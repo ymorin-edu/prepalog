@@ -20,6 +20,30 @@ export function toast(msg, ms = 2600) {
   toast._t = setTimeout(() => { t.style.display = 'none'; }, ms);
 }
 
+// Traduit une erreur de service en phrase utile. Le code brut reste affiché à côté par
+// l'appelant : c'est lui qui permet de chercher, la phrase n'est là que pour ne jamais
+// laisser l'utilisateur devant un écran muet.
+export function messageErreur(e) {
+  const code = String((e && e.code) || '').toLowerCase();
+  const msg = String((e && e.message) || '');
+  if (code.includes('permission-denied') || /insufficient permissions/i.test(msg)) {
+    return "Le service a refusé l'accès aux données. Les règles de sécurité ne sont peut-être pas publiées, ou votre profil n'existe pas encore dans la base.";
+  }
+  if (code.includes('unauthorized-domain')) {
+    return "Ce domaine n'est pas autorisé dans la console Firebase (Authentication, onglet Paramètres, Domaines autorisés).";
+  }
+  if (code.includes('popup')) {
+    return "La fenêtre de connexion Google a été bloquée ou fermée avant la fin. Autorisez les fenêtres surgissantes pour ce site, puis réessayez.";
+  }
+  if (code.includes('api-key') || code.includes('invalid-argument') || code.startsWith('app/')) {
+    return "La configuration Firebase du site semble incorrecte : vérifiez prepalog-config.json.";
+  }
+  if (code.includes('unavailable') || code.includes('network') || /offline|network|failed to fetch/i.test(msg)) {
+    return "Le service de données est injoignable. Vérifiez la connexion du poste : un filtrage réseau peut bloquer l'accès à Firebase.";
+  }
+  return msg || 'Erreur inconnue.';
+}
+
 export function entete({ marque, institution, profil, grand }) {
   const qui = profil
     ? `${ech(profil.prenom || '')} ${ech(profil.nom || '')} · ${profil.role === 'prof' ? 'enseignant' : 'élève'}`

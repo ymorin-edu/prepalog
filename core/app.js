@@ -2,7 +2,7 @@
 
 import { demarrerBackend, B } from './backend.js';
 import { CONFIG, DEMO } from './config.js';
-import { ech, toast, entete, brancherEntete } from './ui.js';
+import { ech, toast, entete, brancherEntete, messageErreur } from './ui.js';
 import { logoSrc } from './theme.js';
 import { activiteVisible, courtNiveau, libelleNiveaux } from './niveaux.js';
 import { chargerActivites, activite, RUBRIQUES, ICONES, activitesDeRubrique } from '../activites/index.js';
@@ -282,21 +282,60 @@ async function vueProf(ongletInitial) {
   // L'espace enseignant peut changer le groupe actif : on le relit au retour.
 }
 
+// --------------------------------------------------------------------- panne
+// Une erreur de service ne doit jamais se traduire par un écran muet : sans cette vue,
+// l'application reste sur « Chargement… » et personne ne sait pourquoi.
+function vuePanne(e) {
+  console.error('Prepalog : démarrage interrompu.', e);
+  const code = (e && (e.code || e.name)) || 'inconnu';
+  app.innerHTML = `
+    ${entete({ marque: CONFIG.marque, institution: CONFIG.institution, profil: null, grand: true })}
+    <div class="avis avis-err">
+      <strong>L'application n'a pas pu démarrer.</strong><br>
+      ${ech(messageErreur(e))}
+    </div>
+    <p class="note">Détail technique : <code>${ech(code)}</code></p>
+    <div class="rangee">
+      <button class="btn btn-p" id="btnReessayer">Réessayer</button>
+      <button class="btn btn-s" id="btnPanneDeco">Revenir à la connexion</button>
+    </div>`;
+  brancherEntete(null);
+  document.getElementById('btnReessayer').addEventListener('click', () => location.reload());
+  document.getElementById('btnPanneDeco').addEventListener('click', async () => {
+    try { await B.deconnexion(); } catch (x) { /* déjà déconnecté */ }
+    location.reload();
+  });
+}
+
 // ------------------------------------------------------------------ amorçage
 (async function demarrer() {
-  await demarrerBackend();
+  try {
+    await demarrerBackend();
+  } catch (e) { vuePanne(e); return; }
+
   B.onAuth(async (p) => {
     profil = p;
     // Un changement de session repart de l'accueil : sinon la rubrique ouverte par
     // l'utilisateur précédent resterait affichée après la connexion suivante.
     rubriqueActive = null;
-    if (!p) { fermerJeuCourant(); groupeActif = null; vueConnexion(); return; }
-    if (p.role === 'prof' && !groupeActif) {
-      const gs = await B.groupesDuProf(p.uid);
-      const memo = groupeMemorise(p.uid);
-      groupeActif = (memo && gs.some((g) => g.id === memo)) ? memo : (gs[0]?.id || null);
+    if (!p) {
+      fermerJeuCourant();
+      groupeActif = null;
+      // Profil absent parce que le service a refusé, ou simple déconnexion ?
+      // Les deux mènent ici, et il faut les distinguer à l'écran.
+      const e = B.panneDemarrage?.();
+      if (e) { vuePanne(e); return; }
+      vueConnexion();
+      return;
     }
-    await vueAccueil();
+    try {
+      if (p.role === 'prof' && !groupeActif) {
+        const gs = await B.groupesDuProf(p.uid);
+        const memo = groupeMemorise(p.uid);
+        groupeActif = (memo && gs.some((g) => g.id === memo)) ? memo : (gs[0]?.id || null);
+      }
+      await vueAccueil();
+    } catch (e) { vuePanne(e); }
   });
 })();
 

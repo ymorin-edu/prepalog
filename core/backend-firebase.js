@@ -34,6 +34,7 @@ export async function creerBackendFirebase() {
   const rt = DB.getDatabase(app);
 
   let courant = null;
+  let panne = null;     // dernière erreur de démarrage, expliquée à l'écran
   let rtActif = false;
   const ecouteurs = new Set();
   const auditeursAuth = [];
@@ -60,17 +61,34 @@ export async function creerBackendFirebase() {
       // La Realtime Database se connecte à la demande seulement.
       DB.goOffline(rt);
       return new Promise((res) => {
-        AU.onAuthStateChanged(auth, async (u) => {
-          courant = await chargerProfil(u);
+        // Une erreur ici — règles non publiées, service filtré, configuration fausse — ne
+        // doit JAMAIS laisser cette promesse en suspens : l'application resterait sur
+        // « Chargement… » sans un mot, ce qui est intenable devant une classe. On résout
+        // donc toujours, et on garde l'erreur pour que l'interface l'explique.
+        const fini = (e) => {
+          panne = e || null;
+          if (e) courant = null;
           notifier();
           res(courant);
-        });
+        };
+        AU.onAuthStateChanged(auth, async (u) => {
+          try {
+            courant = await chargerProfil(u);
+            fini(null);
+          } catch (e) {
+            fini(e);
+          }
+        }, (e) => fini(e));
       });
     },
+
+    // Dernière erreur de démarrage, null si tout va bien.
+    panneDemarrage() { return panne; },
 
     onAuth(cb) { auditeursAuth.push(cb); cb(courant); },
 
     async connexionProf() {
+      panne = null;
       const c = await AU.signInWithPopup(auth, new AU.GoogleAuthProvider());
       const ref = dref('users', c.user.uid);
       const s = await FS.getDoc(ref);
@@ -95,6 +113,7 @@ export async function creerBackendFirebase() {
     },
 
     async connexionEleve(matricule, code) {
+      panne = null;
       try {
         await AU.signInWithEmailAndPassword(auth, matEmail(matricule), matMdp(matricule, code));
       } catch (e) {
