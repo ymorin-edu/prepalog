@@ -208,7 +208,9 @@ async function vueActivite(aid) {
     <button class="lien-accueil" id="btnRetour">← ${rubriqueActive ? ech((RUBRIQUES.find((r) => r.id === rubriqueActive) || {}).label || 'RETOUR').toUpperCase() : 'ACCUEIL'}</button>
     <h1>${ech(m.meta.titre)}</h1>
     <p class="note">${ech(m.meta.code || '')} ${m.meta.desc ? '· ' + ech(m.meta.desc) : ''}
-      ${m.meta.bareme ? `· noté sur ${m.meta.bareme}` : ''}</p>
+      ${m.meta.bareme ? (m.meta.notation === 'avancement'
+        ? `· ${m.meta.bareme} étapes suivies`
+        : `· noté sur ${m.meta.bareme}`) : ''}</p>
     <div id="hoteActivite"><div class="vide">Chargement…</div></div>`;
 
   brancherEntete(async () => { fermerJeuCourant(); await B.deconnexion(); });
@@ -227,6 +229,9 @@ async function vueActivite(aid) {
     // Le niveau de la classe, pour les activités qui portent une série d'exercices de
     // difficulté inégale et n'en montrent que la part qui convient au groupe.
     niveauGroupe: objGroupe?.niveau || null,
+    // Code qui déverrouille la vue d'ensemble du stock dans un environnement d'entreprise :
+    // l'enseignant le donne au moment qu'il choisit dans la séance.
+    codeStock: objGroupe?.codeStock || null,
     // Le travail déjà enregistré pour cette activité, ou null. Utile aux activités
     // notées à la main : l'élève retrouve sa note en ouvrant le module.
     async lireScore() {

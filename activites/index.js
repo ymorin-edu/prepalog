@@ -17,6 +17,8 @@ export const ACTIVITES = [
   () => import('./bouygues-telecom.js'),
   () => import('./brasseries-gatinais.js'),
   () => import('./reception-plateforme.js'),
+  // Environnements d'entreprise (LogiSim)
+  () => import('./spartoo.js'),
 ];
 
 // Pictogrammes des pastilles. Trait de 1,7 px, sans remplissage : même famille graphique
@@ -29,6 +31,7 @@ export const ICONES = {
   tableur: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="4" y="3" width="16" height="18"/><path d="M7.5 7.5h9M7.5 11.5h3M13.5 11.5h3M7.5 15.5h3M13.5 15.5h3"/></svg>`,
   transport: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M2 7h12v10H2z"/><path d="M14 10h4l3 4v3h-7z"/><circle cx="6.5" cy="17.5" r="2.2"/><circle cx="17" cy="17.5" r="2.2"/></svg>`,
   gestion: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M4 4h5.5a2.5 2.5 0 0 1 2.5 2.5V20a2.2 2.2 0 0 0-2.2-1.8H4z"/><path d="M20 4h-5.5A2.5 2.5 0 0 0 12 6.5V20a2.2 2.2 0 0 1 2.2-1.8H20z"/></svg>`,
+  entreprise: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M3 21h18M5 21V6l7-3 7 3v15"/><path d="M9.5 9.5h1.5M13 9.5h1.5M9.5 13h1.5M13 13h1.5"/><path d="M10 21v-4h4v4"/></svg>`,
   comptes: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="8" r="3.4"/><path d="M4.5 20c.9-4 3.9-6 7.5-6s6.6 2 7.5 6"/></svg>`,
   suivi: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="3" y="4" width="18" height="16"/><path d="M3 9h18M9 9v11M15 9v11"/></svg>`,
 };
@@ -49,7 +52,9 @@ export const RUBRIQUES = [
   { id: 'tableur', label: 'Tableur', bande: 2, cat: 'tableur', icone: 'tableur',
     desc: 'Compléter un classeur, le déposer, obtenir la correction automatique.' },
 
-  // bande 3 — l'outil de travail
+  // bande 3 — les outils de travail
+  { id: 'logisim', label: 'Logisim', bande: 3, cat: 'logisim', icone: 'entreprise',
+    desc: "Des environnements d'entreprise complets. Chaque élève travaille dans sa propre base." },
   { id: 'magasin', label: 'Magasin', bande: 3, ids: ['magasin'], icone: 'magasin',
     desc: 'La base du magasin pédagogique : produits, emplacements et état du stock.' },
 ];

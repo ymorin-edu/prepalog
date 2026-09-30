@@ -1,0 +1,957 @@
+// Type « entreprise » — un environnement de travail complet, façon ERP.
+//
+// Portage de LogiSim dans Prepalog. Chaque élève travaille dans SA base : messagerie,
+// commandes clients, préparation et bon de préparation, catalogue, stock, tiers, console.
+// Rien n'est partagé entre élèves — c'est la portée `eleve`, un blob JSON par activité.
+//
+// Ce que Prepalog apporte et que LogiSim portait lui-même : la connexion, les groupes, le
+// suivi de classe. Ce fichier ne garde que l'environnement lui-même.
+//
+// Le suivi est automatique : chaque univers déclare ses `etapes`, qui savent lire la base
+// d'un élève et dire si le travail attendu est fait. Le score remonté au suivi de classe
+// est le nombre d'étapes réussies.
+
+import { ech, toast, confirmer } from '../ui.js';
+import { COLORS, SHIP, pad } from '../../contenus/entreprise-commun.js';
+
+/* ------------------------------------------------------------------ formats */
+export const eur = (n) => Number(n).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' });
+export const fdate = (t) => new Date(t).toLocaleDateString('fr-FR');
+export const fdt = (t) => new Date(t).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
+export const norm = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+export const normLoc = (s) => String(s || '').trim().toUpperCase().replace(/\s+/g, '');
+
+const pastille = (texte, ton) => `<span class="pastille ${ton}">${ech(texte)}</span>`;
+
+export function creerEntreprise(U) {
+  const { ENTREPRISE, VOCAB, CATALOGUE, SUPPLIERS, SUP_BY_ID, CUSTOMERS, CM, baseDeDepart, etapes = [] } = U;
+  const { MODELS, MM, VARIANTS, VM } = CATALOGUE;
+
+  const unite = (n) => ((n > 1 || n === 0) ? VOCAB.unitPl : VOCAB.unit);
+  const label = (v) => v.model.brand + ' ' + v.model.name;
+  const swatch = (c) => `<span class="teinte" style="background:${COLORS[c][1]}"></span>${ech(COLORS[c][0])}`;
+  const etatStock = (q, min) => (q <= 0 ? ['Rupture', 'crit'] : (q <= min ? ['Faible', 'warn'] : ['OK', 'ok']));
+  const pastilleStock = (q, min) => { const s = etatStock(q, min); return pastille(s[0], s[1]); };
+
+  return {
+    rendre(hote, ctx) {
+      if (ctx.meta.portee !== 'eleve') {
+        hote.innerHTML = `<div class="avis avis-err">Un environnement d'entreprise doit être de portée « eleve ».</div>`;
+        return;
+      }
+
+      const db = ctx.jeu.etat();
+      const prenom = ctx.profil.prenom || ctx.profil.nom || 'Élève';
+      const estProf = ctx.profil.role === 'prof';
+
+      // Premier passage : on sème la base de départ. `_depart` porte les messages, qui
+      // reçoivent ici leur identifiant — le reste de l'application n'a plus à s'en soucier.
+      if (!db.v) {
+        const depart = baseDeDepart(prenom);
+        Object.keys(depart).forEach((k) => { if (k !== '_depart') db[k] = depart[k]; });
+        (depart._depart || []).forEach((m) => ajouterMail(m));
+        ctx.jeu.sauver();
+      }
+      ['moves', 'mails', 'orders', 'customers', 'suppliers'].forEach((k) => { if (!db[k]) db[k] = []; });
+
+      // ----------------------------------------------------------- état d'écran
+      // Volontairement hors de la base : ce sont des choix d'affichage, pas du travail.
+      const E = {
+        vue: 'accueil', no: null, ref: null,
+        mailSel: null, dossier: 'in', redige: false,
+        onglet: {}, console: [{ cmd: null, html: '<span class="note">Console. Tapez <b>.help</b> pour la liste des commandes.</span>' }],
+        stockOuvert: estProf, erreurCode: '',
+      };
+
+      const sauver = () => { ctx.jeu.sauver(); remonterEtapes(); };
+      const stockDe = (sku) => { const q = db.stock[sku]; return q == null ? 0 : q; };
+
+      function ajouterMail(m) {
+        m.id = db.seq++; if (m.read === undefined) m.read = false;
+        db.mails.push(m); return m;
+      }
+      function mouvement(sku, type, delta, ref) {
+        db.moves.push({ ts: Date.now(), sku, type, delta, after: db.stock[sku], ref: ref || 'Console', by: prenom });
+      }
+      const tousClients = () => CUSTOMERS.concat(db.customers || []);
+      const tousFournisseurs = () => SUPPLIERS.concat(db.suppliers || []);
+      const clientDe = (id) => CM[id] || (db.customers || []).find((c) => c.id === id) || { prenom: '?', nom: '', adr: '', cp: '', ville: '', email: '', tel: '', id };
+      function codeSuivant(liste, prefixe, largeur) {
+        let mx = 0;
+        liste.forEach((x) => { const n = parseInt(String(x.id).replace(/\D/g, ''), 10); if (!isNaN(n) && n > mx) mx = n; });
+        return prefixe + pad(mx + 1, largeur);
+      }
+
+      // Le score du suivi de classe : le nombre d'étapes réussies.
+      function remonterEtapes() {
+        if (estProf || !etapes.length) return;
+        const res = {};
+        let ok = 0;
+        etapes.forEach((e) => {
+          const r = e.verifier(db, U);
+          res[e.id] = r.status;
+          if (r.status === 'ok') ok++;
+        });
+        ctx.enregistrer({ score: ok, max: etapes.length, detail: res });
+      }
+
+      /* ====================================================== commandes clients */
+      const totaux = (o) => {
+        let sub = 0, n = 0;
+        o.lines.forEach((l) => { sub += VM[l.sku].model.price * l.qty; n += l.qty; });
+        const port = SHIP[o.ship][1];
+        return { sub, port, total: sub + port, n };
+      };
+      function statutCommande(o) {
+        if (!o.prep) return ['À préparer', 'warn'];
+        if (o.prep.validated) return o.prep.complete ? ['Préparée', 'ok'] : ['Préparée (reliquat)', 'info'];
+        const debut = Object.keys(o.prep.rows).some((k) => {
+          const r = o.prep.rows[k];
+          return r.seen !== '' || r.loc || r.qty !== '' || r.status;
+        });
+        return debut ? ['En cours', 'info'] : ['À préparer', 'warn'];
+      }
+      function preparer(o) {
+        if (o.prep) return;
+        o.prep = { rows: {}, doc: false, validated: false };
+        o.lines.forEach((l) => { o.prep.rows[l.sku] = { seen: '', loc: '', qty: '', status: '' }; });
+      }
+      const ligneRemplie = (r) => r.seen !== '' && r.seen != null && !!(r.loc && r.loc.trim()) && r.qty !== '' && r.qty != null && !!r.status;
+      const libelleStatut = (s) => (s === 'ok' ? pastille('Complet', 'ok') : s === 'warn' ? pastille('Partiel', 'warn')
+        : s === 'crit' ? pastille('Rupture', 'crit') : '<span class="note">—</span>');
+      const commandeDe = (no) => db.orders.find((o) => o.no === no);
+
+      function tableauCommande(o, avecPrix) {
+        return `<div class="ent-scroll"><table><thead><tr><th>Réf.</th><th>Désignation</th><th>Couleur</th>
+          <th class="num">${ech(VOCAB.sizeLabel)}</th><th class="num">Qté</th>
+          ${avecPrix ? '<th class="num">PU TTC</th><th class="num">Total</th>' : ''}</tr></thead><tbody>
+          ${o.lines.map((l) => { const v = VM[l.sku]; return `<tr>
+            <td class="mono">${ech(l.sku)}</td><td>${ech(label(v))}</td><td>${swatch(v.color)}</td>
+            <td class="num">${v.size}</td><td class="num">${l.qty}</td>
+            ${avecPrix ? `<td class="num">${eur(v.model.price)}</td><td class="num">${eur(v.model.price * l.qty)}</td>` : ''}
+          </tr>`; }).join('')}</tbody></table></div>`;
+      }
+
+      function corpsMailCommande(o) {
+        const c = clientDe(o.customerId), t = totaux(o);
+        return `<p>Une nouvelle commande vient d'être passée sur le site. Paiement par carte bancaire accepté.</p>
+          <div class="ent-cols">
+            <div><div class="ent-lbl">Client</div><strong>${ech(c.prenom + ' ' + c.nom)}</strong><br>${ech(c.adr)}<br>
+              ${ech(c.cp)} ${ech(c.ville)}<br><span class="mono note">${ech(c.email)} · ${ech(c.tel)}</span></div>
+            <div><div class="ent-lbl">Commande</div><strong class="mono">${ech(o.no)}</strong><br>Date : ${fdt(o.date)}<br>
+              Livraison : ${ech(SHIP[o.ship][0])}<br>Code client : <span class="mono">${ech(c.id)}</span></div>
+          </div>${tableauCommande(o, true)}
+          <p class="ent-droite">Sous-total ${eur(t.sub)} · Port ${eur(t.port)} · <strong>Total TTC ${eur(t.total)}</strong></p>`;
+      }
+
+      /* ============================================================== rendu */
+      function dessiner() {
+        const nonLus = db.mails.filter((m) => m.folder === 'in' && !m.read).length;
+        const aFaire = db.orders.filter((o) => ['À préparer', 'En cours'].includes(statutCommande(o)[0])).length;
+        const item = (id, lbl, n, alias) => {
+          const actif = (alias || [id]).includes(E.vue);
+          return `<button class="ent-nav ${actif ? 'on' : ''}" data-vue="${id}">
+            <span>${ech(lbl)}</span>${n ? `<span class="ent-n">${n}</span>` : ''}</button>`;
+        };
+
+        hote.innerHTML = `
+          <div class="ent-shell">
+            <aside class="ent-side">
+              <div class="ent-org"><strong>${ech(ENTREPRISE.nom)}</strong><span>${ech(ENTREPRISE.sousTitre)}</span></div>
+              ${item('accueil', 'Accueil')}
+              ${item('mail', 'Messagerie', nonLus)}
+              ${item('commandes', 'Commandes', aFaire, ['commandes', 'commande'])}
+              <div class="ent-sep">Articles</div>
+              ${item('catalogue', 'Catalogue', 0, ['catalogue', 'produit'])}
+              ${item('stock', 'Stock')}
+              <div class="ent-sep">Tiers</div>
+              ${item('tiers', 'Clients / Fournisseurs')}
+              <div class="ent-sep">Outils</div>
+              ${item('console', 'Console')}
+              <div class="ent-sep"></div>
+              <button class="ent-nav" data-raz>Réinitialiser ma base</button>
+            </aside>
+            <div class="ent-main" id="entMain"></div>
+          </div>`;
+
+        hote.querySelectorAll('[data-vue]').forEach((b) => b.addEventListener('click', () => aller(b.dataset.vue)));
+        hote.querySelector('[data-raz]').addEventListener('click', reinitialiser);
+        dessinerVue();
+      }
+
+      function aller(v, p) {
+        E.vue = v; Object.assign(E, p || {});
+        dessiner();
+        hote.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      }
+
+      function dessinerVue() {
+        const z = hote.querySelector('#entMain');
+        const vues = {
+          accueil: vueAccueil, mail: vueMail, commandes: vueCommandes, commande: vueCommande,
+          catalogue: vueCatalogue, produit: vueProduit, stock: vueStock, tiers: vueTiers, console: vueConsole,
+        };
+        z.innerHTML = (vues[E.vue] || vueAccueil)();
+        brancher(z);
+        if (E.vue === 'catalogue') majCatalogue();
+        if (E.vue === 'stock' && E.stockOuvert) majStock();
+        if (E.vue === 'tiers') majTiers();
+        if (E.vue === 'console') { const o = z.querySelector('.ent-cout'); if (o) o.scrollTop = o.scrollHeight; }
+      }
+
+      async function reinitialiser() {
+        if (!confirmer('Effacer tout votre travail et repartir d\'une base neuve ?')) return;
+        Object.keys(db).forEach((k) => delete db[k]);
+        const depart = baseDeDepart(prenom);
+        Object.keys(depart).forEach((k) => { if (k !== '_depart') db[k] = depart[k]; });
+        (depart._depart || []).forEach((m) => ajouterMail(m));
+        E.vue = 'accueil'; E.mailSel = null; E.no = null;
+        sauver(); dessiner(); toast('Base réinitialisée.');
+      }
+
+      /* ---------------------------------------------------------- accueil */
+      function vueAccueil() {
+        const nonLus = db.mails.filter((m) => m.folder === 'in' && !m.read).length;
+        const aFaire = db.orders.filter((o) => ['À préparer', 'En cours'].includes(statutCommande(o)[0])).length;
+        let total = 0, rupture = 0;
+        VARIANTS.forEach((v) => { const q = stockDe(v.sku); total += q; if (q <= 0) rupture++; });
+        return `
+          <div class="ent-tete"><h2>Bonjour ${ech(prenom)}</h2>
+            <p class="note">${ech(ENTREPRISE.nom)} · ${ech(ENTREPRISE.exercice)}</p></div>
+          <div class="ent-kpis">
+            <button class="ent-kpi" data-vue2="mail"><b>${nonLus}</b><span>messages non lus</span></button>
+            <button class="ent-kpi" data-vue2="commandes"><b>${aFaire}</b><span>commandes à préparer</span></button>
+            <button class="ent-kpi" data-vue2="stock"><b>${total}</b><span>${ech(unite(total))} en stock</span></button>
+            <button class="ent-kpi" data-vue2="stock"><b>${rupture}</b><span>références en rupture</span></button>
+          </div>
+          <section class="panneau"><h3>Traiter une commande, dans l'ordre</h3>
+            <ol class="ent-etapes">
+              <li><strong>Lire la commande</strong><br><span class="note">Ouvrez la Messagerie et cliquez sur le mail « Nouvelle commande web ».</span></li>
+              <li><strong>Enregistrer la commande</strong><br><span class="note">Le bouton du mail la place dans le menu Commandes.</span></li>
+              <li><strong>Contrôler le stock de chaque ligne</strong><br><span class="note">Depuis la commande, ou avec la console : <span class="mono">.getstock REF</span>.</span></li>
+              <li><strong>Éditer le bon de préparation</strong><br><span class="note">Les articles sont classés par emplacement pour optimiser le parcours.</span></li>
+              <li><strong>Valider la préparation</strong><br><span class="note">Le stock est diminué et les mouvements sont enregistrés.</span></li>
+            </ol></section>`;
+      }
+
+      /* -------------------------------------------------------- messagerie */
+      function vueMail() {
+        const adresse = `${norm(prenom).replace(/ /g, '')}@${VOCAB.mailDomain}`;
+        if (E.redige) {
+          const fs = tousFournisseurs().slice().sort((a, b) => (a.brand < b.brand ? -1 : 1));
+          return `<div class="ent-tete"><h2>Messagerie</h2><p class="note">Adresse : ${ech(adresse)}</p></div>
+            <section class="panneau">
+              <button class="lien-accueil" data-annuler>← Retour</button>
+              <h3>Nouveau message</h3>
+              <div class="champ"><label for="mTo">Destinataire (fournisseur)</label>
+                <select id="mTo"><option value="">Choisir…</option>
+                ${fs.map((s) => `<option value="${ech(s.id)}">${ech(s.brand)} — ${ech(s.name)}</option>`).join('')}</select></div>
+              <div class="champ"><label for="mObj">Objet</label>
+                <input id="mObj" value="Commande de réapprovisionnement"></div>
+              <div class="champ"><label for="mTxt">Message</label>
+                <textarea id="mTxt" rows="8" placeholder="Précisez, pour chaque référence, sa quantité (ex. ${ech(VARIANTS[0] ? VARIANTS[0].sku : 'REF')} : 12 ${ech(VOCAB.unitPl)})."></textarea></div>
+              <button class="btn btn-p" data-envoyer-fou>Envoyer</button>
+            </section>`;
+        }
+
+        const liste = db.mails.filter((m) => m.folder === E.dossier).sort((a, b) => b.ts - a.ts);
+        const sel = liste.find((m) => m.id === E.mailSel);
+        const items = liste.map((m) => `
+          <button class="ent-mitem ${m.read || E.dossier === 'out' ? '' : 'nonlu'} ${sel && sel.id === m.id ? 'on' : ''}" data-mail="${m.id}">
+            <span class="ent-de"><span>${ech(E.dossier === 'in' ? m.from : 'À : ' + m.to)}</span><span class="note">${fdate(m.ts)}</span></span>
+            <span class="ent-obj">${ech(m.subject)}</span></button>`).join('')
+          || '<div class="vide">Aucun message.</div>';
+
+        let lecteur = '<div class="ent-vide-lect note">Sélectionnez un message pour le lire.</div>';
+        if (sel) {
+          const enregistree = sel.kind === 'order' && db.orders.some((o) => o.no === sel.order.no);
+          const corps = sel.kind === 'order' ? corpsMailCommande(sel.order)
+            : `<p>${ech(sel.text).replace(/\n/g, '<br>')}</p>`;
+          let actions = '';
+          if (E.dossier === 'in') {
+            if (sel.kind === 'order') {
+              actions += enregistree
+                ? `<button class="btn btn-p" data-ouvrir-cmd="${ech(sel.order.no)}">Ouvrir la commande</button>`
+                : `<button class="btn btn-p" data-enreg-cmd="${sel.id}">Enregistrer la commande</button>`;
+            }
+            actions += '<button class="btn" data-repondre>Répondre</button>';
+          }
+          lecteur = `<div class="ent-lecteur">
+            <button class="lien-accueil" data-mail-retour>← Retour</button>
+            <h3>${ech(sel.subject)}</h3>
+            <p class="note">${E.dossier === 'in' ? 'De : ' + ech(sel.from + ' <' + sel.fromMail + '>') : 'À : ' + ech(sel.to + ' <' + (sel.toMail || '') + '>')} · ${fdt(sel.ts)}</p>
+            ${corps}
+            ${actions ? `<div class="rangee" style="margin-top:14px">${actions}</div>` : ''}
+            <form id="formRep" hidden style="margin-top:14px">
+              <div class="champ"><label for="repT">Votre réponse</label><textarea id="repT" rows="6"></textarea></div>
+              <button class="btn btn-p" type="submit">Envoyer</button></form></div>`;
+        }
+
+        return `<div class="ent-tete"><h2>Messagerie</h2><p class="note">Adresse : ${ech(adresse)}</p></div>
+          <section class="panneau">
+            <div class="rangee" style="margin-bottom:12px">
+              <button class="btn btn-s ${E.dossier === 'in' ? 'btn-p' : ''}" data-dossier="in">Réception</button>
+              <button class="btn btn-s ${E.dossier === 'out' ? 'btn-p' : ''}" data-dossier="out">Envoyés</button>
+              <span class="pousse"><button class="btn btn-s btn-p" data-nouveau>Nouveau message</button></span>
+            </div>
+            <div class="ent-boite ${sel ? 'sel' : ''}"><div class="ent-mlist">${items}</div>${lecteur}</div>
+          </section>`;
+      }
+
+      function ouvrirMail(id) {
+        E.mailSel = id;
+        const m = db.mails.find((x) => x.id === id);
+        if (m && !m.read) { m.read = true; sauver(); }
+        dessiner();
+      }
+
+      function enregistrerCommande(idMail) {
+        const m = db.mails.find((x) => x.id === idMail);
+        if (!m) return;
+        if (!db.orders.some((o) => o.no === m.order.no)) {
+          const o = JSON.parse(JSON.stringify(m.order));
+          preparer(o); db.orders.push(o); sauver();
+        }
+        aller('commande', { no: m.order.no });
+      }
+
+      function envoyerReponse() {
+        const t = (hote.querySelector('#repT').value || '').trim();
+        if (!t) return;
+        const m = db.mails.find((x) => x.id === E.mailSel);
+        if (!m) return;
+        ajouterMail({ folder: 'out', ts: Date.now(), from: prenom, fromMail: '', to: m.from, toMail: m.fromMail,
+          subject: 'RE : ' + m.subject.replace(/^RE : /, ''), kind: 'text', text: t, read: true });
+        sauver(); E.dossier = 'out'; E.mailSel = null; dessiner();
+        toast('Réponse envoyée.');
+      }
+
+      // Le fournisseur répond tout seul : l'outil retrouve dans le message les références et
+      // les quantités citées, et rappelle le minimum de commande — respecté ou non.
+      const RE_SKU = /\b([A-Z]{2,3}-[A-Z0-9]+-[A-Z]{2}-\d{1,2})\b[^0-9]{0,20}?(\d{1,4})/g;
+      function lireRefsQtes(texte, supId) {
+        const out = []; let m; RE_SKU.lastIndex = 0;
+        while ((m = RE_SKU.exec(texte))) {
+          const sku = m[1].toUpperCase(), qty = parseInt(m[2], 10), v = VM[sku];
+          if (v && v.model.sup === supId) out.push({ sku, qty, v });
+        }
+        return out;
+      }
+
+      function envoyerAuFournisseur() {
+        const id = hote.querySelector('#mTo').value;
+        const sup = SUP_BY_ID[id] || (db.suppliers || []).find((s) => s.id === id);
+        if (!sup) return toast('Choisissez un fournisseur.');
+        const objet = (hote.querySelector('#mObj').value || '').trim() || 'Commande de réapprovisionnement';
+        const corps = (hote.querySelector('#mTxt').value || '').trim();
+        if (!corps) return toast('Le message est vide.');
+
+        ajouterMail({ folder: 'out', ts: Date.now(), from: prenom, fromMail: '', to: sup.contact, toMail: sup.email,
+          subject: objet, kind: 'text', text: corps, read: true });
+
+        const trouves = lireRefsQtes(corps, sup.id);
+        let total = 0; trouves.forEach((x) => { total += x.qty; });
+        let reponse;
+        if (!trouves.length) {
+          reponse = `Bonjour,\n\nNous ne parvenons pas à identifier, dans votre message, de référence ${sup.brand} accompagnée d'une quantité claire. Merci de préciser pour chaque article sa référence exacte et la quantité souhaitée.\n\nCordialement,\n${sup.contact}\n${sup.name}`;
+        } else if (total < (sup.moq || 0)) {
+          reponse = `Bonjour,\n\nNous avons bien reçu votre demande, pour un total de ${total} ${unite(total)}. Pour rappel, notre minimum de commande est de ${sup.moq} ${VOCAB.unitPl} : merci de compléter votre commande avant que nous puissions la traiter.\n\nCordialement,\n${sup.contact}\n${sup.name}`;
+        } else {
+          reponse = `Bonjour,\n\nCommande bien reçue, pour un total de ${total} ${VOCAB.unitPl} : le minimum de commande (${sup.moq} ${VOCAB.unitPl}) est respecté. Livraison prévue sous ${sup.delai} jours.\n\nCordialement,\n${sup.contact}\n${sup.name}`;
+        }
+        ajouterMail({ folder: 'in', ts: Date.now() + 1000, from: sup.contact, fromMail: sup.email, to: prenom,
+          subject: 'RE : ' + objet, kind: 'text', text: reponse, read: false });
+
+        sauver(); E.redige = false; E.dossier = 'in'; E.mailSel = null; dessiner();
+        toast('Message envoyé.');
+      }
+
+      /* ---------------------------------------------------------- commandes */
+      function vueCommandes() {
+        const lignes = db.orders.slice().sort((a, b) => b.date - a.date).map((o) => {
+          const c = clientDe(o.customerId), t = totaux(o), s = statutCommande(o);
+          return `<tr><td class="mono">${ech(o.no)}</td><td>${fdate(o.date)}</td>
+            <td>${ech(c.prenom + ' ' + c.nom)}</td><td class="num">${o.lines.length}</td>
+            <td class="num">${t.n}</td><td class="num">${eur(t.total)}</td>
+            <td>${pastille(s[0], s[1])}</td>
+            <td class="num"><button class="btn btn-s" data-ouvrir-cmd="${ech(o.no)}">Ouvrir</button></td></tr>`;
+        }).join('');
+        const u = VOCAB.unitPl.charAt(0).toUpperCase() + VOCAB.unitPl.slice(1);
+        return `<div class="ent-tete"><h2>Commandes clients</h2>
+            <p class="note">Les commandes apparaissent ici après avoir été enregistrées depuis la messagerie.</p></div>
+          <section class="panneau">${lignes
+            ? `<div class="ent-scroll"><table><thead><tr><th>N°</th><th>Date</th><th>Client</th>
+                <th class="num">Lignes</th><th class="num">${ech(u)}</th><th class="num">Total TTC</th>
+                <th>Statut</th><th></th></tr></thead><tbody>${lignes}</tbody></table></div>`
+            : '<div class="vide">Aucune commande enregistrée. Ouvrez un mail de commande dans la messagerie.</div>'}</section>`;
+      }
+
+      function vueCommande() {
+        const o = commandeDe(E.no);
+        if (!o) return vueCommandes();
+        preparer(o);
+        const c = clientDe(o.customerId), t = totaux(o), s = statutCommande(o), p = o.prep;
+        const fige = p.validated;
+        const complet = o.lines.every((l) => ligneRemplie(p.rows[l.sku]));
+        const choixStatut = [['', 'Choisir…'], ['ok', 'Complet'], ['warn', 'Partiel'], ['crit', 'Rupture']];
+
+        const lignes = o.lines.map((l) => {
+          const v = VM[l.sku], r = p.rows[l.sku];
+          const cStock = fige ? `<b class="mono">${r.seen === '' ? '—' : r.seen}</b>`
+            : `<input type="number" min="0" data-prep="seen" data-sku="${ech(l.sku)}" value="${r.seen === '' ? '' : r.seen}" style="width:70px" aria-label="Stock trouvé pour ${ech(l.sku)}">`;
+          const cEmpl = fige ? ech(r.loc || '—')
+            : `<input type="text" data-prep="loc" data-sku="${ech(l.sku)}" value="${ech(r.loc)}" placeholder="ex. B-01-1" style="width:112px" aria-label="Emplacement pour ${ech(l.sku)}">`;
+          const cQte = fige ? (r.qty === '' ? '—' : r.qty)
+            : `<input type="number" min="0" data-prep="qty" data-sku="${ech(l.sku)}" value="${r.qty === '' ? '' : r.qty}" style="width:70px" aria-label="Quantité à préparer pour ${ech(l.sku)}">`;
+          const cStatut = fige ? libelleStatut(r.status)
+            : `<select data-prep="status" data-sku="${ech(l.sku)}" aria-label="Statut pour ${ech(l.sku)}">
+                ${choixStatut.map((op) => `<option value="${op[0]}" ${(r.status || '') === op[0] ? 'selected' : ''}>${op[1]}</option>`).join('')}</select>`;
+          return `<tr><td class="mono">${ech(l.sku)}</td>
+            <td>${ech(label(v))}<div class="note">${ech(COLORS[v.color][0])} · ${ech(VOCAB.sizeShort)}${v.size}</div></td>
+            <td class="num">${l.qty}</td><td class="num">${cStock}</td><td class="mono">${cEmpl}</td>
+            <td class="num">${cQte}</td><td>${cStatut}</td></tr>`;
+        }).join('');
+
+        return `<button class="lien-accueil" data-vue2="commandes">← COMMANDES</button>
+          <div class="ent-tete"><h2>Commande <span class="mono">${ech(o.no)}</span> ${pastille(s[0], s[1])}</h2></div>
+          <section class="panneau"><dl class="ent-dl">
+            <dt>Client</dt><dd>${ech(c.prenom + ' ' + c.nom)} <span class="mono note">${ech(c.id)}</span></dd>
+            <dt>Adresse</dt><dd>${ech(c.adr)}, ${ech(c.cp)} ${ech(c.ville)}</dd>
+            <dt>Livraison</dt><dd>${ech(SHIP[o.ship][0])}</dd>
+            <dt>Date</dt><dd>${fdt(o.date)}</dd>
+            <dt>Montant</dt><dd>${eur(t.total)} TTC, ${t.n} ${ech(unite(t.n))}</dd></dl></section>
+          <section class="panneau"><h3>Contrôle du stock</h3>
+            <p class="note">Trouvez le stock réel de chaque référence avec la console
+              (<span class="mono">.getstock REF</span>) et son emplacement (<span class="mono">.getlocation REF</span>).
+              Remplissez pour chaque ligne le stock trouvé, l'emplacement, la quantité à préparer et le statut.</p>
+            <div class="ent-scroll"><table><thead><tr><th>Réf.</th><th>Article</th><th class="num">Commandé</th>
+              <th class="num">Stock trouvé</th><th>Emplacement</th><th class="num">À préparer</th><th>Statut</th>
+              </tr></thead><tbody>${lignes}</tbody></table></div>
+            <div class="rangee" style="margin-top:14px">
+              <button class="btn btn-p" data-bon ${complet ? '' : 'disabled'}>
+                ${p.doc ? 'Régénérer le bon de préparation' : 'Éditer le bon de préparation'}</button>
+              <span class="note" id="aideBon" ${complet ? 'hidden' : ''}>Complétez toutes les lignes pour continuer.</span>
+            </div></section>
+          <div id="blocBon">${p.doc ? bonDePreparation(o) : ''}</div>`;
+      }
+
+      function majChamp(sku, champ, val) {
+        const o = commandeDe(E.no); if (!o) return;
+        const r = o.prep.rows[sku]; if (!r) return;
+        if (champ === 'seen' || champ === 'qty') { const n = parseInt(val, 10); r[champ] = isNaN(n) ? '' : Math.max(0, n); }
+        else r[champ] = val;
+
+        // On ne redessine PAS la vue ici. Le `change` d'un champ arrive au moment où l'élève
+        // passe au suivant : remplacer le tableau à cet instant lui volerait la case sur
+        // laquelle il vient de cliquer, et la saisie serait perdue. On met donc à jour à la
+        // main les seuls éléments concernés.
+        if (o.prep.doc) { o.prep.doc = false; const b = hote.querySelector('#blocBon'); if (b) b.innerHTML = ''; }
+        const complet = o.lines.every((l) => ligneRemplie(o.prep.rows[l.sku]));
+        const btn = hote.querySelector('[data-bon]');
+        if (btn) { btn.disabled = !complet; btn.textContent = 'Éditer le bon de préparation'; }
+        const aide = hote.querySelector('#aideBon');
+        if (aide) aide.hidden = complet;
+        sauver();
+      }
+
+      function bonDePreparation(o) {
+        const p = o.prep, c = clientDe(o.customerId);
+        const aPrendre = o.lines.filter((l) => p.rows[l.sku].qty > 0)
+          .sort((a, b) => (VM[a.sku].loc < VM[b.sku].loc ? -1 : 1));
+        const manquants = o.lines.filter((l) => p.rows[l.sku].qty < l.qty);
+        let n = 0; aPrendre.forEach((l) => { n += p.rows[l.sku].qty; });
+
+        const lignes = aPrendre.map((l, i) => {
+          const v = VM[l.sku];
+          return `<tr><td>${i + 1}</td><td class="mono"><b>${ech(v.loc)}</b></td><td class="mono">${ech(l.sku)}</td>
+            <td>${ech(label(v))}</td><td>${ech(COLORS[v.color][0])}</td><td class="num">${v.size}</td>
+            <td class="num"><b>${p.rows[l.sku].qty}</b></td><td class="num"><span class="ent-case"></span></td></tr>`;
+        }).join('');
+
+        const reliquat = manquants.length ? `<div class="ent-lbl" style="margin-top:14px">Reliquat / articles non préparés</div>
+          <table><tbody>${manquants.map((l) => `<tr><td class="mono">${ech(l.sku)}</td><td>${ech(label(VM[l.sku]))}</td>
+            <td class="num">Manque ${l.qty - p.rows[l.sku].qty} sur ${l.qty}</td></tr>`).join('')}</tbody></table>` : '';
+
+        const pied = p.validated
+          ? '<div class="avis avis-ok">Préparation validée : le stock a été diminué (voir Stock, Mouvements).</div>'
+          : `<div class="rangee" style="margin-top:12px">
+              <button class="btn btn-p" data-valider ${aPrendre.length ? '' : 'disabled'}>Valider la préparation (sortie de stock)</button>
+              <button class="btn" data-copier>Copier le bon en texte</button></div>
+             <div id="msgCopie" class="note"></div>`;
+
+        return `<section class="panneau ent-doc" id="bon">
+            <div class="rangee"><div><div class="ent-lbl">${ech(ENTREPRISE.nom)} · Entrepôt</div>
+              <h3>Bon de préparation BP-${ech(o.no.replace('CMD-', ''))}</h3></div>
+              <span class="pousse note" style="text-align:right">Édité le ${fdt(Date.now())}<br>par ${ech(prenom)}</span></div>
+            <div class="ent-cols">
+              <div><div class="ent-lbl">Commande</div><strong>${ech(o.no)}</strong> du ${fdate(o.date)}</div>
+              <div><div class="ent-lbl">Destinataire</div>${ech(c.prenom + ' ' + c.nom)}<br>${ech(c.adr)}<br>${ech(c.cp)} ${ech(c.ville)}</div>
+              <div><div class="ent-lbl">Transport</div>${ech(SHIP[o.ship][0])}</div></div>
+            ${aPrendre.length ? `<div class="ent-scroll"><table><thead><tr><th>N°</th><th>Emplacement</th><th>Réf.</th>
+                <th>Article</th><th>Couleur</th><th class="num">${ech(VOCAB.sizeLabel)}</th><th class="num">Qté</th>
+                <th class="num">Prélevé</th></tr></thead><tbody>${lignes}</tbody></table></div>
+              <p class="ent-droite"><strong>${aPrendre.length} ligne${aPrendre.length > 1 ? 's' : ''} · ${n} ${ech(unite(n))}</strong></p>`
+              : '<p>Aucun article disponible : rien à préparer.</p>'}
+            ${reliquat}
+            <div class="ent-signatures"><div><div class="ent-lbl">Préparateur</div></div><div><div class="ent-lbl">Contrôle emballage</div></div></div>
+          </section>${pied}`;
+      }
+
+      function validerPreparation() {
+        const o = commandeDe(E.no), p = o.prep, err = [];
+        o.lines.forEach((l) => { if (p.rows[l.sku].qty > stockDe(l.sku)) err.push(l.sku); });
+        if (err.length) {
+          err.forEach((k) => { p.rows[k] = { seen: '', loc: '', qty: '', status: '' }; });
+          p.doc = false; sauver(); dessiner();
+          return toast(`Le stock a changé pour : ${err.join(', ')}. Remplissez de nouveau ces lignes.`);
+        }
+        let complet = true;
+        o.lines.forEach((l) => {
+          const r = p.rows[l.sku];
+          if (r.qty > 0) { db.stock[l.sku] -= r.qty; mouvement(l.sku, 'Sortie : préparation', -r.qty, 'BP-' + o.no.replace('CMD-', '')); }
+          if (r.qty < l.qty) complet = false;
+        });
+        p.validated = true; p.complete = complet; p.at = Date.now();
+        sauver(); dessiner();
+        toast(complet ? 'Préparation validée, commande complète.' : 'Préparation validée, avec reliquat.');
+      }
+
+      function copierBon() {
+        const o = commandeDe(E.no), p = o.prep, c = clientDe(o.customerId);
+        let t = `BON DE PRÉPARATION BP-${o.no.replace('CMD-', '')}\nCommande ${o.no} | Client : ${c.prenom} ${c.nom} | ${SHIP[o.ship][0]}\n\n`;
+        o.lines.filter((l) => p.rows[l.sku].qty > 0)
+          .sort((a, b) => (VM[a.sku].loc < VM[b.sku].loc ? -1 : 1))
+          .forEach((l) => { t += `${VM[l.sku].loc}\t${l.sku}\t${label(VM[l.sku])}\t${VOCAB.sizeShort}${VM[l.sku].size}\tQté ${p.rows[l.sku].qty}\n`; });
+        const m = hote.querySelector('#msgCopie');
+        const ok = () => { if (m) m.textContent = 'Bon copié dans le presse-papiers.'; };
+        const ko = () => { if (m) m.textContent = 'Copie impossible ici : sélectionnez le bon à la souris.'; };
+        try { navigator.clipboard.writeText(t).then(ok, ko); } catch (e) { ko(); }
+      }
+
+      /* ---------------------------------------------------------- catalogue */
+      function vueCatalogue() {
+        const marques = [], cats = [];
+        MODELS.forEach((m) => { if (!marques.includes(m.brand)) marques.push(m.brand); if (!cats.includes(m.cat)) cats.push(m.cat); });
+        return `<div class="ent-tete"><h2>Catalogue</h2>
+            <p class="note">${MODELS.length} modèles, ${VARIANTS.length} références couleur et ${ech(VOCAB.configWord)}.</p></div>
+          <div class="ent-filtres">
+            <div class="champ"><label for="cQ">Recherche</label><input id="cQ" data-filtre placeholder="Nom, marque ou référence"></div>
+            <div class="champ"><label for="cB">Marque</label><select id="cB" data-filtre><option value="">Toutes</option>
+              ${marques.map((b) => `<option>${ech(b)}</option>`).join('')}</select></div>
+            <div class="champ"><label for="cC">Catégorie</label><select id="cC" data-filtre><option value="">Toutes</option>
+              ${cats.map((b) => `<option>${ech(b)}</option>`).join('')}</select></div></div>
+          <div id="entListe"></div>`;
+      }
+
+      function majCatalogue() {
+        const q = norm(hote.querySelector('#cQ').value), b = hote.querySelector('#cB').value, c = hote.querySelector('#cC').value;
+        const res = MODELS.filter((m) => (!b || m.brand === b) && (!c || m.cat === c)
+          && (!q || norm(m.brand + ' ' + m.name + ' ' + m.ref + ' ' + m.cat).includes(q)));
+        hote.querySelector('#entListe').innerHTML = res.length
+          ? `<div class="module-grid">${res.map((m) => `<button class="module-tile" data-produit="${ech(m.ref)}">
+              <span class="code">${ech(m.brand)} · ${ech(m.cat)}</span>
+              <span class="titre">${ech(m.name)}</span>
+              <span class="desc mono">${ech(m.ref)}</span>
+              <span class="desc"><strong>${eur(m.price)}</strong> ${m.colors.map((k) => `<span class="teinte" style="background:${COLORS[k][1]}" title="${ech(COLORS[k][0])}"></span>`).join('')}</span>
+            </button>`).join('')}</div>`
+          : '<div class="vide">Aucun modèle ne correspond.</div>';
+        hote.querySelectorAll('[data-produit]').forEach((b2) => b2.addEventListener('click', () => aller('produit', { ref: b2.dataset.produit })));
+      }
+
+      const matrice = (m) => `<div class="ent-scroll"><table class="ent-mx"><thead><tr><th>Couleur</th><th>Empl.</th>
+          ${m.sizes.map((s) => `<th>${s}</th>`).join('')}</tr></thead><tbody>
+          ${m.colors.map((c) => `<tr><td>${swatch(c)}</td><td class="mono">${ech(m.loc[c])}</td>
+            ${m.sizes.map((s) => { const q = stockDe(m.ref + '-' + c + '-' + s);
+              return `<td class="num ${q <= 0 ? 'faux' : (q <= m.min ? 'tiede' : '')}">${q}</td>`; }).join('')}</tr>`).join('')}
+          </tbody></table></div>`;
+
+      function vueProduit() {
+        const m = MM[E.ref];
+        if (!m) return vueCatalogue();
+        const sp = SUP_BY_ID[m.sup], ht = m.price / 1.2;
+        return `<button class="lien-accueil" data-vue2="catalogue">← CATALOGUE</button>
+          <div class="ent-tete"><h2>${ech(m.brand + ' ' + m.name)}</h2><p class="note">${ech(m.desc)}</p></div>
+          <section class="panneau"><dl class="ent-dl">
+            <dt>Référence modèle</dt><dd class="mono">${ech(m.ref)}</dd>
+            <dt>Marque</dt><dd>${ech(m.brand)}</dd>
+            <dt>Catégorie</dt><dd>${ech(m.cat)}</dd>
+            <dt>Prix de vente TTC</dt><dd class="mono"><b>${eur(m.price)}</b></dd>
+            <dt>Prix de vente HT</dt><dd class="mono">${eur(ht)}</dd>
+            <dt>Prix d'achat HT</dt><dd class="mono">${eur(m.cost)}</dd>
+            <dt>Marge brute</dt><dd class="mono">${eur(ht - m.cost)} (${Math.round((ht - m.cost) / ht * 100)} %)</dd>
+            <dt>${ech(VOCAB.sizeLabel)}s</dt><dd>${m.s0} à ${m.s1}</dd>
+            <dt>Seuil d'alerte</dt><dd>${m.min} ${ech(VOCAB.unitPl)} par référence</dd>
+            <dt>Stock maximum</dt><dd>${m.max} ${ech(VOCAB.unitPl)} par référence</dd>
+            <dt>Fournisseur</dt><dd>${ech(sp.name)} <span class="mono note">${ech(sp.id)}</span><br>
+              <span class="note">Délai ${sp.delai} jours · franco ${eur(sp.franco)}</span></dd></dl></section>
+          <section class="panneau"><h3>Stock par couleur et ${ech(VOCAB.configWord)}</h3>${matrice(m)}</section>`;
+      }
+
+      /* -------------------------------------------------------------- stock */
+      function vueStock() {
+        if (!E.stockOuvert) {
+          return `<div class="ent-tete"><h2>Stock</h2><p class="note">Accès verrouillé.</p></div>
+            <section class="panneau" style="max-width:480px">
+              <p>Pour connaître le stock d'une référence précise, utilisez la console
+                (<span class="mono">.getstock REF</span>). La vue d'ensemble est verrouillée :
+                demandez le code à votre enseignant.</p>
+              ${E.erreurCode ? `<div class="avis avis-err">${ech(E.erreurCode)}</div>` : ''}
+              <div class="champ"><label for="codeStock">Code d'accès</label>
+                <input id="codeStock" class="mono" autocapitalize="characters" spellcheck="false"></div>
+              <button class="btn btn-p" data-deverrouiller>Déverrouiller</button></section>`;
+        }
+        const onglet = E.onglet.stock || 'niveaux';
+        let total = 0, valeur = 0, rupture = 0, bas = 0;
+        VARIANTS.forEach((v) => {
+          const q = stockDe(v.sku); total += q; valeur += q * v.model.cost;
+          if (q <= 0) rupture++; else if (q <= v.model.min) bas++;
+        });
+        const marques = []; MODELS.forEach((m) => { if (!marques.includes(m.brand)) marques.push(m.brand); });
+
+        let corps;
+        if (onglet === 'niveaux') {
+          corps = `<div class="ent-filtres">
+            <div class="champ"><label for="sQ">Recherche</label><input id="sQ" data-filtre placeholder="Référence, nom ou emplacement"></div>
+            <div class="champ"><label for="sB">Marque</label><select id="sB" data-filtre><option value="">Toutes</option>
+              ${marques.map((b) => `<option>${ech(b)}</option>`).join('')}</select></div>
+            <div class="champ"><label for="sS">Statut</label><select id="sS" data-filtre><option value="">Tous</option>
+              <option value="crit">Rupture</option><option value="warn">Faible</option><option value="ok">OK</option></select></div>
+            </div><div id="entListe"></div>`;
+        } else {
+          const mv = db.moves.slice().reverse().slice(0, 150).map((m) => `<tr><td>${fdt(m.ts)}</td>
+            <td class="mono">${ech(m.sku)}</td><td>${ech(m.type)}</td>
+            <td class="num ${m.delta < 0 ? 'faux' : 'juste'}"><b class="mono">${m.delta > 0 ? '+' : ''}${m.delta}</b></td>
+            <td class="num">${m.after}</td><td class="mono">${ech(m.ref)}</td><td>${ech(m.by)}</td></tr>`).join('');
+          corps = `<section class="panneau">${mv
+            ? `<div class="ent-scroll"><table><thead><tr><th>Date</th><th>Réf.</th><th>Type</th><th class="num">Qté</th>
+                <th class="num">Stock après</th><th>Origine</th><th>Par</th></tr></thead><tbody>${mv}</tbody></table></div>`
+            : '<div class="vide">Aucun mouvement pour le moment.</div>'}</section>`;
+        }
+
+        return `<div class="ent-tete"><h2>Stock</h2><p class="note">Niveaux par référence et historique des mouvements.</p></div>
+          <div class="ent-kpis">
+            <div class="ent-kpi fixe"><b>${total}</b><span>${ech(unite(total))} en stock</span></div>
+            <div class="ent-kpi fixe"><b>${eur(valeur)}</b><span>valeur au prix d'achat HT</span></div>
+            <div class="ent-kpi fixe"><b>${bas}</b><span>références sous le seuil</span></div>
+            <div class="ent-kpi fixe"><b>${rupture}</b><span>références en rupture</span></div></div>
+          <div class="rangee" style="margin-bottom:12px">
+            <button class="btn btn-s ${onglet === 'niveaux' ? 'btn-p' : ''}" data-onglet="stock" data-val="niveaux">Niveaux de stock</button>
+            <button class="btn btn-s ${onglet === 'mouvements' ? 'btn-p' : ''}" data-onglet="stock" data-val="mouvements">Mouvements</button>
+          </div>${corps}`;
+      }
+
+      function majStock() {
+        const el = hote.querySelector('#sQ'); if (!el) return;
+        const q = norm(el.value), b = hote.querySelector('#sB').value, st = hote.querySelector('#sS').value;
+        let n = 0, lignes = '';
+        for (const v of VARIANTS) {
+          const qty = stockDe(v.sku), s = etatStock(qty, v.model.min);
+          if (b && v.model.brand !== b) continue;
+          if (st && s[1] !== st) continue;
+          if (q && !norm(v.sku + ' ' + label(v) + ' ' + v.loc).includes(q)) continue;
+          n++;
+          if (n <= 150) lignes += `<tr><td class="mono">${ech(v.sku)}</td><td>${ech(label(v))}</td>
+            <td>${swatch(v.color)}</td><td class="num">${v.size}</td><td class="num"><b class="mono">${qty}</b></td>
+            <td class="num note">${v.model.min}</td><td class="mono">${ech(v.loc)}</td><td>${pastille(s[0], s[1])}</td></tr>`;
+        }
+        hote.querySelector('#entListe').innerHTML = `<section class="panneau"><div class="ent-scroll"><table>
+          <thead><tr><th>Référence</th><th>Article</th><th>Couleur</th><th class="num">${ech(VOCAB.sizeLabel)}</th>
+          <th class="num">Stock</th><th class="num">Seuil</th><th>Emplacement</th><th>Statut</th></tr></thead>
+          <tbody>${lignes || '<tr><td colspan="8" class="note">Aucun résultat.</td></tr>'}</tbody></table></div>
+          <p class="note">${n > 150 ? `${n} résultats, les 150 premiers sont affichés.` : `${n} résultat${n > 1 ? 's' : ''}.`}</p></section>`;
+      }
+
+      /* -------------------------------------------------------------- tiers */
+      function vueTiers() {
+        const onglet = E.onglet.tiers || 'clients';
+        return `<div class="ent-tete"><h2>Clients et fournisseurs</h2>
+            <p class="note">${tousClients().length} clients, ${tousFournisseurs().length} fournisseurs.</p></div>
+          <div class="rangee" style="margin-bottom:12px">
+            <button class="btn btn-s ${onglet === 'clients' ? 'btn-p' : ''}" data-onglet="tiers" data-val="clients">Clients</button>
+            <button class="btn btn-s ${onglet === 'fournisseurs' ? 'btn-p' : ''}" data-onglet="tiers" data-val="fournisseurs">Fournisseurs</button>
+          </div>
+          <div class="ent-filtres"><div class="champ"><label for="tQ">Recherche</label>
+            <input id="tQ" data-filtre placeholder="Nom, ville, code…"></div></div>
+          <div id="entListe"></div>`;
+      }
+
+      function majTiers() {
+        const onglet = E.onglet.tiers || 'clients', q = norm(hote.querySelector('#tQ').value);
+        let h;
+        if (onglet === 'clients') {
+          const r = tousClients().filter((c) => !q || norm(`${c.id} ${c.prenom} ${c.nom} ${c.ville} ${c.cp} ${c.email}`).includes(q));
+          h = `<table><thead><tr><th>Code</th><th>Nom</th><th>E-mail</th><th>Téléphone</th><th>Adresse</th>
+            <th>Client depuis</th><th class="num">Commandes</th></tr></thead><tbody>
+            ${r.map((c) => `<tr><td class="mono">${ech(c.id)}</td><td>${ech(c.prenom + ' ' + c.nom)}</td>
+              <td class="mono">${ech(c.email)}</td><td class="mono">${ech(c.tel)}</td>
+              <td>${ech(c.adr)}, ${ech(c.cp)} ${ech(c.ville)}</td><td>${fdate(c.since)}</td>
+              <td class="num">${c.nb}</td></tr>`).join('')}</tbody></table>`;
+        } else {
+          const f = tousFournisseurs().filter((s) => !q || norm(`${s.id} ${s.brand} ${s.name} ${s.ville}`).includes(q));
+          h = `<table><thead><tr><th>Code</th><th>Marque</th><th>Société</th><th>Contact</th><th>Téléphone</th>
+            <th>E-mail</th><th>Adresse</th><th class="num">Délai</th><th class="num">Franco</th>
+            <th class="num">Mini. commande</th><th>Paiement</th></tr></thead><tbody>
+            ${f.map((s) => `<tr><td class="mono">${ech(s.id)}</td><td><b>${ech(s.brand)}</b></td><td>${ech(s.name)}</td>
+              <td>${ech(s.contact)}</td><td class="mono">${ech(s.tel)}</td><td class="mono">${ech(s.email)}</td>
+              <td>${ech(s.adr)}, ${ech(s.cp)} ${ech(s.ville)}</td><td class="num">${s.delai} j</td>
+              <td class="num">${eur(s.franco)}</td><td class="num">${s.moq || '—'} ${ech(VOCAB.unitPl)}</td>
+              <td>${ech(s.pay)}</td></tr>`).join('')}</tbody></table>`;
+        }
+        hote.querySelector('#entListe').innerHTML = `<section class="panneau"><div class="ent-scroll">${h}</div></section>`;
+      }
+
+      /* ------------------------------------------------------------ console */
+      function vueConsole() {
+        const out = E.console.slice(-40).map((c) => `<div>${c.cmd != null ? `<div class="ent-cmd">${ech(c.cmd)}</div>` : ''}
+          <div class="ent-cres">${c.html}</div></div>`).join('');
+        return `<div class="ent-tete"><h2>Console</h2>
+            <p class="note">Interrogez et modifiez votre base avec des commandes. Tapez <span class="mono">.help</span> pour les voir.</p></div>
+          <div class="ent-console"><div class="ent-cout">${out}</div>
+            <form class="ent-cin" id="formCmd" autocomplete="off"><span>&gt;</span>
+              <input id="champCmd" placeholder=".getstock REF" spellcheck="false" aria-label="Commande">
+              <button class="btn btn-p btn-s" type="submit">Exécuter</button></form></div>`;
+      }
+
+      const kv = (paires) => `<div class="ent-kv">${paires.map((p) => `<span>${p[0]}</span><span>${p[1]}</span>`).join('')}</div>`;
+      const tbl = (entetes, lignes, droite) => `<div class="ent-scroll"><table><thead><tr>
+        ${entetes.map((h, i) => `<th${droite && droite.includes(i) ? ' class="num"' : ''}>${h}</th>`).join('')}</tr></thead>
+        <tbody>${lignes.map((r) => `<tr>${r.map((c, i) => `<td${droite && droite.includes(i) ? ' class="num"' : ''}>${c}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+
+      function resoudre(brut) {
+        const ref = String(brut || '').toUpperCase().trim();
+        if (!ref) throw new Error('Il manque la référence. Exemple : .getstock NK-AM270-NR-42');
+        if (VM[ref]) return { v: VM[ref] };
+        if (MM[ref]) return { m: MM[ref] };
+        const part = VARIANTS.filter((v) => v.sku.indexOf(ref) === 0);
+        if (part.length && part.length <= 60) return { liste: part };
+        throw new Error(`Référence introuvable : ${ech(ref)}. Essayez .find suivi d'un nom de modèle.`);
+      }
+      const stockModele = (m) => { let n = 0; m.colors.forEach((c) => m.sizes.forEach((s) => { n += stockDe(`${m.ref}-${c}-${s}`); })); return n; };
+
+      function ajuster(genre, a) {
+        const ref = String(a[0] || '').toUpperCase(), q = parseInt(a[1], 10);
+        const nom = genre === 'set' ? 'setstock' : genre === 'add' ? 'addstock' : 'removestock';
+        if (!ref || a[1] === undefined || isNaN(q) || q < 0 || String(q) !== String(a[1]).trim()) {
+          throw new Error(`Syntaxe : .${nom} <réf article> <quantité entière positive>`);
+        }
+        const v = VM[ref];
+        if (!v) throw new Error(`Référence article introuvable : ${ech(ref)}. Il faut la référence complète (modèle-couleur-taille).`);
+        const avant = stockDe(v.sku);
+        const apres = genre === 'set' ? q : (genre === 'add' ? avant + q : avant - q);
+        if (apres < 0) throw new Error(`Stock insuffisant : ${avant} ${unite(avant)} disponible${avant > 1 ? 's' : ''}, impossible d'en retirer ${q}.`);
+        db.stock[v.sku] = apres;
+        mouvement(v.sku, genre === 'set' ? 'Ajustement inventaire' : (genre === 'add' ? 'Entrée' : 'Sortie'), apres - avant, 'Console');
+        sauver();
+        return `<span class="juste">OK</span> ${ech(v.sku)} : ${avant} → <b>${apres}</b>`;
+      }
+
+      const CMDS = {
+        help: ['.help', 'Affiche cette aide', () => {
+          const lignes = Object.keys(CMDS).filter((k) => k !== 'help')
+            .map((k) => [`<span class="mono">${ech(CMDS[k][0])}</span>`, ech(CMDS[k][1])]);
+          return `<div class="note">Les références ne tiennent pas compte des majuscules. Référence modèle : NK-AM270. Référence article : NK-AM270-NR-42 (modèle, couleur, ${ech(VOCAB.configWord)}).</div>${tbl(['Commande', 'Effet'], lignes)}`;
+        }],
+        find: ['.find <texte>', 'Cherche un modèle par nom, marque ou catégorie', (a) => {
+          const q = norm(a.join(' ')); if (!q) throw new Error('Exemple : .find air max');
+          const r = MODELS.filter((m) => norm(`${m.brand} ${m.name} ${m.ref} ${m.cat}`).includes(q));
+          if (!r.length) throw new Error(`Aucun modèle trouvé pour « ${ech(q)} ».`);
+          return tbl(['Réf. modèle', 'Modèle', 'Catégorie', 'Prix TTC'],
+            r.map((m) => [`<span class="mono">${ech(m.ref)}</span>`, ech(m.brand + ' ' + m.name), ech(m.cat), eur(m.price)]), [3]);
+        }],
+        getstock: ['.getstock <réf>', "Stock d'une référence article ou d'un modèle", (a) => {
+          const r = resoudre(a[0]);
+          if (r.v) { const v = r.v, q = stockDe(v.sku);
+            return kv([['Référence', `<span class="mono">${ech(v.sku)}</span>`], ['Article', ech(label(v))],
+              ['Couleur', ech(COLORS[v.color][0])], [ech(VOCAB.sizeLabel), v.size],
+              ['Stock', `<b>${q}</b> ${ech(unite(q))}`], ['Seuil', v.model.min], ['Stock maximum', v.model.max],
+              ['Emplacement', ech(v.loc)], ['Statut', pastilleStock(q, v.model.min)]]); }
+          if (r.liste) return tbl(['Référence', 'Article', 'Stock', 'Statut'], r.liste.map((v) => { const q = stockDe(v.sku);
+            return [`<span class="mono">${ech(v.sku)}</span>`, `${ech(label(v))} ${ech(COLORS[v.color][0])} ${ech(VOCAB.sizeShort)}${v.size}`,
+              `<b>${q}</b>`, pastilleStock(q, v.model.min)]; }), [2]);
+          const m = r.m, tot = stockModele(m);
+          return `<div>${ech(m.brand + ' ' + m.name)} : <b>${tot}</b> ${ech(unite(tot))} au total</div>${matrice(m)}`;
+        }],
+        getprice: ['.getprice <réf>', "Prix de vente et prix d'achat", (a) => {
+          const r = resoudre(a[0]), m = r.v ? r.v.model : (r.m || (r.liste && r.liste[0].model)), ht = m.price / 1.2;
+          return kv([['Modèle', `${ech(m.brand + ' ' + m.name)} <span class="note">(${ech(m.ref)})</span>`],
+            ['Prix TTC', `<b>${eur(m.price)}</b>`], ['Prix HT', eur(ht)], ["Prix d'achat HT", eur(m.cost)],
+            ['Marge brute', `${eur(ht - m.cost)} (${Math.round((ht - m.cost) / ht * 100)} %)`]]);
+        }],
+        getproduct: ['.getproduct <réf>', 'Fiche produit résumée', (a) => {
+          const r = resoudre(a[0]), m = r.v ? r.v.model : (r.m || (r.liste && r.liste[0].model)), sp = SUP_BY_ID[m.sup];
+          return kv([['Modèle', ech(m.brand + ' ' + m.name)], ['Référence', `<span class="mono">${ech(m.ref)}</span>`],
+            ['Catégorie', ech(m.cat)], ['Couleurs', m.colors.map((c) => `${ech(COLORS[c][0])} (${c})`).join(', ')],
+            [ech(VOCAB.sizeLabel) + 's', `${m.s0} à ${m.s1}`], ['Prix TTC', eur(m.price)],
+            ['Fournisseur', `${ech(sp.brand)} <span class="note">(${ech(sp.id)}, délai ${sp.delai} j)</span>`],
+            ['Description', ech(m.desc)]]);
+        }],
+        getlocation: ['.getlocation <réf>', 'Emplacement en entrepôt', (a) => {
+          const r = resoudre(a[0]);
+          if (r.v) return kv([['Référence', `<span class="mono">${ech(r.v.sku)}</span>`], ['Emplacement', `<b>${ech(r.v.loc)}</b>`],
+            ['Lecture', `Zone ${ech(r.v.model.zone)}, allée ${pad(r.v.model.aisle, 2)}, niveau ${ech(r.v.loc.split('-')[2])}`]]);
+          const m = r.m || r.liste[0].model;
+          return tbl(['Couleur', 'Emplacement'], m.colors.map((c) => [ech(COLORS[c][0]), `<b>${ech(m.loc[c])}</b>`]));
+        }],
+        lowstock: ['.lowstock [n]', 'Références dont le stock est inférieur ou égal à n (par défaut : le seuil)', (a) => {
+          const n = a[0] !== undefined ? parseInt(a[0], 10) : null;
+          if (a[0] !== undefined && isNaN(n)) throw new Error('n doit être un nombre. Exemple : .lowstock 3');
+          const r = VARIANTS.filter((v) => { const q = stockDe(v.sku); return n === null ? q <= v.model.min : q <= n; })
+            .sort((x, y) => stockDe(x.sku) - stockDe(y.sku));
+          return `<div>${r.length} référence${r.length > 1 ? 's' : ''}${r.length > 40 ? ' (les 40 plus basses)' : ''}</div>`
+            + tbl(['Référence', 'Article', 'Stock', 'Statut'], r.slice(0, 40).map((v) => { const q = stockDe(v.sku);
+              return [`<span class="mono">${ech(v.sku)}</span>`, `${ech(label(v))} ${ech(COLORS[v.color][0])} ${ech(VOCAB.sizeShort)}${v.size}`,
+                `<b>${q}</b>`, pastilleStock(q, v.model.min)]; }), [2]);
+        }],
+        stockvalue: ['.stockvalue [marque]', "Valeur du stock au prix d'achat HT", (a) => {
+          const b = norm(a.join(' ')); let val = 0, n = 0;
+          VARIANTS.forEach((v) => { if (b && norm(v.model.brand) !== b) return; const q = stockDe(v.sku); val += q * v.model.cost; n += q; });
+          if (b && !n && !MODELS.some((m) => norm(m.brand) === b)) throw new Error(`Marque inconnue : ${ech(a.join(' '))}`);
+          return kv([['Périmètre', b ? ech(a.join(' ')) : 'Tout le stock'],
+            [VOCAB.unitPl.charAt(0).toUpperCase() + VOCAB.unitPl.slice(1), n], ['Valeur achat HT', `<b>${eur(val)}</b>`]]);
+        }],
+        getclient: ['.getclient <code ou nom>', 'Fiche client', (a) => {
+          const q = norm(a.join(' ')); if (!q) throw new Error('Exemple : .getclient C0007 ou .getclient dubois');
+          const r = tousClients().filter((c) => norm(`${c.id} ${c.prenom} ${c.nom}`).includes(q)).slice(0, 10);
+          if (!r.length) throw new Error('Aucun client trouvé.');
+          return r.length === 1
+            ? kv([['Code', ech(r[0].id)], ['Nom', ech(r[0].prenom + ' ' + r[0].nom)], ['E-mail', ech(r[0].email)],
+                ['Téléphone', ech(r[0].tel)], ['Adresse', `${ech(r[0].adr)}, ${ech(r[0].cp)} ${ech(r[0].ville)}`],
+                ['Client depuis', fdate(r[0].since)], ['Commandes', r[0].nb]])
+            : tbl(['Code', 'Nom', 'Ville'], r.map((c) => [ech(c.id), ech(c.prenom + ' ' + c.nom), ech(c.ville)]));
+        }],
+        getsupplier: ['.getsupplier <code ou marque>', 'Fiche fournisseur', (a) => {
+          const q = norm(a.join(' ')); if (!q) throw new Error('Exemple : .getsupplier nike ou .getsupplier F002');
+          const r = tousFournisseurs().filter((s) => norm(`${s.id} ${s.brand} ${s.name}`).includes(q));
+          if (!r.length) throw new Error('Aucun fournisseur trouvé.');
+          return r.map((s) => kv([['Code', ech(s.id)], ['Marque', ech(s.brand)], ['Société', ech(s.name)],
+            ['Contact', `${ech(s.contact)} · ${ech(s.tel)}`], ['E-mail', ech(s.email)],
+            ['Adresse', `${ech(s.adr)}, ${ech(s.cp)} ${ech(s.ville)}`], ['Délai', `${s.delai} jours`],
+            ['Franco', eur(s.franco)], ['Minimum de commande', `${s.moq || '—'} ${ech(VOCAB.unitPl)}`],
+            ['Paiement', ech(s.pay)]])).join('<hr class="ent-hr">');
+        }],
+        addclient: ['.addclient <prénom nom> ; <e-mail> ; <téléphone> ; <adresse> ; <code postal> ; <ville>', 'Crée un nouveau client', (a) => {
+          const p = a.join(' ').split(';').map((x) => x.trim());
+          if (p.length < 6 || p.some((x) => !x)) throw new Error('Syntaxe : .addclient <prénom nom> ; <e-mail> ; <téléphone> ; <adresse> ; <code postal> ; <ville>');
+          const nm = p[0].split(/\s+/).filter(Boolean);
+          if (nm.length < 2) throw new Error('Indiquez le prénom et le nom, séparés par un espace, avant le premier « ; ».');
+          if (!/^[0-9]{5}$/.test(p[4])) throw new Error('Le code postal doit comporter 5 chiffres.');
+          if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(p[1])) throw new Error(`E-mail invalide : ${ech(p[1])}`);
+          if (!db.customers) db.customers = [];
+          const id = codeSuivant(tousClients(), 'C', 4);
+          db.customers.push({ id, prenom: nm[0], nom: nm.slice(1).join(' '), email: p[1], tel: p[2], adr: p[3], cp: p[4], ville: p[5], since: Date.now(), nb: 0 });
+          sauver();
+          return `<div class="avis avis-ok">Nouveau client créé.</div>${kv([['Code', `<b>${ech(id)}</b>`], ['Nom', ech(p[0])], ['E-mail', ech(p[1])]])}`;
+        }],
+        addsupplier: ['.addsupplier <marque> ; <société> ; <contact> ; <téléphone> ; <e-mail> ; <adresse> ; <cp> ; <ville> ; <délai j.> ; <franco €> ; <paiement>', 'Crée un nouveau fournisseur', (a) => {
+          const p = a.join(' ').split(';').map((x) => x.trim());
+          if (p.length < 11 || p.some((x) => !x)) throw new Error('Syntaxe : .addsupplier <marque> ; <société> ; <contact> ; <téléphone> ; <e-mail> ; <adresse> ; <cp> ; <ville> ; <délai en jours> ; <franco en €> ; <conditions de paiement>');
+          const delai = parseInt(p[8], 10), franco = parseFloat(p[9].replace(',', '.'));
+          if (!/^[0-9]{5}$/.test(p[6])) throw new Error('Le code postal doit comporter 5 chiffres.');
+          if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(p[4])) throw new Error(`E-mail invalide : ${ech(p[4])}`);
+          if (isNaN(delai) || delai < 0) throw new Error('Le délai doit être un nombre de jours (ex. 5).');
+          if (isNaN(franco) || franco < 0) throw new Error('Le franco de port doit être un montant en euros (ex. 900).');
+          if (!db.suppliers) db.suppliers = [];
+          const id = codeSuivant(tousFournisseurs(), 'F', 3);
+          db.suppliers.push({ id, brand: p[0], name: p[1], contact: p[2], tel: p[3], email: p[4], adr: p[5], cp: p[6], ville: p[7], delai, franco, pay: p[10], moq: 16 });
+          sauver();
+          return `<div class="avis avis-ok">Nouveau fournisseur créé.</div>${kv([['Code', `<b>${ech(id)}</b>`], ['Marque', ech(p[0])], ['Société', ech(p[1])]])}`;
+        }],
+        getorder: ['.getorder <n°>', "Détail d'une commande enregistrée", (a) => {
+          const q = String(a[0] || '').toUpperCase(); if (!q) throw new Error('Exemple : .getorder CMD-048213');
+          const o = db.orders.find((x) => x.no.includes(q));
+          if (!o) throw new Error('Commande non enregistrée. Ouvrez le mail de commande et cliquez sur « Enregistrer la commande ».');
+          const c = clientDe(o.customerId), t = totaux(o), s = statutCommande(o);
+          return kv([['Commande', ech(o.no)], ['Client', `${ech(c.prenom + ' ' + c.nom)} (${ech(c.id)})`],
+            ['Livraison', ech(SHIP[o.ship][0])], ['Total TTC', eur(t.total)], ['Statut', ech(s[0])]])
+            + tbl(['Référence', 'Article', 'Qté'], o.lines.map((l) => [`<span class="mono">${ech(l.sku)}</span>`,
+              `${ech(label(VM[l.sku]))} ${ech(COLORS[VM[l.sku].color][0])} ${ech(VOCAB.sizeShort)}${VM[l.sku].size}`, l.qty]), [2]);
+        }],
+        movements: ['.movements [réf]', 'Derniers mouvements de stock', (a) => {
+          const ref = a[0] ? String(a[0]).toUpperCase() : null;
+          const r = db.moves.filter((m) => !ref || m.sku.indexOf(ref) === 0).slice(-15).reverse();
+          if (!r.length) return '<span class="note">Aucun mouvement.</span>';
+          return tbl(['Date', 'Référence', 'Type', 'Qté', 'Stock après'],
+            r.map((m) => [fdt(m.ts), `<span class="mono">${ech(m.sku)}</span>`, ech(m.type), (m.delta > 0 ? '+' : '') + m.delta, m.after]), [3, 4]);
+        }],
+        setstock: ['.setstock <réf> <qté>', "Fixe le stock d'un article (inventaire)", (a) => ajuster('set', a)],
+        addstock: ['.addstock <réf> <qté>', 'Ajoute du stock (réception)', (a) => ajuster('add', a)],
+        removestock: ['.removestock <réf> <qté>', 'Retire du stock (sortie, casse)', (a) => ajuster('rem', a)],
+        clear: ['.clear', 'Vide la console', () => { E.console = []; return null; }],
+      };
+
+      function executer(texte) {
+        texte = String(texte || '').trim(); if (!texte) return;
+        let res;
+        if (texte.charAt(0) !== '.') res = '<span class="faux">Une commande commence par un point. Tapez .help pour la liste.</span>';
+        else {
+          const parts = texte.slice(1).split(/\s+/), nom = parts[0].toLowerCase(), c = CMDS[nom];
+          if (!c) res = `<span class="faux">Commande inconnue : .${ech(nom)}. Tapez .help.</span>`;
+          else { try { res = c[2](parts.slice(1)); } catch (e) { res = `<span class="faux">${ech(e.message)}</span>`; } }
+        }
+        if (res === null) E.console = []; else E.console.push({ cmd: texte, html: res });
+        if (E.vue !== 'console') aller('console'); else dessinerVue();
+        const i = hote.querySelector('#champCmd'); if (i) i.focus();
+      }
+
+      /* ------------------------------------------------------- branchements */
+      function brancher(z) {
+        z.querySelectorAll('[data-vue2]').forEach((b) => b.addEventListener('click', () => aller(b.dataset.vue2)));
+        z.querySelectorAll('[data-onglet]').forEach((b) => b.addEventListener('click', () => {
+          E.onglet[b.dataset.onglet] = b.dataset.val; dessinerVue();
+        }));
+        z.querySelectorAll('[data-mail]').forEach((b) => b.addEventListener('click', () => ouvrirMail(+b.dataset.mail)));
+        z.querySelectorAll('[data-dossier]').forEach((b) => b.addEventListener('click', () => {
+          E.dossier = b.dataset.dossier; E.mailSel = null; dessiner();
+        }));
+        z.querySelector('[data-mail-retour]')?.addEventListener('click', () => { E.mailSel = null; dessiner(); });
+        z.querySelector('[data-nouveau]')?.addEventListener('click', () => { E.redige = true; dessiner(); });
+        z.querySelector('[data-annuler]')?.addEventListener('click', () => { E.redige = false; dessiner(); });
+        z.querySelector('[data-envoyer-fou]')?.addEventListener('click', envoyerAuFournisseur);
+        z.querySelector('[data-repondre]')?.addEventListener('click', () => {
+          const f = z.querySelector('#formRep'); f.hidden = !f.hidden; if (!f.hidden) z.querySelector('#repT').focus();
+        });
+        z.querySelector('#formRep')?.addEventListener('submit', (e) => { e.preventDefault(); envoyerReponse(); });
+        z.querySelectorAll('[data-enreg-cmd]').forEach((b) => b.addEventListener('click', () => enregistrerCommande(+b.dataset.enregCmd)));
+        z.querySelectorAll('[data-ouvrir-cmd]').forEach((b) => b.addEventListener('click', () => aller('commande', { no: b.dataset.ouvrirCmd })));
+        // `input` autant que `change` : le `change` d'un champ texte n'arrive qu'au moment où
+        // l'élève en sort. S'il remplit sa dernière case puis ferme l'onglet, ou si le
+        // navigateur ne déclenche jamais le blur, la saisie serait perdue.
+        z.querySelectorAll('[data-prep]').forEach((el) => {
+          const maj = () => majChamp(el.dataset.sku, el.dataset.prep, el.value);
+          el.addEventListener('input', maj);
+          el.addEventListener('change', maj);
+        });
+        z.querySelector('[data-bon]')?.addEventListener('click', () => {
+          const o = commandeDe(E.no); o.prep.doc = true; sauver();
+          const b = hote.querySelector('#blocBon');
+          b.innerHTML = bonDePreparation(o);
+          brancher(b);
+          z.querySelector('[data-bon]').textContent = 'Régénérer le bon de préparation';
+          hote.querySelector('#bon')?.scrollIntoView({ block: 'start' });
+        });
+        z.querySelector('[data-valider]')?.addEventListener('click', validerPreparation);
+        z.querySelector('[data-copier]')?.addEventListener('click', copierBon);
+        z.querySelector('[data-deverrouiller]')?.addEventListener('click', () => {
+          const saisi = (z.querySelector('#codeStock').value || '').trim().toUpperCase();
+          const attendu = String(ctx.codeStock || '').trim().toUpperCase();
+          if (!attendu) { E.erreurCode = "Aucun code n'a encore été défini par votre enseignant."; }
+          else if (saisi === attendu) { E.stockOuvert = true; E.erreurCode = ''; }
+          else { E.erreurCode = 'Code incorrect.'; }
+          dessinerVue();
+        });
+        z.querySelectorAll('[data-filtre]').forEach((el) => el.addEventListener('input', () => {
+          if (E.vue === 'catalogue') majCatalogue();
+          else if (E.vue === 'stock') majStock();
+          else if (E.vue === 'tiers') majTiers();
+        }));
+        z.querySelector('#formCmd')?.addEventListener('submit', (e) => {
+          e.preventDefault();
+          const i = z.querySelector('#champCmd'), t = i.value; i.value = ''; executer(t);
+        });
+      }
+
+      remonterEtapes();
+      dessiner();
+    },
+  };
+}

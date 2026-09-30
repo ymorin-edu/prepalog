@@ -465,3 +465,122 @@ th.col-saisie, td.col-saisie{ background:var(--ardoise-clair) }
 .serie-groupe:first-child{ margin-top:8px }
 .module-tile.fini{ box-shadow:inset 3px 0 0 var(--vert) }
 .module-tile.fini .code{ color:var(--vert) }
+
+/* --- environnement d'entreprise (type « entreprise ») --------------------------
+   LogiSim dans la charte Prepalog : une colonne de navigation à gauche, le travail
+   à droite. Sous 860 px, la navigation passe en barre horizontale défilante. */
+.ent-shell{ display:grid; grid-template-columns:212px 1fr; gap:18px; margin-top:8px }
+.ent-side{ display:flex; flex-direction:column; gap:2px; align-self:start; position:sticky; top:12px }
+.ent-org{
+  padding:10px 12px; margin-bottom:8px; border-radius:var(--r);
+  background:var(--ardoise-fond); color:var(--sur-ardoise);
+}
+.ent-org strong{ display:block; font-size:1rem }
+.ent-org span{ font-size:11.5px; opacity:.85 }
+.ent-nav{
+  display:flex; align-items:center; gap:8px; width:100%; text-align:left;
+  font:inherit; cursor:pointer; padding:8px 12px; border-radius:var(--r);
+  border:1px solid transparent; background:none; color:var(--encre);
+}
+.ent-nav:hover{ background:var(--survol); border-color:var(--filet) }
+.ent-nav.on{ background:var(--ardoise-clair); border-color:var(--ardoise); font-weight:600 }
+.ent-n{
+  margin-left:auto; font-family:var(--mono); font-size:11px; font-weight:600;
+  background:var(--terre); color:#fff; border-radius:999px; padding:1px 7px;
+}
+.ent-sep{
+  margin:12px 0 4px; padding-left:12px; font-family:var(--mono); font-size:10.5px;
+  letter-spacing:.09em; text-transform:uppercase; color:var(--encre-douce);
+}
+.ent-main{ min-width:0 }
+.ent-tete{ margin-bottom:14px }
+.ent-tete h2{ margin:0 0 2px }
+.ent-tete p{ margin:0 }
+.ent-scroll{ overflow:auto }
+.ent-droite{ text-align:right }
+.ent-lbl{
+  font-family:var(--mono); font-size:10.5px; letter-spacing:.08em;
+  text-transform:uppercase; color:var(--encre-douce); margin-bottom:2px;
+}
+.ent-cols{ display:grid; gap:14px; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); margin:14px 0 }
+.ent-hr{ border:0; border-top:1px solid var(--filet); margin:10px 0 }
+
+/* pastilles d'état, communes à tout le module */
+.pastille{
+  display:inline-block; font-size:11.5px; font-weight:600; padding:2px 9px;
+  border-radius:999px; border:1px solid var(--filet); white-space:nowrap;
+}
+.pastille.ok{ color:var(--vert); border-color:var(--vert) }
+.pastille.warn{ color:var(--terre); border-color:var(--terre) }
+.pastille.crit{ color:var(--rouge); border-color:var(--rouge) }
+.pastille.info{ color:var(--ardoise); border-color:var(--ardoise) }
+.teinte{
+  display:inline-block; width:11px; height:11px; border-radius:3px;
+  border:1px solid var(--filet); margin-right:5px; vertical-align:-1px;
+}
+
+/* indicateurs chiffrés */
+.ent-kpis{ display:grid; gap:12px; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); margin-bottom:16px }
+.ent-kpi{
+  font:inherit; cursor:pointer; text-align:left; padding:14px 16px;
+  border:1px solid var(--filet); border-radius:var(--r); background:var(--panneau); color:var(--encre);
+}
+.ent-kpi.fixe{ cursor:default }
+.ent-kpi:not(.fixe):hover{ border-color:var(--ardoise) }
+.ent-kpi b{ display:block; font-size:1.7rem; line-height:1.1; font-family:var(--mono) }
+.ent-kpi span{ display:block; font-size:12px; color:var(--encre-douce); margin-top:3px }
+
+.ent-etapes{ margin:10px 0 0; padding-left:22px; line-height:1.55 }
+.ent-etapes li{ margin-bottom:8px }
+.ent-dl{ display:grid; grid-template-columns:auto 1fr; gap:6px 18px; margin:0 }
+.ent-dl dt{ color:var(--encre-douce); font-size:.9rem }
+.ent-dl dd{ margin:0 }
+.ent-filtres{ display:grid; gap:12px; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); margin-bottom:14px }
+.ent-filtres .champ{ margin:0 }
+
+/* messagerie : liste à gauche, lecture à droite */
+.ent-boite{ display:grid; grid-template-columns:260px 1fr; gap:14px; align-items:start }
+.ent-mlist{ display:flex; flex-direction:column; gap:4px; max-height:520px; overflow:auto }
+.ent-mitem{
+  font:inherit; text-align:left; cursor:pointer; padding:9px 11px; border-radius:var(--r);
+  border:1px solid var(--filet); background:var(--panneau); color:var(--encre); display:block; width:100%;
+}
+.ent-mitem:hover{ border-color:var(--ardoise) }
+.ent-mitem.on{ border-color:var(--ardoise); box-shadow:inset 3px 0 0 var(--ardoise) }
+.ent-mitem.nonlu .ent-obj{ font-weight:700 }
+.ent-de{ display:flex; justify-content:space-between; gap:8px; font-size:12px; color:var(--encre-douce) }
+.ent-obj{ display:block; margin-top:2px; font-size:13.5px }
+.ent-lecteur, .ent-vide-lect{ border:1px solid var(--filet); border-radius:var(--r); padding:16px 18px; background:var(--panneau) }
+.ent-lecteur h3{ margin:8px 0 2px }
+
+/* bon de préparation : un document, pas un écran */
+.ent-doc{ border-width:2px }
+.ent-case{ display:inline-block; width:15px; height:15px; border:1px solid var(--encre); border-radius:2px }
+.ent-signatures{ display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-top:22px }
+.ent-signatures > div{ border-top:1px solid var(--filet); padding-top:6px; min-height:52px }
+.ent-mx td.num{ font-family:var(--mono) }
+.ent-mx td.tiede{ color:var(--terre); font-weight:600 }
+
+/* console */
+.ent-console{ border:1px solid var(--filet); border-radius:var(--r); overflow:hidden; background:var(--panneau) }
+.ent-cout{ max-height:460px; overflow:auto; padding:14px 16px; display:flex; flex-direction:column; gap:12px }
+.ent-cmd{ font-family:var(--mono); font-size:12.5px; color:var(--terre) }
+.ent-cmd::before{ content:'> ' }
+.ent-cres{ margin-top:4px; font-size:13.5px }
+.ent-cin{ display:flex; align-items:center; gap:8px; padding:10px 12px; border-top:1px solid var(--filet); background:var(--survol) }
+.ent-cin span{ font-family:var(--mono); color:var(--terre) }
+.ent-cin input{ flex:1; font-family:var(--mono) }
+.ent-kv{ display:grid; grid-template-columns:auto 1fr; gap:4px 16px; font-size:13.5px }
+.ent-kv span:nth-child(odd){ color:var(--encre-douce) }
+
+@media (max-width:860px){
+  .ent-shell{ grid-template-columns:1fr }
+  .ent-side{ position:static; flex-direction:row; flex-wrap:wrap; gap:6px }
+  .ent-org{ width:100%; margin-bottom:2px }
+  .ent-nav{ width:auto }
+  .ent-sep{ display:none }
+  .ent-boite{ grid-template-columns:1fr }
+}
+
+.ent-main select[data-prep]{ min-width:106px }
+.ent-main td.mono{ white-space:nowrap }

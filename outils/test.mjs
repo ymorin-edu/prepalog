@@ -513,7 +513,150 @@ await v('série tableur : l\'enseignant voit tous les niveaux', async () => {
   if (!/Tle/.test(code)) throw new Error('niveau de l\'exercice non affiché : ' + code);
 });
 
-// ---------- 26. les polices sont bien celles du dépôt
+// ---------- 26. Spartoo : l'environnement s'ouvre et la base de l'élève est semée
+await v('Spartoo : ouverture de l\'environnement', async () => {
+  // On revient de l'activité précédente vers l'espace enseignant, sur le bon groupe.
+  await page.click('#btnListe').catch(() => {});
+  await page.click('#btnRetour');
+  await page.waitForSelector('#btnAccueil').catch(() => {});
+  await page.click('#btnAccueil').catch(() => {});
+  await page.waitForSelector('#btnProfEspace', { timeout: 6000 });
+  await page.click('#btnProfEspace');
+  await page.waitForSelector('[data-ong="groupes"]');
+  const aActiver = await page.$('[data-actif="1-log-a"]');
+  if (aActiver) { await aActiver.click(); await page.waitForTimeout(300); }
+  // L'enseignant pose ensuite le code qui déverrouille la vue d'ensemble du stock.
+  await page.click('[data-ong="seance"]');
+  await page.waitForSelector('#codeStock');
+  await page.fill('#codeStock', 'STOCK24');
+  await page.click('#btnCodeStock');
+  await page.waitForTimeout(400);
+  await page.click('#btnRetour');
+  await page.click('#btnDeco');
+  await page.waitForSelector('#mat');
+  await page.fill('#mat', '2601'); await page.fill('#code', 'aaa1');
+  await page.press('#code', 'Enter');
+  await page.waitForSelector('[data-rub="logisim"]', { timeout: 6000 });
+  await page.click('[data-rub="logisim"]');          // une seule entreprise : ouverture directe
+  await page.waitForSelector('.ent-shell', { timeout: 6000 });
+  if ((await page.$$eval('.ent-nav', (e) => e.length)) < 8) throw new Error('navigation incomplète');
+  await page.click('[data-vue="mail"]');
+  await page.waitForSelector('.ent-mitem');
+  if ((await page.$$eval('.ent-mitem', (e) => e.length)) !== 3) throw new Error('les 3 messages de départ manquent');
+});
+
+const ouvrirMail = async (motif) => {
+  await page.click('[data-vue="mail"]');
+  await page.waitForSelector('[data-dossier="in"]');
+  await page.click('[data-dossier="in"]');
+  await page.waitForSelector('.ent-mitem');
+  for (const m of await page.$$('.ent-mitem')) {
+    if (new RegExp(motif, 'i').test(await m.textContent())) { await m.click(); return; }
+  }
+  throw new Error('mail introuvable : ' + motif);
+};
+
+// ---------- 27. la console interroge la base
+await v('Spartoo : la console répond', async () => {
+  await page.click('[data-vue="console"]');
+  await page.waitForSelector('#champCmd');
+  await page.fill('#champCmd', '.getstock AD-STS-BL-44');
+  await page.press('#champCmd', 'Enter');
+  await page.waitForTimeout(400);
+  const t = await page.textContent('.ent-cout');
+  if (!/Stan Smith/.test(t)) throw new Error('article non trouvé');
+  if (!/Stock\s*3\b/.test(t)) throw new Error('stock attendu 3 : ' + (t.match(/Stock\s*\d+/) || ['?'])[0]);
+  await page.fill('#champCmd', '.nimportequoi');
+  await page.press('#champCmd', 'Enter');
+  await page.waitForTimeout(300);
+  if (!/Commande inconnue/.test(await page.textContent('.ent-cout'))) throw new Error('commande inconnue non signalée');
+});
+
+// ---------- 28. le stock d'ensemble est verrouillé, le code l'ouvre
+await v('Spartoo : le stock est verrouillé par un code', async () => {
+  await page.click('[data-vue="stock"]');
+  await page.waitForSelector('#codeStock');
+  await page.fill('#codeStock', 'FAUX');
+  await page.click('[data-deverrouiller]');
+  await page.waitForTimeout(250);
+  if (!/Code incorrect/.test(await page.textContent('.ent-main'))) throw new Error('un code faux a été accepté');
+  await page.fill('#codeStock', 'stock24');          // la casse ne doit pas compter
+  await page.click('[data-deverrouiller]');
+  await page.waitForSelector('#sQ', { timeout: 6000 });
+});
+
+// ---------- 29. l'exercice de bout en bout : les trois jalons
+await v('Spartoo : exercice complet, trois jalons au vert', async () => {
+  // Étape 4 — répondre à Léa avec le stock réel.
+  await ouvrirMail('Stan Smith');
+  await page.waitForSelector('[data-repondre]');
+  await page.click('[data-repondre]');
+  await page.fill('#repT', 'Bonjour Madame,\n\nIl nous reste 3 paires en pointure 44.\n\nCordialement');
+  await page.click('#formRep button[type=submit]');
+  await page.waitForTimeout(500);
+
+  // Étape 5 — traiter la commande. Valeurs attendues : une ligne complète, une partielle,
+  // une en rupture. C'est ce qui rend l'exercice intéressant.
+  await ouvrirMail('Nouvelle commande');
+  await page.click('[data-enreg-cmd]');
+  await page.waitForSelector('[data-prep="seen"]');
+  const attendu = {
+    'NK-AM270-NR-42': { seen: 8, loc: 'B-01-1', qty: 1, status: 'ok' },
+    'AD-STS-BL-41': { seen: 1, loc: 'B-04-1', qty: 1, status: 'warn' },
+    'PM-SUE-NR-40': { seen: 0, loc: 'B-06-1', qty: 0, status: 'crit' },
+  };
+  for (const [sku, a] of Object.entries(attendu)) {
+    await page.fill(`[data-prep="seen"][data-sku="${sku}"]`, String(a.seen));
+    await page.fill(`[data-prep="loc"][data-sku="${sku}"]`, a.loc);
+    await page.fill(`[data-prep="qty"][data-sku="${sku}"]`, String(a.qty));
+    await page.selectOption(`[data-prep="status"][data-sku="${sku}"]`, a.status);
+  }
+  await page.waitForSelector('[data-bon]:not([disabled])', { timeout: 6000 });
+  await page.click('[data-bon]');
+  await page.waitForSelector('[data-valider]');
+  await page.click('[data-valider]');
+  await page.waitForTimeout(500);
+  const t = await page.textContent('.ent-main');
+  if (!/Préparation validée/.test(t)) throw new Error('préparation non validée');
+  if (!/reliquat/i.test(t)) throw new Error('le reliquat n\'est pas signalé');
+
+  // Le stock a réellement bougé, et le mouvement est tracé.
+  await page.click('[data-vue="console"]');
+  await page.fill('#champCmd', '.getstock NK-AM270-NR-42');
+  await page.press('#champCmd', 'Enter');
+  await page.waitForTimeout(300);
+  if (!/Stock\s*7\b/.test(await page.textContent('.ent-cout'))) throw new Error('le stock n\'est pas descendu à 7');
+  await page.fill('#champCmd', '.movements');
+  await page.press('#champCmd', 'Enter');
+  await page.waitForTimeout(300);
+  if (!/Sortie : préparation/.test(await page.textContent('.ent-cout'))) throw new Error('mouvement non journalisé');
+
+  // Étape 6 — réapprovisionner Puma : quantités exactes et minimum de commande atteint.
+  await page.click('[data-vue="mail"]');
+  await page.waitForSelector('[data-nouveau]');
+  await page.click('[data-nouveau]');
+  await page.waitForSelector('#mTo');
+  await page.selectOption('#mTo', 'F003');
+  await page.fill('#mTxt', 'Bonjour,\n\nPM-SUE-NR-40 : 12 paires\nPM-SUE-NR-36 : 12 paires\n\nCordialement');
+  await page.click('[data-envoyer-fou]');
+  await page.waitForTimeout(600);
+});
+
+// ---------- 30. le suivi de classe voit l'avancement
+await v('Spartoo : avancement remonté au suivi de classe', async () => {
+  await page.click('#btnRetour');
+  await page.click('#btnDeco');
+  await page.waitForSelector('#btnProf');
+  await page.click('#btnProf');
+  await page.waitForSelector('#btnProfEspace');
+  await page.click('#btnProfEspace');
+  await page.click('[data-ong="suivi"]');
+  await page.waitForSelector('text=ENT-1', { timeout: 6000 });
+  const t = await page.textContent('#contenuProf');
+  if (!/3\/3/.test(t)) throw new Error('avancement attendu 3/3, lu : ' + (t.match(/\d\/3/g) || ['aucun']).join(' '));
+});
+
+// ---------- 31. les polices sont bien celles du dépôt
 await v('polices servies par le dépôt', async () => {
   // Le navigateur a chargé les fichiers, et le texte est bien rendu en Inter.
   await page.evaluate(() => document.fonts.ready);
@@ -524,7 +667,7 @@ await v('polices servies par le dépôt', async () => {
   if (!/Inter/.test(rendu)) throw new Error('police du corps inattendue : ' + rendu);
 });
 
-// ---------- 27. aucune dépendance extérieure, polices comprises
+// ---------- 32. aucune dépendance extérieure, polices comprises
 await v('aucun hébergeur extérieur', async () => {
   // Les filtrages académiques bloquent régulièrement cdnjs et Google Fonts. SheetJS est
   // dans vendor/, les polices dans styles/polices/ : le site ne sort plus du dépôt.

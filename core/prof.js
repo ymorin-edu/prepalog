@@ -286,6 +286,17 @@ export async function rendreEspaceProf(hote, ctx) {
           ${dAutresNiveaux.map((m) => ligneOuverture(m)).join('')}` : ''}
       </section>
       <section class="panneau">
+        <h2>Code d'accès au stock</h2>
+        <p class="note">Dans un environnement d'entreprise, la vue d'ensemble du stock est verrouillée :
+          l'élève doit chercher référence par référence à la console. Donnez ce code quand vous voulez
+          ouvrir la vue complète. Laissez vide pour la garder fermée.</p>
+        <div class="rangee">
+          <div class="champ" style="margin:0"><label for="codeStock">Code du groupe ${ech(g.nom)}</label>
+            <input id="codeStock" class="mono" value="${ech(g.codeStock || '')}" placeholder="ex. STOCK24"></div>
+          <button class="btn btn-s" id="btnCodeStock" style="align-self:end">Enregistrer</button>
+        </div>
+      </section>
+      <section class="panneau">
         <h2>Bases partagées</h2>
         ${partagees.length === 0 ? `<div class="vide">Aucune activité à base partagée.</div>` :
           partagees.map((m) => `<div class="rangee" style="padding:10px 0;border-bottom:1px solid var(--filet)">
@@ -300,6 +311,16 @@ export async function rendreEspaceProf(hote, ctx) {
         <p class="note" style="margin-top:12px">Geler met la base en lecture seule pour les élèves, sans rien effacer :
           pratique en fin de séance pour figer le travail avant correction.</p>
       </section>`;
+
+    z.querySelector('#btnCodeStock').addEventListener('click', async () => {
+      const codeStock = z.querySelector('#codeStock').value.trim();
+      try {
+        await B.majGroupe(g.id, { codeStock });
+        g.codeStock = codeStock;
+        groupes = await B.groupesDuProf(ctx.profil.uid);
+        toast(codeStock ? 'Code enregistré.' : 'Code retiré : le stock reste verrouillé.');
+      } catch (e) { toast("Le code n'a pas pu être enregistré."); }
+    });
 
     z.querySelectorAll('[data-ouvre]').forEach((c) => c.addEventListener('change', async () => {
       const ouverts = { ...(g.ouverts || {}) };

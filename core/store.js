@@ -66,6 +66,11 @@ function jeuPrive(aid, uid, tables) {
       sauverPlusTard(); prevenir(); return l[champ];
     },
     async vider(table) { data[table] = []; sauverPlusTard(); prevenir(); },
+    // Accès direct au blob, pour les activités dont l'état n'est pas une liste de lignes :
+    // un environnement d'entreprise tient tout son ERP dans un seul objet JSON (stock,
+    // mouvements, messages, commandes). On le modifie puis on appelle sauver().
+    etat() { return data; },
+    sauver() { sauverPlusTard(); prevenir(); },
     async semer(graines) {
       Object.keys(graines).forEach((t) => {
         data[t] = graines[t].map((l, i) => ({ id: 'g' + i, ...l, _ts: Date.now() }));
