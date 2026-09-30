@@ -1,0 +1,10 @@
+{
+  "firestore": { "rules": "firestore.rules" },
+  "database": { "rules": "outils/.rtdb-emulateur.json" },
+  "emulators": {
+    "firestore": { "host": "127.0.0.1", "port": 8181 },
+    "database": { "host": "127.0.0.1", "port": 9100 },
+    "ui": { "enabled": false },
+    "singleProjectMode": true
+  }
+}

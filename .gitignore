@@ -2,3 +2,9 @@ push.bat
 push.log
 push_auto.vbs
 node_modules/
+outils/paquets/
+outils/.rtdb-emulateur.json
+firebase-debug.log
+database-debug.log
+firestore-debug.log
+ui-debug.log
