@@ -17,7 +17,9 @@ export const ACTIVITES = [
   () => import('./bouygues-telecom.js'),
   () => import('./brasseries-gatinais.js'),
   () => import('./reception-plateforme.js'),
-  // Environnements d'entreprise (LogiSim)
+  // Environnements d'entreprise (LogiSim). Une tuile par séance, dans l'ordre de la
+  // séquence : on réceptionne, puis on prépare, puis on remonte la traçabilité.
+  () => import('./spartoo-reception.js'),
   () => import('./spartoo.js'),
 ];
 

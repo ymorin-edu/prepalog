@@ -537,7 +537,11 @@ await v('Spartoo : ouverture de l\'environnement', async () => {
   await page.fill('#mat', '2601'); await page.fill('#code', 'aaa1');
   await page.press('#code', 'Enter');
   await page.waitForSelector('[data-rub="logisim"]', { timeout: 6000 });
-  await page.click('[data-rub="logisim"]');          // une seule entreprise : ouverture directe
+  // La rubrique Logisim porte désormais une tuile par SÉANCE de l'entreprise : réception,
+  // préparation. On ouvre ici la préparation ; la réception est testée plus bas.
+  await page.click('[data-rub="logisim"]');
+  await page.waitForSelector('[data-act="spartoo"]', { timeout: 6000 });
+  await page.click('[data-act="spartoo"]');
   await page.waitForSelector('.ent-shell', { timeout: 6000 });
   if ((await page.$$eval('.ent-nav', (e) => e.length)) < 8) throw new Error('navigation incomplète');
   await page.click('[data-vue="mail"]');
@@ -658,7 +662,100 @@ await v('Spartoo : avancement remonté au suivi de classe', async () => {
   if (!/3\/3/.test(t)) throw new Error('avancement attendu 3/3, lu : ' + (t.match(/\d\/3/g) || ['aucun']).join(' '));
 });
 
-// ---------- 31. les polices sont bien celles du dépôt
+// ---------- 31. la réception : même base, volet propre à la séance
+await v('Spartoo réception : la séance s\'ajoute à la base de l\'élève', async () => {
+  await page.click('#btnRetour');
+  await page.click('#btnDeco');
+  await page.waitForSelector('#mat');
+  await page.fill('#mat', '2601'); await page.fill('#code', 'aaa1');
+  await page.press('#code', 'Enter');
+  await page.waitForSelector('[data-rub="logisim"]', { timeout: 6000 });
+  await page.click('[data-rub="logisim"]');
+  await page.waitForSelector('[data-act="spartoo-reception"]', { timeout: 6000 });
+  await page.click('[data-act="spartoo-reception"]');
+  await page.waitForSelector('.ent-shell', { timeout: 6000 });
+  // La base est celle de la préparation (meta.jeuId) : les 3 messages de départ sont
+  // toujours là, et les 2 messages de la séance de réception s'y ajoutent.
+  await page.click('[data-vue="mail"]');
+  await page.waitForSelector('.ent-mitem');
+  // 3 messages de départ + la réponse de Puma au réapprovisionnement de la séance
+  // précédente + les 2 messages de la séance de réception.
+  const n = await page.$$eval('.ent-mitem', (e) => e.length);
+  if (n !== 6) throw new Error(`${n} messages au lieu de 6 : la base n'est pas partagée, ou le volet n'est pas semé`);
+  // Et le travail de la séance précédente est toujours là : le stock a bien été diminué.
+  await page.click('[data-vue="console"]');
+  await page.fill('#champCmd', '.getstock NK-AM270-NR-42');
+  await page.press('#champCmd', 'Enter');
+  await page.waitForTimeout(300);
+  if (!/Stock\s*7\b/.test(await page.textContent('.ent-cout'))) throw new Error('la préparation de la séance précédente a été perdue');
+});
+
+// ---------- 32. la réception de bout en bout : contrôle, écart, entrée en stock
+await v('Spartoo réception : trois jalons au vert', async () => {
+  // Le bon de livraison est dans la messagerie ; la réception s'ouvre depuis le message.
+  await ouvrirMail('Bon de livraison');
+  await page.waitForSelector('[data-ouvrir-rec]');
+  if (!/LOT-PM-2609/.test(await page.textContent('.ent-lecteur'))) throw new Error('le numéro de lot n\'est pas sur le bon de livraison');
+  await page.click('[data-ouvrir-rec]');
+  await page.waitForSelector('#recLot');
+
+  // Ce que l'élève doit trouver : 12 conformes, 6 au lieu de 8, 6 dans un carton abîmé.
+  await page.fill('#recLot', 'LOT-PM-2609');
+  const attendu = {
+    'PM-SUE-RG-39': { annonce: 12, compte: 12, etat: 'ok', decision: 'accepte' },
+    'PM-SUE-MA-41': { annonce: 8, compte: 6, etat: 'ok', decision: 'reserve' },
+    'PM-RSX-BL-42': { annonce: 6, compte: 6, etat: 'abime', decision: 'reserve' },
+  };
+  for (const [sku, a] of Object.entries(attendu)) {
+    await page.fill(`[data-rec="annonce"][data-sku="${sku}"]`, String(a.annonce));
+    await page.fill(`[data-rec="compte"][data-sku="${sku}"]`, String(a.compte));
+    await page.selectOption(`[data-rec="etat"][data-sku="${sku}"]`, a.etat);
+    await page.selectOption(`[data-rec="decision"][data-sku="${sku}"]`, a.decision);
+  }
+  await page.waitForSelector('[data-valider-rec]:not([disabled])', { timeout: 6000 });
+  await page.click('[data-valider-rec]');
+  await page.waitForTimeout(500);
+  if (!/Réception validée/.test(await page.textContent('.ent-main'))) throw new Error('réception non validée');
+
+  // Le lot est entré en stock, et il se remonte d'un bout à l'autre.
+  await page.click('[data-vue="console"]');
+  await page.fill('#champCmd', '.getlot LOT-PM-2609');
+  await page.press('#champCmd', 'Enter');
+  await page.waitForTimeout(400);
+  const t = await page.textContent('.ent-cout');
+  if (!/Entrées\s*24\b/.test(t)) throw new Error('24 paires attendues au lot, lu : ' + (t.match(/Entrées\s*\d+/) || ['?'])[0]);
+  if (!/Puma/.test(t)) throw new Error('le fournisseur du lot n\'est pas retrouvé');
+
+  // Les réserves partent chez le fournisseur.
+  await page.click('[data-vue="mail"]');
+  await page.waitForSelector('[data-nouveau]');
+  await page.click('[data-nouveau]');
+  await page.waitForSelector('#mTo');
+  await page.selectOption('#mTo', 'F003');
+  await page.fill('#mObj', 'Réserves sur le lot LOT-PM-2609');
+  await page.fill('#mTxt', 'Bonjour,\n\nRéserves sur la livraison BL-77421, lot LOT-PM-2609 :\n- PM-SUE-MA-41 : il manque 2 paires sur les 8 annoncées\n- PM-RSX-BL-42 : carton endommagé à la livraison\n\nCordialement');
+  await page.click('[data-envoyer-fou]');
+  await page.waitForTimeout(600);
+});
+
+// ---------- 33. l'avancement de la réception remonte, à côté de celui de la préparation
+await v('Spartoo réception : avancement remonté au suivi', async () => {
+  await page.click('[data-quitter]');
+  await page.waitForSelector('#btnDeco', { timeout: 6000 });
+  await page.click('#btnDeco');
+  await page.waitForSelector('#btnProf');
+  await page.click('#btnProf');
+  await page.waitForSelector('#btnProfEspace');
+  await page.click('#btnProfEspace');
+  await page.click('[data-ong="suivi"]');
+  await page.waitForSelector('text=ENT-2', { timeout: 6000 });
+  const t = await page.textContent('#contenuProf');
+  // Deux séances, deux avancements distincts : c'est tout l'intérêt d'une activité par séance.
+  const av = (t.match(/3\/3/g) || []).length;
+  if (av < 2) throw new Error('deux avancements 3/3 attendus (réception et préparation), lu : ' + av);
+});
+
+// ---------- 34. les polices sont bien celles du dépôt
 await v('polices servies par le dépôt', async () => {
   // Le navigateur a chargé les fichiers, et le texte est bien rendu en Inter.
   await page.evaluate(() => document.fonts.ready);
@@ -669,7 +766,7 @@ await v('polices servies par le dépôt', async () => {
   if (!/Inter/.test(rendu)) throw new Error('police du corps inattendue : ' + rendu);
 });
 
-// ---------- 32. aucune dépendance extérieure, polices comprises
+// ---------- 35. aucune dépendance extérieure, polices comprises
 await v('aucun hébergeur extérieur', async () => {
   // Les filtrages académiques bloquent régulièrement cdnjs et Google Fonts. SheetJS est
   // dans vendor/, les polices dans styles/polices/ : le site ne sort plus du dépôt.

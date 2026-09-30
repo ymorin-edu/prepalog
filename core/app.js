@@ -229,8 +229,13 @@ async function vueActivite(aid) {
 
   fermerJeuCourant();
   const objGroupe = groupeActif ? await B.groupe(groupeActif) : null;
+  // `meta.jeuId` permet à plusieurs activités de travailler dans LA MÊME base. C'est ce qui
+  // fait tenir ensemble les séances d'un même environnement d'entreprise : l'élève réceptionne
+  // une livraison dans une activité, prépare une commande dans la suivante et remonte la
+  // traçabilité dans la troisième, sur son propre stock. Les scores, eux, restent enregistrés
+  // par activité (`aid`) : chaque séance garde son avancement dans le suivi de classe.
   jeuOuvert = await ouvrirJeu({
-    aid, portee: m.meta.portee, tables: m.meta.tables || {},
+    aid: m.meta.jeuId || aid, portee: m.meta.portee, tables: m.meta.tables || {},
     uid: profil.uid, gid: groupeActif,
     eqId: objGroupe?.equipes?.[profil.uid],
   });

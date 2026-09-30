@@ -11,9 +11,9 @@ import * as SPARTOO from '../contenus/spartoo.js';
 
 export const meta = {
   id: 'spartoo',
-  code: 'ENT-1',
-  titre: 'Spartoo',
-  desc: "Vente de chaussures en ligne — réception d'une commande et bon de préparation.",
+  code: 'ENT-2',
+  titre: 'Spartoo — préparation',
+  desc: "Traiter une commande client : contrôle du stock, bon de préparation et réapprovisionnement.",
   rubrique: 'logisim',
   competences: [],
   // Le barème, c'est le nombre de jalons de l'exercice : le suivi de classe montre
@@ -23,6 +23,9 @@ export const meta = {
   // Prend toute la page : ni bandeau ni titre Prepalog autour. Voir core/app.js.
   immersif: true,
   portee: 'eleve',
+  // Base commune aux trois séances de Spartoo : l'élève prépare sur le stock qu'il a
+  // lui-même réceptionné. Le score reste propre à cette activité.
+  jeuId: 'spartoo',
   tables: {},
   pret: true,
 };

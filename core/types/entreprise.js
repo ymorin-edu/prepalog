@@ -28,6 +28,16 @@ export function creerEntreprise(U) {
     baseDeDepart, etapes = [], THEME = {} } = U;
   const { MODELS, MM, VARIANTS, VM } = CATALOGUE;
 
+  // Une entreprise porte plusieurs séances, qui partagent son univers mais pas leur consigne.
+  // `exercice` (la ligne sous « Bonjour {prénom} ») et `accueil` (la marche à suivre) sont
+  // donc déclarés par l'activité, pas par l'entreprise. Sans eux, on retombe sur ce que
+  // portait ENTREPRISE : les modules écrits avant continuent de fonctionner.
+  const exercice = U.exercice || ENTREPRISE.exercice || '';
+  const accueil = U.accueil || null;
+  // Le volet de la base propre à la séance : ses messages, ses livraisons. Il est semé au
+  // premier passage, sans toucher au travail déjà fait dans les autres séances.
+  const volet = U.volet || null;
+
   const unite = (n) => ((n > 1 || n === 0) ? VOCAB.unitPl : VOCAB.unit);
   const label = (v) => v.model.brand + ' ' + v.model.name;
   const swatch = (c) => `<span class="teinte" style="background:${COLORS[c][1]}"></span>${ech(COLORS[c][0])}`;
@@ -53,7 +63,22 @@ export function creerEntreprise(U) {
         (depart._depart || []).forEach((m) => ajouterMail(m));
         ctx.jeu.sauver();
       }
-      ['moves', 'mails', 'orders', 'customers', 'suppliers'].forEach((k) => { if (!db[k]) db[k] = []; });
+      ['moves', 'mails', 'orders', 'receptions', 'customers', 'suppliers'].forEach((k) => { if (!db[k]) db[k] = []; });
+
+      // Le volet de la séance. Chaque activité sème le sien une seule fois, sans toucher au
+      // reste : un élève qui a fait la réception la semaine dernière retrouve son stock, et
+      // reçoit en plus les messages de la séance du jour. `db.volets` retient ce qui a été
+      // semé, pour ne pas le refaire à chaque ouverture.
+      if (volet) {
+        if (!db.volets) db.volets = {};
+        if (!db.volets[volet.id]) {
+          const g = volet.semer(prenom);
+          (g.receptions || []).forEach((r) => db.receptions.push(r));
+          (g.mails || []).forEach((m) => ajouterMail(m));
+          db.volets[volet.id] = Date.now();
+          ctx.jeu.sauver();
+        }
+      }
 
       // ----------------------------------------------------------- état d'écran
       // Volontairement hors de la base : ce sont des choix d'affichage, pas du travail.
@@ -125,8 +150,10 @@ export function creerEntreprise(U) {
         m.id = db.seq++; if (m.read === undefined) m.read = false;
         db.mails.push(m); return m;
       }
-      function mouvement(sku, type, delta, ref) {
-        db.moves.push({ ts: Date.now(), sku, type, delta, after: db.stock[sku], ref: ref || 'Console', by: prenom });
+      // Le numéro de lot voyage avec le mouvement. C'est lui qui rend la traçabilité possible :
+      // sans lui, on sait qu'une paire est sortie, pas de quelle livraison elle venait.
+      function mouvement(sku, type, delta, ref, lot) {
+        db.moves.push({ ts: Date.now(), sku, type, delta, after: db.stock[sku], ref: ref || 'Console', lot: lot || '', by: prenom });
       }
       const tousClients = () => CUSTOMERS.concat(db.customers || []);
       const tousFournisseurs = () => SUPPLIERS.concat(db.suppliers || []);
@@ -203,6 +230,7 @@ export function creerEntreprise(U) {
       function dessiner() {
         const nonLus = db.mails.filter((m) => m.folder === 'in' && !m.read).length;
         const aFaire = db.orders.filter((o) => ['À préparer', 'En cours'].includes(statutCommande(o)[0])).length;
+        const aRecevoir = (db.receptions || []).filter((r) => !r.ctrl || !r.ctrl.validated).length;
         const item = (id, lbl, n, alias) => {
           const actif = (alias || [id]).includes(E.vue);
           return `<button class="ent-nav ${actif ? 'on' : ''}" data-vue="${id}">
@@ -223,6 +251,7 @@ export function creerEntreprise(U) {
                 ${item('accueil', 'Accueil')}
                 ${item('mail', 'Messagerie', nonLus)}
                 ${item('commandes', 'Commandes', aFaire, ['commandes', 'commande'])}
+                ${item('receptions', 'Réceptions', aRecevoir, ['receptions', 'reception'])}
                 <div class="ent-sep">Articles</div>
                 ${item('catalogue', 'Catalogue', 0, ['catalogue', 'produit'])}
                 ${item('stock', 'Stock')}
@@ -255,6 +284,7 @@ export function creerEntreprise(U) {
         const z = hote.querySelector('#entMain');
         const vues = {
           accueil: vueAccueil, mail: vueMail, commandes: vueCommandes, commande: vueCommande,
+          receptions: vueReceptions, reception: vueReception,
           catalogue: vueCatalogue, produit: vueProduit, stock: vueStock,
           clients: vueClients, fournisseurs: vueFournisseurs, console: vueConsole,
         };
@@ -280,24 +310,42 @@ export function creerEntreprise(U) {
       function vueAccueil() {
         const nonLus = db.mails.filter((m) => m.folder === 'in' && !m.read).length;
         const aFaire = db.orders.filter((o) => ['À préparer', 'En cours'].includes(statutCommande(o)[0])).length;
+        const aRecevoir = (db.receptions || []).filter((r) => !r.ctrl || !r.ctrl.validated).length;
         let total = 0, rupture = 0;
         VARIANTS.forEach((v) => { const q = stockDe(v.sku); total += q; if (q <= 0) rupture++; });
+
+        // La marche à suivre est celle de la SÉANCE, pas de l'entreprise : réceptionner,
+        // préparer ou remonter une traçabilité ne se fait pas dans le même ordre. Sans bloc
+        // déclaré, on garde celui du premier exercice.
+        const bloc = accueil || {
+          titre: "Traiter une commande, dans l'ordre",
+          etapes: [
+            ['Lire la commande', 'Ouvrez la Messagerie et cliquez sur le mail « Nouvelle commande web ».'],
+            ['Enregistrer la commande', 'Le bouton du mail la place dans le menu Commandes.'],
+            ['Contrôler le stock de chaque ligne', 'Depuis la commande, ou avec la console : .getstock REF.'],
+            ['Éditer le bon de préparation', 'Les articles sont classés par emplacement pour optimiser le parcours.'],
+            ['Valider la préparation', 'Le stock est diminué et les mouvements sont enregistrés.'],
+          ],
+        };
+        const kpis = (accueil && accueil.kpis) || ['mail', 'commandes', 'stock', 'rupture'];
+        const KPI = {
+          mail: ['mail', nonLus, 'messages non lus'],
+          commandes: ['commandes', aFaire, 'commandes à préparer'],
+          receptions: ['receptions', aRecevoir, 'livraisons à contrôler'],
+          stock: ['stock', total, unite(total) + ' en stock'],
+          rupture: ['stock', rupture, 'références en rupture'],
+        };
+
         return `
           <div class="ent-tete"><h2>Bonjour ${ech(prenom)}</h2>
-            <p class="note">${ech(ENTREPRISE.nom)} · ${ech(ENTREPRISE.exercice)}</p></div>
+            <p class="note">${ech(ENTREPRISE.nom)} · ${ech(exercice)}</p></div>
           <div class="ent-kpis">
-            <button class="ent-kpi" data-vue2="mail"><b>${nonLus}</b><span>messages non lus</span></button>
-            <button class="ent-kpi" data-vue2="commandes"><b>${aFaire}</b><span>commandes à préparer</span></button>
-            <button class="ent-kpi" data-vue2="stock"><b>${total}</b><span>${ech(unite(total))} en stock</span></button>
-            <button class="ent-kpi" data-vue2="stock"><b>${rupture}</b><span>références en rupture</span></button>
+            ${kpis.filter((k) => KPI[k]).map((k) => { const x = KPI[k];
+              return `<button class="ent-kpi" data-vue2="${x[0]}"><b>${x[1]}</b><span>${ech(x[2])}</span></button>`; }).join('')}
           </div>
-          <section class="panneau"><h3>Traiter une commande, dans l'ordre</h3>
+          <section class="panneau"><h3>${ech(bloc.titre)}</h3>
             <ol class="ent-etapes">
-              <li><strong>Lire la commande</strong><br><span class="note">Ouvrez la Messagerie et cliquez sur le mail « Nouvelle commande web ».</span></li>
-              <li><strong>Enregistrer la commande</strong><br><span class="note">Le bouton du mail la place dans le menu Commandes.</span></li>
-              <li><strong>Contrôler le stock de chaque ligne</strong><br><span class="note">Depuis la commande, ou avec la console : <span class="mono">.getstock REF</span>.</span></li>
-              <li><strong>Éditer le bon de préparation</strong><br><span class="note">Les articles sont classés par emplacement pour optimiser le parcours.</span></li>
-              <li><strong>Valider la préparation</strong><br><span class="note">Le stock est diminué et les mouvements sont enregistrés.</span></li>
+              ${bloc.etapes.map((e) => `<li><strong>${ech(e[0])}</strong><br><span class="note">${ech(e[1])}</span></li>`).join('')}
             </ol></section>`;
       }
 
@@ -332,7 +380,9 @@ export function creerEntreprise(U) {
         let lecteur = '<div class="ent-vide-lect note">Sélectionnez un message pour le lire.</div>';
         if (sel) {
           const enregistree = sel.kind === 'order' && db.orders.some((o) => o.no === sel.order.no);
+          const recDuMail = sel.kind === 'bl' ? receptionDe(sel.rec) : null;
           const corps = sel.kind === 'order' ? corpsMailCommande(sel.order)
+            : sel.kind === 'bl' ? `<p>${ech(sel.text).replace(/\n/g, '<br>')}</p>${recDuMail ? bonDeLivraison(recDuMail) : ''}`
             : `<p>${ech(sel.text).replace(/\n/g, '<br>')}</p>`;
           let actions = '';
           if (E.dossier === 'in') {
@@ -340,6 +390,9 @@ export function creerEntreprise(U) {
               actions += enregistree
                 ? `<button class="btn btn-p" data-ouvrir-cmd="${ech(sel.order.no)}">Ouvrir la commande</button>`
                 : `<button class="btn btn-p" data-enreg-cmd="${sel.id}">Enregistrer la commande</button>`;
+            }
+            if (sel.kind === 'bl' && recDuMail) {
+              actions += `<button class="btn btn-p" data-ouvrir-rec="${ech(recDuMail.no)}">Ouvrir la réception</button>`;
             }
             actions += '<button class="btn" data-repondre>Répondre</button>';
           }
@@ -575,7 +628,9 @@ export function creerEntreprise(U) {
         let complet = true;
         o.lines.forEach((l) => {
           const r = p.rows[l.sku];
-          if (r.qty > 0) { db.stock[l.sku] -= r.qty; mouvement(l.sku, 'Sortie : préparation', -r.qty, 'BP-' + o.no.replace('CMD-', '')); }
+          // La sortie consomme les lots dans l'ordre d'entrée : c'est ce qui permettra de
+          // dire, plus tard, quel lot est parti dans quel colis client.
+          if (r.qty > 0) sortirFifo(l.sku, r.qty, 'Sortie : préparation', 'BP-' + o.no.replace('CMD-', ''));
           if (r.qty < l.qty) complet = false;
         });
         p.validated = true; p.complete = complet; p.at = Date.now();
@@ -593,6 +648,235 @@ export function creerEntreprise(U) {
         const ok = () => { if (m) m.textContent = 'Bon copié dans le presse-papiers.'; };
         const ko = () => { if (m) m.textContent = 'Copie impossible ici : sélectionnez le bon à la souris.'; };
         try { navigator.clipboard.writeText(t).then(ok, ko); } catch (e) { ko(); }
+      }
+
+      /* ========================================================== réceptions */
+      // Une réception, c'est deux documents qui ne disent pas forcément la même chose :
+      // le bon de livraison, annoncé par le fournisseur (il arrive par mail), et les colis
+      // réellement posés sur le quai. L'élève compte, compare, décide, et saisit. Le module
+      // ne remplit rien à sa place et ne corrige rien : il enregistre ce qu'on lui dit, et
+      // l'élève va en constater le résultat dans son stock.
+
+      const receptionDe = (no) => (db.receptions || []).find((r) => r.no === no);
+
+      // Le bon de livraison, tel que le fournisseur l'a rempli. C'est un document : il annonce,
+      // il n'établit rien. Les quantités réellement reçues sont sur le quai, pas ici.
+      function bonDeLivraison(r) {
+        const sup = SUP_BY_ID[r.supId] || (db.suppliers || []).find((s) => s.id === r.supId) || { brand: r.supId, name: '', adr: '', cp: '', ville: '' };
+        const lignes = (r.bl.lines || []).map((l) => { const v = VM[l.sku];
+          return `<tr><td class="mono">${ech(l.sku)}</td><td>${v ? ech(label(v)) : '—'}</td>
+            <td>${v ? ech(COLORS[v.color][0]) : '—'}</td><td class="num">${v ? v.size : '—'}</td>
+            <td class="num"><b>${l.qty}</b></td></tr>`; }).join('');
+        const n = (r.bl.lines || []).reduce((s, l) => s + l.qty, 0);
+        return `<section class="panneau ent-doc">
+            <div class="rangee"><div><div class="ent-lbl">${ech(sup.name)}</div>
+              <h3>Bon de livraison ${ech(r.bl.no)}</h3></div>
+              <span class="pousse note" style="text-align:right">${ech(sup.adr)}<br>${ech(sup.cp)} ${ech(sup.ville)}</span></div>
+            <div class="ent-cols">
+              <div><div class="ent-lbl">Destinataire</div><strong>${ech(ENTREPRISE.nom)}</strong><br>Entrepôt — quai de réception</div>
+              <div><div class="ent-lbl">Date d'expédition</div>${fdate(r.bl.date)}</div>
+              <div><div class="ent-lbl">Numéro de lot</div><strong class="mono">${ech(r.bl.lot)}</strong></div>
+              <div><div class="ent-lbl">Transporteur</div>${ech(r.transporteur || '—')}</div></div>
+            <div class="ent-scroll"><table><thead><tr><th>Réf.</th><th>Article</th><th>Couleur</th>
+              <th class="num">${ech(VOCAB.sizeLabel)}</th><th class="num">Qté annoncée</th></tr></thead>
+              <tbody>${lignes}</tbody></table></div>
+            <p class="ent-droite"><strong>${(r.bl.lines || []).length} ligne${(r.bl.lines || []).length > 1 ? 's' : ''} · ${n} ${ech(unite(n))} annoncée${n > 1 ? 's' : ''}</strong></p>
+            <div class="ent-signatures"><div><div class="ent-lbl">Expéditeur</div></div><div><div class="ent-lbl">Réception (nom, date, réserves)</div></div></div>
+          </section>`;
+      }
+
+      // Les références concernées : celles du bon de livraison ET celles trouvées dans les
+      // colis. Un carton contenant une référence non annoncée doit apparaître au contrôle.
+      function refsReception(r) {
+        const out = [];
+        (r.bl.lines || []).forEach((l) => { if (!out.includes(l.sku)) out.push(l.sku); });
+        (r.colis || []).forEach((c) => { if (!out.includes(c.sku)) out.push(c.sku); });
+        return out;
+      }
+      const annonceDe = (r, sku) => (r.bl.lines || []).filter((l) => l.sku === sku).reduce((n, l) => n + l.qty, 0);
+      const compteReel = (r, sku) => (r.colis || []).filter((c) => c.sku === sku).reduce((n, c) => n + c.qty, 0);
+      const colisAbime = (r, sku) => (r.colis || []).some((c) => c.sku === sku && c.etat === 'abime');
+
+      function preparerReception(r) {
+        if (r.ctrl) return;
+        r.ctrl = { lot: '', rows: {}, validated: false, at: null };
+        refsReception(r).forEach((sku) => { r.ctrl.rows[sku] = { annonce: '', compte: '', etat: '', decision: '' }; });
+      }
+      const ligneRecRemplie = (x) => x.annonce !== '' && x.annonce != null && x.compte !== '' && x.compte != null
+        && !!x.etat && !!x.decision;
+
+      function statutReception(r) {
+        if (!r.ctrl) return ['À contrôler', 'warn'];
+        if (r.ctrl.validated) return ['Réceptionnée', 'ok'];
+        const debut = r.ctrl.lot || Object.keys(r.ctrl.rows).some((k) => ligneRecRemplie(r.ctrl.rows[k])
+          || r.ctrl.rows[k].annonce !== '' || r.ctrl.rows[k].compte !== '' || r.ctrl.rows[k].etat || r.ctrl.rows[k].decision);
+        return debut ? ['En cours', 'info'] : ['À contrôler', 'warn'];
+      }
+
+      function vueReceptions() {
+        const liste = (db.receptions || []).slice().sort((a, b) => b.ts - a.ts);
+        const lignes = liste.map((r) => {
+          const sup = SUP_BY_ID[r.supId] || (db.suppliers || []).find((s) => s.id === r.supId) || { brand: r.supId, name: '' };
+          const s = statutReception(r);
+          return `<tr><td class="mono">${ech(r.no)}</td><td>${fdate(r.ts)}</td><td>${ech(sup.brand)}</td>
+            <td class="mono">${ech(r.bl.no)}</td><td class="num">${(r.colis || []).length}</td>
+            <td>${pastille(s[0], s[1])}</td>
+            <td class="num"><button class="btn btn-s" data-ouvrir-rec="${ech(r.no)}">Ouvrir</button></td></tr>`;
+        }).join('');
+        return `<div class="ent-tete"><h2>Réceptions</h2>
+            <p class="note">Les livraisons annoncées par les fournisseurs et les colis reçus sur le quai.</p></div>
+          <section class="panneau">${lignes
+            ? `<div class="ent-scroll"><table><thead><tr><th>N°</th><th>Date</th><th>Fournisseur</th>
+                <th>Bon de livraison</th><th class="num">Colis</th><th>Statut</th><th></th></tr></thead>
+                <tbody>${lignes}</tbody></table></div>`
+            : '<div class="vide">Aucune livraison attendue.</div>'}</section>`;
+      }
+
+      function vueReception() {
+        const r = receptionDe(E.no);
+        if (!r) return vueReceptions();
+        preparerReception(r);
+        const sup = SUP_BY_ID[r.supId] || (db.suppliers || []).find((s) => s.id === r.supId) || { brand: r.supId, name: '', contact: '' };
+        const s = statutReception(r), c = r.ctrl, fige = c.validated;
+        const refs = refsReception(r);
+        const complet = !!(c.lot || '').trim() && refs.every((sku) => ligneRecRemplie(c.rows[sku]));
+
+        const choixEtat = [['', 'Choisir…'], ['ok', 'Conforme'], ['abime', 'Colis endommagé']];
+        const choixDecision = [['', 'Choisir…'], ['accepte', 'Accepté'], ['reserve', 'Accepté sous réserve'], ['refuse', 'Refusé']];
+
+        const colis = (r.colis || []).map((k) => {
+          const v = VM[k.sku];
+          return `<tr><td class="num">${k.no}</td><td class="mono">${ech(k.sku)}</td>
+            <td>${v ? ech(label(v)) : '<span class="faux">Référence inconnue</span>'}
+              ${v ? `<div class="note">${ech(COLORS[v.color][0])} · ${ech(VOCAB.sizeShort)}${v.size}</div>` : ''}</td>
+            <td class="num"><b>${k.qty}</b></td>
+            <td>${k.etat === 'abime' ? pastille('Carton endommagé', 'crit') : pastille('Intact', 'ok')}</td></tr>`;
+        }).join('');
+
+        const lignes = refs.map((sku) => {
+          const v = VM[sku], x = c.rows[sku];
+          const champ = (nom, aide) => (fige ? `<b class="mono">${x[nom] === '' ? '—' : x[nom]}</b>`
+            : `<input type="number" min="0" data-rec="${nom}" data-sku="${ech(sku)}" value="${x[nom] === '' ? '' : x[nom]}" style="width:78px" aria-label="${ech(aide)}">`);
+          const select = (nom, choix, aide) => (fige
+            ? `<span class="note">${ech((choix.find((o) => o[0] === x[nom]) || ['', '—'])[1])}</span>`
+            : `<select data-rec="${nom}" data-sku="${ech(sku)}" aria-label="${ech(aide)}">
+                ${choix.map((o) => `<option value="${o[0]}" ${(x[nom] || '') === o[0] ? 'selected' : ''}>${o[1]}</option>`).join('')}</select>`);
+          return `<tr><td class="mono">${ech(sku)}</td>
+            <td>${v ? ech(label(v)) : '—'}${v ? `<div class="note">${ech(COLORS[v.color][0])} · ${ech(VOCAB.sizeShort)}${v.size}</div>` : ''}</td>
+            <td class="num">${champ('annonce', 'Quantité annoncée pour ' + sku)}</td>
+            <td class="num">${champ('compte', 'Quantité comptée pour ' + sku)}</td>
+            <td>${select('etat', choixEtat, 'État des colis pour ' + sku)}</td>
+            <td>${select('decision', choixDecision, 'Décision pour ' + sku)}</td></tr>`;
+        }).join('');
+
+        const cLot = fige ? `<b class="mono">${ech(c.lot || '—')}</b>`
+          : `<input type="text" id="recLot" class="mono" value="${ech(c.lot)}" placeholder="ex. LOT-XX-0000" style="width:190px" aria-label="Numéro de lot">`;
+
+        return `<button class="lien-accueil" data-vue2="receptions">← RÉCEPTIONS</button>
+          <div class="ent-tete"><h2>Réception <span class="mono">${ech(r.no)}</span> ${pastille(s[0], s[1])}</h2></div>
+          <section class="panneau"><dl class="ent-dl">
+            <dt>Fournisseur</dt><dd>${ech(sup.brand)} — ${ech(sup.name)} <span class="mono note">${ech(r.supId)}</span></dd>
+            <dt>Transporteur</dt><dd>${ech(r.transporteur || '—')}</dd>
+            <dt>Bon de livraison</dt><dd class="mono">${ech(r.bl.no)}</dd>
+            <dt>Arrivée sur le quai</dt><dd>${fdt(r.ts)}</dd></dl>
+            <div class="avis">Le bon de livraison est dans votre messagerie : c'est lui qui donne les
+              quantités annoncées et le numéro de lot. Les colis ci-dessous sont ce que le
+              transporteur a réellement déposé.</div></section>
+          <section class="panneau"><h3>Colis reçus sur le quai</h3>
+            <p class="note">${(r.colis || []).length} colis. Additionnez-les par référence pour obtenir la quantité réellement reçue.</p>
+            <div class="ent-scroll"><table><thead><tr><th class="num">Colis</th><th>Réf.</th><th>Article</th>
+              <th class="num">Contenu</th><th>État du carton</th></tr></thead><tbody>${colis}</tbody></table></div></section>
+          <section class="panneau"><h3>Bon de réception</h3>
+            <p class="note">Reportez le numéro de lot du bon de livraison, puis, pour chaque référence,
+              la quantité annoncée, la quantité que vous avez comptée, l'état des colis et votre décision.
+              Une ligne refusée n'entre pas en stock.</p>
+            <div class="champ" style="max-width:260px"><label for="recLot">Numéro de lot</label>${cLot}</div>
+            <div class="ent-scroll"><table><thead><tr><th>Réf.</th><th>Article</th><th class="num">Annoncé</th>
+              <th class="num">Compté</th><th>État</th><th>Décision</th></tr></thead><tbody>${lignes}</tbody></table></div>
+            ${fige ? `<div class="avis avis-ok">Réception validée le ${fdt(c.at)} : le stock a été augmenté
+                  des quantités acceptées (voir Stock, Mouvements, ou <span class="mono">.getlot ${ech(c.lot)}</span>).</div>`
+              : `<div class="rangee" style="margin-top:14px">
+                  <button class="btn btn-p" data-valider-rec ${complet ? '' : 'disabled'}>Valider la réception (entrée en stock)</button>
+                  <span class="note" id="aideRec" ${complet ? 'hidden' : ''}>Renseignez le numéro de lot et toutes les lignes pour continuer.</span>
+                </div>`}
+          </section>`;
+      }
+
+      function majChampRec(sku, champ, val) {
+        const r = receptionDe(E.no); if (!r || !r.ctrl) return;
+        const x = r.ctrl.rows[sku]; if (!x) return;
+        if (champ === 'annonce' || champ === 'compte') { const n = parseInt(val, 10); x[champ] = isNaN(n) ? '' : Math.max(0, n); }
+        else x[champ] = val;
+        majBoutonRec();
+        sauver();
+      }
+
+      // Même prudence que pour le bon de préparation : on ne redessine pas la vue pendant que
+      // l'élève saisit, sinon la case qu'il vient de quitter disparaît sous ses doigts.
+      function majBoutonRec() {
+        const r = receptionDe(E.no); if (!r || !r.ctrl) return;
+        const lot = hote.querySelector('#recLot');
+        if (lot) r.ctrl.lot = lot.value;
+        const complet = !!(r.ctrl.lot || '').trim()
+          && refsReception(r).every((sku) => ligneRecRemplie(r.ctrl.rows[sku]));
+        const b = hote.querySelector('[data-valider-rec]');
+        if (b) b.disabled = !complet;
+        const aide = hote.querySelector('#aideRec');
+        if (aide) aide.hidden = complet;
+      }
+
+      function validerReception() {
+        const r = receptionDe(E.no); if (!r || !r.ctrl || r.ctrl.validated) return;
+        majBoutonRec();
+        const c = r.ctrl, lot = (c.lot || '').trim().toUpperCase();
+        if (!lot) return toast('Le numéro de lot est obligatoire : il est sur le bon de livraison.');
+        let entrees = 0;
+        refsReception(r).forEach((sku) => {
+          const x = c.rows[sku];
+          if (!VM[sku]) return;
+          const q = x.decision === 'refuse' ? 0 : (parseInt(x.compte, 10) || 0);
+          if (q <= 0) return;
+          db.stock[sku] = stockDe(sku) + q;
+          mouvement(sku, 'Entrée : réception', q, r.no, lot);
+          entrees += q;
+        });
+        c.lot = lot; c.validated = true; c.at = Date.now();
+        sauver(); dessiner();
+        toast(entrees
+          ? `Réception validée : ${entrees} ${unite(entrees)} entrée${entrees > 1 ? 's' : ''} en stock.`
+          : 'Réception validée : aucune entrée en stock.');
+      }
+
+      /* ------------------------------------------------------------- lots */
+      // Ce qui reste de chaque lot pour une référence. Le stock de départ n'a pas de lot :
+      // il est compté à part, et sort le premier — premier entré, premier sorti.
+      function restesParLot(sku) {
+        const parLot = new Map();
+        db.moves.forEach((m) => {
+          if (m.sku !== sku || !m.lot) return;
+          parLot.set(m.lot, (parLot.get(m.lot) || 0) + m.delta);
+        });
+        let identifie = 0;
+        parLot.forEach((q) => { identifie += Math.max(0, q); });
+        const out = [{ lot: '', reste: Math.max(0, stockDe(sku) - identifie) }];
+        parLot.forEach((q, lot) => { if (q > 0) out.push({ lot, reste: q }); });
+        return out;
+      }
+
+      // Une sortie consomme les lots dans l'ordre : elle peut donc donner plusieurs
+      // mouvements, un par lot entamé. C'est ce découpage qui permet, plus tard, de dire
+      // quel client a reçu quel lot.
+      function sortirFifo(sku, qty, type, ref) {
+        let reste = qty;
+        restesParLot(sku).forEach((x) => {
+          if (reste <= 0) return;
+          const pris = Math.min(reste, x.reste);
+          if (pris <= 0) return;
+          db.stock[sku] = stockDe(sku) - pris;
+          mouvement(sku, type, -pris, ref, x.lot);
+          reste -= pris;
+        });
+        if (reste > 0) { db.stock[sku] = stockDe(sku) - reste; mouvement(sku, type, -reste, ref, ''); }
       }
 
       /* ---------------------------------------------------------- catalogue */
@@ -684,10 +968,11 @@ export function creerEntreprise(U) {
           const mv = db.moves.slice().reverse().slice(0, 150).map((m) => `<tr><td>${fdt(m.ts)}</td>
             <td class="mono">${ech(m.sku)}</td><td>${ech(m.type)}</td>
             <td class="num ${m.delta < 0 ? 'faux' : 'juste'}"><b class="mono">${m.delta > 0 ? '+' : ''}${m.delta}</b></td>
-            <td class="num">${m.after}</td><td class="mono">${ech(m.ref)}</td><td>${ech(m.by)}</td></tr>`).join('');
+            <td class="num">${m.after}</td><td class="mono">${m.lot ? ech(m.lot) : '<span class="note">—</span>'}</td>
+            <td class="mono">${ech(m.ref)}</td><td>${ech(m.by)}</td></tr>`).join('');
           corps = `<section class="panneau">${mv
             ? `<div class="ent-scroll"><table><thead><tr><th>Date</th><th>Réf.</th><th>Type</th><th class="num">Qté</th>
-                <th class="num">Stock après</th><th>Origine</th><th>Par</th></tr></thead><tbody>${mv}</tbody></table></div>`
+                <th class="num">Stock après</th><th>Lot</th><th>Origine</th><th>Par</th></tr></thead><tbody>${mv}</tbody></table></div>`
             : '<div class="vide">Aucun mouvement pour le moment.</div>'}</section>`;
         }
 
@@ -799,18 +1084,28 @@ export function creerEntreprise(U) {
       function ajuster(genre, a) {
         const ref = String(a[0] || '').toUpperCase(), q = parseInt(a[1], 10);
         const nom = genre === 'set' ? 'setstock' : genre === 'add' ? 'addstock' : 'removestock';
+        // Tout ce qui suit la quantité est le motif : « casse », « blocage qualité »… Il est
+        // enregistré avec le mouvement, sans quoi l'historique dirait qu'une paire a disparu
+        // sans dire pourquoi.
+        const motif = a.slice(2).join(' ').trim();
         if (!ref || a[1] === undefined || isNaN(q) || q < 0 || String(q) !== String(a[1]).trim()) {
-          throw new Error(`Syntaxe : .${nom} <réf article> <quantité entière positive>`);
+          throw new Error(`Syntaxe : .${nom} <réf article> <quantité entière positive>${genre === 'rem' ? ' [motif]' : ''}`);
         }
         const v = VM[ref];
         if (!v) throw new Error(`Référence article introuvable : ${ech(ref)}. Il faut la référence complète (modèle-couleur-taille).`);
         const avant = stockDe(v.sku);
         const apres = genre === 'set' ? q : (genre === 'add' ? avant + q : avant - q);
         if (apres < 0) throw new Error(`Stock insuffisant : ${avant} ${unite(avant)} disponible${avant > 1 ? 's' : ''}, impossible d'en retirer ${q}.`);
-        db.stock[v.sku] = apres;
-        mouvement(v.sku, genre === 'set' ? 'Ajustement inventaire' : (genre === 'add' ? 'Entrée' : 'Sortie'), apres - avant, 'Console');
+        if (genre === 'rem') {
+          // Une sortie retire des lots dans l'ordre d'entrée : la trace reste juste.
+          sortirFifo(v.sku, q, motif ? 'Sortie : ' + motif : 'Sortie', motif || 'Console');
+        } else {
+          db.stock[v.sku] = apres;
+          mouvement(v.sku, genre === 'set' ? 'Ajustement inventaire' : 'Entrée', apres - avant, motif || 'Console');
+        }
         sauver();
-        return `<span class="juste">OK</span> ${ech(v.sku)} : ${avant} → <b>${apres}</b>`;
+        return `<span class="juste">OK</span> ${ech(v.sku)} : ${avant} → <b>${apres}</b>`
+          + (motif ? ` <span class="note">(${ech(motif)})</span>` : '');
       }
 
       const CMDS = {
@@ -948,8 +1243,47 @@ export function creerEntreprise(U) {
           const ref = a[0] ? String(a[0]).toUpperCase() : null;
           const r = db.moves.filter((m) => !ref || m.sku.indexOf(ref) === 0).slice(-15).reverse();
           if (!r.length) return '<span class="note">Aucun mouvement.</span>';
-          return tbl(['Date', 'Référence', 'Type', 'Qté', 'Stock après'],
-            r.map((m) => [fdt(m.ts), `<span class="mono">${ech(m.sku)}</span>`, ech(m.type), (m.delta > 0 ? '+' : '') + m.delta, m.after]), [3, 4]);
+          return tbl(['Date', 'Référence', 'Type', 'Qté', 'Stock après', 'Lot', 'Origine'],
+            r.map((m) => [fdt(m.ts), `<span class="mono">${ech(m.sku)}</span>`, ech(m.type),
+              (m.delta > 0 ? '+' : '') + m.delta, m.after,
+              m.lot ? `<span class="mono">${ech(m.lot)}</span>` : '<span class="note">—</span>',
+              `<span class="mono">${ech(m.ref)}</span>`]), [3, 4]);
+        }],
+        getlot: ['.getlot <n° de lot>', "Remonter un lot : ce qui est entré, ce qui est sorti, et où c'est parti", (a) => {
+          const lot = String(a[0] || '').toUpperCase().trim();
+          if (!lot) throw new Error('Exemple : .getlot LOT-PS-2409');
+          const mv = db.moves.filter((m) => String(m.lot || '').toUpperCase() === lot);
+          if (!mv.length) throw new Error(`Aucun mouvement pour le lot ${ech(lot)}. Vérifiez le numéro sur le bon de livraison.`);
+          const entrees = mv.filter((m) => m.delta > 0), sorties = mv.filter((m) => m.delta < 0);
+          const somme = (l) => l.reduce((n, m) => n + Math.abs(m.delta), 0);
+          const reste = somme(entrees) - somme(sorties);
+          // Une sortie de préparation porte le numéro du bon (BP-xxxxxx) : on remonte de là à
+          // la commande, donc au client. C'est tout l'intérêt d'avoir gardé l'origine.
+          const ligneSortie = (m) => {
+            const o = db.orders.find((x) => 'BP-' + x.no.replace('CMD-', '') === m.ref);
+            const c = o ? clientDe(o.customerId) : null;
+            return [fdt(m.ts), `<span class="mono">${ech(m.sku)}</span>`, ech(m.type), Math.abs(m.delta),
+              `<span class="mono">${ech(m.ref)}</span>`,
+              o ? `<span class="mono">${ech(o.no)}</span>` : '<span class="note">—</span>',
+              c ? `${ech(c.prenom + ' ' + c.nom)} <span class="mono note">${ech(c.id)}</span>` : '<span class="note">—</span>'];
+          };
+          const sup = entrees.length ? (() => { const v = VM[entrees[0].sku];
+            return v ? (SUP_BY_ID[v.model.sup] || null) : null; })() : null;
+          return kv([['Lot', `<b class="mono">${ech(lot)}</b>`],
+            ['Fournisseur', sup ? `${ech(sup.brand)} <span class="note">(${ech(sup.id)})</span>` : '<span class="note">inconnu</span>'],
+            ['Entré le', entrees.length ? fdt(entrees[0].ts) : '—'],
+            ['Réception', entrees.length ? `<span class="mono">${ech(entrees[0].ref)}</span>` : '—'],
+            ['Entrées', `<b>${somme(entrees)}</b> ${ech(unite(somme(entrees)))}`],
+            ['Sorties', `<b>${somme(sorties)}</b> ${ech(unite(somme(sorties)))}`],
+            ['Reste en stock', `<b>${reste}</b> ${ech(unite(reste))}`]])
+            + `<div class="ent-lbl" style="margin-top:12px">Entrées</div>`
+            + tbl(['Date', 'Référence', 'Type', 'Qté', 'Origine'],
+              entrees.map((m) => [fdt(m.ts), `<span class="mono">${ech(m.sku)}</span>`, ech(m.type), m.delta,
+                `<span class="mono">${ech(m.ref)}</span>`]), [3])
+            + `<div class="ent-lbl" style="margin-top:12px">Sorties</div>`
+            + (sorties.length
+              ? tbl(['Date', 'Référence', 'Type', 'Qté', 'Document', 'Commande', 'Client'], sorties.map(ligneSortie), [3])
+              : '<span class="note">Aucune sortie : tout le lot est encore en stock.</span>');
         }],
         setstock: ['.setstock <réf> <qté>', "Fixe le stock d'un article (inventaire)", (a) => ajuster('set', a)],
         addstock: ['.addstock <réf> <qté>', 'Ajoute du stock (réception)', (a) => ajuster('add', a)],
@@ -991,6 +1325,14 @@ export function creerEntreprise(U) {
         z.querySelector('#formRep')?.addEventListener('submit', (e) => { e.preventDefault(); envoyerReponse(); });
         z.querySelectorAll('[data-enreg-cmd]').forEach((b) => b.addEventListener('click', () => enregistrerCommande(+b.dataset.enregCmd)));
         z.querySelectorAll('[data-ouvrir-cmd]').forEach((b) => b.addEventListener('click', () => aller('commande', { no: b.dataset.ouvrirCmd })));
+        z.querySelectorAll('[data-ouvrir-rec]').forEach((b) => b.addEventListener('click', () => aller('reception', { no: b.dataset.ouvrirRec })));
+        z.querySelectorAll('[data-rec]').forEach((el) => {
+          const maj = () => majChampRec(el.dataset.sku, el.dataset.rec, el.value);
+          el.addEventListener('input', maj);
+          el.addEventListener('change', maj);
+        });
+        z.querySelector('#recLot')?.addEventListener('input', () => { majBoutonRec(); sauver(); });
+        z.querySelector('[data-valider-rec]')?.addEventListener('click', validerReception);
         // `input` autant que `change` : le `change` d'un champ texte n'arrive qu'au moment où
         // l'élève en sort. S'il remplit sa dernière case puis ferme l'onglet, ou si le
         // navigateur ne déclenche jamais le blur, la saisie serait perdue.

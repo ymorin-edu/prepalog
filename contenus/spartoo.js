@@ -88,7 +88,9 @@ export const ENTREPRISE = {
   id: 'spartoo',
   nom: 'Spartoo',
   sousTitre: 'Vente de chaussures en ligne',
-  exercice: "Exercice 1 : réception d'une commande et bon de préparation",
+  // Repli pour un module qui ne déclare pas son propre libellé : chaque séance passe
+  // désormais son `exercice` à creerEntreprise.
+  exercice: "Exercice 2 : préparation d'une commande client",
   logo: './contenus/trames/logos/spartoo.jpg',
 };
 
