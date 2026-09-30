@@ -21,6 +21,7 @@ export const ACTIVITES = [
   // séquence : on réceptionne, puis on prépare, puis on remonte la traçabilité.
   () => import('./spartoo-reception.js'),
   () => import('./spartoo.js'),
+  () => import('./spartoo-tracabilite.js'),
 ];
 
 // Pictogrammes des pastilles. Trait de 1,7 px, sans remplissage : même famille graphique

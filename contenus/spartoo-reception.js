@@ -13,7 +13,7 @@
 
 export const REC = 'REC-04127';
 export const LOT = 'LOT-PM-2609';
-const BL = 'BL-77421';
+export const BL = 'BL-77421';
 
 // Ce que le fournisseur annonce, et ce qu'il a réellement expédié. L'écart est volontaire :
 // sans lui, le contrôle à réception serait une formalité.
@@ -21,13 +21,13 @@ const BL = 'BL-77421';
 //   PM-SUE-RG-39 : 12 annoncées, 12 reçues en deux colis intacts        → conforme
 //   PM-SUE-MA-41 :  8 annoncées,  6 reçues en deux colis intacts        → il manque 2
 //   PM-RSX-BL-42 :  6 annoncées,  6 reçues dans un carton enfoncé       → réserve sur l'état
-const ANNONCE = [
+export const ANNONCE = [
   { sku: 'PM-SUE-RG-39', qty: 12 },
   { sku: 'PM-SUE-MA-41', qty: 8 },
   { sku: 'PM-RSX-BL-42', qty: 6 },
 ];
 
-const COLIS = [
+export const COLIS = [
   { no: 1, sku: 'PM-SUE-RG-39', qty: 6, etat: 'ok' },
   { no: 2, sku: 'PM-SUE-RG-39', qty: 6, etat: 'ok' },
   { no: 3, sku: 'PM-SUE-MA-41', qty: 4, etat: 'ok' },
@@ -95,7 +95,7 @@ const majLot = (s) => String(s || '').toUpperCase().replace(/\s+/g, '');
 
 // Ce que le contrôle aurait dû donner, déduit des colis réellement livrés — jamais écrit
 // en dur : si la livraison change, les jalons suivent.
-function attendu() {
+export function attendu() {
   const refs = [];
   ANNONCE.forEach((l) => { if (!refs.includes(l.sku)) refs.push(l.sku); });
   COLIS.forEach((c) => { if (!refs.includes(c.sku)) refs.push(c.sku); });

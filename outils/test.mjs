@@ -755,7 +755,174 @@ await v('Spartoo réception : avancement remonté au suivi', async () => {
   if (av < 2) throw new Error('deux avancements 3/3 attendus (réception et préparation), lu : ' + av);
 });
 
-// ---------- 34. les polices sont bien celles du dépôt
+// ---------- 34. la traçabilité : l'aval est semé, le lot se remonte dans les deux sens
+// La date d'entrée du lot est lue dans la remontée, jamais écrite d'avance : c'est celle de
+// la base de l'élève, donc celle du jour où il a réceptionné.
+const dateDuLot = (texte) => (texte.match(/Entré le\s*(\d{2}\/\d{2}\/\d{4})/) || [])[1] || '';
+await v('Spartoo traçabilité : l\'aval est semé et le lot se remonte', async () => {
+  await page.click('#btnRetour');
+  await page.click('#btnDeco');
+  await page.waitForSelector('#mat');
+  await page.fill('#mat', '2601'); await page.fill('#code', 'aaa1');
+  await page.press('#code', 'Enter');
+  await page.waitForSelector('[data-rub="logisim"]', { timeout: 6000 });
+  await page.click('[data-rub="logisim"]');
+  await page.waitForSelector('[data-act="spartoo-tracabilite"]', { timeout: 6000 });
+  await page.click('[data-act="spartoo-tracabilite"]');
+  await page.waitForSelector('.ent-shell', { timeout: 6000 });
+
+  // Même base que les deux séances précédentes : 6 messages, plus les 2 de la traçabilité.
+  await page.click('[data-vue="mail"]');
+  await page.waitForSelector('.ent-mitem');
+  // 6 messages à l'issue de la réception, plus la réponse de Puma aux réserves, plus les
+  // 2 messages de la traçabilité.
+  const n = await page.$$eval('.ent-mitem', (e) => e.length);
+  if (n !== 9) throw new Error(`${n} messages au lieu de 9 : la base n'est pas partagée, ou le volet n'est pas semé`);
+
+  // La commande de la séance 2 ne touchait aucune référence du lot : sans les trois
+  // commandes semées ici, il n'y aurait personne à retrouver.
+  await page.click('[data-vue="console"]');
+  await page.fill('#champCmd', '.getlot LOT-PM-2609');
+  await page.press('#champCmd', 'Enter');
+  await page.waitForTimeout(400);
+  const t = await page.textContent('.ent-cout');
+  if (!/Entrées\s*24\b/.test(t)) throw new Error('24 paires attendues au lot, lu : ' + (t.match(/Entrées\s*\d+/) || ['?'])[0]);
+  if (!/Sorties\s*6\b/.test(t)) throw new Error('6 paires sorties attendues, lu : ' + (t.match(/Sorties\s*\d+/) || ['?'])[0]);
+  if (!/Reste en stock\s*18\b/.test(t)) throw new Error('18 paires attendues en reste, lu : ' + (t.match(/Reste en stock\s*\d+/) || ['?'])[0]);
+  for (const no of ['CMD-048301', 'CMD-048307', 'CMD-048312']) {
+    if (!t.includes(no)) throw new Error('commande absente de la remontée du lot : ' + no);
+  }
+  if (!/Simon|Bernard|Fournier/.test(t)) throw new Error('les clients livrés ne remontent pas');
+  // La date d'entrée du lot est celle de la base de l'élève, pas une date écrite d'avance :
+  // c'est elle qu'il devra recopier dans son compte rendu.
+  if (!dateDuLot(t)) throw new Error('la date d\'entrée du lot ne s\'affiche pas');
+});
+
+// ---------- 35. le blocage qualité ne sort que du lot, et ne souffle pas la réponse
+await v('Blocage qualité : le lot seul est touché, sans réponse soufflée', async () => {
+  await page.click('[data-vue="blocage"]');
+  await page.waitForSelector('#blLot');
+  // Le stock total de la référence est bien plus élevé que ce qu'il reste du lot : c'est
+  // exactement le piège que .removestock (premier entré, premier sorti) ne saurait éviter.
+  await page.click('[data-vue="console"]');
+  await page.fill('#champCmd', '.getstock PM-SUE-RG-39');
+  await page.press('#champCmd', 'Enter');
+  await page.waitForTimeout(300);
+  const avant = Number((await page.textContent('.ent-cout')).match(/Stock\s*(\d+)/g).pop().match(/\d+/)[0]);
+  if (avant !== 26) throw new Error('stock de départ attendu 26 (17 + 12 reçues − 3 vendues), lu : ' + avant);
+
+  // Une quantité trop grande est refusée, et le message ne dit pas combien il en reste.
+  await page.click('[data-vue="blocage"]');
+  await page.waitForSelector('#blLot');
+  await page.fill('#blLot', 'LOT-PM-2609');
+  await page.fill('#blRef', 'PM-SUE-RG-39');
+  await page.fill('#blQte', '99');
+  await page.fill('#blMotif', 'blocage qualité, défaut fabricant');
+  await page.click('#formBloc button[type=submit]');
+  await page.waitForTimeout(300);
+  const err = await page.textContent('.ent-main');
+  if (!/ne contient pas autant/.test(err)) throw new Error('une quantité supérieure au lot a été acceptée');
+  if (/\b9\b/.test(err.split('Blocages enregistrés')[0].replace(/LOT-PM-2609|PM-SUE-RG-39|99/g, ''))) {
+    throw new Error('le message d\'erreur souffle la quantité restante');
+  }
+
+  // Le bon compte : 9 paires de ce lot, et pas une de plus.
+  await page.fill('#blQte', '9');
+  await page.click('#formBloc button[type=submit]');
+  await page.waitForTimeout(400);
+  await page.click('[data-vue="console"]');
+  await page.fill('#champCmd', '.getstock PM-SUE-RG-39');
+  await page.press('#champCmd', 'Enter');
+  await page.waitForTimeout(300);
+  const apres = Number((await page.textContent('.ent-cout')).match(/Stock\s*(\d+)/g).pop().match(/\d+/)[0]);
+  if (apres !== 17) throw new Error('stock attendu 17 après blocage des 9 paires du lot, lu : ' + apres);
+  await page.fill('#champCmd', '.getlot LOT-PM-2609');
+  await page.press('#champCmd', 'Enter');
+  await page.waitForTimeout(400);
+  if (!/Reste en stock\s*9\b/.test(await page.textContent('.ent-cout'))) throw new Error('le reste du lot n\'est pas tombé à 9');
+});
+
+// ---------- 36. la traçabilité de bout en bout : les trois jalons
+await v('Spartoo traçabilité : trois jalons au vert', async () => {
+  // Les deux références qui restent : 5 et 4 paires du lot.
+  await page.click('[data-vue="blocage"]');
+  await page.waitForSelector('#blLot');
+  for (const [ref, q] of [['PM-SUE-MA-41', '5'], ['PM-RSX-BL-42', '4']]) {
+    await page.fill('#blLot', 'LOT-PM-2609');
+    await page.fill('#blRef', ref);
+    await page.fill('#blQte', q);
+    await page.fill('#blMotif', 'blocage qualité, défaut fabricant');
+    await page.click('#formBloc button[type=submit]');
+    await page.waitForTimeout(350);
+  }
+  await page.click('[data-vue="console"]');
+  await page.fill('#champCmd', '.getlot LOT-PM-2609');
+  await page.press('#champCmd', 'Enter');
+  await page.waitForTimeout(400);
+  const t = await page.textContent('.ent-cout');
+  if (!/Reste en stock\s*0\b/.test(t)) throw new Error('le lot n\'est pas entièrement bloqué');
+  if (!/Blocage qualité/.test(t)) throw new Error('le mouvement de blocage n\'apparaît pas dans la remontée du lot');
+  const dateEntreeLot = dateDuLot(t);
+  if (!dateEntreeLot) throw new Error('la date d\'entrée du lot est introuvable');
+
+  // Le compte rendu à M. Morin, en répondant à son message.
+  await ouvrirMail('traçabilité et blocage');
+  await page.waitForSelector('[data-repondre]');
+  await page.click('[data-repondre]');
+  await page.fill('#repT', `Bonjour,\n\nLot LOT-PM-2609, entré en stock le ${dateEntreeLot}, fournisseur Puma.\n\n`
+    + 'Commandes déjà livrées avec des paires de ce lot :\n'
+    + '- CMD-048301\n- CMD-048307\n- CMD-048312\n\n'
+    + 'Stock restant bloqué : 9 PM-SUE-RG-39, 5 PM-SUE-MA-41, 4 PM-RSX-BL-42.\n\nCordialement');
+  await page.click('#formRep button[type=submit]');
+  await page.waitForTimeout(600);
+});
+
+// ---------- 37. trois avancements côte à côte dans le suivi
+await v('Spartoo traçabilité : avancement remonté au suivi', async () => {
+  await page.click('[data-quitter]');
+  await page.waitForSelector('#btnDeco', { timeout: 6000 });
+  await page.click('#btnDeco');
+  await page.waitForSelector('#btnProf');
+  await page.click('#btnProf');
+  await page.waitForSelector('#btnProfEspace');
+  await page.click('#btnProfEspace');
+  await page.click('[data-ong="suivi"]');
+  await page.waitForSelector('text=ENT-3', { timeout: 6000 });
+  const t = await page.textContent('#contenuProf');
+  // Trois séances, trois avancements distincts, sur une seule et même base.
+  const av = (t.match(/3\/3/g) || []).length;
+  if (av < 3) throw new Error('trois avancements 3/3 attendus, lu : ' + av);
+});
+
+// ---------- 38. la traçabilité sans les séances précédentes : l'amont est posé
+await v('Spartoo traçabilité : jouable sans les deux séances précédentes', async () => {
+  // Noé n'a fait ni la réception ni la préparation : sans amorçage, il n'aurait ni lot ni
+  // sortie à remonter. La séance lui pose la réception d'un collègue.
+  await page.click('#btnRetour');
+  await page.click('#btnDeco');
+  await page.waitForSelector('#mat');
+  await page.fill('#mat', '2602'); await page.fill('#code', 'bbb2');
+  await page.press('#code', 'Enter');
+  await page.waitForSelector('[data-rub="logisim"]', { timeout: 6000 });
+  await page.click('[data-rub="logisim"]');
+  await page.waitForSelector('[data-act="spartoo-tracabilite"]', { timeout: 6000 });
+  await page.click('[data-act="spartoo-tracabilite"]');
+  await page.waitForSelector('.ent-shell', { timeout: 6000 });
+  await page.click('[data-vue="console"]');
+  await page.fill('#champCmd', '.getlot LOT-PM-2609');
+  await page.press('#champCmd', 'Enter');
+  await page.waitForTimeout(400);
+  const t = await page.textContent('.ent-cout');
+  if (!/Entrées\s*24\b/.test(t)) throw new Error('le lot n\'a pas été posé : ' + (t.match(/Entrées\s*\d+/) || ['rien'])[0]);
+  if (!/Sorties\s*6\b/.test(t)) throw new Error('les sorties du lot manquent');
+  if (!/CMD-048301/.test(t)) throw new Error('les commandes livrées ne remontent pas');
+  // Et la réception posée porte son propre numéro : celle de la séance 1 reste disponible.
+  if (!/REC-04118/.test(t)) throw new Error('la réception du collègue n\'est pas celle attendue');
+  await page.click('[data-quitter]');
+  await page.waitForSelector('#btnDeco', { timeout: 6000 });
+});
+
+// ---------- 39. les polices sont bien celles du dépôt
 await v('polices servies par le dépôt', async () => {
   // Le navigateur a chargé les fichiers, et le texte est bien rendu en Inter.
   await page.evaluate(() => document.fonts.ready);
@@ -766,7 +933,7 @@ await v('polices servies par le dépôt', async () => {
   if (!/Inter/.test(rendu)) throw new Error('police du corps inattendue : ' + rendu);
 });
 
-// ---------- 35. aucune dépendance extérieure, polices comprises
+// ---------- 40. aucune dépendance extérieure, polices comprises
 await v('aucun hébergeur extérieur', async () => {
   // Les filtrages académiques bloquent régulièrement cdnjs et Google Fonts. SheetJS est
   // dans vendor/, les polices dans styles/polices/ : le site ne sort plus du dépôt.
