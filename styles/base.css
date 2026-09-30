@@ -421,6 +421,19 @@ tbody tr:hover{background:var(--survol)}
 .depot.survol{ border-color:var(--ardoise); background:var(--ardoise-clair) }
 .depot p{ margin:0 0 6px }
 
+/* Télécharger puis déposer : les deux gestes de l'élève, chacun son pictogramme.
+   La flèche descend dans le bac, puis en ressort. */
+.btn-fichier{
+  display:inline-flex; align-items:center; gap:11px;
+  margin:16px 0 4px; padding:13px 22px;
+  font-size:1.05rem; font-weight:600; text-decoration:none;
+}
+.btn-fichier-icone{ display:flex }
+.btn-fichier-icone svg{ width:23px; height:23px }
+.depot-icone{ display:block; margin:0 auto 12px; color:var(--ardoise) }
+.depot-icone svg{ width:42px; height:42px }
+.depot.survol .depot-icone{ color:var(--ardoise-fond) }
+
 /* --- activité sur support extérieur (Padlet, Digipad…) --- */
 .lien-ext{ margin-top:14px }
 .lien-tete{ display:flex; align-items:flex-start; gap:16px }

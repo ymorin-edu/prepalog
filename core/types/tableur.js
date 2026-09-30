@@ -42,6 +42,17 @@ function chargerXLSX() {
   return chargement;
 }
 
+// Deux pictogrammes de la même famille que ceux de l'accueil : trait de 1,7, sans
+// remplissage. La flèche descend dans le bac pour télécharger, elle en sort pour déposer —
+// c'est le seul détail qui les distingue, et il se lit d'un coup d'œil.
+const ICONE_TELECHARGER = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+  stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+  <path d="M12 3v11"/><path d="M7.5 9.5L12 14l4.5-4.5"/><path d="M4 15v3.5a1.5 1.5 0 0 0 1.5 1.5h13a1.5 1.5 0 0 0 1.5-1.5V15"/></svg>`;
+
+const ICONE_DEPOSER = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+  stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+  <path d="M12 14V3"/><path d="M7.5 7.5L12 3l4.5 4.5"/><path d="M4 15v3.5a1.5 1.5 0 0 0 1.5 1.5h13a1.5 1.5 0 0 0 1.5-1.5V15"/></svg>`;
+
 function valeurCellule(classeur, ctrl, feuilleParDefaut) {
   const nom = ctrl.feuille || feuilleParDefaut || classeur.SheetNames[0];
   const f = classeur.Sheets[nom];
@@ -119,9 +130,17 @@ function brancherDepot(hote, onClasseur) {
   }
 }
 
+// Bouton de téléchargement : c'est le premier geste de l'élève, il doit se voir de loin.
+const boutonModeleHTML = (href, libelle = 'Télécharger le classeur à compléter') => `
+  <a class="btn btn-p btn-fichier" href="${ech(href)}" download>
+    <span class="btn-fichier-icone">${ICONE_TELECHARGER}</span>
+    <span>${ech(libelle)}</span>
+  </a>`;
+
 const zoneDepotHTML = (nomFichier) => `
   <div class="depot" id="depot">
     <input type="file" id="fichier" accept=".xlsx,.xlsm,.csv" hidden>
+    <span class="depot-icone">${ICONE_DEPOSER}</span>
     <p><strong>Déposez votre classeur ici</strong>, ou
       <button class="btn btn-s" id="btnParcourir">parcourir</button></p>
     <p class="note">Formats acceptés : .xlsx, .xlsm, .csv — le fichier reste sur votre ordinateur,
@@ -161,7 +180,7 @@ export function creerTableur({ consigne, modele, controles, aide, feuille }) {
           <div class="panneau">
             ${consigne ? `<p>${ech(consigne)}</p>` : ''}
             ${aide ? `<p class="note">${ech(aide)}</p>` : ''}
-            ${modele ? `<p><a class="btn btn-s" href="${ech(modele)}" download>Télécharger le classeur à compléter</a></p>` : ''}
+            ${modele ? boutonModeleHTML(modele) : ''}
             ${zoneDepotHTML(nomFichier)}
           </div>
           <div id="resultatTableur">${resultats ? tableauResultats(resultats) : ''}</div>`;
@@ -286,7 +305,7 @@ export function creerSerieTableur({ consigne, exercices, feuille, dossier = '' }
             <h2>${ech(exercice.titre)}</h2>
             <p class="note">${ech(exercice.objectif || '')}
               ${b !== undefined ? ` — meilleur résultat : ${b} / ${exercice.controles.length}` : ''}</p>
-            <p><a class="btn btn-s" href="${ech(dossier + exercice.fichier)}" download>Télécharger le classeur à compléter</a></p>
+            ${boutonModeleHTML(dossier + exercice.fichier)}
             <p class="note">Complétez-le dans Excel ou LibreOffice, enregistrez-le, puis déposez-le ici.
               Autant de fois que nécessaire : c'est le meilleur résultat qui compte.</p>
             ${zoneDepotHTML(nomFichier)}
