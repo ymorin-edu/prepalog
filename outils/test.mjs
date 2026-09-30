@@ -7,9 +7,18 @@ import os from 'node:os';
 const ROOT = new URL('..', import.meta.url).pathname;
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.png': 'image/png', '.woff2': 'font/woff2', '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' };
 
+// `prepalog-config.json` est versionné depuis le 30/09/2026 : sur le disque, il existe.
+// Le servir ferait démarrer l'application en mode réel, où la suite entière n'a plus de
+// sens — elle ne teste que le mode démonstration, et 39 tests sur 46 tombaient. Le serveur
+// de test le refuse donc systématiquement : la suite est mode-démo par construction, quel
+// que soit le contenu du dépôt, et c'est ce 404 délibéré que le test « un seul 404 »
+// attend. Les tests du chemin Firebase, eux, se donnent leur propre configuration d'essai.
+const SANS_CONFIG = '/prepalog-config.json';
+
 const srv = http.createServer((req, res) => {
   let p = decodeURIComponent(req.url.split('?')[0]);
   if (p === '/') p = '/index.html';
+  if (p === SANS_CONFIG) { res.writeHead(404); return res.end('404'); }
   const f = path.join(ROOT, p);
   if (!f.startsWith(ROOT) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) {
     res.writeHead(404); return res.end('404');
@@ -24,8 +33,9 @@ const ctx = await nav.newContext();
 const page = await ctx.newPage();
 page.setDefaultTimeout(5000);
 const erreurs = [];
-// Un 404 est attendu, et un seul : prepalog-config.json, absent du dépôt, c'est lui qui
-// déclenche le mode démonstration. Chromium le journalise en erreur de console à chaque
+// Un 404 est attendu, et un seul : prepalog-config.json, refusé par le serveur de test
+// ci-dessus, c'est lui qui déclenche le mode démonstration. Chromium le journalise en
+// erreur de console à chaque
 // chargement ; le compter ferait échouer la suite en permanence, et masquerait les vraies.
 // On l'écarte donc du relevé, mais on note toutes les URL introuvables : un test dédié
 // vérifie qu'il n'y en a pas d'autre, si bien que rien n'est perdu.
@@ -953,7 +963,7 @@ await v('aucun hébergeur extérieur', async () => {
 
 // ---------- 40 bis. le seul fichier introuvable est celui qui déclenche le mode démo
 await v('un seul 404, celui du fichier de configuration', async () => {
-  const autres = [...introuvables].filter((p) => p !== '/prepalog-config.json');
+  const autres = [...introuvables].filter((p) => p !== SANS_CONFIG);
   if (autres.length) throw new Error('fichier introuvable : ' + autres.join(', '));
 });
 
