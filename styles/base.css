@@ -1,0 +1,141 @@
+/* Prepalog — charte sobre institutionnelle, reprise de la Suite Logistique */
+:root{
+  --encre:#131a21;
+  --encre-douce:#3d4a57;
+  --ardoise:#2c4a63;
+  --ardoise-clair:#e8edf2;
+  --terre:#b4530f;
+  --vert:#1f6b45;
+  --rouge:#9d2727;
+  --fond:#f6f7f9;
+  --blanc:#ffffff;
+  --filet:#dde2e7;
+  --r:4px;
+  --mono:"IBM Plex Mono",ui-monospace,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;
+  background:var(--fond); color:var(--encre);
+  font-size:15px; line-height:1.55;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3{margin:0 0 .5em; line-height:1.25; font-weight:600}
+h1{font-size:1.5rem} h2{font-size:1.15rem} h3{font-size:1rem}
+p{margin:0 0 .8em}
+a{color:var(--ardoise)}
+code,kbd,.mono{font-family:var(--mono); font-size:.92em}
+
+.app{max-width:1080px; margin:0 auto; padding:0 16px 64px}
+.boot{padding:48px 0; color:var(--encre-douce)}
+
+/* en-tête */
+.entete{
+  display:flex; align-items:center; gap:14px;
+  padding:14px 0; border-bottom:1px solid var(--filet); margin-bottom:24px;
+  flex-wrap:wrap;
+}
+.entete .marque{font-weight:700; letter-spacing:-.01em; font-size:1.1rem; color:var(--ardoise)}
+.entete .institution{
+  font-size:.72rem; letter-spacing:.08em; text-transform:uppercase;
+  color:var(--encre-douce); border-left:1px solid var(--filet); padding-left:14px;
+}
+.entete .pousse{margin-left:auto}
+.entete .qui{font-size:.85rem; color:var(--encre-douce)}
+
+/* boutons */
+.btn{
+  font:inherit; font-weight:500; cursor:pointer;
+  border:1px solid var(--filet); background:var(--blanc); color:var(--encre);
+  border-radius:var(--r); padding:8px 14px;
+}
+.btn:hover{border-color:var(--ardoise)}
+.btn:focus-visible{outline:2px solid var(--ardoise); outline-offset:2px}
+.btn-p{background:var(--ardoise); border-color:var(--ardoise); color:#fff}
+.btn-p:hover{background:#233c51}
+.btn-d{color:var(--rouge); border-color:#e6cdcd}
+.btn-s{padding:5px 10px; font-size:.85rem}
+.btn[disabled]{opacity:.5; cursor:not-allowed}
+
+/* champs */
+label{display:block; font-size:.82rem; font-weight:500; color:var(--encre-douce); margin-bottom:4px}
+input,select,textarea{
+  font:inherit; width:100%; padding:8px 10px;
+  border:1px solid var(--filet); border-radius:var(--r); background:var(--blanc); color:var(--encre);
+}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--ardoise); outline-offset:-1px; border-color:var(--ardoise)}
+.champ{margin-bottom:12px}
+
+/* panneaux */
+.panneau{
+  background:var(--blanc); border:1px solid var(--filet);
+  border-radius:var(--r); padding:18px; margin-bottom:16px;
+}
+.grille{display:grid; gap:16px}
+@media(min-width:760px){ .grille-2{grid-template-columns:1fr 1fr} .grille-3{grid-template-columns:repeat(3,1fr)} }
+
+/* pastilles d'accueil */
+.pastilles{display:grid; gap:12px; grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}
+.pastille{
+  display:block; text-align:left; width:100%;
+  background:var(--blanc); border:1px solid var(--filet); border-radius:var(--r);
+  padding:16px; cursor:pointer; font:inherit;
+}
+.pastille:hover{border-color:var(--ardoise)}
+.pastille .code{font-family:var(--mono); font-size:.75rem; color:var(--terre)}
+.pastille .titre{display:block; font-weight:600; margin:4px 0 2px}
+.pastille .desc{display:block; font-size:.85rem; color:var(--encre-douce)}
+.bande-titre{
+  font-size:.72rem; letter-spacing:.08em; text-transform:uppercase;
+  color:var(--encre-douce); margin:22px 0 10px;
+  padding-bottom:6px; border-bottom:1px solid var(--filet);
+}
+
+/* tableaux */
+table{width:100%; border-collapse:collapse; font-size:.9rem}
+th,td{text-align:left; padding:7px 10px; border-bottom:1px solid var(--filet)}
+th{font-weight:600; font-size:.78rem; letter-spacing:.04em; text-transform:uppercase; color:var(--encre-douce)}
+tbody tr:hover{background:#fafbfc}
+.num{text-align:right; font-family:var(--mono)}
+
+/* divers */
+.etiq{
+  display:inline-block; font-family:var(--mono); font-size:.78rem;
+  background:var(--ardoise-clair); color:var(--ardoise);
+  padding:1px 6px; border-radius:2px;
+}
+.note{font-size:.85rem; color:var(--encre-douce)}
+.avis{border-left:3px solid var(--ardoise); background:var(--blanc); padding:12px 14px; border-radius:0 var(--r) var(--r) 0; margin:12px 0}
+.avis-ok{border-color:var(--vert)}
+.avis-err{border-color:var(--rouge)}
+.vide{padding:28px; text-align:center; color:var(--encre-douce); font-size:.9rem}
+.rangee{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+.pousse{margin-left:auto}
+.retour{background:none; border:0; color:var(--ardoise); font:inherit; cursor:pointer; padding:0; margin-bottom:14px}
+.retour:hover{text-decoration:underline}
+
+/* état de synchronisation */
+.sync{font-size:.75rem; font-family:var(--mono); color:var(--encre-douce)}
+.sync[data-etat="attente"]{color:var(--terre)}
+.sync[data-etat="ok"]{color:var(--vert)}
+.sync[data-etat="erreur"]{color:var(--rouge)}
+
+/* messages fugaces */
+#toast{
+  position:fixed; left:50%; bottom:24px; transform:translateX(-50%);
+  background:var(--encre); color:#fff; padding:10px 16px; border-radius:var(--r);
+  font-size:.9rem; z-index:50; max-width:90vw;
+}
+
+/* QCM */
+.question{border-bottom:1px solid var(--filet); padding:14px 0}
+.question:last-of-type{border-bottom:0}
+.question .enonce{font-weight:500; margin-bottom:8px}
+.choix{display:flex; gap:9px; align-items:flex-start; padding:5px 0; cursor:pointer}
+.choix input{width:auto; margin-top:4px; flex:0 0 auto}
+.juste{color:var(--vert); font-weight:500}
+.faux{color:var(--rouge)}
+
+/* bandeau de gel */
+.gele{background:#fdf3e8; border-left:3px solid var(--terre); padding:10px 14px; margin-bottom:14px; font-size:.88rem}

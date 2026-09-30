@@ -1,0 +1,153 @@
+// Jeux de données à portée variable.
+//
+// C'est la seule notion que l'auteur d'une activité manipule. Il déclare une portée,
+// il reçoit un objet `jeu` qui sait lire, écrire, écouter, exporter et se réinitialiser.
+// Passer une activité de « chacun sa base » à « base de classe » = changer un mot.
+//
+//   portee: 'eleve'   → Firestore, blob JSON privé. 1 écriture par sauvegarde.
+//   portee: 'equipe'  → Realtime Database, partagé entre les membres de l'équipe.
+//   portee: 'groupe'  → Realtime Database, partagé avec toute la classe.
+//   portee: 'commun'  → Realtime Database, partagé entre tous les groupes de l'enseignant.
+
+import { B } from './backend.js';
+
+export const PORTEES = ['eleve', 'equipe', 'groupe', 'commun'];
+
+function cheminDe(portee, aid, gid, eqId) {
+  if (portee === 'commun') return `communs/${aid}`;
+  if (portee === 'equipe') return `jeux/${gid}/${aid}__${eqId || 'eq0'}`;
+  return `jeux/${gid}/${aid}`;
+}
+
+// ---------------------------------------------------------------- portée élève
+function jeuPrive(aid, uid, tables) {
+  let data = null;
+  let minuteur = null;
+  const auditeurs = [];
+  const prevenir = () => auditeurs.forEach((cb) => cb(data));
+
+  async function charger() {
+    const s = await B.lireJeuPrive(uid, aid);
+    let brut = s ? s.data : null;
+    if (typeof brut === 'string') { try { brut = JSON.parse(brut); } catch (e) { brut = null; } }
+    data = brut || {};
+    Object.keys(tables).forEach((t) => { if (!data[t]) data[t] = []; });
+    return data;
+  }
+
+  function sauverPlusTard() {
+    clearTimeout(minuteur);
+    minuteur = setTimeout(() => B.ecrireJeuPrive(uid, aid, data).catch(() => {}), 500);
+  }
+
+  return {
+    portee: 'eleve', partage: false, chemin: null,
+    async ouvrir() { await charger(); return this; },
+    lignes(table) { return data[table] || []; },
+    ecouter(table, cb) { const f = () => cb(data[table] || []); auditeurs.push(f); f(); return () => {}; },
+    async ajouter(table, ligne) {
+      const id = ligne.id || 'l' + Math.random().toString(36).slice(2, 9);
+      (data[table] = data[table] || []).push({ ...ligne, id, _ts: Date.now() });
+      sauverPlusTard(); prevenir(); return id;
+    },
+    async modifier(table, id, patch) {
+      const l = (data[table] || []).find((x) => x.id === id);
+      if (l) Object.assign(l, patch, { _ts: Date.now() });
+      sauverPlusTard(); prevenir();
+    },
+    async supprimer(table, id) {
+      data[table] = (data[table] || []).filter((x) => x.id !== id);
+      sauverPlusTard(); prevenir();
+    },
+    async incrementer(table, id, champ, delta) {
+      const l = (data[table] || []).find((x) => x.id === id);
+      if (!l) return null;
+      l[champ] = (Number(l[champ]) || 0) + delta;
+      sauverPlusTard(); prevenir(); return l[champ];
+    },
+    async vider(table) { data[table] = []; sauverPlusTard(); prevenir(); },
+    async semer(graines) {
+      Object.keys(graines).forEach((t) => {
+        data[t] = graines[t].map((l, i) => ({ id: 'g' + i, ...l, _ts: Date.now() }));
+      });
+      sauverPlusTard(); prevenir();
+    },
+    meta: { gele: false },
+    ecouterMeta(cb) { cb({ gele: false }); return () => {}; },
+    async majMeta() {},
+    async vidange() { clearTimeout(minuteur); await B.ecrireJeuPrive(uid, aid, data); },
+    fermer() { clearTimeout(minuteur); if (data) B.ecrireJeuPrive(uid, aid, data).catch(() => {}); },
+  };
+}
+
+// ------------------------------------------------------------ portées partagées
+function jeuPartage(portee, chemin, tables) {
+  const arrets = [];
+  let meta = {};
+
+  return {
+    portee, partage: true, chemin,
+    async ouvrir() {
+      arrets.push(B.ecouterMeta(chemin, (m) => { meta = m || {}; this.meta = meta; }));
+      return this;
+    },
+    lignes(table) { return this._cache?.[table] || []; },
+    ecouter(table, cb) {
+      this._cache = this._cache || {};
+      const stop = B.ecouterJeu(chemin, table, (lignes) => { this._cache[table] = lignes; cb(lignes); });
+      arrets.push(stop);
+      return stop;
+    },
+    async charger(table) {
+      const l = await B.lireTable(chemin, table);
+      this._cache = this._cache || {}; this._cache[table] = l;
+      return l;
+    },
+    async ajouter(table, ligne) { return B.ajouterLigne(chemin, table, ligne); },
+    async modifier(table, id, patch) { return B.majLigne(chemin, table, id, patch); },
+    async supprimer(table, id) { return B.supprimerLigne(chemin, table, id); },
+    async incrementer(table, id, champ, delta) { return B.incrementer(chemin, table, id, champ, delta); },
+    async vider(table) { return B.viderTable(chemin, table); },
+    async semer(graines) {
+      for (const t of Object.keys(graines)) {
+        await B.viderTable(chemin, t);
+        for (const l of graines[t]) await B.ajouterLigne(chemin, t, l);
+      }
+      await B.majMeta(chemin, { semeLe: Date.now() });
+    },
+    meta,
+    ecouterMeta(cb) { const stop = B.ecouterMeta(chemin, cb); arrets.push(stop); return stop; },
+    async majMeta(patch) { return B.majMeta(chemin, patch); },
+    async vidange() {},
+    fermer() { arrets.forEach((s) => { try { s(); } catch (e) {} }); arrets.length = 0; },
+  };
+}
+
+// ----------------------------------------------------------------- fabrique
+export async function ouvrirJeu({ aid, portee, tables = {}, uid, gid, eqId }) {
+  if (!PORTEES.includes(portee)) throw new Error(`Portée inconnue : ${portee}`);
+  const jeu = portee === 'eleve'
+    ? jeuPrive(aid, uid, tables)
+    : jeuPartage(portee, cheminDe(portee, aid, gid, eqId), tables);
+  jeu.tables = tables;
+  return jeu.ouvrir();
+}
+
+// ------------------------------------------------------------------- outils
+export function versCSV(lignes, champs) {
+  const ech = (v) => {
+    const s = v === undefined || v === null ? '' : String(v);
+    return /[";\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  };
+  const entete = champs.map((c) => ech(c.label || c.cle)).join(';');
+  const corps = lignes.map((l) => champs.map((c) => ech(l[c.cle])).join(';'));
+  return '﻿' + [entete, ...corps].join('\r\n');
+}
+
+export function telecharger(nom, contenu, type = 'text/csv;charset=utf-8') {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([contenu], { type }));
+  a.download = nom;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}

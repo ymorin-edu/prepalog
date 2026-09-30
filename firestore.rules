@@ -1,0 +1,67 @@
+rules_version = '2';
+
+// Règles Firestore de Prepalog.
+// Principe : un élève n'accède qu'à ses propres données ; un enseignant n'accède qu'aux
+// groupes où son uid figure dans `profs` ; le rôle n'est jamais modifiable par son porteur.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function connecte()      { return request.auth != null; }
+    function moi()           { return request.auth.uid; }
+    function profilDe(uid)   { return get(/databases/$(database)/documents/users/$(uid)).data; }
+    function estProf()       { return connecte() && profilDe(moi()).role == 'prof'; }
+    function groupeDe(gid)   { return get(/databases/$(database)/documents/groupes/$(gid)).data; }
+    function profDuGroupe(gid) { return connecte() && moi() in groupeDe(gid).profs; }
+    function membreDuGroupe(gid) { return connecte() && gid in profilDe(moi()).groupes; }
+
+    // ---------------------------------------------------------------- profils
+    match /users/{uid} {
+      // Chacun lit son profil ; un enseignant lit les profils de ses élèves.
+      allow read: if connecte() && (uid == moi() || estProf());
+
+      // Création : par un enseignant seulement (comptes élèves créés en lot).
+      // Le tout premier enseignant est créé par l'application avec role == 'prof',
+      // à restreindre côté console si vous voulez verrouiller l'amorçage.
+      allow create: if connecte() && (
+        (request.resource.data.role == 'eleve' && estProf()) ||
+        (uid == moi() && request.resource.data.role == 'prof')
+      );
+
+      // Mise à jour : l'intéressé ne peut jamais changer son propre rôle.
+      allow update: if connecte() && (
+        (uid == moi() && request.resource.data.role == resource.data.role) ||
+        (estProf() && request.resource.data.role == resource.data.role)
+      );
+
+      allow delete: if estProf();
+    }
+
+    // ---------------------------------------------------------------- groupes
+    match /groupes/{gid} {
+      allow read:   if profDuGroupe(gid) || membreDuGroupe(gid);
+      allow create: if estProf() && moi() in request.resource.data.profs;
+      allow update: if profDuGroupe(gid);
+      allow delete: if profDuGroupe(gid);
+    }
+
+    // ---------------------------------------------------------------- travaux
+    match /travaux/{gid}/eleves/{uid}/activites/{aid} {
+      allow read:  if uid == moi() || profDuGroupe(gid);
+      // Un élève n'écrit que ses propres résultats, et seulement dans un groupe
+      // dont il est membre.
+      allow write: if (uid == moi() && membreDuGroupe(gid)) || profDuGroupe(gid);
+    }
+
+    // ------------------------------------------------- jeux privés (portée élève)
+    match /prives/{uid}/jeux/{aid} {
+      allow read:  if uid == moi() || estProf();
+      allow write: if uid == moi();
+    }
+
+    // Tout le reste est fermé.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,0 +1,64 @@
+{
+  "_commentaire": [
+    "Règles Realtime Database de Prepalog.",
+    "Les règles RTDB ne savent pas lire Firestore : les droits sont donc recopiés sous",
+    "acces/{gid}, écrit par l'application au moment où un groupe et ses élèves sont créés.",
+    "",
+    "Écriture d'une ligne autorisée si :",
+    "  - l'auteur est enseignant du groupe, OU",
+    "  - l'auteur est élève du groupe, ET le jeu n'est pas gelé, ET",
+    "    (la ligne est la sienne OU la table est déclarée à écriture partagée dans meta/ouvert)."
+  ],
+
+  "rules": {
+    ".read": false,
+    ".write": false,
+
+    "acces": {
+      "$gid": {
+        ".read": "auth != null && (data.child('profs').child(auth.uid).exists() || data.child('eleves').child(auth.uid).exists())",
+        ".write": "auth != null && (!data.exists() || data.child('profs').child(auth.uid).exists())",
+        "profs":  { "$uid": { ".validate": "newData.isBoolean()" } },
+        "eleves": { "$uid": { ".validate": "newData.isBoolean()" } }
+      }
+    },
+
+    "jeux": {
+      "$gid": {
+        ".read": "auth != null && (root.child('acces').child($gid).child('profs').child(auth.uid).exists() || root.child('acces').child($gid).child('eleves').child(auth.uid).exists())",
+
+        "$cle": {
+          "meta": {
+            ".write": "auth != null && root.child('acces').child($gid).child('profs').child(auth.uid).exists()"
+          },
+
+          "$table": {
+            "$ligne": {
+              ".write": "auth != null && ( root.child('acces').child($gid).child('profs').child(auth.uid).exists() || ( root.child('acces').child($gid).child('eleves').child(auth.uid).exists() && !root.child('jeux').child($gid).child($cle).child('meta').child('gele').val() && ( !data.exists() || data.child('_par').val() === auth.uid || root.child('jeux').child($gid).child($cle).child('meta').child('ouvert').child($table).val() === 'tous' ) ) )",
+
+              "_par":    { ".validate": "newData.val() === auth.uid || root.child('acces').child($gid).child('profs').child(auth.uid).exists()" },
+              "_ts":     { ".validate": "newData.isNumber()" },
+              "_parNom": { ".validate": "newData.isString() && newData.val().length < 80" }
+            }
+          }
+        }
+      }
+    },
+
+    "communs": {
+      "$aid": {
+        ".read": "auth != null",
+        "$table": {
+          "$ligne": {
+            ".write": "auth != null && root.child('profsGlobaux').child(auth.uid).exists()"
+          }
+        }
+      }
+    },
+
+    "profsGlobaux": {
+      ".read": "auth != null",
+      "$uid": { ".write": false }
+    }
+  }
+}
