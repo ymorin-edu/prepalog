@@ -20,8 +20,9 @@ TERRE   = RGBColor(0xb4, 0x53, 0x0f)
 
 # Logo de l'entreprise, versionné avec la trame. Déposer le fichier de la prochaine
 # entreprise à côté et changer cette ligne : le reste suit.
-LOGO = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                    '..', 'contenus', 'trames', 'logos', 'spartoo.jpg')
+RACINE = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
+LOGO = os.path.join(RACINE, 'contenus', 'trames', 'logos', 'spartoo.jpg')
+LOGO_PREPALOG = os.path.join(RACINE, 'styles', 'logo.png')
 
 d = Document()
 st = d.styles['Normal']
@@ -29,7 +30,7 @@ st.font.name = 'Calibri'; st.font.size = Pt(11); st.font.color.rgb = ENCRE
 st.element.rPr.rFonts.set(qn('w:eastAsia'), 'Calibri')
 st.paragraph_format.space_after = Pt(6); st.paragraph_format.line_spacing = 1.08
 for s in d.sections:
-    s.top_margin = s.bottom_margin = Cm(1.5)
+    s.top_margin = Cm(1.2); s.bottom_margin = Cm(1.3)
     s.left_margin = s.right_margin = Cm(1.9)
 
 def colle_au_suivant():
@@ -140,11 +141,13 @@ def tableau(entetes, nlignes, largeurs=None, hauteur=Cm(1.15)):
 from docx.enum.text import WD_TAB_ALIGNMENT
 par = d.add_paragraph(); par.paragraph_format.space_after = Pt(2)
 par.paragraph_format.tab_stops.add_tab_stop(Cm(17.0), WD_TAB_ALIGNMENT.RIGHT)
-r = par.add_run('PREPALOG  ·  LOGISIM  ·  SPARTOO')
-r.bold = True; r.font.size = Pt(10); r.font.color.rgb = TERRE; r.font.name = 'Consolas'
+if os.path.exists(LOGO_PREPALOG):
+    par.add_run().add_picture(LOGO_PREPALOG, height=Cm(1.15))
+r = par.add_run('  Logisim')
+r.bold = True; r.font.size = Pt(20); r.font.color.rgb = ARDOISE
 par.add_run('\t')
 if os.path.exists(LOGO):
-    par.add_run().add_picture(LOGO, height=Cm(1.6))
+    par.add_run().add_picture(LOGO, height=Cm(1.5))
 else:
     # Pas de logo fourni : on met le nom en attendant, plutôt que d'inventer une marque.
     r = par.add_run('SPARTOO'); r.bold = True; r.font.size = Pt(15); r.font.color.rgb = ARDOISE
@@ -160,7 +163,7 @@ for lib, li, co in [('Nom',0,0), ('Prénom',0,2), ('Classe',1,0), ('Date',1,2), 
     c = t.rows[li].cells[co]; ombre(c, 'E8EDF2')
     par = c.paragraphs[0]; par.paragraph_format.space_after = Pt(0)
     r = par.add_run(lib); r.bold = True; r.font.size = Pt(10); r.font.color.rgb = ARDOISE
-for row in t.rows: row.height = Cm(0.88)
+for row in t.rows: row.height = Cm(0.82)
 d.add_paragraph().paragraph_format.space_after = Pt(4)
 
 encadre('Ce document est ta trame de travail :',

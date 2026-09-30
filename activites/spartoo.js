@@ -20,6 +20,8 @@ export const meta = {
   // l'avancement réel, pas une note sur 20.
   bareme: SPARTOO.ETAPES.length,
   notation: 'avancement',
+  // Prend toute la page : ni bandeau ni titre Prepalog autour. Voir core/app.js.
+  immersif: true,
   portee: 'eleve',
   tables: {},
   pret: true,
@@ -35,6 +37,7 @@ const moteur = creerEntreprise({
   CM: SPARTOO.CM,
   baseDeDepart: SPARTOO.baseDeDepart,
   etapes: SPARTOO.ETAPES,
+  THEME: SPARTOO.THEME,
 });
 
 export function rendre(hote, ctx) { moteur.rendre(hote, ctx); }

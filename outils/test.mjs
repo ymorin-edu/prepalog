@@ -644,7 +644,9 @@ await v('Spartoo : exercice complet, trois jalons au vert', async () => {
 
 // ---------- 30. le suivi de classe voit l'avancement
 await v('Spartoo : avancement remonté au suivi de classe', async () => {
-  await page.click('#btnRetour');
+  // L'environnement est immersif : pas de bandeau Prepalog, on en sort par son propre bouton.
+  await page.click('[data-quitter]');
+  await page.waitForSelector('#btnDeco', { timeout: 6000 });
   await page.click('#btnDeco');
   await page.waitForSelector('#btnProf');
   await page.click('#btnProf');

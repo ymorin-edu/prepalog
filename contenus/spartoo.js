@@ -89,6 +89,33 @@ export const ENTREPRISE = {
   nom: 'Spartoo',
   sousTitre: 'Vente de chaussures en ligne',
   exercice: "Exercice 1 : réception d'une commande et bon de préparation",
+  logo: './contenus/trames/logos/spartoo.jpg',
+};
+
+// Le cramoisi relevé sur le logo. Il remplace l'ardoise de Prepalog à l'intérieur du
+// module : l'élève doit sentir qu'il a changé d'outil, pas ouvert un chapitre du site.
+export const THEME = {
+  accent: '#c1013d',
+  surAccent: '#ffffff',
+  // Palette sombre reprise de LogiSim d'origine : noirs chauds, texte gris clair, accents
+  // cramoisis. Le module est sombre quel que soit le thème choisi sur le site — c'est
+  // l'ambiance du logiciel, pas un réglage d'affichage.
+  sombre: {
+    fond: '#15100f',        // fond de fenêtre, noir chaud
+    panneau: '#1e1817',     // panneaux, tuiles, champs
+    bandeau: '#1a1413',     // en-tête, légèrement plus sombre que les panneaux
+    menu: '#1a1413',        // colonne de navigation : un ton distinct du corps
+    survol: '#271f1e',
+    filet: '#352b29',
+    encre: '#ece5e2',
+    encreDouce: '#a3928d',
+    accent: '#ef2a5e',      // textes, bordures, chiffres : plus clair pour rester lisible
+    accentFond: '#c1013d',  // aplats pleins (pastilles, boutons)
+    accentClair: 'rgba(239,42,94,.14)',
+    terre: '#e0904a',
+    vert: '#56b183',
+    rouge: '#e2726f',
+  },
 };
 
 // La commande qui attend l'élève à l'ouverture, et les trois messages de départ.

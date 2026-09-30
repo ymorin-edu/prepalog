@@ -466,27 +466,76 @@ th.col-saisie, td.col-saisie{ background:var(--ardoise-clair) }
 .module-tile.fini{ box-shadow:inset 3px 0 0 var(--vert) }
 .module-tile.fini .code{ color:var(--vert) }
 
+/* --- environnement d'entreprise : le module prend toute la page --------------
+   Une activité « immersive » n'a ni bandeau ni titre Prepalog autour d'elle : elle
+   dessine son propre en-tête, aux couleurs de l'entreprise. Les variables de couleur
+   sont posées en style inline sur .ent-page par le module, donc valables partout à
+   l'intérieur — et nulle part ailleurs. */
+.app > #hoteActivite.immersif{ margin:0 }
+/* Le module pose ses variables sur <body> : l'ambiance couvre toute la fenêtre, pas
+   seulement la colonne de contenu, et disparaît dès qu'on quitte l'entreprise. */
+body.immersion{ background:var(--fond); color:var(--encre) }
+/* Prepalog tient sa lecture dans une colonne de 1080 px : c'est bon pour du texte, mauvais
+   pour un logiciel métier. Le module reprend donc toute la largeur de la fenêtre, comme
+   LogiSim d'origine — sinon les tableaux larges (clients et leurs commandes, stock) se
+   tassent ou perdent des colonnes. Le plafond à 1720 px évite seulement les lignes
+   interminables sur un très grand écran. */
+body.immersion .app{ max-width:1720px; padding:14px 24px 0 }
+.ent-page{ display:block }
+.ent-bandeau{
+  display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+  padding:12px 18px; margin-bottom:18px; border-radius:var(--r);
+  background:var(--ent-bandeau, var(--ardoise-fond));
+  color:var(--ent-bandeau-txt, var(--sur-ardoise));
+  border:1px solid var(--filet);
+}
+.ent-marque{ color:var(--ent-marque, inherit) }
+.ent-logo{
+  height:34px; width:auto; border-radius:3px; background:#fff;
+  padding:3px 5px; flex:0 0 auto;
+}
+.ent-marque{ font-size:1.25rem; font-weight:700; letter-spacing:-.01em }
+.ent-baseline{ font-size:12.5px; opacity:.85 }
+.ent-qui{ font-size:12.5px; opacity:.9 }
+.ent-sortie{
+  font:inherit; font-size:12.5px; cursor:pointer; padding:5px 12px;
+  border-radius:var(--r); border:1px solid currentColor;
+  background:none; color:inherit;
+}
+.ent-sortie:hover{ background:rgba(255,255,255,.15) }
+
 /* --- environnement d'entreprise (type « entreprise ») --------------------------
    LogiSim dans la charte Prepalog : une colonne de navigation à gauche, le travail
    à droite. Sous 860 px, la navigation passe en barre horizontale défilante. */
-.ent-shell{ display:grid; grid-template-columns:212px 1fr; gap:18px; margin-top:8px }
-.ent-side{ display:flex; flex-direction:column; gap:2px; align-self:start; position:sticky; top:12px }
-.ent-org{
-  padding:10px 12px; margin-bottom:8px; border-radius:var(--r);
-  background:var(--ardoise-fond); color:var(--sur-ardoise);
+.ent-shell{
+  display:grid; grid-template-columns:230px 1fr; gap:0; margin-top:8px;
+  /* La colonne de navigation doit descendre jusqu'en bas, même quand le contenu est court :
+     c'est le filet vertical qui sépare la navigation du travail. */
+  min-height:calc(100vh - 92px);
 }
-.ent-org strong{ display:block; font-size:1rem }
-.ent-org span{ font-size:11.5px; opacity:.85 }
+/* Le menu se distingue du corps par un ton légèrement différent et un filet, comme dans
+   LogiSim d'origine. `--ent-side` est posé par l'entreprise ; sans elle, la colonne reste
+   transparente et seul le filet la sépare. */
+.ent-side{
+  display:flex; flex-direction:column; gap:2px; align-self:stretch;
+  background:var(--ent-side, transparent);
+  border-right:1px solid var(--filet);
+  padding:2px 14px 24px 24px; margin:0 18px 0 -24px;
+}
+.ent-side .ent-nav:first-child{ margin-top:0 }
 .ent-nav{
   display:flex; align-items:center; gap:8px; width:100%; text-align:left;
   font:inherit; cursor:pointer; padding:8px 12px; border-radius:var(--r);
   border:1px solid transparent; background:none; color:var(--encre);
 }
 .ent-nav:hover{ background:var(--survol); border-color:var(--filet) }
-.ent-nav.on{ background:var(--ardoise-clair); border-color:var(--ardoise); font-weight:600 }
+.ent-nav.on{
+  background:var(--ardoise-clair); border-color:var(--ardoise); font-weight:600;
+  box-shadow:inset 3px 0 0 var(--ardoise);
+}
 .ent-n{
   margin-left:auto; font-family:var(--mono); font-size:11px; font-weight:600;
-  background:var(--terre); color:#fff; border-radius:999px; padding:1px 7px;
+  background:var(--ent-badge, var(--terre)); color:#fff; border-radius:999px; padding:1px 7px;
 }
 .ent-sep{
   margin:12px 0 4px; padding-left:12px; font-family:var(--mono); font-size:10.5px;
@@ -574,9 +623,12 @@ th.col-saisie, td.col-saisie{ background:var(--ardoise-clair) }
 .ent-kv span:nth-child(odd){ color:var(--encre-douce) }
 
 @media (max-width:860px){
-  .ent-shell{ grid-template-columns:1fr }
-  .ent-side{ position:static; flex-direction:row; flex-wrap:wrap; gap:6px }
-  .ent-org{ width:100%; margin-bottom:2px }
+  .ent-shell{ grid-template-columns:1fr; min-height:0 }
+  .ent-side{
+    position:static; flex-direction:row; flex-wrap:wrap; gap:6px;
+    border-right:0; border-bottom:1px solid var(--filet);
+    padding:8px 16px; margin:0 -16px 14px;
+  }
   .ent-nav{ width:auto }
   .ent-sep{ display:none }
   .ent-boite{ grid-template-columns:1fr }

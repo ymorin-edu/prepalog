@@ -23,6 +23,10 @@ const memoriserGroupe = (uid, gid) => { try { localStorage.setItem(CLE_GROUPE + 
 function fermerJeuCourant() {
   if (jeuOuvert) { try { jeuOuvert.fermer(); } catch (e) {} jeuOuvert = null; }
   B.fermerJeux();
+  // Filet de sécurité : une activité immersive repeint <body> à ses couleurs. Quelle que
+  // soit la façon dont on la quitte, le site doit retrouver sa charte.
+  document.body.classList.remove('immersion');
+  document.body.removeAttribute('style');
 }
 
 // ------------------------------------------------------------------ connexion
@@ -203,18 +207,25 @@ async function vueActivite(aid) {
     return toast("Cette activité demande un groupe. L'enseignant doit en activer un.");
   }
 
-  app.innerHTML = `
-    ${entete({ marque: CONFIG.marque, institution: CONFIG.institution, profil })}
-    <button class="lien-accueil" id="btnRetour">← ${rubriqueActive ? ech((RUBRIQUES.find((r) => r.id === rubriqueActive) || {}).label || 'RETOUR').toUpperCase() : 'ACCUEIL'}</button>
-    <h1>${ech(m.meta.titre)}</h1>
-    <p class="note">${ech(m.meta.code || '')} ${m.meta.desc ? '· ' + ech(m.meta.desc) : ''}
-      ${m.meta.bareme ? (m.meta.notation === 'avancement'
-        ? `· ${m.meta.bareme} étapes suivies`
-        : `· noté sur ${m.meta.bareme}`) : ''}</p>
-    <div id="hoteActivite"><div class="vide">Chargement…</div></div>`;
-
-  brancherEntete(async () => { fermerJeuCourant(); await B.deconnexion(); });
-  document.getElementById('btnRetour').addEventListener('click', () => vueAccueil());
+  // Une activité « immersive » prend toute la page : pas de bandeau Prepalog, pas de titre
+  // de module. L'élève doit avoir l'impression d'entrer dans le logiciel de l'entreprise,
+  // pas d'ouvrir un chapitre du site. C'est le module qui dessine alors son propre en-tête
+  // et son propre bouton de sortie.
+  if (m.meta.immersif) {
+    app.innerHTML = `<div id="hoteActivite" class="immersif"><div class="vide">Chargement…</div></div>`;
+  } else {
+    app.innerHTML = `
+      ${entete({ marque: CONFIG.marque, institution: CONFIG.institution, profil })}
+      <button class="lien-accueil" id="btnRetour">← ${rubriqueActive ? ech((RUBRIQUES.find((r) => r.id === rubriqueActive) || {}).label || 'RETOUR').toUpperCase() : 'ACCUEIL'}</button>
+      <h1>${ech(m.meta.titre)}</h1>
+      <p class="note">${ech(m.meta.code || '')} ${m.meta.desc ? '· ' + ech(m.meta.desc) : ''}
+        ${m.meta.bareme ? (m.meta.notation === 'avancement'
+          ? `· ${m.meta.bareme} étapes suivies`
+          : `· noté sur ${m.meta.bareme}`) : ''}</p>
+      <div id="hoteActivite"><div class="vide">Chargement…</div></div>`;
+    brancherEntete(async () => { fermerJeuCourant(); await B.deconnexion(); });
+    document.getElementById('btnRetour').addEventListener('click', () => vueAccueil());
+  }
 
   fermerJeuCourant();
   const objGroupe = groupeActif ? await B.groupe(groupeActif) : null;
@@ -232,6 +243,9 @@ async function vueActivite(aid) {
     // Code qui déverrouille la vue d'ensemble du stock dans un environnement d'entreprise :
     // l'enseignant le donne au moment qu'il choisit dans la séance.
     codeStock: objGroupe?.codeStock || null,
+    // Sortie de l'environnement, pour une activité immersive qui dessine son propre bouton.
+    quitter() { vueAccueil(); },
+    async deconnexion() { fermerJeuCourant(); await B.deconnexion(); },
     // Le travail déjà enregistré pour cette activité, ou null. Utile aux activités
     // notées à la main : l'élève retrouve sa note en ouvrant le module.
     async lireScore() {

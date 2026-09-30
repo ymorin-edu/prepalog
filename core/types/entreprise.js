@@ -24,7 +24,8 @@ export const normLoc = (s) => String(s || '').trim().toUpperCase().replace(/\s+/
 const pastille = (texte, ton) => `<span class="pastille ${ton}">${ech(texte)}</span>`;
 
 export function creerEntreprise(U) {
-  const { ENTREPRISE, VOCAB, CATALOGUE, SUPPLIERS, SUP_BY_ID, CUSTOMERS, CM, baseDeDepart, etapes = [] } = U;
+  const { ENTREPRISE, VOCAB, CATALOGUE, SUPPLIERS, SUP_BY_ID, CUSTOMERS, CM,
+    baseDeDepart, etapes = [], THEME = {} } = U;
   const { MODELS, MM, VARIANTS, VM } = CATALOGUE;
 
   const unite = (n) => ((n > 1 || n === 0) ? VOCAB.unitPl : VOCAB.unit);
@@ -62,6 +63,60 @@ export function creerEntreprise(U) {
         onglet: {}, console: [{ cmd: null, html: '<span class="note">Console. Tapez <b>.help</b> pour la liste des commandes.</span>' }],
         stockOuvert: estProf, erreurCode: '',
       };
+
+      // Les couleurs de l'entreprise remplacent celles de Prepalog, mais seulement pendant
+      // que le module est ouvert : dès qu'on en sort, le site retrouve sa charte et son
+      // thème clair/sombre.
+      //
+      // Deux niveaux. THEME.accent seul : seule la couleur d'accent change, le module suit
+      // le thème du site. THEME.sombre en plus : le module repeint aussi les surfaces et
+      // impose son ambiance sombre, quel que soit le réglage du site — c'est le rendu de
+      // LogiSim d'origine, que l'élève doit retrouver en entrant dans l'entreprise.
+      const enRgb = (h) => h.replace('#', '').match(/../g).map((x) => parseInt(x, 16)).join(',');
+
+      function styleTheme() {
+        const v = [];
+        const a = THEME.accent;
+        if (a) {
+          v.push(`--ardoise:${a}`, `--ardoise-fond:${a}`,
+            `--sur-ardoise:${THEME.surAccent || '#ffffff'}`,
+            `--ardoise-clair:rgba(${enRgb(a)},.11)`);
+        }
+        const P = THEME.sombre;
+        if (P) {
+          v.push(
+            `--fond:${P.fond}`, `--panneau:${P.panneau}`, `--survol:${P.survol}`,
+            `--filet:${P.filet}`, `--encre:${P.encre}`, `--encre-douce:${P.encreDouce}`,
+            // Sur fond sombre, l'accent des textes et des bordures doit être plus clair que
+            // celui des aplats pleins, sinon il disparaît.
+            `--ardoise:${P.accent}`, `--ardoise-fond:${P.accentFond || P.accent}`,
+            `--ardoise-clair:${P.accentClair || `rgba(${enRgb(P.accent)},.14)`}`,
+            `--terre:${P.terre}`, `--vert:${P.vert}`, `--rouge:${P.rouge}`,
+            `--ent-bandeau:${P.bandeau || P.panneau}`,
+            `--ent-side:${P.menu || P.bandeau || 'transparent'}`,
+            `--ent-bandeau-txt:${P.encre}`,
+            `--ent-marque:${P.accent}`,
+            `--ent-badge:${P.accentFond || P.accent}`,
+            // Un message flottant sombre disparaîtrait sur ce fond : il prend l'accent.
+            `--toast-fond:${P.accentFond || P.accent}`, '--toast-texte:#ffffff',
+            '--gele-fond:#2a1a12',
+            '--ombre:0 1px 2px rgba(0,0,0,.45)',
+            'color-scheme:dark');
+        }
+        return v.join(';');
+      }
+
+      // L'ambiance doit couvrir toute la fenêtre, pas seulement la colonne de contenu :
+      // les variables sont posées sur <body>, et retirées à la sortie du module.
+      function habiller() {
+        document.body.classList.add('immersion');
+        document.body.setAttribute('style', styleTheme());
+      }
+      function deshabiller() {
+        document.body.classList.remove('immersion');
+        document.body.removeAttribute('style');
+      }
+      const sortir = (fn) => { deshabiller(); if (fn) fn(); };
 
       const sauver = () => { ctx.jeu.sauver(); remonterEtapes(); };
       const stockDe = (sku) => { const q = db.stock[sku]; return q == null ? 0 : q; };
@@ -155,27 +210,38 @@ export function creerEntreprise(U) {
         };
 
         hote.innerHTML = `
-          <div class="ent-shell">
-            <aside class="ent-side">
-              <div class="ent-org"><strong>${ech(ENTREPRISE.nom)}</strong><span>${ech(ENTREPRISE.sousTitre)}</span></div>
-              ${item('accueil', 'Accueil')}
-              ${item('mail', 'Messagerie', nonLus)}
-              ${item('commandes', 'Commandes', aFaire, ['commandes', 'commande'])}
-              <div class="ent-sep">Articles</div>
-              ${item('catalogue', 'Catalogue', 0, ['catalogue', 'produit'])}
-              ${item('stock', 'Stock')}
-              <div class="ent-sep">Tiers</div>
-              ${item('tiers', 'Clients / Fournisseurs')}
-              <div class="ent-sep">Outils</div>
-              ${item('console', 'Console')}
-              <div class="ent-sep"></div>
-              <button class="ent-nav" data-raz>Réinitialiser ma base</button>
-            </aside>
-            <div class="ent-main" id="entMain"></div>
+          <div class="ent-page" style="${styleTheme()}">
+            <header class="ent-bandeau">
+              ${ENTREPRISE.logo ? `<img class="ent-logo" src="${ech(ENTREPRISE.logo)}" alt="${ech(ENTREPRISE.nom)}">` : ''}
+              <span class="ent-marque">${ech(ENTREPRISE.nom)}</span>
+              <span class="ent-baseline">${ech(ENTREPRISE.sousTitre)}</span>
+              <span class="pousse ent-qui">${ech(prenom)}</span>
+              <button class="ent-sortie" data-quitter>Quitter</button>
+            </header>
+            <div class="ent-shell">
+              <aside class="ent-side">
+                ${item('accueil', 'Accueil')}
+                ${item('mail', 'Messagerie', nonLus)}
+                ${item('commandes', 'Commandes', aFaire, ['commandes', 'commande'])}
+                <div class="ent-sep">Articles</div>
+                ${item('catalogue', 'Catalogue', 0, ['catalogue', 'produit'])}
+                ${item('stock', 'Stock')}
+                <div class="ent-sep">Tiers</div>
+                ${item('clients', 'Clients')}
+                ${item('fournisseurs', 'Fournisseurs')}
+                <div class="ent-sep">Outils</div>
+                ${item('console', 'Console')}
+                <div class="ent-sep"></div>
+                <button class="ent-nav" data-raz>Réinitialiser ma base</button>
+              </aside>
+              <div class="ent-main" id="entMain"></div>
+            </div>
           </div>`;
 
         hote.querySelectorAll('[data-vue]').forEach((b) => b.addEventListener('click', () => aller(b.dataset.vue)));
         hote.querySelector('[data-raz]').addEventListener('click', reinitialiser);
+        hote.querySelector('[data-quitter]').addEventListener('click', () => sortir(ctx.quitter));
+        habiller();
         dessinerVue();
       }
 
@@ -189,13 +255,14 @@ export function creerEntreprise(U) {
         const z = hote.querySelector('#entMain');
         const vues = {
           accueil: vueAccueil, mail: vueMail, commandes: vueCommandes, commande: vueCommande,
-          catalogue: vueCatalogue, produit: vueProduit, stock: vueStock, tiers: vueTiers, console: vueConsole,
+          catalogue: vueCatalogue, produit: vueProduit, stock: vueStock,
+          clients: vueClients, fournisseurs: vueFournisseurs, console: vueConsole,
         };
         z.innerHTML = (vues[E.vue] || vueAccueil)();
         brancher(z);
         if (E.vue === 'catalogue') majCatalogue();
         if (E.vue === 'stock' && E.stockOuvert) majStock();
-        if (E.vue === 'tiers') majTiers();
+        if (E.vue === 'clients' || E.vue === 'fournisseurs') majTiers();
         if (E.vue === 'console') { const o = z.querySelector('.ent-cout'); if (o) o.scrollTop = o.scrollHeight; }
       }
 
@@ -558,13 +625,6 @@ export function creerEntreprise(U) {
         hote.querySelectorAll('[data-produit]').forEach((b2) => b2.addEventListener('click', () => aller('produit', { ref: b2.dataset.produit })));
       }
 
-      const matrice = (m) => `<div class="ent-scroll"><table class="ent-mx"><thead><tr><th>Couleur</th><th>Empl.</th>
-          ${m.sizes.map((s) => `<th>${s}</th>`).join('')}</tr></thead><tbody>
-          ${m.colors.map((c) => `<tr><td>${swatch(c)}</td><td class="mono">${ech(m.loc[c])}</td>
-            ${m.sizes.map((s) => { const q = stockDe(m.ref + '-' + c + '-' + s);
-              return `<td class="num ${q <= 0 ? 'faux' : (q <= m.min ? 'tiede' : '')}">${q}</td>`; }).join('')}</tr>`).join('')}
-          </tbody></table></div>`;
-
       function vueProduit() {
         const m = MM[E.ref];
         if (!m) return vueCatalogue();
@@ -582,9 +642,12 @@ export function creerEntreprise(U) {
             <dt>${ech(VOCAB.sizeLabel)}s</dt><dd>${m.s0} à ${m.s1}</dd>
             <dt>Seuil d'alerte</dt><dd>${m.min} ${ech(VOCAB.unitPl)} par référence</dd>
             <dt>Stock maximum</dt><dd>${m.max} ${ech(VOCAB.unitPl)} par référence</dd>
+            <dt>Emplacements</dt><dd>${m.colors.map((c) => `${ech(COLORS[c][0])} <span class="mono">${ech(m.loc[c])}</span>`).join(' · ')}</dd>
             <dt>Fournisseur</dt><dd>${ech(sp.name)} <span class="mono note">${ech(sp.id)}</span><br>
               <span class="note">Délai ${sp.delai} jours · franco ${eur(sp.franco)}</span></dd></dl></section>
-          <section class="panneau"><h3>Stock par couleur et ${ech(VOCAB.configWord)}</h3>${matrice(m)}</section>`;
+          <div class="avis">Le catalogue ne donne pas les quantités en stock : elles changent à
+            chaque commande. Pour connaître le stock réel d'une référence, utilisez la console —
+            <span class="mono">.getstock ${ech(m.ref)}</span>.</div>`;
       }
 
       /* -------------------------------------------------------------- stock */
@@ -662,23 +725,28 @@ export function creerEntreprise(U) {
       }
 
       /* -------------------------------------------------------------- tiers */
-      function vueTiers() {
-        const onglet = E.onglet.tiers || 'clients';
-        return `<div class="ent-tete"><h2>Clients et fournisseurs</h2>
-            <p class="note">${tousClients().length} clients, ${tousFournisseurs().length} fournisseurs.</p></div>
-          <div class="rangee" style="margin-bottom:12px">
-            <button class="btn btn-s ${onglet === 'clients' ? 'btn-p' : ''}" data-onglet="tiers" data-val="clients">Clients</button>
-            <button class="btn btn-s ${onglet === 'fournisseurs' ? 'btn-p' : ''}" data-onglet="tiers" data-val="fournisseurs">Fournisseurs</button>
-          </div>
+      function vueClients() {
+        return `<div class="ent-tete"><h2>Clients</h2>
+            <p class="note">${tousClients().length} clients référencés.</p></div>
           <div class="ent-filtres"><div class="champ"><label for="tQ">Recherche</label>
             <input id="tQ" data-filtre placeholder="Nom, ville, code…"></div></div>
           <div id="entListe"></div>`;
       }
 
+      function vueFournisseurs() {
+        return `<div class="ent-tete"><h2>Fournisseurs</h2>
+            <p class="note">${tousFournisseurs().length} fournisseurs référencés.</p></div>
+          <div class="ent-filtres"><div class="champ"><label for="tQ">Recherche</label>
+            <input id="tQ" data-filtre placeholder="Marque, société, ville, code…"></div></div>
+          <div id="entListe"></div>`;
+      }
+
       function majTiers() {
-        const onglet = E.onglet.tiers || 'clients', q = norm(hote.querySelector('#tQ').value);
+        const champ = hote.querySelector('#tQ');
+        if (!champ) return;
+        const q = norm(champ.value);
         let h;
-        if (onglet === 'clients') {
+        if (E.vue === 'clients') {
           const r = tousClients().filter((c) => !q || norm(`${c.id} ${c.prenom} ${c.nom} ${c.ville} ${c.cp} ${c.email}`).includes(q));
           h = `<table><thead><tr><th>Code</th><th>Nom</th><th>E-mail</th><th>Téléphone</th><th>Adresse</th>
             <th>Client depuis</th><th class="num">Commandes</th></tr></thead><tbody>
@@ -687,15 +755,15 @@ export function creerEntreprise(U) {
               <td>${ech(c.adr)}, ${ech(c.cp)} ${ech(c.ville)}</td><td>${fdate(c.since)}</td>
               <td class="num">${c.nb}</td></tr>`).join('')}</tbody></table>`;
         } else {
-          const f = tousFournisseurs().filter((s) => !q || norm(`${s.id} ${s.brand} ${s.name} ${s.ville}`).includes(q));
+          const f = tousFournisseurs().filter((s2) => !q || norm(`${s2.id} ${s2.brand} ${s2.name} ${s2.ville}`).includes(q));
           h = `<table><thead><tr><th>Code</th><th>Marque</th><th>Société</th><th>Contact</th><th>Téléphone</th>
             <th>E-mail</th><th>Adresse</th><th class="num">Délai</th><th class="num">Franco</th>
             <th class="num">Mini. commande</th><th>Paiement</th></tr></thead><tbody>
-            ${f.map((s) => `<tr><td class="mono">${ech(s.id)}</td><td><b>${ech(s.brand)}</b></td><td>${ech(s.name)}</td>
-              <td>${ech(s.contact)}</td><td class="mono">${ech(s.tel)}</td><td class="mono">${ech(s.email)}</td>
-              <td>${ech(s.adr)}, ${ech(s.cp)} ${ech(s.ville)}</td><td class="num">${s.delai} j</td>
-              <td class="num">${eur(s.franco)}</td><td class="num">${s.moq || '—'} ${ech(VOCAB.unitPl)}</td>
-              <td>${ech(s.pay)}</td></tr>`).join('')}</tbody></table>`;
+            ${f.map((s2) => `<tr><td class="mono">${ech(s2.id)}</td><td><b>${ech(s2.brand)}</b></td><td>${ech(s2.name)}</td>
+              <td>${ech(s2.contact)}</td><td class="mono">${ech(s2.tel)}</td><td class="mono">${ech(s2.email)}</td>
+              <td>${ech(s2.adr)}, ${ech(s2.cp)} ${ech(s2.ville)}</td><td class="num">${s2.delai} j</td>
+              <td class="num">${eur(s2.franco)}</td><td class="num">${s2.moq || '—'} ${ech(VOCAB.unitPl)}</td>
+              <td>${ech(s2.pay)}</td></tr>`).join('')}</tbody></table>`;
         }
         hote.querySelector('#entListe').innerHTML = `<section class="panneau"><div class="ent-scroll">${h}</div></section>`;
       }
@@ -768,8 +836,18 @@ export function creerEntreprise(U) {
           if (r.liste) return tbl(['Référence', 'Article', 'Stock', 'Statut'], r.liste.map((v) => { const q = stockDe(v.sku);
             return [`<span class="mono">${ech(v.sku)}</span>`, `${ech(label(v))} ${ech(COLORS[v.color][0])} ${ech(VOCAB.sizeShort)}${v.size}`,
               `<b>${q}</b>`, pastilleStock(q, v.model.min)]; }), [2]);
+          // Modèle entier : une ligne par référence complète, la référence en premier —
+          // c'est elle que l'élève doit recopier dans son bon de préparation.
           const m = r.m, tot = stockModele(m);
-          return `<div>${ech(m.brand + ' ' + m.name)} : <b>${tot}</b> ${ech(unite(tot))} au total</div>${matrice(m)}`;
+          const lignes = [];
+          m.colors.forEach((c) => m.sizes.forEach((t) => {
+            const sku = `${m.ref}-${c}-${t}`, q = stockDe(sku);
+            lignes.push([`<span class="mono">${ech(sku)}</span>`, ech(COLORS[c][0]),
+              t, `<span class="mono">${ech(m.loc[c])}</span>`, `<b>${q}</b>`, pastilleStock(q, m.min)]);
+          }));
+          return `<div>${ech(m.brand + ' ' + m.name)} : <b>${tot}</b> ${ech(unite(tot))} au total, `
+            + `${lignes.length} références</div>`
+            + tbl(['Référence', 'Couleur', ech(VOCAB.sizeLabel), 'Emplacement', 'Stock', 'Statut'], lignes, [2, 4]);
         }],
         getprice: ['.getprice <réf>', "Prix de vente et prix d'achat", (a) => {
           const r = resoudre(a[0]), m = r.v ? r.v.model : (r.m || (r.liste && r.liste[0].model)), ht = m.price / 1.2;
@@ -942,7 +1020,7 @@ export function creerEntreprise(U) {
         z.querySelectorAll('[data-filtre]').forEach((el) => el.addEventListener('input', () => {
           if (E.vue === 'catalogue') majCatalogue();
           else if (E.vue === 'stock') majStock();
-          else if (E.vue === 'tiers') majTiers();
+          else if (E.vue === 'clients' || E.vue === 'fournisseurs') majTiers();
         }));
         z.querySelector('#formCmd')?.addEventListener('submit', (e) => {
           e.preventDefault();
