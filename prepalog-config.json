@@ -1,0 +1,15 @@
+{
+  "marque": "Prepalog",
+  "institution": "Famille des métiers GATL",
+  "suffixeMatricule": "@prepalog.local",
+  "superAdmins": [],
+  "firebase": {
+    "apiKey": "AIzaSyCjG1Yiadj3NBBYk7vS-njpEBfhBvSUlTU",
+    "authDomain": "prepalog-e592d.firebaseapp.com",
+    "databaseURL": "https://prepalog-e592d-default-rtdb.europe-west1.firebasedatabase.app",
+    "projectId": "prepalog-e592d",
+    "storageBucket": "prepalog-e592d.firebasestorage.app",
+    "messagingSenderId": "431036224085",
+    "appId": "1:431036224085:web:71e7b1e64d149d7b70fadc"
+  }
+}
