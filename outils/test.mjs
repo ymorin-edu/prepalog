@@ -354,9 +354,13 @@ await v('scénario : la rubrique et le lien externe', async () => {
   await page.click('#btnRetour');
   await page.waitForSelector('[data-rub="scenario"]', { timeout: 6000 });
   await page.click('[data-rub="scenario"]');
-  await page.waitForSelector('[data-act="brasseries-gatinais"]', { timeout: 6000 });
-  const n = await page.$$eval('[data-act]', (e) => e.length);
-  if (n !== 5) throw new Error(`${n} scénario(s) au lieu de 5`);
+  await page.waitForSelector('[data-act="yves-rocher"]', { timeout: 6000 });
+  const ordre = await page.$$eval('[data-act]', (e) => e.map((x) => x.dataset.act));
+  const attendu = ['yves-rocher', 'foot-locker', 'bouygues-telecom', 'brasseries-gatinais', 'reception-plateforme'];
+  if (ordre.join() !== attendu.join()) throw new Error('ordre des scénarios : ' + ordre.join(', '));
+  // Les codes suivent l'ordre d'affichage.
+  const codes = await page.$$eval('[data-act] .code', (e) => e.map((x) => x.textContent.trim().split(' ')[0]));
+  if (codes.join() !== 'SCE-1,SCE-2,SCE-3,SCE-4,SCE-5') throw new Error('codes : ' + codes.join(', '));
   await page.click('[data-act="brasseries-gatinais"]');
   await page.waitForSelector('.lien-ouvrir', { timeout: 6000 });
   const href = await page.getAttribute('.lien-ouvrir', 'href');
@@ -365,6 +369,8 @@ await v('scénario : la rubrique et le lien externe', async () => {
   if (await page.$('.note-badge')) throw new Error('une note s\'affiche alors qu\'aucune n\'est saisie');
   const t = await page.textContent('#hoteActivite');
   if (!/apparaîtra ici une fois saisie/.test(t)) throw new Error('la mention d\'attente de note manque');
+  // Les consignes vivent sur le Padlet : rien ne doit être recopié ici.
+  if (/Rendu attendu|Calculer le poids/.test(t)) throw new Error('consigne recopiée côté site');
 });
 
 // ---------- 21. l'enseignant saisit la note dans le suivi de classe

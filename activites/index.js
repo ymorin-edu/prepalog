@@ -10,11 +10,12 @@ export const ACTIVITES = [
   () => import('./zones-entrepot.js'),
   () => import('./calculs-stock.js'),
   () => import('./inventaire-tableur.js'),
-  () => import('./brasseries-gatinais.js'),
+  // Scénarios : l'ordre d'affichage des tuiles est celui de cette liste.
   () => import('./yves-rocher.js'),
-  () => import('./reception-plateforme.js'),
   () => import('./foot-locker.js'),
   () => import('./bouygues-telecom.js'),
+  () => import('./brasseries-gatinais.js'),
+  () => import('./reception-plateforme.js'),
 ];
 
 // Pictogrammes des pastilles. Trait de 1,7 px, sans remplissage : même famille graphique

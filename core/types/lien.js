@@ -9,6 +9,10 @@
 //
 // Le lien s'ouvre dans un nouvel onglet : Padlet et Digipad refusent l'affichage en
 // cadre, et l'élève garde Prepalog sous la main.
+//
+// Règle de contenu : **les consignes et le rendu attendu sont sur le support, pas ici.**
+// Les répéter côté site, c'est se condamner à les corriger à deux endroits. Le module ne
+// porte que le titre du travail, le bouton d'ouverture et la note.
 
 import { ech } from '../ui.js';
 
@@ -16,9 +20,6 @@ export function creerLien({
   url,
   service = 'le support',
   objectif = '',
-  consigne = '',
-  etapes = [],
-  rendu = '',
 }) {
   return {
     rendre(hote, ctx) {
@@ -40,16 +41,12 @@ export function creerLien({
             <div class="lien-tete">
               <div>
                 <h2>${ech(objectif || 'Scénario complet')}</h2>
-                ${consigne ? `<p class="note">${ech(consigne)}</p>` : ''}
+                <p class="note">Le dossier, les consignes et le rendu attendu sont sur ${ech(service)}.</p>
               </div>
               ${note !== null
                 ? `<span class="note-badge" title="Note saisie par votre enseignant">${fr(note)} / ${bareme}</span>`
                 : ''}
             </div>
-
-            ${etapes.length ? `<ol class="lien-etapes">
-              ${etapes.map((e) => `<li>${ech(e)}</li>`).join('')}
-            </ol>` : ''}
 
             <a class="btn btn-p lien-ouvrir" href="${ech(url)}" target="_blank" rel="noopener noreferrer">
               Ouvrir ${ech(service)}
@@ -57,8 +54,6 @@ export function creerLien({
             <p class="note lien-adresse">S'ouvre dans un nouvel onglet — gardez celui-ci ouvert.
               <span class="mono">${ech(coupe(url))}</span></p>
           </section>
-
-          ${rendu ? `<div class="avis"><strong>Rendu attendu.</strong> ${ech(rendu)}</div>` : ''}
 
           ${estProf
             ? `<div class="avis">Activité notée à la main : saisissez les notes dans
