@@ -1,4 +1,4 @@
-// Activité témoin nº 2 — base de données partagée par toute la classe, portée groupe.
+// Base du magasin — base de données partagée par toute la classe, portée groupe.
 // Reprend le principe du module Magasin actuel, mais entièrement porté par le noyau :
 // ce fichier ne contient qu'un schéma de tables.
 //
@@ -7,11 +7,13 @@
 import { creerTableau } from '../core/types/tableau.js';
 
 export const meta = {
-  id: 'op1',
-  code: 'OP-1',
+  id: 'magasin',
+  code: 'ACT-1',
   titre: 'Base du magasin',
   desc: 'Produits, emplacements et stock. Base commune à toute la classe.',
   rubrique: 'magasin',
+  niveaux: ['2de', '1re', 'tle', 'cap'],
+  competences: [],
   portee: 'groupe',
   pret: true,
   tables: {

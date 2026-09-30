@@ -5,6 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Prepalog</title>
 <meta name="description" content="Plateforme d'activités pour la famille des métiers GATL.">
+<script>
+  /* Pose le thème avant le premier rendu : sans cela, l'écran clignote en blanc
+     pendant une fraction de seconde au chargement en mode sombre. */
+  try {
+    var t = localStorage.getItem('prepalog:theme');
+    if (t === 'clair' || t === 'sombre') document.documentElement.setAttribute('data-theme', t);
+  } catch (e) {}
+</script>
+<link id="favicon" rel="icon" href="./styles/logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">

@@ -6,6 +6,8 @@ export const DEFAUT = {
   superAdmins: [],         // adresses Google autorisées à créer des enseignants
   institution: 'Famille des métiers GATL',
   marque: 'Prepalog',
+  // Texte affiché sous le bandeau de l'écran de connexion. Modifiable sans toucher au code.
+  preambule: "Site à vocation pédagogique, conçu par votre enseignant avec l'aide de l'intelligence artificielle.",
   suffixeMatricule: '@prepalog.local',
 };
 

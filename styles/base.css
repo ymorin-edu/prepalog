@@ -1,18 +1,86 @@
-/* Prepalog — charte sobre institutionnelle, reprise de la Suite Logistique */
-:root{
+/* ============================================================
+   Prepalog — charte sobre institutionnelle, claire et sombre.
+   Les deux thèmes partagent les mêmes noms de variables : aucune
+   règle ci-dessous n'a besoin de connaître le thème actif.
+   ============================================================ */
+
+:root, :root[data-theme="clair"]{
+  --fond:#f6f7f9;          /* fond de page */
+  --panneau:#ffffff;       /* surfaces : panneaux, champs, tuiles */
+  --survol:#fafbfc;
+  --filet:#dde2e7;
+
   --encre:#131a21;
   --encre-douce:#3d4a57;
-  --ardoise:#2c4a63;
+
+  --ardoise:#2c4a63;       /* couleur d'accent : texte, liens, bordures */
+  --ardoise-fond:#2c4a63;  /* fond des éléments pleins (boutons, disques) */
+  --sur-ardoise:#ffffff;   /* texte posé sur --ardoise-fond */
   --ardoise-clair:#e8edf2;
+
   --terre:#b4530f;
   --vert:#1f6b45;
   --rouge:#9d2727;
-  --fond:#f6f7f9;
-  --blanc:#ffffff;
-  --filet:#dde2e7;
+
+  --gele-fond:#fdf3e8;
+  --toast-fond:#131a21;
+  --toast-texte:#ffffff;
+  --ombre:0 1px 2px rgba(19,26,33,.04);
+
   --r:4px;
   --mono:"IBM Plex Mono",ui-monospace,monospace;
+  color-scheme:light;
 }
+
+:root[data-theme="sombre"]{
+  --fond:#10161c;
+  --panneau:#1a222b;
+  --survol:#202a35;
+  --filet:#2c3846;
+
+  --encre:#e4eaf0;
+  --encre-douce:#9aabbb;
+
+  --ardoise:#7aa9cd;
+  --ardoise-fond:#2f5675;
+  --sur-ardoise:#f2f7fb;
+  --ardoise-clair:#22303c;
+
+  --terre:#e0904a;
+  --vert:#56b183;
+  --rouge:#e2726f;
+
+  --gele-fond:#2b2418;
+  --toast-fond:#e4eaf0;
+  --toast-texte:#10161c;
+  --ombre:0 1px 2px rgba(0,0,0,.3);
+  color-scheme:dark;
+}
+
+/* Suit le réglage du système tant que l'utilisateur n'a pas choisi. */
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="clair"]){
+    --fond:#10161c;
+    --panneau:#1a222b;
+    --survol:#202a35;
+    --filet:#2c3846;
+    --encre:#e4eaf0;
+    --encre-douce:#9aabbb;
+    --ardoise:#7aa9cd;
+    --ardoise-fond:#2f5675;
+    --sur-ardoise:#f2f7fb;
+    --ardoise-clair:#22303c;
+    --terre:#e0904a;
+    --vert:#56b183;
+    --rouge:#e2726f;
+    --gele-fond:#2b2418;
+    --toast-fond:#e4eaf0;
+    --toast-texte:#10161c;
+    --ombre:0 1px 2px rgba(0,0,0,.3);
+    color-scheme:dark;
+  }
+}
+
 *{box-sizing:border-box}
 html,body{margin:0;padding:0}
 body{
@@ -20,6 +88,7 @@ body{
   background:var(--fond); color:var(--encre);
   font-size:15px; line-height:1.55;
   -webkit-font-smoothing:antialiased;
+  transition:background .15s ease, color .15s ease;
 }
 h1,h2,h3{margin:0 0 .5em; line-height:1.25; font-weight:600}
 h1{font-size:1.5rem} h2{font-size:1.15rem} h3{font-size:1rem}
@@ -30,83 +99,95 @@ code,kbd,.mono{font-family:var(--mono); font-size:.92em}
 .app{max-width:1080px; margin:0 auto; padding:0 16px 64px}
 .boot{padding:48px 0; color:var(--encre-douce)}
 
-/* en-tête */
+/* ---------------------------------------------------------- en-tête */
 .entete{
   display:flex; align-items:center; gap:14px;
-  padding:14px 0; border-bottom:1px solid var(--filet); margin-bottom:24px;
+  padding:20px 0 18px; border-bottom:1px solid var(--filet); margin-bottom:26px;
   flex-wrap:wrap;
 }
-.entete .marque{font-weight:700; letter-spacing:-.01em; font-size:1.1rem; color:var(--ardoise)}
+.entete .logo{ width:42px; height:42px; flex:0 0 auto; display:block }
+.entete .marque{font-weight:700; letter-spacing:-.015em; font-size:1.45rem; color:var(--ardoise)}
 .entete .institution{
-  font-size:.72rem; letter-spacing:.08em; text-transform:uppercase;
+  font-size:.78rem; letter-spacing:.09em; text-transform:uppercase;
   color:var(--encre-douce); border-left:1px solid var(--filet); padding-left:14px;
+}
+
+/* Variante d'accueil : bandeau haut, sans ligne de séparation sèche */
+.entete-accueil{ padding:34px 0 26px; gap:18px }
+.entete-accueil .logo{ width:64px; height:64px }
+.entete-accueil .marque{ font-size:2.1rem }
+@media (max-width:560px){
+  .entete-accueil{ padding:24px 0 18px }
+  .entete-accueil .logo{ width:50px; height:50px }
+  .entete-accueil .marque{ font-size:1.7rem }
 }
 .entete .pousse{margin-left:auto}
 .entete .qui{font-size:.85rem; color:var(--encre-douce)}
+@media (max-width:560px){ .entete .institution{display:none} }
 
-/* boutons */
+/* Bouton de thème : pas de texte, deux pictogrammes qui s'échangent */
+.btn-theme{
+  background:none; border:1px solid var(--filet); border-radius:var(--r);
+  width:34px; height:34px; padding:0; cursor:pointer; color:var(--encre-douce);
+  display:inline-flex; align-items:center; justify-content:center; flex:0 0 auto;
+}
+.btn-theme:hover{ border-color:var(--ardoise); color:var(--ardoise) }
+.btn-theme svg{ width:17px; height:17px }
+.btn-theme .ico-lune{ display:none }
+:root[data-theme="sombre"] .btn-theme .ico-lune{ display:block }
+:root[data-theme="sombre"] .btn-theme .ico-soleil{ display:none }
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="clair"]) .btn-theme .ico-lune{ display:block }
+  :root:not([data-theme="clair"]) .btn-theme .ico-soleil{ display:none }
+}
+
+/* ---------------------------------------------------------- boutons */
 .btn{
   font:inherit; font-weight:500; cursor:pointer;
-  border:1px solid var(--filet); background:var(--blanc); color:var(--encre);
+  border:1px solid var(--filet); background:var(--panneau); color:var(--encre);
   border-radius:var(--r); padding:8px 14px;
 }
 .btn:hover{border-color:var(--ardoise)}
 .btn:focus-visible{outline:2px solid var(--ardoise); outline-offset:2px}
-.btn-p{background:var(--ardoise); border-color:var(--ardoise); color:#fff}
-.btn-p:hover{background:#233c51}
-.btn-d{color:var(--rouge); border-color:#e6cdcd}
+.btn-p{background:var(--ardoise-fond); border-color:var(--ardoise-fond); color:var(--sur-ardoise)}
+.btn-p:hover{filter:brightness(1.12)}
+.btn-d{color:var(--rouge); border-color:var(--rouge)}
 .btn-s{padding:5px 10px; font-size:.85rem}
 .btn[disabled]{opacity:.5; cursor:not-allowed}
 
-/* champs */
+/* ----------------------------------------------------------- champs */
 label{display:block; font-size:.82rem; font-weight:500; color:var(--encre-douce); margin-bottom:4px}
 input,select,textarea{
   font:inherit; width:100%; padding:8px 10px;
-  border:1px solid var(--filet); border-radius:var(--r); background:var(--blanc); color:var(--encre);
+  border:1px solid var(--filet); border-radius:var(--r);
+  background:var(--panneau); color:var(--encre);
 }
 input:focus,select:focus,textarea:focus{outline:2px solid var(--ardoise); outline-offset:-1px; border-color:var(--ardoise)}
 .champ{margin-bottom:12px}
 
-/* panneaux */
+/* --------------------------------------------------------- panneaux */
 .panneau{
-  background:var(--blanc); border:1px solid var(--filet);
-  border-radius:var(--r); padding:18px; margin-bottom:16px;
+  background:var(--panneau); border:1px solid var(--filet);
+  border-radius:var(--r); padding:18px; margin-bottom:16px; box-shadow:var(--ombre);
 }
 .grille{display:grid; gap:16px}
 @media(min-width:760px){ .grille-2{grid-template-columns:1fr 1fr} .grille-3{grid-template-columns:repeat(3,1fr)} }
 
-/* pastilles d'accueil */
-.pastilles{display:grid; gap:12px; grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}
-.pastille{
-  display:block; text-align:left; width:100%;
-  background:var(--blanc); border:1px solid var(--filet); border-radius:var(--r);
-  padding:16px; cursor:pointer; font:inherit;
-}
-.pastille:hover{border-color:var(--ardoise)}
-.pastille .code{font-family:var(--mono); font-size:.75rem; color:var(--terre)}
-.pastille .titre{display:block; font-weight:600; margin:4px 0 2px}
-.pastille .desc{display:block; font-size:.85rem; color:var(--encre-douce)}
-.bande-titre{
-  font-size:.72rem; letter-spacing:.08em; text-transform:uppercase;
-  color:var(--encre-douce); margin:22px 0 10px;
-  padding-bottom:6px; border-bottom:1px solid var(--filet);
-}
-
-/* tableaux */
+/* -------------------------------------------------------- tableaux */
 table{width:100%; border-collapse:collapse; font-size:.9rem}
 th,td{text-align:left; padding:7px 10px; border-bottom:1px solid var(--filet)}
 th{font-weight:600; font-size:.78rem; letter-spacing:.04em; text-transform:uppercase; color:var(--encre-douce)}
-tbody tr:hover{background:#fafbfc}
+tbody tr:hover{background:var(--survol)}
 .num{text-align:right; font-family:var(--mono)}
 
-/* divers */
+/* ---------------------------------------------------------- divers */
 .etiq{
   display:inline-block; font-family:var(--mono); font-size:.78rem;
   background:var(--ardoise-clair); color:var(--ardoise);
   padding:1px 6px; border-radius:2px;
 }
 .note{font-size:.85rem; color:var(--encre-douce)}
-.avis{border-left:3px solid var(--ardoise); background:var(--blanc); padding:12px 14px; border-radius:0 var(--r) var(--r) 0; margin:12px 0}
+.avis{border-left:3px solid var(--ardoise); background:var(--panneau); padding:12px 14px; border-radius:0 var(--r) var(--r) 0; margin:12px 0}
 .avis-ok{border-color:var(--vert)}
 .avis-err{border-color:var(--rouge)}
 .vide{padding:28px; text-align:center; color:var(--encre-douce); font-size:.9rem}
@@ -115,20 +196,19 @@ tbody tr:hover{background:#fafbfc}
 .retour{background:none; border:0; color:var(--ardoise); font:inherit; cursor:pointer; padding:0; margin-bottom:14px}
 .retour:hover{text-decoration:underline}
 
-/* état de synchronisation */
 .sync{font-size:.75rem; font-family:var(--mono); color:var(--encre-douce)}
 .sync[data-etat="attente"]{color:var(--terre)}
 .sync[data-etat="ok"]{color:var(--vert)}
 .sync[data-etat="erreur"]{color:var(--rouge)}
 
-/* messages fugaces */
 #toast{
   position:fixed; left:50%; bottom:24px; transform:translateX(-50%);
-  background:var(--encre); color:#fff; padding:10px 16px; border-radius:var(--r);
+  background:var(--toast-fond); color:var(--toast-texte);
+  padding:10px 16px; border-radius:var(--r);
   font-size:.9rem; z-index:50; max-width:90vw;
 }
 
-/* QCM */
+/* -------------------------------------------------------------- QCM */
 .question{border-bottom:1px solid var(--filet); padding:14px 0}
 .question:last-of-type{border-bottom:0}
 .question .enonce{font-weight:500; margin-bottom:8px}
@@ -137,5 +217,231 @@ tbody tr:hover{background:#fafbfc}
 .juste{color:var(--vert); font-weight:500}
 .faux{color:var(--rouge)}
 
-/* bandeau de gel */
-.gele{background:#fdf3e8; border-left:3px solid var(--terre); padding:10px 14px; margin-bottom:14px; font-size:.88rem}
+.gele{background:var(--gele-fond); border-left:3px solid var(--terre); padding:10px 14px; margin-bottom:14px; font-size:.88rem}
+
+/* ============================================================
+   Pastilles de rubrique — système repris de la Suite Logistique
+   ============================================================ */
+.accueil-tete{ display:flex; align-items:flex-start; gap:20px; flex-wrap:wrap }
+.accueil-tete .texte{ flex:1 1 320px }
+.accueil-marque{ flex:0 0 auto; width:96px; height:96px; opacity:.9 }
+@media (max-width:640px){ .accueil-marque{ display:none } }
+
+.rubriques{ display:flex; flex-wrap:wrap; gap:4px 16px; margin:4px 0 8px }
+.rubriques > .rubrique{ width:152px }
+.rubriques-sep{ height:1px; background:var(--filet); margin:20px 0 }
+.rubrique{
+  position:relative; background:none; border:0; cursor:pointer;
+  font-family:inherit; color:var(--encre);
+  padding:14px 6px 16px; border-radius:8px;
+  display:flex; flex-direction:column; align-items:center; gap:11px; text-align:center;
+  transition:background .12s ease;
+}
+.rubrique:hover{ background:var(--panneau) }
+.rubrique:focus-visible{ outline:2px solid var(--ardoise); outline-offset:2px }
+.rubrique-disc{
+  width:86px; height:86px; border-radius:50%;
+  background:var(--ardoise-fond); color:var(--sur-ardoise);
+  display:flex; align-items:center; justify-content:center;
+  transition:background .14s ease, transform .14s ease;
+}
+.rubrique:hover .rubrique-disc{ background:var(--encre); color:var(--fond); transform:translateY(-2px) }
+.rubrique-disc svg{ width:40px; height:40px }
+.rubrique-name{ font-size:14.5px; line-height:1.2; font-weight:500 }
+.rubrique-count{ font-family:var(--mono); font-size:11px; color:var(--encre-douce); margin-top:-7px }
+.rubrique.desactivee{ opacity:.42; cursor:default }
+.rubrique.desactivee:hover{ background:none }
+.rubrique.desactivee:hover .rubrique-disc{ background:var(--ardoise-fond); color:var(--sur-ardoise); transform:none }
+
+.rubriques.staff > .rubrique{ width:124px }
+.rubriques.staff .rubrique-disc{
+  width:60px; height:60px; background:var(--panneau);
+  color:var(--ardoise); border:1px solid var(--filet);
+}
+.rubriques.staff .rubrique:hover .rubrique-disc{ background:var(--ardoise-clair); color:var(--ardoise); border-color:var(--ardoise); transform:translateY(-2px) }
+.rubriques.staff .rubrique-disc svg{ width:26px; height:26px }
+.rubriques.staff .rubrique-name{ font-size:13px; font-weight:600 }
+
+@media (max-width:420px){
+  .rubriques > .rubrique{ width:calc(50% - 8px) }
+  .rubrique-disc{ width:74px; height:74px }
+  .rubrique-disc svg{ width:34px; height:34px }
+}
+
+.rubrique-head{ display:flex; align-items:flex-start; gap:14px; margin:2px 0 22px }
+.rubrique-head .rubrique-disc{ width:54px; height:54px; flex:0 0 auto }
+.rubrique-head .rubrique-disc svg{ width:26px; height:26px }
+.rubrique-head h1{ font-size:25px; margin:0 0 3px; letter-spacing:-.018em }
+.rubrique-head p{ margin:0; font-size:13.5px; color:var(--encre-douce); max-width:62ch }
+
+.lien-accueil{
+  background:none; border:0; padding:0; margin-bottom:16px; cursor:pointer;
+  font-family:var(--mono); font-size:12px; letter-spacing:.06em; color:var(--encre-douce);
+}
+.lien-accueil:hover{ color:var(--ardoise) }
+
+.module-grid{ display:grid; gap:14px; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)) }
+.module-tile{
+  text-align:left; width:100%; font:inherit; cursor:pointer;
+  background:var(--panneau); border:1px solid var(--filet); border-radius:var(--r);
+  padding:16px 18px; color:var(--encre); box-shadow:var(--ombre);
+}
+.module-tile:hover{ border-color:var(--ardoise); box-shadow:inset 3px 0 0 var(--ardoise) }
+.module-tile .code{ font-family:var(--mono); font-size:11px; color:var(--terre); display:block }
+.module-tile .titre{ display:block; font-weight:700; font-size:15.5px; margin:4px 0 6px }
+.module-tile .desc{ display:block; font-size:12.5px; color:var(--encre-douce); line-height:1.4 }
+
+.bande-titre{
+  font-size:.72rem; letter-spacing:.08em; text-transform:uppercase;
+  color:var(--encre-douce); margin:22px 0 10px;
+  padding-bottom:6px; border-bottom:1px solid var(--filet);
+}
+
+/* ============================================================
+   Écran de connexion
+   ============================================================ */
+.preambule{
+  display:flex; gap:12px; align-items:flex-start;
+  background:var(--panneau); border:1px solid var(--filet); border-left:3px solid var(--ardoise);
+  border-radius:0 var(--r) var(--r) 0;
+  padding:14px 18px; margin:0 0 26px;
+  font-size:.92rem; color:var(--encre-douce); line-height:1.5;
+}
+.preambule svg{ width:19px; height:19px; flex:0 0 auto; margin-top:2px; color:var(--ardoise) }
+.preambule strong{ color:var(--encre); font-weight:600 }
+
+.connexion{ display:grid; gap:22px; align-items:start }
+@media (min-width:820px){
+  /* La partie élève occupe les deux tiers : c'est elle qui sert trente fois par heure. */
+  .connexion{ grid-template-columns:2fr 1fr }
+}
+
+.panneau-eleve{ padding:28px 30px }
+.panneau-eleve h2{ font-size:1.4rem; margin-bottom:4px }
+.panneau-eleve .amorce{ color:var(--encre-douce); font-size:.92rem; margin-bottom:22px }
+
+/* Champs de connexion : volontairement plus grands et plus contrastés que
+   les champs ordinaires — ils sont lus de loin et remplis vite. */
+.champ-fort{ margin-bottom:18px }
+.champ-fort label{
+  font-size:.78rem; letter-spacing:.07em; text-transform:uppercase;
+  font-weight:600; color:var(--encre); margin-bottom:7px;
+}
+.champ-fort input{
+  font-size:1.25rem; font-family:var(--mono); letter-spacing:.06em;
+  padding:14px 16px; border:2px solid var(--filet); border-radius:var(--r);
+  background:var(--fond);
+}
+.champ-fort input::placeholder{ font-family:Inter,sans-serif; letter-spacing:0; font-size:.95rem; color:var(--encre-douce); opacity:.7 }
+.champ-fort input:focus{
+  outline:none; border-color:var(--ardoise); background:var(--panneau);
+  box-shadow:0 0 0 3px var(--ardoise-clair);
+}
+.btn-entrer{ width:100%; font-size:1.1rem; padding:14px 20px; margin-top:4px }
+
+@media (min-width:600px){
+  .duo-champs{ display:grid; grid-template-columns:1fr 1fr; gap:0 18px }
+}
+
+/* Panneau enseignant : présent mais discret */
+.panneau-prof{ background:none; box-shadow:none; border-style:dashed }
+.panneau-prof h2{ font-size:1rem; color:var(--encre-douce) }
+
+.pied{
+  margin-top:40px; padding-top:16px; border-top:1px solid var(--filet);
+  font-size:.8rem; color:var(--encre-douce);
+}
+
+/* ============================================================
+   Types d'activité
+   ============================================================ */
+
+/* --- remise en ordre --- */
+.ordre{ list-style:none; margin:16px 0 0; padding:0; counter-reset:none }
+.ordre-item{
+  display:flex; align-items:flex-start; gap:12px;
+  background:var(--panneau); border:1px solid var(--filet); border-radius:var(--r);
+  padding:12px 14px; margin-bottom:8px; cursor:pointer;
+  transition:border-color .12s ease, box-shadow .12s ease;
+}
+.ordre-item:hover{ border-color:var(--ardoise) }
+.ordre-item.choisi{ border-color:var(--ardoise); box-shadow:inset 3px 0 0 var(--ardoise) }
+.ordre-item.glisse{ opacity:.45 }
+.ordre-item.survol{ border-color:var(--ardoise); border-style:dashed }
+.ordre-item.juste{ border-left:3px solid var(--vert) }
+.ordre-item.faux{ border-left:3px solid var(--rouge) }
+.ordre-rang{
+  flex:0 0 auto; width:26px; height:26px; border-radius:50%;
+  background:var(--ardoise-clair); color:var(--ardoise);
+  font-family:var(--mono); font-size:.8rem;
+  display:flex; align-items:center; justify-content:center;
+}
+.ordre-icone{ flex:0 0 auto; font-size:1.5rem; line-height:1.2 }
+.ordre-texte{ flex:1 1 auto; line-height:1.45 }
+.ordre-expl{ display:block; margin-top:4px }
+.ordre-fleches{ flex:0 0 auto; display:flex; flex-direction:column; gap:4px }
+.ordre-fleches .btn{ padding:2px 8px; line-height:1.3 }
+
+/* --- association --- */
+.reserve{ border-style:dashed }
+.etiquettes{ display:flex; flex-wrap:wrap; gap:8px; min-height:42px; align-items:flex-start }
+.etiquette{
+  font:inherit; font-size:.92rem; cursor:grab;
+  background:var(--ardoise-clair); color:var(--encre);
+  border:1px solid var(--filet); border-radius:var(--r);
+  padding:7px 12px;
+}
+.etiquette:hover{ border-color:var(--ardoise) }
+.etiquette.choisie{ border-color:var(--ardoise); box-shadow:0 0 0 2px var(--ardoise-clair) }
+.etiquette.glisse{ opacity:.45 }
+.etiquette.juste{ border-color:var(--vert); box-shadow:inset 3px 0 0 var(--vert) }
+.etiquette.faux{ border-color:var(--rouge); box-shadow:inset 3px 0 0 var(--rouge) }
+.bacs{ display:grid; gap:14px; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)) }
+.bac{ min-height:120px }
+.bac h3{ margin-bottom:8px }
+.bac.survol{ border-color:var(--ardoise); border-style:dashed; background:var(--ardoise-clair) }
+
+/* --- saisie numérique --- */
+.num-saisie{ display:flex; align-items:center; gap:10px; max-width:320px }
+.num-saisie input{
+  font-family:var(--mono); font-size:1.1rem; text-align:right;
+  padding:9px 12px; border-width:2px;
+}
+.num-saisie input.juste{ border-color:var(--vert) }
+.num-saisie input.faux{ border-color:var(--rouge) }
+.num-unite{ font-size:.9rem; color:var(--encre-douce); white-space:nowrap }
+.num-retour{ margin-top:6px }
+
+/* --- dépôt de classeur --- */
+.depot{
+  border:2px dashed var(--filet); border-radius:var(--r);
+  padding:26px 20px; text-align:center; margin-top:14px;
+  transition:border-color .12s ease, background .12s ease;
+}
+.depot.survol{ border-color:var(--ardoise); background:var(--ardoise-clair) }
+.depot p{ margin:0 0 6px }
+
+/* --- activité sur support extérieur (Padlet, Digipad…) --- */
+.lien-ext{ margin-top:14px }
+.lien-tete{ display:flex; align-items:flex-start; gap:16px }
+.lien-tete h2{ margin:0 0 4px }
+.lien-tete .note{ margin:0 }
+.note-badge{
+  margin-left:auto; flex:0 0 auto;
+  font-family:var(--mono); font-size:1rem; font-weight:600;
+  color:var(--sur-ardoise); background:var(--ardoise-fond);
+  border-radius:var(--r); padding:6px 12px; white-space:nowrap;
+}
+.lien-etapes{ margin:14px 0 0; padding-left:22px; line-height:1.6 }
+.lien-etapes li{ margin-bottom:4px }
+.lien-ouvrir{ display:inline-block; margin-top:18px; text-decoration:none }
+.lien-adresse{ margin-top:8px }
+.lien-adresse .mono{ font-family:var(--mono); font-size:11.5px; color:var(--encre-douce) }
+
+/* --- suivi de classe : colonnes notées à la main --- */
+th.col-saisie, td.col-saisie{ background:var(--ardoise-clair) }
+.note-saisie{
+  width:68px; padding:5px 8px; text-align:right;
+  font-family:var(--mono); font-size:.95rem;
+}
+.note-saisie.enregistre{ border-color:var(--vert); box-shadow:inset 0 0 0 1px var(--vert) }

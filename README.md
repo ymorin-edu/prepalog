@@ -74,10 +74,30 @@ Pour une activité à tables (type `tableau`), déclarez `tables` dans `meta` et
 éventuellement `graines` : l'enseignant pourra installer ce contenu de départ en un clic
 depuis « Conduite de séance ».
 
+## Thème clair / sombre
+
+Le bouton en haut à droite bascule entre les deux. Trois états : `auto` (suit le réglage du
+système d'exploitation, c'est le défaut), `clair`, `sombre`. Le choix est enregistré dans le
+navigateur de la personne, il ne remonte pas en base.
+
+Les deux thèmes partagent les mêmes noms de variables CSS (`--fond`, `--panneau`, `--encre`,
+`--ardoise-fond`…) : **une nouvelle activité n'a jamais à connaître le thème actif**, il lui
+suffit d'utiliser les variables et les classes existantes.
+
+Le logo est fourni en deux versions, `styles/logo.png` (disque ardoise) et
+`styles/logo-sombre.png` (disque éclairci), échangées automatiquement. Un script en tête
+d'`index.html` pose le thème avant le premier rendu pour éviter le clignotement blanc.
+
 ## Types d'activité disponibles
 
 - `core/types/qcm.js` — choix unique ou multiple, réponses scellées par empreinte
+- `core/types/ordre.js` — remise en ordre d'étapes, un point par scénario entièrement réussi
+- `core/types/assoc.js` — rangement d'étiquettes dans des catégories
+- `core/types/numerique.js` — saisie de nombres avec tolérance, virgule française acceptée
+- `core/types/tableur.js` — dépôt d'un classeur Excel, contrôle cellule par cellule
 - `core/types/tableau.js` — base de données à tables liées, quelle que soit la portée
+- `core/types/lien.js` — le travail se fait sur un support extérieur (Padlet, Digipad) ;
+  l'activité déclare `notation: 'prof'` et sa note se saisit dans « Suivi de classe »
 
 ## Conduite de séance
 
@@ -87,9 +107,10 @@ exporter le suivi en CSV.
 
 ## Tester
 
-`outils/test.mjs` lance onze vérifications de bout en bout avec Playwright en mode
+`outils/test.mjs` lance vingt-deux vérifications de bout en bout avec Playwright en mode
 démonstration : connexion enseignant et élève, création de groupe et de comptes, base
-partagée, QCM autocorrigé, suivi de classe.
+partagée, les six mécaniques d'activité, filtrage par niveau et forçage, saisie d'une note
+à la main dans le suivi de classe, thème clair/sombre.
 
 ```
 node outils/test.mjs

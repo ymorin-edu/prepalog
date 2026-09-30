@@ -90,11 +90,11 @@ export function creerBackendDemo() {
       return Object.keys(g).filter((k) => (g[k].profs || []).includes(uid)).map((k) => ({ id: k, ...g[k] }));
     },
     async groupe(gid) { const g = groupes()[gid]; return g ? { id: gid, ...g } : null; },
-    async creerGroupe({ nom, annee, profUid }) {
+    async creerGroupe({ nom, annee, niveau, profUid }) {
       const g = groupes();
       const gid = nom.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || uid16();
       if (g[gid]) throw new Error('Un groupe porte déjà ce nom.');
-      g[gid] = { nom, annee, profs: [profUid], code: Math.random().toString(36).slice(2, 6).toUpperCase(), ouverts: {}, equipes: {} };
+      g[gid] = { nom, annee, niveau, profs: [profUid], code: Math.random().toString(36).slice(2, 6).toUpperCase(), ouverts: {}, equipes: {} };
       setGroupes(g);
       return { id: gid, ...g[gid] };
     },
@@ -141,6 +141,30 @@ export function creerBackendDemo() {
         tentatives: (anc?.tentatives || 0) + 1,
         meilleur: Math.max(anc?.meilleur ?? -1, res.score),
         dateMaj: Date.now(),
+      };
+      ecrire(cle, nouv);
+      const idx = lire(`travauxIdx/${gid}`, []);
+      const k = `${uid}|${aid}`;
+      if (!idx.includes(k)) { idx.push(k); ecrire(`travauxIdx/${gid}`, idx); }
+      return nouv;
+    },
+    // Note posée par l'enseignant sur une activité sans correction automatique
+    // (`notation: 'prof'`). Elle remplace le score au lieu de s'y ajouter : une note
+    // corrigée à la baisse doit descendre. `res = null` efface la note.
+    async poserNote(gid, uid, aid, res) {
+      const cle = `travaux/${gid}/${uid}/${aid}`;
+      if (res === null) {
+        ecrire(cle, null);
+        const idx = lire(`travauxIdx/${gid}`, []).filter((k) => k !== `${uid}|${aid}`);
+        ecrire(`travauxIdx/${gid}`, idx);
+        return null;
+      }
+      const anc = lire(cle, null) || {};
+      const nouv = {
+        ...anc, uid, aid, gid,
+        score: res.score, max: res.max, meilleur: res.score,
+        tentatives: anc.tentatives || 0,
+        parProf: true, dateMaj: Date.now(),
       };
       ecrire(cle, nouv);
       const idx = lire(`travauxIdx/${gid}`, []);

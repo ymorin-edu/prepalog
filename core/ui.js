@@ -1,5 +1,7 @@
 // Briques d'interface partagées.
 
+import { logoSrc, majLogos, basculerTheme, ICONE_THEME } from './theme.js';
+
 export const $ = (s, r = document) => r.querySelector(s);
 export const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
 
@@ -18,25 +20,35 @@ export function toast(msg, ms = 2600) {
   toast._t = setTimeout(() => { t.style.display = 'none'; }, ms);
 }
 
-export function entete({ marque, institution, profil, onDeconnexion }) {
+export function entete({ marque, institution, profil, grand }) {
   const qui = profil
     ? `${ech(profil.prenom || '')} ${ech(profil.nom || '')} · ${profil.role === 'prof' ? 'enseignant' : 'élève'}`
     : '';
   return `
-  <header class="entete">
+  <header class="entete${grand ? ' entete-accueil' : ''}">
+    <img class="logo" data-logo src="${logoSrc()}" alt="">
     <span class="marque">${ech(marque)}</span>
     <span class="institution">${ech(institution)}</span>
     <span class="pousse rangee">
-      ${profil ? `<span class="qui">${qui}</span>
-      <button class="btn btn-s" id="btnDeco">Se déconnecter</button>` : ''}
+      ${profil ? `<span class="qui">${qui}</span>` : ''}
+      <button class="btn-theme" id="btnTheme" type="button"
+        title="Changer de thème" aria-label="Changer de thème">${ICONE_THEME}</button>
+      ${profil ? `<button class="btn btn-s" id="btnDeco">Se déconnecter</button>` : ''}
     </span>
   </header>`;
 }
 
-export function brancherDeconnexion(fn) {
+// À appeler après chaque rendu qui contient l'en-tête.
+export function brancherEntete(onDeconnexion) {
+  const t = document.getElementById('btnTheme');
+  if (t) t.addEventListener('click', () => basculerTheme());
   const b = document.getElementById('btnDeco');
-  if (b) b.addEventListener('click', fn);
+  if (b && onDeconnexion) b.addEventListener('click', onDeconnexion);
+  majLogos();
 }
+
+// Ancien nom, conservé : l'en-tête se branche entièrement ici.
+export const brancherDeconnexion = brancherEntete;
 
 export function confirmer(msg) { return window.confirm(msg); }
 

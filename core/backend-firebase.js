@@ -116,12 +116,12 @@ export async function creerBackendFirebase() {
       const s = await FS.getDoc(dref('groupes', gid));
       return s.exists() ? { id: gid, ...s.data() } : null;
     },
-    async creerGroupe({ nom, annee, profUid }) {
+    async creerGroupe({ nom, annee, niveau, profUid }) {
       const gid = nom.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
       const ref = dref('groupes', gid);
       if ((await FS.getDoc(ref)).exists()) throw new Error('Un groupe porte déjà ce nom.');
       const data = {
-        nom, annee, profs: [profUid],
+        nom, annee, niveau, profs: [profUid],
         code: Math.random().toString(36).slice(2, 6).toUpperCase(),
         ouverts: {}, equipes: {}, creeLe: Date.now(),
       };
@@ -193,6 +193,24 @@ export async function creerBackendFirebase() {
         tentatives: (a?.tentatives || 0) + 1,
         meilleur: Math.max(a?.meilleur ?? -1, res.score),
         dateMaj: Date.now(),
+      };
+      await FS.setDoc(ref, nouv);
+      return nouv;
+    },
+    // Note posée par l'enseignant (activités `notation: 'prof'`). Elle remplace le score
+    // au lieu de s'y ajouter, et n'incrémente pas le compteur de tentatives.
+    // `res = null` efface la note. Les règles Firestore autorisent déjà l'écriture par
+    // un enseignant du groupe.
+    async poserNote(gid, uid, aid, res) {
+      const ref = dref('travaux', gid, 'eleves', uid, 'activites', aid);
+      if (res === null) { await FS.deleteDoc(ref); return null; }
+      const s = await FS.getDoc(ref);
+      const a = s.exists() ? s.data() : {};
+      const nouv = {
+        ...a, uid, aid, gid,
+        score: res.score, max: res.max, meilleur: res.score,
+        tentatives: a.tentatives || 0,
+        parProf: true, dateMaj: Date.now(),
       };
       await FS.setDoc(ref, nouv);
       return nouv;

@@ -1,14 +1,16 @@
-// Activité témoin nº 1 — QCM autocorrigé, portée élève.
+// Quiz « Les flux logistiques » — QCM autocorrigé, portée élève.
 // Montre le circuit complet : rendu, correction, enregistrement du score, suivi de classe.
 
 import { creerQCM, sceller } from '../core/types/qcm.js';
 
 export const meta = {
-  id: 'ent1',
-  code: 'ENT-1',
+  id: 'quiz-flux',
+  code: 'QUI-5',
   titre: 'Les flux logistiques',
   desc: 'Vérifier les notions de base : flux poussé, flux tiré, stock de sécurité.',
   rubrique: 'quiz',
+  niveaux: ['2de', '1re'],
+  competences: [],
   bareme: 6,
   portee: 'eleve',
   pret: true,
