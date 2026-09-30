@@ -144,9 +144,11 @@ export async function rendreEspaceProf(hote, ctx) {
             <span class="pousse"><button class="btn btn-s" id="btnCsvEleves">Exporter la liste</button></span>
           </div>
           ${eleves.length === 0 ? `<div class="vide">Aucun élève.</div>` : `
-          <table><thead><tr><th>Nom</th><th>Prénom</th><th>Matricule</th><th>Code</th></tr></thead><tbody>
+          <table><thead><tr><th>Nom</th><th>Prénom</th><th>Matricule</th><th>Code</th><th></th></tr></thead><tbody>
             ${eleves.map((e) => `<tr><td>${ech(e.nom)}</td><td>${ech(e.prenom)}</td>
-              <td class="mono">${ech(e.matricule)}</td><td class="mono">${ech(e.code || '—')}</td></tr>`).join('')}
+              <td class="mono">${ech(e.matricule)}</td><td class="mono">${ech(e.code || '—')}</td>
+              <td><button class="btn btn-s" data-suppre="${ech(e.uid)}" style="color:var(--rouge)"
+                title="Supprimer définitivement cet élève">Supprimer</button></td></tr>`).join('')}
           </tbody></table>
           <p class="note">Les codes sont enregistrés avec le compte : un élève qui a perdu le sien
              le retrouve ici. Les comptes créés avant le 30/09/2026 affichent « — », leur code
@@ -170,6 +172,24 @@ export async function rendreEspaceProf(hote, ctx) {
     if (bc) bc.addEventListener('click', () => telecharger(`identifiants-${g.id}.csv`,
       versCSV(dernierLot.faits, [{ cle: 'nom', label: 'Nom' }, { cle: 'prenom', label: 'Prénom' },
         { cle: 'matricule', label: 'Matricule' }, { cle: 'code', label: 'Code' }])));
+
+    z.querySelectorAll('[data-suppre]').forEach((b) => b.addEventListener('click', async () => {
+      const el = eleves.find((x) => x.uid === b.dataset.suppre);
+      if (!el) return;
+      if (!confirmer(`Supprimer ${el.prenom} ${el.nom} (matricule ${el.matricule}) ?\n\n`
+        + `Seront effacés définitivement : son profil, ses résultats dans tous ses groupes `
+        + `et ses travaux enregistrés.\n\n`
+        + `Son identifiant de connexion part aussi, à condition que son code soit connu `
+        + `(colonne Code). S'il affiche « — », le compte devra être retiré depuis la `
+        + `console Firebase.`)) return;
+      try {
+        const r = await B.supprimerEleve(el.uid);
+        toast(r && r.compte
+          ? 'Élève et compte supprimés.'
+          : 'Données supprimées. Le compte de connexion subsiste : retirez-le depuis la console Firebase.');
+        await dessiner();
+      } catch (e) { toast(e.message || 'Suppression impossible.'); }
+    }));
 
     z.querySelector('#btnCsvEleves').addEventListener('click', () => telecharger(`eleves-${g.id}.csv`,
       versCSV(eleves, [{ cle: 'nom', label: 'Nom' }, { cle: 'prenom', label: 'Prénom' },

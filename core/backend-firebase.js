@@ -226,9 +226,52 @@ export async function creerBackendFirebase() {
       return { faits, erreurs };
     },
 
+    // Suppression complète d'un élève : travaux, jeux privés, miroirs de droits, profil,
+    // et le compte d'authentification lui-même.
+    //
+    // Ce dernier point mérite une explication. Firebase n'autorise la suppression d'un
+    // compte que par son propre titulaire — effacer celui d'un tiers passe par le SDK
+    // Admin, donc un serveur, donc le plan Blaze. La parade : le code de l'élève est
+    // conservé depuis le 30/09/2026, donc l'application connaît son mot de passe. Elle se
+    // connecte à sa place dans une instance secondaire (le procédé de creerEleves) et
+    // demande la suppression en son nom. Aucune élévation de privilège : c'est bien le
+    // compte lui-même qui agit.
+    //
+    // Les comptes créés avant cette date n'ont pas de code enregistré : leur profil et
+    // leurs données partent, mais l'identifiant survit et devra être retiré de la console.
     async supprimerEleve(uid) {
-      // Le document part ; le compte Auth doit être retiré depuis la console Firebase.
+      const s = await FS.getDoc(dref('users', uid));
+      const el = s.exists() ? s.data() : null;
+      const gids = (el && el.groupes) || [];
+
+      for (const gid of gids) {
+        const t = await FS.getDocs(cref('travaux', gid, 'eleves', uid, 'activites'));
+        for (const d of t.docs) await FS.deleteDoc(d.ref);
+      }
+      const pj = await FS.getDocs(cref('prives', uid, 'jeux'));
+      for (const d of pj.docs) await FS.deleteDoc(d.ref);
+
+      if (gids.length) {
+        ouvrirRt();
+        for (const gid of gids) await DB.remove(DB.ref(rt, `acces/${gid}/eleves/${uid}`));
+      }
       await FS.deleteDoc(dref('users', uid));
+
+      let compte = false;
+      if (el && el.code && el.matricule) {
+        const app2 = AP.initializeApp(CONFIG.firebase, 'suppr' + Date.now());
+        try {
+          const auth2 = AU.getAuth(app2);
+          const c = await AU.signInWithEmailAndPassword(
+            auth2, matEmail(el.matricule), matMdp(el.matricule, el.code));
+          await AU.deleteUser(c.user);
+          compte = true;
+        } catch (e) {
+          // Code faux, compte déjà absent : les données sont parties, on le signale.
+        }
+        try { await AP.deleteApp(app2); } catch (e) {}
+      }
+      return { compte };
     },
 
     // ---- travaux ----

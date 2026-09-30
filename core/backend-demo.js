@@ -149,6 +149,7 @@ export function creerBackendDemo() {
     },
     async supprimerEleve(uid) {
       const u = users(); delete u[uid]; setUsers(u);
+      return { compte: true };
     },
 
     // ---- travaux ----

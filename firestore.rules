@@ -89,6 +89,9 @@ service cloud.firestore {
     match /prives/{uid}/jeux/{aid} {
       allow read:  if uid == moi() || estProf();
       allow write: if uid == moi();
+      // Purge : l'enseignant efface le travail d'un élève qu'il supprime, sans pouvoir le
+      // modifier. Écrire à sa place reste interdit — seul l'effacement est ouvert.
+      allow delete: if uid == moi() || estProf();
     }
 
     // Tout le reste est fermé.
