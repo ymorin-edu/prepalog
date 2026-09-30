@@ -2,9 +2,10 @@ import { chromium } from 'playwright';
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
+import os from 'node:os';
 
 const ROOT = new URL('..', import.meta.url).pathname;
-const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.png': 'image/png', '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' };
+const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.png': 'image/png', '.woff2': 'font/woff2', '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' };
 
 const srv = http.createServer((req, res) => {
   let p = decodeURIComponent(req.url.split('?')[0]);
@@ -26,8 +27,27 @@ const erreurs = [];
 page.on('pageerror', (e) => erreurs.push('PAGEERROR: ' + e.message));
 page.on('console', (m) => { if (m.type() === 'error') erreurs.push('CONSOLE: ' + m.text()); });
 // Aucune requête externe ne doit être nécessaire en mode démo.
-await page.route('https://fonts.googleapis.com/**', (r) => r.abort());
-await page.route('https://fonts.gstatic.com/**', (r) => r.abort());
+// Aucune route à intercepter : le site ne sort plus du dépôt. Toute requête externe
+// observée pendant la suite est une régression, et le dernier test la signale.
+
+// SheetJS est servi par le dépôt lui-même (vendor/), plus par un CDN : rien à intercepter.
+// Le module npm reste utile aux tests, mais seulement pour FABRIQUER un classeur rempli.
+let baseXlsx = null;
+for (const base of [process.env.NODE_PATH, `${process.env.HOME}/.npm-global/lib/node_modules`,
+  '/home/claude/.npm-global/lib/node_modules', path.join(ROOT, 'node_modules'),
+  '/usr/lib/node_modules', '/usr/local/lib/node_modules']) {
+  if (!base) continue;
+  if (base && fs.existsSync(path.join(base, 'xlsx', 'xlsx.mjs'))) { baseXlsx = path.join(base, 'xlsx'); break; }
+}
+
+// Toute requête sortante est notée : le dépôt ne doit dépendre d'aucun hébergeur extérieur.
+const hotesExternes = new Set();
+page.on('request', (r) => {
+  try {
+    const h = new URL(r.url()).hostname;
+    if (h && !['127.0.0.1', 'localhost'].includes(h)) hotesExternes.add(h);
+  } catch (e) {}
+});
 
 const ok = [];
 const ko = [];
@@ -340,6 +360,8 @@ await v('dépôt de classeur : modèle disponible', async () => {
   await page.click('#btnAccueil');
   await page.waitForSelector('[data-rub="tableur"]', { timeout: 6000 });
   await page.click('[data-rub="tableur"]');
+  await page.waitForSelector('[data-act="inventaire-tableur"]', { timeout: 6000 });
+  await page.click('[data-act="inventaire-tableur"]');
   await page.waitForSelector('#depot', { timeout: 6000 });
   const href = await page.getAttribute('a[download]', 'href');
   const rep = await page.request.get(new URL(href, page.url()).toString());
@@ -350,8 +372,9 @@ await v('dépôt de classeur : modèle disponible', async () => {
 
 // ---------- 20. scénario : lien externe visible par l'élève
 await v('scénario : la rubrique et le lien externe', async () => {
-  // Le tableur est une rubrique à activité unique : le retour ramène droit à l'accueil.
   await page.click('#btnRetour');
+  await page.waitForSelector('#btnAccueil', { timeout: 6000 });
+  await page.click('#btnAccueil');
   await page.waitForSelector('[data-rub="scenario"]', { timeout: 6000 });
   await page.click('[data-rub="scenario"]');
   await page.waitForSelector('[data-act="yves-rocher"]', { timeout: 6000 });
@@ -418,6 +441,94 @@ await v('l\'élève voit la note de son scénario', async () => {
   await page.waitForSelector('.note-badge', { timeout: 6000 });
   const b = await page.textContent('.note-badge');
   if (!/14,5\s*\/\s*20/.test(b)) throw new Error('badge inattendu : ' + b);
+});
+
+// ---------- 23. série TAB-2 : filtrage par niveau et dépôt d'un classeur
+await v('série tableur : niveau par exercice et correction', async () => {
+  // Léa est en 1re : exs10 (Terminale seulement) ne doit pas lui être proposé.
+  await page.click('#btnRetour');
+  await page.waitForSelector('#btnAccueil', { timeout: 6000 });
+  await page.click('#btnAccueil');
+  await page.waitForSelector('[data-rub="tableur"]', { timeout: 6000 });
+  await page.click('[data-rub="tableur"]');
+  await page.waitForSelector('[data-act="excel-stock"]', { timeout: 6000 });
+  await page.click('[data-act="excel-stock"]');
+  await page.waitForSelector('[data-exo="exs1"]', { timeout: 6000 });
+  const vus = await page.$$eval('[data-exo]', (e) => e.map((x) => x.dataset.exo));
+  if (vus.length !== 9) throw new Error(`${vus.length} exercices au lieu de 9 pour une 1re`);
+  if (vus.includes('exs10')) throw new Error('exs10 (Tle) proposé à une 1re');
+  if (!/RECHERCHEV/.test(await page.textContent('#hoteActivite'))) throw new Error('groupes de notions absents');
+
+  await page.click('[data-exo="exs1"]');
+  await page.waitForSelector('#depot', { timeout: 6000 });
+  const lien = await page.getAttribute('a[download]', 'href');
+  const rep = await page.request.get(new URL(lien, page.url()).toString());
+  if (!rep.ok()) throw new Error('classeur modèle introuvable (' + rep.status() + ')');
+});
+
+// ---------- 24. la correction d'un classeur déposé
+await v('série tableur : correction d\'un classeur déposé', async () => {
+  // On dépose le modèle non complété : les dix cellules de réponse sont vides.
+  await page.setInputFiles('#fichier', ROOT + 'contenus/tab2/exs1-recherchev-prix.xlsx');
+  await page.waitForSelector('#resultatTableur table', { timeout: 15000 });
+  const bilan = await page.textContent('#resultatTableur');
+  if (!/0 contrôle.* sur 10/.test(bilan.replace(/\s+/g, ' '))) {
+    throw new Error('bilan inattendu : ' + bilan.replace(/\s+/g, ' ').slice(0, 100));
+  }
+  const lignes = await page.$$eval('#resultatTableur tbody tr', (e) => e.length);
+  if (lignes !== 10) throw new Error(`${lignes} lignes de contrôle au lieu de 10`);
+  if (!/Cellule vide/.test(bilan)) throw new Error('les cellules vides ne sont pas signalées');
+
+  // Puis le même classeur, correctement rempli : les contrôles générés doivent tomber
+  // exactement sur les cellules de réponse du modèle. C'est ce qui valide la migration.
+  if (!baseXlsx) throw new Error('module xlsx introuvable pour fabriquer le classeur — npm i -g xlsx@0.18.5');
+  const XLSX = await import(path.join(baseXlsx, 'xlsx.mjs'));
+  XLSX.set_fs(fs);
+  const { EXERCICES } = await import(ROOT + 'contenus/tab2-stocks.js');
+  const exs1 = EXERCICES.find((e) => e.id === 'exs1');
+  const cl = XLSX.read(fs.readFileSync(ROOT + 'contenus/tab2/' + exs1.fichier));
+  const f = cl.Sheets['Exercice'];
+  exs1.controles.forEach((c) => { f[c.cellule] = { t: 'n', v: c.attendu }; });
+  const rempli = path.join(os.tmpdir(), 'prepalog-exs1-rempli.xlsx');
+  XLSX.writeFile(cl, rempli);
+  await page.setInputFiles('#fichier', rempli);
+  await page.waitForFunction(() => /10 contrôles réussis/.test(document.body.textContent), null, { timeout: 15000 });
+  fs.unlinkSync(rempli);
+});
+
+// ---------- 25. l'enseignant voit toute la série, étiquetée
+await v('série tableur : l\'enseignant voit tous les niveaux', async () => {
+  await page.click('#btnListe');
+  await page.click('#btnRetour');
+  await page.click('#btnDeco');
+  await page.waitForSelector('#btnProf');
+  await page.click('#btnProf');
+  await page.waitForSelector('[data-rub="tableur"]', { timeout: 6000 });
+  await page.click('[data-rub="tableur"]');
+  await page.click('[data-act="excel-stock"]');
+  await page.waitForSelector('[data-exo="exs10"]', { timeout: 6000 });
+  const n = await page.$$eval('[data-exo]', (e) => e.length);
+  if (n !== 10) throw new Error(`${n} exercices au lieu de 10 côté enseignant`);
+  const code = await page.textContent('[data-exo="exs10"] .code');
+  if (!/Tle/.test(code)) throw new Error('niveau de l\'exercice non affiché : ' + code);
+});
+
+// ---------- 26. les polices sont bien celles du dépôt
+await v('polices servies par le dépôt', async () => {
+  // Le navigateur a chargé les fichiers, et le texte est bien rendu en Inter.
+  await page.evaluate(() => document.fonts.ready);
+  const chargees = await page.evaluate(() => Array.from(document.fonts)
+    .filter((f) => f.status === 'loaded').map((f) => `${f.family} ${f.weight}`));
+  if (!chargees.some((f) => /Inter/.test(f))) throw new Error('Inter non chargée : ' + chargees.join(', '));
+  const rendu = await page.evaluate(() => getComputedStyle(document.body).fontFamily);
+  if (!/Inter/.test(rendu)) throw new Error('police du corps inattendue : ' + rendu);
+});
+
+// ---------- 27. aucune dépendance extérieure, polices comprises
+await v('aucun hébergeur extérieur', async () => {
+  // Les filtrages académiques bloquent régulièrement cdnjs et Google Fonts. SheetJS est
+  // dans vendor/, les polices dans styles/polices/ : le site ne sort plus du dépôt.
+  if (hotesExternes.size) throw new Error('dépendance extérieure : ' + [...hotesExternes].join(', '));
 });
 
 console.log('\n=== RÉUSSIS ===');

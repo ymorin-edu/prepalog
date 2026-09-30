@@ -34,6 +34,19 @@ export function libelleNiveaux(liste) {
 }
 
 /**
+ * Un contenu déclarant `niveaux` concerne-t-il ce niveau de classe ?
+ *
+ * Sert aux activités qui portent une série d'exercices de difficulté inégale : chaque
+ * exercice déclare ses niveaux, et l'élève ne voit que les siens. Sans niveau de groupe
+ * connu — un enseignant sans groupe actif, par exemple — tout est concerné.
+ */
+export function concerneNiveau(niveaux, niveauGroupe) {
+  if (!niveauGroupe) return true;
+  const l = niveaux && niveaux.length ? niveaux : TOUS_NIVEAUX;
+  return l.includes(niveauGroupe);
+}
+
+/**
  * Une activité est-elle visible pour un groupe ?
  *
  *   ouverts[id] === true   → forcée ouverte, même hors niveau

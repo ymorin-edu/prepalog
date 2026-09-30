@@ -105,16 +105,39 @@ Depuis l'espace enseignant : ouvrir ou fermer une activité pour le groupe, seme
 de départ, **geler** une base partagée en lecture seule à la fin de l'heure, réinitialiser,
 exporter le suivi en CSV.
 
+## Aucune dépendance extérieure
+
+**Le site ne fait aucune requête hors de son propre domaine.** Ni CDN, ni Google Fonts.
+
+- **SheetJS**, qui lit les classeurs déposés : `vendor/xlsx.full.min.js`, chargé à la
+  demande par les seules activités de dépôt (voir `vendor/LISEZMOI.md`).
+- **Inter et IBM Plex Mono** : `styles/polices.css` et `styles/polices/`. Grâce à
+  `unicode-range`, une page française ne télécharge que le sous-ensemble `latin`, soit
+  cinq fichiers et environ 110 Ko.
+
+Deux raisons. La première est pratique : les filtrages académiques bloquent régulièrement
+cdnjs comme fonts.googleapis.com. Une activité de dépôt qui irait chercher son lecteur
+Excel au dehors tomberait en panne en séance, devant la classe. La seconde tient au droit :
+chaque chargement depuis Google transmettait l'adresse IP de l'élève à un tiers, sans
+consentement et sans nécessité.
+
+Un test garde la règle : toute requête sortante observée pendant la suite la fait échouer.
+Effet secondaire, le site fonctionne hors ligne une fois chargé.
+
 ## Tester
 
-`outils/test.mjs` lance vingt-deux vérifications de bout en bout avec Playwright en mode
+`outils/test.mjs` lance vingt-sept vérifications de bout en bout avec Playwright en mode
 démonstration : connexion enseignant et élève, création de groupe et de comptes, base
-partagée, les six mécaniques d'activité, filtrage par niveau et forçage, saisie d'une note
-à la main dans le suivi de classe, thème clair/sombre.
+partagée, les sept mécaniques d'activité, filtrage par niveau — module et exercice —,
+saisie d'une note à la main dans le suivi de classe, correction d'un classeur déposé,
+polices servies par le dépôt, absence de dépendance extérieure, thème clair/sombre.
 
 ```
 node outils/test.mjs
 ```
+
+Un seul prérequis, et seulement pour fabriquer le classeur rempli du test de correction :
+`npm i -g playwright xlsx@0.18.5`.
 
 ## Limite assumée
 

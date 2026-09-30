@@ -10,6 +10,7 @@ export const ACTIVITES = [
   () => import('./zones-entrepot.js'),
   () => import('./calculs-stock.js'),
   () => import('./inventaire-tableur.js'),
+  () => import('./excel-stock.js'),
   // Scénarios : l'ordre d'affichage des tuiles est celui de cette liste.
   () => import('./yves-rocher.js'),
   () => import('./foot-locker.js'),

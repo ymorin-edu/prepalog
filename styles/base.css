@@ -443,3 +443,12 @@ th.col-saisie, td.col-saisie{ background:var(--ardoise-clair) }
   font-family:var(--mono); font-size:.95rem;
 }
 .note-saisie.enregistre{ border-color:var(--vert); box-shadow:inset 0 0 0 1px var(--vert) }
+
+/* --- série d'exercices (dépôt de classeur) --- */
+.serie-groupe{
+  margin:22px 0 10px; font-size:.78rem; letter-spacing:.09em; text-transform:uppercase;
+  font-family:var(--mono); color:var(--terre); font-weight:600;
+}
+.serie-groupe:first-child{ margin-top:8px }
+.module-tile.fini{ box-shadow:inset 3px 0 0 var(--vert) }
+.module-tile.fini .code{ color:var(--vert) }

@@ -215,14 +215,18 @@ async function vueActivite(aid) {
   document.getElementById('btnRetour').addEventListener('click', () => vueAccueil());
 
   fermerJeuCourant();
+  const objGroupe = groupeActif ? await B.groupe(groupeActif) : null;
   jeuOuvert = await ouvrirJeu({
     aid, portee: m.meta.portee, tables: m.meta.tables || {},
     uid: profil.uid, gid: groupeActif,
-    eqId: (await B.groupe(groupeActif))?.equipes?.[profil.uid],
+    eqId: objGroupe?.equipes?.[profil.uid],
   });
 
   const ctx = {
     profil, groupe: groupeActif, meta: m.meta, jeu: jeuOuvert,
+    // Le niveau de la classe, pour les activités qui portent une série d'exercices de
+    // difficulté inégale et n'en montrent que la part qui convient au groupe.
+    niveauGroupe: objGroupe?.niveau || null,
     // Le travail déjà enregistré pour cette activité, ou null. Utile aux activités
     // notées à la main : l'élève retrouve sa note en ouvrant le module.
     async lireScore() {
