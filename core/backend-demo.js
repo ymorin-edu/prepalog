@@ -104,6 +104,27 @@ export function creerBackendDemo() {
       g[gid] = { ...g[gid], ...patch };
       setGroupes(g);
     },
+    async supprimerGroupe(gid) {
+      const u = users();
+      let n = 0;
+      Object.keys(u).forEach((k) => {
+        const gs = u[k].groupes || [];
+        if (gs.includes(gid)) { u[k].groupes = gs.filter((x) => x !== gid); n++; }
+      });
+      setUsers(u);
+      const g = groupes(); delete g[gid]; setGroupes(g);
+      lire(`travauxIdx/${gid}`, []).forEach((k) => {
+        const [uid, aid] = k.split('|');
+        try { localStorage.removeItem(`${P}travaux/${gid}/${uid}/${aid}`); } catch (e) {}
+      });
+      try { localStorage.removeItem(`${P}travauxIdx/${gid}`); } catch (e) {}
+      try {
+        Object.keys(localStorage)
+          .filter((k) => k.startsWith(`${P}jeux/${gid}`))
+          .forEach((k) => localStorage.removeItem(k));
+      } catch (e) {}
+      return { eleves: n };
+    },
     async elevesDuGroupe(gid) {
       const u = users();
       return Object.keys(u).filter((k) => u[k].role === 'eleve' && (u[k].groupes || []).includes(gid))

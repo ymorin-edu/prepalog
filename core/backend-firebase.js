@@ -161,6 +161,25 @@ export async function creerBackendFirebase() {
     },
     async majGroupe(gid, patch) { await FS.updateDoc(dref('groupes', gid), patch); },
 
+    // Suppression d'un groupe. L'ordre compte : les droits côté base temps réel viennent
+    // du miroir `acces/{gid}`, donc ce nœud part EN DERNIER — l'effacer d'abord ferait
+    // refuser tout le reste. Les comptes Auth des élèves survivent : les retirer demande
+    // le SDK Admin, donc un serveur, donc le plan Blaze. Ça se fait dans la console.
+    async supprimerGroupe(gid) {
+      const eleves = await this.elevesDuGroupe(gid);
+      for (const el of eleves) {
+        const s = await FS.getDocs(cref('travaux', gid, 'eleves', el.uid, 'activites'));
+        for (const d of s.docs) await FS.deleteDoc(d.ref);
+        // L'élève quitte le groupe sans perdre son compte ni ses autres rattachements.
+        await FS.updateDoc(dref('users', el.uid), { groupes: FS.arrayRemove(gid) });
+      }
+      ouvrirRt();
+      await DB.remove(DB.ref(rt, `jeux/${gid}`));
+      await DB.remove(DB.ref(rt, `acces/${gid}`));
+      await FS.deleteDoc(dref('groupes', gid));
+      return { eleves: eleves.length };
+    },
+
     async elevesDuGroupe(gid) {
       const q = FS.query(cref('users'), FS.where('groupes', 'array-contains', gid));
       const s = await FS.getDocs(q);
@@ -183,6 +202,12 @@ export async function creerBackendFirebase() {
           await FS.setDoc(dref('users', c.user.uid), {
             role: 'eleve', nom: e.nom, prenom: e.prenom,
             matricule: String(e.matricule).trim().toLowerCase(),
+            // Le code est conservé pour que l'enseignant puisse le redonner à l'élève qui
+            // l'a perdu. Sans lui, la seule issue serait de réécrire le mot de passe dans
+            // la console, un par un : le SDK Admin, qui le ferait depuis l'application,
+            // demande un serveur et donc le plan Blaze. Contrepartie assumée : tout
+            // enseignant lit tous les profils, donc tous les codes.
+            code: e.code || '',
             groupes: [gid], creePar: courant?.uid || null, creeLe: Date.now(),
           });
           majAcces[c.user.uid] = true;

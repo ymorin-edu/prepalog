@@ -68,7 +68,11 @@ export async function rendreEspaceProf(hote, ctx) {
               <td><span class="etiq">${ech(courtNiveau(g.niveau))}</span></td>
               <td>${ech(g.annee || '')}</td>
               <td><span class="etiq">${ech(g.code || '')}</span></td>
-              <td>${g.id === gidActif ? '<span class="note">actif</span>' : `<button class="btn btn-s" data-actif="${ech(g.id)}">Activer</button>`}</td>
+              <td class="rangee">
+                ${g.id === gidActif ? '<span class="note">actif</span>' : `<button class="btn btn-s" data-actif="${ech(g.id)}">Activer</button>`}
+                <button class="btn btn-s" data-suppr="${ech(g.id)}" style="color:var(--rouge)"
+                  title="Supprimer définitivement ce groupe">Supprimer</button>
+              </td>
             </tr>`).join('')}
           </tbody></table>`}
         </section>
@@ -91,6 +95,26 @@ export async function rendreEspaceProf(hote, ctx) {
       } catch (e) { toast(e.message); }
     });
     z.querySelectorAll('[data-actif]').forEach((b) => b.addEventListener('click', () => { activer(b.dataset.actif); dessiner(); }));
+
+    z.querySelectorAll('[data-suppr]').forEach((b) => b.addEventListener('click', async () => {
+      const gid = b.dataset.suppr;
+      const gr = groupes.find((x) => x.id === gid);
+      // Une seule confirmation, mais qui énumère ce qui part : un « Êtes-vous sûr ? » ne
+      // dit rien de ce qu'on perd, et c'est justement là que se jouent les accidents.
+      if (!confirmer(`Supprimer le groupe « ${gr?.nom || gid} » ?\n\n`
+        + `Seront effacés définitivement : le groupe, ses bases de données partagées `
+        + `et tous les résultats de ses élèves.\n\n`
+        + `Les élèves gardent leur compte et leurs autres groupes ; ils ne seront plus `
+        + `rattachés à celui-ci. Leurs identifiants de connexion restent valables : pour `
+        + `les supprimer tout à fait, passez par la console Firebase.`)) return;
+      try {
+        const r = await B.supprimerGroupe(gid);
+        groupes = await B.groupesDuProf(ctx.profil.uid);
+        if (gidActif === gid) activer(groupes[0]?.id || null);
+        toast(`Groupe supprimé${r && r.eleves ? ` — ${r.eleves} élève${r.eleves > 1 ? 's détachés' : ' détaché'}` : ''}.`);
+        dessiner();
+      } catch (e) { toast(e.message || 'Suppression impossible.'); }
+    }));
   }
 
   // ------------------------------------------------------------------ comptes
@@ -124,7 +148,9 @@ export async function rendreEspaceProf(hote, ctx) {
             ${eleves.map((e) => `<tr><td>${ech(e.nom)}</td><td>${ech(e.prenom)}</td>
               <td class="mono">${ech(e.matricule)}</td><td class="mono">${ech(e.code || '—')}</td></tr>`).join('')}
           </tbody></table>
-          <p class="note">Les codes ne sont lisibles ici qu'en mode démonstration. En production, notez-les à la création.</p>`}
+          <p class="note">Les codes sont enregistrés avec le compte : un élève qui a perdu le sien
+             le retrouve ici. Les comptes créés avant le 30/09/2026 affichent « — », leur code
+             n'ayant pas été conservé.</p>`}
         </section>
       </div>`;
 
@@ -146,7 +172,8 @@ export async function rendreEspaceProf(hote, ctx) {
         { cle: 'matricule', label: 'Matricule' }, { cle: 'code', label: 'Code' }])));
 
     z.querySelector('#btnCsvEleves').addEventListener('click', () => telecharger(`eleves-${g.id}.csv`,
-      versCSV(eleves, [{ cle: 'nom', label: 'Nom' }, { cle: 'prenom', label: 'Prénom' }, { cle: 'matricule', label: 'Matricule' }])));
+      versCSV(eleves, [{ cle: 'nom', label: 'Nom' }, { cle: 'prenom', label: 'Prénom' },
+        { cle: 'matricule', label: 'Matricule' }, { cle: 'code', label: 'Code' }])));
   }
 
   // -------------------------------------------------------------------- suivi

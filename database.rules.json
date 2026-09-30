@@ -4,6 +4,10 @@
     "Les règles RTDB ne savent pas lire Firestore : les droits sont donc recopiés sous",
     "acces/{gid}, écrit par l'application au moment où un groupe et ses élèves sont créés.",
     "",
+    "L'enseignant du groupe a le droit d'écriture sur tout jeux/{gid} : c'est ce qui lui",
+    "permet d'effacer un groupe entier. Les règles plus profondes restent évaluées pour",
+    "les élèves, un droit accordé plus haut ne les élargit pas.",
+    "",
     "Écriture d'une ligne autorisée si :",
     "  - l'auteur est enseignant du groupe, OU",
     "  - l'auteur est élève du groupe, ET le jeu n'est pas gelé (gele != true, car ! refuse un null), ET",
@@ -26,6 +30,7 @@
     "jeux": {
       "$gid": {
         ".read": "auth != null && (root.child('acces').child($gid).child('profs').child(auth.uid).exists() || root.child('acces').child($gid).child('eleves').child(auth.uid).exists())",
+        ".write": "auth != null && root.child('acces').child($gid).child('profs').child(auth.uid).exists()",
 
         "$cle": {
           "meta": {
