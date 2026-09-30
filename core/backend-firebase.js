@@ -9,15 +9,24 @@
 
 import { CONFIG, matEmail, matMdp } from './config.js';
 
-const CDN = 'https://www.gstatic.com/firebasejs/10.13.0/';
+// Le SDK est servi par le dépôt, pas par gstatic.com : voir vendor/LISEZMOI.md.
+// Un CDN bloqué par le filtrage académique empêcherait le mode réel de démarrer du tout.
+// Chemins relatifs à ce module — `import()` les résout depuis core/, donc vendor/firebase/.
+export const MODULES_SDK = Object.freeze([
+  '../vendor/firebase/firebase-app.js',
+  '../vendor/firebase/firebase-auth.js',
+  '../vendor/firebase/firebase-firestore.js',
+  '../vendor/firebase/firebase-database.js',
+]);
+
+// Chargement des quatre modules, isolé pour que la suite de tests puisse l'exercer
+// sans configuration Firebase : c'est le seul endroit du dépôt qui va chercher du code.
+export function chargerSdk() {
+  return Promise.all(MODULES_SDK.map((m) => import(m)));
+}
 
 export async function creerBackendFirebase() {
-  const [AP, AU, FS, DB] = await Promise.all([
-    import(CDN + 'firebase-app.js'),
-    import(CDN + 'firebase-auth.js'),
-    import(CDN + 'firebase-firestore.js'),
-    import(CDN + 'firebase-database.js'),
-  ]);
+  const [AP, AU, FS, DB] = await chargerSdk();
 
   const app = AP.initializeApp(CONFIG.firebase);
   const auth = AU.getAuth(app);
