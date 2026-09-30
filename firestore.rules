@@ -42,13 +42,21 @@ service cloud.firestore {
       // Chacun lit son profil ; un enseignant lit les profils de ses élèves.
       allow read: if connecte() && (uid == moi() || estProf());
 
-      // Création : par un enseignant seulement (comptes élèves créés en lot).
-      // Le tout premier enseignant est amorcé à la main dans la console, `superAdmins`
-      // étant laissé vide dans prepalog-config.json.
-      allow create: if connecte() && (
-        (request.resource.data.role == 'eleve' && estProf()) ||
-        (uid == moi() && request.resource.data.role == 'prof')
-      );
+      // Création : par un enseignant seulement, et seulement d'un compte élève.
+      //
+      // Cette règle portait jusqu'au 30/09/2026 une seconde branche,
+      // `uid == moi() && request.resource.data.role == 'prof'`, censée servir à l'amorçage.
+      // Elle n'en était pas une : elle autorisait n'importe quel compte authentifié à se
+      // créer un profil enseignant. L'authentification Google accepte tout compte Google et
+      // `prepalog-config.json` est public, donc n'importe qui pouvait devenir enseignant,
+      // puis lire tous les profils — noms, matricules et codes des élèves — et manipuler
+      // les groupes. Aucune autre règle ne rattrapait le coup : `estProf()` se contente de
+      // relire ce profil-là.
+      //
+      // Elle est supprimée sans remplacement. L'amorçage d'un enseignant se fait à la main
+      // dans la console Firebase (procédure dans claude/prepalog-firebase.md), ce qui était
+      // déjà le cas : la branche ne servait donc à rien qu'à ouvrir la porte.
+      allow create: if request.resource.data.role == 'eleve' && estProf();
 
       // Mise à jour : l'intéressé ne peut jamais changer son propre rôle.
       allow update: if connecte() && (
