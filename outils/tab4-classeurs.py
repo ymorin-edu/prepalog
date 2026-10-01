@@ -92,6 +92,11 @@ hg = Alignment(horizontal='left', vertical='top', wrap_text=True)
 def pose(ws, ref, valeur, police=None, fond=None, bordure=None, align=None, fmt=None):
     c = ws[ref]
     c.value = valeur
+    # Un texte qui commence par « = » (la formule montrée en exemple dans une consigne) est pris
+    # par openpyxl pour une vraie formule : il l'écrit en <f>, avec des « ; » et un nom français
+    # que le format interne refuse — Excel annonce alors un fichier endommagé. On force le texte.
+    if isinstance(valeur, str) and valeur.startswith('='):
+        c.data_type = 's'
     if police:
         c.font = police
     if fond:

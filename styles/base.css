@@ -728,3 +728,85 @@ a.ent-nav{ text-decoration:none }
 
 .ent-main select[data-prep]{ min-width:106px }
 .ent-main td.mono{ white-space:nowrap }
+
+/* ------------------------------------------------------------------ transport : plan et tournée
+   Ajouté le 02/10/2026 avec les deux vues de noyau `plan.js` et `tournee.js`. Tout est écrit
+   en variables, donc le clair, le sombre et la charte d'une entreprise (qui réécrit ces mêmes
+   variables pendant qu'un module immersif est ouvert) suivent sans règle en double. */
+.plan-boite{ margin:0 0 16px }
+.plan-svg{
+  display:block; width:100%; height:auto; max-height:62vh;
+  background:var(--panneau); border:1px solid var(--filet); border-radius:var(--r);
+}
+.plan-legende{
+  display:flex; flex-wrap:wrap; gap:6px 20px; margin-top:8px;
+  font-size:13px; color:var(--encre-douce);
+}
+.plan-legende span{ display:inline-flex; align-items:center; gap:7px }
+.plan-legende i{ width:13px; height:13px; display:inline-block }
+.plan-l-rond{ border-radius:50% }
+.plan-l-carre{ border-radius:3px }
+.plan-l-losange{ border-radius:0; transform:rotate(45deg); width:11px; height:11px }
+
+.plan-barre{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:12px }
+/* Le filet de sécurité doit être visible, pas confortable : il n'a ni l'aplat ni le poids
+   d'un bouton d'action, pour qu'on le prenne quand on en a besoin et pas par habitude. */
+.plan-secours{ color:var(--encre-douce); border-style:dashed }
+.plan-table th{ white-space:nowrap }
+.plan-table .plan-case{ width:5.5em; text-align:center; font-family:var(--mono); text-transform:uppercase }
+.plan-table .plan-zone{ color:var(--encre-douce) }
+.plan-table tr.plan-ok td:first-child{ box-shadow:inset 3px 0 0 var(--vert-fond) }
+.plan-table tr.plan-ko td:first-child{ box-shadow:inset 3px 0 0 var(--rouge) }
+.plan-case.plan-ok{ border-color:var(--vert-fond); box-shadow:inset 0 0 0 1px var(--vert-fond) }
+.plan-case.plan-ko{ border-color:var(--rouge) }
+.plan-verdict{ white-space:nowrap }
+
+.tour-grille{ display:grid; grid-template-columns:1fr 300px; gap:18px; align-items:start }
+.tour-liste{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px }
+.tour-item{
+  display:flex; align-items:center; gap:12px; padding:10px 12px;
+  border:1px solid var(--filet); border-radius:var(--r); background:var(--panneau);
+}
+.tour-item[draggable="true"]{ cursor:grab }
+.tour-item.glisse{ opacity:.45 }
+.tour-item.survol{ border-color:var(--ardoise); border-style:dashed }
+.tour-rang{
+  flex:0 0 26px; height:26px; display:grid; place-items:center; border-radius:50%;
+  background:var(--ardoise-fond); color:var(--sur-ardoise); font-family:var(--mono);
+  font-size:13px; font-weight:700;
+}
+.tour-texte{ flex:1; min-width:0; display:flex; flex-direction:column; gap:2px }
+.tour-boutons{ display:flex; gap:5px; flex:0 0 auto }
+.tour-quai{ margin-top:18px; padding-top:14px; border-top:1px dashed var(--filet) }
+.tour-liste-quai .tour-item{ background:var(--survol) }
+
+.tour-jauges{ display:flex; flex-direction:column; gap:14px; position:sticky; top:12px }
+.tour-jauge{
+  padding:12px 14px; border:1px solid var(--filet); border-radius:var(--r);
+  background:var(--panneau); display:flex; flex-direction:column; gap:7px;
+}
+.tour-jauge.trop{ border-color:var(--rouge) }
+.tour-j-tete{ display:flex; justify-content:space-between; align-items:baseline; gap:10px; font-size:13px }
+.tour-j-tete b{ font-family:var(--mono); font-size:1.05rem }
+.tour-j-barre{ height:9px; border-radius:5px; background:var(--survol); overflow:hidden }
+.tour-j-barre i{ display:block; height:100%; background:var(--vert-fond) }
+.tour-jauge.trop .tour-j-barre i{ background:var(--rouge) }
+.tour-jauge .pastille{ align-self:flex-start }
+
+.tour-report{ margin-top:22px; padding-top:16px; border-top:1px solid var(--filet) }
+.tour-cases{ display:grid; gap:12px; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); margin-top:10px }
+.tour-case{ display:flex; flex-direction:column; gap:5px; font-size:13px }
+.tour-saisie{ display:flex; align-items:center; gap:7px }
+.tour-saisie input{ flex:1; font-family:var(--mono); text-align:right }
+.tour-saisie input.juste{ border-color:var(--vert-fond); box-shadow:inset 0 0 0 1px var(--vert-fond) }
+.tour-saisie input.faux{ border-color:var(--rouge) }
+
+@media (max-width:860px){
+  .tour-grille{ grid-template-columns:1fr }
+  .tour-jauges{ position:static }
+  .plan-svg{ max-height:none }
+}
+
+/* La porte de sortie du repérage : visible, mais clairement moins engageante que la
+   validation — elle débloque, elle ne remplace pas le travail. */
+.plan-issue{ color:var(--encre-douce); border-style:dashed }

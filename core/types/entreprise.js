@@ -13,6 +13,8 @@
 
 import { ech, toast, confirmer } from '../ui.js';
 import { COLORS, SHIP, pad } from '../../contenus/entreprise-commun.js';
+import { creerPlan } from './plan.js';
+import { creerTournee } from './tournee.js';
 
 /* ------------------------------------------------------------------ formats */
 export const eur = (n) => Number(n).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' });
@@ -60,6 +62,14 @@ export function creerEntreprise(U) {
   // cherchait.
   const trame = U.trame || null;
 
+  // Les deux vues de transport, ajoutées le 02/10/2026 pour la tournée du vélo-cargo.
+  // Elles n'existent que si la séance les déclare : une entreprise qui n'a pas de
+  // transport garde exactement les écrans d'avant, sans entrée de menu en plus. Le code
+  // générique vit dans `plan.js` et `tournee.js` — il ne connaît ni la ville, ni le
+  // véhicule, et TechPro comme le choix du véhicule en hériteront tels quels.
+  const VPLAN = U.plan ? creerPlan(U.plan) : null;
+  const VTOUR = U.tournee ? creerTournee(Object.assign({ plan: U.plan }, U.tournee)) : null;
+
   const unite = (n) => ((n > 1 || n === 0) ? VOCAB.unitPl : VOCAB.unit);
   const label = (v) => v.model.brand + ' ' + v.model.name;
   const swatch = (c) => `<span class="teinte" style="background:${COLORS[c][1]}"></span>${ech(COLORS[c][0])}`;
@@ -86,6 +96,10 @@ export function creerEntreprise(U) {
         ctx.jeu.sauver();
       }
       ['moves', 'mails', 'orders', 'receptions', 'customers', 'suppliers'].forEach((k) => { if (!db[k]) db[k] = []; });
+      // L'état des vues de transport vit dans la base de l'élève, comme le reste de son
+      // travail : un repérage validé doit se retrouver après une fermeture d'onglet, et
+      // d'une semaine sur l'autre.
+      if (!db.transport) db.transport = {};
 
       // Le volet de la séance. Chaque activité sème le sien une seule fois, sans toucher au
       // reste : un élève qui a fait la réception la semaine dernière retrouve son stock, et
@@ -297,6 +311,9 @@ export function creerEntreprise(U) {
                 ${item('mail', 'Messagerie', nonLus)}
                 ${item('commandes', 'Commandes', aFaire, ['commandes', 'commande'])}
                 ${item('receptions', 'Réceptions', aRecevoir, ['receptions', 'reception'])}
+                ${VPLAN || VTOUR ? `<div class="ent-sep">${ech(U.transportSection || 'Transport')}</div>` : ''}
+                ${VPLAN ? item('plan', VPLAN.nav.libelle) : ''}
+                ${VTOUR ? item('tournee', VTOUR.nav.libelle) : ''}
                 <div class="ent-sep">Articles</div>
                 ${item('catalogue', 'Catalogue', 0, ['catalogue', 'produit'])}
                 ${item('stock', 'Stock')}
@@ -348,6 +365,7 @@ export function creerEntreprise(U) {
         const vues = {
           accueil: vueAccueil, mail: vueMail, commandes: vueCommandes, commande: vueCommande,
           receptions: vueReceptions, reception: vueReception,
+          plan: vuePlan, tournee: vueTournee,
           catalogue: vueCatalogue, produit: vueProduit, stock: vueStock, blocage: vueBlocage,
           clients: vueClients, fournisseurs: vueFournisseurs, console: vueConsole,
         };
@@ -1032,6 +1050,37 @@ export function creerEntreprise(U) {
       }
 
       /* ---------------------------------------------------------- catalogue */
+      /* ------------------------------------------------- transport : plan et tournée */
+      // Les deux vues sont génériques et vivent dans leurs propres fichiers. Ici, on ne
+      // fait que leur prêter la base de l'élève, la sauvegarde et le redessin.
+      // **Un état par SÉANCE, pas par entreprise.** Les séances d'une même entreprise
+      // partagent une seule base (`meta.jeuId`) : deux d'entre elles qui déclareraient
+      // chacune sa tournée se seraient écrasées l'une l'autre, et un repérage validé la
+      // semaine dernière aurait ouvert d'office le temps 2 d'une autre séance. La clé est
+      // donc l'identifiant de l'activité, unique par construction ; `transportId` permet au
+      // contenu de la forcer, par exemple pour que deux séances partagent à dessein le même
+      // repérage. Les jalons lisent `db.transport[<id de la séance>].plan` / `.tournee`.
+      const cleTransport = String(U.transportId || (ctx.meta && ctx.meta.id) || 'transport');
+      const etatTransport = (vue) => {
+        if (!db.transport) db.transport = {};
+        if (!db.transport[cleTransport]) db.transport[cleTransport] = {};
+        if (!db.transport[cleTransport][vue]) db.transport[cleTransport][vue] = {};
+        return db.transport[cleTransport][vue];
+      };
+      const apiTransport = (cle) => ({ etat: etatTransport(cle), sauver, redessiner: dessiner, toast });
+
+      function vuePlan() { return VPLAN.html(etatTransport('plan')); }
+
+      // La tournée reste fermée tant que le repérage n'est pas validé : sans lui, l'élève
+      // ne sait pas où sont les points et ordonnerait au hasard. C'est le « deux temps »
+      // décidé le 02/10/2026, tenu par l'état et non par un réglage d'affichage.
+      function vueTournee() {
+        const verrou = VPLAN && !VPLAN.ouvreSuite(etatTransport('plan'))
+          ? `Commencez par « ${VPLAN.nav.libelle} » : situez chaque point sur le plan, puis validez le repérage.`
+          : null;
+        return VTOUR.html(etatTransport('tournee'), { verrou });
+      }
+
       function vueCatalogue() {
         const marques = [], cats = [];
         MODELS.forEach((m) => { if (!marques.includes(m.brand)) marques.push(m.brand); if (!cats.includes(m.cat)) cats.push(m.cat); });
@@ -1521,6 +1570,8 @@ export function creerEntreprise(U) {
           e.preventDefault();
           const i = z.querySelector('#champCmd'), t = i.value; i.value = ''; executer(t);
         });
+        if (E.vue === 'plan' && VPLAN) VPLAN.brancher(z, apiTransport('plan'));
+        if (E.vue === 'tournee' && VTOUR) VTOUR.brancher(z, apiTransport('tournee'));
       }
 
       remonterEtapes();
