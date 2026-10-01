@@ -254,6 +254,8 @@ await v("aucune collection hors contrat n'est écrivable", () =>
 const semerRtdb = () => env.withSecurityRulesDisabled(async (ctx) => {
   const r = ctx.database().ref();
   await r.set({
+    // prof1 est inscrit dans profsGlobaux : c'est lui qui a le droit de créer un groupe.
+    profsGlobaux: { prof1: true },
     acces: { g1: { profs: { prof1: true }, eleves: { e1: true, e2: true } } },
     jeux: {
       g1: {
@@ -329,13 +331,21 @@ await v("un inconnu ne s'ajoute pas aux élèves du groupe", () =>
 await v("l'enseignant inscrit un élève au groupe", () =>
   assertSucceeds(dbDe('prof1').ref('acces/g1/eleves/e9').set(true)));
 
-// Trou connu, non corrigé au 30/09/2026 : `acces/$gid` accepte l'écriture de tout compte
-// authentifié tant que le nœud n'existe pas (`!data.exists()`), ce qui est nécessaire à la
-// création d'un groupe mais laisse n'importe qui fabriquer des groupes de toutes pièces —
-// sur un plan facturé à la bande passante. Ce test constate l'état actuel ; le jour où la
-// création sera réservée à `profsGlobaux`, il faudra le retourner en assertFails.
-await v("CONNU : un inconnu peut fabriquer un groupe inexistant", () =>
-  assertSucceeds(dbDe('intrus').ref('acces/gpirate/profs/intrus').set(true)));
+// Second trou, bouché le 01/10/2026. `acces/$gid` acceptait l'écriture de tout compte
+// authentifié tant que le nœud n'existait pas (`!data.exists()`) : nécessaire à la création
+// d'un groupe, mais n'importe qui pouvait fabriquer des groupes de toutes pièces et écrire
+// dans `jeux/<gid>` à volonté — sur un plan Spark facturé à la bande passante. La création
+// est désormais réservée aux uid inscrits dans `profsGlobaux`, nœud en `.write: false`.
+await v("un inconnu ne fabrique pas un groupe inexistant", () =>
+  assertFails(dbDe('intrus').ref('acces/gpirate/profs/intrus').set(true)));
+
+// Discriminant : l'attente est « autorisé ». Sans la branche `profsGlobaux`, la création
+// d'un groupe devient impossible à tout le monde, et c'est ce test qui le dit.
+await v("un enseignant global crée un groupe", () =>
+  assertSucceeds(dbDe('prof1').ref('acces/gneuf/profs/prof1').set(true)));
+
+await v("un enseignant non global ne crée pas de groupe", () =>
+  assertFails(dbDe('prof2').ref('acces/gneuf2/profs/prof2').set(true)));
 
 // ---------- 14. suppression d'un groupe entier
 // La règle `.write` au niveau `jeux/$gid` a été ajoutée le 30/09 : sans elle, l'enseignant
@@ -369,21 +379,39 @@ for (const n of ko) console.log('  ✗ ' + n);
 console.log(`\n${ok.length}/${ok.length + ko.length} tests de règles réussis.`);
 process.exit(ko.length ? 1 : 0);
 
-// --- régression volontaire ---------------------------------------------------------
-// Un test qui ne tombe pas quand on remet le bug ne prouve rien. Les quatre refus du
-// 30/09/2026 se rejouent ainsi, un à la fois, dans le fichier de règles :
+// --- régression volontaire -----------------------------------------------------------
+// Un test qui ne tombe pas quand on remet le bug ne prouve rien. Procédure exécutée le
+// 01/10/2026, résultats constatés — à refaire après toute retouche des règles.
 //
 //  1. database.rules.json, `jeux/$gid/$cle/$table/$ligne` :
-//     remplacer `.child('gele').val() != true` par `!...child('gele').val()`
-//     → « un élève écrit dans un jeu jamais gelé » doit tomber.
-//  2. firestore.rules, `monRole()` : remplacer `monProfil().get('role', '')`
-//     par `monProfil().role`
-//     → « un enseignant au profil incomplet reste enseignant » doit tomber.
-//  3. firestore.rules, `match /groupes/{gid}` : retirer la branche `resource == null`
-//     → « lire un groupe inexistant est permis » doit tomber, et avec lui toute création.
-//  4. firestore.rules, `match /users/{uid}` : remettre la branche
+//     remplacer `.child('gele').val() != true` par `.child('gele').val() == false`
+//     → tombe : « un élève écrit dans un jeu jamais gelé », et par ricochet
+//       « un élève récrit la ligne d'un autre si la table est ouverte à tous ».
+//     NE PAS écrire `!...child('gele').val()` comme la version précédente de cette
+//     procédure le demandait : le compilateur de règles RTDB le refuse au chargement
+//     (`! only operates on booleans`), l'émulateur ne démarre pas et aucun test ne tourne.
+//     `== false` a le même défaut sémantique — un `null` n'est pas `false` — et compile.
+//  2. firestore.rules, `match /groupes/{gid}` : retirer la branche `resource == null`
+//     → tombe : « lire un groupe inexistant est permis », et lui seul. La création de
+//       groupe n'en dépend pas : `allow create` ne passe pas par `allow read`.
+//  3. firestore.rules, `match /users/{uid}` : remettre la branche
 //     `(uid == moi() && request.resource.data.role == 'prof')` dans `allow create`
-//     → « un inconnu ne peut pas se créer un profil enseignant » doit tomber.
+//     → tombent : « un inconnu ne peut pas se créer un profil enseignant » puis
+//       « un inconnu ne lit aucun profil d'élève » — la chaîne complète de l'exploit du
+//       30/09, l'intrus se faisant enseignant avant de lire les codes des élèves.
+//       Discrimine par l'autre mécanisme : l'attente est un refus, et le bug accorde.
+//  4. database.rules.json, `acces/$gid` : retirer la branche `profsGlobaux`
+//     → tombe : « un enseignant global crée un groupe ».
 //
-// À refaire après toute retouche des règles : c'est le seul moyen de savoir que la suite
-// surveille encore quelque chose.
+// Hors de portée, et ce n'est pas un oubli : les gardes `monProfil().get('role', '')` et
+// `monProfil().get('groupes', [])`, ainsi que le `exists()` de `monProfil()`. Essai du
+// 01/10/2026 : `monRole()` ramené à `monProfil().role` laisse la suite à 57/57.
+// Ces gardes protègent d'une erreur d'évaluation sur un profil incomplet — or dans ce jeu
+// de règles un profil incomplet n'aboutit jamais à une autorisation : `.role` n'échoue que
+// sur un profil sans `role`, donc sur quelqu'un qui n'est jamais enseignant, et tout ce
+// qu'obtient un non-enseignant passe par `uid == moi()`, qui court-circuite `estProf()`
+// avant lui ; `.groupes` n'échoue que sur un profil sans `groupes`, et `gid in mesGroupes()`
+// est la dernière branche du `allow read`, après `resource == null` et
+// `moi() in resource.data.profs`. Aucun `assertSucceeds` ne peut les voir. Le profil
+// incomplet du harnais, `users/prof3`, porte d'ailleurs `role` et pas `groupes` : le test
+// « un enseignant au profil incomplet reste enseignant » ne surveille donc pas `monRole()`.
