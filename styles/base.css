@@ -561,12 +561,39 @@ body.immersion .app{ max-width:1720px; padding:14px 24px 0 }
 .ent-marque{ font-size:1.25rem; font-weight:700; letter-spacing:-.01em }
 .ent-baseline{ font-size:12.5px; opacity:.85 }
 .ent-qui{ font-size:12.5px; opacity:.9 }
+/* La séance en cours. Lisible depuis l'allée : c'est ce qui permet à l'enseignant
+   de vérifier d'un coup d'œil que l'élève est dans le bon environnement, les trois
+   séances Spartoo partageant le même décor. */
+.ent-seance{
+  font-size:13.5px; font-weight:500; padding:3px 11px; border-radius:999px;
+  background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.24);
+  white-space:nowrap;
+}
+.ent-seance .mono{ font-size:12px; letter-spacing:.04em; font-weight:600 }
 .ent-sortie{
   font:inherit; font-size:12.5px; cursor:pointer; padding:5px 12px;
   border-radius:var(--r); border:1px solid currentColor;
   background:none; color:inherit;
 }
 .ent-sortie:hover{ background:rgba(255,255,255,.15) }
+/* ------------------------------------------------------------------
+   Les actions de séance — la trame et la remise à zéro — vivent dans le
+   bandeau depuis le 01/10/2026. Elles étaient au milieu et en bas du menu
+   de gauche, où personne ne les cherchait : ce ne sont pas des écrans de
+   l'application, ce sont des gestes de début et de fin de séance.
+   La remise à zéro efface le travail de l'élève : elle est volontairement
+   plus discrète que Quitter, et séparée de lui par les trames et un filet,
+   pour qu'un clic de trop ne tombe pas dessus. Le garde-fou reste la
+   demande de confirmation dans reinitialiser().
+   ------------------------------------------------------------------ */
+.ent-act{
+  font:inherit; font-size:12.5px; cursor:pointer; padding:5px 11px;
+  border-radius:var(--r); border:1px solid transparent;
+  background:none; color:inherit; text-decoration:none; white-space:nowrap; opacity:.88;
+}
+.ent-act:hover{ background:rgba(255,255,255,.15); border-color:currentColor; opacity:1 }
+.ent-act-raz{ opacity:.65 }
+.ent-barre{ width:1px; align-self:stretch; background:currentColor; opacity:.28; margin:3px 0 }
 
 /* --- environnement d'entreprise (type « entreprise ») --------------------------
    LogiSim dans la charte Prepalog : une colonne de navigation à gauche, le travail
@@ -593,8 +620,6 @@ body.immersion .app{ max-width:1720px; padding:14px 24px 0 }
   border:1px solid transparent; background:none; color:var(--encre);
 }
 .ent-nav:hover{ background:var(--survol); border-color:var(--filet) }
-/* Les entrées du menu sont des boutons, sauf les trames qui sont de vrais liens de
-   téléchargement : même aspect, sans le soulignement. */
 a.ent-nav{ text-decoration:none }
 .ent-nav.on{
   background:var(--ardoise-clair); border-color:var(--ardoise); font-weight:600;

@@ -38,7 +38,7 @@ export function creerEntreprise(U) {
   // premier passage, sans toucher au travail déjà fait dans les autres séances.
   const volet = U.volet || null;
 
-  // La trame de la séance, téléchargeable depuis le menu — règle révisée le 01/10/2026.
+  // La trame de la séance, téléchargeable depuis le BANDEAU — révisée le 01/10/2026.
   //
   // La règle du 30/09 voulait que la trame vive uniquement sur le document distribué : le
   // site porte l'environnement, la trame porte les consignes. Le principe ne change pas —
@@ -51,8 +51,13 @@ export function creerEntreprise(U) {
   //            docx: './contenus/trames/x-trame-eleve.docx' }
   //
   // **Déclarer la trame, c'est la valider.** Une séance dont la trame n'est pas relue n'en
-  // déclare pas : le menu n'affiche alors rien, et personne ne travaille sur un brouillon.
-  // Les deux formats sont facultatifs l'un comme l'autre.
+  // déclare pas : le bandeau n'affiche alors rien, et personne ne travaille sur un
+  // brouillon. Les deux formats sont facultatifs l'un comme l'autre.
+  //
+  // Les liens vivaient au milieu du menu de gauche jusqu'au 01/10/2026 au soir. Ils sont
+  // remontés dans le bandeau avec la remise à zéro : ce sont des actions de séance, pas
+  // des écrans de l'application, et en bas d'un menu de douze entrées personne ne les
+  // cherchait.
   const trame = U.trame || null;
 
   const unite = (n) => ((n > 1 || n === 0) ? VOCAB.unitPl : VOCAB.unit);
@@ -275,7 +280,15 @@ export function creerEntreprise(U) {
               ${ENTREPRISE.logo ? `<img class="ent-logo" src="${ech(ENTREPRISE.logo)}" alt="${ech(ENTREPRISE.nom)}">` : ''}
               <span class="ent-marque">${ech(ENTREPRISE.nom)}</span>
               <span class="ent-baseline">${ech(ENTREPRISE.sousTitre)}</span>
+              ${etiquetteSeance()}
               <span class="pousse ent-qui">${ech(prenom)}</span>
+              <button class="ent-act ent-act-raz" data-raz
+                title="Effacer votre travail et repartir d'une base neuve">Réinitialiser</button>
+              ${trame && trame.pdf ? `<a class="ent-act" href="${ech(trame.pdf)}" download
+                title="Le carnet de bord de la séance, à imprimer ou à lire à l'écran">Trame PDF</a>` : ''}
+              ${trame && trame.docx ? `<a class="ent-act" href="${ech(trame.docx)}" download
+                title="Le même carnet, à compléter au clavier">Trame Word</a>` : ''}
+              <span class="ent-barre" aria-hidden="true"></span>
               <button class="ent-sortie" data-quitter>Quitter</button>
             </header>
             <div class="ent-shell">
@@ -291,17 +304,8 @@ export function creerEntreprise(U) {
                 <div class="ent-sep">Tiers</div>
                 ${item('clients', 'Clients')}
                 ${item('fournisseurs', 'Fournisseurs')}
-                ${trame ? `<div class="ent-sep">Ma trame</div>
-                  ${trame.pdf ? `<a class="ent-nav" href="${ech(trame.pdf)}" download
-                    title="Le carnet de bord de la séance, à imprimer ou à lire à l'écran">
-                    <span>Trame — PDF</span></a>` : ''}
-                  ${trame.docx ? `<a class="ent-nav" href="${ech(trame.docx)}" download
-                    title="Le même carnet, à compléter au clavier">
-                    <span>Trame — Word</span></a>` : ''}` : ''}
                 <div class="ent-sep">Outils</div>
                 ${item('console', 'Console')}
-                <div class="ent-sep"></div>
-                <button class="ent-nav" data-raz>Réinitialiser ma base</button>
               </aside>
               <div class="ent-main" id="entMain"></div>
             </div>
@@ -312,6 +316,25 @@ export function creerEntreprise(U) {
         hote.querySelector('[data-quitter]').addEventListener('click', () => sortir(ctx.quitter));
         habiller();
         dessinerVue();
+      }
+
+      // La séance en cours, affichée dans le bandeau depuis le 01/10/2026 : trois séances
+      // Spartoo partagent la même entreprise et le même décor, donc rien à l'écran ne disait
+      // laquelle était ouverte. L'enseignant qui passe dans les rangs doit pouvoir le lire
+      // d'un coup d'œil, sans se pencher sur la machine.
+      //
+      // Le titre de l'activité commence par le nom de l'entreprise (« Spartoo — réception »),
+      // déjà affiché deux centimètres à gauche : on le retire pour ne garder que la séance.
+      function etiquetteSeance() {
+        const code = String((ctx.meta && ctx.meta.code) || '').trim();
+        const titre = String((ctx.meta && ctx.meta.titre) || '').trim();
+        const nom = String(ENTREPRISE.nom || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        let court = nom ? titre.replace(new RegExp('^\\s*' + nom + '\\s*[\u2014\u2013-]\\s*', 'i'), '') : titre;
+        court = (court || titre).trim();
+        if (court) court = court.charAt(0).toUpperCase() + court.slice(1);
+        if (!code && !court) return '';
+        return `<span class="ent-seance">${code ? `<b class="mono">${ech(code)}</b>` : ''}${
+          code && court ? ' · ' : ''}${ech(court)}</span>`;
       }
 
       function aller(v, p) {

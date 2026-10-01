@@ -725,13 +725,17 @@ await v('Spartoo : ouverture de l\'environnement', async () => {
   if ((await page.$$eval('.ent-mitem', (e) => e.length)) !== 3) throw new Error('les 3 messages de départ manquent');
 });
 
-// ---------- 26 bis. la trame de la séance se télécharge depuis le menu
+// ---------- 26 bis. la trame de la séance se télécharge depuis le bandeau
 // Règle révisée le 01/10/2026 : la trame reste le support des consignes, mais le fichier
 // est à portée de clic. Un lien de trame qui tombe dans le vide se découvrirait en séance,
 // au pire moment — on vérifie donc que les fichiers partent vraiment, pas seulement que
 // les liens sont là.
-await v('Spartoo : la trame se télécharge depuis le menu', async () => {
-  const liens = await page.$$eval('a.ent-nav[download]', (a) => a.map((x) => x.getAttribute('href')));
+await v('Spartoo : la trame se télécharge depuis le bandeau', async () => {
+  // Le bandeau doit aussi nommer la séance en cours : c'est ce que l'enseignant lit
+  // en passant dans les rangs. On ne fige pas le libellé, seulement sa présence.
+  const seance = (await page.textContent('.ent-bandeau .ent-seance') || '').trim();
+  if (seance.length < 3) throw new Error('la séance en cours n\'est pas nommée dans le bandeau');
+  const liens = await page.$$eval('.ent-bandeau a[download]', (a) => a.map((x) => x.getAttribute('href')));
   if (liens.length !== 2) throw new Error(`${liens.length} lien(s) de trame au lieu de 2 (PDF et Word)`);
   if (!liens.some((h) => /\.pdf$/.test(h)) || !liens.some((h) => /\.docx$/.test(h))) {
     throw new Error('les deux formats ne sont pas proposés : ' + liens.join(', '));
