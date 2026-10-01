@@ -151,6 +151,52 @@ await v('accueil en pastilles de rubrique', async () => {
   if (!/activité/.test(await page.textContent('body'))) throw new Error('compteur absent');
 });
 
+// ---------- 6 ter. chaque rubrique affiche ses activités par numéro de module
+// TAB-5 s'était retrouvé affiché avant TAB-1, TAB-2 et TAB-3, parce que l'ordre venait de
+// la liste `ACTIVITES` et non des numéros. Un seul oubli, visible à trois endroits : la
+// pastille Tableur, les colonnes du suivi de classe et la conduite de séance. Ce test lit
+// l'ordre que le noyau calcule, rubrique par rubrique, donc il garde les trois d'un coup.
+//
+// Il passe par le module chargé dans la page plutôt que par les tuiles : une rubrique à
+// une seule activité s'ouvre directement dessus, sans tuile à lire, et c'est l'ordre
+// calculé qu'on veut vérifier, pas la façon dont il est dessiné.
+await v('rubriques : les activités sont rangées par numéro de module', async () => {
+  const par = await page.evaluate(async () => {
+    const m = await import('/activites/index.js');
+    const mods = await m.chargerActivites();
+    return m.RUBRIQUES.map((r) => ({
+      label: r.label,
+      codes: m.activitesDeRubrique(r, mods).map((a) => a.meta.code),
+    }));
+  });
+  if (!par.length) throw new Error('aucune rubrique lue, test invalide');
+
+  const numero = (c) => Number((/^[A-Z]+-(\d+)$/.exec(c) || [, '0'])[1]);
+  const famille = (c) => (/^([A-Z]+)-/.exec(c) || [, c])[1];
+  let vues = 0;
+  par.forEach(({ label, codes }) => {
+    if (codes.length < 2) return;                 // une seule tuile : rien à ordonner
+    vues++;
+    for (let i = 1; i < codes.length; i++) {
+      // Dans une même famille, le numéro doit croître. Une rubrique qui mélangerait deux
+      // familles (ça n'arrive pas aujourd'hui) n'est pas en faute : on ne compare que ce
+      // qui est comparable.
+      if (famille(codes[i]) !== famille(codes[i - 1])) continue;
+      if (numero(codes[i]) <= numero(codes[i - 1])) {
+        throw new Error(`rubrique ${label} : ${codes.join(' ')} — ${codes[i]} après ${codes[i - 1]}`);
+      }
+    }
+  });
+  if (vues < 3) throw new Error(`${vues} rubrique(s) à plusieurs tuiles seulement, test trop faible`);
+
+  // Repère explicite sur Tableur, la rubrique qui portait le défaut.
+  const tableur = par.find((r) => r.label === 'Tableur');
+  if (!tableur) throw new Error('rubrique Tableur introuvable');
+  if (tableur.codes.join(' ') !== 'TAB-1 TAB-2 TAB-3 TAB-5') {
+    throw new Error('rubrique Tableur : ' + tableur.codes.join(' '));
+  }
+});
+
 // ---------- 7. l'élève voit la base commune de la classe
 await v('base commune visible par l\'élève', async () => {
   await page.click('[data-rub="magasin"]');
@@ -414,7 +460,8 @@ await v('scénario : la rubrique et le lien externe', async () => {
   const ordre = await page.$$eval('[data-act]', (e) => e.map((x) => x.dataset.act));
   const attendu = ['yves-rocher', 'foot-locker', 'bouygues-telecom', 'brasseries-gatinais', 'reception-plateforme'];
   if (ordre.join() !== attendu.join()) throw new Error('ordre des scénarios : ' + ordre.join(', '));
-  // Les codes suivent l'ordre d'affichage.
+  // L'affichage suit les codes : c'est le numéro de module qui décide du rang, pas la
+  // place de la ligne dans `ACTIVITES` (voir `ordonner` dans activites/index.js).
   const codes = await page.$$eval('[data-act] .code', (e) => e.map((x) => x.textContent.trim().split(' ')[0]));
   if (codes.join() !== 'SCE-1,SCE-2,SCE-3,SCE-4,SCE-5') throw new Error('codes : ' + codes.join(', '));
   await page.click('[data-act="brasseries-gatinais"]');

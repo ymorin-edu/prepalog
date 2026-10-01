@@ -2,6 +2,11 @@
 //
 // Ajouter une activité = écrire son fichier, puis ajouter une ligne dans ACTIVITES.
 // L'accueil, les droits, la sauvegarde des scores et le suivi de classe suivent tout seuls.
+//
+// L'ordre d'affichage ne dépend PAS de l'ordre de cette liste : il est calculé à partir
+// des `code` (voir `ordonner` plus bas). Une activité se déplace en changeant son numéro
+// de module, pas en déplaçant sa ligne ici. L'ordre de la liste reste quand même rangé
+// comme l'affichage, pour que le fichier ne raconte pas autre chose que l'écran.
 
 export const ACTIVITES = [
   () => import('./chaine-logistique.js'),
@@ -9,12 +14,13 @@ export const ACTIVITES = [
   () => import('./quiz-flux.js'),
   () => import('./zones-entrepot.js'),
   () => import('./calculs-stock.js'),
-  () => import('./inventaire-tableur.js'),
-  // Tableur : la prise en main d'abord, les séries appliquées ensuite.
+  // Tableur : les numéros donnent la progression — prise en main, puis séries appliquées,
+  // puis l'inventaire. TAB-4 (CAP OL) n'est pas encore migré, d'où le saut de TAB-3 à TAB-5.
   () => import('./excel-pas-a-pas.js'),
   () => import('./excel-stock.js'),
   () => import('./calculs-commerciaux.js'),
-  // Scénarios : l'ordre d'affichage des tuiles est celui de cette liste.
+  () => import('./inventaire-tableur.js'),
+  // Scénarios.
   () => import('./yves-rocher.js'),
   () => import('./foot-locker.js'),
   () => import('./bouygues-telecom.js'),
@@ -76,12 +82,50 @@ export const RUBRIQUES = [
     desc: 'La base du magasin pédagogique : produits, emplacements et état du stock.' },
 ];
 
+// ------------------------------------------------------------------- l'ordre
+//
+// L'affichage suit les NUMÉROS DE MODULE, pas l'ordre de la liste ci-dessus : TAB-1, TAB-2,
+// TAB-3, puis TAB-5. C'est ce que l'élève lit sur la tuile, donc c'est ce qui doit décider.
+//
+// Avant, l'ordre était celui de la liste, et les numéros étaient censés suivre. Ça ne
+// tenait pas : TAB-5 avait été ajouté avant TAB-1, et se retrouvait affiché en premier
+// dans la rubrique Tableur, dans les colonnes du suivi de classe et dans la conduite de
+// séance — trois endroits pour un seul oubli, et rien pour le signaler.
+//
+// Les FAMILLES, elles, gardent l'ordre de la liste : la pastille Tableur n'a pas à passer
+// avant les quiz sous prétexte que « QUI » vient après « TAB » dans l'alphabet. Le rang
+// d'une famille est celui de sa première apparition dans ACTIVITES.
+//
+// Un code hors forme `XXX-9` (il n'y en a pas aujourd'hui) garde sa place : on ne veut pas
+// qu'une coquille dans un `code` fasse disparaître une activité de l'accueil.
+
+const FORME_CODE = /^([A-Z]+)-(\d+)$/;
+
+function ordonner(mods) {
+  const rangFamille = new Map();
+  mods.forEach((m) => {
+    const famille = (FORME_CODE.exec(m.meta.code || '') || [])[1] || m.meta.code || '';
+    if (!rangFamille.has(famille)) rangFamille.set(famille, rangFamille.size);
+  });
+  // `sort` est stable : deux activités de même code gardent l'ordre de la liste.
+  return mods.slice().sort((a, b) => {
+    const ca = FORME_CODE.exec(a.meta.code || '');
+    const cb = FORME_CODE.exec(b.meta.code || '');
+    const fa = rangFamille.get(ca ? ca[1] : a.meta.code || '');
+    const fb = rangFamille.get(cb ? cb[1] : b.meta.code || '');
+    if (fa !== fb) return fa - fb;
+    return Number(ca ? ca[2] : 0) - Number(cb ? cb[2] : 0);
+  });
+}
+
 const cache = new Map();
 
 export async function chargerActivites() {
   if (cache.size) return Array.from(cache.values());
   const mods = await Promise.all(ACTIVITES.map((f) => f()));
-  mods.forEach((m) => cache.set(m.meta.id, m));
+  // On range AVANT de remplir le cache : tout ce qui consomme `chargerActivites()` —
+  // l'accueil, le suivi de classe, la conduite de séance — hérite du même ordre.
+  ordonner(mods).forEach((m) => cache.set(m.meta.id, m));
   return Array.from(cache.values());
 }
 
@@ -90,7 +134,8 @@ export async function activite(id) {
   return cache.get(id) || null;
 }
 
-// Activités d'une rubrique, dans l'ordre déclaré pour `ids`, par ordre naturel pour `cat`.
+// Activités d'une rubrique : dans l'ordre déclaré pour `ids`, par numéro de module pour
+// `cat` — `mods` arrive déjà rangé par `chargerActivites`.
 export function activitesDeRubrique(rubrique, mods) {
   if (!rubrique) return [];
   if (rubrique.ids) {
