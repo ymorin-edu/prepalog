@@ -1036,6 +1036,71 @@ await v('suppression de groupe : la confirmation nomme les élèves qui partent'
   if (orphelins) throw new Error(`${orphelins} élève(s) sans aucun groupe après la suppression`);
 });
 
+// ---------- 38 quater. la vue « élèves sans groupe » voit l'orphelin et le rattache
+// L'autre moitié du cul-de-sac du 01/10/2026 : la suppression de groupe ne fabrique plus
+// d'orphelins, mais ceux d'avant — et ceux que crée une manipulation dans la console
+// Firebase — restaient introuvables, toutes les listes de l'application partant d'un
+// groupe. On fabrique donc exactement cet état-là : un profil d'élève au champ `groupes`
+// vide, comme en laisserait la console, puis on vérifie qu'il remonte et qu'il se répare.
+await v('élèves sans groupe : l\'orphelin est visible et se rattache', async () => {
+  await page.evaluate(() => {
+    const u = JSON.parse(localStorage.getItem('prepalog:users') || '{}');
+    u['zz-orphelin'] = {
+      role: 'eleve', nom: 'PERDU', prenom: 'Paul',
+      matricule: 'zz99', code: 'x9', groupes: [],
+    };
+    localStorage.setItem('prepalog:users', JSON.stringify(u));
+  });
+
+  // Rouvrir l'espace enseignant : la liste est relue à son ouverture.
+  await page.click('#btnRetour');
+  await page.waitForSelector('#btnProfEspace', { timeout: 6000 });
+  await page.click('#btnProfEspace');
+  await page.waitForSelector('[data-ong="orphelins"]', { timeout: 6000 });
+
+  // L'onglet porte le compte, et l'onglet « Groupes » prévient : sans cela, personne
+  // n'irait regarder — c'est tout l'intérêt de la vue.
+  const libelle = await page.textContent('[data-ong="orphelins"]');
+  if (!/\(1\)/.test(libelle)) throw new Error('l\'onglet ne compte pas l\'orphelin : ' + libelle);
+  if (!/aucun groupe/.test(await page.textContent('#contenuProf'))) {
+    throw new Error('l\'onglet Groupes ne signale pas l\'élève sans groupe');
+  }
+
+  await page.click('[data-ong="orphelins"]');
+  await page.waitForSelector('[data-ratt="zz-orphelin"]', { timeout: 6000 });
+  const table = await page.textContent('#contenuProf');
+  if (!/PERDU/.test(table) || !/zz99/.test(table)) throw new Error('l\'orphelin n\'est pas listé');
+  if (!/x9/.test(table)) throw new Error('le code de l\'orphelin n\'est pas affiché');
+
+  await page.selectOption('[data-grp="zz-orphelin"]', 'tle-log');
+  await page.click('[data-ratt="zz-orphelin"]');
+  await page.waitForTimeout(700);
+
+  const etat = await page.evaluate(() => {
+    const u = JSON.parse(localStorage.getItem('prepalog:users') || '{}');
+    return {
+      groupes: u['zz-orphelin'] ? u['zz-orphelin'].groupes : null,
+      restants: Object.values(u).filter((x) => x.role === 'eleve' && !(x.groupes || []).length).length,
+    };
+  });
+  if (!etat.groupes || !etat.groupes.includes('tle-log')) {
+    throw new Error('le rattachement n\'a pas pris : ' + JSON.stringify(etat.groupes));
+  }
+  if (etat.restants) throw new Error(`${etat.restants} élève(s) encore sans groupe`);
+  if (/PERDU/.test(await page.textContent('#contenuProf'))) {
+    throw new Error('l\'élève rattaché figure encore dans la liste des sans-groupe');
+  }
+  const apres = await page.textContent('[data-ong="orphelins"]');
+  if (/\(/.test(apres)) throw new Error('l\'onglet compte encore un orphelin : ' + apres);
+
+  // Ménage : l'élève ajouté ne doit pas fausser les tests suivants.
+  await page.evaluate(() => {
+    const u = JSON.parse(localStorage.getItem('prepalog:users') || '{}');
+    delete u['zz-orphelin'];
+    localStorage.setItem('prepalog:users', JSON.stringify(u));
+  });
+});
+
 // ---------- 39. les polices sont bien celles du dépôt
 await v('polices servies par le dépôt', async () => {
   // Le navigateur a chargé les fichiers, et le texte est bien rendu en Inter.
@@ -1166,6 +1231,7 @@ await v('backend Firebase : le module s\'initialise sans réseau', async () => {
     const b = await m.creerBackendFirebase();
     const attendus = ['init', 'onAuth', 'connexionProf', 'connexionEleve', 'deconnexion',
       'profilCourant', 'groupesDuProf', 'creerGroupe', 'elevesDuGroupe', 'creerEleves',
+      'elevesSansGroupe', 'rattacherEleve',
       'lireScore', 'ecrireScore', 'poserNote', 'suivi', 'lireJeuPrive', 'ecrireJeuPrive',
       'ecouterJeu', 'lireTable', 'ajouterLigne', 'majLigne', 'supprimerLigne',
       'incrementer', 'viderTable', 'ecouterMeta', 'majMeta', 'fermerJeux'];

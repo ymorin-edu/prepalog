@@ -211,6 +211,34 @@ export async function creerBackendFirebase() {
         .sort((a, b) => (a.nom + a.prenom).localeCompare(b.nom + b.prenom, 'fr'));
     },
 
+    // Élèves rattachés à aucun groupe — le filet de sécurité de la base.
+    //
+    // `elevesDuGroupe()` interroge `users` par appartenance à un groupe : un élève dont le
+    // champ `groupes` est vide n'apparaît donc nulle part, alors que son profil, son code
+    // en clair et son identifiant de connexion existent toujours. Depuis le 01/10/2026
+    // l'application n'en fabrique plus — `supprimerGroupe()` emporte ceux qui n'ont que ce
+    // groupe — mais une manipulation dans la console Firebase en crée encore : c'est ce que
+    // cette liste rend visible, et ce que `rattacherEleve()` répare.
+    //
+    // Une seule requête, filtrée sur le rôle ; le tri des « sans groupe » se fait ici,
+    // Firestore ne sachant pas interroger un tableau vide. Volume visé : moins de 200 élèves.
+    async elevesSansGroupe() {
+      const q = FS.query(cref('users'), FS.where('role', '==', 'eleve'));
+      const s = await FS.getDocs(q);
+      return s.docs.map((d) => ({ uid: d.id, ...d.data() }))
+        .filter((u) => !((u.groupes || []).length))
+        .sort((a, b) => ((a.nom || '') + (a.prenom || '')).localeCompare((b.nom || '') + (b.prenom || ''), 'fr'));
+    },
+
+    // Rattache un élève à un groupe. Le miroir `acces/{gid}/eleves` suit, sans quoi l'élève
+    // serait membre du groupe côté Firestore mais refusé par les règles de la base temps
+    // réel — il verrait le groupe sans pouvoir ouvrir une seule base partagée.
+    async rattacherEleve(uid, gid) {
+      await FS.updateDoc(dref('users', uid), { groupes: FS.arrayUnion(gid) });
+      ouvrirRt();
+      await DB.update(DB.ref(rt, `acces/${gid}/eleves`), { [uid]: true });
+    },
+
     async creerEleves(gid, liste, progres) {
       // Instance secondaire : créer un compte connecte l'utilisateur, on ne veut pas
       // déconnecter l'enseignant à chaque élève.

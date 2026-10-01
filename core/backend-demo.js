@@ -144,6 +144,23 @@ export function creerBackendDemo() {
         .map((k) => ({ uid: k, ...u[k] }))
         .sort((a, b) => (a.nom + a.prenom).localeCompare(b.nom + b.prenom, 'fr'));
     },
+    // Élèves rattachés à aucun groupe. Même raison d'être qu'en mode réel : sans cette
+    // liste, un élève sans groupe ne remonte dans aucun écran (voir backend-firebase.js).
+    async elevesSansGroupe() {
+      const u = users();
+      return Object.keys(u).filter((k) => u[k].role === 'eleve' && !(u[k].groupes || []).length)
+        .map((k) => ({ uid: k, ...u[k] }))
+        .sort((a, b) => (a.nom + a.prenom).localeCompare(b.nom + b.prenom, 'fr'));
+    },
+    async rattacherEleve(uid, gid) {
+      const u = users();
+      if (!u[uid]) throw new Error('Élève introuvable.');
+      const gs = u[uid].groupes || [];
+      if (!gs.includes(gid)) gs.push(gid);
+      u[uid].groupes = gs;
+      setUsers(u);
+    },
+
     async creerEleves(gid, liste, progres) {
       const u = users();
       const faits = [], erreurs = [];

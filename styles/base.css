@@ -153,6 +153,10 @@ code,kbd,.mono{font-family:var(--mono); font-size:.92em}
 .btn-p:hover{filter:brightness(1.12)}
 .btn-d{color:var(--rouge); border-color:var(--rouge)}
 .btn-s{padding:5px 10px; font-size:.85rem}
+/* Onglet qui signale quelque chose à régler. Terre cuite et non rouge : l'alerte doit se
+   voir sans se confondre avec un bouton de suppression. */
+.btn-alerte{border-color:var(--terre); color:var(--terre)}
+.btn-alerte.btn-p{background:var(--terre); border-color:var(--terre); color:#fff}
 .btn[disabled]{opacity:.5; cursor:not-allowed}
 
 /* ----------------------------------------------------------- champs */

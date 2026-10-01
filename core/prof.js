@@ -12,10 +12,22 @@ export async function rendreEspaceProf(hote, ctx) {
   let groupes = await B.groupesDuProf(ctx.profil.uid);
   let gidActif = ctx.groupeActif || groupes[0]?.id || null;
   let dernierLot = null;   // résultat de la dernière création de comptes, conservé à l'affichage
+  let sansGroupe = [];     // élèves rattachés à aucun groupe — invisibles partout ailleurs
 
   // Le groupe actif est partagé avec l'accueil : l'y remonter à chaque changement.
   function activer(gid) { gidActif = gid; if (ctx.setGroupe) ctx.setGroupe(gid); }
   activer(gidActif);
+
+  // Relue à l'ouverture de l'espace et après chaque action qui peut en créer ou en défaire
+  // un : la pastille de l'onglet n'a d'intérêt que si elle est juste. Un backend qui ne
+  // connaîtrait pas encore la méthode, ou un refus de lecture, laisse la liste vide plutôt
+  // que de casser tout l'espace enseignant.
+  async function majSansGroupe() {
+    try {
+      sansGroupe = typeof B.elevesSansGroupe === 'function' ? await B.elevesSansGroupe() : [];
+    } catch (e) { sansGroupe = []; }
+  }
+  await majSansGroupe();
 
   async function dessiner() {
     const g = groupes.find((x) => x.id === gidActif) || null;
@@ -23,8 +35,10 @@ export async function rendreEspaceProf(hote, ctx) {
       <button class="lien-accueil" id="btnRetour">← ACCUEIL</button>
       <h1>Espace enseignant</h1>
       <nav class="rangee" style="margin-bottom:16px">
-        ${[['groupes', 'Groupes'], ['comptes', 'Comptes élèves'], ['suivi', 'Suivi de classe'], ['seance', 'Conduite de séance']]
-          .map(([k, l]) => `<button class="btn btn-s ${onglet === k ? 'btn-p' : ''}" data-ong="${k}">${l}</button>`).join('')}
+        ${[['groupes', 'Groupes'], ['comptes', 'Comptes élèves'], ['suivi', 'Suivi de classe'],
+           ['seance', 'Conduite de séance'],
+           ['orphelins', `Élèves sans groupe${sansGroupe.length ? ` (${sansGroupe.length})` : ''}`]]
+          .map(([k, l]) => `<button class="btn btn-s ${onglet === k ? 'btn-p' : ''}${k === 'orphelins' && sansGroupe.length ? ' btn-alerte' : ''}" data-ong="${k}">${l}</button>`).join('')}
         ${g ? `<span class="pousse note">Groupe actif : <span class="etiq">${ech(g.nom)}</span>
           <span class="etiq">${ech(courtNiveau(g.niveau))}</span></span>` : ''}
       </nav>
@@ -35,6 +49,9 @@ export async function rendreEspaceProf(hote, ctx) {
 
     const z = hote.querySelector('#contenuProf');
     if (onglet === 'groupes') await vueGroupes(z);
+    // Cet onglet-ci ne dépend d'aucun groupe actif : c'est justement là qu'on atterrit
+    // quand il n'en reste plus et que des élèves sont restés derrière.
+    else if (onglet === 'orphelins') await vueOrphelins(z);
     else if (!gidActif) z.innerHTML = `<div class="avis">Créez d'abord un groupe dans l'onglet « Groupes ».</div>`;
     else if (onglet === 'comptes') await vueComptes(z, g);
     else if (onglet === 'suivi') await vueSuivi(z, g);
@@ -44,6 +61,12 @@ export async function rendreEspaceProf(hote, ctx) {
   // ------------------------------------------------------------------ groupes
   async function vueGroupes(z) {
     z.innerHTML = `
+      ${sansGroupe.length ? `<div class="avis avis-err" style="margin-bottom:14px">
+        <strong>${sansGroupe.length} élève${sansGroupe.length > 1 ? 's ne sont rattachés' : ' n\'est rattaché'} à aucun groupe.</strong>
+        ${sansGroupe.length > 1 ? 'Ils n\'apparaissent' : 'Il n\'apparaît'} dans aucune liste de classe
+        et ${sansGroupe.length > 1 ? 'ne peuvent' : 'ne peut'} plus se servir de Prepalog.
+        <button class="btn btn-s" id="btnVoirOrphelins" style="margin-left:8px">Voir et régler</button>
+      </div>` : ''}
       <div class="grille grille-2">
         <section class="panneau">
           <h2>Nouveau groupe</h2>
@@ -77,6 +100,8 @@ export async function rendreEspaceProf(hote, ctx) {
           </tbody></table>`}
         </section>
       </div>`;
+
+    z.querySelector('#btnVoirOrphelins')?.addEventListener('click', () => { onglet = 'orphelins'; dessiner(); });
 
     z.querySelector('#btnCreerG').addEventListener('click', async () => {
       const nom = z.querySelector('#gNom').value.trim();
@@ -130,6 +155,7 @@ export async function rendreEspaceProf(hote, ctx) {
       try {
         const r = await B.supprimerGroupe(gid);
         groupes = await B.groupesDuProf(ctx.profil.uid);
+        await majSansGroupe();
         if (gidActif === gid) activer(groupes[0]?.id || null);
         const bouts = [];
         if (r && r.supprimes) bouts.push(`${r.supprimes} élève${r.supprimes > 1 ? 's supprimés' : ' supprimé'}`);
@@ -226,6 +252,88 @@ export async function rendreEspaceProf(hote, ctx) {
     z.querySelector('#btnCsvEleves').addEventListener('click', () => telecharger(`eleves-${g.id}.csv`,
       versCSV(eleves, [{ cle: 'nom', label: 'Nom' }, { cle: 'prenom', label: 'Prénom' },
         { cle: 'matricule', label: 'Matricule' }, { cle: 'code', label: 'Code' }])));
+  }
+
+  // -------------------------------------------------------- élèves sans groupe
+  // Le cul-de-sac que cette vue ferme : toutes les listes de l'application partent d'un
+  // groupe. Un élève qui n'en a plus — groupe supprimé avant le 01/10/2026, profil retouché
+  // dans la console — garde son profil, son code et son identifiant de connexion, mais
+  // n'apparaît plus nulle part : ni à rattacher, ni à supprimer. Il est seulement invisible.
+  // La liste n'est pas relue ici mais par les actions qui la changent, juste avant de
+  // redessiner : l'onglet porte le compte, et un compte peint avant la relecture serait
+  // faux d'un temps — c'est ce qu'on a vu sur le rattachement.
+  async function vueOrphelins(z) {
+    const options = groupes.map((g) =>
+      `<option value="${ech(g.id)}">${ech(g.nom)} — ${ech(courtNiveau(g.niveau))}</option>`).join('');
+
+    z.innerHTML = `
+      <section class="panneau">
+        <div class="rangee" style="margin-bottom:12px">
+          <strong>${sansGroupe.length === 0 ? 'Aucun élève sans groupe'
+            : `${sansGroupe.length} élève${sansGroupe.length > 1 ? 's' : ''} sans groupe`}</strong>
+          <span class="pousse"><button class="btn btn-s" id="btnRelireOrph">Actualiser</button></span>
+        </div>
+        ${sansGroupe.length === 0 ? `
+          <div class="vide">Tous les élèves sont rattachés à un groupe.</div>
+          <p class="note">Cet écran est un filet de sécurité : il montre les élèves qui existent
+            encore dans la base sans appartenir à aucun groupe. Comme toutes les autres listes
+            partent d'un groupe, ce sont les seuls que vous ne verriez nulle part ailleurs.</p>`
+        : `
+        <p class="note">Ces élèves existent dans la base — profil, code, identifiant de
+          connexion — mais n'appartiennent à aucun groupe. Ils n'apparaissent dans aucune liste
+          de classe et ne peuvent plus travailler. Rattachez-les à un groupe, ou supprimez-les
+          définitivement.</p>
+        ${groupes.length === 0 ? `<div class="avis">Vous n'avez aucun groupe : créez-en un dans
+          l'onglet « Groupes » pour pouvoir y rattacher ces élèves.</div>` : ''}
+        <table><thead><tr><th>Nom</th><th>Prénom</th><th>Matricule</th><th>Code</th>
+          <th>Rattacher à</th><th></th></tr></thead><tbody>
+          ${sansGroupe.map((e) => `<tr>
+            <td>${ech(e.nom)}</td><td>${ech(e.prenom)}</td>
+            <td class="mono">${ech(e.matricule)}</td><td class="mono">${ech(e.code || '—')}</td>
+            <td>${groupes.length ? `<div class="rangee">
+              <select data-grp="${ech(e.uid)}" aria-label="Groupe pour ${ech(e.prenom)} ${ech(e.nom)}">${options}</select>
+              <button class="btn btn-s" data-ratt="${ech(e.uid)}">Rattacher</button>
+            </div>` : '<span class="note">—</span>'}</td>
+            <td><button class="btn btn-s" data-suppro="${ech(e.uid)}" style="color:var(--rouge)"
+              title="Supprimer définitivement cet élève">Supprimer</button></td>
+          </tr>`).join('')}
+        </tbody></table>`}
+      </section>`;
+
+    z.querySelector('#btnRelireOrph').addEventListener('click', async () => {
+      await majSansGroupe(); await dessiner();
+    });
+
+    z.querySelectorAll('[data-ratt]').forEach((b) => b.addEventListener('click', async () => {
+      const uid = b.dataset.ratt;
+      const el = sansGroupe.find((x) => x.uid === uid);
+      const gid = z.querySelector(`[data-grp="${CSS.escape(uid)}"]`).value;
+      const gr = groupes.find((x) => x.id === gid);
+      try {
+        await B.rattacherEleve(uid, gid);
+        toast(`${el.prenom} ${el.nom} rattaché à ${gr?.nom || gid}.`);
+        await majSansGroupe();
+        await dessiner();
+      } catch (e) { toast(e.message || 'Rattachement impossible.'); }
+    }));
+
+    z.querySelectorAll('[data-suppro]').forEach((b) => b.addEventListener('click', async () => {
+      const el = sansGroupe.find((x) => x.uid === b.dataset.suppro);
+      if (!el) return;
+      if (!confirmer(`Supprimer ${el.prenom} ${el.nom} (matricule ${el.matricule}) ?\n\n`
+        + `Seront effacés définitivement : son profil, ses travaux enregistrés et son code.\n\n`
+        + `Son identifiant de connexion part aussi, à condition que son code soit connu `
+        + `(colonne Code). S'il affiche « — », le compte devra être retiré depuis la `
+        + `console Firebase.`)) return;
+      try {
+        const r = await B.supprimerEleve(el.uid);
+        toast(r && r.compte
+          ? 'Élève et compte supprimés.'
+          : 'Données supprimées. Le compte de connexion subsiste : retirez-le depuis la console Firebase.');
+        await majSansGroupe();
+        await dessiner();
+      } catch (e) { toast(e.message || 'Suppression impossible.'); }
+    }));
   }
 
   // -------------------------------------------------------------------- suivi
