@@ -8,7 +8,7 @@
 // 11 étapes corrigées automatiquement ; 2 étapes
 // (mise en forme conditionnelle, graphique) se vérifient en classe et ne comptent pas
 // dans le score. Les classeurs modèles sont dans contenus/tab1/, l'onglet « Correction »
-// de la Suite leur ayant été retiré (voir outils/tab1-modeles.py).
+// de la Suite leur ayant été retiré (voir outils/modeles-sans-corrige.py).
 //
 // Le champ `niveaux` est propre à chaque étape : un élève ne voit que celles de son
 // niveau de classe. Modifier une ligne du générateur suffit à en déplacer une.

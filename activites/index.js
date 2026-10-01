@@ -13,6 +13,7 @@ export const ACTIVITES = [
   // Tableur : la prise en main d'abord, les séries appliquées ensuite.
   () => import('./excel-pas-a-pas.js'),
   () => import('./excel-stock.js'),
+  () => import('./calculs-commerciaux.js'),
   // Scénarios : l'ordre d'affichage des tuiles est celui de cette liste.
   () => import('./yves-rocher.js'),
   () => import('./foot-locker.js'),

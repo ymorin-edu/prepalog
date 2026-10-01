@@ -611,7 +611,7 @@ await v('classeurs du dépôt : aucun onglet Correction', async () => {
   // Repère de non-régression : 13 (tab1) + 10 (tab2) + 1 (tab5). Un balayage qui ne
   // trouverait plus rien passerait sinon en silence — c'est exactement la panne qu'un
   // garde-fou ne doit pas avoir.
-  if (classeurs.length < 24) throw new Error(`${classeurs.length} classeurs trouvés, moins que les 24 attendus`);
+  if (classeurs.length < 34) throw new Error(`${classeurs.length} classeurs trouvés, moins que les 34 attendus`);
   const fautifs = [];
   classeurs.forEach((p) => {
     const nom = path.relative(racine, p).split(path.sep).join('/');
@@ -624,6 +624,52 @@ await v('classeurs du dépôt : aucun onglet Correction', async () => {
     }
   });
   if (fautifs.length) throw new Error('classeur(s) avec corrigé : ' + fautifs.join(', '));
+});
+
+// ---------- 24 quater. TAB-3, les dix cas de calculs commerciaux
+// Le cas 3 (établir un devis) est celui qu'on dépose : c'est le seul où une erreur de
+// ligne se propage jusqu'aux totaux (remise de ligne → net → total HT → remise globale →
+// TTC). Si les contrôles générés tombaient à côté des cellules de réponse, ou si le
+// modèle portait déjà une valeur, ce cas le dirait avant les autres.
+await v('TAB-3 : les dix cas de calculs commerciaux', async () => {
+  await page.click('#btnListe');          // on sort de l'étape 7 de TAB-1
+  await page.click('#btnRetour');          // retour à la rubrique Tableur
+  await page.waitForSelector('[data-act="calculs-commerciaux"]', { timeout: 6000 });
+  await page.click('[data-act="calculs-commerciaux"]');
+  await page.waitForSelector('[data-exo="exc01"]', { timeout: 6000 });
+
+  const vus = await page.$$eval('[data-exo]', (e) => e.map((x) => x.dataset.exo));
+  if (vus.length !== 10) throw new Error(`${vus.length} cas au lieu de 10`);
+  const entete = (await page.textContent('#hoteActivite')).replace(/\s+/g, ' ');
+  // Les dix se corrigent automatiquement : aucun ne doit sortir du total, contrairement
+  // à TAB-1 où deux étapes se vérifient en classe.
+  if (/ne comptent pas dans ce total/.test(entete)) {
+    throw new Error('un cas de TAB-3 est hors notation, alors que les dix sont corrigeables');
+  }
+
+  await page.click('[data-exo="exc03"]');
+  await page.waitForSelector('#depot', { timeout: 6000 });
+  if (!baseXlsx) throw new Error('module xlsx introuvable pour fabriquer le classeur — npm i -g xlsx@0.18.5');
+  const XLSX3 = await import(pathToFileURL(path.join(baseXlsx, 'xlsx.mjs')).href);
+  XLSX3.set_fs(fs);
+  const { EXERCICES: EX3 } = await import(pathToFileURL(path.join(ROOT, 'contenus/tab3-calculs-commerciaux.js')).href);
+  const exc03 = EX3.find((e) => e.id === 'exc03');
+  const cl3 = XLSX3.read(fs.readFileSync(path.join(ROOT, 'contenus/tab3/', exc03.fichier)));
+  const f3 = cl3.Sheets['Exercice'];
+  if (!f3) throw new Error("le classeur du cas 3 n'a pas d'onglet « Exercice »");
+  exc03.controles.forEach((c) => {
+    if (f3[c.cellule]) throw new Error(`le modèle contient déjà une réponse en ${c.cellule}`);
+    f3[c.cellule] = { t: 'n', v: c.attendu };
+  });
+  const rempli3 = path.join(os.tmpdir(), 'prepalog-exc03-rempli.xlsx');
+  XLSX3.writeFile(cl3, rempli3);
+  await page.setInputFiles('#fichier', rempli3);
+  const attendus = exc03.controles.length;
+  await page.waitForFunction(
+    (n) => new RegExp(`${n} contrôles réussis sur ${n}`).test(document.body.textContent),
+    attendus, { timeout: 15000 },
+  );
+  fs.unlinkSync(rempli3);
 });
 
 // ---------- 25. l'enseignant voit toute la série, étiquetée
