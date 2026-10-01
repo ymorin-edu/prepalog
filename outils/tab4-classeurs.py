@@ -25,8 +25,12 @@ AUCUNE FORMULE n'est écrite dans les classeurs : les cellules à remplir sont v
 l'élève qui écrit les formules, et c'est tout l'objet du module.
 """
 
+import datetime
 import json
 import pathlib
+import re
+import shutil
+import zipfile
 
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
@@ -43,6 +47,11 @@ VERT = '107C41'
 BEIGE = 'FBF3E0'
 GRIS = '8A8577'
 FILET = 'D8D4CC'
+# L'ambre de la charte, réservé ici au cadre des réserves : c'est la seule zone du document
+# qui ne se corrige pas et qui engage l'élève. Elle ne doit donc ressembler ni au beige des
+# cases notées, ni au reste du document.
+AMBRE = 'B4690E'
+AMBRE_PALE = 'FFF2D8'
 POLICE = 'Calibri'
 
 f_titre = Font(name=POLICE, size=16, bold=True, color=VERT)
@@ -59,6 +68,16 @@ f_mono = Font(name='Consolas', size=11, bold=True, color=VERT)
 
 fond_entete = PatternFill('solid', fgColor=ENCRE)
 fond_remplir = PatternFill('solid', fgColor=BEIGE)
+fond_reserves = PatternFill('solid', fgColor=AMBRE)
+fond_reserves_pale = PatternFill('solid', fgColor=AMBRE_PALE)
+
+f_reserves_titre = Font(name=POLICE, size=11, bold=True, color='FFFFFF')
+f_reserves_note = Font(name=POLICE, size=9, color=AMBRE)
+f_signature = Font(name=POLICE, size=9, bold=True, color=GRIS)
+
+epais = Side(style='medium', color=AMBRE)
+cadre_reserves = Border(left=epais, right=epais, top=epais, bottom=epais)
+ligne_a_signer = Border(bottom=Side(style='thin', color=GRIS))
 
 bord = Side(style='thin', color=FILET)
 cadre = Border(left=bord, right=bord, top=bord, bottom=bord)
@@ -235,6 +254,65 @@ def bloc_indicateurs(ws, ex, ligne, nb, geo):
     return premiere + len(totaux) - 1
 
 
+def bloc_reserves(ws, ligne, nb):
+    """Le cadre des réserves, traité comme ce qu'il est : la partie du bon de livraison qui
+    engage celui qui signe.
+
+    C'est la mention que la pratique professionnelle dit la plus importante et la plus
+    souvent absente : sans réserve écrite au moment de la livraison, on ne peut plus rien
+    réclamer. Un cadre discret en bas de page la ferait manquer, donc elle porte un bandeau
+    ambre pleine largeur, un encadré épais de trois lignes de haut, et des traits à signer.
+
+    L'ambre, et pas le beige des cases notées : cette zone ne se corrige pas. Un élève qui
+    la confondrait avec une réponse attendue croirait être noté dessus.
+    """
+    fin = get_column_letter(nb)
+    l = ligne
+
+    # Le bandeau : pleine largeur, pour qu'on ne puisse pas ne pas le voir.
+    pose(ws, 'A%d' % l, '⚠  RÉSERVES À LA LIVRAISON — à remplir AVANT de signer',
+         f_reserves_titre, fond_reserves, None, gauche)
+    for col in range(1, nb + 1):
+        c = ws.cell(row=l, column=col)
+        c.fill = fond_reserves
+        if col > 1:
+            c.font = f_reserves_titre
+    ws.merge_cells('A%d:%s%d' % (l, fin, l))
+    ws.row_dimensions[l].height = 22
+    l += 1
+
+    pose(ws, 'A%d' % l, "Colis manquant, carton abîmé, palette éventrée : écrivez-le ici. "
+                        "Rien d'écrit = marchandise acceptée telle quelle, et plus aucune "
+                        "réclamation possible.", f_reserves_note, fond_reserves_pale, None, hg)
+    for col in range(2, nb + 1):
+        ws.cell(row=l, column=col).fill = fond_reserves_pale
+    ws.merge_cells('A%d:%s%d' % (l, fin, l))
+    ws.row_dimensions[l].height = 26
+    l += 1
+
+    # Trois lignes de haut, encadrées : de la place pour écrire, et un cadre qui se voit.
+    haut = l
+    for i in range(3):
+        for col in range(1, nb + 1):
+            c = ws.cell(row=haut + i, column=col)
+            c.fill = fond_reserves_pale
+            c.border = cadre_reserves
+        ws.row_dimensions[haut + i].height = 18
+    ws.merge_cells('A%d:%s%d' % (haut, fin, haut + 2))
+    ws['A%d' % haut].alignment = hg
+    l = haut + 3
+
+    # Les traits à signer : une ligne vide soulignée, comme sur un imprimé.
+    l += 1
+    pose(ws, 'A%d' % l, 'Nom du réceptionnaire', f_signature)
+    pose(ws, '%s%d' % (get_column_letter(max(1, nb - 1)), l), 'Date et signature', f_signature)
+    l += 1
+    for col in range(1, nb + 1):
+        ws.cell(row=l, column=col).border = ligne_a_signer
+    ws.row_dimensions[l].height = 20
+    return l
+
+
 def pied_document(ws, ex, ent, ligne, nb):
     fin = get_column_letter(nb)
     l = ligne + 2
@@ -242,15 +320,7 @@ def pied_document(ws, ex, ent, ligne, nb):
         ws.cell(row=l, column=col).border = trait
     l += 1
     if ex['document'].get('reserves'):
-        pose(ws, 'A%d' % l, 'RÉSERVES À LA LIVRAISON', f_etiq)
-        l += 1
-        pose(ws, 'A%d' % l, "À remplir s'il manque quelque chose, ou si un colis est abîmé. "
-                            "Rien d'écrit ici = marchandise acceptée telle quelle.", f_note)
-        ws.merge_cells('A%d:%s%d' % (l, fin, l))
-        l += 2
-        pose(ws, 'A%d' % l, 'Nom du réceptionnaire :', f_val)
-        pose(ws, '%s%d' % (get_column_letter(max(1, nb - 1)), l), 'Signature :', f_val)
-        l += 2
+        l = bloc_reserves(ws, l, nb) + 2
     pose(ws, 'A%d' % l, ent['mention'], f_note)
     ws.merge_cells('A%d:%s%d' % (l, fin, l))
 
@@ -308,6 +378,41 @@ def rendre_consignes(ex, cat):
     return sorties
 
 
+DATE_FIGEE = datetime.datetime(2026, 1, 1)
+
+
+def figer(chemin):
+    """Rend l'écriture reproductible : deux générations donnent les mêmes octets.
+
+    Sans ça, relancer le script réécrit l'horodatage interne des treize classeurs et
+    GitHub Desktop les montre TOUS modifiés, alors qu'un seul a changé — on ne lit plus ses
+    propres diffs, et une modification de contenu se noie dans douze fausses. openpyxl pose
+    `created` comme on le lui demande, mais réécrit `modified` à l'heure de la sauvegarde,
+    et date chaque entrée du zip à l'heure courante : les deux sont normalisées ici.
+    """
+    horo = (DATE_FIGEE.year, DATE_FIGEE.month, DATE_FIGEE.day, 0, 0, 0)
+    iso = DATE_FIGEE.strftime('%Y-%m-%dT%H:%M:%SZ')
+    source = zipfile.ZipFile(chemin)
+    parties = []
+    for info in source.infolist():
+        donnees = source.read(info.filename)
+        if info.filename == 'docProps/core.xml':
+            texte = donnees.decode('utf-8')
+            texte = re.sub(r'(<dcterms:(?:created|modified)[^>]*>)[^<]+(<)',
+                           lambda m: m.group(1) + iso + m.group(2), texte)
+            donnees = texte.encode('utf-8')
+        parties.append((info.filename, info.compress_type, donnees))
+    source.close()
+
+    temporaire = chemin.with_suffix('.xlsx.tmp')
+    with zipfile.ZipFile(temporaire, 'w') as sortie:
+        for nom, compression, donnees in parties:
+            info = zipfile.ZipInfo(nom, date_time=horo)
+            info.compress_type = compression
+            sortie.writestr(info, donnees)
+    shutil.move(str(temporaire), str(chemin))
+
+
 def main():
     d = json.loads(DONNEES.read_text(encoding='utf-8'))
     ent, geo = d['entreprise'], d['geometrie']
@@ -324,8 +429,15 @@ def main():
         onglet_exercice(wb, ex, ent, blocs, cat, geo)
         wb.properties.title = '%s — %s' % (ex['id'], ex['titre'])
         wb.properties.creator = 'Prepalog'
+        # Date figée, et non l'heure de génération : sans ça, relancer le script réécrit
+        # l'horodatage interne des treize classeurs, et GitHub Desktop les montre tous
+        # modifiés alors qu'un seul a changé. Un générateur doit rendre deux fois le même
+        # fichier pour les mêmes données, sinon on ne lit plus ses propres diffs.
+        wb.properties.created = DATE_FIGEE
+        wb.properties.modified = DATE_FIGEE
         chemin = SORTIE / ('%s-%s.xlsx' % (ex['id'], ex['fichier']))
         wb.save(chemin)
+        figer(chemin)
         print('  %s' % chemin.relative_to(RACINE))
 
     print('%d classeurs écrits dans contenus/tab4/.' % total)
