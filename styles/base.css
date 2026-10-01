@@ -13,16 +13,21 @@
   --encre:#131a21;
   --encre-douce:#3d4a57;
 
-  --ardoise:#2c4a63;       /* couleur d'accent : texte, liens, bordures */
-  --ardoise-fond:#2c4a63;  /* fond des éléments pleins (boutons, disques) */
+  --ardoise:#107c41;       /* couleur d'accent : texte, liens, bordures */
+  --ardoise-fond:#107c41;  /* fond des éléments pleins (boutons, disques) */
   --sur-ardoise:#ffffff;   /* texte posé sur --ardoise-fond */
-  --ardoise-clair:#e8edf2;
+  --ardoise-clair:#e3f1e8;
 
-  --terre:#b4530f;
-  --vert:#1f6b45;
+  --terre:#a3680b;
+  /* Le vert de validation. --vert pour le texte et les traits, --vert-fond pour
+     les aplats : voir le commentaire de la règle .juste plus bas. */
+  --vert:#0b7a41;
+  --vert-fond:#0a8449;
+  --sur-vert:#ffffff;
+  --vert-pale:#e2f4ea;
   --rouge:#9d2727;
 
-  --gele-fond:#fdf3e8;
+  --gele-fond:#fdf6e8;
   --toast-fond:#131a21;
   --toast-texte:#ffffff;
   --ombre:0 1px 2px rgba(19,26,33,.04);
@@ -41,16 +46,19 @@
   --encre:#e4eaf0;
   --encre-douce:#9aabbb;
 
-  --ardoise:#7aa9cd;
-  --ardoise-fond:#2f5675;
+  --ardoise:#6fd196;
+  --ardoise-fond:#18724a;
   --sur-ardoise:#f2f7fb;
-  --ardoise-clair:#22303c;
+  --ardoise-clair:#1b3328;
 
-  --terre:#e0904a;
-  --vert:#56b183;
+  --terre:#e0ac4d;
+  --vert:#5fd79a;
+  --vert-fond:#2bb86d;
+  --sur-vert:#0c1f14;
+  --vert-pale:#163122;
   --rouge:#e2726f;
 
-  --gele-fond:#2b2418;
+  --gele-fond:#2b2616;
   --toast-fond:#e4eaf0;
   --toast-texte:#10161c;
   --ombre:0 1px 2px rgba(0,0,0,.3);
@@ -66,14 +74,17 @@
     --filet:#2c3846;
     --encre:#e4eaf0;
     --encre-douce:#9aabbb;
-    --ardoise:#7aa9cd;
-    --ardoise-fond:#2f5675;
+    --ardoise:#6fd196;
+    --ardoise-fond:#18724a;
     --sur-ardoise:#f2f7fb;
-    --ardoise-clair:#22303c;
-    --terre:#e0904a;
-    --vert:#56b183;
+    --ardoise-clair:#1b3328;
+    --terre:#e0ac4d;
+    --vert:#5fd79a;
+    --vert-fond:#2bb86d;
+    --sur-vert:#0c1f14;
+    --vert-pale:#163122;
     --rouge:#e2726f;
-    --gele-fond:#2b2418;
+    --gele-fond:#2b2616;
     --toast-fond:#e4eaf0;
     --toast-texte:#10161c;
     --ombre:0 1px 2px rgba(0,0,0,.3);
@@ -192,7 +203,7 @@ tbody tr:hover{background:var(--survol)}
 }
 .note{font-size:.85rem; color:var(--encre-douce)}
 .avis{border-left:3px solid var(--ardoise); background:var(--panneau); padding:12px 14px; border-radius:0 var(--r) var(--r) 0; margin:12px 0}
-.avis-ok{border-color:var(--vert)}
+.avis-ok{border-color:var(--vert-fond); background:var(--vert-pale)}
 .avis-err{border-color:var(--rouge)}
 .vide{padding:28px; text-align:center; color:var(--encre-douce); font-size:.9rem}
 .rangee{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
@@ -218,7 +229,32 @@ tbody tr:hover{background:var(--survol)}
 .question .enonce{font-weight:500; margin-bottom:8px}
 .choix{display:flex; gap:9px; align-items:flex-start; padding:5px 0; cursor:pointer}
 .choix input{width:auto; margin-top:4px; flex:0 0 auto}
-.juste{color:var(--vert); font-weight:500}
+/* ------------------------------------------------------------------
+   Le juste se signale par un APLAT, jamais par une nuance de vert.
+   Depuis que l'habillage du site est vert lui aussi, comparer deux verts
+   ne veut plus rien dire : le seul vert plein posé DANS le contenu est
+   celui de la validation. Les aplats de l'habillage (disques de rubrique,
+   boutons principaux, logo) sont des éléments de structure, toujours au
+   même endroit, et ne se lisent pas comme un résultat.
+   Les règles jumelles sont plus bas : .etiquette.juste, .ordre-item.juste,
+   .num-saisie input.juste, .pastille.ok, .module-tile.fini, .avis-ok.
+   Ne pas en changer une sans les autres.
+   ------------------------------------------------------------------ */
+.juste{color:var(--vert); font-weight:600}
+/* Marqueur court posé dans une phrase : pastille pleine. */
+span.juste{
+  display:inline-block; background:var(--vert-fond); color:var(--sur-vert);
+  padding:1px 7px; border-radius:2px;
+}
+/* Cellule de résultat (suivi de classe, tableau de correction) : la cellule
+   entière fait l'aplat — c'est ce qui se repère en balayant une colonne. */
+td.juste{background:var(--vert-fond); color:var(--sur-vert)}
+/* Un retour de correction porte une phrase entière, parfois une explication :
+   fond doux et trait plein. L'aplat complet serait illisible sur trois lignes. */
+.retour-q.juste, .num-retour.juste{
+  background:var(--vert-pale); border-left:3px solid var(--vert-fond);
+  padding:7px 11px; border-radius:0 2px 2px 0; font-weight:500;
+}
 .faux{color:var(--rouge)}
 
 .gele{background:var(--gele-fond); border-left:3px solid var(--terre); padding:10px 14px; margin-bottom:14px; font-size:.88rem}
@@ -372,7 +408,7 @@ tbody tr:hover{background:var(--survol)}
 .ordre-item.choisi{ border-color:var(--ardoise); box-shadow:inset 3px 0 0 var(--ardoise) }
 .ordre-item.glisse{ opacity:.45 }
 .ordre-item.survol{ border-color:var(--ardoise); border-style:dashed }
-.ordre-item.juste{ border-left:3px solid var(--vert) }
+.ordre-item.juste{ border-left:3px solid var(--vert-fond); background:var(--vert-pale) }
 .ordre-item.faux{ border-left:3px solid var(--rouge) }
 .ordre-rang{
   flex:0 0 auto; width:26px; height:26px; border-radius:50%;
@@ -398,7 +434,7 @@ tbody tr:hover{background:var(--survol)}
 .etiquette:hover{ border-color:var(--ardoise) }
 .etiquette.choisie{ border-color:var(--ardoise); box-shadow:0 0 0 2px var(--ardoise-clair) }
 .etiquette.glisse{ opacity:.45 }
-.etiquette.juste{ border-color:var(--vert); box-shadow:inset 3px 0 0 var(--vert) }
+.etiquette.juste{ background:var(--vert-fond); border-color:var(--vert-fond); color:var(--sur-vert); box-shadow:none }
 .etiquette.faux{ border-color:var(--rouge); box-shadow:inset 3px 0 0 var(--rouge) }
 .bacs{ display:grid; gap:14px; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)) }
 .bac{ min-height:120px }
@@ -411,7 +447,7 @@ tbody tr:hover{background:var(--survol)}
   font-family:var(--mono); font-size:1.1rem; text-align:right;
   padding:9px 12px; border-width:2px;
 }
-.num-saisie input.juste{ border-color:var(--vert) }
+.num-saisie input.juste{ border-color:var(--vert-fond); box-shadow:inset 0 0 0 1px var(--vert-fond) }
 .num-saisie input.faux{ border-color:var(--rouge) }
 .num-unite{ font-size:.9rem; color:var(--encre-douce); white-space:nowrap }
 .num-retour{ margin-top:6px }
@@ -467,7 +503,7 @@ th.col-saisie, td.col-saisie{ background:var(--ardoise-clair) }
   font-family:var(--mono); color:var(--terre); font-weight:600;
 }
 .serie-groupe:first-child{ margin-top:8px }
-.module-tile.fini{ box-shadow:inset 3px 0 0 var(--vert) }
+.module-tile.fini{ box-shadow:inset 3px 0 0 var(--vert-fond) }
 .module-tile.fini .code{ color:var(--vert) }
 
 /* --- environnement d'entreprise : le module prend toute la page --------------
@@ -566,7 +602,7 @@ a.ent-nav{ text-decoration:none }
   display:inline-block; font-size:11.5px; font-weight:600; padding:2px 9px;
   border-radius:999px; border:1px solid var(--filet); white-space:nowrap;
 }
-.pastille.ok{ color:var(--vert); border-color:var(--vert) }
+.pastille.ok{ background:var(--vert-fond); border-color:var(--vert-fond); color:var(--sur-vert) }
 .pastille.warn{ color:var(--terre); border-color:var(--terre) }
 .pastille.crit{ color:var(--rouge); border-color:var(--rouge) }
 .pastille.info{ color:var(--ardoise); border-color:var(--ardoise) }
