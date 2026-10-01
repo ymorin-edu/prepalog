@@ -267,50 +267,50 @@ td.juste{background:var(--vert-fond); color:var(--sur-vert)}
 .accueil-marque{ flex:0 0 auto; width:96px; height:96px; opacity:.9 }
 @media (max-width:640px){ .accueil-marque{ display:none } }
 
-.rubriques{ display:flex; flex-wrap:wrap; gap:4px 16px; margin:4px 0 8px }
-.rubriques > .rubrique{ width:152px }
+/* ------------------------------------------------------------------
+   Les rubriques d'accueil sont des CARTES, plus des disques pleins.
+   Même forme que .module-tile — fond de panneau, filet, rayon et liseré
+   de survol identiques — pour que l'accueil et l'intérieur d'une rubrique
+   parlent la même langue au lieu d'alterner gros ronds et rectangles.
+   Le pictogramme est posé nu sur la carte, à l'accent : le seul aplat
+   coloré de l'accueil reste le logo. .rubrique-disc n'est plus un disque
+   mais garde son nom, utilisé par core/app.js aux trois endroits.
+   ------------------------------------------------------------------ */
+.rubriques{
+  display:grid; gap:12px; margin:6px 0 8px;
+  grid-template-columns:repeat(auto-fill,minmax(186px,1fr));
+}
 .rubriques-sep{ height:1px; background:var(--filet); margin:20px 0 }
 .rubrique{
-  position:relative; background:none; border:0; cursor:pointer;
-  font-family:inherit; color:var(--encre);
-  padding:14px 6px 16px; border-radius:8px;
-  display:flex; flex-direction:column; align-items:center; gap:11px; text-align:center;
-  transition:background .12s ease;
+  position:relative; cursor:pointer; font-family:inherit; color:var(--encre);
+  background:var(--panneau); border:1px solid var(--filet); border-radius:var(--r);
+  box-shadow:var(--ombre); padding:16px 16px 14px;
+  display:flex; flex-direction:column; align-items:flex-start; gap:10px; text-align:left;
+  transition:border-color .12s ease, box-shadow .12s ease;
 }
-.rubrique:hover{ background:var(--panneau) }
+.rubrique:hover{ border-color:var(--ardoise); box-shadow:inset 3px 0 0 var(--ardoise) }
 .rubrique:focus-visible{ outline:2px solid var(--ardoise); outline-offset:2px }
-.rubrique-disc{
-  width:86px; height:86px; border-radius:50%;
-  background:var(--ardoise-fond); color:var(--sur-ardoise);
-  display:flex; align-items:center; justify-content:center;
-  transition:background .14s ease, transform .14s ease;
-}
-.rubrique:hover .rubrique-disc{ background:var(--encre); color:var(--fond); transform:translateY(-2px) }
-.rubrique-disc svg{ width:40px; height:40px }
-.rubrique-name{ font-size:14.5px; line-height:1.2; font-weight:500 }
-.rubrique-count{ font-family:var(--mono); font-size:11px; color:var(--encre-douce); margin-top:-7px }
-.rubrique.desactivee{ opacity:.42; cursor:default }
-.rubrique.desactivee:hover{ background:none }
-.rubrique.desactivee:hover .rubrique-disc{ background:var(--ardoise-fond); color:var(--sur-ardoise); transform:none }
+.rubrique-disc{ display:flex; color:var(--ardoise) }
+.rubrique-disc svg{ width:32px; height:32px }
+.rubrique-name{ font-size:15px; line-height:1.25; font-weight:600 }
+.rubrique-count{ font-family:var(--mono); font-size:11px; color:var(--encre-douce); margin-top:-4px }
+.rubrique.desactivee{ opacity:.45; cursor:default }
+.rubrique.desactivee:hover{ border-color:var(--filet); box-shadow:var(--ombre) }
 
-.rubriques.staff > .rubrique{ width:124px }
-.rubriques.staff .rubrique-disc{
-  width:60px; height:60px; background:var(--panneau);
-  color:var(--ardoise); border:1px solid var(--filet);
-}
-.rubriques.staff .rubrique:hover .rubrique-disc{ background:var(--ardoise-clair); color:var(--ardoise); border-color:var(--ardoise); transform:translateY(-2px) }
-.rubriques.staff .rubrique-disc svg{ width:26px; height:26px }
-.rubriques.staff .rubrique-name{ font-size:13px; font-weight:600 }
+.rubriques.staff{ grid-template-columns:repeat(auto-fill,minmax(160px,1fr)) }
+.rubriques.staff .rubrique{ padding:13px 14px 12px; gap:8px }
+.rubriques.staff .rubrique-disc svg{ width:24px; height:24px }
+.rubriques.staff .rubrique-name{ font-size:13.5px; font-weight:600 }
 
 @media (max-width:420px){
-  .rubriques > .rubrique{ width:calc(50% - 8px) }
-  .rubrique-disc{ width:74px; height:74px }
-  .rubrique-disc svg{ width:34px; height:34px }
+  .rubriques, .rubriques.staff{ grid-template-columns:1fr 1fr; gap:10px }
+  .rubrique{ padding:13px 13px 12px }
+  .rubrique-disc svg{ width:28px; height:28px }
 }
 
 .rubrique-head{ display:flex; align-items:flex-start; gap:14px; margin:2px 0 22px }
-.rubrique-head .rubrique-disc{ width:54px; height:54px; flex:0 0 auto }
-.rubrique-head .rubrique-disc svg{ width:26px; height:26px }
+.rubrique-head .rubrique-disc{ flex:0 0 auto; margin-top:2px }
+.rubrique-head .rubrique-disc svg{ width:34px; height:34px }
 .rubrique-head h1{ font-size:25px; margin:0 0 3px; letter-spacing:-.018em }
 .rubrique-head p{ margin:0; font-size:13.5px; color:var(--encre-douce); max-width:62ch }
 

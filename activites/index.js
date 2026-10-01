@@ -26,23 +26,34 @@ export const ACTIVITES = [
   () => import('./spartoo-tracabilite.js'),
 ];
 
-// Pictogrammes des pastilles. Trait de 1,7 px, sans remplissage : même famille graphique
-// que la Suite Logistique.
+// Pictogrammes des rubriques. Une seule grille pour les dix : trait de 1,6 px, bouts et
+// angles arrondis, 2 px de marge, aucun remplissage. La taille est posée par le CSS
+// (.rubrique-disc svg), jamais ici : le même dessin sert à 24, 32 et 34 px.
 export const ICONES = {
-  magasin: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M3 5h18M3 12h18M3 19h18M4 5v14M20 5v14"/><rect x="6.5" y="7.5" width="5" height="3.5"/><rect x="13" y="14.5" width="5" height="3.5"/></svg>`,
-  logistique: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M4 8l8-4 8 4v8l-8 4-8-4z"/><path d="M4 8l8 4 8-4M12 12v8"/></svg>`,
-  quiz: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="13.5" r="7.5"/><path d="M12 9.5v4l3 2M9.5 2h5M12 2v3"/></svg>`,
-  scenario: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M3 6h6l2 2h10v11H3z"/><circle cx="14" cy="14" r="3"/><path d="M16.3 16.3L19 19"/></svg>`,
-  tableur: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="4" y="3" width="16" height="18"/><path d="M7.5 7.5h9M7.5 11.5h3M13.5 11.5h3M7.5 15.5h3M13.5 15.5h3"/></svg>`,
-  transport: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M2 7h12v10H2z"/><path d="M14 10h4l3 4v3h-7z"/><circle cx="6.5" cy="17.5" r="2.2"/><circle cx="17" cy="17.5" r="2.2"/></svg>`,
-  gestion: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M4 4h5.5a2.5 2.5 0 0 1 2.5 2.5V20a2.2 2.2 0 0 0-2.2-1.8H4z"/><path d="M20 4h-5.5A2.5 2.5 0 0 0 12 6.5V20a2.2 2.2 0 0 1 2.2-1.8H20z"/></svg>`,
-  entreprise: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M3 21h18M5 21V6l7-3 7 3v15"/><path d="M9.5 9.5h1.5M13 9.5h1.5M9.5 13h1.5M13 13h1.5"/><path d="M10 21v-4h4v4"/></svg>`,
-  comptes: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="8" r="3.4"/><path d="M4.5 20c.9-4 3.9-6 7.5-6s6.6 2 7.5 6"/></svg>`,
-  suivi: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="3" y="4" width="18" height="16"/><path d="M3 9h18M9 9v11M15 9v11"/></svg>`,
+  // rayonnage et cartons
+  magasin: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.3" y="3.6" width="17.4" height="16.8" rx="1.3"/><path d="M3.3 9.2h17.4M3.3 14.8h17.4"/><rect x="5.7" y="5.3" width="4.3" height="2.5" rx=".4"/><rect x="12.6" y="10.9" width="4.3" height="2.5" rx=".4"/><rect x="5.7" y="16.5" width="4.3" height="2.5" rx=".4"/></svg>`,
+  // carton sanglé, l'objet de base du métier
+  logistique: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.4 19.6 7.3v7.8L12 19 4.4 15.1V7.3z"/><path d="M4.4 7.3 12 11.2l7.6-3.9M12 11.2V19"/><path d="M8.2 5.3 15.8 9.2"/></svg>`,
+  // série de questions cochées au fur et à mesure (c'était une horloge)
+  quiz: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3.6 7 1.7 1.7L8.4 5.4"/><path d="m3.6 13 1.7 1.7 3.1-3.3"/><path d="m3.6 19 1.7 1.7 3.1-3.3"/><path d="M11.6 7.4h8.8M11.6 13.4h8.8M11.6 19.4h5.6"/></svg>`,
+  // dossier d'étude de cas, repris à la loupe
+  scenario: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3.2h7.4L19 8.6v12.2H6z"/><path d="M13.2 3.2v5.6h5.6"/><circle cx="11.2" cy="15" r="2.7"/><path d="m13.2 17 2.3 2.3"/></svg>`,
+  // classeur : bandeau d'en-tête puis colonnes
+  tableur: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.4" y="4" width="17.2" height="16" rx="1.4"/><path d="M3.4 8.6h17.2"/><path d="M9.2 8.6V20M15 8.6V20M3.4 14.3h17.2"/></svg>`,
+  // porteur et sa remorque
+  transport: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.4 5.9h11.2v9.9H2.4z"/><path d="M13.6 9.2h3.8l3.2 3.9v2.7h-7"/><path d="M2.4 15.8h3.1M8.6 15.8h6.2M18.2 15.8h2.4"/><circle cx="7.1" cy="17.9" r="2.1"/><circle cx="16.8" cy="17.9" r="2.1"/></svg>`,
+  // registre ouvert
+  gestion: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 6.7C12 6.7 10 4.9 4.2 4.9v13.2C10 18.1 12 19.9 12 19.9s2-1.8 7.8-1.8V4.9C14 4.9 12 6.7 12 6.7Z"/><path d="M12 6.7v13.2"/></svg>`,
+  // l'entreprise, avec sa porte
+  entreprise: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.2 20.6h17.6"/><path d="M5.6 20.6V7.3L12 4.1l6.4 3.2v13.3"/><path d="M9.2 9.9h1.7M13.1 9.9h1.7M9.2 13.3h1.7M13.1 13.3h1.7"/><path d="M10.1 20.6v-3.7h3.8v3.7"/></svg>`,
+  // deux comptes, pas un
+  comptes: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9.4" cy="8.3" r="3.3"/><path d="M3.5 19.6c0-3.3 2.6-5.8 5.9-5.8s5.9 2.5 5.9 5.8"/><path d="M16.2 6.2a3.3 3.3 0 0 1 0 6.2"/><path d="M17.5 19.6c0-2.4-.8-4.3-2.2-5.4"/></svg>`,
+  // des résultats qui montent (c'était la grille du tableur, en double)
+  suivi: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.4 20.4h17.2"/><path d="M5.4 20.4v-7.6h3.5v7.6"/><path d="M10.3 20.4V7.9h3.5v12.5"/><path d="M15.2 20.4v-9.9h3.5v9.9"/></svg>`,
 };
 
-// Les pastilles de l'accueil. Une rubrique liste soit des `ids` explicites, soit une
-// catégorie (`cat`) qui filtre les activités. `bande` regroupe les pastilles par ligne,
+// Les cartes de l'accueil. Une rubrique liste soit des `ids` explicites, soit une
+// catégorie (`cat`) qui filtre les activités. `bande` regroupe les cartes par ligne,
 // séparées par un filet.
 export const RUBRIQUES = [
   // bande 1 — le cours : découvrir, puis appliquer sur un cas complet
