@@ -529,6 +529,79 @@ await v('série tableur : correction d\'un classeur déposé', async () => {
   fs.unlinkSync(rempli);
 });
 
+// ---------- 24 bis. TAB-1 : les treize étapes, dont deux sans correction automatique
+// La migration du module C-1 de la Suite. Deux choses à prouver : les contrôles générés
+// tombent bien sur les cellules de réponse des classeurs repris (sinon toute la série est
+// fausse sans qu'on le voie), et les deux étapes non corrigeables ne pénalisent pas
+// l'élève — elles sont proposées, mais hors du total.
+await v('TAB-1 : les treize étapes, et deux qui ne comptent pas', async () => {
+  await page.click('#btnListe');
+  await page.click('#btnRetour');
+  await page.waitForSelector('[data-act="excel-pas-a-pas"]', { timeout: 6000 });
+  await page.click('[data-act="excel-pas-a-pas"]');
+  await page.waitForSelector('[data-exo="et01"]', { timeout: 6000 });
+
+  const vus = await page.$$eval('[data-exo]', (e) => e.map((x) => x.dataset.exo));
+  if (vus.length !== 13) throw new Error(`${vus.length} étapes au lieu de 13`);
+  const entete = (await page.textContent('#hoteActivite')).replace(/\s+/g, ' ');
+  if (!/sur 11\./.test(entete)) throw new Error('le total devrait exclure les 2 étapes non notées : ' + entete.slice(0, 160));
+  if (!/ne comptent pas dans ce total/.test(entete)) throw new Error('les étapes hors total ne sont pas annoncées');
+
+  // L'étape 9 (mise en forme conditionnelle) n'a rien à déposer.
+  await page.click('[data-exo="et09"]');
+  await page.waitForSelector('a[download]', { timeout: 6000 });
+  if (await page.$('#depot')) throw new Error('une étape sans contrôle propose quand même un dépôt');
+  if (!/vérifie en classe/.test(await page.textContent('#hoteActivite'))) {
+    throw new Error("l'étape sans correction n'explique pas comment elle est vérifiée");
+  }
+  await page.click('#btnListe');
+
+  // L'étape 7 attend des VRAI / FAUX : c'est le seul endroit de la série où la réponse
+  // est un booléen, et le classeur peut porter l'un ou l'autre selon le tableur.
+  await page.waitForSelector('[data-exo="et07"]', { timeout: 6000 });
+  await page.click('[data-exo="et07"]');
+  await page.waitForSelector('#depot', { timeout: 6000 });
+  if (!baseXlsx) throw new Error('module xlsx introuvable pour fabriquer le classeur — npm i -g xlsx@0.18.5');
+  const XLSX1 = await import(pathToFileURL(path.join(baseXlsx, 'xlsx.mjs')).href);
+  XLSX1.set_fs(fs);
+  const { EXERCICES: EX1 } = await import(pathToFileURL(path.join(ROOT, 'contenus/tab1-excel.js')).href);
+  const et07 = EX1.find((e) => e.id === 'et07');
+  const cl1 = XLSX1.read(fs.readFileSync(path.join(ROOT, 'contenus/tab1/', et07.fichier)));
+  const f1 = cl1.Sheets['Exercice'];
+  if (!f1) throw new Error("le classeur de l'étape 7 n'a pas d'onglet « Exercice »");
+  // Les cellules visées doivent être VIDES dans le modèle : si le corrigé y était déjà,
+  // l'exercice n'en serait pas un. C'est ce qui a motivé le retrait de l'onglet Correction.
+  et07.controles.forEach((c) => {
+    if (f1[c.cellule]) throw new Error(`le modèle contient déjà une réponse en ${c.cellule}`);
+    f1[c.cellule] = { t: 'b', v: c.attendu };
+  });
+  const rempli1 = path.join(os.tmpdir(), 'prepalog-et07-rempli.xlsx');
+  XLSX1.writeFile(cl1, rempli1);
+  await page.setInputFiles('#fichier', rempli1);
+  await page.waitForFunction(() => /5 contrôles réussis/.test(document.body.textContent), null, { timeout: 15000 });
+  fs.unlinkSync(rempli1);
+});
+
+// ---------- 24 ter. aucun classeur de TAB-1 ne contient le corrigé
+// Les modèles viennent de la Suite, où un onglet « Correction » masqué portait les
+// réponses — masqué seulement, donc à un clic droit de l'élève. Ce test est le garde-fou
+// du retrait : il lit les fichiers du dépôt, donc il tient même si personne n'y pense.
+await v('TAB-1 : les classeurs ne portent plus l\'onglet Correction', async () => {
+  if (!baseXlsx) throw new Error('module xlsx introuvable');
+  const XLSX1 = await import(pathToFileURL(path.join(baseXlsx, 'xlsx.mjs')).href);
+  XLSX1.set_fs(fs);
+  const dossier = path.join(ROOT, 'contenus', 'tab1');
+  const fichiers = fs.readdirSync(dossier).filter((f) => f.endsWith('.xlsx'));
+  if (fichiers.length !== 13) throw new Error(`${fichiers.length} classeurs au lieu de 13`);
+  const fautifs = [];
+  fichiers.forEach((f) => {
+    const cl = XLSX1.read(fs.readFileSync(path.join(dossier, f)));
+    if (cl.SheetNames.some((n) => /correction|corrig/i.test(n))) fautifs.push(f);
+    if (!cl.SheetNames.includes('Exercice')) fautifs.push(f + ' (sans onglet Exercice)');
+  });
+  if (fautifs.length) throw new Error('classeur(s) avec corrigé : ' + fautifs.join(', '));
+});
+
 // ---------- 25. l'enseignant voit toute la série, étiquetée
 await v('série tableur : l\'enseignant voit tous les niveaux', async () => {
   await page.click('#btnListe');
@@ -544,6 +617,73 @@ await v('série tableur : l\'enseignant voit tous les niveaux', async () => {
   if (n !== 10) throw new Error(`${n} exercices au lieu de 10 côté enseignant`);
   const code = await page.textContent('[data-exo="exs10"] .code');
   if (!/Tle/.test(code)) throw new Error('niveau de l\'exercice non affiché : ' + code);
+});
+
+// ---------- 25 bis. contrôle de liste : l'ordre des lignes est indifférent
+// Pour les exercices du genre « relevez les références sous le minimum », l'ordre des
+// lignes n'a aucun sens : le contrôle cellule par cellule compterait faux un travail juste.
+// On exerce le moteur directement, sur un classeur fabriqué à la main — pas besoin
+// d'ouvrir un fichier, et les quatre cas qui comptent tiennent dans un seul test : bon
+// ordre, ordre inversé, un oubli, un intrus.
+await v('tableur : contrôle de liste à ordre libre', async () => {
+  const r = await page.evaluate(async () => {
+    const { controler, decouperPlage } = await import('/core/types/tableur.js');
+    // Un classeur SheetJS, réduit à ce que le moteur en lit : des cellules { v }.
+    const feuille = (paires) => {
+      const f = {};
+      Object.entries(paires).forEach(([k, v]) => { f[k] = { v }; });
+      return { SheetNames: ['Exercice'], Sheets: { Exercice: f } };
+    };
+    const ctrl = {
+      plage: 'A2:B4', libelle: 'Références sous le minimum', tolerance: 0.01,
+      lignes: [['REF-104', 12], ['REF-110', 3], ['REF-101', 7]],
+    };
+    const passe = (paires) => controler(feuille(paires), [ctrl], 'Exercice')[0];
+    return {
+      plage: decouperPlage('A2:B4'),
+      // 1. l'ordre du corrigé
+      ordre: passe({ A2: 'REF-104', B2: 12, A3: 'REF-110', B3: 3, A4: 'REF-101', B4: 7 }),
+      // 2. le même travail, dans un autre ordre, avec accents et casse libres
+      melange: passe({ A2: 'ref-101', B2: 7, A3: 'REF-104', B3: 12.004, A4: 'REF-110', B4: 3 }),
+      // 3. une ligne oubliée
+      oubli: passe({ A2: 'REF-104', B2: 12, A3: 'REF-110', B3: 3 }),
+      // 4. une ligne écrite hors de la plage : elle ne compte pas
+      horsPlage: passe({
+        A2: 'REF-104', B2: 12, A3: 'REF-110', B3: 3,
+        A4: 'REF-101', B4: 7, A5: 'REF-999', B5: 1,
+      }),
+      // 5. une ligne en trop, dans la plage
+      intrus: controler(feuille({
+        A2: 'REF-104', B2: 12, A3: 'REF-110', B3: 3,
+        A4: 'REF-101', B4: 7, A5: 'REF-999', B5: 1,
+      }), [{ ...ctrl, plage: 'A2:B5' }], 'Exercice')[0],
+      // 6. un trou au milieu de la liste : ce n'est pas une faute
+      trou: controler(feuille({
+        A2: 'REF-104', B2: 12, A4: 'REF-110', B4: 3, A5: 'REF-101', B5: 7,
+      }), [{ ...ctrl, plage: 'A2:B5' }], 'Exercice')[0],
+      // 7. rien de saisi
+      vide: passe({}),
+    };
+  });
+
+  if (!r.plage || r.plage.colonnes.join('') !== 'AB' || r.plage.lignes.join(',') !== '2,3,4') {
+    throw new Error('découpage de plage faux : ' + JSON.stringify(r.plage));
+  }
+  if (!r.ordre.ok) throw new Error('la liste dans l\'ordre du corrigé est refusée : ' + r.ordre.remarque);
+  if (!r.melange.ok) throw new Error('l\'ordre libre est refusé : ' + r.melange.remarque);
+  if (r.oubli.ok) throw new Error('une liste incomplète est acceptée');
+  if (!/manquante/.test(r.oubli.remarque) || !/REF-101/.test(r.oubli.remarque)) {
+    throw new Error('la ligne oubliée n\'est pas nommée : ' + r.oubli.remarque);
+  }
+  // Une ligne écrite hors de la plage ne compte pas : A5 est en dehors de A2:B4.
+  if (!r.horsPlage.ok) throw new Error('une ligne hors plage fait échouer le contrôle : ' + r.horsPlage.remarque);
+  if (r.intrus.ok) throw new Error('une ligne en trop dans la plage est acceptée');
+  if (!/en trop/.test(r.intrus.remarque) || !/REF-999/.test(r.intrus.remarque)) {
+    throw new Error('la ligne en trop n\'est pas nommée : ' + r.intrus.remarque);
+  }
+  if (!r.trou.ok) throw new Error('une ligne vide au milieu de la liste est comptée comme une faute : ' + r.trou.remarque);
+  if (r.vide.ok) throw new Error('une plage vide est acceptée');
+  if (!/Aucune ligne/.test(r.vide.remarque)) throw new Error('plage vide mal signalée : ' + r.vide.remarque);
 });
 
 // ---------- 26. Spartoo : l'environnement s'ouvre et la base de l'élève est semée

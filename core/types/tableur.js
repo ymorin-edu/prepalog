@@ -12,6 +12,16 @@
 //   { feuille: 'Inventaire', cellule: 'E4', attendu: 12 }           // feuille nommée
 //   { cellule: 'E4', attendu: -2, formuleAttendue: true }           // signale une valeur tapée
 //
+// Contrôle de liste, à ordre libre — pour les exercices du genre « relevez les références
+// dont le stock est sous le minimum », où l'ordre des lignes n'a aucun sens :
+//   { plage: 'A2:C11', libelle: 'Références sous le minimum',
+//     lignes: [['REF-104', 'Gants', 12], ['REF-110', 'Sangle', 3]], tolerance: 0.01 }
+// Chaque ligne attendue doit se trouver quelque part dans la plage, dans n'importe quel
+// ordre ; les lignes vides sont ignorées. Une liste à une seule colonne s'écrit
+// `lignes: [['REF-104'], ['REF-110']]`. Le contrôle compte pour un, comme les autres, et
+// sa remarque nomme les lignes oubliées et celles en trop : c'est ce que l'élève doit lire
+// pour se corriger, et ce que l'enseignant regarde en premier.
+//
 // Deux fabriques :
 //   creerTableur       un seul classeur, une seule note.
 //   creerSerieTableur  une progression d'exercices, chacun son classeur et ses contrôles,
@@ -68,8 +78,107 @@ const pliage = (s) => String(s ?? '')
   .normalize('NFD').replace(/[̀-ͯ]/g, '')
   .toLowerCase().replace(/\s+/g, ' ').trim();
 
-function controler(classeur, controles, feuilleParDefaut) {
+// ------------------------------------------------- listes à ordre libre
+// Une plage « A2:C11 » se décompose en colonnes et en lignes sans passer par SheetJS :
+// le lecteur n'est chargé qu'au dépôt d'un fichier, et ces fonctions servent aussi aux
+// tests, qui n'ouvrent aucun classeur.
+const colVersIndex = (s) => s.toUpperCase().split('')
+  .reduce((n, c) => n * 26 + (c.charCodeAt(0) - 64), 0);
+const indexVersCol = (n) => {
+  let s = '';
+  while (n > 0) { const r = (n - 1) % 26; s = String.fromCharCode(65 + r) + s; n = (n - r - 1) / 26; }
+  return s;
+};
+
+export function decouperPlage(plage) {
+  const m = /^([A-Za-z]+)(\d+):([A-Za-z]+)(\d+)$/.exec(String(plage).trim());
+  if (!m) return null;
+  const c1 = colVersIndex(m[1]), c2 = colVersIndex(m[3]);
+  const l1 = Number(m[2]), l2 = Number(m[4]);
+  const colonnes = [];
+  for (let c = Math.min(c1, c2); c <= Math.max(c1, c2); c++) colonnes.push(indexVersCol(c));
+  const lignes = [];
+  for (let l = Math.min(l1, l2); l <= Math.max(l1, l2); l++) lignes.push(l);
+  return { colonnes, lignes };
+}
+
+// VRAI / FAUX. Une formule logique rend un booléen, mais le classeur peut tout aussi bien
+// porter le texte « VRAI » selon le tableur et la langue : les deux sont la même réponse.
+function memeBooleen(lue, attendue) {
+  if (typeof lue === 'boolean') return lue === attendue;
+  const t = pliage(lue);
+  return attendue ? (t === 'vrai' || t === 'true') : (t === 'faux' || t === 'false');
+}
+
+// Une cellule « égale » une valeur attendue : texte indulgent, nombres à la tolérance.
+function memeValeur(lue, attendue, tolerance) {
+  if (attendue === null || attendue === undefined || attendue === '') {
+    return lue === undefined || lue === null || String(lue).trim() === '';
+  }
+  if (typeof attendue === 'boolean') return memeBooleen(lue, attendue);
+  if (typeof attendue === 'number') {
+    const n = normaliser(lue);
+    return n !== null && n !== undefined && estJuste(n, attendue, tolerance);
+  }
+  return pliage(lue) === pliage(attendue);
+}
+
+const libelleLigne = (l) => l.map((v) => (v === null || v === undefined || v === '' ? '—' : v)).join(' / ');
+
+// Appariement : chaque ligne attendue cherche une ligne saisie encore libre. Glouton, ce
+// qui suffit ici — les lignes attendues d'un même exercice ne se recouvrent pas.
+function controlerListe(classeur, ctrl, feuilleParDefaut) {
+  const nom = ctrl.feuille || feuilleParDefaut || classeur.SheetNames[0];
+  const f = classeur.Sheets[nom];
+  if (!f) return { ok: false, remarque: `La feuille « ${nom} » est introuvable.`, feuille: nom };
+
+  const decoupe = decouperPlage(ctrl.plage);
+  if (!decoupe) return { ok: false, remarque: `Plage « ${ctrl.plage} » illisible.`, feuille: nom };
+
+  // Lignes saisies, les vides mises de côté : un élève qui laisse un trou au milieu de sa
+  // liste n'a pas commis de faute.
+  const saisies = [];
+  decoupe.lignes.forEach((l) => {
+    const cells = decoupe.colonnes.map((c) => { const cel = f[c + l]; return cel ? cel.v : undefined; });
+    if (cells.some((v) => v !== undefined && String(v).trim() !== '')) saisies.push({ l, cells });
+  });
+
+  const libres = saisies.slice();
+  const oubliees = [];
+  (ctrl.lignes || []).forEach((attendue) => {
+    const i = libres.findIndex((s) => attendue.every((v, k) => memeValeur(s.cells[k], v, ctrl.tolerance)));
+    if (i < 0) oubliees.push(attendue);
+    else libres.splice(i, 1);
+  });
+
+  const ok = oubliees.length === 0 && libres.length === 0;
+  const bouts = [];
+  if (!saisies.length) bouts.push('Aucune ligne saisie dans la plage.');
+  else {
+    if (oubliees.length) {
+      bouts.push(`${oubliees.length} ligne${oubliees.length > 1 ? 's' : ''} manquante${oubliees.length > 1 ? 's' : ''}`
+        + ` : ${oubliees.slice(0, 4).map(libelleLigne).join(' ; ')}`
+        + (oubliees.length > 4 ? ` ; … et ${oubliees.length - 4} autre${oubliees.length - 4 > 1 ? 's' : ''}` : ''));
+    }
+    if (libres.length) {
+      bouts.push(`${libres.length} ligne${libres.length > 1 ? 's' : ''} en trop ou incorrecte${libres.length > 1 ? 's' : ''}`
+        + ` : ${libres.slice(0, 4).map((s) => `ligne ${s.l} (${libelleLigne(s.cells)})`).join(' ; ')}`
+        + (libres.length > 4 ? ` ; … et ${libres.length - 4} autre${libres.length - 4 > 1 ? 's' : ''}` : ''));
+    }
+  }
+  return {
+    ok, feuille: nom,
+    remarque: ok ? `${saisies.length} ligne${saisies.length > 1 ? 's' : ''}, ordre libre.` : bouts.join(' '),
+  };
+}
+
+export function controler(classeur, controles, feuilleParDefaut) {
   return controles.map((ctrl) => {
+    // Contrôle de liste : la plage entière, l'ordre indifférent.
+    if (ctrl.lignes && ctrl.plage) {
+      const r = controlerListe(classeur, ctrl, feuilleParDefaut);
+      return { ...ctrl, ok: r.ok, remarque: r.remarque, lu: { feuille: r.feuille } };
+    }
     const lu = valeurCellule(classeur, ctrl, feuilleParDefaut);
     let ok = false, remarque = '';
     if (lu.absente) remarque = `La feuille « ${lu.feuille} » est introuvable.`;
@@ -77,6 +186,9 @@ function controler(classeur, controles, feuilleParDefaut) {
     else if (ctrl.texte) {
       ok = String(lu.valeur).trim().length > 0;
       if (!ok) remarque = 'Rien de saisi.';
+    } else if (typeof ctrl.attendu === 'boolean') {
+      ok = memeBooleen(lu.valeur, ctrl.attendu);
+      if (!ok) remarque = `Lu : « ${lu.valeur} », attendu ${ctrl.attendu ? 'VRAI' : 'FAUX'}.`;
     } else if (typeof ctrl.attendu === 'string') {
       ok = pliage(lu.valeur) === pliage(ctrl.attendu);
       if (!ok) remarque = `Lu : « ${lu.valeur} ».`;
@@ -161,7 +273,7 @@ function tableauResultats(resultats) {
         <tbody>${resultats.map((r) => `<tr>
           <td class="${r.ok ? 'juste' : 'faux'}">${r.ok ? '✓' : '✗'}</td>
           <td>${ech(r.libelle || '')}</td>
-          <td class="mono">${ech((r.feuille ? r.feuille + '!' : '') + r.cellule)}</td>
+          <td class="mono">${ech((r.feuille ? r.feuille + '!' : '') + (r.cellule || r.plage || ''))}</td>
           <td class="note">${ech(r.remarque)}</td>
         </tr>`).join('')}</tbody>
       </table>
@@ -192,7 +304,7 @@ export function creerTableur({ consigne, modele, controles, aide, feuille }) {
           const score = resultats.filter((r) => r.ok).length;
           await ctx.enregistrer({
             score, max: controles.length,
-            detail: Object.fromEntries(resultats.map((r) => [r.cellule, r.ok])),
+            detail: Object.fromEntries(resultats.map((r) => [r.cellule || r.plage, r.ok])),
           });
           toast(`${score} / ${controles.length}`);
         });
@@ -232,6 +344,13 @@ export function creerSerieTableur({ consigne, exercices, feuille, dossier = '' }
         ? exercices
         : exercices.filter((e) => concerneNiveau(e.niveaux, ctx.niveauGroupe));
 
+      // Un exercice sans contrôle ne se corrige pas tout seul — mise en forme
+      // conditionnelle, graphique : le lecteur de classeurs ne sait pas les relire. Il
+      // reste dans la liste, téléchargeable, mais il ne compte ni au numérateur ni au
+      // dénominateur : un score que l'élève ne peut pas atteindre ne veut rien dire.
+      const corrigeable = (e) => (e.controles || []).length > 0;
+      const notes = () => visibles.filter(corrigeable);
+
       const bests = () => {
         const o = {};
         (ctx.jeu.lignes('resultats') || []).forEach((r) => {
@@ -250,14 +369,16 @@ export function creerSerieTableur({ consigne, exercices, feuille, dossier = '' }
         }
         if (estProf) return;      // l'enseignant qui essaie un exercice ne se note pas
         const b = bests();
-        const reussis = visibles.filter((e) => b[e.id] === e.controles.length).length;
-        await ctx.enregistrer({ score: reussis, max: visibles.length, detail: b });
+        const aNoter = notes();
+        const reussis = aNoter.filter((e) => b[e.id] === e.controles.length).length;
+        await ctx.enregistrer({ score: reussis, max: aNoter.length, detail: b });
       }
 
       // ------------------------------------------------------------- la liste
       function vueListe() {
         const b = bests();
-        const reussis = visibles.filter((e) => b[e.id] === e.controles.length).length;
+        const aNoter = notes();
+        const reussis = aNoter.filter((e) => b[e.id] === e.controles.length).length;
 
         // Les exercices sont groupés par notion (RECHERCHEV, TCD…) quand ils en portent une.
         const groupes = [];
@@ -272,15 +393,19 @@ export function creerSerieTableur({ consigne, exercices, feuille, dossier = '' }
           ${visibles.length === 0
             ? `<div class="vide">Aucun exercice de cette série ne correspond au niveau du groupe.</div>`
             : `<p class="note"><strong>${reussis} exercice${reussis > 1 ? 's' : ''} réussi${reussis > 1 ? 's' : ''}
-                 sur ${visibles.length}.</strong> Un exercice compte pour réussi quand tous ses contrôles passent.</p>
+                 sur ${aNoter.length}.</strong> Un exercice compte pour réussi quand tous ses contrôles passent.
+                 ${aNoter.length < visibles.length
+                   ? `${visibles.length - aNoter.length} exercice${visibles.length - aNoter.length > 1 ? 's se vérifient' : ' se vérifie'}
+                      en classe et ne compte${visibles.length - aNoter.length > 1 ? 'nt' : ''} pas dans ce total.` : ''}</p>
               ${groupes.map((g) => `
                 ${g.cle ? `<h3 class="serie-groupe">${ech(g.cle)}</h3>` : ''}
                 <div class="module-grid">
                   ${g.exos.map((e) => {
                     const sc = b[e.id];
-                    const fini = sc === e.controles.length;
+                    const fini = corrigeable(e) && sc === e.controles.length;
                     return `<button class="module-tile ${fini ? 'fini' : ''}" data-exo="${ech(e.id)}">
-                      <span class="code">${fini ? '✓ réussi'
+                      <span class="code">${!corrigeable(e) ? 'à vérifier en classe'
+                        : fini ? '✓ réussi'
                         : sc !== undefined ? `meilleur : ${sc} / ${e.controles.length}`
                         : 'non commencé'}${estProf ? ' · ' + ech(libelleNiveaux(e.niveaux)) : ''}</span>
                       <span class="titre">${ech(e.titre)}</span>
@@ -306,13 +431,19 @@ export function creerSerieTableur({ consigne, exercices, feuille, dossier = '' }
             <p class="note">${ech(exercice.objectif || '')}
               ${b !== undefined ? ` — meilleur résultat : ${b} / ${exercice.controles.length}` : ''}</p>
             ${boutonModeleHTML(dossier + exercice.fichier)}
-            <p class="note">Complétez-le dans Excel ou LibreOffice, enregistrez-le, puis déposez-le ici.
-              Autant de fois que nécessaire : c'est le meilleur résultat qui compte.</p>
-            ${zoneDepotHTML(nomFichier)}
+            ${corrigeable(exercice) ? `
+              <p class="note">Complétez-le dans Excel ou LibreOffice, enregistrez-le, puis déposez-le ici.
+                Autant de fois que nécessaire : c'est le meilleur résultat qui compte.</p>
+              ${zoneDepotHTML(nomFichier)}`
+            : `<p class="note">Cet exercice se vérifie en classe : le contrôle automatique ne sait pas
+                relire une couleur conditionnelle ni un graphique. Suivez les consignes du classeur,
+                enregistrez votre travail et montrez-le à votre enseignant. Il ne compte pas dans
+                votre score.</p>`}
           </div>
           <div id="resultatTableur">${resultats ? tableauResultats(resultats) : ''}</div>`;
 
         hote.querySelector('#btnListe').addEventListener('click', vueListe);
+        if (!corrigeable(exercice)) return;
         brancherDepot(hote, async (classeur, nom) => {
           nomFichier = nom;
           resultats = controler(classeur, exercice.controles, feuille);

@@ -10,6 +10,8 @@ export const ACTIVITES = [
   () => import('./zones-entrepot.js'),
   () => import('./calculs-stock.js'),
   () => import('./inventaire-tableur.js'),
+  // Tableur : la prise en main d'abord, les séries appliquées ensuite.
+  () => import('./excel-pas-a-pas.js'),
   () => import('./excel-stock.js'),
   // Scénarios : l'ordre d'affichage des tuiles est celui de cette liste.
   () => import('./yves-rocher.js'),
