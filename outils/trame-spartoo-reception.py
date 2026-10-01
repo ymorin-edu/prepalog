@@ -14,9 +14,15 @@ from docx.enum.table import WD_TABLE_ALIGNMENT
 from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
 
-ENCRE   = RGBColor(0x13, 0x1a, 0x21)
-ARDOISE = RGBColor(0x2c, 0x4a, 0x63)
-TERRE   = RGBColor(0xb4, 0x53, 0x0f)
+# Trame en noir et gris, décidé le 01/10/2026 : la trame s'imprime souvent en noir et
+# blanc, où une couleur d'accent ressort en gris sale. Seul le logo Prepalog apporte le vert
+# de la charte (il est repris de `styles/logo.png`, passé au vert le même jour).
+# Les noms TITRE et GRIS ont été abandonnés : garder « ardoise » pour du noir aurait
+# trompé la prochaine lecture. Dans `styles/base.css`, à l'inverse, `--ardoise` a été
+# conservé — la variable y est sémantique et touche 41 endroits.
+ENCRE = RGBColor(0x1a, 0x1a, 0x1a)   # texte courant
+TITRE = RGBColor(0x11, 0x11, 0x11)   # titres, en-têtes de tableau, numéros de consigne
+GRIS  = RGBColor(0x59, 0x59, 0x59)   # le code « ÉTAPE n »
 
 # Logo de l'entreprise, versionné avec la trame. Déposer le fichier de la prochaine
 # entreprise à côté et changer cette ligne : le reste suit.
@@ -65,9 +71,9 @@ def etape(num, titre, saut=True):
     else:
         par.paragraph_format.space_before = Pt(18)
     par.paragraph_format.space_after = Pt(0)
-    r = par.add_run(f'ÉTAPE {num}'); r.bold = True; r.font.size = Pt(9.5); r.font.color.rgb = TERRE; r.font.name = 'Consolas'
+    r = par.add_run(f'ÉTAPE {num}'); r.bold = True; r.font.size = Pt(9.5); r.font.color.rgb = GRIS; r.font.name = 'Consolas'
     par2 = d.add_paragraph(); par2.paragraph_format.space_before = Pt(2); par2.paragraph_format.space_after = Pt(8)
-    r2 = par2.add_run(titre); r2.bold = True; r2.font.size = Pt(15); r2.font.color.rgb = ARDOISE
+    r2 = par2.add_run(titre); r2.bold = True; r2.font.size = Pt(15); r2.font.color.rgb = TITRE
     par.paragraph_format.keep_with_next = True
     par2.paragraph_format.keep_with_next = True
 
@@ -79,7 +85,7 @@ def coupe():
 
 def soustitre(t):
     par = d.add_paragraph(); par.paragraph_format.space_before = Pt(12); par.paragraph_format.space_after = Pt(4)
-    r = par.add_run(t); r.bold = True; r.font.size = Pt(11.5); r.font.color.rgb = ARDOISE
+    r = par.add_run(t); r.bold = True; r.font.size = Pt(11.5); r.font.color.rgb = TITRE
     par.paragraph_format.keep_with_next = True
 
 def consignes(items):
@@ -90,7 +96,7 @@ def consignes(items):
         par.paragraph_format.space_after = Pt(4)
         par.paragraph_format.left_indent = Cm(0.8)
         par.paragraph_format.first_line_indent = Cm(-0.8)
-        r = par.add_run(f'{i}.  '); r.bold = True; r.font.size = Pt(11); r.font.color.rgb = ARDOISE
+        r = par.add_run(f'{i}.  '); r.bold = True; r.font.size = Pt(11); r.font.color.rgb = TITRE
         par.add_run(it).font.size = Pt(11)
         if i < len(items):
             par.paragraph_format.keep_with_next = True
@@ -98,9 +104,9 @@ def consignes(items):
 def encadre(titre, texte):
     colle_au_suivant()
     t = d.add_table(rows=1, cols=1); t.style = 'Table Grid'; t.alignment = WD_TABLE_ALIGNMENT.LEFT
-    c = t.rows[0].cells[0]; ombre(c, 'F1F4F7')
+    c = t.rows[0].cells[0]; ombre(c, 'F2F2F2')
     par = c.paragraphs[0]; par.paragraph_format.space_after = Pt(0)
-    r = par.add_run(titre + ' '); r.bold = True; r.font.size = Pt(10); r.font.color.rgb = ARDOISE
+    r = par.add_run(titre + ' '); r.bold = True; r.font.size = Pt(10); r.font.color.rgb = TITRE
     r2 = par.add_run(texte); r2.font.size = Pt(10)
     d.add_paragraph().paragraph_format.space_after = Pt(2)
 
@@ -109,7 +115,7 @@ def questions(liste, lignes=2):
     """Une question par bloc, avec `lignes` lignes vides pour la réponse."""
     t = d.add_table(rows=0, cols=1); t.style = 'Table Grid'
     for q in liste:
-        row = t.add_row(); c = row.cells[0]; ombre(c, 'FAFBFC')
+        row = t.add_row(); c = row.cells[0]; ombre(c, 'FAFAFA')
         par = c.paragraphs[0]; par.paragraph_format.space_after = Pt(4)
         r = par.add_run(q); r.font.size = Pt(10.5); r.bold = True
         for _ in range(lignes):
@@ -124,9 +130,9 @@ def tableau(entetes, nlignes, largeurs=None, hauteur=Cm(1.15)):
     colle_au_suivant()
     t = d.add_table(rows=1, cols=len(entetes)); t.style = 'Table Grid'
     for i, h in enumerate(entetes):
-        c = t.rows[0].cells[i]; ombre(c, 'E8EDF2')
+        c = t.rows[0].cells[i]; ombre(c, 'E8E8E8')
         par = c.paragraphs[0]; par.paragraph_format.space_after = Pt(0)
-        r = par.add_run(h); r.bold = True; r.font.size = Pt(10); r.font.color.rgb = ARDOISE
+        r = par.add_run(h); r.bold = True; r.font.size = Pt(10); r.font.color.rgb = TITRE
     for _ in range(nlignes):
         t.add_row().height = hauteur
     if largeurs:
@@ -141,24 +147,24 @@ par.paragraph_format.tab_stops.add_tab_stop(Cm(17.0), WD_TAB_ALIGNMENT.RIGHT)
 if os.path.exists(LOGO_PREPALOG):
     par.add_run().add_picture(LOGO_PREPALOG, height=Cm(1.15))
 r = par.add_run('  Logisim')
-r.bold = True; r.font.size = Pt(20); r.font.color.rgb = ARDOISE
+r.bold = True; r.font.size = Pt(20); r.font.color.rgb = TITRE
 par.add_run('\t')
 if os.path.exists(LOGO):
     par.add_run().add_picture(LOGO, height=Cm(1.5))
 else:
-    r = par.add_run('SPARTOO'); r.bold = True; r.font.size = Pt(15); r.font.color.rgb = ARDOISE
+    r = par.add_run('SPARTOO'); r.bold = True; r.font.size = Pt(15); r.font.color.rgb = TITRE
 
 par = d.add_paragraph(); par.paragraph_format.space_after = Pt(0)
 r = par.add_run("Carnet de suivi — Réceptionner une livraison")
-r.bold = True; r.font.size = Pt(18); r.font.color.rgb = ARDOISE
+r.bold = True; r.font.size = Pt(18); r.font.color.rgb = TITRE
 
 d.add_paragraph().paragraph_format.space_after = Pt(6)
 
 t = d.add_table(rows=3, cols=4); t.style = 'Table Grid'
 for lib, li, co in [('Nom',0,0), ('Prénom',0,2), ('Classe',1,0), ('Date',1,2), ('Matricule Prepalog',2,0)]:
-    c = t.rows[li].cells[co]; ombre(c, 'E8EDF2')
+    c = t.rows[li].cells[co]; ombre(c, 'E8E8E8')
     par = c.paragraphs[0]; par.paragraph_format.space_after = Pt(0)
-    r = par.add_run(lib); r.bold = True; r.font.size = Pt(10); r.font.color.rgb = ARDOISE
+    r = par.add_run(lib); r.bold = True; r.font.size = Pt(10); r.font.color.rgb = TITRE
 for row in t.rows: row.height = Cm(0.82)
 d.add_paragraph().paragraph_format.space_after = Pt(4)
 
