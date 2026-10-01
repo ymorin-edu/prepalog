@@ -171,8 +171,22 @@ await v('rubriques : les activités sont rangées par numéro de module', async 
   });
   if (!par.length) throw new Error('aucune rubrique lue, test invalide');
 
-  const numero = (c) => Number((/^[A-Z]+-(\d+)$/.exec(c) || [, '0'])[1]);
+  // Un numéro peut avoir plusieurs niveaux (`ENT-1.2`). On compare segment par segment,
+  // jamais comme un décimal : sinon `ENT-1.10` passerait avant `ENT-1.9`. Ce test est écrit
+  // à part du noyau exprès — il vérifie le résultat, il ne réutilise pas son comparateur.
+  const segments = (c) => ((/^[A-Z]+-(\d+(?:\.\d+)*)$/.exec(c) || [, ''])[1] || '')
+    .split('.').filter(Boolean).map(Number);
   const famille = (c) => (/^([A-Z]+)-/.exec(c) || [, c])[1];
+  const avant = (a, b) => {               // a doit-il venir strictement avant b ?
+    const x = segments(a); const y = segments(b);
+    for (let i = 0; i < Math.max(x.length, y.length); i++) {
+      const u = x[i] === undefined ? -1 : x[i];
+      const w = y[i] === undefined ? -1 : y[i];
+      if (u !== w) return u < w;
+    }
+    return false;                          // numéros égaux : pas strictement avant
+  };
+
   let vues = 0;
   par.forEach(({ label, codes }) => {
     if (codes.length < 2) return;                 // une seule tuile : rien à ordonner
@@ -182,19 +196,28 @@ await v('rubriques : les activités sont rangées par numéro de module', async 
       // familles (ça n'arrive pas aujourd'hui) n'est pas en faute : on ne compare que ce
       // qui est comparable.
       if (famille(codes[i]) !== famille(codes[i - 1])) continue;
-      if (numero(codes[i]) <= numero(codes[i - 1])) {
+      if (!avant(codes[i - 1], codes[i])) {
         throw new Error(`rubrique ${label} : ${codes.join(' ')} — ${codes[i]} après ${codes[i - 1]}`);
       }
     }
   });
   if (vues < 3) throw new Error(`${vues} rubrique(s) à plusieurs tuiles seulement, test trop faible`);
 
-  // Repère explicite sur Tableur, la rubrique qui portait le défaut.
-  const tableur = par.find((r) => r.label === 'Tableur');
-  if (!tableur) throw new Error('rubrique Tableur introuvable');
-  if (tableur.codes.join(' ') !== 'TAB-1 TAB-2 TAB-3 TAB-5') {
-    throw new Error('rubrique Tableur : ' + tableur.codes.join(' '));
-  }
+  // Le comparateur du test doit lui-même tenir le piège des numéros de version : si `avant`
+  // se trompait sur 1.10 / 1.9, la boucle ci-dessus laisserait passer le désordre qu'elle
+  // est censée attraper. Deux lignes pour garder le garde-fou.
+  if (!avant('ENT-1.9', 'ENT-1.10')) throw new Error('comparateur du test : 1.10 avant 1.9');
+  if (!avant('ENT-1.2', 'ENT-2.1')) throw new Error('comparateur du test : 2.1 avant 1.2');
+
+  // Repères explicites : Tableur, la rubrique qui portait le défaut, et Logisim, dont les
+  // numéros sont à deux niveaux — une séance par tuile, une entreprise par premier chiffre.
+  const repere = (label, attendu) => {
+    const r = par.find((x) => x.label === label);
+    if (!r) throw new Error(`rubrique ${label} introuvable`);
+    if (r.codes.join(' ') !== attendu) throw new Error(`rubrique ${label} : ${r.codes.join(' ')}`);
+  };
+  repere('Tableur', 'TAB-1 TAB-2 TAB-3 TAB-5');
+  repere('Logisim', 'ENT-1.1 ENT-1.2 ENT-1.3');
 });
 
 // ---------- 7. l'élève voit la base commune de la classe
@@ -992,7 +1015,7 @@ await v('Spartoo : avancement remonté au suivi de classe', async () => {
   await page.waitForSelector('#btnProfEspace');
   await page.click('#btnProfEspace');
   await page.click('[data-ong="suivi"]');
-  await page.waitForSelector('text=ENT-1', { timeout: 6000 });
+  await page.waitForSelector('text=ENT-1.1', { timeout: 6000 });
   const t = await page.textContent('#contenuProf');
   if (!/3\/3/.test(t)) throw new Error('avancement attendu 3/3, lu : ' + (t.match(/\d\/3/g) || ['aucun']).join(' '));
 });
@@ -1083,7 +1106,7 @@ await v('Spartoo réception : avancement remonté au suivi', async () => {
   await page.waitForSelector('#btnProfEspace');
   await page.click('#btnProfEspace');
   await page.click('[data-ong="suivi"]');
-  await page.waitForSelector('text=ENT-2', { timeout: 6000 });
+  await page.waitForSelector('text=ENT-1.2', { timeout: 6000 });
   const t = await page.textContent('#contenuProf');
   // Deux séances, deux avancements distincts : c'est tout l'intérêt d'une activité par séance.
   const av = (t.match(/3\/3/g) || []).length;
@@ -1222,7 +1245,7 @@ await v('Spartoo traçabilité : avancement remonté au suivi', async () => {
   await page.waitForSelector('#btnProfEspace');
   await page.click('#btnProfEspace');
   await page.click('[data-ong="suivi"]');
-  await page.waitForSelector('text=ENT-3', { timeout: 6000 });
+  await page.waitForSelector('text=ENT-1.3', { timeout: 6000 });
   const t = await page.textContent('#contenuProf');
   // Trois séances, trois avancements distincts, sur une seule et même base.
   const av = (t.match(/3\/3/g) || []).length;

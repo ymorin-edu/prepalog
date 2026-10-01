@@ -1,6 +1,6 @@
-// ENT-3 — Spartoo, séance « traçabilité ». Dernière des trois séances de l'environnement.
+// ENT-1.3 — Spartoo, séance « traçabilité ». Dernière des trois séances de l'environnement.
 //
-// Même entreprise, même base que la réception (ENT-1) et la préparation (ENT-2) : c'est ce
+// Même entreprise, même base que la réception (ENT-1.1) et la préparation (ENT-1.2) : c'est ce
 // que dit `meta.jeuId`. L'élève remonte ici le lot qu'il a lui-même réceptionné, retrouve les
 // clients qui ont reçu des paires de ce lot, et bloque ce qu'il en reste.
 //
@@ -16,7 +16,7 @@ import * as SEANCE from '../contenus/spartoo-tracabilite.js';
 
 export const meta = {
   id: 'spartoo-tracabilite',
-  code: 'ENT-3',
+  code: 'ENT-1.3',
   titre: 'Spartoo — traçabilité',
   desc: "Remonter un lot défectueux dans les deux sens, bloquer le stock restant et rendre compte.",
   rubrique: 'logisim',

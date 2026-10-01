@@ -1,4 +1,5 @@
-// ENT-1 — Spartoo. Premier environnement d'entreprise, porté depuis LogiSim (org « p42 »).
+// ENT-1.2 — Spartoo, séance « préparation ». Deuxième des trois séances de l'environnement,
+// porté depuis LogiSim (org « p42 »).
 //
 // Chaque élève travaille dans sa propre base : messagerie, commandes, préparation, bon de
 // préparation, catalogue, stock, tiers et console. Rien n'est partagé — portée `eleve`.
@@ -14,7 +15,7 @@ import * as SPARTOO from '../contenus/spartoo.js';
 
 export const meta = {
   id: 'spartoo',
-  code: 'ENT-2',
+  code: 'ENT-1.2',
   titre: 'Spartoo — préparation',
   desc: "Traiter une commande client : contrôle du stock, bon de préparation et réapprovisionnement.",
   rubrique: 'logisim',

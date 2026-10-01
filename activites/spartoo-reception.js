@@ -1,6 +1,7 @@
-// ENT-1 — Spartoo, séance « réception ». Première des trois séances de l'environnement.
+// ENT-1.1 — Spartoo, séance « réception ». Première des trois séances de l'environnement.
 //
-// Même entreprise, même base que la préparation (ENT-2) et la traçabilité : c'est ce que dit
+// Même entreprise, même base que la préparation (ENT-1.2) et la traçabilité (ENT-1.3) : c'est
+// ce que dit
 // `meta.jeuId`. L'élève réceptionne ici la livraison qu'il préparera ensuite et dont il
 // remontera la trace plus tard, sur son propre stock.
 //
@@ -16,7 +17,7 @@ import * as SEANCE from '../contenus/spartoo-reception.js';
 
 export const meta = {
   id: 'spartoo-reception',
-  code: 'ENT-1',
+  code: 'ENT-1.1',
   titre: 'Spartoo — réception',
   desc: "Contrôle d'une livraison fournisseur, réserves et entrée en stock avec numéro de lot.",
   rubrique: 'logisim',

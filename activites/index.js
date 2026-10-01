@@ -85,7 +85,8 @@ export const RUBRIQUES = [
 // ------------------------------------------------------------------- l'ordre
 //
 // L'affichage suit les NUMÉROS DE MODULE, pas l'ordre de la liste ci-dessus : TAB-1, TAB-2,
-// TAB-3, puis TAB-5. C'est ce que l'élève lit sur la tuile, donc c'est ce qui doit décider.
+// TAB-3, puis TAB-5 ; ENT-1.1, ENT-1.2, ENT-1.3. C'est ce que l'élève lit sur la tuile, donc
+// c'est ce qui doit décider.
 //
 // Avant, l'ordre était celui de la liste, et les numéros étaient censés suivre. Ça ne
 // tenait pas : TAB-5 avait été ajouté avant TAB-1, et se retrouvait affiché en premier
@@ -96,10 +97,37 @@ export const RUBRIQUES = [
 // avant les quiz sous prétexte que « QUI » vient après « TAB » dans l'alphabet. Le rang
 // d'une famille est celui de sa première apparition dans ACTIVITES.
 //
-// Un code hors forme `XXX-9` (il n'y en a pas aujourd'hui) garde sa place : on ne veut pas
-// qu'une coquille dans un `code` fasse disparaître une activité de l'accueil.
+// Un numéro peut avoir PLUSIEURS NIVEAUX, séparés par des points : `ENT-1.1`, `ENT-1.2`,
+// `ENT-1.3` sont les trois séances de Spartoo, `ENT-2.1` sera la première de TechPro. Le
+// premier nombre dit l'entreprise, le second la séance — ce que la numérotation à plat
+// (`ENT-1`, `ENT-2`, `ENT-3`) n'exprimait pas, au point qu'ajouter une entreprise obligeait
+// à renuméroter. Rien n'empêche un troisième niveau si le besoin vient.
+//
+// La comparaison se fait **segment par segment**, pas sur le nombre à virgule : `1.10` doit
+// venir après `1.9`, alors que `1.10 < 1.9` si on les lit comme des décimaux. C'est le piège
+// classique des numéros de version, et il arriverait dès la dixième séance.
+//
+// Un code hors forme `XXX-9` ou `XXX-9.9` garde sa place : on ne veut pas qu'une coquille
+// dans un `code` fasse disparaître une activité de l'accueil.
 
-const FORME_CODE = /^([A-Z]+)-(\d+)$/;
+const FORME_CODE = /^([A-Z]+)-(\d+(?:\.\d+)*)$/;
+
+// Rend un tableau de nombres : 'ENT-1.2' → [1, 2]. Un code mal formé rend [].
+const segments = (code) => {
+  const m = FORME_CODE.exec(code || '');
+  return m ? m[2].split('.').map(Number) : [];
+};
+
+// Ordre lexicographique sur les segments. Un numéro plus court passe avant celui qui le
+// prolonge : `ENT-1` avant `ENT-1.1`.
+function comparerSegments(a, b) {
+  for (let i = 0; i < Math.max(a.length, b.length); i++) {
+    const x = a[i] === undefined ? -1 : a[i];
+    const y = b[i] === undefined ? -1 : b[i];
+    if (x !== y) return x - y;
+  }
+  return 0;
+}
 
 function ordonner(mods) {
   const rangFamille = new Map();
@@ -114,7 +142,7 @@ function ordonner(mods) {
     const fa = rangFamille.get(ca ? ca[1] : a.meta.code || '');
     const fb = rangFamille.get(cb ? cb[1] : b.meta.code || '');
     if (fa !== fb) return fa - fb;
-    return Number(ca ? ca[2] : 0) - Number(cb ? cb[2] : 0);
+    return comparerSegments(segments(a.meta.code), segments(b.meta.code));
   });
 }
 
