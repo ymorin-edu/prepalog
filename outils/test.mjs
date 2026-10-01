@@ -216,7 +216,7 @@ await v('rubriques : les activités sont rangées par numéro de module', async 
     if (!r) throw new Error(`rubrique ${label} introuvable`);
     if (r.codes.join(' ') !== attendu) throw new Error(`rubrique ${label} : ${r.codes.join(' ')}`);
   };
-  repere('Tableur', 'TAB-1 TAB-2 TAB-3 TAB-5');
+  repere('Tableur', 'TAB-1 TAB-2 TAB-3 TAB-4 TAB-5');
   repere('Logisim', 'ENT-1.1 ENT-1.2 ENT-1.3');
 });
 
@@ -824,10 +824,10 @@ await v('classeurs du dépôt : aucun onglet Correction', async () => {
       else if (e.name.endsWith('.xlsx')) classeurs.push(p);
     });
   })(racine);
-  // Repère de non-régression : 13 (tab1) + 10 (tab2) + 1 (tab5). Un balayage qui ne
-  // trouverait plus rien passerait sinon en silence — c'est exactement la panne qu'un
-  // garde-fou ne doit pas avoir.
-  if (classeurs.length < 34) throw new Error(`${classeurs.length} classeurs trouvés, moins que les 34 attendus`);
+  // Repère de non-régression : 13 (tab1) + 10 (tab2) + 10 (tab3) + 13 (tab4) + 1 (tab5).
+  // Un balayage qui ne trouverait plus rien passerait sinon en silence — c'est exactement
+  // la panne qu'un garde-fou ne doit pas avoir.
+  if (classeurs.length < 47) throw new Error(`${classeurs.length} classeurs trouvés, moins que les 47 attendus`);
   const fautifs = [];
   classeurs.forEach((p) => {
     const nom = path.relative(racine, p).split(path.sep).join('/');
@@ -886,6 +886,139 @@ await v('TAB-3 : les dix cas de calculs commerciaux', async () => {
     attendus, { timeout: 15000 },
   );
   fs.unlinkSync(rempli3);
+});
+
+// ---------- 24 quinquies. TAB-4, la journée en entrepôt : le contenu et les positions
+//
+// Module neuf, pas une reprise de la Suite : il n'existe aucun corrigé d'origine à
+// confronter, comme on l'a fait pour TAB-1 à TAB-3. Ce qui prend sa place : le générateur
+// vérifie à chaque passage que les cellules visées sont vides et tombent sur des cases à
+// remplir, et ce test porte des REPÈRES DE POSITION ÉCRITS À LA MAIN, qui ne descendent pas
+// de la géométrie du JSON. Si les deux outils se mettaient un jour à viser des cellules
+// différentes, c'est ici qu'on le verrait.
+await v('TAB-4 : les treize étapes de la journée', async () => {
+  const { EXERCICES: EX4 } =
+    await import(pathToFileURL(path.join(ROOT, 'contenus/tab4-journee-entrepot.js')).href);
+
+  if (EX4.length !== 13) throw new Error(`${EX4.length} étapes au lieu de 13`);
+  const total = EX4.reduce((n, e) => n + e.controles.length, 0);
+  if (total !== 93) throw new Error(`${total} contrôles au lieu de 93`);
+  if (EX4.some((e) => !e.controles.length)) {
+    throw new Error('une étape de TAB-4 est sans contrôle, donc hors notation');
+  }
+
+  // Quatre blocs de journée, et pas treize groupes d'une étape : le `groupe` sert à
+  // regrouper les tuiles, donc il ne peut pas être l'heure, qui est unique à chaque étape.
+  const blocs = [...new Set(EX4.map((e) => e.groupe))];
+  if (blocs.length !== 4) throw new Error(`${blocs.length} blocs au lieu de 4 : ${blocs.join(' | ')}`);
+
+  // Les repères, écrits à la main.
+  const ex = (id) => EX4.find((e) => e.id === id) || (() => { throw new Error('étape absente : ' + id); })();
+  const cellules = (id) => ex(id).controles.map((c) => c.cellule).join(' ');
+  const repere = (id, attendu) => {
+    if (cellules(id) !== attendu) {
+      throw new Error(`${id} vise ${cellules(id)} au lieu de ${attendu}`);
+    }
+  };
+  repere('cap01', 'E12 E13 E14 E15 E16 E17 E18');
+  repere('cap13', 'C22 C23 C24 C25 C26 C27');
+  repere('cap04', 'C30 C31 C32 C33 C34');
+  repere('cap12', 'E12 F12 G12 H12 E13 F13 G13 H13');
+
+  // Quelques valeurs attendues, recalculées ici à la main, sans passer par le générateur.
+  const att = (id, cel, v, tol) => {
+    const c = ex(id).controles.find((x) => x.cellule === cel);
+    if (!c) throw new Error(`${id} : pas de contrôle en ${cel}`);
+    const ok = typeof v === 'number' ? Math.abs(c.attendu - v) < (tol || 1e-9) : c.attendu === v;
+    if (!ok) throw new Error(`${id} ${cel} : attendu ${v}, le générateur dit ${c.attendu}`);
+  };
+  att('cap02', 'E13', -2);                 // 8 reçus pour 10 commandés
+  att('cap03', 'D12', true);               // 24 = 24
+  att('cap03', 'D13', false);              // 8 ≠ 10
+  att('cap04', 'C34', 217);                // 27 + 59 + 81 + 50
+  att('cap05', 'F12', 52);                 // 40 + 24 − 12
+  att('cap06', 'C22', 3195.25, 0.001);     // la valeur totale du stock
+  att('cap07', 'C27', 15.67, 0.001);       // 156,7 / 10
+  att('cap11', 'C21', 114.17, 0.001);      // le poids de l'envoi, en kilos
+  att('cap12', 'H12', 0.912, 1e-9);        // 1,20 × 0,80 × 0,95
+  att('cap13', 'C27', -10);                // 302 entrées − 312 sorties
+
+  // Le piège volontaire de l'exercice 10 : un stock ÉGAL au mini n'est pas en alerte,
+  // parce que le test est « strictement plus petit ». Deux lignes le rencontrent.
+  att('cap10', 'E14', 'Stock suffisant');  // 15 en stock pour un mini de 15
+  att('cap10', 'E18', 'Stock suffisant');  // 3 en stock pour un mini de 3
+  att('cap10', 'E12', 'À commander');      // 52 pour un mini de 60
+
+  // Les deux libellés que l'élève recopie. Ils sont écrits ici en clair : si quelqu'un
+  // change « Stock suffisant » dans les données sans toucher aux consignes des classeurs,
+  // ce test le dit avant les élèves.
+  const textes = new Set(EX4.flatMap((e) => e.controles.map((c) => c.attendu))
+    .filter((v) => typeof v === 'string'));
+  ['À commander', 'Stock suffisant'].forEach((t) => {
+    if (!textes.has(t)) throw new Error(`le libellé « ${t} » n'est attendu nulle part`);
+  });
+  if (textes.size !== 2) throw new Error('libellés inattendus : ' + [...textes].join(' | '));
+});
+
+// ---------- 24 sexies. TAB-4 : trois classeurs déposés, trois sans-faute
+//
+// Trois étapes choisies pour les trois sortes de valeur attendue, parce que le lecteur de
+// classeurs ne les compare pas de la même façon : cap03 rend des booléens, cap09 du texte
+// (comparaison indulgente sur la casse et les accents), cap13 des nombres posés dans le
+// bloc d'indicateurs, sous le tableau — la position la plus fragile des treize.
+await v('TAB-4 : trois classeurs déposés, trois sans-faute', async () => {
+  await page.click('#btnListe');
+  await page.click('#btnRetour');
+  await page.waitForSelector('[data-act="journee-entrepot"]', { timeout: 6000 });
+  await page.click('[data-act="journee-entrepot"]');
+  await page.waitForSelector('[data-exo="cap01"]', { timeout: 6000 });
+
+  const vus = await page.$$eval('[data-exo]', (e) => e.map((x) => x.dataset.exo));
+  if (vus.length !== 13) throw new Error(`${vus.length} étapes affichées au lieu de 13`);
+  const entete = (await page.textContent('#hoteActivite')).replace(/\s+/g, ' ');
+  if (/ne comptent pas dans ce total/.test(entete)) {
+    throw new Error('une étape de TAB-4 est hors notation, alors que les treize sont corrigeables');
+  }
+  if (!/sur 13/.test(entete)) throw new Error('le total n\'est pas sur 13 : ' + entete.slice(0, 120));
+
+  if (!baseXlsx) throw new Error('module xlsx introuvable pour fabriquer le classeur — npm i -g xlsx@0.18.5');
+  const XLSX4 = await import(pathToFileURL(path.join(baseXlsx, 'xlsx.mjs')).href);
+  XLSX4.set_fs(fs);
+  const { EXERCICES: EX4 } =
+    await import(pathToFileURL(path.join(ROOT, 'contenus/tab4-journee-entrepot.js')).href);
+
+  for (const id of ['cap03', 'cap09', 'cap13']) {
+    const etape = EX4.find((e) => e.id === id);
+    await page.click(`[data-exo="${id}"]`);
+    await page.waitForSelector('#depot', { timeout: 6000 });
+
+    const cl = XLSX4.read(fs.readFileSync(path.join(ROOT, 'contenus/tab4/', etape.fichier)));
+    const f = cl.Sheets['Exercice'];
+    if (!f) throw new Error(`${id} : le classeur n'a pas d'onglet « Exercice »`);
+    etape.controles.forEach((c) => {
+      // Les classeurs de TAB-4 sont fabriqués, donc les cases devraient être vides par
+      // construction. On le revérifie : une construction juste aujourd'hui peut casser.
+      if (f[c.cellule]) throw new Error(`${id} : le modèle contient déjà une réponse en ${c.cellule}`);
+      const t = typeof c.attendu === 'boolean' ? 'b' : typeof c.attendu === 'string' ? 's' : 'n';
+      f[c.cellule] = { t, v: c.attendu };
+    });
+    const rempli = path.join(os.tmpdir(), `prepalog-${id}-rempli.xlsx`);
+    XLSX4.writeFile(cl, rempli);
+    await page.setInputFiles('#fichier', rempli);
+    const n = etape.controles.length;
+    await page.waitForFunction(
+      (k) => new RegExp(`${k} contrôles réussis sur ${k}`).test(document.body.textContent),
+      n, { timeout: 15000 },
+    );
+    fs.unlinkSync(rempli);
+    await page.click('#btnListe');
+    await page.waitForSelector('[data-exo="cap01"]', { timeout: 6000 });
+  }
+
+  // On laisse la page sur une étape ouverte, pas sur la liste : le test suivant commence
+  // par « revenir à la liste », et il ne trouverait pas le bouton.
+  await page.click('[data-exo="cap01"]');
+  await page.waitForSelector('#depot', { timeout: 6000 });
 });
 
 // ---------- 25. l'enseignant voit la même série que l'élève

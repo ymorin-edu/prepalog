@@ -15,10 +15,11 @@ export const ACTIVITES = [
   () => import('./zones-entrepot.js'),
   () => import('./calculs-stock.js'),
   // Tableur : les numéros donnent la progression — prise en main, puis séries appliquées,
-  // puis l'inventaire. TAB-4 (CAP OL) n'est pas encore migré, d'où le saut de TAB-3 à TAB-5.
+  // puis la journée complète, puis l'inventaire.
   () => import('./excel-pas-a-pas.js'),
   () => import('./excel-stock.js'),
   () => import('./calculs-commerciaux.js'),
+  () => import('./journee-entrepot.js'),
   () => import('./inventaire-tableur.js'),
   // Scénarios.
   () => import('./yves-rocher.js'),

@@ -143,12 +143,16 @@ Effet secondaire, le site fonctionne hors ligne une fois chargé.
 
 ## Tester
 
-`outils/test.mjs` lance **58 vérifications** de bout en bout avec Playwright en mode
+`outils/test.mjs` lance **60 vérifications** de bout en bout avec Playwright en mode
 démonstration : connexion enseignant et élève, création de groupe et de comptes, base
 partagée, les huit mécaniques d'activité, ouverture et fermeture d'une activité pour un
 groupe, conversion du score en note sur 20, saisie d'une note à la main dans le suivi de
 classe, correction d'un classeur déposé, suppression d'un groupe et sort de ses élèves,
 polices servies par le dépôt, absence de dépendance extérieure, thème clair/sombre.
+
+Les séries de tableur ont chacune leur vérification de contenu, et TAB-4 en a deux : l'une
+contrôle les positions visées par les corrigés avec des repères écrits à la main, l'autre
+dépose trois classeurs remplis des valeurs attendues et exige le sans-faute.
 
 Deux de ces vérifications ne passent pas par le navigateur : le filtrage par niveau et le
 calcul de la note sur 20 sont contrôlés **à l'unité**, sur des valeurs fabriquées. Aucun

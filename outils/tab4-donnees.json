@@ -1,0 +1,1739 @@
+{
+  "_lisezmoi": [
+    "TAB-4 — données de la journée chez Stockaval. SOURCE UNIQUE, lue par deux outils :",
+    "  outils/tab4-classeurs.py    fabrique les 13 classeurs de contenus/tab4/",
+    "  outils/tab4-exercices.mjs   calcule les contrôles et écrit contenus/tab4-cap-ol.js",
+    "Aucune valeur attendue ici : seules les DONNÉES D'ENTRÉE. Les réponses sont recalculées",
+    "par le générateur, jamais recopiées — c'est ce qui permet de les confronter aux classeurs.",
+    "Changer un chiffre ici change le classeur ET le corrigé, puisque les deux en descendent.",
+    "Relancer les deux outils après toute modification.",
+    "",
+    "Le fil rouge : une seule journée, les mêmes références du début à la fin. Le stock du soir",
+    "de l'exercice 5 est la quantité valorisée de l'exercice 6, puis le stock actuel des",
+    "exercices 8 et 9. Si vous changez l'un, vérifiez les autres."
+  ],
+  "entreprise": {
+    "nom": "STOCKAVAL",
+    "activite": "Plateforme de fournitures d'entrepôt",
+    "adresse": "12 rue des Lauriers — ZA de la Plaine",
+    "ville": "30000 Nîmes",
+    "tel": "04 66 00 00 00",
+    "siret": "000 000 000 00000",
+    "mention": "Entreprise fictive — support pédagogique, lycée Gaston Darboux, Nîmes.",
+    "journee": "mardi 17 mars 2026"
+  },
+  "fournisseur": [
+    "LA CAISSE À OUTILS — Outillage et protection",
+    "7 avenue de la Gare",
+    "34000 Montpellier"
+  ],
+  "nous": [
+    "STOCKAVAL",
+    "12 rue des Lauriers — ZA de la Plaine",
+    "30000 Nîmes"
+  ],
+  "transporteur": [
+    "TRANSPORTS CÉVENNES",
+    "ZI de Grézan",
+    "30000 Nîmes"
+  ],
+  "geometrie": {
+    "_note": "Positions communes aux deux outils. Le Python les APPLIQUE en écrivant les classeurs, le JS les APPLIQUE en calculant les contrôles : une seule source, donc aucune divergence possible. Le test porte en plus des repères écrits à la main (E12:E18 pour cap01, C22:C27 pour cap13) qui ne passent pas par ici.",
+    "ligneEntete": 11,
+    "premiereLigne": 12,
+    "ligneConstante": 9,
+    "decalageIndicateurs": 3,
+    "colonneIndicateurs": "C"
+  },
+  "catalogue": [
+    {
+      "ref": "EPI-110",
+      "designation": "Gants de manutention taille 9",
+      "unite": "paire",
+      "unitePluriel": "paires",
+      "prix": 3.4,
+      "poidsG": 180
+    },
+    {
+      "ref": "EPI-120",
+      "designation": "Casque de chantier blanc",
+      "unite": "pièce",
+      "unitePluriel": "pièces",
+      "prix": 12.5,
+      "poidsG": 420
+    },
+    {
+      "ref": "EPI-130",
+      "designation": "Chaussures de sécurité S3 T42",
+      "unite": "paire",
+      "unitePluriel": "paires",
+      "prix": 46.9,
+      "poidsG": 1250
+    },
+    {
+      "ref": "EMB-210",
+      "designation": "Carton double cannelure 40x30x30",
+      "unite": "pièce",
+      "unitePluriel": "pièces",
+      "prix": 1.15,
+      "poidsG": 310
+    },
+    {
+      "ref": "EMB-220",
+      "designation": "Film étirable 450 mm",
+      "unite": "bobine",
+      "unitePluriel": "bobines",
+      "prix": 8.75,
+      "poidsG": 2600
+    },
+    {
+      "ref": "EMB-230",
+      "designation": "Ruban adhésif PP 50 mm",
+      "unite": "rouleau",
+      "unitePluriel": "rouleaux",
+      "prix": 1.6,
+      "poidsG": 95
+    },
+    {
+      "ref": "OUT-310",
+      "designation": "Transpalette manuel 2,5 t",
+      "unite": "pièce",
+      "unitePluriel": "pièces",
+      "prix": 349,
+      "poidsG": 78000
+    },
+    {
+      "ref": "OUT-320",
+      "designation": "Cutter de sécurité",
+      "unite": "pièce",
+      "unitePluriel": "pièces",
+      "prix": 6.2,
+      "poidsG": 85
+    }
+  ],
+  "exercices": [
+    {
+      "id": "cap01",
+      "fichier": "saisir-bon-livraison",
+      "moment": "8 h 15 — La réception",
+      "titre": "Le camion est au quai : saisir le bon de livraison",
+      "geste": "Se repérer dans un tableau et saisir un nombre dans la bonne cellule",
+      "objectif": "Reporter sur le bon de livraison les quantités réellement comptées sur le quai.",
+      "document": {
+        "type": "BON DE LIVRAISON",
+        "numero": "BL 2026-4417",
+        "commande": "CF-1182",
+        "dateHeure": "mardi 17 mars 2026 — 8 h 15",
+        "expediteur": "fournisseur",
+        "destinataire": "nous",
+        "reserves": true
+      },
+      "vocabulaire": [
+        [
+          "Bon de livraison (BL)",
+          "Document qui accompagne la marchandise. Il dit ce que le fournisseur affirme avoir livré. Aucune mention n'est obligatoire par la loi, mais un BL sérieux porte le numéro de la commande, la date, et un espace pour les réserves."
+        ],
+        [
+          "Réserves",
+          "Ce que vous écrivez sur le BL quand quelque chose ne va pas : colis manquant, carton abîmé. Sans réserve écrite au moment de la livraison, vous ne pourrez plus rien réclamer."
+        ],
+        [
+          "Quantité commandée",
+          "Ce que votre entreprise avait demandé au fournisseur."
+        ],
+        [
+          "Quantité reçue",
+          "Ce que vous avez compté vous-même, carton par carton. Ce n'est pas toujours la même chose."
+        ]
+      ],
+      "consignes": [
+        "Vous êtes à la réception. Le chauffeur vous tend le bon de livraison et vous comptez la marchandise sur le quai.",
+        "Voici ce que vous avez compté, dans l'ordre des lignes du bon de livraison :",
+        "LISTE_COMPTAGE",
+        "Reportez chacun de ces nombres dans la colonne « Reçu » du tableau, en face de la bonne référence.",
+        "Attention : une seule erreur de ligne et c'est un litige qui part chez le mauvais fournisseur. Vérifiez la référence avant de taper."
+      ],
+      "tableau": {
+        "colonnes": [
+          {
+            "cle": "ref",
+            "titre": "Référence",
+            "largeur": 12
+          },
+          {
+            "cle": "designation",
+            "titre": "Désignation",
+            "largeur": 34
+          },
+          {
+            "cle": "unite",
+            "titre": "Unité",
+            "largeur": 10
+          },
+          {
+            "cle": "commande",
+            "titre": "Commandé",
+            "largeur": 11
+          },
+          {
+            "cle": "recu",
+            "titre": "Reçu",
+            "largeur": 11,
+            "aRemplir": true
+          }
+        ],
+        "lignes": [
+          {
+            "ref": "EPI-110",
+            "commande": 24,
+            "recu": 24
+          },
+          {
+            "ref": "EPI-120",
+            "commande": 10,
+            "recu": 8
+          },
+          {
+            "ref": "EPI-130",
+            "commande": 6,
+            "recu": 6
+          },
+          {
+            "ref": "EMB-210",
+            "commande": 200,
+            "recu": 200
+          },
+          {
+            "ref": "EMB-220",
+            "commande": 12,
+            "recu": 10
+          },
+          {
+            "ref": "EMB-230",
+            "commande": 36,
+            "recu": 36
+          },
+          {
+            "ref": "OUT-320",
+            "commande": 15,
+            "recu": 18
+          }
+        ]
+      },
+      "calcul": {
+        "type": "saisie",
+        "colonne": "recu",
+        "libelle": "Reçu"
+      },
+      "bloc": "LE MATIN — LA RÉCEPTION"
+    },
+    {
+      "id": "cap02",
+      "fichier": "calculer-ecart",
+      "moment": "8 h 40 — La réception",
+      "titre": "Commandé, reçu : calculer l'écart",
+      "geste": "Écrire sa première formule, puis la recopier vers le bas avec la poignée",
+      "objectif": "Calculer l'écart entre ce qui était commandé et ce qui est arrivé, sur les sept lignes.",
+      "document": {
+        "type": "CONTRÔLE DE RÉCEPTION",
+        "numero": "CR 2026-0312",
+        "commande": "CF-1182",
+        "dateHeure": "mardi 17 mars 2026 — 8 h 40",
+        "expediteur": "nous",
+        "reserves": false
+      },
+      "vocabulaire": [
+        [
+          "Écart",
+          "La différence entre le reçu et le commandé. Négatif, il manque de la marchandise. Positif, le fournisseur en a livré plus que prévu — ça se signale aussi."
+        ],
+        [
+          "Formule",
+          "Un calcul qu'Excel fait pour vous. Une formule commence toujours par le signe =. Si vous tapez le résultat à la main, ce n'est pas une formule."
+        ],
+        [
+          "Recopier vers le bas",
+          "Écrire la formule une seule fois, puis tirer le petit carré en bas à droite de la cellule. Excel adapte les lignes tout seul."
+        ]
+      ],
+      "consignes": [
+        "Les quantités reçues sont maintenant saisies. Il faut calculer l'écart de chaque ligne.",
+        "Dans la cellule E12, tapez la formule :    =D12-C12",
+        "Appuyez sur Entrée. Un nombre apparaît. Si c'est 0, la ligne est conforme.",
+        "Puis recopiez cette formule jusqu'en bas du tableau : cliquez sur E12, attrapez le petit carré en bas à droite de la cellule, et tirez jusqu'à la ligne 18.",
+        "Ne tapez pas les sept résultats à la main : le but est justement d'apprendre à ne le faire qu'une fois."
+      ],
+      "tableau": {
+        "colonnes": [
+          {
+            "cle": "ref",
+            "titre": "Référence",
+            "largeur": 12
+          },
+          {
+            "cle": "designation",
+            "titre": "Désignation",
+            "largeur": 34
+          },
+          {
+            "cle": "commande",
+            "titre": "Commandé",
+            "largeur": 11
+          },
+          {
+            "cle": "recu",
+            "titre": "Reçu",
+            "largeur": 11
+          },
+          {
+            "cle": "ecart",
+            "titre": "Écart",
+            "largeur": 11,
+            "aRemplir": true
+          }
+        ],
+        "lignes": [
+          {
+            "ref": "EPI-110",
+            "commande": 24,
+            "recu": 24
+          },
+          {
+            "ref": "EPI-120",
+            "commande": 10,
+            "recu": 8
+          },
+          {
+            "ref": "EPI-130",
+            "commande": 6,
+            "recu": 6
+          },
+          {
+            "ref": "EMB-210",
+            "commande": 200,
+            "recu": 200
+          },
+          {
+            "ref": "EMB-220",
+            "commande": 12,
+            "recu": 10
+          },
+          {
+            "ref": "EMB-230",
+            "commande": 36,
+            "recu": 36
+          },
+          {
+            "ref": "OUT-320",
+            "commande": 15,
+            "recu": 18
+          }
+        ]
+      },
+      "calcul": {
+        "type": "difference",
+        "de": "recu",
+        "moins": "commande",
+        "colonne": "ecart",
+        "libelle": "Écart"
+      },
+      "bloc": "LE MATIN — LA RÉCEPTION"
+    },
+    {
+      "id": "cap03",
+      "fichier": "conforme-ou-pas",
+      "moment": "9 h 05 — La réception",
+      "titre": "Conforme ou pas ? Comparer deux cellules",
+      "geste": "Comparer deux cellules avec le signe = pour obtenir VRAI ou FAUX",
+      "objectif": "Faire dire à Excel, pour chaque ligne, si la quantité reçue est bien celle qui était commandée.",
+      "document": {
+        "type": "FICHE DE CONFORMITÉ",
+        "numero": "CF 2026-0312",
+        "commande": "CF-1182",
+        "dateHeure": "mardi 17 mars 2026 — 9 h 05",
+        "expediteur": "nous",
+        "reserves": false
+      },
+      "vocabulaire": [
+        [
+          "VRAI / FAUX",
+          "Les deux seules réponses possibles à une question fermée. Excel les écrit en majuscules et les calcule tout seul."
+        ],
+        [
+          "Comparer",
+          "Demander à Excel si deux cellules contiennent la même chose. On écrit =B12=C12, ce qui veut dire « est-ce que B12 est égal à C12 ? »."
+        ]
+      ],
+      "consignes": [
+        "Plutôt que de lire les écarts un par un, on va demander à Excel de répondre par VRAI ou FAUX.",
+        "Dans la cellule D12, tapez :    =B12=C12",
+        "Lisez bien : le premier = ouvre la formule, le second pose la question « est-ce pareil ? ».",
+        "Recopiez jusqu'en bas. VRAI veut dire que la ligne est conforme, FAUX qu'il y a un problème.",
+        "Vous n'avez rien à écrire vous-même dans la colonne : c'est Excel qui répond."
+      ],
+      "tableau": {
+        "colonnes": [
+          {
+            "cle": "ref",
+            "titre": "Référence",
+            "largeur": 12
+          },
+          {
+            "cle": "commande",
+            "titre": "Commandé",
+            "largeur": 11
+          },
+          {
+            "cle": "recu",
+            "titre": "Reçu",
+            "largeur": 11
+          },
+          {
+            "cle": "conforme",
+            "titre": "Conforme ?",
+            "largeur": 13,
+            "aRemplir": true
+          },
+          {
+            "cle": "designation",
+            "titre": "Désignation",
+            "largeur": 34
+          }
+        ],
+        "lignes": [
+          {
+            "ref": "EPI-110",
+            "commande": 24,
+            "recu": 24
+          },
+          {
+            "ref": "EPI-120",
+            "commande": 10,
+            "recu": 8
+          },
+          {
+            "ref": "EPI-130",
+            "commande": 6,
+            "recu": 6
+          },
+          {
+            "ref": "EMB-210",
+            "commande": 200,
+            "recu": 200
+          },
+          {
+            "ref": "EMB-220",
+            "commande": 12,
+            "recu": 10
+          },
+          {
+            "ref": "EMB-230",
+            "commande": 36,
+            "recu": 36
+          },
+          {
+            "ref": "OUT-320",
+            "commande": 15,
+            "recu": 18
+          }
+        ]
+      },
+      "calcul": {
+        "type": "egalite",
+        "de": "commande",
+        "et": "recu",
+        "colonne": "conforme",
+        "libelle": "Conforme ?"
+      },
+      "bloc": "LE MATIN — LA RÉCEPTION"
+    },
+    {
+      "id": "cap04",
+      "fichier": "compter-les-colis",
+      "moment": "10 h — La mise en stock",
+      "titre": "Quatre palettes à ranger : combien de colis ?",
+      "geste": "Utiliser =SOMME et sélectionner une plage de cellules",
+      "objectif": "Totaliser les colis de chaque palette, puis l'ensemble de la mise en stock.",
+      "document": {
+        "type": "BORDEREAU DE MISE EN STOCK",
+        "numero": "MS 2026-0312",
+        "dateHeure": "mardi 17 mars 2026 — 10 h 00",
+        "expediteur": "nous",
+        "reserves": false
+      },
+      "vocabulaire": [
+        [
+          "Plage de cellules",
+          "Un groupe de cellules qui se touchent. On l'écrit avec deux points : D12:D15 veut dire « de D12 jusqu'à D15 »."
+        ],
+        [
+          "=SOMME",
+          "La fonction qui additionne une plage. =SOMME(D12:D15) additionne les quatre cellules d'un coup, au lieu de taper =D12+D13+D14+D15."
+        ]
+      ],
+      "consignes": [
+        "Quatre palettes sont arrivées. Chacune porte quatre références différentes.",
+        "Sous le tableau, calculez le total de colis de chaque palette avec =SOMME.",
+        "Pour la palette P-01, les colis sont dans les cellules D12 à D15. Tapez donc :    =SOMME(D12:D15)",
+        "Faites de même pour les trois autres palettes, en changeant la plage.",
+        "Enfin, calculez le total général : vous pouvez additionner les quatre sous-totaux, ou faire la somme de toute la colonne d'un coup."
+      ],
+      "tableau": {
+        "colonnes": [
+          {
+            "cle": "palette",
+            "titre": "Palette",
+            "largeur": 10
+          },
+          {
+            "cle": "ref",
+            "titre": "Référence",
+            "largeur": 12
+          },
+          {
+            "cle": "designation",
+            "titre": "Désignation",
+            "largeur": 34
+          },
+          {
+            "cle": "colis",
+            "titre": "Colis",
+            "largeur": 10
+          }
+        ],
+        "lignes": [
+          {
+            "palette": "P-01",
+            "ref": "EPI-110",
+            "colis": 6
+          },
+          {
+            "palette": "P-01",
+            "ref": "EPI-120",
+            "colis": 4
+          },
+          {
+            "palette": "P-01",
+            "ref": "EMB-230",
+            "colis": 12
+          },
+          {
+            "palette": "P-01",
+            "ref": "OUT-320",
+            "colis": 5
+          },
+          {
+            "palette": "P-02",
+            "ref": "EMB-210",
+            "colis": 50
+          },
+          {
+            "palette": "P-02",
+            "ref": "EMB-220",
+            "colis": 4
+          },
+          {
+            "palette": "P-02",
+            "ref": "EPI-130",
+            "colis": 2
+          },
+          {
+            "palette": "P-02",
+            "ref": "OUT-320",
+            "colis": 3
+          },
+          {
+            "palette": "P-03",
+            "ref": "EMB-210",
+            "colis": 60
+          },
+          {
+            "palette": "P-03",
+            "ref": "EMB-230",
+            "colis": 10
+          },
+          {
+            "palette": "P-03",
+            "ref": "EPI-110",
+            "colis": 8
+          },
+          {
+            "palette": "P-03",
+            "ref": "EMB-220",
+            "colis": 3
+          },
+          {
+            "palette": "P-04",
+            "ref": "EPI-120",
+            "colis": 5
+          },
+          {
+            "palette": "P-04",
+            "ref": "EPI-130",
+            "colis": 4
+          },
+          {
+            "palette": "P-04",
+            "ref": "OUT-310",
+            "colis": 1
+          },
+          {
+            "palette": "P-04",
+            "ref": "EMB-210",
+            "colis": 40
+          }
+        ]
+      },
+      "calcul": {
+        "type": "indicateurs"
+      },
+      "totaux": [
+        {
+          "type": "sommeGroupe",
+          "groupe": "palette",
+          "valeur": "P-01",
+          "colonne": "colis",
+          "libelle": "Total palette P-01"
+        },
+        {
+          "type": "sommeGroupe",
+          "groupe": "palette",
+          "valeur": "P-02",
+          "colonne": "colis",
+          "libelle": "Total palette P-02"
+        },
+        {
+          "type": "sommeGroupe",
+          "groupe": "palette",
+          "valeur": "P-03",
+          "colonne": "colis",
+          "libelle": "Total palette P-03"
+        },
+        {
+          "type": "sommeGroupe",
+          "groupe": "palette",
+          "valeur": "P-04",
+          "colonne": "colis",
+          "libelle": "Total palette P-04"
+        },
+        {
+          "type": "somme",
+          "colonne": "colis",
+          "libelle": "TOTAL des colis mis en stock"
+        }
+      ],
+      "bloc": "LA MISE EN STOCK"
+    },
+    {
+      "id": "cap05",
+      "fichier": "fiche-de-stock",
+      "moment": "10 h 30 — La mise en stock",
+      "titre": "Mettre à jour la fiche de stock",
+      "geste": "Écrire une formule à trois termes, et la recopier sur huit lignes",
+      "objectif": "Calculer le stock du soir à partir du stock du matin, des entrées et des sorties.",
+      "document": {
+        "type": "FICHE DE STOCK",
+        "numero": "FS 2026-0312",
+        "dateHeure": "mardi 17 mars 2026 — arrêté de 10 h 30",
+        "expediteur": "nous",
+        "reserves": false
+      },
+      "vocabulaire": [
+        [
+          "Entrées",
+          "Tout ce qui est rentré dans l'entrepôt aujourd'hui : les livraisons des fournisseurs."
+        ],
+        [
+          "Sorties",
+          "Tout ce qui en est parti : les commandes des clients, expédiées dans la journée."
+        ],
+        [
+          "Stock théorique",
+          "Le stock que vous obtenez par le calcul. Il peut différer du stock réel compté en rayon : c'est à ça que sert l'inventaire."
+        ]
+      ],
+      "consignes": [
+        "Une journée de stock tient dans une seule opération : ce qu'on avait, plus ce qui est entré, moins ce qui est sorti.",
+        "Dans la cellule F12, tapez :    =C12+D12-E12",
+        "Recopiez jusqu'en bas du tableau, ligne 19.",
+        "Vérifiez une ligne de tête : pour les gants, 40 au matin, 24 entrées, 12 sorties. Si votre formule donne 52, elle est bonne.",
+        "Le transpalette n'a reçu aucune entrée aujourd'hui : la cellule vaut 0, et la formule marche quand même."
+      ],
+      "tableau": {
+        "colonnes": [
+          {
+            "cle": "ref",
+            "titre": "Référence",
+            "largeur": 12
+          },
+          {
+            "cle": "designation",
+            "titre": "Désignation",
+            "largeur": 34
+          },
+          {
+            "cle": "debut",
+            "titre": "Stock au matin",
+            "largeur": 14
+          },
+          {
+            "cle": "entrees",
+            "titre": "Entrées",
+            "largeur": 10
+          },
+          {
+            "cle": "sorties",
+            "titre": "Sorties",
+            "largeur": 10
+          },
+          {
+            "cle": "fin",
+            "titre": "Stock au soir",
+            "largeur": 13,
+            "aRemplir": true
+          }
+        ],
+        "lignes": [
+          {
+            "ref": "EPI-110",
+            "debut": 40,
+            "entrees": 24,
+            "sorties": 12
+          },
+          {
+            "ref": "EPI-120",
+            "debut": 25,
+            "entrees": 8,
+            "sorties": 6
+          },
+          {
+            "ref": "EPI-130",
+            "debut": 14,
+            "entrees": 6,
+            "sorties": 5
+          },
+          {
+            "ref": "EMB-210",
+            "debut": 380,
+            "entrees": 200,
+            "sorties": 240
+          },
+          {
+            "ref": "EMB-220",
+            "debut": 22,
+            "entrees": 10,
+            "sorties": 9
+          },
+          {
+            "ref": "EMB-230",
+            "debut": 60,
+            "entrees": 36,
+            "sorties": 28
+          },
+          {
+            "ref": "OUT-310",
+            "debut": 4,
+            "entrees": 0,
+            "sorties": 1
+          },
+          {
+            "ref": "OUT-320",
+            "debut": 30,
+            "entrees": 18,
+            "sorties": 11
+          }
+        ]
+      },
+      "calcul": {
+        "type": "plusMoins",
+        "base": "debut",
+        "plus": "entrees",
+        "moins": "sorties",
+        "colonne": "fin",
+        "libelle": "Stock au soir"
+      },
+      "bloc": "LA MISE EN STOCK"
+    },
+    {
+      "id": "cap06",
+      "fichier": "valeur-du-stock",
+      "moment": "11 h — La mise en stock",
+      "titre": "Ce que vaut le stock",
+      "geste": "Multiplier deux cellules ligne à ligne, puis additionner les résultats",
+      "objectif": "Calculer la valeur de chaque référence en stock, puis la valeur totale de l'entrepôt.",
+      "document": {
+        "type": "ÉTAT VALORISÉ DU STOCK",
+        "numero": "EV 2026-0312",
+        "dateHeure": "mardi 17 mars 2026 — 11 h 00",
+        "expediteur": "nous",
+        "reserves": false
+      },
+      "vocabulaire": [
+        [
+          "Prix unitaire HT",
+          "Le prix d'une seule unité, hors taxes — avant la TVA."
+        ],
+        [
+          "Valeur du stock",
+          "Quantité × prix unitaire. C'est l'argent immobilisé dans l'entrepôt : plus le stock est gros, plus il coûte cher à l'entreprise."
+        ]
+      ],
+      "consignes": [
+        "Les quantités sont celles de votre fiche de stock, après la mise en stock de ce matin.",
+        "Dans la cellule E12, tapez :    =C12*D12",
+        "L'étoile * est le signe de la multiplication sur un ordinateur.",
+        "Recopiez jusqu'en bas, puis calculez la valeur totale du stock sous le tableau avec =SOMME.",
+        "Les montants comportent des centimes : laissez Excel les afficher, ne les arrondissez pas à la main."
+      ],
+      "tableau": {
+        "colonnes": [
+          {
+            "cle": "ref",
+            "titre": "Référence",
+            "largeur": 12
+          },
+          {
+            "cle": "designation",
+            "titre": "Désignation",
+            "largeur": 34
+          },
+          {
+            "cle": "qte",
+            "titre": "Quantité",
+            "largeur": 11
+          },
+          {
+            "cle": "prix",
+            "titre": "Prix unitaire HT",
+            "largeur": 15,
+            "format": "#,##0.00 €"
+          },
+          {
+            "cle": "valeur",
+            "titre": "Valeur HT",
+            "largeur": 14,
+            "aRemplir": true,
+            "format": "#,##0.00 €"
+          }
+        ],
+        "lignes": [
+          {
+            "ref": "EPI-110",
+            "qte": 52
+          },
+          {
+            "ref": "EPI-120",
+            "qte": 27
+          },
+          {
+            "ref": "EPI-130",
+            "qte": 15
+          },
+          {
+            "ref": "EMB-210",
+            "qte": 340
+          },
+          {
+            "ref": "EMB-220",
+            "qte": 23
+          },
+          {
+            "ref": "EMB-230",
+            "qte": 68
+          },
+          {
+            "ref": "OUT-310",
+            "qte": 3
+          },
+          {
+            "ref": "OUT-320",
+            "qte": 37
+          }
+        ]
+      },
+      "calcul": {
+        "type": "produit",
+        "de": "qte",
+        "par": "prix",
+        "colonne": "valeur",
+        "libelle": "Valeur HT",
+        "tolerance": 0.02
+      },
+      "totaux": [
+        {
+          "type": "sommeCalculee",
+          "libelle": "VALEUR TOTALE DU STOCK HT",
+          "format": "#,##0.00 €",
+          "tolerance": 0.05
+        }
+      ],
+      "bloc": "LA MISE EN STOCK"
+    },
+    {
+      "id": "cap07",
+      "fichier": "plus-lourd-plus-leger",
+      "moment": "14 h — Le quai d'expédition",
+      "titre": "Le colis le plus lourd, le plus léger",
+      "geste": "Utiliser =MIN, =MAX, =MOYENNE et =NB sur une colonne",
+      "objectif": "Lire une colonne de poids autrement qu'à l'œil : le plus bas, le plus haut, la moyenne, l'effectif.",
+      "document": {
+        "type": "FEUILLE DE PESÉE",
+        "numero": "PE 2026-0312",
+        "dateHeure": "mardi 17 mars 2026 — 14 h 00",
+        "expediteur": "nous",
+        "reserves": false
+      },
+      "vocabulaire": [
+        [
+          "=MIN et =MAX",
+          "La plus petite et la plus grande valeur d'une plage. Utile pour repérer d'un coup d'œil un colis anormal."
+        ],
+        [
+          "=MOYENNE",
+          "La somme divisée par le nombre de valeurs. Excel le fait en une seule fonction."
+        ],
+        [
+          "=NB",
+          "Compte combien de cellules d'une plage contiennent un nombre. Pratique pour vérifier qu'on n'a rien oublié."
+        ]
+      ],
+      "consignes": [
+        "Dix colis sont prêts à partir. Vous les avez pesés un par un.",
+        "Sous le tableau, complétez les quatre indicateurs avec les fonctions, jamais à la main :",
+        "Nombre de colis :    =NB(C12:C21)",
+        "Puis à vous pour les trois autres : le poids le plus faible avec =MIN, le plus élevé avec =MAX, et le poids moyen avec =MOYENNE. La plage est toujours la même.",
+        "Le poids moyen tombe avec des décimales : c'est normal, ne l'arrondissez pas."
+      ],
+      "tableau": {
+        "colonnes": [
+          {
+            "cle": "colis",
+            "titre": "Colis",
+            "largeur": 12
+          },
+          {
+            "cle": "destination",
+            "titre": "Destination",
+            "largeur": 28
+          },
+          {
+            "cle": "poids",
+            "titre": "Poids (kg)",
+            "largeur": 12,
+            "format": "#,##0.0"
+          }
+        ],
+        "lignes": [
+          {
+            "colis": "C-2101",
+            "destination": "Nîmes — Chantier Sud",
+            "poids": 12.5
+          },
+          {
+            "colis": "C-2102",
+            "destination": "Alès — Atelier municipal",
+            "poids": 4.8
+          },
+          {
+            "colis": "C-2103",
+            "destination": "Montpellier — Dépôt Est",
+            "poids": 23.2
+          },
+          {
+            "colis": "C-2104",
+            "destination": "Nîmes — Chantier Sud",
+            "poids": 7.6
+          },
+          {
+            "colis": "C-2105",
+            "destination": "Uzès — Services techniques",
+            "poids": 18.9
+          },
+          {
+            "colis": "C-2106",
+            "destination": "Montpellier — Dépôt Est",
+            "poids": 31.4
+          },
+          {
+            "colis": "C-2107",
+            "destination": "Beaucaire — Entrepôt 3",
+            "poids": 9.2
+          },
+          {
+            "colis": "C-2108",
+            "destination": "Alès — Atelier municipal",
+            "poids": 15.7
+          },
+          {
+            "colis": "C-2109",
+            "destination": "Nîmes — Chantier Sud",
+            "poids": 6.3
+          },
+          {
+            "colis": "C-2110",
+            "destination": "Beaucaire — Entrepôt 3",
+            "poids": 27.1
+          }
+        ]
+      },
+      "calcul": {
+        "type": "indicateurs"
+      },
+      "totaux": [
+        {
+          "type": "nb",
+          "colonne": "poids",
+          "libelle": "Nombre de colis"
+        },
+        {
+          "type": "min",
+          "colonne": "poids",
+          "libelle": "Poids le plus faible (kg)",
+          "format": "#,##0.0",
+          "tolerance": 0.01
+        },
+        {
+          "type": "max",
+          "colonne": "poids",
+          "libelle": "Poids le plus élevé (kg)",
+          "format": "#,##0.0",
+          "tolerance": 0.01
+        },
+        {
+          "type": "moyenne",
+          "colonne": "poids",
+          "libelle": "Poids moyen (kg)",
+          "format": "#,##0.00",
+          "tolerance": 0.01
+        }
+      ],
+      "bloc": "L'APRÈS-MIDI — PESÉE ET ALERTES"
+    },
+    {
+      "id": "cap08",
+      "fichier": "combien-il-manque",
+      "moment": "14 h 30 — Le point sur les stocks",
+      "titre": "Combien il manque pour atteindre le mini",
+      "geste": "Réemployer la soustraction, et lire le signe du résultat",
+      "objectif": "Mesurer, pour chaque référence, l'écart entre le stock réel et le stock minimum à tenir.",
+      "document": {
+        "type": "ÉTAT DES STOCKS",
+        "numero": "ES 2026-0312",
+        "dateHeure": "mardi 17 mars 2026 — 14 h 30",
+        "expediteur": "nous",
+        "reserves": false
+      },
+      "vocabulaire": [
+        [
+          "Stock minimum",
+          "La quantité en dessous de laquelle il ne faut jamais descendre, sous peine de ne plus pouvoir servir un client. On dit aussi « stock d'alerte »."
+        ],
+        [
+          "Lire le signe",
+          "Un résultat positif veut dire qu'il manque de la marchandise pour atteindre le mini. Un résultat négatif veut dire qu'on est au-dessus : il y en a assez."
+        ]
+      ],
+      "consignes": [
+        "Chaque référence a un stock minimum à tenir. On veut savoir combien il manque pour l'atteindre.",
+        "Dans la cellule E12, tapez :    =D12-C12",
+        "Recopiez jusqu'en bas du tableau.",
+        "Lisez maintenant les résultats : un nombre positif veut dire qu'il manque de la marchandise. Un nombre négatif veut dire qu'il y en a plus qu'assez.",
+        "C'est la même soustraction que ce matin, mais elle ne répond plus à la même question. Une formule ne vaut que par ce qu'on lui demande."
+      ],
+      "tableau": {
+        "colonnes": [
+          {
+            "cle": "ref",
+            "titre": "Référence",
+            "largeur": 12
+          },
+          {
+            "cle": "designation",
+            "titre": "Désignation",
+            "largeur": 34
+          },
+          {
+            "cle": "actuel",
+            "titre": "Stock actuel",
+            "largeur": 13
+          },
+          {
+            "cle": "mini",
+            "titre": "Stock mini",
+            "largeur": 12
+          },
+          {
+            "cle": "manque",
+            "titre": "Il manque",
+            "largeur": 12,
+            "aRemplir": true
+          }
+        ],
+        "lignes": [
+          {
+            "ref": "EPI-110",
+            "actuel": 52,
+            "mini": 40
+          },
+          {
+            "ref": "EPI-120",
+            "actuel": 27,
+            "mini": 30
+          },
+          {
+            "ref": "EPI-130",
+            "actuel": 15,
+            "mini": 20
+          },
+          {
+            "ref": "EMB-210",
+            "actuel": 340,
+            "mini": 300
+          },
+          {
+            "ref": "EMB-220",
+            "actuel": 23,
+            "mini": 25
+          },
+          {
+            "ref": "EMB-230",
+            "actuel": 68,
+            "mini": 50
+          },
+          {
+            "ref": "OUT-310",
+            "actuel": 3,
+            "mini": 2
+          },
+          {
+            "ref": "OUT-320",
+            "actuel": 37,
+            "mini": 45
+          }
+        ]
+      },
+      "calcul": {
+        "type": "difference",
+        "de": "mini",
+        "moins": "actuel",
+        "colonne": "manque",
+        "libelle": "Il manque"
+      },
+      "bloc": "L'APRÈS-MIDI — PESÉE ET ALERTES"
+    },
+    {
+      "id": "cap09",
+      "fichier": "signal-alerte",
+      "moment": "15 h — Le point sur les stocks",
+      "titre": "Le signal d'alerte : la fonction SI",
+      "geste": "Employer =SI pour la première fois — le test vous est donné",
+      "objectif": "Faire écrire par Excel la décision à prendre pour chaque référence, au lieu de la lire soi-même.",
+      "document": {
+        "type": "ÉTAT DES STOCKS — DÉCISIONS",
+        "numero": "ED 2026-0312",
+        "dateHeure": "mardi 17 mars 2026 — 15 h 00",
+        "expediteur": "nous",
+        "reserves": false
+      },
+      "vocabulaire": [
+        [
+          "La fonction SI",
+          "Elle pose une question, et donne une réponse différente selon que la question est vraie ou fausse. Elle s'écrit en trois morceaux séparés par des points-virgules : =SI(la question ; réponse si c'est vrai ; réponse si c'est faux)."
+        ],
+        [
+          "Texte entre guillemets",
+          "Quand la réponse est un mot et non un nombre, il faut l'entourer de guillemets : \"À commander\". Sans les guillemets, Excel affiche une erreur."
+        ]
+      ],
+      "consignes": [
+        "Jusqu'ici c'est vous qui lisiez les écarts. Cette fois, Excel va écrire la décision à votre place.",
+        "Dans la cellule E12, tapez exactement cette formule :",
+        "    =SI(C12<D12;\"À commander\";\"Stock suffisant\")",
+        "Lisez-la à voix haute : SI le stock actuel est plus petit que le stock mini, ALORS écris « À commander », SINON écris « Stock suffisant ».",
+        "Recopiez jusqu'en bas du tableau. Les deux réponses s'écrivent exactement comme ceci, avec les majuscules et l'accent : « À commander » et « Stock suffisant ».",
+        "Vous n'avez rien à inventer aujourd'hui : la formule vous est donnée. Au prochain exercice, ce sera à vous de l'écrire."
+      ],
+      "tableau": {
+        "colonnes": [
+          {
+            "cle": "ref",
+            "titre": "Référence",
+            "largeur": 12
+          },
+          {
+            "cle": "designation",
+            "titre": "Désignation",
+            "largeur": 30
+          },
+          {
+            "cle": "actuel",
+            "titre": "Stock actuel",
+            "largeur": 13
+          },
+          {
+            "cle": "mini",
+            "titre": "Stock mini",
+            "largeur": 12
+          },
+          {
+            "cle": "decision",
+            "titre": "Décision",
+            "largeur": 18,
+            "aRemplir": true
+          }
+        ],
+        "lignes": [
+          {
+            "ref": "EPI-110",
+            "actuel": 52,
+            "mini": 40
+          },
+          {
+            "ref": "EPI-120",
+            "actuel": 27,
+            "mini": 30
+          },
+          {
+            "ref": "EPI-130",
+            "actuel": 15,
+            "mini": 20
+          },
+          {
+            "ref": "EMB-210",
+            "actuel": 340,
+            "mini": 300
+          },
+          {
+            "ref": "EMB-220",
+            "actuel": 23,
+            "mini": 25
+          },
+          {
+            "ref": "EMB-230",
+            "actuel": 68,
+            "mini": 50
+          },
+          {
+            "ref": "OUT-310",
+            "actuel": 3,
+            "mini": 2
+          },
+          {
+            "ref": "OUT-320",
+            "actuel": 37,
+            "mini": 45
+          }
+        ]
+      },
+      "calcul": {
+        "type": "siSeuil",
+        "valeur": "actuel",
+        "seuil": "mini",
+        "colonne": "decision",
+        "libelle": "Décision",
+        "siVrai": "À commander",
+        "siFaux": "Stock suffisant"
+      },
+      "bloc": "L'APRÈS-MIDI — PESÉE ET ALERTES"
+    },
+    {
+      "id": "cap10",
+      "fichier": "le-seuil-a-change",
+      "moment": "15 h 30 — Le point sur les stocks",
+      "titre": "Et si le seuil change ? Écrire son SI tout seul",
+      "geste": "Écrire une formule =SI complète, condition comprise",
+      "objectif": "Refaire seul le travail de l'exercice précédent, sur de nouveaux chiffres et de nouveaux seuils.",
+      "document": {
+        "type": "ÉTAT DES STOCKS — NOUVEAUX SEUILS",
+        "numero": "EN 2026-0312",
+        "dateHeure": "mardi 17 mars 2026 — 15 h 30",
+        "expediteur": "nous",
+        "reserves": false
+      },
+      "vocabulaire": [
+        [
+          "Seuil relevé",
+          "La direction a décidé de tenir des stocks plus élevés avant l'été. Les stocks mini changent, mais le raisonnement ne change pas."
+        ],
+        [
+          "Plus petit que, et non « plus petit ou égal »",
+          "Le signe < veut dire strictement plus petit. Un stock égal au mini n'est donc pas en alerte : il est tout juste suffisant."
+        ]
+      ],
+      "consignes": [
+        "Les stocks ont bougé dans l'après-midi, et les stocks mini ont été relevés.",
+        "À vous d'écrire la formule, dans la cellule E12. Elle a la même forme qu'à l'exercice précédent :",
+        "    =SI( la question ; \"À commander\" ; \"Stock suffisant\" )",
+        "La question compare le stock actuel au stock mini. Les deux colonnes sont C et D.",
+        "Recopiez jusqu'en bas.",
+        "Regardez bien deux lignes : les chaussures ont 15 en stock pour un mini de 15, et le transpalette 3 pour un mini de 3. Ni l'un ni l'autre n'est en alerte, parce qu'ils ne sont pas en dessous du mini : ils sont exactement dessus."
+      ],
+      "tableau": {
+        "colonnes": [
+          {
+            "cle": "ref",
+            "titre": "Référence",
+            "largeur": 12
+          },
+          {
+            "cle": "designation",
+            "titre": "Désignation",
+            "largeur": 30
+          },
+          {
+            "cle": "actuel",
+            "titre": "Stock actuel",
+            "largeur": 13
+          },
+          {
+            "cle": "mini",
+            "titre": "Nouveau mini",
+            "largeur": 13
+          },
+          {
+            "cle": "decision",
+            "titre": "Décision",
+            "largeur": 18,
+            "aRemplir": true
+          }
+        ],
+        "lignes": [
+          {
+            "ref": "EPI-110",
+            "actuel": 52,
+            "mini": 60
+          },
+          {
+            "ref": "EPI-120",
+            "actuel": 55,
+            "mini": 30
+          },
+          {
+            "ref": "EPI-130",
+            "actuel": 15,
+            "mini": 15
+          },
+          {
+            "ref": "EMB-210",
+            "actuel": 340,
+            "mini": 400
+          },
+          {
+            "ref": "EMB-220",
+            "actuel": 48,
+            "mini": 25
+          },
+          {
+            "ref": "EMB-230",
+            "actuel": 68,
+            "mini": 80
+          },
+          {
+            "ref": "OUT-310",
+            "actuel": 3,
+            "mini": 3
+          },
+          {
+            "ref": "OUT-320",
+            "actuel": 37,
+            "mini": 45
+          }
+        ]
+      },
+      "calcul": {
+        "type": "siSeuil",
+        "valeur": "actuel",
+        "seuil": "mini",
+        "colonne": "decision",
+        "libelle": "Décision",
+        "siVrai": "À commander",
+        "siFaux": "Stock suffisant"
+      },
+      "bloc": "L'APRÈS-MIDI — PESÉE ET ALERTES"
+    },
+    {
+      "id": "cap11",
+      "fichier": "bon-de-transport",
+      "moment": "16 h — L'expédition",
+      "titre": "Bon de transport : des grammes aux kilos",
+      "geste": "Figer une cellule avec la touche F4 — les dollars $",
+      "objectif": "Convertir des poids en grammes vers des kilos, le transporteur ne facturant qu'au kilo.",
+      "document": {
+        "type": "BON DE TRANSPORT",
+        "numero": "TR 2026-0881",
+        "dateHeure": "mardi 17 mars 2026 — 16 h 00",
+        "expediteur": "nous",
+        "destinataire": "transporteur",
+        "reserves": false
+      },
+      "constante": {
+        "libelle": "1 kilogramme = ... grammes",
+        "valeur": 1000
+      },
+      "vocabulaire": [
+        [
+          "Figer une cellule",
+          "Empêcher Excel de décaler une référence quand on recopie la formule vers le bas. On ajoute des $ : $C$9. La touche F4 les met pour vous."
+        ],
+        [
+          "Pourquoi figer",
+          "Le facteur de conversion est écrit une seule fois, dans une seule cellule. Sans les $, la recopie irait le chercher une ligne plus bas, là où il n'y a rien."
+        ]
+      ],
+      "consignes": [
+        "Vos fiches produits donnent les poids en grammes. Le transporteur, lui, ne veut que des kilos.",
+        "Le nombre de grammes dans un kilo est écrit une seule fois, dans la cellule C9.",
+        "Dans la cellule E12, tapez :    =C12*D12/$C$9",
+        "Les dollars autour de C9 l'empêchent de bouger quand vous recopierez. Pour les obtenir sans les taper : cliquez sur C9 dans votre formule, puis appuyez sur F4.",
+        "Recopiez jusqu'en bas, puis calculez le poids total de l'envoi sous le tableau.",
+        "Essayez, pour voir, la même formule sans les dollars : vous comprendrez à quoi ils servent."
+      ],
+      "tableau": {
+        "colonnes": [
+          {
+            "cle": "ref",
+            "titre": "Référence",
+            "largeur": 12
+          },
+          {
+            "cle": "designation",
+            "titre": "Désignation",
+            "largeur": 32
+          },
+          {
+            "cle": "qte",
+            "titre": "Quantité",
+            "largeur": 11
+          },
+          {
+            "cle": "poidsG",
+            "titre": "Poids unitaire (g)",
+            "largeur": 16
+          },
+          {
+            "cle": "poidsKg",
+            "titre": "Poids total (kg)",
+            "largeur": 15,
+            "aRemplir": true,
+            "format": "#,##0.00"
+          }
+        ],
+        "lignes": [
+          {
+            "ref": "EPI-110",
+            "qte": 24
+          },
+          {
+            "ref": "EPI-120",
+            "qte": 10
+          },
+          {
+            "ref": "EPI-130",
+            "qte": 6
+          },
+          {
+            "ref": "EMB-210",
+            "qte": 200
+          },
+          {
+            "ref": "EMB-220",
+            "qte": 12
+          },
+          {
+            "ref": "EMB-230",
+            "qte": 36
+          },
+          {
+            "ref": "OUT-320",
+            "qte": 18
+          }
+        ]
+      },
+      "calcul": {
+        "type": "produitDivise",
+        "de": "qte",
+        "par": "poidsG",
+        "divisePar": 1000,
+        "colonne": "poidsKg",
+        "libelle": "Poids total (kg)",
+        "tolerance": 0.01
+      },
+      "totaux": [
+        {
+          "type": "sommeCalculee",
+          "libelle": "POIDS TOTAL DE L'ENVOI (kg)",
+          "format": "#,##0.00",
+          "tolerance": 0.02
+        }
+      ],
+      "bloc": "LE SOIR — L'EXPÉDITION"
+    },
+    {
+      "id": "cap12",
+      "fichier": "dimensions-colis",
+      "moment": "16 h 20 — L'expédition",
+      "titre": "Déclarer les dimensions des colis",
+      "geste": "Convertir des centimètres en mètres, puis calculer un volume",
+      "objectif": "Remplir la déclaration de colisage que le transporteur exige en mètres et en mètres cubes.",
+      "document": {
+        "type": "DÉCLARATION DE COLISAGE",
+        "numero": "DC 2026-0881",
+        "dateHeure": "mardi 17 mars 2026 — 16 h 20",
+        "expediteur": "nous",
+        "destinataire": "transporteur",
+        "reserves": false
+      },
+      "constante": {
+        "libelle": "1 mètre = ... centimètres",
+        "valeur": 100
+      },
+      "vocabulaire": [
+        [
+          "Mètre cube (m³)",
+          "Le volume d'un cube de 1 mètre de côté. Longueur × largeur × hauteur, les trois en mètres. C'est sur ce volume que le transporteur calcule la place à réserver."
+        ],
+        [
+          "Pourquoi convertir",
+          "Si vous multipliez des centimètres, vous obtenez des centimètres cubes — un nombre énorme, inutilisable sur un bon de transport."
+        ]
+      ],
+      "consignes": [
+        "Vous avez mesuré les deux colis au mètre ruban, en centimètres. Le transporteur veut des mètres.",
+        "Le nombre de centimètres dans un mètre est dans la cellule C9.",
+        "Convertissez d'abord les trois dimensions de chaque colis, dans les colonnes E, F et G. Pour la longueur du premier colis :    =B12/$C$9",
+        "Puis calculez le volume en mètres cubes dans la colonne H, en multipliant les trois dimensions converties :    =E12*F12*G12",
+        "Faites de même pour le second colis.",
+        "Vérifiez l'ordre de grandeur : un colis de 120 × 80 × 95 cm fait un peu moins d'un mètre cube. Si vous trouvez 912 000, vous avez multiplié des centimètres."
+      ],
+      "tableau": {
+        "colonnes": [
+          {
+            "cle": "colis",
+            "titre": "Colis",
+            "largeur": 11
+          },
+          {
+            "cle": "longueurCm",
+            "titre": "Longueur (cm)",
+            "largeur": 13
+          },
+          {
+            "cle": "largeurCm",
+            "titre": "Largeur (cm)",
+            "largeur": 13
+          },
+          {
+            "cle": "hauteurCm",
+            "titre": "Hauteur (cm)",
+            "largeur": 13
+          },
+          {
+            "cle": "longueurM",
+            "titre": "Longueur (m)",
+            "largeur": 13,
+            "aRemplir": true,
+            "format": "#,##0.00"
+          },
+          {
+            "cle": "largeurM",
+            "titre": "Largeur (m)",
+            "largeur": 13,
+            "aRemplir": true,
+            "format": "#,##0.00"
+          },
+          {
+            "cle": "hauteurM",
+            "titre": "Hauteur (m)",
+            "largeur": 13,
+            "aRemplir": true,
+            "format": "#,##0.00"
+          },
+          {
+            "cle": "volume",
+            "titre": "Volume (m³)",
+            "largeur": 13,
+            "aRemplir": true,
+            "format": "#,##0.000"
+          }
+        ],
+        "lignes": [
+          {
+            "colis": "C-2106",
+            "longueurCm": 120,
+            "largeurCm": 80,
+            "hauteurCm": 95
+          },
+          {
+            "colis": "C-2103",
+            "longueurCm": 60,
+            "largeurCm": 40,
+            "hauteurCm": 35
+          }
+        ]
+      },
+      "calcul": {
+        "type": "conversionVolume",
+        "diviseur": 100,
+        "tolerance": 0.005,
+        "dimensions": [
+          {
+            "cm": "longueurCm",
+            "m": "longueurM",
+            "libelle": "Longueur (m)"
+          },
+          {
+            "cm": "largeurCm",
+            "m": "largeurM",
+            "libelle": "Largeur (m)"
+          },
+          {
+            "cm": "hauteurCm",
+            "m": "hauteurM",
+            "libelle": "Hauteur (m)"
+          }
+        ],
+        "volume": {
+          "colonne": "volume",
+          "libelle": "Volume (m³)",
+          "tolerance": 0.001
+        }
+      },
+      "bloc": "LE SOIR — L'EXPÉDITION"
+    },
+    {
+      "id": "cap13",
+      "fichier": "rapport-de-journee",
+      "moment": "17 h — Fin de journée",
+      "titre": "Le récapitulatif de la journée",
+      "geste": "Relire un tableau et reprendre ses totaux avec les bonnes fonctions",
+      "objectif": "Remplir le rapport que le chef d'équipe transmet chaque soir, à partir du tableau des mouvements.",
+      "document": {
+        "type": "RAPPORT DE JOURNÉE",
+        "numero": "RJ 2026-0312",
+        "dateHeure": "mardi 17 mars 2026 — 17 h 00",
+        "expediteur": "nous",
+        "reserves": false
+      },
+      "vocabulaire": [
+        [
+          "Rapport de journée",
+          "Le résumé chiffré de ce qui est entré et sorti. Il permet au chef d'équipe de voir en un coup d'œil si la journée a été normale."
+        ],
+        [
+          "Reprendre un total",
+          "Ne jamais recopier un nombre à la main depuis un autre tableau : on pointe la cellule ou la plage. Un chiffre recopié ne se met pas à jour quand la donnée change."
+        ]
+      ],
+      "consignes": [
+        "Voici le récapitulatif des mouvements de la journée, référence par référence.",
+        "Complétez les six indicateurs sous le tableau, chacun avec la fonction qui convient : =SOMME, =NB, =MAX.",
+        "Le dernier indicateur, l'écart entre les entrées et les sorties, se calcule à partir des deux totaux que vous venez d'obtenir.",
+        "S'il est négatif, c'est que l'entrepôt a plus expédié qu'il n'a reçu aujourd'hui. Ça arrive, et ça se surveille.",
+        "Rien ne doit être tapé à la main dans les six cases : tout se calcule depuis le tableau."
+      ],
+      "tableau": {
+        "colonnes": [
+          {
+            "cle": "ref",
+            "titre": "Référence",
+            "largeur": 12
+          },
+          {
+            "cle": "designation",
+            "titre": "Désignation",
+            "largeur": 34
+          },
+          {
+            "cle": "entrees",
+            "titre": "Entrées",
+            "largeur": 11
+          },
+          {
+            "cle": "sorties",
+            "titre": "Sorties",
+            "largeur": 11
+          }
+        ],
+        "lignes": [
+          {
+            "ref": "EPI-110",
+            "entrees": 24,
+            "sorties": 12
+          },
+          {
+            "ref": "EPI-120",
+            "entrees": 8,
+            "sorties": 6
+          },
+          {
+            "ref": "EPI-130",
+            "entrees": 6,
+            "sorties": 5
+          },
+          {
+            "ref": "EMB-210",
+            "entrees": 200,
+            "sorties": 240
+          },
+          {
+            "ref": "EMB-220",
+            "entrees": 10,
+            "sorties": 9
+          },
+          {
+            "ref": "EMB-230",
+            "entrees": 36,
+            "sorties": 28
+          },
+          {
+            "ref": "OUT-310",
+            "entrees": 0,
+            "sorties": 1
+          },
+          {
+            "ref": "OUT-320",
+            "entrees": 18,
+            "sorties": 11
+          }
+        ]
+      },
+      "calcul": {
+        "type": "indicateurs"
+      },
+      "totaux": [
+        {
+          "type": "nb",
+          "colonne": "entrees",
+          "libelle": "Nombre de références suivies"
+        },
+        {
+          "type": "somme",
+          "colonne": "entrees",
+          "libelle": "Total des entrées"
+        },
+        {
+          "type": "somme",
+          "colonne": "sorties",
+          "libelle": "Total des sorties"
+        },
+        {
+          "type": "max",
+          "colonne": "entrees",
+          "libelle": "Entrée la plus forte"
+        },
+        {
+          "type": "max",
+          "colonne": "sorties",
+          "libelle": "Sortie la plus forte"
+        },
+        {
+          "type": "ecartSommes",
+          "colonne": "entrees",
+          "moins": "sorties",
+          "libelle": "Écart entrées − sorties"
+        }
+      ],
+      "bloc": "LE SOIR — L'EXPÉDITION"
+    }
+  ]
+}
