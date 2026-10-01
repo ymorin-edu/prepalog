@@ -104,13 +104,21 @@ export function creerBackendDemo() {
       g[gid] = { ...g[gid], ...patch };
       setGroupes(g);
     },
-    async supprimerGroupe(gid) {
+    // Même règle qu'en mode réel, et pour la même raison : un élève qui n'appartient qu'à
+    // ce groupe part avec lui, sans quoi son profil survit sans jamais plus remonter dans
+    // aucun écran (voir le commentaire détaillé dans backend-firebase.js).
+    async supprimerGroupe(gid, { purger = true } = {}) {
       const u = users();
-      let n = 0;
+      let detaches = 0;
+      const aPurger = [];
       Object.keys(u).forEach((k) => {
         const gs = u[k].groupes || [];
-        if (gs.includes(gid)) { u[k].groupes = gs.filter((x) => x !== gid); n++; }
+        if (!gs.includes(gid)) return;
+        if (purger && u[k].role === 'eleve' && gs.length <= 1) { aPurger.push(k); return; }
+        u[k].groupes = gs.filter((x) => x !== gid);
+        detaches++;
       });
+      aPurger.forEach((k) => { delete u[k]; });
       setUsers(u);
       const g = groupes(); delete g[gid]; setGroupes(g);
       lire(`travauxIdx/${gid}`, []).forEach((k) => {
@@ -123,7 +131,12 @@ export function creerBackendDemo() {
           .filter((k) => k.startsWith(`${P}jeux/${gid}`))
           .forEach((k) => localStorage.removeItem(k));
       } catch (e) {}
-      return { eleves: n };
+      return {
+        eleves: detaches + aPurger.length,
+        supprimes: aPurger.length,
+        detaches,
+        comptes: aPurger.length,   // en démonstration, profil et identifiant ne font qu'un
+      };
     },
     async elevesDuGroupe(gid) {
       const u = users();

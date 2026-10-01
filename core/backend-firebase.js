@@ -163,21 +163,44 @@ export async function creerBackendFirebase() {
 
     // Suppression d'un groupe. L'ordre compte : les droits côté base temps réel viennent
     // du miroir `acces/{gid}`, donc ce nœud part EN DERNIER — l'effacer d'abord ferait
-    // refuser tout le reste. Les comptes Auth des élèves survivent : les retirer demande
-    // le SDK Admin, donc un serveur, donc le plan Blaze. Ça se fait dans la console.
-    async supprimerGroupe(gid) {
+    // refuser tout le reste.
+    //
+    // Les élèves qui n'appartiennent qu'à ce groupe partent AVEC lui, compte
+    // d'authentification compris. Jusqu'au 01/10/2026 ils étaient seulement détachés, et
+    // c'était un cul-de-sac : `elevesDuGroupe()` interroge `users` par appartenance à un
+    // groupe, et l'application n'a pas de vue « tous les élèves ». Un élève sans groupe ne
+    // remontait donc dans aucun écran — invisible, mais bien présent, avec son profil, son
+    // code en clair et son identifiant de connexion. `supprimerEleve()`, le seul outil
+    // capable de l'effacer, part de la liste de classe : il était devenu inatteignable.
+    // Constaté en production le 01/10/2026, sur un élève de test retiré à la main dans la
+    // console.
+    //
+    // Les élèves rattachés à un autre groupe restent seulement détachés : c'est tout
+    // l'intérêt d'un champ `groupes` multiple. `purger: false` rétablit l'ancien
+    // comportement pour tous, et ne sert qu'aux tests.
+    async supprimerGroupe(gid, { purger = true } = {}) {
       const eleves = await this.elevesDuGroupe(gid);
+      let supprimes = 0, detaches = 0, comptes = 0;
       for (const el of eleves) {
+        if (purger && (el.groupes || []).length <= 1) {
+          // supprimerEleve() fait le reste : travaux, jeux privés, acces/{gid}/eleves/{uid},
+          // profil, puis le compte. Il tourne tant que `acces/{gid}` existe encore, donc
+          // avant la purge du miroir plus bas — dans l'autre ordre il se ferait refuser.
+          const r = await this.supprimerEleve(el.uid);
+          supprimes++;
+          if (r && r.compte) comptes++;
+          continue;
+        }
         const s = await FS.getDocs(cref('travaux', gid, 'eleves', el.uid, 'activites'));
         for (const d of s.docs) await FS.deleteDoc(d.ref);
-        // L'élève quitte le groupe sans perdre son compte ni ses autres rattachements.
         await FS.updateDoc(dref('users', el.uid), { groupes: FS.arrayRemove(gid) });
+        detaches++;
       }
       ouvrirRt();
       await DB.remove(DB.ref(rt, `jeux/${gid}`));
       await DB.remove(DB.ref(rt, `acces/${gid}`));
       await FS.deleteDoc(dref('groupes', gid));
-      return { eleves: eleves.length };
+      return { eleves: eleves.length, supprimes, detaches, comptes };
     },
 
     async elevesDuGroupe(gid) {

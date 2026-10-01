@@ -3,8 +3,17 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
-const ROOT = new URL('..', import.meta.url).pathname;
+// `.pathname` d'une URL de fichier n'est PAS un chemin : sous Windows il rend
+// « /C:/Users/… », avec une barre oblique de tête. `path.join` en faisait
+// « \C:\Users\… », donc `fs.existsSync` était faux pour TOUS les fichiers : le serveur de
+// test répondait 404 à tout, la page restait blanche, et la suite mourait sur le premier
+// sélecteur attendu — une erreur qui ne désigne en rien sa cause. `fileURLToPath` rend le
+// chemin natif de la plateforme, et c'est aussi ce qui permet de retrouver `node_modules`
+// une quarantaine de lignes plus bas. Constaté le 01/10/2026, au premier lancement de la
+// suite sous Windows : elle n'avait jamais tourné que sous Linux.
+const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.png': 'image/png', '.woff2': 'font/woff2', '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' };
 
 // `prepalog-config.json` est versionné depuis le 30/09/2026 : sur le disque, il existe.
@@ -503,9 +512,12 @@ await v('série tableur : correction d\'un classeur déposé', async () => {
   // Puis le même classeur, correctement rempli : les contrôles générés doivent tomber
   // exactement sur les cellules de réponse du modèle. C'est ce qui valide la migration.
   if (!baseXlsx) throw new Error('module xlsx introuvable pour fabriquer le classeur — npm i -g xlsx@0.18.5');
-  const XLSX = await import(path.join(baseXlsx, 'xlsx.mjs'));
+  // `import()` attend une URL, pas un chemin : sous Windows un chemin absolu commence par
+  // « C: », que le chargeur ESM prend pour un protocole inconnu. `pathToFileURL` est la
+  // conversion inverse de `fileURLToPath` en tête de fichier — même piège, deux sens.
+  const XLSX = await import(pathToFileURL(path.join(baseXlsx, 'xlsx.mjs')).href);
   XLSX.set_fs(fs);
-  const { EXERCICES } = await import(ROOT + 'contenus/tab2-stocks.js');
+  const { EXERCICES } = await import(pathToFileURL(path.join(ROOT, 'contenus/tab2-stocks.js')).href);
   const exs1 = EXERCICES.find((e) => e.id === 'exs1');
   const cl = XLSX.read(fs.readFileSync(ROOT + 'contenus/tab2/' + exs1.fichier));
   const f = cl.Sheets['Exercice'];
@@ -941,6 +953,87 @@ await v('Spartoo traçabilité : jouable sans les deux séances précédentes', 
   if (!/REC-04118/.test(t)) throw new Error('la réception du collègue n\'est pas celle attendue');
   await page.click('[data-quitter]');
   await page.waitForSelector('#btnDeco', { timeout: 6000 });
+});
+
+// ---------- 38 bis. suppression d'un groupe : qui part, qui reste
+// Régression du 01/10/2026, trouvée en production et pas par la suite. `supprimerGroupe`
+// se contentait de détacher les élèves. Or `elevesDuGroupe` interroge `users` par
+// appartenance à un groupe et l'application n'a pas de vue « tous les élèves » : un élève
+// détaché de son dernier groupe ne remontait plus dans aucun écran, profil, code et
+// identifiant compris, et devenait impossible à supprimer autrement que dans la console.
+// Ce test tient les deux moitiés de la règle à la fois — sans la seconde, « purger tout »
+// passerait aussi, et ce serait un autre dégât.
+await v('suppression de groupe : les élèves sans autre groupe partent avec lui', async () => {
+  const r = await page.evaluate(async () => {
+    const { creerBackendDemo } = await import('/core/backend-demo.js');
+    const B = creerBackendDemo();
+    // Pas de connexionProf ici : `courant` est au niveau du module, donc partagé avec
+    // l'application de la page, et s'y connecter rejouerait tout son rendu.
+    const profUid = 'zz-prof-test';
+    const g1 = await B.creerGroupe({ nom: 'ZZ TEST A', annee: '', niveau: '', profUid });
+    const g2 = await B.creerGroupe({ nom: 'ZZ TEST B', annee: '', niveau: '', profUid });
+    await B.creerEleves(g1.id, [
+      { nom: 'SOLO', prenom: 'Sam', matricule: 'zz01', code: 'x1' },
+      { nom: 'DOUBLE', prenom: 'Dia', matricule: 'zz02', code: 'x2' },
+    ]);
+    // Rattacher Dia au second groupe : l'interface ne sait pas le faire, le champ si.
+    const dia = (await B.elevesDuGroupe(g1.id)).find((e) => e.matricule === 'zz02');
+    const u = JSON.parse(localStorage.getItem('prepalog:users'));
+    u[dia.uid].groupes = [g1.id, g2.id];
+    localStorage.setItem('prepalog:users', JSON.stringify(u));
+
+    const res = await B.supprimerGroupe(g1.id);
+
+    const apres = Object.values(JSON.parse(localStorage.getItem('prepalog:users')))
+      .filter((x) => x.role === 'eleve');
+    const sortie = {
+      res,
+      restants: apres.map((x) => x.matricule),
+      orphelins: apres.filter((x) => !(x.groupes || []).length).length,
+    };
+    await B.supprimerGroupe(g2.id);   // ménage
+    return sortie;
+  });
+  if (r.res.supprimes !== 1) throw new Error(`supprimes = ${r.res.supprimes}, 1 attendu`);
+  if (r.res.detaches !== 1) throw new Error(`detaches = ${r.res.detaches}, 1 attendu`);
+  if (r.restants.includes('zz01')) throw new Error('l\'élève qui n\'avait que ce groupe a survécu');
+  if (!r.restants.includes('zz02')) throw new Error('l\'élève du second groupe a été supprimé à tort');
+  if (r.orphelins) throw new Error(`${r.orphelins} élève(s) sans aucun groupe après suppression`);
+});
+
+// ---------- 38 ter. la confirmation dit ce qu'elle emporte, et l'emporte vraiment
+// Une suppression irréversible ne se juge pas sur son code mais sur la phrase que
+// l'enseignant lit avant de cliquer : c'est la seule protection qu'il ait.
+await v('suppression de groupe : la confirmation nomme les élèves qui partent', async () => {
+  await page.click('#btnDeco');
+  await page.waitForSelector('#btnProf', { timeout: 6000 });
+  await page.click('#btnProf');
+  await page.waitForSelector('#btnProfEspace', { timeout: 6000 });
+  await page.click('#btnProfEspace');
+  const ong = await page.$('[data-ong="groupes"]');
+  if (ong) await ong.click();
+  await page.waitForSelector('[data-suppr]', { timeout: 6000 });
+
+  let texte = '';
+  page.once('dialog', (d) => { texte = d.message(); d.accept(); });
+  await page.click('[data-suppr]');
+  await page.waitForTimeout(900);
+
+  if (!/qu'à ce groupe/.test(texte)) throw new Error('la confirmation ne prévient pas que des élèves partent : ' + texte);
+  if (!/DUPONT/.test(texte) || !/MARTIN/.test(texte)) throw new Error('la confirmation ne nomme pas les élèves : ' + texte);
+
+  // Léa et Noé n'avaient que « 1 LOG A » : ils partent avec lui. Théo est dans « TLE LOG »,
+  // créé au test 12 : il doit rester intact, et c'est la moitié de la règle qu'on oublie
+  // facilement — un « on purge tout » passerait le premier contrôle et pas celui-ci.
+  const etat = await page.evaluate(() => Object.values(
+    JSON.parse(localStorage.getItem('prepalog:users') || '{}'))
+    .filter((x) => x.role === 'eleve')
+    .map((x) => ({ matricule: x.matricule, groupes: (x.groupes || []).length })));
+  const mat = etat.map((x) => x.matricule);
+  if (mat.includes('2601') || mat.includes('2602')) throw new Error('un élève du groupe supprimé a survécu : ' + mat.join(', '));
+  if (!mat.includes('2701')) throw new Error('l\'élève d\'un autre groupe a été supprimé à tort');
+  const orphelins = etat.filter((x) => !x.groupes).length;
+  if (orphelins) throw new Error(`${orphelins} élève(s) sans aucun groupe après la suppression`);
 });
 
 // ---------- 39. les polices sont bien celles du dépôt

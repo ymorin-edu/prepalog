@@ -99,19 +99,51 @@ export async function rendreEspaceProf(hote, ctx) {
     z.querySelectorAll('[data-suppr]').forEach((b) => b.addEventListener('click', async () => {
       const gid = b.dataset.suppr;
       const gr = groupes.find((x) => x.id === gid);
+
       // Une seule confirmation, mais qui énumère ce qui part : un « Êtes-vous sûr ? » ne
       // dit rien de ce qu'on perd, et c'est justement là que se jouent les accidents.
+      // Le décompte est fait AVANT d'agir, et il est nominatif quand il tient : la
+      // suppression du groupe emporte les élèves qui n'ont que lui, et c'est le genre de
+      // conséquence qu'on ne découvre pas après coup.
+      const eleves = await B.elevesDuGroupe(gid);
+      const partent = eleves.filter((e) => (e.groupes || []).length <= 1);
+      const restent = eleves.length - partent.length;
+
+      let detail = '';
+      if (partent.length) {
+        const noms = partent.map((e) => `${e.prenom} ${e.nom}`);
+        detail += `\n\n${partent.length} élève${partent.length > 1 ? 's n\'appartiennent' : ' n\'appartient'} `
+          + `qu'à ce groupe : ${partent.length > 1 ? 'leurs comptes seront supprimés' : 'son compte sera supprimé'} `
+          + `aussi, avec ${partent.length > 1 ? 'leurs codes et leurs travaux' : 'son code et ses travaux'}.\n`
+          + (noms.length <= 12 ? noms.join(', ') : `${noms.slice(0, 12).join(', ')}… et ${noms.length - 12} autres`);
+      }
+      if (restent) {
+        detail += `\n\n${restent} élève${restent > 1 ? 's appartiennent' : ' appartient'} aussi à un autre `
+          + `groupe : ${restent > 1 ? 'ils seront seulement détachés' : 'il sera seulement détaché'} de celui-ci.`;
+      }
+      if (!eleves.length) detail = '\n\nCe groupe ne compte aucun élève.';
+
       if (!confirmer(`Supprimer le groupe « ${gr?.nom || gid} » ?\n\n`
         + `Seront effacés définitivement : le groupe, ses bases de données partagées `
-        + `et tous les résultats de ses élèves.\n\n`
-        + `Les élèves gardent leur compte et leurs autres groupes ; ils ne seront plus `
-        + `rattachés à celui-ci. Leurs identifiants de connexion restent valables : pour `
-        + `les supprimer tout à fait, passez par la console Firebase.`)) return;
+        + `et tous les résultats de ses élèves.`
+        + detail)) return;
       try {
         const r = await B.supprimerGroupe(gid);
         groupes = await B.groupesDuProf(ctx.profil.uid);
         if (gidActif === gid) activer(groupes[0]?.id || null);
-        toast(`Groupe supprimé${r && r.eleves ? ` — ${r.eleves} élève${r.eleves > 1 ? 's détachés' : ' détaché'}` : ''}.`);
+        const bouts = [];
+        if (r && r.supprimes) bouts.push(`${r.supprimes} élève${r.supprimes > 1 ? 's supprimés' : ' supprimé'}`);
+        if (r && r.detaches) bouts.push(`${r.detaches} détaché${r.detaches > 1 ? 's' : ''}`);
+        // Un compte d'authentification sans code enregistré ne peut pas être retiré par
+        // l'application (voir supprimerEleve) : le signaler, sinon il reste dans la console
+        // sans que personne ne le sache. Un seul message : deux toasts d'affilée se
+        // remplacent l'un l'autre, le premier ne serait jamais lu.
+        const orphelins = r ? (r.supprimes || 0) - (r.comptes || 0) : 0;
+        toast(`Groupe supprimé${bouts.length ? ' — ' + bouts.join(', ') : ''}.`
+          + (orphelins > 0
+            ? ` ${orphelins} identifiant${orphelins > 1 ? 's' : ''} de connexion subsiste${orphelins > 1 ? 'nt' : ''} :`
+              + ` à retirer depuis la console Firebase.`
+            : ''), orphelins > 0 ? 7000 : 2600);
         dessiner();
       } catch (e) { toast(e.message || 'Suppression impossible.'); }
     }));

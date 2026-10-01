@@ -126,18 +126,28 @@ Effet secondaire, le site fonctionne hors ligne une fois chargé.
 
 ## Tester
 
-`outils/test.mjs` lance vingt-sept vérifications de bout en bout avec Playwright en mode
+`outils/test.mjs` lance **48 vérifications** de bout en bout avec Playwright en mode
 démonstration : connexion enseignant et élève, création de groupe et de comptes, base
 partagée, les sept mécaniques d'activité, filtrage par niveau — module et exercice —,
 saisie d'une note à la main dans le suivi de classe, correction d'un classeur déposé,
-polices servies par le dépôt, absence de dépendance extérieure, thème clair/sombre.
+suppression d'un groupe et sort de ses élèves, polices servies par le dépôt, absence de
+dépendance extérieure, thème clair/sombre.
 
 ```
+npm install --no-save --no-package-lock playwright xlsx@0.18.5
+npx playwright install chromium
 node outils/test.mjs
 ```
 
-Un seul prérequis, et seulement pour fabriquer le classeur rempli du test de correction :
-`npm i -g playwright xlsx@0.18.5`.
+Installation **locale** et non globale : un paquet posé par `npm i -g` n'est pas résolu par
+un `import 'playwright'` depuis le dossier du projet. `node_modules/` est ignoré par git.
+`xlsx` ne sert qu'à fabriquer le classeur rempli du test de correction.
+
+La suite tourne sous Windows comme sous Linux depuis le 01/10/2026. Elle n'avait jamais
+tourné qu'ailleurs, et deux conversions de chemin manquaient : `fileURLToPath` pour la
+racine servie, `pathToFileURL` pour les `import()` dynamiques. Sans la première, le serveur
+de test répondait 404 à tout et la page restait blanche — un symptôme qui ne désigne en
+rien sa cause.
 
 ## Limite assumée
 
