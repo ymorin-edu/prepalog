@@ -585,22 +585,43 @@ await v('TAB-1 : les treize étapes, et deux qui ne comptent pas', async () => {
   fs.unlinkSync(rempli1);
 });
 
-// ---------- 24 ter. aucun classeur de TAB-1 ne contient le corrigé
+// ---------- 24 ter. aucun classeur du dépôt ne contient le corrigé
 // Les modèles viennent de la Suite, où un onglet « Correction » masqué portait les
 // réponses — masqué seulement, donc à un clic droit de l'élève. Ce test est le garde-fou
 // du retrait : il lit les fichiers du dépôt, donc il tient même si personne n'y pense.
-await v('TAB-1 : les classeurs ne portent plus l\'onglet Correction', async () => {
+//
+// Il balaie **tout** `contenus/`, pas un seul dossier. Il ne visait que TAB-1 jusqu'au
+// 01/10/2026 ; ce jour-là on a découvert que les dix classeurs de TAB-2, migrés avant
+// que la règle soit écrite, portaient encore leur onglet. Un test qui ne regarde qu'un
+// dossier ne garde que ce dossier : celui-ci couvre d'office toute série ajoutée ensuite.
+// Le script `outils/modeles-sans-corrige.py` répare ce que ce test signale.
+await v('classeurs du dépôt : aucun onglet Correction', async () => {
   if (!baseXlsx) throw new Error('module xlsx introuvable');
   const XLSX1 = await import(pathToFileURL(path.join(baseXlsx, 'xlsx.mjs')).href);
   XLSX1.set_fs(fs);
-  const dossier = path.join(ROOT, 'contenus', 'tab1');
-  const fichiers = fs.readdirSync(dossier).filter((f) => f.endsWith('.xlsx'));
-  if (fichiers.length !== 13) throw new Error(`${fichiers.length} classeurs au lieu de 13`);
+  const racine = path.join(ROOT, 'contenus');
+  const classeurs = [];
+  (function parcourir(d) {
+    fs.readdirSync(d, { withFileTypes: true }).forEach((e) => {
+      const p = path.join(d, e.name);
+      if (e.isDirectory()) parcourir(p);
+      else if (e.name.endsWith('.xlsx')) classeurs.push(p);
+    });
+  })(racine);
+  // Repère de non-régression : 13 (tab1) + 10 (tab2) + 1 (tab5). Un balayage qui ne
+  // trouverait plus rien passerait sinon en silence — c'est exactement la panne qu'un
+  // garde-fou ne doit pas avoir.
+  if (classeurs.length < 24) throw new Error(`${classeurs.length} classeurs trouvés, moins que les 24 attendus`);
   const fautifs = [];
-  fichiers.forEach((f) => {
-    const cl = XLSX1.read(fs.readFileSync(path.join(dossier, f)));
-    if (cl.SheetNames.some((n) => /correction|corrig/i.test(n))) fautifs.push(f);
-    if (!cl.SheetNames.includes('Exercice')) fautifs.push(f + ' (sans onglet Exercice)');
+  classeurs.forEach((p) => {
+    const nom = path.relative(racine, p).split(path.sep).join('/');
+    const cl = XLSX1.read(fs.readFileSync(p));
+    if (cl.SheetNames.some((n) => /correction|corrig/i.test(n))) fautifs.push(nom);
+    // Les classeurs d'une série vivent dans un sous-dossier et portent tous un onglet
+    // « Exercice » ; un classeur isolé à la racine (tab5) a le sien, nommé autrement.
+    if (path.dirname(p) !== racine && !cl.SheetNames.includes('Exercice')) {
+      fautifs.push(nom + ' (sans onglet Exercice)');
+    }
   });
   if (fautifs.length) throw new Error('classeur(s) avec corrigé : ' + fautifs.join(', '));
 });

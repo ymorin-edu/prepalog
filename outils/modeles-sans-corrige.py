@@ -1,6 +1,6 @@
-# TAB-1 — préparation des classeurs modèles.
+# Prepalog — retrait du corrigé des classeurs modèles.
 #
-# Les treize classeurs viennent de la Suite Logistique (module C-1), où ils étaient
+# Les classeurs des séries tableur viennent de la Suite Logistique, où ils étaient
 # embarqués en base64 dans index.html. Ils sont repris tels quels — mise en forme,
 # consignes, largeurs de colonnes — à une exception près : **l'onglet « Correction »
 # est retiré**.
@@ -13,8 +13,15 @@
 # une bibliothèque de tableur perdrait la mise en forme (gras, couleurs, largeurs), que
 # les modèles utilisent pour montrer à l'élève où saisir.
 #
-# Usage :  python outils/tab1-modeles.py            (vérifie)
-#          python outils/tab1-modeles.py --ecrire   (retire l'onglet)
+# Le script balaie **tous** les dossiers de classeurs de `contenus/`, pas un seul :
+# c'est ce qui l'a rendu utile le 01/10, quand TAB-2 s'est révélé porter encore son
+# corrigé alors que TAB-1 avait été nettoyé. Un dossier de série ajouté plus tard est
+# couvert sans qu'on y pense. Le test « les classeurs ne portent plus l'onglet
+# Correction » de `outils/test.mjs` balaie la même liste, et c'est lui le vrai
+# garde-fou : ce script répare, le test alerte.
+#
+# Usage :  python outils/modeles-sans-corrige.py            (vérifie)
+#          python outils/modeles-sans-corrige.py --ecrire   (retire l'onglet)
 
 import re
 import shutil
@@ -22,8 +29,13 @@ import sys
 import zipfile
 from pathlib import Path
 
-DOSSIER = Path(__file__).resolve().parent.parent / 'contenus' / 'tab1'
+CONTENUS = Path(__file__).resolve().parent.parent / 'contenus'
 ONGLET = 'Correction'
+
+
+def classeurs():
+    """Rend tous les .xlsx de `contenus/`, racine et sous-dossiers, triés."""
+    return sorted(CONTENUS.rglob('*.xlsx'))
 
 
 def feuille_de(nom_zip, onglet):
@@ -74,25 +86,26 @@ def retirer(chemin):
 
 def main():
     ecrire = '--ecrire' in sys.argv
-    fichiers = sorted(DOSSIER.glob('*.xlsx'))
+    fichiers = classeurs()
     if not fichiers:
-        print(f'Aucun classeur dans {DOSSIER}')
+        print(f'Aucun classeur sous {CONTENUS}')
         return 1
     restants = 0
     for f in fichiers:
+        nom = f.relative_to(CONTENUS).as_posix()
         cible, _ = feuille_de(f, ONGLET)
         if not cible:
-            print(f'  ok      {f.name}')
+            print(f'  ok      {nom}')
             continue
         if ecrire:
             retirer(f)
-            print(f'  retiré  {f.name}')
+            print(f'  retiré  {nom}')
         else:
-            print(f'  À RETIRER : {f.name} porte encore l\'onglet « {ONGLET} »')
+            print(f'  À RETIRER : {nom} porte encore l\'onglet « {ONGLET} »')
             restants += 1
+    print(f'\n{len(fichiers)} classeur(s) examiné(s).')
     if restants:
-        print(f'\n{restants} classeur(s) portent encore le corrigé. '
-              f'Relancez avec --ecrire.')
+        print(f'{restants} portent encore le corrigé. Relancez avec --ecrire.')
         return 1
     return 0
 
