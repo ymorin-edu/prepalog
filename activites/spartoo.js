@@ -3,8 +3,11 @@
 // Chaque élève travaille dans sa propre base : messagerie, commandes, préparation, bon de
 // préparation, catalogue, stock, tiers et console. Rien n'est partagé — portée `eleve`.
 //
-// Le travail se fait avec la trame élève, distribuée à part (Word ou imprimée) :
-// contenus/trames/. Le site porte l'environnement, la trame porte les consignes.
+// Les consignes sont dans la trame élève : le site porte l'environnement de travail, la
+// trame porte le déroulé de la séance. Depuis le 01/10/2026 elle est aussi **téléchargeable
+// depuis le menu de l'environnement** (PDF à imprimer, Word à compléter) : l'enseignant
+// retrouve le fichier à imprimer, et une séance sans photocopie reste faisable au clavier.
+// La déclarer ci-dessous vaut validation — voir core/types/entreprise.js.
 
 import { creerEntreprise } from '../core/types/entreprise.js';
 import * as SPARTOO from '../contenus/spartoo.js';
@@ -41,6 +44,10 @@ const moteur = creerEntreprise({
   baseDeDepart: SPARTOO.baseDeDepart,
   etapes: SPARTOO.ETAPES,
   THEME: SPARTOO.THEME,
+  trame: {
+    pdf: './contenus/trames/spartoo-trame-eleve.pdf',
+    docx: './contenus/trames/spartoo-trame-eleve.docx',
+  },
 });
 
 export function rendre(hote, ctx) { moteur.rendre(hote, ctx); }

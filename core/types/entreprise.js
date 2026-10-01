@@ -38,6 +38,23 @@ export function creerEntreprise(U) {
   // premier passage, sans toucher au travail déjà fait dans les autres séances.
   const volet = U.volet || null;
 
+  // La trame de la séance, téléchargeable depuis le menu — règle révisée le 01/10/2026.
+  //
+  // La règle du 30/09 voulait que la trame vive uniquement sur le document distribué : le
+  // site porte l'environnement, la trame porte les consignes. Le principe ne change pas —
+  // les consignes ne sont toujours pas recopiées dans les écrans — mais le fichier, lui,
+  // est désormais à portée de clic. Deux raisons, toutes deux pratiques : l'enseignant
+  // retrouve en deux secondes le PDF à imprimer, et une séance où l'impression n'a pas pu
+  // se faire n'est plus perdue — l'élève télécharge sa trame et travaille dessus.
+  //
+  //   trame: { pdf: './contenus/trames/x-trame-eleve.pdf',
+  //            docx: './contenus/trames/x-trame-eleve.docx' }
+  //
+  // **Déclarer la trame, c'est la valider.** Une séance dont la trame n'est pas relue n'en
+  // déclare pas : le menu n'affiche alors rien, et personne ne travaille sur un brouillon.
+  // Les deux formats sont facultatifs l'un comme l'autre.
+  const trame = U.trame || null;
+
   const unite = (n) => ((n > 1 || n === 0) ? VOCAB.unitPl : VOCAB.unit);
   const label = (v) => v.model.brand + ' ' + v.model.name;
   const swatch = (c) => `<span class="teinte" style="background:${COLORS[c][1]}"></span>${ech(COLORS[c][0])}`;
@@ -274,6 +291,13 @@ export function creerEntreprise(U) {
                 <div class="ent-sep">Tiers</div>
                 ${item('clients', 'Clients')}
                 ${item('fournisseurs', 'Fournisseurs')}
+                ${trame ? `<div class="ent-sep">Ma trame</div>
+                  ${trame.pdf ? `<a class="ent-nav" href="${ech(trame.pdf)}" download
+                    title="Le carnet de bord de la séance, à imprimer ou à lire à l'écran">
+                    <span>Trame — PDF</span></a>` : ''}
+                  ${trame.docx ? `<a class="ent-nav" href="${ech(trame.docx)}" download
+                    title="Le même carnet, à compléter au clavier">
+                    <span>Trame — Word</span></a>` : ''}` : ''}
                 <div class="ent-sep">Outils</div>
                 ${item('console', 'Console')}
                 <div class="ent-sep"></div>

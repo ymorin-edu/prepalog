@@ -533,6 +533,9 @@ body.immersion .app{ max-width:1720px; padding:14px 24px 0 }
   border:1px solid transparent; background:none; color:var(--encre);
 }
 .ent-nav:hover{ background:var(--survol); border-color:var(--filet) }
+/* Les entrées du menu sont des boutons, sauf les trames qui sont de vrais liens de
+   téléchargement : même aspect, sans le soulignement. */
+a.ent-nav{ text-decoration:none }
 .ent-nav.on{
   background:var(--ardoise-clair); border-color:var(--ardoise); font-weight:600;
   box-shadow:inset 3px 0 0 var(--ardoise);

@@ -722,6 +722,47 @@ await v('Spartoo : ouverture de l\'environnement', async () => {
   if ((await page.$$eval('.ent-mitem', (e) => e.length)) !== 3) throw new Error('les 3 messages de départ manquent');
 });
 
+// ---------- 26 bis. la trame de la séance se télécharge depuis le menu
+// Règle révisée le 01/10/2026 : la trame reste le support des consignes, mais le fichier
+// est à portée de clic. Un lien de trame qui tombe dans le vide se découvrirait en séance,
+// au pire moment — on vérifie donc que les fichiers partent vraiment, pas seulement que
+// les liens sont là.
+await v('Spartoo : la trame se télécharge depuis le menu', async () => {
+  const liens = await page.$$eval('a.ent-nav[download]', (a) => a.map((x) => x.getAttribute('href')));
+  if (liens.length !== 2) throw new Error(`${liens.length} lien(s) de trame au lieu de 2 (PDF et Word)`);
+  if (!liens.some((h) => /\.pdf$/.test(h)) || !liens.some((h) => /\.docx$/.test(h))) {
+    throw new Error('les deux formats ne sont pas proposés : ' + liens.join(', '));
+  }
+  for (const h of liens) {
+    const rep = await page.request.get(new URL(h, page.url()).toString());
+    if (!rep.ok()) throw new Error(`trame introuvable (${rep.status()}) : ${h}`);
+    const octets = (await rep.body()).length;
+    if (octets < 5000) throw new Error(`trame suspecte (${octets} octets) : ${h}`);
+  }
+});
+
+// ---------- 26 ter. toute trame déclarée existe dans le dépôt
+// Relecture statique, sans navigateur : elle couvre les trois séances d'un coup, y compris
+// celles qu'aucun test ne parcourt, et toute séance ajoutée plus tard.
+await v('toute trame déclarée existe dans le dépôt', async () => {
+  const manquants = [];
+  const parcourir = (dir) => {
+    for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+      const f = path.join(dir, e.name);
+      if (e.isDirectory()) { if (!['.git', 'node_modules', 'vendor'].includes(e.name)) parcourir(f); continue; }
+      if (!/\.js$/.test(e.name)) continue;
+      const src = fs.readFileSync(f, 'utf8');
+      // Les chemins déclarés sont relatifs à la racine du site : './contenus/trames/…'.
+      for (const m of src.matchAll(/(?:pdf|docx):\s*'(\.\/contenus\/trames\/[^']+)'/g)) {
+        const cible = path.join(ROOT, m[1].replace(/^\.\//, ''));
+        if (!fs.existsSync(cible)) manquants.push(`${path.relative(ROOT, f)} → ${m[1]}`);
+      }
+    }
+  };
+  parcourir(path.join(ROOT, 'activites'));
+  if (manquants.length) throw new Error('trame déclarée mais absente : ' + manquants.join(', '));
+});
+
 const ouvrirMail = async (motif) => {
   await page.click('[data-vue="mail"]');
   await page.waitForSelector('[data-dossier="in"]');

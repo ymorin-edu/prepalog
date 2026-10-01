@@ -4,7 +4,11 @@
 // que dit `meta.jeuId`. L'élève remonte ici le lot qu'il a lui-même réceptionné, retrouve les
 // clients qui ont reçu des paires de ce lot, et bloque ce qu'il en reste.
 //
-// Les consignes sont dans la trame élève, distribuée à part : contenus/trames/.
+// Les consignes sont dans la trame élève : le site porte l'environnement de travail, la
+// trame porte le déroulé de la séance. Depuis le 01/10/2026 elle est aussi **téléchargeable
+// depuis le menu de l'environnement** (PDF à imprimer, Word à compléter) : l'enseignant
+// retrouve le fichier à imprimer, et une séance sans photocopie reste faisable au clavier.
+// La déclarer ci-dessous vaut validation — voir core/types/entreprise.js.
 
 import { creerEntreprise } from '../core/types/entreprise.js';
 import * as SPARTOO from '../contenus/spartoo.js';
@@ -42,6 +46,10 @@ const moteur = creerEntreprise({
   volet: SEANCE.VOLET,
   etapes: SEANCE.ETAPES,
   THEME: SPARTOO.THEME,
+  trame: {
+    pdf: './contenus/trames/spartoo-tracabilite-trame-eleve.pdf',
+    docx: './contenus/trames/spartoo-tracabilite-trame-eleve.docx',
+  },
 });
 
 export function rendre(hote, ctx) { moteur.rendre(hote, ctx); }
