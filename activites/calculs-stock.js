@@ -10,7 +10,8 @@ export const meta = {
   titre: 'Calculs de stock',
   desc: 'Stock moyen, rotation, couverture, valorisation — huit calculs de base.',
   rubrique: 'quiz',
-  niveaux: ['1re', 'tle'],
+  // Pas de champ `niveaux` : par défaut, tout est ouvert à tous les niveaux.
+  // C'est « Conduite de séance » qui ferme ce qu'on ne veut pas ouvrir ce jour-là.
   competences: [],
   bareme: 8,
   portee: 'eleve',

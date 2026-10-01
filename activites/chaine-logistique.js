@@ -10,7 +10,8 @@ export const meta = {
   titre: 'La chaîne logistique',
   desc: "Remettre dans l'ordre les étapes d'une chaîne, du fournisseur au client. 4 scénarios.",
   rubrique: 'logistique',
-  niveaux: ['2de', '1re', 'cap'],
+  // Pas de champ `niveaux` : par défaut, tout est ouvert à tous les niveaux.
+  // C'est « Conduite de séance » qui ferme ce qu'on ne veut pas ouvrir ce jour-là.
   competences: [],
   bareme: 4,
   portee: 'eleve',

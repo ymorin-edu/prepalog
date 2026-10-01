@@ -20,7 +20,8 @@ export const meta = {
   titre: 'Calculs commerciaux',
   desc: 'Dix cas : durées et coûts, remises, TVA, coefficient multiplicateur, prix de revient, solde, stocks.',
   rubrique: 'tableur',
-  niveaux: ['2de', '1re', 'tle', 'cap'],
+  // Pas de champ `niveaux` : par défaut, tout est ouvert à tous les niveaux.
+  // C'est « Conduite de séance » qui ferme ce qu'on ne veut pas ouvrir ce jour-là.
   competences: [],
   bareme: EXERCICES.length,
   portee: 'eleve',

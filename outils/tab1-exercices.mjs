@@ -220,13 +220,15 @@ function ecrireExercice(e) {
     `    titre: ${guillemets(e.titre)},`,
     `    groupe: ${guillemets(e.groupe)},`,
     `    objectif: ${guillemets(e.objectif)},`,
-    `    niveaux: ${JSON.stringify(e.niveaux || TOUS)},`,
+    // `niveaux` n'est émis que si l'étape en déclare un. Par défaut, tout est ouvert
+    // à tous les niveaux (règle du 01/10/2026) : pas de ligne, pas de restriction.
+    e.niveaux && e.niveaux.length ? `    niveaux: ${JSON.stringify(e.niveaux)},` : null,
     `    fichier: ${guillemets(e.fichier)},`,
     e.controles.length
       ? `    controles: [\n${e.controles.map(ecrireControle).join('\n')}\n    ],`
       : '    // Pas de contrôle : se vérifie en classe, et ne compte pas dans le score.\n    controles: [],',
     '  },',
-  ].join('\n');
+  ].filter((l) => l !== null).join('\n');
 }
 
 const total = EXERCICES.reduce((n, e) => n + e.controles.length, 0);
@@ -244,8 +246,9 @@ const entete = `// TAB-1 — Apprendre Excel pas à pas : les ${EXERCICES.length
 // dans le score. Les classeurs modèles sont dans contenus/tab1/, l'onglet « Correction »
 // de la Suite leur ayant été retiré (voir outils/modeles-sans-corrige.py).
 //
-// Le champ \`niveaux\` est propre à chaque étape : un élève ne voit que celles de son
-// niveau de classe. Modifier une ligne du générateur suffit à en déplacer une.
+// Aucune étape ne déclare de \`niveaux\` : par défaut, tout est ouvert à tous les niveaux.
+// Le mécanisme existe toujours — il suffit d'ajouter \`niveaux: ['1re', 'tle']\` sur une ligne
+// du générateur pour restreindre une étape — mais ce n'est plus le réglage par défaut.
 
 export const EXERCICES = [
 `;

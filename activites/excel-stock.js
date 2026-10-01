@@ -13,7 +13,8 @@ export const meta = {
   titre: 'Excel — Gestion des stocks',
   desc: 'Dix exercices : RECHERCHEV, SIERREUR, SI imbriqués, tableaux croisés dynamiques.',
   rubrique: 'tableur',
-  niveaux: ['2de', '1re', 'tle'],
+  // Pas de champ `niveaux` : par défaut, tout est ouvert à tous les niveaux.
+  // C'est « Conduite de séance » qui ferme ce qu'on ne veut pas ouvrir ce jour-là.
   competences: [],
   bareme: EXERCICES.length,
   portee: 'eleve',

@@ -6,6 +6,7 @@ import { ech, toast, confirmer } from './ui.js';
 import { chargerActivites, activite } from '../activites/index.js';
 import { versCSV, telecharger, ouvrirJeu } from './store.js';
 import { NIVEAUX, libelleNiveau, courtNiveau, libelleNiveaux, activiteVisible, horsNiveau } from './niveaux.js';
+import { BAREME_AFFICHE, noteSur20, noteConvertie, formaterNote } from './notes.js';
 
 export async function rendreEspaceProf(hote, ctx) {
   let onglet = ctx.onglet || 'groupes';
@@ -362,8 +363,25 @@ export async function rendreEspaceProf(hote, ctx) {
         </td>`;
       }
       if (!t) return `<td class="num note">—</td>`;
-      const part = t.meilleur / (t.max || m.bareme);
-      return `<td class="num ${part >= 0.7 ? 'juste' : part < 0.4 ? 'faux' : ''}">${t.meilleur}/${t.max || m.bareme}
+      // Le `max` enregistré avec le score fait foi : un module dont le nombre d'exercices
+      // a changé depuis garde ainsi des notes comparables. Le barème du module ne sert
+      // que de secours pour les scores écrits avant que le `max` soit transmis.
+      const max = t.max || m.bareme;
+      const part = max > 0 ? t.meilleur / max : 0;
+      const classe = part >= 0.7 ? 'juste' : part < 0.4 ? 'faux' : '';
+
+      // Les jalons d'un environnement d'entreprise ne sont pas une note : « 3 / 3 » est
+      // l'information juste, et c'est elle qu'on affiche. Voir `core/notes.js`.
+      if (!noteConvertie(m)) {
+        return `<td class="num ${classe}">${t.meilleur}/${max}
+          <span class="note">(${t.tentatives})</span></td>`;
+      }
+
+      // Note sur 20. Le score brut reste accessible en infobulle : l'enseignant veut
+      // souvent savoir combien d'exercices ont été réussis, pas seulement la note.
+      return `<td class="num ${classe}"
+        title="${t.meilleur} sur ${max} — ${t.tentatives} tentative${t.tentatives > 1 ? 's' : ''}"
+        >${formaterNote(noteSur20(t.meilleur, max))}<span class="note">/${BAREME_AFFICHE}</span>
         <span class="note">(${t.tentatives})</span></td>`;
     };
 
@@ -376,15 +394,24 @@ export async function rendreEspaceProf(hote, ctx) {
         ${notees.length === 0 ? `<div class="vide">Aucune activité notée pour l'instant.</div>` : `
         <div style="overflow:auto"><table>
           <thead><tr><th>Élève</th>${notees.map((m) => `
-            <th class="${aLaMain(m) ? 'col-saisie' : ''}" title="${ech(m.titre)}${aLaMain(m) ? ' — note saisie à la main' : ''}">
-              ${ech(m.code)}${aLaMain(m) ? `<span class="note"> /${m.bareme}</span>` : ''}
+            <th class="${aLaMain(m) ? 'col-saisie' : ''}" title="${ech(m.titre)}${
+              aLaMain(m) ? ' — note saisie à la main'
+              : noteConvertie(m) ? ` — note sur ${BAREME_AFFICHE}, calculée`
+              : ' — jalons franchis, ce n\'est pas une note'}">
+              ${ech(m.code)}${aLaMain(m) ? `<span class="note"> /${m.bareme}</span>`
+                : noteConvertie(m) ? `<span class="note"> /${BAREME_AFFICHE}</span>` : ''}
             </th>`).join('')}</tr></thead>
           <tbody>${eleves.map((e) => `<tr>
             <td>${ech(e.nom)} ${ech(e.prenom)}</td>
             ${notees.map((m) => cellule(e, m)).join('')}
           </tr>`).join('')}</tbody>
         </table></div>
-        <p class="note">Entre parenthèses : le nombre de tentatives. Le score retenu est le meilleur.
+        <p class="note">Les activités corrigées automatiquement sont ramenées à une
+          <strong>note sur ${BAREME_AFFICHE}</strong>, quel que soit leur nombre d'exercices ;
+          survolez une note pour voir le détail. Entre parenthèses : le nombre de tentatives.
+          Le score retenu est le meilleur.
+          ${notees.some((m) => !noteConvertie(m) && !aLaMain(m)) ? `Les environnements
+            d'entreprise affichent des jalons franchis, pas une note.` : ''}
           ${notees.some(aLaMain) ? `Les colonnes en fond clair sont notées à la main : tapez la note,
             elle s'enregistre en quittant la case. Une case vidée efface la note.` : ''}</p>`}
       </section>`;
@@ -424,11 +451,23 @@ export async function rendreEspaceProf(hote, ctx) {
     });
 
     z.querySelector('#btnCsvSuivi')?.addEventListener('click', () => {
+      // L'en-tête dit sur quoi chaque colonne est notée : un CSV se relit des mois plus
+      // tard, souvent par quelqu'un qui n'a pas le site sous les yeux.
       const champs = [{ cle: 'nom', label: 'Nom' }, { cle: 'prenom', label: 'Prénom' },
-        ...notees.map((m) => ({ cle: m.id, label: m.code }))];
+        ...notees.map((m) => ({
+          cle: m.id,
+          label: noteConvertie(m) || aLaMain(m) ? `${m.code} /${aLaMain(m) ? m.bareme : BAREME_AFFICHE}`
+            : `${m.code} (jalons)`,
+        }))];
       const lignes = eleves.map((e) => {
         const o = { nom: e.nom, prenom: e.prenom };
-        notees.forEach((m) => { o[m.id] = par[e.uid]?.[m.id]?.meilleur ?? ''; });
+        notees.forEach((m) => {
+          const t = par[e.uid]?.[m.id];
+          if (!t || typeof t.meilleur !== 'number') { o[m.id] = ''; return; }
+          o[m.id] = noteConvertie(m)
+            ? formaterNote(noteSur20(t.meilleur, t.max || m.bareme))
+            : t.meilleur;
+        });
         return o;
       });
       telecharger(`suivi-${g.id}.csv`, versCSV(lignes, champs));
@@ -450,7 +489,10 @@ export async function rendreEspaceProf(hote, ctx) {
         <input type="checkbox" data-ouvre="${ech(m.id)}" ${visible ? 'checked' : ''}>
         <span>
           <span class="etiq">${ech(m.code || m.id)}</span> ${ech(m.titre)}
-          <span class="note">— ${ech(libelleNiveaux(m.niveaux))}${m.bareme ? `, noté sur ${m.bareme}` : ''}</span>
+          <span class="note">— ${ech(libelleNiveaux(m.niveaux))}${
+            !m.bareme ? ''
+            : m.notation === 'avancement' ? `, ${m.bareme} jalon${m.bareme > 1 ? 's' : ''}`
+            : `, noté sur ${noteConvertie(m) ? BAREME_AFFICHE : m.bareme}`}</span>
           ${force === true && horsNiveau(m, g) ? `<span class="etiq" style="color:var(--terre)">ouverte hors niveau</span>` : ''}
         </span>
       </label>`;

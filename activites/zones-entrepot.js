@@ -9,7 +9,8 @@ export const meta = {
   titre: "Zones et opérations de l'entrepôt",
   desc: 'Ranger chaque opération dans la zone où elle se déroule.',
   rubrique: 'quiz',
-  niveaux: ['2de', '1re', 'cap'],
+  // Pas de champ `niveaux` : par défaut, tout est ouvert à tous les niveaux.
+  // C'est « Conduite de séance » qui ferme ce qu'on ne veut pas ouvrir ce jour-là.
   competences: [],
   bareme: 12,
   portee: 'eleve',

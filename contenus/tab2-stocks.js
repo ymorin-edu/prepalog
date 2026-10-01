@@ -13,7 +13,6 @@ export const EXERCICES = [
     titre: "Retrouver un prix unitaire",
     groupe: "RECHERCHEV",
     objectif: "Utiliser RECHERCHEV pour retrouver le prix d'un article à partir de sa référence.",
-    niveaux: ["2de", "1re", "tle"],
     fichier: "exs1-recherchev-prix.xlsx",
     controles: [
     { cellule: "C2", libelle: "Prix ligne 2", attendu: 45, tolerance: 0.02 },
@@ -33,7 +32,6 @@ export const EXERCICES = [
     titre: "Compléter une fiche produit",
     groupe: "RECHERCHEV",
     objectif: "Utiliser plusieurs RECHERCHEV pour retrouver désignation, catégorie et fournisseur.",
-    niveaux: ["2de", "1re", "tle"],
     fichier: "exs2-recherchev-fiche-produit.xlsx",
     controles: [
     { cellule: "B2", libelle: "Désignation REF109", attendu: "Chaussures de sécurité" },
@@ -67,7 +65,6 @@ export const EXERCICES = [
     titre: "Valoriser le stock",
     groupe: "RECHERCHEV",
     objectif: "Combiner RECHERCHEV et un calcul pour valoriser le stock d'un produit.",
-    niveaux: ["1re", "tle"],
     fichier: "exs3-recherchev-valorisation.xlsx",
     controles: [
     { cellule: "C2", libelle: "Prix REF201", attendu: 15, tolerance: 0.02 },
@@ -98,7 +95,6 @@ export const EXERCICES = [
     titre: "Gérer les références inconnues",
     groupe: "SIERREUR",
     objectif: "Utiliser SIERREUR avec RECHERCHEV pour traiter les références absentes du catalogue.",
-    niveaux: ["1re", "tle"],
     fichier: "exs4-sierreur-recherchev.xlsx",
     controles: [
     { cellule: "C2", libelle: "Ligne 2", attendu: 10, tolerance: 0.02 },
@@ -118,7 +114,6 @@ export const EXERCICES = [
     titre: "Statut de réapprovisionnement",
     groupe: "SI imbriqués",
     objectif: "Utiliser deux SI imbriqués pour classer un produit selon 3 niveaux d'urgence.",
-    niveaux: ["1re", "tle"],
     fichier: "exs5-si-imbriques.xlsx",
     controles: [
     { cellule: "F2", libelle: "Statut ligne 2", attendu: "Urgent" },
@@ -140,7 +135,6 @@ export const EXERCICES = [
     titre: "Quantité totale par catégorie",
     groupe: "TCD",
     objectif: "Découvrir le tableau croisé dynamique pour regrouper des quantités par catégorie.",
-    niveaux: ["1re", "tle"],
     fichier: "exs6-tcd-quantite-categorie.xlsx",
     controles: [
     { cellule: "B25", libelle: "Total EPI", attendu: 170, tolerance: 0.5 },
@@ -154,7 +148,6 @@ export const EXERCICES = [
     titre: "Valeur de stock par fournisseur",
     groupe: "TCD",
     objectif: "Utiliser un TCD pour connaître la valeur de stock immobilisée par fournisseur.",
-    niveaux: ["1re", "tle"],
     fichier: "exs7-tcd-valeur-fournisseur.xlsx",
     controles: [
     { cellule: "B26", libelle: "Total SecuEquip", attendu: 3290, tolerance: 0.5 },
@@ -167,7 +160,6 @@ export const EXERCICES = [
     titre: "Compter les références par catégorie",
     groupe: "TCD",
     objectif: "Utiliser un TCD en mode comptage plutôt qu'en mode somme.",
-    niveaux: ["1re", "tle"],
     fichier: "exs8-tcd-comptage-categorie.xlsx",
     controles: [
     { cellule: "B29", libelle: "Nombre EPI", attendu: 5, tolerance: 0.01 },
@@ -181,7 +173,6 @@ export const EXERCICES = [
     titre: "Retrouver un emplacement de stockage",
     groupe: "RECHERCHEV",
     objectif: "Réutiliser RECHERCHEV pour retrouver l'adresse de stockage d'un produit.",
-    niveaux: ["2de", "1re", "tle"],
     fichier: "exs9-recherchev-emplacement.xlsx",
     controles: [
     { cellule: "B2", libelle: "Emplacement REF905", attendu: "B01-01" },
@@ -201,7 +192,6 @@ export const EXERCICES = [
     titre: "Tableau de bord de stock complet",
     groupe: "Cas combiné",
     objectif: "Combiner RECHERCHEV, calcul, SI et TCD sur un cas complet de gestion de stock.",
-    niveaux: ["tle"],
     fichier: "exs10-cas-combine-tableau-de-bord.xlsx",
     controles: [
     { cellule: "D2", libelle: "Désignation REF401", attendu: "Casque de chantier" },

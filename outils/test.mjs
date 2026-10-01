@@ -276,7 +276,73 @@ await v('suivi de classe côté enseignant', async () => {
   await page.waitForSelector('text=QUI-5', { timeout: 6000 });
   const t = await page.textContent('#contenuProf');
   if (!/DUPONT/.test(t)) throw new Error('élève absent du suivi');
-  if (!/\/\s*6/.test(t)) throw new Error('score absent du suivi');
+
+  // Depuis le 01/10/2026 le suivi affiche une NOTE SUR 20, pas le score brut : le quiz
+  // est noté sur 6 questions, et la colonne doit quand même annoncer « /20 ». Voir
+  // `core/notes.js` pour le raisonnement.
+  const colonne = await page.textContent('th[title*="flux"]');
+  if (!/\/\s*20/.test(colonne)) {
+    throw new Error('la colonne n\'annonce pas un barème sur 20 : ' + colonne.trim());
+  }
+  const cellule = (await page.$$eval('#contenuProf tbody tr', (lignes) => {
+    const l = lignes.find((x) => /DUPONT/.test(x.textContent));
+    return l ? [...l.querySelectorAll('td')].map((d) => ({ txt: d.textContent.replace(/\s+/g, ' ').trim(), titre: d.getAttribute('title') || '' })) : [];
+  })).find((c) => /\/20/.test(c.txt));
+  if (!cellule) throw new Error('aucune note sur 20 dans la ligne de l\'élève');
+  if (!/^\d+(,\d)?\/20/.test(cellule.txt)) {
+    throw new Error('la note n\'est pas au format attendu : ' + cellule.txt);
+  }
+  // Le score brut reste accessible : l'enseignant doit pouvoir savoir combien de questions
+  // ont été réussies, pas seulement la note.
+  if (!/\bsur\b/.test(cellule.titre)) {
+    throw new Error('le détail brut n\'est pas en infobulle : ' + cellule.titre);
+  }
+});
+
+// ---------- 11 bis. la note sur 20 : la règle, à l'unité
+//
+// Le calcul est écrit ICI à part de celui du noyau, exprès : un test qui réutiliserait la
+// fonction qu'il vérifie ne vérifierait rien. Même précaution que pour le comparateur
+// d'ordre des modules.
+await v('note sur 20 : la conversion et ses cas de bord', async () => {
+  const { noteSur20, noteConvertie, formaterNote, BAREME_AFFICHE } =
+    await import(pathToFileURL(path.join(ROOT, 'core/notes.js')).href);
+
+  if (BAREME_AFFICHE !== 20) throw new Error('le barème affiché n\'est plus 20');
+
+  // Comparateur indépendant : proportion × 20, arrondie au demi-point.
+  const attendu = (s, m) => Math.round((s / m) * 40) / 2;
+  const cas = [[13, 13], [9, 13], [0, 13], [3, 3], [10, 10], [1, 6], [5, 6], [7, 10], [1, 3]];
+  cas.forEach(([s, m]) => {
+    const got = noteSur20(s, m);
+    if (got !== attendu(s, m)) {
+      throw new Error(`noteSur20(${s}, ${m}) = ${got}, attendu ${attendu(s, m)}`);
+    }
+  });
+
+  // Ce qui a motivé la règle : des dénominateurs différents, la même réussite complète.
+  if (noteSur20(3, 3) !== 20 || noteSur20(10, 10) !== 20 || noteSur20(13, 13) !== 20) {
+    throw new Error('un sans-faute ne donne pas 20/20 selon le nombre d\'exercices');
+  }
+  // Et l'arrondi tombe bien sur un demi-point, jamais sur trois décimales.
+  if (noteSur20(1, 3) !== 6.5) throw new Error('1/3 devrait donner 6,5 — ' + noteSur20(1, 3));
+  if (noteSur20(5, 6) !== 16.5) throw new Error('5/6 devrait donner 16,5 — ' + noteSur20(5, 6));
+
+  // Cas de bord : rien d'affichable plutôt qu'un NaN ou un faux zéro.
+  [[1, 0], [1, undefined], [undefined, 10], [null, 10], [1, -3], ['4', 10]].forEach(([s, m]) => {
+    if (noteSur20(s, m) !== null) throw new Error(`noteSur20(${s}, ${m}) devrait rendre null`);
+  });
+  if (formaterNote(null) !== '—') throw new Error('une note absente devrait s\'écrire «\u00a0—\u00a0»');
+  if (formaterNote(13.5) !== '13,5') throw new Error('la note s\'écrit avec une virgule');
+
+  // Les deux notations qui ne se convertissent pas, et pourquoi.
+  if (!noteConvertie({ id: 'a' })) throw new Error('un module autocorrigé doit être converti');
+  if (noteConvertie({ id: 'a', notation: 'prof' })) {
+    throw new Error('une note saisie à la main ne doit pas être convertie');
+  }
+  if (noteConvertie({ id: 'a', notation: 'avancement' })) {
+    throw new Error('des jalons ne doivent pas être convertis en note');
+  }
 });
 
 // ---------- 13. bascule clair / sombre
@@ -324,9 +390,63 @@ await v('écran de connexion', async () => {
   await page.waitForSelector('text=Bonjour Léa', { timeout: 6000 });
 });
 
-// ---------- 15. niveaux : filtrage automatique et forçage par l'enseignant
-await v('filtrage par niveau et forçage', async () => {
-  // Le quiz QUI-5 est déclaré 2de + 1re ; on crée un groupe de Terminale.
+// ---------- 15. niveaux : le mécanisme, vérifié à l'unité
+//
+// Depuis le 01/10/2026, aucune activité ne déclare de `niveaux` : tout est ouvert à tous
+// les niveaux, et c'est « Conduite de séance » qui ferme ce qu'on ne veut pas ouvrir. Le
+// filtrage par niveau reste donc dans le noyau, prêt à resservir, mais plus aucun contenu
+// ne l'exerce — un parcours de bout en bout ne peut plus le vérifier.
+//
+// D'où ce test à l'unité, sur des métas fabriquées : il ne dépend d'aucun contenu, et il
+// gardera le mécanisme en état le jour où des règles de niveaux reviendront. C'est le même
+// raisonnement que pour le comparateur d'ordre : un garde-fou adossé à un seul cas de
+// contenu disparaît avec ce contenu.
+await v('niveaux : filtrage, forçage et fermeture, à l\'unité', async () => {
+  const { activiteVisible, horsNiveau, concerneNiveau } =
+    await import(pathToFileURL(path.join(ROOT, 'core/niveaux.js')).href);
+
+  const tle = { id: 'g', niveau: 'tle', ouverts: {} };
+  const sansNiveau = { id: 'g', niveau: '', ouverts: {} };
+  const ouverte = { id: 'a', pret: true };                       // aucun `niveaux` : tous
+  const restreinte = { id: 'a', pret: true, niveaux: ['2de', '1re'] };
+  const pasPrete = { id: 'a', pret: false };
+
+  const att = (cond, quoi) => { if (!cond) throw new Error(quoi); };
+
+  // Par défaut — c'est désormais le cas de toutes les activités du dépôt — tout passe.
+  att(activiteVisible(ouverte, tle), 'une activité sans `niveaux` devrait être visible');
+  att(!horsNiveau(ouverte, tle), 'une activité sans `niveaux` n\'est pas hors niveau');
+
+  // Le filtrage lui-même.
+  att(!activiteVisible(restreinte, tle), 'une activité 2de/1re ne devrait pas être visible en Tle');
+  att(horsNiveau(restreinte, tle), 'le hors-niveau n\'est pas signalé');
+  att(activiteVisible(restreinte, { id: 'g', niveau: '1re', ouverts: {} }),
+    'une activité 2de/1re devrait être visible en 1re');
+
+  // L'enseignant garde le dernier mot, dans les deux sens.
+  att(activiteVisible(restreinte, { ...tle, ouverts: { a: true } }),
+    'le forçage ne rend pas visible une activité hors niveau');
+  att(!activiteVisible(ouverte, { ...tle, ouverts: { a: false } }),
+    'la fermeture ne masque pas une activité du bon niveau');
+
+  // Deux garde-fous de bord : une activité pas prête ne sort jamais, et un groupe sans
+  // niveau n'exclut rien — sinon un groupe mal renseigné viderait l'accueil.
+  att(!activiteVisible(pasPrete, tle), 'une activité non prête ne doit pas être visible');
+  att(activiteVisible(restreinte, sansNiveau), 'un groupe sans niveau ne doit rien exclure');
+
+  // Le filtrage par exercice, qui sert aux séries de tableur.
+  att(concerneNiveau(undefined, 'cap'), 'un exercice sans `niveaux` vaut pour tous');
+  att(concerneNiveau([], 'cap'), 'un `niveaux` vide vaut pour tous');
+  att(!concerneNiveau(['tle'], 'cap'), 'un exercice Tle ne concerne pas un CAP');
+  att(concerneNiveau(['tle'], null), 'sans niveau de groupe connu, tout est concerné');
+});
+
+// ---------- 15 bis. l'enseignant ferme une activité, l'élève ne la voit plus
+//
+// C'est le geste qui remplace le filtrage automatique dans l'usage réel : tout est ouvert,
+// l'enseignant ferme ce qui n'est pas au programme du jour. Le parcours crée aussi le
+// groupe « TLE LOG » et Théo, réutilisés par les tests de suppression et de rattachement.
+await v('conduite de séance : fermer une activité la retire chez l\'élève', async () => {
   await page.click('#btnDeco');
   await page.waitForSelector('#btnProf');
   await page.click('#btnProf');
@@ -344,37 +464,60 @@ await v('filtrage par niveau et forçage', async () => {
   await page.click('#btnLot');
   await page.waitForSelector('text=1 compte créé', { timeout: 6000 });
 
-  // Côté élève de Terminale : le quiz de 2de/1re ne doit pas apparaître.
+  // Rien n'est restreint : l'élève de Terminale voit la rubrique Logistique.
   await page.click('#btnRetour');
   await page.click('#btnDeco');
   await page.waitForSelector('#mat');
   await page.fill('#mat', '2701'); await page.fill('#code', 'ccc3');
   await page.press('#code', 'Enter');
   await page.waitForSelector('text=Bonjour Théo', { timeout: 6000 });
-  if (await page.$('[data-rub="logistique"]')) throw new Error('rubrique hors niveau visible par l\'élève');
-  if (!(await page.$('[data-rub="magasin"]'))) throw new Error('magasin tous niveaux absent');
+  if (!(await page.$('[data-rub="logistique"]'))) {
+    throw new Error('la rubrique Logistique devrait être ouverte à tous les niveaux');
+  }
+  if (!(await page.$('[data-rub="magasin"]'))) throw new Error('magasin absent');
 
-  // L'enseignant force l'ouverture du quiz pour ce groupe.
+  // L'enseignant ferme la chaîne logistique pour ce groupe.
   await page.click('#btnDeco');
   await page.waitForSelector('#btnProf');
   await page.click('#btnProf');
   await page.waitForSelector('#btnProfEspace');
   await page.click('#btnProfEspace');
-  // On s'assure de travailler sur le groupe de Terminale.
   await page.waitForSelector('[data-ong="groupes"]');
   const aActiver = await page.$('[data-actif="tle-log"]');
   if (aActiver) { await aActiver.click(); await page.waitForTimeout(300); }
   await page.click('[data-ong="seance"]');
   await page.waitForSelector('[data-ouvre="chaine-logistique"]');
-  const coche = await page.isChecked('[data-ouvre="chaine-logistique"]');
-  if (coche) throw new Error('la chaîne devrait être décochée pour un groupe Tle');
-  await page.check('[data-ouvre="chaine-logistique"]');
+  if (!(await page.isChecked('[data-ouvre="chaine-logistique"]'))) {
+    throw new Error('la chaîne devrait être cochée d\'office, plus rien n\'étant restreint');
+  }
+  await page.uncheck('[data-ouvre="chaine-logistique"]');
   await page.waitForTimeout(500);
-  if (!/hors niveau/.test(await page.textContent('#contenuProf'))) {
-    throw new Error('le forçage hors niveau n\'est pas signalé');
+
+  // L'élève ne la voit plus. C'est une seule activité dans sa rubrique : la pastille part.
+  await page.click('#btnRetour');
+  await page.click('#btnDeco');
+  await page.waitForSelector('#mat');
+  await page.fill('#mat', '2701'); await page.fill('#code', 'ccc3');
+  await page.press('#code', 'Enter');
+  await page.waitForSelector('text=Bonjour Théo', { timeout: 6000 });
+  if (await page.$('[data-rub="logistique"]')) {
+    throw new Error('la rubrique fermée est encore visible par l\'élève');
   }
 
-  // L'élève de Terminale le voit maintenant.
+  // L'enseignant la rouvre, et elle revient.
+  await page.click('#btnDeco');
+  await page.waitForSelector('#btnProf');
+  await page.click('#btnProf');
+  await page.waitForSelector('#btnProfEspace');
+  await page.click('#btnProfEspace');
+  await page.waitForSelector('[data-ong="groupes"]');
+  const r = await page.$('[data-actif="tle-log"]');
+  if (r) { await r.click(); await page.waitForTimeout(300); }
+  await page.click('[data-ong="seance"]');
+  await page.waitForSelector('[data-ouvre="chaine-logistique"]');
+  await page.check('[data-ouvre="chaine-logistique"]');
+  await page.waitForTimeout(500);
+
   await page.click('#btnRetour');
   await page.click('#btnDeco');
   await page.waitForSelector('#mat');
@@ -546,9 +689,9 @@ await v('l\'élève voit la note de son scénario', async () => {
   if (!/14,5\s*\/\s*20/.test(b)) throw new Error('badge inattendu : ' + b);
 });
 
-// ---------- 23. série TAB-2 : filtrage par niveau et dépôt d'un classeur
-await v('série tableur : niveau par exercice et correction', async () => {
-  // Léa est en 1re : exs10 (Terminale seulement) ne doit pas lui être proposé.
+// ---------- 23. série TAB-2 : la série entière est proposée, et le modèle se télécharge
+await v('série tableur : la série entière et le modèle', async () => {
+  // Plus aucun exercice n'est restreint par niveau : Léa, en 1re, voit les dix.
   await page.click('#btnRetour');
   await page.waitForSelector('#btnAccueil', { timeout: 6000 });
   await page.click('#btnAccueil');
@@ -558,8 +701,8 @@ await v('série tableur : niveau par exercice et correction', async () => {
   await page.click('[data-act="excel-stock"]');
   await page.waitForSelector('[data-exo="exs1"]', { timeout: 6000 });
   const vus = await page.$$eval('[data-exo]', (e) => e.map((x) => x.dataset.exo));
-  if (vus.length !== 9) throw new Error(`${vus.length} exercices au lieu de 9 pour une 1re`);
-  if (vus.includes('exs10')) throw new Error('exs10 (Tle) proposé à une 1re');
+  if (vus.length !== 10) throw new Error(`${vus.length} exercices au lieu de 10`);
+  if (!vus.includes('exs10')) throw new Error('exs10 absent : un exercice est encore filtré');
   if (!/RECHERCHEV/.test(await page.textContent('#hoteActivite'))) throw new Error('groupes de notions absents');
 
   await page.click('[data-exo="exs1"]');
@@ -617,7 +760,10 @@ await v('TAB-1 : les treize étapes, et deux qui ne comptent pas', async () => {
   const vus = await page.$$eval('[data-exo]', (e) => e.map((x) => x.dataset.exo));
   if (vus.length !== 13) throw new Error(`${vus.length} étapes au lieu de 13`);
   const entete = (await page.textContent('#hoteActivite')).replace(/\s+/g, ' ');
-  if (!/sur 11\./.test(entete)) throw new Error('le total devrait exclure les 2 étapes non notées : ' + entete.slice(0, 160));
+  // Le total exclut les 2 étapes non corrigeables, et la phrase annonce aussi la note
+  // sur 20 — c'est sur ce dénominateur-là que l'élève est noté, pas sur 11.
+  if (!/sur 11\b/.test(entete)) throw new Error('le total devrait exclure les 2 étapes non notées : ' + entete.slice(0, 160));
+  if (!/soit .*\/ 20/.test(entete)) throw new Error('la note sur 20 n\'est pas annoncée à l\'élève : ' + entete.slice(0, 160));
   if (!/ne comptent pas dans ce total/.test(entete)) throw new Error('les étapes hors total ne sont pas annoncées');
 
   // L'étape 9 (mise en forme conditionnelle) n'a rien à déposer.
@@ -742,8 +888,8 @@ await v('TAB-3 : les dix cas de calculs commerciaux', async () => {
   fs.unlinkSync(rempli3);
 });
 
-// ---------- 25. l'enseignant voit toute la série, étiquetée
-await v('série tableur : l\'enseignant voit tous les niveaux', async () => {
+// ---------- 25. l'enseignant voit la même série que l'élève
+await v('série tableur : l\'enseignant voit la même série que l\'élève', async () => {
   await page.click('#btnListe');
   await page.click('#btnRetour');
   await page.click('#btnDeco');
@@ -755,8 +901,12 @@ await v('série tableur : l\'enseignant voit tous les niveaux', async () => {
   await page.waitForSelector('[data-exo="exs10"]', { timeout: 6000 });
   const n = await page.$$eval('[data-exo]', (e) => e.length);
   if (n !== 10) throw new Error(`${n} exercices au lieu de 10 côté enseignant`);
-  const code = await page.textContent('[data-exo="exs10"] .code');
-  if (!/Tle/.test(code)) throw new Error('niveau de l\'exercice non affiché : ' + code);
+  // Plus aucun exercice n'est restreint : aucune étiquette de niveau ne doit subsister,
+  // sinon c'est qu'un `niveaux` traîne encore dans le contenu.
+  const etiq = await page.$$eval('[data-exo] .code', (e) => e.map((x) => x.textContent).join(' '));
+  if (/2de|1re|Tle|CAP/.test(etiq)) {
+    throw new Error('une étiquette de niveau subsiste : ' + etiq.slice(0, 120));
+  }
 });
 
 // ---------- 25 bis. contrôle de liste : l'ordre des lignes est indifférent

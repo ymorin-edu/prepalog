@@ -10,8 +10,9 @@
 // dans le score. Les classeurs modèles sont dans contenus/tab1/, l'onglet « Correction »
 // de la Suite leur ayant été retiré (voir outils/modeles-sans-corrige.py).
 //
-// Le champ `niveaux` est propre à chaque étape : un élève ne voit que celles de son
-// niveau de classe. Modifier une ligne du générateur suffit à en déplacer une.
+// Aucune étape ne déclare de `niveaux` : par défaut, tout est ouvert à tous les niveaux.
+// Le mécanisme existe toujours — il suffit d'ajouter `niveaux: ['1re', 'tle']` sur une ligne
+// du générateur pour restreindre une étape — mais ce n'est plus le réglage par défaut.
 
 export const EXERCICES = [
   {
@@ -19,7 +20,6 @@ export const EXERCICES = [
     titre: "1 — Découvrir Excel et saisir des données",
     groupe: "PREMIERS PAS",
     objectif: "Se repérer dans une feuille et saisir des informations sans erreur.",
-    niveaux: ["2de","1re","tle","cap"],
     fichier: "et01-decouvrir-excel.xlsx",
     controles: [
     { cellule: "B2", libelle: "Désignation ligne 2", attendu: "Carton de conserves" },
@@ -41,7 +41,6 @@ export const EXERCICES = [
     titre: "2 — Écrire sa première formule",
     groupe: "FORMULES",
     objectif: "Comprendre ce qu'est une formule et utiliser une référence de cellule.",
-    niveaux: ["2de","1re","tle","cap"],
     fichier: "et02-premiere-formule.xlsx",
     controles: [
     { cellule: "E2", libelle: "Montant ligne 2", attendu: 28, tolerance: 0.02, formuleAttendue: true },
@@ -57,7 +56,6 @@ export const EXERCICES = [
     titre: "3 — Tirer une formule (la recopier)",
     groupe: "FORMULES",
     objectif: "Recopier une formule vers le bas et vers la droite sans la retaper.",
-    niveaux: ["2de","1re","tle","cap"],
     fichier: "et03-tirer-formule.xlsx",
     controles: [
     { cellule: "D3", libelle: "Montant ligne 3", attendu: 35, tolerance: 0.02, formuleAttendue: true },
@@ -77,7 +75,6 @@ export const EXERCICES = [
     titre: "4 — Figer une cellule avec F4",
     groupe: "FORMULES",
     objectif: "Empêcher une référence de bouger quand on recopie une formule.",
-    niveaux: ["2de","1re","tle","cap"],
     fichier: "et04-figer-cellule.xlsx",
     controles: [
     { cellule: "C7", libelle: "Coût du trajet ligne 7", attendu: 96, tolerance: 0.02, formuleAttendue: true },
@@ -93,7 +90,6 @@ export const EXERCICES = [
     titre: "5 — Comprendre et utiliser une plage",
     groupe: "FORMULES",
     objectif: "Découvrir la notion de plage (C2:C7) à travers SOMME, MIN et MAX.",
-    niveaux: ["2de","1re","tle","cap"],
     fichier: "et05-comprendre-plage.xlsx",
     controles: [
     { cellule: "C9", libelle: "Total des quantités", attendu: 180, formuleAttendue: true },
@@ -106,7 +102,6 @@ export const EXERCICES = [
     titre: "6 — Additionner et calculer une moyenne",
     groupe: "FONCTIONS",
     objectif: "Utiliser SOMME et MOYENNE sur des quantités en stock.",
-    niveaux: ["2de","1re","tle","cap"],
     fichier: "et06-somme-moyenne.xlsx",
     controles: [
     { cellule: "C18", libelle: "Total des quantités", attendu: 273, formuleAttendue: true },
@@ -118,7 +113,6 @@ export const EXERCICES = [
     titre: "7 — La fonction SI, premiers pas",
     groupe: "FONCTIONS",
     objectif: "Découvrir SI sur un cas simple à 5 lignes, une seule condition.",
-    niveaux: ["2de","1re","tle","cap"],
     fichier: "et07-si-premiers-pas.xlsx",
     controles: [
     { cellule: "E7", libelle: "Faut-il commander ? ligne 7", attendu: false, formuleAttendue: true },
@@ -133,7 +127,6 @@ export const EXERCICES = [
     titre: "8 — La fonction SI",
     groupe: "FONCTIONS",
     objectif: "Faire prendre une décision automatique à Excel selon une condition.",
-    niveaux: ["2de","1re","tle","cap"],
     fichier: "et08-fonction-si.xlsx",
     controles: [
     { cellule: "E2", libelle: "Statut ligne 2", attendu: "OK" },
@@ -158,7 +151,6 @@ export const EXERCICES = [
     titre: "9 — Mise en forme conditionnelle",
     groupe: "MISE EN FORME",
     objectif: "Colorer automatiquement les lignes à recommander.",
-    niveaux: ["2de","1re","tle","cap"],
     fichier: "et09-mise-en-forme-conditionnelle.xlsx",
     // Pas de contrôle : se vérifie en classe, et ne compte pas dans le score.
     controles: [],
@@ -168,7 +160,6 @@ export const EXERCICES = [
     titre: "10 — Créer un graphique",
     groupe: "MISE EN FORME",
     objectif: "Représenter le stock sous forme de graphique en barres.",
-    niveaux: ["2de","1re","tle","cap"],
     fichier: "et10-graphique.xlsx",
     // Pas de contrôle : se vérifie en classe, et ne compte pas dans le score.
     controles: [],
@@ -178,7 +169,6 @@ export const EXERCICES = [
     titre: "11 — Cas concret : tableau de bord de stock",
     groupe: "CAS COMPLET",
     objectif: "Combiner toutes les compétences sur un cas complet de gestion de stock.",
-    niveaux: ["2de","1re","tle","cap"],
     fichier: "et11-tableau-de-bord.xlsx",
     controles: [
     { cellule: "F2", libelle: "Valeur du stock ligne 2", attendu: 28.8, tolerance: 0.05, formuleAttendue: true },
@@ -230,7 +220,6 @@ export const EXERCICES = [
     titre: "12 — Extraire une partie d'une référence",
     groupe: "TEXTE",
     objectif: "Découvrir GAUCHE et DROITE pour décoder une référence produit.",
-    niveaux: ["2de","1re","tle","cap"],
     fichier: "et12-gauche-droite.xlsx",
     controles: [
     { cellule: "B2", libelle: "Code entrepôt ligne 2", attendu: "NIM" },
@@ -264,7 +253,6 @@ export const EXERCICES = [
     titre: "13 — Construire une référence avec CONCATENER",
     groupe: "TEXTE",
     objectif: "Assembler plusieurs informations séparées en une seule référence.",
-    niveaux: ["2de","1re","tle","cap"],
     fichier: "et13-concatener.xlsx",
     controles: [
     { cellule: "D2", libelle: "Référence construite ligne 2", attendu: "NIM-24-015" },

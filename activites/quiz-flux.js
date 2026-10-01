@@ -9,7 +9,8 @@ export const meta = {
   titre: 'Les flux logistiques',
   desc: 'Vérifier les notions de base : flux poussé, flux tiré, stock de sécurité.',
   rubrique: 'quiz',
-  niveaux: ['2de', '1re'],
+  // Pas de champ `niveaux` : par défaut, tout est ouvert à tous les niveaux.
+  // C'est « Conduite de séance » qui ferme ce qu'on ne veut pas ouvrir ce jour-là.
   competences: [],
   bareme: 6,
   portee: 'eleve',

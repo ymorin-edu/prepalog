@@ -11,7 +11,8 @@ export const meta = {
   titre: 'Inventaire tournant sur tableur',
   desc: 'Calculer les écarts et la valorisation du stock, puis déposer le classeur.',
   rubrique: 'tableur',
-  niveaux: ['1re', 'tle'],
+  // Pas de champ `niveaux` : par défaut, tout est ouvert à tous les niveaux.
+  // C'est « Conduite de séance » qui ferme ce qu'on ne veut pas ouvrir ce jour-là.
   competences: [],
   bareme: 6,
   portee: 'eleve',

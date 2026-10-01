@@ -30,6 +30,7 @@
 import { ech, toast } from '../ui.js';
 import { estJuste, normaliser } from './numerique.js';
 import { concerneNiveau, libelleNiveaux } from '../niveaux.js';
+import { texteNoteSur20 } from '../notes.js';
 
 // SheetJS est servi par le site lui-même, jamais par un CDN : les filtrages académiques
 // bloquent régulièrement cdnjs et consorts, et une activité qui tombe en panne en séance
@@ -265,6 +266,7 @@ function tableauResultats(resultats) {
   return `
     <div class="avis ${justes === resultats.length ? 'avis-ok' : justes >= resultats.length * 0.6 ? '' : 'avis-err'}">
       <strong>${justes} contrôle${justes > 1 ? 's' : ''} réussi${justes > 1 ? 's' : ''} sur ${resultats.length}.</strong>
+      <span class="note">Soit ${texteNoteSur20(justes, resultats.length)}.</span>
       ${justes === resultats.length ? ' Classeur conforme.' : ' Corrigez votre classeur et déposez-le de nouveau.'}
     </div>
     <div class="panneau">
@@ -393,7 +395,8 @@ export function creerSerieTableur({ consigne, exercices, feuille, dossier = '' }
           ${visibles.length === 0
             ? `<div class="vide">Aucun exercice de cette série ne correspond au niveau du groupe.</div>`
             : `<p class="note"><strong>${reussis} exercice${reussis > 1 ? 's' : ''} réussi${reussis > 1 ? 's' : ''}
-                 sur ${aNoter.length}.</strong> Un exercice compte pour réussi quand tous ses contrôles passent.
+                 sur ${aNoter.length}, soit ${texteNoteSur20(reussis, aNoter.length)}.</strong>
+                 Un exercice compte pour réussi quand tous ses contrôles passent.
                  ${aNoter.length < visibles.length
                    ? `${visibles.length - aNoter.length} exercice${visibles.length - aNoter.length > 1 ? 's se vérifient' : ' se vérifie'}
                       en classe et ne compte${visibles.length - aNoter.length > 1 ? 'nt' : ''} pas dans ce total.` : ''}</p>

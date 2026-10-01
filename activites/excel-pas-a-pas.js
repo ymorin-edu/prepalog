@@ -21,7 +21,8 @@ export const meta = {
   titre: 'Apprendre Excel pas à pas',
   desc: 'Treize étapes : saisie, formules, recopie, F4, plages, SOMME, SI, fonctions texte.',
   rubrique: 'tableur',
-  niveaux: ['2de', '1re', 'tle', 'cap'],
+  // Pas de champ `niveaux` : par défaut, tout est ouvert à tous les niveaux.
+  // C'est « Conduite de séance » qui ferme ce qu'on ne veut pas ouvrir ce jour-là.
   competences: [],
   bareme: CORRIGEABLES,
   portee: 'eleve',

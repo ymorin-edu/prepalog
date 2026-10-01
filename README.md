@@ -45,6 +45,8 @@ export const meta = {
   desc: 'Une phrase de présentation.',
   rubrique: 'quiz',     // doit exister dans activites/index.js
   bareme: 10,           // présence d'un barème = apparaît dans le suivi de classe
+                        // (le suivi affiche une note sur 20 : voir core/notes.js)
+  // pas de `niveaux` : par défaut, tout est ouvert à tous les niveaux
   portee: 'eleve',      // 'eleve' | 'equipe' | 'groupe' | 'commun'
   pret: true,
 };
@@ -99,6 +101,21 @@ d'`index.html` pose le thème avant le premier rendu pour éviter le clignotemen
 - `core/types/lien.js` — le travail se fait sur un support extérieur (Padlet, Digipad) ;
   l'activité déclare `notation: 'prof'` et sa note se saisit dans « Suivi de classe »
 
+## Niveaux et notation
+
+Deux règles arrêtées le 01/10/2026.
+
+**Par défaut, tout est ouvert à tous les niveaux.** Aucune activité ne déclare de `niveaux` :
+c'est « Conduite de séance » qui ferme ce qu'on ne veut pas ouvrir ce jour-là. Le mécanisme
+de filtrage reste dans `core/niveaux.js`, prêt à resservir — il suffit d'ajouter
+`niveaux: ['1re', 'tle']` à un `meta`, ou à la ligne d'un exercice de série.
+
+**Un module, une note sur 20.** Le suivi de classe ramène tout score automatique à une note
+sur 20, arrondie au demi-point, quel que soit le nombre d'exercices du module. Le score brut
+reste enregistré tel quel et s'affiche en infobulle ; une note saisie à la main garde son
+barème, et les jalons d'un environnement d'entreprise restent des jalons. Le détail est
+dans `core/notes.js`.
+
 ## Conduite de séance
 
 Depuis l'espace enseignant : ouvrir ou fermer une activité pour le groupe, semer le contenu
@@ -126,12 +143,17 @@ Effet secondaire, le site fonctionne hors ligne une fois chargé.
 
 ## Tester
 
-`outils/test.mjs` lance **48 vérifications** de bout en bout avec Playwright en mode
+`outils/test.mjs` lance **58 vérifications** de bout en bout avec Playwright en mode
 démonstration : connexion enseignant et élève, création de groupe et de comptes, base
-partagée, les sept mécaniques d'activité, filtrage par niveau — module et exercice —,
-saisie d'une note à la main dans le suivi de classe, correction d'un classeur déposé,
-suppression d'un groupe et sort de ses élèves, polices servies par le dépôt, absence de
-dépendance extérieure, thème clair/sombre.
+partagée, les huit mécaniques d'activité, ouverture et fermeture d'une activité pour un
+groupe, conversion du score en note sur 20, saisie d'une note à la main dans le suivi de
+classe, correction d'un classeur déposé, suppression d'un groupe et sort de ses élèves,
+polices servies par le dépôt, absence de dépendance extérieure, thème clair/sombre.
+
+Deux de ces vérifications ne passent pas par le navigateur : le filtrage par niveau et le
+calcul de la note sur 20 sont contrôlés **à l'unité**, sur des valeurs fabriquées. Aucun
+contenu du dépôt ne les exerce plus — tout est ouvert à tous les niveaux — et un garde-fou
+adossé à un seul cas de contenu disparaîtrait avec ce contenu.
 
 ```
 npm install --no-save --no-package-lock playwright xlsx@0.18.5

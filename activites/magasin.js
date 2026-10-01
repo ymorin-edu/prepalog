@@ -12,7 +12,8 @@ export const meta = {
   titre: 'Base du magasin',
   desc: 'Produits, emplacements et stock. Base commune à toute la classe.',
   rubrique: 'magasin',
-  niveaux: ['2de', '1re', 'tle', 'cap'],
+  // Pas de champ `niveaux` : par défaut, tout est ouvert à tous les niveaux.
+  // C'est « Conduite de séance » qui ferme ce qu'on ne veut pas ouvrir ce jour-là.
   competences: [],
   portee: 'groupe',
   pret: true,
