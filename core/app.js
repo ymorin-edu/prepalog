@@ -3,7 +3,6 @@
 import { demarrerBackend, B } from './backend.js';
 import { CONFIG, DEMO } from './config.js';
 import { ech, toast, entete, brancherEntete, messageErreur } from './ui.js';
-import { logoSrc } from './theme.js';
 import { activiteVisible, courtNiveau, libelleNiveaux } from './niveaux.js';
 import { chargerActivites, activite, RUBRIQUES, ICONES, activitesDeRubrique } from '../activites/index.js';
 import { ouvrirJeu } from './store.js';
@@ -158,7 +157,6 @@ async function vueAccueil() {
         ${groupe ? `<p class="note">Groupe : <span class="etiq">${ech(groupe.nom)}</span>
       <span class="etiq">${ech(courtNiveau(groupe.niveau))}</span></p>` : '<p class="note">&nbsp;</p>'}
       </div>
-      <img class="accueil-marque" data-logo src="${logoSrc()}" alt="">
     </div>
     ${pastillesParBande}
     ${estProf ? `<div class="rubriques-sep"></div>

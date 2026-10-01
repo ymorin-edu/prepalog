@@ -220,9 +220,12 @@ await v('bascule du thème et persistance', async () => {
   if (avant === apres) throw new Error('le fond n\'a pas changé');
   const attr = await page.evaluate(() => document.documentElement.getAttribute('data-theme'));
   if (!['clair', 'sombre'].includes(attr)) throw new Error('data-theme non posé');
-  // le logo suit le thème
+  // Le logo du bandeau est fixe (tracé blanc sur l'aplat vert) ; c'est le favicon
+  // qui suit le thème depuis le 01/10/2026.
   const src = await page.getAttribute('.entete .logo', 'src');
-  if (attr === 'sombre' && !/logo-sombre/.test(src)) throw new Error('logo clair en mode sombre');
+  if (!/logo-bandeau/.test(src)) throw new Error('le bandeau ne porte pas logo-bandeau.png');
+  const fav = await page.getAttribute('#favicon', 'href');
+  if (attr === 'sombre' && !/logo-sombre/.test(fav)) throw new Error('favicon clair en mode sombre');
   // et le choix survit au rechargement
   await page.reload();
   await page.waitForTimeout(600);

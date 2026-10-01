@@ -1,6 +1,6 @@
 // Briques d'interface partagées.
 
-import { logoSrc, majLogos, basculerTheme, ICONE_THEME } from './theme.js';
+import { majLogos, basculerTheme, ICONE_THEME } from './theme.js';
 
 export const $ = (s, r = document) => r.querySelector(s);
 export const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
@@ -44,19 +44,28 @@ export function messageErreur(e) {
   return msg || 'Erreur inconnue.';
 }
 
+// Le logo du bandeau ne suit pas le thème : c'est un tracé blanc sur fond
+// transparent, posé sur l'aplat vert, identique en clair et en sombre.
+//
+// Le bouton de thème n'est rendu que pour l'enseignant. Décision du 01/10/2026 :
+// les élèves ne choisissent pas leur thème. Attention, cela ne force PAS le clair
+// chez eux — un poste réglé en sombre au niveau du système affichera toujours
+// Prepalog en sombre, puisque le thème 'auto' suit prefers-color-scheme. Pour
+// l'imposer, il faudrait appliquerTheme('clair') à la connexion d'un élève.
 export function entete({ marque, institution, profil, grand }) {
+  const estProf = !!profil && profil.role === 'prof';
   const qui = profil
     ? `${ech(profil.prenom || '')} ${ech(profil.nom || '')} · ${profil.role === 'prof' ? 'enseignant' : 'élève'}`
     : '';
   return `
   <header class="entete${grand ? ' entete-accueil' : ''}">
-    <img class="logo" data-logo src="${logoSrc()}" alt="">
+    <img class="logo" src="./styles/logo-bandeau.png" alt="">
     <span class="marque">${ech(marque)}</span>
     <span class="institution">${ech(institution)}</span>
     <span class="pousse rangee">
       ${profil ? `<span class="qui">${qui}</span>` : ''}
-      <button class="btn-theme" id="btnTheme" type="button"
-        title="Changer de thème" aria-label="Changer de thème">${ICONE_THEME}</button>
+      ${estProf ? `<button class="btn-theme" id="btnTheme" type="button"
+        title="Changer de thème" aria-label="Changer de thème">${ICONE_THEME}</button>` : ''}
       ${profil ? `<button class="btn btn-s" id="btnDeco">Se déconnecter</button>` : ''}
     </span>
   </header>`;

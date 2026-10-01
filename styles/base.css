@@ -5,32 +5,36 @@
    ============================================================ */
 
 :root, :root[data-theme="clair"]{
-  --fond:#f6f7f9;          /* fond de page */
-  --panneau:#ffffff;       /* surfaces : panneaux, champs, tuiles */
-  --survol:#fafbfc;
-  --filet:#dde2e7;
+  /* Gris chauds, et pas de blanc pur : sous un néon de salle, le blanc franc
+     se lit comme une lampe plutôt que comme une feuille, et c'est ce qui
+     poussait vers le thème sombre. Les gris sont décalés vers le jaune, très
+     peu — le reste de la charte n'a pas bougé. */
+  --fond:#f4f1ea;          /* fond de page */
+  --panneau:#fdfbf7;       /* surfaces : panneaux, champs, tuiles */
+  --survol:#f9f6ef;
+  --filet:#e3ded3;
 
-  --encre:#131a21;
-  --encre-douce:#3d4a57;
+  --encre:#1a1915;
+  --encre-douce:#555047;
 
   --ardoise:#107c41;       /* couleur d'accent : texte, liens, bordures */
   --ardoise-fond:#107c41;  /* fond des éléments pleins (boutons, disques) */
   --sur-ardoise:#ffffff;   /* texte posé sur --ardoise-fond */
   --ardoise-clair:#e3f1e8;
 
-  --terre:#a3680b;
+  --terre:#9c620a;
   /* Le vert de validation. --vert pour le texte et les traits, --vert-fond pour
      les aplats : voir le commentaire de la règle .juste plus bas. */
   --vert:#0b7a41;
   --vert-fond:#0a8449;
   --sur-vert:#ffffff;
-  --vert-pale:#e2f4ea;
+  --vert-pale:#e4f1e5;
   --rouge:#9d2727;
 
-  --gele-fond:#fdf6e8;
-  --toast-fond:#131a21;
+  --gele-fond:#fcf3e2;
+  --toast-fond:#1a1915;
   --toast-texte:#ffffff;
-  --ombre:0 1px 2px rgba(19,26,33,.04);
+  --ombre:0 1px 2px rgba(40,34,24,.06);
 
   --r:4px;
   --mono:"IBM Plex Mono",ui-monospace,monospace;
@@ -110,39 +114,59 @@ code,kbd,.mono{font-family:var(--mono); font-size:.92em}
 .app{max-width:1080px; margin:0 auto; padding:0 16px 64px}
 .boot{padding:48px 0; color:var(--encre-douce)}
 
-/* ---------------------------------------------------------- en-tête */
+/* ------------------------------------------------------------------
+   Le bandeau est un aplat vert, large comme la colonne de contenu : les
+   marges négatives lui font rattraper le padding de .app, et le padding
+   intérieur ramène son contenu à l'aplomb des cartes du dessous.
+   Le logo occupe toute la hauteur du bandeau — c'est ce qui lui donne sa
+   présence, donc la hauteur du bandeau et celle du logo sont la même
+   variable. Son fichier est styles/logo-bandeau.png, un tracé BLANC sur
+   fond transparent : il ne suit pas le thème, et c'est voulu, les deux
+   verts du bandeau ne coïncident pas d'un thème à l'autre.
+   Sur fond vert, tous les textes et bordures sont en blanc translucide —
+   des valeurs en dur, parce qu'elles valent pour les deux thèmes.
+   ------------------------------------------------------------------ */
 .entete{
-  display:flex; align-items:center; gap:14px;
-  padding:20px 0 18px; border-bottom:1px solid var(--filet); margin-bottom:26px;
-  flex-wrap:wrap;
+  --h-bandeau:72px;
+  display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+  background:var(--ardoise-fond); color:var(--sur-ardoise);
+  margin:0 -16px 26px; padding:0 16px; min-height:var(--h-bandeau);
 }
-.entete .logo{ width:42px; height:42px; flex:0 0 auto; display:block }
-.entete .marque{font-weight:700; letter-spacing:-.015em; font-size:1.45rem; color:var(--ardoise)}
+.entete .logo{
+  align-self:stretch; height:var(--h-bandeau); width:auto;
+  flex:0 0 auto; display:block; margin-left:-2px;
+}
+.entete .marque{font-weight:700; letter-spacing:-.015em; font-size:1.45rem; color:var(--sur-ardoise)}
 .entete .institution{
   font-size:.78rem; letter-spacing:.09em; text-transform:uppercase;
-  color:var(--encre-douce); border-left:1px solid var(--filet); padding-left:14px;
+  color:rgba(255,255,255,.72); border-left:1px solid rgba(255,255,255,.3); padding-left:14px;
 }
 
-/* Variante d'accueil : bandeau haut, sans ligne de séparation sèche */
-.entete-accueil{ padding:34px 0 26px; gap:18px }
-.entete-accueil .logo{ width:64px; height:64px }
+/* Variante d'accueil : le même bandeau, plus haut, sur l'écran de connexion */
+.entete-accueil{ --h-bandeau:96px; gap:18px }
 .entete-accueil .marque{ font-size:2.1rem }
 @media (max-width:560px){
-  .entete-accueil{ padding:24px 0 18px }
-  .entete-accueil .logo{ width:50px; height:50px }
+  .entete-accueil{ --h-bandeau:72px }
   .entete-accueil .marque{ font-size:1.7rem }
 }
-.entete .pousse{margin-left:auto}
-.entete .qui{font-size:.85rem; color:var(--encre-douce)}
+.entete .pousse{margin-left:auto; display:flex; align-items:center; gap:8px; flex-wrap:wrap}
+.entete .qui{font-size:.85rem; color:rgba(255,255,255,.82)}
 @media (max-width:560px){ .entete .institution{display:none} }
 
-/* Bouton de thème : pas de texte, deux pictogrammes qui s'échangent */
+/* Les boutons du bandeau sont des fantômes sur l'aplat vert. */
+.entete .btn{
+  background:transparent; color:#fff; border-color:rgba(255,255,255,.45);
+}
+.entete .btn:hover{ background:rgba(255,255,255,.14); border-color:rgba(255,255,255,.78) }
+
+/* Bouton de thème : pas de texte, deux pictogrammes qui s'échangent.
+   Il n'est rendu que pour l'enseignant — voir entete() dans core/ui.js. */
 .btn-theme{
-  background:none; border:1px solid var(--filet); border-radius:var(--r);
-  width:34px; height:34px; padding:0; cursor:pointer; color:var(--encre-douce);
+  background:transparent; border:1px solid rgba(255,255,255,.38); border-radius:var(--r);
+  width:34px; height:34px; padding:0; cursor:pointer; color:rgba(255,255,255,.9);
   display:inline-flex; align-items:center; justify-content:center; flex:0 0 auto;
 }
-.btn-theme:hover{ border-color:var(--ardoise); color:var(--ardoise) }
+.btn-theme:hover{ border-color:rgba(255,255,255,.78); color:#fff; background:rgba(255,255,255,.14) }
 .btn-theme svg{ width:17px; height:17px }
 .btn-theme .ico-lune{ display:none }
 :root[data-theme="sombre"] .btn-theme .ico-lune{ display:block }
@@ -262,10 +286,10 @@ td.juste{background:var(--vert-fond); color:var(--sur-vert)}
 /* ============================================================
    Pastilles de rubrique — système repris de la Suite Logistique
    ============================================================ */
+/* Le gros logo d'accueil a été retiré le 01/10/2026 : le bandeau vert porte
+   déjà la marque, le répéter 150 px plus bas n'apportait rien. */
 .accueil-tete{ display:flex; align-items:flex-start; gap:20px; flex-wrap:wrap }
 .accueil-tete .texte{ flex:1 1 320px }
-.accueil-marque{ flex:0 0 auto; width:96px; height:96px; opacity:.9 }
-@media (max-width:640px){ .accueil-marque{ display:none } }
 
 /* ------------------------------------------------------------------
    Les rubriques d'accueil sont des CARTES, plus des disques pleins.
