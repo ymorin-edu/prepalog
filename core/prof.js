@@ -8,6 +8,7 @@ import { chargerActivites, activite } from '../activites/index.js';
 import { versCSV, telecharger, ouvrirJeu } from './store.js';
 import { NIVEAUX, libelleNiveau, courtNiveau, libelleNiveaux, activiteVisible, horsNiveau } from './niveaux.js';
 import { BAREME_AFFICHE, noteSur20, noteConvertie, formaterNote } from './notes.js';
+import { TEMPS, COEFS_DEFAUT, coefsDuGroupe, seancesParCompetence, moyenneCompetence } from './competences.js';
 
 export async function rendreEspaceProf(hote, ctx) {
   let onglet = ctx.onglet || 'groupes';
@@ -38,7 +39,7 @@ export async function rendreEspaceProf(hote, ctx) {
       <h1>Espace enseignant</h1>
       <nav class="rangee" style="margin-bottom:16px">
         ${[['groupes', 'Groupes'], ['comptes', 'Comptes élèves'], ['suivi', 'Suivi de classe'],
-           ['seance', 'Conduite de séance'], ['corriges', 'Corrigés'],
+           ['competences', 'Compétences'], ['seance', 'Conduite de séance'], ['corriges', 'Corrigés'],
            ['orphelins', `Élèves sans groupe${sansGroupe.length ? ` (${sansGroupe.length})` : ''}`]]
           .map(([k, l]) => `<button class="btn btn-s ${onglet === k ? 'btn-p' : ''}${k === 'orphelins' && sansGroupe.length ? ' btn-alerte' : ''}" data-ong="${k}">${l}</button>`).join('')}
         ${g ? `<span class="pousse note">Groupe actif : <span class="etiq">${ech(g.nom)}</span>
@@ -59,6 +60,7 @@ export async function rendreEspaceProf(hote, ctx) {
     else if (!gidActif) z.innerHTML = `<div class="avis">Créez d'abord un groupe dans l'onglet « Groupes ».</div>`;
     else if (onglet === 'comptes') await vueComptes(z, g);
     else if (onglet === 'suivi') await vueSuivi(z, g);
+    else if (onglet === 'competences') await vueCompetences(z, g);
     else await vueSeance(z, g);
   }
 
@@ -444,7 +446,23 @@ export async function rendreEspaceProf(hote, ctx) {
             title="Note sur ${m.bareme}. Laisser vide pour effacer.">
         </td>`;
       }
-      if (!t) return `<td class="num note">—</td>`;
+      // Pas de score : l'élève n'a rien rendu. Un clic sur le tiret met 0 — cas de l'élève
+      // présent qui n'a rien fait (demande de Tristan, 02/10/2026). Un absent garde son tiret,
+      // et une séance pas faite ne compte pas dans la moyenne par compétence ; un 0, si.
+      if (!t) {
+        return `<td class="num note"><button type="button" class="btn-zero" data-uid="${ech(e.uid)}"
+          data-aid="${ech(m.id)}" title="Pas de note. Cliquer pour mettre 0 (élève présent, rien fait)."
+          aria-label="Mettre 0 — ${ech(m.code)} — ${ech(e.nom)} ${ech(e.prenom)}">—</button></td>`;
+      }
+      // Un 0 posé par l'enseignant : il se lit comme tel et s'efface d'un clic. Si l'élève fait
+      // la séance plus tard, sa vraie note le remplace (le meilleur score est retenu).
+      if (t.parProf && t.meilleur === 0) {
+        const lu = noteConvertie(m) ? `0<span class="note">/${BAREME_AFFICHE}</span>` : `0/${t.max || m.bareme}`;
+        return `<td class="num faux zero-pose" title="0 mis par l'enseignant : élève présent, rien fait.">${lu}
+          <span class="note">posé</span>
+          <button type="button" class="btn-zero-eff" data-uid="${ech(e.uid)}" data-aid="${ech(m.id)}"
+            title="Effacer ce 0" aria-label="Effacer le 0 — ${ech(m.code)} — ${ech(e.nom)} ${ech(e.prenom)}">×</button></td>`;
+      }
       // Le `max` enregistré avec le score fait foi : un module dont le nombre d'exercices
       // a changé depuis garde ainsi des notes comparables. Le barème du module ne sert
       // que de secours pour les scores écrits avant que le `max` soit transmis.
@@ -493,6 +511,8 @@ export async function rendreEspaceProf(hote, ctx) {
           (pas pour les environnements d'entreprise). Le score retenu est le meilleur.
           ${notees.some((m) => !noteConvertie(m) && !aLaMain(m)) ? `Les environnements
             d'entreprise affichent des jalons franchis, pas une note.` : ''}
+          Un élève présent qui n'a rien fait : cliquez sur son tiret « — » pour lui mettre 0 ;
+          la croix « × » efface ce 0, et s'il fait la séance plus tard sa note le remplace.
           ${notees.some(aLaMain) ? `Les colonnes en fond clair sont notées à la main : tapez la note,
             elle s'enregistre en quittant la case. Une case vidée efface la note.` : ''}</p>`}
       </section>
@@ -550,6 +570,25 @@ export async function rendreEspaceProf(hote, ctx) {
         }
       });
     });
+
+    // Mettre 0 / effacer le 0. Le barème enregistré est celui du module, pour que le 0 se
+    // convertisse comme n'importe quel score (0 sur 20, ou 0 jalon sur 3).
+    z.querySelectorAll('.btn-zero').forEach((b) => b.addEventListener('click', async () => {
+      const m = notees.find((x) => x.id === b.dataset.aid);
+      if (!m) return;
+      try {
+        await B.poserNote(g.id, b.dataset.uid, m.id, { score: 0, max: m.bareme });
+        toast(`0 mis en ${m.code}.`);
+        await vueSuivi(z, g);
+      } catch (e) { toast("Le 0 n'a pas pu être enregistré."); }
+    }));
+    z.querySelectorAll('.btn-zero-eff').forEach((b) => b.addEventListener('click', async () => {
+      try {
+        await B.poserNote(g.id, b.dataset.uid, b.dataset.aid, null);
+        toast('0 effacé.');
+        await vueSuivi(z, g);
+      } catch (e) { toast("Le 0 n'a pas pu être effacé."); }
+    }));
 
     z.querySelector('#btnRaz')?.addEventListener('click', async () => {
       const uid = z.querySelector('#razEleve').value;
@@ -614,6 +653,136 @@ export async function rendreEspaceProf(hote, ctx) {
         return o;
       });
       telecharger(`suivi-${g.id}.csv`, versCSV(lignes, champs));
+    });
+  }
+
+  // -------------------------------------------------------------- compétences
+  // La note qui compte : une moyenne PONDÉRÉE par compétence, le poids venant du temps
+  // pédagogique de chaque séance (voir core/competences.js). Le suivi par séance, juste
+  // au-dessus dans les onglets, ne change pas : les jalons y restent des jalons.
+  async function vueCompetences(z, g) {
+    z.innerHTML = `<div class="panneau"><div class="vide">Chargement des compétences…</div></div>`;
+    const [eleves, travaux, mods] = await Promise.all([
+      B.elevesDuGroupe(g.id), B.suivi(g.id), chargerActivites(),
+    ]);
+    const comps = seancesParCompetence(mods.map((m) => m.meta));
+    const coefs = coefsDuGroupe(g);
+    const par = {};
+    travaux.forEach((t) => { (par[t.uid] = par[t.uid] || {})[t.aid] = t; });
+
+    const ligneDetail = (d) => `${d.meta.code} (${TEMPS[d.temps].toLowerCase()}, coef ${formaterNote(d.coef)}) : `
+      + (d.note === null ? 'pas faite' : `${formaterNote(d.note)} / ${BAREME_AFFICHE}`);
+
+    const cellule = (e, c) => {
+      const b = moyenneCompetence(c.seances, par[e.uid], coefs);
+      const titre = ech(b.detail.map(ligneDetail).join('\n'));
+      if (b.moyenne === null) return `<td class="num note" title="${titre}">—</td>`;
+      const part = b.moyenne / BAREME_AFFICHE;
+      const classe = part >= 0.7 ? 'juste' : part < 0.4 ? 'faux' : '';
+      return `<td class="num ${classe}" title="${titre}" data-comp="${ech(c.code)}" data-uid="${ech(e.uid)}"
+        >${formaterNote(b.moyenne)}<span class="note">/${BAREME_AFFICHE}</span>
+        <span class="note">(${b.nbNotes}/${c.seances.length})</span></td>`;
+    };
+
+    z.innerHTML = `
+      <section class="panneau" id="panCoefs">
+        <strong>Coefficients de ${ech(g.nom)}</strong>
+        <p class="note">Guidage, entraînement et erreur induite sont des évaluations
+          <strong>formatives</strong> (coefficient ${COEFS_DEFAUT.guidage} par défaut) ; l'évaluation est
+          <strong>sommative</strong> (coefficient ${COEFS_DEFAUT.evaluation} par défaut). Les coefficients
+          valent pour ce groupe seulement. Un coefficient 0 retire ce temps des moyennes.</p>
+        <div class="rangee">
+          ${Object.entries(TEMPS).map(([k, l]) => `<label>${ech(l)}
+            <input type="number" class="note-saisie coef-saisie" data-temps="${k}" min="0" max="10"
+              step="0.5" value="${coefs[k]}" aria-label="Coefficient ${ech(l)}"></label>`).join('')}
+          <button class="btn btn-s btn-p" id="btnCoefs">Enregistrer</button>
+          <button class="btn btn-s" id="btnCoefsDefaut">Revenir aux coefficients par défaut</button>
+        </div>
+      </section>
+      <section class="panneau">
+        <div class="rangee" style="margin-bottom:12px">
+          <strong>Notes par compétence — ${ech(g.nom)}</strong>
+          <span class="pousse"><button class="btn btn-s" id="btnCsvComp">Exporter en CSV</button></span>
+        </div>
+        ${comps.length === 0 ? `<div class="vide">Aucune séance ne déclare encore de compétence.</div>`
+          : eleves.length === 0 ? `<div class="vide">Aucun élève dans ce groupe.</div>` : `
+        <div style="overflow:auto"><table id="tabComp">
+          <thead><tr><th>Élève</th>${comps.map((c) => `
+            <th title="${ech(c.libelle)}">${ech(c.code)}<span class="note"> /${BAREME_AFFICHE}</span></th>`).join('')}</tr></thead>
+          <tbody>${eleves.map((e) => `<tr>
+            <td>${ech(e.nom)} ${ech(e.prenom)}</td>
+            ${comps.map((c) => cellule(e, c)).join('')}
+          </tr>`).join('')}</tbody>
+        </table></div>
+        <p class="note">Moyenne <strong>pondérée</strong> des séances faites, chacune ramenée sur
+          ${BAREME_AFFICHE} — y compris les environnements en jalons (3 jalons sur 3 = ${BAREME_AFFICHE}).
+          Une séance pas encore faite ne compte pas pour zéro : elle n'entre pas dans la moyenne.
+          Entre parenthèses : séances faites sur séances de la compétence. Survolez une moyenne
+          pour voir le détail. Une séance qui travaille deux compétences compte pour les deux.</p>`}
+      </section>
+      ${comps.length === 0 ? '' : `
+      <section class="panneau" id="panSeancesComp">
+        <strong>Les séances de chaque compétence</strong>
+        <table>
+          <thead><tr><th>Compétence</th><th>Séances</th></tr></thead>
+          <tbody>${comps.map((c) => `<tr>
+            <td><strong>${ech(c.code)}</strong> ${ech(c.libelle)}</td>
+            <td>${c.seances.map((m) => `${ech(m.code)} ${ech(m.titre)}
+              <span class="note">· ${ech(TEMPS[m.temps].toLowerCase())}, coef ${formaterNote(coefs[m.temps])}</span>`).join('<br>')}</td>
+          </tr>`).join('')}</tbody>
+        </table>
+        <p class="note">Les modules sans compétence (prise en main d'Excel, calculs commerciaux,
+          quiz de calcul) restent dans le suivi de classe mais n'entrent dans aucune moyenne.</p>
+      </section>`}`;
+
+    // ---- coefficients
+    async function enregistrer(nouv) {
+      try {
+        await B.majGroupe(g.id, { coefs: nouv });
+        g.coefs = nouv;
+        toast('Coefficients enregistrés.');
+        await vueCompetences(z, g);
+      } catch (e) {
+        toast("Les coefficients n'ont pas pu être enregistrés.");
+      }
+    }
+    z.querySelector('#btnCoefs').addEventListener('click', () => {
+      const nouv = {};
+      for (const inp of z.querySelectorAll('.coef-saisie')) {
+        const v = Number(inp.value.trim().replace(',', '.'));
+        if (inp.value.trim() === '' || !Number.isFinite(v) || v < 0 || v > 10) {
+          inp.focus();
+          return toast('Un coefficient doit être un nombre entre 0 et 10.');
+        }
+        nouv[inp.dataset.temps] = v;
+      }
+      enregistrer(nouv);
+    });
+    z.querySelector('#btnCoefsDefaut').addEventListener('click', () => enregistrer({ ...COEFS_DEFAUT }));
+
+    // ---- export élève × compétence
+    // Une ligne par élève et par compétence : c'est la forme qui se trie et se filtre dans un
+    // tableur. Le détail des séances (temps, coefficient, note) tient dans une colonne, pour
+    // que la ligne se relise seule, des mois plus tard.
+    z.querySelector('#btnCsvComp').addEventListener('click', () => {
+      const champs = [
+        { cle: 'nom', label: 'Nom' }, { cle: 'prenom', label: 'Prénom' },
+        { cle: 'comp', label: 'Compétence' }, { cle: 'libelle', label: 'Libellé' },
+        { cle: 'seances', label: 'Séances (temps, coefficient, note sur 20)' },
+        { cle: 'faites', label: 'Séances faites' },
+        { cle: 'moyenne', label: `Moyenne pondérée /${BAREME_AFFICHE}` },
+      ];
+      const lignes = [];
+      eleves.forEach((e) => comps.forEach((c) => {
+        const b = moyenneCompetence(c.seances, par[e.uid], coefs);
+        lignes.push({
+          nom: e.nom, prenom: e.prenom, comp: c.code, libelle: c.libelle,
+          seances: b.detail.map(ligneDetail).join(' | '),
+          faites: `${b.nbNotes} sur ${c.seances.length}`,
+          moyenne: b.moyenne === null ? '' : formaterNote(b.moyenne),
+        });
+      }));
+      telecharger(`competences-${g.id}.csv`, versCSV(lignes, champs));
     });
   }
 

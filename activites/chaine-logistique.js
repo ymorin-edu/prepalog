@@ -12,7 +12,9 @@ export const meta = {
   rubrique: 'logistique',
   // Pas de champ `niveaux` : par défaut, tout est ouvert à tous les niveaux.
   // C'est « Conduite de séance » qui ferme ce qu'on ne veut pas ouvrir ce jour-là.
-  competences: [],
+  // Compétences et temps pédagogique : voir core/competences.js (validé par Tristan, 02/10/2026).
+  competences: ['C1.1'],
+  temps: 'guidage',
   bareme: 4,
   portee: 'eleve',
   pret: true,

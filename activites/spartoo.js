@@ -19,7 +19,9 @@ export const meta = {
   titre: 'Spartoo — préparation',
   desc: "Traiter une commande client : contrôle du stock, bon de préparation et réapprovisionnement.",
   rubrique: 'logisim',
-  competences: [],
+  // Compétences et temps pédagogique : voir core/competences.js (validé par Tristan, 02/10/2026).
+  competences: ['C2.2'],
+  temps: 'guidage',
   // Le barème, c'est le nombre de jalons de l'exercice : le suivi de classe montre
   // l'avancement réel, pas une note sur 20.
   bareme: SPARTOO.ETAPES.length,

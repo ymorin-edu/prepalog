@@ -11,7 +11,9 @@ export const meta = {
   titre: 'Bouygues Telecom',
   desc: 'Scénario logistique complet, noté.',
   rubrique: 'scenario',
-  competences: [],
+  // Compétences et temps pédagogique : voir core/competences.js (validé par Tristan, 02/10/2026).
+  competences: ['C1.6'],
+  temps: 'evaluation',
   bareme: 20,
   notation: 'prof',
   portee: 'eleve',

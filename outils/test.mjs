@@ -366,6 +366,222 @@ await v('note sur 20 : la conversion et ses cas de bord', async () => {
   }
 });
 
+// ---------- 11 ter. notes par compétence (chantier du 02/10/2026)
+//
+// Trois blocs : la règle de calcul à l'unité (valeurs écrites à la main, pas recalculées par
+// la fonction vérifiée), le tableau des déclarations validé par Tristan (figé ici : une
+// compétence qui change doit se voir), puis l'écran et l'export, pilotés comme un prof.
+
+await v('compétences : moyenne pondérée, coefficients et cas de bord, à l\'unité', async () => {
+  const C = await import(pathToFileURL(path.join(ROOT, 'core/competences.js')).href);
+  // Coefficients : défauts 1 / 1 / 1 / 3, valeurs du groupe prioritaires, valeur abîmée = défaut.
+  const d = C.coefsDuGroupe({});
+  if (d.guidage !== 1 || d.entrainement !== 1 || d.erreur !== 1 || d.evaluation !== 3) {
+    throw new Error('coefficients par défaut : ' + JSON.stringify(d));
+  }
+  const g = C.coefsDuGroupe({ coefs: { evaluation: 2, guidage: -1, entrainement: 'x', erreur: 0 } });
+  if (g.evaluation !== 2 || g.guidage !== 1 || g.entrainement !== 1 || g.erreur !== 0) {
+    throw new Error('coefficients du groupe : ' + JSON.stringify(g));
+  }
+  const s1 = { id: 's1', bareme: 2, temps: 'guidage', competences: ['C1.6'] };
+  const s2 = { id: 's2', bareme: 10, temps: 'evaluation', competences: ['C1.6', 'C1.1'] };
+  const s3 = { id: 's3', bareme: 3, notation: 'avancement', temps: 'guidage', competences: ['C1.6'] };
+  const s4 = { id: 's4', bareme: 6, temps: 'entrainement', competences: ['C1.6'] };
+  // 1/2 = 10 ; 8/10 = 16 ; 3 jalons sur 3 = 20 ; s4 pas faite (ne compte pas pour zéro).
+  const travaux = { s1: { meilleur: 1, max: 2 }, s2: { meilleur: 8, max: 10 }, s3: { meilleur: 3, max: 3 } };
+  const r = C.moyenneCompetence([s1, s2, s3, s4], travaux, d);
+  // (10×1 + 16×3 + 20×1) / 5 = 78 / 5 = 15,6
+  if (r.moyenne !== 15.6) throw new Error('moyenne ' + r.moyenne + ' au lieu de 15,6');
+  if (r.nbNotes !== 3) throw new Error('séances notées ' + r.nbNotes + ' au lieu de 3');
+  if (r.detail[3].note !== null) throw new Error('une séance pas faite a une note');
+  // Évaluation au coefficient 1 : (10 + 16 + 20) / 3 = 15,33
+  const r1 = C.moyenneCompetence([s1, s2, s3, s4], travaux, { ...d, evaluation: 1 });
+  if (r1.moyenne !== 15.33) throw new Error('moyenne au coef 1 : ' + r1.moyenne + ' au lieu de 15,33');
+  // Rien de fait, ou tout au coefficient 0 : pas de moyenne, pas de faux zéro.
+  if (C.moyenneCompetence([s1, s4], {}, d).moyenne !== null) throw new Error('moyenne sans aucune note');
+  const zero = { guidage: 0, entrainement: 0, erreur: 0, evaluation: 0 };
+  if (C.moyenneCompetence([s1, s2], travaux, zero).moyenne !== null) throw new Error('moyenne à poids nul');
+  // Une séance à deux compétences compte pour les deux ; l'ordre est celui du référentiel.
+  const pc = C.seancesParCompetence([s1, s2, s3, s4, { id: 'x', bareme: 4, competences: [], temps: 'guidage' },
+    { id: 'y', bareme: 4, competences: ['C1.6'] /* pas de temps : hors tableau */ }]);
+  if (pc.map((c) => c.code).join(',') !== 'C1.1,C1.6') throw new Error('ordre des compétences : ' + pc.map((c) => c.code));
+  if (pc[0].seances.map((m) => m.id).join() !== 's2') throw new Error('C1.1 : ' + pc[0].seances.map((m) => m.id));
+  if (pc[1].seances.map((m) => m.id).join() !== 's1,s2,s3,s4') throw new Error('C1.6 : ' + pc[1].seances.map((m) => m.id));
+  if (pc[1].libelle !== 'Gérer le suivi des stocks') throw new Error('libellé C1.6 : ' + pc[1].libelle);
+});
+
+await v('compétences : chaque séance déclare ce que Tristan a validé le 02/10', async () => {
+  // Écrit à la main. Changer une ligne ici, c'est changer une note de bulletin : le dire.
+  const ATTENDU = {
+    'DEC-1': ['C1.1', 'guidage'], 'QUI-5': ['C1.1', 'entrainement'], 'QUI-6': ['C1.1', 'entrainement'],
+    'QUI-7': ['C1.6', 'entrainement'], 'TAB-2': ['C1.6', 'entrainement'],
+    'TAB-4': ['C1.4,C1.6', 'entrainement'], 'TAB-5': ['C1.6', 'entrainement'],
+    'ENT-1.1': ['C1.4', 'guidage'], 'ENT-1.2': ['C2.2', 'guidage'], 'ENT-1.3': ['C3.2', 'guidage'],
+    'ENT-3.1': ['C2.4', 'guidage'],
+    'SCE-1': ['C1.6', 'guidage'], 'SCE-2': ['C1.6', 'evaluation'], 'SCE-3': ['C1.6', 'evaluation'],
+    'SCE-4': ['C1.5', 'guidage'], 'SCE-5': ['C1.3,C1.4', 'guidage'],
+  };
+  const HORS = ['TAB-1', 'TAB-3', 'QUI-8', 'QUI-9', 'QUI-10'];
+  const metas = await page.evaluate(async () => {
+    const { chargerActivites } = await import('/activites/index.js');
+    const { COMPETENCES, TEMPS } = await import('/core/competences.js');
+    return (await chargerActivites()).map(({ meta: m }) => ({
+      code: m.code, bareme: m.bareme, comp: (m.competences || []).join(','), temps: m.temps,
+      inconnues: (m.competences || []).filter((c) => !COMPETENCES[c]),
+      tempsOk: m.temps === undefined || !!TEMPS[m.temps],
+    }));
+  });
+  const faux = [];
+  for (const [code, [comp, temps]] of Object.entries(ATTENDU)) {
+    const m = metas.find((x) => x.code === code);
+    if (!m) { faux.push(code + ' introuvable'); continue; }
+    if (m.comp !== comp || m.temps !== temps) faux.push(`${code} : ${m.comp} ${m.temps} (attendu ${comp} ${temps})`);
+    if (!m.bareme) faux.push(code + ' sans barème');
+  }
+  HORS.forEach((code) => { const m = metas.find((x) => x.code === code); if (m && m.comp) faux.push(code + ' devrait être hors tableau'); });
+  metas.forEach((m) => {
+    if (m.inconnues.length) faux.push(`${m.code} : code inconnu ${m.inconnues}`);
+    if (!m.tempsOk) faux.push(`${m.code} : temps inconnu ${m.temps}`);
+    // Une séance qui déclare une compétence sans temps disparaîtrait du tableau sans bruit.
+    if (m.comp && !m.temps) faux.push(`${m.code} : compétence sans temps`);
+  });
+  if (faux.length) throw new Error(faux.join(' | '));
+});
+
+await v('compétences : l\'écran, les coefficients du groupe et l\'export CSV', async () => {
+  // Deux notes saisies à la main sur C1.6 : SCE-1 (guidage) 8 et SCE-2 (évaluation) 16.
+  await page.click('[data-ong="suivi"]');
+  await page.waitForSelector('.note-saisie', { timeout: 6000 });
+  const saisir = async (code, val) => {
+    const sel = `.note-saisie[aria-label^="${code} — DUPONT"]`;
+    await page.evaluate(() => { const t = document.getElementById('toast'); if (t) t.textContent = ''; });
+    await page.fill(sel, val);
+    await page.press(sel, 'Tab');
+    await page.waitForFunction((s) => document.querySelector(s)?.classList.contains('enregistre')
+      || /enregistrée|effacée/.test(document.getElementById('toast')?.textContent || ''), sel, { timeout: 4000 });
+    await page.waitForTimeout(150);
+  };
+  await saisir('SCE-1', '8');
+  await saisir('SCE-2', '16');
+
+  const lire = async () => page.$$eval('#tabComp tbody tr', (lignes) => {
+    const l = lignes.find((x) => /DUPONT/.test(x.textContent));
+    const o = {};
+    l.querySelectorAll('td[data-comp]').forEach((d) => {
+      o[d.dataset.comp] = d.textContent.replace(/\s+/g, ' ').trim();
+      o[d.dataset.comp + ':titre'] = d.getAttribute('title');
+    });
+    return o;
+  });
+  const ouvrir = async () => {
+    await page.click('[data-ong="competences"]');
+    await page.waitForSelector('#tabComp', { timeout: 6000 });
+  };
+  await ouvrir();
+  const entetes = await page.$$eval('#tabComp thead th', (t) => t.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));
+  if (!entetes.some((t) => /^C1\.6/.test(t))) throw new Error('pas de colonne C1.6 : ' + entetes.join(' | '));
+  // (8×1 + 16×3) / 4 = 14 ; deux séances faites sur les sept de C1.6.
+  let c = await lire();
+  if (!/^14\/20 \(2\/7\)$/.test(c['C1.6'] || '')) throw new Error('C1.6 : ' + c['C1.6'] + ' au lieu de 14/20 (2/7)');
+  const titre = c['C1.6:titre'] || '';
+  if (!/SCE-2 \(évaluation, coef 3\) : 16 \/ 20/.test(titre) || !/QUI-7 .*pas faite/.test(titre)) {
+    throw new Error('détail en infobulle : ' + titre);
+  }
+  // Le prof passe l'évaluation au coefficient 1 : (8 + 16) / 2 = 12, et le réglage tient.
+  await page.fill('.coef-saisie[data-temps="evaluation"]', '1');
+  await page.click('#btnCoefs');
+  await page.waitForFunction(() => /^12/.test(([...document.querySelectorAll('#tabComp tbody tr')].find((x) => /DUPONT/.test(x.textContent))?.querySelector('td[data-comp="C1.6"]')?.textContent.trim() || '')), null, { timeout: 4000 });
+  // Rechargement complet : le coefficient doit venir de la base, pas de la mémoire de l'écran.
+  await page.reload();
+  await page.waitForSelector('#btnProfEspace', { timeout: 8000 });
+  await page.click('#btnProfEspace');
+  await ouvrir();
+  if ((await page.inputValue('.coef-saisie[data-temps="evaluation"]')) !== '1') throw new Error('coefficient non conservé');
+  c = await lire();
+  if (!/^12\/20/.test(c['C1.6'])) throw new Error('après coef 1 : ' + c['C1.6']);
+  // Un coefficient refusé ne s'enregistre pas.
+  await page.fill('.coef-saisie[data-temps="guidage"]', '-2');
+  await page.click('#btnCoefs');
+  await page.waitForTimeout(300);
+  if (!/entre 0 et 10/.test(await page.textContent('#toast'))) throw new Error('coefficient négatif accepté');
+  // Retour aux défauts.
+  await page.click('#btnCoefsDefaut');
+  await page.waitForFunction(() => /^14/.test(([...document.querySelectorAll('#tabComp tbody tr')].find((x) => /DUPONT/.test(x.textContent))?.querySelector('td[data-comp="C1.6"]')?.textContent.trim() || '')), null, { timeout: 4000 });
+  if ((await page.inputValue('.coef-saisie[data-temps="evaluation"]')) !== '3') throw new Error('défaut non rétabli');
+
+  // L'export : une ligne par élève et par compétence.
+  const [dl] = await Promise.all([page.waitForEvent('download'), page.click('#btnCsvComp')]);
+  const csv = fs.readFileSync(await dl.path(), 'utf8').replace(/^﻿/, '');
+  const lignes = csv.split('\r\n');
+  if (!/^Nom;Prénom;Compétence;Libellé;Séances .*;Séances faites;Moyenne pondérée \/20$/.test(lignes[0])) {
+    throw new Error('en-tête : ' + lignes[0]);
+  }
+  const l16 = lignes.find((l) => /^DUPONT;Léa;C1\.6;/.test(l));
+  if (!l16) throw new Error('pas de ligne DUPONT C1.6');
+  if (!/;2 sur 7;14$/.test(l16)) throw new Error('ligne C1.6 : ' + l16);
+  if (!/SCE-1 \(guidage, coef 1\) : 8 \/ 20/.test(l16)) throw new Error('détail SCE-1 absent : ' + l16);
+  const nbComp = (await page.$$('#tabComp thead th')).length - 1;
+  const nbEl = (await page.$$('#tabComp tbody tr')).length;
+  if (lignes.length - 1 !== nbComp * nbEl) throw new Error(`${lignes.length - 1} lignes au lieu de ${nbComp}×${nbEl}`);
+
+  // Le suivi par séance n'a pas bougé : les notes saisies restent sur leur barème.
+  await page.click('[data-ong="suivi"]');
+  await page.waitForSelector('.note-saisie');
+  if ((await page.inputValue('.note-saisie[aria-label^="SCE-1 — DUPONT"]')) !== '8') throw new Error('SCE-1 changé dans le suivi');
+  // On remet le groupe comme on l'a trouvé.
+  await saisir('SCE-1', '');
+  await saisir('SCE-2', '');
+});
+
+await v('suivi : mettre 0 à un élève présent qui n\'a rien fait, l\'effacer, le voir remplacé', async () => {
+  const BTN = '.btn-zero[aria-label="Mettre 0 — QUI-7 — DUPONT Léa"]';
+  const EFF = '.btn-zero-eff[aria-label="Effacer le 0 — QUI-7 — DUPONT Léa"]';
+  const celluleQui7 = () => page.$eval(`th[title^="Calculs de stock"]`, (th) => {
+    const i = [...th.parentNode.children].indexOf(th);
+    const l = [...document.querySelectorAll('#contenuProf tbody tr')].find((x) => /DUPONT/.test(x.textContent));
+    return l.children[i].textContent.replace(/\s+/g, ' ').trim();
+  });
+  await page.click('[data-ong="suivi"]');
+  await page.waitForSelector(BTN, { timeout: 6000 });
+  if ((await celluleQui7()) !== '—') throw new Error('case vide attendue : ' + await celluleQui7());
+  await page.click(BTN);
+  await page.waitForSelector(EFF, { timeout: 4000 });
+  if (!/^0\/20 posé ×$/.test(await celluleQui7())) throw new Error('après 0 : ' + await celluleQui7());
+  // Le 0 compte dans la moyenne par compétence (une séance pas faite, elle, ne compte pas).
+  await page.click('[data-ong="competences"]');
+  await page.waitForSelector('#tabComp');
+  const c16 = await page.$$eval('#tabComp tbody tr', (lignes) => lignes.find((x) => /DUPONT/.test(x.textContent))
+    .querySelector('td[data-comp="C1.6"]')?.textContent.replace(/\s+/g, ' ').trim());
+  if (c16 !== '0/20 (1/7)') throw new Error('C1.6 avec le 0 : ' + c16);
+  // La croix efface le 0 : retour au tiret.
+  await page.click('[data-ong="suivi"]');
+  await page.waitForSelector(EFF);
+  await page.click(EFF);
+  await page.waitForSelector(BTN, { timeout: 4000 });
+  // Rattrapage : l'élève fait la séance après coup, sa vraie note remplace le 0.
+  await page.click(BTN);
+  await page.waitForSelector(EFF);
+  const ids = await page.evaluate(async () => {
+    const k = Object.keys(localStorage).find((x) => /travaux\/[^/]+\/[^/]+\/calculs-stock$/.test(x));
+    const [, gid, uid] = k.match(/travaux\/([^/]+)\/([^/]+)\/calculs-stock$/);
+    const { B } = await import('/core/backend.js');
+    await B.ecrireScore(gid, uid, 'calculs-stock', { score: 6, max: 8 });
+    return { gid, uid };
+  });
+  await page.click('[data-ong="competences"]');
+  await page.waitForSelector('#tabComp');
+  await page.click('[data-ong="suivi"]');
+  await page.waitForSelector('#contenuProf tbody tr');
+  if (!/^15\/20/.test(await celluleQui7()) || /posé/.test(await celluleQui7())) {
+    throw new Error('après rattrapage : ' + await celluleQui7());
+  }
+  // On remet le groupe comme on l'a trouvé.
+  await page.evaluate(async ({ gid, uid }) => {
+    const { B } = await import('/core/backend.js');
+    await B.poserNote(gid, uid, 'calculs-stock', null);
+  }, ids);
+});
+
 // ---------- 13. bascule clair / sombre
 await v('bascule du thème et persistance', async () => {
   const fondDe = () => page.evaluate(() => getComputedStyle(document.body).backgroundColor);

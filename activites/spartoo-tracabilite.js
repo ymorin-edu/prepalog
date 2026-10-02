@@ -20,7 +20,9 @@ export const meta = {
   titre: 'Spartoo — traçabilité',
   desc: "Remonter un lot défectueux dans les deux sens, bloquer le stock restant et rendre compte.",
   rubrique: 'logisim',
-  competences: [],
+  // Compétences et temps pédagogique : voir core/competences.js (validé par Tristan, 02/10/2026).
+  competences: ['C3.2'],
+  temps: 'guidage',
   bareme: SEANCE.ETAPES.length,
   notation: 'avancement',
   immersif: true,

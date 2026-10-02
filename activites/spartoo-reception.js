@@ -21,7 +21,9 @@ export const meta = {
   titre: 'Spartoo — réception',
   desc: "Contrôle d'une livraison fournisseur, réserves et entrée en stock avec numéro de lot.",
   rubrique: 'logisim',
-  competences: [],
+  // Compétences et temps pédagogique : voir core/competences.js (validé par Tristan, 02/10/2026).
+  competences: ['C1.4'],
+  temps: 'guidage',
   bareme: SEANCE.ETAPES.length,
   notation: 'avancement',
   immersif: true,

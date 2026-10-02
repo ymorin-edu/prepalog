@@ -285,6 +285,10 @@ span.juste{
 /* Cellule de résultat (suivi de classe, tableau de correction) : la cellule
    entière fait l'aplat — c'est ce qui se repère en balayant une colonne. */
 td.juste{background:var(--vert-fond); color:var(--sur-vert)}
+/* Le barème et le compte posés dans une cellule verte (« /20 (2/7) ») prennent la couleur
+   de la cellule : en gris doux, ils disparaissaient sur l'aplat (vu le 02/10, onglet
+   Compétences, et déjà vrai dans le suivi de classe). */
+td.juste .note{color:inherit; opacity:.85}
 /* Un retour de correction porte une phrase entière, parfois une explication :
    fond doux et trait plein. L'aplat complet serait illisible sur trois lignes. */
 .retour-q.juste, .num-retour.juste{
@@ -532,6 +536,20 @@ th.col-saisie, td.col-saisie{ background:var(--ardoise-clair) }
   font-family:var(--mono); font-size:.95rem;
 }
 .note-saisie.enregistre{ border-color:var(--vert); box-shadow:inset 0 0 0 1px var(--vert) }
+/* Le tiret d'une case vide est un bouton : un clic met 0 (élève présent, rien fait).
+   Il doit rester un tiret au repos — le tableau ne doit pas se couvrir de boutons — et
+   annoncer son geste au survol et au clavier. */
+.btn-zero, .btn-zero-eff{
+  font:inherit; color:inherit; background:none; border:1px solid transparent;
+  border-radius:var(--r); padding:0 6px; cursor:pointer; line-height:1.4;
+}
+.btn-zero:hover, .btn-zero:focus-visible{ border-color:var(--encre-douce) }
+/* Au survol, le tiret devient « 0 ? » à la même place : la ligne ne doit pas sauter. */
+.btn-zero:hover, .btn-zero:focus-visible{ font-size:0 }
+.btn-zero:hover::after, .btn-zero:focus-visible::after{ content:"0 ?"; font-size:.85rem }
+td.zero-pose{ white-space:nowrap }
+.btn-zero-eff{ color:var(--encre-douce); margin-left:2px }
+.btn-zero-eff:hover, .btn-zero-eff:focus-visible{ border-color:var(--encre-douce); color:inherit }
 
 /* --- série d'exercices (dépôt de classeur) --- */
 .serie-groupe{

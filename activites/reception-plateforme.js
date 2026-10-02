@@ -10,7 +10,9 @@ export const meta = {
   titre: 'Réception sur plateforme logistique',
   desc: 'Gérer la réception de marchandise sur une plateforme — scénario complet noté.',
   rubrique: 'scenario',
-  competences: [],
+  // Compétences et temps pédagogique : voir core/competences.js (validé par Tristan, 02/10/2026).
+  competences: ['C1.3', 'C1.4'],
+  temps: 'guidage',
   bareme: 20,
   notation: 'prof',
   portee: 'eleve',

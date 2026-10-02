@@ -30,7 +30,9 @@ export const meta = {
   desc: 'Situer sept clients sur un plan de Nîmes, choisir ce que le vélo-cargo peut emporter, '
     + 'puis ordonner les arrêts pour attraper le train de 16 h 10.',
   rubrique: 'logisim',
-  competences: [],
+  // Compétences et temps pédagogique : voir core/competences.js (validé par Tristan, 02/10/2026).
+  competences: ['C2.4'],
+  temps: 'guidage',
   // Le barème, c'est le nombre de jalons. Pas de `notation` : le suivi ramène le score sur
   // 20 (voir l'en-tête de ce fichier) tout en gardant les jalons lisibles.
   bareme: SEANCE.ETAPES.length,
