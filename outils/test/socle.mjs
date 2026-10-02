@@ -1386,12 +1386,12 @@ await v('Logisim : l’élève ne voit pas la carte d’une entreprise sans séa
   if (ids !== '1,3') throw new Error('cartes chez l’élève : ' + ids);
 });
 
-await v('Logisim : une entreprise à une seule séance ouverte montre quand même la liste', async () => {
-  // Boost : ENT-3.1 seule est prête, les deux autres sont en préparation.
+await v('Logisim : une entreprise dont seules certaines séances sont ouvertes montre la liste, sans la séance en préparation', async () => {
+  // Boost : ENT-3.1 et ENT-3.3 sont prêtes, ENT-3.2 est en préparation (cachée à l'élève).
   await pl.click('[data-ent="3"]');
   await pl.waitForSelector('.entreprise-tete');
   const t = await tuilesL();
-  if (t.map((x) => x.code).join() !== 'ENT-3.1') throw new Error('tuiles chez l’élève : ' + t.map((x) => x.code).join(', '));
+  if (t.map((x) => x.code).join() !== 'ENT-3.1,ENT-3.3') throw new Error('tuiles chez l’élève : ' + t.map((x) => x.code).join(', '));
   if (t.some((x) => x.cachee)) throw new Error('étiquette d’enseignant chez l’élève');
   if (await pl.$('.ent-shell')) throw new Error('la séance s’est ouverte sans passer par la liste');
 });

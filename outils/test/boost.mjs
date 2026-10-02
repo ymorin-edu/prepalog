@@ -2084,7 +2084,7 @@ const JUSTE33 = 'Bonjour Inès,\n\nCharge utile : dépassée\nTrain de 16 h 10 :
   + 'Poids chargé : 218 kg\nArrivée à la Pâtisserie Arnaud : 15 h 27\nArrivée à la gare : 15 h 50\n\nLéa';
 const REPARATION = ['charge', 'horaire', 'creneau', 'trajet'];
 
-await v('ENT-3.3 : la séance est l’erreur induite de C2.4, cachée aux élèves, six jalons, sans notation ni copie', async () => {
+await v('ENT-3.3 : la séance est l’erreur induite de C2.4, validée par Tristan (visible des élèves), six jalons, sans notation ni copie', async () => {
   const r = await page33.evaluate(async () => {
     const { meta } = await import('/activites/boost-ent33.js');
     const { ETAPES } = await import('/contenus/boost-ent33.js');
@@ -2094,7 +2094,7 @@ await v('ENT-3.3 : la séance est l’erreur induite de C2.4, cachée aux élèv
   });
   const m = r.meta;
   if (m.code !== 'ENT-3.3' || m.temps !== 'erreur' || m.competences.join() !== 'C2.4' || m.rubrique !== 'logisim') throw new Error('déclaration : ' + JSON.stringify(m));
-  if (m.pret !== false) throw new Error('pret devrait être false tant que Tristan n’a pas validé la séance');
+  if (m.pret !== true) throw new Error('pret devrait être true : Tristan a validé la séance le 03/10/2026');
   if ('notation' in m || m.copie) throw new Error('jalons et note sur 20 : ni `notation`, ni `copie`');
   if (m.jeuId !== 'boost' || m.reinitialisable) throw new Error('base de Boost partagée : ni jeu à part, ni remise à zéro');
   if (m.bareme !== 6 || r.ids.join() !== 'contraintes,preuves,charge,horaire,creneau,trajet') throw new Error('jalons : ' + m.bareme + ' ' + r.ids.join());

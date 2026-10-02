@@ -7,9 +7,8 @@
 // puis la répare. Brief : `docs/briefs/ENT-3.3-boost-tournee-a-corriger.md` ; contenu et jalons :
 // `contenus/boost-ent33.js`. Aucun écran nouveau : le moteur a reçu `etatInitial` et `sansVerdict`.
 //
-// ── `pret: false` ───────────────────────────────────────────────────────────────────────
-// Tant que Tristan ne l'a pas validée à l'écran, la séance est cachée aux ÉLÈVES (l'enseignant
-// la voit, étiquetée « en préparation »).
+// ── `pret: true` ────────────────────────────────────────────────────────────────────────
+// Validée à l'écran par Tristan le 03/10/2026 : la séance est visible des élèves.
 //
 // ── Pas de `notation` ───────────────────────────────────────────────────────────────────
 // Comme ENT-3.1 et ENT-3.2 : jalons ET note sur 20. Pas de trame élève : déclarer une trame,
@@ -36,7 +35,7 @@ export const meta = {
   reinitialisable: false,
   jeuId: 'boost',
   tables: {},
-  pret: false,
+  pret: true,
 };
 
 // Pas de `plan` : tous les clients sont déjà sur la carte, il n'y a rien à situer. La tournée
