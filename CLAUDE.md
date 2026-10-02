@@ -20,6 +20,18 @@ décision de fond, la **finalité** ci-dessous passe avant tout.
   quels tests valent leur prix et lesquels non.
 - Avant une séance en classe : si quelque chose a été modifié **le jour même**, le dire. Un
   échec devant les élèves n'est pas rattrapable.
+- **Règle « changer de conversation ».** Une conversation longue coûte de plus en plus cher : tout
+  ce qui a été lu y reste. Dire à Tristan **quand c'est le bon moment de repartir de zéro**, en une
+  ligne, et jamais en plein échec de test ni entre un changement et son commit. Les bons moments :
+  un chantier vient d'être commité et poussé (séance, correctif moteur, fiche) ; la conversation a
+  lu beaucoup de gros fichiers ou lancé plusieurs fois la suite ; on passe à un sujet sans lien.
+  Avant de proposer, tout ce qu'il faut pour reprendre est **dans le dépôt** (compte rendu du
+  brief, `docs/decisions.md`, commits) : sinon l'écrire d'abord, puis proposer.
+- **Règle « modèle adapté ».** Au début d'une tâche, dire en une ligne quel modèle convient.
+  **Sonnet par défaut** : documentation, correctifs, contenus, tests, commits, vérifications.
+  **Opus se justifie dans deux cas seulement** : une **vue nouvelle du moteur** (`core/types/`,
+  `core/app.js`) et une **séance nouvelle** à construire de bout en bout (cadrage, pièges,
+  jalons). Si la tâche est d'un autre type que le modèle courant, le dire avant de commencer.
 
 ## Finalité du projet
 
