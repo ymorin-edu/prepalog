@@ -252,6 +252,17 @@ export function creerBackendDemo() {
       ecrire(k, t); publier(k);
       return id;
     },
+    // Pose une ligne à une clé CHOISIE par l'appelant, et la remplace si elle existe.
+    // `ajouterLigne` ne peut pas servir à ça en mode réel : la Realtime Database y fabrique
+    // la clé elle-même (`push`), donc un élève qui refait un quiz s'ajouterait une ligne de
+    // classement de plus à chaque tentative. Ici la clé est l'uid : une ligne par élève.
+    async poserLigne(chemin, table, id, ligne) {
+      const k = `${chemin}/${table}`;
+      const t = lire(k, {});
+      t[id] = { ...ligne, id };
+      ecrire(k, t); publier(k);
+      return id;
+    },
     async majLigne(chemin, table, id, patch) {
       const k = `${chemin}/${table}`;
       const t = lire(k, {});

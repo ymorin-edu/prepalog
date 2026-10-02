@@ -243,6 +243,10 @@ async function vueActivite(aid) {
     // Le niveau de la classe, pour les activités qui portent une série d'exercices de
     // difficulté inégale et n'en montrent que la part qui convient au groupe.
     niveauGroupe: objGroupe?.niveau || null,
+    // Le nom lisible du groupe. `groupe` ci-dessus n'en porte que l'identifiant : un
+    // classement qui mélange les classes doit afficher « 1 LOG », pas « 1-log ». L'objet
+    // groupe est déjà chargé ici, donc ça ne coûte aucune lecture de plus.
+    groupeNom: objGroupe?.nom || null,
     // Code qui déverrouille la vue d'ensemble du stock dans un environnement d'entreprise :
     // l'enseignant le donne au moment qu'il choisit dans la séance.
     codeStock: objGroupe?.codeStock || null,

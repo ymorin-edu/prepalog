@@ -413,6 +413,22 @@ export async function creerBackendFirebase() {
       await DB.set(r, { ...ligne, _par: courant?.uid || null, _parNom: `${courant?.prenom || ''} ${courant?.nom || ''}`.trim(), _ts: Date.now() });
       return r.key;
     },
+    // Pose une ligne à une clé CHOISIE par l'appelant, et la remplace si elle existe.
+    // `ajouterLigne` ci-dessus laisse la Realtime Database fabriquer la clé (`push`) :
+    // un élève qui refait un quiz s'ajouterait une ligne de classement à chaque tentative.
+    // Ici la clé est son uid, donc une seule ligne par élève, écrasée quand il fait mieux.
+    // C'est aussi ce que la règle de sécurité exige : sous `communs/`, un élève n'a le
+    // droit d'écrire que la ligne dont la clé est son propre uid.
+    async poserLigne(chemin, table, id, ligne) {
+      ouvrirRt();
+      await DB.set(DB.ref(rt, `${chemin}/${table}/${id}`), {
+        ...ligne,
+        _par: courant?.uid || null,
+        _parNom: `${courant?.prenom || ''} ${courant?.nom || ''}`.trim(),
+        _ts: Date.now(),
+      });
+      return id;
+    },
     async majLigne(chemin, table, id, patch) {
       ouvrirRt();
       await DB.update(DB.ref(rt, `${chemin}/${table}/${id}`), { ...patch, _ts: Date.now() });

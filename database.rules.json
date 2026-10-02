@@ -16,7 +16,13 @@
     "Écriture d'une ligne autorisée si :",
     "  - l'auteur est enseignant du groupe, OU",
     "  - l'auteur est élève du groupe, ET le jeu n'est pas gelé (gele != true, car ! refuse un null), ET",
-    "    (la ligne est la sienne OU la table est déclarée à écriture partagée dans meta/ouvert)."
+    "    (la ligne est la sienne OU la table est déclarée à écriture partagée dans meta/ouvert).",
+    "",
+    "communs/{aid} : lisible par tout compte authentifié, et depuis l'ajout des classements",
+    "de quiz, un élève peut y écrire LA SEULE ligne dont la clé est son propre uid. C'est ce",
+    "qui permet un classement visible par toutes les classes sans passer par l'enseignant.",
+    "Conséquence à connaître : ce qu'un élève écrit là est lu par les élèves des autres",
+    "groupes. Le site n'y met donc que le prénom et l'initiale du nom."
   ],
 
   "rules": {
@@ -60,7 +66,11 @@
         ".read": "auth != null",
         "$table": {
           "$ligne": {
-            ".write": "auth != null && root.child('profsGlobaux').child(auth.uid).exists()"
+            ".write": "auth != null && ( root.child('profsGlobaux').child(auth.uid).exists() || $ligne === auth.uid )",
+            "nom":   { ".validate": "newData.isString() && newData.val().length < 80" },
+            "score": { ".validate": "newData.isNumber()" },
+            "max":   { ".validate": "newData.isNumber()" },
+            "temps": { ".validate": "newData.isNumber()" }
           }
         }
       }

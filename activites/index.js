@@ -14,6 +14,7 @@ export const ACTIVITES = [
   () => import('./quiz-flux.js'),
   () => import('./zones-entrepot.js'),
   () => import('./calculs-stock.js'),
+  () => import('./entr-conversions.js'),
   // Tableur : les numéros donnent la progression — prise en main, puis séries appliquées,
   // puis la journée complète, puis l'inventaire.
   () => import('./excel-pas-a-pas.js'),
