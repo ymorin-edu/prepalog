@@ -1,6 +1,6 @@
 # Chantier moteur — Logisim rangé par entreprise
 
-**Statut** : à valider par Tristan — construit et testé le 03/10/2026 (maquette et choix : 02/10/2026)
+**Statut** : livré — validé à l'écran par Tristan et poussé le 03/10/2026 (maquette et choix : 02/10/2026)
 **Date** : 02/10/2026
 **Conversation d'origine** : Claude Code, après la construction d'ENT-3.3
 **Modèle** : Opus (vue nouvelle de `core/app.js`)
@@ -97,5 +97,5 @@ erreur dans la console.
   l'envers (élève qui voit tout → échec). `outils/test.mjs` et `commun.mjs` non touchés. Suite entière 335/335,
   `test-seances.mjs` vert. Captures en thème clair et sombre regardées : logos lisibles.
 - **Commits** : `39707cc` (moteur et tests), puis ce compte rendu.
-- **Reste ouvert** : validation à l'écran par Tristan (critères ci-dessus), puis push. Une entreprise nouvelle
+- **Reste ouvert** : Une entreprise nouvelle
   (ENT-4.x) devra ajouter sa ligne dans `ENTREPRISES` et son logo dans `contenus/trames/logos/`.
