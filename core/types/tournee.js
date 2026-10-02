@@ -48,6 +48,19 @@
 //     arrivees: { [idPoint]: minutes }, creneaux: [{ id, nom, avant, libelle, charge, arrivee, rate }],
 //     creneauxRates: [idPoint…], creneauRate }
 //
+// Deux options de séance d'ERREUR INDUITE (ENT-3.3, « la tournée à corriger », 02/10/2026) :
+//
+//   etatInitial: { ordre: [id…], quai: [id…], depart: true, arrivee: true }
+//     La tournée est DÉJÀ construite à l'ouverture — celle d'un collègue, avec son erreur. `quai`
+//     est facultatif (tout ce qui n'est pas dans `ordre`). Voir `amorcer` : l'état n'est installé
+//     qu'UNE FOIS, marqué `amorce` dans la base de l'élève, et ne réécrase jamais son travail.
+//     « Recommencer la tournée » remet alors CETTE tournée, pas une tournée vide.
+//   sansVerdict: true
+//     Les jauges gardent leurs limites mais ne disent plus si elles sont tenues (ni « dépassée »,
+//     ni « raté », ni « respectée »), comme en copie rendue — sans les autres effets de la copie :
+//     la feuille de calcul garde son bouton « Vérifier ». Quand l'élève doit DIAGNOSTIQUER une
+//     tournée, l'écran ne doit pas lui donner le diagnostic.
+//
 // Un point peut porter un CRÉNEAU de livraison : `creneau: { avant: 14 * 60 + 45, libelle }`
 // (ENT-3.2 : la Pâtisserie Arnaud n'accepte qu'avant 14 h 45). Voir `bilanDe`.
 
@@ -161,7 +174,10 @@ export function creerTournee(T) {
   // plus), la feuille de calcul n'a plus de bouton « Vérifier », et rien ne se dévoile. La note
   // se calcule à la remise de la copie, par les jalons de la séance.
   const COPIE = !!T.copie;
-  const REPERE = !!T.jaugesRepere || COPIE;
+  // Ne plus rien dire des contraintes franchies : la copie le veut, et la séance « à corriger »
+  // aussi (`sansVerdict`) sans pour autant devenir une copie.
+  const SANS_VERDICT = COPIE || !!T.sansVerdict;
+  const REPERE = !!T.jaugesRepere || COPIE || !!T.sansVerdict;
 
   // La feuille de calcul, facultative. Elle n'est pas une vue de menu : elle se pose dans
   // cette page, sous les jauges, parce qu'elle est tirée des données que l'élève vient de
@@ -207,6 +223,37 @@ export function creerTournee(T) {
   const vide = () => (T.departAQuai
     ? { ordre: [], quai: POINTS.map((p) => String(p.id)), report: {}, juge: {}, valide: null }
     : { ordre: POINTS.map((p) => String(p.id)), quai: [], report: {}, juge: {}, valide: null });
+
+  // ── L'état de départ d'une séance « à corriger » ─────────────────────────────────────────
+  // Une erreur de contenu (un client inconnu, un client à la fois chargé et à quai) est une erreur
+  // franche à la création, pas un trou qu'on découvrirait à l'écran — comme `creerCarte`.
+  const ids = POINTS.map((p) => String(p.id));
+  if (T.etatInitial) {
+    const I = T.etatInitial;
+    const ordre = (I.ordre || []).map(String);
+    const quai = (I.quai || ids.filter((id) => !ordre.includes(id))).map(String);
+    [...ordre, ...quai].forEach((id) => {
+      if (!ids.includes(id)) throw new Error(`creerTournee : etatInitial cite « ${id} », qui n'est pas un point`);
+    });
+    if (ordre.some((id) => quai.includes(id)) || new Set([...ordre, ...quai]).size !== ids.length) {
+      throw new Error('creerTournee : etatInitial doit répartir chaque point une fois, chargé ou à quai');
+    }
+  }
+  // Une copie neuve à chaque appel : l'élève modifie ces tableaux, le contenu ne doit jamais bouger.
+  const etatDepart = () => {
+    const I = T.etatInitial;
+    if (!I) return vide();
+    const ordre = (I.ordre || []).map(String);
+    const quai = (I.quai || ids.filter((id) => !ordre.includes(id))).map(String);
+    return { ordre, quai, report: {}, juge: {}, valide: null,
+      depart: I.depart ? Date.now() : null, arrivee: I.arrivee ? Date.now() : null };
+  };
+  // Le bouton « Recommencer » est inutile tant que la tournée est celle de départ.
+  const estDepart = (e) => {
+    const d = etatDepart();
+    const cle = (x) => JSON.stringify([x.ordre, [...x.quai].sort(), !!x.depart, !!x.arrivee]);
+    return cle(e) === cle(d);
+  };
 
   /* ------------------------------------------------------------------ le calcul du bilan */
   // Tout se recalcule à partir de l'ordre courant, à chaque dessin. Rien n'est mémorisé :
@@ -297,13 +344,13 @@ export function creerTournee(T) {
     // rien. Vu à l'écran : les colis de Boost n'ont pas de maximum et aucune case ne les
     // réclame ; leur jauge disait pourtant « à calculer ».
     if (muet && max != null) {
-      return `<div class="tour-jauge tour-jauge-repere ${trop && !COPIE ? 'trop' : ''}">
+      return `<div class="tour-jauge tour-jauge-repere ${trop && !SANS_VERDICT ? 'trop' : ''}">
         <div class="tour-j-tete"><span>${ech(m.libelle)}</span>
           <b class="mono">max ${fr(max)} ${ech(m.unite || '')}</b></div>
         <span class="note">C'est la limite à ne pas dépasser.
           Le total, c'est à vous de le calculer.</span>
         ${m.comparaison ? `<span class="tour-compare">${ech(m.comparaison)}</span>` : ''}
-        ${COPIE ? '' : (trop ? `<span class="pastille crit">${ech(m.libelle)} dépassée</span>`
+        ${SANS_VERDICT ? '' : (trop ? `<span class="pastille crit">${ech(m.libelle)} dépassée</span>`
           : (DANS_GRILLE && valeur > 0 ? '<span class="pastille ok">limite respectée</span>' : ''))}
       </div>`;
     }
@@ -322,7 +369,7 @@ export function creerTournee(T) {
       // La distance reste donnée : elle est le produit du parcours cliqué, pas un calcul que
       // l'élève doit savoir faire. Le nombre d'arrêts et le temps par arrêt aussi — ce sont
       // les données de son calcul, pas son résultat.
-      return `<div class="tour-jauge tour-jauge-repere ${b.enRetard && !COPIE ? 'trop' : ''}">
+      return `<div class="tour-jauge tour-jauge-repere ${b.enRetard && !SANS_VERDICT ? 'trop' : ''}">
         <div class="tour-j-tete"><span>${ech(H.libelleLimite || 'Horaire limite')}</span>
           <b class="mono">${H.limite != null ? hhmm(H.limite) : '—'}</b></div>
         ${DANS_GRILLE
@@ -335,7 +382,7 @@ export function creerTournee(T) {
               ${ech(String(H.service || 0))} min par arrêt, ${ech(String(H.vitesse))} km/h en ville.
               L'heure de retour, c'est à vous de la calculer.</span>`}
         ${H.comparaison ? `<span class="tour-compare">${ech(H.comparaison)}</span>` : ''}
-        ${COPIE ? '' : (b.enRetard ? `<span class="pastille crit">${ech(H.libelleLimite || 'Horaire limite')} manqué</span>`
+        ${SANS_VERDICT ? '' : (b.enRetard ? `<span class="pastille crit">${ech(H.libelleLimite || 'Horaire limite')} manqué</span>`
           : (DANS_GRILLE && b.complete ? '<span class="pastille ok">horaire tenu</span>' : ''))}
       </div>`;
     }
@@ -370,11 +417,11 @@ export function creerTournee(T) {
         ${tete}<span class="note">${ech(c.nom)} : ${ech(c.libelle)}. Ce client n’est pas dans la tournée.</span></div>`;
     }
     if (muet) {
-      return `<div class="tour-jauge tour-jauge-creneau tour-jauge-repere ${c.rate && !COPIE ? 'trop' : ''}" data-creneau="${ech(c.id)}">
+      return `<div class="tour-jauge tour-jauge-creneau tour-jauge-repere ${c.rate && !SANS_VERDICT ? 'trop' : ''}" data-creneau="${ech(c.id)}">
         ${tete}
         <span class="note">${ech(c.nom)} : ${ech(c.libelle)}. Il faut arriver chez ce client avant cette heure.
           L’heure d’arrivée chez lui, c’est à vous de la calculer.</span>
-        ${COPIE ? '' : (c.rate ? '<span class="pastille crit">Créneau raté</span>'
+        ${SANS_VERDICT ? '' : (c.rate ? '<span class="pastille crit">Créneau raté</span>'
           : (DANS_GRILLE && b.complete ? '<span class="pastille ok">créneau tenu</span>' : ''))}
       </div>`;
     }
@@ -491,15 +538,20 @@ export function creerTournee(T) {
       const gj = (etat.grille && etat.grille.juge) || {};
       const formulesJustes = Object.keys(gj).length > 0 && Object.values(gj).every((x) => x === 'ok');
       const contrainteFranchie = (b.depassements && b.depassements.length > 0) || b.enRetard || b.creneauRate;
-      const avertissement = !COPIE && DANS_GRILLE && formulesJustes && contrainteFranchie
+      const avertissement = !SANS_VERDICT && DANS_GRILLE && formulesJustes && contrainteFranchie
         ? 'Vos formules sont justes, mais la tournée ne respecte pas toutes les contraintes '
           + '(colonne de droite, en rouge). Le calcul est bon : c’est la tournée qu’il faut revoir.'
         : '';
-      const vierge = !n && !etat.depart && !etat.arrivee;
+      // Avec un état de départ (séance « à corriger »), recommencer = retrouver la tournée du
+      // collègue, pas la vider : le bouton ne sert à rien tant qu'on y est.
+      const vierge = T.etatInitial ? estDepart(etat) : (!n && !etat.depart && !etat.arrivee);
       const raz = `<div class="tour-raz">
           <button class="btn btn-s${razArme ? ' btn-alerte btn-p' : ''}" data-tour-raz ${vierge ? 'disabled' : ''}
-            title="Remettre toutes les commandes à quai et retirer le départ et l’arrivée. Les formules de la feuille de calcul sont gardées.">${
-            razArme ? 'Tout remettre à quai ? Cliquez pour confirmer' : 'Recommencer la tournée'}</button>
+            title="${T.etatInitial
+              ? 'Retrouver la tournée telle qu’elle était à l’ouverture. Les formules de la feuille de calcul sont gardées.'
+              : 'Remettre toutes les commandes à quai et retirer le départ et l’arrivée. Les formules de la feuille de calcul sont gardées.'}">${
+            razArme ? (T.etatInitial ? 'Retrouver la tournée de départ ? Cliquez pour confirmer' : 'Tout remettre à quai ? Cliquez pour confirmer')
+              : (T.etatInitial ? 'Retrouver la tournée de départ' : 'Recommencer la tournée')}</button>
           ${razArme ? '<button class="btn btn-s" data-tour-raz-non>Annuler</button>' : ''}
         </div>`;
       const jaugesHtml = `${raz}${MESURES.map((m) => jauge(m, b.cumuls[m.id], muet)).join('')}
@@ -587,6 +639,22 @@ export function creerTournee(T) {
 
     // Exposé pour les jalons du contenu : `verifier(db)` recalcule le bilan sans dessiner.
     bilan: bilanDe,
+
+    // ── Installer la tournée de départ (séance « à corriger ») ──────────────────────────────
+    // Appelé par l'hôte AVANT de dessiner. **Une seule fois** : l'état porte `amorce` (l'horodatage
+    // de la pose), et tant qu'il y est, rien n'est refait — ni à la réouverture, ni au redessin,
+    // ni après une reconnexion. C'est ce qui garantit qu'on n'écrase jamais le travail de l'élève.
+    //
+    // Un état qui porte DÉJÀ du travail (un arrêt chargé, un bout posé) mais pas de marque n'est
+    // pas touché non plus : on pose seulement la marque. Rend vrai si quelque chose a changé, pour
+    // que l'hôte sauve.
+    amorcer(etat) {
+      if (!T.etatInitial || !etat || etat.amorce) return false;
+      const aTravaille = (etat.ordre && etat.ordre.length) || etat.depart || etat.arrivee;
+      if (aTravaille) { etat.amorce = Date.now(); return true; }
+      Object.assign(etat, etatDepart(), { amorce: Date.now() });
+      return true;
+    },
 
     brancher(z, api) {
       const etat = api.etat;
@@ -746,12 +814,12 @@ export function creerTournee(T) {
 
       z.querySelector('[data-tour-raz]')?.addEventListener('click', () => {
         if (!etaitArme) { razArme = true; api.redessiner(); return; }
-        const neuf = vide();
+        const neuf = etatDepart();
         etat.ordre = neuf.ordre; etat.quai = neuf.quai;
-        etat.depart = null; etat.arrivee = null;
+        etat.depart = neuf.depart; etat.arrivee = neuf.arrivee;
         invalider();
         api.sauver(); api.redessiner();
-        if (api.toast) api.toast('Tournée remise à zéro : tout est à quai.');
+        if (api.toast) api.toast(T.etatInitial ? 'Tournée de départ retrouvée.' : 'Tournée remise à zéro : tout est à quai.');
       });
       z.querySelector('[data-tour-raz-non]')?.addEventListener('click', () => api.redessiner());
 

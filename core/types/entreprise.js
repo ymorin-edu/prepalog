@@ -1326,6 +1326,9 @@ export function creerEntreprise(U) {
         const verrou = VPLAN && !VPLAN.ouvreSuite(etatTransport('plan'))
           ? `Commencez par « ${VPLAN.nav.libelle} » : situez chaque point sur le plan, puis validez le repérage.`
           : null;
+        // Séance « à corriger » : la tournée du collègue est posée à la première ouverture, une
+        // seule fois (voir `amorcer` dans tournee.js). Sans `etatInitial`, rien ne se passe.
+        if (!verrou && VTOUR.amorcer && VTOUR.amorcer(etatTransport('tournee'))) sauver();
         return VTOUR.html(etatTransport('tournee'), { verrou });
       }
 

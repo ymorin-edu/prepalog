@@ -1829,4 +1829,177 @@ await v('ENT-3.2 : aucune erreur de console sur tout le parcours', async () => {
   if (erreurs32.length) throw new Error([...new Set(erreurs32)].slice(0, 3).join(' | '));
 });
 
+/* ===================================================================================== */
+/* Moteur tournée — état initial et « sans verdict » (chantier moteur d'ENT-3.3)          */
+/*                                                                                        */
+/* Ajouté le 02/10/2026. On monte la vue du moteur directement (journée d'ENT-3.2), sans */
+/* passer par une séance : ce qu'on éprouve ici, c'est `etatInitial`, `amorcer`,          */
+/* `sansVerdict` et le bouton « Retrouver la tournée de départ ».                         */
+/* Les valeurs attendues sont écrites ICI à la main (voir l'énumération des 5 040 ordres  */
+/* dans `outils/carte/calibrer.mjs`) : la tournée du collègue est « Mercerie Pellet à     */
+/* quai, puis le plus court » — 218 kg pour 180, créneau raté, train tenu.                */
+/* ===================================================================================== */
+
+const COLLEGUE = { ordre: ['c4', 'c3', 'c8', 'c1', 'c7', 'c6', 'c5'], quai: ['c2'], depart: true, arrivee: true };
+
+// Monte la vue du moteur dans un div jetable ; `t` complète la déclaration de la tournée d'ENT-3.2.
+const monterMoteur = (t, etat0) => page.evaluate(async ({ t, etat0 }) => {
+  const [{ creerTournee }, S] = await Promise.all([import('/core/types/tournee.js'), import('/contenus/boost-ent32.js')]);
+  const vue = creerTournee(Object.assign({ plan: S.PLAN }, S.TOURNEE, t));
+  const etat = etat0 || {};
+  // Un essai précédent qui a échoué n'a pas pu défaire son écran : on repart toujours d'une page propre.
+  document.getElementById('moteurEssai')?.remove();
+  const hote = document.createElement('div');
+  hote.id = 'moteurEssai';
+  document.body.appendChild(hote);
+  const sauvegardes = [];
+  const api = { etat, sauver: () => sauvegardes.push(JSON.stringify(etat)), toast: () => {},
+    redessiner: () => { hote.innerHTML = vue.html(etat); vue.brancher(hote, api); } };
+  window.__moteur = { vue, etat, hote, api, sauvegardes };
+  return true;
+}, { t, etat0 });
+const demonterMoteur = () => page.evaluate(() => { document.getElementById('moteurEssai')?.remove(); delete window.__moteur; });
+const lireMoteur = () => page.evaluate(() => JSON.parse(JSON.stringify(window.__moteur.etat)));
+
+await v('Moteur tournée : amorcer pose la tournée du collègue, une fois, avec sa marque', async () => {
+  await monterMoteur({ etatInitial: COLLEGUE }, {});
+  const r = await page.evaluate(() => { const m = window.__moteur; const a = m.vue.amorcer(m.etat); return { a, e: JSON.parse(JSON.stringify(m.etat)) }; });
+  if (r.a !== true) throw new Error('amorcer devait rendre vrai la première fois');
+  if (r.e.ordre.join() !== COLLEGUE.ordre.join()) throw new Error('ordre : ' + r.e.ordre);
+  if (r.e.quai.join() !== 'c2') throw new Error('à quai : ' + r.e.quai);
+  if (!r.e.depart || !r.e.arrivee) throw new Error('départ et arrivée devraient être posés : ' + JSON.stringify([r.e.depart, r.e.arrivee]));
+  if (!r.e.amorce) throw new Error('la marque `amorce` manque : rien n’empêcherait de le refaire');
+  await demonterMoteur();
+});
+
+await v('Moteur tournée : la tournée de départ est celle du brief — 218 kg, créneau raté, train tenu (bilan compté comme les clics)', async () => {
+  await monterMoteur({ etatInitial: COLLEGUE }, {});
+  const r = await page.evaluate(() => {
+    const m = window.__moteur; m.vue.amorcer(m.etat);
+    const pose = m.vue.bilan(m.etat);
+    // La même tournée posée « comme par des clics » : l'état que le moteur écrit au clic.
+    const clic = m.vue.bilan({ ordre: ['c4', 'c3', 'c8', 'c1', 'c7', 'c6', 'c5'], quai: ['c2'], depart: 1, arrivee: 1, report: {}, juge: {} });
+    const pick = (b) => ({ km: Math.round(b.km * 1000) / 1000, charge: b.cumuls.charge, creneau: b.creneauRate, retard: b.enRetard, gare: Math.round(b.arrivee) });
+    return { pose: pick(pose), clic: pick(clic) };
+  });
+  if (JSON.stringify(r.pose) !== JSON.stringify(r.clic)) throw new Error('posée ≠ cliquée : ' + JSON.stringify(r));
+  if (r.pose.charge !== 218) throw new Error('charge ' + r.pose.charge + ' kg au lieu de 218');
+  if (Math.abs(r.pose.km - 11.52) > 0.05) throw new Error('distance ' + r.pose.km + ' km au lieu de ≈ 11,52');
+  if (r.pose.creneau !== true) throw new Error('le créneau devrait être raté');
+  if (r.pose.retard !== false) throw new Error('le train devrait être tenu (leurre)');
+  if (r.pose.gare < 947 || r.pose.gare > 953) throw new Error('arrivée à la gare : ' + r.pose.gare + ' min, attendu ≈ 15 h 50');
+  await demonterMoteur();
+});
+
+await v('Moteur tournée : amorcer ne réécrase JAMAIS le travail — ni au second appel, ni après reconnexion, ni au redessin', async () => {
+  await monterMoteur({ etatInitial: COLLEGUE }, {});
+  const r = await page.evaluate(async () => {
+    const m = window.__moteur; m.vue.amorcer(m.etat);
+    // L'élève répare : il retire la Pâtisserie, puis recharge un client à quai.
+    m.etat.ordre = m.etat.ordre.filter((x) => x !== 'c6'); m.etat.quai.push('c6'); m.etat.arrivee = null;
+    // Ce qui compte, c'est la tournée : le redessin ajoute de lui-même la feuille de calcul vide
+    // (`grille`), qui n'est pas du travail d'élève.
+    const tournee = (e) => JSON.stringify([e.ordre, e.quai, e.depart, e.arrivee, e.amorce]);
+    const apres = JSON.stringify(m.etat);
+    const deuxieme = m.vue.amorcer(m.etat);
+    m.api.redessiner(); m.api.redessiner();                        // redessin ×2
+    const redessin = tournee(m.etat);
+    // Reconnexion : la base est relue (copie JSON) et une NOUVELLE vue la reçoit.
+    const { creerTournee } = await import('/core/types/tournee.js');
+    const S = await import('/contenus/boost-ent32.js');
+    const neuve = creerTournee(Object.assign({ plan: S.PLAN }, S.TOURNEE, { etatInitial: { ordre: ['c1'], quai: ['c2', 'c3', 'c4', 'c5', 'c6', 'c7', 'c8'], depart: true, arrivee: true } }));
+    const relue = JSON.parse(apres);
+    const troisieme = neuve.amorcer(relue);
+    return { apres, deuxieme, redessin, troisieme, relue: JSON.stringify(relue),
+      tourneeApres: tournee(JSON.parse(apres)) };
+  });
+  if (r.deuxieme !== false) throw new Error('le second amorcer devait ne rien faire');
+  if (r.redessin !== r.tourneeApres) throw new Error('le redessin a modifié le travail de l’élève : ' + r.redessin);
+  if (r.troisieme !== false || r.relue !== r.apres) throw new Error('la reconnexion a réécrasé le travail');
+  if (JSON.parse(r.apres).ordre.includes('c6')) throw new Error('cas mal posé : c6 devrait avoir été retiré');
+  await demonterMoteur();
+});
+
+await v('Moteur tournée : un état qui porte déjà du travail, sans marque, n’est pas écrasé — la marque seule est posée', async () => {
+  await monterMoteur({ etatInitial: COLLEGUE }, { ordre: ['c1'], quai: ['c2', 'c3', 'c4', 'c5', 'c6', 'c7', 'c8'], report: {}, juge: {}, depart: 1, arrivee: null });
+  const r = await page.evaluate(() => { const m = window.__moteur; const a = m.vue.amorcer(m.etat); return { a, e: JSON.parse(JSON.stringify(m.etat)) }; });
+  if (r.e.ordre.join() !== 'c1' || r.e.arrivee !== null) throw new Error('le travail existant a été écrasé : ' + JSON.stringify(r.e));
+  if (!r.e.amorce) throw new Error('la marque devait être posée');
+  await demonterMoteur();
+});
+
+await v('Moteur tournée : sans etatInitial, amorcer ne fait rien — ENT-3.1 et ENT-3.2 ne bougent pas', async () => {
+  await monterMoteur({}, {});
+  const r = await page.evaluate(() => { const m = window.__moteur; const a = m.vue.amorcer(m.etat); return { a, e: JSON.stringify(m.etat) }; });
+  if (r.a !== false || r.e !== '{}') throw new Error('amorcer a touché une séance sans état de départ : ' + r.e);
+  await demonterMoteur();
+});
+
+await v('Moteur tournée : un état de départ incohérent est refusé à la création (client inconnu, client chargé ET à quai, client oublié)', async () => {
+  const essais = [
+    ['client inconnu', { ordre: ['c1', 'zz'], quai: [] }],
+    ['chargé et à quai', { ordre: ['c1', 'c2', 'c3', 'c4', 'c5', 'c6', 'c7', 'c8'], quai: ['c8'] }],
+    ['client oublié', { ordre: ['c1', 'c2'], quai: ['c3'] }],
+  ];
+  for (const [nom, I] of essais) {
+    const r = await page.evaluate(async (I) => {
+      const [{ creerTournee }, S] = await Promise.all([import('/core/types/tournee.js'), import('/contenus/boost-ent32.js')]);
+      try { creerTournee(Object.assign({ plan: S.PLAN }, S.TOURNEE, { etatInitial: I })); return 'accepté'; } catch (e) { return 'refusé'; }
+    }, I);
+    if (r !== 'refusé') throw new Error(nom + ' : ' + r);
+  }
+});
+
+await v('Moteur tournée : « Retrouver la tournée de départ » — grisé au départ, actif après une modif, remet la tournée du collègue', async () => {
+  await monterMoteur({ etatInitial: COLLEGUE }, {});
+  await page.evaluate(() => { const m = window.__moteur; m.vue.amorcer(m.etat); m.api.redessiner(); });
+  const sel = '#moteurEssai [data-tour-raz]';
+  if (!(await page.$eval(sel, (b) => b.disabled))) throw new Error('le bouton devrait être grisé tant que la tournée est celle de départ');
+  const texte = (await page.textContent(sel)).trim();
+  if (!/Retrouver la tournée de départ/.test(texte) || /Recommencer/.test(texte)) throw new Error('libellé : ' + texte);
+  // L'élève répare, puis veut revenir au départ.
+  await page.evaluate(() => { const m = window.__moteur; m.etat.ordre = m.etat.ordre.filter((x) => x !== 'c5'); m.etat.quai.push('c5'); m.etat.depart = null; m.api.redessiner(); });
+  if (await page.$eval(sel, (b) => b.disabled)) throw new Error('le bouton devrait être actif après une modification');
+  await page.click(sel);                                   // arme
+  await page.click('#moteurEssai [data-tour-raz]');        // confirme
+  const e = await lireMoteur();
+  if (e.ordre.join() !== COLLEGUE.ordre.join() || e.quai.join() !== 'c2' || !e.depart || !e.arrivee) {
+    throw new Error('la tournée de départ n’est pas revenue : ' + JSON.stringify(e));
+  }
+  if (!e.amorce) throw new Error('la marque a disparu : la tournée serait reposée à la prochaine ouverture');
+  await demonterMoteur();
+});
+
+await v('Moteur tournée : sans etatInitial, « Recommencer la tournée » vide toujours la tournée (inchangé)', async () => {
+  await monterMoteur({}, { ordre: ['c1', 'c2'], quai: ['c3', 'c4', 'c5', 'c6', 'c7', 'c8'], report: {}, juge: {}, depart: 1, arrivee: 1 });
+  await page.evaluate(() => window.__moteur.api.redessiner());
+  const texte = (await page.textContent('#moteurEssai [data-tour-raz]')).trim();
+  if (texte !== 'Recommencer la tournée') throw new Error('libellé : ' + texte);
+  await page.click('#moteurEssai [data-tour-raz]');
+  await page.click('#moteurEssai [data-tour-raz]');
+  const e = await lireMoteur();
+  if (e.ordre.length || e.quai.length !== 8 || e.depart || e.arrivee) throw new Error('la tournée n’est pas vide : ' + JSON.stringify(e));
+  await demonterMoteur();
+});
+
+await v('Moteur tournée : sansVerdict — la tournée du collègue ne s’accuse nulle part (ni dépassée, ni raté, ni respectée, ni tenu)', async () => {
+  const verdict = /dépassée|manqué|raté|retard|respectée|tenu\b|Créneau tenu|horaire tenu/i;
+  const lire = async (t) => {
+    await monterMoteur(Object.assign({ etatInitial: COLLEGUE }, t), {});
+    const r = await page.evaluate(() => { const m = window.__moteur; m.vue.amorcer(m.etat); m.api.redessiner();
+      return { txt: m.hote.textContent.replace(/\s+/g, ' '), trop: m.hote.querySelectorAll('.tour-jauge.trop').length,
+        crit: m.hote.querySelectorAll('.pastille.crit, .pastille.ok').length }; });
+    await demonterMoteur();
+    return r;
+  };
+  const muet = await lire({ sansVerdict: true });
+  if (verdict.test(muet.txt)) throw new Error('un verdict est lisible : ' + (muet.txt.match(verdict) || [])[0]);
+  if (muet.trop || muet.crit) throw new Error('jauge ou pastille d’alerte visible : ' + JSON.stringify(muet));
+  if (!/180/.test(muet.txt)) throw new Error('la limite de 180 kg doit rester lisible');
+  if (/\b218\b/.test(muet.txt)) throw new Error('le poids chargé (218) est donné');
+  // Témoin : SANS l'option, ce même écran accuse bien la tournée (sinon le test ne prouverait rien).
+  const parlant = await lire({});
+  if (!verdict.test(parlant.txt) || !parlant.trop) throw new Error('le témoin n’accuse rien : l’essai ne prouve rien');
+});
+
 }
