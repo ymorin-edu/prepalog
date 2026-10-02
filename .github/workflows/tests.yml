@@ -1,0 +1,31 @@
+# Lance la suite de tests à chaque push et à chaque demande de fusion.
+# Elle ne BLOQUE rien : le site est servi directement depuis `main`, un push est en ligne
+# tout de suite. Elle PRÉVIENT (croix rouge sur le commit, mail de GitHub) si quelque chose
+# est cassé. Mode démonstration uniquement, comme en local : aucun accès au vrai Firebase.
+
+name: Tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  suite:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # Même installation qu'en local (voir CLAUDE.md) : rien n'est ajouté au dépôt.
+      - name: Installer Playwright et xlsx
+        run: npm install --no-save --no-package-lock playwright xlsx@0.18.5
+
+      - name: Installer Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Suite de tests
+        run: node outils/test.mjs
