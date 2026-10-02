@@ -32,6 +32,9 @@ export const ACTIVITES = [
   () => import('./spartoo-reception.js'),
   () => import('./spartoo.js'),
   () => import('./spartoo-tracabilite.js'),
+  // Boost (Nîmes) — ENT-3.x. C2.4 « Organiser une tournée de livraison » prend quatre
+  // séances : guidage, entraînement, erreur induite, évaluation. Seule la première existe.
+  () => import('./boost-tournee.js'),
 ];
 
 // Pictogrammes des rubriques. Une seule grille pour les dix : trait de 1,6 px, bouts et

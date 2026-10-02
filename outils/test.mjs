@@ -217,7 +217,10 @@ await v('rubriques : les activités sont rangées par numéro de module', async 
     if (r.codes.join(' ') !== attendu) throw new Error(`rubrique ${label} : ${r.codes.join(' ')}`);
   };
   repere('Tableur', 'TAB-1 TAB-2 TAB-3 TAB-4 TAB-5');
-  repere('Logisim', 'ENT-1.1 ENT-1.2 ENT-1.3');
+  // Deux entreprises, et le rang se lit sur le premier chiffre : les trois séances Spartoo
+  // (ENT-1.x), puis Boost (ENT-3.x). TechPro prendra ENT-2.x et viendra s'insérer entre les
+  // deux sans qu'on touche à cette liste autrement qu'en l'allongeant.
+  repere('Logisim', 'ENT-1.1 ENT-1.2 ENT-1.3 ENT-3.1');
 });
 
 // ---------- 7. l'élève voit la base commune de la classe
@@ -2322,6 +2325,596 @@ await v('vue plan : une séance peut tolérer une case fausse', async () => {
 await v('transport : aucune erreur de console pendant tout le parcours', async () => {
   if (erreursTr.length) throw new Error([...new Set(erreursTr)].slice(0, 3).join(' | '));
 });
+
+
+/* ===================================================================================== */
+/* ENT-3.1 — Boost, la tournée du vélo-cargo (lot 2 : le CONTENU)                         */
+/*                                                                                        */
+/* Les dix-sept cas précédents gardent les deux vues du noyau sur un scénario d'essai.    */
+/* Ceux-ci gardent le CONTENU de la séance : les sept adresses, les cases recalculées, le  */
+/* calibrage (une seule combinaison de clients possible), le parcours complet d'un élève   */
+/* qui réussit, et les cinq jalons — y compris ce qu'ils disent AVANT que l'élève ait      */
+/* commencé, parce qu'un jalon qui annonce « à corriger » à l'ouverture ferait croire à    */
+/* une faute là où il n'y a rien.                                                         */
+/*                                                                                        */
+/* On passe par l'activité réelle (`activites/boost-tournee.js`), pas par un montage à la  */
+/* main : c'est la déclaration de la séance autant que ses chiffres qu'on veut garder.    */
+/* ===================================================================================== */
+
+const ctxBo = await nav.newContext();
+const pageBo = await ctxBo.newPage();
+pageBo.setDefaultTimeout(8000);
+const erreursBo = [];
+pageBo.on('pageerror', (e) => erreursBo.push('PAGEERROR: ' + e.message));
+pageBo.on('console', (m) => { if (m.type() === 'error' && !/\b404\b/.test(m.text())) erreursBo.push('CONSOLE: ' + m.text()); });
+await pageBo.goto('http://127.0.0.1:8099/');
+await pageBo.waitForSelector('#btnProf', { timeout: 8000 });
+
+await pageBo.evaluate(async () => {
+  const act = await import('/activites/boost-tournee.js');
+  const hote = document.createElement('div');
+  hote.id = 'boost31';
+  document.body.appendChild(hote);
+  const db = {};
+  const suivi = [];
+  act.rendre(hote, {
+    meta: act.meta,
+    profil: { prenom: 'Lea', nom: 'Dupont', role: 'eleve' },
+    jeu: { etat: () => db, sauver: () => {} },
+    enregistrer: (r) => suivi.push(r),
+    quitter: () => {}, codeStock: 'ABC',
+  });
+  window.__bo = { act, db, suivi, hote };
+});
+
+const zBo = '#boost31 .ent-main';
+const ouvrirBo = async (vue) => {
+  await pageBo.click(`#boost31 .ent-nav[data-vue="${vue}"]`);
+  await pageBo.waitForTimeout(140);
+};
+// L'état de la séance, lu dans la base de l'élève. La clé est `transportId`, pas l'identifiant
+// de l'activité : c'est elle que les jalons du contenu interrogent.
+const etatBo = (vue) => pageBo.evaluate((v) => {
+  const t = window.__bo.db.transport && window.__bo.db.transport['boost-ent31'];
+  return t ? JSON.parse(JSON.stringify(t[v] || {})) : null;
+}, vue);
+const dernierSuivi = () => pageBo.evaluate(() => {
+  const s = window.__bo.suivi;
+  return s.length ? JSON.parse(JSON.stringify(s[s.length - 1])) : null;
+});
+// Les modèles HTML coupent leurs phrases sur plusieurs lignes : « manqué\n de 9 min ». Une
+// assertion écrite d'un trait ne les retrouve pas. Trois fois le piège sur ce projet, d'où ce
+// lecteur qui écrase les blancs.
+const texteBo = async (sel) => (await pageBo.textContent(sel || zBo)).replace(/\s+/g, ' ').trim();
+// Les jalons, interrogés DIRECTEMENT sur le contenu. Le moteur, lui, ne les remonte au suivi
+// qu'au moment où il sauve : un test qui pose un état dans la base puis lit `ctx.enregistrer`
+// relirait l'état précédent et se tromperait de verdict.
+const jalonsBo = () => pageBo.evaluate(async () => {
+  const S = await import('/contenus/boost-tournee.js');
+  const o = {};
+  S.ETAPES.forEach((e) => { o[e.id] = e.verifier(window.__bo.db).status; });
+  return o;
+});
+
+// Les sept cases attendues, ÉCRITES ICI à la main. Le contenu, lui, ne les écrit pas : le
+// noyau les recalcule depuis la position du point. Les deux doivent tomber d'accord, et c'est
+// tout l'intérêt de les poser en dur dans le test — un point déplacé par erreur se voit.
+const CASES31 = { c1: 'D2', c2: 'C2', c3: 'C4', c4: 'B3', c5: 'F3', c6: 'E1', c7: 'D4' };
+// Le meilleur ordre de passage, et ce qu'il donne. Valeurs obtenues par énumération des
+// 720 ordres (voir `claude/prepalog-boost-c24-c26.md`), pas estimées.
+const ORDRE31 = ['c4', 'c2', 'c1', 'c6', 'c5', 'c7'];
+
+await v('ENT-3.1 : la séance déclare un barème de jalons et PAS de notation', async () => {
+  const d = await pageBo.evaluate(async () => {
+    const act = await import('/activites/boost-tournee.js');
+    const notes = await import('/core/notes.js');
+    return {
+      code: act.meta.code, id: act.meta.id, jeuId: act.meta.jeuId,
+      bareme: act.meta.bareme, notation: act.meta.notation,
+      immersif: !!act.meta.immersif, portee: act.meta.portee,
+      convertie: notes.noteConvertie(act.meta),
+      sur20: notes.noteSur20(act.meta.bareme, act.meta.bareme),
+    };
+  });
+  if (d.code !== 'ENT-3.1') throw new Error('code ' + d.code);
+  if (d.jeuId !== 'boost') throw new Error('jeuId ' + d.jeuId);
+  if (d.portee !== 'eleve' || !d.immersif) throw new Error('portée ou immersion');
+  if (d.notation !== undefined) throw new Error('la séance déclare notation: ' + d.notation);
+  if (d.bareme !== 5) throw new Error('barème ' + d.bareme + ' au lieu de 5 jalons');
+  // C'est l'omission de `notation` qui donne la note sur 20 — vérifié par le moteur lui-même,
+  // pas supposé.
+  if (!d.convertie) throw new Error('la séance ne serait pas ramenée sur 20');
+  if (d.sur20 !== 20) throw new Error('5 jalons sur 5 ne donnent pas 20/20 : ' + d.sur20);
+});
+
+await v('ENT-3.1 : sept clients, adresses réelles sans numéro de rue, quartiers cachés', async () => {
+  await ouvrirBo('plan');
+  const adr = await pageBo.$$eval(`${zBo} .plan-table tbody tr td:nth-child(2)`, (e) => e.map((x) => x.textContent.trim()));
+  if (adr.length !== 7) throw new Error(adr.length + ' lignes au lieu de 7');
+  // Pas de numéro de rue : la rue est réelle, le commerce est inventé. Un numéro désignerait
+  // un vrai bâtiment.
+  adr.forEach((a) => {
+    if (/^\s*\d/.test(a)) throw new Error('numéro de rue dans « ' + a + ' »');
+    if (!/30\d{3} Nîmes$/.test(a)) throw new Error('adresse mal formée : ' + a);
+  });
+  if (!adr.some((a) => /Mascard/.test(a)) || !adr.some((a) => /Bouvine/.test(a))) {
+    throw new Error('les deux rues vérifiées en source officielle ont disparu');
+  }
+  // Temps 1 : le plan est muet et les quartiers ne sont pas donnés.
+  const zones = await pageBo.$$eval(`${zBo} .plan-zone`, (e) => e.map((x) => x.textContent.trim()));
+  if (zones.some((z) => z !== '—')) throw new Error('quartiers affichés au temps 1 : ' + zones.join('|'));
+  const svg = await pageBo.textContent(`${zBo} .plan-svg`);
+  if (/Comptoir des Halles/.test(svg)) throw new Error('les noms des clients sont sur le plan muet');
+  // Le décor nomme les quartiers, mais aucun ne porte le nom d'un client : lire le décor ne
+  // donne pas la réponse.
+  if (!/Écusson/.test(svg) || !/Costières/.test(svg)) throw new Error('le décor a perdu ses quartiers');
+  if (/Route d'Avignon/.test(svg)) throw new Error('le décor dit encore « Route d’Avignon » au lieu de Grézan');
+});
+
+await v('ENT-3.1 : l’entrepôt est au sud-ouest, et le décor ne double pas le noyau', async () => {
+  const g = await pageBo.evaluate(() => {
+    const svg = document.querySelector('#boost31 .plan-svg');
+    const d = svg.querySelector('.plan-depart rect');
+    return {
+      x: +d.getAttribute('x') + 13, y: +d.getAttribute('y') + 13,
+      departs: svg.querySelectorAll('.plan-depart').length,
+      arrivees: svg.querySelectorAll('.plan-arrivee').length,
+      traces: svg.querySelectorAll('.plan-trace').length,
+      points: svg.querySelectorAll('.plan-pt').length,
+      echelles: (svg.innerHTML.match(/1 km/g) || []).length,
+    };
+  });
+  // Sud-ouest : moitié gauche du plan (600 de large), moitié basse (420 de haut). La maquette
+  // le plaçait au nord-est, à l'opposé de son adresse réelle.
+  if (!(g.x < 300 && g.y > 210)) throw new Error(`entrepôt en (${g.x},${g.y}) : pas au sud-ouest`);
+  // Le quadrillage, les repères, le tracé, les points et l'échelle sont dessinés par le NOYAU.
+  // Si le décor du contenu les redessinait, on les verrait en double.
+  if (g.departs !== 1 || g.arrivees !== 1 || g.traces !== 1) throw new Error('repères en double dans le SVG');
+  if (g.points !== 7) throw new Error(g.points + ' points dessinés');
+  if (g.echelles !== 1) throw new Error(g.echelles + ' échelles « 1 km » : le décor en redessine une');
+});
+
+await v('ENT-3.1 : le plan porte trois repères nîmois, la voie ferrée et le nord', async () => {
+  // Le premier décor aurait pu être celui de n'importe quelle ville moyenne. Un élève reconnaît
+  // sa ville par ses monuments, ses axes structurants et son orientation — ce cas garde les
+  // trois, et garde surtout que le décor ne reprend pas la couleur des points clients.
+  const d = await pageBo.evaluate(() => {
+    const svg = document.querySelector('#boost31 .plan-svg');
+    const rail = svg.querySelector('.plan-rail');
+    const [a, b] = (rail ? rail.dataset.rail : '0,0 0,0').split(' ')
+      .map((p) => p.split(',').map(Number));
+    // Distance de la gare à la droite du rail : la voie ferrée n'a de sens que si elle passe
+    // par la gare. Produit vectoriel sur la longueur, pas d'à-peu-près à l'œil.
+    const G = { x: 318, y: 255 };
+    const dx = b[0] - a[0], dy = b[1] - a[1];
+    const ecart = Math.abs((G.x - a[0]) * dy - (G.y - a[1]) * dx) / Math.hypot(dx, dy);
+    return {
+      reperes: svg.querySelectorAll('.plan-reperes > g').length,
+      nord: svg.querySelectorAll('.plan-nord').length,
+      rails: svg.querySelectorAll('.plan-rail').length,
+      ecart,
+      texte: svg.textContent,
+      // `--ardoise-fond`, c'est le bleu des clients. Le noyau le pose sur les sept points, et
+      // sur eux seuls : si le décor le reprend pour ses quartiers, les pastilles disparaissent
+      // dans le fond. C'était le défaut de la première version.
+      bleus: (svg.innerHTML.match(/var\(--ardoise-fond\)/g) || []).length,
+    };
+  });
+  if (d.reperes !== 3) throw new Error(d.reperes + ' repère(s) dessiné(s) au lieu de 3');
+  ['Arènes', 'Maison Carrée', 'Tour Magne'].forEach((m) => {
+    if (!d.texte.includes(m)) throw new Error('le repère « ' + m + ' » n’est pas nommé');
+  });
+  if (d.nord !== 1) throw new Error('pas de flèche du nord : l’élève ne peut pas raccrocher le plan en ligne');
+  if (d.rails !== 1) throw new Error(d.rails + ' voie(s) ferrée(s)');
+  if (!(d.ecart < 6)) throw new Error('la voie ferrée passe à ' + d.ecart.toFixed(1) + ' px de la gare');
+  if (!/voie ferrée/.test(d.texte)) throw new Error('la voie ferrée n’est pas nommée');
+  if (d.bleus !== 7) throw new Error(d.bleus + ' usages du bleu des clients au lieu de 7 : le décor leur fait concurrence');
+});
+
+await v('ENT-3.1 : le calibrage tient — une seule combinaison de clients possible', async () => {
+  // La règle du projet est d'ÉNUMÉRER, pas d'estimer. 128 combinaisons et 720 ordres, calculés
+  // ici à partir du contenu réel : si un poids ou une position change, ce test tombe.
+  const r = await pageBo.evaluate(async () => {
+    const B = await import('/contenus/boost.js');
+    const { distanceKm } = await import('/core/types/plan.js');
+    const P = B.DESTINATAIRES, V = B.VELO, PLAN = B.PLAN_NIMES;
+    const combis = [];
+    let sousEnsembles = 0;
+    for (let m = 0; m < (1 << P.length); m++) {
+      sousEnsembles++;
+      const c = P.filter((_, i) => m & (1 << i));
+      if (c.reduce((t, x) => t + x.kg, 0) <= V.chargeUtile) combis.push(c);
+    }
+    const maxn = Math.max(...combis.map((c) => c.length));
+    const grandes = combis.filter((c) => c.length === maxn);
+    // Les ordres de passage de la meilleure combinaison.
+    const perms = (a) => (a.length <= 1 ? [a] : a.flatMap((x, i) =>
+      perms(a.slice(0, i).concat(a.slice(i + 1))).map((p) => [x].concat([p]).flat())));
+    const c = grandes[0];
+    let ok = 0, tot = 0, best = Infinity, bestOrdre = null;
+    perms(c).forEach((p) => {
+      const suite = [PLAN.depart].concat(p, [PLAN.arrivee]);
+      let km = 0;
+      for (let i = 1; i < suite.length; i++) km += distanceKm(PLAN, suite[i - 1], suite[i]);
+      const arr = V.depart + km / V.vitesse * 60 + p.length * V.service;
+      tot++;
+      if (arr <= V.train) ok++;
+      if (arr < best) { best = arr; bestOrdre = p.map((x) => x.id); }
+    });
+    return {
+      total: P.reduce((t, x) => t + x.kg, 0), utile: V.chargeUtile,
+      sousEnsembles, combis: combis.length, maxn, nGrandes: grandes.length,
+      quai: P.filter((x) => !c.includes(x)).map((x) => x.id),
+      poids: c.reduce((t, x) => t + x.kg, 0),
+      ok, tot, best: Math.round(best), bestOrdre,
+    };
+  });
+  // 128 sous-ensembles de sept clients, dont 115 tiennent dans les 180 kg. On énumère les
+  // 128 — c'est la règle du projet : énumérer, pas estimer.
+  if (r.sousEnsembles !== 128) throw new Error(r.sousEnsembles + ' sous-ensembles au lieu de 128');
+  if (r.combis !== 115) throw new Error(r.combis + ' combinaisons tenables au lieu de 115');
+  if (r.total !== 237) throw new Error('masse totale ' + r.total + ' kg au lieu de 237');
+  if (r.maxn !== 6) throw new Error('on pourrait livrer ' + r.maxn + ' clients, pas 6');
+  if (r.nGrandes !== 1) throw new Error(r.nGrandes + ' combinaisons de 6 clients : la réponse n’est plus unique');
+  if (r.quai.join(',') !== 'c3') throw new Error('à quai : ' + r.quai.join(',') + ' au lieu de c3 (La Pointe Sud)');
+  if (r.poids !== 179) throw new Error(r.poids + ' kg chargés au lieu de 179');
+  if (r.tot !== 720) throw new Error(r.tot + ' ordres énumérés au lieu de 720');
+  // La contrainte de temps doit mordre : si presque tous les ordres passaient, l'exercice
+  // n'aurait plus d'intérêt ; si aucun ne passait, il serait infaisable.
+  if (!(r.ok > 40 && r.ok < 300)) throw new Error(r.ok + '/720 ordres à l’heure : calibrage à revoir');
+  if (r.best !== 15 * 60 + 27) throw new Error('meilleure arrivée à ' + r.best + ' min au lieu de 15 h 27');
+  if (r.bestOrdre.join(',') !== 'c4,c2,c1,c6,c5,c7') throw new Error('meilleur ordre : ' + r.bestOrdre.join(','));
+});
+
+await v('ENT-3.1 : les jalons ne reprochent rien avant que l’élève ait commencé', async () => {
+  const s = await dernierSuivi();
+  if (!s) throw new Error('aucun avancement remonté au suivi');
+  if (s.max !== 5) throw new Error('max ' + s.max + ' au lieu de 5');
+  if (s.score !== 0) throw new Error('score ' + s.score + ' avant tout travail');
+  // Aucun jalon ne doit être « ko » : rien n'est fait, donc rien n'est faux. La charge est
+  // pourtant à 237 kg pour 180 utiles — c'est l'état de départ, pas une erreur de l'élève.
+  const ko = Object.keys(s.detail).filter((k) => s.detail[k] === 'ko');
+  if (ko.length) throw new Error('jalon(s) à tort en « ko » : ' + ko.join(', '));
+});
+
+await v('ENT-3.1 : le mail du responsable porte la fiche des sept commandes', async () => {
+  await ouvrirBo('mail');
+  const t = await pageBo.textContent(zBo);
+  if (!/Tournée vélo-cargo du jour/.test(t)) throw new Error('le mail de la séance n’est pas semé');
+  const corps = await pageBo.evaluate(() => {
+    const m = window.__bo.db.mails.find((x) => /vélo-cargo du jour/.test(x.subject));
+    return m ? m.text : '';
+  });
+  ['Comptoir des Halles', 'Pointe Sud', 'Caveau Pélissier', '180 kg', '16 h 10']
+    .forEach((x) => { if (!corps.includes(x)) throw new Error('le mail ne dit pas « ' + x + ' »'); });
+  // La gare, c'est Nîmes-Centre : la gare TGV est à Manduel, inatteignable en vélo-cargo.
+  if (!/Nîmes-Centre/.test(corps)) throw new Error('le mail ne nomme pas la gare de Nîmes-Centre');
+  if (/Nîmes TGV|Pont-du-Gard/.test(corps)) throw new Error('le mail envoie le vélo-cargo à la gare TGV');
+  // Semé une seule fois, même si l'élève revient : la base est partagée par les séances ENT-3.x.
+  const n = await pageBo.evaluate(() => window.__bo.db.mails.filter((x) => /vélo-cargo du jour/.test(x.subject)).length);
+  if (n !== 1) throw new Error(n + ' exemplaires du mail');
+});
+
+await v('ENT-3.1 : l’écran Clients donne l’adresse mais jamais le quartier', async () => {
+  await ouvrirBo('clients');
+  await pageBo.waitForTimeout(140);
+  const t = await pageBo.textContent(zBo);
+  if (!/Comptoir des Halles/.test(t)) throw new Error('les sept commerces ne sont pas référencés');
+  if (!/Mascard/.test(t)) throw new Error('l’adresse n’est pas donnée');
+  // L'écran ne doit pas servir le champ `zone` : c'est précisément ce que l'élève va chercher.
+  // Cinq quartiers sur sept n'apparaissent ni dans un nom de rue ni dans une enseigne, et
+  // aucun ne doit donc se lire ici. C'est ce test qui a attrapé « Épicerie Fontaine » et
+  // « Caveau des Costières », deux commerces inventés qui donnaient la réponse dans leur nom.
+  ['Écusson', 'Ville Active', 'Saint-Césaire', 'Costières']
+    .forEach((q) => { if (new RegExp(q).test(t)) throw new Error('le quartier « ' + q + ' » est donné dans l’écran Clients'); });
+  // Les trois autres SONT dans le nom de la rue — quai de la Fontaine, route de Courbessac,
+  // rue de Grézan — et il n'y a rien à y faire : ces rues sont réelles et cohérentes avec la
+  // position de leur point, les renommer serait mentir. Pour ces trois clients, le quartier
+  // vient avec l'adresse ; la CASE du quadrillage reste à lire sur le plan, et c'est elle
+  // qu'on corrige. Le test garde qu'on n'en ajoute pas un quatrième par mégarde — c'est lui
+  // qui a attrapé « Caveau des Costières », dont l'enseigne donnait la réponse.
+  const donnes = ['Fontaine', 'Courbessac', 'Grézan'].filter((q) => new RegExp(q).test(t));
+  if (donnes.length !== 3) throw new Error('quartiers lisibles dans les adresses : ' + donnes.join(', '));
+});
+
+await v('ENT-3.1 : la tournée est fermée tant que le repérage n’est pas fait', async () => {
+  await ouvrirBo('tournee');
+  const t = await pageBo.textContent(zBo);
+  if (!/Plan de Nîmes/.test(t)) throw new Error('la tournée s’ouvre sans repérage : ' + t.slice(0, 200));
+  if (await pageBo.$$eval(`${zBo} #tourListe`, (e) => e.length)) throw new Error('les arrêts sont déjà manipulables');
+});
+
+await v('ENT-3.1 : les sept cases justes ouvrent la tournée et valident le jalon', async () => {
+  await ouvrirBo('plan');
+  for (const [id, c] of Object.entries(CASES31)) {
+    await pageBo.fill(`${zBo} .plan-case[data-case="${id}"]`, c);
+  }
+  await pageBo.click(`${zBo} [data-plan-valider]`);
+  await pageBo.waitForTimeout(160);
+  const t = await pageBo.textContent(zBo);
+  if (!/Les 7 points sont bien situés/.test(t)) throw new Error('les cases du test ne tombent pas d’accord avec le noyau : ' + t.slice(0, 400));
+  const e = await etatBo('plan');
+  if (!e.valide) throw new Error('le repérage n’est pas enregistré');
+  if (e.force) throw new Error('la porte de sortie a été prise alors que tout est juste');
+  const svg = await pageBo.textContent(`${zBo} .plan-svg`);
+  if (!/Comptoir des Halles/.test(svg)) throw new Error('les noms n’apparaissent pas au temps 2');
+  const s = await dernierSuivi();
+  if (s.detail.reperage !== 'ok') throw new Error('jalon repérage : ' + s.detail.reperage);
+  if (s.score !== 1) throw new Error('score ' + s.score + ' au lieu de 1 après le repérage');
+});
+
+await v('ENT-3.1 : à l’ouverture de la tournée, rien n’est encore reproché', async () => {
+  // Le moment le plus traître de la séance. L'élève vient de valider son repérage, il ouvre la
+  // tournée, et les sept commandes y sont toutes chargées : 237 kg pour 180 utiles, et un
+  // retour bien après le train. Rien de tout cela n'est une faute — c'est l'énoncé. Un jalon
+  // qui afficherait « à corriger » ici ferait croire à l'enseignant que l'élève s'est trompé
+  // avant même d'avoir touché à quoi que ce soit.
+  await ouvrirBo('tournee');
+  const t = await texteBo();
+  if (!/237 \/ 180 kg/.test(t)) throw new Error('la charge de départ n’est pas de 237 kg : ' + t.slice(0, 300));
+  const j = await jalonsBo();
+  const ko = Object.keys(j).filter((k) => j[k] === 'ko');
+  if (ko.length) throw new Error('jalon(s) à tort en « ko » à l’ouverture : ' + ko.join(', ') + ' — ' + JSON.stringify(j));
+  if (j.charge !== 'attente') throw new Error('jalon charge à l’ouverture : ' + j.charge);
+  if (j.horaire !== 'attente') throw new Error('jalon horaire à l’ouverture : ' + j.horaire);
+  if (j.choix !== 'attente') throw new Error('jalon choix à l’ouverture : ' + j.choix);
+  if (j.reperage !== 'ok') throw new Error('jalon repérage : ' + j.reperage);
+});
+
+await v('ENT-3.1 : la bonne commande à quai, le bon ordre, le train attrapé, 5 jalons sur 5', async () => {
+  await ouvrirBo('tournee');
+  // La Pointe Sud à quai : 58 kg, la seule commande qui libère assez de charge à elle seule.
+  await pageBo.click(`${zBo} [data-quai="c3"]`);
+  await pageBo.waitForTimeout(140);
+  // On vise la jauge de CHARGE, pas « une jauge en rouge » : à cet instant l'ordre est encore
+  // celui de la fiche, donc la jauge d'horaire est légitimement en rouge. Confondre les deux
+  // ferait passer ce test pour un échec du calibrage.
+  const chargeTrop = await pageBo.$$eval(`${zBo} .tour-jauge`, (els) => els
+    .filter((e) => /Charge du vélo-cargo/.test(e.textContent))
+    .map((e) => ({ trop: e.classList.contains('trop'), txt: e.textContent.replace(/\s+/g, ' ').trim() })));
+  if (chargeTrop.length !== 1) throw new Error(chargeTrop.length + ' jauge(s) de charge');
+  if (chargeTrop[0].trop) throw new Error('la charge dépasse encore : ' + chargeTrop[0].txt);
+  if (!/179 \/ 180 kg/.test(chargeTrop[0].txt)) throw new Error('charge affichée : ' + chargeTrop[0].txt);
+  // L'ordre optimal. Le glisser-déposer et les flèches sont déjà éprouvés par les dix-sept
+  // cas du noyau ; ici c'est le CHIFFRE qu'on vérifie, donc on pose l'ordre et on redessine.
+  await pageBo.evaluate((ordre) => {
+    window.__bo.db.transport['boost-ent31'].tournee.ordre = ordre;
+  }, ORDRE31);
+  await ouvrirBo('plan');
+  await ouvrirBo('tournee');
+  const t = await texteBo();
+  if (!/15 h 27/.test(t)) throw new Error('retour annoncé autrement qu’à 15 h 27 : ' + t.slice(0, 600));
+  if (/manqué/.test(t)) throw new Error('le train est annoncé manqué avec le meilleur ordre');
+  // Les quatre cases de report. Les valeurs sont écrites ici, pas lues sur l'écran.
+  const attendu = { total: '237', trop: '57', chargee: '179', arrets: '36' };
+  for (const [id, val] of Object.entries(attendu)) {
+    await pageBo.fill(`${zBo} [data-report="${id}"]`, val);
+  }
+  await pageBo.click(`${zBo} [data-tour-valider]`);
+  await pageBo.waitForTimeout(180);
+  const faux = await pageBo.$$eval(`${zBo} .tour-saisie input.faux`, (e) => e.length);
+  if (faux) throw new Error(faux + ' case(s) de report jugée(s) fausse(s) alors qu’elles sont justes');
+  const s = await dernierSuivi();
+  if (s.score !== 5 || s.max !== 5) throw new Error('suivi : ' + s.score + '/' + s.max + ' — ' + JSON.stringify(s.detail));
+  const pas = Object.keys(s.detail).filter((k) => s.detail[k] !== 'ok');
+  if (pas.length) throw new Error('jalon(s) pas au vert : ' + pas.join(', '));
+});
+
+await v('ENT-3.1 : un mauvais ordre fait manquer le train, et seul ce jalon tombe', async () => {
+  // L'ordre de départ, celui de la fiche : 32,6 km et un retour à 16 h 19, neuf minutes après
+  // le train. La charge, elle, reste bonne — les deux contraintes se jugent séparément.
+  await pageBo.evaluate(() => {
+    const t = window.__bo.db.transport['boost-ent31'].tournee;
+    t.ordre = ['c1', 'c2', 'c4', 'c5', 'c6', 'c7'];
+    t.juge = {};
+  });
+  await ouvrirBo('plan');
+  await ouvrirBo('tournee');
+  const t = await texteBo();
+  if (!/16 h 19/.test(t)) throw new Error('retour annoncé autrement qu’à 16 h 19 : ' + t.slice(0, 600));
+  if (!/manqué de 9 min/.test(t)) throw new Error('le retard n’est pas annoncé : ' + t.slice(0, 600));
+  const j = await jalonsBo();
+  if (j.horaire !== 'ko') throw new Error('jalon horaire : ' + j.horaire);
+  if (j.charge !== 'ok') throw new Error('jalon charge tombé avec l’horaire : ' + j.charge);
+  if (j.choix !== 'ok') throw new Error('jalon choix tombé avec l’horaire : ' + j.choix);
+  if (j.reperage !== 'ok') throw new Error('jalon repérage tombé avec l’horaire');
+  // Réordonner efface la correction des cases : le jalon « report » repasse en « na ».
+  if (j.report !== 'na') throw new Error('jalon report après un changement d’ordre : ' + j.report);
+  const vus = Object.keys(j).filter((k) => j[k] === 'ok').length;
+  if (vus !== 3) throw new Error(vus + ' jalons au vert au lieu de 3 — ' + JSON.stringify(j));
+});
+
+await v('ENT-3.1 : laisser deux commandes à quai reste une sortie de secours praticable', async () => {
+  // Décision du calibrage : l'élève en difficulté peut laisser DEUX clients à quai et tenir
+  // l'horaire largement. Le jalon « choix » le dit faux, mais il n'est pas bloqué.
+  await pageBo.evaluate(() => {
+    const t = window.__bo.db.transport['boost-ent31'].tournee;
+    t.ordre = ['c4', 'c2', 'c1', 'c6', 'c7'];
+    t.quai = ['c3', 'c5'];
+    t.juge = {};
+  });
+  await ouvrirBo('plan');
+  await ouvrirBo('tournee');
+  const t = await texteBo();
+  if (/manqué/.test(t)) throw new Error('deux clients à quai et le train est encore manqué : ' + t.slice(0, 400));
+  if (!/15 h 10/.test(t)) throw new Error('retour annoncé autrement qu’à 15 h 10 : ' + t.slice(0, 400));
+  const j = await jalonsBo();
+  if (j.horaire !== 'ok' || j.charge !== 'ok') throw new Error('horaire ou charge en faute : ' + JSON.stringify(j));
+  if (j.choix !== 'ko') throw new Error('deux clients à quai sont comptés comme le bon choix');
+});
+
+await v('ENT-3.1 : le filet de sécurité donne le quartier, et le suivi garde la trace', async () => {
+  // Nouvelle base : on refait le parcours depuis zéro pour éprouver le filet de sécurité et la
+  // porte de sortie sans défaire le travail déjà vérifié.
+  await pageBo.evaluate(async () => {
+    const act = await import('/activites/boost-tournee.js');
+    const hote = document.createElement('div');
+    hote.id = 'boost31b';
+    document.body.appendChild(hote);
+    const db = {}; const suivi = [];
+    act.rendre(hote, {
+      meta: Object.assign({}, act.meta, { id: 'boost-tournee-b' }),
+      profil: { prenom: 'Theo', nom: 'Martin', role: 'eleve' },
+      jeu: { etat: () => db, sauver: () => {} },
+      enregistrer: (r) => suivi.push(r),
+      quitter: () => {}, codeStock: 'ABC',
+    });
+    window.__bo2 = { db, suivi };
+  });
+  const z2 = '#boost31b .ent-main';
+  await pageBo.click('#boost31b .ent-nav[data-vue="plan"]');
+  await pageBo.waitForTimeout(140);
+  await pageBo.click(`${z2} [data-plan-secours]`);
+  await pageBo.waitForTimeout(140);
+  const zones = await pageBo.$$eval(`${z2} .plan-zone`, (e) => e.map((x) => x.textContent.trim()));
+  if (!zones.includes('Écusson') || !zones.includes('Grézan')) throw new Error('les quartiers ne sont pas révélés : ' + zones.join('|'));
+  // Mais PAS les cases : le filet débloque, il ne donne pas la réponse.
+  const cases = await pageBo.$$eval(`${z2} .plan-case`, (e) => e.map((x) => x.value));
+  if (cases.some((c) => c !== '')) throw new Error('le filet de sécurité a rempli des cases : ' + cases.join('|'));
+  const s = await pageBo.evaluate(() => {
+    const s = window.__bo2.suivi; return s.length ? JSON.parse(JSON.stringify(s[s.length - 1])) : null;
+  });
+  // Le recours au filet est horodaté, donc visible dans le suivi, sans compter pour une faute.
+  if (s.detail.reperage !== 'attente') throw new Error('jalon repérage : ' + s.detail.reperage);
+});
+
+await v('ENT-3.1 : la porte de sortie débloque sans valider, et le jalon ne ment pas', async () => {
+  const z2 = '#boost31b .ent-main';
+  // Trois validations infructueuses : la porte n'apparaît qu'ensuite (essaisAvantIssue: 3).
+  for (let essai = 1; essai <= 3; essai++) {
+    for (const id of Object.keys(CASES31)) await pageBo.fill(`${z2} .plan-case[data-case="${id}"]`, 'A1');
+    const avant = await pageBo.$$eval(`${z2} [data-plan-issue]`, (e) => e.length);
+    if (essai < 3 && avant) throw new Error('la porte de sortie est offerte dès l’essai ' + essai);
+    await pageBo.click(`${z2} [data-plan-valider]`);
+    await pageBo.waitForTimeout(140);
+  }
+  if (!(await pageBo.$$eval(`${z2} [data-plan-issue]`, (e) => e.length))) {
+    throw new Error('la porte de sortie n’apparaît pas après trois essais');
+  }
+  await pageBo.click(`${z2} [data-plan-issue]`);
+  await pageBo.waitForTimeout(160);
+  const e = await pageBo.evaluate(() => JSON.parse(JSON.stringify(window.__bo2.db.transport['boost-ent31'].plan)));
+  if (e.valide) throw new Error('la porte de sortie a validé le repérage');
+  if (!e.force) throw new Error('le recours à la porte de sortie n’est pas enregistré');
+  // La suite s'ouvre quand même : personne ne reste coincé sur une case.
+  await pageBo.click('#boost31b .ent-nav[data-vue="tournee"]');
+  await pageBo.waitForTimeout(160);
+  if (!(await pageBo.$$eval(`${z2} #tourListe .tour-item`, (e2) => e2.length))) {
+    throw new Error('la tournée reste fermée après la porte de sortie');
+  }
+  const s = await pageBo.evaluate(() => {
+    const s2 = window.__bo2.suivi; return JSON.parse(JSON.stringify(s2[s2.length - 1]));
+  });
+  if (s.detail.reperage !== 'ko') throw new Error('jalon repérage après la porte de sortie : ' + s.detail.reperage);
+});
+
+await v('ENT-3.1 : une case tolérée laisse avancer, mais ne donne pas le point', async () => {
+  // `toleres: 1` : six cases justes sur sept suffisent pour continuer. Le jalon, lui, exige
+  // les sept — c'est la distinction entre « ne pas bloquer un élève » et « valider un acquis ».
+  await pageBo.evaluate(async () => {
+    const act = await import('/activites/boost-tournee.js');
+    const hote = document.createElement('div');
+    hote.id = 'boost31c';
+    document.body.appendChild(hote);
+    const db = {}; const suivi = [];
+    act.rendre(hote, {
+      meta: Object.assign({}, act.meta, { id: 'boost-tournee-c' }),
+      profil: { prenom: 'Ines', nom: 'Roux', role: 'eleve' },
+      jeu: { etat: () => db, sauver: () => {} },
+      enregistrer: (r) => suivi.push(r),
+      quitter: () => {}, codeStock: 'ABC',
+    });
+    window.__bo3 = { db, suivi };
+  });
+  const z3 = '#boost31c .ent-main';
+  await pageBo.click('#boost31c .ent-nav[data-vue="plan"]');
+  await pageBo.waitForTimeout(140);
+  for (const [id, c] of Object.entries(CASES31)) {
+    await pageBo.fill(`${z3} .plan-case[data-case="${id}"]`, id === 'c5' ? 'A1' : c);
+  }
+  await pageBo.click(`${z3} [data-plan-valider]`);
+  await pageBo.waitForTimeout(160);
+  const t = await pageBo.textContent(z3);
+  if (!/vous pouvez continuer/.test(t)) throw new Error('la tolérance ne joue pas : ' + t.slice(0, 300));
+  if (!/Repérage validé/.test(t)) throw new Error('le repérage n’est pas validé malgré la tolérance');
+  const s = await pageBo.evaluate(() => {
+    const s2 = window.__bo3.suivi; return JSON.parse(JSON.stringify(s2[s2.length - 1]));
+  });
+  if (s.detail.reperage !== 'ko') throw new Error('six cases sur sept donnent le point : ' + s.detail.reperage);
+});
+
+await v('ENT-3.1 : la charte de Boost habille les deux vues sans une ligne de CSS en plus', async () => {
+  const c = await pageBo.evaluate(() => {
+    const page = document.querySelector('#boost31 .ent-page');
+    const lu = (v) => getComputedStyle(page).getPropertyValue(v).trim().toLowerCase();
+    const svg = document.querySelector('#boost31 .plan-svg');
+    const hex = (el, attr) => (el ? getComputedStyle(el).fill || el.getAttribute(attr) : '');
+    return {
+      vert: lu('--vert'), terre: lu('--terre'), fond: lu('--ardoise-fond'), marque: lu('--ent-marque'),
+      depart: hex(svg.querySelector('.plan-depart rect'), 'fill'),
+      arrivee: hex(svg.querySelector('.plan-arrivee path'), 'fill'),
+      point: hex(svg.querySelector('.plan-pt circle'), 'fill'),
+    };
+  });
+  // Les trois valeurs relevées sur le site et le logo de Boost, dans leurs rôles.
+  if (c.vert !== '#25c998') throw new Error('--vert (menthe du logo) : ' + c.vert);
+  if (c.terre !== '#f0bd3c') throw new Error('--terre (jaune de la charte) : ' + c.terre);
+  if (c.fond !== '#345cfd') throw new Error('--ardoise-fond (bleu électrique) : ' + c.fond);
+  if (c.marque !== '#25c998') throw new Error('--ent-marque : ' + c.marque);
+  // Et les vues les prennent : l'entrepôt en menthe, la gare en jaune, les clients en bleu.
+  const rgb = (s) => s.replace(/\s/g, '');
+  if (rgb(c.depart) !== 'rgb(37,201,152)') throw new Error('entrepôt : ' + c.depart);
+  if (rgb(c.arrivee) !== 'rgb(240,189,60)') throw new Error('gare : ' + c.arrivee);
+  if (rgb(c.point) !== 'rgb(52,92,253)') throw new Error('point client : ' + c.point);
+});
+
+await v('ENT-3.1 : le logo réel de Boost est servi par le dépôt', async () => {
+  const r = await pageBo.evaluate(async () => {
+    const img = document.querySelector('#boost31 .ent-logo');
+    if (!img) return { absent: true };
+    const rep = await fetch(img.src);
+    const buf = await rep.arrayBuffer();
+    const h = await crypto.subtle.digest('SHA-256', buf);
+    return {
+      src: img.getAttribute('src'), ok: rep.ok, octets: buf.byteLength,
+      sha: [...new Uint8Array(h)].map((b) => b.toString(16).padStart(2, '0')).join(''),
+    };
+  });
+  if (r.absent) throw new Error('le bandeau n’affiche pas le logo');
+  if (!r.ok) throw new Error('le logo ne se charge pas : ' + r.src);
+  // L'empreinte du fichier d'origine, recalculée sur le fichier SERVI. Une image recopiée à la
+  // main se serait corrompue sans que la taille le dise — c'est arrivé une fois sur ce projet.
+  if (r.octets !== 9861) throw new Error(r.octets + ' octets au lieu de 9 861');
+  if (r.sha !== 'b1e5c4ec368a158251bdb989fc56d34f439bf488e3297ad368782339d0aa2388') {
+    throw new Error('empreinte du logo : ' + r.sha);
+  }
+  if (!/^\.\/contenus\/trames\/logos\/boost\.png$/.test(r.src)) throw new Error('chemin du logo : ' + r.src);
+});
+
+await v('ENT-3.1 : aucune carte en ligne n’est intégrée, seulement un lien', async () => {
+  await ouvrirBo('plan');
+  const a = await pageBo.evaluate(() => {
+    const z = document.querySelector('#boost31 .ent-main');
+    const lien = z.querySelector('.plan-barre a');
+    return {
+      iframes: z.querySelectorAll('iframe, embed, object').length,
+      href: lien ? lien.getAttribute('href') : null,
+      cible: lien ? lien.getAttribute('target') : null,
+      rel: lien ? lien.getAttribute('rel') : null,
+      images: [...z.querySelectorAll('img')].map((i) => i.getAttribute('src')),
+    };
+  });
+  if (a.iframes) throw new Error(a.iframes + ' cadre(s) intégré(s) : aucune carte en ligne ne doit être embarquée');
+  if (!a.href) throw new Error('pas de lien vers un plan en ligne');
+  if (!/^https:\/\//.test(a.href)) throw new Error('lien non sécurisé : ' + a.href);
+  if (a.cible !== '_blank' || !/noopener/.test(a.rel || '')) throw new Error('le lien ne s’ouvre pas proprement dans un autre onglet');
+  if (a.images.some((s) => /^https?:/.test(s))) throw new Error('image chargée depuis l’extérieur : ' + a.images.join(', '));
+});
+
+await v('ENT-3.1 : aucune erreur de console sur tout le parcours', async () => {
+  if (erreursBo.length) throw new Error([...new Set(erreursBo)].slice(0, 3).join(' | '));
+});
+
 
 
 console.log('\n=== RÉUSSIS ===');
