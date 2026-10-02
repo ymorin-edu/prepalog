@@ -5,6 +5,11 @@ n'est pas évident)**. Claude Code y ajoute toute décision prise en cours de ro
 reporte dans les fiches du projet PREPALOG. Une décision de fond sur la pédagogie reste dans
 `docs/fiches/prepalog-finalite.md`.
 
+- 03/10/2026 · Claude Code · **Logisim rangé par entreprise, choix de construction** : la pastille Logisim
+  passe toujours par les logos, même s'il ne reste qu'une séance ouverte (prolongement de la décision 2 du brief) ;
+  une séance dont le numéro n'est dans aucune ligne de `ENTREPRISES` va sous une carte « Autres séances », sans
+  logo, toujours en dernier ; la plaque `#f7f4ee` reste une couleur fixe et non une variable (elle ne doit pas
+  suivre le thème) ; l'enseignant voit la carte de toute entreprise qui a au moins une séance au registre.
 - 02/10/2026 · Tristan · **Logisim rangé par entreprise** (chantier moteur, brief
   `docs/briefs/MOTEUR-logisim-par-entreprise.md`) : Logisim → logos des entreprises (logo seul) → séances de
   l'entreprise ; la liste s'affiche même pour une seule séance ; « Quitter » ramène à la liste de l'entreprise.

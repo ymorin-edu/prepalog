@@ -1,6 +1,6 @@
 # Chantier moteur — Logisim rangé par entreprise
 
-**Statut** : à implémenter — maquette cliquable faite et choix tranchés par Tristan le 02/10/2026
+**Statut** : à valider par Tristan — construit et testé le 03/10/2026 (maquette et choix : 02/10/2026)
 **Date** : 02/10/2026
 **Conversation d'origine** : Claude Code, après la construction d'ENT-3.3
 **Modèle** : Opus (vue nouvelle de `core/app.js`)
@@ -78,8 +78,24 @@ erreur dans la console.
 
 ## Compte rendu *(rempli par Claude Code à la livraison)*
 
-- **Fichiers créés / modifiés** :
-- **Écarts par rapport au brief** :
-- **Tests** :
-- **Commits** :
-- **Reste ouvert** :
+- **Fichiers créés / modifiés** : `activites/index.js` (table `ENTREPRISES`, drapeau `parEntreprise: true` sur la
+  rubrique Logisim, fonction `entreprisesDe`), `core/app.js` (niveau « entreprise » de l'accueil, état
+  `entrepriseActive`), `styles/base.css` (`.entreprises`, `.entreprise`, `.plaque`, `.entreprise-tete`, repris de la
+  maquette, plus `.entreprise-autres`), `activites/FICHE-SEANCE.md` (la règle « premier nombre du code »).
+- **Écarts par rapport au brief** : aucun sur les décisions. Choix de construction (journal du 03/10) : la pastille
+  Logisim passe toujours par les logos, même avec une seule séance ouverte ; la carte « Autres séances » est un
+  texte (pas de logo), toujours en dernier ; la plaque `#f7f4ee` reste une couleur fixe, pas une variable ; le lien
+  de la liste s'appelle `#btnLogisim` (« ← LOGISIM »), celui des logos reste `#btnAccueil`.
+- **Tests** : 8 cas nouveaux en fin du bloc `socle` (fenêtre à part) : trois logos et rien d'autre sur la carte,
+  logos locaux et chargés ; un logo ouvre ses séances avec nom et métier ; « ← LOGISIM » / « ← ACCUEIL » ; l'élève
+  ne voit pas la carte d'une entreprise sans séance ouverte, et un changement de session repart de l'accueil ; une
+  seule séance ouverte → la liste quand même ; « Quitter » ramène à la liste de l'entreprise ; une séance au numéro
+  inconnu reste sous « Autres » ; aucune requête hors du site, aucune erreur. Chacun éprouvé par un sabotage (9
+  sabotages, tous attrapés). **Tests réécrits** (annoncés à Tristan) : `spartoo.mjs` (4 endroits),
+  `test-seances.mjs` (2 fonctions), `visibilite.mjs` (ouverture de rubrique et retour à l'accueil par le logo ;
+  sans cela, le cas « l'élève ne voit pas la séance en préparation » serait passé à vide) — `visibilite` éprouvé à
+  l'envers (élève qui voit tout → échec). `outils/test.mjs` et `commun.mjs` non touchés. Suite entière 335/335,
+  `test-seances.mjs` vert. Captures en thème clair et sombre regardées : logos lisibles.
+- **Commits** : `39707cc` (moteur et tests), puis ce compte rendu.
+- **Reste ouvert** : validation à l'écran par Tristan (critères ci-dessus), puis push. Une entreprise nouvelle
+  (ENT-4.x) devra ajouter sa ligne dans `ENTREPRISES` et son logo dans `contenus/trames/logos/`.
