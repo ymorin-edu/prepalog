@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Essai — vue carte réelle (Prepalog)</title>
+<!-- Page d'ESSAI de la vue `core/types/carte.js`, dans le vrai moteur d'entreprise et le décor
+     Boost, AVANT qu'ENT-3.2 existe comme séance. Elle n'est liée nulle part et rien n'y est
+     enregistré : la base vit en mémoire, un rechargement repart de zéro.
+     Ouvrir avec `lancer.bat`, puis http://localhost:8000/outils/essai-carte.html -->
+<!-- Les chemins du contenu (logo, trames) partent de la racine du site : on s'y place. -->
+<base href="../">
+<link rel="icon" href="./styles/logo.png">
+<link rel="stylesheet" href="./styles/polices.css">
+<link rel="stylesheet" href="./styles/base.css">
+</head>
+<body>
+<div id="hote"></div>
+<script type="module">
+import { creerEntreprise } from './core/types/entreprise.js';
+import * as BOOST from './contenus/boost.js';
+import { CARTE } from './contenus/boost-carte.js';
+
+const moteur = creerEntreprise({
+  ENTREPRISE: BOOST.ENTREPRISE, VOCAB: BOOST.VOCAB, CATALOGUE: BOOST.CATALOGUE,
+  SUPPLIERS: BOOST.SUPPLIERS, SUP_BY_ID: BOOST.SUP_BY_ID, CUSTOMERS: BOOST.CUSTOMERS, CM: BOOST.CM,
+  baseDeDepart: BOOST.baseDeDepart, THEME: BOOST.THEME,
+  etapes: [], exercice: 'Essai de la carte réelle',
+  transportSection: 'Tournées', transportId: 'essai-carte',
+  plan: {
+    libelle: 'Plan de Nîmes',
+    titre: 'Situer les nouveaux clients sur le plan de Nîmes',
+    consigne: 'Les clients habituels sont déjà sur la carte. Situez les trois nouveaux : '
+      + 'cherchez leur rue dans l’index, ouvrez le quartier, puis cliquez sur la rue.',
+    carte: CARTE,
+  },
+});
+const db = {};
+moteur.rendre(document.getElementById('hote'), {
+  meta: { id: 'essai-carte', code: 'ESSAI', titre: 'Boost — essai de la carte réelle', portee: 'eleve', immersif: true, jeuId: 'essai-carte' },
+  profil: { prenom: 'Essai', nom: 'Carte', role: 'eleve' },
+  jeu: { etat: () => db, sauver: () => {} },
+  enregistrer: () => {}, quitter: () => { location.reload(); }, codeStock: '',
+});
+window.__essai = { db };
+document.querySelector('.ent-nav[data-vue="plan"]')?.click();
+</script>
+</body>
+</html>

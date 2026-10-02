@@ -5102,6 +5102,320 @@ await v('QUI-9 et QUI-10 : rien n’est allé chercher quoi que ce soit à l’e
 
 /* ===== BLOC QUIZ CALCUL — fin ===== */
 
+
+/* ===================================================================================== */
+/* La vue « carte réelle » (core/types/carte.js) — ENT-3.2 et suivantes, étape 1          */
+/*                                                                                        */
+/* Montée dans le vrai moteur d'entreprise, décor Boost, avec la carte générée            */
+/* (`contenus/boost-carte.js`) et ses sept clients d'essai. Ce que ces cas gardent :       */
+/*   - les données : chaque nouveau client est sur sa rue, dans sa case, dans l'index ;    */
+/*   - la règle du 02/10 : un nom de rue ne compte que s'il se lit ENTIER à l'écran ;      */
+/*   - le point aimanté : bonne rue = posé au numéro BAN ; autre rue = refusé, nommé,      */
+/*     compté ; maisons ou vue d'ensemble = refusé, pas compté ;                           */
+/*   - la fin du repérage ouvre la suite, et le travail survit à un redessin ;            */
+/*   - ENT-3.1 n'est pas touchée : elle garde le plan schématique.                        */
+/* ===================================================================================== */
+
+const ctxCt = await nav.newContext({ viewport: { width: 1440, height: 900 } });
+const pageCt = await ctxCt.newPage();
+pageCt.setDefaultTimeout(8000);
+const erreursCt = [];
+const hotesCt = new Set();
+pageCt.on('pageerror', (e) => erreursCt.push('PAGEERROR: ' + e.message));
+pageCt.on('console', (m) => { if (m.type() === 'error' && !/\b404\b/.test(m.text())) erreursCt.push('CONSOLE: ' + m.text()); });
+pageCt.on('request', (r) => { try { const h = new URL(r.url()).hostname; if (h && !['127.0.0.1', 'localhost'].includes(h)) hotesCt.add(h); } catch (e) {} });
+await pageCt.goto('http://127.0.0.1:8099/');
+await pageCt.waitForSelector('#btnProf', { timeout: 8000 });
+
+// `css` : une feuille ajoutée AVANT le montage — c'est ainsi qu'on simule une police de poste
+// plus large que celle de la mesure, puisque le garde-fou ne mesure qu'à l'ouverture.
+const monterCt = (css) => pageCt.evaluate(async (css) => {
+  document.getElementById('ct-hote')?.remove();
+  document.getElementById('ct-css')?.remove();
+  if (css) { const s = document.createElement('style'); s.id = 'ct-css'; s.textContent = css; document.head.appendChild(s); }
+  const { creerEntreprise } = await import('/core/types/entreprise.js');
+  const B = await import('/contenus/boost.js');
+  const { CARTE } = await import('/contenus/boost-carte.js');
+  const moteur = creerEntreprise({
+    ENTREPRISE: B.ENTREPRISE, VOCAB: B.VOCAB, CATALOGUE: B.CATALOGUE, SUPPLIERS: B.SUPPLIERS,
+    SUP_BY_ID: B.SUP_BY_ID, CUSTOMERS: B.CUSTOMERS, CM: B.CM, baseDeDepart: B.baseDeDepart, THEME: B.THEME,
+    etapes: [], exercice: 'Essai', transportSection: 'Tournées', transportId: 'essai-carte',
+    plan: { libelle: 'Plan de Nîmes', titre: 'Situer les nouveaux clients', carte: CARTE },
+  });
+  const hote = document.createElement('div'); hote.id = 'ct-hote'; document.body.appendChild(hote);
+  const db = (window.__ct && window.__ct.garder) ? window.__ct.db : {};
+  let sauvegardes = 0;
+  moteur.rendre(hote, {
+    meta: { id: 'essai-carte', code: 'ESSAI', titre: 'Boost — essai', portee: 'eleve', immersif: true, jeuId: 'essai-carte' },
+    profil: { prenom: 'Lea', nom: 'Dupont', role: 'eleve' },
+    jeu: { etat: () => db, sauver: () => { sauvegardes++; } }, enregistrer: () => {}, quitter: () => {}, codeStock: '',
+  });
+  window.__ct = { db, CARTE, sauvegardes: () => sauvegardes };
+  hote.querySelector('.ent-nav[data-vue="plan"]').click();
+}, css || '');
+const etatCt = () => pageCt.evaluate(() => JSON.parse(JSON.stringify(
+  (window.__ct.db.transport && window.__ct.db.transport['essai-carte'] && window.__ct.db.transport['essai-carte'].plan) || {})));
+const bulleCt = () => pageCt.textContent('[data-ct-bulle]');
+const zoomCt = async (k) => { await pageCt.click(`[data-ct-zoom="${k}"]`); await pageCt.waitForTimeout(650); };
+// Un point de la carte (mètres) → un clic à l'écran, au pixel près.
+//
+// Deux précautions, trouvées par un test qui passait une fois sur deux : le moteur fait défiler
+// la page en DOUX (`scrollIntoView`) à chaque changement de vue, donc on attend que le
+// défilement soit fini avant de lire la position ; et on vide la bulle avant de cliquer, pour
+// qu'un message resté du clic d'avant ne fasse pas passer un clic perdu pour une réponse.
+const cliquerCt = async (pt) => {
+  await pageCt.evaluate(() => new Promise((ok) => {
+    let y = -1, n = 0;
+    const f = () => { if (window.scrollY === y) n++; else { n = 0; y = window.scrollY; } if (n >= 5) ok(); else requestAnimationFrame(f); };
+    requestAnimationFrame(f);
+  }));
+  await pageCt.evaluate(() => { document.querySelector('[data-ct-bulle]').textContent = ''; });
+  const ecran = await pageCt.evaluate(({ x, y }) => {
+    const svg = document.querySelector('[data-ct-svg]');
+    const p = svg.createSVGPoint(); p.x = x; p.y = y;
+    const e = p.matrixTransform(svg.getScreenCTM());
+    return { x: e.x, y: e.y };
+  }, pt);
+  await pageCt.mouse.click(ecran.x, ecran.y);
+  await pageCt.waitForTimeout(60);
+};
+// Un point SÛR d'une rue : le milieu de son plus long segment visible dans le zoom, dont on
+// vérifie avec la fonction de la vue que c'est bien CETTE rue qu'il désigne (pas un carrefour).
+const pointDeRue = (nom, k) => pageCt.evaluate(async ({ nom, k }) => {
+  const { segments, rueSous } = await import('/core/types/carte.js');
+  const C = window.__ct.CARTE;
+  const RUES = Object.entries(C.rues).map(([n, d]) => ({ n, s: segments(d) }));
+  const [x0, y0, w, h] = C.quartiers[k].vb;
+  const segs = segments(C.rues[nom]).map(([a, b]) => ({ x: (a[0] + b[0]) / 2, y: (a[1] + b[1]) / 2, L: Math.hypot(b[0] - a[0], b[1] - a[1]) }))
+    .filter((p) => p.x > x0 + w * 0.08 && p.x < x0 + w * 0.92 && p.y > y0 + h * 0.12 && p.y < y0 + h * 0.92)
+    .sort((a, b) => b.L - a.L);
+  const bon = segs.find((p) => { const r = rueSous(RUES, p, 30); return r && r.n === nom; });
+  return bon ? { x: bon.x, y: bon.y } : null;
+}, { nom, k });
+
+await v('carte : les données — chaque nouveau client est sur sa rue, dans sa case et dans l’index', async () => {
+  await monterCt();
+  const r = await pageCt.evaluate(async () => {
+    const { segments, caseCarte } = await import('/core/types/carte.js');
+    const C = window.__ct.CARTE; const pb = [];
+    const dist = (p, [a, b]) => { const dx = b[0] - a[0], dy = b[1] - a[1], L = dx * dx + dy * dy;
+      const t = L ? Math.max(0, Math.min(1, ((p.x - a[0]) * dx + (p.y - a[1]) * dy) / L)) : 0;
+      return Math.hypot(p.x - a[0] - t * dx, p.y - a[1] - t * dy); };
+    const nouveaux = C.clients.filter((c) => c.nouveau);
+    if (nouveaux.length < 2 || C.clients.length - nouveaux.length < 2) pb.push('il faut des nouveaux ET des habituels');
+    for (const c of C.clients) {
+      if (caseCarte(C, c) !== c.case) pb.push(`${c.nom} : case ${caseCarte(C, c)} ≠ ${c.case}`);
+      if (!c.nouveau) continue;
+      const d = Math.min(...segments(C.rues[c.rue] || '').map((s) => dist(c, s)));
+      if (!(d < 45)) pb.push(`${c.nom} à ${Math.round(d)} m de la ${c.rue}`);
+      const e = C.index.find((x) => x.n === c.rue);
+      if (!e) pb.push(`${c.rue} absente de l’index`);
+      else if (!e.q.includes(c.quartier) || !e.c.includes(c.case)) pb.push(`index faux pour ${c.rue} : ${e.q} ${e.c}`);
+    }
+    if (C.index.length < 100) pb.push('index trop court : ' + C.index.length);
+    return pb;
+  });
+  if (r.length) throw new Error(r.join(' | '));
+});
+
+await v('carte : à l’ouverture, les habituels sont posés, les nouveaux attendent, sans mode hors connexion', async () => {
+  const r = await pageCt.evaluate(() => ({
+    pins: document.querySelectorAll('[data-pins] .ct-mk-client').length,
+    fiches: document.querySelectorAll('[data-ct-client]').length,
+    index: document.querySelectorAll('[data-ct-index] li').length,
+    horsCo: !!document.querySelector('[data-hors-connexion]'),
+    menu: document.querySelector('.ent-nav[data-vue="plan"]')?.textContent.trim(),
+  }));
+  if (r.pins !== 4) throw new Error(`${r.pins} points au départ au lieu des 4 habituels`);
+  if (r.fiches !== 3) throw new Error(`${r.fiches} fiches à situer au lieu de 3`);
+  if (r.index < 100) throw new Error('index affiché : ' + r.index);
+  if (r.horsCo) throw new Error('le mode hors connexion est proposé alors que la carte n’a pas besoin du réseau');
+  if (r.menu !== 'Plan de Nîmes') throw new Error('entrée de menu : ' + r.menu);
+});
+
+await v('carte : l’index cherche sans accents et ouvre le quartier de la rue', async () => {
+  await pageCt.fill('[data-ct-cherche]', 'madeleine');
+  const l = await pageCt.$$eval('[data-ct-index] li', (e) => e.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));
+  if (!l.some((t) => /Rue de la Madeleine/.test(t) && /Écusson · D2/.test(t))) throw new Error('index : ' + l.join(' | '));
+  await pageCt.fill('[data-ct-cherche]', 'ecusson');
+  // « ecusson » ne doit trouver que des NOMS de rues, pas le nom du quartier écrit à côté.
+  const l2 = await pageCt.$$eval('[data-ct-index] li', (e) => e.length);
+  await pageCt.fill('[data-ct-cherche]', 'l’aspic');
+  if (!/Aspic/.test(await pageCt.textContent('[data-ct-index]'))) throw new Error('l’apostrophe typographique ne trouve pas la rue de l’Aspic');
+  await pageCt.fill('[data-ct-cherche]', 'madeleine');
+  await pageCt.click('[data-ct-index] li[data-ct-rue="Rue de la Madeleine"]');
+  await pageCt.waitForTimeout(650);
+  const vue = await pageCt.evaluate(() => ({ zoom: document.querySelector('[data-ct-svg]').classList.contains('ct-zoom'),
+    etiq: document.querySelector('.ct-etiq.vue')?.dataset.etiq }));
+  if (!vue.zoom || vue.etiq !== 'ecusson') throw new Error('le clic dans l’index n’ouvre pas l’Écusson : ' + JSON.stringify(vue));
+  if (l2 > 3) throw new Error(`« ecusson » trouve ${l2} rues : la recherche lit autre chose que le nom`);
+});
+
+// La règle du 02/10 (le « ous » de la rue Rousselier) : un nom n'est posé que s'il se lit
+// entier. Mesuré sur le RENDU, nom par nom, dans chaque zoom, avec la police du poste puis
+// une police nettement plus large que celle de la mesure. La marge du build (15 %) absorbe
+// une police un peu plus large à elle seule ; il faut donc dépasser cette marge pour que le
+// garde-fou `ajusterEtiquettes` soit réellement mis à l'épreuve — et vérifier qu'il a agi.
+for (const [essai, css] of [['police normale', ''], ['police bien plus large, garde-fou en action', '.ct-etiq text{letter-spacing:.16em}']]) {
+  await v(`carte : tous les noms de rues se lisent entiers dans chaque zoom (${essai})`, async () => {
+    await monterCt(css);
+    const quartiers = await pageCt.evaluate(() => Object.keys(window.__ct.CARTE.quartiers));
+    const pb = []; let reduits = 0;
+    for (const k of quartiers) {
+      await zoomCt(k);
+      const r = await pageCt.evaluate((k) => {
+        const g = document.querySelector(`.ct-etiq[data-etiq="${k}"]`);
+        const L = [...g.querySelectorAll('text')].map((t) => {
+          const p = document.querySelector(t.firstChild.getAttribute('href'));
+          return { n: t.textContent, texte: t.getComputedTextLength(), chemin: p.getTotalLength(),
+            rendus: t.getNumberOfChars() };
+        });
+        const clients = window.__ct.CARTE.clients.filter((c) => c.nouveau && c.quartier === k).map((c) => c.rue);
+        const fs = window.__ct.CARTE.quartiers[k].fs;
+        const tailles = [...g.querySelectorAll('text')].filter((t) => t.style.fontSize).map((t) => ({ n: t.textContent, r: parseFloat(t.style.fontSize) / fs }));
+        return { L, clients, reduits: tailles.length, tailles };
+      }, k);
+      if (r.L.length < 15) pb.push(`${k} : ${r.L.length} noms seulement`);
+      r.L.filter((e) => e.texte > e.chemin + 0.5).forEach((e) => pb.push(`${k} : « ${e.n} » coupé (${Math.round(e.texte)} > ${Math.round(e.chemin)})`));
+      r.clients.filter((n) => !r.L.some((e) => e.n === n)).forEach((n) => pb.push(`${k} : la ${n} n’a pas de nom`));
+      reduits += r.reduits;
+      // Réduire n'est pas une échappatoire : avec la police de mesure, AUCUN nom ne doit avoir
+      // besoin du garde-fou (sinon le build a mal calculé sa place), et même avec une police
+      // bien plus large, un nom réduit doit rester lisible — au moins 75 % de sa taille.
+      if (!css && r.reduits) pb.push(`${k} : ${r.reduits} nom(s) réduits avec la police de mesure (${r.tailles[0].n})`);
+      r.tailles.filter((t) => t.r < 0.75).forEach((t) => pb.push(`${k} : « ${t.n} » réduit à ${Math.round(t.r * 100)} %`));
+    }
+    if (css && !reduits) pb.push('aucun nom réduit : le cas ne met pas le garde-fou à l’épreuve');
+    if (pb.length) throw new Error(pb.slice(0, 4).join(' | '));
+  });
+}
+
+// En vue d'ensemble, client armé : un clic DANS un quartier l'ouvre (c'est le geste attendu),
+// un clic ailleurs — ici sur l'avenue de la Boulangerie Roux, hors des quartiers dessinés — est
+// refusé avec un message. Ni l'un ni l'autre ne pose de point ni ne compte d'essai.
+await v('carte : en vue d’ensemble, un clic ne pose rien et ne compte pas (il ouvre le quartier)', async () => {
+  await monterCt();
+  await pageCt.click('[data-ct-arme="c1"]');
+  const hors = await pageCt.evaluate(() => window.__ct.CARTE.clients.find((c) => c.id === 'c5'));
+  await cliquerCt(hors);
+  if (!/Ouvrez d’abord le bon quartier : les noms de rues/.test(await bulleCt())) throw new Error('bulle : ' + await bulleCt());
+  const dedans = await pageCt.evaluate(() => window.__ct.CARTE.clients.find((c) => c.id === 'c1'));
+  await cliquerCt(dedans);
+  await pageCt.waitForTimeout(650);
+  const vue = await pageCt.evaluate(() => document.querySelector('.ct-etiq.vue')?.dataset.etiq);
+  if (vue !== 'ecusson') throw new Error('le clic dans l’Écusson ne l’ouvre pas : ' + vue);
+  const e = await etatCt();
+  if (Object.keys(e.places || {}).length || Object.keys(e.essais || {}).length) throw new Error('état touché : ' + JSON.stringify(e));
+  await pageCt.click('[data-ct-ensemble]'); await pageCt.waitForTimeout(650);
+});
+
+await v('carte : un clic sur une autre rue est refusé, nommé, et compté comme essai', async () => {
+  await zoomCt('ecusson');
+  const pt = await pointDeRue('Rue Nationale', 'ecusson');
+  if (!pt) throw new Error('aucun point sûr sur la rue Nationale');
+  await cliquerCt(pt);
+  const b = await bulleCt();
+  if (!/Ici c’est : Rue Nationale\. Cherchez la rue de la Madeleine\./.test(b)) throw new Error('bulle : ' + b);
+  const e = await etatCt();
+  if ((e.essais || {}).c1 !== 1 || (e.places || {}).c1) throw new Error('état : ' + JSON.stringify(e));
+  if (!/1 clic sur une autre rue/.test(await pageCt.textContent('[data-ct-client="c1"]'))) throw new Error('l’essai n’est pas affiché');
+  if (await pageCt.$$eval('[data-pins] .ct-mk-client', (x) => x.length) !== 4) throw new Error('un point a été posé');
+});
+
+await v('carte : un clic sur les maisons demande une rue, sans compter d’essai', async () => {
+  const pt = await pageCt.evaluate(async () => {
+    const { segments, rueSous } = await import('/core/types/carte.js');
+    const C = window.__ct.CARTE;
+    const RUES = Object.entries(C.rues).map(([n, d]) => ({ n, s: segments(d) }));
+    const [x0, y0, w, h] = C.quartiers.ecusson.vb;
+    for (let i = 0.3; i < 0.8; i += 0.02) for (let j = 0.3; j < 0.8; j += 0.02) {
+      const p = { x: x0 + w * i, y: y0 + h * j };
+      if (!rueSous(RUES, p, 30)) return p;
+    }
+    return null;
+  });
+  if (!pt) throw new Error('aucun îlot sans rue trouvé');
+  await cliquerCt(pt);
+  if (!/Cliquez sur une rue/.test(await bulleCt())) throw new Error('bulle : ' + await bulleCt());
+  if ((await etatCt()).essais.c1 !== 1) throw new Error('le clic sur les maisons a compté un essai');
+});
+
+await v('carte : un clic sur la bonne rue pose le point au numéro (BAN), pas là où l’on a cliqué', async () => {
+  const pt = await pointDeRue('Rue de la Madeleine', 'ecusson');
+  await cliquerCt(pt);
+  const r = await pageCt.evaluate(() => {
+    const c = window.__ct.CARTE.clients.find((x) => x.id === 'c1');
+    const g = [...document.querySelectorAll('[data-pins] .ct-mk-client')].find((m) => /^1\./.test(m.querySelector('title').textContent));
+    return { c: { x: c.x, y: c.y }, g: g && { x: +g.dataset.x, y: +g.dataset.y }, n: document.querySelectorAll('[data-pins] .ct-mk-client').length };
+  });
+  if (!r.g || r.n !== 5) throw new Error('point non posé : ' + JSON.stringify(r));
+  if (Math.hypot(r.g.x - r.c.x, r.g.y - r.c.y) > 0.01) throw new Error('posé ailleurs qu’au numéro : ' + JSON.stringify(r));
+  if (Math.hypot(pt.x - r.c.x, pt.y - r.c.y) < 5) throw new Error('le test a cliqué sur le numéro lui-même : il ne prouve pas l’aimant');
+  const e = await etatCt();
+  if (!e.places.c1 || e.essais.c1 !== 1 || e.valide) throw new Error('état : ' + JSON.stringify(e));
+  if (!/1 clic sur une autre rue/.test(await pageCt.textContent('[data-ct-client="c1"]'))) throw new Error('le suivi de l’essai a disparu');
+  if (!(await pageCt.evaluate(() => window.__ct.sauvegardes()))) throw new Error('rien n’a été sauvé');
+});
+
+await v('carte : la tournée reste fermée tant qu’un nouveau client manque, puis s’ouvre', async () => {
+  const ouvre = () => pageCt.evaluate(async () => {
+    const { creerCarte } = await import('/core/types/carte.js');
+    const v = creerCarte({ carte: window.__ct.CARTE });
+    const e = window.__ct.db.transport['essai-carte'].plan;
+    return { ouvre: v.ouvreSuite(e), bilan: v.bilan(e) };
+  });
+  if ((await ouvre()).ouvre) throw new Error('la suite s’ouvre avec un seul client situé');
+  await pageCt.click('[data-ct-arme="c2"]');
+  await cliquerCt(await pointDeRue("Rue de l'Aspic", 'ecusson'));
+  await zoomCt('fontaine');
+  await pageCt.click('[data-ct-arme="c3"]');
+  await cliquerCt(await pointDeRue('Rue Rousselier', 'fontaine'));
+  const r = await ouvre();
+  if (!r.ouvre) throw new Error('la suite reste fermée : ' + JSON.stringify(r.bilan));
+  if (r.bilan.places !== 3 || r.bilan.essais !== 1 || r.bilan.premierCoup !== 2) throw new Error('bilan : ' + JSON.stringify(r.bilan));
+  if (!(await etatCt()).valide) throw new Error('`valide` non horodaté');
+  if (!/Les 7 clients sont sur la carte/.test(await pageCt.textContent('[data-ct-bilan]'))) throw new Error('bilan affiché : ' + await pageCt.textContent('[data-ct-bilan]'));
+  await pageCt.waitForTimeout(1500);
+  if (await pageCt.evaluate(() => document.querySelector('[data-ct-svg]').classList.contains('ct-zoom'))) throw new Error('pas de retour à la vue d’ensemble');
+});
+
+await v('carte : le travail survit à un redessin de la page et à un remontage sur la même base', async () => {
+  await pageCt.click('.ent-nav[data-vue="accueil"]');
+  await pageCt.click('.ent-nav[data-vue="plan"]');
+  if (await pageCt.$$eval('[data-pins] .ct-mk-client', (x) => x.length) !== 7) throw new Error('points perdus au redessin');
+  await pageCt.evaluate(() => { window.__ct.garder = true; });
+  await monterCt();
+  const r = await pageCt.evaluate(() => ({ n: document.querySelectorAll('[data-pins] .ct-mk-client').length,
+    t: document.querySelector('[data-ct-client="c1"]').textContent.replace(/\s+/g, ' ') }));
+  await pageCt.evaluate(() => { window.__ct.garder = false; });
+  if (r.n !== 7 || !/Situé/.test(r.t) || !/1 clic sur une autre rue/.test(r.t)) throw new Error('après remontage : ' + JSON.stringify(r));
+});
+
+await v('carte : un contenu dont un nouveau client n’a pas de rue nommée est refusé à la construction', async () => {
+  const r = await pageCt.evaluate(async () => {
+    const { creerCarte } = await import('/core/types/carte.js');
+    const C = window.__ct.CARTE;
+    const essais = [
+      C.clients.map((c) => (c.id === 'c1' ? Object.assign({}, c, { rue: 'Rue Imaginaire' }) : c)),
+      C.clients.map((c) => (c.id === 'c4' ? Object.assign({}, c, { nouveau: true, rue: 'Rue Pierre Semard', quartier: 'ecusson' }) : c)),
+    ];
+    return essais.map((clients) => { try { creerCarte({ carte: C, clients }); return 'accepté'; } catch (e) { return e.message; } });
+  });
+  if (!/n'est pas sur la carte/.test(r[0])) throw new Error('rue inexistante : ' + r[0]);
+  if (!/n'a pas son nom dans le zoom/.test(r[1])) throw new Error('rue sans nom : ' + r[1]);
+});
+
+await v('carte : ENT-3.1 garde son plan schématique (aucune carte réelle déclarée)', async () => {
+  const r = await pageCt.evaluate(async () => { const S = await import('/contenus/boost-tournee.js'); return { carte: !!S.PLAN.carte, cases: !!(S.PLAN.reperage && S.PLAN.reperage.champ) }; });
+  if (r.carte || !r.cases) throw new Error(JSON.stringify(r));
+});
+
+await v('carte : aucune erreur, aucune requête hors du site', async () => {
+  if (erreursCt.length) throw new Error([...new Set(erreursCt)].slice(0, 3).join(' | '));
+  if (hotesCt.size) throw new Error('requête extérieure : ' + [...hotesCt].join(', '));
+});
+await ctxCt.close();
+
 console.log('\n=== RÉUSSIS ===');
 ok.forEach((o) => console.log('  ✓ ' + o));
 if (ko.length) { console.log('\n=== ÉCHECS ==='); ko.forEach((k) => console.log('  ✗ ' + k)); }

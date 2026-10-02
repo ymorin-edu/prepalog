@@ -14,6 +14,7 @@
 import { ech, toast, confirmer } from '../ui.js';
 import { COLORS, SHIP, pad } from '../../contenus/entreprise-commun.js';
 import { creerPlan } from './plan.js';
+import { creerCarte } from './carte.js';
 import { creerTournee } from './tournee.js';
 
 /* ------------------------------------------------------------------ formats */
@@ -67,7 +68,12 @@ export function creerEntreprise(U) {
   // transport garde exactement les écrans d'avant, sans entrée de menu en plus. Le code
   // générique vit dans `plan.js` et `tournee.js` — il ne connaît ni la ville, ni le
   // véhicule, et TechPro comme le choix du véhicule en hériteront tels quels.
-  const VPLAN = U.plan ? creerPlan(U.plan) : null;
+  //
+  // Depuis le 02/10/2026, une séance peut déclarer la VRAIE carte de la ville à la place du
+  // plan schématique : `plan.carte` (le module généré par `outils/carte/construire.py`) fait
+  // choisir `carte.js`. Même contrat pour l'hôte — `nav`, `ouvreSuite`, `html`, `brancher` —
+  // donc rien d'autre ne change ici. ENT-3.1 ne déclare pas de carte : elle garde son plan.
+  const VPLAN = U.plan ? (U.plan.carte ? creerCarte(U.plan) : creerPlan(U.plan)) : null;
   const VTOUR = U.tournee ? creerTournee(Object.assign({ plan: U.plan }, U.tournee)) : null;
 
   const unite = (n) => ((n > 1 || n === 0) ? VOCAB.unitPl : VOCAB.unit);
