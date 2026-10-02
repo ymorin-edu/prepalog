@@ -165,6 +165,14 @@ npx playwright install chromium
 node outils/test.mjs
 ```
 
+Depuis le 02/10/2026 (190 cas à cette date), la suite est découpée en **un fichier par bloc**
+dans `outils/test/` : `socle`, `spartoo`, `groupes`, `dependances`, `transport`, `boost`,
+`quiz`, `carte`, plus `commun.mjs` (serveur, navigateur, page partagée). `outils/test.mjs` est
+le lanceur : même commande, même bilan. Pour ne lancer qu'un bloc, `node outils/test.mjs boost`
+(plusieurs : `node outils/test.mjs boost carte`). `spartoo` et `groupes` s'appuient sur l'élève
+et les groupes créés par le socle : lancés seuls, ils sont précédés du socle. Un nouveau bloc
+s'inscrit dans la liste `BLOCS` du lanceur, qui refuse de partir s'il en trouve un oublié.
+
 Installation **locale** et non globale : un paquet posé par `npm i -g` n'est pas résolu par
 un `import 'playwright'` depuis le dossier du projet. `node_modules/` est ignoré par git.
 `xlsx` ne sert qu'à fabriquer le classeur rempli du test de correction.
