@@ -150,6 +150,19 @@ export function creerEntreprise(U) {
       // LogiSim d'origine, que l'élève doit retrouver en entrant dans l'entreprise.
       const enRgb = (h) => h.replace('#', '').match(/../g).map((x) => parseInt(x, 16)).join(',');
 
+      // L'encre à poser SUR un aplat de cette couleur, choisie par sa luminance. Elle sert à
+      // la pastille d'ordre de passage de la carte, dessinée en `--vert` : la menthe de Boost
+      // (#25c998) est claire, et l'encre blanche du site y devenait illisible — deux pour un
+      // de contraste sur un chiffre de dix pixels, au vidéoprojecteur. La calculer évite de
+      // demander une couleur de plus à chaque entreprise, et une charte peut toujours imposer
+      // la sienne avec `surVert`.
+      const surCouleur = (h) => {
+        const [r, g, b] = h.replace('#', '').match(/../g).map((x) => parseInt(x, 16) / 255);
+        const lin = (c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+        const L = 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+        return L > 0.4 ? '#07261c' : '#ffffff';
+      };
+
       function styleTheme() {
         const v = [];
         const a = THEME.accent;
@@ -168,6 +181,7 @@ export function creerEntreprise(U) {
             `--ardoise:${P.accent}`, `--ardoise-fond:${P.accentFond || P.accent}`,
             `--ardoise-clair:${P.accentClair || `rgba(${enRgb(P.accent)},.14)`}`,
             `--terre:${P.terre}`, `--vert:${P.vert}`, `--rouge:${P.rouge}`,
+            `--sur-vert:${P.surVert || surCouleur(P.vert)}`,
             `--ent-bandeau:${P.bandeau || P.panneau}`,
             `--ent-side:${P.menu || P.bandeau || 'transparent'}`,
             `--ent-bandeau-txt:${P.encre}`,
@@ -287,6 +301,17 @@ export function creerEntreprise(U) {
           return `<button class="ent-nav ${actif ? 'on' : ''}" data-vue="${id}">
             <span>${ech(lbl)}</span>${n ? `<span class="ent-n">${n}</span>` : ''}</button>`;
         };
+        // Le mode hors connexion de la vue plan, remonté dans le BANDEAU le 03/10/2026.
+        // Tristan : *« il ne faut pas mettre ça ici, la majorité des élèves va juste cliquer
+        // dessus pour avoir les réponses »*. Sous la carte, au milieu du travail, il se lisait
+        // comme une aide à l'exercice ; à côté de « Réinitialiser », il se lit comme un réglage
+        // de poste. Le mécanisme, lui, n'a pas bougé : l'état reste `plan.secours`, horodaté.
+        //
+        // Lecture SANS création : on passe par la base à la main plutôt que par
+        // `etatTransport('plan')`, pour que le simple affichage du bandeau n'aille pas poser
+        // l'état de la vue plan dans la base d'un élève qui ne l'a jamais ouverte.
+        const horsCo = !!(db.transport && db.transport[cleTransport]
+          && db.transport[cleTransport].plan && db.transport[cleTransport].plan.secours);
 
         hote.innerHTML = `
           <div class="ent-page" style="${styleTheme()}">
@@ -296,12 +321,22 @@ export function creerEntreprise(U) {
               <span class="ent-baseline">${ech(ENTREPRISE.sousTitre)}</span>
               ${etiquetteSeance()}
               <span class="pousse ent-qui">${ech(prenom)}</span>
+              <!-- Les actions du bandeau, dans cet ordre : remise à zéro, puis les deux trames
+                   de la séance (elles vont par paire), puis le réglage de poste. ENT-3.1 n'a pas
+                   encore de trame, mais elle en aura une comme les trois Spartoo : la place est
+                   donc tenue, et le mode hors connexion reste en bout de file. -->
               <button class="ent-act ent-act-raz" data-raz
                 title="Effacer votre travail et repartir d'une base neuve">Réinitialiser</button>
               ${trame && trame.pdf ? `<a class="ent-act" href="${ech(trame.pdf)}" download
                 title="Le carnet de bord de la séance, à imprimer ou à lire à l'écran">Trame PDF</a>` : ''}
               ${trame && trame.docx ? `<a class="ent-act" href="${ech(trame.docx)}" download
                 title="Le même carnet, à compléter au clavier">Trame Word</a>` : ''}
+              ${!(VPLAN && VPLAN.horsConnexion) ? '' : `<button class="ent-act" data-hors-connexion
+                ${horsCo ? 'disabled' : ''}
+                title="${horsCo
+                  ? 'Les quartiers sont affichés sur le plan. La case du quadrillage reste à trouver.'
+                  : 'Si les plans en ligne ne passent pas depuis ce poste : affiche le quartier de chaque point sur le plan. La case du quadrillage reste à trouver.'}"
+                >${ech(VPLAN.horsConnexion.libelle)}${horsCo ? ' ✓' : ''}</button>`}
               <span class="ent-barre" aria-hidden="true"></span>
               <button class="ent-sortie" data-quitter>Quitter</button>
             </header>
@@ -330,6 +365,11 @@ export function creerEntreprise(U) {
 
         hote.querySelectorAll('[data-vue]').forEach((b) => b.addEventListener('click', () => aller(b.dataset.vue)));
         hote.querySelector('[data-raz]').addEventListener('click', reinitialiser);
+        hote.querySelector('[data-hors-connexion]')?.addEventListener('click', () => {
+          VPLAN.activerHorsConnexion(etatTransport('plan'));
+          sauver(); dessiner();
+          toast('Mode hors connexion : les quartiers sont affichés sur le plan.');
+        });
         hote.querySelector('[data-quitter]').addEventListener('click', () => sortir(ctx.quitter));
         habiller();
         dessinerVue();

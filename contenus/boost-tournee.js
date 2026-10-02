@@ -65,9 +65,10 @@ export const PLAN = Object.assign({}, PLAN_NIMES, {
     consigne: 'Sept clients, sept cases à trouver. Validez quand vous les avez toutes : '
       + 'les noms apparaîtront sur le plan et la tournée s’ouvrira.',
     champ: 'Case',
-    // Le filet de sécurité donne le QUARTIER, pas la case : il débloque un poste sans accès
-    // à Internet sans donner la réponse. Son usage est horodaté dans la base.
-    secours: 'Je n’ai pas accès à Internet',
+    // Le libellé du mode hors connexion, qui vit dans le BANDEAU du module et non dans la vue
+    // (décision de Tristan du 03/10 : sous la carte, les élèves cliquaient dessus pour avoir
+    // les réponses). Il donne le QUARTIER, pas la case, et son usage est horodaté dans la base.
+    secours: 'Mode hors connexion',
     // Une case fausse n'empêche pas d'avancer, et elle reste visible à l'écran comme dans le
     // suivi. Le jalon, lui, exige les sept.
     toleres: 1,
@@ -85,15 +86,116 @@ export const TOURNEE = {
   consigne: `Le vélo-cargo part de l’entrepôt à ${Math.floor(VELO.depart / 60)} h 00 et doit `
     + `être à la gare de Nîmes-Centre avant ${Math.floor(VELO.train / 60)} h `
     + `${String(VELO.train % 60).padStart(2, '0')}, départ du train pour Paris. Il emporte au `
-    + `plus ${VELO.chargeUtile} kg. Les sept commandes dépassent cette charge : laissez à quai `
-    + 'ce qui ne peut pas partir, puis mettez les arrêts dans un ordre qui tienne l’horaire.',
+    + `plus ${VELO.chargeUtile} kg. Les sept commandes dépassent cette charge : chargez `
+    + 'ce qui peut partir, laissez le reste à quai, puis mettez les arrêts dans un ordre qui '
+    + 'tienne l’horaire.',
+  // Le vélo-cargo part VIDE : l'élève le charge. Décision de Tristan du 03/10 — trouver tous
+  // les arrêts déjà chargés n'est pas intuitif, et c'est l'inverse du geste réel. La jauge
+  // part de zéro et monte jusqu'au plafond, ce qui montre la contrainte au lieu de l'annoncer.
+  departAQuai: true,
+  libelleCharge: 'Chargé dans le vélo-cargo',
+  libelleQuai: 'Commandes restées à quai',
+  libelleCharger: 'charger',
+  // Les résultats ne se valident pas tant que la tournée ne tient pas. Sans ça, les quatre
+  // cases ci-dessous donnent les mêmes valeurs quel que soit l'ordre — 237, 57, 179, 36 — et
+  // un élève obtient 4/4 en manquant le train de cinquante minutes. Relevé par Tristan le
+  // 03/10 : « il suffit de garder les 6 premières et on tombe juste, aucun travail de tournée
+  // à faire ».
+  exigeConforme: true,
+  // ── Les jauges ne donnent plus les totaux, et l'élève les calcule ──────────────────────
+  // Tristan, le 03/10 au soir : *« il doit disposer d'un petit espace tableur intégré où il
+  // doit saisir la formule pour trouver le temps. Même chose pour le poids : il doit
+  // construire avec une somme pour avoir le poids total. »*
+  //
+  // Les deux vont ensemble, et l'ordre compte : tant que la jauge affiche « 179 / 180 kg »,
+  // l'élève lit le nombre et le recopie, et la feuille de calcul est décorative. C'est le même
+  // défaut que celui relevé le matin du 03/10 sur les cases de report, d'un cran plus haut.
+  jaugesRepere: true,
+  // L'entrepôt et la gare ne sont plus du décor : l'élève les pose comme les autres arrêts.
+  // Tristan, le 04/10 : *« l'élève ne sélectionne ni le départ (entrepôt Boost) ni l'arrivée
+  // (la gare) »*. Ces deux trajets pèsent pourtant lourd — l'aller depuis Carémeau et le retour
+  // vers la gare font à eux seuls une bonne part des 22,1 km qu'il doit faire entrer dans son
+  // temps de route. Avec `exigeConforme`, une chaîne incomplète refuse le report : oublier la
+  // gare ne peut pas devenir une façon d'attraper le train.
+  extremitesACliquer: true,
+  // Les contraintes (charge, train) quittent le haut de l'écran et se posent à droite de la
+  // feuille de calcul. Tristan, le 05/10 : *« les contraintes de droite descendent dans la
+  // partie tableur »* — l'élève calcule à gauche, compare à droite.
+  contraintesDansGrille: true,
+  grille: {
+    titre: 'Feuille de calcul du vélo-cargo',
+    consigne: 'Les cellules colorées sont à remplir, et il faut y écrire une FORMULE — elle '
+      + 'commence par « = ». Le résultat s’affiche à droite de chaque case au fur et à mesure. '
+      + 'En jaune, les étapes du calcul ; en violet, les deux résultats à comparer aux '
+      + 'contraintes. L’heure de départ, elle, se tape simplement (13:00). Si vous changez votre '
+      + 'tournée, les données changent et vos formules se recalculent toutes seules.',
+    colonnes: ['A', 'B'],
+    decimales: 1,
+    // Engendrée depuis le parcours que l'élève vient de cliquer : les lignes des arrêts sont
+    // les SIENNES, dans SON ordre. Avec six arrêts chargés, les poids occupent B2 à B7 et le
+    // total tombe en B8 — mais s'il en charge cinq, tout remonte d'une ligne. C'est voulu :
+    // une plage se lit sur la grille qu'on a sous les yeux, pas apprise par cœur.
+    //
+    // Le temps se calcule en TROIS ÉTAPES (jaunes) puis un résultat (violet), dans l'ordre où
+    // on le ferait à la main. Demande de Tristan, le 05/10 : d'abord distance ÷ vitesse, qui
+    // donne des HEURES ; puis la conversion en minutes ; puis le temps aux arrêts ; enfin
+    // l'heure de départ + le temps de route (en minutes) + le temps aux arrêts = l'heure
+    // d'arrivée à la gare, qu'on compare au train. Les heures sont comptées en minutes depuis
+    // minuit (13 h 00 = 780) : voir `heureFr` dans `core/formules.js`.
+    lignes: (b) => {
+      const n = b.retenus.length;
+      // La distance est ARRONDIE au dixième comme elle est affichée, et les valeurs attendues
+      // sont recalculées depuis cet arrondi : sinon l'élève, qui ne peut taper que ce qu'il
+      // lit, serait en désaccord avec le moteur d'un centième de minute.
+      const km = Math.round(b.km * 10) / 10;
+      const heures = km / VELO.vitesse;
+      const route = heures * 60;
+      const service = n * VELO.service;
+      return [
+        { A: 'Arrêt', B: 'Poids (kg)', entete: true },
+        ...b.retenus.map((p) => ({ A: p.nom, B: p.kg })),
+        { A: 'Poids total chargé (kg)', type: 'resultat',
+          note: 'Additionnez les poids de vos arrêts avec SOMME.',
+          B: { saisie: true, formule: true, attendu: b.cumuls.charge, libelle: 'poids total' } },
+        { A: 'Charge utile maximale (kg)', type: 'contrainte', B: VELO.chargeUtile },
+        {},
+        { A: 'Distance du parcours (km)', B: km },
+        { A: 'Vitesse en ville (km/h)', B: VELO.vitesse },
+        { A: 'Étape 1 · Temps de route (heures)', type: 'etape',
+          note: 'Distance (km) ÷ vitesse (km/h) = temps (h). Exemple : 6 km à 12 km/h → 6 ÷ 12 = 0,5 h.',
+          B: { saisie: true, formule: true, attendu: heures, tolerance: 0.01, decimales: 2,
+               libelle: 'temps de route en heures' } },
+        { A: 'Étape 2 · Temps de route (min)', type: 'etape',
+          note: '1 heure = 60 minutes : on multiplie les heures par 60. Exemple : 0,5 h × 60 = 30 min.',
+          B: { saisie: true, formule: true, attendu: route, tolerance: 0.5,
+               libelle: 'temps de route en minutes' } },
+        { A: 'Nombre d’arrêts', B: n },
+        { A: 'Temps par arrêt (min)', B: VELO.service },
+        { A: 'Étape 3 · Temps aux arrêts (min)', type: 'etape',
+          note: 'Nombre d’arrêts × temps par arrêt.',
+          B: { saisie: true, formule: true, attendu: service, libelle: 'temps aux arrêts' } },
+        { A: 'Heure de départ',
+          note: 'À taper sous la forme 13:00 (pas de formule ici).',
+          B: { saisie: true, formule: false, attendu: VELO.depart, format: 'heure',
+               placeholder: 'ex. 13:00', libelle: 'heure de départ' } },
+        { A: 'Heure d’arrivée à la gare', type: 'resultat',
+          note: 'Heure de départ + temps de route (min) + temps aux arrêts (min).',
+          B: { saisie: true, formule: true, attendu: VELO.depart + route + service, tolerance: 0.5,
+               format: 'heure', libelle: 'heure d’arrivée' } },
+        { A: 'Départ du train (contrainte)', type: 'contrainte',
+          B: { valeur: VELO.train, format: 'heure' } },
+      ];
+    },
+  },
   mesures: [
-    { id: 'charge', libelle: 'Charge du vélo-cargo', unite: 'kg', champ: 'kg', max: VELO.chargeUtile },
+    { id: 'charge', libelle: 'Charge du vélo-cargo', unite: 'kg', champ: 'kg', max: VELO.chargeUtile,
+      comparaison: 'À comparer au poids total chargé (cellule violette).' },
     { id: 'colis', libelle: 'Colis chargés', unite: 'colis', champ: 'colis' },
   ],
   horaire: {
     depart: VELO.depart, limite: VELO.train, vitesse: VELO.vitesse, service: VELO.service,
     libelleLimite: 'départ du train',
+    comparaison: 'À comparer à l’heure d’arrivée à la gare (cellule violette).',
   },
   titreReport: 'Reportez vos résultats sur la fiche de tournée',
   consigneReport: 'Un seul de ces quatre résultats se lit sur une jauge ; les trois autres se '
@@ -137,8 +239,9 @@ export const ACCUEIL = {
     ['Lire la consigne du responsable', 'Menu Messagerie : la fiche de tournée du jour et ce qu’on attend de vous.'],
     ['Situer les sept clients', 'Menu Plan de Nîmes. Vous n’avez que le nom de la rue : cherchez-la sur un plan en ligne, puis écrivez la case.'],
     ['Valider le repérage', 'Les noms s’affichent sur le plan, et la tournée s’ouvre.'],
-    ['Choisir ce qui part', 'Menu Tournée. Les sept commandes pèsent plus que la charge utile du vélo-cargo : laissez à quai ce qui ne peut pas partir.'],
-    ['Ordonner les arrêts', 'Glissez-les, ou utilisez les flèches. Le tracé et l’heure de retour suivent votre ordre.'],
+    ['Charger le vélo-cargo', 'Menu Tournée. Il part vide : cliquez les clients sur la carte, dans l’ordre où vous voulez y passer. Les sept commandes pèsent plus que sa charge utile, il faudra en laisser une à quai.'],
+    ['Ordonner les arrêts', 'L’ordre est celui de vos clics. Pour en insérer un au milieu, utilisez les flèches ↑ et ↓ du récapitulatif. Le tracé et l’heure de retour suivent votre ordre.'],
+    ['Calculer dans la feuille', 'Sous la carte : le poids total, puis le temps en trois étapes jusqu’à l’heure d’arrivée à la gare. Les contraintes sont à droite : comparez-les à vos deux résultats.'],
     ['Reporter vos résultats', 'Les quatre cases du bas de la page, puis « Valider mes résultats ».'],
   ],
 };
@@ -191,16 +294,19 @@ export const VOLET = {
 
 const VUE = creerTournee(Object.assign({ plan: PLAN }, TOURNEE));
 
-const ORDRE_INITIAL = DESTINATAIRES.map((d) => String(d.id)).join(',');
 const etatDe = (db, vue) => (db && db.transport && db.transport[TRANSPORT_ID]
   ? db.transport[TRANSPORT_ID][vue] : null);
 
-// L'élève a-t-il touché à la tournée ? Tant qu'il ne l'a pas fait, on ne lui reproche pas
-// une charge dépassée : c'est l'état de départ, pas une erreur.
+// L'élève a-t-il commencé ? Depuis que le vélo-cargo part VIDE (`departAQuai`), la réponse
+// est simple : il a commencé dès qu'il a chargé quelque chose, ou tapé un résultat. Tant
+// qu'il n'a rien chargé, on ne lui reproche rien — ni la charge, ni l'horaire.
+//
+// Ce n'est pas un détail : avec le véhicule vide, la charge est à 0 sur 180 et un jalon naïf
+// la déclarerait « respectée » avant même que l'élève ait touché à quoi que ce soit. Il
+// gagnerait un point en ne faisant rien.
 function commencee(etat) {
   if (!etat || !etat.ordre) return false;
-  if ((etat.quai || []).length) return true;
-  if (etat.ordre.map(String).join(',') !== ORDRE_INITIAL) return true;
+  if (etat.ordre.length) return true;
   return Object.keys(etat.report || {}).some((k) => String(etat.report[k] || '').trim() !== '');
 }
 
@@ -232,7 +338,7 @@ export const ETAPES = [
         ? `À revoir : ${faux.map((d) => d.nom).join(', ')}.`
         : 'Les sept cases sont justes.')
         + ` ${e.essais || 0} validation(s).`
-        + (e.secours ? ' Quartiers révélés (pas d’accès à Internet).' : '')
+        + (e.secours ? ' Mode hors connexion utilisé.' : '')
         + (e.force ? ' A continué sans avoir validé le repérage.' : '');
       if (e.force && !e.valide) return { status: 'ko', detail, ts: e.force };
       if (!e.valide) return { status: 'attente', detail };
@@ -246,8 +352,9 @@ export const ETAPES = [
     verifier(db) {
       const e = etatDe(db, 'tournee');
       if (!e || !e.ordre) return { status: 'na' };
+      if (!commencee(e)) return { status: 'attente', detail: 'Rien n’est encore chargé.' };
       const quai = (e.quai || []).map(String);
-      if (!quai.length) return { status: 'attente', detail: 'Rien n’est encore laissé à quai.' };
+      if (!quai.length) return { status: 'ko', detail: 'Tout a été chargé : le vélo-cargo déborde.' };
       const detail = `Laissé(s) à quai : ${quai.map(nomDe).join(', ')}.`
         + (A_QUAI ? ` Attendu : ${nomDe(A_QUAI)} seul.` : '');
       const juste = A_QUAI && quai.length === 1 && quai[0] === A_QUAI;
@@ -264,6 +371,8 @@ export const ETAPES = [
       const b = VUE.bilan(e);
       const detail = `${b.cumuls.charge} kg chargés sur ${VELO.chargeUtile} kg utiles, `
         + `${b.retenus.length} arrêt(s).`;
+      // Un vélo-cargo vide respecte le plafond, évidemment. Ça ne vaut pas un point.
+      if (!b.retenus.length) return { status: 'attente', detail };
       return { status: b.cumuls.charge <= VELO.chargeUtile ? 'ok' : 'ko', detail };
     },
   },

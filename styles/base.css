@@ -96,6 +96,18 @@
   }
 }
 
+
+/* Les deux surbrillances de la feuille de calcul (05/10/2026) : jaune = une ÉTAPE du calcul,
+   violet = un RÉSULTAT à comparer à une contrainte. Ni le vert (l'ordre), ni le bleu (le client),
+   ni le rouge (la limite franchie).
+   TRANSLUCIDES, et c'est voulu : posées sur le fond du panneau, elles s'adaptent à la charte de
+   l'entreprise, claire ou sombre. Un aplat clair fixe rendait le texte illisible sur la charte
+   sombre de Boost — vu en pilotant l'écran, pas par un test. */
+:root{
+  --gr-etape-fond:rgba(240,190,0,.30); --gr-etape-trait:#d9a800;
+  --gr-res-fond:rgba(139,92,246,.30); --gr-res-trait:#8b5cf6;
+}
+
 *{box-sizing:border-box}
 html,body{margin:0;padding:0}
 body{
@@ -747,6 +759,28 @@ a.ent-nav{ text-decoration:none }
 .plan-l-rond{ border-radius:50% }
 .plan-l-carre{ border-radius:3px }
 .plan-l-losange{ border-radius:0; transform:rotate(45deg); width:11px; height:11px }
+/* Les deux encres de la carte cliquable (04/10/2026). La pastille d'ordre est plus petite que
+   le rond du client dans la légende comme sur le plan : c'est la même hiérarchie des deux
+   signes, et on la lit sans avoir à comparer. */
+.plan-l-ordre{ border-radius:50%; width:10px; height:10px }
+.plan-l-creux{
+  border-radius:50%; background:transparent;
+  border:2px dashed var(--ardoise-fond); opacity:.75;
+}
+
+/* ---- la carte cliquable : construire la tournée en cliquant les points -------------------
+   Les cibles de clic sont posées dans le SVG par `svgPlan` (r = 20, transparentes). Ici, ce
+   qui se voit : le curseur qui annonce qu'on peut cliquer, le survol, et un contour de focus
+   visible au clavier — chaque point est un bouton, il doit se voir quand on l'atteint par
+   tabulation. `touch-action` évite qu'un double-tap zoome la carte au lieu d'ajouter l'arrêt. */
+.plan-boite-clic .plan-svg{ touch-action:manipulation }
+.plan-pt-clic{ cursor:pointer }
+.plan-pt-cible:focus{ outline:none }
+.plan-pt-cible:focus-visible{
+  outline:3px solid var(--ardoise); outline-offset:2px; border-radius:50%;
+}
+.plan-pt-clic:hover .plan-pt-ordre circle{ stroke-width:2.4 }
+.plan-pt-clic:hover circle:first-of-type{ stroke-width:3.5 }
 
 .plan-barre{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:12px }
 /* Le filet de sécurité doit être visible, pas confortable : il n'a ni l'aplat ni le poids
@@ -761,7 +795,14 @@ a.ent-nav{ text-decoration:none }
 .plan-case.plan-ko{ border-color:var(--rouge) }
 .plan-verdict{ white-space:nowrap }
 
+/* La carte est passée DANS la colonne de gauche le 04/10/2026, au-dessus du récapitulatif, et
+   les jauges restent collées à droite. Avant, elle était posée au-dessus de la grille entière :
+   en descendant pour ordonner les arrêts, l'élève perdait la carte de vue — premier des quatre
+   défauts d'ergonomie relevés par Tristan. Maintenant le geste (cliquer la carte) et son effet
+   (les jauges qui montent) sont côte à côte, et c'est le récapitulatif qu'on va chercher plus
+   bas, pas l'inverse. */
 .tour-grille{ display:grid; grid-template-columns:1fr 300px; gap:18px; align-items:start }
+.tour-col{ min-width:0 }
 .tour-liste{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px }
 .tour-item{
   display:flex; align-items:center; gap:12px; padding:10px 12px;
@@ -770,15 +811,58 @@ a.ent-nav{ text-decoration:none }
 .tour-item[draggable="true"]{ cursor:grab }
 .tour-item.glisse{ opacity:.45 }
 .tour-item.survol{ border-color:var(--ardoise); border-style:dashed }
+/* ── Les deux encres, les mêmes que sur la carte ──────────────────────────────────────────
+   Relevé par Tristan le 04/10, capture à l'appui : *« le jeu de couleur est inversé, le vert
+   doit signifier l'ordre de la tournée, le bleu l'emplacement physique de la boutique »*. Il
+   a raison, et c'était la faute la plus bête possible — la liste disait le contraire de la
+   carte, alors que tout ce chantier servait à faire porter un seul sens à chaque signe.
+
+   VERT = QUAND (l'ordre de passage) · BLEU = QUI, et où (le client, son emplacement)
+
+   Donc la pastille de rang prend le vert du tracé et de l'entrepôt, et le numéro du client
+   prend le bleu de son point sur le plan. Un test tient maintenant les deux écrans ensemble. */
 .tour-rang{
   flex:0 0 26px; height:26px; display:grid; place-items:center; border-radius:50%;
-  background:var(--ardoise-fond); color:var(--sur-ardoise); font-family:var(--mono);
+  background:var(--vert); color:var(--sur-vert,#07261c); font-family:var(--mono);
   font-size:13px; font-weight:700;
 }
-.tour-texte{ flex:1; min-width:0; display:flex; flex-direction:column; gap:2px }
+/* Le nom et les mesures sur UNE ligne quand la place le permet, au lieu de deux empilées.
+   Depuis que la tournée se construit sur la carte, le récapitulatif n'est plus la surface de
+   travail mais une liste de vérification : il doit être court, pour que la carte et les jauges
+   restent à l'écran. Sept lignes gagnent là plus de cent cinquante pixels. */
+.tour-texte{ flex:1; min-width:0; display:flex; flex-wrap:wrap; align-items:baseline; gap:1px 10px }
+/* Le numéro du CLIENT, devant son nom — « 3 · La Pointe Sud ». Il fait le lien avec le rond
+   bleu de la carte et avec la fiche de tournée ; la pastille de gauche (.tour-rang), elle, dit
+   l'ordre de passage. Deux signes, deux sens, y compris dans la liste. */
+.tour-nom{ display:flex; align-items:baseline; gap:6px; min-width:0 }
+.tour-nom strong{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.tour-num{ color:var(--ardoise-fond); font-size:13px; font-weight:700; flex:0 0 auto }
 .tour-boutons{ display:flex; gap:5px; flex:0 0 auto }
+/* Les deux bouts de la chaîne, au-dessus et au-dessous du récapitulatif (04/10/2026). Tant
+   qu'ils ne sont pas posés ils se lisent comme une consigne — trait discontinu, fond en
+   retrait — et une fois posés ils prennent l'allure d'un arrêt ordinaire. */
+.tour-bout{
+  display:flex; align-items:center; gap:12px; padding:9px 12px; margin:0 0 8px;
+  border:1px dashed var(--filet); border-radius:var(--r); background:var(--survol);
+}
+.tour-liste + .tour-bout{ margin:8px 0 0 }
+.tour-bout-pose{ border-style:solid; background:var(--panneau) }
+.tour-rang-bout{ font-size:12px }
+/* « Départ · » et « Arrivée · » sont des étiquettes, pas des numéros de client : elles ne
+   prennent donc NI le vert de l'ordre NI le bleu du client. Mélanger les trois rendrait la
+   règle des deux encres illisible au moment même où on l'applique. */
+.tour-bout-lbl{ color:var(--encre-douce); font-size:13px; font-weight:700; flex:0 0 auto }
 .tour-quai{ margin-top:18px; padding-top:14px; border-top:1px dashed var(--filet) }
 .tour-liste-quai .tour-item{ background:var(--survol) }
+
+/* Les laissés à quai en PUCES et non en cartes empilées (04/10/2026). Deux listes verticales
+   symétriques se confondaient, et surtout elles poussaient la carte hors de l'écran au moment
+   précis où l'élève avait besoin de la voir pour ordonner. Ici ça s'enroule sur une ou deux
+   lignes, et la carte reste visible. */
+.tour-puces{ flex-direction:row; flex-wrap:wrap; gap:8px }
+.tour-puce{ padding:6px 8px 6px 11px; gap:9px; border-radius:999px }
+.tour-puce .tour-texte{ flex:0 1 auto }
+.tour-puce .note{ font-size:12px }
 
 .tour-jauges{ display:flex; flex-direction:column; gap:14px; position:sticky; top:12px }
 .tour-jauge{
@@ -800,6 +884,92 @@ a.ent-nav{ text-decoration:none }
 .tour-saisie input{ flex:1; font-family:var(--mono); text-align:right }
 .tour-saisie input.juste{ border-color:var(--vert-fond); box-shadow:inset 0 0 0 1px var(--vert-fond) }
 .tour-saisie input.faux{ border-color:var(--rouge) }
+
+/* Une jauge devenue repère de limite (04/10/2026) : plus de barre, plus de total, un plafond
+   et une phrase. Elle doit se lire comme une consigne, pas comme un résultat — d'où le fond
+   légèrement en retrait et le trait discontinu. */
+.tour-jauge-repere{ background:var(--survol); border-style:dashed }
+.tour-jauge-repere .tour-j-tete b{ font-size:.95rem; color:var(--encre-douce) }
+
+/* ---- la feuille de calcul intégrée -------------------------------------------------------
+   Elle doit RESSEMBLER à un tableur : en-têtes de colonnes en lettres, numéros de lignes,
+   quadrillage serré, chiffres à droite en chasse fixe. C'est la moitié de l'apprentissage —
+   l'élève doit reconnaître l'objet quand il ouvrira Excel. */
+.gr-bloc{ margin-top:22px; padding-top:16px; border-top:1px solid var(--filet) }
+/* Largeur bornée : étirée sur toute la page, la feuille cesse de ressembler à un tableur et
+   devient une mise en page. Une colonne de libellés, une colonne de valeurs, et on s'arrête. */
+.gr-table{ border-collapse:collapse; margin-top:10px; font-size:14px; min-width:460px; max-width:720px }
+.gr-table td:first-of-type{ width:50% }
+.gr-table th, .gr-table td{ border:1px solid var(--filet); padding:5px 9px; text-align:left }
+.gr-table thead th{ background:var(--survol); color:var(--encre-douce); font-size:12px;
+  font-weight:600; text-align:center }
+.gr-num{ background:var(--survol); color:var(--encre-douce); font-size:12px; font-weight:600;
+  text-align:center !important; width:30px }
+.gr-coin{ width:30px }
+.gr-ligne-entete td{ background:var(--survol); font-weight:600 }
+.gr-nb{ text-align:right !important; white-space:nowrap }
+/* Les cellules à remplir se voient du premier coup d'œil : c'est ce qu'on demande à l'élève. */
+.gr-saisie{ background:var(--ardoise-clair) }
+.gr-champ{ display:flex; align-items:center; gap:8px }
+.gr-champ input{ flex:1; min-width:9.5em; font-family:var(--mono); font-size:13px; padding:4px 7px }
+.gr-res{ flex:0 0 auto; min-width:4.5em; text-align:right; color:var(--encre-douce); font-size:13px }
+.gr-res-err{ color:var(--rouge) }
+.gr-verdict{ display:block; margin-top:5px }
+/* Désigner une cellule à la souris pendant qu'on écrit une formule (04/10/2026). Le curseur
+   « cellule » n'apparaît QUE pendant l'écriture d'une formule : hors de là, rien ne doit laisser
+   croire que le tableau se clique. `user-select:none` pendant le glissement, sinon le navigateur
+   sélectionne le texte du tableau au lieu de suivre le geste. */
+.gr-table.gr-pointe{ user-select:none; cursor:cell }
+.gr-table [data-ref].gr-vise{
+  outline:2px dashed var(--ardoise); outline-offset:-2px; background:var(--ardoise-clair);
+}
+.gr-aides{ margin:10px 0 0; padding-left:18px; font-size:13px; color:var(--encre-douce) }
+.gr-aides li{ margin:3px 0 }
+.gr-aides b{ margin-right:5px }
+
+
+/* ---- feuille de calcul : deux surbrillances, et les contraintes à droite (05/10/2026) --------
+   Tristan : *« il doit pouvoir distinguer rapidement que les formules sont justes mais que les
+   contraintes ne sont pas respectées à droite. Pour ça on mettra une surbrillance différente
+   pour distinguer les étapes et les résultats (poids total chargé) et heure d'arrivée. »*
+   JAUNE = une étape du calcul · VIOLET = un résultat qu'on compare à la contrainte, et la carte
+   de la contrainte, à droite, prend le même violet pour dire « c'est avec celui-là qu'on compare ».
+   Le vert « juste » et le rouge « franchie » gardent leur sens : le verdict de la formule est
+   sur la cellule, celui de la contrainte est sur la carte, et les deux ne se mélangent pas. */
+.gr-deux{ display:grid; grid-template-columns:minmax(0,1fr) 290px; gap:22px; align-items:start }
+.gr-gauche{ min-width:0 }
+.gr-droite{ position:sticky; top:12px }
+.gr-droite .tour-jauges{ position:static }
+.gr-droite::before{
+  content:"Contraintes"; display:block; margin:0 0 8px; font-size:12px; font-weight:700;
+  letter-spacing:.04em; text-transform:uppercase; color:var(--encre-douce);
+}
+.gr-expl{ display:block; margin-top:2px; font-size:12px; font-weight:400; color:var(--encre-douce); line-height:1.35 }
+.gr-t-etape td{ background:var(--gr-etape-fond) }
+.gr-t-etape td:first-of-type{ box-shadow:inset 4px 0 0 var(--gr-etape-trait) }
+.gr-t-resultat td{ background:var(--gr-res-fond); font-weight:600 }
+.gr-t-resultat td:first-of-type{ box-shadow:inset 5px 0 0 var(--gr-res-trait) }
+.gr-t-contrainte td{ box-shadow:inset 0 0 0 1px var(--gr-res-trait); font-weight:600 }
+.gr-t-contrainte td:first-of-type{ font-style:italic }
+.gr-legende{ list-style:none; margin:8px 0 0; padding:0; display:flex; flex-wrap:wrap; gap:6px 16px; font-size:12px; color:var(--encre-douce) }
+.gr-legende li{ display:flex; align-items:center; gap:6px }
+.gr-puce{ width:14px; height:14px; border-radius:3px; display:inline-block }
+.gr-puce-etape{ background:var(--gr-etape-fond); box-shadow:inset 3px 0 0 var(--gr-etape-trait) }
+.gr-puce-resultat{ background:var(--gr-res-fond); box-shadow:inset 3px 0 0 var(--gr-res-trait) }
+.gr-puce-contrainte{ box-shadow:inset 0 0 0 1px var(--gr-res-trait) }
+.gr-contraintes .tour-jauge-repere{ border-left:5px solid var(--gr-res-trait) }
+.gr-contraintes .tour-jauge-repere.trop{ border-color:var(--rouge); border-left-color:var(--rouge); border-style:solid; border-width:2px 2px 2px 5px }
+.tour-compare{
+  align-self:flex-start; font-size:12px; font-weight:600; padding:2px 8px; border-radius:3px;
+  background:var(--gr-res-fond); box-shadow:inset 3px 0 0 var(--gr-res-trait);
+}
+.gr-bloc .avis-ok, .tour-report .avis-ok{ background:rgba(37,201,152,.18); color:var(--encre) }
+.avis-contrainte{ border-color:var(--rouge); background:var(--panneau); margin-top:12px }
+.tour-grille-deux{ grid-template-columns:minmax(0,1.1fr) minmax(300px,1fr) }
+@media (max-width:860px){
+  .gr-deux, .tour-grille-deux{ grid-template-columns:1fr }
+  .gr-droite{ position:static }
+}
 
 @media (max-width:860px){
   .tour-grille{ grid-template-columns:1fr }

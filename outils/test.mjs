@@ -2055,15 +2055,73 @@ await v('vue plan : une case fausse est vue, et le temps 2 reste fermé', async 
   if (!/Valider le repérage/.test(t)) throw new Error('le bouton de validation a disparu');
 });
 
-await v('vue plan : le filet de sécurité donne le quartier, pas la case', async () => {
-  await pageTr.click('#essaiTr [data-plan-secours]');
-  await pageTr.waitForTimeout(100);
+await v('bandeau : trames et mode hors connexion tiennent ensemble, dans l’ordre', async () => {
+  // ENT-3.1 n'a pas encore de trame élève, mais elle en aura une comme les trois Spartoo, et le
+  // bandeau portera alors QUATRE actions. Ce cas monte une séance qui déclare les deux trames ET
+  // un plan, pour garder dès maintenant qu'elles cohabitent et dans quel ordre : remise à zéro,
+  // les deux trames (elles vont par paire), puis le réglage de poste, puis Quitter.
+  const ordre = await pageTr.evaluate(async () => {
+    const m = await import('/core/types/entreprise.js');
+    const P = window.__tr.PLAN;
+    const hote = document.createElement('div');
+    hote.id = 'essaiBandeau';
+    document.body.appendChild(hote);
+    const CAT = { MODELS: [], MM: {}, VARIANTS: [], VM: {} };
+    const act = m.creerEntreprise({
+      ENTREPRISE: { nom: 'Essai Bandeau', sousTitre: 'essai' },
+      VOCAB: { unit: 'piece', unitPl: 'pieces', sizeLabel: 'Taille' },
+      CATALOGUE: CAT, SUPPLIERS: [], SUP_BY_ID: {}, CUSTOMERS: [], CM: {},
+      baseDeDepart: () => ({ v: 1, seq: 1, stock: {}, mails: [], orders: [], receptions: [],
+        moves: [], customers: [], suppliers: [], _depart: [] }),
+      THEME: {}, etapes: [], plan: P,
+      trame: { pdf: './x.pdf', docx: './x.docx' },
+    });
+    act.rendre(hote, {
+      meta: { id: 'essBandeau', portee: 'eleve', code: 'ESS-2', titre: 'Essai bandeau' },
+      profil: { prenom: 'Lea', role: 'eleve' },
+      jeu: { etat: () => ({}), sauver: () => {} },
+      enregistrer: () => {}, quitter: () => {}, codeStock: 'ABC',
+    });
+    const b = hote.querySelector('.ent-bandeau');
+    return {
+      actions: [...b.querySelectorAll('.ent-act, .ent-sortie')].map((e) => e.textContent.trim()),
+      // Le libellé du mode hors connexion vient du CONTENU (`reperage.secours`), pas du noyau :
+      // un scénario sans carte en ligne peut l'appeler autrement.
+      libelleDeclare: P.reperage.secours,
+      // Le bandeau se replie sur deux lignes au lieu de déborder (`flex-wrap`), donc ce qu'on
+      // garde, c'est qu'il ne déborde PAS en largeur — sinon des boutons sortiraient de l'écran.
+      deborde: b.scrollWidth > b.clientWidth + 1,
+    };
+  });
+  const attendu = ['Réinitialiser', 'Trame PDF', 'Trame Word', ordre.libelleDeclare, 'Quitter'];
+  if (ordre.actions.join(' · ') !== attendu.join(' · ')) {
+    throw new Error('bandeau : ' + ordre.actions.join(' · '));
+  }
+  if (ordre.deborde) throw new Error('le bandeau déborde en largeur : des boutons sortent de l’écran');
+});
+
+await v('vue plan : le mode hors connexion est dans le bandeau, pas dans la vue', async () => {
+  // Déplacé le 03/10/2026. Sous la carte, à portée de souris et au milieu du travail, ce bouton
+  // se lisait comme une aide à l'exercice : « la majorité des élèves va juste cliquer dessus
+  // pour avoir les réponses » (Tristan). Dans le bandeau, à côté de « Réinitialiser », il se lit
+  // comme un réglage de poste. Ce cas garde les DEUX moitiés du déménagement.
+  if (await pageTr.$$eval('#essaiTr .ent-main [data-plan-secours]', (e) => e.length)) {
+    throw new Error('le mode hors connexion est redescendu dans la vue plan');
+  }
+  const bandeau = await pageTr.$$eval('#essaiTr .ent-bandeau [data-hors-connexion]', (e) => e.length);
+  if (bandeau !== 1) throw new Error(bandeau + ' bouton(s) « hors connexion » dans le bandeau');
+  await pageTr.click('#essaiTr [data-hors-connexion]');
+  await pageTr.waitForTimeout(140);
+  // Une fois activé, il ne se reclique pas : le recours est horodaté une fois pour toutes.
+  if (!(await pageTr.$eval('#essaiTr [data-hors-connexion]', (e) => e.disabled))) {
+    throw new Error('le mode hors connexion reste cliquable après coup');
+  }
   const zones = await pageTr.$$eval('#essaiTr .plan-zone', (e) => e.map((x) => x.textContent.trim()));
   if (zones.filter((z) => /Quartier/.test(z)).length !== 4) throw new Error('les quartiers ne sont pas révélés');
   const cases = await pageTr.$$eval('#essaiTr .plan-case', (e) => e.map((x) => x.value));
   if (cases.join('|') !== 'B1|C1|A1|C2') throw new Error('les cases saisies ont bougé : ' + cases.join('|'));
   const t = await texteTr();
-  if (!/reste à lire sur le plan/.test(t)) throw new Error('le filet de sécurité ne dit pas ce qu\'il ne donne pas');
+  if (!/reste à lire sur le plan/.test(t)) throw new Error('le mode hors connexion ne dit pas ce qu\'il ne donne pas');
 });
 
 await v('vue tournée : fermée tant que le repérage n\'est pas validé', async () => {
@@ -2230,6 +2288,295 @@ await v('vue tournée : réordonner après coup efface la correction', async () 
   if (marques !== 0) throw new Error('des cases restent marquées');
 });
 
+/* ===================================================================================== */
+/* La carte cliquable et les deux encres — écrites le 04/10/2026.                        */
+/*                                                                                       */
+/* Deux chantiers en un. Tristan, le 03/10 au soir : *« tout est laborieux, on pourrait   */
+/* repartir sur une carte cliquable beaucoup plus intuitive ? »*, et, une heure plus tôt, */
+/* *« le numéro en rond bleu qui indique la position sur la carte, il indique aussi la    */
+/* position dans la liste, ça porte à confusion »*. Le second est absorbé par le premier :  */
+/* dès qu'on construit la tournée sur la carte, distinguer le client de son rang n'est    */
+/* plus cosmétique, c'est la condition pour savoir sur quoi on clique.                    */
+/* ===================================================================================== */
+
+// L'ordre et le quai posés à la main, puis un aller-retour de vue pour redessiner. C'est le
+// même procédé que pour ENT-3.1 : on fixe l'état, et on mesure ce que la vue en fait.
+const poserTr = async (ordre, quai) => {
+  await pageTr.evaluate((o) => {
+    const t = window.__tr.avec.db.transport.ess1.tournee;
+    t.ordre = o.ordre; t.quai = o.quai; t.juge = {}; t.bloque = null;
+  }, { ordre, quai });
+  await ouvrir('plan');
+  await ouvrir('tournee');
+};
+// Ce que la carte porte vraiment, point par point : le chiffre du rond, celui de la pastille,
+// et l'état creux. C'est la seule lecture qui vaille — le reste est dans l'état, pas à l'écran.
+const lireCarte = () => pageTr.$$eval('#essaiTr .plan-svg .plan-pt', (gs) => gs.map((g) => ({
+  id: g.dataset.point,
+  rond: g.querySelector('text').textContent.trim(),
+  ordre: g.querySelector('.plan-pt-ordre text')
+    ? g.querySelector('.plan-pt-ordre text').textContent.trim() : null,
+  quai: g.classList.contains('plan-pt-quai'),
+})));
+
+await v('carte cliquable : un clic ajoute l’arrêt À LA FIN de la tournée', async () => {
+  // La règle la plus simple à expliquer à une classe : on clique, ça se met au bout. Pas de
+  // discussion sur l'endroit où l'arrêt se glisse — les flèches servent à ça ensuite.
+  await poserTr(['p1', 'p2'], ['p3', 'p4']);
+  let e = await pageTr.evaluate(() => window.__tr.avec.db.transport.ess1.tournee);
+  if (e.ordre.join(',') !== 'p1,p2') throw new Error('état de départ : ' + e.ordre.join(','));
+
+  await pageTr.click('#essaiTr [data-clic-point="p4"]');
+  await pageTr.waitForTimeout(120);
+  e = await pageTr.evaluate(() => window.__tr.avec.db.transport.ess1.tournee);
+  if (e.ordre.join(',') !== 'p1,p2,p4') throw new Error('p4 n’est pas ajouté à la fin : ' + e.ordre.join(','));
+  if (e.quai.join(',') !== 'p3') throw new Error('le quai n’a pas lâché p4 : ' + e.quai.join(','));
+
+  // Et le second clic se met APRÈS le premier, pas ailleurs.
+  await pageTr.click('#essaiTr [data-clic-point="p3"]');
+  await pageTr.waitForTimeout(120);
+  e = await pageTr.evaluate(() => window.__tr.avec.db.transport.ess1.tournee);
+  if (e.ordre.join(',') !== 'p1,p2,p4,p3') throw new Error('ordre après deux clics : ' + e.ordre.join(','));
+  if (e.quai.length) throw new Error('le quai n’est pas vide : ' + e.quai.join(','));
+  // Le tracé du plan suit : départ (50,50) → p1 (150,50) → p2 (250,50) → p4 (250,150) → p3…
+  const trace = await pageTr.getAttribute('#essaiTr .plan-trace', 'points');
+  if (!trace.startsWith('50,50 150,50 250,50 250,150 150,150')) throw new Error('tracé : ' + trace);
+});
+
+await v('carte cliquable : un clic sur un arrêt chargé le retire, et les suivants se renumérotent', async () => {
+  await poserTr(['p1', 'p2', 'p4', 'p3'], []);
+  await pageTr.click('#essaiTr [data-clic-point="p2"]');
+  await pageTr.waitForTimeout(120);
+  const e = await pageTr.evaluate(() => window.__tr.avec.db.transport.ess1.tournee);
+  if (e.ordre.join(',') !== 'p1,p4,p3') throw new Error('p2 n’est pas retiré : ' + e.ordre.join(','));
+  if (e.quai.join(',') !== 'p2') throw new Error('p2 n’est pas au quai : ' + e.quai.join(','));
+  // La renumérotation est le point sensible : p4 était 3ᵉ, il devient 2ᵉ.
+  const c = await lireCarte();
+  const par = Object.fromEntries(c.map((x) => [x.id, x]));
+  if (par.p1.ordre !== '1' || par.p4.ordre !== '2' || par.p3.ordre !== '3') {
+    throw new Error('ordre mal renuméroté : ' + JSON.stringify(c));
+  }
+  if (par.p2.ordre !== null) throw new Error('un arrêt retiré garde sa pastille d’ordre');
+});
+
+await v('carte cliquable : deux encres, deux sens — le rond dit le client, la pastille dit le rang', async () => {
+  // Le défaut d'origine, reproduit exactement : trois arrêts chargés dont le QUATRIÈME client
+  // en troisième position, et le troisième client resté à quai. Avant la correction, le rond
+  // de p4 affichait « 3 » (son rang) et celui de p3 affichait « 3 » (son numéro) : deux « 3 »
+  // sur la même carte, pour deux choses différentes.
+  await poserTr(['p1', 'p2', 'p4'], ['p3']);
+  const c = await lireCarte();
+  const par = Object.fromEntries(c.map((x) => [x.id, x]));
+
+  // Le rond : le numéro du client, le même partout, et il ne bouge jamais.
+  if (c.map((x) => x.rond).join(',') !== '1,2,3,4') {
+    throw new Error('les ronds ne portent pas les numéros des clients : ' + JSON.stringify(c));
+  }
+  // Deux ronds ne peuvent pas porter le même chiffre : c'est la confusion d'origine.
+  const ronds = c.map((x) => x.rond);
+  if (new Set(ronds).size !== ronds.length) throw new Error('deux ronds portent le même numéro : ' + ronds.join(','));
+
+  // La pastille : le rang, et seulement pour ce qui est chargé.
+  if (par.p4.ordre !== '3') throw new Error('p4 devrait être le 3ᵉ arrêt : ' + par.p4.ordre);
+  if (par.p4.rond !== '4') throw new Error('le rond de p4 devrait rester le client 4 : ' + par.p4.rond);
+  if (par.p3.ordre !== null) throw new Error('un arrêt à quai porte une pastille d’ordre');
+  if (!par.p3.quai) throw new Error('l’arrêt resté à quai n’est pas dessiné en creux');
+  if (par.p1.quai || par.p2.quai || par.p4.quai) throw new Error('un arrêt chargé est dessiné en creux');
+
+  // Et la légende dit laquelle est laquelle, sinon deux numérotations sur un plan sont pires
+  // qu'une seule fausse.
+  const leg = await pageTr.$$eval('#essaiTr .plan-legende span', (e) => e.map((x) => x.textContent.trim()).join(' | '));
+  if (!/numéro du client/.test(leg)) throw new Error('la légende ne nomme pas le rond : ' + leg);
+  if (!/ordre de passage/.test(leg)) throw new Error('la légende ne nomme pas la pastille : ' + leg);
+  if (!/resté à quai/.test(leg)) throw new Error('la légende ne nomme pas le rond creux : ' + leg);
+
+  // La liste porte les deux aussi : la pastille de rang à gauche, le numéro du client devant
+  // le nom — « 4 · Client Quatre ».
+  const lignes = await pageTr.$$eval('#essaiTr #tourListe .tour-item', (ls) => ls.map((l) => ({
+    rang: l.querySelector('.tour-rang').textContent.trim(),
+    num: l.querySelector('.tour-num').textContent.trim(),
+    nom: l.querySelector('strong').textContent.trim(),
+  })));
+  if (lignes.length !== 3) throw new Error(lignes.length + ' ligne(s) au récapitulatif');
+  if (lignes[2].rang !== '3' || lignes[2].num !== '4 ·' || lignes[2].nom !== 'Client Quatre') {
+    throw new Error('la 3ᵉ ligne ne porte pas les deux numéros : ' + JSON.stringify(lignes[2]));
+  }
+});
+
+await v('carte cliquable : la cible de clic est plus grande que le rond, et les noms ne la volent pas', async () => {
+  // Au vidéoprojecteur comme à la souris, viser un disque de douze pixels est pénible. Et une
+  // étiquette qui attrape le clic est la première source de clics perdus : l'élève vise
+  // « Client Un », il touche le texte, rien ne se passe, il recommence.
+  const g = await pageTr.evaluate(() => {
+    const pt = document.querySelector('#essaiTr .plan-svg .plan-pt');
+    const cible = pt.querySelector('.plan-pt-cible');
+    const etiq = [...document.querySelectorAll('#essaiTr .plan-svg .plan-pt text')]
+      .filter((t) => /Client/.test(t.textContent));
+    return {
+      rRond: +pt.querySelector('circle').getAttribute('r'),
+      rCible: +cible.getAttribute('r'),
+      dernier: pt.lastElementChild === cible || pt.children[pt.children.length - 1] === cible,
+      role: cible.getAttribute('role'),
+      tab: cible.getAttribute('tabindex'),
+      aria: cible.getAttribute('aria-label'),
+      etiqNeutres: etiq.length > 0 && etiq.every((t) => getComputedStyle(t).pointerEvents === 'none'),
+      pastillesNeutres: [...document.querySelectorAll('#essaiTr .plan-pt-ordre')]
+        .every((o) => getComputedStyle(o).pointerEvents === 'none'),
+    };
+  });
+  if (g.rCible <= g.rRond) throw new Error(`cible r=${g.rCible} pour un rond r=${g.rRond}`);
+  if (g.rCible < 18) throw new Error('cible de clic trop petite : r=' + g.rCible);
+  if (!g.dernier) throw new Error('la cible n’est pas posée en dernier : elle passerait sous le reste');
+  if (g.role !== 'button' || g.tab !== '0') throw new Error('la cible n’est pas un bouton atteignable : ' + g.role + '/' + g.tab);
+  if (!/Client Un/.test(g.aria || '')) throw new Error('la cible ne dit pas ce qu’elle fait : ' + g.aria);
+  if (!g.etiqNeutres) throw new Error('les noms des points attrapent le clic');
+  if (!g.pastillesNeutres) throw new Error('la pastille d’ordre attrape le clic');
+});
+
+await v('carte cliquable : Entrée ajoute et retire, et le focus revient sur le point cliqué', async () => {
+  // Chaque point est un bouton : au clavier, Entrée doit faire ce que fait la souris. Le piège
+  // est le redessin — il détruit l'élément qui avait le focus, et sans report l'élève est
+  // renvoyé en haut de page : son premier Entrée marchait, le second ne faisait plus rien.
+  // Trouvé en pilotant l'écran, pas par une relecture.
+  await poserTr(['p1', 'p2'], ['p3', 'p4']);
+  await pageTr.focus('#essaiTr [data-clic-point="p3"]');
+  await pageTr.keyboard.press('Enter');
+  await pageTr.waitForTimeout(140);
+  let e = await pageTr.evaluate(() => window.__tr.avec.db.transport.ess1.tournee.ordre.join(','));
+  if (e !== 'p1,p2,p3') throw new Error('Entrée n’ajoute pas : ' + e);
+  const garde = await pageTr.evaluate(() => {
+    const a = document.activeElement;
+    return a ? a.getAttribute('data-clic-point') : null;
+  });
+  if (garde !== 'p3') throw new Error('le focus est perdu après le redessin : ' + garde);
+  // Le second Entrée, celui qui ne faisait rien.
+  await pageTr.keyboard.press('Enter');
+  await pageTr.waitForTimeout(140);
+  e = await pageTr.evaluate(() => window.__tr.avec.db.transport.ess1.tournee.ordre.join(','));
+  if (e !== 'p1,p2') throw new Error('le second Entrée ne retire pas : ' + e);
+});
+
+/* ===================================================================================== */
+/* L'évaluateur de formules — écrit le 04/10/2026.                                       */
+/*                                                                                       */
+/* Tristan : *« il doit disposer d'un petit espace tableur intégré où il doit saisir la   */
+/* formule pour trouver le temps »*. C'est le morceau du projet où une erreur se voit le  */
+/* moins : une formule qui rend un nombre faux ne lève rien, elle ment. Les valeurs       */
+/* attendues sont donc ÉCRITES À LA MAIN ici — c'est la règle du projet pour un test, et  */
+/* c'est l'inverse de celle d'un générateur.                                              */
+/* ===================================================================================== */
+
+await v('formules : les quatre opérations, les priorités, et la virgule française', async () => {
+  const r = await pageTr.evaluate(async () => {
+    const F = await import('/core/formules.js');
+    const v = (c) => F.evaluerGrille(c);
+    return {
+      nb: [F.nombreFr('12,5'), F.nombreFr('12.5'), F.nombreFr('1 234,5'), F.nombreFr('abc'), F.nombreFr('')],
+      calc: ['=2+3*4', '=(2+3)*4', '=2^3^2', '=-3+10', '=10/4', '=12,5+0,5']
+        .map((f) => v({ A1: f }).valeurs.A1),
+    };
+  });
+  // La virgule décimale est la frappe d'un élève sur un poste français. Le point est accepté
+  // aussi : personne ne doit être puni pour avoir tapé 12.5.
+  if (r.nb.join('|') !== '12.5|12.5|1234.5||') throw new Error('lecture des nombres : ' + JSON.stringify(r.nb));
+  // 2^3^2 vaut 512 et non 64 : la puissance est associative à DROITE, comme dans Excel.
+  if (r.calc.join('|') !== '14|20|512|7|2.5|13') throw new Error('calculs : ' + JSON.stringify(r.calc));
+});
+
+await v('formules : SOMME, MOYENNE, MIN, MAX, ARRONDI et les plages', async () => {
+  const r = await pageTr.evaluate(async () => {
+    const F = await import('/core/formules.js');
+    const poids = { B2: '31', B3: '24', B4: '42', B5: '19', B6: '36', B7: '27' };
+    return {
+      // Les six commandes d'ENT-3.1, et leur somme : 31+24+42+19+36+27.
+      somme: F.evaluerGrille(Object.assign({ B8: '=SOMME(B2:B7)' }, poids)).valeurs.B8,
+      plage: F.cellulesDePlage('B2', 'B7').join(','),
+      envers: F.cellulesDePlage('B7', 'B2').join(','),
+      autres: F.evaluerGrille({
+        B2: '4', B3: '6',
+        A1: '=SOMME(B2:B3;10)', A2: '=MOYENNE(2;4;9)', A3: '=MAX(1;7;3)',
+        A4: '=MIN(1;7;3)', A5: '=ARRONDI(12,345;2)', A6: '=ARRONDI(12,5)',
+      }).valeurs,
+      // Une cellule vide vaut zéro dans une addition, mais ne compte pas dans une moyenne —
+      // sinon une plage un peu large fausserait le résultat sans que personne le voie.
+      vide: F.evaluerGrille({ B2: '4', B3: '', B4: '6', A1: '=B2+B3', A2: '=MOYENNE(B2:B4)' }).valeurs,
+    };
+  });
+  if (r.somme !== 179) throw new Error('SOMME(B2:B7) = ' + r.somme + ' au lieu de 179');
+  if (r.plage !== 'B2,B3,B4,B5,B6,B7') throw new Error('plage : ' + r.plage);
+  if (r.envers !== 'B2,B3,B4,B5,B6,B7') throw new Error('plage à l’envers non remise à l’endroit : ' + r.envers);
+  const a = r.autres;
+  if (a.A1 !== 20 || a.A2 !== 5 || a.A3 !== 7 || a.A4 !== 1 || a.A5 !== 12.35 || a.A6 !== 13) {
+    throw new Error('fonctions : ' + JSON.stringify(a));
+  }
+  if (r.vide.A1 !== 4 || r.vide.A2 !== 5) throw new Error('cellules vides : ' + JSON.stringify(r.vide));
+});
+
+await v('formules : une formule fausse rend une erreur lisible, jamais un nombre faux', async () => {
+  // C'est le vrai danger de ce fichier. Un analyseur trop permissif qui lirait « =2+ » comme 2
+  // donnerait un résultat plausible à un élève qui s'est trompé, et personne ne le verrait.
+  const r = await pageTr.evaluate(async () => {
+    const F = await import('/core/formules.js');
+    const code = (f) => { const x = F.evaluerGrille({ A1: f }); return x.erreurs.A1 || ('valeur ' + x.valeurs.A1); };
+    return {
+      nom: [code('=SOMM(1;2)'), code('=SI(1;2;3)')],
+      div: [code('=10/0'), F.evaluerGrille({ B2: '0', A1: '=5/B2' }).erreurs.A1],
+      malEcrites: ['=2+', '=(2+3', '=2 3', '=*5', '=SOMME(1;2', '=B2:B7+1', '=SOMME 1'].map(code),
+      // Une formule qui se mord la queue doit dire pourquoi, pas faire déborder la pile du
+      // navigateur — ce qui emporterait la page entière et l'heure de cours avec.
+      circ: [F.evaluerGrille({ A1: '=A2', A2: '=A1' }).erreurs.A1, code('=A1+1')],
+      // Un libellé texte dans une cellule n'est pas une erreur : une grille en est pleine.
+      libelle: F.evaluerGrille({ A1: 'Poids total', B1: '=SOMME(B2:B3)', B2: '1', B3: '2' }),
+    };
+  });
+  if (r.nom.join('|') !== '#NOM?|#NOM?') throw new Error('fonction inconnue : ' + JSON.stringify(r.nom));
+  if (r.div.join('|') !== '#DIV/0!|#DIV/0!') throw new Error('division par zéro : ' + JSON.stringify(r.div));
+  const acceptees = r.malEcrites.filter((x) => x.startsWith('valeur'));
+  if (acceptees.length) throw new Error('formule(s) mal écrite(s) acceptée(s) : ' + JSON.stringify(r.malEcrites));
+  if (!r.circ.every((x) => /^#/.test(String(x)))) throw new Error('référence circulaire : ' + JSON.stringify(r.circ));
+  if (r.libelle.erreurs.A1) throw new Error('un libellé texte est compté comme une erreur');
+  if (r.libelle.valeurs.B1 !== 3) throw new Error('somme à côté d’un libellé : ' + r.libelle.valeurs.B1);
+});
+
+await v('carte cliquable : rien de tout cela n’existe sans plan ni sans ordre de passage', async () => {
+  // Règle du noyau : une vue ne gagne une capacité que si le contenu la déclare. Une séance
+  // où le transport n'est qu'une contrainte de charge n'a pas de carte, donc pas de clic ; et
+  // l'écran de repérage, lui, a une carte mais aucun ordre de passage — il doit rester
+  // exactement celui d'avant, sans pastille, sans rond creux et sans cible de clic.
+  const sansCarte = await pageTr.$$eval('#essaiSansPlan [data-clic-point]', (e) => e.length);
+  if (sansCarte) throw new Error('une séance sans plan a des cibles de clic');
+
+  await ouvrir('plan');
+  const r = await pageTr.evaluate(() => ({
+    cibles: document.querySelectorAll('#essaiTr .plan-svg .plan-pt-cible').length,
+    pastilles: document.querySelectorAll('#essaiTr .plan-svg .plan-pt-ordre').length,
+    creux: document.querySelectorAll('#essaiTr .plan-svg .plan-pt-quai').length,
+    ronds: [...document.querySelectorAll('#essaiTr .plan-svg .plan-pt')]
+      .map((g) => g.querySelector('text').textContent.trim()).join(','),
+    leg: [...document.querySelectorAll('#essaiTr .plan-legende span')].map((x) => x.textContent).join(' | '),
+  }));
+  if (r.cibles || r.pastilles || r.creux) throw new Error('l’écran de repérage a gagné la carte cliquable : ' + JSON.stringify(r));
+  if (r.ronds !== '1,2,3,4') throw new Error('les numéros de clients du repérage ont bougé : ' + r.ronds);
+  if (/ordre de passage/.test(r.leg)) throw new Error('la légende parle d’un ordre de passage inexistant');
+  await ouvrir('tournee');
+
+  // Et une séance qui ne déclare PAS `extremitesACliquer` garde ses deux bouts comme avant :
+  // dessinés pleins, comptés dans le trajet, et sans rien à cliquer. Règle du noyau — une vue
+  // ne gagne une capacité que si le contenu la demande.
+  const bouts = await pageTr.evaluate(() => ({
+    cibles: document.querySelectorAll('#essaiTr [data-clic-extremite]').length,
+    boutons: document.querySelectorAll('#essaiTr [data-bout]').length,
+    creux: document.querySelectorAll('#essaiTr .plan-bout-vide').length,
+    trace: document.querySelector('#essaiTr .plan-trace').getAttribute('points'),
+  }));
+  if (bouts.cibles || bouts.boutons) throw new Error('une séance sans extrémités à cliquer en a gagné');
+  if (bouts.creux) throw new Error('un bout est dessiné en creux sans que la séance le demande');
+  // Le dépôt d'essai est en (50,50) et la gare en (350,150) : le tracé doit toujours les
+  // porter, sans que personne ait eu à les poser.
+  if (!bouts.trace.startsWith('50,50')) throw new Error('le tracé ne part plus du dépôt : ' + bouts.trace);
+  if (!bouts.trace.endsWith('350,150')) throw new Error('le tracé ne finit plus à la gare : ' + bouts.trace);
+});
+
 await v('vue plan : la porte de sortie n\'apparaît qu\'après deux essais infructueux', async () => {
   // Règle de Tristan du 02/10 au soir : l'élève ne doit jamais être complètement bloqué, mais
   // il doit pouvoir se tromper. La porte de sortie ne s'ouvre donc pas tout de suite.
@@ -2389,6 +2736,27 @@ const texteBo = async (sel) => (await pageBo.textContent(sel || zBo)).replace(/\
 // Les jalons, interrogés DIRECTEMENT sur le contenu. Le moteur, lui, ne les remonte au suivi
 // qu'au moment où il sauve : un test qui pose un état dans la base puis lit `ctx.enregistrer`
 // relirait l'état précédent et se tromperait de verdict.
+// Le bilan calculé par le NOYAU pour l'état courant, sans passer par l'écran.
+//
+// Nécessaire depuis le 04/10 : les jauges ne disent plus le poids total ni l'heure de retour,
+// c'est tout l'objet de la feuille de calcul. Les chiffres de calibrage — 179 kg, 16 h 19,
+// 15 h 10 — ne sont donc plus à l'écran, et les vérifier à la source est de toute façon plus
+// juste : on mesure le modèle, pas sa mise en page.
+const bilanBo = () => pageBo.evaluate(async () => {
+  const S = await import('/contenus/boost-tournee.js');
+  const { creerTournee } = await import('/core/types/tournee.js');
+  const vue = creerTournee(Object.assign({ plan: S.PLAN }, S.TOURNEE));
+  const t = window.__bo.db.transport['boost-ent31'].tournee;
+  const b = vue.bilan(Object.assign({ ordre: [], quai: [], report: {}, juge: {} }, t));
+  const hhmm = (m) => `${String(Math.floor(m / 60)).padStart(2, '0')} h ${String(Math.round(m % 60)).padStart(2, '0')}`;
+  return {
+    km: Math.round(b.km * 10) / 10, minutes: Math.round(b.minutes),
+    arrivee: b.arrivee == null ? null : hhmm(b.arrivee),
+    charge: b.cumuls.charge, colis: b.cumuls.colis,
+    arrets: b.retenus.length, enRetard: b.enRetard,
+  };
+});
+
 const jalonsBo = () => pageBo.evaluate(async () => {
   const S = await import('/contenus/boost-tournee.js');
   const o = {};
@@ -2651,7 +3019,20 @@ await v('ENT-3.1 : à l’ouverture de la tournée, rien n’est encore reproch�
   // avant même d'avoir touché à quoi que ce soit.
   await ouvrirBo('tournee');
   const t = await texteBo();
-  if (!/237 \/ 180 kg/.test(t)) throw new Error('la charge de départ n’est pas de 237 kg : ' + t.slice(0, 300));
+  // Le vélo-cargo part VIDE : la jauge est à 0 sur 180 et les sept commandes sont à quai.
+  // Trouver tout déjà chargé n'était pas intuitif, et c'était l'inverse du geste réel.
+  // La jauge ne dit plus le total — elle dit la LIMITE. C'est la condition pour que la feuille
+  // de calcul serve à quelque chose (04/10). Le vélo-cargo part quand même vide, et ça se lit
+  // au quai et au récapitulatif, pas à la jauge.
+  if (!/max 180 kg/.test(t)) throw new Error('la jauge n’annonce pas la limite : ' + t.slice(0, 300));
+  if (/0 \/ 180 kg|179 \/ 180/.test(t)) throw new Error('la jauge donne encore un total : ' + t.slice(0, 300));
+  const b0 = await bilanBo();
+  if (b0.charge !== 0 || b0.arrets !== 0) throw new Error('le vélo-cargo ne part pas vide : ' + JSON.stringify(b0));
+  if (!/Commandes restées à quai \(7\)/.test(t)) throw new Error('les sept commandes ne sont pas à quai : ' + t.slice(0, 400));
+  if (!/Rien n'est chargé/.test(t.replace(/’/g, "'"))) throw new Error('pas d’état vide expliqué : ' + t.slice(0, 300));
+  if (await pageBo.$$eval(`${zBo} #tourListe .tour-item`, (e) => e.length)) {
+    throw new Error('des arrêts sont déjà chargés');
+  }
   const j = await jalonsBo();
   const ko = Object.keys(j).filter((k) => j[k] === 'ko');
   if (ko.length) throw new Error('jalon(s) à tort en « ko » à l’ouverture : ' + ko.join(', ') + ' — ' + JSON.stringify(j));
@@ -2659,13 +3040,24 @@ await v('ENT-3.1 : à l’ouverture de la tournée, rien n’est encore reproch�
   if (j.horaire !== 'attente') throw new Error('jalon horaire à l’ouverture : ' + j.horaire);
   if (j.choix !== 'attente') throw new Error('jalon choix à l’ouverture : ' + j.choix);
   if (j.reperage !== 'ok') throw new Error('jalon repérage : ' + j.reperage);
+  // Et le piège inverse : un élève qui tape un chiffre dans une case SANS rien avoir chargé a
+  // bien « commencé », mais son vélo-cargo vide respecte évidemment le plafond. Ça ne vaut pas
+  // un point — sinon on en gagne un en ne faisant rien.
+  await pageBo.fill(`${zBo} [data-report="total"]`, '237');
+  await pageBo.waitForTimeout(80);
+  const j2 = await jalonsBo();
+  if (j2.charge === 'ok') throw new Error('le vélo-cargo vide fait gagner le jalon « charge »');
+  if (j2.horaire === 'ok') throw new Error('le vélo-cargo vide fait gagner le jalon « horaire »');
 });
 
 await v('ENT-3.1 : la bonne commande à quai, le bon ordre, le train attrapé, 5 jalons sur 5', async () => {
   await ouvrirBo('tournee');
-  // La Pointe Sud à quai : 58 kg, la seule commande qui libère assez de charge à elle seule.
-  await pageBo.click(`${zBo} [data-quai="c3"]`);
-  await pageBo.waitForTimeout(140);
+  // On charge les six, et on laisse La Pointe Sud à quai : 58 kg, la seule commande qui libère
+  // assez de charge à elle seule.
+  for (const id of ['c1', 'c2', 'c4', 'c5', 'c6', 'c7']) {
+    await pageBo.click(`${zBo} [data-reprendre="${id}"]`);
+    await pageBo.waitForTimeout(60);
+  }
   // On vise la jauge de CHARGE, pas « une jauge en rouge » : à cet instant l'ordre est encore
   // celui de la fiche, donc la jauge d'horaire est légitimement en rouge. Confondre les deux
   // ferait passer ce test pour un échec du calibrage.
@@ -2674,16 +3066,27 @@ await v('ENT-3.1 : la bonne commande à quai, le bon ordre, le train attrapé, 5
     .map((e) => ({ trop: e.classList.contains('trop'), txt: e.textContent.replace(/\s+/g, ' ').trim() })));
   if (chargeTrop.length !== 1) throw new Error(chargeTrop.length + ' jauge(s) de charge');
   if (chargeTrop[0].trop) throw new Error('la charge dépasse encore : ' + chargeTrop[0].txt);
-  if (!/179 \/ 180 kg/.test(chargeTrop[0].txt)) throw new Error('charge affichée : ' + chargeTrop[0].txt);
+  // La jauge ne donne plus le chiffre : on le vérifie à la source, et on vérifie EN PLUS
+  // qu'elle ne le laisse pas filer — ni en clair, ni par une soustraction (« dépassée de 57 »).
+  if (/179/.test(chargeTrop[0].txt)) throw new Error('la jauge donne le poids total : ' + chargeTrop[0].txt);
+  if (/dépassée de/.test(chargeTrop[0].txt)) throw new Error('la jauge donne le total par soustraction : ' + chargeTrop[0].txt);
+  const bCharge = await bilanBo();
+  if (bCharge.charge !== 179) throw new Error('charge calculée : ' + bCharge.charge + ' kg au lieu de 179');
   // L'ordre optimal. Le glisser-déposer et les flèches sont déjà éprouvés par les dix-sept
   // cas du noyau ; ici c'est le CHIFFRE qu'on vérifie, donc on pose l'ordre et on redessine.
   await pageBo.evaluate((ordre) => {
-    window.__bo.db.transport['boost-ent31'].tournee.ordre = ordre;
+    const t = window.__bo.db.transport['boost-ent31'].tournee;
+    t.ordre = ordre;
+    // Les deux bouts sont posés ici comme l'élève les poserait d'un clic : depuis le 04/10 ils
+    // ne sont plus du décor, et une chaîne incomplète raccourcit légitimement le trajet.
+    t.depart = Date.now(); t.arrivee = Date.now();
   }, ORDRE31);
   await ouvrirBo('plan');
   await ouvrirBo('tournee');
   const t = await texteBo();
-  if (!/15 h 27/.test(t)) throw new Error('retour annoncé autrement qu’à 15 h 27 : ' + t.slice(0, 600));
+  const bOpt = await bilanBo();
+  if (bOpt.arrivee !== '15 h 27') throw new Error('retour calculé à ' + bOpt.arrivee + ' au lieu de 15 h 27');
+  if (/15 h 27/.test(t)) throw new Error('l’écran donne l’heure de retour avant le calcul : ' + t.slice(0, 600));
   if (/manqué/.test(t)) throw new Error('le train est annoncé manqué avec le meilleur ordre');
   // Les quatre cases de report. Les valeurs sont écrites ici, pas lues sur l'écran.
   const attendu = { total: '237', trop: '57', chargee: '179', arrets: '36' };
@@ -2706,13 +3109,22 @@ await v('ENT-3.1 : un mauvais ordre fait manquer le train, et seul ce jalon tomb
   await pageBo.evaluate(() => {
     const t = window.__bo.db.transport['boost-ent31'].tournee;
     t.ordre = ['c1', 'c2', 'c4', 'c5', 'c6', 'c7'];
-    t.juge = {};
+    t.quai = ['c3'];
+    t.depart = Date.now(); t.arrivee = Date.now();
+    t.juge = {}; t.bloque = null;
   });
   await ouvrirBo('plan');
   await ouvrirBo('tournee');
   const t = await texteBo();
-  if (!/16 h 19/.test(t)) throw new Error('retour annoncé autrement qu’à 16 h 19 : ' + t.slice(0, 600));
-  if (!/manqué de 9 min/.test(t)) throw new Error('le retard n’est pas annoncé : ' + t.slice(0, 600));
+  // Le calibrage, à la source : 32,6 km et un retour à 16 h 19, neuf minutes après le train.
+  const bTrain = await bilanBo();
+  if (bTrain.arrivee !== '16 h 19') throw new Error('retour calculé à ' + bTrain.arrivee + ' au lieu de 16 h 19');
+  if (bTrain.km !== 32.6) throw new Error('distance calculée : ' + bTrain.km + ' km au lieu de 32,6');
+  // À l'écran, l'élève apprend QUE le train est manqué — c'est indispensable, sinon la
+  // contrainte disparaît de la séance — mais pas DE COMBIEN : neuf minutes de retard sur une
+  // limite connue redonneraient l'heure de retour, donc le temps total qu'il doit calculer.
+  if (!/manqué/.test(t)) throw new Error('le retard n’est pas annoncé du tout : ' + t.slice(0, 600));
+  if (/16 h 19|manqué de 9 min/.test(t)) throw new Error('l’écran donne l’heure de retour : ' + t.slice(0, 600));
   const j = await jalonsBo();
   if (j.horaire !== 'ko') throw new Error('jalon horaire : ' + j.horaire);
   if (j.charge !== 'ok') throw new Error('jalon charge tombé avec l’horaire : ' + j.charge);
@@ -2724,6 +3136,702 @@ await v('ENT-3.1 : un mauvais ordre fait manquer le train, et seul ce jalon tomb
   if (vus !== 3) throw new Error(vus + ' jalons au vert au lieu de 3 — ' + JSON.stringify(j));
 });
 
+await v('ENT-3.1 : une tournée qui ne tient pas refuse le report des résultats', async () => {
+  // Le défaut relevé par Tristan le 03/10 : *« il suffit de garder les 6 premières et on tombe
+  // juste, aucun travail de tournée à faire »*. La cause est structurelle — chaque case se
+  // corrige contre le bilan DE L'ÉLÈVE, donc aucune ne peut juger son ordre — et dans ENT-3.1
+  // les quatre valeurs attendues sont identiques quel que soit l'ordre : 237, 57, 179, 36.
+  // Un élève obtenait 4/4 en manquant le train de neuf minutes.
+  //
+  // On arrive ici avec l'ordre de la fiche, celui qui rentre à 16 h 19. Les quatre valeurs
+  // saisies sont les BONNES : c'est bien la tournée, et elle seule, qui doit faire refuser.
+  const attendu = { total: '237', trop: '57', chargee: '179', arrets: '36' };
+  for (const [id, val] of Object.entries(attendu)) {
+    await pageBo.fill(`${zBo} [data-report="${id}"]`, val);
+  }
+  await pageBo.click(`${zBo} [data-tour-valider]`);
+  await pageBo.waitForTimeout(180);
+  const t = await texteBo();
+  if (!/ne tient pas encore/.test(t)) throw new Error('le report est accepté malgré le train manqué : ' + t.slice(-500));
+  // Le refus dit ce qui ne va pas, sans dire de combien — même raison que la jauge : « manqué
+  // de 9 min » sur un train à 16 h 10 rend l'heure de retour par une addition.
+  if (!/train manqué/.test(t)) throw new Error('le refus ne dit pas ce qui ne va pas : ' + t.slice(-400));
+  if (/manqué de \d/.test(t)) throw new Error('le refus donne l’heure de retour par soustraction : ' + t.slice(-400));
+  // Aucune case n'est déclarée juste : l'écran ne doit pas afficher quatre « juste » sous une
+  // jauge rouge.
+  const justes = await pageBo.$$eval(`${zBo} .tour-saisie input.juste`, (e) => e.length);
+  if (justes) throw new Error(justes + ' case(s) déclarée(s) justes alors que la tournée ne tient pas');
+  const j = await jalonsBo();
+  if (j.report === 'ok') throw new Error('le jalon report est validé malgré le train manqué');
+  // Et le refus s'efface dès que l'élève touche à son ordre : on ne le laisse pas devant un
+  // message rouge qui ne correspond plus à rien.
+  await pageBo.click(`${zBo} [data-bas="0"]`);
+  await pageBo.waitForTimeout(140);
+  if (/ne tient pas encore/.test(await texteBo())) throw new Error('le refus survit à un changement d’ordre');
+});
+
+await v('ENT-3.1 : la tournée se construit entièrement à la carte, et les cinq jalons tombent', async () => {
+  // Le cas qui dit si le chantier sert à quelque chose. Les autres cas d'ENT-3.1 posent
+  // l'ordre à la main dans la base parce que c'est le CHIFFRE qu'ils vérifient ; celui-ci fait
+  // l'inverse : il ne touche pas à la base, il clique les six clients sur la carte dans
+  // l'ordre de passage, exactement comme un élève, et regarde si la séance tombe juste.
+  //
+  // Six clics, et c'est tout. Avant la carte cliquable, il fallait six clics de chargement
+  // PUIS une dizaine de clics de flèches pour arriver au même état.
+  await pageBo.evaluate(() => {
+    const t = window.__bo.db.transport['boost-ent31'].tournee;
+    t.ordre = []; t.quai = ['c1', 'c2', 'c3', 'c4', 'c5', 'c6', 'c7'];
+    // Les deux bouts repartent à zéro eux aussi : ce cas doit TOUT construire au clic, y
+    // compris le départ et l'arrivée. Les laisser posés par un cas précédent inverserait le
+    // sens des deux clics, qui les retireraient au lieu de les placer.
+    t.depart = null; t.arrivee = null;
+    t.report = {}; t.juge = {}; t.bloque = null; t.valide = null;
+  });
+  await ouvrirBo('plan');
+  await ouvrirBo('tournee');
+  if (await pageBo.$$eval(`${zBo} #tourListe .tour-item`, (e) => e.length)) {
+    throw new Error('la tournée ne repart pas à vide');
+  }
+  // Les deux bouts se cliquent comme les clients — c'est le chantier du 04/10 : l'élève doit
+  // poser l'entrepôt et la gare, pas les trouver déjà là. Le départ d'abord, comme on raconte
+  // une tournée.
+  await pageBo.click(`${zBo} [data-clic-extremite="depart"]`);
+  await pageBo.waitForTimeout(70);
+  for (const id of ORDRE31) {
+    await pageBo.click(`${zBo} [data-clic-point="${id}"]`);
+    await pageBo.waitForTimeout(70);
+  }
+  await pageBo.click(`${zBo} [data-clic-extremite="arrivee"]`);
+  await pageBo.waitForTimeout(70);
+  const t = await pageBo.evaluate(() => window.__bo.db.transport['boost-ent31'].tournee);
+  if (!t.depart || !t.arrivee) throw new Error('les deux bouts ne sont pas posés : ' + JSON.stringify({ d: t.depart, a: t.arrivee }));
+  // L'ordre attendu, ÉCRIT ICI à la main plutôt que relu depuis `ORDRE31` : les deux doivent
+  // tomber d'accord, sinon la constante et la carte pourraient se tromper ensemble.
+  if (t.ordre.join(',') !== 'c4,c2,c1,c6,c5,c7') throw new Error('ordre construit à la carte : ' + t.ordre.join(','));
+  if (t.quai.join(',') !== 'c3') throw new Error('La Pointe Sud devrait rester seule à quai : ' + t.quai.join(','));
+
+  // Les chiffres de la séance, écrits ici à la main : 179 kg des six commandes retenues
+  // (31 + 24 + 42 + 19 + 36 + 27), 21 colis, et le train attrapé.
+  const txt = await texteBo();
+  const bCarte = await bilanBo();
+  if (bCarte.charge !== 179) throw new Error('charge : ' + bCarte.charge + ' kg au lieu de 179');
+  if (bCarte.colis !== 21) throw new Error('colis : ' + bCarte.colis + ' au lieu de 21');
+  if (bCarte.arrivee !== '15 h 27') throw new Error('retour : ' + bCarte.arrivee + ' au lieu de 15 h 27');
+  if (/dépassée|manqué/.test(txt)) throw new Error('une contrainte est violée alors que l’ordre est le bon');
+
+  // La carte, elle, porte bien les deux encres : sept ronds numérotés de 1 à 7 qui ne bougent
+  // pas, six pastilles d'ordre, et La Pointe Sud en creux.
+  const c = await pageBo.$$eval(`${zBo} .plan-svg .plan-pt`, (gs) => gs.map((g) => ({
+    id: g.dataset.point,
+    rond: g.querySelector('text').textContent.trim(),
+    ordre: g.querySelector('.plan-pt-ordre text') ? g.querySelector('.plan-pt-ordre text').textContent.trim() : null,
+    quai: g.classList.contains('plan-pt-quai'),
+  })));
+  if (c.map((x) => x.rond).join(',') !== '1,2,3,4,5,6,7') throw new Error('ronds : ' + JSON.stringify(c));
+  if (c.filter((x) => x.ordre).length !== 6) throw new Error('pastilles d’ordre : ' + JSON.stringify(c));
+  const pointe = c.find((x) => x.id === 'c3');
+  if (!pointe.quai || pointe.ordre !== null) throw new Error('La Pointe Sud n’est pas dessinée à quai : ' + JSON.stringify(pointe));
+  // Maison Lauze est le PREMIER arrêt et le client n° 4 : le cas même qui affichait deux « 3 »
+  // sur la carte avant la correction (La Pointe Sud, client 3, et le 3ᵉ arrêt).
+  const lauze = c.find((x) => x.id === 'c4');
+  if (lauze.rond !== '4' || lauze.ordre !== '1') throw new Error('Maison Lauze : ' + JSON.stringify(lauze));
+
+  // Et les quatre résultats se reportent et se valident, donc les cinq jalons tombent.
+  // 237 kg les sept commandes, 57 kg de trop, 179 kg chargés, 36 min d'arrêts (6 × 6).
+  for (const [id, val] of Object.entries({ total: '237', trop: '57', chargee: '179', arrets: '36' })) {
+    await pageBo.fill(`${zBo} [data-report="${id}"]`, val);
+  }
+  await pageBo.click(`${zBo} [data-tour-valider]`);
+  await pageBo.waitForTimeout(200);
+  const j = await jalonsBo();
+  const pas = Object.keys(j).filter((k) => j[k] !== 'ok');
+  if (pas.length) throw new Error('jalon(s) non validé(s) : ' + pas.join(', ') + ' — ' + JSON.stringify(j));
+});
+
+await v('ENT-3.1 : la feuille de calcul est engendrée depuis la tournée de l’élève', async () => {
+  // Ce qui fait d'une feuille de calcul un écran de logiciel et pas un exercice posé à côté :
+  // ses données sont CELLES que l'élève vient de construire en cliquant, dans SON ordre. S'il
+  // charge six arrêts, les poids occupent B2 à B7 et le total tombe en B8 ; s'il en charge
+  // cinq, tout remonte d'une ligne. La plage se lit sur la grille qu'on a sous les yeux.
+  await pageBo.evaluate(() => {
+    const t = window.__bo.db.transport['boost-ent31'].tournee;
+    t.ordre = ['c4', 'c2', 'c1', 'c6', 'c5', 'c7']; t.quai = ['c3'];
+    t.depart = Date.now(); t.arrivee = Date.now();
+    t.juge = {}; t.bloque = null; t.valide = null;
+    t.grille = { cases: {}, juge: {}, valide: null };
+  });
+  await ouvrirBo('plan');
+  await ouvrirBo('tournee');
+
+  const g = await pageBo.$$eval(`${zBo} .gr-table tr`, (trs) => trs.slice(1).map((tr, i) => ({
+    ligne: i + 1,
+    a: tr.children[1] ? tr.children[1].textContent.trim() : '',
+    b: tr.children[2] ? tr.children[2].textContent.trim() : '',
+    saisie: !!tr.querySelector('[data-gr]'),
+  })));
+  // Les six arrêts dans l'ordre de l'élève, lignes 2 à 7, puis le total à remplir en ligne 8.
+  const noms = g.slice(1, 7).map((x) => x.a).join('|');
+  if (noms !== 'Maison Lauze|Épicerie Verdier|Le Comptoir des Halles|Atelier Mazet|Studio Garance|Caveau Pélissier') {
+    throw new Error('les lignes ne suivent pas la tournée de l’élève : ' + noms);
+  }
+  const poids = g.slice(1, 7).map((x) => x.b).join('|');
+  if (poids !== '42|24|31|36|19|27') throw new Error('poids ligne par ligne : ' + poids);
+  const refs = await pageBo.$$eval(`${zBo} [data-gr]`, (e) => e.map((x) => x.dataset.gr).join(','));
+  if (refs !== 'B8,B13,B14,B17,B18,B19') throw new Error('cellules à remplir : ' + refs);
+  if (!g[7].saisie) throw new Error('la ligne 8 n’est pas la cellule du poids total');
+
+  // Et la feuille donne les DONNÉES du calcul — distance, vitesse, nombre d'arrêts, temps par
+  // arrêt — sans jamais donner les résultats : ce sont les six cellules à remplir (le poids,
+  // les trois étapes du temps, l'heure de départ et l'heure d'arrivée).
+  const donnees = g.map((x) => `${x.a}=${x.b}`).join(' ; ');
+  if (!/Distance du parcours \(km\)=22,1/.test(donnees)) throw new Error('distance : ' + donnees);
+  if (!/Vitesse en ville \(km\/h\)=12/.test(donnees)) throw new Error('vitesse : ' + donnees);
+  if (!/Nombre d’arrêts=6/.test(donnees)) throw new Error('nombre d’arrêts : ' + donnees);
+  if (!/Temps par arrêt \(min\)=6/.test(donnees)) throw new Error('temps par arrêt : ' + donnees);
+});
+
+await v('ENT-3.1 : les formules justes sont acceptées, et le résultat s’affiche en direct', async () => {
+  // Les formules qu'on attend d'un élève, et leurs résultats écrits ici à la main : 179 kg,
+  // 1,84 h de route (22,1 km ÷ 12 km/h), 110,5 min (× 60), 36 min d'arrêts (6 × 6), un départ
+  // à 13 h 00, et l'arrivée à la gare : 780 + 110,5 + 36 = 926,5 min, soit 15 h 27.
+  const formules = { B8: '=SOMME(B2:B7)', B13: '=B11/B12', B14: '=B13*60', B17: '=B15*B16',
+    B18: '13:00', B19: '=B18+B14+B17' };
+  for (const [ref, f] of Object.entries(formules)) {
+    await pageBo.fill(`${zBo} [data-gr="${ref}"]`, f);
+    await pageBo.waitForTimeout(40);
+  }
+  // Le résultat s'affiche à côté de la formule, en direct, SANS avoir à valider : c'est ce qui
+  // permet à l'élève de voir ce que son calcul produit pendant qu'il l'écrit.
+  const res = await pageBo.$$eval(`${zBo} [data-gr-res]`, (e) => e.map((x) => x.textContent.trim()).join('|'));
+  if (res !== '179|1,84|110,5|36|13 h 00|15 h 27') throw new Error('résultats affichés : ' + res);
+
+  await pageBo.click(`${zBo} [data-gr-verifier]`);
+  await pageBo.waitForTimeout(200);
+  const t = await texteBo();
+  if (!/Toutes les formules sont justes/.test(t)) throw new Error('les formules ne sont pas acceptées : ' + t.slice(-400));
+  const justes = await pageBo.$$eval(`${zBo} .gr-saisie input.juste`, (e) => e.length);
+  if (justes !== 6) throw new Error(justes + ' cellule(s) juste(s) au lieu de 6');
+  // L'état vit dans la base de l'élève, cloisonné dans celui de la tournée : il retrouvera ses
+  // formules la semaine suivante.
+  const enBase = await pageBo.evaluate(() => window.__bo.db.transport['boost-ent31'].tournee.grille.cases);
+  if (enBase.B8 !== '=SOMME(B2:B7)') throw new Error('les formules ne sont pas enregistrées : ' + JSON.stringify(enBase));
+});
+
+await v('ENT-3.1 : un nombre tapé à la main est refusé, même quand il est juste', async () => {
+  // Le cœur du chantier. Un élève qui calcule de tête et tape « 179 » a trouvé le bon nombre
+  // sans faire le travail demandé — et c'est le travail demandé qui est la compétence. Le
+  // message doit le lui dire autrement que « faux », parce qu'il n'a pas faux.
+  await pageBo.fill(`${zBo} [data-gr="B8"]`, '179');
+  await pageBo.click(`${zBo} [data-gr-verifier]`);
+  await pageBo.waitForTimeout(200);
+  let t = await texteBo();
+  if (/Toutes les formules sont justes/.test(t)) throw new Error('un nombre tapé à la main est accepté');
+  if (!/écrivez une formule/.test(t)) throw new Error('le refus ne dit pas ce qui manque : ' + t.slice(-400));
+  if (!/tapé à la main/.test(t)) throw new Error('le bilan ne distingue pas le nombre tapé du résultat faux : ' + t.slice(-400));
+
+  // Une formule juste mais qui ne tombe pas sur la bonne valeur, c'est « à revoir », pas la
+  // même chose : les deux verdicts ne doivent pas se confondre.
+  await pageBo.fill(`${zBo} [data-gr="B8"]`, '=SOMME(B2:B6)');
+  await pageBo.click(`${zBo} [data-gr-verifier]`);
+  await pageBo.waitForTimeout(200);
+  t = await texteBo();
+  if (/écrivez une formule/.test(t)) throw new Error('une formule juste est prise pour un nombre tapé');
+  if (!/à revoir/.test(t)) throw new Error('une plage trop courte est acceptée : ' + t.slice(-400));
+
+  // Et une formule mal écrite est signalée comme telle, pas comme un résultat faux.
+  await pageBo.fill(`${zBo} [data-gr="B8"]`, '=SOMM(B2:B7)');
+  await pageBo.click(`${zBo} [data-gr-verifier]`);
+  await pageBo.waitForTimeout(200);
+  t = await texteBo();
+  if (!/formule mal écrite/.test(t)) throw new Error('une fonction inconnue n’est pas signalée : ' + t.slice(-400));
+
+  await pageBo.fill(`${zBo} [data-gr="B8"]`, '=SOMME(B2:B7)');
+  await pageBo.click(`${zBo} [data-gr-verifier]`);
+  await pageBo.waitForTimeout(200);
+});
+
+await v('feuille de calcul : désigner une cellule à la souris écrit sa référence', async () => {
+  // Tristan, le 04/10 : *« il ne reproduit pas le clic ou le clic glissé pour sélectionner les
+  // cellules »*. C'est le geste d'Excel, et c'est comme ça qu'on apprend ce qu'est une plage :
+  // on la montre, on ne l'épelle pas. Trois gestes, plus deux règles qui disent QUAND ils
+  // s'arment — ces deux-là sont sorties en pilotant l'écran à la souris, pas d'une relecture.
+  const champ = `${zBo} [data-gr="B8"]`;
+  const val = () => pageBo.inputValue(champ);
+  // Le message flottant du test précédent reste 2,6 s en bas de l'écran, pile là où tombent les
+  // cellules de la feuille : un clic de souris brut atterrissait DESSUS et ne faisait rien. On
+  // le retire plutôt que d'attendre — et c'est aussi ce qui rend ce cas rapide.
+  await pageBo.evaluate(() => { const t = document.getElementById('toast'); if (t) t.remove(); });
+  const centre = async (ref) => {
+    const el = pageBo.locator(`${zBo} .gr-table [data-ref="${ref}"]`);
+    await el.scrollIntoViewIfNeeded();
+    const b = await el.boundingBox();
+    return { x: b.x + b.width / 2, y: b.y + b.height / 2 };
+  };
+  const cliquer = async (ref, maj) => {
+    const p = await centre(ref);
+    if (maj) await pageBo.keyboard.down('Shift');
+    await pageBo.mouse.move(p.x, p.y);
+    await pageBo.mouse.down();
+    await pageBo.mouse.up();
+    if (maj) await pageBo.keyboard.up('Shift');
+    await pageBo.waitForTimeout(90);
+  };
+  const ouvrirFormule = async (texte) => {
+    await pageBo.fill(champ, texte);
+    await pageBo.click(champ);
+    await pageBo.keyboard.press('End');
+    await pageBo.waitForTimeout(60);
+  };
+
+  // ── Le clic simple insère la référence de la cellule désignée.
+  await ouvrirFormule('=');
+  await cliquer('B4');
+  if (await val() !== '=B4') throw new Error('clic simple : ' + await val());
+
+  // ── Le clic glissé suit la souris et écrit UNE plage, pas six références empilées.
+  await ouvrirFormule('=SOMME(');
+  const d = await centre('B2');
+  await pageBo.mouse.move(d.x, d.y);
+  await pageBo.mouse.down();
+  for (const r of ['B3', 'B4', 'B5', 'B6', 'B7']) {
+    const p = await centre(r);
+    await pageBo.mouse.move(p.x, p.y);
+    await pageBo.waitForTimeout(25);
+  }
+  await pageBo.mouse.up();
+  await pageBo.waitForTimeout(100);
+  if (await val() !== '=SOMME(B2:B7') throw new Error('clic glissé : ' + await val());
+  // Et la plage obtenue est la bonne : refermée, elle vaut les 179 kg des six commandes.
+  await pageBo.keyboard.type(')');
+  await pageBo.waitForTimeout(140);
+  const res = await pageBo.textContent(`${zBo} [data-gr-res="B8"]`);
+  if (res.trim() !== '179') throw new Error('la plage désignée ne vaut pas 179 : ' + res);
+
+  // ── Maj-clic étend la dernière référence posée, sans en empiler une seconde.
+  await ouvrirFormule('=SOMME(');
+  await cliquer('B2');
+  await cliquer('B5', true);
+  if (await val() !== '=SOMME(B2:B5') throw new Error('Maj-clic : ' + await val());
+
+  // ── Un glissement de bas en haut s'écrit quand même à l'endroit : « B2:B7 », jamais
+  // « B7:B2 ». C'est ce que l'élève doit lire et réécrire ensuite tout seul.
+  await ouvrirFormule('=SOMME(');
+  await cliquer('B7');
+  await cliquer('B3', true);
+  if (await val() !== '=SOMME(B3:B7') throw new Error('plage à l’envers non remise à l’endroit : ' + await val());
+
+  // ── La référence s'insère AU CURSEUR, pas à la fin : l'élève qui reprend le début de sa
+  // formule ne doit pas voir sa cellule atterrir tout au bout.
+  await pageBo.fill(champ, '=+100');
+  await pageBo.click(champ);
+  await pageBo.evaluate((sel) => {
+    const e = document.querySelector(sel);
+    e.setSelectionRange(1, 1);
+    e.dispatchEvent(new Event('select'));
+  }, champ);
+  await cliquer('B3');
+  if (await val() !== '=B3+100') throw new Error('insertion ailleurs qu’au curseur : ' + await val());
+
+  await pageBo.fill(champ, '=SOMME(B2:B7)');
+  await pageBo.waitForTimeout(80);
+});
+
+await v('feuille de calcul : le pointage se tait quand la formule n’attend pas de référence', async () => {
+  // Les deux pièges d'une cellule cliquable, trouvés en pilotant la souris. Sans ces deux
+  // règles, l'élève récolte des références dont il n'a rien demandé et ne comprend pas d'où
+  // elles sortent — ce qui est pire que l'absence du geste.
+  const champ = `${zBo} [data-gr="B8"]`;
+  await pageBo.evaluate(() => { const t = document.getElementById('toast'); if (t) t.remove(); });
+  const centre = async (ref) => {
+    const el = pageBo.locator(`${zBo} .gr-table [data-ref="${ref}"]`);
+    await el.scrollIntoViewIfNeeded();
+    const b = await el.boundingBox();
+    return { x: b.x + b.width / 2, y: b.y + b.height / 2 };
+  };
+
+  // 1. Hors formule, une cellule cliquée reste une cellule cliquée.
+  await pageBo.fill(champ, '179');
+  await pageBo.click(champ);
+  const p4 = await centre('B4');
+  await pageBo.mouse.click(p4.x, p4.y);
+  await pageBo.waitForTimeout(100);
+  if (await pageBo.inputValue(champ) !== '179') {
+    throw new Error('un clic insère une référence hors formule : ' + await pageBo.inputValue(champ));
+  }
+
+  // 2. Sur une formule TERMINÉE, le clic ne vient pas la polluer : l'élève qui a fini et qui
+  //    clique la cellule suivante veut y aller, pas y faire référence.
+  await pageBo.fill(champ, '=SOMME(B2:B7)');
+  await pageBo.click(champ);
+  await pageBo.keyboard.press('End');
+  await pageBo.mouse.click(p4.x, p4.y);
+  await pageBo.waitForTimeout(100);
+  if (await pageBo.inputValue(champ) !== '=SOMME(B2:B7)') {
+    throw new Error('une formule finie est polluée par un clic : ' + await pageBo.inputValue(champ));
+  }
+
+  // 3. Cliquer DANS son propre champ pour y poser le curseur n'insère pas sa propre référence.
+  await pageBo.fill(champ, '=SOMME(');
+  await pageBo.click(champ);
+  await pageBo.waitForTimeout(100);
+  if (await pageBo.inputValue(champ) !== '=SOMME(') {
+    throw new Error('le champ s’auto-référence quand on y clique : ' + await pageBo.inputValue(champ));
+  }
+
+  await pageBo.fill(champ, '=SOMME(B2:B7)');
+  await pageBo.waitForTimeout(80);
+});
+
+await v('ENT-3.1 : l’élève pose lui-même le départ et l’arrivée, et ils comptent dans le trajet', async () => {
+  // Tristan, le 04/10 : *« l'élève ne sélectionne ni le départ (entrepôt Boost) ni l'arrivée
+  // (la gare) »*. Ils étaient dessinés et comptés, mais jamais touchés : on pouvait finir la
+  // séance sans voir que la tournée part de Carémeau et finit à la gare, alors que ces deux
+  // trajets font une bonne part des kilomètres à calculer.
+  const poser = async (ordre, depart, arrivee) => {
+    await pageBo.evaluate((o) => {
+      const t = window.__bo.db.transport['boost-ent31'].tournee;
+      t.ordre = o.ordre; t.quai = ['c3'];
+      t.depart = o.depart ? Date.now() : null;
+      t.arrivee = o.arrivee ? Date.now() : null;
+      t.juge = {}; t.bloque = null; t.valide = null;
+    }, { ordre, depart, arrivee });
+    await ouvrirBo('plan');
+    await ouvrirBo('tournee');
+    return bilanBo();
+  };
+
+  // Les trois longueurs, écrites ici à la main. 22,1 km la chaîne complète ; sans la gare il
+  // manque le retour, sans l'entrepôt il manque l'aller. Les deux bouts pèsent 3,8 km à eux
+  // seuls — c'est précisément ce que l'élève ne voyait pas.
+  const complet = await poser(ORDRE31, true, true);
+  if (complet.km !== 22.1) throw new Error('chaîne complète : ' + complet.km + ' km au lieu de 22,1');
+  if (!complet.arrivee) throw new Error('pas d’heure de retour sur une chaîne complète');
+
+  const sansGare = await poser(ORDRE31, true, false);
+  if (sansGare.km >= complet.km) throw new Error('retirer la gare ne raccourcit pas le trajet : ' + sansGare.km);
+
+  const sansRien = await poser(ORDRE31, false, false);
+  if (sansRien.km >= sansGare.km) throw new Error('retirer l’entrepôt ne raccourcit pas le trajet : ' + sansRien.km);
+
+  // Et la carte le montre : un bout pas encore posé est dessiné en creux, comme un arrêt resté
+  // à quai — même signe pour le même sens.
+  const dessin = await pageBo.evaluate(() => ({
+    departVide: !!document.querySelector('#boost31 .plan-depart.plan-bout-vide'),
+    arriveeVide: !!document.querySelector('#boost31 .plan-arrivee.plan-bout-vide'),
+    pastilles: [...document.querySelectorAll('#boost31 .plan-depart .plan-pt-ordre, #boost31 .plan-arrivee .plan-pt-ordre')].length,
+  }));
+  if (!dessin.departVide || !dessin.arriveeVide) throw new Error('un bout non posé est dessiné comme posé : ' + JSON.stringify(dessin));
+  if (dessin.pastilles) throw new Error('un bout non posé porte une pastille de tournée');
+
+  // Posés, ils prennent leur pastille menthe « D » et « A » : la chaîne se lit D → 1 … → A.
+  await poser(ORDRE31, true, true);
+  const lettres = await pageBo.evaluate(() => [...document.querySelectorAll(
+    '#boost31 .plan-depart .plan-pt-ordre text, #boost31 .plan-arrivee .plan-pt-ordre text')]
+    .map((t) => t.textContent.trim()).join(','));
+  if (lettres !== 'D,A') throw new Error('pastilles des deux bouts : ' + lettres);
+});
+
+await v('ENT-3.1 : oublier la gare ne doit pas devenir une façon d’attraper le train', async () => {
+  // Le trou que ce chantier aurait pu ouvrir, et la raison pour laquelle le report doit refuser
+  // une chaîne incomplète. C'est la troisième fois que le même piège se présente sur cette
+  // séance : « il suffit de garder les 6 premières », puis les cases identiques quel que soit
+  // l'ordre, et maintenant le retour qu'on n'a pas placé.
+  await pageBo.evaluate(() => {
+    const t = window.__bo.db.transport['boost-ent31'].tournee;
+    // L'ordre de la fiche : complet il rentre à 16 h 19, NEUF MINUTES APRÈS le train.
+    t.ordre = ['c1', 'c2', 'c4', 'c5', 'c6', 'c7']; t.quai = ['c3'];
+    t.depart = Date.now(); t.arrivee = null;        // la gare n'est pas placée
+    t.juge = {}; t.bloque = null; t.valide = null;
+  });
+  await ouvrirBo('plan');
+  await ouvrirBo('tournee');
+
+  // Sans le retour vers la gare, le modèle dit que le train est attrapé : c'est bien une
+  // tricherie praticable, et c'est pour ça qu'elle doit être refusée ailleurs.
+  const b = await bilanBo();
+  if (b.enRetard) throw new Error('test invalide : la chaîne incomplète est déjà en retard, il n’y a rien à refuser');
+
+  for (const [id, val] of Object.entries({ total: '237', trop: '57', chargee: '179', arrets: '36' })) {
+    await pageBo.fill(`${zBo} [data-report="${id}"]`, val);
+  }
+  await pageBo.click(`${zBo} [data-tour-valider]`);
+  await pageBo.waitForTimeout(200);
+  const t = await texteBo();
+  if (!/ne tient pas encore/.test(t)) throw new Error('le report est accepté avec une chaîne incomplète : ' + t.slice(-400));
+  if (!/arrivée n’est pas placée/.test(t)) throw new Error('le refus ne dit pas ce qui manque : ' + t.slice(-400));
+  const justes = await pageBo.$$eval(`${zBo} .tour-saisie input.juste`, (e) => e.length);
+  if (justes) throw new Error(justes + ' case(s) déclarée(s) justes avec une chaîne incomplète');
+  const j = await jalonsBo();
+  if (j.report === 'ok') throw new Error('le jalon report est validé avec une chaîne incomplète');
+});
+
+await v('ENT-3.1 : vert = l’ordre, bleu = le client — sur la carte ET dans la liste', async () => {
+  // Relevé par Tristan le 04/10, capture à l'appui : *« le jeu de couleur est inversé, le vert
+  // doit signifier l'ordre de la tournée, le bleu l'emplacement physique de la boutique »*. La
+  // carte disait vert = ordre, la liste disait l'inverse — et les deux écrans se contredisaient
+  // sur la seule chose que ce chantier devait rendre univoque.
+  //
+  // Ce cas tient les DEUX écrans ensemble. Un test qui n'en regarderait qu'un laisserait
+  // repartir l'incohérence au premier coup de pinceau.
+  const c = await pageBo.evaluate(() => {
+    const rgb = (s) => String(s || '').replace(/\s/g, '');
+    const lu = (el, prop) => (el ? rgb(getComputedStyle(el)[prop]) : 'absent');
+    const page = document.querySelector('#boost31 .ent-page');
+    const vari = (v) => rgb(getComputedStyle(page).getPropertyValue(v));
+    return {
+      vert: vari('--vert'), bleu: vari('--ardoise-fond'),
+      carteClient: lu(document.querySelector('#boost31 .plan-pt circle'), 'fill'),
+      carteOrdre: lu(document.querySelector('#boost31 .plan-pt-ordre circle'), 'fill'),
+      // Dans le RÉCAPITULATIF, pas dans les lignes de départ/arrivée qui le précèdent : leurs
+      // étiquettes ne portent ni l'une ni l'autre des deux encres, et les lire ici ferait
+      // passer ce cas pour vert quoi qu'il arrive.
+      listeOrdre: lu(document.querySelector('#boost31 #tourListe .tour-rang'), 'backgroundColor'),
+      listeClient: lu(document.querySelector('#boost31 #tourListe .tour-num'), 'color'),
+    };
+  });
+  // Les deux couleurs de la charte de Boost, écrites ici à la main.
+  if (c.vert !== '#25c998' && c.vert !== 'rgb(37,201,152)') throw new Error('--vert : ' + c.vert);
+  if (c.bleu !== '#345cfd' && c.bleu !== 'rgb(52,92,253)') throw new Error('--ardoise-fond : ' + c.bleu);
+  const VERT = 'rgb(37,201,152)';
+  const BLEU = 'rgb(52,92,253)';
+  if (c.carteOrdre !== VERT) throw new Error('carte, pastille d’ordre : ' + c.carteOrdre + ' au lieu du vert');
+  if (c.carteClient !== BLEU) throw new Error('carte, rond du client : ' + c.carteClient + ' au lieu du bleu');
+  if (c.listeOrdre !== VERT) throw new Error('liste, pastille d’ordre : ' + c.listeOrdre + ' au lieu du vert');
+  if (c.listeClient !== BLEU) throw new Error('liste, numéro du client : ' + c.listeClient + ' au lieu du bleu');
+});
+
+await v('formules : une heure se tape « 13:00 » ou « 13h00 » et vaut des minutes', async () => {
+  // Demandé par Tristan le 05/10 : l'élève entre l'heure de départ, puis y AJOUTE le temps de
+  // route en minutes. Une heure vaut donc des minutes depuis minuit (13 h 00 = 780). Les valeurs
+  // sont écrites ici à la main.
+  const r = await pageBo.evaluate(async () => {
+    const F = await import('/core/formules.js');
+    return {
+      a: F.heureFr('13:00'), b: F.heureFr('13h05'), c: F.heureFr('13 h 05'), d: F.heureFr('13h'),
+      nu: F.heureFr('13'), tard: F.heureFr('25:00'), min: F.heureFr('12:75'), texte: F.heureFr('Arrêt'),
+      somme: F.evaluerGrille({ B1: '13:00', B2: '110,5', B3: '36', B4: '=B1+B2+B3' }).valeurs.B4,
+      fmt: F.formaterHeure(926.5), fmt2: F.formaterHeure(970), fmt3: F.formaterHeure(785),
+      aff: F.afficher('B4', F.evaluerGrille({ B4: '=13*60+5' }), 1, 'heure'),
+    };
+  });
+  const attendu = { a: 780, b: 785, c: 785, d: 780, nu: null, tard: null, min: null, texte: null,
+    somme: 926.5, fmt: '15 h 27', fmt2: '16 h 10', fmt3: '13 h 05', aff: '13 h 05' };
+  for (const [k, val] of Object.entries(attendu)) {
+    if (r[k] !== val) throw new Error(`${k} : ${r[k]} au lieu de ${val}`);
+  }
+});
+
+// ── Les états posés à la main pour les cas de la feuille de calcul : six arrêts qui tiennent,
+// ou les sept qui ne tiennent pas. Les adresses suivent le nombre d'arrêts (voir plus haut).
+const poserGrille = async (ordre, quai, cases) => {
+  await pageBo.evaluate((o) => {
+    const t = window.__bo.db.transport['boost-ent31'].tournee;
+    t.ordre = o.ordre; t.quai = o.quai;
+    t.depart = Date.now(); t.arrivee = Date.now();
+    t.report = {}; t.juge = {}; t.bloque = null; t.valide = null;
+    t.grille = { cases: o.cases || {}, juge: {}, valide: null };
+  }, { ordre, quai, cases });
+  await ouvrirBo('plan');
+  await ouvrirBo('tournee');
+};
+const SIX = ['c4', 'c2', 'c1', 'c6', 'c5', 'c7'];
+const FORM6 = { B8: '=SOMME(B2:B7)', B13: '=B11/B12', B14: '=B13*60', B17: '=B15*B16',
+  B18: '13:00', B19: '=B18+B14+B17' };
+const SEPT = ['c1', 'c2', 'c3', 'c4', 'c5', 'c6', 'c7'];
+const FORM7 = { B9: '=SOMME(B2:B8)', B14: '=B12/B13', B15: '=B14*60', B18: '=B16*B17',
+  B19: '13:00', B20: '=B19+B15+B18' };
+
+await v('ENT-3.1 : les étapes et les résultats ont chacun leur surbrillance, et les contraintes sont dans la feuille', async () => {
+  // Tristan, le 05/10 : *« une surbrillance différente pour distinguer les étapes et les
+  // résultats (poids total chargé) et heure d'arrivée »*. On mesure les couleurs RENDUES, pas
+  // les noms de classes : une classe sans règle CSS passerait un test de classes.
+  await poserGrille(SIX, ['c3']);
+  const fond = await pageBo.$$eval(`${zBo} .gr-table tbody tr`, (trs) => trs.map((tr) => ({
+    a: tr.children[1] ? tr.children[1].textContent.replace(/\s+/g, ' ').trim() : '',
+    bg: tr.children[2] ? getComputedStyle(tr.children[2]).backgroundColor : '',
+  })));
+  const de = (re) => {
+    const l = fond.find((x) => re.test(x.a));
+    if (!l) throw new Error('ligne introuvable : ' + re + ' dans ' + fond.map((x) => x.a).join(' | '));
+    return l.bg;
+  };
+  const e1 = de(/^Étape 1/), e2 = de(/^Étape 2/), e3 = de(/^Étape 3/);
+  const poids = de(/^Poids total chargé/), arrivee = de(/^Heure d’arrivée/);
+  const depart = de(/^Heure de départ/), fixe = de(/^Distance du parcours/);
+  if (e1 !== e2 || e2 !== e3) throw new Error('les trois étapes n’ont pas la même surbrillance : ' + [e1, e2, e3]);
+  if (poids !== arrivee) throw new Error('les deux résultats n’ont pas la même surbrillance : ' + [poids, arrivee]);
+  if (e1 === poids) throw new Error('une étape et un résultat ont la même surbrillance : ' + e1);
+  if (e1 === depart || poids === depart) throw new Error('l’heure de départ se confond avec une étape ou un résultat');
+  if (e1 === fixe || poids === fixe) throw new Error('une donnée fixe se confond avec une étape ou un résultat');
+
+  // Les explications sont SOUS les libellés, là où l'élève cherche : la formule distance ÷
+  // vitesse avec ses unités, puis la conversion en minutes.
+  const t = await pageBo.$eval(`${zBo} .gr-table`, (e) => e.textContent.replace(/\s+/g, ' '));
+  if (!/Distance \(km\) ÷ vitesse \(km\/h\) = temps \(h\)/.test(t)) throw new Error('l’étape 1 n’est pas expliquée : ' + t);
+  if (!/1 heure = 60 minutes/.test(t)) throw new Error('la conversion en minutes n’est pas expliquée : ' + t);
+  if (!/Heure de départ \+ temps de route \(min\) \+ temps aux arrêts \(min\)/.test(t)) throw new Error('l’heure d’arrivée n’est pas expliquée');
+  // Les deux contraintes figurent aussi dans la feuille, pour la comparaison.
+  if (!/Charge utile maximale \(kg\)\s*180/.test(t)) throw new Error('la charge maximale n’est pas dans la feuille : ' + t);
+  if (!/Départ du train \(contrainte\)\s*16 h 10/.test(t)) throw new Error('le train n’est pas dans la feuille : ' + t);
+  // La légende dit ce que les couleurs veulent dire.
+  const leg = await pageBo.$eval(`${zBo} .gr-legende`, (e) => e.textContent.replace(/\s+/g, ' '));
+  if (!/Étape du calcul/.test(leg) || !/Résultat à comparer/.test(leg)) throw new Error('légende : ' + leg);
+
+  // Les contraintes sont DANS le bloc de la feuille, à sa droite — et plus au-dessus.
+  const place = await pageBo.evaluate((z) => {
+    const racine = document.querySelector(z);
+    const droite = racine.querySelector('.gr-bloc .gr-droite');
+    const gauche = racine.querySelector('.gr-bloc .gr-gauche .gr-table');
+    const haut = racine.querySelector('.tour-grille .tour-jauge');
+    if (!droite || !gauche) return { ok: false };
+    const a = gauche.getBoundingClientRect(), b = droite.getBoundingClientRect();
+    return { ok: true, aDroite: b.left >= a.right - 1, jauges: droite.querySelectorAll('.tour-jauge').length, haut: !!haut };
+  }, zBo);
+  if (!place.ok) throw new Error('les contraintes ne sont pas dans le bloc de la feuille');
+  if (!place.aDroite) throw new Error('les contraintes ne sont pas à droite de la feuille');
+  if (place.jauges < 3) throw new Error(place.jauges + ' jauge(s) à droite de la feuille');
+  if (place.haut) throw new Error('des jauges restent au-dessus de la feuille');
+});
+
+await v('ENT-3.1 : des formules justes avec une tournée qui ne tient pas — le calcul est vert, la contrainte est rouge', async () => {
+  // Le cas qui a motivé la demande : un élève charge les sept commandes (237 kg pour 180), écrit
+  // des formules PARFAITES, et doit voir d'un coup d'œil que son calcul est bon et que c'est sa
+  // tournée qui ne passe pas. Les adresses suivent : sept arrêts, donc le total tombe en B9.
+  await poserGrille(SEPT, [], FORM7);
+  await pageBo.click(`${zBo} [data-gr-verifier]`);
+  await pageBo.waitForTimeout(220);
+  const t = await texteBo();
+  if (!/Toutes les formules sont justes/.test(t)) throw new Error('les formules sept arrêts ne sont pas acceptées : ' + t.slice(-500));
+  const justes = await pageBo.$$eval(`${zBo} .gr-saisie input.juste`, (e) => e.length);
+  if (justes !== 6) throw new Error(justes + ' cellule(s) en vert au lieu de 6');
+  // À droite, la charge est en rouge — et la carte de la charge ne dit PAS de combien.
+  const droite = await pageBo.$$eval(`${zBo} .gr-droite .tour-jauge`, (els) => els.map((e) => ({
+    trop: e.classList.contains('trop'), txt: e.textContent.replace(/\s+/g, ' ').trim() })));
+  const charge = droite.find((x) => /Charge du vélo-cargo/.test(x.txt));
+  if (!charge || !charge.trop) throw new Error('la charge dépassée n’est pas en rouge : ' + JSON.stringify(droite));
+  if (!/dépassée/.test(charge.txt)) throw new Error('la carte ne dit pas que la limite est franchie : ' + charge.txt);
+  const fuite = droite.map((x) => x.txt).join(' ');
+  if (/\b(237|57)\b/.test(fuite)) throw new Error('la colonne de droite laisse filer un total : ' + fuite);
+  if (/dépassée de/.test(fuite)) throw new Error('la colonne de droite donne l’écart : ' + fuite);
+  // Et le message qui relie les deux : le calcul est bon, c'est la tournée qui est à revoir.
+  const av = await pageBo.$$eval(`${zBo} .avis-contrainte`, (e) => e.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));
+  if (av.length !== 1 || !/Vos formules sont justes, mais la tournée ne respecte pas/.test(av[0])) {
+    throw new Error('message manquant : ' + JSON.stringify(av));
+  }
+  // Le vert et le rouge ne se mélangent pas : une cellule juste n'est jamais rouge.
+  const mele = await pageBo.$$eval(`${zBo} .gr-saisie input.juste.faux`, (e) => e.length);
+  if (mele) throw new Error('une cellule est à la fois juste et fausse');
+
+  // Retirer un arrêt change les données sous les formules : le verdict périmé disparaît, avec
+  // son message. Sans ça, « juste » restait affiché sur un total devenu faux.
+  await pageBo.click(`${zBo} [data-quai="c3"]`);
+  await pageBo.waitForTimeout(220);
+  const reste = await pageBo.evaluate((z) => ({
+    justes: document.querySelectorAll(`${z} .gr-saisie input.juste`).length,
+    avis: document.querySelectorAll(`${z} .avis-contrainte`).length,
+    base: Object.keys(window.__bo.db.transport['boost-ent31'].tournee.grille.juge || {}).length,
+  }), zBo);
+  if (reste.justes || reste.avis || reste.base) throw new Error('le verdict de la feuille survit à un changement de tournée : ' + JSON.stringify(reste));
+});
+
+await v('ENT-3.1 : une tournée qui tient et des formules justes — la contrainte est verte, sans message d’alerte', async () => {
+  await poserGrille(SIX, ['c3'], FORM6);
+  await pageBo.click(`${zBo} [data-gr-verifier]`);
+  await pageBo.waitForTimeout(220);
+  const t = await texteBo();
+  if (!/Toutes les formules sont justes/.test(t)) throw new Error('formules six arrêts : ' + t.slice(-400));
+  const trop = await pageBo.$$eval(`${zBo} .gr-droite .tour-jauge.trop`, (e) => e.length);
+  if (trop) throw new Error(trop + ' contrainte(s) en rouge alors que la tournée tient');
+  const ok = await pageBo.$$eval(`${zBo} .gr-droite .pastille.ok`, (e) => e.map((x) => x.textContent.trim()).join('|'));
+  if (ok !== 'limite respectée|horaire tenu') throw new Error('pastilles vertes : ' + ok);
+  if (await pageBo.$$eval(`${zBo} .avis-contrainte`, (e) => e.length)) throw new Error('un message d’alerte alors que tout tient');
+});
+
+await v('ENT-3.1 : l’heure de départ se tape « 13h00 » ou « 13:00 », et « 13 » est refusé', async () => {
+  await poserGrille(SIX, ['c3'], Object.assign({}, FORM6, { B18: '13' }));
+  await pageBo.click(`${zBo} [data-gr-verifier]`);
+  await pageBo.waitForTimeout(200);
+  let faux = await pageBo.$$eval(`${zBo} .gr-saisie input.faux`, (e) => e.map((x) => x.dataset.gr).join(','));
+  // « 13 » ne dit pas si c'est 13 minutes ou 13 heures : la cellule est à revoir, et c'est la
+  // SEULE — l'heure d'arrivée, calculée depuis un 13, est fausse elle aussi, ce qui est normal.
+  if (!/B18/.test(faux)) throw new Error('« 13 » est accepté comme heure de départ : ' + faux);
+  await pageBo.fill(`${zBo} [data-gr="B18"]`, '13h00');
+  await pageBo.waitForTimeout(60);
+  const res = await pageBo.textContent(`${zBo} [data-gr-res="B19"]`);
+  if (res.trim() !== '15 h 27') throw new Error('« 13h00 » ne donne pas 15 h 27 : ' + res);
+  await pageBo.click(`${zBo} [data-gr-verifier]`);
+  await pageBo.waitForTimeout(200);
+  faux = await pageBo.$$eval(`${zBo} .gr-saisie input.faux`, (e) => e.length);
+  if (faux) throw new Error(faux + ' cellule(s) fausses avec « 13h00 »');
+  // Un départ tapé à 14:00 donne une arrivée plus tard : la formule reste JUSTE comme formule,
+  // mais l'heure de départ n'est pas celle de la consigne.
+  await pageBo.fill(`${zBo} [data-gr="B18"]`, '14:00');
+  await pageBo.click(`${zBo} [data-gr-verifier]`);
+  await pageBo.waitForTimeout(200);
+  faux = await pageBo.$$eval(`${zBo} .gr-saisie input.faux`, (e) => e.map((x) => x.dataset.gr).join(','));
+  if (!/B18/.test(faux)) throw new Error('un départ à 14:00 est accepté : ' + faux);
+});
+
+await v('ENT-3.1 : les jauges ne donnent plus les totaux, et les rendent après validation', async () => {
+  // La décision qui décide de tout : si la jauge affiche « 179 / 180 kg », l'élève le recopie
+  // et la feuille de calcul ne sert à rien — exactement le défaut relevé par Tristan le 03/10
+  // sur les cases de report, d'un cran plus haut.
+  // On repart de la tournée qui tient, chaîne complète : les cas précédents ont laissé des
+  // états volontairement bancals, et ce cas-ci parle des CHIFFRES, pas de l'organisation.
+  await pageBo.evaluate(() => {
+    const t = window.__bo.db.transport['boost-ent31'].tournee;
+    t.ordre = ['c4', 'c2', 'c1', 'c6', 'c5', 'c7']; t.quai = ['c3'];
+    t.depart = Date.now(); t.arrivee = Date.now();
+    t.report = {}; t.juge = {}; t.bloque = null; t.valide = null;
+  });
+  await ouvrirBo('plan');
+  await ouvrirBo('tournee');
+
+  const lire = async () => (await pageBo.$$eval(`${zBo} .tour-jauges`, (e) => e[0].textContent.replace(/\s+/g, ' ')))[0] === undefined
+    ? '' : (await pageBo.$$eval(`${zBo} .tour-jauges`, (e) => e[0].textContent.replace(/\s+/g, ' ').trim()));
+
+  let j = await lire();
+  if (!/max 180 kg/.test(j)) throw new Error('la jauge de charge n’annonce pas sa limite : ' + j);
+  if (/179/.test(j)) throw new Error('la jauge donne le poids total : ' + j);
+  if (/15 h 27|147 min/.test(j)) throw new Error('la jauge donne l’heure de retour ou le temps total : ' + j);
+  // Ce qu'elle CONTINUE de donner : la limite. Les données du calcul (distance, vitesse, temps
+  // par arrêt) sont passées dans la feuille de calcul, à gauche, et ne sont plus répétées ici.
+  if (!/16 h 10/.test(j)) throw new Error('le train n’est plus annoncé : ' + j);
+  const feuille = await pageBo.$eval(`${zBo} .gr-table`, (e) => e.textContent.replace(/\s+/g, ' '));
+  if (!/Distance du parcours \(km\)\s*22,1/.test(feuille)) throw new Error('la distance n’est plus donnée : ' + feuille);
+  if (!/Temps par arrêt \(min\)\s*6/.test(feuille)) throw new Error('le temps par arrêt n’est plus donné : ' + feuille);
+  // Une mesure SANS plafond n'est pas un repère de limite : elle garde son total, sinon on
+  // enverrait l'élève calculer un nombre que personne ne lui demande.
+  if (!/21 colis/.test(j)) throw new Error('les colis, sans plafond, ont été rendus muets : ' + j);
+
+  // Le travail fait, le chiffre revient : c'est le retour, et il n'a plus rien à donner.
+  for (const [id, val] of Object.entries({ total: '237', trop: '57', chargee: '179', arrets: '36' })) {
+    await pageBo.fill(`${zBo} [data-report="${id}"]`, val);
+  }
+  await pageBo.click(`${zBo} [data-tour-valider]`);
+  await pageBo.waitForTimeout(220);
+  j = await lire();
+  if (!/179 \/ 180 kg/.test(j)) throw new Error('la jauge ne rend pas le total après validation : ' + j);
+  if (!/15 h 27/.test(j)) throw new Error('l’heure de retour n’est pas rendue après validation : ' + j);
+
+  // Et elle se retait dès que l'élève touche à sa tournée : une validation ancienne ne doit
+  // pas dévoiler les totaux d'une tournée qui a changé.
+  await pageBo.click(`${zBo} [data-bas="0"]`);
+  await pageBo.waitForTimeout(200);
+  j = await lire();
+  if (/179 \/ 180 kg|15 h 2/.test(j)) throw new Error('les jauges restent dévoilées après un changement d’ordre : ' + j);
+  if (!/max 180 kg/.test(j)) throw new Error('les jauges ne redeviennent pas des repères : ' + j);
+  // Et l'horodatage de la validation part avec elle. L'écran est déjà protégé par la règle de
+  // dévoilement, qui exige une correction EN COURS ; mais laisser un `valide` derrière soi
+  // ferait écrire au suivi qu'une tournée a été validée à une heure où ce n'était plus vrai.
+  const reste = await pageBo.evaluate(() => {
+    const t = window.__bo.db.transport['boost-ent31'].tournee;
+    return { valide: t.valide, juges: Object.keys(t.juge || {}).length };
+  });
+  if (reste.valide) throw new Error('la validation survit à un changement d’ordre : ' + reste.valide);
+  if (reste.juges) throw new Error('la correction survit à un changement d’ordre');
+});
+
 await v('ENT-3.1 : laisser deux commandes à quai reste une sortie de secours praticable', async () => {
   // Décision du calibrage : l'élève en difficulté peut laisser DEUX clients à quai et tenir
   // l'horaire largement. Le jalon « choix » le dit faux, mais il n'est pas bloqué.
@@ -2731,20 +3839,23 @@ await v('ENT-3.1 : laisser deux commandes à quai reste une sortie de secours pr
     const t = window.__bo.db.transport['boost-ent31'].tournee;
     t.ordre = ['c4', 'c2', 'c1', 'c6', 'c7'];
     t.quai = ['c3', 'c5'];
-    t.juge = {};
+    t.depart = Date.now(); t.arrivee = Date.now();
+    t.juge = {}; t.bloque = null;
   });
   await ouvrirBo('plan');
   await ouvrirBo('tournee');
   const t = await texteBo();
   if (/manqué/.test(t)) throw new Error('deux clients à quai et le train est encore manqué : ' + t.slice(0, 400));
-  if (!/15 h 10/.test(t)) throw new Error('retour annoncé autrement qu’à 15 h 10 : ' + t.slice(0, 400));
+  const bDeux = await bilanBo();
+  if (bDeux.arrivee !== '15 h 10') throw new Error('retour calculé à ' + bDeux.arrivee + ' au lieu de 15 h 10');
+  if (/15 h 10/.test(t)) throw new Error('l’écran donne l’heure de retour : ' + t.slice(0, 400));
   const j = await jalonsBo();
   if (j.horaire !== 'ok' || j.charge !== 'ok') throw new Error('horaire ou charge en faute : ' + JSON.stringify(j));
   if (j.choix !== 'ko') throw new Error('deux clients à quai sont comptés comme le bon choix');
 });
 
-await v('ENT-3.1 : le filet de sécurité donne le quartier, et le suivi garde la trace', async () => {
-  // Nouvelle base : on refait le parcours depuis zéro pour éprouver le filet de sécurité et la
+await v('ENT-3.1 : le mode hors connexion donne le quartier, et le suivi garde la trace', async () => {
+  // Nouvelle base : on refait le parcours depuis zéro pour éprouver le mode hors connexion et la
   // porte de sortie sans défaire le travail déjà vérifié.
   await pageBo.evaluate(async () => {
     const act = await import('/activites/boost-tournee.js');
@@ -2764,7 +3875,15 @@ await v('ENT-3.1 : le filet de sécurité donne le quartier, et le suivi garde l
   const z2 = '#boost31b .ent-main';
   await pageBo.click('#boost31b .ent-nav[data-vue="plan"]');
   await pageBo.waitForTimeout(140);
-  await pageBo.click(`${z2} [data-plan-secours]`);
+  // Il n'est PAS proposé dans la vue, et il n'y est pas non plus annoncé : un élève bloqué
+  // demande à son enseignant, qui sait si les postes de la salle laissent passer les plans
+  // en ligne. C'est tout l'objet du déplacement du 03/10.
+  if (await pageBo.$$eval(`${z2} [data-plan-secours]`, (e) => e.length)) {
+    throw new Error('le mode hors connexion est proposé dans la vue plan');
+  }
+  const vu = await pageBo.textContent(z2);
+  if (/hors connexion/i.test(vu)) throw new Error('la vue annonce le mode hors connexion : ' + vu.slice(0, 200));
+  await pageBo.click('#boost31b [data-hors-connexion]');
   await pageBo.waitForTimeout(140);
   const zones = await pageBo.$$eval(`${z2} .plan-zone`, (e) => e.map((x) => x.textContent.trim()));
   if (!zones.includes('Écusson') || !zones.includes('Grézan')) throw new Error('les quartiers ne sont pas révélés : ' + zones.join('|'));
@@ -2774,8 +3893,11 @@ await v('ENT-3.1 : le filet de sécurité donne le quartier, et le suivi garde l
   const s = await pageBo.evaluate(() => {
     const s = window.__bo2.suivi; return s.length ? JSON.parse(JSON.stringify(s[s.length - 1])) : null;
   });
-  // Le recours au filet est horodaté, donc visible dans le suivi, sans compter pour une faute.
+  // Le recours au mode hors connexion est horodaté, donc visible dans le suivi, sans compter
+  // pour une faute.
   if (s.detail.reperage !== 'attente') throw new Error('jalon repérage : ' + s.detail.reperage);
+  const trace = await pageBo.evaluate(() => !!window.__bo2.db.transport['boost-ent31'].plan.secours);
+  if (!trace) throw new Error('le recours au mode hors connexion n’est pas enregistré dans la base');
 });
 
 await v('ENT-3.1 : la porte de sortie débloque sans valider, et le jalon ne ment pas', async () => {
@@ -2799,7 +3921,9 @@ await v('ENT-3.1 : la porte de sortie débloque sans valider, et le jalon ne men
   // La suite s'ouvre quand même : personne ne reste coincé sur une case.
   await pageBo.click('#boost31b .ent-nav[data-vue="tournee"]');
   await pageBo.waitForTimeout(160);
-  if (!(await pageBo.$$eval(`${z2} #tourListe .tour-item`, (e2) => e2.length))) {
+  // La tournée s'ouvre — vide, puisque le vélo-cargo part à quai. C'est la liste des commandes
+  // à charger qui prouve que l'écran est bien là.
+  if (!(await pageBo.$$eval(`${z2} .tour-liste-quai .tour-item`, (e2) => e2.length))) {
     throw new Error('la tournée reste fermée après la porte de sortie');
   }
   const s = await pageBo.evaluate(() => {

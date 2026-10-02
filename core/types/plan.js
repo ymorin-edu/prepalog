@@ -19,9 +19,10 @@
 //   temps 2 — les noms apparaissent sur le plan. Le repérage est fait, la tournée peut
 //             commencer.
 //
-// Un bouton « je n'ai pas accès à Internet » révèle le quartier de chaque point. Il
-// débloque sans donner la réponse : la case du quadrillage reste à trouver sur le plan.
-// Il doit être visible mais pas confortable — c'est un filet de sécurité, pas un raccourci.
+// Un **mode hors connexion** révèle le quartier de chaque point. Il débloque sans donner la
+// réponse : la case du quadrillage reste à trouver sur le plan. Depuis le 03/10/2026 il n'est
+// plus un bouton posé sous la carte mais une entrée du **bandeau du module**, à côté de
+// « Réinitialiser » — voir `horsConnexion` plus bas, et la raison de ce déménagement.
 //
 //   creerPlan({
 //     libelle: 'Plan de la ville',          // entrée de menu
@@ -34,7 +35,7 @@
 //     arrivee: { nom: 'Gare', x, y },        // facultatif
 //     points:  [{ id, nom, zone, adresse, x, y }],
 //     enLigne: { libelle: 'Ouvrir un plan en ligne', url: '…' },   // facultatif
-//     reperage: { consigne, champ: 'Case', secours: 'Je n’ai pas accès à Internet',
+//     reperage: { consigne, champ: 'Case', secours: 'Mode hors connexion',
 //                 toleres: 0,            // cases fausses admises pour valider quand même
 //                 blocant: true,         // la suite attend-elle la validation ?
 //                 essaisAvantIssue: 2,   // essais avant d'offrir « continuer quand même »
@@ -93,7 +94,29 @@ export function distanceKm(PLAN, a, b) {
 
 // `o.noms` : afficher le nom des points (temps 2). `o.ordre` : les identifiants des points
 // à relier, dans l'ordre, pour tracer la tournée. `o.id` : suffixe des identifiants DOM,
-// pour que deux plans sur la même page ne se marchent pas dessus.
+// pour que deux plans sur la même page ne se marchent pas dessus. `o.cliquable` : poser une
+// cible de clic sur chaque point, pour construire la tournée à la carte (voir plus bas).
+//
+// ── UN SIGNE, UN SENS : deux encres sur le même point ────────────────────────────────────
+// Défaut relevé par Tristan le 03/10/2026 : *« le numéro en rond bleu qui indique la position
+// sur la carte, il indique aussi la position dans la liste, ça porte à confusion »*. Le rond
+// portait `rang + 1` pour un arrêt chargé et `i + 1` sinon, si bien que **deux points
+// pouvaient afficher le même numéro** — Maison Lauze, 3ᵉ arrêt, et La Pointe Sud, client n° 3
+// resté à quai. Et un arrêt resté à quai était dessiné exactement comme un arrêt livré.
+//
+//   rond bleu, 1 à n      QUI    le client. Le même numéro partout — la fiche, le mail du
+//                                responsable, le tableau du repérage — et il ne change JAMAIS.
+//   pastille menthe       QUAND  l'ordre de passage, en haut à gauche du rond, dans la couleur
+//                                du tracé et de l'entrepôt : « menthe = la tournée ».
+//   rond creux, pointillé PAS AUJOURD'HUI   l'arrêt est resté à quai.
+//
+// La couleur fait la moitié du travail : tout ce qui est menthe sur le plan appartient à la
+// tournée, le bleu reste l'identité du client. Le rond creux garde la couleur du client (c'est
+// `fill-opacity` qui le vide, pas une autre couleur) — un arrêt à quai reste reconnaissable.
+//
+// **Déclaratif :** tout cela n'existe que si `o.ordre` est un tableau, ce que seule la vue
+// tournée fournit. Une séance sans ordre de passage garde exactement l'écran d'avant : le
+// numéro du client dans un rond plein, et rien de plus.
 export function svgPlan(PLAN, o = {}) {
   const L = PLAN.largeur, H = PLAN.hauteur;
   const cols = String((PLAN.grille && PLAN.grille.colonnes) || 'ABCDEF');
@@ -112,15 +135,30 @@ export function svgPlan(PLAN, o = {}) {
       ${Array.from({ length: nl }, (_, i) => `<text x="12" y="${i * hl + hl / 2 + 5}">${i + 1}</text>`).join('')}
     </g>`;
 
-  // Le tracé passe par le départ, les points dans l'ordre demandé, puis l'arrivée.
+  // ── Les deux bouts de la chaîne ─────────────────────────────────────────────────────────
+  // Tristan, le 04/10 : *« l'élève ne sélectionne ni le départ (entrepôt Boost) ni l'arrivée
+  // (la gare) »*. Il avait raison et c'était un défaut de fond : les deux étaient dessinés et
+  // comptés dans le trajet, mais l'élève ne les touchait jamais. Il pouvait finir la séance
+  // sans avoir compris que sa tournée part de l'entrepôt et finit à la gare — alors que ces
+  // deux trajets pèsent des kilomètres et des minutes dans le calcul qu'on lui demande.
+  //
+  // `o.extremites` fait passer les deux bouts du statut de décor à celui d'**arrêts à poser**.
+  // Sans ce réglage, rien ne change : ils sont toujours là, comme avant.
+  const extremites = !!o.extremites;
+  const departPose = !extremites || !!o.departPose;
+  const arriveePose = !extremites || !!o.arriveePose;
+
+  // Le tracé passe par le départ, les points dans l'ordre demandé, puis l'arrivée — mais
+  // seulement par les bouts réellement posés, sinon il annoncerait un trajet que l'élève n'a
+  // pas construit.
   const suite = [];
-  if (o.ordre && o.ordre.length) {
-    if (PLAN.depart) suite.push(PLAN.depart);
-    o.ordre.forEach((id) => {
+  if ((o.ordre && o.ordre.length) || (extremites && (departPose || arriveePose))) {
+    if (PLAN.depart && departPose) suite.push(PLAN.depart);
+    (o.ordre || []).forEach((id) => {
       const p = PLAN.points.find((q) => String(q.id) === String(id));
       if (p) suite.push(p);
     });
-    if (PLAN.arrivee) suite.push(PLAN.arrivee);
+    if (PLAN.arrivee && arriveePose) suite.push(PLAN.arrivee);
   }
   const trace = `<polyline class="plan-trace" fill="none" stroke="var(--vert)" stroke-width="4"
       stroke-linejoin="round" stroke-linecap="round"
@@ -128,34 +166,109 @@ export function svgPlan(PLAN, o = {}) {
 
   // Un nom écrit par-dessus le décor deviendrait illisible : `paint-order` lui pose un
   // liseré de la couleur du panneau, donc il reste net sur n'importe quel fond.
+  //
+  // `pointer-events="none"` : une étiquette dépasse largement du point, et sans ça l'élève
+  // qui vise « Maison Lauze » cliquerait le NOM au lieu du point. Sur une carte cliquable
+  // c'est la première source de clics perdus.
   const etiquette = (p, dx, dy, ancre) => `<text x="${p.x + dx}" y="${p.y + dy}"
       text-anchor="${ancre}" font-size="12.5" font-weight="600" fill="var(--encre)"
+      pointer-events="none"
       paint-order="stroke" stroke="var(--panneau)" stroke-width="3.5">${ech(p.nom)}</text>`;
 
-  const depart = !PLAN.depart ? '' : `<g class="plan-depart">
+  // La pastille menthe des deux bouts : « D » et « A » plutôt qu'un numéro. La chaîne se lit
+  // alors D → 1 → 2 … → A, dans la couleur de la tournée, exactement comme les arrêts.
+  const pastilleBout = (p, lettre, pose) => (!extremites || !pose ? '' : `
+    <g class="plan-pt-ordre" pointer-events="none">
+      <circle cx="${p.x - 15}" cy="${p.y - 15}" r="8" fill="var(--vert)"
+        stroke="var(--panneau)" stroke-width="1.6"/>
+      <text x="${p.x - 15}" y="${p.y - 11.5}" text-anchor="middle" font-size="10.5"
+        font-weight="700" fill="var(--sur-vert,#07261c)">${lettre}</text></g>`);
+
+  const cibleBout = (p, quoi, pose) => (!extremites || !o.cliquable ? '' : `
+    <circle class="plan-pt-cible" cx="${p.x}" cy="${p.y}" r="22" fill="transparent"
+      data-clic-extremite="${quoi}" role="button" tabindex="0"
+      aria-label="${ech(pose
+        ? `Retirer ${p.nom} de la tournée`
+        : `Placer ${p.nom} comme ${quoi === 'depart' ? 'départ' : 'arrivée'} de la tournée`)}"/>`);
+
+  // Un bout pas encore posé se dessine en creux, comme un arrêt resté à quai : même signe pour
+  // le même sens, c'est la règle du projet.
+  const depart = !PLAN.depart ? '' : `<g class="plan-depart${
+      extremites && !departPose ? ' plan-bout-vide' : ''}${o.cliquable && extremites ? ' plan-pt-clic' : ''}">
       <rect x="${PLAN.depart.x - 13}" y="${PLAN.depart.y - 13}" width="26" height="26" rx="5"
-        fill="var(--vert)" stroke="var(--panneau)" stroke-width="2"/>
+        fill="var(--vert)"${extremites && !departPose ? ' fill-opacity=".14" stroke="var(--vert)" stroke-dasharray="3.5 2.5"' : ' stroke="var(--panneau)"'}
+        stroke-width="2"/>
       <text x="${PLAN.depart.x}" y="${PLAN.depart.y + 5}" text-anchor="middle" font-size="14"
-        font-weight="700" fill="var(--panneau)">${ech(PLAN.depart.lettre || 'D')}</text>
+        pointer-events="none"
+        font-weight="700" fill="${extremites && !departPose ? 'var(--vert)' : 'var(--panneau)'}"
+        >${ech(PLAN.depart.lettre || 'D')}</text>
       ${etiquette(PLAN.depart, 0, -20, 'middle')}
+      ${pastilleBout(PLAN.depart, 'D', departPose)}
+      ${cibleBout(PLAN.depart, 'depart', departPose)}
     </g>`;
 
-  const arrivee = !PLAN.arrivee ? '' : `<g class="plan-arrivee">
+  const arrivee = !PLAN.arrivee ? '' : `<g class="plan-arrivee${
+      extremites && !arriveePose ? ' plan-bout-vide' : ''}${o.cliquable && extremites ? ' plan-pt-clic' : ''}">
       <path d="M${PLAN.arrivee.x} ${PLAN.arrivee.y - 15} L${PLAN.arrivee.x + 14} ${PLAN.arrivee.y}
         L${PLAN.arrivee.x} ${PLAN.arrivee.y + 15} L${PLAN.arrivee.x - 14} ${PLAN.arrivee.y} Z"
-        fill="var(--terre)" stroke="var(--panneau)" stroke-width="2"/>
+        fill="var(--terre)"${extremites && !arriveePose ? ' fill-opacity=".14" stroke="var(--terre)" stroke-dasharray="3.5 2.5"' : ' stroke="var(--panneau)"'}
+        stroke-width="2"/>
       ${etiquette(PLAN.arrivee, 20, 20, 'start')}
+      ${pastilleBout(PLAN.arrivee, 'A', arriveePose)}
+      ${cibleBout(PLAN.arrivee, 'arrivee', arriveePose)}
     </g>`;
 
+  // `ordonne` distingue « cette vue connaît un ordre de passage » (un tableau, même vide) de
+  // « cette vue n'en a aucun » (rien du tout). Sans cette distinction, la vue plan du repérage
+  // dessinerait ses sept clients en creux, comme s'ils étaient tous restés à quai.
+  const ordonne = Array.isArray(o.ordre);
+
   const points = PLAN.points.map((p, i) => {
-    const rang = o.ordre ? o.ordre.findIndex((x) => String(x) === String(p.id)) : -1;
+    // Le numéro du CLIENT : déclaré par le contenu s'il en porte un, sinon son rang dans la
+    // fiche. Il ne dépend jamais de la tournée — c'est tout l'objet de la correction.
+    const num = p.numero != null ? p.numero : i + 1;
+    const rang = ordonne ? o.ordre.findIndex((x) => String(x) === String(p.id)) : -1;
+    const aQuai = ordonne && rang < 0;
     const droite = p.x > L * 0.68;          // à droite du plan, l'étiquette part vers la gauche
-    return `<g class="plan-pt" data-point="${ech(p.id)}">
-      <circle cx="${p.x}" cy="${p.y}" r="12" fill="var(--ardoise-fond)"
-        stroke="var(--panneau)" stroke-width="2"/>
+
+    const rond = aQuai
+      ? `<circle cx="${p.x}" cy="${p.y}" r="12" fill="var(--ardoise-fond)" fill-opacity=".14"
+          stroke="var(--ardoise-fond)" stroke-width="2.5" stroke-dasharray="3.5 2.5"/>`
+      : `<circle cx="${p.x}" cy="${p.y}" r="12" fill="var(--ardoise-fond)"
+          stroke="var(--panneau)" stroke-width="2"/>`;
+
+    // Sur un rond vidé, l'encre blanche du chiffre deviendrait invisible : il reprend la
+    // couleur du client, qui ressort sur le disque pâle.
+    // `pointer-events="none"` ici aussi : la pastille dépasse d'un cheveu de la cible de clic,
+    // et sans ça ce petit croissant de menthe serait une zone morte.
+    // Posée à 13,5 px en diagonale pour un rayon de 8 : les deux disques se touchent presque
+    // sans se recouvrir. Au premier essai, à 11 px pour 8,5, les deux chiffres se chevauchaient
+    // et devenaient illisibles au vidéoprojecteur — c'est ce qu'on cherchait à corriger.
+    const pastilleOrdre = rang < 0 ? '' : `<g class="plan-pt-ordre" pointer-events="none">
+      <circle cx="${p.x - 13.5}" cy="${p.y - 13.5}" r="8" fill="var(--vert)"
+        stroke="var(--panneau)" stroke-width="1.6"/>
+      <text x="${p.x - 13.5}" y="${p.y - 10}" text-anchor="middle" font-size="10.5"
+        font-weight="700" fill="var(--sur-vert,#07261c)">${rang + 1}</text></g>`;
+
+    // La cible de clic est **plus grande que le rond dessiné** (r = 20 contre r = 12) et
+    // transparente : au vidéoprojecteur, viser un disque de douze pixels est pénible, et sur
+    // un poste élève à la souris ça coûte des clics perdus. Elle est posée EN DERNIER, donc
+    // au-dessus de tout le reste, et c'est elle qui reçoit le clic comme le clavier.
+    const cible = !o.cliquable ? '' : `<circle class="plan-pt-cible" cx="${p.x}" cy="${p.y}"
+        r="20" fill="transparent" data-clic-point="${ech(p.id)}" role="button" tabindex="0"
+        aria-label="${ech(aQuai
+          ? `Ajouter ${p.nom} à la fin de la tournée`
+          : `Retirer ${p.nom} de la tournée (actuellement ${rang + 1}ᵉ arrêt)`)}"/>`;
+
+    return `<g class="plan-pt${aQuai ? ' plan-pt-quai' : ''}${o.cliquable ? ' plan-pt-clic' : ''}"
+        data-point="${ech(p.id)}"${rang >= 0 ? ` data-rang="${rang + 1}"` : ''}>
+      ${rond}
       <text x="${p.x}" y="${p.y + 4}" text-anchor="middle" font-size="12" font-weight="700"
-        fill="var(--sur-ardoise,#fff)">${rang >= 0 ? rang + 1 : i + 1}</text>
+        pointer-events="none"
+        fill="${aQuai ? 'var(--ardoise-fond)' : 'var(--sur-ardoise,#fff)'}">${num}</text>
+      ${pastilleOrdre}
       ${o.noms ? etiquette(p, droite ? -16 : 16, 4, droite ? 'end' : 'start') : ''}
+      ${cible}
     </g>`;
   }).join('');
 
@@ -178,14 +291,26 @@ export function svgPlan(PLAN, o = {}) {
   </svg>`;
 }
 
-export function legendePlan(PLAN) {
+// `o.ordre` : le même tableau que `svgPlan`. S'il est là, la légende explique les deux encres,
+// parce qu'un plan qui porte deux numérotations doit dire laquelle est laquelle. Sans ordre de
+// passage, la légende ne gagne rien — une séance de repérage seul garde la sienne, inchangée.
+export function legendePlan(PLAN, o = {}) {
+  const ordonne = Array.isArray(o.ordre);
   const items = PLAN.legende || [
     PLAN.depart && { forme: 'carre', couleur: 'var(--vert)', texte: PLAN.depart.nom },
     PLAN.arrivee && { forme: 'losange', couleur: 'var(--terre)', texte: PLAN.arrivee.nom },
-    { forme: 'rond', couleur: 'var(--ardoise-fond)', texte: PLAN.legendePoints || 'Point à desservir' },
+    { forme: 'rond', couleur: 'var(--ardoise-fond)',
+      texte: ordonne
+        ? `${PLAN.legendePoints || 'Point à desservir'} : numéro du client`
+        : (PLAN.legendePoints || 'Point à desservir') },
   ].filter(Boolean);
+  const deuxEncres = !ordonne ? '' : `
+    <span><i class="plan-l-ordre" style="background:var(--vert)"></i>pastille verte = ordre de passage${
+      o.extremites ? ' (D = départ, A = arrivée, à placer aussi)' : ''}</span>
+    <span><i class="plan-l-creux"></i>rond creux = resté à quai</span>`;
   return `<div class="plan-legende">
     ${items.map((x) => `<span><i class="plan-l-${ech(x.forme)}" style="background:${x.couleur}"></i>${ech(x.texte)}</span>`).join('')}
+    ${deuxEncres}
     <span>Échelle : ${ech((PLAN.echelle && PLAN.echelle.libelle) || '1 km')}</span>
   </div>`;
 }
@@ -225,6 +350,28 @@ export function creerPlan(PLAN) {
     // Ce que la suite de la séance doit interroger. Volontairement distinct de `temps2` et de
     // `valide` : une séance non bloquante laisse tout ouvert sans que rien soit réussi.
     ouvreSuite: (etat) => !R || R.blocant === false || !!(etat && (etat.valide || etat.force)),
+
+    /* ------------------------------------------------ le mode hors connexion ------------
+     * Il était un bouton posé SOUS LA CARTE, à portée de souris, au milieu du travail.
+     * Tristan, le 03/10/2026 : *« il ne faut pas mettre ça ici, la majorité des élèves va
+     * juste cliquer dessus pour avoir les réponses »*. Il a raison, et ce n'est pas une
+     * question de formulation : un bouton placé dans la zone de travail se lit comme une
+     * aide à l'exercice, quoi qu'on écrive dessus.
+     *
+     * Il vit donc maintenant dans le **bandeau du module**, à côté de « Réinitialiser », où
+     * il se lit comme un réglage de poste. C'est `core/types/entreprise.js` qui le dessine
+     * et qui l'actionne ; la vue plan n'expose plus que ce qu'il faut pour ça. L'état, lui,
+     * n'a pas bougé d'un octet : toujours `etat.secours`, horodaté, lisible par un jalon.
+     *
+     * Ce qu'il fait n'a pas changé non plus : il **révèle le quartier, pas la case**. Il
+     * débloque un poste sans accès aux plans en ligne sans donner la réponse.
+     *
+     * Et il n'est **pas annoncé dans la vue** : un élève bloqué demande à son enseignant,
+     * qui sait si les postes de la salle laissent passer les plans en ligne.
+     */
+    horsConnexion: !R ? null : { libelle: R.secours || 'Mode hors connexion' },
+    estHorsConnexion: (etat) => !!(etat && etat.secours),
+    activerHorsConnexion: (etat) => { if (etat && !etat.secours) etat.secours = Date.now(); },
 
     html(etat0) {
       const etat = Object.assign(vide(), etat0 || {});
@@ -288,11 +435,8 @@ export function creerPlan(PLAN) {
         <div class="plan-reperage">
           <div class="plan-barre">
             ${lien}
-            ${t2 ? '' : `<button class="btn btn-s plan-secours" data-plan-secours
-                 title="Affiche le quartier de chaque point. La case du quadrillage reste à trouver."
-                 ${etat.secours ? 'disabled' : ''}>${ech(R.secours || 'Je n’ai pas accès à Internet')}</button>`}
           </div>
-          ${etat.secours ? `<p class="note">Quartiers affichés, faute d'accès à Internet.
+          ${etat.secours ? `<p class="note">Mode hors connexion : les quartiers sont affichés.
             La case du quadrillage reste à lire sur le plan.</p>` : ''}
           <div class="ent-scroll"><table class="plan-table"><thead><tr>
             <th class="num">N°</th><th>Adresse</th><th>Quartier</th>
@@ -324,11 +468,6 @@ export function creerPlan(PLAN) {
         const maj = () => { etat.cases[el.dataset.case] = el.value; api.sauver(); };
         el.addEventListener('input', maj);
         el.addEventListener('change', maj);
-      });
-
-      z.querySelector('[data-plan-secours]')?.addEventListener('click', () => {
-        etat.secours = Date.now();
-        api.sauver(); api.redessiner();
       });
 
       z.querySelector('[data-plan-valider]')?.addEventListener('click', () => {
