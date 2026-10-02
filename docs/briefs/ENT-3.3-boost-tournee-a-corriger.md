@@ -172,7 +172,7 @@ donne **aucun** jalon de réparation ; (4) accuser la mauvaise contrainte me co�
     « 15:27 », « 927 » acceptés).
   - **Pas de menu « Plan de Nîmes »** : tous les clients sont déjà sur la carte, la tournée porte le plan elle-même.
   - **Pas de `niveaux: ['1re']`** : ENT-3.1 et ENT-3.2 n'en déclarent pas ; restreindre la seule ENT-3.3 aurait fermé la
-    suite du parcours à une classe qui a fait les deux premières. À trancher par Tristan s'il veut les trois en 1re.
+    suite du parcours à une classe qui a fait les deux premières. **Confirmé par Tristan (02/10) : pas de niveau.**
   - **Base partagée `jeuId: 'boost'`** comme ENT-3.2 (le modèle), alors que `CLAUDE.md` dit « une base par séance » :
     la tournée est cloisonnée par `transportId: 'boost-ent33'`, le message par le volet `boost-ent33`.
   - Sans réponse envoyée, D1/D2 sont « en attente » (convention d'ENT-2.3), jamais « ok ».
@@ -197,5 +197,4 @@ donne **aucun** jalon de réparation ; (4) accuser la mauvaise contrainte me co�
 - **Reste ouvert** :
   - **Validation à l'écran par Tristan** (critères du §10), puis `pret: true`.
   - Trame élève et corrigé : après validation.
-  - `niveaux` (voir écarts).
 

@@ -5,6 +5,8 @@ n'est pas évident)**. Claude Code y ajoute toute décision prise en cours de ro
 reporte dans les fiches du projet PREPALOG. Une décision de fond sur la pédagogie reste dans
 `docs/fiches/prepalog-finalite.md`.
 
+- 02/10/2026 · Tristan · **ENT-3.3 sans `niveaux`**, comme ENT-3.1 et ENT-3.2 : les trois séances Boost restent
+  ouvertes à tous les niveaux.
 - 02/10/2026 · Tristan · **ENT-3.3 : la collègue est Inès, livreuse vélo-cargo** ; l'élève lui répond **une ligne par
   contrainte** (« respectée ou dépassée », « attrapé ou manqué », « tenu ou raté ») puis trois chiffres (poids chargé,
   arrivée à la Pâtisserie Arnaud, arrivée à la gare), plutôt qu'une liste des contraintes violées : il se prononce aussi
