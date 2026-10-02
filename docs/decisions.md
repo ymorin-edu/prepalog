@@ -5,6 +5,9 @@ n'est pas évident)**. Claude Code y ajoute toute décision prise en cours de ro
 reporte dans les fiches du projet PREPALOG. Une décision de fond sur la pédagogie reste dans
 `docs/fiches/prepalog-finalite.md`.
 
+- 02/10/2026 · Tristan · **ENT-2.2 (Cdiscount, inventaire tournant) confirmée validée à l'écran** : elle
+  reste `pret: true`. Confirmation donnée à Claude Code après le constat de Cowork (ci-dessous),
+  qui n'en trouvait aucune trace écrite.
 - 02/10/2026 · Cowork · **Fiches du projet remises à jour** après le passage à Claude Code : tableau
   des chantiers et « où on en est » refondus, nomenclature (tableau des 26 séances relu dans le
   registre) et finalité mises à jour, copies recopiées dans `docs/fiches/`. Pas de décision de fond
