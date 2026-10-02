@@ -25,11 +25,20 @@ export const meta = {
   notation: 'avancement',
   immersif: true,
   portee: 'eleve',
+  // Remise à zéro de la base par l'élève : seulement en séance X.1, qui ouvre la chaîne. Une
+  // séance X.2 ou X.3 reprend le travail de la précédente ; l'effacer ferait perdre les séances d'avant.
+  reinitialisable: false,
   // La base est celle de Spartoo, partagée avec les deux autres séances. Le score, lui, reste
   // enregistré sur cette activité : le suivi de classe garde une ligne par séance.
   jeuId: 'spartoo',
+  // Parcours strict : ENT-1.3 ne s'ouvre qu'à l'élève qui a validé ENT-1.2 (voir core/parcours.js).
+  parcours: true,
+  precedente: 'spartoo',
   tables: {},
   pret: true,
+  // Corrigé des QCM d'éco-droit de la trame : affiché dans l'onglet « Corrigés » de l'espace
+  // enseignant, jamais côté élève. Fichier généré par le générateur de la trame.
+  corrige: './contenus/corriges/ENT-1.3.js',
 };
 
 const moteur = creerEntreprise({
@@ -41,14 +50,15 @@ const moteur = creerEntreprise({
   CUSTOMERS: SPARTOO.CUSTOMERS,
   CM: SPARTOO.CM,
   baseDeDepart: SPARTOO.baseDeDepart,
+  reponsesFournisseur: SPARTOO.REPONSES_FOURNISSEUR,
   exercice: SEANCE.EXERCICE,
   accueil: SEANCE.ACCUEIL,
   volet: SEANCE.VOLET,
   etapes: SEANCE.ETAPES,
   THEME: SPARTOO.THEME,
   trame: {
-    pdf: './contenus/trames/spartoo-tracabilite-trame-eleve.pdf',
-    docx: './contenus/trames/spartoo-tracabilite-trame-eleve.docx',
+    pdf: './contenus/trames/ENT-1.3-spartoo-tracabilite-trame-eleve.pdf',
+    docx: './contenus/trames/ENT-1.3-spartoo-tracabilite-trame-eleve.docx',
   },
 });
 

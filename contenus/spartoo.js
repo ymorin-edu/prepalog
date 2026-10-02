@@ -120,8 +120,29 @@ export const THEME = {
   },
 };
 
-// La commande qui attend l'élève à l'ouverture, et les trois messages de départ.
-export function baseDeDepart(prenom) {
+// Réponses automatiques d'un fournisseur à un message qui n'est PAS une commande. Chaque
+// fonction reçoit (texte, fournisseur, base, prénom) et rend le texte de la réponse, ou rien.
+// Sans elle, le fournisseur lisait « PM-SUE-MA-41 : 8 annoncées, 6 reçues » comme une commande
+// de 14 paires et rappelait son minimum de commande.
+//
+// Des réserves : le message cite un numéro de lot (LOT-XX-0000) ET parle de réserve, de manque,
+// de carton ou de colis abîmé. La réponse est un accusé de réception — elle ne dit ni si les
+// réserves sont justes, ni ce qui manque : c'est à l'élève de l'avoir écrit.
+export const REPONSES_FOURNISSEUR = [
+  (texte, sup) => {
+    const lot = (String(texte).toUpperCase().match(/LOT-[A-Z]{2}-\d{4}/) || [])[0];
+    if (!lot) return null;
+    if (!/r[ée]serves?|manqu|endommag|ab[iî]m|cass[ée]/i.test(texte)) return null;
+    return `Bonjour,\n\nNous accusons réception de vos réserves concernant le lot ${lot}. Elles sont transmises à notre service qualité et à notre transporteur ; nous reviendrons vers vous sous 48 heures pour vous proposer un envoi complémentaire ou un avoir.\n\nCordialement,\n${sup.contact}\n${sup.name}`;
+  },
+];
+
+// La base d'un élève qui n'a rien fait, et les trois messages de la séance de préparation.
+// Les messages ne sont PAS dans la base de départ : ils appartiennent à ENT-1.2 et sont semés
+// par son volet (`VOLET`, plus bas), au moment où l'élève ouvre cette séance. Une réception
+// (ENT-1.1) ne contient donc que ce qui sert à réceptionner, et la préparation arrive avec ses
+// messages neufs par-dessus l'historique que l'élève s'est lui-même constitué.
+function construire(prenom) {
   const now = Date.now();
   const stock = {};
   CATALOGUE.VARIANTS.forEach((v) => { stock[v.sku] = v.qty0; });
@@ -139,10 +160,6 @@ export function baseDeDepart(prenom) {
     v: 1, created: now, stock, moves: [], mails: [], orders: [], seq: 1,
     customers: [], suppliers: [],
     _depart: [
-      { folder: 'in', ts: now - 3600e3 * 26, from: 'M. Morin, responsable logistique',
-        fromMail: 'direction@spartoo.example', to: prenom,
-        subject: 'Bienvenue chez Spartoo : votre mission', kind: 'text',
-        text: `Bonjour ${prenom},\n\nVous rejoignez l'équipe logistique de Spartoo, boutique de chaussures en ligne. Chaque commande client arrive par mail dans cette messagerie.\n\nPour chaque commande, vous devez :\n1. l'enregistrer,\n2. contrôler le stock de chaque ligne,\n3. éditer le bon de préparation,\n4. valider la préparation pour sortir les articles du stock.\n\nLa console (menu Console) vous permet d'interroger la base avec des commandes comme .getstock REF. Tapez .help pour les voir toutes.\n\nBon courage,\nM. Morin` },
       { folder: 'in', ts: now - 3600e3 * 5, from: 'Léa Dubois',
         fromMail: 'lea.dubois@mail.example', to: prenom,
         subject: 'Question sur les Stan Smith blanches', kind: 'text',
@@ -153,6 +170,35 @@ export function baseDeDepart(prenom) {
     ],
   };
 }
+
+export function baseDeDepart(prenom) {
+  return { ...construire(prenom), _depart: [] };
+}
+
+// Le message de bienvenue arrive toujours en séance X.1 : c'est le premier message que reçoit
+// l'élève dans l'entreprise, quelle que soit la première séance de l'environnement. Il est semé par
+// le volet d'ENT-1.1 (voir activites / contenus/spartoo-reception.js).
+export function mailBienvenue(prenom) {
+  return { folder: 'in', ts: Date.now() - 3600e3 * 26, from: 'M. Morin, responsable logistique',
+    fromMail: 'direction@spartoo.example', to: prenom,
+    subject: 'Bienvenue chez Spartoo : votre mission', kind: 'text',
+    text: `Bonjour ${prenom},\n\nVous rejoignez l'équipe logistique de Spartoo, boutique de chaussures en ligne. Votre travail ici se fait en plusieurs missions : réceptionner les livraisons des fournisseurs, préparer les commandes des clients, puis retrouver d'où vient un lot en cas de problème. Chaque mission arrive par mail dans cette messagerie.\n\nLa console (menu Console) vous permet d'interroger la base avec des commandes comme .getstock REF. Tapez .help pour les voir toutes.\n\nBon courage,\nM. Morin` };
+}
+
+// Le volet d'ENT-1.2 : la question de la cliente et la commande web, datées d'aujourd'hui pour
+// arriver au-dessus de l'historique des séances précédentes.
+export const VOLET = {
+  id: 'preparation-1',
+  semer(prenom, db) {
+    const now = Date.now();
+    // Une base ouverte avant ce découpage contient déjà ces messages : on ne les double pas.
+    const deja = new Set(((db && db.mails) || []).map((m) => m.subject));
+    const decalages = [2, 0.5];               // question de Léa, commande (heures)
+    const mails = construire(prenom)._depart;
+    mails.forEach((m, i) => { m.ts = now - 3600e3 * decalages[i]; });
+    return { mails: mails.filter((m) => !deja.has(m.subject)) };
+  },
+};
 
 /* ============================ Suivi de l'exercice ============================
  * Trois jalons, repris de LogiSim. Chacun sait lire la base d'un élève et dire si le

@@ -6,7 +6,7 @@ en-tête sur la première page seule, de la place pour écrire, un saut de page 
 étapes, jamais de coupure juste après une consigne, on commence hors de l'outil, et tout
 jalon contrôlé automatiquement est annoncé à l'élève.
 """
-import os
+import os, sys
 from docx import Document
 from docx.shared import Pt, Cm, RGBColor
 from docx.enum.text import WD_BREAK
@@ -39,6 +39,20 @@ for s in d.sections:
     s.top_margin = Cm(1.2); s.bottom_margin = Cm(1.3)
     s.left_margin = s.right_margin = Cm(1.9)
 
+_SAUT = [False]
+
+
+def saut_avant():
+    """Le prochain bloc commence une nouvelle page (page_break_before sur son premier paragraphe :
+    jamais un paragraphe de saut, qui laissait une page blanche quand la page était pleine)."""
+    _SAUT[0] = True
+
+
+def _consomme():
+    v = _SAUT[0]; _SAUT[0] = False
+    return v
+
+
 def colle_au_suivant():
     """Empêche une coupure de page juste après la dernière ligne écrite.
 
@@ -48,7 +62,7 @@ def colle_au_suivant():
     vide qui le précède éventuellement — pour qu'ils descendent avec le tableau.
     """
     pars = d.paragraphs
-    if not pars:
+    if not pars or _SAUT[0]:   # un saut de page est demandé : rien ne doit descendre avec le bloc
         return
     pars[-1].paragraph_format.keep_with_next = True
     if not pars[-1].text.strip() and len(pars) > 1:
@@ -57,16 +71,26 @@ def colle_au_suivant():
 def ombre(cell, hexa):
     sh = OxmlElement('w:shd'); sh.set(qn('w:fill'), hexa); cell._tc.get_or_add_tcPr().append(sh)
 
+DERNIER_P = ['']
+
 def p(texte='', taille=11, gras=False, couleur=None, avant=0, apres=6):
+    DERNIER_P[0] = texte
     par = d.add_paragraph(); par.paragraph_format.space_before = Pt(avant); par.paragraph_format.space_after = Pt(apres)
+    if _consomme(): par.paragraph_format.page_break_before = True
     r = par.add_run(texte); r.bold = gras; r.font.size = Pt(taille); r.font.color.rgb = couleur or ENCRE
     return par
 
+ETAPE_NUM, ETAPE_TITRE = 0, ''
+
 def etape(num, titre, saut=True):
+    global ETAPE_NUM, ETAPE_TITRE
+    ETAPE_NUM, ETAPE_TITRE = num, titre
     """`saut=False` quand l'étape est assez courte pour tenir avec la précédente."""
     par = d.add_paragraph()
     if saut:
-        par.add_run().add_break(WD_BREAK.PAGE)
+        # page_break_before et non un saut dans le paragraphe : si la page précédente est pleine,
+        # le saut tombait sur la page suivante et laissait une page blanche (02/10/2026).
+        par.paragraph_format.page_break_before = True
         par.paragraph_format.space_before = Pt(0)
     else:
         par.paragraph_format.space_before = Pt(18)
@@ -105,37 +129,136 @@ def encadre(titre, texte):
     colle_au_suivant()
     t = d.add_table(rows=1, cols=1); t.style = 'Table Grid'; t.alignment = WD_TABLE_ALIGNMENT.LEFT
     c = t.rows[0].cells[0]; ombre(c, 'F2F2F2')
+    t.rows[0]._tr.get_or_add_trPr().append(OxmlElement('w:cantSplit'))
     par = c.paragraphs[0]; par.paragraph_format.space_after = Pt(0)
+    if _consomme(): par.paragraph_format.page_break_before = True
     r = par.add_run(titre + ' '); r.bold = True; r.font.size = Pt(10); r.font.color.rgb = TITRE
     r2 = par.add_run(texte); r2.font.size = Pt(10)
     d.add_paragraph().paragraph_format.space_after = Pt(2)
 
 def questions(liste, lignes=2):
+    """Une question, UNE zone de réponse, puis la suivante (Tristan, 02/10/2026) : pas de double
+    question. Un élément est un texte, ou (texte, nombre de lignes) pour adapter la zone :
+    1 ligne pour un fait, 2 pour une explication courte, 4 pour une analyse réflexive."""
     colle_au_suivant()
-    """Une question par bloc, avec `lignes` lignes vides pour la réponse."""
     t = d.add_table(rows=0, cols=1); t.style = 'Table Grid'
+    saut = _consomme()
     for q in liste:
+        q, n = q if isinstance(q, tuple) else (q, lignes)
+        _note('reflexion' if lignes == 4 and not isinstance(q, tuple) and _REFL[0] else ('brouillon' if n >= 6 else 'question'), q, lignes=n)
         row = t.add_row(); c = row.cells[0]; ombre(c, 'FAFAFA')
+        trPr = row._tr.get_or_add_trPr(); trPr.append(OxmlElement('w:cantSplit'))
         par = c.paragraphs[0]; par.paragraph_format.space_after = Pt(4)
+        if saut: par.paragraph_format.page_break_before = True; saut = False
         r = par.add_run(q); r.font.size = Pt(10.5); r.bold = True
-        for _ in range(lignes):
+        for _ in range(n):
             rep = c.add_paragraph()
             rep.paragraph_format.space_before = Pt(0); rep.paragraph_format.space_after = Pt(4)
             rep.add_run('').font.size = Pt(11)
-        row.height = Cm(0.8 + 0.72 * lignes)
+        row.height = Cm(0.9 + 0.85 * n)
     vide = d.add_paragraph(); vide.paragraph_format.space_after = Pt(0)
     vide.add_run('').font.size = Pt(5)
+    vide.paragraph_format.line_spacing = Pt(3)
 
-def tableau(entetes, nlignes, largeurs=None, hauteur=Cm(1.15)):
+
+def faits(liste, hauteur=Cm(0.9)):
+    """Questions de fait à une ligne : un tableau « question / ta réponse », une ligne par question
+    (une question, une zone), bien plus compact que des blocs séparés — pour tenir une étape sur
+    une seule page (Tristan, 02/10/2026)."""
     colle_au_suivant()
+    t = d.add_table(rows=1, cols=2); t.style = 'Table Grid'
+    for i, h in enumerate(['Question', 'Ta réponse']):
+        c = t.rows[0].cells[i]; ombre(c, 'E8E8E8')
+        par = c.paragraphs[0]; par.paragraph_format.space_after = Pt(0)
+        par.paragraph_format.keep_with_next = True
+        r = par.add_run(h); r.bold = True; r.font.size = Pt(10); r.font.color.rgb = TITRE
+    for q in liste:
+        q = q[0] if isinstance(q, tuple) else q
+        _note('fait', q)
+        row = t.add_row(); row.height = hauteur
+        row._tr.get_or_add_trPr().append(OxmlElement('w:cantSplit'))
+        par = row.cells[0].paragraphs[0]; par.paragraph_format.space_after = Pt(0)
+        par.add_run(q).font.size = Pt(10)
+    for row in t.rows:
+        row.cells[0].width = Cm(10.4); row.cells[1].width = Cm(6.6)
+    t.autofit = False
+    t.columns[0].width = Cm(10.4); t.columns[1].width = Cm(6.6)
+    vide = d.add_paragraph(); vide.paragraph_format.space_after = Pt(0)
+    vide.add_run('').font.size = Pt(5); vide.paragraph_format.line_spacing = Pt(3)
+
+
+_REFL = [False]
+ITEMS = []   # toutes les questions de la trame, dans l'ordre : sert au corrigé complet
+
+def _note(genre, texte, **extra):
+    ITEMS.append(dict(etape=ETAPE_NUM, etapeTitre=ETAPE_TITRE, genre=genre, texte=texte, **extra))
+
+CLES = []   # corrigé : une entrée par QCM, écrit dans contenus/corriges/ à la fin du script
+
+def qcm(liste):
+    """QCM pour la partie éco-droit (Tristan, 02/10/2026 : « trop dur » en réponse libre).
+    Trois choix, une seule bonne réponse, à cocher. Chaque élément : (question, [choix], index de la bonne).
+    Les choix courts tiennent sur une ligne ; sinon un choix par ligne. Une question, une zone."""
+    colle_au_suivant()
+    t = d.add_table(rows=0, cols=1); t.style = 'Table Grid'
+    saut = _consomme()
+    for q, choix, bon in liste:
+        _note('qcm', q, choix=list(choix), bonne=bon)
+        CLES.append(dict(etape=ETAPE_NUM, etapeTitre=ETAPE_TITRE, question=q, choix=list(choix), bonne=bon))
+        row = t.add_row(); c = row.cells[0]; ombre(c, 'FAFAFA')
+        row._tr.get_or_add_trPr().append(OxmlElement('w:cantSplit'))
+        par = c.paragraphs[0]; par.paragraph_format.space_after = Pt(3)
+        par.paragraph_format.keep_with_next = True
+        if saut: par.paragraph_format.page_break_before = True; saut = False
+        r = par.add_run('QCM  '); r.bold = True; r.font.size = Pt(9); r.font.color.rgb = GRIS
+        r = par.add_run(q); r.bold = True; r.font.size = Pt(10.5)
+        court = sum(len(x) for x in choix) < 84
+        lignes = ['\u2610  ' + ('      \u2610  '.join(choix))] if court else ['\u2610  ' + x for x in choix]
+        for i, ligne in enumerate(lignes):
+            o = c.add_paragraph(); o.paragraph_format.space_before = Pt(0)
+            o.paragraph_format.space_after = Pt(2 if i < len(lignes) - 1 else 4)
+            if i < len(lignes) - 1: o.paragraph_format.keep_with_next = True
+            o.paragraph_format.left_indent = Cm(0.4)
+            o.add_run(ligne).font.size = Pt(10.5)
+    vide = d.add_paragraph(); vide.paragraph_format.space_after = Pt(0)
+    vide.add_run('').font.size = Pt(5); vide.paragraph_format.line_spacing = Pt(3)
+
+
+def reflechir(liste):
+    """Analyse réflexive (règle n° 8 des trames) : pas de bonne réponse unique, quatre lignes."""
+    par = d.add_paragraph(); par.paragraph_format.space_before = Pt(8); par.paragraph_format.space_after = Pt(4)
+    if _consomme(): par.paragraph_format.page_break_before = True
+    r = par.add_run('Pour réfléchir'); r.bold = True; r.font.size = Pt(11.5); r.font.color.rgb = TITRE
+    r = par.add_run("   Il n'y a pas une seule bonne réponse : explique la tienne, avec tes mots.")
+    r.font.size = Pt(9.5); r.font.color.rgb = GRIS
+    par.paragraph_format.keep_with_next = True
+    _REFL[0] = True
+    questions(liste, 4)
+    _REFL[0] = False
+
+
+def tableau(entetes, nlignes, largeurs=None, hauteur=Cm(1.15), remplis=None):
+    """`remplis` : liste de listes, une par ligne, pour pré-imprimer des cellules ('' = à compléter)."""
+    colle_au_suivant()
+    if ETAPE_NUM:
+        _note('tableau', ' | '.join(entetes), lignes=(len(remplis) if remplis else nlignes), contexte=DERNIER_P[0], lignes_imprimees=[r[0] for r in remplis] if remplis else None)
     t = d.add_table(rows=1, cols=len(entetes)); t.style = 'Table Grid'
     for i, h in enumerate(entetes):
         c = t.rows[0].cells[i]; ombre(c, 'E8E8E8')
         par = c.paragraphs[0]; par.paragraph_format.space_after = Pt(0)
         r = par.add_run(h); r.bold = True; r.font.size = Pt(10); r.font.color.rgb = TITRE
-    for _ in range(nlignes):
-        t.add_row().height = hauteur
+        par.paragraph_format.keep_with_next = True   # l'en-tête ne reste jamais seul en bas de page
+    n = len(remplis) if remplis else nlignes
+    for k in range(n):
+        row = t.add_row(); row.height = hauteur
+        if remplis:
+            for i, txt in enumerate(remplis[k]):
+                if txt:
+                    par = row.cells[i].paragraphs[0]; par.paragraph_format.space_after = Pt(0)
+                    par.add_run(txt).font.size = Pt(10)
     if largeurs:
+        t.autofit = False
+        for i, w in enumerate(largeurs): t.columns[i].width = w
         for row in t.rows:
             for i, w in enumerate(largeurs): row.cells[i].width = w
     d.add_paragraph().paragraph_format.space_after = Pt(2)
@@ -156,7 +279,7 @@ else:
     r = par.add_run('SPARTOO'); r.bold = True; r.font.size = Pt(15); r.font.color.rgb = TITRE
 
 par = d.add_paragraph(); par.paragraph_format.space_after = Pt(0)
-r = par.add_run("Carnet de suivi — Remonter la trace d'un lot")
+r = par.add_run("ENT-1.3 — Carnet de suivi : remonter la trace d'un lot")
 r.bold = True; r.font.size = Pt(18); r.font.color.rgb = TITRE
 
 d.add_paragraph().paragraph_format.space_after = Pt(6)
@@ -166,7 +289,10 @@ for lib, li, co in [('Nom',0,0), ('Prénom',0,2), ('Classe',1,0), ('Date',1,2), 
     c = t.rows[li].cells[co]; ombre(c, 'E8E8E8')
     par = c.paragraphs[0]; par.paragraph_format.space_after = Pt(0)
     r = par.add_run(lib); r.bold = True; r.font.size = Pt(10); r.font.color.rgb = TITRE
-for row in t.rows: row.height = Cm(0.82)
+# Matricule : une seule case de réponse sur la largeur restante (02/10/2026). Avant, la ligne
+# gardait deux cases vides à droite. Lignes à 1,1 cm : de la place pour écrire à la main.
+t.rows[2].cells[1].merge(t.rows[2].cells[3])
+for row in t.rows: row.height = Cm(0.9)
 d.add_paragraph().paragraph_format.space_after = Pt(4)
 
 encadre('Ce document est ta trame de travail :',
@@ -176,7 +302,19 @@ encadre('Ce document est ta trame de travail :',
         "travail est fait correctement.")
 
 # ==================================================================== étape 1
-etape(1, "Comprendre la traçabilité", saut=False)
+soustitre("Le déroulé de ta séance")
+p("Chaque étape commence sur une nouvelle page. Passe à la suivante quand tu as répondu à toutes les questions "
+  "de celle-ci.", taille=10, apres=4)
+tableau(['N°', 'Étape', 'Où travailles-tu ?'], 0, [Cm(1.4), Cm(11.0), Cm(4.6)], hauteur=Cm(0.9),
+        remplis=[['1', 'Comprendre la traçabilité', 'Sur Internet'],
+        ['2', "Lire l'alerte du fournisseur et la consigne", 'Dans Prepalog'],
+        ['3', "Remonter l'amont : d'où vient ce lot ?", 'Dans Prepalog'],
+        ['4', "Remonter l'aval : où sont parties les paires ?", 'Dans Prepalog'],
+        ['5', 'Compter ce qui reste, référence par référence', 'Dans Prepalog'],
+        ['6', 'Bloquer le stock restant', 'Dans Prepalog'],
+        ['7', 'Rendre compte à M. Morin', 'Dans Prepalog']])
+
+etape(1, "Comprendre la traçabilité")
 p("Avant d'ouvrir le logiciel, il faut savoir de quoi on parle. Quand un industriel découvre un défaut, il ne "
   "rappelle pas toute sa production : il rappelle un lot. Fais une recherche sur Internet pour comprendre "
   "comment c'est possible.")
@@ -185,17 +323,17 @@ consignes([
  "Cherche ensuite un exemple réel de rappel de produit (le site RappelConso en présente beaucoup).",
  "Réponds aux questions ci-dessous avec ce que tu trouves.",
 ])
+faits(["Qu'est-ce qu'un numéro de lot ?", 'Qui attribue le numéro de lot ?'])
 questions([
- "Qu'est-ce qu'un numéro de lot, et qui l'attribue ?",
- "Que veut dire « tracer » un produit en logistique ?",
-], lignes=2)
+ ('Que veut dire « tracer » un produit en logistique ?', 2),
+])
 questions([
- "Dans un rappel de produit que tu as trouvé, quelles informations l'entreprise donne-t-elle au client ?",
-], lignes=2)
-questions([
- "Une entreprise qui ne sait pas dans quel lot était un article : que doit-elle faire en cas de défaut ? Pourquoi "
- "cela lui coûte-t-il beaucoup plus cher ?",
-], lignes=2)
+ ("Dans un rappel de produit que tu as trouvé, quelles informations l'entreprise donne-t-elle au client ?", 2),
+])
+reflechir([
+ 'Si une entreprise ne sait pas dans quel lot était un article, que doit-elle faire en cas de défaut ?',
+ 'Pourquoi cela lui coûte-t-il beaucoup plus cher ?',
+])
 
 # ==================================================================== étape 2
 etape(2, "Lire l'alerte du fournisseur et la consigne")
@@ -209,11 +347,11 @@ p("Relève les informations de l'alerte :", taille=10.5, gras=True, avant=6)
 tableau(['Information', 'Ce que tu relèves'], 4, [Cm(6.4), Cm(10.6)], hauteur=Cm(1.0))
 p("Dans la colonne de gauche, écris : numéro du lot en cause — nature du défaut — ce que Puma demande — "
   "qui a envoyé l'alerte.", taille=9.5, apres=8)
-questions([
- "Le défaut est-il visible à l'œil nu ? Quelle conséquence cela a-t-il pour le contrôle en entrepôt ?",
- "Puma écrit que les paires de la même référence venues d'autres livraisons ne sont pas en cause. Explique "
- "pourquoi, avec tes mots.",
-], lignes=2)
+faits(["Le défaut est-il visible à l'œil nu ?"])
+reflechir([
+ 'Quelle conséquence cela a-t-il pour le contrôle en entrepôt ?',
+ "Puma écrit que les paires de la même référence venues d'autres livraisons ne sont pas en cause. Pourquoi, avec tes mots ?",
+])
 
 # ==================================================================== étape 3
 etape(3, "Remonter l'amont : d'où vient ce lot ?")
@@ -232,6 +370,9 @@ p("Recopie maintenant le détail des entrées :", taille=10.5, gras=True, avant=
 tableau(['Référence article', 'Article', 'Quantité entrée'], 3, [Cm(5.4), Cm(7.6), Cm(4.0)], hauteur=Cm(1.15))
 encadre('Attention à la date :', "tu devras la recopier dans ton compte rendu de l'étape 7, écrite au format "
         "jj/mm/aaaa, par exemple 14/03/2026. Note-la dès maintenant, telle qu'elle s'affiche.")
+reflechir([
+ 'Pourquoi est-il important de savoir par quelle réception ce lot est entré en stock ?',
+])
 
 # ==================================================================== étape 4
 etape(4, "Remonter l'aval : où sont parties les paires ?")
@@ -246,10 +387,14 @@ consignes([
 p("Relève les sorties du lot :", taille=10.5, gras=True, avant=6)
 tableau(['Référence article', 'Qté', 'Bon de préparation', 'N° de commande', 'Client livré'], 5,
         [Cm(4.2), Cm(1.6), Cm(3.6), Cm(3.4), Cm(4.2)], hauteur=Cm(1.15))
-questions([
- "Combien de clients différents ont reçu des paires de ce lot ?",
- "Sans le numéro de lot, aurait-on pu savoir lesquels ? Explique ce qu'on aurait été obligé de faire.",
-], lignes=2)
+faits(['Combien de clients différents ont reçu des paires de ce lot ?'])
+qcm([
+ ("Ces clients sont des consommateurs. Si un produit peut être dangereux, que doit faire le vendeur ?",
+  ["attendre que les clients se plaignent", "les informer rapidement", "ne rien dire pour ne pas perdre de ventes"], 1),
+])
+reflechir([
+ "Sans le numéro de lot, qu'aurait-on été obligé de faire pour savoir quels clients avaient reçu ces paires ?",
+])
 
 # ==================================================================== étape 5
 etape(5, "Compter ce qui reste, référence par référence")
@@ -264,13 +409,13 @@ consignes([
 p("Fais ton calcul ici, avant de toucher au stock :", taille=10.5, gras=True, avant=6)
 tableau(['Référence article', 'Entré avec ce lot', 'Déjà sorti', 'Reste à bloquer'], 4,
         [Cm(5.4), Cm(3.9), Cm(3.4), Cm(4.3)], hauteur=Cm(1.2))
-questions([
- "Compare le stock total d'une de ces références (.getstock suivi de la référence) avec ce qu'il reste du lot. "
- "Pourquoi les deux nombres sont-ils différents ?",
-], lignes=2)
-questions([
- "Que se passerait-il si tu bloquais le stock total de la référence au lieu du reste du lot ?",
-], lignes=2)
+faits(["Avec .getstock suivi d'une de ces références, quel est le stock total de cette référence ?", 'Combien reste-t-il de paires de ce lot pour cette même référence ?'])
+reflechir([
+ 'Pourquoi ces deux nombres sont-ils différents ?',
+])
+reflechir([
+ 'Que se passerait-il si tu bloquais le stock total de la référence au lieu du reste du lot ?',
+])
 
 # ==================================================================== étape 6
 etape(6, "Bloquer le stock restant")
@@ -289,13 +434,10 @@ encadre('Si le logiciel refuse :', "c'est que la quantité demandée dépasse ce
 consignes([
  "Quand tout est bloqué, retourne dans la Console et tape à nouveau .getlot suivi du numéro de lot.",
 ])
-questions([
- "Que vaut maintenant le « Reste en stock » du lot ?",
- "Quel type de mouvement apparaît dans le tableau des sorties, à côté des ventes ?",
-], lignes=1)
-questions([
+faits(['Que vaut maintenant le « Reste en stock » du lot ?', 'Quel type de mouvement apparaît dans le tableau des sorties, à côté des ventes ?'])
+reflechir([
  "À quoi sert le motif, plusieurs mois plus tard, quand quelqu'un relit l'historique des mouvements ?",
-], lignes=2)
+])
 
 # ==================================================================== étape 7
 etape(7, "Rendre compte à M. Morin")
@@ -310,13 +452,24 @@ encadre('Attention, à lire avant de rédiger :', "ton compte rendu doit conteni
         "(tirets compris), la date d'entrée en stock au format jj/mm/aaaa, le nom du fournisseur, et le numéro de "
         "chaque commande concernée sous la forme CMD-000000. C'est ce que ton enseignant retrouvera dans son suivi.")
 p("Rédige d'abord ton brouillon ici, puis recopie-le dans la messagerie :", taille=10.5, gras=True, avant=6)
-questions(["Brouillon de ton compte rendu à M. Morin :"], lignes=8)
 questions([
- "Pourquoi le compte rendu doit-il donner les numéros de commande, et pas seulement les noms des clients ?",
- "Que devra faire Spartoo si un client rapporte une paire du lot ? Cite deux actions.",
-], lignes=2)
+ ('Brouillon de ton compte rendu à M. Morin :', 8),
+])
+reflechir([
+ 'Pourquoi le compte rendu doit-il donner les numéros de commande, et pas seulement les noms des clients ?',
+ 'Quelle première action Spartoo devra-t-elle mener si un client rapporte une paire du lot ?',
+])
 
 SORTIE = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                      '..', 'contenus', 'trames', 'spartoo-tracabilite-trame-eleve.docx')
+                      '..', 'contenus', 'trames', 'ENT-1.3-spartoo-tracabilite-trame-eleve.docx')
+# ------------------------------------------------------------------ corrigé pour l'espace enseignant
+# Le corrigé des QCM est écrit à côté de la trame, jamais dedans : l'espace enseignant du site
+# l'affiche (onglet « Corrigés », champ `corrige` du `meta` de l'activité).
+NOTIONS = [["Ces clients sont des consommateurs", "Module 2 — consommateur, obligation d'information", "Pour un produit potentiellement dangereux, le vendeur doit informer rapidement les clients concernés (la traçabilité sert à les retrouver)."]]
+CODE_SEANCE, TITRE_SEANCE, FICHIER_TRAME = 'ENT-1.3', "Spartoo — remonter la trace d'un lot", 'ENT-1.3-spartoo-tracabilite-trame-eleve'
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from corriges_data import ecrire_corrige
+ecrire_corrige(CODE_SEANCE, TITRE_SEANCE, FICHIER_TRAME, ITEMS, CLES, NOTIONS,
+               os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'contenus', 'corriges'), os.path.basename(__file__))
 d.save(SORTIE)
 print('logo :', 'repris' if os.path.exists(LOGO) else 'absent — emplacement réservé')

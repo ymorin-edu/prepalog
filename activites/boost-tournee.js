@@ -36,11 +36,17 @@ export const meta = {
   bareme: SEANCE.ETAPES.length,
   immersif: true,
   portee: 'eleve',
+  // Remise à zéro de la base par l'élève : seulement en séance X.1, qui ouvre la chaîne. Une
+  // séance X.2 ou X.3 reprend le travail de la précédente ; l'effacer ferait perdre les séances d'avant.
+  reinitialisable: true,
   // Base commune à toutes les séances ENT-3.x de Boost. L'état des deux vues de transport
   // est cloisonné par séance via `transportId`, donc deux séances Boost ne s'écrasent pas.
   jeuId: 'boost',
   tables: {},
   pret: true,
+  // Corrigé des QCM d'éco-droit de la trame : affiché dans l'onglet « Corrigés » de l'espace
+  // enseignant, jamais côté élève. Fichier généré par le générateur de la trame.
+  corrige: './contenus/corriges/ENT-3.1.js',
 };
 
 const moteur = creerEntreprise({

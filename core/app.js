@@ -7,6 +7,7 @@ import { activiteVisible, courtNiveau, libelleNiveaux } from './niveaux.js';
 import { chargerActivites, activite, RUBRIQUES, ICONES, activitesDeRubrique } from '../activites/index.js';
 import { ouvrirJeu } from './store.js';
 import { rendreEspaceProf } from './prof.js';
+import { verrou, seancesDepuis, seancesDuParcours } from './parcours.js';
 
 const app = document.getElementById('app');
 let profil = null;
@@ -116,6 +117,12 @@ async function vueAccueil() {
   // ---- niveau 2 : une rubrique ouverte, ses activités en tuiles
   if (rub) {
     const acts = activitesDeRubrique(rub, visibles);
+    // Les séances d'un parcours qui ne sont pas encore ouvertes à cet élève : grisées, avec la raison.
+    const metas = mods.map((x) => x.meta);
+    const verrous = {};
+    await Promise.all(acts.map(async (x) => {
+      try { verrous[x.meta.id] = await verrou(metas, x.meta, profil, groupeActif); } catch (e) { verrous[x.meta.id] = null; }
+    }));
     app.innerHTML = `${cartouche}
       <button class="lien-accueil" id="btnAccueil">← ACCUEIL</button>
       <div class="rubrique-head">
@@ -125,10 +132,12 @@ async function vueAccueil() {
       ${acts.length === 0
         ? `<div class="vide">Aucune activité ouverte dans cette rubrique pour l'instant.</div>`
         : `<div class="module-grid">${acts.map((m) => `
-            <button class="module-tile" data-act="${ech(m.meta.id)}">
+            <button class="module-tile${verrous[m.meta.id] ? ' verrouillee' : ''}" data-act="${ech(m.meta.id)}"
+              ${verrous[m.meta.id] ? 'style="opacity:.55"' : ''}>
               <span class="code">${ech(m.meta.code || '')}${estProf ? ' · ' + ech(libelleNiveaux(m.meta.niveaux)) : ''}</span>
               <span class="titre">${ech(m.meta.titre)}</span>
               <span class="desc">${ech(m.meta.desc || '')}</span>
+              ${verrous[m.meta.id] ? `<span class="desc"><strong>${ech(verrous[m.meta.id])}</strong></span>` : ''}
             </button>`).join('')}</div>`}`;
     brancher();
     return;
@@ -204,6 +213,11 @@ async function vueActivite(aid) {
   if (m.meta.portee !== 'eleve' && !groupeActif) {
     return toast("Cette activité demande un groupe. L'enseignant doit en activer un.");
   }
+  // Parcours strict : une séance dont la précédente n'est pas validée reste fermée.
+  {
+    const raison = await verrou((await chargerActivites()).map((x) => x.meta), m.meta, profil, groupeActif);
+    if (raison) return toast(raison);
+  }
 
   // Une activité « immersive » prend toute la page : pas de bandeau Prepalog, pas de titre
   // de module. L'élève doit avoir l'impression d'entrer dans le logiciel de l'entreprise,
@@ -237,6 +251,44 @@ async function vueActivite(aid) {
     uid: profil.uid, gid: groupeActif,
     eqId: objGroupe?.equipes?.[profil.uid],
   });
+
+  // Reprise demandée par l'enseignant pour un élève bloqué (espace enseignant > Suivi).
+  //
+  // L'enseignant n'a pas le droit d'écrire dans la base privée d'un élève (règles Firestore :
+  // « écrire à sa place reste interdit »), et un effacement ne tiendrait pas si l'élève avait la
+  // séance ouverte, car sa fenêtre réécrit sa base en quittant. L'enseignant pose donc un
+  // DRAPEAU, `_reprise-<id de la séance>`, dans la zone où il a le droit d'écrire (les travaux de
+  // l'élève), et c'est l'élève lui-même qui remet sa base en état à sa prochaine ouverture. La date
+  // du drapeau est retenue dans la base : un drapeau n'est appliqué qu'une fois.
+  //
+  // « Au début de la séance S » = la photo prise à la fin de la séance précédente, c'est-à-dire ce
+  // que l'élève a réellement fait. Sans photo (séance débloquée à la main), la base de départ.
+  // Les photos de S et des suivantes sont retirées : ces séances sont à refaire.
+  if (m.meta.portee === 'eleve' && profil.role === 'eleve' && groupeActif && (m.meta.parcours || m.meta.immersif)) {
+    try {
+      const metas = (await chargerActivites()).map((x) => x.meta);
+      const base = jeuOuvert.etat();
+      let derniere = null;
+      for (const x of seancesDuParcours(metas, m.meta)) {
+        const rep = await B.lireScore(groupeActif, profil.uid, '_reprise-' + x.id);
+        if (rep && rep.dateMaj > (base.reprise || 0) && (!derniere || rep.dateMaj > derniere.rep.dateMaj)) derniere = { x, rep };
+      }
+      if (derniere) {
+        const { x, rep } = derniere;
+        const photo = x.precedente && base.points && base.points[x.precedente];
+        const aDefaire = new Set(seancesDepuis(metas, x).map((y) => y.id));
+        const gardees = {};
+        Object.keys(base.points || {}).forEach((k) => { if (!aDefaire.has(k)) gardees[k] = base.points[k]; });
+        Object.keys(base).forEach((k) => delete base[k]);
+        if (photo) Object.assign(base, JSON.parse(JSON.stringify(photo)));
+        else Object.keys(m.meta.tables || {}).forEach((t) => { base[t] = []; });
+        if (Object.keys(gardees).length) base.points = gardees;
+        base.reprise = rep.dateMaj;
+        jeuOuvert.sauver();
+        toast('Ton enseignant a remis ton travail au début de la séance.');
+      }
+    } catch (e) { /* un drapeau illisible ne doit jamais empêcher d'ouvrir la séance */ }
+  }
 
   const ctx = {
     profil, groupe: groupeActif, meta: m.meta, jeu: jeuOuvert,

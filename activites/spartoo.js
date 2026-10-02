@@ -27,11 +27,20 @@ export const meta = {
   // Prend toute la page : ni bandeau ni titre Prepalog autour. Voir core/app.js.
   immersif: true,
   portee: 'eleve',
+  // Remise à zéro de la base par l'élève : seulement en séance X.1, qui ouvre la chaîne. Une
+  // séance X.2 ou X.3 reprend le travail de la précédente ; l'effacer ferait perdre les séances d'avant.
+  reinitialisable: false,
   // Base commune aux trois séances de Spartoo : l'élève prépare sur le stock qu'il a
   // lui-même réceptionné. Le score reste propre à cette activité.
   jeuId: 'spartoo',
+  // Parcours strict : ENT-1.2 ne s'ouvre qu'à l'élève qui a validé ENT-1.1 (voir core/parcours.js).
+  parcours: true,
+  precedente: 'spartoo-reception',
   tables: {},
   pret: true,
+  // Corrigé des QCM d'éco-droit de la trame : affiché dans l'onglet « Corrigés » de l'espace
+  // enseignant, jamais côté élève. Fichier généré par le générateur de la trame.
+  corrige: './contenus/corriges/ENT-1.2.js',
 };
 
 const moteur = creerEntreprise({
@@ -43,11 +52,13 @@ const moteur = creerEntreprise({
   CUSTOMERS: SPARTOO.CUSTOMERS,
   CM: SPARTOO.CM,
   baseDeDepart: SPARTOO.baseDeDepart,
+  reponsesFournisseur: SPARTOO.REPONSES_FOURNISSEUR,
+  volet: SPARTOO.VOLET,
   etapes: SPARTOO.ETAPES,
   THEME: SPARTOO.THEME,
   trame: {
-    pdf: './contenus/trames/spartoo-trame-eleve.pdf',
-    docx: './contenus/trames/spartoo-trame-eleve.docx',
+    pdf: './contenus/trames/ENT-1.2-spartoo-preparation-trame-eleve.pdf',
+    docx: './contenus/trames/ENT-1.2-spartoo-preparation-trame-eleve.docx',
   },
 });
 

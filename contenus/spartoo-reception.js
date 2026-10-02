@@ -9,6 +9,7 @@
 // et c'est l'élève qui compte, compare, décide et saisit. Il voit ensuite le résultat dans
 // son propre stock : c'est tout l'objet de la séance.
 
+import { mailBienvenue } from './spartoo.js';
 /* ------------------------------------------------------------------ constantes */
 
 export const REC = 'REC-04127';
@@ -54,8 +55,10 @@ export const ACCUEIL = {
 
 export const VOLET = {
   id: 'reception-1',
-  semer(prenom) {
+  semer(prenom, db) {
     const now = Date.now();
+    // Le message de bienvenue arrive toujours en X.1 (et pas deux fois à une base qui l'a déjà).
+    const aDejaBienvenue = ((db && db.mails) || []).some((m) => /^Bienvenue chez Spartoo/.test(m.subject || ''));
     const reception = {
       no: REC, supId: 'F003', ts: now - 3600e3 * 2,
       transporteur: 'Geodis, tournée 14',
@@ -67,6 +70,7 @@ export const VOLET = {
     return {
       receptions: [reception],
       mails: [
+        ...(aDejaBienvenue ? [] : [mailBienvenue(prenom)]),
         { folder: 'in', ts: now - 3600e3 * 20, from: 'M. Morin, responsable logistique',
           fromMail: 'direction@spartoo.example', to: prenom,
           subject: 'Procédure de réception : à lire avant de décharger', kind: 'text',

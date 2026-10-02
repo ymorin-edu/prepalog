@@ -121,6 +121,24 @@ await v('semis de la base partagée', async () => {
   await page.waitForTimeout(600);
 });
 
+// ---------- 4 bis. les corrigés complets des trames sont dans l'espace enseignant
+// Onglet « Corrigés » : un fichier par séance, déclaré par `meta.corrige`. La bonne réponse
+// y est marquée par « ✓ » — une information portée par un signe, pas par la couleur seule.
+await v('espace enseignant : onglet Corrigés', async () => {
+  await page.click('[data-ong="corriges"]');
+  await page.waitForSelector('text=un contrat de vente', { timeout: 6000 });
+  const t = await page.textContent('#contenuProf');
+  if (!/✓ B\. un contrat de vente/.test(t)) throw new Error('bonne réponse non marquée');
+  if (!/Pistes \(pas de réponse unique\)/.test(t)) throw new Error('pistes des questions de réflexion absentes');
+  if (!/2006/.test(t) || !/Grenoble/.test(t)) throw new Error('réponses des questions de faits absentes');
+  const nTab = await page.$$eval('#contenuProf table', (e) => e.length);
+  if (nTab < 10) throw new Error(`${nTab} tableaux de réponses seulement`);
+  for (const code of ['ENT-1.1', 'ENT-1.2', 'ENT-1.3', 'ENT-3.1']) {
+    if (!t.includes(code)) throw new Error('corrigé absent : ' + code);
+  }
+  if (/n'a pas pu être chargé/.test(t)) throw new Error('un fichier de corrigé ne se charge pas');
+});
+
 // ---------- 5. l'enseignant voit la base semée
 await v('lecture de la base partagée (enseignant)', async () => {
   await page.click('#btnRetour');
@@ -1136,6 +1154,17 @@ await v('Spartoo : ouverture de l\'environnement', async () => {
   await page.fill('#mat', '2601'); await page.fill('#code', 'aaa1');
   await page.press('#code', 'Enter');
   await page.waitForSelector('[data-rub="logisim"]', { timeout: 6000 });
+  // Parcours strict (02/10/2026) : ENT-1.2 et ENT-1.3 ne s'ouvrent qu'après validation de la séance
+  // précédente. Ces cas-ci testent le CONTENU des séances, pas l'ordre (c'est `test-seances.mjs`) :
+  // on pose donc, comme le ferait le bouton « Débloquer » de l'enseignant, les deux drapeaux.
+  await page.evaluate(() => {
+    let uid = localStorage.getItem('prepalog:session');
+    try { uid = JSON.parse(uid); } catch (e) { /* déjà une chaîne */ }
+    ['spartoo', 'spartoo-tracabilite'].forEach((aid) => {
+      localStorage.setItem(`prepalog:travaux/1-log-a/${uid}/_debloque-${aid}`,
+        JSON.stringify({ uid, aid: '_debloque-' + aid, gid: '1-log-a', score: 0, max: 0, meilleur: 0, tentatives: 0 }));
+    });
+  });
   // La rubrique Logisim porte désormais une tuile par SÉANCE de l'entreprise : réception,
   // préparation. On ouvre ici la préparation ; la réception est testée plus bas.
   await page.click('[data-rub="logisim"]');
@@ -1145,7 +1174,7 @@ await v('Spartoo : ouverture de l\'environnement', async () => {
   if ((await page.$$eval('.ent-nav', (e) => e.length)) < 8) throw new Error('navigation incomplète');
   await page.click('[data-vue="mail"]');
   await page.waitForSelector('.ent-mitem');
-  if ((await page.$$eval('.ent-mitem', (e) => e.length)) !== 3) throw new Error('les 3 messages de départ manquent');
+  if ((await page.$$eval('.ent-mitem', (e) => e.length)) !== 2) throw new Error('les 2 messages de la préparation manquent (la bienvenue arrive en ENT-1.1)');
 });
 
 // ---------- 26 bis. la trame de la séance se télécharge depuis le bandeau
@@ -1191,6 +1220,42 @@ await v('toute trame déclarée existe dans le dépôt', async () => {
   };
   parcourir(path.join(ROOT, 'activites'));
   if (manquants.length) throw new Error('trame déclarée mais absente : ' + manquants.join(', '));
+});
+
+// ---------- 26 quater. tout corrigé déclaré existe et reste cohérent
+// Statique, comme le test des trames. Un QCM de trame doit avoir trois choix et une bonne
+// réponse valide : le générateur Python l'assure, ce test garde le fichier produit.
+await v('tout corrigé de trame déclaré existe, couvre toute la trame et est cohérent', async () => {
+  const problemes = [];
+  let total = 0, qcm = 0;
+  for (const e of fs.readdirSync(path.join(ROOT, 'activites'))) {
+    if (!/\.js$/.test(e)) continue;
+    const src = fs.readFileSync(path.join(ROOT, 'activites', e), 'utf8');
+    for (const m of src.matchAll(/corrige:\s*'(\.\/contenus\/corriges\/[^']+)'/g)) {
+      const cible = path.join(ROOT, m[1].replace(/^\.\//, ''));
+      if (!fs.existsSync(cible)) { problemes.push(`${e} → ${m[1]} absent`); continue; }
+      const { CORRIGE } = await import(pathToFileURL(cible).href);
+      if (!CORRIGE?.items?.length) problemes.push(`${m[1]} vide`);
+      for (const it of CORRIGE.items) {
+        total++;
+        const nom = `${m[1]} : « ${String(it.texte).slice(0, 40)} »`;
+        if (!it.texte || !it.genre) { problemes.push(`${nom} sans texte ni genre`); continue; }
+        if (it.genre === 'qcm') {
+          qcm++;
+          if (it.choix?.length !== 3 || !(it.bonne >= 0 && it.bonne < 3)) problemes.push(`${nom} QCM invalide`);
+        } else if (it.genre === 'tableau') {
+          if (!it.entetes?.length || !it.reponses?.length || it.reponses.some((l) => l.length !== it.entetes.length)) problemes.push(`${nom} tableau invalide`);
+        } else if (it.genre === 'brouillon') {
+          if (!it.modele && !it.criteres) problemes.push(`${nom} sans modèle`);
+        } else if (!it.rep && !(it.pistes?.length)) {
+          problemes.push(`${nom} sans réponse`);
+        }
+      }
+    }
+  }
+  if (problemes.length) throw new Error(problemes.join(' ; '));
+  if (qcm < 14) throw new Error(`seulement ${qcm} QCM corrigés (14 attendus : ils ne doivent pas diminuer)`);
+  if (total < 140) throw new Error(`seulement ${total} questions corrigées (au moins 140 attendues : toute la trame doit être couverte)`);
 });
 
 const ouvrirMail = async (motif) => {
@@ -1548,6 +1613,13 @@ await v('Spartoo traçabilité : jouable sans les deux séances précédentes', 
   await page.fill('#mat', '2602'); await page.fill('#code', 'bbb2');
   await page.press('#code', 'Enter');
   await page.waitForSelector('[data-rub="logisim"]', { timeout: 6000 });
+  // Séance fermée à qui n'a pas validé la 1.2 : l'enseignant la débloque (voir test-seances.mjs).
+  await page.evaluate(() => {
+    let uid = localStorage.getItem('prepalog:session');
+    try { uid = JSON.parse(uid); } catch (e) { /* déjà une chaîne */ }
+    localStorage.setItem(`prepalog:travaux/1-log-a/${uid}/_debloque-spartoo-tracabilite`,
+      JSON.stringify({ uid, aid: '_debloque-spartoo-tracabilite', gid: '1-log-a', score: 0, max: 0, meilleur: 0, tentatives: 0 }));
+  });
   await page.click('[data-rub="logisim"]');
   await page.waitForSelector('[data-act="spartoo-tracabilite"]', { timeout: 6000 });
   await page.click('[data-act="spartoo-tracabilite"]');
@@ -2077,7 +2149,7 @@ await v('bandeau : trames et mode hors connexion tiennent ensemble, dans l’ord
       trame: { pdf: './x.pdf', docx: './x.docx' },
     });
     act.rendre(hote, {
-      meta: { id: 'essBandeau', portee: 'eleve', code: 'ESS-2', titre: 'Essai bandeau' },
+      meta: { id: 'essBandeau', portee: 'eleve', code: 'ESS-1', titre: 'Essai bandeau', reinitialisable: true },
       profil: { prenom: 'Lea', role: 'eleve' },
       jeu: { etat: () => ({}), sauver: () => {} },
       enregistrer: () => {}, quitter: () => {}, codeStock: 'ABC',
@@ -2098,6 +2170,26 @@ await v('bandeau : trames et mode hors connexion tiennent ensemble, dans l’ord
     throw new Error('bandeau : ' + ordre.actions.join(' · '));
   }
   if (ordre.deborde) throw new Error('le bandeau déborde en largeur : des boutons sortent de l’écran');
+});
+
+// Remise à zéro de la base : réservée aux séances X.1 (décision du 02/10/2026). Une séance X.2 ou
+// X.3 reprend le travail de la précédente : un élève absent commence la séance manquée à son
+// étape 1, sans sauter d'étape, et ne repart jamais de zéro. Le noyau ne dessine le bouton que si `meta.reinitialisable` est vrai ;
+// ce cas garde que seules les activités dont le code finit par « .1 » le déclarent.
+await v('remise à zéro de la base : seulement en séance X.1', async () => {
+  const problemes = [];
+  let n = 0;
+  for (const e of fs.readdirSync(path.join(ROOT, 'activites'))) {
+    if (!/\.js$/.test(e) || e === 'index.js') continue;
+    const src = fs.readFileSync(path.join(ROOT, 'activites', e), 'utf8');
+    const code = /code:\s*'(ENT-[\d.]+)'/.exec(src)?.[1];
+    if (!code) continue;
+    n++;
+    const dit = /reinitialisable:\s*true/.test(src);
+    if (dit !== /\.1$/.test(code)) problemes.push(`${e} (${code}) : reinitialisable ${dit ? 'vrai' : 'absent'}`);
+  }
+  if (n < 4) throw new Error(`seulement ${n} séances ENT lues`);
+  if (problemes.length) throw new Error(problemes.join(' ; '));
 });
 
 await v('vue plan : le mode hors connexion est dans le bandeau, pas dans la vue', async () => {

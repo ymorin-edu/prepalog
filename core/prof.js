@@ -3,6 +3,7 @@
 
 import { B } from './backend.js';
 import { ech, toast, confirmer } from './ui.js';
+import { seancesDepuis } from './parcours.js';
 import { chargerActivites, activite } from '../activites/index.js';
 import { versCSV, telecharger, ouvrirJeu } from './store.js';
 import { NIVEAUX, libelleNiveau, courtNiveau, libelleNiveaux, activiteVisible, horsNiveau } from './niveaux.js';
@@ -37,7 +38,7 @@ export async function rendreEspaceProf(hote, ctx) {
       <h1>Espace enseignant</h1>
       <nav class="rangee" style="margin-bottom:16px">
         ${[['groupes', 'Groupes'], ['comptes', 'Comptes élèves'], ['suivi', 'Suivi de classe'],
-           ['seance', 'Conduite de séance'],
+           ['seance', 'Conduite de séance'], ['corriges', 'Corrigés'],
            ['orphelins', `Élèves sans groupe${sansGroupe.length ? ` (${sansGroupe.length})` : ''}`]]
           .map(([k, l]) => `<button class="btn btn-s ${onglet === k ? 'btn-p' : ''}${k === 'orphelins' && sansGroupe.length ? ' btn-alerte' : ''}" data-ong="${k}">${l}</button>`).join('')}
         ${g ? `<span class="pousse note">Groupe actif : <span class="etiq">${ech(g.nom)}</span>
@@ -53,10 +54,85 @@ export async function rendreEspaceProf(hote, ctx) {
     // Cet onglet-ci ne dépend d'aucun groupe actif : c'est justement là qu'on atterrit
     // quand il n'en reste plus et que des élèves sont restés derrière.
     else if (onglet === 'orphelins') await vueOrphelins(z);
+    // Les corrigés des trames ne dépendent pas non plus d'un groupe : ils servent à préparer.
+    else if (onglet === 'corriges') await vueCorriges(z);
     else if (!gidActif) z.innerHTML = `<div class="avis">Créez d'abord un groupe dans l'onglet « Groupes ».</div>`;
     else if (onglet === 'comptes') await vueComptes(z, g);
     else if (onglet === 'suivi') await vueSuivi(z, g);
     else await vueSeance(z, g);
+  }
+
+  // ------------------------------------------------------------------ corrigés des trames
+  // Les QCM d'éco-droit des trames papier (écrits par outils/trame-*.py) ont leur corrigé ici,
+  // dans un fichier par séance déclaré par `meta.corrige`. L'élève ne voit jamais cet onglet.
+  // Limite assumée, comme pour tous les corrigés du site (voir prepalog-architecture.md) : le
+  // fichier est servi par le dépôt public, donc lisible par qui connaît son adresse.
+  async function vueCorriges(z) {
+    z.innerHTML = `<div class="note">Chargement des corrigés…</div>`;
+    const mods = await chargerActivites();
+    const avec = mods.map((m) => m.meta).filter((m) => m.corrige);
+    if (!avec.length) {
+      z.innerHTML = `<div class="vide">Aucun corrigé n'est publié pour l'instant.</div>`;
+      return;
+    }
+    const lots = await Promise.all(avec.map(async (m) => {
+      try {
+        const mod = await import(new URL(m.corrige, document.baseURI).href);
+        return { m, c: mod.CORRIGE };
+      } catch (e) { return { m, c: null }; }
+    }));
+    const lettre = (i) => String.fromCharCode(65 + i);
+    const liste = (l) => `<ul style="margin:4px 0 4px 18px">${l.map((x) => `<li>${ech(x)}</li>`).join('')}</ul>`;
+    const noteHtml = (it) => it.note ? `<div class="note" style="margin-top:4px">${ech(it.note)}</div>` : '';
+    // Une question = un bloc ; la réponse attendue change de forme selon le genre.
+    const corps = (it) => {
+      if (it.genre === 'qcm') return `
+        <div style="margin:6px 0 4px 12px">${it.choix.map((ch, i) => i === it.bonne
+          ? `<div><strong>✓ ${lettre(i)}. ${ech(ch)}</strong></div>`
+          : `<div class="note">&nbsp;&nbsp;${lettre(i)}. ${ech(ch)}</div>`).join('')}</div>
+        ${it.explication ? `<div class="note">${ech(it.explication)}</div>` : ''}
+        ${it.notion ? `<div class="note"><span class="etiq">${ech(it.notion)}</span></div>` : ''}`;
+      if (it.genre === 'tableau') return `
+        ${it.contexte ? `<div class="note">${ech(it.contexte)}</div>` : ''}
+        <table style="margin:6px 0"><thead><tr>${it.entetes.map((h) => `<th>${ech(h)}</th>`).join('')}</tr></thead>
+          <tbody>${(it.reponses || []).map((l) => `<tr>${l.map((c) => `<td>${ech(c)}</td>`).join('')}</tr>`).join('')}</tbody></table>
+        ${noteHtml(it)}`;
+      if (it.genre === 'brouillon') return `
+        ${it.modele ? `<blockquote style="margin:6px 0;padding:8px 12px;border-left:3px solid var(--filet);white-space:pre-line">${ech(it.modele)}</blockquote>` : ''}
+        ${it.criteres ? `<div class="note">Le message doit contenir :</div>${liste(it.criteres)}` : ''}
+        ${noteHtml(it)}`;
+      if (it.pistes) return `<div class="note">Pistes (pas de réponse unique) :</div>${liste(it.pistes)}${noteHtml(it)}`;
+      return `<div style="margin:4px 0 0 12px"><strong>✓ ${ech(it.rep || '')}</strong></div>${noteHtml(it)}`;
+    };
+    const etiqGenre = { qcm: 'QCM', fait: 'Fait', question: 'Question', reflexion: 'Pour réfléchir', tableau: 'Tableau', brouillon: 'Message' };
+    const bloc = ({ m, c }) => {
+      if (!c) return `<section class="panneau"><h2><span class="etiq">${ech(m.code || m.id)}</span> ${ech(m.titre)}</h2>
+        <div class="avis">Le fichier de corrigé n'a pas pu être chargé.</div></section>`;
+      const parEtape = new Map();
+      c.items.forEach((it) => {
+        if (!parEtape.has(it.etape)) parEtape.set(it.etape, { titre: it.etapeTitre, items: [] });
+        parEtape.get(it.etape).items.push(it);
+      });
+      const nbQcm = c.items.filter((it) => it.genre === 'qcm').length;
+      return `<section class="panneau">
+        <h2><span class="etiq">${ech(c.code)}</span> ${ech(c.titre)}</h2>
+        <p class="note">${c.items.length} questions dont ${nbQcm} QCM — trame <span class="mono">${ech(c.trame)}</span>.
+          La réponse attendue est marquée « ✓ » ; les questions « Pour réfléchir » n'ont que des pistes.</p>
+        ${/\.1$/.test(c.code) ? '' : `<p class="note"><strong>Chiffres du logiciel :</strong> valables si l'élève a fait la séance précédente
+          jusqu'au bout, dans l'ordre. L'élève absent commence la séance manquée à son étape 1 ; la base ne se remet à zéro
+          qu'en séance X.1. En cas d'écart, comparer avec l'écran de l'élève.</p>`}
+        ${[...parEtape.entries()].map(([n, e]) => `
+          <h3 style="margin-top:16px">Étape ${ech(n)} — ${ech(e.titre)}</h3>
+          ${e.items.map((it) => `
+            <div class="corr-item" data-genre="${ech(it.genre)}" style="padding:10px 0;border-bottom:1px solid var(--filet)">
+              <div><span class="etiq">${ech(etiqGenre[it.genre] || it.genre)}</span> ${it.genre === 'tableau' ? '' : `<strong>${ech(it.texte)}</strong>`}</div>
+              ${corps(it)}
+            </div>`).join('')}`).join('')}
+      </section>`;
+    };
+    z.innerHTML = `<p class="note">Corrigés complets des trames élèves (QCM, questions du logiciel, recherches Internet, tableaux, messages). Les réponses sont à relire
+      avant usage ; celles issues d'Internet portent leur source et la date de relevé. Les nombres du logiciel dépendent de la base de données du site.</p>
+      ${lots.map(bloc).join('')}`;
   }
 
   // ------------------------------------------------------------------ groupes
@@ -350,6 +426,12 @@ export async function rendreEspaceProf(hote, ctx) {
     const aLaMain = (m) => m.notation === 'prof';
     const par = {};
     travaux.forEach((t) => { (par[t.uid] = par[t.uid] || {})[t.aid] = t; });
+    // Séances à base privée d'élève : celles où l'on peut se retrouver bloqué.
+    const seancesBase = mods.map((m) => m.meta)
+      .filter((m) => m.portee === 'eleve' && m.immersif)
+      .sort((a, b) => String(a.code).localeCompare(String(b.code), 'fr', { numeric: true }));
+    const metasTous = mods.map((m) => m.meta);
+    const verrouillables = seancesBase.filter((m) => m.precedente);
 
     const cellule = (e, m) => {
       const t = par[e.uid]?.[m.id];
@@ -373,8 +455,7 @@ export async function rendreEspaceProf(hote, ctx) {
       // Les jalons d'un environnement d'entreprise ne sont pas une note : « 3 / 3 » est
       // l'information juste, et c'est elle qu'on affiche. Voir `core/notes.js`.
       if (!noteConvertie(m)) {
-        return `<td class="num ${classe}">${t.meilleur}/${max}
-          <span class="note">(${t.tentatives})</span></td>`;
+        return `<td class="num ${classe}">${t.meilleur}/${max}</td>`;
       }
 
       // Note sur 20. Le score brut reste accessible en infobulle : l'enseignant veut
@@ -408,13 +489,33 @@ export async function rendreEspaceProf(hote, ctx) {
         </table></div>
         <p class="note">Les activités corrigées automatiquement sont ramenées à une
           <strong>note sur ${BAREME_AFFICHE}</strong>, quel que soit leur nombre d'exercices ;
-          survolez une note pour voir le détail. Entre parenthèses : le nombre de tentatives.
-          Le score retenu est le meilleur.
+          survolez une note pour voir le détail. Entre parenthèses : le nombre de tentatives
+          (pas pour les environnements d'entreprise). Le score retenu est le meilleur.
           ${notees.some((m) => !noteConvertie(m) && !aLaMain(m)) ? `Les environnements
             d'entreprise affichent des jalons franchis, pas une note.` : ''}
           ${notees.some(aLaMain) ? `Les colonnes en fond clair sont notées à la main : tapez la note,
             elle s'enregistre en quittant la case. Une case vidée efface la note.` : ''}</p>`}
-      </section>`;
+      </section>
+      ${seancesBase.length === 0 || eleves.length === 0 ? '' : `
+      <section class="panneau" id="porteSortie">
+        <strong>Élève bloqué : remettre sa base au début d'une séance</strong>
+        <p class="note">La base de l'élève revient à ce qu'elle était <strong>à la fin de la séance
+          précédente</strong> (ce qu'il a réellement fait), ou à la base de départ s'il n'a pas validé
+          la précédente. Les scores de la séance choisie et des suivantes sont effacés du suivi ;
+          les séances d'avant restent. Demandez d'abord à l'élève de quitter la séance, puis de la
+          rouvrir.</p>
+        <div class="rangee">
+          <select id="razEleve" aria-label="Élève">${eleves.map((e) =>
+            `<option value="${ech(e.uid)}">${ech(e.nom)} ${ech(e.prenom)}</option>`).join('')}</select>
+          <select id="razSeance" aria-label="Séance">${seancesBase.map((m) =>
+            `<option value="${ech(m.id)}">${ech(m.code)} — ${ech(m.titre)}</option>`).join('')}</select>
+          <button class="btn btn-s" id="btnRaz">Remettre au début</button>
+          ${verrouillables.length ? `<select id="debSeance" aria-label="Séance à débloquer">${verrouillables.map((m) =>
+            `<option value="${ech(m.id)}">${ech(m.code)}</option>`).join('')}</select>
+          <button class="btn btn-s" id="btnDebloquer"
+            title="Ouvre la séance à cet élève sans qu'il ait validé la précédente">Débloquer cette séance</button>` : ''}
+        </div>
+      </section>`}`;
 
     z.querySelectorAll('.note-saisie').forEach((inp) => {
       // Dernière valeur acceptée : c'est elle qu'on restaure si la saisie est refusée,
@@ -448,6 +549,48 @@ export async function rendreEspaceProf(hote, ctx) {
           toast("La note n'a pas pu être enregistrée.");
         }
       });
+    });
+
+    z.querySelector('#btnRaz')?.addEventListener('click', async () => {
+      const uid = z.querySelector('#razEleve').value;
+      const aid = z.querySelector('#razSeance').value;
+      const m = seancesBase.find((x) => x.id === aid);
+      const el = eleves.find((e) => e.uid === uid);
+      if (!m || !el) return;
+      const touchees = seancesDepuis(metasTous, m);
+      if (!confirmer(`Remettre la base de ${el.prenom} ${el.nom} au début de ${m.code} ?\n\n`
+        + `Son travail dans ${touchees.map((x) => x.code).join(', ')} est effacé et leurs scores `
+        + `disparaissent du suivi. Il repart de ce qu'il avait à la fin de la séance précédente.`)) return;
+      try {
+        // Un drapeau que le poste de l'élève lira à sa prochaine ouverture : l'enseignant
+        // n'écrit jamais dans la base privée de l'élève.
+        await B.poserNote(g.id, uid, '_reprise-' + m.id, { score: 0, max: 0 });
+        for (const x of touchees) {
+          await B.poserNote(g.id, uid, x.id, null);
+          if (par[uid]) delete par[uid][x.id];
+          // Un déblocage manuel des séances d'après tombe avec elles ; celui de la séance choisie reste.
+          if (x.id !== m.id) await B.poserNote(g.id, uid, '_debloque-' + x.id, null);
+        }
+        toast(`Base de ${el.prenom} remise au début de ${m.code}.`);
+        await vueSuivi(z, g);
+      } catch (e) {
+        toast("La remise à zéro n'a pas pu être enregistrée.");
+      }
+    });
+
+    z.querySelector('#btnDebloquer')?.addEventListener('click', async () => {
+      const uid = z.querySelector('#razEleve').value;
+      const m = verrouillables.find((x) => x.id === z.querySelector('#debSeance').value);
+      const el = eleves.find((e) => e.uid === uid);
+      if (!m || !el) return;
+      if (!confirmer(`Ouvrir ${m.code} à ${el.prenom} ${el.nom} sans qu'il ait validé la séance précédente ?\n\n`
+        + `Il repartira de la base de départ de cette séance.`)) return;
+      try {
+        await B.poserNote(g.id, uid, '_debloque-' + m.id, { score: 0, max: 0 });
+        toast(`${m.code} est ouverte à ${el.prenom}.`);
+      } catch (e) {
+        toast("Le déblocage n'a pas pu être enregistré.");
+      }
     });
 
     z.querySelector('#btnCsvSuivi')?.addEventListener('click', () => {

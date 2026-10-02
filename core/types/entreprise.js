@@ -95,11 +95,16 @@ export function creerEntreprise(U) {
         (depart._depart || []).forEach((m) => ajouterMail(m));
         ctx.jeu.sauver();
       }
-      ['moves', 'mails', 'orders', 'receptions', 'customers', 'suppliers'].forEach((k) => { if (!db[k]) db[k] = []; });
-      // L'état des vues de transport vit dans la base de l'élève, comme le reste de son
-      // travail : un repérage validé doit se retrouver après une fermeture d'onglet, et
-      // d'une semaine sur l'autre.
-      if (!db.transport) db.transport = {};
+      // Les listes que tout le moteur suppose présentes. Appelée à l'ouverture ET après une
+      // remise à zéro : `baseDeDepart` n'en fournit qu'une partie (ni `receptions`, ni `transport`).
+      function normaliserBase() {
+        ['moves', 'mails', 'orders', 'receptions', 'customers', 'suppliers'].forEach((k) => { if (!db[k]) db[k] = []; });
+        // L'état des vues de transport vit dans la base de l'élève, comme le reste de son
+        // travail : un repérage validé doit se retrouver après une fermeture d'onglet, et
+        // d'une semaine sur l'autre.
+        if (!db.transport) db.transport = {};
+      }
+      normaliserBase();
 
       // Le volet de la séance. Chaque activité sème le sien une seule fois, sans toucher au
       // reste : un élève qui a fait la réception la semaine dernière retrouve son stock, et
@@ -109,7 +114,13 @@ export function creerEntreprise(U) {
       // avant de décider quoi semer. C'est ce qui permet à la traçabilité de fonctionner
       // pour un élève qui a manqué la réception — elle lui pose l'historique qui manque —
       // sans rien réécrire chez celui qui l'a faite.
-      if (volet) {
+      //
+      // Fonction à part depuis le 02/10/2026 : la remise à zéro (`reinitialiser`) efface aussi
+      // `db.volets`, et ne ressemait pas le volet — l'élève qui cliquait « Réinitialiser » en
+      // ENT-1.1 se retrouvait avec une réception vide et sans les messages de la séance, jusqu'à
+      // ce qu'il quitte et rouvre. Une base remise à zéro doit être celle d'un premier passage.
+      function semerVolet() {
+        if (!volet) return;
         if (!db.volets) db.volets = {};
         if (!db.volets[volet.id]) {
           const g = volet.semer(prenom, db) || {};
@@ -129,6 +140,7 @@ export function creerEntreprise(U) {
           ctx.jeu.sauver();
         }
       }
+      semerVolet();
 
       // ----------------------------------------------------------- état d'écran
       // Volontairement hors de la base : ce sont des choix d'affichage, pas du travail.
@@ -240,6 +252,16 @@ export function creerEntreprise(U) {
           if (r.status === 'ok') ok++;
         });
         ctx.enregistrer({ score: ok, max: etapes.length, detail: res });
+        // Séance validée : on range une photo du travail, une fois pour toutes. Elle ouvre la
+        // séance suivante et sert de point de reprise (voir core/parcours.js).
+        if (ctx.meta.parcours && ok === etapes.length) {
+          if (!db.points) db.points = {};
+          if (!db.points[ctx.meta.id]) {
+            const { points, reprise, ...reste } = db;
+            db.points[ctx.meta.id] = JSON.parse(JSON.stringify(reste));
+            ctx.jeu.sauver();
+          }
+        }
       }
 
       /* ====================================================== commandes clients */
@@ -325,8 +347,8 @@ export function creerEntreprise(U) {
                    de la séance (elles vont par paire), puis le réglage de poste. ENT-3.1 n'a pas
                    encore de trame, mais elle en aura une comme les trois Spartoo : la place est
                    donc tenue, et le mode hors connexion reste en bout de file. -->
-              <button class="ent-act ent-act-raz" data-raz
-                title="Effacer votre travail et repartir d'une base neuve">Réinitialiser</button>
+              ${ctx.meta && ctx.meta.reinitialisable ? `<button class="ent-act ent-act-raz" data-raz
+                title="Effacer votre travail et repartir d'une base neuve">Réinitialiser</button>` : ''}
               ${trame && trame.pdf ? `<a class="ent-act" href="${ech(trame.pdf)}" download
                 title="Le carnet de bord de la séance, à imprimer ou à lire à l'écran">Trame PDF</a>` : ''}
               ${trame && trame.docx ? `<a class="ent-act" href="${ech(trame.docx)}" download
@@ -364,7 +386,7 @@ export function creerEntreprise(U) {
           </div>`;
 
         hote.querySelectorAll('[data-vue]').forEach((b) => b.addEventListener('click', () => aller(b.dataset.vue)));
-        hote.querySelector('[data-raz]').addEventListener('click', reinitialiser);
+        hote.querySelector('[data-raz]')?.addEventListener('click', reinitialiser);
         hote.querySelector('[data-hors-connexion]')?.addEventListener('click', () => {
           VPLAN.activerHorsConnexion(etatTransport('plan'));
           sauver(); dessiner();
@@ -419,10 +441,24 @@ export function creerEntreprise(U) {
 
       async function reinitialiser() {
         if (!confirmer('Effacer tout votre travail et repartir d\'une base neuve ?')) return;
+        // Ce qui survit à la remise à zéro : les photos de fin de séance (la validation reste
+        // acquise) et la reprise demandée par l'enseignant (voir core/app.js), qui sans cela
+        // serait rejouée à la prochaine ouverture et effacerait le travail refait depuis.
+        const reprise = db.reprise, points = db.points;
+        const photo = ctx.meta.precedente && points && points[ctx.meta.precedente];
         Object.keys(db).forEach((k) => delete db[k]);
-        const depart = baseDeDepart(prenom);
-        Object.keys(depart).forEach((k) => { if (k !== '_depart') db[k] = depart[k]; });
-        (depart._depart || []).forEach((m) => ajouterMail(m));
+        if (photo) {
+          // Repartir de ce que l'élève a réellement fait à la séance précédente.
+          Object.assign(db, JSON.parse(JSON.stringify(photo)));
+        } else {
+          const depart = baseDeDepart(prenom);
+          Object.keys(depart).forEach((k) => { if (k !== '_depart') db[k] = depart[k]; });
+          (depart._depart || []).forEach((m) => ajouterMail(m));
+        }
+        if (reprise) db.reprise = reprise;
+        if (points) db.points = points;
+        normaliserBase();
+        semerVolet();
         E.vue = 'accueil'; E.mailSel = null; E.no = null;
         sauver(); dessiner(); toast('Base réinitialisée.');
       }
@@ -593,7 +629,14 @@ export function creerEntreprise(U) {
         const trouves = lireRefsQtes(corps, sup.id);
         let total = 0; trouves.forEach((x) => { total += x.qty; });
         let reponse;
-        if (!trouves.length) {
+        // Un message qui n'est pas une commande (des réserves sur une livraison, par exemple)
+        // reçoit la réponse que l'univers a prévue pour lui, pas un rappel du minimum de
+        // commande. Trouvé le 02/10/2026 en jouant ENT-1.1 : Puma répondait aux réserves
+        // « pour un total de 14 paires, notre minimum de commande est de 20 ».
+        const speciale = (U.reponsesFournisseur || []).map((f) => f(corps, sup, db, prenom)).find(Boolean);
+        if (speciale) {
+          reponse = speciale;
+        } else if (!trouves.length) {
           reponse = `Bonjour,\n\nNous ne parvenons pas à identifier, dans votre message, de référence ${sup.brand} accompagnée d'une quantité claire. Merci de préciser pour chaque article sa référence exacte et la quantité souhaitée.\n\nCordialement,\n${sup.contact}\n${sup.name}`;
         } else if (total < (sup.moq || 0)) {
           reponse = `Bonjour,\n\nNous avons bien reçu votre demande, pour un total de ${total} ${unite(total)}. Pour rappel, notre minimum de commande est de ${sup.moq} ${VOCAB.unitPl} : merci de compléter votre commande avant que nous puissions la traiter.\n\nCordialement,\n${sup.contact}\n${sup.name}`;

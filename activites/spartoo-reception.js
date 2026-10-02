@@ -26,11 +26,19 @@ export const meta = {
   notation: 'avancement',
   immersif: true,
   portee: 'eleve',
+  // Remise à zéro de la base par l'élève : seulement en séance X.1, qui ouvre la chaîne. Une
+  // séance X.2 ou X.3 reprend le travail de la précédente ; l'effacer ferait perdre les séances d'avant.
+  reinitialisable: true,
   // La base est celle de Spartoo, partagée avec les autres séances de l'entreprise. Le score,
   // lui, reste enregistré sur cette activité : le suivi de classe garde une ligne par séance.
   jeuId: 'spartoo',
+  // Début du parcours : jamais verrouillée ; sa validation (3/3) ouvre ENT-1.2 (voir core/parcours.js).
+  parcours: true,
   tables: {},
   pret: true,
+  // Corrigé des QCM d'éco-droit de la trame : affiché dans l'onglet « Corrigés » de l'espace
+  // enseignant, jamais côté élève. Fichier généré par le générateur de la trame.
+  corrige: './contenus/corriges/ENT-1.1.js',
 };
 
 const moteur = creerEntreprise({
@@ -42,14 +50,15 @@ const moteur = creerEntreprise({
   CUSTOMERS: SPARTOO.CUSTOMERS,
   CM: SPARTOO.CM,
   baseDeDepart: SPARTOO.baseDeDepart,
+  reponsesFournisseur: SPARTOO.REPONSES_FOURNISSEUR,
   exercice: SEANCE.EXERCICE,
   accueil: SEANCE.ACCUEIL,
   volet: SEANCE.VOLET,
   etapes: SEANCE.ETAPES,
   THEME: SPARTOO.THEME,
   trame: {
-    pdf: './contenus/trames/spartoo-reception-trame-eleve.pdf',
-    docx: './contenus/trames/spartoo-reception-trame-eleve.docx',
+    pdf: './contenus/trames/ENT-1.1-spartoo-reception-trame-eleve.pdf',
+    docx: './contenus/trames/ENT-1.1-spartoo-reception-trame-eleve.docx',
   },
 });
 
