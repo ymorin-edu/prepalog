@@ -1,0 +1,106 @@
+{
+ "sortie": "contenus/boost-carte.js",
+ "description": "les sept clients de la page d'essai du 02/10/2026 (commerces inventés, adresses réelles). Ils servent à la page d'essai et aux tests de la vue carte.",
+ "clients": [
+  {
+   "id": "c1",
+   "nom": "Fromagerie Aubanel",
+   "adresse": "8 rue de la Madeleine",
+   "rue": "Rue de la Madeleine",
+   "lonlat": [
+    4.359002,
+    43.838176
+   ],
+   "quartier": "ecusson",
+   "kg": 22,
+   "colis": 3,
+   "nouveau": true
+  },
+  {
+   "id": "c2",
+   "nom": "Librairie Coste",
+   "adresse": "21 rue de l'Aspic",
+   "rue": "Rue de l'Aspic",
+   "lonlat": [
+    4.35981,
+    43.836325
+   ],
+   "quartier": "ecusson",
+   "kg": 35,
+   "colis": 4,
+   "nouveau": true
+  },
+  {
+   "id": "c3",
+   "nom": "Cave Fabre",
+   "adresse": "10 rue Rousselier",
+   "rue": "Rue Rousselier",
+   "lonlat": [
+    4.338023,
+    43.838349
+   ],
+   "quartier": "fontaine",
+   "kg": 41,
+   "colis": 5,
+   "nouveau": true
+  },
+  {
+   "id": "c4",
+   "nom": "Atelier Vidal",
+   "adresse": "15 rue de Combret",
+   "rue": "Rue de Combret",
+   "lonlat": [
+    4.345752,
+    43.839495
+   ],
+   "quartier": "fontaine",
+   "kg": 18,
+   "colis": 2,
+   "nouveau": false
+  },
+  {
+   "id": "c5",
+   "nom": "Boulangerie Roux",
+   "adresse": "40 avenue du Maréchal Juin",
+   "rue": "Avenue du Maréchal Juin",
+   "lonlat": [
+    4.352897,
+    43.826111
+   ],
+   "quartier": null,
+   "kg": 27,
+   "colis": 3,
+   "nouveau": false,
+   "cp": "30900"
+  },
+  {
+   "id": "c6",
+   "nom": "Fleuriste Bastide",
+   "adresse": "12 rue Pierre Semard",
+   "rue": "Rue Pierre Semard",
+   "lonlat": [
+    4.365242,
+    43.839154
+   ],
+   "quartier": null,
+   "kg": 14,
+   "colis": 2,
+   "nouveau": false
+  },
+  {
+   "id": "c7",
+   "nom": "Quincaillerie Sabatier",
+   "adresse": "30 avenue Jean-Jaurès",
+   "rue": "Avenue Jean Jaurès",
+   "lonlat": [
+    4.350326,
+    43.835791
+   ],
+   "quartier": null,
+   "kg": 46,
+   "colis": 6,
+   "nouveau": false,
+   "cp": "30900"
+  }
+ ]
+}

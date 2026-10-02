@@ -19,7 +19,8 @@
 <script type="module">
 import { creerEntreprise } from './core/types/entreprise.js';
 import * as BOOST from './contenus/boost.js';
-import { CARTE } from './contenus/boost-carte.js';
+// La journée d'ENT-3.2 (étape 2b) : huit clients, la Cave Teissier trop lourde, un créneau.
+import { CARTE } from './contenus/boost-ent32-carte.js';
 
 const moteur = creerEntreprise({
   ENTREPRISE: BOOST.ENTREPRISE, VOCAB: BOOST.VOCAB, CATALOGUE: BOOST.CATALOGUE,
@@ -30,9 +31,22 @@ const moteur = creerEntreprise({
   plan: {
     libelle: 'Plan de Nîmes',
     titre: 'Situer les nouveaux clients sur le plan de Nîmes',
-    consigne: 'Les clients habituels sont déjà sur la carte. Situez les trois nouveaux : '
+    consigne: 'Les clients habituels sont déjà sur la carte. Situez les quatre nouveaux : '
       + 'cherchez leur rue dans l’index, ouvrez le quartier, puis cliquez sur la rue.',
     carte: CARTE,
+  },
+  // La tournée sur la carte réelle (étape 2) : le minimum pour l'essayer, sans feuille de calcul.
+  tournee: {
+    libelle: 'Tournée (essai)', titre: 'Organiser la tournée sur la carte réelle',
+    consigne: 'Départ de l’entrepôt à 14 h 10, train à 16 h 10, 180 kg au plus. La Pâtisserie Arnaud '
+      + 'doit être livrée avant 14 h 45 : la colonne de droite dit si le créneau est tenu. Cliquez l’entrepôt, puis les clients dans l’ordre de passage, '
+      + 'puis la gare. Le tracé suit les rues ; les kilomètres sont ceux de l’itinéraire à vélo-cargo.',
+    mesures: [{ id: 'charge', libelle: 'Charge', unite: 'kg', champ: 'kg', max: BOOST.VELO.chargeUtile },
+      { id: 'colis', libelle: 'Colis', unite: 'colis', champ: 'colis' }],
+    horaire: { depart: 14 * 60 + 10, limite: BOOST.VELO.train, vitesse: BOOST.VELO.vitesse,
+      service: BOOST.VELO.service, libelleLimite: 'départ du train' },
+    departAQuai: true, extremitesACliquer: true,
+    libelleCharge: 'Chargé dans le vélo-cargo', libelleQuai: 'Commandes restées à quai', libelleCharger: 'charger',
   },
 });
 const db = {};

@@ -1188,12 +1188,15 @@ a.ent-nav{ text-decoration:none }
 .ct-etiq text.r0, .ct-etiq text.r1{ font-weight:650 }
 .ct-rep{ display:none; fill:#8a6440; font-style:italic; font-weight:600; paint-order:stroke; stroke:#fff; text-anchor:middle; pointer-events:none; font-family:system-ui,"Segoe UI",sans-serif }
 .ct-zoom .ct-rep{ display:block }
-.ct-mk circle{ stroke:#13163e; stroke-width:2 }
+.ct-mk .ct-rond{ stroke:#13163e; stroke-width:2 }
+/* La cible de clic (r = 20) est plus grande que le rond : elle doit rester INVISIBLE, quelle que
+   soit la couleur du marqueur — une règle « circle » trop large l'a peinte en bleu au premier essai. */
+.ct-mk .plan-pt-cible{ fill:transparent; stroke:none }
 .ct-mk text{ font-weight:800; text-anchor:middle; dominant-baseline:central; pointer-events:none; font-size:12px; font-family:system-ui,"Segoe UI",sans-serif }
 .ct-mk .ct-mk-nom{ text-anchor:start; dominant-baseline:auto; font-weight:700; font-size:12.5px; paint-order:stroke; stroke:#fff; stroke-width:3; fill:#2a2622 }
-.ct-mk-depart circle{ fill:#25c998 } .ct-mk-depart .ct-mk-l{ fill:#09073b }
-.ct-mk-arrivee circle{ fill:#f0bd3c } .ct-mk-arrivee .ct-mk-l{ fill:#09073b }
-.ct-mk-client circle{ fill:#345cfd } .ct-mk-client .ct-mk-l{ fill:#fff }
+.ct-mk-depart .ct-rond{ fill:#25c998 } .ct-mk-depart .ct-mk-l{ fill:#09073b }
+.ct-mk-arrivee .ct-rond{ fill:#f0bd3c } .ct-mk-arrivee .ct-mk-l{ fill:#09073b }
+.ct-mk-client .ct-rond{ fill:#345cfd } .ct-mk-client .ct-mk-l{ fill:#fff }
 
 /* le panneau */
 .ct-panneau{ background:var(--panneau); border:1px solid var(--filet); border-radius:var(--r); padding:12px 14px }
@@ -1219,3 +1222,25 @@ a.ent-nav{ text-decoration:none }
 .ct-index li:hover, .ct-index li:focus-visible{ background:var(--survol); outline:none }
 .ct-ou{ margin-left:auto; white-space:nowrap; color:var(--encre-douce); font-size:12.5px }
 .ct-vide{ color:var(--encre-douce); cursor:default }
+
+/* la tournée sur la carte réelle (02/10/2026) : mêmes signes que le plan schématique —
+   rond bleu = le client, pastille menthe = l'ordre de passage, rond creux pointillé = à quai.
+   Le tracé suit les rues, en menthe comme tout ce qui appartient à la tournée. */
+.ct-cadre-tournee{ height:min(62vh,600px); min-height:420px }
+.ct-trace{ fill:none; stroke:#25c998; stroke-opacity:.9; stroke-linecap:round; stroke-linejoin:round; pointer-events:none }
+.ct-mk-creux .ct-rond{ fill-opacity:.16; stroke-dasharray:3.5 2.5; stroke-width:2.5 }
+.ct-mk-client.ct-mk-creux .ct-rond{ stroke:#345cfd }
+.ct-mk-depart.ct-mk-creux .ct-rond{ stroke:#159d74 }
+.ct-mk-arrivee.ct-mk-creux .ct-rond{ stroke:#c4931a }
+.ct-mk-client.ct-mk-creux .ct-mk-l{ fill:#345cfd }
+.ct-mk-depart.ct-mk-creux .ct-mk-l{ fill:#159d74 } .ct-mk-arrivee.ct-mk-creux .ct-mk-l{ fill:#c4931a }
+.ct-ordre circle{ fill:#25c998; stroke:#13163e; stroke-width:1.6 }
+.ct-ordre text{ fill:#07261c; font-size:10.5px }
+.ct-mk .plan-pt-cible{ cursor:pointer }
+.ct-mk .plan-pt-cible:focus{ outline:none }
+.ct-mk .plan-pt-cible:focus-visible{ stroke:#f0bd3c; stroke-width:3 }
+.ct-mk.plan-pt-clic:hover .ct-rond{ stroke-width:3.5 }
+
+/* Recommencer la tournée (02/10/2026) : en tête de la colonne des contraintes, discret tant
+   qu'il n'est pas armé, rouge le temps de la confirmation. */
+.tour-raz{ display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end }

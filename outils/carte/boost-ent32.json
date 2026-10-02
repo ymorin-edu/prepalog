@@ -1,0 +1,132 @@
+{
+ "sortie": "contenus/boost-ent32-carte.js",
+ "description": "les huit clients d'ENT-3.2, « nouvelle journée » (commerces inventés, adresses réelles géocodées à la BAN le 02/10/2026) : quatre nouveaux à situer, quatre habituels déjà sur la carte.",
+ "clients": [
+  {
+   "id": "c1",
+   "nom": "Torréfaction Guiraud",
+   "adresse": "5 rue de l'Horloge",
+   "rue": "Rue de l'Horloge",
+   "lonlat": [
+    4.358514,
+    43.838464
+   ],
+   "quartier": "ecusson",
+   "kg": 18,
+   "colis": 3,
+   "nouveau": true
+  },
+  {
+   "id": "c2",
+   "nom": "Mercerie Pellet",
+   "adresse": "9 rue Régale",
+   "rue": "Rue Régale",
+   "lonlat": [
+    4.360807,
+    43.83601
+   ],
+   "quartier": "ecusson",
+   "kg": 12,
+   "colis": 2,
+   "nouveau": true
+  },
+  {
+   "id": "c3",
+   "nom": "Atelier Ribot",
+   "adresse": "10 rue Canteduc",
+   "rue": "Rue Canteduc",
+   "lonlat": [
+    4.345924,
+    43.838416
+   ],
+   "quartier": "fontaine",
+   "kg": 34,
+   "colis": 4,
+   "nouveau": true
+  },
+  {
+   "id": "c4",
+   "nom": "Herboristerie Mazel",
+   "adresse": "11 corniche de l'Ermitage",
+   "rue": "Corniche de l'Ermitage",
+   "lonlat": [
+    4.337246,
+    43.841514
+   ],
+   "quartier": "fontaine",
+   "kg": 16,
+   "colis": 2,
+   "nouveau": true,
+   "cp": "30900"
+  },
+  {
+   "id": "c5",
+   "nom": "Cave Teissier",
+   "adresse": "15 rue de la République",
+   "rue": "Rue de la République",
+   "lonlat": [
+    4.358614,
+    43.832618
+   ],
+   "quartier": null,
+   "kg": 52,
+   "colis": 8,
+   "nouveau": false,
+   "cp": "30900"
+  },
+  {
+   "id": "c6",
+   "nom": "Pâtisserie Arnaud",
+   "adresse": "30 avenue Carnot",
+   "rue": "Avenue Carnot",
+   "lonlat": [
+    4.366602,
+    43.834529
+   ],
+   "quartier": null,
+   "kg": 31,
+   "colis": 4,
+   "nouveau": false,
+   "creneau": {
+    "avant": 885,
+    "libelle": "livraison avant 14 h 45"
+   }
+  },
+  {
+   "id": "c7",
+   "nom": "Papeterie Bonnet",
+   "adresse": "20 rue de Beaucaire",
+   "rue": "Rue de Beaucaire",
+   "lonlat": [
+    4.368133,
+    43.838923
+   ],
+   "quartier": null,
+   "kg": 29,
+   "colis": 5,
+   "nouveau": false
+  },
+  {
+   "id": "c8",
+   "nom": "Épicerie Roussel",
+   "adresse": "22 rue Pasteur",
+   "rue": "Rue Pasteur",
+   "lonlat": [
+    4.353209,
+    43.840124
+   ],
+   "quartier": null,
+   "kg": 38,
+   "colis": 6,
+   "nouveau": false
+  }
+ ],
+ "calibrage": {
+  "note": "Vérifié par outils/carte/calibrer.mjs (énumération complète, pas d'estimation). Paramètres de la journée : départ 14 h 10, train 16 h 10, 180 kg, 12 km/h, 6 min par arrêt.",
+  "depart": 850,
+  "train": 970,
+  "chargeUtile": 180,
+  "vitesse": 12,
+  "service": 6
+ }
+}

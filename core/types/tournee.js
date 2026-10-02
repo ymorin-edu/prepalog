@@ -44,14 +44,21 @@
 //
 // `bilan` passé aux cases de report et aux jalons du contenu :
 //   { retenus, ecartes, cumuls: { [idMesure]: nombre }, km, minutes, arrivee,
-//     depassements: [idMesure…], enRetard }
+//     depassements: [idMesure…], enRetard,
+//     arrivees: { [idPoint]: minutes }, creneaux: [{ id, nom, avant, libelle, charge, arrivee, rate }],
+//     creneauxRates: [idPoint…], creneauRate }
+//
+// Un point peut porter un CRÉNEAU de livraison : `creneau: { avant: 14 * 60 + 45, libelle }`
+// (ENT-3.2 : la Pâtisserie Arnaud n'accepte qu'avant 14 h 45). Voir `bilanDe`.
 
 import { ech } from '../ui.js';
 import { svgPlan, legendePlan, distanceKm } from './plan.js';
+import { planDeCarte, kmCarte, carteTournee } from './carte.js';
 import { normaliser, estJuste } from './numerique.js';
 import { creerGrille } from './grille.js';
 
-export const hhmm = (m) => `${String(Math.floor(m / 60)).padStart(2, '0')} h ${String(Math.round(m % 60)).padStart(2, '0')}`;
+// On arrondit la minute AVANT de couper en heures : sinon 14 h 59 min 42 s s'écrivait « 14 h 60 ».
+export const hhmm = (m) => { const r = Math.round(m); return `${String(Math.floor(r / 60)).padStart(2, '0')} h ${String(r % 60).padStart(2, '0')}`; };
 const fr = (n, d = 2) => new Intl.NumberFormat('fr-FR', { maximumFractionDigits: d }).format(n);
 
 export function creerTournee(T) {
@@ -60,7 +67,15 @@ export function creerTournee(T) {
   // scénarios Logisim, où le transport n'est qu'une contrainte de plus et non le sujet.
   // Sans plan, pas de carte dessinée et pas de distance, donc pas d'horaire : seuls les
   // cumuls et leurs plafonds jouent. Avec plan, tout fonctionne.
-  const PLAN = T.plan || null;
+  //
+  // Depuis le 02/10/2026, le plan peut être la VRAIE carte de la ville (`plan.carte`, voir
+  // `carte.js`). La tournée n'en sait presque rien : `planDeCarte` lui rend un plan comme les
+  // autres (points, départ, arrivée), la distance d'un trajet se lit dans la table des
+  // itinéraires par les rues au lieu de se mesurer à vol d'oiseau, et le dessin est délégué.
+  // Tout le reste — ordre, quai, cumuls, horaire, report, feuille de calcul — est le même code.
+  const PLAN = T.plan ? (T.plan.carte ? planDeCarte(T.plan) : T.plan) : null;
+  const CARTE = PLAN && PLAN.carte ? carteTournee(PLAN) : null;
+  const km1 = (a, b) => (CARTE ? kmCarte(PLAN, a, b) : distanceKm(PLAN, a, b));
   const POINTS = T.points || (PLAN ? PLAN.points : []);
   const MESURES = T.mesures || [];
   const H = T.horaire || null;
@@ -104,6 +119,17 @@ export function creerTournee(T) {
   // Il n'est armé QUE par le clavier. Le rendre aussi après un clic de souris déplacerait la
   // page sous le curseur de l'élève à chaque arrêt ajouté.
   let focusApresRedessin = null;
+
+  // ── Recommencer la tournée (Tristan, 02/10/2026 au soir) ────────────────────────────────
+  // *« il faudrait une case où on peut reset le trajet dans le bandeau à droite »*. Défaire une
+  // tournée de sept arrêts demandait sept clics « retirer » et deux sur les bouts. Le bouton
+  // remet TOUT à quai, bouts compris, et efface la correction — mais garde les formules de la
+  // feuille de calcul : l'élève qui recommence son ordre ne doit pas réécrire `=SOMME(…)`.
+  //
+  // Deux temps, sans boîte de dialogue du navigateur (elles bloquent les postes et les tests) :
+  // le premier clic arme le bouton (« Tout remettre à quai ? »), le second confirme. Armé, il se
+  // désarme au premier autre geste, puisque la vue se redessine.
+  let razArme = false;
 
   // ── Les jauges se taisent ───────────────────────────────────────────────────────────────
   // `jaugesRepere: true`. Dès qu'on demande à l'élève de CALCULER le poids total et le temps,
@@ -191,20 +217,55 @@ export function creerTournee(T) {
     // Le trajet ne compte que les bouts RÉELLEMENT posés. Une chaîne incomplète donne donc une
     // distance plus courte — et c'est exactement pour ça que le report des résultats la refuse :
     // sans ce garde-fou, oublier la gare deviendrait la façon la plus simple d'attraper le train.
+    //
+    // ── L'heure d'arrivée chez chaque client (02/10/2026, pour le créneau d'ENT-3.2) ─────────
+    // Elle se lit dans la même boucle que les km : départ, plus les trajets cumulés jusqu'à ce
+    // client (par les rues sur la carte réelle), plus le service des arrêts PRÉCÉDENTS — on
+    // arrive chez le quatrième client après avoir servi les trois premiers, pas après l'avoir
+    // servi lui. C'est la règle de `outils/carte/calibrer.mjs`, qui a calé la journée : les
+    // deux calculs doivent tomber sur les mêmes 371 ordres, et un test le vérifie.
     let km = 0, minutes = 0, arrivee = null;
+    const arrivees = {};
     if (H && PLAN && retenus.length) {
       const suite = [];
       if (PLAN.depart && departPose(etat)) suite.push(PLAN.depart);
       retenus.forEach((p) => suite.push(p));
       if (PLAN.arrivee && arriveePose(etat)) suite.push(PLAN.arrivee);
-      for (let i = 1; i < suite.length; i++) km += distanceKm(PLAN, suite[i - 1], suite[i]);
+      suite.forEach((p, i) => {
+        if (i > 0) km += km1(suite[i - 1], p);
+        const j = retenus.indexOf(p);
+        if (j >= 0) arrivees[String(p.id)] = H.depart + km / H.vitesse * 60 + j * (H.service || 0);
+      });
       minutes = km / H.vitesse * 60 + retenus.length * (H.service || 0);
       arrivee = H.depart + minutes;
     }
     const enRetard = !!(H && arrivee != null && H.limite != null && arrivee > H.limite);
 
+    // ── Les créneaux de livraison ────────────────────────────────────────────────────────
+    // Décision de Tristan (02/10/2026) pour ENT-3.2 : un client n'accepte qu'avant une heure
+    // donnée, et c'est ce qui fait que l'ordre compte vraiment — le plus court chemin le rate.
+    // Un créneau ne se juge que si le client est CHARGÉ : laissé à quai, il n'est pas livré
+    // aujourd'hui, ce n'est pas un retard. Sans horaire ni plan, aucune heure d'arrivée, donc
+    // aucun créneau jugé — comme le train.
+    //
+    // « Avant 14 h 45 » admet 14 h 45 pile (`<=`), comme le calage.
+    const creneaux = [];
+    POINTS.forEach((p) => {
+      if (!p.creneau || p.creneau.avant == null) return;
+      const id = String(p.id);
+      const a = arrivees[id] == null ? null : arrivees[id];
+      creneaux.push({
+        id, nom: p.nom, avant: p.creneau.avant,
+        libelle: p.creneau.libelle || `livraison avant ${hhmm(p.creneau.avant)}`,
+        charge: etat.ordre.some((x) => String(x) === id),
+        arrivee: a, rate: a != null && a > p.creneau.avant,
+      });
+    });
+    const creneauxRates = creneaux.filter((c) => c.rate).map((c) => c.id);
+
     return {
       retenus, ecartes, cumuls, km, minutes, arrivee, depassements, enRetard,
+      arrivees, creneaux, creneauxRates, creneauRate: creneauxRates.length > 0,
       // Exposé pour les jalons du contenu, qui doivent pouvoir distinguer « mal organisé » de
       // « pas fini ». `arrivee` est déjà l'HEURE de retour, d'où les noms explicites.
       departPose: departPose(etat), arriveePose: arriveePose(etat), complete: chaineComplete(etat),
@@ -279,6 +340,41 @@ export function creerTournee(T) {
     </div>`;
   }
 
+  // Le retard à un créneau, en minutes entières : le même arrondi que l'heure affichée
+  // (`hhmm`), et jamais « raté de 0 min » pour quelques secondes de trop.
+  const retardMin = (c) => Math.max(1, Math.round(c.arrivee - c.avant));
+
+  // Une jauge par client à créneau, sous celle du train : c'est une contrainte de plus, au même
+  // rang que la charge et l'horaire. Muette (`jaugesRepere`), elle dit QUE le créneau est raté,
+  // jamais de combien ni à quelle heure on arrive — ce serait la réponse de la feuille de
+  // calcul. Parlante, elle donne l'heure d'arrivée et le retard.
+  function jaugeCreneau(c, b, muet) {
+    if (!H || !PLAN) return '';
+    // Titre court : avec le nom du client, il passait sur deux lignes dans la colonne de droite
+    // (vu à l'écran le 02/10) ; le nom va dans la note.
+    const tete = `<div class="tour-j-tete"><span>Créneau</span>
+        <b class="mono">${c.charge && c.arrivee != null && !muet ? `${hhmm(c.arrivee)} / ` : ''}${hhmm(c.avant)}</b></div>`;
+    if (!c.charge) {
+      return `<div class="tour-jauge tour-jauge-creneau${muet ? ' tour-jauge-repere' : ''}" data-creneau="${ech(c.id)}">
+        ${tete}<span class="note">${ech(c.nom)} : ${ech(c.libelle)}. Ce client n’est pas dans la tournée.</span></div>`;
+    }
+    if (muet) {
+      return `<div class="tour-jauge tour-jauge-creneau tour-jauge-repere ${c.rate ? 'trop' : ''}" data-creneau="${ech(c.id)}">
+        ${tete}
+        <span class="note">${ech(c.nom)} : ${ech(c.libelle)}. Il faut arriver chez ce client avant cette heure.
+          L’heure d’arrivée chez lui, c’est à vous de la calculer.</span>
+        ${c.rate ? '<span class="pastille crit">Créneau raté</span>'
+          : (DANS_GRILLE && b.complete ? '<span class="pastille ok">créneau tenu</span>' : '')}
+      </div>`;
+    }
+    return `<div class="tour-jauge tour-jauge-creneau ${c.rate ? 'trop' : ''}" data-creneau="${ech(c.id)}">
+      ${tete}
+      <span class="note">${ech(c.nom)} : ${ech(c.libelle)}. Arrivée prévue à ${hhmm(c.arrivee)}.</span>
+      ${c.rate ? `<span class="pastille crit">Créneau raté de ${retardMin(c)} min</span>`
+        : '<span class="pastille ok">créneau tenu</span>'}
+    </div>`;
+  }
+
   /* ------------------------------------------------------------------------------- la vue */
   return {
     nav: { id: 'tournee', libelle: T.libelle || 'Tournée' },
@@ -297,6 +393,10 @@ export function creerTournee(T) {
           <div class="avis">${ech(opts.verrou)}</div>`;
       }
 
+      // Le créneau se lit aussi sur la ligne du client : c'est une donnée de son calcul.
+      const creneauNote = (p) => (p.creneau && p.creneau.avant != null
+        ? ` · <span class="tour-creneau">${ech(p.creneau.libelle || `livraison avant ${hhmm(p.creneau.avant)}`)}</span>` : '');
+
       // Le récapitulatif, compact : une ligne par arrêt. Le numéro du client est posé AVANT le
       // nom — « 3 · La Pointe Sud » — pour faire le lien avec la fiche et avec le rond bleu de
       // la carte, et il reste en dehors du `<strong>` qui ne porte que le nom.
@@ -307,7 +407,7 @@ export function creerTournee(T) {
           <span class="tour-rang">${pos + 1}</span>
           <span class="tour-texte">
             <span class="tour-nom"><span class="tour-num mono">${ech(numeroDe(id))} ·</span><strong>${ech(p.nom)}</strong></span>
-            <span class="note">${ech(p.zone || '')}${MESURES.map((m) => ` · ${fr(Number(p[m.champ] || 0))} ${ech(m.unite || '')}`).join('')}</span>
+            <span class="note">${ech(p.zone || '')}${MESURES.map((m) => ` · ${fr(Number(p[m.champ] || 0))} ${ech(m.unite || '')}`).join('')}${creneauNote(p)}</span>
           </span>
           <span class="tour-boutons">
             <button class="btn btn-s" data-haut="${pos}" ${pos === 0 ? 'disabled' : ''}
@@ -358,7 +458,7 @@ export function creerTournee(T) {
               return !p ? '' : `<li class="tour-item tour-puce">
                 <span class="tour-texte">
                 <span class="tour-nom"><span class="tour-num mono">${ech(numeroDe(id))} ·</span><strong>${ech(p.nom)}</strong></span>
-                <span class="note">${MESURES.map((m) => `${fr(Number(p[m.champ] || 0))} ${ech(m.unite || '')}`).join(' · ')}</span>
+                <span class="note">${MESURES.map((m) => `${fr(Number(p[m.champ] || 0))} ${ech(m.unite || '')}`).join(' · ')}${creneauNote(p)}</span>
                 </span><span class="tour-boutons">
                 <button class="btn btn-s" data-reprendre="${ech(id)}">${ech(T.libelleCharger || 'reprendre')}</button>
                 </span></li>`;
@@ -379,13 +479,20 @@ export function creerTournee(T) {
       // QUE une contrainte est franchie, jamais de combien (alerte n° 28).
       const gj = (etat.grille && etat.grille.juge) || {};
       const formulesJustes = Object.keys(gj).length > 0 && Object.values(gj).every((x) => x === 'ok');
-      const contrainteFranchie = (b.depassements && b.depassements.length > 0) || b.enRetard;
+      const contrainteFranchie = (b.depassements && b.depassements.length > 0) || b.enRetard || b.creneauRate;
       const avertissement = DANS_GRILLE && formulesJustes && contrainteFranchie
         ? 'Vos formules sont justes, mais la tournée ne respecte pas toutes les contraintes '
           + '(colonne de droite, en rouge). Le calcul est bon : c’est la tournée qu’il faut revoir.'
         : '';
-      const jaugesHtml = `${MESURES.map((m) => jauge(m, b.cumuls[m.id], muet)).join('')}
-            ${jaugeHoraire(b, muet)}`;
+      const vierge = !n && !etat.depart && !etat.arrivee;
+      const raz = `<div class="tour-raz">
+          <button class="btn btn-s${razArme ? ' btn-alerte btn-p' : ''}" data-tour-raz ${vierge ? 'disabled' : ''}
+            title="Remettre toutes les commandes à quai et retirer le départ et l’arrivée. Les formules de la feuille de calcul sont gardées.">${
+            razArme ? 'Tout remettre à quai ? Cliquez pour confirmer' : 'Recommencer la tournée'}</button>
+          ${razArme ? '<button class="btn btn-s" data-tour-raz-non>Annuler</button>' : ''}
+        </div>`;
+      const jaugesHtml = `${raz}${MESURES.map((m) => jauge(m, b.cumuls[m.id], muet)).join('')}
+            ${jaugeHoraire(b, muet)}${b.creneaux.map((c) => jaugeCreneau(c, b, muet)).join('')}`;
       const grille = !GRILLE ? '' : GRILLE.html(lignesGrille(etat), etat.grille, DANS_GRILLE
         ? { droite: `<div class="tour-jauges gr-contraintes">${jaugesHtml}</div>`, avertissement }
         : {});
@@ -428,7 +535,10 @@ export function creerTournee(T) {
         <div class="tour-grille${DANS_GRILLE ? ' tour-grille-deux' : ''}">
           <div class="tour-col">
             ${PLAN ? `<div class="plan-boite${CLIQUABLE ? ' plan-boite-clic' : ''}">
-              ${svgPlan(PLAN, {
+              ${CARTE ? CARTE.html({
+                ordre: etat.ordre, cliquable: CLIQUABLE,
+                extremites: EXTREMITES, departPose: etat.depart, arriveePose: etat.arrivee,
+              }) : svgPlan(PLAN, {
                 noms: true, ordre: etat.ordre, cliquable: CLIQUABLE, id: 'tournee',
                 extremites: EXTREMITES, departPose: etat.depart, arriveePose: etat.arrivee,
               })}
@@ -468,6 +578,11 @@ export function creerTournee(T) {
     brancher(z, api) {
       const etat = api.etat;
       if (!etat.ordre) Object.assign(etat, vide());
+      const etaitArme = razArme;
+      razArme = false;          // tout redessin désarme ; seul le premier clic ci-dessous réarme
+      // La carte réelle a son zoom, son échelle et ses traits à épaisseur d'écran : la scène se
+      // remonte après chaque redessin, en gardant le zoom où l'élève l'avait laissé.
+      if (CARTE) CARTE.brancher(z);
       if (!etat.report) etat.report = {};
 
       // Un ordre ou un chargement modifié invalide tout ce qui avait été jugé : les résultats
@@ -616,6 +731,17 @@ export function creerTournee(T) {
         el.addEventListener('change', maj);
       });
 
+      z.querySelector('[data-tour-raz]')?.addEventListener('click', () => {
+        if (!etaitArme) { razArme = true; api.redessiner(); return; }
+        const neuf = vide();
+        etat.ordre = neuf.ordre; etat.quai = neuf.quai;
+        etat.depart = null; etat.arrivee = null;
+        invalider();
+        api.sauver(); api.redessiner();
+        if (api.toast) api.toast('Tournée remise à zéro : tout est à quai.');
+      });
+      z.querySelector('[data-tour-raz-non]')?.addEventListener('click', () => api.redessiner());
+
       z.querySelector('[data-tour-valider]')?.addEventListener('click', () => {
         const b = bilanDe(etat);
         // ── Les résultats ne se valident pas tant que la tournée ne tient pas ──────────────
@@ -650,6 +776,12 @@ export function creerTournee(T) {
               ? `${H.libelleLimite || 'horaire limite'} manqué`
               : `${H.libelleLimite || 'horaire limite'} manqué de ${fr(b.arrivee - H.limite, 0)} min`);
           }
+          // Le créneau raté refuse le report au même titre que le train : c'est le cœur d'ENT-3.2.
+          b.creneaux.filter((c) => c.rate).forEach((c) => {
+            maux.push(muetAuReport
+              ? `créneau raté chez ${c.nom}`
+              : `créneau raté chez ${c.nom} (${retardMin(c)} min de retard)`);
+          });
           if (!b.retenus.length) maux.push('aucun arrêt chargé');
           // La chaîne incomplète est refusée au même titre qu'une charge dépassée. Sans ça,
           // oublier la gare raccourcit le trajet et fait attraper le train sans rien faire —

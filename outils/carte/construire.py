@@ -1,6 +1,6 @@
 """Construit `contenus/boost-carte.js` : la carte réelle de Nîmes de la vue `core/types/carte.js`.
 
-Usage : `python outils/carte/construire.py` (shapely requis ; sources : voir `geo.py`). Rejoué à
+Usage : `python outils/carte/construire.py [séance.json]` (shapely requis ; sources : voir `geo.py`). Rejoué à
 l'identique, il doit redonner le même fichier, octet pour octet — c'est ainsi qu'on sait que la
 carte du dépôt vient bien des données, et pas d'une retouche à la main.
 
@@ -23,27 +23,16 @@ Q = quartiers()
 for k, q in Q.items():
     q['g'] = q['g'].simplify(2)
 
-# --------------------------------------------------------------------- les clients de l'essai
-# Commerces INVENTÉS, adresses RÉELLES (numéro compris), géocodées par la BAN le 02/10/2026.
-# `place` : le client est-il DÉJÀ dans le fichier clients (habituel, posé sur la carte) ou
-# NOUVEAU (l'élève le situe) ? Décision du 02/10 : seuls les nouveaux sont à repérer, pour que le
-# temps de la séance aille à la tournée.
-CLIENTS = [
-    dict(id='c1', nom='Fromagerie Aubanel', adresse='8 rue de la Madeleine', rue='Rue de la Madeleine',
-         lonlat=(4.359002, 43.838176), quartier='ecusson', kg=22, colis=3, nouveau=True),
-    dict(id='c2', nom='Librairie Coste', adresse="21 rue de l'Aspic", rue="Rue de l'Aspic",
-         lonlat=(4.35981, 43.836325), quartier='ecusson', kg=35, colis=4, nouveau=True),
-    dict(id='c3', nom='Cave Fabre', adresse='10 rue Rousselier', rue='Rue Rousselier',
-         lonlat=(4.338023, 43.838349), quartier='fontaine', kg=41, colis=5, nouveau=True),
-    dict(id='c4', nom='Atelier Vidal', adresse='15 rue de Combret', rue='Rue de Combret',
-         lonlat=(4.345752, 43.839495), quartier='fontaine', kg=18, colis=2, nouveau=False),
-    dict(id='c5', nom='Boulangerie Roux', adresse='40 avenue du Maréchal Juin', rue='Avenue du Maréchal Juin',
-         lonlat=(4.352897, 43.826111), quartier=None, kg=27, colis=3, nouveau=False, cp='30900'),
-    dict(id='c6', nom='Fleuriste Bastide', adresse='12 rue Pierre Semard', rue='Rue Pierre Semard',
-         lonlat=(4.365242, 43.839154), quartier=None, kg=14, colis=2, nouveau=False),
-    dict(id='c7', nom='Quincaillerie Sabatier', adresse='30 avenue Jean-Jaurès', rue='Avenue Jean Jaurès',
-         lonlat=(4.350326, 43.835791), quartier=None, kg=46, colis=6, nouveau=False, cp='30900'),
-]
+# --------------------------------------------------------------------- les clients de la séance
+# Un fichier JSON par séance, passé en argument (par défaut `essai.json`, la page d'essai) :
+#   { "sortie": "contenus/….js", "description": "…", "clients": [ … ] }
+# Commerces INVENTÉS, adresses RÉELLES (numéro compris), géocodées à la Base Adresse Nationale.
+# `nouveau` : le client est-il à situer par l'élève (true) ou déjà dans le fichier clients, donc
+# posé sur la carte (false) ? Décision du 02/10 : seuls les nouveaux sont à repérer, pour que le
+# temps de la séance aille à la tournée. Les champs en plus (`creneau`…) passent tels quels.
+SEANCE_F = sys.argv[1] if len(sys.argv) > 1 else os.path.join(ICI, 'essai.json')
+SEANCE = json.load(open(SEANCE_F, encoding='utf-8'))
+CLIENTS = [dict(c, lonlat=tuple(c['lonlat'])) for c in SEANCE['clients']]
 NOUVEAUX = [c for c in CLIENTS if c['nouveau']]
 DEPART = dict(nom='Entrepôt Boost', adresse='31 avenue Joliot-Curie', lonlat=(4.32309, 43.81278))
 GARE_LL = next(e['c'] for e in D['osm'] if e['tags'].get('railway') == 'station'
@@ -61,6 +50,12 @@ for c in CLIENTS:
     assert c['rueG'] is not None, c['rue']
     d = c['rueG'].distance(Point(c['xy']))
     assert d < 45, (c['nom'], d)                       # le point BAN est bien sur sa rue
+    if c['nouveau']:
+        # …et c'est SA rue la plus proche : à un angle, la rue voisine peut passer à 30 m, et c'est
+        # elle que l'élève verrait sous le point (règle ajoutée le 02/10 au soir, test « données »).
+        proches = sorted((LineString([xy(*p) for p in e['g']]).distance(Point(c['xy'])), e['tags']['name'])
+                         for e in D['osm'] if 'highway' in e['tags'] and 'name' in e['tags'] and 'g' in e)
+        assert proches[0][1] == c['rue'], (c['nom'], 'rue la plus proche :', proches[0])
     if c['quartier']:
         assert Q[c['quartier']]['g'].contains(Point(c['xy'])), c['nom']
 DEPART['xy'] = xy(*DEPART['lonlat']); ARRIVEE['xy'] = xy(*ARRIVEE['lonlat'])
@@ -378,10 +373,24 @@ print('rues cliquables :', len(RUES), '| index :', len(INDEX), 'rues')
 for c in NOUVEAUX:
     assert c['rue'] in RUES and any(e['n'] == c['rue'] for e in INDEX), c['rue']
 
+# --------------------------------------------------------------------- les itinéraires
+# Les km de la tournée se comptent PAR LES RUES, et le tracé suit les rues (Tristan, 02/10/2026).
+# Plus court chemin à vélo-cargo entre chaque paire de points, dans les deux sens : voir
+# `itineraires.py` pour le réseau retenu et la règle des sens uniques.
+from itineraires import itineraires
+POINTS_TOURNEE = [dict(id='depart', xy=DEPART['xy']), dict(id='arrivee', xy=ARRIVEE['xy'])] + \
+    [dict(id=c['id'], xy=c['xy'], rue=c['rue']) for c in CLIENTS]
+ITIN = itineraires(POINTS_TOURNEE)
+TRAJETS = {k: dict(m=round(v['m']), d=chemin([LineString(v['g'])], tol=1.5)) for k, v in sorted(ITIN.items())}
+print('itinéraires :', len(TRAJETS), 'trajets,', sum(len(t['d']) for t in TRAJETS.values()) // 1000, 'ko ;',
+      'entrepôt → gare', TRAJETS['depart|arrivee']['m'], 'm')
+
 # --------------------------------------------------------------------- le paquet de données
 def ring(g):
     return chemin([g], ferme=True, tol=0)
 
+# Champs propres à une séance, recopiés tels quels pour le contenu (créneau de livraison…).
+EN_PLUS = ('creneau', 'tel', 'marque')
 DATA = dict(
     frame=[OX, OY, NC*PAS, NL*PAS], pas=PAS, cols=COLS, nl=NL, marge=round(MARGE),
     couches=COUCHES,
@@ -389,15 +398,16 @@ DATA = dict(
                        lx=round(q['g'].representative_point().x), ly=round(q['g'].representative_point().y),
                        vb=[round(v, 1) for v in VUES[k]['vb']], fs=round(POLICE * VUES[k]['k'], 2)) for k, q in Q.items()},
     etiquettes=ETIQ, reperes=REPERES, rues=RUES, index=INDEX,
+    trajets=TRAJETS,
     depart=dict(nom=DEPART['nom'], x=round(DEPART['xy'][0]), y=round(DEPART['xy'][1])),
     arrivee=dict(nom=ARRIVEE['nom'], x=round(ARRIVEE['xy'][0]), y=round(ARRIVEE['xy'][1])),
     clients=[dict(id=c['id'], nom=c['nom'], adresse=c['adresse'] + ', ' + c.get('cp', '30000') + ' Nîmes', rue=c['rue'], nouveau=c['nouveau'],
                   quartier=c['quartier'], case=c['case'], cases=c['cases'], kg=c['kg'], colis=c['colis'],
                   x=round(c['xy'][0], 1), y=round(c['xy'][1], 1),
-                  rueD=chemin([c['rueG']], tol=0)) for c in CLIENTS],
+                  rueD=chemin([c['rueG']], tol=0), **{k: c[k] for k in sorted(c) if k in EN_PLUS}) for c in CLIENTS],
 )
 DEPOT = os.path.normpath(os.path.join(ICI, '..', '..'))
-sortie = os.path.join(DEPOT, 'contenus', 'boost-carte.js')
+sortie = os.path.join(DEPOT, *SEANCE['sortie'].split('/'))
 TETE = """// GÉNÉRÉ par outils/carte/construire.py — ne pas modifier à la main : relancer le script.
 //
 // La carte réelle de Nîmes, pour la vue `core/types/carte.js` (ENT-3.2 et suivantes).
@@ -408,8 +418,7 @@ TETE = """// GÉNÉRÉ par outils/carte/construire.py — ne pas modifier à la 
 //   - position des clients : Base Adresse Nationale (Licence Ouverte).
 // Coordonnées en mètres, projection locale (origine 4,312° E, 43,856° N ; y vers le sud).
 //
-// `clients` : les sept clients de la page d'essai du 02/10/2026 (commerces inventés, adresses
-// réelles). Ils servent à la vue tant qu'ENT-3.2 n'a pas les siens (étape 2).
+// Séance : outils/carte/""" + os.path.basename(SEANCE_F) + """ — `clients` : """ + SEANCE['description'] + """
 """
 with open(sortie, 'w', encoding='utf-8', newline='\n') as f:
     f.write(TETE + 'export const CARTE = ' + json.dumps(DATA, ensure_ascii=False, separators=(',', ':')) + ';\n')

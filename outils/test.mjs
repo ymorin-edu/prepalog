@@ -5141,6 +5141,12 @@ const monterCt = (css) => pageCt.evaluate(async (css) => {
     SUP_BY_ID: B.SUP_BY_ID, CUSTOMERS: B.CUSTOMERS, CM: B.CM, baseDeDepart: B.baseDeDepart, THEME: B.THEME,
     etapes: [], exercice: 'Essai', transportSection: 'Tournées', transportId: 'essai-carte',
     plan: { libelle: 'Plan de Nîmes', titre: 'Situer les nouveaux clients', carte: CARTE },
+    tournee: {
+      libelle: 'Tournée', titre: 'Tournée sur la carte réelle',
+      mesures: [{ id: 'charge', libelle: 'Charge', unite: 'kg', champ: 'kg', max: B.VELO.chargeUtile }],
+      horaire: { depart: B.VELO.depart, limite: B.VELO.train, vitesse: B.VELO.vitesse, service: B.VELO.service },
+      departAQuai: true, extremitesACliquer: true,
+    },
   });
   const hote = document.createElement('div'); hote.id = 'ct-hote'; document.body.appendChild(hote);
   const db = (window.__ct && window.__ct.garder) ? window.__ct.db : {};
@@ -5163,12 +5169,15 @@ const zoomCt = async (k) => { await pageCt.click(`[data-ct-zoom="${k}"]`); await
 // la page en DOUX (`scrollIntoView`) à chaque changement de vue, donc on attend que le
 // défilement soit fini avant de lire la position ; et on vide la bulle avant de cliquer, pour
 // qu'un message resté du clic d'avant ne fasse pas passer un clic perdu pour une réponse.
+const scrollFiniCt = () => pageCt.evaluate(() => new Promise((ok) => {
+  let y = -1, n = 0;
+  const f = () => { if (window.scrollY === y) n++; else { n = 0; y = window.scrollY; } if (n >= 5) ok(); else requestAnimationFrame(f); };
+  requestAnimationFrame(f);
+}));
+// Un point de la tournée (client ou bout de chaîne), cliqué une fois la page immobile.
+const pointCt = async (sel) => { await scrollFiniCt(); await pageCt.click(sel, { force: true }); };
 const cliquerCt = async (pt) => {
-  await pageCt.evaluate(() => new Promise((ok) => {
-    let y = -1, n = 0;
-    const f = () => { if (window.scrollY === y) n++; else { n = 0; y = window.scrollY; } if (n >= 5) ok(); else requestAnimationFrame(f); };
-    requestAnimationFrame(f);
-  }));
+  await scrollFiniCt();
   await pageCt.evaluate(() => { document.querySelector('[data-ct-bulle]').textContent = ''; });
   const ecran = await pageCt.evaluate(({ x, y }) => {
     const svg = document.querySelector('[data-ct-svg]');
@@ -5193,11 +5202,14 @@ const pointDeRue = (nom, k) => pageCt.evaluate(async ({ nom, k }) => {
   return bon ? { x: bon.x, y: bon.y } : null;
 }, { nom, k });
 
-await v('carte : les données — chaque nouveau client est sur sa rue, dans sa case et dans l’index', async () => {
+// Deux jeux de données, construits par le même script : la page d'essai (`boost-carte.js`) et la
+// journée d'ENT-3.2 (`boost-ent32-carte.js`). Les mêmes règles tiennent pour les deux.
+for (const module of ['/contenus/boost-carte.js', '/contenus/boost-ent32-carte.js']) await v(`carte : les données (${module.split('/').pop()}) — chaque nouveau client est sur sa rue, dans sa case et dans l’index`, async () => {
   await monterCt();
-  const r = await pageCt.evaluate(async () => {
-    const { segments, caseCarte } = await import('/core/types/carte.js');
-    const C = window.__ct.CARTE; const pb = [];
+  const r = await pageCt.evaluate(async (module) => {
+    const { segments, caseCarte, creerCarte } = await import('/core/types/carte.js');
+    const { CARTE: C } = await import(module); const pb = [];
+    try { creerCarte({ carte: C }); } catch (e) { pb.push('refusé par la vue : ' + e.message); }
     const dist = (p, [a, b]) => { const dx = b[0] - a[0], dy = b[1] - a[1], L = dx * dx + dy * dy;
       const t = L ? Math.max(0, Math.min(1, ((p.x - a[0]) * dx + (p.y - a[1]) * dy) / L)) : 0;
       return Math.hypot(p.x - a[0] - t * dx, p.y - a[1] - t * dy); };
@@ -5206,15 +5218,20 @@ await v('carte : les données — chaque nouveau client est sur sa rue, dans sa 
     for (const c of C.clients) {
       if (caseCarte(C, c) !== c.case) pb.push(`${c.nom} : case ${caseCarte(C, c)} ≠ ${c.case}`);
       if (!c.nouveau) continue;
+      // Sa rue est LA PLUS PROCHE de son point BAN, pas seulement « à moins de 45 m » : à un angle,
+      // la rue d'à côté peut passer à 30 m, et c'est elle que l'élève verrait sous le point.
       const d = Math.min(...segments(C.rues[c.rue] || '').map((s) => dist(c, s)));
+      const proche = Object.entries(C.rues).map(([n, dd]) => [n, Math.min(...segments(dd).map((s) => dist(c, s)))])
+        .sort((x, y) => x[1] - y[1])[0];
       if (!(d < 45)) pb.push(`${c.nom} à ${Math.round(d)} m de la ${c.rue}`);
+      if (proche[0] !== c.rue) pb.push(`${c.nom} : la rue la plus proche est ${proche[0]} (${Math.round(proche[1])} m), pas la ${c.rue}`);
       const e = C.index.find((x) => x.n === c.rue);
       if (!e) pb.push(`${c.rue} absente de l’index`);
       else if (!e.q.includes(c.quartier) || !e.c.includes(c.case)) pb.push(`index faux pour ${c.rue} : ${e.q} ${e.c}`);
     }
     if (C.index.length < 100) pb.push('index trop court : ' + C.index.length);
     return pb;
-  });
+  }, module);
   if (r.length) throw new Error(r.join(' | '));
 });
 
@@ -5408,6 +5425,305 @@ await v('carte : un contenu dont un nouveau client n’a pas de rue nommée est 
 await v('carte : ENT-3.1 garde son plan schématique (aucune carte réelle déclarée)', async () => {
   const r = await pageCt.evaluate(async () => { const S = await import('/contenus/boost-tournee.js'); return { carte: !!S.PLAN.carte, cases: !!(S.PLAN.reperage && S.PLAN.reperage.champ) }; });
   if (r.carte || !r.cases) throw new Error(JSON.stringify(r));
+});
+
+await v('carte : le calage d’ENT-3.2 tient (un seul client à quai, train minoritaire, créneau qui change l’ordre)', async () => {
+  const { execFileSync } = await import('node:child_process');
+  try { execFileSync(process.execPath, [path.join(ROOT, 'outils', 'carte', 'calibrer.mjs')], { stdio: 'pipe' }); }
+  catch (e) { throw new Error(String(e.stderr || e.message).trim().split('\n').slice(-2).join(' ')); }
+});
+
+/* ---- la tournée sur la carte réelle (étape 2) : km par les rues, tracé le long des rues ---- */
+
+await v('carte : chaque itinéraire part de son point, arrive au suivant, et n’est pas plus court qu’à vol d’oiseau', async () => {
+  const pb = await pageCt.evaluate(async () => {
+    const { segments } = await import('/core/types/carte.js');
+    const C = window.__ct.CARTE; const pb = [];
+    const pts = Object.fromEntries([...C.clients.map((c) => [c.id, c]), ['depart', C.depart], ['arrivee', C.arrivee]]);
+    const ids = Object.keys(pts);
+    for (const a of ids) for (const b of ids) {
+      if (a === b) continue;
+      const t = C.trajets[`${a}|${b}`];
+      if (!t) { pb.push(`${a}→${b} manquant`); continue; }
+      const sg = segments(t.d);
+      const L = sg.reduce((s, [p, q]) => s + Math.hypot(q[0] - p[0], q[1] - p[1]), 0);
+      const [d0] = sg[0], d1 = sg[sg.length - 1][1];
+      const vol = Math.hypot(pts[a].x - pts[b].x, pts[a].y - pts[b].y);
+      if (Math.hypot(d0[0] - pts[a].x, d0[1] - pts[a].y) > 2) pb.push(`${a}→${b} ne part pas de ${a}`);
+      if (Math.hypot(d1[0] - pts[b].x, d1[1] - pts[b].y) > 2) pb.push(`${a}→${b} n’arrive pas à ${b}`);
+      if (t.m < vol - 1) pb.push(`${a}→${b} : ${t.m} m < ${Math.round(vol)} m à vol d’oiseau`);
+      if (Math.abs(L - t.m) > Math.max(15, t.m * 0.03)) pb.push(`${a}→${b} : tracé de ${Math.round(L)} m pour ${t.m} m annoncés`);
+    }
+    return pb;
+  });
+  if (pb.length) throw new Error(pb.slice(0, 4).join(' | '));
+});
+
+await v('carte : la tournée compte les km PAR LES RUES, dans le sens du trajet', async () => {
+  await monterCt();
+  await pageCt.evaluate(() => { const t = window.__ct.db.transport['essai-carte'].plan; Object.assign(t, { places: { c1: 1, c2: 1, c3: 1 }, valide: 1 }); });
+  await pageCt.click('.ent-nav[data-vue="tournee"]');
+  await pageCt.waitForSelector('[data-clic-point="c5"]');
+  for (const sel of ['[data-clic-extremite="depart"]', '[data-clic-point="c5"]', '[data-clic-point="c3"]', '[data-clic-point="c1"]', '[data-clic-extremite="arrivee"]']) {
+    await pointCt(sel);
+  }
+  const r = await pageCt.evaluate(async () => {
+    const { creerTournee } = await import('/core/types/tournee.js');
+    const B = await import('/contenus/boost.js');
+    const C = window.__ct.CARTE;
+    const t = window.__ct.db.transport['essai-carte'].tournee;
+    const vue = creerTournee({ plan: { carte: C }, mesures: [], horaire: { depart: 780, limite: 970, vitesse: 12, service: 6 }, extremitesACliquer: true });
+    const b = vue.bilan(Object.assign({ ordre: [], quai: [], report: {}, juge: {} }, t));
+    const pts = Object.fromEntries([...C.clients.map((c) => [c.id, c]), ['depart', C.depart], ['arrivee', C.arrivee]]);
+    const ch = ['depart', ...t.ordre, 'arrivee'];
+    let rues = 0, envers = 0, vol = 0;
+    for (let i = 1; i < ch.length; i++) {
+      rues += C.trajets[`${ch[i - 1]}|${ch[i]}`].m; envers += C.trajets[`${ch[i]}|${ch[i - 1]}`].m;
+      vol += Math.hypot(pts[ch[i]].x - pts[ch[i - 1]].x, pts[ch[i]].y - pts[ch[i - 1]].y);
+    }
+    return { ordre: t.ordre, km: b.km, rues: rues / 1000, envers: envers / 1000, vol: vol / 1000 };
+  });
+  if (r.ordre.join() !== 'c5,c3,c1') throw new Error('ordre construit au clic : ' + r.ordre.join());
+  if (Math.abs(r.km - r.rues) > 1e-9) throw new Error(`${r.km} km comptés, ${r.rues} km par les rues`);
+  if (Math.abs(r.rues - r.envers) < 0.001) throw new Error('le parcours choisi ne distingue pas les sens : le test ne prouve rien');
+  if (r.km < r.vol * 1.05) throw new Error(`${r.km} km : c’est presque le vol d’oiseau (${r.vol})`);
+});
+
+await v('carte : le tracé suit les rues, dans l’ordre choisi, et suit les changements', async () => {
+  const lire = () => pageCt.evaluate(() => {
+    const C = window.__ct.CARTE; const t = window.__ct.db.transport['essai-carte'].tournee;
+    const ch = [...(t.depart ? ['depart'] : []), ...t.ordre, ...(t.arrivee ? ['arrivee'] : [])];
+    const attendu = ch.slice(1).map((b, i) => C.trajets[`${ch[i]}|${b}`].d).join('');
+    return { d: document.querySelector('[data-ct-trace]').getAttribute('d'), attendu, n: ch.length };
+  });
+  let r = await lire();
+  if (!r.d || r.d !== r.attendu) throw new Error('tracé différent des itinéraires de la table');
+  if ((r.d.match(/M/g) || []).length !== r.n - 1) throw new Error('un morceau par trajet attendu');
+  if ((r.d.match(/l/g) || []).length < 40) throw new Error('le tracé a trop peu de sommets pour suivre des rues');
+  await pointCt('[data-clic-point="c3"]');      // retiré de la tournée
+  r = await lire();
+  if (r.d !== r.attendu || r.n !== 4) throw new Error('le tracé ne suit pas le retrait d’un arrêt');
+  await pointCt('[data-clic-extremite="depart"]');
+  await pointCt('[data-clic-extremite="arrivee"]');
+  await pointCt('[data-clic-point="c5"]');
+  await pointCt('[data-clic-point="c1"]');
+  r = await lire();
+  if (r.d !== '') throw new Error('il reste un tracé alors que rien n’est posé : ' + r.d.slice(0, 40));
+});
+
+await v('carte : la tournée garde le zoom d’un clic à l’autre, et le clic marche zoomé', async () => {
+  // Une tournée vide, posée à la main : ce cas ne dépend pas de ce qu'ont laissé les précédents.
+  await pageCt.evaluate(() => {
+    const t = window.__ct.db.transport['essai-carte'].tournee;
+    Object.assign(t, { ordre: [], quai: window.__ct.CARTE.clients.map((c) => c.id), depart: null, arrivee: null });
+  });
+  await pageCt.click('.ent-nav[data-vue="accueil"]'); await pageCt.click('.ent-nav[data-vue="tournee"]');
+  await pageCt.click('[data-ct-zoom="ecusson"]'); await pageCt.waitForTimeout(650);
+  await pointCt('[data-clic-point="c1"]');
+  await pointCt('[data-clic-point="c2"]');
+  const r = await pageCt.evaluate(() => ({ zoom: document.querySelector('[data-ct-svg]').classList.contains('ct-zoom'),
+    vue: document.querySelector('.ct-etiq.vue')?.dataset.etiq, ordre: window.__ct.db.transport['essai-carte'].tournee.ordre.join(),
+    rangs: [...document.querySelectorAll('[data-rang]')].map((g) => g.dataset.point + ':' + g.dataset.rang).join() }));
+  if (!r.zoom || r.vue !== 'ecusson') throw new Error('zoom perdu au redessin : ' + JSON.stringify(r));
+  if (r.ordre !== 'c1,c2' || r.rangs !== 'c1:1,c2:2') throw new Error(JSON.stringify(r));
+});
+
+await v('tournée : « Recommencer la tournée » arme d’abord, puis remet tout à quai, bouts compris', async () => {
+  // Le bouton vit dans la colonne collante des contraintes : on le déclenche par le DOM, ce cas
+  // juge le comportement, pas la mise en page.
+  const razCt = () => pageCt.$eval('[data-tour-raz]', (b) => b.click());
+  const etatT = () => pageCt.evaluate(() => JSON.parse(JSON.stringify(window.__ct.db.transport['essai-carte'].tournee)));
+  // Le cas précédent a laissé la carte zoomée sur l'Écusson : on revient à l'ensemble, sinon les
+  // points des autres quartiers sont hors de l'écran.
+  await pageCt.click('[data-ct-ensemble]'); await pageCt.waitForTimeout(650);
+  for (const sel of ['[data-clic-extremite="depart"]', '[data-clic-point="c5"]', '[data-clic-point="c3"]', '[data-clic-extremite="arrivee"]']) await pointCt(sel);
+  const avant = await etatT();
+  if (avant.ordre.length < 3 || !avant.depart || !avant.arrivee) throw new Error('tournée de départ mal construite : ' + JSON.stringify(avant));
+  await razCt();
+  if (!/confirmer/i.test(await pageCt.textContent('[data-tour-raz]'))) throw new Error('le premier clic n’arme pas le bouton');
+  if ((await etatT()).ordre.join() !== avant.ordre.join()) throw new Error('le premier clic a déjà effacé la tournée');
+  await pageCt.$eval('[data-tour-raz-non]', (b) => b.click());
+  if (/confirmer/i.test(await pageCt.textContent('[data-tour-raz]'))) throw new Error('« Annuler » ne désarme pas');
+  await razCt(); await razCt();
+  const apres = await etatT();
+  const tous = await pageCt.evaluate(() => window.__ct.CARTE.clients.map((c) => c.id).sort().join());
+  if (apres.ordre.length || apres.depart || apres.arrivee) throw new Error('il reste quelque chose : ' + JSON.stringify(apres));
+  if ([...apres.quai].sort().join() !== tous) throw new Error('tout n’est pas à quai : ' + apres.quai.join());
+  if (await pageCt.getAttribute('[data-ct-trace]', 'd')) throw new Error('le tracé est resté');
+  if (!(await pageCt.$eval('[data-tour-raz]', (b) => b.disabled))) throw new Error('le bouton reste actif sur une tournée vide');
+});
+
+/* ---- le créneau de livraison (ENT-3.2) : heure d'arrivée par client, créneau raté ---- */
+/* La journée d'ENT-3.2 (`boost-ent32-carte.js`) : la Pâtisserie Arnaud (c6) n'accepte      */
+/* qu'avant 14 h 45. Deux tournées de référence, tirées de la fiche du 02/10 :              */
+/*   - celle de Tristan à l'essai, c7 c1 c2 c6 c8 c3 c4 : gare à 16 h 05 (train pris),     */
+/*     pâtisserie à 15 h 07 — créneau raté de 22 min ;                                     */
+/*   - la meilleure qui tient tout, c6 c7 c8 c3 c4 c1 c2.                                  */
+const ORDRE_RATE = ['c7', 'c1', 'c2', 'c6', 'c8', 'c3', 'c4'];
+const ORDRE_BON = ['c6', 'c7', 'c8', 'c3', 'c4', 'c1', 'c2'];
+
+// Le bilan de la VRAIE vue, sur la journée d'ENT-3.2, pour un ordre donné (bouts posés).
+const bilanCr = (ordre, extra) => pageCt.evaluate(async ({ ordre, extra }) => {
+  const { creerTournee, hhmm } = await import('/core/types/tournee.js');
+  const B = await import('/contenus/boost.js');
+  const { CARTE: C } = await import('/contenus/boost-ent32-carte.js');
+  const vue = creerTournee(Object.assign({ plan: { carte: C },
+    mesures: [{ id: 'charge', libelle: 'Charge', unite: 'kg', champ: 'kg', max: B.VELO.chargeUtile }],
+    horaire: { depart: 14 * 60 + 10, limite: B.VELO.train, vitesse: B.VELO.vitesse, service: B.VELO.service },
+    extremitesACliquer: true }, extra || {}));
+  const tous = C.clients.map((c) => c.id);
+  const b = vue.bilan({ ordre, quai: tous.filter((x) => !ordre.includes(x)), depart: 1, arrivee: 1, report: {}, juge: {} });
+  return { arrivees: b.arrivees, creneaux: b.creneaux, rates: b.creneauxRates, rate: b.creneauRate,
+    enRetard: b.enRetard, gare: b.arrivee == null ? null : hhmm(b.arrivee), c6: b.arrivees.c6 == null ? null : hhmm(b.arrivees.c6) };
+}, { ordre, extra });
+
+await v('créneau : l’heure d’arrivée chez chaque client = trajets par les rues + service des arrêts PRÉCÉDENTS', async () => {
+  // L'attendu est recalculé ici, à la main, depuis la table des itinéraires — pas lu dans la vue.
+  const attendu = await pageCt.evaluate(async (ordre) => {
+    const { CARTE: C } = await import('/contenus/boost-ent32-carte.js');
+    const B = await import('/contenus/boost.js');
+    const ch = ['depart', ...ordre]; let m = 0; const a = {};
+    for (let i = 1; i < ch.length; i++) {
+      m += C.trajets[`${ch[i - 1]}|${ch[i]}`].m;
+      a[ch[i]] = 14 * 60 + 10 + m / 1000 / B.VELO.vitesse * 60 + (i - 1) * B.VELO.service;
+    }
+    return a;
+  }, ORDRE_RATE);
+  const r = await bilanCr(ORDRE_RATE);
+  for (const id of ORDRE_RATE) {
+    if (r.arrivees[id] == null || Math.abs(r.arrivees[id] - attendu[id]) > 1e-9) {
+      throw new Error(`${id} : arrivée ${r.arrivees[id]} pour ${attendu[id]} attendues`);
+    }
+  }
+  if (r.c6 !== '15 h 07') throw new Error('pâtisserie à ' + r.c6 + ' (15 h 07 attendu, fiche du 02/10)');
+  if (r.gare !== '16 h 05' || r.enRetard) throw new Error(`gare à ${r.gare}, train ${r.enRetard ? 'manqué' : 'pris'} (16 h 05, pris, attendu)`);
+  if (!r.rate || r.rates.join() !== 'c6') throw new Error('créneau non vu comme raté : ' + JSON.stringify(r.creneaux));
+  const c = r.creneaux.find((x) => x.id === 'c6');
+  if (!c || c.avant !== 885 || !c.charge || !/14 h 45/.test(c.libelle)) throw new Error('créneau mal lu dans les données : ' + JSON.stringify(c));
+  const bon = await bilanCr(ORDRE_BON);
+  if (bon.rate || bon.enRetard) throw new Error('la meilleure tournée est refusée : ' + JSON.stringify(bon.creneaux));
+});
+
+await v('créneau : à quai, un client n’est pas « en retard » ; sans horaire, aucun créneau n’est jugé', async () => {
+  // La pâtisserie à quai : elle n'est pas livrée aujourd'hui, ce n'est pas un retard.
+  const quai = await bilanCr(['c7', 'c1', 'c2', 'c8', 'c3', 'c4']);
+  const c = quai.creneaux.find((x) => x.id === 'c6');
+  if (!c || c.charge || c.rate || quai.rate || c.arrivee != null) throw new Error('client à quai jugé : ' + JSON.stringify(c));
+  const sansHoraire = await bilanCr(ORDRE_RATE, { horaire: null });
+  if (sansHoraire.rate || Object.keys(sansHoraire.arrivees).length) throw new Error('un créneau est jugé sans horaire : ' + JSON.stringify(sansHoraire.creneaux));
+});
+
+await v('créneau : le moteur et le calage comptent les mêmes ordres (train, puis train ET créneau)', async () => {
+  // `calibrer.mjs` a calé la journée avec SA formule. La vue doit tomber sur les mêmes nombres :
+  // sinon un ordre « juste » pour le calage serait refusé à l'élève, ou l'inverse.
+  const { execFileSync } = await import('node:child_process');
+  const sortie = execFileSync(process.execPath, [path.join(ROOT, 'outils', 'carte', 'calibrer.mjs')], { encoding: 'utf8' });
+  const m = sortie.match(/(\d+) ordres de passage : (\d+) attrapent le train .*?, (\d+) tiennent aussi le créneau/);
+  if (!m) throw new Error('sortie du calage illisible : ' + sortie.slice(0, 200));
+  const r = await pageCt.evaluate(async () => {
+    const { creerTournee } = await import('/core/types/tournee.js');
+    const B = await import('/contenus/boost.js');
+    const { CARTE: C } = await import('/contenus/boost-ent32-carte.js');
+    const vue = creerTournee({ plan: { carte: C }, mesures: [],
+      horaire: { depart: 14 * 60 + 10, limite: B.VELO.train, vitesse: B.VELO.vitesse, service: B.VELO.service },
+      extremitesACliquer: true });
+    const S = C.clients.filter((c) => c.id !== 'c5').map((c) => c.id);
+    function* perms(a) { if (a.length < 2) { yield a; return; } for (let i = 0; i < a.length; i++) for (const p of perms([...a.slice(0, i), ...a.slice(i + 1)])) yield [a[i], ...p]; }
+    let n = 0, train = 0, tout = 0;
+    for (const p of perms(S)) {
+      n++;
+      const b = vue.bilan({ ordre: p, quai: ['c5'], depart: 1, arrivee: 1, report: {}, juge: {} });
+      if (!b.enRetard) { train++; if (!b.creneauRate) tout++; }
+    }
+    return { n, train, tout };
+  });
+  if (`${r.n} ${r.train} ${r.tout}` !== `${m[1]} ${m[2]} ${m[3]}`) {
+    throw new Error(`moteur : ${r.n} ordres, ${r.train} au train, ${r.tout} tiennent tout ; calage : ${m[1]}, ${m[2]}, ${m[3]}`);
+  }
+});
+
+// La vue montée sur la journée d'ENT-3.2, repérage déjà fait, tournée posée par l'état.
+const monterCr = (opts, ordre) => pageCt.evaluate(async ({ opts, ordre }) => {
+  document.getElementById('cr-hote')?.remove();
+  document.getElementById('ct-hote')?.remove();
+  const { creerEntreprise } = await import('/core/types/entreprise.js');
+  const B = await import('/contenus/boost.js');
+  const { CARTE } = await import('/contenus/boost-ent32-carte.js');
+  const moteur = creerEntreprise({
+    ENTREPRISE: B.ENTREPRISE, VOCAB: B.VOCAB, CATALOGUE: B.CATALOGUE, SUPPLIERS: B.SUPPLIERS,
+    SUP_BY_ID: B.SUP_BY_ID, CUSTOMERS: B.CUSTOMERS, CM: B.CM, baseDeDepart: B.baseDeDepart, THEME: B.THEME,
+    etapes: [], exercice: 'Essai', transportSection: 'Tournées', transportId: 'essai-cr',
+    plan: { libelle: 'Plan de Nîmes', titre: 'Situer les nouveaux clients', carte: CARTE },
+    tournee: Object.assign({
+      libelle: 'Tournée', titre: 'Tournée ENT-3.2',
+      mesures: [{ id: 'charge', libelle: 'Charge', unite: 'kg', champ: 'kg', max: B.VELO.chargeUtile }],
+      horaire: { depart: 14 * 60 + 10, limite: B.VELO.train, vitesse: B.VELO.vitesse, service: B.VELO.service, libelleLimite: 'départ du train' },
+      departAQuai: true, extremitesACliquer: true, exigeConforme: true,
+      report: [{ id: 'rkm', libelle: 'Distance', unite: 'km', tolerance: 0.05, valeur: (b) => b.km }],
+    }, opts),
+  });
+  const tous = CARTE.clients.map((c) => c.id);
+  const db = { transport: { 'essai-cr': {
+    plan: { places: Object.fromEntries(CARTE.clients.filter((c) => c.nouveau).map((c) => [c.id, 1])), essais: {}, valide: 1 },
+    tournee: { ordre, quai: tous.filter((x) => !ordre.includes(x)), depart: 1, arrivee: 1, report: {}, juge: {}, valide: null },
+  } } };
+  const hote = document.createElement('div'); hote.id = 'cr-hote'; document.body.appendChild(hote);
+  moteur.rendre(hote, {
+    meta: { id: 'essai-cr', code: 'ESSAI', titre: 'Boost — créneau', portee: 'eleve', immersif: true, jeuId: 'essai-cr' },
+    profil: { prenom: 'Lea', nom: 'Dupont', role: 'eleve' },
+    jeu: { etat: () => db, sauver: () => {} }, enregistrer: () => {}, quitter: () => {}, codeStock: '',
+  });
+  window.__cr = { db };
+  hote.querySelector('.ent-nav[data-vue="tournee"]').click();
+}, { opts: opts || {}, ordre });
+const texteCr = () => pageCt.textContent('#cr-hote .ent-main');
+const jaugeCr = () => pageCt.$eval('#cr-hote [data-creneau="c6"]', (e) => ({ txt: e.textContent.replace(/\s+/g, ' '), trop: e.classList.contains('trop') }));
+const validerCr = async (km) => {
+  if (km != null) await pageCt.fill('#cr-hote [data-report="rkm"]', km);
+  await pageCt.$eval('#cr-hote [data-tour-valider]', (b) => b.click());
+  await pageCt.waitForTimeout(120);
+};
+
+await v('créneau : la jauge parlante donne l’arrivée et le retard, et le report est refusé tant que le créneau est raté', async () => {
+  await monterCr({}, ORDRE_RATE);
+  await pageCt.waitForSelector('#cr-hote [data-creneau="c6"]');
+  let j = await jaugeCr();
+  if (!j.trop || !/Créneau raté de 22 min/.test(j.txt) || !/15 h 07/.test(j.txt)) throw new Error('jauge : ' + j.txt);
+  if (!/livraison avant 14 h 45/.test(await pageCt.textContent('#cr-hote #tourListe'))) throw new Error('le créneau ne se lit pas sur la ligne du client');
+  await validerCr();
+  let t = await texteCr();
+  if (!/ne tient pas encore/.test(t) || !/créneau raté chez Pâtisserie Arnaud \(22 min de retard\)/.test(t)) throw new Error('report non refusé : ' + t.slice(-400));
+  if (/train manqué/.test(t)) throw new Error('le train est donné pour manqué alors qu’il est pris');
+  const juge = await pageCt.evaluate(() => window.__cr.db.transport['essai-cr'].tournee.juge);
+  if (Object.keys(juge).length) throw new Error('les cases ont été jugées malgré le refus');
+  // La bonne tournée : la jauge passe au vert et le report est accepté.
+  await monterCr({}, ORDRE_BON);
+  await pageCt.waitForSelector('#cr-hote [data-creneau="c6"]');
+  j = await jaugeCr();
+  if (j.trop || !/créneau tenu/.test(j.txt)) throw new Error('jauge de la bonne tournée : ' + j.txt);
+  const km = await pageCt.evaluate(async (o) => {
+    const { CARTE: C } = await import('/contenus/boost-ent32-carte.js');
+    const ch = ['depart', ...o, 'arrivee']; let m = 0;
+    for (let i = 1; i < ch.length; i++) m += C.trajets[`${ch[i - 1]}|${ch[i]}`].m;
+    return (m / 1000).toFixed(2).replace('.', ',');
+  }, ORDRE_BON);
+  await validerCr(km);
+  t = await texteCr();
+  if (/ne tient pas encore/.test(t) || !/Tous les résultats sont justes/.test(t)) throw new Error('la bonne tournée est refusée : ' + t.slice(-400));
+});
+
+await v('créneau : jauges muettes — « créneau raté », sans l’heure d’arrivée ni le retard, au refus comme à l’écran', async () => {
+  await monterCr({ jaugesRepere: true }, ORDRE_RATE);
+  await pageCt.waitForSelector('#cr-hote [data-creneau="c6"]');
+  const j = await jaugeCr();
+  if (!j.trop || !/Créneau raté/.test(j.txt)) throw new Error('la jauge muette ne dit pas que le créneau est raté : ' + j.txt);
+  if (/raté de|\d+ min|15 h 07/.test(j.txt)) throw new Error('la jauge muette donne le retard ou l’arrivée : ' + j.txt);
+  if (!/14 h 45/.test(j.txt)) throw new Error('la limite du créneau n’est plus donnée : ' + j.txt);
+  await validerCr();
+  const t = await texteCr();
+  if (!/ne tient pas encore/.test(t) || !/créneau raté chez Pâtisserie Arnaud/.test(t)) throw new Error('report non refusé : ' + t.slice(-400));
+  if (/de retard|15 h 07|raté de/.test(t)) throw new Error('la page muette donne le retard ou l’arrivée : ' + t.slice(-400));
+  await pageCt.evaluate(() => document.getElementById('cr-hote')?.remove());
 });
 
 await v('carte : aucune erreur, aucune requête hors du site', async () => {
