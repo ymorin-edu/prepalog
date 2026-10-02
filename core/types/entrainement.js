@@ -91,7 +91,13 @@ export function creerEntrainement({
     nbQuestions,
 
     rendre(hote, ctx) {
-      const chemin = `communs/classement-${ctx.meta.id}`;
+      // Les classements vivent dans leur propre branche, et pas dans `communs/`.
+      // `communs/` est le référentiel partagé entre toutes les classes, en LECTURE seule
+      // pour les élèves : y ouvrir l'écriture pour les classements en aurait fait une
+      // branche à deux régimes, et aurait imposé aux futurs référentiels les contraintes
+      // de format écrites pour les quiz. Une branche, une règle, une phrase :
+      // sous `classements/{activité}/`, chacun écrit la ligne qui porte son identifiant.
+      const CLASSEMENTS = 'classements';
       const estEleve = ctx.profil?.role === 'eleve';
       let jeu = null;          // { qs, i, score, repondu, choisi, depart }
       let ongletClassement = 'groupe';
@@ -263,7 +269,7 @@ export function creerEntrainement({
 
       // -------------------------------------------------------------- classement
       async function maLigne() {
-        const lignes = await B.lireTable(chemin, 'scores');
+        const lignes = await B.lireTable(CLASSEMENTS, ctx.meta.id);
         return lignes.find((l) => l.id === ctx.profil?.uid) || null;
       }
 
@@ -284,7 +290,7 @@ export function creerEntrainement({
             score, max, temps, ts: Date.now(),
           };
           if (ancien?.nom) neuf.nom = nomCourt(ctx.profil);
-          if (meilleurQue(neuf, ancien)) await B.poserLigne(chemin, 'scores', uid, neuf);
+          if (meilleurQue(neuf, ancien)) await B.poserLigne(CLASSEMENTS, ctx.meta.id, uid, neuf);
         } catch (e) {
           // Un classement qui ne s'enregistre pas ne doit pas gâcher la fin du quiz :
           // la note, elle, est déjà partie dans le suivi.
@@ -299,7 +305,7 @@ export function creerEntrainement({
         if (!ancien) return;
         const { id, _par, _parNom, _ts, nom, ...reste } = ancien;
         const neuf = visible ? { ...reste, nom: nomCourt(ctx.profil) } : reste;
-        await B.poserLigne(chemin, 'scores', ctx.profil.uid, neuf);
+        await B.poserLigne(CLASSEMENTS, ctx.meta.id, ctx.profil.uid, neuf);
       }
 
       // Le bandeau de choix, posé sous le classement et sous le bilan. Il n'apparaît qu'à
@@ -328,7 +334,7 @@ export function creerEntrainement({
       async function vueClassement() {
         hote.innerHTML = `<div class="panneau"><div class="vide">Chargement du classement…</div></div>`;
         let lignes = [];
-        try { lignes = await B.lireTable(chemin, 'scores'); }
+        try { lignes = await B.lireTable(CLASSEMENTS, ctx.meta.id); }
         catch (e) { lignes = []; }
 
         const dessiner = () => {
@@ -368,7 +374,7 @@ export function creerEntrainement({
           hote.querySelector('#qzRejouer').addEventListener('click', () => vueRappel());
           // Changer d'avis recharge le tableau : la ligne de l'élève doit changer sous ses
           // yeux, sinon il ne sait pas si son choix a été pris.
-          brancherBandeau(async () => { lignes = await B.lireTable(chemin, 'scores').catch(() => lignes); dessiner(); });
+          brancherBandeau(async () => { lignes = await B.lireTable(CLASSEMENTS, ctx.meta.id).catch(() => lignes); dessiner(); });
         };
         dessiner();
       }

@@ -981,6 +981,7 @@ a.ent-nav{ text-decoration:none }
    validation — elle débloque, elle ne remplace pas le travail. */
 .plan-issue{ color:var(--encre-douce); border-style:dashed }
 
+/* ===== BLOC QUIZ — début ===== */
 /* ============================================================
    Entraînement — quiz question par question (core/types/entrainement.js)
    ============================================================ */
@@ -1107,3 +1108,5 @@ a.ent-nav{ text-decoration:none }
 .calc-t-zero{ grid-column:span 2 }
 .calc-t-egal{ background:var(--ardoise-fond); color:var(--sur-ardoise); border-color:var(--ardoise-fond); font-weight:600 }
 .calc-t-egal:hover{ background:var(--ardoise-fond); filter:brightness(1.08) }
+
+/* ===== BLOC QUIZ — fin ===== */

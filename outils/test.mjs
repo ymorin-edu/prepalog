@@ -4043,6 +4043,8 @@ await v('ENT-3.1 : aucune erreur de console sur tout le parcours', async () => {
 
 
 /* ============================================================
+/* ===== BLOC QUIZ — début (core/types/entrainement.js) ===== */
+/* ============================================================
    QUI-8 — entraînement « Conversions d'unités »
    ============================================================
    Ce qui est gardé ici, et pourquoi :
@@ -4345,7 +4347,7 @@ await v('QUI-8 : au classement, le résultat est anonyme par défaut', async () 
 await v('QUI-8 : tant que l’élève reste anonyme, son nom n’est pas dans la base', async () => {
   const ligne = await page.evaluate(async () => {
     const { B } = await import('/core/backend.js');
-    const l = await B.lireTable('communs/classement-entr-conversions', 'scores');
+    const l = await B.lireTable('classements', 'entr-conversions');
     return l[0] || null;
   });
   if (!ligne) throw new Error('aucune ligne de classement enregistrée');
@@ -4378,7 +4380,7 @@ await v('QUI-8 : l’élève peut s’attribuer son score, et revenir en arrièr
   if (/Zoé/.test(t)) throw new Error('le prénom reste affiché après le retour à l’anonymat');
   const texte = await page.evaluate(async () => {
     const { B } = await import('/core/backend.js');
-    return JSON.stringify(await B.lireTable('communs/classement-entr-conversions', 'scores'));
+    return JSON.stringify(await B.lireTable('classements', 'entr-conversions'));
   });
   if (/Zoé|MORIN/.test(texte)) throw new Error('le nom est seulement caché, pas effacé : ' + texte);
   if (!/"score"/.test(texte)) throw new Error('le résultat a disparu avec le nom : ' + texte);
@@ -4535,7 +4537,7 @@ await v('QUI-8 : le suivi de classe affiche la note sur 20 du quiz', async () =>
 await v('QUI-8 : un enseignant qui joue ne s’enregistre ni note ni rang', async () => {
   const avant = await page.evaluate(async () => {
     const { B } = await import('/core/backend.js');
-    return (await B.lireTable('communs/classement-entr-conversions', 'scores')).length;
+    return (await B.lireTable('classements', 'entr-conversions')).length;
   });
   await page.click('#btnRetour');
   await page.waitForSelector('[data-rub="quiz"]', { timeout: 6000 });
@@ -4547,7 +4549,7 @@ await v('QUI-8 : un enseignant qui joue ne s’enregistre ni note ni rang', asyn
   await jouerJusquAuBilan();
   const apres = await page.evaluate(async () => {
     const { B } = await import('/core/backend.js');
-    return (await B.lireTable('communs/classement-entr-conversions', 'scores')).length;
+    return (await B.lireTable('classements', 'entr-conversions')).length;
   });
   if (apres !== avant) throw new Error(`le classement est passé de ${avant} à ${apres} ligne(s)`);
 });
@@ -4555,6 +4557,8 @@ await v('QUI-8 : un enseignant qui joue ne s’enregistre ni note ni rang', asyn
 await v('QUI-8 : rien n’est allé chercher quoi que ce soit à l’extérieur', async () => {
   if (hotesExternes.size) throw new Error('dépendance extérieure : ' + [...hotesExternes].join(', '));
 });
+
+/* ===== BLOC QUIZ — fin ===== */
 
 
 console.log('\n=== RÉUSSIS ===');

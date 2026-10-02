@@ -97,6 +97,9 @@ const v = async (nom, fn) => {
 // se serait authentifié sur le site, lequel est public.
 const fsDe = (uid) => env.authenticatedContext(uid).firestore();
 const dbDe = (uid) => env.authenticatedContext(uid).database();
+// Personne du tout : ni élève, ni enseignant, ni compte Google. Le site étant public, cet
+// état existe à chaque chargement de page avant la connexion.
+const dbAnonyme = () => env.unauthenticatedContext().database();
 
 // =====================================================================================
 //  FIRESTORE
@@ -365,6 +368,73 @@ await v("un élève lit les référentiels communs", () =>
 await v("un élève n'écrit pas dans les référentiels communs", () =>
   assertFails(dbDe('e1').ref('communs/ref1/table/L1').set({ a: 1 })));
 
+// ---------- 15 bis. les classements de quiz (02/10/2026)
+// Les quiz d'entraînement (QUI-8 et suivants) rangent leur classement sous
+// `classements/{activité}/{uid}`, commun à toutes les classes. C'est la SEULE écriture
+// d'un élève hors de son propre groupe dans tout Prepalog, d'où ces cas.
+//
+// Pourquoi une branche à part et pas `communs/` : `communs/` est le référentiel partagé,
+// en lecture seule pour les élèves. Y ouvrir l'écriture en aurait fait une branche à deux
+// régimes et aurait imposé aux futurs référentiels des contraintes écrites pour les quiz.
+const CL = 'classements/entr-conversions';
+const resultat = (n) => ({ gid: 'g1', groupe: '1 LOG A', score: n, max: 20, temps: 212, ts: 1700000000000 });
+
+// Discriminant : l'attente est « autorisé ». Sans `$uid === auth.uid`, plus aucun élève ne
+// peut s'inscrire au classement, et c'est ce test qui le dit.
+await v("un élève s'inscrit au classement sous sa propre clé", () =>
+  assertSucceeds(dbDe('e1').ref(`${CL}/e1`).set(resultat(14))));
+
+await v("un élève n'écrit pas la ligne de classement d'un autre", () =>
+  assertFails(dbDe('e2').ref(`${CL}/e1`).set(resultat(20))));
+
+await v("un élève n'efface pas la ligne de classement d'un autre", () =>
+  assertFails(dbDe('e2').ref(`${CL}/e1`).remove()));
+
+// S'attribuer son score, puis revenir à l'anonymat : deux réécritures de sa propre ligne.
+await v("un élève reprend sa propre ligne de classement", () =>
+  assertSucceeds(dbDe('e1').ref(`${CL}/e1`).set({ ...resultat(17), nom: 'Emma D.' })));
+
+await v("un élève redevient anonyme en réécrivant sa ligne sans nom", () =>
+  assertSucceeds(dbDe('e1').ref(`${CL}/e1`).set(resultat(17))));
+
+// Le classement est lu par toutes les classes : c'est le but, et c'est aussi ce qu'il faut
+// regarder en face. Un élève d'un autre groupe le lit, et n'importe quel compte Google
+// authentifié aussi — raison pour laquelle le site n'y écrit AUCUN nom par défaut.
+await v("un élève d'un autre groupe lit le classement", () =>
+  assertSucceeds(dbDe('e3').ref(CL).once('value')));
+
+await v("un compte authentifié quelconque lit le classement", () =>
+  assertSucceeds(dbDe('intrus').ref(CL).once('value')));
+
+await v("un visiteur non connecté ne lit pas le classement", () =>
+  assertFails(dbAnonyme().ref(CL).once('value')));
+
+await v("un visiteur non connecté n'écrit pas au classement", () =>
+  assertFails(dbAnonyme().ref(`${CL}/x`).set(resultat(20))));
+
+// Les `.validate` ne protègent aucun secret : ils empêchent de se servir du classement
+// comme d'un espace de stockage libre, la Realtime Database étant facturée à la bande
+// passante.
+await v("un nom trop long est refusé au classement", () =>
+  assertFails(dbDe('e1').ref(`${CL}/e1`).set({ ...resultat(12), nom: 'x'.repeat(200) })));
+
+await v("un score qui n'est pas un nombre est refusé", () =>
+  assertFails(dbDe('e1').ref(`${CL}/e1`).set({ ...resultat(12), score: 'vingt' })));
+
+// L'enseignant remet un classement à zéro d'un seul geste. Le `.write` est posé un cran
+// plus haut, sur `$aid` : sans lui, la suppression ne passe que ligne par ligne et
+// s'arrête en chemin — c'est exactement ce qui était arrivé sur `jeux/$gid` le 30/09.
+// Le 02/10, ce cas a échoué au premier passage et c'est la règle qui a été corrigée.
+await v("un élève n'efface pas tout le classement", () =>
+  assertFails(dbDe('e1').ref(CL).remove()));
+
+await v("un enseignant global efface le classement", () =>
+  assertSucceeds(dbDe('prof1').ref(CL).remove()));
+
+// Et `communs/` n'a pas bougé : toujours en lecture seule pour les élèves.
+await v("un élève n'écrit toujours pas dans les référentiels communs", () =>
+  assertFails(dbDe('e1').ref('communs/ref1/table/L2').set({ a: 1 })));
+
 await v("nul ne s'inscrit dans profsGlobaux", () =>
   assertFails(dbDe('prof1').ref('profsGlobaux/prof1').set(true)));
 
@@ -402,6 +472,14 @@ process.exit(ko.length ? 1 : 0);
 //       Discrimine par l'autre mécanisme : l'attente est un refus, et le bug accorde.
 //  4. database.rules.json, `acces/$gid` : retirer la branche `profsGlobaux`
 //     → tombe : « un enseignant global crée un groupe ».
+//  5 bis. database.rules.json, `classements/$aid` : retirer le `.write` du niveau dossier
+//     → tombe : « un enseignant global efface le classement ». Constaté pour de vrai le
+//       02/10 : la règle n'avait pas ce droit, et c'est le test qui l'a dit.
+//  5. database.rules.json, `classements/$aid/$uid` : retirer `$uid === auth.uid`
+//     → tombe : « un élève s'inscrit au classement sous sa propre clé ».
+//     Et en sens inverse, remplacer la condition par `auth != null` tout court
+//     → tombe : « un élève n'écrit pas la ligne de classement d'un autre ».
+//     Les deux sens sont couverts. (Ajouté le 02/10/2026 avec les classements de quiz.)
 //
 // Hors de portée, et ce n'est pas un oubli : les gardes `monProfil().get('role', '')` et
 // `monProfil().get('groupes', [])`, ainsi que le `exists()` de `monProfil()`. Essai du

@@ -18,11 +18,25 @@
     "  - l'auteur est élève du groupe, ET le jeu n'est pas gelé (gele != true, car ! refuse un null), ET",
     "    (la ligne est la sienne OU la table est déclarée à écriture partagée dans meta/ouvert).",
     "",
-    "communs/{aid} : lisible par tout compte authentifié, et depuis l'ajout des classements",
-    "de quiz, un élève peut y écrire LA SEULE ligne dont la clé est son propre uid. C'est ce",
-    "qui permet un classement visible par toutes les classes sans passer par l'enseignant.",
+    "communs/{aid} : le référentiel partagé entre toutes les classes. Lisible par tout compte",
+    "authentifié, écrit par les seuls enseignants globaux. N'y ouvrez pas l'écriture aux",
+    "élèves : les classements de quiz ont leur propre branche, pour que celle-ci garde une",
+    "règle unique.",
+    "",
+    "classements/{aid}/{uid} : le classement d'un quiz d'entraînement, commun à toutes les",
+    "classes. Chacun écrit LA SEULE ligne dont la clé est son propre uid, et personne ne",
+    "touche à celle d'un autre.",
+    "Le .write posé un cran plus haut, sur {aid}, sert à l'enseignant pour remettre un",
+    "classement à zéro d'un seul geste : sans lui il ne pourrait effacer que ligne par",
+    "ligne, et la suppression s'arrêterait en chemin. Meme motif que le .write sur",
+    "jeux/{gid}, ajoute le 30/09. Il n'elargit rien pour les eleves : leur regle plus",
+    "profonde reste evaluee, et les .validate s'appliquent a tout le monde.",
+    "Les .validate ne protègent aucun secret : ils empêchent de",
+    "se servir du classement comme d'un espace de stockage libre, la Realtime Database étant",
+    "facturée à la bande passante.",
     "Conséquence à connaître : ce qu'un élève écrit là est lu par les élèves des autres",
-    "groupes. Le site n'y met donc que le prénom et l'initiale du nom."
+    "groupes. Le site n'y met donc AUCUN nom par défaut, et le prénom suivi de l'initiale",
+    "du nom si l'élève demande à s'attribuer son score."
   ],
 
   "rules": {
@@ -66,12 +80,25 @@
         ".read": "auth != null",
         "$table": {
           "$ligne": {
-            ".write": "auth != null && ( root.child('profsGlobaux').child(auth.uid).exists() || $ligne === auth.uid )",
-            "nom":   { ".validate": "newData.isString() && newData.val().length < 80" },
-            "score": { ".validate": "newData.isNumber()" },
-            "max":   { ".validate": "newData.isNumber()" },
-            "temps": { ".validate": "newData.isNumber()" }
+            ".write": "auth != null && root.child('profsGlobaux').child(auth.uid).exists()"
           }
+        }
+      }
+    },
+
+    "classements": {
+      "$aid": {
+        ".read": "auth != null",
+        ".write": "auth != null && root.child('profsGlobaux').child(auth.uid).exists()",
+        "$uid": {
+          ".write": "auth != null && ( $uid === auth.uid || root.child('profsGlobaux').child(auth.uid).exists() )",
+          "nom":    { ".validate": "newData.isString() && newData.val().length < 80" },
+          "groupe": { ".validate": "newData.isString() && newData.val().length < 60" },
+          "gid":    { ".validate": "newData.isString() && newData.val().length < 60" },
+          "score":  { ".validate": "newData.isNumber()" },
+          "max":    { ".validate": "newData.isNumber()" },
+          "temps":  { ".validate": "newData.isNumber()" },
+          "ts":     { ".validate": "newData.isNumber()" }
         }
       }
     },
