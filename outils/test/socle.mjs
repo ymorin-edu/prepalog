@@ -160,10 +160,10 @@ await v('rubriques : les activités sont rangées par numéro de module', async 
     if (r.codes.join(' ') !== attendu) throw new Error(`rubrique ${label} : ${r.codes.join(' ')}`);
   };
   repere('Tableur', 'TAB-1 TAB-2 TAB-3 TAB-4 TAB-5');
-  // Deux entreprises, et le rang se lit sur le premier chiffre : les trois séances Spartoo
-  // (ENT-1.x), puis Boost (ENT-3.x). TechPro prendra ENT-2.x et viendra s'insérer entre les
-  // deux sans qu'on touche à cette liste autrement qu'en l'allongeant.
-  repere('Logisim', 'ENT-1.1 ENT-1.2 ENT-1.3 ENT-3.1');
+  // Trois entreprises, et le rang se lit sur le premier chiffre : les trois séances Spartoo
+  // (ENT-1.x), puis Cdiscount (ENT-2.x, depuis le 02/10/2026), puis Boost (ENT-3.x). Une séance
+  // nouvelle s'insère à son rang : on ne touche à cette liste qu'en l'allongeant.
+  repere('Logisim', 'ENT-1.1 ENT-1.2 ENT-1.3 ENT-2.1 ENT-3.1');
 });
 
 // ---------- 7. l'élève voit la base commune de la classe
@@ -297,6 +297,12 @@ await v('note sur 20 : la conversion et ses cas de bord', async () => {
 // la fonction vérifiée), le tableau des déclarations validé par Tristan (figé ici : une
 // compétence qui change doit se voir), puis l'écran et l'export, pilotés comme un prof.
 
+// Le nombre de séances du registre qui déclarent une compétence (ajouté le 02/10/2026, chantier D).
+const nbSeances = (comp) => page.evaluate(async (k) => {
+  const m = await import('/activites/index.js');
+  return (await m.chargerActivites()).filter((a) => (a.meta.competences || []).includes(k)).length;
+}, comp);
+
 await v('compétences : moyenne pondérée, coefficients et cas de bord, à l\'unité', async () => {
   const C = await import(pathToFileURL(path.join(ROOT, 'core/competences.js')).href);
   // Coefficients : défauts 1 / 1 / 1 / 3, valeurs du groupe prioritaires, valeur abîmée = défaut.
@@ -405,9 +411,13 @@ await v('compétences : l\'écran, les coefficients du groupe et l\'export CSV',
   await ouvrir();
   const entetes = await page.$$eval('#tabComp thead th', (t) => t.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));
   if (!entetes.some((t) => /^C1\.6/.test(t))) throw new Error('pas de colonne C1.6 : ' + entetes.join(' | '));
-  // (8×1 + 16×3) / 4 = 14 ; deux séances faites sur les sept de C1.6.
+  // (8×1 + 16×3) / 4 = 14 ; deux séances faites sur toutes celles de C1.6. Le nombre de séances
+  // C1.6 est relu dans le registre (il était écrit en dur, 7, et chaque séance Cdiscount le
+  // faisait tomber) : ce test juge la moyenne, pas l'inventaire des séances.
+  const nC16 = await nbSeances('C1.6');
+  if (nC16 < 7) throw new Error(`${nC16} séances C1.6 lues dans le registre : lecture cassée`);
   let c = await lire();
-  if (!/^14\/20 \(2\/7\)$/.test(c['C1.6'] || '')) throw new Error('C1.6 : ' + c['C1.6'] + ' au lieu de 14/20 (2/7)');
+  if (c['C1.6'] !== `14/20 (2/${nC16})`) throw new Error('C1.6 : ' + c['C1.6'] + ` au lieu de 14/20 (2/${nC16})`);
   const titre = c['C1.6:titre'] || '';
   if (!/SCE-2 \(évaluation, coef 3\) : 16 \/ 20/.test(titre) || !/QUI-7 .*pas faite/.test(titre)) {
     throw new Error('détail en infobulle : ' + titre);
@@ -443,7 +453,7 @@ await v('compétences : l\'écran, les coefficients du groupe et l\'export CSV',
   }
   const l16 = lignes.find((l) => /^DUPONT;Léa;C1\.6;/.test(l));
   if (!l16) throw new Error('pas de ligne DUPONT C1.6');
-  if (!/;2 sur 7;14$/.test(l16)) throw new Error('ligne C1.6 : ' + l16);
+  if (!l16.endsWith(`;2 sur ${nC16};14`)) throw new Error('ligne C1.6 : ' + l16);
   if (!/SCE-1 \(guidage, coef 1\) : 8 \/ 20/.test(l16)) throw new Error('détail SCE-1 absent : ' + l16);
   const nbComp = (await page.$$('#tabComp thead th')).length - 1;
   const nbEl = (await page.$$('#tabComp tbody tr')).length;
@@ -477,7 +487,8 @@ await v('suivi : mettre 0 à un élève présent qui n\'a rien fait, l\'effacer,
   await page.waitForSelector('#tabComp');
   const c16 = await page.$$eval('#tabComp tbody tr', (lignes) => lignes.find((x) => /DUPONT/.test(x.textContent))
     .querySelector('td[data-comp="C1.6"]')?.textContent.replace(/\s+/g, ' ').trim());
-  if (c16 !== '0/20 (1/7)') throw new Error('C1.6 avec le 0 : ' + c16);
+  const nC16 = await nbSeances('C1.6');
+  if (c16 !== `0/20 (1/${nC16})`) throw new Error('C1.6 avec le 0 : ' + c16 + ` au lieu de 0/20 (1/${nC16})`);
   // La croix efface le 0 : retour au tiret.
   await page.click('[data-ong="suivi"]');
   await page.waitForSelector(EFF);
