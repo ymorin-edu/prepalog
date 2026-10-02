@@ -7,9 +7,8 @@
 // détaillée (décision de Tristan, 02/10/2026). Détail et données :
 // `contenus/cdiscount-inventaire.js` ; écran : `core/types/inventaire.js`.
 //
-// **`pret: false`** tant que Tristan ne l'a pas validée à l'écran (règle 4 du tableau des
-// chantiers) : la séance est cachée aux élèves, quel que soit le groupe. Ni trame ni corrigé
-// écrits : ils viendront après sa validation.
+// **`pret: true`** : validée à l'écran par Tristan (02/10/2026). Pas de trame papier (« Tout à
+// l'écran ») ; corrigé détaillé donné par l'écran Inventaire lui-même.
 
 import { creerEntreprise } from '../core/types/entreprise.js';
 import * as CDISCOUNT from '../contenus/cdiscount.js';

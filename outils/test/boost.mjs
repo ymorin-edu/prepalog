@@ -1511,4 +1511,322 @@ await v('ENT-3.1 : aucune erreur de console sur tout le parcours', async () => {
   if (erreursBo.length) throw new Error([...new Set(erreursBo)].slice(0, 3).join(' | '));
 });
 
+/* ===================================================================================== */
+/* ENT-3.2 — Boost, la tournée sous contrainte (entraînement, C2.4)                       */
+/*                                                                                        */
+/* Ajouté le 02/10/2026 (chantier A). On passe par l'activité réelle                      */
+/* (`activites/boost-ent32.js`) et par l'écran : la déclaration de la séance, les chiffres */
+/* de la journée (écrits ICI à la main), le mail, la feuille de calcul, les jauges        */
+/* muettes, et surtout les huit jalons — dont les deux paliers du trajet le plus court,   */
+/* dont l'optimum est recalculé par le contenu et jamais recopié.                         */
+/* ===================================================================================== */
+
+const ctx32 = await nav.newContext({ viewport: { width: 1440, height: 900 } });
+const page32 = await ctx32.newPage();
+page32.setDefaultTimeout(8000);
+if (process.env.LENT) { const cdp = await ctx32.newCDPSession(page32); await cdp.send('Emulation.setCPUThrottlingRate', { rate: Number(process.env.LENT) }); }
+const erreurs32 = [];
+page32.on('pageerror', (e) => erreurs32.push('PAGEERROR: ' + e.message));
+page32.on('console', (m) => { if (m.type() === 'error' && !/\b404\b/.test(m.text())) erreurs32.push('CONSOLE: ' + m.text()); });
+await page32.goto('http://127.0.0.1:8099/');
+await page32.waitForSelector('#btnProf', { timeout: 8000 });
+
+await page32.evaluate(async () => {
+  const act = await import('/activites/boost-ent32.js');
+  const hote = document.createElement('div');
+  hote.id = 'boost32';
+  document.body.appendChild(hote);
+  const db = {};
+  const suivi = [];
+  act.rendre(hote, {
+    meta: act.meta,
+    profil: { prenom: 'Lea', nom: 'Dupont', role: 'eleve' },
+    jeu: { etat: () => db, sauver: () => {} },
+    enregistrer: (r) => suivi.push(r),
+    quitter: () => {}, codeStock: 'ABC',
+  });
+  window.__b32 = { act, db, suivi, hote };
+});
+const z32 = '#boost32 .ent-main';
+const ouvrir32 = async (vue) => { await page32.click(`#boost32 .ent-nav[data-vue="${vue}"]`); await page32.waitForTimeout(140); };
+const etat32 = (vue) => page32.evaluate((v) => {
+  const t = window.__b32.db.transport && window.__b32.db.transport['boost-ent32'];
+  return t ? JSON.parse(JSON.stringify(t[v] || {})) : null;
+}, vue);
+const texte32 = async (sel) => (await page32.textContent(sel || z32)).replace(/\s+/g, ' ').trim();
+const jalons32 = () => page32.evaluate(async () => {
+  const S = await import('/contenus/boost-ent32.js');
+  const o = {};
+  S.ETAPES.forEach((e) => { o[e.id] = e.verifier(window.__b32.db).status; });
+  return o;
+});
+const jalon32 = (id) => page32.evaluate(async (id) => {
+  const S = await import('/contenus/boost-ent32.js');
+  return S.ETAPES.find((e) => e.id === id).verifier(window.__b32.db);
+}, id);
+// Le même repère que le bloc `carte` : ni la page ni la carte ne bougent pendant 5 images.
+const immobile32 = () => page32.evaluate(() => new Promise((ok) => {
+  let y = null, n = 0;
+  const f = () => {
+    const s = document.querySelector('#boost32 [data-ct-svg]');
+    const cle = window.scrollY + '|' + (s ? s.getAttribute('viewBox') : '');
+    if (cle === y) n++; else { n = 0; y = cle; }
+    if (n >= 5) ok(); else requestAnimationFrame(f);
+  };
+  requestAnimationFrame(f);
+}));
+const point32 = async (sel) => { await immobile32(); await page32.click(`${z32} ${sel}`, { force: true }); };
+// Les quatre nouveaux posés par la base (le repérage au clic est gardé par le bloc `carte`).
+const poserNouveaux32 = () => page32.evaluate(() => {
+  const d = window.__b32.db;
+  d.transport = d.transport || {};
+  const t = d.transport['boost-ent32'] = d.transport['boost-ent32'] || {};
+  t.plan = { places: { c1: 1, c2: 1, c3: 1, c4: 1 }, essais: {}, valide: Date.now() };
+});
+// Remet la tournée à zéro, puis la construit au CLIC : départ, clients dans l'ordre, arrivée,
+// et les clients à quai se déduisent (le départ part vide).
+const construire32 = async (ordre, { depart = true, arrivee = true } = {}) => {
+  await page32.evaluate(() => {
+    const t = window.__b32.db.transport['boost-ent32'];
+    t.tournee = { ordre: [], quai: ['c1', 'c2', 'c3', 'c4', 'c5', 'c6', 'c7', 'c8'], report: {}, juge: {}, depart: null, arrivee: null, valide: null };
+  });
+  await ouvrir32('plan');
+  await ouvrir32('tournee');
+  if (depart) await point32('[data-clic-extremite="depart"]');
+  for (const id of ordre) await point32(`[data-clic-point="${id}"]`);
+  if (arrivee) await point32('[data-clic-extremite="arrivee"]');
+  await page32.waitForTimeout(80);
+};
+// Les valeurs ATTENDUES de la journée, écrites ici à la main (calage de `calibrer.mjs`).
+const ORDRE32 = ['c6', 'c7', 'c8', 'c3', 'c4', 'c1', 'c2'];   // meilleur qui tient tout : 12,54 km
+const COURT32 = ['c4', 'c3', 'c8', 'c1', 'c2', 'c7', 'c6'];   // le plus court : 11,00 km, rate le créneau
+
+await v('ENT-3.2 : la séance est un entraînement de C2.4, cachée aux élèves, sans notation', async () => {
+  const r = await page32.evaluate(async () => {
+    const { meta } = await import('/activites/boost-ent32.js');
+    const { ETAPES } = await import('/contenus/boost-ent32.js');
+    const reg = await import('/activites/index.js');
+    const liste = reg.ACTIVITES || reg.default || [];
+    const m = await Promise.all((Array.isArray(liste) ? liste : []).map((f) => (typeof f === 'function' ? f() : f)));
+    return { meta, nb: ETAPES.length, ids: ETAPES.map((e) => e.id),
+      inscrite: m.some((x) => x && x.meta && x.meta.id === 'boost-ent32'), registre: Array.isArray(liste) ? liste.length : -1 };
+  });
+  const m = r.meta;
+  if (m.code !== 'ENT-3.2' || m.temps !== 'entrainement' || m.competences.join() !== 'C2.4') throw new Error('déclaration : ' + JSON.stringify(m));
+  if (m.pret !== false) throw new Error('pret devrait être false tant que Tristan n’a pas validé la séance');
+  if ('notation' in m) throw new Error('une séance notée sur 20 ne déclare pas de `notation`');
+  if (m.jeuId !== 'boost' || m.reinitialisable) throw new Error('la base de Boost est partagée avec ENT-3.1 : ni jeu à part, ni remise à zéro');
+  if (r.nb !== 8 || m.bareme !== 8) throw new Error('barème : ' + m.bareme + ' pour ' + r.nb + ' jalons');
+  if (r.ids.join() !== 'reperage,choix,charge,horaire,creneau,formules,trajet10,trajet5') throw new Error('jalons : ' + r.ids.join());
+  if (r.registre > 0 && !r.inscrite) throw new Error('la séance n’est pas dans le registre');
+});
+
+await v('ENT-3.2 : la journée — huit clients, 230 kg pour 180, seule la Cave Teissier peut rester à quai', async () => {
+  const r = await page32.evaluate(async () => {
+    const S = await import('/contenus/boost-ent32.js');
+    return { n: S.CLIENTS.length, nouveaux: S.NOUVEAUX.map((c) => c.id), total: S.TOTAL, aQuai: S.A_QUAI,
+      cren: S.CRENEAU && { id: S.CRENEAU.id, avant: S.CRENEAU.creneau.avant }, j: S.JOURNEE,
+      refs: [S.REF_TOTAL, S.REF_ECART], opt: S.optimum(),
+      seuls: S.CLIENTS.filter((c) => c.kg >= S.TOTAL - S.JOURNEE.chargeUtile).map((c) => c.id) };
+  });
+  if (r.n !== 8 || r.nouveaux.join() !== 'c1,c2,c3,c4') throw new Error('clients : ' + JSON.stringify([r.n, r.nouveaux]));
+  if (r.total !== 230) throw new Error('total ' + r.total + ' kg au lieu de 230');
+  if (r.seuls.join() !== 'c5' || r.aQuai !== 'c5') throw new Error('à quai : ' + r.aQuai + ' (seuls : ' + r.seuls + ')');
+  if (!r.cren || r.cren.id !== 'c6' || r.cren.avant !== 885) throw new Error('créneau : ' + JSON.stringify(r.cren));
+  if (r.j.depart !== 850 || r.j.limite !== 970 || r.j.chargeUtile !== 180) throw new Error('journée : ' + JSON.stringify(r.j));
+  if (r.refs.join() !== 'B10,B12') throw new Error('cellules du calcul : ' + r.refs);
+  // La meilleure tournée qui tient tout, recalculée par le contenu : celle du calage.
+  if (r.opt.ordre.join() !== ORDRE32.join()) throw new Error('optimum : ' + r.opt.ordre.join());
+  if (Math.abs(r.opt.km - 12.545) > 0.01) throw new Error('optimum : ' + r.opt.km + ' km au lieu de 12,54');
+});
+
+await v('ENT-3.2 : les jalons ne reprochent rien avant que l’élève ait commencé', async () => {
+  const j = await jalons32();
+  const ko = Object.keys(j).filter((k) => j[k] === 'ko');
+  if (ko.length) throw new Error('jalon(s) à tort en « ko » : ' + ko.join(', '));
+  const faits = Object.keys(j).filter((k) => j[k] === 'ok');
+  if (faits.length) throw new Error('jalon(s) validé(s) sans rien avoir fait : ' + faits.join(', '));
+  const s = await page32.evaluate(() => { const l = window.__b32.suivi; return l.length ? l[l.length - 1] : null; });
+  if (!s) throw new Error('aucun avancement remonté au suivi');
+  if (s.max !== 8 || s.score !== 0) throw new Error('suivi : ' + s.score + '/' + s.max);
+});
+
+await v('ENT-3.2 : le mail du responsable porte la fiche des huit commandes et le créneau, sans la réponse', async () => {
+  await ouvrir32('mail');
+  if (!/Tournée vélo-cargo de cet après-midi/.test(await texte32())) throw new Error('le mail de la séance n’est pas semé');
+  const t = await page32.evaluate(() => {
+    const l = window.__b32.db.mails.filter((x) => /cet après-midi/.test(x.subject));
+    return l.length === 1 ? l[0].text.replace(/\s+/g, ' ') : 'EXEMPLAIRES:' + l.length;
+  });
+  if (/^EXEMPLAIRES/.test(t)) throw new Error('mail semé ' + t);
+  for (const nom of ['Torréfaction Guiraud', 'Mercerie Pellet', 'Atelier Ribot', 'Herboristerie Mazel', 'Cave Teissier',
+    'Pâtisserie Arnaud', 'Papeterie Bonnet', 'Épicerie Roussel']) {
+    if (!t.includes(nom)) throw new Error('la fiche ne porte pas ' + nom);
+  }
+  if (!/avant 14 h 45/.test(t)) throw new Error('le créneau n’est pas dans le mail');
+  if ((t.match(/nouveau client/g) || []).length !== 4) throw new Error('les quatre nouveaux clients ne sont pas signalés');
+  if (!/14 h 10/.test(t) || !/16 h 10/.test(t)) throw new Error('départ 14 h 10 / train 16 h 10 absents');
+  // Le mail ne fait pas le travail de la feuille : ni le total, ni ce qu'il faut écarter.
+  if (/\b230\b/.test(t) || /\b50 kg\b/.test(t)) throw new Error('le mail donne le total ou la masse à écarter');
+});
+
+await v('ENT-3.2 : la tournée est fermée tant que les quatre nouveaux ne sont pas situés', async () => {
+  await ouvrir32('tournee');
+  if (await page32.$(`${z32} [data-clic-point]`)) throw new Error('la tournée est ouverte avant le repérage');
+  const j = await jalon32('reperage');
+  if (j.status !== 'na') throw new Error('repérage : ' + j.status);
+});
+
+await v('ENT-3.2 : la bonne tournée se construit à la carte — jalons sur les trajets, créneau tenu', async () => {
+  await poserNouveaux32();
+  await construire32(ORDRE32);
+  const t = await etat32('tournee');
+  if (t.ordre.join() !== ORDRE32.join()) throw new Error('ordre construit : ' + t.ordre.join());
+  if (t.quai.join() !== 'c5') throw new Error('à quai : ' + t.quai.join());
+  const j = await jalons32();
+  for (const k of ['reperage', 'charge', 'horaire', 'creneau', 'trajet10', 'trajet5']) {
+    if (j[k] !== 'ok') throw new Error(k + ' : ' + j[k] + ' — ' + JSON.stringify(j));
+  }
+  // La feuille n'est pas encore faite : « choix » et « formules » ne sont pas validés.
+  if (j.choix === 'ok' || j.formules === 'ok') throw new Error('choix/formules validés sans calcul : ' + JSON.stringify(j));
+});
+
+await v('ENT-3.2 : les jauges sont muettes — la limite, jamais le total ni l’heure d’arrivée', async () => {
+  const t = await texte32();
+  // 178 kg chargés, retour à 15 h 55, arrivée chez la pâtisserie vers 14 h 29 : rien de tout ça ne s'écrit.
+  if (/\b178\b/.test(t)) throw new Error('la jauge donne le poids chargé');
+  if (/15 h 55/.test(t)) throw new Error('la jauge donne l’heure d’arrivée à la gare');
+  const cr = await texte32(`${z32} [data-creneau="c6"]`);
+  if (!/14 h 45/.test(cr)) throw new Error('la limite du créneau n’est pas lisible : ' + cr);
+  if (/ \/ /.test(cr) || /Arrivée prévue/.test(cr)) throw new Error('la jauge de créneau donne l’heure d’arrivée : ' + cr);
+  if (!/180/.test(t)) throw new Error('la limite de 180 kg n’est pas lisible');
+  if (/raté de|retard de/.test(t)) throw new Error('un retard chiffré est affiché');
+});
+
+await v('ENT-3.2 : la feuille — huit poids, total, charge utile, poids à écarter ; la formule est exigée', async () => {
+  await ouvrir32('tournee');
+  const lignes = await page32.$$eval(`${z32} .gr-table tr, ${z32} table tr`, (tr) => tr.map((r) => r.textContent.replace(/\s+/g, ' ').trim()));
+  const txt = lignes.join(' | ');
+  for (const nom of ['Cave Teissier', 'Pâtisserie Arnaud', 'Poids total des commandes', 'Poids à laisser à quai', 'Poids chargé']) {
+    if (!txt.includes(nom)) throw new Error('la feuille ne porte pas « ' + nom + ' » : ' + txt.slice(0, 300));
+  }
+  if (!/Heure d’arrivée chez Pâtisserie Arnaud/.test(txt)) throw new Error('pas de ligne pour l’heure d’arrivée chez le client à créneau');
+  // Un nombre tapé à la main est refusé, même juste : on veut la formule.
+  await page32.fill(`${z32} [data-gr="B12"]`, '50');
+  await page32.fill(`${z32} [data-gr="B10"]`, '=SOMME(B2:B9)');
+  await page32.click(`${z32} [data-gr-verifier]`);
+  await page32.waitForTimeout(200);
+  const g = (await etat32('tournee')).grille;
+  if (g.juge.B10 !== 'ok') throw new Error('B10 : ' + g.juge.B10);
+  if (g.juge.B12 !== 'pasFormule') throw new Error('B12 tapé à la main devrait être « pasFormule » : ' + g.juge.B12);
+  const j = await jalon32('choix');
+  if (j.status === 'ok') throw new Error('« choix » validé avec un nombre tapé à la main');
+});
+
+await v('ENT-3.2 : les formules justes valident le calcul, « choix » et « formules » — 8 jalons sur 8', async () => {
+  const formules = { B10: '=SOMME(B2:B9)', B12: '=B10-B11', B13: '=B10-B6',
+    B17: '=B15/B16', B18: '=B17*60', B21: '=B19*B20', B22: '14:10', B23: '=B22+B18+B21',
+    B28: '=B22+B26/B16*60+B27*B20' };
+  for (const [ref, f] of Object.entries(formules)) {
+    await page32.fill(`${z32} [data-gr="${ref}"]`, f);
+    await page32.waitForTimeout(40);
+  }
+  await page32.click(`${z32} [data-gr-verifier]`);
+  await page32.waitForTimeout(250);
+  const g = (await etat32('tournee')).grille;
+  const pas = Object.keys(g.juge).filter((k) => g.juge[k] !== 'ok');
+  if (pas.length) throw new Error('cellules non justes : ' + pas.map((k) => k + '=' + g.juge[k]).join(', '));
+  const j = await jalons32();
+  const nonOk = Object.keys(j).filter((k) => j[k] !== 'ok');
+  if (nonOk.length) throw new Error('jalon(s) non validé(s) : ' + nonOk.join(', ') + ' — ' + JSON.stringify(j));
+  const s = await page32.evaluate(() => { const l = window.__b32.suivi; return l[l.length - 1]; });
+  if (s.score !== 8 || s.max !== 8) throw new Error('suivi : ' + s.score + '/' + s.max);
+});
+
+await v('ENT-3.2 : le trajet le plus court rate le créneau — les deux paliers de distance tombent, les autres non', async () => {
+  await construire32(COURT32);
+  const j = await jalons32();
+  if (j.creneau !== 'ko') throw new Error('créneau : ' + j.creneau);
+  if (j.trajet10 !== 'ko' || j.trajet5 !== 'ko') throw new Error('un trajet qui rate le créneau ne vaut pas les paliers : ' + JSON.stringify(j));
+  if (j.horaire !== 'ok' || j.charge !== 'ok') throw new Error('train et charge devraient tenir : ' + JSON.stringify(j));
+  const d = await jalon32('creneau');
+  if (!/Pâtisserie Arnaud/.test(d.detail)) throw new Error('le détail ne nomme pas le client : ' + d.detail);
+  // La pastille de la jauge muette dit QUE le créneau est raté.
+  const cr = await texte32(`${z32} [data-creneau="c6"]`);
+  if (!/Créneau raté/.test(cr)) throw new Error('la jauge ne signale pas le créneau raté : ' + cr);
+});
+
+await v('ENT-3.2 : les paliers — à 10 % oui, à 5 % non, au-delà aucun ; recalculés sur les 5 040 ordres', async () => {
+  const r = await page32.evaluate(async () => {
+    const S = await import('/contenus/boost-ent32.js');
+    const C = (await import('/contenus/boost-ent32-carte.js')).CARTE;
+    const J = S.JOURNEE;
+    const d = (a, b) => C.trajets[`${a}|${b}`].m;
+    const ids = S.CLIENTS.filter((c) => c.id !== 'c5').map((c) => c.id);
+    function* perms(a) { if (a.length < 2) { yield a; return; } for (let i = 0; i < a.length; i++) for (const p of perms([...a.slice(0, i), ...a.slice(i + 1)])) yield [a[i], ...p]; }
+    const tiennent = [];
+    for (const p of perms(ids)) {
+      const ch = ['depart', ...p, 'arrivee']; let m = 0, ok = true;
+      for (let i = 1; i < ch.length; i++) {
+        m += d(ch[i - 1], ch[i]);
+        if (ch[i] === 'c6' && J.depart + m / 1000 / J.vitesse * 60 + (i - 1) * J.service > 885) ok = false;
+      }
+      if (J.depart + m / 1000 / J.vitesse * 60 + 7 * J.service > J.limite) ok = false;
+      if (ok) tiennent.push({ p, km: m / 1000 });
+    }
+    const best = Math.min(...tiennent.map((t) => t.km));
+    const pris = (min, max) => tiennent.find((t) => t.km > best * min && t.km <= best * max);
+    const etat = (p) => ({ ordre: p, quai: ['c5'], depart: 1, arrivee: 1, report: {}, juge: {} });
+    const verdict = (t) => {
+      window.__b32.db.transport['boost-ent32'].tournee = etat(t.p);
+      return ['trajet10', 'trajet5'].map((k) => S.ETAPES.find((e) => e.id === k).verifier(window.__b32.db).status).join();
+    };
+    const meilleur = tiennent.find((t) => t.km === best);
+    const entre = pris(1.05, 1.10), loin = pris(1.10, 9);
+    return { n: tiennent.length, best, p10: tiennent.filter((t) => t.km <= best * 1.10).length, p5: tiennent.filter((t) => t.km <= best * 1.05).length,
+      v0: verdict(meilleur), v10: entre && verdict(entre), vloin: loin && verdict(loin), entre: entre && entre.km / best, loin: loin && loin.km / best };
+  });
+  // Les effectifs du calage : 371 ordres tiennent tout, 57 à moins de 10 %, 17 à moins de 5 %.
+  if (r.n !== 371 || r.p10 !== 57 || r.p5 !== 17) throw new Error('effectifs : ' + JSON.stringify([r.n, r.p10, r.p5]));
+  if (r.v0 !== 'ok,ok') throw new Error('la meilleure tournée : ' + r.v0);
+  if (r.v10 !== 'ok,ko') throw new Error('entre 5 et 10 % (' + (r.entre * 100 - 100).toFixed(1) + ' %) : ' + r.v10);
+  if (r.vloin !== 'ko,ko') throw new Error('au-delà de 10 % (' + (r.loin * 100 - 100).toFixed(1) + ' %) : ' + r.vloin);
+});
+
+await v('ENT-3.2 : un mauvais client à quai fait tomber « choix », « charge » et les paliers', async () => {
+  // La Pâtisserie reste à quai à la place de la Cave : on charge donc 230 − 31 = 199 kg.
+  await construire32(['c5', 'c7', 'c8', 'c3', 'c4', 'c1', 'c2']);
+  let j = await jalons32();
+  if (j.charge !== 'ko') throw new Error('charge : ' + j.charge);
+  if (j.choix !== 'ko') throw new Error('choix : ' + j.choix);
+  if (j.trajet10 !== 'ko') throw new Error('trajet10 : ' + j.trajet10);
+  // Tout chargé : le vélo-cargo déborde, et « choix » le dit.
+  await construire32(['c1', 'c2', 'c3', 'c4', 'c5', 'c6', 'c7', 'c8']);
+  const d = await jalon32('choix');
+  if (d.status !== 'ko' || !/déborde/.test(d.detail)) throw new Error('tout chargé : ' + JSON.stringify(d));
+});
+
+await v('ENT-3.2 : sans le départ ni l’arrivée, ni le train ni le créneau ne se gagnent', async () => {
+  await construire32(ORDRE32, { depart: false, arrivee: false });
+  let j = await jalons32();
+  if (j.horaire === 'ok' || j.creneau === 'ok') throw new Error('train/créneau validés sans départ ni arrivée : ' + JSON.stringify(j));
+  if (j.trajet10 === 'ok' || j.trajet5 === 'ok') throw new Error('paliers validés sans chaîne complète : ' + JSON.stringify(j));
+  // Départ posé, arrivée non : le créneau se juge (il ne dépend que du départ), le train non.
+  await construire32(ORDRE32, { depart: true, arrivee: false });
+  j = await jalons32();
+  if (j.creneau !== 'ok') throw new Error('créneau avec le départ posé : ' + j.creneau);
+  if (j.horaire === 'ok' || j.trajet10 === 'ok') throw new Error('train/paliers validés sans la gare : ' + JSON.stringify(j));
+});
+
+await v('ENT-3.2 : ENT-3.1 et ENT-3.2 ne s’écrasent pas — états cloisonnés dans la base commune de Boost', async () => {
+  const k = await page32.evaluate(() => Object.keys(window.__b32.db.transport || {}));
+  if (k.join() !== 'boost-ent32') throw new Error('clés de la base : ' + k.join());
+  const ids = await page32.evaluate(async () => [(await import('/contenus/boost-tournee.js')).TRANSPORT_ID, (await import('/contenus/boost-ent32.js')).TRANSPORT_ID]);
+  if (ids[0] === ids[1]) throw new Error('les deux séances partagent le même transportId : ' + ids[0]);
+});
+
+await v('ENT-3.2 : aucune erreur de console sur tout le parcours', async () => {
+  if (erreurs32.length) throw new Error([...new Set(erreurs32)].slice(0, 3).join(' | '));
+});
+
 }

@@ -679,6 +679,263 @@ Stock au dernier inventaire : 27 - 12 - 1 + 9 + 1 = 24`;
     if (erreurs22.length) throw new Error(erreurs22.slice(0, 3).join(' | '));
   });
 
+  /* ================================================================================
+   * ENT-2.3 « Régularisé à l'aveugle » (erreur induite) — ajouté le 03/10/2026, chantier D.
+   *
+   * Décisions de Tristan : le vrai problème est une LIVRAISON INCOMPLÈTE (Gardéo livre 8 mixeurs
+   * pour 12 annoncés, la réception valide les 12) ; l'élève répond par un message à lignes à
+   * intitulé ; séance d'entraînement hors évaluation, `pret: false`. Les valeurs attendues sont
+   * écrites À LA MAIN ici : un test qui les recalculerait avec le code de la séance ne verrait pas
+   * une erreur de données.
+   * ============================================================================== */
+
+  const S23 = await imp('contenus/cdiscount-regularise.js');
+  const STOCK_23 = { 'BOU-17L': 16, 'GRP-2F': 11, 'MIX-PLG': 9, 'MUL-4P': 37, 'PIL-AA-8': 75, 'VEI-LED': 9 };
+  const ids23 = S23.ETAPES.map((x) => x.id);
+  const tombes23 = (db) => { const st = statuts(S23, db); return ids23.filter((x, i) => st[i] !== 'ok'); };
+
+  const JUSTE_23 = `Ajustement à revoir : MIX-PLG, -4
+Ajustement justifié : GRP-2F, constat de casse DEM-26-0036
+Réception concernée : REC-26-0447
+Annoncé sur le bon de livraison : 12
+Réellement reçu : 8
+Valeur du manque : 4 × 12,60 = 50,40 €
+Motif exact : Erreur de réception
+Suite à donner : Réclamation auprès de Gardéo, livraison incomplète`;
+
+  await v('ENT-2.3 : volume déclaré = volume réel (6 références, 11 documents, 22 mouvements), plus fort qu\'ENT-2.1', async () => {
+    const db = ouvrir(S23);
+    const refs = new Set(db.moves.map((m) => m.sku));
+    // Documents : les réceptions, les commandes, et le constat de casse (un message).
+    const constats = db.mails.filter((m) => /^Constat de casse DEM-/.test(m.subject)).length;
+    const vol = { references: refs.size, documents: db.receptions.length + db.orders.length + constats, mouvements: db.moves.length };
+    if (JSON.stringify(vol) !== JSON.stringify({ references: 6, documents: 11, mouvements: 22 })) throw new Error('volume réel : ' + JSON.stringify(vol));
+    for (const k of Object.keys(S23.VOLUME)) if (S23.VOLUME[k] !== vol[k]) throw new Error(`${k} : déclaré ${S23.VOLUME[k]}, réel ${vol[k]}`);
+    if (S23.CATALOGUE.VARIANTS.length !== 6) throw new Error('la séance montre plus ou moins que ses six références');
+    if (!(refs.size > S21.VOLUME.references && db.moves.length > S21.VOLUME.mouvements)) throw new Error('le volume ne dépasse pas celui d\'ENT-2.1');
+    const meta = await page.evaluate(async () => (await import('/activites/cdiscount-regularise.js')).meta);
+    if (JSON.stringify(meta.volume) !== JSON.stringify(S23.VOLUME)) throw new Error('le meta ne déclare pas le volume de la séance');
+  });
+
+  await v('ENT-2.3 : mouvements datés dans l\'ordre, stock « après » sans trou, stock final écrit à la main', async () => {
+    const db = ouvrir(S23);
+    for (let i = 1; i < db.moves.length; i++) if (db.moves[i].ts < db.moves[i - 1].ts) throw new Error('mouvements dans le désordre');
+    if (db.moves.some((m) => m.ts > Date.now())) throw new Error('un mouvement est daté dans le futur');
+    if (db.moves.some((m) => m.ts < S23.dateInventaire())) throw new Error('un mouvement est antérieur à l\'inventaire');
+    const s = { ...S23.INVENTAIRE_PRECEDENT };
+    for (const m of db.moves) { s[m.sku] += m.delta; if (m.after !== s[m.sku]) throw new Error(`stock après faux sur ${m.sku} (${m.ref})`); if (s[m.sku] < 0) throw new Error(`stock négatif sur ${m.sku}`); }
+    for (const [k, n] of Object.entries(STOCK_23)) if (db.stock[k] !== n) throw new Error(`stock final de ${k} : ${db.stock[k]} au lieu de ${n}`);
+    // Chaque mouvement a son document : réception, bon de préparation, ou campagne d'inventaire.
+    const recs = new Set(db.receptions.map((r) => r.no)), bps = new Set(db.orders.map((o) => 'BP-' + o.no.replace('CMD-', '')));
+    for (const m of db.moves) {
+      const ok = recs.has(m.ref) || bps.has(m.ref) || m.ref.startsWith(S23.ID_CAMPAGNE + ' · ');
+      if (!ok) throw new Error(`mouvement sans document : ${m.sku} ${m.type} ${m.ref}`);
+      if (!Object.values(S23.TYPES).includes(m.type)) throw new Error(`type de mouvement inattendu : ${m.type}`);
+    }
+    // Le type d'un ajustement est celui que le moteur écrit lui-même (écran Inventaire, console).
+    if (S23.TYPES.ajustement !== 'Ajustement inventaire') throw new Error('type d\'ajustement différent de celui du moteur');
+    // Le « vu en stock » des bons de préparation est le stock juste avant la sortie.
+    for (const o of db.orders) for (const l of o.lines) {
+      const m = db.moves.find((x) => x.ref === 'BP-' + o.no.replace('CMD-', '') && x.sku === l.sku);
+      if (o.prep.rows[l.sku].seen !== m.after + l.qty) throw new Error(`${o.no} : « vu en stock » incohérent`);
+    }
+  });
+
+  await v('ENT-2.3 : le piège — un seul écart BL / colis, sur les mixeurs de REC-26-0447, et deux ajustements dont un seul est orphelin', async () => {
+    const db = ouvrir(S23);
+    const m = S23.manques(db);
+    if (m.length !== 1) throw new Error(`${m.length} écarts BL / colis au lieu d'un : ` + JSON.stringify(m));
+    if (JSON.stringify(m[0]) !== JSON.stringify({ rec: 'REC-26-0447', sku: 'MIX-PLG', annonce: 12, recu: 8, manque: 4 })) throw new Error('écart : ' + JSON.stringify(m[0]));
+    // La réception a pourtant été validée à la quantité du BL : c'est l'erreur du réceptionnaire.
+    const r = db.receptions.find((x) => x.no === 'REC-26-0447');
+    if (!r.ctrl.validated || r.ctrl.rows['MIX-PLG'].compte !== 12) throw new Error('la réception doit être validée à 12');
+    const entree = db.moves.find((x) => x.ref === 'REC-26-0447' && x.sku === 'MIX-PLG');
+    if (!entree || entree.delta !== 12) throw new Error('le stock doit être entré à la quantité du BL (12)');
+    // L'autre réception est irréprochable.
+    const autre = db.receptions.find((x) => x.no === 'REC-26-0441');
+    for (const l of autre.bl.lines) { const q = autre.colis.filter((c) => c.sku === l.sku).reduce((n, c) => n + c.qty, 0); if (q !== l.qty) throw new Error('REC-26-0441 devrait être conforme'); }
+    // Deux ajustements : MIX −4 « Démarque inconnue » et GRP −1 « Casse ».
+    const aj = db.moves.filter((x) => x.type === 'Ajustement inventaire');
+    if (aj.length !== 2) throw new Error(`${aj.length} ajustements au lieu de 2`);
+    const orph = aj.find((x) => x.sku === 'MIX-PLG'), just = aj.find((x) => x.sku === 'GRP-2F');
+    if (!orph || orph.delta !== -4 || !/Démarque inconnue/.test(orph.ref)) throw new Error('ajustement orphelin mal formé : ' + JSON.stringify(orph));
+    if (!just || just.delta !== -1 || !/Casse/.test(just.ref)) throw new Error('ajustement justifié mal formé : ' + JSON.stringify(just));
+    // Le justifié a son constat de casse ; l'orphelin n'en a aucun (seul l'indice du cariste y mène).
+    if (!db.mails.some((x) => /Constat de casse DEM-26-0036/.test(x.subject))) throw new Error('constat de casse DEM-26-0036 absent');
+    if (db.mails.some((x) => /DEM-/.test(x.subject + x.text) && /mixeur/i.test(x.subject + x.text))) throw new Error('un constat de casse justifie les mixeurs : plus d\'ajustement orphelin');
+    // Le stock du système avant l'ajustement orphelin est celui que cite le magasinier (13 → 9).
+    if (orph.after !== 9 || orph.after - orph.delta !== 13) throw new Error(`stock avant/après l'ajustement : ${orph.after - orph.delta} → ${orph.after}`);
+  });
+
+  await v('ENT-2.3 : l\'erreur est induite (« c\'est de la démarque »), l\'indice existe, le délai de réclamation est donné', async () => {
+    const db = ouvrir(S23);
+    const samir = db.mails.find((x) => x.fromMail === S23.SAMIR.mail);
+    if (!samir || !/C'est de la démarque/.test(samir.text) || !/Pas besoin d'aller plus loin/.test(samir.text)) throw new Error('le message du magasinier ne pousse pas à la conclusion rapide');
+    if (!/\b9\b/.test(samir.text) || !/\b13\b/.test(samir.text)) throw new Error('le message cite un autre stock que le vrai (13 → 9)');
+    const kevin = db.mails.find((x) => /un trou dans la couche de mixeurs/.test(x.subject));
+    if (!kevin || !kevin.text.includes('REC-26-0447')) throw new Error('indice du cariste absent');
+    if (kevin.ts < db.receptions.find((r) => r.no === 'REC-26-0447').ts) throw new Error('l\'indice du cariste est antérieur à la réception');
+    const mission = db.mails.find((x) => x.fromMail === CD.EQUIPE.cheffe.mail && /Ajustements de la semaine/.test(x.subject));
+    for (const l of S23.LIGNES_REPONSE) if (!mission.text.includes(l)) throw new Error('ligne à recopier absente du message : ' + l);
+    if (!new RegExp(`dans les ${S23.DELAI_RECLAMATION} jours qui suivent la livraison`).test(mission.text)) throw new Error('délai de réclamation absent');
+    // Il reste du temps : la réception date de moins que le délai (sinon la réclamation est perdue d'avance).
+    const jours = (Date.now() - db.receptions.find((r) => r.no === 'REC-26-0447').ts) / 864e5;
+    if (!(jours < S23.DELAI_RECLAMATION)) throw new Error('le délai de réclamation est déjà dépassé');
+    // Cinq messages : bienvenue, indice, magasinier, casse, mission.
+    if (db.mails.length !== 5) throw new Error(`${db.mails.length} messages au lieu de 5`);
+  });
+
+  await v('ENT-2.3 : sans réponse, aucun jalon n\'est acquis ; base nue ou sans écart BL / colis = « pas encore là »', async () => {
+    const db = ouvrir(S23);
+    const st = statuts(S23, db);
+    if (st.length !== 6 || st.some((s) => s !== 'attente')) throw new Error('statuts avant réponse : ' + st.join(', '));
+    const nue = S23.baseDeDepart('Léa'); nue.moves = []; nue.mails = []; nue.orders = [];
+    if (statuts(S23, nue).some((s) => s !== 'na')) throw new Error('un jalon juge une base sans mouvements');
+    // Si les colis font le compte, il n'y a plus de litige : les jalons se taisent au lieu de mentir.
+    const sain = ouvrir(S23);
+    sain.receptions.find((r) => r.no === 'REC-26-0447').colis.push({ no: 99, sku: 'MIX-PLG', qty: 4, etat: 'ok' });
+    repondre(sain, JUSTE_23);
+    if (statuts(S23, sain).some((s) => s !== 'na')) throw new Error('jalons sur une base sans litige : ' + statuts(S23, sain).join(', '));
+  });
+
+  await v('ENT-2.3 : la réponse juste valide les six jalons, calcul compris', async () => {
+    const db = ouvrir(S23);
+    repondre(db, JUSTE_23);
+    const st = statuts(S23, db);
+    if (st.some((s) => s !== 'ok')) throw new Error('statuts : ' + st.join(', '));
+    // La réponse attendue calculée depuis la base est, elle aussi, juste.
+    const db2 = ouvrir(S23);
+    repondre(db2, S23.reponseAttendue(db2));
+    if (tombes23(db2).length) throw new Error('reponseAttendue() ne valide pas : ' + tombes23(db2).join(', '));
+    // Écritures tolérées : « 50.4 », « 50,4 € », motif « livraison incomplète », « litige ».
+    const db3 = ouvrir(S23);
+    repondre(db3, JUSTE_23.replace('4 × 12,60 = 50,40 €', '50.4').replace('Erreur de réception', 'une livraison incomplète').replace('Réclamation auprès de Gardéo, livraison incomplète', 'ouvrir un litige avec le fournisseur'));
+    if (tombes23(db3).length) throw new Error('écritures tolérées refusées : ' + tombes23(db3).join(', '));
+  });
+
+  await v('ENT-2.3 : chaque erreur typique fait tomber SON jalon, et lui seul', async () => {
+    const cas = [
+      ['ajustements', 'Ajustement à revoir : MIX-PLG, -4', 'Ajustement à revoir : GRP-2F, -1'],                 // le casse justifié accusé à la place
+      ['ajustements', 'Ajustement à revoir : MIX-PLG, -4', 'Ajustement à revoir : MIX-PLG et GRP-2F'],          // « tout ajustement est suspect »
+      ['ajustements', 'GRP-2F, constat de casse DEM-26-0036', 'GRP-2F'],                                         // justifié deviné, sans le constat
+      ['ajustements', 'GRP-2F, constat de casse DEM-26-0036', 'MIX-PLG, constat de casse DEM-26-0036'],         // inversé
+      ['reception', 'Réception concernée : REC-26-0447', 'Réception concernée : REC-26-0441'],                  // la mauvaise réception
+      ['reception', 'Réception concernée : REC-26-0447', 'Réception concernée : REC-26-0447 et REC-26-0441'],   // les deux
+      ['quantites', 'Annoncé sur le bon de livraison : 12\nRéellement reçu : 8', 'Annoncé sur le bon de livraison : 8\nRéellement reçu : 12'], // inversées
+      ['quantites', 'Réellement reçu : 8', 'Réellement reçu : 12'],                                              // les colis non additionnés
+      ['valeur', '4 × 12,60 = 50,40 €', '4 × 27,99 = 111,96 €'],                                                // le prix de vente au lieu du prix d'achat
+      ['valeur', '4 × 12,60 = 50,40 €', '4 × 12,60 = 50,40 €\nValeur du manque : 4 €'],                          // la dernière ligne qui porte l'intitulé fait foi
+      ['motif', 'Motif exact : Erreur de réception', 'Motif exact : Démarque inconnue'],                         // l'erreur du magasinier reprise
+      ['suite', 'Suite à donner : Réclamation auprès de Gardéo, livraison incomplète', "Suite à donner : rien, c'est de la démarque"],
+    ];
+    for (const [id, avant, apres] of cas) {
+      if (!JUSTE_23.includes(avant.split('\n')[0]) && !JUSTE_23.includes(avant)) throw new Error(`cas mal écrit : ${avant}`);
+      const db = ouvrir(S23);
+      repondre(db, JUSTE_23.replace(avant, apres));
+      const tombes = tombes23(db);
+      if (tombes.length !== 1 || tombes[0] !== id) throw new Error(`« ${apres} » : tombent ${tombes.join(', ') || 'aucun'}, attendu ${id}`);
+    }
+  });
+
+  await v('ENT-2.3 : le meilleur essai est retenu, une réponse à un autre destinataire ne compte pas, une ligne absente tombe seule', async () => {
+    const db = ouvrir(S23);
+    repondre(db, JUSTE_23.replace('Réception concernée : REC-26-0447', 'Réception concernée : REC-26-0441'));
+    if (tombes23(db).join() !== 'reception') throw new Error('premier essai faux non détecté : ' + tombes23(db).join());
+    repondre(db, JUSTE_23);
+    if (tombes23(db).length) throw new Error('le second essai juste n\'est pas retenu');
+    const db2 = ouvrir(S23);
+    db2.mails.push({ folder: 'out', ts: Date.now(), toMail: CD.EQUIPE.quai.mail, text: JUSTE_23 });
+    if (statuts(S23, db2).some((s) => s !== 'attente')) throw new Error('une réponse au cariste est comptée');
+    const db3 = ouvrir(S23);
+    repondre(db3, JUSTE_23.split('\n').filter((l) => !l.startsWith('Motif exact')).join('\n'));
+    if (tombes23(db3).join() !== 'motif') throw new Error('ligne « Motif exact » absente : ' + tombes23(db3).join());
+  });
+
+  await v('ENT-2.3 : inscrite au registre, cachée tant que pret: false, parmi les séances C1.6, temps « erreur induite »', async () => {
+    const src = fs.readFileSync(path.join(ROOT, 'activites', 'index.js'), 'utf8');
+    if (!src.includes("import('./cdiscount-regularise.js')")) throw new Error('absente de activites/index.js');
+    const meta = await page.evaluate(async () => (await import('/activites/cdiscount-regularise.js')).meta);
+    if (meta.code !== 'ENT-2.3' || meta.temps !== 'erreur' || !meta.competences.includes('C1.6')) throw new Error('meta incomplet');
+    if (meta.bareme !== S23.ETAPES.length) throw new Error('barème ≠ nombre de jalons');
+    if (meta.reinitialisable) throw new Error('la remise à zéro est réservée aux séances X.1');
+    const { activiteVisible } = await imp('core/niveaux.js');
+    if (!meta.pret && activiteVisible(meta, { niveau: '1re' })) throw new Error('séance non prête visible des élèves');
+    const regs = await page.evaluate(async () => (await (await import('/activites/index.js')).chargerActivites()).map((a) => a.meta.code));
+    if (!regs.includes('ENT-2.3')) throw new Error('ENT-2.3 absente du registre chargé');
+  });
+
+  await v('ENT-2.3 : la séance s\'ouvre, se lit et se répond dans le vrai moteur — le litige est visible à l\'écran', async () => {
+    const res = await page.evaluate(async ({ CHEFFE, JUSTE_ }) => {
+      const mod = await import('/activites/cdiscount-regularise.js');
+      const hote = document.createElement('div');
+      hote.id = 'essaiCdiscount23';
+      document.body.appendChild(hote);
+      const db = {};
+      const ctx = { meta: mod.meta, profil: { prenom: 'Léa', role: 'eleve' }, codeStock: 'STOCK24',
+        jeu: { etat: () => db, sauver() {} }, enregistrer(r) { window.__cdScore23 = r; }, quitter() {} };
+      mod.rendre(hote, ctx);
+      const attendre = () => new Promise((r) => setTimeout(r, 60));
+      const clic = async (sel) => { const e = hote.querySelector(sel); if (!e) throw new Error('introuvable : ' + sel); e.click(); await attendre(); };
+      const out = {};
+      out.accent = getComputedStyle(document.body).getPropertyValue('--ardoise').trim();
+      await clic('[data-vue="mail"]');
+      out.mails = hote.querySelectorAll('.ent-mitem').length;
+      // La console, sur l'article en cause : six mouvements, dont l'ajustement.
+      await clic('[data-vue="console"]');
+      hote.querySelector('#champCmd').value = '.movements MIX-PLG';
+      hote.querySelector('#formCmd').dispatchEvent(new Event('submit', { cancelable: true }));
+      await attendre();
+      const tables = hote.querySelectorAll('.ent-cres table');
+      const derniere = tables.length ? tables[tables.length - 1] : null;
+      out.lignesConsole = derniere ? derniere.querySelectorAll('tbody tr').length : 0;
+      out.consoleAjust = derniere ? /Ajustement inventaire/.test(derniere.textContent) && /Démarque inconnue/.test(derniere.textContent) : false;
+      // Le stock, déverrouillé : six références, sans colonne couleur ni taille ; vingt-deux mouvements.
+      await clic('[data-vue="stock"]');
+      hote.querySelector('#codeStock').value = 'STOCK24';
+      await clic('[data-deverrouiller]');
+      out.lignesStock = hote.querySelectorAll('#entListe tbody tr').length;
+      out.colonne = [...hote.querySelectorAll('#entListe th')].map((t) => t.textContent.trim()).join('|');
+      await clic('[data-onglet="stock"][data-val="mouvements"]');
+      out.lignesMouv = hote.querySelectorAll('.panneau tbody tr').length;
+      // Les deux réceptions et les huit commandes ; la réception en litige montre 8 mixeurs de colis.
+      await clic('[data-vue="receptions"]');
+      out.receptions = hote.querySelectorAll('[data-ouvrir-rec]').length;
+      await clic('[data-ouvrir-rec="REC-26-0447"]');
+      const lignes = [...hote.querySelectorAll('.panneau tbody tr')].map((tr) => [...tr.querySelectorAll('td')].map((t) => t.textContent.trim()));
+      // Les lignes de colis : [n°, référence, désignation, contenu, état] ; le contrôle, lui, est ailleurs.
+      out.colisMixeurs = lignes.filter((l) => l[1] === 'MIX-PLG' && /^\d+$/.test(l[0])).reduce((n, l) => n + Number(l[3] || 0), 0);
+      out.controleMixeurs = (lignes.find((l) => l[0] === 'MIX-PLG' && l.includes('Accepté')) || []).join('/');
+      await clic('[data-vue="commandes"]');
+      out.commandes = hote.querySelectorAll('[data-ouvrir-cmd]').length;
+      // Répondre à la cheffe, comme l'élève.
+      await clic('[data-vue="mail"]');
+      const mission = [...db.mails].find((m) => m.fromMail === CHEFFE && /Ajustements de la semaine/.test(m.subject));
+      await clic(`[data-mail="${mission.id}"]`);
+      await clic('[data-repondre]');
+      hote.querySelector('#repT').value = JUSTE_;
+      hote.querySelector('#formRep').dispatchEvent(new Event('submit', { cancelable: true }));
+      await attendre();
+      out.score = window.__cdScore23;
+      hote.querySelector('[data-quitter]').click();
+      hote.remove();
+      return out;
+    }, { CHEFFE: CD.EQUIPE.cheffe.mail, JUSTE_: JUSTE_23 }).catch(async (e) => {
+      await page.evaluate(() => { document.getElementById('essaiCdiscount23')?.remove(); document.body.classList.remove('immersion'); document.body.removeAttribute('style'); });
+      throw e;
+    });
+    if (res.accent.toLowerCase() !== '#3732ff') throw new Error('accent de la charte non appliqué : ' + res.accent);
+    if (res.mails !== 5) throw new Error(`${res.mails} messages au lieu de 5`);
+    if (res.lignesConsole !== 6 || !res.consoleAjust) throw new Error(`.movements MIX-PLG : ${res.lignesConsole} lignes (6 attendues), ajustement lisible : ${res.consoleAjust}`);
+    if (res.lignesStock !== 6) throw new Error(`${res.lignesStock} lignes de stock au lieu de 6`);
+    if (/Couleur|Taille/.test(res.colonne)) throw new Error('colonnes Couleur ou Taille affichées : ' + res.colonne);
+    if (res.lignesMouv !== 22) throw new Error(`${res.lignesMouv} mouvements à l'écran au lieu de 22`);
+    if (res.receptions !== 2 || res.commandes !== 8) throw new Error(`${res.receptions} réceptions, ${res.commandes} commandes`);
+    if (res.colisMixeurs !== 8) throw new Error('les colis de mixeurs à l\'écran ne font pas 8 : ' + res.colisMixeurs);
+    if (!res.score || res.score.score !== 6 || res.score.max !== 6) throw new Error('score remonté : ' + JSON.stringify(res.score));
+    const reste = await page.evaluate(() => document.body.classList.contains('immersion'));
+    if (reste) throw new Error('la page n\'a pas été rendue propre');
+  });
+
   // ---------- la page d'essai (pour valider à l'écran une séance encore « pret: false »)
   await v('Cdiscount : la page d\'essai ouvre ENT-2.1 dans le vrai moteur et affiche ses jalons', async () => {
     // Un onglet à part : la page partagée de la suite n'est pas déplacée.
@@ -713,6 +970,25 @@ Stock au dernier inventaire : 27 - 12 - 1 + 9 + 1 = 24`;
       await p.waitForSelector('.ent-nav[data-vue="inventaire"]', { timeout: 6000 });
       const jalons = await p.$$eval('#jalons span', (s) => s.map((x) => x.textContent.trim()));
       if (jalons.length !== S22.ETAPES.length) throw new Error(`${jalons.length} jalons affichés au lieu de ${S22.ETAPES.length}`);
+      if (jalons.some((j) => !j.startsWith('⏳'))) throw new Error('jalons avant travail : ' + jalons.join(' | '));
+      if (errs.length) throw new Error(errs.join(' | '));
+    } finally { await ctx.close(); }
+  });
+
+  await v('Cdiscount : la page d\'essai ouvre aussi ENT-2.3, avec ses six jalons à « attente »', async () => {
+    const ctx = await nav.newContext();
+    const p = await ctx.newPage();
+    const errs = [];
+    p.on('pageerror', (e) => errs.push(e.message));
+    p.on('console', (m) => { if (m.type() === 'error' && !/\b404\b/.test(m.text())) errs.push(m.text()); });
+    try {
+      await p.goto(new URL('/outils/essai-cdiscount.html', page.url()).toString());
+      await p.waitForSelector('.ent-shell', { timeout: 6000 });
+      await p.selectOption('select[name="seance"]', 'cdiscount-regularise');
+      // ENT-2.3 n'a pas d'entrée de menu propre (pas d'écran Inventaire) : on attend que les six jalons de la séance remplacent ceux d'ENT-2.1.
+      await p.waitForFunction((n) => document.querySelectorAll('#jalons span').length === n, S23.ETAPES.length, { timeout: 6000 });
+      const jalons = await p.$$eval('#jalons span', (s) => s.map((x) => x.textContent.trim()));
+      if (jalons.length !== S23.ETAPES.length) throw new Error(`${jalons.length} jalons affichés au lieu de ${S23.ETAPES.length}`);
       if (jalons.some((j) => !j.startsWith('⏳'))) throw new Error('jalons avant travail : ' + jalons.join(' | '));
       if (errs.length) throw new Error(errs.join(' | '));
     } finally { await ctx.close(); }
