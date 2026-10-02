@@ -112,6 +112,9 @@ export const meta = {
 ```
 
 Ajouter une activité = un fichier + **une ligne** dans `activites/index.js`.
+La liste complète des champs de `meta` (parcours, jeuId, corrige, immersif…), des exports et de
+ce que reçoit `rendre` est dans `activites/FICHE-SEANCE.md` : **la lire avant d'écrire ou
+modifier une séance**, et la corriger si le code a changé.
 
 - Préfixes de code par nature de travail : `DEC` découverte, `ACT` outil métier, `ENT` environnement
   d'entreprise (`ENT-1.2` : entreprise 1, séance 2), `TAB` tableur, `REF` exercices par
