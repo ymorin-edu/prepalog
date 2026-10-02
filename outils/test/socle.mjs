@@ -163,7 +163,7 @@ await v('rubriques : les activités sont rangées par numéro de module', async 
   // Trois entreprises, et le rang se lit sur le premier chiffre : les trois séances Spartoo
   // (ENT-1.x), puis Cdiscount (ENT-2.x, depuis le 02/10/2026), puis Boost (ENT-3.x). Une séance
   // nouvelle s'insère à son rang : on ne touche à cette liste qu'en l'allongeant.
-  repere('Logisim', 'ENT-1.1 ENT-1.2 ENT-1.3 ENT-2.1 ENT-2.2 ENT-2.3 ENT-3.1 ENT-3.2');
+  repere('Logisim', 'ENT-1.1 ENT-1.2 ENT-1.3 ENT-2.1 ENT-2.2 ENT-2.3 ENT-3.1 ENT-3.2 ENT-3.3');
 });
 
 // ---------- 7. l'élève voit la base commune de la classe
@@ -348,7 +348,7 @@ await v('compétences : chaque séance déclare ce que Tristan a validé le 02/1
     'QUI-7': ['C1.6', 'entrainement'], 'TAB-2': ['C1.6', 'entrainement'],
     'TAB-4': ['C1.4,C1.6', 'entrainement'], 'TAB-5': ['C1.6', 'entrainement'],
     'ENT-1.1': ['C1.4', 'guidage'], 'ENT-1.2': ['C2.2', 'guidage'], 'ENT-1.3': ['C3.2', 'guidage'],
-    'ENT-3.1': ['C2.4', 'guidage'], 'ENT-3.2': ['C2.4', 'entrainement'],
+    'ENT-3.1': ['C2.4', 'guidage'], 'ENT-3.2': ['C2.4', 'entrainement'], 'ENT-3.3': ['C2.4', 'erreur'],
     'SCE-1': ['C1.6', 'guidage'], 'SCE-2': ['C1.6', 'evaluation'], 'SCE-3': ['C1.6', 'evaluation'],
     'SCE-4': ['C1.5', 'guidage'], 'SCE-5': ['C1.3,C1.4', 'guidage'],
   };

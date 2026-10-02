@@ -2002,4 +2002,279 @@ await v('Moteur tournée : sansVerdict — la tournée du collègue ne s’accus
   if (!verdict.test(parlant.txt) || !parlant.trop) throw new Error('le témoin n’accuse rien : l’essai ne prouve rien');
 });
 
+
+/* ===================================================================================== */
+/* ENT-3.3 — « la tournée à corriger » (erreur induite de C2.4)                           */
+/*                                                                                        */
+/* Ajouté le 02/10/2026. La séance pose la tournée d'Inès (Mercerie Pellet à quai, puis   */
+/* le plus court), muette ; l'élève répond contrainte par contrainte, puis répare.        */
+/* Les valeurs attendues sont écrites ICI à la main (énumération de `calibrer.mjs` et     */
+/* calcul de la tournée d'Inès) : 218 kg, Pâtisserie à ≈ 15 h 27, gare à ≈ 15 h 50.       */
+/* ===================================================================================== */
+
+const ctx33 = await nav.newContext({ viewport: { width: 1440, height: 900 } });
+const page33 = await ctx33.newPage();
+page33.setDefaultTimeout(8000);
+const erreurs33 = [];
+page33.on('pageerror', (e) => erreurs33.push('PAGEERROR: ' + e.message));
+page33.on('console', (m) => { if (m.type() === 'error' && !/\b404\b/.test(m.text())) erreurs33.push('CONSOLE: ' + m.text()); });
+await page33.goto('http://127.0.0.1:8099/');
+await page33.waitForSelector('#btnProf', { timeout: 8000 });
+
+// Monte la séance ; `garder` reprend la base précédente relue en JSON : c'est la reconnexion.
+const monter33 = (garder) => page33.evaluate(async (garder) => {
+  const act = await import('/activites/boost-ent33.js');
+  document.getElementById('boost33')?.remove();
+  const hote = document.createElement('div');
+  hote.id = 'boost33';
+  document.body.appendChild(hote);
+  const db = garder && window.__b33 ? JSON.parse(JSON.stringify(window.__b33.db)) : {};
+  const suivi = [];
+  act.rendre(hote, {
+    meta: act.meta,
+    profil: { prenom: 'Lea', nom: 'Dupont', role: 'eleve' },
+    jeu: { etat: () => db, sauver: () => {} },
+    enregistrer: (r) => suivi.push(r),
+    quitter: () => {}, codeStock: 'ABC',
+  });
+  window.__b33 = { act, db, suivi, hote };
+}, garder);
+await monter33(false);
+const z33 = '#boost33 .ent-main';
+const ouvrir33 = async (vue) => { await page33.click(`#boost33 .ent-nav[data-vue="${vue}"]`); await page33.waitForTimeout(140); };
+const tournee33 = () => page33.evaluate(() => {
+  const t = window.__b33.db.transport && window.__b33.db.transport['boost-ent33'];
+  return t && t.tournee ? JSON.parse(JSON.stringify(t.tournee)) : null;
+});
+const jalons33 = () => page33.evaluate(async () => {
+  const S = await import('/contenus/boost-ent33.js');
+  const o = {};
+  S.ETAPES.forEach((e) => { o[e.id] = e.verifier(window.__b33.db).status; });
+  return o;
+});
+// Pose une tournée dans la base, comme si l'élève l'avait cliquée (la marque `amorce` reste).
+const poser33 = (ordre, quai, { depart = true, arrivee = true } = {}) => page33.evaluate(({ ordre, quai, depart, arrivee }) => {
+  const t = window.__b33.db.transport['boost-ent33'].tournee;
+  Object.assign(t, { ordre, quai, depart: depart ? Date.now() : null, arrivee: arrivee ? Date.now() : null });
+}, { ordre, quai, depart, arrivee });
+// Range une réponse à Inès dans la base, comme le fait le bouton « Envoyer ».
+const repondre33 = (texte) => page33.evaluate(async (texte) => {
+  const S = await import('/contenus/boost-ent33.js');
+  window.__b33.db.mails.push({ folder: 'out', ts: Date.now(), from: 'Lea', fromMail: '', to: 'Inès', toMail: S.INES.mail,
+    subject: 'RE : tournée', kind: 'text', text: texte, read: true, id: 9000 + window.__b33.db.mails.length });
+}, texte);
+const oublierReponses33 = () => page33.evaluate(() => { const d = window.__b33.db; d.mails = d.mails.filter((m) => m.folder !== 'out'); });
+const immobile33 = () => page33.evaluate(() => new Promise((ok) => {
+  let y = null, n = 0;
+  const f = () => {
+    const s = document.querySelector('#boost33 [data-ct-svg]');
+    const cle = window.scrollY + '|' + (s ? s.getAttribute('viewBox') : '');
+    if (cle === y) n++; else { n = 0; y = cle; }
+    if (n >= 5) ok(); else requestAnimationFrame(f);
+  };
+  requestAnimationFrame(f);
+}));
+
+// Écrits à la main : la tournée d'Inès, la meilleure réparation, et une réparation qui tient tout
+// mais roule trop (14,56 km, +16 % ; gare vers 16 h 05).
+const INES33 = { ordre: ['c4', 'c3', 'c8', 'c1', 'c7', 'c6', 'c5'], quai: ['c2'] };
+const BONNE33 = ['c6', 'c7', 'c8', 'c3', 'c4', 'c1', 'c2'];
+const LONGUE33 = ['c2', 'c6', 'c1', 'c7', 'c4', 'c3', 'c8'];
+const JUSTE33 = 'Bonjour Inès,\n\nCharge utile : dépassée\nTrain de 16 h 10 : attrapé\nCréneau de la Pâtisserie Arnaud : raté\n'
+  + 'Poids chargé : 218 kg\nArrivée à la Pâtisserie Arnaud : 15 h 27\nArrivée à la gare : 15 h 50\n\nLéa';
+const REPARATION = ['charge', 'horaire', 'creneau', 'trajet'];
+
+await v('ENT-3.3 : la séance est l’erreur induite de C2.4, cachée aux élèves, six jalons, sans notation ni copie', async () => {
+  const r = await page33.evaluate(async () => {
+    const { meta } = await import('/activites/boost-ent33.js');
+    const { ETAPES } = await import('/contenus/boost-ent33.js');
+    const reg = await import('/activites/index.js');
+    const liste = await reg.chargerActivites();
+    return { meta, ids: ETAPES.map((e) => e.id), inscrite: liste.some((x) => x.meta.id === 'boost-ent33') };
+  });
+  const m = r.meta;
+  if (m.code !== 'ENT-3.3' || m.temps !== 'erreur' || m.competences.join() !== 'C2.4' || m.rubrique !== 'logisim') throw new Error('déclaration : ' + JSON.stringify(m));
+  if (m.pret !== false) throw new Error('pret devrait être false tant que Tristan n’a pas validé la séance');
+  if ('notation' in m || m.copie) throw new Error('jalons et note sur 20 : ni `notation`, ni `copie`');
+  if (m.jeuId !== 'boost' || m.reinitialisable) throw new Error('base de Boost partagée : ni jeu à part, ni remise à zéro');
+  if (m.bareme !== 6 || r.ids.join() !== 'contraintes,preuves,charge,horaire,creneau,trajet') throw new Error('jalons : ' + m.bareme + ' ' + r.ids.join());
+  if (!r.inscrite) throw new Error('la séance n’est pas dans le registre');
+});
+
+await v('ENT-3.3 : la tournée d’Inès est la B du brief, et son diagnostic recalculé dit surcharge + créneau raté, train tenu', async () => {
+  const r = await page33.evaluate(async () => {
+    const S = await import('/contenus/boost-ent33.js');
+    return { c: S.COLLEGUE, d: S.diagnostic(), init: S.TOURNEE.etatInitial === S.COLLEGUE, muet: S.TOURNEE.sansVerdict };
+  });
+  if (r.c.ordre.join() !== INES33.ordre.join() || r.c.quai.join() !== 'c2' || !r.c.depart || !r.c.arrivee) throw new Error('tournée d’Inès : ' + JSON.stringify(r.c));
+  if (!r.init || r.muet !== true) throw new Error('la vue doit déclarer etatInitial et sansVerdict');
+  const d = r.d;
+  if (d.surcharge !== true || d.creneauRate !== true || d.trainManque !== false) throw new Error('contraintes : ' + JSON.stringify(d));
+  if (d.poids !== 218) throw new Error('poids ' + d.poids + ' au lieu de 218');
+  if (Math.abs(d.arriveeClient - 926.6) > 0.5) throw new Error('arrivée à la Pâtisserie : ' + d.arriveeClient + ' min, attendu ≈ 15 h 27');
+  if (Math.abs(d.arriveeGare - 949.6) > 0.5) throw new Error('arrivée à la gare : ' + d.arriveeGare + ' min, attendu ≈ 15 h 50');
+});
+
+await v('ENT-3.3 : à l’ouverture rien n’est validé, pas de menu Plan — et le message d’Inès ne donne ni le total, ni les heures', async () => {
+  const j = await jalons33();
+  const faits = Object.keys(j).filter((k) => j[k] === 'ok');
+  if (faits.length) throw new Error('jalon(s) validé(s) sans rien avoir fait : ' + faits.join(', '));
+  if (j.contraintes !== 'attente' || j.preuves !== 'attente') throw new Error('diagnostic sans réponse : ' + JSON.stringify(j));
+  const menu = await page33.$$eval('#boost33 .ent-nav', (l) => l.map((b) => b.dataset.vue));
+  if (menu.includes('plan') || !menu.includes('tournee')) throw new Error('menu : ' + menu.join());
+  await ouvrir33('mail');
+  const t = await page33.evaluate(() => {
+    const l = window.__b33.db.mails.filter((x) => x.fromMail === 'ines.livraison@boost.example');
+    return l.length === 1 ? l[0].text.replace(/\s+/g, ' ') : 'EXEMPLAIRES:' + l.length;
+  });
+  for (const l of ['Charge utile :', 'Train de 16 h 10 :', 'Créneau de la Pâtisserie Arnaud :', 'Poids chargé :', 'Arrivée à la Pâtisserie Arnaud :', 'Arrivée à la gare :', 'Mercerie Pellet', 'le plus court']) {
+    if (!t.includes(l)) throw new Error('le message ne porte pas « ' + l + ' » : ' + t.slice(0, 200));
+  }
+  for (const x of [/\b218\b/, /\b230\b/, /15 h 2[67]/, /15 h 49/, /15 h 50/]) {
+    if (x.test(t)) throw new Error('le message donne la réponse : ' + x);
+  }
+});
+
+await v('ENT-3.3 : la tournée d’Inès est posée à l’ouverture — départ, ordre, Mercerie Pellet à quai, arrivée', async () => {
+  await ouvrir33('tournee');
+  const e = await tournee33();
+  if (!e || e.ordre.join() !== INES33.ordre.join() || e.quai.join() !== 'c2' || !e.depart || !e.arrivee || !e.amorce) {
+    throw new Error('tournée posée : ' + JSON.stringify(e));
+  }
+});
+
+await v('ENT-3.3 : rien à l’écran ne donne le diagnostic — ni verdict, ni 218 kg, ni heure d’arrivée', async () => {
+  const r = await page33.evaluate(() => {
+    const h = document.querySelector('#boost33 .ent-main');
+    return { txt: h.textContent.replace(/\s+/g, ' '), trop: h.querySelectorAll('.tour-jauge.trop').length,
+      crit: h.querySelectorAll('.pastille.crit, .pastille.ok').length };
+  });
+  const verdict = /dépassée|manqué|raté|en retard|respectée|tenu\b|attrapé/i;
+  if (verdict.test(r.txt)) throw new Error('un verdict est lisible : ' + (r.txt.match(verdict) || [])[0]);
+  if (r.trop || r.crit) throw new Error('jauge ou pastille d’alerte visible : ' + JSON.stringify(r));
+  if (/\b218\b/.test(r.txt) || /15 h 2[67]|15 h 49|15 h 50/.test(r.txt)) throw new Error('un chiffre du diagnostic est donné à l’écran');
+  if (!/180/.test(r.txt)) throw new Error('la limite de 180 kg doit rester lisible');
+});
+
+await v('ENT-3.3 : la tournée d’Inès laissée telle quelle ne vaut AUCUN jalon de réparation', async () => {
+  const j = await jalons33();
+  const faits = REPARATION.filter((k) => j[k] === 'ok');
+  if (faits.length) throw new Error('inaction récompensée : ' + faits.join(', '));
+  if (j.charge !== 'ko') throw new Error('charge : ' + j.charge);
+});
+
+await v('ENT-3.3 : une modification de l’élève survit au changement d’écran et à la reconnexion', async () => {
+  await immobile33();
+  await page33.click(`${z33} [data-clic-point="c6"]`, { force: true });   // retire la Pâtisserie
+  await page33.waitForTimeout(80);
+  let e = await tournee33();
+  if (e.ordre.includes('c6')) throw new Error('le clic n’a pas retiré la Pâtisserie : ' + e.ordre);
+  const avant = JSON.stringify([e.ordre, e.quai, e.amorce]);
+  await ouvrir33('mail');
+  await ouvrir33('tournee');
+  e = await tournee33();
+  if (JSON.stringify([e.ordre, e.quai, e.amorce]) !== avant) throw new Error('le changement d’écran a reposé la tournée d’Inès');
+  await monter33(true);
+  await ouvrir33('tournee');
+  e = await tournee33();
+  if (JSON.stringify([e.ordre, e.quai, e.amorce]) !== avant) throw new Error('la reconnexion a reposé la tournée d’Inès : ' + JSON.stringify(e.ordre));
+});
+
+await v('ENT-3.3 : « Retrouver la tournée de départ » remet celle d’Inès, qui ne vaut toujours rien', async () => {
+  const sel = '#boost33 [data-tour-raz]';
+  await page33.click(sel);
+  await page33.click(sel);
+  const e = await tournee33();
+  if (e.ordre.join() !== INES33.ordre.join() || e.quai.join() !== 'c2') throw new Error('tournée : ' + JSON.stringify(e));
+  const j = await jalons33();
+  if (REPARATION.some((k) => j[k] === 'ok')) throw new Error('jalons : ' + JSON.stringify(j));
+});
+
+await v('ENT-3.3 : D1 — la réponse juste passe ; accuser le train (leurre), une ligne au choix ou absente ne passe pas', async () => {
+  const essai = async (texte) => { await oublierReponses33(); if (texte != null) await repondre33(texte); return (await jalons33()).contraintes; };
+  if ((await essai(null)) === 'ok') throw new Error('aucune réponse validée');
+  if ((await essai(JUSTE33)) !== 'ok') throw new Error('la réponse juste est refusée');
+  const tout = JUSTE33.replace('Train de 16 h 10 : attrapé', 'Train de 16 h 10 : manqué');
+  if ((await essai(tout)) === 'ok') throw new Error('« tout accuser » est validé');
+  const choix = JUSTE33.replace('Charge utile : dépassée', 'Charge utile : (respectée ou dépassée)');
+  if ((await essai(choix)) === 'ok') throw new Error('une ligne laissée au choix est validée');
+  const oubli = JUSTE33.replace('Créneau de la Pâtisserie Arnaud : raté\n', '');
+  if ((await essai(oubli)) === 'ok') throw new Error('une ligne absente est validée');
+  const rien = JUSTE33.replace('Charge utile : dépassée', 'Charge utile : respectée');
+  if ((await essai(rien)) === 'ok') throw new Error('la surcharge non vue est validée');
+  // Autres écritures justes : négations, majuscules, sans accents.
+  const libre = 'charge utile : non respectée, 218 > 180\nTRAIN DE 16 H 10 : pas manqué\ncreneau de patisserie arnaud : en retard\n'
+    + 'Poids chargé : 218, pour une charge utile de 180';
+  if ((await essai(libre)) !== 'ok') throw new Error('une écriture libre et juste est refusée');
+});
+
+await v('ENT-3.3 : D2 — les chiffres justes passent sous plusieurs écritures ; des chiffres faux non', async () => {
+  const essai = async (p, c, g) => { await oublierReponses33(); await repondre33(`Poids chargé : ${p}\nArrivée à la Pâtisserie Arnaud : ${c}\nArrivée à la gare : ${g}`); return (await jalons33()).preuves; };
+  for (const [p, c, g] of [['218 kg', '15 h 27', '15 h 50'], ['230 - 12 = 218', '15h27', '15:50'], ['218', '15 h 26', '15h49'], ['218 kg (max 180)', '927', '950']]) {
+    if ((await essai(p, c, g)) !== 'ok') throw new Error('refusé : ' + [p, c, g].join(' / '));
+  }
+  for (const [p, c, g] of [['180', '15 h 27', '15 h 50'], ['218', '14 h 45', '15 h 50'], ['218', '15 h 27', '16 h 10'], ['230', '15 h 27', '15 h 50']]) {
+    if ((await essai(p, c, g)) === 'ok') throw new Error('accepté à tort : ' + [p, c, g].join(' / '));
+  }
+});
+
+await v('ENT-3.3 : la réponse envoyée depuis la messagerie, comme l’élève, valide le diagnostic', async () => {
+  await oublierReponses33();
+  await ouvrir33('mail');
+  const id = await page33.evaluate(() => window.__b33.db.mails.find((m) => m.fromMail === 'ines.livraison@boost.example').id);
+  await page33.click(`#boost33 [data-mail="${id}"]`);
+  await page33.click('#boost33 [data-repondre]');
+  await page33.fill('#boost33 #repT', JUSTE33);
+  await page33.click('#boost33 #formRep button[type="submit"]');
+  await page33.waitForTimeout(80);
+  const j = await jalons33();
+  if (j.contraintes !== 'ok' || j.preuves !== 'ok') throw new Error('diagnostic : ' + JSON.stringify(j));
+});
+
+await v('ENT-3.3 : réparations — la bonne vaut les quatre ; la Mercerie à quai, ou deux commandes à quai, ne valent pas la charge', async () => {
+  await poser33(BONNE33, ['c5']);
+  let j = await jalons33();
+  for (const k of REPARATION) if (j[k] !== 'ok') throw new Error('bonne réparation, ' + k + ' : ' + j[k]);
+  // La tournée d'Inès réordonnée, Mercerie Pellet toujours à quai : surchargée, rien ne passe.
+  await poser33(['c6', 'c4', 'c3', 'c8', 'c1', 'c7', 'c5'], ['c2']);
+  j = await jalons33();
+  for (const k of REPARATION) if (j[k] === 'ok') throw new Error('Mercerie à quai, ' + k + ' validé');
+  // Deux commandes à quai (Cave et Mercerie) : la charge tient, mais ce n'est pas la bonne décision.
+  await poser33(['c6', 'c7', 'c8', 'c3', 'c4', 'c1'], ['c2', 'c5']);
+  j = await jalons33();
+  if (j.charge === 'ok' || j.trajet === 'ok') throw new Error('deux commandes à quai validées : ' + JSON.stringify(j));
+});
+
+await v('ENT-3.3 : une réparation qui tient tout mais roule trop (+16 %) ne perd que le jalon « trajet »', async () => {
+  await poser33(LONGUE33, ['c5']);
+  const j = await jalons33();
+  if (j.charge !== 'ok' || j.horaire !== 'ok' || j.creneau !== 'ok') throw new Error('la réparation longue devrait tenir tout : ' + JSON.stringify(j));
+  if (j.trajet !== 'ko') throw new Error('trajet : ' + j.trajet);
+});
+
+await v('ENT-3.3 : le créneau et le train ne se jugent pas sans le départ et la gare', async () => {
+  await poser33(BONNE33, ['c5'], { depart: false, arrivee: false });
+  let j = await jalons33();
+  if (j.creneau === 'ok' || j.horaire === 'ok' || j.trajet === 'ok') throw new Error('validé sans départ ni gare : ' + JSON.stringify(j));
+  await poser33(BONNE33, ['c5'], { depart: true, arrivee: false });
+  j = await jalons33();
+  if (j.creneau !== 'ok') throw new Error('créneau avec le départ posé : ' + j.creneau);
+  if (j.horaire === 'ok' || j.trajet === 'ok') throw new Error('train validé sans la gare : ' + JSON.stringify(j));
+});
+
+await v('ENT-3.3 : ENT-3.2 et ENT-3.3 ne s’écrasent pas — tournée et message cloisonnés dans la base commune', async () => {
+  const ids = await page33.evaluate(async () => {
+    const [a, b] = await Promise.all([import('/contenus/boost-ent32.js'), import('/contenus/boost-ent33.js')]);
+    return [a.TRANSPORT_ID, b.TRANSPORT_ID, a.VOLET.id, b.VOLET.id];
+  });
+  if (ids[0] === ids[1] || ids[2] === ids[3]) throw new Error('clés partagées : ' + ids.join());
+  const k = await page33.evaluate(() => Object.keys(window.__b33.db.transport || {}));
+  if (k.join() !== 'boost-ent33') throw new Error('clés de la base : ' + k.join());
+});
+
+await v('ENT-3.3 : aucune erreur de console sur tout le parcours', async () => {
+  if (erreurs33.length) throw new Error([...new Set(erreurs33)].slice(0, 3).join(' | '));
+});
+await ctx33.close();
+
 }
