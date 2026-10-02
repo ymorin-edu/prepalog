@@ -11,7 +11,7 @@ import path from 'node:path';
 import os from 'node:os';
 import { pathToFileURL } from 'node:url';
 
-export default async function bloc({ v, page, ok, ROOT, baseXlsx }) {
+export default async function bloc({ v, page, nav, ok, ROOT, baseXlsx }) {
 
 // ---------- 1. connexion enseignant
 await v('connexion enseignant', async () => {
@@ -1281,5 +1281,149 @@ await v('tableur : contrôle de liste à ordre libre', async () => {
   if (r.vide.ok) throw new Error('une plage vide est acceptée');
   if (!/Aucune ligne/.test(r.vide.remarque)) throw new Error('plage vide mal signalée : ' + r.vide.remarque);
 });
+
+
+// ---------- Logisim rangé par entreprise (02/10/2026, brief MOTEUR-logisim-par-entreprise)
+// Pastille Logisim → les logos → les séances de l'entreprise. Fenêtre à part : ces cas créent
+// leur propre groupe et ne dérangent pas la page partagée des autres cas.
+{
+const ctxL = await nav.newContext({ viewport: { width: 1280, height: 900 } });
+const pl = await ctxL.newPage();
+pl.setDefaultTimeout(6000);
+const erreursL = [];
+const horsSite = [];
+pl.on('pageerror', (e) => erreursL.push('PAGEERROR: ' + e.message));
+pl.on('dialog', (d) => d.accept());
+pl.on('request', (r) => { if (!r.url().startsWith('http://127.0.0.1:8099/') && !r.url().startsWith('data:')) horsSite.push(r.url()); });
+await pl.goto('http://127.0.0.1:8099/');
+await pl.waitForSelector('#btnProf', { timeout: 8000 });
+
+const cartes = () => pl.$$eval('.entreprise', (els) => els.map((e) => ({
+  id: e.dataset.ent, texte: e.textContent.trim(), title: e.title, aria: e.getAttribute('aria-label'),
+  img: e.querySelector('img') ? { alt: e.querySelector('img').alt, src: e.querySelector('img').getAttribute('src'),
+    charge: e.querySelector('img').complete && e.querySelector('img').naturalWidth > 0 } : null })));
+const tuilesL = () => pl.$$eval('.module-tile', (els) => els.map((e) => ({
+  id: e.dataset.act, code: e.querySelector('.code').textContent, cachee: e.querySelector('[data-cachee]')?.dataset.cachee || null })));
+
+await v('Logisim : l’enseignant voit trois logos, et rien d’autre sur la carte', async () => {
+  await pl.click('#btnProf');
+  await pl.waitForSelector('#btnProfEspace');
+  await pl.click('#btnProfEspace');
+  await pl.waitForSelector('#gNom');
+  await pl.fill('#gNom', 'LOGI 1');
+  await pl.click('#btnCreerG');
+  await pl.waitForSelector('text=LOGI 1');
+  await pl.click('[data-ong="comptes"]');
+  await pl.waitForSelector('#lot');
+  await pl.fill('#lot', 'LOGO ; Inès ; 3951 ; ll01');
+  await pl.click('#btnLot');
+  await pl.waitForTimeout(400);
+  await pl.click('#btnRetour');
+  await pl.click('[data-rub="logisim"]');
+  await pl.waitForSelector('.entreprise');
+  // Les logos se chargent après l'affichage : on leur laisse le temps, sans en faire une condition.
+  await pl.waitForFunction(() => [...document.querySelectorAll('.entreprise img')].every((i) => i.complete), null, { timeout: 4000 }).catch(() => {});
+  const c = await cartes();
+  const attendu = { 1: 'Spartoo', 2: 'Cdiscount', 3: 'Boost' };
+  if (c.map((x) => x.id).join() !== '1,2,3') throw new Error('cartes : ' + c.map((x) => x.id).join());
+  for (const x of c) {
+    if (x.texte) throw new Error(`carte ${x.id} : du texte visible « ${x.texte} »`);
+    if (x.title !== attendu[x.id] || x.aria !== attendu[x.id] || !x.img || x.img.alt !== attendu[x.id]) throw new Error('nom d’accessibilité : ' + JSON.stringify(x));
+    if (!/^\.\/contenus\/trames\/logos\//.test(x.img.src)) throw new Error('logo hors du dépôt : ' + x.img.src);
+    if (!x.img.charge) throw new Error('logo non chargé : ' + x.img.src);
+  }
+  // Aucune tuile de séance au niveau des logos : elles sont derrière le logo.
+  if ((await tuilesL()).length) throw new Error('des tuiles de séance s’affichent à côté des logos');
+});
+
+await v('Logisim : un logo ouvre les séances de son entreprise, nom et métier en tête', async () => {
+  await pl.click('[data-ent="3"]');
+  await pl.waitForSelector('.entreprise-tete');
+  const h = await pl.$eval('.entreprise-tete', (e) => ({ h1: e.querySelector('h1').textContent, p: e.querySelector('p').textContent }));
+  if (h.h1 !== 'Boost' || h.p !== 'Logistique e-commerce — Nîmes') throw new Error('en-tête : ' + JSON.stringify(h));
+  const t = await tuilesL();
+  if (!t.length || t.some((x) => !/^ENT-3\./.test(x.code))) throw new Error('tuiles : ' + t.map((x) => x.code).join(', '));
+  // L'enseignant voit aussi les séances en préparation, étiquetées.
+  if (!t.some((x) => x.cachee === 'en préparation')) throw new Error('aucune séance Boost étiquetée « en préparation »');
+});
+
+await v('Logisim : « ← LOGISIM » ramène aux logos, « ← ACCUEIL » à l’accueil', async () => {
+  const lib = (await pl.textContent('#btnLogisim')).trim();
+  if (lib !== '← LOGISIM') throw new Error('libellé : ' + lib);
+  await pl.click('#btnLogisim');
+  await pl.waitForSelector('.entreprise');
+  if ((await cartes()).length !== 3) throw new Error('retour aux logos incomplet');
+  await pl.click('#btnAccueil');
+  await pl.waitForSelector('[data-rub="logisim"]');
+  if (await pl.$('.entreprise')) throw new Error('les logos restent affichés à l’accueil');
+});
+
+await v('Logisim : l’élève ne voit pas la carte d’une entreprise sans séance ouverte', async () => {
+  // On ferme pour ce groupe la seule séance prête de Cdiscount.
+  await pl.click('#btnProfEspace');
+  await pl.click('[data-ong="seance"]');
+  await pl.waitForSelector('[data-ouvre="cdiscount-inventaire"]');
+  await pl.uncheck('[data-ouvre="cdiscount-inventaire"]');
+  await pl.waitForFunction(() => !document.querySelector('[data-ouvre="cdiscount-inventaire"]').checked);
+  // L'enseignant, lui, garde la carte Cdiscount.
+  await pl.click('#btnRetour');
+  await pl.click('[data-rub="logisim"]');
+  await pl.waitForSelector('.entreprise');
+  if (!(await cartes()).some((x) => x.id === '2')) throw new Error('l’enseignant a perdu la carte Cdiscount');
+  await pl.click('[data-ent="3"]');               // on quitte l'enseignant DANS une entreprise
+  await pl.waitForSelector('.entreprise-tete');
+  await pl.click('#btnDeco');
+  await pl.waitForSelector('#mat');
+  await pl.fill('#mat', '3951');
+  await pl.fill('#code', 'll01');
+  await pl.click('#btnEleve');
+  await pl.waitForSelector('text=Bonjour Inès');
+  // Un changement de session repart de l'accueil, pas de l'entreprise de l'utilisateur précédent.
+  if (await pl.$('.entreprise-tete')) throw new Error('l’élève arrive dans l’entreprise ouverte par l’enseignant');
+  await pl.click('[data-rub="logisim"]');
+  await pl.waitForSelector('.entreprise');
+  const ids = (await cartes()).map((x) => x.id).join();
+  if (ids !== '1,3') throw new Error('cartes chez l’élève : ' + ids);
+});
+
+await v('Logisim : une entreprise à une seule séance ouverte montre quand même la liste', async () => {
+  // Boost : ENT-3.1 seule est prête, les deux autres sont en préparation.
+  await pl.click('[data-ent="3"]');
+  await pl.waitForSelector('.entreprise-tete');
+  const t = await tuilesL();
+  if (t.map((x) => x.code).join() !== 'ENT-3.1') throw new Error('tuiles chez l’élève : ' + t.map((x) => x.code).join(', '));
+  if (t.some((x) => x.cachee)) throw new Error('étiquette d’enseignant chez l’élève');
+  if (await pl.$('.ent-shell')) throw new Error('la séance s’est ouverte sans passer par la liste');
+});
+
+await v('Logisim : « Quitter » une séance ramène à la liste de son entreprise', async () => {
+  await pl.click('[data-act="boost-tournee"]');
+  await pl.waitForSelector('[data-quitter]');
+  await pl.click('[data-quitter]');
+  await pl.waitForSelector('.entreprise-tete');
+  const ent = await pl.getAttribute('.entreprise-tete', 'data-entreprise');
+  if (ent !== '3') throw new Error('retour dans l’entreprise ' + ent);
+  if (!(await pl.$('[data-act="boost-tournee"]'))) throw new Error('la tuile ENT-3.1 manque au retour');
+});
+
+await v('Logisim : une séance au numéro d’entreprise inconnu reste visible (« Autres »)', async () => {
+  const r = await pl.evaluate(async () => {
+    const { entreprisesDe } = await import('/activites/index.js');
+    const m = (code) => ({ meta: { id: code, code } });
+    return entreprisesDe([m('ENT-1.1'), m('ENT-9.1'), m('ENT'), m('ENT-3.2')])
+      .map((e) => ({ id: e.id, logo: !!e.logo, codes: e.acts.map((a) => a.meta.code).join() }));
+  });
+  const vu = r.map((e) => `${e.id}:${e.codes}`).join(' | ');
+  if (vu !== '1:ENT-1.1 | 3:ENT-3.2 | autres:ENT-9.1,ENT') throw new Error(vu);
+  if (r.find((e) => e.id === 'autres').logo) throw new Error('« Autres » ne doit pas avoir de logo');
+});
+
+await v('Logisim : aucune requête hors du site, aucune erreur JavaScript', async () => {
+  if (horsSite.length) throw new Error('requêtes hors du site : ' + horsSite.slice(0, 3).join(', '));
+  if (erreursL.length) throw new Error(erreursL.slice(0, 3).join(' / '));
+});
+
+await ctxL.close();
+}
 
 }

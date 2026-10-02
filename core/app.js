@@ -4,7 +4,7 @@ import { demarrerBackend, B } from './backend.js';
 import { CONFIG, DEMO } from './config.js';
 import { ech, toast, entete, brancherEntete, messageErreur } from './ui.js';
 import { activiteVisible, raisonCachee, courtNiveau, libelleNiveaux } from './niveaux.js';
-import { chargerActivites, activite, RUBRIQUES, ICONES, activitesDeRubrique } from '../activites/index.js';
+import { chargerActivites, activite, RUBRIQUES, ICONES, activitesDeRubrique, entreprisesDe } from '../activites/index.js';
 import { ouvrirJeu } from './store.js';
 import { rendreEspaceProf } from './prof.js';
 import { verrou, seancesDepuis, seancesDuParcours } from './parcours.js';
@@ -14,6 +14,7 @@ let profil = null;
 let groupeActif = null;
 let jeuOuvert = null;
 let rubriqueActive = null;   // null = pastilles d'accueil ; sinon id de la rubrique ouverte
+let entrepriseActive = null; // rubrique rangée par entreprise (Logisim) : null = les logos ; sinon id de l'entreprise
 
 // L'enseignant retrouve le groupe sur lequel il travaillait, d'une séance à l'autre.
 const CLE_GROUPE = 'prepalog:groupe:';
@@ -118,19 +119,55 @@ async function vueAccueil() {
 
   // ---- niveau 2 : une rubrique ouverte, ses activités en tuiles
   if (rub) {
-    const acts = activitesDeRubrique(rub, visibles);
+    let acts = activitesDeRubrique(rub, visibles);
+
+    // Rubrique rangée par entreprise (Logisim) : d'abord les logos, puis les séances de
+    // l'entreprise choisie. Toujours le même chemin, même pour une entreprise à une séance.
+    let ent = null;
+    if (rub.parEntreprise) {
+      const ents = entreprisesDe(acts);
+      ent = ents.find((e) => e.id === entrepriseActive) || null;
+      if (!ent) {
+        entrepriseActive = null;
+        // La carte = le logo seul ; le nom reste lisible par title, aria-label et alt.
+        app.innerHTML = `${cartouche}
+          <button class="lien-accueil" id="btnAccueil">← ACCUEIL</button>
+          <div class="rubrique-head">
+            <span class="rubrique-disc">${ICONES[rub.icone] || ''}</span>
+            <div><h1>${ech(rub.label)}</h1><p>${ech(rub.desc || '')} Choisissez une entreprise.</p></div>
+          </div>
+          ${ents.length === 0
+            ? `<div class="vide">Aucune activité ouverte dans cette rubrique pour l'instant.</div>`
+            : `<div class="entreprises">${ents.map((e) => `
+                <button class="entreprise" data-ent="${ech(e.id)}" title="${ech(e.nom)}" aria-label="${ech(e.nom)}">
+                  ${e.logo ? `<span class="plaque"><img src="${ech(e.logo)}" alt="${ech(e.nom)}"></span>`
+                    : `<span class="entreprise-autres">${ech(e.nom)}</span>`}
+                </button>`).join('')}</div>`}`;
+        brancher();
+        return;
+      }
+      acts = ent.acts;
+    }
+
     // Les séances d'un parcours qui ne sont pas encore ouvertes à cet élève : grisées, avec la raison.
     const metas = mods.map((x) => x.meta);
     const verrous = {};
     await Promise.all(acts.map(async (x) => {
       try { verrous[x.meta.id] = await verrou(metas, x.meta, profil, groupeActif); } catch (e) { verrous[x.meta.id] = null; }
     }));
+    const tete = ent
+      ? `<button class="lien-accueil" id="btnLogisim">← ${ech(rub.label.toUpperCase())}</button>
+        <div class="entreprise-tete" data-entreprise="${ech(ent.id)}">
+          ${ent.logo ? `<span class="plaque"><img src="${ech(ent.logo)}" alt=""></span>` : ''}
+          <div><h1>${ech(ent.nom)}</h1><p>${ech(ent.metier)}</p></div>
+        </div>`
+      : `<button class="lien-accueil" id="btnAccueil">← ACCUEIL</button>
+        <div class="rubrique-head">
+          <span class="rubrique-disc">${ICONES[rub.icone] || ''}</span>
+          <div><h1>${ech(rub.label)}</h1><p>${ech(rub.desc || '')}</p></div>
+        </div>`;
     app.innerHTML = `${cartouche}
-      <button class="lien-accueil" id="btnAccueil">← ACCUEIL</button>
-      <div class="rubrique-head">
-        <span class="rubrique-disc">${ICONES[rub.icone] || ''}</span>
-        <div><h1>${ech(rub.label)}</h1><p>${ech(rub.desc || '')}</p></div>
-      </div>
+      ${tete}
       ${acts.length === 0
         ? `<div class="vide">Aucune activité ouverte dans cette rubrique pour l'instant.</div>`
         : `<div class="module-grid">${acts.map((m) => `
@@ -188,15 +225,23 @@ async function vueAccueil() {
     brancherEntete(async () => { fermerJeuCourant(); await B.deconnexion(); });
 
     document.getElementById('btnAccueil')?.addEventListener('click', () => {
-      rubriqueActive = null; vueAccueil();
+      rubriqueActive = null; entrepriseActive = null; vueAccueil();
     });
+    document.getElementById('btnLogisim')?.addEventListener('click', () => {
+      entrepriseActive = null; vueAccueil();
+    });
+    document.querySelectorAll('[data-ent]').forEach((b) => b.addEventListener('click', () => {
+      entrepriseActive = b.dataset.ent; vueAccueil();
+    }));
 
     document.querySelectorAll('[data-rub]').forEach((b) => b.addEventListener('click', () => {
       const r = RUBRIQUES.find((x) => x.id === b.dataset.rub);
       const acts = activitesDeRubrique(r, visibles);
-      // Une rubrique à activité unique ouvre directement : un clic de moins.
-      if (acts.length === 1) return vueActivite(acts[0].meta.id);
+      // Une rubrique à activité unique ouvre directement : un clic de moins. Sauf une rubrique
+      // rangée par entreprise : toujours logos, puis séances (décision de Tristan, 02/10/2026).
+      if (acts.length === 1 && !r.parEntreprise) return vueActivite(acts[0].meta.id);
       rubriqueActive = r.id;
+      entrepriseActive = null;
       vueAccueil();
     }));
 
@@ -306,6 +351,8 @@ async function vueActivite(aid) {
     // l'enseignant le donne au moment qu'il choisit dans la séance.
     codeStock: objGroupe?.codeStock || null,
     // Sortie de l'environnement, pour une activité immersive qui dessine son propre bouton.
+    // La rubrique et l'entreprise ouvertes sont gardées : on revient à la liste des séances
+    // de l'entreprise, pas à l'accueil général.
     quitter() { vueAccueil(); },
     async deconnexion() { fermerJeuCourant(); await B.deconnexion(); },
     // Le travail déjà enregistré pour cette activité, ou null. Utile aux activités
@@ -342,7 +389,7 @@ async function vueProf(ongletInitial) {
     groupeActif,
     onglet: ongletInitial,
     setGroupe: (gid) => { groupeActif = gid; memoriserGroupe(profil.uid, gid); },
-    retour: () => { rubriqueActive = null; vueAccueil(); },
+    retour: () => { rubriqueActive = null; entrepriseActive = null; vueAccueil(); },
   });
   // L'espace enseignant peut changer le groupe actif : on le relit au retour.
 }
@@ -383,6 +430,7 @@ function vuePanne(e) {
     // Un changement de session repart de l'accueil : sinon la rubrique ouverte par
     // l'utilisateur précédent resterait affichée après la connexion suivante.
     rubriqueActive = null;
+    entrepriseActive = null;
     if (!p) {
       fermerJeuCourant();
       groupeActif = null;

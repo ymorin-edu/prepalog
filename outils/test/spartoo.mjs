@@ -50,6 +50,7 @@ await v('Spartoo : ouverture de l\'environnement', async () => {
   // La rubrique Logisim porte désormais une tuile par SÉANCE de l'entreprise : réception,
   // préparation. On ouvre ici la préparation ; la réception est testée plus bas.
   await page.click('[data-rub="logisim"]');
+  await page.click('[data-ent="1"]');          // Logisim est rangé par entreprise : le logo Spartoo
   await page.waitForSelector('[data-act="spartoo"]', { timeout: 6000 });
   await page.click('[data-act="spartoo"]');
   await page.waitForSelector('.ent-shell', { timeout: 6000 });
@@ -262,6 +263,7 @@ await v('Spartoo réception : la séance s\'ajoute à la base de l\'élève', as
   await page.press('#code', 'Enter');
   await page.waitForSelector('[data-rub="logisim"]', { timeout: 6000 });
   await page.click('[data-rub="logisim"]');
+  await page.click('[data-ent="1"]');          // Logisim est rangé par entreprise : le logo Spartoo
   await page.waitForSelector('[data-act="spartoo-reception"]', { timeout: 6000 });
   await page.click('[data-act="spartoo-reception"]');
   await page.waitForSelector('.ent-shell', { timeout: 6000 });
@@ -358,6 +360,7 @@ await v('Spartoo traçabilité : l\'aval est semé et le lot se remonte', async 
   await page.press('#code', 'Enter');
   await page.waitForSelector('[data-rub="logisim"]', { timeout: 6000 });
   await page.click('[data-rub="logisim"]');
+  await page.click('[data-ent="1"]');          // Logisim est rangé par entreprise : le logo Spartoo
   await page.waitForSelector('[data-act="spartoo-tracabilite"]', { timeout: 6000 });
   await page.click('[data-act="spartoo-tracabilite"]');
   await page.waitForSelector('.ent-shell', { timeout: 6000 });
@@ -503,6 +506,7 @@ await v('Spartoo traçabilité : jouable sans les deux séances précédentes', 
       JSON.stringify({ uid, aid: '_debloque-spartoo-tracabilite', gid: '1-log-a', score: 0, max: 0, meilleur: 0, tentatives: 0 }));
   });
   await page.click('[data-rub="logisim"]');
+  await page.click('[data-ent="1"]');          // Logisim est rangé par entreprise : le logo Spartoo
   await page.waitForSelector('[data-act="spartoo-tracabilite"]', { timeout: 6000 });
   await page.click('[data-act="spartoo-tracabilite"]');
   await page.waitForSelector('.ent-shell', { timeout: 6000 });

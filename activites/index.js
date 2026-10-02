@@ -88,10 +88,21 @@ export const RUBRIQUES = [
     desc: 'Compléter un classeur, le déposer, obtenir la correction automatique.' },
 
   // bande 3 — les outils de travail
-  { id: 'logisim', label: 'Logisim', bande: 3, cat: 'logisim', icone: 'entreprise',
+  { id: 'logisim', label: 'Logisim', bande: 3, cat: 'logisim', icone: 'entreprise', parEntreprise: true,
     desc: "Des environnements d'entreprise complets. Chaque élève travaille dans sa propre base." },
   { id: 'magasin', label: 'Magasin', bande: 3, ids: ['magasin'], icone: 'magasin',
     desc: 'La base du magasin pédagogique : produits, emplacements et état du stock.' },
+];
+
+// Les entreprises de Logisim (02/10/2026, décision de Tristan) : la pastille Logisim montre
+// d'abord leurs logos, puis les séances de l'entreprise choisie. Une séance appartient à
+// l'entreprise du PREMIER NOMBRE de son code : ENT-3.2 → 3. Une entreprise nouvelle = une ligne.
+// Le nom et le métier sont recopiés du `sousTitre` des contenus (contenus/<nom>.js) : ces
+// fichiers sont lourds, l'accueil ne les importe pas.
+export const ENTREPRISES = [
+  { n: 1, nom: 'Spartoo', metier: 'Vente de chaussures en ligne', logo: './contenus/trames/logos/spartoo.jpg' },
+  { n: 2, nom: 'Cdiscount', metier: 'Entrepôt de Cestas — suivi des stocks', logo: './contenus/trames/logos/cdiscount.png' },
+  { n: 3, nom: 'Boost', metier: 'Logistique e-commerce — Nîmes', logo: './contenus/trames/logos/boost.png' },
 ];
 
 // ------------------------------------------------------------------- l'ordre
@@ -182,4 +193,17 @@ export function activitesDeRubrique(rubrique, mods) {
     return rubrique.ids.map((id) => mods.find((m) => m.meta.id === id)).filter(Boolean);
   }
   return mods.filter((m) => m.meta.rubrique === rubrique.cat);
+}
+
+// Les séances d'une rubrique rangée par entreprise, regroupées : une entrée par entreprise
+// qui a au moins une séance dans `acts` (déjà filtrées par ce que voit l'utilisateur), dans
+// l'ordre de la table. Une séance dont le numéro n'est dans aucune ligne ne disparaît pas :
+// elle va sous « Autres », toujours en dernier, sans logo.
+export function entreprisesDe(acts) {
+  const connues = new Set(ENTREPRISES.map((e) => e.n));
+  const groupes = ENTREPRISES.map((e) => ({ id: String(e.n), nom: e.nom, metier: e.metier, logo: e.logo,
+    acts: acts.filter((m) => segments(m.meta.code)[0] === e.n) }));
+  groupes.push({ id: 'autres', nom: 'Autres séances', metier: "Séances qui ne sont rattachées à aucune entreprise de la liste.",
+    logo: null, acts: acts.filter((m) => !connues.has(segments(m.meta.code)[0])) });
+  return groupes.filter((g) => g.acts.length);
 }

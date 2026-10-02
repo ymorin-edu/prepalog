@@ -115,7 +115,8 @@ const TUILE_TRAME = { 'spartoo-reception': 'Spartoo — réception', spartoo: 'S
 async function ouvrirSeance(aid) {
   if (await page.$('[data-quitter]')) { await page.click('[data-quitter]'); }
   await page.waitForSelector('[data-rub="logisim"], [data-act]');
-  if (await page.$('[data-rub="logisim"]')) await page.click('[data-rub="logisim"]');
+  // Logisim est rangé par entreprise (02/10/2026) : pastille, puis logo Spartoo, puis la séance.
+  if (await page.$('[data-rub="logisim"]')) { await page.click('[data-rub="logisim"]'); await page.click('[data-ent="1"]'); }
   await page.waitForSelector(`[data-act="${aid}"]`);
   attendre(`la tuile ${aid} n'a pas le titre « ${TUILE_TRAME[aid]} » cité par la trame`, (await lire(`[data-act="${aid}"]`)).includes(TUILE_TRAME[aid]));
   await page.click(`[data-act="${aid}"]`);
@@ -125,7 +126,8 @@ async function ouvrirSeance(aid) {
 async function tuileFermee(aid) {
   if (await page.$('[data-quitter]')) await page.click('[data-quitter]');
   await page.waitForSelector('[data-rub="logisim"], [data-act]');
-  if (await page.$('[data-rub="logisim"]')) await page.click('[data-rub="logisim"]');
+  // Logisim est rangé par entreprise (02/10/2026) : pastille, puis logo Spartoo, puis la séance.
+  if (await page.$('[data-rub="logisim"]')) { await page.click('[data-rub="logisim"]'); await page.click('[data-ent="1"]'); }
   await page.waitForSelector(`[data-act="${aid}"]`);
   const classe = (await page.getAttribute(`[data-act="${aid}"]`, 'class')) || '';
   const texte = await lire(`[data-act="${aid}"]`);

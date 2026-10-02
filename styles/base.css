@@ -361,6 +361,28 @@ td.juste .note{color:inherit; opacity:.85}
 .lien-accueil:hover{ color:var(--ardoise) }
 
 .module-grid{ display:grid; gap:14px; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)) }
+/* Logisim rangé par entreprise : la carte d'une entreprise est son logo seul, posé sur une
+   plaque claire. La plaque garde la même teinte papier quel que soit le thème, exprès (pas une
+   variable) : les logos ont un fond blanc ou une encre sombre, et deviendraient illisibles sur
+   le fond du thème sombre. `multiply` fond le blanc d'un JPEG (Spartoo) dans la plaque. */
+.entreprises{ display:grid; gap:16px; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)) }
+.entreprise{ cursor:pointer; font:inherit; color:inherit; background:var(--panneau); border:1px solid var(--filet);
+  border-radius:var(--r); box-shadow:var(--ombre); padding:6px; height:140px;
+  display:flex; align-items:center; justify-content:center;
+  transition:border-color .12s ease, box-shadow .12s ease }
+.entreprise:hover{ border-color:var(--ardoise); box-shadow:inset 3px 0 0 var(--ardoise) }
+.entreprise:focus-visible{ outline:2px solid var(--ardoise); outline-offset:2px }
+.entreprise .plaque{ width:100%; height:100%; border-radius:calc(var(--r) - 3px); background:#f7f4ee;
+  display:flex; align-items:center; justify-content:center }
+.entreprise img, .entreprise-tete img{ mix-blend-mode:multiply }
+.entreprise img{ max-width:82%; max-height:84px; object-fit:contain }
+.entreprise-autres{ font-size:15px; font-weight:600; color:var(--encre-douce) }
+.entreprise-tete{ display:flex; align-items:center; gap:16px; margin:2px 0 22px }
+.entreprise-tete .plaque{ background:#f7f4ee; border:1px solid var(--filet); border-radius:var(--r);
+  padding:8px 12px; display:flex }
+.entreprise-tete img{ height:44px; max-width:160px; object-fit:contain }
+.entreprise-tete h1{ font-size:25px; margin:0 0 3px; letter-spacing:-.018em }
+.entreprise-tete p{ margin:0; font-size:13.5px; color:var(--encre-douce) }
 /* L'enseignant voit toutes les tuiles (02/10/2026) ; celles que les élèves ne voient pas le disent. */
 .tuile-cachee{ display:inline-block; margin-top:6px; font-size:12px; font-weight:600; color:var(--terre);
   border:1px dashed var(--terre); border-radius:999px; padding:2px 9px }

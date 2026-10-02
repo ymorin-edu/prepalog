@@ -26,15 +26,24 @@ await pg.waitForSelector('#btnProf', { timeout: 8000 });
 const metas = await pg.evaluate(async () => (await (await import('/activites/index.js')).chargerActivites())
   .map((m) => ({ id: m.meta.id, code: m.meta.code, pret: !!m.meta.pret, rubrique: m.meta.rubrique })));
 const prepa = metas.find((m) => !m.pret && m.rubrique === 'logisim') || metas.find((m) => !m.pret);
-// Une séance prête de la même rubrique, qu'on fermera pour le groupe.
-const prete = metas.find((m) => m.pret && m.rubrique === (prepa || {}).rubrique && m.id !== (prepa || {}).id);
+// Logisim est rangé par entreprise (02/10/2026) : le premier nombre du code dit l'entreprise.
+const entDe = (m) => (m && m.rubrique === 'logisim' ? String(((m.code || '').match(/-(\d+)/) || [])[1]) : null);
+// Une séance prête de la même rubrique (et de la même entreprise), qu'on fermera pour le groupe.
+const prete = metas.find((m) => m.pret && m.rubrique === (prepa || {}).rubrique && m.id !== (prepa || {}).id
+  && entDe(m) === entDe(prepa));
 
 const tuiles = () => pg.$$eval('.module-tile', (els) => els.map((e) => ({
   id: e.dataset.act, cachee: e.querySelector('[data-cachee]')?.dataset.cachee || null })));
-const ouvrirRubrique = async (rub) => {
+// Retour à l'accueil d'où que l'on soit : la liste d'une entreprise ne mène qu'aux logos.
+const versAccueil = async () => {
+  if (await pg.$('#btnLogisim')) await pg.click('#btnLogisim');
+  await pg.click('#btnAccueil');
+};
+const ouvrirRubrique = async (rub, ent) => {
   await pg.click('#btnAccueil').catch(() => {});
   await pg.waitForSelector(`[data-rub="${rub}"]`);
   await pg.click(`[data-rub="${rub}"]`);
+  if (ent) await pg.click(`[data-ent="${ent}"]`);   // Logisim : le logo de l'entreprise
   await pg.waitForSelector('.module-tile, .ent-bandeau');
 };
 
@@ -57,7 +66,7 @@ await v('visibilité : l’enseignant voit la séance en préparation, étiquet�
   await pg.click('#btnLot');
   await pg.waitForTimeout(400);
   await pg.click('#btnRetour');
-  await ouvrirRubrique(prepa.rubrique);
+  await ouvrirRubrique(prepa.rubrique, entDe(prepa));
   const t = await tuiles();
   const x = t.find((y) => y.id === prepa.id);
   if (!x) throw new Error(`${prepa.code} absente chez l’enseignant : ` + t.map((y) => y.id).join(', '));
@@ -67,7 +76,7 @@ await v('visibilité : l’enseignant voit la séance en préparation, étiquet�
 });
 
 await v('visibilité : la case d’une séance en préparation est grisée dans la conduite de séance', async () => {
-  await pg.click('#btnAccueil');
+  await versAccueil();
   await pg.click('#btnProfEspace');
   await pg.click('[data-ong="seance"]');
   await pg.waitForSelector(`[data-ouvre="${prepa.id}"]`);
@@ -82,14 +91,14 @@ await v('visibilité : la case d’une séance en préparation est grisée dans 
 
 await v('visibilité : une séance fermée garde sa tuile chez l’enseignant, « fermée pour ce groupe »', async () => {
   await pg.click('#btnRetour');
-  await ouvrirRubrique(prepa.rubrique);
+  await ouvrirRubrique(prepa.rubrique, entDe(prepa));
   const t = await tuiles();
   const p = t.find((y) => y.id === prete.id);
   if (!p || p.cachee !== 'fermée pour ce groupe') throw new Error(JSON.stringify(p));
 });
 
 await v('visibilité : l’élève ne voit ni la séance en préparation ni la séance fermée', async () => {
-  await pg.click('#btnAccueil');
+  await versAccueil();
   await pg.click('#btnDeco');
   await pg.waitForSelector('#mat');
   await pg.fill('#mat', '3901');
@@ -100,6 +109,9 @@ await v('visibilité : l’élève ne voit ni la séance en préparation ni la s
   if (ids.includes(prepa.rubrique)) {
     await pg.click(`[data-rub="${prepa.rubrique}"]`);
     await pg.waitForTimeout(400);
+    // Logisim : une entreprise dont aucune séance n'est ouverte à l'élève n'a pas de carte.
+    const ent = entDe(prepa);
+    if (ent && await pg.$(`[data-ent="${ent}"]`)) { await pg.click(`[data-ent="${ent}"]`); await pg.waitForTimeout(400); }
   }
   const t = await tuiles();
   if (t.some((y) => y.id === prepa.id || y.id === prete.id)) throw new Error('visible à l’élève : ' + t.map((y) => y.id).join(', '));
