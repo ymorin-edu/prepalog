@@ -624,6 +624,31 @@ body.immersion .app{ max-width:1720px; padding:14px 24px 0 }
 .ent-act:hover{ background:rgba(255,255,255,.15); border-color:currentColor; opacity:1 }
 .ent-act-raz{ opacity:.65 }
 .ent-barre{ width:1px; align-self:stretch; background:currentColor; opacity:.28; margin:3px 0 }
+/* --- La copie rendue (évaluation, 02/10/2026) ---------------------------------
+   Une étiquette « Évaluation » dans le bandeau, et le bouton « Rendre ma copie », plus
+   visible que les autres actions : c'est LE geste de fin d'épreuve. Armé (premier clic),
+   il passe en plein, comme « Recommencer la tournée ». Après la remise, l'étiquette dit
+   l'heure, et un avis en tête de chaque écran rappelle que tout est en lecture seule. */
+.ent-copie{
+  font-size:12.5px; font-weight:600; letter-spacing:.03em; padding:3px 10px; border-radius:999px;
+  border:1px dashed currentColor; white-space:nowrap;
+}
+.ent-copie-rendue{ border-style:solid; background:rgba(255,255,255,.16) }
+.ent-act-copie{ border-color:currentColor; opacity:1; font-weight:600 }
+.ent-act-copie.ent-act-arme{ background:var(--terre); border-color:var(--terre); color:#fff }
+.ent-act-copie:disabled{ opacity:.6; cursor:wait }
+.ent-copie-avis{ margin-top:0 }
+.ent-main :disabled{ cursor:not-allowed }
+/* Le suivi : une copie rendue porte sa mention ; « ramasser » reste discret à côté du tiret. */
+.copie-cell{ white-space:nowrap }
+.copie-mention{ margin-left:4px }
+.btn-copie-rouvrir, .btn-ramasser{
+  font:inherit; font-size:.8rem; color:var(--encre-douce); background:none; border:1px solid transparent;
+  border-radius:var(--r); padding:0 5px; cursor:pointer; line-height:1.4; margin-left:2px;
+}
+.btn-copie-rouvrir:hover, .btn-copie-rouvrir:focus-visible,
+.btn-ramasser:hover, .btn-ramasser:focus-visible{ border-color:var(--encre-douce); color:inherit }
+.copie-ramassage{ margin-top:16px; padding-top:12px; border-top:1px solid var(--filet) }
 
 /* --- environnement d'entreprise (type « entreprise ») --------------------------
    LogiSim dans la charte Prepalog : une colonne de navigation à gauche, le travail

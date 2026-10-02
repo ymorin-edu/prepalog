@@ -7,7 +7,11 @@
 <!-- Page d'ESSAI de la vue `core/types/carte.js`, dans le vrai moteur d'entreprise et le décor
      Boost, AVANT qu'ENT-3.2 existe comme séance. Elle n'est liée nulle part et rien n'y est
      enregistré : la base vit en mémoire, un rechargement repart de zéro.
-     Ouvrir avec `lancer.bat`, puis http://localhost:8000/outils/essai-carte.html -->
+     Ouvrir avec `lancer.bat`, puis http://localhost:8000/outils/essai-carte.html
+     Mode ÉVALUATION (copie rendue, 02/10/2026) : http://localhost:8000/outils/essai-carte.html?copie
+     — jauges réduites aux limites, report sans correction, « Rendre ma copie » dans le bandeau,
+     puis lecture seule. La « note » de l'essai (deux jalons d'exemple) s'affiche dans la console
+     du navigateur (F12), jamais à l'écran : c'est ce que verrait l'enseignant dans le suivi. -->
 <!-- Les chemins du contenu (logo, trames) partent de la racine du site : on s'y place. -->
 <base href="../">
 <link rel="icon" href="./styles/logo.png">
@@ -22,11 +26,22 @@ import * as BOOST from './contenus/boost.js';
 // La journée d'ENT-3.2 (étape 2b) : huit clients, la Cave Teissier trop lourde, un créneau.
 import { CARTE } from './contenus/boost-ent32-carte.js';
 
+const COPIE = new URLSearchParams(location.search).has('copie');
+// Deux jalons d'exemple pour l'évaluation : de quoi voir une note à la remise.
+const ETAPES = !COPIE ? [] : [
+  { id: 'cave', titre: 'La Cave Teissier laissée à quai',
+    verifier: (db) => { const t = db.transport && db.transport['essai-carte'] && db.transport['essai-carte'].tournee;
+      return { status: t && t.quai && t.quai.length === 1 && t.quai[0] === 'c5' ? 'ok' : 'ko' }; } },
+  { id: 'distance', titre: 'La distance reportée',
+    verifier: (db) => { const t = db.transport && db.transport['essai-carte'] && db.transport['essai-carte'].tournee;
+      return { status: t && t.report && String(t.report.rkm || '').trim() ? 'ok' : 'ko' }; } },
+];
 const moteur = creerEntreprise({
   ENTREPRISE: BOOST.ENTREPRISE, VOCAB: BOOST.VOCAB, CATALOGUE: BOOST.CATALOGUE,
   SUPPLIERS: BOOST.SUPPLIERS, SUP_BY_ID: BOOST.SUP_BY_ID, CUSTOMERS: BOOST.CUSTOMERS, CM: BOOST.CM,
   baseDeDepart: BOOST.baseDeDepart, THEME: BOOST.THEME,
-  etapes: [], exercice: 'Essai de la carte réelle',
+  etapes: ETAPES, exercice: COPIE ? 'Essai — évaluation (copie rendue)' : 'Essai de la carte réelle',
+  copie: COPIE,
   transportSection: 'Tournées', transportId: 'essai-carte',
   plan: {
     libelle: 'Plan de Nîmes',
@@ -39,7 +54,7 @@ const moteur = creerEntreprise({
   tournee: {
     libelle: 'Tournée (essai)', titre: 'Organiser la tournée sur la carte réelle',
     consigne: 'Départ de l’entrepôt à 14 h 10, train à 16 h 10, 180 kg au plus. La Pâtisserie Arnaud '
-      + 'doit être livrée avant 14 h 45 : la colonne de droite dit si le créneau est tenu. Cliquez l’entrepôt, puis les clients dans l’ordre de passage, '
+      + (COPIE ? 'doit être livrée avant 14 h 45 : à vous de vérifier que le créneau est tenu. ' : 'doit être livrée avant 14 h 45 : la colonne de droite dit si le créneau est tenu. ') + 'Cliquez l’entrepôt, puis les clients dans l’ordre de passage, '
       + 'puis la gare. Le tracé suit les rues ; les kilomètres sont ceux de l’itinéraire à vélo-cargo.',
     mesures: [{ id: 'charge', libelle: 'Charge', unite: 'kg', champ: 'kg', max: BOOST.VELO.chargeUtile },
       { id: 'colis', libelle: 'Colis', unite: 'colis', champ: 'colis' }],
@@ -47,14 +62,34 @@ const moteur = creerEntreprise({
       service: BOOST.VELO.service, libelleLimite: 'départ du train' },
     departAQuai: true, extremitesACliquer: true,
     libelleCharge: 'Chargé dans le vélo-cargo', libelleQuai: 'Commandes restées à quai', libelleCharger: 'charger',
+    ...(!COPIE ? {} : {
+      exigeConforme: true,
+      report: [{ id: 'rkm', libelle: 'Distance de la tournée', unite: 'km', tolerance: 0.05, valeur: (b) => b.km }],
+      grille: {
+        titre: 'Feuille de calcul', colonnes: ['A', 'B'],
+        lignes: (b) => [{ A: 'Arrêt', B: 'Poids (kg)', entete: true },
+          ...b.retenus.map((p) => ({ A: p.nom, B: p.kg })),
+          { A: 'Poids total (kg)', B: { saisie: true, formule: true, attendu: b.cumuls.charge } }],
+      },
+      contraintesDansGrille: true,
+    }),
   },
 });
 const db = {};
+let travail = null;   // le résultat « enregistré » de l'essai (en mémoire)
 moteur.rendre(document.getElementById('hote'), {
-  meta: { id: 'essai-carte', code: 'ESSAI', titre: 'Boost — essai de la carte réelle', portee: 'eleve', immersif: true, jeuId: 'essai-carte' },
+  meta: { id: 'essai-carte', code: 'ESSAI', titre: COPIE ? 'Boost — évaluation (essai)' : 'Boost — essai de la carte réelle',
+    portee: 'eleve', immersif: true, jeuId: 'essai-carte', ...(COPIE ? { copie: true } : {}) },
   profil: { prenom: 'Essai', nom: 'Carte', role: 'eleve' },
   jeu: { etat: () => db, sauver: () => {} },
   enregistrer: () => {}, quitter: () => { location.reload(); }, codeStock: '',
+  lireScore: async () => travail,
+  rendreCopie: async (res) => {
+    if (travail) throw new Error('copie déjà rendue');
+    travail = { ...res, meilleur: res.score, rendu: Date.now(), ramasse: false };
+    console.info('Copie rendue — ce que verrait l’enseignant :', res.score + '/' + res.max, res.detail);
+    return travail;
+  },
 });
 window.__essai = { db };
 document.querySelector('.ent-nav[data-vue="plan"]')?.click();

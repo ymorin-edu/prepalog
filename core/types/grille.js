@@ -122,7 +122,10 @@ export function creerGrille(G) {
     html(lignes, etat0, opts = {}) {
       const etat = Object.assign({ cases: {}, juge: {}, valide: null }, etat0 || {});
       const cases = etat.cases || {};
-      const juge = etat.juge || {};
+      // `sansCorrection` (évaluation en copie rendue) : aucun verdict, aucun bouton « Vérifier ».
+      // Le résultat de chaque formule reste affiché à côté : c'est le tableur, pas la correction.
+      const SANS = !!opts.sansCorrection;
+      const juge = SANS ? {} : (etat.juge || {});
       const aJuge = Object.keys(juge).length > 0;
       const r = evaluerGrille(cellulesDe(lignes, cases));
 
@@ -218,9 +221,9 @@ export function creerGrille(G) {
           .map((c) => `<li><b class="mono">${ech(c.ref)}</b> ${ech(c.aide)}</li>`).join('')}</ul>`}
         ${bilan}
         ${opts.avertissement ? `<div class="avis avis-contrainte">${ech(opts.avertissement)}</div>` : ''}
-        <div class="rangee" style="margin-top:12px">
+        ${SANS ? '' : `<div class="rangee" style="margin-top:12px">
           <button class="btn btn-p" data-gr-verifier>${ech(G.libelleValider || 'Vérifier mes formules')}</button>
-        </div>`;
+        </div>`}`;
       return opts.droite
         ? `<div class="gr-bloc gr-deux"><div class="gr-gauche">${gauche}</div>
             <aside class="gr-droite" aria-label="Contraintes de l’exercice">${opts.droite}</aside></div>`

@@ -311,8 +311,16 @@ async function vueActivite(aid) {
       if (!groupeActif) return null;
       try { return await B.lireScore(groupeActif, profil.uid, aid); } catch (e) { return null; }
     },
+    // Évaluation en « copie rendue » (`meta.copie`, voir core/copie.js) : une seule remise,
+    // note figée. Rend la copie enregistrée, ou lève une erreur (déjà rendue, hors groupe).
+    async rendreCopie(res) {
+      if (!m.meta.copie || profil.role !== 'eleve' || !groupeActif) throw new Error('pas de copie à rendre ici');
+      return B.rendreCopie(groupeActif, profil.uid, aid, { score: res.score, max: res.max, detail: res.detail || null });
+    },
     async enregistrer(res) {
       if (!m.meta.bareme || profil.role !== 'eleve' || !groupeActif) return;
+      // Une évaluation ne remonte rien pendant le travail : seule la remise compte.
+      if (m.meta.copie) return;
       try { await B.ecrireScore(groupeActif, profil.uid, aid, { score: res.score, max: res.max, detail: res.detail || null }); }
       catch (e) { toast("Le score n'a pas pu être enregistré."); }
     },

@@ -187,6 +187,10 @@ export function creerBackendDemo() {
     async ecrireScore(gid, uid, aid, res) {
       const cle = `travaux/${gid}/${uid}/${aid}`;
       const anc = lire(cle, null);
+      // Une copie rendue (ou ramassée) est FIGÉE : plus aucun score ne la remplace. Voir
+      // `rendreCopie` ci-dessous et `core/copie.js`. Le vrai service le garantit aussi par ses
+      // règles (firestore.rules) ; ici, c'est la seule garde.
+      if (anc && anc.rendu) return anc;
       const nouv = {
         ...res, uid, aid, gid,
         nom: courant?.nom || '', prenom: courant?.prenom || '',
@@ -217,6 +221,27 @@ export function creerBackendDemo() {
         score: res.score, max: res.max, meilleur: res.score,
         tentatives: anc.tentatives || 0,
         parProf: true, dateMaj: Date.now(),
+      };
+      ecrire(cle, nouv);
+      const idx = lire(`travauxIdx/${gid}`, []);
+      const k = `${uid}|${aid}`;
+      if (!idx.includes(k)) { idx.push(k); ecrire(`travauxIdx/${gid}`, idx); }
+      return nouv;
+    },
+    // Copie rendue (évaluation, `meta.copie`) : une seule remise, note figée. L'élève la rend
+    // lui-même, ou l'enseignant la ramasse (`ramasse: true`, avec le nom de l'élève). Refusée
+    // si une copie est déjà rendue : la première remise fait foi. Le score remplace un 0 posé
+    // par l'enseignant (élève absent puis rattrapage).
+    async rendreCopie(gid, uid, aid, res) {
+      const cle = `travaux/${gid}/${uid}/${aid}`;
+      const anc = lire(cle, null);
+      if (anc && anc.rendu) throw new Error('copie déjà rendue');
+      const nouv = {
+        uid, aid, gid,
+        nom: res.nom ?? (courant?.nom || ''), prenom: res.prenom ?? (courant?.prenom || ''),
+        score: res.score, max: res.max, detail: res.detail || null,
+        meilleur: res.score, tentatives: 1,
+        rendu: Date.now(), ramasse: !!res.ramasse, dateMaj: Date.now(),
       };
       ecrire(cle, nouv);
       const idx = lire(`travauxIdx/${gid}`, []);

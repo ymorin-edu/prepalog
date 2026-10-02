@@ -20,6 +20,8 @@ export default async function bloc({ v, page, nav, ROOT }) {
   const imp = (rel) => import(pathToFileURL(path.join(ROOT, rel)).href);
   const CD = await imp('contenus/cdiscount.js');
   const S21 = await imp('contenus/cdiscount-mouvements.js');
+  const S22 = await imp('contenus/cdiscount-inventaire.js');
+  const INVM = await imp('core/types/inventaire.js');
 
   // Ce que fait le moteur à l'ouverture d'une séance (`creerEntreprise`, semerVolet), refait ici
   // pour juger les données sans navigateur : base de départ, puis volet de la séance.
@@ -291,6 +293,384 @@ Stock au dernier inventaire : 27 - 12 - 1 + 9 + 1 = 24`;
     if (reste) throw new Error('la page n\'a pas été rendue propre');
   });
 
+
+  /* ================================================================================
+   * ENT-2.2 « Inventaire tournant » (entraînement) — ajouté le 02/10/2026, chantier D.
+   *
+   * Réglages décidés par Tristan : 8 références et 27 mouvements (ENT-2.1 : 5 et 19), correction
+   * DÉTAILLÉE, piège unique = l'article au mauvais emplacement. Les valeurs attendues sont
+   * écrites À LA MAIN ici (stock, écarts, taux) : un test qui les recalculerait avec le code de
+   * la séance ne verrait pas une erreur de données.
+   * ============================================================================== */
+
+  const SYSTEME_22 = { 'CAB-USBC-1M': 64, 'CHG-20W': 44, 'ECO-BT-01': 22, 'SOU-SF-02': 29, 'BAT-10K': 10, 'CLE-64G': 37, 'AMP-LED-E27': 37, 'COQ-UNI-01': 27 };
+  const COMPTE_22 = { 'CAB-USBC-1M': 67, 'CHG-20W': 41, 'ECO-BT-01': 22, 'SOU-SF-02': 29, 'BAT-10K': 8, 'CLE-64G': 37, 'AMP-LED-E27': 37, 'COQ-UNI-01': 25 };
+  const ECARTS_22 = { 'CAB-USBC-1M': 3, 'CHG-20W': -3, 'ECO-BT-01': 0, 'SOU-SF-02': 0, 'BAT-10K': -2, 'CLE-64G': 0, 'AMP-LED-E27': 0, 'COQ-UNI-01': -2 };
+  const ORDRE_22 = Object.keys(SYSTEME_22);
+  const ID_22 = S22.ID_INVENTAIRE;
+
+  // L'état de l'écran Inventaire d'un élève, posé à la main (alerte n° 20 : on appelle
+  // `verifier(db)` directement). `decisions` : { ref: [action, motif] }.
+  const etat22 = (db, { saisie = COMPTE_22, ecarts = ECARTS_22, decisions = {}, recomptes = {}, taux = '3,7', valide = true } = {}) => {
+    const e = INVM.etatNeuf(S22.INVENTAIRE, (r) => db.stock[r]);
+    ORDRE_22.forEach((r) => { e.saisie[r] = String(saisie[r]); e.ecarts[r] = String(ecarts[r]); });
+    Object.entries(decisions).forEach(([r, [action, motif]]) => { e.decisions[r] = { action, motif: motif || '' }; });
+    Object.entries(recomptes).forEach(([r, q]) => { e.recomptes[r] = q; });
+    e.taux = taux; e.valide = valide ? Date.now() : null; e.etape = valide ? 4 : 1;
+    db.inventaires = { [ID_22]: e };
+    return db;
+  };
+  const BONNES_22 = { 'CAB-USBC-1M': ['recompter'], 'CHG-20W': ['rayon'], 'BAT-10K': ['rayon'], 'COQ-UNI-01': ['regul', 'Démarque inconnue'] };
+  const justeDb = (surcharge = {}) => etat22(ouvrir(S22), { recomptes: { 'CAB-USBC-1M': 64 }, decisions: BONNES_22, ...surcharge });
+  const ids22 = S22.ETAPES.map((x) => x.id);
+  const tombes22 = (db) => { const st = statuts(S22, db); return ids22.filter((x, i) => st[i] !== 'ok'); };
+
+  // ---------- ENT-2.2 — les données
+  await v('ENT-2.2 : volume déclaré = volume réel (8 références, 16 documents, 27 mouvements), plus fort qu\'ENT-2.1', async () => {
+    const db = ouvrir(S22);
+    const refs = new Set(db.moves.map((m) => m.sku));
+    const docs = new Set(db.moves.map((m) => m.ref));
+    const vol = { references: refs.size, documents: docs.size, mouvements: db.moves.length };
+    if (JSON.stringify(vol) !== JSON.stringify({ references: 8, documents: 16, mouvements: 27 })) throw new Error('volume réel : ' + JSON.stringify(vol));
+    for (const k of Object.keys(S22.VOLUME)) if (S22.VOLUME[k] !== vol[k]) throw new Error(`${k} : déclaré ${S22.VOLUME[k]}, réel ${vol[k]}`);
+    if (S22.CATALOGUE.VARIANTS.length !== 8) throw new Error('la séance montre plus ou moins que ses huit références');
+    // Décision de Tristan : un peu plus qu'ENT-2.1 (5 références, 19 mouvements).
+    if (!(refs.size > S21.VOLUME.references && db.moves.length > S21.VOLUME.mouvements)) throw new Error('le volume ne dépasse pas celui d\'ENT-2.1');
+    const meta = await page.evaluate(async () => (await import('/activites/cdiscount-inventaire.js')).meta);
+    if (JSON.stringify(meta.volume) !== JSON.stringify(S22.VOLUME)) throw new Error('le meta ne déclare pas le volume de la séance');
+  });
+
+  await v('ENT-2.2 : chaque mouvement a son document, le stock « après » se suit sans trou et retombe sur le stock du système', async () => {
+    const db = ouvrir(S22);
+    const recs = new Set(db.receptions.map((r) => r.no));
+    const bps = new Set(db.orders.map((o) => 'BP-' + o.no.replace('CMD-', '')));
+    const sujets = db.mails.map((m) => m.subject + ' ' + m.text).join('\n');
+    for (const m of db.moves) {
+      if (!(recs.has(m.ref) || bps.has(m.ref) || sujets.includes(m.ref))) throw new Error(`mouvement sans document : ${m.sku} ${m.type} ${m.ref}`);
+      if (!Object.values(S22.TYPES).includes(m.type)) throw new Error(`type de mouvement inattendu : ${m.type}`);
+    }
+    for (let i = 1; i < db.moves.length; i++) if (db.moves[i].ts < db.moves[i - 1].ts) throw new Error('mouvements dans le désordre');
+    if (db.moves.some((m) => m.ts > Date.now())) throw new Error('un mouvement est daté dans le futur');
+    if (db.moves.some((m) => m.ts < S22.INVENTAIRE.depuis)) throw new Error('un mouvement est antérieur au dernier inventaire : « voir les mouvements » ne le montrerait pas');
+    const s = { ...S22.INVENTAIRE_PRECEDENT };
+    for (const m of db.moves) { s[m.sku] += m.delta; if (m.after !== s[m.sku]) throw new Error(`stock après faux sur ${m.sku} (${m.ref})`); }
+    if (JSON.stringify(s) !== JSON.stringify(SYSTEME_22)) throw new Error('stock du système : ' + JSON.stringify(s));
+    for (const k of Object.keys(s)) if (s[k] !== db.stock[k]) throw new Error(`stock final faux : ${k}`);
+    for (const v2 of S22.CATALOGUE.VARIANTS) { if (s[v2.sku] < 0 || s[v2.sku] > v2.model.max) throw new Error(`${v2.sku} hors des bornes du catalogue`); }
+    for (const r of db.receptions) {
+      const parColis = {}; r.colis.forEach((c) => { parColis[c.sku] = (parColis[c.sku] || 0) + c.qty; });
+      r.bl.lines.forEach((l) => { if (parColis[l.sku] !== l.qty) throw new Error(`${r.no} : colis et bon de livraison divergent`); });
+    }
+    for (const o of db.orders) for (const l of o.lines) {
+      const m = db.moves.find((x) => x.ref === 'BP-' + o.no.replace('CMD-', '') && x.sku === l.sku);
+      if (o.prep.rows[l.sku].seen !== m.after + l.qty) throw new Error(`${o.no} : « vu en stock » incohérent`);
+    }
+  });
+
+  await v('ENT-2.2 : écarts, taux et décisions attendus (valeurs écrites à la main)', async () => {
+    const db = ouvrir(S22);
+    const L = Object.fromEntries(S22.INVENTAIRE.lignes.map((l) => [l.ref, l]));
+    if (JSON.stringify(S22.INVENTAIRE.lignes.map((l) => l.ref)) !== JSON.stringify(ORDRE_22)) throw new Error('ordre du relevé ≠ ordre des emplacements');
+    ORDRE_22.forEach((r, i) => {
+      if (L[r].compte !== COMPTE_22[r]) throw new Error(`${r} : relevé ${L[r].compte} au lieu de ${COMPTE_22[r]}`);
+      if (db.stock[r] !== SYSTEME_22[r]) throw new Error(`${r} : système ${db.stock[r]}`);
+      if (COMPTE_22[r] - SYSTEME_22[r] !== ECARTS_22[r]) throw new Error('test mal écrit : ' + r);
+      if (i > 0 && S22.CATALOGUE.VM[r].loc <= S22.CATALOGUE.VM[ORDRE_22[i - 1]].loc) throw new Error('relevé pas dans l\'ordre des emplacements');
+    });
+    const attendus = Object.fromEntries(S22.INVENTAIRE.lignes.filter((l) => l.attendu).map((l) => [l.ref, [l.attendu, l.motif || '']]));
+    if (JSON.stringify(attendus) !== JSON.stringify({ 'CAB-USBC-1M': ['recompter', ''], 'CHG-20W': ['rayon', ''], 'BAT-10K': ['rayon', ''], 'COQ-UNI-01': ['regul', 'Démarque inconnue'] })) throw new Error('décisions attendues : ' + JSON.stringify(attendus));
+    // Le bilan, lu comme le fait l'écran, donne les mêmes écarts et le taux de 3,7 % (10 ÷ 270).
+    const b = INVM.bilanInventaire(justeDb(), S22.INVENTAIRE, S22.CATALOGUE);
+    if (b.sommeAbs !== 10 || b.sommeSys !== 270 || b.tauxAttendu !== 3.7) throw new Error(`taux : ${b.sommeAbs} ÷ ${b.sommeSys} = ${b.tauxAttendu}`);
+    if (JSON.stringify(b.lignes.map((l) => l.ecartPremier)) !== JSON.stringify(ORDRE_22.map((r) => ECARTS_22[r]))) throw new Error('écarts du bilan');
+    // Réglages décidés par Tristan : correction détaillée, écarts par l'élève, comptage à l'aveugle.
+    const I = S22.INVENTAIRE;
+    if (I.correction !== 'detaillee' || I.ecarts !== 'eleve' || I.aveugle !== true || I.source !== 'releve' || I.motifObligatoire === false) throw new Error('réglages de l\'inventaire');
+    for (const l of I.lignes.filter((x) => x.attendu)) if (!l.explication || l.explication.length < 60) throw new Error(`correction détaillée sans explication : ${l.ref}`);
+  });
+
+  await v('ENT-2.2 : le piège est l\'article au mauvais emplacement — la paire +3 / −3 s\'annule, le stock du système est juste', async () => {
+    const db = ouvrir(S22);
+    // 1. La paire : mêmes trois cartons. Le surplus des câbles est le manque des chargeurs.
+    if (ECARTS_22['CAB-USBC-1M'] + ECARTS_22['CHG-20W'] !== 0) throw new Error('la paire ne s\'annule pas');
+    // 2. Aucun mouvement n'explique ces écarts : tous les mouvements de CAB, CHG et BAT ont un document
+    //    de type ordinaire (réception, préparation, annulation), jamais un ajustement ni une casse.
+    const ordinaires = [S22.TYPES.reception, S22.TYPES.preparation, S22.TYPES.reintegration];
+    for (const r of ['CAB-USBC-1M', 'CHG-20W', 'BAT-10K']) {
+      const bad = db.moves.filter((m) => m.sku === r && !ordinaires.includes(m.type));
+      if (bad.length) throw new Error(`${r} : un mouvement explique déjà l'écart (${bad[0].type})`);
+    }
+    // 3. L'indice est dans la messagerie, et il ne donne pas la décision : il nomme le doute, le
+    //    document et la zone (A-01) pour les chargeurs ; la commande annulée et son document pour les batteries.
+    const kevin = db.mails.find((m) => /Palette Kabeo/.test(m.subject));
+    if (!kevin || !/REC-26-0431/.test(kevin.text) || !/A-01/.test(kevin.text)) throw new Error('indice du cariste (palette Kabeo) absent ou incomplet');
+    const ines = db.mails.find((m) => /Annulation de CMD-732153/.test(m.subject));
+    if (!ines || !/REI-26-0012/.test(ines.text) || !/A-03/.test(ines.text)) throw new Error('indice de la préparatrice (annulation) absent ou incomplet');
+    for (const m of [kevin, ines]) if (/régulari|remettre en rayon|recompt/i.test(m.text)) throw new Error('un indice donne la décision : ' + m.subject);
+    // 4. Le rangement raté de la batterie est bien dans les mouvements : sortie puis réintégration.
+    const bat = db.moves.filter((m) => m.sku === 'BAT-10K');
+    if (!bat.some((m) => m.type === S22.TYPES.reintegration && m.delta === 2 && m.ref === 'REI-26-0012')) throw new Error('réintégration des batteries absente');
+    if (!bat.some((m) => m.type === S22.TYPES.preparation && m.delta === -2 && m.ref === 'BP-732153')) throw new Error('sortie des batteries absente');
+    // 5. Rien d'autre n'est semé : pas de casse ni de retour NON déclarés, pas d'erreur de saisie.
+    //    Tout retour et toute casse du lot ont leur document ; les motifs d'ajustement attendus sont
+    //    ceux de la ligne témoin seulement.
+    for (const m of db.moves.filter((x) => x.type === S22.TYPES.casse || x.type === S22.TYPES.retour)) {
+      if (!db.mails.some((x) => (x.subject + x.text).includes(m.ref))) throw new Error(`${m.ref} : retour ou casse sans document dans la messagerie`);
+    }
+    const motifs = S22.INVENTAIRE.lignes.filter((l) => l.motif).map((l) => l.motif);
+    if (JSON.stringify(motifs) !== JSON.stringify(['Démarque inconnue'])) throw new Error('motifs attendus : ' + motifs.join(', '));
+  });
+
+  await v('ENT-2.2 : la ligne témoin (coques) n\'a aucune cause à trouver — c\'est la seule où régulariser est juste', async () => {
+    const db = ouvrir(S22);
+    const mails = db.mails.map((m) => m.subject + ' ' + m.text + ' ' + (m.remarque || '')).join('\n');
+    // Aucun message ne parle des coques autrement que pour écarter la piste (relevé : « bacs voisins vérifiés »).
+    const parlent = db.mails.filter((m) => /COQ-UNI-01|coque/i.test(m.subject + ' ' + m.text));
+    if (parlent.length) throw new Error('un message explique l\'écart des coques : ' + parlent[0].subject);
+    if (!/A-04-2 : recompté deux fois, bacs voisins vérifiés/.test(mails)) throw new Error('la remarque du relevé n\'écarte pas la piste du mauvais rangement');
+    const mvCoq = db.moves.filter((m) => m.sku === 'COQ-UNI-01');
+    if (mvCoq.some((m) => m.type !== S22.TYPES.preparation)) throw new Error('un mouvement atypique explique les coques');
+    // Sans cette ligne, « remettre en rayon » serait juste partout : au moins une régularisation attendue.
+    const regul = S22.INVENTAIRE.lignes.filter((l) => l.attendu === 'regul');
+    if (regul.length !== 1 || regul[0].ref !== 'COQ-UNI-01') throw new Error('une seule régularisation attendue : les coques');
+    const rayon = S22.INVENTAIRE.lignes.filter((l) => l.attendu === 'rayon');
+    if (rayon.length < 2) throw new Error('le mauvais rangement doit se présenter au moins deux fois');
+  });
+
+  // ---------- ENT-2.2 — les jalons
+  await v('ENT-2.2 : sans travail, aucun jalon n\'est acquis (l\'inaction ne rapporte rien) ; base nue = « pas encore là »', async () => {
+    const db = ouvrir(S22);
+    const st = statuts(S22, db);
+    if (st.some((s) => s !== 'attente')) throw new Error('statuts avant travail : ' + st.join(', '));
+    const nue = S22.baseDeDepart('Léa'); nue.moves = []; nue.mails = []; nue.orders = [];
+    if (statuts(S22, nue).some((s) => s !== 'na')) throw new Error('un jalon juge une base sans mouvements');
+    // Un inventaire VALIDÉ sans aucune décision ne rapporte pas les deux jalons de décisions.
+    const sans = etat22(ouvrir(S22), { decisions: {} });
+    const t = tombes22(sans);
+    if (!t.includes('rangements') || !t.includes('temoin')) throw new Error('décisions absentes mais jalons acquis : ' + t.join(', '));
+  });
+
+  await v('ENT-2.2 : le parcours juste valide les cinq jalons', async () => {
+    const db = justeDb();
+    const st = statuts(S22, db);
+    if (st.some((s) => s !== 'ok')) throw new Error('statuts : ' + st.join(', '));
+  });
+
+  await v('ENT-2.2 : tant que l\'inventaire n\'est pas validé, les décisions ne sont pas jugées (« attente »)', async () => {
+    const db = justeDb({ valide: false });
+    const st = Object.fromEntries(ids22.map((x, i) => [x, statuts(S22, db)[i]]));
+    if (st.rangements !== 'attente' || st.temoin !== 'attente' || st.taux !== 'attente') throw new Error('décisions jugées avant validation : ' + JSON.stringify(st));
+    if (st.comptage !== 'ok' || st.ecarts !== 'ok') throw new Error('comptage et écarts justes non reconnus : ' + JSON.stringify(st));
+  });
+
+  await v('ENT-2.2 : chaque erreur typique fait tomber SON jalon, et lui seul', async () => {
+    const cas = [
+      // Les trois façons de ne pas voir le mauvais rangement : régulariser à tort.
+      ['rangements', 'régulariser les chargeurs manquants', { decisions: { ...BONNES_22, 'CHG-20W': ['regul', 'Démarque inconnue'] } }],
+      ['rangements', 'régulariser le surplus de câbles', { decisions: { ...BONNES_22, 'CAB-USBC-1M': ['regul', 'Erreur de réception'] }, recomptes: {} }],
+      ['rangements', 'régulariser les batteries', { decisions: { ...BONNES_22, 'BAT-10K': ['regul', 'Casse'] } }],
+      ['rangements', 'ne rien décider pour les batteries', { decisions: { 'CAB-USBC-1M': ['recompter'], 'CHG-20W': ['rayon'], 'COQ-UNI-01': ['regul', 'Démarque inconnue'] } }],
+      // Le piège inverse : « tout est un mauvais rangement ».
+      ['temoin', 'remettre les coques en rayon', { decisions: { ...BONNES_22, 'COQ-UNI-01': ['rayon'] } }],
+      ['temoin', 'régulariser les coques avec un autre motif', { decisions: { ...BONNES_22, 'COQ-UNI-01': ['regul', 'Casse'] } }],
+      ['temoin', 'recompter les coques', { decisions: { ...BONNES_22, 'COQ-UNI-01': ['recompter'] } }],
+      // Le calcul.
+      ['taux', 'taux faux (écarts relevés avec leur signe)', { taux: '0' }],
+      ['taux', 'taux en quantité faux (somme des écarts / somme des stocks avec une erreur)', { taux: '3,3' }],
+    ];
+    for (const [id, quoi, surcharge] of cas) {
+      const db = justeDb(surcharge);
+      const t = tombes22(db);
+      if (t.length !== 1 || t[0] !== id) throw new Error(`« ${quoi} » : tombent ${t.join(', ') || 'aucun'}, attendu ${id}`);
+    }
+    // Des écarts mal calculés : le jalon « écarts » ne passe pas.
+    const mal = justeDb({ ecarts: { ...ECARTS_22, 'CHG-20W': 3 } });
+    if (!tombes22(mal).includes('ecarts')) throw new Error('écart mal calculé non vu');
+    // Un comptage qui ne reprend pas le relevé : le jalon « comptage » ne passe pas.
+    const faux = justeDb({ saisie: { ...COMPTE_22, 'CAB-USBC-1M': 64 } });
+    if (!tombes22(faux).includes('comptage')) throw new Error('relevé mal reporté non vu');
+  });
+
+  await v('ENT-2.2 : le taux se lit à ± 0,1 point (3,7 juste, 3,66 juste, 4 faux)', async () => {
+    for (const [taux, ok] of [['3,7', true], ['3.7', true], ['3,66', true], ['3,8', true], ['4', false], ['10', false], ['', false]]) {
+      const t = tombes22(justeDb({ taux }));
+      if (ok !== !t.includes('taux')) throw new Error(`taux « ${taux} » : ${ok ? 'doit passer' : 'doit tomber'} (tombent : ${t.join(', ') || 'aucun'})`);
+    }
+  });
+
+  // ---------- ENT-2.2 — dans le navigateur, avec le vrai moteur et le vrai écran Inventaire
+  await v('ENT-2.2 : inscrite au registre, cachée tant que pret: false, parmi les séances C1.6', async () => {
+    const src = fs.readFileSync(path.join(ROOT, 'activites', 'index.js'), 'utf8');
+    if (!src.includes("import('./cdiscount-inventaire.js')")) throw new Error('absente de activites/index.js');
+    const meta = await page.evaluate(async () => (await import('/activites/cdiscount-inventaire.js')).meta);
+    if (meta.code !== 'ENT-2.2' || meta.temps !== 'entrainement' || !meta.competences.includes('C1.6')) throw new Error('meta incomplet');
+    if (meta.bareme !== S22.ETAPES.length) throw new Error('barème ≠ nombre de jalons');
+    const { activiteVisible } = await imp('core/niveaux.js');
+    if (!meta.pret && activiteVisible(meta, { niveau: '1re' })) throw new Error('séance non prête visible des élèves');
+    const regs = await page.evaluate(async () => {
+      const m = await import('/activites/index.js');
+      return (await m.chargerActivites()).map((a) => a.meta.code);
+    });
+    if (!regs.includes('ENT-2.2')) throw new Error('ENT-2.2 absente du registre chargé');
+  });
+
+  // Un onglet à part pour l'élève : on rejoue le parcours avec de vrais clics.
+  const ctx22 = await nav.newContext();
+  const pg = await ctx22.newPage();
+  pg.setDefaultTimeout(6000);
+  const erreurs22 = [];
+  pg.on('pageerror', (e) => erreurs22.push('PAGEERROR: ' + e.message));
+  pg.on('console', (m) => { if (m.type() === 'error' && !/\b404\b/.test(m.text())) erreurs22.push('CONSOLE: ' + m.text()); });
+  await pg.goto(new URL('/', page.url()).toString());
+  await pg.waitForSelector('#btnProf', { timeout: 8000 });
+
+  const monter22 = async (role = 'eleve') => {
+    await pg.evaluate(async (r) => {
+      const mod = await import('/activites/cdiscount-inventaire.js');
+      document.querySelector('#hote22')?.remove();
+      const hote = document.createElement('div'); hote.id = 'hote22'; document.body.appendChild(hote);
+      const db = {};
+      window.__inv22 = { db, scores: [] };
+      mod.rendre(hote, { meta: mod.meta, profil: { prenom: 'Léa', nom: 'Test', role: r }, codeStock: 'STOCK24',
+        jeu: { etat: () => db, sauver() {} }, enregistrer(x) { window.__inv22.scores.push(x); }, quitter() {} });
+    }, role);
+  };
+  const Z22 = '#hote22 .ent-main';
+  const ouvrir22 = async (vue) => { await pg.click(`#hote22 .ent-nav[data-vue="${vue}"]`); await pg.waitForTimeout(80); };
+  const texte22 = async (sel) => ((await pg.textContent(sel || Z22)) || '').replace(/\s+/g, ' ').trim();
+  const aller22 = async (n) => { await pg.click(`${Z22} [data-inv-aller="${n}"]`); await pg.waitForTimeout(80); };
+  const decider22 = async (ref, action, motif) => {
+    await pg.selectOption(`${Z22} [data-inv-action="${ref}"]`, action); await pg.waitForTimeout(80);
+    if (motif) await pg.selectOption(`${Z22} [data-inv-motif="${ref}"]`, motif);
+  };
+  const dbPage = () => pg.evaluate(() => JSON.parse(JSON.stringify(window.__inv22.db)));
+  const jusquAuTraitement22 = async () => {
+    await ouvrir22('inventaire');
+    for (const r of ORDRE_22) await pg.fill(`${Z22} [data-inv-saisie="${r}"]`, String(COMPTE_22[r]));
+    await aller22(2);
+    for (const r of ORDRE_22) await pg.fill(`${Z22} [data-inv-ecart="${r}"]`, String(ECARTS_22[r]).replace('-', '−'));
+    await aller22(3);
+  };
+  const valider22 = async (taux = '3,7') => {
+    await aller22(4);
+    await pg.fill(`${Z22} [data-inv-taux]`, taux);
+    await pg.click(`${Z22} [data-inv-valider]`); await pg.waitForTimeout(120);
+  };
+
+  await v('ENT-2.2 : la séance s\'ouvre dans le vrai moteur — huit messages, relevé « papier », stock caché à l\'aveugle', async () => {
+    await monter22();
+    const accueil = await texte22();
+    // L'accueil d'un environnement affiche d'ordinaire le stock total : ici il trahirait le comptage.
+    if (/en stock|références en rupture/.test(accueil) || /\b270\b/.test(accueil)) throw new Error('le stock du système est lisible à l\'accueil : ' + accueil.slice(0, 200));
+    if (!(await pg.$('#hote22 .ent-nav[data-vue="inventaire"]'))) throw new Error('pas d\'entrée Inventaire');
+    const accent = await pg.evaluate(() => getComputedStyle(document.body).getPropertyValue('--ardoise').trim());
+    if (accent.toLowerCase() !== '#3732ff') throw new Error('accent de la charte non appliqué : ' + accent);
+    await ouvrir22('mail');
+    const nb = await pg.$$eval('#hote22 .ent-mitem', (e) => e.length);
+    if (nb !== 7) throw new Error(`${nb} messages au lieu de 7`);
+    // Le relevé papier : huit lignes (emplacement, référence, quantité) et la remarque de l'équipe.
+    const sujets = await pg.$$eval('#hote22 .ent-mitem', (e) => e.map((x) => x.textContent));
+    const idx = sujets.findIndex((s) => /Relevé de comptage/.test(s));
+    await pg.click(`#hote22 .ent-mitem >> nth=${idx}`); await pg.waitForTimeout(80);
+    const lignes = await pg.$$eval('#hote22 .inv-papier tbody tr', (e) => e.map((x) => [...x.querySelectorAll('td')].map((t) => t.textContent.trim())));
+    if (JSON.stringify(lignes.map((l) => [l[1], Number(l[2])])) !== JSON.stringify(ORDRE_22.map((r) => [r, COMPTE_22[r]]))) throw new Error('relevé affiché : ' + JSON.stringify(lignes));
+    if (!/bacs voisins vérifiés/.test(await texte22('#hote22 .inv-papier'))) throw new Error('remarque du relevé absente');
+    // À l'aveugle : Stock bloqué, console fermée sur le stock — pour l'élève.
+    await ouvrir22('stock');
+    if (!(await pg.$(`${Z22} [data-stock-bloque]`))) throw new Error('Stock doit être bloqué');
+    await ouvrir22('console');
+    await pg.fill('#champCmd', '.getstock COQ-UNI-01'); await pg.press('#champCmd', 'Enter'); await pg.waitForTimeout(80);
+    const blocs = await pg.$$eval(`${Z22} .ent-cres`, (e) => e.map((x) => x.textContent));
+    if (!/Inventaire en cours/.test(blocs[blocs.length - 1] || '')) throw new Error('.getstock devrait être refusée : ' + blocs[blocs.length - 1]);
+    // Pas de fuite par le Catalogue : le stock du système n'y figure pas avant la validation du comptage.
+    await ouvrir22('catalogue');
+    const cat = await texte22();
+    for (const n of ['64', '44', '37']) if (new RegExp(`(Stock|stock)\\D{0,12}\\b${n}\\b`).test(cat)) throw new Error('le Catalogue montre un stock du système : ' + n);
+  });
+
+  await v('ENT-2.2 : parcours juste de bout en bout — 4 décisions justes, une seule régularisation, correction détaillée, score 5/5', async () => {
+    await monter22();
+    await jusquAuTraitement22();
+    // Les quatre écarts, pas un de plus.
+    const lignes = await pg.$$eval(`${Z22} [data-inv-ligne]`, (e) => e.map((x) => x.dataset.invLigne));
+    if (JSON.stringify(lignes) !== JSON.stringify(['CAB-USBC-1M', 'CHG-20W', 'BAT-10K', 'COQ-UNI-01'])) throw new Error('lignes à traiter : ' + lignes.join(', '));
+    // Les mouvements de la ligne sont consultables, et ne commencent qu'après le dernier inventaire.
+    await pg.click(`${Z22} [data-inv-ouvrir="BAT-10K"]`); await pg.waitForTimeout(80);
+    const mv = await pg.$$eval(`${Z22} [data-inv-mvts="BAT-10K"] tbody tr`, (e) => e.length);
+    if (mv !== 4) throw new Error(`${mv} mouvements de BAT-10K à l'écran au lieu de 4`);
+    await decider22('CAB-USBC-1M', 'recompter');
+    await decider22('CHG-20W', 'rayon');
+    await decider22('BAT-10K', 'rayon');
+    await decider22('COQ-UNI-01', 'regul', 'Démarque inconnue');
+    await valider22('3,7');
+    const bilan = await texte22();
+    if (!/Inventaire INV-2026-52 validé/.test(bilan)) throw new Error('inventaire non validé : ' + bilan.slice(0, 200));
+    if (!/4 décisions justes sur 4/.test(bilan)) throw new Error('bilan : ' + bilan.slice(0, 300));
+    // Correction DÉTAILLÉE : la colonne « Ce qu'il fallait voir » et l'explication du mauvais rangement.
+    if (!/Ce qu'il fallait voir/.test(bilan) || !/les trois mêmes cartons/.test(bilan)) throw new Error('correction détaillée absente');
+    const db = await dbPage();
+    // Un seul ajustement : les coques, −2, avec le motif.
+    const aj = db.moves.filter((m) => m.type === 'Ajustement inventaire');
+    if (aj.length !== 1 || aj[0].sku !== 'COQ-UNI-01' || aj[0].delta !== -2 || !/INV-2026-52 · Démarque inconnue/.test(aj[0].ref)) throw new Error('ajustements : ' + JSON.stringify(aj));
+    const attendu = { ...SYSTEME_22, 'COQ-UNI-01': 25 };
+    if (JSON.stringify(db.stock) !== JSON.stringify(attendu)) throw new Error('stock final : ' + JSON.stringify(db.stock));
+    // Les jalons, lus par la même fonction que l'écran.
+    const st = statuts(S22, db);
+    if (st.some((s) => s !== 'ok')) throw new Error('jalons : ' + st.join(', '));
+    const dernier = await pg.evaluate(() => window.__inv22.scores[window.__inv22.scores.length - 1]);
+    if (!dernier || dernier.score !== 5 || dernier.max !== 5) throw new Error('score remonté : ' + JSON.stringify(dernier));
+    // Après validation, Stock s'ouvre (le code est celui du groupe) et affiche le stock régularisé.
+    await ouvrir22('stock');
+    await pg.fill(`${Z22} #codeStock`, 'STOCK24'); await pg.click(`${Z22} [data-deverrouiller]`); await pg.waitForTimeout(80);
+    const lig = await texte22(`${Z22} #entListe`);
+    if (!/COQ-UNI-01.*?universelle\s*25\b/.test(lig)) throw new Error('Stock ne montre pas 25 coques : ' + lig.slice(0, 300));
+  });
+
+  await v('ENT-2.2 : le réflexe « tout écart négatif se régularise » coûte cher — les chargeurs disparaissent du stock, et la correction dit pourquoi', async () => {
+    await monter22();
+    await jusquAuTraitement22();
+    await decider22('CAB-USBC-1M', 'recompter');
+    await decider22('CHG-20W', 'regul', 'Démarque inconnue');   // le piège
+    await decider22('BAT-10K', 'rayon');
+    await decider22('COQ-UNI-01', 'regul', 'Démarque inconnue');
+    await valider22('3,7');
+    const bilan = await texte22();
+    if (!/3 décisions justes sur 4/.test(bilan)) throw new Error('bilan : ' + bilan.slice(0, 300));
+    if (!/à revoir/.test(bilan) || !/les trois mêmes cartons/.test(bilan)) throw new Error('la correction n\'explique pas le mauvais rangement');
+    const db = await dbPage();
+    if (db.stock['CHG-20W'] !== 41) throw new Error('les chargeurs devraient être régularisés à 41 : ' + db.stock['CHG-20W']);
+    const t = tombes22(db);
+    if (t.length !== 1 || t[0] !== 'rangements') throw new Error('jalons tombés : ' + t.join(', '));
+    const dernier = await pg.evaluate(() => window.__inv22.scores[window.__inv22.scores.length - 1]);
+    if (!dernier || dernier.score !== 4) throw new Error('score : ' + JSON.stringify(dernier));
+  });
+
+  await v('ENT-2.2 : à l\'étape 3, régulariser sans motif est refusé, et le recomptage des câbles fait disparaître l\'écart', async () => {
+    await monter22();
+    await jusquAuTraitement22();
+    await decider22('CAB-USBC-1M', 'recompter');
+    await decider22('CHG-20W', 'rayon');
+    await decider22('BAT-10K', 'rayon');
+    await decider22('COQ-UNI-01', 'regul');                 // pas de motif
+    await aller22(4);
+    const msg = await texte22(`${Z22} [data-inv-msg]`);
+    if (!/sans motif est refusée/.test(msg)) throw new Error('refus attendu : ' + msg);
+    const ecart = await texte22(`${Z22} [data-inv-ligne="CAB-USBC-1M"] [data-inv-ecart-ligne]`);
+    if (!/0/.test(ecart.replace(/\s/g, '')) || /\+3/.test(ecart)) throw new Error('l\'écart des câbles devrait avoir disparu au recomptage : ' + ecart);
+  });
+
+  await v('ENT-2.2 : l\'enseignant voit le stock malgré le comptage à l\'aveugle', async () => {
+    await monter22('prof');
+    await ouvrir22('stock');
+    if (await pg.$(`${Z22} [data-stock-bloque]`)) throw new Error('Stock bloqué pour l\'enseignant');
+  });
+
+  await v('ENT-2.2 : aucune erreur de console ni d\'exception pendant ces parcours', async () => {
+    await pg.evaluate(() => { document.querySelector('#hote22')?.remove(); document.body.classList.remove('immersion'); });
+    await ctx22.close();
+    if (erreurs22.length) throw new Error(erreurs22.slice(0, 3).join(' | '));
+  });
+
   // ---------- la page d'essai (pour valider à l'écran une séance encore « pret: false »)
   await v('Cdiscount : la page d\'essai ouvre ENT-2.1 dans le vrai moteur et affiche ses jalons', async () => {
     // Un onglet à part : la page partagée de la suite n'est pas déplacée.
@@ -308,6 +688,24 @@ Stock au dernier inventaire : 27 - 12 - 1 + 9 + 1 = 24`;
       const fichiers = fs.readdirSync(path.join(ROOT, 'activites')).filter((f) => /^cdiscount-.*\.js$/.test(f)).map((f) => f.slice(0, -3));
       const oubli = fichiers.filter((f) => !opts.includes(f));
       if (oubli.length) throw new Error('séance Cdiscount absente de la page d\'essai : ' + oubli.join(', '));
+      if (errs.length) throw new Error(errs.join(' | '));
+    } finally { await ctx.close(); }
+  });
+
+  await v('Cdiscount : la page d\'essai ouvre aussi ENT-2.2, avec ses cinq jalons à « attente »', async () => {
+    const ctx = await nav.newContext();
+    const p = await ctx.newPage();
+    const errs = [];
+    p.on('pageerror', (e) => errs.push(e.message));
+    p.on('console', (m) => { if (m.type() === 'error' && !/\b404\b/.test(m.text())) errs.push(m.text()); });
+    try {
+      await p.goto(new URL('/outils/essai-cdiscount.html', page.url()).toString());
+      await p.waitForSelector('.ent-shell', { timeout: 6000 });
+      await p.selectOption('select[name="seance"]', 'cdiscount-inventaire');
+      await p.waitForSelector('.ent-nav[data-vue="inventaire"]', { timeout: 6000 });
+      const jalons = await p.$$eval('#jalons span', (s) => s.map((x) => x.textContent.trim()));
+      if (jalons.length !== S22.ETAPES.length) throw new Error(`${jalons.length} jalons affichés au lieu de ${S22.ETAPES.length}`);
+      if (jalons.some((j) => !j.startsWith('⏳'))) throw new Error('jalons avant travail : ' + jalons.join(' | '));
       if (errs.length) throw new Error(errs.join(' | '));
     } finally { await ctx.close(); }
   });

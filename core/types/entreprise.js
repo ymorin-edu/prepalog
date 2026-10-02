@@ -74,8 +74,19 @@ export function creerEntreprise(U) {
   // plan schématique : `plan.carte` (le module généré par `outils/carte/construire.py`) fait
   // choisir `carte.js`. Même contrat pour l'hôte — `nav`, `ouvreSuite`, `html`, `brancher` —
   // donc rien d'autre ne change ici. ENT-3.1 ne déclare pas de carte : elle garde son plan.
+  // ── La copie rendue (évaluation, 02/10/2026, chantier A) ─────────────────────────────────
+  // `copie: true`, passé par l'activité ET déclaré dans son `meta` (le suivi de classe et
+  // `core/app.js` le lisent là). Décisions de Tristan pour ENT-3.4, et toutes les évaluations :
+  //   - pendant le travail, rien ne remonte au suivi : pas de « meilleur score » qu'on améliore
+  //     en réessayant ;
+  //   - aucune correction à l'écran : la tournée garde ses limites, sans dire si elles sont
+  //     tenues, et ses cases s'enregistrent sans juste / faux (voir `copie` dans tournee.js) ;
+  //   - « Rendre ma copie », une seule fois ; la note est calculée à la remise et figée ;
+  //   - après la remise, l'environnement se consulte mais ne se modifie plus, sans note affichée.
+  // L'enseignant ramasse les copies non rendues et peut en rouvrir une (core/copie.js).
+  const COPIE = !!U.copie;
   const VPLAN = U.plan ? (U.plan.carte ? creerCarte(U.plan) : creerPlan(U.plan)) : null;
-  const VTOUR = U.tournee ? creerTournee(Object.assign({ plan: U.plan }, U.tournee)) : null;
+  const VTOUR = U.tournee ? creerTournee(Object.assign({ plan: U.plan }, U.tournee, COPIE ? { copie: true } : {})) : null;
   // L'écran « Inventaire » (02/10/2026, chantier E), sur le même principe : il n'existe que si
   // la séance déclare un `inventaire` — format dans `claude/prepalog-inventaire-format.md`.
   const VINV = U.inventaire ? creerInventaire(U.inventaire, CATALOGUE) : null;
@@ -98,8 +109,31 @@ export function creerEntreprise(U) {
   const etatStock = (q, min) => (q <= 0 ? ['Rupture', 'crit'] : (q <= min ? ['Faible', 'warn'] : ['OK', 'ok']));
   const pastilleStock = (q, min) => { const s = etatStock(q, min); return pastille(s[0], s[1]); };
 
+  // La note d'une base : le nombre d'étapes réussies. Sert au suivi en direct, à la remise de la
+  // copie, et à l'enseignant qui ramasse une copie (il lit la base de l'élève sans l'ouvrir).
+  // Une étape qui plante sur une base incomplète compte comme non faite, sans tout arrêter.
+  function noterBase(db) {
+    const detail = {};
+    let ok = 0;
+    etapes.forEach((e) => {
+      let st = 'ko';
+      try { st = e.verifier(db, U).status; } catch (x) { st = 'ko'; }
+      detail[e.id] = st;
+      if (st === 'ok') ok++;
+    });
+    return { score: ok, max: etapes.length, detail };
+  }
+
   return {
+    copie: COPIE,
+    // Pour le ramassage des copies (core/copie.js) : la note de la base d'un élève.
+    noter(db) { return noterBase(JSON.parse(JSON.stringify(db || {}))); },
     rendre(hote, ctx) {
+      if (!!(ctx.meta && ctx.meta.copie) !== COPIE) {
+        hote.innerHTML = `<div class="avis avis-err">Évaluation mal déclarée : « copie » doit figurer
+          dans le meta de l'activité ET dans ce qu'elle passe à creerEntreprise.</div>`;
+        return;
+      }
       if (ctx.meta.portee !== 'eleve') {
         hote.innerHTML = `<div class="avis avis-err">Un environnement d'entreprise doit être de portée « eleve ».</div>`;
         return;
@@ -242,7 +276,12 @@ export function creerEntreprise(U) {
       }
       const sortir = (fn) => { deshabiller(); if (fn) fn(); };
 
-      const sauver = () => { ctx.jeu.sauver(); remonterEtapes(); };
+      // L'état de la copie (évaluation). `charge` : on sait si elle est déjà rendue — tant qu'on
+      // ne le sait pas, le bouton « Rendre » n'est pas offert. Côté enseignant, rien à rendre.
+      const copie = { rendue: null, ramassee: false, arme: false, envoi: false, charge: !COPIE || estProf };
+      const rendue = () => !!(COPIE && copie.rendue);
+      // Copie rendue : plus rien ne s'écrit dans la base, même si un geste passait le verrou.
+      const sauver = () => { if (rendue()) return; ctx.jeu.sauver(); remonterEtapes(); };
       const stockDe = (sku) => { const q = db.stock[sku]; return q == null ? 0 : q; };
 
       function ajouterMail(m) {
@@ -266,17 +305,12 @@ export function creerEntreprise(U) {
       // Le score du suivi de classe : le nombre d'étapes réussies.
       function remonterEtapes() {
         if (estProf || !etapes.length) return;
-        const res = {};
-        let ok = 0;
-        etapes.forEach((e) => {
-          const r = e.verifier(db, U);
-          res[e.id] = r.status;
-          if (r.status === 'ok') ok++;
-        });
-        ctx.enregistrer({ score: ok, max: etapes.length, detail: res });
+        const { score: ok, max, detail: res } = noterBase(db);
+        // Évaluation : rien ne remonte pendant le travail, seule la remise compte.
+        if (!COPIE) ctx.enregistrer({ score: ok, max, detail: res });
         // Séance validée : on range une photo du travail, une fois pour toutes. Elle ouvre la
         // séance suivante et sert de point de reprise (voir core/parcours.js).
-        if (ctx.meta.parcours && ok === etapes.length) {
+        if (ctx.meta.parcours && ok === max) {
           if (!db.points) db.points = {};
           if (!db.points[ctx.meta.id]) {
             const { points, reprise, ...reste } = db;
@@ -369,7 +403,8 @@ export function creerEntreprise(U) {
                    de la séance (elles vont par paire), puis le réglage de poste. ENT-3.1 n'a pas
                    encore de trame, mais elle en aura une comme les trois Spartoo : la place est
                    donc tenue, et le mode hors connexion reste en bout de file. -->
-              ${ctx.meta && ctx.meta.reinitialisable ? `<button class="ent-act ent-act-raz" data-raz
+              ${boutonsCopie()}
+              ${ctx.meta && ctx.meta.reinitialisable && !rendue() ? `<button class="ent-act ent-act-raz" data-raz
                 title="Effacer votre travail et repartir d'une base neuve">Réinitialiser</button>` : ''}
               ${trame && trame.pdf ? `<a class="ent-act" href="${ech(trame.pdf)}" download
                 title="Le carnet de bord de la séance, à imprimer ou à lire à l'écran">Trame PDF</a>` : ''}
@@ -416,8 +451,82 @@ export function creerEntreprise(U) {
           toast('Mode hors connexion : les quartiers sont affichés sur le plan.');
         });
         hote.querySelector('[data-quitter]').addEventListener('click', () => sortir(ctx.quitter));
+        hote.querySelector('[data-copie-rendre]')?.addEventListener('click', () => {
+          if (!copie.arme) { copie.arme = true; dessiner(); return; }
+          rendreLaCopie();
+        });
+        hote.querySelector('[data-copie-annuler]')?.addEventListener('click', () => { copie.arme = false; dessiner(); });
         habiller();
         dessinerVue();
+      }
+
+      /* ------------------------------------------------------------- la copie rendue */
+      // Le bouton du bandeau, en deux temps sans boîte de dialogue du navigateur (elles bloquent
+      // les postes et les tests) : le premier clic arme, le second rend. Même geste que
+      // « Recommencer la tournée ».
+      function boutonsCopie() {
+        if (!COPIE) return '';
+        if (estProf) return '<span class="ent-copie" title="Les élèves rendent leur copie ici ; vous la ramassez depuis le suivi.">Évaluation</span>';
+        if (copie.rendue) {
+          return `<span class="ent-copie ent-copie-rendue" data-copie-etat="rendue">${
+            copie.ramassee ? 'Copie ramassée' : 'Copie rendue'} à ${ech(heureDe(copie.rendue))}</span>`;
+        }
+        if (!copie.charge) return '<span class="ent-copie">Évaluation</span>';
+        return `<span class="ent-copie">Évaluation</span>
+          <button class="ent-act ent-act-copie${copie.arme ? ' ent-act-arme' : ''}" data-copie-rendre ${copie.envoi ? 'disabled' : ''}
+            title="Remettre votre travail à l'enseignant. Une seule remise : vous ne pourrez plus rien modifier.">${
+            copie.envoi ? 'Envoi…' : (copie.arme ? 'Rendre définitivement ? Cliquez pour confirmer' : 'Rendre ma copie')}</button>
+          ${copie.arme && !copie.envoi ? '<button class="ent-act" data-copie-annuler>Annuler</button>' : ''}`;
+      }
+      const heureDe = (ts) => new Date(ts).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }).replace(':', ' h ');
+
+      async function rendreLaCopie() {
+        if (copie.envoi || copie.rendue) return;
+        copie.envoi = true; dessiner();
+        const res = noterBase(db);
+        try {
+          // Le travail d'abord : la base de l'élève est ce que l'enseignant consultera.
+          ctx.jeu.sauver();
+          if (ctx.jeu.vidange) await ctx.jeu.vidange();
+          const t = await ctx.rendreCopie(res);
+          copie.rendue = (t && t.rendu) || Date.now();
+          copie.ramassee = !!(t && t.ramasse);
+          toast('Copie rendue. Votre enseignant vous donnera la note.');
+        } catch (e) {
+          // Déjà rendue (ramassée par l'enseignant pendant qu'on travaillait, ou un double clic
+          // sur deux onglets) : on relit ce qui fait foi.
+          const t = await ctx.lireScore().catch(() => null);
+          if (t && t.rendu) { copie.rendue = t.rendu; copie.ramassee = !!t.ramasse; toast('Cette copie a déjà été remise.'); }
+          else toast("La copie n'a pas pu être rendue. Réessayez, ou appelez votre enseignant.");
+        }
+        copie.envoi = false; copie.arme = false;
+        dessiner();
+      }
+
+      // Après la remise : on regarde, on ne touche plus. Le verrou est posé UNE fois sur l'hôte,
+      // en phase de capture, donc avant les écouteurs de chaque vue — une vue écrite demain sera
+      // verrouillée sans rien savoir de la copie. Restent libres : le menu, la sortie, le zoom
+      // de la carte. `sauver` ne fait plus rien non plus : deux gardes valent mieux qu'une.
+      const LIBRE = '.ent-nav, [data-quitter], [data-ct-zoom], [data-ct-ensemble]';
+      if (COPIE && !estProf) {
+        const verrou = (ev) => {
+          if (!rendue()) return;
+          const t = ev.target;
+          if (t && t.closest && t.closest(LIBRE)) return;
+          if (ev.type === 'keydown' && ev.key === 'Tab') return;
+          ev.stopPropagation(); ev.preventDefault();
+        };
+        ['click', 'dblclick', 'mousedown', 'input', 'change', 'keydown', 'submit', 'dragstart', 'drop', 'paste']
+          .forEach((type) => hote.addEventListener(type, verrou, true));
+      }
+      function figerVue(z) {
+        if (!rendue()) return;
+        z.querySelectorAll('input, select, textarea').forEach((el) => { el.disabled = true; });
+        z.querySelectorAll('button').forEach((el) => { if (!el.matches(LIBRE)) el.disabled = true; });
+        z.insertAdjacentHTML('afterbegin', `<div class="avis ent-copie-avis" data-copie-avis>
+          <strong>${copie.ramassee ? 'Copie ramassée' : 'Copie rendue'} à ${ech(heureDe(copie.rendue))}.</strong>
+          Votre travail est enregistré tel quel : vous pouvez le consulter, plus le modifier.
+          Votre enseignant vous donnera la note.</div>`);
       }
 
       // La séance en cours, affichée dans le bandeau depuis le 01/10/2026 : trois séances
@@ -457,6 +566,7 @@ export function creerEntreprise(U) {
         };
         z.innerHTML = (vues[E.vue] || vueAccueil)();
         brancher(z);
+        figerVue(z);
         if (E.vue === 'catalogue') majCatalogue();
         if (E.vue === 'stock' && E.stockOuvert) majStock();
         if (E.vue === 'clients' || E.vue === 'fournisseurs') majTiers();
@@ -1735,6 +1845,15 @@ export function creerEntreprise(U) {
 
       remonterEtapes();
       dessiner();
+      // Évaluation : la copie est-elle déjà rendue ? Ce qui fait foi est le résultat enregistré
+      // (que l'enseignant peut ramasser ou rouvrir), pas la base de l'élève.
+      if (COPIE && !estProf) {
+        Promise.resolve(ctx.lireScore ? ctx.lireScore() : null).catch(() => null).then((t) => {
+          if (t && t.rendu) { copie.rendue = t.rendu; copie.ramassee = !!t.ramasse; }
+          copie.charge = true;
+          if (hote.isConnected) dessiner();
+        });
+      }
     },
   };
 }

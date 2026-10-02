@@ -90,7 +90,12 @@ service cloud.firestore {
       allow read:  if uid == moi() || profDuGroupe(gid);
       // Un élève n'écrit que ses propres résultats, et seulement dans un groupe
       // dont il est membre.
-      allow write: if (uid == moi() && membreDuGroupe(gid)) || profDuGroupe(gid);
+      // Copie rendue (évaluation, 02/10/2026) : un résultat qui porte `rendu` est FIGÉ pour
+      // l'élève — il ne peut ni le réécrire ni l'effacer. Seul l'enseignant du groupe le
+      // modifie (ramasser, rouvrir). `resource == null` : création, toujours permise.
+      allow write: if (uid == moi() && membreDuGroupe(gid)
+                       && (resource == null || !('rendu' in resource.data)))
+                    || profDuGroupe(gid);
     }
 
     // ------------------------------------------------- jeux privés (portée élève)

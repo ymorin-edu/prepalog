@@ -334,12 +334,32 @@ export async function creerBackendFirebase() {
       const ref = dref('travaux', gid, 'eleves', uid, 'activites', aid);
       const anc = await FS.getDoc(ref);
       const a = anc.exists() ? anc.data() : null;
+      // Copie rendue : figée. Les règles refuseraient de toute façon l'écriture de l'élève
+      // (firestore.rules) ; on ne la tente pas, pour ne pas afficher une erreur à chaque geste.
+      if (a && a.rendu) return a;
       const nouv = {
         ...res, uid, aid, gid,
         nom: courant?.nom || '', prenom: courant?.prenom || '',
         tentatives: (a?.tentatives || 0) + 1,
         meilleur: Math.max(a?.meilleur ?? -1, res.score),
         dateMaj: Date.now(),
+      };
+      await FS.setDoc(ref, nouv);
+      return nouv;
+    },
+    // Copie rendue (évaluation, `meta.copie`) : une seule remise, note figée — voir le même
+    // nom dans backend-demo.js. La garde de l'élève est dans firestore.rules : un document qui
+    // porte `rendu` ne se modifie plus que par l'enseignant du groupe.
+    async rendreCopie(gid, uid, aid, res) {
+      const ref = dref('travaux', gid, 'eleves', uid, 'activites', aid);
+      const anc = await FS.getDoc(ref);
+      if (anc.exists() && anc.data().rendu) throw new Error('copie déjà rendue');
+      const nouv = {
+        uid, aid, gid,
+        nom: res.nom ?? (courant?.nom || ''), prenom: res.prenom ?? (courant?.prenom || ''),
+        score: res.score, max: res.max, detail: res.detail || null,
+        meilleur: res.score, tentatives: 1,
+        rendu: Date.now(), ramasse: !!res.ramasse, dateMaj: Date.now(),
       };
       await FS.setDoc(ref, nouv);
       return nouv;

@@ -225,6 +225,28 @@ await v("un enseignant étranger ne lit pas ces résultats", () =>
 await v("l'enseignant saisit une note à la main", () =>
   assertSucceeds(fsDe('prof1').doc('travaux/g1/eleves/e1/activites/scenario').set({ score: 14, max: 20 })));
 
+// ---------- 6 bis. la copie rendue (évaluations, 02/10/2026) : figée pour l'élève
+// Un résultat qui porte `rendu` ne se réécrit plus par l'élève — ni à la main dans la console
+// du navigateur, ni par un onglet resté ouvert. Seul l'enseignant du groupe le ramasse ou le
+// rouvre (core/copie.js).
+await env.withSecurityRulesDisabled(async (ctx) => {
+  await ctx.firestore().doc('travaux/g1/eleves/e1/activites/eval1').set({ score: 3, max: 6, meilleur: 3, rendu: 1790000000000 });
+});
+await v("copie rendue : l'élève ne réécrit pas sa note", () =>
+  assertFails(fsDe('e1').doc('travaux/g1/eleves/e1/activites/eval1').set({ score: 6, max: 6, meilleur: 6 })));
+await v("copie rendue : l'élève ne retire pas le marqueur de remise", () =>
+  assertFails(fsDe('e1').doc('travaux/g1/eleves/e1/activites/eval1').update({ rendu: null, meilleur: 6 })));
+await v("copie rendue : l'élève ne l'efface pas pour la rendre de nouveau", () =>
+  assertFails(fsDe('e1').doc('travaux/g1/eleves/e1/activites/eval1').delete()));
+await v("copie : l'élève rend une copie neuve (création)", () =>
+  assertSucceeds(fsDe('e1').doc('travaux/g1/eleves/e1/activites/eval2').set({ score: 2, max: 6, meilleur: 2, rendu: 1790000000001 })));
+await v("copie rendue : l'enseignant du groupe la rouvre (effacement)", () =>
+  assertSucceeds(fsDe('prof1').doc('travaux/g1/eleves/e1/activites/eval1').delete()));
+await v("copie : l'enseignant du groupe ramasse une copie (écrit au nom de l'élève)", () =>
+  assertSucceeds(fsDe('prof1').doc('travaux/g1/eleves/e2/activites/eval1').set({ score: 1, max: 6, meilleur: 1, rendu: 1790000000002, ramasse: true })));
+await v("copie : un enseignant étranger ne ramasse pas", () =>
+  assertFails(fsDe('prof2').doc('travaux/g1/eleves/e2/activites/eval3').set({ score: 6, max: 6, rendu: 1 })));
+
 // ---------- 7. jeux privés : l'enseignant efface sans pouvoir écrire
 await v("un élève écrit son jeu privé", () =>
   assertSucceeds(fsDe('e1').doc('prives/e1/jeux/logisim').set({ blob: '{"a":1}', rev: 2 })));

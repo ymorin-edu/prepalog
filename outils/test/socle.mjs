@@ -163,7 +163,7 @@ await v('rubriques : les activités sont rangées par numéro de module', async 
   // Trois entreprises, et le rang se lit sur le premier chiffre : les trois séances Spartoo
   // (ENT-1.x), puis Cdiscount (ENT-2.x, depuis le 02/10/2026), puis Boost (ENT-3.x). Une séance
   // nouvelle s'insère à son rang : on ne touche à cette liste qu'en l'allongeant.
-  repere('Logisim', 'ENT-1.1 ENT-1.2 ENT-1.3 ENT-2.1 ENT-3.1');
+  repere('Logisim', 'ENT-1.1 ENT-1.2 ENT-1.3 ENT-2.1 ENT-2.2 ENT-3.1');
 });
 
 // ---------- 7. l'élève voit la base commune de la classe

@@ -58,6 +58,8 @@ import { normaliser, estJuste } from './numerique.js';
 import { creerGrille } from './grille.js';
 
 // On arrondit la minute AVANT de couper en heures : sinon 14 h 59 min 42 s s'écrivait « 14 h 60 ».
+// L'heure d'un horodatage, en minutes depuis minuit, pour l'écrire avec `hhmm`.
+const minutesDuJour = (ts) => { const d = new Date(ts); return d.getHours() * 60 + d.getMinutes(); };
 export const hhmm = (m) => { const r = Math.round(m); return `${String(Math.floor(r / 60)).padStart(2, '0')} h ${String(r % 60).padStart(2, '0')}`; };
 const fr = (n, d = 2) => new Intl.NumberFormat('fr-FR', { maximumFractionDigits: d }).format(n);
 
@@ -150,7 +152,16 @@ export function creerTournee(T) {
   //
   // Et elles se remplissent **après** validation, comme retour : le travail fait, le chiffre
   // revient.
-  const REPERE = !!T.jaugesRepere;
+  // ── La copie rendue (évaluation, 02/10/2026) ────────────────────────────────────────────
+  // `copie: true`, posé par l'environnement d'entreprise quand la séance est une évaluation
+  // (`meta.copie`). Décision de Tristan : « jauges muettes seulement ». L'élève garde les
+  // LIMITES (180 kg, le train, le créneau) mais l'outil ne dit plus si elles sont tenues — ni
+  // « dépassée », ni « raté », ni « limite respectée » : vérifier sa tournée fait partie de
+  // l'épreuve. Le report s'enregistre sans juste / faux et sans refus (`exigeConforme` ne joue
+  // plus), la feuille de calcul n'a plus de bouton « Vérifier », et rien ne se dévoile. La note
+  // se calcule à la remise de la copie, par les jalons de la séance.
+  const COPIE = !!T.copie;
+  const REPERE = !!T.jaugesRepere || COPIE;
 
   // La feuille de calcul, facultative. Elle n'est pas une vue de menu : elle se pose dans
   // cette page, sous les jauges, parce qu'elle est tirée des données que l'élève vient de
@@ -169,7 +180,7 @@ export function creerTournee(T) {
   const arriveePose = (e) => !EXTREMITES || !!(e && e.arrivee);
   const chaineComplete = (e) => departPose(e) && arriveePose(e);
 
-  const estRevele = (e) => !!(e && e.valide && e.juge && Object.keys(e.juge).length);
+  const estRevele = (e) => !COPIE && !!(e && e.valide && e.juge && Object.keys(e.juge).length);
 
   const GRILLE = T.grille ? creerGrille(T.grille) : null;
   // ── Les contraintes descendent dans la feuille de calcul ─────────────────────────────────
@@ -286,14 +297,14 @@ export function creerTournee(T) {
     // rien. Vu à l'écran : les colis de Boost n'ont pas de maximum et aucune case ne les
     // réclame ; leur jauge disait pourtant « à calculer ».
     if (muet && max != null) {
-      return `<div class="tour-jauge tour-jauge-repere ${trop ? 'trop' : ''}">
+      return `<div class="tour-jauge tour-jauge-repere ${trop && !COPIE ? 'trop' : ''}">
         <div class="tour-j-tete"><span>${ech(m.libelle)}</span>
           <b class="mono">max ${fr(max)} ${ech(m.unite || '')}</b></div>
         <span class="note">C'est la limite à ne pas dépasser.
           Le total, c'est à vous de le calculer.</span>
         ${m.comparaison ? `<span class="tour-compare">${ech(m.comparaison)}</span>` : ''}
-        ${trop ? `<span class="pastille crit">${ech(m.libelle)} dépassée</span>`
-          : (DANS_GRILLE && valeur > 0 ? '<span class="pastille ok">limite respectée</span>' : '')}
+        ${COPIE ? '' : (trop ? `<span class="pastille crit">${ech(m.libelle)} dépassée</span>`
+          : (DANS_GRILLE && valeur > 0 ? '<span class="pastille ok">limite respectée</span>' : ''))}
       </div>`;
     }
     return `<div class="tour-jauge ${trop ? 'trop' : ''}">
@@ -311,7 +322,7 @@ export function creerTournee(T) {
       // La distance reste donnée : elle est le produit du parcours cliqué, pas un calcul que
       // l'élève doit savoir faire. Le nombre d'arrêts et le temps par arrêt aussi — ce sont
       // les données de son calcul, pas son résultat.
-      return `<div class="tour-jauge tour-jauge-repere ${b.enRetard ? 'trop' : ''}">
+      return `<div class="tour-jauge tour-jauge-repere ${b.enRetard && !COPIE ? 'trop' : ''}">
         <div class="tour-j-tete"><span>${ech(H.libelleLimite || 'Horaire limite')}</span>
           <b class="mono">${H.limite != null ? hhmm(H.limite) : '—'}</b></div>
         ${DANS_GRILLE
@@ -324,8 +335,8 @@ export function creerTournee(T) {
               ${ech(String(H.service || 0))} min par arrêt, ${ech(String(H.vitesse))} km/h en ville.
               L'heure de retour, c'est à vous de la calculer.</span>`}
         ${H.comparaison ? `<span class="tour-compare">${ech(H.comparaison)}</span>` : ''}
-        ${b.enRetard ? `<span class="pastille crit">${ech(H.libelleLimite || 'Horaire limite')} manqué</span>`
-          : (DANS_GRILLE && b.complete ? '<span class="pastille ok">horaire tenu</span>' : '')}
+        ${COPIE ? '' : (b.enRetard ? `<span class="pastille crit">${ech(H.libelleLimite || 'Horaire limite')} manqué</span>`
+          : (DANS_GRILLE && b.complete ? '<span class="pastille ok">horaire tenu</span>' : ''))}
       </div>`;
     }
     return `<div class="tour-jauge ${b.enRetard ? 'trop' : ''}">
@@ -359,12 +370,12 @@ export function creerTournee(T) {
         ${tete}<span class="note">${ech(c.nom)} : ${ech(c.libelle)}. Ce client n’est pas dans la tournée.</span></div>`;
     }
     if (muet) {
-      return `<div class="tour-jauge tour-jauge-creneau tour-jauge-repere ${c.rate ? 'trop' : ''}" data-creneau="${ech(c.id)}">
+      return `<div class="tour-jauge tour-jauge-creneau tour-jauge-repere ${c.rate && !COPIE ? 'trop' : ''}" data-creneau="${ech(c.id)}">
         ${tete}
         <span class="note">${ech(c.nom)} : ${ech(c.libelle)}. Il faut arriver chez ce client avant cette heure.
           L’heure d’arrivée chez lui, c’est à vous de la calculer.</span>
-        ${c.rate ? '<span class="pastille crit">Créneau raté</span>'
-          : (DANS_GRILLE && b.complete ? '<span class="pastille ok">créneau tenu</span>' : '')}
+        ${COPIE ? '' : (c.rate ? '<span class="pastille crit">Créneau raté</span>'
+          : (DANS_GRILLE && b.complete ? '<span class="pastille ok">créneau tenu</span>' : ''))}
       </div>`;
     }
     return `<div class="tour-jauge tour-jauge-creneau ${c.rate ? 'trop' : ''}" data-creneau="${ech(c.id)}">
@@ -480,7 +491,7 @@ export function creerTournee(T) {
       const gj = (etat.grille && etat.grille.juge) || {};
       const formulesJustes = Object.keys(gj).length > 0 && Object.values(gj).every((x) => x === 'ok');
       const contrainteFranchie = (b.depassements && b.depassements.length > 0) || b.enRetard || b.creneauRate;
-      const avertissement = DANS_GRILLE && formulesJustes && contrainteFranchie
+      const avertissement = !COPIE && DANS_GRILLE && formulesJustes && contrainteFranchie
         ? 'Vos formules sont justes, mais la tournée ne respecte pas toutes les contraintes '
           + '(colonne de droite, en rouge). Le calcul est bon : c’est la tournée qu’il faut revoir.'
         : '';
@@ -493,9 +504,9 @@ export function creerTournee(T) {
         </div>`;
       const jaugesHtml = `${raz}${MESURES.map((m) => jauge(m, b.cumuls[m.id], muet)).join('')}
             ${jaugeHoraire(b, muet)}${b.creneaux.map((c) => jaugeCreneau(c, b, muet)).join('')}`;
-      const grille = !GRILLE ? '' : GRILLE.html(lignesGrille(etat), etat.grille, DANS_GRILLE
+      const grille = !GRILLE ? '' : GRILLE.html(lignesGrille(etat), etat.grille, Object.assign(DANS_GRILLE
         ? { droite: `<div class="tour-jauges gr-contraintes">${jaugesHtml}</div>`, avertissement }
-        : {});
+        : {}, COPIE ? { sansCorrection: true } : {}));
 
       const cases = !REPORT.length ? '' : `
         <div class="tour-report">
@@ -505,7 +516,7 @@ export function creerTournee(T) {
             ${REPORT.map((r) => {
               const v = etat.report[r.id] == null ? '' : String(etat.report[r.id]);
               const j = juge[r.id];
-              const cl = !aJuge ? '' : (j ? 'juste' : 'faux');
+              const cl = (!aJuge || COPIE) ? '' : (j ? 'juste' : 'faux');
               return `<label class="tour-case">
                 <span>${ech(r.libelle)}</span>
                 <span class="tour-saisie">
@@ -513,19 +524,21 @@ export function creerTournee(T) {
                     data-report="${ech(r.id)}" value="${ech(v)}" autocomplete="off">
                   ${r.unite ? `<span class="num-unite">${ech(r.unite)}</span>` : ''}
                 </span>
-                ${!aJuge ? '' : (j
+                ${(!aJuge || COPIE) ? '' : (j
                   ? '<span class="pastille ok">juste</span>'
                   : '<span class="pastille crit">à revoir</span>')}
               </label>`;
             }).join('')}
           </div>
-          ${etat.bloque ? `<div class="avis avis-err">${ech(etat.bloque)}</div>` : ''}
-          ${(etat.bloque || !aJuge) ? '' : (REPORT.every((r) => juge[r.id])
+          ${etat.bloque && !COPIE ? `<div class="avis avis-err">${ech(etat.bloque)}</div>` : ''}
+          ${COPIE && etat.enregistre ? `<div class="avis" data-tour-enregistre>Résultats enregistrés à ${ech(hhmm(minutesDuJour(etat.enregistre)))}.
+            Ils seront corrigés quand vous rendrez votre copie ; vous pouvez encore les modifier d’ici là.</div>` : ''}
+          ${(etat.bloque || !aJuge || COPIE) ? '' : (REPORT.every((r) => juge[r.id])
             ? '<div class="avis avis-ok">Tous les résultats sont justes.</div>'
             : `<div class="avis avis-err">${REPORT.filter((r) => !juge[r.id]).length} résultat(s)
                  à revoir. Reprenez votre calcul : les cases ne donnent pas la réponse.</div>`)}
           <div class="rangee" style="margin-top:12px">
-            <button class="btn btn-p" data-tour-valider>Valider mes résultats</button>
+            <button class="btn btn-p" data-tour-valider>${COPIE ? 'Enregistrer mes résultats' : 'Valider mes résultats'}</button>
           </div>
         </div>`;
 
@@ -743,6 +756,15 @@ export function creerTournee(T) {
       z.querySelector('[data-tour-raz-non]')?.addEventListener('click', () => api.redessiner());
 
       z.querySelector('[data-tour-valider]')?.addEventListener('click', () => {
+        // Évaluation : on enregistre, on ne corrige pas, on ne refuse rien. Les cases sont déjà
+        // sauvées à la frappe ; ce bouton rassure l'élève et horodate son report.
+        if (COPIE) {
+          etat.enregistre = Date.now();
+          etat.juge = {}; etat.bloque = null; etat.valide = null;
+          api.sauver(); api.redessiner();
+          if (api.toast) api.toast('Résultats enregistrés.');
+          return;
+        }
         const b = bilanDe(etat);
         // ── Les résultats ne se valident pas tant que la tournée ne tient pas ──────────────
         // Défaut relevé par Tristan le 03/10/2026 : *« il suffit de garder les 6 premières et

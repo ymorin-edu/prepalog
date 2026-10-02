@@ -8,6 +8,7 @@ import { chargerActivites, activite } from '../activites/index.js';
 import { versCSV, telecharger, ouvrirJeu } from './store.js';
 import { NIVEAUX, libelleNiveau, courtNiveau, libelleNiveaux, activiteVisible, horsNiveau } from './niveaux.js';
 import { BAREME_AFFICHE, noteSur20, noteConvertie, formaterNote } from './notes.js';
+import { estCopie, estRendue, libelleRendu, ramasser, rouvrir } from './copie.js';
 import { TEMPS, COEFS_DEFAUT, coefsDuGroupe, seancesParCompetence, moyenneCompetence } from './competences.js';
 
 export async function rendreEspaceProf(hote, ctx) {
@@ -446,13 +447,33 @@ export async function rendreEspaceProf(hote, ctx) {
             title="Note sur ${m.bareme}. Laisser vide pour effacer.">
         </td>`;
       }
+      // Évaluation en copie rendue (core/copie.js) : une copie rendue ou ramassée affiche sa
+      // note, la mention et une croix pour la ROUVRIR ; une copie pas encore rendue offre
+      // « ramasser » à côté du tiret (le 0 de l'élève présent reste possible).
+      if (estCopie(m) && estRendue(t)) {
+        const max = t.max || m.bareme;
+        const part = max > 0 ? t.meilleur / max : 0;
+        const classe = part >= 0.7 ? 'juste' : part < 0.4 ? 'faux' : '';
+        const lu = noteConvertie(m)
+          ? `${formaterNote(noteSur20(t.meilleur, max))}<span class="note">/${BAREME_AFFICHE}</span>`
+          : `${t.meilleur}/${max}`;
+        return `<td class="num ${classe} copie-cell" title="${t.meilleur} sur ${max} — copie ${ech(libelleRendu(t))}">${lu}
+          <span class="note copie-mention" data-copie-mention>${t.ramasse ? 'ramassée' : 'rendue'}</span>
+          <button type="button" class="btn-copie-rouvrir" data-copie-rouvrir data-uid="${ech(e.uid)}" data-aid="${ech(m.id)}"
+            title="Rouvrir la copie : la note est effacée, l'élève peut reprendre et rendre de nouveau"
+            aria-label="Rouvrir la copie — ${ech(m.code)} — ${ech(e.nom)} ${ech(e.prenom)}">×</button></td>`;
+      }
+      const ramasserBtn = estCopie(m)
+        ? ` <button type="button" class="btn-ramasser" data-copie-ramasser data-uid="${ech(e.uid)}" data-aid="${ech(m.id)}"
+            title="Ramasser la copie : elle est notée dans l'état où l'élève l'a laissée, et figée."
+            aria-label="Ramasser la copie — ${ech(m.code)} — ${ech(e.nom)} ${ech(e.prenom)}">ramasser</button>` : '';
       // Pas de score : l'élève n'a rien rendu. Un clic sur le tiret met 0 — cas de l'élève
       // présent qui n'a rien fait (demande de Tristan, 02/10/2026). Un absent garde son tiret,
       // et une séance pas faite ne compte pas dans la moyenne par compétence ; un 0, si.
       if (!t) {
         return `<td class="num note"><button type="button" class="btn-zero" data-uid="${ech(e.uid)}"
           data-aid="${ech(m.id)}" title="Pas de note. Cliquer pour mettre 0 (élève présent, rien fait)."
-          aria-label="Mettre 0 — ${ech(m.code)} — ${ech(e.nom)} ${ech(e.prenom)}">—</button></td>`;
+          aria-label="Mettre 0 — ${ech(m.code)} — ${ech(e.nom)} ${ech(e.prenom)}">—</button>${ramasserBtn}</td>`;
       }
       // Un 0 posé par l'enseignant : il se lit comme tel et s'efface d'un clic. Si l'élève fait
       // la séance plus tard, sa vraie note le remplace (le meilleur score est retenu).
@@ -515,6 +536,17 @@ export async function rendreEspaceProf(hote, ctx) {
           la croix « × » efface ce 0, et s'il fait la séance plus tard sa note le remplace.
           ${notees.some(aLaMain) ? `Les colonnes en fond clair sont notées à la main : tapez la note,
             elle s'enregistre en quittant la case. Une case vidée efface la note.` : ''}</p>`}
+        ${!notees.some(estCopie) || eleves.length === 0 ? '' : `
+        <div class="copie-ramassage" id="copieRamassage">
+          <strong>Évaluations : copies non rendues</strong>
+          <p class="note">Une évaluation ne compte que la copie rendue, une seule fois. En fin d'heure,
+            ramassez les copies que les élèves n'ont pas rendues : chacune est notée dans l'état où
+            l'élève l'a laissée, puis figée. La croix « × » d'une copie la rouvre (note effacée,
+            l'élève reprend son travail).</p>
+          <div class="rangee">${notees.filter(estCopie).map((m) => `
+            <button class="btn btn-s" data-copie-tout="${ech(m.id)}">Ramasser les copies de ${ech(m.code)}</button>`).join('')}
+          </div>
+        </div>`}
       </section>
       ${seancesBase.length === 0 || eleves.length === 0 ? '' : `
       <section class="panneau" id="porteSortie">
@@ -588,6 +620,49 @@ export async function rendreEspaceProf(hote, ctx) {
         toast('0 effacé.');
         await vueSuivi(z, g);
       } catch (e) { toast("Le 0 n'a pas pu être effacé."); }
+    }));
+
+    // Les copies (core/copie.js). Le module de l'activité sait noter une base : c'est lui qui
+    // ramasse, avec les mêmes jalons que la remise par l'élève.
+    const moduleDe = (aid) => mods.find((x) => x.meta.id === aid);
+    const MOTIF = { rendue: 'déjà rendue', vide: "l'élève n'a pas ouvert la séance", module: "cette activité ne sait pas se noter" };
+    z.querySelectorAll('[data-copie-ramasser]').forEach((b) => b.addEventListener('click', async () => {
+      const module = moduleDe(b.dataset.aid);
+      const eleve = eleves.find((x) => x.uid === b.dataset.uid);
+      if (!module || !eleve) return;
+      b.disabled = true;
+      try {
+        const r = await ramasser(B, { gid: g.id, eleve, module });
+        toast(r.ok ? `Copie de ${eleve.prenom} ramassée.` : `Rien à ramasser : ${MOTIF[r.raison] || r.raison}.`);
+        await vueSuivi(z, g);
+      } catch (e) { b.disabled = false; toast("La copie n'a pas pu être ramassée."); }
+    }));
+    z.querySelectorAll('[data-copie-tout]').forEach((b) => b.addEventListener('click', async () => {
+      const module = moduleDe(b.dataset.copieTout);
+      if (!module) return;
+      b.disabled = true;
+      const n = { ok: 0, rendue: 0, vide: 0, erreur: 0 };
+      for (const eleve of eleves) {
+        try {
+          const r = await ramasser(B, { gid: g.id, eleve, module });
+          if (r.ok) n.ok++; else n[r.raison] = (n[r.raison] || 0) + 1;
+        } catch (e) { n.erreur++; }
+      }
+      toast(`${module.meta.code} : ${n.ok} copie(s) ramassée(s), ${n.rendue} déjà rendue(s), `
+        + `${n.vide} élève(s) sans travail${n.erreur ? `, ${n.erreur} en erreur` : ''}.`, 6000);
+      await vueSuivi(z, g);
+    }));
+    z.querySelectorAll('[data-copie-rouvrir]').forEach((b) => b.addEventListener('click', async () => {
+      const m = notees.find((x) => x.id === b.dataset.aid);
+      const el = eleves.find((x) => x.uid === b.dataset.uid);
+      if (!m || !el) return;
+      if (!confirmer(`Rouvrir la copie de ${el.prenom} ${el.nom} en ${m.code} ?\n\n`
+        + `Sa note est effacée. Il reprend son travail là où il l'a laissé, et devra rendre de nouveau.`)) return;
+      try {
+        await rouvrir(B, { gid: g.id, uid: el.uid, aid: m.id });
+        toast(`Copie de ${el.prenom} rouverte.`);
+        await vueSuivi(z, g);
+      } catch (e) { toast("La copie n'a pas pu être rouverte."); }
     }));
 
     z.querySelector('#btnRaz')?.addEventListener('click', async () => {
