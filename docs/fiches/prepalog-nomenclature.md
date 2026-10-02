@@ -1,7 +1,6 @@
-> *Copie du 02/10/2026 de la fiche `claude/prepalog-nomenclature.md` du projet Claude PREPALOG
-> (source de conception : le projet). Voir `docs/LISEZMOI.md`. Le tableau « État des activités »
-> date du 01/10 : le registre `activites/index.js` fait foi pour l'état actuel (ENT-2.x Cdiscount et
-> ENT-3.x Boost y ont été ajoutés depuis).*
+> *Copie de la fiche `claude/prepalog-nomenclature.md` du projet Claude PREPALOG, **mise à jour le
+> 02/10/2026 au soir** (tableau des séances relu dans le registre). Source de conception : le projet.
+> Voir `docs/LISEZMOI.md`. Le registre `activites/index.js` fait foi pour l'état actuel.*
 
 # Prepalog — nomenclature des activités
 
@@ -30,11 +29,11 @@ Format de l'`id` : minuscules, tirets, sans numéro ni préfixe de rubrique — 
 |---|---|---|
 | `DEC` | découverte, notions | DEC-1 La chaîne logistique |
 | `ACT` | outil ou activité métier | ACT-1 Base du magasin, ACT-2 Préparation, ACT-3 Réception, ACT-4 Agenda, ACT-5 Flotte |
-| `ENT` | environnement d'entreprise complet (LogiSim) | ENT-1.1 Spartoo réception, ENT-1.2 Spartoo préparation, ENT-1.3 Spartoo traçabilité, ENT-2.1 TechPro… |
-| `TAB` | tableur | TAB-1 Excel pas à pas, TAB-2 Stocks, TAB-3 Calculs commerciaux, TAB-4 CAP OL, TAB-5 Inventaire |
+| `ENT` | environnement d'entreprise complet (LogiSim) | ENT-1.1 Spartoo réception, ENT-1.2 Spartoo préparation, ENT-1.3 Spartoo traçabilité, ENT-2.1 Cdiscount, ENT-3.1 Boost… |
+| `TAB` | tableur | TAB-1 Excel pas à pas, TAB-2 Stocks, TAB-3 Calculs commerciaux, TAB-4 Une journée en entrepôt, TAB-5 Inventaire |
 | `REF` | exercices par compétence du référentiel | REF-1 à REF-3 (pôles 1, 2, 3) |
 | `SCE` | scénario évalué | SCE-1 Yves Rocher, SCE-2 Foot Locker, SCE-3 Bouygues, SCE-4 Brasseries, SCE-5 Réception plateforme |
-| `QUI` | quiz d'entraînement | QUI-1 Calcul, QUI-2 Géo, QUI-3 Français, QUI-4 CACES, QUI-5 Flux logistiques |
+| `QUI` | quiz d'entraînement | QUI-1 Calcul, QUI-2 Géo, QUI-3 Français, QUI-4 CACES, QUI-5 Flux logistiques, QUI-8 à QUI-10 calculs d'entraînement |
 | `MES` | messagerie | MES-1 |
 
 Le préfixe dit **ce que l'élève fait**, pas de quel domaine il s'agit. C'est ce qui permet
@@ -56,9 +55,9 @@ Idée de Tristan, le 01/10/2026. Un environnement d'entreprise n'est pas *une* a
 
 > **premier nombre = l'entreprise, second = la séance.**
 
-Spartoo est donc `ENT-1.1` (réception), `ENT-1.2` (préparation), `ENT-1.3` (traçabilité), et
-TechPro Distribution prendra `ENT-2.1`, `ENT-2.2`… *(TechPro est abandonnée depuis le 02/10 ;
-`ENT-2.x` est utilisé par Cdiscount, `ENT-3.x` par Boost.)*
+Spartoo est donc `ENT-1.1` (réception), `ENT-1.2` (préparation), `ENT-1.3` (traçabilité),
+Cdiscount `ENT-2.1` à `ENT-2.x`, Boost `ENT-3.1` à `ENT-3.x`. *(TechPro Distribution, prévue à
+l'origine en `ENT-2.x`, est abandonnée depuis le 02/10 : entreprise fictive.)*
 
 Ce que ça règle : avec la numérotation à plat, les trois séances Spartoo occupaient `ENT-1`,
 `ENT-2`, `ENT-3`, et TechPro aurait dû commencer à `ENT-4` — un numéro qui ne dit rien de
@@ -136,6 +135,9 @@ conservé à sa place.
 
 ## Niveaux
 
+> **État au 02/10/2026 : aucune activité ne déclare `niveaux`** (règle du 01/10 : tout est ouvert
+> à tous les niveaux, c'est « Conduite de séance » qui ferme). Le mécanisme ci-dessous reste prêt.
+
 `core/niveaux.js`. Quatre niveaux : `2de` (Seconde GATL), `1re` (Première Bac Pro),
 `tle` (Terminale Bac Pro), `cap` (CAP Opérateur logistique).
 
@@ -200,35 +202,50 @@ export const meta = {
 };
 ```
 
-## État des activités au 01/10/2026
+## État des activités au 02/10/2026
 
-Dans l'ordre d'affichage, qui est celui des codes.
+Dans l'ordre d'affichage, qui est celui des codes. Source de vérité : `activites/index.js` et le
+`meta` de chaque fichier d'activité. `pret` : `false` = cachée aux élèves (visible de l'enseignant,
+étiquetée « en préparation »). **Aucune activité ne déclare `niveaux`.**
 
-| id | code | rubrique | niveaux | portée |
-|---|---|---|---|---|
-| `chaine-logistique` | DEC-1 | logistique | 2de, 1re, CAP | élève |
-| `magasin` | ACT-1 | magasin | tous | groupe |
-| `quiz-flux` | QUI-5 | quiz | 2de, 1re | élève |
-| `zones-entrepot` | QUI-6 | quiz | 2de, 1re, CAP | élève |
-| `calculs-stock` | QUI-7 | quiz | 1re, Tle | élève |
-| `excel-pas-a-pas` | TAB-1 | tableur | tous | élève |
-| `excel-stock` | TAB-2 | tableur | 2de, 1re, Tle — et par exercice | élève |
-| `calculs-commerciaux` | TAB-3 | tableur | tous | élève |
-| `inventaire-tableur` | TAB-5 | tableur | 1re, Tle | élève |
-| `yves-rocher` | SCE-1 | scenario | tous | élève |
-| `foot-locker` | SCE-2 | scenario | tous | élève |
-| `bouygues-telecom` | SCE-3 | scenario | tous | élève |
-| `brasseries-gatinais` | SCE-4 | scenario | tous | élève |
-| `reception-plateforme` | SCE-5 | scenario | tous | élève |
-| `spartoo-reception` | ENT-1.1 | logisim | tous | élève |
-| `spartoo` | ENT-1.2 | logisim | tous | élève |
-| `spartoo-tracabilite` | ENT-1.3 | logisim | tous | élève |
+| id | code | rubrique | temps | compétences | notation | pret |
+|---|---|---|---|---|---|---|
+| `chaine-logistique` | DEC-1 | logistique | guidage | C1.1 | note sur 20 | oui |
+| `magasin` | ACT-1 | magasin | — | — | sans note (base de classe, portée groupe) | oui |
+| `quiz-flux` | QUI-5 | quiz | entraînement | C1.1 | note sur 20 | oui |
+| `zones-entrepot` | QUI-6 | quiz | entraînement | C1.1 | note sur 20 | oui |
+| `calculs-stock` | QUI-7 | quiz | entraînement | C1.6 | note sur 20 | oui |
+| `entr-conversions` | QUI-8 | quiz | — | — (transversal) | générateur, note sur 20 | oui |
+| `entr-proportionnalite` | QUI-9 | quiz | — | — (transversal) | générateur, note sur 20 | oui |
+| `entr-arrondis` | QUI-10 | quiz | — | — (transversal) | générateur, note sur 20 | oui |
+| `excel-pas-a-pas` | TAB-1 | tableur | — | — (transversal) | note sur 20 | oui |
+| `excel-stock` | TAB-2 | tableur | entraînement | C1.6 | note sur 20 (niveau par exercice) | oui |
+| `calculs-commerciaux` | TAB-3 | tableur | — | — (transversal) | note sur 20 | oui |
+| `journee-entrepot` | TAB-4 | tableur | entraînement | C1.4, C1.6 | note sur 20 | oui |
+| `inventaire-tableur` | TAB-5 | tableur | entraînement | C1.6 | note sur 20 | oui |
+| `yves-rocher` | SCE-1 | scenario | guidage | C1.6 | saisie par l'enseignant | oui |
+| `foot-locker` | SCE-2 | scenario | évaluation | C1.6 | saisie par l'enseignant | oui |
+| `bouygues-telecom` | SCE-3 | scenario | évaluation | C1.6 | saisie par l'enseignant | oui |
+| `brasseries-gatinais` | SCE-4 | scenario | guidage | C1.5 | saisie par l'enseignant | oui |
+| `reception-plateforme` | SCE-5 | scenario | guidage | C1.3, C1.4 | saisie par l'enseignant | oui |
+| `spartoo-reception` | ENT-1.1 | logisim | guidage | C1.4 | jalons (avancement) | oui |
+| `spartoo` | ENT-1.2 | logisim | guidage | C2.2 | jalons (avancement) | oui |
+| `spartoo-tracabilite` | ENT-1.3 | logisim | guidage | C3.2 | jalons (avancement) | oui |
+| `cdiscount-mouvements` | ENT-2.1 | logisim | guidage | C1.6 | jalons (avancement) | **non** |
+| `cdiscount-inventaire` | ENT-2.2 | logisim | entraînement | C1.6 | jalons (avancement) | oui (validation à confirmer) |
+| `cdiscount-regularise` | ENT-2.3 | logisim | erreur induite | C1.6 | jalons (avancement) | **non** |
+| `boost-tournee` | ENT-3.1 | logisim | guidage | C2.4 | note sur 20 (6 jalons) | oui |
+| `boost-ent32` | ENT-3.2 | logisim | entraînement | C2.4 | note sur 20 (8 jalons) | **non** |
 
-**TAB-4 est réservé au CAP OL**, pas encore migré : le trou entre TAB-3 et TAB-5 est voulu.
+*(Notation, 02/10 : les séances SCE se notent à la main ; les séances Spartoo et Cdiscount sont en
+jalons ; Boost passe par la note sur 20 calculée depuis les jalons, sans `notation`. Voir
+`prepalog-notes-competences.md` pour la conversion sur 20 par compétence.)*
 
-Les trois séances Spartoo portaient `ENT-1`, `ENT-2`, `ENT-3` jusqu'au 01/10/2026 au soir.
-Les `id` n'ont pas bougé, donc **aucun score d'élève n'est perdu** ; seules les étiquettes
-changent, y compris dans les exports CSV déjà imprimés.
+Prévus, pas encore écrits : **ENT-2.4** (Cdiscount), **ENT-3.3** (Boost, erreur induite — demande
+moteur : pré-remplir un ordre de passage), **ENT-3.4** (Boost, évaluation en copie rendue).
+**TAB-4 a été refait à neuf** (fiche `prepalog-tab4.md`) : le trou entre TAB-3 et TAB-5 n'existe plus.
+Les trois séances Spartoo portaient `ENT-1`, `ENT-2`, `ENT-3` jusqu'au 01/10/2026 au soir ; les `id`
+n'ont pas bougé, **aucun score d'élève n'est perdu**.
 
-Reste à migrer : TAB-4 (CAP OL), les pôles de compétences (REF-1 à REF-3), les quiz
-d'entraînement et les modules transport. *(TechPro Distribution : abandonnée le 02/10.)*
+Reste à migrer : les pôles de compétences (REF-1 à REF-3), les SCE dans Logisim, les modules
+transport et les quiz d'entraînement restants. *(TechPro Distribution : abandonnée le 02/10.)*

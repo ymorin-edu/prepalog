@@ -1,8 +1,7 @@
-> *Copie du 02/10/2026 de la fiche `claude/prepalog-finalite.md` du projet Claude PREPALOG.
-> Source de conception : le projet. Les renvois à d'autres fiches `claude/…` pointent vers des
-> fiches qui restent dans le projet, sauf celles recopiées dans ce dossier. Dans cette copie, les
-> mentions de « commit par Tristan » sont historiques : c'est maintenant Claude Code qui commite
-> (voir `docs/LISEZMOI.md`).*
+> *Copie de la fiche `claude/prepalog-finalite.md` du projet Claude PREPALOG, **mise à jour le
+> 02/10/2026 au soir**. Source de conception : le projet. Voir `docs/LISEZMOI.md`. Les renvois à
+> d'autres fiches `claude/…` pointent vers des fiches restées dans le projet, sauf celles recopiées
+> dans ce dossier. Le commit et le push sont désormais faits par Claude Code.*
 
 # Prepalog — finalité du projet (cadrage du 02/10/2026)
 
@@ -49,8 +48,9 @@ de classe et des **notes par compétence** qui comptent.
    vérifier chez Boost le périssable et les camions).
 9. **Une même entreprise sert plusieurs niveaux**, avec des missions plus difficiles.
 10. **Ordre de marche : cadrage fait (Prepalog, Spartoo). Chantier « notes par compétence »
-    FAIT le 02/10** (ci-dessous, B, et `prepalog-notes-competences.md`). **Prochain : ENT-3.2,
-    3.3, 3.4**, chaque séance déclarée d'emblée avec `competences` et `temps`.
+    FAIT le 02/10** (ci-dessous, B, et `prepalog-notes-competences.md`). **ENT-3.2 écrite le
+    02/10 (cachée, à valider à l'écran) ; restent ENT-3.3 et 3.4**, chaque séance déclarée
+    d'emblée avec `competences` et `temps`. Cdiscount (ENT-2.1 à 2.3) est en place.
 11. **Prepalog et Logisim ne se mélangent pas** (Tristan, 02/10) :
     - **Prepalog** est la plateforme d'entrée. Elle porte les **entraînements sans logique de
       scénario** (tableur, quiz de notions), le **magasin pédagogique** et l'**organisation des
