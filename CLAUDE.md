@@ -235,14 +235,41 @@ recopier du base64 à la main. 11. Générateur de fichiers binaires : le rendre
 cellule (≥ 12 unités de chaque ligne ; liste des points fautifs figée dans un test, ne doit
 jamais s'allonger).
 
-## Mémoire du projet (ailleurs que dans ce fichier)
+## Travail à deux : Cowork conçoit, Claude Code construit
 
-Les fiches détaillées vivent dans le projet Claude **« PREPALOG »** (`claude/prepalog-*.md`) et
-ne sont pas visibles ici. Les plus utiles : `prepalog-finalite`, `prepalog-nomenclature`,
-`prepalog-depot`, `prepalog-firebase`, `prepalog-regles-verifiees`, `prepalog-progression-pedagogique`,
-`prepalog-entreprises-reelles`, `prepalog-chantiers-en-cours`, `prepalog-notes-competences`,
-`prepalog-inventaire-format`, `prepalog-vues-transport`. Si Tristan colle ou exporte l'une
-d'elles, la lire avant de toucher au sujet.
+Tristan utilise **deux outils** (organisation décidée le 02/10/2026) :
+
+- **Cowork** (conversations + projet Claude « PREPALOG », que Claude Code ne voit pas) : concevoir
+  une séance, vérifier une entreprise par recherche web, fabriquer trames Word/PDF et
+  diaporamas, tenir la mémoire de conception.
+- **Claude Code** (toi, ici) : écrire les séances dans le moteur, tester, corriger, **commiter et
+  pousser**.
+
+Le relais passe par le dossier **`docs/`** du dépôt. **Lis `docs/LISEZMOI.md`** : il décrit le
+cycle d'une séance et les règles d'écriture. En résumé :
+
+- Une séance à construire arrive sous forme de **brief** dans `docs/briefs/` (modèle :
+  `docs/briefs/MODELE.md`). Quand Tristan dit « implémente le brief ENT-x.y », lis-le en entier,
+  annonce la durée, et construis avec **`pret: false`** jusqu'à ce qu'il ait validé à l'écran.
+- **À la livraison, remplis la section « Compte rendu » du brief**, passe son statut à `livré`, et
+  ajoute une ligne à `docs/decisions.md` pour toute décision prise en route : c'est ce qui permet à
+  Cowork de tenir à jour la mémoire de conception.
+- **Une demande au moteur** (écran ou comportement qu'`core/` ne sait pas faire) s'écrit dans la
+  section 7 du brief ; une séance n'écrit rien dans `core/` ni `styles/base.css`. Un chantier
+  moteur à part s'en charge, un seul à la fois.
+- Si un brief est incomplet, ambigu, ou contredit le code ou la finalité : **pose la question à
+  Tristan avant d'écrire**, ne comble pas les trous toi-même (surtout sur l'entreprise : ne rien
+  inventer de « réel » sans source).
+- **Cowork n'écrit que dans `docs/`.** Si tu trouves des changements dans le dépôt que tu n'as pas
+  faits, regarde `git status` et `git diff` avant de les écraser, et dis-le à Tristan.
+
+Fiches de référence copiées dans `docs/fiches/` : `prepalog-finalite` (la boussole),
+`prepalog-nomenclature`, `prepalog-progression-pedagogique`, `prepalog-entreprises-reelles`,
+`prepalog-notes-competences`, `prepalog-inventaire-format`, `prepalog-vues-transport`. Ce sont des
+**copies datées du 02/10/2026** : en cas de contradiction avec le code, c'est le code qui dit ce qui
+existe, et la fiche est à signaler. Les autres fiches (architecture, Firebase, règles vérifiées,
+chantiers, référentiels Bac Pro 2025 / 2de GATL / CAP OL, carte de couverture, entreprises…) restent
+dans le projet : si Tristan colle ou exporte l'une d'elles, la lire avant de toucher au sujet.
 
 Les pages d'essai jetables et maquettes vont dans
 `G:\Mon Drive\Travail\Logistique\1L\Claude outputs`.
