@@ -27,6 +27,7 @@ export default async function bloc({ v, nav, ok, ROOT }) {
 const ctxCt = await nav.newContext({ viewport: { width: 1440, height: 900 } });
 const pageCt = await ctxCt.newPage();
 pageCt.setDefaultTimeout(8000);
+if (process.env.LENT) { const cdp = await ctxCt.newCDPSession(pageCt); await cdp.send('Emulation.setCPUThrottlingRate', { rate: Number(process.env.LENT) }); }
 const erreursCt = [];
 const hotesCt = new Set();
 pageCt.on('pageerror', (e) => erreursCt.push('PAGEERROR: ' + e.message));
@@ -70,31 +71,55 @@ const monterCt = (css) => pageCt.evaluate(async (css) => {
 const etatCt = () => pageCt.evaluate(() => JSON.parse(JSON.stringify(
   (window.__ct.db.transport && window.__ct.db.transport['essai-carte'] && window.__ct.db.transport['essai-carte'].plan) || {})));
 const bulleCt = () => pageCt.textContent('[data-ct-bulle]');
-const zoomCt = async (k) => { await pageCt.click(`[data-ct-zoom="${k}"]`); await pageCt.waitForTimeout(650); };
+// Fixé le 02/10 (chantier A) : les délais fixes (650 ms pour un zoom, 60 ms pour la bulle)
+// suffisaient ici mais pas sur le poste de Tristan — six cas tombaient sous Windows, et tombent
+// pareil ici avec le processeur ralenti ×8 (`LENT=8 node outils/test.mjs carte`). On attend
+// maintenant que la page soit IMMOBILE (défilement fini ET zoom fini : la `viewBox` ne bouge
+// plus), et que la bulle ait répondu, au lieu de compter des millisecondes.
+const zoomCt = async (k) => { await pageCt.click(`[data-ct-zoom="${k}"]`); await immobileCt(); };
 // Un point de la carte (mètres) → un clic à l'écran, au pixel près.
 //
 // Deux précautions, trouvées par un test qui passait une fois sur deux : le moteur fait défiler
 // la page en DOUX (`scrollIntoView`) à chaque changement de vue, donc on attend que le
 // défilement soit fini avant de lire la position ; et on vide la bulle avant de cliquer, pour
 // qu'un message resté du clic d'avant ne fasse pas passer un clic perdu pour une réponse.
-const scrollFiniCt = () => pageCt.evaluate(() => new Promise((ok) => {
-  let y = -1, n = 0;
-  const f = () => { if (window.scrollY === y) n++; else { n = 0; y = window.scrollY; } if (n >= 5) ok(); else requestAnimationFrame(f); };
+// Immobile = ni la page ni la carte ne bougent pendant 5 images de suite : `scrollY` (le défilement
+// doux) et la `viewBox` du SVG (le zoom animé). Un délai fixe ne vaut que pour un poste rapide.
+const immobileCt = () => pageCt.evaluate(() => new Promise((ok) => {
+  let y = null, n = 0;
+  const f = () => {
+    const s = document.querySelector('[data-ct-svg]');
+    const cle = window.scrollY + '|' + (s ? s.getAttribute('viewBox') : '');
+    if (cle === y) n++; else { n = 0; y = cle; }
+    if (n >= 5) ok(); else requestAnimationFrame(f);
+  };
   requestAnimationFrame(f);
 }));
+const scrollFiniCt = immobileCt;
 // Un point de la tournée (client ou bout de chaîne), cliqué une fois la page immobile.
 const pointCt = async (sel) => { await scrollFiniCt(); await pageCt.click(sel, { force: true }); };
 const cliquerCt = async (pt) => {
   await scrollFiniCt();
   await pageCt.evaluate(() => { document.querySelector('[data-ct-bulle]').textContent = ''; });
-  const ecran = await pageCt.evaluate(({ x, y }) => {
+  // Le point doit être DANS la fenêtre : un clic de souris hors de l'écran ne touche rien (la
+  // bulle reste vide). Si le défilement doux s'est arrêté ailleurs, on amène le point au milieu,
+  // sans animation, et on recalcule.
+  const ecranDe = () => pageCt.evaluate(({ x, y }) => {
     const svg = document.querySelector('[data-ct-svg]');
     const p = svg.createSVGPoint(); p.x = x; p.y = y;
     const e = p.matrixTransform(svg.getScreenCTM());
-    return { x: e.x, y: e.y };
+    return { x: e.x, y: e.y, h: innerHeight };
   }, pt);
+  let ecran = await ecranDe();
+  if (ecran.y < 20 || ecran.y > ecran.h - 20) {
+    await pageCt.evaluate((dy) => window.scrollBy({ top: dy, behavior: 'instant' }), ecran.y - ecran.h / 2);
+    await immobileCt();
+    ecran = await ecranDe();
+  }
   await pageCt.mouse.click(ecran.x, ecran.y);
-  await pageCt.waitForTimeout(60);
+  // Chaque clic sur la carte, client armé, répond dans la bulle : on attend la réponse (sans
+  // échouer ici si elle ne vient pas — c'est au cas de juger le texte, ou son absence).
+  await pageCt.waitForFunction(() => document.querySelector('[data-ct-bulle]').textContent !== '', null, { timeout: 4000 }).catch(() => {});
 };
 // Un point SÛR d'une rue : le milieu de son plus long segment visible dans le zoom, dont on
 // vérifie avec la fonction de la vue que c'est bien CETTE rue qu'il désigne (pas un carrefour).
@@ -169,7 +194,7 @@ await v('carte : l’index cherche sans accents et ouvre le quartier de la rue',
   if (!/Aspic/.test(await pageCt.textContent('[data-ct-index]'))) throw new Error('l’apostrophe typographique ne trouve pas la rue de l’Aspic');
   await pageCt.fill('[data-ct-cherche]', 'madeleine');
   await pageCt.click('[data-ct-index] li[data-ct-rue="Rue de la Madeleine"]');
-  await pageCt.waitForTimeout(650);
+  await immobileCt();
   const vue = await pageCt.evaluate(() => ({ zoom: document.querySelector('[data-ct-svg]').classList.contains('ct-zoom'),
     etiq: document.querySelector('.ct-etiq.vue')?.dataset.etiq }));
   if (!vue.zoom || vue.etiq !== 'ecusson') throw new Error('le clic dans l’index n’ouvre pas l’Écusson : ' + JSON.stringify(vue));
@@ -226,12 +251,12 @@ await v('carte : en vue d’ensemble, un clic ne pose rien et ne compte pas (il 
   if (!/Ouvrez d’abord le bon quartier : les noms de rues/.test(await bulleCt())) throw new Error('bulle : ' + await bulleCt());
   const dedans = await pageCt.evaluate(() => window.__ct.CARTE.clients.find((c) => c.id === 'c1'));
   await cliquerCt(dedans);
-  await pageCt.waitForTimeout(650);
+  await immobileCt();
   const vue = await pageCt.evaluate(() => document.querySelector('.ct-etiq.vue')?.dataset.etiq);
   if (vue !== 'ecusson') throw new Error('le clic dans l’Écusson ne l’ouvre pas : ' + vue);
   const e = await etatCt();
   if (Object.keys(e.places || {}).length || Object.keys(e.essais || {}).length) throw new Error('état touché : ' + JSON.stringify(e));
-  await pageCt.click('[data-ct-ensemble]'); await pageCt.waitForTimeout(650);
+  await pageCt.click('[data-ct-ensemble]'); await immobileCt();
 });
 
 await v('carte : un clic sur une autre rue est refusé, nommé, et compté comme essai', async () => {
@@ -300,8 +325,11 @@ await v('carte : la tournée reste fermée tant qu’un nouveau client manque, p
   if (r.bilan.places !== 3 || r.bilan.essais !== 1 || r.bilan.premierCoup !== 2) throw new Error('bilan : ' + JSON.stringify(r.bilan));
   if (!(await etatCt()).valide) throw new Error('`valide` non horodaté');
   if (!/Les 7 clients sont sur la carte/.test(await pageCt.textContent('[data-ct-bilan]'))) throw new Error('bilan affiché : ' + await pageCt.textContent('[data-ct-bilan]'));
-  await pageCt.waitForTimeout(1500);
+  // Le retour à l'ensemble part 1,4 s après le dernier point : on l'attend (5 s au plus), puis
+  // la fin de son animation, pour que le cas suivant ne clique pas pendant le dézoom.
+  await pageCt.waitForFunction(() => !document.querySelector('[data-ct-svg]').classList.contains('ct-zoom'), null, { timeout: 5000 }).catch(() => {});
   if (await pageCt.evaluate(() => document.querySelector('[data-ct-svg]').classList.contains('ct-zoom'))) throw new Error('pas de retour à la vue d’ensemble');
+  await immobileCt();
 });
 
 await v('carte : le travail survit à un redessin de la page et à un remontage sur la même base', async () => {
@@ -426,7 +454,7 @@ await v('carte : la tournée garde le zoom d’un clic à l’autre, et le clic 
     Object.assign(t, { ordre: [], quai: window.__ct.CARTE.clients.map((c) => c.id), depart: null, arrivee: null });
   });
   await pageCt.click('.ent-nav[data-vue="accueil"]'); await pageCt.click('.ent-nav[data-vue="tournee"]');
-  await pageCt.click('[data-ct-zoom="ecusson"]'); await pageCt.waitForTimeout(650);
+  await pageCt.click('[data-ct-zoom="ecusson"]'); await immobileCt();
   await pointCt('[data-clic-point="c1"]');
   await pointCt('[data-clic-point="c2"]');
   const r = await pageCt.evaluate(() => ({ zoom: document.querySelector('[data-ct-svg]').classList.contains('ct-zoom'),
@@ -443,7 +471,7 @@ await v('tournée : « Recommencer la tournée » arme d’abord, puis remet tou
   const etatT = () => pageCt.evaluate(() => JSON.parse(JSON.stringify(window.__ct.db.transport['essai-carte'].tournee)));
   // Le cas précédent a laissé la carte zoomée sur l'Écusson : on revient à l'ensemble, sinon les
   // points des autres quartiers sont hors de l'écran.
-  await pageCt.click('[data-ct-ensemble]'); await pageCt.waitForTimeout(650);
+  await pageCt.click('[data-ct-ensemble]'); await immobileCt();
   for (const sel of ['[data-clic-extremite="depart"]', '[data-clic-point="c5"]', '[data-clic-point="c3"]', '[data-clic-extremite="arrivee"]']) await pointCt(sel);
   const avant = await etatT();
   if (avant.ordre.length < 3 || !avant.depart || !avant.arrivee) throw new Error('tournée de départ mal construite : ' + JSON.stringify(avant));

@@ -8,8 +8,8 @@
 // **`pret: false`** tant que Tristan ne l'a pas validée à l'écran (règle 4 du tableau des
 // chantiers) : la séance est cachée aux élèves, quel que soit le groupe.
 //
-// Pas encore de trame élève : elle viendra avec les autres séances ENT-2.x. En attendant, les
-// consignes sont dans le message de la cheffe d'équipe et dans la marche à suivre de l'accueil.
+// Trame élève écrite (`outils/trame-cdiscount-mouvements.py`, `contenus/trames/ENT-2.1-…`), PAS
+// déclarée tant que Tristan ne l'a pas relue ; seul son corrigé est déclaré (`meta.corrige`).
 
 import { creerEntreprise } from '../core/types/entreprise.js';
 import * as CDISCOUNT from '../contenus/cdiscount.js';
@@ -34,6 +34,9 @@ export const meta = {
   // peut donc repartir de zéro sans rien perdre d'une autre séance.
   reinitialisable: true,
   tables: {},
+  // Corrigé de la trame (espace enseignant). La trame elle-même n'est PAS déclarée (`trame:`) :
+  // déclarer, c'est valider, et elle n'est pas encore relue.
+  corrige: './contenus/corriges/ENT-2.1.js',
   pret: false,
 };
 
