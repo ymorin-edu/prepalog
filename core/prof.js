@@ -872,8 +872,13 @@ export async function rendreEspaceProf(hote, ctx) {
     const ligneOuverture = (m) => {
       const visible = activiteVisible(m, g);
       const force = g.ouverts?.[m.id];
-      return `<label class="choix">
-        <input type="checkbox" data-ouvre="${ech(m.id)}" ${visible ? 'checked' : ''}>
+      // Une séance en préparation (`pret: false`) reste cachée aux élèves quoi qu'on coche : la
+      // case est donc grisée. Avant le 02/10/2026 elle se laissait cocher, se redécochait aussitôt,
+      // et un second clic enregistrait « fermée » sans que rien ne le montre — la séance restait
+      // alors fermée le jour où elle passait prête.
+      const prepa = !m.pret;
+      return `<label class="choix${prepa ? ' choix-prepa' : ''}">
+        <input type="checkbox" data-ouvre="${ech(m.id)}" ${visible ? 'checked' : ''} ${prepa ? 'disabled' : ''}>
         <span>
           <span class="etiq">${ech(m.code || m.id)}</span> ${ech(m.titre)}
           <span class="note">— ${ech(libelleNiveaux(m.niveaux))}${
@@ -881,6 +886,8 @@ export async function rendreEspaceProf(hote, ctx) {
             : m.notation === 'avancement' ? `, ${m.bareme} jalon${m.bareme > 1 ? 's' : ''}`
             : `, noté sur ${noteConvertie(m) ? BAREME_AFFICHE : m.bareme}`}</span>
           ${force === true && horsNiveau(m, g) ? `<span class="etiq" style="color:var(--terre)">ouverte hors niveau</span>` : ''}
+          ${prepa ? `<span class="etiq etiq-prepa" title="Cachée aux élèves tant qu'elle n'est pas validée (pret: false). Vous pouvez l'essayer depuis l'accueil.">en préparation</span>` : ''}
+          ${!prepa && force === false ? `<span class="etiq" style="color:var(--terre)">fermée</span>` : ''}
         </span>
       </label>`;
     };

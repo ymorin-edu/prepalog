@@ -66,6 +66,18 @@ export function activiteVisible(meta, groupe) {
   return niveaux.includes(groupe.niveau);
 }
 
+// Pourquoi les ÉLÈVES de ce groupe ne voient pas une activité, ou null s'ils la voient.
+// Depuis le 02/10/2026 (demande de Tristan : « possible que les enseignants voient tout ? »),
+// l'enseignant voit TOUTES les activités à l'accueil, y compris celles qu'il faut encore valider
+// (`pret: false`) : c'est le seul moyen de les essayer dans le vrai site. Sa tuile dit alors ce
+// que voient les élèves, pour qu'il ne croie pas une séance ouverte alors qu'elle ne l'est pas.
+export function raisonCachee(meta, groupe) {
+  if (!meta.pret) return 'en préparation';
+  if (activiteVisible(meta, groupe)) return null;
+  const forcage = groupe && groupe.ouverts ? groupe.ouverts[meta.id] : undefined;
+  return forcage === false ? 'fermée pour ce groupe' : 'hors niveau du groupe';
+}
+
 // Vrai si l'activité ne correspond pas au niveau du groupe et n'est visible
 // que parce que l'enseignant l'a forcée : utile pour le signaler dans son espace.
 export function horsNiveau(meta, groupe) {

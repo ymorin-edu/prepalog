@@ -361,6 +361,11 @@ td.juste .note{color:inherit; opacity:.85}
 .lien-accueil:hover{ color:var(--ardoise) }
 
 .module-grid{ display:grid; gap:14px; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)) }
+/* L'enseignant voit toutes les tuiles (02/10/2026) ; celles que les élèves ne voient pas le disent. */
+.tuile-cachee{ display:inline-block; margin-top:6px; font-size:12px; font-weight:600; color:var(--terre);
+  border:1px dashed var(--terre); border-radius:999px; padding:2px 9px }
+.choix-prepa{ opacity:.75 }
+.etiq-prepa{ color:var(--terre) }
 .module-tile{
   text-align:left; width:100%; font:inherit; cursor:pointer;
   background:var(--panneau); border:1px solid var(--filet); border-radius:var(--r);

@@ -3,7 +3,7 @@
 import { demarrerBackend, B } from './backend.js';
 import { CONFIG, DEMO } from './config.js';
 import { ech, toast, entete, brancherEntete, messageErreur } from './ui.js';
-import { activiteVisible, courtNiveau, libelleNiveaux } from './niveaux.js';
+import { activiteVisible, raisonCachee, courtNiveau, libelleNiveaux } from './niveaux.js';
 import { chargerActivites, activite, RUBRIQUES, ICONES, activitesDeRubrique } from '../activites/index.js';
 import { ouvrirJeu } from './store.js';
 import { rendreEspaceProf } from './prof.js';
@@ -105,8 +105,10 @@ async function vueAccueil() {
   const groupe = groupeActif ? await B.groupe(groupeActif) : null;
 
   // Le niveau du groupe décide, sauf forçage explicite par l'enseignant.
-  // L'enseignant sans groupe actif voit tout.
-  const visibles = mods.filter((m) => activiteVisible(m.meta, groupe));
+  // L'ENSEIGNANT voit tout (02/10/2026) : les séances en préparation, fermées ou d'un autre
+  // niveau gardent leur tuile chez lui, avec une étiquette qui dit ce que voient les élèves.
+  const visibles = mods.filter((m) => estProf || activiteVisible(m.meta, groupe));
+  const cachee = (m) => (estProf ? raisonCachee(m.meta, groupe) : null);
 
   const rub = rubriqueActive ? RUBRIQUES.find((r) => r.id === rubriqueActive) : null;
   const cartouche = `
@@ -138,6 +140,7 @@ async function vueAccueil() {
               <span class="titre">${ech(m.meta.titre)}</span>
               <span class="desc">${ech(m.meta.desc || '')}</span>
               ${verrous[m.meta.id] ? `<span class="desc"><strong>${ech(verrous[m.meta.id])}</strong></span>` : ''}
+              ${cachee(m) ? `<span class="tuile-cachee" data-cachee="${ech(cachee(m))}">Cachée aux élèves : ${ech(cachee(m))}</span>` : ''}
             </button>`).join('')}</div>`}`;
     brancher();
     return;
