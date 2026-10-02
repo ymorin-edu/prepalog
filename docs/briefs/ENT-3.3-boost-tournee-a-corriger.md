@@ -1,6 +1,6 @@
 # Brief de séance — ENT-3.3 Boost « La tournée à corriger »
 
-**Statut** : en cours — chantier moteur (§7) livré le 02/10/2026, séance à construire *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
+**Statut** : à valider par Tristan — chantier moteur (§7) et séance livrés le 02/10/2026, séance en `pret: false` *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
 **Date du brief** : 02/10/2026
 **Ordre de travail conseillé** : **1/3** — puis ENT-3.4, puis ENT-2.4. Tout en `pret: false`, commits fréquents.
 **Conversation d'origine** : « Prepalog — chantier A » (cadrage : `docs/fiches/` + fiches du projet `prepalog-boost-cadrage-ent32-34`, `prepalog-reprise-ent32`, `prepalog-ent32-livree`)
@@ -142,21 +142,60 @@ donne **aucun** jalon de réparation ; (4) accuser la mauvaise contrainte me co�
 
 ## 11. Questions ouvertes
 
-- [ ] **1. Même journée qu'ENT-3.2 ou nouvelle ?** *Recommandation : même carte et mêmes clients* (carte déjà vérifiée et calibrée ; pas de nouveau géocodage ;
+- [x] **1. Même journée qu'ENT-3.2 ou nouvelle ?** *Recommandation : même carte et mêmes clients* (carte déjà vérifiée et calibrée ; pas de nouveau géocodage ;
       l'attention va au diagnostic). Risque : un élève qui se souvient de la solution d'ENT-3.2 répare sans diagnostiquer — d'où D1/D2 notés. À trancher par Tristan.
-- [ ] **2. Une ou deux contraintes violées ?** *Recommandation : deux sur trois, la troisième en leurre.* À confirmer.
-- [ ] **3. « Recommencer la tournée » : remet-il la tournée du collègue (recommandé) ou une tournée vide ?**
-- [ ] **4. « Diagnostic noté à part » : jusqu'où ?** Deux groupes de jalons étiquetés dans le suivi (si faisable sans toucher à `core/prof.js`) ou seulement des jalons distincts ?
-- [ ] **5. Barème** : 6 jalons ? Les 4 de réparation à poids égal ?
-- [ ] **6. Prénom et rôle du collègue** (réels du métier, prénom inventé) — proposition de Claude Code à valider.
+- [x] **2. Une ou deux contraintes violées ?** *Recommandation : deux sur trois, la troisième en leurre.* À confirmer.
+- [x] **3. « Recommencer la tournée » : remet-il la tournée du collègue (recommandé) ou une tournée vide ?**
+- [x] **4. « Diagnostic noté à part » : jusqu'où ?** Deux groupes de jalons étiquetés dans le suivi (si faisable sans toucher à `core/prof.js`) ou seulement des jalons distincts ?
+- [x] **5. Barème** : 6 jalons ? Les 4 de réparation à poids égal ?
+- [x] **6. Prénom et rôle du collègue** (réels du métier, prénom inventé) — **Inès, livreuse vélo-cargo** (choix de Tristan, 02/10).
 
 ---
 
-## Compte rendu *(rempli par Claude Code à la livraison)*
+## Compte rendu *(rempli par Claude Code le 02/10/2026)*
 
 - **Fichiers créés / modifiés** :
+  - `contenus/boost-ent33.js` (créé) : la séance — tournée d'Inès, message, lecture de la réponse, 6 jalons ;
+  - `activites/boost-ent33.js` (créé) : `meta`, **`id: 'boost-ent33'`**, `code: 'ENT-3.3'`, `temps: 'erreur'`, `pret: false` ;
+  - `activites/index.js` : une ligne (après ENT-3.2) ;
+  - `outils/test/boost.mjs` : 16 cas « ENT-3.3 » ajoutés à la fin du bloc (aucun cas existant réécrit) ;
+  - `outils/test/socle.mjs` : liste Logisim allongée de ENT-3.3 (accord déjà donné) **et** une entrée
+    `'ENT-3.3': ['C2.4', 'erreur']` dans la liste des compétences déclarées (allongement seulement).
+  - Chantier moteur (commit précédent `560e6f8`) : `core/types/tournee.js`, `core/types/entreprise.js`.
 - **Écarts par rapport au brief** (et pourquoi) :
+  - **Réponse à Inès : une ligne par contrainte** au lieu d'une liste fermée (choix de Tristan, 02/10) :
+    `Charge utile : (respectée ou dépassée)`, `Train de 16 h 10 : (attrapé ou manqué)`,
+    `Créneau de la Pâtisserie Arnaud : (tenu ou raté)`, puis `Poids chargé :`, `Arrivée à la Pâtisserie Arnaud :`,
+    `Arrivée à la gare :`. L'élève se prononce aussi sur le leurre ; « tout cocher » n'existe plus, accuser le train = D1 ko.
+  - **D2 demande trois chiffres** (poids chargé, arrivée chez le client à créneau, arrivée à la gare), y compris celui
+    du leurre : le train « tenu » se prouve aussi. Tolérance : poids exact, heures à ±1 min (« 15 h 27 », « 15h27 »,
+    « 15:27 », « 927 » acceptés).
+  - **Pas de menu « Plan de Nîmes »** : tous les clients sont déjà sur la carte, la tournée porte le plan elle-même.
+  - **Pas de `niveaux: ['1re']`** : ENT-3.1 et ENT-3.2 n'en déclarent pas ; restreindre la seule ENT-3.3 aurait fermé la
+    suite du parcours à une classe qui a fait les deux premières. À trancher par Tristan s'il veut les trois en 1re.
+  - **Base partagée `jeuId: 'boost'`** comme ENT-3.2 (le modèle), alors que `CLAUDE.md` dit « une base par séance » :
+    la tournée est cloisonnée par `transportId: 'boost-ent33'`, le message par le volet `boost-ent33`.
+  - Sans réponse envoyée, D1/D2 sont « en attente » (convention d'ENT-2.3), jamais « ok ».
 - **Décisions prises en route** :
-- **Tests** : bloc / suite entière, nombre de cas, sabotages éprouvés
-- **Commits** : *(hash + message)*
+  - Même journée qu'ENT-3.2 : la carte, les clients, la feuille de calcul et la meilleure tournée (`optimum()`)
+    sont **importés** de `contenus/boost-ent32.js`, rien n'est recopié.
+  - Diagnostic attendu **recalculé** depuis la tournée d'Inès par le bilan du moteur : 218 kg pour 180 (surcharge),
+    Pâtisserie Arnaud ≈ 15 h 27 pour 14 h 45 (créneau raté), gare ≈ 15 h 50 pour 16 h 10 (train tenu, leurre).
+  - Le mail d'Inès porte la fiche des huit commandes et les contraintes, mais **ni le total, ni le poids chargé,
+    ni aucune heure d'arrivée** (gardé par un test). Son raisonnement : « une commande à quai — la plus petite » et
+    « le plus court donne de la marge partout ».
+  - Jalons : D1 `contraintes`, D2 `preuves`, R1 `charge` (bonne commande à quai **et** ≤ 180 kg), R2 `horaire`,
+    R3 `creneau`, R4 `trajet` (≤ 10 % de la meilleure). Titres préfixés « Diagnostic · » / « Réparation · » : c'est
+    l'étiquetage, sans toucher à `core/prof.js`. La tournée d'Inès intacte vaut 0 jalon de réparation (surchargée,
+    et un garde explicite « encore celle d'Inès » en double sécurité).
+- **Tests** : bloc `boost` 79/79 ; suite entière **327/327** ; `test-seances.mjs` vert. **Sabotages éprouvés (7, tous font
+  tomber au moins un cas)** : état initial reposé à chaque ouverture ; `sansVerdict` retiré (jauges parlantes, pastilles) ;
+  D1 qui accepte « tout accuser » ; D2 qui tolère 50 kg ; R1 qui accepte la tournée d'Inès ; optimum recopié (faux) au
+  lieu de recalculé ; créneau jugé sans le départ. Le garde « tournée encore celle d'Inès » seul ne fait rien tomber :
+  il double la règle de surcharge, c'est voulu.
+- **Commits** : voir `git log` — « ENT-3.3 : la tournée à corriger… » puis « Journal : ENT-3.3… ».
 - **Reste ouvert** :
+  - **Validation à l'écran par Tristan** (critères du §10), puis `pret: true`.
+  - Trame élève et corrigé : après validation.
+  - `niveaux` (voir écarts).
+

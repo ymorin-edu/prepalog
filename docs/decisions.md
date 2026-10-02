@@ -5,6 +5,13 @@ n'est pas évident)**. Claude Code y ajoute toute décision prise en cours de ro
 reporte dans les fiches du projet PREPALOG. Une décision de fond sur la pédagogie reste dans
 `docs/fiches/prepalog-finalite.md`.
 
+- 02/10/2026 · Tristan · **ENT-3.3 : la collègue est Inès, livreuse vélo-cargo** ; l'élève lui répond **une ligne par
+  contrainte** (« respectée ou dépassée », « attrapé ou manqué », « tenu ou raté ») puis trois chiffres (poids chargé,
+  arrivée à la Pâtisserie Arnaud, arrivée à la gare), plutôt qu'une liste des contraintes violées : il se prononce aussi
+  sur le leurre.
+- 02/10/2026 · Claude Code · **ENT-3.3 construite** (`boost-ent33`, `pret: false`, à valider à l'écran) : même journée
+  qu'ENT-3.2 (carte, feuille et meilleure tournée importées), pas de menu Plan, 6 jalons « Diagnostic · » / « Réparation · »,
+  base `boost` partagée et cloisonnée. Pas de `niveaux` (comme ENT-3.1/3.2). Suite 327/327, 7 sabotages éprouvés.
 - 02/10/2026 · Claude Code · **Chantier moteur d'ENT-3.3 livré** (`core/types/tournee.js`, un appel dans
   `entreprise.js`) : `etatInitial` (tournée déjà construite, posée **une seule fois**, marquée `amorce`
   dans la base de l'élève ; « Recommencer » la remet au lieu de vider) et `sansVerdict` (jauges sans
