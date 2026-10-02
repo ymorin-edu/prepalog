@@ -232,7 +232,10 @@ for (const [essai, css] of [['police normale', ''], ['police bien plus large, ga
       // Réduire n'est pas une échappatoire : avec la police de mesure, AUCUN nom ne doit avoir
       // besoin du garde-fou (sinon le build a mal calculé sa place), et même avec une police
       // bien plus large, un nom réduit doit rester lisible — au moins 75 % de sa taille.
-      if (!css && r.reduits) pb.push(`${k} : ${r.reduits} nom(s) réduits avec la police de mesure (${r.tailles[0].n})`);
+      // Cette exigence vaut pour la police des postes (Segoe UI, Windows). Ailleurs (Linux de la
+      // CI GitHub), la police système est plus large : un nom réduit y est normal, et seule la
+      // lisibilité (≥ 75 %, juste dessous) reste exigée.
+      if (!css && r.reduits && process.platform === 'win32') pb.push(`${k} : ${r.reduits} nom(s) réduits avec la police de mesure (${r.tailles[0].n})`);
       r.tailles.filter((t) => t.r < 0.75).forEach((t) => pb.push(`${k} : « ${t.n} » réduit à ${Math.round(t.r * 100)} %`));
     }
     if (css && !reduits) pb.push('aucun nom réduit : le cas ne met pas le garde-fou à l’épreuve');
