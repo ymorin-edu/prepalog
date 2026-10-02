@@ -623,6 +623,10 @@ body.immersion .app{ max-width:1720px; padding:14px 24px 0 }
 }
 .ent-act:hover{ background:rgba(255,255,255,.15); border-color:currentColor; opacity:1 }
 .ent-act-raz{ opacity:.65 }
+.ent-sans-trame{
+  font-size:12.5px; padding:3px 10px; border-radius:999px; border:1px dashed currentColor;
+  white-space:nowrap; opacity:.8;
+}
 .ent-barre{ width:1px; align-self:stretch; background:currentColor; opacity:.28; margin:3px 0 }
 /* --- La copie rendue (évaluation, 02/10/2026) ---------------------------------
    Une étiquette « Évaluation » dans le bandeau, et le bouton « Rendre ma copie », plus

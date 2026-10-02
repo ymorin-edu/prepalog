@@ -63,6 +63,10 @@ export function creerEntreprise(U) {
   // des écrans de l'application, et en bas d'un menu de douze entrées personne ne les
   // cherchait.
   const trame = U.trame || null;
+  // Une séance qui se fait tout entière à l'écran le dit dans le bandeau, à la place des
+  // liens de trame (02/10/2026) : `sansTrame: "Tout à l'écran"`. Sans effet si une trame est
+  // déclarée — on ne montre jamais les deux.
+  const sansTrame = !trame && U.sansTrame ? String(U.sansTrame) : null;
 
   // Les deux vues de transport, ajoutées le 02/10/2026 pour la tournée du vélo-cargo.
   // Elles n'existent que si la séance les déclare : une entreprise qui n'a pas de
@@ -410,6 +414,7 @@ export function creerEntreprise(U) {
                 title="Le carnet de bord de la séance, à imprimer ou à lire à l'écran">Trame PDF</a>` : ''}
               ${trame && trame.docx ? `<a class="ent-act" href="${ech(trame.docx)}" download
                 title="Le même carnet, à compléter au clavier">Trame Word</a>` : ''}
+              ${sansTrame ? `<span class="ent-sans-trame" title="Pas de feuille à rendre : tout se fait dans l'environnement">${ech(sansTrame)}</span>` : ''}
               ${!(VPLAN && VPLAN.horsConnexion) ? '' : `<button class="ent-act" data-hors-connexion
                 ${horsCo ? 'disabled' : ''}
                 title="${horsCo

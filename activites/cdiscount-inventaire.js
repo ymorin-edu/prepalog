@@ -35,7 +35,7 @@ export const meta = {
   // 02/10/2026, gardée par un test du bloc « transport »). L'inventaire validé est définitif :
   // l'élève voit sa correction détaillée, mais ne refait pas la séance de lui-même.
   tables: {},
-  pret: false,
+  pret: true,
 };
 
 const moteur = creerEntreprise({
@@ -52,6 +52,8 @@ const moteur = creerEntreprise({
   volet: SEANCE.VOLET,
   etapes: SEANCE.ETAPES,
   inventaire: SEANCE.INVENTAIRE,
+  // Pas de trame papier : le bandeau le dit.
+  sansTrame: "Tout à l'écran",
   THEME: CDISCOUNT.THEME,
 });
 

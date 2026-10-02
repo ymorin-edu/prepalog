@@ -665,6 +665,14 @@ Stock au dernier inventaire : 27 - 12 - 1 + 9 + 1 = 24`;
     if (await pg.$(`${Z22} [data-stock-bloque]`)) throw new Error('Stock bloqué pour l\'enseignant');
   });
 
+  await v('ENT-2.2 : le bandeau dit « Tout à l\'écran » à la place des liens de trame (aucune trame, aucun lien mort)', async () => {
+    await monter22();
+    const b = await pg.$$eval('#hote22 .ent-bandeau .ent-sans-trame', (e) => e.map((x) => x.textContent.trim()));
+    if (b.length !== 1 || !/Tout à l.écran/.test(b[0])) throw new Error('étiquette du bandeau : ' + JSON.stringify(b));
+    const liens = await pg.$$eval('#hote22 .ent-bandeau a[download]', (e) => e.length);
+    if (liens) throw new Error(liens + ' lien(s) de trame alors qu\'il n\'y a pas de trame');
+  });
+
   await v('ENT-2.2 : aucune erreur de console ni d\'exception pendant ces parcours', async () => {
     await pg.evaluate(() => { document.querySelector('#hote22')?.remove(); document.body.classList.remove('immersion'); });
     await ctx22.close();
