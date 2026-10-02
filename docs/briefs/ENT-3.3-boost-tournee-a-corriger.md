@@ -1,6 +1,6 @@
 # Brief de séance — ENT-3.3 Boost « La tournée à corriger »
 
-**Statut** : à implémenter *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
+**Statut** : en cours — chantier moteur (§7) livré le 02/10/2026, séance à construire *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
 **Date du brief** : 02/10/2026
 **Ordre de travail conseillé** : **1/3** — puis ENT-3.4, puis ENT-2.4. Tout en `pret: false`, commits fréquents.
 **Conversation d'origine** : « Prepalog — chantier A » (cadrage : `docs/fiches/` + fiches du projet `prepalog-boost-cadrage-ent32-34`, `prepalog-reprise-ent32`, `prepalog-ent32-livree`)

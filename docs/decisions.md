@@ -5,6 +5,17 @@ n'est pas évident)**. Claude Code y ajoute toute décision prise en cours de ro
 reporte dans les fiches du projet PREPALOG. Une décision de fond sur la pédagogie reste dans
 `docs/fiches/prepalog-finalite.md`.
 
+- 02/10/2026 · Claude Code · **Chantier moteur d'ENT-3.3 livré** (`core/types/tournee.js`, un appel dans
+  `entreprise.js`) : `etatInitial` (tournée déjà construite, posée **une seule fois**, marquée `amorce`
+  dans la base de l'élève ; « Recommencer » la remet au lieu de vider) et `sansVerdict` (jauges sans
+  verdict, sans être une copie ; la feuille garde son « Vérifier »). Inactifs tant qu'une séance ne les
+  déclare pas. 9 cas dans le bloc `boost`, 4 sabotages éprouvés ; suite 311/311.
+- 02/10/2026 · Tristan · **ENT-3.3 : réponses aux questions du brief** : recommandations de Cowork pour
+  1 (même journée qu'ENT-3.2), 2 (deux contraintes sur trois, la troisième en leurre), 3 (« Recommencer »
+  remet la tournée du collègue) et 5 (6 jalons, poids égal) ; 4 : jalons distincts, sans toucher
+  à `core/prof.js`. **Tournée du collègue : B** — Mercerie Pellet (12 kg) laissée à quai, puis l'ordre le
+  plus court (c4 c3 c8 c1 c7 c6 c5, ≈ 11,5 km) : 218 kg pour 180 (surcharge), créneau de la Pâtisserie
+  Arnaud raté, train tenu (leurre).
 - 02/10/2026 · Tristan · **ENT-2.2 (Cdiscount, inventaire tournant) confirmée validée à l'écran** : elle
   reste `pret: true`. Confirmation donnée à Claude Code après le constat de Cowork (ci-dessous),
   qui n'en trouvait aucune trace écrite.
