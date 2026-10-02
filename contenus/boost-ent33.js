@@ -81,6 +81,16 @@ export const TOURNEE = Object.assign({}, E32.TOURNEE, {
     + `départ » remet celle d’Inès.`,
   etatInitial: COLLEGUE,
   sansVerdict: true,
+  // La ligne « poids chargé » est la moins intuitive de la feuille : ici la tournée est déjà faite,
+  // l'élève ne choisit pas ce qui reste à quai, il doit le LIRE puis le retrouver dans la liste.
+  // La consigne dit où chercher et la forme de la formule, jamais la cellule ni le résultat.
+  grille: Object.assign({}, E32.TOURNEE.grille, {
+    lignes: (b) => E32.TOURNEE.grille.lignes(b).map((l) => l.A !== 'Poids chargé dans le vélo-cargo (kg)' ? l
+      : Object.assign({}, l, { note: 'Ce qui est dans le vélo-cargo = poids total − poids des commandes restées à quai. '
+        + '1) Lisez, sous la carte, « Commandes restées à quai ». 2) Retrouvez leur poids dans la liste en haut de la feuille. '
+        + '3) Écrivez la soustraction : =B10-… (une cellule à retirer par commande restée à quai). '
+        + 'Le résultat se compare à la charge utile.' })),
+  }),
 });
 
 // Le bilan d'une tournée, par la même vue que l'écran.
