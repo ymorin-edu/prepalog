@@ -28,4 +28,13 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Suite de tests
-        run: node outils/test.mjs
+        run: node outils/test.mjs 2>&1 | tee sortie-tests.txt; exit "${PIPESTATUS[0]}"
+
+      # En cas d'échec, remonte les cas fautifs dans le résumé du passage (lisible sans
+      # ouvrir le journal complet).
+      - name: Résumé des échecs
+        if: failure()
+        run: |
+          sed -n '/=== ÉCHECS ===/,$p' sortie-tests.txt | while IFS= read -r l; do
+            [ -n "$l" ] && echo "::error::$l"
+          done
