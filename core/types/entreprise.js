@@ -16,6 +16,7 @@ import { COLORS, SHIP, pad } from '../../contenus/entreprise-commun.js';
 import { creerPlan } from './plan.js';
 import { creerCarte } from './carte.js';
 import { creerTournee } from './tournee.js';
+import { creerInventaire } from './inventaire.js';
 
 /* ------------------------------------------------------------------ formats */
 export const eur = (n) => Number(n).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' });
@@ -75,10 +76,25 @@ export function creerEntreprise(U) {
   // donc rien d'autre ne change ici. ENT-3.1 ne déclare pas de carte : elle garde son plan.
   const VPLAN = U.plan ? (U.plan.carte ? creerCarte(U.plan) : creerPlan(U.plan)) : null;
   const VTOUR = U.tournee ? creerTournee(Object.assign({ plan: U.plan }, U.tournee)) : null;
+  // L'écran « Inventaire » (02/10/2026, chantier E), sur le même principe : il n'existe que si
+  // la séance déclare un `inventaire` — format dans `claude/prepalog-inventaire-format.md`.
+  const VINV = U.inventaire ? creerInventaire(U.inventaire, CATALOGUE) : null;
 
   const unite = (n) => ((n > 1 || n === 0) ? VOCAB.unitPl : VOCAB.unit);
-  const label = (v) => v.model.brand + ' ' + v.model.name;
-  const swatch = (c) => `<span class="teinte" style="background:${COLORS[c][1]}"></span>${ech(COLORS[c][0])}`;
+  // Catalogue « simple » (02/10/2026, chantier E) : des articles sans couleur ni taille — un
+  // câble, une batterie, un carton de vin. Jusque-là l'environnement ne connaissait que la
+  // chaussure de Spartoo (« modèle-couleur-taille ») et plantait sur un article sans couleur.
+  // Pour un tel catalogue (`catalogueSimple`, contenus/entreprise-commun.js), les colonnes
+  // Couleur et Taille disparaissent partout ; rien ne change pour Spartoo.
+  const SIMPLE = !!CATALOGUE.simple;
+  const label = (v) => [v.model.brand, v.model.name].filter(Boolean).join(' ');
+  const nomCouleur = (c) => (COLORS[c] ? COLORS[c][0] : '');
+  const swatch = (c) => (COLORS[c] ? `<span class="teinte" style="background:${COLORS[c][1]}"></span>${ech(COLORS[c][0])}` : '');
+  // La précision « Noir · T.42 » sous une désignation, et les deux colonnes Couleur / Taille.
+  const precision = (v) => (SIMPLE || !v ? '' : `<div class="note">${ech(nomCouleur(v.color))} · ${ech(VOCAB.sizeShort)}${v.size}</div>`);
+  const precisionTexte = (v) => (SIMPLE ? '' : ` ${nomCouleur(v.color)} ${VOCAB.sizeShort}${v.size}`);
+  const thVariante = (couleur = 'Couleur') => (SIMPLE ? '' : `<th>${couleur}</th><th class="num">${ech(VOCAB.sizeLabel)}</th>`);
+  const tdVariante = (v, teinte) => (SIMPLE ? '' : (v ? `<td>${teinte ? swatch(v.color) : ech(nomCouleur(v.color))}</td><td class="num">${v.size}</td>` : '<td>—</td><td class="num">—</td>'));
   const etatStock = (q, min) => (q <= 0 ? ['Rupture', 'crit'] : (q <= min ? ['Faible', 'warn'] : ['OK', 'ok']));
   const pastilleStock = (q, min) => { const s = etatStock(q, min); return pastille(s[0], s[1]); };
 
@@ -297,12 +313,12 @@ export function creerEntreprise(U) {
       const commandeDe = (no) => db.orders.find((o) => o.no === no);
 
       function tableauCommande(o, avecPrix) {
-        return `<div class="ent-scroll"><table><thead><tr><th>Réf.</th><th>Désignation</th><th>Couleur</th>
-          <th class="num">${ech(VOCAB.sizeLabel)}</th><th class="num">Qté</th>
+        return `<div class="ent-scroll"><table><thead><tr><th>Réf.</th><th>Désignation</th>${thVariante()}
+          <th class="num">Qté</th>
           ${avecPrix ? '<th class="num">PU TTC</th><th class="num">Total</th>' : ''}</tr></thead><tbody>
           ${o.lines.map((l) => { const v = VM[l.sku]; return `<tr>
-            <td class="mono">${ech(l.sku)}</td><td>${ech(label(v))}</td><td>${swatch(v.color)}</td>
-            <td class="num">${v.size}</td><td class="num">${l.qty}</td>
+            <td class="mono">${ech(l.sku)}</td><td>${ech(label(v))}</td>${tdVariante(v, true)}
+            <td class="num">${l.qty}</td>
             ${avecPrix ? `<td class="num">${eur(v.model.price)}</td><td class="num">${eur(v.model.price * l.qty)}</td>` : ''}
           </tr>`; }).join('')}</tbody></table></div>`;
       }
@@ -380,6 +396,7 @@ export function creerEntreprise(U) {
                 <div class="ent-sep">Articles</div>
                 ${item('catalogue', 'Catalogue', 0, ['catalogue', 'produit'])}
                 ${item('stock', 'Stock')}
+                ${VINV ? item('inventaire', VINV.nav.libelle) : ''}
                 ${item('blocage', 'Blocage qualité')}
                 <div class="ent-sep">Tiers</div>
                 ${item('clients', 'Clients')}
@@ -435,6 +452,7 @@ export function creerEntreprise(U) {
           receptions: vueReceptions, reception: vueReception,
           plan: vuePlan, tournee: vueTournee,
           catalogue: vueCatalogue, produit: vueProduit, stock: vueStock, blocage: vueBlocage,
+          inventaire: VINV ? vueInventaire : vueAccueil,
           clients: vueClients, fournisseurs: vueFournisseurs, console: vueConsole,
         };
         z.innerHTML = (vues[E.vue] || vueAccueil)();
@@ -546,6 +564,7 @@ export function creerEntreprise(U) {
           const recDuMail = sel.kind === 'bl' ? receptionDe(sel.rec) : null;
           const corps = sel.kind === 'order' ? corpsMailCommande(sel.order)
             : sel.kind === 'bl' ? `<p>${ech(sel.text).replace(/\n/g, '<br>')}</p>${recDuMail ? bonDeLivraison(recDuMail) : ''}`
+            : sel.kind === 'releve' ? `<p>${ech(sel.text || '').replace(/\n/g, '<br>')}</p>${VINV && sel.inventaire === VINV.id ? VINV.releve(sel) : ''}`
             : `<p>${ech(sel.text).replace(/\n/g, '<br>')}</p>`;
           let actions = '';
           if (E.dossier === 'in') {
@@ -697,7 +716,7 @@ export function creerEntreprise(U) {
             : `<select data-prep="status" data-sku="${ech(l.sku)}" aria-label="Statut pour ${ech(l.sku)}">
                 ${choixStatut.map((op) => `<option value="${op[0]}" ${(r.status || '') === op[0] ? 'selected' : ''}>${op[1]}</option>`).join('')}</select>`;
           return `<tr><td class="mono">${ech(l.sku)}</td>
-            <td>${ech(label(v))}<div class="note">${ech(COLORS[v.color][0])} · ${ech(VOCAB.sizeShort)}${v.size}</div></td>
+            <td>${ech(label(v))}${precision(v)}</td>
             <td class="num">${l.qty}</td><td class="num">${cStock}</td><td class="mono">${cEmpl}</td>
             <td class="num">${cQte}</td><td>${cStatut}</td></tr>`;
         }).join('');
@@ -754,7 +773,7 @@ export function creerEntreprise(U) {
         const lignes = aPrendre.map((l, i) => {
           const v = VM[l.sku];
           return `<tr><td>${i + 1}</td><td class="mono"><b>${ech(v.loc)}</b></td><td class="mono">${ech(l.sku)}</td>
-            <td>${ech(label(v))}</td><td>${ech(COLORS[v.color][0])}</td><td class="num">${v.size}</td>
+            <td>${ech(label(v))}</td>${tdVariante(v)}
             <td class="num"><b>${p.rows[l.sku].qty}</b></td><td class="num"><span class="ent-case"></span></td></tr>`;
         }).join('');
 
@@ -778,7 +797,7 @@ export function creerEntreprise(U) {
               <div><div class="ent-lbl">Destinataire</div>${ech(c.prenom + ' ' + c.nom)}<br>${ech(c.adr)}<br>${ech(c.cp)} ${ech(c.ville)}</div>
               <div><div class="ent-lbl">Transport</div>${ech(SHIP[o.ship][0])}</div></div>
             ${aPrendre.length ? `<div class="ent-scroll"><table><thead><tr><th>N°</th><th>Emplacement</th><th>Réf.</th>
-                <th>Article</th><th>Couleur</th><th class="num">${ech(VOCAB.sizeLabel)}</th><th class="num">Qté</th>
+                <th>Article</th>${thVariante()}<th class="num">Qté</th>
                 <th class="num">Prélevé</th></tr></thead><tbody>${lignes}</tbody></table></div>
               <p class="ent-droite"><strong>${aPrendre.length} ligne${aPrendre.length > 1 ? 's' : ''} · ${n} ${ech(unite(n))}</strong></p>`
               : '<p>Aucun article disponible : rien à préparer.</p>'}
@@ -813,7 +832,7 @@ export function creerEntreprise(U) {
         let t = `BON DE PRÉPARATION BP-${o.no.replace('CMD-', '')}\nCommande ${o.no} | Client : ${c.prenom} ${c.nom} | ${SHIP[o.ship][0]}\n\n`;
         o.lines.filter((l) => p.rows[l.sku].qty > 0)
           .sort((a, b) => (VM[a.sku].loc < VM[b.sku].loc ? -1 : 1))
-          .forEach((l) => { t += `${VM[l.sku].loc}\t${l.sku}\t${label(VM[l.sku])}\t${VOCAB.sizeShort}${VM[l.sku].size}\tQté ${p.rows[l.sku].qty}\n`; });
+          .forEach((l) => { t += `${VM[l.sku].loc}\t${l.sku}\t${label(VM[l.sku])}${SIMPLE ? '' : `\t${VOCAB.sizeShort}${VM[l.sku].size}`}\tQté ${p.rows[l.sku].qty}\n`; });
         const m = hote.querySelector('#msgCopie');
         const ok = () => { if (m) m.textContent = 'Bon copié dans le presse-papiers.'; };
         const ko = () => { if (m) m.textContent = 'Copie impossible ici : sélectionnez le bon à la souris.'; };
@@ -835,7 +854,7 @@ export function creerEntreprise(U) {
         const sup = SUP_BY_ID[r.supId] || (db.suppliers || []).find((s) => s.id === r.supId) || { brand: r.supId, name: '', adr: '', cp: '', ville: '' };
         const lignes = (r.bl.lines || []).map((l) => { const v = VM[l.sku];
           return `<tr><td class="mono">${ech(l.sku)}</td><td>${v ? ech(label(v)) : '—'}</td>
-            <td>${v ? ech(COLORS[v.color][0]) : '—'}</td><td class="num">${v ? v.size : '—'}</td>
+            ${tdVariante(v)}
             <td class="num"><b>${l.qty}</b></td></tr>`; }).join('');
         const n = (r.bl.lines || []).reduce((s, l) => s + l.qty, 0);
         return `<section class="panneau ent-doc">
@@ -847,8 +866,8 @@ export function creerEntreprise(U) {
               <div><div class="ent-lbl">Date d'expédition</div>${fdate(r.bl.date)}</div>
               <div><div class="ent-lbl">Numéro de lot</div><strong class="mono">${ech(r.bl.lot)}</strong></div>
               <div><div class="ent-lbl">Transporteur</div>${ech(r.transporteur || '—')}</div></div>
-            <div class="ent-scroll"><table><thead><tr><th>Réf.</th><th>Article</th><th>Couleur</th>
-              <th class="num">${ech(VOCAB.sizeLabel)}</th><th class="num">Qté annoncée</th></tr></thead>
+            <div class="ent-scroll"><table><thead><tr><th>Réf.</th><th>Article</th>${thVariante()}
+              <th class="num">Qté annoncée</th></tr></thead>
               <tbody>${lignes}</tbody></table></div>
             <p class="ent-droite"><strong>${(r.bl.lines || []).length} ligne${(r.bl.lines || []).length > 1 ? 's' : ''} · ${n} ${ech(unite(n))} annoncée${n > 1 ? 's' : ''}</strong></p>
             <div class="ent-signatures"><div><div class="ent-lbl">Expéditeur</div></div><div><div class="ent-lbl">Réception (nom, date, réserves)</div></div></div>
@@ -918,7 +937,7 @@ export function creerEntreprise(U) {
           const v = VM[k.sku];
           return `<tr><td class="num">${k.no}</td><td class="mono">${ech(k.sku)}</td>
             <td>${v ? ech(label(v)) : '<span class="faux">Référence inconnue</span>'}
-              ${v ? `<div class="note">${ech(COLORS[v.color][0])} · ${ech(VOCAB.sizeShort)}${v.size}</div>` : ''}</td>
+              ${precision(v)}</td>
             <td class="num"><b>${k.qty}</b></td>
             <td>${k.etat === 'abime' ? pastille('Carton endommagé', 'crit') : pastille('Intact', 'ok')}</td></tr>`;
         }).join('');
@@ -932,7 +951,7 @@ export function creerEntreprise(U) {
             : `<select data-rec="${nom}" data-sku="${ech(sku)}" aria-label="${ech(aide)}">
                 ${choix.map((o) => `<option value="${o[0]}" ${(x[nom] || '') === o[0] ? 'selected' : ''}>${o[1]}</option>`).join('')}</select>`);
           return `<tr><td class="mono">${ech(sku)}</td>
-            <td>${v ? ech(label(v)) : '—'}${v ? `<div class="note">${ech(COLORS[v.color][0])} · ${ech(VOCAB.sizeShort)}${v.size}</div>` : ''}</td>
+            <td>${v ? ech(label(v)) : '—'}${precision(v)}</td>
             <td class="num">${champ('annonce', 'Quantité annoncée pour ' + sku)}</td>
             <td class="num">${champ('compte', 'Quantité comptée pour ' + sku)}</td>
             <td>${select('etat', choixEtat, 'État des colis pour ' + sku)}</td>
@@ -1119,7 +1138,7 @@ export function creerEntreprise(U) {
         if (!lot) return refuser('Renseignez le numéro de lot. Il est sur le bon de livraison.');
         if (!ref) return refuser('Renseignez la référence de l\'article à bloquer.');
         const v = VM[ref];
-        if (!v) return refuser(`Référence article introuvable : ${ref}. Il faut la référence complète (modèle, couleur, ${VOCAB.configWord}).`);
+        if (!v) return refuser(`Référence article introuvable : ${ref}.${SIMPLE ? '' : ` Il faut la référence complète (modèle, couleur, ${VOCAB.configWord}).`}`);
         const q = parseInt(brut, 10);
         if (isNaN(q) || q <= 0 || String(q) !== brut) return refuser('La quantité doit être un nombre entier supérieur à zéro.');
         if (!motif) return refuser('Le motif est obligatoire : il reste dans l\'historique du mouvement.');
@@ -1160,6 +1179,31 @@ export function creerEntreprise(U) {
 
       function vuePlan() { return VPLAN.html(etatTransport('plan')); }
 
+      /* ---------------------------------------------------------- inventaire */
+      // L'état de l'inventaire vit dans la base de l'élève, sous le numéro de campagne. Il est
+      // créé à la première ouverture de l'écran, avec la PHOTO du stock système de ce moment-là.
+      const lireInventaire = () => (VINV && db.inventaires ? db.inventaires[VINV.id] : null);
+      function etatInventaire() {
+        if (!db.inventaires) db.inventaires = {};
+        if (!db.inventaires[VINV.id]) { db.inventaires[VINV.id] = VINV.etatNeuf(stockDe); ctx.jeu.sauver(); }
+        return db.inventaires[VINV.id];
+      }
+      // L'enseignant voit toujours le stock : il prépare et corrige.
+      const inventaireBloque = () => !!VINV && !estProf && VINV.bloqueStock(lireInventaire());
+      // Ce que l'écran demande à l'environnement. Un ajustement passe par les mêmes chemins
+      // qu'à la console : une baisse entame les lots dans l'ordre d'entrée (la traçabilité reste
+      // juste), une hausse entre sans lot.
+      const apiInventaire = () => ({
+        sauver, toast,
+        redessiner: dessinerVue,
+        mouvements: () => db.moves,
+        ajuster(sku, delta, origine) {
+          if (delta < 0) sortirFifo(sku, -delta, 'Ajustement inventaire', origine);
+          else if (delta > 0) { db.stock[sku] = stockDe(sku) + delta; mouvement(sku, 'Ajustement inventaire', delta, origine); }
+        },
+      });
+      function vueInventaire() { return VINV.html(etatInventaire(), apiInventaire()); }
+
       // La tournée reste fermée tant que le repérage n'est pas validé : sans lui, l'élève
       // ne sait pas où sont les points et ordonnerait au hasard. C'est le « deux temps »
       // décidé le 02/10/2026, tenu par l'état et non par un réglage d'affichage.
@@ -1172,12 +1216,15 @@ export function creerEntreprise(U) {
 
       function vueCatalogue() {
         const marques = [], cats = [];
-        MODELS.forEach((m) => { if (!marques.includes(m.brand)) marques.push(m.brand); if (!cats.includes(m.cat)) cats.push(m.cat); });
+        MODELS.forEach((m) => { if (m.brand && !marques.includes(m.brand)) marques.push(m.brand); if (!cats.includes(m.cat)) cats.push(m.cat); });
+        // Un catalogue simple sans marques n'a pas de filtre Marque : un menu vide intriguerait.
+        // Le champ reste dans la page, caché, pour que le filtrage n'ait pas deux chemins.
         return `<div class="ent-tete"><h2>Catalogue</h2>
-            <p class="note">${MODELS.length} modèles, ${VARIANTS.length} références couleur et ${ech(VOCAB.configWord)}.</p></div>
+            <p class="note">${SIMPLE ? `${MODELS.length} article${MODELS.length > 1 ? 's' : ''}.`
+              : `${MODELS.length} modèles, ${VARIANTS.length} références couleur et ${ech(VOCAB.configWord)}.`}</p></div>
           <div class="ent-filtres">
-            <div class="champ"><label for="cQ">Recherche</label><input id="cQ" data-filtre placeholder="Nom, marque ou référence"></div>
-            <div class="champ"><label for="cB">Marque</label><select id="cB" data-filtre><option value="">Toutes</option>
+            <div class="champ"><label for="cQ">Recherche</label><input id="cQ" data-filtre placeholder="${SIMPLE ? 'Désignation ou référence' : 'Nom, marque ou référence'}"></div>
+            <div class="champ" ${marques.length ? '' : 'hidden'}><label for="cB">Marque</label><select id="cB" data-filtre><option value="">Toutes</option>
               ${marques.map((b) => `<option>${ech(b)}</option>`).join('')}</select></div>
             <div class="champ"><label for="cC">Catégorie</label><select id="cC" data-filtre><option value="">Toutes</option>
               ${cats.map((b) => `<option>${ech(b)}</option>`).join('')}</select></div></div>
@@ -1190,10 +1237,10 @@ export function creerEntreprise(U) {
           && (!q || norm(m.brand + ' ' + m.name + ' ' + m.ref + ' ' + m.cat).includes(q)));
         hote.querySelector('#entListe').innerHTML = res.length
           ? `<div class="module-grid">${res.map((m) => `<button class="module-tile" data-produit="${ech(m.ref)}">
-              <span class="code">${ech(m.brand)} · ${ech(m.cat)}</span>
+              <span class="code">${m.brand ? `${ech(m.brand)} · ` : ''}${ech(m.cat)}</span>
               <span class="titre">${ech(m.name)}</span>
               <span class="desc mono">${ech(m.ref)}</span>
-              <span class="desc"><strong>${eur(m.price)}</strong> ${m.colors.map((k) => `<span class="teinte" style="background:${COLORS[k][1]}" title="${ech(COLORS[k][0])}"></span>`).join('')}</span>
+              <span class="desc"><strong>${eur(m.price)}</strong> ${m.colors.filter((k) => COLORS[k]).map((k) => `<span class="teinte" style="background:${COLORS[k][1]}" title="${ech(COLORS[k][0])}"></span>`).join('')}</span>
             </button>`).join('')}</div>`
           : '<div class="vide">Aucun modèle ne correspond.</div>';
         hote.querySelectorAll('[data-produit]').forEach((b2) => b2.addEventListener('click', () => aller('produit', { ref: b2.dataset.produit })));
@@ -1204,21 +1251,22 @@ export function creerEntreprise(U) {
         if (!m) return vueCatalogue();
         const sp = SUP_BY_ID[m.sup], ht = m.price / 1.2;
         return `<button class="lien-accueil" data-vue2="catalogue">← CATALOGUE</button>
-          <div class="ent-tete"><h2>${ech(m.brand + ' ' + m.name)}</h2><p class="note">${ech(m.desc)}</p></div>
+          <div class="ent-tete"><h2>${ech([m.brand, m.name].filter(Boolean).join(' '))}</h2><p class="note">${ech(m.desc)}</p></div>
           <section class="panneau"><dl class="ent-dl">
-            <dt>Référence modèle</dt><dd class="mono">${ech(m.ref)}</dd>
-            <dt>Marque</dt><dd>${ech(m.brand)}</dd>
+            <dt>${SIMPLE ? 'Référence article' : 'Référence modèle'}</dt><dd class="mono">${ech(m.ref)}</dd>
+            ${m.brand ? `<dt>Marque</dt><dd>${ech(m.brand)}</dd>` : ''}
             <dt>Catégorie</dt><dd>${ech(m.cat)}</dd>
             <dt>Prix de vente TTC</dt><dd class="mono"><b>${eur(m.price)}</b></dd>
             <dt>Prix de vente HT</dt><dd class="mono">${eur(ht)}</dd>
             <dt>Prix d'achat HT</dt><dd class="mono">${eur(m.cost)}</dd>
             <dt>Marge brute</dt><dd class="mono">${eur(ht - m.cost)} (${Math.round((ht - m.cost) / ht * 100)} %)</dd>
-            <dt>${ech(VOCAB.sizeLabel)}s</dt><dd>${m.s0} à ${m.s1}</dd>
-            <dt>Seuil d'alerte</dt><dd>${m.min} ${ech(VOCAB.unitPl)} par référence</dd>
-            <dt>Stock maximum</dt><dd>${m.max} ${ech(VOCAB.unitPl)} par référence</dd>
-            <dt>Emplacements</dt><dd>${m.colors.map((c) => `${ech(COLORS[c][0])} <span class="mono">${ech(m.loc[c])}</span>`).join(' · ')}</dd>
-            <dt>Fournisseur</dt><dd>${ech(sp.name)} <span class="mono note">${ech(sp.id)}</span><br>
-              <span class="note">Délai ${sp.delai} jours · franco ${eur(sp.franco)}</span></dd></dl></section>
+            ${SIMPLE ? '' : `<dt>${ech(VOCAB.sizeLabel)}s</dt><dd>${m.s0} à ${m.s1}</dd>`}
+            <dt>Seuil d'alerte</dt><dd>${m.min} ${ech(VOCAB.unitPl)}${SIMPLE ? '' : ' par référence'}</dd>
+            <dt>Stock maximum</dt><dd>${m.max} ${ech(VOCAB.unitPl)}${SIMPLE ? '' : ' par référence'}</dd>
+            ${SIMPLE ? `<dt>Emplacement</dt><dd class="mono">${ech(m.emplacement)}</dd>`
+              : `<dt>Emplacements</dt><dd>${m.colors.map((c) => `${ech(nomCouleur(c))} <span class="mono">${ech(m.loc[c])}</span>`).join(' · ')}</dd>`}
+            ${sp ? `<dt>Fournisseur</dt><dd>${ech(sp.name)} <span class="mono note">${ech(sp.id)}</span><br>
+              <span class="note">Délai ${sp.delai} jours · franco ${eur(sp.franco)}</span></dd>` : ''}</dl></section>
           <div class="avis">Le catalogue ne donne pas les quantités en stock : elles changent à
             chaque commande. Pour connaître le stock réel d'une référence, utilisez la console —
             <span class="mono">.getstock ${ech(m.ref)}</span>.</div>`;
@@ -1226,6 +1274,13 @@ export function creerEntreprise(U) {
 
       /* -------------------------------------------------------------- stock */
       function vueStock() {
+        if (inventaireBloque()) {
+          return `<div class="ent-tete"><h2>Stock</h2><p class="note">Inventaire en cours.</p></div>
+            <section class="panneau" style="max-width:520px" data-stock-bloque>
+              <p><b>Comptage à l'aveugle :</b> le stock du système est masqué jusqu'à la validation du
+                comptage (écran « ${ech(VINV.nav.libelle)} »). On compte ce qu'on voit, sans être influencé
+                par le chiffre de l'ordinateur.</p></section>`;
+        }
         if (!E.stockOuvert) {
           return `<div class="ent-tete"><h2>Stock</h2><p class="note">Accès verrouillé.</p></div>
             <section class="panneau" style="max-width:480px">
@@ -1243,13 +1298,13 @@ export function creerEntreprise(U) {
           const q = stockDe(v.sku); total += q; valeur += q * v.model.cost;
           if (q <= 0) rupture++; else if (q <= v.model.min) bas++;
         });
-        const marques = []; MODELS.forEach((m) => { if (!marques.includes(m.brand)) marques.push(m.brand); });
+        const marques = []; MODELS.forEach((m) => { if (m.brand && !marques.includes(m.brand)) marques.push(m.brand); });
 
         let corps;
         if (onglet === 'niveaux') {
           corps = `<div class="ent-filtres">
             <div class="champ"><label for="sQ">Recherche</label><input id="sQ" data-filtre placeholder="Référence, nom ou emplacement"></div>
-            <div class="champ"><label for="sB">Marque</label><select id="sB" data-filtre><option value="">Toutes</option>
+            <div class="champ" ${marques.length ? '' : 'hidden'}><label for="sB">Marque</label><select id="sB" data-filtre><option value="">Toutes</option>
               ${marques.map((b) => `<option>${ech(b)}</option>`).join('')}</select></div>
             <div class="champ"><label for="sS">Statut</label><select id="sS" data-filtre><option value="">Tous</option>
               <option value="crit">Rupture</option><option value="warn">Faible</option><option value="ok">OK</option></select></div>
@@ -1289,13 +1344,13 @@ export function creerEntreprise(U) {
           if (q && !norm(v.sku + ' ' + label(v) + ' ' + v.loc).includes(q)) continue;
           n++;
           if (n <= 150) lignes += `<tr><td class="mono">${ech(v.sku)}</td><td>${ech(label(v))}</td>
-            <td>${swatch(v.color)}</td><td class="num">${v.size}</td><td class="num"><b class="mono">${qty}</b></td>
+            ${tdVariante(v, true)}<td class="num"><b class="mono">${qty}</b></td>
             <td class="num note">${v.model.min}</td><td class="mono">${ech(v.loc)}</td><td>${pastille(s[0], s[1])}</td></tr>`;
         }
         hote.querySelector('#entListe').innerHTML = `<section class="panneau"><div class="ent-scroll"><table>
-          <thead><tr><th>Référence</th><th>Article</th><th>Couleur</th><th class="num">${ech(VOCAB.sizeLabel)}</th>
+          <thead><tr><th>Référence</th><th>Article</th>${thVariante()}
           <th class="num">Stock</th><th class="num">Seuil</th><th>Emplacement</th><th>Statut</th></tr></thead>
-          <tbody>${lignes || '<tr><td colspan="8" class="note">Aucun résultat.</td></tr>'}</tbody></table></div>
+          <tbody>${lignes || '<tr><td colspan="${SIMPLE ? 6 : 8}" class="note">Aucun résultat.</td></tr>'}</tbody></table></div>
           <p class="note">${n > 150 ? `${n} résultats, les 150 premiers sont affichés.` : `${n} résultat${n > 1 ? 's' : ''}.`}</p></section>`;
       }
 
@@ -1382,7 +1437,7 @@ export function creerEntreprise(U) {
           throw new Error(`Syntaxe : .${nom} <réf article> <quantité entière positive>${genre === 'rem' ? ' [motif]' : ''}`);
         }
         const v = VM[ref];
-        if (!v) throw new Error(`Référence article introuvable : ${ech(ref)}. Il faut la référence complète (modèle-couleur-taille).`);
+        if (!v) throw new Error(`Référence article introuvable : ${ech(ref)}.${SIMPLE ? '' : ' Il faut la référence complète (modèle-couleur-taille).'}`);
         const avant = stockDe(v.sku);
         const apres = genre === 'set' ? q : (genre === 'add' ? avant + q : avant - q);
         if (apres < 0) throw new Error(`Stock insuffisant : ${avant} ${unite(avant)} disponible${avant > 1 ? 's' : ''}, impossible d'en retirer ${q}.`);
@@ -1402,7 +1457,10 @@ export function creerEntreprise(U) {
         help: ['.help', 'Affiche cette aide', () => {
           const lignes = Object.keys(CMDS).filter((k) => k !== 'help')
             .map((k) => [`<span class="mono">${ech(CMDS[k][0])}</span>`, ech(CMDS[k][1])]);
-          return `<div class="note">Les références ne tiennent pas compte des majuscules. Référence modèle : NK-AM270. Référence article : NK-AM270-NR-42 (modèle, couleur, ${ech(VOCAB.configWord)}).</div>${tbl(['Commande', 'Effet'], lignes)}`;
+          const exemple = SIMPLE
+            ? `Référence article : ${ech(VARIANTS[0] ? VARIANTS[0].sku : 'REF')}.`
+            : `Référence modèle : NK-AM270. Référence article : NK-AM270-NR-42 (modèle, couleur, ${ech(VOCAB.configWord)}).`;
+          return `<div class="note">Les références ne tiennent pas compte des majuscules. ${exemple}</div>${tbl(['Commande', 'Effet'], lignes)}`;
         }],
         find: ['.find <texte>', 'Cherche un modèle par nom, marque ou catégorie', (a) => {
           const q = norm(a.join(' ')); if (!q) throw new Error('Exemple : .find air max');
@@ -1415,11 +1473,11 @@ export function creerEntreprise(U) {
           const r = resoudre(a[0]);
           if (r.v) { const v = r.v, q = stockDe(v.sku);
             return kv([['Référence', `<span class="mono">${ech(v.sku)}</span>`], ['Article', ech(label(v))],
-              ['Couleur', ech(COLORS[v.color][0])], [ech(VOCAB.sizeLabel), v.size],
+              ...(SIMPLE ? [] : [['Couleur', ech(nomCouleur(v.color))], [ech(VOCAB.sizeLabel), v.size]]),
               ['Stock', `<b>${q}</b> ${ech(unite(q))}`], ['Seuil', v.model.min], ['Stock maximum', v.model.max],
               ['Emplacement', ech(v.loc)], ['Statut', pastilleStock(q, v.model.min)]]); }
           if (r.liste) return tbl(['Référence', 'Article', 'Stock', 'Statut'], r.liste.map((v) => { const q = stockDe(v.sku);
-            return [`<span class="mono">${ech(v.sku)}</span>`, `${ech(label(v))} ${ech(COLORS[v.color][0])} ${ech(VOCAB.sizeShort)}${v.size}`,
+            return [`<span class="mono">${ech(v.sku)}</span>`, ech(label(v) + precisionTexte(v)),
               `<b>${q}</b>`, pastilleStock(q, v.model.min)]; }), [2]);
           // Modèle entier : une ligne par référence complète, la référence en premier —
           // c'est elle que l'élève doit recopier dans son bon de préparation.
@@ -1427,7 +1485,7 @@ export function creerEntreprise(U) {
           const lignes = [];
           m.colors.forEach((c) => m.sizes.forEach((t) => {
             const sku = `${m.ref}-${c}-${t}`, q = stockDe(sku);
-            lignes.push([`<span class="mono">${ech(sku)}</span>`, ech(COLORS[c][0]),
+            lignes.push([`<span class="mono">${ech(sku)}</span>`, ech(nomCouleur(c)),
               t, `<span class="mono">${ech(m.loc[c])}</span>`, `<b>${q}</b>`, pastilleStock(q, m.min)]);
           }));
           return `<div>${ech(m.brand + ' ' + m.name)} : <b>${tot}</b> ${ech(unite(tot))} au total, `
@@ -1436,24 +1494,28 @@ export function creerEntreprise(U) {
         }],
         getprice: ['.getprice <réf>', "Prix de vente et prix d'achat", (a) => {
           const r = resoudre(a[0]), m = r.v ? r.v.model : (r.m || (r.liste && r.liste[0].model)), ht = m.price / 1.2;
-          return kv([['Modèle', `${ech(m.brand + ' ' + m.name)} <span class="note">(${ech(m.ref)})</span>`],
+          return kv([[SIMPLE ? 'Article' : 'Modèle', `${ech([m.brand, m.name].filter(Boolean).join(' '))} <span class="note">(${ech(m.ref)})</span>`],
             ['Prix TTC', `<b>${eur(m.price)}</b>`], ['Prix HT', eur(ht)], ["Prix d'achat HT", eur(m.cost)],
             ['Marge brute', `${eur(ht - m.cost)} (${Math.round((ht - m.cost) / ht * 100)} %)`]]);
         }],
         getproduct: ['.getproduct <réf>', 'Fiche produit résumée', (a) => {
           const r = resoudre(a[0]), m = r.v ? r.v.model : (r.m || (r.liste && r.liste[0].model)), sp = SUP_BY_ID[m.sup];
-          return kv([['Modèle', ech(m.brand + ' ' + m.name)], ['Référence', `<span class="mono">${ech(m.ref)}</span>`],
-            ['Catégorie', ech(m.cat)], ['Couleurs', m.colors.map((c) => `${ech(COLORS[c][0])} (${c})`).join(', ')],
-            [ech(VOCAB.sizeLabel) + 's', `${m.s0} à ${m.s1}`], ['Prix TTC', eur(m.price)],
-            ['Fournisseur', `${ech(sp.brand)} <span class="note">(${ech(sp.id)}, délai ${sp.delai} j)</span>`],
+          return kv([[SIMPLE ? 'Article' : 'Modèle', ech([m.brand, m.name].filter(Boolean).join(' '))], ['Référence', `<span class="mono">${ech(m.ref)}</span>`],
+            ['Catégorie', ech(m.cat)],
+            ...(SIMPLE ? [['Emplacement', `<span class="mono">${ech(m.emplacement)}</span>`]]
+              : [['Couleurs', m.colors.map((c) => `${ech(nomCouleur(c))} (${c})`).join(', ')],
+                [ech(VOCAB.sizeLabel) + 's', `${m.s0} à ${m.s1}`]]),
+            ['Prix TTC', eur(m.price)],
+            ['Fournisseur', sp ? `${ech(sp.brand)} <span class="note">(${ech(sp.id)}, délai ${sp.delai} j)</span>` : '—'],
             ['Description', ech(m.desc)]]);
         }],
         getlocation: ['.getlocation <réf>', 'Emplacement en entrepôt', (a) => {
           const r = resoudre(a[0]);
+          // Un catalogue simple donne son emplacement tel quel : il n'a ni zone ni allée calculées.
           if (r.v) return kv([['Référence', `<span class="mono">${ech(r.v.sku)}</span>`], ['Emplacement', `<b>${ech(r.v.loc)}</b>`],
-            ['Lecture', `Zone ${ech(r.v.model.zone)}, allée ${pad(r.v.model.aisle, 2)}, niveau ${ech(r.v.loc.split('-')[2])}`]]);
+            ...(SIMPLE ? [] : [['Lecture', `Zone ${ech(r.v.model.zone)}, allée ${pad(r.v.model.aisle, 2)}, niveau ${ech(r.v.loc.split('-')[2])}`]])]);
           const m = r.m || r.liste[0].model;
-          return tbl(['Couleur', 'Emplacement'], m.colors.map((c) => [ech(COLORS[c][0]), `<b>${ech(m.loc[c])}</b>`]));
+          return tbl(['Couleur', 'Emplacement'], m.colors.map((c) => [ech(nomCouleur(c)), `<b>${ech(m.loc[c])}</b>`]));
         }],
         lowstock: ['.lowstock [n]', 'Références dont le stock est inférieur ou égal à n (par défaut : le seuil)', (a) => {
           const n = a[0] !== undefined ? parseInt(a[0], 10) : null;
@@ -1462,7 +1524,7 @@ export function creerEntreprise(U) {
             .sort((x, y) => stockDe(x.sku) - stockDe(y.sku));
           return `<div>${r.length} référence${r.length > 1 ? 's' : ''}${r.length > 40 ? ' (les 40 plus basses)' : ''}</div>`
             + tbl(['Référence', 'Article', 'Stock', 'Statut'], r.slice(0, 40).map((v) => { const q = stockDe(v.sku);
-              return [`<span class="mono">${ech(v.sku)}</span>`, `${ech(label(v))} ${ech(COLORS[v.color][0])} ${ech(VOCAB.sizeShort)}${v.size}`,
+              return [`<span class="mono">${ech(v.sku)}</span>`, ech(label(v) + precisionTexte(v)),
                 `<b>${q}</b>`, pastilleStock(q, v.model.min)]; }), [2]);
         }],
         stockvalue: ['.stockvalue [marque]', "Valeur du stock au prix d'achat HT", (a) => {
@@ -1527,7 +1589,7 @@ export function creerEntreprise(U) {
           return kv([['Commande', ech(o.no)], ['Client', `${ech(c.prenom + ' ' + c.nom)} (${ech(c.id)})`],
             ['Livraison', ech(SHIP[o.ship][0])], ['Total TTC', eur(t.total)], ['Statut', ech(s[0])]])
             + tbl(['Référence', 'Article', 'Qté'], o.lines.map((l) => [`<span class="mono">${ech(l.sku)}</span>`,
-              `${ech(label(VM[l.sku]))} ${ech(COLORS[VM[l.sku].color][0])} ${ech(VOCAB.sizeShort)}${VM[l.sku].size}`, l.qty]), [2]);
+              ech(label(VM[l.sku]) + precisionTexte(VM[l.sku])), l.qty]), [2]);
         }],
         movements: ['.movements [réf]', 'Derniers mouvements de stock', (a) => {
           const ref = a[0] ? String(a[0]).toUpperCase() : null;
@@ -1581,6 +1643,10 @@ export function creerEntreprise(U) {
         clear: ['.clear', 'Vide la console', () => { E.console = []; return null; }],
       };
 
+      // Les commandes qui donnent (ou font voir) le stock du système : bloquées pendant un
+      // comptage à l'aveugle. Les ajustements aussi — `.setstock` affiche « avant → après ».
+      const CMDS_STOCK = ['getstock', 'lowstock', 'stockvalue', 'movements', 'getlot', 'setstock', 'addstock', 'removestock'];
+
       function executer(texte) {
         texte = String(texte || '').trim(); if (!texte) return;
         let res;
@@ -1588,6 +1654,9 @@ export function creerEntreprise(U) {
         else {
           const parts = texte.slice(1).split(/\s+/), nom = parts[0].toLowerCase(), c = CMDS[nom];
           if (!c) res = `<span class="faux">Commande inconnue : .${ech(nom)}. Tapez .help.</span>`;
+          else if (CMDS_STOCK.includes(nom) && inventaireBloque()) {
+            res = `<span class="faux">Inventaire en cours : le stock du système est masqué jusqu'à la validation du comptage.</span>`;
+          }
           else { try { res = c[2](parts.slice(1)); } catch (e) { res = `<span class="faux">${ech(e.message)}</span>`; } }
         }
         if (res === null) E.console = []; else E.console.push({ cmd: texte, html: res });
@@ -1661,6 +1730,7 @@ export function creerEntreprise(U) {
         });
         if (E.vue === 'plan' && VPLAN) VPLAN.brancher(z, apiTransport('plan'));
         if (E.vue === 'tournee' && VTOUR) VTOUR.brancher(z, apiTransport('tournee'));
+        if (E.vue === 'inventaire' && VINV) VINV.brancher(z, etatInventaire(), apiInventaire());
       }
 
       remonterEtapes();

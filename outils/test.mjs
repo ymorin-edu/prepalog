@@ -19,7 +19,7 @@
 // Ajouter un bloc : créer `outils/test/<nom>.mjs` sur le modèle des autres
 // (`export default async function bloc({ v, page, nav, … })`), puis l'inscrire dans `BLOCS`.
 
-const BLOCS = ['socle', 'spartoo', 'groupes', 'dependances', 'transport', 'boost', 'quiz', 'carte'];
+const BLOCS = ['socle', 'spartoo', 'groupes', 'dependances', 'transport', 'boost', 'quiz', 'carte', 'inventaire'];
 const PREREQUIS = { spartoo: ['socle'], groupes: ['socle'] };
 
 // Un fichier de bloc posé dans `outils/test/` mais oublié dans `BLOCS` ne tournerait jamais,

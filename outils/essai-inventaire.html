@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Essai — écran Inventaire (Prepalog)</title>
+<!-- Page d'ESSAI de l'écran `core/types/inventaire.js`, dans le vrai moteur d'entreprise, sur
+     l'entreprise fictive LogiDémo (`outils/essai-inventaire.js`). Elle n'est liée nulle part et
+     rien n'y est enregistré : la base vit en mémoire, un rechargement repart de zéro.
+     Ouvrir avec `lancer.bat`, puis http://localhost:8000/outils/essai-inventaire.html -->
+<base href="../">
+<link rel="icon" href="./styles/logo.png">
+<link rel="stylesheet" href="./styles/polices.css">
+<link rel="stylesheet" href="./styles/base.css">
+<style>
+  .essai-reglages{ background:#fff7d6; border-bottom:1px solid #e8d48a; padding:8px 16px; font:14px/1.5 sans-serif; color:#3b3200 }
+  .essai-reglages label{ display:inline-block; margin:2px 16px 2px 0; white-space:nowrap; font-weight:400 }
+  .essai-reglages select{ width:auto; display:inline-block; padding:2px 4px }
+  .essai-reglages input[type=checkbox]{ width:auto; display:inline; margin:0 4px 0 0 }
+</style>
+</head>
+<body>
+<form class="essai-reglages" id="reglages">
+  <b>Page d'essai</b> — réglages de la séance (chaque changement repart d'une base neuve) :
+  <label>Source <select name="source"><option value="releve">relevé (messagerie)</option><option value="physique">comptage physique</option></select></label>
+  <label>Écarts calculés par <select name="ecarts"><option value="eleve">l'élève</option><option value="ecran">l'écran</option></select></label>
+  <label>Correction <select name="correction"><option value="detaillee">détaillée</option><option value="verdict">verdict seul</option><option value="aucune">aucune (évaluation)</option></select></label>
+  <label><input type="checkbox" name="aveugle" checked> à l'aveugle</label>
+  <label><input type="checkbox" name="motifObligatoire" checked> motif obligatoire</label>
+</form>
+<div id="hote"></div>
+<script type="module">
+import { creerEntreprise } from './core/types/entreprise.js';
+import { univers } from './outils/essai-inventaire.js';
+
+const form = document.getElementById('reglages');
+function monter() {
+  const f = new FormData(form);
+  const moteur = creerEntreprise(univers({
+    source: f.get('source'), ecarts: f.get('ecarts'), correction: f.get('correction'),
+    aveugle: f.get('aveugle') === 'on', motifObligatoire: f.get('motifObligatoire') === 'on',
+  }));
+  const db = {};
+  moteur.rendre(document.getElementById('hote'), {
+    meta: { id: 'essai-inventaire', code: 'ESSAI', titre: 'LogiDémo — essai de l’inventaire', portee: 'eleve', immersif: true },
+    profil: { prenom: 'Essai', nom: 'Inventaire', role: 'eleve' },
+    jeu: { etat: () => db, sauver: () => {} },
+    enregistrer: () => {}, quitter: () => { location.reload(); }, codeStock: 'ESSAI',
+  });
+  window.__essai = { db };
+  document.querySelector('.ent-nav[data-vue="inventaire"]')?.click();
+}
+form.addEventListener('change', monter);
+monter();
+</script>
+</body>
+</html>
