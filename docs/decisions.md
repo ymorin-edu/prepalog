@@ -20,3 +20,4 @@ reporte dans les fiches du projet PREPALOG. Une décision de fond sur la pédago
 - 02/10/2026 · Tristan · TechPro Distribution (entreprise fictive) **abandonnée** ; le numéro `ENT-2`
   est utilisé par Cdiscount, `ENT-3` par Boost.
 - 02/10 · Tristan · 8 entreprises validées (« oui ») : Mondial Relay, IKEA, Cdiscount, Lactalis, Airbus, La Redoute, Action, Geodis. Carte de couverture v2.1 à jour. Chiffres à rafraîchir : Cdiscount, Action, Kuehne+Nagel France ; Airbus à recouper avec une source Airbus.
+- 02/10 · Cowork · Trois briefs écrits pour Claude Code dans `docs/briefs/` : ENT-3.3 (Boost, erreur induite), ENT-3.4 (Boost, évaluation en copie rendue), ENT-2.4 (Cdiscount, évaluation inventaire). Ordre conseillé 3.3 → 3.4 → 2.4. ENT-3.3 demande un chantier moteur d'abord (état initial de la tournée). Questions ouvertes dans chaque brief, à trancher par Tristan.
