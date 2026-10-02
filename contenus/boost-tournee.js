@@ -19,7 +19,9 @@
 //   3. les sept noms apparaissent sur le plan ; il découvre que les commandes pèsent 237 kg
 //      pour 180 kg de charge utile, donc qu'il faut laisser un client à quai ;
 //   4. il ordonne les arrêts, en glissant ou avec les flèches, et regarde les jauges ;
-//   5. il reporte quatre résultats dans des cases qui se corrigent seules.
+//   5. il calcule dans la feuille (poids total, puis temps en trois étapes) ; il reporte deux
+//      résultats — la masse totale et ce qui ne peut pas partir — dans des cases qui se
+//      corrigent seules.
 //
 // ── La notation : jalons ET note sur 20 ─────────────────────────────────────────────────
 // Tristan, le 02/10 : « les élèves sont motivés par les notes, je peux l'utiliser avec un
@@ -54,7 +56,8 @@ export const PLAN = Object.assign({}, PLAN_NIMES, {
   titre: 'Situer les sept clients sur le plan de Nîmes',
   consigne: "La fiche de tournée ne donne que le nom de la rue. Pour chaque client, trouvez "
     + "la rue sur un plan en ligne, repérez-la sur le plan de Nîmes ci-dessous, puis écrivez "
-    + 'sa case du quadrillage (une lettre et un chiffre, par exemple C2).',
+    + 'sa case du quadrillage (une lettre et un chiffre, par exemple C2), et choisissez son '
+    + 'quartier dans le menu déroulant.',
   // Un lien vers un plan libre, qui s'ouvre dans un autre onglet. On n'intègre AUCUNE carte
   // en ligne dans Prepalog : pas d'iframe, pas de fond repris. L'élève cherche, puis revient.
   enLigne: {
@@ -62,9 +65,16 @@ export const PLAN = Object.assign({}, PLAN_NIMES, {
     url: 'https://www.openstreetmap.org/#map=13/43.8367/4.3601',
   },
   reperage: {
-    consigne: 'Sept clients, sept cases à trouver. Validez quand vous les avez toutes : '
-      + 'les noms apparaîtront sur le plan et la tournée s’ouvrira.',
+    consigne: 'Sept clients : pour chacun, une case et un quartier à trouver. Validez quand '
+      + 'vous les avez tous : les noms apparaîtront sur le plan et la tournée s’ouvrira.',
     champ: 'Case',
+    // Un menu déroulant par ligne (Tristan, 05/10/2026), douze quartiers pour sept clients :
+    // les cinq en trop empêchent de finir par élimination. Ce sont des quartiers réels de
+    // Nîmes, qu'aucun client n'habite ; ils ne sont pas dessinés sur le plan. Rangés par ordre
+    // alphabétique, pour que la liste ne suive ni l'ordre de la fiche ni celui du plan.
+    quartiers: [...DESTINATAIRES.map((d) => d.zone),
+      'Carémeau', 'Gambetta', 'Mas de Mingue', 'Pissevin', 'Valdegour']
+      .sort((a, b) => a.localeCompare(b, 'fr')),
     // Le libellé du mode hors connexion, qui vit dans le BANDEAU du module et non dans la vue
     // (décision de Tristan du 03/10 : sous la carte, les élèves cliquaient dessus pour avoir
     // les réponses). Il donne le QUARTIER, pas la case, et son usage est horodaté dans la base.
@@ -198,18 +208,18 @@ export const TOURNEE = {
     comparaison: 'À comparer à l’heure d’arrivée à la gare (cellule violette).',
   },
   titreReport: 'Reportez vos résultats sur la fiche de tournée',
-  consigneReport: 'Un seul de ces quatre résultats se lit sur une jauge ; les trois autres se '
-    + 'calculent. Les cases ne donnent pas la réponse : elles disent seulement si la vôtre est '
-    + 'juste.',
-  // QUATRE cases, et le choix n'est pas neutre.
+  consigneReport: 'Ces deux résultats portent sur la décision, pas sur le calcul : aucune jauge '
+    + 'ne les donne, il faut additionner la fiche. Les cases ne donnent pas la réponse : elles '
+    + 'disent seulement si la vôtre est juste.',
+  // DEUX cases, depuis le 05/10 (Tristan : « tu prends tes recommandations »). Il y en avait
+  // quatre — 237, 57, 179, 36 — et deux d'entre elles faisaient doublon avec la feuille de
+  // calcul : le poids chargé (179) et le temps aux arrêts (36) y sont calculés par formule et
+  // corrigés par « Vérifier ». L'élève les tapait deux fois. C'est maintenant le jalon
+  // « formules » qui note ce travail.
   //
-  // Les deux premières portent sur la DÉCISION : il faut additionner les sept masses de la
-  // fiche — aucune jauge ne donne ce total, puisque la jauge ne compte que ce qui est chargé —
-  // puis mesurer le dépassement. La troisième est la seule qui se lise sur une jauge : elle
-  // confirme à l'élève qu'il lit bien son tableau de bord, et elle lui met sous les yeux les
-  // 179 kg sur 180 — on ne remplit jamais pile. La quatrième est le point de la séance :
-  // **le temps passé aux arrêts pèse plus lourd que la distance**, et il faut l'avoir calculé
-  // une fois pour le croire (36 minutes d'arrêts pour environ 110 minutes de route).
+  // Les deux qui restent portent sur la DÉCISION, que la feuille ne travaille pas : il faut
+  // additionner les sept masses de la fiche — aucune jauge ne donne ce total, puisque la jauge
+  // ne compte que ce qui est chargé — puis mesurer le dépassement.
   //
   // Ce qu'on NE demande pas, et volontairement : l'avance sur le départ du train. La valeur
   // attendue deviendrait négative dès qu'un élève est en retard, et faire taper « −12 » à un
@@ -221,10 +231,6 @@ export const TOURNEE = {
     { id: 'trop', libelle: 'Masse qui ne peut pas partir aujourd’hui', unite: 'kg',
       valeur: (b) => b.retenus.concat(b.ecartes).reduce((t, p) => t + Number(p.kg || 0), 0)
         - VELO.chargeUtile },
-    { id: 'chargee', libelle: 'Masse chargée dans le vélo-cargo', unite: 'kg',
-      valeur: (b) => b.cumuls.charge },
-    { id: 'arrets', libelle: 'Temps passé aux arrêts sur toute la tournée', unite: 'min',
-      valeur: (b) => b.retenus.length * VELO.service },
   ],
 };
 
@@ -242,7 +248,7 @@ export const ACCUEIL = {
     ['Charger le vélo-cargo', 'Menu Tournée. Il part vide : cliquez les clients sur la carte, dans l’ordre où vous voulez y passer. Les sept commandes pèsent plus que sa charge utile, il faudra en laisser une à quai.'],
     ['Ordonner les arrêts', 'L’ordre est celui de vos clics. Pour en insérer un au milieu, utilisez les flèches ↑ et ↓ du récapitulatif. Le tracé et l’heure de retour suivent votre ordre.'],
     ['Calculer dans la feuille', 'Sous la carte : le poids total, puis le temps en trois étapes jusqu’à l’heure d’arrivée à la gare. Les contraintes sont à droite : comparez-les à vos deux résultats.'],
-    ['Reporter vos résultats', 'Les quatre cases du bas de la page, puis « Valider mes résultats ».'],
+    ['Reporter vos résultats', 'Les deux cases du bas de la page, puis « Valider mes résultats ».'],
   ],
 };
 
@@ -279,7 +285,8 @@ export const VOLET = {
 };
 
 /* ============================ Suivi de l'exercice ============================
- * Cinq jalons. Le barème de la séance, c'est leur nombre : chacun vaut 4 points sur 20.
+ * Six jalons. Le barème de la séance, c'est leur nombre : chacun vaut 3,33 points sur 20
+ * (il y en avait cinq, à 4 points, avant l'ajout du jalon « formules » le 05/10).
  *
  *   ok      le travail est fait et juste
  *   ko      il est fait mais à corriger
@@ -336,7 +343,7 @@ export const ETAPES = [
       const faux = DESTINATAIRES.filter((d) => e.juge[d.id] !== true);
       const detail = (faux.length
         ? `À revoir : ${faux.map((d) => d.nom).join(', ')}.`
-        : 'Les sept cases sont justes.')
+        : 'Les sept points (case et quartier) sont justes.')
         + ` ${e.essais || 0} validation(s).`
         + (e.secours ? ' Mode hors connexion utilisé.' : '')
         + (e.force ? ' A continué sans avoir validé le repérage.' : '');
@@ -398,7 +405,7 @@ export const ETAPES = [
   },
   {
     id: 'report',
-    titre: 'Les quatre résultats reportés sont justes',
+    titre: 'Les deux résultats reportés sont justes',
     verifier(db) {
       const e = etatDe(db, 'tournee');
       if (!e || !e.juge || !Object.keys(e.juge).length) return { status: 'na' };
@@ -409,6 +416,30 @@ export const ETAPES = [
           ? e.report[r.id] : '(vide)'} `
         + `(attendu ${r.valeur(b)}) — ${e.juge[r.id] === true ? 'juste' : 'à revoir'}`).join('\n');
       return { status: faux.length === 0 ? 'ok' : 'ko', detail, ts: e.valide || undefined };
+    },
+  },
+  {
+    // Ajouté le 05/10. Il note le travail de la feuille de calcul : toutes les formules justes,
+    // c'est-à-dire « Vérifier » entièrement vert. Il se lit sur l'état de la feuille, que la
+    // tournée efface dès que l'élève change son parcours (`invalider`) : un verdict ancien ne
+    // peut donc pas valoir pour une tournée qui n'est plus la même.
+    id: 'formules',
+    titre: 'Les formules de la feuille de calcul sont justes',
+    verifier(db) {
+      const e = etatDe(db, 'tournee');
+      const g = e && e.grille;
+      if (!g) return { status: 'na' };
+      const saisies = Object.keys(g.cases || {}).some((k) => String(g.cases[k] || '').trim() !== '');
+      const juge = g.juge || {};
+      if (!Object.keys(juge).length) return { status: saisies ? 'attente' : 'na' };
+      // Une cellule restée vide n'est pas une faute, c'est du travail qui manque : `attente`.
+      const faux = Object.keys(juge).filter((k) => juge[k] !== 'ok' && juge[k] !== 'vide');
+      const vides = Object.keys(juge).filter((k) => juge[k] === 'vide');
+      if (faux.length) return { status: 'ko', detail: `Cellules à revoir : ${faux.join(', ')}.` };
+      if (vides.length || !g.valide) {
+        return { status: 'attente', detail: vides.length ? `Cellules à remplir : ${vides.join(', ')}.` : undefined };
+      }
+      return { status: 'ok', detail: 'Toutes les formules sont justes.', ts: g.valide };
     },
   },
 ];

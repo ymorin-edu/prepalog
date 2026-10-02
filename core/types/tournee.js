@@ -622,7 +622,7 @@ export function creerTournee(T) {
         // Défaut relevé par Tristan le 03/10/2026 : *« il suffit de garder les 6 premières et
         // on tombe juste, aucun travail de tournée à faire »*. Il a raison, et la cause est
         // structurelle : chaque case se corrige contre le bilan DE L'ÉLÈVE, donc une case ne
-        // peut jamais juger son ordre. Dans ENT-3.1, les quatre valeurs attendues sont même
+        // peut jamais juger son ordre. Dans ENT-3.1 (à l’époque des quatre cases), les valeurs attendues étaient même
         // identiques quel que soit l'ordre — 237, 57, 179, 36 — si bien qu'un élève obtenait
         // 4/4 en manquant le train de cinquante minutes.
         //

@@ -791,8 +791,9 @@ a.ent-nav{ text-decoration:none }
 .plan-table .plan-zone{ color:var(--encre-douce) }
 .plan-table tr.plan-ok td:first-child{ box-shadow:inset 3px 0 0 var(--vert-fond) }
 .plan-table tr.plan-ko td:first-child{ box-shadow:inset 3px 0 0 var(--rouge) }
-.plan-case.plan-ok{ border-color:var(--vert-fond); box-shadow:inset 0 0 0 1px var(--vert-fond) }
-.plan-case.plan-ko{ border-color:var(--rouge) }
+.plan-case.plan-ok, .plan-quartier.plan-ok{ border-color:var(--vert-fond); box-shadow:inset 0 0 0 1px var(--vert-fond) }
+.plan-case.plan-ko, .plan-quartier.plan-ko{ border-color:var(--rouge); box-shadow:inset 0 0 0 1px var(--rouge) }
+.plan-table .plan-quartier{ min-width:12em; max-width:100% }
 .plan-verdict{ white-space:nowrap }
 
 /* La carte est passée DANS la colonne de gauche le 04/10/2026, au-dessus du récapitulatif, et
@@ -963,7 +964,7 @@ a.ent-nav{ text-decoration:none }
   align-self:flex-start; font-size:12px; font-weight:600; padding:2px 8px; border-radius:3px;
   background:var(--gr-res-fond); box-shadow:inset 3px 0 0 var(--gr-res-trait);
 }
-.gr-bloc .avis-ok, .tour-report .avis-ok{ background:rgba(37,201,152,.18); color:var(--encre) }
+.gr-bloc .avis-ok, .tour-report .avis-ok, .plan-reperage .avis-ok{ background:rgba(37,201,152,.18); color:var(--encre) }
 .avis-contrainte{ border-color:var(--rouge); background:var(--panneau); margin-top:12px }
 .tour-grille-deux{ grid-template-columns:minmax(0,1.1fr) minmax(300px,1fr) }
 @media (max-width:860px){

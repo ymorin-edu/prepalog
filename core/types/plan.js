@@ -39,12 +39,21 @@
 //                 toleres: 0,            // cases fausses admises pour valider quand même
 //                 blocant: true,         // la suite attend-elle la validation ?
 //                 essaisAvantIssue: 2,   // essais avant d'offrir « continuer quand même »
-//                 issue: 'Je ne trouve pas, continuer quand même' },
+//                 issue: 'Je ne trouve pas, continuer quand même',
+//                 quartiers: ['Écusson', …] },   // facultatif : un menu déroulant par ligne
 //     legende: [{ forme: 'carre'|'losange'|'rond', couleur, texte }],  // facultatif
 //   })
 //
 // L'état est un objet simple, rangé par l'appelant dans la base de l'élève :
-//   { cases: {…}, juge: {…}, essais: n, valide: ts, force: ts, secours: ts }
+//   { cases: {…}, quartiers: {…}, juge: {…}, essais: n, valide: ts, force: ts, secours: ts }
+//
+// ── Le quartier se CHOISIT dans un menu déroulant (Tristan, 05/10/2026) ──────────────────
+// Si `reperage.quartiers` est déclaré (une liste de noms, plus longue que les points : douze
+// pour sept à Nîmes), chaque ligne porte un menu déroulant à la place de la colonne
+// « Quartier » en lecture seule. Un point n'est juste que si la CASE et le QUARTIER le sont.
+// Les noms en trop sont là pour qu'on ne puisse pas procéder par élimination.
+// Le mode hors connexion, lui, remplit les menus avec le bon quartier et les verrouille :
+// il continue de donner le quartier sans donner la case. Sans `quartiers`, rien ne change.
 //
 // **L'autocorrection se règle au cas par cas — règle de Tristan du 02/10/2026 au soir :**
 // *« il ne faut pas que l'élève se retrouve complètement bloqué mais il faut en même temps lui
@@ -324,16 +333,27 @@ export function creerPlan(PLAN) {
   // pour qu'il ne passe pas la séance bloqué sur une case. `0` l'offre tout de suite, `null`
   // la supprime — à régler séance par séance.
   const ESSAIS = !R ? 0 : (R.essaisAvantIssue === undefined ? 2 : R.essaisAvantIssue);
-  const vide = () => ({ cases: {}, juge: {}, essais: 0, valide: null, force: null, secours: null });
+  const QUARTIERS = R && Array.isArray(R.quartiers) && R.quartiers.length ? R.quartiers : null;
+  const vide = () => ({ cases: {}, quartiers: {}, juge: {}, essais: 0, valide: null, force: null,
+    secours: null });
 
   // Une saisie juste n'est pas « la bonne réponse écrite dans le contenu » mais la case
   // RECALCULÉE depuis la position du point : le contenu ne peut pas se contredire.
+  // Avec des menus de quartier, le point n'est juste que si les DEUX le sont. Le mode hors
+  // connexion a rempli le menu à la place de l'élève : son quartier est alors tenu pour juste.
+  const quartierJuste = (etat, p) => !QUARTIERS || !!etat.secours
+    || (etat.quartiers && etat.quartiers[p.id] === p.zone);
+  const caseJuste = (etat, p) => normCase(etat.cases[p.id]) === normCase(caseDe(PLAN, p));
   const juger = (etat) => {
     const juge = {};
-    PLAN.points.forEach((p) => {
-      juge[p.id] = normCase(etat.cases[p.id]) === normCase(caseDe(PLAN, p));
-    });
+    PLAN.points.forEach((p) => { juge[p.id] = caseJuste(etat, p) && quartierJuste(etat, p); });
     return juge;
+  };
+  // Le détail, pour peindre en rouge le bon champ de la ligne et non toute la ligne.
+  const juger2 = (etat) => {
+    const c = {}, q = {};
+    PLAN.points.forEach((p) => { c[p.id] = caseJuste(etat, p); q[p.id] = quartierJuste(etat, p); });
+    return { c, q };
   };
   const faux = (juge) => PLAN.points.filter((p) => juge[p.id] !== true).length;
   // « Assez juste », pas « tout juste » : la tolérance est déclarée par la séance.
@@ -401,6 +421,7 @@ export function creerPlan(PLAN) {
       // Le quartier n'apparaît qu'après le filet de sécurité, ou une fois le repérage fait.
       const montrerZone = !!etat.secours || t2;
 
+      const dj = etat.detail || {};
       const lignes = PLAN.points.map((p, i) => {
         const val = etat.cases[p.id] == null ? '' : String(etat.cases[p.id]);
         const j = juge[p.id];
@@ -408,11 +429,26 @@ export function creerPlan(PLAN) {
         // tout le texte de la ligne en vert ou en rouge, ce qui rendrait l'adresse
         // illisible. Ici, c'est un liseré sur le bord gauche, et la case elle-même.
         const etatCl = !aJuge ? '' : (j ? 'plan-ok' : 'plan-ko');
+        // En mode menus, seul le champ fautif devient rouge : la ligne dit « à revoir », le
+        // champ dit quoi — sans dire laquelle des réponses est la bonne.
+        const clCase = !aJuge ? '' : (QUARTIERS && dj.c ? (dj.c[p.id] ? 'plan-ok' : 'plan-ko') : etatCl);
+        const clQ = !aJuge ? '' : (dj.q ? (dj.q[p.id] ? 'plan-ok' : 'plan-ko') : etatCl);
+        let celluleZone;
+        if (QUARTIERS) {
+          const choisi = etat.secours ? p.zone : (etat.quartiers && etat.quartiers[p.id]) || '';
+          celluleZone = `<select class="champ plan-quartier ${clQ}" data-quartier="${ech(p.id)}"
+              aria-label="Quartier du point ${i + 1}" ${t2 || etat.secours ? 'disabled' : ''}>
+              <option value=""${choisi === '' ? ' selected' : ''}>— choisir —</option>
+              ${QUARTIERS.map((nom) => `<option value="${ech(nom)}"${nom === choisi ? ' selected' : ''}>${ech(nom)}</option>`).join('')}
+            </select>`;
+        } else {
+          celluleZone = montrerZone ? ech(p.zone || '') : '<span class="note">—</span>';
+        }
         return `<tr class="${etatCl}">
           <td class="num mono">${i + 1}</td>
           <td>${ech(p.adresse || '')}</td>
-          <td class="plan-zone">${montrerZone ? ech(p.zone || '') : '<span class="note">—</span>'}</td>
-          <td><input class="champ plan-case ${etatCl}" data-case="${ech(p.id)}" value="${ech(val)}"
+          <td class="plan-zone">${celluleZone}</td>
+          <td><input class="champ plan-case ${clCase}" data-case="${ech(p.id)}" value="${ech(val)}"
                 maxlength="4" size="4" aria-label="Case du point ${i + 1}"
                 ${t2 ? 'disabled' : ''}></td>
           <td class="plan-verdict">${!aJuge ? '' : (j
@@ -436,10 +472,10 @@ export function creerPlan(PLAN) {
           <div class="plan-barre">
             ${lien}
           </div>
-          ${etat.secours ? `<p class="note">Mode hors connexion : les quartiers sont affichés.
+          ${etat.secours ? `<p class="note">Mode hors connexion : les quartiers sont ${QUARTIERS ? 'remplis' : 'affichés'}.
             La case du quadrillage reste à lire sur le plan.</p>` : ''}
           <div class="ent-scroll"><table class="plan-table"><thead><tr>
-            <th class="num">N°</th><th>Adresse</th><th>Quartier</th>
+            <th class="num">N°</th><th>Adresse</th><th>Quartier${QUARTIERS ? ' (menu)' : ''}</th>
             <th>${ech((R.champ || 'Case') + '')}</th><th></th>
           </tr></thead><tbody>${lignes}</tbody></table></div>
           ${bilan}
@@ -463,6 +499,11 @@ export function creerPlan(PLAN) {
     brancher(z, api) {
       const etat = api.etat;
       if (!etat.cases) etat.cases = {};
+      if (!etat.quartiers) etat.quartiers = {};
+
+      z.querySelectorAll('[data-quartier]').forEach((el) => {
+        el.addEventListener('change', () => { etat.quartiers[el.dataset.quartier] = el.value; api.sauver(); });
+      });
 
       z.querySelectorAll('[data-case]').forEach((el) => {
         const maj = () => { etat.cases[el.dataset.case] = el.value; api.sauver(); };
@@ -472,6 +513,7 @@ export function creerPlan(PLAN) {
 
       z.querySelector('[data-plan-valider]')?.addEventListener('click', () => {
         etat.juge = juger(etat);
+        etat.detail = juger2(etat);
         etat.essais = (etat.essais || 0) + 1;
         const fini = assezJustes(etat.juge);
         if (fini) etat.valide = Date.now();
