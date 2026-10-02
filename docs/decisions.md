@@ -5,6 +5,10 @@ n'est pas évident)**. Claude Code y ajoute toute décision prise en cours de ro
 reporte dans les fiches du projet PREPALOG. Une décision de fond sur la pédagogie reste dans
 `docs/fiches/prepalog-finalite.md`.
 
+- 02/10/2026 · Tristan · **Logisim rangé par entreprise** (chantier moteur, brief
+  `docs/briefs/MOTEUR-logisim-par-entreprise.md`) : Logisim → logos des entreprises (logo seul) → séances de
+  l'entreprise ; la liste s'affiche même pour une seule séance ; « Quitter » ramène à la liste de l'entreprise.
+  Maquette cliquable dans « Claude outputs ». Plaque claire fixe sous les logos (choix de Claude Code, signalé).
 - 02/10/2026 · Tristan · **ENT-3.3 sans `niveaux`**, comme ENT-3.1 et ENT-3.2 : les trois séances Boost restent
   ouvertes à tous les niveaux.
 - 02/10/2026 · Tristan · **ENT-3.3 : la collègue est Inès, livreuse vélo-cargo** ; l'élève lui répond **une ligne par
