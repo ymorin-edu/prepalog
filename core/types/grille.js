@@ -64,6 +64,9 @@
 //   Des options de la feuille :
 //     aides: 'bouton'     la note d'une ligne (et l'`aide` de sa cellule) passe derrière un « ? »
 //                         qui l'ouvre au clic. Rien n'est enregistré : c'est un pli, pas un indice payé.
+//     verifier: false     pas de bouton « Vérifier mes formules » (ENT-3.3 : la feuille d'Inès porte une
+//                         formule fausse à TROUVER ; le bouton la montrerait en rouge). Les jalons jugent
+//                         sans lui, par `juger` ou `toutesJustes` (décision de Tristan, 03/10/2026).
 //     couleurs: false     plus de jaune « étape » ni de violet « résultat » ; seules les cellules à
 //                         remplir restent repérées, par une bordure (jamais d'aplat : charte).
 //     brouillon: { colonnes: ['F', 'G'], lignes: 10, titre, consigne }
@@ -386,7 +389,7 @@ export function creerGrille(G) {
           .map((c) => `<li><b class="mono">${ech(c.ref)}</b> ${ech(c.aide)}</li>`).join('')}</ul>`}
         ${bilan}
         ${opts.avertissement ? `<div class="avis avis-contrainte">${ech(opts.avertissement)}</div>` : ''}
-        ${SANS ? '' : `<div class="rangee" style="margin-top:12px">
+        ${SANS || G.verifier === false ? '' : `<div class="rangee" style="margin-top:12px">
           <button class="btn btn-p" data-gr-verifier>${ech(G.libelleValider || 'Vérifier mes formules')}</button>
         </div>`}`;
       const sobre = SOBRE ? ' gr-sobre' : '';
