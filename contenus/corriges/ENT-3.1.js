@@ -71,7 +71,7 @@ export const CORRIGE = {
       "reponses": [
         [
           "Heure de départ de l'entrepôt",
-          "13 h 00"
+          "14 h 00"
         ],
         [
           "Heure de départ du train pour Paris",
@@ -119,70 +119,70 @@ export const CORRIGE = {
       "etape": 3,
       "etapeTitre": "Situer les sept clients sur le plan",
       "genre": "tableau",
-      "texte": "Client | Rue | Case | Quartier",
+      "texte": "N° | Rue | Quartier | Case",
       "entetes": [
-        "Client",
+        "N°",
         "Rue",
-        "Case",
-        "Quartier"
+        "Quartier",
+        "Case"
       ],
-      "contexte": "Dans le menu de gauche, clique sur « Plan de Nîmes ». Tu vois un plan dessiné, avec un quadrillage : des colonnes A à F et des lignes 1 à 4. Une case s'écrit lettre puis chiffre, par exemple C2. Les clients n'y sont pas encore nommés : à toi de les situer.",
+      "contexte": "Dans le menu de gauche, clique sur « Plan de Nîmes ». Tu vois la vraie carte de la ville, avec un quadrillage : des colonnes A à E et des lignes 1 à 5 (une case fait 1 km de côté). Une case s'écrit lettre puis chiffre, par exemple C2. Les sept quartiers sont dessinés avec leur nom, et les sept clients sont des points numérotés : le numéro est celui de la fiche de M. Morin. Leurs noms ne sont pas encore écrits sur la carte.",
       "reponses": [
         [
-          "Le Comptoir des Halles",
-          "rue Général Perrier",
-          "D2",
-          "Écusson"
+          "1",
+          "rue du Général Perrier",
+          "Écusson",
+          "D2"
         ],
         [
-          "Épicerie Verdier",
-          "quai de la Fontaine",
-          "C2",
-          "Jardins de la Fontaine"
+          "2",
+          "rue de Combret",
+          "Jardins de la Fontaine",
+          "C2"
         ],
         [
-          "La Pointe Sud",
+          "3",
           "rue de l'Hostellerie",
-          "C4",
-          "Ville Active"
+          "Ville Active",
+          "C5"
         ],
         [
-          "Maison Lauze",
+          "4",
           "rue de Mascard",
-          "B3",
-          "Saint-Césaire"
+          "Saint-Césaire",
+          "B5"
         ],
         [
-          "Studio Garance",
-          "route de Courbessac",
-          "F3",
-          "Courbessac"
+          "5",
+          "rue Edmond Rostand",
+          "Croix de Fer",
+          "E1"
         ],
         [
-          "Atelier Mazet",
-          "rue de Grézan",
-          "E1",
-          "Grézan"
+          "6",
+          "rue Graverol",
+          "Gambetta",
+          "D2"
         ],
         [
-          "Caveau Pélissier",
-          "avenue de la Bouvine",
-          "D4",
-          "Costières"
+          "7",
+          "rue Roger Sabatier",
+          "Costières",
+          "D4"
         ]
       ],
-      "note": "Cases recalculées depuis la position de chaque point sur le plan (60 px = 1 km). La Pointe Sud est sur la limite B/C : la case attendue est C4. Le logiciel tolère une erreur."
+      "note": "Les numéros sont ceux de la fiche de M. Morin : 1 Comptoir des Halles, 2 Épicerie Verdier, 3 La Pointe Sud, 4 Maison Lauze, 5 Studio Garance, 6 Atelier Mazet, 7 Caveau Pélissier. Cases recalculées par le logiciel depuis la position de chaque point sur la carte réelle (quadrillage de 1 km). Le logiciel tolère une case fausse ; le point du suivi exige les sept (case ET quartier). Les noms des clients n'apparaissent qu'après la validation. Vérifié le 03/10/2026 : les sept rues existent à Nîmes et tombent entièrement dans le contour de leur quartier (IRIS INSEE regroupés ; Costières = Marronniers + Capouchiné + Maréchal Juin)."
     },
     {
       "etape": 3,
       "etapeTitre": "Situer les sept clients sur le plan",
       "genre": "reflexion",
-      "texte": "Pour l'adresse la plus difficile, comment as-tu trouvé la case ?",
+      "texte": "Pour le client le plus difficile à situer, comment as-tu trouvé la case et le quartier ?",
       "pistes": [
-        "Réponse personnelle : méthode attendue = chercher la rue sur le plan en ligne, repérer un grand repère (centre, Arènes, gare), puis retrouver la zone sur le plan dessiné.",
-        "Valoriser les méthodes : repères, orientation (nord), cases voisines quand le point touche une ligne."
+        "Réponse personnelle : méthode attendue = cliquer la ligne du tableau pour faire apparaître le halo du point, lire la colonne puis la ligne du quadrillage, puis lire le nom du quartier dessiné autour du point.",
+        "Valoriser les méthodes : zoomer sur le quartier pour lire le nom de la rue, vérifier la case en suivant les lignes du quadrillage, comparer avec les deux cases voisines."
       ],
-      "note": "Le point de La Pointe Sud est sur la limite des colonnes B et C : la case attendue est C4."
+      "note": "Les deux points les plus piégeux : Comptoir des Halles et Atelier Mazet sont tous deux en D2, mais dans des quartiers différents (Écusson et Gambetta) : la case seule ne suffit pas, il faut lire le quartier."
     },
     {
       "etape": 3,
@@ -280,17 +280,17 @@ export const CORRIGE = {
         [
           "1",
           "réponse personnelle (ex. dans l'ordre de la fiche : Halles, Verdier, Lauze, Garance, Mazet, Pélissier)",
-          "non : 32,6 km, arrivée 16 h 19"
+          "non : 21,3 km, arrivée 16 h 23"
         ],
         [
           "2",
           "Lauze, Halles, Verdier, Mazet, Garance, Pélissier",
-          "oui : 22,5 km, arrivée 15 h 29"
+          "oui : 14,8 km, arrivée 15 h 50"
         ],
         [
           "3",
-          "Lauze, Verdier, Halles, Mazet, Garance, Pélissier (ordre le plus court)",
-          "oui : 22,1 km, arrivée 15 h 27"
+          "Lauze, Pélissier, Verdier, Halles, Mazet, Garance (ordre le plus court)",
+          "oui : 11,9 km, arrivée 15 h 36"
         ],
         [
           "4",
@@ -298,7 +298,7 @@ export const CORRIGE = {
           "libre"
         ]
       ],
-      "note": "Exemples calculés (départ entrepôt, arrivée gare, 6 clients, 12 km/h, 6 min par arrêt). La colonne « Train tenu ? » doit seulement être cohérente avec la jauge de l'élève."
+      "note": "Exemples calculés par le calibrage (départ entrepôt 14 h 00, arrivée gare, 6 clients, 12 km/h, 6 min par arrêt, km par les rues). La colonne « Train tenu ? » doit seulement être cohérente avec la jauge de l'élève. 189 ordres sur 720 tiennent le train."
     },
     {
       "etape": 5,
@@ -317,7 +317,7 @@ export const CORRIGE = {
       "texte": "Quel principe as-tu trouvé pour choisir l'ordre des arrêts ?",
       "pistes": [
         "Aller de proche en proche, sans revenir en arrière, en terminant du côté de la gare.",
-        "Ordre optimal calculé : Maison Lauze → Épicerie Verdier → Comptoir des Halles → Atelier Mazet → Studio Garance → Caveau Pélissier (22,1 km, arrivée 15 h 27). Tout ordre sous 30,8 km tient le train (125 ordres sur 720)."
+        "Ordre le plus court calculé (km par les rues de Nîmes) : Maison Lauze → Caveau Pélissier → Épicerie Verdier → Comptoir des Halles → Atelier Mazet → Studio Garance (11,9 km, arrivée 15 h 36). Tout ordre sous 18,8 km tient le train (189 ordres sur 720)."
       ]
     },
     {
@@ -343,13 +343,13 @@ export const CORRIGE = {
           "Étape 1 · temps de route (h)",
           "B13",
           "=B11/B12",
-          "1,84 (pour 22,1 km)"
+          "0,99 (pour 11,9 km)"
         ],
         [
           "Étape 2 · temps de route (min)",
           "B14",
           "=B13*60",
-          "110,7"
+          "59,5"
         ],
         [
           "Étape 3 · temps aux arrêts (min)",
@@ -361,7 +361,7 @@ export const CORRIGE = {
           "Heure d'arrivée à la gare",
           "B19",
           "=B18+B14+B17",
-          "15:27 (927 min depuis minuit)"
+          "15:36 (935,5 min depuis minuit)"
         ]
       ],
       "note": "Références de cellules déduites de l'ordre des lignes de la feuille avec 6 arrêts chargés (poids en B2 à B7 ; si l'élève charge 5 ou 7 arrêts, tout est décalé : lire l'écran). Les valeurs dépendent de l'ordre des arrêts de l'élève : distance (B11) = km parcourus. Toute formule équivalente est acceptée (ex. =B11/B12*60)."
@@ -378,8 +378,8 @@ export const CORRIGE = {
       "etapeTitre": "Calculer dans la feuille de calcul",
       "genre": "fait",
       "texte": "Ton heure d'arrivée est-elle avant ou après l'heure du train ?",
-      "rep": "Avant : 15 h 27 pour le meilleur ordre (22,1 km), le train part à 16 h 10.",
-      "note": "Dépend de l'ordre choisi : tout ordre de moins de 30,8 km tient le train."
+      "rep": "Avant : 15 h 36 pour l'ordre le plus court (11,9 km), le train part à 16 h 10.",
+      "note": "Dépend de l'ordre choisi : tout ordre de moins de 18,8 km tient le train (départ 14 h 00, 6 arrêts de 6 min, 12 km/h)."
     },
     {
       "etape": 6,
@@ -397,8 +397,8 @@ export const CORRIGE = {
       "genre": "reflexion",
       "texte": "Si le vélo-cargo roulait à 15 km/h, qu'est-ce qui changerait dans ta feuille ?",
       "pistes": [
-        "La vitesse (cellule B12) passerait de 12 à 15 : les étapes 1 et 2 donnent un temps de route plus court (22,1 / 15 = 1,48 h, soit 88,5 min).",
-        "L'heure d'arrivée serait plus tôt (≈ 15 h 05 pour le meilleur ordre) : les formules ne changent pas, seule la donnée change et tout se recalcule."
+        "La vitesse (cellule B12) passerait de 12 à 15 : les étapes 1 et 2 donnent un temps de route plus court (11,9 / 15 = 0,79 h, soit 47,6 min).",
+        "L'heure d'arrivée serait plus tôt (≈ 15 h 24 pour l'ordre le plus court) : les formules ne changent pas, seule la donnée change et tout se recalcule."
       ]
     },
     {
@@ -494,7 +494,7 @@ export const CORRIGE = {
       "texte": "Si le vélo-cargo pouvait porter 250 kg, qu'est-ce que cela changerait à ta tournée ?",
       "pistes": [
         "Les sept commandes (237 kg) tiendraient en une fois : plus de client laissé à quai.",
-        "Le choix devient uniquement un problème d'ordre, et le temps aux arrêts (7 × 6 = 42 min) pèse davantage : à vérifier face au train."
+        "Le choix devient uniquement un problème d'ordre, et le temps aux arrêts (7 × 6 = 42 min) et les kilomètres du septième arrêt pèsent davantage : à vérifier face au train (la tournée dans l'ordre de la fiche, à sept arrêts, fait 23,9 km et arrive à 16 h 42 : train manqué)."
       ]
     }
   ]

@@ -316,10 +316,10 @@ ENT_3_1 = {
    "Il arrive un jour plus tard : le client attend plus longtemps, il peut être mécontent ou annuler.",
    "C'est aussi une mauvaise image pour la marque cliente de Boost et pour Boost.",
  ]},
- "Pour l'adresse la plus difficile": {"pistes": [
-   "Réponse personnelle : méthode attendue = chercher la rue sur le plan en ligne, repérer un grand repère (centre, Arènes, gare), puis retrouver la zone sur le plan dessiné.",
-   "Valoriser les méthodes : repères, orientation (nord), cases voisines quand le point touche une ligne.",
- ], "note": "Le point de La Pointe Sud est sur la limite des colonnes B et C : la case attendue est C4."},
+ "Pour le client le plus difficile à situer": {"pistes": [
+   "Réponse personnelle : méthode attendue = cliquer la ligne du tableau pour faire apparaître le halo du point, lire la colonne puis la ligne du quadrillage, puis lire le nom du quartier dessiné autour du point.",
+   "Valoriser les méthodes : zoomer sur le quartier pour lire le nom de la rue, vérifier la case en suivant les lignes du quadrillage, comparer avec les deux cases voisines.",
+ ], "note": "Les deux points les plus piégeux : Comptoir des Halles et Atelier Mazet sont tous deux en D2, mais dans des quartiers différents (Écusson et Gambetta) : la case seule ne suffit pas, il faut lire le quartier."},
  "Un livreur se trompe de quartier": {"pistes": [
    "Retard (on perd du temps) et risque de rater le train.",
    "Client mécontent, colis livré à la mauvaise adresse ou perdu, coûts supplémentaires pour Boost.",
@@ -339,17 +339,17 @@ ENT_3_1 = {
  ]},
  "Quel principe as-tu trouvé": {"pistes": [
    "Aller de proche en proche, sans revenir en arrière, en terminant du côté de la gare.",
-   "Ordre optimal calculé : Maison Lauze → Épicerie Verdier → Comptoir des Halles → Atelier Mazet → Studio Garance → Caveau Pélissier (22,1 km, arrivée 15 h 27). Tout ordre sous 30,8 km tient le train (125 ordres sur 720).",
+   "Ordre le plus court calculé (km par les rues de Nîmes) : Maison Lauze → Caveau Pélissier → Épicerie Verdier → Comptoir des Halles → Atelier Mazet → Studio Garance (11,9 km, arrivée 15 h 36). Tout ordre sous 18,8 km tient le train (189 ordres sur 720).",
  ]},
  "Ton poids total est-il": {"rep": "En dessous (ou égal) : 179 kg pour 180 kg maximum, si La Pointe Sud est restée à quai."},
- "Ton heure d'arrivée est-elle": {"rep": "Avant : 15 h 27 pour le meilleur ordre (22,1 km), le train part à 16 h 10.", "note": "Dépend de l'ordre choisi : tout ordre de moins de 30,8 km tient le train."},
+ "Ton heure d'arrivée est-elle": {"rep": "Avant : 15 h 36 pour l'ordre le plus court (11,9 km), le train part à 16 h 10.", "note": "Dépend de l'ordre choisi : tout ordre de moins de 18,8 km tient le train (départ 14 h 00, 6 arrêts de 6 min, 12 km/h)."},
  "Si une contrainte est franchie": {"pistes": [
    "Changer la tournée, pas les formules : le logiciel le dit (« Le calcul est bon : c'est la tournée qu'il faut revoir »).",
    "Les formules mesurent la tournée. Modifier les formules pour « faire passer » le résultat serait tricher avec la réalité.",
  ]},
  "Si le vélo-cargo roulait à 15 km/h": {"pistes": [
-   "La vitesse (cellule B12) passerait de 12 à 15 : les étapes 1 et 2 donnent un temps de route plus court (22,1 / 15 = 1,48 h, soit 88,5 min).",
-   "L'heure d'arrivée serait plus tôt (≈ 15 h 05 pour le meilleur ordre) : les formules ne changent pas, seule la donnée change et tout se recalcule.",
+   "La vitesse (cellule B12) passerait de 12 à 15 : les étapes 1 et 2 donnent un temps de route plus court (11,9 / 15 = 0,79 h, soit 47,6 min).",
+   "L'heure d'arrivée serait plus tôt (≈ 15 h 24 pour l'ordre le plus court) : les formules ne changent pas, seule la donnée change et tout se recalcule.",
  ]},
  "Dans une vraie entreprise, qui prévient": {"pistes": [
    "Le responsable d'exploitation (M. Morin) ou le service client de Boost, qui prévient le client ou la marque cliente.",
@@ -361,27 +361,27 @@ ENT_3_1 = {
  ]},
  "Si le vélo-cargo pouvait porter 250 kg": {"pistes": [
    "Les sept commandes (237 kg) tiendraient en une fois : plus de client laissé à quai.",
-   "Le choix devient uniquement un problème d'ordre, et le temps aux arrêts (7 × 6 = 42 min) pèse davantage : à vérifier face au train.",
+   "Le choix devient uniquement un problème d'ordre, et le temps aux arrêts (7 × 6 = 42 min) et les kilomètres du septième arrêt pèsent davantage : à vérifier face au train (la tournée dans l'ordre de la fiche, à sept arrêts, fait 23,9 km et arrive à 16 h 42 : train manqué).",
  ]},
 }
 ENT_3_1_TABLEAUX = {
  "T: Information | Ce que tu relèves": {"lignes": [
-   ["Heure de départ de l'entrepôt", "13 h 00"],
+   ["Heure de départ de l'entrepôt", "14 h 00"],
    ["Heure de départ du train pour Paris", "16 h 10"],
    ["Charge maximale du vélo-cargo (kg)", "180"],
    ["Vitesse du vélo-cargo en ville (km/h)", "12"],
    ["Temps passé à chaque arrêt (min)", "6"],
    ["Où doit arriver le vélo-cargo ?", "À la gare de Nîmes-Centre, avant 16 h 10"],
  ]},
- "T: Client | Rue | Case | Quartier": {"lignes": [
-   ["Le Comptoir des Halles", "rue Général Perrier", "D2", "Écusson"],
-   ["Épicerie Verdier", "quai de la Fontaine", "C2", "Jardins de la Fontaine"],
-   ["La Pointe Sud", "rue de l'Hostellerie", "C4", "Ville Active"],
-   ["Maison Lauze", "rue de Mascard", "B3", "Saint-Césaire"],
-   ["Studio Garance", "route de Courbessac", "F3", "Courbessac"],
-   ["Atelier Mazet", "rue de Grézan", "E1", "Grézan"],
-   ["Caveau Pélissier", "avenue de la Bouvine", "D4", "Costières"],
- ], "note": "Cases recalculées depuis la position de chaque point sur le plan (60 px = 1 km). La Pointe Sud est sur la limite B/C : la case attendue est C4. Le logiciel tolère une erreur."},
+ "T: N° | Rue | Quartier | Case": {"lignes": [
+   ["1", "rue du Général Perrier", "Écusson", "D2"],
+   ["2", "rue de Combret", "Jardins de la Fontaine", "C2"],
+   ["3", "rue de l'Hostellerie", "Ville Active", "C5"],
+   ["4", "rue de Mascard", "Saint-Césaire", "B5"],
+   ["5", "rue Edmond Rostand", "Croix de Fer", "E1"],
+   ["6", "rue Graverol", "Gambetta", "D2"],
+   ["7", "rue Roger Sabatier", "Costières", "D4"],
+ ], "note": "Les numéros sont ceux de la fiche de M. Morin : 1 Comptoir des Halles, 2 Épicerie Verdier, 3 La Pointe Sud, 4 Maison Lauze, 5 Studio Garance, 6 Atelier Mazet, 7 Caveau Pélissier. Cases recalculées par le logiciel depuis la position de chaque point sur la carte réelle (quadrillage de 1 km). Le logiciel tolère une case fausse ; le point du suivi exige les sept (case ET quartier). Les noms des clients n'apparaissent qu'après la validation. Vérifié le 03/10/2026 : les sept rues existent à Nîmes et tombent entièrement dans le contour de leur quartier (IRIS INSEE regroupés ; Costières = Marronniers + Capouchiné + Maréchal Juin)."},
  "T: Client | Chargé ou à quai ?": {"lignes": [
    ["Le Comptoir des Halles", "chargé", "31 kg, sur le chemin"],
    ["Épicerie Verdier", "chargé", "24 kg"],
@@ -392,17 +392,17 @@ ENT_3_1_TABLEAUX = {
    ["Caveau Pélissier", "chargé", "27 kg"],
  ], "note": "Un seul client à quai est possible : La Pointe Sud (58 kg ≥ 57 kg de trop). Vérifié par énumération des 128 combinaisons."},
  "T: Essai | Ordre des arrêts": {"lignes": [
-   ["1", "réponse personnelle (ex. dans l'ordre de la fiche : Halles, Verdier, Lauze, Garance, Mazet, Pélissier)", "non : 32,6 km, arrivée 16 h 19"],
-   ["2", "Lauze, Halles, Verdier, Mazet, Garance, Pélissier", "oui : 22,5 km, arrivée 15 h 29"],
-   ["3", "Lauze, Verdier, Halles, Mazet, Garance, Pélissier (ordre le plus court)", "oui : 22,1 km, arrivée 15 h 27"],
+   ["1", "réponse personnelle (ex. dans l'ordre de la fiche : Halles, Verdier, Lauze, Garance, Mazet, Pélissier)", "non : 21,3 km, arrivée 16 h 23"],
+   ["2", "Lauze, Halles, Verdier, Mazet, Garance, Pélissier", "oui : 14,8 km, arrivée 15 h 50"],
+   ["3", "Lauze, Pélissier, Verdier, Halles, Mazet, Garance (ordre le plus court)", "oui : 11,9 km, arrivée 15 h 36"],
    ["4", "libre", "libre"],
- ], "note": "Exemples calculés (départ entrepôt, arrivée gare, 6 clients, 12 km/h, 6 min par arrêt). La colonne « Train tenu ? » doit seulement être cohérente avec la jauge de l'élève."},
+ ], "note": "Exemples calculés par le calibrage (départ entrepôt 14 h 00, arrivée gare, 6 clients, 12 km/h, 6 min par arrêt, km par les rues). La colonne « Train tenu ? » doit seulement être cohérente avec la jauge de l'élève. 189 ordres sur 720 tiennent le train."},
  "T: Ce qu'on calcule | Cellule | Ma formule": {"lignes": [
    ["Poids total chargé (kg)", "B8", "=SOMME(B2:B7)", "179"],
-   ["Étape 1 · temps de route (h)", "B13", "=B11/B12", "1,84 (pour 22,1 km)"],
-   ["Étape 2 · temps de route (min)", "B14", "=B13*60", "110,7"],
+   ["Étape 1 · temps de route (h)", "B13", "=B11/B12", "0,99 (pour 11,9 km)"],
+   ["Étape 2 · temps de route (min)", "B14", "=B13*60", "59,5"],
    ["Étape 3 · temps aux arrêts (min)", "B17", "=B15*B16", "36"],
-   ["Heure d'arrivée à la gare", "B19", "=B18+B14+B17", "15:27 (927 min depuis minuit)"],
+   ["Heure d'arrivée à la gare", "B19", "=B18+B14+B17", "15:36 (935,5 min depuis minuit)"],
  ], "note": "Références de cellules déduites de l'ordre des lignes de la feuille avec 6 arrêts chargés (poids en B2 à B7 ; si l'élève charge 5 ou 7 arrêts, tout est décalé : lire l'écran). Les valeurs dépendent de l'ordre des arrêts de l'élève : distance (B11) = km parcourus. Toute formule équivalente est acceptée (ex. =B11/B12*60)."},
  "T: Client | Poids (kg)": {"lignes": [
    ["Le Comptoir des Halles", "31"], ["Épicerie Verdier", "24"], ["La Pointe Sud", "58"],

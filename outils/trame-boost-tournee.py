@@ -271,13 +271,13 @@ def tableau(entetes, nlignes, largeurs=None, hauteur=Cm(1.15), remplis=None):
 # y figurent aussi dans le message, mais la trame ne les recopie pas : l'élève les lit à
 # l'écran quand il en a besoin (étape 7).
 CLIENTS = [
-    ('Le Comptoir des Halles', 'rue Général Perrier'),
-    ('Épicerie Verdier', 'quai de la Fontaine'),
+    ('Le Comptoir des Halles', 'rue du Général Perrier'),
+    ('Épicerie Verdier', 'rue de Combret'),
     ('La Pointe Sud', "rue de l'Hostellerie"),
     ('Maison Lauze', 'rue de Mascard'),
-    ('Studio Garance', 'route de Courbessac'),
-    ('Atelier Mazet', 'rue de Grézan'),
-    ('Caveau Pélissier', 'avenue de la Bouvine'),
+    ('Studio Garance', 'rue Edmond Rostand'),
+    ('Atelier Mazet', 'rue Graverol'),
+    ('Caveau Pélissier', 'rue Roger Sabatier'),
 ]
 
 # ==================================================================== en-tête
@@ -374,7 +374,7 @@ tableau(['Information', 'Ce que tu relèves'], 6, [Cm(7.4), Cm(9.6)], hauteur=Cm
                  ["Temps passé à chaque arrêt (min)", ''],
                  ["Où doit arriver le vélo-cargo ?", '']])
 p("Dans la liste des commandes, une ligne donne : le nom du commerce, sa rue, le nombre de colis et le poids. "
-  "Les clients ne donnent que le nom de leur rue : pas de quartier, pas de plan.", taille=9.5, apres=8)
+  "Les clients ne donnent que le nom de leur rue : pas de quartier, pas de case.", taille=9.5, apres=8)
 reflechir([
     "M. Morin demande de situer les clients sur un plan AVANT de construire la tournée. Pourquoi, à ton avis ?",
     "Un colis qui rate le train est livré un jour plus tard. Quelle conséquence cela a-t-il pour le client ?",
@@ -382,34 +382,36 @@ reflechir([
 
 # ==================================================================== étape 3
 etape(3, "Situer les sept clients sur le plan")
-p("Dans le menu de gauche, clique sur « Plan de Nîmes ». Tu vois un plan dessiné, avec un quadrillage : des colonnes "
-  "A à F et des lignes 1 à 4. Une case s'écrit lettre puis chiffre, par exemple C2. Les clients n'y sont pas encore "
-  "nommés : à toi de les situer.")
+p("Dans le menu de gauche, clique sur « Plan de Nîmes ». Tu vois la vraie carte de la ville, avec un quadrillage : "
+  "des colonnes A à E et des lignes 1 à 5 (une case fait 1 km de côté). Une case s'écrit lettre puis chiffre, par "
+  "exemple C2. Les sept quartiers sont dessinés avec leur nom, et les sept clients sont des points numérotés : "
+  "le numéro est celui de la fiche de M. Morin. Leurs noms ne sont pas encore écrits sur la carte.")
 consignes([
-    "Clique sur « Ouvrir un plan de Nîmes (OpenStreetMap) » : un plan en ligne s'ouvre dans un autre onglet.",
-    "Dans ce plan, cherche chaque rue du tableau ci-dessous (écris le nom de la rue puis « Nîmes »).",
-    "Repère où se trouve la rue par rapport au centre-ville, aux Arènes et à la gare.",
-    "Reviens sur le plan dessiné, trouve le point qui correspond, et note sa case dans le tableau.",
-    "Note aussi le quartier de la rue : le plan en ligne l'écrit, ou le plan dessiné l'écrit à côté du point.",
+    "Sous la carte, le tableau a une ligne par client, avec le numéro et la rue. Clique sur une ligne : son point "
+    "s'entoure sur la carte (et l'inverse marche aussi : clique sur un point).",
+    "Lis la case du point : la lettre de la colonne, puis le chiffre de la ligne.",
+    "Lis le nom du quartier dessiné autour du point. Pour vérifier la rue, clique sur le quartier : la carte "
+    "zoome et écrit les noms de rues.",
+    "Écris ta réponse dans le tableau ci-dessous, puis dans la ligne du logiciel : la case à taper, le quartier à "
+    "choisir dans le menu déroulant.",
 ])
-tableau(['Client', 'Rue', 'Case', 'Quartier'], 0, [Cm(4.6), Cm(5.2), Cm(2.2), Cm(5.0)], hauteur=Cm(1.0),
-        remplis=[[n, r_, '', ''] for n, r_ in CLIENTS])
+tableau(['N°', 'Rue', 'Quartier', 'Case'], 0, [Cm(1.4), Cm(6.2), Cm(5.8), Cm(3.6)], hauteur=Cm(1.0),
+        remplis=[[str(i), r_, '', ''] for i, (n, r_) in enumerate(CLIENTS, 1)])
 encadre('Deux conseils :',
-        "ce plan est un schéma, pas une carte à l'échelle : le centre est dessiné plus grand qu'en vrai, donc tu ne "
-        "retrouveras pas les mêmes distances sur le plan en ligne. Cherche l'orientation (la flèche du nord) et les "
-        "grands repères. Si un point touche une ligne du quadrillage, essaie les deux cases voisines.")
+        "le menu des quartiers propose douze noms pour sept clients : cinq ne sont à personne, donc tu ne peux pas "
+        "finir par élimination. Si tu hésites entre deux cases, choisis celle où se trouve le centre du point : le "
+        "logiciel accepte une seule case fausse.")
 saut_avant()
-p("Recopie maintenant ces informations sur le plan dessiné, dans les lignes prévues (une case et un quartier choisi "
-  "dans le menu déroulant, pour chaque client). Puis clique sur « Valider le repérage ».")
+p("Clique maintenant sur « Valider le repérage ».")
 encadre('Ce que tu dois voir :',
         "un champ qui devient rouge quand la case ou le quartier est faux ; le message « Repérage validé » quand tout "
-        "est bon ; les sept noms qui s'écrivent sur le plan ; et une nouvelle entrée dans le menu de gauche, "
-        "« Tournée du 14 avril ». Le logiciel accepte une erreur, mais le point du suivi n'est donné que si les "
-        "sept clients sont justes. Après trois essais ratés, un bouton « Je ne trouve pas, continuer quand même » "
-        "apparaît : tu peux avancer, mais ton suivi le montre. Le « Mode hors connexion » (en haut) donne les "
-        "quartiers sans les cases ; son usage est lui aussi noté dans le suivi.")
+        "est bon ; les sept noms de clients qui s'écrivent dans le tableau ; et une nouvelle entrée dans le menu de "
+        "gauche, « Tournée du 14 avril ». Le logiciel accepte une erreur, mais le point du suivi n'est donné que si "
+        "les sept clients sont justes. Après trois essais ratés, un bouton « Je ne trouve pas, continuer quand même » "
+        "apparaît : tu peux avancer, mais ton suivi le montre. Le « Mode hors connexion » (en haut) remplit les "
+        "quartiers à ta place, sans les cases ; son usage est lui aussi noté dans le suivi.")
 reflechir([
-    "Pour l'adresse la plus difficile, comment as-tu trouvé la case ?",
+    "Pour le client le plus difficile à situer, comment as-tu trouvé la case et le quartier ?",
     "Un livreur se trompe de quartier. Quelles conséquences cela a-t-il pour Boost ?",
 ])
 
@@ -474,13 +476,13 @@ consignes([
     "Étape 1 : distance ÷ vitesse. Le résultat est un temps en heures.",
     "Étape 2 : convertis ces heures en minutes (1 heure = 60 minutes).",
     "Étape 3 : temps aux arrêts = nombre d'arrêts × temps par arrêt.",
-    "Heure de départ : tape simplement 13:00 (pas de formule).",
+    "Heure de départ : tape simplement 14:00 (pas de formule).",
     "Heure d'arrivée : heure de départ + temps de route (min) + temps aux arrêts (min).",
     "Clique sur « Vérifier mes formules ».",
 ])
 encadre('À savoir :',
-        "le logiciel compte les heures en minutes depuis minuit : 13 h 00, c'est 13 × 60 = 780 minutes. C'est ce qui "
-        "te permet d'ajouter une heure et des minutes. Ne tape pas « 13 » tout seul : écris 13:00 ou 13h00. Un "
+        "le logiciel compte les heures en minutes depuis minuit : 14 h 00, c'est 14 × 60 = 840 minutes. C'est ce qui "
+        "te permet d'ajouter une heure et des minutes. Ne tape pas « 14 » tout seul : écris 14:00 ou 14h00. Un "
         "exemple pour comprendre l'étape 1 : 6 km à 12 km/h, c'est 6 ÷ 12 = 0,5 h.")
 p("Note les formules que tu as écrites :", taille=10.5, gras=True)
 tableau(['Ce qu\'on calcule', 'Cellule', 'Ma formule', 'Résultat affiché'], 0,

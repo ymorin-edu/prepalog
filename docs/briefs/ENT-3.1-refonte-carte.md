@@ -173,8 +173,8 @@ quartiers et des numéros.
 - **Commits** : voir l'historique du 03/10/2026 (« ENT-3.1 : carte réelle… »).
 - **Reste ouvert** :
   - **validation de Tristan à l'écran** (page `outils/essai-ent31.html`, et au vidéoprojecteur), puis `pret: true` ;
-  - **trame Word/PDF d'ENT-3.1 et corrigé** (`outils/trame-boost-tournee.py`, `outils/corriges_data.py` →
-    `contenus/corriges/ENT-3.1.js`) : ils décrivent encore l'ancien exercice (plan en ligne, plan A–F × 1–4, anciennes
-    rues, cases et km). À régénérer après validation de l'écran ;
+  - ~~trame Word/PDF et corrigé d'ENT-3.1~~ **régénérés le 03/10/2026** (carte réelle A–E × 1–5, sept rues et quartiers
+    nouveaux, départ 14 h 00, km par les rues : ordre le plus court 11,9 km / 15 h 36, ordre de la fiche 21,3 km / 16 h 23,
+    189 ordres sur 720 tiennent le train). Le PDF est repris du .docx par Word ;
   - la fiche `docs/fiches/prepalog-vues-transport.md` (copie datée) ne connaît pas le mode « lire la case » ;
   - 3.4 : complication du repérage à décider avant de la construire.
