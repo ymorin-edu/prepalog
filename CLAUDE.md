@@ -230,6 +230,14 @@ main dans GitHub Desktop : **c'est maintenant à Claude de le faire.**
 - Après un push touchant `firestore.rules`/`database.rules.json` : rappeler qu'il reste à
   **publier dans la console**.
 
+## Plusieurs sessions à la fois : `docs/EN-COURS.md`
+
+Tristan peut avoir deux conversations Claude Code ouvertes sur le dépôt. **Avant d'écrire**, lire
+`docs/EN-COURS.md` et lancer `git status` : si un fichier dont on a besoin est modifié sans qu'on l'ait
+fait, ou inscrit là, **s'arrêter et le dire** (ne pas écraser, ne pas deviner). Sinon, s'inscrire (une
+ligne, commitée et poussée aussitôt), et **s'effacer** une fois le travail commité et poussé. Ne jamais
+commiter les fichiers d'une autre session : `git add` par nom, uniquement les siens.
+
 ## Alertes — à signaler à Tristan quand elles se présentent
 
 1. Règles de sécurité modifiées (voir Firebase). 2. Un nouvel enseignant rejoint. 3. Bascule
