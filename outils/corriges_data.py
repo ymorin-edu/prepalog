@@ -524,12 +524,276 @@ ENT_2_1 = {
 }
 
 
+# --------------------------------------------------------------------------------- ENT-4.1 (Picard)
+# Trame écrite par Cowork le 03/10/2026. Nombres du logiciel tirés de contenus/picard-ent41.js ;
+# recherches Internet sourcées dans `note` (relevées le 03/10/2026).
+ENT_4_1 = {
+ "Que vend Picard": {"rep": "Des produits surgelés : plats cuisinés, légumes, viandes, poissons, desserts, glaces… sous sa propre marque, dans ses magasins et en ligne.", "note": "Source : picard.fr, « L'histoire de Picard »."},
+ "En quelle année Picard ouvre-t-il": {"rep": "1974 (rue de Rome, à Paris).", "note": "Source : picard.fr, « L'histoire de Picard ». L'entreprise est plus ancienne (Les Glacières de Fontainebleau, 1906) : accepter 1974 seulement pour le premier magasin de surgelés."},
+ "Combien de magasins Picard a-t-il": {"rep": "Plus de 1 000 (le 1 000e ouvre en 2018 ; plus de 1 200 aujourd'hui).", "note": "Sources : picard.fr (histoire) et recrutement.picard.fr. Accepter tout nombre au-dessus de 1 000 avec une source."},
+ "Quelle entreprise fait tourner l'entrepôt": {"rep": "GXO (GXO Logistics), un logisticien : Picard lui confie l'entrepôt.", "note": "Source : Voxlog, reportage de 2023 sur l'entrepôt de Sainghin-en-Mélantois ; communiqué de GXO. C'est de l'externalisation."},
+ "D'après l'article, que fait l'entrepôt": {"rep": "Il refuse le camion. Tous les camions ont des sondes ; aucune marchandise ne rentre sans contrôle de température (un expert peut venir contrôler chaque palette).", "note": "Source : Voxlog (2023) : « en cas de température non conforme, ils sont refusés »."},
+ "D'après ce que tu as trouvé, qu'est-ce qui rend": {"pistes": [
+   "Le temps compte : un surgelé se réchauffe dès qu'il sort du froid, une chaussure non.",
+   "Il faut contrôler la température (ticket, sonde) en plus de la quantité et de l'état.",
+   "Un produit réchauffé puis recongelé a perdu sa qualité, et cela ne se voit pas à l'œil.",
+   "Accepter toute idée liée à la chaîne du froid ou à la sécurité alimentaire."]},
+ "T: Information | Ce que tu relèves": {"lignes": [
+   ["Heure d'arrivée du camion", "6 h 00"],
+   ["Fournisseur (qui envoie la marchandise)", "Surgelés du Littoral (fictif)"],
+   ["Transporteur (qui conduit le camion)", "Transports Givrex (fictif)"],
+   ["Nombre de palettes", "5"],
+   ["La règle de la maison", "Le froid d'abord, les papiers ensuite."],
+ ]},
+ "Le chef de quai écrit : « le froid d'abord": {"pistes": [
+   "Mettre les surgelés au froid avant de remplir les documents.",
+   "Les papiers peuvent attendre, les surgelés non.",
+   "Question de prévision : toute idée est recevable, on y revient à l'étape 6."]},
+ "Numéro du bon de livraison": {"rep": "SL-26-1184."},
+ "Température de consigne écrite sur le ticket": {"rep": "−20 °C."},
+ "À quelle heure la température commence-t-elle": {"rep": "03:45 (−16,8 °C)."},
+ "Quelle est la température la plus haute du ticket": {"rep": "−12,1 °C, à 04:15.", "note": "La remontée : 03:45 −16,8 · 04:00 −12,6 · 04:15 −12,1 · 04:30 −13,0 · 04:45 −17,4."},
+ "À quelle heure revient-elle sous la consigne": {"rep": "05:00 (−20,8 °C).", "note": "À 04:45 (−17,4 °C), elle est encore au-dessus de la consigne. Réponse attendue à l'écran : « une remontée qui a duré : je la signale et je sonde chaque palette à cœur »."},
+ "Pourquoi as-tu lu le ticket AVANT": {"pistes": [
+   "Portes fermées, la marchandise reste au froid : lire le ticket ne lui coûte rien.",
+   "Le ticket dit s'il faudra sonder chaque palette, ou même refuser le camion.",
+   "Une fois les palettes sur le quai, chaque minute compte dans le temps hors froid."]},
+ "T: Palette | Cartons par couche | Couches": {"lignes": [
+   ["P1", "12 (4 × 3)", "5", "3", "57", "57"],
+   ["P2", "9 (3 × 3)", "4", "0", "36", "36"],
+   ["P3", "12 (4 × 3)", "4", "0", "48", "48"],
+   ["P4", "6 (3 × 2)", "4", "2", "22", "24"],
+   ["P5", "6 (3 × 2)", "5", "0", "30", "30"],
+ ], "note": "P4 : un des deux manquants est dans le coin du fond, visible seulement en faisant le tour. P1 : la couche du dessus est incomplète mais le total est conforme au BL. Le bilan marque « à revoir (non compté) » les lignes « détail » si l'élève n'a rempli que le total."},
+ "Pour la palette la plus difficile à compter": {"pistes": [
+   "Souvent P4 (le carton manquant du fond ne se voit qu'en faisant le tour) ou P1 (couche du dessus incomplète).",
+   "Valoriser la méthode : couche × nombre de couches − manquants, faire le tour, recompter.",]},
+ "T: Palette | T° à cœur | Référence lue": {"lignes": [
+   ["P1", "−21,5 °C", "oui (HVE-1000)", "bon état", "Accepter — aucun motif"],
+   ["P2", "−19,8 °C", "oui (CRB-070)", "2 cartons écrasés, visibles de l'arrière", "Accepter avec réserves — cartons endommagés"],
+   ["P3", "−14,2 °C", "oui (GVA-1000)", "bon état", "Refuser — température non conforme"],
+   ["P4", "−20,4 °C", "oui (CAB-400)", "bon état (2 cartons manquants)", "Accepter avec réserves — manquant"],
+   ["P5", "−20,9 °C", "NON : EPB-450 (épinards en branches) au lieu de EPH-450", "bon état", "Refuser — produit différent"],
+ ], "note": "Le jalon de décision exige aussi la palette sondée. P3 : plus chaud que −15 °C, refus (règle du quai)."},
+ "Pour une palette que tu as refusée": {"pistes": [
+   "P3 : la sonde (−14,2 °C) est au-dessus de −15 °C : refus, quelle que soit la quantité.",
+   "P5 : l'étiquette dit EPB-450, le BL EPH-450 : ce n'est pas le produit commandé.",
+   "Valoriser l'élève qui cite la preuve (la valeur lue, la référence lue)."]},
+ "Quel geste t'a fait découvrir un problème": {"pistes": [
+   "Faire le tour : les cartons écrasés de P2, le carton manquant au fond de P4.",
+   "Sonder : la glace de P3, qui avait l'air normale.",
+   "Lire l'étiquette : la mauvaise référence de P5, invisible sans elle."]},
+ "T: Palette | Décision | Ce que tu as écrit": {"lignes": [
+   ["P2", "Accepter avec réserves", "2 (cartons endommagés)"],
+   ["P3", "Refuser", "−14,2 (température à cœur relevée)"],
+   ["P4", "Accepter avec réserves", "2 (cartons manquants)"],
+   ["P5", "Refuser", "EPB-450 (référence réellement livrée)"],
+ ], "note": "Phrases écrites sur le BL : voir le corrigé de la séance (ENT-4.1). Ne pas ajouter « sous réserve de déballage » (sans valeur)."},
+ "Temps hors froid du lot quand il entre": {"rep": "Variable : environ 20 minutes pour un parcours juste ; sous le repère de 30 minutes.", "note": "Plus long si l'élève a écrit les réserves avant de rentrer le lot (le chef de quai l'arrête et le lui fait remarquer)."},
+ "Que deviennent les palettes refusées": {"rep": "Elles restent sur le quai, puis repartent dans le camion avec le chauffeur (P3 et P5)."},
+ "Qu'est-ce qui t'a fait perdre le plus de temps hors froid": {"pistes": [
+   "Les gestes répétés (faire le tour plusieurs fois, recompter).",
+   "Écrire les réserves avant de rentrer le lot (4 minutes de plus hors froid).",
+   "Hésiter sur une décision. Valoriser l'élève qui chiffre sa perte de temps."]},
+ "Combien de lignes sont marquées « ✗ à revoir »": {"rep": "Variable selon l'élève (0 pour un parcours parfait).", "note": "Les lignes « détail » (couche × couches − manquants) comptent dans le bilan affiché mais pas dans les 18 jalons du suivi."},
+ "Temps réel passé": {"rep": "Variable : c'est le temps de l'élève à l'écran.", "note": "Mesuré pour caler les seuils de rapidité d'ENT-4.4 (provisoirement 12 et 16 min) ; non noté."},
+ "Dans combien de jours faut-il confirmer": {"rep": "3 jours (jours fériés non compris), par lettre recommandée.", "note": "Code de commerce, art. L133-3 (version en vigueur depuis le 10/12/2009, lue sur Légifrance le 03/10/2026)."},
+ "Pour quelles palettes faudra-t-il envoyer": {"rep": "P2 (cartons endommagés) et P4 (cartons manquants).", "note": "P3 et P5 sont refusées : elles repartent avec le transporteur."},
+ "Choisis une ligne « à revoir »": {"pistes": [
+   "Réponse personnelle : l'élève relie une erreur à un geste oublié (faire le tour, sonder, lire l'étiquette) ou à un ordre (papiers avant le froid).",
+   "S'il n'a rien à revoir : le geste qui l'a le plus aidé, et pourquoi."]},
+ "Les palettes refusées repartent dans le camion": {"pistes": [
+   "Le service approvisionnement (ou les achats) : la marchandise manque, il faut la recommander.",
+   "Le fournisseur, pour qu'il renvoie les bons produits.",
+   "Les magasins qui attendaient ces produits, s'il y a un risque de rupture.",
+   "Accepter toute réponse qui montre que le refus a des suites."]},
+}
+
+
+# --------------------------------------------------------------------------------- ENT-4.2 (Picard)
+# Trame écrite par Cowork le 03/10/2026. Nombres tirés de contenus/picard-ent42.js. Deux chemins : camion
+# Glaces Néviane (A) d'abord = le bon ordre ; Légumes d'Orvalle (B) d'abord = les glaces passent au-dessus
+# de −15 °C et sont à refuser, quoi que fasse l'élève (garde-fou testé par Claude Code).
+ENT_4_2 = {
+ "À quoi sert le groupe froid": {"rep": "C'est la machine frigorifique du camion : elle produit le froid et garde la remorque à la température de consigne pendant tout le trajet.", "note": "Définition de métier ; recherche « groupe froid camion frigorifique »."},
+ "Que mesure l'enregistreur de température": {"rep": "La température de l'air dans la remorque, à intervalles réguliers (ici toutes les 15 minutes), du départ à l'arrivée ; il l'imprime sur un ticket.", "note": "Pour les surgelés, le transport doit être équipé d'instruments qui enregistrent la température de l'air (règlement (CE) n° 37/2005)."},
+ "Que veut dire « sonder à cœur »": {"rep": "Planter une sonde au centre d'un carton pour lire la température du produit lui-même (pas celle de l'air)."},
+ "Un camion arrive avec un ticket parfait": {"pistes": [
+   "Le ticket mesure l'air de la remorque, pas le produit : une palette peut avoir chauffé avant d'être chargée.",
+   "Un produit peut avoir été mal congelé chez le fournisseur.",
+   "C'est la règle du quai : aucune marchandise ne rentre sans contrôle de température."]},
+ "T: Information | Premier camion arrivé": {"lignes": [
+   ["Heure d'arrivée", "06:00 (Glaces Néviane)", "06:10 (Légumes d'Orvalle)"],
+   ["Fournisseur", "Glaces Néviane (fictif)", "Légumes d'Orvalle (fictif)"],
+   ["Transporteur", "Transports Hivernel (fictif)", "Transports Calvenor (fictif)"],
+   ["Nombre de palettes", "3", "5"],
+   ["Ce qu'il transporte", "des glaces", "des légumes surgelés"],
+ ]},
+ "Combien de quais as-tu": {"rep": "Un seul (le quai 32) : un camion à la fois."},
+ "Que dois-tu lire avant de décider": {"rep": "Les deux tickets de température (un par camion)."},
+ "Avant d'avoir vu les tickets, quel camion": {"pistes": [
+   "Réponse de prévision, toutes recevables : « le premier arrivé », « celui qui a le plus de palettes », « les glaces, plus fragiles »…",
+   "On y revient à l'étape 3 : l'intérêt est de voir si le ticket fait changer d'avis."]},
+ "T: Heure | Camion Glaces Néviane": {"lignes": [
+   ["05:00", "−20,3 °C", "−20,8 °C"],
+   ["05:30", "−19,3 °C", "−20,6 °C"],
+   ["05:45", "−18,5 °C", "−20,7 °C"],
+   ["06:00", "−17,4 °C", "−21,0 °C"],
+   ["Ce que montre le ticket", "La température remonte encore à l'arrivée, de plus en plus vite : le groupe froid faiblit", "Rien à signaler : la température est restée stable"],
+ ], "note": "Ticket Glaces Néviane : stable vers −21 °C jusqu'à 04:30, puis 04:45 −20,6 · 05:00 −20,3 · 05:15 −19,9 · 05:30 −19,3 · 05:45 −18,5 · 06:00 −17,4. Le ticket Légumes est le seul juste à « rien à signaler »."},
+ "Le camion que tu fais décharger en premier": {"rep": "Le camion Glaces Néviane."},
+ "La raison que tu as choisie": {"rep": "« Le ticket des Glaces Néviane montre que leur froid faiblit : les glaces se réchauffent si le camion attend. »", "note": "Le jalon exige le bon camion ET cette phrase. « Arrivé le premier » donne le bon camion pour une mauvaise raison : jalon faux."},
+ "Qu'est-ce qui, sur les tickets, t'a fait choisir": {"pistes": [
+   "La dernière heure du ticket des glaces : la température monte de plus en plus vite.",
+   "Le ticket des légumes est stable : ce camion peut attendre sans dommage.",
+   "Valoriser l'élève qui cite des valeurs lues (−18,5 puis −17,4 °C)."]},
+ "Compare avec ta réponse de l'étape 2": {"pistes": [
+   "Réponse personnelle. Intéressant : l'élève qui voulait « le premier arrivé » et qui garde le même camion pour une autre raison.",
+   "Ou celui qui change d'avis grâce au ticket : c'est le but de la séance (adapter l'organisation à un aléa, C1.3)."]},
+ "Temps hors froid de ce lot quand il entre": {"rep": "Variable : environ 13 à 15 minutes pour le lot de glaces (3 palettes) en bon ordre.", "note": "Une jauge par camion : elle démarre à l'ouverture de son camion, s'arrête quand son lot entre en chambre froide."},
+ "Combien de lignes as-tu écrites sur le BL": {"rep": "3 pour le camion de glaces en bon ordre (une ligne de réserve « température » par palette).", "note": "Ex. : « A1 GVA-2500 : acceptée sous réserve — température à cœur −17,5 °C (−18 °C exigé). »"},
+ "Quelle palette de ce camion t'a demandé": {"pistes": [
+   "A2 (deux références sur une palette) ou la décision « avec réserves » pour une glace à −17,5 °C, ni bonne ni à refuser.",
+   "Valoriser l'élève qui cite la règle du quai pour justifier."]},
+ "Temps hors froid de ce second lot": {"rep": "Variable : environ 15 à 20 minutes pour les 5 palettes de légumes.", "note": "Le second lot ne démarre qu'à l'ouverture de son camion : l'attente porte fermée ne compte pas dans sa jauge."},
+ "Que deviennent les palettes que tu as refusées": {"rep": "Elles restent au quai et repartent dans le camion avec le chauffeur (B2 et B3 en bon ordre).", "note": "Si l'élève a pris les légumes d'abord : les trois palettes de glaces sont aussi refusées."},
+ "Ce camion a attendu porte fermée": {"pistes": [
+   "Bon ordre (légumes en second) : rien, son groupe froid tient, ses légumes sont restés à −21 °C.",
+   "Mauvais ordre (glaces en second) : les glaces ont continué de se réchauffer, au-dessus de −15 °C : tout le camion est refusé.",
+   "Valoriser l'élève qui relie l'attente à la température relevée à la sonde."]},
+ "La ligne « Ordre de déchargement": {"rep": "Juste si l'élève a choisi le camion Glaces Néviane ET la phrase sur le froid qui faiblit.", "note": "Variable selon l'élève."},
+ "Combien de lignes sont marquées « ✗ à revoir »": {"rep": "Variable selon l'élève (0 pour un parcours parfait, sur 30 jalons)."},
+ "Température à cœur des glaces quand": {"rep": "−17,5 °C si les glaces ont été déchargées en premier ; au-dessus de −15 °C (−14,9 °C au mieux) si elles ont attendu.", "note": "+0,25 °C par minute d'attente porte fermée, à partir de −18,5 °C à 06:10 (valeurs construites)."},
+ "Si tu avais choisi l'autre camion en premier": {"pistes": [
+   "Bon ordre choisi : les glaces auraient attendu au moins 14 minutes de plus et dépassé −15 °C : refusées, perdues pour Picard.",
+   "Mauvais ordre choisi : en les prenant d'abord, elles seraient restées vers −17,5 °C, acceptées avec réserves.",
+   "L'idée : l'ordre de réception a des conséquences sur la marchandise, pas seulement sur le temps."]},
+ "Choisis une ligne « à revoir »": {"pistes": [
+   "Réponse personnelle : relier l'erreur à un geste (faire le tour, lire l'étiquette arrière de B3, compter les deux références de A2, sonder B2 malgré le ticket parfait).",
+   "S'il n'a rien à revoir : la décision la plus difficile, et pourquoi."]},
+ "Dans une vraie entreprise, qui faut-il prévenir": {"pistes": [
+   "Le chef de quai, pour décider de l'ordre et des suites.",
+   "Le transporteur (son camion doit être réparé), et le fournisseur.",
+   "Le service qualité de l'entrepôt.",
+   "Accepter toute réponse qui montre qu'un aléa se signale, il ne se garde pas pour soi."]},
+}
+T_4_2_PREMIER = {"lignes": [
+   ["A1", "36", "36", "−17,5 °C", "oui (GVA-2500)", "Accepter avec réserves — température"],
+   ["A2", "18 + 6", "18 + 6", "−17,5 °C", "oui (SCI-500 et SFR-500)", "Accepter avec réserves — température"],
+   ["A3", "48", "48", "−17,5 °C", "oui (BCH-060)", "Accepter avec réserves — température"],
+   ["", "", "", "", "", ""],
+   ["", "", "", "", "", ""],
+ ], "note": "Si l'élève a pris le bon ordre (glaces d'abord). A2 porte deux références : 3 couches de sorbet citron (18) + 1 couche de framboise (6), à compter séparément. Les glaces se sont un peu réchauffées pendant la lecture des tickets : entre −18 et −15 °C, donc acceptées avec réserves (règle du quai). Si l'élève a pris les légumes d'abord, ce tableau porte les palettes B (voir l'étape 5)."}
+T_4_2_SECOND = {"lignes": [
+   ["B1", "60", "60", "−21,0 °C", "oui (PPO-1000)", "Accepter — aucun motif"],
+   ["B2", "36", "36", "−14,8 °C", "oui (POE-750)", "Refuser — température"],
+   ["B3", "30", "30", "−20,6 °C", "NON : face avant déchirée ; face arrière CFL-1000 (chou-fleur) au lieu de BRO-1000", "Refuser — produit différent"],
+   ["B4", "31", "32", "−20,2 °C", "oui (HBE-1000)", "Accepter avec réserves — manquant (1)"],
+   ["B5", "45", "45", "−20,8 °C", "oui (CAR-1000)", "Accepter — aucun motif"],
+ ], "note": "Si l'élève a pris le bon ordre (légumes en second). B2 : chaude malgré un ticket parfait, seule la sonde la trouve. B3 : le refus n'est juste que si l'étiquette arrière a été lue. B4 : le carton manquant est dans le coin du fond, en haut. Mauvais ordre : ce tableau porte les glaces, toutes à refuser (température au-dessus de −15 °C)."}
+
+
+# --------------------------------------------------------------------------------- ENT-4.3 (Picard)
+# Trame écrite par Cowork le 03/10/2026. Nombres tirés de contenus/picard-ent43.js. La date de la réception
+# est le jour où l'élève ouvre la séance. Article L133-3 lu sur Légifrance le 03/10/2026.
+ENT_4_3 = {
+ "En combien de jours faut-il protester": {"rep": "3 jours, qui suivent la réception.", "note": "Code de commerce, art. L133-3 (version en vigueur depuis le 10/12/2009)."},
+ "Les jours fériés comptent-ils": {"rep": "Non : « non compris les jours fériés »."},
+ "Par quel moyen faut-il envoyer la protestation": {"rep": "Par lettre recommandée, ou par acte extrajudiciaire (commissaire de justice, ex-huissier)."},
+ "À qui l'envoie-t-on": {"rep": "Au transporteur (le « voiturier » du texte)."},
+ "Pourquoi la loi laisse-t-elle si peu de temps": {"pistes": [
+   "Plus on attend, moins on peut prouver que le dommage vient du transport et pas de l'entrepôt.",
+   "Le transporteur doit pouvoir vérifier vite, tant que le camion, le chauffeur et les documents sont disponibles.",
+   "Accepter toute idée liée à la preuve ou à l'équité entre les deux parties."]},
+ "T: Qui écrit ? | Ce qu'il dit": {"lignes": [
+   ["Transports Givrex", "Il confirme la livraison du BL SL-26-1207 cette nuit, avec la réserve « sous réserve de déballage » ; pour réclamer, il faut lui répondre."],
+   ["Mathis, réceptionnaire de nuit", "« RAS, tout est rentré » : 5 palettes en chambre froide n° 2, la fiche est dans le dossier."],
+   ["Le chef de quai", "Vérifier la réception de Mathis avant que le transporteur soit trop loin, puis lui répondre en complétant cinq lignes."],
+ ]},
+ "Numéro du bon de livraison": {"rep": "SL-26-1207."},
+ "À quelle heure Mathis a-t-il réceptionné": {"rep": "À 3 h 10 (le camion est arrivé à 3 h 00)."},
+ "Où sont les palettes maintenant": {"rep": "En chambre froide n° 2 (le camion est reparti)."},
+ "Avant d'ouvrir le dossier, quelle pièce": {"pistes": [
+   "La fiche de Mathis (ce qu'il a compté et sondé), le BL (ce qui a été signé), ou le ticket (le trajet).",
+   "Toute réponse justifiée est recevable ; valoriser celle qui compare deux pièces entre elles."]},
+ "T: Palette | BL (cartons) | Fiche : cartons": {"lignes": [
+   ["N1", "44", "44", "−19,6 °C", "Acceptée", "couche du dessus pas complète… mais 44 = BL : rien à signaler"],
+   ["N2", "36", "36", "−14 °C", "Acceptée (« OK »)", "−14 °C, c'est plus chaud que −15 °C : il fallait refuser"],
+   ["N3", "40", "40", "−19,8 °C", "Acceptée", "40, exactement le chiffre du BL : a-t-il vraiment compté ?"],
+   ["N4", "45", "45", "−20,1 °C", "Acceptée", "rien"],
+   ["N5", "30", "30", "−19,2 °C", "Acceptée", "rien"],
+ ], "note": "N1 est la fausse piste : la remarque de Mathis attire l'œil, mais la palette est conforme. Le doute sur N3 ne se lève qu'en recomptant (étape 4)."},
+ "Entre quelles heures la température de l'air dépasse": {"rep": "De 01:15 à 02:45 (−18,2 °C à 01:15, −18,0 °C à 02:45 ; −20,1 °C à 03:00).", "note": "Une remontée qui a duré environ 1 h 30."},
+ "Quelle est la température la plus haute du ticket": {"rep": "−11,1 °C, à 02:00."},
+ "Quelle réserve Mathis a-t-il écrite": {"rep": "« Sous réserve de déballage. »", "note": "Mention sans valeur juridique : elle ne dit ni quoi, ni combien, ni sur quelle palette."},
+ "Quelle ligne de la fiche de Mathis": {"pistes": [
+   "N2 : −14 °C noté « OK », alors que c'est au-dessus de −15 °C : Mathis a accepté une palette à refuser.",
+   "N3 : un comptage qui recopie le BL peut cacher un comptage non fait.",
+   "N1 : l'élève peut la citer ; l'étape 4 montre qu'elle est conforme. Valoriser l'explication."]},
+ "T: Palette | Ton comptage | Fiche de Mathis": {"lignes": [
+   ["N1", "44 (12 × 4 − 4)", "44", "44", "−21,4 °C", "oui"],
+   ["N2", "36", "36", "36", "−21,0 °C", "oui"],
+   ["N3", "37 (8 × 5 − 3)", "40", "40", "−21,6 °C", "oui"],
+   ["N4", "45", "45", "45", "−21,2 °C", "oui"],
+   ["N5", "30", "30", "30", "−20,9 °C", "oui"],
+ ], "note": "N3 : deux trous en haut au fond et un troisième juste dessous, visible en faisant le tour. N2 : la sonde d'aujourd'hui ne montre plus rien, la preuve est la fiche (−14 °C) et le ticket."},
+ "Ta sonde d'aujourd'hui et la fiche de Mathis": {"pistes": [
+   "La fiche : c'est la température à la réception, au moment où ça comptait. Aujourd'hui, la palette a été recongelée.",
+   "Le ticket confirme : l'air de la remorque est monté jusqu'à −11,1 °C pendant le trajet.",
+   "Idée clé : la preuve est dans les documents, pas dans la sonde du lendemain."]},
+ "Pour la ligne « Délai », comment as-tu su": {"pistes": [
+   "La réception date de cette nuit : on est le jour même, donc bien avant 3 jours.",
+   "Valoriser l'élève qui cite la règle de l'étape 1 (3 jours, jours fériés non compris)."]},
+ "Quelle palette as-tu bloquée": {"rep": "N2 (et elle seule).", "note": "Bloquer une palette conforme fait tomber le jalon « aucune palette conforme bloquée ». N3 n'est pas à bloquer : son problème est une quantité, pas une qualité."},
+ "Pourquoi as-tu bloqué cette palette": {"pistes": [
+   "Elle a été réceptionnée à −14 °C : elle s'est réchauffée puis a été recongelée, sa qualité n'est plus garantie.",
+   "La sonde d'aujourd'hui ne prouve rien : c'est la fiche de la réception qui compte.",
+   "Le service qualité décidera (détruire, déclasser) ; en attendant, elle ne doit pas partir en magasin."]},
+ "Combien de lignes sont marquées « ✗ à revoir »": {"rep": "Variable selon l'élève (0 pour un parcours parfait, sur 10 jalons)."},
+ "Dans la vraie vie, comment doit partir": {"rep": "Par lettre recommandée (ou acte d'un commissaire de justice), au transporteur."},
+ "Avant quelle date doit-elle partir": {"rep": "Dans les 3 jours qui suivent la réception, jours fériés non compris : la date de la séance + 3 jours.", "note": "La date de réception affichée est le jour où l'élève a ouvert la séance."},
+ "Qu'as-tu trouvé grâce aux documents": {"pistes": [
+   "La palette N2 réceptionnée trop chaude (la fiche à −14 °C, le ticket) : la sonde d'aujourd'hui dit −21 °C.",
+   "La mention « sous réserve de déballage », qui ne protège de rien.",
+   "Le délai, qui se calcule depuis la date du BL."]},
+ "Si tu étais Mathis": {"pistes": [
+   "Compter vraiment (couches × cartons − manquants) au lieu de recopier le BL.",
+   "Appliquer la règle des températures même quand on est pressé, et refuser à −14 °C.",
+   "Écrire des réserves précises, prévenir le chef de quai au lieu d'écrire « RAS »."]},
+ "Choisis une ligne « à revoir »": {"pistes": [
+   "Réponse personnelle : relier l'erreur à une pièce mal lue ou à un geste oublié (recompter N3, accuser N1 à tort, oublier la date).",
+   "S'il n'a rien à revoir : la preuve la plus solide (souvent la fiche de Mathis pour N2)."]},
+}
+T_4_3_DIAG = {"lignes": [
+   ["Palette acceptée à tort :", "N2"],
+   ["Preuve :", "la fiche de Mathis dit −14 °C à cœur (plus chaud que −15 °C)"],
+   ["Manquant :", "N3, 3 cartons (37 au lieu de 40)"],
+   ["Réserve :", "« sous réserve de déballage » ne vaut rien"],
+   ["Délai :", "encore dans le délai (réception cette nuit, moins de 3 jours)"],
+ ], "note": "Lecture des jalons : N2 et elle seule, preuve avec « 14 » ou « fiche » ; N3 avec 3 (ou 37 et 40) ; « déballage » + « ne vaut rien / sans valeur / inutile… » ; délai : « encore », « dans le délai », « oui »… Citer N1 dans « Palette acceptée à tort » ou « Manquant » fait tomber « N1 non accusée », même dans un second message."}
+T_4_3_PROT = {"lignes": [
+   ["BL :", "SL-26-1207"],
+   ["Réceptionné le :", "la date du jour de la séance, en chiffres (jj/mm/aaaa)"],
+   ["Palette :", "N2 et N3"],
+   ["Constat :", "N2 : température non conforme à la réception (−14 °C à cœur) ; N3 : cartons manquants"],
+   ["Quantité :", "3 cartons manquants sur N3 (37 au lieu de 40)"],
+ ], "note": "« Constat » doit parler de la température ET du manquant ; « Palette » doit citer N2 et N3, et elles seules."}
+
+
 # --------------------------------------------------------------------------------- assemblage
 import json as _json
 import os as _os
 
 # ENT-1.3 : tableaux dont l'en-tête se répète ou dont la clé est propre à une étape
 _EXTRAS = {
+    'ENT-4.3': {
+        (5, 'T: Ligne du message'): T_4_3_DIAG,
+        (6, 'T: Ligne du message'): T_4_3_PROT,
+    },
+    'ENT-4.2': {
+        (4, 'T: Palette | Cartons comptés'): T_4_2_PREMIER,
+        (5, 'T: Palette | Cartons comptés'): T_4_2_SECOND,
+    },
     'ENT-1.3': {
         (2, 'T: Information | Ce que tu relèves'): TABLEAUX_PAR_ETAPE_1_3[2],
         (3, 'T: Information | Ce que tu relèves'): TABLEAUX_PAR_ETAPE_1_3[3],
@@ -542,11 +806,14 @@ _DICOS = {
     'ENT-1.2': [ENT_1_2],
     'ENT-1.3': [ENT_1_3],
     'ENT-3.1': [ENT_3_1, ENT_3_1_TABLEAUX],
+    'ENT-4.1': [ENT_4_1],
+    'ENT-4.2': [ENT_4_2],
+    'ENT-4.3': [ENT_4_3],
 }
 
 
-def ecrire_corrige(code, titre, trame, items, cles, notions, dossier, script):
-    """Écrit contenus/corriges/<code>.js : TOUTES les questions de la trame, dans l'ordre, avec leur réponse.
+def ecrire_corrige(code, titre, trame, items, cles, notions, dossier, script, fichier=None):
+    """Écrit contenus/corriges/<fichier ou code>.js (`fichier` : Picard, où <code>.js est le corrigé calculé de la séance) : TOUTES les questions de la trame, dans l'ordre, avec leur réponse.
     Échoue si une question n'a pas de réponse, ou si une clé de réponse ne correspond à aucune question."""
     dicos = _DICOS[code]
     extras = _EXTRAS.get(code, {})
@@ -591,7 +858,7 @@ def ecrire_corrige(code, titre, trame, items, cles, notions, dossier, script):
             code, [(a, b[:60]) for a, b in manques], [k[:60] for k in inutiles]))
     os_ = _os
     os_.makedirs(dossier, exist_ok=True)
-    with open(os_.path.join(dossier, code + '.js'), 'w', encoding='utf-8') as f:
+    with open(os_.path.join(dossier, (fichier or code) + '.js'), 'w', encoding='utf-8') as f:
         f.write("// Généré par outils/%s — ne pas modifier à la main : modifier le générateur, puis le relancer.\n" % script)
         f.write("export const CORRIGE = " + _json.dumps(dict(code=code, titre=titre, trame=trame, items=sortie),
                                                         ensure_ascii=False, indent=2) + ";\n")
