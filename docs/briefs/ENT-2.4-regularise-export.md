@@ -6,7 +6,7 @@
 > Lis docs/briefs/COORDINATION-cdiscount.md, le compte rendu de docs/briefs/MOTEUR-geste-tableur.md (API livrée), puis implémente le brief docs/briefs/ENT-2.4-regularise-export.md. Annonce la durée, dis-moi si un point du brief contredit le code, puis enchaîne sans attendre : les questions du brief sont déjà tranchées (§11).
 > ```
 
-**Statut** : à implémenter — après ENT-2.2 (C6).
+**Statut** : livré (04/10/2026), fermé aux élèves (`ouverture: 'prof'`).
 **Date du brief** : 03/10/2026
 **Modèle** : Sonnet — **Durée estimée par Cowork** : 2 à 3 h.
 **Touche le moteur** : non.
@@ -160,9 +160,35 @@ RECHERCHEV au bonus ; vendeur de la place de marché, fictif, second plaignant q
 
 ## Compte rendu *(rempli par Claude Code à la livraison)*
 
-- **Fichiers créés / modifiés** :
+- **Fichiers créés / modifiés** : `contenus/cdiscount-regularise.js` (export, `AJUSTEMENTS_AUTRES`, vendeur, 2 jalons
+  tableur en tête), `activites/cdiscount-regularise.js` (desc, `tableur`), `outils/test/cdiscount.mjs`.
 - **Écarts par rapport au brief** :
-- **Décisions prises en route** (lignes de `AJUSTEMENTS_AUTRES`, numéros) :
-- **Tests** :
-- **Commits** :
-- **Reste ouvert** :
+  - Compétence : C1.6 seule (ENT-2.2 n'a pas déclaré C3.2, qui est la traçabilité).
+  - Le bouton « Exporter les ajustements du mois » est dans l'**en-tête de l'écran Stock** (visible quel que soit
+    l'onglet) : le moteur pose les exports par écran, pas par onglet. La mission dit « Stock, onglet Mouvements » : ça
+    reste juste (on y est).
+  - **Aucune étiquette « Tout à l'écran »** : la séance se fait en partie dans le tableur (retirée aussi d'ENT-2.2).
+- **Décisions prises en route** :
+  - `AJUSTEMENTS_AUTRES` : 28 lignes AJ-26-0190 à AJ-26-0220 (18 pour tous, 10 de plus pour un confirmé), J-24 à J-1,
+    allées A, B et C ; celles de l'allée B datent d'avant le dernier inventaire (la base de l'élève commence là, rien ne
+    contredit les mouvements). Documents DEM-26-0008… (aucun numéro déjà pris par une autre séance), FR-26-0014…,
+    REC-26-0402…, BP-731811… ; saisis par Kevin Larrieu (casse), Sofiane Brettes (prélèvement), Nadia Ferrand
+    (réception), Samir Benkhelifa (démarque).
+  - Les deux ajustements de la base : MIX = **AJ-26-0217** (sans document), GRP = **AJ-26-0219** (DEM-26-0036). Un
+    ajustement passé par l'élève lui-même à la console entre dans l'export, sans document (« À VÉRIFIER »).
+  - Comptes obtenus : 20 lignes, Casse 7, Erreur de prélèvement 5, Erreur de réception 3, Démarque inconnue 5 ;
+    confirmé 30 lignes, 10 / 8 / 5 / 7 — exactement ceux du brief.
+  - Contrôles : « À vérifier » (clé N° ajustement, `IF` exigé, « À VÉRIFIER » lu sans casse ni accents) et Synthèse
+    (clé Motif, `COUNTIF`) ; feuille Synthèse d'amorce : en-têtes seuls. Retour « entraînement ».
+  - Le vendeur arrive à l'ouverture, transféré par Nadia ; il cite la date de REC-26-0447 et celle de l'ajustement ;
+    pied « (Vendeur et boutique fictifs, inventés pour l'exercice.) » ; adresse `j.mounet@bassin-cuisine.example`.
+    Cohérence des chiffres : avant la livraison, 6 mixeurs (stock propre) ; les 5 vendus ensuite sortent de ce stock-là ;
+    les 12 du vendeur deviennent 8 après l'ajustement (13 − 4 = 9 au total, dont 8 à lui) — à relire par Tristan.
+- **Tests** : 5 cas nouveaux (20 / 30 lignes, une seule sans document, comptes par motif à la main ; classeur juste →
+  jalons 1-2 ok ; « À VÉRIFIER » tapé → ko ; synthèse fausse → ko ; enquête juste sans tableur → six jalons ok ; vendeur ;
+  RECHERCHEV nulle part ; à l'écran : export depuis Stock, retour « 4 résultats justes sur 24 » sans détail).
+  **Cas existants réécrits** : ils portent désormais sur les six jalons d'enquête (`statuts6`), 6 messages au lieu de 5,
+  score maximal 8 au lieu de 6. Sabotage « un document donné aux mixeurs » → 2 cas tombent. Suite entière 529/529.
+- **Commits** : « ENT-2.4 recadrée : export des ajustements, SI, NB.SI et le vendeur de la place de marché (C7) ».
+- **Reste ouvert** : trame (encart SI / NB.SI, encadré vérifié / construit, « que répondre au vendeur ? ») et corrigé
+  (Cowork, après validation à l'écran).

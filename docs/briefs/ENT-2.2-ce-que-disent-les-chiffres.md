@@ -201,7 +201,8 @@ bandeau d'aide ; NB.SI.ENS réservé au bonus.
   - Jalons 2 à 4 : `ko` dès qu'un dépôt existe et que le contrôle n'est pas entièrement juste ; `attente` sans dépôt.
   - L'accusé de Nadia (« Vos références à recompter ») arrive dès qu'une ligne « À recompter : » porte au moins une
     référence connue, juste ou fausse ; l'amorce vide ne fait rien arriver.
-  - Pas de `niveaux` dans le `meta` (comme les autres séances Cdiscount). `sansTrame: "Tout à l'écran"` jusqu'à la trame.
+  - Pas de `niveaux` dans le `meta` (comme les autres séances Cdiscount). Pas d'étiquette « Tout à l'écran » : une
+    partie du travail se fait dans le tableur.
 - **Tests** : 8 cas dans `cdiscount` (valeurs à la main : 30 / 45 lignes, les 8 constats, la synthèse ; mêmes 26 lignes
   qu'ENT-2.3 sur la fenêtre, à deux jours près ; 5/5 avec le bon classeur et la bonne liste ; sans BAT ko, avec ECO ko,
   amorce vide attente ; synthèse fausse + liste qui la suit : 4 ko, 5 ok ; nombre tapé → jalon 2 ko ; pas de SI →

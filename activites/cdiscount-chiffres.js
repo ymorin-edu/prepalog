@@ -53,7 +53,6 @@ const moteur = creerEntreprise({
   volet: SEANCE.VOLET,
   etapes: SEANCE.ETAPES,
   tableur: SEANCE.TABLEUR,
-  sansTrame: "Tout à l'écran",
   THEME: CDISCOUNT.THEME,
 });
 

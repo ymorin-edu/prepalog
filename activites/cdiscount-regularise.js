@@ -6,11 +6,15 @@
 // celui qui ne se justifie par aucun document, remonte à la réception où l'écart est né
 // (bon de livraison contre colis), chiffre le manque et dit quoi faire. Il répond par écrit à la
 // cheffe d'équipe ; les jalons lisent sa réponse. Détail et données :
-// `contenus/cdiscount-regularise.js`. Aucun écran nouveau : Stock, Mouvements, Réceptions,
-// messagerie.
+// `contenus/cdiscount-regularise.js`.
 //
-// **`pret: true`** depuis le 03/10/2026 : Tristan l'a validée à l'écran, elle est ouverte aux
-// élèves. Ni trame ni corrigé écrits : aucune trame n'est demandée pour l'instant.
+// Recadrée le 04/10/2026 (brief `docs/briefs/ENT-2.4-regularise-export.md`) : l'élève commence par
+// le TABLEUR (export des ajustements du mois depuis Stock, SI, NB.SI, dépôt dans Fichiers, retour
+// « n résultats justes sur m »), et un vendeur de la place de marché (fictif) se plaint de la même
+// réception. Huit jalons : deux pour le tableur, les six d'avant pour l'enquête.
+//
+// Livrée fermée (`ouverture: 'prof'`) : Tristan l'essaie, puis l'ouvre lui-même. Pas encore de
+// trame (Cowork, après validation à l'écran).
 
 import { creerEntreprise } from '../core/types/entreprise.js';
 import * as CDISCOUNT from '../contenus/cdiscount.js';
@@ -20,7 +24,7 @@ export const meta = {
   id: 'cdiscount-regularise',
   code: 'ENT-2.4',
   titre: 'Cdiscount — régularisé à l’aveugle',
-  desc: "Contrôler les ajustements de la semaine, retrouver celui qui cache un vrai problème, remonter à la réception et dire quoi faire.",
+  desc: "Exporter les ajustements du mois, repérer celui qui n'a pas de justificatif, remonter à la réception et dire quoi faire.",
   rubrique: 'logisim',
   // Compétences et temps pédagogique : voir core/competences.js.
   competences: ['C1.6'],
@@ -53,6 +57,7 @@ const moteur = creerEntreprise({
   accueil: SEANCE.ACCUEIL,
   volet: SEANCE.VOLET,
   etapes: SEANCE.ETAPES,
+  tableur: SEANCE.TABLEUR,
   THEME: CDISCOUNT.THEME,
 });
 

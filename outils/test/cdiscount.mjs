@@ -1251,8 +1251,11 @@ Ce qui cloche : DEM-26-0027 : 2 - 1 = 1`;
 
   const S23 = await imp('contenus/cdiscount-regularise.js');
   const STOCK_23 = { 'BOU-17L': 16, 'GRP-2F': 11, 'MIX-PLG': 9, 'MUL-4P': 37, 'PIL-AA-8': 75, 'VEI-LED': 9 };
-  const ids23 = S23.ETAPES.map((x) => x.id);
-  const tombes23 = (db) => { const st = statuts(S23, db); return ids23.filter((x, i) => st[i] !== 'ok'); };
+  // Les six jalons de l'ENQUÊTE. Depuis le 04/10/2026 (C7), deux jalons tableur les précèdent : ils ont leurs cas plus bas.
+  const ENQ23 = S23.ETAPES.slice(2);
+  const statuts6 = (db) => statuts({ ETAPES: ENQ23, CATALOGUE: S23.CATALOGUE }, db);
+  const ids23 = ENQ23.map((x) => x.id);
+  const tombes23 = (db) => { const st = statuts6(db); return ids23.filter((x, i) => st[i] !== 'ok'); };
 
   const JUSTE_23 = `Ajustement à revoir : MIX-PLG, -4
 Ajustement justifié : GRP-2F, constat de casse DEM-26-0036
@@ -1341,27 +1344,27 @@ Suite à donner : Réclamation auprès de Gardéo, livraison incomplète`;
     // Il reste du temps : la réception date de moins que le délai (sinon la réclamation est perdue d'avance).
     const jours = (Date.now() - db.receptions.find((r) => r.no === 'REC-26-0447').ts) / 864e5;
     if (!(jours < S23.DELAI_RECLAMATION)) throw new Error('le délai de réclamation est déjà dépassé');
-    // Cinq messages : bienvenue, indice, magasinier, casse, mission.
-    if (db.mails.length !== 5) throw new Error(`${db.mails.length} messages au lieu de 5`);
+    // Six messages : bienvenue, indice, magasinier, casse, vendeur (transféré), mission.
+    if (db.mails.length !== 6) throw new Error(`${db.mails.length} messages au lieu de 6`);
   });
 
   await v('ENT-2.4 : sans réponse, aucun jalon n\'est acquis ; base nue ou sans écart BL / colis = « pas encore là »', async () => {
     const db = ouvrir(S23);
-    const st = statuts(S23, db);
+    const st = statuts6(db);
     if (st.length !== 6 || st.some((s) => s !== 'attente')) throw new Error('statuts avant réponse : ' + st.join(', '));
     const nue = S23.baseDeDepart('Léa'); nue.moves = []; nue.mails = []; nue.orders = [];
-    if (statuts(S23, nue).some((s) => s !== 'na')) throw new Error('un jalon juge une base sans mouvements');
+    if (statuts6(nue).some((s) => s !== 'na')) throw new Error('un jalon juge une base sans mouvements');
     // Si les colis font le compte, il n'y a plus de litige : les jalons se taisent au lieu de mentir.
     const sain = ouvrir(S23);
     sain.receptions.find((r) => r.no === 'REC-26-0447').colis.push({ no: 99, sku: 'MIX-PLG', qty: 4, etat: 'ok' });
     repondre(sain, JUSTE_23);
-    if (statuts(S23, sain).some((s) => s !== 'na')) throw new Error('jalons sur une base sans litige : ' + statuts(S23, sain).join(', '));
+    if (statuts6(sain).some((s) => s !== 'na')) throw new Error('jalons sur une base sans litige : ' + statuts6(sain).join(', '));
   });
 
   await v('ENT-2.4 : la réponse juste valide les six jalons, calcul compris', async () => {
     const db = ouvrir(S23);
     repondre(db, JUSTE_23);
-    const st = statuts(S23, db);
+    const st = statuts6(db);
     if (st.some((s) => s !== 'ok')) throw new Error('statuts : ' + st.join(', '));
     // La réponse attendue calculée depuis la base est, elle aussi, juste.
     const db2 = ouvrir(S23);
@@ -1405,7 +1408,7 @@ Suite à donner : Réclamation auprès de Gardéo, livraison incomplète`;
     if (tombes23(db).length) throw new Error('le second essai juste n\'est pas retenu');
     const db2 = ouvrir(S23);
     db2.mails.push({ folder: 'out', ts: Date.now(), toMail: CD.EQUIPE.quai.mail, text: JUSTE_23 });
-    if (statuts(S23, db2).some((s) => s !== 'attente')) throw new Error('une réponse au cariste est comptée');
+    if (statuts6(db2).some((s) => s !== 'attente')) throw new Error('une réponse au cariste est comptée');
     const db3 = ouvrir(S23);
     repondre(db3, JUSTE_23.split('\n').filter((l) => !l.startsWith('Motif exact')).join('\n'));
     if (tombes23(db3).join() !== 'motif') throw new Error('ligne « Motif exact » absente : ' + tombes23(db3).join());
@@ -1484,14 +1487,15 @@ Suite à donner : Réclamation auprès de Gardéo, livraison incomplète`;
       throw e;
     });
     if (res.accent.toLowerCase() !== '#3732ff') throw new Error('accent de la charte non appliqué : ' + res.accent);
-    if (res.mails !== 5) throw new Error(`${res.mails} messages au lieu de 5`);
+    if (res.mails !== 6) throw new Error(`${res.mails} messages au lieu de 6`);
     if (res.lignesConsole !== 6 || !res.consoleAjust) throw new Error(`.movements MIX-PLG : ${res.lignesConsole} lignes (6 attendues), ajustement lisible : ${res.consoleAjust}`);
     if (res.lignesStock !== 6) throw new Error(`${res.lignesStock} lignes de stock au lieu de 6`);
     if (/Couleur|Taille/.test(res.colonne)) throw new Error('colonnes Couleur ou Taille affichées : ' + res.colonne);
     if (res.lignesMouv !== 22) throw new Error(`${res.lignesMouv} mouvements à l'écran au lieu de 22`);
     if (res.receptions !== 2 || res.commandes !== 8) throw new Error(`${res.receptions} réceptions, ${res.commandes} commandes`);
     if (res.colisMixeurs !== 8) throw new Error('les colis de mixeurs à l\'écran ne font pas 8 : ' + res.colisMixeurs);
-    if (!res.score || res.score.score !== 6 || res.score.max !== 6) throw new Error('score remonté : ' + JSON.stringify(res.score));
+    // Les six jalons de l'enquête ; les deux du tableur attendent un dépôt.
+    if (!res.score || res.score.score !== 6 || res.score.max !== 8) throw new Error('score remonté : ' + JSON.stringify(res.score));
     const reste = await page.evaluate(() => document.body.classList.contains('immersion'));
     if (reste) throw new Error('la page n\'a pas été rendue propre');
   });
@@ -1746,6 +1750,137 @@ Suite à donner : Réclamation auprès de Gardéo, livraison incomplète`;
       const dernier = await p.evaluate(() => window.__c22.scores[window.__c22.scores.length - 1]);
       if (!dernier || dernier.score !== 5 || dernier.max !== 5) throw new Error('score : ' + JSON.stringify(dernier));
       if (/confirm|standard|niveau/i.test(await p.textContent('#hote2'))) throw new Error('le niveau se lit à l\'écran');
+      if (errs.length) throw new Error(errs.join(' | '));
+    } finally { await ctx2.close(); }
+  });
+
+  /* ================================================================================
+   * ENT-2.4 recadrée (04/10/2026, C7) : l'export des ajustements du mois, SI et NB.SI, le vendeur.
+   * Valeurs À LA MAIN : 20 lignes (30 en confirmé), une seule sans document (AJ-26-0217, les
+   * mixeurs), comptes par motif 7 / 5 / 3 / 5 (10 / 8 / 5 / 7 en confirmé).
+   * ============================================================================== */
+  const exportA = (db) => GT.construireExport(S23.TABLEUR.exports[0], db, {});
+  const classeurA = (db, o = {}) => {
+    const ex = exportA(db);
+    const F = ex.feuilles[0];
+    const c = Object.fromEntries(F.colonnes.map((x, i) => [x, i]));
+    const n = F.colonnes.length, J = XL.utils.encode_col(n), H = XL.utils.encode_col(c.Document), G = XL.utils.encode_col(c.Motif);
+    const ws = XL.utils.aoa_to_sheet([[...F.colonnes, 'À vérifier'], ...F.lignes.map((l) => l.map((x) => (x === null ? '' : x)))]);
+    F.lignes.forEach((l, k) => {
+      const r = k + 2, v = l[c.Document] ? '' : 'À VÉRIFIER';
+      ws[J + r] = o.tape ? (v ? { t: 's', v } : undefined) : { t: 's', v, f: `IF(${H}${r}="","À VÉRIFIER","")` };
+      if (!ws[J + r]) delete ws[J + r];
+    });
+    ws['!ref'] = `A1:${J}${F.lignes.length + 1}`;
+    const motifs = Object.entries(o.syn || S23.parMotif(db));
+    const ws2 = XL.utils.aoa_to_sheet([['Motif', 'Nombre'], ...motifs]);
+    motifs.forEach((m, k) => { ws2['B' + (k + 2)] = { t: 'n', v: m[1], f: `COUNTIF(Ajustements!${G}:${G},A${k + 2})` }; });
+    const wb = XL.utils.book_new();
+    XL.utils.book_append_sheet(wb, ws, 'Ajustements');
+    XL.utils.book_append_sheet(wb, ws2, 'Synthèse');
+    return XL.write(wb, { bookType: 'xlsx', type: 'buffer' });
+  };
+  const deposerA = (db, o) => {
+    const res = GT.controlerDepot(XL.read(classeurA(db, o), { type: 'buffer', cellFormula: true }), S23.controles(db), exportA(db).propres);
+    GT.enregistrerDepot(db, S23.ID_DEPOT, res, { retour: 'entrainement', fichier: 'x.xlsx' });
+    return res;
+  };
+  const stA = (db) => Object.fromEntries(S23.ETAPES.map((e) => [e.id, e.verifier(db).status]));
+
+  await v('ENT-2.4 : export des ajustements du mois — 20 lignes, une seule sans document (AJ-26-0217, les mixeurs), 7 / 5 / 3 / 5 par motif', async () => {
+    const db = ouvrir(S23);
+    const F = exportA(db).feuilles[0];
+    if (F.colonnes.join('|') !== 'Date|N° ajustement|Référence|Désignation|Allée|Quantité|Motif|Document|Saisi par') throw new Error('colonnes');
+    if (F.lignes.length !== 20) throw new Error(`${F.lignes.length} lignes au lieu de 20`);
+    const sans = F.lignes.filter((l) => !l[7]);
+    if (sans.length !== 1 || sans[0][1] !== 'AJ-26-0217' || sans[0][2] !== 'MIX-PLG' || sans[0][5] !== -4 || sans[0][6] !== 'Démarque inconnue') throw new Error('sans document : ' + JSON.stringify(sans));
+    const grp = F.lignes.find((l) => l[2] === 'GRP-2F' && l[1] === 'AJ-26-0219');
+    if (!grp || grp[7] !== 'DEM-26-0036' || grp[6] !== 'Casse') throw new Error('grille-pain : ' + JSON.stringify(grp));
+    if (JSON.stringify(S23.parMotif(db)) !== JSON.stringify({ Casse: 7, 'Erreur de prélèvement': 5, 'Erreur de réception': 3, 'Démarque inconnue': 5 })) throw new Error('par motif : ' + JSON.stringify(S23.parMotif(db)));
+    if (new Set(F.lignes.map((l) => l[4])).size !== 3) throw new Error('tout l\'entrepôt : allées ' + [...new Set(F.lignes.map((l) => l[4]))].join());
+    // Rien de l'historique ne contredit la base : aucune ligne de l'allée B après le dernier inventaire, hors celles de Samir.
+    const depuis = S23.dateInventaire(db.moves[db.moves.length - 1].ts);
+    const bApres = F.lignes.filter((l) => l[4] === 'B' && l[0] >= depuis && !['AJ-26-0217', 'AJ-26-0219'].includes(l[1]));
+    if (bApres.length) throw new Error('ajustement de l\'allée B absent des mouvements : ' + bApres.map((l) => l[1]).join());
+    for (let i = 1; i < F.lignes.length; i++) if (F.lignes[i][0] < F.lignes[i - 1][0]) throw new Error('lignes dans le désordre');
+  });
+
+  await v('ENT-2.4 : confirmé — 30 ajustements, toujours une seule ligne sans document, 10 / 8 / 5 / 7 par motif', async () => {
+    const db = ouvrir(S23, 'Léa', 'confirme');
+    const F = exportA(db).feuilles[0];
+    if (F.lignes.length !== 30) throw new Error(`${F.lignes.length} lignes au lieu de 30`);
+    if (F.lignes.filter((l) => !l[7]).map((l) => l[1]).join() !== 'AJ-26-0217') throw new Error('sans document');
+    if (JSON.stringify(S23.parMotif(db)) !== JSON.stringify({ Casse: 10, 'Erreur de prélèvement': 8, 'Erreur de réception': 5, 'Démarque inconnue': 7 })) throw new Error('par motif : ' + JSON.stringify(S23.parMotif(db)));
+    if (JSON.stringify(ouvrir(S23, 'Léa', 'confirme').mails.map((m) => m.text)) !== JSON.stringify(ouvrir(S23).mails.map((m) => m.text))) throw new Error('les messages trahissent le niveau');
+  });
+
+  await v('ENT-2.4 : le classeur juste valide les deux jalons tableur ; « À VÉRIFIER » tapé sans formule ne valide pas ; synthèse fausse : ko ; l\'enquête n\'en dépend pas', async () => {
+    const db = ouvrir(S23);
+    if (stA(db).averifier !== 'attente' || stA(db).parmotif !== 'attente') throw new Error('sans dépôt : ' + JSON.stringify(stA(db)));
+    const res = deposerA(db);
+    if (res.map((r) => `${r.justes}/${r.total}`).join(' ') !== '20/20 4/4') throw new Error('totaux : ' + res.map((r) => `${r.justes}/${r.total} ${r.remarques[0] || ''}`).join(' ; '));
+    if (stA(db).averifier !== 'ok' || stA(db).parmotif !== 'ok') throw new Error(JSON.stringify(stA(db)));
+    const tape = ouvrir(S23); deposerA(tape, { tape: true });
+    if (stA(tape).averifier !== 'ko') throw new Error('tapé : ' + stA(tape).averifier);
+    const faux = ouvrir(S23); deposerA(faux, { syn: { Casse: 7, 'Erreur de prélèvement': 5, 'Erreur de réception': 3, 'Démarque inconnue': 4 } });
+    if (stA(faux).parmotif !== 'ko') throw new Error('synthèse fausse : ' + stA(faux).parmotif);
+    // Sans tableur, l'enquête juste donne quand même ses six jalons.
+    const enq = ouvrir(S23); repondre(enq, JUSTE_23);
+    const st = stA(enq);
+    if (['ajustements', 'reception', 'quantites', 'valeur', 'motif', 'suite'].some((k) => st[k] !== 'ok') || st.averifier !== 'attente') throw new Error(JSON.stringify(st));
+  });
+
+  await v('ENT-2.4 : le vendeur de la place de marché (fictif, annoncé) pointe la même réception ; RECHERCHEV n\'existe nulle part dans la séance', async () => {
+    const db = ouvrir(S23);
+    const m = db.mails.find((x) => x.subject === 'TR : Stock affiché — Bassin Cuisine');
+    if (!m || !/Julien Mounet, Bassin Cuisine \(vendeur de la place de marché\)/.test(m.text)) throw new Error('message du vendeur');
+    if (!/livré 12 pour mon compte/.test(m.text) || !/n'en affiche plus que 8/.test(m.text) || !/Où sont passés mes 4 mixeurs \?/.test(m.text)) throw new Error('texte du vendeur');
+    if (!/fictifs, inventés pour l'exercice/.test(m.text)) throw new Error('le vendeur n\'est pas annoncé fictif');
+    const rec = new Date(db.receptions.find((r) => r.no === 'REC-26-0447').ts).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' });
+    if (!m.text.includes(`le ${rec}`)) throw new Error('date de la réception absente du message : ' + rec);
+    if (!/^.*\.example>/m.test(m.text)) throw new Error('adresse du vendeur hors .example');
+    const mission = db.mails.find((x) => /Ajustements de la semaine/.test(x.subject));
+    if (!/Commencez par le tableur : dans Stock, onglet Mouvements, exportez les ajustements du mois\./.test(mission.text)) throw new Error('mission sans le tableur');
+    for (const f of ['activites/cdiscount-regularise.js', 'contenus/cdiscount-regularise.js']) {
+      if (/VLOOKUP|RECHERCHEV/i.test(fs.readFileSync(path.join(ROOT, f), 'utf8'))) throw new Error('RECHERCHEV dans ' + f);
+    }
+    if (S23.controles(db).some((c) => (c.fonctions || []).some((x) => /VLOOKUP/.test(x)))) throw new Error('RECHERCHEV exigée');
+  });
+
+  await v('ENT-2.4 : à l\'écran — « Exporter les ajustements du mois » sur Stock, dépôt : « n résultats justes sur m », sans détail', async () => {
+    const ctx2 = await nav.newContext({ acceptDownloads: true });
+    const p = await ctx2.newPage();
+    p.setDefaultTimeout(6000);
+    const errs = [];
+    p.on('pageerror', (e) => errs.push(e.message));
+    p.on('console', (m) => { if (m.type() === 'error' && !/\b404\b/.test(m.text())) errs.push(m.text()); });
+    try {
+      await p.goto(new URL('/', page.url()).toString());
+      await p.waitForSelector('#btnProf', { timeout: 8000 });
+      await p.evaluate(async () => {
+        const mod = await import('/activites/cdiscount-regularise.js');
+        const hote = document.createElement('div'); hote.id = 'hote4'; document.body.appendChild(hote);
+        const db = {};
+        window.__c24 = { db };
+        mod.rendre(hote, { meta: mod.meta, profil: { prenom: 'Léa', nom: 'Test', role: 'eleve' }, codeStock: 'STOCK24',
+          jeu: { etat: () => db, sauver() {} }, enregistrer() {}, quitter() {} });
+      });
+      const Z = '#hote4 .ent-main';
+      const aller = async (vue) => { await p.click(`#hote4 .ent-nav[data-vue="${vue}"]`); await p.waitForTimeout(80); };
+      await aller('stock');
+      const [dl] = await Promise.all([p.waitForEvent('download'), p.click(`${Z} [data-exporter="ajustements"]`)]);
+      if (dl.suggestedFilename() !== 'cdiscount-ajustements-du-mois.xlsx') throw new Error('nom : ' + dl.suggestedFilename());
+      const wb = XL.read(fs.readFileSync(await dl.path()), { type: 'buffer' });
+      if (XL.utils.sheet_to_json(wb.Sheets.Ajustements).length !== 20) throw new Error('lignes exportées');
+      if (wb.SheetNames.join() !== 'Ajustements,Synthèse') throw new Error('feuilles : ' + wb.SheetNames.join());
+      const db = await p.evaluate(() => JSON.parse(JSON.stringify(window.__c24.db)));
+      await aller('fichiers');
+      await p.setInputFiles('#fichierTableur', { name: 'ajustements.xlsx', mimeType: 'application/octet-stream', buffer: classeurA(db, { tape: true }) });
+      await p.waitForTimeout(400);
+      const t = (await p.textContent(Z)).replace(/\s+/g, ' ');
+      // « À VÉRIFIER » tapé, sans formule : la colonne est fausse partout (0 / 20), la synthèse juste (4 / 4).
+      if (!/4 résultats justes sur 24\./.test(t)) throw new Error('retour : ' + (await p.textContent('[data-depot-retour]')));
+      if (/AJ-26-0217|nombre tapé|valeur tapée|À vérifier »/.test(t)) throw new Error('détail montré en entraînement : ' + t.slice(0, 400));
       if (errs.length) throw new Error(errs.join(' | '));
     } finally { await ctx2.close(); }
   });
