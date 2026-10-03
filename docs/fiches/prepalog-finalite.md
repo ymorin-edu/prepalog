@@ -3,7 +3,7 @@
 > d'autres fiches `claude/…` pointent vers des fiches restées dans le projet, sauf celles recopiées
 > dans ce dossier. Le commit et le push sont désormais faits par Claude Code.*
 
-# Prepalog — finalité du projet (cadrage du 02/10/2026)
+# Prepalog — finalité du projet (cadrage du 02/10/2026, décisions 13 à 15 ajoutées le 03/10/2026)
 
 **Boussole de toutes les sessions.** Cette fiche passe avant les autres en cas de contradiction.
 Les décisions ci-dessous sont celles de Tristan ; les « conséquences » sont des déductions à
@@ -64,6 +64,22 @@ de classe et des **notes par compétence** qui comptent.
     moment de la migration : reprendre `competences` et `temps` de chaque SCE dans la séance
     Logisim qui le remplace, sinon ses notes sortent du tableau par compétence (les scores
     restent dans la base, mais une séance retirée du registre n'est plus lue).
+13. **Des expériences ludiques et innovantes** (Tristan, 03/10/2026). Si une compétence peut être
+    abordée sous un nouvel angle grâce à de nouvelles vues, **on prend le temps de les insérer dans le
+    moteur.** Nuance la conséquence C : la nouveauté pédagogique justifie un chantier moteur ; on garde
+    les garde-fous (durée annoncée, un seul chantier moteur à la fois, vue pensée pour être réutilisée).
+14. **Le temps face aux élèves n'est pas une contrainte de conception** (Tristan, 03/10/2026, règle
+    valable pour tout Prepalog) : *« chaque année je n'ai pas le même volume horaire selon les niveaux,
+    je veux donc disposer d'assez de contenu quel que soit mon volume de l'année. »*
+    - on ne réduit jamais un contenu pour le faire tenir dans un horaire ;
+    - Prepalog est un **réservoir** : **plus de contenu qu'une année n'en consomme**, à chaque niveau ;
+      Tristan choisit ce qu'il ouvre (Conduite de séance) ;
+    - chaque séance se range en **cœur** (parcours minimal qui couvre toutes les compétences du niveau
+      avec leurs trois temps) ou **complément** (variantes, lots supplémentaires, entreprises en plus,
+      reprises d'entraînement). **Validé** ; marquage dans le `meta` à concevoir (chantier moteur).
+15. **La 2de GATL pioche dans trois référentiels** (Logistique 2025, OTM 2020, AGOrA 2020) avec des
+    scénarios transversaux ; chaque élève fait les trois postes ; note par spécialité (accord de
+    principe). Codes `OTM-…` et `AGO-…` (Tristan, 03/10/2026).
 
 ## Spartoo, l'exception assumée
 

@@ -7,6 +7,28 @@ reporte dans les fiches du projet PREPALOG. Une décision de fond sur la pédago
 
 - 03/10/2026 · Claude Code · **ENT-4.1 Picard livrée, fermée aux élèves** (`pret: true, ouverture: 'prof'`) : séance sur la vue quai, accueil, mail du chef de quai, corrigé calculé depuis la séance (pas de générateur), Picard en 4e entreprise de Logisim. **Fond papier de Prepalog imposé** à l'environnement Picard (`THEME.papier`, le fond glacier abandonné : illisible sur un poste en mode sombre, décision de Tristan). Pas de trame déclarée (Cowork). Suite 418/418.
 - 03/10/2026 · Claude Code · **Vue « quai de réception » livrée à l'essai** (P1, brief `docs/briefs/MOTEUR-vue-quai.md`) : le quai est une entrée du menu de l'environnement (menu visible, pour le mail d'accueil) ; en évaluation, « Clore la réception » rend la copie ; chrono réel compté dès l'ouverture, arrêté à la clôture ou à la remise ; tiers-temps recopié dans l'état du quai ; API du §4 complétée (textes, `aides.consignes`, `note`). Page d'essai `outils/essai-quai.html`. Suite 414/414.
+- 03/10/2026 · Tristan · **Geste métier « extraire, traiter dans un tableur, remonter, décider »** à insérer dans des
+  scénarios Logisim : bouton « Exporter » (un .xlsx brut fabriqué depuis la base de l'élève), traitement avec formules
+  dans le tableur du poste, **dépôt du fichier** dans le logiciel (pas de recopie des résultats), contrôle des résultats
+  **sur l'export de l'élève** et **de la présence de formules**, puis décision jugée sur les chiffres de l'élève.
+  **Double compatibilité Excel et LibreOffice Calc obligatoire** (selon les salles) : export .xlsx ; dépôt .xlsx ou .ods,
+  .csv refusé ; fonctions anciennes et communes seulement (pas de RECHERCHEX, FILTRE, UNIQUE, TRIER, LET) ; contrôle sur
+  le nom interne (`SUM`, `VLOOKUP`). **Pilote : Cdiscount.** Chantier moteur à cadrer (Opus) **après** l'essai des
+  fichiers témoins de Tristan. Détail : fiche projet `prepalog-geste-export-tableur`. Rien à construire avant un brief.
+- 03/10/2026 · Tristan · **Règle pour tout Prepalog : le temps face aux élèves n'est pas une contrainte de conception.**
+  Le volume horaire change chaque année selon les niveaux : Prepalog est un **réservoir**, il doit y avoir **plus de
+  contenu qu'une année n'en consomme**, à chaque niveau, et Tristan choisit ce qu'il ouvre (Conduite de séance). On ne
+  réduit jamais un contenu pour tenir un horaire. **Chaque séance se range en « cœur »** (parcours minimal qui couvre
+  toutes les compétences du niveau avec leurs trois temps) **ou « complément »** (variantes, lots supplémentaires,
+  entreprises en plus, reprises d'entraînement). **Validé par Tristan** ; le marquage dans le `meta` (nom du champ,
+  affichage dans Conduite de séance) est **à concevoir** dans un chantier moteur, avant d'écrire les séances de 2de.
+  Finalité, décision 14 (`docs/fiches/prepalog-finalite.md`).
+- 03/10/2026 · Tristan · **La 2de GATL pioche dans trois référentiels** (Logistique 2025, OTM 2020, AGOrA 2020) avec des
+  **scénarios transversaux** ; **chaque élève fait les trois postes** (gestionnaire, transporteur, logisticien) en
+  séances successives ; **note par spécialité** dans le suivi de 2de (accord de principe). Codes : Logistique inchangés
+  (`C1.4`), **`OTM-C2.1`**, **`AGO-2.1`**, `CAP-C1.1` ; domaines D1 à D5 déclarés à côté. Conception en cours dans
+  Cowork (fiches projet `prepalog-2de-socle-transversal`, `prepalog-2de-hors-socle-et-vues`) : **rien à construire
+  avant un brief**.
 - 03/10/2026 · Tristan · **ENT-3.2 : un imprévu en cours de journée** (brief `docs/briefs/ENT-3.2-imprevu.md`) : quand la
   tournée de la phase 1 tient tout, un message du responsable arrive (un client annule, un créneau est avancé) et l'élève
   replanifie sur la même carte et la même feuille. Choisi parmi : plusieurs contraintes à la fois, deux vélos-cargos à répartir.
