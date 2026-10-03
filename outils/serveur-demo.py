@@ -18,5 +18,5 @@ class Demo(SimpleHTTPRequestHandler):
         super().end_headers()
 
 
-port = int(sys.argv[1]) if len(sys.argv) > 1 else 8001
+port = int(sys.argv[1]) if len(sys.argv) > 1 else int(os.environ.get('PORT', 8001))
 ThreadingHTTPServer(('127.0.0.1', port), Demo).serve_forever()
