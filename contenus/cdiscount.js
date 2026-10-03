@@ -256,3 +256,28 @@ export function mailBienvenue(prenom, ts) {
     subject: 'Bienvenue à l’entrepôt de Cestas', kind: 'text',
     text: `Bonjour ${prenom},\n\nBienvenue dans l'équipe stock de l'entrepôt Cdiscount de Cestas, en Gironde. Ici, on expédie chaque jour des milliers de petits colis de moins de 30 kg, commandés sur cdiscount.com.\n\nNotre travail : que le stock affiché dans le système soit le stock réel, celui qui est dans les rayons. Si le système se trompe, on vend des articles qu'on n'a plus, ou on rachète ce qu'on a déjà.\n\nVous aurez besoin de trois écrans :\n- Stock : les quantités par référence, et l'onglet Mouvements, qui garde la trace de tout ce qui est entré et sorti (le code d'accès vous est donné par votre enseignant) ;\n- Réceptions et Commandes : les documents qui ont fait bouger le stock ;\n- la Console, par exemple .movements suivi d'une référence, pour ne voir que les mouvements d'un article.\n\nBon courage,\n${EQUIPE.cheffe.nom}` };
 }
+
+// Les lignes des bons de préparation d'une base, comme les exporte le logiciel (geste tableur,
+// 04/10/2026) : une ligne par article préparé, dans l'ordre du temps. « Stock logiciel » = le
+// stock du système juste avant la sortie (lu sur le mouvement du bon) ; « Stock trouvé » = ce que
+// le préparateur a noté au rayon (`seen`). Fonction PURE de la base : réexporter donne le même
+// fichier. `filtre(o, sku)` : garder une commande / une référence (allée, emplacements…).
+// Une commande annulée garde la ligne de son bon s'il a été préparé.
+export function lignesPreparation(db, CAT, filtre = () => true) {
+  const L = [];
+  (db.orders || []).forEach((o) => {
+    if (!o.prep || !o.prep.rows) return;
+    const bon = 'BP-' + o.no.replace('CMD-', '');
+    o.lines.forEach((l) => {
+      if (!filtre(o, l.sku)) return;
+      const m = (db.moves || []).find((x) => x.ref === bon && x.sku === l.sku);
+      if (!m) return;
+      const v = CAT.VM[l.sku];
+      const row = o.prep.rows[l.sku] || {};
+      L.push({ ts: m.ts, bon, commande: o.no, sku: l.sku, designation: v ? [v.model.brand, v.model.name].filter(Boolean).join(' ') : l.sku,
+        emplacement: v ? v.loc : '', qty: l.qty, logiciel: m.after + l.qty, trouve: row.seen === '' || row.seen == null ? null : Number(row.seen),
+        preparateur: m.by || o.prep.par || '' });
+    });
+  });
+  return L.sort((a, b) => a.ts - b.ts || (a.bon < b.bon ? -1 : a.bon > b.bon ? 1 : 0) || (a.emplacement < b.emplacement ? -1 : 1));
+}

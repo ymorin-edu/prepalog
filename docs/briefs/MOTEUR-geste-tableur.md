@@ -6,7 +6,7 @@
 > Lis docs/briefs/COORDINATION-cdiscount.md, docs/EN-COURS.md, puis le brief docs/briefs/MOTEUR-geste-tableur.md. Annonce la durée avant de commencer, découpe en lots, fabrique la page d'essai, puis enchaîne sans attendre : les questions du brief sont déjà tranchées (§12).
 > ```
 
-**Statut** : à implémenter — après ENT-2.3 recadrée (C4). **Gros chantier moteur.**
+**Statut** : livré (04/10/2026).
 **Date du brief** : 03/10/2026
 **Modèle** : **Opus** — **Durée estimée par Cowork** : 6 à 8 h, en lots (export ; dépôt et contrôles ; retours selon le
 temps ; copie rendue ; page d'essai et tests témoins).
@@ -194,11 +194,46 @@ et des noms de fonctions ; retour selon le temps pédagogique ; fichier jamais s
 
 ## Compte rendu *(rempli par Claude Code)*
 
-- **Fichiers créés / modifiés** :
-- **API livrée** (déclaration, contrôles, `resultatDepot`) — **à recopier telle quelle**, les briefs suivants en dépendent :
-- **Écarts par rapport au brief** :
-- **Décisions prises en route** :
-- **Règles Firebase** : modifiées ? publiées ?
-- **Tests** :
-- **Commits** :
-- **Reste ouvert** :
+- **Fichiers créés / modifiés** : `core/types/export-tableur.js` (neuf), `core/types/classeur.js` (neuf : le chargement de
+  SheetJS, les pictogrammes, `pliage`, `memeValeur`, `controler`… sortis **sans changement** de `tableur.js` et
+  `numerique.js`, qui les réexportent — il fallait pouvoir les importer hors navigateur), `core/types/entreprise.js`
+  (câblage), `styles/base.css` (5 règles, aucune variable), `contenus/cdiscount.js` (`lignesPreparation(db, CAT, filtre)`,
+  pure, pour les séances), `outils/essai-tableur.html` + `outils/essai-tableur.js` (page d'essai),
+  `outils/test/tableur-export.mjs` (19 cas), `outils/test/fichiers/` (les 3 témoins, copiés à l'identique, empreintes
+  vérifiées), **`outils/test.mjs` (une ligne dans `BLOCS`)**, `activites/FICHE-SEANCE.md` (section « Geste tableur »).
+- **API livrée** — la déclaration du § 4 telle quelle, avec ces précisions :
+  - `feuilles[].lignes(db)` rend des tableaux ; une date est un **horodatage (ms)** déclaré dans `types` (`'date'` ou
+    `'dateHeure'`) ; `feuilles[].aveugle: ['Stock logiciel']` = colonnes retirées tant qu'un comptage à l'aveugle n'est
+    pas validé (garde du § 7, **à déclarer par la séance**) ;
+  - contrôles : `colonne` (`titre`, `cle`, `attendu(ligne)` où `ligne` = la ligne **propre** de l'export en objet
+    `{ 'Stock trouvé': 45, … }`, `filtre(ligne)` facultatif, `formule`, `fonctions`, `tolerance`), `table` (`cle`,
+    `colonne`, `attendu: { clé: valeur }`), `lignes` (`attendu`), `cellule` et liste (ceux de `tableur.js`, + `fonctions`) ;
+    chaque contrôle a un `id` et un `libelle` ;
+  - fonctions en **noms anglais** de SheetJS (`IF`, `COUNTIF`, `COUNTIFS`, `VLOOKUP`, `IFERROR`…), nom entier ;
+    tolérance par défaut **1e-6** (`tolerance: null` = exacte) ;
+  - `resultatDepot(db, idDepot)` → `{ depose, essais, at, controles: { [id]: { id, libelle, ok, justes, total, remarques } } }`
+    (meilleur dépôt ; en évaluation l'unique) ; aussi `exportFait(db, idExport)`, `totalJustes(liste)`,
+    `totalControles(liste)` ; état : `db.tableur.exports[id] = { at, n }`, `db.tableur.depots[id] = { essais, dernier,
+    meilleur }` (`{ at, fichier, resultats }`) ;
+  - pour une séance : `import { resultatDepot } from '../core/types/export-tableur.js'` fonctionne aussi dans Node (tests).
+- **Écarts par rapport au brief** : le « bandeau d'aide » n'existait pas : c'est un bouton **« Rappel tableur »** dans
+  le bandeau de l'entreprise, qui déplie une ligne de rappel sous le bandeau (hors de l'écran de travail ; il reste
+  cliquable après la remise de la copie). La graine des salissures est `uid` de l'élève (à défaut prénom + nom) +
+  `id` de la séance + `id` de l'export. `.xlsm` accepté en plus.
+- **Décisions prises en route** : un fichier qui n'est pas une archive zip (texte renommé en .xlsx) est refusé avant
+  lecture (« Ce fichier n'est pas un classeur. ») ; le meilleur dépôt est remplacé à égalité (le plus récent des
+  meilleurs) ; une feuille introuvable par son nom est prise si le classeur n'en a qu'une ; un doublon de salissure
+  n'est jamais tiré d'une ligne à date en texte (le nombre de dates en texte reste celui déclaré) ; « Exporter »
+  télécharge à chaque clic (seul le premier export est tracé) ; en évaluation, la zone de dépôt disparaît après le dépôt.
+- **Règles Firebase** : non modifiées (tout vit dans la base de l'élève de la séance, chemin existant).
+- **Tests** : bloc `tableur-export` 19/19 — export pur, vraies dates, salissures déterministes ; noms de fonctions ;
+  colonne retrouvée après tri et insertion ; nombre tapé, SI absent, COUNTIFS au lieu de COUNTIF repérés ; les 3
+  témoins passent (E13 « nombre tapé » repéré) ; sabotages « texte exact de la formule » et « égalité exacte » font
+  échouer LibreOffice ; à l'écran : export réel téléchargé, rappel dans le bandeau, guidage détaillé, entraînement
+  « n sur m » et meilleur retenu, évaluation « Fichier reçu. » et second dépôt refusé, .csv / .txt / faux .xlsx refusés
+  sans compter, .ods accepté. Sabotage « retour détaillé en évaluation » → le cas tombe. Séries TAB vertes. Suite
+  entière 516/516.
+- **Commits** : « Geste tableur : Exporter, Déposer, contrôles et retours selon le temps (C5) ».
+- **Reste ouvert** : **le témoin « Excel » n'a probablement jamais été réenregistré par Excel** (contenu identique
+  au fichier « à ouvrir dans Excel », seul un octet diffère) : à refaire un jour à la main pour un vrai essai Excel.
+  Tristan doit déposer à l'écran un fichier Excel ET un LibreOffice sur `outils/essai-tableur.html`.

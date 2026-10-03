@@ -158,6 +158,53 @@ séance 2), `TAB` tableur, `REF` exercices par compétence, `SCE` scénario anci
 | `lireScore()` | Le travail déjà enregistré, utile pour une séance notée à la main. |
 | `quitter()`, `deconnexion()` | Sortie d'une séance immersive. |
 
+## Geste tableur (Exporter, traiter, Déposer) — `core/types/export-tableur.js`
+
+Depuis le 04/10/2026 (chantier C5, brief `docs/briefs/MOTEUR-geste-tableur.md`). Une séance d'entreprise
+déclare `tableur` dans `creerEntreprise` ; sans lui, rien ne change.
+
+```js
+tableur: {
+  aide: 'SI(test ; si vrai ; si faux) — NB.SI(plage ; critère)',  // « Rappel tableur » du bandeau, jamais dans l'écran
+  exports: [{
+    id: 'preparations', ecran: 'commandes',            // écran qui porte « Exporter » (en-tête)
+    libelle: 'Exporter les lignes de préparation', fichier: 'x.xlsx',
+    feuilles: [{ nom: 'Préparations', colonnes: [...], lignes: (db) => [[ts, 'BP-…', …]],  // PURE
+                 types: { Date: 'date' },              // 'date' | 'dateHeure' : la valeur est un horodatage
+                 aveugle: ['Stock logiciel'] },        // retirée tant qu'un comptage à l'aveugle n'est pas validé
+               { nom: 'Synthèse', colonnes: ['Référence', 'Nb constats'], lignes: (db) => [['CAB-USBC-1M', null]] }],
+    salissures: { vides: 4, doublons: 3, datesTexte: 5 },   // 1re feuille ; graine = élève + séance
+  }],
+  depot: { id: 'analyse', export: 'preparations', libelle: 'Déposer mon fichier',
+           retour: 'guidage' | 'entrainement' | 'evaluation',   // défaut : déduit de meta.temps
+           controles: (db) => [ … ] },
+}
+```
+
+Contrôles (`controles(db)`, calculés sur la base, jamais en dur) — l'élève trie, filtre, insère des colonnes :
+
+| `type` | Déclaration | Vérifie |
+|---|---|---|
+| `colonne` | `{ id, libelle, feuille, titre: 'Écart', cle: ['N° bon', 'Référence'], attendu: (ligne) => …, filtre?, formule: true, fonctions: ['IF'], tolerance? }` | colonne trouvée par son titre en ligne 1 (casse, accents, espaces ignorés) ; chaque ligne de l'export retrouvée par sa clé ; `ligne` = l'export propre en objet `{ colonne: valeur }` |
+| `table` | `{ id, feuille, cle: 'Référence', colonne: 'Nb constats', attendu: { clé: valeur }, fonctions: ['COUNTIF'] }` | une valeur par clé |
+| `lignes` | `{ id, feuille, attendu: 143 }` | lignes non vides, aucun doublon exact restant |
+| `cellule` / liste | `{ cellule: 'E8', attendu, fonctions? }`, `{ plage, lignes }` | ceux de `classeur.js`, plus les noms de fonctions |
+
+Fonctions : noms ANGLAIS de SheetJS (`IF`, `COUNTIF`, `VLOOKUP`…), nom entier (`IF` ≠ `COUNTIF`), affichés
+en français à l'élève. Tolérance par défaut 1e-6 (`tolerance: null` = exacte). Une formule exigée (`formule`
+ou `fonctions`) l'est même pour un résultat vide. Résultat : `{ id, libelle, ok, justes, total, remarques }`.
+
+Retour au dépôt : guidage = détaillé, case par case, redépôt illimité ; entraînement = « n résultats justes
+sur m » ; évaluation = « Fichier reçu. », un seul dépôt (un fichier refusé n'en est pas un). Formats :
+.xlsx, .xlsm, .ods ; .csv refusé (« Ce format perd les formules… »). Le fichier n'est jamais stocké.
+
+Pour les jalons : `resultatDepot(db, 'analyse')` → `{ depose, essais, at, controles: { [id]: résultat } }`
+(le MEILLEUR dépôt ; en évaluation, l'unique) ; `exportFait(db, 'preparations')`. Une évaluation
+(`copie: true`) : `noter(db)` lit `resultatDepot` ; après « Rendre ma copie », le dépôt est verrouillé.
+
+Page d'essai : `outils/essai-tableur.html` ; tests : bloc `tableur-export` (fichiers témoins Excel et
+LibreOffice dans `outils/test/fichiers/`).
+
 ## Pièges
 
 - Une séance en cours d'écriture reste en `pret: false` et peut être commitée à tout moment.

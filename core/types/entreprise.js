@@ -18,6 +18,7 @@ import { creerCarte } from './carte.js';
 import { creerTournee } from './tournee.js';
 import { creerInventaire } from './inventaire.js';
 import { creerQuai } from './quai.js';
+import { creerGesteTableur, retourDeTemps } from './export-tableur.js';
 import { graineDeBase, poserGraine } from '../tirage.js';
 
 /* ------------------------------------------------------------------ formats */
@@ -96,6 +97,10 @@ export function creerEntreprise(U) {
   // L'écran « Inventaire » (02/10/2026, chantier E), sur le même principe : il n'existe que si
   // la séance déclare un `inventaire` — format dans `claude/prepalog-inventaire-format.md`.
   const VINV = U.inventaire ? creerInventaire(U.inventaire, CATALOGUE) : null;
+  // Le GESTE TABLEUR (04/10/2026, chantier C5, `core/types/export-tableur.js`) : il n'existe que si
+  // la séance déclare un `tableur` — boutons « Exporter » sur les écrans déclarés, entrée de menu
+  // « Fichiers » (exports et dépôt), rappel dans le bandeau d'aide.
+  const VTAB = U.tableur ? creerGesteTableur(U.tableur) : null;
   // L'écran « Quai de réception » (03/10/2026, chantier P1, pilote Picard), même principe : il
   // n'existe que si la séance déclare un `quai` (format en tête de `core/types/quai.js`). Son
   // état vit dans `db.quais[<quai.id>]`. En évaluation, il porte le chrono réel et la note sur 20.
@@ -551,6 +556,8 @@ export function creerEntreprise(U) {
                 title="Fiche d'intention pédagogique du scénario (enseignant seulement)">Fiche d'intention PDF</a>` : ''}
               ${estProf && ctx.intention && ctx.intention.docx ? `<a class="ent-act" data-intention href="${ech(ctx.intention.docx)}" download
                 title="La même fiche, en Word">Fiche d'intention Word</a>` : ''}
+              ${VTAB && VTAB.aide ? `<button class="ent-act${E.aideTableur ? ' on' : ''}" data-aide-tableur aria-expanded="${E.aideTableur ? 'true' : 'false'}"
+                title="Un rappel court des fonctions du tableur">Rappel tableur</button>` : ''}
               ${sansTrame ? `<span class="ent-sans-trame" title="Pas de feuille à rendre : tout se fait dans l'environnement">${ech(sansTrame)}</span>` : ''}
               ${!(VPLAN && VPLAN.horsConnexion) ? '' : `<button class="ent-act" data-hors-connexion
                 ${horsCo ? 'disabled' : ''}
@@ -561,6 +568,7 @@ export function creerEntreprise(U) {
               <span class="ent-barre" aria-hidden="true"></span>
               <button class="ent-sortie" data-quitter>Quitter</button>
             </header>
+            ${VTAB && VTAB.aide && E.aideTableur ? `<div class="ent-aide" data-aide-tableur-texte>${ech(VTAB.aide)}</div>` : ''}
             <div class="ent-shell">
               <aside class="ent-side">
                 ${item('accueil', 'Accueil')}
@@ -581,6 +589,7 @@ export function creerEntreprise(U) {
                 ${item('fournisseurs', 'Fournisseurs')}
                 <div class="ent-sep">Outils</div>
                 ${item('console', 'Console')}
+                ${VTAB ? item('fichiers', VTAB.nav.libelle) : ''}
               </aside>
               <div class="ent-main" id="entMain"></div>
             </div>
@@ -588,6 +597,7 @@ export function creerEntreprise(U) {
 
         hote.querySelectorAll('[data-vue]').forEach((b) => b.addEventListener('click', () => aller(b.dataset.vue)));
         hote.querySelector('[data-raz]')?.addEventListener('click', reinitialiser);
+        hote.querySelector('[data-aide-tableur]')?.addEventListener('click', () => { E.aideTableur = !E.aideTableur; dessiner(); });
         hote.querySelector('[data-hors-connexion]')?.addEventListener('click', () => {
           VPLAN.activerHorsConnexion(etatTransport('plan'));
           sauver(); dessiner();
@@ -651,7 +661,7 @@ export function creerEntreprise(U) {
       // verrouillée sans rien savoir de la copie. Restent libres : le menu, la sortie, le zoom
       // de la carte. `sauver` ne fait plus rien non plus : deux gardes valent mieux qu'une.
       // `[data-libre]` : ce qu'une vue déclare consultable (les étapes et onglets du quai).
-      const LIBRE = '.ent-nav, [data-quitter], [data-ct-zoom], [data-ct-ensemble], [data-libre]';
+      const LIBRE = '.ent-nav, [data-aide-tableur], [data-quitter], [data-ct-zoom], [data-ct-ensemble], [data-libre]';
       if (COPIE && !estProf) {
         const verrou = (ev) => {
           if (!rendue()) return;
@@ -707,9 +717,11 @@ export function creerEntreprise(U) {
           catalogue: vueCatalogue, produit: vueProduit, stock: vueStock, blocage: vueBlocage,
           inventaire: VINV ? vueInventaire : vueAccueil,
           quai: VQUAI ? vueQuai : vueAccueil,
+          fichiers: VTAB ? vueFichiers : vueAccueil,
           clients: vueClients, fournisseurs: vueFournisseurs, console: vueConsole,
         };
         z.innerHTML = (vues[E.vue] || vueAccueil)();
+        if (VTAB) VTAB.poserExports(z, E.vue, apiTableur());
         brancher(z);
         figerVue(z);
         if (E.vue === 'catalogue') majCatalogue();
@@ -1490,6 +1502,20 @@ export function creerEntreprise(U) {
       // Périmètre pas encore choisi par l'élève (`perimetre` de la séance) : l'écran attend.
       function vueInventaire() { return VINV.attente(db) ? VINV.attenteHtml() : VINV.html(etatInventaire(), apiInventaire()); }
 
+      /* ---------------------------------------------------------- geste tableur */
+      // Ce que le geste demande à l'environnement. La graine des salissures : l'élève (son
+      // identifiant, à défaut son nom) et la séance. Le retour au dépôt : celui que la séance
+      // déclare, sinon celui de son temps pédagogique. Un export ne donne jamais le stock du jour
+      // pendant un comptage à l'aveugle (`aveugle`).
+      const apiTableur = () => ({
+        db, sauver, toast, redessiner: dessinerVue,
+        graine: ctx.profil.uid || [ctx.profil.prenom, ctx.profil.nom].filter(Boolean).join(' '),
+        seance: (ctx.meta && ctx.meta.id) || '',
+        retour: (U.tableur && U.tableur.depot && U.tableur.depot.retour) || retourDeTemps(ctx.meta && ctx.meta.temps),
+        aveugle: () => !!VINV && VINV.bloqueStock(lireInventaire()),
+      });
+      function vueFichiers() { return VTAB.html(apiTableur()); }
+
       /* ---------------------------------------------------------- quai de réception */
       // L'état vit dans la base de l'élève, sous l'identifiant du quai de la séance. Il est créé dès
       // l'ouverture : le temps réel compte de l'ouverture de la séance à la remise de la copie,
@@ -2096,6 +2122,7 @@ export function creerEntreprise(U) {
           E.vue = 'mail'; E.dossier = 'in';
           ouvrirMail(Number(b.dataset.tourNotifOuvrir));
         }));
+        if (E.vue === 'fichiers' && VTAB) VTAB.brancher(z, apiTableur());
         if (E.vue === 'inventaire' && VINV && !VINV.attente(db)) VINV.brancher(z, etatInventaire(), apiInventaire());
         if (E.vue === 'quai' && VQUAI) VQUAI.brancher(z, etatQuai(), apiQuai());
       }

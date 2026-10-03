@@ -8,24 +8,9 @@
 
 import { ech, toast } from '../ui.js';
 
-export function normaliser(saisie) {
-  if (saisie === null || saisie === undefined) return NaN;
-  const t = String(saisie)
-    .replace(/ | |\s/g, '')   // espaces fines, insécables, ordinaires
-    .replace(',', '.');
-  if (t === '') return NaN;
-  return Number(t);
-}
-
-export function estJuste(valeur, attendu, tolerance) {
-  if (Number.isNaN(valeur)) return false;
-  if (tolerance === undefined || tolerance === null) return valeur === attendu;
-  if (typeof tolerance === 'string' && tolerance.trim().endsWith('%')) {
-    const p = parseFloat(tolerance) / 100;
-    return Math.abs(valeur - attendu) <= Math.abs(attendu * p) + 1e-9;
-  }
-  return Math.abs(valeur - attendu) <= Number(tolerance) + 1e-9;
-}
+// `normaliser` et `estJuste` vivent dans `classeur.js` (sans écran) depuis le 04/10/2026.
+import { normaliser, estJuste } from './classeur.js';
+export { normaliser, estJuste };
 
 const fr = (n) => new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 4 }).format(n);
 

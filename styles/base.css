@@ -669,6 +669,20 @@ body.immersion .app{ max-width:1720px; padding:14px 24px 0 }
 .ent-act-copie.ent-act-arme{ background:var(--terre); border-color:var(--terre); color:#fff }
 .ent-act-copie:disabled{ opacity:.6; cursor:wait }
 .ent-copie-avis{ margin-top:0 }
+/* --- Le geste tableur (04/10/2026, chantier C5, core/types/export-tableur.js) ---------
+   « Exporter » se pose dans l'en-tête de l'écran déclaré, sous le titre ; le rappel des
+   fonctions vit dans un bandeau d'aide, sous le bandeau de l'entreprise, jamais dans l'écran
+   de travail (décision 5 de la série Cdiscount). Teintes translucides : les chartes des
+   entreprises peuvent être sombres. */
+.ent-act.on{ border-color:currentColor; background:rgba(255,255,255,.15); opacity:1 }
+.ent-aide{
+  padding:7px 18px; font-size:13.5px; line-height:1.45;
+  background:rgba(127,127,127,.12); border-bottom:1px solid rgba(127,127,127,.25);
+}
+.ent-exports{ margin-top:8px }
+.btn-export{ display:inline-flex; align-items:center; gap:7px }
+.btn-export .btn-fichier-icone svg{ width:17px; height:17px }
+.depot-detail td{ vertical-align:top }
 .ent-main :disabled{ cursor:not-allowed }
 /* Le suivi : une copie rendue porte sa mention ; « ramasser » reste discret à côté du tiret. */
 .copie-cell{ white-space:nowrap }

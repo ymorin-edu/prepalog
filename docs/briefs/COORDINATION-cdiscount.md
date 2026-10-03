@@ -42,7 +42,7 @@ restent **fermées aux élèves** (`ouverture: 'prof'`) jusqu'à ce que Tristan 
 | C2 | ENT-2.1 recadrée | `ENT-2.1-recadrage.md` | moyen (1 h 30-2 h 30) | Sonnet | non |
 | C3 | Renumérotation (inventaire → 2.3, régularisé → 2.4) | `CDISCOUNT-renumerotation.md` | petit (30-45 min) | Sonnet | non |
 | C4 | ENT-2.3 recadrée + **lot 0 : périmètre de l'écran Inventaire** | `ENT-2.3-inventaire-recadre.md` | moyen (2-3 h) | Sonnet | **oui pour le lot 0** : `core/types/inventaire.js` |
-| C5 | **Geste tableur** (Exporter, Déposer, contrôles, retours) | `MOTEUR-geste-tableur.md` | **gros (6-8 h)** | **Opus** | **oui** : `core/types/export-tableur.js` (neuf), `entreprise.js`, `tableur.js`, styles, `test.mjs` |
+| C5 | **Geste tableur** (Exporter, Déposer, contrôles, retours) — **livré 04/10** | `MOTEUR-geste-tableur.md` | **gros (6-8 h)** | **Opus** | **oui** : `core/types/export-tableur.js` (neuf), `entreprise.js`, `tableur.js`, styles, `test.mjs` |
 | C6 | ENT-2.2 « Ce que disent les chiffres » | `ENT-2.2-ce-que-disent-les-chiffres.md` | moyen (3-4 h) | **Opus** | non |
 | C7 | ENT-2.4 régularisé + export + vendeur | `ENT-2.4-regularise-export.md` | moyen (2-3 h) | Sonnet | non |
 | C9 | ENT-2.6 bonus | `ENT-2.6-bonus.md` | moyen (2-3 h) | Sonnet | non |
