@@ -95,7 +95,8 @@
 //     avec « ✗ » ; sous la barre, une ligne dit pourquoi pour la cellule choisie (« écrivez une
 //     formule », « formule mal écrite »…) ;
 //   · l'AIDE d'une cellule (`aide` de la cellule, sinon `note` de sa ligne) s'affiche sous la barre
-//     quand on la choisit, au lieu d'être écrite sous chaque ligne ;
+//     quand on la choisit, au lieu d'être écrite sous chaque ligne — avec `aides: 'bouton'` (feuille
+//     moins guidée, ENT-3.2), elle reste pliée derrière un bouton « ? Aide » sous la barre ;
 //   · une cellule peut porter son TYPE (`type: 'etape' | 'resultat' | 'contrainte'`) : seule elle est
 //     teintée, pas toute la ligne — en colonnes, une ligne porte deux blocs. Une étiquette se teinte
 //     aussi, écrite `{ valeur: 'Étape 1 · …', type: 'etape' }`.
@@ -171,7 +172,10 @@ export function creerGrille(G) {
     const aide = aideDe(lignes, ref);
     return [verdict ? `<span class="gr-info-verdict${verdict === 'ok' ? ' juste' : (verdict === 'vide' || verdict === 'attente' ? '' : ' faux')}">${
       ech(MOT_VERDICT[verdict] || MOT_VERDICT.valeur)}</span>` : '',
-    aide ? `<span class="gr-info-aide"><b>Aide</b> · ${ech(aide)}</span>` : ''].filter(Boolean).join(' ');
+    !aide ? '' : (AIDES_BOUTON
+      ? `<button type="button" class="gr-aide-btn gr-aide-barre" data-gr-aide-barre aria-expanded="false">? Aide</button>`
+        + `<span class="gr-info-aide" hidden>${ech(aide)}</span>`
+      : `<span class="gr-info-aide"><b>Aide</b> · ${ech(aide)}</span>`)].filter(Boolean).join(' ');
   };
   // La teinte d'une cellule qui déclare son type (pas sur une feuille sans couleurs).
   const teinte = (v) => (!SOBRE && v && typeof v === 'object' && v.type ? ` gr-c-${v.type}` : '');
@@ -311,7 +315,9 @@ export function creerGrille(G) {
       const enTete = `<tr><th class="gr-coin"></th>${COLS
         .map((c) => `<th class="gr-col">${ech(c)}</th>`).join('')}</tr>`;
 
-      const corps = lignes.map((L, i) => {
+      // `jusqua` : seules les premières lignes se dessinent (un onglet de la vue tournée) ; le calcul,
+      // lui, porte toujours sur la feuille entière.
+      const corps = (opts.jusqua ? lignes.slice(0, opts.jusqua) : lignes).map((L, i) => {
         // Le texte d'aide de la ligne, derrière le « ? » : sa note, sinon l'aide de sa cellule.
         const aideLigne = !AIDES_BOUTON ? '' : (L.note || COLS.map((col) => L[col])
           .filter((v) => v && typeof v === 'object' && v.saisie && v.aide).map((v) => v.aide).join(' '));
@@ -380,7 +386,7 @@ export function creerGrille(G) {
           // Avec `aides: 'bouton'`, elle est pliée derrière un « ? » (un vrai bouton : Entrée et
           // Espace l'ouvrent au clavier, et un lecteur d'écran sait s'il est ouvert).
           let note = '';
-          if (col === COLS[0] && AIDES_BOUTON && aideLigne) {
+          if (col === COLS[0] && AIDES_BOUTON && aideLigne && !TAB) {
             const ouvert = ouvertes.has(i);
             const id = `${ID}-aide-${i}`;
             note = `<button type="button" class="gr-aide-btn" data-gr-aide="${i}" aria-expanded="${ouvert}"
@@ -481,7 +487,7 @@ export function creerGrille(G) {
           .map((c) => `<li><b class="mono">${ech(c.ref)}</b> ${ech(c.aide)}</li>`).join('')}</ul>`}
         ${bilan}
         ${opts.avertissement ? `<div class="avis avis-contrainte">${ech(opts.avertissement)}</div>` : ''}
-        ${SANS || LS || G.verifier === false ? '' : `<div class="rangee" style="margin-top:12px">
+        ${SANS || LS || opts.sansVerifier || G.verifier === false ? '' : `<div class="rangee" style="margin-top:12px">
           <button class="btn btn-p" data-gr-verifier>${ech(G.libelleValider || 'Vérifier mes formules')}</button>
         </div>`}`;
       const sobre = (SOBRE ? ' gr-sobre' : '') + (LS ? ' gr-lecture-seule' : '') + (TAB ? ' gr-tableur' : '');
@@ -539,6 +545,14 @@ export function creerGrille(G) {
         return td;
       };
       if (barre) {
+        // Le « ? Aide » sous la barre : s'ouvre et se ferme sans rien enregistrer.
+        z.querySelector('[data-gr-barre-info]')?.addEventListener('click', (e) => {
+          const b = e.target.closest && e.target.closest('[data-gr-aide-barre]');
+          if (!b) return;
+          const ouvrir = b.getAttribute('aria-expanded') !== 'true';
+          b.setAttribute('aria-expanded', String(ouvrir));
+          if (b.nextElementSibling) b.nextElementSibling.hidden = !ouvrir;
+        });
         z.querySelectorAll('[data-gr-cel]').forEach((td) => {
           td.addEventListener('click', () => {
             if (vientDePointer) { vientDePointer = false; return; }

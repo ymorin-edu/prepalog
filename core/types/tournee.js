@@ -112,6 +112,19 @@
 //                             tant qu'il y est. Aucun verdict. `fait` est le texte affiché ensuite
 //                             (« {h} » = l'heure) ; `rouvrir`, s'il est donné, est le libellé d'un
 //                             bouton qui efface `termine` (sinon c'est définitif).
+//
+// DES ONGLETS qui suivent le parcours de l'élève (ENT-3.2, chantier F, décisions de Tristan du
+// 03/10/2026 : « organiser la page en fonction du parcours élève ») — sur la vue ou sur une phase :
+//
+//   onglets: [{ id: 'donnees', libelle: 'Données et poids', texte: '…', fait: (db, etat) => booléen,
+//               contenu: 'feuille', lignesFeuille: 11 },     // le haut de la feuille seulement
+//             { id: 'tournee', libelle: 'Tournée', contenu: 'tournee', … },   // carte, arrêts, quai
+//             { id: 'heures',  libelle: 'Heures',  contenu: 'calcul', … }]    // feuille entière
+//     Un seul onglet à l'écran ; ils sont LIBRES (on va et vient), chacun avec sa pastille « à faire »
+//     / « ✓ fait » (`fait` ne juge jamais) et un bouton « Étape suivante » en bas. Sur la carte, les
+//     contraintes s'affichent en étiquettes ; sur « calcul », à droite de la feuille comme d'habitude.
+//     L'onglet ouvert est gardé en mémoire le temps de la page ; à l'ouverture, et quand la phase
+//     change (l'imprévu), c'est le premier qui n'est pas fait.
 
 import { ech } from '../ui.js';
 import { svgPlan, legendePlan, distanceKm } from './plan.js';
@@ -250,6 +263,8 @@ export function creerTournee(T) {
   // désarme au premier autre geste, puisque la vue se redessine.
   let razArme = false;
   let terminerArme = false;   // « J'ai terminé » : même geste en deux clics que « Recommencer »
+  let ongletActif = null;     // les onglets (voir l'en-tête) : celui qui est ouvert, en mémoire
+  let phaseVue = null;        // la phase du dernier dessin : un changement rouvre le premier onglet à faire
 
   // ── Les jauges se taisent ───────────────────────────────────────────────────────────────
   // `jaugesRepere: true`. Dès qu'on demande à l'élève de CALCULER le poids total et le temps,
@@ -574,6 +589,14 @@ export function creerTournee(T) {
     </ol>${(optDe(etat, 'rappel') || []).length ? `<div class="tour-rappel">${optDe(etat, 'rappel').map((r) => `<span class="tour-rappel-puce">${ech(r)}</span>`).join('')}</div>` : ''}`);
   // Remet les pastilles à jour SANS redessiner : la feuille de calcul se remplit sur la même page.
   const majEtapes = (z, etat, db) => {
+    z.querySelectorAll('[data-onglet-i]').forEach((b) => {
+      const o = (optDe(etat, 'onglets') || [])[+b.dataset.ongletI];
+      const sp = b.querySelector('[data-etape-etat]');
+      if (!o || !sp) return;
+      const fait = faitDe(o, db, etat);
+      sp.classList.toggle('fait', fait);
+      sp.innerHTML = fait ? '<span aria-hidden="true">✓</span> fait' : 'à faire';
+    });
     z.querySelectorAll('[data-etape]').forEach((li) => {
       const p = pastillesDe(etat)[+li.dataset.etape];
       if (!p) return;
@@ -741,7 +764,8 @@ export function creerTournee(T) {
             title="${razTitre}">${razLibelle}</button>
           ${razArme ? '<button class="btn btn-s" data-tour-raz-non>Annuler</button>' : ''}
         </div>`;
-      const jaugesHtml = `${etiq ? '' : raz}${MESURES.map((m) => jauge(m, b.cumuls[m.id], muet)).join('')}
+      const ONG = optDe(etat, 'onglets') || [];
+      const jaugesHtml = `${etiq || ONG.length ? '' : raz}${MESURES.map((m) => jauge(m, b.cumuls[m.id], muet)).join('')}
             ${jaugeHoraire(b, muet)}${b.creneaux.map((c) => jaugeCreneau(c, b, muet)).join('')}`;
       // Les contraintes en ÉTIQUETTES : la limite seule, sans phrase ni verdict, en une ligne
       // au-dessus de la feuille. La feuille prend alors toute la largeur.
@@ -817,11 +841,7 @@ export function creerTournee(T) {
           <span><strong>Nouveau message</strong> · ${ech(m.from || '')} : « ${ech(m.subject || '')} »</span>
           <button class="btn btn-s btn-p" data-tour-notif-ouvrir="${ech(String(m.id))}">Lire le message</button>
         </div>`).join('');
-      return `
-        <div class="ent-tete"><h2>${ech(T.titre || 'Tournée')}</h2></div>
-        ${notif}
-        ${consigne ? `<p class="note">${ech(consigne)}</p>` : ''}
-        ${etapesHtml(etat, opts.db)}
+      const blocCarte = `
         <div class="tour-grille${DANS_GRILLE && recap ? ' tour-grille-deux' : ''}${fige ? ' tour-fige' : ''}">
           <div class="tour-col">
             ${PLAN ? `<div class="plan-boite${clic ? ' plan-boite-clic' : ''}">
@@ -855,10 +875,53 @@ export function creerTournee(T) {
             </ul>
             ${bout('arrivee')}
             ${quai}`}
-            ${etiq ? raz : ''}
+            ${etiq || ONG.length ? raz : ''}
           </div>
           ${DANS_GRILLE || etiq ? '' : `<div class="tour-jauges">${jaugesHtml}</div>`}
-        </div>
+        </div>`;
+      const tete = `
+        <div class="ent-tete"><h2>${ech(T.titre || 'Tournée')}</h2></div>
+        ${notif}
+        ${consigne ? `<p class="note">${ech(consigne)}</p>` : ''}`;
+
+      // ── Les onglets (voir l'en-tête) : un seul à l'écran, dans l'ordre du parcours ─────────
+      if (ONG.length) {
+        if (phaseVue !== numPhase(etat)) { phaseVue = numPhase(etat); ongletActif = null; }
+        if (!ONG.some((o) => o.id === ongletActif)) ongletActif = (ONG.find((o) => !faitDe(o, opts.db, etat)) || ONG[0]).id;
+        const k = ONG.findIndex((o) => o.id === ongletActif);
+        const O = ONG[k];
+        const barreOnglets = `<div class="tour-onglets" role="tablist" aria-label="Étapes">${ONG.map((o, i) => `
+          <button type="button" role="tab" class="tour-onglet${i === k ? ' actif' : ''}" aria-selected="${i === k}"
+            data-tour-onglet="${ech(o.id)}" data-onglet-i="${i}"><span class="tour-onglet-num mono">${i + 1}</span>
+            <span class="tour-onglet-lbl">${ech(o.libelle)}</span>${pastilleHtml(faitDe(o, opts.db, etat))}</button>`).join('')}
+          </div>`;
+        let corps = '';
+        if (O.contenu === 'feuille') {
+          corps = !GRILLE ? '' : GRILLE.html(lignesGrille(etat), etat.grille, Object.assign({ jusqua: O.lignesFeuille, sansVerifier: true },
+            COPIE ? { sansCorrection: true } : {}, fige ? { lectureSeule: true } : {}, O.consigne ? { consigne: O.consigne } : {}));
+        } else if (O.contenu === 'tournee') {
+          // Sur la carte, les contraintes en étiquettes : l'élève les a sous les yeux en construisant.
+          const etq = etiquettes.length ? etiquettes : [
+            ...MESURES.filter((m) => m.max != null).map((m) => `${m.libelle} : ${fr(m.max)} ${m.unite || ''} au plus`.replace(/\s+/g, ' ')),
+            ...(H && H.limite != null ? [`${(H.libelleLimite || 'Horaire limite').replace(/^./, (x) => x.toUpperCase())} : ${hhmm(H.limite)}`] : []),
+            ...b.creneaux.map((c) => `${c.nom} : avant ${hhmm(c.avant)}`),
+          ];
+          corps = `<div class="tour-etiquettes" data-tour-etiquettes><span class="ent-lbl">Contraintes</span>
+            ${etq.map((x) => `<span class="tour-etiquette">${ech(x)}</span>`).join('')}</div>${blocCarte}`;
+        } else {
+          corps = `${etiquettesHtml}${grille}${termine}${cases}`;
+        }
+        const suivant = k < ONG.length - 1 ? `<div class="rangee tour-suivant">
+            <button type="button" class="btn btn-p" data-tour-onglet="${ech(ONG[k + 1].id)}">Étape suivante : ${ech(ONG[k + 1].libelle)} →</button>
+          </div>` : '';
+        return `${tete}${barreOnglets}
+          ${O.texte ? `<p class="note tour-onglet-texte">${ech(O.texte)}</p>` : ''}
+          <div role="tabpanel" data-tour-panneau="${ech(O.id)}">${corps}</div>${suivant}`;
+      }
+
+      return `${tete}
+        ${etapesHtml(etat, opts.db)}
+        ${blocCarte}
         ${etiquettesHtml}
         ${grille}
         ${termine}
@@ -917,6 +980,14 @@ export function creerTournee(T) {
       // remonte après chaque redessin, en gardant le zoom où l'élève l'avait laissé.
       if (CARTE) CARTE.brancher(z, { lecture: figeDe(etat) });
       if (!etat.report) etat.report = {};
+
+      // Les onglets : changer d'onglet redessine, et remonte la page jusqu'à la barre des onglets.
+      z.querySelectorAll('[data-tour-onglet]').forEach((b) => b.addEventListener('click', () => {
+        ongletActif = b.dataset.tourOnglet;
+        api.redessiner();
+        const barre = z.querySelector('.tour-onglets');
+        if (barre && barre.scrollIntoView) barre.scrollIntoView({ block: 'nearest' });
+      }));
 
       // « J'ai terminé » : le premier clic arme, le second horodate et fige ; « Reprendre » défige.
       z.querySelector('[data-tour-terminer]')?.addEventListener('click', () => {

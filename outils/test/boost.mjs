@@ -1575,7 +1575,31 @@ const immobile32 = () => page32.evaluate(() => new Promise((ok) => {
   };
   requestAnimationFrame(f);
 }));
-const point32 = async (sel) => { await immobile32(); await page32.click(`${z32} ${sel}`, { force: true }); };
+// Depuis le chantier F (03/10/2026), la tournée d'ENT-3.2 est en ONGLETS (Données et poids, Tournée,
+// Heures) : un geste sur la carte passe d'abord par l'onglet « Tournée », la feuille par les deux autres.
+const onglet32 = async (id) => {
+  if (await page32.$(`${z32} [data-tour-panneau="${id}"]`)) return;
+  await page32.click(`${z32} .tour-onglets [data-tour-onglet="${id}"]`);
+  await page32.waitForTimeout(120);
+};
+const point32 = async (sel) => { await onglet32('tournee'); await immobile32(); await page32.click(`${z32} ${sel}`, { force: true }); };
+// La feuille EN COLONNES, comme un tableur : on choisit la cellule, on écrit dans la barre. L'onglet
+// « Heures » montre la feuille entière. Les adresses (écrites ici à la main) : B2 à B9 les poids,
+// B10 le total, B11 le poids à laisser à quai, B13 le poids laissé à quai, B14 le poids chargé ; F2 à
+// F7 les données de la journée, F13 la distance, F14 à F16 le temps et l'arrivée à la gare, F17 à F19
+// le client à créneau.
+// Les pastilles des trois onglets, dans l'ordre : « à faire » ou « ✓ fait ».
+const pastilles32 = () => page32.$$eval(`${z32} [data-onglet-i] [data-etape-etat]`, (l) => l.map((x) => x.textContent.replace(/\s+/g, ' ').trim()).join(' | '));
+const taper32 = async (ref, texte) => {
+  await onglet32('heures');
+  await page32.$eval(`${z32} [data-gr-cel="${ref}"]`, (td) => td.click());
+  await page32.fill(`${z32} [data-gr-barre]`, texte);
+  await page32.waitForTimeout(30);
+};
+const SAISIES32 = { F2: '14:35', F3: '14', F4: '5', F5: '190', F6: '16:15', F7: '15:05',
+  B2: '18', B3: '12', B4: '34', B5: '16', B6: '52', B7: '31', B8: '29', B9: '38',
+  B10: '=SOMME(B2:B9)', B11: '=B10-F5', B13: '=B6', B14: '=B10-B13', F14: '=F13/F3*60', F15: '=7*F4',
+  F16: '=F2+F14+F15', F19: '=F2+F17/F3*60+F18*F4' };
 // Les quatre nouveaux posés par la base (le repérage au clic est gardé par le bloc `carte`).
 const poserNouveaux32 = () => page32.evaluate(() => {
   const d = window.__b32.db;
@@ -1644,7 +1668,7 @@ await v('ENT-3.2 : la journée — huit clients, 230 kg pour 190, seule la Cave 
   if (r.seuls.join() !== 'c5' || r.aQuai !== 'c5') throw new Error('à quai : ' + r.aQuai + ' (seuls : ' + r.seuls + ')');
   if (!r.cren || r.cren.id !== 'c6' || r.cren.avant !== 905) throw new Error('créneau : ' + JSON.stringify(r.cren));
   if (r.j.depart !== 875 || r.j.limite !== 975 || r.j.chargeUtile !== 190 || r.j.vitesse !== 14 || r.j.service !== 5) throw new Error('journée : ' + JSON.stringify(r.j));
-  if (r.refs.join() !== 'B18,B19') throw new Error('cellules du calcul : ' + r.refs);
+  if (r.refs.join() !== 'B10,B11') throw new Error('cellules du calcul : ' + r.refs);
   // La meilleure tournée qui tient tout, recalculée par le contenu : celle du calage.
   if (r.opt.ordre.join() !== ORDRE32.join()) throw new Error('optimum : ' + r.opt.ordre.join());
   if (Math.abs(r.opt.km - 12.545) > 0.01) throw new Error('optimum : ' + r.opt.km + ' km au lieu de 12,54');
@@ -1717,6 +1741,8 @@ await v('ENT-3.2 : la bonne tournée se construit à la carte — jalons sur les
   }
   // La feuille n'est pas encore faite : « choix » et « formules » ne sont pas validés.
   if (j.choix === 'ok' || j.formules === 'ok') throw new Error('choix/formules validés sans calcul : ' + JSON.stringify(j));
+  // Onglets (chantier F) : seule la tournée est faite.
+  if (await pastilles32() !== 'à faire | ✓ fait | à faire') throw new Error('pastilles : ' + await pastilles32());
 });
 
 await v('ENT-3.2 : une tournée qui tient tout ne suffit pas — sans la feuille vérifiée juste, pas d’imprévu', async () => {
@@ -1726,6 +1752,7 @@ await v('ENT-3.2 : une tournée qui tient tout ne suffit pas — sans la feuille
 });
 
 await v('ENT-3.2 : les jauges sont muettes — la limite, jamais le total ni l’heure d’arrivée', async () => {
+  await onglet32('heures');      // les jauges sont à droite de la feuille, dans l'onglet « Heures »
   // Le texte TEL QU'AFFICHÉ (cellules séparées) : collé, le n° de ligne 17 et « 8 · Épicerie… » font « 178 ».
   const t = (await page32.evaluate(() => document.querySelector('#boost32 .ent-main').innerText)).replace(/\s+/g, ' ');
   // 178 kg chargés, arrivée à la gare à 16 h 04, chez la pâtisserie à 14 h 55 : rien de tout ça ne s'écrit.
@@ -1739,41 +1766,65 @@ await v('ENT-3.2 : les jauges sont muettes — la limite, jamais le total ni l�
   if (/raté de|retard de/.test(t)) throw new Error('un retard chiffré est affiché');
 });
 
-await v('ENT-3.2 : la feuille en trois blocs — données du mail, commandes, tournée remplie toute seule ; la formule est exigée', async () => {
+// Réécrit le 03/10/2026 (chantier F) : la feuille en trois blocs de 38 lignes devient UN SEUL TABLEAU
+// des commandes (choix de Tristan), en colonnes, en deux parties pour les onglets.
+await v('ENT-3.2 : la feuille en colonnes — un seul tableau des commandes, « Arrêt n° » rempli, deux parties ; la formule est exigée', async () => {
   await ouvrir32('tournee');
-  const lignes = await page32.$$eval(`${z32} .gr-table tr`, (tr) => tr.map((r) => r.textContent.replace(/\s+/g, ' ').trim()));
-  const txt = lignes.join(' | ');
-  for (const x of ['Données de la journée', 'Commandes du jour', 'Tournée (ordre des arrêts', 'Poids total (kg)',
-    'Poids à laisser à quai', 'Poids chargé', 'Temps de route (min)', 'Heure d’arrivée chez Pâtisserie Arnaud']) {
+  await onglet32('heures');
+  const lignes = await page32.$$eval(`${z32} .gr-table tbody tr`, (tr) => tr.map((r) => [...r.children].map((c) => c.textContent.replace(/\s+/g, ' ').trim())));
+  const txt = lignes.map((l) => l.join(' ')).join(' | ');
+  for (const x of ['Données de la journée', 'Commandes du jour', 'Arrêt n°', 'Poids total (kg)', 'Poids à laisser à quai',
+    'Après la tournée', 'Poids laissé à quai', 'Poids chargé', 'Temps de route (min)', 'Heure d’arrivée chez Pâtisserie Arnaud']) {
     if (!txt.includes(x)) throw new Error('la feuille ne porte pas « ' + x + ' » : ' + txt.slice(0, 300));
   }
-  // Ce qui disparaît (brief §2) : les étapes numérotées, la conversion en deux cases, l'heure du jour en exemple.
-  if (/Étape \d|Temps de route \(heures\)/.test(txt)) throw new Error('la feuille est encore guidée : ' + txt.slice(0, 200));
-  if (await page32.$(`${z32} [data-gr][placeholder*="14:"]`)) throw new Error('une heure du jour sert d’exemple');
-  // Le tableau « Tournée » suit les arrêts cliqués ; ses poids ne se tapent pas.
-  if (!/Arrêt 1 · Pâtisserie Arnaud/.test(txt)) throw new Error('le tableau Tournée ne suit pas l’ordre');
-  if (await page32.$(`${z32} [data-gr="B22"]`)) throw new Error('le poids d’un arrêt se tape');
+  if (lignes.length !== 19) throw new Error(lignes.length + ' lignes au lieu de 19');
+  // Plus de second bloc qui répète les poids, plus d'étapes numérotées.
+  if (/Tournée \(ordre des arrêts|Étape \d|Temps de route \(heures\)/.test(txt)) throw new Error('ancien bloc ou étape guidée : ' + txt.slice(0, 200));
+  // « Arrêt n° » suit la tournée cliquée (Pâtisserie Arnaud en premier) ; la Cave, à quai, n'a pas de numéro.
+  const arret = (i) => lignes[i][3];
+  if (arret(6) !== '1' || arret(5) !== '' || arret(1) !== '6') throw new Error('Arrêt n° : ' + lignes.slice(1, 9).map((l) => l[1] + '=' + l[3]).join(' ; '));
+  // L'onglet « Données et poids » ne montre que le haut : onze lignes.
+  await onglet32('donnees');
+  const haut = await page32.$$eval(`${z32} .gr-table tbody tr`, (tr) => tr.length);
+  if (haut !== 11) throw new Error('onglet « Données et poids » : ' + haut + ' lignes');
+  if (await page32.$(`${z32} [data-gr-verifier]`)) throw new Error('« Vérifier » dans l’onglet du haut');
   // Un nombre tapé à la main est refusé, même juste ; un total sans poids tapés n'est pas « juste ».
-  await page32.fill(`${z32} [data-gr="B19"]`, '40');
-  await page32.fill(`${z32} [data-gr="B18"]`, '=SOMME(B10:B17)');
+  await taper32('B11', '40');
+  await taper32('B10', '=SOMME(B2:B9)');
   await page32.click(`${z32} [data-gr-verifier]`);
   await page32.waitForTimeout(200);
   const g = (await etat32('tournee')).grille;
-  if (g.juge.B18 !== 'attente') throw new Error('total sans poids tapés : ' + g.juge.B18);
-  if (g.juge.B19 !== 'pasFormule') throw new Error('B19 tapé à la main devrait être « pasFormule » : ' + g.juge.B19);
+  if (g.juge.B10 !== 'attente') throw new Error('total sans poids tapés : ' + g.juge.B10);
+  if (g.juge.B11 !== 'pasFormule') throw new Error('B11 tapé à la main devrait être « pasFormule » : ' + g.juge.B11);
   const j = await jalon32('choix');
   if (j.status === 'ok') throw new Error('« choix » validé avec un nombre tapé à la main');
 });
 
-await v('ENT-3.2 : le « ? » — le format seul sur les heures à taper, la méthode sur les formules', async () => {
-  const aides = await page32.$$eval(`${z32} [data-gr-aide]`, (b) => b.map((x) => [+x.dataset.grAide + 1,
-    document.getElementById(x.getAttribute('aria-controls')).textContent]));
-  const lignes = aides.map((a) => a[0]).join();
-  if (lignes !== '2,6,7,18,19,30,32,33,34,38') throw new Error('« ? » sur les lignes ' + lignes);
-  for (const [l, t] of aides.filter((a) => [2, 6, 7].includes(a[0]))) {
-    if (!t.includes('9:05') || /14:35|16:15|15:05|14 h 35|16 h 15|15 h 05/.test(t)) throw new Error(`ligne ${l} : ${t}`);
+// Réécrit le 03/10/2026 (chantier F) : le « ? » d'une ligne devient « ? Aide » sous la barre de formule.
+await v('ENT-3.2 : « ? Aide » — le format seul sur les heures à taper, la méthode sur les formules, plié jusqu’au clic', async () => {
+  await onglet32('heures');
+  const aides = await page32.evaluate(async (z) => {
+    const o = {};
+    for (const td of document.querySelectorAll(`${z} td.gr-saisie`)) {
+      td.click();
+      const b = document.querySelector(`${z} [data-gr-aide-barre]`);
+      if (!b) continue;
+      const t = b.nextElementSibling;
+      o[td.dataset.ref] = { plie: t.hidden, texte: t.textContent };
+    }
+    return o;
+  }, z32);
+  const refs = Object.keys(aides).sort().join();
+  if (refs !== 'B10,B11,B13,B14,F14,F15,F16,F19,F2,F6,F7') throw new Error('« ? Aide » sur ' + refs);
+  if (Object.values(aides).some((a) => !a.plie)) throw new Error('une aide est dépliée sans clic');
+  for (const r of ['F2', 'F6', 'F7']) {
+    const t = aides[r].texte;
+    if (!t.includes('9:05') || /14:35|16:15|15:05|14 h 35|16 h 15|15 h 05/.test(t)) throw new Error(`${r} : ${t}`);
   }
-  if (!aides.find((a) => a[0] === 18)[1].includes('SOMME')) throw new Error('pas d’aide de méthode sur le total');
+  if (!aides.B10.texte.includes('SOMME')) throw new Error('pas d’aide de méthode sur le total');
+  await page32.$eval(`${z32} [data-gr-cel="B10"]`, (td) => td.click());
+  await page32.click(`${z32} [data-gr-aide-barre]`);
+  if (!(await page32.isVisible(`${z32} .gr-info-aide`))) throw new Error('« ? Aide » ne déplie pas l’aide');
 });
 
 // Une erreur de lecture ne se paie qu'une fois (règle validée par Tristan le 03/10) : une donnée
@@ -1783,41 +1834,37 @@ await v('ENT-3.2 : un poids mal recopié — « données » ko, « formules » o
     const S = await import('/contenus/boost-ent32.js');
     const juge = {};
     [...S.REFS_DONNEES, ...S.REFS_FORMULES].forEach((k) => { juge[k] = 'ok'; });
-    juge.B12 = 'valeur';                                     // l'Atelier Ribot mal recopié
+    juge.B4 = 'valeur';                                      // l'Atelier Ribot mal recopié
     const db = { transport: { 'boost-ent32': { plan: { valide: 1 }, tournee: { ordre: ['c6', 'c7', 'c8', 'c3', 'c4', 'c1', 'c2'],
       quai: ['c5'], depart: 1, arrivee: 1, report: {}, juge: {}, grille: { cases: {}, juge, valide: null } } } } };
     const st = (id) => S.ETAPES.find((e) => e.id === id).verifier(db).status;
     const r0 = { donnees: st('donnees'), formules: st('formules'), declenche: S.VOLET.declencheurs[0].quand(db) };
-    juge.B30 = 'valeur';                                     // une formule fausse, elle, bloque
+    juge.B14 = 'valeur';                                     // une formule fausse, elle, bloque
     // La feuille d'ENT-3.2 elle-même : Ribot tapé 43 au lieu de 34, tout le reste juste.
     const { creerGrille } = await import('/core/types/grille.js');
     const { creerTournee } = await import('/core/types/tournee.js');
     const vue = creerTournee(Object.assign({ plan: S.PLAN }, S.TOURNEE));
     const L = S.TOURNEE.grille.lignes(vue.bilan(db.transport['boost-ent32'].tournee));
-    const cases = { B2: '14:35', B3: '14', B4: '5', B5: '190', B6: '16:15', B7: '15:05',
-      B10: '18', B11: '12', B12: '43', B13: '16', B14: '52', B15: '31', B16: '29', B17: '38',
-      B18: '=SOMME(B10:B17)', B19: '=B18-B5', B30: '=SOMME(B22:B29)', B32: '=B31/B3*60', B33: '=7*B4',
-      B34: '=B2+B32+B33', B38: '=B2+B36/B3*60+B37*B4' };
+    const cases = { F2: '14:35', F3: '14', F4: '5', F5: '190', F6: '16:15', F7: '15:05',
+      B2: '18', B3: '12', B4: '43', B5: '16', B6: '52', B7: '31', B8: '29', B9: '38',
+      B10: '=SOMME(B2:B9)', B11: '=B10-F5', B13: '=B6', B14: '=B10-B13', F14: '=F13/F3*60', F15: '=7*F4',
+      F16: '=F2+F14+F15', F19: '=F2+F17/F3*60+F18*F4' };
     const jg = creerGrille(S.TOURNEE.grille).juger(L, cases);
     return Object.assign(r0, { bloque: S.VOLET.declencheurs[0].quand(db), formules2: st('formules'),
       feuille: Object.keys(jg).filter((k) => jg[k] !== 'ok').join() });
   });
-  if (r.feuille !== 'B12') throw new Error('feuille d’ENT-3.2, Ribot mal recopié : cases non justes ' + r.feuille);
+  if (r.feuille !== 'B4') throw new Error('feuille d’ENT-3.2, Ribot mal recopié : cases non justes ' + r.feuille);
   if (r.donnees !== 'ko' || r.formules !== 'ok') throw new Error('jalons : ' + JSON.stringify(r));
   if (!r.declenche) throw new Error('un poids mal recopié bloque l’imprévu');
   if (r.bloque || r.formules2 !== 'ko') throw new Error('une formule fausse laisse passer : ' + JSON.stringify(r));
 });
 
 await v('ENT-3.2 : données et formules justes valident « données », « choix » et « formules » — les 9 jalons de la phase 1', async () => {
-  const saisies = { B2: '14:35', B3: '14', B4: '5', B5: '190', B6: '16:15', B7: '15:05',
-    B10: '18', B11: '12', B12: '34', B13: '16', B14: '52', B15: '31', B16: '29', B17: '38',
-    B18: '=SOMME(B10:B17)', B19: '=B18-B5', B30: '=SOMME(B22:B29)', B32: '=B31/B3*60', B33: '=7*B4',
-    B34: '=B2+B32+B33', B38: '=B2+B36/B3*60+B37*B4' };
-  for (const [ref, f] of Object.entries(saisies)) await page32.fill(`${z32} [data-gr="${ref}"]`, f);
+  for (const [ref, f] of Object.entries(SAISIES32)) await taper32(ref, f);
   // Les résultats, écrits à la main : 230 kg, 40 à écarter, 178 chargés, gare à 16 h 04, Pâtisserie à
   // 14 h 56 (et non 14 h 55 : la feuille part de la distance arrondie au dixième, comme l'élève la lit).
   const res = async (ref) => (await page32.textContent(`${z32} [data-gr-res="${ref}"]`)).trim();
-  const vus = [await res('B18'), await res('B19'), await res('B30'), await res('B34'), await res('B38')].join(' | ');
+  const vus = [await res('B10'), await res('B11'), await res('B14'), await res('F16'), await res('F19')].join(' | ');
   if (vus !== '230 | 40 | 178 | 16 h 04 | 14 h 56') throw new Error('résultats : ' + vus);
   await page32.click(`${z32} [data-gr-verifier]`);
   await page32.waitForTimeout(250);
@@ -1860,6 +1907,10 @@ await v('ENT-3.2 : tournée juste + feuille juste — le message arrive, une seu
   await ouvrir32('mail'); await ouvrir32('tournee');
   const r2 = await imprevu32();
   if (r2.mails.length !== 1) throw new Error('message envoyé ' + r2.mails.length + ' fois');
+  // Onglets (chantier F) : la journée a changé, les trois pastilles repassent à « à faire » et
+  // l'onglet « Données et poids » s'ouvre.
+  if (await pastilles32() !== 'à faire | à faire | à faire') throw new Error('pastilles après l’imprévu : ' + await pastilles32());
+  if (!(await page32.$(`${z32} [data-tour-panneau="donnees"]`))) throw new Error('l’onglet ouvert après l’imprévu n’est pas « Données et poids »');
 });
 
 await v('ENT-3.2 : le message dit ce qui change en texte courant — annulation, nouveau créneau, créneau levé, Cave à quai, 14 h 00', async () => {
@@ -1883,6 +1934,7 @@ await v('ENT-3.2 : « Nouveau message » en tête de la tournée ; « Lire le me
 });
 
 await v('ENT-3.2 : après l’imprévu — Atelier Ribot barré et non chargeable ; créneau de l’Épicerie repéré, Pâtisserie sans créneau', async () => {
+  await onglet32('tournee');
   if (!(await page32.$(`${z32} [data-annule="c3"]`))) throw new Error('Atelier Ribot n’est pas barré dans le récapitulatif');
   if (!(await page32.$(`${z32} [data-point="c3"][data-annule]`))) throw new Error('Atelier Ribot n’est pas barré sur la carte');
   if (await page32.$(`${z32} [data-clic-point="c3"]`)) throw new Error('Atelier Ribot est encore cliquable sur la carte');
@@ -1894,6 +1946,7 @@ await v('ENT-3.2 : après l’imprévu — Atelier Ribot barré et non chargeabl
   const ch = await page32.$$eval(`${z32} [data-creneau-change]`, (l) => l.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));
   if (!ch.some((x) => /14 h 55/.test(x) && /nouveau/.test(x))) throw new Error('le nouveau créneau n’est pas repéré : ' + ch.join(' | '));
   if (!ch.some((x) => /plus de créneau/.test(x))) throw new Error('le créneau levé n’est pas repéré : ' + ch.join(' | '));
+  await onglet32('heures');      // les jauges, à droite de la feuille
   if (!(await page32.$(`${z32} [data-creneau="c8"]`)) || await page32.$(`${z32} [data-creneau="c6"]`)) throw new Error('la jauge de créneau n’a pas changé de client');
   if (!/14 h 55/.test(await texte32(`${z32} [data-creneau="c8"]`))) throw new Error('la limite de 14 h 55 n’est pas lisible');
 });
@@ -1909,11 +1962,15 @@ await v('ENT-3.2 : après l’imprévu, rien à l’écran ne dit que l’ancien
   });
   if (!b.rate || b.ids.join() !== 'c8' || b.charge !== 144) throw new Error('cas mal posé : ' + JSON.stringify(b));
   // … et l'écran se tait : ni pastille, ni jauge rouge, ni avertissement de la feuille.
+  // Dans CHACUN des trois onglets.
   const verdict = /raté|manqué|dépassée|respectée|tenu\b|retard/i;
-  const t = await texte32();
-  if (verdict.test(t)) throw new Error('un verdict est lisible : ' + (t.match(verdict) || [])[0]);
-  const n = await page32.evaluate(() => document.querySelectorAll('#boost32 .tour-jauge.trop, #boost32 .avis-contrainte, #boost32 .tour-jauges .pastille').length);
-  if (n) throw new Error(n + ' marque(s) de verdict à l’écran');
+  for (const o of ['donnees', 'tournee', 'heures']) {
+    await onglet32(o);
+    const t = await texte32();
+    if (verdict.test(t)) throw new Error(`onglet ${o} : un verdict est lisible : ` + (t.match(verdict) || [])[0]);
+    const n = await page32.evaluate(() => document.querySelectorAll('#boost32 .tour-jauge.trop, #boost32 .avis-contrainte, #boost32 .tour-jauges .pastille').length);
+    if (n) throw new Error(`onglet ${o} : ` + n + ' marque(s) de verdict à l’écran');
+  }
   // La feuille vérifiée ne l'est plus : les données ont changé sous les formules.
   const g = (await etat32('tournee')).grille;
   if (g.valide) throw new Error('la feuille est encore « vérifiée » après l’imprévu');
@@ -1929,8 +1986,9 @@ await v('ENT-3.2 : la tournée laissée telle quelle — les deux jalons de phas
 });
 
 await v('ENT-3.2 : la feuille suit la phase 2 — Ribot à 0 kg, total 196, à écarter 6, créneau de l’Épicerie à retaper', async () => {
+  await onglet32('heures');
   const txt = (await page32.$$eval(`${z32} .gr-table tr`, (tr) => tr.map((r) => r.textContent.replace(/\s+/g, ' ').trim()))).join(' | ');
-  if (!/Atelier Ribot — commande annulée/.test(txt)) throw new Error('la ligne d’Atelier Ribot ne dit pas l’annulation');
+  if (!/Atelier Ribot — annulée/.test(txt)) throw new Error('la ligne d’Atelier Ribot ne dit pas l’annulation');
   if (!/Heure d’arrivée chez Épicerie Roussel/.test(txt) || /chez Pâtisserie Arnaud/.test(txt)) throw new Error('la ligne du créneau n’a pas changé de client');
   if (!/Limite du créneau \(Épicerie Roussel\)/.test(txt)) throw new Error('la donnée du créneau n’a pas changé de client');
   // Les formules de la phase 1 sont gardées : on revérifie, elles valent sur les nouvelles données ;
@@ -1938,13 +1996,15 @@ await v('ENT-3.2 : la feuille suit la phase 2 — Ribot à 0 kg, total 196, à �
   await page32.click(`${z32} [data-gr-verifier]`);
   await page32.waitForTimeout(200);
   const g = (await etat32('tournee')).grille;
-  for (const k of ['B18', 'B19']) if (g.juge[k] !== 'ok') throw new Error(k + ' : ' + g.juge[k]);
-  if (g.juge.B7 !== 'valeur') throw new Error('l’ancienne limite de créneau est jugée : ' + g.juge.B7);
-  if ('B12' in g.juge) throw new Error('le poids de la commande annulée se tape encore');
+  for (const k of ['B10', 'B11']) if (g.juge[k] !== 'ok') throw new Error(k + ' : ' + g.juge[k]);
+  if (g.juge.F7 !== 'valeur') throw new Error('l’ancienne limite de créneau est jugée : ' + g.juge.F7);
+  if ('B4' in g.juge) throw new Error('le poids de la commande annulée se tape encore');
   if ((await imprevu32()).mails.length !== 1) throw new Error('la feuille revérifiée a renvoyé le message');
   const res = async (ref) => (await page32.textContent(`${z32} [data-gr-res="${ref}"]`)).trim();
-  if (await res('B18') !== '196' || await res('B19') !== '6') throw new Error('total / écart : ' + await res('B18') + ' / ' + await res('B19'));
-  await page32.fill(`${z32} [data-gr="B7"]`, '14:55');
+  if (await res('B10') !== '196' || await res('B11') !== '6') throw new Error('total / écart : ' + await res('B10') + ' / ' + await res('B11'));
+  await taper32('F7', '14:55');
+  // La limite retapée depuis le message : l'onglet « Données et poids » est fait à nouveau.
+  if (!(await pastilles32()).startsWith('✓ fait')) throw new Error('pastilles après la limite retapée : ' + await pastilles32());
 });
 
 await v('ENT-3.2 : la bonne replanification gagne les deux jalons de phase 2 ; une qui tient à +12 % ne gagne que le premier', async () => {
@@ -2063,7 +2123,8 @@ await v('ENT-3.2 : le trajet le plus court rate le créneau — les deux paliers
   if (j.horaire !== 'ok' || j.charge !== 'ok') throw new Error('train et charge devraient tenir : ' + JSON.stringify(j));
   const d = await jalon32('creneau');
   if (!/Pâtisserie Arnaud/.test(d.detail)) throw new Error('le détail ne nomme pas le client : ' + d.detail);
-  // La pastille de la jauge muette dit QUE le créneau est raté.
+  // La pastille de la jauge muette dit QUE le créneau est raté (onglet « Heures », à droite de la feuille).
+  await onglet32('heures');
   const cr = await texte32(`${z32} [data-creneau="c6"]`);
   if (!/Créneau raté/.test(cr)) throw new Error('la jauge ne signale pas le créneau raté : ' + cr);
 });
@@ -2674,7 +2735,8 @@ await v('ENT-3.3 : les options des deux temps n’existent qu’en ENT-3.3 — E
   // ENT-3.1 a la feuille « comme un tableur » depuis le chantier F (barre de formule, en lecture tant
   // qu'aucune cellule n'est choisie) : seules les options des deux temps lui sont étrangères.
   if (r.e31.etapes || r.e31.etiq || r.e31.terminer || !r.e31.barre) throw new Error('e31 : ' + JSON.stringify(r.e31));
-  for (const k of ['e32', 'e32i']) if (Object.values(r[k]).some(Boolean)) throw new Error(k + ' : ' + JSON.stringify(r[k]));
+  // ENT-3.2 aussi a la feuille « comme un tableur » depuis le chantier F (et des onglets, pas des pastilles).
+  for (const k of ['e32', 'e32i']) if (r[k].etapes || r[k].terminer || !r[k].barre) throw new Error(k + ' : ' + JSON.stringify(r[k]));
   if (!r.e33.etapes || !r.e33.barre || !r.e33.etiq || !r.e33.readonly) throw new Error('ENT-3.3 : ' + JSON.stringify(r.e33));
 });
 
