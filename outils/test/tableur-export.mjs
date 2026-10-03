@@ -165,6 +165,8 @@ export default async function bloc({ v, nav, ROOT, baseXlsx }) {
     if (r2[1].justes !== 0 || !/valeur tapée|sans formule/.test(r2[1].remarques.join())) throw new Error(dire(r2));
     const r3 = controlerEssai(classeurEleve(ex, { fauxSi: true }), db, ex);
     if (r3[1].justes !== 9 || !/valeur lue X/.test(r3[1].remarques.join())) throw new Error(dire(r3));
+    // La table garde ce que l'élève a écrit, clé par clé (un jalon peut en dépendre).
+    if (JSON.stringify(r1[2].lu) !== JSON.stringify({ 'CAB-USBC-1M': 1, 'CHG-20W': 2, 'ECO-BT-01': 0, 'SOU-SF-02': 0, 'BAT-10K': 0, 'CLE-64G': 0, 'AMP-LED-E27': 0, 'COQ-UNI-01': 1 })) throw new Error('lu : ' + JSON.stringify(r1[2].lu));
     const r4 = controlerEssai(classeurEleve(ex, { countifs: true }), db, ex);
     if (r4[2].ok || !/n'utilise pas NB\.SI/.test(r4[2].remarques.join())) throw new Error(dire(r4));
     // Une ligne supprimée par l'élève : elle compte faux, et la remarque la nomme.

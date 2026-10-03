@@ -231,7 +231,7 @@ function juger(cel, attendu, ctrl) {
 //       la colonne retrouvée par son titre, chaque ligne de l'export retrouvée par sa clé
 //       (l'élève trie, filtre, insère des colonnes : jamais d'adresse fixe) ;
 //   { type: 'table', id, feuille, cle: 'Référence', colonne: 'Nb constats', attendu: { clé: valeur },
-//     fonctions: ['COUNTIF'], formule: true }
+//     fonctions: ['COUNTIF'], formule: true }      → le résultat porte aussi `lu: { clé: valeur lue }`
 //   { type: 'lignes', id, feuille, attendu: 143 }   lignes non vides, aucun doublon exact restant ;
 //   { type: 'cellule', id, cellule: 'E8', attendu, fonctions?, … } et { plage, lignes } : ceux de
 //     `classeur.js` (`controler`), plus les noms de fonctions.
@@ -272,13 +272,18 @@ export function controlerDepot(classeur, controles, propres = []) {
       if (ic < 0 || iv < 0) return resultat(ctrl, 0, cles.length || 1, [`Colonne « ${ic < 0 ? ctrl.cle : ctrl.colonne} » introuvable en ligne 1.`]);
       let justes = 0;
       const rem = [];
+      // Ce que l'élève a écrit, clé par clé : un jalon peut en dépendre (« une erreur ne se paie
+      // qu'une fois » : la décision suivante se juge sur SES chiffres).
+      const lu = {};
       cles.forEach((k) => {
         const l = g.lignes.find((x) => x.cells[ic] && cleDe(x.cells[ic].v) === cleDe(k));
         if (!l) { rem.push(`${k} : ligne absente.`); return; }
-        const pb = juger(l.cells[iv], ctrl.attendu[k], ctrl);
+        const c = l.cells[iv];
+        lu[k] = vide(c) ? null : c.v;
+        const pb = juger(c, ctrl.attendu[k], ctrl);
         if (pb) rem.push(`${k} : ${pb}.`); else justes++;
       });
-      return resultat(ctrl, justes, cles.length, rem);
+      return { ...resultat(ctrl, justes, cles.length, rem), lu };
     }
     if (type === 'colonne') {
       const cle = [].concat(ctrl.cle);

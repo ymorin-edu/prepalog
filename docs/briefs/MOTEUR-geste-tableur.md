@@ -207,7 +207,7 @@ et des noms de fonctions ; retour selon le temps pédagogique ; fichier jamais s
     pas validé (garde du § 7, **à déclarer par la séance**) ;
   - contrôles : `colonne` (`titre`, `cle`, `attendu(ligne)` où `ligne` = la ligne **propre** de l'export en objet
     `{ 'Stock trouvé': 45, … }`, `filtre(ligne)` facultatif, `formule`, `fonctions`, `tolerance`), `table` (`cle`,
-    `colonne`, `attendu: { clé: valeur }`), `lignes` (`attendu`), `cellule` et liste (ceux de `tableur.js`, + `fonctions`) ;
+    `colonne`, `attendu: { clé: valeur }` ; **son résultat porte aussi `lu: { clé: valeur lue }`**, ajouté pour ENT-2.2), `lignes` (`attendu`), `cellule` et liste (ceux de `tableur.js`, + `fonctions`) ;
     chaque contrôle a un `id` et un `libelle` ;
   - fonctions en **noms anglais** de SheetJS (`IF`, `COUNTIF`, `COUNTIFS`, `VLOOKUP`, `IFERROR`…), nom entier ;
     tolérance par défaut **1e-6** (`tolerance: null` = exacte) ;
