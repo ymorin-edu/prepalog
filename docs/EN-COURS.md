@@ -7,7 +7,7 @@ est déjà modifié ou inscrit ci-dessous, **elle s'arrête et le dit à Tristan
 
 | Chantier | Fichiers qu'il touche | Depuis |
 |---|---|---|
-| *(personne d'inscrit)* | | |
+| F · feuille en colonnes pour ENT-3.1 puis ENT-3.2 (pages d'essai d'abord) | `core/types/grille.js`, `styles/base.css`, `contenus/boost-tournee.js`, `contenus/boost-ent32.js`, `activites/boost-tournee.js`, `activites/boost-ent32.js`, `outils/essai-ent31.html`, `outils/test/boost.mjs` | 03/10/2026 |
 
 Rappel : un seul chantier à la fois dans `core/types/tournee.js`, `core/types/grille.js`,
 `core/types/entreprise.js`, `styles/base.css` et `outils/test/boost.mjs` (voir `docs/briefs/COORDINATION-boost.md`).
