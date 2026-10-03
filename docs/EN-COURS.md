@@ -7,7 +7,7 @@ est déjà modifié ou inscrit ci-dessous, **elle s'arrête et le dit à Tristan
 
 | Chantier | Fichiers qu'il touche | Depuis |
 |---|---|---|
-| Ouvrir ENT-2.1, ENT-2.3, ENT-3.2 aux élèves (`pret: true`) | `activites/cdiscount-mouvements.js`, `activites/cdiscount-regularise.js`, `activites/boost-ent32.js`, `outils/test/` (visibilité, cdiscount, boost), `docs/decisions.md` | 03/10/2026 |
+| *(personne d'inscrit)* | | |
 
 Rappel : un seul chantier à la fois dans `core/types/tournee.js`, `core/types/grille.js`,
 `core/types/entreprise.js`, `styles/base.css` et `outils/test/boost.mjs` (voir `docs/briefs/COORDINATION-boost.md`).
