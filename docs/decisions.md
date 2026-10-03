@@ -5,6 +5,7 @@ n'est pas évident)**. Claude Code y ajoute toute décision prise en cours de ro
 reporte dans les fiches du projet PREPALOG. Une décision de fond sur la pédagogie reste dans
 `docs/fiches/prepalog-finalite.md`.
 
+- 03/10/2026 · Tristan · **Vue « quai de réception » (P1) et ENT-4.1 validées à l'écran.** ENT-4.1 reste fermée aux élèves jusqu'à ce que Tristan l'ouvre dans Conduite de séance. Prochain chantier Picard : ENT-4.2 (P4).
 - 03/10/2026 · Claude Code · **ENT-4.1 Picard livrée, fermée aux élèves** (`pret: true, ouverture: 'prof'`) : séance sur la vue quai, accueil, mail du chef de quai, corrigé calculé depuis la séance (pas de générateur), Picard en 4e entreprise de Logisim. **Fond papier de Prepalog imposé** à l'environnement Picard (`THEME.papier`, le fond glacier abandonné : illisible sur un poste en mode sombre, décision de Tristan). Pas de trame déclarée (Cowork). Suite 418/418.
 - 03/10/2026 · Claude Code · **Vue « quai de réception » livrée à l'essai** (P1, brief `docs/briefs/MOTEUR-vue-quai.md`) : le quai est une entrée du menu de l'environnement (menu visible, pour le mail d'accueil) ; en évaluation, « Clore la réception » rend la copie ; chrono réel compté dès l'ouverture, arrêté à la clôture ou à la remise ; tiers-temps recopié dans l'état du quai ; API du §4 complétée (textes, `aides.consignes`, `note`). Page d'essai `outils/essai-quai.html`. Suite 414/414.
 - 03/10/2026 · Tristan · **Geste métier « extraire, traiter dans un tableur, remonter, décider »** à insérer dans des

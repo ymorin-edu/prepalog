@@ -6,7 +6,7 @@
 > Lis docs/briefs/COORDINATION-picard.md, docs/EN-COURS.md, puis le brief docs/briefs/MOTEUR-vue-quai.md et ouvre la maquette docs/briefs/picard/maquette-quai-picard.html. Annonce la durée avant de commencer, découpe en lots, puis enchaîne sans attendre : les questions du brief sont déjà tranchées (§11).
 > ```
 
-**Statut** : à valider par Tristan *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
+**Statut** : livré — validé à l'écran par Tristan le 03/10/2026 *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
 **Date du brief** : 03/10/2026
 **Conversation d'origine** : Cowork (Opus), « maquette du quai Picard » ; fiches projet `claude/prepalog-picard-cadrage.md`, `claude/prepalog-picard-4-seances.md`
 **Modèle** : **Opus** (vue nouvelle du moteur).
@@ -216,7 +216,7 @@ Tranché par Tristan le 03/10/2026 :
   chacun fait tomber ses tests. Suite entière : **414/414**.
 - **Commits** : `c3ba95d` (vue, câblage, contenus, page d'essai), `10a9df7` (serveur d'essai), `c9d73b1` (tests).
 - **Reste ouvert** :
-  - **Validation à l'écran par Tristan** : `outils/essai-quai.html` (réglages : guidage / évaluation, 5 ou 8 palettes,
+  - ~~Validation à l'écran par Tristan~~ : faite le 03/10/2026 (page d'essai et ENT-4.1). Page : `outils/essai-quai.html` (réglages : guidage / évaluation, 5 ou 8 palettes,
     élève / enseignant, tiers-temps), sur l'ordinateur de classe et au vidéoprojecteur.
   - Le temps réel de guidage est **rangé** (base de l'élève et `detail.quai.reel` du score) mais **aucun écran enseignant
     ne l'affiche encore** : à prévoir avec ENT-4.1 ou dans le suivi (le détail d'un score n'est lu nulle part aujourd'hui).
