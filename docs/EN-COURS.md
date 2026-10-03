@@ -7,7 +7,7 @@ est déjà modifié ou inscrit ci-dessous, **elle s'arrête et le dit à Tristan
 
 | Chantier | Fichiers qu'il touche | Depuis |
 |---|---|---|
-| *(personne d'inscrit)* | | |
+| C3 + C4 Cdiscount : renumérotation, périmètre de l'écran Inventaire, ENT-2.3 recadrée | `activites/cdiscount-inventaire.js`, `activites/cdiscount-regularise.js`, `contenus/cdiscount-inventaire.js`, `contenus/cdiscount*.js`, `core/types/inventaire.js`, `outils/test/inventaire.mjs`, `outils/test/cdiscount.mjs`, docs | 04/10/2026 |
 
 Rappel : un seul chantier à la fois dans `core/types/tournee.js`, `core/types/grille.js`,
 `core/types/entreprise.js`, `styles/base.css` et `outils/test/boost.mjs` (voir `docs/briefs/COORDINATION-boost.md`).
