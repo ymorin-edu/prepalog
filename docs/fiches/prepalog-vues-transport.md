@@ -1,7 +1,7 @@
 > *Copie du 02/10/2026 de la fiche `claude/prepalog-vues-transport.md` du projet Claude PREPALOG
 > (source de conception : le projet). Voir `docs/LISEZMOI.md`. Les tailles de fichiers et le nombre de
 > cas de test cités sont ceux du 03/10 : se fier au code et à `node outils/test.mjs` pour les
-> valeurs actuelles.*
+> valeurs actuelles. Complétée le 03/10/2026 par la section « La vue carte ».*
 
 # Prepalog — les deux vues de transport du noyau (03/10/2026 — bandeau, départ à quai, report conditionnel)
 
@@ -85,7 +85,37 @@ cases de report fonctionnent tels quels.
 
 ## Où est le code
 
-`core/types/plan.js` et `core/types/tournee.js`, qu'`entreprise.js` importe et branche.
+`core/types/plan.js` et `core/types/tournee.js`, qu'`entreprise.js` importe et branche. S'y ajoute `core/types/carte.js` (voir plus bas) :
+elle donne à `plan` et à `tournee` une **carte réelle** à la place du décor dessiné.
+
+## La vue carte — `creerCarte(…)` et ses deux modes *(ajoutée le 03/10/2026)*
+
+La carte **réelle** de Nîmes (rues, voie ferrée, parcs, bâti d'après OpenStreetMap et l'IGN ; quartiers
+= IRIS de l'INSEE regroupés ; positions = Base Adresse Nationale). Le module de carte est **généré**
+(`outils/carte/construire.py` depuis un `boost-entNN.json`) : on ne le modifie pas à la main. La vue ne
+connaît ni Nîmes ni Boost. Les **kilomètres se comptent par les rues** (table `carte.trajets`) et le
+tracé de la tournée suit les rues. Deux modes, choisis par ce que le contenu déclare :
+
+| Mode | Il s'active quand… | Ce que l'élève voit et fait | Séance |
+|---|---|---|---|
+| **Lire la case** | le plan déclare `carte` **et** `reperage` | les sept points numérotés visibles dès le départ, les contours des quartiers **avec leur nom**, le quadrillage de 1 km (A à E × 1 à 5) ; sous la carte, le tableau de `plan.js` : n°, adresse, **quartier (menu)**, **case**. Un clic sur un point ou sur une ligne les entoure d'un halo ambre. Les noms des clients n'apparaissent **qu'après validation, dans le tableau** (pas sur la carte : trop larges au centre-ville). | ENT-3.1 (guidage) |
+| **Clic sur la rue** | le plan déclare `carte` **sans** `reperage` | points **cachés** : l'élève clique la bonne rue, le point s'aimante au numéro ; une autre rue est refusée avec son nom et compte comme un essai (jalon en évaluation seulement) ; index des rues par quartier et case | ENT-3.2 et suivantes |
+
+Règles du mode « lire la case » :
+
+- il **réutilise le tableau de repérage de `plan.js`** (`creerPlan(PLAN, options)` : `caseDe`, `dessin`,
+  `brancherDessin`, `nomsDansTableau`), donc les mêmes réglages : `toleres`, `essaisAvantIssue`, `issue`,
+  `blocant`, et le mode hors connexion du **bandeau** (qui remplit les menus de quartier, pas les cases) ;
+- la **case attendue est recalculée** depuis la position du point, jamais recopiée (comme `caseDe`) ;
+- les quartiers dessinés et nommés viennent du module de carte : **autant que la séance en déclare**
+  (sept en ENT-3.1, deux en ENT-3.2) ;
+- **plus de lien vers un plan en ligne** : le zoom d'un quartier donne les noms de rues ;
+- `plan` et `tournee` cohabitent avec `carte` : la tournée se pose sur la même carte (départ, gare,
+  clients cliquables, tracé par les rues).
+
+**Échelle de difficulté du repérage** (décision de Tristan, 03/10/2026) : 3.1 points visibles + contours
++ noms ; 3.2 points cachés, clic sur la rue ; 3.3 la tournée du collègue est déjà posée (on diagnostique) ;
+3.4 à décider. Le premier mode est donc un **guidage**, pas un niveau à réutiliser en évaluation.
 
 ## La vue plan — `creerPlan(PLAN)`
 
