@@ -256,14 +256,16 @@ const CLES = MODELES.map((r) => [cle(r), r]);
 // Les références connues d'un texte, dans l'ordre des emplacements, sans doublon. Les morceaux
 // se coupent aux virgules, points-virgules, barres et retours à la ligne : « bat 10k » reste un
 // seul morceau, lu « bat10k ».
-export function extraireRefs(texte) {
+// `modeles` : les références reconnues (toute l'allée A par défaut ; ENT-2.6 passe les siennes).
+export function extraireRefs(texte, modeles = MODELES) {
   const l = ligne(texte, LIGNE_LISTE);
   let t = l !== null ? l : String(texte || '');
   if (l !== null && t.includes(':')) t = t.slice(t.indexOf(':') + 1);
   const morceaux = t.split(/[,;/\n]+/).map(cle).filter(Boolean);
   const vues = new Set();
-  morceaux.forEach((m) => CLES.forEach(([k, r]) => { if (m.includes(k)) vues.add(r); }));
-  return MODELES.filter((r) => vues.has(r));
+  const cles = modeles === MODELES ? CLES : modeles.map((r) => [cle(r), r]);
+  morceaux.forEach((m) => cles.forEach(([k, r]) => { if (m.includes(k)) vues.add(r); }));
+  return modeles.filter((r) => vues.has(r));
 }
 
 // La réponse « Absent » : aucune référence, et le mot (casse et accents ignorés).

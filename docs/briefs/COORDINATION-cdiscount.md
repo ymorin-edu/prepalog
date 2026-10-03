@@ -27,7 +27,7 @@ Règle de tout le dépôt : **un seul chantier moteur à la fois** (`core/`, `st
 | ENT-2.3 | `cdiscount-inventaire` | Inventaire tournant | entraînement | redonner sa liste, recompter sa liste (le relevé couvre l'allée), oubli = aléa, « Absent » | ENT-2.2 actuelle | **livrée 04/10** (fermée) |
 | ENT-2.4 | `cdiscount-regularise` | Régularisé à l'aveugle | erreur induite + entraînement du geste | exporter les ajustements, SI / NB.SI, enquêter ; vendeur de la place de marché | ENT-2.3 actuelle | **livrée 04/10** (fermée) |
 | ENT-2.5 | `cdiscount-compte-a-rebours` | Le compte à rebours | **évaluation** (coef. 3) | boucle complète sur l'allée C, **un jeu par élève**, copie rendue | ancien brief ENT-2.4 (**abandonné**) | **brief prêt** (`ENT-2.5-compte-a-rebours.md`) |
-| ENT-2.6 | `cdiscount-priorites` | Cinq recomptages, pas un de plus | **bonus** (entraînement, coef. 1) | export sale sur deux allées, NB.SI.ENS + RECHERCHEV, priorisation par la valeur | **nouvelle** | **brief prêt** (`ENT-2.6-bonus.md`) |
+| ENT-2.6 | `cdiscount-priorites` | Cinq recomptages, pas un de plus | **bonus** (entraînement, coef. 1) | export sale sur deux allées, NB.SI.ENS + RECHERCHEV, priorisation par la valeur | **nouvelle** | **livrée 04/10** (fermée) |
 
 Le geste tableur reçoit ses trois temps : **guidé** (2.2), **entraîné** (2.4, 2.6), **évalué** (2.5). C1.6 garde les siens.
 **Aucun élève n'a travaillé sur la série** : renumérotation libre, pas de garde de compatibilité ; toutes les séances

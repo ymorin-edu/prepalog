@@ -1041,7 +1041,7 @@ Ce qui cloche : DEM-26-0027 : 2 - 1 = 1`;
     const d = doublons(metas.map((m) => m.code));
     if (d.length) throw new Error('code en double : ' + d.join(', '));
     const cd = metas.filter((m) => /^cdiscount-/.test(m.id));
-    const attendu = { 'cdiscount-mouvements': 'ENT-2.1', 'cdiscount-chiffres': 'ENT-2.2', 'cdiscount-inventaire': 'ENT-2.3', 'cdiscount-regularise': 'ENT-2.4' };
+    const attendu = { 'cdiscount-mouvements': 'ENT-2.1', 'cdiscount-chiffres': 'ENT-2.2', 'cdiscount-inventaire': 'ENT-2.3', 'cdiscount-regularise': 'ENT-2.4', 'cdiscount-priorites': 'ENT-2.6' };
     for (const [id, code] of Object.entries(attendu)) {
       const m = cd.find((x) => x.id === id);
       if (!m || m.code !== code) throw new Error(`${id} : ${m && m.code} au lieu de ${code}`);
@@ -1881,6 +1881,194 @@ Suite à donner : Réclamation auprès de Gardéo, livraison incomplète`;
       // « À VÉRIFIER » tapé, sans formule : la colonne est fausse partout (0 / 20), la synthèse juste (4 / 4).
       if (!/4 résultats justes sur 24\./.test(t)) throw new Error('retour : ' + (await p.textContent('[data-depot-retour]')));
       if (/AJ-26-0217|nombre tapé|valeur tapée|À vérifier »/.test(t)) throw new Error('détail montré en entraînement : ' + t.slice(0, 400));
+      if (errs.length) throw new Error(errs.join(' | '));
+    } finally { await ctx2.close(); }
+  });
+
+  /* ================================================================================
+   * ENT-2.6 « Cinq recomptages, pas un de plus » (bonus) — ajouté le 04/10/2026, C9.
+   * Valeurs À LA MAIN : lignes brutes et nettoyées, les 8 références à écart, leurs constats depuis
+   * le dernier inventaire et leur valeur, le top 5 par valeur et par fréquence, BAT-10K hors des
+   * cinq avec la date et dedans sans. Le classeur de l'élève est fabriqué ici : il NETTOIE l'export
+   * (vides, doublons, dates en texte), puis écrit Écart, SI(ET), NB.SI.ENS, RECHERCHEV.
+   * ============================================================================== */
+  const S6 = await imp('contenus/cdiscount-priorites.js');
+  const ouvrir6 = (aisance) => {
+    const db = ouvrir(S6, 'Léa', aisance);
+    return db;
+  };
+  const GRAINE6 = GT.graineExport('eleve-test', 'cdiscount-priorites', 'preparations');
+  const export6 = (db, graine = GRAINE6) => GT.construireExport(S6.TABLEUR.exports[0], db, { graine });
+  const CONSTATS_26 = { 'CAB-USBC-1M': 7, 'CHG-20W': 4, 'ECO-BT-01': 2, 'SOU-SF-02': 0, 'BAT-10K': 0, 'CLE-64G': 0, 'AMP-LED-E27': 0,
+    'COQ-UNI-01': 0, 'CAS-FIL-01': 0, 'SUP-VOIT': 5, 'CLA-SF-01': 3, 'HUB-USB-4': 0, 'MUL-4P': 0, 'PIL-AA-8': 8, 'VEI-LED': 0,
+    'BOU-17L': 2, 'GRP-2F': 0, 'MIX-PLG': 2 };
+  const VALEURS_26 = { 'CAB-USBC-1M': 4.9, 'CHG-20W': -29.7, 'ECO-BT-01': -59.7, 'SUP-VOIT': -9.6, 'CLA-SF-01': -28.4, 'PIL-AA-8': -6.2,
+    'BOU-17L': -27.8, 'MIX-PLG': 25.2 };
+  const TOP_VALEUR = ['ECO-BT-01', 'CHG-20W', 'CLA-SF-01', 'BOU-17L', 'MIX-PLG'];
+  const TOP_FREQUENCE = ['PIL-AA-8', 'CAB-USBC-1M', 'SUP-VOIT', 'CHG-20W', 'CLA-SF-01'];
+  // Le classeur de l'élève. `o.sale` : il ne nettoie pas ; `o.nbsi` : NB.SI au lieu de NB.SI.ENS ;
+  // `o.sansDate` : il oublie le critère de date.
+  const classeur6 = (db, o = {}) => {
+    const ex = export6(db);
+    const F = ex.feuilles[0];
+    const c = Object.fromEntries(F.colonnes.map((x, i) => [x, i]));
+    const versDate = (v) => { if (typeof v !== 'string') return v; const [j, m, a] = v.split('/').map(Number); return new Date(a, m - 1, j, 12).getTime(); };
+    let L = F.lignes;
+    if (!o.sale) {
+      const vu = new Set();
+      L = L.filter((l) => l.some((x) => x !== null)).filter((l) => { const k = l.join('|'); if (vu.has(k)) return false; vu.add(k); return true; })
+        .map((l) => l.map((x, i) => (i === c.Date ? versDate(x) : x)));
+    }
+    const tInv = new Date(new Date(db.moves.find((m) => m.type === 'Ajustement inventaire').ts).setHours(0, 0, 0, 0));
+    const dateOk = (l) => typeof l[c.Date] === 'number' && l[c.Date] >= tInv.getTime();
+    const n = F.colonnes.length, K = XL.utils.encode_col(n), Lc = XL.utils.encode_col(n + 1), M = XL.utils.encode_col(n + 2);
+    const aoa = [[...F.colonnes, 'Écart', 'Réf. en écart', 'Écart retenu'], ...L.map((l) => l.map((x, i) => (x === null ? null : i === c.Date && typeof x === 'number' ? new Date(x) : x)))];
+    const ws = XL.utils.aoa_to_sheet(aoa, { cellDates: true });
+    const enEcart = [];
+    L.forEach((l, k) => {
+      if (l.every((x) => x === null)) return;
+      const r = k + 2, ec = l[c['Stock trouvé']] - l[c['Stock logiciel']];
+      const retenu = ec !== 0 && (o.sansDate || dateOk(l));
+      ws[K + r] = { t: 'n', v: ec, f: `I${r}-H${r}` };
+      ws[Lc + r] = { t: 's', v: retenu ? l[c['Référence']] : '', f: `IF(AND(${K}${r}<>0,A${r}>=DATE(${tInv.getFullYear()},${tInv.getMonth() + 1},${tInv.getDate()})),D${r},"")` };
+      ws[M + r] = { t: 'n', v: ec, f: `${K}${r}` };
+      if (retenu) enEcart.push([l[c['Référence']], ec]);
+    });
+    ws['!ref'] = `A1:${M}${L.length + 1}`;
+    const refs = ex.feuilles[2].lignes.map((l) => l[0]);
+    const cout = Object.fromEntries(ex.feuilles[1].lignes.map((l) => [l[0], l[2]]));
+    const syn = refs.map((r) => {
+      const nb = enEcart.filter(([x]) => x === r).length;
+      const e = (enEcart.find(([x]) => x === r) || [r, 0])[1];
+      return [r, nb, e, cout[r], Math.round(e * cout[r] * 100) / 100];
+    });
+    const ws2 = XL.utils.aoa_to_sheet([['Référence', 'Constats', 'Écart', 'Coût', 'Valeur de l’écart'], ...syn]);
+    syn.forEach((x, k) => {
+      const r = k + 2;
+      ws2['B' + r] = { t: 'n', v: x[1], f: o.nbsi ? `COUNTIF(Préparations!${Lc}:${Lc},A${r})` : `COUNTIFS(Préparations!D:D,A${r},Préparations!${K}:${K},"<>0",Préparations!A:A,">="&DATE(2026,1,1))` };
+      ws2['C' + r] = { t: 'n', v: x[2], f: `IFERROR(VLOOKUP(A${r},Préparations!${Lc}:${M},2,FALSE),0)` };
+      ws2['D' + r] = { t: 'n', v: x[3], f: `VLOOKUP(A${r},Tarifs!A:C,3,FALSE)` };
+      ws2['E' + r] = { t: 'n', v: x[4], f: `C${r}*D${r}` };
+    });
+    const wb = XL.utils.book_new();
+    XL.utils.book_append_sheet(wb, ws, 'Préparations');
+    XL.utils.book_append_sheet(wb, XL.utils.aoa_to_sheet([['Référence', 'Désignation', 'Coût unitaire'], ...ex.feuilles[1].lignes]), 'Tarifs');
+    XL.utils.book_append_sheet(wb, ws2, 'Synthèse');
+    return XL.write(wb, { bookType: 'xlsx', type: 'buffer' });
+  };
+  const deposer6 = (db, o) => {
+    const res = GT.controlerDepot(XL.read(classeur6(db, o), { type: 'buffer', cellFormula: true }), S6.controles(db), export6(db).propres);
+    GT.enregistrerDepot(db, S6.ID_DEPOT, res, { retour: 'entrainement', fichier: 'x.xlsx' });
+    return res;
+  };
+  const st6 = (db) => Object.fromEntries(S6.ETAPES.map((e) => [e.id, e.verifier(db).status]));
+
+  await v('ENT-2.6 : 151 lignes propres, 158 brutes (4 vides, 3 doublons, 5 dates en texte, dont 1 doublon et 3 dates sur des constats d\'après l\'inventaire)', async () => {
+    const db = ouvrir6();
+    const ex = export6(db);
+    if (ex.propres.length !== 151) throw new Error(`${ex.propres.length} lignes propres`);
+    const L = ex.feuilles[0].lignes;
+    if (L.length !== 158) throw new Error(`${L.length} lignes brutes`);
+    if (L.filter((l) => l.every((x) => x === null)).length !== 4) throw new Error('vides');
+    const tInv = new Date(db.moves.find((m) => m.type === 'Ajustement inventaire').ts).setHours(0, 0, 0, 0);
+    const textes = L.filter((l) => typeof l[0] === 'string');
+    if (textes.length !== 5) throw new Error('dates en texte : ' + textes.length);
+    const surConstat = (l) => l[8] !== l[7] && (typeof l[0] === 'number' ? l[0] >= tInv : true);
+    if (textes.filter((l) => l[8] !== l[7]).length < 3) throw new Error('dates en texte sur des constats : ' + textes.filter((l) => l[8] !== l[7]).length);
+    const cles = L.filter((l) => l[1]).map((l) => l.join('|'));
+    const dbl = L.filter((l) => l[1] && cles.filter((k) => k === l.join('|')).length > 1);
+    if (cles.length - new Set(cles).size !== 3 || !dbl.some(surConstat)) throw new Error('doublons');
+    // Même élève, même fichier ; un autre élève, d'autres positions.
+    if (JSON.stringify(export6(db).feuilles) !== JSON.stringify(ex.feuilles)) throw new Error('salissures non déterministes');
+    if (JSON.stringify(export6(db, 'autre').feuilles[0].lignes) === JSON.stringify(L)) throw new Error('deux élèves, même fichier');
+    if (ex.feuilles.map((f) => f.nom).join() !== 'Préparations,Tarifs,Synthèse' || ex.feuilles[2].lignes.length !== 18) throw new Error('feuilles');
+    if (ex.feuilles[1].lignes.find((l) => l[0] === 'BAT-10K')[2] !== 24.9) throw new Error('tarif de BAT-10K');
+  });
+
+  await v('ENT-2.6 : constats depuis l\'inventaire, valeurs, top 5 par valeur ≠ top 5 par fréquence ; BAT-10K hors des cinq avec la date, dedans sans', async () => {
+    const db = ouvrir6();
+    if (JSON.stringify(S6.constats(db)) !== JSON.stringify(CONSTATS_26)) throw new Error('constats : ' + JSON.stringify(S6.constats(db)));
+    const v = S6.valeurs(db);
+    for (const [r, x] of Object.entries(VALEURS_26)) if (v[r] !== x) throw new Error(`${r} : ${v[r]} au lieu de ${x}`);
+    if (Object.entries(v).filter(([, x]) => x !== 0).length !== 8) throw new Error('huit références à écart');
+    if (S6.top5Valeur(db).join() !== TOP_VALEUR.join()) throw new Error('top valeur : ' + S6.top5Valeur(db));
+    if (S6.top5Frequence(db).join() !== TOP_FREQUENCE.join()) throw new Error('top fréquence : ' + S6.top5Frequence(db));
+    if (TOP_VALEUR.filter((r) => !TOP_FREQUENCE.includes(r)).length < 2) throw new Error('piège de la fréquence');
+    if (S6.constats(db, { depuisInventaire: false })['BAT-10K'] !== 5) throw new Error('BAT avant l\'inventaire');
+    if (!S6.top5Valeur(db, { depuisInventaire: false }).includes('BAT-10K')) throw new Error('piège de la date : BAT-10K devrait entrer sans le critère');
+  });
+
+  await v('ENT-2.6 : confirmé — 223 lignes, salissures 6 / 5 / 8, mêmes pièges', async () => {
+    const db = ouvrir6('confirme');
+    const ex = export6(db);
+    if (ex.propres.length !== 223 || ex.feuilles[0].lignes.length !== 234) throw new Error(`${ex.propres.length} / ${ex.feuilles[0].lignes.length}`);
+    if (ex.feuilles[0].lignes.filter((l) => typeof l[0] === 'string').length !== 8) throw new Error('dates en texte');
+    if (JSON.stringify(S6.constats(db)) !== JSON.stringify({ ...CONSTATS_26, 'CAB-USBC-1M': 9, 'CHG-20W': 7, 'ECO-BT-01': 4, 'SUP-VOIT': 7, 'CLA-SF-01': 6, 'PIL-AA-8': 9, 'BOU-17L': 4, 'MIX-PLG': 3 })) throw new Error('constats : ' + JSON.stringify(S6.constats(db)));
+    if (S6.top5Valeur(db).join() !== TOP_VALEUR.join()) throw new Error('top valeur');
+    if (TOP_VALEUR.filter((r) => !S6.top5Frequence(db).includes(r)).length < 2) throw new Error('piège de la fréquence');
+    if (!S6.top5Valeur(db, { depuisInventaire: false }).includes('BAT-10K') || S6.constats(db)['BAT-10K'] !== 0) throw new Error('piège de la date');
+  });
+
+  await v('ENT-2.6 : le classeur juste et les cinq bonnes références → 4/4 ; sans travail, rien', async () => {
+    const db = ouvrir6();
+    if (Object.values(st6(db)).some((x) => x !== 'attente')) throw new Error('avant travail : ' + JSON.stringify(st6(db)));
+    const res = deposer6(db);
+    if (res.some((r) => !r.ok)) throw new Error(res.map((r) => `${r.id} ${r.justes}/${r.total} ${r.remarques[0] || ''}`).join(' ; '));
+    repondre(db, 'À recompter : ECO-BT-01, CHG-20W, CLA-SF-01, BOU-17L, MIX-PLG'); declencher(S6, db);
+    if (Object.values(st6(db)).some((x) => x !== 'ok')) throw new Error(JSON.stringify(st6(db)));
+    if (!db.mails.some((m) => m.subject === 'Les cinq recomptages' && /Merci\. Je lance les cinq recomptages\./.test(m.text))) throw new Error('accusé de Nadia');
+  });
+
+  await v('ENT-2.6 : erreurs — synthèse sur l\'export non nettoyé : jalons 1 et 2 ko ; NB.SI au lieu de NB.SI.ENS : 2 ko ; top 5 par fréquence : 4 ko ; date oubliée : BAT-10K et ko', async () => {
+    const sale = ouvrir6(); deposer6(sale, { sale: true });
+    if (st6(sale).nettoye !== 'ko' || st6(sale).constats !== 'ko') throw new Error('sale : ' + JSON.stringify(st6(sale)));
+    const nbsi = ouvrir6(); deposer6(nbsi, { nbsi: true });
+    if (st6(nbsi).constats !== 'ko' || st6(nbsi).nettoye !== 'ok') throw new Error('NB.SI : ' + JSON.stringify(st6(nbsi)));
+    const freq = ouvrir6(); deposer6(freq); repondre(freq, 'À recompter : ' + TOP_FREQUENCE.join(', ')); declencher(S6, freq);
+    if (st6(freq).cinq !== 'ko') throw new Error('top fréquence accepté');
+    const quatre = ouvrir6(); repondre(quatre, 'À recompter : ECO-BT-01, CHG-20W, CLA-SF-01, BOU-17L'); declencher(S6, quatre);
+    if (st6(quatre).cinq !== 'ko') throw new Error('quatre références acceptées');
+    // L'élève qui oublie la date : ses constats et ses valeurs sont faux, sa liste suit ses chiffres
+    // (une erreur ne se paie qu'une fois) — mais ses chiffres mettent BAT-10K dans les cinq.
+    const sd = ouvrir6(); deposer6(sd, { sansDate: true });
+    if (st6(sd).constats !== 'ko' || st6(sd).valeur !== 'ko') throw new Error('sans date : ' + JSON.stringify(st6(sd)));
+    if (!S6.cinqBonnes(['ECO-BT-01', 'BAT-10K', 'CHG-20W', 'CLA-SF-01', 'BOU-17L'], S6.valeursDeReference(sd))) throw new Error('liste cohérente avec ses chiffres');
+  });
+
+  await v('ENT-2.6 : à l\'écran — Exporter (158 lignes brutes, trois feuilles), dépôt : « n résultats justes sur m »', async () => {
+    const ctx2 = await nav.newContext({ acceptDownloads: true });
+    const p = await ctx2.newPage();
+    p.setDefaultTimeout(6000);
+    const errs = [];
+    p.on('pageerror', (e) => errs.push(e.message));
+    p.on('console', (m) => { if (m.type() === 'error' && !/\b404\b/.test(m.text())) errs.push(m.text()); });
+    try {
+      await p.goto(new URL('/', page.url()).toString());
+      await p.waitForSelector('#btnProf', { timeout: 8000 });
+      await p.evaluate(async () => {
+        const mod = await import('/activites/cdiscount-priorites.js');
+        const hote = document.createElement('div'); hote.id = 'hote6'; document.body.appendChild(hote);
+        const db = {};
+        window.__c26 = { db, scores: [] };
+        mod.rendre(hote, { meta: mod.meta, profil: { prenom: 'Léa', nom: 'Test', role: 'eleve', uid: 'eleve-test' }, codeStock: 'STOCK24',
+          jeu: { etat: () => db, sauver() {} }, enregistrer(x) { window.__c26.scores.push(x); }, quitter() {} });
+      });
+      const Z = '#hote6 .ent-main';
+      const aller = async (vue) => { await p.click(`#hote6 .ent-nav[data-vue="${vue}"]`); await p.waitForTimeout(80); };
+      await aller('commandes');
+      const [dl] = await Promise.all([p.waitForEvent('download'), p.click(`${Z} [data-exporter="preparations"]`)]);
+      if (dl.suggestedFilename() !== 'cdiscount-preparations-allees-A-B.xlsx') throw new Error('nom : ' + dl.suggestedFilename());
+      const wb = XL.read(fs.readFileSync(await dl.path()), { type: 'buffer' });
+      if (wb.SheetNames.join() !== 'Préparations,Tarifs,Synthèse') throw new Error('feuilles');
+      const brut = XL.utils.sheet_to_json(wb.Sheets['Préparations'], { header: 1, blankrows: true }).length - 1;
+      if (brut !== 158) throw new Error(`${brut} lignes brutes`);
+      // Le fichier téléchargé est celui que fabrique le test pour le même élève (même graine).
+      const db = await p.evaluate(() => JSON.parse(JSON.stringify(window.__c26.db)));
+      await aller('fichiers');
+      await p.setInputFiles('#fichierTableur', { name: 'bonus.xlsx', mimeType: 'application/octet-stream', buffer: classeur6(db) });
+      await p.waitForTimeout(500);
+      const t = (await p.textContent(Z)).replace(/\s+/g, ' ');
+      if (!/37 résultats justes sur 37\./.test(t)) throw new Error('retour : ' + (await p.textContent('[data-depot-retour]')));
       if (errs.length) throw new Error(errs.join(' | '));
     } finally { await ctx2.close(); }
   });
