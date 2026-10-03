@@ -173,7 +173,7 @@ Inès et sa feuille sont **construits**. Les adresses des clients restent réell
 - [ ] Lot 2 : quel jeu de valeurs (journée + imprévu) parmi ceux proposés par le script.
 - [ ] Lot 2 : quelle formule fausse pour Inès ; quel jalon.
 - [ ] Lot 2 : « données recopiées justes » = jalon à part, ou dans « formules » ? (nombre de jalons de 3.2)
-- [ ] À l'écran (page d'essai) : la règle « une erreur de lecture ne se paie qu'une fois » convient-elle ?
+- [x] À l'écran (page d'essai) : la règle « une erreur de lecture ne se paie qu'une fois » convient-elle ? **Oui (Tristan, 03/10).**
 - [ ] 3.4 (brief 3.4, pas ici) : matinée, charge, colis, mail moins explicite — valeurs à caler avec le script, **même méthode qu'en §4.1**
       (les valeurs 9 h 30 / 11 h 50 / 15 km/h / 160 kg du premier brief sont probablement trop larges, comme celles de 3.2).
 
