@@ -6,7 +6,7 @@
 > Lis docs/briefs/COORDINATION-picard.md puis implémente le brief docs/briefs/ENT-4.4-picard-evaluation.md avec les seuils de temps réel provisoires (12 et 16 min) : ils seront ajustés plus tard, garde-les dans un réglage facile à changer. Annonce la durée puis enchaîne sans attendre : les questions du brief sont déjà tranchées (§10).
 > ```
 
-**Statut** : à implémenter — **après** ENT-4.1 et `MOTEUR-tiers-temps`. **L'essai en classe ne bloque pas** (décision de
+**Statut** : **livré le 03/10/2026, fermé aux élèves** (`pret: true, ouverture: 'prof'`) — à essayer à l'écran. Avant : à implémenter — **après** ENT-4.1 et `MOTEUR-tiers-temps`. **L'essai en classe ne bloque pas** (décision de
 Tristan, 03/10) : construire avec les seuils provisoires (12 / 16 min), rangés dans un réglage du contenu facile à
 changer ; Tristan les ajustera après l'essai, avant le jour de l'évaluation.
 **Date du brief** : 03/10/2026
@@ -120,11 +120,61 @@ ne sait pas le faire — le dire au compte rendu). `contenus/corriges/ENT-4.4.js
 
 ---
 
-## Compte rendu *(rempli par Claude Code à la livraison)*
+## Compte rendu *(rempli par Claude Code à la livraison, 03/10/2026)*
 
 - **Fichiers créés / modifiés** :
+  - créés : `core/tirage.js` (tirage générique), `activites/picard-ent44.js`, `contenus/picard-ent44.js` (réserve,
+    tirage, contraintes d'équité, réglage de la note `NOTE_ENT44`, mail), `contenus/corriges/ENT-4.4.js` ;
+  - moteur : `core/types/quai.js` (second motif `deuxMotifs` / `motif2Attendu`, `etapesQuaiTire`, `resume` pour le
+    détail de la copie), `core/types/entreprise.js` (`quai` en fonction de la graine : graine posée à l'ouverture,
+    note et ramassage sur le quai de la base), `core/prof.js` (onglet Corrigés : « le corrigé de cet élève »),
+    `core/copie.js` (`baseDeLEleve` exportée, rien d'autre) ;
+  - `contenus/picard.js` (fournisseur fictif F-CDD, `catalogue(produits, fournisseur)`), `activites/index.js` (une
+    ligne), `activites/FICHE-SEANCE.md` (tirage et second motif) ;
+  - tests : 13 cas ENT-4.4 dans `outils/test/picard.mjs` ; **une ligne d'un cas existant de `outils/test/socle.mjs`
+    réécrite** (la liste des séances Logisim gagne ENT-4.4). `outils/test.mjs` et `commun.mjs` non touchés.
 - **Écarts par rapport au brief** :
-- **Décisions prises en route** :
-- **Tests** :
-- **Commits** :
-- **Reste ouvert** :
+  - **Seuils hors froid inatteignables avec 6 palettes** : un parcours juste sans aucun geste en trop prend déjà
+    21 min 30 hors froid (6 min 30 de déchargement + 6 sondes + 6 comptages + 3 min pour rentrer le lot) ; un élève
+    prudent qui lit les 6 étiquettes et fait le tour de chaque palette arrive vers 27-28 min. Avec « ≤ 20 → 3 », les
+    3 points sont hors d'atteinte : le parcours juste et rapide fait **19/20**, pas 20. Les seuils du brief sont
+    gardés tels quels dans `NOTE_ENT44` ; proposition à trancher : **≤ 25 → 3, ≤ 30 → 2, ≤ 35 → 1**. Le test « juste
+    rapide → 20 » est écrit avec un temps hors froid ramené à 20 min dans l'état.
+  - Le suivi de classe n'affiche pas le `detail` : le corrigé par élève est donc une **vue de l'onglet Corrigés**
+    (choisir un élève du groupe actif : son camion, l'attendu, sa réponse jalon par jalon, sa note), et le détail
+    est AUSSI rangé dans la copie (`detail.quai.jeu`, `detail.quai.graine`).
+  - La palette « deux problèmes » demandait un **second motif** que la vue ne savait pas faire (demande au moteur
+    non listée au §7) : ajouté, visible seulement quand la séance le déclare (ENT-4.1 à 4.3 inchangées à l'écran).
+- **Décisions prises en route (à corriger à l'écran si besoin)** :
+  - Noms fictifs : fournisseur **« Les Cuisines de la Deûle »**, transporteur **« Transports Polarix »** (aucune
+    société de ce nom trouvée par recherche web le 03/10/2026) ; BL `CD-26-xxxx`, remorque `FR-xxx`, arrivée 06:00.
+  - Réserve de 14 produits (pâtisseries et plats cuisinés), chacun avec sa « référence voisine » livrée par erreur :
+    lasagnes bolognaise / aux légumes, gratin dauphinois / savoyard, hachis parmentier / de canard, bœuf
+    bourguignon / carottes, blanquette de veau / de dinde, paëlla royale / au poulet, risotto champignons /
+    asperges, tarte citron meringuée / citron, tarte aux pommes / fine aux pommes, éclairs chocolat / café, macarons
+    assortis / chocolat, moelleux chocolat / cœur caramel, profiteroles / choux à la crème, tiramisu / framboise.
+  - Plages tirées : palettes 3-4 × 2-3 × 4-5 cartons ; températures froides −22,4 à −18,6 °C, palette chaude −14,6 à
+    −12,4 °C (toujours au-dessus de −15 : refuser) ; « double » : 1-2 manquants sur la couche du dessus + 1-3
+    écrasés ; « avarie » : 1-3 écrasés ; tous les écrasés sur la **face arrière** (il faut faire le tour, comme P2
+    d'ENT-4.1, et c'est la même face pour tous : équité du temps) ; « couche » : 2 à (couche − 2) cartons absents du
+    dessus, BL = cartons réels ; remontée du ticket d'1 h, débutant entre 01:00 et 04:30, trois relevés au-dessus de
+    −15 °C (−13,4 à −11,8).
+  - Mail d'accueil : « lundi chargé : tu réceptionnes le camion de 6 h 00 au quai 32, sans moi. Les Cuisines de la
+    Deûle, 6 palettes, transporteur Transports Polarix. »
+  - Graine posée **une fois pour toutes** dans la base (`db.tirage`) : une base ouverte ensuite sous un autre
+    identifiant garde son camion. Un élève qui n'a pas ouvert : le corrigé montre déjà le camion qu'il recevra.
+  - 20 jalons pour tous : ticket, 6 comptages, 6 décisions, 4 réserves, pas de « déballage », signature, lot rentré.
+- **Tests** (vérifié : suite entière 470/471 puis `socle` 47/47 après la ligne ENT-4.4 ; bloc `picard` 79/79) :
+  500 graines conformes du premier coup (zéro secours, même structure, règle −18/−15, ticket) ; cinq sabotages
+  refusés par le vérificateur ; même élève → même camion, 300 élèves → 300 camions ; jeu figé (valeurs à la main) ;
+  meta ; graine posée, aucune aide, second motif sur chaque palette ; parcours juste → rien de visible avant la
+  remise, copie 19/20, ramassage = même note ; deux problèmes (ligne de réserve, un seul motif → faux, motifs dans
+  l'autre ordre → juste, motif en trop → faux) ; seconde quantité fausse → seule la réserve tombe ; notes du brief
+  (rapide 20, palette fausse 18,42, BL non signé 14,25, tiers-temps 13 min 20 → 20 au lieu de 19) ; rechargement ;
+  voisins ; corrigé par élève dans l'onglet ; ouverture dans Logisim. Éprouvés à l'envers : graine identique pour
+  tous → 8 cas tombent ; second motif ignoré → le cas « deux problèmes » tombe.
+- **Commits** : voir `git log` (« ENT-4.4 Picard : … »).
+- **Reste ouvert** : seuils du temps réel (12 / 16 min, provisoires) et du hors froid (voir écart ci-dessus), à
+  régler dans `NOTE_ENT44` avant le jour de l'évaluation ; le mode réel (Firebase) n'est pas couvert par la suite :
+  la copie porte maintenant un `detail.quai.jeu` de 20 objets (taille modeste, pas de tableau de tableaux) ;
+  réutilisation par Cdiscount ENT-2.5 : voir la fiche séance (une vue inventaire tirée reste à brancher).
