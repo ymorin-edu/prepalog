@@ -155,3 +155,11 @@
 .quai-bilan{ font-size:13px }
 .quai-bilan td{ vertical-align:top }
 .quai-note{ font-size:13px; margin-bottom:10px }
+
+/* Quai « déjà réceptionné » (ENT-4.3) : le bandeau des deux temps, l'écriture du collègue sur sa fiche. */
+.quai-temps{ border:1px solid var(--filet); border-left:4px solid var(--quai-froid, var(--ardoise)); border-radius:var(--r); padding:8px 12px; font-size:14px; background:var(--panneau) }
+.quai-temps-2{ border-left-color:var(--ardoise) }
+.quai-onglets-dossier button{ font-size:15px; padding:8px 14px }
+.quai-main{ font-family:"Segoe Print","Bradley Hand","Comic Sans MS",cursive; color:#1d3a7a }
+p.quai-main{ margin:8px 0 0; font-size:15px }
+.quai-controle .quai-tete{ align-items:center }

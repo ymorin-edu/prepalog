@@ -968,6 +968,227 @@ await v('ENT-4.2 : sous le logo Picard dans Logisim, elle s’ouvre sur l’accu
   await ctx.close();
 });
 
+/* ============================================================ ENT-4.3 : la réception de nuit */
+// Valeurs écrites à la main (brief §5) : N1 4×3×4 − 4 = 44 = BL (fausse piste) ; N2 fiche −14 °C « OK », sonde
+// d'aujourd'hui −21,0 °C → bloquer ; N3 4×2×5 − 3 = 37 pour 40 au BL (fiche : 40) ; BL SL-26-1207, réception 03 h 10.
+const ID43 = 'picard-ent43';
+const monter43 = (p) => p.evaluate(async () => {
+  const { creerEntreprise } = await import('/core/types/entreprise.js');
+  const P = await import('/contenus/picard.js');
+  const S = await import('/contenus/picard-ent43.js');
+  document.querySelector('#quaiTest')?.remove();
+  const hote = document.createElement('div'); hote.id = 'quaiTest'; document.body.appendChild(hote);
+  const U = { ENTREPRISE: P.ENTREPRISE, VOCAB: P.VOCAB, CATALOGUE: P.catalogue(S.PRODUITS_ENT43), SUPPLIERS: P.SUPPLIERS,
+    SUP_BY_ID: P.SUP_BY_ID, CUSTOMERS: P.CUSTOMERS, CM: P.CM, THEME: P.THEME, baseDeDepart: P.baseDeDepart,
+    etapes: S.ETAPES, exercice: 'ENT-4.3', accueil: S.ACCUEIL, volet: S.VOLET, quai: S.QUAI_ENT43 };
+  const db = {};
+  window.__q = { db, U, S, moteur: creerEntreprise(U), remis: null };
+  window.__q.moteur.rendre(hote, {
+    meta: { id: 'picard-ent43', code: 'ENT-4.3', titre: 'Picard', portee: 'eleve', immersif: true },
+    profil: { prenom: 'Lea', nom: 'Test', role: 'eleve' },
+    jeu: { etat: () => db, sauver: () => {} }, enregistrer: () => {}, quitter: () => {}, codeStock: 'ABC', lireScore: async () => null,
+  });
+  document.querySelector('#quaiTest .ent-nav[data-vue="quai"]').click();
+});
+const etat43 = (p) => p.evaluate((id) => JSON.parse(JSON.stringify((window.__q.db.quais || {})[id] || null)), ID43);
+const auQuai = async (p) => { await p.click('#quaiTest .ent-nav[data-vue="quai"]'); await p.waitForTimeout(40); };
+const jalons43 = (p) => p.evaluate(async () => {
+  const { jalonsQuai } = await import('/core/types/quai.js');
+  const r = jalonsQuai(window.__q.db, window.__q.U.quai);
+  return { pts: r.pts, max: r.max, ok: r.L.filter((l) => l.ok).map((l) => l.id) };
+});
+// Répondre, dans la messagerie, au message reçu dont l'objet commence par `objet`.
+async function repondre(p, objet, texte) {
+  await p.click('#quaiTest .ent-nav[data-vue="mail"]');
+  await p.click('#quaiTest [data-dossier="in"]');
+  const id = await p.evaluate((o) => window.__q.db.mails.find((m) => m.folder === 'in' && m.subject.startsWith(o)).id, objet);
+  await p.click(`#quaiTest [data-mail="${id}"]`);
+  await p.click('#quaiTest [data-repondre]');
+  await p.fill('#quaiTest #repT', texte);
+  await p.click('#quaiTest #formRep button[type="submit"]');
+  await p.waitForTimeout(60);
+}
+const DIAG_JUSTE = ['Palette acceptée à tort : N2', 'Preuve : sa fiche dit -14 °C à cœur', 'Manquant : N3, 3 cartons',
+  'Réserve : « sous réserve de déballage » ne vaut rien', 'Délai : encore dans le délai'].join('\n');
+const protJuste = (jour) => ['BL : SL-26-1207', `Réceptionné le : ${jour.split('-').reverse().join('/')}`, 'Palette : N2 et N3',
+  'Constat : N2 température de -14 °C à la réception, N3 cartons manquants', 'Quantité : 3 cartons sur N3'].join('\n');
+const bloquer43 = async (p, n) => {
+  await clic(p, '[data-q="onglet"][data-v="chambre"]');
+  await clic(p, `[data-q="sel"][data-n="${n}"]`);
+  await clic(p, '[data-q="bloquer"]');
+};
+const terminer43 = async (p) => { await clic(p, '[data-q="terminer"]'); await clic(p, '[data-q="terminer"]'); };
+
+await v('ENT-4.3 : meta (erreur induite C1.4, 1re, livrée fermée aux élèves, dix jalons)', async () => {
+  const m = await pg2.evaluate(async () => (await import('/activites/picard-ent43.js')).meta);
+  egal([m.id, m.code, m.rubrique, m.competences, m.temps, m.niveaux, m.bareme, m.pret, m.ouverture, m.immersif, m.portee, !!m.copie],
+    ['picard-ent43', 'ENT-4.3', 'logisim', ['C1.4'], 'erreur', ['1re'], 10, true, 'prof', true, 'eleve', false], 'meta');
+});
+
+await v('ENT-4.3 : contenu — N2 acceptée à tort au-dessus de −15 °C, N3 37 pour 40, N1 conforme ; tout à −21 °C aujourd’hui', async () => {
+  const S = await import(new URL('../../contenus/picard-ent43.js', import.meta.url));
+  const pal = Object.fromEntries(S.PALETTES_ENT43.map((p) => [p.id, p]));
+  const fiche = Object.fromEntries(S.FICHE.map((f) => [f.id, f]));
+  const reel = (p) => p.W * p.D * p.L - p.manque.length;
+  egal([reel(pal.N1), pal.N1.bl, reel(pal.N3), pal.N3.bl, fiche.N3.compte], [44, 44, 37, 40, 40], 'comptages');
+  vrai(fiche.N2.temp > -15 && fiche.N2.decision === 'Acceptée', 'N2 doit être acceptée au-dessus de −15 °C sur la fiche');
+  vrai(S.FICHE.filter((f) => f.id !== 'N2').every((f) => f.temp <= -18), 'une autre palette hors de la règle sur la fiche');
+  vrai(S.PALETTES_ENT43.every((p) => p.temp <= -20.5), 'la sonde d’aujourd’hui trahirait la réponse');
+  egal(S.PALETTES_ENT43.filter((p) => p.bloquer).map((p) => p.id), ['N2'], 'palettes à bloquer');
+});
+
+await v('ENT-4.3 : temps 1 figé — le dossier de Mathis se lit, aucun bouton Bloquer ni « J’ai terminé », les gestes ne changent pas le dossier', async () => {
+  await monter43(pg2);
+  vrai((await texte(pg2, `${Z} [data-q-temps]`)).startsWith('Temps 1 — Contrôler'), 'bandeau du temps 1');
+  const avant = await texte(pg2, `${Z} [data-q-dossier]`) + await texte(pg2, `${Z} [data-q-fiche-tableau]`);
+  vrai(avant.includes('Sous réserve de déballage.') && avant.includes('SL-26-1207'), 'BL signé : ' + avant.slice(0, 200));
+  vrai((await texte(pg2, `${Z} [data-q-fiche="N2"]`)).includes('−14 °C'), 'fiche N2');
+  await clic(pg2, '[data-q="onglet"][data-v="chambre"]');
+  await clic(pg2, '[data-q="sel"][data-n="2"]');
+  await clic(pg2, '[data-q="tourner"]');
+  await clic(pg2, '[data-q="sonder"]');
+  await pg2.fill(`${Z} [data-q-compte]`, '37');
+  await clic(pg2, '[data-q="compter"]');
+  egal(await pg2.$$eval(`${Z} [data-q="bloquer"], ${Z} [data-q="debloquer"], ${Z} [data-q="terminer"]`, (x) => x.length), 0, 'boutons du temps 2 au temps 1');
+  vrai(await pg2.$(`${Z} [data-q-pas-bloquer]`), 'phrase du temps 1');
+  vrai((await texte(pg2, `${Z} [data-q-rcompte]`)).includes('Ton comptage : 37 cartons · fiche de Mathis : 40 · BL : 40'), 'comptage noté');
+  await clic(pg2, '[data-q="onglet"][data-v="dossier"]');
+  egal(await texte(pg2, `${Z} [data-q-dossier]`) + await texte(pg2, `${Z} [data-q-fiche-tableau]`), avant, 'dossier modifié par les gestes');
+  const e = await etat43(pg2);
+  egal([e.phase, Object.values(e.palettes).some((s) => s.bloque), e.fini], [1, false, false], 'état du temps 1');
+});
+
+await v('ENT-4.3 : re-sonder N2 lit −21,0 °C (la sonde ne trahit rien), la fiche dit −14 °C', async () => {
+  await clic(pg2, '[data-q="onglet"][data-v="chambre"]');
+  await clic(pg2, '[data-q="sel"][data-n="1"]');
+  await clic(pg2, '[data-q="sonder"]');
+  egal(await texte(pg2, `${Z} [data-q-sonde]`), '−21,0 °C à cœur maintenant', 'sonde N2');
+  egal(await texte(pg2, `${Z} [data-q-fiche-temp]`), '−14 °C', 'fiche N2');
+});
+
+await v('ENT-4.3 : N3 se regarde de l’arrière et compte 37 cartons dessinés (4 × 2 × 5 − 3)', async () => {
+  await clic(pg2, '[data-q="sel"][data-n="2"]');
+  // N3 a déjà fait un quart de tour : deux de plus pour la vue de l'arrière.
+  while (!(await texte(pg2, `${Z} [data-q-palette]`)).includes('vue de l’arrière')) await clic(pg2, '[data-q="tourner"]');
+  // 4 × 2 × 5 − 3 = 37 cartons dessinés.
+  const n = await pg2.$$eval(`${Z} [data-q-palette] polygon[fill="#e6cfa3"]`, (x) => x.length);
+  egal(n, 37, 'cartons dessinés');
+});
+
+await v('ENT-4.3 : un diagnostic FAUX ouvre quand même le temps 2, une seule fois ; le chef ne dit pas quoi corriger', async () => {
+  await monter43(pg2);
+  await repondre(pg2, 'Réception de nuit', 'Palette acceptée à tort : aucune\nPreuve :\nManquant : aucun\nRéserve :\nDélai :');
+  let e = await etat43(pg2);
+  egal(e.phase, 2, 'temps 2 non ouvert');
+  const reponses = await pg2.evaluate(() => window.__q.db.mails.filter((m) => m.folder === 'in' && m.subject === 'Re : réception de nuit').map((m) => m.text));
+  egal(reponses.length, 1, 'réponse du chef');
+  vrai(!/N2|N3|déballage/.test(reponses[0]), 'la réponse du chef révèle : ' + reponses[0]);
+  await repondre(pg2, 'Réception de nuit', DIAG_JUSTE);
+  egal(await pg2.evaluate(() => window.__q.db.mails.filter((m) => m.subject === 'Re : réception de nuit').length), 1, 'réponse du chef en double');
+  await auQuai(pg2);
+  vrai((await texte(pg2, `${Z} [data-q-temps]`)).startsWith('Temps 2 — Corriger'), 'bandeau du temps 2');
+  vrai(await pg2.$(`${Z} [data-q="terminer"]`), '« J’ai terminé » absent au temps 2');
+});
+
+await v('ENT-4.3 : parcours juste — diagnostic, N2 bloquée, protestation, « J’ai terminé » : 10/10 et bilan', async () => {
+  await monter43(pg2);
+  egal((await jalons43(pg2)).pts, 0, 'jalons avant tout');
+  await repondre(pg2, 'Réception de nuit', DIAG_JUSTE);
+  await auQuai(pg2);
+  await bloquer43(pg2, 1);
+  const jour = (await etat43(pg2)).jour;
+  await repondre(pg2, 'Avis de livraison', protJuste(jour));
+  await auQuai(pg2);
+  await terminer43(pg2);
+  const j = await jalons43(pg2);
+  egal([j.pts, j.max], [10, 10], 'jalons : ' + j.ok);
+  egal(await pg2.$$eval(`${Z} [data-q-bilan] tr[data-jalon]`, (x) => x.length), 10, 'lignes du bilan');
+  vrai((await texte(pg2, `${Z} [data-q-bilan] tr[data-jalon="diag-n2"]`)).includes('sa fiche dit -14 °C à cœur'), 'le bilan montre la ligne telle que tapée');
+  const etapes = await pg2.evaluate(() => window.__q.S.ETAPES.map((x) => x.verifier(window.__q.db).status));
+  egal(etapes.filter((x) => x === 'ok').length, 10, 'suivi');
+});
+
+await v('ENT-4.3 : « J’ai terminé » est définitif (deux clics) — plus de blocage possible, même forcé', async () => {
+  const e = await etat43(pg2);
+  vrai(e.fini && e.termine, 'non terminé');
+  vrai(await pg2.isDisabled(`${Z} [data-q="debloquer"]`), 'débloquer encore actif');
+  await pg2.evaluate(() => { const b = document.querySelector('#quaiTest [data-q="debloquer"]'); b.disabled = false; b.click(); });
+  egal((await etat43(pg2)).palettes.N2.bloque, true, 'débloquée après « J’ai terminé »');
+});
+
+await v('ENT-4.3 : N1 accusée → faux ; N4 bloquée → faux ; protestation sans quantité → faux ; le reste juste', async () => {
+  await monter43(pg2);
+  await repondre(pg2, 'Réception de nuit', DIAG_JUSTE.replace('Manquant : N3, 3 cartons', 'Manquant : N3, 3 cartons ; N1, 4 cartons'));
+  await auQuai(pg2);
+  await bloquer43(pg2, 1);
+  await clic(pg2, '[data-q="sel"][data-n="3"]');
+  await clic(pg2, '[data-q="bloquer"]');
+  const jour = (await etat43(pg2)).jour;
+  await repondre(pg2, 'Avis de livraison', protJuste(jour).replace('Quantité : 3 cartons sur N3', 'Quantité :'));
+  const j = await jalons43(pg2);
+  egal(['diag-n1', 'diag-n3', 'bloque-autres', 'prot-constat'].filter((id) => !j.ok.includes(id)), ['diag-n1', 'diag-n3', 'bloque-autres', 'prot-constat'], 'jalons faux');
+  egal(j.pts, 6, 'jalons justes : ' + j.ok);
+  // Débloquer N4 (permis tant que « J’ai terminé » n’est pas cliqué) répare le jalon du blocage.
+  await auQuai(pg2);
+  await clic(pg2, '[data-q="onglet"][data-v="chambre"]');
+  await clic(pg2, '[data-q="sel"][data-n="3"]');
+  await clic(pg2, '[data-q="debloquer"]');
+  vrai((await jalons43(pg2)).ok.includes('bloque-autres'), 'débloquer N4 ne répare pas');
+});
+
+await v('ENT-4.3 : aucun jalon n’est vrai par inaction (même temps 2 ouvert par un message vide de sens)', async () => {
+  await monter43(pg2);
+  egal((await jalons43(pg2)).pts, 0, 'base neuve');
+  await repondre(pg2, 'Réception de nuit', 'ok');
+  await auQuai(pg2);
+  await terminer43(pg2);
+  const j = await jalons43(pg2);
+  // « N1 non accusée » est le seul jalon que donne un diagnostic envoyé sans rien accuser (brief §8).
+  egal(j.ok, ['diag-n1'], 'jalons vrais');
+});
+
+await v('ENT-4.3 : lecture des lignes — délai (« pas dépassé » juste, « trop tard » faux), date sous trois formes, palettes', async () => {
+  const S = await import(new URL('../../contenus/picard-ent43.js', import.meta.url));
+  const delai = (l) => S.jalonsDiagnostic({ mails: [{ folder: 'out', toMail: S.CHEF.mail, ts: 1, text: `Délai : ${l}` }] }).find((x) => x.id === 'diag-delai').ok;
+  egal(['encore dans le délai', 'pas dépassé', 'oui, 3 jours', 'trop tard', 'non', 'délai dépassé', 'impossible'].map(delai),
+    [true, true, true, false, false, false, false], 'délai');
+  egal(['13/10/2026', 'le 13/10', '13 octobre 2026', '14/10/2026', '13/11/2026'].map((d) => S.dateJuste(d.toLowerCase(), '2026-10-13')),
+    [true, true, true, false, false], 'dates');
+  egal([S.palettesCitees('n2 et n3'), S.palettesCitees('N 2, N3, n2')], [['N2', 'N3'], ['N2', 'N3']], 'palettes citées');
+});
+
+await v('ENT-4.3 : le bouton Messagerie mène aux messages, un lien ramène au quai', async () => {
+  await monter43(pg2);
+  await clic(pg2, '[data-q="messagerie"]');
+  vrai((await texte(pg2, Z)).includes('Réception de nuit : à vérifier ce matin'), 'messagerie non ouverte');
+  await pg2.click('#quaiTest [data-retour-quai]');
+  await pg2.waitForTimeout(40);
+  vrai(await pg2.$(`${Z} [data-quai="picard-ent43"]`), 'pas revenu au quai');
+});
+
+await v('ENT-4.3 : corrigé — palettes, diagnostic et protestation', async () => {
+  const { CORRIGE: c } = await import(new URL('../../contenus/corriges/ENT-4.3.js', import.meta.url));
+  egal(c.items[0].reponses.map((r) => r[0]), ['N1', 'N2', 'N3', 'N4', 'N5'], 'palettes');
+  vrai(c.items[0].reponses[2][2].startsWith('37 cartons (BL 40)'), 'N3 : ' + c.items[0].reponses[2][2]);
+  vrai(c.items[1].rep.includes('Palette acceptée à tort : N2') && c.items[3].rep.includes('BL : SL-26-1207'), 'messages');
+});
+
+await v('ENT-4.3 : sous le logo Picard dans Logisim, elle s’ouvre sur l’accueil et les trois messages', async () => {
+  const { ctx, pg: p, erreurs } = await contexte();
+  await p.click('#btnProf');
+  await p.click('[data-rub="logisim"]');
+  await p.click('[data-ent="4"]');
+  await p.click('[data-act="picard-ent43"]');
+  await p.waitForSelector('.ent-bandeau');
+  vrai((await texte(p, '.ent-bandeau')).includes('ENT-4.3'), 'bandeau de séance');
+  vrai((await texte(p, '.ent-main')).includes('La réception de nuit'), 'accueil de la séance');
+  await p.click('.ent-nav[data-vue="mail"]');
+  const m = await texte(p, '.ent-main');
+  vrai(m.includes('Réception de nuit : à vérifier ce matin') && m.includes('Camion Givrex de 3 h') && m.includes('Avis de livraison'), 'messages : ' + m.slice(0, 300));
+  egal(erreurs, [], 'erreurs JS');
+  await ctx.close();
+});
+
 await v('quai : aucune erreur JavaScript dans le bloc', async () => {
   egal(erreursQ, [], 'erreurs');
 });

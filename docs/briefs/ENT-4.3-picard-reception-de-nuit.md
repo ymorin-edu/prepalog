@@ -6,7 +6,7 @@
 > Lis docs/briefs/COORDINATION-picard.md, docs/briefs/ENT-3.3-deux-temps.md (le modèle des deux temps) puis implémente le brief docs/briefs/ENT-4.3-picard-reception-de-nuit.md. Annonce la durée, liste ce que la vue quai doit gagner (§7), fabrique une page d'essai puis enchaîne sur la séance sans attendre : les questions du brief sont déjà tranchées (§11).
 > ```
 
-**Statut** : à implémenter — **après** ENT-4.2
+**Statut** : livré (03/10/2026), fermé aux élèves (`pret: true, ouverture: 'prof'`) — à essayer à l'écran
 **Date du brief** : 03/10/2026
 **Conversation d'origine** : Cowork (Opus) ; fiche projet `claude/prepalog-picard-4-seances.md`
 
@@ -128,9 +128,46 @@ Trame élève Word/PDF (Cowork) ; corrigé `contenus/corriges/ENT-4.3.js` (diagn
 
 ## Compte rendu *(rempli par Claude Code à la livraison)*
 
-- **Fichiers créés / modifiés** :
+- **Fichiers créés / modifiés** : `core/types/quai.js` (mode `controle` : écran « dossier / chambre froide », Bloquer /
+  Débloquer, « J'ai terminé », bilan, `jalonsControle`, `passerPhase`), `core/types/entreprise.js` (déclencheur
+  `phaseQuai`, `api.db`, bouton Messagerie et lien « ← Revenir au quai »), `styles/quai.css` (bandeau des deux temps,
+  écriture de Mathis), `contenus/picard-ent43.js`, `activites/picard-ent43.js` + une ligne dans `activites/index.js`,
+  `contenus/corriges/ENT-4.3.js`, `outils/essai-ent43.html` (page d'essai = la vraie séance, avec un raccourci « envoyer
+  le diagnostic »), `outils/test/picard.mjs` (14 cas ENT-4.3), `activites/FICHE-SEANCE.md`, `docs/decisions.md`.
+  En plus, demandé par Tristan en cours de route : « Valider cette palette » (étape ③ d'ENT-4.1 / 4.2) cliquable seulement
+  avec comptage, décision et motif (commit à part).
 - **Écarts par rapport au brief** :
-- **Décisions prises en route** :
-- **Tests** :
-- **Commits** :
-- **Reste ouvert** :
+  - le 3e carton manquant de N3 n'est pas « au cœur » (invisible dans la vue 3D, donc introuvable) mais **sous la couche du
+    dessus, au bord arrière** : deux trous en haut au fond, un juste dessous, visible en faisant le tour (et en creux d'en haut) ;
+  - une 5e ligne **« Délai : »** au diagnostic (le §5 dit « le diagnostic doit le dire ») et un jalon pour elle ;
+  - **dix jalons** : diagnostic ×5 (N2 + preuve, N3 + quantité, déballage, délai, N1 non accusée), blocage ×2 (N2 bloquée,
+    aucune palette conforme bloquée), protestation ×3 (BL + date, palettes N2 et N3, constat + quantité) ;
+  - pas d'horloge ni de temps hors froid au quai (les palettes sont déjà au froid) ; le temps réel est compté comme partout.
+- **Décisions prises en route (à relire à l'écran)** :
+  - **date de la réception = le jour où l'élève ouvre la séance** (rangée dans l'état du quai) : elle est écrite sur le BL, la
+    protestation doit la reprendre, et le délai est toujours tenu ;
+  - **fournisseur et transporteur repris d'ENT-4.1** (Surgelés du Littoral, Transports Givrex) : aucun nom neuf à vérifier ;
+    BL SL-26-1207 ; réception à 03 h 10 ; camion arrivé à 3 h 00 ;
+  - palettes (construites) : N1 colin pané 44 (4×3×4 − 4, couche du dessus incomplète, conforme), N2 frites 36 (fiche −14 °C
+    « OK »), N3 épinards 37 pour 40, N4 nuggets 45, N5 pizzas 30 ; sonde d'aujourd'hui entre −20,9 et −21,6 °C ;
+  - fiche de Mathis : 44 / 36 / 40 / 45 / 30 cartons, −19,6 / −14 / −19,8 / −20,1 / −19,2 °C, toutes « Acceptée » ; son mot
+    « Camion un peu en retard, j'ai fait vite. RAS, tout est rentré en chambre froide » ; ticket : remontée de l'air de 1 h 15 à
+    2 h 30 jusqu'à −11,1 °C, revenue à −20,1 °C à l'arrivée ;
+  - **trois messages au départ** : le chef de quai (les cinq lignes à compléter, préremplies quand on clique « Répondre »),
+    Mathis (« RAS, tout est rentré »), l'avis de livraison de Transports Givrex (la protestation s'écrit en lui répondant, ses
+    cinq lignes préremplies). La réponse du chef (temps 2) ne dit pas quoi corriger (« s'il faut protester… ») ;
+  - lecture des lignes : N2 juste si « Palette acceptée à tort » cite N2 et elle seule, et si « Preuve » cite 14 ou « fiche » ;
+    une palette citée de trop fait tomber le jalon ; **N1 citée dans un seul message suffit à faire tomber « N1 non accusée »** ;
+    quantité : 3, ou « 37 » et « 40 » ; délai : « encore », « dans le délai », « oui », « pas dépassé » justes, « trop tard »,
+    « non », « dépassé », « impossible » faux ; date : 13/10, 13/10/2026 ou 13 octobre ;
+  - un diagnostic envoyé sans rien accuser donne « N1 non accusée » (1 jalon sur 10), comme le dit le §8 ;
+  - pas de « Recommencer » au bilan (les messages ne se rejouent pas) ;
+  - deux onglets (dossier / chambre froide) plutôt qu'un seul long écran, pour ne pas refaire la surcharge d'ENT-3.3.
+- **Tests** : bloc `picard` 65/65 (14 cas ENT-4.3 + 1 pour « Valider »). Cas ENT-4.2 réécrit : « Valider cette palette coche
+  l'onglet… » note maintenant le comptage avant de valider. Éprouvés dans les deux sens (temps 1 non figé, temps 2 jamais
+  ouvert, sonde qui lit la fiche, inaction récompensée, « J'ai terminé » non définitif, « Valider » toujours actif : chaque
+  sabotage fait tomber des cas). `outils/test/socle.mjs` : la liste figée des séances Logisim est allongée d’ENT-4.3.
+  Suite complète 448/448.
+- **Commits** : « Vue quai : Valider cette palette… » puis « ENT-4.3 Picard la réception de nuit… ».
+- **Reste ouvert** : trame élève Word/PDF (Cowork) ; essai à l'écran par Tristan (lire les textes des trois messages et les
+  intitulés des lignes) ; variante « livraison vieille de 4 jours » (en réserve).

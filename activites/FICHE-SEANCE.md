@@ -50,8 +50,17 @@ juste, phrases: [{ v, lib }] }` (choix de l'ordre + justification, ouvert une fo
 d'une palette réchauffée devient « refuser — température »). Une palette peut porter `refs: [{ ref, nom, bl, couches,
 teinte, etiq }]` (plusieurs références, un comptage par référence) ou `etiqAvant: 'dechiree'` (la vraie étiquette, `etiq`,
 se lit sur la face arrière ; le refus « produit » n'est juste qu'une fois l'arrière lu).
-À l'étape ③, chaque palette se valide (« Valider cette palette » : une coche sur l'onglet, rien de figé) ; le bouton
-« Contrôles terminés → réserves » est en haut à droite et demande toujours une confirmation (03/10/2026).
+À l'étape ③, chaque palette se valide (« Valider cette palette » : une coche sur l'onglet, rien de figé ; seulement le
+comptage noté — chaque référence —, la décision choisie et un motif pour des réserves ou un refus, sinon une phrase dit ce
+qui manque) ; le bouton « Contrôles terminés → réserves » est en haut à droite et demande toujours une confirmation (03/10/2026).
+**Quai « déjà réceptionné »** (03/10/2026, ENT-4.3, exemple : `contenus/picard-ent43.js`) : `mode: 'controle'`, un seul
+camion, et `dossier: { receptionnaire, heure, reserves: [lignes du BL], fiche: [{ id, compte, temp, decision, remarque }], mot,
+rappelProtestation }` (le travail du collègue, lu dans le contenu : jamais modifiable). Pas d'étapes ni d'horloge : onglets
+« dossier » / « en chambre froide » (tour, sonde = `temp` d'aujourd'hui, étiquette, comptage de l'élève). Temps 2 ouvert par un
+message déclenché portant `phaseQuai: 2` : « Bloquer — qualité » / « Débloquer », puis « J'ai terminé » (deux clics, définitif)
+et bilan. Palette à bloquer : `bloquer: true`. Jalons des messages : `jalonsDossier: { avant(db, e), apres(db, e) }` (lignes
+`{ id, lib, fait, attendu, ok }`), placés avant et après ceux du blocage. Un bouton « Messagerie » mène aux messages, un lien y
+ramène au quai.
 
 `creerEntreprise` est dans `core/types/entreprise.js`. Les autres moteurs sont dans
 `core/types/` (`qcm`, `ordre`, `assoc`, `numerique`, `tableur`, `tableau`, `tournee`, …).

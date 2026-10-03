@@ -1251,6 +1251,208 @@ export function creerQuai(Q, opts = {}) {
     api.sauver(); api.redessiner(); if (api.haut) api.haut();
   }
 
+  if (R.controle) return vueControle();
+
+  /* ================================================ quai « déjà réceptionné » */
+  // Voir l'en-tête du fichier. Le camion est reparti, les palettes sont en chambre froide ; tout ce que
+  // le collègue a fait vient de `Q.dossier` (jamais de la base) : le temps 1 est figé par construction.
+  function vueControle() {
+    const DOS = R.dossier;
+    const ui2 = { armeFin: false, msgCompte: '', focus: null };
+    const P = PAL[0];
+    const fiche = (p) => (DOS.fiche || []).find((f) => f.id === p.id) || {};
+    const sc = (e, p) => e.palettes[p.id];
+    const phase2 = (e) => (e.phase || 1) >= 2;
+    const qui = DOS.receptionnaire || 'le collègue';
+    const heure = DOS.heure || '';
+
+    const dossierHtml = (e) => {
+      const lignes = (DOS.reserves || []).map((l) => `<div>${ech(l)}</div>`).join('') || '<div>Néant.</div>';
+      const tete = '<thead><tr><th>Palette</th><th class="num">Cartons comptés</th><th class="num">T° à cœur</th><th>Décision</th><th>Remarque</th></tr></thead>';
+      const rangs = P.map((p) => {
+        const f = fiche(p);
+        return `<tr data-q-fiche="${ech(p.id)}"><td>${ech(p.id)}</td><td class="num">${ech(f.compte ?? '')}</td><td class="num">${f.temp != null ? fmtT(f.temp) : ''}</td><td>${ech(f.decision || '')}</td><td class="quai-main">${ech(f.remarque || '')}</td></tr>`;
+      }).join('');
+      return `<div class="quai-grille2" data-q-dossier>
+        <div class="quai-doc quai-papier">
+          <div class="quai-doc-titre">📄 Bon de livraison n° ${ech(cam.bl)} — exemplaire du destinataire</div>
+          <p class="note">${fictif(cam.fournisseur, cam.fictif)} · transporteur ${fictif(cam.transporteur, cam.fictif)} · réceptionné le <b data-q-jour>${ech(jourAffiche(e.jour))}</b> à <b>${ech(heure)}</b>, ${ech(R.lieu.nom)}</p>
+          ${blHtml(0)}
+          <div class="quai-zone-res"><div class="quai-lib-res">Réserves du destinataire :</div><div class="quai-manuscrit" data-q-lignes>${lignes}</div></div>
+          <div class="quai-signatures">
+            <div><div class="quai-lib-res">Le réceptionnaire (${ech(Q.destinataire || '')}${Q.destinataire ? ', ' : ''}${ech(qui)})</div><div class="quai-sig">${signature('#1d3a7a', 1)}</div></div>
+            <div><div class="quai-lib-res">Le chauffeur (${ech(cam.transporteur)})</div><div class="quai-sig">${signature('#222', 2)}</div></div>
+          </div>
+          <div class="quai-reconst">Document pédagogique, reconstitution, non contractuel.</div>
+        </div>
+        <div class="quai-doc">
+          <div class="quai-doc-titre">🧾 Ticket de l'enregistreur de température</div>
+          <div class="quai-ticket" data-q-ticket>${ech(ticketTexte(0))}</div>
+          <div class="quai-reconst">Ticket reconstitué, non contractuel.</div>
+        </div>
+      </div>
+      <div class="quai-doc quai-papier" data-q-fiche-tableau>
+        <div class="quai-doc-titre">📋 ${ech(DOS.titreFiche || 'Fiche de comptage et de sonde')} — ${ech(qui)}, ${ech(heure)}</div>
+        <table class="quai-bl">${tete}<tbody>${rangs}</tbody></table>
+        ${DOS.mot ? `<p class="quai-main" data-q-mot>${ech(DOS.mot)}</p>` : ''}
+        <div class="quai-reconst">${ech(qui)} est un personnage fictif. Document pédagogique, reconstitution, non contractuel.</div>
+      </div>`;
+    };
+
+    // La chambre froide vue de face : les palettes au froid, les bloquées dans la zone à part.
+    const sceneChambre = (e) => {
+      let o = `<defs>${DEFS_FILM}</defs><rect x="0" y="0" width="700" height="190" fill="#2f3a42"/><rect x="0" y="150" width="700" height="40" fill="#46525a"/>`;
+      o += '<rect x="470" y="12" width="222" height="170" rx="6" fill="none" stroke="#e0a090" stroke-width="2" stroke-dasharray="7 5"/>';
+      o += '<text x="581" y="30" text-anchor="middle" font-size="12" font-weight="700" fill="#ffb9a8" font-family="system-ui">Zone de blocage qualité</text>';
+      const tc = `${R.lieu.chambre.temp > 0 ? '+' : ''}${virgule(Number(R.lieu.chambre.temp).toFixed(1))} °C`.replace('-', '−');
+      o += `<text x="12" y="24" font-size="12" fill="#e4e8eb" font-family="system-ui">${ech(R.lieu.chambre.nom)} · ${tc}</text>`;
+      const libres = P.filter((p) => !sc(e, p).bloque), bl = P.filter((p) => sc(e, p).bloque);
+      libres.forEach((p, k) => { o += paletteFace(p, 60 + k * 90, 172, 0.5); });
+      bl.forEach((p, k) => {
+        const x = 528 + k * 105;
+        o += paletteFace(p, x, 172, 0.5);
+        // L'étiquette juste au-dessus de la palette (hauteur de `paletteFace` à l'échelle 0,5).
+        const y = Math.round(172 - 6.5 - p.L * 13.5 - 28);
+        o += `<g data-q-etiq-bloque="${ech(p.id)}"><rect x="${x - 50}" y="${y}" width="100" height="22" rx="3" fill="#f6f1e4" stroke="#b8431b" stroke-width="2"/><text x="${x}" y="${y + 15}" text-anchor="middle" font-size="10" font-weight="700" fill="#9d2727" font-family="system-ui">BLOQUÉ — QUALITÉ</text></g>`;
+      });
+      return o;
+    };
+
+    const chambreHtml = (e) => {
+      const p = R.palettes[e.sel], s = sc(e, p), f = fiche(p);
+      const dis = e.fini ? 'disabled' : '';
+      const onglets = P.map((q, n) => {
+        const sq = sc(e, q);
+        const fait = [sq.compte !== null ? 'recomptée' : null, sq.sonde !== null ? 'sondée' : null, sq.bloque ? 'bloquée' : null].filter(Boolean).join(', ') || 'à contrôler';
+        return `<button role="tab" data-q="sel" data-libre data-n="${n}" aria-selected="${n === e.sel}" class="${n === e.sel ? 'on' : ''}">${ech(q.id)}<span class="quai-etat">${fait}</span></button>`;
+      }).join('');
+      const bloc = phase2(e)
+        ? `<div class="quai-ligne">${s.bloque
+          ? `<button class="btn" data-q="debloquer" ${dis}>Débloquer ${ech(p.id)}</button><span class="quai-constat" data-q-bloquee>🔒 Bloquée — qualité, en zone à part</span>`
+          : `<button class="btn" data-q="bloquer" ${dis}>🔒 Bloquer ${ech(p.id)} — qualité</button>`}</div>`
+        : '<p class="note" data-q-pas-bloquer>Temps 1 : tu contrôles, tu ne corriges rien. Le blocage s’ouvrira après ton diagnostic au chef de quai.</p>';
+      const etiq = s.etiqMontre || s.etiqVue ? zoomEtiquette(p, s, cam) : '<span class="note">🔍 Clique sur l’étiquette d’un carton pour la lire de près.</span>';
+      return `<svg class="quai-cf" data-q-chambre viewBox="0 0 700 190" role="img" aria-label="La chambre froide : les palettes au froid et la zone de blocage qualité">${sceneChambre(e)}</svg>
+      <div class="quai-onglets" role="tablist" aria-label="Palette">${onglets}</div>
+      <details class="quai-rappel-bl" data-libre><summary data-libre>📄 Revoir le bon de livraison</summary>${blHtml(0)}</details>
+      <div class="quai-poste">
+        <div class="quai-scene">
+          <svg data-q-palette viewBox="0 0 460 380" role="img" aria-label="Palette ${ech(p.id)} vue en trois dimensions">${palette3d(p, s, false)}</svg>
+          <div class="quai-vue-lib">Côtés déjà vus : ${s.vues.length} sur 4</div>
+          <button class="btn" data-q="tourner" ${dis}>↻ Faire le tour de la palette</button>
+        </div>
+        <div class="quai-outils">
+          <div class="quai-ligne"><button class="btn" data-q="sonder" ${dis}>Sonder à cœur</button>
+            ${s.sonde !== null ? `<span class="quai-constat" data-q-sonde>${virgule(Number(s.sonde).toFixed(1)).replace('-', '−')} °C à cœur maintenant</span>` : ''}</div>
+          <p class="note">Fiche de ${ech(qui)} à ${ech(heure)} : <b data-q-fiche-temp>${f.temp != null ? fmtT(f.temp) : '—'}</b> à cœur.</p>
+          <div class="quai-zoom">${etiq}</div>
+          <div class="quai-champ">
+            <label for="qCompte">Ton comptage : cartons sur cette palette</label>
+            <div class="quai-ligne"><input id="qCompte" class="quai-court" type="number" min="0" inputmode="numeric" data-q-compte value="${s.compte ?? ''}" ${dis}>
+              <button class="btn" data-q="compter" ${dis}>Noter mon comptage</button></div>
+            <span class="note" data-q-rcompte>${ui2.msgCompte ? ech(ui2.msgCompte) : `${s.compte !== null ? `Ton comptage : ${s.compte} cartons · ` : ''}fiche de ${ech(qui)} : ${ech(f.compte ?? '—')} · BL : ${p.bl}.`}</span>
+          </div>
+          ${bloc}
+        </div>
+      </div>`;
+    };
+
+    const bilanControle = (e, api) => {
+      if (!e.fini) return '';
+      const db = api.db ? api.db() : { quais: { [Q.id]: e } };
+      const { L, pts, max } = jalonsQuai(db, Q);
+      return `<div class="quai-bilan-bloc">
+        <h3>Bilan de ton contrôle</h3>
+        <p class="note">${pts} jalon${pts > 1 ? 's' : ''} juste${pts > 1 ? 's' : ''} sur ${max}.</p>
+        <table class="quai-bilan" data-q-bilan><thead><tr><th></th><th>Ce que tu as fait</th><th>Attendu</th><th></th></tr></thead><tbody>${L.map((l) => `<tr data-jalon="${ech(l.id)}"><td>${ech(l.lib)}</td><td>${ech(l.fait)}</td><td>${ech(l.attendu)}</td><td class="${l.ok ? 'quai-ok' : 'quai-ko'}">${l.ok ? '✓ juste' : '✗ à revoir'}</td></tr>`).join('')}</tbody></table>
+        ${Q.bonASavoir ? `<p class="note">${Q.bonASavoir}</p>` : ''}
+      </div>`;
+    };
+
+    const finHtml = (e) => {
+      if (!phase2(e)) return '';
+      const fin = e.fini
+        ? `<p class="quai-constat" data-q-termine>Terminé à ${new Date(e.termine || Date.now()).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }).replace(':', ' h ')} : le dossier est figé.</p>`
+        : `<button class="btn btn-p${ui2.armeFin ? ' quai-arme' : ''}" data-q="terminer">${ui2.armeFin ? 'C’est définitif : plus aucun changement possible. Cliquez pour confirmer' : 'J’ai terminé'}</button>
+           ${ui2.armeFin ? '<button class="btn" data-q="desarmerFin">Annuler</button>' : ''}`;
+      return `<div class="quai-doc" data-q-fin>
+        ${DOS.rappelProtestation ? `<p class="quai-aide" data-q-rappel>${DOS.rappelProtestation}</p>` : ''}
+        <div class="quai-ligne">${fin}</div>
+      </div>`;
+    };
+
+    return {
+      id: Q.id,
+      nav: { libelle: Q.libelle || 'Quai de réception' },
+      etatNeuf: () => etatNeuf(Q),
+      jalons: (db) => jalonsQuai(db, Q),
+      note: null,
+      tic() {},
+      // Le message déclenché qui ouvre le temps 2 (`phaseQuai` dans `entreprise.js`) : une fois, sans retour.
+      passerPhase(e, n) { normaliser(e, R); if (n > (e.phase || 1)) e.phase = n; },
+      html(e, api) {
+        normaliser(e, R);
+        const t2 = phase2(e);
+        const bandeau = t2
+          ? `<div class="quai-temps quai-temps-2" data-q-temps="2"><b>Temps 2 — Corriger.</b> ${e.fini ? 'Tu as terminé : le dossier est figé, ton bilan est en bas.' : 'Bloque ce qui doit l’être (onglet « En chambre froide »), écris au transporteur s’il le faut (Messagerie), puis « J’ai terminé ».'}</div>`
+          : `<div class="quai-temps" data-q-temps="1"><b>Temps 1 — Contrôler.</b> Le travail de ${ech(qui)} est figé : tu peux tout relire, recompter, re-sonder, mais rien corriger. Quand tu sais ce qui ne va pas, envoie ton diagnostic au chef de quai (Messagerie, réponds à son message).</div>`;
+        const onglet = (v, lib) => `<button role="tab" data-q="onglet" data-libre data-v="${v}" aria-selected="${e.onglet === v}" class="${e.onglet === v ? 'on' : ''}">${lib}</button>`;
+        return `<div class="quai quai-controle" data-quai="${ech(Q.id)}" data-q-phase="${t2 ? 2 : 1}">
+          <div class="quai-tete">
+            <div><h2>${ech(Q.titre || R.lieu.nom)}</h2>
+              <div class="note">Livraison « ${fictif(cam.fournisseur, cam.fictif)} » · transporteur ${fictif(cam.transporteur, cam.fictif)} · réceptionnée à ${ech(heure)} par ${ech(qui)} (personnage fictif) · camion reparti, palettes en chambre froide</div></div>
+            <button class="btn" data-q="messagerie" data-libre>✉ Messagerie</button>
+          </div>
+          ${Q.avertissement ? `<div class="quai-avert">${Q.avertissement}</div>` : ''}
+          ${bandeau}
+          <div class="quai-onglets quai-onglets-dossier" role="tablist" aria-label="Le dossier">${onglet('dossier', `📁 Le dossier de ${ech(qui)}`)}${onglet('chambre', '🧊 En chambre froide')}</div>
+          <section class="quai-carte">${e.onglet === 'chambre' ? chambreHtml(e) : dossierHtml(e)}</section>
+          ${finHtml(e)}
+          ${bilanControle(e, api)}
+        </div>`;
+      },
+      brancher(z, e, api) {
+        const p = () => R.palettes[e.sel];
+        const s = () => sc(e, p());
+        const geste = (fn) => (ev, b) => { if (e.fini) return; fn(ev, b); };
+        const on = (cle, fn) => z.querySelectorAll(`[data-q="${cle}"]`).forEach((b) => b.addEventListener('click', (ev) => fn(ev, b)));
+        const refaire = () => { api.sauver(); api.redessiner(); };
+        z.querySelectorAll('[data-q], input').forEach((el) => el.addEventListener('focus', () => {
+          ui2.focus = el.id ? `#${el.id}` : el.dataset.q ? `[data-q="${el.dataset.q}"]${el.dataset.n ? `[data-n="${el.dataset.n}"]` : ''}${el.dataset.v ? `[data-v="${el.dataset.v}"]` : ''}` : null;
+        }));
+        if (clavier && ui2.focus) { const f = z.querySelector(ui2.focus); if (f && !f.disabled) f.focus(); }
+        on('messagerie', () => { if (api.messagerie) api.messagerie(); });
+        on('onglet', (ev, b) => { e.onglet = b.dataset.v === 'chambre' ? 'chambre' : 'dossier'; ui2.msgCompte = ''; refaire(); });
+        on('sel', (ev, b) => { e.sel = +b.dataset.n; ui2.msgCompte = ''; refaire(); });
+        on('tourner', geste(() => { const ss = s(); ss.vue = (ss.vue + 1) % 4; if (!ss.vues.includes(ss.vue)) ss.vues.push(ss.vue); refaire(); }));
+        // La sonde lit la température d'AUJOURD'HUI : après des heures en chambre froide, tout est froid.
+        on('sonder', geste(() => { s().sonde = p().temp; refaire(); }));
+        on('compter', geste(() => {
+          const v = parseInt(z.querySelector('[data-q-compte]').value, 10);
+          if (Number.isNaN(v)) { ui2.msgCompte = 'Écris d’abord le nombre de cartons que tu as comptés.'; api.redessiner(); return; }
+          ui2.msgCompte = ''; s().compte = v; refaire();
+        }));
+        z.querySelector('[data-q-palette]')?.addEventListener('click', (ev) => {
+          const g = ev.target.closest('[data-q-etiq]');
+          if (!g || e.fini) return;
+          const cle = g.dataset.k || 'avant', ss = s();
+          if (!Array.isArray(ss.etiqLues)) ss.etiqLues = [];
+          ss.etiqMontre = cle; if (!ss.etiqLues.includes(cle)) ss.etiqLues.push(cle); ss.etiqVue = true;
+          refaire();
+        });
+        // Bloquer / débloquer : seulement au temps 2, tant que « J'ai terminé » n'est pas cliqué.
+        on('bloquer', geste(() => { if (!phase2(e)) return; s().bloque = true; refaire(); }));
+        on('debloquer', geste(() => { if (!phase2(e)) return; s().bloque = false; refaire(); }));
+        on('terminer', geste(() => {
+          if (!phase2(e)) return;
+          if (!ui2.armeFin) { ui2.armeFin = true; api.redessiner(); return; }
+          ui2.armeFin = false; e.fini = true; e.termine = Date.now(); refaire();
+        }));
+        on('desarmerFin', () => { ui2.armeFin = false; api.redessiner(); });
+      },
+    };
+  }
+
   return {
     id: Q.id,
     nav: { libelle: Q.libelle || 'Quai de réception' },

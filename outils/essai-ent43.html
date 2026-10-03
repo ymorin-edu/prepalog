@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Essai — ENT-4.3 la réception de nuit (Prepalog)</title>
+<!-- Page d'ESSAI d'ENT-4.3 (brief docs/briefs/ENT-4.3-picard-reception-de-nuit.md), pour l'essai de Tristan à
+     l'écran : c'est la VRAIE séance (`activites/picard-ent43.js`), vue par un élève. La base est gardée dans l'onglet
+     (sessionStorage) ; « Recommencer l'essai » repart de zéro. Liée nulle part.
+     Ouvrir avec `lancer.bat`, puis http://localhost:8000/outils/essai-ent43.html
+     Le suivi (les dix jalons) s'affiche sous la séance, comme le verrait l'enseignant. -->
+<base href="../">
+<link rel="icon" href="./styles/logo.png">
+<link rel="stylesheet" href="./styles/polices.css">
+<link rel="stylesheet" href="./styles/base.css">
+<link rel="stylesheet" href="./styles/quai.css">
+<style>
+  #essai{ max-width:1100px; margin:12px auto; display:flex; flex-wrap:wrap; gap:8px; font-size:14px }
+  #suivi{ max-width:1100px; margin:24px auto; padding:12px 16px; border:1px dashed var(--filet); border-radius:8px; font-size:14px }
+  #suivi h2{ font-size:15px; margin:0 0 8px }
+  #suivi li{ margin:3px 0; white-space:pre-line }
+</style>
+</head>
+<body>
+<div id="essai">
+  <button class="btn btn-s" id="raccourci" title="Envoie au chef de quai un diagnostic juste, comme l’élève le ferait depuis la messagerie">Raccourci : envoyer le diagnostic au chef de quai</button>
+  <button class="btn btn-s" id="zero">Recommencer l’essai</button>
+</div>
+<div id="hote"></div>
+<section id="suivi" aria-live="polite"><h2>Suivi enseignant (essai)</h2><ul></ul></section>
+<script type="module">
+import * as act from './activites/picard-ent43.js';
+import * as S from './contenus/picard-ent43.js';
+
+const CLE = 'essai-ent43';
+const db = (() => { try { return JSON.parse(sessionStorage.getItem(CLE)) || {}; } catch (e) { return {}; } })();
+const garder = () => { try { sessionStorage.setItem(CLE, JSON.stringify(db)); } catch (e) { /* onglet privé */ } };
+document.getElementById('zero').addEventListener('click', () => { sessionStorage.removeItem(CLE); location.reload(); });
+
+const suivi = document.querySelector('#suivi ul');
+const signe = { ok: '✓', attente: '·' };
+const montrer = () => {
+  const q = db.quais && db.quais[S.QUAI_ID];
+  const res = S.ETAPES.map((e) => ({ titre: e.titre, st: (e.verifier(db) || {}).status }));
+  suivi.innerHTML = `<li><strong>${res.filter((r) => r.st === 'ok').length} / ${res.length} jalons</strong></li>`
+    + `<li>Temps : ${q && q.phase >= 2 ? '2 — corriger' : '1 — contrôler (figé)'}${q && q.fini ? ' · « J’ai terminé » cliqué' : ''}</li>`
+    + res.map((r) => `<li>${signe[r.st] || '·'} ${r.titre}</li>`).join('');
+};
+act.rendre(document.getElementById('hote'), {
+  meta: act.meta,
+  profil: { prenom: 'Essai', nom: 'Élève', role: 'eleve' },
+  jeu: { etat: () => db, sauver: () => { garder(); montrer(); } },
+  enregistrer: () => { garder(); montrer(); },
+  quitter: () => { location.reload(); }, codeStock: '',
+});
+montrer();
+window.__essai = { db };
+
+// Le raccourci : un diagnostic juste, rangé comme le fait « Envoyer », puis la séance est remontée pour que la
+// réponse du chef de quai arrive comme après un vrai envoi.
+document.getElementById('raccourci').addEventListener('click', () => {
+  const L = S.LIGNES_DIAG;
+  db.mails = db.mails || [];
+  if (!db.mails.some((m) => m.folder === 'out' && m.toMail === S.CHEF.mail)) {
+    db.mails.push({ id: 'essai-' + Date.now(), folder: 'out', ts: Date.now(), from: 'Essai', to: S.CHEF.nom, toMail: S.CHEF.mail,
+      subject: 'RE : réception de nuit', kind: 'text', read: true,
+      text: [`${L.palette} N2`, `${L.preuve} sa fiche dit −14 °C à cœur`, `${L.manquant} N3, 3 cartons`,
+        `${L.reserve} « sous réserve de déballage » ne vaut rien`, `${L.delai} encore dans le délai`].join('\n') });
+  }
+  garder();
+  location.reload();
+});
+</script>
+</body>
+</html>

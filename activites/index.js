@@ -46,6 +46,7 @@ export const ACTIVITES = [
   // Picard (Sainghin-en-Mélantois) — ENT-4.x. C1.4 « réception » en quatre séances, sur la vue quai.
   () => import('./picard-ent41.js'),
   () => import('./picard-ent42.js'),
+  () => import('./picard-ent43.js'),
 ];
 
 // Pictogrammes des rubriques. Une seule grille pour les dix : trait de 1,6 px, bouts et

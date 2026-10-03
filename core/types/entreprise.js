@@ -227,6 +227,7 @@ export function creerEntreprise(U) {
       //
       //   volet.declencheurs: [{ id: 'imprevu', quand: (db) => booléen,
       //                          semer: (prenom, db) => ({ mails: […] }), phaseTournee: 2 }]
+      //   (ou `phaseQuai: 2` pour un quai « déjà réceptionné », voir core/types/quai.js)
       //
       // Vérifié à chaque sauvegarde (et à l'ouverture). **Une seule fois** : la marque est rangée
       // dans `db.volets` (`<volet>#<id>`), comme celle du volet, donc rien ne se rejoue au
@@ -251,6 +252,8 @@ export function creerEntreprise(U) {
           const g = (d.semer ? d.semer(prenom, db) : null) || {};
           (g.mails || []).forEach((m) => ajouterMail(Object.assign(m, { declenche: d.id })));
           if (d.phaseTournee && VTOUR) VTOUR.passerPhase(etatTransport('tournee'), d.phaseTournee);
+          // Même principe pour un quai « déjà réceptionné » (ENT-4.3) : le temps 2 s'ouvre avec le message.
+          if (d.phaseQuai && VQUAI && VQUAI.passerPhase) VQUAI.passerPhase(etatQuai(), d.phaseQuai);
           db.volets[cle] = Date.now();
           fait = true;
           if ((g.mails || []).length) toast(avant + 'Nouveau message : ' + (g.mails[0].from || 'Messagerie'));
@@ -777,7 +780,9 @@ export function creerEntreprise(U) {
               <button class="btn btn-p" type="submit">Envoyer</button></form></div>`;
         }
 
-        return `<div class="ent-tete"><h2>Messagerie</h2><p class="note">Adresse : ${ech(adresse)}</p></div>
+        // Venu du quai par son bouton « Messagerie » (ENT-4.3) : un lien pour y revenir.
+        const retourQuai = VQUAI && E.retourQuai ? '<button class="lien-accueil" data-retour-quai>← Revenir au quai</button>' : '';
+        return `<div class="ent-tete"><h2>Messagerie</h2><p class="note">Adresse : ${ech(adresse)}</p>${retourQuai}</div>
           <section class="panneau">
             <div class="rangee" style="margin-bottom:12px">
               <button class="btn btn-s ${E.dossier === 'in' ? 'btn-p' : ''}" data-dossier="in">Réception</button>
@@ -1408,6 +1413,10 @@ export function creerEntreprise(U) {
         redessiner: dessinerVue,
         zone: () => hote.querySelector('#entMain'),
         haut: () => hote.scrollIntoView({ block: 'start' }),
+        // La base entière (les jalons d'un quai « déjà réceptionné » lisent aussi les messages).
+        db: () => db,
+        // Le bouton « Messagerie » du quai (ENT-4.3) : la boîte de réception, avec un lien de retour.
+        messagerie: () => { E.retourQuai = true; aller('mail', { redige: false, mailSel: null, dossier: 'in' }); },
         copieRendue: rendue,
         rendreCopie: () => { if (COPIE && !estProf) rendreLaCopie(); },
         // « Recommencer la réception » (guidage) : un quai neuf, le reste de la base intact.
@@ -1932,6 +1941,7 @@ export function creerEntreprise(U) {
         }));
         z.querySelector('[data-mail-retour]')?.addEventListener('click', () => { E.mailSel = null; dessiner(); });
         z.querySelector('[data-nouveau]')?.addEventListener('click', () => { E.redige = true; dessiner(); });
+        z.querySelector('[data-retour-quai]')?.addEventListener('click', () => { E.retourQuai = false; aller('quai'); });
         z.querySelector('[data-annuler]')?.addEventListener('click', () => { E.redige = false; dessiner(); });
         z.querySelector('[data-envoyer-fou]')?.addEventListener('click', envoyerAuFournisseur);
         z.querySelector('[data-repondre]')?.addEventListener('click', () => {
