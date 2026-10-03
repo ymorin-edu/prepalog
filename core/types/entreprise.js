@@ -96,7 +96,17 @@ export function creerEntreprise(U) {
   const VTOUR = U.tournee ? creerTournee(Object.assign({ plan: U.plan }, U.tournee, COPIE ? { copie: true } : {})) : null;
   // L'écran « Inventaire » (02/10/2026, chantier E), sur le même principe : il n'existe que si
   // la séance déclare un `inventaire` — format dans `claude/prepalog-inventaire-format.md`.
-  const VINV = U.inventaire ? creerInventaire(U.inventaire, CATALOGUE) : null;
+  //
+  // UN INVENTAIRE TIRÉ PAR ÉLÈVE (évaluation, 04/10/2026, Cdiscount ENT-2.5), sur le modèle du quai :
+  // la séance passe `inventaire` sous forme de FONCTION de la graine (`(graine) => déclaration`).
+  // L'écran est celui de CETTE base (`invDeBase`), fixé par `rendre` après la pose de la graine.
+  const INV_TIRE = typeof U.inventaire === 'function' ? U.inventaire : null;
+  const invsTires = new Map();
+  const invDeGraine = (g) => {
+    if (!invsTires.has(g)) invsTires.set(g, creerInventaire(INV_TIRE(g), CATALOGUE));
+    return invsTires.get(g);
+  };
+  let VINV = INV_TIRE ? invDeGraine('') : (U.inventaire ? creerInventaire(U.inventaire, CATALOGUE) : null);
   // Le GESTE TABLEUR (04/10/2026, chantier C5, `core/types/export-tableur.js`) : il n'existe que si
   // la séance déclare un `tableur` — boutons « Exporter » sur les écrans déclarés, entrée de menu
   // « Fichiers » (exports et dépôt), rappel dans le bandeau d'aide.
@@ -153,6 +163,8 @@ export function creerEntreprise(U) {
     });
     // Le niveau figé dans la séance, pour l'enseignant qui relit le détail d'une note.
     if (db && db.aisance === 'confirme') detail.niveau = 'confirmé';
+    // Un jeu tiré par élève (inventaire tiré, ou `tirage: true`) : la graine, pour retrouver son jeu.
+    if (INV_TIRE || U.tirage) detail.graine = graineDeBase(db);
     // Le quai range aussi ses temps dans le détail : le temps réel passé en guidage sert à caler
     // les seuils de rapidité de l'évaluation (décision de Tristan, 03/10/2026). En évaluation, la
     // note n'est plus le nombre d'étapes : 15 points de réception + 5 de rapidité (`noteQuai`).
@@ -234,10 +246,13 @@ export function creerEntreprise(U) {
       // Une base d'avant le niveau (ou reprise d'une autre séance) le reçoit à son ouverture. Pas
       // une copie d'évaluation déjà commencée : elle peut être rendue, plus rien ne s'y écrit.
       if (!baseNeuve && !COPIE && figerAisance()) ctx.jeu.sauver();
-      // Quai tiré par élève : la graine (son identifiant) posée une fois pour toutes, puis son quai.
-      if (QUAI_TIRE) {
+      // Jeu tiré par élève (quai, inventaire, ou `tirage: true` pour une séance qui ne tire que ses
+      // données) : la graine (son identifiant) posée une fois pour toutes, AVANT le volet — qui peut
+      // la lire — puis son quai et son inventaire.
+      if (QUAI_TIRE || INV_TIRE || U.tirage) {
         if (poserGraine(db, ctx.profil.uid || prenom)) ctx.jeu.sauver();
-        VQUAI = quaiDeBase(db);
+        if (QUAI_TIRE) VQUAI = quaiDeBase(db);
+        if (INV_TIRE) VINV = invDeGraine(graineDeBase(db));
       }
 
       // Le volet de la séance. Chaque activité sème le sien une seule fois, sans toucher au
