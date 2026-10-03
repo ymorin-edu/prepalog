@@ -85,7 +85,7 @@ await pageTr.evaluate(async () => {
 
   // `db` est passable de l'extérieur : c'est ce qui permet de monter DEUX séances sur une
   // même base, comme les trois séances de Spartoo le font en production.
-  const monter = (hoteId, extra, etapes, metaId, db) => {
+  const monter = (hoteId, extra, etapes, metaId, db, role) => {
     const hote = document.createElement('div');
     hote.id = hoteId;
     document.body.appendChild(hote);
@@ -94,7 +94,7 @@ await pageTr.evaluate(async () => {
     const act = m.creerEntreprise(Object.assign({}, commun, { etapes: etapes || [] }, extra));
     act.rendre(hote, {
       meta: { id: metaId || 'ess1', portee: 'eleve', code: 'ESS-1', titre: 'Essai Transport — transport' },
-      profil: { prenom: 'Lea', nom: 'Dupont', role: 'eleve' },
+      profil: { prenom: 'Lea', nom: 'Dupont', role: role || 'eleve' },
       jeu: { etat: () => db, sauver: () => {} },
       enregistrer: (r) => suivi.push(r),
       quitter: () => {}, codeStock: 'ABC',
@@ -135,7 +135,9 @@ await pageTr.evaluate(async () => {
       report: [{ id: 'rcharge', libelle: 'Charge emportee', unite: 'kg', valeur: (b) => b.cumuls.charge }],
     },
   }, [], 'ess3');
-  window.__tr = { avec, sans, jumelle, sansPlan, sortie, tolere, PLAN };
+  // La même séance, ouverte par l'enseignant : il essaie la tournée sans refaire le repérage.
+  const prof = monter('essaiProf', { plan: PLAN, tournee: TOURNEE }, etapes, 'ess1', null, 'prof');
+  window.__tr = { avec, sans, jumelle, sansPlan, sortie, tolere, prof, PLAN };
 });
 
 const casesJustes = { p1: 'B1', p2: 'C1', p3: 'B2', p4: 'C2' };
@@ -291,6 +293,20 @@ await v('vue tournée : fermée tant que le repérage n\'est pas validé', async
   if (!/Commencez par/.test(t)) throw new Error('la tournée s\'ouvre avant le repérage');
   const items = await pageTr.$$eval('#essaiTr .tour-item', (e) => e.length);
   if (items !== 0) throw new Error('les arrêts sont déjà manipulables');
+});
+
+await v('vue tournée : l\'enseignant l\'ouvre sans repérage, sans rien écrire dans le plan', async () => {
+  await pageTr.click('#essaiProf .ent-nav[data-vue="tournee"]');
+  await pageTr.waitForTimeout(80);
+  const t = await pageTr.textContent('#essaiProf .ent-main');
+  if (/Commencez par/.test(t)) throw new Error('la tournée reste verrouillée pour l\'enseignant');
+  const items = await pageTr.$$eval('#essaiProf .tour-item', (e) => e.length);
+  if (!items) throw new Error('aucun arrêt manipulable côté enseignant');
+  const valide = await pageTr.evaluate(() => {
+    const p = window.__tr.prof.db.transport && window.__tr.prof.db.transport.ess1 && window.__tr.prof.db.transport.ess1.plan;
+    return !!(p && p.valide);
+  });
+  if (valide) throw new Error('le repérage a été marqué validé dans la base de l\'enseignant');
 });
 
 await v('vue plan : les quatre cases justes ouvrent le temps 2', async () => {

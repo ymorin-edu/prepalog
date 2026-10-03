@@ -1362,8 +1362,10 @@ export function creerEntreprise(U) {
       // La tournée reste fermée tant que le repérage n'est pas validé : sans lui, l'élève
       // ne sait pas où sont les points et ordonnerait au hasard. C'est le « deux temps »
       // décidé le 02/10/2026, tenu par l'état et non par un réglage d'affichage.
+      // L'enseignant, lui, n'est jamais retenu (03/10/2026) : il essaie la tournée sans refaire
+      // le repérage à chaque fois. Rien n'est écrit dans sa base : le jalon de repérage reste à faire.
       function vueTournee() {
-        const verrou = VPLAN && !VPLAN.ouvreSuite(etatTransport('plan'))
+        const verrou = VPLAN && !estProf && !VPLAN.ouvreSuite(etatTransport('plan'))
           ? `Commencez par « ${VPLAN.nav.libelle} » : situez chaque point sur le plan, puis validez le repérage.`
           : null;
         // Séance « à corriger » : la tournée du collègue est posée à la première ouverture, une
