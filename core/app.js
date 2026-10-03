@@ -4,7 +4,7 @@ import { demarrerBackend, B } from './backend.js';
 import { CONFIG, DEMO } from './config.js';
 import { ech, toast, entete, brancherEntete, messageErreur } from './ui.js';
 import { activiteVisible, raisonCachee, courtNiveau, libelleNiveaux } from './niveaux.js';
-import { chargerActivites, activite, RUBRIQUES, ICONES, activitesDeRubrique, entreprisesDe } from '../activites/index.js';
+import { chargerActivites, activite, RUBRIQUES, ICONES, activitesDeRubrique, entreprisesDe, intentionDe } from '../activites/index.js';
 import { ouvrirJeu } from './store.js';
 import { rendreEspaceProf } from './prof.js';
 import { verrou, seancesDepuis, seancesDuParcours } from './parcours.js';
@@ -366,6 +366,9 @@ async function vueActivite(aid) {
     // Code qui déverrouille la vue d'ensemble du stock dans un environnement d'entreprise :
     // l'enseignant le donne au moment qu'il choisit dans la séance.
     codeStock: objGroupe?.codeStock || null,
+    // La fiche d'intention du scénario (`ENTREPRISES`, activites/index.js). Transmise telle
+    // quelle : c'est la vue qui décide de ne la montrer qu'à l'enseignant.
+    intention: intentionDe(m.meta.code),
     // Sortie de l'environnement, pour une activité immersive qui dessine son propre bouton.
     // La rubrique et l'entreprise ouvertes sont gardées : on revient à la liste des séances
     // de l'entreprise, pas à l'accueil général.

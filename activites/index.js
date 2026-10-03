@@ -104,6 +104,11 @@ export const RUBRIQUES = [
 // l'entreprise du PREMIER NOMBRE de son code : ENT-3.2 → 3. Une entreprise nouvelle = une ligne.
 // Le nom et le métier sont recopiés du `sousTitre` des contenus (contenus/<nom>.js) : ces
 // fichiers sont lourds, l'accueil ne les importe pas.
+//
+// `intention: { pdf, docx }` (03/10/2026, décision 17 de Tristan) : la fiche d'intention
+// pédagogique du scénario, UNE pour toutes ses séances. Elle n'est montrée qu'à l'enseignant :
+// onglet « Corrigés » et bandeau de la séance. Déclarer, c'est valider (comme les trames) :
+// tant que Tristan n'a pas relu la fiche, la ligne n'a pas de champ `intention`.
 export const ENTREPRISES = [
   { n: 1, nom: 'Spartoo', metier: 'Vente de chaussures en ligne', logo: './contenus/trames/logos/spartoo.jpg' },
   { n: 2, nom: 'Cdiscount', metier: 'Entrepôt de Cestas — suivi des stocks', logo: './contenus/trames/logos/cdiscount.png' },
@@ -208,8 +213,15 @@ export function activitesDeRubrique(rubrique, mods) {
 export function entreprisesDe(acts) {
   const connues = new Set(ENTREPRISES.map((e) => e.n));
   const groupes = ENTREPRISES.map((e) => ({ id: String(e.n), nom: e.nom, metier: e.metier, logo: e.logo,
+    intention: e.intention || null,
     acts: acts.filter((m) => segments(m.meta.code)[0] === e.n) }));
   groupes.push({ id: 'autres', nom: 'Autres séances', metier: "Séances qui ne sont rattachées à aucune entreprise de la liste.",
     logo: null, acts: acts.filter((m) => !connues.has(segments(m.meta.code)[0])) });
   return groupes.filter((g) => g.acts.length);
+}
+
+// La fiche d'intention de l'entreprise d'une séance (`ENT-2.3` → ligne 2), ou null.
+export function intentionDe(code) {
+  const e = ENTREPRISES.find((x) => x.n === segments(code)[0]);
+  return (e && e.intention) || null;
 }

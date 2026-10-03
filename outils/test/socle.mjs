@@ -1465,4 +1465,98 @@ await v('Logisim : aucune requête hors du site, aucune erreur JavaScript', asyn
 await ctxL.close();
 }
 
+// ---------- Fiche d'intention (03/10/2026, brief MOTEUR-fiche-intention, décision 17)
+// Déclarée une fois par entreprise (`intention` dans `ENTREPRISES`), montrée à l'enseignant SEUL :
+// onglet Corrigés et bandeau de la séance. Aucune fiche n'est encore déclarée dans le dépôt : ce
+// contexte de test reçoit `activites/index.js` avec une `intention` sur la ligne Boost (n: 3), rien
+// de modifié dans le dépôt. Spartoo (n: 1) et Cdiscount (n: 2) restent sans fiche : témoins.
+{
+const ctxI = await nav.newContext({ viewport: { width: 1280, height: 900 } });
+const FICHE = { pdf: './contenus/intentions/essai-intention-pedagogique.pdf', docx: './contenus/intentions/essai-intention-pedagogique.docx' };
+let ficheInjectee = false;
+await ctxI.route('**/activites/index.js*', async (route) => {
+  const r = await route.fetch();
+  const corps = await r.text();
+  const ancre = "logo: './contenus/trames/logos/boost.png' }";
+  ficheInjectee = corps.includes(ancre);
+  await route.fulfill({ response: r, body: corps.replace(ancre,
+    `logo: './contenus/trames/logos/boost.png', intention: ${JSON.stringify(FICHE)} }`) });
+});
+const pi = await ctxI.newPage();
+pi.setDefaultTimeout(6000);
+const erreursI = [];
+pi.on('pageerror', (e) => erreursI.push('PAGEERROR: ' + e.message));
+pi.on('dialog', (d) => d.accept());
+await pi.goto('http://127.0.0.1:8099/');
+await pi.waitForSelector('#btnProf', { timeout: 8000 });
+const liensBandeau = () => pi.$$eval('.ent-bandeau [data-intention]', (l) => l.map((a) => a.getAttribute('href')));
+const ouvrirSeanceI = async (ent, id) => {
+  // Depuis la liste d'une entreprise (retour de « Quitter »), « ← LOGISIM » ramène aux logos.
+  if (await pi.$('#btnLogisim')) await pi.click('#btnLogisim');
+  else {
+    if (await pi.$('#btnAccueil')) await pi.click('#btnAccueil');
+    await pi.click('[data-rub="logisim"]');
+  }
+  await pi.click(`[data-ent="${ent}"]`);
+  await pi.click(`[data-act="${id}"]`);
+  await pi.waitForSelector('.ent-bandeau [data-quitter]');
+};
+const quitterI = async () => { await pi.click('[data-quitter]'); await pi.waitForSelector('.entreprise-tete'); };
+
+await v('fiche d’intention : onglet Corrigés, sous l’entreprise qui la déclare et elle seule', async () => {
+  if (!ficheInjectee) throw new Error('la ligne Boost de ENTREPRISES a changé : l’injection de la fiche est à revoir');
+  await pi.click('#btnProf');
+  await pi.waitForSelector('#btnProfEspace');
+  await pi.click('#btnProfEspace');
+  await pi.waitForSelector('#gNom');
+  await pi.fill('#gNom', 'INTENT 1');
+  await pi.click('#btnCreerG');
+  await pi.waitForSelector('text=INTENT 1');
+  await pi.click('[data-ong="comptes"]');
+  await pi.waitForSelector('#lot');
+  await pi.fill('#lot', 'INTENTION ; Sam ; 3961 ; ii01');
+  await pi.click('#btnLot');
+  await pi.waitForTimeout(400);
+  await pi.click('[data-ong="corriges"]');
+  await pi.waitForSelector('#corrSommaire [data-entreprise="3"]');
+  const r = await pi.$$eval('#corrSommaire [data-entreprise]', (els) => els.map((e) => ({
+    id: e.dataset.entreprise,
+    liens: [...e.querySelectorAll('[data-intention] a')].map((a) => a.textContent.trim() + '=' + a.getAttribute('href')),
+    seances: e.querySelectorAll('[data-corrige]').length })));
+  const boost = r.find((x) => x.id === '3');
+  if (boost.liens.join() !== `PDF=${FICHE.pdf},Word=${FICHE.docx}`) throw new Error('Boost : ' + boost.liens.join());
+  if (!boost.seances) throw new Error('aucune séance sous Boost');
+  const autres = r.filter((x) => x.id !== '3');
+  if (!autres.some((x) => x.id === '1')) throw new Error('Spartoo absent : le témoin ne prouve rien');
+  if (autres.some((x) => x.liens.length)) throw new Error('fiche sous une entreprise qui n’en déclare pas : ' + JSON.stringify(autres));
+});
+
+await v('fiche d’intention : dans le bandeau de la séance quand l’enseignant l’ouvre, pas pour une entreprise sans fiche', async () => {
+  await pi.click('#btnRetour');
+  await ouvrirSeanceI(3, 'boost-ent33');
+  const l = await liensBandeau();
+  if (l.join() !== `${FICHE.pdf},${FICHE.docx}`) throw new Error('liens : ' + l.join());
+  await quitterI();
+  await ouvrirSeanceI(1, 'spartoo-reception');
+  if ((await liensBandeau()).length) throw new Error('fiche dans une séance Spartoo, qui n’en déclare pas');
+  await quitterI();
+});
+
+await v('fiche d’intention : jamais dans le bandeau d’un élève', async () => {
+  if (await pi.$('#btnLogisim')) await pi.click('#btnLogisim');
+  await pi.click('#btnDeco');
+  await pi.waitForSelector('#mat');
+  await pi.fill('#mat', '3961');
+  await pi.fill('#code', 'ii01');
+  await pi.click('#btnEleve');
+  await pi.waitForSelector('text=Bonjour Sam');
+  await ouvrirSeanceI(3, 'boost-ent33');
+  if ((await liensBandeau()).length) throw new Error('lien « Fiche d’intention » chez l’élève');
+  if (/Fiche d.intention/.test(await pi.textContent('.ent-bandeau'))) throw new Error('mention de la fiche chez l’élève');
+  if (erreursI.length) throw new Error(erreursI.slice(0, 3).join(' / '));
+});
+
+await ctxI.close();
+}
+
 }

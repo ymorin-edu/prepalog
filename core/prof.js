@@ -116,7 +116,11 @@ export async function rendreEspaceProf(hote, ctx) {
         <div style="display:flex;align-items:center;gap:10px;flex:0 0 300px">
           ${e.logo ? `<span style="background:#f7f4ee;border:1px solid var(--filet);border-radius:var(--r);padding:4px 8px;display:inline-flex">
             <img src="${ech(e.logo)}" alt="" style="height:26px;max-width:90px;object-fit:contain;mix-blend-mode:multiply"></span>` : ''}
-          <div><strong>${ech(e.nom)}</strong><div class="note" style="margin:0">${ech(e.metier)}</div></div>
+          <div><strong>${ech(e.nom)}</strong><div class="note" style="margin:0">${ech(e.metier)}</div>
+            ${e.intention ? `<div class="note" data-intention style="margin:2px 0 0">Fiche d'intention :
+              ${e.intention.pdf ? `<a href="${ech(e.intention.pdf)}" download>PDF</a>` : ''}
+              ${e.intention.pdf && e.intention.docx ? ' · ' : ''}
+              ${e.intention.docx ? `<a href="${ech(e.intention.docx)}" download>Word</a>` : ''}</div>` : ''}</div>
         </div>
         <div class="rangee" style="gap:8px">${e.acts.map(({ meta: m }) => `
           <button class="btn btn-s ${m.id === corrigeActif ? 'btn-p' : ''}" data-corrige="${ech(m.id)}"

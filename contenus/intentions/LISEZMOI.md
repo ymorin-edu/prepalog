@@ -1,0 +1,1 @@
+Fiches d'intention pédagogique générées par Cowork (une par scénario, Word + PDF) ; déclarées dans `ENTREPRISES` (`activites/index.js`, champ `intention`) après relecture de Tristan. Fichier public comme tout le dépôt : aucun secret (jamais la valeur d'un code d'accès, seulement « le code que vous avez défini dans votre espace »).

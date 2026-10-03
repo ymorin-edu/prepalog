@@ -514,6 +514,11 @@ export function creerEntreprise(U) {
                 title="Le carnet de bord de la séance, à imprimer ou à lire à l'écran">Trame PDF</a>` : ''}
               ${trame && trame.docx ? `<a class="ent-act" href="${ech(trame.docx)}" download
                 title="Le même carnet, à compléter au clavier">Trame Word</a>` : ''}
+              ${/* La fiche d'intention du scénario (03/10/2026) : à l'enseignant SEUL, jamais à un élève. */
+                estProf && ctx.intention && ctx.intention.pdf ? `<a class="ent-act" data-intention href="${ech(ctx.intention.pdf)}" download
+                title="Fiche d'intention pédagogique du scénario (enseignant seulement)">Fiche d'intention PDF</a>` : ''}
+              ${estProf && ctx.intention && ctx.intention.docx ? `<a class="ent-act" data-intention href="${ech(ctx.intention.docx)}" download
+                title="La même fiche, en Word">Fiche d'intention Word</a>` : ''}
               ${sansTrame ? `<span class="ent-sans-trame" title="Pas de feuille à rendre : tout se fait dans l'environnement">${ech(sansTrame)}</span>` : ''}
               ${!(VPLAN && VPLAN.horsConnexion) ? '' : `<button class="ent-act" data-hors-connexion
                 ${horsCo ? 'disabled' : ''}

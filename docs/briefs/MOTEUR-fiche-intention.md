@@ -6,7 +6,7 @@
 > Lis docs/briefs/COORDINATION-cdiscount.md, docs/EN-COURS.md, puis implémente le brief docs/briefs/MOTEUR-fiche-intention.md. Annonce la durée avant de commencer, puis enchaîne sans attendre : les questions du brief sont déjà tranchées (§7).
 > ```
 
-**Statut** : à implémenter
+**Statut** : livré (03/10/2026)
 **Date du brief** : 03/10/2026
 **Modèle** : Sonnet — **Durée estimée par Cowork** : 30 à 45 min.
 **Touche le moteur** : oui (`core/prof.js`, `activites/index.js`, peut-être `core/types/entreprise.js`) → s'inscrire
@@ -92,8 +92,11 @@ Une ligne dans `activites/FICHE-SEANCE.md` (le champ `intention` de `ENTREPRISES
 
 ## Compte rendu *(rempli par Claude Code)*
 
-- **Fichiers créés / modifiés** :
-- **Écarts par rapport au brief** :
-- **Décisions prises en route** :
-- **Tests** :
-- **Commits** :
+- **Fichiers créés / modifiés** : `activites/index.js` (commentaire du champ `intention`, passé par `entreprisesDe`, nouvelle fonction `intentionDe(code)`) ; `core/app.js` (`ctx.intention`, transmis à toutes les séances) ; `core/types/entreprise.js` (deux liens dans le bandeau, **seulement si `estProf`**) ; `core/prof.js` (onglet Corrigés) ; `contenus/intentions/LISEZMOI.md` (créé) ; `activites/FICHE-SEANCE.md` ; `outils/test/socle.mjs` (3 cas neufs, aucun cas existant réécrit) ; `docs/decisions.md`.
+- **Écarts par rapport au brief** : aucun. `core/app.js` est touché en plus des fichiers cités (une ligne : c'est lui qui fabrique le contexte de la séance ; le moteur d'entreprise n'importe pas `activites/`).
+- **Décisions prises en route** (à juger à l'écran) :
+  - Onglet Corrigés : la fiche apparaît **une fois par entreprise**, sous son nom et son métier (« Fiche d'intention : PDF · Word »), sur la même ligne que les boutons de toutes ses séances — pas répétée sur chaque bouton.
+  - Une entreprise dont aucune séance n'a de corrigé n'apparaît pas dans l'onglet Corrigés, donc sa fiche non plus (elle reste dans le bandeau des séances).
+  - Bandeau : « Fiche d'intention PDF » et « Fiche d'intention Word », juste après les liens de trame, même style que les trames.
+- **Tests** : bloc `socle`, 3 cas neufs dans un contexte à part qui reçoit `activites/index.js` avec une fiche fictive sur la ligne Boost (rien dans le dépôt) : Corrigés (Boost a les deux liens, Spartoo et Cdiscount aucun) ; bandeau enseignant (Boost oui, Spartoo non) ; bandeau élève (aucun lien, aucune mention). **Sabotage** éprouvé : lien affiché sans tester le profil → le cas élève tombe. Suite complète : 474/474.
+- **Commits** : voir `git log` (« Fiche d'intention : bouton enseignant… »).
