@@ -9,9 +9,8 @@
 // `contenus/cdiscount-regularise.js`. Aucun écran nouveau : Stock, Mouvements, Réceptions,
 // messagerie.
 //
-// **`pret: false`** tant que Tristan ne l'a pas validée à l'écran (règle 4 du tableau des
-// chantiers) : la séance est cachée aux élèves, quel que soit le groupe. Ni trame ni corrigé
-// écrits : ils viendront après sa validation.
+// **`pret: true`** depuis le 03/10/2026 : Tristan l'a validée à l'écran, elle est ouverte aux
+// élèves. Ni trame ni corrigé écrits : aucune trame n'est demandée pour l'instant.
 
 import { creerEntreprise } from '../core/types/entreprise.js';
 import * as CDISCOUNT from '../contenus/cdiscount.js';
@@ -36,7 +35,7 @@ export const meta = {
   // 02/10/2026, gardée par un test du bloc « transport »). L'élève peut en revanche renvoyer sa
   // réponse : le meilleur essai est retenu.
   tables: {},
-  pret: false,
+  pret: true,
 };
 
 const moteur = creerEntreprise({

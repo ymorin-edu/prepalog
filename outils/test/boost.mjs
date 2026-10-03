@@ -1598,7 +1598,7 @@ const APRES32 = ['c6', 'c7', 'c8', 'c4', 'c1', 'c2'];          // l'ancienne tou
 const OPT2_32 = ['c8', 'c4', 'c1', 'c2', 'c7', 'c6'];          // meilleure qui tient tout : 12,38 km
 const LOIN2_32 = ['c8', 'c2', 'c1', 'c4', 'c7', 'c6'];         // tient tout, mais 13,87 km (+12 %)
 
-await v('ENT-3.2 : la séance est un entraînement de C2.4, cachée aux élèves, sans notation', async () => {
+await v('ENT-3.2 : la séance est un entraînement de C2.4, ouverte aux élèves, sans notation', async () => {
   const r = await page32.evaluate(async () => {
     const { meta } = await import('/activites/boost-ent32.js');
     const { ETAPES } = await import('/contenus/boost-ent32.js');
@@ -1610,7 +1610,7 @@ await v('ENT-3.2 : la séance est un entraînement de C2.4, cachée aux élèves
   });
   const m = r.meta;
   if (m.code !== 'ENT-3.2' || m.temps !== 'entrainement' || m.competences.join() !== 'C2.4') throw new Error('déclaration : ' + JSON.stringify(m));
-  if (m.pret !== false) throw new Error('pret devrait être false tant que Tristan n’a pas validé la séance');
+  if (m.pret !== true) throw new Error('pret devrait être true : Tristan a validé la séance le 03/10/2026');
   if ('notation' in m) throw new Error('une séance notée sur 20 ne déclare pas de `notation`');
   if (m.jeuId !== 'boost' || m.reinitialisable) throw new Error('la base de Boost est partagée avec ENT-3.1 : ni jeu à part, ni remise à zéro');
   // Dix jalons depuis l'imprévu (03/10/2026) : les huit de la phase 1, puis les deux de la phase 2.

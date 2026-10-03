@@ -11,6 +11,11 @@
 //     (constaté par Tristan le 02/10 sur ENT-2.2).
 // Il travaille sur les vraies métas du registre : la séance « en préparation » est cherchée parmi
 // celles qui ont `pret: false` au moment du test (aucune → le cas le dit, il ne passe pas à vide).
+//
+// Depuis le 03/10/2026, plus aucune séance du registre n'est en préparation (ENT-2.1, ENT-2.3 et
+// ENT-3.2 ouvertes). Pour que le bloc garde de quoi éprouver, le navigateur de test reçoit ENT-2.3
+// (`cdiscount-regularise.js`) avec `pret: false` : le fichier servi est le vrai, seul ce drapeau
+// est réécrit, et dans ce contexte de test seulement. Rien n'est modifié dans le dépôt.
 
 export default async function bloc({ v, nav }) {
 
@@ -18,6 +23,13 @@ const ctxV = await nav.newContext({ viewport: { width: 1280, height: 900 } });
 const pg = await ctxV.newPage();
 pg.setDefaultTimeout(6000);
 const erreursV = [];
+let prepaForcee = false;
+await ctxV.route('**/activites/cdiscount-regularise.js*', async (route) => {
+  const r = await route.fetch();
+  const corps = await r.text();
+  prepaForcee = /pret:\s*true,/.test(corps);
+  await route.fulfill({ response: r, body: corps.replace(/pret:\s*true,/, 'pret: false,') });
+});
 pg.on('pageerror', (e) => erreursV.push('PAGEERROR: ' + e.message));
 pg.on('dialog', (d) => d.accept());
 await pg.goto('http://127.0.0.1:8099/');
@@ -49,6 +61,7 @@ const ouvrirRubrique = async (rub, ent) => {
 
 await v('visibilité : il existe une séance en préparation à éprouver', async () => {
   if (!prepa) throw new Error('aucune séance `pret: false` dans le registre : ce bloc ne prouve rien tant qu’il n’y en a pas');
+  if (!prepaForcee && prepa.id === 'cdiscount-regularise') throw new Error('ENT-2.3 n’a pas été mise « en préparation » pour le test');
   if (!prete) throw new Error('aucune séance prête dans la rubrique ' + prepa.rubrique);
 });
 

@@ -5,8 +5,7 @@
 // recalcule le stock du dernier inventaire. Il répond par écrit à la cheffe d'équipe ; les
 // jalons lisent sa réponse. Détail et données : `contenus/cdiscount-mouvements.js`.
 //
-// **`pret: false`** tant que Tristan ne l'a pas validée à l'écran (règle 4 du tableau des
-// chantiers) : la séance est cachée aux élèves, quel que soit le groupe.
+// **`pret: true`** depuis le 03/10/2026 : Tristan l'a validée à l'écran, elle est ouverte aux élèves.
 //
 // Trame élève écrite (`outils/trame-cdiscount-mouvements.py`, `contenus/trames/ENT-2.1-…`), PAS
 // déclarée tant que Tristan ne l'a pas relue ; seul son corrigé est déclaré (`meta.corrige`).
@@ -37,7 +36,7 @@ export const meta = {
   // Corrigé de la trame (espace enseignant). La trame elle-même n'est PAS déclarée (`trame:`) :
   // déclarer, c'est valider, et elle n'est pas encore relue.
   corrige: './contenus/corriges/ENT-2.1.js',
-  pret: false,
+  pret: true,
 };
 
 const moteur = creerEntreprise({

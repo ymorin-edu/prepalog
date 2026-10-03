@@ -11,9 +11,8 @@
 // la feuille vérifiée, un message du responsable change la journée (un client annule, le créneau
 // change de client). L'élève replanifie : dix jalons au lieu de huit. Détails dans le contenu.
 //
-// ── `pret: false` ───────────────────────────────────────────────────────────────────────
-// Tant que Tristan ne l'a pas validée à l'écran, la séance est cachée aux ÉLÈVES (l'enseignant
-// la voit, étiquetée « en préparation »). On passe `pret: true` après son essai.
+// ── `pret: true` ────────────────────────────────────────────────────────────────────────
+// Validée à l'écran par Tristan le 03/10/2026 (imprévu compris) : ouverte aux élèves.
 //
 // ── Pas de `notation` ───────────────────────────────────────────────────────────────────
 // Comme ENT-3.1 : jalons ET note sur 20 (le suivi ramène le score sur 20), voir l'en-tête de
@@ -41,7 +40,7 @@ export const meta = {
   reinitialisable: false,
   jeuId: 'boost',
   tables: {},
-  pret: false,
+  pret: true,
 };
 
 const moteur = creerEntreprise({

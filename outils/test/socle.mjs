@@ -1307,6 +1307,16 @@ await v('tableur : contrôle de liste à ordre libre', async () => {
 // leur propre groupe et ne dérangent pas la page partagée des autres cas.
 {
 const ctxL = await nav.newContext({ viewport: { width: 1280, height: 900 } });
+// Depuis le 03/10/2026, plus aucune séance Boost n'est en préparation (ENT-3.2 ouverte). Pour que
+// ces cas gardent une séance « en préparation » à éprouver, ce contexte de test reçoit ENT-3.2 avec
+// `pret: false` : le vrai fichier, seul ce drapeau réécrit, rien de modifié dans le dépôt.
+let ent32Forcee = false;
+await ctxL.route('**/activites/boost-ent32.js*', async (route) => {
+  const r = await route.fetch();
+  const corps = await r.text();
+  ent32Forcee = /pret:\s*true,/.test(corps);
+  await route.fulfill({ response: r, body: corps.replace(/pret:\s*true,/, 'pret: false,') });
+});
 const pl = await ctxL.newPage();
 pl.setDefaultTimeout(6000);
 const erreursL = [];
@@ -1363,6 +1373,7 @@ await v('Logisim : un logo ouvre les séances de son entreprise, nom et métier 
   const t = await tuilesL();
   if (!t.length || t.some((x) => !/^ENT-3\./.test(x.code))) throw new Error('tuiles : ' + t.map((x) => x.code).join(', '));
   // L'enseignant voit aussi les séances en préparation, étiquetées.
+  if (!ent32Forcee) throw new Error('ENT-3.2 n’a pas été mise « en préparation » pour le test');
   if (!t.some((x) => x.cachee === 'en préparation')) throw new Error('aucune séance Boost étiquetée « en préparation »');
 });
 
@@ -1378,12 +1389,17 @@ await v('Logisim : « ← LOGISIM » ramène aux logos, « ← ACCUEIL » à l�
 });
 
 await v('Logisim : l’élève ne voit pas la carte d’une entreprise sans séance ouverte', async () => {
-  // On ferme pour ce groupe la seule séance prête de Cdiscount.
+  // On ferme pour ce groupe TOUTES les séances ouvertes de Cdiscount (il y en a plusieurs depuis
+  // le 03/10/2026 : ENT-2.1, 2.2, 2.3 et l'inventaire).
   await pl.click('#btnProfEspace');
   await pl.click('[data-ong="seance"]');
   await pl.waitForSelector('[data-ouvre="cdiscount-inventaire"]');
-  await pl.uncheck('[data-ouvre="cdiscount-inventaire"]');
-  await pl.waitForFunction(() => !document.querySelector('[data-ouvre="cdiscount-inventaire"]').checked);
+  const ouvertesCd = await pl.$$eval('[data-ouvre^="cdiscount-"]', (l) => l.filter((x) => x.checked && !x.disabled).map((x) => x.dataset.ouvre));
+  if (!ouvertesCd.length) throw new Error('aucune séance Cdiscount ouverte à fermer : le cas ne prouve rien');
+  for (const id of ouvertesCd) {
+    await pl.uncheck(`[data-ouvre="${id}"]`);
+    await pl.waitForFunction((x) => !document.querySelector(`[data-ouvre="${x}"]`).checked, id);
+  }
   // L'enseignant, lui, garde la carte Cdiscount.
   await pl.click('#btnRetour');
   await pl.click('[data-rub="logisim"]');
@@ -1406,8 +1422,8 @@ await v('Logisim : l’élève ne voit pas la carte d’une entreprise sans séa
 });
 
 await v('Logisim : une entreprise dont seules certaines séances sont ouvertes montre la liste, sans la séance en préparation', async () => {
-  // Boost : ENT-3.1 (validée le 03/10/2026) et ENT-3.3 sont prêtes ; ENT-3.2 est en préparation
-  // (cachée à l'élève).
+  // Boost : ENT-3.1 et ENT-3.3 sont prêtes ; ENT-3.2 est mise « en préparation » pour ce test
+  // (voir la réécriture du drapeau en tête de ces cas), donc cachée à l'élève.
   await pl.click('[data-ent="3"]');
   await pl.waitForSelector('.entreprise-tete');
   const t = await tuilesL();
