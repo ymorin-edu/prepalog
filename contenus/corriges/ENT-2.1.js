@@ -465,7 +465,7 @@ export const CORRIGE = {
       "texte": "Au prochain inventaire, le comptage donne 2 articles de moins que le stock du système. Que ferais-tu en premier ?",
       "pistes": [
         "Ne pas corriger tout de suite : recompter, puis chercher dans les mouvements ce qui explique les 2 articles manquants (casse non déclarée, retour non enregistré, erreur de préparation).",
-        "Seulement ensuite, si rien ne l'explique, régulariser avec un motif écrit. C'est la démarche de la séance suivante (ENT-2.2)."
+        "Seulement ensuite, si rien ne l'explique, régulariser avec un motif écrit. C'est la démarche de l'inventaire tournant (ENT-2.3)."
       ]
     },
     {

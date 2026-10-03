@@ -1,14 +1,16 @@
 // Cdiscount (entrepôt de Cestas) — l'univers de l'environnement ENT-2.x.
 //
-// C1.6 « Gérer le suivi des stocks », pour les 1L. Quatre séances, une par temps de la
-// doctrine (cadrage : `claude/prepalog-c16-cadrage-1L.md`) :
+// C1.6 « Gérer le suivi des stocks », pour les 1L. Série recadrée le 03/10/2026
+// (`docs/briefs/COORDINATION-cdiscount.md`) :
 //
-//   ENT-2.1 « Le stock raconte »                      guidage       4 à 6 références
-//   ENT-2.2 « Inventaire tournant »                   entraînement  10 à 15 références
-//   ENT-2.3 « L'inventaire régularisé à l'aveugle »   erreur induite 10 à 15 références
-//   ENT-2.4 évaluation                                 évaluation    le plus grand volume
+//   ENT-2.1 « Le stock raconte »                      guidage
+//   ENT-2.2 « Ce que disent les chiffres »            guidage du geste tableur (à venir)
+//   ENT-2.3 « Inventaire tournant »                   entraînement
+//   ENT-2.4 « Régularisé à l'aveugle »                erreur induite
+//   ENT-2.5 « Le compte à rebours »                   évaluation (à venir)
+//   ENT-2.6 bonus                                      entraînement (à venir)
 //
-// Ce fichier porte ce qui est COMMUN aux quatre — identité, charte, catalogue, emplacements,
+// Ce fichier porte ce qui est COMMUN à toutes — identité, charte, catalogue, emplacements,
 // fournisseurs, clients. Chaque séance apporte son stock, ses mouvements, ses messages et ses
 // jalons dans son propre fichier `contenus/cdiscount-<séance>.js`.
 //
@@ -131,7 +133,7 @@ export const SUP_BY_ID = (() => { const o = {}; SUPPLIERS.forEach((s) => { o[s.i
 // Vingt-quatre articles, trois zones. Les huit premiers et leurs emplacements sont ceux de la
 // maquette de l'écran Inventaire validée le 02/10 (`prepalog-maquette-inventaire-cdiscount.html`),
 // avec le même prix d'achat (c'est lui qui valorise le stock et les écarts d'inventaire), pour que
-// l'entraînement (ENT-2.2) retombe sur ce que Tristan a vu.
+// l'entraînement (ENT-2.3) retombe sur ce que Tristan a vu.
 //
 // Format du catalogue simple (`catalogueSimple`, `contenus/entreprise-commun.js`). Le stock de
 // départ n'est PAS ici : chaque séance pose le sien dans sa `baseDeDepart`.

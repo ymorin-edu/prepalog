@@ -1,4 +1,4 @@
-// ENT-2.3 — Cdiscount, séance « Régularisé à l'aveugle ». Troisième séance de l'environnement
+// ENT-2.4 — Cdiscount, séance « Régularisé à l'aveugle ». Quatrième séance de l'environnement
 // Cdiscount (C1.6, suivi des stocks et inventaire, 1L).
 //
 // Erreur induite : un magasinier de nuit a « régularisé » un écart de mixeurs en le baptisant
@@ -18,7 +18,7 @@ import * as SEANCE from '../contenus/cdiscount-regularise.js';
 
 export const meta = {
   id: 'cdiscount-regularise',
-  code: 'ENT-2.3',
+  code: 'ENT-2.4',
   titre: 'Cdiscount — régularisé à l’aveugle',
   desc: "Contrôler les ajustements de la semaine, retrouver celui qui cache un vrai problème, remonter à la réception et dire quoi faire.",
   rubrique: 'logisim',
@@ -36,6 +36,8 @@ export const meta = {
   // réponse : le meilleur essai est retenu.
   tables: {},
   pret: true,
+  // Fermée aux élèves pendant la refonte Cdiscount (brief `CDISCOUNT-renumerotation.md`, 03/10/2026).
+  ouverture: 'prof',
 };
 
 const moteur = creerEntreprise({

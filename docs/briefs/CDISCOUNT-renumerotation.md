@@ -6,7 +6,7 @@
 > Lis docs/briefs/COORDINATION-cdiscount.md, docs/EN-COURS.md, puis applique le brief docs/briefs/CDISCOUNT-renumerotation.md. Annonce la durée, puis enchaîne sans attendre : les questions du brief sont déjà tranchées (§6).
 > ```
 
-**Statut** : à implémenter — après ENT-2.1 recadrée (C2).
+**Statut** : livré (04/10/2026).
 **Date du brief** : 03/10/2026
 **Modèle** : Sonnet — **Durée estimée par Cowork** : 30 à 45 min (codes, textes, tests, documentation).
 **Touche le moteur** : non (activités, contenus, tests, docs).
@@ -77,7 +77,18 @@ Ne change ni données, ni jalons, ni écrans : ENT-2.3 et ENT-2.4 sont recadrée
 
 ## Compte rendu *(rempli par Claude Code)*
 
-- **Fichiers modifiés** :
-- **Occurrences de l'ancien code laissées volontairement** (et pourquoi) :
-- **Tests** :
-- **Commits** :
+- **Fichiers modifiés** : `activites/cdiscount-inventaire.js` (ENT-2.3, `ouverture: 'prof'`), `activites/cdiscount-regularise.js`
+  (ENT-2.4, `ouverture: 'prof'`), en-têtes et `EXERCICE` de `contenus/cdiscount-inventaire.js` (Exercice 3) et
+  `contenus/cdiscount-regularise.js` (Exercice 4), `contenus/cdiscount.js` (tableau de la série recadrée en tête),
+  `contenus/cdiscount-mouvements.js`, `core/declencheurs.js` (commentaires), `contenus/corriges/ENT-2.1.js` et
+  `outils/corriges_data.py` (« la séance suivante (ENT-2.2) » → « l'inventaire tournant (ENT-2.3) »),
+  `outils/essai-cdiscount.html`, `activites/FICHE-SEANCE.md` (exemple), `outils/test/cdiscount.mjs`,
+  `outils/test/socle.mjs`, `outils/test/visibilite.mjs`.
+- **Occurrences de l'ancien code laissées volontairement** : briefs et `docs/decisions.md` (historique) ; dans
+  `visibilite.mjs`, « constaté par Tristan le 02/10 sur ENT-2.2 » (fait daté).
+- **Tests** : nouveau cas « Cdiscount renuméroté » (codes attendus, fermées aux élèves, aucun `code` en double dans le
+  registre) ; sabotage (inventaire mis en ENT-2.4) → le cas tombe. **Deux cas existants réécrits** :
+  `visibilite.mjs` sert désormais l'inventaire sans son `ouverture` pour garder un cas « prête, le niveau décide » ;
+  `socle.mjs` « l'élève ne voit pas la carte d'une entreprise sans séance ouverte » ouvre d'abord l'inventaire (toutes
+  les séances Cdiscount sont livrées fermées, il n'y avait plus rien à fermer). Suite entière : 482/482.
+- **Commits** : voir `git log` (« Cdiscount renuméroté … »).

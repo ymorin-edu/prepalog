@@ -183,7 +183,7 @@ await v('rubriques : les activités sont rangées par numéro de module', async 
   // (ENT-1.x), puis Cdiscount (ENT-2.x, depuis le 02/10/2026), puis Boost (ENT-3.x), puis Picard
   // (ENT-4.x, 03/10/2026). Une séance nouvelle s'insère à son rang : on ne touche à cette liste
   // qu'en l'allongeant.
-  repere('Logisim', 'ENT-1.1 ENT-1.2 ENT-1.3 ENT-2.1 ENT-2.2 ENT-2.3 ENT-3.1 ENT-3.2 ENT-3.3 ENT-4.1 ENT-4.2 ENT-4.3 ENT-4.4');
+  repere('Logisim', 'ENT-1.1 ENT-1.2 ENT-1.3 ENT-2.1 ENT-2.3 ENT-2.4 ENT-3.1 ENT-3.2 ENT-3.3 ENT-4.1 ENT-4.2 ENT-4.3 ENT-4.4');
 });
 
 // ---------- 7. l'élève voit la base commune de la classe
@@ -1393,10 +1393,16 @@ await v('Logisim : « ← LOGISIM » ramène aux logos, « ← ACCUEIL » à l�
 
 await v('Logisim : l’élève ne voit pas la carte d’une entreprise sans séance ouverte', async () => {
   // On ferme pour ce groupe TOUTES les séances ouvertes de Cdiscount (il y en a plusieurs depuis
-  // le 03/10/2026 : ENT-2.1, 2.2, 2.3 et l'inventaire).
+  // le 03/10/2026).
   await pl.click('#btnProfEspace');
   await pl.click('[data-ong="seance"]');
   await pl.waitForSelector('[data-ouvre="cdiscount-inventaire"]');
+  // Depuis la renumérotation (04/10/2026), toutes les séances Cdiscount sont livrées fermées
+  // (`ouverture: 'prof'`) : on en ouvre une d'abord, sinon il n'y aurait rien à fermer.
+  if (!(await pl.isChecked('[data-ouvre="cdiscount-inventaire"]'))) {
+    await pl.check('[data-ouvre="cdiscount-inventaire"]');
+    await pl.waitForFunction(() => document.querySelector('[data-ouvre="cdiscount-inventaire"]').checked);
+  }
   const ouvertesCd = await pl.$$eval('[data-ouvre^="cdiscount-"]', (l) => l.filter((x) => x.checked && !x.disabled).map((x) => x.dataset.ouvre));
   if (!ouvertesCd.length) throw new Error('aucune séance Cdiscount ouverte à fermer : le cas ne prouve rien');
   for (const id of ouvertesCd) {

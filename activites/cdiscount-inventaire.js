@@ -1,4 +1,4 @@
-// ENT-2.2 — Cdiscount, séance « Inventaire tournant ». Deuxième séance de l'environnement
+// ENT-2.3 — Cdiscount, séance « Inventaire tournant ». Troisième séance de l'environnement
 // Cdiscount (C1.6, suivi des stocks et inventaire, 1L).
 //
 // Entraînement : l'élève reporte un relevé de comptage, calcule les écarts, cherche la cause de
@@ -16,7 +16,7 @@ import * as SEANCE from '../contenus/cdiscount-inventaire.js';
 
 export const meta = {
   id: 'cdiscount-inventaire',
-  code: 'ENT-2.2',
+  code: 'ENT-2.3',
   titre: 'Cdiscount — inventaire tournant',
   desc: "Reporter un comptage, calculer les écarts, retrouver leur cause (dont l'article mal rangé), décider et valider l'inventaire.",
   rubrique: 'logisim',
@@ -35,6 +35,8 @@ export const meta = {
   // l'élève voit sa correction détaillée, mais ne refait pas la séance de lui-même.
   tables: {},
   pret: true,
+  // Fermée aux élèves pendant la refonte Cdiscount (brief `CDISCOUNT-renumerotation.md`, 03/10/2026).
+  ouverture: 'prof',
 };
 
 const moteur = creerEntreprise({

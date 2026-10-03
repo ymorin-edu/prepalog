@@ -1,7 +1,7 @@
-// Cdiscount — ENT-2.3 « Régularisé à l'aveugle ». Entraînement (erreur induite), C1.6.
+// Cdiscount — ENT-2.4 « Régularisé à l'aveugle ». Entraînement (erreur induite), C1.6.
 //
 // Troisième séance de l'environnement Cdiscount. Après ENT-2.1 (lire les mouvements) et
-// ENT-2.2 (faire un inventaire), l'élève découvre l'envers de l'inventaire : un AJUSTEMENT passé
+// ENT-2.3 (faire un inventaire), l'élève découvre l'envers de l'inventaire : un AJUSTEMENT passé
 // sans enquête peut effacer un vrai problème. Ici, un magasinier de nuit a compté l'allée B,
 // trouvé quatre mixeurs de moins que le système, et passé « −4, Démarque inconnue » sans regarder
 // plus loin ; son message pousse à conclure que « c'est de la démarque, ça arrive ». C'est
@@ -26,7 +26,7 @@
 // bloqué — il peut répondre à tout moment, et un jalon faux ne fait tomber que lui. Le délai de
 // réclamation (huit jours) donne un enjeu sans rien verrouiller.
 //
-// Volume : 6 références, 11 documents, 22 mouvements (ENT-2.1 : 5, 10, 19 ; ENT-2.2 : 8, 16, 27).
+// Volume : 6 références, 11 documents, 22 mouvements (ENT-2.1 : 5, 10, 19 ; ENT-2.3 : 8, 16, 27).
 //
 // Tout est CONSTRUIT (voir l'en-tête de `contenus/cdiscount.js`).
 
@@ -113,7 +113,7 @@ export function dateInventaire(now = Date.now()) {
 
 /* ------------------------------------------------------------------ base et volet */
 
-export const EXERCICE = 'Exercice 3 : contrôler les ajustements de la semaine';
+export const EXERCICE = 'Exercice 4 : contrôler les ajustements de la semaine';
 
 export const ACCUEIL = {
   titre: 'Un ajustement doit toujours avoir une cause',

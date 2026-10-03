@@ -42,12 +42,12 @@
 import { CUSTOMERS, EQUIPE, mailBienvenue, sousCatalogue } from './cdiscount.js';
 import { apresMail, ligne, nombres, nrm } from '../core/declencheurs.js';
 
-// Lues aussi par ENT-2.3 (`cdiscount-regularise.js`), qui les importe d'ici.
+// Lues aussi par ENT-2.4 (`cdiscount-regularise.js`), qui les importe d'ici.
 export { ligne, nombres };
 
 /* ------------------------------------------------------------------ périmètre */
 
-// Les cinq références de l'allée : celles de la zone A que l'élève retrouvera en ENT-2.2.
+// Les cinq références de l'allée : celles de la zone A que l'élève retrouvera en ENT-2.3.
 export const MODELES = ['CAB-USBC-1M', 'CHG-20W', 'ECO-BT-01', 'BAT-10K', 'COQ-UNI-01'];
 export const CATALOGUE = sousCatalogue(MODELES);
 

@@ -17,7 +17,7 @@
 export const nrm = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
 
 // La dernière ligne d'un texte qui porte l'intitulé (un élève qui se corrige en bas de message
-// est lu sur sa correction). Venue d'ENT-2.1, partagée avec ENT-2.3.
+// est lu sur sa correction). Venue d'ENT-2.1, partagée avec ENT-2.4.
 export function ligne(texte, intitule) {
   const cle = nrm(intitule).replace(/\s*:$/, '');
   const l = String(texte || '').split(/\r?\n/).filter((x) => nrm(x).includes(cle));

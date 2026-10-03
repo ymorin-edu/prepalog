@@ -337,7 +337,7 @@ Ce qui cloche : DEM-26-0027 : 2 - 1 = 1`;
     if (!DECL.apresJalon(ETAPES, 'u', { ok: true })({})) throw new Error('apresJalon ne transmet pas l\'univers');
     const vrai = () => true, faux = () => false;
     if (!DECL.tous(vrai, vrai)({}) || DECL.tous(vrai, faux)({})) throw new Error('tous');
-    // ENT-2.1 et ENT-2.3 lisent les mêmes `ligne()` et `nombres()` : déplacées, pas copiées.
+    // ENT-2.1 et ENT-2.4 lisent les mêmes `ligne()` et `nombres()` : déplacées, pas copiées.
     if (S21.ligne !== DECL.ligne || S21.nombres !== DECL.nombres) throw new Error('ligne/nombres recopiées au lieu d\'être réimportées');
   });
 
@@ -707,7 +707,7 @@ Ce qui cloche : DEM-26-0027 : 2 - 1 = 1`;
   });
 
   /* ================================================================================
-   * ENT-2.2 « Inventaire tournant » (entraînement) — ajouté le 02/10/2026, chantier D.
+   * ENT-2.3 « Inventaire tournant » (entraînement) — ajouté le 02/10/2026, chantier D.
    *
    * Réglages décidés par Tristan : 8 références et 27 mouvements (ENT-2.1 : 5 et 19), correction
    * DÉTAILLÉE, piège unique = l'article au mauvais emplacement. Les valeurs attendues sont
@@ -737,8 +737,8 @@ Ce qui cloche : DEM-26-0027 : 2 - 1 = 1`;
   const ids22 = S22.ETAPES.map((x) => x.id);
   const tombes22 = (db) => { const st = statuts(S22, db); return ids22.filter((x, i) => st[i] !== 'ok'); };
 
-  // ---------- ENT-2.2 — les données
-  await v('ENT-2.2 : volume déclaré = volume réel (8 références, 16 documents, 27 mouvements), plus fort qu\'ENT-2.1', async () => {
+  // ---------- ENT-2.3 — les données
+  await v('ENT-2.3 : volume déclaré = volume réel (8 références, 16 documents, 27 mouvements), plus fort qu\'ENT-2.1', async () => {
     const db = ouvrir(S22);
     const refs = new Set(db.moves.map((m) => m.sku));
     const docs = new Set(db.moves.map((m) => m.ref));
@@ -752,7 +752,7 @@ Ce qui cloche : DEM-26-0027 : 2 - 1 = 1`;
     if (JSON.stringify(meta.volume) !== JSON.stringify(S22.VOLUME)) throw new Error('le meta ne déclare pas le volume de la séance');
   });
 
-  await v('ENT-2.2 : chaque mouvement a son document, le stock « après » se suit sans trou et retombe sur le stock du système', async () => {
+  await v('ENT-2.3 : chaque mouvement a son document, le stock « après » se suit sans trou et retombe sur le stock du système', async () => {
     const db = ouvrir(S22);
     const recs = new Set(db.receptions.map((r) => r.no));
     const bps = new Set(db.orders.map((o) => 'BP-' + o.no.replace('CMD-', '')));
@@ -779,7 +779,7 @@ Ce qui cloche : DEM-26-0027 : 2 - 1 = 1`;
     }
   });
 
-  await v('ENT-2.2 : écarts, taux et décisions attendus (valeurs écrites à la main)', async () => {
+  await v('ENT-2.3 : écarts, taux et décisions attendus (valeurs écrites à la main)', async () => {
     const db = ouvrir(S22);
     const L = Object.fromEntries(S22.INVENTAIRE.lignes.map((l) => [l.ref, l]));
     if (JSON.stringify(S22.INVENTAIRE.lignes.map((l) => l.ref)) !== JSON.stringify(ORDRE_22)) throw new Error('ordre du relevé ≠ ordre des emplacements');
@@ -801,7 +801,7 @@ Ce qui cloche : DEM-26-0027 : 2 - 1 = 1`;
     for (const l of I.lignes.filter((x) => x.attendu)) if (!l.explication || l.explication.length < 60) throw new Error(`correction détaillée sans explication : ${l.ref}`);
   });
 
-  await v('ENT-2.2 : le piège est l\'article au mauvais emplacement — la paire +3 / −3 s\'annule, le stock du système est juste', async () => {
+  await v('ENT-2.3 : le piège est l\'article au mauvais emplacement — la paire +3 / −3 s\'annule, le stock du système est juste', async () => {
     const db = ouvrir(S22);
     // 1. La paire : mêmes trois cartons. Le surplus des câbles est le manque des chargeurs.
     if (ECARTS_22['CAB-USBC-1M'] + ECARTS_22['CHG-20W'] !== 0) throw new Error('la paire ne s\'annule pas');
@@ -833,7 +833,7 @@ Ce qui cloche : DEM-26-0027 : 2 - 1 = 1`;
     if (JSON.stringify(motifs) !== JSON.stringify(['Démarque inconnue'])) throw new Error('motifs attendus : ' + motifs.join(', '));
   });
 
-  await v('ENT-2.2 : la ligne témoin (coques) n\'a aucune cause à trouver — c\'est la seule où régulariser est juste', async () => {
+  await v('ENT-2.3 : la ligne témoin (coques) n\'a aucune cause à trouver — c\'est la seule où régulariser est juste', async () => {
     const db = ouvrir(S22);
     const mails = db.mails.map((m) => m.subject + ' ' + m.text + ' ' + (m.remarque || '')).join('\n');
     // Aucun message ne parle des coques autrement que pour écarter la piste (relevé : « bacs voisins vérifiés »).
@@ -849,8 +849,8 @@ Ce qui cloche : DEM-26-0027 : 2 - 1 = 1`;
     if (rayon.length < 2) throw new Error('le mauvais rangement doit se présenter au moins deux fois');
   });
 
-  // ---------- ENT-2.2 — les jalons
-  await v('ENT-2.2 : sans travail, aucun jalon n\'est acquis (l\'inaction ne rapporte rien) ; base nue = « pas encore là »', async () => {
+  // ---------- ENT-2.3 — les jalons
+  await v('ENT-2.3 : sans travail, aucun jalon n\'est acquis (l\'inaction ne rapporte rien) ; base nue = « pas encore là »', async () => {
     const db = ouvrir(S22);
     const st = statuts(S22, db);
     if (st.some((s) => s !== 'attente')) throw new Error('statuts avant travail : ' + st.join(', '));
@@ -862,20 +862,20 @@ Ce qui cloche : DEM-26-0027 : 2 - 1 = 1`;
     if (!t.includes('rangements') || !t.includes('temoin')) throw new Error('décisions absentes mais jalons acquis : ' + t.join(', '));
   });
 
-  await v('ENT-2.2 : le parcours juste valide les cinq jalons', async () => {
+  await v('ENT-2.3 : le parcours juste valide les cinq jalons', async () => {
     const db = justeDb();
     const st = statuts(S22, db);
     if (st.some((s) => s !== 'ok')) throw new Error('statuts : ' + st.join(', '));
   });
 
-  await v('ENT-2.2 : tant que l\'inventaire n\'est pas validé, les décisions ne sont pas jugées (« attente »)', async () => {
+  await v('ENT-2.3 : tant que l\'inventaire n\'est pas validé, les décisions ne sont pas jugées (« attente »)', async () => {
     const db = justeDb({ valide: false });
     const st = Object.fromEntries(ids22.map((x, i) => [x, statuts(S22, db)[i]]));
     if (st.rangements !== 'attente' || st.temoin !== 'attente' || st.taux !== 'attente') throw new Error('décisions jugées avant validation : ' + JSON.stringify(st));
     if (st.comptage !== 'ok' || st.ecarts !== 'ok') throw new Error('comptage et écarts justes non reconnus : ' + JSON.stringify(st));
   });
 
-  await v('ENT-2.2 : chaque erreur typique fait tomber SON jalon, et lui seul', async () => {
+  await v('ENT-2.3 : chaque erreur typique fait tomber SON jalon, et lui seul', async () => {
     const cas = [
       // Les trois façons de ne pas voir le mauvais rangement : régulariser à tort.
       ['rangements', 'régulariser les chargeurs manquants', { decisions: { ...BONNES_22, 'CHG-20W': ['regul', 'Démarque inconnue'] } }],
@@ -903,19 +903,39 @@ Ce qui cloche : DEM-26-0027 : 2 - 1 = 1`;
     if (!tombes22(faux).includes('comptage')) throw new Error('relevé mal reporté non vu');
   });
 
-  await v('ENT-2.2 : le taux se lit à ± 0,1 point (3,7 juste, 3,66 juste, 4 faux)', async () => {
+  await v('ENT-2.3 : le taux se lit à ± 0,1 point (3,7 juste, 3,66 juste, 4 faux)', async () => {
     for (const [taux, ok] of [['3,7', true], ['3.7', true], ['3,66', true], ['3,8', true], ['4', false], ['10', false], ['', false]]) {
       const t = tombes22(justeDb({ taux }));
       if (ok !== !t.includes('taux')) throw new Error(`taux « ${taux} » : ${ok ? 'doit passer' : 'doit tomber'} (tombent : ${t.join(', ') || 'aucun'})`);
     }
   });
 
-  // ---------- ENT-2.2 — dans le navigateur, avec le vrai moteur et le vrai écran Inventaire
-  await v('ENT-2.2 : inscrite au registre, cachée tant que pret: false, parmi les séances C1.6', async () => {
+  // ---------- Renumérotation (03/10/2026, brief `CDISCOUNT-renumerotation.md`)
+  // Deux séances au même `code` se rangeraient au même rang, sans que rien ne casse à l'écran.
+  // `doublons()` est éprouvée à la main sur une liste qui en contient un : le cas ne passe pas
+  // parce qu'elle ne sait rien voir.
+  await v('Cdiscount renuméroté : ENT-2.1, 2.3, 2.4 dans l\'ordre, fermées aux élèves, aucun code en double au registre', async () => {
+    const doublons = (codes) => codes.filter((c, i) => codes.indexOf(c) !== i);
+    if (doublons(['ENT-2.1', 'ENT-2.3', 'ENT-2.3']).join() !== 'ENT-2.3') throw new Error('doublons() ne voit pas un doublon');
+    const metas = await page.evaluate(async () => (await (await import('/activites/index.js')).chargerActivites())
+      .map((a) => ({ id: a.meta.id, code: a.meta.code, pret: !!a.meta.pret, ouverture: a.meta.ouverture || null })));
+    const d = doublons(metas.map((m) => m.code));
+    if (d.length) throw new Error('code en double : ' + d.join(', '));
+    const cd = metas.filter((m) => /^cdiscount-/.test(m.id));
+    const attendu = { 'cdiscount-mouvements': 'ENT-2.1', 'cdiscount-inventaire': 'ENT-2.3', 'cdiscount-regularise': 'ENT-2.4' };
+    for (const [id, code] of Object.entries(attendu)) {
+      const m = cd.find((x) => x.id === id);
+      if (!m || m.code !== code) throw new Error(`${id} : ${m && m.code} au lieu de ${code}`);
+      if (!m.pret || m.ouverture !== 'prof') throw new Error(`${code} n'est pas fermée aux élèves`);
+    }
+  });
+
+  // ---------- ENT-2.3 — dans le navigateur, avec le vrai moteur et le vrai écran Inventaire
+  await v('ENT-2.3 : inscrite au registre, cachée tant que pret: false, parmi les séances C1.6', async () => {
     const src = fs.readFileSync(path.join(ROOT, 'activites', 'index.js'), 'utf8');
     if (!src.includes("import('./cdiscount-inventaire.js')")) throw new Error('absente de activites/index.js');
     const meta = await page.evaluate(async () => (await import('/activites/cdiscount-inventaire.js')).meta);
-    if (meta.code !== 'ENT-2.2' || meta.temps !== 'entrainement' || !meta.competences.includes('C1.6')) throw new Error('meta incomplet');
+    if (meta.code !== 'ENT-2.3' || meta.temps !== 'entrainement' || !meta.competences.includes('C1.6')) throw new Error('meta incomplet');
     if (meta.bareme !== S22.ETAPES.length) throw new Error('barème ≠ nombre de jalons');
     const { activiteVisible } = await imp('core/niveaux.js');
     if (!meta.pret && activiteVisible(meta, { niveau: '1re' })) throw new Error('séance non prête visible des élèves');
@@ -923,7 +943,7 @@ Ce qui cloche : DEM-26-0027 : 2 - 1 = 1`;
       const m = await import('/activites/index.js');
       return (await m.chargerActivites()).map((a) => a.meta.code);
     });
-    if (!regs.includes('ENT-2.2')) throw new Error('ENT-2.2 absente du registre chargé');
+    if (!regs.includes('ENT-2.3')) throw new Error('ENT-2.3 absente du registre chargé');
   });
 
   // Un onglet à part pour l'élève : on rejoue le parcours avec de vrais clics.
@@ -969,7 +989,7 @@ Ce qui cloche : DEM-26-0027 : 2 - 1 = 1`;
     await pg.click(`${Z22} [data-inv-valider]`); await pg.waitForTimeout(120);
   };
 
-  await v('ENT-2.2 : la séance s\'ouvre dans le vrai moteur — huit messages, relevé « papier », stock caché à l\'aveugle', async () => {
+  await v('ENT-2.3 : la séance s\'ouvre dans le vrai moteur — huit messages, relevé « papier », stock caché à l\'aveugle', async () => {
     await monter22();
     const accueil = await texte22();
     // L'accueil d'un environnement affiche d'ordinaire le stock total : ici il trahirait le comptage.
@@ -1000,7 +1020,7 @@ Ce qui cloche : DEM-26-0027 : 2 - 1 = 1`;
     for (const n of ['64', '44', '37']) if (new RegExp(`(Stock|stock)\\D{0,12}\\b${n}\\b`).test(cat)) throw new Error('le Catalogue montre un stock du système : ' + n);
   });
 
-  await v('ENT-2.2 : parcours juste de bout en bout — 4 décisions justes, une seule régularisation, correction détaillée, score 5/5', async () => {
+  await v('ENT-2.3 : parcours juste de bout en bout — 4 décisions justes, une seule régularisation, correction détaillée, score 5/5', async () => {
     await monter22();
     await jusquAuTraitement22();
     // Les quatre écarts, pas un de plus.
@@ -1038,7 +1058,7 @@ Ce qui cloche : DEM-26-0027 : 2 - 1 = 1`;
     if (!/COQ-UNI-01.*?universelle\s*25\b/.test(lig)) throw new Error('Stock ne montre pas 25 coques : ' + lig.slice(0, 300));
   });
 
-  await v('ENT-2.2 : le réflexe « tout écart négatif se régularise » coûte cher — les chargeurs disparaissent du stock, et la correction dit pourquoi', async () => {
+  await v('ENT-2.3 : le réflexe « tout écart négatif se régularise » coûte cher — les chargeurs disparaissent du stock, et la correction dit pourquoi', async () => {
     await monter22();
     await jusquAuTraitement22();
     await decider22('CAB-USBC-1M', 'recompter');
@@ -1057,7 +1077,7 @@ Ce qui cloche : DEM-26-0027 : 2 - 1 = 1`;
     if (!dernier || dernier.score !== 4) throw new Error('score : ' + JSON.stringify(dernier));
   });
 
-  await v('ENT-2.2 : à l\'étape 3, régulariser sans motif est refusé, et le recomptage des câbles fait disparaître l\'écart', async () => {
+  await v('ENT-2.3 : à l\'étape 3, régulariser sans motif est refusé, et le recomptage des câbles fait disparaître l\'écart', async () => {
     await monter22();
     await jusquAuTraitement22();
     await decider22('CAB-USBC-1M', 'recompter');
@@ -1071,13 +1091,13 @@ Ce qui cloche : DEM-26-0027 : 2 - 1 = 1`;
     if (!/0/.test(ecart.replace(/\s/g, '')) || /\+3/.test(ecart)) throw new Error('l\'écart des câbles devrait avoir disparu au recomptage : ' + ecart);
   });
 
-  await v('ENT-2.2 : l\'enseignant voit le stock malgré le comptage à l\'aveugle', async () => {
+  await v('ENT-2.3 : l\'enseignant voit le stock malgré le comptage à l\'aveugle', async () => {
     await monter22('prof');
     await ouvrir22('stock');
     if (await pg.$(`${Z22} [data-stock-bloque]`)) throw new Error('Stock bloqué pour l\'enseignant');
   });
 
-  await v('ENT-2.2 : le bandeau dit « Tout à l\'écran » à la place des liens de trame (aucune trame, aucun lien mort)', async () => {
+  await v('ENT-2.3 : le bandeau dit « Tout à l\'écran » à la place des liens de trame (aucune trame, aucun lien mort)', async () => {
     await monter22();
     const b = await pg.$$eval('#hote22 .ent-bandeau .ent-sans-trame', (e) => e.map((x) => x.textContent.trim()));
     if (b.length !== 1 || !/Tout à l.écran/.test(b[0])) throw new Error('étiquette du bandeau : ' + JSON.stringify(b));
@@ -1085,14 +1105,14 @@ Ce qui cloche : DEM-26-0027 : 2 - 1 = 1`;
     if (liens) throw new Error(liens + ' lien(s) de trame alors qu\'il n\'y a pas de trame');
   });
 
-  await v('ENT-2.2 : aucune erreur de console ni d\'exception pendant ces parcours', async () => {
+  await v('ENT-2.3 : aucune erreur de console ni d\'exception pendant ces parcours', async () => {
     await pg.evaluate(() => { document.querySelector('#hote22')?.remove(); document.body.classList.remove('immersion'); });
     await ctx22.close();
     if (erreurs22.length) throw new Error(erreurs22.slice(0, 3).join(' | '));
   });
 
   /* ================================================================================
-   * ENT-2.3 « Régularisé à l'aveugle » (erreur induite) — ajouté le 03/10/2026, chantier D.
+   * ENT-2.4 « Régularisé à l'aveugle » (erreur induite) — ajouté le 03/10/2026, chantier D.
    *
    * Décisions de Tristan : le vrai problème est une LIVRAISON INCOMPLÈTE (Gardéo livre 8 mixeurs
    * pour 12 annoncés, la réception valide les 12) ; l'élève répond par un message à lignes à
@@ -1115,7 +1135,7 @@ Valeur du manque : 4 × 12,60 = 50,40 €
 Motif exact : Erreur de réception
 Suite à donner : Réclamation auprès de Gardéo, livraison incomplète`;
 
-  await v('ENT-2.3 : volume déclaré = volume réel (6 références, 11 documents, 22 mouvements), plus fort qu\'ENT-2.1', async () => {
+  await v('ENT-2.4 : volume déclaré = volume réel (6 références, 11 documents, 22 mouvements), plus fort qu\'ENT-2.1', async () => {
     const db = ouvrir(S23);
     const refs = new Set(db.moves.map((m) => m.sku));
     // Documents : les réceptions, les commandes, et le constat de casse (un message).
@@ -1129,7 +1149,7 @@ Suite à donner : Réclamation auprès de Gardéo, livraison incomplète`;
     if (JSON.stringify(meta.volume) !== JSON.stringify(S23.VOLUME)) throw new Error('le meta ne déclare pas le volume de la séance');
   });
 
-  await v('ENT-2.3 : mouvements datés dans l\'ordre, stock « après » sans trou, stock final écrit à la main', async () => {
+  await v('ENT-2.4 : mouvements datés dans l\'ordre, stock « après » sans trou, stock final écrit à la main', async () => {
     const db = ouvrir(S23);
     for (let i = 1; i < db.moves.length; i++) if (db.moves[i].ts < db.moves[i - 1].ts) throw new Error('mouvements dans le désordre');
     if (db.moves.some((m) => m.ts > Date.now())) throw new Error('un mouvement est daté dans le futur');
@@ -1153,7 +1173,7 @@ Suite à donner : Réclamation auprès de Gardéo, livraison incomplète`;
     }
   });
 
-  await v('ENT-2.3 : le piège — un seul écart BL / colis, sur les mixeurs de REC-26-0447, et deux ajustements dont un seul est orphelin', async () => {
+  await v('ENT-2.4 : le piège — un seul écart BL / colis, sur les mixeurs de REC-26-0447, et deux ajustements dont un seul est orphelin', async () => {
     const db = ouvrir(S23);
     const m = S23.manques(db);
     if (m.length !== 1) throw new Error(`${m.length} écarts BL / colis au lieu d'un : ` + JSON.stringify(m));
@@ -1179,7 +1199,7 @@ Suite à donner : Réclamation auprès de Gardéo, livraison incomplète`;
     if (orph.after !== 9 || orph.after - orph.delta !== 13) throw new Error(`stock avant/après l'ajustement : ${orph.after - orph.delta} → ${orph.after}`);
   });
 
-  await v('ENT-2.3 : l\'erreur est induite (« c\'est de la démarque »), l\'indice existe, le délai de réclamation est donné', async () => {
+  await v('ENT-2.4 : l\'erreur est induite (« c\'est de la démarque »), l\'indice existe, le délai de réclamation est donné', async () => {
     const db = ouvrir(S23);
     const samir = db.mails.find((x) => x.fromMail === S23.SAMIR.mail);
     if (!samir || !/C'est de la démarque/.test(samir.text) || !/Pas besoin d'aller plus loin/.test(samir.text)) throw new Error('le message du magasinier ne pousse pas à la conclusion rapide');
@@ -1197,7 +1217,7 @@ Suite à donner : Réclamation auprès de Gardéo, livraison incomplète`;
     if (db.mails.length !== 5) throw new Error(`${db.mails.length} messages au lieu de 5`);
   });
 
-  await v('ENT-2.3 : sans réponse, aucun jalon n\'est acquis ; base nue ou sans écart BL / colis = « pas encore là »', async () => {
+  await v('ENT-2.4 : sans réponse, aucun jalon n\'est acquis ; base nue ou sans écart BL / colis = « pas encore là »', async () => {
     const db = ouvrir(S23);
     const st = statuts(S23, db);
     if (st.length !== 6 || st.some((s) => s !== 'attente')) throw new Error('statuts avant réponse : ' + st.join(', '));
@@ -1210,7 +1230,7 @@ Suite à donner : Réclamation auprès de Gardéo, livraison incomplète`;
     if (statuts(S23, sain).some((s) => s !== 'na')) throw new Error('jalons sur une base sans litige : ' + statuts(S23, sain).join(', '));
   });
 
-  await v('ENT-2.3 : la réponse juste valide les six jalons, calcul compris', async () => {
+  await v('ENT-2.4 : la réponse juste valide les six jalons, calcul compris', async () => {
     const db = ouvrir(S23);
     repondre(db, JUSTE_23);
     const st = statuts(S23, db);
@@ -1225,7 +1245,7 @@ Suite à donner : Réclamation auprès de Gardéo, livraison incomplète`;
     if (tombes23(db3).length) throw new Error('écritures tolérées refusées : ' + tombes23(db3).join(', '));
   });
 
-  await v('ENT-2.3 : chaque erreur typique fait tomber SON jalon, et lui seul', async () => {
+  await v('ENT-2.4 : chaque erreur typique fait tomber SON jalon, et lui seul', async () => {
     const cas = [
       ['ajustements', 'Ajustement à revoir : MIX-PLG, -4', 'Ajustement à revoir : GRP-2F, -1'],                 // le casse justifié accusé à la place
       ['ajustements', 'Ajustement à revoir : MIX-PLG, -4', 'Ajustement à revoir : MIX-PLG et GRP-2F'],          // « tout ajustement est suspect »
@@ -1249,7 +1269,7 @@ Suite à donner : Réclamation auprès de Gardéo, livraison incomplète`;
     }
   });
 
-  await v('ENT-2.3 : le meilleur essai est retenu, une réponse à un autre destinataire ne compte pas, une ligne absente tombe seule', async () => {
+  await v('ENT-2.4 : le meilleur essai est retenu, une réponse à un autre destinataire ne compte pas, une ligne absente tombe seule', async () => {
     const db = ouvrir(S23);
     repondre(db, JUSTE_23.replace('Réception concernée : REC-26-0447', 'Réception concernée : REC-26-0441'));
     if (tombes23(db).join() !== 'reception') throw new Error('premier essai faux non détecté : ' + tombes23(db).join());
@@ -1263,20 +1283,20 @@ Suite à donner : Réclamation auprès de Gardéo, livraison incomplète`;
     if (tombes23(db3).join() !== 'motif') throw new Error('ligne « Motif exact » absente : ' + tombes23(db3).join());
   });
 
-  await v('ENT-2.3 : inscrite au registre, cachée tant que pret: false, parmi les séances C1.6, temps « erreur induite »', async () => {
+  await v('ENT-2.4 : inscrite au registre, cachée tant que pret: false, parmi les séances C1.6, temps « erreur induite »', async () => {
     const src = fs.readFileSync(path.join(ROOT, 'activites', 'index.js'), 'utf8');
     if (!src.includes("import('./cdiscount-regularise.js')")) throw new Error('absente de activites/index.js');
     const meta = await page.evaluate(async () => (await import('/activites/cdiscount-regularise.js')).meta);
-    if (meta.code !== 'ENT-2.3' || meta.temps !== 'erreur' || !meta.competences.includes('C1.6')) throw new Error('meta incomplet');
+    if (meta.code !== 'ENT-2.4' || meta.temps !== 'erreur' || !meta.competences.includes('C1.6')) throw new Error('meta incomplet');
     if (meta.bareme !== S23.ETAPES.length) throw new Error('barème ≠ nombre de jalons');
     if (meta.reinitialisable) throw new Error('la remise à zéro est réservée aux séances X.1');
     const { activiteVisible } = await imp('core/niveaux.js');
     if (!meta.pret && activiteVisible(meta, { niveau: '1re' })) throw new Error('séance non prête visible des élèves');
     const regs = await page.evaluate(async () => (await (await import('/activites/index.js')).chargerActivites()).map((a) => a.meta.code));
-    if (!regs.includes('ENT-2.3')) throw new Error('ENT-2.3 absente du registre chargé');
+    if (!regs.includes('ENT-2.4')) throw new Error('ENT-2.4 absente du registre chargé');
   });
 
-  await v('ENT-2.3 : la séance s\'ouvre, se lit et se répond dans le vrai moteur — le litige est visible à l\'écran', async () => {
+  await v('ENT-2.4 : la séance s\'ouvre, se lit et se répond dans le vrai moteur — le litige est visible à l\'écran', async () => {
     const res = await page.evaluate(async ({ CHEFFE, JUSTE_ }) => {
       const mod = await import('/activites/cdiscount-regularise.js');
       const hote = document.createElement('div');
@@ -1369,7 +1389,7 @@ Suite à donner : Réclamation auprès de Gardéo, livraison incomplète`;
     } finally { await ctx.close(); }
   });
 
-  await v('Cdiscount : la page d\'essai ouvre aussi ENT-2.2, avec ses cinq jalons à « attente »', async () => {
+  await v('Cdiscount : la page d\'essai ouvre aussi ENT-2.3, avec ses cinq jalons à « attente »', async () => {
     const ctx = await nav.newContext();
     const p = await ctx.newPage();
     const errs = [];
@@ -1387,7 +1407,7 @@ Suite à donner : Réclamation auprès de Gardéo, livraison incomplète`;
     } finally { await ctx.close(); }
   });
 
-  await v('Cdiscount : la page d\'essai ouvre aussi ENT-2.3, avec ses six jalons à « attente »', async () => {
+  await v('Cdiscount : la page d\'essai ouvre aussi ENT-2.4, avec ses six jalons à « attente »', async () => {
     const ctx = await nav.newContext();
     const p = await ctx.newPage();
     const errs = [];
@@ -1397,7 +1417,7 @@ Suite à donner : Réclamation auprès de Gardéo, livraison incomplète`;
       await p.goto(new URL('/outils/essai-cdiscount.html', page.url()).toString());
       await p.waitForSelector('.ent-shell', { timeout: 6000 });
       await p.selectOption('select[name="seance"]', 'cdiscount-regularise');
-      // ENT-2.3 n'a pas d'entrée de menu propre (pas d'écran Inventaire) : on attend que les six jalons de la séance remplacent ceux d'ENT-2.1.
+      // ENT-2.4 n'a pas d'entrée de menu propre (pas d'écran Inventaire) : on attend que les six jalons de la séance remplacent ceux d'ENT-2.1.
       await p.waitForFunction((n) => document.querySelectorAll('#jalons span').length === n, S23.ETAPES.length, { timeout: 6000 });
       const jalons = await p.$$eval('#jalons span', (s) => s.map((x) => x.textContent.trim()));
       if (jalons.length !== S23.ETAPES.length) throw new Error(`${jalons.length} jalons affichés au lieu de ${S23.ETAPES.length}`);

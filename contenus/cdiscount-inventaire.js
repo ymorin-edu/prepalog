@@ -1,4 +1,4 @@
-// Cdiscount — ENT-2.2 « Inventaire tournant ». Entraînement, C1.6.
+// Cdiscount — ENT-2.3 « Inventaire tournant ». Entraînement, C1.6.
 //
 // Deuxième séance de l'environnement Cdiscount, et la première qui TOUCHE au stock. Après
 // ENT-2.1 (lire les mouvements), l'élève fait un inventaire tournant de l'allée A : il reporte
@@ -150,7 +150,7 @@ export const INVENTAIRE = {
 
 /* ------------------------------------------------------------------ base et volet */
 
-export const EXERCICE = 'Exercice 2 : faire l’inventaire d’une allée';
+export const EXERCICE = 'Exercice 3 : faire l’inventaire d’une allée';
 
 export const ACCUEIL = {
   titre: 'Un inventaire tournant, dans l’ordre',

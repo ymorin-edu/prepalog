@@ -7,7 +7,7 @@
 // dans CE navigateur de test seulement (le vrai fichier de la séance est servi, un seul drapeau
 // est réécrit au passage, rien n'est modifié dans le dépôt) :
 //   - ENT-2.1 (`cdiscount-mouvements`) servie avec `pret: false` : « en préparation » ;
-//   - ENT-2.3 (`cdiscount-regularise`) servie avec `ouverture: 'prof'` : fermée aux élèves tant
+//   - ENT-2.4 (`cdiscount-regularise`) servie avec `ouverture: 'prof'` : fermée aux élèves tant
 //     que l'enseignant ne l'a pas cochée dans « Conduite de séance » ;
 //   - une séance Cdiscount prête, sans `ouverture` : comportement d'avant (le niveau décide).
 // Ce que ces cas gardent :
@@ -35,6 +35,13 @@ const forcer = (id, remplacer) => ctxV.route(`**/activites/${id}.js*`, async (ro
 });
 await forcer(PREPA, 'pret: false,');
 await forcer(A_OUVRIR, "pret: true, ouverture: 'prof',");
+// Depuis la renumérotation (03/10/2026), toutes les séances Cdiscount sont livrées fermées : on
+// sert l'inventaire SANS son `ouverture` pour garder un cas « prête, le niveau décide ».
+const SANS_OUVERTURE = 'cdiscount-inventaire';
+await ctxV.route(`**/activites/${SANS_OUVERTURE}.js*`, async (route) => {
+  const r = await route.fetch();
+  await route.fulfill({ response: r, body: (await r.text()).replace(/\n\s*ouverture:\s*'prof',/, '') });
+});
 pg.on('pageerror', (e) => erreursV.push('PAGEERROR: ' + e.message));
 pg.on('dialog', (d) => d.accept());
 await pg.goto('http://127.0.0.1:8099/');
@@ -108,7 +115,7 @@ const cocher = async (id, oui) => {
 
 await v('visibilité : les trois états à éprouver sont posés (en préparation, à ouvrir, prête)', async () => {
   if (!forcees[PREPA] || !prepa || prepa.pret) throw new Error('ENT-2.1 n’a pas été mise « en préparation » : ' + JSON.stringify(prepa));
-  if (!forcees[A_OUVRIR] || !aOuvrir || !aOuvrir.pret || aOuvrir.ouverture !== 'prof') throw new Error('ENT-2.3 n’est pas « à ouvrir » : ' + JSON.stringify(aOuvrir));
+  if (!forcees[A_OUVRIR] || !aOuvrir || !aOuvrir.pret || aOuvrir.ouverture !== 'prof') throw new Error('ENT-2.4 n’est pas « à ouvrir » : ' + JSON.stringify(aOuvrir));
   if (!prete) throw new Error('aucune autre séance Cdiscount prête');
 });
 
@@ -150,7 +157,7 @@ await v('visibilité : l’enseignant voit les trois séances, chacune avec ce q
   const t = await tuiles();
   const de = (id) => t.find((y) => y.id === id);
   if (!de(PREPA) || de(PREPA).cachee !== 'en préparation') throw new Error('ENT-2.1 : ' + JSON.stringify(de(PREPA)));
-  if (!de(A_OUVRIR) || de(A_OUVRIR).cachee !== 'pas encore ouverte à ce groupe') throw new Error('ENT-2.3 : ' + JSON.stringify(de(A_OUVRIR)));
+  if (!de(A_OUVRIR) || de(A_OUVRIR).cachee !== 'pas encore ouverte à ce groupe') throw new Error('ENT-2.4 : ' + JSON.stringify(de(A_OUVRIR)));
   if (!de(prete.id) || de(prete.id).cachee) throw new Error(`${prete.code} : ` + JSON.stringify(de(prete.id)));
 });
 
@@ -160,7 +167,7 @@ await v('visibilité : conduite de séance — « en préparation » grisée, «
     etiq: e.closest('label').textContent.replace(/\s+/g, ' ') }));
   const p = await c(PREPA), a = await c(A_OUVRIR), r = await c(prete.id);
   if (!p.dis || p.coche || !/en préparation/.test(p.etiq)) throw new Error('ENT-2.1 : ' + JSON.stringify(p));
-  if (a.dis || a.coche || !/à ouvrir/.test(a.etiq)) throw new Error('ENT-2.3 : ' + JSON.stringify(a));
+  if (a.dis || a.coche || !/à ouvrir/.test(a.etiq)) throw new Error('ENT-2.4 : ' + JSON.stringify(a));
   if (r.dis || !r.coche || /à ouvrir/.test(r.etiq)) throw new Error(`${prete.code} : ` + JSON.stringify(r));
   // On ferme la séance prête pour ce groupe : elle doit rester visible chez l'enseignant.
   await cocher(prete.id, false);
@@ -187,7 +194,7 @@ await v('visibilité : l’enseignant coche la séance « à ouvrir » — l’�
   await cocher(A_OUVRIR, true);
   await commeEleve();
   const t = await tuilesEleve();
-  if (!t.some((y) => y.id === A_OUVRIR)) throw new Error('ENT-2.3 cochée mais invisible : ' + t.map((y) => y.id).join(', '));
+  if (!t.some((y) => y.id === A_OUVRIR)) throw new Error('ENT-2.4 cochée mais invisible : ' + t.map((y) => y.id).join(', '));
   if (t.some((y) => y.id === PREPA)) throw new Error('la séance en préparation est apparue');
 });
 
@@ -199,7 +206,7 @@ await v('visibilité : l’enseignant la décoche — elle disparaît pour l’�
   if (!/fermée/.test(a)) throw new Error('étiquette après décochage : ' + a);
   await commeEleve();
   const t = await tuilesEleve();
-  if (t.some((y) => y.id === A_OUVRIR)) throw new Error('ENT-2.3 décochée mais encore visible');
+  if (t.some((y) => y.id === A_OUVRIR)) throw new Error('ENT-2.4 décochée mais encore visible');
 });
 
 await v('visibilité : aucune erreur JavaScript', async () => {
