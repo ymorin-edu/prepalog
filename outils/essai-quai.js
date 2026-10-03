@@ -8,7 +8,7 @@
 //   - tiers-temps de l'élève.
 
 import * as P from '../contenus/picard.js';
-import { QUAI_ENT41, PALETTES_ENT41 } from '../contenus/picard-ent41.js';
+import { QUAI_ENT41, PALETTES_ENT41, VOLET } from '../contenus/picard-ent41.js';
 import { etapesQuai } from '../core/types/quai.js';
 
 // Trois palettes sans aléa, pour l'essai à 8 palettes seulement (construites).
@@ -36,15 +36,8 @@ export function quaiEssai({ evaluation = false, huit = false } = {}) {
   });
 }
 
-// Le mail d'accueil du chef de quai (texte validé par Tristan le 03/10/2026, brief ENT-4.1 §11).
-const volet = {
-  id: 'essai-quai',
-  semer(prenom) {
-    return { mails: [{ folder: 'in', ts: Date.now(), from: 'Le chef de quai', fromMail: 'chef.quai@picard-quai.example', to: prenom,
-      subject: 'Quai 32 : premier camion à 6 h 00', kind: 'text',
-      text: `Bonjour ${prenom}, tu es au quai 32 ce matin. Premier camion à 6 h 00 : Surgelés du Littoral, 5 palettes, transporteur Transports Givrex. Lis bien le ticket de température avant de faire ouvrir. Règle de la maison : le froid d'abord, les papiers ensuite. Bon courage ! — Le chef de quai` }] };
-  },
-};
+// Le mail d'accueil du chef de quai : celui de la séance.
+const volet = VOLET;
 
 export function univers(reglages = {}) {
   const quai = quaiEssai(reglages);

@@ -539,6 +539,46 @@ await v('quai : guidage — « Recommencer la réception » repart d’un quai n
   egal([e.fini, e.minute, e.decharge, e.etape], [false, 0, false, 1], 'quai neuf');
 });
 
+/* ===================================================== ENT-4.1, la séance */
+
+await v('ENT-4.1 : déclaration (C1.4, guidage, 1re, 18 jalons, livrée fermée aux élèves)', async () => {
+  const m = await pg2.evaluate(async () => (await import('/activites/picard-ent41.js')).meta);
+  egal([m.id, m.code, m.rubrique, m.competences, m.temps, m.niveaux, m.bareme, m.pret, m.ouverture, m.immersif, m.portee, !!m.copie],
+    ['picard-ent41', 'ENT-4.1', 'logisim', ['C1.4'], 'guidage', ['1re'], 18, true, 'prof', true, 'eleve', false], 'meta');
+});
+
+await v('ENT-4.1 : sous le logo Picard dans Logisim, elle s’ouvre sur l’accueil et le mail du chef de quai', async () => {
+  const p = await nouvellePage();
+  await p.click('#btnProf');
+  await p.click('[data-rub="logisim"]');
+  await p.click('[data-ent="4"]');
+  vrai((await texte(p, '[data-entreprise="4"]')).includes('Picard'), 'bloc Picard absent');
+  await p.click('[data-act="picard-ent41"]');
+  await p.waitForSelector('.ent-bandeau');
+  vrai((await texte(p, '.ent-bandeau')).includes('ENT-4.1'), 'bandeau de séance');
+  vrai((await texte(p, '.ent-main')).includes('Réceptionner le premier camion, dans l’ordre'), 'accueil de la séance');
+  await p.click('.ent-nav[data-vue="mail"]');
+  vrai((await texte(p, '.ent-main')).includes('Quai 32 : premier camion à 6 h 00'), 'mail du chef de quai');
+  await p.click('.ent-nav[data-vue="quai"]');
+  vrai((await texte(p, '.ent-main')).includes('Le camion de Transports Givrex (fictif) vient de se mettre à quai'), 'quai');
+  await p.close();
+});
+
+await v('ENT-4.1 : corrigé — palettes, cartons réels et réserves calculés depuis la séance', async () => {
+  const c = await pg2.evaluate(async () => (await import('/contenus/corriges/ENT-4.1.js')).CORRIGE);
+  const pal = c.items.find((i) => i.etape === 3).reponses.map((r) => [r[0], r[3], r[5]]);
+  egal(pal, [
+    ['P1', '57 (4 × 3 × 5 − 3)', 'Accepter — aucun motif'],
+    ['P2', '36 (3 × 3 × 4)', 'Accepter avec réserves — Cartons endommagés'],
+    ['P3', '48 (4 × 3 × 4)', 'Refuser — Température non conforme'],
+    ['P4', '22 (3 × 2 × 4 − 2)', 'Accepter avec réserves — Manquant'],
+    ['P5', '30 (3 × 2 × 5)', 'Refuser — Produit différent de la commande'],
+  ], 'tableau des palettes');
+  const res = c.items.filter((i) => i.genre === 'tableau')[1].reponses;
+  egal(res.map((r) => r[0]), ['P2', 'P3', 'P4', 'P5'], 'réserves attendues');
+  vrai(res[1][1].includes('température à cœur −14,2 °C') && res[3][1].includes('produit livré EPB-450'), 'lignes de réserve : ' + JSON.stringify(res));
+});
+
 await v('quai : aucune erreur JavaScript dans le bloc', async () => {
   egal(erreursQ, [], 'erreurs');
 });

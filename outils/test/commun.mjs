@@ -20,7 +20,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 // crans au-dessus, d'où « ../.. ». Constaté le 01/10/2026, au premier lancement de la
 // suite sous Windows : elle n'avait jamais tourné que sous Linux.
 const ROOT = fileURLToPath(new URL('../..', import.meta.url));
-const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.png': 'image/png', '.woff2': 'font/woff2', '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' };
+const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.png': 'image/png', '.jpg': 'image/jpeg', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' };
 
 // `prepalog-config.json` est versionné depuis le 30/09/2026 : sur le disque, il existe.
 // Le servir ferait démarrer l'application en mode réel, où la suite entière n'a plus de

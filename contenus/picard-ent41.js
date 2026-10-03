@@ -11,6 +11,7 @@
 //   P4  2 cartons manquants, dont un dans le coin du fond     → réserves, manquant
 //   P5  étiquette EPB-450 au lieu de EPH-450                 → refuser, produit différent
 
+import { etapesQuai } from '../core/types/quai.js';
 import { LIEU, PHOTOS, DECHARGEMENT, COUTS, SEUIL_HORS_FROID, AVERTISSEMENT, BON_A_SAVOIR, releves } from './picard.js';
 
 // Une palette : W cartons en largeur × D en profondeur × L couches. `manque` : cartons absents,
@@ -53,4 +54,33 @@ export const QUAI_ENT41 = {
     qcmTicket: { attendu: 'long' },
     palettes: PALETTES_ENT41,
   }],
+};
+
+// Un jalon de la vue = une étape du suivi (18 : ticket, 5 comptages, 5 décisions, 4 réserves,
+// pas de mention de déballage, signature, lot rentré).
+export const ETAPES = etapesQuai(QUAI_ENT41);
+
+export const ACCUEIL = {
+  titre: 'Réceptionner le premier camion, dans l’ordre',
+  kpis: ['mail'],
+  etapes: [
+    ['Lire le message du chef de quai', 'Menu Messagerie : le camion attendu ce matin et la règle de la maison.'],
+    ['Aller au quai', 'Menu Quai de réception : le camion vient de se mettre à quai, portes fermées.'],
+    ['Lire les papiers avant d’ouvrir', 'Le bon de livraison et le ticket de l’enregistreur de température.'],
+    ['Faire décharger, puis contrôler chaque palette', 'Faire le tour, sonder, lire l’étiquette, compter, puis décider.'],
+    ['Le froid d’abord, les papiers ensuite', 'Rentrer le lot en chambre froide, écrire des réserves précises, faire signer le chauffeur.'],
+  ],
+};
+
+// Le mail d'accueil du chef de quai (personnage fictif). Texte validé par Tristan le 03/10/2026
+// (brief ENT-4.1 §11), repris tel quel.
+export const VOLET = {
+  id: 'picard-ent41',
+  semer(prenom) {
+    return { mails: [{ folder: 'in', ts: Date.now() - 600e3, from: 'Le chef de quai', fromMail: 'chef.quai@picard-quai.example',
+      to: prenom, subject: 'Quai 32 : premier camion à 6 h 00', kind: 'text',
+      text: `Bonjour ${prenom}, tu es au quai 32 ce matin. Premier camion à 6 h 00 : Surgelés du Littoral, 5 palettes, `
+        + 'transporteur Transports Givrex. Lis bien le ticket de température avant de faire ouvrir. Règle de la maison : '
+        + 'le froid d\'abord, les papiers ensuite. Bon courage ! — Le chef de quai' }] };
+  },
 };

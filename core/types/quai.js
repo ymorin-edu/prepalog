@@ -32,7 +32,9 @@
 // Ce qui est construit pour plus tard sans être utilisé (brief §7) : `camions` est une liste,
 // et les palettes sont rangées par identifiant ; le déchargement place n palettes.
 
-import { ech } from '../ui.js';
+// Pas d'import de `ui.js` : le corrigé d'une séance (`contenus/corriges/`) importe ce module, et la
+// suite de tests charge les corrigés hors du navigateur.
+const ech = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 /* ================================================================== libellés */
 export const MOTIFS = {

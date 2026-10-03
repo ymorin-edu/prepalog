@@ -179,10 +179,11 @@ await v('rubriques : les activités sont rangées par numéro de module', async 
     if (r.codes.join(' ') !== attendu) throw new Error(`rubrique ${label} : ${r.codes.join(' ')}`);
   };
   repere('Tableur', 'TAB-1 TAB-2 TAB-3 TAB-4 TAB-5');
-  // Trois entreprises, et le rang se lit sur le premier chiffre : les trois séances Spartoo
-  // (ENT-1.x), puis Cdiscount (ENT-2.x, depuis le 02/10/2026), puis Boost (ENT-3.x). Une séance
-  // nouvelle s'insère à son rang : on ne touche à cette liste qu'en l'allongeant.
-  repere('Logisim', 'ENT-1.1 ENT-1.2 ENT-1.3 ENT-2.1 ENT-2.2 ENT-2.3 ENT-3.1 ENT-3.2 ENT-3.3');
+  // Quatre entreprises, et le rang se lit sur le premier chiffre : les trois séances Spartoo
+  // (ENT-1.x), puis Cdiscount (ENT-2.x, depuis le 02/10/2026), puis Boost (ENT-3.x), puis Picard
+  // (ENT-4.x, 03/10/2026). Une séance nouvelle s'insère à son rang : on ne touche à cette liste
+  // qu'en l'allongeant.
+  repere('Logisim', 'ENT-1.1 ENT-1.2 ENT-1.3 ENT-2.1 ENT-2.2 ENT-2.3 ENT-3.1 ENT-3.2 ENT-3.3 ENT-4.1');
 });
 
 // ---------- 7. l'élève voit la base commune de la classe
@@ -1334,7 +1335,9 @@ const cartes = () => pl.$$eval('.entreprise', (els) => els.map((e) => ({
 const tuilesL = () => pl.$$eval('.module-tile', (els) => els.map((e) => ({
   id: e.dataset.act, code: e.querySelector('.code').textContent, cachee: e.querySelector('[data-cachee]')?.dataset.cachee || null })));
 
-await v('Logisim : l’enseignant voit trois logos, et rien d’autre sur la carte', async () => {
+// Quatre logos depuis Picard (ENT-4.1, 03/10/2026). ENT-4.1 est livrée fermée aux élèves
+// (`ouverture: 'prof'`) : chez l'élève, la carte Picard n'apparaît donc pas (cas plus bas).
+await v('Logisim : l’enseignant voit quatre logos, et rien d’autre sur la carte', async () => {
   await pl.click('#btnProf');
   await pl.waitForSelector('#btnProfEspace');
   await pl.click('#btnProfEspace');
@@ -1353,8 +1356,8 @@ await v('Logisim : l’enseignant voit trois logos, et rien d’autre sur la car
   // Les logos se chargent après l'affichage : on leur laisse le temps, sans en faire une condition.
   await pl.waitForFunction(() => [...document.querySelectorAll('.entreprise img')].every((i) => i.complete), null, { timeout: 4000 }).catch(() => {});
   const c = await cartes();
-  const attendu = { 1: 'Spartoo', 2: 'Cdiscount', 3: 'Boost' };
-  if (c.map((x) => x.id).join() !== '1,2,3') throw new Error('cartes : ' + c.map((x) => x.id).join());
+  const attendu = { 1: 'Spartoo', 2: 'Cdiscount', 3: 'Boost', 4: 'Picard' };
+  if (c.map((x) => x.id).join() !== '1,2,3,4') throw new Error('cartes : ' + c.map((x) => x.id).join());
   for (const x of c) {
     if (x.texte) throw new Error(`carte ${x.id} : du texte visible « ${x.texte} »`);
     if (x.title !== attendu[x.id] || x.aria !== attendu[x.id] || !x.img || x.img.alt !== attendu[x.id]) throw new Error('nom d’accessibilité : ' + JSON.stringify(x));
@@ -1382,7 +1385,7 @@ await v('Logisim : « ← LOGISIM » ramène aux logos, « ← ACCUEIL » à l�
   if (lib !== '← LOGISIM') throw new Error('libellé : ' + lib);
   await pl.click('#btnLogisim');
   await pl.waitForSelector('.entreprise');
-  if ((await cartes()).length !== 3) throw new Error('retour aux logos incomplet');
+  if ((await cartes()).length !== 4) throw new Error('retour aux logos incomplet');
   await pl.click('#btnAccueil');
   await pl.waitForSelector('[data-rub="logisim"]');
   if (await pl.$('.entreprise')) throw new Error('les logos restent affichés à l’accueil');

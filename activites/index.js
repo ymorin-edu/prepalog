@@ -43,6 +43,8 @@ export const ACTIVITES = [
   () => import('./boost-tournee.js'),
   () => import('./boost-ent32.js'),
   () => import('./boost-ent33.js'),
+  // Picard (Sainghin-en-Mélantois) — ENT-4.x. C1.4 « réception » en quatre séances, sur la vue quai.
+  () => import('./picard-ent41.js'),
 ];
 
 // Pictogrammes des rubriques. Une seule grille pour les dix : trait de 1,6 px, bouts et
@@ -103,6 +105,7 @@ export const ENTREPRISES = [
   { n: 1, nom: 'Spartoo', metier: 'Vente de chaussures en ligne', logo: './contenus/trames/logos/spartoo.jpg' },
   { n: 2, nom: 'Cdiscount', metier: 'Entrepôt de Cestas — suivi des stocks', logo: './contenus/trames/logos/cdiscount.png' },
   { n: 3, nom: 'Boost', metier: 'Logistique e-commerce — Nîmes', logo: './contenus/trames/logos/boost.png' },
+  { n: 4, nom: 'Picard', metier: 'Entrepôt de surgelés — Sainghin-en-Mélantois', logo: './contenus/trames/logos/picard.svg' },
 ];
 
 // ------------------------------------------------------------------- l'ordre
