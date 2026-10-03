@@ -5,6 +5,10 @@ n'est pas évident)**. Claude Code y ajoute toute décision prise en cours de ro
 reporte dans les fiches du projet PREPALOG. Une décision de fond sur la pédagogie reste dans
 `docs/fiches/prepalog-finalite.md`.
 
+- 03/10/2026 · Tristan · **ENT-3.2 : un imprévu en cours de journée** (brief `docs/briefs/ENT-3.2-imprevu.md`) : quand la
+  tournée de la phase 1 tient tout, un message du responsable arrive (un client annule, un créneau est avancé) et l'élève
+  replanifie sur la même carte et la même feuille. Choisi parmi : plusieurs contraintes à la fois, deux vélos-cargos à répartir.
+  Maquette « Maquette imprévu ENT-3.2 » validée. Dépend du chantier « données qui changent » pour les valeurs de la journée.
 - 03/10/2026 · Tristan · **ENT-3.3 : consigne en trois étapes courtes + pastilles d'avancement** (brief
   `docs/briefs/ENT-3.3-consigne-trois-etapes.md`) : Contrôler → Répondre → Réparer, un seul rôle par écran ; mail d'Inès
   réorganisé en blocs (mêmes six intitulés, le moteur de réponse et les jalons ne bougent pas) ; accueil à quatre étapes ;

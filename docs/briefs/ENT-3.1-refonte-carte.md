@@ -106,6 +106,15 @@ quartiers et des numéros.
 - [ ] 3.4 : quelle est la complication retenue (voir l'échelle du §2) ? À décider **avant** de construire 3.4,
       pas maintenant.
 
+## 10. Moteur touché et travail en parallèle *(ajouté le 03/10/2026)*
+
+**Chantier B du plan Boost : livré par ccode le 03/10, en attente de ta validation à l'écran** (`pret: false`).
+
+- **Moteur touché** (déjà fait) : `core/types/carte.js` (mode « lire la case »), `core/types/plan.js` (tableau de repérage réutilisable), `styles/base.css` (halo ambre).
+- **Reste à faire, sans moteur** : valider à l'écran (`outils/essai-ent31.html`, au vidéoprojecteur) puis `pret: true` ; régénérer la **trame Word/PDF** et le **corrigé** d'ENT-3.1.
+- **Peut se faire en même temps que** tout autre chantier : la trame et le corrigé (Cowork ou ccode) ne touchent pas le moteur ; ta validation à l'écran non plus.
+- **Attention** : les chantiers suivants (consigne 3.3, imprévu 3.2, feuille de calcul) touchent `tournee.js` et `styles/base.css` comme lui : ils partent **de cette version commitée**, pas d'une copie plus ancienne.
+
 ---
 
 ## Compte rendu *(rempli par Claude Code à la livraison)*

@@ -6,6 +6,12 @@
       "runtimeExecutable": "python",
       "runtimeArgs": ["outils/serveur-demo.py", "8001"],
       "port": 8001
+    },
+    {
+      "name": "prepalog-demo-2",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["outils/serveur-demo.py", "8002"],
+      "port": 8002
     }
   ]
 }

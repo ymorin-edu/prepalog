@@ -66,6 +66,23 @@ aujourd'hui départ 14 h 10, train 16 h 10, 12 km/h, 6 min, 180 kg, créneau 14 
 - [ ] La distance de la tournée reste-t-elle lisible en 3.4 (jauges réduites aux limites) ? À vérifier dans le moteur.
 - [ ] 3.4 : valeurs (matinée, 160 kg, colis) à confirmer avec Tristan avant de construire.
 
+## 6. Moteur touché et travail en parallèle *(ajouté le 03/10/2026)*
+
+**Chantier D du plan Boost. Reporté ; le plus gros ; à lancer en dernier.**
+
+| Partie | Fichiers touchés | Nature |
+|---|---|---|
+| Poids / colis saisis par l'élève (non pré-remplis) | `core/types/tournee.js` (`grille.lignes`), `core/types/grille.js` (correction du total sur ce qu'il a tapé) | **moteur** |
+| Temps aux arrêts selon les colis (3.4) | `core/types/tournee.js` (`horaire.service`) | **moteur** |
+| Brouillon libre non corrigé (3.4) | `core/types/grille.js`, `styles/base.css` | **moteur** |
+| Aides à la demande (3.2, si retenues) | `core/types/tournee.js`, base de l'élève, suivi (`core/prof.js` peut-être) | **moteur** |
+| Journée propre à chaque séance (départ, train, vitesse, service, charge, créneau) | `contenus/boost-ent32.js`, `boost-ent34`…, `contenus/boost.js` (`VELO`) | contenu |
+| Calage | `outils/carte/calibrer.mjs` | outil |
+
+- **Peut se faire en même temps que** : le choix des **valeurs de chaque journée** et des **clients de 3.4** (script de calage, sans moteur) ; la rédaction des mails ; les trames.
+- **Ne pas lancer en même temps** que A ou C (même `tournee.js`, `grille.js`). Un seul chantier moteur à la fois.
+- **Interaction avec C** : voir `ENT-3.2-imprevu.md` §12 (qui passe d'abord, et le recalage de l'imprévu).
+
 ---
 
 ## Compte rendu *(rempli par Claude Code à la livraison)*

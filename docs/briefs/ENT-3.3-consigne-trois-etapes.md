@@ -59,11 +59,10 @@ utiliser un aplat vert plein pour « fait »** (trait, coche ou bordure verte, v
 
 ## 5. Alertes
 
-- **Séance en ligne** (`pret: true`) : modifier des textes change ce que voient les élèves. À pousser **hors séance**, et à dire à
-  Tristan si une séance ENT-3.3 est proche.
-- **Le mail est semé UNE seule fois** dans la base de l'élève (`volet.semer`) : **un élève qui a déjà ouvert ENT-3.3 gardera
-  l'ancien mail**. Vérifier le comportement de la graine ; si besoin, le dire à Tristan (réinitialisation par élève ?) plutôt que
-  forcer une réécriture de leurs données.
+- **Séance en ligne** (`pret: true`) : Tristan (03/10/2026) accepte que les modifications soient en ligne tout de suite.
+  **Aucun élève n'a encore ouvert ENT-3.3** : le mail d'Inès n'a pas été semé dans leur base, donc personne ne garde l'ancien
+  mail et aucune remise à zéro n'est à prévoir. (À vérifier dans le suivi avant de pousser : si un élève l'a ouverte entre-temps,
+  le dire à Tristan.)
 - **Tests** du bloc `boost` qui comparent des textes du mail ou de l'accueil seront à réécrire : **le dire explicitement**
   (valeurs écrites à la main, pas recopiées du code). Vérifier que `juger` (réponse à Inès) lit toujours les six lignes dans
   leur nouvel ordre (il lit la dernière ligne qui COMMENCE par l'intitulé : ne doit pas dépendre de l'ordre).
@@ -85,7 +84,21 @@ redevient grise. Relire le mail d'Inès : il est plus clair, la réponse se reco
 ## 8. Questions ouvertes
 
 - [ ] Les pastilles sont-elles aussi utiles en ENT-3.2 et 3.4 ? (Hors périmètre : à décider séance par séance.)
-- [ ] Élèves qui ont déjà le mail d'origine : on les laisse tels quels ou on prévoit une remise à zéro ?
+- [x] Élèves qui ont déjà le mail d'origine : **aucun** (Tristan, 03/10/2026) ; pas de remise à zéro.
+
+## 9. Moteur touché et travail en parallèle *(ajouté le 03/10/2026)*
+
+**Chantier A du plan Boost** (voir `docs/briefs/COORDINATION-boost.md`). **À lancer en premier : c'est le plus petit.**
+
+| Partie | Fichiers touchés | Nature |
+|---|---|---|
+| Textes (consigne, mail d'Inès, accueil) | `contenus/boost-ent33.js` | **contenu seul**, aucun moteur |
+| Pastilles d'avancement | `core/types/tournee.js` (rendu en tête de la vue), `core/types/entreprise.js` (déclaration), `styles/base.css` (pastilles) | **petit ajout moteur** |
+| Tests | `outils/test/boost.mjs` (cas « ENT-3.3 ») | à réécrire en partie (alerte 7) |
+
+- **Peut se faire en même temps que** : la préparation de contenu des autres chantiers (géocodage, calage, textes), car elle ne touche pas ces fichiers.
+- **Ne pas lancer en même temps** qu'un autre chantier qui touche `tournee.js`, `entreprise.js` ou `styles/base.css` (imprévu 3.2, feuille de calcul, carte) : conflits probables. **Un seul chantier moteur à la fois.**
+- **Les pastilles sont génériques** (`pastilles: […]` déclaré par la séance) : le chantier « imprévu 3.2 » pourra les réutiliser sans rien refaire.
 
 ---
 
