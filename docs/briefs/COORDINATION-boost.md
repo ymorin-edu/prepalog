@@ -12,7 +12,7 @@ la préparation de contenu et les supports peuvent avancer en parallèle.
 | B | Carte réelle dans ENT-3.1 | `ENT-3.1-refonte-carte.md` | **livré**, `pret: true`, trame et corrigé régénérés | gros | Opus (fait) |
 | C | Un imprévu en cours de journée (ENT-3.2) | `ENT-3.2-imprevu.md` | **livré**, validé à l’écran, ouvert aux élèves (03/10) | moyen à gros | Opus |
 | D | Feuille de calcul moins guidée + données qui changent | `ENT-3.x-feuille-moins-guidee.md` | **lots 1 et 2 livrés le 03/10** (3.2 et 3.3 recalées, jeu A, F1) ; essai à l'écran de Tristan ; puis ENT-3.4 | gros | lot 1 Opus, lot 2 Sonnet |
-| E | ENT-3.3 en deux temps : contrôler (figé), puis corriger | `ENT-3.3-deux-temps.md` | **cadré le 03/10, à lancer** (page d'essai d'abord) | moyen à gros | Opus |
+| E | ENT-3.3 en deux temps : contrôler (figé), puis corriger | `ENT-3.3-deux-temps.md` | **livré le 03/10** (feuille en colonnes « comme un tableur » en plus ; suite 382/382) ; à suivre : même feuille pour 3.1 et 3.2 | moyen à gros | Opus |
 
 ## Qui touche quoi (moteur)
 

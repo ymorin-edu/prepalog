@@ -6,7 +6,7 @@
 > Lis docs/briefs/COORDINATION-boost.md puis implémente le brief ENT-3.3-deux-temps. Annonce la durée avant de commencer. Fabrique-moi d'abord la page d'essai cliquable (§8) et attends ma validation avant de toucher à la séance. Dis-moi quels tests tu réécris.
 > ```
 
-**Statut** : à implémenter
+**Statut** : livré (03/10/2026)
 **Date du brief** : 03/10/2026 (cadrage écrit par Claude Code à la demande de Tristan, après essai d'ENT-3.3 à l'écran)
 **Chantier** : E du plan Boost (voir `COORDINATION-boost.md`). **Chantier moteur** : un seul à la fois.
 **Modèle** : Opus (vue du moteur modifiée : `core/types/tournee.js`, `core/types/grille.js`).
@@ -95,11 +95,11 @@ terminé ». Lancer : `lancer.bat` puis l'adresse à donner. **Tristan valide av
 
 ## 9. Questions encore ouvertes (à poser par Claude Code au moment voulu)
 
-- [ ] Temps 1 : la liste des arrêts en lecture reste-t-elle sous la carte, ou seulement la carte ? (à juger sur la page d'essai)
-- [ ] Temps 1 : les trois étiquettes de contraintes suffisent-elles, ou faut-il garder la colonne de droite ?
-- [ ] « J'ai terminé » : définitif, ou l'élève peut-il rouvrir (« Reprendre ma correction ») ?
-- [ ] Jalons de réparation : lus à « J'ai terminé », ou en continu ?
-- [ ] Le message d'Inès au passage : texte exact (court, ne révèle rien du diagnostic).
+- [x] Temps 1 : la liste des arrêts reste sous la carte, en lecture, sans bouton.
+- [x] Les trois étiquettes suffisent, aux DEUX temps (pas de colonne de jauges au temps 2 non plus).
+- [x] « J'ai terminé » est définitif (deux clics).
+- [x] Jalons de réparation lus en continu.
+- [x] Message d'Inès validé tel que proposé (il ne dit pas « corrige »).
 - [ ] Ensuite : alléger ENT-3.2 de la même façon (onglets « Carte » / « Feuille » ?) — décision 4, plus tard.
 
 ## 10. Mise en ligne
@@ -110,9 +110,31 @@ la page d'essai ; dire à Tristan avant le push ce qui change. Tests d'ENT-3.3 r
 ---
 
 ## Compte rendu *(rempli par Claude Code à la livraison)*
-- **Fichiers créés / modifiés** :
-- **Écarts par rapport au brief** :
-- **Décisions prises en route** :
-- **Tests** :
-- **Commits** :
-- **Reste ouvert** :
+- **Fichiers créés / modifiés** : `core/types/tournee.js` (options par phase `fige`, `recapitulatif`, `etiquettes`,
+  `consigneFeuille`, `noteFige`, `pastilles`/`rappel`, `raz`, `termine`), `core/types/grille.js` (lecture seule ;
+  affichage `tableur` avec barre de formule), `core/types/carte.js` (texte d'aide de la carte figée), `styles/base.css`
+  (étiquettes, lecture seule, barre de formule, « J'ai terminé » — variables du thème seulement), `contenus/boost-ent33.js`
+  (feuille en colonnes, deux phases, déclencheur, mail, accueil), `activites/boost-ent33.js` (en-tête), `outils/essai-ent33.html`
+  (page d'essai : la vraie séance), `outils/test/boost.mjs`.
+- **Écarts par rapport au brief** : la feuille d'Inès a été REFAITE en plus (demande de Tristan sur la page d'essai :
+  « trop grande, pas ergonomique », « plus de colonnes ») : 15 lignes × 5 colonnes au lieu de 38 lignes — la tournée et le
+  poids chargé à gauche (poids des arrêts remplis tout seuls, ligne « À quai » remplie toute seule), les données et le calcul
+  des heures à droite, plus de bloc « Commandes du jour » ni de « poids total / poids à laisser à quai ». Elle s'affiche
+  « comme un tableur » : le résultat dans la cellule, le contenu dans une barre de formule au-dessus (clic, flèches, Entrée,
+  pointage de plage depuis la barre). Vue à 1366 × 768 : ~2 900 px → ~1 650 px.
+- **Décisions prises en route** : voir `docs/decisions.md` (03/10/2026, chantier E). Les jalons ne changent pas de sens
+  (la formule fausse est maintenant en B11). Personne n'avait commencé ENT-3.3 : aucune reprise de données.
+  À savoir : l'enseignant n'a PAS de bouton pour rouvrir « J'ai terminé » à un élève (« Réinitialiser » vide une base de
+  groupe, rien de plus fin) — dit à tort dans une question à Tristan, corrigé ici.
+- **Tests** : réécrits (alerte 7) — le cas « ENT-3.3 n'a ni phase ni message déclenché » (devenu « les deux temps n'annulent
+  rien ») ; les 12 cas de la consigne en trois étapes et des pastilles, remplacés par 13 cas des deux temps (vue, temps 1 figé
+  et geste forcé, feuille en colonnes et barre, déblocage par un message faux et une seule fois, barre modifiable sans
+  redessin et « ↺ », pointage de plage à la souris, carte et « Retrouver la tournée d'Inès », « J'ai terminé » définitif sans
+  toucher aux jalons, options absentes de 3.1 / 3.2, mail, accueil) ; adresses B30 → B11 dans les cas « diagnostic » et
+  « formule » ; une ligne de nettoyage rendue robuste. Éprouvés dans les deux sens (vue non figée, rouvrir permis, affichage
+  classique, déblocage qui exigerait un chiffre : chaque sabotage fait tomber des cas). Suite complète 382/382.
+- **Commits** : voir l'historique (« ENT-3.3 en deux temps… »).
+- **Reste ouvert** : ENT-3.1 et ENT-3.2 passent à la feuille en colonnes « comme un tableur » (décidé par Tristan le
+  03/10, chantier suivant, chacune avec sa page d'essai) ; en ENT-3.2, les poids sont TAPÉS depuis le mail (décision du
+  lot 2) : à reposer à Tristan pour la mise en colonnes. Le mode lecture seule de la feuille « classique » (sans
+  `affichage: 'tableur'`) n'est gardé par aucun test : aucune séance ne s'en sert.
