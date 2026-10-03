@@ -312,9 +312,9 @@ On sait que tout ne rentre pas dans le vélo-cargo, alors j’ai laissé une com
             + `CE QUE J’ATTENDS DE TOI
 M. Morin veut qu’on se relise à deux avant chaque départ. En trois temps :
 `
-            + `1. Contrôle ma tournée sans y toucher : la feuille de calcul suit la tournée affichée.
+            + `D’abord, contrôle ma tournée sans y toucher : la feuille de calcul suit la tournée affichée.
 `
-            + `2. Réponds-moi en recopiant ces six lignes et en les complétant, une ligne par information :
+            + `Ensuite, réponds-moi en recopiant ces six lignes et en les complétant, une ligne par information :
 
 `
             + `1. La charge
@@ -332,7 +332,7 @@ ${L.creneau} ${choix('creneau')}
 ${L.client} (l’heure)
 
 `
-            + `3. Si quelque chose ne va pas, répare la tournée directement dans l’outil.
+            + `Enfin, si quelque chose ne va pas, répare la tournée directement dans l’outil.
 
 Merci !
 ${INES.nom}` },

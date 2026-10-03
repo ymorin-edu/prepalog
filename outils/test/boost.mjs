@@ -2263,7 +2263,7 @@ await v('ENT-3.3 : le mail d’Inès regroupe les six lignes en trois blocs (cha
     if (!t.includes(b)) throw new Error('bloc manquant : ' + b);
   }
   const bloc = (a, z) => t.slice(t.indexOf(a), z ? t.indexOf(z) : undefined);
-  const charge = bloc('1. La charge', '2. Le train'), train = bloc('2. Le train', '3. Le créneau'), cren = bloc('3. Le créneau', '3. Si quelque chose');
+  const charge = bloc('1. La charge', '2. Le train'), train = bloc('2. Le train', '3. Le créneau'), cren = bloc('3. Le créneau', 'Enfin, si quelque chose');
   if (!/Charge utile :/.test(charge) || !/Poids chargé :/.test(charge)) throw new Error('bloc charge : ' + charge);
   if (!/Train de 16 h 10 :/.test(train) || !/Arrivée à la gare :/.test(train)) throw new Error('bloc train : ' + train);
   if (!/Créneau de la Pâtisserie Arnaud :/.test(cren) || !/Arrivée à la Pâtisserie Arnaud :/.test(cren)) throw new Error('bloc créneau : ' + cren);
