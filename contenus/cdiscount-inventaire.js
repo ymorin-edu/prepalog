@@ -134,6 +134,10 @@ export const TYPES = {
 // séance (inventés, adresses en .example).
 const PREPA = { nom: 'Inès Lagarde', role: 'préparatrice', mail: 'i.lagarde@cdiscount.example' };
 const PREPARATEUR = { nom: 'Yanis Cazenave', role: 'préparateur', mail: 'y.cazenave@cdiscount.example' };
+// Qui a préparé chaque commande (la colonne « Préparateur » de l'export d'ENT-2.2) : à tour de
+// rôle, et Inès pour la commande qu'elle a annulée. Inventés.
+export const PREPARATEURS = [PREPARATEUR.nom, PREPA.nom, 'Sofiane Brettes'];
+export const preparateurDe = (no, i) => (no === REINTEGRATION.commande ? PREPA.nom : PREPARATEURS[i % PREPARATEURS.length]);
 const COLLEGUE = 'Mathis Darrigade';
 
 /* ------------------------------------------------------------------ outils */
@@ -184,16 +188,17 @@ export function periode(now = Date.now(), depart = INVENTAIRE_PRECEDENT) {
       bl: { no: r.bl, date: ts - JOUR, lot: r.lot, lines: r.lignes.map(([s, q]) => ({ sku: s, qty: q })) },
       colis, ctrl: { lot: r.lot, rows, validated: true, at: ts + 3600e3 * 0.5 } });
   });
-  COMMANDES.forEach((c) => {
+  COMMANDES.forEach((c, i) => {
     const ts = quand(now, c.j, c.h);
     const rows = {};
+    const par = preparateurDe(c.no, i);
     c.lignes.forEach(([s, q]) => {
       rows[s] = { seen: '', loc: CATALOGUE.VM[s].loc, qty: q, status: 'ok' };
-      mouvements.push({ sku: s, type: TYPES.preparation, delta: -q, ref: bp(c.no), ts, by: 'Équipe préparation' });
+      mouvements.push({ sku: s, type: TYPES.preparation, delta: -q, ref: bp(c.no), ts, by: par });
     });
     const o = { no: c.no, date: ts - 3600e3 * 5, customerId: c.client, ship: c.ship,
       lines: c.lignes.map(([s, q]) => ({ sku: s, qty: q })),
-      prep: { rows, doc: true, validated: true, complete: true, at: ts, par: 'Équipe préparation' } };
+      prep: { rows, doc: true, validated: true, complete: true, at: ts, par } };
     // Préparée, puis annulée par le client : la réintégration fait rentrer ses articles. Son bon
     // reste lisible, figé.
     if (c.no === ANNULATION.commande) o.annulee = { motif: ANNULATION.motif, at: quand(now, REINTEGRATION.j, REINTEGRATION.h) - 3600e3 * 0.5 };

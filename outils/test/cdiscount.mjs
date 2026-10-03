@@ -16,7 +16,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-export default async function bloc({ v, page, nav, ROOT }) {
+export default async function bloc({ v, page, nav, ROOT, baseXlsx }) {
   const imp = (rel) => import(pathToFileURL(path.join(ROOT, rel)).href);
   const CD = await imp('contenus/cdiscount.js');
   const S21 = await imp('contenus/cdiscount-mouvements.js');
@@ -1033,7 +1033,7 @@ Ce qui cloche : DEM-26-0027 : 2 - 1 = 1`;
   // Deux séances au même `code` se rangeraient au même rang, sans que rien ne casse à l'écran.
   // `doublons()` est éprouvée à la main sur une liste qui en contient un : le cas ne passe pas
   // parce qu'elle ne sait rien voir.
-  await v('Cdiscount renuméroté : ENT-2.1, 2.3, 2.4 dans l\'ordre, fermées aux élèves, aucun code en double au registre', async () => {
+  await v('Cdiscount renuméroté : ENT-2.1, 2.2, 2.3, 2.4 dans l\'ordre, fermées aux élèves, aucun code en double au registre', async () => {
     const doublons = (codes) => codes.filter((c, i) => codes.indexOf(c) !== i);
     if (doublons(['ENT-2.1', 'ENT-2.3', 'ENT-2.3']).join() !== 'ENT-2.3') throw new Error('doublons() ne voit pas un doublon');
     const metas = await page.evaluate(async () => (await (await import('/activites/index.js')).chargerActivites())
@@ -1041,7 +1041,7 @@ Ce qui cloche : DEM-26-0027 : 2 - 1 = 1`;
     const d = doublons(metas.map((m) => m.code));
     if (d.length) throw new Error('code en double : ' + d.join(', '));
     const cd = metas.filter((m) => /^cdiscount-/.test(m.id));
-    const attendu = { 'cdiscount-mouvements': 'ENT-2.1', 'cdiscount-inventaire': 'ENT-2.3', 'cdiscount-regularise': 'ENT-2.4' };
+    const attendu = { 'cdiscount-mouvements': 'ENT-2.1', 'cdiscount-chiffres': 'ENT-2.2', 'cdiscount-inventaire': 'ENT-2.3', 'cdiscount-regularise': 'ENT-2.4' };
     for (const [id, code] of Object.entries(attendu)) {
       const m = cd.find((x) => x.id === id);
       if (!m || m.code !== code) throw new Error(`${id} : ${m && m.code} au lieu de ${code}`);
@@ -1552,5 +1552,201 @@ Suite à donner : Réclamation auprès de Gardéo, livraison incomplète`;
       if (jalons.some((j) => !j.startsWith('⏳'))) throw new Error('jalons avant travail : ' + jalons.join(' | '));
       if (errs.length) throw new Error(errs.join(' | '));
     } finally { await ctx.close(); }
+  });
+
+  /* ================================================================================
+   * ENT-2.2 « Ce que disent les chiffres » (guidage du geste tableur) — ajouté le 04/10/2026, C6.
+   * Valeurs écrites À LA MAIN : nombre de lignes de l'export par niveau, les 8 constats (bon,
+   * référence, écart), la synthèse. Le classeur « de l'élève » est fabriqué ici à partir de SON
+   * export, avec les formules qu'il doit écrire (SI, NB.SI), ou avec ses erreurs.
+   * ============================================================================== */
+  const S2 = await imp('contenus/cdiscount-chiffres.js');
+  const GT = await imp('core/types/export-tableur.js');
+  if (!baseXlsx) throw new Error('module xlsx introuvable — npm install --no-save --no-package-lock xlsx@0.18.5');
+  const XL = await import(pathToFileURL(path.join(baseXlsx, 'xlsx.mjs')).href);
+  const CONSTATS_22 = [['BP-732101', 'CAB-USBC-1M', 3], ['BP-732118', 'CHG-20W', -3], ['BP-732126', 'COQ-UNI-01', -2],
+    ['BP-732167', 'CHG-20W', -3], ['BP-732181', 'CAB-USBC-1M', 3], ['BP-732181', 'COQ-UNI-01', -2],
+    ['BP-732195', 'BAT-10K', -2], ['BP-732210', 'CHG-20W', -3]];
+  const SYNTHESE_22 = { 'CAB-USBC-1M': 2, 'CHG-20W': 3, 'ECO-BT-01': 0, 'SOU-SF-02': 0, 'BAT-10K': 1, 'CLE-64G': 0, 'AMP-LED-E27': 0, 'COQ-UNI-01': 2 };
+  const ouvrirC = (aisance) => declencher(S2, ouvrir(S2, 'Léa', aisance));
+  const exportC = (db) => GT.construireExport(S2.TABLEUR.exports[0], db, {});
+  // Le classeur de l'élève. `o` : ses erreurs (tape : écarts tapés ; sansSi : une autre fonction que
+  // SI dans la colonne L ; syn : valeurs de synthèse écrites à la place des bonnes).
+  const classeurC = (db, o = {}) => {
+    const ex = exportC(db);
+    const F = ex.feuilles[0];
+    const c = Object.fromEntries(F.colonnes.map((x, i) => [x, i]));
+    const n = F.colonnes.length, K = XL.utils.encode_col(n), L = XL.utils.encode_col(n + 1);
+    const T = XL.utils.encode_col(c['Stock trouvé']), Lg = XL.utils.encode_col(c['Stock logiciel']), D = XL.utils.encode_col(c['Référence']);
+    const ws = XL.utils.aoa_to_sheet([[...F.colonnes, 'Écart', 'Réf. en écart'], ...F.lignes]);
+    F.lignes.forEach((l, k) => {
+      const r = k + 2, ec = l[c['Stock trouvé']] - l[c['Stock logiciel']];
+      ws[K + r] = o.tape ? { t: 'n', v: ec } : { t: 'n', v: ec, f: `${T}${r}-${Lg}${r}` };
+      ws[L + r] = { t: 's', v: ec !== 0 ? l[c['Référence']] : '', f: o.sansSi ? `CHOOSE(1+COUNTIF(${K}${r},"<>0"),"",${D}${r})` : `IF(${K}${r}<>0,${D}${r},"")` };
+    });
+    ws['!ref'] = `A1:${L}${F.lignes.length + 1}`;
+    const syn = ex.feuilles[1].lignes.map(([ref]) => [ref, o.syn && o.syn[ref] != null ? o.syn[ref]
+      : F.lignes.filter((l) => l[c['Référence']] === ref && l[c['Stock trouvé']] !== l[c['Stock logiciel']]).length]);
+    const ws2 = XL.utils.aoa_to_sheet([['Référence', 'Nb constats'], ...syn]);
+    syn.forEach((x, k) => { ws2['B' + (k + 2)] = { t: 'n', v: x[1], f: `COUNTIF(Préparations!${L}:${L},A${k + 2})` }; });
+    const wb = XL.utils.book_new();
+    XL.utils.book_append_sheet(wb, ws, 'Préparations');
+    XL.utils.book_append_sheet(wb, ws2, 'Synthèse');
+    return XL.write(wb, { bookType: 'xlsx', type: 'buffer' });
+  };
+  // Déposer « à la main » (sans écran) : contrôle, puis rangement comme le fait l'écran.
+  const deposerC = (db, o) => {
+    const wb = XL.read(classeurC(db, o), { type: 'buffer', cellFormula: true });
+    const res = GT.controlerDepot(wb, S2.controles(db), exportC(db).propres);
+    GT.enregistrerDepot(db, S2.ID_DEPOT, res, { retour: 'guidage', fichier: 'x.xlsx' });
+    return res;
+  };
+  const exporterC = (db) => { db.tableur = db.tableur || {}; db.tableur.exports = { [S2.ID_EXPORT]: { at: Date.now(), n: 30 } }; return db; };
+  const stC = (db) => Object.fromEntries(S2.ETAPES.map((e) => [e.id, e.verifier(db).status]));
+
+  await v('ENT-2.2 : export standard — 30 lignes (A-01 à A-04), les 8 constats et la synthèse écrits à la main', async () => {
+    const db = ouvrirC();
+    const F = exportC(db).feuilles[0];
+    if (F.lignes.length !== 30) throw new Error(`${F.lignes.length} lignes au lieu de 30`);
+    if (F.colonnes.join('|') !== 'Date|N° bon|Commande|Référence|Désignation|Emplacement|Qté préparée|Stock logiciel|Stock trouvé|Préparateur') throw new Error('colonnes');
+    const c = Object.fromEntries(F.colonnes.map((x, i) => [x, i]));
+    const vus = F.lignes.filter((l) => l[c['Stock trouvé']] !== l[c['Stock logiciel']])
+      .map((l) => [l[c['N° bon']], l[c['Référence']], l[c['Stock trouvé']] - l[c['Stock logiciel']]]);
+    if (JSON.stringify(vus) !== JSON.stringify(CONSTATS_22)) throw new Error('constats : ' + JSON.stringify(vus));
+    if (JSON.stringify(S2.constats(db)) !== JSON.stringify(SYNTHESE_22)) throw new Error('synthèse : ' + JSON.stringify(S2.constats(db)));
+    if (S2.refsEnEcart(db).join() !== 'CAB-USBC-1M,CHG-20W,BAT-10K,COQ-UNI-01') throw new Error('bonne liste');
+    if (F.lignes.some((l) => !l[c['Préparateur']] || /Équipe/.test(l[c['Préparateur']]))) throw new Error('préparateur manquant');
+    if (exportC(db).feuilles[1].lignes.map((l) => l[0]).join() !== 'CAB-USBC-1M,CHG-20W,ECO-BT-01,SOU-SF-02,BAT-10K,CLE-64G,AMP-LED-E27,COQ-UNI-01') throw new Error('amorce de la synthèse');
+    const vol = { references: new Set(db.moves.map((m) => m.sku)).size, documents: new Set(db.moves.map((m) => m.ref)).size, mouvements: db.moves.length };
+    if (JSON.stringify(vol) !== JSON.stringify(S2.VOLUME)) throw new Error('volume : ' + JSON.stringify(vol));
+    if (db.moves.some((m) => m.ts >= new Date().setHours(0, 0, 0, 0))) throw new Error('un mouvement est daté d\'aujourd\'hui ou du futur');
+    let s = { ...S2.STOCK_DEBUT_MOIS };
+    for (const m of db.moves) { s[m.sku] += m.delta; if (m.after !== s[m.sku] || s[m.sku] < 0) throw new Error(`stock après faux : ${m.sku} ${m.ref}`); }
+  });
+
+  await v('ENT-2.2 : confirmé — 45 lignes, toute l\'allée (12 références), mêmes constats, même bonne liste', async () => {
+    const db = ouvrirC('confirme');
+    const F = exportC(db).feuilles[0];
+    if (F.lignes.length !== 45) throw new Error(`${F.lignes.length} lignes au lieu de 45`);
+    if (exportC(db).feuilles[1].lignes.length !== 12) throw new Error('synthèse du confirmé : 12 lignes');
+    if (JSON.stringify(S2.constats(db)) !== JSON.stringify({ ...SYNTHESE_22, 'CAS-FIL-01': 0, 'SUP-VOIT': 0, 'CLA-SF-01': 0, 'HUB-USB-4': 0 })) throw new Error('synthèse : ' + JSON.stringify(S2.constats(db)));
+    if (S2.refsEnEcart(db).join() !== 'CAB-USBC-1M,CHG-20W,BAT-10K,COQ-UNI-01') throw new Error('bonne liste');
+    if (JSON.stringify(ouvrirC('confirme').mails.map((m) => m.text)) !== JSON.stringify(ouvrirC().mails.map((m) => m.text))) throw new Error('la mission trahit le niveau');
+  });
+
+  await v('ENT-2.2 : même allée qu\'ENT-2.3, deux jours avant — commandes et constats de la fenêtre identiques, une seule source', async () => {
+    const d2 = ouvrirC(), d3 = ouvrir(S22);
+    const L2 = CD.lignesPreparation(d2, S2.CATALOGUE), L3 = CD.lignesPreparation(d3, S22.CATALOGUE);
+    const communs = L2.filter((p) => L3.some((q) => q.bon === p.bon && q.sku === p.sku));
+    if (communs.length !== 26) throw new Error(`${communs.length} lignes communes au lieu de 26`);
+    for (const p of communs) {
+      const q = L3.find((x) => x.bon === p.bon && x.sku === p.sku);
+      if (p.logiciel !== q.logiciel || p.trouve !== q.trouve || p.preparateur !== q.preparateur || p.qty !== q.qty) throw new Error(`${p.bon} ${p.sku} diffère d'ENT-2.3`);
+      // Les deux séances s'ouvrent « aujourd'hui » : ce qui date de J-9 en ENT-2.3 date de J-7 ici.
+      if (Math.abs((p.ts - q.ts) - 2 * 864e5) > 3600e3 * 2) throw new Error(`${p.bon} : décalage ≠ 2 jours`);
+    }
+    for (const b of ['BP-732226', 'BP-732233', 'BP-732239']) if (L2.some((p) => p.bon === b)) throw new Error(b + ' est déjà là');
+    const o = d2.orders.find((x) => x.no === 'CMD-732153');
+    if (!o || !o.annulee) throw new Error('CMD-732153 doit être annulée ici aussi');
+  });
+
+  await v('ENT-2.2 : sans travail, rien n\'est acquis ; le classeur juste et la bonne liste donnent 5/5', async () => {
+    const db = ouvrirC();
+    if (Object.values(stC(db)).some((x) => x !== 'attente')) throw new Error('avant travail : ' + JSON.stringify(stC(db)));
+    exporterC(db);
+    const res = deposerC(db);
+    if (res.some((r) => !r.ok)) throw new Error('classeur juste refusé : ' + res.map((r) => `${r.id} ${r.justes}/${r.total} ${r.remarques[0] || ''}`).join(' ; '));
+    if (res.map((r) => `${r.justes}/${r.total}`).join(' ') !== '30/30 30/30 8/8') throw new Error('totaux : ' + res.map((r) => `${r.justes}/${r.total}`).join(' '));
+    repondre(db, 'À recompter : CHG-20W, CAB-USBC-1M, BAT-10K, COQ-UNI-01'); declencher(S2, db);
+    if (Object.values(stC(db)).some((x) => x !== 'ok')) throw new Error('5/5 attendu : ' + JSON.stringify(stC(db)));
+    const accuse = db.mails.filter((m) => m.subject === 'Vos références à recompter');
+    if (accuse.length !== 1 || !/Merci, c'est noté\. Je demande à l'équipe inventaire de passer dans l'allée A : vous ferez le recomptage\./.test(accuse[0].text)) throw new Error('accusé de Nadia');
+  });
+
+  await v('ENT-2.2 : la liste — sans BAT : ko ; avec ECO en plus : ko ; amorce vide : attente, et Nadia ne répond pas', async () => {
+    const base = () => { const db = exporterC(ouvrirC()); deposerC(db); return db; };
+    let db = base(); repondre(db, 'À recompter : CHG-20W, CAB-USBC-1M, COQ-UNI-01'); declencher(S2, db);
+    if (stC(db).liste !== 'ko') throw new Error('sans BAT : ' + stC(db).liste);
+    db = base(); repondre(db, 'À recompter : CHG-20W, CAB-USBC-1M, BAT-10K, COQ-UNI-01, ECO-BT-01'); declencher(S2, db);
+    if (stC(db).liste !== 'ko') throw new Error('avec ECO : ' + stC(db).liste);
+    db = base(); repondre(db, 'À recompter : '); declencher(S2, db);
+    if (stC(db).liste !== 'attente' || db.mails.some((m) => m.subject === 'Vos références à recompter')) throw new Error('amorce vide');
+    db = base(); repondre(db, 'À recompter : CHG-20W'); repondre(db, 'À recompter : chg-20w, cab usbc 1m, bat10k, COQ-UNI-01'); declencher(S2, db);
+    if (stC(db).liste !== 'ok') throw new Error('seconde liste juste : ' + stC(db).liste);
+  });
+
+  await v('ENT-2.2 : une erreur ne se paie qu\'une fois — synthèse déposée fausse (BAT à 0) + liste sans BAT : synthèse ko, liste ok', async () => {
+    const db = exporterC(ouvrirC());
+    deposerC(db, { syn: { 'BAT-10K': 0 } });
+    repondre(db, 'À recompter : CAB-USBC-1M, CHG-20W, COQ-UNI-01'); declencher(S2, db);
+    const st = stC(db);
+    if (st.synthese !== 'ko' || st.liste !== 'ok') throw new Error(JSON.stringify(st));
+    const db2 = exporterC(ouvrirC());
+    deposerC(db2, { syn: { 'BAT-10K': 0 } });
+    repondre(db2, 'À recompter : CAB-USBC-1M, CHG-20W, BAT-10K, COQ-UNI-01'); declencher(S2, db2);
+    if (stC(db2).liste !== 'ko') throw new Error('liste vraie contre une synthèse fausse : ' + stC(db2).liste);
+  });
+
+  await v('ENT-2.2 : un écart tapé sans formule ne valide pas le jalon 2 ; une autre fonction que SI ne valide pas le 3', async () => {
+    const db = exporterC(ouvrirC());
+    deposerC(db, { tape: true });
+    if (stC(db).ecart !== 'ko' || stC(db).si !== 'ok') throw new Error('tapé : ' + JSON.stringify(stC(db)));
+    const db2 = exporterC(ouvrirC());
+    deposerC(db2, { sansSi: true });
+    if (stC(db2).si !== 'ko' || stC(db2).ecart !== 'ok') throw new Error('sans SI : ' + JSON.stringify(stC(db2)));
+    deposerC(db2);
+    if (stC(db2).si !== 'ok') throw new Error('redépôt juste non retenu');
+  });
+
+  await v('ENT-2.2 : à l\'écran — Exporter sur Commandes (30 lignes), déposer dans Fichiers (retour détaillé), écrire à Nadia, 5/5', async () => {
+    const ctx2 = await nav.newContext({ acceptDownloads: true });
+    const p = await ctx2.newPage();
+    p.setDefaultTimeout(6000);
+    const errs = [];
+    p.on('pageerror', (e) => errs.push(e.message));
+    p.on('console', (m) => { if (m.type() === 'error' && !/\b404\b/.test(m.text())) errs.push(m.text()); });
+    try {
+      await p.goto(new URL('/', page.url()).toString());
+      await p.waitForSelector('#btnProf', { timeout: 8000 });
+      await p.evaluate(async () => {
+        const mod = await import('/activites/cdiscount-chiffres.js');
+        const hote = document.createElement('div'); hote.id = 'hote2'; document.body.appendChild(hote);
+        const db = {};
+        window.__c22 = { db, scores: [] };
+        mod.rendre(hote, { meta: mod.meta, profil: { prenom: 'Léa', nom: 'Test', role: 'eleve' }, codeStock: 'STOCK24',
+          jeu: { etat: () => db, sauver() {} }, enregistrer(x) { window.__c22.scores.push(x); }, quitter() {} });
+      });
+      const Z = '#hote2 .ent-main';
+      const aller = async (vue) => { await p.click(`#hote2 .ent-nav[data-vue="${vue}"]`); await p.waitForTimeout(80); };
+      await aller('commandes');
+      const [dl] = await Promise.all([p.waitForEvent('download'), p.click(`${Z} [data-exporter="preparations"]`)]);
+      if (dl.suggestedFilename() !== 'cdiscount-preparations-allee-A.xlsx') throw new Error('nom : ' + dl.suggestedFilename());
+      const wb = XL.read(fs.readFileSync(await dl.path()), { type: 'buffer' });
+      const n = XL.utils.sheet_to_json(wb.Sheets['Préparations']).length;
+      if (n !== 30) throw new Error(`${n} lignes exportées`);
+      const db = await p.evaluate(() => JSON.parse(JSON.stringify(window.__c22.db)));
+      await aller('fichiers');
+      await p.setInputFiles('#fichierTableur', { name: 'analyse.xlsx', mimeType: 'application/octet-stream', buffer: classeurC(db, { tape: true }) });
+      await p.waitForTimeout(400);
+      const t = (await p.textContent(Z)).replace(/\s+/g, ' ');
+      if (!/38 résultats justes sur 68/.test(t) || !/la cellule contient un nombre tapé, pas une formule/.test(t)) throw new Error('retour guidé : ' + t.slice(0, 400));
+      await p.setInputFiles('#fichierTableur', { name: 'analyse.xlsx', mimeType: 'application/octet-stream', buffer: classeurC(db) });
+      await p.waitForTimeout(400);
+      if (!/68 résultats justes sur 68/.test((await p.textContent(Z)).replace(/\s+/g, ' '))) throw new Error('redépôt juste');
+      await p.click('#hote2 [data-aide-tableur]');
+      if (!/SI\(test ; si vrai ; si faux\)/.test(await p.textContent('#hote2 [data-aide-tableur-texte]'))) throw new Error('rappel du bandeau');
+      await aller('mail');
+      await p.click(`${Z} .ent-mitem >> text=Allée A : ce que disent les chiffres`);
+      await p.click(`${Z} [data-repondre]`);
+      if (await p.inputValue(`${Z} #repT`) !== 'À recompter : ') throw new Error('amorce');
+      await p.fill(`${Z} #repT`, 'À recompter : CAB-USBC-1M, CHG-20W, BAT-10K, COQ-UNI-01');
+      await p.click(`${Z} #formRep button[type="submit"]`); await p.waitForTimeout(150);
+      const fin = await p.evaluate(() => JSON.parse(JSON.stringify(window.__c22.db)));
+      if (Object.values(stC(fin)).some((x) => x !== 'ok')) throw new Error('jalons : ' + JSON.stringify(stC(fin)));
+      const dernier = await p.evaluate(() => window.__c22.scores[window.__c22.scores.length - 1]);
+      if (!dernier || dernier.score !== 5 || dernier.max !== 5) throw new Error('score : ' + JSON.stringify(dernier));
+      if (/confirm|standard|niveau/i.test(await p.textContent('#hote2'))) throw new Error('le niveau se lit à l\'écran');
+      if (errs.length) throw new Error(errs.join(' | '));
+    } finally { await ctx2.close(); }
   });
 }

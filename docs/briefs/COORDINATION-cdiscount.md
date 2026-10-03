@@ -23,7 +23,7 @@ Règle de tout le dépôt : **un seul chantier moteur à la fois** (`core/`, `st
 | Code | `id` | Titre | Temps | Ce que fait l'élève | Reprise de | État |
 |---|---|---|---|---|---|---|
 | ENT-2.1 | `cdiscount-mouvements` | Le stock raconte | guidage | une commande annulée (rayon vide, site « en stock ») : remonter les mouvements jusqu'au constat de casse saisi −1 au lieu de −2 | ENT-2.1 actuelle | **brief prêt** (`ENT-2.1-recadrage.md`) |
-| ENT-2.2 | `cdiscount-chiffres` | Ce que disent les chiffres | guidage du geste tableur | exporter les constats des préparateurs, Écart / SI / NB.SI, choisir les références à recompter | **nouvelle** | **brief prêt** (`ENT-2.2-ce-que-disent-les-chiffres.md`) |
+| ENT-2.2 | `cdiscount-chiffres` | Ce que disent les chiffres | guidage du geste tableur | exporter les constats des préparateurs, Écart / SI / NB.SI, choisir les références à recompter | **nouvelle** | **livrée 04/10** (fermée) |
 | ENT-2.3 | `cdiscount-inventaire` | Inventaire tournant | entraînement | redonner sa liste, recompter sa liste (le relevé couvre l'allée), oubli = aléa, « Absent » | ENT-2.2 actuelle | **livrée 04/10** (fermée) |
 | ENT-2.4 | `cdiscount-regularise` | Régularisé à l'aveugle | erreur induite + entraînement du geste | exporter les ajustements, SI / NB.SI, enquêter ; vendeur de la place de marché | ENT-2.3 actuelle | **brief prêt** (`ENT-2.4-regularise-export.md`) |
 | ENT-2.5 | `cdiscount-compte-a-rebours` | Le compte à rebours | **évaluation** (coef. 3) | boucle complète sur l'allée C, **un jeu par élève**, copie rendue | ancien brief ENT-2.4 (**abandonné**) | **brief prêt** (`ENT-2.5-compte-a-rebours.md`) |

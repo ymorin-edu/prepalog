@@ -36,6 +36,7 @@ export const ACTIVITES = [
   () => import('./spartoo.js'),
   () => import('./spartoo-tracabilite.js'),
   () => import('./cdiscount-mouvements.js'),
+  () => import('./cdiscount-chiffres.js'),
   () => import('./cdiscount-inventaire.js'),
   () => import('./cdiscount-regularise.js'),
   // Boost (Nîmes) — ENT-3.x. C2.4 « Organiser une tournée de livraison » prend quatre

@@ -6,7 +6,7 @@
 > Lis docs/briefs/COORDINATION-cdiscount.md, le compte rendu de docs/briefs/MOTEUR-geste-tableur.md (API livrée), puis implémente le brief docs/briefs/ENT-2.2-ce-que-disent-les-chiffres.md. Annonce la durée, dis-moi si un point du brief contredit l'API livrée, puis enchaîne sans attendre : les questions du brief sont déjà tranchées (§11).
 > ```
 
-**Statut** : à implémenter — **après** le geste tableur (C5) et ENT-2.3 recadrée (C4, dont elle importe les données).
+**Statut** : livré (04/10/2026), fermé aux élèves (`ouverture: 'prof'`).
 **Date du brief** : 03/10/2026
 **Modèle** : **Opus** (première séance sur le geste tableur) — **Durée estimée par Cowork** : 3 à 4 h.
 **Touche le moteur** : non (contenu, activité, tests). Si l'API du geste manque de quelque chose : **le lister et
@@ -175,9 +175,40 @@ bandeau d'aide ; NB.SI.ENS réservé au bonus.
 
 ## Compte rendu *(rempli par Claude Code à la livraison)*
 
-- **Fichiers créés / modifiés** :
+- **Fichiers créés / modifiés** : `activites/cdiscount-chiffres.js`, `contenus/cdiscount-chiffres.js` (neufs), une ligne dans
+  `activites/index.js` ; `contenus/cdiscount-inventaire.js` (préparateurs nommés, voir plus bas) ; `outils/essai-cdiscount.html`
+  (ENT-2.2 dans le sélecteur) ; `outils/test/cdiscount.mjs` (8 cas) ; `outils/test/socle.mjs` (ENT-2.2 ajoutée à la liste des
+  codes Logisim). Moteur : le contrôle « table » rend aussi `lu` (commit à part).
 - **Écarts par rapport au brief** :
-- **Décisions prises en route** (nombre exact de lignes, constats par référence, noms des préparateurs) :
-- **Tests** :
-- **Commits** :
-- **Reste ouvert** :
+  - **Compétence : C1.6 seule.** C3.2 existe dans `core/competences.js`, mais c'est « traçabilité » : y ranger une séance
+    de tableur fausserait cette note.
+  - Le moteur ne gardait pas les valeurs de la synthèse déposée (seulement juste / faux) : le jalon 5 en a besoin. Ajouté
+    au moteur (`lu` dans le résultat d'un contrôle « table »), commit séparé, sans rien changer d'autre.
+  - La mission (texte du § 5, gardé mot pour mot) dit « depuis le dernier inventaire » ; l'export, lui, couvre le mois
+    (§ 6 et § 11) : les 12 lignes d'avant l'inventaire n'ont aucun écart, elles ne changent rien au travail.
+- **Décisions prises en route** :
+  - Fenêtre : ENT-2.2 a lieu **deux jours avant** ENT-2.3 ; tout ce qui, en ENT-2.3, date d'avant-hier ou d'hier
+    (CMD-732226, 732233, 732239) n'est pas encore arrivé. Données tirées de `periode()` d'ENT-2.3 (une seule source).
+  - **Lignes : 30 en standard** (18 depuis l'inventaire + 12 avant), **45 en confirmé** (toute l'allée).
+  - **Constats : 8** — CHG-20W 3 (BP-732118, 732167, 732210 : −3), CAB-USBC-1M 2 (BP-732101, 732181 : +3),
+    COQ-UNI-01 2 (BP-732126, 732181 : −2), BAT-10K 1 (BP-732195 : −2). Synthèse = ces nombres, 0 ailleurs.
+  - Dix commandes anciennes CMD-731905 à 731986 (J-19 à J-11 du calendrier d'ENT-2.3), sans écart ; stock de début de
+    mois = inventaire précédent + leurs sorties.
+  - **Préparateurs** (inventés) : Yanis Cazenave, Inès Lagarde, Sofiane Brettes, à tour de rôle ; Inès pour CMD-732153
+    (qu'elle a annulée). Posés dans la source commune : ENT-2.3 les montre aussi (Mouvements, bons).
+  - Jalon 5 : **le meilleur message compte** (une seconde liste juste rattrape une première fausse) ; jugé contre la
+    synthèse déposée (`lu`), et contre les 4 vraies références sans dépôt ; une valeur de synthèse > 0 = « à recompter ».
+  - Jalons 2 à 4 : `ko` dès qu'un dépôt existe et que le contrôle n'est pas entièrement juste ; `attente` sans dépôt.
+  - L'accusé de Nadia (« Vos références à recompter ») arrive dès qu'une ligne « À recompter : » porte au moins une
+    référence connue, juste ou fausse ; l'amorce vide ne fait rien arriver.
+  - Pas de `niveaux` dans le `meta` (comme les autres séances Cdiscount). `sansTrame: "Tout à l'écran"` jusqu'à la trame.
+- **Tests** : 8 cas dans `cdiscount` (valeurs à la main : 30 / 45 lignes, les 8 constats, la synthèse ; mêmes 26 lignes
+  qu'ENT-2.3 sur la fenêtre, à deux jours près ; 5/5 avec le bon classeur et la bonne liste ; sans BAT ko, avec ECO ko,
+  amorce vide attente ; synthèse fausse + liste qui la suit : 4 ko, 5 ok ; nombre tapé → jalon 2 ko ; pas de SI →
+  jalon 3 ko ; à l'écran : export téléchargé de 30 lignes, retour guidé, rappel du bandeau, message à Nadia, score 5/5).
+  Sabotages éprouvés : « stock trouvé » pris sur le système → 6 cas tombent ; export du confirmé limité à A-04 → le cas
+  tombe. Suite entière 524/524.
+- **Commits** : « Geste tableur : le contrôle « table » garde les valeurs lues… » puis « ENT-2.2 « Ce que disent les
+  chiffres » : exporter, SI, NB.SI, choisir les références (C6) ».
+- **Reste ouvert** : trame élève avec l'encart SI / NB.SI et le cadre « Ma liste de références à recompter », corrigé
+  (Cowork, après validation à l'écran) ; **essai par Tristan sous Excel ET sous LibreOffice** (§ 10).
