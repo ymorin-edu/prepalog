@@ -9,11 +9,12 @@
    papier quel que soit le thème : ce sont des objets, pas l'interface.
    ============================================================ */
 
-.quai{ --quai-froid:#2a6fb0; --quai-chaud:#b8431b }
-:root[data-theme="sombre"] .quai{ --quai-froid:#7fb6ea; --quai-chaud:#ff8a65 }
+:root{ --quai-froid:#2a6fb0; --quai-chaud:#b8431b }
+:root[data-theme="sombre"]{ --quai-froid:#7fb6ea; --quai-chaud:#ff8a65 }
 @media (prefers-color-scheme: dark){
-  :root:not([data-theme="clair"]) .quai{ --quai-froid:#7fb6ea; --quai-chaud:#ff8a65 }
+  :root:not([data-theme="clair"]){ --quai-froid:#7fb6ea; --quai-chaud:#ff8a65 }
 }
+/* Une entreprise qui impose le papier (THEME.papier) repose ces deux valeurs sur <body>. */
 
 .quai{ display:grid; gap:14px; max-width:1150px }
 .quai h2{ margin:0 }

@@ -18,7 +18,6 @@ import { creerCarte } from './carte.js';
 import { creerTournee } from './tournee.js';
 import { creerInventaire } from './inventaire.js';
 import { creerQuai } from './quai.js';
-import { themeEffectif } from '../theme.js';
 
 /* ------------------------------------------------------------------ formats */
 export const eur = (n) => Number(n).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' });
@@ -295,18 +294,24 @@ export function creerEntreprise(U) {
 
       function styleTheme() {
         const v = [];
+        // THEME.papier (03/10/2026, Picard) : l'entreprise impose le thème clair « papier » de
+        // Prepalog, quel que soit le réglage du poste. Sans lui, un poste réglé en sombre
+        // (Windows) affichait le bleu nuit de Picard sur fond sombre : illisible (Tristan).
+        // Mêmes valeurs que `:root` dans styles/base.css (à garder ensemble), puis l'accent de
+        // l'entreprise par-dessus. Les couleurs propres à la vue quai suivent aussi.
+        if (THEME.papier && !THEME.sombre) {
+          v.push('--fond:#f4f1ea', '--panneau:#fdfbf7', '--survol:#f9f6ef', '--filet:#e3ded3',
+            '--encre:#1a1915', '--encre-douce:#555047',
+            '--ardoise:#107c41', '--ardoise-fond:#107c41', '--sur-ardoise:#ffffff', '--ardoise-clair:#e3f1e8',
+            '--terre:#9c620a', '--vert:#0b7a41', '--vert-fond:#0a8449', '--sur-vert:#ffffff', '--vert-pale:#e4f1e5',
+            '--rouge:#9d2727', '--gele-fond:#fcf3e2', '--toast-fond:#1a1915', '--toast-texte:#ffffff',
+            '--ombre:0 1px 2px rgba(40,34,24,.06)', '--quai-froid:#2a6fb0', '--quai-chaud:#b8431b', 'color-scheme:light');
+        }
         const a = THEME.accent;
         if (a) {
           v.push(`--ardoise:${a}`, `--ardoise-fond:${a}`,
             `--sur-ardoise:${THEME.surAccent || '#ffffff'}`,
             `--ardoise-clair:rgba(${enRgb(a)},.11)`);
-        }
-        // THEME.clair (03/10/2026, Picard) : les surfaces de la charte en thème clair (le fond
-        // « glacier » de Picard). Seulement quand le site est en clair : sur le thème sombre de
-        // l'enseignant, l'encre claire deviendrait illisible sur un fond pâle.
-        const Cl = THEME.clair;
-        if (Cl && !THEME.sombre && themeEffectif() !== 'sombre') {
-          ['fond', 'panneau', 'survol', 'filet'].forEach((k) => { if (Cl[k]) v.push(`--${k}:${Cl[k]}`); });
         }
         const P = THEME.sombre;
         if (P) {
@@ -461,7 +466,7 @@ export function creerEntreprise(U) {
           && db.transport[cleTransport].plan && db.transport[cleTransport].plan.secours);
 
         hote.innerHTML = `
-          <div class="ent-page" style="${styleTheme()}">
+          <div class="ent-page" style="${styleTheme()}${THEME.papier ? ';color:var(--encre);background:var(--fond)' : ''}">
             <header class="ent-bandeau">
               ${ENTREPRISE.logo ? `<img class="ent-logo" src="${ech(ENTREPRISE.logo)}" alt="${ech(ENTREPRISE.nom)}">` : ''}
               <span class="ent-marque">${ech(ENTREPRISE.nom)}</span>

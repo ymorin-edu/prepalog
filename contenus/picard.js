@@ -19,8 +19,8 @@
 // pour un quai réfrigéré à +4 °C, les coûts des gestes. Le chef de quai est un personnage fictif.
 //
 // Charte relevée sur le site de Picard le 03/10/2026 (docs/briefs/picard/LISEZMOI.md) : accent
-// #0011AC (bleu des titres et boutons), fond glacier très pâle. Le vert « juste » reste celui de
-// Prepalog, distinct du bleu.
+// #0011AC (bleu des titres et boutons) ; le fond reste le papier de Prepalog. Le vert « juste »
+// reste celui de Prepalog, distinct du bleu.
 
 import { catalogueSimple } from './entreprise-commun.js';
 
@@ -38,10 +38,9 @@ export const VOCAB = {
   mailDomain: 'picard-quai.example',
 };
 
-export const THEME = {
-  accent: '#0011ac',
-  clair: { fond: '#eef5f7', panneau: '#fbfdfd', survol: '#f3f8fa', filet: '#d6e1e6' },
-};
+// Fond « papier » de Prepalog imposé (décision de Tristan, 03/10/2026 : le fond glacier et le
+// mode sombre du poste rendaient l'écran illisible) ; seul l'accent reprend le bleu Picard.
+export const THEME = { accent: '#0011ac', papier: true };
 
 // Le lieu, commun aux quatre séances (construit, sauf l'entrepôt).
 export const LIEU = {

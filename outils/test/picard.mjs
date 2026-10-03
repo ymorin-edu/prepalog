@@ -386,6 +386,20 @@ await v('quai : guidage — le mail d’accueil du chef de quai est dans la mess
   vrai((await texte(pg2, Z)).includes('Quai 32 : premier camion à 6 h 00'), 'mail d’accueil absent');
 });
 
+// Décision de Tristan (03/10/2026) : sur un poste réglé en sombre, le bleu nuit de Picard sur fond
+// sombre était illisible. L'entreprise impose le papier de Prepalog (THEME.papier).
+await v('quai : poste en mode sombre — l’écran reste sur le fond papier, texte foncé', async () => {
+  const { ctx, pg: ps, erreurs } = await contexte({ colorScheme: 'dark' });
+  await monter(ps);
+  const c = await ps.evaluate(() => {
+    const cs = (s) => getComputedStyle(document.querySelector(s));
+    return { fond: cs('#quaiTest .ent-page').backgroundColor, carte: cs('#quaiTest .quai-carte').backgroundColor, encre: cs('#quaiTest .quai-carte').color };
+  });
+  egal(c, { fond: 'rgb(244, 241, 234)', carte: 'rgb(253, 251, 247)', encre: 'rgb(26, 25, 21)' }, 'couleurs calculées');
+  egal(erreurs, [], 'erreurs JS');
+  await ctx.close();
+});
+
 await v('quai : prefers-reduced-motion — pas d’animation, le déchargement est fini d’emblée', async () => {
   const { ctx, pg: pr, erreurs } = await contexte({ reducedMotion: 'reduce' });
   await monter(pr);
