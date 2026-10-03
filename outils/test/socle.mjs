@@ -49,19 +49,38 @@ await v('semis de la base partagée', async () => {
 // ---------- 4 bis. les corrigés complets des trames sont dans l'espace enseignant
 // Onglet « Corrigés » : un fichier par séance, déclaré par `meta.corrige`. La bonne réponse
 // y est marquée par « ✓ » — une information portée par un signe, pas par la couleur seule.
+// Rangement entreprise puis séance (03/10/2026) : le sommaire range chaque séance sous SON
+// entreprise, et un clic n'affiche que le corrigé de la séance choisie.
 await v('espace enseignant : onglet Corrigés', async () => {
   await page.click('[data-ong="corriges"]');
+  await page.waitForSelector('#corrSommaire [data-corrige]', { timeout: 6000 });
+  const rang = await page.$$eval('#corrSommaire [data-entreprise]', (e) => e.map((x) =>
+    x.dataset.entreprise + ':' + [...x.querySelectorAll('[data-corrige] .mono')].map((s) => s.textContent).join(',')));
+  for (const [ent, code] of [['1', 'ENT-1.1'], ['1', 'ENT-1.2'], ['1', 'ENT-1.3'], ['2', 'ENT-2.1'], ['3', 'ENT-3.1']]) {
+    if (!rang.some((l) => l.startsWith(ent + ':') && l.includes(code))) throw new Error(`${code} absent sous l'entreprise ${ent} : ${rang.join(' | ')}`);
+  }
+  if (await page.$('#contenuProf table')) throw new Error('un corrigé est affiché avant tout choix');
+
+  await page.click('[data-corrige="spartoo-reception"]');
   await page.waitForSelector('text=un contrat de vente', { timeout: 6000 });
   const t = await page.textContent('#contenuProf');
   if (!/✓ B\. un contrat de vente/.test(t)) throw new Error('bonne réponse non marquée');
   if (!/Pistes \(pas de réponse unique\)/.test(t)) throw new Error('pistes des questions de réflexion absentes');
   if (!/2006/.test(t) || !/Grenoble/.test(t)) throw new Error('réponses des questions de faits absentes');
   const nTab = await page.$$eval('#contenuProf table', (e) => e.length);
-  if (nTab < 10) throw new Error(`${nTab} tableaux de réponses seulement`);
-  for (const code of ['ENT-1.1', 'ENT-1.2', 'ENT-1.3', 'ENT-3.1']) {
-    if (!t.includes(code)) throw new Error('corrigé absent : ' + code);
+  if (nTab < 4) throw new Error(`${nTab} tableaux de réponses seulement`);
+  // Un seul corrigé à la fois : ENT-1.1 ouvert, aucun autre titre de corrigé à l'écran.
+  const titres = await page.$$eval('#contenuProf section.panneau h2', (e) => e.map((x) => x.textContent));
+  if (titres.length !== 1 || !titres[0].includes('ENT-1.1')) throw new Error('corrigés affichés : ' + titres.join(' | '));
+
+  // Chaque séance se charge (fichier présent et lisible).
+  for (const id of await page.$$eval('#corrSommaire [data-corrige]', (e) => e.map((x) => x.dataset.corrige))) {
+    await page.click(`[data-corrige="${id}"]`);
+    await page.waitForSelector(`[data-corrige="${id}"][aria-pressed="true"]`, { timeout: 6000 });
+    const tt = await page.textContent('#contenuProf');
+    if (/n'a pas pu être chargé/.test(tt)) throw new Error('corrigé illisible : ' + id);
+    if (!(await page.$('#contenuProf .corr-item'))) throw new Error('corrigé vide : ' + id);
   }
-  if (/n'a pas pu être chargé/.test(t)) throw new Error('un fichier de corrigé ne se charge pas');
 });
 
 // ---------- 5. l'enseignant voit la base semée

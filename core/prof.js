@@ -4,7 +4,7 @@
 import { B } from './backend.js';
 import { ech, toast, confirmer } from './ui.js';
 import { seancesDepuis } from './parcours.js';
-import { chargerActivites, activite } from '../activites/index.js';
+import { chargerActivites, activite, entreprisesDe } from '../activites/index.js';
 import { versCSV, telecharger, ouvrirJeu } from './store.js';
 import { NIVEAUX, libelleNiveau, courtNiveau, libelleNiveaux, activiteVisible, horsNiveau } from './niveaux.js';
 import { BAREME_AFFICHE, noteSur20, noteConvertie, formaterNote } from './notes.js';
@@ -13,6 +13,7 @@ import { TEMPS, COEFS_DEFAUT, coefsDuGroupe, seancesParCompetence, moyenneCompet
 
 export async function rendreEspaceProf(hote, ctx) {
   let onglet = ctx.onglet || 'groupes';
+  let corrigeActif = null; // id de la séance dont le corrigé est ouvert (onglet Corrigés)
   let groupes = await B.groupesDuProf(ctx.profil.uid);
   let gidActif = ctx.groupeActif || groupes[0]?.id || null;
   let dernierLot = null;   // résultat de la dernière création de comptes, conservé à l'affichage
@@ -70,20 +71,43 @@ export async function rendreEspaceProf(hote, ctx) {
   // dans un fichier par séance déclaré par `meta.corrige`. L'élève ne voit jamais cet onglet.
   // Limite assumée, comme pour tous les corrigés du site (voir prepalog-architecture.md) : le
   // fichier est servi par le dépôt public, donc lisible par qui connaît son adresse.
+  //
+  // Rangement (03/10/2026, décision de Tristan) : entreprise puis séance, comme la pastille
+  // Logisim de l'accueil. On choisit une séance, seul son corrigé s'affiche (et se charge).
   async function vueCorriges(z) {
-    z.innerHTML = `<div class="note">Chargement des corrigés…</div>`;
-    const mods = await chargerActivites();
-    const avec = mods.map((m) => m.meta).filter((m) => m.corrige);
-    if (!avec.length) {
+    // Au changement de séance, on garde l'écran en place pendant le chargement (pas de saut).
+    if (!z.querySelector('#corrSommaire')) z.innerHTML = `<div class="note">Chargement des corrigés…</div>`;
+    const mods = (await chargerActivites()).filter((x) => x.meta.corrige);
+    if (!mods.length) {
       z.innerHTML = `<div class="vide">Aucun corrigé n'est publié pour l'instant.</div>`;
       return;
     }
-    const lots = await Promise.all(avec.map(async (m) => {
+    if (!mods.some((x) => x.meta.id === corrigeActif)) corrigeActif = null;
+    const actif = mods.find((x) => x.meta.id === corrigeActif)?.meta || null;
+    let lot = null;
+    if (actif) {
       try {
-        const mod = await import(new URL(m.corrige, document.baseURI).href);
-        return { m, c: mod.CORRIGE };
-      } catch (e) { return { m, c: null }; }
-    }));
+        const mod = await import(new URL(actif.corrige, document.baseURI).href);
+        lot = { m: actif, c: mod.CORRIGE };
+      } catch (e) { lot = { m: actif, c: null }; }
+    }
+    // Le titre d'une séance répète souvent le nom de l'entreprise (« Spartoo — réception ») :
+    // sous l'en-tête de l'entreprise, on ne garde que la suite.
+    const sansNom = (titre, nom) => String(titre || '').replace(new RegExp(`^${nom.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*[—–-]\\s*`), '');
+    const ents = entreprisesDe(mods);
+    const sommaire = ents.map((e, i) => `
+      <div class="corr-ent" data-entreprise="${ech(e.id)}" style="display:flex;align-items:center;gap:14px;padding:10px 0;${i < ents.length - 1 ? 'border-bottom:1px solid var(--filet);' : ''}flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:10px;flex:0 0 300px">
+          ${e.logo ? `<span style="background:#f7f4ee;border:1px solid var(--filet);border-radius:var(--r);padding:4px 8px;display:inline-flex">
+            <img src="${ech(e.logo)}" alt="" style="height:26px;max-width:90px;object-fit:contain;mix-blend-mode:multiply"></span>` : ''}
+          <div><strong>${ech(e.nom)}</strong><div class="note" style="margin:0">${ech(e.metier)}</div></div>
+        </div>
+        <div class="rangee" style="gap:8px">${e.acts.map(({ meta: m }) => `
+          <button class="btn btn-s ${m.id === corrigeActif ? 'btn-p' : ''}" data-corrige="${ech(m.id)}"
+            ${m.id === corrigeActif ? 'aria-pressed="true"' : 'aria-pressed="false"'}>
+            <span class="mono">${ech(m.code || m.id)}</span> ${ech(sansNom(m.titre, e.nom))}${m.pret === false ? ' · en préparation' : ''}
+          </button>`).join('')}</div>
+      </div>`).join('');
     const lettre = (i) => String.fromCharCode(65 + i);
     const liste = (l) => `<ul style="margin:4px 0 4px 18px">${l.map((x) => `<li>${ech(x)}</li>`).join('')}</ul>`;
     const noteHtml = (it) => it.note ? `<div class="note" style="margin-top:4px">${ech(it.note)}</div>` : '';
@@ -135,7 +159,14 @@ export async function rendreEspaceProf(hote, ctx) {
     };
     z.innerHTML = `<p class="note">Corrigés complets des trames élèves (QCM, questions du logiciel, recherches Internet, tableaux, messages). Les réponses sont à relire
       avant usage ; celles issues d'Internet portent leur source et la date de relevé. Les nombres du logiciel dépendent de la base de données du site.</p>
-      ${lots.map(bloc).join('')}`;
+      <section class="panneau" id="corrSommaire">${sommaire}</section>
+      ${lot ? bloc(lot) : `<div class="vide">Choisissez une séance ci-dessus pour afficher son corrigé.</div>`}`;
+    z.querySelectorAll('[data-corrige]').forEach((b) => b.addEventListener('click', async () => {
+      corrigeActif = b.dataset.corrige;
+      const auClavier = b.matches(':focus-visible');
+      await vueCorriges(z);
+      if (auClavier) z.querySelector(`[data-corrige="${CSS.escape(b.dataset.corrige)}"]`)?.focus();
+    }));
   }
 
   // ------------------------------------------------------------------ groupes
