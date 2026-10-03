@@ -74,6 +74,8 @@ const ID = (o = {}) => `essai-quai${o.evaluation ? '-eval' : ''}${o.huit ? '-8' 
 const etat = (p, o = {}) => p.evaluate((id) => JSON.parse(JSON.stringify((window.__q.db.quais || {})[id] || null)), ID(o));
 const texte = async (p, sel) => ((await p.textContent(sel)) || '').replace(/\s+/g, ' ').trim();
 const clic = async (p, sel) => { await p.click(`${Z} ${sel}`); await p.waitForTimeout(40); };
+// « Contrôles terminés → réserves » demande une confirmation (deuxième clic) depuis le 03/10/2026.
+const vers4 = async (p) => { await clic(p, '[data-q="vers4"]'); if (await p.$(`${Z} [data-q="vers4"].quai-arme`)) await clic(p, '[data-q="vers4"]'); };
 const jalons = (p, o = {}) => p.evaluate(async () => {
   const { jalonsQuai } = await import('/core/types/quai.js');
   const r = jalonsQuai(window.__q.db, window.__q.U.quai);
@@ -108,7 +110,7 @@ async function jouer(p, ecarts = {}) {
     await p.selectOption(`${Z} [data-q-decision]`, pal.decision);
     await p.selectOption(`${Z} [data-q-motif]`, pal.motif);
   }
-  await clic(p, '[data-q="vers4"]');
+  await vers4(p);
   const remplir = async () => {
     for (const id of ids) {
       const pal = Object.assign({}, JUSTE[id], ecarts[id] || {});
@@ -249,7 +251,7 @@ await v('quai : guidage — le chef de quai arrête l’élève qui écrit avant
   if (await pg.isVisible(`${Z} [data-q="passer"]`)) await clic(pg, '[data-q="passer"]');
   await clic(pg, '[data-q="vers3"]');
   for (let n = 0; n < 5; n++) { await clic(pg, `[data-q="sel"][data-n="${n}"]`); await pg.selectOption(`${Z} [data-q-decision]`, 'accepter'); }
-  await clic(pg, '[data-q="vers4"]');
+  await vers4(pg);
   await clic(pg, '[data-q="ecrire"]');
   vrai((await texte(pg, `${Z} [data-q-chef]`)).includes('Rentre d\'abord le lot accepté en chambre froide'), 'chef de quai absent');
   egal((await etat(pg)).ecrit, false, 'réserves écrites malgré l’arrêt du chef');
@@ -424,7 +426,7 @@ await v('quai : évaluation — aucune aide (consignes, règle, détail, repère
   egal([await pg2.$$eval(`${Z} .quai-aide`, (x) => x.length), !!(await pg2.$(`${Z} [data-q-detail]`)), !!(await pg2.$(`${Z} [data-q-repere]`))],
     [0, false, false], 'aides / détail / repère');
   for (let n = 0; n < 5; n++) { await clic(pg2, `[data-q="sel"][data-n="${n}"]`); await pg2.selectOption(`${Z} [data-q-decision]`, 'accepter'); }
-  await clic(pg2, '[data-q="vers4"]');
+  await vers4(pg2);
   await clic(pg2, '[data-q="ecrire"]');
   vrai(!(await pg2.$(`${Z} [data-q-chef]`)), 'chef de quai en évaluation');
   egal((await etat(pg2, { evaluation: true })).ecrit, true, 'réserves non écrites');
@@ -643,7 +645,7 @@ async function camion42(p, ids, ecarts = {}, rapide = false) {
     await p.selectOption(`${Z} [data-q-decision]`, pal.decision);
     await p.selectOption(`${Z} [data-q-motif]`, pal.motif);
   }
-  await clic(p, '[data-q="vers4"]');
+  await vers4(p);
   if (!rapide) await clic(p, '[data-q="rentrer"]');
   for (const id of ids) {
     const pal = Object.assign({}, JUSTE42[id], ecarts[id] || {});
@@ -678,7 +680,7 @@ await v('ENT-4.2 : déclaration (C1.4 + C1.3, entraînement, 1re, 30 jalons, liv
 await v('ENT-4.2 : écran ① — deux camions, l’ordre ne se choisit qu’après les deux tickets, aucune aide', async () => {
   await monter42(pg2);
   const t = await texte(pg2, Z);
-  vrai(t.includes('Deux camions frigorifiques attendent') && t.includes('Camion A — arrivé à 06:00') && t.includes('Camion B — arrivé à 06:10'), 'les deux camions');
+  vrai(t.includes('Deux camions frigorifiques attendent') && t.includes('Camion Glaces Néviane — arrivé à 06:00') && t.includes('Camion Légumes d’Orvalle — arrivé à 06:10'), 'les deux camions');
   egal(await texte(pg2, `${Z} [data-q-heure]`), '06:10', 'heure de prise de poste');
   vrai(!(await pg2.$(`${Z} [data-q="premier"]`)), 'choix de l’ordre avant les tickets');
   vrai(!(await pg2.$(`${Z} [data-q="decharger"]`)), 'bouton de déchargement avant le choix');
@@ -714,7 +716,7 @@ await v('ENT-4.2 : parcours juste (A d’abord) → 30 jalons sur 30, glaces à 
     'B4 HBE-1000 : acceptée sous réserve — manque 1 carton (BL 32, reçu 31).',
   ], 'réserves du BL de B');
   const b = await texte(pg2, `${Z} .quai-bilan-bloc`);
-  vrai(b.includes('Camion A : temps hors froid du lot 13 min 30') && b.includes('sorties à −17,5 °C à cœur, entre −18 °C et −15 °C : à accepter avec réserves'), 'bilan du camion A : ' + b.slice(0, 400));
+  vrai(b.includes('Camion Glaces Néviane : temps hors froid du lot 13 min 30') && b.includes('sorties à −17,5 °C à cœur, entre −18 °C et −15 °C : à accepter avec réserves'), 'bilan du camion A : ' + b.slice(0, 400));
   egal(await pg2.$$eval(`${Z} [data-jalon] .quai-ok`, (x) => x.length), 30, 'lignes justes au bilan');
 });
 
@@ -738,7 +740,7 @@ await v('ENT-4.2 : B d’abord, au plus vite → les glaces de A à −14,9 °C,
     const L = jalonsQuai(window.__q.db, window.__q.U.quai).L;
     return Object.fromEntries(['ordre', 'A1-decision', 'A1-reserve'].map((id) => [id, L.find((l) => l.id === id).attendu]));
   });
-  egal(r, { ordre: 'camion A d’abord — « Le ticket de A montre que son froid faiblit : ses glaces se réchauffent s’il attend »',
+  egal(r, { ordre: 'camion Glaces Néviane d’abord — « Le ticket des Glaces Néviane montre que leur froid faiblit : les glaces se réchauffent si le camion attend »',
     'A1-decision': 'Refuser — Température non conforme',
     'A1-reserve': 'A1 GVA-2500 : palette REFUSÉE — température à cœur −14,9 °C (−18 °C exigé). 36 cartons repris par le chauffeur.' }, 'attendus');
   // Accepter les glaces est faux ; les refuser pour la température, avec la valeur relevée, est juste.
@@ -822,6 +824,41 @@ await v('ENT-4.2 : un seul quai — B ne se met à quai qu’une fois A reparti 
   egal([e.suivants[0].ouvertA - avant, e.actif], [3, 1], 'manœuvre / camion montré');
 });
 
+await v('contrôle : « Valider cette palette » coche l’onglet et passe à la suivante ; rien n’est figé', async () => {
+  await monter42(pg2);
+  await debut42(pg2);
+  await decharger42(pg2, 0);
+  vrai(await pg2.isDisabled(`${Z} [data-q="valider"]`), 'valider sans décision');
+  await pg2.selectOption(`${Z} [data-q-decision]`, 'accepter');
+  await clic(pg2, '[data-q="valider"]');
+  const e = await etat42(pg2);
+  egal([e.palettes.A1.valide, e.sel], [true, 1], 'A1 validée, A2 sélectionnée');
+  vrai((await texte(pg2, `${Z} [data-q="sel"][data-n="0"]`)).includes('✓ validée'), 'onglet de A1');
+  // Rien de figé : on revient sur A1 et on change la décision.
+  await clic(pg2, '[data-q="sel"][data-n="0"]');
+  vrai(!(await pg2.isDisabled(`${Z} [data-q-decision]`)), 'A1 figée après validation');
+  await pg2.selectOption(`${Z} [data-q-decision]`, 'reserves');
+  egal((await etat42(pg2)).palettes.A1.decision, 'reserves', 'décision changée');
+});
+
+await v('contrôle : le bouton des réserves est en haut à droite et demande confirmation (palettes non validées comptées)', async () => {
+  vrai(await pg2.$(`${Z} .quai-titre-ligne [data-q="vers4"]`), 'bouton absent du haut de l’écran');
+  egal(await pg2.$$eval(`${Z} .quai-outils [data-q="vers4"]`, (x) => x.length), 0, 'bouton encore sous la palette');
+  await clic(pg2, '[data-q="vers4"]');
+  vrai((await texte(pg2, `${Z} [data-q-vers4]`)).includes('2 palettes non validées : passer quand même ? Cliquez pour confirmer'), 'confirmation : ' + await texte(pg2, `${Z} [data-q-vers4]`));
+  egal((await etat42(pg2)).etape, 3, 'passé aux réserves au premier clic');
+  await clic(pg2, '[data-q="desarmer4"]');
+  vrai(!(await pg2.$(`${Z} [data-q="vers4"].quai-arme`)), 'annuler ne désarme pas');
+  await clic(pg2, '[data-q="vers4"]');
+  await clic(pg2, '[data-q="vers4"]');
+  egal((await etat42(pg2)).etape, 4, 'pas aux réserves après confirmation');
+  // « Revoir le bon de livraison » porte le nom du camion, en grand.
+  await clic(pg2, '[data-q="etape"][data-n="3"]');
+  vrai((await texte(pg2, `${Z} .quai-rappel-bl summary`)).includes('Revoir le bon de livraison du camion Glaces Néviane'), 'rappel du BL');
+  const taille = await pg2.$eval(`${Z} .quai-rappel-bl summary`, (x) => parseFloat(getComputedStyle(x).fontSize));
+  vrai(taille >= 16, 'rappel du BL trop petit : ' + taille);
+});
+
 await v('ENT-4.2 : aucun jalon n’est vrai par inaction', async () => {
   await monter42(pg2);
   egal([(await jalons(pg2)).pts, (await jalons(pg2)).max], [0, 30], 'base neuve');
@@ -835,7 +872,7 @@ await v('ENT-4.2 : aucun jalon n’est vrai par inaction', async () => {
 
 await v('ENT-4.2 : corrigé — tickets, ordre, palettes et réserves des deux chemins', async () => {
   const c = await pg2.evaluate(async () => (await import('/contenus/corriges/ENT-4.2.js')).CORRIGE);
-  vrai(c.items[1].rep.includes('camion A d’abord'), 'ordre');
+  vrai(c.items[1].rep.includes('camion Glaces Néviane d’abord'), 'ordre');
   const pal = c.items.find((i) => i.etape === 3 && i.genre === 'tableau').reponses.map((r) => [r[0], r[3], r[5]]);
   const res = 'Accepter avec réserves — Température non conforme';
   egal(pal, [
@@ -844,7 +881,7 @@ await v('ENT-4.2 : corrigé — tickets, ordre, palettes et réserves des deux c
     ['B2', '36 (3 × 3 × 4)', 'Refuser — Température non conforme'], ['B3', '30 (3 × 2 × 5)', 'Refuser — Produit différent de la commande'],
     ['B4', '31 (4 × 2 × 4 − 1)', 'Accepter avec réserves — Manquant'], ['B5', '45 (3 × 3 × 5)', 'Accepter — aucun motif'],
   ], 'tableau des palettes');
-  const tard = c.items.find((i) => /d’abord$/.test(i.texte) && i.texte.startsWith('Si le camion B')).reponses;
+  const tard = c.items.find((i) => /d’abord$/.test(i.texte) && i.texte.startsWith('Si le camion Légumes')).reponses;
   egal(tard.map((r) => r[1]), ['Refuser — Température non conforme', 'Refuser — Température non conforme', 'Refuser — Température non conforme'], 'B d’abord');
   vrai(tard[0][2].includes('−14,9 °C'), 'température de A au plus tôt');
   const bl = c.items.filter((i) => i.genre === 'tableau')[1].reponses;

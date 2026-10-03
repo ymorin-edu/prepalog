@@ -87,7 +87,9 @@ const nombre = (brut) => {
 // CALCULÉES depuis la palette, jamais recopiées : cartons réels, manquants, avaries.
 function reglages(Q) {
   const camions = (Q.camions || []).map((c, ci) => Object.assign({}, c, {
-    lettre: c.lettre || String.fromCharCode(65 + ci), rechauffe: Number(c.rechauffeEnAttente) || 0 }));
+    // Le camion porte le nom de son fournisseur à l'écran (« camion Glaces Néviane ») ; la lettre ne sert
+    // qu'aux identifiants (jalons, attributs).
+    lettre: c.lettre || String.fromCharCode(65 + ci), nom: c.nom || c.fournisseur || c.lettre || String.fromCharCode(65 + ci), rechauffe: Number(c.rechauffeEnAttente) || 0 }));
   const palettes = [];
   camions.forEach((c, ci) => (c.palettes || []).forEach((p) => {
     const manque = p.manque || [], avarie = p.avarie || {};
@@ -220,13 +222,13 @@ export function jalonsQuai(db, Q) {
   const E = e || etatNeuf(Q);
   const M = R.multi;
   const suff = (c) => (M ? `-${c.lettre}` : '');
-  const libC = (lib, c) => (M ? `${lib} (camion ${c.lettre})` : lib);
+  const libC = (lib, c) => (M ? `${lib} (camion ${c.nom})` : lib);
   // L'ordre des camions et sa justification : un seul jalon, les deux à la fois.
   if (M && Q.ordre) {
     const O = Q.ordre, o = E.ordre || {}, ph = Object.fromEntries((O.phrases || []).map((x) => [x.v, x.lib]));
     const cP = R.camions[O.premier] || R.camions[0];
-    const fait = o.premier != null && unDecharge(E, R) ? `camion ${R.camions[o.premier].lettre} d’abord — « ${ph[o.phrase] || 'sans justification'} »` : 'pas encore choisi';
-    j('ordre', 'Ordre de déchargement et justification', fait, `camion ${cP.lettre} d’abord — « ${ph[O.juste] || O.juste} »`,
+    const fait = o.premier != null && unDecharge(E, R) ? `camion ${R.camions[o.premier].nom} d’abord — « ${ph[o.phrase] || 'sans justification'} »` : 'pas encore choisi';
+    j('ordre', 'Ordre de déchargement et justification', fait, `camion ${cP.nom} d’abord — « ${ph[O.juste] || O.juste} »`,
       !!e && unDecharge(E, R) && o.premier === O.premier && o.phrase === O.juste);
   }
   R.camions.forEach((c, ci) => {
@@ -482,9 +484,9 @@ export function creerQuai(Q, opts = {}) {
   const lieuMin = R.lieu.nom.charAt(0).toLowerCase() + R.lieu.nom.slice(1);
   const accepte = (s) => s.decision === 'accepter' || s.decision === 'reserves';
   const st = (e, p) => e.palettes[p.id];
-  const nomCam = (ci) => `camion ${R.camions[ci].lettre}`;
+  const nomCam = (ci) => `camion ${R.camions[ci].nom}`;
   // L'état d'écran : ce qui n'est pas du travail (chef de quai affiché, animation en cours…).
-  const ui = { chef4: false, arme: false, armeRaz: false, msgCompte: '', anim: null, lancer: false, jouerCf: false, focus: null };
+  const ui = { chef4: false, arme: false, arme4: false, armeRaz: false, msgCompte: '', anim: null, lancer: false, jouerCf: false, focus: null };
 
   // Chaque geste avance l'horloge du quai, et le temps hors froid de CHAQUE lot sorti du camion et
   // pas encore rentré en chambre froide.
@@ -667,7 +669,7 @@ export function creerQuai(Q, opts = {}) {
     </div>
     <div class="quai-barre2">
       <div><div class="quai-compteur2">Palettes sur le quai : <b data-q-nb>${im.nb} / ${N}</b><span class="quai-pastilles2" data-q-past>${im.pastilles}</span></div>
-        <div class="note">${M ? `Camion ${ech(cm.lettre)}, ${fictif(cm.transporteur, cm.fictif)} · ` : ''}Durée du déchargement : <b>${formule(ci)}</b> de temps du quai</div></div>
+        <div class="note">${M ? `Camion ${ech(cm.nom)}, ${fictif(cm.transporteur, cm.fictif)} · ` : ''}Durée du déchargement : <b>${formule(ci)}</b> de temps du quai</div></div>
       <div class="quai-ligne">
         <button class="btn" data-q="passer" ${fini || attente ? 'hidden' : ''}>⏩ Passer l'animation</button>
         <button class="btn" data-q="revoir" data-libre ${fini ? '' : 'hidden'}>↺ Revoir le déchargement</button>
@@ -783,11 +785,11 @@ export function creerQuai(Q, opts = {}) {
     const lieu = `quai ${R.lieu.refrigere ? 'réfrigéré' : 'non réfrigéré'} ${R.lieu.temp > 0 ? '+' : ''}${virgule(R.lieu.temp)} °C`;
     // Une jauge par lot : un seul camion (format d'ENT-4.1), ou une par camion.
     const jauge = (ci) => {
-      const k = K(e, ci), lt = M ? R.camions[ci].lettre : '';
+      const k = K(e, ci), lt = M ? R.camions[ci].lettre : '', nm = M ? R.camions[ci].nom : '';
       const trop = k.decharge && k.froid > R.seuil && !e.fini && !k.rentre;
       const attr = (nom) => (M ? `${nom}="${lt}"` : nom);
       return `<div class="quai-horloge quai-h-froid">
-        <div class="quai-lib">Temps hors froid ${M ? `du lot du camion ${lt}` : 'du lot'}</div>
+        <div class="quai-lib">Temps hors froid ${M ? `du lot du camion ${ech(nm)}` : 'du lot'}</div>
         <div class="quai-val" ${attr('data-q-froid')}>${k.decharge ? `<span class="${k.froid > R.seuil ? 'quai-depasse' : ''}">${fmtMin(k.froid)}</span>` : `— <span class="note">${M ? 'porte fermée' : 'camion fermé'}</span>`}</div>
         <div class="quai-jauge"><i data-q-jauge style="width:${k.decharge ? Math.min(100, k.froid / (R.seuil * 1.5) * 100) : 0}%"></i></div>
         <div class="note" ${attr('data-q-nfroid')}>${trop
@@ -834,9 +836,9 @@ export function creerQuai(Q, opts = {}) {
     const cm = R.camions[ci], k = K(e, ci);
     const choix = (cm.qcmTicket && cm.qcmTicket.choix) || QCM_TICKET;
     const c = M ? ` data-c="${ci}"` : '';
-    return `<button class="btn" data-q="ticket"${c} ${k.ticketLu || e.fini ? 'disabled' : ''}>Lire le ticket${M ? ` du camion ${cm.lettre}` : ''} <span class="quai-cout">· ${fmtMin(C.ticket)}</span></button>
+    return `<button class="btn" data-q="ticket"${c} ${k.ticketLu || e.fini ? 'disabled' : ''}>Lire le ticket${M ? ` du camion ${ech(cm.nom)}` : ''} <span class="quai-cout">· ${fmtMin(C.ticket)}</span></button>
       ${k.ticketLu ? `<div class="quai-ticket" data-q-ticket${M ? `="${cm.lettre}"` : ''}>${ech(ticketTexte(ci))}</div>
-      <div class="quai-qcm" role="radiogroup" aria-label="Ce que montre le ticket${M ? ` du camion ${cm.lettre}` : ''}">
+      <div class="quai-qcm" role="radiogroup" aria-label="Ce que montre le ticket${M ? ` du camion ${ech(cm.nom)}` : ''}">
         <b>Ce que montre le ticket :</b>
         ${choix.map((x) => `<label><input type="radio" name="quaiTicket${M ? `-${ci}` : ''}" data-q="ticketRep"${c} value="${ech(x.v)}" ${k.ticketRep === x.v ? 'checked' : ''} ${e.fini ? 'disabled' : ''}> ${ech(x.lib)}</label>`).join('')}
       </div>` : ''}`;
@@ -881,7 +883,7 @@ export function creerQuai(Q, opts = {}) {
   }
   function boutonDecharger(e, ci) {
     const premier = !unDecharge(e, R);
-    const lib = premier ? `« Oui, vous pouvez ouvrir et décharger » — camion ${R.camions[ci].lettre}` : `Faire mettre à quai le camion ${R.camions[ci].lettre} et décharger`;
+    const lib = premier ? `« Oui, vous pouvez ouvrir et décharger » — camion ${ech(R.camions[ci].nom)}` : `Faire mettre à quai le camion ${ech(R.camions[ci].nom)} et décharger`;
     const cout = premier ? `durée : ${formule(ci)}` : `manœuvre ${fmtMin(R.manoeuvre)}, puis ${formule(ci)}`;
     return `<p class="quai-ligne"><button class="btn btn-p" data-q="decharger" data-c="${ci}" ${peutDecharger(e, ci) ? '' : 'disabled'}>${lib}</button>
       <span class="quai-cout">${cout}</span></p>`;
@@ -890,7 +892,7 @@ export function creerQuai(Q, opts = {}) {
     const O = Q.ordre || {}, o = e.ordre || {}, engage = unDecharge(e, R), lus = tousLus(e);
     const etat = (ci) => { const k = K(e, ci); return k.signe ? 'reparti, BL signé' : k.decharge ? 'à quai, porte ouverte' : 'attend porte fermée'; };
     const cartes = R.camions.map((c, ci) => `<div class="quai-doc" data-q-camion="${ech(c.lettre)}">
-        <div class="quai-doc-titre">🚚 Camion ${ech(c.lettre)} — arrivé à ${ech(c.arrivee || '')}</div>
+        <div class="quai-doc-titre">🚚 Camion ${ech(c.nom)} — arrivé à ${ech(c.arrivee || '')}</div>
         <p class="note">${fictif(c.fournisseur, c.fictif)} · transporteur ${fictif(c.transporteur, c.fictif)} · ${PAL[ci].length} palettes · <b data-q-etat-camion>${etat(ci)}</b></p>
         <div class="quai-chauffeur">${silhouette(36)}<p><b>Le chauffeur :</b> « ${ech(c.parole || `Bonjour, livraison ${c.fournisseur}. Voilà mon bon de livraison et le ticket de l'enregistreur.`)} »</p></div>
         <div class="quai-doc-titre">📄 Bon de livraison</div>
@@ -901,7 +903,7 @@ export function creerQuai(Q, opts = {}) {
       </div>`).join('');
     const radios = (nom, q, items, val) => items.map((x) => `<label><input type="radio" name="${nom}" data-q="${q}" value="${ech(x.v)}" ${String(val) === String(x.v) ? 'checked' : ''} ${engage || e.fini ? 'disabled' : ''}> ${ech(x.lib)}</label>`).join('');
     const choix = lus ? `<div class="quai-grille2">
-        <div class="quai-qcm" role="radiogroup" aria-label="Le camion à décharger en premier">${radios('quaiPremier', 'premier', R.camions.map((c, ci) => ({ v: ci, lib: `Le camion ${c.lettre} (${c.fournisseur})` })), o.premier)}</div>
+        <div class="quai-qcm" role="radiogroup" aria-label="Le camion à décharger en premier">${radios('quaiPremier', 'premier', R.camions.map((c, ci) => ({ v: ci, lib: `Le camion ${c.nom}` })), o.premier)}</div>
         <div class="quai-qcm" role="radiogroup" aria-label="Pourquoi"><b>Pourquoi ?</b>${radios('quaiPhrase', 'phrase', O.phrases || [], o.phrase)}</div>
       </div>` : '<p class="note">Lis d’abord le ticket de chaque camion : c’est là que se décide l’ordre.</p>';
     const suite = engage ? R.camions.map((_, ci) => (K(e, ci).decharge ? '' : boutonDecharger(e, ci))).join('')
@@ -923,7 +925,7 @@ export function creerQuai(Q, opts = {}) {
 
   // Le choix du camion montré aux étapes ③ et ④ (seulement les camions déjà ouverts).
   const choixCamion = (e) => (M ? `<div class="quai-onglets" role="tablist" aria-label="Camion">${R.camions.map((c, ci) => (K(e, ci).decharge
-    ? `<button role="tab" data-q="camion" data-libre data-c="${ci}" aria-selected="${ci === ca(e)}" class="${ci === ca(e) ? 'on' : ''}">🚚 Camion ${ech(c.lettre)}<span class="quai-etat">${K(e, ci).signe ? 'reparti' : 'à quai'}</span></button>` : '')).join('')}</div>` : '');
+    ? `<button role="tab" data-q="camion" data-libre data-c="${ci}" aria-selected="${ci === ca(e)}" class="${ci === ca(e) ? 'on' : ''}">🚚 Camion ${ech(c.nom)}<span class="quai-etat">${K(e, ci).signe ? 'reparti' : 'à quai'}</span></button>` : '')).join('')}</div>` : '');
 
   function zoomEtiquette(p, s, cm) {
     const cle = s.etiqMontre || (s.etiqVue ? 'avant' : null);
@@ -945,7 +947,7 @@ export function creerQuai(Q, opts = {}) {
       if (q.camion !== ci) return '';
       const sq = st(e, q);
       const compte = q.refs ? sq.comptes && Object.keys(sq.comptes).length : sq.compte !== null;
-      const fait = [sq.sonde !== null ? 'sondée' : null, compte ? 'comptée' : null, sq.decision ? 'décidée' : null].filter(Boolean).join(', ') || 'à contrôler';
+      const fait = sq.valide ? '✓ validée' : [sq.sonde !== null ? 'sondée' : null, compte ? 'comptée' : null, sq.decision ? 'décidée' : null].filter(Boolean).join(', ') || 'à contrôler';
       return `<button role="tab" data-q="sel" data-libre data-n="${n}" aria-selected="${n === e.sel}" class="${n === e.sel ? 'on' : ''}">${ech(q.id)}<span class="quai-etat">${fait}</span></button>`;
     }).join('');
     const d = s.detail || {};
@@ -961,11 +963,20 @@ export function creerQuai(Q, opts = {}) {
             <button class="btn" data-q="compter" ${dis}>Noter le comptage <span class="quai-cout">· ${fmtMin(C.compter)}</span></button></div>
           <span class="note" data-q-rcompte>${ui.msgCompte ? ech(ui.msgCompte) : (s.compte !== null ? `Comptage noté : ${s.compte} cartons (BL : ${p.bl}).` : '')}</span>
         </div>`;
+    // Passer aux réserves : en haut à droite, toujours avec confirmation (qui dit ce qui n'est pas validé).
+    const nonVal = PAL[ci].filter((q) => !st(e, q).valide).length;
+    const vers4 = ui.arme4
+      ? `<button class="btn quai-arme" data-q="vers4" data-libre>${nonVal ? `${nonVal} palette${nonVal > 1 ? 's' : ''} non validée${nonVal > 1 ? 's' : ''} : passer quand même ?` : 'Passer aux réserves ?'} Cliquez pour confirmer</button>
+        <button class="btn" data-q="desarmer4" data-libre>Annuler</button>`
+      : `<button class="btn${nonVal ? '' : ' btn-p'}" data-q="vers4" data-libre>Contrôles terminés → réserves et chambre froide</button>`;
     return `<section class="quai-carte">
-      <h2 class="quai-h2"><span class="quai-pastille-etape">3</span>Le quai : contrôler chaque palette${M ? ` du camion ${ech(cm.lettre)}` : ''}</h2>
+      <div class="quai-titre-ligne">
+        <h2 class="quai-h2"><span class="quai-pastille-etape">3</span>Le quai : contrôler chaque palette${M ? ` du camion ${ech(cm.nom)}` : ''}</h2>
+        <div class="quai-ligne" data-q-vers4>${vers4}</div>
+      </div>
       ${choixCamion(e)}
       <div class="quai-onglets" role="tablist">${onglets}</div>
-      <details class="quai-rappel-bl" data-libre><summary data-libre>📄 Revoir le bon de livraison${M ? ` du camion ${ech(cm.lettre)}` : ''}</summary>${blHtml(ci)}</details>
+      <details class="quai-rappel-bl" data-libre><summary data-libre>📄 Revoir le bon de livraison${M ? ` du camion ${ech(cm.nom)}` : ''}</summary>${blHtml(ci)}</details>
       <div class="quai-poste">
         <div class="quai-scene">
           <svg data-q-palette viewBox="0 0 460 380" role="img" aria-label="Palette ${ech(p.id)} vue en trois dimensions">${palette3d(p, s, A.repere)}</svg>
@@ -988,7 +999,8 @@ export function creerQuai(Q, opts = {}) {
             <select id="qDecision" data-q-decision ${dis}>${Object.entries(DECISIONS).map(([kk, v]) => `<option value="${kk}" ${s.decision === kk ? 'selected' : ''}>${v}</option>`).join('')}</select></div>
           <div class="quai-champ"><label for="qMotif">Motif de la réserve ou du refus</label>
             <select id="qMotif" data-q-motif ${dis}>${Object.entries(MOTIFS).map(([kk, v]) => `<option value="${kk}" ${s.motif === kk ? 'selected' : ''}>${v}</option>`).join('')}</select></div>
-          <button class="btn btn-p" data-q="vers4" data-libre>Contrôles terminés → réserves et chambre froide</button>
+          <div class="quai-ligne"><button class="btn btn-p" data-q="valider" ${!s.decision || e.fini ? 'disabled' : ''}>✓ Valider cette palette</button>
+            <span class="note" data-q-valide>${s.valide ? 'Palette validée.' : (s.decision ? '' : 'Choisis d’abord une décision.')}</span></div>
         </div>
       </div>
       <div class="quai-journal" aria-live="polite">${e.journal.map((l) => `<div>${ech(l)}</div>`).join('')}</div>
@@ -1026,9 +1038,9 @@ export function creerQuai(Q, opts = {}) {
     // Plusieurs camions : celui qui est reparti libère le quai pour le suivant.
     const reste = M ? R.camions.map((_, cj) => cj).filter((cj) => !K(e, cj).decharge) : [];
     const suivant = M && k.signe && reste.length && !e.fini
-      ? `<div class="quai-doc" data-q-suivant><p>Le camion ${ech(cm.lettre)} repart, le quai est libre. ${reste.map((cj) => `Le camion ${ech(R.camions[cj].lettre)}`).join(', ')} attend porte fermée.</p>${reste.map((cj) => boutonDecharger(e, cj)).join('')}</div>` : '';
+      ? `<div class="quai-doc" data-q-suivant><p>Le camion ${ech(cm.nom)} repart, le quai est libre. ${reste.map((cj) => `Le camion ${ech(R.camions[cj].nom)}`).join(', ')} attend porte fermée.</p>${reste.map((cj) => boutonDecharger(e, cj)).join('')}</div>` : '';
     return `<section class="quai-carte">
-      <h2 class="quai-h2"><span class="quai-pastille-etape">4</span>Rentrer le lot en chambre froide, écrire les réserves, faire signer${M ? ` — camion ${ech(cm.lettre)}` : ''}</h2>
+      <h2 class="quai-h2"><span class="quai-pastille-etape">4</span>Rentrer le lot en chambre froide, écrire les réserves, faire signer${M ? ` — camion ${ech(cm.nom)}` : ''}</h2>
       ${choixCamion(e)}
       ${A.consignes ? `<p class="quai-aide">Règle du quai : <b>le froid d'abord, les papiers ensuite</b>. 1) <b>Rentre le lot</b> accepté en chambre froide (le temps hors froid s'arrête). 2) <b>Écris tes réserves sur le BL</b> et fais-les signer par le chauffeur. Le chauffeur peut attendre ; les surgelés, non.<br>
         Une réserve doit être <b>précise</b> : quelle palette, quoi, combien. « Sous réserve de déballage » ne vaut rien : ce n'est pas une réserve.</p>` : ''}
@@ -1098,7 +1110,7 @@ export function creerQuai(Q, opts = {}) {
         const chaud = c.rechauffe && k.decharge
           ? ` Il a attendu ${fmtMin(k.ouvertA)} porte fermée, groupe froid faible : ses palettes sont sorties à ${fmtT(tMax)} à cœur${zone}.`
           : '';
-        return `<p class="note" data-q-bilan-camion="${ech(c.lettre)}">Camion ${ech(c.lettre)} : temps hors froid du lot ${k.decharge ? fmtMin(k.froid) : '—'} (repère ${R.seuil} min).${chaud}${ordre(k)}</p>`;
+        return `<p class="note" data-q-bilan-camion="${ech(c.lettre)}">Camion ${ech(c.nom)} : temps hors froid du lot ${k.decharge ? fmtMin(k.froid) : '—'} (repère ${R.seuil} min).${chaud}${ordre(k)}</p>`;
       }).join('')
       : `<p class="note">Temps hors froid du lot : ${e.decharge ? fmtMin(e.froid) : '—'} (repère ${R.seuil} min).${ordre(e)}</p>`;
     return `<div class="quai-bilan-bloc">
@@ -1146,7 +1158,7 @@ export function creerQuai(Q, opts = {}) {
   function aller(e, n, api) {
     if (n > 1 && !unDecharge(e, R)) return;
     if (ui.anim) ui.anim.finir();
-    e.etape = n; ui.chef4 = false; ui.msgCompte = '';
+    e.etape = n; ui.chef4 = false; ui.msgCompte = ''; ui.arme4 = false;
     api.sauver(); api.redessiner();
     if (api.haut) api.haut();
   }
@@ -1193,7 +1205,7 @@ export function creerQuai(Q, opts = {}) {
       const corps = etape === 1 ? ecran1(e) : etape === 2 ? `<section class="quai-carte">${scene2(e)}</section>` : etape === 3 ? ecran3(e) : ecran4(e, api);
       const libs = M ? ['① Les camions arrivent'].concat(ETAPES.slice(1)) : ETAPES;
       const tete = M
-        ? R.camions.map((c) => `Camion ${ech(c.lettre)} : « ${fictif(c.fournisseur, c.fictif)} », ${fictif(c.transporteur, c.fictif)}`).join(' · ')
+        ? R.camions.map((c) => `Camion « ${fictif(c.nom, c.fictif)} », transporteur ${fictif(c.transporteur, c.fictif)}`).join(' · ')
         : `Livraison « ${fictif(cam.fournisseur, cam.fictif)} » · camion frigorifique ${fictif(cam.transporteur, cam.fictif)}`;
       return `<div class="quai" data-quai="${ech(Q.id)}">
         <div class="quai-tete">
@@ -1260,8 +1272,23 @@ export function creerQuai(Q, opts = {}) {
         if (!reduit()) animer(z2, e, api, true);
       });
       on('vers3', () => aller(e, 3, api));
-      on('vers4', () => aller(e, 4, api));
-      on('sel', (ev, b) => { e.sel = +b.dataset.n; ui.msgCompte = ''; api.sauver(); api.redessiner(); });
+      on('vers4', () => {
+        if (!ui.arme4) { ui.arme4 = true; api.redessiner(); return; }
+        aller(e, 4, api);
+      });
+      on('desarmer4', () => { ui.arme4 = false; api.redessiner(); });
+      // Valider une palette : une coche, rien de figé (décision de Tristan, 03/10/2026). On passe à la
+      // suivante non validée du même camion.
+      on('valider', geste(() => {
+        const pal = p();
+        if (!s().decision) return;
+        s().valide = true; ui.arme4 = false; ui.msgCompte = '';
+        const L = PAL[pal.camion], i = L.indexOf(pal);
+        const suite = L.slice(i + 1).concat(L.slice(0, i)).find((q) => !st(e, q).valide);
+        if (suite) e.sel = R.palettes.indexOf(suite);
+        api.sauver(); api.redessiner();
+      }));
+      on('sel', (ev, b) => { e.sel = +b.dataset.n; ui.msgCompte = ''; ui.arme4 = false; api.sauver(); api.redessiner(); });
       on('tourner', geste(() => {
         const ss = s(); ss.vue = (ss.vue + 1) % 4; if (!ss.vues.includes(ss.vue)) ss.vues.push(ss.vue);
         avancer(e, C.tourner, `${p().id} : ${VUES[ss.vue]}`); api.sauver(); api.redessiner();

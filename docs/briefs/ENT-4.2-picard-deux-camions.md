@@ -160,5 +160,10 @@ Trame élève Word/PDF (Cowork, après validation à l'écran) ; corrigé `conte
 - **Tests** : bloc `picard` 46/46 (11 cas ENT-4.2, éprouvés par 4 sabotages : sans réchauffement, sans preuve de
   l'étiquette arrière, sans manœuvre, comptage multi-références ignoré) ; suite entière verte avant le push.
 - **Commits** : voir `git log` (« ENT-4.2 Picard … »).
+- **Après le premier essai de Tristan (03/10)** : camions nommés par leur fournisseur à l'écran (« camion Glaces
+  Néviane », phrases d'ordre et mail compris ; « A » et « B » ne restent que dans les identifiants, palettes A1… B5) ;
+  « Valider cette palette » à l'étape ③ (une coche, rien de figé, passe à la palette suivante non validée ; il faut une
+  décision) ; « Contrôles terminés → réserves » en haut à droite avec confirmation qui compte les palettes non
+  validées (vaut aussi pour ENT-4.1, même écran) ; « Revoir le bon de livraison » agrandi.
 - **Reste ouvert** : trame élève (Cowork, après validation à l'écran) ; la teinte des bandes (jaune / rose) et la petite
   taille des étiquettes déchirées sur la palette 3D sont à juger à l'écran.

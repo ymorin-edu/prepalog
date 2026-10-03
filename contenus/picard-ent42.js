@@ -6,7 +6,10 @@
 // fournisseurs et transporteurs sont fictifs, noms vérifiés par recherche web le 03/10/2026 (aucune
 // entreprise à ce nom) : Glaces Néviane, Transports Hivernel, Légumes d'Orvalle, Transports Calvenor.
 //
-// Le camion A a un groupe froid qui faiblit : ses glaces sont à −18,5 °C à cœur au début, et
+// À l'écran, chaque camion porte le nom de son fournisseur (demande de Tristan, 03/10/2026) ; « A » et « B »
+// ne restent que dans les identifiants (palettes A1… B5, jalons).
+//
+// Le camion A (Glaces Néviane) a un groupe froid qui faiblit : ses glaces sont à −18,5 °C à cœur au début, et
 // gagnent 0,25 °C par minute du temps du quai tant qu'il reste porte fermée (décision de Tristan,
 // brief §11). La vue calcule la température réelle à la sonde et la décision attendue qui en découle,
 // par la RÈGLE DU QUAI À TROIS ZONES (décision de Tristan, 03/10/2026, construite pour l'exercice sur
@@ -102,9 +105,9 @@ export const QUAI_ENT42 = {
     premier: 0,
     juste: 'froid',
     phrases: [
-      { v: 'arrive', lib: 'Le camion A est arrivé le premier' },
-      { v: 'palettes', lib: 'Le camion B a plus de palettes' },
-      { v: 'froid', lib: 'Le ticket de A montre que son froid faiblit : ses glaces se réchauffent s’il attend' },
+      { v: 'arrive', lib: 'Le camion Glaces Néviane est arrivé le premier' },
+      { v: 'palettes', lib: 'Le camion Légumes d’Orvalle a plus de palettes' },
+      { v: 'froid', lib: 'Le ticket des Glaces Néviane montre que leur froid faiblit : les glaces se réchauffent si le camion attend' },
       { v: 'cher', lib: 'Les glaces sont plus chères' },
     ],
   },
@@ -149,8 +152,8 @@ export const VOLET = {
   semer(prenom) {
     return { mails: [{ folder: 'in', ts: Date.now() - 600e3, from: 'Le chef de quai', fromMail: 'chef.quai@picard-quai.example',
       to: prenom, subject: 'Quai 32 : deux camions ce matin', kind: 'text',
-      text: `Bonjour ${prenom}, deux camions pour toi ce matin au quai 32. À 6 h 00, le camion A : Glaces Néviane, 3 palettes `
-        + 'de glaces, transporteur Transports Hivernel. À 6 h 10, le camion B : Légumes d\'Orvalle, 5 palettes de légumes, '
+      text: `Bonjour ${prenom}, deux camions pour toi ce matin au quai 32. À 6 h 00, le camion Glaces Néviane : 3 palettes `
+        + 'de glaces, transporteur Transports Hivernel. À 6 h 10, le camion Légumes d\'Orvalle : 5 palettes de légumes, '
         + 'transporteur Transports Calvenor. Un seul quai : c\'est toi qui décides lequel tu fais décharger en premier, et tu dois '
         + 'pouvoir dire pourquoi. Lis les deux tickets avant de décider. Et toujours : le froid d\'abord, les papiers ensuite. '
         + 'Aujourd\'hui, pas d\'aide : je regarde ton bilan à la fin. — Le chef de quai' }] };
