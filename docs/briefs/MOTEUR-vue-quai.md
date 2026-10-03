@@ -6,7 +6,7 @@
 > Lis docs/briefs/COORDINATION-picard.md, docs/EN-COURS.md, puis le brief docs/briefs/MOTEUR-vue-quai.md et ouvre la maquette docs/briefs/picard/maquette-quai-picard.html. Annonce la durée avant de commencer, découpe en lots, puis enchaîne sans attendre : les questions du brief sont déjà tranchées (§11).
 > ```
 
-**Statut** : à implémenter *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
+**Statut** : à valider par Tristan *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
 **Date du brief** : 03/10/2026
 **Conversation d'origine** : Cowork (Opus), « maquette du quai Picard » ; fiches projet `claude/prepalog-picard-cadrage.md`, `claude/prepalog-picard-4-seances.md`
 **Modèle** : **Opus** (vue nouvelle du moteur).
@@ -179,8 +179,44 @@ Tranché par Tristan le 03/10/2026 :
 ## Compte rendu *(rempli par Claude Code à la livraison)*
 
 - **Fichiers créés / modifiés** :
+  - `core/types/quai.js` (neuf) : la vue, ses jalons (`jalonsQuai`), les étapes de séance (`etapesQuai`), la note
+    d'évaluation (`noteQuai`).
+  - `core/types/entreprise.js` : entrée de menu « Quai de réception », état `db.quais[<id>]` créé dès l'ouverture, chrono
+    réel, note sur 20 en évaluation (`noter`), `[data-libre]` (étapes consultables après la remise de la copie),
+    `THEME.clair` (fond « glacier » de la charte).
+  - `styles/quai.css` (neuf, chargé par `index.html`), `contenus/picard.js` et `contenus/picard-ent41.js` (neufs),
+    `contenus/picard/` (2 photos + licences, empreintes vérifiées), `contenus/trames/logos/picard.svg` (empreinte vérifiée).
+  - `outils/essai-quai.html` + `outils/essai-quai.js` (page d'essai), `outils/test/picard.mjs` (31 cas),
+    **une ligne dans `BLOCS` de `outils/test.mjs`**, `outils/serveur-demo.py` (lit aussi la variable `PORT`),
+    `.claude/launch.json`, `activites/FICHE-SEANCE.md` (section « vue quai »).
 - **Écarts par rapport au brief** (et pourquoi) :
+  - « Plein écran » : la séance est immersive comme toutes les séances d'entreprise, et le quai est **une entrée du menu**
+    de l'environnement, le menu restant visible (sinon l'élève ne peut pas lire le mail d'accueil du chef de quai).
+  - En évaluation, le dernier bouton est « **Clore la réception et rendre ma copie** » (deux clics, comme la maquette) :
+    clore la réception rend la copie. Le chrono s'arrête à la clôture (guidage) ou à la remise (évaluation), et ne
+    tourne pas tant que le site ne sait pas si la copie est déjà rendue.
+  - API (§4) **complétée, rien de retiré** : `titre`, `destinataire`, `avertissement`, `bonASavoir` (textes du contenu),
+    `libelle` (entrée de menu), `camions[].fictif` (affiche « (fictif) »), `ticket: { remorque, societe, consigne, depart,
+    releves }`, `aides.consignes` (les textes d'aide en pointillés et le message « la marchandise se réchauffe » de la
+    jauge), `note` (seuils et poids de l'évaluation, présence = note sur 20), `photos.cadre / places` facultatifs.
+    `aides.chefDeQuai` couvre aussi le chauffeur qui refuse une réserve vide.
+  - Contenu Picard d'ENT-4.1 (`contenus/picard*.js`) écrit dès ce chantier : la page d'essai en avait besoin. Il ne reste à
+    ENT-4.1 (P2) que l'activité, l'accueil, le mail d'accueil (volet), le corrigé et la ligne `ENTREPRISES`.
 - **Décisions prises en route** :
-- **Tests** :
-- **Commits** :
+  - Tiers-temps : lu dans `ctx.tiersTemps` ou `ctx.profil.tiersTemps` (fourni par P3) et recopié dans l'état du quai à
+    chaque ouverture : `noter(db)` et le ramassage le lisent là.
+  - Temps réel rangé dans la base toutes les 10 s, à chaque geste et à la sortie ; compté par écart d'horloge (un onglet
+    en arrière-plan ne perd pas de temps).
+  - Le détail de la note (temps réel, hors froid, points) part dans `detail.quai` du score, en guidage comme en évaluation.
+  - Bouton « Recommencer la réception » au bilan de guidage (deux clics), comme le « Recommencer » de la maquette.
+  - Déchargement à n palettes : les 5 places de la maquette, une 6e à droite, puis un second rang en retrait (8 vérifiées).
+- **Tests** : bloc `picard`, 31 cas (liste du §9, dont note : 10 min → 20, 13 min 20 → 19, 13 min 20 tiers-temps → 20,
+  une palette fausse → 18,17, BL non signé → 14,17). Éprouvés dans l'autre sens : 4 sabotages du moteur (sonde non
+  exigée, froid qui continue en chambre froide, chrono seulement sur l'écran du quai, rapidité sans signature),
+  chacun fait tomber ses tests. Suite entière : **414/414**.
+- **Commits** : `c3ba95d` (vue, câblage, contenus, page d'essai), `10a9df7` (serveur d'essai), `c9d73b1` (tests).
 - **Reste ouvert** :
+  - **Validation à l'écran par Tristan** : `outils/essai-quai.html` (réglages : guidage / évaluation, 5 ou 8 palettes,
+    élève / enseignant, tiers-temps), sur l'ordinateur de classe et au vidéoprojecteur.
+  - Le temps réel de guidage est **rangé** (base de l'élève et `detail.quai.reel` du score) mais **aucun écran enseignant
+    ne l'affiche encore** : à prévoir avec ENT-4.1 ou dans le suivi (le détail d'un score n'est lu nulle part aujourd'hui).

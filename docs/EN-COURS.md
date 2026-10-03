@@ -7,7 +7,7 @@ est déjà modifié ou inscrit ci-dessous, **elle s'arrête et le dit à Tristan
 
 | Chantier | Fichiers qu'il touche | Depuis |
 |---|---|---|
-| P1 · vue quai (Picard) | `core/types/quai.js` (neuf), `core/types/entreprise.js`, `styles/quai.css` (neuf), `index.html`, `outils/test.mjs` (`BLOCS`), `outils/test/picard.mjs`, `outils/essai-quai.*`, `contenus/picard*` | 03/10/2026 |
+| *(personne d'inscrit)* | | |
 
 Rappel : un seul chantier à la fois dans `core/types/tournee.js`, `core/types/grille.js`,
 `core/types/entreprise.js`, `styles/base.css` et `outils/test/boost.mjs` (voir `docs/briefs/COORDINATION-boost.md`).
