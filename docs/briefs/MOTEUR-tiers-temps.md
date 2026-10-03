@@ -6,7 +6,7 @@
 > Lis docs/EN-COURS.md puis implémente le brief docs/briefs/MOTEUR-tiers-temps.md. Annonce la durée, dis-moi si les règles Firebase doivent changer avant de coder.
 > ```
 
-**Statut** : à implémenter
+**Statut** : livré (03/10/2026)
 **Date du brief** : 03/10/2026
 **Modèle** : Sonnet (petit chantier) — sauf si les règles Firebase changent (alors le dire, alerte 1).
 **Durée estimée par Cowork** : 1 à 2 h.
@@ -47,7 +47,27 @@ ne peut pas modifier sa propre case. Émulateur de règles si elles changent (`o
 
 ## Compte rendu *(rempli par Claude Code)*
 
-- **Fichiers créés / modifiés** :
-- **Règles Firebase** : modifiées ? publiées ?
-- **Tests** :
-- **Commits** :
+- **Élargi en route par Tristan (03/10/2026)** : en plus du tiers-temps, un **niveau** par élève, *standard* (défaut) ou
+  *confirmé*, indépendant du tiers-temps (un élève confirmé peut avoir le tiers-temps). Le niveau « simple / avancé /
+  très avancé » évoqué n'existait pas dans le code : il est remplacé par ces deux valeurs. Dans le code, le champ
+  s'appelle `aisance` (`'standard'` / `'confirme'`) pour ne pas se confondre avec le niveau de classe du groupe.
+  Règle de contenu : confirmé = jeu de données +30 % en guidage/entraînement, +50 % en bonus, **seulement dans les
+  séances qui le prévoient**, et le contenu en plus ne doit jamais casser les exercices du jeu standard. Première
+  utilisatrice prévue : la refonte Cdiscount.
+- **Fichiers créés / modifiés** : `core/amenagements.js` (nouveau : valeurs, défauts, filtre) ; `core/backend-demo.js`
+  et `core/backend-firebase.js` (`majAmenagements`, `relireAmenagements`) ; `core/app.js` (`ctx.aisance`,
+  `ctx.tiersTemps`, relus à l'ouverture de chaque séance, une lecture Firestore de plus) ; `core/prof.js` (onglet
+  « Comptes élèves » : colonnes Niveau et Tiers-temps, enregistrées au changement, sans redessiner) ;
+  `activites/FICHE-SEANCE.md` (deux lignes) ; `firestore.rules`.
+- **Place de la case** (choisie par Claude Code) : onglet « Comptes élèves », sur la ligne de l'élève. Pas dans
+  « Suivi de classe » (projetable). L'export de la liste ne contient ni le niveau ni le tiers-temps.
+- **Vue quai** : rien à changer, elle lisait déjà `ctx.tiersTemps` (seuils × 4/3 et mention à l'élève).
+- **Règles Firebase** : **modifiées** (`firestore.rules`, `users/{uid}`, branche « l'intéressé ») : un élève ne peut
+  ni ajouter, ni changer, ni retirer `aisance` ou `tiersTemps` sur son profil (`diff().affectedKeys()`, ne suppose pas
+  que le champ existe). **À publier dans la console Firebase par Tristan** (Firestore → Règles). RTDB inchangée.
+- **Tests** : nouveau bloc `amenagements` (9 cas : défauts, transmission à la séance, camarade non touché, élève qui
+  tente de se régler, décochage pendant que l'élève est connecté, rien dans l'export ni le suivi) ; 6 cas ajoutés à
+  `outils/test-regles.mjs` (émulateur 86/86). Éprouvés dans les deux sens (relecture retirée, garde retirée, valeur
+  non transmise, règle retirée : chaque fois des cas tombent). `outils/test.mjs` touché : une ligne dans `BLOCS`.
+  Suite entière 457/457.
+- **Commits** : `5c1cdea` (code, règles, tests), puis ce compte rendu.
