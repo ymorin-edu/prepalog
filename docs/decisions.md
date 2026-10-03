@@ -5,6 +5,11 @@ n'est pas évident)**. Claude Code y ajoute toute décision prise en cours de ro
 reporte dans les fiches du projet PREPALOG. Une décision de fond sur la pédagogie reste dans
 `docs/fiches/prepalog-finalite.md`.
 
+- 03/10/2026 · Tristan · **Reprise de l'enchaînement ENT-3.1 → 3.4, étape 1 : la carte d'ENT-3.1** (brief
+  `docs/briefs/ENT-3.1-refonte-carte.md`) : la carte réelle remplace le plan schématique ; **contours + noms de
+  quartiers visibles** ; **sept points numérotés visibles dès le départ** (guidage : peu de recherche). Ce niveau
+  est celui de 3.1 seulement : **la difficulté du repérage doit monter dans 3.2, 3.3, 3.4**. Autres retours à traiter
+  ensuite, dans l'ordre et avec maquette : tableur de moins en moins guidé, consigne d'ENT-3.3 floue, 3.2 trop proche de 3.1.
 - 03/10/2026 · Claude Code · **Logisim rangé par entreprise, choix de construction** : la pastille Logisim
   passe toujours par les logos, même s'il ne reste qu'une séance ouverte (prolongement de la décision 2 du brief) ;
   une séance dont le numéro n'est dans aucune ligne de `ENTREPRISES` va sous une carte « Autres séances », sans
