@@ -17,6 +17,8 @@ import { creerPlan } from './plan.js';
 import { creerCarte } from './carte.js';
 import { creerTournee } from './tournee.js';
 import { creerInventaire } from './inventaire.js';
+import { creerQuai } from './quai.js';
+import { themeEffectif } from '../theme.js';
 
 /* ------------------------------------------------------------------ formats */
 export const eur = (n) => Number(n).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' });
@@ -94,6 +96,10 @@ export function creerEntreprise(U) {
   // L'écran « Inventaire » (02/10/2026, chantier E), sur le même principe : il n'existe que si
   // la séance déclare un `inventaire` — format dans `claude/prepalog-inventaire-format.md`.
   const VINV = U.inventaire ? creerInventaire(U.inventaire, CATALOGUE) : null;
+  // L'écran « Quai de réception » (03/10/2026, chantier P1, pilote Picard), même principe : il
+  // n'existe que si la séance déclare un `quai` (format en tête de `core/types/quai.js`). Son
+  // état vit dans `db.quais[<quai.id>]`. En évaluation, il porte le chrono réel et la note sur 20.
+  const VQUAI = U.quai ? creerQuai(U.quai, COPIE ? { copie: true } : {}) : null;
 
   const unite = (n) => ((n > 1 || n === 0) ? VOCAB.unitPl : VOCAB.unit);
   // Catalogue « simple » (02/10/2026, chantier E) : des articles sans couleur ni taille — un
@@ -125,6 +131,20 @@ export function creerEntreprise(U) {
       detail[e.id] = st;
       if (st === 'ok') ok++;
     });
+    // Le quai range aussi ses temps dans le détail : le temps réel passé en guidage sert à caler
+    // les seuils de rapidité de l'évaluation (décision de Tristan, 03/10/2026). En évaluation, la
+    // note n'est plus le nombre d'étapes : 15 points de réception + 5 de rapidité (`noteQuai`).
+    if (VQUAI) {
+      const q = (db && db.quais && db.quais[VQUAI.id]) || {};
+      detail.quai = { reel: Math.round(q.reel || 0), froid: q.froid || 0, tiersTemps: !!q.tiersTemps };
+      if (VQUAI.note) {
+        const n = VQUAI.note(db);
+        Object.assign(detail.quai, { reception: Math.round(n.reception * 100) / 100, jalons: n.pts, sur: n.nJalons,
+          horsFroid: n.ptsFroid, reelPts: n.ptsReel, rapidite: Math.round(n.vitesse * 100) / 100,
+          complet: n.complet, justes: n.justes, palettes: n.nPalettes });
+        return { score: n.score, max: n.max, detail };
+      }
+    }
     return { score: ok, max: etapes.length, detail };
   }
 
@@ -281,6 +301,13 @@ export function creerEntreprise(U) {
             `--sur-ardoise:${THEME.surAccent || '#ffffff'}`,
             `--ardoise-clair:rgba(${enRgb(a)},.11)`);
         }
+        // THEME.clair (03/10/2026, Picard) : les surfaces de la charte en thème clair (le fond
+        // « glacier » de Picard). Seulement quand le site est en clair : sur le thème sombre de
+        // l'enseignant, l'encre claire deviendrait illisible sur un fond pâle.
+        const Cl = THEME.clair;
+        if (Cl && !THEME.sombre && themeEffectif() !== 'sombre') {
+          ['fond', 'panneau', 'survol', 'filet'].forEach((k) => { if (Cl[k]) v.push(`--${k}:${Cl[k]}`); });
+        }
         const P = THEME.sombre;
         if (P) {
           v.push(
@@ -316,7 +343,7 @@ export function creerEntreprise(U) {
         document.body.classList.remove('immersion');
         document.body.removeAttribute('style');
       }
-      const sortir = (fn) => { deshabiller(); if (fn) fn(); };
+      const sortir = (fn) => { arreterChrono(); deshabiller(); if (fn) fn(); };
 
       // L'état de la copie (évaluation). `charge` : on sait si elle est déjà rendue — tant qu'on
       // ne le sait pas, le bouton « Rendre » n'est pas offert. Côté enseignant, rien à rendre.
@@ -468,6 +495,7 @@ export function creerEntreprise(U) {
                 ${item('mail', 'Messagerie', nonLus)}
                 ${item('commandes', 'Commandes', aFaire, ['commandes', 'commande'])}
                 ${item('receptions', 'Réceptions', aRecevoir, ['receptions', 'reception'])}
+                ${VQUAI ? item('quai', VQUAI.nav.libelle) : ''}
                 ${VPLAN || VTOUR ? `<div class="ent-sep">${ech(U.transportSection || 'Transport')}</div>` : ''}
                 ${VPLAN ? item('plan', VPLAN.nav.libelle) : ''}
                 ${VTOUR ? item('tournee', VTOUR.nav.libelle) : ''}
@@ -550,7 +578,8 @@ export function creerEntreprise(U) {
       // en phase de capture, donc avant les écouteurs de chaque vue — une vue écrite demain sera
       // verrouillée sans rien savoir de la copie. Restent libres : le menu, la sortie, le zoom
       // de la carte. `sauver` ne fait plus rien non plus : deux gardes valent mieux qu'une.
-      const LIBRE = '.ent-nav, [data-quitter], [data-ct-zoom], [data-ct-ensemble]';
+      // `[data-libre]` : ce qu'une vue déclare consultable (les étapes et onglets du quai).
+      const LIBRE = '.ent-nav, [data-quitter], [data-ct-zoom], [data-ct-ensemble], [data-libre]';
       if (COPIE && !estProf) {
         const verrou = (ev) => {
           if (!rendue()) return;
@@ -605,6 +634,7 @@ export function creerEntreprise(U) {
           plan: vuePlan, tournee: vueTournee,
           catalogue: vueCatalogue, produit: vueProduit, stock: vueStock, blocage: vueBlocage,
           inventaire: VINV ? vueInventaire : vueAccueil,
+          quai: VQUAI ? vueQuai : vueAccueil,
           clients: vueClients, fournisseurs: vueFournisseurs, console: vueConsole,
         };
         z.innerHTML = (vues[E.vue] || vueAccueil)();
@@ -1359,6 +1389,67 @@ export function creerEntreprise(U) {
       });
       function vueInventaire() { return VINV.html(etatInventaire(), apiInventaire()); }
 
+      /* ---------------------------------------------------------- quai de réception */
+      // L'état vit dans la base de l'élève, sous l'identifiant du quai de la séance. Il est créé dès
+      // l'ouverture : le temps réel compte de l'ouverture de la séance à la remise de la copie,
+      // quel que soit l'écran affiché (décision de Tristan, 03/10/2026).
+      function etatQuai() {
+        if (!db.quais) db.quais = {};
+        if (!db.quais[VQUAI.id]) db.quais[VQUAI.id] = VQUAI.etatNeuf();
+        return db.quais[VQUAI.id];
+      }
+      const apiQuai = () => ({
+        sauver, toast, estProf,
+        redessiner: dessinerVue,
+        zone: () => hote.querySelector('#entMain'),
+        haut: () => hote.scrollIntoView({ block: 'start' }),
+        copieRendue: rendue,
+        rendreCopie: () => { if (COPIE && !estProf) rendreLaCopie(); },
+        // « Recommencer la réception » (guidage) : un quai neuf, le reste de la base intact.
+        recommencer: () => {
+          const tt = etatQuai().tiersTemps;
+          db.quais[VQUAI.id] = VQUAI.etatNeuf();
+          db.quais[VQUAI.id].tiersTemps = tt;
+          sauver(); dessinerVue();
+        },
+      });
+      function vueQuai() { return VQUAI.html(etatQuai(), apiQuai()); }
+
+      // Le chrono réel. Il compte en secondes, par écart d'horloge (un onglet en arrière-plan ne
+      // reçoit plus qu'un tic par minute), s'arrête à la clôture de la réception ou à la remise
+      // de la copie, et ne tourne pas tant qu'on ne sait pas si la copie est déjà rendue. Il est
+      // rangé dans la base toutes les 10 s et à la sortie : il survit à un rechargement.
+      // Le tiers-temps de l'élève (brief MOTEUR-tiers-temps, à venir) est recopié dans l'état à
+      // chaque ouverture : `noter(db)` et le ramassage le lisent là.
+      let minuterie = null;
+      const jeton = {};
+      function sauverChrono() { if (!rendue()) ctx.jeu.sauver(); }
+      function arreterChrono() {
+        if (!minuterie) return;
+        clearInterval(minuterie); minuterie = null;
+        window.removeEventListener('pagehide', sauverChrono);
+        sauverChrono();
+      }
+      if (VQUAI) {
+        const q0 = etatQuai();
+        const tt = !!(ctx.tiersTemps || (ctx.profil && ctx.profil.tiersTemps));
+        if (q0.tiersTemps !== tt) q0.tiersTemps = tt;
+        hote.__quaiChrono = jeton;
+        let dernier = Date.now(), sauve = Date.now();
+        minuterie = setInterval(() => {
+          if (!hote.isConnected || hote.__quaiChrono !== jeton) { clearInterval(minuterie); minuterie = null; return; }
+          const t = Date.now(), dt = Math.min(70, (t - dernier) / 1000);
+          dernier = t;
+          if (rendue() || (COPIE && !estProf && !copie.charge)) return;
+          const q = etatQuai();
+          if (q.fini) return;
+          q.reel = Math.round(((q.reel || 0) + dt) * 10) / 10;
+          if (t - sauve >= 10000) { sauve = t; ctx.jeu.sauver(); }
+          if (E.vue === 'quai') VQUAI.tic(hote.querySelector('#entMain'), q);
+        }, 1000);
+        window.addEventListener('pagehide', sauverChrono);
+      }
+
       // La tournée reste fermée tant que le repérage n'est pas validé : sans lui, l'élève
       // ne sait pas où sont les points et ordonnerait au hasard. C'est le « deux temps »
       // décidé le 02/10/2026, tenu par l'état et non par un réglage d'affichage.
@@ -1900,6 +1991,7 @@ export function creerEntreprise(U) {
           ouvrirMail(Number(b.dataset.tourNotifOuvrir));
         }));
         if (E.vue === 'inventaire' && VINV) VINV.brancher(z, etatInventaire(), apiInventaire());
+        if (E.vue === 'quai' && VQUAI) VQUAI.brancher(z, etatQuai(), apiQuai());
       }
 
       // Un message déclenché dont la condition est déjà vraie à l'ouverture (travail fait sur un

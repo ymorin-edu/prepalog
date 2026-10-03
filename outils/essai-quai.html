@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Essai — Quai de réception (Prepalog)</title>
+<!-- Page d'ESSAI de l'écran `core/types/quai.js`, dans le vrai moteur d'entreprise, sur le quai
+     d'ENT-4.1 (Picard, données de la maquette v8 : `outils/essai-quai.js`). Elle n'est liée nulle
+     part et rien n'y est enregistré : la base vit en mémoire, un rechargement repart de zéro.
+     Ouvrir avec `lancer.bat`, puis http://localhost:8000/outils/essai-quai.html -->
+<base href="../">
+<link rel="icon" href="./styles/logo.png">
+<link rel="stylesheet" href="./styles/polices.css">
+<link rel="stylesheet" href="./styles/base.css">
+<link rel="stylesheet" href="./styles/quai.css">
+<style>
+  .essai-reglages{ background:#fff7d6; border-bottom:1px solid #e8d48a; padding:8px 16px; font:14px/1.5 sans-serif; color:#3b3200 }
+  .essai-reglages label{ display:inline-block; margin:2px 16px 2px 0; white-space:nowrap; font-weight:400; color:#3b3200 }
+  .essai-reglages select{ width:auto; display:inline-block; padding:2px 4px }
+  .essai-reglages input[type=checkbox]{ width:auto; display:inline; margin:0 4px 0 0 }
+  .essai-note{ background:#fff7d6; border:1px solid #e8d48a; color:#3b3200; padding:8px 16px; font:14px/1.5 sans-serif }
+  .essai-note table{ font-size:13px; max-width:760px }
+</style>
+</head>
+<body>
+<form class="essai-reglages" id="reglages">
+  <b>Page d'essai</b> — chaque changement repart d'une base neuve :
+  <label>Séance <select name="mode"><option value="guidage">guidage (ENT-4.1, toutes les aides)</option><option value="evaluation">évaluation (aucune aide, chrono, copie rendue)</option></select></label>
+  <label>Palettes <select name="palettes"><option value="5">5 (ENT-4.1)</option><option value="8">8 (quai plein, essai)</option></select></label>
+  <label>Voir comme <select name="role"><option value="eleve">élève</option><option value="prof">enseignant</option></select></label>
+  <label><input type="checkbox" name="tiers"> élève avec tiers-temps</label>
+</form>
+<div id="essaiNote" class="essai-note" hidden></div>
+<div id="hote"></div>
+<script type="module">
+import { creerEntreprise } from './core/types/entreprise.js';
+import { univers } from './outils/essai-quai.js';
+
+const form = document.getElementById('reglages');
+const boite = document.getElementById('essaiNote');
+function monter() {
+  const f = new FormData(form);
+  const evaluation = f.get('mode') === 'evaluation';
+  const moteur = creerEntreprise(univers({ evaluation, huit: f.get('palettes') === '8' }));
+  const db = {};
+  boite.hidden = true;
+  const hote = document.getElementById('hote');
+  const neuf = hote.cloneNode(false); hote.replaceWith(neuf);
+  moteur.rendre(neuf, {
+    meta: { id: 'essai-quai', code: 'ESSAI', titre: 'Picard — essai du quai de réception', portee: 'eleve', immersif: true, copie: evaluation },
+    profil: { prenom: 'Essai', nom: 'Quai', role: f.get('role') },
+    tiersTemps: f.get('tiers') === 'on',
+    jeu: { etat: () => db, sauver: () => {} },
+    enregistrer: () => {}, quitter: () => { location.reload(); }, codeStock: 'ESSAI',
+    lireScore: async () => null,
+    // La remise de la copie, simulée : la note calculée s'affiche en haut (ce que l'enseignant lira).
+    rendreCopie: async (res) => {
+      const q = (res.detail && res.detail.quai) || {};
+      boite.hidden = false;
+      boite.innerHTML = `<b>Copie rendue (simulée).</b> Note calculée : <b>${String(res.score).replace('.', ',')} / ${res.max}</b>
+        — réception ${String(q.reception).replace('.', ',')} / 15 (${q.jalons}/${q.sur} jalons) · hors froid ${q.froid} min → ${q.horsFroid} pt ·
+        temps réel ${Math.floor(q.reel / 60)} min ${String(q.reel % 60).padStart(2, '0')} s${q.tiersTemps ? ' (tiers-temps)' : ''} → ${q.reelPts} pt ·
+        rapidité retenue ${String(q.rapidite).replace('.', ',')} / 5 (${q.complet ? `${q.justes}/${q.palettes} palettes justes` : 'réception incomplète'}).`;
+      return { rendu: Date.now() };
+    },
+  });
+  window.__essai = { db, moteur };
+  document.querySelector('.ent-nav[data-vue="quai"]')?.click();
+}
+form.addEventListener('change', monter);
+monter();
+</script>
+</body>
+</html>
