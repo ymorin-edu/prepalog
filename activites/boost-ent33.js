@@ -7,6 +7,10 @@
 // puis la répare. Brief : `docs/briefs/ENT-3.3-boost-tournee-a-corriger.md` ; contenu et jalons :
 // `contenus/boost-ent33.js`. Aucun écran nouveau : le moteur a reçu `etatInitial` et `sansVerdict`.
 //
+// EN DEUX TEMPS depuis le 03/10/2026 (chantier E, `docs/briefs/ENT-3.3-deux-temps.md`) : contrôler la
+// tournée et la feuille d'Inès FIGÉES, lui répondre, puis corriger et cliquer « J'ai terminé ». Le
+// moteur a reçu les options `fige`, `etiquettes`, `termine` et la feuille « comme un tableur ».
+//
 // ── `pret: true` ────────────────────────────────────────────────────────────────────────
 // Validée à l'écran par Tristan le 03/10/2026 : la séance est visible des élèves.
 //

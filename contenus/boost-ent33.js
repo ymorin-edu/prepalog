@@ -16,6 +16,14 @@
 //     « le plus court donne de la marge ») : c'est la leçon d'ENT-3.2 appliquée à moitié ;
 //   · la tournée est déjà posée à l'ouverture (`etatInitial`, une seule fois, voir tournee.js) et
 //     les jauges ne disent rien (`sansVerdict`) : le diagnostic se calcule, il ne se lit pas ;
+//   · EN DEUX TEMPS (chantier E, 03/10/2026, brief `docs/briefs/ENT-3.3-deux-temps.md`) : au temps 1
+//     tout est FIGÉ — la tournée d'Inès et sa feuille se lisent, rien ne se modifie ; dès qu'un message
+//     part vers Inès (juste ou faux), elle répond et la vue se débloque (phase 2) : l'élève corrige,
+//     puis clique « J'ai terminé », définitif. Tristan : *« la vue donne trop d'information, on ne sait
+//     plus où regarder »* ;
+//   · la feuille d'Inès est EN COLONNES et s'affiche COMME UN TABLEUR (barre de formule) : la tournée
+//     et le poids chargé à gauche, les données et les heures à droite, quinze lignes au lieu de 38
+//     (décision de Tristan, 03/10/2026 : « trop grande, pas ergonomique », « plus de colonnes ») ;
 //   · l'élève répond à Inès en recopiant six lignes à intitulé — une par contrainte (tenue ou
 //     non), puis trois chiffres (poids chargé, arrivée chez la Pâtisserie, arrivée à la gare).
 //     Décision de Tristan du 02/10 : une ligne PAR contrainte plutôt qu'une liste, pour que
@@ -34,6 +42,7 @@
 
 import { creerTournee } from '../core/types/tournee.js';
 import { creerGrille } from '../core/types/grille.js';
+import { apresMail } from '../core/declencheurs.js';
 import * as E32 from './boost-ent32.js';
 
 export const TRANSPORT_ID = 'boost-ent33';
@@ -65,58 +74,171 @@ export const COLLEGUE = {
   arrivee: true,
 };
 
+/* ====================================================== la feuille d'Inès (en colonnes) ==== */
+// Quinze lignes, cinq colonnes, sans bloc qui répète (décisions de Tristan du 03/10/2026) :
+//
+//        A                              B            C   D                                  E
+//    1   Tournée (ordre des arrêts)     Poids (kg)       Données de la journée
+//    2…9 un arrêt par ligne, son poids  (rempli seul)    départ, vitesse, temps par arrêt, charge
+//                                                        utile, train, créneau (tapés par Inès)
+//   10   À quai : <les commandes>       leur poids       Temps de route (min)        (formule)
+//   11   Poids chargé (kg)              =SOMME(…)        Temps aux arrêts (min)      (formule)
+//   12…15                                                gare, distance et rang du client à créneau,
+//                                                        son heure d'arrivée
+//
+// Les huit lignes de la tournée sont RÉSERVÉES : un arrêt par ligne dans l'ordre de la tournée, le
+// poids rempli tout seul (c'est la feuille d'Inès, il n'y a rien à recopier) ; au-delà des arrêts, la
+// ligne est vide et rien ne bouge en dessous. La ligne « À quai » se remplit toute seule (Tristan,
+// 03/10) : l'élève voit ce qu'il laisse sans refaire de total. La formule fausse d'Inès (F1) : son
+// poids chargé oublie la DERNIÈRE ligne de sa tournée, `=SOMME(B2:B7)` au lieu de B2:B8.
+//
+// Les adresses se déduisent de la place des lignes (`REF`), jamais écrites à la main ailleurs.
+
+const N_ARRETS = CLIENTS.length;                                   // huit lignes réservées
+export const REF = {
+  arrets: CLIENTS.map((_, k) => `B${k + 2}`),
+  quai: `B${N_ARRETS + 2}`, charge: `B${N_ARRETS + 3}`,
+  depart: 'E2', vitesse: 'E3', service: 'E4', chargeUtile: 'E5', train: 'E6', creneau: 'E7',
+  km: 'E9', route: 'E10', service2: 'E11', gare: 'E12', kmC: 'E13', rangC: 'E14', heureC: 'E15',
+};
+const tape = (m) => `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`;
+// Un résultat qui dépend de cases de la feuille : `null` tant que l'une d'elles est vide.
+const tous = (lire, refs) => { const v = refs.map(lire); return v.some((x) => x == null) ? null : v; };
+const somme = (v) => (v == null ? null : v.reduce((t, x) => t + x, 0));
+
+export const FEUILLE = {
+  titre: 'Feuille de calcul d’Inès',
+  colonnes: ['A', 'B', 'C', 'D', 'E'],
+  decimales: 1,
+  couleurs: false,
+  verifier: false,           // la formule fausse est à TROUVER : « Vérifier » la montrerait en rouge
+  affichage: 'tableur',      // le résultat dans la cellule, la formule dans la barre (comme Excel)
+  libelleOrigine: 'Remettre ce qu’Inès avait écrit',
+  lignes(b) {
+    const n = b.retenus.length;
+    const J = JOURNEE;
+    // Le client à créneau de la journée, et ce qu'il faut pour calculer l'heure d'arrivée chez lui.
+    const CR = (b.creneaux || [])[0] || null;
+    let kmC = null, rang = -1;
+    if (CR) {
+      rang = b.retenus.findIndex((p) => String(p.id) === String(CR.id));
+      const arr = b.arrivees[String(CR.id)];
+      if (rang >= 0 && b.departPose && arr != null) kmC = Math.round(((arr - J.depart - rang * J.service) * J.vitesse / 60) * 10) / 10;
+    }
+    const pre = (txt) => ({ prerempli: txt });
+    const donnee = (libelle, attendu, o = {}) => ({ saisie: true, formule: false, attendu, libelle, ...o });
+    const formule = (libelle, attendu, o = {}) => ({ saisie: true, formule: true, attendu, libelle, ...o });
+    const arret = (k) => (b.retenus[k] ? { A: `${k + 1} · ${b.retenus[k].nom}`, B: Number(b.retenus[k].kg) } : { A: '', B: '' });
+    const quai = b.ecartes || [];
+    const gauche = [
+      { A: 'Tournée (ordre des arrêts)', B: 'Poids (kg)', entete: true },
+      ...CLIENTS.map((_, k) => arret(k)),
+      { A: `À quai : ${quai.length ? quai.map((p) => p.nom).join(', ') : 'rien'}`, B: quai.reduce((t, p) => t + Number(p.kg || 0), 0) },
+      { A: 'Poids chargé (kg)', B: formule('poids chargé', (l) => (n ? somme(tous(l, REF.arrets.slice(0, n))) : null),
+        // F1 : Inès oublie la dernière ligne de sa tournée (la Cave Teissier, 52 kg).
+        pre(`=SOMME(${REF.arrets[0]}:${REF.arrets[N_ARRETS - 3]})`)) },
+    ];
+    const droite = [
+      { D: 'Données de la journée', E: '' },
+      { D: 'Départ de l’entrepôt', E: donnee('départ de l’entrepôt', J.depart, { format: 'heure', ...pre(tape(J.depart)) }) },
+      { D: 'Vitesse en ville (km/h)', E: donnee('vitesse', J.vitesse, pre(String(J.vitesse))) },
+      { D: 'Temps par arrêt (min)', E: donnee('temps par arrêt', J.service, pre(String(J.service))) },
+      { D: 'Charge utile (kg)', E: donnee('charge utile', J.chargeUtile, pre(String(J.chargeUtile))) },
+      { D: 'Départ du train', E: donnee('départ du train', J.limite, { format: 'heure', ...pre(tape(J.limite)) }) },
+      { D: CR ? `Créneau ${CR.nom}` : 'Créneau', E: CR ? donnee('limite du créneau', CR.avant, { format: 'heure', ...pre(tape(CR.avant)) }) : '' },
+      { D: 'Distance du parcours (km)', E: Math.round(b.km * 10) / 10 },
+      { D: 'Temps de route (min)', E: formule('temps de route', (l) => { const v = tous(l, [REF.km, REF.vitesse]); return v && v[1] ? v[0] / v[1] * 60 : null; },
+        { tolerance: 0.5, ...pre(`=${REF.km}/${REF.vitesse}*60`) }) },
+      { D: 'Temps aux arrêts (min)', E: formule('temps aux arrêts', (l) => { const v = l(REF.service); return v == null || !n ? null : n * v; },
+        pre(`=${N_ARRETS - 1}*${REF.service}`)) },
+      { D: 'Arrivée à la gare', E: formule('arrivée à la gare', (l) => somme(tous(l, [REF.depart, REF.route, REF.service2])),
+        { tolerance: 0.5, format: 'heure', ...pre(`=${REF.depart}+${REF.route}+${REF.service2}`) }) },
+      { D: CR ? `Distance jusqu’à ${CR.nom} (km)` : '', E: CR ? (kmC == null ? '—' : kmC) : '' },
+      { D: CR ? 'Arrêts servis avant elle' : '', E: CR ? (rang < 0 ? '—' : rang) : '' },
+      { D: CR ? `Arrivée ${CR.nom}` : '', E: !CR || kmC == null ? '' : formule('arrivée chez le client à créneau', (l) => {
+        const v = tous(l, [REF.depart, REF.kmC, REF.vitesse, REF.rangC, REF.service]);
+        return v && v[2] ? v[0] + v[1] / v[2] * 60 + v[3] * v[4] : null;
+      }, { tolerance: 0.5, format: 'heure', ...pre(`=${REF.depart}+${REF.kmC}/${REF.vitesse}*60+${REF.rangC}*${REF.service}`) }) },
+    ];
+    // La ligne 8 de la colonne de droite reste vide : elle sépare les données du calcul des heures.
+    droite.splice(7, 0, {});
+    return Array.from({ length: Math.max(gauche.length, droite.length) },
+      (_, i) => Object.assign({ C: '' }, gauche[i] || {}, droite[i] || {}));
+  },
+};
+
 /* ================================================================= la tournée (carte) ==== */
-// La vue d'ENT-3.2, avec trois différences : la tournée d'Inès est posée à l'ouverture, les jauges
-// ne donnent aucun verdict, et la consigne demande de contrôler avant de réparer. Le plan est passé
-// à la tournée seule : pas de menu « Plan de Nîmes », tous les clients sont déjà sur la carte.
+// La vue d'ENT-3.2, en deux temps. Le plan est passé à la tournée seule : pas de menu « Plan de
+// Nîmes », tous les clients sont déjà sur la carte. Les jauges ne donnent aucun verdict
+// (`sansVerdict`), et les contraintes sont réduites à trois étiquettes aux deux temps.
+
+const phaseDe = (e) => (e && e.phase && e.phase.n) || 1;
+// Au temps 2, l'élève a touché à quelque chose : une cellule, ou la tournée telle qu'au déblocage.
+const corrige = (e) => {
+  if (phaseDe(e) < 2) return false;
+  if (Object.keys((e.grille && e.grille.cases) || {}).length) return true;
+  const d = e.phase.depart || {};
+  const cle = (x) => JSON.stringify([(x.ordre || []).map(String), [...(x.quai || [])].map(String).sort(), !!x.depart, !!x.arrivee]);
+  return cle(e) !== cle(d);
+};
 
 export const TOURNEE = Object.assign({}, E32.TOURNEE, {
   plan: E32.PLAN,
-  titre: 'La tournée d’Inès : contrôler, répondre, réparer',
+  titre: 'La tournée d’Inès',
   consigne: '',
-  // Trois étapes, un verbe et un rôle chacune. Les pastilles passent au vert quand l'étape est FAITE
-  // (une saisie, un message parti, une tournée changée) : elles ne disent jamais si c'est juste.
+  // Le fil des deux temps, le même aux deux phases. Les pastilles disent ce qui est FAIT — un message
+  // parti, une correction commencée, « J'ai terminé » cliqué —, jamais si c'est juste.
   pastilles: [
-    { libelle: 'Contrôler',
-      texte: 'ne touchez pas encore à la carte. Contrôlez la feuille de calcul d’Inès, ses données et ses formules, '
-        + 'et corrigez-y ce qui est faux : le poids chargé, l’heure d’arrivée à la gare'
-        + (CRENEAU ? ` et l’heure d’arrivée à la ${CRENEAU.nom} doivent être justes.` : ' doivent être justes.'),
-      // La feuille arrive remplie : l'étape est faite quand l'élève y a touché (une case corrigée).
-      fait: (db, e) => Object.keys((e && e.grille && e.grille.cases) || {}).length > 0 },
-    { libelle: 'Répondre',
-      texte: 'dans la messagerie, dites à Inès pour chaque contrainte si elle est tenue, avec le chiffre qui le prouve.',
-      fait: (db) => reponses(db).length > 0 },
-    { libelle: 'Réparer',
-      texte: 'sur la carte, corrigez la tournée pour que les trois contraintes soient tenues. '
-        + '« Retrouver la tournée de départ » remet celle d’Inès.',
-      fait: (db, e) => ouverte(e) && !inchangee(e) },
+    { libelle: 'Contrôler, puis répondre',
+      texte: 'la tournée et la feuille d’Inès sont figées. Cherchez ce qui ne va pas, puis répondez-lui dans '
+        + 'la messagerie, avec les six lignes de son message.',
+      fait: (db, e) => phaseDe(e) >= 2 },
+    { libelle: 'Corriger',
+      texte: 'après sa réponse, l’outil se débloque : corrigez sa feuille et sa tournée ici même.',
+      fait: (db, e) => corrige(e) },
+    { libelle: 'Terminer',
+      texte: 'cliquez « J’ai terminé » sous la feuille quand votre correction est finie.',
+      fait: (db, e) => !!(e && e.termine) },
   ],
-  rappel: [
-    `Charge utile : ${JOURNEE.chargeUtile} kg`,
-    `Train : ${h(JOURNEE.limite)}`,
-    ...(CRENEAU ? [`${CRENEAU.nom} : avant ${h(CRENEAU.creneau.avant)}`] : []),
-  ],
+  rappel: [],
+  etiquettes: true,
   etatInitial: COLLEGUE,
   sansVerdict: true,
-  // La feuille d'Inès (chantier D, lot 2, 03/10/2026) : la feuille d'ENT-3.2, déjà remplie par elle —
-  // données, poids, formules — avec UNE formule fausse : son poids chargé oublie la dernière ligne de
-  // la tournée (F1, choix de Tristan). Pas de bouton « Vérifier » : il montrerait la case en rouge
-  // (décision de Tristan) ; « ↺ » remet ce qu'Inès avait écrit. Voir `feuille()` dans boost-ent32.js.
-  grille: E32.feuille({ ines: true }),
+  grille: FEUILLE,
+  phases: {
+    // Temps 1 : contrôler. Tout se lit, rien ne se modifie.
+    1: {
+      fige: true,
+      noteFige: 'La tournée telle qu’Inès l’a préparée. Elle ne se modifie pas pour l’instant.',
+      consigneFeuille: 'La feuille d’Inès telle qu’elle l’a remplie. Cliquez une cellule : ce qu’elle contient '
+        + '(formule ou valeur tapée) s’affiche dans la barre au-dessus. Rien ne se modifie pour l’instant.',
+    },
+    // Temps 2 : corriger, débloqué par la réponse d'Inès (voir `VOLET.declencheurs`).
+    2: {
+      consigneFeuille: 'La feuille d’Inès, débloquée. Cliquez une cellule et corrigez-la dans la barre au-dessus ; '
+        + '« ↺ » remet ce qu’Inès avait écrit. Si vous changez la tournée, la feuille suit.',
+      raz: { libelle: 'Retrouver la tournée d’Inès', confirmer: 'Retrouver la tournée d’Inès ? Cliquez pour confirmer',
+        titre: 'Remettre la tournée telle qu’Inès l’avait préparée. Les formules de la feuille sont gardées.',
+        toast: 'Tournée d’Inès retrouvée.' },
+      // Définitif (décision de Tristan, 03/10/2026) : deux clics, puis la vue se fige.
+      termine: { libelle: 'J’ai terminé', confirmer: 'Terminer ma correction ? Cliquez pour confirmer',
+        fait: 'Correction terminée à {h}. Elle est enregistrée telle quelle.' },
+    },
+  },
 });
 
 // Le bilan d'une tournée, par la même vue que l'écran.
 const VUE = creerTournee(TOURNEE);
 
 // La feuille d'Inès, pour juger sa formule sans dessiner (et sans bouton « Vérifier »).
-const GRILLE = creerGrille(TOURNEE.grille);
+const GRILLE = creerGrille(FEUILLE);
 const lignesDe = (e) => TOURNEE.grille.lignes(VUE.bilan(e));
 
 // Ce que la feuille d'Inès affiche pour le poids chargé, sa formule fausse comprise : le chiffre de
 // son message (« la charge passe »). Recalculé, jamais recopié.
 export function poidsInes() {
   const e = Object.assign({ report: {}, juge: {} }, COLLEGUE, { depart: 1, arrivee: 1 });
-  return GRILLE.valeur(lignesDe(e), {}, E32.REF.charge);
+  return GRILLE.valeur(lignesDe(e), {}, REF.charge);
 }
 
 /* ======================================================== le diagnostic attendu ====== */
@@ -256,10 +378,10 @@ export const ACCUEIL = {
   kpis: ['mail'],
   etapes: [
     ['Lire le message d’Inès', 'Menu Messagerie : sa tournée, son raisonnement, et les six lignes qu’elle attend en réponse.'],
-    ['Contrôler', 'Menu Tournée, sans modifier la carte : dans la feuille de calcul, le poids chargé, l’heure d’arrivée à la gare'
-      + `${CRENEAU ? ` et chez ${CRENEAU.nom}` : ''}. Comparez chacun à sa contrainte.`],
+    ['Contrôler', 'Menu Tournée : la tournée et la feuille d’Inès sont figées. Dans la feuille, le poids chargé, l’heure '
+      + `d’arrivée à la gare${CRENEAU ? ` et chez ${CRENEAU.nom}` : ''} : comparez chacun à sa contrainte.`],
     ['Répondre', 'Menu Messagerie : pour chaque contrainte, tenue ou pas, avec le chiffre qui le prouve.'],
-    ['Réparer', 'Menu Tournée : sur la carte, la bonne commande à quai, un ordre qui tient tout, le plus court possible.'],
+    ['Corriger', 'Après la réponse d’Inès, menu Tournée : corrigez sa feuille et sa tournée, puis « J’ai terminé ».'],
   ],
 };
 
@@ -307,9 +429,9 @@ On sait que tout ne rentre pas dans le vélo-cargo, alors j’ai laissé une com
 
 `
             + `CE QUE J’ATTENDS DE TOI
-M. Morin veut qu’on se relise à deux avant chaque départ. En trois temps :
+M. Morin veut qu’on se relise à deux avant chaque départ. En deux temps :
 `
-            + `D’abord, contrôle ma tournée sans y toucher, et ma feuille de calcul : elle suit la tournée affichée. Si une formule est fausse, corrige-la.
+            + `D’abord, contrôle ma tournée et ma feuille de calcul, formules comprises. Je les ai verrouillées : tu ne peux rien y changer pour l’instant.
 `
             + `Ensuite, réponds-moi en recopiant ces six lignes et en les complétant, une ligne par information :
 
@@ -329,13 +451,31 @@ ${L.creneau} ${choix('creneau')}
 ${L.client} (l’heure)
 
 `
-            + `Enfin, si quelque chose ne va pas, répare la tournée directement dans l’outil.
+            + `Dès que ta réponse m’arrive, je te déverrouille l’outil : s’il y a quelque chose à reprendre, tu le feras directement dedans.
 
 Merci !
 ${INES.nom}` },
       ],
     };
   },
+  // Le passage au temps 2 : un message parti vers Inès, JUSTE OU FAUX (alerte 28 : l'arrivée ne doit
+  // rien révéler, et l'élève qui se trompe ne doit pas rester bloqué). Sa réponse ne dit pas
+  // « corrige » — ce serait avouer qu'il y a une erreur (texte validé par Tristan, 03/10/2026).
+  declencheurs: [{
+    id: 'deverrouille',
+    quand: apresMail({ a: INES.mail }),
+    phaseTournee: 2,
+    semer: (prenom) => ({ mails: [{
+      folder: 'in', ts: Date.now(), from: `${INES.nom}, ${INES.role}`, fromMail: INES.mail, to: prenom,
+      subject: 'Re : ma tournée de cet après-midi', kind: 'text',
+      text: `Merci pour ta relecture, ${prenom} !
+
+Je pars bientôt et je n’ai pas le temps de m’y remettre. `
+        + 'Ma feuille et ma tournée sont déverrouillées pour toi : s’il y a quelque chose à reprendre, '
+        + 'fais-le directement dans l’outil, menu Tournée.\n\n'
+        + 'Quand tu as fini, clique « J’ai terminé » en bas de la page.\n\nInès',
+    }] }),
+  }],
 };
 
 /* ============================ Suivi de l'exercice ============================
@@ -346,6 +486,9 @@ ${INES.nom}` },
  *   contraintes  Diagnostic : chaque contrainte dite tenue ou non, et juste (leurre compris)
  *   preuves      Diagnostic : poids chargé, arrivée chez le client à créneau, arrivée à la gare
  *   formule      Réparation : la formule fausse de la feuille d'Inès corrigée (chantier D, lot 2)
+ *
+ * Les jalons de réparation se lisent EN CONTINU, pas au clic sur « J'ai terminé » (décision de Tristan
+ * du 03/10/2026) : un élève qui a bien corrigé et oublié le bouton garde ses points.
  *   charge       Réparation : la bonne commande à quai, la charge utile respectée
  *   horaire      Réparation : le train est attrapé
  *   creneau      Réparation : le créneau est tenu
@@ -418,8 +561,8 @@ export const ETAPES = [
       if (!ouverte(e)) return { status: 'na' };
       const cases = (e.grille && e.grille.cases) || {};
       // Laissée telle qu'Inès l'a écrite, elle ne vaut rien — sans accuser l'élève qui n'a pas commencé.
-      if (cases[E32.REF.charge] == null) return { status: 'attente', detail: 'La formule du poids chargé est encore celle d’Inès.' };
-      const j = GRILLE.juger(lignesDe(e), cases)[E32.REF.charge];
+      if (cases[REF.charge] == null) return { status: 'attente', detail: 'La formule du poids chargé est encore celle d’Inès.' };
+      const j = GRILLE.juger(lignesDe(e), cases)[REF.charge];
       return { status: j === 'ok' ? 'ok' : 'ko',
         detail: j === 'ok' ? 'La formule du poids chargé est corrigée.' : 'La formule du poids chargé est encore fausse.' };
     },
