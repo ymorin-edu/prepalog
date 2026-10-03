@@ -66,11 +66,27 @@ function reglages(INV) {
   };
 }
 
+// LE PÉRIMÈTRE (04/10/2026, lot 0 de la refonte Cdiscount) : les lignes que l'élève traite.
+// Sans `perimetre` dans la déclaration, toutes. Avec `perimetre(db)`, la séance calcule sur la
+// base de l'élève les références qu'il compte : un tableau (gardé dans l'ordre des
+// emplacements), ou `null` tant que rien n'est choisi — l'écran affiche alors
+// `attentePerimetre` et ne crée pas d'état. Le relevé de la messagerie, lui, reste complet.
+export function lignesInventaire(INV, db, VM) {
+  if (typeof INV.perimetre !== 'function') return INV.lignes;
+  const p = INV.perimetre(db || {});
+  if (!Array.isArray(p)) return null;
+  const garde = new Set(p);
+  const loc = (l) => (VM && VM[l.ref] ? VM[l.ref].loc : l.ref);
+  return INV.lignes.filter((l) => garde.has(l.ref))
+    .map((l, i) => [l, i]).sort((a, b) => loc(a[0]).localeCompare(loc(b[0])) || a[1] - b[1]).map(([l]) => l);
+}
+
 // L'état vierge d'un inventaire, avec la PHOTO du stock système : c'est contre elle que les
 // écarts se calculent, même si le stock bouge ensuite (une commande préparée entre-temps).
-export function etatNeuf(INV, stockDe) {
+// `lignes` : le périmètre (toutes les lignes par défaut).
+export function etatNeuf(INV, stockDe, lignes = INV.lignes) {
   const systeme = {};
-  INV.lignes.forEach((l) => { systeme[l.ref] = stockDe(l.ref); });
+  lignes.forEach((l) => { systeme[l.ref] = stockDe(l.ref); });
   return { etape: 1, systeme, saisie: {}, ecarts: {}, decisions: {}, recomptes: {}, taux: '', valide: null, ajustements: [] };
 }
 
@@ -81,13 +97,14 @@ export function etatNeuf(INV, stockDe) {
 export function bilanInventaire(db, INV, CATALOGUE) {
   const R = reglages(INV);
   const e = db && db.inventaires && db.inventaires[INV.id];
-  const vide = { commence: false, valide: false, saisieOk: false, ecartsOk: null, tauxOk: null,
-    justes: 0, notees: INV.lignes.filter((l) => l.attendu).length, lignes: [], tauxAttendu: null };
-  if (!e) return vide;
   const VM = (CATALOGUE && CATALOGUE.VM) || {};
+  const perimetre = lignesInventaire(INV, db, VM);
+  const vide = { commence: false, valide: false, saisieOk: false, ecartsOk: null, tauxOk: null,
+    justes: 0, notees: (perimetre || []).filter((l) => l.attendu).length, lignes: [], tauxAttendu: null };
+  if (!e || !perimetre) return vide;
   let sommeAbs = 0, sommeSys = 0, justes = 0, notees = 0;
   let saisieOk = true, ecartsOk = true;
-  const lignes = INV.lignes.map((l) => {
+  const lignes = perimetre.map((l) => {
     const v = VM[l.ref];
     const systeme = e.systeme[l.ref] != null ? e.systeme[l.ref] : 0;
     const premier = entierPositif(e.saisie[l.ref]);
@@ -147,6 +164,11 @@ export function creerInventaire(INV, CATALOGUE) {
   // L'état d'affichage, hors de la base : quelle ligne a ses mouvements ouverts, quel message.
   const ui = { ouvert: null, msg: null };
   const ligneDe = (ref) => INV.lignes.find((l) => l.ref === ref);
+  // Les lignes du périmètre, relues sur la base à chaque dessin (`api.db`) ; toutes sans périmètre.
+  let LG = INV.lignes;
+  const fixer = (api) => { LG = lignesInventaire(INV, api && api.db, VM) || []; };
+  // La base que lit le bilan : celle de l'élève (le périmètre en dépend), l'état de l'écran dedans.
+  const baseDe = (e, api) => Object.assign({}, (api && api.db) || {}, { inventaires: { [INV.id]: e } });
   const inconnues = INV.lignes.filter((l) => !VM[l.ref]).map((l) => l.ref);
 
   const message = () => (ui.msg ? `<div class="avis ${ui.msg[0] === 'ok' ? 'avis-ok' : 'avis-err'}" data-inv-msg>${ui.msg[1]}</div>` : '');
@@ -157,7 +179,7 @@ export function creerInventaire(INV, CATALOGUE) {
 
   // Le compte retenu d'une ligne : le recomptage s'il y en a un, sinon le premier comptage.
   const compteDe = (e, ref) => (e.recomptes[ref] != null ? e.recomptes[ref] : entierPositif(e.saisie[ref]));
-  const lignesAvecEcart = (e) => INV.lignes.filter((l) => {
+  const lignesAvecEcart = (e) => LG.filter((l) => {
     const p = entierPositif(e.saisie[l.ref]);
     return p != null && p !== e.systeme[l.ref];
   });
@@ -171,7 +193,7 @@ export function creerInventaire(INV, CATALOGUE) {
       <p>${consigne}</p>
       <div class="ent-scroll"><table><thead><tr><th>Emplacement</th><th>Référence</th><th>Désignation</th>
         <th class="num">Stock système</th><th class="num">Compté</th></tr></thead><tbody>
-      ${INV.lignes.map((l) => { const v = VM[l.ref]; return `<tr><td class="mono">${ech(v ? v.loc : '')}</td>
+      ${LG.map((l) => { const v = VM[l.ref]; return `<tr><td class="mono">${ech(v ? v.loc : '')}</td>
         <td class="mono">${ech(l.ref)}</td><td>${ech(v ? [v.model.brand, v.model.name].filter(Boolean).join(' ') : '')}</td>
         <td class="num">${R.aveugle ? '<span class="note inv-cache">caché</span>' : e.systeme[l.ref]}</td>
         <td class="num"><input type="text" inputmode="numeric" class="inv-champ" data-inv-saisie="${ech(l.ref)}"
@@ -192,7 +214,7 @@ export function creerInventaire(INV, CATALOGUE) {
         : "L'écran a calculé les écarts. <b>Vérifiez-les</b>, puis passez au traitement."}</p>
       <div class="ent-scroll"><table><thead><tr><th>Emplacement</th><th>Référence</th><th class="num">Système</th>
         <th class="num">Compté</th><th class="num">Écart</th><th class="num">Valeur de l'écart</th></tr></thead><tbody>
-      ${INV.lignes.map((l) => {
+      ${LG.map((l) => {
         const v = VM[l.ref], c = entierPositif(e.saisie[l.ref]), ec = c - e.systeme[l.ref];
         return `<tr><td class="mono">${ech(v ? v.loc : '')}</td><td class="mono">${ech(l.ref)}</td>
           <td class="num">${e.systeme[l.ref]}</td><td class="num">${c}</td>
@@ -321,19 +343,19 @@ export function creerInventaire(INV, CATALOGUE) {
     ui.msg = null;
     const refuser = (t) => { ui.msg = ['err', t]; api.redessiner(); };
     if (n === 2 && e.etape === 1) {
-      const manque = INV.lignes.filter((l) => entierPositif(e.saisie[l.ref]) == null);
+      const manque = LG.filter((l) => entierPositif(e.saisie[l.ref]) == null);
       if (manque.length) return refuser(`Il manque ${manque.length} quantité${manque.length > 1 ? 's' : ''} (ou elle n'est pas un nombre entier) : ${manque.map((l) => ech(VM[l.ref] ? VM[l.ref].loc : l.ref)).join(', ')}.`);
       if (R.source === 'releve') {
-        const faux = INV.lignes.filter((l) => entierPositif(e.saisie[l.ref]) !== l.compte);
+        const faux = LG.filter((l) => entierPositif(e.saisie[l.ref]) !== l.compte);
         if (faux.length) return refuser(`${faux.length} quantité${faux.length > 1 ? 's ne correspondent' : ' ne correspond'} pas au relevé : relisez-le ligne par ligne (${faux.map((l) => ech(VM[l.ref] ? VM[l.ref].loc : l.ref)).join(', ')}).`);
       }
     }
     if (n === 3 && e.etape === 2 && R.ecarts === 'eleve') {
-      const vides = INV.lignes.filter((l) => lireNombre(e.ecarts[l.ref]) == null);
+      const vides = LG.filter((l) => lireNombre(e.ecarts[l.ref]) == null);
       if (vides.length) return refuser(`Il manque ${vides.length} écart${vides.length > 1 ? 's' : ''}. Une ligne sans écart s'écrit 0.`);
       // En évaluation, aucun retour : l'écart faux est gardé tel quel et compté au bilan.
       if (R.correction !== 'aucune') {
-        const faux = INV.lignes.filter((l) => lireNombre(e.ecarts[l.ref]) !== entierPositif(e.saisie[l.ref]) - e.systeme[l.ref]);
+        const faux = LG.filter((l) => lireNombre(e.ecarts[l.ref]) !== entierPositif(e.saisie[l.ref]) - e.systeme[l.ref]);
         if (faux.length) return refuser(`${faux.length} écart${faux.length > 1 ? 's sont faux' : ' est faux'}. Rappel : écart = compté − système (un manque est négatif).`);
       }
     }
@@ -362,7 +384,7 @@ export function creerInventaire(INV, CATALOGUE) {
       return api.redessiner();
     }
     if (R.ecarts === 'eleve' && R.correction !== 'aucune') {
-      const b = bilanInventaire({ inventaires: { [INV.id]: e } }, INV, CATALOGUE);
+      const b = bilanInventaire(baseDe(e, api), INV, CATALOGUE);
       if (!b.tauxOk) { ui.msg = ['err', "Le taux d'écart est faux. Rappel : somme des écarts sans leur signe ÷ somme des stocks système × 100."]; return api.redessiner(); }
     }
     const passes = [];
@@ -385,8 +407,22 @@ export function creerInventaire(INV, CATALOGUE) {
     // n'est pas validé — y compris avant la première ouverture de l'écran : sinon l'élève
     // irait noter le stock avant de commencer.
     bloqueStock: (etat) => R.aveugle && !(etat && (etat.etape >= 2 || etat.valide)),
-    etatNeuf: (stockDe) => etatNeuf(INV, stockDe),
+    etatNeuf: (stockDe, db) => etatNeuf(INV, stockDe, lignesInventaire(INV, db, VM) || []),
     releve: (mail) => releveHtml(INV, CATALOGUE, mail),
+    // Périmètre pas encore choisi : l'écran attend, sans créer d'état.
+    attente: (db) => lignesInventaire(INV, db, VM) == null,
+    attenteHtml: () => `<div class="ent-tete"><h2>${ech(INV.titre || 'Inventaire')}</h2></div>
+      <div class="avis" data-inv-attente>${ech(INV.attentePerimetre || 'En attente de la liste des références à compter.')}</div>`,
+    // Périmètre agrandi après le début (robustesse) : les lignes nouvelles prennent leur photo du
+    // moment. Rien ne bouge après la validation. Rend vrai si l'état a changé.
+    completer(e, db, stockDe) {
+      if (!e || e.valide) return false;
+      let change = false;
+      (lignesInventaire(INV, db, VM) || []).forEach((l) => {
+        if (e.systeme[l.ref] == null) { e.systeme[l.ref] = stockDe(l.ref); change = true; }
+      });
+      return change;
+    },
 
     html(e, api) {
       const tete = `<div class="ent-tete"><h2>${ech(INV.titre || 'Inventaire')}</h2>
@@ -394,13 +430,15 @@ export function creerInventaire(INV, CATALOGUE) {
       if (inconnues.length) {
         return tete + `<div class="avis avis-err">Inventaire mal déclaré : référence${inconnues.length > 1 ? 's' : ''} absente${inconnues.length > 1 ? 's' : ''} du catalogue (${inconnues.map(ech).join(', ')}).</div>`;
       }
-      const b = bilanInventaire({ inventaires: { [INV.id]: e } }, INV, CATALOGUE);
+      fixer(api);
+      const b = bilanInventaire(baseDe(e, api), INV, CATALOGUE);
       const corps = e.valide ? vueBilan(e, b)
         : e.etape === 1 ? vueSaisie(e) : e.etape === 2 ? vueEcarts(e) : e.etape === 3 ? vueTraitement(e, api) : vueValidation(e, b);
       return tete + pastilles(e.etape, !!e.valide) + corps;
     },
 
     brancher(z, e, api) {
+      fixer(api);
       // Les saisies sont rangées à chaque frappe, sans redessiner : le curseur reste en place.
       const ranger = (sel, cle, champ) => z.querySelectorAll(sel).forEach((el) => {
         const maj = () => { if (e.valide) return; e[champ][el.dataset[cle]] = el.value; api.sauver(); };

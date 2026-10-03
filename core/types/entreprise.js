@@ -1469,7 +1469,8 @@ export function creerEntreprise(U) {
       const lireInventaire = () => (VINV && db.inventaires ? db.inventaires[VINV.id] : null);
       function etatInventaire() {
         if (!db.inventaires) db.inventaires = {};
-        if (!db.inventaires[VINV.id]) { db.inventaires[VINV.id] = VINV.etatNeuf(stockDe); ctx.jeu.sauver(); }
+        if (!db.inventaires[VINV.id]) { db.inventaires[VINV.id] = VINV.etatNeuf(stockDe, db); ctx.jeu.sauver(); }
+        else if (VINV.completer(db.inventaires[VINV.id], db, stockDe)) ctx.jeu.sauver();
         return db.inventaires[VINV.id];
       }
       // L'enseignant voit toujours le stock : il prépare et corrige.
@@ -1478,7 +1479,7 @@ export function creerEntreprise(U) {
       // qu'à la console : une baisse entame les lots dans l'ordre d'entrée (la traçabilité reste
       // juste), une hausse entre sans lot.
       const apiInventaire = () => ({
-        sauver, toast,
+        sauver, toast, db,
         redessiner: dessinerVue,
         mouvements: () => db.moves,
         ajuster(sku, delta, origine) {
@@ -1486,7 +1487,8 @@ export function creerEntreprise(U) {
           else if (delta > 0) { db.stock[sku] = stockDe(sku) + delta; mouvement(sku, 'Ajustement inventaire', delta, origine); }
         },
       });
-      function vueInventaire() { return VINV.html(etatInventaire(), apiInventaire()); }
+      // Périmètre pas encore choisi par l'élève (`perimetre` de la séance) : l'écran attend.
+      function vueInventaire() { return VINV.attente(db) ? VINV.attenteHtml() : VINV.html(etatInventaire(), apiInventaire()); }
 
       /* ---------------------------------------------------------- quai de réception */
       // L'état vit dans la base de l'élève, sous l'identifiant du quai de la séance. Il est créé dès
@@ -2094,7 +2096,7 @@ export function creerEntreprise(U) {
           E.vue = 'mail'; E.dossier = 'in';
           ouvrirMail(Number(b.dataset.tourNotifOuvrir));
         }));
-        if (E.vue === 'inventaire' && VINV) VINV.brancher(z, etatInventaire(), apiInventaire());
+        if (E.vue === 'inventaire' && VINV && !VINV.attente(db)) VINV.brancher(z, etatInventaire(), apiInventaire());
         if (E.vue === 'quai' && VQUAI) VQUAI.brancher(z, etatQuai(), apiQuai());
       }
 

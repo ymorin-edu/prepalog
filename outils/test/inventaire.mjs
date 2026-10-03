@@ -39,7 +39,10 @@ const monter = (opts = {}) => pg.evaluate(async (o) => {
   const hote = document.createElement('div'); hote.id = 'invTest'; document.body.appendChild(hote);
   const U = E.univers(o.reglages || {});
   if (o.sansInventaire) delete U.inventaire;
+  // Périmètre (04/10/2026) : la séance le lit sur la base — ici `db.perim`, que le test pose.
+  if (o.perimetre) { U.inventaire.perimetre = (base) => base.perim || null; U.inventaire.attentePerimetre = 'En attente de votre liste.'; }
   const db = {};
+  if (o.perim) db.perim = o.perim;
   creerEntreprise(U).rendre(hote, {
     meta: { id: 'essai-inventaire', code: 'ESSAI', titre: 'LogiDémo — essai', portee: 'eleve', immersif: true },
     profil: { prenom: 'Lea', nom: 'Test', role: o.role || 'eleve' },
@@ -401,6 +404,62 @@ await v('Inventaire : comptage physique — saisie libre, recomptage saisi par l
 await v('Inventaire : un inventaire mal déclaré (référence hors catalogue) le dit, sans planter', async () => {
   await monter({ reglages: { lignes: [{ ref: 'INCONNUE-1', compte: 3 }] } }); await ouvrir('inventaire');
   vrai((await texte()).includes('absente du catalogue (INCONNUE-1)'), 'message attendu');
+});
+
+/* ============================================================ le périmètre (04/10/2026)
+ * Lot 0 de la refonte Cdiscount (brief ENT-2.3) : l'élève ne compte que SA liste. Valeurs à la
+ * main : périmètre RAM-A4-80 (A-01-1, 40), AGR-24-6 (A-02-1, 14), CAL-SCI (A-03-1, 8), donné
+ * dans le désordre. Écarts 0, −3, −1 → 4 ÷ 62 × 100 = 6,45 → 6,5 %.
+ */
+const P3 = ['CAL-SCI', 'RAM-A4-80', 'AGR-24-6'];
+
+await v('Inventaire : périmètre pas encore choisi — l’écran attend, sans créer d’état ni débloquer le stock', async () => {
+  await monter({ perimetre: true }); await ouvrir('inventaire');
+  vrai((await texte()).includes('En attente de votre liste.'), 'message d’attente : ' + await texte());
+  vrai(!(await pg.$(`${Z} [data-inv-saisie]`)), 'aucun champ de saisie');
+  egal(await etat(), null, 'état');
+  const b = await pg.evaluate(async () => (await import('/core/types/inventaire.js')).bilanInventaire(window.__inv.db, window.__inv.U.inventaire, window.__inv.U.CATALOGUE));
+  egal([b.commence, b.saisieOk, b.notees], [false, false, 0], 'bilan sans périmètre');
+  await ouvrir('stock');
+  vrai((await texte()).includes('comptage'), 'le stock reste bloqué');
+});
+
+await v('Inventaire : périmètre de 3 lignes — 3 lignes dans l’ordre des emplacements, photo de ces 3 seulement, 3 saisies suffisent', async () => {
+  await monter({ perimetre: true, perim: P3 }); await ouvrir('inventaire');
+  const refs = await pg.$$eval(`${Z} [data-inv-saisie]`, (l) => l.map((x) => x.dataset.invSaisie));
+  egal(refs, ['RAM-A4-80', 'AGR-24-6', 'CAL-SCI'], 'lignes à saisir');
+  egal((await etat()).systeme, { 'RAM-A4-80': 40, 'AGR-24-6': 14, 'CAL-SCI': 8 }, 'photo du système');
+  await saisirReleve({ 'RAM-A4-80': 40, 'AGR-24-6': 11, 'CAL-SCI': 7 }); await aller(2);
+  egal(await msg(), '', 'message à l’étape 1');
+  egal((await etat()).etape, 2, 'étape');
+  for (const [r, e] of [['RAM-A4-80', 0], ['AGR-24-6', -3], ['CAL-SCI', -1]]) await pg.fill(`${Z} [data-inv-ecart="${r}"]`, String(e));
+  await aller(3);
+  egal((await etat()).etape, 3, 'étape après les écarts');
+  const b = await pg.evaluate(async () => (await import('/core/types/inventaire.js')).bilanInventaire(window.__inv.db, window.__inv.U.inventaire, window.__inv.U.CATALOGUE));
+  egal([b.saisieOk, b.ecartsOk, b.lignes.length, b.notees, b.sommeAbs, b.sommeSys, b.tauxAttendu], [true, true, 3, 2, 4, 62, 6.5], 'bilan sur 3 lignes');
+});
+
+await v('Inventaire : périmètre — la validation se fait sur le taux du périmètre, et le relevé de la messagerie reste complet', async () => {
+  await decider('AGR-24-6', 'rayon'); await decider('CAL-SCI', 'regul', 'Casse'); await aller(4);
+  await pg.fill(`${Z} [data-inv-taux]`, '3,7');
+  await pg.click(`${Z} [data-inv-valider]`); await pg.waitForTimeout(80);
+  vrai(/taux d.écart est faux/.test(await msg()), 'le taux de l’allée entière doit être refusé : ' + await msg());
+  await pg.fill(`${Z} [data-inv-taux]`, '6,5');
+  await pg.click(`${Z} [data-inv-valider]`); await pg.waitForTimeout(80);
+  vrai(!!(await pg.$(`${Z} [data-inv-valide]`)), 'inventaire validé');
+  vrai((await texte()).includes('2 décisions justes sur 2'), 'correction sur le périmètre : ' + await texte());
+  await ouvrir('mail');
+  await pg.click(`${Z} .ent-mitem >> text=Relevé de comptage`); await pg.waitForTimeout(80);
+  egal((await pg.$$(`${Z} .inv-papier tr`)).length, 8, 'lignes du relevé');
+});
+
+await v('Inventaire : périmètre agrandi après le début — la ligne nouvelle s’ajoute avec sa photo du moment', async () => {
+  await monter({ perimetre: true, perim: ['RAM-A4-80'] }); await ouvrir('inventaire');
+  egal(Object.keys((await etat()).systeme), ['RAM-A4-80'], 'photo de départ');
+  await pg.evaluate(() => { window.__inv.db.perim = ['RAM-A4-80', 'CLE-USB-32']; });
+  await ouvrir('stock'); await ouvrir('inventaire');
+  egal((await etat()).systeme, { 'RAM-A4-80': 40, 'CLE-USB-32': 20 }, 'photo complétée');
+  egal(await pg.$$eval(`${Z} [data-inv-saisie]`, (l) => l.map((x) => x.dataset.invSaisie)), ['RAM-A4-80', 'CLE-USB-32'], 'lignes');
 });
 
 await v('Inventaire : aucune erreur de console sur tout le parcours', async () => {
