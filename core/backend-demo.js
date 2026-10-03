@@ -1,6 +1,8 @@
 // Backend de démonstration : tout en localStorage, aucune connexion réseau.
 // Sert au développement, aux tests automatisés et au repli si Firebase est absent.
 
+import { filtrerAmenagements, amenagements } from './amenagements.js';
+
 const P = 'prepalog:';
 const lire = (k, d) => { try { const v = localStorage.getItem(P + k); return v ? JSON.parse(v) : d; } catch (e) { return d; } };
 const ecrire = (k, v) => { try { localStorage.setItem(P + k, JSON.stringify(v)); } catch (e) {} };
@@ -180,6 +182,20 @@ export function creerBackendDemo() {
     async supprimerEleve(uid) {
       const u = users(); delete u[uid]; setUsers(u);
       return { compte: true };
+    },
+
+    // Niveau et tiers-temps d'un élève (voir core/amenagements.js). Même garde qu'en mode
+    // réel, où ce sont les règles Firestore qui la tiennent : seul un enseignant écrit.
+    async majAmenagements(uid, patch) {
+      if (!courant || courant.role !== 'prof') throw new Error('Réservé à l’enseignant.');
+      const u = users();
+      if (!u[uid] || u[uid].role !== 'eleve') throw new Error('Élève introuvable.');
+      u[uid] = { ...u[uid], ...filtrerAmenagements(patch) };
+      setUsers(u);
+    },
+    // Relus à l'ouverture d'une séance : l'enseignant a pu cocher pendant que l'élève travaillait.
+    async relireAmenagements() {
+      return amenagements(courant ? users()[courant.uid] : null);
     },
 
     // ---- travaux ----

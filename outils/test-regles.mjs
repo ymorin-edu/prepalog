@@ -149,6 +149,29 @@ await v("un élève modifie son profil sans toucher au rôle", () =>
 await v("un élève ne se promeut pas enseignant", () =>
   assertFails(fsDe('e1').doc('users/e1').update({ role: 'prof' })));
 
+// Niveau et tiers-temps (brief MOTEUR-tiers-temps, 03/10/2026) : réglés par l'enseignant
+// seul. Le profil d'e1 ne porte au départ aucun des deux champs : la règle ne doit pas
+// supposer qu'ils existent, ni pour refuser l'élève, ni pour laisser passer l'enseignant.
+await v("un élève ne s'accorde pas le tiers-temps (champ absent au départ)", () =>
+  assertFails(fsDe('e1').doc('users/e1').update({ tiersTemps: true })));
+
+await v("un élève ne se met pas au niveau confirmé", () =>
+  assertFails(fsDe('e1').doc('users/e1').update({ aisance: 'confirme' })));
+
+await v("un élève ne glisse pas le tiers-temps dans une modification permise", () =>
+  assertFails(fsDe('e1').doc('users/e1').update({ nom: 'Emma', tiersTemps: true })));
+
+await v("l'enseignant accorde le tiers-temps et le niveau confirmé", () =>
+  assertSucceeds(fsDe('prof1').doc('users/e1').update({ tiersTemps: true, aisance: 'confirme' })));
+
+await v("un élève ne retire pas non plus son tiers-temps ni ne change son niveau", async () => {
+  await assertFails(fsDe('e1').doc('users/e1').update({ tiersTemps: false }));
+  await assertFails(fsDe('e1').doc('users/e1').update({ aisance: 'standard' }));
+});
+
+await v("un élève dont le tiers-temps est posé modifie toujours le reste de son profil", () =>
+  assertSucceeds(fsDe('e1').doc('users/e1').update({ nom: 'Emma' })));
+
 // ---------- 3. lecture des profils
 await v("chacun lit son profil", () => assertSucceeds(fsDe('e1').doc('users/e1').get()));
 

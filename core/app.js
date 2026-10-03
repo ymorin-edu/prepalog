@@ -8,6 +8,7 @@ import { chargerActivites, activite, RUBRIQUES, ICONES, activitesDeRubrique, ent
 import { ouvrirJeu } from './store.js';
 import { rendreEspaceProf } from './prof.js';
 import { verrou, seancesDepuis, seancesDuParcours } from './parcours.js';
+import { amenagements } from './amenagements.js';
 
 const app = document.getElementById('app');
 let profil = null;
@@ -338,8 +339,23 @@ async function vueActivite(aid) {
     } catch (e) { /* un drapeau illisible ne doit jamais empêcher d'ouvrir la séance */ }
   }
 
+  // Niveau et tiers-temps de l'élève (core/amenagements.js), relus ici et non pris du profil
+  // chargé à la connexion : l'enseignant a pu les changer pendant que l'élève travaillait. Le
+  // profil en mémoire suit, pour qu'aucune vue ne lise une valeur périmée par `ctx.profil`.
+  let am = amenagements(profil);
+  if (profil.role === 'eleve') {
+    try { am = await B.relireAmenagements(); } catch (e) { /* relecture impossible : valeurs de la connexion */ }
+    profil.aisance = am.aisance;
+    profil.tiersTemps = am.tiersTemps;
+  }
+
   const ctx = {
     profil, groupe: groupeActif, meta: m.meta, jeu: jeuOuvert,
+    // Réglés élève par élève par l'enseignant (onglet « Comptes élèves »). `aisance` :
+    // 'standard' ou 'confirme' — une séance qui ne le lit pas reste la même pour tous.
+    // `tiersTemps` : seuils de temps × 4/3 dans une épreuve chronométrée.
+    aisance: am.aisance,
+    tiersTemps: am.tiersTemps,
     // Le niveau de la classe, pour les activités qui portent une série d'exercices de
     // difficulté inégale et n'en montrent que la part qui convient au groupe.
     niveauGroupe: objGroupe?.niveau || null,

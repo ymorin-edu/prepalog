@@ -3,6 +3,7 @@
 
 import { B } from './backend.js';
 import { ech, toast, confirmer } from './ui.js';
+import { AISANCES, amenagements } from './amenagements.js';
 import { seancesDepuis } from './parcours.js';
 import { chargerActivites, activite, entreprisesDe } from '../activites/index.js';
 import { versCSV, telecharger, ouvrirJeu } from './store.js';
@@ -313,15 +314,26 @@ export async function rendreEspaceProf(hote, ctx) {
             <span class="pousse"><button class="btn btn-s" id="btnCsvEleves">Exporter la liste</button></span>
           </div>
           ${eleves.length === 0 ? `<div class="vide">Aucun élève.</div>` : `
-          <table><thead><tr><th>Nom</th><th>Prénom</th><th>Matricule</th><th>Code</th><th></th></tr></thead><tbody>
-            ${eleves.map((e) => `<tr><td>${ech(e.nom)}</td><td>${ech(e.prenom)}</td>
+          <table><thead><tr><th>Nom</th><th>Prénom</th><th>Matricule</th><th>Code</th>
+            <th>Niveau</th><th>Tiers-temps</th><th></th></tr></thead><tbody>
+            ${eleves.map((e) => { const a = amenagements(e); return `<tr><td>${ech(e.nom)}</td><td>${ech(e.prenom)}</td>
               <td class="mono">${ech(e.matricule)}</td><td class="mono">${ech(e.code || '—')}</td>
+              <td><select data-aisance="${ech(e.uid)}" style="width:auto;min-width:8.5em" aria-label="Niveau de ${ech(e.prenom)} ${ech(e.nom)}">
+                ${AISANCES.map((x) => `<option value="${x.id}"${a.aisance === x.id ? ' selected' : ''}>${x.label}</option>`).join('')}
+              </select></td>
+              <td><label class="rangee" style="gap:6px"><input type="checkbox" data-tiers="${ech(e.uid)}"${a.tiersTemps ? ' checked' : ''}
+                aria-label="Tiers-temps de ${ech(e.prenom)} ${ech(e.nom)}"></label></td>
               <td><button class="btn btn-s" data-suppre="${ech(e.uid)}" style="color:var(--rouge)"
-                title="Supprimer définitivement cet élève">Supprimer</button></td></tr>`).join('')}
+                title="Supprimer définitivement cet élève">Supprimer</button></td></tr>`; }).join('')}
           </tbody></table>
           <p class="note">Les codes sont enregistrés avec le compte : un élève qui a perdu le sien
              le retrouve ici. Les comptes créés avant le 30/09/2026 affichent « — », leur code
-             n'ayant pas été conservé.</p>`}
+             n'ayant pas été conservé.</p>
+          <p class="note"><strong>Niveau</strong> : « Confirmé » donne des jeux de données plus
+             complets dans les séances qui le prévoient ; les autres restent identiques.
+             <strong>Tiers-temps</strong> : seuils de temps × 4/3 dans les épreuves chronométrées.
+             Le tiers-temps ne s'affiche qu'ici et chez l'élève concerné ; il n'est ni exporté
+             ni visible dans le suivi de classe. Pris en compte à la prochaine séance ouverte.</p>`}
         </section>
       </div>`;
 
@@ -341,6 +353,27 @@ export async function rendreEspaceProf(hote, ctx) {
     if (bc) bc.addEventListener('click', () => telecharger(`identifiants-${g.id}.csv`,
       versCSV(dernierLot.faits, [{ cle: 'nom', label: 'Nom' }, { cle: 'prenom', label: 'Prénom' },
         { cle: 'matricule', label: 'Matricule' }, { cle: 'code', label: 'Code' }])));
+
+    // Niveau et tiers-temps : enregistrés au changement, sans redessiner (le focus reste en place).
+    // Un refus remet la case comme elle était : jamais d'écran qui ment sur ce qui est enregistré.
+    const regler = async (champ, uid, valeur, annuler) => {
+      const el = eleves.find((x) => x.uid === uid);
+      if (!el) return;
+      try {
+        await B.majAmenagements(uid, { [champ]: valeur });
+        el[champ] = valeur;
+        toast(champ === 'tiersTemps'
+          ? `Tiers-temps ${valeur ? 'accordé à' : 'retiré à'} ${el.prenom} ${el.nom}.`
+          : `${el.prenom} ${el.nom} : niveau ${valeur === 'confirme' ? 'confirmé' : 'standard'}.`);
+      } catch (e) { annuler(); toast(e.message || 'Réglage non enregistré.'); }
+    };
+    z.querySelectorAll('[data-aisance]').forEach((s) => s.addEventListener('change', () => {
+      const avant = amenagements(eleves.find((x) => x.uid === s.dataset.aisance)).aisance;
+      regler('aisance', s.dataset.aisance, s.value, () => { s.value = avant; });
+    }));
+    z.querySelectorAll('[data-tiers]').forEach((c) => c.addEventListener('change', () => {
+      regler('tiersTemps', c.dataset.tiers, c.checked, () => { c.checked = !c.checked; });
+    }));
 
     z.querySelectorAll('[data-suppre]').forEach((b) => b.addEventListener('click', async () => {
       const el = eleves.find((x) => x.uid === b.dataset.suppre);

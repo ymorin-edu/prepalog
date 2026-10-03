@@ -59,8 +59,14 @@ service cloud.firestore {
       allow create: if request.resource.data.role == 'eleve' && estProf();
 
       // Mise à jour : l'intéressé ne peut jamais changer son propre rôle.
+      //
+      // Ni son niveau (`aisance`) ni son tiers-temps (`tiersTemps`) : c'est l'enseignant qui
+      // les règle (brief MOTEUR-tiers-temps, 03/10/2026), sinon un élève pourrait s'accorder
+      // lui-même un tiers-temps. `diff().affectedKeys()` ne suppose pas que le champ existe :
+      // un champ ajouté, modifié ou retiré compte de la même façon.
       allow update: if connecte() && (
-        (uid == moi() && request.resource.data.role == resource.data.role) ||
+        (uid == moi() && request.resource.data.role == resource.data.role
+          && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['aisance', 'tiersTemps'])) ||
         (estProf() && request.resource.data.role == resource.data.role)
       );
 

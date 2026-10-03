@@ -8,6 +8,7 @@
 // fermerJeux() coupe la connexion en sortant du module.
 
 import { CONFIG, matEmail, matMdp } from './config.js';
+import { filtrerAmenagements, amenagements } from './amenagements.js';
 
 // Le SDK est servi par le dépôt, pas par gstatic.com : voir vendor/LISEZMOI.md.
 // Un CDN bloqué par le filtrage académique empêcherait le mode réel de démarrer du tout.
@@ -160,6 +161,17 @@ export async function creerBackendFirebase() {
       return { id: gid, ...data };
     },
     async majGroupe(gid, patch) { await FS.updateDoc(dref('groupes', gid), patch); },
+
+    // Niveau et tiers-temps d'un élève (voir core/amenagements.js). Les règles Firestore
+    // refusent qu'un élève écrive ces deux champs sur son propre profil.
+    async majAmenagements(uid, patch) { await FS.updateDoc(dref('users', uid), filtrerAmenagements(patch)); },
+    // Relus à l'ouverture d'une séance (une lecture) : l'enseignant a pu cocher pendant que
+    // l'élève travaillait, et le profil n'est chargé qu'à la connexion.
+    async relireAmenagements() {
+      if (!courant) return amenagements(null);
+      const s = await FS.getDoc(dref('users', courant.uid));
+      return amenagements(s.exists() ? s.data() : null);
+    },
 
     // Suppression d'un groupe. L'ordre compte : les droits côté base temps réel viennent
     // du miroir `acces/{gid}`, donc ce nœud part EN DERNIER — l'effacer d'abord ferait
