@@ -12,6 +12,7 @@ la préparation de contenu et les supports peuvent avancer en parallèle.
 | B | Carte réelle dans ENT-3.1 | `ENT-3.1-refonte-carte.md` | **livré**, `pret: true`, trame et corrigé régénérés | gros | Opus (fait) |
 | C | Un imprévu en cours de journée (ENT-3.2) | `ENT-3.2-imprevu.md` | **livré**, validé à l’écran, ouvert aux élèves (03/10) | moyen à gros | Opus |
 | D | Feuille de calcul moins guidée + données qui changent | `ENT-3.x-feuille-moins-guidee.md` | **lots 1 et 2 livrés le 03/10** (3.2 et 3.3 recalées, jeu A, F1) ; essai à l'écran de Tristan ; puis ENT-3.4 | gros | lot 1 Opus, lot 2 Sonnet |
+| E | ENT-3.3 en deux temps : contrôler (figé), puis corriger | `ENT-3.3-deux-temps.md` | **cadré le 03/10, à lancer** (page d'essai d'abord) | moyen à gros | Opus |
 
 ## Qui touche quoi (moteur)
 
@@ -35,7 +36,8 @@ la préparation de contenu et les supports peuvent avancer en parallèle.
 2. **B** : valider à l'écran, puis `pret: true` ; régénérer trame et corrigé (peut se faire pendant A).
 3. **C** (imprévu).
 4. **D** (feuille de calcul + données) — **décidé le 03/10 : avant ENT-3.4**, en deux lots. Le lot 2 recale 3.2/3.3 **et l'imprévu**.
-5. **ENT-3.4** ensuite : son brief (daté du 02/10) est à recaler sur D (feuille sans couleurs, brouillon, colis, données neuves calées par le script).
+5. **E** (ENT-3.3 en deux temps, décidé le 03/10 après essai) : moteur `tournee.js` / `grille.js`, donc pas en même temps qu'un autre chantier moteur.
+6. **ENT-3.4** ensuite : son brief (daté du 02/10) est à recaler sur D (feuille sans couleurs, brouillon, colis, données neuves calées par le script).
 
 ## Ce qui peut se faire en même temps
 
@@ -61,6 +63,7 @@ Une phrase par chantier, aussi en tête de chaque brief. Elles disent à ccode d
 | C · imprévu ENT-3.2 | `Lis docs/briefs/COORDINATION-boost.md puis implémente le brief ENT-3.2-imprevu. Annonce la durée avant de commencer, propose-moi 2 ou 3 imprévus chiffrés avec le script de calage, et attends mon choix avant de coder.` |
 | D · lot 1 (moteur) | `Lis docs/briefs/COORDINATION-boost.md puis implémente le LOT 1 du brief ENT-3.x-feuille-moins-guidee. Annonce la durée avant de commencer. Fabrique-moi la page d'essai cliquable de la §5 avant de toucher aux séances.` |
 | D · lot 2 (3.2 / 3.3) | `Lis docs/briefs/COORDINATION-boost.md puis implémente le LOT 2 du brief ENT-3.x-feuille-moins-guidee. Annonce la durée, propose-moi 2 ou 3 jeux de valeurs chiffrés avec le script de calage (journée ET imprévu) et 2 ou 3 formules fausses pour Inès, et attends mon choix avant de coder.` |
+| E · ENT-3.3 en deux temps | `Lis docs/briefs/COORDINATION-boost.md puis implémente le brief ENT-3.3-deux-temps. Annonce la durée avant de commencer. Fabrique-moi d'abord la page d'essai cliquable (§8) et attends ma validation avant de toucher à la séance. Dis-moi quels tests tu réécris.` |
 
 ## Règles posées par Tristan (03/10/2026), valables pour tous les scénarios à venir
 
