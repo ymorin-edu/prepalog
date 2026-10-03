@@ -90,6 +90,15 @@
 // tableau, où il se lit et se corrige. C'est le geste d'Excel. Le pointage de cellule marche depuis
 // la barre comme depuis un champ ; Entrée dans la barre descend d'une cellule. En lecture seule, la
 // barre se lit sans se modifier. La cellule choisie est gardée en mémoire le temps de la page.
+// Pour un GUIDAGE (ENT-3.1, décisions de Tristan du 03/10/2026) :
+//   · après « Vérifier », la cellule juste passe en vert plein avec « ✓ », la fausse en texte rouge
+//     avec « ✗ » ; sous la barre, une ligne dit pourquoi pour la cellule choisie (« écrivez une
+//     formule », « formule mal écrite »…) ;
+//   · l'AIDE d'une cellule (`aide` de la cellule, sinon `note` de sa ligne) s'affiche sous la barre
+//     quand on la choisit, au lieu d'être écrite sous chaque ligne ;
+//   · une cellule peut porter son TYPE (`type: 'etape' | 'resultat' | 'contrainte'`) : seule elle est
+//     teintée, pas toute la ligne — en colonnes, une ligne porte deux blocs. Une étiquette se teinte
+//     aussi, écrite `{ valeur: 'Étape 1 · …', type: 'etape' }`.
 //
 // Les LIGNES RÉSERVÉES (le tableau « Tournée » occupe toujours huit lignes, vides au-delà du
 // nombre d'arrêts) ne demandent rien au moteur : c'est le contenu qui engendre ses lignes, il en
@@ -142,6 +151,30 @@ export function creerGrille(G) {
     lignes.forEach((L, i) => COLS.forEach((col) => { if (adresse(col, i) === ref) x = L[col]; }));
     return x;
   };
+  // L'aide d'une cellule à remplir : la sienne, sinon la note de sa ligne.
+  const aideDe = (lignes, ref) => {
+    let x = null;
+    lignes.forEach((L, i) => COLS.forEach((col) => {
+      const v = L[col];
+      if (adresse(col, i) === ref && v && typeof v === 'object' && v.saisie) x = v.aide || L.note || null;
+    }));
+    return x;
+  };
+  const MOT_VERDICT = { ok: '✓ Juste.', pasFormule: '✗ Un nombre tapé à la main : écrivez une formule, elle commence par « = ».',
+    vide: 'À remplir.', attente: 'Remplissez d’abord les données dont elle dépend.', erreur: '✗ Formule mal écrite.',
+    valeur: '✗ À revoir.' };
+  let sansDernier = false;     // `sansCorrection` du dernier dessin (copie rendue) : aucun verdict
+  // La ligne sous la barre : le verdict de la cellule choisie, puis son aide.
+  const infoDe = (lignes, juge, ref) => {
+    if (!ref) return '';
+    const verdict = sansDernier ? null : (juge || {})[ref];
+    const aide = aideDe(lignes, ref);
+    return [verdict ? `<span class="gr-info-verdict${verdict === 'ok' ? ' juste' : (verdict === 'vide' || verdict === 'attente' ? '' : ' faux')}">${
+      ech(MOT_VERDICT[verdict] || MOT_VERDICT.valeur)}</span>` : '',
+    aide ? `<span class="gr-info-aide"><b>Aide</b> · ${ech(aide)}</span>` : ''].filter(Boolean).join(' ');
+  };
+  // La teinte d'une cellule qui déclare son type (pas sur une feuille sans couleurs).
+  const teinte = (v) => (!SOBRE && v && typeof v === 'object' && v.type ? ` gr-c-${v.type}` : '');
   const barreDe = (lignes, cases, ref) => {
     if (!ref) return { texte: '', editable: false, v: null };
     const v = definitionDe(lignes, ref);
@@ -269,6 +302,7 @@ export function creerGrille(G) {
       // `sansCorrection` (évaluation en copie rendue) : aucun verdict, aucun bouton « Vérifier ».
       // Le résultat de chaque formule reste affiché à côté : c'est le tableur, pas la correction.
       const SANS = !!opts.sansCorrection;
+      sansDernier = SANS;
       const LS = !!opts.lectureSeule;
       const juge = SANS ? {} : (etat.juge || {});
       const aJuge = Object.keys(juge).length > 0;
@@ -288,16 +322,17 @@ export function creerGrille(G) {
           // à la frappe comme un résultat (`data-gr-res`), sans redessin.
           if (v && typeof v === 'object' && v.copie) {
             const dec = v.decimales == null ? DEC : v.decimales;
-            return `<td class="gr-fixe gr-copie gr-nb mono${TAB && selection === a ? ' gr-sel' : ''}" data-ref="${ech(a)}"${TAB ? ` data-gr-cel="${ech(a)}" tabindex="0"` : ''}
+            return `<td class="gr-fixe gr-copie gr-nb mono${teinte(v)}${TAB && selection === a ? ' gr-sel' : ''}" data-ref="${ech(a)}"${TAB ? ` data-gr-cel="${ech(a)}" tabindex="0"` : ''}
               title="Recopié de ${ech(String(v.copie).toUpperCase())}"><span data-gr-res="${ech(a)}"
               data-fmt="${ech(v.format || '')}" data-dec="${ech(String(dec))}">${ech(
               afficher(a, r, dec, v.format || null))}</span></td>`;
           }
           if (v && typeof v === 'object' && v.saisie && TAB) {
-            const verdict = juge[a];
-            const cl = !aJuge || !verdict ? '' : (verdict === 'ok' ? ' gr-juste' : ' gr-faux');
-            return `<td class="gr-saisie${selection === a ? ' gr-sel' : ''}" data-ref="${ech(a)}" data-gr-cel="${ech(a)}" tabindex="0"
-              aria-label="Cellule ${ech(a)}${v.libelle ? ', ' + ech(v.libelle) : ''}"><b class="gr-res mono${cl}" data-gr-res="${ech(a)}"
+            const verdict = aJuge ? juge[a] : null;
+            const vu = !verdict || verdict === 'vide' || verdict === 'attente' ? '' : (verdict === 'ok' ? 'juste' : 'faux');
+            return `<td class="gr-saisie${teinte(v)}${vu ? ' ' + vu : ''}${selection === a ? ' gr-sel' : ''}" data-ref="${ech(a)}" data-gr-cel="${ech(a)}" tabindex="0"
+              aria-label="Cellule ${ech(a)}${v.libelle ? ', ' + ech(v.libelle) : ''}${vu === 'juste' ? ', juste' : (vu ? ', à revoir' : '')}">${
+              vu ? `<span class="gr-marque" aria-hidden="true">${vu === 'juste' ? '✓' : '✗'}</span>` : ''}<b class="gr-res mono" data-gr-res="${ech(a)}"
               data-fmt="${ech(v.format || '')}" data-dec="${ech(String(v.decimales == null ? DEC : v.decimales))}">${ech(
               afficher(a, r, v.decimales == null ? DEC : v.decimales, v.format || null))}</b></td>`;
           }
@@ -351,10 +386,10 @@ export function creerGrille(G) {
             note = `<button type="button" class="gr-aide-btn" data-gr-aide="${i}" aria-expanded="${ouvert}"
                 aria-controls="${id}" aria-label="Aide pour « ${ech(txt)} »" title="Aide">?</button>
               <span class="gr-expl gr-aide-txt" id="${id}"${ouvert ? '' : ' hidden'}>${ech(aideLigne)}</span>`;
-          } else if (col === COLS[0] && L.note && !AIDES_BOUTON) {
+          } else if (col === COLS[0] && L.note && !AIDES_BOUTON && !TAB) {
             note = `<span class="gr-expl">${ech(L.note)}</span>`;
           }
-          return `<td class="gr-fixe${nb ? ' gr-nb mono' : ''}${TAB && selection === a ? ' gr-sel' : ''}" data-ref="${ech(a)}"${
+          return `<td class="gr-fixe${nb ? ' gr-nb mono' : ''}${teinte(v)}${TAB && selection === a ? ' gr-sel' : ''}" data-ref="${ech(a)}"${
             TAB ? ` data-gr-cel="${ech(a)}" tabindex="0"` : ''}>${ech(txt)}${note}</td>`;
         }).join('');
         // Sans couleurs, le TYPE de ligne ne se dessine plus : étape, résultat et contrainte se
@@ -364,7 +399,7 @@ export function creerGrille(G) {
       }).join('');
 
       // Avec les aides pliées, la liste du bas disparaît aussi : elle redonnerait ce que le « ? » cache.
-      const aides = AIDES_BOUTON ? [] : aRemplir(lignes).filter((c) => c.aide);
+      const aides = AIDES_BOUTON || TAB ? [] : aRemplir(lignes).filter((c) => c.aide);
       const bilan = !aJuge ? '' : (() => {
         const vals = Object.values(juge);
         if (vals.every((x) => x === 'ok')) {
@@ -382,7 +417,8 @@ export function creerGrille(G) {
       })();
 
       // La légende des surbrillances : seulement celles que la feuille utilise.
-      const types = new Set(SOBRE ? [] : lignes.map((L) => L.type).filter(Boolean));
+      const types = new Set(SOBRE ? [] : [...lignes.map((L) => L.type),
+        ...lignes.flatMap((L) => COLS.map((c) => L[c] && typeof L[c] === 'object' ? L[c].type : null))].filter(Boolean));
       const legende = !types.size ? '' : `<ul class="gr-legende">${[
         ['etape', 'Étape du calcul'],
         ['resultat', 'Résultat à comparer à la contrainte'],
@@ -432,7 +468,8 @@ export function creerGrille(G) {
             ${LS ? '' : `<button type="button" class="gr-origine" data-gr-origine="${ech(selection || '')}"
               title="${ech(LIBELLE_ORIGINE)}" aria-label="${ech(LIBELLE_ORIGINE)}"${
               edit && modifiee(cases, selection, c.v) ? '' : ' hidden'}>↺</button>`}
-          </div>`;
+          </div>
+          <div class="gr-barre-info" data-gr-barre-info aria-live="polite">${infoDe(lignes, juge, selection)}</div>`;
         })()}
         <div class="gr-feuilles${BR ? ' gr-avec-brouillon' : ''}">
           <div class="ent-scroll"><table class="gr-table">
@@ -483,6 +520,8 @@ export function creerGrille(G) {
         if (lbl) lbl.textContent = ref;
         const orig = z.querySelector('.gr-barre [data-gr-origine]');
         if (orig) { orig.dataset.grOrigine = ref; orig.hidden = !(edit && modifiee(etat.cases, ref, c.v)); }
+        const info = z.querySelector('[data-gr-barre-info]');
+        if (info) info.innerHTML = infoDe(api.lignes(), etat.juge, ref);
         if (focus && edit) {
           barre.focus();
           try { barre.setSelectionRange(barre.value.length, barre.value.length); } catch (e) { /* champ détaché */ }

@@ -149,26 +149,29 @@ export const TOURNEE = {
   // feuille de calcul. Tristan, le 05/10 : *« les contraintes de droite descendent dans la
   // partie tableur »* — l'élève calcule à gauche, compare à droite.
   contraintesDansGrille: true,
+  // ── La feuille EN COLONNES, comme un tableur (chantier F, 03/10/2026) ──────────────────────
+  // Tristan, après ENT-3.3 : la feuille « trop grande, pas ergonomique », « plus de colonnes ».
+  // À gauche les arrêts de l'élève, dans SON ordre et autant de lignes que d'arrêts — la plage se
+  // lit sur la feuille qu'on a sous les yeux : avec six arrêts, B2 à B7 et le total en B8 —, puis
+  // le poids total et la charge utile. À droite le calcul du temps, toujours aux mêmes adresses
+  // (E2 à E11), en TROIS ÉTAPES (jaunes) puis un résultat (violet), dans l'ordre où on le ferait à
+  // la main (demande de Tristan du 05/10) : distance ÷ vitesse en heures, × 60 en minutes, le temps
+  // aux arrêts, puis départ + route + arrêts = l'arrivée à la gare, qu'on compare au train.
+  //
+  // Le résultat s'affiche dans la cellule ; on la clique et on écrit dans la barre de formule.
+  // Choix de Tristan pour ce GUIDAGE : les couleurs restent, case par case ; l'aide de la cellule
+  // s'affiche sous la barre quand on la choisit ; après « Vérifier », la cellule juste passe en vert
+  // avec « ✓ », la fausse en rouge avec « ✗ », et la barre dit pourquoi. La colonne des contraintes
+  // reste à droite. Les heures comptent en minutes depuis minuit (14 h 00 = 840, `core/formules.js`).
   grille: {
     titre: 'Feuille de calcul du vélo-cargo',
-    consigne: 'Les cellules colorées sont à remplir, et il faut y écrire une FORMULE — elle '
-      + 'commence par « = ». Le résultat s’affiche à droite de chaque case au fur et à mesure. '
-      + 'En jaune, les étapes du calcul ; en violet, les deux résultats à comparer aux '
-      + 'contraintes. L’heure de départ, elle, se tape simplement (' + hhmm0(VELO.depart) + '). Si vous changez votre '
-      + 'tournée, les données changent et vos formules se recalculent toutes seules.',
-    colonnes: ['A', 'B'],
+    consigne: 'Cliquez une cellule colorée, puis écrivez dans la barre au-dessus du tableau une FORMULE : elle '
+      + 'commence par « = ». L’aide de la cellule s’affiche sous la barre. En jaune, les étapes du calcul ; '
+      + 'en violet, les deux résultats à comparer aux contraintes. L’heure de départ, elle, se tape simplement ('
+      + hhmm0(VELO.depart) + '). Si vous changez votre tournée, vos formules se recalculent toutes seules.',
+    colonnes: ['A', 'B', 'C', 'D', 'E'],
     decimales: 1,
-    // Engendrée depuis le parcours que l'élève vient de cliquer : les lignes des arrêts sont
-    // les SIENNES, dans SON ordre. Avec six arrêts chargés, les poids occupent B2 à B7 et le
-    // total tombe en B8 — mais s'il en charge cinq, tout remonte d'une ligne. C'est voulu :
-    // une plage se lit sur la grille qu'on a sous les yeux, pas apprise par cœur.
-    //
-    // Le temps se calcule en TROIS ÉTAPES (jaunes) puis un résultat (violet), dans l'ordre où
-    // on le ferait à la main. Demande de Tristan, le 05/10 : d'abord distance ÷ vitesse, qui
-    // donne des HEURES ; puis la conversion en minutes ; puis le temps aux arrêts ; enfin
-    // l'heure de départ + le temps de route (en minutes) + le temps aux arrêts = l'heure
-    // d'arrivée à la gare, qu'on compare au train. Les heures sont comptées en minutes depuis
-    // minuit (13 h 00 = 780) : voir `heureFr` dans `core/formules.js`.
+    affichage: 'tableur',
     lignes: (b) => {
       const n = b.retenus.length;
       // La distance est ARRONDIE au dixième comme elle est affichée, et les valeurs attendues
@@ -178,40 +181,41 @@ export const TOURNEE = {
       const heures = km / VELO.vitesse;
       const route = heures * 60;
       const service = n * VELO.service;
-      return [
-        { A: 'Arrêt', B: 'Poids (kg)', entete: true },
+      const lib = (valeur, type) => ({ valeur, type });
+      const gauche = [
         ...b.retenus.map((p) => ({ A: p.nom, B: p.kg })),
-        { A: 'Poids total chargé (kg)', type: 'resultat',
-          note: 'Additionnez les poids de vos arrêts avec SOMME.',
-          B: { saisie: true, formule: true, attendu: b.cumuls.charge, libelle: 'poids total' } },
-        { A: 'Charge utile maximale (kg)', type: 'contrainte', B: VELO.chargeUtile },
-        {},
-        { A: 'Distance du parcours (km)', B: km },
-        { A: 'Vitesse en ville (km/h)', B: VELO.vitesse },
-        { A: 'Étape 1 · Temps de route (heures)', type: 'etape',
-          note: 'Distance (km) ÷ vitesse (km/h) = temps (h). Exemple : 6 km à 12 km/h → 6 ÷ 12 = 0,5 h.',
-          B: { saisie: true, formule: true, attendu: heures, tolerance: 0.01, decimales: 2,
-               libelle: 'temps de route en heures' } },
-        { A: 'Étape 2 · Temps de route (min)', type: 'etape',
-          note: '1 heure = 60 minutes : on multiplie les heures par 60. Exemple : 0,5 h × 60 = 30 min.',
-          B: { saisie: true, formule: true, attendu: route, tolerance: 0.5,
-               libelle: 'temps de route en minutes' } },
-        { A: 'Nombre d’arrêts', B: n },
-        { A: 'Temps par arrêt (min)', B: VELO.service },
-        { A: 'Étape 3 · Temps aux arrêts (min)', type: 'etape',
-          note: 'Nombre d’arrêts × temps par arrêt.',
-          B: { saisie: true, formule: true, attendu: service, libelle: 'temps aux arrêts' } },
-        { A: 'Heure de départ',
-          note: `À taper sous la forme ${hhmm0(VELO.depart)} (pas de formule ici).`,
-          B: { saisie: true, formule: false, attendu: VELO.depart, format: 'heure',
-               placeholder: `ex. ${hhmm0(VELO.depart)}`, libelle: 'heure de départ' } },
-        { A: 'Heure d’arrivée à la gare', type: 'resultat',
-          note: 'Heure de départ + temps de route (min) + temps aux arrêts (min).',
-          B: { saisie: true, formule: true, attendu: VELO.depart + route + service, tolerance: 0.5,
-               format: 'heure', libelle: 'heure d’arrivée' } },
-        { A: 'Départ du train (contrainte)', type: 'contrainte',
-          B: { valeur: VELO.train, format: 'heure' } },
+        { A: lib('Poids total chargé (kg)', 'resultat'),
+          B: { saisie: true, formule: true, attendu: b.cumuls.charge, libelle: 'poids total', type: 'resultat',
+            aide: 'Additionnez les poids de vos arrêts avec SOMME : =SOMME(première cellule:dernière cellule).' } },
+        { A: lib('Charge utile maximale (kg)', 'contrainte'), B: { valeur: VELO.chargeUtile, type: 'contrainte' } },
       ];
+      const droite = [
+        { D: 'Distance du parcours (km)', E: km },
+        { D: 'Vitesse en ville (km/h)', E: VELO.vitesse },
+        { D: lib('Étape 1 · Temps de route (heures)', 'etape'),
+          E: { saisie: true, formule: true, attendu: heures, tolerance: 0.01, decimales: 2, type: 'etape',
+            libelle: 'temps de route en heures',
+            aide: 'Distance (km) ÷ vitesse (km/h) = temps (h). Exemple : 6 km à 12 km/h → 6 ÷ 12 = 0,5 h.' } },
+        { D: lib('Étape 2 · Temps de route (min)', 'etape'),
+          E: { saisie: true, formule: true, attendu: route, tolerance: 0.5, type: 'etape', libelle: 'temps de route en minutes',
+            aide: '1 heure = 60 minutes : on multiplie les heures par 60. Exemple : 0,5 h × 60 = 30 min.' } },
+        { D: 'Nombre d’arrêts', E: n },
+        { D: 'Temps par arrêt (min)', E: VELO.service },
+        { D: lib('Étape 3 · Temps aux arrêts (min)', 'etape'),
+          E: { saisie: true, formule: true, attendu: service, type: 'etape', libelle: 'temps aux arrêts',
+            aide: 'Nombre d’arrêts × temps par arrêt.' } },
+        { D: 'Heure de départ',
+          E: { saisie: true, formule: false, attendu: VELO.depart, format: 'heure', libelle: 'heure de départ',
+            aide: `À taper sous la forme ${hhmm0(VELO.depart)} (pas de formule ici).` } },
+        { D: lib('Heure d’arrivée à la gare', 'resultat'),
+          E: { saisie: true, formule: true, attendu: VELO.depart + route + service, tolerance: 0.5, format: 'heure',
+            type: 'resultat', libelle: 'heure d’arrivée',
+            aide: 'Heure de départ + temps de route (min) + temps aux arrêts (min).' } },
+        { D: lib('Départ du train (contrainte)', 'contrainte'), E: { valeur: VELO.train, format: 'heure', type: 'contrainte' } },
+      ];
+      const tete = { A: 'Arrêt', B: 'Poids (kg)', C: '', D: 'Calcul du temps', E: '', entete: true };
+      return [tete, ...Array.from({ length: Math.max(gauche.length, droite.length) },
+        (_, i) => Object.assign({ C: '' }, gauche[i] || { A: '', B: '' }, droite[i] || { D: '', E: '' }))];
     },
   },
   mesures: [

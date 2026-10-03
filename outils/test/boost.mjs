@@ -114,13 +114,16 @@ const choisirQuartiersBo = async (z, sauf = []) => {
 };
 // Remplit la feuille de calcul d'une tournée à six arrêts et la fait vérifier : les six
 // formules attendues d'un élève (voir le cas « les formules justes sont acceptées »).
+// Depuis le chantier F (03/10/2026), la feuille d'ENT-3.1 est EN COLONNES et s'affiche comme un
+// tableur : on choisit la cellule (clic), on écrit dans la barre de formule. La tournée et le poids
+// total à gauche (B), le calcul du temps à droite, toujours en E2 à E11.
+const barreBo = () => `${zBo} [data-gr-barre]`;
+const choisirBo = (ref) => pageBo.$eval(`${zBo} [data-gr-cel="${ref}"]`, (td) => td.click());
+const taperBo = async (ref, texte) => { await choisirBo(ref); await pageBo.fill(barreBo(), texte); await pageBo.waitForTimeout(40); };
+const casesBo = () => pageBo.evaluate(() => window.__bo.db.transport['boost-ent31'].tournee.grille.cases);
+const F31 = { B8: '=SOMME(B2:B7)', E4: '=E2/E3', E5: '=E4*60', E8: '=E6*E7', E9: '14:00', E10: '=E9+E5+E8' };
 const remplirFeuilleBo = async () => {
-  const formules = { B8: '=SOMME(B2:B7)', B13: '=B11/B12', B14: '=B13*60', B17: '=B15*B16',
-    B18: '14:00', B19: '=B18+B14+B17' };
-  for (const [ref, f] of Object.entries(formules)) {
-    await pageBo.fill(`${zBo} [data-gr="${ref}"]`, f);
-    await pageBo.waitForTimeout(40);
-  }
+  for (const [ref, f] of Object.entries(F31)) await taperBo(ref, f);
   await pageBo.click(`${zBo} [data-gr-verifier]`);
   await pageBo.waitForTimeout(200);
 };
@@ -723,7 +726,9 @@ await v('ENT-3.1 : la feuille de calcul est engendrée depuis la tournée de l�
     ligne: i + 1,
     a: tr.children[1] ? tr.children[1].textContent.trim() : '',
     b: tr.children[2] ? tr.children[2].textContent.trim() : '',
-    saisie: !!tr.querySelector('[data-gr]'),
+    d: tr.children[4] ? tr.children[4].textContent.trim() : '',
+    e: tr.children[5] ? tr.children[5].textContent.trim() : '',
+    saisie: !!tr.querySelector('td.gr-saisie[data-ref^="B"]'),
   })));
   // Les six arrêts dans l'ordre de l'élève, lignes 2 à 7, puis le total à remplir en ligne 8.
   const noms = g.slice(1, 7).map((x) => x.a).join('|');
@@ -732,14 +737,14 @@ await v('ENT-3.1 : la feuille de calcul est engendrée depuis la tournée de l�
   }
   const poids = g.slice(1, 7).map((x) => x.b).join('|');
   if (poids !== '42|27|24|31|36|19') throw new Error('poids ligne par ligne : ' + poids);
-  const refs = await pageBo.$$eval(`${zBo} [data-gr]`, (e) => e.map((x) => x.dataset.gr).join(','));
-  if (refs !== 'B8,B13,B14,B17,B18,B19') throw new Error('cellules à remplir : ' + refs);
+  const refs = await pageBo.$$eval(`${zBo} td.gr-saisie`, (e) => e.map((x) => x.dataset.ref).sort().join(','));
+  if (refs !== 'B8,E10,E4,E5,E8,E9') throw new Error('cellules à remplir : ' + refs);
   if (!g[7].saisie) throw new Error('la ligne 8 n’est pas la cellule du poids total');
 
   // Et la feuille donne les DONNÉES du calcul — distance, vitesse, nombre d'arrêts, temps par
   // arrêt — sans jamais donner les résultats : ce sont les six cellules à remplir (le poids,
   // les trois étapes du temps, l'heure de départ et l'heure d'arrivée).
-  const donnees = g.map((x) => `${x.a}=${x.b}`).join(' ; ');
+  const donnees = g.map((x) => `${x.d}=${x.e}`).join(' ; ');
   if (!/Distance du parcours \(km\)=11,9/.test(donnees)) throw new Error('distance : ' + donnees);
   if (!/Vitesse en ville \(km\/h\)=12/.test(donnees)) throw new Error('vitesse : ' + donnees);
   if (!/Nombre d’arrêts=6/.test(donnees)) throw new Error('nombre d’arrêts : ' + donnees);
@@ -750,22 +755,18 @@ await v('ENT-3.1 : les formules justes sont acceptées, et le résultat s’affi
   // Les formules qu'on attend d'un élève, et leurs résultats écrits ici à la main : 179 kg,
   // 0,99 h de route (11,9 km ÷ 12 km/h), 59,5 min (× 60), 36 min d'arrêts (6 × 6), un départ
   // à 14 h 00, et l'arrivée à la gare : 840 + 59,5 + 36 = 935,5 min, soit 15 h 36.
-  const formules = { B8: '=SOMME(B2:B7)', B13: '=B11/B12', B14: '=B13*60', B17: '=B15*B16',
-    B18: '14:00', B19: '=B18+B14+B17' };
-  for (const [ref, f] of Object.entries(formules)) {
-    await pageBo.fill(`${zBo} [data-gr="${ref}"]`, f);
-    await pageBo.waitForTimeout(40);
-  }
-  // Le résultat s'affiche à côté de la formule, en direct, SANS avoir à valider : c'est ce qui
+  for (const [ref, f] of Object.entries(F31)) await taperBo(ref, f);
+  // Le résultat s'affiche dans la cellule, en direct, SANS avoir à valider : c'est ce qui
   // permet à l'élève de voir ce que son calcul produit pendant qu'il l'écrit.
-  const res = await pageBo.$$eval(`${zBo} [data-gr-res]`, (e) => e.map((x) => x.textContent.trim()).join('|'));
+  const res = await pageBo.evaluate((z) => ['B8', 'E4', 'E5', 'E8', 'E9', 'E10']
+    .map((r) => document.querySelector(`${z} [data-gr-res="${r}"]`).textContent.trim()).join('|'), zBo);
   if (res !== '179|0,99|59,5|36|14 h 00|15 h 36') throw new Error('résultats affichés : ' + res);
 
   await pageBo.click(`${zBo} [data-gr-verifier]`);
   await pageBo.waitForTimeout(200);
   const t = await texteBo();
   if (!/Toutes les formules sont justes/.test(t)) throw new Error('les formules ne sont pas acceptées : ' + t.slice(-400));
-  const justes = await pageBo.$$eval(`${zBo} .gr-saisie input.juste`, (e) => e.length);
+  const justes = await pageBo.$$eval(`${zBo} td.gr-saisie.juste`, (e) => e.length);
   if (justes !== 6) throw new Error(justes + ' cellule(s) juste(s) au lieu de 6');
   // L'état vit dans la base de l'élève, cloisonné dans celui de la tournée : il retrouvera ses
   // formules la semaine suivante.
@@ -777,7 +778,7 @@ await v('ENT-3.1 : un nombre tapé à la main est refusé, même quand il est ju
   // Le cœur du chantier. Un élève qui calcule de tête et tape « 179 » a trouvé le bon nombre
   // sans faire le travail demandé — et c'est le travail demandé qui est la compétence. Le
   // message doit le lui dire autrement que « faux », parce qu'il n'a pas faux.
-  await pageBo.fill(`${zBo} [data-gr="B8"]`, '179');
+  await taperBo('B8', '179');
   await pageBo.click(`${zBo} [data-gr-verifier]`);
   await pageBo.waitForTimeout(200);
   let t = await texteBo();
@@ -789,7 +790,7 @@ await v('ENT-3.1 : un nombre tapé à la main est refusé, même quand il est ju
 
   // Une formule juste mais qui ne tombe pas sur la bonne valeur, c'est « à revoir », pas la
   // même chose : les deux verdicts ne doivent pas se confondre.
-  await pageBo.fill(`${zBo} [data-gr="B8"]`, '=SOMME(B2:B6)');
+  await taperBo('B8', '=SOMME(B2:B6)');
   await pageBo.click(`${zBo} [data-gr-verifier]`);
   await pageBo.waitForTimeout(200);
   t = await texteBo();
@@ -797,13 +798,13 @@ await v('ENT-3.1 : un nombre tapé à la main est refusé, même quand il est ju
   if (!/à revoir/.test(t)) throw new Error('une plage trop courte est acceptée : ' + t.slice(-400));
 
   // Et une formule mal écrite est signalée comme telle, pas comme un résultat faux.
-  await pageBo.fill(`${zBo} [data-gr="B8"]`, '=SOMM(B2:B7)');
+  await taperBo('B8', '=SOMM(B2:B7)');
   await pageBo.click(`${zBo} [data-gr-verifier]`);
   await pageBo.waitForTimeout(200);
   t = await texteBo();
-  if (!/formule mal écrite/.test(t)) throw new Error('une fonction inconnue n’est pas signalée : ' + t.slice(-400));
+  if (!/formule mal écrite/i.test(t)) throw new Error('une fonction inconnue n’est pas signalée : ' + t.slice(-400));
 
-  await pageBo.fill(`${zBo} [data-gr="B8"]`, '=SOMME(B2:B7)');
+  await taperBo('B8', '=SOMME(B2:B7)');
   await pageBo.click(`${zBo} [data-gr-verifier]`);
   await pageBo.waitForTimeout(200);
   if ((await jalonsBo()).formules !== 'ok') throw new Error('jalon formules avec toutes les formules justes : ' + (await jalonsBo()).formules);
@@ -814,7 +815,8 @@ await v('feuille de calcul : désigner une cellule à la souris écrit sa réfé
   // cellules »*. C'est le geste d'Excel, et c'est comme ça qu'on apprend ce qu'est une plage :
   // on la montre, on ne l'épelle pas. Trois gestes, plus deux règles qui disent QUAND ils
   // s'arment — ces deux-là sont sorties en pilotant l'écran à la souris, pas d'une relecture.
-  const champ = `${zBo} [data-gr="B8"]`;
+  // Depuis le chantier F, on écrit dans la BARRE DE FORMULE, la cellule B8 choisie.
+  const champ = barreBo();
   const val = () => pageBo.inputValue(champ);
   // Le message flottant du test précédent reste 2,6 s en bas de l'écran, pile là où tombent les
   // cellules de la feuille : un clic de souris brut atterrissait DESSUS et ne faisait rien. On
@@ -836,6 +838,7 @@ await v('feuille de calcul : désigner une cellule à la souris écrit sa réfé
     await pageBo.waitForTimeout(90);
   };
   const ouvrirFormule = async (texte) => {
+    await choisirBo('B8');
     await pageBo.fill(champ, texte);
     await pageBo.click(champ);
     await pageBo.keyboard.press('End');
@@ -881,6 +884,7 @@ await v('feuille de calcul : désigner une cellule à la souris écrit sa réfé
 
   // ── La référence s'insère AU CURSEUR, pas à la fin : l'élève qui reprend le début de sa
   // formule ne doit pas voir sa cellule atterrir tout au bout.
+  await choisirBo('B8');
   await pageBo.fill(champ, '=+100');
   await pageBo.click(champ);
   await pageBo.evaluate((sel) => {
@@ -891,7 +895,7 @@ await v('feuille de calcul : désigner une cellule à la souris écrit sa réfé
   await cliquer('B3');
   if (await val() !== '=B3+100') throw new Error('insertion ailleurs qu’au curseur : ' + await val());
 
-  await pageBo.fill(champ, '=SOMME(B2:B7)');
+  await taperBo('B8', '=SOMME(B2:B7)');
   await pageBo.waitForTimeout(80);
 });
 
@@ -899,7 +903,9 @@ await v('feuille de calcul : le pointage se tait quand la formule n’attend pas
   // Les deux pièges d'une cellule cliquable, trouvés en pilotant la souris. Sans ces deux
   // règles, l'élève récolte des références dont il n'a rien demandé et ne comprend pas d'où
   // elles sortent — ce qui est pire que l'absence du geste.
-  const champ = `${zBo} [data-gr="B8"]`;
+  // Depuis le chantier F : la barre de formule, sur la cellule B8. Hors formule, cliquer une autre
+  // cellule la CHOISIT (comme Excel) ; ce qui compte, c'est que B8 n'ait rien récolté.
+  const champ = barreBo();
   await pageBo.evaluate(() => { const t = document.getElementById('toast'); if (t) t.remove(); });
   const centre = async (ref) => {
     const el = pageBo.locator(`${zBo} .gr-table [data-ref="${ref}"]`);
@@ -908,28 +914,26 @@ await v('feuille de calcul : le pointage se tait quand la formule n’attend pas
     return { x: b.x + b.width / 2, y: b.y + b.height / 2 };
   };
 
-  // 1. Hors formule, une cellule cliquée reste une cellule cliquée.
-  await pageBo.fill(champ, '179');
+  // 1. Hors formule, une cellule cliquée reste une cellule cliquée : elle devient la cellule choisie.
+  await taperBo('B8', '179');
   await pageBo.click(champ);
   const p4 = await centre('B4');
   await pageBo.mouse.click(p4.x, p4.y);
   await pageBo.waitForTimeout(100);
-  if (await pageBo.inputValue(champ) !== '179') {
-    throw new Error('un clic insère une référence hors formule : ' + await pageBo.inputValue(champ));
-  }
+  if ((await casesBo()).B8 !== '179') throw new Error('un clic insère une référence hors formule : ' + (await casesBo()).B8);
+  if ((await pageBo.textContent(`${zBo} [data-gr-barre-ref]`)).trim() !== 'B4') throw new Error('la cellule cliquée n’est pas choisie');
 
   // 2. Sur une formule TERMINÉE, le clic ne vient pas la polluer : l'élève qui a fini et qui
   //    clique la cellule suivante veut y aller, pas y faire référence.
-  await pageBo.fill(champ, '=SOMME(B2:B7)');
+  await taperBo('B8', '=SOMME(B2:B7)');
   await pageBo.click(champ);
   await pageBo.keyboard.press('End');
   await pageBo.mouse.click(p4.x, p4.y);
   await pageBo.waitForTimeout(100);
-  if (await pageBo.inputValue(champ) !== '=SOMME(B2:B7)') {
-    throw new Error('une formule finie est polluée par un clic : ' + await pageBo.inputValue(champ));
-  }
+  if ((await casesBo()).B8 !== '=SOMME(B2:B7)') throw new Error('une formule finie est polluée par un clic : ' + (await casesBo()).B8);
 
-  // 3. Cliquer DANS son propre champ pour y poser le curseur n'insère pas sa propre référence.
+  // 3. Cliquer DANS la barre pour y poser le curseur n'insère pas de référence.
+  await choisirBo('B8');
   await pageBo.fill(champ, '=SOMME(');
   await pageBo.click(champ);
   await pageBo.waitForTimeout(100);
@@ -937,7 +941,7 @@ await v('feuille de calcul : le pointage se tait quand la formule n’attend pas
     throw new Error('le champ s’auto-référence quand on y clique : ' + await pageBo.inputValue(champ));
   }
 
-  await pageBo.fill(champ, '=SOMME(B2:B7)');
+  await taperBo('B8', '=SOMME(B2:B7)');
   await pageBo.waitForTimeout(80);
 });
 
@@ -1095,21 +1099,22 @@ const poserGrille = async (ordre, quai, cases) => {
   await ouvrirBo('tournee');
 };
 const SIX = ['c4', 'c7', 'c2', 'c1', 'c6', 'c5'];
-const FORM6 = { B8: '=SOMME(B2:B7)', B13: '=B11/B12', B14: '=B13*60', B17: '=B15*B16',
-  B18: '14:00', B19: '=B18+B14+B17' };
+const FORM6 = F31;
 const SEPT = ['c1', 'c2', 'c3', 'c4', 'c5', 'c6', 'c7'];
-const FORM7 = { B9: '=SOMME(B2:B8)', B14: '=B12/B13', B15: '=B14*60', B18: '=B16*B17',
-  B19: '14:00', B20: '=B19+B15+B18' };
+// Sept arrêts : le total descend en B9 ; le calcul du temps, à droite, ne bouge pas.
+const FORM7 = Object.fromEntries([...Object.entries(F31).filter(([k]) => k !== 'B8'), ['B9', '=SOMME(B2:B8)']]);
 
 await v('ENT-3.1 : les étapes et les résultats ont chacun leur surbrillance, et les contraintes sont dans la feuille', async () => {
   // Tristan, le 05/10 : *« une surbrillance différente pour distinguer les étapes et les
   // résultats (poids total chargé) et heure d'arrivée »*. On mesure les couleurs RENDUES, pas
   // les noms de classes : une classe sans règle CSS passerait un test de classes.
   await poserGrille(SIX, ['c3']);
-  const fond = await pageBo.$$eval(`${zBo} .gr-table tbody tr`, (trs) => trs.map((tr) => ({
-    a: tr.children[1] ? tr.children[1].textContent.replace(/\s+/g, ' ').trim() : '',
-    bg: tr.children[2] ? getComputedStyle(tr.children[2]).backgroundColor : '',
-  })));
+  // En colonnes, une ligne porte deux blocs : on lit chaque libellé (colonne A ou D) et la teinte de
+  // la cellule à sa droite (B ou E).
+  const fond = await pageBo.$$eval(`${zBo} .gr-table tbody tr`, (trs) => trs.flatMap((tr) => [1, 4].map((k) => ({
+    a: tr.children[k] ? tr.children[k].textContent.replace(/\s+/g, ' ').trim() : '',
+    bg: tr.children[k + 1] ? getComputedStyle(tr.children[k + 1]).backgroundColor : '',
+  }))));
   const de = (re) => {
     const l = fond.find((x) => re.test(x.a));
     if (!l) throw new Error('ligne introuvable : ' + re + ' dans ' + fond.map((x) => x.a).join(' | '));
@@ -1124,12 +1129,16 @@ await v('ENT-3.1 : les étapes et les résultats ont chacun leur surbrillance, e
   if (e1 === depart || poids === depart) throw new Error('l’heure de départ se confond avec une étape ou un résultat');
   if (e1 === fixe || poids === fixe) throw new Error('une donnée fixe se confond avec une étape ou un résultat');
 
-  // Les explications sont SOUS les libellés, là où l'élève cherche : la formule distance ÷
-  // vitesse avec ses unités, puis la conversion en minutes.
+  // Les explications s'affichent SOUS LA BARRE quand on choisit la cellule (chantier F, choix de
+  // Tristan) : la formule distance ÷ vitesse avec ses unités, la conversion, l'heure d'arrivée.
+  const aide = async (ref) => { await choisirBo(ref); return (await pageBo.textContent(`${zBo} [data-gr-barre-info]`)).replace(/\s+/g, ' '); };
+  if (!/Distance \(km\) ÷ vitesse \(km\/h\) = temps \(h\)/.test(await aide('E4'))) throw new Error('l’étape 1 n’est pas expliquée : ' + await aide('E4'));
+  if (!/1 heure = 60 minutes/.test(await aide('E5'))) throw new Error('la conversion en minutes n’est pas expliquée');
+  if (!/Nombre d’arrêts × temps par arrêt/.test(await aide('E8'))) throw new Error('l’étape 3 n’est pas expliquée');
+  if (!/SOMME/.test(await aide('B8'))) throw new Error('le poids total n’est pas expliqué');
+  if (!/Heure de départ \+ temps de route \(min\) \+ temps aux arrêts \(min\)/.test(await aide('E10'))) throw new Error('l’heure d’arrivée n’est pas expliquée');
+  if (await aide('E2')) throw new Error('une donnée fixe a une aide : ' + await aide('E2'));
   const t = await pageBo.$eval(`${zBo} .gr-table`, (e) => e.textContent.replace(/\s+/g, ' '));
-  if (!/Distance \(km\) ÷ vitesse \(km\/h\) = temps \(h\)/.test(t)) throw new Error('l’étape 1 n’est pas expliquée : ' + t);
-  if (!/1 heure = 60 minutes/.test(t)) throw new Error('la conversion en minutes n’est pas expliquée : ' + t);
-  if (!/Heure de départ \+ temps de route \(min\) \+ temps aux arrêts \(min\)/.test(t)) throw new Error('l’heure d’arrivée n’est pas expliquée');
   // Les deux contraintes figurent aussi dans la feuille, pour la comparaison.
   if (!/Charge utile maximale \(kg\)\s*180/.test(t)) throw new Error('la charge maximale n’est pas dans la feuille : ' + t);
   if (!/Départ du train \(contrainte\)\s*16 h 10/.test(t)) throw new Error('le train n’est pas dans la feuille : ' + t);
@@ -1162,7 +1171,7 @@ await v('ENT-3.1 : des formules justes avec une tournée qui ne tient pas — le
   await pageBo.waitForTimeout(220);
   const t = await texteBo();
   if (!/Toutes les formules sont justes/.test(t)) throw new Error('les formules sept arrêts ne sont pas acceptées : ' + t.slice(-500));
-  const justes = await pageBo.$$eval(`${zBo} .gr-saisie input.juste`, (e) => e.length);
+  const justes = await pageBo.$$eval(`${zBo} td.gr-saisie.juste`, (e) => e.length);
   if (justes !== 6) throw new Error(justes + ' cellule(s) en vert au lieu de 6');
   // À droite, la charge est en rouge — et la carte de la charge ne dit PAS de combien.
   const droite = await pageBo.$$eval(`${zBo} .gr-droite .tour-jauge`, (els) => els.map((e) => ({
@@ -1179,7 +1188,7 @@ await v('ENT-3.1 : des formules justes avec une tournée qui ne tient pas — le
     throw new Error('message manquant : ' + JSON.stringify(av));
   }
   // Le vert et le rouge ne se mélangent pas : une cellule juste n'est jamais rouge.
-  const mele = await pageBo.$$eval(`${zBo} .gr-saisie input.juste.faux`, (e) => e.length);
+  const mele = await pageBo.$$eval(`${zBo} td.gr-saisie.juste.faux`, (e) => e.length);
   if (mele) throw new Error('une cellule est à la fois juste et fausse');
 
   // Retirer un arrêt change les données sous les formules : le verdict périmé disparaît, avec
@@ -1187,7 +1196,7 @@ await v('ENT-3.1 : des formules justes avec une tournée qui ne tient pas — le
   await pageBo.click(`${zBo} [data-quai="c3"]`);
   await pageBo.waitForTimeout(220);
   const reste = await pageBo.evaluate((z) => ({
-    justes: document.querySelectorAll(`${z} .gr-saisie input.juste`).length,
+    justes: document.querySelectorAll(`${z} td.gr-saisie.juste`).length,
     avis: document.querySelectorAll(`${z} .avis-contrainte`).length,
     base: Object.keys(window.__bo.db.transport['boost-ent31'].tournee.grille.juge || {}).length,
   }), zBo);
@@ -1208,28 +1217,28 @@ await v('ENT-3.1 : une tournée qui tient et des formules justes — la contrain
 });
 
 await v('ENT-3.1 : l’heure de départ se tape « 14h00 » ou « 14:00 », et « 14 » est refusé', async () => {
-  await poserGrille(SIX, ['c3'], Object.assign({}, FORM6, { B18: '14' }));
+  await poserGrille(SIX, ['c3'], Object.assign({}, FORM6, { E9: '14' }));
   await pageBo.click(`${zBo} [data-gr-verifier]`);
   await pageBo.waitForTimeout(200);
-  let faux = await pageBo.$$eval(`${zBo} .gr-saisie input.faux`, (e) => e.map((x) => x.dataset.gr).join(','));
+  let faux = await pageBo.$$eval(`${zBo} td.gr-saisie.faux`, (e) => e.map((x) => x.dataset.ref).join(','));
   // « 14 » ne dit pas si c'est 14 minutes ou 14 heures : la cellule est à revoir, et c'est la
   // SEULE — l'heure d'arrivée, calculée depuis un 14, est fausse elle aussi, ce qui est normal.
-  if (!/B18/.test(faux)) throw new Error('« 14 » est accepté comme heure de départ : ' + faux);
-  await pageBo.fill(`${zBo} [data-gr="B18"]`, '14h00');
+  if (!/E9/.test(faux)) throw new Error('« 14 » est accepté comme heure de départ : ' + faux);
+  await taperBo('E9', '14h00');
   await pageBo.waitForTimeout(60);
-  const res = await pageBo.textContent(`${zBo} [data-gr-res="B19"]`);
+  const res = await pageBo.textContent(`${zBo} [data-gr-res="E10"]`);
   if (res.trim() !== '15 h 36') throw new Error('« 14h00 » ne donne pas 15 h 36 : ' + res);
   await pageBo.click(`${zBo} [data-gr-verifier]`);
   await pageBo.waitForTimeout(200);
-  faux = await pageBo.$$eval(`${zBo} .gr-saisie input.faux`, (e) => e.length);
+  faux = await pageBo.$$eval(`${zBo} td.gr-saisie.faux`, (e) => e.length);
   if (faux) throw new Error(faux + ' cellule(s) fausses avec « 14h00 »');
   // Un départ tapé à 15:00 donne une arrivée plus tard : la formule reste JUSTE comme formule,
   // mais l'heure de départ n'est pas celle de la consigne.
-  await pageBo.fill(`${zBo} [data-gr="B18"]`, '15:00');
+  await taperBo('E9', '15:00');
   await pageBo.click(`${zBo} [data-gr-verifier]`);
   await pageBo.waitForTimeout(200);
-  faux = await pageBo.$$eval(`${zBo} .gr-saisie input.faux`, (e) => e.map((x) => x.dataset.gr).join(','));
-  if (!/B18/.test(faux)) throw new Error('un départ à 15:00 est accepté : ' + faux);
+  faux = await pageBo.$$eval(`${zBo} td.gr-saisie.faux`, (e) => e.map((x) => x.dataset.ref).join(','));
+  if (!/E9/.test(faux)) throw new Error('un départ à 15:00 est accepté : ' + faux);
 });
 
 await v('ENT-3.1 : les jauges ne donnent plus les totaux, et les rendent après validation', async () => {
@@ -2662,7 +2671,10 @@ await v('ENT-3.3 : les options des deux temps n’existent qu’en ENT-3.3 — E
     return { e31: marques(dessine(E31.TOURNEE, E31.PLAN)), e32: marques(dessine(E32.TOURNEE, E32.PLAN)),
       e32i: marques(dessine(E32.TOURNEE_IMPREVU, E32.PLAN)), e33: marques(dessine(E33.TOURNEE)) };
   });
-  for (const k of ['e31', 'e32', 'e32i']) if (Object.values(r[k]).some(Boolean)) throw new Error(k + ' : ' + JSON.stringify(r[k]));
+  // ENT-3.1 a la feuille « comme un tableur » depuis le chantier F (barre de formule, en lecture tant
+  // qu'aucune cellule n'est choisie) : seules les options des deux temps lui sont étrangères.
+  if (r.e31.etapes || r.e31.etiq || r.e31.terminer || !r.e31.barre) throw new Error('e31 : ' + JSON.stringify(r.e31));
+  for (const k of ['e32', 'e32i']) if (Object.values(r[k]).some(Boolean)) throw new Error(k + ' : ' + JSON.stringify(r[k]));
   if (!r.e33.etapes || !r.e33.barre || !r.e33.etiq || !r.e33.readonly) throw new Error('ENT-3.3 : ' + JSON.stringify(r.e33));
 });
 
