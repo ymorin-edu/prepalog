@@ -6,7 +6,7 @@
 > Lis docs/briefs/COORDINATION-picard.md, docs/briefs/ENT-3.3-deux-temps.md (le modèle des deux temps) puis implémente le brief docs/briefs/ENT-4.3-picard-reception-de-nuit.md. Annonce la durée, liste ce que la vue quai doit gagner (§7), fabrique une page d'essai puis enchaîne sur la séance sans attendre : les questions du brief sont déjà tranchées (§11).
 > ```
 
-**Statut** : livré (03/10/2026), fermé aux élèves (`pret: true, ouverture: 'prof'`) — à essayer à l'écran
+**Statut** : livré et **validé à l'écran par Tristan** (03/10/2026) ; fermé aux élèves (`pret: true, ouverture: 'prof'`) tant qu'il ne l'ouvre pas dans Conduite de séance
 **Date du brief** : 03/10/2026
 **Conversation d'origine** : Cowork (Opus) ; fiche projet `claude/prepalog-picard-4-seances.md`
 
