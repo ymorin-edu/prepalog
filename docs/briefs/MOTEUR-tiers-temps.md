@@ -64,7 +64,7 @@ ne peut pas modifier sa propre case. Émulateur de règles si elles changent (`o
 - **Vue quai** : rien à changer, elle lisait déjà `ctx.tiersTemps` (seuils × 4/3 et mention à l'élève).
 - **Règles Firebase** : **modifiées** (`firestore.rules`, `users/{uid}`, branche « l'intéressé ») : un élève ne peut
   ni ajouter, ni changer, ni retirer `aisance` ou `tiersTemps` sur son profil (`diff().affectedKeys()`, ne suppose pas
-  que le champ existe). **À publier dans la console Firebase par Tristan** (Firestore → Règles). RTDB inchangée.
+  que le champ existe). **Publiées dans la console Firebase par Tristan le 03/10/2026.** RTDB inchangée.
 - **Tests** : nouveau bloc `amenagements` (9 cas : défauts, transmission à la séance, camarade non touché, élève qui
   tente de se régler, décochage pendant que l'élève est connecté, rien dans l'export ni le suivi) ; 6 cas ajoutés à
   `outils/test-regles.mjs` (émulateur 86/86). Éprouvés dans les deux sens (relecture retirée, garde retirée, valeur
