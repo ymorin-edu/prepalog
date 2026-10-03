@@ -7,7 +7,7 @@ est déjà modifié ou inscrit ci-dessous, **elle s'arrête et le dit à Tristan
 
 | Chantier | Fichiers qu'il touche | Depuis |
 |---|---|---|
-| ENT-4.3 Picard (P5) : vue quai « déjà réceptionné », Bloquer, Messagerie | `core/types/quai.js`, `core/types/entreprise.js`, `styles/base.css`, `contenus/picard*.js`, `activites/picard-ent43.js`, `activites/index.js`, `outils/test/picard.mjs`, `outils/essai-*` | 03/10/2026 |
+| *(personne d'inscrit)* | | |
 
 Rappel : un seul chantier à la fois dans `core/types/tournee.js`, `core/types/grille.js`,
 `core/types/entreprise.js`, `styles/base.css` et `outils/test/boost.mjs` (voir `docs/briefs/COORDINATION-boost.md`).
