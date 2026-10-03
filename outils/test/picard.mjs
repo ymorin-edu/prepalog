@@ -579,6 +579,275 @@ await v('ENT-4.1 : corrigé — palettes, cartons réels et réserves calculés 
   vrai(res[1][1].includes('température à cœur −14,2 °C') && res[3][1].includes('produit livré EPB-450'), 'lignes de réserve : ' + JSON.stringify(res));
 });
 
+/* ===================================================== ENT-4.2, deux camions */
+// Brief `docs/briefs/ENT-4.2-picard-deux-camions.md` §9. Valeurs écrites À LA MAIN :
+//   A1 3×3×4 = 36 · A2 citron 3 couches de 3×2 = 18, framboise 1 couche = 6 · A3 4×3×4 = 48
+//   B1 4×3×5 = 60 · B2 36, −14,8 °C → refuser température · B3 30, arrière CFL-1000 → refuser produit
+//   B4 4×2×4 − 1 = 31 (BL 32) → réserves manquant (1) · B5 3×3×5 = 45
+// Camion A : −18,5 °C au départ, +0,25 °C par minute du quai porte fermée. A d'abord : ouvert à 4 min
+// (deux tickets) → −17,5 °C, à accepter. B d'abord, au plus vite : 4 + 5,5 + 1 + 1 + 3 = 14,5 min →
+// −18,5 + 3,625 = −14,875, arrondi −14,9 °C : au-dessus de −15, à refuser.
+const ID42 = 'picard-ent42';
+const monter42 = (p) => p.evaluate(async () => {
+  const { creerEntreprise } = await import('/core/types/entreprise.js');
+  const P = await import('/contenus/picard.js');
+  const S = await import('/contenus/picard-ent42.js');
+  document.querySelector('#quaiTest')?.remove();
+  const hote = document.createElement('div'); hote.id = 'quaiTest'; document.body.appendChild(hote);
+  const U = { ENTREPRISE: P.ENTREPRISE, VOCAB: P.VOCAB, CATALOGUE: P.catalogue(S.PRODUITS_ENT42), SUPPLIERS: P.SUPPLIERS,
+    SUP_BY_ID: P.SUP_BY_ID, CUSTOMERS: P.CUSTOMERS, CM: P.CM, THEME: P.THEME, baseDeDepart: P.baseDeDepart,
+    etapes: S.ETAPES, exercice: 'ENT-4.2', accueil: S.ACCUEIL, volet: S.VOLET, quai: S.QUAI_ENT42 };
+  const db = {};
+  window.__q = { db, U, moteur: creerEntreprise(U), remis: null };
+  window.__q.moteur.rendre(hote, {
+    meta: { id: 'picard-ent42', code: 'ENT-4.2', titre: 'Picard', portee: 'eleve', immersif: true },
+    profil: { prenom: 'Lea', nom: 'Test', role: 'eleve' },
+    jeu: { etat: () => db, sauver: () => {} }, enregistrer: () => {}, quitter: () => {}, codeStock: 'ABC', lireScore: async () => null,
+  });
+  document.querySelector('#quaiTest .ent-nav[data-vue="quai"]').click();
+});
+const etat42 = (p) => p.evaluate((id) => JSON.parse(JSON.stringify((window.__q.db.quais || {})[id] || null)), ID42);
+const JUSTE42 = {
+  A1: { compte: 36, decision: 'accepter', motif: 'aucun' },
+  A2: { comptes: { 'SCI-500': 18, 'SFR-500': 6 }, decision: 'accepter', motif: 'aucun' },
+  A3: { compte: 48, decision: 'accepter', motif: 'aucun' },
+  B1: { compte: 60, decision: 'accepter', motif: 'aucun' },
+  B2: { compte: 36, decision: 'refuser', motif: 'temperature', res: '-14,8' },
+  B3: { compte: 30, decision: 'refuser', motif: 'produit', res: 'CFL-1000', arriere: true },
+  B4: { compte: 31, decision: 'reserves', motif: 'manquant', res: '1' },
+  B5: { compte: 45, decision: 'accepter', motif: 'aucun' },
+};
+const N42 = { A1: 0, A2: 1, A3: 2, B1: 3, B2: 4, B3: 5, B4: 6, B5: 7 };
+async function decharger42(p, c) {
+  await clic(p, `[data-q="decharger"][data-c="${c}"]`);
+  if (await p.isVisible(`${Z} [data-q="passer"]`)) await clic(p, '[data-q="passer"]');
+  await clic(p, '[data-q="vers3"]');
+}
+// Contrôle des palettes d'un camion, puis rentrer, écrire, signer. `rapide` : décider sans rien
+// contrôler (le chemin le plus court en temps du quai).
+async function camion42(p, ids, ecarts = {}, rapide = false) {
+  for (const id of ids) {
+    const pal = Object.assign({}, JUSTE42[id], ecarts[id] || {});
+    await clic(p, `[data-q="sel"][data-n="${N42[id]}"]`);
+    if (!rapide) {
+      if (pal.sonder !== false) await clic(p, '[data-q="sonder"]');
+      if (pal.avant) await clic(p, '[data-q-etiq][data-k="avant"] >> nth=-1');
+      if (pal.arriere) { await clic(p, '[data-q="tourner"]'); await clic(p, '[data-q-etiq][data-k="arriere"] >> nth=-1'); }
+      if (pal.comptes) {
+        for (const [r, n] of Object.entries(pal.comptes)) await p.fill(`${Z} #qCompte-${r}`, String(n));
+        await clic(p, '[data-q="compter"]');
+      } else if (pal.compte != null) { await p.fill(`${Z} [data-q-compte]`, String(pal.compte)); await clic(p, '[data-q="compter"]'); }
+    }
+    await p.selectOption(`${Z} [data-q-decision]`, pal.decision);
+    await p.selectOption(`${Z} [data-q-motif]`, pal.motif);
+  }
+  await clic(p, '[data-q="vers4"]');
+  if (!rapide) await clic(p, '[data-q="rentrer"]');
+  for (const id of ids) {
+    const pal = Object.assign({}, JUSTE42[id], ecarts[id] || {});
+    if (pal.res != null && await p.$(`${Z} #qRes-${id}`)) await p.fill(`${Z} #qRes-${id}`, pal.res);
+  }
+  await clic(p, '[data-q="ecrire"]');
+  await clic(p, '[data-q="signer"]');
+}
+async function debut42(p, { premier = 0, phrase = 'froid' } = {}) {
+  await clic(p, '[data-q="ticket"][data-c="0"]');
+  await clic(p, '[data-q="ticket"][data-c="1"]');
+  await p.check(`${Z} [data-q="ticketRep"][data-c="0"][value="faiblit"]`);
+  await p.check(`${Z} [data-q="ticketRep"][data-c="1"][value="rien"]`);
+  await p.check(`${Z} [data-q="premier"][value="${premier}"]`); await p.waitForTimeout(40);
+  await p.check(`${Z} [data-q="phrase"][value="${phrase}"]`); await p.waitForTimeout(40);
+}
+async function jouer42(p, ecarts = {}) {
+  await debut42(p, ecarts.ordre);
+  await decharger42(p, 0);
+  await camion42(p, ['A1', 'A2', 'A3'], ecarts);
+  await decharger42(p, 1);
+  await camion42(p, ['B1', 'B2', 'B3', 'B4', 'B5'], ecarts);
+  await clic(p, '[data-q="clore"]');
+}
+
+await v('ENT-4.2 : déclaration (C1.4 + C1.3, entraînement, 1re, 30 jalons, livrée fermée aux élèves)', async () => {
+  const m = await pg2.evaluate(async () => (await import('/activites/picard-ent42.js')).meta);
+  egal([m.id, m.code, m.rubrique, m.competences, m.temps, m.niveaux, m.bareme, m.pret, m.ouverture, m.immersif, !!m.copie],
+    ['picard-ent42', 'ENT-4.2', 'logisim', ['C1.4', 'C1.3'], 'entrainement', ['1re'], 30, true, 'prof', true, false], 'meta');
+});
+
+await v('ENT-4.2 : écran ① — deux camions, l’ordre ne se choisit qu’après les deux tickets, aucune aide', async () => {
+  await monter42(pg2);
+  const t = await texte(pg2, Z);
+  vrai(t.includes('Deux camions frigorifiques attendent') && t.includes('Camion A — arrivé à 06:00') && t.includes('Camion B — arrivé à 06:10'), 'les deux camions');
+  egal(await texte(pg2, `${Z} [data-q-heure]`), '06:10', 'heure de prise de poste');
+  vrai(!(await pg2.$(`${Z} [data-q="premier"]`)), 'choix de l’ordre avant les tickets');
+  vrai(!(await pg2.$(`${Z} [data-q="decharger"]`)), 'bouton de déchargement avant le choix');
+  await clic(pg2, '[data-q="ticket"][data-c="0"]');
+  vrai(!(await pg2.$(`${Z} [data-q="premier"]`)), 'choix de l’ordre après un seul ticket');
+  await clic(pg2, '[data-q="ticket"][data-c="1"]');
+  await pg2.check(`${Z} [data-q="premier"][value="1"]`); await pg2.waitForTimeout(40);
+  vrai(await pg2.isDisabled(`${Z} [data-q="decharger"][data-c="1"]`), 'déchargement ouvert sans justification');
+  egal(await pg2.$$eval(`${Z} .quai-aide, ${Z} [data-q-chef]`, (x) => x.length), 0, 'aides affichées');
+  egal(await pg2.$$eval(`${Z} .quai-h-froid`, (x) => x.length), 2, 'une jauge hors froid par camion');
+});
+
+await v('ENT-4.2 : parcours juste (A d’abord) → 30 jalons sur 30, glaces à −17,5 °C, deux jauges indépendantes', async () => {
+  await monter42(pg2);
+  await jouer42(pg2);
+  const j = await jalons(pg2);
+  egal([j.pts, j.max, j.ko], [30, 30, []], 'jalons');
+  const e = await etat42(pg2);
+  egal([e.palettes.A1.sonde, e.palettes.A3.sonde, e.ouvertA], [-17.5, -17.5, 4], 'sonde des glaces / ouverture de A');
+  // A : 3 min 30 de déchargement + 3 sondes + 3 comptages (A2 : 2 min) + rentrer 3 = 13 min 30, arrêté là.
+  // B : ouvert après la signature de A, il ne compte que ses propres gestes.
+  egal([e.froid, e.rentre, e.suivants[0].rentre, e.suivants[0].signe, e.fini], [13.5, true, true, true, true], 'lot A / B');
+  // B : 5 min 30 + 5 sondes + tour 30 s + étiquette 30 s + 5 comptages + rentrer 3 = 19 min 30.
+  egal(e.suivants[0].froid, 19.5, 'temps hors froid du lot B');
+  egal(e.suivants[0].lignes.map((l) => l.texte), [
+    'B2 POE-750 : palette REFUSÉE — température à cœur −14,8 °C (−18 °C exigé). 36 cartons repris par le chauffeur.',
+    'B3 BRO-1000 : palette REFUSÉE — produit livré CFL-1000 au lieu de BRO-1000 commandé. 30 cartons repris par le chauffeur.',
+    'B4 HBE-1000 : acceptée sous réserve — manque 1 carton (BL 32, reçu 31).',
+  ], 'réserves du BL de B');
+  const b = await texte(pg2, `${Z} .quai-bilan-bloc`);
+  vrai(b.includes('Camion A : temps hors froid du lot 13 min 30') && b.includes('sorties à −17,5 °C à cœur.'), 'bilan du camion A : ' + b.slice(0, 400));
+  egal(await pg2.$$eval(`${Z} [data-jalon] .quai-ok`, (x) => x.length), 30, 'lignes justes au bilan');
+});
+
+await v('ENT-4.2 : B d’abord, au plus vite → les glaces de A à −14,9 °C, à refuser (température réelle)', async () => {
+  await monter42(pg2);
+  await debut42(pg2, { premier: 1, phrase: 'palettes' });
+  await decharger42(pg2, 1);
+  // Tout accepter sans contrôler : une seule ligne « Néant » (1 min), le chemin le plus court.
+  const toutAccepter = Object.fromEntries(['B1', 'B2', 'B3', 'B4', 'B5'].map((id) => [id, { decision: 'accepter', motif: 'aucun', res: null }]));
+  await camion42(pg2, ['B1', 'B2', 'B3', 'B4', 'B5'], toutAccepter, true);
+  vrai(await pg2.isDisabled(`${Z} [data-q="clore"]`), 'clore sans le camion A');
+  await decharger42(pg2, 0);
+  const e = await etat42(pg2);
+  egal(e.suivants[0].ouvertA, 4, 'B ouvert après les deux tickets');
+  egal(e.ouvertA, 14.5, 'A ouvert au plus tôt après B');
+  await clic(pg2, '[data-q="sel"][data-n="0"]');
+  await clic(pg2, '[data-q="sonder"]');
+  vrai((await texte(pg2, `${Z} [data-q-sonde]`)).includes('−14,9 °C à cœur'), 'sonde de A1');
+  const r = await pg2.evaluate(async () => {
+    const { jalonsQuai } = await import('/core/types/quai.js');
+    const L = jalonsQuai(window.__q.db, window.__q.U.quai).L;
+    return Object.fromEntries(['ordre', 'A1-decision', 'A1-reserve'].map((id) => [id, L.find((l) => l.id === id).attendu]));
+  });
+  egal(r, { ordre: 'camion A d’abord — « Le ticket de A montre que son froid faiblit : ses glaces se réchauffent s’il attend »',
+    'A1-decision': 'Refuser — Température non conforme',
+    'A1-reserve': 'A1 GVA-2500 : palette REFUSÉE — température à cœur −14,9 °C (−18 °C exigé). 36 cartons repris par le chauffeur.' }, 'attendus');
+  // Accepter les glaces est faux ; les refuser pour la température, avec la valeur relevée, est juste.
+  await pg2.selectOption(`${Z} [data-q-decision]`, 'accepter');
+  vrai((await jalons(pg2)).ko.includes('A1-decision'), 'accepter des glaces à −14,9 °C compte juste');
+  await pg2.selectOption(`${Z} [data-q-decision]`, 'refuser');
+  await pg2.selectOption(`${Z} [data-q-motif]`, 'temperature');
+  vrai(!(await jalons(pg2)).ko.includes('A1-decision'), 'le refus des glaces ne compte pas juste');
+});
+
+await v('ENT-4.2 : bon ordre, phrase fausse → seul le jalon d’ordre tombe ; mauvais ordre, bonne phrase aussi', async () => {
+  const r = await pg2.evaluate(async () => {
+    const { jalonsQuai } = await import('/core/types/quai.js');
+    const Q = window.__q.U.quai;
+    const ko = (premier, phrase) => jalonsQuai({ quais: { [Q.id]: { minute: 4, decharge: true, ouvertA: 4, palettes: {}, ordre: { premier, phrase }, suivants: [{}] } } }, Q)
+      .L.find((l) => l.id === 'ordre').ok;
+    return [ko(0, 'froid'), ko(0, 'arrive'), ko(0, 'cher'), ko(1, 'froid'), ko(1, 'palettes')];
+  });
+  egal(r, [true, false, false, false, false], 'jalon d’ordre');
+  await monter42(pg2);
+  await jouer42(pg2, { ordre: { premier: 0, phrase: 'arrive' } });
+  egal((await jalons(pg2)).ko, ['ordre'], 'jalons faux');
+});
+
+await v('ENT-4.2 : A2 multi-références comptée d’un bloc → faux ; B2 non sondée → faux ; B3 sans l’arrière → faux', async () => {
+  await monter42(pg2);
+  await jouer42(pg2, {
+    A2: { comptes: { 'SCI-500': 24, 'SFR-500': 0 } },
+    B2: { sonder: false },
+    B3: { arriere: false, avant: true },
+  });
+  egal((await jalons(pg2)).ko, ['A2-comptage', 'B2-decision', 'B3-decision'], 'jalons faux');
+  const e = await etat42(pg2);
+  egal(e.palettes.B3.etiqLues, ['avant'], 'étiquettes lues de B3');
+});
+
+await v('ENT-4.2 : étiquettes — avant déchirée, arrière lisible ; une étiquette par référence sur A2', async () => {
+  await monter42(pg2);
+  await debut42(pg2);
+  await decharger42(pg2, 0);
+  await clic(pg2, '[data-q="sel"][data-n="1"]');
+  egal(await pg2.$$eval(`${Z} [data-q-etiq]`, (x) => [...new Set(x.map((g) => g.dataset.k))]), ['SCI-500', 'SFR-500'], 'étiquettes de A2');
+  vrai((await pg2.$$eval(`${Z} [data-q-bande]`, (x) => x.length)) > 0, 'bandes de couleur des deux références');
+  await clic(pg2, '[data-q-etiq][data-k="SFR-500"] >> nth=-1');
+  vrai((await texte(pg2, `${Z} [data-q-etiquette]`)).includes('Réf. SFR-500'), 'étiquette framboise');
+  egal(await pg2.$$eval(`${Z} [data-q-compte-ref]`, (x) => x.map((i) => i.dataset.qCompteRef)), ['SCI-500', 'SFR-500'], 'un comptage par référence');
+  // B3, après le camion A.
+  await camion42(pg2, ['A1', 'A2', 'A3']);
+  await decharger42(pg2, 1);
+  await clic(pg2, '[data-q="sel"][data-n="5"]');
+  egal(await pg2.$$eval(`${Z} [data-q-etiq]`, (x) => [...new Set(x.map((g) => g.dataset.k))]), ['avant'], 'de face, seule l’étiquette avant');
+  vrai(await pg2.$(`${Z} [data-q-dechiree]`), 'étiquette avant non déchirée');
+  await clic(pg2, '[data-q-etiq][data-k="avant"] >> nth=-1');
+  const t = await texte(pg2, `${Z} [data-q-etiquette]`);
+  vrai(t.includes('étiquette déchirée') && !t.includes('CFL-1000') && !t.includes('BRO-1000'), 'étiquette avant : ' + t);
+  await clic(pg2, '[data-q="tourner"]');
+  await clic(pg2, '[data-q-etiq][data-k="arriere"] >> nth=-1');
+  vrai((await texte(pg2, `${Z} [data-q-etiquette]`)).includes('Réf. CFL-1000'), 'étiquette arrière');
+});
+
+await v('ENT-4.2 : un seul quai — B ne se met à quai qu’une fois A reparti ; la manœuvre coûte 3 min', async () => {
+  await monter42(pg2);
+  await debut42(pg2);
+  await decharger42(pg2, 0);
+  await clic(pg2, '[data-q="etape"][data-n="1"]');
+  vrai(await pg2.isDisabled(`${Z} [data-q="decharger"][data-c="1"]`), 'B se met à quai avant le départ de A');
+  await clic(pg2, '[data-q="etape"][data-n="3"]');
+  await camion42(pg2, ['A1', 'A2', 'A3']);
+  const avant = (await etat42(pg2)).minute;
+  await decharger42(pg2, 1);
+  const e = await etat42(pg2);
+  egal([e.suivants[0].ouvertA - avant, e.actif], [3, 1], 'manœuvre / camion montré');
+});
+
+await v('ENT-4.2 : aucun jalon n’est vrai par inaction', async () => {
+  await monter42(pg2);
+  egal([(await jalons(pg2)).pts, (await jalons(pg2)).max], [0, 30], 'base neuve');
+  await debut42(pg2);
+  await decharger42(pg2, 0);
+  const j = await jalons(pg2);
+  // Le seul jalon gagné : l'ordre choisi (et justifié), plus les deux tickets bien lus.
+  egal(j.pts, 3, 'jalons après le seul déchargement de A : ' + JSON.stringify(j.ko));
+  vrai(j.ko.includes('A1-reserve') && j.ko.includes('deballage') && j.ko.includes('rentre-A'), 'réserve « aucune ligne » vraie sans papiers');
+});
+
+await v('ENT-4.2 : corrigé — tickets, ordre, palettes et réserves des deux chemins', async () => {
+  const c = await pg2.evaluate(async () => (await import('/contenus/corriges/ENT-4.2.js')).CORRIGE);
+  vrai(c.items[1].rep.includes('camion A d’abord'), 'ordre');
+  const pal = c.items.find((i) => i.etape === 3).reponses.map((r) => [r[0], r[3], r[5]]);
+  egal(pal, [
+    ['A1', '36 (3 × 3 × 4)', 'Accepter — aucun motif'], ['A2', 'SCI-500 : 18 · SFR-500 : 6', 'Accepter — aucun motif'],
+    ['A3', '48 (4 × 3 × 4)', 'Accepter — aucun motif'], ['B1', '60 (4 × 3 × 5)', 'Accepter — aucun motif'],
+    ['B2', '36 (3 × 3 × 4)', 'Refuser — Température non conforme'], ['B3', '30 (3 × 2 × 5)', 'Refuser — Produit différent de la commande'],
+    ['B4', '31 (4 × 2 × 4 − 1)', 'Accepter avec réserves — Manquant'], ['B5', '45 (3 × 3 × 5)', 'Accepter — aucun motif'],
+  ], 'tableau des palettes');
+  const tard = c.items.find((i) => /d’abord$/.test(i.texte) && i.texte.startsWith('Si le camion B')).reponses;
+  egal(tard.map((r) => r[1]), ['Refuser — Température non conforme', 'Refuser — Température non conforme', 'Refuser — Température non conforme'], 'B d’abord');
+  vrai(tard[0][2].includes('−14,9 °C'), 'température de A au plus tôt');
+});
+
+await v('ENT-4.2 : sous le logo Picard dans Logisim, elle s’ouvre sur l’accueil et le mail des deux camions', async () => {
+  // Contexte neuf : celui du bloc garde la session enseignant ouverte par le test d'ENT-4.1.
+  const { ctx, pg: p, erreurs } = await contexte();
+  await p.click('#btnProf');
+  await p.click('[data-rub="logisim"]');
+  await p.click('[data-ent="4"]');
+  await p.click('[data-act="picard-ent42"]');
+  await p.waitForSelector('.ent-bandeau');
+  vrai((await texte(p, '.ent-bandeau')).includes('ENT-4.2'), 'bandeau de séance');
+  vrai((await texte(p, '.ent-main')).includes('Deux camions, un seul quai'), 'accueil de la séance');
+  await p.click('.ent-nav[data-vue="mail"]');
+  vrai((await texte(p, '.ent-main')).includes('Quai 32 : deux camions ce matin'), 'mail du chef de quai');
+  egal(erreurs, [], 'erreurs JS');
+  await ctx.close();
+});
+
 await v('quai : aucune erreur JavaScript dans le bloc', async () => {
   egal(erreursQ, [], 'erreurs');
 });

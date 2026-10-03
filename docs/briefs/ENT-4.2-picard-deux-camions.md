@@ -6,7 +6,7 @@
 > Lis docs/briefs/COORDINATION-picard.md puis implémente le brief docs/briefs/ENT-4.2-picard-deux-camions.md (ENT-4.1 doit être livrée et validée). Annonce la durée, liste ce que la vue quai doit gagner (§7), puis enchaîne sans attendre : les questions du brief sont déjà tranchées (§11).
 > ```
 
-**Statut** : à implémenter — **après** ENT-4.1 validée à l'écran
+**Statut** : livré le 03/10/2026, **fermé aux élèves** (`pret: true, ouverture: 'prof'`) : Tristan l'essaie puis l'ouvre dans « Conduite de séance »
 **Date du brief** : 03/10/2026
 **Conversation d'origine** : Cowork (Opus) ; fiche projet `claude/prepalog-picard-4-seances.md`
 
@@ -120,9 +120,45 @@ Trame élève Word/PDF (Cowork, après validation à l'écran) ; corrigé `conte
 
 ## Compte rendu *(rempli par Claude Code à la livraison)*
 
-- **Fichiers créés / modifiés** :
+- **Fichiers créés / modifiés** : `core/types/quai.js` (plusieurs camions, réchauffement, multi-références, étiquette
+  par face, une jauge par lot) ; `contenus/picard-ent42.js` (neuf) ; `activites/picard-ent42.js` (neuf) ;
+  `activites/index.js` (une ligne) ; `contenus/corriges/ENT-4.2.js` (neuf, calculé) ; `activites/FICHE-SEANCE.md` ;
+  `outils/test/picard.mjs` (11 cas ENT-4.2) ; `outils/test/socle.mjs` (liste Logisim allongée de ENT-4.2, seule
+  modification d'un cas existant). `outils/test.mjs` n'est pas touché. ENT-4.1 : aucun changement de comportement
+  (35 cas inchangés et verts), sauf l'accord « 1 carton » au singulier dans une réserve (ENT-4.1 n'a que des 2).
 - **Écarts par rapport au brief** :
-- **Décisions prises en route** :
-- **Tests** :
-- **Commits** :
-- **Reste ouvert** :
+  - « Décharger B d'abord mène **toujours** au refus » n'était pas vrai tel quel : au plus vite, B d'abord ouvre A après
+    5 min 30 + 2 min de papiers (−16,6 °C). Pour le tenir, deux règles : le choix de l'ordre ne s'ouvre **qu'une fois les
+    deux tickets lus** (4 min, c'est le déroulé §4.2) et la mise à quai du second camion coûte une **manœuvre de 3 min**
+    (construit). Chemin B le plus court : 4 + 5,5 + 1 + 1 + 3 = 14 min 30 → −14,9 °C, à refuser ; un test le garde.
+  - Le second camion ne se met à quai **qu'une fois le premier reparti (BL signé)** : un seul quai. Le lot du premier
+    peut rester sur le quai (sa jauge continue) : l'élève peut le rentrer avant ou après.
+  - En bon ordre, les glaces sont sondées à **−17,5 °C** : au-dessus de −18 °C, sous la tolérance de −15 °C, donc
+    « accepter » (brief §5). La ligne de refus de la vue dit « (−18 °C exigé) » : **à juger à l'écran**, un élève peut
+    hésiter à accepter −17,5.
+  - Pas de `reinitialisable` (réservé aux X.1, test du dépôt) ; « Recommencer la réception » du bilan reste (il ne
+    remet à zéro que le quai d'ENT-4.2).
+- **Décisions prises en route (choisies seul, à corriger à l'écran)** :
+  - Noms fictifs, sans résultat à la recherche web le 03/10/2026 : **Glaces Néviane** + **Transports Hivernel** (camion A),
+    **Légumes d'Orvalle** + **Transports Calvenor** (camion B). Écartés : « Brumel » (trop proche de Transports Brunel,
+    vrai transporteur frigorifique du Nord), « Valmonde » (ancienne maison d'édition).
+  - Prise de poste à **06:10**, les deux camions déjà là ; le réchauffement de A compte depuis 06:10.
+  - Ticket A : stable vers −21 °C puis 04:45 −20,6 · 05:00 −20,3 · 05:15 −19,9 · 05:30 −19,3 · 05:45 −18,5 · 06:00
+    −17,4 (remontée qui s'accélère). Ticket B : stable. Quatrième réponse au ticket : « La température remonte encore à
+    l'arrivée, de plus en plus vite : le groupe froid faiblit » (juste pour A) ; « Rien à signaler » juste pour B.
+  - Palettes : A1 glace vanille 2,5 L (36), A2 sorbet citron 3 couches (18) + framboise 1 couche (6), bandes jaune et
+    rose sur les cartons, A3 bâtonnets chocolat (48) ; B1 petits pois (60), B2 poêlée campagnarde −14,8 °C (36),
+    B3 brocolis BRO-1000, étiquette arrière CFL-1000 chou-fleur (30), B4 haricots beurre 31 pour 32, B5 carottes (45).
+    Toutes les glaces à −18,5 °C (avec −18,6, l'arrondi au dixième rendait −15,0 : acceptable par erreur).
+  - Compter une palette multi-références coûte 1 min par référence.
+  - Le refus « produit différent » de B3 n'est juste que si l'étiquette arrière a été lue (la seule preuve) ; règle
+    limitée aux étiquettes déchirées pour ne rien changer à ENT-4.1.
+  - 30 jalons : ordre + phrase (1), tickets (2), comptages (8), décisions (8), réserves (6 : les trois palettes de A, qui
+    peuvent devenir à refuser, et B2, B3, B4 ; pour A en bon ordre, « aucune ligne » est juste une fois le BL écrit),
+    pas de mention de déballage sur les deux BL (1), signatures (2), lots rentrés (2).
+  - Mail d'accueil écrit (« Quai 32 : deux camions ce matin ») : à relire.
+- **Tests** : bloc `picard` 46/46 (11 cas ENT-4.2, éprouvés par 4 sabotages : sans réchauffement, sans preuve de
+  l'étiquette arrière, sans manœuvre, comptage multi-références ignoré) ; suite entière verte avant le push.
+- **Commits** : voir `git log` (« ENT-4.2 Picard … »).
+- **Reste ouvert** : trame élève (Cowork, après validation à l'écran) ; la teinte des bandes (jaune / rose) et la petite
+  taille des étiquettes déchirées sur la palette 3D sont à juger à l'écran.
