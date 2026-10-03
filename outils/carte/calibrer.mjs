@@ -32,6 +32,15 @@ const impF = process.argv[4] ? path.resolve(DEPOT, process.argv[4])
   : (process.argv[2] ? null : path.resolve(DEPOT, 'contenus/boost-ent32-imprevu.js'));
 const IMP = impF ? (await import(pathToFileURL(impF).href)).IMPREVU : null;
 const d = (a, b) => C.trajets[`${a}|${b}`].m;
+// Le temps de service d'un arrêt : un nombre, ou `{ base, parColis, champ }` — la MÊME formule
+// que `serviceDe` dans core/types/tournee.js (chantier D, 03/10/2026).
+const PAR_ID = Object.fromEntries(C.clients.map((c) => [String(c.id), c]));
+const svc = (id) => {
+  const S = J.service;
+  if (!S || typeof S !== 'object') return Number(S || 0);
+  return Number(S.base || 0) + Number(S.parColis || 0) * Number((PAR_ID[id] || {})[S.champ || 'colis'] || 0);
+};
+const sommeSvc = (ids) => ids.reduce((t, id) => t + svc(id), 0);
 const hm = (m) => `${Math.floor(m / 60)} h ${String(Math.round(m % 60)).padStart(2, '0')}`;
 function* perms(a) { if (a.length < 2) { yield a; return; } for (let i = 0; i < a.length; i++) for (const p of perms([...a.slice(0, i), ...a.slice(i + 1)])) yield [a[i], ...p]; }
 
@@ -51,12 +60,12 @@ const tiennent = [];
 for (const p of perms(S.map((c) => c.id))) {
   n++;
   const ch = ['depart', ...p, 'arrivee'];
-  let m = 0; const arr = {};
+  let m = 0, servi = 0; const arr = {};
   for (let i = 1; i < ch.length; i++) {
     m += d(ch[i - 1], ch[i]);
-    if (i < ch.length - 1) arr[ch[i]] = J.depart + m / 1000 / J.vitesse * 60 + (i - 1) * J.service;
+    if (i < ch.length - 1) { arr[ch[i]] = J.depart + m / 1000 / J.vitesse * 60 + servi; servi += svc(ch[i]); }
   }
-  const fin = J.depart + m / 1000 / J.vitesse * 60 + S.length * J.service;
+  const fin = J.depart + m / 1000 / J.vitesse * 60 + sommeSvc(p);
   const okTrain = fin <= J.train;
   const okCren = cren.every((c) => arr[c.id] <= c.creneau.avant);
   if (okTrain) train++;
@@ -83,15 +92,16 @@ if (IMP) {
   const kg2 = S2.reduce((t, c) => t + c.kg, 0);
   if (kg2 > J.chargeUtile) pb.push(`imprévu : ${kg2} kg chargés pour ${J.chargeUtile}`);
   const ev = (p) => {
-    const ch = ['depart', ...p, 'arrivee']; let m = 0, ok = true;
+    const ch = ['depart', ...p, 'arrivee']; let m = 0, ok = true, servi = 0;
     for (let i = 1; i < ch.length; i++) {
       m += d(ch[i - 1], ch[i]);
       if (i < ch.length - 1) {
         const k = cr2(S2.find((c) => c.id === ch[i]));
-        if (k && J.depart + m / 1000 / J.vitesse * 60 + (i - 1) * J.service > k.avant) ok = false;
+        if (k && J.depart + m / 1000 / J.vitesse * 60 + servi > k.avant) ok = false;
+        servi += svc(ch[i]);
       }
     }
-    const fin = J.depart + m / 1000 / J.vitesse * 60 + p.length * J.service;
+    const fin = J.depart + m / 1000 / J.vitesse * 60 + sommeSvc(p);
     return { m, fin, ok: ok && fin <= J.train };
   };
   const encore = tiennent.filter((p) => ev(p.filter((id) => !an.includes(id))).ok).length;

@@ -35,7 +35,8 @@
 //     horaire: {                            // facultatif : la contrainte de temps
 //       depart: 13 * 60, limite: 16 * 60 + 10, vitesse: 12, service: 6,
 //       libelleLimite: 'départ du train',
-//     },
+//     },                                    // `service` : un nombre de minutes par arrêt, OU
+//                                           //   { base: 4, parColis: 1, champ: 'colis' } (voir `serviceDe`)
 //     report: [{ id, libelle, unite, tolerance, valeur: (bilan) => … }],
 //   })
 //
@@ -43,7 +44,7 @@
 //   { ordre: [id…], quai: [id…], report: { [id]: '…' }, juge: { [id]: bool }, valide: ts }
 //
 // `bilan` passé aux cases de report et aux jalons du contenu :
-//   { retenus, ecartes, cumuls: { [idMesure]: nombre }, km, minutes, arrivee,
+//   { retenus, ecartes, cumuls: { [idMesure]: nombre }, km, minutes, service, arrivee,
 //     depassements: [idMesure…], enRetard,
 //     arrivees: { [idPoint]: minutes }, creneaux: [{ id, nom, avant, libelle, charge, arrivee, rate }],
 //     creneauxRates: [idPoint…], creneauRate }
@@ -123,6 +124,23 @@ export function creerTournee(T) {
   const H = T.horaire || null;
   const REPORT = T.report || [];
   const pointDe = (id) => POINTS.find((p) => String(p.id) === String(id));
+
+  // ── Le temps de service d'un arrêt (chantier D, 03/10/2026, pour ENT-3.4) ───────────────
+  // `horaire.service` est un nombre (6 min par arrêt, comme jusqu'ici) OU `{ base, parColis }` :
+  // un arrêt coûte `base` minutes plus `parColis` minutes par colis livré (`champ`, 'colis' par
+  // défaut). Un seul calcul, ici, que lisent les arrivées, le créneau, les jauges et le report —
+  // et `outils/carte/calibrer.mjs` applique la même formule.
+  const SERVICE_COLIS = !!(H && H.service && typeof H.service === 'object');
+  const serviceDe = (p) => {
+    if (!H) return 0;
+    if (!SERVICE_COLIS) return Number(H.service || 0);
+    const S = H.service;
+    return Number(S.base || 0) + Number(S.parColis || 0) * Number((p && p[S.champ || 'colis']) || 0);
+  };
+  // Le temps par arrêt tel que l'écran le dit.
+  const texteService = () => (SERVICE_COLIS
+    ? `${fr(Number(H.service.base || 0))} min par arrêt, plus ${fr(Number(H.service.parColis || 0))} min par colis`
+    : `${fr(Number(H.service || 0))} min par arrêt`);
 
   // ── Les phases de la journée (voir l'en-tête) ───────────────────────────────────────────
   // Une erreur de contenu (un client inconnu) est une erreur franche à la création, comme
@@ -354,19 +372,25 @@ export function creerTournee(T) {
     // arrive chez le quatrième client après avoir servi les trois premiers, pas après l'avoir
     // servi lui. C'est la règle de `outils/carte/calibrer.mjs`, qui a calé la journée : les
     // deux calculs doivent tomber sur les mêmes 371 ordres, et un test le vérifie.
-    let km = 0, minutes = 0, arrivee = null;
+    let km = 0, minutes = 0, arrivee = null, service = 0;
     const arrivees = {};
     if (H && PLAN && retenus.length) {
       const suite = [];
       if (PLAN.depart && departPose(etat)) suite.push(PLAN.depart);
       retenus.forEach((p) => suite.push(p));
       if (PLAN.arrivee && arriveePose(etat)) suite.push(PLAN.arrivee);
+      // Le service des arrêts déjà servis, cumulé au fil de la tournée.
+      let servi = 0;
       suite.forEach((p, i) => {
         if (i > 0) km += km1(suite[i - 1], p);
         const j = retenus.indexOf(p);
-        if (j >= 0) arrivees[String(p.id)] = H.depart + km / H.vitesse * 60 + j * (H.service || 0);
+        if (j >= 0) {
+          arrivees[String(p.id)] = H.depart + km / H.vitesse * 60 + servi;
+          servi += serviceDe(p);
+        }
       });
-      minutes = km / H.vitesse * 60 + retenus.length * (H.service || 0);
+      service = retenus.reduce((t, p) => t + serviceDe(p), 0);
+      minutes = km / H.vitesse * 60 + service;
       arrivee = H.depart + minutes;
     }
     const enRetard = !!(H && arrivee != null && H.limite != null && arrivee > H.limite);
@@ -395,6 +419,8 @@ export function creerTournee(T) {
 
     return {
       retenus, ecartes, cumuls, km, minutes, arrivee, depassements, enRetard,
+      // Le temps passé aux arrêts, en minutes (avec un service par colis, il dépend des clients).
+      service,
       arrivees, creneaux, creneauxRates, creneauRate: creneauxRates.length > 0,
       // Exposé pour les jalons du contenu, qui doivent pouvoir distinguer « mal organisé » de
       // « pas fini ». `arrivee` est déjà l'HEURE de retour, d'où les noms explicites.
@@ -453,7 +479,7 @@ export function creerTournee(T) {
               L'heure d'arrivée, c'est à vous de la calculer.</span>`
           : `<span class="note">Départ à ${hhmm(H.depart)}. ${fr(b.km, 1)} km à parcourir,
               ${b.retenus.length} arrêt${b.retenus.length > 1 ? 's' : ''},
-              ${ech(String(H.service || 0))} min par arrêt, ${ech(String(H.vitesse))} km/h en ville.
+              ${ech(texteService())}, ${ech(String(H.vitesse))} km/h en ville.
               L'heure de retour, c'est à vous de la calculer.</span>`}
         ${H.comparaison ? `<span class="tour-compare">${ech(H.comparaison)}</span>` : ''}
         ${sv ? '' : (b.enRetard ? `<span class="pastille crit">${ech(H.libelleLimite || 'Horaire limite')} manqué</span>`
@@ -466,7 +492,7 @@ export function creerTournee(T) {
       <div class="tour-j-barre"><i style="width:${part}%"></i></div>
       <span class="note">${fr(b.km, 1)} km parcourus, ${fr(b.minutes, 0)} min au total
         (${b.retenus.length} arrêt${b.retenus.length > 1 ? 's' : ''}
-        × ${H.service || 0} min de service).</span>
+        ${SERVICE_COLIS ? `: ${ech(texteService())}` : `× ${H.service || 0} min de service`}).</span>
       ${b.enRetard ? `<span class="pastille crit">${ech(H.libelleLimite || 'Horaire limite')} manqué
         de ${fr(b.arrivee - H.limite, 0)} min</span>` : ''}
     </div>`;

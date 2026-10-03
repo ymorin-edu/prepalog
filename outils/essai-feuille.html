@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Essai — feuille de calcul moins guidée (Prepalog)</title>
+<!-- Page d'ESSAI du lot 1 du chantier D (brief docs/briefs/ENT-3.x-feuille-moins-guidee.md, §5),
+     dans le vrai moteur d'entreprise et le décor Boost, AVANT de toucher aux séances. Elle n'est
+     liée nulle part. La base vit dans l'onglet (sessionStorage) : basculer une option garde ce qui
+     est tapé ; « Repartir de zéro » l'efface.
+     Ouvrir avec `lancer.bat`, puis http://localhost:8000/outils/essai-feuille.html
+     La journée est PROVISOIRE (départ 14 h 30, 14 km/h, 5 min par arrêt, 190 kg, train 16 h 10,
+     Pâtisserie Arnaud avant 15 h 00) : le lot 2 la recale avec outils/carte/calibrer.mjs.
+     Options, dans l'adresse ou par les boutons du bandeau :
+       ?sobre     la feuille sans couleurs (cible d'ENT-3.4)
+       ?brouillon le brouillon libre à droite (cible d'ENT-3.4)
+       ?ines      la feuille d'Inès, déjà remplie, avec UNE formule fausse (cible d'ENT-3.3) -->
+<base href="../">
+<link rel="icon" href="./styles/logo.png">
+<link rel="stylesheet" href="./styles/polices.css">
+<link rel="stylesheet" href="./styles/base.css">
+<style>
+  /* Le bandeau d'essai : hors du moteur, il n'existe que sur cette page. */
+  .essai-bandeau{ display:flex; flex-wrap:wrap; align-items:center; gap:8px 14px; padding:10px 16px;
+    background:var(--panneau); border-bottom:1px solid var(--filet); font-size:14px }
+  .essai-bandeau strong{ margin-right:6px }
+  .essai-bandeau a{ color:var(--encre); text-decoration:none; padding:4px 10px; border:1px solid var(--filet);
+    border-radius:999px }
+  .essai-bandeau a[aria-pressed="true"]{ border-color:var(--ardoise); color:var(--ardoise); font-weight:700 }
+  .essai-bandeau .essai-raz{ margin-left:auto }
+</style>
+</head>
+<body>
+<nav class="essai-bandeau" aria-label="Options de l’essai">
+  <strong>Essai · feuille moins guidée</strong>
+  <a href="#" data-opt="sobre">Sans couleurs (3.4)</a>
+  <a href="#" data-opt="brouillon">Brouillon (3.4)</a>
+  <a href="#" data-opt="ines">Feuille d’Inès (3.3)</a>
+  <a href="#" class="essai-raz" data-raz>Repartir de zéro</a>
+</nav>
+<div id="hote"></div>
+<script type="module">
+import { creerEntreprise } from './core/types/entreprise.js';
+import * as BOOST from './contenus/boost.js';
+import { CARTE as CARTE32 } from './contenus/boost-ent32-carte.js';
+
+const Q = new URLSearchParams(location.search);
+const SOBRE = Q.has('sobre'), BROUILLON = Q.has('brouillon'), INES = Q.has('ines');
+const ID = 'essai-feuille';
+
+/* ---------------------------------------------------------------- la journée provisoire */
+const JOURNEE = { depart: 14 * 60 + 30, vitesse: 14, service: 5, chargeUtile: 190, train: 16 * 60 + 10 };
+const CRENEAU_ID = 'c6';
+const CRENEAU_AVANT = 15 * 60;
+// La même carte qu'ENT-3.2, seul le créneau de la Pâtisserie Arnaud bouge (provisoire).
+const CARTE = Object.assign({}, CARTE32, {
+  clients: CARTE32.clients.map((c) => (c.id === CRENEAU_ID
+    ? Object.assign({}, c, { creneau: { avant: CRENEAU_AVANT, libelle: 'livraison avant 15 h 00' } }) : c)),
+});
+const CLIENTS = CARTE.clients;
+const CR = CLIENTS.find((c) => c.id === CRENEAU_ID);
+const h = (m) => `${Math.floor(m / 60)} h ${String(Math.round(m % 60)).padStart(2, '0')}`;
+
+/* ------------------------------------------------- la feuille : trois blocs, adresses fixes */
+// Les lignes sont posées dans cet ordre, et leurs adresses se DÉDUISENT de leur place (`ref`) :
+// rien n'est écrit en dur. Le tableau « Tournée » a toujours 8 lignes, vides au-delà des arrêts.
+const N = CLIENTS.length;
+const A1 = 2;                       // bloc A : lignes 2 à 7
+const REF = {
+  depart: 'B2', vitesse: 'B3', service: 'B4', charge: 'B5', train: 'B6', creneau: 'B7',
+};
+const B1 = 10;                      // bloc B : en-tête ligne 9, clients lignes 10 à 17
+const refPoids = (i) => `B${B1 + i}`;
+REF.total = `B${B1 + N}`;           // 18
+REF.ecart = `B${B1 + N + 1}`;       // 19
+const C1 = B1 + N + 4;              // bloc C : en-tête ligne 21, arrêts lignes 22 à 29
+const refArret = (k) => `B${C1 + k}`;
+REF.charge2 = `B${C1 + N}`;         // 30 poids chargé
+REF.km = `B${C1 + N + 1}`;          // 31
+REF.route = `B${C1 + N + 2}`;       // 32
+REF.arrets = `B${C1 + N + 3}`;      // 33
+REF.gare = `B${C1 + N + 4}`;        // 34
+REF.kmC = `B${C1 + N + 6}`;         // 36
+REF.rangC = `B${C1 + N + 7}`;       // 37
+REF.heureC = `B${C1 + N + 8}`;      // 38
+
+// La feuille d'Inès (3.3) : tout est tapé, toutes les formules écrites — et l'heure d'arrivée à
+// la gare OUBLIE les arrêts (`=B2+B32`). Elle dit donc « le train est tenu » à tort.
+// Le « ? » ne donne JAMAIS la méthode ni une valeur du jour (décision de Tristan, 03/10/2026) :
+// seulement le FORMAT des heures, avec un exemple neutre (9:05) qui n'est aucune heure de la journée.
+const FORMAT_HEURE = 'Une heure se tape avec deux-points, sans formule : par exemple 9:05.';
+const FORMAT_CALCUL = 'Le résultat s’affiche en heure. Dans la feuille, une heure compte en minutes : 9:05 + 20 donne 9 h 25.';
+const pre = (txt) => (INES ? { prerempli: txt } : {});
+
+// `lire(ref)` rend la valeur de la cellule SUR LA FEUILLE DE L'ÉLÈVE (null si vide) : les cases
+// calculées sont jugées sur ce qu'il a tapé, pas sur le mail — une erreur de lecture ne se paie
+// qu'une fois.
+const tous = (lire, refs) => { const v = refs.map(lire); return v.some((x) => x == null) ? null : v; };
+const somme = (v) => (v == null ? null : v.reduce((t, x) => t + x, 0));
+
+function lignes(b) {
+  const n = b.retenus.length;
+  const km = Math.round(b.km * 10) / 10;
+  const rang = b.retenus.findIndex((p) => String(p.id) === CRENEAU_ID);
+  const arr = b.arrivees[CRENEAU_ID];
+  const kmC = rang >= 0 && b.departPose && arr != null
+    ? Math.round(((arr - JOURNEE.depart - rang * JOURNEE.service) * JOURNEE.vitesse / 60) * 10) / 10 : null;
+  const attente = '(posez d’abord le départ et ce client)';
+  const donnee = (libelle, attendu, opts = {}) => ({
+    saisie: true, formule: false, attendu, libelle,
+    placeholder: opts.format === 'heure' ? 'hh:mm' : '', ...opts,
+  });
+  const formule = (libelle, attendu, opts = {}) => ({ saisie: true, formule: true, attendu, libelle, ...opts });
+  const indexDe = (id) => CLIENTS.findIndex((c) => String(c.id) === String(id));
+  return [
+    { A: 'Données de la journée (à chercher dans le mail)', B: '', entete: true },
+    { A: 'Heure de départ de l’entrepôt', note: FORMAT_HEURE,
+      B: donnee('heure de départ', JOURNEE.depart, { format: 'heure', ...pre('14:30') }) },
+    { A: 'Vitesse en ville (km/h)', B: donnee('vitesse', JOURNEE.vitesse, pre('14')) },
+    { A: 'Temps par arrêt (min)', B: donnee('temps par arrêt', JOURNEE.service, pre('5')) },
+    { A: 'Charge utile du vélo-cargo (kg)', type: 'contrainte', B: donnee('charge utile', JOURNEE.chargeUtile, pre('190')) },
+    { A: 'Départ du train', type: 'contrainte', note: FORMAT_HEURE,
+      B: donnee('départ du train', JOURNEE.train, { format: 'heure', ...pre('16:10') }) },
+    { A: `Limite du créneau (${CR.nom})`, type: 'contrainte', note: FORMAT_HEURE,
+      B: donnee('limite du créneau', CRENEAU_AVANT, { format: 'heure', ...pre('15:00') }) },
+    {},
+    { A: 'Commandes du jour (ordre du mail)', B: 'Poids (kg)', entete: true },
+    ...CLIENTS.map((c, i) => ({ A: `${i + 1} · ${c.nom}`, B: donnee(`poids de ${c.nom}`, c.kg, pre(String(c.kg))) })),
+    { A: 'Poids total (kg)', type: 'resultat',
+      B: formule('poids total', (lire) => somme(tous(lire, CLIENTS.map((_, i) => refPoids(i)))),
+        pre(`=SOMME(${refPoids(0)}:${refPoids(N - 1)})`)) },
+    { A: 'Poids à laisser à quai, au moins (kg)', type: 'resultat',
+      B: formule('poids à laisser à quai', (lire) => { const v = tous(lire, [REF.total, REF.charge]); return v && v[0] - v[1]; },
+        pre(`=${REF.total}-${REF.charge}`)) },
+    {},
+    { A: 'Tournée (ordre des arrêts, se remplit tout seul)', B: 'Poids (kg)', entete: true },
+    // Huit lignes RÉSERVÉES : un arrêt par ligne dans l'ordre cliqué, son poids RECOPIÉ de ce que
+    // l'élève a tapé plus haut. Au-delà des arrêts, la ligne est vide — et rien ne bouge en dessous.
+    ...Array.from({ length: N }, (_, k) => {
+      const p = b.retenus[k];
+      return p ? { A: `Arrêt ${k + 1} · ${p.nom}`, B: { copie: refPoids(indexDe(p.id)) } } : { A: '', B: '' };
+    }),
+    { A: 'Poids chargé (kg)', type: 'resultat',
+      B: formule('poids chargé', (lire) => (n ? somme(tous(lire, b.retenus.map((_, k) => refArret(k)))) : null),
+        pre(`=SOMME(${refArret(0)}:${refArret(N - 1)})`)) },
+    { A: 'Distance du parcours (km)', B: km },
+    { A: 'Temps de route (min)', type: 'etape',
+      B: formule('temps de route', (lire) => { const v = tous(lire, [REF.km, REF.vitesse]); return v && v[1] ? v[0] / v[1] * 60 : null; },
+        { tolerance: 0.5, ...pre(`=${REF.km}/${REF.vitesse}*60`) }) },
+    { A: 'Temps aux arrêts (min)', type: 'etape',
+      B: formule('temps aux arrêts', (lire) => { const v = lire(REF.service); return v == null || !n ? null : n * v; },
+        pre(`=7*${REF.service}`)) },
+    { A: 'Heure d’arrivée à la gare', type: 'resultat',
+      note: FORMAT_CALCUL,
+      B: formule('heure d’arrivée à la gare', (lire) => somme(tous(lire, [REF.depart, REF.route, REF.arrets])),
+        { tolerance: 0.5, format: 'heure', ...pre(`=${REF.depart}+${REF.route}`) }) },
+    {},
+    { A: `Distance jusqu’à ${CR.nom} (km)`, B: kmC == null ? attente : kmC },
+    { A: 'Arrêts servis avant lui', B: rang < 0 ? attente : rang },
+    { A: `Heure d’arrivée chez ${CR.nom}`, type: 'resultat',
+      note: FORMAT_CALCUL,
+      B: kmC == null ? attente
+        : formule('heure d’arrivée chez le client à créneau', (lire) => {
+          const v = tous(lire, [REF.depart, REF.kmC, REF.vitesse, REF.rangC, REF.service]);
+          return v && v[2] ? v[0] + v[1] / v[2] * 60 + v[3] * v[4] : null;
+        }, { tolerance: 0.5, format: 'heure', ...pre(`=${REF.depart}+${REF.kmC}/${REF.vitesse}*60+${REF.rangC}*${REF.service}`) }) },
+  ];
+}
+
+/* ------------------------------------------------------------------------- le mail */
+const fiche = CLIENTS.map((c, i) => `${i + 1}. ${c.nom} — ${c.adresse} — ${c.colis} colis, ${c.kg} kg`
+  + (c.creneau ? ` — ${c.creneau.libelle}` : '')).join('\n');
+const VOLET = {
+  id: ID,
+  semer(prenom) {
+    return { mails: [{
+      folder: 'in', ts: Date.now() - 3600e3, from: 'M. Morin, responsable d’exploitation (essai)',
+      fromMail: 'exploitation@boost.example', to: prenom,
+      subject: 'Tournée vélo-cargo de cet après-midi (journée PROVISOIRE de l’essai)', kind: 'text',
+      text: `Bonjour ${prenom},\n\nCet après-midi, vous partez de l’entrepôt à ${h(JOURNEE.depart)} avec le vélo-cargo `
+        + `à assistance électrique : comptez ${JOURNEE.vitesse} km/h en ville et ${JOURNEE.service} minutes par arrêt. `
+        + `Il emporte au plus ${JOURNEE.chargeUtile} kg.\n\nLe train de Paris part de la gare de Nîmes-Centre à ${h(JOURNEE.train)}. `
+        + `${CR.nom} ne reçoit ses livraisons qu’avant ${h(CRENEAU_AVANT)}.\n\nLes ${N} commandes :\n\n${fiche}\n\n`
+        + (INES ? 'Inès a préparé la feuille de calcul ce matin : elle me dit que le train est tenu. Contrôlez-la.\n\n' : '')
+        + 'Bon courage,\nM. Morin',
+    }] };
+  },
+};
+
+/* ---------------------------------------------------------------- le moteur, en mémoire */
+const CLE = 'prepalog-essai-feuille';
+let db = {};
+try { db = JSON.parse(sessionStorage.getItem(CLE) || '{}') || {}; } catch (e) { db = {}; }
+// Le repérage est réputé fait : l'essai porte sur la feuille, pas sur la carte.
+if (!db.transport) db.transport = {};
+if (!db.transport[ID]) db.transport[ID] = {};
+if (!db.transport[ID].plan) db.transport[ID].plan = { valide: Date.now() };
+const garder = () => { try { sessionStorage.setItem(CLE, JSON.stringify(db)); } catch (e) { /* stockage refusé : l'essai marche quand même */ } };
+
+const moteur = creerEntreprise({
+  ENTREPRISE: BOOST.ENTREPRISE, VOCAB: BOOST.VOCAB, CATALOGUE: BOOST.CATALOGUE,
+  SUPPLIERS: BOOST.SUPPLIERS, SUP_BY_ID: BOOST.SUP_BY_ID, CUSTOMERS: BOOST.CUSTOMERS, CM: BOOST.CM,
+  baseDeDepart: BOOST.baseDeDepart, THEME: BOOST.THEME,
+  etapes: [], exercice: 'Essai — feuille de calcul moins guidée', volet: VOLET,
+  transportSection: 'Tournées', transportId: ID,
+  plan: { libelle: 'Plan de Nîmes', titre: 'Plan de Nîmes', consigne: 'Repérage réputé fait pour l’essai.', carte: CARTE },
+  tournee: {
+    libelle: 'Tournée de l’après-midi', titre: 'Organiser la tournée du vélo-cargo',
+    consigne: 'Toutes les données sont dans le mail du responsable. Cliquez l’entrepôt, les clients dans '
+      + 'l’ordre de passage, puis la gare.',
+    departAQuai: true, jaugesRepere: true, extremitesACliquer: true, contraintesDansGrille: true,
+    libelleCharge: 'Chargé dans le vélo-cargo', libelleQuai: 'Commandes restées à quai', libelleCharger: 'charger',
+    mesures: [{ id: 'charge', libelle: 'Charge du vélo-cargo', unite: 'kg', champ: 'kg', max: JOURNEE.chargeUtile },
+      { id: 'colis', libelle: 'Colis chargés', unite: 'colis', champ: 'colis' }],
+    horaire: { depart: JOURNEE.depart, limite: JOURNEE.train, vitesse: JOURNEE.vitesse, service: JOURNEE.service,
+      libelleLimite: 'départ du train' },
+    grille: {
+      titre: INES ? 'Feuille de calcul d’Inès' : 'Feuille de calcul du vélo-cargo',
+      consigne: INES
+        ? 'Inès a rempli cette feuille ce matin. Contrôlez ses données et ses formules : vous pouvez les modifier.'
+        : 'Tapez les données du mail, puis écrivez les formules (elles commencent par « = »). '
+          + 'Le « ? » rappelle comment s’écrit une heure.',
+      colonnes: ['A', 'B'], decimales: 1, aides: 'bouton',
+      ...(SOBRE ? { couleurs: false } : {}),
+      ...(BROUILLON ? { brouillon: { colonnes: ['D', 'E'], lignes: 10 } } : {}),
+      lignes,
+    },
+  },
+});
+moteur.rendre(document.getElementById('hote'), {
+  meta: { id: ID, code: 'ESSAI', titre: 'Boost — essai de la feuille', portee: 'eleve', immersif: true, jeuId: ID },
+  profil: { prenom: 'Essai', nom: 'Feuille', role: 'eleve' },
+  jeu: { etat: () => db, sauver: garder },
+  enregistrer: () => {}, quitter: () => { location.reload(); }, codeStock: '',
+});
+window.__essai = { db, REF };
+document.querySelector('.ent-nav[data-vue="tournee"]')?.click();
+
+/* ------------------------------------------------------------------- le bandeau d'essai */
+document.querySelectorAll('[data-opt]').forEach((a) => {
+  const o = a.dataset.opt;
+  a.setAttribute('aria-pressed', String(Q.has(o)));
+  a.addEventListener('click', (e) => {
+    e.preventDefault();
+    const q = new URLSearchParams(location.search);
+    if (q.has(o)) q.delete(o); else q.set(o, '');
+    // La feuille d'Inès et la feuille vierge ne se mélangent pas : changer de l'une à l'autre repart de zéro.
+    if (o === 'ines') { try { sessionStorage.removeItem(CLE); } catch (err) { /* rien */ } }
+    location.search = q.toString().replace(/=(&|$)/g, '$1');
+  });
+});
+document.querySelector('[data-raz]').addEventListener('click', (e) => {
+  e.preventDefault();
+  try { sessionStorage.removeItem(CLE); } catch (err) { /* rien */ }
+  location.reload();
+});
+</script>
+</body>
+</html>

@@ -2672,4 +2672,212 @@ await v('ENT-3.3 : aucune erreur de console sur tout le parcours', async () => {
 });
 await ctx33.close();
 
+/* ===================================================================================== */
+/* Chantier D, lot 1 — la feuille de calcul moins guidée (moteur, 03/10/2026)             */
+/*                                                                                        */
+/* Brief `docs/briefs/ENT-3.x-feuille-moins-guidee.md`. Le moteur se garde sur la PAGE      */
+/* D'ESSAI `outils/essai-feuille.html` (celle que Tristan valide en cliquant) : la journée */
+/* y est provisoire, mais les trois blocs et leurs adresses sont ceux de la cible.         */
+/* Les valeurs attendues sont écrites à la main : 14 h 30, Ribot 34 kg, 178 kg chargés…    */
+/* Le service par colis se garde à part, sur le bilan du noyau, sans dessin.              */
+/* ===================================================================================== */
+
+const ctxF = await nav.newContext();
+const pageF = await ctxF.newPage();
+pageF.setDefaultTimeout(8000);
+const erreursF = [];
+pageF.on('pageerror', (e) => erreursF.push('PAGEERROR: ' + e.message));
+pageF.on('console', (m) => { if (m.type() === 'error' && !/\b404\b/.test(m.text())) erreursF.push('CONSOLE: ' + m.text()); });
+// Une base neuve à chaque fois : celle de l'essai vit dans l'onglet (sessionStorage).
+const ouvrirF = async (q = '') => {
+  await pageF.goto('http://127.0.0.1:8099/outils/essai-feuille.html');
+  await pageF.evaluate(() => sessionStorage.clear());
+  await pageF.goto('http://127.0.0.1:8099/outils/essai-feuille.html' + q);
+  await pageF.waitForSelector('[data-gr-verifier]');
+};
+const tourF = () => pageF.evaluate(() => JSON.parse(JSON.stringify(window.__essai.db.transport['essai-feuille'].tournee || {})));
+// Les clics passent par les boutons du récapitulatif (le même chemin de code que la carte).
+const construireF = (ordre) => pageF.evaluate((o) => {
+  const clic = (s) => document.querySelector(s).click();
+  clic('[data-bout="depart"]');
+  o.forEach((id) => clic(`[data-reprendre="${id}"]`));
+  clic('[data-bout="arrivee"]');
+}, ordre);
+const taperF = (ref, val) => pageF.fill(`[data-gr="${ref}"]`, val);
+const celluleF = (ref) => pageF.evaluate((r) => document.querySelector(`[data-ref="${r}"]`).innerText.replace(/\s+/g, ' ').trim(), ref);
+// Le résultat affiché à côté d'une formule (sans la pastille de correction).
+const resF = async (ref) => (await pageF.textContent(`[data-gr-res="${ref}"]`)).trim();
+const verifierF = async () => { await pageF.click('[data-gr-verifier]'); return (await tourF()).grille.juge; };
+const POIDS_F = [18, 12, 34, 16, 52, 31, 29, 38];          // ordre du mail : c1 … c8
+const ORDRE_F = ['c6', 'c7', 'c8', 'c3', 'c4', 'c1', 'c2']; // la Cave Teissier à quai
+// La feuille entière remplie juste (le poids de l'Atelier Ribot peut être mal recopié).
+const remplirF = async ({ ribot = '34' } = {}) => {
+  for (const [r, x] of [['B2', '14:30'], ['B3', '14'], ['B4', '5'], ['B5', '190'], ['B6', '16:10'], ['B7', '15:00']]) await taperF(r, x);
+  for (let i = 0; i < 8; i++) await taperF(`B${10 + i}`, i === 2 ? ribot : String(POIDS_F[i]));
+  for (const [r, x] of [['B18', '=SOMME(B10:B17)'], ['B19', '=B18-B5'], ['B30', '=SOMME(B22:B29)'],
+    ['B32', '=B31/B3*60'], ['B33', '=7*B4'], ['B34', '=B2+B32+B33'], ['B38', '=B2+B36/B3*60+B37*B4']]) await taperF(r, x);
+};
+
+await v('Feuille D : une erreur de lecture ne se paie qu’une fois — le total se juge sur les poids TAPÉS', async () => {
+  await ouvrirF();
+  await construireF(ORDRE_F);
+  await remplirF({ ribot: '43' });                          // 43 au lieu de 34
+  let j = await verifierF();
+  const faux = Object.keys(j).filter((k) => j[k] !== 'ok');
+  if (faux.join() !== 'B12') throw new Error('cases non justes : ' + JSON.stringify(j));
+  // Le total vaut 239 (230 + 9) et il est juste ; une formule qui oublie une ligne est fausse.
+  if (await resF('B18') !== '239') throw new Error('total : ' + await resF('B18'));
+  if (await resF('B30') !== '187') throw new Error('poids chargé : ' + await resF('B30'));
+  await taperF('B18', '=SOMME(B10:B16)');
+  j = await verifierF();
+  if (j.B18 !== 'valeur') throw new Error('total amputé jugé : ' + j.B18);
+  // Le poids chargé tapé à la main, même juste, n'est pas une formule.
+  await taperF('B18', '=SOMME(B10:B17)');
+  await taperF('B30', '187');
+  j = await verifierF();
+  if (j.B30 !== 'pasFormule') throw new Error('poids chargé tapé à la main : ' + j.B30);
+});
+
+await v('Feuille D : une feuille vide ne rend aucune case juste (« données à remplir d’abord »)', async () => {
+  await ouvrirF();
+  await construireF(ORDRE_F);
+  await taperF('B18', '=SOMME(B10:B17)');                   // vaut 0, la somme de rien
+  await taperF('B30', '=SOMME(B22:B29)');
+  const j = await verifierF();
+  if (j.B18 !== 'attente' || j.B30 !== 'attente') throw new Error('feuille vide : ' + JSON.stringify(j));
+  if (Object.values(j).some((x) => x === 'ok')) throw new Error('une case juste sur une feuille vide : ' + JSON.stringify(j));
+  if (!(await pageF.textContent('[data-ref="B18"]')).includes('données à remplir d’abord')) throw new Error('pastille absente');
+});
+
+await v('Feuille D : le tableau « Tournée » suit l’ordre, recopie les poids tapés, et rien ne bouge en dessous', async () => {
+  await ouvrirF();
+  await construireF(ORDRE_F);
+  // Rien de tapé : les noms sont là, les poids recopiés sont vides, et ne se modifient pas.
+  if (await celluleF('A22') !== 'Arrêt 1 · Pâtisserie Arnaud' || await celluleF('B22') !== '') throw new Error('ligne 22 : ' + await celluleF('A22') + ' | ' + await celluleF('B22'));
+  if (await pageF.$('[data-gr="B22"]')) throw new Error('une cellule recopiée se modifie');
+  await taperF('B15', '31');                               // le poids de la Pâtisserie Arnaud (c6)
+  if (await celluleF('B22') !== '31') throw new Error('recopie à la frappe : ' + await celluleF('B22'));
+  await remplirF();
+  const avant = await pageF.inputValue('[data-gr="B30"]');
+  // On descend la Pâtisserie : elle passe en ligne 23, la Papeterie remonte en 22.
+  await pageF.click('[data-bas="0"]');
+  if (await celluleF('A22') !== 'Arrêt 1 · Papeterie Bonnet' || await celluleF('B22') !== '29') throw new Error('réordonné : ' + await celluleF('A22'));
+  if (await celluleF('A23') !== 'Arrêt 2 · Pâtisserie Arnaud') throw new Error('ligne 23 : ' + await celluleF('A23'));
+  // On retire la Papeterie : 6 arrêts, deux lignes vides, et la ligne 30 est TOUJOURS le poids chargé.
+  await pageF.click('[data-quai="c7"]');
+  if (await celluleF('A28') !== '' || await celluleF('A29') !== '') throw new Error('lignes réservées : ' + await celluleF('A28'));
+  if (!(await celluleF('A30')).startsWith('Poids chargé') || !(await celluleF('A34')).startsWith('Heure d’arrivée à la gare')) throw new Error('les lignes du dessous ont bougé');
+  if (await pageF.inputValue('[data-gr="B30"]') !== avant) throw new Error('formule déplacée');
+  if (await resF('B30') !== '149') throw new Error('poids chargé recalculé : ' + await resF('B30'));   // 178 − 29
+});
+
+await v('Feuille D : le « ? » ne donne que le format des heures, s’ouvre à la souris et au clavier, sans rien enregistrer', async () => {
+  await ouvrirF();
+  await construireF(ORDRE_F);
+  // Plié : aucune phrase d'aide visible, ni sous les libellés, ni en liste sous la feuille.
+  // Décision de Tristan (03/10) : le « ? » ne donne jamais la méthode ni une heure du jour, seulement
+  // le FORMAT des heures. Il n'existe donc que sur les lignes d'heure (2, 6, 7, 34, 38).
+  const lignesAide = await pageF.$$eval('[data-gr-aide]', (b) => b.map((x) => +x.dataset.grAide + 1));
+  if (lignesAide.join() !== '2,6,7,34,38') throw new Error('« ? » posés sur les lignes ' + lignesAide.join());
+  const textes = await pageF.$$eval('.gr-aide-txt', (t) => t.map((x) => x.textContent).join(' | '));
+  if (/SOMME|÷|×|14:30|16:10|15:00|14 h 30|16 h 10|15 h 00/.test(textes)) throw new Error('le « ? » donne la réponse : ' + textes);
+  const id = await pageF.getAttribute('[data-gr-aide="33"]', 'aria-controls');
+  if (await pageF.isVisible('#' + id)) throw new Error('aide visible avant le clic');
+  if (await pageF.$('.gr-aides')) throw new Error('liste d’aides sous la feuille');
+  const base = JSON.stringify(await pageF.evaluate(() => window.__essai.db));
+  await pageF.click('[data-gr-aide="33"]');
+  if (!(await pageF.isVisible('#' + id)) || await pageF.getAttribute('[data-gr-aide="33"]', 'aria-expanded') !== 'true') throw new Error('aide non ouverte');
+  if (!(await pageF.textContent('#' + id)).includes('9:05')) throw new Error('texte : ' + await pageF.textContent('#' + id));
+  await pageF.focus('[data-gr-aide="1"]');
+  await pageF.keyboard.press('Enter');
+  if (await pageF.getAttribute('[data-gr-aide="1"]', 'aria-expanded') !== 'true') throw new Error('Entrée n’ouvre pas');
+  if (JSON.stringify(await pageF.evaluate(() => window.__essai.db)) !== base) throw new Error('le « ? » a écrit dans la base');
+  // Pendant l'écriture d'une formule, cliquer le « ? » n'insère pas la cellule où il est posé.
+  await pageF.click('[data-gr="B19"]');
+  await pageF.fill('[data-gr="B19"]', '=');
+  await pageF.click('[data-gr-aide="37"]');
+  if (await pageF.inputValue('[data-gr="B19"]') !== '=') throw new Error('le « ? » a inséré : ' + await pageF.inputValue('[data-gr="B19"]'));
+});
+
+await v('Feuille D : la feuille d’Inès — formules pré-remplies, jugées, absentes de la base, gardées par « Recommencer »', async () => {
+  await ouvrirF('?ines');
+  await construireF(ORDRE_F);
+  if (await pageF.inputValue('[data-gr="B34"]') !== '=B2+B32') throw new Error('formule d’Inès : ' + await pageF.inputValue('[data-gr="B34"]'));
+  const j = await verifierF();
+  const faux = Object.keys(j).filter((k) => j[k] !== 'ok');
+  if (faux.join() !== 'B34') throw new Error('la seule fausse doit être B34 : ' + JSON.stringify(j));
+  if (Object.keys((await tourF()).grille.cases || {}).length) throw new Error('le pré-rempli est écrit dans la base');
+  await pageF.click('[data-tour-raz]'); await pageF.click('[data-tour-raz]');
+  if ((await tourF()).ordre.length) throw new Error('tournée non remise à zéro');
+  if (await pageF.inputValue('[data-gr="B34"]') !== '=B2+B32') throw new Error('« Recommencer » a effacé la formule');
+  // Réparée par l'élève : elle s'enregistre, et elle est juste.
+  await construireF(ORDRE_F);
+  await taperF('B34', '=B2+B32+B33');
+  const j2 = await verifierF();
+  if (j2.B34 !== 'ok' || (await tourF()).grille.cases.B34 !== '=B2+B32+B33') throw new Error('réparation : ' + j2.B34);
+});
+
+await v('Feuille D : sans couleurs — ni jaune ni violet, cellules à remplir repérées par une bordure, sans aplat', async () => {
+  await ouvrirF();
+  if (!(await pageF.$('.gr-legende')) || !(await pageF.$('.gr-t-resultat'))) throw new Error('la feuille colorée a perdu ses couleurs');
+  await ouvrirF('?sobre');
+  if (await pageF.$('.gr-legende') || await pageF.$('.gr-t-etape, .gr-t-resultat, .gr-t-contrainte')) throw new Error('couleurs encore là');
+  const s = await pageF.evaluate(() => { const c = getComputedStyle(document.querySelector('.gr-saisie')); return [c.backgroundColor, c.boxShadow]; });
+  if (s[0] !== 'rgba(0, 0, 0, 0)' || s[1] === 'none') throw new Error('cellule à remplir : ' + s.join(' / '));
+  const trait = await pageF.evaluate(() => getComputedStyle(document.querySelector('.gr-contraintes .tour-jauge-repere')).borderLeftWidth);
+  if (trait !== '1px') throw new Error('trait violet des contraintes : ' + trait);
+});
+
+await v('Feuille D : le brouillon lit la feuille, n’est jamais jugé, et la feuille ne le lit pas', async () => {
+  await ouvrirF('?brouillon');
+  await construireF(ORDRE_F);
+  await remplirF();
+  await pageF.fill('[data-grb="D1"]', '=B31/B3');
+  await pageF.fill('[data-grb="D2"]', '=D1*60');
+  const km = Number((await celluleF('B31')).replace(',', '.'));
+  const d2 = Number((await pageF.textContent('[data-grb-res="D2"]')).replace(',', '.'));
+  if (!(km > 5) || Math.abs(d2 - km / 14 * 60) > 0.01) throw new Error(`brouillon : ${d2} pour ${km} km`);
+  if ((await tourF()).grille.brouillon.D2 !== '=D1*60') throw new Error('brouillon non enregistré');
+  // Une formule de la feuille qui cite le brouillon ne reçoit pas sa valeur.
+  await taperF('B33', '=D2');
+  if ((await celluleF('B33')).endsWith(String(Math.round(d2 * 10) / 10).replace('.', ','))) throw new Error('la feuille lit le brouillon : ' + await celluleF('B33'));
+  const j = await verifierF();
+  if (Object.keys(j).some((k) => k.startsWith('D') || k.startsWith('E'))) throw new Error('brouillon jugé : ' + Object.keys(j));
+  if (j.B33 === 'ok') throw new Error('=D2 jugé juste');
+  // À la souris : depuis le brouillon on désigne la feuille ; depuis la feuille, pas le brouillon.
+  await pageF.click('[data-grb="E1"]');
+  await pageF.fill('[data-grb="E1"]', '=');
+  await pageF.locator('[data-ref="B31"]').scrollIntoViewIfNeeded();
+  const b31 = await pageF.locator('[data-ref="B31"]').boundingBox();
+  await pageF.mouse.click(b31.x + 20, b31.y + b31.height / 2);
+  if (await pageF.inputValue('[data-grb="E1"]') !== '=B31') throw new Error('désigner la feuille depuis le brouillon : ' + await pageF.inputValue('[data-grb="E1"]'));
+  await pageF.click('[data-gr="B33"]');
+  await pageF.fill('[data-gr="B33"]', '=');
+  await pageF.locator('[data-ref="D1"]').scrollIntoViewIfNeeded();
+  const d1 = await pageF.locator('[data-ref="D1"]').boundingBox();
+  await pageF.mouse.click(d1.x + 4, d1.y + 4);
+  if ((await pageF.inputValue('[data-gr="B33"]')).includes('D1')) throw new Error('la feuille a désigné le brouillon');
+});
+
+await v('Feuille D : le temps de service par colis (base + par colis) pèse sur les arrivées et le train', async () => {
+  const r = await pageF.evaluate(async () => {
+    const { creerTournee } = await import('/core/types/tournee.js');
+    // Tous les points au même endroit : distance nulle, tout le temps est du service.
+    const plan = { depart: { id: 'D', nom: 'Dépôt', x: 0, y: 0 }, arrivee: { id: 'A', nom: 'Arrivée', x: 0, y: 0 },
+      points: [{ id: 'p1', nom: 'Un', x: 0, y: 0, colis: 3 }, { id: 'p2', nom: 'Deux', x: 0, y: 0, colis: 5 }] };
+    const etat = { ordre: ['p1', 'p2'], quai: [], depart: 1, arrivee: 1 };
+    const fixe = creerTournee({ plan, horaire: { depart: 540, limite: 600, vitesse: 12, service: 6 } }).bilan(etat);
+    const colis = creerTournee({ plan, horaire: { depart: 540, limite: 555, vitesse: 12, service: { base: 4, parColis: 1 } } }).bilan(etat);
+    return { fixe: [fixe.arrivees.p2, fixe.minutes, fixe.service], colis: [colis.arrivees.p1, colis.arrivees.p2, colis.minutes, colis.service, colis.enRetard] };
+  });
+  // Fixe : 6 + 6. Par colis : (4 + 3) puis (4 + 5) = 16 min, au-delà de la limite de 15.
+  if (r.fixe.join() !== '546,12,12') throw new Error('service fixe : ' + r.fixe.join());
+  if (r.colis.join() !== '540,547,16,16,true') throw new Error('service par colis : ' + r.colis.join());
+});
+
+await v('Feuille D : aucune erreur de console sur la page d’essai', async () => {
+  if (erreursF.length) throw new Error([...new Set(erreursF)].slice(0, 3).join(' | '));
+});
+await ctxF.close();
+
 }

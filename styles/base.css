@@ -1079,6 +1079,48 @@ a.ent-nav{ text-decoration:none }
 }
 .gr-bloc .avis-ok, .tour-report .avis-ok, .plan-reperage .avis-ok{ background:rgba(37,201,152,.18); color:var(--encre) }
 .avis-contrainte{ border-color:var(--rouge); background:var(--panneau); margin-top:12px }
+
+/* ---- feuille de calcul moins guidée (chantier D du plan Boost, 03/10/2026) -------------------
+   La feuille et son brouillon côte à côte ; sous la feuille si la place manque. */
+.gr-feuilles{ display:flex; flex-wrap:wrap; gap:6px 22px; align-items:flex-start }
+.gr-feuilles > .ent-scroll{ min-width:0; max-width:100% }
+/* Une cellule recopiée (tableau « Tournée ») : on la lit, on ne l'écrit pas. */
+.gr-copie{ color:var(--encre-douce) }
+/* Le « ? » d'une ligne : un vrai bouton, petit, qui ne vole pas la vedette au libellé. */
+.gr-aide-btn{
+  margin-left:6px; width:20px; height:20px; padding:0; border-radius:50%; vertical-align:middle;
+  border:1px solid var(--filet); background:var(--panneau); color:var(--encre-douce);
+  font-family:inherit; font-size:12px; font-weight:700; line-height:1; cursor:pointer;
+}
+.gr-aide-btn:hover{ border-color:var(--ardoise); color:var(--ardoise) }
+.gr-aide-btn[aria-expanded="true"]{ border-color:var(--ardoise); color:var(--ardoise) }
+.gr-aide-btn:focus-visible{ outline:2px solid var(--ardoise); outline-offset:2px }
+.gr-aide-txt[hidden]{ display:none }
+/* Sans couleurs : plus de jaune ni de violet, ni sur la feuille ni sur les contraintes. Les
+   cellules à remplir gardent un repère, une BORDURE (jamais d'aplat : le vert plein dit « juste »). */
+.gr-sobre .gr-saisie{ background:transparent; box-shadow:inset 0 0 0 2px var(--ardoise) }
+.gr-sobre .gr-contraintes .tour-jauge-repere{ border-left-width:1px; border-left-color:var(--filet) }
+.gr-sobre .gr-contraintes .tour-jauge-repere.trop{ border-color:var(--rouge); border-width:2px }
+.gr-sobre .tour-compare{ background:none; box-shadow:none; padding:0; font-weight:400; color:var(--encre-douce) }
+/* Le brouillon : un petit tableur à bords pointillés, plus étroit, jamais coloré. */
+.gr-brouillon .ent-lbl{ margin-top:10px }
+.gr-brouillon .note{ margin:2px 0 0; font-size:12px }
+.gr-table-brouillon{ min-width:0 }
+.gr-table-brouillon td:first-of-type{ width:auto }
+.gr-table-brouillon td.gr-br{ border-style:dashed }
+.gr-table-brouillon .gr-champ{ flex-direction:column; align-items:stretch; gap:1px }
+.gr-table-brouillon .gr-champ input{ min-width:0; width:7em }
+.gr-table-brouillon .gr-res{ min-width:0; font-size:12px }
+/* Avec un brouillon, la feuille se resserre pour lui laisser la droite (un écran de 1366 px
+   avec la colonne des contraintes), et le brouillon reste en vue quand on descend la feuille. */
+.gr-avec-brouillon{ display:grid; grid-template-columns:minmax(0,1fr) auto; gap:6px 18px }
+.gr-avec-brouillon .gr-table{ min-width:0 }
+.gr-avec-brouillon .gr-table:not(.gr-table-brouillon) .gr-champ input{ min-width:7.5em }
+.gr-avec-brouillon .gr-brouillon{ position:sticky; top:12px }
+@media (max-width:1100px){
+  .gr-avec-brouillon{ grid-template-columns:1fr }
+  .gr-avec-brouillon .gr-brouillon{ position:static }
+}
 .tour-grille-deux{ grid-template-columns:minmax(0,1.1fr) minmax(300px,1fr) }
 @media (max-width:860px){
   .gr-deux, .tour-grille-deux{ grid-template-columns:1fr }
