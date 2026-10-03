@@ -354,6 +354,86 @@ Stock au dernier inventaire : 27 - 12 - 1 + 9 + 1 = 24`;
     if (reste) throw new Error('la page n\'a pas été rendue propre');
   });
 
+  // Statut « Annulée » des commandes (brief MOTEUR-statut-annulee, 03/10/2026). Le moteur est
+  // éprouvé sur la base d'ENT-2.1 : six commandes semées préparées, que l'on transforme ici pour
+  // couvrir les cinq statuts. A : annulée sans bon ; B : annulée ET préparée (la priorité) ;
+  // C : sans bon (À préparer) ; D : bon commencé (En cours) ; E : préparée ; F : reliquat.
+  await v('Moteur : une commande annulée s\'affiche « Annulée » partout, ne se prépare pas et ne compte plus à préparer', async () => {
+    const res = await page.evaluate(async () => {
+      const mod = await import('/activites/cdiscount-mouvements.js');
+      const hote = document.createElement('div');
+      hote.id = 'essaiCdiscount';
+      document.body.appendChild(hote);
+      const db = {};
+      const ctx = { meta: mod.meta, profil: { prenom: 'Léa', role: 'eleve' }, codeStock: 'STOCK24',
+        jeu: { etat: () => db, sauver() {} }, enregistrer() {}, quitter() {} };
+      const attendre = () => new Promise((r) => setTimeout(r, 60));
+      const clic = async (sel) => { const e = hote.querySelector(sel); if (!e) throw new Error('introuvable : ' + sel); e.click(); await attendre(); };
+      mod.rendre(hote, ctx);
+      hote.querySelector('[data-quitter]').click();
+      const [A, B, C, D, E, F] = db.orders;
+      const at = new Date(2026, 10, 3, 14, 5).getTime();
+      delete A.prep;
+      A.annulee = { motif: 'Rupture : emplacement vide à la préparation', at };
+      B.annulee = { motif: 'Client injoignable', at };
+      delete C.prep;
+      D.prep.validated = false; delete D.prep.complete;
+      F.prep.complete = false;
+      mod.rendre(hote, ctx);
+      const out = { nos: { A: A.no, B: B.no, C: C.no, D: D.no, E: E.no, F: F.no } };
+      out.compteur = hote.querySelector('[data-vue="commandes"] .ent-n')?.textContent.trim() || '0';
+      await clic('[data-vue="commandes"]');
+      out.liste = {};
+      hote.querySelectorAll('[data-ouvrir-cmd]').forEach((b) => {
+        const p = b.closest('tr').querySelector('.pastille');
+        out.liste[b.dataset.ouvrirCmd] = [p.textContent.trim(), p.className.replace('pastille', '').trim()];
+      });
+      const fiche = async (no) => {
+        await clic('[data-vue="commandes"]');
+        await clic(`[data-ouvrir-cmd="${no}"]`);
+        return { titre: hote.querySelector('.ent-tete .pastille')?.textContent.trim(),
+          avis: hote.querySelector('[data-annulee]')?.textContent.trim() || null,
+          saisies: hote.querySelectorAll('[data-prep]').length,
+          boutons: hote.querySelectorAll('[data-bon], [data-valider], [data-copier]').length,
+          bon: !!hote.querySelector('#bon') };
+      };
+      out.A = await fiche(A.no);
+      out.Aprep = 'prep' in A;
+      out.B = await fiche(B.no);
+      out.C = await fiche(C.no);
+      // La console dit la même chose que l'écran.
+      await clic('[data-vue="console"]');
+      hote.querySelector('#champCmd').value = '.getorder ' + A.no;
+      hote.querySelector('#formCmd').dispatchEvent(new Event('submit', { cancelable: true }));
+      await attendre();
+      const blocs = hote.querySelectorAll('.ent-cres');
+      out.console = blocs.length ? blocs[blocs.length - 1].textContent : '';
+      hote.querySelector('[data-quitter]').click();
+      hote.remove();
+      return out;
+    }).catch(async (e) => {
+      await page.evaluate(() => { document.getElementById('essaiCdiscount')?.remove(); document.body.classList.remove('immersion'); document.body.removeAttribute('style'); });
+      throw e;
+    });
+    const { nos, liste } = res;
+    const attendu = { A: ['Annulée', 'crit'], B: ['Annulée', 'crit'], C: ['À préparer', 'warn'], D: ['En cours', 'info'],
+      E: ['Préparée', 'ok'], F: ['Préparée (reliquat)', 'info'] };
+    for (const [k, st] of Object.entries(attendu)) {
+      if (JSON.stringify(liste[nos[k]]) !== JSON.stringify(st)) throw new Error(`commande ${k} : ${JSON.stringify(liste[nos[k]])} au lieu de ${JSON.stringify(st)}`);
+    }
+    // À préparer : C et D seulement — A (annulée, sans bon) ne compte plus.
+    if (res.compteur !== '2') throw new Error(`${res.compteur} commandes à préparer au lieu de 2`);
+    if (res.A.titre !== 'Annulée' || res.A.avis !== 'Annulée le 03/11 à 14:05 — Rupture : emplacement vide à la préparation')
+      throw new Error('fiche A : ' + JSON.stringify(res.A));
+    if (res.A.saisies || res.A.boutons || res.Aprep) throw new Error('commande annulée préparable : ' + JSON.stringify(res.A) + ' prep créé : ' + res.Aprep);
+    if (res.B.titre !== 'Annulée' || !/Client injoignable/.test(res.B.avis || '')) throw new Error('fiche B : ' + JSON.stringify(res.B));
+    if (res.B.saisies || res.B.boutons || !res.B.bon) throw new Error('bon figé de B : ' + JSON.stringify(res.B));
+    // Le témoin : une commande sans `annulee` reste préparable comme avant.
+    if (res.C.titre !== 'À préparer' || res.C.avis || !res.C.saisies || !res.C.boutons)
+      throw new Error('fiche C : ' + JSON.stringify(res.C));
+    if (!/Annulée/.test(res.console)) throw new Error('.getorder : ' + res.console.slice(0, 200));
+  });
+
   // Ajouté le 03/10/2026 (réponse amorcée) : le champ « Répondre » du message de Nadia s'ouvre avec
   // les six intitulés ; les autres messages gardent un champ vide ; envoyer l'amorce telle quelle
   // ne rapporte aucun jalon.

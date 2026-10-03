@@ -15,7 +15,7 @@
 // ligne de plus (une copie de `ctx.aisance` / `ctx.tiersTemps` dans `window`) ; rien n'est
 // modifié dans le dépôt.
 
-export default async function bloc({ v, nav }) {
+export default async function bloc({ v, nav, page }) {
 
 const ctxA = await nav.newContext({ viewport: { width: 1280, height: 900 }, acceptDownloads: true });
 let espion = false;
@@ -183,4 +183,74 @@ await v('aménagements : aucune erreur JavaScript', async () => {
 });
 
 await ctxA.close();
+
+// ── Le niveau dans la base d'une séance d'entreprise (brief MOTEUR-statut-annulee, 03/10/2026) ──
+// `db.aisance` recopié de `ctx.aisance` à la création de la base, puis figé. Éprouvé sur ENT-2.1
+// rendue dans la page avec un contexte minimal (même moteur que l'application) : la transmission
+// de `ctx.aisance` par core/app.js est gardée par les cas ci-dessus.
+const ouvrirEntreprise = (db, profil, aisance) => page.evaluate(async ({ db, profil, aisance }) => {
+  const mod = await import('/activites/cdiscount-mouvements.js');
+  const hote = document.createElement('div');
+  hote.id = 'essaiAisance';
+  document.body.appendChild(hote);
+  const base = db || {};
+  const out = { textes: [], score: null };
+  const ctx = { meta: mod.meta, profil, aisance, codeStock: 'STOCK24',
+    jeu: { etat: () => base, sauver() {} }, enregistrer(r) { out.score = r; }, quitter() {} };
+  try {
+    mod.rendre(hote, ctx);
+    const attendre = () => new Promise((r) => setTimeout(r, 60));
+    // Chaque écran de la séance, tel que l'élève peut le voir.
+    for (const vue of [...new Set([...hote.querySelectorAll('.ent-nav[data-vue]')].map((b) => b.dataset.vue))]) {
+      hote.querySelector(`.ent-nav[data-vue="${vue}"]`).click();
+      await attendre();
+      out.textes.push(hote.textContent);
+      if (vue === 'mail') {
+        const m = hote.querySelector('[data-mail]');
+        if (m) { m.click(); await attendre(); out.textes.push(hote.textContent); }
+      }
+    }
+    hote.querySelector('[data-quitter]').click();
+  } finally {
+    hote.remove();
+    document.body.classList.remove('immersion');
+    document.body.removeAttribute('style');
+  }
+  return { db: base, textes: out.textes, score: out.score };
+}, { db, profil, aisance });
+const ELEVE = { prenom: 'Léa', role: 'eleve', uid: 'u-aisance' };
+
+await v('aménagements : séance d’entreprise — élève confirmé → db.aisance « confirme » à la première ouverture, jamais affiché', async () => {
+  const r = await ouvrirEntreprise(null, ELEVE, 'confirme');
+  if (r.db.aisance !== 'confirme' || r.db.aisancePour !== 'cdiscount-mouvements') throw new Error(JSON.stringify([r.db.aisance, r.db.aisancePour]));
+  // « Confirmé » ou « confirme », mais pas « confirmer » ni « confirmez » (`\b` ne marche pas après « é »).
+  const MOT = /confirm[ée](?![a-zà-ÿ])|aisance|niveau\s*:/i;
+  const bavard = r.textes.find((t) => MOT.test(t));
+  if (bavard) throw new Error('le niveau se lit à l’écran : ' + bavard.match(new RegExp('.{0,40}(' + MOT.source + ').{0,40}', 'i'))[0]);
+  if (r.textes.length < 3) throw new Error(`${r.textes.length} écrans parcourus seulement`);
+  // Le détail de la note (lu par l'enseignant) le dit.
+  if (!r.score || r.score.detail.niveau !== 'confirmé') throw new Error('détail : ' + JSON.stringify(r.score && r.score.detail));
+});
+
+await v('aménagements : séance d’entreprise — réglage changé ensuite, la séance commencée garde son niveau', async () => {
+  const r1 = await ouvrirEntreprise(null, ELEVE, 'confirme');
+  const r2 = await ouvrirEntreprise(r1.db, ELEVE, 'standard');
+  if (r2.db.aisance !== 'confirme') throw new Error('niveau relu au lieu d’être figé : ' + r2.db.aisance);
+  // Et dans l'autre sens.
+  const r3 = await ouvrirEntreprise(null, ELEVE, 'standard');
+  const r4 = await ouvrirEntreprise(r3.db, ELEVE, 'confirme');
+  if (r4.db.aisance !== 'standard') throw new Error('standard devenu ' + r4.db.aisance);
+  if (r4.score && r4.score.detail.niveau) throw new Error('un standard porte un niveau dans le détail');
+});
+
+await v('aménagements : séance d’entreprise — élève non réglé ou enseignant → standard ; base d’une autre séance → refigée', async () => {
+  const sans = await ouvrirEntreprise(null, ELEVE, undefined);
+  if (sans.db.aisance !== 'standard') throw new Error('non réglé : ' + sans.db.aisance);
+  const prof = await ouvrirEntreprise(null, { prenom: 'Prof', role: 'prof', uid: 'p1' }, 'confirme');
+  if (prof.db.aisance !== 'standard') throw new Error('enseignant : ' + prof.db.aisance);
+  // Une base reprise d'une autre séance (photo `precedente`, parcours) prend le réglage du jour.
+  const autre = Object.assign(sans.db, { aisance: 'confirme', aisancePour: 'une-autre-seance' });
+  const r = await ouvrirEntreprise(autre, ELEVE, 'standard');
+  if (r.db.aisance !== 'standard' || r.db.aisancePour !== 'cdiscount-mouvements') throw new Error(JSON.stringify([r.db.aisance, r.db.aisancePour]));
+});
 }

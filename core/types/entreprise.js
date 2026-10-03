@@ -146,6 +146,8 @@ export function creerEntreprise(U) {
       detail[e.id] = st;
       if (st === 'ok') ok++;
     });
+    // Le niveau figé dans la séance, pour l'enseignant qui relit le détail d'une note.
+    if (db && db.aisance === 'confirme') detail.niveau = 'confirmé';
     // Le quai range aussi ses temps dans le détail : le temps réel passé en guidage sert à caler
     // les seuils de rapidité de l'évaluation (décision de Tristan, 03/10/2026). En évaluation, la
     // note n'est plus le nombre d'étapes : 15 points de réception + 5 de rapidité (`noteQuai`).
@@ -188,10 +190,28 @@ export function creerEntreprise(U) {
       const prenom = ctx.profil.prenom || ctx.profil.nom || 'Élève';
       const estProf = ctx.profil.role === 'prof';
 
+      // Le niveau de l'élève DANS CETTE SÉANCE (brief MOTEUR-statut-annulee, 03/10/2026) :
+      // `db.aisance`, 'standard' ou 'confirme', recopié du réglage de l'enseignant (`ctx.aisance`,
+      // core/amenagements.js) à la création de la base, puis FIGÉ : un changement de réglage vaut
+      // pour les séances suivantes, jamais pour une séance commencée. `db.aisancePour` dit quelle
+      // séance l'a figé : une base reprise d'une autre séance (photo `precedente`, parcours à base
+      // partagée) le refige pour la sienne. L'enseignant qui ouvre une séance : toujours standard.
+      // Le moteur n'en fait rien lui-même ; `baseDeDepart`, `semer`, les déclencheurs et les jalons
+      // le lisent dans la base. Jamais affiché à l'élève.
+      const aisanceReglee = () => (!estProf && ctx.aisance === 'confirme' ? 'confirme' : 'standard');
+      function figerAisance() {
+        if (db.aisancePour === ctx.meta.id && (db.aisance === 'standard' || db.aisance === 'confirme')) return false;
+        db.aisance = aisanceReglee();
+        db.aisancePour = ctx.meta.id;
+        return true;
+      }
+
       // Premier passage : on sème la base de départ. `_depart` porte les messages, qui
       // reçoivent ici leur identifiant — le reste de l'application n'a plus à s'en soucier.
-      if (!db.v) {
-        const depart = baseDeDepart(prenom);
+      const baseNeuve = !db.v;
+      if (baseNeuve) {
+        figerAisance();
+        const depart = baseDeDepart(prenom, { aisance: db.aisance });
         Object.keys(depart).forEach((k) => { if (k !== '_depart') db[k] = depart[k]; });
         (depart._depart || []).forEach((m) => ajouterMail(m));
         ctx.jeu.sauver();
@@ -206,6 +226,9 @@ export function creerEntreprise(U) {
         if (!db.transport) db.transport = {};
       }
       normaliserBase();
+      // Une base d'avant le niveau (ou reprise d'une autre séance) le reçoit à son ouverture. Pas
+      // une copie d'évaluation déjà commencée : elle peut être rendue, plus rien ne s'y écrit.
+      if (!baseNeuve && !COPIE && figerAisance()) ctx.jeu.sauver();
       // Quai tiré par élève : la graine (son identifiant) posée une fois pour toutes, puis son quai.
       if (QUAI_TIRE) {
         if (poserGraine(db, ctx.profil.uid || prenom)) ctx.jeu.sauver();
@@ -431,7 +454,10 @@ export function creerEntreprise(U) {
         const port = SHIP[o.ship][1];
         return { sub, port, total: sub + port, n };
       };
+      // Une commande semée annulée (`annulee: { motif, at }`, brief MOTEUR-statut-annulee) :
+      // « Annulée » l'emporte sur tout, même préparée ou commencée. Elle ne se prépare plus.
       function statutCommande(o) {
+        if (o.annulee) return ['Annulée', 'crit'];
         if (!o.prep) return ['À préparer', 'warn'];
         if (o.prep.validated) return o.prep.complete ? ['Préparée', 'ok'] : ['Préparée (reliquat)', 'info'];
         const debut = Object.keys(o.prep.rows).some((k) => {
@@ -440,8 +466,14 @@ export function creerEntreprise(U) {
         });
         return debut ? ['En cours', 'info'] : ['À préparer', 'warn'];
       }
+      const jourHeure = (t) => {
+        const d = new Date(t), z = (n) => String(n).padStart(2, '0');
+        return `${z(d.getDate())}/${z(d.getMonth() + 1)} à ${z(d.getHours())}:${z(d.getMinutes())}`;
+      };
+      const avisAnnulee = (o) => `<div class="avis avis-err" data-annulee>Annulée${o.annulee.at ? ' le ' + jourHeure(o.annulee.at) : ''}${
+        o.annulee.motif ? ' — ' + ech(o.annulee.motif) : ''}</div>`;
       function preparer(o) {
-        if (o.prep) return;
+        if (o.prep || o.annulee) return;
         o.prep = { rows: {}, doc: false, validated: false };
         o.lines.forEach((l) => { o.prep.rows[l.sku] = { seen: '', loc: '', qty: '', status: '' }; });
       }
@@ -697,8 +729,12 @@ export function creerEntreprise(U) {
         if (photo) {
           // Repartir de ce que l'élève a réellement fait à la séance précédente.
           Object.assign(db, JSON.parse(JSON.stringify(photo)));
+          // Le niveau est relu à la remise à zéro : celui du réglage actuel, pas celui de la photo.
+          delete db.aisancePour;
+          figerAisance();
         } else {
-          const depart = baseDeDepart(prenom);
+          figerAisance();
+          const depart = baseDeDepart(prenom, { aisance: db.aisance });
           Object.keys(depart).forEach((k) => { if (k !== '_depart') db[k] = depart[k]; });
           (depart._depart || []).forEach((m) => ajouterMail(m));
         }
@@ -925,9 +961,11 @@ export function creerEntreprise(U) {
       function vueCommande() {
         const o = commandeDe(E.no);
         if (!o) return vueCommandes();
+        if (o.annulee && !o.prep) return vueCommandeAnnulee(o);
         preparer(o);
         const c = clientDe(o.customerId), t = totaux(o), s = statutCommande(o), p = o.prep;
-        const fige = p.validated;
+        // Annulée en cours de préparation : le contrôle et le bon restent lisibles, rien ne se saisit.
+        const fige = p.validated || !!o.annulee;
         const complet = o.lines.every((l) => ligneRemplie(p.rows[l.sku]));
         const choixStatut = [['', 'Choisir…'], ['ok', 'Complet'], ['warn', 'Partiel'], ['crit', 'Rupture']];
 
@@ -950,6 +988,7 @@ export function creerEntreprise(U) {
 
         return `<button class="lien-accueil" data-vue2="commandes">← COMMANDES</button>
           <div class="ent-tete"><h2>Commande <span class="mono">${ech(o.no)}</span> ${pastille(s[0], s[1])}</h2></div>
+          ${o.annulee ? avisAnnulee(o) : ''}
           <section class="panneau"><dl class="ent-dl">
             <dt>Client</dt><dd>${ech(c.prenom + ' ' + c.nom)} <span class="mono note">${ech(c.id)}</span></dd>
             <dt>Adresse</dt><dd>${ech(c.adr)}, ${ech(c.cp)} ${ech(c.ville)}</dd>
@@ -957,22 +996,37 @@ export function creerEntreprise(U) {
             <dt>Date</dt><dd>${fdt(o.date)}</dd>
             <dt>Montant</dt><dd>${eur(t.total)} TTC, ${t.n} ${ech(unite(t.n))}</dd></dl></section>
           <section class="panneau"><h3>Contrôle du stock</h3>
-            <p class="note">Trouvez le stock réel de chaque référence avec la console
+            ${o.annulee ? '<p class="note">Commande annulée : le contrôle saisi reste consultable, rien ne se modifie.</p>' : `<p class="note">Trouvez le stock réel de chaque référence avec la console
               (<span class="mono">.getstock REF</span>) et son emplacement (<span class="mono">.getlocation REF</span>).
-              Remplissez pour chaque ligne le stock trouvé, l'emplacement, la quantité à préparer et le statut.</p>
+              Remplissez pour chaque ligne le stock trouvé, l'emplacement, la quantité à préparer et le statut.</p>`}
             <div class="ent-scroll"><table><thead><tr><th>Réf.</th><th>Article</th><th class="num">Commandé</th>
               <th class="num">Stock trouvé</th><th>Emplacement</th><th class="num">À préparer</th><th>Statut</th>
               </tr></thead><tbody>${lignes}</tbody></table></div>
-            <div class="rangee" style="margin-top:14px">
+            ${o.annulee ? '' : `<div class="rangee" style="margin-top:14px">
               <button class="btn btn-p" data-bon ${complet ? '' : 'disabled'}>
                 ${p.doc ? 'Régénérer le bon de préparation' : 'Éditer le bon de préparation'}</button>
               <span class="note" id="aideBon" ${complet ? 'hidden' : ''}>Complétez toutes les lignes pour continuer.</span>
-            </div></section>
+            </div>`}</section>
           <div id="blocBon">${p.doc ? bonDePreparation(o) : ''}</div>`;
       }
 
+      // Annulée sans avoir été commencée : la commande se lit, aucun contrôle à remplir.
+      function vueCommandeAnnulee(o) {
+        const c = clientDe(o.customerId), t = totaux(o), s = statutCommande(o);
+        return `<button class="lien-accueil" data-vue2="commandes">← COMMANDES</button>
+          <div class="ent-tete"><h2>Commande <span class="mono">${ech(o.no)}</span> ${pastille(s[0], s[1])}</h2></div>
+          ${avisAnnulee(o)}
+          <section class="panneau"><dl class="ent-dl">
+            <dt>Client</dt><dd>${ech(c.prenom + ' ' + c.nom)} <span class="mono note">${ech(c.id)}</span></dd>
+            <dt>Adresse</dt><dd>${ech(c.adr)}, ${ech(c.cp)} ${ech(c.ville)}</dd>
+            <dt>Livraison</dt><dd>${ech(SHIP[o.ship][0])}</dd>
+            <dt>Date</dt><dd>${fdt(o.date)}</dd>
+            <dt>Montant</dt><dd>${eur(t.total)} TTC, ${t.n} ${ech(unite(t.n))}</dd></dl></section>
+          <section class="panneau"><h3>Articles commandés</h3>${tableauCommande(o, true)}</section>`;
+      }
+
       function majChamp(sku, champ, val) {
-        const o = commandeDe(E.no); if (!o) return;
+        const o = commandeDe(E.no); if (!o || o.annulee) return;
         const r = o.prep.rows[sku]; if (!r) return;
         if (champ === 'seen' || champ === 'qty') { const n = parseInt(val, 10); r[champ] = isNaN(n) ? '' : Math.max(0, n); }
         else r[champ] = val;
@@ -1008,7 +1062,8 @@ export function creerEntreprise(U) {
           <table><tbody>${manquants.map((l) => `<tr><td class="mono">${ech(l.sku)}</td><td>${ech(label(VM[l.sku]))}</td>
             <td class="num">Manque ${l.qty - p.rows[l.sku].qty} sur ${l.qty}</td></tr>`).join('')}</tbody></table>` : '';
 
-        const pied = p.validated
+        const pied = o.annulee ? ''
+          : p.validated
           ? '<div class="avis avis-ok">Préparation validée : le stock a été diminué (voir Stock, Mouvements).</div>'
           : `<div class="rangee" style="margin-top:12px">
               <button class="btn btn-p" data-valider ${aPrendre.length ? '' : 'disabled'}>Valider la préparation (sortie de stock)</button>
@@ -1034,7 +1089,9 @@ export function creerEntreprise(U) {
       }
 
       function validerPreparation() {
-        const o = commandeDe(E.no), p = o.prep, err = [];
+        const o = commandeDe(E.no);
+        if (!o || o.annulee) return;
+        const p = o.prep, err = [];
         o.lines.forEach((l) => { if (p.rows[l.sku].qty > stockDe(l.sku)) err.push(l.sku); });
         if (err.length) {
           err.forEach((k) => { p.rows[k] = { seen: '', loc: '', qty: '', status: '' }; });
@@ -2003,7 +2060,7 @@ export function creerEntreprise(U) {
           el.addEventListener('change', maj);
         });
         z.querySelector('[data-bon]')?.addEventListener('click', () => {
-          const o = commandeDe(E.no); o.prep.doc = true; sauver();
+          const o = commandeDe(E.no); if (!o || o.annulee) return; o.prep.doc = true; sauver();
           const b = hote.querySelector('#blocBon');
           b.innerHTML = bonDePreparation(o);
           brancher(b);

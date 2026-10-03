@@ -6,7 +6,7 @@
 > Lis docs/briefs/COORDINATION-cdiscount.md, docs/EN-COURS.md, puis implémente le brief docs/briefs/MOTEUR-statut-annulee.md. Annonce la durée avant de commencer, puis enchaîne sans attendre : les questions du brief sont déjà tranchées (§6).
 > ```
 
-**Statut** : à implémenter
+**Statut** : livré (03/10/2026)
 **Date du brief** : 03/10/2026
 **Modèle** : Sonnet — **Durée estimée par Cowork** : 40 min à 1 h, tests compris (statut « Annulée » 20-30 min ; niveau
 dans la séance 20-30 min, ou rien si le chantier tiers-temps l'a déjà fait).
@@ -108,8 +108,35 @@ journal `docs/decisions.md`.
 
 ## Compte rendu *(rempli par Claude Code)*
 
-- **Fichiers créés / modifiés** :
+- **Fichiers créés / modifiés** : `core/types/entreprise.js` (statut, fiche de commande, niveau figé, détail de
+  la note) ; `outils/test/cdiscount.mjs` (1 cas) ; `outils/test/amenagements.mjs` (3 cas) ;
+  `activites/FICHE-SEANCE.md` (deux paragraphes) ; `docs/decisions.md` (une ligne). `outils/test.mjs` et
+  `commun.mjs` **non touchés**.
 - **Écarts par rapport au brief** :
-- **Décisions prises en route** :
-- **Tests** :
-- **Commits** :
+  - **Nom du champ de niveau : `db.aisance`, pas `db.niveau`.** Le chantier tiers-temps a appelé le réglage
+    `aisance` (`ctx.aisance`, `'standard'`/`'confirme'`) ; le brief disait de garder ses noms. **Les briefs
+    Cdiscount (et `MOTEUR-geste-tableur.md`, qui cite `db.niveau`) doivent lire `db.aisance`.**
+  - Le détail de la note porte `niveau: 'confirmé'` (seulement pour un confirmé). Aucune vue de l'enseignant
+    n'affiche aujourd'hui ce détail : il est rangé avec le score (lisible dans les données), pas montré dans le
+    suivi de classe projetable. Le réglage se voit déjà dans « Comptes élèves ».
+  - Pas de commande `.orders` dans la console : seule `.getorder` liste une commande, elle dit « Annulée ».
+- **Décisions prises en route** (seul, à corriger à l'écran) :
+  - Commande annulée **sans** `prep` : fiche en lecture (client, adresse, montant, articles commandés) sous un
+    bandeau rouge « Annulée le JJ/MM à HH:MM — motif » ; aucun contrôle de stock affiché. Ouvrir la fiche ne
+    crée plus de `prep` vide (avant, toute ouverture en créait un).
+  - Commande annulée **avec** `prep` : même bandeau, tableau de contrôle en lecture seule (comme une
+    préparation validée), bon de préparation visible s'il avait été édité, sans aucun bouton.
+  - `db.aisancePour` (identifiant de la séance qui a figé le niveau) : cloisonnement par séance, exigé par
+    `CLAUDE.md`. Une base reprise d'une autre séance (photo `precedente`, parcours Spartoo à base partagée)
+    refige le niveau sur le réglage du jour. Une copie d'évaluation déjà commencée n'est jamais réécrite.
+  - `baseDeDepart(prenom, { aisance })` : second argument ajouté, pour qu'une séance puisse grossir son
+    stock de départ et pas seulement son volet. Les séances existantes l'ignorent.
+- **Tests** : 4 cas nouveaux. Commande : les six statuts côte à côte (Annulée sans bon, Annulée + préparée,
+  À préparer, En cours, Préparée, reliquat), compteur « à préparer » = 2, fiche sans saisie ni bouton,
+  aucun `prep` créé, bon figé lisible, `.getorder`. Niveau : confirmé → `db.aisance === 'confirme'`, figé dans
+  les deux sens, non réglé / enseignant → standard, base d'une autre séance refigée, aucun écran de la séance
+  ne dit « confirmé », détail de la note. **Sabotages** : priorité retirée → le cas commande tombe
+  (« B : Préparée au lieu d'Annulée ») ; relecture à chaque ouverture → le cas « figé » tombe ; « Confirmé »
+  affiché sur l'accueil → le cas « jamais affiché » tombe (il ne tombait pas au premier essai : motif de
+  recherche corrigé). Suite entière **478/478**.
+- **Commits** : voir `git log` (« Commandes : statut Annulée… »).

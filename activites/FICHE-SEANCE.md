@@ -35,6 +35,22 @@ lui-même qu'elle est finie), `tous(…)` pour combiner. Jamais de clic de menu,
 minuterie. Si l'élève a pu recevoir ces messages autrement (séance déjà ouverte), `semer` vérifie
 par l'objet qu'ils ne sont pas déjà là.
 
+**Commande annulée** (03/10/2026, brief `MOTEUR-statut-annulee`) : une commande semée peut porter
+`annulee: { motif: 'Rupture : emplacement vide à la préparation', at: <timestamp> }`. Elle s'affiche
+« Annulée » (pastille rouge) partout, **avant tout autre statut** (même préparée ou commencée), ne se
+prépare plus (aucune saisie, aucun bouton) et ne compte plus dans les « commandes à préparer ». Sa fiche
+dit « Annulée le JJ/MM à HH:MM — motif ». Si elle porte un `prep` (une ligne de `rows` par ligne
+commandée), le contrôle et le bon restent lisibles en lecture seule. Le moteur ne fait aucun mouvement de
+stock à l'annulation : c'est le volet qui sème ceux qu'il veut.
+
+**Niveau de l'élève dans la séance** (03/10/2026) : `db.aisance` vaut `'standard'` ou `'confirme'`,
+recopié de `ctx.aisance` à la création de la base puis **figé** (un réglage changé ensuite vaut pour les
+séances suivantes ; la remise à zéro le relit ; l'enseignant a toujours `'standard'`). `baseDeDepart(prenom,
+{ aisance })` le reçoit en second argument ; `semer(prenom, db)`, les déclencheurs et `verifier(db)` le
+lisent dans la base. Une séance qui prévoit un volume confirmé **ajoute** ses opérations quand
+`db.aisance === 'confirme'`, sans changer celles du jeu standard ni ce qu'attendent ses jalons (une
+évaluation ne le lit pas). **Jamais affiché à l'élève** ; le détail de la note porte `niveau: 'confirmé'`.
+
 **Vue « quai de réception »** (03/10/2026, pilote Picard ENT-4.x) : la séance déclare `quai: { id, lieu,
 seuilHorsFroid, dechargement, couts, aides, photos, camions: [{ …, palettes }] }` (exemple complet :
 `contenus/picard-ent41.js`, brief `docs/briefs/MOTEUR-vue-quai.md` §4) et `etapes: etapesQuai(QUAI)` (importé de
