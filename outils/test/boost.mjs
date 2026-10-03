@@ -2134,6 +2134,161 @@ await v('ENT-3.3 : la tournée d’Inès est posée à l’ouverture — départ
   }
 });
 
+/* ------------ ENT-3.3 · consigne en trois étapes et pastilles d'avancement (03/10/2026) ------------ */
+/* Ajoutés avec le chantier A du plan Boost. Aucun cas existant n'a été réécrit : les textes     */
+/* du mail et de l'accueil que les anciens cas lisaient (six intitulés, Mercerie, plus court)    */
+/* y sont toujours. Valeurs écrites à la main : 180 kg, 16 h 10, 14 h 45 ; cellules B13 (poids  */
+/* chargé), B23 (gare), B28 (Pâtisserie) de la feuille.                                          */
+
+const etapes33 = () => page33.evaluate(() => [...document.querySelectorAll('#boost33 [data-etape]')]
+  .map((li) => ({ fait: li.classList.contains('fait'), txt: li.textContent.replace(/\s+/g, ' ').trim(),
+    pastille: li.querySelector('[data-etape-etat]').textContent.replace(/\s+/g, ' ').trim() })));
+const rafraichir33 = async () => { await ouvrir33('mail'); await ouvrir33('tournee'); };
+const CELLULES33 = ['B13', 'B23', 'B28'];
+
+await v('ENT-3.3 : la consigne tient en trois étapes — Contrôler, Répondre, Réparer — et rappelle les trois valeurs de la journée', async () => {
+  const r = await page33.evaluate(() => ({
+    titre: document.querySelector('#boost33 .ent-main h2').textContent,
+    rappel: [...document.querySelectorAll('#boost33 .tour-rappel-puce')].map((x) => x.textContent),
+    nbNote: document.querySelectorAll('#boost33 .ent-main > p.note').length,
+  }));
+  if (r.titre !== 'La tournée d’Inès : contrôler, répondre, réparer') throw new Error('titre : ' + r.titre);
+  const e = await etapes33();
+  if (e.length !== 3) throw new Error('étapes : ' + e.length);
+  ['1. Contrôler', '2. Répondre', '3. Réparer'].forEach((t, i) => { if (!e[i].txt.startsWith(t)) throw new Error('étape ' + (i + 1) + ' : ' + e[i].txt); });
+  if (!/ne touchez pas encore à la carte/.test(e[0].txt) || !/poids chargé/.test(e[0].txt) || !/Pâtisserie Arnaud/.test(e[0].txt)) throw new Error('étape 1 : ' + e[0].txt);
+  if (!/messagerie/.test(e[1].txt) || !/Retrouver la tournée de départ/.test(e[2].txt)) throw new Error('étapes 2 et 3');
+  if (r.rappel.join('|') !== 'Charge utile : 180 kg|Train : 16 h 10|Pâtisserie Arnaud : avant 14 h 45') throw new Error('rappel : ' + r.rappel.join('|'));
+  if (r.nbNote) throw new Error('l’ancien bloc de consigne est encore là');
+});
+
+await v('ENT-3.3 : à l’ouverture, les trois pastilles sont grises — « à faire », sans rien d’autre qu’une couleur', async () => {
+  const e = await etapes33();
+  if (e.some((x) => x.fait || x.pastille !== 'à faire')) throw new Error(JSON.stringify(e.map((x) => x.pastille)));
+});
+
+await v('ENT-3.3 : la pastille 1 passe au vert quand les trois cellules ont une valeur, même fausse — en direct, sans redessin, sans dire « juste »', async () => {
+  await immobile33();
+  await page33.evaluate(() => { document.querySelector('#boost33 .ent-main').dataset.temoin = '1'; });
+  for (const ref of CELLULES33.slice(0, 2)) await page33.fill(`${z33} [data-gr="${ref}"]`, '=1');
+  let e = await etapes33();
+  if (e[0].fait) throw new Error('deux cellules sur trois suffisent');
+  await page33.fill(`${z33} [data-gr="B28"]`, '   ');
+  e = await etapes33();
+  if (e[0].fait) throw new Error('des espaces comptent comme une saisie');
+  await page33.fill(`${z33} [data-gr="B28"]`, '=1');
+  e = await etapes33();
+  if (!e[0].fait || e[0].pastille !== '✓ fait') throw new Error('pastille 1 : ' + JSON.stringify(e[0]));
+  if (e[1].fait || e[2].fait) throw new Error('les autres pastilles ont bougé');
+  const r = await page33.evaluate(() => ({ temoin: document.querySelector('#boost33 .ent-main').dataset.temoin,
+    juge: JSON.stringify(window.__b33.db.transport['boost-ent33'].tournee.grille.juge),
+    plein: document.querySelectorAll('#boost33 .tour-etape .pastille.ok').length }));
+  if (r.temoin !== '1') throw new Error('la page a été redessinée à la frappe');
+  if (r.juge !== '{}' || r.plein) throw new Error('rien n’a été jugé, aucun aplat vert : ' + JSON.stringify(r));
+  await page33.fill(`${z33} [data-gr="B13"]`, '');
+  e = await etapes33();
+  if (e[0].fait) throw new Error('vider une cellule doit repasser la pastille au gris');
+  await page33.fill(`${z33} [data-gr="B13"]`, '=1');
+});
+
+await v('ENT-3.3 : l’état de la pastille ne tient pas à la couleur seule, et le vert est un trait — jamais un aplat', async () => {
+  const r = await page33.evaluate(() => {
+    const p = document.querySelector('#boost33 .tour-etape.fait .tour-pastille');
+    const c = getComputedStyle(p);
+    return { txt: p.textContent.trim(), fond: c.backgroundColor, bord: c.borderTopColor, texte: c.color };
+  });
+  if (r.txt !== '✓ fait') throw new Error('texte : ' + r.txt);
+  if (r.fond !== 'rgba(0, 0, 0, 0)') throw new Error('aplat de fond : ' + r.fond);
+  if (r.bord !== r.texte) throw new Error('trait et texte devraient avoir le même vert : ' + JSON.stringify(r));
+});
+
+await v('ENT-3.3 : la pastille 1 survit au redessin et à la reconnexion', async () => {
+  await rafraichir33();
+  if (!(await etapes33())[0].fait) throw new Error('perdue au changement d’écran');
+  await monter33(true);
+  await ouvrir33('tournee');
+  if (!(await etapes33())[0].fait) throw new Error('perdue à la reconnexion');
+});
+
+await v('ENT-3.3 : la pastille 2 passe au vert quand un message part vers Inès — pas un message à quelqu’un d’autre', async () => {
+  await page33.evaluate(() => { const d = window.__b33.db; d.mails.push({ folder: 'out', ts: Date.now(), from: 'Lea', fromMail: '', to: 'M. Morin',
+    toMail: 'morin@boost.example', subject: 'autre', kind: 'text', text: 'Bonjour', read: true, id: 8000 }); });
+  await rafraichir33();
+  if ((await etapes33())[1].fait) throw new Error('un message à un autre destinataire a allumé la pastille');
+  await repondre33('Bonjour Inès, je ne sais pas encore.');          // même fausse, même vide de chiffres
+  await rafraichir33();
+  const e = await etapes33();
+  if (!e[1].fait) throw new Error('le message parti vers Inès n’allume pas la pastille 2');
+  if (e[2].fait) throw new Error('la pastille 3 a bougé');
+  await page33.evaluate(() => { const d = window.__b33.db; d.mails = d.mails.filter((m) => m.folder !== 'out'); });
+  await rafraichir33();
+  if ((await etapes33())[1].fait) throw new Error('sans message envoyé la pastille doit être grise');
+});
+
+await v('ENT-3.3 : la pastille 3 reste grise sur la tournée d’Inès, passe au vert à la première modification, et redevient grise après « Retrouver la tournée de départ »', async () => {
+  const e0 = await etapes33();
+  if (e0[2].fait) throw new Error('verte sur la tournée d’Inès intacte');
+  await immobile33();
+  await page33.click(`${z33} [data-clic-point="c6"]`, { force: true });   // retire la Pâtisserie
+  await page33.waitForTimeout(100);
+  if (!(await etapes33())[2].fait) throw new Error('modifiée, la pastille 3 reste grise');
+  await monter33(true);
+  await ouvrir33('tournee');
+  if (!(await etapes33())[2].fait) throw new Error('perdue à la reconnexion');
+  const sel = '#boost33 [data-tour-raz]';
+  await page33.click(sel);
+  await page33.click(sel);
+  await page33.waitForTimeout(100);
+  const e = await etapes33();
+  if (e[2].fait) throw new Error('« Retrouver la tournée de départ » n’a pas remis la pastille 3 au gris');
+  if (!e[0].fait) throw new Error('les formules de la feuille sont gardées : la pastille 1 doit rester verte');
+});
+
+await v('ENT-3.3 : les pastilles n’existent qu’en ENT-3.3 — la tournée d’ENT-3.2 n’en dessine aucune', async () => {
+  const r = await page33.evaluate(async () => {
+    const { creerTournee } = await import('/core/types/tournee.js');
+    const E32 = await import('/contenus/boost-ent32.js');
+    const E33 = await import('/contenus/boost-ent33.js');
+    const dessine = (T) => creerTournee(T).html({}, { db: {} });
+    return { e32: dessine(E32.TOURNEE).includes('data-tour-etapes'), e33: dessine(E33.TOURNEE).includes('data-tour-etapes'),
+      decl32: 'pastilles' in E32.TOURNEE };
+  });
+  if (r.e32 || r.decl32) throw new Error('ENT-3.2 dessine des pastilles');
+  if (!r.e33) throw new Error('ENT-3.3 n’en dessine pas');
+});
+
+await v('ENT-3.3 : le mail d’Inès regroupe les six lignes en trois blocs (charge, train, créneau) et une réponse recopiée telle quelle reste juste', async () => {
+  const t = await page33.evaluate(() => window.__b33.db.mails.find((x) => x.fromMail === 'ines.livraison@boost.example').text);
+  for (const b of ['LE RAPPEL', 'LES COMMANDES', 'CE QUE J’AI FAIT', 'CE QUE J’ATTENDS DE TOI', '1. La charge', '2. Le train', '3. Le créneau']) {
+    if (!t.includes(b)) throw new Error('bloc manquant : ' + b);
+  }
+  const bloc = (a, z) => t.slice(t.indexOf(a), z ? t.indexOf(z) : undefined);
+  const charge = bloc('1. La charge', '2. Le train'), train = bloc('2. Le train', '3. Le créneau'), cren = bloc('3. Le créneau', '3. Si quelque chose');
+  if (!/Charge utile :/.test(charge) || !/Poids chargé :/.test(charge)) throw new Error('bloc charge : ' + charge);
+  if (!/Train de 16 h 10 :/.test(train) || !/Arrivée à la gare :/.test(train)) throw new Error('bloc train : ' + train);
+  if (!/Créneau de la Pâtisserie Arnaud :/.test(cren) || !/Arrivée à la Pâtisserie Arnaud :/.test(cren)) throw new Error('bloc créneau : ' + cren);
+  // Le modèle du mail, recopié et complété dans l'ordre des blocs (intitulés d'abord, valeurs ensuite).
+  const modele = [...charge.split('\n'), ...train.split('\n'), ...cren.split('\n')].filter((l) => /:/.test(l));
+  const rempli = modele.map((l) => l.replace(/\(respectée ou dépassée\)/, 'dépassée').replace(/\(attrapé ou manqué\)/, 'attrapé')
+    .replace(/\(tenu ou raté\)/, 'raté').replace('Poids chargé : (en kg)', 'Poids chargé : 218 kg')
+    .replace('Arrivée à la Pâtisserie Arnaud : (l’heure)', 'Arrivée à la Pâtisserie Arnaud : 15 h 27')
+    .replace('Arrivée à la gare : (l’heure)', 'Arrivée à la gare : 15 h 50')).join('\n');
+  await oublierReponses33();
+  await repondre33(rempli);
+  const j = await jalons33();
+  await oublierReponses33();
+  if (j.contraintes !== 'ok' || j.preuves !== 'ok') throw new Error('réponse recopiée dans l’ordre du mail : ' + JSON.stringify(j) + '\n' + rempli);
+});
+
+await v('ENT-3.3 : l’accueil annonce quatre étapes — lire, contrôler, répondre, réparer', async () => {
+  const e = await page33.evaluate(async () => (await import('/contenus/boost-ent33.js')).ACCUEIL.etapes.map((x) => x[0]));
+  if (e.join('|') !== 'Lire le message d’Inès|Contrôler|Répondre|Réparer') throw new Error(e.join('|'));
+});
+
+// Nettoyage : les cas suivants repartent de la tournée d'Inès, sans formules, sans message envoyé.
+await page33.evaluate(() => { const t = window.__b33.db.transport['boost-ent33'].tournee; t.grille.cases = {}; });
+await rafraichir33();
+
 await v('ENT-3.3 : rien à l’écran ne donne le diagnostic — ni verdict, ni 218 kg, ni heure d’arrivée', async () => {
   const r = await page33.evaluate(() => {
     const h = document.querySelector('#boost33 .ent-main');

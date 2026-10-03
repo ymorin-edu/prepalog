@@ -61,6 +61,17 @@
 //     la feuille de calcul garde son bouton « Vérifier ». Quand l'élève doit DIAGNOSTIQUER une
 //     tournée, l'écran ne doit pas lui donner le diagnostic.
 //
+// Des PASTILLES D'AVANCEMENT (ENT-3.3, chantier A du plan Boost, 03/10/2026) :
+//
+//   pastilles: [{ libelle: 'Contrôler', texte: 'Ne touchez pas encore à la carte…',
+//                 fait: (db, etat) => booléen }, …]
+//   rappel: ['Charge utile : 180 kg', …]     // facultatif : puces discrètes sous les étapes
+//     Les étapes s'affichent en tête de la vue, en liste numérotée, chacune avec sa pastille :
+//     grise « à faire », ou « fait » avec une coche et une bordure verte (jamais d'aplat : le vert
+//     plein dit « juste » ailleurs). `fait` lit la base de l'élève (`db`, et `etat` = l'état de la
+//     tournée) et ne juge JAMAIS : « une valeur est saisie », « un message est parti », « la tournée
+//     a changé » — pas « c'est juste ». Sans `pastilles`, rien n'est dessiné.
+//
 // Un point peut porter un CRÉNEAU de livraison : `creneau: { avant: 14 * 60 + 45, libelle }`
 // (ENT-3.2 : la Pâtisserie Arnaud n'accepte qu'avant 14 h 45). Voir `bilanDe`.
 
@@ -433,6 +444,26 @@ export function creerTournee(T) {
     </div>`;
   }
 
+  /* ------------------------------------------------------------------- les pastilles */
+  const PASTILLES = T.pastilles || [];
+  const faitDe = (p, db, etat) => { try { return !!p.fait(db, etat); } catch (e) { return false; } };
+  const pastilleHtml = (fait) => `<span class="tour-pastille${fait ? ' fait' : ''}" data-etape-etat>`
+    + `${fait ? '<span aria-hidden="true">✓</span> fait' : 'à faire'}</span>`;
+  const etapesHtml = (etat, db) => (!PASTILLES.length ? '' : `<ol class="tour-etapes" data-tour-etapes>
+      ${PASTILLES.map((p, i) => `<li class="tour-etape${faitDe(p, db, etat) ? ' fait' : ''}" data-etape="${i}">
+        <span class="tour-etape-texte"><strong>${i + 1}. ${ech(p.libelle)}</strong>${p.texte ? ` : ${ech(p.texte)}` : ''}</span>
+        ${pastilleHtml(faitDe(p, db, etat))}</li>`).join('')}
+    </ol>${(T.rappel || []).length ? `<div class="tour-rappel">${T.rappel.map((r) => `<span class="tour-rappel-puce">${ech(r)}</span>`).join('')}</div>` : ''}`);
+  // Remet les pastilles à jour SANS redessiner : la feuille de calcul se remplit sur la même page.
+  const majEtapes = (z, etat, db) => {
+    z.querySelectorAll('[data-etape]').forEach((li) => {
+      const fait = faitDe(PASTILLES[+li.dataset.etape], db, etat);
+      li.classList.toggle('fait', fait);
+      const sp = li.querySelector('[data-etape-etat]');
+      if (sp) { sp.classList.toggle('fait', fait); sp.innerHTML = fait ? '<span aria-hidden="true">✓</span> fait' : 'à faire'; }
+    });
+  };
+
   /* ------------------------------------------------------------------------------- la vue */
   return {
     nav: { id: 'tournee', libelle: T.libelle || 'Tournée' },
@@ -597,6 +628,7 @@ export function creerTournee(T) {
       return `
         <div class="ent-tete"><h2>${ech(T.titre || 'Tournée')}</h2></div>
         ${T.consigne ? `<p class="note">${ech(T.consigne)}</p>` : ''}
+        ${etapesHtml(etat, opts.db)}
         <div class="tour-grille${DANS_GRILLE ? ' tour-grille-deux' : ''}">
           <div class="tour-col">
             ${PLAN ? `<div class="plan-boite${CLIQUABLE ? ' plan-boite-clic' : ''}">
@@ -800,7 +832,7 @@ export function creerTournee(T) {
         GRILLE.brancher(z, {
           etat: etat.grille,
           lignes: () => lignesGrille(etat),
-          sauver: api.sauver,
+          sauver: () => { api.sauver(); majEtapes(z, etat, api.db); },
           redessiner: api.redessiner,
           toast: api.toast,
         });

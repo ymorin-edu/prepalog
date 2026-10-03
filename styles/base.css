@@ -1338,3 +1338,17 @@ a.ent-nav{ text-decoration:none }
 /* Recommencer la tournée (02/10/2026) : en tête de la colonne des contraintes, discret tant
    qu'il n'est pas armé, rouge le temps de la confirmation. */
 .tour-raz{ display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end }
+
+/* Pastilles d'avancement d'une séance en étapes (03/10/2026). L'état ne tient pas à la couleur
+   seule : « à faire » / « ✓ fait ». Jamais d'aplat vert (le plein dit « juste » ailleurs) :
+   trait, coche et texte verts, comme les variables du thème, donc rien à décliner par thème. */
+.tour-etapes{ list-style:none; margin:10px 0 6px; padding:0; display:flex; flex-direction:column; gap:6px }
+.tour-etape{ display:flex; align-items:center; justify-content:space-between; gap:12px;
+  padding:8px 12px; border:1px solid var(--filet); border-radius:8px; font-size:.9rem }
+.tour-etape.fait{ border-color:var(--vert) }
+.tour-pastille{ flex:none; font-size:11.5px; font-weight:600; padding:2px 9px; border-radius:999px;
+  border:1px solid var(--filet); color:var(--encre-douce); white-space:nowrap }
+.tour-pastille.fait{ border-color:var(--vert); color:var(--vert) }
+.tour-rappel{ display:flex; flex-wrap:wrap; gap:6px; margin:0 0 10px }
+.tour-rappel-puce{ font-size:11.5px; padding:1px 8px; border-radius:999px; border:1px solid var(--filet);
+  color:var(--encre-douce) }

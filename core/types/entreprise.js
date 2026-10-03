@@ -1290,7 +1290,7 @@ export function creerEntreprise(U) {
         if (!db.transport[cleTransport][vue]) db.transport[cleTransport][vue] = {};
         return db.transport[cleTransport][vue];
       };
-      const apiTransport = (cle) => ({ etat: etatTransport(cle), sauver, redessiner: dessiner, toast });
+      const apiTransport = (cle) => ({ etat: etatTransport(cle), sauver, redessiner: dessiner, toast, db });
 
       function vuePlan() { return VPLAN.html(etatTransport('plan')); }
 
@@ -1329,7 +1329,7 @@ export function creerEntreprise(U) {
         // Séance « à corriger » : la tournée du collègue est posée à la première ouverture, une
         // seule fois (voir `amorcer` dans tournee.js). Sans `etatInitial`, rien ne se passe.
         if (!verrou && VTOUR.amorcer && VTOUR.amorcer(etatTransport('tournee'))) sauver();
-        return VTOUR.html(etatTransport('tournee'), { verrou });
+        return VTOUR.html(etatTransport('tournee'), { verrou, db });
       }
 
       function vueCatalogue() {

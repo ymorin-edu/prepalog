@@ -71,14 +71,31 @@ export const COLLEGUE = {
 
 export const TOURNEE = Object.assign({}, E32.TOURNEE, {
   plan: E32.PLAN,
-  titre: 'La tournée d’Inès, à contrôler puis à corriger',
-  consigne: `Inès a préparé la tournée du vélo-cargo : elle est déjà construite ci-dessous (départ à `
-    + `${h(JOURNEE.depart)}, ordre de passage, commande laissée à quai). Contrôlez-la AVANT d’y toucher : `
-    + `la feuille de calcul suit la tournée affichée. Comparez le poids chargé à la charge utile `
-    + `(${JOURNEE.chargeUtile} kg), l’arrivée à la gare au train de ${h(JOURNEE.limite)}`
-    + (CRENEAU ? ` et l’arrivée à la ${CRENEAU.nom} à son créneau (avant ${h(CRENEAU.creneau.avant)})` : '')
-    + `. Répondez à Inès, puis réparez la tournée en cliquant sur la carte. « Retrouver la tournée de `
-    + `départ » remet celle d’Inès.`,
+  titre: 'La tournée d’Inès : contrôler, répondre, réparer',
+  consigne: '',
+  // Trois étapes, un verbe et un rôle chacune. Les pastilles passent au vert quand l'étape est FAITE
+  // (une saisie, un message parti, une tournée changée) : elles ne disent jamais si c'est juste.
+  pastilles: [
+    { libelle: 'Contrôler',
+      texte: `ne touchez pas encore à la carte. Dans la feuille de calcul, calculez le poids chargé, l’heure d’arrivée à la gare`
+        + (CRENEAU ? ` et l’heure d’arrivée à la ${CRENEAU.nom}.` : '.'),
+      fait: (db, e) => REFS_RESULTATS.every((ref) => {
+        const v = e && e.grille && e.grille.cases ? e.grille.cases[ref] : null;
+        return v != null && String(v).trim() !== '';
+      }) },
+    { libelle: 'Répondre',
+      texte: 'dans la messagerie, dites à Inès pour chaque contrainte si elle est tenue, avec le chiffre qui le prouve.',
+      fait: (db) => reponses(db).length > 0 },
+    { libelle: 'Réparer',
+      texte: 'sur la carte, corrigez la tournée pour que les trois contraintes soient tenues. '
+        + '« Retrouver la tournée de départ » remet celle d’Inès.',
+      fait: (db, e) => ouverte(e) && !inchangee(e) },
+  ],
+  rappel: [
+    `Charge utile : ${JOURNEE.chargeUtile} kg`,
+    `Train : ${h(JOURNEE.limite)}`,
+    ...(CRENEAU ? [`${CRENEAU.nom} : avant ${h(CRENEAU.creneau.avant)}`] : []),
+  ],
   etatInitial: COLLEGUE,
   sansVerdict: true,
   // La ligne « poids chargé » est la moins intuitive de la feuille : ici la tournée est déjà faite,
@@ -95,6 +112,16 @@ export const TOURNEE = Object.assign({}, E32.TOURNEE, {
 
 // Le bilan d'une tournée, par la même vue que l'écran.
 const VUE = creerTournee(TOURNEE);
+
+// Les adresses des trois cellules de résultat de la feuille (poids chargé, arrivée à la gare,
+// arrivée chez le client à créneau) : lues dans les lignes de la feuille, jamais écrites en dur.
+// Leur place ne dépend pas de la tournée (une ligne « à poser d'abord » tient la place de la cellule).
+const REFS_RESULTATS = (() => {
+  const L = TOURNEE.grille.lignes(VUE.bilan(Object.assign({ report: {}, juge: {} }, COLLEGUE, { depart: 1, arrivee: 1 })));
+  const ref = (debut) => `B${L.findIndex((l) => String(l.A || '').startsWith(debut)) + 1}`;
+  return [ref('Poids chargé'), ref('Heure d’arrivée à la gare'),
+    ...(CRENEAU ? [ref(`Heure d’arrivée chez ${CRENEAU.nom}`)] : [])];
+})();
 
 /* ======================================================== le diagnostic attendu ====== */
 // Recalculé depuis la tournée d'Inès, jamais écrit en dur. `null` si la journée ne permet pas
@@ -233,10 +260,10 @@ export const ACCUEIL = {
   kpis: ['mail'],
   etapes: [
     ['Lire le message d’Inès', 'Menu Messagerie : sa tournée, son raisonnement, et les six lignes qu’elle attend en réponse.'],
-    ['Contrôler sa tournée', 'Menu Tournée : elle est déjà construite. Ne la modifiez pas encore — la feuille de calcul suit la tournée affichée.'],
-    ['Calculer', `Dans la feuille : le poids chargé, l’heure d’arrivée à la gare${CRENEAU ? ` et chez ${CRENEAU.nom}` : ''}. Comparez chacun à sa contrainte.`],
-    ['Répondre à Inès', 'Pour chaque contrainte : tenue ou pas. Puis les trois chiffres qui le prouvent.'],
-    ['Réparer la tournée', 'Sur la carte : la bonne commande à quai, un ordre qui tient tout, le plus court possible.'],
+    ['Contrôler', 'Menu Tournée, sans modifier la carte : dans la feuille de calcul, le poids chargé, l’heure d’arrivée à la gare'
+      + `${CRENEAU ? ` et chez ${CRENEAU.nom}` : ''}. Comparez chacun à sa contrainte.`],
+    ['Répondre', 'Menu Messagerie : pour chaque contrainte, tenue ou pas, avec le chiffre qui le prouve.'],
+    ['Réparer', 'Menu Tournée : sur la carte, la bonne commande à quai, un ordre qui tient tout, le plus court possible.'],
   ],
 };
 
@@ -257,23 +284,58 @@ export const VOLET = {
         { folder: 'in', ts: now - 3600e3, from: `${INES.nom}, ${INES.role}`,
           fromMail: INES.mail, to: prenom,
           subject: `Ma tournée de cet après-midi : tu peux la vérifier avant que je parte ?`, kind: 'text',
-          text: `Salut ${prenom},\n\nJ’ai préparé la tournée du vélo-cargo de cet après-midi. Elle est déjà `
-            + `dans l’outil, menu Tournée.\n\nLe rappel : départ de l’entrepôt à ${h(JOURNEE.depart)}, `
+          text: `Salut ${prenom},
+
+J’ai préparé la tournée du vélo-cargo de cet après-midi. Elle est déjà `
+            + `dans l’outil, menu Tournée.
+
+`
+            + `LE RAPPEL
+Départ de l’entrepôt à ${h(JOURNEE.depart)}, `
             + `${JOURNEE.chargeUtile} kg au plus dans le vélo-cargo, ${JOURNEE.service} minutes par arrêt, `
             + `une douzaine de kilomètres à l’heure en ville, et le train de Paris part de Nîmes-Centre à `
             + `${h(JOURNEE.limite)}.`
             + (CRENEAU ? ` ${CRENEAU.nom} ne reçoit qu’avant ${h(CRENEAU.creneau.avant)}.` : '')
-            + `\n\nLes commandes :\n\n${fiche}\n\n`
-            + `Mon raisonnement : on sait que tout ne rentre pas dans le vélo-cargo, alors j’ai laissé une commande `
-            + `à quai — la ${QUAI_INES}, c’est la plus petite, elle partira demain sans gêner personne. Pour le `
+            + `
+
+LES COMMANDES
+${fiche}
+
+`
+            + `CE QUE J’AI FAIT
+On sait que tout ne rentre pas dans le vélo-cargo, alors j’ai laissé une commande `
+            + `à quai : la ${QUAI_INES}, c’est la plus petite, elle partira demain sans gêner personne. Pour le `
             + `reste, j’ai pris l’ordre le plus court sur la carte : moins de kilomètres, donc forcément de la `
-            + `marge partout.\n\nM. Morin veut qu’on se relise à deux avant chaque départ. Tu peux vérifier ? `
-            + `Réponds-moi en recopiant ces six lignes et en les complétant :\n\n`
-            + `${L.charge} ${choix('charge')}\n${L.train} ${choix('train')}\n${L.creneau} ${choix('creneau')}\n`
-            + `${L.poids} (en kg)\n${L.client} (l’heure)\n${L.gare} (l’heure)\n\n`
-            + `Une ligne par information, s’il te plaît. Calcule sur MA tournée avant d’y toucher : la feuille `
-            + `de calcul suit la tournée affichée. Ensuite, si quelque chose ne va pas, corrige-la directement `
-            + `dans l’outil.\n\nMerci !\n${INES.nom}` },
+            + `marge partout.
+
+`
+            + `CE QUE J’ATTENDS DE TOI
+M. Morin veut qu’on se relise à deux avant chaque départ. En trois temps :
+`
+            + `1. Contrôle ma tournée sans y toucher : la feuille de calcul suit la tournée affichée.
+`
+            + `2. Réponds-moi en recopiant ces six lignes et en les complétant, une ligne par information :
+
+`
+            + `1. La charge
+${L.charge} ${choix('charge')}
+${L.poids} (en kg)
+
+`
+            + `2. Le train
+${L.train} ${choix('train')}
+${L.gare} (l’heure)
+
+`
+            + `3. Le créneau
+${L.creneau} ${choix('creneau')}
+${L.client} (l’heure)
+
+`
+            + `3. Si quelque chose ne va pas, répare la tournée directement dans l’outil.
+
+Merci !
+${INES.nom}` },
       ],
     };
   },

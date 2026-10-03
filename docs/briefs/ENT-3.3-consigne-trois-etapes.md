@@ -6,7 +6,7 @@
 > Lis docs/briefs/COORDINATION-boost.md puis implémente le brief ENT-3.3-consigne-trois-etapes. Annonce la durée avant de commencer et construis les pastilles et les textes ; dis-moi quels tests tu réécris.
 > ```
 
-**Statut** : à implémenter *(petit chantier : textes + un petit ajout au moteur)*
+**Statut** : livré (03/10/2026), à valider à l'écran *(petit chantier : textes + un petit ajout au moteur)*
 **Date du brief** : 03/10/2026
 **Maquette** : « Maquette consigne ENT-3.3 » (Cowork, 03/10/2026) : trois onglets, avant / après (écran Tournée, mail d'Inès, accueil).
 **Séance concernée** : ENT-3.3 `boost-ent33`, **déjà `pret: true`** (livrée, validée à l'écran le 03/10). `id` et
@@ -110,9 +110,9 @@ redevient grise. Relire le mail d'Inès : il est plus clair, la réponse se reco
 
 ## Compte rendu *(rempli par Claude Code à la livraison)*
 
-- **Fichiers créés / modifiés** :
-- **Écarts par rapport au brief** :
-- **Décisions prises en route** :
-- **Tests** :
-- **Commits** :
-- **Reste ouvert** :
+- **Fichiers créés / modifiés** : `core/types/tournee.js` (option `pastilles` + `rappel`, rendu en tête de vue, mise à jour en direct), `core/types/entreprise.js` (passe `db` à la vue : 2 lignes), `styles/base.css` (`.tour-etapes`, `.tour-pastille`, `.tour-rappel`, variables existantes : rien à décliner par thème), `contenus/boost-ent33.js` (titre, étapes, rappel, mail, accueil), `outils/test/boost.mjs`, `docs/decisions.md`.
+- **Écarts par rapport au brief** : les trois étapes et leurs pastilles forment **une seule liste** (chaque ligne = texte de l'étape + pastille), au lieu d'un paragraphe de consigne plus une rangée de pastilles à côté ; le rappel (charge utile, train, créneau) est une rangée de puces sous la liste. L'ancien paragraphe de consigne n'existe plus. Les trois adresses de cellules (poids chargé, gare, Pâtisserie) sont lues dans les lignes de la feuille, pas écrites en dur.
+- **Décisions prises en route** : pastille 1 = trois cellules non vides (espaces seuls refusés) ; elle se met à jour **à la frappe, sans redessin** ; elle reste verte après « Retrouver la tournée de départ » (les formules sont gardées). La pastille 2 compte un message parti vers `INES.mail`, quel qu'en soit le contenu.
+- **Tests** : **aucun cas existant réécrit** (les anciens cas qui lisent le mail et l'accueil passent tels quels : six intitulés, Mercerie, « le plus court » y sont toujours). **10 cas ajoutés** au bloc `boost` : étapes + rappel (valeurs écrites à la main), pastilles grises, pastille 1 en direct, état non porté par la couleur seule et pas d'aplat, survie à la reconnexion, pastille 2 (et message à un autre destinataire), pastille 3 (grise sur l'état d'Inès, verte après modification, grise après « Retrouver »), pas de pastilles en ENT-3.2, mail en blocs + réponse recopiée dans l'ordre du mail, accueil. Sabotages éprouvés : pastille 3 verte sur l'état initial, pastille 1 qui lit le juge, pastilles déclarées en ENT-3.2 : chacun fait tomber les cas attendus. Suite entière 346/346.
+- **Commits** : voir `git log` (un commit « ENT-3.3 : consigne en trois étapes et pastilles d'avancement »).
+- **Reste ouvert** : validation à l'écran par Tristan ; vérifier dans le suivi qu'aucun élève n'a ouvert ENT-3.3 (non vérifiable depuis ici). Pastilles en ENT-3.2 / 3.4 : à décider séance par séance (`pastilles` y est réutilisable sans rien toucher au moteur).
