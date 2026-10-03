@@ -83,6 +83,9 @@ tableur: {
 }
 ```
 
+**Niveau standard / confirmé** : un confirmé reçoit un export plus long ; la séance le décide dans `lignes(db)` en
+lisant `db.niveau` (rien à prévoir dans le moteur du geste, sinon que `lignes` reçoive bien la base).
+
 **L'export est une fonction pure de la base** (et de la graine pour les salissures) : réexporter donne le même fichier,
 et le contrôle recalcule les attendus à partir des mêmes lignes. `db.tableur.exports[id] = { at, n }` garde la trace du
 premier export (un jalon « export fait » peut la lire).

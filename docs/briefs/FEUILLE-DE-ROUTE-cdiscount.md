@@ -14,6 +14,9 @@
 - **Les questions des briefs sont déjà tranchées (03/10)** : CC enchaîne et te liste à la fin ce qu'il a choisi seul.
   Chaque brief a aussi une liste « Détails tranchés par Cowork » : c'est là que tu corriges ce qui te gêne.
 - Toutes les séances arrivent **fermées aux élèves** : tu les ouvres toi-même dans « Conduite de séance ».
+- **Niveau standard / confirmé** : réglé sur la fiche de chaque élève (chantier tiers-temps). Pour 2.1, 2.2, 2.3, 2.4
+  et 2.6, **joue chaque séance deux fois, une en standard et une en confirmé** : le confirmé a plus de lignes ou de
+  documents, rien d'autre ne doit changer, et le mot « confirmé » ne doit apparaître nulle part côté élève.
 
 ---
 
@@ -42,12 +45,12 @@ Lis docs/briefs/COORDINATION-cdiscount.md, docs/EN-COURS.md, puis implémente le
 
 ---
 
-## Étape 2 — Le statut « Annulée » ⚙
+## Étape 2 — Le statut « Annulée » et le niveau de l'élève dans la séance ⚙
 
 | | |
 |---|---|
 | **Modèle** | **Sonnet** |
-| **Durée annoncée** | 20 à 30 min |
+| **Durée annoncée** | 40 min à 1 h |
 | **Brief** | `docs/briefs/MOTEUR-statut-annulee.md` |
 
 ```
@@ -212,7 +215,7 @@ Lis docs/briefs/COORDINATION-cdiscount.md, docs/briefs/DECISION-jeu-unique-evalu
 |---|---|---|---|---|
 | 0 | Fin de la chaîne Picard | — | — | — |
 | 1 | Bouton fiche d'intention (C0) | Sonnet | 30-45 min | oui |
-| 2 | Statut « Annulée » (C1) | Sonnet | 20-30 min | oui |
+| 2 | Statut « Annulée » + niveau dans la séance (C1) | Sonnet | 40 min-1 h | oui |
 | 3 | ENT-2.1 recadrée (C2) | Sonnet | 1 h 30-2 h 30 | non |
 | 4 | Trame + corrigé 2.1 | Cowork | — | non |
 | 5 | Renumérotation (C3) | Sonnet | 30-45 min | non |

@@ -114,6 +114,26 @@ construit » (vendeur fictif), « Pour réfléchir » : que répondre au vendeur
 Exporter, traiter sous Excel ou LibreOffice, déposer : le retour dit « n résultats justes sur m » sans détail ; une seule
 ligne « À VÉRIFIER » (les mixeurs) ; le message du vendeur se lit comme un vrai client ; la réponse juste donne 8/8.
 
+## Niveau de l'élève : standard / confirmé
+
+> **Décision de Tristan (03/10/2026)** : à partir de la série Cdiscount, chaque élève a un niveau **standard** (par
+> défaut) ou **confirmé**, réglé par l'enseignant sur la fiche de l'élève (chantier « tiers-temps et niveau élève » :
+> nom exact du réglage dans le compte rendu de `MOTEUR-tiers-temps.md`). Un confirmé a **plus d'opérations** à traiter
+> — même travail, mêmes aides, mêmes pièges —, en **guidage et en entraînement** ; **l'évaluation est la même pour
+> tous** ; **l'élève ne voit jamais son niveau** (aucune étiquette, aucun message qui le trahit). La séance lit le
+> niveau dans sa base (`db.niveau`, posé à l'ouverture : `MOTEUR-statut-annulee.md`, partie 2) : il est **figé à la
+> première ouverture** ; un changement de niveau ensuite ne touche pas une séance déjà commencée.
+
+**Ce que ça change ici (détails tranchés par Cowork)** :
+
+- **Standard** : export de **20** ajustements (inchangé). **Confirmé** : **30** ajustements (10 lignes de plus dans
+  `AJUSTEMENTS_AUTRES`, toutes **avec document**) ; toujours **une seule ligne sans document (MIX)** ; répartition
+  confirmé : Casse 10, Erreur de prélèvement 8, Erreur de réception 5, Démarque inconnue 7 (dont MIX). Valeurs
+  recalculées par le code.
+- L'enquête dans le logiciel (allée B, REC-26-0447, vendeur) est **la même** pour les deux niveaux ; jalons 3 à 8
+  inchangés.
+- Tests : comptes par motif **par niveau** ; « une seule ligne sans document » vérifié pour les deux niveaux.
+
 ## 11. Questions — toutes tranchées
 
 > **Réponses données d'avance par Tristan (03/10/2026, Cowork)** : ne pas s'arrêter ; appliquer ces choix et **lister au

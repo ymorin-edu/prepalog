@@ -137,6 +137,30 @@ Valeurs écrites à la main :
 - **Tristan valide** en jouant trois fois : liste exacte ; liste sans CAB (l'aléa arrive, la paire se résout) ;
   « Absent ».
 
+## Niveau de l'élève : standard / confirmé
+
+> **Décision de Tristan (03/10/2026)** : à partir de la série Cdiscount, chaque élève a un niveau **standard** (par
+> défaut) ou **confirmé**, réglé par l'enseignant sur la fiche de l'élève (chantier « tiers-temps et niveau élève » :
+> nom exact du réglage dans le compte rendu de `MOTEUR-tiers-temps.md`). Un confirmé a **plus d'opérations** à traiter
+> — même travail, mêmes aides, mêmes pièges —, en **guidage et en entraînement** ; **l'évaluation est la même pour
+> tous** ; **l'élève ne voit jamais son niveau** (aucune étiquette, aucun message qui le trahit). La séance lit le
+> niveau dans sa base (`db.niveau`, posé à l'ouverture : `MOTEUR-statut-annulee.md`, partie 2) : il est **figé à la
+> première ouverture** ; un changement de niveau ensuite ne touche pas une séance déjà commencée.
+
+**Ce que ça change ici (détails tranchés par Cowork)** :
+
+- **Catalogue étendu à toute l'allée A (12 références)** pour les deux niveaux, comme ENT-2.2 : les quatre références
+  A-05 / A-06 ont leurs mouvements de la période et **aucun écart** ; le relevé de comptage couvre les 12 emplacements.
+  Les pièges et le taux des 8 premières lignes ne changent pas.
+- **Standard** : périmètre = sa liste + aléas (inchangé).
+  **Confirmé** : périmètre = sa liste + aléas **+ A-05 et A-06** : dans son accusé de réception, Nadia ajoute « Tant que
+  l'équipe passe, recomptez aussi A-05 et A-06 : leur comptage tournant tombe cette semaine. » → 4 lignes de plus à
+  reporter, écarts nuls, taux calculé sur son périmètre (`bilanInventaire` le fait seul).
+- Jalons inchangés. Tests : périmètre et taux attendus **par niveau** ; **sabotage** : phrase de Nadia envoyée à un
+  standard (doit échouer).
+- Cohérence avec ENT-2.2 : les commandes A-05 / A-06 de la fenêtre sont **les mêmes** dans les deux séances (une seule
+  source, ce fichier).
+
 ## 11. Questions — toutes tranchées
 
 > **Réponses données d'avance par Tristan (03/10/2026, Cowork)** : ne pas s'arrêter ; appliquer ces choix et **lister au

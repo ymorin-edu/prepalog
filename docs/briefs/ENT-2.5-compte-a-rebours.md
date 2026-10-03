@@ -134,6 +134,21 @@ le corrigé par élève. `contenus/corriges/ENT-2.5.js` : la règle et la struct
 Passer l'évaluation en élève **avec deux identifiants différents** : deux allées différentes, même difficulté ; aucun
 retour à l'écran ; la copie rendue apparaît dans le suivi avec le corrigé de cet élève.
 
+## Niveau de l'élève : standard / confirmé
+
+> **Décision de Tristan (03/10/2026)** : à partir de la série Cdiscount, chaque élève a un niveau **standard** (par
+> défaut) ou **confirmé**, réglé par l'enseignant sur la fiche de l'élève (chantier « tiers-temps et niveau élève » :
+> nom exact du réglage dans le compte rendu de `MOTEUR-tiers-temps.md`). Un confirmé a **plus d'opérations** à traiter
+> — même travail, mêmes aides, mêmes pièges —, en **guidage et en entraînement** ; **l'évaluation est la même pour
+> tous** ; **l'élève ne voit jamais son niveau** (aucune étiquette, aucun message qui le trahit). La séance lit le
+> niveau dans sa base (`db.niveau`, posé à l'ouverture : `MOTEUR-statut-annulee.md`, partie 2) : il est **figé à la
+> première ouverture** ; un changement de niveau ensuite ne touche pas une séance déjà commencée.
+
+**Ce que ça change ici (détails tranchés par Cowork)** :
+
+- **Évaluation : même structure et même volume pour tous**, quel que soit le niveau (décision de Tristan). Le tirage
+  d'un jeu par élève **ne lit pas** le niveau. Test : deux élèves de niveaux différents, même graine → même jeu.
+
 ## 11. Questions — toutes tranchées
 
 > **Réponses données d'avance par Tristan (03/10/2026, Cowork)** : ne pas s'arrêter ; appliquer ces choix et **lister au

@@ -125,6 +125,28 @@ lieu de `IF` (jalon 3 doit échouer) ; « stock trouvé » calculé sur le syst�
 Exporter, ouvrir le fichier **sous Excel puis sous LibreOffice**, écrire les formules, déposer : le retour guidé nomme les
 cases fausses ; quatre références ressortent ; la liste juste valide 5/5 ; une valeur tapée est signalée.
 
+## Niveau de l'élève : standard / confirmé
+
+> **Décision de Tristan (03/10/2026)** : à partir de la série Cdiscount, chaque élève a un niveau **standard** (par
+> défaut) ou **confirmé**, réglé par l'enseignant sur la fiche de l'élève (chantier « tiers-temps et niveau élève » :
+> nom exact du réglage dans le compte rendu de `MOTEUR-tiers-temps.md`). Un confirmé a **plus d'opérations** à traiter
+> — même travail, mêmes aides, mêmes pièges —, en **guidage et en entraînement** ; **l'évaluation est la même pour
+> tous** ; **l'élève ne voit jamais son niveau** (aucune étiquette, aucun message qui le trahit). La séance lit le
+> niveau dans sa base (`db.niveau`, posé à l'ouverture : `MOTEUR-statut-annulee.md`, partie 2) : il est **figé à la
+> première ouverture** ; un changement de niveau ensuite ne touche pas une séance déjà commencée.
+
+**Ce que ça change ici (détails tranchés par Cowork)** :
+
+- **Base identique pour les deux niveaux** : le catalogue couvre **toute l'allée A, A-01-1 à A-06-2 (12 références)** ;
+  les quatre références A-05 / A-06 (CAS-FIL-01, SUP-VOIT, CLA-SF-01, HUB-USB-4) ont leurs commandes, **sans aucun
+  écart**.
+- **Standard** : l'export porte les emplacements **A-01 à A-04** (≈ 30 lignes, 8 références) — inchangé.
+  **Confirmé** : l'export porte **toute l'allée A** (≈ 45 lignes, 12 références) ; la feuille « Synthèse » a 12 lignes.
+  Les constats restent sur les 4 mêmes références : **la bonne liste est la même** pour les deux niveaux.
+- Contrôles et jalons calculés sur l'export de l'élève (rien en dur) ; mission identique (« exportez les lignes de
+  préparation de l'allée » : le contenu du fichier dépend du niveau, pas le texte).
+- Tests : export et synthèse attendus **par niveau** ; **sabotage** : export du confirmé limité à A-04 (doit échouer).
+
 ## 11. Questions — toutes tranchées
 
 > **Réponses données d'avance par Tristan (03/10/2026, Cowork)** : ne pas s'arrêter ; appliquer ces choix et **lister au

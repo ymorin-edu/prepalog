@@ -38,7 +38,7 @@ restent **fermées aux élèves** (`ouverture: 'prof'`) jusqu'à ce que Tristan 
 | # | Chantier | Brief | Taille | Modèle | Touche le moteur ? |
 |---|---|---|---|---|---|
 | C0 | Bouton « Fiche d'intention » (tous scénarios) | `MOTEUR-fiche-intention.md` | petit (30-45 min) | Sonnet | **oui** : `core/prof.js`, `activites/index.js` |
-| C1 | Statut « Annulée » des commandes | `MOTEUR-statut-annulee.md` | petit (20-30 min) | Sonnet | **oui** : `core/types/entreprise.js` |
+| C1 | Statut « Annulée » des commandes **+ niveau de l'élève dans la séance** (`db.niveau`) | `MOTEUR-statut-annulee.md` | petit (40 min-1 h) | Sonnet | **oui** : `core/types/entreprise.js` |
 | C2 | ENT-2.1 recadrée | `ENT-2.1-recadrage.md` | moyen (1 h 30-2 h 30) | Sonnet | non |
 | C3 | Renumérotation (inventaire → 2.3, régularisé → 2.4) | `CDISCOUNT-renumerotation.md` | petit (30-45 min) | Sonnet | non |
 | C4 | ENT-2.3 recadrée + **lot 0 : périmètre de l'écran Inventaire** | `ENT-2.3-inventaire-recadre.md` | moyen (2-3 h) | Sonnet | **oui pour le lot 0** : `core/types/inventaire.js` |
@@ -49,7 +49,7 @@ restent **fermées aux élèves** (`ouverture: 'prof'`) jusqu'à ce que Tristan 
 | C8 | ENT-2.5 évaluation (un jeu par élève) | `ENT-2.5-compte-a-rebours.md` | moyen (3-4 h) | Sonnet | non (réutilise le tirage de Picard P6) |
 
 **Ordre** : C1 → C2 → C3 → C4 → C5 → C6 → C7 → C9 → C8. **C0 n'importe quand** (avant la première fiche d'intention).
-C8 en dernier : il lui faut le tirage générique livré par Picard P6, le geste tableur (C5) et le périmètre d'inventaire
+C1 suppose le chantier « tiers-temps et niveau élève » livré (Picard P3, en cours le 03/10). C8 en dernier : il lui faut le tirage générique livré par Picard P6, le geste tableur (C5) et le périmètre d'inventaire
 (C4). Feuille de route de Tristan : `docs/briefs/FEUILLE-DE-ROUTE-cdiscount.md`.
 
 **Dépendances de données** : ENT-2.2 **importe** les commandes, constats et stock réel d'ENT-2.3 (même allée A, deux jours
@@ -84,6 +84,11 @@ avant) → C4 avant C6 ; ENT-2.5 reprend l'extraction de liste et les aléas d'E
   guidage détaillé (redépôt illimité), entraînement « n sur m » (redépôt possible), évaluation un dépôt sans retour ;
   fichier jamais stocké. **SI et NB.SI** en 2.2 et 2.4 ; **NB.SI.ENS et RECHERCHEV au bonus**.
 - **Encart de rappel** des fonctions dans la trame ; rappel court dans le **bandeau d'aide**, jamais dans l'écran de travail.
+- **Niveau standard / confirmé** (décision du 03/10, **à partir de cette série**) : réglé par l'enseignant sur la fiche
+  de l'élève (chantier tiers-temps, Picard P3) ; un confirmé a **plus d'opérations** — même travail, mêmes aides, mêmes
+  pièges — **en guidage et en entraînement** (2.1, 2.2, 2.3, 2.4, 2.6) ; **évaluation identique pour tous** (2.5) ;
+  **l'élève ne voit jamais son niveau** ; niveau figé à la première ouverture d'une séance. Chaque brief a sa section
+  « Niveau de l'élève : standard / confirmé ».
 - **Évaluation** : un jeu tiré par élève (graine = identifiant), copie rendue, pas de trame, corrigé par élève.
 - **« Absent »** (ENT-2.3) : **dit par l'enseignant**, jamais écrit dans un message.
 - **Trames élève** Word/PDF pour 2.1, 2.2, 2.3, 2.4, 2.6 (pas 2.5) et **une fiche d'intention** pour toute la série :

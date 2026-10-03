@@ -1,4 +1,4 @@
-# Brief de chantier — MOTEUR : statut « Annulée » des commandes (Cdiscount C1)
+# Brief de chantier — MOTEUR : statut « Annulée » des commandes + niveau de l'élève dans la séance (Cdiscount C1)
 
 > **📋 Phrase à copier-coller dans ccode :**
 >
@@ -8,7 +8,9 @@
 
 **Statut** : à implémenter
 **Date du brief** : 03/10/2026
-**Modèle** : Sonnet — **Durée estimée par Cowork** : 20 à 30 min, tests compris.
+**Modèle** : Sonnet — **Durée estimée par Cowork** : 40 min à 1 h, tests compris (statut « Annulée » 20-30 min ; niveau
+dans la séance 20-30 min, ou rien si le chantier tiers-temps l'a déjà fait).
+**Prérequis** : chantier « tiers-temps et niveau élève » livré (`MOTEUR-tiers-temps.md`, Picard P3).
 **Touche le moteur** : oui (`core/types/entreprise.js`) → s'inscrire dans `docs/EN-COURS.md` avant de commencer.
 **Conception** : fiches du projet `claude/prepalog-ent21-cadrage-detaille.md` (décision 2, § 4) et
 `claude/prepalog-cdiscount-serie-decisions.md`.
@@ -60,6 +62,32 @@ Suite entière verte avant commit.
 Pas de geste « Annuler une commande » pour l'élève (aucune séance ne le demande). Pas de mouvement de stock
 automatique à l'annulation : c'est le volet qui sème les mouvements (ou leur absence) qu'il veut.
 
+## Partie 2 — le niveau de l'élève transmis à la séance (décision de Tristan, 03/10/2026)
+
+**Décision** : à partir de la série Cdiscount, chaque élève a un niveau **standard** (par défaut) ou **confirmé**, réglé
+par l'enseignant sur sa fiche (construit dans le chantier tiers-temps : **lire son compte rendu** pour le nom exact du
+champ et de ce que reçoit `rendre(hote, ctx)`). Un confirmé a **plus d'opérations** en guidage et en entraînement ;
+l'évaluation est la même pour tous ; **l'élève ne voit jamais son niveau**.
+
+**Le manque probable** : le contenu d'une séance d'entreprise ne voit pas `ctx` — `baseDeDepart()`, `volet.semer(prenom,
+db)`, les déclencheurs, les jalons (`verifier(db)`) et les exports ne reçoivent que la base. **À construire dans
+`core/types/entreprise.js`** (si le chantier tiers-temps ne l'a pas déjà fait — le vérifier d'abord) :
+
+- à la **création de la base** d'une séance, `db.niveau = 'standard' | 'confirme'` recopié depuis le réglage de l'élève
+  (absent ou inconnu → `'standard'`) ; l'enseignant qui ouvre une séance → `'standard'` ;
+- **figé** : une base qui a déjà un `db.niveau` le garde (un changement de niveau ne touche pas une séance commencée ;
+  il vaut pour les séances suivantes ; ENT-2.1, réinitialisable, le relit à la remise à zéro) ;
+- **jamais affiché** à l'élève (ni bandeau, ni accueil, ni console) ; visible de l'enseignant seulement là où il voit
+  déjà le tiers-temps (et dans le `detail` du suivi : « niveau : confirmé ») ;
+- une séance qui n'utilise pas `db.niveau` ne change en rien.
+
+**Tests** (même bloc) : élève réglé confirmé → `db.niveau === 'confirme'` à la première ouverture ; réglage changé
+ensuite → la base garde l'ancienne valeur ; élève non réglé → `'standard'` ; le mot « confirmé » n'apparaît nulle part
+dans l'écran de l'élève ; **sabotage** : relire le réglage à chaque ouverture (le cas « figé » doit échouer).
+
+Une ligne dans `activites/FICHE-SEANCE.md` (`db.niveau`, comment une séance déclare son volume par niveau) et une au
+journal `docs/decisions.md`.
+
 ## 6. Questions — toutes tranchées
 
 > **Réponses données d'avance (03/10/2026, Cowork)** : ne pas s'arrêter ; appliquer ces choix et **lister au compte
@@ -73,6 +101,8 @@ automatique à l'annulation : c'est le volet qui sème les mouvements (ou leur a
 - [x] Le bon de préparation figé reste lisible : oui, en lecture seule, sans bouton.
 - [x] Une ligne au journal `docs/decisions.md` et une ligne dans `activites/FICHE-SEANCE.md` (le champ `annulee` d'une
   commande semée).
+- [x] Niveau : valeurs `'standard'` / `'confirme'` (sans accent dans le code), rangé dans `db.niveau`, figé à la première
+  ouverture ; si le chantier tiers-temps a choisi d'autres noms, **garder les siens** et le dire au compte rendu.
 
 ---
 

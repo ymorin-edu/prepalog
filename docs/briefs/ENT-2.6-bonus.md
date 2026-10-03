@@ -114,6 +114,24 @@ export ». Corrigé (Cowork).
 Faire le bonus sous Excel **et** sous LibreOffice ; vérifier que le piège de la date (BAT-10K) et le piège de la fréquence
 se voient ; que le retour reste « n sur m ».
 
+## Niveau de l'élève : standard / confirmé
+
+> **Décision de Tristan (03/10/2026)** : à partir de la série Cdiscount, chaque élève a un niveau **standard** (par
+> défaut) ou **confirmé**, réglé par l'enseignant sur la fiche de l'élève (chantier « tiers-temps et niveau élève » :
+> nom exact du réglage dans le compte rendu de `MOTEUR-tiers-temps.md`). Un confirmé a **plus d'opérations** à traiter
+> — même travail, mêmes aides, mêmes pièges —, en **guidage et en entraînement** ; **l'évaluation est la même pour
+> tous** ; **l'élève ne voit jamais son niveau** (aucune étiquette, aucun message qui le trahit). La séance lit le
+> niveau dans sa base (`db.niveau`, posé à l'ouverture : `MOTEUR-statut-annulee.md`, partie 2) : il est **figé à la
+> première ouverture** ; un changement de niveau ensuite ne touche pas une séance déjà commencée.
+
+**Ce que ça change ici (détails tranchés par Cowork)** :
+
+- **Standard** : ≈ 150 lignes sur 30 jours (inchangé). **Confirmé** : **≈ 220 lignes** sur les mêmes 30 jours et les
+  mêmes 18 références (plus de commandes), salissures en proportion : **6 lignes vides, 5 doublons, 8 dates en texte**.
+- Mêmes pièges (BAT-10K avant l'inventaire, top 5 par valeur ≠ top 5 par fréquence d'au moins 2 références) : **vérifiés
+  par le code pour chaque niveau**.
+- Tests : lignes nettoyées, constats et top 5 attendus **par niveau**.
+
 ## 11. Questions — toutes tranchées
 
 > **Réponses données d'avance par Tristan (03/10/2026, Cowork)** : ne pas s'arrêter ; appliquer ces choix et **lister au

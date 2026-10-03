@@ -146,6 +146,29 @@ Jouer la séance en élève : (1) la mission parle de la cliente ; (2) CMD-73160
 terminal » ; (5) une réponse complète juste donne 6/6 ; citer CMD-731602 fait tomber le jalon 3 avec le détail ; écrire
 « RET-26-0091 » dans « Ce qui cloche » ne valide pas le jalon 6.
 
+## Niveau de l'élève : standard / confirmé
+
+> **Décision de Tristan (03/10/2026)** : à partir de la série Cdiscount, chaque élève a un niveau **standard** (par
+> défaut) ou **confirmé**, réglé par l'enseignant sur la fiche de l'élève (chantier « tiers-temps et niveau élève » :
+> nom exact du réglage dans le compte rendu de `MOTEUR-tiers-temps.md`). Un confirmé a **plus d'opérations** à traiter
+> — même travail, mêmes aides, mêmes pièges —, en **guidage et en entraînement** ; **l'évaluation est la même pour
+> tous** ; **l'élève ne voit jamais son niveau** (aucune étiquette, aucun message qui le trahit). La séance lit le
+> niveau dans sa base (`db.niveau`, posé à l'ouverture : `MOTEUR-statut-annulee.md`, partie 2) : il est **figé à la
+> première ouverture** ; un changement de niveau ensuite ne touche pas une séance déjà commencée.
+
+**Ce que ça change ici (détails tranchés par Cowork)** :
+
+- **Confirmé : l'histoire d'ECO-BT-01 s'allonge de trois documents** : une réception de plus (**REC-26-0409**, +6, J-7
+  l'après-midi, après l'inventaire) et deux commandes d'écouteurs de plus (**CMD-731420**, −3, J-6 ; **CMD-731515**,
+  −3, J-4). Leur somme est nulle : **stock actuel 1, stock d'inventaire 4, casse DEM-26-0027 (2 constatés, −1 saisi)
+  inchangés** ; le stock ne passe jamais sous zéro ; le « stock trouvé » des bons suit la même règle. Volume : 15
+  documents, ≈ 23 mouvements (standard : 12 et ≈ 20).
+- Jalons inchangés, **valeurs attendues relues dans la base** (jalon 2 : deux réceptions d'écouteurs à citer pour le
+  confirmé ; jalon 3 : huit commandes). La mission de Nadia ne change pas (« la réception REC-… » → « les réceptions
+  REC-… » : formulation qui marche pour les deux niveaux).
+- Tests : un parcours juste **par niveau** (valeurs écrites à la main pour chacun) ; **sabotage** : jalon 2 du confirmé
+  qui n'exige qu'une réception (doit échouer).
+
 ## 11. Questions — toutes tranchées
 
 > **Réponses données d'avance par Tristan (03/10/2026, Cowork)** : ne pas s'arrêter ; appliquer ces choix et **lister au
