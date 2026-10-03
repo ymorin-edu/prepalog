@@ -7,7 +7,7 @@ est déjà modifié ou inscrit ci-dessous, **elle s'arrête et le dit à Tristan
 
 | Chantier | Fichiers qu'il touche | Depuis |
 |---|---|---|
-| *(personne d'inscrit)* | | |
+| Tiers-temps et niveau élève (brief MOTEUR-tiers-temps) | core/prof.js, core/app.js, core/backend-demo.js, core/backend-firebase.js, firestore.rules, activites/FICHE-SEANCE.md, outils/test/ (nouveau bloc) | 03/10/2026 |
 
 Rappel : un seul chantier à la fois dans `core/types/tournee.js`, `core/types/grille.js`,
 `core/types/entreprise.js`, `styles/base.css` et `outils/test/boost.mjs` (voir `docs/briefs/COORDINATION-boost.md`).
