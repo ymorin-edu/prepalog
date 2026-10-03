@@ -86,10 +86,11 @@ REF.heureC = `B${C1 + N + 8}`;      // 38
 
 // La feuille d'Inès (3.3) : tout est tapé, toutes les formules écrites — et l'heure d'arrivée à
 // la gare OUBLIE les arrêts (`=B2+B32`). Elle dit donc « le train est tenu » à tort.
-// Le « ? » ne donne JAMAIS la méthode ni une valeur du jour (décision de Tristan, 03/10/2026) :
-// seulement le FORMAT des heures, avec un exemple neutre (9:05) qui n'est aucune heure de la journée.
+// Le « ? » (décision de Tristan, 03/10/2026) : sur une heure À TAPER, seulement le FORMAT, avec un
+// exemple neutre (9:05) qui n'est aucune heure de la journée — jamais la valeur du jour. Sur une
+// formule avec des calculs, l'aide de méthode (celle d'ENT-3.1) ; si elle rend une heure, plus le format.
 const FORMAT_HEURE = 'Une heure se tape avec deux-points, sans formule : par exemple 9:05.';
-const FORMAT_CALCUL = 'Le résultat s’affiche en heure. Dans la feuille, une heure compte en minutes : 9:05 + 20 donne 9 h 25.';
+const FORMAT_CALCUL = 'Dans la feuille, une heure compte en minutes : 9:05 + 20 donne 9 h 25.';
 const pre = (txt) => (INES ? { prerempli: txt } : {});
 
 // `lire(ref)` rend la valeur de la cellule SUR LA FEUILLE DE L'ÉLÈVE (null si vide) : les cases
@@ -126,10 +127,11 @@ function lignes(b) {
     {},
     { A: 'Commandes du jour (ordre du mail)', B: 'Poids (kg)', entete: true },
     ...CLIENTS.map((c, i) => ({ A: `${i + 1} · ${c.nom}`, B: donnee(`poids de ${c.nom}`, c.kg, pre(String(c.kg))) })),
-    { A: 'Poids total (kg)', type: 'resultat',
+    { A: 'Poids total (kg)', type: 'resultat', note: `Additionnez les ${N} poids avec SOMME.`,
       B: formule('poids total', (lire) => somme(tous(lire, CLIENTS.map((_, i) => refPoids(i)))),
         pre(`=SOMME(${refPoids(0)}:${refPoids(N - 1)})`)) },
     { A: 'Poids à laisser à quai, au moins (kg)', type: 'resultat',
+      note: 'Poids total − charge utile : ce qu’il faut au minimum retirer du vélo-cargo.',
       B: formule('poids à laisser à quai', (lire) => { const v = tous(lire, [REF.total, REF.charge]); return v && v[0] - v[1]; },
         pre(`=${REF.total}-${REF.charge}`)) },
     {},
@@ -140,25 +142,26 @@ function lignes(b) {
       const p = b.retenus[k];
       return p ? { A: `Arrêt ${k + 1} · ${p.nom}`, B: { copie: refPoids(indexDe(p.id)) } } : { A: '', B: '' };
     }),
-    { A: 'Poids chargé (kg)', type: 'resultat',
+    { A: 'Poids chargé (kg)', type: 'resultat', note: 'Additionnez les poids des arrêts avec SOMME.',
       B: formule('poids chargé', (lire) => (n ? somme(tous(lire, b.retenus.map((_, k) => refArret(k)))) : null),
         pre(`=SOMME(${refArret(0)}:${refArret(N - 1)})`)) },
     { A: 'Distance du parcours (km)', B: km },
     { A: 'Temps de route (min)', type: 'etape',
+      note: 'Distance ÷ vitesse donne des heures ; × 60 pour des minutes.',
       B: formule('temps de route', (lire) => { const v = tous(lire, [REF.km, REF.vitesse]); return v && v[1] ? v[0] / v[1] * 60 : null; },
         { tolerance: 0.5, ...pre(`=${REF.km}/${REF.vitesse}*60`) }) },
-    { A: 'Temps aux arrêts (min)', type: 'etape',
+    { A: 'Temps aux arrêts (min)', type: 'etape', note: 'Nombre d’arrêts × temps par arrêt.',
       B: formule('temps aux arrêts', (lire) => { const v = lire(REF.service); return v == null || !n ? null : n * v; },
         pre(`=7*${REF.service}`)) },
     { A: 'Heure d’arrivée à la gare', type: 'resultat',
-      note: FORMAT_CALCUL,
+      note: `Heure de départ + temps de route + temps aux arrêts. ${FORMAT_CALCUL}`,
       B: formule('heure d’arrivée à la gare', (lire) => somme(tous(lire, [REF.depart, REF.route, REF.arrets])),
         { tolerance: 0.5, format: 'heure', ...pre(`=${REF.depart}+${REF.route}`) }) },
     {},
     { A: `Distance jusqu’à ${CR.nom} (km)`, B: kmC == null ? attente : kmC },
     { A: 'Arrêts servis avant lui', B: rang < 0 ? attente : rang },
     { A: `Heure d’arrivée chez ${CR.nom}`, type: 'resultat',
-      note: FORMAT_CALCUL,
+      note: `Heure de départ + temps de route jusqu’à lui (distance ÷ vitesse × 60) + arrêts déjà servis × temps par arrêt. ${FORMAT_CALCUL}`,
       B: kmC == null ? attente
         : formule('heure d’arrivée chez le client à créneau', (lire) => {
           const v = tous(lire, [REF.depart, REF.kmC, REF.vitesse, REF.rangC, REF.service]);
@@ -219,7 +222,7 @@ const moteur = creerEntreprise({
       consigne: INES
         ? 'Inès a rempli cette feuille ce matin. Contrôlez ses données et ses formules : vous pouvez les modifier.'
         : 'Tapez les données du mail, puis écrivez les formules (elles commencent par « = »). '
-          + 'Le « ? » rappelle comment s’écrit une heure.',
+          + 'Le « ? » d’une ligne donne une aide.',
       colonnes: ['A', 'B'], decimales: 1, aides: 'bouton',
       ...(SOBRE ? { couleurs: false } : {}),
       ...(BROUILLON ? { brouillon: { colonnes: ['D', 'E'], lignes: 10 } } : {}),

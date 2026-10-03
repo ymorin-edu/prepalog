@@ -2771,16 +2771,21 @@ await v('Feuille D : le tableau « Tournée » suit l’ordre, recopie les poids
   if (await resF('B30') !== '149') throw new Error('poids chargé recalculé : ' + await resF('B30'));   // 178 − 29
 });
 
-await v('Feuille D : le « ? » ne donne que le format des heures, s’ouvre à la souris et au clavier, sans rien enregistrer', async () => {
+await v('Feuille D : le « ? » — format seul sur une heure à taper, méthode sur une formule ; clavier ; rien d’enregistré', async () => {
   await ouvrirF();
   await construireF(ORDRE_F);
-  // Plié : aucune phrase d'aide visible, ni sous les libellés, ni en liste sous la feuille.
-  // Décision de Tristan (03/10) : le « ? » ne donne jamais la méthode ni une heure du jour, seulement
-  // le FORMAT des heures. Il n'existe donc que sur les lignes d'heure (2, 6, 7, 34, 38).
+  // Décision de Tristan (03/10) : sur une heure À TAPER (lignes 2, 6, 7), le format seulement, jamais
+  // l'heure du jour ; sur chaque formule avec des calculs, l'aide de méthode.
   const lignesAide = await pageF.$$eval('[data-gr-aide]', (b) => b.map((x) => +x.dataset.grAide + 1));
-  if (lignesAide.join() !== '2,6,7,34,38') throw new Error('« ? » posés sur les lignes ' + lignesAide.join());
-  const textes = await pageF.$$eval('.gr-aide-txt', (t) => t.map((x) => x.textContent).join(' | '));
-  if (/SOMME|÷|×|14:30|16:10|15:00|14 h 30|16 h 10|15 h 00/.test(textes)) throw new Error('le « ? » donne la réponse : ' + textes);
+  if (lignesAide.join() !== '2,6,7,18,19,30,32,33,34,38') throw new Error('« ? » posés sur les lignes ' + lignesAide.join());
+  const aideDe = (ligne) => pageF.evaluate((i) => document.getElementById(document.querySelector(`[data-gr-aide="${i}"]`).getAttribute('aria-controls')).textContent, ligne - 1);
+  for (const l of [2, 6, 7]) {
+    const t = await aideDe(l);
+    if (!t.includes('9:05') || /14:30|16:10|15:00|14 h 30|16 h 10|15 h 00/.test(t)) throw new Error(`ligne ${l} : ${t}`);
+  }
+  if (!(await aideDe(18)).includes('SOMME') || !(await aideDe(32)).includes('× 60')) throw new Error('aide de méthode absente');
+  if (!(await aideDe(34)).includes('temps aux arrêts') || !(await aideDe(34)).includes('9:05')) throw new Error('ligne 34 : ' + await aideDe(34));
+  // Plié : rien de visible, ni sous les libellés, ni en liste sous la feuille.
   const id = await pageF.getAttribute('[data-gr-aide="33"]', 'aria-controls');
   if (await pageF.isVisible('#' + id)) throw new Error('aide visible avant le clic');
   if (await pageF.$('.gr-aides')) throw new Error('liste d’aides sous la feuille');

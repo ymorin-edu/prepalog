@@ -211,9 +211,9 @@ Inès et sa feuille sont **construits**. Les adresses des clients restent réell
      déjà tout de `horaire` : c'est au contenu du lot 2 de déclarer ses valeurs.
   - *Distance en copie rendue* : la carte n'affiche pas de km ; avec `contraintesDansGrille`, la distance n'est lisible que
     **si la feuille la donne** (ligne « Distance du parcours », comme aujourd'hui). La feuille de 3.4 devra la garder.
-- **Écarts par rapport au brief** : décision de Tristan pendant l'essai (03/10) : **le « ? » ne donne jamais la méthode ni une
-  valeur du jour, seulement le format des heures**, avec un exemple neutre (9:05). Il n'est donc posé que sur les lignes d'heure.
-  Les anciennes aides donnaient même la réponse (« sous la forme 16:10 » = l'heure du train).
+- **Écarts par rapport au brief** : précision de Tristan pendant l'essai (03/10) : sur une **heure à taper**, le « ? » ne
+  donne que le format, avec un exemple neutre (9:05) — les anciennes aides donnaient l'heure du jour (« sous la forme 16:10 »
+  = l'heure du train) ; sur une **formule avec des calculs**, l'aide de méthode d'ENT-3.1 reste (plus le format pour une heure calculée).
 - **Tests** : 9 cas ajoutés au bloc `boost` (aucun cas existant réécrit, `test.mjs` et `commun.mjs` non touchés), sur la page
   d'essai. Chacun éprouvé dans les deux sens : 10 sabotages du moteur et 1 du contenu, chacun fait tomber le cas attendu.
   Non testé : `calibrer.mjs` avec un service par colis (seule la sortie à nombre fixe est vérifiée identique). Suite 377/377.
