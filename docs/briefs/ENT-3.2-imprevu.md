@@ -1,5 +1,11 @@
 # Brief de chantier — ENT-3.2 Un imprévu en cours de journée
 
+> **📋 Phrase à copier-coller dans ccode :**
+>
+> ```
+> Lis docs/briefs/COORDINATION-boost.md puis implémente le brief ENT-3.2-imprevu. Annonce la durée avant de commencer, propose-moi 2 ou 3 imprévus chiffrés avec le script de calage, et attends mon choix avant de coder.
+> ```
+
 **Statut** : à implémenter *(chantier moteur + séance ; **Opus**, séance nouvelle de bout en bout)*
 **Date du brief** : 03/10/2026
 **Maquette validée** : « Maquette imprévu ENT-3.2 » (Cowork, 03/10/2026) : le message du responsable et l'écran Tournée.

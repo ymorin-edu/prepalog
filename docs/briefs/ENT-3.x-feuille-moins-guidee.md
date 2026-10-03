@@ -1,5 +1,11 @@
 # Brief de chantier — Feuille de calcul de moins en moins guidée (Boost ENT-3.1 → 3.4)
 
+> **📋 Phrase à copier-coller dans ccode :**
+>
+> ```
+> Lis docs/briefs/COORDINATION-boost.md puis implémente le brief ENT-3.x-feuille-moins-guidee. Annonce la durée avant de commencer et pose-moi les questions ouvertes du brief avant d'écrire.
+> ```
+
 **Statut** : **reporté** (pas pour le 03/10 : trop de travail). À reprendre après la refonte de la carte d'ENT-3.1
 (`docs/briefs/ENT-3.1-refonte-carte.md`).
 **Date du brief** : 03/10/2026

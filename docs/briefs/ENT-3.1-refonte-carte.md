@@ -1,5 +1,11 @@
 # Brief de chantier — ENT-3.1 Refonte de la carte (Boost, tournée du vélo-cargo)
 
+> **📋 Phrase à copier-coller dans ccode :**
+>
+> ```
+> Lis docs/briefs/COORDINATION-boost.md puis, pour ENT-3.1 (carte déjà livrée), régénère la trame Word/PDF et le corrigé d'ENT-3.1 d'après le brief ENT-3.1-refonte-carte (section « Reste ouvert »). Je valide la carte à l'écran de mon côté.
+> ```
+
 **Statut** : livré, en attente de validation à l'écran (`pret: false`) *(étape 1 sur 4 de la reprise de l'enchaînement ENT-3.1 → 3.4)*
 **Date du brief** : 03/10/2026
 **Conversation d'origine** : Cowork, 03/10/2026 (retours de Tristan sur l'enchaînement 3.1 / 3.2 / 3.3)

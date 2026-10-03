@@ -47,6 +47,17 @@ la préparation de contenu et les supports peuvent avancer en parallèle.
 **Pas en parallèle** : deux chantiers qui écrivent dans `core/types/tournee.js`, `core/types/grille.js`, `core/types/entreprise.js` ou `styles/base.css` ;
 deux sessions qui ajoutent des cas dans `outils/test/boost.mjs` (conflit de fusion) ; un `git push` pendant qu'un autre chantier est à mi-chemin et rouge.
 
+## Phrases à copier-coller dans ccode
+
+Une phrase par chantier, aussi en tête de chaque brief. Elles disent à ccode de lire ce document d'abord.
+
+| Chantier | Phrase |
+|---|---|
+| A · consigne ENT-3.3 | `Lis docs/briefs/COORDINATION-boost.md puis implémente le brief ENT-3.3-consigne-trois-etapes. Annonce la durée avant de commencer et construis les pastilles et les textes ; dis-moi quels tests tu réécris.` |
+| B · trame et corrigé ENT-3.1 | `Lis docs/briefs/COORDINATION-boost.md puis, pour ENT-3.1 (carte déjà livrée), régénère la trame Word/PDF et le corrigé d'ENT-3.1 d'après le brief ENT-3.1-refonte-carte (section « Reste ouvert »). Je valide la carte à l'écran de mon côté.` |
+| C · imprévu ENT-3.2 | `Lis docs/briefs/COORDINATION-boost.md puis implémente le brief ENT-3.2-imprevu. Annonce la durée avant de commencer, propose-moi 2 ou 3 imprévus chiffrés avec le script de calage, et attends mon choix avant de coder.` |
+| D · feuille de calcul | `Lis docs/briefs/COORDINATION-boost.md puis implémente le brief ENT-3.x-feuille-moins-guidee. Annonce la durée avant de commencer et pose-moi les questions ouvertes du brief avant d'écrire.` |
+
 ## Règles posées par Tristan (03/10/2026), valables pour tous les scénarios à venir
 
 - Les **données changent** d'une séance à l'autre, **sauf** deux séances jouées le même jour de travail (3.2 et 3.3).

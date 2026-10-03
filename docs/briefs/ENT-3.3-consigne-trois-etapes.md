@@ -1,5 +1,11 @@
 # Brief de chantier — ENT-3.3 Consigne en trois étapes + pastilles d'avancement
 
+> **📋 Phrase à copier-coller dans ccode :**
+>
+> ```
+> Lis docs/briefs/COORDINATION-boost.md puis implémente le brief ENT-3.3-consigne-trois-etapes. Annonce la durée avant de commencer et construis les pastilles et les textes ; dis-moi quels tests tu réécris.
+> ```
+
 **Statut** : à implémenter *(petit chantier : textes + un petit ajout au moteur)*
 **Date du brief** : 03/10/2026
 **Maquette** : « Maquette consigne ENT-3.3 » (Cowork, 03/10/2026) : trois onglets, avant / après (écran Tournée, mail d'Inès, accueil).
