@@ -77,6 +77,20 @@
 //                         Il affiche ses résultats avec au moins deux décimales : c'est là qu'on pose
 //                         les étapes intermédiaires (0,98 h), qu'un arrondi à l'unité rendrait fausses.
 //
+// La feuille en LECTURE SEULE (ENT-3.3 en deux temps, chantier E, 03/10/2026) : l'appelant passe
+// `lectureSeule: true` à `html` ET à `brancher` (la vue tournée le fait quand elle est figée).
+// Données, formules et résultats restent lisibles, au clavier aussi (champs `readonly`, pas
+// `disabled`) ; plus de « ↺ », plus de « Vérifier », plus de pointage de cellule, et rien ne
+// s'écrit dans l'état. Les « ? » s'ouvrent encore. `consigne` remplace celle de la feuille.
+//
+// L'affichage COMME UN TABLEUR (`affichage: 'tableur'`, ENT-3.3 en deux temps, 03/10/2026). Tristan :
+// *« la partie tableur est trop grande et pas ergonomique »*. Chaque cellule n'affiche plus que son
+// RÉSULTAT, sur une ligne basse ; on clique une cellule (ou on s'y rend au clavier : flèches, Entrée)
+// et son contenu — formule, valeur tapée, donnée — s'affiche dans une BARRE DE FORMULE au-dessus du
+// tableau, où il se lit et se corrige. C'est le geste d'Excel. Le pointage de cellule marche depuis
+// la barre comme depuis un champ ; Entrée dans la barre descend d'une cellule. En lecture seule, la
+// barre se lit sans se modifier. La cellule choisie est gardée en mémoire le temps de la page.
+//
 // Les LIGNES RÉSERVÉES (le tableau « Tournée » occupe toujours huit lignes, vides au-delà du
 // nombre d'arrêts) ne demandent rien au moteur : c'est le contenu qui engendre ses lignes, il en
 // pose toujours huit, et les adresses en dessous ne bougent plus.
@@ -119,6 +133,23 @@ export function creerGrille(G) {
   // Les plis d'aide ouverts, gardés EN MÉMOIRE seulement le temps de la page : un redessin (un
   // clic sur la carte) ne doit pas les refermer, mais rien ne va dans la base de l'élève.
   const ouvertes = new Set();
+  const TAB = G.affichage === 'tableur';
+  let selection = null;      // la cellule choisie (affichage tableur), en mémoire seulement
+
+  // La définition d'une cellule par son adresse, et ce que la barre de formule en montre.
+  const definitionDe = (lignes, ref) => {
+    let x;
+    lignes.forEach((L, i) => COLS.forEach((col) => { if (adresse(col, i) === ref) x = L[col]; }));
+    return x;
+  };
+  const barreDe = (lignes, cases, ref) => {
+    if (!ref) return { texte: '', editable: false, v: null };
+    const v = definitionDe(lignes, ref);
+    if (v && typeof v === 'object' && v.saisie) return { texte: saisieDe(cases, ref, v), editable: true, v };
+    if (v && typeof v === 'object' && v.copie) return { texte: `=${String(v.copie).toUpperCase()}`, editable: false, v };
+    const brut = v && typeof v === 'object' ? v.valeur : v;
+    return { texte: brut == null ? '' : String(brut), editable: false, v };
+  };
 
   // Ce que l'élève voit dans une cellule à remplir : ce qu'il y a tapé, sinon la formule
   // pré-remplie du contenu. Une cellule qu'il a vidée reste vide (`''` n'est pas « rien »).
@@ -238,6 +269,7 @@ export function creerGrille(G) {
       // `sansCorrection` (évaluation en copie rendue) : aucun verdict, aucun bouton « Vérifier ».
       // Le résultat de chaque formule reste affiché à côté : c'est le tableur, pas la correction.
       const SANS = !!opts.sansCorrection;
+      const LS = !!opts.lectureSeule;
       const juge = SANS ? {} : (etat.juge || {});
       const aJuge = Object.keys(juge).length > 0;
       const r = evaluerGrille(cellulesDe(lignes, cases));
@@ -256,10 +288,18 @@ export function creerGrille(G) {
           // à la frappe comme un résultat (`data-gr-res`), sans redessin.
           if (v && typeof v === 'object' && v.copie) {
             const dec = v.decimales == null ? DEC : v.decimales;
-            return `<td class="gr-fixe gr-copie gr-nb mono" data-ref="${ech(a)}"
+            return `<td class="gr-fixe gr-copie gr-nb mono${TAB && selection === a ? ' gr-sel' : ''}" data-ref="${ech(a)}"${TAB ? ` data-gr-cel="${ech(a)}" tabindex="0"` : ''}
               title="Recopié de ${ech(String(v.copie).toUpperCase())}"><span data-gr-res="${ech(a)}"
               data-fmt="${ech(v.format || '')}" data-dec="${ech(String(dec))}">${ech(
               afficher(a, r, dec, v.format || null))}</span></td>`;
+          }
+          if (v && typeof v === 'object' && v.saisie && TAB) {
+            const verdict = juge[a];
+            const cl = !aJuge || !verdict ? '' : (verdict === 'ok' ? ' gr-juste' : ' gr-faux');
+            return `<td class="gr-saisie${selection === a ? ' gr-sel' : ''}" data-ref="${ech(a)}" data-gr-cel="${ech(a)}" tabindex="0"
+              aria-label="Cellule ${ech(a)}${v.libelle ? ', ' + ech(v.libelle) : ''}"><b class="gr-res mono${cl}" data-gr-res="${ech(a)}"
+              data-fmt="${ech(v.format || '')}" data-dec="${ech(String(v.decimales == null ? DEC : v.decimales))}">${ech(
+              afficher(a, r, v.decimales == null ? DEC : v.decimales, v.format || null))}</b></td>`;
           }
           if (v && typeof v === 'object' && v.saisie) {
             const brut = saisieDe(cases, a, v);
@@ -267,11 +307,11 @@ export function creerGrille(G) {
             const cl = !aJuge || !verdict ? '' : (verdict === 'ok' ? 'juste' : 'faux');
             return `<td class="gr-saisie" data-ref="${ech(a)}">
               <span class="gr-champ">
-                <input type="text" class="champ ${cl}" data-gr="${ech(a)}" value="${ech(brut)}"
+                <input type="text" class="champ ${cl}" data-gr="${ech(a)}" value="${ech(brut)}"${LS ? ' readonly aria-readonly="true"' : ''}
                   autocomplete="off" spellcheck="false"
                   aria-label="Cellule ${ech(a)}${v.libelle ? ', ' + ech(v.libelle) : ''}"
                   placeholder="${ech(v.placeholder || (v.formule ? '= votre formule' : 'votre réponse'))}">
-                ${v.prerempli == null ? '' : `<button type="button" class="gr-origine" data-gr-origine="${ech(a)}"
+                ${v.prerempli == null || LS ? '' : `<button type="button" class="gr-origine" data-gr-origine="${ech(a)}"
                   title="${ech(LIBELLE_ORIGINE)}" aria-label="${ech(LIBELLE_ORIGINE)} (cellule ${ech(a)})"${
                   modifiee(cases, a, v) ? '' : ' hidden'}>↺</button>`}
                 <b class="gr-res mono" data-gr-res="${ech(a)}" data-fmt="${ech(v.format || '')}"
@@ -314,7 +354,8 @@ export function creerGrille(G) {
           } else if (col === COLS[0] && L.note && !AIDES_BOUTON) {
             note = `<span class="gr-expl">${ech(L.note)}</span>`;
           }
-          return `<td class="gr-fixe${nb ? ' gr-nb mono' : ''}" data-ref="${ech(a)}">${ech(txt)}${note}</td>`;
+          return `<td class="gr-fixe${nb ? ' gr-nb mono' : ''}${TAB && selection === a ? ' gr-sel' : ''}" data-ref="${ech(a)}"${
+            TAB ? ` data-gr-cel="${ech(a)}" tabindex="0"` : ''}>${ech(txt)}${note}</td>`;
         }).join('');
         // Sans couleurs, le TYPE de ligne ne se dessine plus : étape, résultat et contrainte se
         // ressemblent, et c'est à l'élève de savoir lequel il compare à quoi.
@@ -377,8 +418,22 @@ export function creerGrille(G) {
       // posé par l'appelant (la vue tournée y met ses jauges) ; sans lui, la feuille reste seule.
       const gauche = `
         <div class="ent-lbl">${ech(G.titre || 'Feuille de calcul')}</div>
-        ${G.consigne ? `<p class="note">${ech(G.consigne)}</p>` : ''}
+        ${(opts.consigne || G.consigne) ? `<p class="note">${ech(opts.consigne || G.consigne)}</p>` : ''}
         ${legende}
+        ${!TAB ? '' : (() => {
+          const c = barreDe(lignes, cases, selection);
+          const edit = c.editable && !LS;
+          return `<div class="gr-barre">
+            <span class="gr-barre-ref mono" data-gr-barre-ref>${ech(selection || '')}</span>
+            <span class="gr-fx" aria-hidden="true">fx</span>
+            <input type="text" class="champ" data-gr-barre${edit ? ` data-gr="${ech(selection)}"` : ''} value="${ech(c.texte)}"
+              ${edit ? '' : 'readonly'} autocomplete="off" spellcheck="false" aria-label="Barre de formule"
+              placeholder="Cliquez une cellule pour lire ce qu’elle contient">
+            ${LS ? '' : `<button type="button" class="gr-origine" data-gr-origine="${ech(selection || '')}"
+              title="${ech(LIBELLE_ORIGINE)}" aria-label="${ech(LIBELLE_ORIGINE)}"${
+              edit && modifiee(cases, selection, c.v) ? '' : ' hidden'}>↺</button>`}
+          </div>`;
+        })()}
         <div class="gr-feuilles${BR ? ' gr-avec-brouillon' : ''}">
           <div class="ent-scroll"><table class="gr-table">
             <thead>${enTete}</thead><tbody>${corps}</tbody>
@@ -389,10 +444,10 @@ export function creerGrille(G) {
           .map((c) => `<li><b class="mono">${ech(c.ref)}</b> ${ech(c.aide)}</li>`).join('')}</ul>`}
         ${bilan}
         ${opts.avertissement ? `<div class="avis avis-contrainte">${ech(opts.avertissement)}</div>` : ''}
-        ${SANS || G.verifier === false ? '' : `<div class="rangee" style="margin-top:12px">
+        ${SANS || LS || G.verifier === false ? '' : `<div class="rangee" style="margin-top:12px">
           <button class="btn btn-p" data-gr-verifier>${ech(G.libelleValider || 'Vérifier mes formules')}</button>
         </div>`}`;
-      const sobre = SOBRE ? ' gr-sobre' : '';
+      const sobre = (SOBRE ? ' gr-sobre' : '') + (LS ? ' gr-lecture-seule' : '') + (TAB ? ' gr-tableur' : '');
       return opts.droite
         ? `<div class="gr-bloc gr-deux${sobre}"><div class="gr-gauche">${gauche}</div>
             <aside class="gr-droite" aria-label="Contraintes de l’exercice">${opts.droite}</aside></div>`
@@ -403,6 +458,73 @@ export function creerGrille(G) {
     // et non un tableau : la grille est tirée du parcours de l'élève, qui change sous elle.
     brancher(z, api) {
       const etat = api.etat;
+      // Les plis d'aide : s'ouvrent et se ferment sans redessin et sans rien enregistrer — même
+      // en lecture seule.
+      z.querySelectorAll('[data-gr-aide]').forEach((btn) => btn.addEventListener('click', () => {
+        const ouvrir = btn.getAttribute('aria-expanded') !== 'true';
+        btn.setAttribute('aria-expanded', String(ouvrir));
+        const txt = document.getElementById(btn.getAttribute('aria-controls'));
+        if (txt) txt.hidden = !ouvrir;
+        if (ouvrir) ouvertes.add(+btn.dataset.grAide); else ouvertes.delete(+btn.dataset.grAide);
+      }));
+      // L'affichage tableur : choisir une cellule remplit la barre de formule, sans redessin.
+      let vientDePointer = false;     // un clic qui vient d'insérer une référence ne choisit pas la cellule
+      const barre = TAB ? z.querySelector('[data-gr-barre]') : null;
+      const selectionner = (ref, focus) => {
+        if (!barre) return;
+        selection = ref;
+        z.querySelectorAll('[data-gr-cel]').forEach((td) => td.classList.toggle('gr-sel', td.dataset.grCel === ref));
+        const c = barreDe(api.lignes(), etat.cases || {}, ref);
+        const edit = c.editable && !api.lectureSeule;
+        barre.value = c.texte;
+        barre.readOnly = !edit;
+        if (edit) barre.dataset.gr = ref; else delete barre.dataset.gr;
+        const lbl = z.querySelector('[data-gr-barre-ref]');
+        if (lbl) lbl.textContent = ref;
+        const orig = z.querySelector('.gr-barre [data-gr-origine]');
+        if (orig) { orig.dataset.grOrigine = ref; orig.hidden = !(edit && modifiee(etat.cases, ref, c.v)); }
+        if (focus && edit) {
+          barre.focus();
+          try { barre.setSelectionRange(barre.value.length, barre.value.length); } catch (e) { /* champ détaché */ }
+          // Sans attendre l'événement « focus » (une fenêtre qui n'a pas la main ne l'émet pas) :
+          // la barre devient le champ en cours d'écriture, pour le pointage de cellule.
+          actif = barre; suivreCurseur(barre);
+        }
+      };
+      // La cellule voisine (flèches, Entrée dans la barre).
+      const voisine = (ref, dc, dl) => {
+        const m = /^([A-Z])(\d+)$/.exec(ref || '');
+        if (!m) return null;
+        const c = COLS[COLS.indexOf(m[1]) + dc];
+        const td = c ? z.querySelector(`[data-gr-cel="${c}${+m[2] + dl}"]`) : null;
+        return td;
+      };
+      if (barre) {
+        z.querySelectorAll('[data-gr-cel]').forEach((td) => {
+          td.addEventListener('click', () => {
+            if (vientDePointer) { vientDePointer = false; return; }
+            selectionner(td.dataset.grCel, true);
+          });
+          td.addEventListener('keydown', (e) => {
+            const fl = { ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0] }[e.key];
+            if (fl) {
+              const v = voisine(td.dataset.grCel, fl[0], fl[1]);
+              if (v) { e.preventDefault(); v.focus(); selectionner(v.dataset.grCel, false); }
+            } else if (e.key === 'Enter' || e.key === 'F2') {
+              e.preventDefault(); selectionner(td.dataset.grCel, true);
+            }
+          });
+        });
+        barre.addEventListener('keydown', (e) => {
+          if (e.key !== 'Enter') return;
+          e.preventDefault();
+          const v = voisine(selection, 0, 1);
+          if (v) { v.focus(); selectionner(v.dataset.grCel, false); }
+        });
+      }
+
+      // Lecture seule : rien d'autre ne se branche, rien ne s'écrit.
+      if (api.lectureSeule) { if (detacherPointage) { detacherPointage(); detacherPointage = null; } return; }
       if (!etat.cases) etat.cases = {};
       if (BR && !etat.brouillon) etat.brouillon = {};
 
@@ -435,6 +557,7 @@ export function creerGrille(G) {
           api.sauver();
           return;
         }
+        if (!el.dataset.gr) return;      // la barre, sur une cellule qui ne se modifie pas
         etat.cases[el.dataset.gr] = el.value;
         // Le « ↺ » d'une case pré-remplie apparaît dès qu'elle diffère de l'origine, sans redessin.
         const orig = z.querySelector(`[data-gr-origine="${el.dataset.gr}"]`);
@@ -467,7 +590,7 @@ export function creerGrille(G) {
         curseur.fin = el.selectionEnd == null ? curseur.debut : el.selectionEnd;
       };
 
-      z.querySelectorAll('[data-gr], [data-grb]').forEach((el) => {
+      z.querySelectorAll('[data-gr], [data-grb], [data-gr-barre]').forEach((el) => {
         // `pose = null` : une frappe au clavier périme le repère du geste précédent.
         const maj = () => { pose = null; noter(el); suivreCurseur(el); };
         el.addEventListener('input', maj);
@@ -581,6 +704,7 @@ export function creerGrille(G) {
             // `preventDefault` garde le focus ET le curseur dans le champ. Sans lui, le navigateur
             // déplace le focus sur la cellule cliquée et la formule se referme sous les doigts.
             e.preventDefault();
+            vientDePointer = true;
 
             tableGeste = tableau;
             if (prolonge) {
@@ -631,15 +755,6 @@ export function creerGrille(G) {
         etat.juge = {}; etat.valide = null;
         api.sauver(); api.redessiner();
         if (api.toast) api.toast('Formule d’origine remise.');
-      }));
-
-      // Les plis d'aide : s'ouvrent et se ferment sans redessin et sans rien enregistrer.
-      z.querySelectorAll('[data-gr-aide]').forEach((btn) => btn.addEventListener('click', () => {
-        const ouvrir = btn.getAttribute('aria-expanded') !== 'true';
-        btn.setAttribute('aria-expanded', String(ouvrir));
-        const txt = document.getElementById(btn.getAttribute('aria-controls'));
-        if (txt) txt.hidden = !ouvrir;
-        if (ouvrir) ouvertes.add(+btn.dataset.grAide); else ouvertes.delete(+btn.dataset.grAide);
       }));
 
       z.querySelector('[data-gr-verifier]')?.addEventListener('click', () => {

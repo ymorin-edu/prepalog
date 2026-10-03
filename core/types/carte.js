@@ -708,12 +708,12 @@ export function carteTournee(P) {
     },
     // La tournée redessine toute sa vue à chaque clic : la scène est remontée à chaque fois,
     // mais le ZOOM est gardé ici, donc l'élève qui travaille dans l'Écusson y reste.
-    brancher(z) {
+    // `lecture` : la tournée est figée (ENT-3.3 en deux temps) — on la lit, on ne clique pas les clients.
+    brancher(z, o = {}) {
       if (!z.querySelector('[data-ct-svg]')) return null;
+      const geste = o.lecture ? 'La tournée se lit sur la carte ; elle ne se modifie pas.' : 'Cliquez les clients dans l’ordre de passage.';
       return monterScene(z, C, ui, {
-        aide: () => (ui.vue === 'ensemble'
-          ? 'Cliquez les clients dans l’ordre de passage. Un quartier s’ouvre avec ses boutons.'
-          : 'Cliquez les clients dans l’ordre de passage.'),
+        aide: () => (ui.vue === 'ensemble' ? `${geste} Un quartier s’ouvre avec ses boutons.` : geste),
         // Un clic sur un quartier (hors d'un point) l'ouvre ; un point garde son clic à lui.
         clicQuartier: (ev) => !ev.target.closest('[data-clic-point],[data-clic-extremite]'),
       });
