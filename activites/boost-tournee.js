@@ -45,7 +45,7 @@ export const meta = {
   // est cloisonné par séance via `transportId`, donc deux séances Boost ne s'écrasent pas.
   jeuId: 'boost',
   tables: {},
-  pret: false,
+  pret: true,
   // Corrigé des QCM d'éco-droit de la trame : affiché dans l'onglet « Corrigés » de l'espace
   // enseignant, jamais côté élève. Fichier généré par le générateur de la trame.
   corrige: './contenus/corriges/ENT-3.1.js',
