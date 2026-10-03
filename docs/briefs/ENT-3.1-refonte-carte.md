@@ -6,7 +6,7 @@
 > Lis docs/briefs/COORDINATION-boost.md puis, pour ENT-3.1 (carte déjà livrée), régénère la trame Word/PDF et le corrigé d'ENT-3.1 d'après le brief ENT-3.1-refonte-carte (section « Reste ouvert »). Je valide la carte à l'écran de mon côté.
 > ```
 
-**Statut** : livré, en attente de validation à l'écran (`pret: false`) *(étape 1 sur 4 de la reprise de l'enchaînement ENT-3.1 → 3.4)*
+**Statut** : livré ; ENT-3.1 en `pret: true` dans le code (03/10/2026) ; trame et corrigé régénérés *(étape 1 sur 4 de la reprise de l'enchaînement ENT-3.1 → 3.4)*
 **Date du brief** : 03/10/2026
 **Conversation d'origine** : Cowork, 03/10/2026 (retours de Tristan sur l'enchaînement 3.1 / 3.2 / 3.3)
 **Maquette validée** : `G:\Mon Drive\Travail\Logistique\1L\Claude outputs\maquette-31-carte.html`
@@ -172,7 +172,7 @@ quartiers et des numéros.
   acceptée sans comparaison ; quartier mal rattaché ; points masqués ; calage cassé (départ remis à 13 h).
 - **Commits** : voir l'historique du 03/10/2026 (« ENT-3.1 : carte réelle… »).
 - **Reste ouvert** :
-  - **validation de Tristan à l'écran** (page `outils/essai-ent31.html`, et au vidéoprojecteur), puis `pret: true` ;
+  - ~~validation de Tristan à l'écran puis `pret: true`~~ **faite** (la séance est en `pret: true` le 03/10/2026) ; reste, si pas encore fait, un essai au vidéoprojecteur ;
   - ~~trame Word/PDF et corrigé d'ENT-3.1~~ **régénérés le 03/10/2026** (carte réelle A–E × 1–5, sept rues et quartiers
     nouveaux, départ 14 h 00, km par les rues : ordre le plus court 11,9 km / 15 h 36, ordre de la fiche 21,3 km / 16 h 23,
     189 ordres sur 720 tiennent le train). Le PDF est repris du .docx par Word ;
