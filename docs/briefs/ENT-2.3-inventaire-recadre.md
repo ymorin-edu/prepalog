@@ -6,7 +6,7 @@
 > Lis docs/briefs/COORDINATION-cdiscount.md, docs/EN-COURS.md, puis implémente le brief docs/briefs/ENT-2.3-inventaire-recadre.md : d'abord le lot moteur du §7 (écran Inventaire, commité à part), puis la séance. Annonce la durée, puis enchaîne sans attendre : les questions du brief sont déjà tranchées (§11).
 > ```
 
-**Statut** : à implémenter — après la renumérotation (C3). **N'attend pas le geste tableur** (C5).
+**Statut** : livré (04/10/2026), fermé aux élèves (`ouverture: 'prof'`).
 **Date du brief** : 03/10/2026
 **Modèle** : Sonnet — **Durée estimée par Cowork** : 2 à 3 h (lot moteur 45 min à 1 h, séance et tests 1 h 30 à 2 h).
 **Touche le moteur** : **oui pour le lot 0** (`core/types/inventaire.js`, `outils/test/inventaire.mjs`) → s'inscrire
@@ -193,10 +193,46 @@ données de l'ancienne ENT-2.2, pièges compris ; écarts et taux calculés par 
 
 ## Compte rendu *(rempli par Claude Code à la livraison)*
 
-- **Fichiers créés / modifiés** :
-- **API du périmètre livrée** (pour la fiche du format) :
+- **Fichiers créés / modifiés** : lot 0 — `core/types/inventaire.js`, `core/types/entreprise.js` (branchement : l'écran
+  reçoit la base, attend tant que le périmètre est `null`, complète la photo si le périmètre grandit),
+  `outils/test/inventaire.mjs` (4 cas). Séance — `contenus/cdiscount-inventaire.js` (réécrit), `activites/cdiscount-inventaire.js`
+  (desc, en-tête), `outils/test/cdiscount.mjs` (partie ENT-2.3 réécrite : 27 cas).
+- **API du périmètre livrée** (pour la fiche du format — **à reporter par Cowork dans `prepalog-inventaire-format.md`**) :
+  `perimetre(db)` dans la déclaration `inventaire` → tableau de références (gardé dans l'ordre des emplacements) ou `null` ;
+  `attentePerimetre: '…'` = le message de l'écran tant que c'est `null`. Exports de `core/types/inventaire.js` :
+  `lignesInventaire(INV, db, VM)` (les lignes du périmètre, ou toutes), `etatNeuf(INV, stockDe, lignes?)`.
+  `bilanInventaire(db, …)` lit le périmètre sur la base qu'on lui passe (la base de l'élève, pas un état seul).
+  Sans `perimetre` : rien ne change. Le relevé de la messagerie reste complet.
+- **Exports pour ENT-2.2** (`contenus/cdiscount-inventaire.js`) : `REFS_A_ECART`, `REFS_CONFIRME`, `COMMANDES`, `RECEPTIONS`,
+  `RETOUR`, `CASSE`, `REINTEGRATION`, `ANNULATION`, `DEMARQUE`, `INVENTAIRE_PRECEDENT`, `ecartsReelsApres(m)`, et surtout
+  `periode(now, depart)` qui rend réceptions, commandes, mouvements et **`preparations`** (une ligne par ligne de bon :
+  `ts, bon, commande, sku, qty, logiciel, trouve`).
 - **Écarts par rapport au brief** :
+  - Les références reconnues dans la liste sont celles de **toute l'allée A (12)**, pas « les 8 » du § 11 : le catalogue
+    est étendu à 12 par la section niveau, et un élève qui cite A-05 recompte A-05 (écart 0, intrus).
+  - Volume : 12 références, 21 documents, 36 mouvements (et non « 8, 16, 27 inchangé ») : conséquence des 5 commandes
+    A-05 / A-06 demandées par la section niveau.
+  - **Constats d'écart sur les bons : 10** (CHG 3, CAB 3, BAT 2, COQ 2), pas « ≈ 8, CAB 2 » comme l'estimait le brief
+    ENT-2.2 : c'est ce que donnent les commandes existantes. La bonne liste ne change pas.
+  - Le taux attendu se calcule sur le périmètre : 6,9 % pour la bonne liste (10 ÷ 145), 6,0 % avec un intrus ECO
+    (10 ÷ 167), 4,9 % pour un confirmé (10 ÷ 204). L'ancien 3,7 % (allée entière) est désormais **faux**.
 - **Décisions prises en route** :
-- **Tests** :
-- **Commits** :
-- **Reste ouvert** :
+  - Rappel « rien reconnu » : déclencheur à part (`rappel`), une seule fois ; il porte aussi l'amorce « À recompter : ».
+  - L'accusé de Nadia a pour objet « Votre liste à recompter » ; pour « Absent », c'est le même message (texte du § 5) ;
+    un **confirmé « Absent »** reçoit aussi la phrase A-05 / A-06.
+  - Aléas datés de 3 min puis + 1 min chacun après l'accusé (le relevé et la mission à + 1 à 3 s).
+  - Une référence prime sur le mot « absent » dans la même réponse.
+  - Le volet garde son identifiant `inventaire-1` : une base d'essai ouverte **avant** ce recadrage (enseignant) garde
+    l'ancien contenu ; son écran Inventaire attendra une liste. Aucun élève n'est concerné (séance fermée).
+  - CMD-732153 : annulée 30 min avant la réintégration ; son bon reste « préparé », figé.
+  - 5 commandes A-05 / A-06 : CMD-732109, 732132, 732174, 732202, 732233 (clients C0003, 5, 7, 10, 12).
+  - Le « Stock trouvé » d'une ligne est `max(0, stock réel)` avant la sortie.
+- **Tests** : bloc `inventaire` 37/37 (dont 4 nouveaux ; sabotage « le périmètre est ignoré » → 4 cas tombent) ; bloc
+  `cdiscount` 63/63 (partie ENT-2.3 réécrite, valeurs à la main : stock système des 12 références, 11 « stock trouvé »
+  bon par bon, taux par liste et par niveau) ; sabotages éprouvés : extraction sensible à la casse, « absent » écrit dans
+  un message, jalons lus sur l'allée entière, phrase du confirmé envoyée à un standard → chacun fait tomber ses cas.
+  Suite entière : 497/497.
+- **Commits** : « Écran Inventaire : périmètre réglable par la séance… (lot 0 de C4) » puis « ENT-2.3 recadrée… (C4) ».
+- **Reste ouvert** : trame élève (Cowork, après validation à l'écran) ; ligne de la fiche du format d'inventaire
+  (Cowork) ; validation par Tristan en jouant trois fois (liste exacte ; sans CAB ; « Absent » — c'est **lui** qui dit
+  « Absent » à l'élève, à écrire dans la fiche d'intention).

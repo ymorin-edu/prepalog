@@ -707,46 +707,67 @@ Ce qui cloche : DEM-26-0027 : 2 - 1 = 1`;
   });
 
   /* ================================================================================
-   * ENT-2.3 « Inventaire tournant » (entraînement) — ajouté le 02/10/2026, chantier D.
+   * ENT-2.3 « Inventaire tournant » (entraînement) — ajouté le 02/10/2026, chantier D ;
+   * RÉÉCRIT le 04/10/2026 (brief `ENT-2.3-inventaire-recadre.md`, C4) : l'élève redonne sa liste à
+   * Nadia, l'écran ne montre que son périmètre, une référence à écart oubliée revient par un aléa,
+   * « Absent » donne la liste d'un collègue, le confirmé recompte aussi A-05 / A-06.
    *
-   * Réglages décidés par Tristan : 8 références et 27 mouvements (ENT-2.1 : 5 et 19), correction
-   * DÉTAILLÉE, piège unique = l'article au mauvais emplacement. Les valeurs attendues sont
-   * écrites À LA MAIN ici (stock, écarts, taux) : un test qui les recalculerait avec le code de
-   * la séance ne verrait pas une erreur de données.
+   * Les valeurs attendues sont écrites À LA MAIN ici (stock, écarts, taux, « stock trouvé ») : un
+   * test qui les recalculerait avec le code de la séance ne verrait pas une erreur de données.
    * ============================================================================== */
 
-  const SYSTEME_22 = { 'CAB-USBC-1M': 64, 'CHG-20W': 44, 'ECO-BT-01': 22, 'SOU-SF-02': 29, 'BAT-10K': 10, 'CLE-64G': 37, 'AMP-LED-E27': 37, 'COQ-UNI-01': 27 };
-  const COMPTE_22 = { 'CAB-USBC-1M': 67, 'CHG-20W': 41, 'ECO-BT-01': 22, 'SOU-SF-02': 29, 'BAT-10K': 8, 'CLE-64G': 37, 'AMP-LED-E27': 37, 'COQ-UNI-01': 25 };
-  const ECARTS_22 = { 'CAB-USBC-1M': 3, 'CHG-20W': -3, 'ECO-BT-01': 0, 'SOU-SF-02': 0, 'BAT-10K': -2, 'CLE-64G': 0, 'AMP-LED-E27': 0, 'COQ-UNI-01': -2 };
-  const ORDRE_22 = Object.keys(SYSTEME_22);
-  const ID_22 = S22.ID_INVENTAIRE;
+  const SYSTEME_23 = { 'CAB-USBC-1M': 64, 'CHG-20W': 44, 'ECO-BT-01': 22, 'SOU-SF-02': 29, 'BAT-10K': 10, 'CLE-64G': 37,
+    'AMP-LED-E27': 37, 'COQ-UNI-01': 27, 'CAS-FIL-01': 12, 'SUP-VOIT': 22, 'CLA-SF-01': 9, 'HUB-USB-4': 16 };
+  const COMPTE_23 = { ...SYSTEME_23, 'CAB-USBC-1M': 67, 'CHG-20W': 41, 'BAT-10K': 8, 'COQ-UNI-01': 25 };
+  const ECARTS_23 = Object.fromEntries(Object.keys(SYSTEME_23).map((r) => [r, COMPTE_23[r] - SYSTEME_23[r]]));
+  const ORDRE_23 = Object.keys(SYSTEME_23);
+  const LISTE_4 = ['CAB-USBC-1M', 'CHG-20W', 'BAT-10K', 'COQ-UNI-01'];
+  const A05_A06 = ['CAS-FIL-01', 'SUP-VOIT', 'CLA-SF-01', 'HUB-USB-4'];
+  const ID_23 = S22.ID_INVENTAIRE;
+
+  // Ce que fait le moteur à chaque sauvegarde : les déclencheurs du volet, une seule fois chacun.
+  const declencher = (S, db, prenom = 'Léa') => {
+    if (!db.volets) db.volets = {};
+    for (const d of S.VOLET.declencheurs || []) {
+      const cle = `${S.VOLET.id}#${d.id}`;
+      if (db.volets[cle] || !d.quand(db)) continue;
+      ((d.semer(prenom, db) || {}).mails || []).forEach((m) => db.mails.push({ ...m, declenche: d.id }));
+      db.volets[cle] = Date.now();
+    }
+    return db;
+  };
+  // Ouvrir la séance, répondre à Nadia, laisser arriver ce qui doit arriver.
+  const avecListe = (texte, aisance) => declencher(S22, (() => { const db = ouvrir(S22, 'Léa', aisance); if (texte != null) repondre(db, texte); return db; })());
+  const perim = (db) => S22.INVENTAIRE.perimetre(db);
 
   // L'état de l'écran Inventaire d'un élève, posé à la main (alerte n° 20 : on appelle
-  // `verifier(db)` directement). `decisions` : { ref: [action, motif] }.
-  const etat22 = (db, { saisie = COMPTE_22, ecarts = ECARTS_22, decisions = {}, recomptes = {}, taux = '3,7', valide = true } = {}) => {
-    const e = INVM.etatNeuf(S22.INVENTAIRE, (r) => db.stock[r]);
-    ORDRE_22.forEach((r) => { e.saisie[r] = String(saisie[r]); e.ecarts[r] = String(ecarts[r]); });
+  // `verifier(db)` directement), SUR SON PÉRIMÈTRE. `decisions` : { ref: [action, motif] }.
+  const etat23 = (db, { saisie = COMPTE_23, ecarts = ECARTS_23, decisions = {}, recomptes = {}, taux = '6,9', valide = true } = {}) => {
+    const refs = perim(db) || [];
+    const e = INVM.etatNeuf(S22.INVENTAIRE, (r) => db.stock[r], S22.INVENTAIRE.lignes.filter((l) => refs.includes(l.ref)));
+    refs.forEach((r) => { e.saisie[r] = String(saisie[r]); e.ecarts[r] = String(ecarts[r]); });
     Object.entries(decisions).forEach(([r, [action, motif]]) => { e.decisions[r] = { action, motif: motif || '' }; });
     Object.entries(recomptes).forEach(([r, q]) => { e.recomptes[r] = q; });
     e.taux = taux; e.valide = valide ? Date.now() : null; e.etape = valide ? 4 : 1;
-    db.inventaires = { [ID_22]: e };
+    db.inventaires = { [ID_23]: e };
     return db;
   };
-  const BONNES_22 = { 'CAB-USBC-1M': ['recompter'], 'CHG-20W': ['rayon'], 'BAT-10K': ['rayon'], 'COQ-UNI-01': ['regul', 'Démarque inconnue'] };
-  const justeDb = (surcharge = {}) => etat22(ouvrir(S22), { recomptes: { 'CAB-USBC-1M': 64 }, decisions: BONNES_22, ...surcharge });
-  const ids22 = S22.ETAPES.map((x) => x.id);
-  const tombes22 = (db) => { const st = statuts(S22, db); return ids22.filter((x, i) => st[i] !== 'ok'); };
+  const BONNES_23 = { 'CAB-USBC-1M': ['recompter'], 'CHG-20W': ['rayon'], 'BAT-10K': ['rayon'], 'COQ-UNI-01': ['regul', 'Démarque inconnue'] };
+  const LISTE_JUSTE = 'À recompter : CAB-USBC-1M, CHG-20W, BAT-10K, COQ-UNI-01';
+  const justeInv = (surcharge = {}, texte = LISTE_JUSTE, aisance) => etat23(avecListe(texte, aisance), { recomptes: { 'CAB-USBC-1M': 64 }, decisions: BONNES_23, ...surcharge });
+  const idsInv = S22.ETAPES.map((x) => x.id);
+  const tombesInv = (db) => { const st = statuts(S22, db); return idsInv.filter((x, i) => st[i] !== 'ok'); };
+  const sujetsIn = (db) => db.mails.filter((m) => m.folder === 'in').map((m) => m.subject);
 
   // ---------- ENT-2.3 — les données
-  await v('ENT-2.3 : volume déclaré = volume réel (8 références, 16 documents, 27 mouvements), plus fort qu\'ENT-2.1', async () => {
+  await v('ENT-2.3 : volume déclaré = volume réel (12 références, 21 documents, 36 mouvements), plus fort qu\'ENT-2.1', async () => {
     const db = ouvrir(S22);
     const refs = new Set(db.moves.map((m) => m.sku));
     const docs = new Set(db.moves.map((m) => m.ref));
     const vol = { references: refs.size, documents: docs.size, mouvements: db.moves.length };
-    if (JSON.stringify(vol) !== JSON.stringify({ references: 8, documents: 16, mouvements: 27 })) throw new Error('volume réel : ' + JSON.stringify(vol));
+    if (JSON.stringify(vol) !== JSON.stringify({ references: 12, documents: 21, mouvements: 36 })) throw new Error('volume réel : ' + JSON.stringify(vol));
     for (const k of Object.keys(S22.VOLUME)) if (S22.VOLUME[k] !== vol[k]) throw new Error(`${k} : déclaré ${S22.VOLUME[k]}, réel ${vol[k]}`);
-    if (S22.CATALOGUE.VARIANTS.length !== 8) throw new Error('la séance montre plus ou moins que ses huit références');
-    // Décision de Tristan : un peu plus qu'ENT-2.1 (5 références, 19 mouvements).
+    if (S22.CATALOGUE.VARIANTS.length !== 12) throw new Error('la séance doit montrer toute l\'allée A (12 références)');
     if (!(refs.size > S21.VOLUME.references && db.moves.length > S21.VOLUME.mouvements)) throw new Error('le volume ne dépasse pas celui d\'ENT-2.1');
     const meta = await page.evaluate(async () => (await import('/activites/cdiscount-inventaire.js')).meta);
     if (JSON.stringify(meta.volume) !== JSON.stringify(S22.VOLUME)) throw new Error('le meta ne déclare pas le volume de la séance');
@@ -766,146 +787,244 @@ Ce qui cloche : DEM-26-0027 : 2 - 1 = 1`;
     if (db.moves.some((m) => m.ts < S22.INVENTAIRE.depuis)) throw new Error('un mouvement est antérieur au dernier inventaire : « voir les mouvements » ne le montrerait pas');
     const s = { ...S22.INVENTAIRE_PRECEDENT };
     for (const m of db.moves) { s[m.sku] += m.delta; if (m.after !== s[m.sku]) throw new Error(`stock après faux sur ${m.sku} (${m.ref})`); }
-    if (JSON.stringify(s) !== JSON.stringify(SYSTEME_22)) throw new Error('stock du système : ' + JSON.stringify(s));
+    if (JSON.stringify(s) !== JSON.stringify(SYSTEME_23)) throw new Error('stock du système : ' + JSON.stringify(s));
     for (const k of Object.keys(s)) if (s[k] !== db.stock[k]) throw new Error(`stock final faux : ${k}`);
     for (const v2 of S22.CATALOGUE.VARIANTS) { if (s[v2.sku] < 0 || s[v2.sku] > v2.model.max) throw new Error(`${v2.sku} hors des bornes du catalogue`); }
     for (const r of db.receptions) {
       const parColis = {}; r.colis.forEach((c) => { parColis[c.sku] = (parColis[c.sku] || 0) + c.qty; });
       r.bl.lines.forEach((l) => { if (parColis[l.sku] !== l.qty) throw new Error(`${r.no} : colis et bon de livraison divergent`); });
     }
-    for (const o of db.orders) for (const l of o.lines) {
-      const m = db.moves.find((x) => x.ref === 'BP-' + o.no.replace('CMD-', '') && x.sku === l.sku);
-      if (o.prep.rows[l.sku].seen !== m.after + l.qty) throw new Error(`${o.no} : « vu en stock » incohérent`);
-    }
   });
 
-  await v('ENT-2.3 : écarts, taux et décisions attendus (valeurs écrites à la main)', async () => {
+  // Le « Stock trouvé » des bons de préparation = le stock RÉEL au rayon (décision 3 de la série).
+  // Valeurs écrites à la main, bon par bon, sur les quatre références à écart ; partout ailleurs, il
+  // retombe sur le stock du système juste avant la sortie.
+  await v('ENT-2.3 : « Stock trouvé » des bons = stock réel — CHG et CAB décrochés de 3 après REC-26-0431, BAT de 2 après REI-26-0012, COQ de 2 (démarque)', async () => {
+    const db = ouvrir(S22);
+    const vu = (cmd, sku) => db.orders.find((o) => o.no === cmd).prep.rows[sku].seen;
+    const attendu = [
+      ['CMD-732101', 'CAB-USBC-1M', 73], ['CMD-732181', 'CAB-USBC-1M', 72], ['CMD-732226', 'CAB-USBC-1M', 70],
+      ['CMD-732118', 'CHG-20W', 45], ['CMD-732167', 'CHG-20W', 44], ['CMD-732210', 'CHG-20W', 42],
+      ['CMD-732153', 'BAT-10K', 12], ['CMD-732195', 'BAT-10K', 10], ['CMD-732239', 'BAT-10K', 9],
+      ['CMD-732126', 'COQ-UNI-01', 28], ['CMD-732181', 'COQ-UNI-01', 27],
+    ];
+    for (const [cmd, sku, n] of attendu) if (vu(cmd, sku) !== n) throw new Error(`${cmd} ${sku} : stock trouvé ${vu(cmd, sku)} au lieu de ${n}`);
+    // Ailleurs, aucun constat : le stock trouvé est celui du système avant la sortie.
+    let constats = 0;
+    for (const o of db.orders) for (const l of o.lines) {
+      const m = db.moves.find((x) => x.ref === 'BP-' + o.no.replace('CMD-', '') && x.sku === l.sku);
+      if (o.prep.rows[l.sku].seen !== m.after + l.qty) { constats++; if (!LISTE_4.includes(l.sku)) throw new Error(`${o.no} : constat inattendu sur ${l.sku}`); }
+    }
+    if (constats !== 10) throw new Error(`${constats} constats au lieu de 10`);
+    // La même source pour ENT-2.2 : `periode()` donne les mêmes lignes.
+    const P = S22.periode();
+    if (P.preparations.filter((p) => p.trouve !== p.logiciel).length !== 10) throw new Error('periode() ne donne pas les mêmes constats');
+    if (JSON.stringify(S22.REFS_A_ECART) !== JSON.stringify(LISTE_4)) throw new Error('REFS_A_ECART : ' + S22.REFS_A_ECART.join(', '));
+  });
+
+  await v('ENT-2.3 : CMD-732153 porte le statut « Annulée », sa sortie et sa réintégration sont dans les mouvements', async () => {
+    const db = ouvrir(S22);
+    const o = db.orders.find((x) => x.no === 'CMD-732153');
+    if (!o.annulee || o.annulee.motif !== 'Annulée par le client pendant la préparation' || !o.annulee.at) throw new Error('annulation : ' + JSON.stringify(o.annulee));
+    if (db.orders.filter((x) => x.annulee).length !== 1) throw new Error('une seule commande annulée');
+    const bat = db.moves.filter((m) => m.sku === 'BAT-10K');
+    if (!bat.some((m) => m.type === S22.TYPES.reintegration && m.delta === 2 && m.ref === 'REI-26-0012')) throw new Error('réintégration des batteries absente');
+    if (!bat.some((m) => m.type === S22.TYPES.preparation && m.delta === -2 && m.ref === 'BP-732153')) throw new Error('sortie des batteries absente');
+  });
+
+  await v('ENT-2.3 : écarts, décisions attendues, relevé de toute l\'allée dans l\'ordre des emplacements (valeurs écrites à la main)', async () => {
     const db = ouvrir(S22);
     const L = Object.fromEntries(S22.INVENTAIRE.lignes.map((l) => [l.ref, l]));
-    if (JSON.stringify(S22.INVENTAIRE.lignes.map((l) => l.ref)) !== JSON.stringify(ORDRE_22)) throw new Error('ordre du relevé ≠ ordre des emplacements');
-    ORDRE_22.forEach((r, i) => {
-      if (L[r].compte !== COMPTE_22[r]) throw new Error(`${r} : relevé ${L[r].compte} au lieu de ${COMPTE_22[r]}`);
-      if (db.stock[r] !== SYSTEME_22[r]) throw new Error(`${r} : système ${db.stock[r]}`);
-      if (COMPTE_22[r] - SYSTEME_22[r] !== ECARTS_22[r]) throw new Error('test mal écrit : ' + r);
-      if (i > 0 && S22.CATALOGUE.VM[r].loc <= S22.CATALOGUE.VM[ORDRE_22[i - 1]].loc) throw new Error('relevé pas dans l\'ordre des emplacements');
+    if (JSON.stringify(S22.INVENTAIRE.lignes.map((l) => l.ref)) !== JSON.stringify(ORDRE_23)) throw new Error('ordre du relevé ≠ ordre des emplacements');
+    ORDRE_23.forEach((r, i) => {
+      if (L[r].compte !== COMPTE_23[r]) throw new Error(`${r} : relevé ${L[r].compte} au lieu de ${COMPTE_23[r]}`);
+      if (db.stock[r] !== SYSTEME_23[r]) throw new Error(`${r} : système ${db.stock[r]}`);
+      if (i > 0 && S22.CATALOGUE.VM[r].loc <= S22.CATALOGUE.VM[ORDRE_23[i - 1]].loc) throw new Error('relevé pas dans l\'ordre des emplacements');
     });
+    if (Object.entries(ECARTS_23).filter(([, e]) => e).map(([r]) => r).join() !== LISTE_4.join()) throw new Error('écarts hors des quatre références');
     const attendus = Object.fromEntries(S22.INVENTAIRE.lignes.filter((l) => l.attendu).map((l) => [l.ref, [l.attendu, l.motif || '']]));
     if (JSON.stringify(attendus) !== JSON.stringify({ 'CAB-USBC-1M': ['recompter', ''], 'CHG-20W': ['rayon', ''], 'BAT-10K': ['rayon', ''], 'COQ-UNI-01': ['regul', 'Démarque inconnue'] })) throw new Error('décisions attendues : ' + JSON.stringify(attendus));
-    // Le bilan, lu comme le fait l'écran, donne les mêmes écarts et le taux de 3,7 % (10 ÷ 270).
-    const b = INVM.bilanInventaire(justeDb(), S22.INVENTAIRE, S22.CATALOGUE);
-    if (b.sommeAbs !== 10 || b.sommeSys !== 270 || b.tauxAttendu !== 3.7) throw new Error(`taux : ${b.sommeAbs} ÷ ${b.sommeSys} = ${b.tauxAttendu}`);
-    if (JSON.stringify(b.lignes.map((l) => l.ecartPremier)) !== JSON.stringify(ORDRE_22.map((r) => ECARTS_22[r]))) throw new Error('écarts du bilan');
-    // Réglages décidés par Tristan : correction détaillée, écarts par l'élève, comptage à l'aveugle.
     const I = S22.INVENTAIRE;
     if (I.correction !== 'detaillee' || I.ecarts !== 'eleve' || I.aveugle !== true || I.source !== 'releve' || I.motifObligatoire === false) throw new Error('réglages de l\'inventaire');
     for (const l of I.lignes.filter((x) => x.attendu)) if (!l.explication || l.explication.length < 60) throw new Error(`correction détaillée sans explication : ${l.ref}`);
   });
 
-  await v('ENT-2.3 : le piège est l\'article au mauvais emplacement — la paire +3 / −3 s\'annule, le stock du système est juste', async () => {
+  await v('ENT-2.3 : le piège est l\'article au mauvais emplacement — indices dans la messagerie dès l\'ouverture, sans la décision', async () => {
     const db = ouvrir(S22);
-    // 1. La paire : mêmes trois cartons. Le surplus des câbles est le manque des chargeurs.
-    if (ECARTS_22['CAB-USBC-1M'] + ECARTS_22['CHG-20W'] !== 0) throw new Error('la paire ne s\'annule pas');
-    // 2. Aucun mouvement n'explique ces écarts : tous les mouvements de CAB, CHG et BAT ont un document
-    //    de type ordinaire (réception, préparation, annulation), jamais un ajustement ni une casse.
+    if (ECARTS_23['CAB-USBC-1M'] + ECARTS_23['CHG-20W'] !== 0) throw new Error('la paire ne s\'annule pas');
     const ordinaires = [S22.TYPES.reception, S22.TYPES.preparation, S22.TYPES.reintegration];
-    for (const r of ['CAB-USBC-1M', 'CHG-20W', 'BAT-10K']) {
+    for (const r of ['CAB-USBC-1M', 'CHG-20W', 'BAT-10K', 'COQ-UNI-01']) {
       const bad = db.moves.filter((m) => m.sku === r && !ordinaires.includes(m.type));
       if (bad.length) throw new Error(`${r} : un mouvement explique déjà l'écart (${bad[0].type})`);
     }
-    // 3. L'indice est dans la messagerie, et il ne donne pas la décision : il nomme le doute, le
-    //    document et la zone (A-01) pour les chargeurs ; la commande annulée et son document pour les batteries.
     const kevin = db.mails.find((m) => /Palette Kabeo/.test(m.subject));
     if (!kevin || !/REC-26-0431/.test(kevin.text) || !/A-01/.test(kevin.text)) throw new Error('indice du cariste (palette Kabeo) absent ou incomplet');
     const ines = db.mails.find((m) => /Annulation de CMD-732153/.test(m.subject));
     if (!ines || !/REI-26-0012/.test(ines.text) || !/A-03/.test(ines.text)) throw new Error('indice de la préparatrice (annulation) absent ou incomplet');
     for (const m of [kevin, ines]) if (/régulari|remettre en rayon|recompt/i.test(m.text)) throw new Error('un indice donne la décision : ' + m.subject);
-    // 4. Le rangement raté de la batterie est bien dans les mouvements : sortie puis réintégration.
-    const bat = db.moves.filter((m) => m.sku === 'BAT-10K');
-    if (!bat.some((m) => m.type === S22.TYPES.reintegration && m.delta === 2 && m.ref === 'REI-26-0012')) throw new Error('réintégration des batteries absente');
-    if (!bat.some((m) => m.type === S22.TYPES.preparation && m.delta === -2 && m.ref === 'BP-732153')) throw new Error('sortie des batteries absente');
-    // 5. Rien d'autre n'est semé : pas de casse ni de retour NON déclarés, pas d'erreur de saisie.
-    //    Tout retour et toute casse du lot ont leur document ; les motifs d'ajustement attendus sont
-    //    ceux de la ligne témoin seulement.
-    for (const m of db.moves.filter((x) => x.type === S22.TYPES.casse || x.type === S22.TYPES.retour)) {
-      if (!db.mails.some((x) => (x.subject + x.text).includes(m.ref))) throw new Error(`${m.ref} : retour ou casse sans document dans la messagerie`);
-    }
-    const motifs = S22.INVENTAIRE.lignes.filter((l) => l.motif).map((l) => l.motif);
-    if (JSON.stringify(motifs) !== JSON.stringify(['Démarque inconnue'])) throw new Error('motifs attendus : ' + motifs.join(', '));
+    if (!db.mails.some((m) => /RET-26-0107/.test(m.subject)) || !db.mails.some((m) => /DEM-26-0031/.test(m.subject))) throw new Error('retour et casse attendus à l\'ouverture');
+    // La ligne témoin : aucun message n'explique les coques ; le relevé (arrivé avec la liste) écarte la piste.
+    const lu = avecListe(LISTE_JUSTE);
+    // (L'accusé de Nadia et sa demande citent des listes : ils n'expliquent rien.)
+    if (lu.mails.some((m) => m.folder === 'in' && !/liste/.test(m.subject) && /COQ-UNI-01|coque/i.test(m.subject + ' ' + m.text))) throw new Error('un message explique l\'écart des coques');
+    if (!lu.mails.some((m) => /A-04-2 : recompté deux fois, bacs voisins vérifiés/.test(m.remarque || ''))) throw new Error('la remarque du relevé n\'écarte pas la piste du mauvais rangement');
   });
 
-  await v('ENT-2.3 : la ligne témoin (coques) n\'a aucune cause à trouver — c\'est la seule où régulariser est juste', async () => {
-    const db = ouvrir(S22);
-    const mails = db.mails.map((m) => m.subject + ' ' + m.text + ' ' + (m.remarque || '')).join('\n');
-    // Aucun message ne parle des coques autrement que pour écarter la piste (relevé : « bacs voisins vérifiés »).
-    const parlent = db.mails.filter((m) => /COQ-UNI-01|coque/i.test(m.subject + ' ' + m.text));
-    if (parlent.length) throw new Error('un message explique l\'écart des coques : ' + parlent[0].subject);
-    if (!/A-04-2 : recompté deux fois, bacs voisins vérifiés/.test(mails)) throw new Error('la remarque du relevé n\'écarte pas la piste du mauvais rangement');
-    const mvCoq = db.moves.filter((m) => m.sku === 'COQ-UNI-01');
-    if (mvCoq.some((m) => m.type !== S22.TYPES.preparation)) throw new Error('un mouvement atypique explique les coques');
-    // Sans cette ligne, « remettre en rayon » serait juste partout : au moins une régularisation attendue.
-    const regul = S22.INVENTAIRE.lignes.filter((l) => l.attendu === 'regul');
-    if (regul.length !== 1 || regul[0].ref !== 'COQ-UNI-01') throw new Error('une seule régularisation attendue : les coques');
-    const rayon = S22.INVENTAIRE.lignes.filter((l) => l.attendu === 'rayon');
-    if (rayon.length < 2) throw new Error('le mauvais rangement doit se présenter au moins deux fois');
+  // ---------- ENT-2.3 — la liste de l'élève
+  await v('ENT-2.3 : à l\'ouverture, Nadia redemande la liste (amorce « À recompter : ») ; ni relevé ni mission, écran en attente', async () => {
+    const db = declencher(S22, ouvrir(S22));
+    const nadia = db.mails.find((m) => /votre liste/.test(m.subject));
+    if (!nadia || nadia.amorce !== 'À recompter : ' || !/rappelez-moi les références de l'allée A que vous avez retenues/.test(nadia.text)) throw new Error('demande de Nadia : ' + JSON.stringify(nadia && { s: nadia.subject, a: nadia.amorce }));
+    const s = sujetsIn(db);
+    if (s.some((x) => /Relevé de comptage|c’est pour vous|Rayon à vérifier/.test(x))) throw new Error('arrivé avant la liste : ' + s.join(' | '));
+    if (perim(db) !== null) throw new Error('périmètre avant la liste : ' + perim(db));
+    if (statuts(S22, db).some((x) => x !== 'attente')) throw new Error('jalons avant la liste : ' + statuts(S22, db).join(', '));
+  });
+
+  await v('ENT-2.3 : liste exacte — accusé neutre, relevé, mission ; 4 lignes à saisir, aucun aléa, taux 10 ÷ 145 = 6,9 %', async () => {
+    const db = avecListe(LISTE_JUSTE);
+    if (JSON.stringify(perim(db)) !== JSON.stringify(LISTE_4)) throw new Error('périmètre : ' + perim(db));
+    const s = sujetsIn(db);
+    for (const x of ['Votre liste à recompter', 'Relevé de comptage — allée A', 'Inventaire de l’allée A : c’est pour vous']) if (!s.includes(x)) throw new Error('manque : ' + x);
+    if (s.some((x) => /Rayon à vérifier/.test(x))) throw new Error('aléa sans oubli');
+    const accuse = db.mails.find((m) => m.subject === 'Votre liste à recompter');
+    if (!/C'est noté : vous recomptez CAB-USBC-1M, CHG-20W, BAT-10K, COQ-UNI-01\./.test(accuse.text)) throw new Error('accusé : ' + accuse.text);
+    if (/juste|bonne|exact|bravo|oubli/i.test(accuse.text)) throw new Error('l\'accusé juge la liste');
+    if (/A-05 et A-06/.test(accuse.text)) throw new Error('phrase du confirmé envoyée à un standard');
+    const mission = db.mails.find((m) => /c’est pour vous/.test(m.subject));
+    if (/huit emplacements/.test(mission.text) || !/les références de votre liste/.test(mission.text)) throw new Error('mission non réécrite');
+    const b = INVM.bilanInventaire(justeInv(), S22.INVENTAIRE, S22.CATALOGUE);
+    if (b.lignes.length !== 4 || b.sommeAbs !== 10 || b.sommeSys !== 145 || b.tauxAttendu !== 6.9) throw new Error(`bilan : ${b.lignes.length} lignes, ${b.sommeAbs} ÷ ${b.sommeSys} = ${b.tauxAttendu}`);
+    if (statuts(S22, justeInv()).some((x) => x !== 'ok')) throw new Error('5/5 attendu : ' + statuts(S22, justeInv()).join(', '));
+  });
+
+  await v('ENT-2.3 : liste sans CAB — l\'aléa CAB arrive (Yanis Cazenave, après le relevé), CAB entre dans le périmètre, 5/5 possible', async () => {
+    const texte = 'À recompter : CHG-20W, BAT-10K, COQ-UNI-01';
+    const db = avecListe(texte);
+    if (JSON.stringify(perim(db)) !== JSON.stringify(LISTE_4)) throw new Error('périmètre : ' + perim(db));
+    const aleas = db.mails.filter((m) => /^Rayon à vérifier/.test(m.subject));
+    if (aleas.length !== 1 || aleas[0].subject !== 'Rayon à vérifier : CAB-USBC-1M' || !/Yanis Cazenave/.test(aleas[0].from)) throw new Error('aléas : ' + aleas.map((m) => m.subject).join(' | '));
+    if (!/Le bac A-01-1 des câbles déborde/.test(aleas[0].text)) throw new Error('texte de l\'aléa : ' + aleas[0].text);
+    const releve = db.mails.find((m) => m.kind === 'releve');
+    if (!(aleas[0].ts > releve.ts)) throw new Error('l\'aléa doit suivre le relevé dans l\'horodatage');
+    const accuse = db.mails.find((m) => m.subject === 'Votre liste à recompter');
+    if (/CAB/.test(accuse.text)) throw new Error('l\'accusé cite une référence oubliée');
+    if (statuts(S22, justeInv({}, texte)).some((x) => x !== 'ok')) throw new Error('5/5 attendu');
+  });
+
+  await v('ENT-2.3 : liste avec un intrus (ECO-BT-01) — 5 lignes, écart 0 pour ECO, taux 10 ÷ 167 = 6,0 %', async () => {
+    const texte = LISTE_JUSTE + ', ECO-BT-01';
+    const db = avecListe(texte);
+    if (JSON.stringify(perim(db)) !== JSON.stringify(['CAB-USBC-1M', 'CHG-20W', 'ECO-BT-01', 'BAT-10K', 'COQ-UNI-01'])) throw new Error('périmètre : ' + perim(db));
+    const j = justeInv({ taux: '6' }, texte);
+    const b = INVM.bilanInventaire(j, S22.INVENTAIRE, S22.CATALOGUE);
+    if (b.lignes.length !== 5 || b.sommeSys !== 167 || b.tauxAttendu !== 6 || b.lignes.find((l) => l.ref === 'ECO-BT-01').ecartPremier !== 0) throw new Error(`bilan : ${b.sommeAbs} ÷ ${b.sommeSys} = ${b.tauxAttendu}`);
+    if (statuts(S22, j).some((x) => x !== 'ok')) throw new Error('5/5 attendu : ' + statuts(S22, j).join(', '));
+    if (!tombesInv(justeInv({ taux: '6,9' }, texte)).includes('taux')) throw new Error('le taux de la liste exacte ne doit pas passer avec un intrus');
+  });
+
+  await v('ENT-2.3 : « Absent » — la liste de Mathis Darrigade, 4 lignes ; le mot « absent » n\'est écrit dans aucun message', async () => {
+    const db = avecListe('À recompter : absent');
+    if (JSON.stringify(perim(db)) !== JSON.stringify(LISTE_4)) throw new Error('périmètre : ' + perim(db));
+    const accuse = db.mails.find((m) => m.subject === 'Votre liste à recompter');
+    if (!/Pas de souci\. Voici la liste préparée par Mathis Darrigade, de l'équipe stock : À recompter : CAB-USBC-1M, CHG-20W, BAT-10K, COQ-UNI-01\. Le relevé arrive\./.test(accuse.text)) throw new Error('accusé : ' + accuse.text);
+    if (db.mails.some((m) => /^Rayon à vérifier/.test(m.subject))) throw new Error('aléa avec la liste du collègue');
+    for (const d of [ouvrir(S22), db, avecListe('chg'), avecListe('À recompter : CHG-20W', 'confirme')]) {
+      const fuite = d.mails.filter((m) => m.folder === 'in' && /absent/i.test(DECL.nrm(m.subject + ' ' + m.text + ' ' + (m.remarque || ''))));
+      if (fuite.length) throw new Error('« absent » écrit dans : ' + fuite[0].subject);
+    }
+    // « ABSENT », « Absente » ou sans l'intitulé : reconnu ; un mot avec une référence : la référence prime.
+    if (JSON.stringify(perim(avecListe('ABSENTE'))) !== JSON.stringify(LISTE_4)) throw new Error('« ABSENTE » non reconnu');
+    if (S22.listeEleve(avecListe('À recompter : CHG-20W (j\'étais absent)')).absent) throw new Error('une référence doit primer sur « absent »');
+  });
+
+  await v('ENT-2.3 : fautes ignorées — « chg20w, Cab-Usbc-1m ; bat 10k » donne 3 références, dans l\'ordre des emplacements', async () => {
+    const r = S22.extraireRefs('À recompter : chg20w, Cab-Usbc-1m ; bat 10k');
+    if (JSON.stringify(r) !== JSON.stringify(['CAB-USBC-1M', 'CHG-20W', 'BAT-10K'])) throw new Error('extraites : ' + r.join(', '));
+    // Sans la ligne « À recompter », tout le message est lu ; un mot inconnu est ignoré sans rien dire.
+    if (S22.extraireRefs('Bonjour Nadia,\nje garde COQ-UNI-01 et XYZ-99\nMerci').join() !== 'COQ-UNI-01') throw new Error('message sans intitulé');
+    if (S22.extraireRefs('À recompter : rien de spécial').length) throw new Error('une référence inventée');
+  });
+
+  await v('ENT-2.3 : rien de reconnu → un seul rappel, pas de relevé ; une seconde réponse reconnue débloque', async () => {
+    const db = avecListe('À recompter : je ne sais pas');
+    repondre(db, 'toujours rien'); declencher(S22, db);
+    const rappels = db.mails.filter((m) => /je n’ai rien reconnu/.test(m.subject));
+    if (rappels.length !== 1 || !/Je n'ai reconnu aucune référence de l'allée A dans votre message\. Renvoyez-moi la liste, références écrites comme sur l'écran Stock\./.test(rappels[0].text)) throw new Error(`${rappels.length} rappel(s)`);
+    if (db.mails.some((m) => m.kind === 'releve')) throw new Error('relevé sans liste');
+    repondre(db, 'À recompter : CHG-20W, COQ-UNI-01'); declencher(S22, db);
+    if (!db.mails.some((m) => m.kind === 'releve')) throw new Error('la réponse reconnue ne débloque pas');
+    if (JSON.stringify(perim(db)) !== JSON.stringify(LISTE_4)) throw new Error('périmètre : ' + perim(db));
+    if (db.mails.filter((m) => /^Rayon à vérifier/.test(m.subject)).length !== 2) throw new Error('deux aléas attendus (CAB, BAT)');
+  });
+
+  await v('ENT-2.3 : deux réponses reconnues — la première fixe la liste, rien n\'arrive en double', async () => {
+    const db = avecListe('À recompter : CHG-20W');
+    const avant = db.mails.length;
+    repondre(db, LISTE_JUSTE + ', ECO-BT-01'); declencher(S22, db);
+    if (db.mails.length !== avant + 1) throw new Error('quelque chose est arrivé à la seconde réponse');
+    if (JSON.stringify(perim(db)) !== JSON.stringify(LISTE_4)) throw new Error('la seconde réponse a changé la liste : ' + perim(db));
+    if (db.mails.filter((m) => m.kind === 'releve').length !== 1) throw new Error('relevé en double');
+  });
+
+  await v('ENT-2.3 : confirmé — Nadia ajoute A-05 et A-06, 8 lignes, taux 10 ÷ 204 = 4,9 % ; un standard ne reçoit jamais la phrase', async () => {
+    const db = avecListe(LISTE_JUSTE, 'confirme');
+    if (JSON.stringify(perim(db)) !== JSON.stringify([...LISTE_4, ...A05_A06])) throw new Error('périmètre : ' + perim(db));
+    const accuse = db.mails.find((m) => m.subject === 'Votre liste à recompter');
+    if (!/Tant que l'équipe passe, recomptez aussi A-05 et A-06 : leur comptage tournant tombe cette semaine\./.test(accuse.text)) throw new Error('accusé du confirmé : ' + accuse.text);
+    const j = justeInv({ taux: '4,9' }, LISTE_JUSTE, 'confirme');
+    const b = INVM.bilanInventaire(j, S22.INVENTAIRE, S22.CATALOGUE);
+    if (b.lignes.length !== 8 || b.sommeSys !== 204 || b.tauxAttendu !== 4.9) throw new Error(`bilan : ${b.lignes.length} lignes, ${b.sommeSys}, ${b.tauxAttendu}`);
+    if (statuts(S22, j).some((x) => x !== 'ok')) throw new Error('5/5 attendu : ' + statuts(S22, j).join(', '));
+    // Le confirmé « Absent » reçoit aussi la phrase ; un standard, jamais (liste, absent, rappel).
+    if (!/A-05 et A-06/.test(avecListe('absent', 'confirme').mails.find((m) => m.subject === 'Votre liste à recompter').text)) throw new Error('confirmé absent sans la phrase');
+    for (const t of [LISTE_JUSTE, 'absent', 'À recompter : CHG-20W', 'rien']) {
+      if (avecListe(t).mails.some((m) => /A-05 et A-06/.test(m.text || ''))) throw new Error('phrase du confirmé envoyée à un standard : ' + t);
+    }
+    if (ouvrir(S22, 'Léa', 'confirme').mails.length !== ouvrir(S22).mails.length) throw new Error('l\'ouverture trahit le niveau');
   });
 
   // ---------- ENT-2.3 — les jalons
   await v('ENT-2.3 : sans travail, aucun jalon n\'est acquis (l\'inaction ne rapporte rien) ; base nue = « pas encore là »', async () => {
-    const db = ouvrir(S22);
-    const st = statuts(S22, db);
+    const st = statuts(S22, avecListe(LISTE_JUSTE));
     if (st.some((s) => s !== 'attente')) throw new Error('statuts avant travail : ' + st.join(', '));
     const nue = S22.baseDeDepart('Léa'); nue.moves = []; nue.mails = []; nue.orders = [];
     if (statuts(S22, nue).some((s) => s !== 'na')) throw new Error('un jalon juge une base sans mouvements');
-    // Un inventaire VALIDÉ sans aucune décision ne rapporte pas les deux jalons de décisions.
-    const sans = etat22(ouvrir(S22), { decisions: {} });
-    const t = tombes22(sans);
+    const sans = etat23(avecListe(LISTE_JUSTE), { decisions: {} });
+    const t = tombesInv(sans);
     if (!t.includes('rangements') || !t.includes('temoin')) throw new Error('décisions absentes mais jalons acquis : ' + t.join(', '));
   });
 
-  await v('ENT-2.3 : le parcours juste valide les cinq jalons', async () => {
-    const db = justeDb();
-    const st = statuts(S22, db);
-    if (st.some((s) => s !== 'ok')) throw new Error('statuts : ' + st.join(', '));
-  });
-
   await v('ENT-2.3 : tant que l\'inventaire n\'est pas validé, les décisions ne sont pas jugées (« attente »)', async () => {
-    const db = justeDb({ valide: false });
-    const st = Object.fromEntries(ids22.map((x, i) => [x, statuts(S22, db)[i]]));
+    const db = justeInv({ valide: false });
+    const st = Object.fromEntries(idsInv.map((x, i) => [x, statuts(S22, db)[i]]));
     if (st.rangements !== 'attente' || st.temoin !== 'attente' || st.taux !== 'attente') throw new Error('décisions jugées avant validation : ' + JSON.stringify(st));
     if (st.comptage !== 'ok' || st.ecarts !== 'ok') throw new Error('comptage et écarts justes non reconnus : ' + JSON.stringify(st));
   });
 
   await v('ENT-2.3 : chaque erreur typique fait tomber SON jalon, et lui seul', async () => {
     const cas = [
-      // Les trois façons de ne pas voir le mauvais rangement : régulariser à tort.
-      ['rangements', 'régulariser les chargeurs manquants', { decisions: { ...BONNES_22, 'CHG-20W': ['regul', 'Démarque inconnue'] } }],
-      ['rangements', 'régulariser le surplus de câbles', { decisions: { ...BONNES_22, 'CAB-USBC-1M': ['regul', 'Erreur de réception'] }, recomptes: {} }],
-      ['rangements', 'régulariser les batteries', { decisions: { ...BONNES_22, 'BAT-10K': ['regul', 'Casse'] } }],
+      ['rangements', 'régulariser les chargeurs manquants', { decisions: { ...BONNES_23, 'CHG-20W': ['regul', 'Démarque inconnue'] } }],
+      ['rangements', 'régulariser le surplus de câbles', { decisions: { ...BONNES_23, 'CAB-USBC-1M': ['regul', 'Erreur de réception'] }, recomptes: {} }],
+      ['rangements', 'régulariser les batteries', { decisions: { ...BONNES_23, 'BAT-10K': ['regul', 'Casse'] } }],
       ['rangements', 'ne rien décider pour les batteries', { decisions: { 'CAB-USBC-1M': ['recompter'], 'CHG-20W': ['rayon'], 'COQ-UNI-01': ['regul', 'Démarque inconnue'] } }],
-      // Le piège inverse : « tout est un mauvais rangement ».
-      ['temoin', 'remettre les coques en rayon', { decisions: { ...BONNES_22, 'COQ-UNI-01': ['rayon'] } }],
-      ['temoin', 'régulariser les coques avec un autre motif', { decisions: { ...BONNES_22, 'COQ-UNI-01': ['regul', 'Casse'] } }],
-      ['temoin', 'recompter les coques', { decisions: { ...BONNES_22, 'COQ-UNI-01': ['recompter'] } }],
-      // Le calcul.
+      ['temoin', 'remettre les coques en rayon', { decisions: { ...BONNES_23, 'COQ-UNI-01': ['rayon'] } }],
+      ['temoin', 'régulariser les coques avec un autre motif', { decisions: { ...BONNES_23, 'COQ-UNI-01': ['regul', 'Casse'] } }],
+      ['temoin', 'recompter les coques', { decisions: { ...BONNES_23, 'COQ-UNI-01': ['recompter'] } }],
       ['taux', 'taux faux (écarts relevés avec leur signe)', { taux: '0' }],
-      ['taux', 'taux en quantité faux (somme des écarts / somme des stocks avec une erreur)', { taux: '3,3' }],
+      ['taux', 'taux de toute l\'allée au lieu du périmètre', { taux: '3,7' }],
     ];
     for (const [id, quoi, surcharge] of cas) {
-      const db = justeDb(surcharge);
-      const t = tombes22(db);
+      const t = tombesInv(justeInv(surcharge));
       if (t.length !== 1 || t[0] !== id) throw new Error(`« ${quoi} » : tombent ${t.join(', ') || 'aucun'}, attendu ${id}`);
     }
-    // Des écarts mal calculés : le jalon « écarts » ne passe pas.
-    const mal = justeDb({ ecarts: { ...ECARTS_22, 'CHG-20W': 3 } });
-    if (!tombes22(mal).includes('ecarts')) throw new Error('écart mal calculé non vu');
-    // Un comptage qui ne reprend pas le relevé : le jalon « comptage » ne passe pas.
-    const faux = justeDb({ saisie: { ...COMPTE_22, 'CAB-USBC-1M': 64 } });
-    if (!tombes22(faux).includes('comptage')) throw new Error('relevé mal reporté non vu');
+    if (!tombesInv(justeInv({ ecarts: { ...ECARTS_23, 'CHG-20W': 3 } })).includes('ecarts')) throw new Error('écart mal calculé non vu');
+    if (!tombesInv(justeInv({ saisie: { ...COMPTE_23, 'CAB-USBC-1M': 64 } })).includes('comptage')) throw new Error('relevé mal reporté non vu');
   });
 
-  await v('ENT-2.3 : le taux se lit à ± 0,1 point (3,7 juste, 3,66 juste, 4 faux)', async () => {
-    for (const [taux, ok] of [['3,7', true], ['3.7', true], ['3,66', true], ['3,8', true], ['4', false], ['10', false], ['', false]]) {
-      const t = tombes22(justeDb({ taux }));
+  await v('ENT-2.3 : le taux se lit à ± 0,1 point sur le périmètre (6,9 juste, 6,85 juste, 7,1 faux)', async () => {
+    for (const [taux, ok] of [['6,9', true], ['6.9', true], ['6,85', true], ['7', true], ['7,1', false], ['10', false], ['', false]]) {
+      const t = tombesInv(justeInv({ taux }));
       if (ok !== !t.includes('taux')) throw new Error(`taux « ${taux} » : ${ok ? 'doit passer' : 'doit tomber'} (tombent : ${t.join(', ') || 'aucun'})`);
     }
   });
@@ -931,19 +1050,13 @@ Ce qui cloche : DEM-26-0027 : 2 - 1 = 1`;
   });
 
   // ---------- ENT-2.3 — dans le navigateur, avec le vrai moteur et le vrai écran Inventaire
-  await v('ENT-2.3 : inscrite au registre, cachée tant que pret: false, parmi les séances C1.6', async () => {
+  await v('ENT-2.3 : inscrite au registre, parmi les séances C1.6, livrée fermée aux élèves', async () => {
     const src = fs.readFileSync(path.join(ROOT, 'activites', 'index.js'), 'utf8');
     if (!src.includes("import('./cdiscount-inventaire.js')")) throw new Error('absente de activites/index.js');
     const meta = await page.evaluate(async () => (await import('/activites/cdiscount-inventaire.js')).meta);
     if (meta.code !== 'ENT-2.3' || meta.temps !== 'entrainement' || !meta.competences.includes('C1.6')) throw new Error('meta incomplet');
     if (meta.bareme !== S22.ETAPES.length) throw new Error('barème ≠ nombre de jalons');
-    const { activiteVisible } = await imp('core/niveaux.js');
-    if (!meta.pret && activiteVisible(meta, { niveau: '1re' })) throw new Error('séance non prête visible des élèves');
-    const regs = await page.evaluate(async () => {
-      const m = await import('/activites/index.js');
-      return (await m.chargerActivites()).map((a) => a.meta.code);
-    });
-    if (!regs.includes('ENT-2.3')) throw new Error('ENT-2.3 absente du registre chargé');
+    if (!meta.pret || meta.ouverture !== 'prof') throw new Error('livrée : pret: true, ouverture: \'prof\'');
   });
 
   // Un onglet à part pour l'élève : on rejoue le parcours avec de vrais clics.
@@ -956,16 +1069,16 @@ Ce qui cloche : DEM-26-0027 : 2 - 1 = 1`;
   await pg.goto(new URL('/', page.url()).toString());
   await pg.waitForSelector('#btnProf', { timeout: 8000 });
 
-  const monter22 = async (role = 'eleve') => {
-    await pg.evaluate(async (r) => {
+  const monter22 = async (role = 'eleve', aisance) => {
+    await pg.evaluate(async ([r, a]) => {
       const mod = await import('/activites/cdiscount-inventaire.js');
       document.querySelector('#hote22')?.remove();
       const hote = document.createElement('div'); hote.id = 'hote22'; document.body.appendChild(hote);
-      const db = {};
+      const db = a ? { aisance: a, aisancePour: mod.meta.id } : {};
       window.__inv22 = { db, scores: [] };
       mod.rendre(hote, { meta: mod.meta, profil: { prenom: 'Léa', nom: 'Test', role: r }, codeStock: 'STOCK24',
         jeu: { etat: () => db, sauver() {} }, enregistrer(x) { window.__inv22.scores.push(x); }, quitter() {} });
-    }, role);
+    }, [role, aisance || null]);
   };
   const Z22 = '#hote22 .ent-main';
   const ouvrir22 = async (vue) => { await pg.click(`#hote22 .ent-nav[data-vue="${vue}"]`); await pg.waitForTimeout(80); };
@@ -976,57 +1089,75 @@ Ce qui cloche : DEM-26-0027 : 2 - 1 = 1`;
     if (motif) await pg.selectOption(`${Z22} [data-inv-motif="${ref}"]`, motif);
   };
   const dbPage = () => pg.evaluate(() => JSON.parse(JSON.stringify(window.__inv22.db)));
-  const jusquAuTraitement22 = async () => {
+  // Répondre à Nadia par la vraie messagerie : le champ s'ouvre sur l'amorce, on écrit après.
+  const repondre22 = async (suite) => {
+    await ouvrir22('mail');
+    await pg.click(`${Z22} .ent-mitem >> text=Inventaire de l’allée A : votre liste`); await pg.waitForTimeout(80);
+    await pg.click(`${Z22} [data-repondre]`);
+    const amorce = await pg.inputValue(`${Z22} #repT`);
+    await pg.fill(`${Z22} #repT`, amorce + suite);
+    await pg.click(`${Z22} #formRep button[type="submit"]`); await pg.waitForTimeout(120);
+    await ouvrir22('mail');
+    if (await pg.$(`${Z22} [data-dossier="in"]`)) { await pg.click(`${Z22} [data-dossier="in"]`); await pg.waitForTimeout(80); }
+    return amorce;
+  };
+  const jusquAuTraitement22 = async (refs = LISTE_4) => {
     await ouvrir22('inventaire');
-    for (const r of ORDRE_22) await pg.fill(`${Z22} [data-inv-saisie="${r}"]`, String(COMPTE_22[r]));
+    for (const r of refs) await pg.fill(`${Z22} [data-inv-saisie="${r}"]`, String(COMPTE_23[r]));
     await aller22(2);
-    for (const r of ORDRE_22) await pg.fill(`${Z22} [data-inv-ecart="${r}"]`, String(ECARTS_22[r]).replace('-', '−'));
+    for (const r of refs) await pg.fill(`${Z22} [data-inv-ecart="${r}"]`, String(ECARTS_23[r]).replace('-', '−'));
     await aller22(3);
   };
-  const valider22 = async (taux = '3,7') => {
+  const valider22 = async (taux = '6,9') => {
     await aller22(4);
     await pg.fill(`${Z22} [data-inv-taux]`, taux);
     await pg.click(`${Z22} [data-inv-valider]`); await pg.waitForTimeout(120);
   };
 
-  await v('ENT-2.3 : la séance s\'ouvre dans le vrai moteur — huit messages, relevé « papier », stock caché à l\'aveugle', async () => {
+  await v('ENT-2.3 : la séance s\'ouvre dans le vrai moteur — six messages, l\'écran attend la liste, stock caché à l\'aveugle', async () => {
     await monter22();
     const accueil = await texte22();
-    // L'accueil d'un environnement affiche d'ordinaire le stock total : ici il trahirait le comptage.
-    if (/en stock|références en rupture/.test(accueil) || /\b270\b/.test(accueil)) throw new Error('le stock du système est lisible à l\'accueil : ' + accueil.slice(0, 200));
-    if (!(await pg.$('#hote22 .ent-nav[data-vue="inventaire"]'))) throw new Error('pas d\'entrée Inventaire');
+    if (/en stock|références en rupture/.test(accueil)) throw new Error('le stock du système est lisible à l\'accueil : ' + accueil.slice(0, 200));
     const accent = await pg.evaluate(() => getComputedStyle(document.body).getPropertyValue('--ardoise').trim());
     if (accent.toLowerCase() !== '#3732ff') throw new Error('accent de la charte non appliqué : ' + accent);
+    await ouvrir22('inventaire');
+    if (!/En attente de votre liste : répondez à Nadia Ferrand \(Messagerie\)\./.test(await texte22())) throw new Error('écran : ' + (await texte22()).slice(0, 200));
+    if ((await dbPage()).inventaires) throw new Error('un état d\'inventaire créé avant la liste');
     await ouvrir22('mail');
     const nb = await pg.$$eval('#hote22 .ent-mitem', (e) => e.length);
-    if (nb !== 7) throw new Error(`${nb} messages au lieu de 7`);
-    // Le relevé papier : huit lignes (emplacement, référence, quantité) et la remarque de l'équipe.
-    const sujets = await pg.$$eval('#hote22 .ent-mitem', (e) => e.map((x) => x.textContent));
-    const idx = sujets.findIndex((s) => /Relevé de comptage/.test(s));
-    await pg.click(`#hote22 .ent-mitem >> nth=${idx}`); await pg.waitForTimeout(80);
-    const lignes = await pg.$$eval('#hote22 .inv-papier tbody tr', (e) => e.map((x) => [...x.querySelectorAll('td')].map((t) => t.textContent.trim())));
-    if (JSON.stringify(lignes.map((l) => [l[1], Number(l[2])])) !== JSON.stringify(ORDRE_22.map((r) => [r, COMPTE_22[r]]))) throw new Error('relevé affiché : ' + JSON.stringify(lignes));
-    if (!/bacs voisins vérifiés/.test(await texte22('#hote22 .inv-papier'))) throw new Error('remarque du relevé absente');
-    // À l'aveugle : Stock bloqué, console fermée sur le stock — pour l'élève.
+    if (nb !== 6) throw new Error(`${nb} messages au lieu de 6`);
     await ouvrir22('stock');
     if (!(await pg.$(`${Z22} [data-stock-bloque]`))) throw new Error('Stock doit être bloqué');
     await ouvrir22('console');
     await pg.fill('#champCmd', '.getstock COQ-UNI-01'); await pg.press('#champCmd', 'Enter'); await pg.waitForTimeout(80);
     const blocs = await pg.$$eval(`${Z22} .ent-cres`, (e) => e.map((x) => x.textContent));
     if (!/Inventaire en cours/.test(blocs[blocs.length - 1] || '')) throw new Error('.getstock devrait être refusée : ' + blocs[blocs.length - 1]);
-    // Pas de fuite par le Catalogue : le stock du système n'y figure pas avant la validation du comptage.
     await ouvrir22('catalogue');
     const cat = await texte22();
     for (const n of ['64', '44', '37']) if (new RegExp(`(Stock|stock)\\D{0,12}\\b${n}\\b`).test(cat)) throw new Error('le Catalogue montre un stock du système : ' + n);
   });
 
-  await v('ENT-2.3 : parcours juste de bout en bout — 4 décisions justes, une seule régularisation, correction détaillée, score 5/5', async () => {
+  await v('ENT-2.3 : CMD-732153 s\'affiche « Annulée » dans Commandes', async () => {
     await monter22();
+    await ouvrir22('commandes');
+    const t = await texte22();
+    if (!/CMD-732153[^]*?Annulée/.test(t)) throw new Error('commandes : ' + t.slice(0, 400));
+  });
+
+  await v('ENT-2.3 : parcours juste de bout en bout — la liste par la messagerie, 4 lignes, une seule régularisation, score 5/5', async () => {
+    await monter22();
+    const amorce = await repondre22('CAB-USBC-1M, CHG-20W, BAT-10K, COQ-UNI-01');
+    if (amorce !== 'À recompter : ') throw new Error('amorce : ' + JSON.stringify(amorce));
+    const sujets = await pg.$$eval('#hote22 .ent-mitem', (e) => e.map((x) => x.textContent));
+    if (!sujets.some((s) => /Relevé de comptage/.test(s))) throw new Error('relevé non arrivé : ' + sujets.join(' | '));
+    // Le relevé papier couvre toute l'allée : douze lignes.
+    await pg.click(`${Z22} .ent-mitem >> text=Relevé de comptage`); await pg.waitForTimeout(80);
+    const lignes = await pg.$$eval('#hote22 .inv-papier tbody tr', (e) => e.map((x) => [...x.querySelectorAll('td')].map((t) => t.textContent.trim())));
+    if (JSON.stringify(lignes.map((l) => [l[1], Number(l[2])])) !== JSON.stringify(ORDRE_23.map((r) => [r, COMPTE_23[r]]))) throw new Error('relevé affiché : ' + JSON.stringify(lignes));
+    await ouvrir22('inventaire');
+    const saisies = await pg.$$eval(`${Z22} [data-inv-saisie]`, (e) => e.map((x) => x.dataset.invSaisie));
+    if (JSON.stringify(saisies) !== JSON.stringify(LISTE_4)) throw new Error('lignes à saisir : ' + saisies.join(', '));
     await jusquAuTraitement22();
-    // Les quatre écarts, pas un de plus.
-    const lignes = await pg.$$eval(`${Z22} [data-inv-ligne]`, (e) => e.map((x) => x.dataset.invLigne));
-    if (JSON.stringify(lignes) !== JSON.stringify(['CAB-USBC-1M', 'CHG-20W', 'BAT-10K', 'COQ-UNI-01'])) throw new Error('lignes à traiter : ' + lignes.join(', '));
-    // Les mouvements de la ligne sont consultables, et ne commencent qu'après le dernier inventaire.
     await pg.click(`${Z22} [data-inv-ouvrir="BAT-10K"]`); await pg.waitForTimeout(80);
     const mv = await pg.$$eval(`${Z22} [data-inv-mvts="BAT-10K"] tbody tr`, (e) => e.length);
     if (mv !== 4) throw new Error(`${mv} mouvements de BAT-10K à l'écran au lieu de 4`);
@@ -1034,61 +1165,58 @@ Ce qui cloche : DEM-26-0027 : 2 - 1 = 1`;
     await decider22('CHG-20W', 'rayon');
     await decider22('BAT-10K', 'rayon');
     await decider22('COQ-UNI-01', 'regul', 'Démarque inconnue');
-    await valider22('3,7');
+    await valider22('6,9');
     const bilan = await texte22();
-    if (!/Inventaire INV-2026-52 validé/.test(bilan)) throw new Error('inventaire non validé : ' + bilan.slice(0, 200));
-    if (!/4 décisions justes sur 4/.test(bilan)) throw new Error('bilan : ' + bilan.slice(0, 300));
-    // Correction DÉTAILLÉE : la colonne « Ce qu'il fallait voir » et l'explication du mauvais rangement.
+    if (!/Inventaire INV-2026-52 validé/.test(bilan) || !/4 décisions justes sur 4/.test(bilan)) throw new Error('bilan : ' + bilan.slice(0, 300));
     if (!/Ce qu'il fallait voir/.test(bilan) || !/les trois mêmes cartons/.test(bilan)) throw new Error('correction détaillée absente');
     const db = await dbPage();
-    // Un seul ajustement : les coques, −2, avec le motif.
     const aj = db.moves.filter((m) => m.type === 'Ajustement inventaire');
     if (aj.length !== 1 || aj[0].sku !== 'COQ-UNI-01' || aj[0].delta !== -2 || !/INV-2026-52 · Démarque inconnue/.test(aj[0].ref)) throw new Error('ajustements : ' + JSON.stringify(aj));
-    const attendu = { ...SYSTEME_22, 'COQ-UNI-01': 25 };
-    if (JSON.stringify(db.stock) !== JSON.stringify(attendu)) throw new Error('stock final : ' + JSON.stringify(db.stock));
-    // Les jalons, lus par la même fonction que l'écran.
-    const st = statuts(S22, db);
-    if (st.some((s) => s !== 'ok')) throw new Error('jalons : ' + st.join(', '));
+    if (JSON.stringify(db.stock) !== JSON.stringify({ ...SYSTEME_23, 'COQ-UNI-01': 25 })) throw new Error('stock final : ' + JSON.stringify(db.stock));
+    if (statuts(S22, db).some((s) => s !== 'ok')) throw new Error('jalons : ' + statuts(S22, db).join(', '));
     const dernier = await pg.evaluate(() => window.__inv22.scores[window.__inv22.scores.length - 1]);
     if (!dernier || dernier.score !== 5 || dernier.max !== 5) throw new Error('score remonté : ' + JSON.stringify(dernier));
-    // Après validation, Stock s'ouvre (le code est celui du groupe) et affiche le stock régularisé.
-    await ouvrir22('stock');
-    await pg.fill(`${Z22} #codeStock`, 'STOCK24'); await pg.click(`${Z22} [data-deverrouiller]`); await pg.waitForTimeout(80);
-    const lig = await texte22(`${Z22} #entListe`);
-    if (!/COQ-UNI-01.*?universelle\s*25\b/.test(lig)) throw new Error('Stock ne montre pas 25 coques : ' + lig.slice(0, 300));
   });
 
-  await v('ENT-2.3 : le réflexe « tout écart négatif se régularise » coûte cher — les chargeurs disparaissent du stock, et la correction dit pourquoi', async () => {
+  await v('ENT-2.3 : liste sans CAB par la messagerie — l\'aléa arrive, la paire se résout, 5/5', async () => {
     await monter22();
-    await jusquAuTraitement22();
-    await decider22('CAB-USBC-1M', 'recompter');
-    await decider22('CHG-20W', 'regul', 'Démarque inconnue');   // le piège
-    await decider22('BAT-10K', 'rayon');
-    await decider22('COQ-UNI-01', 'regul', 'Démarque inconnue');
-    await valider22('3,7');
-    const bilan = await texte22();
-    if (!/3 décisions justes sur 4/.test(bilan)) throw new Error('bilan : ' + bilan.slice(0, 300));
-    if (!/à revoir/.test(bilan) || !/les trois mêmes cartons/.test(bilan)) throw new Error('la correction n\'explique pas le mauvais rangement');
-    const db = await dbPage();
-    if (db.stock['CHG-20W'] !== 41) throw new Error('les chargeurs devraient être régularisés à 41 : ' + db.stock['CHG-20W']);
-    const t = tombes22(db);
-    if (t.length !== 1 || t[0] !== 'rangements') throw new Error('jalons tombés : ' + t.join(', '));
-    const dernier = await pg.evaluate(() => window.__inv22.scores[window.__inv22.scores.length - 1]);
-    if (!dernier || dernier.score !== 4) throw new Error('score : ' + JSON.stringify(dernier));
-  });
-
-  await v('ENT-2.3 : à l\'étape 3, régulariser sans motif est refusé, et le recomptage des câbles fait disparaître l\'écart', async () => {
-    await monter22();
+    await repondre22('CHG-20W, BAT-10K, COQ-UNI-01');
+    const sujets = await pg.$$eval('#hote22 .ent-mitem', (e) => e.map((x) => x.textContent));
+    if (!sujets.some((s) => /Rayon à vérifier : CAB-USBC-1M/.test(s))) throw new Error('aléa absent : ' + sujets.join(' | '));
     await jusquAuTraitement22();
     await decider22('CAB-USBC-1M', 'recompter');
     await decider22('CHG-20W', 'rayon');
     await decider22('BAT-10K', 'rayon');
-    await decider22('COQ-UNI-01', 'regul');                 // pas de motif
-    await aller22(4);
-    const msg = await texte22(`${Z22} [data-inv-msg]`);
-    if (!/sans motif est refusée/.test(msg)) throw new Error('refus attendu : ' + msg);
-    const ecart = await texte22(`${Z22} [data-inv-ligne="CAB-USBC-1M"] [data-inv-ecart-ligne]`);
-    if (!/0/.test(ecart.replace(/\s/g, '')) || /\+3/.test(ecart)) throw new Error('l\'écart des câbles devrait avoir disparu au recomptage : ' + ecart);
+    await decider22('COQ-UNI-01', 'regul', 'Démarque inconnue');
+    await valider22('6,9');
+    const dernier = await pg.evaluate(() => window.__inv22.scores[window.__inv22.scores.length - 1]);
+    if (!dernier || dernier.score !== 5) throw new Error('score : ' + JSON.stringify(dernier));
+  });
+
+  await v('ENT-2.3 : le réflexe « tout écart négatif se régularise » coûte cher — les chargeurs disparaissent, la correction dit pourquoi', async () => {
+    await monter22();
+    await repondre22('CAB-USBC-1M, CHG-20W, BAT-10K, COQ-UNI-01');
+    await jusquAuTraitement22();
+    await decider22('CAB-USBC-1M', 'recompter');
+    await decider22('CHG-20W', 'regul', 'Démarque inconnue');
+    await decider22('BAT-10K', 'rayon');
+    await decider22('COQ-UNI-01', 'regul', 'Démarque inconnue');
+    await valider22('6,9');
+    const bilan = await texte22();
+    if (!/3 décisions justes sur 4/.test(bilan) || !/les trois mêmes cartons/.test(bilan)) throw new Error('bilan : ' + bilan.slice(0, 300));
+    const db = await dbPage();
+    if (db.stock['CHG-20W'] !== 41) throw new Error('les chargeurs devraient être régularisés à 41 : ' + db.stock['CHG-20W']);
+    const t = tombesInv(db);
+    if (t.length !== 1 || t[0] !== 'rangements') throw new Error('jalons tombés : ' + t.join(', '));
+  });
+
+  await v('ENT-2.3 : confirmé à l\'écran — 8 lignes à saisir (A-05 / A-06 en plus), aucune étiquette de niveau', async () => {
+    await monter22('eleve', 'confirme');
+    await repondre22('CAB-USBC-1M, CHG-20W, BAT-10K, COQ-UNI-01');
+    await ouvrir22('inventaire');
+    const saisies = await pg.$$eval(`${Z22} [data-inv-saisie]`, (e) => e.map((x) => x.dataset.invSaisie));
+    if (JSON.stringify(saisies) !== JSON.stringify([...LISTE_4, ...A05_A06])) throw new Error('lignes : ' + saisies.join(', '));
+    if (/confirm|standard|niveau/i.test(await pg.textContent('#hote22'))) throw new Error('le niveau se lit à l\'écran');
   });
 
   await v('ENT-2.3 : l\'enseignant voit le stock malgré le comptage à l\'aveugle', async () => {

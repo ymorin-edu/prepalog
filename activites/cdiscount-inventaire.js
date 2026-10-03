@@ -1,14 +1,16 @@
 // ENT-2.3 — Cdiscount, séance « Inventaire tournant ». Troisième séance de l'environnement
 // Cdiscount (C1.6, suivi des stocks et inventaire, 1L).
 //
-// Entraînement : l'élève reporte un relevé de comptage, calcule les écarts, cherche la cause de
-// chacun dans les mouvements et la messagerie, décide (régulariser, remettre en rayon, recompter)
-// et calcule le taux d'écart. Piège central : l'article au mauvais emplacement. Correction
-// détaillée (décision de Tristan, 02/10/2026). Détail et données :
-// `contenus/cdiscount-inventaire.js` ; écran : `core/types/inventaire.js`.
+// Entraînement : l'élève redonne à Nadia la liste des références qu'il a choisies en ENT-2.2,
+// reporte le relevé de comptage pour ces références seulement, calcule les écarts, cherche la
+// cause de chacun dans les mouvements et la messagerie, décide (régulariser, remettre en rayon,
+// recompter) et calcule le taux d'écart. Une référence à écart oubliée revient par un aléa.
+// Piège central : l'article au mauvais emplacement. Correction détaillée (décision de Tristan,
+// 02/10/2026). Recadrée le 04/10/2026 (brief `docs/briefs/ENT-2.3-inventaire-recadre.md`).
+// Détail et données : `contenus/cdiscount-inventaire.js` ; écran : `core/types/inventaire.js`.
 //
-// **`pret: true`** : validée à l'écran par Tristan (02/10/2026). Pas de trame papier (« Tout à
-// l'écran ») ; corrigé détaillé donné par l'écran Inventaire lui-même.
+// Livrée fermée (`pret: true, ouverture: 'prof'`) : Tristan l'essaie, puis l'ouvre lui-même.
+// Pas encore de trame papier (« Tout à l'écran ») : Cowork la fera après validation à l'écran.
 
 import { creerEntreprise } from '../core/types/entreprise.js';
 import * as CDISCOUNT from '../contenus/cdiscount.js';
@@ -18,13 +20,13 @@ export const meta = {
   id: 'cdiscount-inventaire',
   code: 'ENT-2.3',
   titre: 'Cdiscount — inventaire tournant',
-  desc: "Reporter un comptage, calculer les écarts, retrouver leur cause (dont l'article mal rangé), décider et valider l'inventaire.",
+  desc: "Recompter les références qu'on a choisies, calculer les écarts, retrouver leur cause, décider et valider l'inventaire.",
   rubrique: 'logisim',
   // Compétences et temps pédagogique : voir core/competences.js.
   competences: ['C1.6'],
   temps: 'entrainement',
-  // Volume déclaré (`claude/prepalog-montee-en-competences.md`) : le volume STANDARD. Le lot en
-  // plus des élèves à l'aise viendra du niveau d'aisance, pas encore construit.
+  // Volume déclaré (`claude/prepalog-montee-en-competences.md`) : toute l'allée A. Un élève
+  // confirmé (`db.aisance`) recompte en plus A-05 et A-06 (voir le contenu).
   volume: SEANCE.VOLUME,
   bareme: SEANCE.ETAPES.length,
   notation: 'avancement',
