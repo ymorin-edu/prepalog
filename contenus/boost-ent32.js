@@ -6,10 +6,10 @@
 // `claude/prepalog-boost-cadrage-ent32-34.md` :
 //
 //   · nouvelle journée : huit clients (dont quatre nouveaux à situer), d'autres poids ;
-//   · un CRÉNEAU de livraison : la Pâtisserie Arnaud n'accepte qu'avant 14 h 45. L'ordre compte
+//   · un CRÉNEAU de livraison : la Pâtisserie Arnaud n'accepte qu'avant une heure donnée. L'ordre compte
 //     vraiment — le trajet le plus court rate ce créneau (vérifié par `outils/carte/calibrer.mjs`) ;
 //   · jauges MUETTES : elles donnent la limite, jamais le total. Le client à laisser à quai se
-//     trouve par le calcul (230 − 180 = 50 kg) dans la feuille, pas « en cliquant au hasard » ;
+//     trouve par le calcul (poids total − charge utile) dans la feuille, pas « en cliquant au hasard » ;
 //   · le trajet le plus court compte, en paliers : à moins de 10 %, puis à moins de 5 % de la
 //     meilleure tournée qui tient tout. L'optimum est RECALCULÉ ici (énumération des 5 040
 //     ordres), jamais recopié : si un client change, le jalon suit.
@@ -28,13 +28,13 @@
 // Quand sa tournée tient tout ET que sa feuille de calcul est vérifiée juste (choix de Tristan :
 // il a fini la phase 1 et a eu le temps de chercher plus court), un message de M. Morin arrive :
 // l'Atelier Ribot annule, la Pâtisserie Arnaud n'a plus de créneau, l'Épicerie Roussel ferme
-// tôt (avant 14 h 40), la Cave Teissier reste à quai. Les données de l'imprévu sont dans
+// tôt, la Cave Teissier reste à quai. Les données de l'imprévu sont dans
 // `contenus/boost-ent32-imprevu.js` (calées par `outils/carte/calibrer.mjs`) ; le moteur les lit
 // comme une PHASE de la tournée (`phases` dans `core/types/tournee.js`), et le message arrive par
 // `volet.declencheurs` (`core/types/entreprise.js`). Une seule fois, marqué dans la base.
 //
 // Après le message, l'écran ne dit plus si les limites tiennent (`sansVerdict` de la phase) :
-// l'élève recalcule dans la feuille. Les huit jalons de la phase 1 sont FIGÉS à l'arrivée du
+// l'élève recalcule dans la feuille. Les neuf jalons de la phase 1 sont FIGÉS à l'arrivée du
 // message (ils lisent la tournée et la feuille gardées dans `phase.avant`) ; deux jalons de
 // phase 2 s'ajoutent. TOUT est construit : commerces, annulation, fermeture, message.
 //
@@ -43,7 +43,6 @@
 
 import { creerTournee } from '../core/types/tournee.js';
 import { creerCarte } from '../core/types/carte.js';
-import { VELO } from './boost.js';
 import { CARTE } from './boost-ent32-carte.js';
 import { IMPREVU } from './boost-ent32-imprevu.js';
 
@@ -51,13 +50,16 @@ export const TRANSPORT_ID = 'boost-ent32';
 
 /* ===================================================================== la journée ====== */
 
-// Le départ est à 14 h 10 (celui d'ENT-3.1 est à 13 h 00). Le reste est l'univers commun.
+// La journée PROPRE à ENT-3.2 (et 3.3, même jour de travail) — chantier D, lot 2, jeu A choisi par
+// Tristan le 03/10/2026 parmi trois calés par `outils/carte/calibrer.mjs`. Elle ne lit plus `VELO`
+// (la journée d'ENT-3.1) : les données changent d'une séance à l'autre. Les mêmes valeurs sont dans
+// `outils/carte/boost-ent32.json` (`calibrage`), que lit le script, et un test vérifie l'accord.
 export const JOURNEE = {
-  depart: 14 * 60 + 10,
-  limite: VELO.train,
-  chargeUtile: VELO.chargeUtile,
-  vitesse: VELO.vitesse,
-  service: VELO.service,
+  depart: 14 * 60 + 35,
+  limite: 16 * 60 + 15,
+  chargeUtile: 190,
+  vitesse: 14,          // vélo-cargo à assistance électrique
+  service: 5,
 };
 
 export const CLIENTS = CARTE.clients;
@@ -98,82 +100,7 @@ export const TOURNEE = {
   jaugesRepere: true,
   extremitesACliquer: true,
   contraintesDansGrille: true,
-  grille: {
-    titre: 'Feuille de calcul du vélo-cargo',
-    consigne: 'Les cellules colorées sont à remplir, et il faut y écrire une FORMULE — elle commence '
-      + 'par « = ». Le résultat s’affiche à droite de chaque case. En jaune, les étapes du calcul ; '
-      + 'en violet, les résultats à comparer aux contraintes (colonne de droite). L’heure de départ '
-      + 'se tape simplement (14:10). Si vous changez votre tournée, les données changent et vos '
-      + 'formules se recalculent toutes seules.',
-    colonnes: ['A', 'B'],
-    decimales: 1,
-    // Le début de la feuille est FIXE : les huit poids dans l'ordre de la fiche, puis le total, la
-    // charge utile et ce qu'il faut écarter. Ses adresses ne bougent pas, et le jalon « choix »
-    // peut donc les lire. La suite (temps de route, créneau) dépend de la tournée de l'élève.
-    lignes: (b) => {
-      const n = b.retenus.length;
-      const km = Math.round(b.km * 10) / 10;     // arrondi comme affiché : l'élève ne tape que ce qu'il lit
-      const heures = km / JOURNEE.vitesse;
-      const route = heures * 60;
-      const service = n * JOURNEE.service;
-
-      // Le créneau : distance jusqu'au client concerné, déduite de son heure d'arrivée dans le bilan.
-      // Le client à créneau est celui de la PHASE en cours (après l'imprévu, ce n'est plus le même).
-      const CR = (b.creneaux || [])[0] || null;
-      let kmC = null, rang = -1, attenduC = null;
-      if (CR) {
-        rang = b.retenus.findIndex((p) => String(p.id) === String(CR.id));
-        const arr = b.arrivees[String(CR.id)];
-        if (rang >= 0 && b.departPose && arr != null) {
-          kmC = Math.round(((arr - JOURNEE.depart - rang * JOURNEE.service) * JOURNEE.vitesse / 60) * 10) / 10;
-          attenduC = JOURNEE.depart + kmC / JOURNEE.vitesse * 60 + rang * JOURNEE.service;
-        }
-      }
-      const attente = '(posez d’abord le départ et ce client)';
-
-      return [
-        ...lignesTete(b),
-        {},
-        { A: 'Distance du parcours (km)', B: km },
-        { A: 'Vitesse en ville (km/h)', B: JOURNEE.vitesse },
-        { A: 'Étape 1 · Temps de route (heures)', type: 'etape',
-          note: 'Distance (km) ÷ vitesse (km/h) = temps (h).',
-          B: { saisie: true, formule: true, attendu: heures, tolerance: 0.01, decimales: 2,
-               libelle: 'temps de route en heures' } },
-        { A: 'Étape 2 · Temps de route (min)', type: 'etape',
-          note: '1 heure = 60 minutes : on multiplie les heures par 60.',
-          B: { saisie: true, formule: true, attendu: route, tolerance: 0.5,
-               libelle: 'temps de route en minutes' } },
-        { A: 'Nombre d’arrêts', B: n },
-        { A: 'Temps par arrêt (min)', B: JOURNEE.service },
-        { A: 'Étape 3 · Temps aux arrêts (min)', type: 'etape',
-          note: 'Nombre d’arrêts × temps par arrêt.',
-          B: { saisie: true, formule: true, attendu: service, libelle: 'temps aux arrêts' } },
-        { A: 'Heure de départ',
-          note: 'À taper sous la forme 14:10 (pas de formule ici).',
-          B: { saisie: true, formule: false, attendu: JOURNEE.depart, format: 'heure',
-               placeholder: 'ex. 14:10', libelle: 'heure de départ' } },
-        { A: 'Heure d’arrivée à la gare', type: 'resultat',
-          note: 'Heure de départ + temps de route (min) + temps aux arrêts (min).',
-          B: { saisie: true, formule: true, attendu: JOURNEE.depart + route + service, tolerance: 0.5,
-               format: 'heure', libelle: 'heure d’arrivée' } },
-        { A: 'Départ du train (contrainte)', type: 'contrainte',
-          B: { valeur: JOURNEE.limite, format: 'heure' } },
-        ...(!CR ? [] : [
-          {},
-          { A: `Distance jusqu’à ${CR.nom} (km)`, B: kmC == null ? attente : kmC },
-          { A: 'Arrêts servis avant lui', B: rang < 0 ? attente : rang },
-          { A: `Heure d’arrivée chez ${CR.nom}`, type: 'resultat',
-            note: 'Heure de départ + temps de route jusqu’à lui (distance ÷ vitesse × 60) + arrêts déjà servis × temps par arrêt.',
-            B: attenduC == null ? attente
-              : { saisie: true, formule: true, attendu: attenduC, tolerance: 0.5, format: 'heure',
-                  libelle: 'heure d’arrivée chez le client à créneau' } },
-          { A: 'Heure limite de livraison (contrainte)', type: 'contrainte',
-            B: { valeur: CR.avant, format: 'heure' } },
-        ]),
-      ];
-    },
-  },
+  grille: null,   // posée plus bas : `feuille()`, partagée avec la feuille d'Inès (ENT-3.3)
   mesures: [
     { id: 'charge', libelle: 'Charge du vélo-cargo', unite: 'kg', champ: 'kg', max: JOURNEE.chargeUtile,
       comparaison: 'À comparer au poids chargé dans la feuille (cellule violette).' },
@@ -186,39 +113,165 @@ export const TOURNEE = {
   },
 };
 
-// Le début de la feuille : les huit poids de la fiche, le total, la charge utile, ce qu'on écarte,
-// ce qu'on charge. Défini après TOURNEE pour que les adresses se déduisent de la place des lignes.
-// Après l'imprévu, la commande annulée garde sa ligne (les adresses ne bougent pas, `=SOMME(B2:B9)`
-// reste juste) mais pèse 0 kg : le total, ce qu'on écarte et ce qu'on charge suivent la phase.
-const lignesTete = (b) => {
-  const an = (b && b.annules) || [];
-  const total = CLIENTS.filter((c) => !an.includes(String(c.id))).reduce((t, c) => t + c.kg, 0);
-  return [
-    { A: 'Client', B: 'Poids (kg)', entete: true },
-    ...CLIENTS.map((c, i) => (an.includes(String(c.id))
-      ? { A: `${i + 1} · ${c.nom} — commande annulée`, B: 0 }
-      : { A: `${i + 1} · ${c.nom}`, B: c.kg })),
-    { A: 'Poids total des commandes (kg)', type: 'resultat',
-      note: `Additionnez les ${CLIENTS.length} poids avec SOMME.`,
-      B: { saisie: true, formule: true, attendu: total, libelle: 'poids total des commandes' } },
-    { A: 'Charge utile maximale (kg)', type: 'contrainte', B: JOURNEE.chargeUtile },
-    { A: 'Poids à laisser à quai, au moins (kg)', type: 'resultat',
-      note: 'Poids total − charge utile : ce qu’il faut au minimum retirer du vélo-cargo.',
-      B: { saisie: true, formule: true, attendu: total - JOURNEE.chargeUtile, libelle: 'poids à laisser à quai' } },
-    { A: 'Poids chargé dans le vélo-cargo (kg)', type: 'resultat',
-      note: 'Poids total − poids de ce qui reste à quai. À comparer à la charge utile.',
-      B: { saisie: true, formule: true, attendu: b ? b.cumuls.charge : null, libelle: 'poids chargé' } },
-  ];
-};
+/* ============================================================ la feuille de calcul ==== */
+// Chantier D, lot 2 (brief `docs/briefs/ENT-3.x-feuille-moins-guidee.md`, décisions de Tristan du
+// 03/10/2026). Une feuille MOINS GUIDÉE que celle d'ENT-3.1, en trois blocs, dans cet ordre :
+//
+//   A · les données de la journée, à CHERCHER dans le mail et à taper (pas de formule) ;
+//   B · les commandes du jour, dans l'ordre du mail : le poids de chaque client se TAPE, puis le
+//       poids total et le poids à laisser à quai (formules) ;
+//   C · la tournée, dans l'ordre des arrêts cliqués, REMPLIE TOUTE SEULE : huit lignes réservées,
+//       le poids de chaque arrêt recopié de ce que l'élève a tapé en B ; puis le poids chargé, la
+//       distance (donnée par la carte), le temps de route, le temps aux arrêts, l'heure d'arrivée
+//       à la gare, et la partie créneau.
+//
+// Les adresses ne bougent JAMAIS, quels que soient l'ordre et le nombre d'arrêts : elles se
+// déduisent de la place des lignes (voir `REF`), jamais écrites à la main ailleurs.
+//
+// « Une erreur de lecture ne se paie qu'une fois » (règle validée par Tristan le 03/10) : une
+// donnée mal recopiée est fausse sur sa ligne ; les cases calculées ensuite se jugent sur ce que
+// l'élève a TAPÉ (`attendu: (lire) => …`, voir core/types/grille.js), pas sur le mail.
+//
+// Le « ? » de chaque ligne (règle de Tristan, 03/10) : sur une heure à TAPER, seulement le format,
+// avec un exemple neutre (9:05) — jamais l'heure du jour ; sur une formule avec des calculs, l'aide
+// de méthode d'ENT-3.1 ; sur une heure calculée, la méthode plus le format.
+//
+// `feuille({ ines: true })` est la feuille d'Inès (ENT-3.3) : tout est déjà tapé et écrit, juste,
+// SAUF le poids chargé, qui oublie la dernière ligne de la tournée (formule F1, choix de Tristan).
 
-// Les adresses des deux cellules que le jalon « choix » lit : jamais écrites en dur.
-const adresseDe = (intitule) => `B${lignesTete(null).findIndex((l) => l.A === intitule) + 1}`;
-export const REF_TOTAL = adresseDe('Poids total des commandes (kg)');
-export const REF_ECART = adresseDe('Poids à laisser à quai, au moins (kg)');
+const N_CMD = CLIENTS.length;
+// Les lignes, numérotées comme dans la feuille (la première porte le 1).
+const L_A = 2;                          // bloc A : départ, vitesse, temps par arrêt, charge, train, créneau
+const L_B = L_A + 6 + 2;                // bloc B : un client par ligne, après une ligne vide et un en-tête
+const L_C = L_B + N_CMD + 2 + 2;        // bloc C : les arrêts, après total, écart, une ligne vide, un en-tête
+export const REF = {
+  depart: `B${L_A}`, vitesse: `B${L_A + 1}`, service: `B${L_A + 2}`,
+  chargeUtile: `B${L_A + 3}`, train: `B${L_A + 4}`, creneau: `B${L_A + 5}`,
+  poids: CLIENTS.map((_, i) => `B${L_B + i}`),
+  total: `B${L_B + N_CMD}`, ecart: `B${L_B + N_CMD + 1}`,
+  arrets: CLIENTS.map((_, k) => `B${L_C + k}`),
+  charge: `B${L_C + N_CMD}`, km: `B${L_C + N_CMD + 1}`, route: `B${L_C + N_CMD + 2}`,
+  service2: `B${L_C + N_CMD + 3}`, gare: `B${L_C + N_CMD + 4}`,
+  kmC: `B${L_C + N_CMD + 6}`, rangC: `B${L_C + N_CMD + 7}`, heureC: `B${L_C + N_CMD + 8}`,
+};
+// Les cases de DONNÉES (lues dans le mail) et les cases de FORMULES : deux jalons distincts.
+export const REFS_DONNEES = [REF.depart, REF.vitesse, REF.service, REF.chargeUtile, REF.train, REF.creneau, ...REF.poids];
+export const REFS_FORMULES = [REF.total, REF.ecart, REF.charge, REF.route, REF.service2, REF.gare, REF.heureC];
+// Les deux cases que lit le jalon « choix » (gardées sous leurs anciens noms).
+export const REF_TOTAL = REF.total;
+export const REF_ECART = REF.ecart;
+
+const AIDE_HEURE = 'Une heure se tape avec deux-points, sans formule : par exemple 9:05.';
+const AIDE_EN_MINUTES = 'Dans la feuille, une heure compte en minutes : 9:05 + 20 donne 9 h 25.';
+// Un résultat qui dépend de cases de la feuille de l'élève : `null` tant que l'une d'elles est vide.
+const tous = (lire, refs) => { const v = refs.map(lire); return v.some((x) => x == null) ? null : v; };
+const somme = (v) => (v == null ? null : v.reduce((t, x) => t + x, 0));
+const hhmmTape = (m) => `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`;
+
+export function feuille({ ines = false } = {}) {
+  const pre = (txt) => (ines ? { prerempli: txt } : {});
+  const indexDe = (id) => CLIENTS.findIndex((c) => String(c.id) === String(id));
+  const lignes = (b) => {
+    const n = b.retenus.length;
+    const an = b.annules || [];
+    const km = Math.round(b.km * 10) / 10;     // arrondi comme affiché : l'élève ne tape que ce qu'il lit
+    // Le client à créneau est celui de la PHASE en cours (après l'imprévu, ce n'est plus le même).
+    const CR = (b.creneaux || [])[0] || null;
+    let kmC = null, rang = -1;
+    if (CR) {
+      rang = b.retenus.findIndex((p) => String(p.id) === String(CR.id));
+      const arr = b.arrivees[String(CR.id)];
+      if (rang >= 0 && b.departPose && arr != null) {
+        kmC = Math.round(((arr - JOURNEE.depart - rang * JOURNEE.service) * JOURNEE.vitesse / 60) * 10) / 10;
+      }
+    }
+    const attente = '(posez d’abord le départ et ce client)';
+    const donnee = (libelle, attendu, opts = {}) => ({ saisie: true, formule: false, attendu, libelle,
+      placeholder: opts.format === 'heure' ? 'hh:mm' : '', ...opts });
+    const formule = (libelle, attendu, opts = {}) => ({ saisie: true, formule: true, attendu, libelle, ...opts });
+    return [
+      { A: 'Données de la journée (à chercher dans le mail)', B: '', entete: true },
+      { A: 'Heure de départ de l’entrepôt', note: AIDE_HEURE,
+        B: donnee('heure de départ', JOURNEE.depart, { format: 'heure', ...pre(hhmmTape(JOURNEE.depart)) }) },
+      { A: 'Vitesse en ville (km/h)', B: donnee('vitesse', JOURNEE.vitesse, pre(String(JOURNEE.vitesse))) },
+      { A: 'Temps par arrêt (min)', B: donnee('temps par arrêt', JOURNEE.service, pre(String(JOURNEE.service))) },
+      { A: 'Charge utile du vélo-cargo (kg)', type: 'contrainte',
+        B: donnee('charge utile', JOURNEE.chargeUtile, pre(String(JOURNEE.chargeUtile))) },
+      { A: 'Départ du train', type: 'contrainte', note: AIDE_HEURE,
+        B: donnee('départ du train', JOURNEE.limite, { format: 'heure', ...pre(hhmmTape(JOURNEE.limite)) }) },
+      { A: CR ? `Limite du créneau (${CR.nom})` : 'Limite du créneau', type: 'contrainte', note: AIDE_HEURE,
+        B: CR ? donnee('limite du créneau', CR.avant, { format: 'heure', ...pre(hhmmTape(CR.avant)) }) : '' },
+      {},
+      { A: 'Commandes du jour (ordre du mail)', B: 'Poids (kg)', entete: true },
+      // Après l'imprévu, la commande annulée garde sa ligne (les adresses ne bougent pas) mais pèse 0 kg.
+      ...CLIENTS.map((c, i) => (an.includes(String(c.id))
+        ? { A: `${i + 1} · ${c.nom} — commande annulée`, B: 0 }
+        : { A: `${i + 1} · ${c.nom}`, B: donnee(`poids de ${c.nom}`, c.kg, pre(String(c.kg))) })),
+      { A: 'Poids total (kg)', type: 'resultat', note: `Additionnez les ${N_CMD} poids avec SOMME.`,
+        B: formule('poids total', (lire) => somme(tous(lire, REF.poids)), pre(`=SOMME(${REF.poids[0]}:${REF.poids[N_CMD - 1]})`)) },
+      { A: 'Poids à laisser à quai, au moins (kg)', type: 'resultat',
+        note: 'Poids total − charge utile : ce qu’il faut au minimum retirer du vélo-cargo.',
+        B: formule('poids à laisser à quai', (lire) => { const v = tous(lire, [REF.total, REF.chargeUtile]); return v && v[0] - v[1]; },
+          pre(`=${REF.total}-${REF.chargeUtile}`)) },
+      {},
+      { A: 'Tournée (ordre des arrêts, se remplit tout seul)', B: 'Poids (kg)', entete: true },
+      // Huit lignes RÉSERVÉES : un arrêt par ligne dans l'ordre cliqué, son poids RECOPIÉ de ce que
+      // l'élève a tapé en B. Au-delà des arrêts, la ligne est vide — et rien ne bouge en dessous.
+      ...CLIENTS.map((_, k) => {
+        const p = b.retenus[k];
+        return p ? { A: `Arrêt ${k + 1} · ${p.nom}`, B: { copie: REF.poids[indexDe(p.id)] } } : { A: '', B: '' };
+      }),
+      { A: 'Poids chargé (kg)', type: 'resultat', note: 'Additionnez les poids des arrêts avec SOMME.',
+        B: formule('poids chargé', (lire) => (n ? somme(tous(lire, REF.arrets.slice(0, n))) : null),
+          // F1 : Inès oublie la dernière ligne de sa tournée (la Cave Teissier, 52 kg).
+          pre(`=SOMME(${REF.arrets[0]}:${REF.arrets[N_CMD - 3]})`)) },
+      { A: 'Distance du parcours (km)', B: km },
+      { A: 'Temps de route (min)', type: 'etape', note: 'Distance ÷ vitesse donne des heures ; × 60 pour des minutes.',
+        B: formule('temps de route', (lire) => { const v = tous(lire, [REF.km, REF.vitesse]); return v && v[1] ? v[0] / v[1] * 60 : null; },
+          { tolerance: 0.5, ...pre(`=${REF.km}/${REF.vitesse}*60`) }) },
+      { A: 'Temps aux arrêts (min)', type: 'etape', note: 'Nombre d’arrêts × temps par arrêt.',
+        B: formule('temps aux arrêts', (lire) => { const v = lire(REF.service); return v == null || !n ? null : n * v; },
+          pre(`=${N_CMD - 1}*${REF.service}`)) },
+      { A: 'Heure d’arrivée à la gare', type: 'resultat',
+        note: `Heure de départ + temps de route + temps aux arrêts. ${AIDE_EN_MINUTES}`,
+        B: formule('heure d’arrivée à la gare', (lire) => somme(tous(lire, [REF.depart, REF.route, REF.service2])),
+          { tolerance: 0.5, format: 'heure', ...pre(`=${REF.depart}+${REF.route}+${REF.service2}`) }) },
+      {},
+      ...(!CR ? [{}, {}, {}] : [
+        { A: `Distance jusqu’à ${CR.nom} (km)`, B: kmC == null ? attente : kmC },
+        { A: 'Arrêts servis avant lui', B: rang < 0 ? attente : rang },
+        { A: `Heure d’arrivée chez ${CR.nom}`, type: 'resultat',
+          note: `Heure de départ + temps de route jusqu’à lui (distance ÷ vitesse × 60) + arrêts déjà servis × temps par arrêt. ${AIDE_EN_MINUTES}`,
+          B: kmC == null ? attente
+            : formule('heure d’arrivée chez le client à créneau', (lire) => {
+              const v = tous(lire, [REF.depart, REF.kmC, REF.vitesse, REF.rangC, REF.service]);
+              return v && v[2] ? v[0] + v[1] / v[2] * 60 + v[3] * v[4] : null;
+            }, { tolerance: 0.5, format: 'heure',
+              ...pre(`=${REF.depart}+${REF.kmC}/${REF.vitesse}*60+${REF.rangC}*${REF.service}`) }) },
+      ]),
+    ];
+  };
+  return {
+    titre: ines ? 'Feuille de calcul d’Inès' : 'Feuille de calcul du vélo-cargo',
+    consigne: ines
+      ? 'Inès a rempli cette feuille avant de vous l’envoyer : données, poids et formules. Contrôlez-la : '
+        + 'les cellules se modifient, et « ↺ » remet ce qu’Inès avait écrit. Si vous changez la tournée, '
+        + 'la partie « Tournée » se remplit toute seule.'
+      : 'Tapez les données du mail, puis écrivez les formules : elles commencent par « = ». En jaune, '
+        + 'les étapes du calcul ; en violet, les résultats à comparer aux contraintes (colonne de droite). '
+        + 'La partie « Tournée » se remplit toute seule, dans l’ordre de vos arrêts. Le « ? » d’une ligne donne une aide.',
+    colonnes: ['A', 'B'],
+    decimales: 1,
+    aides: 'bouton',
+    ...(ines ? { verifier: false, libelleOrigine: 'Remettre ce qu’Inès avait écrit' } : {}),
+    lignes,
+  };
+}
+TOURNEE.grille = feuille();
 
 /* ===================================================== le calcul de la meilleure tournée == */
 // Le client à laisser à quai est le SEUL dont le poids suffit, à lui seul, à ramener la charge
-// sous la limite (ici la Cave Teissier, 52 kg pour 50 kg à écarter). Puis les 5 040 ordres des
+// sous la limite (ici la Cave Teissier, 52 kg pour 40 kg à écarter). Puis les 5 040 ordres des
 // sept autres : on garde ceux qui attrapent le train ET tiennent le créneau, et on prend le plus
 // court. Même règle que `outils/carte/calibrer.mjs`, recalculée ici plutôt que recopiée.
 const dist = (a, b) => CARTE.trajets[`${a}|${b}`].m;
@@ -330,12 +383,12 @@ export const VOLET = {
       mails: [
         { folder: 'in', ts: now - 3600e3 * 2, from: 'M. Morin, responsable d’exploitation',
           fromMail: 'exploitation@boost.example', to: prenom,
-          subject: 'Tournée vélo-cargo de cet après-midi — départ 14 h 10', kind: 'text',
+          subject: `Tournée vélo-cargo de cet après-midi — départ ${h(JOURNEE.depart)}`, kind: 'text',
           text: `Bonjour ${prenom},\n\nVous reprenez la tournée du vélo-cargo cet après-midi. Même règle `
             + `que la dernière fois : les colis partent en vélo-cargo jusqu’à la gare de Nîmes-Centre, puis `
             + `en train. Le train de Paris part à ${h(JOURNEE.limite)}, et un colis qui arrive après est livré un jour plus tard.\n\n`
             + `Le vélo-cargo emporte au plus ${JOURNEE.chargeUtile} kg. Vous partez de l’entrepôt à ${h(JOURNEE.depart)}, `
-            + `comptez ${JOURNEE.service} minutes par arrêt et une douzaine de kilomètres à l’heure en ville.\n\n`
+            + `comptez ${JOURNEE.service} minutes par arrêt et ${JOURNEE.vitesse} km/h en ville : le vélo-cargo est à assistance électrique.\n\n`
             + `Voici les ${CLIENTS.length} commandes :\n\n${fiche}\n\n`
             + (CRENEAU ? `Une nouveauté : ${CRENEAU.nom} ne reçoit ses livraisons qu’avant ${h(CRENEAU.creneau.avant)}. `
               + `Passé cette heure, la boutique est fermée au public et le colis revient. Il faut donc y arriver à temps, `
@@ -349,7 +402,7 @@ export const VOLET = {
     };
   },
   // L'imprévu : il arrive quand la phase 1 est FINIE (voir `phase1Finie`), une seule fois, et fait
-  // passer la tournée en phase 2 au même instant. « Il est 14 h 00 » : avant le départ de 14 h 10,
+  // passer la tournée en phase 2 au même instant. « Il est 14 h 00 » : avant le départ de 14 h 35,
   // la tournée n'est pas partie (choix de Tristan). Texte courant, comme un vrai message : l'élève
   // cherche ce qui change, on ne lui donne pas de tableau. Tout ce qu'il dit est lu dans `IMPREVU`.
   declencheurs: [{
@@ -469,9 +522,19 @@ function phase1Finie(db) {
   const b = VUE.bilan(e);
   if (!b.complete || !bonChargement(e)) return false;
   if (b.cumuls.charge > JOURNEE.chargeUtile || b.enRetard || b.creneauRate) return false;
-  const g = e.grille;
-  const juge = (g && g.juge) || {};
-  return !!(g && g.valide && Object.keys(juge).length && Object.values(juge).every((x) => x === 'ok'));
+  // Les FORMULES justes, vérifiées (le bouton a été cliqué). Une donnée mal recopiée ne bloque pas
+  // l'imprévu : une erreur de lecture ne se paie qu'une fois, au jalon « données » (lot 2, 03/10).
+  return formulesJustes(e) === true;
+}
+
+// Les cases de formules de la feuille, d'après la dernière vérification : `true` toutes justes,
+// `false` au moins une à revoir, `null` pas encore vérifiées ou pas toutes remplies.
+function formulesJustes(e) {
+  const juge = (e && e.grille && e.grille.juge) || {};
+  const refs = REFS_FORMULES.filter((r) => r in juge);
+  if (!refs.length) return null;
+  if (refs.some((r) => !['ok', 'vide', 'attente'].includes(juge[r]))) return false;
+  return refs.length === REFS_FORMULES.length && refs.every((r) => juge[r] === 'ok') ? true : null;
 }
 
 // ── Les jalons de la phase 2 ─────────────────────────────────────────────────────────────
@@ -509,6 +572,24 @@ export const ETAPES = [
       if (!e || (!b.places && !b.essais)) return { status: 'na' };
       const detail = `${b.places} client(s) sur ${b.nouveaux} situé(s) ; ${b.premierCoup} du premier coup.`;
       return { status: b.places === b.nouveaux ? 'ok' : 'attente', detail, ts: e.valide || undefined };
+    },
+  },
+  {
+    id: 'donnees',
+    titre: 'Les données du mail recopiées justes dans la feuille (journée et poids)',
+    verifier(db) {
+      const e = tour1(db);
+      const g = e && e.grille;
+      if (!g) return { status: 'na' };
+      const juge = g.juge || {};
+      const tapees = REFS_DONNEES.some((r) => String((g.cases || {})[r] || '').trim() !== '');
+      if (!REFS_DONNEES.some((r) => r in juge)) return { status: tapees ? 'attente' : 'na' };
+      const faux = REFS_DONNEES.filter((r) => juge[r] && juge[r] !== 'ok' && juge[r] !== 'vide');
+      const vides = REFS_DONNEES.filter((r) => !juge[r] || juge[r] === 'vide');
+      // Le détail dit QUELLES cases revoir, jamais la valeur du mail.
+      if (faux.length) return { status: 'ko', detail: `Données à revoir : ${faux.join(', ')}.` };
+      if (vides.length) return { status: 'attente', detail: `Données à taper : ${vides.join(', ')}.` };
+      return { status: 'ok', detail: 'Les données du mail sont toutes recopiées justes.' };
     },
   },
   {
@@ -585,16 +666,18 @@ export const ETAPES = [
       const e = tour1(db);
       const g = e && e.grille;
       if (!g) return { status: 'na' };
-      const saisies = Object.keys(g.cases || {}).some((k) => String(g.cases[k] || '').trim() !== '');
+      // Les cases de FORMULES seulement : les données lues dans le mail ont leur jalon à elles.
+      const saisies = REFS_FORMULES.some((k) => String((g.cases || {})[k] || '').trim() !== '');
       const juge = g.juge || {};
-      if (!Object.keys(juge).length) return { status: saisies ? 'attente' : 'na' };
-      const faux = Object.keys(juge).filter((k) => juge[k] !== 'ok' && juge[k] !== 'vide');
-      const vides = Object.keys(juge).filter((k) => juge[k] === 'vide');
+      const refs = REFS_FORMULES.filter((r) => r in juge);
+      if (!refs.length) return { status: saisies ? 'attente' : 'na' };
+      const faux = refs.filter((k) => !['ok', 'vide', 'attente'].includes(juge[k]));
       if (faux.length) return { status: 'ko', detail: `Cellules à revoir : ${faux.join(', ')}.` };
-      if (vides.length || !g.valide) {
-        return { status: 'attente', detail: vides.length ? `Cellules à remplir : ${vides.join(', ')}.` : undefined };
+      if (formulesJustes(e) !== true) {
+        const vides = REFS_FORMULES.filter((k) => !juge[k] || juge[k] !== 'ok');
+        return { status: 'attente', detail: `Cellules à remplir : ${vides.join(', ')}.` };
       }
-      return { status: 'ok', detail: 'Toutes les formules sont justes.', ts: g.valide };
+      return { status: 'ok', detail: 'Toutes les formules sont justes.', ts: g.valide || undefined };
     },
   },
   {

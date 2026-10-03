@@ -34,7 +34,9 @@ const monter = (o = {}) => pg.evaluate(async (o) => {
   document.getElementById('cp-hote')?.remove();
   const { creerEntreprise } = await import('/core/types/entreprise.js');
   const B = await import('/contenus/boost.js');
-  const { CARTE } = await import('/contenus/boost-ent32-carte.js');
+  // La journée d'essai du 02/10 (14 h 10, VELO) : son créneau est ÉPINGLÉ à 14 h 45, comme ses chiffres,
+  // pour que ces cas gardent le MOTEUR sans dépendre de la journée d'ENT-3.2 (recalée au chantier D, lot 2).
+  const CARTE = ((x) => ({ ...x, clients: x.clients.map((c) => (c.id === 'c6' ? { ...c, creneau: { avant: 885, libelle: 'livraison avant 14 h 45' } } : c)) }))((await import('/contenus/boost-ent32-carte.js')).CARTE);
   const ETAPES = [
     { id: 'toujours', titre: 'Toujours', verifier: () => ({ status: 'ok' }) },
     { id: 'sept', titre: 'Sept arrêts', verifier: (db) => ({ status: (db.transport['essai-cp'].tournee.ordre || []).length === 7 ? 'ok' : 'ko' }) },

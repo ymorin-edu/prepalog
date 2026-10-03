@@ -88,8 +88,8 @@
    "colis": 4,
    "nouveau": false,
    "creneau": {
-    "avant": 885,
-    "libelle": "livraison avant 14 h 45"
+    "avant": 905,
+    "libelle": "livraison avant 15 h 05"
    }
   },
   {
@@ -122,11 +122,11 @@
   }
  ],
  "calibrage": {
-  "note": "Vérifié par outils/carte/calibrer.mjs (énumération complète, pas d'estimation). Paramètres de la journée : départ 14 h 10, train 16 h 10, 180 kg, 12 km/h, 6 min par arrêt.",
-  "depart": 850,
-  "train": 970,
-  "chargeUtile": 180,
-  "vitesse": 12,
-  "service": 6
+  "note": "Vérifié par outils/carte/calibrer.mjs (énumération complète, pas d'estimation). Paramètres de la journée (chantier D, lot 2, jeu A choisi par Tristan le 03/10/2026) : départ 14 h 35, train 16 h 15, 190 kg, 14 km/h (vélo à assistance électrique), 5 min par arrêt.",
+  "depart": 875,
+  "train": 975,
+  "chargeUtile": 190,
+  "vitesse": 14,
+  "service": 5
  }
 }

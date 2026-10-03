@@ -9,7 +9,8 @@
 //
 // L'IMPRÉVU (03/10/2026, brief `docs/briefs/ENT-3.2-imprevu.md`) : une fois la tournée juste et
 // la feuille vérifiée, un message du responsable change la journée (un client annule, le créneau
-// change de client). L'élève replanifie : dix jalons au lieu de huit. Détails dans le contenu.
+// change de client). L'élève replanifie. Onze jalons depuis le chantier D (lot 2, 03/10) : la feuille
+// de calcul moins guidée ajoute « données recopiées justes ». Détails dans le contenu.
 //
 // ── `pret: true` ────────────────────────────────────────────────────────────────────────
 // Validée à l'écran par Tristan le 03/10/2026 (imprévu compris) : ouverte aux élèves.

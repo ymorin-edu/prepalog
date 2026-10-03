@@ -510,6 +510,8 @@ await v('tournée : « Recommencer la tournée » arme d’abord, puis remet tou
 });
 
 /* ---- le créneau de livraison (ENT-3.2) : heure d'arrivée par client, créneau raté ---- */
+// La journée d'essai du 02/10 (14 h 10, VELO) : son créneau est ÉPINGLÉ à 14 h 45, comme ses chiffres,
+// pour que ces cas gardent le MOTEUR sans dépendre de la journée d'ENT-3.2 (recalée au chantier D, lot 2).
 /* La journée d'ENT-3.2 (`boost-ent32-carte.js`) : la Pâtisserie Arnaud (c6) n'accepte      */
 /* qu'avant 14 h 45. Deux tournées de référence, tirées de la fiche du 02/10 :              */
 /*   - celle de Tristan à l'essai, c7 c1 c2 c6 c8 c3 c4 : gare à 16 h 05 (train pris),     */
@@ -522,7 +524,7 @@ const ORDRE_BON = ['c6', 'c7', 'c8', 'c3', 'c4', 'c1', 'c2'];
 const bilanCr = (ordre, extra) => pageCt.evaluate(async ({ ordre, extra }) => {
   const { creerTournee, hhmm } = await import('/core/types/tournee.js');
   const B = await import('/contenus/boost.js');
-  const { CARTE: C } = await import('/contenus/boost-ent32-carte.js');
+  const C = ((x) => ({ ...x, clients: x.clients.map((c) => (c.id === 'c6' ? { ...c, creneau: { avant: 885, libelle: 'livraison avant 14 h 45' } } : c)) }))((await import('/contenus/boost-ent32-carte.js')).CARTE);
   const vue = creerTournee(Object.assign({ plan: { carte: C },
     mesures: [{ id: 'charge', libelle: 'Charge', unite: 'kg', champ: 'kg', max: B.VELO.chargeUtile }],
     horaire: { depart: 14 * 60 + 10, limite: B.VELO.train, vitesse: B.VELO.vitesse, service: B.VELO.service },
@@ -536,7 +538,7 @@ const bilanCr = (ordre, extra) => pageCt.evaluate(async ({ ordre, extra }) => {
 await v('créneau : l’heure d’arrivée chez chaque client = trajets par les rues + service des arrêts PRÉCÉDENTS', async () => {
   // L'attendu est recalculé ici, à la main, depuis la table des itinéraires — pas lu dans la vue.
   const attendu = await pageCt.evaluate(async (ordre) => {
-    const { CARTE: C } = await import('/contenus/boost-ent32-carte.js');
+    const C = ((x) => ({ ...x, clients: x.clients.map((c) => (c.id === 'c6' ? { ...c, creneau: { avant: 885, libelle: 'livraison avant 14 h 45' } } : c)) }))((await import('/contenus/boost-ent32-carte.js')).CARTE);
     const B = await import('/contenus/boost.js');
     const ch = ['depart', ...ordre]; let m = 0; const a = {};
     for (let i = 1; i < ch.length; i++) {
@@ -580,8 +582,10 @@ await v('créneau : le moteur et le calage comptent les mêmes ordres (train, pu
     const { creerTournee } = await import('/core/types/tournee.js');
     const B = await import('/contenus/boost.js');
     const { CARTE: C } = await import('/contenus/boost-ent32-carte.js');
+    // La journée que le calage vérifie : celle d'ENT-3.2 (`calibrage` de boost-ent32.json = JOURNEE).
+    const J = (await import('/contenus/boost-ent32.js')).JOURNEE;
     const vue = creerTournee({ plan: { carte: C }, mesures: [],
-      horaire: { depart: 14 * 60 + 10, limite: B.VELO.train, vitesse: B.VELO.vitesse, service: B.VELO.service },
+      horaire: { depart: J.depart, limite: J.limite, vitesse: J.vitesse, service: J.service },
       extremitesACliquer: true });
     const S = C.clients.filter((c) => c.id !== 'c5').map((c) => c.id);
     function* perms(a) { if (a.length < 2) { yield a; return; } for (let i = 0; i < a.length; i++) for (const p of perms([...a.slice(0, i), ...a.slice(i + 1)])) yield [a[i], ...p]; }
@@ -604,7 +608,7 @@ const monterCr = (opts, ordre) => pageCt.evaluate(async ({ opts, ordre }) => {
   document.getElementById('ct-hote')?.remove();
   const { creerEntreprise } = await import('/core/types/entreprise.js');
   const B = await import('/contenus/boost.js');
-  const { CARTE } = await import('/contenus/boost-ent32-carte.js');
+  const CARTE = ((x) => ({ ...x, clients: x.clients.map((c) => (c.id === 'c6' ? { ...c, creneau: { avant: 885, libelle: 'livraison avant 14 h 45' } } : c)) }))((await import('/contenus/boost-ent32-carte.js')).CARTE);
   const moteur = creerEntreprise({
     ENTREPRISE: B.ENTREPRISE, VOCAB: B.VOCAB, CATALOGUE: B.CATALOGUE, SUPPLIERS: B.SUPPLIERS,
     SUP_BY_ID: B.SUP_BY_ID, CUSTOMERS: B.CUSTOMERS, CM: B.CM, baseDeDepart: B.baseDeDepart, THEME: B.THEME,
@@ -658,7 +662,7 @@ await v('créneau : la jauge parlante donne l’arrivée et le retard, et le rep
   j = await jaugeCr();
   if (j.trop || !/créneau tenu/.test(j.txt)) throw new Error('jauge de la bonne tournée : ' + j.txt);
   const km = await pageCt.evaluate(async (o) => {
-    const { CARTE: C } = await import('/contenus/boost-ent32-carte.js');
+    const C = ((x) => ({ ...x, clients: x.clients.map((c) => (c.id === 'c6' ? { ...c, creneau: { avant: 885, libelle: 'livraison avant 14 h 45' } } : c)) }))((await import('/contenus/boost-ent32-carte.js')).CARTE);
     const ch = ['depart', ...o, 'arrivee']; let m = 0;
     for (let i = 1; i < ch.length; i++) m += C.trajets[`${ch[i - 1]}|${ch[i]}`].m;
     return (m / 1000).toFixed(2).replace('.', ',');

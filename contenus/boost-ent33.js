@@ -2,7 +2,7 @@
 //
 // Troisième des quatre séances de C2.4 : l'ERREUR INDUITE. ENT-3.1 (guidage) a appris le geste,
 // ENT-3.2 (entraînement) l'a fait refaire sous trois contraintes — la charge utile, le train de
-// 16 h 10, le créneau de la Pâtisserie Arnaud. Ici l'élève ne construit pas : il CONTRÔLE la
+// 16 h 15 (journée du chantier D, lot 2), le créneau de la Pâtisserie Arnaud. Ici l'élève ne construit pas : il CONTRÔLE la
 // tournée d'une collègue, dit quelles contraintes elle ne tient pas en le chiffrant, puis la répare.
 // Brief : `docs/briefs/ENT-3.3-boost-tournee-a-corriger.md` ; décisions de Tristan du 02/10/2026
 // dans `docs/decisions.md`.
@@ -30,9 +30,10 @@
 // Les contraintes violées, le poids chargé et les heures que les jalons attendent sont
 // RECALCULÉS depuis la tournée d'Inès par le bilan du moteur — le même code que les clics. La
 // meilleure tournée est celle d'ENT-3.2, recalculée par son `optimum()` (énumération des 5 040
-// ordres). Seul le test écrit les valeurs à la main (218 kg, 15 h 27, 15 h 50).
+// ordres). Seul le test écrit les valeurs à la main (218 kg, 15 h 40, 15 h 59 ; 166 kg sur la feuille d’Inès).
 
 import { creerTournee } from '../core/types/tournee.js';
+import { creerGrille } from '../core/types/grille.js';
 import * as E32 from './boost-ent32.js';
 
 export const TRANSPORT_ID = 'boost-ent33';
@@ -77,12 +78,11 @@ export const TOURNEE = Object.assign({}, E32.TOURNEE, {
   // (une saisie, un message parti, une tournée changée) : elles ne disent jamais si c'est juste.
   pastilles: [
     { libelle: 'Contrôler',
-      texte: `ne touchez pas encore à la carte. Dans la feuille de calcul, calculez le poids chargé, l’heure d’arrivée à la gare`
-        + (CRENEAU ? ` et l’heure d’arrivée à la ${CRENEAU.nom}.` : '.'),
-      fait: (db, e) => REFS_RESULTATS.every((ref) => {
-        const v = e && e.grille && e.grille.cases ? e.grille.cases[ref] : null;
-        return v != null && String(v).trim() !== '';
-      }) },
+      texte: 'ne touchez pas encore à la carte. Contrôlez la feuille de calcul d’Inès, ses données et ses formules, '
+        + 'et corrigez-y ce qui est faux : le poids chargé, l’heure d’arrivée à la gare'
+        + (CRENEAU ? ` et l’heure d’arrivée à la ${CRENEAU.nom} doivent être justes.` : ' doivent être justes.'),
+      // La feuille arrive remplie : l'étape est faite quand l'élève y a touché (une case corrigée).
+      fait: (db, e) => Object.keys((e && e.grille && e.grille.cases) || {}).length > 0 },
     { libelle: 'Répondre',
       texte: 'dans la messagerie, dites à Inès pour chaque contrainte si elle est tenue, avec le chiffre qui le prouve.',
       fait: (db) => reponses(db).length > 0 },
@@ -98,30 +98,26 @@ export const TOURNEE = Object.assign({}, E32.TOURNEE, {
   ],
   etatInitial: COLLEGUE,
   sansVerdict: true,
-  // La ligne « poids chargé » est la moins intuitive de la feuille : ici la tournée est déjà faite,
-  // l'élève ne choisit pas ce qui reste à quai, il doit le LIRE puis le retrouver dans la liste.
-  // La consigne dit où chercher et la forme de la formule, jamais la cellule ni le résultat.
-  grille: Object.assign({}, E32.TOURNEE.grille, {
-    lignes: (b) => E32.TOURNEE.grille.lignes(b).map((l) => l.A !== 'Poids chargé dans le vélo-cargo (kg)' ? l
-      : Object.assign({}, l, { note: 'Ce qui est dans le vélo-cargo = poids total − poids des commandes restées à quai. '
-        + '1) Lisez, sous la carte, « Commandes restées à quai ». 2) Retrouvez leur poids dans la liste en haut de la feuille. '
-        + '3) Écrivez la soustraction : =B10-… (une cellule à retirer par commande restée à quai). '
-        + 'Le résultat se compare à la charge utile.' })),
-  }),
+  // La feuille d'Inès (chantier D, lot 2, 03/10/2026) : la feuille d'ENT-3.2, déjà remplie par elle —
+  // données, poids, formules — avec UNE formule fausse : son poids chargé oublie la dernière ligne de
+  // la tournée (F1, choix de Tristan). Pas de bouton « Vérifier » : il montrerait la case en rouge
+  // (décision de Tristan) ; « ↺ » remet ce qu'Inès avait écrit. Voir `feuille()` dans boost-ent32.js.
+  grille: E32.feuille({ ines: true }),
 });
 
 // Le bilan d'une tournée, par la même vue que l'écran.
 const VUE = creerTournee(TOURNEE);
 
-// Les adresses des trois cellules de résultat de la feuille (poids chargé, arrivée à la gare,
-// arrivée chez le client à créneau) : lues dans les lignes de la feuille, jamais écrites en dur.
-// Leur place ne dépend pas de la tournée (une ligne « à poser d'abord » tient la place de la cellule).
-const REFS_RESULTATS = (() => {
-  const L = TOURNEE.grille.lignes(VUE.bilan(Object.assign({ report: {}, juge: {} }, COLLEGUE, { depart: 1, arrivee: 1 })));
-  const ref = (debut) => `B${L.findIndex((l) => String(l.A || '').startsWith(debut)) + 1}`;
-  return [ref('Poids chargé'), ref('Heure d’arrivée à la gare'),
-    ...(CRENEAU ? [ref(`Heure d’arrivée chez ${CRENEAU.nom}`)] : [])];
-})();
+// La feuille d'Inès, pour juger sa formule sans dessiner (et sans bouton « Vérifier »).
+const GRILLE = creerGrille(TOURNEE.grille);
+const lignesDe = (e) => TOURNEE.grille.lignes(VUE.bilan(e));
+
+// Ce que la feuille d'Inès affiche pour le poids chargé, sa formule fausse comprise : le chiffre de
+// son message (« la charge passe »). Recalculé, jamais recopié.
+export function poidsInes() {
+  const e = Object.assign({ report: {}, juge: {} }, COLLEGUE, { depart: 1, arrivee: 1 });
+  return GRILLE.valeur(lignesDe(e), {}, E32.REF.charge);
+}
 
 /* ======================================================== le diagnostic attendu ====== */
 // Recalculé depuis la tournée d'Inès, jamais écrit en dur. `null` si la journée ne permet pas
@@ -293,7 +289,7 @@ J’ai préparé la tournée du vélo-cargo de cet après-midi. Elle est déjà 
             + `LE RAPPEL
 Départ de l’entrepôt à ${h(JOURNEE.depart)}, `
             + `${JOURNEE.chargeUtile} kg au plus dans le vélo-cargo, ${JOURNEE.service} minutes par arrêt, `
-            + `une douzaine de kilomètres à l’heure en ville, et le train de Paris part de Nîmes-Centre à `
+            + `${JOURNEE.vitesse} km/h en ville avec l’assistance électrique, et le train de Paris part de Nîmes-Centre à `
             + `${h(JOURNEE.limite)}.`
             + (CRENEAU ? ` ${CRENEAU.nom} ne reçoit qu’avant ${h(CRENEAU.creneau.avant)}.` : '')
             + `
@@ -306,13 +302,14 @@ ${fiche}
 On sait que tout ne rentre pas dans le vélo-cargo, alors j’ai laissé une commande `
             + `à quai : la ${QUAI_INES}, c’est la plus petite, elle partira demain sans gêner personne. Pour le `
             + `reste, j’ai pris l’ordre le plus court sur la carte : moins de kilomètres, donc forcément de la `
-            + `marge partout.
+            + `marge partout. J’ai tout calculé dans la feuille de calcul : d’après elle, on charge ${poidsInes()} kg, `
+            + `la charge passe sous les ${JOURNEE.chargeUtile} kg.
 
 `
             + `CE QUE J’ATTENDS DE TOI
 M. Morin veut qu’on se relise à deux avant chaque départ. En trois temps :
 `
-            + `D’abord, contrôle ma tournée sans y toucher : la feuille de calcul suit la tournée affichée.
+            + `D’abord, contrôle ma tournée sans y toucher, et ma feuille de calcul : elle suit la tournée affichée. Si une formule est fausse, corrige-la.
 `
             + `Ensuite, réponds-moi en recopiant ces six lignes et en les complétant, une ligne par information :
 
@@ -342,12 +339,13 @@ ${INES.nom}` },
 };
 
 /* ============================ Suivi de l'exercice ============================
- * Six jalons, chacun vaut 1/6 de la note sur 20 (la séance déclare un barème, pas de notation).
+ * Sept jalons, chacun vaut 1/7 de la note sur 20 (la séance déclare un barème, pas de notation).
  * Le diagnostic et la réparation sont des jalons DISTINCTS (décision de Tristan, 02/10) :
  * l'un peut être juste et l'autre faux, et le suivi le dit.
  *
  *   contraintes  Diagnostic : chaque contrainte dite tenue ou non, et juste (leurre compris)
  *   preuves      Diagnostic : poids chargé, arrivée chez le client à créneau, arrivée à la gare
+ *   formule      Réparation : la formule fausse de la feuille d'Inès corrigée (chantier D, lot 2)
  *   charge       Réparation : la bonne commande à quai, la charge utile respectée
  *   horaire      Réparation : le train est attrapé
  *   creneau      Réparation : le créneau est tenu
@@ -410,6 +408,20 @@ export const ETAPES = [
             + `${LIGNES_REPONSE.client} ${dire(client, okC, h)}\n`
             + `Arrivée à la gare : ${dire(gare, okG, h)}` };
       });
+    },
+  },
+  {
+    id: 'formule',
+    titre: 'Réparation · la formule fausse de la feuille d’Inès corrigée',
+    verifier(db) {
+      const e = etatTournee(db);
+      if (!ouverte(e)) return { status: 'na' };
+      const cases = (e.grille && e.grille.cases) || {};
+      // Laissée telle qu'Inès l'a écrite, elle ne vaut rien — sans accuser l'élève qui n'a pas commencé.
+      if (cases[E32.REF.charge] == null) return { status: 'attente', detail: 'La formule du poids chargé est encore celle d’Inès.' };
+      const j = GRILLE.juger(lignesDe(e), cases)[E32.REF.charge];
+      return { status: j === 'ok' ? 'ok' : 'ko',
+        detail: j === 'ok' ? 'La formule du poids chargé est corrigée.' : 'La formule du poids chargé est encore fausse.' };
     },
   },
   {
