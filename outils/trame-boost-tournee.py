@@ -137,6 +137,29 @@ def encadre(titre, texte, espace=True):
         d.add_paragraph().paragraph_format.space_after = Pt(2)
 
 
+def encadre_liste(titre, items, intro='', espace=True):
+    """Encadré gris dont le contenu est une liste à puces (une idée par ligne : plus lisible pour
+    un élève qui lit difficilement, Tristan 03/10/2026). `intro` : phrase facultative avant la liste."""
+    colle_au_suivant()
+    t = d.add_table(rows=1, cols=1); t.style = 'Table Grid'; t.alignment = WD_TABLE_ALIGNMENT.LEFT
+    row = t.rows[0]; row._tr.get_or_add_trPr().append(OxmlElement('w:cantSplit'))
+    c = row.cells[0]; ombre(c, 'F2F2F2')
+    par = c.paragraphs[0]; par.paragraph_format.space_after = Pt(2)
+    par.paragraph_format.keep_with_next = True
+    if _consomme(): par.paragraph_format.page_break_before = True
+    r = par.add_run(titre + (' ' if intro else '')); r.bold = True; r.font.size = Pt(10); r.font.color.rgb = TITRE
+    if intro:
+        par.add_run(intro).font.size = Pt(10)
+    for i, it in enumerate(items):
+        o = c.add_paragraph(); o.paragraph_format.space_before = Pt(0)
+        o.paragraph_format.space_after = Pt(2 if i < len(items) - 1 else 0)
+        o.paragraph_format.left_indent = Cm(0.7); o.paragraph_format.first_line_indent = Cm(-0.4)
+        if i < len(items) - 1: o.paragraph_format.keep_with_next = True
+        o.add_run('\u2022  ' + it).font.size = Pt(10)
+    if espace:
+        d.add_paragraph().paragraph_format.space_after = Pt(2)
+
+
 def questions(liste, lignes=2):
     """Une question, UNE zone de réponse, puis la suivante (Tristan, 02/10/2026) : pas de double
     question. Un élément est un texte, ou (texte, nombre de lignes) pour adapter la zone."""
@@ -313,9 +336,14 @@ d.add_paragraph().paragraph_format.space_after = Pt(4)
 encadre('Ce document est ta trame de travail :',
         "tu peux le suivre seul, étape par étape. Chaque étape dit où cliquer et ce que tu dois voir à l'écran.")
 encadre('Ce que ton enseignant voit dans son suivi :',
-        "six points, qui donnent une note sur 20 : clients bien situés (case ET quartier), commandes chargées et "
-        "laissées à quai, charge du vélo-cargo, arrivée avant le train, deux résultats reportés, formules. Tes "
+        "six points, qui donnent une note sur 20 : clients bien situés (case ET quartier), commandes "
+        "chargées, charge du vélo-cargo, arrivée avant le train, deux résultats reportés, formules. Tes "
         "réponses écrites ici ne sont pas notées par le logiciel : elles servent à réfléchir.")
+
+encadre('Ce qui est vrai, ce qui est inventé :',
+        "Boost, son adresse, ses clients de marque (Marou, Molleni, Jacker), le vélo-cargo et le train sont réels. "
+        "Les sept commerces à livrer, leurs colis, les poids, les horaires et la charge du vélo sont inventés pour "
+        "l'exercice. Les rues, elles, sont de vraies rues de Nîmes.")
 
 # ==================================================================== étape 1
 soustitre("Le déroulé de ta séance")
@@ -351,10 +379,10 @@ questions([
  ("Cite un avantage d'envoyer les colis en vélo-cargo puis en train, plutôt qu'en camion.", 2),
  ('Cite une limite de ce mode de transport.', 2),
 ])
-encadre('Ce qui est vrai, ce qui est inventé :',
-        "Boost, son adresse, ses clients de marque (Marou, Molleni, Jacker), le vélo-cargo et le train sont réels. "
-        "Les sept commerces à livrer, leurs colis, les poids, les horaires et la charge du vélo sont inventés pour "
-        "l'exercice. Les rues, elles, sont de vraies rues de Nîmes.", espace=False)
+reflechir([
+    "Boost livre des colis en vélo-cargo puis en train plutôt qu'en camion. Dans quelle situation ce choix serait-il "
+    "moins bon pour l'un de ses clients ?",
+])
 
 # ==================================================================== étape 2
 etape(2, "Ouvrir son environnement et lire la consigne")
@@ -377,7 +405,6 @@ p("Dans la liste des commandes, une ligne donne : le nom du commerce, sa rue, le
   "Les clients ne donnent que le nom de leur rue : pas de quartier, pas de case.", taille=9.5, apres=8)
 reflechir([
     "M. Morin demande de situer les clients sur un plan AVANT de construire la tournée. Pourquoi, à ton avis ?",
-    "Un colis qui rate le train est livré un jour plus tard. Quelle conséquence cela a-t-il pour le client ?",
 ])
 
 # ==================================================================== étape 3
@@ -399,20 +426,17 @@ tableau(['N°', 'Rue', 'Quartier', 'Case'], 0, [Cm(1.4), Cm(6.2), Cm(5.8), Cm(3.
         remplis=[[str(i), r_, '', ''] for i, (n, r_) in enumerate(CLIENTS, 1)])
 encadre('Deux conseils :',
         "le menu des quartiers propose douze noms pour sept clients : cinq ne sont à personne, donc tu ne peux pas "
-        "finir par élimination. Si tu hésites entre deux cases, choisis celle où se trouve le centre du point : le "
-        "logiciel accepte une seule case fausse.")
+        "finir par élimination. Si tu hésites entre deux cases, choisis celle où se trouve le centre du point.")
 saut_avant()
 p("Clique maintenant sur « Valider le repérage ».")
-encadre('Ce que tu dois voir :',
-        "un champ qui devient rouge quand la case ou le quartier est faux ; le message « Repérage validé » quand tout "
-        "est bon ; les sept noms de clients qui s'écrivent dans le tableau ; et une nouvelle entrée dans le menu de "
-        "gauche, « Tournée du 14 avril ». Le logiciel accepte une erreur, mais le point du suivi n'est donné que si "
-        "les sept clients sont justes. Après trois essais ratés, un bouton « Je ne trouve pas, continuer quand même » "
-        "apparaît : tu peux avancer, mais ton suivi le montre. Le « Mode hors connexion » (en haut) remplit les "
-        "quartiers à ta place, sans les cases ; son usage est lui aussi noté dans le suivi.")
+encadre_liste('Ce que tu dois voir :', [
+    "un champ qui devient rouge quand la case ou le quartier est faux ;",
+    "les sept noms de clients qui s'écrivent dans le tableau quand tout est bon ;",
+    "le message « Repérage validé » ;",
+    "une nouvelle entrée dans le menu de gauche : « Tournée du 14 avril ».",
+])
 reflechir([
     "Pour le client le plus difficile à situer, comment as-tu trouvé la case et le quartier ?",
-    "Un livreur se trompe de quartier. Quelles conséquences cela a-t-il pour Boost ?",
 ])
 
 # ==================================================================== étape 4
@@ -428,11 +452,15 @@ consignes([
 encadre('Ce que tu dois voir :',
         "la jauge monte à chaque commande chargée, et elle te prévient quand la limite est franchie. Elle ne te dit "
         "pas de combien : c'est à toi de le trouver, à l'étape 6.")
+faits(["Qu'as-tu vu à l'écran qui t'a fait comprendre que tu ne pouvais pas tout emporter ?"])
 p("Note ta décision :", taille=10.5, gras=True, avant=6)
-tableau(['Client', 'Chargé ou à quai ?', 'Ce qui m\'a fait choisir'], 0, [Cm(5.0), Cm(3.6), Cm(8.4)], hauteur=Cm(0.8),
-        remplis=[[n, '', ''] for n, _ in CLIENTS])
+tableau(['Client', 'Chargé ou à quai ?'], 0, [Cm(8.0), Cm(9.0)], hauteur=Cm(0.8),
+        remplis=[[n, ''] for n, _ in CLIENTS])
+encadre_liste('Tu peux passer à l\'étape 5 quand :', [
+    "la jauge ne t'avertit plus ;",
+    "chaque commande est soit dans le vélo-cargo, soit dans « Commandes restées à quai ».",
+])
 reflechir([
-    "Qu'as-tu vu à l'écran qui t'a fait comprendre que tu ne pouvais pas tout emporter ?",
     "Pourquoi as-tu laissé CE client à quai plutôt qu'un autre ? (M. Morin précise que ce qui reste à quai partira "
     "demain.)",
 ])
@@ -465,13 +493,16 @@ p("Sous la carte, la feuille de calcul est faite avec TA tournée : les lignes s
   "Les cases colorées sont à remplir avec une formule, c'est-à-dire un calcul qui commence par « = ». Le résultat "
   "s'affiche à droite de la case. À droite de la feuille, les contraintes : la charge maximale et l'heure du "
   "train.")
+encadre('Deux mots à connaître :',
+        "SOMME : une fonction qui additionne plusieurs cases d'un coup. Cellule : une case de la feuille de calcul, "
+        "repérée par une lettre et un chiffre (comme B2).")
 encadre('Les couleurs :',
         "jaune = une étape du calcul. Violet = un résultat à comparer à une contrainte. Si tu changes ta tournée, "
         "les données changent et tes formules se recalculent seules ; mais les « juste » disparaissent, et il faut "
         "cliquer à nouveau sur « Vérifier mes formules ».")
 consignes([
-    "Poids total chargé : écris une formule avec SOMME qui additionne les poids de tes arrêts. Au lieu de taper les "
-    "adresses, clique sur la première cellule des poids puis fais glisser la souris jusqu'à la dernière (ou "
+    "Poids total chargé : écris une formule avec SOMME qui additionne les poids de tes arrêts. Au lieu de taper le "
+    "nom des cellules (comme B2), clique sur la première cellule des poids puis fais glisser la souris jusqu'à la dernière (ou "
     "Maj + clic).",
     "Étape 1 : distance ÷ vitesse. Le résultat est un temps en heures.",
     "Étape 2 : convertis ces heures en minutes (1 heure = 60 minutes).",
@@ -482,8 +513,12 @@ consignes([
 ])
 encadre('À savoir :',
         "le logiciel compte les heures en minutes depuis minuit : 14 h 00, c'est 14 × 60 = 840 minutes. C'est ce qui "
-        "te permet d'ajouter une heure et des minutes. Ne tape pas « 14 » tout seul : écris 14:00 ou 14h00. Un "
-        "exemple pour comprendre l'étape 1 : 6 km à 12 km/h, c'est 6 ÷ 12 = 0,5 h.")
+        "te permet d'ajouter une heure et des minutes. Ne tape pas « 14 » tout seul : écris 14:00 ou 14h00.")
+encadre_liste('Trois exemples, avec d\'autres chiffres que ceux de ta tournée :', [
+    "étape 1 : 6 km à 12 km/h, c'est 6 ÷ 12 = 0,5 h ;",
+    "étape 2 : 0,5 h, c'est 0,5 × 60 = 30 min ;",
+    "étape 3 : 4 arrêts de 5 min, c'est 4 × 5 = 20 min.",
+])
 p("Note les formules que tu as écrites :", taille=10.5, gras=True)
 tableau(['Ce qu\'on calcule', 'Cellule', 'Ma formule', 'Résultat affiché'], 0,
         [Cm(5.0), Cm(2.0), Cm(5.6), Cm(4.4)], hauteur=Cm(1.2),
@@ -493,16 +528,17 @@ tableau(['Ce qu\'on calcule', 'Cellule', 'Ma formule', 'Résultat affiché'], 0,
                  ['Étape 3 · temps aux arrêts (min)', '', '', ''],
                  ["Heure d'arrivée à la gare", '', '', '']])
 saut_avant()
-encadre('Ce que tu dois voir :',
-        "après « Vérifier », les cellules justes passent au vert avec « juste ». Si toutes tes formules sont justes "
-        "mais qu'une contrainte est franchie, la contrainte passe en rouge et le logiciel écrit : « Le calcul est "
-        "bon : c'est la tournée qu'il faut revoir. » Il ne te dit pas de combien : tu le lis toi-même en comparant "
-        "tes résultats aux contraintes.")
+encadre_liste('Ce que tu dois voir :', [
+    "après « Vérifier », les cellules justes passent au vert avec « juste » ;",
+    "si toutes tes formules sont justes mais qu'une contrainte est franchie, la contrainte passe en rouge et le "
+    "logiciel écrit : « Le calcul est bon : c'est la tournée qu'il faut revoir. » ;",
+    "il ne te dit pas de combien : tu le lis toi-même en comparant tes résultats aux contraintes.",
+])
 soustitre('Compare tes résultats aux contraintes')
 faits(['Ton poids total est-il au-dessus ou en dessous de la charge maximale ?', "Ton heure d'arrivée est-elle avant ou après l'heure du train ?"])
 reflechir([
-    "Si une contrainte est franchie alors que tes formules sont justes, que dois-tu changer : les formules ou "
-    "la tournée ? Explique.",
+    "Tes formules sont justes, mais une contrainte est franchie. Comment as-tu su que c'était ta tournée qu'il "
+    "fallait revoir, et pas tes formules ?",
     "Si le vélo-cargo roulait à 15 km/h, qu'est-ce qui changerait dans ta feuille ?",
 ])
 
@@ -521,11 +557,12 @@ tableau(['Client', 'Poids (kg)'], 0, [Cm(10.0), Cm(7.0)], hauteur=Cm(0.8),
 tableau(['Résultat', 'Mon calcul', 'Ma réponse (kg)'], 0, [Cm(7.0), Cm(6.0), Cm(4.0)], hauteur=Cm(1.2),
         remplis=[['Masse totale des sept commandes', '', ''],
                  ["Masse qui ne peut pas partir aujourd'hui", '', '']])
-encadre('Ce que tu dois voir :',
-        "chaque case dit seulement si ta réponse est juste, pas la bonne valeur. Le logiciel refuse de valider tant "
-        "que ta tournée ne tient pas : il faut que la charge soit respectée, que le train soit tenu et que le départ "
-        "et l'arrivée soient posés. Si on te refuse, retourne à la carte : c'est la tournée qui est à revoir, pas "
-        "tes cases.")
+encadre_liste('Ce que tu dois voir :', [
+    "chaque case dit seulement si ta réponse est juste, pas la bonne valeur ;",
+    "le logiciel refuse de valider tant que ta tournée ne tient pas : il faut que la charge soit respectée, que le "
+    "train soit tenu et que le départ et l'arrivée soient posés ;",
+    "si on te refuse, retourne à la carte : c'est la tournée qui est à revoir, pas tes cases.",
+])
 saut_avant()
 reflechir([
     "Dans une vraie entreprise, qui prévient le client dont la commande reste à quai ?",

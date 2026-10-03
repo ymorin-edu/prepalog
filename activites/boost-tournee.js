@@ -14,10 +14,10 @@
 // sur 20 en gardant le score brut en jalons dans son infobulle. Rien à ajouter au moteur —
 // vérifié dans le code, pas supposé.
 //
-// ── Pas de trame élève pour l'instant ───────────────────────────────────────────────────
-// Déclarer une trame, c'est la valider : le bandeau n'affiche donc rien ici. Les consignes
-// de la séance vivent dans le mail du responsable et dans l'accueil. Reste à décider avec
-// Tristan s'il veut une trame papier comme pour les trois Spartoo.
+// ── Trame élève ─────────────────────────────────────────────────────────────────────────
+// Déclarée le 03/10/2026 après relecture point par point avec Tristan. Les consignes vivent
+// dans la trame (Word / PDF, générée par `outils/trame-boost-tournee.py`), pas dans le site :
+// le bandeau n'affiche que les deux liens de téléchargement.
 
 import { creerEntreprise } from '../core/types/entreprise.js';
 import * as BOOST from '../contenus/boost.js';
@@ -46,6 +46,12 @@ export const meta = {
   jeuId: 'boost',
   tables: {},
   pret: true,
+  // Trame élève : déclarer, c'est valider (relue le 03/10/2026). Un test vérifie que les deux
+  // fichiers existent dans le dépôt.
+  trame: {
+    pdf: './contenus/trames/ENT-3.1-boost-tournee-trame-eleve.pdf',
+    docx: './contenus/trames/ENT-3.1-boost-tournee-trame-eleve.docx',
+  },
   // Corrigé des QCM d'éco-droit de la trame : affiché dans l'onglet « Corrigés » de l'espace
   // enseignant, jamais côté élève. Fichier généré par le générateur de la trame.
   corrige: './contenus/corriges/ENT-3.1.js',

@@ -308,26 +308,20 @@ ENT_3_1 = {
  "Boost est une « entreprise d'insertion »": {"rep": "Elle accueille des personnes éloignées de l'emploi : elles travaillent en étant salariées, retrouvent un rythme de travail, découvrent les métiers de la logistique et sont accompagnées pour ensuite trouver un emploi classique.", "note": "Source : article Voxlog sur Boost (salaires fixes, accompagnement par des conseillers en insertion)."},
  "Cite un avantage d'envoyer les colis en vélo-cargo": {"rep": "Moins de pollution et d'émissions de CO₂ que le camion (vélo-cargo puis train), pas de bruit, plus facile de circuler en centre-ville.", "note": "Accepter tout avantage écologique ou de circulation. Boost s'appuie sur le modèle WePost (vélo-cargo + train) cité comme alternative bas carbone."},
  "Cite une limite de ce mode de transport": {"rep": "Charge limitée (ici 180 kg), vitesse faible (12 km/h en ville), dépendance aux horaires du train, météo, distances courtes.", "note": "L'article Voxlog dit que le transport reste « complexe »."},
+ "Boost livre des colis en vélo-cargo": {"pistes": [
+   "Un colis lourd ou volumineux : le vélo-cargo est limité en charge (ici 180 kg).",
+   "Une livraison urgente ou en dehors des horaires du train : le train fixe l'heure limite, un camion pourrait partir plus tard.",
+   "Mauvaise météo ou longue distance en ville. Accepter toute situation justifiée : il n'y a pas une seule réponse.",
+ ]},
  "M. Morin demande de situer les clients": {"pistes": [
    "Sans savoir où sont les clients, on ne peut pas organiser un parcours : on ne calcule ni la distance ni le temps.",
    "Les clients ne donnent que le nom de la rue : il faut d'abord les repérer pour décider de l'ordre des arrêts.",
- ]},
- "Un colis qui rate le train": {"pistes": [
-   "Il arrive un jour plus tard : le client attend plus longtemps, il peut être mécontent ou annuler.",
-   "C'est aussi une mauvaise image pour la marque cliente de Boost et pour Boost.",
  ]},
  "Pour le client le plus difficile à situer": {"pistes": [
    "Réponse personnelle : méthode attendue = cliquer la ligne du tableau pour faire apparaître le halo du point, lire la colonne puis la ligne du quadrillage, puis lire le nom du quartier dessiné autour du point.",
    "Valoriser les méthodes : zoomer sur le quartier pour lire le nom de la rue, vérifier la case en suivant les lignes du quadrillage, comparer avec les deux cases voisines.",
  ], "note": "Les deux points les plus piégeux : Comptoir des Halles et Atelier Mazet sont tous deux en D2, mais dans des quartiers différents (Écusson et Gambetta) : la case seule ne suffit pas, il faut lire le quartier."},
- "Un livreur se trompe de quartier": {"pistes": [
-   "Retard (on perd du temps) et risque de rater le train.",
-   "Client mécontent, colis livré à la mauvaise adresse ou perdu, coûts supplémentaires pour Boost.",
- ]},
- "Qu'as-tu vu à l'écran": {"pistes": [
-   "La jauge « Charge du vélo-cargo » monte à chaque commande chargée et prévient quand la limite de 180 kg est franchie.",
-   "Les sept commandes pèsent 237 kg (57 kg de trop) : on ne peut pas tout charger.",
- ]},
+ "Qu'as-tu vu à l'écran": {"rep": "La jauge « Charge du vélo-cargo » monte à chaque commande chargée et prévient quand la limite de 180 kg est franchie : les sept commandes ne tiennent pas toutes.", "note": "Le total (237 kg) et le dépassement (57 kg) ne sont pas dits à l'élève : il les trouve à l'étape 7."},
  "Pourquoi as-tu laissé CE client à quai": {"pistes": [
    "Le seul choix qui permet de respecter la charge en écartant un seul client est La Pointe Sud (58 kg) : 237 − 58 = 179 kg ≤ 180 kg.",
    "Autre raison valable : c'est le client le plus loin / le plus pénalisant en temps ; ce qui reste à quai partira demain.",
@@ -343,8 +337,8 @@ ENT_3_1 = {
  ]},
  "Ton poids total est-il": {"rep": "En dessous (ou égal) : 179 kg pour 180 kg maximum, si La Pointe Sud est restée à quai."},
  "Ton heure d'arrivée est-elle": {"rep": "Avant : 15 h 36 pour l'ordre le plus court (11,9 km), le train part à 16 h 10.", "note": "Dépend de l'ordre choisi : tout ordre de moins de 18,8 km tient le train (départ 14 h 00, 6 arrêts de 6 min, 12 km/h)."},
- "Si une contrainte est franchie": {"pistes": [
-   "Changer la tournée, pas les formules : le logiciel le dit (« Le calcul est bon : c'est la tournée qu'il faut revoir »).",
+ "Tes formules sont justes, mais une contrainte": {"pistes": [
+   "Le logiciel l'a dit : « Le calcul est bon : c'est la tournée qu'il faut revoir ». Les formules sont validées (« juste »), donc l'erreur est dans la tournée.",
    "Les formules mesurent la tournée. Modifier les formules pour « faire passer » le résultat serait tricher avec la réalité.",
  ]},
  "Si le vélo-cargo roulait à 15 km/h": {"pistes": [
@@ -383,13 +377,13 @@ ENT_3_1_TABLEAUX = {
    ["7", "rue Roger Sabatier", "Costières", "D4"],
  ], "note": "Les numéros sont ceux de la fiche de M. Morin : 1 Comptoir des Halles, 2 Épicerie Verdier, 3 La Pointe Sud, 4 Maison Lauze, 5 Studio Garance, 6 Atelier Mazet, 7 Caveau Pélissier. Cases recalculées par le logiciel depuis la position de chaque point sur la carte réelle (quadrillage de 1 km). Le logiciel tolère une case fausse ; le point du suivi exige les sept (case ET quartier). Les noms des clients n'apparaissent qu'après la validation. Vérifié le 03/10/2026 : les sept rues existent à Nîmes et tombent entièrement dans le contour de leur quartier (IRIS INSEE regroupés ; Costières = Marronniers + Capouchiné + Maréchal Juin)."},
  "T: Client | Chargé ou à quai ?": {"lignes": [
-   ["Le Comptoir des Halles", "chargé", "31 kg, sur le chemin"],
-   ["Épicerie Verdier", "chargé", "24 kg"],
-   ["La Pointe Sud", "à quai", "58 kg : seule commande qui, retirée, ramène la charge à 179 kg (≤ 180)"],
-   ["Maison Lauze", "chargé", "42 kg"],
-   ["Studio Garance", "chargé", "19 kg"],
-   ["Atelier Mazet", "chargé", "36 kg"],
-   ["Caveau Pélissier", "chargé", "27 kg"],
+   ["Le Comptoir des Halles", "chargé"],
+   ["Épicerie Verdier", "chargé"],
+   ["La Pointe Sud", "à quai"],
+   ["Maison Lauze", "chargé"],
+   ["Studio Garance", "chargé"],
+   ["Atelier Mazet", "chargé"],
+   ["Caveau Pélissier", "chargé"],
  ], "note": "Un seul client à quai est possible : La Pointe Sud (58 kg ≥ 57 kg de trop). Vérifié par énumération des 128 combinaisons."},
  "T: Essai | Ordre des arrêts": {"lignes": [
    ["1", "réponse personnelle (ex. dans l'ordre de la fiche : Halles, Verdier, Lauze, Garance, Mazet, Pélissier)", "non : 21,3 km, arrivée 16 h 23"],

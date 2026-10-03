@@ -59,6 +59,17 @@ export const CORRIGE = {
       "note": "L'article Voxlog dit que le transport reste « complexe »."
     },
     {
+      "etape": 1,
+      "etapeTitre": "Découvrir Boost",
+      "genre": "reflexion",
+      "texte": "Boost livre des colis en vélo-cargo puis en train plutôt qu'en camion. Dans quelle situation ce choix serait-il moins bon pour l'un de ses clients ?",
+      "pistes": [
+        "Un colis lourd ou volumineux : le vélo-cargo est limité en charge (ici 180 kg).",
+        "Une livraison urgente ou en dehors des horaires du train : le train fixe l'heure limite, un camion pourrait partir plus tard.",
+        "Mauvaise météo ou longue distance en ville. Accepter toute situation justifiée : il n'y a pas une seule réponse."
+      ]
+    },
+    {
       "etape": 2,
       "etapeTitre": "Ouvrir son environnement et lire la consigne",
       "genre": "tableau",
@@ -103,16 +114,6 @@ export const CORRIGE = {
       "pistes": [
         "Sans savoir où sont les clients, on ne peut pas organiser un parcours : on ne calcule ni la distance ni le temps.",
         "Les clients ne donnent que le nom de la rue : il faut d'abord les repérer pour décider de l'ordre des arrêts."
-      ]
-    },
-    {
-      "etape": 2,
-      "etapeTitre": "Ouvrir son environnement et lire la consigne",
-      "genre": "reflexion",
-      "texte": "Un colis qui rate le train est livré un jour plus tard. Quelle conséquence cela a-t-il pour le client ?",
-      "pistes": [
-        "Il arrive un jour plus tard : le client attend plus longtemps, il peut être mécontent ou annuler.",
-        "C'est aussi une mauvaise image pour la marque cliente de Boost et pour Boost."
       ]
     },
     {
@@ -185,74 +186,54 @@ export const CORRIGE = {
       "note": "Les deux points les plus piégeux : Comptoir des Halles et Atelier Mazet sont tous deux en D2, mais dans des quartiers différents (Écusson et Gambetta) : la case seule ne suffit pas, il faut lire le quartier."
     },
     {
-      "etape": 3,
-      "etapeTitre": "Situer les sept clients sur le plan",
-      "genre": "reflexion",
-      "texte": "Un livreur se trompe de quartier. Quelles conséquences cela a-t-il pour Boost ?",
-      "pistes": [
-        "Retard (on perd du temps) et risque de rater le train.",
-        "Client mécontent, colis livré à la mauvaise adresse ou perdu, coûts supplémentaires pour Boost."
-      ]
+      "etape": 4,
+      "etapeTitre": "Charger le vélo-cargo",
+      "genre": "fait",
+      "texte": "Qu'as-tu vu à l'écran qui t'a fait comprendre que tu ne pouvais pas tout emporter ?",
+      "rep": "La jauge « Charge du vélo-cargo » monte à chaque commande chargée et prévient quand la limite de 180 kg est franchie : les sept commandes ne tiennent pas toutes.",
+      "note": "Le total (237 kg) et le dépassement (57 kg) ne sont pas dits à l'élève : il les trouve à l'étape 7."
     },
     {
       "etape": 4,
       "etapeTitre": "Charger le vélo-cargo",
       "genre": "tableau",
-      "texte": "Client | Chargé ou à quai ? | Ce qui m'a fait choisir",
+      "texte": "Client | Chargé ou à quai ?",
       "entetes": [
         "Client",
-        "Chargé ou à quai ?",
-        "Ce qui m'a fait choisir"
+        "Chargé ou à quai ?"
       ],
       "contexte": "Note ta décision :",
       "reponses": [
         [
           "Le Comptoir des Halles",
-          "chargé",
-          "31 kg, sur le chemin"
+          "chargé"
         ],
         [
           "Épicerie Verdier",
-          "chargé",
-          "24 kg"
+          "chargé"
         ],
         [
           "La Pointe Sud",
-          "à quai",
-          "58 kg : seule commande qui, retirée, ramène la charge à 179 kg (≤ 180)"
+          "à quai"
         ],
         [
           "Maison Lauze",
-          "chargé",
-          "42 kg"
+          "chargé"
         ],
         [
           "Studio Garance",
-          "chargé",
-          "19 kg"
+          "chargé"
         ],
         [
           "Atelier Mazet",
-          "chargé",
-          "36 kg"
+          "chargé"
         ],
         [
           "Caveau Pélissier",
-          "chargé",
-          "27 kg"
+          "chargé"
         ]
       ],
       "note": "Un seul client à quai est possible : La Pointe Sud (58 kg ≥ 57 kg de trop). Vérifié par énumération des 128 combinaisons."
-    },
-    {
-      "etape": 4,
-      "etapeTitre": "Charger le vélo-cargo",
-      "genre": "reflexion",
-      "texte": "Qu'as-tu vu à l'écran qui t'a fait comprendre que tu ne pouvais pas tout emporter ?",
-      "pistes": [
-        "La jauge « Charge du vélo-cargo » monte à chaque commande chargée et prévient quand la limite de 180 kg est franchie.",
-        "Les sept commandes pèsent 237 kg (57 kg de trop) : on ne peut pas tout charger."
-      ]
     },
     {
       "etape": 4,
@@ -385,9 +366,9 @@ export const CORRIGE = {
       "etape": 6,
       "etapeTitre": "Calculer dans la feuille de calcul",
       "genre": "reflexion",
-      "texte": "Si une contrainte est franchie alors que tes formules sont justes, que dois-tu changer : les formules ou la tournée ? Explique.",
+      "texte": "Tes formules sont justes, mais une contrainte est franchie. Comment as-tu su que c'était ta tournée qu'il fallait revoir, et pas tes formules ?",
       "pistes": [
-        "Changer la tournée, pas les formules : le logiciel le dit (« Le calcul est bon : c'est la tournée qu'il faut revoir »).",
+        "Le logiciel l'a dit : « Le calcul est bon : c'est la tournée qu'il faut revoir ». Les formules sont validées (« juste »), donc l'erreur est dans la tournée.",
         "Les formules mesurent la tournée. Modifier les formules pour « faire passer » le résultat serait tricher avec la réalité."
       ]
     },
