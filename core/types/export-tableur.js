@@ -102,7 +102,8 @@ export function construireExport(exp, db, { graine = '', aveugle = false } = {})
   });
   const premiere = feuilles[0];
   const propres = premiere ? premiere.lignes.map((l) => Object.fromEntries(premiere.colonnes.map((c, i) => [c, l[i]]))) : [];
-  const S = exp.salissures;
+  // Les salissures peuvent dépendre de la base (le niveau de l'élève) : `salissures(db)`.
+  const S = typeof exp.salissures === 'function' ? exp.salissures(db) : exp.salissures;
   if (premiere && S) {
     const h = hasard(graine);
     let L = premiere.lignes.map((l) => l.slice());
