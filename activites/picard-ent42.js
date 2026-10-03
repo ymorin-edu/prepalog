@@ -11,7 +11,8 @@
 // Pas de `reinitialisable` : réservé aux séances X.1 (décision du 02/10/2026) ; « Recommencer la
 // réception » du bilan (la vue) ne remet à zéro que le quai de cette séance.
 // Pas de `notation` : comme ENT-4.1, jalons et note sur 20 (le suivi ramène les 30 jalons sur 20).
-// Pas de trame : elle viendra de Cowork après la validation à l'écran.
+// Trame élève Word/PDF déclarée le 03/10/2026, relue et validée par Tristan (générateur dans `outils/`,
+// brief `docs/briefs/PICARD-trames-eleve.md`) ; son corrigé s'ajoute au corrigé calculé (`meta.corrige`).
 
 import { creerEntreprise } from '../core/types/entreprise.js';
 import * as PICARD from '../contenus/picard.js';
@@ -31,6 +32,10 @@ export const meta = {
   immersif: true,
   portee: 'eleve',
   tables: {},
+  trame: {
+    pdf: './contenus/trames/ENT-4.2-picard-deux-camions-trame-eleve.pdf',
+    docx: './contenus/trames/ENT-4.2-picard-deux-camions-trame-eleve.docx',
+  },
   corrige: './contenus/corriges/ENT-4.2.js',
   pret: true,
   ouverture: 'prof',

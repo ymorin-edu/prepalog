@@ -6,7 +6,7 @@
 > Lis docs/briefs/PICARD-trames-eleve.md : commite les fichiers de trame Picard déposés par Cowork (liste §2), sans rien déclarer. Ne touche à aucun autre fichier.
 > ```
 
-**Statut** : trames écrites et vérifiées par Cowork ; **à relire par Tristan** ; non déclarées.
+**Statut** : **livré** le 03/10/2026 — trames relues et validées par Tristan, déclarées ; compte rendu en fin de brief.
 
 ## 1. Ce que c'est
 
@@ -60,3 +60,20 @@ Message de commit proposé : « Picard : trames élève ENT-4.1, 4.2, 4.3 et leu
   en vigueur depuis le 10/12/2009), avec les mots difficiles expliqués ; plus de recherche Internet à cette étape.
   Nouvelle fonction `encadre_texte()` dans `outils/trame_commun.py`.
 - ENT-4.1 : lignes « détail » du bilan **gardées telles quelles** (la trame fait remplir les trois cases).
+
+## Compte rendu *(rempli par Claude Code, 03/10/2026)*
+
+- **Fichiers** : les 16 fichiers du §2 commités tels quels (« Picard : trames élève ENT-4.1, 4.2, 4.3 et leurs
+  corrigés (déposés par Cowork) ») ; puis `activites/picard-ent41.js`, `picard-ent42.js`, `picard-ent43.js` (champ
+  `trame: { pdf, docx }`, commentaire « Pas de trame » remplacé) et `contenus/corriges/ENT-4.1.js`, `4.2`, `4.3`
+  (import du `CORRIGE` de `ENT-4.x-trame.js`, `trame:` = nom du fichier, items de la trame **après** ceux calculés).
+- **Écart (et pourquoi)** : l'onglet Corrigés regroupe les items **par numéro d'étape** ; les étapes de la trame
+  (1 « Découvrir Picard »…) ont les mêmes numéros que celles de l'écran (1 « Le camion arrive »…), donc elles se
+  seraient mêlées. Les items de la trame reçoivent `etape: '<n> (trame)'` : l'onglet affiche deux blocs, d'abord
+  « Étape 1 — Le camion arrive »…, puis « Étape 1 (trame) — Découvrir Picard »… Rien touché dans `core/`.
+- **Vérifié** : ordre des blocs relu pour les trois corrigés (ENT-4.1 : 34 items, 4.2 : 35, 4.3 : 33) ; les cas
+  « corrigé » existants du bloc `picard` lisent toujours les items calculés. Suite entière **481/481**. Pas
+  d'essai à l'écran de l'onglet Corrigés lui-même.
+- **Un push = en ligne** : les trames sont maintenant téléchargeables depuis le bandeau des trois séances.
+- **Reste ouvert** : aucun. Régénérer une trame : §3 point 3.
+

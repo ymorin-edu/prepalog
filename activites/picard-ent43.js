@@ -8,7 +8,8 @@
 // bilan à la fin. Données dans `contenus/picard-ent43.js`.
 //
 // Pas de `reinitialisable` (réservé aux séances X.1). Pas de `notation` : dix jalons ramenés sur 20.
-// Pas de trame : elle viendra de Cowork après la validation à l'écran.
+// Trame élève Word/PDF déclarée le 03/10/2026, relue et validée par Tristan (générateur dans `outils/`,
+// brief `docs/briefs/PICARD-trames-eleve.md`) ; son corrigé s'ajoute au corrigé calculé (`meta.corrige`).
 
 import { creerEntreprise } from '../core/types/entreprise.js';
 import * as PICARD from '../contenus/picard.js';
@@ -28,6 +29,10 @@ export const meta = {
   immersif: true,
   portee: 'eleve',
   tables: {},
+  trame: {
+    pdf: './contenus/trames/ENT-4.3-picard-reception-de-nuit-trame-eleve.pdf',
+    docx: './contenus/trames/ENT-4.3-picard-reception-de-nuit-trame-eleve.docx',
+  },
   corrige: './contenus/corriges/ENT-4.3.js',
   pret: true,
   ouverture: 'prof',

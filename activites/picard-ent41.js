@@ -12,8 +12,8 @@
 // Comme Boost : jalons et note sur 20 (le suivi ramène les 18 jalons sur 20). Le temps réel passé
 // est mesuré et rangé dans la base (`db.quais['picard-ent41'].reel`, et `detail.quai.reel` du
 // score), sans note, pour caler les seuils de rapidité d'ENT-4.4.
-// Pas de trame : elle viendra de Cowork après la validation à l'écran (déclarer une trame, c'est
-// la valider).
+// Trame élève Word/PDF déclarée le 03/10/2026, relue et validée par Tristan (générateur dans `outils/`,
+// brief `docs/briefs/PICARD-trames-eleve.md`) ; son corrigé s'ajoute au corrigé calculé (`meta.corrige`).
 
 import { creerEntreprise } from '../core/types/entreprise.js';
 import * as PICARD from '../contenus/picard.js';
@@ -34,6 +34,10 @@ export const meta = {
   portee: 'eleve',
   reinitialisable: true,
   tables: {},
+  trame: {
+    pdf: './contenus/trames/ENT-4.1-picard-premier-camion-trame-eleve.pdf',
+    docx: './contenus/trames/ENT-4.1-picard-premier-camion-trame-eleve.docx',
+  },
   corrige: './contenus/corriges/ENT-4.1.js',
   pret: true,
   ouverture: 'prof',

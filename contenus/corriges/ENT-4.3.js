@@ -5,6 +5,12 @@
 
 import { QUAI_ENT43, PALETTES_ENT43, FICHE, LIGNES_DIAG, LIGNES_PROT, BL, HEURE } from '../picard-ent43.js';
 import { jalonsQuai } from '../../core/types/quai.js';
+import { CORRIGE as TRAME } from './ENT-4.3-trame.js';
+
+// Le corrigé de la trame élève (généré, validée par Tristan le 03/10/2026), après celui calculé
+// depuis la séance. Ses étapes sont celles de la trame : marquées « (trame) », sinon l'onglet
+// Corrigés, qui regroupe par numéro d'étape, les mêlerait aux étapes de l'écran (mêmes numéros).
+const DE_LA_TRAME = TRAME.items.map((it) => ({ ...it, etape: `${it.etape} (trame)` }));
 
 const attendus = jalonsQuai({}, QUAI_ENT43).L;
 const attendu = (id) => (attendus.find((l) => l.id === id) || {}).attendu || '';
@@ -21,7 +27,7 @@ const CE_QUIL_FAUT = {
 export const CORRIGE = {
   code: 'ENT-4.3',
   titre: 'Picard — la réception de nuit',
-  trame: '(pas encore de trame : tout se fait à l’écran)',
+  trame: TRAME.trame,
   items: [
     { etape: 1, etapeTitre: 'Contrôler', genre: 'tableau', texte: 'Le dossier de Mathis, palette par palette',
       contexte: `Réception à ${HEURE}, BL ${BL}. La sonde d’aujourd’hui lit environ −21 °C partout : la preuve de N2 est dans la fiche.`,
@@ -49,5 +55,6 @@ export const CORRIGE = {
         `${LIGNES_PROT.quantite} N3 : 3 cartons`,
       ].join(' · '),
       note: 'En vrai : lettre recommandée ou acte d’huissier dans les 3 jours, jours fériés non compris (Code de commerce, art. L133-3).' },
+    ...DE_LA_TRAME,
   ],
 };

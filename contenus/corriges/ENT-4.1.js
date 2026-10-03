@@ -6,6 +6,12 @@
 
 import { QUAI_ENT41, PALETTES_ENT41 } from '../picard-ent41.js';
 import { jalonsQuai, DECISIONS, MOTIFS } from '../../core/types/quai.js';
+import { CORRIGE as TRAME } from './ENT-4.1-trame.js';
+
+// Le corrigé de la trame élève (généré, validée par Tristan le 03/10/2026), après celui calculé
+// depuis la séance. Ses étapes sont celles de la trame : marquées « (trame) », sinon l'onglet
+// Corrigés, qui regroupe par numéro d'étape, les mêlerait aux étapes de l'écran (mêmes numéros).
+const DE_LA_TRAME = TRAME.items.map((it) => ({ ...it, etape: `${it.etape} (trame)` }));
 
 const attendus = jalonsQuai({}, QUAI_ENT41).L;
 const attendu = (id) => (attendus.find((l) => l.id === id) || {}).attendu || '';
@@ -21,7 +27,7 @@ const ALEA = {
 export const CORRIGE = {
   code: 'ENT-4.1',
   titre: 'Picard — le premier camion',
-  trame: '(pas encore de trame : tout se fait à l’écran)',
+  trame: TRAME.trame,
   items: [
     { etape: 1, etapeTitre: 'Le camion arrive', genre: 'question',
       texte: 'Que montre le ticket de l’enregistreur ?',
@@ -41,5 +47,6 @@ export const CORRIGE = {
       texte: 'Dans quel ordre finir la réception ?',
       rep: 'Le froid d’abord, les papiers ensuite : rentrer le lot accepté en chambre froide (le temps hors froid s’arrête), puis écrire les réserves et faire signer le chauffeur. Ne pas ajouter « sous réserve de déballage ».',
       note: 'Parcours juste : 18 jalons, 20 min hors froid (repère 30 min). L’ordre froid / papiers n’est pas noté, seulement enseigné.' },
+    ...DE_LA_TRAME,
   ],
 };

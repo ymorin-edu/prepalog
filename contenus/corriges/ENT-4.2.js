@@ -6,6 +6,12 @@
 
 import { QUAI_ENT42, PALETTES_A, PALETTES_B } from '../picard-ent42.js';
 import { jalonsQuai, DECISIONS, MOTIFS } from '../../core/types/quai.js';
+import { CORRIGE as TRAME } from './ENT-4.2-trame.js';
+
+// Le corrigé de la trame élève (généré, validée par Tristan le 03/10/2026), après celui calculé
+// depuis la séance. Ses étapes sont celles de la trame : marquées « (trame) », sinon l'onglet
+// Corrigés, qui regroupe par numéro d'étape, les mêlerait aux étapes de l'écran (mêmes numéros).
+const DE_LA_TRAME = TRAME.items.map((it) => ({ ...it, etape: `${it.etape} (trame)` }));
 
 // A d'abord : le camion A s'ouvre après les deux tickets (4 min de quai), ses glaces à −17,5 °C.
 const attendus = jalonsQuai({ quais: { [QUAI_ENT42.id]: { minute: 4, ouvertA: 4, palettes: {}, suivants: [{}] } } }, QUAI_ENT42).L;
@@ -26,7 +32,7 @@ const ordre = QUAI_ENT42.ordre;
 export const CORRIGE = {
   code: 'ENT-4.2',
   titre: 'Picard — deux camions, un seul quai',
-  trame: '(pas encore de trame : tout se fait à l’écran)',
+  trame: TRAME.trame,
   items: [
     { etape: 1, etapeTitre: 'Les camions arrivent', genre: 'question',
       texte: 'Que montrent les deux tickets ?',
@@ -60,5 +66,6 @@ export const CORRIGE = {
       texte: 'Dans quel ordre finir chaque réception ?',
       rep: 'Pour chaque camion : le froid d’abord, les papiers ensuite. Rentrer le lot accepté en chambre froide (son temps hors froid s’arrête), puis écrire les réserves et faire signer le chauffeur. Le second camion ne se met à quai qu’une fois le premier reparti (BL signé). Ne jamais ajouter « sous réserve de déballage ».',
       note: `Parcours juste : ${attendus.filter((l) => l.compte).length} jalons. L’ordre froid / papiers n’est pas noté, seulement rappelé au bilan.` },
+    ...DE_LA_TRAME,
   ],
 };
