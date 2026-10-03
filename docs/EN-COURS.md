@@ -7,7 +7,7 @@ est déjà modifié ou inscrit ci-dessous, **elle s'arrête et le dit à Tristan
 
 | Chantier | Fichiers qu'il touche | Depuis |
 |---|---|---|
-| P2 · ENT-4.1 Picard | `activites/picard-ent41.js` (neuf), `activites/index.js`, `contenus/picard-ent41.js`, `contenus/corriges/ENT-4.1.js` (neuf), `outils/test/picard.mjs` | 03/10/2026 |
+| *(personne d'inscrit)* | | |
 
 Rappel : un seul chantier à la fois dans `core/types/tournee.js`, `core/types/grille.js`,
 `core/types/entreprise.js`, `styles/base.css` et `outils/test/boost.mjs` (voir `docs/briefs/COORDINATION-boost.md`).

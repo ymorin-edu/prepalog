@@ -6,7 +6,7 @@
 > Lis docs/briefs/COORDINATION-picard.md puis implémente le brief docs/briefs/ENT-4.1-picard-premier-camion.md (la vue quai doit être livrée). Annonce la durée avant de commencer et dis-moi si un point du brief contredit le code.
 > ```
 
-**Statut** : à implémenter — **après** `MOTEUR-vue-quai.md` (dont c'est la séance pilote)
+**Statut** : livré le 03/10/2026, **fermé aux élèves** (`pret: true, ouverture: 'prof'`) : Tristan l'essaie puis l'ouvre dans « Conduite de séance »
 **Date du brief** : 03/10/2026
 **Conversation d'origine** : Cowork (Opus) ; fiches projet `claude/prepalog-picard-cadrage.md`, `claude/prepalog-picard-4-seances.md` ; doc partagé « Picard — vue d'ensemble des 4 séances »
 
@@ -114,9 +114,23 @@ La séance se joue comme la maquette v8 en guidage, sous le logo Picard, dans le
 
 ## Compte rendu *(rempli par Claude Code à la livraison)*
 
-- **Fichiers créés / modifiés** :
+- **Fichiers créés / modifiés** : `activites/picard-ent41.js` (neuf) ; `activites/index.js` (une ligne dans le registre,
+  une ligne `ENTREPRISES` n° 4 avec le logo) ; `contenus/picard-ent41.js` (étapes, accueil, mail d'accueil) ;
+  `contenus/corriges/ENT-4.1.js` (neuf) ; `contenus/picard.js` (`THEME.papier`) ; `core/types/quai.js` (n'importe plus
+  `ui.js`, pour que le corrigé se charge dans les tests) ; tests : `outils/test/picard.mjs` (+3 cas),
+  `outils/test/socle.mjs` (listes allongées à quatre entreprises), `outils/test/commun.mjs` (types SVG et JPEG).
 - **Écarts par rapport au brief** :
-- **Décisions prises en route** :
-- **Tests** :
-- **Commits** :
-- **Reste ouvert** :
+  - **Charte** : le fond « glacier » est abandonné. L'environnement impose le **fond papier de Prepalog**, quel que soit le
+    réglage du poste ; seul l'accent reste le bleu Picard `#0011AC` (décision de Tristan après essai : illisible sur un
+    poste en mode sombre).
+  - **Corrigé** sans générateur Python : il est calculé à l'ouverture depuis les palettes et les jalons de la vue, donc
+    jamais recopié. Pas de trame déclarée (Cowork, après validation à l'écran).
+  - Le mail d'accueil reprend le texte validé tel quel ; objet ajouté : « Quai 32 : premier camion à 6 h 00 ».
+- **Décisions prises en route** : accueil de séance en 5 étapes (messagerie → quai → papiers → contrôle → froid puis
+  papiers) ; `reinitialisable: true` (séance X.1, base à elle).
+- **Tests** : bloc `picard` 35/35 (dont la séance ouverte depuis l'accueil Logisim et le corrigé, valeurs écrites à la
+  main) ; suite entière **418/418**. Le cas « l'élève ne voit pas la carte d'une entreprise sans séance ouverte » confirme
+  que Picard reste caché aux élèves tant que la séance n'est pas ouverte.
+- **Commits** : `2740b6a` (fond papier), `ea7b3ad` (séance).
+- **Reste ouvert** : le temps réel de guidage est enregistré (`detail.quai.reel`) mais pas encore affiché à l'enseignant ;
+  trame élève (Cowork) ; essai en classe pour caler les seuils d'ENT-4.4.
