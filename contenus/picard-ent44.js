@@ -41,7 +41,8 @@ import { LIEU, PHOTOS, DECHARGEMENT, COUTS, SEUIL_HORS_FROID, AVERTISSEMENT, BON
    └───────────────────────────────────────────────────────────────────────────────────────┘ */
 export const NOTE_ENT44 = {
   reception: 15,                               // points de réception (jalons réussis / jalons × 15)
-  horsFroid: [[20, 3], [25, 2], [30, 1]],      // temps hors froid du lot : ≤ 20 min → 3, ≤ 25 → 2, ≤ 30 → 1
+  horsFroid: [[25, 3], [30, 2], [35, 1]],      // temps hors froid du lot : ≤ 25 min → 3, ≤ 30 → 2, ≤ 35 → 1 (Tristan, 03/10/2026 :
+                                               // 6 palettes, un parcours juste prend déjà 21 min 30)
   reel: [[12, 2], [16, 1]],                    // temps réel : ≤ 12 min → 2, ≤ 16 → 1 (PROVISOIRE)
   tiersTemps: 4 / 3,                           // seuils du temps réel × 4/3 en tiers-temps
 };

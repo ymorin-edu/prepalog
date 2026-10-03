@@ -1357,7 +1357,7 @@ await v('ENT-4.4 : l’élève reçoit son camion (graine posée), aucune aide, 
     [0, false, false], 'aides / détail / repère');
 });
 
-await v('ENT-4.4 : parcours juste → aucun verdict avant la remise, copie 19/20 (21 min 30 hors froid), ramassage = même note', async () => {
+await v('ENT-4.4 : parcours juste → aucun verdict avant la remise, copie 20/20 (21 min 30 hors froid ≤ 25), ramassage = même note', async () => {
   await monter44(pg2);
   await jouer44(pg2);
   await pg2.evaluate((id) => { window.__q.db.quais[id].reel = 600; }, ID44);
@@ -1369,7 +1369,7 @@ await v('ENT-4.4 : parcours juste → aucun verdict avant la remise, copie 19/20
   await pg2.waitForFunction(() => !!window.__q.remis);
   const r = await pg2.evaluate(() => window.__q.remis);
   const q = r.detail.quai;
-  egal([r.score, r.max, q.jalons, q.sur, q.horsFroid, q.reelPts, q.graine, q.jeu.length, q.jeu.every((l) => l.ok)], [19, 20, 20, 20, 2, 2, 'eleve-A', 20, true], 'copie');
+  egal([r.score, r.max, q.jalons, q.sur, q.horsFroid, q.reelPts, q.graine, q.jeu.length, q.jeu.every((l) => l.ok)], [20, 20, 20, 20, 3, 2, 'eleve-A', 20, true], 'copie');
   egal((await etat44(pg2)).froid, 21.5, 'temps hors froid');
   vrai((await texte(pg2, `${Z} [data-q-bilan]`)).includes('Ton enseignant te donnera la note'), 'l’élève voit une correction');
   const ramasse = await pg2.evaluate(() => window.__q.A.noter(JSON.parse(JSON.stringify(window.__q.db))));
@@ -1424,10 +1424,13 @@ await v('ENT-4.4 : note — valeurs du brief sur le camion de l’élève (rapid
       treizeTiers: avec((e) => { e.froid = 20; e.reel = 800; e.tiersTemps = true; }),
       dixSept: avec((e) => { e.froid = 20; e.reel = 17 * 60; }),
       dixSeptTiers: avec((e) => { e.froid = 20; e.reel = 17 * 60; e.tiersTemps = true; }),
+      // Hors froid (Tristan, 03/10/2026) : ≤ 25 → 3, ≤ 30 → 2, ≤ 35 → 1, au-delà 0.
+      froid27: avec((e) => { e.froid = 27; e.reel = 600; }),
+      froid36: avec((e) => { e.froid = 36; e.reel = 600; }),
     };
   }, ID44);
   // 19/20 jalons = 14,25 ; rapidité (3 + 2) × 5/6 = 4,17 ; BL non signé : réception incomplète, 0 de rapidité.
-  egal(n, { rapide: 20, uneFausse: 18.42, nonSigne: 14.25, treize: 19, treizeTiers: 20, dixSept: 18, dixSeptTiers: 19 }, 'notes');
+  egal(n, { rapide: 20, uneFausse: 18.42, nonSigne: 14.25, treize: 19, treizeTiers: 20, dixSept: 18, dixSeptTiers: 19, froid27: 19, froid36: 17 }, 'notes');
 });
 
 await v('ENT-4.4 : après rechargement, l’élève garde son camion et son travail ; la graine n’est jamais remplacée', async () => {
@@ -1490,7 +1493,7 @@ await v('ENT-4.4 : corrigé — par élève dans l’onglet Corrigés (camion, j
   const t = await texte(p, '[data-corr-eleve]');
   vrai(t.includes('CD-26-1810') && t.includes('TAP-750') && t.includes('étiquette TAF-750'), 'camion de l’élève : ' + t.slice(0, 300));
   egal(await p.$$eval('[data-corr-eleve] table >> nth=1', (x) => x[0].querySelectorAll('tbody tr').length), 20, 'jalons');
-  vrai(!t.includes('✗ faux') && t.includes('19 / 20'), 'jalons ou note : ' + t.slice(-400));
+  vrai(!t.includes('✗ faux') && t.includes('20 / 20'), 'jalons ou note : ' + t.slice(-400));
   await p.selectOption('#corrEleve', uids.absent);
   await p.waitForFunction(() => document.querySelector('[data-corr-eleve]').textContent.includes('pas encore ouvert'));
   egal(await p.$$eval('[data-corr-eleve] table', (x) => x.length), 1, 'jalons d’un élève qui n’a pas ouvert');

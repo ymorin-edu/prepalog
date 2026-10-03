@@ -138,8 +138,8 @@ ne sait pas le faire — le dire au compte rendu). `contenus/corriges/ENT-4.4.js
     21 min 30 hors froid (6 min 30 de déchargement + 6 sondes + 6 comptages + 3 min pour rentrer le lot) ; un élève
     prudent qui lit les 6 étiquettes et fait le tour de chaque palette arrive vers 27-28 min. Avec « ≤ 20 → 3 », les
     3 points sont hors d'atteinte : le parcours juste et rapide fait **19/20**, pas 20. Les seuils du brief sont
-    gardés tels quels dans `NOTE_ENT44` ; proposition à trancher : **≤ 25 → 3, ≤ 30 → 2, ≤ 35 → 1**. Le test « juste
-    rapide → 20 » est écrit avec un temps hors froid ramené à 20 min dans l'état.
+    d'abord gardés ; **tranché par Tristan le 03/10/2026 : ≤ 25 → 3, ≤ 30 → 2, ≤ 35 → 1** (dans `NOTE_ENT44`). Le
+    parcours juste et rapide fait désormais 20/20.
   - Le suivi de classe n'affiche pas le `detail` : le corrigé par élève est donc une **vue de l'onglet Corrigés**
     (choisir un élève du groupe actif : son camion, l'attendu, sa réponse jalon par jalon, sa note), et le détail
     est AUSSI rangé dans la copie (`detail.quai.jeu`, `detail.quai.graine`).
@@ -174,7 +174,7 @@ ne sait pas le faire — le dire au compte rendu). `contenus/corriges/ENT-4.4.js
   voisins ; corrigé par élève dans l'onglet ; ouverture dans Logisim. Éprouvés à l'envers : graine identique pour
   tous → 8 cas tombent ; second motif ignoré → le cas « deux problèmes » tombe.
 - **Commits** : voir `git log` (« ENT-4.4 Picard : … »).
-- **Reste ouvert** : seuils du temps réel (12 / 16 min, provisoires) et du hors froid (voir écart ci-dessus), à
-  régler dans `NOTE_ENT44` avant le jour de l'évaluation ; le mode réel (Firebase) n'est pas couvert par la suite :
+- **Validé par Tristan le 03/10/2026** (choix faits seul ci-dessus compris). **Reste ouvert** : seuils du temps réel
+  (12 / 16 min, provisoires), à régler dans `NOTE_ENT44` avant le jour de l'évaluation ; le mode réel (Firebase) n'est pas couvert par la suite :
   la copie porte maintenant un `detail.quai.jeu` de 20 objets (taille modeste, pas de tableau de tableaux) ;
   réutilisation par Cdiscount ENT-2.5 : voir la fiche séance (une vue inventaire tirée reste à brancher).
