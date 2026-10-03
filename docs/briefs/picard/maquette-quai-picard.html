@@ -1,0 +1,1107 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maquette — le quai de réception (Picard) v2</title>
+<style>
+:root{
+  --fond:#eef5f7; --panneau:#fbfdfd; --encre:#2b2a27; --gris:#6d6a63; --trait:#d9d1c3;
+  --accent:#0011ac; --accent-doux:rgba(0,17,172,.08); --marque:#000bf7;
+  --vert:#2f7d4a; --rouge:#b3261e; --terre:#a8650f; --terre-doux:rgba(168,101,15,.12);
+  --froid:#2a6fb0; --chaud:#c4421a;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --fond:#1d1c1a; --panneau:#262522; --encre:#ece7de; --gris:#a9a399; --trait:#3d3a35;
+    --accent:#9aa6ff; --accent-doux:rgba(154,166,255,.14); --marque:#9aa6ff;
+    --vert:#6cc48b; --rouge:#ff8a80; --terre:#e3a54a; --terre-doux:rgba(227,165,74,.14);
+    --froid:#7fb6ea; --chaud:#ff8a65;
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--fond);color:var(--encre);font:15px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
+.bandeau-maquette{background:var(--terre-doux);border-bottom:1px solid var(--terre);padding:8px 16px;font-size:13px}
+.bandeau-maquette b{color:var(--terre)}
+header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--trait);background:var(--panneau)}
+header h1{font-size:18px;margin:0;color:var(--accent)}
+header{border-bottom:3px solid var(--marque)!important}
+.logo-marque{height:46px;width:auto;display:block}
+.titre-marque{display:flex;gap:12px;align-items:center}
+.sous,.note{color:var(--gris);font-size:13px}
+.modes{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.modes button,.btn{font:inherit;border:1px solid var(--trait);background:var(--panneau);color:var(--encre);padding:6px 12px;border-radius:6px;cursor:pointer}
+.modes button.actif{border-color:var(--accent);color:var(--accent);font-weight:600;box-shadow:inset 0 0 0 1px var(--accent)}
+.btn:hover:not(:disabled){border-color:var(--accent)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.principal{border-color:var(--accent);color:var(--accent);font-weight:600}
+.cout{color:var(--gris);font-size:12px}
+main{max-width:1150px;margin:0 auto;padding:16px;display:grid;gap:16px}
+.horloges{display:flex;flex-wrap:wrap;gap:12px;align-items:stretch}
+.horloge{background:var(--panneau);border:1px solid var(--trait);border-radius:8px;padding:10px 14px;min-width:200px}
+.horloge .lib{font-size:12px;color:var(--gris);text-transform:uppercase;letter-spacing:.04em}
+.horloge .val{font-size:26px;font-weight:700;font-variant-numeric:tabular-nums}
+.horloge.chrono .val{color:var(--accent)}
+.horloge.chrono.urgent .val{color:var(--rouge)}
+.horloge.froid{flex:1;min-width:280px}
+.jauge{height:14px;border-radius:7px;background:var(--trait);overflow:hidden;margin:6px 0 2px}
+.jauge i{display:block;height:100%;background:linear-gradient(90deg,var(--froid),var(--terre) 70%,var(--chaud))}
+.depasse{color:var(--chaud);font-weight:600}
+.carte{background:var(--panneau);border:1px solid var(--trait);border-radius:8px;padding:14px}
+.carte h2{font-size:16px;margin:0 0 8px}
+.etape{display:inline-block;font-size:12px;color:var(--accent);border:1px solid var(--accent);border-radius:20px;padding:1px 8px;margin-right:6px}
+.grille2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media (max-width:820px){.grille2{grid-template-columns:1fr}}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{border-bottom:1px solid var(--trait);padding:5px 6px;text-align:left}
+th{color:var(--gris);font-weight:600}
+.reconst{font-size:11px;color:var(--gris);margin-top:6px;font-style:italic}
+.qcm label{display:block;padding:4px 0;cursor:pointer}
+.onglets{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.onglets button{font:inherit;font-size:13px;border:1px solid var(--trait);background:var(--fond);color:var(--encre);padding:5px 10px;border-radius:6px;cursor:pointer}
+.onglets button.actif{border-color:var(--accent);color:var(--accent);font-weight:600}
+.onglets .etat{font-size:11px;color:var(--gris);margin-left:4px}
+.poste{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:16px}
+@media (max-width:820px){.poste{grid-template-columns:1fr}}
+.scene{background:var(--fond);border:1px solid var(--trait);border-radius:8px;padding:8px;text-align:center}
+.scene svg{width:100%;max-width:460px;height:auto}
+.vue-lib{font-size:13px;color:var(--gris);margin:4px 0 8px}
+.outils{display:grid;gap:10px;align-content:start}
+.constat{font-size:13px;border-left:3px solid var(--accent);padding:4px 8px;background:var(--accent-doux)}
+.champ{display:grid;gap:4px;font-size:13px}
+.champ input,.champ select{font:inherit;font-size:14px;padding:4px 6px;border:1px solid var(--trait);border-radius:4px;background:var(--panneau);color:var(--encre);max-width:100%}
+.champ input{width:110px}
+.ligne{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.ok{color:var(--vert);font-weight:600}
+.ko{color:var(--rouge);font-weight:600}
+.alerte{border:1px solid var(--chaud);border-radius:6px;padding:8px 10px;font-size:13px}
+.aide{border:1px dashed var(--accent);border-radius:6px;padding:8px 10px;font-size:13px;color:var(--gris)}
+.journal{font-size:12px;color:var(--gris);max-height:110px;overflow:auto;border-top:1px dashed var(--trait);margin-top:10px;padding-top:6px}
+.cache{display:none!important}
+.zoom{border:1px solid var(--trait);border-radius:8px;padding:10px;background:var(--fond)}
+.etiq{background:#f6f1e4;color:#222;border:1px solid #999;border-radius:4px;padding:10px 12px;font:13px/1.5 ui-monospace,Consolas,monospace;max-width:340px}
+.etiq b{font-family:system-ui,sans-serif}
+.etiq .code{letter-spacing:2px;font-size:11px;border-top:1px dashed #999;margin-top:6px;padding-top:4px}
+.detail{display:grid;grid-template-columns:auto auto;gap:4px 10px;align-items:center;font-size:13px}
+.detail input{width:80px}
+.stepper{display:flex;gap:6px;flex-wrap:wrap}
+.stepper button{font:inherit;font-size:14px;border:1px solid var(--trait);background:var(--panneau);color:var(--gris);padding:8px 12px;border-radius:20px;cursor:pointer}
+.stepper button.actif{border-color:var(--accent);color:var(--accent);font-weight:600}
+.stepper button:disabled{opacity:.45;cursor:not-allowed}
+.photo{position:relative;border-radius:8px;overflow:hidden;background:linear-gradient(135deg,#5b6b78,#2f3a44);min-height:220px;margin-bottom:12px}
+.photo img{display:block;width:100%;height:260px;object-fit:cover}
+.photo .photo-vide{display:none}
+.photo.sans-photo img{display:none}
+.photo.sans-photo .photo-vide{display:flex;flex-direction:column;align-items:center;justify-content:center;height:260px;color:#e8e2d6;font-size:15px;text-align:center}
+.photo-vide span{font-size:12px;opacity:.8;margin-top:6px}
+.photo-legende{position:absolute;left:0;right:0;bottom:0;padding:8px 12px;background:rgba(20,24,30,.62);color:#f1ece3;font-size:14px}
+.chauffeur{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--trait);border-radius:8px;padding:8px 12px;margin-bottom:12px;background:var(--fond)}
+.chauffeur p{margin:4px 0}
+.doc{border:1px solid var(--trait);border-radius:8px;padding:10px;background:var(--fond)}
+.doc-titre{font-weight:600;margin-bottom:8px}
+.ticket{background:#f3efe6;color:#222;font:12px/1.35 ui-monospace,Consolas,monospace;padding:10px 14px;margin:10px 0;max-width:300px;border-left:1px dashed #aaa;border-right:1px dashed #aaa;box-shadow:0 1px 3px rgba(0,0,0,.15);white-space:pre}
+.rappel-bl{margin-bottom:10px;font-size:13px}
+.ques{border:1px dashed var(--terre);border-radius:8px;padding:10px 14px;font-size:13px;background:var(--terre-doux)}
+.ques h2{font-size:14px;margin:0 0 6px;color:var(--terre)}
+.ques ol{margin:0;padding-left:18px}
+.quai2{position:relative;border-radius:8px;overflow:hidden;background:linear-gradient(135deg,#5b6b78,#2f3a44);margin-bottom:12px}
+.quai2 svg{display:block;width:100%;height:auto}
+.quai2 .photo-legende{transition:opacity .3s}
+@media (max-width:640px){.quai2 .photo-legende{position:static;font-size:13px}}
+.barre2{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+.compteur2{font-size:15px}
+.compteur2 b{font-size:20px;font-variant-numeric:tabular-nums}
+.pastilles2{display:inline-flex;gap:4px;vertical-align:middle;margin-left:6px}
+.pastilles2 i{width:26px;height:18px;border-radius:3px;border:1px solid var(--trait);font:600 10px/16px system-ui;font-style:normal;text-align:center;color:var(--gris)}
+.pastilles2 i.sur{background:#d9b77e;border-color:#8a6634;color:#3b2a12}
+.bl4{background:#f6f1e4;color:#222}
+.bl4 th{color:#555}.bl4 th,.bl4 td{border-color:#cfc6b4}
+.zone-res{border:1px solid #bbb;border-radius:4px;min-height:70px;margin-top:10px;padding:6px 10px}
+.lib-res{font-size:12px;color:#555}
+.manuscrit{font-family:"Segoe Print","Bradley Hand","Comic Sans MS",cursive;color:#1d3a7a;font-size:15px;line-height:1.6}
+.signatures{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px}
+.sig{height:54px;border-bottom:1px solid #999}
+.sig svg{height:54px;width:auto}
+.res-ligne{border-top:1px dashed var(--trait);padding:8px 0;display:grid;gap:4px;font-size:13px}
+.res-ligne input{width:120px;font:inherit;padding:3px 6px;border:1px solid var(--trait);border-radius:4px;background:var(--panneau);color:var(--encre)}
+#cf4{width:100%;height:auto;background:#2a3238;border-radius:6px}
+</style>
+</head>
+<body>
+<div class="bandeau-maquette"><b>Maquette jetable, version 8 (en étapes)</b> — réels : Picard, son logo, l'entrepôt de Sainghin-en-Mélantois (exploité par GXO) et le contrôle de température à chaque réception. Le quai 32 et son numéro sont un décor. Fournisseur, transporteur, produits, colisages, températures, durées et seuils sont <b>construits pour la démonstration</b>. Rien n'est enregistré.</div>
+
+<header>
+  <div class="titre-marque">
+    <img class="logo-marque" src="photos/logo-picard.svg" alt="Picard">
+    <div>
+    <h1>Entrepôt Picard de Sainghin-en-Mélantois (59) — Quai 32, réception</h1>
+    <div class="sous">Livraison « Surgelés du Littoral » (fictif) · camion frigorifique Transports Givrex (fictif)</div>
+    </div>
+  </div>
+  <div class="modes" role="group" aria-label="Mode de la séance">
+    <span class="note">Voir la séance comme :</span>
+    <button id="mGuidage" class="actif">Guidage / entraînement</button>
+    <button id="mEval">Évaluation (chrono)</button>
+    <label class="note" id="lTiers" style="display:none"><input type="checkbox" id="tiers"> élève avec tiers-temps</label>
+  </div>
+</header>
+
+<main>
+  <div class="horloges">
+    <div class="horloge">
+      <div class="lib">Horloge du quai (temps simulé)</div>
+      <div class="val" id="hQuai">06:00</div>
+      <div class="note">avance seulement quand tu fais un geste</div>
+    </div>
+    <div class="horloge froid">
+      <div class="lib">Temps hors froid du lot</div>
+      <div class="val" id="hFroid">— <span class="note">camion fermé</span></div>
+      <div class="jauge"><i id="jFroid" style="width:0"></i></div>
+      <div class="note" id="nFroid">démarre quand le transporteur décharge · repère construit : <span id="seuil"></span> min (quai réfrigéré +4 °C)</div>
+    </div>
+    <div class="horloge chrono cache" id="boiteChrono">
+      <div class="lib">Temps passé (temps réel)</div>
+      <div class="val" id="hChrono">00:00</div>
+      <div class="note" id="nChrono">mesuré, ne coupe rien : il compte dans la note de rapidité</div>
+    </div>
+  </div>
+
+  <nav class="stepper" id="stepper" aria-label="Étapes de la réception">
+    <button data-step="1" class="actif">① Le camion arrive</button>
+    <button data-step="2">② Déchargement</button>
+    <button data-step="3">③ Contrôle des palettes</button>
+    <button data-step="4">④ Réserves et chambre froide</button>
+  </nav>
+
+  <section class="carte etape-ecran" data-ecran="1">
+    <div class="photo" id="photo1">
+      <img src="photos/quai-remorques.jpg" alt="Remorques frigorifiques à quai devant un entrepôt" onerror="this.parentNode.classList.add('sans-photo')">
+      <div class="photo-vide">Emplacement photo : remorques à quai<br><span>déposer <b>quai-remorques.jpg</b> dans un dossier <b>photos</b> à côté de cette maquette</span></div>
+      <div class="photo-legende">06:00 — Quai 32. Le camion de Transports Givrex (fictif) vient de se mettre à quai, portes fermées.</div>
+    </div>
+    <div class="chauffeur">
+      <svg viewBox="0 0 60 60" width="48" height="48" aria-hidden="true"><circle cx="30" cy="20" r="11" fill="var(--trait)"/><path d="M8 58c2-14 11-22 22-22s20 8 22 22z" fill="var(--trait)"/></svg>
+      <p><b>Le chauffeur :</b> « Bonjour, livraison Surgelés du Littoral pour le quai 32. Voilà mon bon de livraison et le ticket de l'enregistreur. Je peux ouvrir ? »</p>
+    </div>
+    <div class="grille2">
+      <div class="doc">
+        <div class="doc-titre">📄 Bon de livraison</div>
+        <table>
+          <thead><tr><th>Palette</th><th>Réf.</th><th>Désignation</th><th>Cartons</th></tr></thead>
+          <tbody id="bl"></tbody>
+        </table>
+        <div class="reconst">BL n° SL-26-1184 — Document pédagogique, reconstitution, non contractuel.</div>
+      </div>
+      <div class="doc">
+        <div class="doc-titre">🧾 Ticket de l'enregistreur de température</div>
+        <button class="btn" id="bCourbe">Lire le ticket <span class="cout">· 2 min</span></button>
+        <div id="zoneCourbe" class="cache">
+          <div class="ticket" id="ticket"></div>
+          <div class="qcm">
+            <b>Ce que montre le ticket :</b>
+            <label><input type="radio" name="courbe" value="rien"> Rien à signaler, la température est restée stable</label>
+            <label><input type="radio" name="courbe" value="bref"> Un pic très bref, sans conséquence</label>
+            <label><input type="radio" name="courbe" value="long"> Une remontée qui a duré : je la signale et je sonde chaque palette à cœur</label>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="note" style="margin-top:12px">Tant que les portes sont fermées, la marchandise est au froid : c'est le bon moment pour lire les papiers.</p>
+    <p><button class="btn principal" id="bDecharger">« Oui, vous pouvez ouvrir et décharger »</button> <span class="cout">le chauffeur pose toutes les palettes sur le quai ; le temps hors froid démarre · durée : <span id="dureeDech1"></span></span></p>
+  </section>
+
+  <section class="carte etape-ecran cache" data-ecran="2">
+    <div class="quai2">
+      <svg id="quai2" viewBox="0 190 1280 663" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Le quai 32 : la porte s'ouvre, le chauffeur sort les palettes une à une au transpalette">
+        <defs>
+          <clipPath id="cPorte"><rect x="455" y="352" width="331" height="233"/></clipPath>
+          <clipPath id="cPorte2"><rect x="455" y="352" width="331" height="233"/></clipPath>
+          <filter id="flou" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="16"/></filter>
+          <linearGradient id="film" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#fff" stop-opacity=".38"/><stop offset=".45" stop-color="#fff" stop-opacity=".06"/>
+            <stop offset=".6" stop-color="#fff" stop-opacity=".26"/><stop offset="1" stop-color="#fff" stop-opacity=".05"/>
+          </linearGradient>
+          <linearGradient id="ombreSol" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#000" stop-opacity=".35"/><stop offset="1" stop-color="#000" stop-opacity="0"/></linearGradient>
+        </defs>
+        <image href="photos/quai-interieur.jpg" x="0" y="0" width="1280" height="853"/>
+        <g clip-path="url(#cPorte)">
+          <g id="remorque"></g>
+          <g id="porte"><image href="photos/quai-interieur.jpg" x="0" y="0" width="1280" height="853" clip-path="url(#cPorte2)"/></g>
+        </g>
+        <g id="afficheur" aria-label="Afficheur de température du quai">
+          <rect x="800" y="366" width="96" height="54" rx="4" fill="#1b2228" stroke="#8d969c" stroke-width="2"/>
+          <text x="848" y="382" text-anchor="middle" font-size="10" fill="#c9d2d8" font-family="system-ui,sans-serif" letter-spacing="1">QUAI 32</text>
+          <text x="848" y="408" text-anchor="middle" font-size="18" font-weight="700" fill="#8fd0ff" font-family="ui-monospace,Consolas,monospace">+4,0 °C</text>
+        </g>
+        <g id="horlogeMur" aria-label="Horloge du quai">
+          <rect x="800" y="430" width="96" height="44" rx="4" fill="#1b2228" stroke="#8d969c" stroke-width="2"/>
+          <text id="horlogeLib" x="848" y="444" text-anchor="middle" font-size="9" fill="#c9d2d8" font-family="system-ui,sans-serif" letter-spacing="1">HEURE</text>
+          <text id="horlogeVal" x="848" y="466" text-anchor="middle" font-size="18" font-weight="700" fill="#ffd27a" font-family="ui-monospace,Consolas,monospace">06:00</text>
+        </g>
+        <g id="brume" filter="url(#flou)"></g>
+        <g id="posees"></g>
+        <g id="mobile"></g>
+      </svg>
+      <div class="photo-legende" id="leg2">Le camion est à quai, portes fermées.</div>
+    </div>
+    <div class="barre2">
+      <div><div class="compteur2">Palettes sur le quai : <b id="nb2">0 / 5</b><span class="pastilles2" id="past2"></span></div><div class="note">Durée du déchargement : <b id="dureeDech2"></b> de temps du quai</div></div>
+      <div class="ligne">
+        <button class="btn" id="bPasser2">⏩ Passer l'animation</button>
+        <button class="btn cache" id="bRevoir2">↺ Revoir le déchargement</button>
+        <button class="btn principal" id="bVers3" disabled>Contrôler les palettes →</button>
+      </div>
+    </div>
+    <p class="aide" id="aide2" style="margin-top:12px">Le quai est réfrigéré (<b>+4 °C</b>, voir l'afficheur à droite de la porte), mais c'est bien plus chaud que la remorque à −20 °C. Dès que la porte s'ouvre, <b>tout le lot sort du froid</b> : regarde la jauge en haut, elle a démarré. Le chauffeur pose les palettes ; à toi ensuite de les contrôler <b>vite et bien</b>, chaque geste coûte du temps.</p>
+  </section>
+
+  <section class="carte etape-ecran cache" id="carteQuai" data-ecran="3">
+    <h2><span class="etape">3</span>Le quai : contrôler chaque palette</h2>
+    <div id="quaiFerme" class="note">Le camion n'est pas encore déchargé.</div>
+    <div id="quaiOuvert" class="cache">
+      <div class="onglets" id="onglets" role="tablist"></div>
+      <details class="rappel-bl"><summary>📄 Revoir le bon de livraison</summary><table><thead><tr><th>Palette</th><th>Réf.</th><th>Désignation</th><th>Cartons</th></tr></thead><tbody id="bl2"></tbody></table></details>
+      <div class="poste">
+        <div class="scene">
+          <svg id="palette3d" viewBox="0 0 460 380" role="img" aria-label="Palette vue en trois dimensions"></svg>
+          <div class="vue-lib" id="vueLib"></div>
+          <button class="btn" id="bTourner">↻ Faire le tour de la palette <span class="cout">· 30 s</span></button>
+        </div>
+        <div class="outils">
+          <div class="aide" id="aideComptage">Pour compter sans tout compter : combien de cartons dans une couche ? combien de couches ? Puis regarde bien la couche du dessus.</div>
+          <div class="ligne"><button class="btn" id="bSonder">Sonder à cœur <span class="cout">· 1 min</span></button><span id="rSonde"></span></div>
+          <div class="zoom" id="zoneZoom"><span class="note">🔍 Clique sur l'étiquette d'un carton pour la lire de près (30 s).</span></div>
+          <div class="aide" id="regleCouches">Règle du quai : sur une palette, toutes les couches <b>sous la couche du dessus</b> sont complètes. Les cartons que tu ne vois pas au cœur sont donc bien là. Le carton marqué <b>P1, P2…</b> te sert de repère quand tu fais le tour.</div>
+          <div class="detail" id="detailCompte">
+            <label for="dCouche">Cartons dans une couche complète</label><input id="dCouche" type="number" min="0">
+            <label for="dCouches">Nombre de couches</label><input id="dCouches" type="number" min="0">
+            <label for="dManque">Cartons manquants dans la couche du dessus</label><input id="dManque" type="number" min="0">
+          </div>
+          <div class="champ">
+            <label for="iCompte">Total : cartons comptés sur cette palette</label>
+            <div class="ligne"><input id="iCompte" type="number" min="0" inputmode="numeric"><button class="btn" id="bCompte">Noter le comptage <span class="cout">· 1 min</span></button></div>
+            <span id="rCompte" class="note"></span>
+          </div>
+          <div class="champ"><label for="sDecision">Décision</label><select id="sDecision"></select></div>
+          <div class="champ"><label for="sMotif">Motif de la réserve ou du refus</label><select id="sMotif"></select></div>
+          <button class="btn principal" data-aller="4">Contrôles terminés → réserves et chambre froide</button>
+        </div>
+      </div>
+      <div class="journal" id="journal" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <section class="carte etape-ecran cache" data-ecran="4">
+    <h2><span class="etape">4</span>Rentrer le lot en chambre froide, écrire les réserves, faire signer</h2>
+    <p class="aide" id="aide4">Règle du quai : <b>le froid d'abord, les papiers ensuite</b>. 1) <b>Rentre le lot</b> accepté en chambre froide (le temps hors froid s'arrête). 2) <b>Écris tes réserves sur le BL</b> et fais-les signer par le chauffeur. Le chauffeur peut attendre ; les surgelés, non.<br>
+    Une réserve doit être <b>précise</b> : quelle palette, quoi, combien. « Sous réserve de déballage » ne vaut rien : ce n'est pas une réserve.</p>
+    <div class="alerte cache" id="chef4" role="alert" style="margin-bottom:12px">
+      <p style="margin:0 0 6px"><b>Le chef de quai :</b> « Attends ! Tes palettes sont toujours sur le quai. <b>Rentre d'abord le lot accepté en chambre froide</b> : le chauffeur, lui, peut attendre cinq minutes ; les surgelés, non. Les papiers, tu les feras juste après. »</p>
+      <button class="btn principal" id="bChefRentrer">D'accord, je rentre le lot d'abord</button>
+      <button class="btn" id="bChefPapiers">J'écris quand même les réserves</button>
+    </div>
+    <div class="alerte cache" id="chef4b" role="alert" style="margin-bottom:12px"><b>Le chef de quai :</b> « « Sous réserve de déballage », ça ne te protège de rien : ça ne dit ni quoi, ni combien, ni sur quelle palette. Ce sont tes réserves précises qui comptent. »</div>
+    <div class="grille2">
+      <div class="doc">
+        <div class="doc-titre">🧊 Chambre froide n° 2</div>
+        <svg id="cf4" viewBox="0 0 640 300" role="img" aria-label="Le quai et l'entrée de la chambre froide"></svg>
+        <p id="etatCf" class="note"></p>
+        <button class="btn principal" id="bRentrer">Rentrer le lot accepté en chambre froide <span class="cout">· 3 min de manutention</span></button>
+        <p class="note">Les palettes refusées restent au quai et repartent dans le camion.</p>
+      </div>
+      <div class="doc">
+        <div class="doc-titre">✍️ Tes réserves</div>
+        <div id="formRes"></div>
+        <label class="res-ligne" style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="cDeballage"> Ajouter la mention « Sous réserve de déballage »</label>
+        <div class="ligne" style="margin-top:8px"><button class="btn" id="bEcrire">Écrire les réserves sur le BL <span class="cout" id="coutEcrire"></span></button></div>
+      </div>
+    </div>
+    <div class="doc bl4" style="margin-top:16px">
+      <div class="doc-titre">📄 Bon de livraison n° SL-26-1184 — exemplaire du destinataire</div>
+      <table><thead><tr><th>Palette</th><th>Réf.</th><th>Désignation</th><th>Cartons</th></tr></thead><tbody id="bl4"></tbody></table>
+      <div class="zone-res"><div class="lib-res">Réserves du destinataire :</div><div id="lignesRes" class="manuscrit"></div></div>
+      <div class="signatures">
+        <div><div class="lib-res">Le réceptionnaire (Picard, Quai 32)</div><div id="sigMoi" class="sig"></div></div>
+        <div><div class="lib-res">Le chauffeur (Transports Givrex)</div><div id="sigChauffeur" class="sig"></div></div>
+      </div>
+      <div class="reconst">Document pédagogique, reconstitution, non contractuel.</div>
+    </div>
+    <div class="chauffeur" id="parole4" style="margin-top:12px"><svg viewBox="0 0 60 60" width="40" height="40" aria-hidden="true"><circle cx="30" cy="20" r="11" fill="var(--trait)"/><path d="M8 58c2-14 11-22 22-22s20 8 22 22z" fill="var(--trait)"/></svg><p id="parole4txt"></p></div>
+    <p class="ligne"><button class="btn" id="bSigner">Faire signer le chauffeur <span class="cout">· 1 min</span></button>
+      <button class="btn principal" id="bValider" disabled>Clore la réception</button></p>
+    <div id="bilan"></div>
+  </section>
+
+  <section class="ques">
+    <h2>Pour Tristan : ce qui a changé et ce qu'il faut essayer</h2>
+    <ol>
+      <li><b>Nouveau : un écran par étape</b>. Étape 1 : photo du quai (emplacement prévu), le chauffeur te tend le BL et le <b>ticket imprimé</b> de son enregistreur (au lieu de la courbe). </li>
+      <li><b>Nouveau : étape 2, le déchargement animé</b> (photo du quai intérieur). La porte du quai se lève, l'air froid s'échappe et coule au sol, le chauffeur sort les 5 palettes une à une au transpalette et les pose de part et d'autre de l'allée. Le temps hors froid démarre à l'ouverture de la porte ; <b>le déchargement dure selon le nombre de palettes</b> : 30 s d'ouverture + 1 min par palette, soit 5 min 30 ici (valeurs construites, regroupées dans <code>DECHARGEMENT</code> pour servir aux exercices de planification de quai). <b>Quai réfrigéré à +4 °C</b> (afficheur sur le mur) et <b>repère hors froid de 30 min</b> (construit) : un parcours juste prend ~20 min, il reste de la marge ; l'élève qui traîne dépasse. Réglementaire (vérifié) : −18 °C à cœur, −15 °C toléré brièvement au déchargement, aucune durée en minutes dans les textes. Bouton « Passer » pour les élèves qui recommencent ; « Revoir » ne coûte rien.</li>
+      <li><b>Le transporteur décharge tout d'un coup</b> : un seul temps hors froid pour le lot. Lire l'enregistreur <b>avant</b> de faire décharger ne coûte rien au froid ; le lire après, si.</li>
+      <li><b>Compter</b> : la palette est dessinée en 3D, l'élève compte (couches × cartons par couche, couche du dessus) et saisit son nombre. P1 a une couche du dessus incomplète mais conforme au BL ; P4 a deux cartons en moins, dont un dans le coin du fond.</li>
+      <li><b>Faire le tour</b> : les cartons écrasés de P2 ne se voient que d'un côté.</li>
+      <li><b>L'étiquette</b> : clique sur la petite étiquette d'un carton pour la lire. P5 cache son anomalie là : la référence ne correspond pas au BL.</li>
+      <li><b>Repère</b> : en guidage, le carton le plus haut à gauche en vue de face porte le numéro de la palette (P1, P2…). Fais le tour : il suit le carton. Absent en évaluation.</li>
+      <li>En guidage, la <b>règle des couches</b> et le <b>détail du comptage</b> sont affichés ; en évaluation, seulement le total.</li>
+      <li><b>Nouveau : étape 4</b>. Deux tâches dans l'ordre choisi par l'élève : <b>rentrer le lot</b> accepté en chambre froide (3 min, le temps hors froid s'arrête) et <b>écrire les réserves</b> (1 min par ligne) puis <b>faire signer le chauffeur</b> (1 min). Chaque réserve demande la donnée qui la rend précise : température relevée à la sonde (P3), référence lue sur l'étiquette (P5), nombre de cartons écrasés (P2) ou manquants (P4). Les lignes s'écrivent « à la main » sur le BL. En guidage, le chauffeur refuse de signer une réserve vide. Bilan : une ligne par réserve attendue, signature, lot rentré.</li>
+      <li><b>Nouveau (v7) : charte Picard</b> — logo officiel (picard.fr, empreinte vérifiée), bleu Picard <code>#0011AC</code> en accent (relevé sur le site ; le logo est en <code>#000BF7</code>), fond bleu glacier très pâle ; entrepôt réel nommé.</li>
+      <li><b>Nouveau (v8) : le chrono mesure, il ne coupe plus</b>. Note d'évaluation = 15 pts de réception (jalons) + 5 pts de rapidité : 3 sur le temps hors froid (≤ 20 min : 3, ≤ 25 : 2, ≤ 30 : 1) et 2 sur le temps réel (≤ 12 min : 2, ≤ 16 : 1 ; × 4/3 en tiers-temps). Rapidité seulement si la réception est complète (tout décidé, lot rentré, BL signé), en proportion des palettes justes. En guidage, le temps réel est mesuré et affiché au bilan, sans note, pour caler les seuils (12 et 16 min sont provisoires).</li>
+      <li><b>Nouveau (v7) : horloge murale</b> sur la photo du quai (étape 2), sous l'afficheur de température : heure du quai en guidage, <b>temps passé</b> en évaluation.</li>
+      <li><b>Piège « Sous réserve de déballage »</b> : case à cocher dans « Tes réserves ». Cochée, la mention s'écrit sur le BL, le bilan la compte fausse (jalon, aussi en évaluation) ; en guidage, le chef de quai explique qu'elle ne protège de rien.</li>
+      <li><b>Ordre froid / papiers</b> : jamais sanctionné en points. En guidage, si l'élève veut écrire ses réserves avant d'avoir rentré le lot, le <b>chef de quai l'arrête</b> et lui explique la règle (il peut passer outre) ; le bilan la redit. En évaluation, rien : seul le temps hors froid compte.</li>
+      <li>Passe en <b>évaluation</b> (chrono réel, tiers-temps) et laisse le temps finir.</li>
+    </ol>
+  </section>
+</main>
+
+<script>
+// ================= Données construites pour la démonstration =================
+// Quai réfrigéré : sa température justifie le repère hors froid (valeurs construites).
+// Réglementaire (vérifié) : −18 °C à cœur, tolérance −15 °C sur de courtes périodes (chargement/déchargement),
+// sans durée en minutes dans les textes. Variante plus exigeante possible : quai non réfrigéré ~+15 °C, 15 à 20 min.
+const QUAI = { nom:'Quai 32', temp:4, refrigere:true };
+const SEUIL = 30;               // repère construit (minutes hors froid du lot), pour un quai à +4 °C
+// Durée du déchargement : variable selon le nombre de palettes (valeurs construites).
+// Mêmes données réutilisables dans les exercices de planification de quai.
+const DECHARGEMENT = { ouverture: 0.5, parPalette: 1 };   // en minutes de temps du quai
+const dureeDechargement = n => DECHARGEMENT.ouverture + n * DECHARGEMENT.parPalette;
+const formuleDechargement = n => `${n} palettes × ${fmtMin(DECHARGEMENT.parPalette)} + ${fmtMin(DECHARGEMENT.ouverture)} d’ouverture = ${fmtMin(dureeDechargement(n))}`;
+// Note d'évaluation (décision de Tristan, 03/10/2026) : pas de couperet, le chrono MESURE.
+// 15 points pour la réception (jalons), 5 pour la rapidité : 3 sur le temps hors froid (simulé),
+// 2 sur le temps réel (seuils × 4/3 en tiers-temps). La rapidité ne compte que si la réception est
+// COMPLÈTE (tout décidé, lot rentré, BL signé), et en proportion des palettes justes.
+// Les seuils du temps réel sont provisoires : à caler sur les temps mesurés en guidage (ENT-4.1).
+const NOTE = { reception: 15,
+  horsFroid: [[20, 3], [25, 2], [30, 1]],      // min de temps hors froid → points
+  reel: [[12, 2], [16, 1]],                     // min réelles → points (× tiers-temps)
+  tiersTemps: 4/3 };
+const palier = (v, paliers) => { for (const [seuil, pts] of paliers) if (v <= seuil) return pts; return 0; };
+const COUTS = { courbe:2, sonder:1, tourner:0.5, compter:1, rentrer:3, ligne:1, signer:1 };
+// Une palette : W cartons en largeur × D en profondeur × L couches.
+// manque : cartons absents, en « i,j,k » (k = couche, 0 en bas).
+// avarie : carton abîmé « i,j,k » → côté abîmé (dx,dy) en coordonnées de la palette.
+const PALETTES = [
+  { id:'P1', ref:'HVE-1000', nom:'Haricots verts extra-fins 1 kg', bl:57, etiq:{ ref:'HVE-1000', nom:'HARICOTS VERTS EXTRA-FINS', poids:'10 × 1 kg', lot:'L26-2741', ddm:'09/2028' }, W:4, D:3, L:5,
+    manque:['0,0,4','1,0,4','2,0,4'], avarie:{}, temp:-21.5,
+    attendu:'accepter', motifAttendu:'aucun' },
+  { id:'P2', ref:'CRB-070', nom:'Croissants pur beurre à cuire', bl:36, etiq:{ ref:'CRB-070', nom:'CROISSANTS PUR BEURRE À CUIRE', poids:'6 × 70 g × 10', lot:'L26-2688', ddm:'03/2028' }, W:3, D:3, L:4,
+    manque:[], avarie:{ '1,0,2':[0,-1], '2,0,1':[0,-1] }, temp:-19.8,
+    attendu:'reserves', motifAttendu:'avarie' },
+  { id:'P3', ref:'GVA-1000', nom:'Glaces vanille 1 L', bl:48, etiq:{ ref:'GVA-1000', nom:'CRÈME GLACÉE VANILLE 1 L', poids:'8 × 1 L', lot:'L26-2702', ddm:'06/2028' }, W:4, D:3, L:4,
+    manque:[], avarie:{}, temp:-14.2,
+    attendu:'refuser', motifAttendu:'temperature' },
+  { id:'P4', ref:'CAB-400', nom:'Filets de cabillaud 400 g', bl:24, etiq:{ ref:'CAB-400', nom:'FILETS DE CABILLAUD', poids:'12 × 400 g', lot:'L26-2719', ddm:'12/2027' }, W:3, D:2, L:4,
+    manque:['2,1,3','0,0,3'], avarie:{}, temp:-20.4,
+    attendu:'reserves', motifAttendu:'manquant' },
+  { id:'P5', ref:'EPH-450', nom:'Épinards hachés 450 g', bl:30, etiq:{ ref:'EPB-450', nom:'ÉPINARDS EN BRANCHES', poids:'12 × 450 g', lot:'L26-2733', ddm:'10/2028' }, W:3, D:2, L:5,
+    manque:[], avarie:{}, temp:-20.9,
+    attendu:'refuser', motifAttendu:'produit' },
+];
+PALETTES.forEach(p => p.reel = p.W*p.D*p.L - p.manque.length);
+const MOTIFS = { aucun:'aucun motif', temperature:'Température non conforme', avarie:'Cartons endommagés', manquant:'Manquant', produit:'Produit différent de la commande' };
+const DECISIONS = { '':'— à décider —', accepter:'Accepter', reserves:'Accepter avec réserves', refuser:'Refuser' };
+const VUES = ['vue de l’avant', 'vue du côté droit', 'vue de l’arrière', 'vue du côté gauche'];
+
+// ================= État =================
+let mode = 'guidage', tiers = false, st, chronoId = null;
+function neuf(){
+  st = { minute:0, courbeLue:false, courbeRep:null, decharge:false, froid:0, fini:false, finParChrono:false,
+         chrono: 0, sel:0, journal:[], deballage:false, rentre:false, ecrit:false, lignes:[], signe:false, refusChauffeur:'',
+         p: PALETTES.map(x => ({ ...x, vue:0, vuesVues:new Set([0]), sonde:null, compte:null, etiqVue:false, detail:{}, decision:'', motif:'aucun', res:'' })) };
+}
+function avancer(min, texte){
+  st.minute += min;
+  if (st.decharge && !st.fini && !st.rentre) st.froid += min;   // un seul temps hors froid pour tout le lot
+  st.journal.unshift(`${hhmm(st.minute)} — ${texte} (+${fmtMin(min)})`);
+}
+const hhmm = m => { const t = 360 + m; const h = Math.floor(t/60), mm = Math.floor(t%60); return `${String(h).padStart(2,'0')}:${String(mm).padStart(2,'0')}${t%1?'’30':''}`; };
+const fmtMin = m => { const e = Math.floor(m), s = m - e >= .5; if (!e && s) return '30 s'; return s ? `${e} min 30` : `${e} min`; };
+const mmss = s => `${String(Math.floor(s/60)).padStart(2,'0')}:${String(Math.floor(s%60)).padStart(2,'0')}`;
+
+// ================= Palette en 3D (projection isométrique) =================
+// Rotation de la palette : on change les coordonnées (i,j) selon la vue.
+function tourner(i, j, W, D, r){
+  if (r === 0) return [i, j];
+  if (r === 1) return [D-1-j, i];
+  if (r === 2) return [W-1-i, D-1-j];
+  return [j, W-1-i];
+}
+function tournerDir([dx, dy], r){
+  if (r === 0) return [dx, dy];
+  if (r === 1) return [-dy, dx];
+  if (r === 2) return [-dx, -dy];
+  return [dy, -dx];
+}
+function dessinerPalette(p){
+  const r = p.vue, W2 = (r % 2) ? p.D : p.W, D2 = (r % 2) ? p.W : p.D;
+  const S = 34, H = 26;                                   // carton : 1 × 1 au sol, hauteur 26 px
+  const cx = 230 + (D2 - W2) * S * 0.866 / 2;
+  const base = 330 - (W2 + D2) * S * 0.5;
+  const P = (a, b, z) => [cx + (a - b) * S * 0.866, base + (a + b) * S * 0.5 - z * H];
+  const poly = (pts, fill, extra='') => `<polygon points="${pts.map(q=>q.map(n=>n.toFixed(1)).join(',')).join(' ')}" fill="${fill}" stroke="#5e4424" stroke-width="1" ${extra}/>`;
+  let s = '';
+  // la palette en bois
+  const z0 = -0.55, z1 = 0;
+  s += poly([P(0,0,z1),P(W2,0,z1),P(W2,D2,z1),P(0,D2,z1)], '#c9a46b');
+  s += poly([P(W2,0,z0),P(W2,D2,z0),P(W2,D2,z1),P(W2,0,z1)], '#a07a43');
+  s += poly([P(0,D2,z0),P(W2,D2,z0),P(W2,D2,z1),P(0,D2,z1)], '#8a6634');
+  // les cartons
+  const manque = new Set(p.manque);
+  // carton repère : en vue de face, le plus haut à gauche (i = 0, j = D-1, couche la plus haute présente)
+  let kRep = p.L - 1; while (kRep > 0 && manque.has(`0,${p.D-1},${kRep}`)) kRep--;
+  const repere = mode === 'guidage' ? `0,${p.D-1},${kRep}` : null;
+  const boites = [];
+  for (let k = 0; k < p.L; k++) for (let i = 0; i < p.W; i++) for (let j = 0; j < p.D; j++){
+    if (manque.has(`${i},${j},${k}`)) continue;
+    const [a, b] = tourner(i, j, p.W, p.D, r);
+    const av = p.avarie[`${i},${j},${k}`];
+    boites.push({ a, b, k, av: av ? tournerDir(av, r) : null, rep: `${i},${j},${k}` === repere });
+  }
+  boites.sort((x, y) => (x.a + x.b + x.k) - (y.a + y.b + y.k) || x.k - y.k);
+  for (const { a, b, k, av, rep } of boites){
+    const top = [P(a,b,k+1),P(a+1,b,k+1),P(a+1,b+1,k+1),P(a,b+1,k+1)];
+    const droite = [P(a+1,b,k),P(a+1,b+1,k),P(a+1,b+1,k+1),P(a+1,b,k+1)];
+    const gauche = [P(a,b+1,k),P(a+1,b+1,k),P(a+1,b+1,k+1),P(a,b+1,k+1)];
+    s += poly(top, '#e6cfa3') + poly(droite, '#c9a26a') + poly(gauche, '#b08550');
+    // ruban adhésif sur le dessus
+    s += `<line x1="${((top[0][0]+top[3][0])/2).toFixed(1)}" y1="${((top[0][1]+top[3][1])/2).toFixed(1)}" x2="${((top[1][0]+top[2][0])/2).toFixed(1)}" y2="${((top[1][1]+top[2][1])/2).toFixed(1)}" stroke="#a88a5a" stroke-width="2"/>`;
+    // carton écrasé : visible seulement si son côté abîmé fait face à l'élève
+    if (rep){
+      const c = [(top[0][0]+top[2][0])/2, (top[0][1]+top[2][1])/2];
+      s += `<g><ellipse cx="${c[0].toFixed(1)}" cy="${c[1].toFixed(1)}" rx="15" ry="9" fill="#f6f1e4" stroke="var(--accent)" stroke-width="1.5"/><text x="${c[0].toFixed(1)}" y="${(c[1]+4).toFixed(1)}" text-anchor="middle" font-size="11" font-weight="700" fill="#0011ac">${p.id}</text></g>`;
+    }
+    const fr = tournerDir([0, 1], r);
+    const faceEtiq = fr[0] === 1 && fr[1] === 0 ? droite : fr[0] === 0 && fr[1] === 1 ? gauche : null;
+    if (faceEtiq){
+      const m = (u, v) => [faceEtiq[0][0] + (faceEtiq[1][0]-faceEtiq[0][0])*u + (faceEtiq[3][0]-faceEtiq[0][0])*v, faceEtiq[0][1] + (faceEtiq[1][1]-faceEtiq[0][1])*u + (faceEtiq[3][1]-faceEtiq[0][1])*v];
+      s += `<g class="etiq-clic" style="cursor:zoom-in"><title>Lire l'étiquette</title>${poly([m(.3,.2),m(.75,.2),m(.75,.62),m(.3,.62)], '#f6f1e4', 'stroke-width=".6"')}<line x1="${m(.36,.35)[0].toFixed(1)}" y1="${m(.36,.35)[1].toFixed(1)}" x2="${m(.68,.35)[0].toFixed(1)}" y2="${m(.68,.35)[1].toFixed(1)}" stroke="#777" stroke-width="1"/><line x1="${m(.36,.48)[0].toFixed(1)}" y1="${m(.36,.48)[1].toFixed(1)}" x2="${m(.6,.48)[0].toFixed(1)}" y2="${m(.6,.48)[1].toFixed(1)}" stroke="#777" stroke-width="1"/></g>`;
+    }
+    const face = av && av[0] === 1 && av[1] === 0 ? droite : av && av[0] === 0 && av[1] === 1 ? gauche : null;
+    if (face){
+      const m = (u, v) => [face[0][0] + (face[1][0]-face[0][0])*u + (face[3][0]-face[0][0])*v, face[0][1] + (face[1][1]-face[0][1])*u + (face[3][1]-face[0][1])*v];
+      s += poly([m(.15,.25),m(.5,.05),m(.85,.3),m(.75,.8),m(.35,.9),m(.2,.6)], '#6e4c22', 'opacity=".85"');
+      s += `<polyline points="${[m(.25,.5),m(.45,.35),m(.55,.6),m(.75,.45)].map(q=>q.map(n=>n.toFixed(1)).join(',')).join(' ')}" fill="none" stroke="#2b1c0b" stroke-width="1.5"/>`;
+    }
+  }
+  // repère d'orientation : l'étiquette palette est sur la face avant
+  s += `<text x="230" y="372" text-anchor="middle" font-size="12" fill="var(--gris)">${p.id} · ${VUES[r]}</text>`;
+  document.getElementById('palette3d').innerHTML = s;
+  document.getElementById('vueLib').textContent = `Côtés déjà vus : ${[...p.vuesVues].length} sur 4`;
+}
+
+// ================= Courbe de l'enregistreur =================
+function dessinerCourbe(){
+  const X = h => 50 + h * 75, Yc = t => 20 + ((-5 - t) / 20) * 170, pts = [];
+  for (let m = 0; m <= 360; m += 5){
+    let t = -21 + Math.sin(m/23) * .4;
+    if (m >= 220 && m < 230) t = -21 + (m-220)/10 * 9;
+    else if (m >= 230 && m < 255) t = -12 + Math.sin(m) * .3;
+    else if (m >= 255 && m < 290) t = -12 - (m-255)/35 * 9;
+    pts.push([X(m/60), Yc(t)]);
+  }
+  let g = '';
+  for (let t = -25; t <= -5; t += 5) g += `<line x1="50" x2="500" y1="${Yc(t)}" y2="${Yc(t)}" stroke="var(--trait)"/><text x="44" y="${Yc(t)+4}" font-size="11" text-anchor="end" fill="var(--gris)">${t} °C</text>`;
+  for (let h = 0; h <= 6; h++) g += `<text x="${X(h)}" y="210" font-size="11" text-anchor="middle" fill="var(--gris)">${h} h</text>`;
+  g += `<line x1="50" x2="500" y1="${Yc(-18)}" y2="${Yc(-18)}" stroke="var(--terre)" stroke-dasharray="4 3"/><text x="500" y="${Yc(-18)-4}" font-size="11" text-anchor="end" fill="var(--terre)">−18 °C</text>`;
+  g += `<polyline fill="none" stroke="var(--froid)" stroke-width="2" points="${pts.map(p=>p.join(',')).join(' ')}"/>`;
+  g += `<text x="275" y="14" font-size="11" text-anchor="middle" fill="var(--gris)">Température de la caisse — départ 0 h, arrivée au quai 6 h</text>`;
+  document.getElementById('courbe').innerHTML = g;
+}
+
+function dessinerTicket(){
+  const lignes = ['  ENREGISTREUR TEMP.  ', ' Remorque FR-627  Givrex', ' Consigne : -20.0 C', ' Depart  : 00:00', ' --------------------- ', '  HEURE      TEMP. C'];
+  for (let m = 15; m <= 360; m += 15){
+    let t = -21 + Math.sin(m/23) * .4;
+    if (m === 225) t = -16.8; else if (m === 240) t = -12.6; else if (m === 255) t = -12.1; else if (m === 270) t = -13.0; else if (m === 285) t = -17.4;
+    const hh = String(Math.floor(m/60)).padStart(2,'0') + ':' + String(m%60).padStart(2,'0');
+    lignes.push(`  ${hh}      ${t.toFixed(1).padStart(6)}`);
+  }
+  lignes.push(' --------------------- ', ' Arrivee : 06:00', ' Signature chauffeur :', '', '  ~~~~~~~~~~~~~~~~~ ');
+  $('ticket').textContent = lignes.join('\n');
+}
+
+// ================= Étapes =================
+let etape = 1;
+function allerA(n){
+  etape = n;
+  document.querySelectorAll('.etape-ecran').forEach(e => e.classList.toggle('cache', +e.dataset.ecran !== n));
+  document.querySelectorAll('#stepper button').forEach(b => b.classList.toggle('actif', +b.dataset.step === n));
+  window.scrollTo({ top: 0 });
+}
+document.getElementById('stepper').onclick = e => { const b = e.target.closest('[data-step]'); if (!b) return; const n = +b.dataset.step; if (n > 1 && !st.decharge) return; allerA(n); if (n === 2) anim2.dessiner(); };
+document.addEventListener('click', e => { const b = e.target.closest('[data-aller]'); if (b) allerA(+b.dataset.aller); });
+
+// ================= Rendu =================
+const $ = id => document.getElementById(id);
+function rendre(){
+  $('hQuai').textContent = hhmm(st.minute);
+  if (st.decharge){
+    $('hFroid').innerHTML = `<span class="${st.froid > SEUIL ? 'depasse' : ''}">${fmtMin(st.froid)}</span>`;
+    $('jFroid').style.width = Math.min(100, st.froid / (SEUIL * 1.5) * 100) + '%';
+  }
+  const trop = st.decharge && st.froid > SEUIL && !st.fini;
+  $('nFroid').innerHTML = trop
+    ? (mode === 'guidage' ? '<span class="depasse">Repère dépassé : la marchandise se réchauffe. Termine tes contrôles et rentre le lot.</span>' : '<span class="depasse">Repère dépassé.</span>')
+    : `démarre quand le transporteur décharge · repère construit : ${SEUIL} min (quai ${QUAI.refrigere ? 'réfrigéré' : 'non réfrigéré'} ${QUAI.temp > 0 ? '+' : ''}${QUAI.temp} °C)`;
+
+  $('boiteChrono').classList.toggle('cache', mode !== 'eval');
+  horlogeMurale();
+  $('hChrono').textContent = mmss(st.chrono);
+  $('nChrono').textContent = tiers ? 'mesuré, ne coupe rien · tiers-temps : seuils × 4/3' : 'mesuré, ne coupe rien : il compte dans la note de rapidité';
+  $('lTiers').style.display = mode === 'eval' ? '' : 'none';
+  $('aideComptage').classList.toggle('cache', mode !== 'guidage');
+  $('regleCouches').classList.toggle('cache', mode !== 'guidage');
+  $('detailCompte').classList.toggle('cache', mode !== 'guidage');
+  $('aide2').classList.toggle('cache', mode !== 'guidage');
+  $('aide4').classList.toggle('cache', mode !== 'guidage');
+
+  $('bCourbe').disabled = st.courbeLue || st.fini;
+  $('zoneCourbe').classList.toggle('cache', !st.courbeLue);
+  $('bDecharger').disabled = st.decharge || st.fini;
+  $('dureeDech1').textContent = $('dureeDech2').textContent = formuleDechargement(st.p.length);
+  $('bl').innerHTML = $('bl2').innerHTML = st.p.map(p => `<tr><td>${p.id}</td><td>${p.ref}</td><td>${p.nom}</td><td>${p.bl}</td></tr>`).join('');
+  document.querySelectorAll('#stepper button').forEach(b => b.disabled = +b.dataset.step > 1 && !st.decharge);
+
+  $('quaiFerme').classList.toggle('cache', st.decharge);
+  $('quaiOuvert').classList.toggle('cache', !st.decharge);
+  
+  if (!st.decharge) { rendre4(); return; }
+
+  $('onglets').innerHTML = st.p.map((p, n) => {
+    const fait = [p.sonde !== null ? 'sondée' : null, p.compte !== null ? 'comptée' : null, p.decision ? 'décidée' : null].filter(Boolean).join(', ') || 'à contrôler';
+    return `<button role="tab" data-sel="${n}" class="${n === st.sel ? 'actif' : ''}">${p.id}<span class="etat">${fait}</span></button>`;
+  }).join('');
+
+  const p = st.p[st.sel];
+  dessinerPalette(p);
+  $('rSonde').innerHTML = p.sonde !== null ? `<span class="constat">${p.sonde.toFixed(1).replace('.', ',')} °C à cœur</span>` : '';
+  $('rCompte').textContent = p.compte !== null ? `Comptage noté : ${p.compte} cartons (BL : ${p.bl}).` : '';
+  if (document.activeElement !== $('iCompte')) $('iCompte').value = p.compte ?? '';
+  for (const k of ['dCouche','dCouches','dManque']) if (document.activeElement !== $(k)) $(k).value = p.detail[k] ?? '';
+  $('zoneZoom').innerHTML = p.etiqVue
+    ? `<div class="etiq"><b>Surgelés du Littoral</b> — produit surgelé, conserver à −18 °C<br>Réf. ${p.etiq.ref}<br><b>${p.etiq.nom}</b><br>Contenu : ${p.etiq.poids}<br>Lot : ${p.etiq.lot} · À consommer de préférence avant fin : ${p.etiq.ddm}<div class="code">||| |||| || ||||| | ||| 3 760000 ${p.etiq.ref.replace('-','')}</div></div><div class="reconst">Étiquette reconstituée, non contractuelle.</div>`
+    : `<span class="note">🔍 Clique sur l'étiquette d'un carton pour la lire de près (30 s).</span>`;
+  $('sDecision').innerHTML = Object.entries(DECISIONS).map(([k, v]) => `<option value="${k}" ${p.decision === k ? 'selected' : ''}>${v}</option>`).join('');
+  $('sMotif').innerHTML = Object.entries(MOTIFS).map(([k, v]) => `<option value="${k}" ${p.motif === k ? 'selected' : ''}>${v}</option>`).join('');
+  ['bSonder','bTourner','bCompte','iCompte','sDecision','sMotif','dCouche','dCouches','dManque'].forEach(id => $(id).disabled = st.fini || st.rentre || st.ecrit);
+  rendre4();
+  $('journal').innerHTML = st.journal.map(l => `<div>${l}</div>`).join('');
+}
+
+// ================= Gestes =================
+$('bCourbe').onclick = () => { st.courbeLue = true; avancer(COUTS.courbe, 'ticket de l’enregistreur lu'); dessinerTicket(); rendre(); };
+$('bDecharger').onclick = () => { if (st.decharge) return; allerA(2); anim2.lancer(); };
+$('bTourner').onclick = () => { const p = st.p[st.sel]; p.vue = (p.vue + 1) % 4; p.vuesVues.add(p.vue); avancer(COUTS.tourner, `${p.id} : ${VUES[p.vue]}`); rendre(); };
+$('bSonder').onclick = () => { const p = st.p[st.sel]; p.sonde = p.temp; avancer(COUTS.sonder, `${p.id} sondée`); rendre(); };
+$('bCompte').onclick = () => {
+  const p = st.p[st.sel], v = parseInt($('iCompte').value, 10);
+  if (Number.isNaN(v)) { $('rCompte').textContent = 'Écris d’abord le nombre de cartons que tu as comptés.'; return; }
+  p.compte = v; avancer(COUTS.compter, `${p.id} : ${v} cartons notés`); rendre();
+};
+$('palette3d').onclick = e => {
+  if (!e.target.closest('.etiq-clic') || st.fini) return;
+  const p = st.p[st.sel]; if (!p.etiqVue){ p.etiqVue = true; avancer(COUTS.tourner, `${p.id} : étiquette lue`); } rendre();
+};
+['dCouche','dCouches','dManque'].forEach(k => $(k).oninput = e => { st.p[st.sel].detail[k] = e.target.value; });
+$('sDecision').onchange = e => { st.p[st.sel].decision = e.target.value; rendre(); };
+$('sMotif').onchange = e => { st.p[st.sel].motif = e.target.value; rendre(); };
+$('onglets').onclick = e => { const b = e.target.closest('[data-sel]'); if (b){ st.sel = +b.dataset.sel; rendre(); } };
+$('bValider').onclick = () => terminer(false);
+$('bRentrer').onclick = () => rentrer();
+$('bEcrire').onclick = () => {
+  // Guidage : apprendre l'ordre (froid d'abord, papiers ensuite) sans l'imposer
+  if (mode === 'guidage' && !st.rentre && !st.chefVu){ st.chefVu = true; $('chef4').classList.remove('cache'); $('chef4').scrollIntoView({ block:'center' }); return; }
+  ecrireReserves();
+};
+$('cDeballage').onchange = e => { st.deballage = e.target.checked; };
+$('bChefRentrer').onclick = () => { $('chef4').classList.add('cache'); rentrer(); };
+$('bChefPapiers').onclick = () => { $('chef4').classList.add('cache'); st.passeOutreChef = true; ecrireReserves(); };
+$('bSigner').onclick = () => signer();
+$('formRes').oninput = e => { const n = e.target.dataset.res; if (n !== undefined) st.p[+n].res = e.target.value; };
+$('mGuidage').onclick = () => changerMode('guidage');
+$('mEval').onclick = () => changerMode('eval');
+$('tiers').onchange = e => { tiers = e.target.checked; demarrer(); };
+document.addEventListener('change', e => { if (e.target.name === 'courbe') st.courbeRep = e.target.value; });
+
+function changerMode(m){
+  mode = m;
+  $('mGuidage').classList.toggle('actif', m === 'guidage');
+  $('mEval').classList.toggle('actif', m === 'eval');
+  demarrer();
+}
+function demarrer(){
+  clearInterval(chronoId); neuf();
+  document.querySelectorAll('input[name=courbe]').forEach(i => i.checked = false);
+  anim2.reset(); anim4.stop(); $('chef4').classList.add('cache'); $('chef4b').classList.add('cache'); allerA(1); $('bilan').innerHTML = ''; $('hFroid').innerHTML = '— <span class="note">camion fermé</span>'; $('jFroid').style.width = '0';
+  chronoId = setInterval(() => { if (st.fini) return; st.chrono += 1; if (mode === 'eval') rendre(); else horlogeMurale(); }, 1000);
+  rendre();
+}
+
+// ================= Bilan =================
+function jalons(){
+  const L = []; let pts = 0, max = 0;
+  const j = (lib, fait, attendu, ok) => { max++; if (ok) pts++; L.push([lib, fait, attendu, ok]); };
+  j('Enregistreur', st.courbeLue ? ({rien:'rien à signaler', bref:'pic bref', long:'remontée qui a duré'}[st.courbeRep] || 'lu, sans réponse') : 'non lu', 'remontée qui a duré, à signaler', st.courbeRep === 'long');
+  st.p.forEach(p => {
+    if (mode === 'guidage'){
+      const d = p.detail, couche = p.W*p.D, haut = p.manque.length;
+      const okD = +d.dCouche === couche && +d.dCouches === p.L && +(d.dManque||0) === haut;
+      L.push([`${p.id} détail`, d.dCouche ? `${d.dCouche} par couche × ${d.dCouches||'?'} couches − ${d.dManque||0}` : 'non rempli', `${couche} par couche × ${p.L} couches − ${haut}`, okD]);
+    }
+    j(`${p.id} comptage`, p.compte === null ? 'pas compté' : `${p.compte} cartons`, `${p.reel} cartons (BL : ${p.bl})`, p.compte === p.reel);
+    const fait = p.decision ? `${DECISIONS[p.decision]} — ${MOTIFS[p.motif]}${p.sonde === null ? ' (sans sonder)' : ''}` : 'sans contrôle ni décision';
+    j(`${p.id} décision`, fait, `${DECISIONS[p.attendu]} — ${MOTIFS[p.motifAttendu]}`, p.decision === p.attendu && p.motif === p.motifAttendu && p.sonde !== null);
+  });
+  st.p.forEach(p => {
+    if (p.attendu === 'accepter') return;
+    const l = st.ecrit ? st.lignes.find(x => x.id === p.id) : null;
+    j(`${p.id} réserve écrite`, l ? l.texte : (st.ecrit ? 'aucune ligne' : 'réserves non écrites'), ligneAttendue(p), !!l && l.juste);
+  });
+  j('Mention « sous réserve de déballage »', st.mentionEcrite ? 'ajoutée' : 'non ajoutée', 'non ajoutée (aucune valeur juridique)', st.ecrit && !st.mentionEcrite);
+  j('Signature du chauffeur sous les réserves', st.signe ? 'obtenue' : 'pas de signature', 'obtenue', st.signe);
+  j('Lot rentré en chambre froide', st.rentre ? `oui, après ${fmtMin(st.froid)} hors froid` : 'non', 'oui', st.rentre);
+  return { L, pts, max };
+}
+function horlogeMurale(){
+  const ev = mode === 'eval';
+  $('horlogeLib').textContent = ev ? 'TEMPS PASSÉ' : 'HEURE DU QUAI';
+  $('horlogeVal').textContent = ev ? mmss(st.chrono) : hhmm(st.minute).slice(0, 5);
+}
+function noteEval(pts, max){
+  const complet = st.p.every(p => p.decision) && st.rentre && st.signe;
+  const justes = st.p.filter(p => p.decision === p.attendu && p.motif === p.motifAttendu && p.sonde !== null).length;
+  const prop = justes / st.p.length;
+  const fac = tiers ? NOTE.tiersTemps : 1;
+  const ptsFroid = palier(st.froid, NOTE.horsFroid);
+  const ptsReel = palier(st.chrono / 60, NOTE.reel.map(([m, p]) => [m * fac, p]));
+  const vitesse = complet ? (ptsFroid + ptsReel) * prop : 0;
+  const reception = pts / max * NOTE.reception;
+  return { complet, justes, prop, ptsFroid, ptsReel, vitesse, reception, note: reception + vitesse };
+}
+const v1 = n => n.toFixed(1).replace('.', ',');
+function terminer(parChrono){
+  if (st.fini) return;
+  st.fini = true; clearInterval(chronoId);
+  const { L, pts, max } = jalons();
+  const tete = '';
+  const tableau = `<table><thead><tr><th></th><th>Ce que tu as fait</th><th>Attendu</th><th></th></tr></thead><tbody>${L.map(l => `<tr><td>${l[0]}</td><td>${l[1]}</td><td>${l[2]}</td><td class="${l[3]?'ok':'ko'}">${l[3]?'✓ juste':'✗ à revoir'}</td></tr>`).join('')}</tbody></table>`;
+  $('bilan').innerHTML = tete + (mode === 'guidage'
+    ? tableau + `<p class="note">Temps hors froid du lot : ${st.decharge ? fmtMin(st.froid) : '—'} (repère ${SEUIL} min).${st.rentre ? (st.ordreFroidDabord ? ' Tu as rentré le lot <b>avant</b> d’écrire les papiers : bon réflexe, le chauffeur attend, les surgelés non.' : ` Tu as écrit les papiers <b>avant</b> de rentrer le lot${st.passeOutreChef ? ', malgré le chef de quai' : ''} : le temps hors froid a continué de tourner pendant ce temps. <b>Règle à retenir : le froid d’abord, les papiers ensuite.</b>`) : ''}</p>
+      <p class="note">Temps réel passé : ${mmss(st.chrono)} (mesuré pour caler les seuils de l'évaluation, non noté).</p>
+      <p class="note">Bon à savoir : la réserve écrite sur le BL ne suffit pas. Pour une avarie ou un manquant, il faut la confirmer au transporteur par <b>lettre recommandée dans les 3 jours</b> (hors jours fériés), sinon on ne peut plus rien lui réclamer (Code de commerce, art. L133-3).</p>`
+    : (() => { const n = noteEval(pts, max);
+        return `<p><b>Copie rendue.</b> L'élève ne voit pas la correction.</p>
+        <details open><summary class="note">Côté enseignant (maquette) : note ${v1(n.note)}/20</summary>
+        <table><tbody>
+          <tr><td>Réception</td><td>${pts}/${max} jalons</td><td>${v1(n.reception)} / ${NOTE.reception}</td></tr>
+          <tr><td>Temps hors froid</td><td>${st.decharge ? fmtMin(st.froid) : '—'}</td><td>${n.ptsFroid} / 3 (≤ 20 min : 3 · ≤ 25 : 2 · ≤ 30 : 1)</td></tr>
+          <tr><td>Temps réel</td><td>${mmss(st.chrono)}${tiers ? ' (tiers-temps)' : ''}</td><td>${n.ptsReel} / 2 (≤ ${v1(12 * (tiers ? NOTE.tiersTemps : 1))} min : 2 · ≤ ${v1(16 * (tiers ? NOTE.tiersTemps : 1))} : 1)</td></tr>
+          <tr><td>Rapidité retenue</td><td>${n.complet ? `réception complète, ${n.justes}/${st.p.length} palettes justes` : 'réception incomplète : pas de points de rapidité'}</td><td>${v1(n.vitesse)} / 5</td></tr>
+        </tbody></table>${tableau}</details>`; })())
+    + `<p><button class="btn" id="bRecommencer">Recommencer</button></p>`;
+  $('bRecommencer').onclick = demarrer;
+  rendre();
+}
+// ================= Étape 2 : déchargement animé =================
+// Coordonnées dans la photo (1280 × 853). Porte du quai : x 455–786, y 352–585.
+const anim2 = (() => {
+  const NS = 'http://www.w3.org/2000/svg';
+  const PORTE = { x0:455, x1:786, y0:352, y1:585 };
+  const OUV = { L:478, R:763, T:372, B:566 };            // ouverture de la remorque
+  const VP = { x:620, y:458 }, PROF = .36;               // point de fuite, taille du fond
+  const SOL_Y0 = 566, SOL_Y1 = 835;                      // sol : entrée remorque → premier plan
+  // places sur le quai, de part et d'autre de l'allée centrale
+  const PLACES = [ [150,800], [320,768], [466,738], [808,738], [985,768] ];
+  const T_OUVRE = 900, T_PORTE = 2000, T_DEB = 2700, T_PAL = 2100, T_TRAJET = 1850;
+  const FIN = T_DEB + 5 * T_PAL + 200;
+  const COUT_PORTE = DECHARGEMENT.ouverture, COUT_PAL = DECHARGEMENT.parPalette;
+  let t = 0, t0 = null, raf = null, etat = 'attente', rejeu = false, evts = 0;
+
+  const $s = id => document.getElementById(id);
+  const ease = x => x < 0 ? 0 : x > 1 ? 1 : x < .5 ? 2*x*x : 1 - Math.pow(-2*x + 2, 2) / 2;
+  const clamp = x => Math.max(0, Math.min(1, x));
+  const echelle = y => .42 + (y - SOL_Y0) / (SOL_Y1 - SOL_Y0) * .58;
+  const f1 = n => n.toFixed(1);
+  const pts = a => a.map(q => q.map(f1).join(',')).join(' ');
+
+  // ---------- intérieur de la remorque frigorifique ----------
+  function interieur(restantes){
+    const { L, R, T, B } = OUV;
+    const pr = (x, y, k) => [VP.x + (x - VP.x) * k, VP.y + (y - VP.y) * k];
+    const [l2, t2] = pr(L, T, PROF), [r2, b2] = pr(R, B, PROF);
+    let s = `<rect x="${PORTE.x0}" y="${PORTE.y0}" width="331" height="233" fill="#11161b"/>`;
+    // cadre arrière de la remorque (blanc sale) et joints
+    s += `<rect x="${L-14}" y="${T-14}" width="${R-L+28}" height="${B-T+14}" fill="#a7afb5"/>`;
+    s += `<rect x="${L-4}" y="${T-4}" width="${R-L+8}" height="${B-T+4}" fill="#3a4148"/>`;
+    s += `<polygon points="${pts([[L,T],[R,T],[r2,t2],[l2,t2]])}" fill="#b8c1c7"/>`;          // plafond
+    s += `<polygon points="${pts([[L,T],[l2,t2],[l2,b2],[L,B]])}" fill="#8f999f"/>`;          // paroi gauche
+    s += `<polygon points="${pts([[R,T],[r2,t2],[r2,b2],[R,B]])}" fill="#9ea7ad"/>`;          // paroi droite
+    s += `<polygon points="${pts([[L,B],[R,B],[r2,b2],[l2,b2]])}" fill="#5f676c"/>`;          // plancher
+    s += `<rect x="${f1(l2)}" y="${f1(t2)}" width="${f1(r2-l2)}" height="${f1(b2-t2)}" fill="#7f8a92"/>`; // fond
+    // groupe froid au fond + rampe lumineuse
+    s += `<rect x="${f1(l2+18)}" y="${f1(t2+3)}" width="${f1(r2-l2-36)}" height="9" rx="2" fill="#8d979f"/>`;
+    s += `<line x1="${VP.x}" y1="${T+6}" x2="${VP.x}" y2="${f1(t2+2)}" stroke="#ffffff" stroke-width="5" opacity=".75"/>`;
+    // nervures des parois et rainures du plancher
+    for (const k of [.82, .64, .48]){
+      const [a, b] = pr(L, T, k), [c, d] = pr(L, B, k), [e] = pr(R, T, k);
+      s += `<line x1="${f1(a)}" y1="${f1(b)}" x2="${f1(c)}" y2="${f1(d)}" stroke="#a7afb6" stroke-width="2"/>`;
+      s += `<line x1="${f1(e)}" y1="${f1(b)}" x2="${f1(e)}" y2="${f1(d)}" stroke="#b5bcc2" stroke-width="2"/>`;
+    }
+    for (let u = 1; u < 8; u++){
+      const x = L + (R - L) * u / 8, [x2] = pr(x, B, PROF);
+      s += `<line x1="${f1(x)}" y1="${B}" x2="${f1(x2)}" y2="${f1(b2)}" stroke="#6c757b" stroke-width="1"/>`;
+    }
+    // palettes encore dans la remorque (les plus proches d'abord)
+    const places = [];
+    restantes.forEach((p, m) => {
+      const rang = Math.floor(m / 2), cote = m % 2 ? 1 : -1;
+      const k = 1 - rang * .24 - .04;
+      const [x, y] = pr(VP.x + cote * 62, B - 2, k);
+      places.push([p, x, y, .42 * k]);
+    });
+    places.reverse().forEach(([p, x, y, e]) => s += palette(p, x, y, e, { ombre:false }));
+    // voile froid + niveleur de quai (tôle striée, bord jaune et noir)
+    s += `<rect x="${PORTE.x0}" y="${PORTE.y0}" width="331" height="233" fill="#1c3442" opacity=".30"/>`;
+    s += `<rect x="${PORTE.x0}" y="${PORTE.y0}" width="331" height="233" fill="#a9d2f0" opacity=".08"/>`;
+    s += `<polygon points="${pts([[L-6,B],[R+6,B],[R+20,PORTE.y1],[L-20,PORTE.y1]])}" fill="#6b7279"/>`;
+    for (let u = 0; u < 14; u++){
+      const x = L - 20 + (R - L + 40) * (u + .5) / 14;
+      s += `<rect x="${f1(x-7)}" y="${PORTE.y1-5}" width="7" height="5" fill="${u % 2 ? '#1d1d1d' : '#e3b21b'}"/>`;
+    }
+    return s;
+  }
+
+  // ---------- une palette filmée, vue de face avec un peu de dessus ----------
+  // (x, y) = milieu du bas de la palette en bois ; e = échelle
+  function palette(p, x, y, e, o = {}){
+    const cw = 32 * e, ch = 27 * e, W = p.W, Lc = p.L, w = W * cw, h = Lc * ch;
+    const dx = p.D * 7 * e, dy = p.D * 5.5 * e, hb = 13 * e;   // profondeur oblique, hauteur bois
+    const X = x - w / 2, Y = y - hb;                            // coin bas gauche des cartons
+    const manque = new Set(p.manque);
+    let s = '';
+    if (o.ombre !== false) s += `<ellipse cx="${f1(x + dx/2)}" cy="${f1(y + 2*e)}" rx="${f1(w*.62 + dx/2)}" ry="${f1(9*e)}" fill="#000" opacity=".28"/>`;
+    // palette en bois : planche de dessus, 3 plots, côté
+    s += `<polygon points="${pts([[X,Y],[X+w,Y],[X+w+dx,Y-dy],[X+dx,Y-dy]])}" fill="#b98f55"/>`;
+    s += `<polygon points="${pts([[X+w,Y],[X+w+dx,Y-dy],[X+w+dx,y-dy],[X+w,y]])}" fill="#7d5a2c"/>`;
+    s += `<rect x="${f1(X)}" y="${f1(Y)}" width="${f1(w)}" height="${f1(hb*.35)}" fill="#c99d61"/>`;
+    for (const u of [0, .5, 1]){
+      const bx = X + (w - 14*e) * u;
+      s += `<rect x="${f1(bx)}" y="${f1(Y + hb*.35)}" width="${f1(14*e)}" height="${f1(hb*.65)}" fill="#a77d45"/>`;
+    }
+    s += `<rect x="${f1(X)}" y="${f1(y - hb*.2)}" width="${f1(w)}" height="${f1(hb*.2)}" fill="#8f6a37"/>`;
+    // cartons : face avant (rangée j = 0), dessus, côté droit
+    const top = Lc - 1;
+    const colPleine = i => { for (let j = 0; j < p.D; j++) if (!manque.has(`${i},${j},${top}`)) return true; return false; };
+    for (let k = 0; k < Lc; k++){
+      for (let i = 0; i < W; i++){
+        if (k === top && !colPleine(i)) continue;
+        const cx = X + i * cw, cy = Y - (k + 1) * ch;
+        s += `<rect x="${f1(cx)}" y="${f1(cy)}" width="${f1(cw)}" height="${f1(ch)}" fill="${(i + k) % 2 ? '#d2ad73' : '#c9a265'}" stroke="#6e5128" stroke-width="${f1(Math.max(.5, .9*e))}"/>`;
+        s += `<line x1="${f1(cx)}" y1="${f1(cy + ch*.5)}" x2="${f1(cx + cw)}" y2="${f1(cy + ch*.5)}" stroke="#ad8a55" stroke-width="${f1(1.4*e)}"/>`;
+      }
+    }
+    const hTop = (colPleine(W - 1) ? Lc : Lc - 1) * ch, hTopG = (colPleine(0) ? Lc : Lc - 1) * ch;
+    s += `<polygon points="${pts([[X+w,Y],[X+w+dx,Y-dy],[X+w+dx,Y-dy-hTop],[X+w,Y-hTop]])}" fill="#a98450" stroke="#6e5128" stroke-width="${f1(.8*e)}"/>`;
+    s += `<polygon points="${pts([[X,Y-hTopG],[X+w,Y-hTop],[X+w+dx,Y-dy-hTop],[X+dx,Y-dy-hTopG]])}" fill="#e2c48e" stroke="#6e5128" stroke-width="${f1(.8*e)}"/>`;
+    // film étirable
+    s += `<polygon points="${pts([[X,Y],[X+w,Y],[X+w+dx,Y-dy],[X+w+dx,Y-dy-hTop],[X+w,Y-hTop],[X,Y-hTopG]])}" fill="url(#film)"/>`;
+    for (let u = 1; u < 4; u++){
+      const yy = Y - h * u / 4;
+      s += `<line x1="${f1(X)}" y1="${f1(yy + 6*e)}" x2="${f1(X + w + dx)}" y2="${f1(yy - dy - 4*e)}" stroke="#fff" stroke-opacity=".22" stroke-width="${f1(1.2*e)}"/>`;
+    }
+    // étiquette palette (fiche blanche) avec son numéro
+    const ew = 30 * e, eh = 22 * e, ex = X + w/2 - ew/2, ey = Y - h * .55;
+    s += `<rect x="${f1(ex)}" y="${f1(ey)}" width="${f1(ew)}" height="${f1(eh)}" fill="#f7f4ec" stroke="#888" stroke-width="${f1(.6*e)}"/>`;
+    if (e > .3) s += `<text x="${f1(ex + ew/2)}" y="${f1(ey + eh*.68)}" text-anchor="middle" font-size="${f1(12*e)}" font-weight="700" fill="#0011ac" font-family="system-ui,sans-serif">${p.id}</text>`;
+    return s;
+  }
+
+  // ---------- transpalette électrique + chauffeur (silhouette sans visage) ----------
+  // (x, y) = milieu du bas de la palette portée ; le transpalette est devant, côté élève
+  function transpalette(x, y, e, pas, wPal){
+    let s = '';
+    const bx = x - wPal * .18, by = y + 7*e;                      // tête motrice, devant la palette
+    s += `<ellipse cx="${f1(bx)}" cy="${f1(by + 2*e)}" rx="${f1(30*e)}" ry="${f1(6*e)}" fill="#000" opacity=".3"/>`;
+    s += `<rect x="${f1(bx - 22*e)}" y="${f1(by - 44*e)}" width="${f1(44*e)}" height="${f1(44*e)}" rx="${f1(5*e)}" fill="#d9a514" stroke="#5b4508" stroke-width="${f1(e)}"/>`;
+    s += `<rect x="${f1(bx - 22*e)}" y="${f1(by - 44*e)}" width="${f1(44*e)}" height="${f1(10*e)}" rx="${f1(4*e)}" fill="#2b2b2b"/>`;
+    s += `<rect x="${f1(bx - 16*e)}" y="${f1(by - 26*e)}" width="${f1(32*e)}" height="${f1(4*e)}" fill="#2b2b2b" opacity=".5"/>`;
+    s += `<circle cx="${f1(bx)}" cy="${f1(by - 1*e)}" r="${f1(6*e)}" fill="#1c1c1c"/>`;
+    // chauffeur : marche devant, à gauche, en tirant le timon
+    const cx = bx - 58*e, sol = by + 6*e, b = Math.sin(pas) * 7 * e, c = '#232a31';
+    const hx = cx + 16*e, hy = sol - 92*e;                        // main sur la poignée
+    s += `<line x1="${f1(bx - 6*e)}" y1="${f1(by - 42*e)}" x2="${f1(hx)}" y2="${f1(hy)}" stroke="#2b2b2b" stroke-width="${f1(5*e)}" stroke-linecap="round"/>`;
+    s += `<g fill="${c}" stroke="${c}" stroke-linecap="round">`;
+    s += `<ellipse cx="${f1(cx)}" cy="${f1(sol + 1*e)}" rx="${f1(18*e)}" ry="${f1(4*e)}" fill="#000" stroke="none" opacity=".3"/>`;
+    s += `<line x1="${f1(cx - 5*e)}" y1="${f1(sol - 60*e)}" x2="${f1(cx - 7*e + b)}" y2="${f1(sol - 3*e)}" stroke-width="${f1(10*e)}"/>`;
+    s += `<line x1="${f1(cx + 5*e)}" y1="${f1(sol - 60*e)}" x2="${f1(cx + 7*e - b)}" y2="${f1(sol - 3*e)}" stroke-width="${f1(10*e)}"/>`;
+    s += `<rect x="${f1(cx - 14*e)}" y="${f1(sol - 114*e)}" width="${f1(28*e)}" height="${f1(58*e)}" rx="${f1(11*e)}" stroke="none"/>`;
+    s += `<line x1="${f1(cx + 8*e)}" y1="${f1(sol - 104*e)}" x2="${f1(hx)}" y2="${f1(hy)}" stroke-width="${f1(8*e)}"/>`;
+    s += `<line x1="${f1(cx - 9*e)}" y1="${f1(sol - 104*e)}" x2="${f1(cx - 13*e - b*.6)}" y2="${f1(sol - 70*e)}" stroke-width="${f1(8*e)}"/>`;
+    s += `<circle cx="${f1(cx)}" cy="${f1(sol - 128*e)}" r="${f1(12*e)}" stroke="none"/>`;
+    s += `<rect x="${f1(cx - 14*e)}" y="${f1(sol - 98*e)}" width="${f1(28*e)}" height="${f1(6*e)}" fill="#c9d64a" stroke="none"/>`;
+    s += `<rect x="${f1(cx - 14*e)}" y="${f1(sol - 80*e)}" width="${f1(28*e)}" height="${f1(5*e)}" fill="#c9d64a" stroke="none"/>`;
+    s += `</g>`;
+    return s;
+  }
+
+  // ---------- brume froide : l'air froid tombe et coule au sol ----------
+  function brume(t){
+    let s = '';
+    for (let n = 0; n < 14; n++){
+      const d = T_OUVRE + 300 + n * 330, u = (t - d) / 4200;
+      if (u <= 0 || u >= 1) continue;
+      const a = Math.sin(u * Math.PI) * .72;
+      const x = 620 + (n % 2 ? 1 : -1) * (20 + (n % 5) * 40) * u, y = 560 + 150 * u;
+      s += `<ellipse cx="${f1(x)}" cy="${f1(y)}" rx="${f1(80 + 170*u)}" ry="${f1(16 + 22*u)}" fill="#eef5fa" opacity="${a.toFixed(2)}"/>`;
+    }
+    return s;
+  }
+
+  // ---------- image à l'instant t ----------
+  function image(t){
+    const P = st.p;
+    const depart = n => T_DEB + n * T_PAL;
+    const montee = ease((t - T_OUVRE) / T_PORTE);
+    $s('porte').setAttribute('transform', `translate(0 ${f1(-montee * 236)})`);
+    $s('remorque').innerHTML = interieur(P.filter((_, n) => t < depart(n)));
+    $s('brume').innerHTML = brume(t);
+    const posees = [];
+    let mobile = '', enCours = null;
+    P.forEach((p, n) => {
+      const [xf, yf] = PLACES[n];
+      if (t >= depart(n) + T_TRAJET) posees.push([p, xf, yf]);
+      else if (t >= depart(n)){
+        const u = ease((t - depart(n)) / T_TRAJET);
+        const x0 = 620, y0 = SOL_Y0 + 4, cx = 620 + (xf - 620) * .12, cy = yf - 10;
+        const x = (1-u)*(1-u)*x0 + 2*(1-u)*u*cx + u*u*xf, y = (1-u)*(1-u)*y0 + 2*(1-u)*u*cy + u*u*yf;
+        const e = echelle(y);
+        mobile = palette(p, x, y, e) + transpalette(x, y, e, (t - depart(n)) / 110, p.W * 32 * e);
+        enCours = n;
+      }
+    });
+    posees.sort((a, b) => a[2] - b[2]);
+    $s('posees').innerHTML = posees.map(([p, x, y]) => palette(p, x, y, echelle(y))).join('');
+    $s('mobile').innerHTML = mobile;
+    // légende, compteur, pastilles
+    const nb = posees.length;
+    let leg;
+    if (etat === 'attente') leg = `${hhmm(st.minute)} — Le camion est à quai, portes fermées.`;
+    else if (t < T_OUVRE) leg = `${hhmm(st.minute)} — Le chauffeur ouvre les portes arrière de sa remorque.`;
+    else if (t < T_DEB) leg = `${hhmm(st.minute)} — La porte du quai se lève : l'air froid s'échappe et tombe au sol. Le temps hors froid démarre.`;
+    else if (nb < P.length) leg = `${hhmm(st.minute)} — Le chauffeur sort la palette ${P[enCours ?? nb].id} au transpalette (${Math.min(nb + 1, P.length)} sur ${P.length}).`;
+    else leg = `${hhmm(st.minute)} — Les ${P.length} palettes sont sur le quai. Le camion attend la fin de tes contrôles.`;
+    $s('leg2').textContent = leg;
+    $s('nb2').textContent = `${nb} / ${P.length}`;
+    const posIds = new Set(posees.map(q => q[0].id));
+    $s('past2').innerHTML = P.map(p => `<i class="${posIds.has(p.id) ? 'sur' : ''}">${p.id}</i>`).join('');
+  }
+
+  // ---------- événements du temps du quai (une seule fois, jamais en « revoir ») ----------
+  function evenements(t){
+    if (rejeu) return;
+    if (evts === 0 && t >= T_OUVRE){
+      st.decharge = true; evts = 1;
+      avancer(COUT_PORTE, 'porte du quai ouverte, début du déchargement'); rendre();
+    }
+    while (evts >= 1 && evts <= st.p.length && t >= T_DEB + (evts - 1) * T_PAL + T_TRAJET){
+      avancer(COUT_PAL, `${st.p[evts - 1].id} posée sur le quai`); evts++; rendre();
+    }
+  }
+
+  function boucle(now){
+    if (t0 === null) t0 = now - t;
+    t = now - t0;
+    if (st.fini && !rejeu) t = FIN;
+    evenements(t); image(t);
+    if (t >= FIN){ terminer2(); return; }
+    raf = requestAnimationFrame(boucle);
+  }
+  function terminer2(){
+    cancelAnimationFrame(raf); raf = null; t = FIN; etat = 'fini'; rejeu = false;
+    evenements(FIN); image(FIN);
+    $s('bPasser2').classList.add('cache');
+    $s('bRevoir2').classList.remove('cache');
+    $s('bVers3').disabled = false;
+  }
+
+  const reduit = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  return {
+    lancer(){
+      etat = 'joue'; t = 0; t0 = null; evts = 0; rejeu = false;
+      $s('bPasser2').classList.remove('cache'); $s('bRevoir2').classList.add('cache'); $s('bVers3').disabled = true;
+      if (reduit) { terminer2(); return; }
+      raf = requestAnimationFrame(boucle);
+    },
+    passer(){ if (etat === 'joue' || rejeu) terminer2(); },
+    revoir(){
+      if (etat !== 'fini') return;
+      etat = 'joue'; rejeu = true; t = 0; t0 = null;
+      $s('bPasser2').classList.remove('cache'); $s('bRevoir2').classList.add('cache');
+      raf = requestAnimationFrame(boucle);
+    },
+    reset(){
+      cancelAnimationFrame(raf); raf = null; etat = 'attente'; t = 0; t0 = null; evts = 0; rejeu = false;
+      $s('bPasser2').classList.remove('cache'); $s('bRevoir2').classList.add('cache'); $s('bVers3').disabled = true;
+      image(0);
+    },
+    dessiner(){ if (!raf) image(etat === 'fini' ? FIN : t); },
+    palette,
+  };
+})();
+$('bPasser2').onclick = () => anim2.passer();
+$('bRevoir2').onclick = () => anim2.revoir();
+$('bVers3').onclick = () => allerA(3);
+
+
+// ================= Étape 4 : chambre froide, réserves, signature =================
+const accepte = p => p.decision === 'accepter' || p.decision === 'reserves';
+// Ce que la réserve doit préciser, selon le motif choisi par l'élève
+const CHAMP_RES = {
+  temperature: { lib: 'Température à cœur relevée (°C)', type: 'number', attendu: p => p.temp, egal: (v, p) => Math.abs(parseFloat(String(v).replace(',', '.')) - p.temp) < 0.05 },
+  produit:     { lib: 'Référence réellement livrée (lue sur l’étiquette)', type: 'text', attendu: p => p.etiq.ref, egal: (v, p) => String(v).trim().toUpperCase() === p.etiq.ref },
+  avarie:      { lib: 'Nombre de cartons endommagés', type: 'number', attendu: p => Object.keys(p.avarie).length, egal: (v, p) => +v === Object.keys(p.avarie).length },
+  manquant:    { lib: 'Nombre de cartons manquants', type: 'number', attendu: p => p.bl - p.reel, egal: (v, p) => +v === p.bl - p.reel },
+  aucun:       { lib: 'Nombre de cartons concernés', type: 'number', attendu: () => '?', egal: () => false },
+};
+const fmtT = v => `${String(v).replace('.', ',').replace('-', '−')} °C`;
+function texteLigne(p, motif, v){
+  const vide = v === '' || v === undefined || v === null;
+  const val = vide ? '…' : v;
+  if (p.decision === 'refuser'){
+    const pourquoi = motif === 'temperature' ? `température à cœur ${vide ? '…' : fmtT(v)} (−18 °C exigé)`
+      : motif === 'produit' ? `produit livré ${val} au lieu de ${p.ref} commandé`
+      : motif === 'avarie' ? `${val} cartons endommagés` : motif === 'manquant' ? `${val} cartons manquants` : 'motif non précisé';
+    return `${p.id} ${p.ref} : palette REFUSÉE — ${pourquoi}. ${p.reel} cartons repris par le chauffeur.`;
+  }
+  const quoi = motif === 'avarie' ? `${val} cartons endommagés (écrasés)` : motif === 'manquant' ? `manque ${val} cartons (BL ${p.bl}, reçu ${vide ? '…' : p.bl - (+v)})`
+    : motif === 'temperature' ? `température à cœur ${vide ? '…' : fmtT(v)}` : motif === 'produit' ? `référence livrée ${val}` : 'réserve sans motif';
+  return `${p.id} ${p.ref} : acceptée sous réserve — ${quoi}.`;
+}
+function ligneAttendue(p){
+  const q = { ...p, decision: p.attendu };
+  return texteLigne(q, p.motifAttendu, CHAMP_RES[p.motifAttendu].attendu(p));
+}
+const aEcrire = () => st.p.map((p, n) => ({ p, n })).filter(({ p }) => p.decision === 'reserves' || p.decision === 'refuser');
+
+function rendre4(){
+  const toutDecide = st.p.every(p => p.decision);
+  // BL avec les lignes écrites
+  $('bl4').innerHTML = st.p.map(p => `<tr><td>${p.id}</td><td>${p.ref}</td><td>${p.nom}</td><td>${p.bl}</td></tr>`).join('');
+  $('lignesRes').innerHTML = st.ecrit ? ((st.lignes.length ? st.lignes.map(l => `<div>${l.texte}</div>`).join('') : '<div>Néant — marchandise reçue conforme.</div>') + (st.mentionEcrite ? '<div>Sous réserve de déballage.</div>' : '')) : '';
+  $('sigMoi').innerHTML = st.ecrit ? signature('#1d3a7a', 1) : '';
+  $('sigChauffeur').innerHTML = st.signe ? signature('#222', 2) : '';
+  // formulaire
+  const liste = aEcrire();
+  if (!toutDecide) $('formRes').innerHTML = `<p class="note">Décide d'abord pour chaque palette (étape 3) : il en reste ${st.p.filter(p => !p.decision).length}.</p>`;
+  else if (!liste.length) $('formRes').innerHTML = '<p class="note">Aucune palette refusée ou acceptée sous réserve : tu écriras « Néant ».</p>';
+  else if (!$('formRes').querySelector('[data-res]') || $('formRes').dataset.cle !== liste.map(x => x.p.id + x.p.decision + x.p.motif).join()){
+    $('formRes').dataset.cle = liste.map(x => x.p.id + x.p.decision + x.p.motif).join();
+    $('formRes').innerHTML = liste.map(({ p, n }) => {
+      const c = CHAMP_RES[p.motif] || CHAMP_RES.aucun;
+      return `<div class="res-ligne"><b>${p.id} — ${DECISIONS[p.decision]} · ${MOTIFS[p.motif]}</b>
+        <label>${c.lib} <input data-res="${n}" type="${c.type}" ${c.type === 'number' ? 'step="any"' : ''} value="${p.res}"></label></div>`;
+    }).join('');
+  }
+  $('formRes').querySelectorAll('input').forEach(i => i.disabled = st.signe || st.fini);
+  $('cDeballage').disabled = st.signe || st.fini || !toutDecide; $('cDeballage').checked = st.deballage;
+  $('coutEcrire').textContent = `· ${fmtMin(Math.max(1, liste.length) * COUTS.ligne)}`;
+  $('bEcrire').disabled = !st.decharge || !toutDecide || st.signe || st.fini;
+  $('bEcrire').firstChild.textContent = st.ecrit ? 'Réécrire les réserves ' : 'Écrire les réserves sur le BL ';
+  $('bSigner').disabled = !st.ecrit || st.signe || st.fini;
+  $('bRentrer').disabled = !st.decharge || !toutDecide || st.rentre || st.fini;
+  $('bValider').disabled = !st.decharge || st.fini || !(st.rentre && st.signe);
+  $('etatCf').textContent = st.rentre ? `Lot rentré à ${hhmm(st.minute >= 0 ? st.heureRentre : 0)} : ${st.p.filter(accepte).length} palettes en chambre froide, ${st.p.filter(p => !accepte(p)).length} refusée(s) au quai.`
+    : (toutDecide ? `${st.p.filter(accepte).length} palettes à rentrer · temps hors froid : ${fmtMin(st.froid)}.` : 'Décide d’abord pour chaque palette.');
+  $('parole4txt').innerHTML = `<b>Le chauffeur :</b> « ${st.paroleChauffeur || (st.signe ? 'C’est signé. Je recharge les palettes refusées et j’y vais. Bonne journée !' : st.ecrit ? 'Faites voir ce que vous avez écrit… Je signe ?' : 'J’attends vos papiers pour signer. Mes autres clients m’attendent aussi.')} »`;
+  if (!anim4.joue) anim4.dessiner(st.rentre ? 1 : 0);
+}
+function signature(c, graine){
+  // paraphe dessiné : une boucle d'initiale puis une ligne ondulée qui s'amortit
+  const g = graine === 1 ? [18, 34, 30, 8, 46, 40] : [22, 40, 16, 6, 52, 30];
+  const d = `M8 ${g[1]} C ${g[0]} 4, ${g[0] + 20} 4, ${g[0] + 10} ${g[1]} S ${g[0] + 2} 50, ${g[0] + 24} 30`
+    + ` C ${g[0] + 40} ${g[2]}, ${g[0] + 50} ${g[3] + 40}, ${g[0] + 64} 28`
+    + ` S ${g[0] + 86} ${g[4]}, ${g[0] + 100} 26 S ${g[0] + 124} ${g[5]}, ${g[0] + 150} 24`;
+  return `<svg viewBox="0 0 190 54"><path d="${d}" fill="none" stroke="${c}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+}
+function ecrireReserves(){
+  const liste = aEcrire();
+  st.lignes = liste.map(({ p }) => {
+    const c = CHAMP_RES[p.motif] || CHAMP_RES.aucun;
+    const juste = p.decision === p.attendu && p.motif === p.motifAttendu && p.res !== '' && c.egal(p.res, p);
+    return { id: p.id, texte: texteLigne(p, p.motif, p.res), juste, vide: p.res === '' };
+  });
+  avancer(Math.max(1, liste.length) * COUTS.ligne, `réserves écrites sur le BL (${liste.length} ligne${liste.length > 1 ? 's' : ''})`);
+  st.ecrit = true; st.paroleChauffeur = ''; st.mentionEcrite = st.deballage;
+  $('chef4b').classList.toggle('cache', !(mode === 'guidage' && st.deballage));
+  rendre();
+}
+function signer(){
+  // En guidage, le chauffeur refuse de signer une réserve incomplète (sans valeur)
+  const vides = st.lignes.filter(l => l.vide);
+  if (mode === 'guidage' && vides.length){
+    st.paroleChauffeur = `Votre réserve sur ${vides.map(l => l.id).join(', ')} ne dit pas combien ni quoi. Une réserve pas précise, ça ne vaut rien. Complétez et je signe.`;
+    rendre(); return;
+  }
+  st.signe = true; st.paroleChauffeur = '';
+  avancer(COUTS.signer, 'BL signé par le chauffeur, réserves comprises');
+  rendre();
+}
+function rentrer(){
+  avancer(COUTS.rentrer, `lot rentré en chambre froide (${st.p.filter(accepte).length} palettes)`);
+  st.ordreFroidDabord = !st.ecrit;
+  st.rentre = true; st.heureRentre = st.minute;
+  anim4.jouer();
+  rendre();
+}
+
+// Petite scène : l'entrée de la chambre froide (rideau à lanières) et le quai
+const anim4 = (() => {
+  let raf = null, t0 = null;
+  const D = 2600;
+  const scene = u => {
+    let s = '';
+    s += `<rect x="0" y="0" width="640" height="300" fill="#3a4349"/>`;
+    s += `<polygon points="0,210 640,210 640,300 0,300" fill="#59636a"/>`;                 // sol du quai
+    s += `<rect x="0" y="0" width="250" height="210" fill="#d5dade"/>`;                      // mur isolé de la chambre
+    for (let x = 0; x < 250; x += 50) s += `<line x1="${x}" y1="0" x2="${x}" y2="210" stroke="#b9c0c5" stroke-width="2"/>`;
+    s += `<rect x="70" y="40" width="130" height="170" fill="#0f2233"/>`;                    // baie
+    for (let k = 0; k < 9; k++) s += `<rect x="${72 + k * 14.2}" y="42" width="13" height="168" fill="#cfe6f7" opacity=".35"/>`; // lanières
+    s += `<rect x="85" y="6" width="100" height="28" rx="3" fill="#1b2228"/><text x="135" y="26" text-anchor="middle" font-size="14" font-weight="700" fill="#8fd0ff" font-family="ui-monospace,Consolas,monospace">−23,0 °C</text>`;
+    s += `<text x="20" y="232" font-size="12" fill="#e4e8eb" font-family="system-ui">Chambre froide n° 2</text>`;
+    s += `<rect x="540" y="60" width="100" height="150" fill="#cfd4d8"/><rect x="552" y="72" width="88" height="138" fill="#1d252b"/>`;
+    s += `<text x="590" y="232" text-anchor="middle" font-size="12" fill="#e4e8eb" font-family="system-ui">Camion (refus)</text>`;
+    s += `<text x="320" y="292" text-anchor="middle" font-size="12" fill="#e4e8eb" font-family="system-ui">Quai 32 · +4 °C</text>`;
+    // palettes
+    const acc = st.p.filter(accepte), ref = st.p.filter(p => !accepte(p));
+    const items = [];
+    acc.forEach((p, k) => {
+      const x0 = 300 + k * 48, y0 = 262, uu = Math.max(0, Math.min(1, u * 1.4 - k * .1));
+      const x = x0 + (135 - x0) * uu, y = y0 + (205 - y0) * uu, e = .55 - .15 * uu;
+      items.push([y, uu >= 1 ? '' : anim2.palette(p, x, y, e), uu < 1 ? 1 - uu * .9 : 0]);
+    });
+    ref.forEach((p, k) => {
+      const x0 = 420 + k * 48, y0 = 262;
+      items.push([y0, anim2.palette(p, x0, y0, .55) + `<text x="${x0}" y="${y0 + 16}" text-anchor="middle" font-size="11" font-weight="700" fill="#ff9a8a" font-family="system-ui">refusée</text>`, 1]);
+    });
+    items.sort((a, b) => a[0] - b[0]).forEach(([, g, o]) => s += `<g opacity="${o.toFixed(2)}">${g}</g>`);
+    if (u >= 1 && acc.length) s += `<text x="135" y="130" text-anchor="middle" font-size="13" fill="#cfe6f7" font-family="system-ui">${acc.length} palettes au froid ✓</text>`;
+    return s;
+  };
+  const o = {
+    joue: false,
+    dessiner(u){ $('cf4').innerHTML = scene(u); },
+    jouer(){
+      o.joue = true; t0 = null;
+      const pas = now => { if (t0 === null) t0 = now; const u = Math.min(1, (now - t0) / D); o.dessiner(u); if (u < 1) raf = requestAnimationFrame(pas); else { o.joue = false; } };
+      if (matchMedia('(prefers-reduced-motion: reduce)').matches){ o.joue = false; o.dessiner(1); return; }
+      raf = requestAnimationFrame(pas);
+    },
+    stop(){ cancelAnimationFrame(raf); o.joue = false; },
+  };
+  return o;
+})();
+
+demarrer();
+</script>
+</body>
+</html>
