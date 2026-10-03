@@ -22,6 +22,7 @@ export default async function bloc({ v, page, nav, ROOT }) {
   const S21 = await imp('contenus/cdiscount-mouvements.js');
   const S22 = await imp('contenus/cdiscount-inventaire.js');
   const INVM = await imp('core/types/inventaire.js');
+  const DECL = await imp('core/declencheurs.js');
 
   // Ce que fait le moteur à l'ouverture d'une séance (`creerEntreprise`, semerVolet), refait ici
   // pour juger les données sans navigateur : base de départ, puis volet de la séance.
@@ -108,7 +109,10 @@ export default async function bloc({ v, page, nav, ROOT }) {
     const db = ouvrir(S21);
     const recs = new Set(db.receptions.map((r) => r.no));
     const bps = new Set(db.orders.map((o) => 'BP-' + o.no.replace('CMD-', '')));
-    const sujets = db.mails.map((m) => m.subject + ' ' + m.text).join('\n');
+    // Le retour et la casse arrivent en cours de séance (option B, 03/10/2026) : on compte aussi
+    // les messages du déclencheur.
+    const tard = S21.VOLET.declencheurs.flatMap((d) => d.semer('Léa', db).mails || []);
+    const sujets = [...db.mails, ...tard].map((m) => m.subject + ' ' + m.text).join('\n');
     for (const m of db.moves) {
       const trouve = recs.has(m.ref) || bps.has(m.ref) || sujets.includes(m.ref);
       if (!trouve) throw new Error(`mouvement sans document : ${m.sku} ${m.type} ${m.ref}`);
@@ -213,6 +217,62 @@ Stock au dernier inventaire : 27 - 12 - 1 + 9 + 1 = 24`;
     if (statuts(S21, db3).some((s) => s !== 'attente')) throw new Error('une réponse au cariste est comptée');
   });
 
+  // ---------- Messages déclenchés (option B, 03/10/2026) : les fabriques de `core/declencheurs.js`
+  await v('Déclencheurs : apresMail part à l\'envoi (juste ou faux), pas sur un brouillon, un mail reçu ou une ligne sans nombre ; apresJalon sur « ok » seul ; tous', async () => {
+    const A = 'nadia.ferrand@cdiscount.example';
+    const q = DECL.apresMail({ a: A, ligne: 'Stock actuel :', nombre: true });
+    const base = (mails) => ({ mails });
+    const cas = [
+      ['envoyé, nombre faux', [{ folder: 'out', toMail: A, text: 'Stock actuel : 5' }], true],
+      ['envoyé, adresse en majuscules', [{ folder: 'out', toMail: 'Nadia.Ferrand@Cdiscount.example', text: 'stock ACTUEL : 27' }], true],
+      ['autre adresse', [{ folder: 'out', toMail: 'quai@cdiscount.example', text: 'Stock actuel : 27' }], false],
+      ['mail reçu', [{ folder: 'in', fromMail: A, toMail: A, text: 'Stock actuel : 27' }], false],
+      ['brouillon', [{ folder: 'brouillon', toMail: A, text: 'Stock actuel : 27' }], false],
+      ['amorce vide', [{ folder: 'out', toMail: A, text: 'Stock actuel : \nRéception : \nStock au dernier inventaire : ' }], false],
+      ['seulement une référence', [{ folder: 'out', toMail: A, text: 'Stock actuel : ECO-BT-01' }], false],
+      ['ligne absente', [{ folder: 'out', toMail: A, text: 'Bonjour, voici 27' }], false],
+      ['aucun mail', [], false],
+    ];
+    for (const [nom, mails, attendu] of cas) if (q(base(mails)) !== attendu) throw new Error(`apresMail, ${nom} : ${!attendu}`);
+    // Sans `ligne` : n'importe quel envoi à l'adresse ; sans `nombre` : la ligne suffit.
+    if (!DECL.apresMail({ a: A })(base([{ folder: 'out', toMail: A, text: '' }]))) throw new Error('apresMail sans ligne');
+    if (!DECL.apresMail({ a: A, ligne: 'Stock actuel :' })(base([{ folder: 'out', toMail: A, text: 'Stock actuel : ' }]))) throw new Error('apresMail sans nombre');
+    const ETAPES = [{ id: 'x', verifier: (db) => ({ status: db.st }) }, { id: 'u', verifier: (db, U) => ({ status: U && U.ok ? 'ok' : 'ko' }) }];
+    for (const st of ['ko', 'attente', 'na']) if (DECL.apresJalon(ETAPES, 'x')({ st })) throw new Error('apresJalon vrai sur ' + st);
+    if (!DECL.apresJalon(ETAPES, 'x')({ st: 'ok' })) throw new Error('apresJalon faux sur ok');
+    if (DECL.apresJalon(ETAPES, 'absent')({ st: 'ok' })) throw new Error('apresJalon vrai sur une étape inconnue');
+    if (!DECL.apresJalon(ETAPES, 'u', { ok: true })({})) throw new Error('apresJalon ne transmet pas l\'univers');
+    const vrai = () => true, faux = () => false;
+    if (!DECL.tous(vrai, vrai)({}) || DECL.tous(vrai, faux)({})) throw new Error('tous');
+    // ENT-2.1 et ENT-2.3 lisent les mêmes `ligne()` et `nombres()` : déplacées, pas copiées.
+    if (S21.ligne !== DECL.ligne || S21.nombres !== DECL.nombres) throw new Error('ligne/nombres recopiées au lieu d\'être réimportées');
+  });
+
+  await v('ENT-2.1 : le déclencheur part sur un compte rendu à Nadia, juste ou faux, jamais sur l\'amorce vide ni à l\'ouverture', async () => {
+    const d = (S21.VOLET.declencheurs || []).find((x) => x.id === 'documents');
+    if (!d) throw new Error('déclencheur « documents » absent');
+    const db = ouvrir(S21);
+    const sujets = db.mails.map((m) => m.subject);
+    if (sujets.length !== 2 || sujets.some((x) => /^Retour client|^Constat de casse/.test(x))) throw new Error('mails à l\'ouverture : ' + sujets.join(' | '));
+    if (d.quand(db)) throw new Error('le déclencheur est vrai dès l\'ouverture');
+    repondre(db, S21.LIGNES_REPONSE.map((l) => l + ' ').join('\n'));
+    if (d.quand(db)) throw new Error('l\'amorce vide déclenche');
+    repondre(db, 'Stock actuel : 5');
+    if (!d.quand(db)) throw new Error('un compte rendu faux (5) ne déclenche pas');
+    const g = d.semer('Léa', db).mails;
+    if (g.length !== 2 || !/^Retour client RET-26-0091/.test(g[0].subject) || !/^Constat de casse DEM-26-0027/.test(g[1].subject)) throw new Error('mails déclenchés : ' + g.map((m) => m.subject).join(' | '));
+    if (g.some((m) => m.ts < Date.now() - 5000)) throw new Error('les mails déclenchés ne portent pas l\'heure d\'arrivée');
+    // Les jalons ne bougent pas : « actuel » ko sur 5, les autres ko faute de lignes remplies.
+    const st = statuts(S21, db);
+    if (st.some((x) => x !== 'ko')) throw new Error('statuts après « Stock actuel : 5 » : ' + st.join(', '));
+    const db2 = ouvrir(S21);
+    repondre(db2, 'Stock actuel : 27');
+    if (statuts(S21, db2)[0] !== 'ok') throw new Error('« Stock actuel : 27 » ne valide pas le jalon actuel');
+    // Un élève qui avait les deux mails (séance ouverte avant le 03/10/2026) ne les reçoit pas en double.
+    db2.mails.push(...g);
+    if (d.semer('Léa', db2).mails.length) throw new Error('doublon pour une base qui a déjà les deux mails');
+  });
+
   // ---------- ENT-2.1 — dans le navigateur, avec le vrai moteur
   await v('ENT-2.1 : inscrite au registre, cachée tant que pret: false', async () => {
     const src = fs.readFileSync(path.join(ROOT, 'activites', 'index.js'), 'utf8');
@@ -282,7 +342,8 @@ Stock au dernier inventaire : 27 - 12 - 1 + 9 + 1 = 24`;
     });
     if (!res.logoOk) throw new Error('le logo ne se charge pas : ' + res.logo);
     if (res.accent.toLowerCase() !== '#3732ff') throw new Error('accent de la charte non appliqué : ' + res.accent);
-    if (res.mails !== 4) throw new Error(`${res.mails} messages au lieu de 4`);
+    // Option B (03/10/2026) : Bienvenue et consigne à l'ouverture ; le retour et la casse arrivent plus tard.
+    if (res.mails !== 2) throw new Error(`${res.mails} messages au lieu de 2`);
     if (res.lignesConsole !== 8) throw new Error(`.movements ECO-BT-01 : ${res.lignesConsole} lignes au lieu de 8`);
     if (res.lignesStock !== 5) throw new Error(`${res.lignesStock} lignes de stock au lieu de 5`);
     if (/Couleur|Taille/.test(res.colonne)) throw new Error('colonnes Couleur ou Taille affichées pour des articles simples : ' + res.colonne);
@@ -310,7 +371,7 @@ Stock au dernier inventaire : 27 - 12 - 1 + 9 + 1 = 24`;
       const clic = async (sel) => { const e = hote.querySelector(sel); if (!e) throw new Error('introuvable : ' + sel); e.click(); await attendre(); };
       const out = {};
       await clic('[data-vue="mail"]');
-      const autre = db.mails.find((m) => /^Retour client/.test(m.subject));
+      const autre = db.mails.find((m) => /^Bienvenue/.test(m.subject));
       await clic(`[data-mail="${autre.id}"]`);
       await clic('[data-repondre]');
       out.autre = hote.querySelector('#repT').value;
@@ -345,6 +406,105 @@ Stock au dernier inventaire : 27 - 12 - 1 + 9 + 1 = 24`;
     if (st.some((s) => s === 'ok')) throw new Error('l\'amorce seule valide un jalon : ' + st.join(', '));
   });
 
+  // Option B (03/10/2026) : dans le vrai moteur, rien n'arrive en cliquant partout ; le premier compte
+  // rendu à Nadia, même faux, fait arriver le retour et la casse, une seule fois, avec une bulle qui
+  // dit les deux (envoi + nouveau message).
+  await v('ENT-2.1 : cliquer partout ne fait rien arriver ; « Stock actuel : 5 » fait arriver le retour et la casse, une fois, sans doublon au remontage ni pour une base ancienne', async () => {
+    const res = await page.evaluate(async ({ CHEFFE }) => {
+      const mod = await import('/activites/cdiscount-mouvements.js');
+      const attendre = () => new Promise((r) => setTimeout(r, 60));
+      const bulle = () => document.getElementById('toast')?.textContent || '';
+      const monter = (db) => {
+        const hote = document.createElement('div');
+        hote.id = 'essaiCdiscount';
+        document.body.appendChild(hote);
+        const ctx = { meta: mod.meta, profil: { prenom: 'Léa', role: 'eleve' }, codeStock: 'STOCK24',
+          jeu: { etat: () => db, sauver() {} }, enregistrer() {}, quitter() {} };
+        mod.rendre(hote, ctx);
+        const clic = async (sel) => { const e = hote.querySelector(sel); if (!e) throw new Error('introuvable : ' + sel); e.click(); await attendre(); };
+        const demonter = () => { hote.querySelector('[data-quitter]').click(); hote.remove(); };
+        const envoyer = async (texte) => {
+          await clic('[data-vue="mail"]');
+          await clic('[data-dossier="in"]');
+          const mission = db.mails.find((m) => m.fromMail === CHEFFE && /racontez/.test(m.subject));
+          await clic(`[data-mail="${mission.id}"]`);
+          await clic('[data-repondre]');
+          if (texte !== null) hote.querySelector('#repT').value = texte;
+          hote.querySelector('#formRep').dispatchEvent(new Event('submit', { cancelable: true }));
+          await attendre();
+        };
+        return { hote, clic, demonter, envoyer };
+      };
+      const compte = (db) => ({ recus: db.mails.filter((m) => m.folder === 'in').length,
+        retour: db.mails.filter((m) => /^Retour client RET-/.test(m.subject)).length,
+        casse: db.mails.filter((m) => /^Constat de casse DEM-/.test(m.subject)).length });
+      const out = {};
+      const db = {};
+      let e = monter(db);
+      out.ouverture = compte(db);
+      // Cliquer partout : tous les menus, chaque mail, Stock et Mouvements, la console.
+      for (const b of [...new Set([...e.hote.querySelectorAll('.ent-nav[data-vue]')].map((x) => x.dataset.vue))]) await e.clic(`.ent-nav[data-vue="${b}"]`);
+      await e.clic('[data-vue="mail"]');
+      for (const m of db.mails.filter((x) => x.folder === 'in')) await e.clic(`[data-mail="${m.id}"]`);
+      await e.clic('[data-vue="stock"]');
+      e.hote.querySelector('#codeStock').value = 'STOCK24';
+      await e.clic('[data-deverrouiller]');
+      await e.clic('[data-onglet="stock"][data-val="mouvements"]');
+      await e.clic('[data-vue="console"]');
+      for (const cmd of ['.help', '.movements ECO-BT-01', '.getstock ECO-BT-01']) {
+        e.hote.querySelector('#champCmd').value = cmd;
+        e.hote.querySelector('#formCmd').dispatchEvent(new Event('submit', { cancelable: true }));
+        await attendre();
+      }
+      out.apresClics = compte(db);
+      // L'amorce envoyée telle quelle (six intitulés, aucun nombre).
+      await e.envoyer(null);
+      out.apresAmorce = compte(db);
+      // Le premier compte rendu, FAUX.
+      await e.envoyer('Stock actuel : 5');
+      out.bulle = bulle();
+      out.pastille = e.hote.querySelector('.ent-nav[data-vue="mail"] .ent-n')?.textContent || '';
+      out.apresEnvoi = compte(db);
+      out.marques = Object.keys(db.volets || {});
+      await e.envoyer('Stock actuel : 27');
+      out.bulle2 = bulle();
+      out.apresSecond = compte(db);
+      e.demonter();
+      // Remontage (reconnexion) : rien de plus.
+      e = monter(db);
+      out.apresRemontage = compte(db);
+      e.demonter();
+      // Base d'un élève qui a commencé avant le 03/10/2026 : il a déjà les deux mails, sans la marque.
+      const ancienne = {};
+      e = monter(ancienne);
+      e.demonter();
+      const recu = (t) => ({ folder: 'in', ts: Date.now() - 3600e3, from: 'x', fromMail: 'x@cdiscount.example', subject: t, kind: 'text', text: 'x', read: true, id: ancienne.seq++ });
+      ancienne.mails.push(recu('Retour client RET-26-0091 remis en stock'), recu('Constat de casse DEM-26-0027'));
+      e = monter(ancienne);
+      await e.envoyer('Stock actuel : 5');
+      out.ancienne = compte(ancienne);
+      out.bulleAncienne = bulle();
+      e.demonter();
+      return out;
+    }, { CHEFFE: CD.EQUIPE.cheffe.mail }).catch(async (e) => {
+      await page.evaluate(() => { document.getElementById('essaiCdiscount')?.remove(); document.body.classList.remove('immersion'); document.body.removeAttribute('style'); });
+      throw e;
+    });
+    const dit = (c) => JSON.stringify(c);
+    // Valeurs écrites à la main : 2 mails reçus à l'ouverture (Bienvenue, consigne), 4 après l'envoi.
+    if (res.ouverture.recus !== 2 || res.ouverture.retour || res.ouverture.casse) throw new Error('ouverture : ' + dit(res.ouverture));
+    if (dit(res.apresClics) !== dit(res.ouverture)) throw new Error('un clic a fait arriver un message : ' + dit(res.apresClics));
+    if (dit(res.apresAmorce) !== dit(res.ouverture)) throw new Error('l\'amorce vide a fait arriver un message : ' + dit(res.apresAmorce));
+    if (res.apresEnvoi.recus !== 4 || res.apresEnvoi.retour !== 1 || res.apresEnvoi.casse !== 1) throw new Error('après « Stock actuel : 5 » : ' + dit(res.apresEnvoi));
+    if (!/^Réponse envoyée\. Nouveau message : /.test(res.bulle)) throw new Error('bulle à l\'envoi : ' + JSON.stringify(res.bulle));
+    if (res.pastille !== '2') throw new Error('pastille de la messagerie : ' + JSON.stringify(res.pastille));
+    if (!res.marques.includes('mouvements-1#documents')) throw new Error('marque absente : ' + res.marques.join(', '));
+    if (dit(res.apresSecond) !== dit(res.apresEnvoi)) throw new Error('le second envoi a reposé des mails : ' + dit(res.apresSecond));
+    if (res.bulle2 !== 'Réponse envoyée.') throw new Error('bulle au second envoi : ' + JSON.stringify(res.bulle2));
+    if (dit(res.apresRemontage) !== dit(res.apresEnvoi)) throw new Error('doublon au remontage : ' + dit(res.apresRemontage));
+    if (res.ancienne.retour !== 1 || res.ancienne.casse !== 1 || res.ancienne.recus !== 4) throw new Error('base ancienne : ' + dit(res.ancienne));
+    if (res.bulleAncienne !== 'Réponse envoyée.') throw new Error('base ancienne, bulle : ' + JSON.stringify(res.bulleAncienne));
+  });
 
   /* ================================================================================
    * ENT-2.2 « Inventaire tournant » (entraînement) — ajouté le 02/10/2026, chantier D.

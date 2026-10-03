@@ -477,7 +477,7 @@ export const CORRIGE = {
         "Ligne de Nadia",
         "Ce que j'écris sur cette ligne"
       ],
-      "contexte": "Tu as tout ce qu'il faut. Il reste à répondre à Nadia comme elle le demande : six lignes, une information par ligne.",
+      "contexte": "Tu as tout ce qu'il faut. Il reste à envoyer à Nadia la réponse complète : six lignes, une information par ligne.",
       "reponses": [
         [
           "Stock actuel :",

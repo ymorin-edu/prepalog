@@ -361,7 +361,7 @@ p("Connecte-toi à Prepalog, ouvre la rubrique Logisim, puis l'activité « Cdis
 consignes([
     "Ouvre d'abord « Bienvenue à l'entrepôt de Cestas » : Nadia Ferrand, ta cheffe d'équipe, te présente le travail.",
     "Ouvre ensuite « Écouteurs ECO-BT-01 : racontez-moi la semaine ». Lis-le en entier, jusqu'au bout. Ne réponds "
-    "pas tout de suite : tu répondras à l'étape 7.",
+    "pas tout de suite : tu enverras ton stock actuel à la fin de l'étape 3, et ta réponse complète à l'étape 7.",
     "Relève les informations ci-dessous.",
 ])
 encadre('Un mot de métier :',
@@ -394,6 +394,17 @@ encadre('Ce que tu dois voir :',
         "sur l'écran Stock, des cases de chiffres en haut, puis la liste des références ; dans la console, une réponse "
         "avec la référence et la quantité. Les deux nombres doivent être identiques. Sinon, vérifie que tu as bien "
         "écrit la référence.")
+# Option B (03/10/2026) : le premier compte rendu fait arriver la suite. On ne dit PAS quels documents
+# arrivent (règle de la page 1 : « les autres documents »).
+p("Nadia attend ce premier chiffre avant la suite : envoie-le-lui maintenant.")
+consignes([
+    "Dans « Messagerie », ouvre le message de Nadia et clique sur « Répondre ».",
+    "Complète seulement la première ligne (« Stock actuel : ») avec le nombre que tu as relevé, puis clique sur "
+    "« Envoyer ».",
+])
+encadre('Ce que tu dois voir :',
+        "en bas de l'écran, « Réponse envoyée. Nouveau message » ; à côté de « Messagerie », le nombre de messages "
+        "non lus augmente. Ces nouveaux messages te serviront à l'étape 5.")
 reflechir([
     "Quelle façon de lire le stock te paraît la plus sûre ? Explique ton choix.",
     "Ce nombre dit-il à lui seul comment le stock est arrivé là ? Explique.",
@@ -503,7 +514,7 @@ reflechir([
 
 # ==================================================================== étape 7
 etape(7, "Répondre à Nadia Ferrand")
-p("Tu as tout ce qu'il faut. Il reste à répondre à Nadia comme elle le demande : six lignes, une information par "
+p("Tu as tout ce qu'il faut. Il reste à envoyer à Nadia la réponse complète : six lignes, une information par "
   "ligne.")
 encadre("À lire AVANT d'écrire :",
         "le suivi lit tes lignes. Les six intitulés sont déjà écrits dans le champ de réponse : ne les modifie pas, "

@@ -215,7 +215,11 @@ export function creerEntreprise(U) {
       // phase (`passerPhase` dans tournee.js) au même instant que le message arrive. Les messages
       // portent `declenche` : la tournée les signale en tête (« Nouveau message ») tant qu'ils
       // ne sont pas lus. Une condition qui plante compte comme fausse, sans rien arrêter.
-      function declencher() {
+      // Les conditions toutes faites (après un jalon, après un mail envoyé) sont dans
+      // `core/declencheurs.js`. `avant` précède l'annonce dans la bulle : le site n'en a qu'une, et
+      // un envoi de mail qui fait arriver un message doit dire les deux (« Réponse envoyée.
+      // Nouveau message : … »), sinon la confirmation de l'envoi efface l'annonce (03/10/2026).
+      function declencher(avant = '') {
         if (!volet || !(volet.declencheurs || []).length) return false;
         if (!db.volets) db.volets = {};
         let fait = false;
@@ -230,7 +234,7 @@ export function creerEntreprise(U) {
           if (d.phaseTournee && VTOUR) VTOUR.passerPhase(etatTransport('tournee'), d.phaseTournee);
           db.volets[cle] = Date.now();
           fait = true;
-          if ((g.mails || []).length) toast('Nouveau message : ' + (g.mails[0].from || 'Messagerie'));
+          if ((g.mails || []).length) toast(avant + 'Nouveau message : ' + (g.mails[0].from || 'Messagerie'));
         });
         return fait;
       }
@@ -773,8 +777,9 @@ export function creerEntreprise(U) {
         if (!m) return;
         ajouterMail({ folder: 'out', ts: Date.now(), from: prenom, fromMail: '', to: m.from, toMail: m.fromMail,
           subject: 'RE : ' + m.subject.replace(/^RE : /, ''), kind: 'text', text: t, read: true });
+        const arrive = !rendue() && declencher('Réponse envoyée. ');
         sauver(); E.dossier = 'out'; E.mailSel = null; dessiner();
-        toast('Réponse envoyée.');
+        if (!arrive) toast('Réponse envoyée.');
       }
 
       // Le fournisseur répond tout seul : l'outil retrouve dans le message les références et
@@ -820,8 +825,9 @@ export function creerEntreprise(U) {
         ajouterMail({ folder: 'in', ts: Date.now() + 1000, from: sup.contact, fromMail: sup.email, to: prenom,
           subject: 'RE : ' + objet, kind: 'text', text: reponse, read: false });
 
+        const arrive = !rendue() && declencher('Message envoyé. ');
         sauver(); E.redige = false; E.dossier = 'in'; E.mailSel = null; dessiner();
-        toast('Message envoyé.');
+        if (!arrive) toast('Message envoyé.');
       }
 
       /* ---------------------------------------------------------- commandes */

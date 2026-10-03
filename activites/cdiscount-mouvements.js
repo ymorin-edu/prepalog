@@ -6,6 +6,9 @@
 // jalons lisent sa réponse. Détail et données : `contenus/cdiscount-mouvements.js`.
 //
 // **`pret: true`** depuis le 03/10/2026 : Tristan l'a validée à l'écran, elle est ouverte aux élèves.
+// Le même jour (option B) : le retour client et la casse n'arrivent plus à l'ouverture, mais quand
+// l'élève a envoyé à Nadia son « Stock actuel : … » (`volet.declencheurs`). Laissée ouverte pendant
+// la validation, sur décision de Tristan.
 //
 // Trame élève écrite (`outils/trame-cdiscount-mouvements.py`, `contenus/trames/ENT-2.1-…`), PAS
 // déclarée tant que Tristan ne l'a pas relue ; seul son corrigé est déclaré (`meta.corrige`).
