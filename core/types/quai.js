@@ -134,6 +134,9 @@ function reglages(Q) {
     couts: Object.assign({}, COUTS_DEFAUT, Q.couts || {}),
     aides, camions, palettes, multi: camions.length > 1,
     controle: Q.mode === 'controle', dossier: Q.dossier || {},
+    // Un second motif proposé pour CHAQUE palette (ENT-4.4 : une palette porte deux problèmes) : la
+    // liste ne dit donc pas laquelle. Absent : l'écran d'ENT-4.1 à 4.3, un seul motif.
+    deuxMotifs: !!Q.deuxMotifs,
     depart: minutesDe(Q.debut || (camions[0] && camions[0].arrivee)),
   };
 }
@@ -156,8 +159,8 @@ function tempReelle(p, e, R) {
 // recalculée pour un camion qui s'est réchauffé, selon la règle à trois zones (−18 / −15 °C).
 function effective(p, e, R) {
   const temp = tempReelle(p, e, R);
-  if (R.camions[p.camion].rechauffe && temp > R.seuilRefus) return Object.assign({}, p, { temp, attendu: 'refuser', motifAttendu: 'temperature' });
-  if (R.camions[p.camion].rechauffe && temp > R.seuilReserve) return Object.assign({}, p, { temp, attendu: 'reserves', motifAttendu: 'temperature' });
+  if (R.camions[p.camion].rechauffe && temp > R.seuilRefus) return Object.assign({}, p, { temp, attendu: 'refuser', motifAttendu: 'temperature', motif2Attendu: undefined });
+  if (R.camions[p.camion].rechauffe && temp > R.seuilReserve) return Object.assign({}, p, { temp, attendu: 'reserves', motifAttendu: 'temperature', motif2Attendu: undefined });
   return temp === p.temp ? p : Object.assign({}, p, { temp });
 }
 export const dureeDechargement = (n, D) => D.ouverture + n * D.parPalette;
@@ -180,7 +183,7 @@ export function etatNeuf(Q) {
   if (R.multi) Object.assign(e, { suivants: R.camions.slice(1).map(camionNeuf), ordre: { premier: null, phrase: null }, actif: 0 });
   return e;
 }
-const paletteNeuve = () => ({ vue: 0, vues: [0], sonde: null, compte: null, etiqVue: false, detail: {}, decision: '', motif: 'aucun', res: '' });
+const paletteNeuve = () => ({ vue: 0, vues: [0], sonde: null, compte: null, etiqVue: false, detail: {}, decision: '', motif: 'aucun', res: '', motif2: 'aucun', res2: '' });
 
 // Une base écrite avec une autre version du contenu : on complète sans rien effacer.
 function normaliser(e, R) {
@@ -215,25 +218,41 @@ const CHAMP_RES = {
   manquant: { lib: 'Nombre de cartons manquants', mode: 'numeric', attendu: (p) => p.manquants, egal: (v, p) => nombre(v) === p.manquants },
   aucun: { lib: 'Nombre de cartons concernés', mode: 'numeric', attendu: () => '?', egal: () => false },
 };
-function texteLigne(p, decision, motif, v) {
-  const vide = v === '' || v === undefined || v === null;
-  const val = vide ? '…' : v;
-  const s = String(v).trim() === '1' ? '' : 's'; // « 1 carton manquant », « 2 cartons manquants »
+// Une ligne de réserve : un constat par motif (deux pour une palette à deux problèmes, ENT-4.4).
+// `motifs` : [[motif, valeur saisie], …].
+function texteLigne(p, decision, motifs) {
+  const vide = (v) => v === '' || v === undefined || v === null;
+  const pl = (v) => (String(v).trim() === '1' ? '' : 's'); // « 1 carton manquant », « 2 cartons manquants »
+  const L = motifs.length ? motifs : [['aucun', '']];
   if (decision === 'refuser') {
-    const pourquoi = motif === 'temperature' ? `température à cœur ${vide ? '…' : fmtT(v)} (−18 °C exigé)`
-      : motif === 'produit' ? `produit livré ${val} au lieu de ${p.ref} commandé`
-        : motif === 'avarie' ? `${val} carton${s} endommagé${s}` : motif === 'manquant' ? `${val} carton${s} manquant${s}` : 'motif non précisé';
+    const pourquoi = L.map(([motif, v]) => {
+      const val = vide(v) ? '…' : v, s = pl(v);
+      return motif === 'temperature' ? `température à cœur ${vide(v) ? '…' : fmtT(v)} (−18 °C exigé)`
+        : motif === 'produit' ? `produit livré ${val} au lieu de ${p.ref} commandé`
+          : motif === 'avarie' ? `${val} carton${s} endommagé${s}` : motif === 'manquant' ? `${val} carton${s} manquant${s}` : 'motif non précisé';
+    }).join(' ; ');
     return `${p.id} ${p.ref} : palette REFUSÉE — ${pourquoi}. ${p.reel} cartons repris par le chauffeur.`;
   }
-  const quoi = motif === 'avarie' ? `${val} carton${s} endommagé${s} (écrasé${s})`
-    : motif === 'manquant' ? `manque ${val} carton${s} (BL ${p.bl}, reçu ${vide ? '…' : p.bl - (+nombre(v))})`
-      : motif === 'temperature' ? `température à cœur ${vide ? '…' : fmtT(v)} (−18 °C exigé)` : motif === 'produit' ? `référence livrée ${val}` : 'réserve sans motif';
+  const quoi = L.map(([motif, v]) => {
+    const val = vide(v) ? '…' : v, s = pl(v);
+    return motif === 'avarie' ? `${val} carton${s} endommagé${s} (écrasé${s})`
+      : motif === 'manquant' ? `manque ${val} carton${s} (BL ${p.bl}, reçu ${vide(v) ? '…' : p.bl - (+nombre(v))})`
+        : motif === 'temperature' ? `température à cœur ${vide(v) ? '…' : fmtT(v)} (−18 °C exigé)` : motif === 'produit' ? `référence livrée ${val}` : 'réserve sans motif';
+  }).join(' ; ');
   return `${p.id} ${p.ref} : acceptée sous réserve — ${quoi}.`;
 }
-const ligneAttendue = (p) => texteLigne(p, p.attendu, p.motifAttendu, CHAMP_RES[p.motifAttendu].attendu(p));
+// Les motifs attendus d'une palette (un, ou deux avec `motif2Attendu`) et ceux choisis par l'élève
+// (le second menu n'existe que si la séance déclare `deuxMotifs`), sans « aucun » ni doublon.
+const motifsAttendus = (p) => [p.motifAttendu, p.motif2Attendu].filter((m) => m && m !== 'aucun');
+const motifsChoisis = (s) => [...new Set([s.motif, s.motif2].filter((m) => m && m !== 'aucun'))];
+const memesMotifs = (p, s) => { const a = motifsAttendus(p), c = motifsChoisis(s); return a.length === c.length && a.every((m) => c.includes(m)); };
+export const libMotifs = (L) => (L.length ? L.map((m) => MOTIFS[m]).join(' + ') : MOTIFS.aucun);
+// La valeur saisie pour un motif : `res` pour le premier menu, `res2` pour le second.
+const valeurDe = (s, m) => (s.motif === m ? s.res : s.motif2 === m ? s.res2 : '');
+const ligneAttendue = (p) => texteLigne(p, p.attendu, motifsAttendus(p).map((m) => [m, CHAMP_RES[m].attendu(p)]));
 // Une décision juste demande la palette sondée ; et, quand l'étiquette avant est déchirée, un refus
 // « produit différent » demande d'avoir lu l'étiquette arrière (la seule preuve).
-const paletteJuste = (p, s) => s.decision === p.attendu && s.motif === p.motifAttendu && s.sonde !== null
+const paletteJuste = (p, s) => s.decision === p.attendu && memesMotifs(p, s) && s.sonde !== null
   && !(p.etiqAvant === 'dechiree' && p.motifAttendu === 'produit' && !(s.etiqLues || []).includes('arriere'));
 // Le comptage : un total, ou un nombre par référence pour une palette multi-références.
 const compteJuste = (p, s) => (p.refs ? p.refs.every((r) => s.comptes && +s.comptes[r.ref] === r.reel && s.comptes[r.ref] !== '') : s.compte === p.reel);
@@ -288,8 +307,8 @@ export function jalonsQuai(db, Q) {
     } else {
       j(`${p.id}-comptage`, `${p.id} comptage`, s.compte === null ? 'pas compté' : `${s.compte} cartons`, `${p.reel} cartons (BL : ${p.bl})`, s.compte === p.reel);
     }
-    const fait = s.decision ? `${DECISIONS[s.decision]} — ${MOTIFS[s.motif]}${s.sonde === null ? ' (sans sonder)' : ''}` : 'sans contrôle ni décision';
-    j(`${p.id}-decision`, `${p.id} décision`, fait, `${DECISIONS[p.attendu]} — ${MOTIFS[p.motifAttendu]}`, paletteJuste(p, s));
+    const fait = s.decision ? `${DECISIONS[s.decision]} — ${libMotifs(motifsChoisis(s))}${s.sonde === null ? ' (sans sonder)' : ''}` : 'sans contrôle ni décision';
+    j(`${p.id}-decision`, `${p.id} décision`, fait, `${DECISIONS[p.attendu]} — ${libMotifs(motifsAttendus(p))}`, paletteJuste(p, s));
   });
   // Une ligne de réserve par palette qui en demande une ; pour un camion qui peut se réchauffer, ses
   // palettes ont TOUJOURS un jalon de réserve (le nombre de jalons ne dépend pas du parcours) :
@@ -353,6 +372,24 @@ export function etapesQuai(Q) {
     verifier(db) {
       const l = jalonsQuai(db, Q).L.find((x) => x.id === id);
       return { status: l && l.ok ? 'ok' : 'attente' };
+    },
+  }));
+}
+
+// Les étapes d'un quai TIRÉ PAR ÉLÈVE (ENT-4.4, `core/tirage.js`) : `quaiDe(graine)` rend la
+// déclaration du quai d'une graine. Les identifiants des jalons dépendent du jeu (la réserve écrite
+// de P3 n'existe que si P3 porte un aléa) : l'étape n° k est donc le k-ième jalon compté du jeu DE LA
+// BASE lue. Le tirage garantit la même structure à tous (même nombre de jalons, dans le même ordre :
+// la suite de tests le vérifie sur des centaines de graines).
+export function etapesQuaiTire(quaiDe, graineDeBase) {
+  const ref = jalonsQuai({}, quaiDe('')).L.filter((l) => l.compte);
+  let nRes = 0;
+  return ref.map((l, k) => ({
+    id: `j${k + 1}`,
+    titre: /-reserve$/.test(l.id) ? `Réserve écrite n° ${++nRes}` : l.lib,
+    verifier(db) {
+      const L = jalonsQuai(db, quaiDe(graineDeBase(db))).L.filter((x) => x.compte);
+      return { status: L[k] && L[k].ok ? 'ok' : 'attente' };
     },
   }));
 }
@@ -1061,6 +1098,8 @@ export function creerQuai(Q, opts = {}) {
             <select id="qDecision" data-q-decision ${dis}>${Object.entries(DECISIONS).map(([kk, v]) => `<option value="${kk}" ${s.decision === kk ? 'selected' : ''}>${v}</option>`).join('')}</select></div>
           <div class="quai-champ"><label for="qMotif">Motif de la réserve ou du refus</label>
             <select id="qMotif" data-q-motif ${dis}>${Object.entries(MOTIFS).map(([kk, v]) => `<option value="${kk}" ${s.motif === kk ? 'selected' : ''}>${v}</option>`).join('')}</select></div>
+          ${R.deuxMotifs ? `<div class="quai-champ"><label for="qMotif2">Second motif, si la palette a un autre problème</label>
+            <select id="qMotif2" data-q-motif2 ${dis}>${Object.entries(MOTIFS).map(([kk, v]) => `<option value="${kk}" ${(s.motif2 || 'aucun') === kk ? 'selected' : ''}>${kk === 'aucun' ? 'aucun autre problème' : v}</option>`).join('')}</select></div>` : ''}
           <div class="quai-ligne"><button class="btn btn-p" data-q="valider" ${manqueValider(p, s) || e.fini ? 'disabled' : ''}>✓ Valider cette palette</button>
             <span class="note" data-q-valide>${s.valide ? 'Palette validée.' : manqueValider(p, s)}</span></div>
         </div>
@@ -1095,8 +1134,12 @@ export function creerQuai(Q, opts = {}) {
     else {
       form = liste.map((p) => {
         const s = st(e, p), c = CHAMP_RES[s.motif] || CHAMP_RES.aucun;
-        return `<div class="quai-res-ligne"><b>${ech(p.id)} — ${DECISIONS[s.decision]} · ${MOTIFS[s.motif]}</b>
-          <label class="quai-res-lib">${ech(c.lib)} <input class="quai-court" id="qRes-${ech(p.id)}" data-q-res="${ech(p.id)}" type="text" inputmode="${c.mode === 'text' ? 'text' : c.mode}" value="${ech(s.res)}" ${k.signe || e.fini ? 'disabled' : ''}></label></div>`;
+        const dis4 = k.signe || e.fini ? 'disabled' : '';
+        // Second motif (ENT-4.4) : un second constat, une seconde valeur.
+        const m2 = R.deuxMotifs && s.motif2 && s.motif2 !== 'aucun' && s.motif2 !== s.motif ? CHAMP_RES[s.motif2] : null;
+        return `<div class="quai-res-ligne"><b>${ech(p.id)} — ${DECISIONS[s.decision]} · ${libMotifs(motifsChoisis(s))}</b>
+          <label class="quai-res-lib">${ech(c.lib)} <input class="quai-court" id="qRes-${ech(p.id)}" data-q-res="${ech(p.id)}" type="text" inputmode="${c.mode === 'text' ? 'text' : c.mode}" value="${ech(s.res)}" ${dis4}></label>
+          ${m2 ? `<label class="quai-res-lib">${ech(m2.lib)} <input class="quai-court" id="qRes2-${ech(p.id)}" data-q-res2="${ech(p.id)}" type="text" inputmode="${m2.mode === 'text' ? 'text' : m2.mode}" value="${ech(s.res2 || '')}" ${dis4}></label>` : ''}</div>`;
       }).join('');
     }
     const lignes = k.ecrit ? ((k.lignes.length ? k.lignes.map((l) => `<div>${ech(l.texte)}</div>`).join('') : '<div>Néant — marchandise reçue conforme.</div>') + (k.mentionEcrite ? '<div>Sous réserve de déballage.</div>' : '')) : '';
@@ -1213,9 +1256,13 @@ export function creerQuai(Q, opts = {}) {
     const k = K(e, ci);
     const liste = aEcrire(e, ci);
     k.lignes = liste.map((p) => {
-      const s = st(e, p), c = CHAMP_RES[s.motif] || CHAMP_RES.aucun, pe = effective(p, e, R);
-      const juste = s.decision === pe.attendu && s.motif === pe.motifAttendu && s.res !== '' && c.egal(s.res, pe);
-      return { id: p.id, texte: texteLigne(p, s.decision, s.motif, s.res), juste, vide: String(s.res).trim() === '' };
+      const s = st(e, p), pe = effective(p, e, R), choisis = motifsChoisis(s);
+      // Juste : la bonne décision, les bons motifs, et pour chacun la bonne valeur (deux constats,
+      // deux quantités pour une palette à deux problèmes).
+      const juste = s.decision === pe.attendu && memesMotifs(pe, s)
+        && choisis.every((m) => { const v = valeurDe(s, m); return v !== '' && v != null && CHAMP_RES[m].egal(v, pe); });
+      const vals = choisis.map((m) => [m, valeurDe(s, m)]);
+      return { id: p.id, texte: texteLigne(p, s.decision, vals), juste, vide: !vals.length || vals.some(([, v]) => String(v == null ? '' : v).trim() === '') };
     });
     avancer(e, Math.max(1, liste.length) * C.ligne, `réserves écrites sur le BL${M ? ` du ${nomCam(ci)}` : ''} (${liste.length} ligne${liste.length > 1 ? 's' : ''})`);
     k.ecrit = true; k.paroleChauffeur = ''; k.mentionEcrite = !!k.deballage;
@@ -1459,6 +1506,9 @@ export function creerQuai(Q, opts = {}) {
     etatNeuf: () => etatNeuf(Q),
     jalons: (db) => jalonsQuai(db, Q),
     note: Q.note || EVAL ? (db) => noteQuai(db, Q) : null,
+    // Le jeu reçu, l'attendu et la réponse, jalon par jalon (quai tiré par élève, ENT-4.4) : rangé
+    // dans le `detail` de la copie pour l'enseignant (des objets : Firestore refuse les tableaux de tableaux).
+    resume: (db) => jalonsQuai(db, Q).L.filter((l) => l.compte).map((l) => ({ lib: l.lib, fait: l.fait, attendu: l.attendu, ok: l.ok })),
     // Le chrono réel, appelé chaque seconde par l'environnement : mise à jour en place.
     tic(z, e) {
       if (!z) return;
@@ -1604,7 +1654,9 @@ export function creerQuai(Q, opts = {}) {
       z.querySelectorAll('[data-q-detail]').forEach((i) => i.addEventListener('input', () => { s().detail[i.dataset.qDetail] = i.value; api.sauver(); }));
       z.querySelector('[data-q-decision]')?.addEventListener('change', (ev) => { s().decision = ev.target.value; api.sauver(); api.redessiner(); });
       z.querySelector('[data-q-motif]')?.addEventListener('change', (ev) => { s().motif = ev.target.value; api.sauver(); api.redessiner(); });
+      z.querySelector('[data-q-motif2]')?.addEventListener('change', (ev) => { s().motif2 = ev.target.value; api.sauver(); api.redessiner(); });
       z.querySelectorAll('[data-q-res]').forEach((i) => i.addEventListener('input', () => { e.palettes[i.dataset.qRes].res = i.value; api.sauver(); }));
+      z.querySelectorAll('[data-q-res2]').forEach((i) => i.addEventListener('input', () => { e.palettes[i.dataset.qRes2].res2 = i.value; api.sauver(); }));
       z.querySelector('[data-q-deballage]')?.addEventListener('change', (ev) => { kc().deballage = ev.target.checked; api.sauver(); });
       on('rentrer', geste(() => { ui.chef4 = false; rentrer(e, api); }));
       on('ecrire', geste(() => {

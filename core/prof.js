@@ -9,12 +9,13 @@ import { chargerActivites, activite, entreprisesDe } from '../activites/index.js
 import { versCSV, telecharger, ouvrirJeu } from './store.js';
 import { NIVEAUX, libelleNiveau, courtNiveau, libelleNiveaux, activiteVisible, horsNiveau, ouvertureParProf } from './niveaux.js';
 import { BAREME_AFFICHE, noteSur20, noteConvertie, formaterNote } from './notes.js';
-import { estCopie, estRendue, libelleRendu, ramasser, rouvrir } from './copie.js';
+import { estCopie, estRendue, libelleRendu, ramasser, rouvrir, baseDeLEleve } from './copie.js';
 import { TEMPS, COEFS_DEFAUT, coefsDuGroupe, seancesParCompetence, moyenneCompetence } from './competences.js';
 
 export async function rendreEspaceProf(hote, ctx) {
   let onglet = ctx.onglet || 'groupes';
   let corrigeActif = null; // id de la séance dont le corrigé est ouvert (onglet Corrigés)
+  let corrigeEleve = '';   // uid de l'élève dont on lit le corrigé (séance à jeu tiré par élève)
   let groupes = await B.groupesDuProf(ctx.profil.uid);
   let gidActif = ctx.groupeActif || groupes[0]?.id || null;
   let dernierLot = null;   // résultat de la dernière création de comptes, conservé à l'affichage
@@ -89,8 +90,22 @@ export async function rendreEspaceProf(hote, ctx) {
     if (actif) {
       try {
         const mod = await import(new URL(actif.corrige, document.baseURI).href);
-        lot = { m: actif, c: mod.CORRIGE };
+        lot = { m: actif, c: mod.CORRIGE, parEleve: typeof mod.corrigeEleve === 'function' ? mod.corrigeEleve : null };
       } catch (e) { lot = { m: actif, c: null }; }
+    }
+    // Séance à JEU TIRÉ PAR ÉLÈVE (évaluation, `core/tirage.js`) : pas de corrigé fixe, le corrigé
+    // DE CET ÉLÈVE — son jeu, l'attendu, sa réponse — calculé par le fichier de corrigé
+    // (`corrigeEleve(base, uid)`) depuis la base de l'élève, lue comme au ramassage des copies.
+    let eleves = [], corrEleve = null;
+    if (lot && lot.parEleve && gidActif) {
+      try { eleves = await B.elevesDuGroupe(gidActif); } catch (e) { eleves = []; }
+      if (!eleves.some((e) => e.uid === corrigeEleve)) corrigeEleve = '';
+      if (corrigeEleve) {
+        try {
+          const base = await baseDeLEleve(B, corrigeEleve, lot.m.jeuId || lot.m.id);
+          corrEleve = lot.parEleve(base, corrigeEleve);
+        } catch (e) { corrEleve = { erreur: true }; }
+      }
     }
     // Le titre d'une séance répète souvent le nom de l'entreprise (« Spartoo — réception ») :
     // sous l'en-tête de l'entreprise, on ne garde que la suite.
@@ -158,10 +173,33 @@ export async function rendreEspaceProf(hote, ctx) {
             </div>`).join('')}`).join('')}
       </section>`;
     };
+    // Le choix de l'élève, puis son corrigé (mêmes blocs que le corrigé d'une séance).
+    const blocEleve = () => {
+      if (!lot || !lot.parEleve) return '';
+      if (!gidActif) return '<section class="panneau"><div class="avis">Chaque élève a son propre jeu : choisissez d\'abord un groupe actif pour lire le corrigé d\'un élève.</div></section>';
+      const nom = (e) => `${e.nom || ''} ${e.prenom || ''}`.trim() || e.uid;
+      const choix = `<div class="champ"><label for="corrEleve">Le corrigé de cet élève (chaque élève a reçu son propre jeu)</label>
+        <select id="corrEleve"><option value="">— choisir un élève —</option>
+          ${eleves.slice().sort((a, b) => nom(a).localeCompare(nom(b), 'fr')).map((e) => `<option value="${ech(e.uid)}" ${e.uid === corrigeEleve ? 'selected' : ''}>${ech(nom(e))}</option>`).join('')}
+        </select></div>`;
+      let corpsEleve = '';
+      if (corrEleve && corrEleve.erreur) corpsEleve = '<div class="avis">Le jeu de cet élève n\'a pas pu être lu.</div>';
+      else if (corrEleve) {
+        corpsEleve = `${corrEleve.texte ? `<p class="note">${ech(corrEleve.texte)}</p>` : ''}
+          ${corrEleve.items.map((it) => `<div class="corr-item" data-genre="${ech(it.genre)}" style="padding:10px 0;border-bottom:1px solid var(--filet)">
+            <div><strong>${ech(it.texte)}</strong></div>${corps(it)}</div>`).join('')}`;
+      }
+      return `<section class="panneau" data-corr-eleve>${choix}${corpsEleve}</section>`;
+    };
     z.innerHTML = `<p class="note">Corrigés complets des trames élèves (QCM, questions du logiciel, recherches Internet, tableaux, messages). Les réponses sont à relire
       avant usage ; celles issues d'Internet portent leur source et la date de relevé. Les nombres du logiciel dépendent de la base de données du site.</p>
       <section class="panneau" id="corrSommaire">${sommaire}</section>
-      ${lot ? bloc(lot) : `<div class="vide">Choisissez une séance ci-dessus pour afficher son corrigé.</div>`}`;
+      ${lot ? blocEleve() + bloc(lot) : `<div class="vide">Choisissez une séance ci-dessus pour afficher son corrigé.</div>`}`;
+    z.querySelector('#corrEleve')?.addEventListener('change', async (ev) => {
+      corrigeEleve = ev.target.value;
+      await vueCorriges(z);
+      z.querySelector('#corrEleve')?.focus();
+    });
     z.querySelectorAll('[data-corrige]').forEach((b) => b.addEventListener('click', async () => {
       corrigeActif = b.dataset.corrige;
       const auClavier = b.matches(':focus-visible');

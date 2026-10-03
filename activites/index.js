@@ -47,6 +47,7 @@ export const ACTIVITES = [
   () => import('./picard-ent41.js'),
   () => import('./picard-ent42.js'),
   () => import('./picard-ent43.js'),
+  () => import('./picard-ent44.js'),
 ];
 
 // Pictogrammes des rubriques. Une seule grille pour les dix : trait de 1,6 px, bouts et

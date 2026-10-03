@@ -1189,6 +1189,331 @@ await v('ENT-4.3 : sous le logo Picard dans Logisim, elle s’ouvre sur l’accu
   await ctx.close();
 });
 
+/* ============================================== ENT-4.4 — évaluation, un camion tiré par élève */
+// Chantier P6 (03/10/2026, brief `docs/briefs/ENT-4.4-picard-evaluation.md`). Le tirage
+// (`core/tirage.js`, `contenus/picard-ent44.js`) est éprouvé hors du navigateur sur des centaines
+// de graines ; la séance, montée par son activité (`activites/picard-ent44.js`), à la souris.
+//
+// Le camion de l'élève « eleve-A », écrit À LA MAIN (relu à l'écran le 03/10/2026) :
+//   P1  ECC-4    4×2×5 − 4 = 36 (BL 36)   couche du dessus incomplète   accepter
+//   P2  PRO-12   4×2×5 − 1 = 39 (BL 40)   1 manquant + 3 écrasés         réserves — manquant (1) + cartons endommagés (3)
+//   P3  PAE-1000 4×2×5 = 40, −14,2 °C                                  refuser — température (−14,2)
+//   P4  HAP-800  4×3×5 = 60, 3 écrasés                                 réserves — cartons endommagés (3)
+//   P5  TAP-750  3×3×4 = 36, étiquette TAF-750                         refuser — produit différent (TAF-750)
+//   P6  GRD-1000 4×3×4 = 48                                            accepter
+// Parcours juste sans tour ni étiquette : 6 min 30 + 6 sondes + 6 comptages + 3 min = 21 min 30 hors froid.
+const ID44 = 'picard-ent44';
+const JUSTE44 = {
+  P1: { compte: 36, decision: 'accepter', motif: 'aucun' },
+  P2: { compte: 39, decision: 'reserves', motif: 'manquant', res: '1', motif2: 'avarie', res2: '3' },
+  P3: { compte: 40, decision: 'refuser', motif: 'temperature', res: '-14,2' },
+  P4: { compte: 60, decision: 'reserves', motif: 'avarie', res: '3' },
+  P5: { compte: 36, decision: 'refuser', motif: 'produit', res: 'TAF-750' },
+  P6: { compte: 48, decision: 'accepter', motif: 'aucun' },
+};
+// Monte l'activité ENT-4.4 elle-même (son `rendre`), pour l'élève `uid`, dans une base neuve ou
+// gardée dans le stockage du navigateur (`garder`).
+const monter44 = (p, o = {}) => p.evaluate(async (o) => {
+  const A = await import('/activites/picard-ent44.js');
+  document.querySelector('#quaiTest')?.remove();
+  const hote = document.createElement('div'); hote.id = 'quaiTest'; document.body.appendChild(hote);
+  const CLE = 'essai-ent44-base';
+  const db = o.garder ? JSON.parse(localStorage.getItem(CLE) || '{}') : {};
+  window.__q = { db, A, remis: null };
+  A.rendre(hote, {
+    meta: A.meta,
+    profil: { prenom: 'Lea', nom: 'Test', role: o.role || 'eleve', uid: o.uid || 'eleve-A' },
+    tiersTemps: !!o.tiers,
+    jeu: { etat: () => db, sauver: () => { if (o.garder) localStorage.setItem(CLE, JSON.stringify(db)); } },
+    enregistrer: () => {}, quitter: () => {}, codeStock: 'ABC',
+    lireScore: async () => null,
+    rendreCopie: async (res) => { window.__q.remis = res; return { rendu: Date.now() }; },
+  });
+  if (!o.accueil) document.querySelector('#quaiTest .ent-nav[data-vue="quai"]').click();
+}, o);
+const etat44 = (p) => p.evaluate((id) => JSON.parse(JSON.stringify((window.__q.db.quais || {})[id] || null)), ID44);
+async function jouer44(p, ecarts = {}) {
+  await clic(p, '[data-q="ticket"]');
+  await p.check(`${Z} [data-q="ticketRep"][value="long"]`);
+  await clic(p, '[data-q="decharger"]');
+  if (await p.isVisible(`${Z} [data-q="passer"]`)) await clic(p, '[data-q="passer"]');
+  await clic(p, '[data-q="vers3"]');
+  const ids = Object.keys(JUSTE44);
+  const pal = (id) => Object.assign({}, JUSTE44[id], ecarts[id] || {});
+  for (let n = 0; n < ids.length; n++) {
+    const x = pal(ids[n]);
+    await clic(p, `[data-q="sel"][data-n="${n}"]`);
+    await clic(p, '[data-q="sonder"]');
+    await p.fill(`${Z} [data-q-compte]`, String(x.compte)); await clic(p, '[data-q="compter"]');
+    await p.selectOption(`${Z} [data-q-decision]`, x.decision);
+    await p.selectOption(`${Z} [data-q-motif]`, x.motif);
+    if (x.motif2) await p.selectOption(`${Z} [data-q-motif2]`, x.motif2);
+  }
+  await vers4(p);
+  await clic(p, '[data-q="rentrer"]');
+  for (const id of ids) {
+    const x = pal(id);
+    if (x.res != null && await p.$(`${Z} #qRes-${id}`)) await p.fill(`${Z} #qRes-${id}`, x.res);
+    if (x.res2 != null && await p.$(`${Z} #qRes2-${id}`)) await p.fill(`${Z} #qRes2-${id}`, x.res2);
+  }
+  await clic(p, '[data-q="ecrire"]');
+  await clic(p, '[data-q="signer"]');
+}
+
+await v('ENT-4.4 : tirage — 500 élèves, chaque camion respecte les contraintes d’équité, la règle du quai et la même structure', async () => {
+  const S = await import(new URL('../../contenus/picard-ent44.js', import.meta.url));
+  const { tirerJeu } = await import(new URL('../../core/tirage.js', import.meta.url));
+  const { jalonsQuai } = await import(new URL('../../core/types/quai.js', import.meta.url));
+  const structure = (Q) => jalonsQuai({}, Q).L.filter((l) => l.compte).map((l) => l.lib.replace(/^P\d réserve écrite$/, 'réserve'));
+  const ref = structure(S.quaiDe('')).join(' | ');
+  const fautes = [];
+  let secours = 0, retires = 0;
+  for (let i = 0; i < 500; i++) {
+    const g = `eleve-${i}-${(i * 7919) % 1000}`;
+    const r = tirerJeu(S.TIRAGE, g);
+    if (r.secours) secours++;
+    if (r.essai > 0) retires++;
+    const e = S.verifier(r.jeu);
+    if (e.length) fautes.push(`${g} : ${e.join(', ')}`);
+    const Q = S.quaiDe(g);
+    if (structure(Q).join(' | ') !== ref) fautes.push(`${g} : structure des jalons différente`);
+    // La règle −18 / −15, relue indépendamment du vérificateur du contenu.
+    for (const p of Q.camions[0].palettes) {
+      const zone = p.temp > -15 ? 'refuser' : p.temp > -18 ? 'reserves' : null;
+      if (zone === 'reserves') fautes.push(`${g} ${p.id} : ${p.temp} dans la zone des réserves`);
+      if (zone === 'refuser' && !(p.attendu === 'refuser' && p.motifAttendu === 'temperature')) fautes.push(`${g} ${p.id} : ${p.temp} non refusée`);
+    }
+    if (Q.camions[0].ticket.releves.filter(([, t]) => t > -15).length !== 3) fautes.push(`${g} : remontée du ticket`);
+  }
+  egal(fautes.slice(0, 5), [], 'camions hors règle');
+  egal([secours, S.ETAPES.length, S.verifier(S.TIRAGE.secours)], [0, 20, []], 'secours / 20 jalons / secours conforme');
+  vrai(retires < 25, `${retires} tirages refaits sur 500 : le tirage tire trop souvent hors règle`);
+});
+
+await v('ENT-4.4 : tirage — le vérificateur refuse un camion hors règle (cinq sabotages)', async () => {
+  const S = await import(new URL('../../contenus/picard-ent44.js', import.meta.url));
+  const { tirerJeu } = await import(new URL('../../core/tirage.js', import.meta.url));
+  const jeu = () => JSON.parse(JSON.stringify(tirerJeu(S.TIRAGE, 'eleve-A').jeu));
+  const casse = (fn) => { const j = jeu(); fn(j, (a) => j.palettes.find((p) => p.alea === a)); return S.verifier(j).length; };
+  egal(S.verifier(jeu()), [], 'le camion intact est refusé');
+  const n = {
+    doubleSansEcrase: casse((j, a) => { a('double').avarie = {}; }),
+    conformeTiede: casse((j, a) => { a('conforme').temp = -16.5; }),
+    produitSansErreur: casse((j, a) => { const p = a('produit'); p.etiq.ref = p.ref; }),
+    deuxConformes: casse((j, a) => { a('couche').alea = 'conforme'; }),
+    ticketPlat: casse((j) => { j.remontee = {}; }),
+  };
+  vrai(Object.values(n).every((x) => x > 0), 'sabotage accepté : ' + JSON.stringify(n));
+});
+
+await v('ENT-4.4 : tirage — même élève, même camion ; 300 élèves, 300 camions différents', async () => {
+  const S = await import(new URL('../../contenus/picard-ent44.js', import.meta.url));
+  const { tirerJeu } = await import(new URL('../../core/tirage.js', import.meta.url));
+  const cle = (g) => JSON.stringify(tirerJeu(S.TIRAGE, g).jeu);
+  egal(cle('eleve-A') === cle('eleve-A'), true, 'même élève, camions différents');
+  const vus = new Set();
+  for (let i = 0; i < 300; i++) vus.add(cle(`u${i}`));
+  egal(vus.size, 300, 'deux élèves ont reçu le même camion');
+});
+
+// Le camion d'un élève ne doit pas changer entre l'ouverture de l'évaluation et le ramassage : ce
+// cas tombe si la réserve ou le tirage est modifié. Valeurs écrites à la main (03/10/2026).
+await v('ENT-4.4 : tirage — jeu figé (le camion d’un élève ne change pas d’une version à l’autre)', async () => {
+  const S = await import(new URL('../../contenus/picard-ent44.js', import.meta.url));
+  const c = S.quaiDe('eleve-fige-44').camions[0];
+  egal(c.bl, 'CD-26-1410', 'BL');
+  egal(c.palettes.map((p) => `${p.id} ${p.alea} ${p.ref}/${p.etiq.ref} ${p.W}x${p.D}x${p.L} bl${p.bl} m${p.manque.length} a${Object.keys(p.avarie).length} ${p.temp}`), [
+    'P1 produit PRO-12/CHC-12 4x2x5 bl40 m0 a0 -19.6',
+    'P2 couche TIR-4/TIR-4 3x2x5 bl28 m2 a0 -22',
+    'P3 avarie MOC-2/MOC-2 4x3x4 bl48 m0 a1 -21.1',
+    'P4 temp PAE-1000/PAE-1000 3x2x5 bl30 m0 a0 -13.7',
+    'P5 double MAC-12/MAC-12 3x3x4 bl36 m2 a2 -22',
+    'P6 conforme BLV-900/BLV-900 3x3x4 bl36 m0 a0 -21.8',
+  ], 'palettes');
+  egal(c.ticket.releves.filter(([, t]) => t > -18), [['04:30', -16.9], ['04:45', -13], ['05:00', -12.3], ['05:15', -12.8], ['05:30', -16.9]], 'remontée du ticket');
+});
+
+await v('ENT-4.4 : meta (évaluation, copie rendue, fermée aux élèves, 20 jalons)', async () => {
+  const r = await pg2.evaluate(async () => { const A = await import('/activites/picard-ent44.js'); return { m: A.meta, noter: typeof A.noter }; });
+  const m = r.m;
+  egal([m.id, m.code, m.rubrique, m.competences, m.temps, m.niveaux, m.bareme, m.immersif, m.ouverture, m.pret, m.portee, m.copie, !!m.reinitialisable, r.noter],
+    ['picard-ent44', 'ENT-4.4', 'logisim', ['C1.4'], 'evaluation', ['1re'], 20, true, 'prof', true, 'eleve', true, false, 'function'], 'meta');
+});
+
+await v('ENT-4.4 : l’élève reçoit son camion (graine posée), aucune aide, un second motif sur chaque palette', async () => {
+  await monter44(pg2);
+  egal(await pg2.evaluate(() => window.__q.db.tirage.graine), 'eleve-A', 'graine');
+  const t = await texte(pg2, Z);
+  vrai(t.includes('CD-26-1810') && t.includes('PRO-12') && t.includes('Les Cuisines de la Deûle (fictif)') && t.includes('Transports Polarix (fictif)'), 'camion de l’élève : ' + t.slice(0, 400));
+  vrai(t.includes('6 palettes × 1 min + 30 s d’ouverture = 6 min 30'), 'formule du déchargement');
+  await clic(pg2, '[data-q="decharger"]');
+  if (await pg2.isVisible(`${Z} [data-q="passer"]`)) await clic(pg2, '[data-q="passer"]');
+  await clic(pg2, '[data-q="vers3"]');
+  for (let n = 0; n < 6; n++) {
+    await clic(pg2, `[data-q="sel"][data-n="${n}"]`);
+    vrai(await pg2.$(`${Z} [data-q-motif2]`), `pas de second motif sur la palette ${n + 1}`);
+  }
+  egal([await pg2.$$eval(`${Z} .quai-aide`, (x) => x.length), !!(await pg2.$(`${Z} [data-q-detail]`)), !!(await pg2.$(`${Z} [data-q-repere]`))],
+    [0, false, false], 'aides / détail / repère');
+});
+
+await v('ENT-4.4 : parcours juste → aucun verdict avant la remise, copie 19/20 (21 min 30 hors froid), ramassage = même note', async () => {
+  await monter44(pg2);
+  await jouer44(pg2);
+  await pg2.evaluate((id) => { window.__q.db.quais[id].reel = 600; }, ID44);
+  // Avant la remise : ni tableau de jalons, ni « juste », ni note.
+  const avant = await texte(pg2, Z);
+  vrai(!(await pg2.$(`${Z} [data-jalon]`)) && !/✓ juste|✗ à revoir|\/ ?20/.test(avant), 'un verdict est visible avant la remise');
+  await clic(pg2, '[data-q="clore"]');
+  await clic(pg2, '[data-q="clore"]');
+  await pg2.waitForFunction(() => !!window.__q.remis);
+  const r = await pg2.evaluate(() => window.__q.remis);
+  const q = r.detail.quai;
+  egal([r.score, r.max, q.jalons, q.sur, q.horsFroid, q.reelPts, q.graine, q.jeu.length, q.jeu.every((l) => l.ok)], [19, 20, 20, 20, 2, 2, 'eleve-A', 20, true], 'copie');
+  egal((await etat44(pg2)).froid, 21.5, 'temps hors froid');
+  vrai((await texte(pg2, `${Z} [data-q-bilan]`)).includes('Ton enseignant te donnera la note'), 'l’élève voit une correction');
+  const ramasse = await pg2.evaluate(() => window.__q.A.noter(JSON.parse(JSON.stringify(window.__q.db))));
+  egal([ramasse.score, ramasse.max], [r.score, r.max], 'ramassage ≠ remise');
+});
+
+await v('ENT-4.4 : la palette à deux problèmes — deux constats, deux quantités, et chacun compte', async () => {
+  const res = await pg2.evaluate(async (id) => {
+    const { jalonsQuai } = await import('/core/types/quai.js');
+    const S = await import('/contenus/picard-ent44.js');
+    const Q = S.quaiDe('eleve-A');
+    const base = JSON.parse(JSON.stringify(window.__q.db));
+    const ko = (fn) => { const db = JSON.parse(JSON.stringify(base)); fn(db.quais[id]); return jalonsQuai(db, Q).L.filter((l) => l.compte && !l.ok).map((l) => l.id); };
+    return {
+      ligne: base.quais[id].lignes.find((l) => l.id === 'P2').texte,
+      juste: ko(() => {}),
+      unSeulMotif: ko((e) => { e.palettes.P2.motif2 = 'aucun'; }),
+      // Les réserves déjà écrites restent : seule la décision est rejouée ici.
+      motifsInverses: ko((e) => { e.palettes.P2.motif = 'avarie'; e.palettes.P2.motif2 = 'manquant'; }),
+      secondMotifEnTrop: ko((e) => { e.palettes.P4.motif2 = 'manquant'; }),
+    };
+  }, ID44);
+  egal(res.ligne, 'P2 PRO-12 : acceptée sous réserve — manque 1 carton (BL 40, reçu 39) ; 3 cartons endommagés (écrasés).', 'ligne de réserve');
+  egal([res.juste, res.unSeulMotif, res.motifsInverses, res.secondMotifEnTrop], [[], ['P2-decision'], [], ['P4-decision']], 'jalons');
+});
+
+await v('ENT-4.4 : la seconde quantité fausse fait tomber la réserve, et elle seule', async () => {
+  await monter44(pg2);
+  await jouer44(pg2, { P2: { res2: '2' } });
+  const ko = await pg2.evaluate(async (id) => {
+    const { jalonsQuai } = await import('/core/types/quai.js');
+    const S = await import('/contenus/picard-ent44.js');
+    return jalonsQuai(window.__q.db, S.quaiDe('eleve-A')).L.filter((l) => l.compte && !l.ok).map((l) => l.id);
+  }, ID44);
+  egal(ko, ['P2-reserve'], 'jalons faux');
+});
+
+await v('ENT-4.4 : note — valeurs du brief sur le camion de l’élève (rapide, palette fausse, BL non signé, tiers-temps)', async () => {
+  await monter44(pg2);
+  await jouer44(pg2);
+  const n = await pg2.evaluate(async (id) => {
+    const { noteQuai } = await import('/core/types/quai.js');
+    const S = await import('/contenus/picard-ent44.js');
+    const Q = S.quaiDe('eleve-A');
+    const base = JSON.parse(JSON.stringify(window.__q.db));
+    const avec = (fn) => { const db = JSON.parse(JSON.stringify(base)); fn(db.quais[id]); return noteQuai(db, Q).score; };
+    return {
+      rapide: avec((e) => { e.froid = 20; e.reel = 600; }),
+      uneFausse: avec((e) => { e.froid = 20; e.reel = 600; e.palettes.P6.decision = 'reserves'; }),
+      nonSigne: avec((e) => { e.froid = 20; e.reel = 600; e.signe = false; }),
+      treize: avec((e) => { e.froid = 20; e.reel = 800; }),
+      treizeTiers: avec((e) => { e.froid = 20; e.reel = 800; e.tiersTemps = true; }),
+      dixSept: avec((e) => { e.froid = 20; e.reel = 17 * 60; }),
+      dixSeptTiers: avec((e) => { e.froid = 20; e.reel = 17 * 60; e.tiersTemps = true; }),
+    };
+  }, ID44);
+  // 19/20 jalons = 14,25 ; rapidité (3 + 2) × 5/6 = 4,17 ; BL non signé : réception incomplète, 0 de rapidité.
+  egal(n, { rapide: 20, uneFausse: 18.42, nonSigne: 14.25, treize: 19, treizeTiers: 20, dixSept: 18, dixSeptTiers: 19 }, 'notes');
+});
+
+await v('ENT-4.4 : après rechargement, l’élève garde son camion et son travail ; la graine n’est jamais remplacée', async () => {
+  await pg2.evaluate(() => localStorage.removeItem('essai-ent44-base'));
+  await monter44(pg2, { garder: true });
+  await clic(pg2, '[data-q="ticket"]');
+  await pg2.check(`${Z} [data-q="ticketRep"][value="long"]`);
+  await pg2.reload();
+  await pg2.waitForLoadState('load');
+  await monter44(pg2, { garder: true });
+  egal([(await etat44(pg2)).ticketRep, await pg2.evaluate(() => window.__q.db.tirage.graine)], ['long', 'eleve-A'], 'travail / graine après rechargement');
+  vrai((await texte(pg2, Z)).includes('CD-26-1810'), 'camion changé après rechargement');
+  // Même base ouverte sous un autre identifiant (enseignant qui teste, poste partagé) : le camion reste.
+  await monter44(pg2, { garder: true, uid: 'eleve-B' });
+  egal(await pg2.evaluate(() => window.__q.db.tirage.graine), 'eleve-A', 'graine remplacée');
+  await pg2.evaluate(() => localStorage.removeItem('essai-ent44-base'));
+});
+
+await v('ENT-4.4 : deux élèves voisins reçoivent deux camions différents', async () => {
+  await monter44(pg2, { uid: 'eleve-A' });
+  const a = await texte(pg2, `${Z} .quai-papier, ${Z} .quai-doc`);
+  await monter44(pg2, { uid: 'eleve-B' });
+  const b = await texte(pg2, `${Z} .quai-papier, ${Z} .quai-doc`);
+  vrai(a.includes('CD-26-1810') && !b.includes('CD-26-1810') && a !== b, 'mêmes camions');
+});
+
+await v('ENT-4.4 : corrigé — par élève dans l’onglet Corrigés (camion, jalons, note), camion seul s’il n’a pas ouvert', async () => {
+  // La base d'un élève qui a fini (celle d'« eleve-A », jouée plus haut) est rangée au nom d'un élève du groupe.
+  await monter44(pg2);
+  await jouer44(pg2);
+  const base = await pg2.evaluate(() => JSON.parse(JSON.stringify(window.__q.db)));
+  const { ctx, pg: p, erreurs } = await contexte();
+  await p.click('#btnProf');
+  await p.waitForSelector('#btnProfEspace');
+  await p.click('#btnProfEspace');
+  await p.waitForSelector('#gNom');
+  await p.fill('#gNom', 'PIC 44');
+  await p.click('#btnCreerG');
+  await p.waitForSelector('text=PIC 44');
+  await p.click('[data-ong="comptes"]');
+  await p.waitForSelector('#lot');
+  await p.fill('#lot', 'FINI ; Alice ; 4401 ; pc01\nABSENT ; Bruno ; 4402 ; pc02');
+  await p.click('#btnLot');
+  await p.waitForSelector('[data-tiers]');
+  const uids = await p.evaluate(async (b) => {
+    const { B } = await import('/core/backend.js');
+    const gs = await B.groupesDuProf((await B.profilCourant()).uid);
+    const g = gs.find((x) => x.nom === 'PIC 44');
+    const el = await B.elevesDuGroupe(g.id);
+    const fini = el.find((e) => e.nom === 'FINI'), absent = el.find((e) => e.nom === 'ABSENT');
+    await B.ecrireJeuPrive(fini.uid, 'picard-ent44', b);
+    return { fini: fini.uid, absent: absent.uid };
+  }, base);
+  await p.click('[data-ong="corriges"]');
+  await p.click('[data-corrige="picard-ent44"]');
+  await p.waitForSelector('#corrEleve');
+  vrai((await texte(p, '#contenuProf')).includes('Manquant + cartons écrasés sur la même palette'), 'corrigé commun absent');
+  await p.selectOption('#corrEleve', uids.fini);
+  await p.waitForSelector('[data-corr-eleve] table >> nth=1');
+  const t = await texte(p, '[data-corr-eleve]');
+  vrai(t.includes('CD-26-1810') && t.includes('TAP-750') && t.includes('étiquette TAF-750'), 'camion de l’élève : ' + t.slice(0, 300));
+  egal(await p.$$eval('[data-corr-eleve] table >> nth=1', (x) => x[0].querySelectorAll('tbody tr').length), 20, 'jalons');
+  vrai(!t.includes('✗ faux') && t.includes('19 / 20'), 'jalons ou note : ' + t.slice(-400));
+  await p.selectOption('#corrEleve', uids.absent);
+  await p.waitForFunction(() => document.querySelector('[data-corr-eleve]').textContent.includes('pas encore ouvert'));
+  egal(await p.$$eval('[data-corr-eleve] table', (x) => x.length), 1, 'jalons d’un élève qui n’a pas ouvert');
+  egal(erreurs, [], 'erreurs JS');
+  await ctx.close();
+});
+
+await v('ENT-4.4 : sous le logo Picard dans Logisim, elle s’ouvre sur l’accueil et le mail court du chef de quai', async () => {
+  const { ctx, pg: p, erreurs } = await contexte();
+  await p.click('#btnProf');
+  await p.click('[data-rub="logisim"]');
+  await p.click('[data-ent="4"]');
+  await p.click('[data-act="picard-ent44"]');
+  await p.waitForSelector('.ent-bandeau');
+  vrai((await texte(p, '.ent-bandeau')).includes('ENT-4.4'), 'bandeau de séance');
+  vrai((await texte(p, '.ent-main')).includes('Le rush du lundi'), 'accueil de la séance');
+  await p.click('.ent-nav[data-vue="mail"]');
+  const m = await texte(p, '.ent-main');
+  vrai(m.includes('Quai 32 : le camion de 6 h 00'), 'mail : ' + m.slice(0, 300));
+  egal(erreurs, [], 'erreurs JS');
+  await ctx.close();
+});
+
 await v('quai : aucune erreur JavaScript dans le bloc', async () => {
   egal(erreursQ, [], 'erreurs');
 });

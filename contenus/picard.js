@@ -77,13 +77,16 @@ export function releves(remontee = {}, fin = 360) {
 }
 
 // Le catalogue de l'environnement : les produits livrés (articles simples, stock nul au départ).
-export function catalogue(produits) {
+export function catalogue(produits, fournisseur = 'F-SDL') {
   return catalogueSimple(produits.map((p) => ({ ref: p.ref, designation: p.nom, categorie: 'Surgelés',
-    prix: 0, cout: 0, emplacement: '', stock: 0, fournisseur: 'F-SDL' })));
+    prix: 0, cout: 0, emplacement: '', stock: 0, fournisseur })));
 }
 export const SUPPLIERS = [
   { id: 'F-SDL', brand: 'Surgelés du Littoral', name: 'Surgelés du Littoral (fictif)', adr: '', cp: '', ville: '',
     contact: '', tel: '', email: 'commandes@surgeles-littoral.example', delai: 2, franco: 0, pay: '30 jours net', moq: 1 },
+  // ENT-4.4 : pâtisseries et plats cuisinés (fictif, aucune société de ce nom trouvée le 03/10/2026).
+  { id: 'F-CDD', brand: 'Les Cuisines de la Deûle', name: 'Les Cuisines de la Deûle (fictif)', adr: '', cp: '', ville: '',
+    contact: '', tel: '', email: 'commandes@cuisines-deule.example', delai: 2, franco: 0, pay: '30 jours net', moq: 1 },
 ];
 export const SUP_BY_ID = Object.fromEntries(SUPPLIERS.map((s) => [s.id, s]));
 export const CUSTOMERS = [];

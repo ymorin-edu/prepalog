@@ -18,6 +18,7 @@ import { creerCarte } from './carte.js';
 import { creerTournee } from './tournee.js';
 import { creerInventaire } from './inventaire.js';
 import { creerQuai } from './quai.js';
+import { graineDeBase, poserGraine } from '../tirage.js';
 
 /* ------------------------------------------------------------------ formats */
 export const eur = (n) => Number(n).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' });
@@ -98,7 +99,22 @@ export function creerEntreprise(U) {
   // L'écran « Quai de réception » (03/10/2026, chantier P1, pilote Picard), même principe : il
   // n'existe que si la séance déclare un `quai` (format en tête de `core/types/quai.js`). Son
   // état vit dans `db.quais[<quai.id>]`. En évaluation, il porte le chrono réel et la note sur 20.
-  const VQUAI = U.quai ? creerQuai(U.quai, COPIE ? { copie: true } : {}) : null;
+  //
+  // UN QUAI TIRÉ PAR ÉLÈVE (évaluation, 03/10/2026, chantier P6, `core/tirage.js`) : la séance passe
+  // alors `quai` sous forme de FONCTION de la graine (`(graine) => déclaration du quai`). La graine
+  // (l'identifiant de l'élève) est posée dans sa base à la première ouverture (`db.tirage`) ; l'écran,
+  // la note et le ramassage lisent tous le quai de CETTE base (`quaiDeBase`), jamais un quai commun.
+  const OPTS_QUAI = COPIE ? { copie: true } : {};
+  const QUAI_TIRE = typeof U.quai === 'function' ? U.quai : null;
+  const quaisTires = new Map();
+  const quaiDeGraine = (g) => {
+    if (!quaisTires.has(g)) quaisTires.set(g, creerQuai(QUAI_TIRE(g), OPTS_QUAI));
+    return quaisTires.get(g);
+  };
+  const QUAI_FIXE = U.quai && !QUAI_TIRE ? creerQuai(U.quai, OPTS_QUAI) : null;
+  const quaiDeBase = (db) => (QUAI_TIRE ? quaiDeGraine(graineDeBase(db)) : QUAI_FIXE);
+  // Le quai de l'écran ouvert : celui de la base de l'élève, fixé par `rendre`.
+  let VQUAI = QUAI_TIRE ? quaiDeGraine('') : QUAI_FIXE;
 
   const unite = (n) => ((n > 1 || n === 0) ? VOCAB.unitPl : VOCAB.unit);
   // Catalogue « simple » (02/10/2026, chantier E) : des articles sans couleur ni taille — un
@@ -133,11 +149,17 @@ export function creerEntreprise(U) {
     // Le quai range aussi ses temps dans le détail : le temps réel passé en guidage sert à caler
     // les seuils de rapidité de l'évaluation (décision de Tristan, 03/10/2026). En évaluation, la
     // note n'est plus le nombre d'étapes : 15 points de réception + 5 de rapidité (`noteQuai`).
-    if (VQUAI) {
-      const q = (db && db.quais && db.quais[VQUAI.id]) || {};
+    const VQ = quaiDeBase(db);
+    if (VQ) {
+      const q = (db && db.quais && db.quais[VQ.id]) || {};
       detail.quai = { reel: Math.round(q.reel || 0), froid: q.froid || 0, tiersTemps: !!q.tiersTemps };
-      if (VQUAI.note) {
-        const n = VQUAI.note(db);
+      // Quai tiré : le jeu reçu, l'attendu et la réponse, jalon par jalon (lisible par l'enseignant).
+      if (QUAI_TIRE) {
+        detail.quai.graine = graineDeBase(db);
+        if (VQ.resume) detail.quai.jeu = VQ.resume(db);
+      }
+      if (VQ.note) {
+        const n = VQ.note(db);
         Object.assign(detail.quai, { reception: Math.round(n.reception * 100) / 100, jalons: n.pts, sur: n.nJalons,
           horsFroid: n.ptsFroid, reelPts: n.ptsReel, rapidite: Math.round(n.vitesse * 100) / 100,
           complet: n.complet, justes: n.justes, palettes: n.nPalettes });
@@ -184,6 +206,11 @@ export function creerEntreprise(U) {
         if (!db.transport) db.transport = {};
       }
       normaliserBase();
+      // Quai tiré par élève : la graine (son identifiant) posée une fois pour toutes, puis son quai.
+      if (QUAI_TIRE) {
+        if (poserGraine(db, ctx.profil.uid || prenom)) ctx.jeu.sauver();
+        VQUAI = quaiDeBase(db);
+      }
 
       // Le volet de la séance. Chaque activité sème le sien une seule fois, sans toucher au
       // reste : un élève qui a fait la réception la semaine dernière retrouve son stock, et

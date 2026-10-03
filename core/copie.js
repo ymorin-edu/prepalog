@@ -30,7 +30,7 @@ export function libelleRendu(travail) {
 
 // La base privée de l'élève, telle que l'enregistre `core/store.js` (texte JSON en service
 // réel, objet en démonstration). `null` si l'élève n'a jamais ouvert la séance.
-async function baseDeLEleve(B, uid, jeuId) {
+export async function baseDeLEleve(B, uid, jeuId) {
   const s = await B.lireJeuPrive(uid, jeuId);
   let brut = s ? s.data : null;
   if (typeof brut === 'string') { try { brut = JSON.parse(brut); } catch (e) { brut = null; } }
