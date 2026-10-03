@@ -224,6 +224,7 @@ const moteur = creerEntreprise({
         : 'Tapez les données du mail, puis écrivez les formules (elles commencent par « = »). '
           + 'Le « ? » d’une ligne donne une aide.',
       colonnes: ['A', 'B'], decimales: 1, aides: 'bouton',
+      ...(INES ? { libelleOrigine: 'Remettre la formule d’Inès' } : {}),
       ...(SOBRE ? { couleurs: false } : {}),
       ...(BROUILLON ? { brouillon: { colonnes: ['D', 'E'], lignes: 10 } } : {}),
       lignes,

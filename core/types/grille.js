@@ -54,6 +54,8 @@
 //       La cellule arrive déjà écrite (la feuille d'un collègue, ENT-3.3). L'élève la modifie, et
 //       c'est jugé comme une saisie. Rien n'est écrit dans sa base tant qu'il n'y touche pas : la
 //       formule d'origine reste donc celle du contenu, et « Recommencer la tournée » n'y touche pas.
+//       Une fois modifiée, un petit bouton « ↺ » à côté de la case la remet comme à l'origine
+//       (décision de Tristan, 03/10/2026) : son libellé se règle par `libelleOrigine` sur la feuille.
 //   Une cellule peut être RECOPIÉE d'une autre :
 //     { copie: 'B5' }
 //       Elle affiche la valeur de B5 (le poids tapé du client, dans le tableau « Tournée »), ne se
@@ -107,6 +109,10 @@ export function creerGrille(G) {
     return !!(BR && m && BR.colonnes.includes(m[1]) && +m[2] >= 1 && +m[2] <= BR.lignes);
   };
   const ID = `gr${++compteurGrilles}`;
+  const LIBELLE_ORIGINE = G.libelleOrigine || 'Remettre la formule d’origine';
+  // Une case pré-remplie que l'élève a changée : le « ↺ » se montre.
+  const modifiee = (cases, a, v) => v && v.prerempli != null && cases && cases[a] != null
+    && String(cases[a]) !== String(v.prerempli);
   // Les plis d'aide ouverts, gardés EN MÉMOIRE seulement le temps de la page : un redessin (un
   // clic sur la carte) ne doit pas les refermer, mais rien ne va dans la base de l'élève.
   const ouvertes = new Set();
@@ -262,6 +268,9 @@ export function creerGrille(G) {
                   autocomplete="off" spellcheck="false"
                   aria-label="Cellule ${ech(a)}${v.libelle ? ', ' + ech(v.libelle) : ''}"
                   placeholder="${ech(v.placeholder || (v.formule ? '= votre formule' : 'votre réponse'))}">
+                ${v.prerempli == null ? '' : `<button type="button" class="gr-origine" data-gr-origine="${ech(a)}"
+                  title="${ech(LIBELLE_ORIGINE)}" aria-label="${ech(LIBELLE_ORIGINE)} (cellule ${ech(a)})"${
+                  modifiee(cases, a, v) ? '' : ' hidden'}>↺</button>`}
                 <b class="gr-res mono" data-gr-res="${ech(a)}" data-fmt="${ech(v.format || '')}"
                   data-dec="${ech(String(v.decimales == null ? DEC : v.decimales))}">${ech(
                   afficher(a, r, v.decimales == null ? DEC : v.decimales, v.format || null))}</b>
@@ -424,6 +433,13 @@ export function creerGrille(G) {
           return;
         }
         etat.cases[el.dataset.gr] = el.value;
+        // Le « ↺ » d'une case pré-remplie apparaît dès qu'elle diffère de l'origine, sans redessin.
+        const orig = z.querySelector(`[data-gr-origine="${el.dataset.gr}"]`);
+        if (orig) {
+          const L = api.lignes();
+          const v = (() => { let x = null; L.forEach((l, i) => COLS.forEach((col) => { if (adresse(col, i) === el.dataset.gr) x = l[col]; })); return x; })();
+          orig.hidden = !modifiee(etat.cases, el.dataset.gr, v);
+        }
         // Une correction affichée ne vaut plus rien dès que l'élève retouche sa formule.
         if (Object.keys(etat.juge || {}).length) { etat.juge = {}; }
         recalculer();
@@ -548,8 +564,9 @@ export function creerGrille(G) {
             // aux règles ci-dessus.
             const prolonge = e.shiftKey && pose && pose.ancre;
             if (!actif || !estFormule(actif.value)) return;
-            // Le « ? » d'une ligne s'ouvre ; il ne désigne pas la cellule où il est posé.
-            if (e.target.closest && e.target.closest('[data-gr-aide]')) return;
+            // Le « ? » d'une ligne s'ouvre, le « ↺ » remet la formule : ni l'un ni l'autre ne désigne
+            // la cellule où il est posé.
+            if (e.target.closest && e.target.closest('[data-gr-aide], [data-gr-origine]')) return;
             // La feuille ne lit jamais le brouillon : depuis une cellule de la feuille, le
             // brouillon reste un tableau ordinaire.
             if (tableau.classList.contains('gr-table-brouillon') && !actif.dataset.grb) return;
@@ -603,6 +620,15 @@ export function creerGrille(G) {
         document.addEventListener('mouseup', finir);
         detacherPointage = () => document.removeEventListener('mouseup', finir);
       }
+
+      // Le « ↺ » : la case reprend la formule d'origine (la saisie de l'élève est retirée de la base),
+      // et la correction en cours ne vaut plus rien.
+      z.querySelectorAll('[data-gr-origine]').forEach((btn) => btn.addEventListener('click', () => {
+        delete etat.cases[btn.dataset.grOrigine];
+        etat.juge = {}; etat.valide = null;
+        api.sauver(); api.redessiner();
+        if (api.toast) api.toast('Formule d’origine remise.');
+      }));
 
       // Les plis d'aide : s'ouvrent et se ferment sans redessin et sans rien enregistrer.
       z.querySelectorAll('[data-gr-aide]').forEach((btn) => btn.addEventListener('click', () => {
