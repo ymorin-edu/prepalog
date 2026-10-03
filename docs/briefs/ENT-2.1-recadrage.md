@@ -6,7 +6,7 @@
 > Lis docs/briefs/COORDINATION-cdiscount.md puis implémente le brief docs/briefs/ENT-2.1-recadrage.md (le statut « Annulée » doit être livré : MOTEUR-statut-annulee.md). Annonce la durée, dis-moi si un point du brief contredit le code, puis enchaîne sans attendre : les questions du brief sont déjà tranchées (§11).
 > ```
 
-**Statut** : à implémenter — **après** `MOTEUR-statut-annulee.md` (C1).
+**Statut** : **livré** le 03/10/2026 (`pret: true, ouverture: 'prof'`) — compte rendu en fin de brief.
 **Date du brief** : 03/10/2026
 **Modèle** : Sonnet — **Durée estimée par Cowork** : 1 h 30 à 2 h 30 (données refaites, jalon 6, réécriture des cas de
 test et des sabotages).
@@ -203,9 +203,45 @@ Décisions de fond : les six de la fiche de cadrage (cause = casse 2 saisie −1
 
 ## Compte rendu *(rempli par Claude Code à la livraison)*
 
-- **Fichiers créés / modifiés** :
-- **Écarts par rapport au brief** (et pourquoi) :
-- **Décisions prises en route** :
-- **Tests** : bloc / suite entière, nombre de cas, sabotages éprouvés
-- **Commits** :
+- **Fichiers créés / modifiés** : `contenus/cdiscount-mouvements.js` (données, mission, constat, clôture, 6e jalon,
+  niveau confirmé) ; `activites/cdiscount-mouvements.js` (`desc`, en-tête, `ouverture: 'prof'`) ;
+  `outils/test/cdiscount.mjs` (**cas ENT-2.1 réécrits**, alerte 7 : `outils/test.mjs` et `commun.mjs` non touchés ;
+  l'aide `ouvrir()` du bloc reçoit un 3e argument `aisance`).
+- **Écarts par rapport au brief** :
+  - **`db.aisance`, pas `db.niveau`** : nom du champ livré par C1 (`'standard'` / `'confirme'`).
+  - **Jalon 3 lu sur la ligne « Commandes » seulement** (avant : tout le message). Sans ça, une commande citée
+    dans « Ce qui cloche » se payait deux fois (jalons 3 et 6) — règle « une erreur ne se paie qu'une fois ».
+  - **Jalon 2** : la quantité est acceptée en total (16 pour le confirmé) **ou** réception par réception (6 et 10).
+  - **Mot de clôture** : condition propre à la séance (ligne « Ce qui cloche » non vide), pas `apresMail` qui
+    exige un nombre (« Ce qui cloche : DEM-26-0027 » seul n'en a pas une fois la référence retirée).
+- **Décisions prises en route** (seul, à corriger à l'écran) :
+  - Clients des nouvelles commandes : CMD-731545 → C0010, CMD-731578 → C0007, CMD-731590 → C0014 ; confirmé :
+    CMD-731420 → C0001, CMD-731515 → C0017. La cliente C0019 s'affiche **« Mme Moreau »** (Clara Moreau).
+  - Heures : CMD-731545 J-3 16 h 24 ; CMD-731578 J-1 9 h 36 ; CMD-731590 J-1 15 h 12 ; confirmé : REC-26-0409 J-7
+    14 h, CMD-731420 J-6 11 h, CMD-731515 J-4 13 h 30 (BL-SN-40488, lot LOT-SN-2637). CMD-731602 passée **la veille à
+    20 h 36**, annulée **ce matin à 7 h 24** (jamais dans le futur si la séance est ouverte plus tôt).
+  - Bon de CMD-731602 : « Stock trouvé » 0, « À préparer » 0, statut « Rupture ».
+  - Objet de la mission : « Écouteurs ECO-BT-01 : commande annulée, racontez-moi la semaine ». Texte : la cliente,
+    sa réclamation entre guillemets, « Le système, lui, dit encore qu'il en reste un. Tant qu'il le dit, le site
+    continue de vendre des écouteurs que nous n'avons pas. Avant le Black Friday, je veux savoir où le système
+    s'est trompé. », puis les cinq tâches et les sept lignes.
+  - Constat de Kevin : « Quantité : 2 », « deux boîtiers d'écouteurs sont écrasés, invendables », « Décision :
+    sortis du stock et mis au rebut. Saisi sur le terminal. »
+  - Mot de clôture : objet « Votre enquête sur les écouteurs », texte du brief mot pour mot.
+  - Accueil : une étape ajoutée (« Comparer chaque document à son mouvement ») ; « sept lignes ».
+  - Titre du jalon 6 : « Erreur trouvée : le document qui ne correspond pas à son mouvement, et l'écart ». Il refuse
+    toute autre référence de la base (retour, commande, BP, réception) dans la ligne.
+- **Tests** : bloc `cdiscount` 51 cas (dont 3 nouveaux : niveau confirmé, réception oubliée du confirmé, mot de
+  clôture). Valeurs à la main : stock 1, inventaire 4, réception 10, écart 1, « Stock trouvé » 4 / 12 / **10** / 7 /
+  4 / 2 / 0 (système 4 / 12 / 11 / 8 / 5 / 3). **Sabotages éprouvés, tous tombent** : jalon 6 sans écart ; jalon 6
+  qui accepte le retour ; jalon 3 qui tolère l'annulée ; jalon 2 du confirmé satisfait par une réception (ne tombait
+  pas au premier essai : cas ajouté, une réception avec le bon total) ; « Stock trouvé » lu sur le stock système.
+  Suite entière **481/481**. Essai à l'écran (page d'essai) : CMD-731602 « Annulée », bon à 0 « Rupture »,
+  CMD-731530 à 10, constat de Kevin, deux envois → 6/6, mot de clôture reçu.
+- **Commits** : « ENT-2.1 recadrée : la commande annulée, la casse mal saisie, six jalons (C2 Cdiscount) ».
 - **Reste ouvert** :
+  - **Trame et corrigé d'ENT-2.1 faux** depuis ce chantier (`ENT-2.1.js` déclaré, sur l'ancienne histoire) : à
+    régénérer par Cowork après validation à l'écran.
+  - **ENT-2.1 est maintenant fermée aux élèves** (`ouverture: 'prof'`) : à rouvrir dans « Conduite de séance ».
+  - Moteur, déjà là avant : le bon de préparation d'une commande semée affiche « Édité le <maintenant> par
+    <l'élève> » au lieu de la date et du préparateur du bon. Pas propre à cette séance.

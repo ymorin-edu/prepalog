@@ -26,8 +26,11 @@ export default async function bloc({ v, page, nav, ROOT }) {
 
   // Ce que fait le moteur à l'ouverture d'une séance (`creerEntreprise`, semerVolet), refait ici
   // pour juger les données sans navigateur : base de départ, puis volet de la séance.
-  const ouvrir = (S, prenom = 'Léa') => {
+  // `aisance` : le niveau que le moteur fige dans la base avant de semer le volet (C1, 03/10/2026).
+  const db2vol = (db) => [new Set(db.moves.map((m) => m.sku)).size, new Set(db.moves.map((m) => m.ref)).size, db.moves.length].join('|');
+  const ouvrir = (S, prenom = 'Léa', aisance) => {
     const db = S.baseDeDepart(prenom);
+    if (aisance) db.aisance = aisance;
     ['moves', 'mails', 'orders', 'receptions', 'customers', 'suppliers'].forEach((k) => { if (!db[k]) db[k] = []; });
     const g = S.VOLET.semer(prenom, db) || {};
     (g.receptions || []).forEach((r) => db.receptions.push(r));
@@ -89,7 +92,7 @@ export default async function bloc({ v, page, nav, ROOT }) {
   });
 
   // ---------- ENT-2.1 « Le stock raconte » — les données
-  await v('ENT-2.1 : volume déclaré = volume réel (5 références, 10 documents, 19 mouvements)', async () => {
+  await v('ENT-2.1 : volume déclaré = volume réel (5 références, 12 documents, 20 mouvements)', async () => {
     const db = ouvrir(S21);
     const refs = new Set(db.moves.map((m) => m.sku));
     const docs = new Set(db.moves.map((m) => m.ref));
@@ -137,11 +140,45 @@ export default async function bloc({ v, page, nav, ROOT }) {
       r.colis.forEach((c) => { parColis[c.sku] = (parColis[c.sku] || 0) + c.qty; });
       r.bl.lines.forEach((l) => { if (parColis[l.sku] !== l.qty) throw new Error(`${r.no} : colis et bon de livraison divergent`); });
     }
-    // Le « vu en stock » des bons de préparation est le stock juste avant la sortie.
-    for (const o of db.orders) for (const l of o.lines) {
+    // Le « Stock trouvé » des bons : le stock RÉEL juste avant la sortie (recadrage du 03/10/2026).
+    // Hors écouteurs, réel = système ; pour les écouteurs, valeurs écrites à la main : il décroche du
+    // système d'une unité à partir de CMD-731530 (la casse saisie −1 au lieu de −2).
+    for (const o of db.orders.filter((x) => !x.annulee)) for (const l of o.lines.filter((x) => x.sku !== S21.CIBLE)) {
       const m = db.moves.find((x) => x.ref === 'BP-' + o.no.replace('CMD-', '') && x.sku === l.sku);
-      if (o.prep.rows[l.sku].seen !== m.after + l.qty) throw new Error(`${o.no} : « vu en stock » incohérent`);
+      if (o.prep.rows[l.sku].seen !== m.after + l.qty) throw new Error(`${o.no} : « Stock trouvé » incohérent sur ${l.sku}`);
     }
+    const trouve = (no) => db.orders.find((o) => o.no === no).prep.rows[S21.CIBLE].seen;
+    const systeme = (no) => { const m = db.moves.find((x) => x.ref === 'BP-' + no.replace('CMD-', '') && x.sku === S21.CIBLE); return m.after - m.delta; };
+    const attendu = { 'CMD-731402': [4, 4], 'CMD-731488': [12, 12], 'CMD-731530': [10, 11], 'CMD-731561': [7, 8], 'CMD-731578': [4, 5], 'CMD-731590': [2, 3] };
+    for (const [no, [t, s]] of Object.entries(attendu)) {
+      if (trouve(no) !== t || systeme(no) !== s) throw new Error(`${no} : trouvé ${trouve(no)} / système ${systeme(no)}, attendu ${t} / ${s}`);
+    }
+    // La commande de la cliente : annulée, aucun mouvement, bon figé « Rupture » à 0.
+    const a = db.orders.find((o) => o.no === 'CMD-731602');
+    if (!a || !a.annulee || a.annulee.motif !== 'Rupture : emplacement A-02-1 vide à la préparation') throw new Error('CMD-731602 : ' + JSON.stringify(a && a.annulee));
+    if (a.lines.length !== 1 || a.lines[0].sku !== S21.CIBLE || a.lines[0].qty !== 1) throw new Error('CMD-731602 : lignes ' + JSON.stringify(a.lines));
+    if (db.moves.some((m) => m.ref === 'BP-731602')) throw new Error('la commande annulée a fait bouger le stock');
+    const r = a.prep.rows[S21.CIBLE];
+    if (r.seen !== 0 || r.status !== 'crit' || r.qty !== 0) throw new Error('bon de CMD-731602 : ' + JSON.stringify(r));
+    if (a.annulee.at > Date.now() || a.date > a.annulee.at) throw new Error('CMD-731602 mal datée');
+  });
+
+  await v('ENT-2.1 : confirmé = trois documents de plus sur les écouteurs, mêmes stocks, même casse (valeurs à la main)', async () => {
+    const st = ouvrir(S21), cf = ouvrir(S21, 'Léa', 'confirme');
+    const eco = (db) => db.moves.filter((m) => m.sku === S21.CIBLE);
+    if (db2vol(st) !== '5|12|20') throw new Error('standard : ' + db2vol(st));
+    if (db2vol(cf) !== '5|15|23') throw new Error('confirmé : ' + db2vol(cf));
+    for (const db of [st, cf]) {
+      if (db.stock[S21.CIBLE] !== 1) throw new Error('stock actuel ≠ 1');
+      if (db.stock[S21.CIBLE] - eco(db).reduce((n, m) => n + m.delta, 0) !== 4) throw new Error('stock d\'inventaire ≠ 4');
+      if (eco(db).some((m) => m.after < 0)) throw new Error('stock d\'écouteurs sous zéro');
+      if (db.orders.find((o) => o.no === 'CMD-731602').prep.rows[S21.CIBLE].seen !== 0) throw new Error('stock trouvé de la cliente ≠ 0');
+    }
+    const refs = (db) => [...new Set(eco(db).map((m) => m.ref))].sort().join(' ');
+    const plus = refs(cf).split(' ').filter((r) => !refs(st).split(' ').includes(r));
+    if (plus.join(' ') !== 'BP-731420 BP-731515 REC-26-0409') throw new Error('documents en plus : ' + plus.join(' '));
+    const tr = (no) => cf.orders.find((o) => o.no === no).prep.rows[S21.CIBLE].seen;
+    if (tr('CMD-731420') !== 10 || tr('CMD-731402') !== 7 || tr('CMD-731515') !== 14 || tr('CMD-731530') !== 10) throw new Error('stock trouvé confirmé');
   });
 
   await v('ENT-2.1 : l\'enquête a des pièges (une réception et une commande sans écouteurs, une entrée qui n\'est pas un achat, une sortie qui n\'est pas une vente)', async () => {
@@ -155,15 +192,28 @@ export default async function bloc({ v, page, nav, ROOT }) {
     if (!eco.some((m) => m.type === S21.TYPES.casse && m.delta < 0)) throw new Error('pas de casse sur la cible');
     // Le stock d'inventaire ne doit pas se lire tel quel : il diffère du stock actuel.
     if (S21.INVENTAIRE[S21.CIBLE] === db.stock[S21.CIBLE]) throw new Error('stock actuel = stock d\'inventaire : rien à recalculer');
+    // Une commande d'écouteurs qui n'a fait bouger aucun stock (l'annulée), et une casse dont le
+    // constat ne dit pas ce qui a été saisi.
+    if (!db.orders.some((o) => o.annulee && o.lines.some((l) => l.sku === S21.CIBLE) && !bpEco.has('BP-' + o.no.replace('CMD-', '')))) throw new Error('pas de commande annulée sur la cible');
+    const saisie = -eco.filter((m) => m.ref === S21.CASSE.no).reduce((n, m) => n + m.delta, 0);
+    if (saisie !== 1 || S21.CASSE.constatee !== 2) throw new Error(`casse : saisie ${saisie}, constat ${S21.CASSE.constatee}`);
   });
 
   // ---------- ENT-2.1 — les jalons
-  const JUSTE = `Stock actuel : 27
-Réception : REC-26-0415, 12 écouteurs
-Commandes : CMD-731402, CMD-731488, CMD-731530, CMD-731561, CMD-731602
+  const JUSTE = `Stock actuel : 1
+Réception : REC-26-0415, 10 écouteurs
+Commandes : CMD-731402, CMD-731488, CMD-731530, CMD-731561, CMD-731578, CMD-731590
 Retour : RET-26-0091
 Casse : DEM-26-0027
-Stock au dernier inventaire : 27 - 12 - 1 + 9 + 1 = 24`;
+Stock au dernier inventaire : 1 - 11 + 14 = 4
+Ce qui cloche : DEM-26-0027, constat 2, saisi 1, écart 1`;
+  const JUSTE_CONFIRME = `Stock actuel : 1
+Réception : REC-26-0409 : 6 ; REC-26-0415 : 10
+Commandes : CMD-731420, CMD-731402, CMD-731488, CMD-731515, CMD-731530, CMD-731561, CMD-731578, CMD-731590
+Retour : RET-26-0091
+Casse : DEM-26-0027
+Stock au dernier inventaire : 1 - 17 + 20 = 4
+Ce qui cloche : DEM-26-0027 : 2 - 1 = 1`;
 
   await v('ENT-2.1 : sans réponse, aucun jalon n\'est acquis (l\'inaction ne rapporte rien)', async () => {
     const db = ouvrir(S21);
@@ -174,22 +224,55 @@ Stock au dernier inventaire : 27 - 12 - 1 + 9 + 1 = 24`;
     if (statuts(S21, nue).some((s) => s !== 'na')) throw new Error('un jalon juge une base sans mouvements');
   });
 
-  await v('ENT-2.1 : la réponse juste valide les cinq jalons, calcul compris', async () => {
+  await v('ENT-2.1 : la réponse juste valide les six jalons, pour chaque niveau', async () => {
+    if (S21.ETAPES.length !== 6) throw new Error(`${S21.ETAPES.length} jalons au lieu de 6`);
     const db = ouvrir(S21);
     repondre(db, JUSTE);
     const st = statuts(S21, db);
-    if (st.some((s) => s !== 'ok')) throw new Error('statuts : ' + st.join(', '));
+    if (st.some((s) => s !== 'ok')) throw new Error('standard : ' + st.join(', '));
+    const cf = ouvrir(S21, 'Léa', 'confirme');
+    repondre(cf, JUSTE_CONFIRME);
+    const sc = statuts(S21, cf);
+    if (sc.some((s) => s !== 'ok')) throw new Error('confirmé : ' + sc.join(', '));
+    // La quantité d'une réception peut aussi s'écrire en total (16).
+    const cf2 = ouvrir(S21, 'Léa', 'confirme');
+    repondre(cf2, JUSTE_CONFIRME.replace('REC-26-0409 : 6 ; REC-26-0415 : 10', 'REC-26-0409 et REC-26-0415, 16 en tout'));
+    if (statuts(S21, cf2)[1] !== 'ok') throw new Error('confirmé : total des réceptions refusé');
+    // Le confirmé ne passe pas avec la réponse du standard : il a plus de documents à trouver.
+    const cf3 = ouvrir(S21, 'Léa', 'confirme');
+    repondre(cf3, JUSTE);
+    const s3 = statuts(S21, cf3);
+    if (s3[1] !== 'ko' || s3[2] !== 'ko') throw new Error('confirmé, réponse standard : ' + s3.join(', '));
+  });
+
+  await v('ENT-2.1 : confirmé, une seule réception citée fait tomber le jalon des réceptions, et lui seul', async () => {
+    const db = ouvrir(S21, 'Léa', 'confirme');
+    repondre(db, JUSTE_CONFIRME.replace('REC-26-0409 : 6 ; REC-26-0415 : 10', 'REC-26-0415 : 10'));
+    const st = statuts(S21, db);
+    const ids = S21.ETAPES.map((e) => e.id);
+    const tombes = ids.filter((x, i) => st[i] !== 'ok');
+    if (tombes.join() !== 'reception') throw new Error('tombent : ' + tombes.join(', '));
+    // Une seule réception, mais avec le bon total (16) : la réception oubliée suffit à faire tomber.
+    const db2 = ouvrir(S21, 'Léa', 'confirme');
+    repondre(db2, JUSTE_CONFIRME.replace('REC-26-0409 : 6 ; REC-26-0415 : 10', 'REC-26-0415, 16 écouteurs'));
+    if (statuts(S21, db2)[1] !== 'ko') throw new Error('une réception sur deux, total juste : acceptée');
   });
 
   await v('ENT-2.1 : chaque erreur typique fait tomber SON jalon, et lui seul', async () => {
     const cas = [
-      ['actuel', 'Stock actuel : 27', 'Stock actuel : 24'],                       // le stock d'inventaire lu comme actuel
-      ['reception', 'Réception : REC-26-0415, 12 écouteurs', 'Réception : REC-26-0412, 12'], // la mauvaise réception
-      ['reception', 'Réception : REC-26-0415, 12 écouteurs', 'Réception : REC-26-0415'],    // sans la quantité
-      ['commandes', 'CMD-731602', 'CMD-731602, CMD-731455'],                       // une commande sans écouteurs
+      ['actuel', 'Stock actuel : 1', 'Stock actuel : 4'],                         // le stock d'inventaire lu comme actuel
+      ['reception', 'Réception : REC-26-0415, 10 écouteurs', 'Réception : REC-26-0412, 10'], // la mauvaise réception
+      ['reception', 'Réception : REC-26-0415, 10 écouteurs', 'Réception : REC-26-0415'],    // sans la quantité
+      ['commandes', 'CMD-731590', 'CMD-731590, CMD-731455'],                       // une commande sans écouteurs
+      ['commandes', 'CMD-731590', 'CMD-731590, CMD-731602'],                       // la commande annulée (piège 1)
       ['commandes', ', CMD-731561', ''],                                          // une commande oubliée
       ['retour-casse', 'Retour : RET-26-0091\nCasse : DEM-26-0027', 'Retour : DEM-26-0027\nCasse : RET-26-0091'], // inversés
-      ['inventaire', '= 24', '= 30'],                                             // le retour compté comme une sortie
+      ['inventaire', '= 4', '= 6'],                                               // le retour compté comme une sortie
+      ['erreur', 'Ce qui cloche : DEM-26-0027, constat 2, saisi 1, écart 1', 'Ce qui cloche : RET-26-0091, écart 1'], // la fausse piste (piège 2)
+      ['erreur', 'Ce qui cloche : DEM-26-0027, constat 2, saisi 1, écart 1', 'Ce qui cloche : DEM-26-0027 et RET-26-0091, écart 1'], // accuse aussi le retour
+      ['erreur', 'Ce qui cloche : DEM-26-0027, constat 2, saisi 1, écart 1', 'Ce qui cloche : DEM-26-0027'],          // sans comparer (pas d'écart)
+      ['erreur', 'Ce qui cloche : DEM-26-0027, constat 2, saisi 1, écart 1', 'Ce qui cloche : DEM-26-0027, écart 2'], // écart faux
+      ['erreur', 'Ce qui cloche : DEM-26-0027, constat 2, saisi 1, écart 1', 'Ce qui cloche : CMD-731602 annulée, écart 1'], // la conséquence, pas la cause
     ];
     const ids = S21.ETAPES.map((e) => e.id);
     for (const [id, avant, apres] of cas) {
@@ -200,16 +283,26 @@ Stock au dernier inventaire : 27 - 12 - 1 + 9 + 1 = 24`;
       const tombes = ids.filter((x, i) => st[i] !== 'ok');
       if (tombes.length !== 1 || tombes[0] !== id) throw new Error(`« ${apres || '(retirée)'} » : tombent ${tombes.join(', ') || 'aucun'}, attendu ${id}`);
     }
+    // Le détail lu par l'enseignant dit pourquoi la commande annulée est fautive.
+    const db = ouvrir(S21);
+    repondre(db, JUSTE.replace('CMD-731590', 'CMD-731590, CMD-731602'));
+    const d = S21.ETAPES.find((e) => e.id === 'commandes').verifier(db).detail;
+    if (!/CMD-731602, commande annulée : elle n'a fait bouger aucun stock/.test(d)) throw new Error('détail : ' + d);
+    // Une commande citée dans « Ce qui cloche » ne se paie qu'au jalon 6, pas au jalon 3.
+    const db2 = ouvrir(S21);
+    repondre(db2, JUSTE + ' (la commande CMD-731602 a été annulée à cause de ça)');
+    const st2 = statuts(S21, db2);
+    if (st2[2] !== 'ok' || st2[5] !== 'ko') throw new Error('commande citée dans « Ce qui cloche » : ' + st2.join(', '));
   });
 
   await v('ENT-2.1 : le meilleur essai est retenu, et une correction en bas de message est lue', async () => {
     const db = ouvrir(S21);
-    repondre(db, JUSTE.replace('Stock actuel : 27', 'Stock actuel : 24'));
+    repondre(db, JUSTE.replace('Stock actuel : 1', 'Stock actuel : 4'));
     if (statuts(S21, db)[0] !== 'ko') throw new Error('premier essai faux non détecté');
     repondre(db, JUSTE);
     if (statuts(S21, db)[0] !== 'ok') throw new Error('le second essai juste n\'est pas retenu');
     const db2 = ouvrir(S21);
-    repondre(db2, JUSTE.replace('Stock actuel : 27', 'Stock actuel : 24') + '\nStock actuel : 27 (je me suis trompé plus haut)');
+    repondre(db2, JUSTE.replace('Stock actuel : 1', 'Stock actuel : 4') + '\nStock actuel : 1 (je me suis trompé plus haut)');
     if (statuts(S21, db2)[0] !== 'ok') throw new Error('la correction en bas de message n\'est pas lue');
     // Une réponse envoyée à quelqu'un d'autre que la cheffe d'équipe ne compte pas.
     const db3 = ouvrir(S21);
@@ -262,15 +355,38 @@ Stock au dernier inventaire : 27 - 12 - 1 + 9 + 1 = 24`;
     const g = d.semer('Léa', db).mails;
     if (g.length !== 2 || !/^Retour client RET-26-0091/.test(g[0].subject) || !/^Constat de casse DEM-26-0027/.test(g[1].subject)) throw new Error('mails déclenchés : ' + g.map((m) => m.subject).join(' | '));
     if (g.some((m) => m.ts < Date.now() - 5000)) throw new Error('les mails déclenchés ne portent pas l\'heure d\'arrivée');
+    // Le constat dit 2, et « saisi sur le terminal » (le mouvement, lui, dit −1).
+    if (!/Quantité : 2\n/.test(g[1].text) || !/Saisi sur le terminal/.test(g[1].text)) throw new Error('constat : ' + g[1].text);
     // Les jalons ne bougent pas : « actuel » ko sur 5, les autres ko faute de lignes remplies.
     const st = statuts(S21, db);
     if (st.some((x) => x !== 'ko')) throw new Error('statuts après « Stock actuel : 5 » : ' + st.join(', '));
     const db2 = ouvrir(S21);
-    repondre(db2, 'Stock actuel : 27');
-    if (statuts(S21, db2)[0] !== 'ok') throw new Error('« Stock actuel : 27 » ne valide pas le jalon actuel');
+    repondre(db2, 'Stock actuel : 1');
+    if (statuts(S21, db2)[0] !== 'ok') throw new Error('« Stock actuel : 1 » ne valide pas le jalon actuel');
     // Un élève qui avait les deux mails (séance ouverte avant le 03/10/2026) ne les reçoit pas en double.
     db2.mails.push(...g);
     if (d.semer('Léa', db2).mails.length) throw new Error('doublon pour une base qui a déjà les deux mails');
+  });
+
+  await v('ENT-2.1 : le mot de clôture de Nadia arrive sur « Ce qui cloche » rempli, juste ou faux, et ne dit rien du résultat', async () => {
+    const d = (S21.VOLET.declencheurs || []).find((x) => x.id === 'cloture');
+    if (!d) throw new Error('déclencheur « cloture » absent');
+    const db = ouvrir(S21);
+    if (d.quand(db)) throw new Error('vrai dès l\'ouverture');
+    repondre(db, S21.LIGNES_REPONSE.map((l) => l + ' ').join('\n'));
+    if (d.quand(db)) throw new Error('l\'amorce vide déclenche');
+    repondre(db, 'Stock actuel : 1');
+    if (d.quand(db)) throw new Error('le premier compte rendu déclenche la clôture');
+    const faux = ouvrir(S21);
+    repondre(faux, 'Ce qui cloche : RET-26-0091');
+    if (!d.quand(faux)) throw new Error('une réponse fausse, sans nombre, ne déclenche pas');
+    const juste = ouvrir(S21);
+    repondre(juste, JUSTE);
+    if (!d.quand(juste)) throw new Error('la réponse juste ne déclenche pas');
+    const gF = d.semer('Léa', faux).mails, gJ = d.semer('Léa', juste).mails;
+    if (gF.length !== 1 || gF[0].text !== gJ[0].text) throw new Error('le mot de clôture dépend de la réponse');
+    if (!/la prochaine fois, on regarde toute l'allée/.test(gJ[0].text)) throw new Error('texte : ' + gJ[0].text);
+    if (/bravo|exact|juste|bonne réponse|erreur est|c'est bien/i.test(gJ[0].text.replace(/Une erreur sur un article/, ''))) throw new Error('le mot de clôture juge la réponse : ' + gJ[0].text);
   });
 
   // ---------- ENT-2.1 — dans le navigateur, avec le vrai moteur
@@ -323,10 +439,12 @@ Stock au dernier inventaire : 27 - 12 - 1 + 9 + 1 = 24`;
       out.receptions = hote.querySelectorAll('[data-ouvrir-rec]').length;
       await clic('[data-vue="commandes"]');
       out.commandes = hote.querySelectorAll('[data-ouvrir-cmd]').length;
+      out.statut602 = hote.querySelector('[data-ouvrir-cmd="CMD-731602"]')?.closest('tr').querySelector('.pastille')?.textContent.trim();
       // Répondre à la cheffe, comme l'élève.
       await clic('[data-vue="mail"]');
       const mission = [...db.mails].find((m) => m.fromMail === CHEFFE && /racontez/.test(m.subject));
       await clic(`[data-mail="${mission.id}"]`);
+      out.mission = hote.textContent;
       await clic('[data-repondre]');
       hote.querySelector('#repT').value = JUSTE_;
       hote.querySelector('#formRep').dispatchEvent(new Event('submit', { cancelable: true }));
@@ -344,12 +462,14 @@ Stock au dernier inventaire : 27 - 12 - 1 + 9 + 1 = 24`;
     if (res.accent.toLowerCase() !== '#3732ff') throw new Error('accent de la charte non appliqué : ' + res.accent);
     // Option B (03/10/2026) : Bienvenue et consigne à l'ouverture ; le retour et la casse arrivent plus tard.
     if (res.mails !== 2) throw new Error(`${res.mails} messages au lieu de 2`);
-    if (res.lignesConsole !== 8) throw new Error(`.movements ECO-BT-01 : ${res.lignesConsole} lignes au lieu de 8`);
+    if (res.lignesConsole !== 9) throw new Error(`.movements ECO-BT-01 : ${res.lignesConsole} lignes au lieu de 9`);
     if (res.lignesStock !== 5) throw new Error(`${res.lignesStock} lignes de stock au lieu de 5`);
     if (/Couleur|Taille/.test(res.colonne)) throw new Error('colonnes Couleur ou Taille affichées pour des articles simples : ' + res.colonne);
-    if (res.lignesMouv !== 19) throw new Error(`${res.lignesMouv} mouvements à l'écran au lieu de 19`);
-    if (res.receptions !== 2 || res.commandes !== 6) throw new Error(`${res.receptions} réceptions, ${res.commandes} commandes`);
-    if (!res.score || res.score.score !== 5 || res.score.max !== 5) throw new Error('score remonté : ' + JSON.stringify(res.score));
+    if (res.lignesMouv !== 20) throw new Error(`${res.lignesMouv} mouvements à l'écran au lieu de 20`);
+    if (res.receptions !== 2 || res.commandes !== 9) throw new Error(`${res.receptions} réceptions, ${res.commandes} commandes`);
+    if (res.statut602 !== 'Annulée') throw new Error('CMD-731602 affichée : ' + res.statut602);
+    if (!/Mme Moreau/.test(res.mission) || !/Black Friday/.test(res.mission) || !/ce n'est pas sérieux/i.test(res.mission)) throw new Error('mission sans la cliente : ' + res.mission.slice(0, 300));
+    if (!res.score || res.score.score !== 6 || res.score.max !== 6) throw new Error('score remonté : ' + JSON.stringify(res.score));
     const reste = await page.evaluate(() => document.body.classList.contains('immersion'));
     if (reste) throw new Error('la page n\'a pas été rendue propre');
   });
@@ -437,7 +557,7 @@ Stock au dernier inventaire : 27 - 12 - 1 + 9 + 1 = 24`;
   // Ajouté le 03/10/2026 (réponse amorcée) : le champ « Répondre » du message de Nadia s'ouvre avec
   // les six intitulés ; les autres messages gardent un champ vide ; envoyer l'amorce telle quelle
   // ne rapporte aucun jalon.
-  await v('ENT-2.1 : « Répondre » à Nadia s\'ouvre avec les six intitulés, les autres mails restent vides, et l\'amorce seule ne valide rien', async () => {
+  await v('ENT-2.1 : « Répondre » à Nadia s\'ouvre avec les sept intitulés, les autres mails restent vides, et l\'amorce seule ne valide rien', async () => {
     const res = await page.evaluate(async ({ CHEFFE }) => {
       const mod = await import('/activites/cdiscount-mouvements.js');
       const hote = document.createElement('div');
@@ -546,7 +666,7 @@ Stock au dernier inventaire : 27 - 12 - 1 + 9 + 1 = 24`;
       out.pastille = e.hote.querySelector('.ent-nav[data-vue="mail"] .ent-n')?.textContent || '';
       out.apresEnvoi = compte(db);
       out.marques = Object.keys(db.volets || {});
-      await e.envoyer('Stock actuel : 27');
+      await e.envoyer('Stock actuel : 1');
       out.bulle2 = bulle();
       out.apresSecond = compte(db);
       e.demonter();

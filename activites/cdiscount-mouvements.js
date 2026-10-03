@@ -1,17 +1,20 @@
 // ENT-2.1 — Cdiscount, séance « Le stock raconte ». Première séance de l'environnement
 // Cdiscount (C1.6, suivi des stocks et inventaire, 1L).
 //
-// Guidage : l'élève lit le stock et ses mouvements, relie chaque mouvement à son document et
-// recalcule le stock du dernier inventaire. Il répond par écrit à la cheffe d'équipe ; les
-// jalons lisent sa réponse. Détail et données : `contenus/cdiscount-mouvements.js`.
+// Guidage : une commande a été annulée ce matin (rayon vide, site « en stock »). L'élève lit le
+// stock et ses mouvements, relie chaque mouvement à son document, recalcule le stock d'inventaire
+// et compare chaque document à son mouvement jusqu'au constat de casse mal saisi. Il répond par
+// écrit à la cheffe d'équipe ; les jalons lisent sa réponse. Détail et données :
+// `contenus/cdiscount-mouvements.js`.
 //
-// **`pret: true`** depuis le 03/10/2026 : Tristan l'a validée à l'écran, elle est ouverte aux élèves.
-// Le même jour (option B) : le retour client et la casse n'arrivent plus à l'ouverture, mais quand
-// l'élève a envoyé à Nadia son « Stock actuel : … » (`volet.declencheurs`). Laissée ouverte pendant
-// la validation, sur décision de Tristan.
+// Recadrée le 03/10/2026 (brief `docs/briefs/ENT-2.1-recadrage.md`) : six jalons au lieu de cinq,
+// commande annulée, « Stock trouvé » sur le stock réel, niveau confirmé (trois documents de plus).
+// Livrée fermée (`ouverture: 'prof'`, demandé dans `docs/decisions.md`) : Tristan la rouvre lui-même
+// dans « Conduite de séance » après l'avoir essayée.
 //
-// Trame élève écrite (`outils/trame-cdiscount-mouvements.py`, `contenus/trames/ENT-2.1-…`), PAS
-// déclarée tant que Tristan ne l'a pas relue ; seul son corrigé est déclaré (`meta.corrige`).
+// La trame élève et son corrigé (`ENT-2.1.js`) datent d'AVANT le recadrage : Cowork les refait après
+// validation à l'écran. La trame n'est pas déclarée (`trame:`) ; le corrigé l'est, mais il est faux
+// tant qu'il n'est pas régénéré.
 
 import { creerEntreprise } from '../core/types/entreprise.js';
 import * as CDISCOUNT from '../contenus/cdiscount.js';
@@ -21,7 +24,7 @@ export const meta = {
   id: 'cdiscount-mouvements',
   code: 'ENT-2.1',
   titre: 'Cdiscount — le stock raconte',
-  desc: "Lire le stock et ses mouvements, relier chaque mouvement à son document, recalculer le stock d'inventaire.",
+  desc: "Une cliente n'a pas reçu ses écouteurs : remonter les mouvements de stock jusqu'à l'erreur.",
   rubrique: 'logisim',
   // Compétences et temps pédagogique : voir core/competences.js.
   competences: ['C1.6'],
@@ -40,6 +43,7 @@ export const meta = {
   // déclarer, c'est valider, et elle n'est pas encore relue.
   corrige: './contenus/corriges/ENT-2.1.js',
   pret: true,
+  ouverture: 'prof',
 };
 
 const moteur = creerEntreprise({
