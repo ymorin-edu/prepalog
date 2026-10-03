@@ -8,7 +8,7 @@ la préparation de contenu et les supports peuvent avancer en parallèle.
 
 | Lettre | Chantier | Brief | Statut | Taille | Modèle |
 |---|---|---|---|---|---|
-| A | Consigne d'ENT-3.3 + pastilles d'avancement | `ENT-3.3-consigne-trois-etapes.md` | **à lancer en premier** | petit | Sonnet |
+| A | Consigne d'ENT-3.3 + pastilles d'avancement | `ENT-3.3-consigne-trois-etapes.md` | **livré et validé (03/10/2026)** | petit | Sonnet (fait) |
 | B | Carte réelle dans ENT-3.1 | `ENT-3.1-refonte-carte.md` | **livré**, à valider à l'écran (`pret: false`) | gros | Opus (fait) |
 | C | Un imprévu en cours de journée (ENT-3.2) | `ENT-3.2-imprevu.md` | prêt, **après A** | moyen à gros | Opus |
 | D | Feuille de calcul moins guidée + données qui changent | `ENT-3.x-feuille-moins-guidee.md` | reporté, **en dernier** | gros | Opus |

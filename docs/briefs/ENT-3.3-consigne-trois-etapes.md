@@ -6,7 +6,7 @@
 > Lis docs/briefs/COORDINATION-boost.md puis implémente le brief ENT-3.3-consigne-trois-etapes. Annonce la durée avant de commencer et construis les pastilles et les textes ; dis-moi quels tests tu réécris.
 > ```
 
-**Statut** : livré (03/10/2026), à valider à l'écran *(petit chantier : textes + un petit ajout au moteur)*
+**Statut** : livré et validé à l'écran par Tristan (03/10/2026) *(petit chantier : textes + un petit ajout au moteur)*
 **Date du brief** : 03/10/2026
 **Maquette** : « Maquette consigne ENT-3.3 » (Cowork, 03/10/2026) : trois onglets, avant / après (écran Tournée, mail d'Inès, accueil).
 **Séance concernée** : ENT-3.3 `boost-ent33`, **déjà `pret: true`** (livrée, validée à l'écran le 03/10). `id` et
@@ -115,4 +115,4 @@ redevient grise. Relire le mail d'Inès : il est plus clair, la réponse se reco
 - **Décisions prises en route** : pastille 1 = trois cellules non vides (espaces seuls refusés) ; elle se met à jour **à la frappe, sans redessin** ; elle reste verte après « Retrouver la tournée de départ » (les formules sont gardées). La pastille 2 compte un message parti vers `INES.mail`, quel qu'en soit le contenu.
 - **Tests** : **aucun cas existant réécrit** (les anciens cas qui lisent le mail et l'accueil passent tels quels : six intitulés, Mercerie, « le plus court » y sont toujours). **10 cas ajoutés** au bloc `boost` : étapes + rappel (valeurs écrites à la main), pastilles grises, pastille 1 en direct, état non porté par la couleur seule et pas d'aplat, survie à la reconnexion, pastille 2 (et message à un autre destinataire), pastille 3 (grise sur l'état d'Inès, verte après modification, grise après « Retrouver »), pas de pastilles en ENT-3.2, mail en blocs + réponse recopiée dans l'ordre du mail, accueil. Sabotages éprouvés : pastille 3 verte sur l'état initial, pastille 1 qui lit le juge, pastilles déclarées en ENT-3.2 : chacun fait tomber les cas attendus. Suite entière 346/346.
 - **Commits** : voir `git log` (un commit « ENT-3.3 : consigne en trois étapes et pastilles d'avancement »).
-- **Reste ouvert** : validation à l'écran par Tristan ; vérifier dans le suivi qu'aucun élève n'a ouvert ENT-3.3 (non vérifiable depuis ici). Pastilles en ENT-3.2 / 3.4 : à décider séance par séance (`pastilles` y est réutilisable sans rien toucher au moteur).
+- **Reste ouvert** : rien (validation et contrôle du suivi faits par Tristan, 03/10/2026). Pastilles en ENT-3.2 / 3.4 : à décider séance par séance (`pastilles` y est réutilisable sans rien toucher au moteur).
