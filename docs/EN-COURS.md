@@ -7,7 +7,7 @@ est déjà modifié ou inscrit ci-dessous, **elle s'arrête et le dit à Tristan
 
 | Chantier | Fichiers qu'il touche | Depuis |
 |---|---|---|
-| C1 · statut « Annulée » + niveau dans la séance (MOTEUR-statut-annulee) | `core/types/entreprise.js`, `outils/test/` (bloc entreprise), `activites/FICHE-SEANCE.md`, `docs/decisions.md`, le brief | 03/10/2026 |
+| *(personne d'inscrit)* | | |
 
 Rappel : un seul chantier à la fois dans `core/types/tournee.js`, `core/types/grille.js`,
 `core/types/entreprise.js`, `styles/base.css` et `outils/test/boost.mjs` (voir `docs/briefs/COORDINATION-boost.md`).
