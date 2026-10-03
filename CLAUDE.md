@@ -120,6 +120,7 @@ export const meta = {
   notation: 'prof' | 'avancement',  // absent = score auto ramené sur 20
   portee: 'eleve' | 'equipe' | 'groupe' | 'commun',
   pret: true,               // false = cachée aux élèves (l'enseignant la voit, étiquetée)
+  ouverture: 'prof',        // fermée aux élèves tant que l'enseignant ne l'a pas cochée (Conduite de séance)
 };
 ```
 
@@ -134,9 +135,13 @@ modifier une séance**, et la corriger si le code a changé.
   segment (`ENT-1.10` après `ENT-1.9`). Pour déplacer une activité, changer son `code`.
   `TAB-4` est réservé au CAP OL. Changer un `code` déplace les étiquettes partout (aucun score
   perdu) : le dire.
-- **Séance en cours d'écriture : `pret: false`**, ce qui permet de commiter à tout moment.
-  On passe à `true` quand Tristan l'a validée à l'écran. Une séance `pret: false` compte quand
-  même dans le tableau des compétences (décision de Tristan).
+- **Séance en cours d'écriture : `pret: false`**, ce qui permet de commiter à tout moment
+  (brouillon que personne ne peut ouvrir aux élèves).
+- **Séance livrée : `pret: true, ouverture: 'prof'`** (règle adoptée par Tristan le 03/10/2026).
+  Elle reste fermée aux élèves ; Tristan l'essaie à l'écran, puis l'**ouvre lui-même** en la
+  cochant pour son groupe dans « Conduite de séance » — plus de commit pour ouvrir. Les séances
+  déjà ouvertes avant cette règle (dont ENT-2.1, 2.3, 3.2) ne sont pas converties sans son accord.
+  Une séance `pret: false` compte quand même dans le tableau des compétences (décision de Tristan).
 - Évaluation : `meta.copie: true`, `copie: meta.copie` dans `creerEntreprise`, et
   `export const noter = (db) => moteur.noter(db);` dans le fichier d'activité.
 - Données d'une entreprise : `contenus/<nom>.js`, une base par séance (pas de `jeuId` partagé
@@ -270,7 +275,8 @@ cycle d'une séance et les règles d'écriture. En résumé :
 
 - Une séance à construire arrive sous forme de **brief** dans `docs/briefs/` (modèle :
   `docs/briefs/MODELE.md`). Quand Tristan dit « implémente le brief ENT-x.y », lis-le en entier,
-  annonce la durée, et construis avec **`pret: false`** jusqu'à ce qu'il ait validé à l'écran.
+  annonce la durée, construis avec **`pret: false`**, et livre avec **`pret: true, ouverture: 'prof'`** :
+  Tristan l'essaie à l'écran et l'ouvre lui-même à son groupe.
 - **À la livraison, remplis la section « Compte rendu » du brief**, passe son statut à `livré`, et
   ajoute une ligne à `docs/decisions.md` pour toute décision prise en route : c'est ce qui permet à
   Cowork de tenir à jour la mémoire de conception.
