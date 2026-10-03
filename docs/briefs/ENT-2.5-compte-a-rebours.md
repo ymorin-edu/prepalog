@@ -6,8 +6,7 @@
 > Lis docs/briefs/COORDINATION-cdiscount.md, docs/briefs/DECISION-jeu-unique-evaluations.md, le compte rendu de docs/briefs/ENT-4.4-picard-evaluation.md (API du tirage) et celui de docs/briefs/MOTEUR-geste-tableur.md (API du dépôt), puis implémente le brief docs/briefs/ENT-2.5-compte-a-rebours.md. Annonce la durée, puis enchaîne sans attendre : les questions du brief sont déjà tranchées (§11).
 > ```
 
-**Statut** : à implémenter — **en dernier** de la série : après ENT-2.6 (C9) et **après Picard P6** (tirage générique
-d'un jeu par élève). Remplace l'ancien brief `ENT-2.4-cdiscount-evaluation-inventaire.md` (**abandonné**).
+**Statut** : livré (04/10/2026), fermé aux élèves (`ouverture: 'prof'`) : Tristan l'ouvre le jour de l'évaluation.
 **Date du brief** : 03/10/2026
 **Modèle** : Sonnet — **Durée estimée par Cowork** : 3 à 4 h (règles du tirage et test sur graines compris).
 **Touche le moteur** : non, si le tirage de P6, le geste tableur (C5) et le périmètre d'inventaire (C4) sont livrés.
@@ -173,10 +172,47 @@ boucle complète ; une copie (dépôt + inventaire) ; un jeu par élève (graine
 
 ## Compte rendu *(rempli par Claude Code à la livraison)*
 
-- **Fichiers créés / modifiés** :
-- **Déclaration du tirage** (réserve, contraintes) :
+- **Fichiers créés / modifiés** : `activites/cdiscount-compte-a-rebours.js`, `contenus/cdiscount-compte-a-rebours.js`,
+  `contenus/corriges/ENT-2.5.js` (neufs), une ligne dans `activites/index.js`, `outils/essai-cdiscount.html` (ENT-2.5 dans la
+  liste, la copie reste dans la page), `outils/test/cdiscount.mjs` (8 cas), `outils/test/socle.mjs` (ENT-2.5 dans la liste).
+  **Moteur** (commit à part) : `core/types/entreprise.js` — `inventaire` peut être une **fonction de la graine** (comme le
+  quai de Picard), la graine est posée aussi pour un inventaire tiré ou `tirage: true`, et la note garde `detail.graine`.
+- **Déclaration du tirage** (`DECL_TIRAGE`, `core/tirage.js`, 40 essais) : 6 références de l'allée C ; sortes tirées
+  (`h.prendre`) ; stocks de départ dans la moitié haute de [mini, maxi] du catalogue ; écarts rayon 2-4, régulariser 1-3,
+  recompter 3-6 ; une réception J-9 (24-36 unités) pour les références « rayon » et « régulariser », une réception J-8 à J-6
+  (36-48) pour « recompter » (le surplus monté en réserve) ; annulation J-7 à J-5 (réintégration 2 h après), démarque J-8 à
+  J-6 ; préparations : 2-3 avant et 3-4 après l'événement pour une référence à écart, 7-9 pour les autres, jamais le jour de
+  l'événement ; un retour et une casse sur deux références sans écart ; numéros tirés (CMD-7342xx, REI-26-00xx,
+  REC-26-05xx, RET-26-01xx, DEM-26-00xx). **Contraintes** (`verifier`) : 3 sortes sur 3 références distinctes, 3 sans écart,
+  plages, ≥ 2 constats par écart et 0 ailleurs, stocks jamais négatifs (système et rayon), 36 à 44 lignes, taux du
+  périmètre exact entre 2 et 8 %, retour et casse hors écarts. Secours : le premier jeu conforme d'une graine fixe.
+  Sur 500 graines : 384 conformes du premier coup, **aucun secours**, au plus 4 retirages.
 - **Écarts par rapport au brief** :
+  - Compétence : C1.6 seule (C3.2 = traçabilité).
+  - Les réceptions ajoutées (J-9 et le surplus) ne sont pas dans le brief : sans elles, les stocks de l'allée C (maxi
+    20 à 35) donnaient presque toujours un taux au-dessus de 8 %. Le stock de départ est posé par le volet (la base de départ
+    ne connaît pas la graine).
+  - Le compte rendu s'écrit en répondant à l'accusé de Nadia (« Votre liste à recompter »), dont l'amorce porte les deux
+    lignes « Régularisé : » et « Valeur régularisée : ».
 - **Décisions prises en route** :
-- **Tests** (dont nombre de graines tirées) :
-- **Commits** :
-- **Reste ouvert** :
+  - Jalons 5 et 6 : `attente` tant que le comptage n'est pas validé ou complet, `ko` après validation s'ils sont faux ;
+    7 à 10 : jugés à la validation de l'inventaire. Jalon 11 : la ligne qui **commence** par « Régularisé » (sans quoi
+    « Valeur régularisée » se lit à sa place) doit citer exactement les références que l'élève a **régularisées à l'écran**,
+    et la valeur = Σ |ajustement| × coût (tolérance 0,01 €) ; s'il n'a rien régularisé, « aucune » et 0 € sont justes.
+  - L'aléa d'une référence oubliée : « Il manque des … en C-0x-x par rapport au système » (sans quantité), par Yanis Cazenave.
+  - Relevé : « Comptage aux emplacements de prélèvement » ; remarque « recompté deux fois, bacs voisins vérifiés » sur
+    l'emplacement de la référence à régulariser.
+  - Corrigé par élève (onglet Corrigés, choisir l'élève) : son allée (constats, système, relevé, écart, décision attendue),
+    la liste juste, le taux, le compte rendu juste, puis ses jalons et sa note ; avant ouverture, l'allée qu'il recevra.
+- **Tests** (8 cas) : **300 graines** — toutes conformes, zéro secours, ≥ 290 jeux différents ; même graine → même jeu ;
+  standard et confirmé → même allée ; le jeu de « eleve-test » écrit à la main (LAM-FRO rayon −3, COR-SAU régulariser −1,
+  ELA-FIT-3 recompter −4 ; stocks 23 / 53 / 6 / 9 / 49 / 57 ; 38 lignes ; taux 5,0 % ; valeur 3,20 €) ; parcours juste 11/11,
+  une décision fausse 10/11 ; liste avec oubli → jalon 4 ko, aléa reçu, inventaire jouable ; synthèse fausse + liste qui la
+  suit → 3 ko, 4 ok ; compte rendu jugé sur la régularisation de l'élève ; corrigé par élève ; à l'écran : graine posée,
+  export, « Fichier reçu. » et plus de second dépôt, inventaire de 3 lignes sans aucune correction, copie rendue 11/11,
+  ramassage = même note. Sabotages éprouvés : deux références de la même sorte → 8 cas tombent ; correction affichée → le
+  cas d'écran tombe ; jalon 11 jugé sur la référence attendue → 2 cas tombent. Suite entière 545/545.
+- **Commits** : « Moteur : inventaire tiré par élève… » puis « ENT-2.5 évaluation : le compte à rebours… (C8) ».
+- **Reste ouvert** : la fiche d'intention Cdiscount (Cowork) doit décrire l'épreuve et dire où lire le corrigé par élève ;
+  **Tristan passe l'évaluation avec deux identifiants** (deux allées, même difficulté) avant de l'ouvrir ; ne plus toucher au
+  tirage une fois l'évaluation ouverte.

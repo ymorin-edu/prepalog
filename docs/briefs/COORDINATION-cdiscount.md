@@ -10,6 +10,9 @@ Conception (projet PREPALOG) : `claude/prepalog-cdiscount-serie-decisions.md` (d
 `claude/prepalog-geste-export-tableur.md`, `claude/prepalog-regle-evaluation-jeu-unique.md`,
 `claude/prepalog-fiche-intention-pedagogique.md`. Décision générale déposée : `docs/briefs/DECISION-jeu-unique-evaluations.md`.
 
+> **04/10/2026 : toute la série est livrée (C0 à C9), fermée aux élèves.** Restent : validation à l'écran par Tristan,
+> trames élève et fiche d'intention (Cowork). Récapitulatif de la nuit : `docs/RECAP-2026-10-04-cdiscount.md`.
+
 ## Quand (décision 7 de Tristan)
 
 **Pas de date à tenir.** *« On prépare quand le moteur est libre, on finit Picard puis on attaque la refonte de
@@ -26,7 +29,7 @@ Règle de tout le dépôt : **un seul chantier moteur à la fois** (`core/`, `st
 | ENT-2.2 | `cdiscount-chiffres` | Ce que disent les chiffres | guidage du geste tableur | exporter les constats des préparateurs, Écart / SI / NB.SI, choisir les références à recompter | **nouvelle** | **livrée 04/10** (fermée) |
 | ENT-2.3 | `cdiscount-inventaire` | Inventaire tournant | entraînement | redonner sa liste, recompter sa liste (le relevé couvre l'allée), oubli = aléa, « Absent » | ENT-2.2 actuelle | **livrée 04/10** (fermée) |
 | ENT-2.4 | `cdiscount-regularise` | Régularisé à l'aveugle | erreur induite + entraînement du geste | exporter les ajustements, SI / NB.SI, enquêter ; vendeur de la place de marché | ENT-2.3 actuelle | **livrée 04/10** (fermée) |
-| ENT-2.5 | `cdiscount-compte-a-rebours` | Le compte à rebours | **évaluation** (coef. 3) | boucle complète sur l'allée C, **un jeu par élève**, copie rendue | ancien brief ENT-2.4 (**abandonné**) | **brief prêt** (`ENT-2.5-compte-a-rebours.md`) |
+| ENT-2.5 | `cdiscount-compte-a-rebours` | Le compte à rebours | **évaluation** (coef. 3) | boucle complète sur l'allée C, **un jeu par élève**, copie rendue | ancien brief ENT-2.4 (**abandonné**) | **livrée 04/10** (fermée) |
 | ENT-2.6 | `cdiscount-priorites` | Cinq recomptages, pas un de plus | **bonus** (entraînement, coef. 1) | export sale sur deux allées, NB.SI.ENS + RECHERCHEV, priorisation par la valeur | **nouvelle** | **livrée 04/10** (fermée) |
 
 Le geste tableur reçoit ses trois temps : **guidé** (2.2), **entraîné** (2.4, 2.6), **évalué** (2.5). C1.6 garde les siens.

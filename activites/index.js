@@ -39,6 +39,7 @@ export const ACTIVITES = [
   () => import('./cdiscount-chiffres.js'),
   () => import('./cdiscount-inventaire.js'),
   () => import('./cdiscount-regularise.js'),
+  () => import('./cdiscount-compte-a-rebours.js'),
   () => import('./cdiscount-priorites.js'),
   // Boost (Nîmes) — ENT-3.x. C2.4 « Organiser une tournée de livraison » prend quatre
   // séances : guidage, entraînement, erreur induite, évaluation. ENT-3.4 reste à écrire.

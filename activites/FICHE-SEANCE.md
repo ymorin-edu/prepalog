@@ -205,6 +205,15 @@ Pour les jalons : `resultatDepot(db, 'analyse')` → `{ depose, essais, at, cont
 Page d'essai : `outils/essai-tableur.html` ; tests : bloc `tableur-export` (fichiers témoins Excel et
 LibreOffice dans `outils/test/fichiers/`).
 
+## Inventaire tiré par élève (évaluation)
+
+Depuis le 04/10/2026 (Cdiscount ENT-2.5), `inventaire` peut être une **fonction de la graine** :
+`inventaire: (graine) => déclaration`, comme le quai de Picard ENT-4.4. Le moteur pose la graine (`db.tirage`, l'identifiant
+de l'élève) à la première ouverture, AVANT le volet — qui la lit (`graineDeBase(db)`) pour semer le jeu de l'élève. Une
+séance qui ne tire que ses données (sans quai ni inventaire tirés) déclare `tirage: true`. La note garde `detail.graine`.
+Le stock de départ d'un jeu tiré se pose dans `semer` (la base de départ ne connaît pas la graine). Voir
+`contenus/cdiscount-compte-a-rebours.js` et son corrigé par élève `contenus/corriges/ENT-2.5.js`.
+
 ## Pièges
 
 - Une séance en cours d'écriture reste en `pret: false` et peut être commitée à tout moment.

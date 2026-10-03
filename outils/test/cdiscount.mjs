@@ -1041,7 +1041,7 @@ Ce qui cloche : DEM-26-0027 : 2 - 1 = 1`;
     const d = doublons(metas.map((m) => m.code));
     if (d.length) throw new Error('code en double : ' + d.join(', '));
     const cd = metas.filter((m) => /^cdiscount-/.test(m.id));
-    const attendu = { 'cdiscount-mouvements': 'ENT-2.1', 'cdiscount-chiffres': 'ENT-2.2', 'cdiscount-inventaire': 'ENT-2.3', 'cdiscount-regularise': 'ENT-2.4', 'cdiscount-priorites': 'ENT-2.6' };
+    const attendu = { 'cdiscount-mouvements': 'ENT-2.1', 'cdiscount-chiffres': 'ENT-2.2', 'cdiscount-inventaire': 'ENT-2.3', 'cdiscount-regularise': 'ENT-2.4', 'cdiscount-compte-a-rebours': 'ENT-2.5', 'cdiscount-priorites': 'ENT-2.6' };
     for (const [id, code] of Object.entries(attendu)) {
       const m = cd.find((x) => x.id === id);
       if (!m || m.code !== code) throw new Error(`${id} : ${m && m.code} au lieu de ${code}`);
@@ -2069,6 +2069,254 @@ Suite à donner : Réclamation auprès de Gardéo, livraison incomplète`;
       await p.waitForTimeout(500);
       const t = (await p.textContent(Z)).replace(/\s+/g, ' ');
       if (!/37 résultats justes sur 37\./.test(t)) throw new Error('retour : ' + (await p.textContent('[data-depot-retour]')));
+      if (errs.length) throw new Error(errs.join(' | '));
+    } finally { await ctx2.close(); }
+  });
+
+  /* ================================================================================
+   * ENT-2.5 « Le compte à rebours » (ÉVALUATION, un jeu tiré par élève) — ajouté le 04/10/2026, C8.
+   * Le tirage : quelques centaines de graines, toutes conformes à la structure commune, zéro secours.
+   * Le parcours : sur la graine « eleve-test », valeurs écrites À LA MAIN pour CETTE graine.
+   * ============================================================================== */
+  const S5 = await imp('contenus/cdiscount-compte-a-rebours.js');
+  const TI = await imp('core/tirage.js');
+  const COR5 = await imp('contenus/corriges/ENT-2.5.js');
+  // Ouvrir la séance comme le moteur : base, graine (posée AVANT le volet), volet.
+  const ouvrir25 = (graine, aisance) => {
+    const db = S5.baseDeDepart('Léa');
+    if (aisance) db.aisance = aisance;
+    db.tirage = { graine, pose: Date.now() };
+    ['moves', 'mails', 'orders', 'receptions', 'customers', 'suppliers'].forEach((k) => { if (!db[k]) db[k] = []; });
+    const g = S5.VOLET.semer('Léa', db);
+    g.receptions.forEach((r) => db.receptions.push(r));
+    g.orders.forEach((o) => db.orders.push(o));
+    g.mouvements.forEach((m) => { db.stock[m.sku] += m.delta; db.moves.push({ ...m, after: db.stock[m.sku] }); });
+    g.mails.forEach((m) => db.mails.push(m));
+    db.volets = { [S5.VOLET.id]: Date.now() };
+    return db;
+  };
+  const st5 = (db) => Object.fromEntries(S5.ETAPES.map((e) => [e.id, e.verifier(db).status]));
+  const note5 = (db) => S5.ETAPES.filter((e) => e.verifier(db).status === 'ok').length;
+  // Le jeu de « eleve-test », écrit à la main.
+  const J5 = { rayon: 'LAM-FRO', regul: 'COR-SAU', recompter: 'ELA-FIT-3' };
+  const SYS5 = { 'GOU-ISO-75': 23, 'COR-SAU': 53, 'TAP-YOG': 6, 'BAL-FOOT': 9, 'LAM-FRO': 49, 'ELA-FIT-3': 57 };
+  const REL5 = { ...SYS5, 'COR-SAU': 52, 'LAM-FRO': 46, 'ELA-FIT-3': 53 };
+  const LISTE5 = ['COR-SAU', 'LAM-FRO', 'ELA-FIT-3'];
+  // Le classeur de l'élève (export propre, synthèse à écrire : en-têtes seuls dans l'export).
+  const classeur5 = (db, o = {}) => {
+    const ex = GT.construireExport(S5.TABLEUR.exports[0], db, {});
+    const F = ex.feuilles[0];
+    const c = Object.fromEntries(F.colonnes.map((x, i) => [x, i]));
+    const n = F.colonnes.length, K = XL.utils.encode_col(n), L = XL.utils.encode_col(n + 1);
+    const ws = XL.utils.aoa_to_sheet([[...F.colonnes, 'Écart', 'Réf. en écart'], ...F.lignes]);
+    F.lignes.forEach((l, k) => {
+      const r = k + 2, ec = l[c['Stock trouvé']] - l[c['Stock logiciel']];
+      ws[K + r] = { t: 'n', v: ec, f: `I${r}-H${r}` };
+      ws[L + r] = { t: 's', v: ec !== 0 ? l[c['Référence']] : '', f: `IF(${K}${r}<>0,D${r},"")` };
+    });
+    ws['!ref'] = `A1:${L}${F.lignes.length + 1}`;
+    const syn = S5.MODELES.map((ref) => [ref, o.syn && o.syn[ref] != null ? o.syn[ref] : F.lignes.filter((l) => l[c['Référence']] === ref && l[c['Stock trouvé']] !== l[c['Stock logiciel']]).length]);
+    const ws2 = XL.utils.aoa_to_sheet([['Référence', 'Nb constats'], ...syn]);
+    syn.forEach((x, k) => { ws2['B' + (k + 2)] = { t: 'n', v: x[1], f: `COUNTIF(Préparations!${L}:${L},A${k + 2})` }; });
+    const wb = XL.utils.book_new();
+    XL.utils.book_append_sheet(wb, ws, 'Préparations');
+    XL.utils.book_append_sheet(wb, ws2, 'Synthèse');
+    return XL.write(wb, { bookType: 'xlsx', type: 'buffer' });
+  };
+  const deposer5 = (db, o) => {
+    const res = GT.controlerDepot(XL.read(classeur5(db, o), { type: 'buffer', cellFormula: true }), S5.controles(db), GT.construireExport(S5.TABLEUR.exports[0], db, {}).propres);
+    GT.enregistrerDepot(db, S5.ID_DEPOT, res, { retour: 'evaluation', fichier: 'x.xlsx' });
+    return res;
+  };
+  // L'inventaire, posé à la main sur le périmètre (alerte n° 20) ; `regul` : ce que l'élève régularise.
+  const inventaire5 = (db, { decisions, taux = '5', regul = [[J5.regul, -1]] } = {}) => {
+    const INV = S5.inventaireDeBase(db);
+    const refs = INV.perimetre(db) || [];
+    const e = INVM.etatNeuf(INV, (r) => db.stock[r], INV.lignes.filter((l) => refs.includes(l.ref)));
+    refs.forEach((r) => { e.saisie[r] = String(REL5[r]); e.ecarts[r] = String(REL5[r] - SYS5[r]); });
+    const D = decisions || { [J5.rayon]: ['rayon'], [J5.regul]: ['regul', 'Démarque inconnue'], [J5.recompter]: ['recompter'] };
+    Object.entries(D).forEach(([r, [action, motif]]) => { e.decisions[r] = { action, motif: motif || '' }; });
+    if ((D[J5.recompter] || [])[0] === 'recompter') e.recomptes[J5.recompter] = SYS5[J5.recompter];
+    e.taux = taux; e.valide = Date.now(); e.etape = 4;
+    e.ajustements = regul.map(([ref, delta]) => ({ ref, delta, motif: 'Démarque inconnue', origine: 'x' }));
+    db.inventaires = { [S5.ID_INVENTAIRE]: e };
+    return db;
+  };
+  const exporter5 = (db) => { db.tableur = db.tableur || {}; db.tableur.exports = { [S5.ID_EXPORT]: { at: 1, n: 38 } }; return db; };
+  const parcours5 = (o = {}) => {
+    const db = exporter5(ouvrir25('eleve-test'));
+    deposer5(db, o.syn ? { syn: o.syn } : {});
+    repondre(db, o.liste || 'À recompter : COR-SAU, LAM-FRO, ELA-FIT-3'); declencher(S5, db);
+    inventaire5(db, o.inv || {});
+    repondre(db, o.cr || 'Régularisé : COR-SAU\nValeur régularisée : 1 × 3,20 = 3,20 €'); declencher(S5, db);
+    return db;
+  };
+
+  await v('ENT-2.5 : tirage — 300 élèves, 300 jeux conformes du premier coup ou presque, zéro secours, structure commune toujours tenue', async () => {
+    const sig = new Set();
+    let secours = 0;
+    for (let i = 0; i < 300; i++) {
+      const r = TI.tirerJeu(S5.DECL_TIRAGE, 'eleve-' + i);
+      if (r.secours) secours++;
+      const j = r.jeu;
+      const pb = S5.verifier(j);
+      if (pb.length) throw new Error(`eleve-${i} : ${pb.join(' ; ')}`);
+      const refs = S5.SORTES.map((s) => j.sorte[s]);
+      if (new Set(refs).size !== 3 || j.sans.length !== 3) throw new Error('structure');
+      const A = S5.attendus(j);
+      if (refs.some((r) => A.constats[r] < 2) || j.sans.some((r) => A.constats[r] !== 0)) throw new Error('constats');
+      if (A.taux < 2 || A.taux > 8 || A.lignes < 36 || A.lignes > 44) throw new Error(`taux ${A.taux}, ${A.lignes} lignes`);
+      sig.add(JSON.stringify([j.sorte, j.ecart, j.depart]));
+    }
+    if (secours) throw new Error(`${secours} jeux de secours`);
+    if (sig.size < 290) throw new Error(`${sig.size} jeux différents seulement`);
+    if (JSON.stringify(S5.jeuDe('eleve-7')) !== JSON.stringify(TI.tirerJeu(S5.DECL_TIRAGE, 'eleve-7').jeu)) throw new Error('même élève, autre jeu');
+    if (S5.verifier(S5.DECL_TIRAGE.secours).length) throw new Error('le jeu de secours n\'est pas conforme');
+    // Le vérificateur refuse un jeu dont deux écarts sont de la même sorte.
+    const faux = JSON.parse(JSON.stringify(S5.jeuDe('eleve-3'))); faux.sorte.recompter = faux.sorte.rayon;
+    if (!S5.verifier(faux).length) throw new Error('jeu à deux sortes identiques accepté');
+  });
+
+  await v('ENT-2.5 : le niveau n\'entre pas dans le tirage — même graine, standard ou confirmé : même allée, mêmes messages', async () => {
+    const a = ouvrir25('eleve-test'), b = ouvrir25('eleve-test', 'confirme');
+    const f = (db) => JSON.stringify([db.moves.map((m) => [m.sku, m.delta, m.ref]), db.mails.map((m) => m.subject + m.text), db.stock]);
+    if (f(a) !== f(b)) throw new Error('le niveau change le jeu');
+    if (f(a) === f(ouvrir25('eleve-autre'))) throw new Error('deux élèves, même allée');
+  });
+
+  await v('ENT-2.5 : le jeu de « eleve-test » (à la main) — sortes, stocks, relevé, constats, export propre de 38 lignes, indices dans la messagerie', async () => {
+    const db = ouvrir25('eleve-test');
+    const j = S5.jeuDeBase(db);
+    if (JSON.stringify(j.sorte) !== JSON.stringify(J5)) throw new Error('sortes : ' + JSON.stringify(j.sorte));
+    if (JSON.stringify(db.stock) !== JSON.stringify(SYS5)) throw new Error('stock : ' + JSON.stringify(db.stock));
+    const I = Object.fromEntries(S5.inventaireDeBase(db).lignes.map((l) => [l.ref, l.compte]));
+    if (JSON.stringify(I) !== JSON.stringify(REL5)) throw new Error('relevé : ' + JSON.stringify(I));
+    if (JSON.stringify(S5.constats(db)) !== JSON.stringify({ 'GOU-ISO-75': 0, 'COR-SAU': 3, 'TAP-YOG': 0, 'BAL-FOOT': 0, 'LAM-FRO': 4, 'ELA-FIT-3': 3 })) throw new Error('constats : ' + JSON.stringify(S5.constats(db)));
+    const ex = GT.construireExport(S5.TABLEUR.exports[0], db, {});
+    if (ex.propres.length !== 38 || ex.feuilles[0].lignes.length !== 38) throw new Error('export : ' + ex.propres.length);
+    if (ex.feuilles[1].colonnes.join() !== 'Référence,Nb constats' || ex.feuilles[1].lignes.length) throw new Error('synthèse : en-têtes seuls');
+    const s = db.mails.map((m) => m.subject + ' ' + m.text).join('\n');
+    if (!/Annulation de CMD-734216/.test(s) || !/j'ai réintégré 3 lampe frontale led \(LAM-FRO\)/.test(s)) throw new Error('message de Lucie');
+    if (!/Réception REC-26-0568 : le surplus de bandes élastiques de fitness, lot de 3 \(ELA-FIT-3\)/.test(s) || /monté en réserve, juste au-dessus\.[^\n]*\d+ /.test(s)) throw new Error('message du cariste');
+    if (/COR-SAU/.test(s.replace(/Relevé[^]*/, ''))) throw new Error('un message parle de la référence à régulariser');
+    if (db.orders.find((o) => o.no === 'CMD-734216').annulee === undefined) throw new Error('commande annulée');
+    if (/absent/i.test(s)) throw new Error('« absent » écrit');
+  });
+
+  await v('ENT-2.5 : parcours juste → 11/11 ; une décision fausse → 10/11 ; sans travail, rien', async () => {
+    if (Object.values(st5(ouvrir25('eleve-test'))).some((x) => x !== 'attente')) throw new Error('avant travail : ' + JSON.stringify(st5(ouvrir25('eleve-test'))));
+    const db = parcours5();
+    if (note5(db) !== 11) throw new Error('parcours juste : ' + JSON.stringify(st5(db)));
+    const r = S5.corrige(S5.jeuDeBase(db));
+    if (r.taux !== 5 || r.valeur !== 3.2 || r.regularise !== 'COR-SAU' || r.liste.join() !== LISTE5.join()) throw new Error('corrigé : ' + JSON.stringify(r));
+    const faux = parcours5({ inv: { decisions: { [J5.rayon]: ['regul', 'Démarque inconnue'], [J5.regul]: ['regul', 'Démarque inconnue'], [J5.recompter]: ['recompter'] },
+      regul: [[J5.rayon, -3], [J5.regul, -1]] }, cr: 'Régularisé : LAM-FRO, COR-SAU\nValeur régularisée : 3 × 6,30 + 1 × 3,20 = 22,10 €' });
+    const st = st5(faux);
+    if (note5(faux) !== 10 || st.rayon !== 'ko') throw new Error('une décision fausse : ' + JSON.stringify(st));
+  });
+
+  await v('ENT-2.5 : liste avec un oubli → jalon 4 ko, l\'aléa arrive, l\'inventaire reste jouable ; le taux se lit sur le périmètre', async () => {
+    const db = parcours5({ liste: 'À recompter : COR-SAU, LAM-FRO' });
+    const st = st5(db);
+    if (st.liste !== 'ko') throw new Error('liste : ' + st.liste);
+    if (!db.mails.some((m) => m.subject === 'Rayon à vérifier : ELA-FIT-3')) throw new Error('aléa absent');
+    if (['comptage', 'ecarts', 'rayon', 'regul', 'recompter', 'taux', 'compteRendu'].some((k) => st[k] !== 'ok')) throw new Error(JSON.stringify(st));
+    // Une erreur ne se paie qu'une fois : synthèse déposée fausse, liste qui la suit.
+    const syn = parcours5({ syn: { 'ELA-FIT-3': 0 }, liste: 'À recompter : COR-SAU, LAM-FRO' });
+    if (st5(syn).synthese !== 'ko' || st5(syn).liste !== 'ok') throw new Error('synthèse fausse : ' + JSON.stringify(st5(syn)));
+    if (!Object.entries(st5(parcours5({ inv: { taux: '3,7' } }))).filter(([, x]) => x !== 'ok').map(([k]) => k).includes('taux')) throw new Error('taux faux accepté');
+  });
+
+  await v('ENT-2.5 : le compte rendu se juge sur ce que l\'élève a RÉELLEMENT régularisé (erreur payée une fois, au jalon 8)', async () => {
+    // Il régularise la lampe (à tort) et pas la corde : jalons rayon et regul faux, compte rendu juste s'il dit ce qu'il a fait.
+    const inv = { decisions: { [J5.rayon]: ['regul', 'Démarque inconnue'], [J5.regul]: ['rayon'], [J5.recompter]: ['recompter'] }, regul: [[J5.rayon, -3]] };
+    const db = parcours5({ inv, cr: 'Régularisé : LAM-FRO\nValeur régularisée : 3 × 6,30 = 18,90 €' });
+    const st = st5(db);
+    if (st.compteRendu !== 'ok' || st.rayon !== 'ko' || st.regul !== 'ko') throw new Error(JSON.stringify(st));
+    const db2 = parcours5({ inv, cr: 'Régularisé : COR-SAU\nValeur régularisée : 3,20 €' });
+    if (st5(db2).compteRendu !== 'ko') throw new Error('compte rendu de la référence attendue, pas de la sienne');
+    if (st5(parcours5({ cr: 'Régularisé : COR-SAU\nValeur régularisée : 32 €' })).compteRendu !== 'ko') throw new Error('valeur fausse');
+  });
+
+  await v('ENT-2.5 : corrigé par élève — son allée, l\'attendu, ses jalons, sa note ; avant ouverture, l\'allée qu\'il recevra', async () => {
+    const c = COR5.corrigeEleve(parcours5(), 'eleve-test');
+    const t = JSON.stringify(c);
+    if (!/Liste juste : COR-SAU, LAM-FRO, ELA-FIT-3/.test(t) || !/Valeur régularisée : 3,20 €/.test(t) || !/20 \/ 20 \(11 jalons sur 11\)/.test(t)) throw new Error(t.slice(0, 400));
+    const avant = COR5.corrigeEleve({}, 'eleve-test');
+    if (!/pas encore ouvert/.test(avant.texte) || avant.items.length !== 1) throw new Error('avant ouverture');
+    if (!/COR-SAU/.test(JSON.stringify(avant.items))) throw new Error('le jeu de l\'élève (graine = identifiant)');
+  });
+
+  await v('ENT-2.5 : à l\'écran — copie, un seul dépôt « Fichier reçu. », aucune correction de l\'inventaire, remise = ramassage', async () => {
+    const ctx2 = await nav.newContext({ acceptDownloads: true });
+    const p = await ctx2.newPage();
+    p.setDefaultTimeout(6000);
+    const errs = [];
+    p.on('pageerror', (e) => errs.push(e.message));
+    p.on('console', (m) => { if (m.type() === 'error' && !/\b404\b/.test(m.text())) errs.push(m.text()); });
+    try {
+      await p.goto(new URL('/', page.url()).toString());
+      await p.waitForSelector('#btnProf', { timeout: 8000 });
+      await p.evaluate(async () => {
+        const A = await import('/activites/cdiscount-compte-a-rebours.js');
+        const hote = document.createElement('div'); hote.id = 'hote5'; document.body.appendChild(hote);
+        const db = {};
+        window.__c25 = { db, A, remis: null };
+        A.rendre(hote, { meta: A.meta, profil: { prenom: 'Léa', nom: 'Test', role: 'eleve', uid: 'eleve-test' }, codeStock: 'STOCK24',
+          jeu: { etat: () => db, sauver() {} }, enregistrer() {}, quitter() {},
+          lireScore: async () => null, rendreCopie: async (res) => { window.__c25.remis = res; return { rendu: Date.now() }; } });
+      });
+      const Z = '#hote5 .ent-main';
+      const aller = async (vue) => { await p.click(`#hote5 .ent-nav[data-vue="${vue}"]`); await p.waitForTimeout(80); };
+      if (await p.evaluate(() => window.__c25.db.tirage.graine) !== 'eleve-test') throw new Error('graine non posée');
+      await aller('commandes');
+      const [dl] = await Promise.all([p.waitForEvent('download'), p.click(`${Z} [data-exporter="preparations"]`)]);
+      if (dl.suggestedFilename() !== 'cdiscount-preparations-allee-C.xlsx') throw new Error('nom');
+      const db0 = await p.evaluate(() => JSON.parse(JSON.stringify(window.__c25.db)));
+      await aller('fichiers');
+      await p.setInputFiles('#fichierTableur', { name: 'eval.xlsx', mimeType: 'application/octet-stream', buffer: classeur5(db0) });
+      await p.waitForTimeout(400);
+      const t = (await p.textContent(Z)).replace(/\s+/g, ' ');
+      if (!/Fichier reçu\./.test(t) || /résultats? justes?/.test(t)) throw new Error('retour : ' + t.slice(0, 300));
+      if (await p.$('#fichierTableur')) throw new Error('second dépôt possible');
+      // La liste, par la messagerie.
+      await aller('mail');
+      await p.click(`${Z} .ent-mitem >> text=Allée C : le compte à rebours`);
+      await p.click(`${Z} [data-repondre]`);
+      await p.fill(`${Z} #repT`, 'À recompter : COR-SAU, LAM-FRO, ELA-FIT-3');
+      await p.click(`${Z} #formRep button[type="submit"]`); await p.waitForTimeout(150);
+      // L'inventaire : 3 lignes, écarts et taux faux acceptés sans rien dire (correction « aucune »).
+      await aller('inventaire');
+      const saisies = await p.$$eval(`${Z} [data-inv-saisie]`, (e) => e.map((x) => x.dataset.invSaisie));
+      if (saisies.join() !== 'COR-SAU,LAM-FRO,ELA-FIT-3') throw new Error('périmètre : ' + saisies.join());
+      for (const r of saisies) await p.fill(`${Z} [data-inv-saisie="${r}"]`, String(REL5[r]));
+      await p.click(`${Z} [data-inv-aller="2"]`); await p.waitForTimeout(80);
+      for (const r of saisies) await p.fill(`${Z} [data-inv-ecart="${r}"]`, String(REL5[r] - SYS5[r]));
+      await p.click(`${Z} [data-inv-aller="3"]`); await p.waitForTimeout(80);
+      await p.selectOption(`${Z} [data-inv-action="LAM-FRO"]`, 'rayon'); await p.waitForTimeout(60);
+      await p.selectOption(`${Z} [data-inv-action="COR-SAU"]`, 'regul'); await p.waitForTimeout(60);
+      await p.selectOption(`${Z} [data-inv-motif="COR-SAU"]`, 'Démarque inconnue');
+      await p.selectOption(`${Z} [data-inv-action="ELA-FIT-3"]`, 'recompter'); await p.waitForTimeout(60);
+      await p.click(`${Z} [data-inv-aller="4"]`); await p.waitForTimeout(80);
+      await p.fill(`${Z} [data-inv-taux]`, '5');
+      await p.click(`${Z} [data-inv-valider]`); await p.waitForTimeout(120);
+      const bilan = (await p.textContent(Z)).replace(/\s+/g, ' ');
+      if (!/Inventaire INV-2026-58 valid/.test(bilan)) throw new Error('inventaire non validé : ' + bilan.slice(0, 300));
+      if (/d.cisions? justes?|\bjuste\b|. revoir|Ce qu.il fallait voir/.test(bilan)) throw new Error('une correction s’affiche : ' + bilan.slice(0, 300));
+      // Le compte rendu, puis la copie.
+      await aller('mail');
+      if (await p.$(`${Z} [data-dossier="in"]`)) { await p.click(`${Z} [data-dossier="in"]`); await p.waitForTimeout(80); }
+      await p.click(`${Z} .ent-mitem >> text=Votre liste à recompter`);
+      await p.click(`${Z} [data-repondre]`);
+      await p.fill(`${Z} #repT`, 'Régularisé : COR-SAU\nValeur régularisée : 3,20 €');
+      await p.click(`${Z} #formRep button[type="submit"]`); await p.waitForTimeout(150);
+      await p.click('#hote5 [data-copie-rendre]'); await p.waitForTimeout(60);
+      await p.click('#hote5 [data-copie-rendre]');
+      await p.waitForFunction(() => !!window.__c25.remis);
+      const r = await p.evaluate(() => window.__c25.remis);
+      if (r.score !== 11 || r.max !== 11) throw new Error('copie : ' + JSON.stringify(r));
+      const ramasse = await p.evaluate(() => window.__c25.A.noter(JSON.parse(JSON.stringify(window.__c25.db))));
+      if (ramasse.score !== r.score || ramasse.max !== r.max) throw new Error('ramassage ≠ remise');
       if (errs.length) throw new Error(errs.join(' | '));
     } finally { await ctx2.close(); }
   });
