@@ -1,6 +1,6 @@
 # Brief de chantier — ENT-3.1 Refonte de la carte (Boost, tournée du vélo-cargo)
 
-**Statut** : à implémenter *(étape 1 sur 4 de la reprise de l'enchaînement ENT-3.1 → 3.4)*
+**Statut** : livré, en attente de validation à l'écran (`pret: false`) *(étape 1 sur 4 de la reprise de l'enchaînement ENT-3.1 → 3.4)*
 **Date du brief** : 03/10/2026
 **Conversation d'origine** : Cowork, 03/10/2026 (retours de Tristan sur l'enchaînement 3.1 / 3.2 / 3.3)
 **Maquette validée** : `G:\Mon Drive\Travail\Logistique\1L\Claude outputs\maquette-31-carte.html`
@@ -111,8 +111,55 @@ quartiers et des numéros.
 ## Compte rendu *(rempli par Claude Code à la livraison)*
 
 - **Fichiers créés / modifiés** :
+  - moteur : `core/types/carte.js` (mode « lire la case », `creerLecture`, activé par `reperage` à côté de
+    `carte`), `core/types/plan.js` (le tableau de repérage accepte un autre dessin : `creerPlan(PLAN, o)`, options
+    `caseDe`, `dessin`, `brancherDessin`, `nomsDansTableau`), `styles/base.css` (halo ambre du client choisi) ;
+  - générateur : `outils/carte/quartiers.py` (jeu `ent31` : 7 quartiers), `outils/carte/construire.py` (quartiers
+    choisis par la séance ; options `nomsQuartiers: "eviter"` et `quadrillage: "points"`, voir décisions), nouveau
+    `outils/carte/boost-ent31.json` → `contenus/boost-ent31-carte.js` (généré, 717 ko). ENT-3.2 se reconstruit
+    **octet pour octet** à l'identique ;
+  - contenu : `contenus/boost.js` (sept adresses, deux quartiers, départ 14 h 00 ; plan schématique `PLAN_NIMES` retiré),
+    `contenus/boost-tournee.js` (plan = carte réelle + repérage par cases ; mail, accueil, feuille suivent l'heure) ;
+  - tests : `outils/test/boost.mjs` (**cas d'ENT-3.1 réécrits**, voir Tests), `outils/test/carte.mjs` (un cas retourné),
+    `outils/test/socle.mjs` (deux cas : ENT-3.1 cachée aux élèves) ;
+  - page d'essai : `outils/essai-ent31.html` (la vraie séance, vue par un élève, base en mémoire, suivi affiché dessous).
 - **Écarts par rapport au brief** (et pourquoi) :
-- **Décisions prises en route** :
-- **Tests** :
-- **Commits** :
+  - **Les noms des clients n'apparaissent pas sur la carte** après le repérage, mais **dans le tableau** (et dans
+    l'infobulle du point) : au centre-ville, « Le Comptoir des Halles » mesure près de 2 km à l'échelle de la vue
+    d'ensemble et masquait les noms de quartier ; au zoom, il couvrait le nom de sa propre rue.
+  - **Plus de lien vers un plan en ligne** : le point est déjà sur la carte, le zoom d'un quartier donne les noms de
+    rues. Le mode hors connexion du bandeau reste (il remplit les menus de quartier, pas les cases).
+  - **Départ du vélo-cargo à 14 h 00** au lieu de 13 h 00 : par les rues, la tournée fait 12 à 25 km (22,1 sur le plan
+    schématique) ; à 13 h, les 720 ordres attrapaient tous le train.
+  - Trois rues ont changé **après** le premier choix, pour éloigner les points des lignes du quadrillage (voir décisions).
+- **Décisions prises en route** : voir `docs/decisions.md` (03/10/2026, Claude Code, « ENT-3.1 refonte de la carte »).
+  Décisions de Tristan sur question : Croix de Fer remplace Courbessac (hors carte), Gambetta remplace Grézan (pas
+  d'IRIS), Costières = IRIS Marronniers + Capouchiné + Maréchal Juin.
+- **Vérifié / construit** :
+  - **vérifié** : les sept rues existent à Nîmes (BAN, code postal compris, 03/10/2026) et tombent **entièrement** dans
+    leur contour ; contours = IRIS INSEE (Licence Ouverte) ; composition des Costières d'après la liste du conseil de
+    quartier (nimes.fr) ; Croix de Fer et Gambetta sont des IRIS officiels ;
+  - **construit** : les commerces (inventés), leur position au **milieu du tracé OSM** de la rue (rues sans numéro),
+    le regroupement des Costières (Haute Magaille, qui en fait partie, sort de la carte), les chiffres de la journée.
+  - Les sept clients, avec leur case recalculée : Comptoir des Halles (rue du Général-Perrier) D2 Écusson ; Épicerie
+    Verdier (rue de Combret) C2 Jardins de la Fontaine ; La Pointe Sud (rue de l'Hostellerie) C5 Ville Active ; Maison
+    Lauze (rue de Mascard) B5 Saint-Césaire ; Studio Garance (rue Edmond-Rostand) E1 Croix de Fer ; Atelier Mazet
+    (rue Graverol) D2 Gambetta ; Caveau Pélissier (rue Roger-Sabatier) D4 Costières.
+- **Calage** (énumération complète, `calibrer.mjs`) : 237 kg pour 180, La Pointe Sud (58 kg) seule à quai ; 189 ordres
+  sur 720 (26 %) attrapent le train ; meilleur ordre Lauze → Pélissier → Verdier → Comptoir → Mazet → Garance,
+  11,9 km, gare à 15 h 36 ; l'ordre de la fiche fait 21,3 km et arrive à 16 h 23 (train manqué de 13 min).
+- **Tests** : suite entière **335/335** en mode démo. Bloc `boost` : les cas propres au plan schématique sont
+  **réécrits** (alerte 7) — adresses et points visibles, liste ↔ carte, client dans son contour et loin des lignes,
+  rendu à l'écran (aucun nom de quartier sous un point ni coupé, aucun rond à cheval sur une ligne), calibrage par les
+  rues, écran Clients, plus de lien externe ; les valeurs de calage des autres cas sont recalculées et **écrites à la
+  main**. Bloc `carte` : « ENT-3.1 garde son plan schématique » devient « le mode lire la case ne s'active que pour
+  ENT-3.1 (3.2 garde le clic sur la rue) ». **Sabotages éprouvés** (chacun fait tomber au moins un cas) : case
+  acceptée sans comparaison ; quartier mal rattaché ; points masqués ; calage cassé (départ remis à 13 h).
+- **Commits** : voir l'historique du 03/10/2026 (« ENT-3.1 : carte réelle… »).
 - **Reste ouvert** :
+  - **validation de Tristan à l'écran** (page `outils/essai-ent31.html`, et au vidéoprojecteur), puis `pret: true` ;
+  - **trame Word/PDF d'ENT-3.1 et corrigé** (`outils/trame-boost-tournee.py`, `outils/corriges_data.py` →
+    `contenus/corriges/ENT-3.1.js`) : ils décrivent encore l'ancien exercice (plan en ligne, plan A–F × 1–4, anciennes
+    rues, cases et km). À régénérer après validation de l'écran ;
+  - la fiche `docs/fiches/prepalog-vues-transport.md` (copie datée) ne connaît pas le mode « lire la case » ;
+  - 3.4 : complication du repérage à décider avant de la construire.

@@ -5,6 +5,29 @@ n'est pas évident)**. Claude Code y ajoute toute décision prise en cours de ro
 reporte dans les fiches du projet PREPALOG. Une décision de fond sur la pédagogie reste dans
 `docs/fiches/prepalog-finalite.md`.
 
+- 03/10/2026 · Tristan · **ENT-3.3 : consigne en trois étapes courtes + pastilles d'avancement** (brief
+  `docs/briefs/ENT-3.3-consigne-trois-etapes.md`) : Contrôler → Répondre → Réparer, un seul rôle par écran ; mail d'Inès
+  réorganisé en blocs (mêmes six intitulés, le moteur de réponse et les jalons ne bougent pas) ; accueil à quatre étapes ;
+  **trois pastilles qui passent au vert quand l'étape est faite** (feuille remplie, réponse envoyée, tournée modifiée) et
+  **ne disent jamais si c'est juste**. Maquette « Maquette consigne ENT-3.3 » validée dans l'esprit, pastilles ajoutées au chantier.
+- 03/10/2026 · Tristan (sur question) · **ENT-3.1, quartiers de la carte réelle** : Courbessac (6 à 8 km, hors de la
+  carte de 5 km) → **Croix de Fer** ; Grézan (pas d'IRIS) → **Gambetta** ; **Costières** = IRIS Marronniers +
+  Capouchiné + Maréchal Juin (liste du conseil de quartier), la Ville Active reste à part. Courbessac et Grézan
+  deviennent des leurres du menu ; **Valdegour sort** pour garder douze noms (choix de Claude Code).
+- 03/10/2026 · Claude Code · **ENT-3.1 refonte de la carte, choix de construction** : (1) noms des clients **dans le
+  tableau** au temps 2, pas sur la carte (illisibles au centre-ville) ; (2) **départ à 14 h 00** (par les rues, tout
+  ordre attrapait le train à 13 h) : 26 % des ordres tiennent ; (3) quadrillage d'ENT-3.1 calé sur l'**éloignement des
+  points** (pas sur « la rue tient dans une case », inutile quand le point est visible) : tout point, entrepôt
+  compris, à 210 m au moins d'une ligne, pour que le rond tienne dans sa case même sur un cadre de 440 px ; d'où trois
+  rues choisies pour leur position (Edmond-Rostand, Graverol, Roger-Sabatier) ; (4) noms de quartier placés par le
+  générateur hors des points, sans mordre sur un autre quartier ; (5) plus de lien vers un plan en ligne.
+- 03/10/2026 · Tristan · **Feuille de calcul de moins en moins guidée, avec de l'information à chercher** (brief
+  `docs/briefs/ENT-3.x-feuille-moins-guidee.md`, maquette validée dans l'esprit, **chantier reporté**, trop long pour
+  le 03/10) : les arrêts cliqués arrivent dans la feuille **sans leur poids** (à chercher dans le mail et à taper) ;
+  3.1 guidée (étapes, exemples), 3.2 sans étapes ni exemples, 3.4 sans aide avec brouillon libre.
+  **Règle pour tous les scénarios à venir : les données changent d'une séance à l'autre** (départ, train, vitesse,
+  temps par arrêt, charge utile, créneau), **sauf quand deux séances se jouent dans la même journée de travail**
+  (ENT-3.2 et 3.3 gardent la même journée).
 - 03/10/2026 · Tristan · **Reprise de l'enchaînement ENT-3.1 → 3.4, étape 1 : la carte d'ENT-3.1** (brief
   `docs/briefs/ENT-3.1-refonte-carte.md`) : la carte réelle remplace le plan schématique ; **contours + noms de
   quartiers visibles** ; **sept points numérotés visibles dès le départ** (guidage : peu de recherche). Ce niveau
