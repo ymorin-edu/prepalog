@@ -1,0 +1,148 @@
+# Brief de séance — ENT-2.6 Cdiscount « Cinq recomptages, pas un de plus » (bonus)
+
+> **📋 Phrase à copier-coller dans ccode :**
+>
+> ```
+> Lis docs/briefs/COORDINATION-cdiscount.md, le compte rendu de docs/briefs/MOTEUR-geste-tableur.md (API livrée), puis implémente le brief docs/briefs/ENT-2.6-bonus.md. Annonce la durée, dis-moi si l'API du dépôt ne sait pas contrôler un point du §7, puis enchaîne sans attendre : les questions du brief sont déjà tranchées (§11).
+> ```
+
+**Statut** : à implémenter — après ENT-2.4 (C7), **avant** ENT-2.5 (C8).
+**Date du brief** : 03/10/2026
+**Modèle** : Sonnet — **Durée estimée par Cowork** : 2 à 3 h.
+**Touche le moteur** : non (si le contrôle « lignes » et les salissures du geste tableur sont livrés ; sinon le lister).
+**Conception** : `claude/prepalog-cdiscount-serie-decisions.md` (décisions 15, 16).
+
+## 1. Identité
+
+| Champ | Valeur |
+|---|---|
+| `code` / `id` | ENT-2.6 / **`cdiscount-priorites`** (nouveau) |
+| Titre | « Cdiscount — cinq recomptages, pas un de plus » |
+| desc | « Bonus : nettoyer un export d'un mois sur deux allées, chiffrer les écarts et choisir les cinq références à recompter. » |
+| Niveau / compétences | 1re / C1.6 (et C3.2 si déclarée en ENT-2.2) |
+| Temps | **entraînement** (coefficient 1) — bonus, « réservé à ceux qui ont fini » (dit par la trame et l'enseignant) |
+| Notation | `avancement`, 4 jalons |
+| Ouverture | `pret: true, ouverture: 'prof'` — **Tristan l'ouvre** pour qui a fini |
+
+L'évaluation reste ENT-2.5 ; le bonus porte le numéro 2.6 (décision 15).
+
+## 2. Vérifié / construit
+
+Comme ENT-2.1. **Construit** : l'export, ses salissures, la feuille de tarifs (coûts du catalogue de `cdiscount.js`).
+Un export « sale » (lignes vides, doublons, dates en texte) est une réalité des extractions de logiciel : la trame peut le
+dire.
+
+## 3. Objectif
+
+Avant le Black Friday, Nadia **ne peut faire recompter que 5 références**. L'élève nettoie un export d'un mois sur
+**deux allées** (~150 lignes), compte les constats d'écart **depuis le dernier inventaire** par référence (**NB.SI.ENS**),
+chiffre l'écart de chaque référence en euros (**RECHERCHEV** vers la feuille Tarifs), et choisit **les 5 plus coûteuses**
+— pas seulement les plus fréquentes.
+
+## 4. Déroulé
+
+1. Ouverture : mission de Nadia (§ 5).
+2. Écran Commandes → **« Exporter les lignes de préparation »** → `cdiscount-preparations-allees-A-B.xlsx` : feuilles
+   **« Préparations »** (sale) et **« Tarifs »** (Référence | Désignation | Coût unitaire), **« Synthèse »** (colonne
+   « Référence » seule, 18 lignes).
+3. Tableur :
+   - **nettoyer** : supprimer les lignes vides et les doublons, convertir les dates écrites en texte ;
+   - colonne **« Écart »** (trouvé − logiciel) ;
+   - colonne **« Réf. en écart »** : la référence si l'écart n'est pas nul **et** la date est postérieure ou égale au
+     dernier inventaire (SI, ET) ; colonne **« Écart retenu »** juste à droite (recopie de l'écart) ;
+   - **Synthèse** : « Constats » `=NB.SI.ENS(Préparations!D:D;A2;Préparations!K:K;"<>0";Préparations!A:A;">="&<date>)` ;
+     « Écart » `=SIERREUR(RECHERCHEV(A2;Préparations!L:M;2;FAUX);0)` ; « Coût » `=RECHERCHEV(A2;Tarifs!A:C;3;FAUX)` ;
+     « Valeur de l'écart » `= Écart × Coût`.
+4. Dépôt : **retour d'entraînement** (« n résultats justes sur m »), redépôt possible.
+5. Décision : message `À recompter : ` avec **5 références**.
+
+Encarts NB.SI.ENS et RECHERCHEV (trame), rappel court dans le bandeau d'aide.
+
+## 5. Messages
+
+| Arrivée | De | Contenu |
+|---|---|---|
+| ouverture | Nadia | « Bonus, pour ceux qui ont fini : le Black Friday approche et l'équipe inventaire ne peut recompter que **cinq** références dans les allées A et B. Exportez les lignes de préparation du mois (attention : l'export sort brut du logiciel, il faut le nettoyer). Comptez, par référence, les constats d'écart **depuis le dernier inventaire du <date>** (NB.SI.ENS), puis chiffrez l'écart de chaque référence avec son coût, que vous trouverez dans la feuille Tarifs (RECHERCHEV). Une erreur coûte plus cher sur une batterie que sur une pile : choisissez les cinq références où l'écart pèse le plus en euros, et écrivez-les-moi sur une ligne « À recompter : ». » |
+| après le message « À recompter : » | Nadia | « Merci. Je lance les cinq recomptages. » (neutre) |
+
+## 6. Données (`contenus/cdiscount-priorites.js`)
+
+- **Allées A et B** : 18 références (A-01-1 à A-06-2, B-01-1 à B-03-2) ; base propre.
+- **≈ 150 lignes** de bons de préparation sur 30 jours ; **dernier inventaire = J-14** (date écrite dans la mission).
+- **8 références à écart** depuis J-14, **écart constant** pour chacune après son apparition (un écart persiste tant qu'on
+  ne régularise pas) ; les 10 autres : aucun constat depuis J-14.
+- **Piège de la date** : une référence chère (**BAT-10K**) a de nombreux constats **avant** J-14, régularisés à
+  l'inventaire, **aucun après** : sans le critère de date, elle entre à tort dans les cinq.
+- **Piège de la fréquence** : le top 5 par **valeur** diffère du top 5 par **nombre de constats** d'au moins **2
+  références** (ex. des piles ou des câbles souvent signalés pour 1 ou 2 unités, contre des écouteurs signalés deux fois
+  pour 3 unités). Calculé et vérifié par le code.
+- **Salissures** (déterministes, graine élève + séance) : **4 lignes vides**, **3 doublons exacts** (dont au moins un
+  sur une référence à écart, pour fausser NB.SI.ENS), **5 dates en texte** (au moins 3 sur des lignes à écart après J-14).
+- **Tarifs** : coût unitaire de `cdiscount.js` (une seule source).
+
+## 7. Contrôles et jalons
+
+| Contrôle | Type | Attendu |
+|---|---|---|
+| Export nettoyé | `lignes` | nombre de lignes de données sans vide ni doublon ; colonne Date entièrement en vraies dates |
+| Constats depuis le dernier inventaire | table « Synthèse », clé Référence, colonne « Constats » | `COUNTIFS` |
+| Valeur de l'écart | table « Synthèse », colonne « Valeur de l'écart » (tolérance 0,01) | `VLOOKUP` présent dans la feuille Synthèse |
+
+| # | Jalon | Lit |
+|---|---|---|
+| 1 | Export nettoyé | contrôle « Export nettoyé » (meilleur dépôt) |
+| 2 | Constats comptés depuis le dernier inventaire (NB.SI.ENS) | contrôle « Constats » |
+| 3 | Écarts chiffrés en euros (RECHERCHEV) | contrôle « Valeur de l'écart » |
+| 4 | **Les cinq bonnes priorités** | message « À recompter : » : **exactement 5** références = les 5 plus grandes valeurs **en valeur absolue** selon la synthèse **déposée** (sans dépôt : les vraies) |
+
+## 8. Tests (`outils/test/cdiscount.mjs`)
+
+Valeurs à la main : nombre de lignes brutes et nettoyées ; les 8 références à écart, leurs constats depuis J-14 et leur
+valeur ; le top 5 par valeur et le top 5 par fréquence (≥ 2 différences) ; BAT-10K hors du top 5 avec le critère de date,
+dedans sans. Classeur juste fabriqué dans le test → 4/4. **Sabotages** : synthèse calculée sur le fichier non nettoyé
+(jalon 2 doit échouer) ; NB.SI au lieu de NB.SI.ENS (jalon 2 doit échouer) ; top 5 par fréquence envoyé (jalon 4 doit
+échouer) ; salissures non déterministes (même élève, deux fichiers différents : doit échouer).
+
+## 9. Supports
+
+Trame élève Word/PDF (Cowork, après validation à l'écran) : encarts **NB.SI.ENS** et **RECHERCHEV** (syntaxe, exemple,
+erreur fréquente : FAUX oublié, plage de recherche qui ne commence pas par la colonne cherchée), une page « nettoyer un
+export ». Corrigé (Cowork).
+
+## 10. Critères de validation par Tristan
+
+Faire le bonus sous Excel **et** sous LibreOffice ; vérifier que le piège de la date (BAT-10K) et le piège de la fréquence
+se voient ; que le retour reste « n sur m ».
+
+## 11. Questions — toutes tranchées
+
+> **Réponses données d'avance par Tristan (03/10/2026, Cowork)** : ne pas s'arrêter ; appliquer ces choix et **lister au
+> compte rendu** tout ce que tu as choisi seul.
+
+Décisions de fond : ENT-2.6, bonus ouvert par Tristan, coefficient 1 ; deux allées, un mois, ~150 lignes ; export sale ;
+NB.SI.ENS + RECHERCHEV ; 5 références, les plus coûteuses ; retour façon entraînement.
+
+### Détails tranchés par Cowork (à corriger à l'écran par Tristan)
+
+- [x] `id` `cdiscount-priorites` ; titre « Cdiscount — cinq recomptages, pas un de plus ».
+- [x] **Allées A et B** (18 références) ; l'allée C reste vierge pour l'évaluation.
+- [x] **Critère de date** (depuis le dernier inventaire, J-14) : il donne leur sens à NB.SI.ENS et aux dates en texte.
+- [x] **Valeur d'une référence = écart constaté × coût unitaire** (écart constant par référence) ; classement en valeur
+  absolue (un surplus coûte aussi).
+- [x] Méthode attendue pour l'écart par référence : RECHERCHEV sur la colonne « Réf. en écart » (avec SI et ET) suivie de
+  « Écart retenu » ; **SIERREUR** autorisée (dans la liste des fonctions communes). Toute autre méthode qui donne les
+  bonnes valeurs est acceptée : le contrôle porte sur les valeurs et sur la présence de `VLOOKUP` dans la Synthèse.
+- [x] Salissures : 4 vides, 3 doublons, 5 dates en texte.
+- [x] Piège de la date sur **BAT-10K** ; piège de la fréquence vérifié par le code (≥ 2 différences).
+- [x] Fichier `cdiscount-preparations-allees-A-B.xlsx`, feuilles Préparations, Tarifs, Synthèse.
+
+---
+
+## Compte rendu *(rempli par Claude Code à la livraison)*
+
+- **Fichiers créés / modifiés** :
+- **Écarts par rapport au brief** :
+- **Décisions prises en route** (les 8 références à écart, écarts, top 5) :
+- **Tests** :
+- **Commits** :
+- **Reste ouvert** :

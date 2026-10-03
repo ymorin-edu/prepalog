@@ -1,6 +1,6 @@
 # Brief de séance — ENT-2.4 Cdiscount « Évaluation de l'inventaire »
 
-**Statut** : à implémenter *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
+**Statut** : **abandonné** (03/10/2026, refonte de la série Cdiscount) — remplacé par `docs/briefs/ENT-2.5-compte-a-rebours.md` (évaluation « Le compte à rebours », un jeu par élève). Voir `docs/briefs/COORDINATION-cdiscount.md`. Ne pas implémenter.
 **Date du brief** : 02/10/2026
 **Ordre de travail conseillé** : **3/3** — après ENT-3.3 et ENT-3.4 (pas d'urgence : elle sert **après la PFMP**, reprise le 4/01). Tout en `pret: false`.
 **Conversation d'origine** : « Prepalog — chantier D » (cadrage : `prepalog-c16-cadrage-1L`, `prepalog-chantier-d-etat`, `prepalog-inventaire-format`, `prepalog-ent22-inventaire-tournant`)
