@@ -13,9 +13,10 @@
 //
 // ── Ce que l'élève fait, dans l'ordre ───────────────────────────────────────────────────
 //   1. il lit la fiche de tournée : sept clients, une adresse de RUE pour chacun ;
-//   2. il ouvre un plan en ligne dans un autre onglet, situe chaque adresse, et écrit la
-//      case du quadrillage sur notre plan. C'est le geste du métier : on reçoit une adresse,
-//      on la situe, puis on construit la tournée ;
+//   2. sur la carte réelle de Nîmes, chaque client est un point numéroté et les quartiers sont
+//      dessinés avec leur nom : il relève la case du quadrillage et choisit le quartier dans un
+//      menu. C'est le geste du métier, guidé : on reçoit une adresse, on la situe, puis on
+//      construit la tournée (refonte du 03/10/2026, voir le plan plus bas) ;
 //   3. les sept noms apparaissent sur le plan ; il découvre que les commandes pèsent 237 kg
 //      pour 180 kg de charge utile, donc qu'il faut laisser un client à quai ;
 //   4. il ordonne les arrêts, en glissant ou avec les flèches, et regarde les jauges ;
@@ -45,35 +46,47 @@
 // justes, et le suivi montre la différence.
 
 import { creerTournee } from '../core/types/tournee.js';
-import { PLAN_NIMES, DESTINATAIRES, VELO } from './boost.js';
+import { DESTINATAIRES, VELO } from './boost.js';
+import { CARTE } from './boost-ent31-carte.js';
 
 export const TRANSPORT_ID = 'boost-ent31';
 
 /* ======================================================================= le plan ====== */
 
-export const PLAN = Object.assign({}, PLAN_NIMES, {
+// ── Refonte du 03/10/2026 : la carte RÉELLE ────────────────────────────────────────────────
+// Brief `docs/briefs/ENT-3.1-refonte-carte.md`. Le plan schématique (quadrillage, taches, traits)
+// est remplacé par la carte réelle des séances 3.2+, en mode « lire la case » (`carte.js`) :
+// contours des sept quartiers ET leurs noms, sept points numérotés visibles dès le départ.
+// Décision de Tristan : c'est un guidage, il y a peu de recherche à faire — la difficulté du
+// repérage montera en 3.2 (points cachés, clic sur la rue), 3.3 et 3.4.
+//
+// La carte vient de `contenus/boost-ent31-carte.js`, GÉNÉRÉ par `outils/carte/construire.py`
+// depuis `outils/carte/boost-ent31.json` — on ne le modifie pas à la main. La case juste de
+// chaque point est recalculée depuis sa position, jamais écrite ici.
+//
+// Plus de lien vers un plan en ligne : le point est déjà sur la carte, et le zoom d'un quartier
+// donne les noms de rues pour vérifier l'adresse. Rien dans la séance ne demande Internet.
+
+export const PLAN = {
   libelle: 'Plan de Nîmes',
   titre: 'Situer les sept clients sur le plan de Nîmes',
-  consigne: "La fiche de tournée ne donne que le nom de la rue. Pour chaque client, trouvez "
-    + "la rue sur un plan en ligne, repérez-la sur le plan de Nîmes ci-dessous, puis écrivez "
-    + 'sa case du quadrillage (une lettre et un chiffre, par exemple C2), et choisissez son '
-    + 'quartier dans le menu déroulant.',
-  // Un lien vers un plan libre, qui s'ouvre dans un autre onglet. On n'intègre AUCUNE carte
-  // en ligne dans Prepalog : pas d'iframe, pas de fond repris. L'élève cherche, puis revient.
-  enLigne: {
-    libelle: 'Ouvrir un plan de Nîmes (OpenStreetMap)',
-    url: 'https://www.openstreetmap.org/#map=13/43.8367/4.3601',
-  },
+  // Le texte de la maquette validée par Tristan le 03/10/2026.
+  consigne: 'La fiche de tournée ne donne que le nom de la rue. Pour chaque client, repérez le '
+    + 'point numéroté sur la carte : écrivez sa case du quadrillage (une lettre et un chiffre, par '
+    + 'exemple C2) et choisissez son quartier dans le menu.',
+  carte: CARTE,
   reperage: {
-    consigne: 'Sept clients : pour chacun, une case et un quartier à trouver. Validez quand '
-      + 'vous les avez tous : les noms apparaîtront sur le plan et la tournée s’ouvrira.',
+    consigne: 'Sept clients : pour chacun, une case et un quartier. Validez quand vous les avez '
+      + 'tous : les noms des clients apparaîtront dans le tableau et la tournée s’ouvrira.',
     champ: 'Case',
     // Un menu déroulant par ligne (Tristan, 05/10/2026), douze quartiers pour sept clients :
     // les cinq en trop empêchent de finir par élimination. Ce sont des quartiers réels de
-    // Nîmes, qu'aucun client n'habite ; ils ne sont pas dessinés sur le plan. Rangés par ordre
-    // alphabétique, pour que la liste ne suive ni l'ordre de la fiche ni celui du plan.
+    // Nîmes, qu'aucun client n'habite et qui ne sont pas dessinés. Le 03/10/2026, Courbessac
+    // et Grézan (vrais quartiers de l'ancienne fiche) sont devenus des leurres, Gambetta (leurre)
+    // est devenu vrai, et Valdegour est sorti pour garder douze noms. Rangés par ordre
+    // alphabétique, pour que la liste ne suive ni l'ordre de la fiche ni celui de la carte.
     quartiers: [...DESTINATAIRES.map((d) => d.zone),
-      'Carémeau', 'Gambetta', 'Mas de Mingue', 'Pissevin', 'Valdegour']
+      'Carémeau', 'Courbessac', 'Grézan', 'Mas de Mingue', 'Pissevin']
       .sort((a, b) => a.localeCompare(b, 'fr')),
     // Le libellé du mode hors connexion, qui vit dans le BANDEAU du module et non dans la vue
     // (décision de Tristan du 03/10 : sous la carte, les élèves cliquaient dessus pour avoir
@@ -86,14 +99,18 @@ export const PLAN = Object.assign({}, PLAN_NIMES, {
     essaisAvantIssue: 3,
     issue: 'Je ne trouve pas, continuer quand même',
   },
-});
+};
+
+// L'heure de départ, écrite comme l'élève la tape (14:00) et comme on la dit (14 h 00).
+const hhmm0 = (m) => `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`;
+const hFr = (m) => `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')}`;
 
 /* ==================================================================== la tournée ====== */
 
 export const TOURNEE = {
   libelle: 'Tournée du 14 avril',
   titre: 'Organiser la tournée du vélo-cargo',
-  consigne: `Le vélo-cargo part de l’entrepôt à ${Math.floor(VELO.depart / 60)} h 00 et doit `
+  consigne: `Le vélo-cargo part de l’entrepôt à ${hFr(VELO.depart)} et doit `
     + `être à la gare de Nîmes-Centre avant ${Math.floor(VELO.train / 60)} h `
     + `${String(VELO.train % 60).padStart(2, '0')}, départ du train pour Paris. Il emporte au `
     + `plus ${VELO.chargeUtile} kg. Les sept commandes dépassent cette charge : chargez `
@@ -124,7 +141,7 @@ export const TOURNEE = {
   // L'entrepôt et la gare ne sont plus du décor : l'élève les pose comme les autres arrêts.
   // Tristan, le 04/10 : *« l'élève ne sélectionne ni le départ (entrepôt Boost) ni l'arrivée
   // (la gare) »*. Ces deux trajets pèsent pourtant lourd — l'aller depuis Carémeau et le retour
-  // vers la gare font à eux seuls une bonne part des 22,1 km qu'il doit faire entrer dans son
+  // vers la gare font à eux seuls une bonne part des kilomètres qu'il doit faire entrer dans son
   // temps de route. Avec `exigeConforme`, une chaîne incomplète refuse le report : oublier la
   // gare ne peut pas devenir une façon d'attraper le train.
   extremitesACliquer: true,
@@ -137,7 +154,7 @@ export const TOURNEE = {
     consigne: 'Les cellules colorées sont à remplir, et il faut y écrire une FORMULE — elle '
       + 'commence par « = ». Le résultat s’affiche à droite de chaque case au fur et à mesure. '
       + 'En jaune, les étapes du calcul ; en violet, les deux résultats à comparer aux '
-      + 'contraintes. L’heure de départ, elle, se tape simplement (13:00). Si vous changez votre '
+      + 'contraintes. L’heure de départ, elle, se tape simplement (' + hhmm0(VELO.depart) + '). Si vous changez votre '
       + 'tournée, les données changent et vos formules se recalculent toutes seules.',
     colonnes: ['A', 'B'],
     decimales: 1,
@@ -185,9 +202,9 @@ export const TOURNEE = {
           note: 'Nombre d’arrêts × temps par arrêt.',
           B: { saisie: true, formule: true, attendu: service, libelle: 'temps aux arrêts' } },
         { A: 'Heure de départ',
-          note: 'À taper sous la forme 13:00 (pas de formule ici).',
+          note: `À taper sous la forme ${hhmm0(VELO.depart)} (pas de formule ici).`,
           B: { saisie: true, formule: false, attendu: VELO.depart, format: 'heure',
-               placeholder: 'ex. 13:00', libelle: 'heure de départ' } },
+               placeholder: `ex. ${hhmm0(VELO.depart)}`, libelle: 'heure de départ' } },
         { A: 'Heure d’arrivée à la gare', type: 'resultat',
           note: 'Heure de départ + temps de route (min) + temps aux arrêts (min).',
           B: { saisie: true, formule: true, attendu: VELO.depart + route + service, tolerance: 0.5,
@@ -243,8 +260,8 @@ export const ACCUEIL = {
   kpis: ['mail'],
   etapes: [
     ['Lire la consigne du responsable', 'Menu Messagerie : la fiche de tournée du jour et ce qu’on attend de vous.'],
-    ['Situer les sept clients', 'Menu Plan de Nîmes. Vous n’avez que le nom de la rue : cherchez-la sur un plan en ligne, puis écrivez la case.'],
-    ['Valider le repérage', 'Les noms s’affichent sur le plan, et la tournée s’ouvre.'],
+    ['Situer les sept clients', 'Menu Plan de Nîmes. Chaque client est un point numéroté : relevez sa case du quadrillage et choisissez son quartier.'],
+    ['Valider le repérage', 'Les noms des clients s’affichent dans le tableau, et la tournée s’ouvre.'],
     ['Charger le vélo-cargo', 'Menu Tournée. Il part vide : cliquez les clients sur la carte, dans l’ordre où vous voulez y passer. Les sept commandes pèsent plus que sa charge utile, il faudra en laisser une à quai.'],
     ['Ordonner les arrêts', 'L’ordre est celui de vos clics. Pour en insérer un au milieu, utilisez les flèches ↑ et ↓ du récapitulatif. Le tracé et l’heure de retour suivent votre ordre.'],
     ['Calculer dans la feuille', 'Sous la carte : le poids total, puis le temps en trois étapes jusqu’à l’heure d’arrivée à la gare. Les contraintes sont à droite : comparez-les à vos deux résultats.'],
@@ -265,16 +282,17 @@ export const VOLET = {
       mails: [
         { folder: 'in', ts: now - 3600e3 * 2, from: 'M. Morin, responsable d’exploitation',
           fromMail: 'exploitation@boost.example', to: prenom,
-          subject: 'Tournée vélo-cargo du jour — à organiser avant 13 h', kind: 'text',
+          subject: `Tournée vélo-cargo du jour — à organiser avant ${Math.floor(VELO.depart / 60)} h`, kind: 'text',
           text: `Bonjour ${prenom},\n\nVous prenez la tournée du vélo-cargo cet après-midi. `
             + `Rappel de la règle maison : nos colis partent en vélo-cargo jusqu’à la gare de `
             + `Nîmes-Centre, puis en train. Le train de Paris part à 16 h 10. Un colis qui `
             + `arrive après, c’est un client livré un jour plus tard.\n\nLe vélo-cargo emporte `
-            + `au plus ${VELO.chargeUtile} kg. Vous partez de l’entrepôt à 13 h 00, comptez `
+            + `au plus ${VELO.chargeUtile} kg. Vous partez de l’entrepôt à ${hFr(VELO.depart)}, comptez `
             + `${VELO.service} minutes par arrêt et une douzaine de kilomètres à l’heure en `
             + `ville.\n\nVoici les sept commandes à livrer :\n\n${fiche}\n\nTrois choses dans `
-            + `l’ordre :\n\n1. Les clients ne nous donnent que le nom de leur rue. Situez-les `
-            + `vous-même sur un plan, c’est la première chose qu’on fait ici.\n2. Additionnez `
+            + `l’ordre :\n\n1. Les clients ne nous donnent que le nom de leur rue. Ils sont `
+            + `pointés sur notre plan de Nîmes : relevez pour chacun sa case et son quartier, c’est `
+            + `la première chose qu’on fait ici.\n2. Additionnez `
             + `les masses. Si ça ne passe pas, décidez ce qui reste à quai — et dites-vous bien `
             + `que ce qui reste partira demain, donc autant que ce soit le moins pénalisant.\n`
             + `3. Mettez les arrêts dans un ordre qui vous ramène à la gare à l’heure.\n\n`

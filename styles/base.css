@@ -1284,6 +1284,13 @@ a.ent-nav{ text-decoration:none }
 .ct-mk-depart .ct-rond{ fill:#25c998 } .ct-mk-depart .ct-mk-l{ fill:#09073b }
 .ct-mk-arrivee .ct-rond{ fill:#f0bd3c } .ct-mk-arrivee .ct-mk-l{ fill:#09073b }
 .ct-mk-client .ct-rond{ fill:#345cfd } .ct-mk-client .ct-mk-l{ fill:#fff }
+/* Mode « lire la case » (ENT-3.1) : halo ambre du client choisi, sur la carte et dans le tableau. */
+.ct-mk-lecture{ cursor:pointer }
+.ct-mk-lecture .ct-halo{ fill:none; stroke:#f0bd3c; stroke-width:3; opacity:0 }
+.ct-mk-lecture.ct-mk-choisi .ct-halo{ opacity:1 }
+.ct-mk-lecture.ct-mk-choisi .ct-rond{ stroke:#f0bd3c; stroke-width:3.5 }
+.ct-mk-lecture:focus{ outline:none } .ct-mk-lecture:focus-visible .ct-halo{ opacity:1 }
+.plan-table tr.plan-choisi td{ background:rgba(240,189,60,.10) }
 
 /* le panneau */
 .ct-panneau{ background:var(--panneau); border:1px solid var(--filet); border-radius:var(--r); padding:12px 14px }

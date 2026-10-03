@@ -19,10 +19,6 @@ from quartiers import quartiers
 from shapely.ops import linemerge, substring
 from shapely.geometry import box
 
-Q = quartiers()
-for k, q in Q.items():
-    q['g'] = q['g'].simplify(2)
-
 # --------------------------------------------------------------------- les clients de la séance
 # Un fichier JSON par séance, passé en argument (par défaut `essai.json`, la page d'essai) :
 #   { "sortie": "contenus/….js", "description": "…", "clients": [ … ] }
@@ -32,6 +28,10 @@ for k, q in Q.items():
 # temps de la séance aille à la tournée. Les champs en plus (`creneau`…) passent tels quels.
 SEANCE_F = sys.argv[1] if len(sys.argv) > 1 else os.path.join(ICI, 'essai.json')
 SEANCE = json.load(open(SEANCE_F, encoding='utf-8'))
+# Les quartiers dessinés : deux pour ENT-3.2 (par défaut), sept pour ENT-3.1 (voir quartiers.py).
+Q = quartiers(SEANCE.get('quartiers', 'ent32'))
+for k, q in Q.items():
+    q['g'] = q['g'].simplify(2)
 CLIENTS = [dict(c, lonlat=tuple(c['lonlat'])) for c in SEANCE['clients']]
 NOUVEAUX = [c for c in CLIENTS if c['nouveau']]
 DEPART = dict(nom='Entrepôt Boost', adresse='31 avenue Joliot-Curie', lonlat=(4.32309, 43.81278))
@@ -68,11 +68,16 @@ DEPART['xy'] = xy(*DEPART['lonlat']); ARRIVEE['xy'] = xy(*ARRIVEE['lonlat'])
 PAS, NC, NL = 1000, 5, 5
 COLS = 'ABCDE'
 besoin = [c['xy'] for c in CLIENTS] + [DEPART['xy'], ARRIVEE['xy']]
+# Les points gardent 250 m de marge ; un contour de quartier peut aller jusqu'au cadre, à 20 m
+# près (avec 250 m partout, Saint-Césaire et la Ville Active d'ENT-3.1 ne tenaient pas en 5 km).
 emprise = unary_union([q['g'] for q in Q.values()]).bounds
-xmin = min(min(p[0] for p in besoin), emprise[0]) - 250
-xmax = max(max(p[0] for p in besoin), emprise[2]) + 250
-ymin = min(min(p[1] for p in besoin), emprise[1]) - 250
-ymax = max(max(p[1] for p in besoin), emprise[3]) + 250
+# En mode « points » (ENT-3.1), un contour peut même déborder de 100 m, coupé au bord : sans ce
+# jeu, le cadre ne pouvait pas bouger et l'entrepôt restait à cheval sur une ligne.
+DEB = -100 if SEANCE.get('quadrillage') == 'points' else 20
+xmin = min(min(p[0] for p in besoin) - 250, emprise[0] - DEB)
+xmax = max(max(p[0] for p in besoin) + 250, emprise[2] + DEB)
+ymin = min(min(p[1] for p in besoin) - 250, emprise[1] - DEB)
+ymax = max(max(p[1] for p in besoin) + 250, emprise[3] + DEB)
 
 def cases_de(geom, ox, oy):
     out = set()
@@ -86,13 +91,21 @@ def marge(p, ox, oy):
     dx = (p[0] - ox) % PAS; dy = (p[1] - oy) % PAS
     return min(dx, PAS - dx, dy, PAS - dy)
 
+# ENT-3.1 (`"quadrillage": "points"`) : le point est VISIBLE et c'est lui qu'on lit, pas la rue.
+# Le critère 1 tombe, et tout l'effort va à l'éloignement des lignes : au vidéoprojecteur, le
+# cadre peut descendre à 440 px de haut, et un rond y couvre ~150 m (alerte 15).
+# L'entrepôt et la gare comptent comme les clients : on ne demande pas leur case, mais leur rond
+# doit tenir dans une case comme les autres (alerte 15).
+POINTS_SEULS = SEANCE.get('quadrillage') == 'points'
+LUS = [c['xy'] for c in CLIENTS]
+AUTRES = [DEPART['xy'], ARRIVEE['xy']]
 meilleur = None
 for ox in range(int(xmax - NC*PAS) + 1, int(xmin), 10):
     for oy in range(int(ymax - NL*PAS) + 1, int(ymin), 10):
-        m = min(marge(p, ox, oy) for p in besoin)
+        m = min(marge(p, ox, oy) for p in besoin) if not POINTS_SEULS else             min(min(marge(p, ox, oy) for p in LUS), min(marge(p, ox, oy) for p in AUTRES))
         if meilleur and m < meilleur[0][1] - 1e-9 and meilleur[0][0] == 0:
             continue
-        coupees = sum(len(cases_de(c['rueG'], ox, oy)) > 1 for c in NOUVEAUX)
+        coupees = 0 if POINTS_SEULS else sum(len(cases_de(c['rueG'], ox, oy)) > 1 for c in NOUVEAUX)
         cle = (coupees, -m)
         if meilleur is None or cle < (meilleur[0][0], -meilleur[0][1]):
             meilleur = ((coupees, m), ox, oy)
@@ -385,6 +398,54 @@ TRAJETS = {k: dict(m=round(v['m']), d=chemin([LineString(v['g'])], tol=1.5)) for
 print('itinéraires :', len(TRAJETS), 'trajets,', sum(len(t['d']) for t in TRAJETS.values()) // 1000, 'ko ;',
       'entrepôt → gare', TRAJETS['depart|arrivee']['m'], 'm')
 
+# --------------------------------------------------------------------- le nom des quartiers
+# Par défaut, au « point représentatif » du contour. Une séance où les points sont VISIBLES dès
+# le départ (ENT-3.1, `"nomsQuartiers": "eviter"`) le pose ailleurs s'il le faut : le 03/10, au
+# premier essai, « Gambetta », « Écusson » et « Costières » étaient sous un point. On ne déplace
+# jamais un point : c'est le nom qui cherche sa place, sans toucher un point,
+# l'entrepôt, la gare, leur nom, ni un autre quartier, et en posant au moins un quart de lui-même chez lui.
+# Tailles en pixels d'écran, converties à l'échelle de la vue d'ensemble la plus serrée
+# (K_ENS mètres par pixel) ; largeur de texte majorée (gras, police du poste inconnue).
+POS_Q = {k: (round(q['g'].representative_point().x), round(q['g'].representative_point().y)) for k, q in Q.items()}
+if SEANCE.get('nomsQuartiers') == 'eviter':
+    K_ENS = 10.5                     # m par pixel : vue d'ensemble dans un cadre de ~520 px de haut
+    FQ = 14 * K_ENS                  # corps du nom de quartier (14 px, voir carte.js)
+    largeur = lambda t, fpx: len(t) * 0.66 * fpx * K_ENS
+    # Les noms des clients ne sont PAS dans la vue d'ensemble (seulement au zoom d'un quartier,
+    # voir `carte.js`) : au centre, « Le Comptoir des Halles » y mesurerait près de 2 km. Seuls
+    # les noms de l'entrepôt et de la gare, toujours affichés à droite de leur point, comptent.
+    def nom_client(x, y, nom):
+        return box(x + 14 * K_ENS, y - 9 * K_ENS, x + 16 * K_ENS + largeur(nom, 12.5), y + 6 * K_ENS)
+    obstacles = []
+    for c in CLIENTS + [DEPART, ARRIVEE]:
+        x, y = c['xy']
+        obstacles.append(Point(x, y).buffer(16 * K_ENS))
+    for c in [DEPART, ARRIVEE]:
+        obstacles.append(nom_client(*c['xy'], c['nom']))
+    poses = []
+    for k in sorted(Q, key=lambda k: Q[k]['g'].area):
+        g = Q[k]['g']; w = largeur(Q[k]['nom'], 14); h = FQ
+        rp = g.representative_point()
+        best = None
+        x0, y0, x1, y1 = g.buffer(200).bounds
+        for xx in range(int(x0), int(x1), 25):
+            for yy in range(int(y0), int(y1), 25):
+                b = box(xx - w / 2, yy - 0.8 * h, xx + w / 2, yy + 0.25 * h)
+                if not FRAME.contains(b) or any(b.intersects(o) for o in obstacles + poses):
+                    continue
+                # Un nom qui mord sur un AUTRE quartier se lirait comme le sien : interdit.
+                if any(b.intersection(Q[o]['g']).area > 0.03 * b.area for o in Q if o != k):
+                    continue
+                dedans = b.intersection(g).area / b.area
+                if dedans < 0.25:          # le nom doit poser au moins un quart de lui-même chez lui
+                    continue
+                score = (0 if dedans > 0.6 else 1, -round(dedans, 1), Point(xx, yy).distance(rp))
+                if best is None or score < best[0]:
+                    best = (score, xx, yy, b)
+        assert best, f'aucune place pour le nom du quartier {k}'
+        POS_Q[k] = (best[1], best[2]); poses.append(best[3].buffer(4 * K_ENS))
+        print(f"nom du quartier {Q[k]['nom']} : ({best[1]}, {best[2]}), {'dans' if best[0][0] == 0 else 'hors de'} son contour")
+
 # --------------------------------------------------------------------- le paquet de données
 def ring(g):
     return chemin([g], ferme=True, tol=0)
@@ -395,7 +456,7 @@ DATA = dict(
     frame=[OX, OY, NC*PAS, NL*PAS], pas=PAS, cols=COLS, nl=NL, marge=round(MARGE),
     couches=COUCHES,
     quartiers={k: dict(nom=q['nom'], iris=q['iris'], d=ring(q['g']),
-                       lx=round(q['g'].representative_point().x), ly=round(q['g'].representative_point().y),
+                       lx=POS_Q[k][0], ly=POS_Q[k][1],
                        vb=[round(v, 1) for v in VUES[k]['vb']], fs=round(POLICE * VUES[k]['k'], 2)) for k, q in Q.items()},
     etiquettes=ETIQ, reperes=REPERES, rues=RUES, index=INDEX,
     trajets=TRAJETS,

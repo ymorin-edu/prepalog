@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Essai — ENT-3.1 sur la carte réelle (Prepalog)</title>
+<!-- Page d'ESSAI d'ENT-3.1 refondue (brief docs/briefs/ENT-3.1-refonte-carte.md), pour la
+     validation de Tristan à l'écran : c'est la VRAIE séance (`activites/boost-tournee.js`), vue
+     par un élève, avec une base en mémoire — un rechargement repart de zéro. Liée nulle part.
+     Ouvrir avec `lancer.bat`, puis http://localhost:8000/outils/essai-ent31.html
+     Le suivi (les six jalons) s'affiche sous la séance, comme le verrait l'enseignant. -->
+<base href="../">
+<link rel="icon" href="./styles/logo.png">
+<link rel="stylesheet" href="./styles/polices.css">
+<link rel="stylesheet" href="./styles/base.css">
+<style>
+  #suivi{ max-width:1100px; margin:24px auto; padding:12px 16px; border:1px dashed var(--filet); border-radius:8px; font-size:14px }
+  #suivi h2{ font-size:15px; margin:0 0 8px }
+  #suivi li{ margin:3px 0; white-space:pre-line }
+</style>
+</head>
+<body>
+<div id="hote"></div>
+<section id="suivi" aria-live="polite"><h2>Suivi enseignant (essai)</h2><ul></ul></section>
+<script type="module">
+import * as act from './activites/boost-tournee.js';
+import { ETAPES } from './contenus/boost-tournee.js';
+
+const db = {};
+const suivi = document.querySelector('#suivi ul');
+const signe = { ok: '✓', ko: '✗', attente: '…', na: '·' };
+act.rendre(document.getElementById('hote'), {
+  meta: act.meta,
+  profil: { prenom: 'Essai', nom: 'Élève', role: 'eleve' },
+  jeu: { etat: () => db, sauver: () => {} },
+  // Le moteur envoie le score ; le détail de chaque jalon est relu ici, comme dans le suivi.
+  enregistrer: (r) => {
+    suivi.innerHTML = `<li><strong>${r.score} / ${r.max} jalons</strong></li>`
+      + ETAPES.map((e) => { const v = e.verifier(db) || {};
+        return `<li>${signe[v.status] || '·'} ${e.titre}${v.detail ? ' — ' + v.detail : ''}</li>`; }).join('');
+  },
+  quitter: () => { location.reload(); }, codeStock: '',
+});
+window.__essai = { db };
+document.querySelector('.ent-nav[data-vue="plan"]')?.click();
+</script>
+</body>
+</html>

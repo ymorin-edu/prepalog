@@ -1,8 +1,11 @@
 // Vue « carte » — situer les nouveaux clients sur la VRAIE carte d'une ville.
 //
 // Écrite le 02/10/2026 pour ENT-3.2 et les séances suivantes de C2.4. Elle reprend, dans le
-// moteur, la page d'essai validée par Tristan le même jour (`essai-plan-osm.html`). **ENT-3.1
-// ne change pas** : elle garde son plan schématique (`plan.js`) et son repérage par cases.
+// moteur, la page d'essai validée par Tristan le même jour (`essai-plan-osm.html`).
+//
+// Depuis le 03/10/2026, elle a un second mode, « LIRE LA CASE », pour ENT-3.1 (le guidage) :
+// voir `creerLecture` plus bas. Il s'active quand le contenu déclare `reperage` à côté de
+// `carte` — sans `reperage`, rien ne change pour ENT-3.2 et les suivantes.
 //
 // Ce que la vue NE connaît PAS : Nîmes, Boost, le vélo-cargo. Tout vient du contenu :
 //   creerCarte({
@@ -43,6 +46,7 @@
 //   { places: { id: horodatage }, essais: { id: n }, valide: horodatage }
 
 import { ech } from '../ui.js';
+import { creerPlan } from './plan.js';
 
 // « Rue de la Madeleine » → « rue de la Madeleine », pour l'écrire au milieu d'une phrase.
 const minu = (t) => (t ? t[0].toLowerCase() + t.slice(1) : '');
@@ -333,6 +337,7 @@ function monterScene(z, C, ui, o = {}) {
 export function creerCarte(PLAN) {
   const C = PLAN.carte;
   if (!C || !C.frame || !C.couches) throw new Error('creerCarte : `carte` manquante (contenus/…-carte.js)');
+  if (PLAN.reperage) return creerLecture(PLAN);
   const CLIENTS = (PLAN.clients || C.clients || []).map((c, i) => Object.assign({ numero: i + 1 }, c));
   const NOUVEAUX = CLIENTS.filter((c) => c.nouveau);
   const HABITUELS = CLIENTS.filter((c) => !c.nouveau);
@@ -517,6 +522,85 @@ export function creerCarte(PLAN) {
       dessinerPoints(); fiches(); index(); S.aide();
     },
   };
+}
+
+
+/* ----------------------------------------------------------------- le mode « lire la case » */
+// ENT-3.1, refonte du 03/10/2026 (brief `docs/briefs/ENT-3.1-refonte-carte.md`). Décisions de
+// Tristan, sur maquette :
+//   - la carte RÉELLE remplace le plan schématique de la séance de guidage ;
+//   - les contours des quartiers ET leurs noms sont dessinés : « ça facilite l'exercice ici » ;
+//   - les points sont numérotés et visibles dès le départ : il y a peu de recherche à faire. Ce
+//     niveau est celui de 3.1 seulement : 3.2 cache les points (clic sur la rue).
+// L'élève lit la case de chaque point et choisit son quartier dans le menu : c'est le tableau de
+// `plan.js`, réutilisé tel quel (`creerPlan(PLAN, o)`), avec ses réglages `reperage` — tolérance,
+// porte de sortie, mode hors connexion du bandeau. Seul le dessin change, et la case juste : elle
+// se RECALCULE depuis la position du point (`caseCarte`), jamais recopiée du contenu.
+//
+// Un clic sur un point ou sur une ligne du tableau met les deux en évidence (halo ambre de la
+// maquette) : l'élève sait de quelle ligne il parle.
+//
+// Au temps 2 (repérage validé), le NOM des clients apparaît dans le tableau et dans l'infobulle
+// du point, pas sur la carte (essai du 03/10/2026) : dans la vue d'ensemble, au centre-ville,
+// « Le Comptoir des Halles » couvrirait près de 2 km et masquerait des noms de quartier ; au zoom,
+// il recouvrait le nom de sa propre rue. Les noms de quartier sont placés par le générateur hors
+// des points.
+function creerLecture(PLAN) {
+  const C = PLAN.carte;
+  const P = planDeCarte(PLAN);
+  P.points.forEach((p) => {
+    if (!C.quartiers[p.quartier]) throw new Error(`creerCarte : quartier inconnu pour ${p.nom}`);
+    if (!caseCarte(C, p)) throw new Error(`creerCarte : ${p.nom} est hors du quadrillage`);
+  });
+  const ui = { vue: 'ensemble', choisi: null };
+
+  const point = (p, t2) => `<g class="ct-mk ct-mk-client ct-mk-lecture" data-x="${p.x}" data-y="${p.y}"
+      transform="translate(${p.x} ${p.y})" data-ct-point="${ech(p.id)}" role="button" tabindex="0"
+      aria-label="${ech(`Client ${p.numero} : voir sa ligne`)}">
+    <title>${ech(t2 ? `${p.numero}. ${p.nom}` : `Client ${p.numero}`)}</title>
+    <circle class="ct-halo" r="17"/><circle class="ct-rond" r="11"/><text class="ct-mk-l">${p.numero}</text></g>`;
+
+  const legende = `<div class="plan-legende">
+    <span><i class="plan-l-rond" style="background:#25c998"></i>${ech(C.depart.nom)}</span>
+    <span><i class="plan-l-rond" style="background:#f0bd3c"></i>${ech(C.arrivee.nom)}</span>
+    <span><i class="plan-l-rond" style="background:#345cfd"></i>Client : son numéro</span>
+    <span>Quadrillage : une case = 1 km</span></div>`;
+
+  return creerPlan(Object.assign({}, PLAN, { points: P.points }), {
+    caseDe: (_, p) => caseCarte(C, p),
+    nomsDansTableau: true,
+    dessin: (etat, t2) => `<div class="ct-lecture">${htmlCadre(C, {
+      calque: P.points.map((p) => point(p, t2)).join(''), classe: 'ct-cadre-lecture' })}
+      ${legende}</div>`,
+    brancherDessin(z) {
+      if (!z.querySelector('[data-ct-svg]')) return;
+      const S = monterScene(z, C, ui, {
+        aide: () => (ui.vue === 'ensemble'
+          ? 'Chaque client est un point numéroté. Cliquez un quartier pour lire les noms de rues.'
+          : 'Lisez les noms de rues. « Vue d’ensemble » pour revenir à toute la ville.'),
+      });
+      const choisir = (id, depuis) => {
+        ui.choisi = ui.choisi === id && depuis === 'point' ? null : id;
+        z.querySelectorAll('[data-ct-point]').forEach((g) => g.classList.toggle('ct-mk-choisi', g.dataset.ctPoint === ui.choisi));
+        z.querySelectorAll('[data-plan-ligne]').forEach((tr) => tr.classList.toggle('plan-choisi', tr.dataset.planLigne === ui.choisi));
+      };
+      z.querySelectorAll('[data-ct-point]').forEach((g) => {
+        const va = () => {
+          choisir(g.dataset.ctPoint, 'point');
+          const tr = z.querySelector(`[data-plan-ligne="${CSS.escape(g.dataset.ctPoint)}"]`);
+          if (tr && ui.choisi && tr.scrollIntoView) tr.scrollIntoView({ block: 'nearest' });
+        };
+        g.addEventListener('click', (ev) => { ev.stopPropagation(); va(); });
+        g.addEventListener('keydown', (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); va(); } });
+      });
+      z.querySelectorAll('[data-plan-ligne]').forEach((tr) => {
+        tr.addEventListener('focusin', () => choisir(tr.dataset.planLigne, 'ligne'));
+        tr.addEventListener('click', () => choisir(tr.dataset.planLigne, 'ligne'));
+      });
+      if (ui.choisi) choisir(ui.choisi, 'ligne');
+      S.aide();
+    },
+  });
 }
 
 /* ------------------------------------------------------------- la tournée sur la carte réelle */

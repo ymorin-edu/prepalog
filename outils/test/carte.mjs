@@ -21,7 +21,7 @@ export default async function bloc({ v, nav, ok, ROOT }) {
 /*   - le point aimanté : bonne rue = posé au numéro BAN ; autre rue = refusé, nommé,      */
 /*     compté ; maisons ou vue d'ensemble = refusé, pas compté ;                           */
 /*   - la fin du repérage ouvre la suite, et le travail survit à un redessin ;            */
-/*   - ENT-3.1 n'est pas touchée : elle garde le plan schématique.                        */
+/*   - ENT-3.1 (refonte du 03/10/2026) lit la case sur la carte réelle ; 3.2 n'en hérite pas. */
 /* ===================================================================================== */
 
 const ctxCt = await nav.newContext({ viewport: { width: 1440, height: 900 } });
@@ -361,9 +361,26 @@ await v('carte : un contenu dont un nouveau client n’a pas de rue nommée est 
   if (!/n'a pas son nom dans le zoom/.test(r[1])) throw new Error('rue sans nom : ' + r[1]);
 });
 
-await v('carte : ENT-3.1 garde son plan schématique (aucune carte réelle déclarée)', async () => {
-  const r = await pageCt.evaluate(async () => { const S = await import('/contenus/boost-tournee.js'); return { carte: !!S.PLAN.carte, cases: !!(S.PLAN.reperage && S.PLAN.reperage.champ) }; });
-  if (r.carte || !r.cases) throw new Error(JSON.stringify(r));
+await v('carte : le mode « lire la case » ne s’active que pour ENT-3.1, pas pour ENT-3.2', async () => {
+  // Refonte du 03/10/2026 : ENT-3.1 déclare la carte réelle ET un repérage par cases ; ENT-3.2
+  // déclare la carte seule et garde le clic sur la rue. La vue choisit son mode sur `reperage`.
+  const r = await pageCt.evaluate(async () => {
+    const { creerCarte } = await import('/core/types/carte.js');
+    const S1 = await import('/contenus/boost-tournee.js');
+    const S2 = await import('/contenus/boost-ent32.js');
+    const v1 = creerCarte(S1.PLAN), v2 = creerCarte(S2.PLAN);
+    const h1 = v1.html({}), h2 = v2.html({});
+    return {
+      carte1: !!S1.PLAN.carte, cases1: !!(S1.PLAN.reperage && S1.PLAN.reperage.champ), reperage2: !!S2.PLAN.reperage,
+      secours1: !!v1.horsConnexion, secours2: !!v2.horsConnexion,
+      table1: /data-case=/.test(h1), points1: (h1.match(/data-ct-point=/g) || []).length,
+      table2: /data-case=/.test(h2), index2: /data-ct-cherche/.test(h2),
+    };
+  });
+  if (!r.carte1 || !r.cases1 || r.reperage2) throw new Error('déclarations : ' + JSON.stringify(r));
+  if (!r.secours1 || r.secours2) throw new Error('mode hors connexion : ' + JSON.stringify(r));
+  if (!r.table1 || r.points1 !== 7) throw new Error('ENT-3.1 sans tableau ou sans ses sept points : ' + JSON.stringify(r));
+  if (r.table2 || !r.index2) throw new Error('ENT-3.2 a perdu son mode « clic sur la rue » : ' + JSON.stringify(r));
 });
 
 await v('carte : le calage d’ENT-3.2 tient (un seul client à quai, train minoritaire, créneau qui change l’ordre)', async () => {

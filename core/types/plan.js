@@ -326,8 +326,18 @@ export function legendePlan(PLAN, o = {}) {
 
 /* ------------------------------------------------------------------------------- la vue */
 
-export function creerPlan(PLAN) {
+// `o` (facultatif) sert à la vue `carte.js`, qui réutilise ce repérage par cases sur la carte
+// réelle (ENT-3.1, depuis le 03/10/2026) au lieu de le recopier :
+//   o.caseDe(PLAN, p)        la case juste d'un point, recalculée (par défaut : `caseDe` ci-dessus) ;
+//   o.dessin(etat, t2)       le HTML de la carte, à la place du plan schématique et de sa légende ;
+//   o.brancherDessin(z, api) appelé à la fin de `brancher`, pour monter ce dessin ;
+//   o.nomsDansTableau        au temps 2, le nom du client s'écrit dans sa ligne, et non sur le
+//                            dessin (sur la carte réelle, au centre-ville, il n'y tient pas).
+// Le tableau, la correction, la tolérance, la porte de sortie et le mode hors connexion restent
+// ceux d'ici : un seul code, donc les deux plans corrigent de la même façon.
+export function creerPlan(PLAN, o = {}) {
   const R = PLAN.reperage || null;
+  const caseJusteDe = o.caseDe || caseDe;
   const TOL = R && R.toleres ? Number(R.toleres) : 0;
   // Deux essais avant d'ouvrir la porte de sortie : assez pour que l'élève cherche, assez peu
   // pour qu'il ne passe pas la séance bloqué sur une case. `0` l'offre tout de suite, `null`
@@ -343,7 +353,7 @@ export function creerPlan(PLAN) {
   // connexion a rempli le menu à la place de l'élève : son quartier est alors tenu pour juste.
   const quartierJuste = (etat, p) => !QUARTIERS || !!etat.secours
     || (etat.quartiers && etat.quartiers[p.id] === p.zone);
-  const caseJuste = (etat, p) => normCase(etat.cases[p.id]) === normCase(caseDe(PLAN, p));
+  const caseJuste = (etat, p) => normCase(etat.cases[p.id]) === normCase(caseJusteDe(PLAN, p));
   const juger = (etat) => {
     const juge = {};
     PLAN.points.forEach((p) => { juge[p.id] = caseJuste(etat, p) && quartierJuste(etat, p); });
@@ -406,7 +416,7 @@ export function creerPlan(PLAN) {
         <div class="ent-tete"><h2>${ech(PLAN.titre || 'Plan')}</h2></div>
         ${PLAN.consigne ? `<p class="note">${ech(PLAN.consigne)}</p>` : ''}`;
 
-      const carte = `<div class="plan-boite">
+      const carte = o.dessin ? o.dessin(etat, t2) : `<div class="plan-boite">
         ${svgPlan(PLAN, { noms: t2, id: 'reperage' })}
         ${legendePlan(PLAN)}
       </div>`;
@@ -444,9 +454,9 @@ export function creerPlan(PLAN) {
         } else {
           celluleZone = montrerZone ? ech(p.zone || '') : '<span class="note">—</span>';
         }
-        return `<tr class="${etatCl}">
-          <td class="num mono">${i + 1}</td>
-          <td>${ech(p.adresse || '')}</td>
+        return `<tr class="${etatCl}" data-plan-ligne="${ech(p.id)}">
+          <td class="num mono">${p.numero != null ? p.numero : i + 1}</td>
+          <td>${o.nomsDansTableau && t2 ? `<strong>${ech(p.nom)}</strong><br>` : ''}${ech(p.adresse || '')}</td>
           <td class="plan-zone">${celluleZone}</td>
           <td><input class="champ plan-case ${clCase}" data-case="${ech(p.id)}" value="${ech(val)}"
                 maxlength="4" size="4" aria-label="Case du point ${i + 1}"
@@ -461,7 +471,8 @@ export function creerPlan(PLAN) {
         ? `<div class="avis avis-ok">${faux(juge) === 0
              ? `Les ${PLAN.points.length} points sont bien situés.`
              : `${faux(juge)} point(s) restent mal situés, mais vous pouvez continuer.`}
-             Les noms sont maintenant affichés sur le plan.</div>`
+             ${o.nomsDansTableau ? 'Les noms des clients sont maintenant affichés dans le tableau.'
+               : 'Les noms sont maintenant affichés sur le plan.'}</div>`
         : `<div class="avis avis-err">${faux(juge)}
              point(s) encore mal situé(s). Reprenez-les sur le plan, puis validez de nouveau.</div>`);
 
@@ -528,6 +539,8 @@ export function creerPlan(PLAN) {
         api.sauver(); api.redessiner();
         if (api.toast) api.toast('Vous pouvez continuer. Le repérage reste à revoir.');
       });
+
+      if (o.brancherDessin) o.brancherDessin(z, api);
     },
   };
 }
