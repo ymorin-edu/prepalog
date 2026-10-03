@@ -216,6 +216,9 @@ et des noms de fonctions ; retour selon le temps pédagogique ; fichier jamais s
     `totalControles(liste)` ; état : `db.tableur.exports[id] = { at, n }`, `db.tableur.depots[id] = { essais, dernier,
     meilleur }` (`{ at, fichier, resultats }`) ;
   - pour une séance : `import { resultatDepot } from '../core/types/export-tableur.js'` fonctionne aussi dans Node (tests).
+- **Ajouts du 04/10 (pour ENT-2.6)** : `salissures.cible(ligne)` + `doublonsCible` / `datesTexteCible` (au moins ce nombre
+  de salissures sur les lignes visées) ; contrôle `lignes` : `colonneDate: 'Date'` (plus aucune date écrite en texte) ;
+  contrôle `table` : `fonctionsFeuille: ['VLOOKUP']` (la fonction doit figurer quelque part dans la feuille).
 - **Écarts par rapport au brief** : le « bandeau d'aide » n'existait pas : c'est un bouton **« Rappel tableur »** dans
   le bandeau de l'entreprise, qui déplie une ligne de rappel sous le bandeau (hors de l'écran de travail ; il reste
   cliquable après la remise de la copie). La graine des salissures est `uid` de l'élève (à défaut prénom + nom) +

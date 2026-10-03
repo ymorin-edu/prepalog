@@ -32,6 +32,8 @@
 //         aveugle: ['Stock logiciel'],                       // colonnes retirées tant qu'un comptage
 //       }, …],                                               //   à l'aveugle n'est pas validé
 //       salissures: { vides: 4, doublons: 3, datesTexte: 5 }, // 1re feuille, déterministe
+//       // Viser des lignes (04/10, ENT-2.6) : `cible(ligne)` (objet colonne → valeur) ; au moins
+//       // `doublonsCible` doublons et `datesTexteCible` dates en texte tombent sur ces lignes-là.
 //     }],
 //     depot: {
 //       id: 'analyse', export: 'preparations', libelle: 'Déposer mon fichier',
@@ -107,18 +109,23 @@ export function construireExport(exp, db, { graine = '', aveugle = false } = {})
     // Dates tapées en texte : `datesTexte` cellules de date tirées au hasard.
     const colsDate = premiere.colonnes.map((c, i) => [c, i]).filter(([c]) => premiere.types[c]).map(([, i]) => i);
     const touchees = new Set();
+    // Les lignes visées par la séance (`cible`), lues sur la ligne propre en objet.
+    const vise = (l) => !!(S.cible && S.cible(Object.fromEntries(premiere.colonnes.map((c, i) => [c, l[i]]))));
+    // Tirer `n` éléments dont au moins `min` parmi ceux qui sont visés.
+    const tirer = (liste, n, min, estVise) => {
+      const m = h.melanger(liste);
+      const v = m.filter(estVise).slice(0, Math.min(min || 0, n));
+      return v.concat(m.filter((x) => !v.includes(x)).slice(0, n - v.length));
+    };
     if (colsDate.length && S.datesTexte) {
       const cand = [];
       L.forEach((l, r) => colsDate.forEach((i) => { if (typeof l[i] === 'number') cand.push([r, i]); }));
-      h.melanger(cand).slice(0, S.datesTexte).forEach(([r, i]) => { L[r][i] = dateTexte(L[r][i]); touchees.add(L[r]); });
+      tirer(cand, S.datesTexte, S.datesTexteCible, ([r]) => vise(L[r])).forEach(([r, i]) => { touchees.add(L[r]); L[r][i] = dateTexte(L[r][i]); });
     }
     // Doublons exacts : une ligne recopiée (jamais une ligne à date en texte : le nombre de dates
     // en texte reste celui déclaré), posée ailleurs.
-    for (let k = 0; k < (S.doublons || 0) && L.length; k++) {
-      const sources = L.filter((l) => !touchees.has(l));
-      const src = (sources.length ? sources : L)[h.entier(0, (sources.length ? sources : L).length - 1)];
-      L.splice(h.entier(0, L.length), 0, src.slice());
-    }
+    const sources = tirer(L.filter((l) => !touchees.has(l)), S.doublons || 0, S.doublonsCible, vise);
+    sources.forEach((src) => L.splice(h.entier(0, L.length), 0, src.slice()));
     // Lignes vides glissées entre les données.
     for (let k = 0; k < (S.vides || 0); k++) L.splice(h.entier(1, Math.max(1, L.length - 1)), 0, premiere.colonnes.map(() => null));
     premiere.lignes = L;
@@ -231,8 +238,12 @@ function juger(cel, attendu, ctrl) {
 //       la colonne retrouvée par son titre, chaque ligne de l'export retrouvée par sa clé
 //       (l'élève trie, filtre, insère des colonnes : jamais d'adresse fixe) ;
 //   { type: 'table', id, feuille, cle: 'Référence', colonne: 'Nb constats', attendu: { clé: valeur },
-//     fonctions: ['COUNTIF'], formule: true }      → le résultat porte aussi `lu: { clé: valeur lue }`
-//   { type: 'lignes', id, feuille, attendu: 143 }   lignes non vides, aucun doublon exact restant ;
+//     fonctions: ['COUNTIF'], formule: true,
+//     fonctionsFeuille?: ['VLOOKUP'] }   → ces fonctions doivent figurer QUELQUE PART dans la feuille
+//                                         (une valeur calculée à partir d'une colonne de RECHERCHEV) ;
+//     le résultat porte aussi `lu: { clé: valeur lue }`
+//   { type: 'lignes', id, feuille, attendu: 143, colonneDate?: 'Date' }   lignes non vides, aucun
+//     doublon exact restant, et (colonneDate) plus aucune date écrite en texte dans cette colonne ;
 //   { type: 'cellule', id, cellule: 'E8', attendu, fonctions?, … } et { plage, lignes } : ceux de
 //     `classeur.js` (`controler`), plus les noms de fonctions.
 export function controlerDepot(classeur, controles, propres = []) {
@@ -264,6 +275,14 @@ export function controlerDepot(classeur, controles, propres = []) {
       const rem = [];
       if (pleines.length !== ctrl.attendu) rem.push(`${pleines.length} ${pluriel(pleines.length, 'ligne')} de données, attendu ${ctrl.attendu}.`);
       if (doublons) rem.push(`${doublons} ${pluriel(doublons, 'doublon')} encore dans la feuille.`);
+      if (ctrl.colonneDate) {
+        const id = colonneDe(g, ctrl.colonneDate);
+        if (id < 0) rem.push(`Colonne « ${ctrl.colonneDate} » introuvable en ligne 1.`);
+        else {
+          const texte = pleines.filter((l) => l.cells[id] && l.cells[id].t === 's' && String(l.cells[id].v).trim() !== '').length;
+          if (texte) rem.push(`${texte} ${pluriel(texte, 'date écrite', 'dates écrites')} en texte dans la colonne « ${ctrl.colonneDate} ».`);
+        }
+      }
       return resultat(ctrl, rem.length ? 0 : 1, 1, rem);
     }
     if (type === 'table') {
@@ -283,6 +302,10 @@ export function controlerDepot(classeur, controles, propres = []) {
         const pb = juger(c, ctrl.attendu[k], ctrl);
         if (pb) rem.push(`${k} : ${pb}.`); else justes++;
       });
+      // Des fonctions exigées n'importe où dans la feuille : sans elles, rien n'est juste.
+      const absentes = (ctrl.fonctionsFeuille || []).map((x) => String(x).toUpperCase()).filter((x) =>
+        !Object.keys(F.ws).some((a) => a[0] !== '!' && F.ws[a] && F.ws[a].f && fonctionsDe(F.ws[a].f).has(x)));
+      if (absentes.length) return { ...resultat(ctrl, 0, cles.length, [`La feuille « ${F.nom} » n'utilise pas ${absentes.map(nomFr).join(', ')}.`, ...rem]), lu };
       return { ...resultat(ctrl, justes, cles.length, rem), lu };
     }
     if (type === 'colonne') {

@@ -81,6 +81,38 @@ export default async function bloc({ v, nav, ROOT, baseXlsx }) {
     if (un.propres.length !== 10) throw new Error('lignes propres : ' + un.propres.length);
   });
 
+  await v('Tableur : salissures visées — au moins n doublons et n dates en texte sur les lignes que la séance désigne', async () => {
+    const { db } = baseEssai();
+    // Les lignes en écart (4 sur 10 dans l'essai : CAB, CHG, COQ, CHG).
+    const vise = (l) => l['Stock trouvé'] !== l['Stock logiciel'];
+    const enEcart = (l) => l[8] !== l[7];
+    const exp = { ...EXP(), salissures: { vides: 1, doublons: 2, datesTexte: 3, cible: vise, doublonsCible: 1, datesTexteCible: 2 } };
+    for (const eleve of ['a', 'b', 'c', 'd', 'e']) {
+      const ex = G.construireExport(exp, db, { graine: eleve });
+      const L = ex.feuilles[0].lignes;
+      const textes = L.filter((l) => typeof l[0] === 'string');
+      if (textes.length !== 3 || textes.filter(enEcart).length < 2) throw new Error(`${eleve} : dates en texte ` + textes.map((l) => l[3]).join());
+      const cles = L.filter((l) => l[1]).map((l) => l.join('|'));
+      const doublons = cles.filter((k, i) => cles.indexOf(k) !== i);
+      if (doublons.length !== 2 || !L.filter((l) => l[1] && cles.filter((k) => k === l.join('|')).length > 1).some(enEcart)) throw new Error(`${eleve} : doublons ` + doublons.join(' ; '));
+    }
+  });
+
+  await v('Tableur : contrôle « lignes » avec colonneDate — une date écrite en texte est signalée ; « fonctionsFeuille » : RECHERCHEV n\'importe où dans la feuille', async () => {
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet([['Date', 'X'], [new Date(2026, 9, 1), 1], ['02/10/2026', 2]], { cellDates: true });
+    XLSX.utils.book_append_sheet(wb, ws, 'P');
+    const relu = XLSX.read(XLSX.write(wb, { bookType: 'xlsx', type: 'buffer' }), { type: 'buffer', cellFormula: true });
+    const [r] = G.controlerDepot(relu, [{ type: 'lignes', id: 'n', feuille: 'P', attendu: 2, colonneDate: 'Date' }]);
+    if (r.ok || !/1 date écrite en texte/.test(r.remarques.join())) throw new Error(JSON.stringify(r));
+    const s2 = XLSX.utils.aoa_to_sheet([['Réf', 'Coût', 'Valeur'], ['A', 2, 4], ['B', 3, 9]]);
+    s2.B2.f = 'VLOOKUP(A2,T!A:B,2,FALSE)'; s2.C2.f = 'B2*2'; s2.B3.f = 'VLOOKUP(A3,T!A:B,2,FALSE)'; s2.C3.f = 'B3*3';
+    const wb2 = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb2, s2, 'S');
+    const t = (ff) => G.controlerDepot(wb2, [{ type: 'table', id: 't', feuille: 'S', cle: 'Réf', colonne: 'Valeur', attendu: { A: 4, B: 9 }, formule: true, fonctionsFeuille: ff }])[0];
+    if (!t(['VLOOKUP']).ok) throw new Error('VLOOKUP présent dans la feuille non vu : ' + JSON.stringify(t(['VLOOKUP'])));
+    if (t(['COUNTIFS']).ok || !/n'utilise pas NB\.SI\.ENS/.test(t(['COUNTIFS']).remarques[0])) throw new Error('fonction absente non vue');
+  });
+
   await v('Tableur : comptage à l\'aveugle — la colonne déclarée « aveugle » n\'est pas exportée tant que le comptage n\'est pas validé', async () => {
     const { db } = baseEssai();
     const exp = { ...EXP(), feuilles: [{ ...EXP().feuilles[0], aveugle: ['Stock logiciel'] }] };
