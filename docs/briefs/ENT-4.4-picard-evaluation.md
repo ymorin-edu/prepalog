@@ -40,10 +40,15 @@ Mail d'accueil court (sans conseil) ; déroulé d'ENT-4.1 (4 étapes) ; **aucune
 P1, pas de règle des couches, total seul) ; « Revoir le BL » gardé ; **chrono qui mesure** (affiché « Temps passé »,
 horloge murale) ; « Rendre ma copie » ; aucun verdict à l'écran ; en fin d'heure l'enseignant ramasse.
 
-## 5. Deux jeux alternés (décision de Tristan)
+## 5. Un jeu tiré par élève (décision de Tristan, 03/10/2026 — remplace les deux jeux alternés)
 
-**Deux camions différents de même difficulté**, attribués **un élève sur deux** (règle d'attribution stable par élève à
-proposer, ex. d'après son identifiant) ; le second sert aussi aux absents. Structure commune, 6 palettes :
+> Décision générale : `docs/briefs/DECISION-jeu-unique-evaluations.md` (« un jeu par élève, cette règle vaut pour toutes les évaluations si c'est
+> applicable »). Elle remplace les **deux jeux alternés un élève sur deux** prévus jusque-là.
+
+**Chaque élève reçoit un camion tiré pour lui**, graine = **identifiant de l'élève** (stable : même jeu sur un autre
+poste, après rechargement, après réouverture de la copie par l'enseignant ; pas de `reinitialisable`). Un absent passe
+plus tard sur son propre jeu. La **structure commune est la contrainte d'équité** que le tirage respecte toujours :
+6 palettes, avec exactement les six aléas ci-dessous :
 
 | # | Aléa | Attendu |
 |---|---|---|
@@ -54,8 +59,11 @@ proposer, ex. d'après son identifiant) ; le second sert aussi aux absents. Stru
 | 5 | couche du dessus incomplète, **conforme au BL** | Accepter |
 | 6 | conforme | Accepter |
 
-Ticket : une remontée à signaler (comme ENT-4.1, autres valeurs). Produits, colisages, positions des aléas et valeurs
-**différents entre les deux jeux**.
+Ticket : une remontée à signaler (comme ENT-4.1).
+**Tirés** pour chaque élève : les produits et colisages (dans une réserve de produits Picard plausibles), l'ordre des
+palettes (quelle position porte quel aléa), les valeurs (quantités, températures dans les zones de la règle du quai
+−18 / −15 °C, manquants), le moment de la remontée du ticket. **Jalons et note calculés sur le jeu de l'élève**, jamais
+écrits en dur. Les seuils de rapidité sont **communs à tous** (ils ne dépendent pas du jeu).
 
 > **Règle du quai pour la température à cœur (décision de Tristan, 03/10/2026, après ENT-4.2)** — vaut pour toutes
 > les séances Picard. **−18 °C ou plus froid : accepter. Entre −18 et −15 °C : accepter avec réserves — température,
@@ -78,29 +86,37 @@ Le détail (réception, hors froid, réel, rapidité retenue) va dans `detail`, 
 
 ## 7. Demandes au moteur
 
-Aucune nouvelle si la vue quai (avec note de rapidité) et le tiers-temps sont livrés. À vérifier : l'attribution
-d'un jeu par élève (si le moteur ne sait pas déjà le faire, la proposer).
+Aucune nouvelle sur la vue quai si elle (avec note de rapidité) et le tiers-temps sont livrés. **Nouveau : le tirage
+d'un jeu par élève**, à construire **générique** (pas propre au quai) : graine = identifiant de l'élève, une réserve et
+des contraintes d'équité déclarées par la séance. Cdiscount ENT-2.5 le réutilisera (6 références, quantités, pièges
+d'inventaire) : décrire au compte rendu l'API, où vit le code et comment une autre séance le déclare (`docs/briefs/DECISION-jeu-unique-evaluations.md`).
 
 ## 8. Tests
 
 Note (valeurs écrites à la main) : parcours juste rapide → 20 ; une palette fausse → rapidité × 5/6 ; BL non signé → 0
 point de rapidité ; tiers-temps → seuils × 4/3 ; ramassage = même note que la remise ; chaque élève garde son jeu après
 rechargement ; deux élèves voisins ont deux jeux différents ; aucun verdict visible avant la remise.
+**Tirage** (obligatoire) : tirer quelques centaines de graines et vérifier que chaque jeu respecte les contraintes
+d'équité (les six aléas, les zones de température, la remontée du ticket) — aucun tirage hors règle ne doit atteindre un
+élève ; deux élèves différents → deux jeux différents ; même élève → même jeu.
 
 ## 9. Supports
 
-Pas de trame (décision de Tristan : l'écran suffit) ; corrigé `contenus/corriges/ENT-4.4.js` pour les **deux** jeux.
+Pas de trame (décision de Tristan : l'écran suffit). **Plus de corrigé fixe par jeu** : l'enseignant voit, **par élève**,
+le jeu reçu, l'attendu et la réponse (dans le `detail` du suivi, ou une vue « corrigé de cet élève » si le corrigé actuel
+ne sait pas le faire — le dire au compte rendu). `contenus/corriges/ENT-4.4.js` décrit la règle et la structure commune.
 
 ## 10. Questions ouvertes
 
 - [ ] Seuils de temps réel (après l'essai d'ENT-4.1 en classe).
 > **Réponses données d'avance par Tristan (03/10/2026, Cowork)** : ne pas s'arrêter pour les questions ci-dessous ; appliquer ces choix, et **lister au compte rendu** tout ce que tu as choisi seul (noms, textes, chiffres) pour que Tristan le corrige à l'écran.
 
-- [x] **Noms fictifs, produits et valeurs des deux jeux** (tranché le 03/10/2026) : **choisis par Claude Code** sur la
-  grille du §5 (noms vérifiés par recherche web), listés au compte rendu ; Tristan les vérifie en passant l'évaluation.
+- [x] **Noms fictifs, réserve de produits et plages de valeurs du tirage** (tranché le 03/10/2026) : **choisis par
+  Claude Code** sur la grille du §5 (noms vérifiés par recherche web), listés au compte rendu ; Tristan les vérifie en
+  passant l'évaluation.
 - [x] **Mail d'accueil** : écrit par Claude Code, court, **sans conseil**.
-- [x] **Attribution du jeu : alternance dans l'ordre alphabétique du groupe** (1er élève → jeu A, 2e → B, 3e → A…) :
-  moitié-moitié exacte. Un élève absent passe plus tard sur le jeu B.
+- [x] ~~Attribution du jeu : alternance dans l'ordre alphabétique du groupe~~ — **supprimée le 03/10/2026** : un jeu
+  tiré par élève, graine = identifiant (`docs/briefs/DECISION-jeu-unique-evaluations.md`).
 
 ---
 

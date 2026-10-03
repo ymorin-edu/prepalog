@@ -15,7 +15,7 @@ Conception : fiches du projet PREPALOG `claude/prepalog-picard-cadrage.md` et `c
 | ENT-4.1 | Le premier camion | guidage | la maquette v8 : 1 camion, 5 palettes, un aléa par palette, toutes les aides | **livrée et validée par Tristan le 03/10** ; à ouvrir aux élèves dans Conduite de séance ; vue quai (P1) validée |
 | ENT-4.2 | Deux camions, un seul quai | entraînement (C1.4 + **C1.3**) | choisir quel camion décharger d'abord (le froid de A faiblit : conséquence réelle + jalon avec phrase juste) ; 8 palettes dont 4 aléas (multi-références, chaude malgré le ticket, étiquette déchirée, manquant) ; un temps hors froid par camion ; seul le bilan reste comme aide | **livrée le 03/10, fermée aux élèves** (vue quai étendue : plusieurs camions, réchauffement, multi-références, étiquette par face) ; à essayer à l'écran |
 | ENT-4.3 | La réception de nuit | erreur induite | deux temps comme ENT-3.3 : contrôler le travail figé du collègue (3 erreurs + 1 fausse piste, preuve dans les documents), diagnostic au chef de quai → corriger : bloquer, protestation au transporteur (messages à lignes) | **brief prêt** (`ENT-4.3-picard-reception-de-nuit.md`) |
-| ENT-4.4 | Le rush du lundi | évaluation | 2 jeux alternés (un élève sur deux), 6 palettes dont une à deux problèmes, aucune aide, copie rendue, note 15 + 5 rapidité | **brief prêt** (`ENT-4.4-picard-evaluation.md`) ; seuils réels après l'essai d'ENT-4.1 |
+| ENT-4.4 | Le rush du lundi | évaluation | **un jeu tiré par élève** (graine = identifiant, décision du 03/10 : `DECISION-jeu-unique-evaluations.md`), 6 palettes dont une à deux problèmes, aucune aide, copie rendue, note 15 + 5 rapidité | **brief prêt** (`ENT-4.4-picard-evaluation.md`) ; seuils réels après l'essai d'ENT-4.1 |
 
 ## Les chantiers et leur ordre
 
@@ -26,7 +26,7 @@ Conception : fiches du projet PREPALOG `claude/prepalog-picard-cadrage.md` et `c
 | P3 | **Tiers-temps par élève** | `MOTEUR-tiers-temps.md` | petit (1-2 h) | Sonnet | oui (fiche élève, peut-être règles Firebase) |
 | P4 | **ENT-4.2** + extensions de la vue (plusieurs camions, réchauffement, multi-références, étiquette par face) | `ENT-4.2-picard-deux-camions.md` §7 | moyen à gros | Opus | oui |
 | P5 | **ENT-4.3** + extensions (quai « déjà réceptionné » figé, contrôle en chambre froide, Bloquer, bouton Messagerie) | `ENT-4.3-picard-reception-de-nuit.md` §7 | moyen à gros | Opus | oui |
-| P6 | **ENT-4.4** (2 jeux, note avec rapidité) | `ENT-4.4-picard-evaluation.md` | moyen | Sonnet | non, sauf attribution d'un jeu par élève |
+| P6 | **ENT-4.4** (un jeu tiré par élève, note avec rapidité) | `ENT-4.4-picard-evaluation.md` | moyen à gros | Sonnet | oui : tirage générique d'un jeu par élève (réutilisé par Cdiscount ENT-2.5) |
 
 **Ordre** : P1 → validation à l'écran (page d'essai) → P2 → P4 → P5 → P3 → P6. **L'essai d'ENT-4.1 en classe ne bloque
 rien** (décision de Tristan) : il se fait en parallèle ; ENT-4.4 est construite avec les seuils provisoires (12 / 16 min),
