@@ -293,6 +293,58 @@ Stock au dernier inventaire : 27 - 12 - 1 + 9 + 1 = 24`;
     if (reste) throw new Error('la page n\'a pas été rendue propre');
   });
 
+  // Ajouté le 03/10/2026 (réponse amorcée) : le champ « Répondre » du message de Nadia s'ouvre avec
+  // les six intitulés ; les autres messages gardent un champ vide ; envoyer l'amorce telle quelle
+  // ne rapporte aucun jalon.
+  await v('ENT-2.1 : « Répondre » à Nadia s\'ouvre avec les six intitulés, les autres mails restent vides, et l\'amorce seule ne valide rien', async () => {
+    const res = await page.evaluate(async ({ CHEFFE }) => {
+      const mod = await import('/activites/cdiscount-mouvements.js');
+      const hote = document.createElement('div');
+      hote.id = 'essaiCdiscount';
+      document.body.appendChild(hote);
+      const db = {};
+      const ctx = { meta: mod.meta, profil: { prenom: 'Léa', role: 'eleve' }, codeStock: 'STOCK24',
+        jeu: { etat: () => db, sauver() {} }, enregistrer() {}, quitter() {} };
+      mod.rendre(hote, ctx);
+      const attendre = () => new Promise((r) => setTimeout(r, 60));
+      const clic = async (sel) => { const e = hote.querySelector(sel); if (!e) throw new Error('introuvable : ' + sel); e.click(); await attendre(); };
+      const out = {};
+      await clic('[data-vue="mail"]');
+      const autre = db.mails.find((m) => /^Retour client/.test(m.subject));
+      await clic(`[data-mail="${autre.id}"]`);
+      await clic('[data-repondre]');
+      out.autre = hote.querySelector('#repT').value;
+      await clic('[data-mail-retour]');
+      const mission = db.mails.find((m) => m.fromMail === CHEFFE && /racontez/.test(m.subject));
+      await clic(`[data-mail="${mission.id}"]`);
+      await clic('[data-repondre]');
+      const t = hote.querySelector('#repT');
+      out.amorce = t.value;
+      out.curseur = t.selectionStart;
+      out.focus = document.activeElement === t;
+      hote.querySelector('#formRep').dispatchEvent(new Event('submit', { cancelable: true }));
+      await attendre();
+      out.envoye = db.mails.filter((m) => m.folder === 'out').map((m) => m.text);
+      hote.querySelector('[data-quitter]').click();
+      hote.remove();
+      return out;
+    }, { CHEFFE: CD.EQUIPE.cheffe.mail }).catch(async (e) => {
+      await page.evaluate(() => { document.getElementById('essaiCdiscount')?.remove(); document.body.classList.remove('immersion'); document.body.removeAttribute('style'); });
+      throw e;
+    });
+    const lignes = res.amorce.split('\n');
+    if (lignes.length !== S21.LIGNES_REPONSE.length || lignes.some((l, i) => l.trim() !== S21.LIGNES_REPONSE[i])) {
+      throw new Error('amorce : ' + JSON.stringify(res.amorce));
+    }
+    if (!res.focus || res.curseur !== lignes[0].length) throw new Error(`curseur ${res.curseur}, focus ${res.focus}`);
+    if (res.autre !== '') throw new Error('le champ d\'un autre message n\'est pas vide : ' + JSON.stringify(res.autre));
+    if (res.envoye.length !== 1) throw new Error(`${res.envoye.length} réponses envoyées au lieu de 1`);
+    const db = ouvrir(S21);
+    repondre(db, res.envoye[0]);
+    const st = statuts(S21, db);
+    if (st.some((s) => s === 'ok')) throw new Error('l\'amorce seule valide un jalon : ' + st.join(', '));
+  });
+
 
   /* ================================================================================
    * ENT-2.2 « Inventaire tournant » (entraînement) — ajouté le 02/10/2026, chantier D.

@@ -700,7 +700,7 @@ export function creerEntreprise(U) {
             ${corps}
             ${actions ? `<div class="rangee" style="margin-top:14px">${actions}</div>` : ''}
             <form id="formRep" hidden style="margin-top:14px">
-              <div class="champ"><label for="repT">Votre réponse</label><textarea id="repT" rows="6"></textarea></div>
+              <div class="champ"><label for="repT">Votre réponse</label><textarea id="repT" rows="${sel.amorce ? 8 : 6}">${ech(sel.amorce || '')}</textarea></div>
               <button class="btn btn-p" type="submit">Envoyer</button></form></div>`;
         }
 
@@ -1797,7 +1797,11 @@ export function creerEntreprise(U) {
         z.querySelector('[data-annuler]')?.addEventListener('click', () => { E.redige = false; dessiner(); });
         z.querySelector('[data-envoyer-fou]')?.addEventListener('click', envoyerAuFournisseur);
         z.querySelector('[data-repondre]')?.addEventListener('click', () => {
-          const f = z.querySelector('#formRep'); f.hidden = !f.hidden; if (!f.hidden) z.querySelector('#repT').focus();
+          const f = z.querySelector('#formRep'); f.hidden = !f.hidden;
+          if (f.hidden) return;
+          const t = z.querySelector('#repT'); t.focus();
+          // Réponse amorcée (mail avec `amorce`) : le curseur attend au bout de la première ligne.
+          if (t.value) { const i = t.value.indexOf('\n'); const p = i < 0 ? t.value.length : i; t.setSelectionRange(p, p); }
         });
         z.querySelector('#formRep')?.addEventListener('submit', (e) => { e.preventDefault(); envoyerReponse(); });
         z.querySelectorAll('[data-enreg-cmd]').forEach((b) => b.addEventListener('click', () => enregistrerCommande(+b.dataset.enregCmd)));
