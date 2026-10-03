@@ -37,7 +37,9 @@
 //     reparti (BL signé), après une manœuvre (`quai.manoeuvre`, 3 min par défaut, construit) ;
 //   - un camion qui attend peut se réchauffer (`rechauffeEnAttente`, °C par minute du temps du quai
 //     écoulé avant SON ouverture) : la sonde lit la température réelle, et la décision attendue en
-//     découle (au-dessus de `quai.seuilRefus`, −15 °C par défaut : refuser — température) ;
+//     découle selon la règle du quai à trois zones (décision de Tristan, 03/10/2026) : −18 °C ou plus
+//     froid, la décision déclarée ; entre `quai.seuilReserve` (−18) et `quai.seuilRefus` (−15) :
+//     accepter avec réserves — température ; au-dessus de −15 °C : refuser — température ;
 //   - un temps hors froid PAR CAMION : chaque lot démarre à l'ouverture de son camion et s'arrête
 //     quand il entre en chambre froide ; les étapes ②③④ montrent le camion choisi.
 // L'état du PREMIER camion déclaré reste à la racine de l'état (format d'ENT-4.1, inchangé : ses
@@ -110,6 +112,7 @@ function reglages(Q) {
     lieu: Object.assign({ nom: 'Quai', temp: 4, refrigere: true, chambre: { nom: 'Chambre froide', temp: -23 } }, Q.lieu || {}),
     seuil: Q.seuilHorsFroid || 30,
     seuilRefus: Q.seuilRefus != null ? Q.seuilRefus : -15,
+    seuilReserve: Q.seuilReserve != null ? Q.seuilReserve : -18,
     manoeuvre: Q.manoeuvre != null ? Q.manoeuvre : 3,
     D: Object.assign({ ouverture: 0.5, parPalette: 1 }, Q.dechargement || {}),
     couts: Object.assign({}, COUTS_DEFAUT, Q.couts || {}),
@@ -133,10 +136,11 @@ function tempReelle(p, e, R) {
   return Math.round((p.temp + c.rechauffe * att) * 10) / 10;
 }
 // La palette telle qu'elle est dans CETTE réception : température réelle, et décision attendue
-// recalculée pour un camion qui s'est réchauffé au-delà du seuil de refus.
+// recalculée pour un camion qui s'est réchauffé, selon la règle à trois zones (−18 / −15 °C).
 function effective(p, e, R) {
   const temp = tempReelle(p, e, R);
   if (R.camions[p.camion].rechauffe && temp > R.seuilRefus) return Object.assign({}, p, { temp, attendu: 'refuser', motifAttendu: 'temperature' });
+  if (R.camions[p.camion].rechauffe && temp > R.seuilReserve) return Object.assign({}, p, { temp, attendu: 'reserves', motifAttendu: 'temperature' });
   return temp === p.temp ? p : Object.assign({}, p, { temp });
 }
 export const dureeDechargement = (n, D) => D.ouverture + n * D.parPalette;
@@ -189,7 +193,7 @@ function texteLigne(p, decision, motif, v) {
   }
   const quoi = motif === 'avarie' ? `${val} carton${s} endommagé${s} (écrasé${s})`
     : motif === 'manquant' ? `manque ${val} carton${s} (BL ${p.bl}, reçu ${vide ? '…' : p.bl - (+nombre(v))})`
-      : motif === 'temperature' ? `température à cœur ${vide ? '…' : fmtT(v)}` : motif === 'produit' ? `référence livrée ${val}` : 'réserve sans motif';
+      : motif === 'temperature' ? `température à cœur ${vide ? '…' : fmtT(v)} (−18 °C exigé)` : motif === 'produit' ? `référence livrée ${val}` : 'réserve sans motif';
   return `${p.id} ${p.ref} : acceptée sous réserve — ${quoi}.`;
 }
 const ligneAttendue = (p) => texteLigne(p, p.attendu, p.motifAttendu, CHAMP_RES[p.motifAttendu].attendu(p));
@@ -1088,8 +1092,11 @@ export function creerQuai(Q, opts = {}) {
       ? R.camions.map((c, ci) => {
         const k = K(e, ci);
         // Le camion qui se réchauffe : ce que son attente a coûté, lu sur la sonde.
+        const tMax = Math.max(...PAL[ci].map((p) => tempReelle(p, e, R)));
+        const zone = tMax > R.seuilRefus ? `, au-dessus de ${fmtT(R.seuilRefus)} : à refuser`
+          : tMax > R.seuilReserve ? `, entre ${fmtT(R.seuilReserve)} et ${fmtT(R.seuilRefus)} : à accepter avec réserves (température relevée)` : '';
         const chaud = c.rechauffe && k.decharge
-          ? ` Il a attendu ${fmtMin(k.ouvertA)} porte fermée, groupe froid faible : ses palettes sont sorties à ${fmtT(Math.max(...PAL[ci].map((p) => tempReelle(p, e, R))))} à cœur${Math.max(...PAL[ci].map((p) => tempReelle(p, e, R))) > R.seuilRefus ? `, au-dessus de ${fmtT(R.seuilRefus)} : à refuser` : ''}.`
+          ? ` Il a attendu ${fmtMin(k.ouvertA)} porte fermée, groupe froid faible : ses palettes sont sorties à ${fmtT(tMax)} à cœur${zone}.`
           : '';
         return `<p class="note" data-q-bilan-camion="${ech(c.lettre)}">Camion ${ech(c.lettre)} : temps hors froid du lot ${k.decharge ? fmtMin(k.froid) : '—'} (repère ${R.seuil} min).${chaud}${ordre(k)}</p>`;
       }).join('')

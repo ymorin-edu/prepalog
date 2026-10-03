@@ -133,9 +133,9 @@ Trame élève Word/PDF (Cowork, après validation à l'écran) ; corrigé `conte
     (construit). Chemin B le plus court : 4 + 5,5 + 1 + 1 + 3 = 14 min 30 → −14,9 °C, à refuser ; un test le garde.
   - Le second camion ne se met à quai **qu'une fois le premier reparti (BL signé)** : un seul quai. Le lot du premier
     peut rester sur le quai (sa jauge continue) : l'élève peut le rentrer avant ou après.
-  - En bon ordre, les glaces sont sondées à **−17,5 °C** : au-dessus de −18 °C, sous la tolérance de −15 °C, donc
-    « accepter » (brief §5). La ligne de refus de la vue dit « (−18 °C exigé) » : **à juger à l'écran**, un élève peut
-    hésiter à accepter −17,5.
+  - En bon ordre, les glaces sont sondées à **−17,5 °C**. Tranché par Tristan le 03/10 (après la livraison) : règle à
+    trois zones, donc A1, A2, A3 = **accepter avec réserves — température (−17,5)** au lieu de « accepter » (§5) : trois
+    lignes sur le BL du camion A (« acceptée sous réserve — température à cœur −17,5 °C (−18 °C exigé) »).
   - Pas de `reinitialisable` (réservé aux X.1, test du dépôt) ; « Recommencer la réception » du bilan reste (il ne
     remet à zéro que le quai d'ENT-4.2).
 - **Décisions prises en route (choisies seul, à corriger à l'écran)** :

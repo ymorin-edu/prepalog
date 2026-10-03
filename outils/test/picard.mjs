@@ -584,9 +584,11 @@ await v('ENT-4.1 : corrigé — palettes, cartons réels et réserves calculés 
 //   A1 3×3×4 = 36 · A2 citron 3 couches de 3×2 = 18, framboise 1 couche = 6 · A3 4×3×4 = 48
 //   B1 4×3×5 = 60 · B2 36, −14,8 °C → refuser température · B3 30, arrière CFL-1000 → refuser produit
 //   B4 4×2×4 − 1 = 31 (BL 32) → réserves manquant (1) · B5 3×3×5 = 45
-// Camion A : −18,5 °C au départ, +0,25 °C par minute du quai porte fermée. A d'abord : ouvert à 4 min
-// (deux tickets) → −17,5 °C, à accepter. B d'abord, au plus vite : 4 + 5,5 + 1 + 1 + 3 = 14,5 min →
-// −18,5 + 3,625 = −14,875, arrondi −14,9 °C : au-dessus de −15, à refuser.
+// Camion A : −18,5 °C au départ, +0,25 °C par minute du quai porte fermée. Règle du quai à trois zones
+// (Tristan, 03/10/2026) : ≤ −18 accepter ; entre −18 et −15 réserves — température ; > −15 refuser.
+// A d'abord : ouvert à 4 min (deux tickets) → −17,5 °C, réserves — température (−17,5).
+// B d'abord, au plus vite : 4 + 5,5 + 1 + 1 + 3 = 14,5 min → −18,5 + 3,625 = −14,875, arrondi −14,9 °C :
+// au-dessus de −15, à refuser.
 const ID42 = 'picard-ent42';
 const monter42 = (p) => p.evaluate(async () => {
   const { creerEntreprise } = await import('/core/types/entreprise.js');
@@ -608,9 +610,9 @@ const monter42 = (p) => p.evaluate(async () => {
 });
 const etat42 = (p) => p.evaluate((id) => JSON.parse(JSON.stringify((window.__q.db.quais || {})[id] || null)), ID42);
 const JUSTE42 = {
-  A1: { compte: 36, decision: 'accepter', motif: 'aucun' },
-  A2: { comptes: { 'SCI-500': 18, 'SFR-500': 6 }, decision: 'accepter', motif: 'aucun' },
-  A3: { compte: 48, decision: 'accepter', motif: 'aucun' },
+  A1: { compte: 36, decision: 'reserves', motif: 'temperature', res: '-17,5' },
+  A2: { comptes: { 'SCI-500': 18, 'SFR-500': 6 }, decision: 'reserves', motif: 'temperature', res: '-17,5' },
+  A3: { compte: 48, decision: 'reserves', motif: 'temperature', res: '-17,5' },
   B1: { compte: 60, decision: 'accepter', motif: 'aucun' },
   B2: { compte: 36, decision: 'refuser', motif: 'temperature', res: '-14,8' },
   B3: { compte: 30, decision: 'refuser', motif: 'produit', res: 'CFL-1000', arriere: true },
@@ -689,7 +691,7 @@ await v('ENT-4.2 : écran ① — deux camions, l’ordre ne se choisit qu’apr
   egal(await pg2.$$eval(`${Z} .quai-h-froid`, (x) => x.length), 2, 'une jauge hors froid par camion');
 });
 
-await v('ENT-4.2 : parcours juste (A d’abord) → 30 jalons sur 30, glaces à −17,5 °C, deux jauges indépendantes', async () => {
+await v('ENT-4.2 : parcours juste (A d’abord) → 30 jalons sur 30, glaces à −17,5 °C en réserve, deux jauges indépendantes', async () => {
   await monter42(pg2);
   await jouer42(pg2);
   const j = await jalons(pg2);
@@ -701,13 +703,18 @@ await v('ENT-4.2 : parcours juste (A d’abord) → 30 jalons sur 30, glaces à 
   egal([e.froid, e.rentre, e.suivants[0].rentre, e.suivants[0].signe, e.fini], [13.5, true, true, true, true], 'lot A / B');
   // B : 5 min 30 + 5 sondes + tour 30 s + étiquette 30 s + 5 comptages + rentrer 3 = 19 min 30.
   egal(e.suivants[0].froid, 19.5, 'temps hors froid du lot B');
+  egal(e.lignes.map((l) => l.texte), [
+    'A1 GVA-2500 : acceptée sous réserve — température à cœur −17,5 °C (−18 °C exigé).',
+    'A2 SCI-500 + SFR-500 : acceptée sous réserve — température à cœur −17,5 °C (−18 °C exigé).',
+    'A3 BCH-060 : acceptée sous réserve — température à cœur −17,5 °C (−18 °C exigé).',
+  ], 'réserves du BL de A');
   egal(e.suivants[0].lignes.map((l) => l.texte), [
     'B2 POE-750 : palette REFUSÉE — température à cœur −14,8 °C (−18 °C exigé). 36 cartons repris par le chauffeur.',
     'B3 BRO-1000 : palette REFUSÉE — produit livré CFL-1000 au lieu de BRO-1000 commandé. 30 cartons repris par le chauffeur.',
     'B4 HBE-1000 : acceptée sous réserve — manque 1 carton (BL 32, reçu 31).',
   ], 'réserves du BL de B');
   const b = await texte(pg2, `${Z} .quai-bilan-bloc`);
-  vrai(b.includes('Camion A : temps hors froid du lot 13 min 30') && b.includes('sorties à −17,5 °C à cœur.'), 'bilan du camion A : ' + b.slice(0, 400));
+  vrai(b.includes('Camion A : temps hors froid du lot 13 min 30') && b.includes('sorties à −17,5 °C à cœur, entre −18 °C et −15 °C : à accepter avec réserves'), 'bilan du camion A : ' + b.slice(0, 400));
   egal(await pg2.$$eval(`${Z} [data-jalon] .quai-ok`, (x) => x.length), 30, 'lignes justes au bilan');
 });
 
@@ -754,6 +761,15 @@ await v('ENT-4.2 : bon ordre, phrase fausse → seul le jalon d’ordre tombe ; 
   await monter42(pg2);
   await jouer42(pg2, { ordre: { premier: 0, phrase: 'arrive' } });
   egal((await jalons(pg2)).ko, ['ordre'], 'jalons faux');
+});
+
+await v('ENT-4.2 : A d’abord, glaces à −17,5 °C — accepter ou refuser est faux, seules les réserves sont justes', async () => {
+  await monter42(pg2);
+  await jouer42(pg2, { A1: { decision: 'accepter', motif: 'aucun', res: null }, A3: { decision: 'refuser', motif: 'temperature' } });
+  egal((await jalons(pg2)).ko, ['A1-decision', 'A3-decision', 'A1-reserve', 'A3-reserve'], 'jalons faux');
+  await monter42(pg2);
+  await jouer42(pg2, { A2: { res: '-18,5' } });
+  egal((await jalons(pg2)).ko, ['A2-reserve'], 'réserve avec la température de départ au lieu de la température relevée');
 });
 
 await v('ENT-4.2 : A2 multi-références comptée d’un bloc → faux ; B2 non sondée → faux ; B3 sans l’arrière → faux', async () => {
@@ -820,16 +836,47 @@ await v('ENT-4.2 : aucun jalon n’est vrai par inaction', async () => {
 await v('ENT-4.2 : corrigé — tickets, ordre, palettes et réserves des deux chemins', async () => {
   const c = await pg2.evaluate(async () => (await import('/contenus/corriges/ENT-4.2.js')).CORRIGE);
   vrai(c.items[1].rep.includes('camion A d’abord'), 'ordre');
-  const pal = c.items.find((i) => i.etape === 3).reponses.map((r) => [r[0], r[3], r[5]]);
+  const pal = c.items.find((i) => i.etape === 3 && i.genre === 'tableau').reponses.map((r) => [r[0], r[3], r[5]]);
+  const res = 'Accepter avec réserves — Température non conforme';
   egal(pal, [
-    ['A1', '36 (3 × 3 × 4)', 'Accepter — aucun motif'], ['A2', 'SCI-500 : 18 · SFR-500 : 6', 'Accepter — aucun motif'],
-    ['A3', '48 (4 × 3 × 4)', 'Accepter — aucun motif'], ['B1', '60 (4 × 3 × 5)', 'Accepter — aucun motif'],
+    ['A1', '36 (3 × 3 × 4)', res], ['A2', 'SCI-500 : 18 · SFR-500 : 6', res],
+    ['A3', '48 (4 × 3 × 4)', res], ['B1', '60 (4 × 3 × 5)', 'Accepter — aucun motif'],
     ['B2', '36 (3 × 3 × 4)', 'Refuser — Température non conforme'], ['B3', '30 (3 × 2 × 5)', 'Refuser — Produit différent de la commande'],
     ['B4', '31 (4 × 2 × 4 − 1)', 'Accepter avec réserves — Manquant'], ['B5', '45 (3 × 3 × 5)', 'Accepter — aucun motif'],
   ], 'tableau des palettes');
   const tard = c.items.find((i) => /d’abord$/.test(i.texte) && i.texte.startsWith('Si le camion B')).reponses;
   egal(tard.map((r) => r[1]), ['Refuser — Température non conforme', 'Refuser — Température non conforme', 'Refuser — Température non conforme'], 'B d’abord');
   vrai(tard[0][2].includes('−14,9 °C'), 'température de A au plus tôt');
+  const bl = c.items.filter((i) => i.genre === 'tableau')[1].reponses;
+  egal(bl.map((r) => r[0]), ['A1', 'A2', 'A3', 'B2', 'B3', 'B4'], 'réserves attendues, A d’abord');
+  vrai(bl[0][1].includes('température à cœur −17,5 °C'), 'réserve de A1 : ' + bl[0][1]);
+});
+
+// La règle du quai à trois zones vaut pour TOUTES les séances Picard (ENT-4.1 à 4.4) : une palette
+// déclarée dont la seule anomalie est la température doit suivre −18 / −15. Ce cas relit chaque
+// contenu `contenus/picard-ent4*.js` : une séance nouvelle y est soumise d'office.
+await v('Picard : chaque palette déclarée suit la règle −18 / −15 (accepter, réserves, refuser)', async () => {
+  const fs = await import('node:fs');
+  const fichiers = fs.readdirSync(new URL('../../contenus/', import.meta.url)).filter((f) => /^picard-ent4\d+\.js$/.test(f));
+  vrai(fichiers.length >= 2, 'contenus Picard introuvables : ' + fichiers);
+  const fautes = [];
+  let n = 0;
+  for (const f of fichiers) {
+    const m = await import(new URL(`../../contenus/${f}`, import.meta.url));
+    for (const Q of Object.values(m).filter((x) => x && Array.isArray(x.camions))) {
+      for (const c of Q.camions) for (const p of c.palettes || []) {
+        n++;
+        if (c.rechauffeEnAttente) continue; // décision recalculée par la vue sur la température réelle
+        const autre = (p.manque || []).length || Object.keys(p.avarie || {}).length || p.attendu === 'refuser' && p.motifAttendu === 'produit'
+          || (p.attendu === 'reserves' && p.motifAttendu !== 'temperature');
+        const zone = p.temp > -15 ? 'refuser' : p.temp > -18 ? 'reserves' : null;
+        if (zone && (p.attendu !== zone || p.motifAttendu !== 'temperature')) fautes.push(`${f} ${p.id} ${p.temp} : ${p.attendu}/${p.motifAttendu}`);
+        if (!zone && !autre && p.motifAttendu === 'temperature') fautes.push(`${f} ${p.id} ${p.temp} : température conforme mais motif température`);
+      }
+    }
+  }
+  vrai(n >= 13, `seulement ${n} palettes lues`);
+  egal(fautes, [], 'palettes hors de la règle');
 });
 
 await v('ENT-4.2 : sous le logo Picard dans Logisim, elle s’ouvre sur l’accueil et le mail des deux camions', async () => {

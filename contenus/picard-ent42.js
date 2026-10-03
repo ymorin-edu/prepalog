@@ -8,17 +8,19 @@
 //
 // Le camion A a un groupe froid qui faiblit : ses glaces sont à −18,5 °C à cœur au début, et
 // gagnent 0,25 °C par minute du temps du quai tant qu'il reste porte fermée (décision de Tristan,
-// brief §11). La vue calcule la température réelle à la sonde et la décision attendue qui en découle
-// (au-dessus de −15 °C : refuser — température). Les deux chemins :
+// brief §11). La vue calcule la température réelle à la sonde et la décision attendue qui en découle,
+// par la RÈGLE DU QUAI À TROIS ZONES (décision de Tristan, 03/10/2026, construite pour l'exercice sur
+// les seuils vérifiés −18 °C et tolérance −15 °C) : −18 °C ou plus froid → accepter ; entre −18 et
+// −15 °C → accepter avec réserves, température relevée ; au-dessus de −15 °C → refuser. Les deux chemins :
 //   - A d'abord : on ne peut choisir qu'après avoir lu les deux tickets (2 × 2 min), A s'ouvre à
-//     4 min → −17,5 °C à cœur : sous la tolérance de −15 °C au déchargement, on accepte ;
+//     4 min → −17,5 °C à cœur : dans la tolérance, mais plus chaud que −18 °C : réserves — température ;
 //   - B d'abord : au plus vite 4 min (tickets) + 5 min 30 (déchargement de B) + 1 min (une ligne de
 //     réserve) + 1 min (signature) + 3 min (manœuvre de mise à quai de A) = 14 min 30 → −14,9 °C :
 //     les trois palettes de A sont à refuser, quoi que fasse l'élève. Garde-fou : un test le vérifie.
 //
-//   A1  glace vanille                              aucun aléa       → accepter
-//   A2  sorbets citron (3 couches) + framboise (1)  deux références → accepter, compter chacune
-//   A3  bâtonnets chocolat                          aucun aléa       → accepter
+//   A1  glace vanille                              (A d'abord) −17,5 °C → réserves, température
+//   A2  sorbets citron (3 couches) + framboise (1)  deux références, compter chacune ; −17,5 °C → réserves
+//   A3  bâtonnets chocolat                          (A d'abord) −17,5 °C → réserves, température
 //   B1  petits pois                                 aucun aléa       → accepter
 //   B2  poêlée campagnarde, −14,8 °C à cœur         ticket parfait   → refuser, température
 //   B3  brocolis : étiquette avant déchirée, l'arrière dit CFL-1000  → refuser, produit différent
@@ -93,6 +95,7 @@ export const QUAI_ENT42 = {
   // L'élève prend son poste à 6 h 10 : les deux camions sont là.
   debut: '06:10',
   seuilRefus: -15,
+  seuilReserve: -18,
   manoeuvre: 3,
   ordre: {
     question: 'Quel camion faites-vous décharger en premier ?',
@@ -124,7 +127,8 @@ export const QUAI_ENT42 = {
 
 // Un jalon de la vue = une étape du suivi (30 : ordre et raison, 2 tickets, 8 comptages, 8 décisions,
 // 6 réserves — les 3 palettes du camion A et B2, B3, B4 —, pas de mention de déballage, 2 signatures,
-// 2 lots rentrés).
+// 2 lots rentrés). Les décisions et réserves du camion A se lisent sur la température réelle.
+// `attendu` des palettes de A = ce qu'elles seraient sans attente (la vue le recalcule).
 export const ETAPES = etapesQuai(QUAI_ENT42);
 
 export const ACCUEIL = {

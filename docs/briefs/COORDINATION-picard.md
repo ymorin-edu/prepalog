@@ -52,6 +52,9 @@ de P1 validée, les trames élève (Cowork).
 - Temps du quai simulé partout ; **temps hors froid d'un seul lot** (le transporteur décharge tout) ; repère 30 min pour
   un quai réfrigéré à +4 °C ; déchargement = 30 s + 1 min par palette (valeurs construites, **réutilisées pour la
   planification de quai**).
+- **Température à cœur, trois zones** (03/10, après ENT-4.2) : ≤ −18 °C accepter ; entre −18 et −15 °C accepter avec
+  réserves (température relevée) ; > −15 °C refuser. Règle du quai, construite sur les seuils vérifiés ; testée sur tous
+  les contenus Picard.
 - **Le froid d'abord, les papiers ensuite** : enseigné en guidage (chef de quai), jamais sanctionné en points.
 - « Sous réserve de déballage » = case piège, jalon faux, aussi en évaluation.
 - Évaluation : **le chrono mesure, il ne coupe pas** ; note = 15 pts de réception + 5 pts de rapidité (3 sur le temps

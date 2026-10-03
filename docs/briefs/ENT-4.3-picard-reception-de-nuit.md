@@ -75,6 +75,14 @@ chambre froide.
 
 Délai : réception à 3 h le jour même → **dans le délai** (le diagnostic doit le dire).
 
+> **Règle du quai pour la température à cœur (décision de Tristan, 03/10/2026, après ENT-4.2)** — vaut pour toutes
+> les séances Picard. **−18 °C ou plus froid : accepter. Entre −18 et −15 °C : accepter avec réserves — température,
+> en écrivant la valeur relevée. Au-dessus de −15 °C : refuser — température.** Vérifié : −18 °C exigé, tolérance
+> brève −15 °C au déchargement ; les trois zones sont une règle du quai, construite (à annoncer comme telle). La vue
+> l'applique d'elle-même pour un camion qui se réchauffe (`seuilReserve`, `seuilRefus`) ; pour les autres palettes, le
+> contenu déclare `attendu` / `motifAttendu` conformes : un test du bloc `picard` relit chaque `contenus/picard-ent4*.js`
+> et refuse une palette hors de la règle.
+
 ## 6. Aides
 
 Erreur induite = pas de chef de quai qui guide, pas de repère P1. Indices dans les documents seulement. Bilan à la fin.
