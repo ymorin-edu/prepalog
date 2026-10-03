@@ -6,7 +6,7 @@
 > Lis docs/briefs/COORDINATION-boost.md puis implémente le brief ENT-3.2-imprevu. Annonce la durée avant de commencer, propose-moi 2 ou 3 imprévus chiffrés avec le script de calage, et attends mon choix avant de coder.
 > ```
 
-**Statut** : à implémenter *(chantier moteur + séance ; **Opus**, séance nouvelle de bout en bout)*
+**Statut** : **livré** le 03/10/2026, `pret: false`, à valider à l'écran *(chantier moteur + séance ; Opus)*
 **Date du brief** : 03/10/2026
 **Maquette validée** : « Maquette imprévu ENT-3.2 » (Cowork, 03/10/2026) : le message du responsable et l'écran Tournée.
 **Séance concernée** : ENT-3.2 `boost-ent32`, **aujourd'hui `pret: false`** (cachée aux élèves) : on peut donc la
@@ -106,9 +106,9 @@ Ribot (ou le client choisi) est barré et je ne peux plus le charger ; (4) ma to
 
 ## 11. Questions ouvertes
 
-- [ ] Le message arrive-t-il avec un délai fictif (« il est 14 h 00 »), ou sans heure ? (la maquette met l'heure dans le texte.)
-- [ ] Barème : rester à 8 jalons (les deux nouveaux remplaçant `trajet10`/`trajet5` ?) ou passer à 10 ? Recommandation : 10.
-- [ ] Un client urgent qui s'ajoute (avec un point à situer) : hors périmètre, à garder pour une autre séance ?
+- [x] *(Tristan, 03/10 : « Il est 14 h 00 » dans le texte)* Le message arrive-t-il avec un délai fictif (« il est 14 h 00 »), ou sans heure ? (la maquette met l'heure dans le texte.)
+- [x] *(Tristan, 03/10 : 10 jalons)* Barème : rester à 8 jalons (les deux nouveaux remplaçant `trajet10`/`trajet5` ?) ou passer à 10 ? Recommandation : 10.
+- [x] *(hors périmètre, gardé pour une autre séance)* Un client urgent qui s'ajoute (avec un point à situer) : hors périmètre, à garder pour une autre séance ?
 
 ## 12. Moteur touché et travail en parallèle *(ajouté le 03/10/2026)*
 
@@ -132,8 +132,34 @@ Ribot (ou le client choisi) est barré et je ne peux plus le charger ; (4) ma to
 ## Compte rendu *(rempli par Claude Code à la livraison)*
 
 - **Fichiers créés / modifiés** :
+  - créé `contenus/boost-ent32-imprevu.js` (les données de l'imprévu, sans import : lues par la séance ET par le calage) ;
+  - moteur : `core/types/tournee.js` (option `phases`, `passerPhase`, bilan par phase, « Recommencer » par phase,
+    bandeau « Nouveau message », commande annulée barrée, créneau changé repéré), `core/types/entreprise.js`
+    (`volet.declencheurs` : message déclenché par une condition, une seule fois, marqué dans `db.volets`),
+    `core/types/carte.js` (rond barré, sans cible), `styles/base.css` (quatre petites règles, aucune variable touchée) ;
+  - séance : `contenus/boost-ent32.js` (feuille qui suit la phase, `optimumImprevu()` recalculé, `TOURNEE_IMPREVU`,
+    message, jalons `replanif` et `trajet2`), `activites/boost-ent32.js` (déclare `TOURNEE_IMPREVU`) ;
+  - outil : `outils/carte/calibrer.mjs` (vérifie aussi l'imprévu ; sans argument = ENT-3.2 et son imprévu) ;
+  - tests : `outils/test/boost.mjs` ; fiche `activites/FICHE-SEANCE.md` (une ligne sur `declencheurs`).
 - **Écarts par rapport au brief** :
-- **Décisions prises en route** :
-- **Tests** :
-- **Commits** :
+  - l'exemple de la maquette (Pâtisserie avant 14 h 30) est impossible (arrivée au plus tôt 14 h 34), et avancer le
+    créneau de la Pâtisserie ne force rien (la meilleure tournée de la phase 1 commence chez elle : 312 tournées justes
+    sur 371 tiendraient encore). Le créneau **change de client** : option 1 choisie par Tristan ;
+  - déclencheur : tournée qui tient tout **et** feuille vérifiée juste (choix de Tristan), pas la seule condition de `trajet5` ;
+  - « ancienne tournée » = la tournée de l'élève **client annulé retiré** (le moteur le retire de lui-même à l'arrivée du message).
+- **Décisions prises en route** : voir `docs/decisions.md` (03/10/2026, trois lignes ENT-3.2). En bref : Cave fixée à quai par
+  le message ; 14 h 00 ; 10 jalons ; jalons de la phase 1 figés à l'arrivée du message (ils lisent `phase.avant`) ;
+  écran sans verdict en phase 2 ; ligne de la commande annulée gardée à 0 kg dans la feuille ; une tournée identique à celle
+  de l'arrivée du message vaut « ko » au jalon 9 ; l'accueil n'annonce pas l'imprévu.
+- **Tests** : bloc `boost`, 3 cas d'ENT-3.2 **réécrits** (barème 8 → 10, suivi 0/10, « 8 jalons sur 8 » devenu « les 8 jalons
+  de la phase 1 ») et 16 cas ajoutés pour ENT-3.2. Le cas `carte : le calage d'ENT-3.2 tient` lance `calibrer.mjs` sans argument :
+  il vérifie désormais aussi l'imprévu. Un cas « Moteur entreprise » ajouté (message déclenché une seule fois même si la
+  condition reste vraie). Suite complète 362/362. Huit sabotages éprouvés, chacun fait tomber au moins un cas : message
+  rejoué au remontage, message à l'ouverture, client annulé cliquable, phase 2 sur les données de la phase 1, optimum de
+  phase 2 recopié, garde du jalon 9 retirée, phase 2 qui parle, « Recommencer » qui vide la tournée.
+- **Commits** : voir l'historique (« ENT-3.2 : un imprévu en cours de journée … »).
 - **Reste ouvert** :
+  - validation à l'écran par Tristan (critères du §10), puis `pret: true` ;
+  - corrigé à écrire après validation ;
+  - à recaler si le chantier D (données qui changent) passe après : relancer `node outils/carte/calibrer.mjs` ;
+  - `docs/briefs/COORDINATION-boost.md` (ligne C) est en cours de modification par une autre session : statut à mettre à jour.

@@ -23,6 +23,12 @@ const moteur = creerEntreprise({ ENTREPRISE, VOCAB, CATALOGUE, …, etapes, accu
 export function rendre(hote, ctx) { moteur.rendre(hote, ctx); }
 ```
 
+Un `volet` sème ses messages à l'ouverture (`semer`). Il peut aussi déclarer des messages qui
+arrivent **plus tard**, une seule fois, quand le travail de l'élève rend une condition vraie :
+`declencheurs: [{ id, quand(db), semer(prenom, db), phaseTournee }]` (modèle : l'imprévu
+d'ENT-3.2). `phaseTournee` fait passer la tournée à une phase déclarée dans `tournee.phases`
+(client annulé, créneau déplacé, écran sans verdict) : voir l'en-tête de `core/types/tournee.js`.
+
 `creerEntreprise` est dans `core/types/entreprise.js`. Les autres moteurs sont dans
 `core/types/` (`qcm`, `ordre`, `assoc`, `numerique`, `tableur`, `tableau`, `tournee`, …).
 

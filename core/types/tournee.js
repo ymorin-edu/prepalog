@@ -74,6 +74,22 @@
 //
 // Un point peut porter un CRÉNEAU de livraison : `creneau: { avant: 14 * 60 + 45, libelle }`
 // (ENT-3.2 : la Pâtisserie Arnaud n'accepte qu'avant 14 h 45). Voir `bilanDe`.
+//
+// Des PHASES : la journée change en cours de séance (ENT-3.2, « l'imprévu », chantier C du plan
+// Boost, 03/10/2026) :
+//
+//   phases: { 2: { annules: [id…],                         // commandes annulées : barrées, non chargeables
+//                  creneaux: { [id]: { avant, libelle } | null },   // créneau posé, déplacé ou levé (null)
+//                  sansVerdict: true,                       // la phase ne dit plus si les limites tiennent
+//                  consigne: '…' } }                        // facultatif : remplace la consigne
+//     La phase en cours est rangée dans l'état (`etat.phase = { n, depuis, avant, depart }`), posée
+//     par `passerPhase(etat, n)` — l'hôte l'appelle quand le contenu le décide (message déclenché,
+//     voir `volet.declencheurs` dans entreprise.js). Sans `etat.phase`, c'est la phase 1 : la
+//     journée telle que le contenu la déclare. Le bilan, la feuille, les jauges et les jalons lisent
+//     tous les données de la phase EN COURS, par le même `bilanDe`. `avant` garde la tournée (et la
+//     feuille) telle qu'elle était à l'instant du changement : les jalons de la phase 1 la lisent.
+//     « Recommencer » remet la tournée de départ de la phase en cours (`depart`), pas une tournée
+//     vide. Sans `phases`, rien de tout cela n'existe : ENT-3.1 et ENT-3.3 ne bougent pas.
 
 import { ech } from '../ui.js';
 import { svgPlan, legendePlan, distanceKm } from './plan.js';
@@ -107,6 +123,37 @@ export function creerTournee(T) {
   const H = T.horaire || null;
   const REPORT = T.report || [];
   const pointDe = (id) => POINTS.find((p) => String(p.id) === String(id));
+
+  // ── Les phases de la journée (voir l'en-tête) ───────────────────────────────────────────
+  // Une erreur de contenu (un client inconnu) est une erreur franche à la création, comme
+  // `etatInitial` plus bas.
+  const PHASES = T.phases || {};
+  Object.keys(PHASES).forEach((n) => {
+    const c = PHASES[n] || {};
+    [...(c.annules || []), ...Object.keys(c.creneaux || {})].forEach((id) => {
+      if (!pointDe(id)) throw new Error(`creerTournee : la phase ${n} cite « ${id} », qui n'est pas un point`);
+    });
+  });
+  const numPhase = (e) => (e && e.phase && e.phase.n) || 1;
+  const cfgPhase = (e) => PHASES[numPhase(e)] || null;
+  const annulesDe = (e) => ((cfgPhase(e) || {}).annules || []).map(String);
+  const estAnnule = (e, id) => annulesDe(e).includes(String(id));
+  // Les points de la phase en cours : sans les annulés, avec les créneaux de la phase. Un point
+  // dont le créneau a changé porte `creneauChange` (et `creneauLeve` s'il n'en a plus) : l'écran
+  // le repère. Les objets du contenu ne sont jamais modifiés.
+  const pointsDe = (e) => {
+    const c = cfgPhase(e);
+    if (!c) return POINTS;
+    const an = annulesDe(e);
+    const cr = c.creneaux || {};
+    return POINTS.filter((p) => !an.includes(String(p.id))).map((p) => {
+      if (!Object.prototype.hasOwnProperty.call(cr, String(p.id))) return p;
+      const q = Object.assign({}, p, { creneauChange: true });
+      if (cr[String(p.id)]) q.creneau = cr[String(p.id)];
+      else { delete q.creneau; q.creneauLeve = true; }
+      return q;
+    });
+  };
   // Le numéro du client, celui que portent la fiche de tournée, le mail du responsable et le
   // rond bleu de la carte. Il ne bouge jamais ; l'ordre de passage, lui, est la pastille verte.
   const numeroDe = (id) => {
@@ -189,6 +236,11 @@ export function creerTournee(T) {
   // aussi (`sansVerdict`) sans pour autant devenir une copie.
   const SANS_VERDICT = COPIE || !!T.sansVerdict;
   const REPERE = !!T.jaugesRepere || COPIE || !!T.sansVerdict;
+  // Une PHASE peut aussi se taire (`phases[n].sansVerdict`, ENT-3.2 après l'imprévu : *« ma tournée
+  // d'avant ne tient plus et rien à l'écran ne me le dit »*). `sv` est la valeur du dessin EN
+  // COURS, posée en tête de `html` : les jauges la lisent pendant ce dessin, et lui seul.
+  const svDe = (e) => SANS_VERDICT || !!(cfgPhase(e) || {}).sansVerdict;
+  let sv = SANS_VERDICT;
 
   // La feuille de calcul, facultative. Elle n'est pas une vue de menu : elle se pose dans
   // cette page, sous les jauges, parce qu'elle est tirée des données que l'élève vient de
@@ -259,9 +311,14 @@ export function creerTournee(T) {
     return { ordre, quai, report: {}, juge: {}, valide: null,
       depart: I.depart ? Date.now() : null, arrivee: I.arrivee ? Date.now() : null };
   };
+  // Le départ de la PHASE EN COURS : après un imprévu, c'est la tournée telle qu'elle était à
+  // l'arrivée du message (client annulé retiré), pas la tournée vide de la phase 1.
+  const departDe = (e) => (numPhase(e) > 1 && e.phase.depart
+    ? Object.assign({ report: {}, juge: {}, valide: null }, JSON.parse(JSON.stringify(e.phase.depart)))
+    : etatDepart());
   // Le bouton « Recommencer » est inutile tant que la tournée est celle de départ.
   const estDepart = (e) => {
-    const d = etatDepart();
+    const d = departDe(e);
     const cle = (x) => JSON.stringify([x.ordre, [...x.quai].sort(), !!x.depart, !!x.arrivee]);
     return cle(e) === cle(d);
   };
@@ -270,8 +327,12 @@ export function creerTournee(T) {
   // Tout se recalcule à partir de l'ordre courant, à chaque dessin. Rien n'est mémorisé :
   // une valeur mise en cache finirait par mentir après un déplacement.
   function bilanDe(etat) {
-    const retenus = etat.ordre.map(pointDe).filter(Boolean);
-    const ecartes = etat.quai.map(pointDe).filter(Boolean);
+    // Les points de la PHASE en cours : un client annulé n'est ni chargé ni à quai — il ne
+    // compte nulle part, même si un état ancien le citait encore.
+    const PTS = pointsDe(etat);
+    const dePhase = (id) => PTS.find((p) => String(p.id) === String(id));
+    const retenus = etat.ordre.map(dePhase).filter(Boolean);
+    const ecartes = etat.quai.map(dePhase).filter(Boolean);
 
     const cumuls = {};
     const depassements = [];
@@ -319,7 +380,7 @@ export function creerTournee(T) {
     //
     // « Avant 14 h 45 » admet 14 h 45 pile (`<=`), comme le calage.
     const creneaux = [];
-    POINTS.forEach((p) => {
+    PTS.forEach((p) => {
       if (!p.creneau || p.creneau.avant == null) return;
       const id = String(p.id);
       const a = arrivees[id] == null ? null : arrivees[id];
@@ -338,6 +399,8 @@ export function creerTournee(T) {
       // Exposé pour les jalons du contenu, qui doivent pouvoir distinguer « mal organisé » de
       // « pas fini ». `arrivee` est déjà l'HEURE de retour, d'où les noms explicites.
       departPose: departPose(etat), arriveePose: arriveePose(etat), complete: chaineComplete(etat),
+      // La phase et ses données, pour la feuille de calcul du contenu (elle suit la journée en cours).
+      phase: numPhase(etat), points: PTS, annules: annulesDe(etat),
     };
   }
 
@@ -355,13 +418,13 @@ export function creerTournee(T) {
     // rien. Vu à l'écran : les colis de Boost n'ont pas de maximum et aucune case ne les
     // réclame ; leur jauge disait pourtant « à calculer ».
     if (muet && max != null) {
-      return `<div class="tour-jauge tour-jauge-repere ${trop && !SANS_VERDICT ? 'trop' : ''}">
+      return `<div class="tour-jauge tour-jauge-repere ${trop && !sv ? 'trop' : ''}">
         <div class="tour-j-tete"><span>${ech(m.libelle)}</span>
           <b class="mono">max ${fr(max)} ${ech(m.unite || '')}</b></div>
         <span class="note">C'est la limite à ne pas dépasser.
           Le total, c'est à vous de le calculer.</span>
         ${m.comparaison ? `<span class="tour-compare">${ech(m.comparaison)}</span>` : ''}
-        ${SANS_VERDICT ? '' : (trop ? `<span class="pastille crit">${ech(m.libelle)} dépassée</span>`
+        ${sv ? '' : (trop ? `<span class="pastille crit">${ech(m.libelle)} dépassée</span>`
           : (DANS_GRILLE && valeur > 0 ? '<span class="pastille ok">limite respectée</span>' : ''))}
       </div>`;
     }
@@ -380,7 +443,7 @@ export function creerTournee(T) {
       // La distance reste donnée : elle est le produit du parcours cliqué, pas un calcul que
       // l'élève doit savoir faire. Le nombre d'arrêts et le temps par arrêt aussi — ce sont
       // les données de son calcul, pas son résultat.
-      return `<div class="tour-jauge tour-jauge-repere ${b.enRetard && !SANS_VERDICT ? 'trop' : ''}">
+      return `<div class="tour-jauge tour-jauge-repere ${b.enRetard && !sv ? 'trop' : ''}">
         <div class="tour-j-tete"><span>${ech(H.libelleLimite || 'Horaire limite')}</span>
           <b class="mono">${H.limite != null ? hhmm(H.limite) : '—'}</b></div>
         ${DANS_GRILLE
@@ -393,7 +456,7 @@ export function creerTournee(T) {
               ${ech(String(H.service || 0))} min par arrêt, ${ech(String(H.vitesse))} km/h en ville.
               L'heure de retour, c'est à vous de la calculer.</span>`}
         ${H.comparaison ? `<span class="tour-compare">${ech(H.comparaison)}</span>` : ''}
-        ${SANS_VERDICT ? '' : (b.enRetard ? `<span class="pastille crit">${ech(H.libelleLimite || 'Horaire limite')} manqué</span>`
+        ${sv ? '' : (b.enRetard ? `<span class="pastille crit">${ech(H.libelleLimite || 'Horaire limite')} manqué</span>`
           : (DANS_GRILLE && b.complete ? '<span class="pastille ok">horaire tenu</span>' : ''))}
       </div>`;
     }
@@ -428,11 +491,11 @@ export function creerTournee(T) {
         ${tete}<span class="note">${ech(c.nom)} : ${ech(c.libelle)}. Ce client n’est pas dans la tournée.</span></div>`;
     }
     if (muet) {
-      return `<div class="tour-jauge tour-jauge-creneau tour-jauge-repere ${c.rate && !SANS_VERDICT ? 'trop' : ''}" data-creneau="${ech(c.id)}">
+      return `<div class="tour-jauge tour-jauge-creneau tour-jauge-repere ${c.rate && !sv ? 'trop' : ''}" data-creneau="${ech(c.id)}">
         ${tete}
         <span class="note">${ech(c.nom)} : ${ech(c.libelle)}. Il faut arriver chez ce client avant cette heure.
           L’heure d’arrivée chez lui, c’est à vous de la calculer.</span>
-        ${SANS_VERDICT ? '' : (c.rate ? '<span class="pastille crit">Créneau raté</span>'
+        ${sv ? '' : (c.rate ? '<span class="pastille crit">Créneau raté</span>'
           : (DANS_GRILLE && b.complete ? '<span class="pastille ok">créneau tenu</span>' : ''))}
       </div>`;
     }
@@ -470,7 +533,12 @@ export function creerTournee(T) {
 
     html(etat0, opts = {}) {
       const etat = Object.assign(vide(), etat0 || {});
+      sv = svDe(etat);
       const b = bilanDe(etat);
+      // Ce que l'écran affiche est la journée de la phase en cours (créneaux compris).
+      const PTS = pointsDe(etat);
+      const pointDe = (id) => PTS.find((p) => String(p.id) === String(id));
+      const annules = annulesDe(etat);
       const juge = etat.juge || {};
       const aJuge = Object.keys(juge).length > 0;
       const n = etat.ordre.length;
@@ -483,8 +551,14 @@ export function creerTournee(T) {
       }
 
       // Le créneau se lit aussi sur la ligne du client : c'est une donnée de son calcul.
-      const creneauNote = (p) => (p.creneau && p.creneau.avant != null
-        ? ` · <span class="tour-creneau">${ech(p.creneau.libelle || `livraison avant ${hhmm(p.creneau.avant)}`)}</span>` : '');
+      // Un créneau qui a CHANGÉ avec la phase est repéré (« nouveau », ou « plus de créneau ») :
+      // l'élève doit voir ce qui a bougé, sans qu'on lui dise ce que ça fait à sa tournée.
+      const creneauNote = (p) => {
+        if (p.creneauLeve) return ' · <span class="tour-creneau tour-creneau-change" data-creneau-change>plus de créneau aujourd’hui</span>';
+        if (!p.creneau || p.creneau.avant == null) return '';
+        return ` · <span class="tour-creneau${p.creneauChange ? ' tour-creneau-change' : ''}"${p.creneauChange ? ' data-creneau-change' : ''}>`
+          + `${ech(p.creneau.libelle || `livraison avant ${hhmm(p.creneau.avant)}`)}${p.creneauChange ? ' · nouveau' : ''}</span>`;
+      };
 
       // Le récapitulatif, compact : une ligne par arrêt. Le numéro du client est posé AVANT le
       // nom — « 3 · La Pointe Sud » — pour faire le lien avec la fiche et avec le rond bleu de
@@ -538,11 +612,21 @@ export function creerTournee(T) {
       // Deux listes symétriques se confondaient (quatrième défaut relevé par Tristan) et elles
       // poussaient la carte hors de l'écran au moment même où l'élève en avait besoin. Ici,
       // c'est une ligne de puces, et la carte reste visible.
+      const aQuai = etat.quai.filter((id) => pointDe(id));
+      // Les commandes annulées par la phase : barrées, sans bouton — elles ne se chargent plus.
+      const lignesAnnulees = !annules.length ? '' : `<div class="tour-annules" data-tour-annules>
+        <div class="ent-lbl">Commandes annulées (${annules.length})</div>
+        <ul class="tour-liste tour-puces">${annules.map((id) => {
+          const p = POINTS.find((q) => String(q.id) === id);
+          return !p ? '' : `<li class="tour-item tour-puce tour-puce-annule" data-annule="${ech(id)}">
+            <span class="tour-texte"><span class="tour-nom"><s><span class="tour-num mono">${ech(numeroDe(id))} ·</span><strong>${ech(p.nom)}</strong></s></span>
+            <span class="note">commande annulée : ne se charge plus</span></span></li>`;
+        }).join('')}</ul></div>`;
       const quai = `<div class="tour-quai">
-        <div class="ent-lbl">${ech(T.libelleQuai || 'Laissés à quai')} (${etat.quai.length})</div>
-        ${etat.quai.length === 0
+        <div class="ent-lbl">${ech(T.libelleQuai || 'Laissés à quai')} (${aQuai.length})</div>
+        ${aQuai.length === 0
           ? '<p class="note">Aucun. Tout est chargé dans le véhicule.</p>'
-          : `<ul class="tour-liste tour-liste-quai tour-puces">${etat.quai.map((id) => {
+          : `<ul class="tour-liste tour-liste-quai tour-puces">${aQuai.map((id) => {
               const p = pointDe(id);
               return !p ? '' : `<li class="tour-item tour-puce">
                 <span class="tour-texte">
@@ -552,6 +636,7 @@ export function creerTournee(T) {
                 <button class="btn btn-s" data-reprendre="${ech(id)}">${ech(T.libelleCharger || 'reprendre')}</button>
                 </span></li>`;
             }).join('')}</ul>`}
+        ${lignesAnnulees}
       </div>`;
 
       // Les jauges se taisent tant que le travail n'est pas validé. Après, elles le rendent :
@@ -561,7 +646,8 @@ export function creerTournee(T) {
       // validation : `juge` est effacé dès que l'élève touche à sa tournée, donc les jauges se
       // retaisent au premier changement. Se fier au seul `valide` laissait une validation
       // ancienne dévoiler les totaux d'une tournée qui n'avait plus rien à voir.
-      const muet = REPERE && !estRevele(etat);
+      // Une phase qui se tait (`sansVerdict`) rend aussi les jauges muettes, validation ou pas.
+      const muet = (REPERE && !estRevele(etat)) || (sv && !SANS_VERDICT);
 
       // Ce que dit la feuille quand ses formules sont toutes justes et que la tournée, elle,
       // ne tient pas : l'élève doit voir que ce n'est PAS son calcul qui est en cause. On dit
@@ -569,20 +655,27 @@ export function creerTournee(T) {
       const gj = (etat.grille && etat.grille.juge) || {};
       const formulesJustes = Object.keys(gj).length > 0 && Object.values(gj).every((x) => x === 'ok');
       const contrainteFranchie = (b.depassements && b.depassements.length > 0) || b.enRetard || b.creneauRate;
-      const avertissement = !SANS_VERDICT && DANS_GRILLE && formulesJustes && contrainteFranchie
+      const avertissement = !sv && DANS_GRILLE && formulesJustes && contrainteFranchie
         ? 'Vos formules sont justes, mais la tournée ne respecte pas toutes les contraintes '
           + '(colonne de droite, en rouge). Le calcul est bon : c’est la tournée qu’il faut revoir.'
         : '';
       // Avec un état de départ (séance « à corriger »), recommencer = retrouver la tournée du
-      // collègue, pas la vider : le bouton ne sert à rien tant qu'on y est.
-      const vierge = T.etatInitial ? estDepart(etat) : (!n && !etat.depart && !etat.arrivee);
+      // collègue, pas la vider : le bouton ne sert à rien tant qu'on y est. Après un imprévu
+      // (phase 2 et plus), recommencer = retrouver la tournée de l'arrivée du message.
+      const enPhase = numPhase(etat) > 1;
+      const vierge = (T.etatInitial || enPhase) ? estDepart(etat) : (!n && !etat.depart && !etat.arrivee);
+      const razTitre = enPhase
+        ? 'Remettre la tournée telle qu’elle était à l’arrivée du message. Les formules de la feuille de calcul sont gardées.'
+        : (T.etatInitial
+          ? 'Retrouver la tournée telle qu’elle était à l’ouverture. Les formules de la feuille de calcul sont gardées.'
+          : 'Remettre toutes les commandes à quai et retirer le départ et l’arrivée. Les formules de la feuille de calcul sont gardées.');
+      const razLibelle = razArme
+        ? (enPhase ? 'Revenir à la tournée de l’arrivée du message ? Cliquez pour confirmer'
+          : (T.etatInitial ? 'Retrouver la tournée de départ ? Cliquez pour confirmer' : 'Tout remettre à quai ? Cliquez pour confirmer'))
+        : (T.etatInitial && !enPhase ? 'Retrouver la tournée de départ' : 'Recommencer la tournée');
       const raz = `<div class="tour-raz">
           <button class="btn btn-s${razArme ? ' btn-alerte btn-p' : ''}" data-tour-raz ${vierge ? 'disabled' : ''}
-            title="${T.etatInitial
-              ? 'Retrouver la tournée telle qu’elle était à l’ouverture. Les formules de la feuille de calcul sont gardées.'
-              : 'Remettre toutes les commandes à quai et retirer le départ et l’arrivée. Les formules de la feuille de calcul sont gardées.'}">${
-            razArme ? (T.etatInitial ? 'Retrouver la tournée de départ ? Cliquez pour confirmer' : 'Tout remettre à quai ? Cliquez pour confirmer')
-              : (T.etatInitial ? 'Retrouver la tournée de départ' : 'Recommencer la tournée')}</button>
+            title="${razTitre}">${razLibelle}</button>
           ${razArme ? '<button class="btn btn-s" data-tour-raz-non>Annuler</button>' : ''}
         </div>`;
       const jaugesHtml = `${raz}${MESURES.map((m) => jauge(m, b.cumuls[m.id], muet)).join('')}
@@ -625,15 +718,26 @@ export function creerTournee(T) {
           </div>
         </div>`;
 
+      // La consigne de la phase en cours : après l'imprévu, celle d'avant serait fausse.
+      const consigne = (cfgPhase(etat) || {}).consigne || T.consigne;
+      // « Nouveau message » en tête de l'écran : l'hôte passe les messages DÉCLENCHÉS non lus
+      // (`opts.notifications`, voir `volet.declencheurs` dans entreprise.js). Le bouton ouvre le
+      // message ; c'est l'hôte qui le branche, la messagerie est à lui.
+      const notifs = opts.notifications || [];
+      const notif = notifs.map((m) => `<div class="avis tour-notif" data-tour-notif role="status">
+          <span><strong>Nouveau message</strong> · ${ech(m.from || '')} : « ${ech(m.subject || '')} »</span>
+          <button class="btn btn-s btn-p" data-tour-notif-ouvrir="${ech(String(m.id))}">Lire le message</button>
+        </div>`).join('');
       return `
         <div class="ent-tete"><h2>${ech(T.titre || 'Tournée')}</h2></div>
-        ${T.consigne ? `<p class="note">${ech(T.consigne)}</p>` : ''}
+        ${notif}
+        ${consigne ? `<p class="note">${ech(consigne)}</p>` : ''}
         ${etapesHtml(etat, opts.db)}
         <div class="tour-grille${DANS_GRILLE ? ' tour-grille-deux' : ''}">
           <div class="tour-col">
             ${PLAN ? `<div class="plan-boite${CLIQUABLE ? ' plan-boite-clic' : ''}">
               ${CARTE ? CARTE.html({
-                ordre: etat.ordre, cliquable: CLIQUABLE,
+                ordre: etat.ordre, cliquable: CLIQUABLE, annules,
                 extremites: EXTREMITES, departPose: etat.depart, arriveePose: etat.arrivee,
               }) : svgPlan(PLAN, {
                 noms: true, ordre: etat.ordre, cliquable: CLIQUABLE, id: 'tournee',
@@ -685,6 +789,28 @@ export function creerTournee(T) {
       const aTravaille = (etat.ordre && etat.ordre.length) || etat.depart || etat.arrivee;
       if (aTravaille) { etat.amorce = Date.now(); return true; }
       Object.assign(etat, etatDepart(), { amorce: Date.now() });
+      return true;
+    },
+
+    // ── Passer à une phase de la journée (l'imprévu d'ENT-3.2) ─────────────────────────────
+    // Appelé par l'hôte quand le contenu le décide. **Une seule fois** par phase : un état déjà à
+    // cette phase (ou au-delà) n'est pas touché — ni au remontage, ni après une reconnexion.
+    // Garde la tournée et la feuille d'AVANT (les jalons de la phase précédente les lisent),
+    // retire les clients annulés de la tournée comme du quai, et note la tournée de départ de la
+    // phase (celle que remet « Recommencer »). La correction en cours ne vaut plus rien : les
+    // données ont changé sous les formules. Rend vrai si quelque chose a changé, pour que l'hôte sauve.
+    passerPhase(etat, n) {
+      if (!PHASES[n] || !etat || numPhase(etat) >= n) return false;
+      if (!etat.ordre) Object.assign(etat, vide());
+      const copie = (x) => JSON.parse(JSON.stringify(x));
+      const bouts = (e) => ({ ordre: e.ordre, quai: e.quai, depart: e.depart || null, arrivee: e.arrivee || null });
+      const avant = copie(Object.assign(bouts(etat), { grille: etat.grille || null }));
+      const an = (PHASES[n].annules || []).map(String);
+      etat.ordre = etat.ordre.filter((x) => !an.includes(String(x)));
+      etat.quai = etat.quai.filter((x) => !an.includes(String(x)));
+      etat.phase = { n, depuis: Date.now(), avant, depart: copie(bouts(etat)) };
+      etat.juge = {}; etat.bloque = null; etat.valide = null;
+      if (etat.grille) { etat.grille.juge = {}; etat.grille.valide = null; }
       return true;
     },
 
@@ -742,6 +868,8 @@ export function creerTournee(T) {
       // **À la fin, toujours.** C'est la règle expliquée à la classe, et c'est ce qui fait de la
       // carte une construction et non une correction.
       const charger = (id) => {
+        // Une commande annulée par la phase ne se charge plus, quel que soit le chemin du clic.
+        if (estAnnule(etat, id)) return;
         etat.quai = etat.quai.filter((x) => String(x) !== String(id));
         if (!etat.ordre.some((x) => String(x) === String(id))) etat.ordre.push(String(id));
         invalider();
@@ -846,12 +974,16 @@ export function creerTournee(T) {
 
       z.querySelector('[data-tour-raz]')?.addEventListener('click', () => {
         if (!etaitArme) { razArme = true; api.redessiner(); return; }
-        const neuf = etatDepart();
+        const enPhase = numPhase(etat) > 1;
+        const neuf = departDe(etat);
         etat.ordre = neuf.ordre; etat.quai = neuf.quai;
         etat.depart = neuf.depart; etat.arrivee = neuf.arrivee;
         invalider();
         api.sauver(); api.redessiner();
-        if (api.toast) api.toast(T.etatInitial ? 'Tournée de départ retrouvée.' : 'Tournée remise à zéro : tout est à quai.');
+        if (api.toast) {
+          api.toast(enPhase ? 'Tournée remise comme à l’arrivée du message.'
+            : (T.etatInitial ? 'Tournée de départ retrouvée.' : 'Tournée remise à zéro : tout est à quai.'));
+        }
       });
       z.querySelector('[data-tour-raz-non]')?.addEventListener('click', () => api.redessiner());
 
@@ -880,7 +1012,7 @@ export function creerTournee(T) {
         //
         // Déclaratif : `exigeConforme: true`. Une séance où le report porte sur un chargement
         // volontairement impossible n'en veut pas.
-        const muetAuReport = REPERE && !estRevele(etat);
+        const muetAuReport = (REPERE && !estRevele(etat)) || svDe(etat);
         if (T.exigeConforme) {
           // Quand les jauges se taisent, ce message doit se taire aussi : « dépassée de 57 kg »
           // sur un plafond de 180 rend le total par une soustraction, et l'élève n'a plus rien

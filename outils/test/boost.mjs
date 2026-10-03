@@ -1591,6 +1591,12 @@ const construire32 = async (ordre, { depart = true, arrivee = true } = {}) => {
 // Les valeurs ATTENDUES de la journée, écrites ici à la main (calage de `calibrer.mjs`).
 const ORDRE32 = ['c6', 'c7', 'c8', 'c3', 'c4', 'c1', 'c2'];   // meilleur qui tient tout : 12,54 km
 const COURT32 = ['c4', 'c3', 'c8', 'c1', 'c2', 'c7', 'c6'];   // le plus court : 11,00 km, rate le créneau
+const PHASE1_32 = ['reperage', 'choix', 'charge', 'horaire', 'creneau', 'formules', 'trajet10', 'trajet5'];
+// L'imprévu (phase 2), écrit à la main d'après l'énumération des 720 ordres : Atelier Ribot (c3)
+// annulé, Épicerie Roussel (c8) avant 14 h 40, Pâtisserie Arnaud sans créneau, Cave à quai.
+const APRES32 = ['c6', 'c7', 'c8', 'c4', 'c1', 'c2'];          // l'ancienne tournée, Ribot retiré : 12,50 km, Roussel ratée
+const OPT2_32 = ['c8', 'c4', 'c1', 'c2', 'c7', 'c6'];          // meilleure qui tient tout : 12,38 km
+const LOIN2_32 = ['c8', 'c2', 'c1', 'c4', 'c7', 'c6'];         // tient tout, mais 13,87 km (+12 %)
 
 await v('ENT-3.2 : la séance est un entraînement de C2.4, cachée aux élèves, sans notation', async () => {
   const r = await page32.evaluate(async () => {
@@ -1607,8 +1613,9 @@ await v('ENT-3.2 : la séance est un entraînement de C2.4, cachée aux élèves
   if (m.pret !== false) throw new Error('pret devrait être false tant que Tristan n’a pas validé la séance');
   if ('notation' in m) throw new Error('une séance notée sur 20 ne déclare pas de `notation`');
   if (m.jeuId !== 'boost' || m.reinitialisable) throw new Error('la base de Boost est partagée avec ENT-3.1 : ni jeu à part, ni remise à zéro');
-  if (r.nb !== 8 || m.bareme !== 8) throw new Error('barème : ' + m.bareme + ' pour ' + r.nb + ' jalons');
-  if (r.ids.join() !== 'reperage,choix,charge,horaire,creneau,formules,trajet10,trajet5') throw new Error('jalons : ' + r.ids.join());
+  // Dix jalons depuis l'imprévu (03/10/2026) : les huit de la phase 1, puis les deux de la phase 2.
+  if (r.nb !== 10 || m.bareme !== 10) throw new Error('barème : ' + m.bareme + ' pour ' + r.nb + ' jalons');
+  if (r.ids.join() !== 'reperage,choix,charge,horaire,creneau,formules,trajet10,trajet5,replanif,trajet2') throw new Error('jalons : ' + r.ids.join());
   if (r.registre > 0 && !r.inscrite) throw new Error('la séance n’est pas dans le registre');
 });
 
@@ -1639,7 +1646,7 @@ await v('ENT-3.2 : les jalons ne reprochent rien avant que l’élève ait comme
   if (faits.length) throw new Error('jalon(s) validé(s) sans rien avoir fait : ' + faits.join(', '));
   const s = await page32.evaluate(() => { const l = window.__b32.suivi; return l.length ? l[l.length - 1] : null; });
   if (!s) throw new Error('aucun avancement remonté au suivi');
-  if (s.max !== 8 || s.score !== 0) throw new Error('suivi : ' + s.score + '/' + s.max);
+  if (s.max !== 10 || s.score !== 0) throw new Error('suivi : ' + s.score + '/' + s.max);
 });
 
 await v('ENT-3.2 : le mail du responsable porte la fiche des huit commandes et le créneau, sans la réponse', async () => {
@@ -1661,6 +1668,20 @@ await v('ENT-3.2 : le mail du responsable porte la fiche des huit commandes et l
   if (/\b230\b/.test(t) || /\b50 kg\b/.test(t)) throw new Error('le mail donne le total ou la masse à écarter');
 });
 
+// L'imprévu (03/10/2026) : il ne doit RIEN y avoir à l'ouverture — ni message, ni phase.
+const imprevu32 = () => page32.evaluate(() => {
+  const d = window.__b32.db;
+  const t = d.transport && d.transport['boost-ent32'] && d.transport['boost-ent32'].tournee;
+  return { mails: d.mails.filter((m) => m.declenche).map((m) => ({ id: m.id, subject: m.subject, read: m.read, declenche: m.declenche })),
+    marque: !!(d.volets && d.volets['boost-ent32#imprevu']), phase: t && t.phase ? t.phase.n : 1 };
+});
+await v('ENT-3.2 : à l’ouverture, aucun message d’imprévu et la journée est celle de la phase 1', async () => {
+  const r = await imprevu32();
+  if (r.mails.length || r.marque || r.phase !== 1) throw new Error('imprévu déjà là : ' + JSON.stringify(r));
+  const n = await page32.evaluate(() => window.__b32.db.mails.filter((m) => /Changement pour la tournée/.test(m.subject)).length);
+  if (n) throw new Error('le message de l’imprévu est semé à l’ouverture');
+});
+
 await v('ENT-3.2 : la tournée est fermée tant que les quatre nouveaux ne sont pas situés', async () => {
   await ouvrir32('tournee');
   if (await page32.$(`${z32} [data-clic-point]`)) throw new Error('la tournée est ouverte avant le repérage');
@@ -1680,6 +1701,12 @@ await v('ENT-3.2 : la bonne tournée se construit à la carte — jalons sur les
   }
   // La feuille n'est pas encore faite : « choix » et « formules » ne sont pas validés.
   if (j.choix === 'ok' || j.formules === 'ok') throw new Error('choix/formules validés sans calcul : ' + JSON.stringify(j));
+});
+
+await v('ENT-3.2 : une tournée qui tient tout ne suffit pas — sans la feuille vérifiée juste, pas d’imprévu', async () => {
+  const r = await imprevu32();
+  if (r.mails.length || r.marque || r.phase !== 1) throw new Error('l’imprévu est arrivé avant la feuille : ' + JSON.stringify(r));
+  if (await page32.$(`${z32} [data-tour-notif]`)) throw new Error('la notification est affichée');
 });
 
 await v('ENT-3.2 : les jauges sont muettes — la limite, jamais le total ni l’heure d’arrivée', async () => {
@@ -1714,7 +1741,7 @@ await v('ENT-3.2 : la feuille — huit poids, total, charge utile, poids à éca
   if (j.status === 'ok') throw new Error('« choix » validé avec un nombre tapé à la main');
 });
 
-await v('ENT-3.2 : les formules justes valident le calcul, « choix » et « formules » — 8 jalons sur 8', async () => {
+await v('ENT-3.2 : les formules justes valident le calcul, « choix » et « formules » — les 8 jalons de la phase 1', async () => {
   const formules = { B10: '=SOMME(B2:B9)', B12: '=B10-B11', B13: '=B10-B6',
     B17: '=B15/B16', B18: '=B17*60', B21: '=B19*B20', B22: '14:10', B23: '=B22+B18+B21',
     B28: '=B22+B26/B16*60+B27*B20' };
@@ -1728,10 +1755,232 @@ await v('ENT-3.2 : les formules justes valident le calcul, « choix » et « for
   const pas = Object.keys(g.juge).filter((k) => g.juge[k] !== 'ok');
   if (pas.length) throw new Error('cellules non justes : ' + pas.map((k) => k + '=' + g.juge[k]).join(', '));
   const j = await jalons32();
-  const nonOk = Object.keys(j).filter((k) => j[k] !== 'ok');
+  const nonOk = PHASE1_32.filter((k) => j[k] !== 'ok');
   if (nonOk.length) throw new Error('jalon(s) non validé(s) : ' + nonOk.join(', ') + ' — ' + JSON.stringify(j));
+  // La phase 1 est finie : l'imprévu vient d'arriver, et rien n'est encore replanifié.
   const s = await page32.evaluate(() => { const l = window.__b32.suivi; return l[l.length - 1]; });
-  if (s.score !== 8 || s.max !== 8) throw new Error('suivi : ' + s.score + '/' + s.max);
+  if (s.score !== 8 || s.max !== 10) throw new Error('suivi : ' + s.score + '/' + s.max);
+});
+
+/* ---- ENT-3.2 : l'imprévu (phase 2). La phase 1 vient d'être finie au test précédent ---- */
+
+// Reconstruit la tournée au clic EN PHASE 2 : la phase et la feuille sont gardées.
+const construire32p2 = async (ordre) => {
+  await page32.evaluate(() => {
+    const t = window.__b32.db.transport['boost-ent32'].tournee;
+    t.ordre = []; t.quai = ['c1', 'c2', 'c4', 'c5', 'c6', 'c7', 'c8']; t.depart = null; t.arrivee = null;
+    t.juge = {}; t.valide = null;
+  });
+  await ouvrir32('plan');
+  await ouvrir32('tournee');
+  await point32('[data-clic-extremite="depart"]');
+  for (const id of ordre) await point32(`[data-clic-point="${id}"]`);
+  await point32('[data-clic-extremite="arrivee"]');
+  await page32.waitForTimeout(80);
+};
+
+await v('ENT-3.2 : tournée juste + feuille juste — le message arrive, une seule fois, et la journée passe en phase 2', async () => {
+  const r = await imprevu32();
+  if (r.mails.length !== 1 || !r.marque || r.phase !== 2) throw new Error('imprévu : ' + JSON.stringify(r));
+  if (!/Changement pour la tournée/.test(r.mails[0].subject) || r.mails[0].read) throw new Error('message : ' + JSON.stringify(r.mails[0]));
+  const t = await etat32('tournee');
+  if (t.ordre.join() !== APRES32.join() || t.quai.join() !== 'c5') throw new Error('tournée après le message : ' + t.ordre.join() + ' / ' + t.quai.join());
+  if (t.phase.avant.ordre.join() !== ORDRE32.join()) throw new Error('la tournée de la phase 1 n’est pas gardée : ' + JSON.stringify(t.phase.avant));
+  // Changer d'écran ne renvoie rien (la feuille revérifiée non plus : voir le test de la feuille).
+  await ouvrir32('mail'); await ouvrir32('tournee');
+  const r2 = await imprevu32();
+  if (r2.mails.length !== 1) throw new Error('message envoyé ' + r2.mails.length + ' fois');
+});
+
+await v('ENT-3.2 : le message dit ce qui change en texte courant — annulation, nouveau créneau, créneau levé, Cave à quai, 14 h 00', async () => {
+  const t = await page32.evaluate(() => window.__b32.db.mails.find((m) => m.declenche).text.replace(/\s+/g, ' '));
+  for (const x of ['Il est 14 h 00', 'Atelier Ribot', 'annuler', 'Épicerie Roussel', 'avant 14 h 40', 'Pâtisserie Arnaud', 'Cave Teissier reste à quai', '16 h 10']) {
+    if (!t.includes(x)) throw new Error('le message ne dit pas « ' + x + ' » : ' + t);
+  }
+  // Il ne fait pas le travail : ni la nouvelle tournée, ni « elle ne tient plus », ni un chiffre de calcul.
+  if (/ne tient plus|\b196\b|\b144\b|\b16 kg\b|Torréfaction/.test(t)) throw new Error('le message donne la réponse : ' + t);
+});
+
+await v('ENT-3.2 : « Nouveau message » en tête de la tournée ; « Lire le message » l’ouvre et éteint la notification', async () => {
+  const n = await texte32(`${z32} [data-tour-notif]`);
+  if (!/Nouveau message/.test(n) || !/Changement pour la tournée/.test(n)) throw new Error('notification : ' + n);
+  await page32.click(`${z32} [data-tour-notif-ouvrir]`);
+  await page32.waitForTimeout(150);
+  if (!/Il est 14 h 00/.test(await texte32())) throw new Error('le message ne s’est pas ouvert');
+  if (!(await imprevu32()).mails[0].read) throw new Error('le message n’est pas marqué lu');
+  await ouvrir32('tournee');
+  if (await page32.$(`${z32} [data-tour-notif]`)) throw new Error('la notification reste après lecture');
+});
+
+await v('ENT-3.2 : après l’imprévu — Atelier Ribot barré et non chargeable ; créneau de l’Épicerie repéré, Pâtisserie sans créneau', async () => {
+  if (!(await page32.$(`${z32} [data-annule="c3"]`))) throw new Error('Atelier Ribot n’est pas barré dans le récapitulatif');
+  if (!(await page32.$(`${z32} [data-point="c3"][data-annule]`))) throw new Error('Atelier Ribot n’est pas barré sur la carte');
+  if (await page32.$(`${z32} [data-clic-point="c3"]`)) throw new Error('Atelier Ribot est encore cliquable sur la carte');
+  if (await page32.$(`${z32} [data-reprendre="c3"]`)) throw new Error('Atelier Ribot a encore un bouton « charger »');
+  // Même un clic forcé sur son rond ne le charge pas.
+  await point32('[data-point="c3"]');
+  const t = await etat32('tournee');
+  if (t.ordre.includes('c3') || t.quai.includes('c3')) throw new Error('Atelier Ribot a été chargé : ' + JSON.stringify([t.ordre, t.quai]));
+  const ch = await page32.$$eval(`${z32} [data-creneau-change]`, (l) => l.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));
+  if (!ch.some((x) => /14 h 40/.test(x) && /nouveau/.test(x))) throw new Error('le nouveau créneau n’est pas repéré : ' + ch.join(' | '));
+  if (!ch.some((x) => /plus de créneau/.test(x))) throw new Error('le créneau levé n’est pas repéré : ' + ch.join(' | '));
+  if (!(await page32.$(`${z32} [data-creneau="c8"]`)) || await page32.$(`${z32} [data-creneau="c6"]`)) throw new Error('la jauge de créneau n’a pas changé de client');
+  if (!/14 h 40/.test(await texte32(`${z32} [data-creneau="c8"]`))) throw new Error('la limite de 14 h 40 n’est pas lisible');
+});
+
+await v('ENT-3.2 : après l’imprévu, rien à l’écran ne dit que l’ancienne tournée ne tient plus', async () => {
+  // Elle ne tient plus (l'Épicerie est ratée)…
+  const b = await page32.evaluate(async () => {
+    const S = await import('/contenus/boost-ent32.js');
+    const { creerTournee } = await import('/core/types/tournee.js');
+    const vue = creerTournee(Object.assign({ plan: S.PLAN }, S.TOURNEE_IMPREVU));
+    const x = vue.bilan(window.__b32.db.transport['boost-ent32'].tournee);
+    return { rate: x.creneauRate, ids: x.creneauxRates, charge: x.cumuls.charge };
+  });
+  if (!b.rate || b.ids.join() !== 'c8' || b.charge !== 144) throw new Error('cas mal posé : ' + JSON.stringify(b));
+  // … et l'écran se tait : ni pastille, ni jauge rouge, ni avertissement de la feuille.
+  const verdict = /raté|manqué|dépassée|respectée|tenu\b|retard/i;
+  const t = await texte32();
+  if (verdict.test(t)) throw new Error('un verdict est lisible : ' + (t.match(verdict) || [])[0]);
+  const n = await page32.evaluate(() => document.querySelectorAll('#boost32 .tour-jauge.trop, #boost32 .avis-contrainte, #boost32 .tour-jauges .pastille').length);
+  if (n) throw new Error(n + ' marque(s) de verdict à l’écran');
+  // La feuille vérifiée ne l'est plus : les données ont changé sous les formules.
+  const g = (await etat32('tournee')).grille;
+  if (g.valide) throw new Error('la feuille est encore « vérifiée » après l’imprévu');
+});
+
+await v('ENT-3.2 : la tournée laissée telle quelle — jalons 9 et 10 ko ; les 8 de la phase 1 restent acquis', async () => {
+  const j = await jalons32();
+  if (j.replanif !== 'ko' || j.trajet2 !== 'ko') throw new Error('l’inaction rapporte : ' + JSON.stringify(j));
+  const p1 = PHASE1_32.filter((k) => j[k] !== 'ok');
+  if (p1.length) throw new Error('la phase 1 a perdu : ' + p1.join(', '));
+  const d = await jalon32('replanif');
+  if (!/pas été replanifiée/.test(d.detail)) throw new Error('détail : ' + d.detail);
+});
+
+await v('ENT-3.2 : la feuille suit la phase 2 — Ribot à 0 kg, total 196, à écarter 16, heure chez l’Épicerie', async () => {
+  const txt = (await page32.$$eval(`${z32} .gr-table tr, ${z32} table tr`, (tr) => tr.map((r) => r.textContent.replace(/\s+/g, ' ').trim()))).join(' | ');
+  if (!/Atelier Ribot — commande annulée/.test(txt)) throw new Error('la ligne d’Atelier Ribot ne dit pas l’annulation');
+  if (!/Heure d’arrivée chez Épicerie Roussel/.test(txt) || /chez Pâtisserie Arnaud/.test(txt)) throw new Error('la ligne du créneau n’a pas changé de client');
+  // Les formules de la phase 1 sont gardées : on revérifie, elles valent sur les nouvelles données.
+  await page32.click(`${z32} [data-gr-verifier]`);
+  await page32.waitForTimeout(200);
+  const g = (await etat32('tournee')).grille;
+  for (const k of ['B10', 'B12', 'B13']) if (g.juge[k] !== 'ok') throw new Error(k + ' : ' + g.juge[k]);
+  if ((await imprevu32()).mails.length !== 1) throw new Error('la feuille revérifiée a renvoyé le message');
+  const att = await page32.evaluate(async () => {
+    const S = await import('/contenus/boost-ent32.js');
+    const { creerTournee } = await import('/core/types/tournee.js');
+    const vue = creerTournee(Object.assign({ plan: S.PLAN }, S.TOURNEE_IMPREVU));
+    const L = S.TOURNEE_IMPREVU.grille.lignes(vue.bilan(window.__b32.db.transport['boost-ent32'].tournee));
+    const de = (a) => (L.find((l) => l.A === a) || {}).B;
+    return { total: de('Poids total des commandes (kg)').attendu, ecart: de('Poids à laisser à quai, au moins (kg)').attendu,
+      ribot: de('3 · Atelier Ribot — commande annulée') };
+  });
+  if (att.total !== 196 || att.ecart !== 16 || att.ribot !== 0) throw new Error('attendus : ' + JSON.stringify(att));
+});
+
+await v('ENT-3.2 : la bonne replanification gagne les jalons 9 et 10 ; une qui tient à +12 % ne gagne que le 9', async () => {
+  await construire32p2(OPT2_32);
+  let j = await jalons32();
+  if (j.replanif !== 'ok' || j.trajet2 !== 'ok') throw new Error('bonne replanification : ' + JSON.stringify(j));
+  const s = await page32.evaluate(() => { const l = window.__b32.suivi; return l[l.length - 1]; });
+  if (s.score !== 10 || s.max !== 10) throw new Error('suivi : ' + s.score + '/' + s.max);
+  await construire32p2(LOIN2_32);
+  j = await jalons32();
+  if (j.replanif !== 'ok' || j.trajet2 !== 'ko') throw new Error('à +12 % : ' + JSON.stringify(j));
+  // L'ancien ordre, reconstruit à la main : il rate l'Épicerie, il ne vaut rien.
+  await construire32p2(APRES32);
+  j = await jalons32();
+  if (j.replanif !== 'ko' || j.trajet2 !== 'ko') throw new Error('ancien ordre : ' + JSON.stringify(j));
+  // La phase 1 n'a pas bougé pendant tout ça.
+  if (PHASE1_32.some((k) => j[k] !== 'ok')) throw new Error('la phase 1 a bougé : ' + JSON.stringify(j));
+});
+
+await v('ENT-3.2 : l’optimum de la phase 2 est recalculé par le contenu (720 ordres), et ce n’est pas l’ancien', async () => {
+  const o = await page32.evaluate(async () => (await import('/contenus/boost-ent32.js')).optimumImprevu());
+  if (o.ordre.join() !== OPT2_32.join()) throw new Error('optimum : ' + o.ordre.join());
+  if (Math.abs(o.km - 12.38) > 0.01) throw new Error('optimum : ' + o.km + ' km au lieu de 12,38');
+  if (o.ordre.join() === APRES32.join()) throw new Error('la meilleure tournée est l’ancienne');
+});
+
+await v('ENT-3.2 : « Recommencer » remet la tournée de l’arrivée du message, pas une tournée vide', async () => {
+  await construire32p2(OPT2_32);
+  const sel = `${z32} [data-tour-raz]`;
+  await page32.click(sel); await page32.waitForTimeout(80);
+  if (!/arrivée du message/.test(await page32.textContent(sel))) throw new Error('le bouton armé ne dit pas ce qu’il remet');
+  await page32.click(sel); await page32.waitForTimeout(120);
+  const t = await etat32('tournee');
+  if (t.ordre.join() !== APRES32.join() || t.quai.join() !== 'c5' || !t.depart || !t.arrivee) throw new Error('remise : ' + JSON.stringify([t.ordre, t.quai, t.depart, t.arrivee]));
+  if (!(await page32.$eval(sel, (b) => b.disabled))) throw new Error('le bouton devrait être grisé sur la tournée de départ de la phase');
+  if (!t.phase || t.phase.n !== 2) throw new Error('la remise a fait sortir de la phase 2');
+});
+
+await v('ENT-3.2 : remontage et reconnexion — l’imprévu n’est ni rejoué, ni perdu', async () => {
+  const r = await page32.evaluate(async () => {
+    const act = await import('/activites/boost-ent32.js');
+    const avant = JSON.stringify(window.__b32.db.transport['boost-ent32'].tournee);
+    const essai = (db) => {
+      const hote = document.createElement('div'); document.body.appendChild(hote);
+      act.rendre(hote, { meta: act.meta, profil: { prenom: 'Lea', nom: 'Dupont', role: 'eleve' },
+        jeu: { etat: () => db, sauver: () => {} }, enregistrer: () => {}, quitter: () => {}, codeStock: 'ABC' });
+      hote.remove();
+      return { n: db.mails.filter((m) => m.declenche).length, tournee: JSON.stringify(db.transport['boost-ent32'].tournee) };
+    };
+    const remonte = essai(window.__b32.db);                                    // même base
+    const reco = essai(JSON.parse(JSON.stringify(window.__b32.db)));          // base relue
+    return { avant, remonte, reco };
+  });
+  for (const [nom, x] of [['remontage', r.remonte], ['reconnexion', r.reco]]) {
+    if (x.n !== 1) throw new Error(nom + ' : ' + x.n + ' message(s) d’imprévu');
+    if (x.tournee !== r.avant) throw new Error(nom + ' : la tournée a changé');
+  }
+});
+
+await v('Moteur entreprise : un message déclenché part UNE fois, même si sa condition reste vraie (remontage, reconnexion)', async () => {
+  const r = await page32.evaluate(async () => {
+    const [{ creerEntreprise }, B] = await Promise.all([import('/core/types/entreprise.js'), import('/contenus/boost.js')]);
+    // Une condition toujours vraie : seule la marque du moteur empêche de rejouer le message.
+    const volet = { id: 'essai', semer: () => ({}),
+      declencheurs: [{ id: 'toujours', quand: () => true, semer: () => ({ mails: [{ folder: 'in', ts: 1, from: 'Essai', subject: 'Déclenché', text: '…' }] }) }] };
+    const moteur = creerEntreprise({ ENTREPRISE: B.ENTREPRISE, VOCAB: B.VOCAB, CATALOGUE: B.CATALOGUE, SUPPLIERS: B.SUPPLIERS,
+      SUP_BY_ID: B.SUP_BY_ID, CUSTOMERS: B.CUSTOMERS, CM: B.CM, baseDeDepart: B.baseDeDepart, THEME: B.THEME, etapes: [], volet });
+    const meta = { id: 'essai-declencheur', portee: 'eleve' };
+    const monter = (db) => {
+      const hote = document.createElement('div'); document.body.appendChild(hote);
+      moteur.rendre(hote, { meta, profil: { prenom: 'Lea', role: 'eleve' }, jeu: { etat: () => db, sauver: () => {} },
+        enregistrer: () => {}, quitter: () => {} });
+      hote.remove();
+      return db.mails.filter((m) => m.subject === 'Déclenché').length;
+    };
+    const db = {};
+    const n1 = monter(db), n2 = monter(db);
+    const n3 = monter(JSON.parse(JSON.stringify(db)));
+    return [n1, n2, n3];
+  });
+  if (r.join() !== '1,1,1') throw new Error('messages après ouverture, remontage, reconnexion : ' + r.join());
+});
+
+await v('ENT-3.2 : le calage de l’imprévu tient — aucune des 371 tournées justes ne tient encore, 120 sur 720 tiennent', async () => {
+  const { execFileSync } = await import('node:child_process');
+  const path = await import('node:path');
+  const { fileURLToPath } = await import('node:url');
+  const racine = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
+  let sortie;
+  try { sortie = execFileSync(process.execPath, [path.join(racine, 'outils', 'carte', 'calibrer.mjs')], { stdio: 'pipe' }).toString(); }
+  catch (e) { throw new Error(String(e.stderr || e.message).trim().split('\n').slice(-3).join(' ')); }
+  if (!/qui tiennent encore : 0 sur 371/.test(sortie)) throw new Error('ancienne tournée : ' + sortie);
+  if (!/720 ordres de passage : 120 tiennent tout/.test(sortie)) throw new Error('phase 2 : ' + sortie);
+  if (!/meilleur qui tient tout : c8 c4 c1 c2 c7 c6/.test(sortie)) throw new Error('meilleure tournée : ' + sortie);
+});
+
+await v('ENT-3.2 : l’imprévu n’existe que dans ENT-3.2 — ENT-3.3 n’a ni phase ni message déclenché', async () => {
+  const r = await page32.evaluate(async () => {
+    const [a, b] = await Promise.all([import('/contenus/boost-ent33.js'), import('/contenus/boost-ent32.js')]);
+    return { phases33: 'phases' in a.TOURNEE, phases32: 'phases' in b.TOURNEE, decl33: !!(a.VOLET && a.VOLET.declencheurs),
+      imp: !!b.TOURNEE_IMPREVU.phases };
+  });
+  if (r.phases33 || r.phases32 || r.decl33 || !r.imp) throw new Error(JSON.stringify(r));
 });
 
 await v('ENT-3.2 : le trajet le plus court rate le créneau — les deux paliers de distance tombent, les autres non', async () => {

@@ -969,6 +969,14 @@ a.ent-nav{ text-decoration:none }
 .tour-puce{ padding:6px 8px 6px 11px; gap:9px; border-radius:999px }
 .tour-puce .tour-texte{ flex:0 1 auto }
 .tour-puce .note{ font-size:12px }
+/* La phase d'imprévu (ENT-3.2) : la commande annulée est barrée, sans bouton ; le créneau qui a
+   changé est repéré par la forme (souligné pointillé, en ambre), jamais par un aplat ; le
+   « Nouveau message » se signale par une bordure ambre, comme un avis. */
+.tour-annules{ margin-top:12px }
+.tour-puce-annule{ border-style:dashed }
+.tour-puce-annule s{ text-decoration-thickness:2px }
+.tour-creneau-change{ color:var(--terre); font-weight:600; border-bottom:1px dashed var(--terre) }
+.tour-notif{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px; border-left-color:var(--terre) }
 
 .tour-jauges{ display:flex; flex-direction:column; gap:14px; position:sticky; top:12px }
 .tour-jauge{
@@ -1328,6 +1336,9 @@ a.ent-nav{ text-decoration:none }
 .ct-mk-arrivee.ct-mk-creux .ct-rond{ stroke:#c4931a }
 .ct-mk-client.ct-mk-creux .ct-mk-l{ fill:#345cfd }
 .ct-mk-depart.ct-mk-creux .ct-mk-l{ fill:#159d74 } .ct-mk-arrivee.ct-mk-creux .ct-mk-l{ fill:#c4931a }
+.ct-mk-annule{ opacity:.9 }
+.ct-mk-annule .ct-barre{ stroke:#2a2622; stroke-width:3.5; stroke-linecap:round }
+.ct-mk-annule .ct-mk-nom{ text-decoration:line-through; font-weight:600 }
 .ct-ordre circle{ fill:#25c998; stroke:#13163e; stroke-width:1.6 }
 .ct-ordre text{ fill:#07261c; font-size:10.5px }
 .ct-mk .plan-pt-cible{ cursor:pointer }

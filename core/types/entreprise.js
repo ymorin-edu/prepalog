@@ -202,6 +202,40 @@ export function creerEntreprise(U) {
       }
       semerVolet();
 
+      // ── Les messages DÉCLENCHÉS (ENT-3.2, « l'imprévu », 03/10/2026) ─────────────────────────
+      // `semer` ne pose ses messages qu'à l'ouverture. Un volet peut aussi déclarer des messages
+      // qui arrivent PLUS TARD, quand le travail de l'élève rend une condition vraie :
+      //
+      //   volet.declencheurs: [{ id: 'imprevu', quand: (db) => booléen,
+      //                          semer: (prenom, db) => ({ mails: […] }), phaseTournee: 2 }]
+      //
+      // Vérifié à chaque sauvegarde (et à l'ouverture). **Une seule fois** : la marque est rangée
+      // dans `db.volets` (`<volet>#<id>`), comme celle du volet, donc rien ne se rejoue au
+      // remontage ni à la reconnexion. `phaseTournee` fait passer la tournée de la séance à cette
+      // phase (`passerPhase` dans tournee.js) au même instant que le message arrive. Les messages
+      // portent `declenche` : la tournée les signale en tête (« Nouveau message ») tant qu'ils
+      // ne sont pas lus. Une condition qui plante compte comme fausse, sans rien arrêter.
+      function declencher() {
+        if (!volet || !(volet.declencheurs || []).length) return false;
+        if (!db.volets) db.volets = {};
+        let fait = false;
+        volet.declencheurs.forEach((d) => {
+          const cle = `${volet.id}#${d.id}`;
+          if (db.volets[cle]) return;
+          let vrai = false;
+          try { vrai = !!d.quand(db); } catch (x) { vrai = false; }
+          if (!vrai) return;
+          const g = (d.semer ? d.semer(prenom, db) : null) || {};
+          (g.mails || []).forEach((m) => ajouterMail(Object.assign(m, { declenche: d.id })));
+          if (d.phaseTournee && VTOUR) VTOUR.passerPhase(etatTransport('tournee'), d.phaseTournee);
+          db.volets[cle] = Date.now();
+          fait = true;
+          if ((g.mails || []).length) toast('Nouveau message : ' + (g.mails[0].from || 'Messagerie'));
+        });
+        return fait;
+      }
+      const notificationsTournee = () => db.mails.filter((m) => m.declenche && m.folder === 'in' && !m.read);
+
       // ----------------------------------------------------------- état d'écran
       // Volontairement hors de la base : ce sont des choix d'affichage, pas du travail.
       const E = {
@@ -285,7 +319,7 @@ export function creerEntreprise(U) {
       const copie = { rendue: null, ramassee: false, arme: false, envoi: false, charge: !COPIE || estProf };
       const rendue = () => !!(COPIE && copie.rendue);
       // Copie rendue : plus rien ne s'écrit dans la base, même si un geste passait le verrou.
-      const sauver = () => { if (rendue()) return; ctx.jeu.sauver(); remonterEtapes(); };
+      const sauver = () => { if (rendue()) return; declencher(); ctx.jeu.sauver(); remonterEtapes(); };
       const stockDe = (sku) => { const q = db.stock[sku]; return q == null ? 0 : q; };
 
       function ajouterMail(m) {
@@ -1329,7 +1363,7 @@ export function creerEntreprise(U) {
         // Séance « à corriger » : la tournée du collègue est posée à la première ouverture, une
         // seule fois (voir `amorcer` dans tournee.js). Sans `etatInitial`, rien ne se passe.
         if (!verrou && VTOUR.amorcer && VTOUR.amorcer(etatTransport('tournee'))) sauver();
-        return VTOUR.html(etatTransport('tournee'), { verrou, db });
+        return VTOUR.html(etatTransport('tournee'), { verrou, db, notifications: notificationsTournee() });
       }
 
       function vueCatalogue() {
@@ -1852,9 +1886,18 @@ export function creerEntreprise(U) {
         });
         if (E.vue === 'plan' && VPLAN) VPLAN.brancher(z, apiTransport('plan'));
         if (E.vue === 'tournee' && VTOUR) VTOUR.brancher(z, apiTransport('tournee'));
+        // « Lire le message » du bandeau de la tournée : la messagerie est ici, pas dans la vue.
+        z.querySelectorAll('[data-tour-notif-ouvrir]').forEach((b) => b.addEventListener('click', () => {
+          E.vue = 'mail'; E.dossier = 'in';
+          ouvrirMail(Number(b.dataset.tourNotifOuvrir));
+        }));
         if (E.vue === 'inventaire' && VINV) VINV.brancher(z, etatInventaire(), apiInventaire());
       }
 
+      // Un message déclenché dont la condition est déjà vraie à l'ouverture (travail fait sur un
+      // autre poste, coupure entre la sauvegarde et l'envoi) arrive maintenant. Ici et pas plus
+      // haut : la tournée de la séance doit exister pour passer de phase.
+      if (!rendue() && declencher()) ctx.jeu.sauver();
       remonterEtapes();
       dessiner();
       // Évaluation : la copie est-elle déjà rendue ? Ce qui fait foi est le résultat enregistré

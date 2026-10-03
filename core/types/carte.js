@@ -649,6 +649,7 @@ function marqueurTournee(p, o) {
       transform="translate(${p.x} ${p.y})"${o.data || ''}>
     <title>${ech(o.titre)}</title>
     <circle class="ct-rond" r="11"/><text class="ct-mk-l">${ech(o.lettre)}</text>
+    ${o.barre ? '<line class="ct-barre" x1="-12" y1="12" x2="12" y2="-12"/>' : ''}
     ${o.rang ? `<g class="plan-pt-ordre ct-ordre" pointer-events="none"><circle cx="-13.5" cy="-13.5" r="8"/>
       <text x="-13.5" y="-13.5">${ech(o.rang)}</text></g>` : ''}
     ${o.nom ? `<text class="ct-mk-nom" x="16" y="4">${ech(o.nom)}</text>` : ''}
@@ -679,7 +680,18 @@ export function carteTournee(P) {
         cible: !ext ? '' : cible(`data-clic-extremite="${quoi}"`, pose ? `Retirer ${p.nom} de la tournée`
           : `Placer ${p.nom} comme ${quoi === 'depart' ? 'départ' : 'arrivée'} de la tournée`),
       });
+      // Une commande ANNULÉE (phase d'imprévu, ENT-3.2) : le rond reste à sa place — on ne
+      // déplace jamais un point — mais il est barré, pâli, et n'a plus de cible : il ne se
+      // charge plus.
+      const annules = (o.annules || []).map(String);
       const points = P.points.map((p) => {
+        if (annules.includes(String(p.id))) {
+          return marqueurTournee(p, {
+            cl: 'ct-mk-client plan-pt ct-mk-annule', creux: true, barre: true, lettre: String(p.numero),
+            nom: p.nom, titre: `${p.numero}. ${p.nom} — commande annulée`,
+            data: ` data-point="${ech(p.id)}" data-annule="1"`,
+          });
+        }
         const rang = ordre.findIndex((x) => String(x) === String(p.id));
         return marqueurTournee(p, {
           cl: 'ct-mk-client plan-pt' + (o.cliquable ? ' plan-pt-clic' : '') + (rang < 0 ? ' plan-pt-quai' : ''),

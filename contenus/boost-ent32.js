@@ -22,11 +22,30 @@
 // que le jalon « formules » note. Le refus d'une tournée qui ne tient pas se lit sur les
 // jauges (pastille « créneau raté », « train manqué ») dès que la chaîne est complète.
 // Pas de trame élève : déclarer une trame, c'est la valider.
+//
+// ── L'imprévu (phase 2), chantier C du plan Boost, 03/10/2026 ───────────────────────────
+// Brief `docs/briefs/ENT-3.2-imprevu.md`. En 3.1 l'élève construit une fois ; ici il S'ADAPTE.
+// Quand sa tournée tient tout ET que sa feuille de calcul est vérifiée juste (choix de Tristan :
+// il a fini la phase 1 et a eu le temps de chercher plus court), un message de M. Morin arrive :
+// l'Atelier Ribot annule, la Pâtisserie Arnaud n'a plus de créneau, l'Épicerie Roussel ferme
+// tôt (avant 14 h 40), la Cave Teissier reste à quai. Les données de l'imprévu sont dans
+// `contenus/boost-ent32-imprevu.js` (calées par `outils/carte/calibrer.mjs`) ; le moteur les lit
+// comme une PHASE de la tournée (`phases` dans `core/types/tournee.js`), et le message arrive par
+// `volet.declencheurs` (`core/types/entreprise.js`). Une seule fois, marqué dans la base.
+//
+// Après le message, l'écran ne dit plus si les limites tiennent (`sansVerdict` de la phase) :
+// l'élève recalcule dans la feuille. Les huit jalons de la phase 1 sont FIGÉS à l'arrivée du
+// message (ils lisent la tournée et la feuille gardées dans `phase.avant`) ; deux jalons de
+// phase 2 s'ajoutent. TOUT est construit : commerces, annulation, fermeture, message.
+//
+// ENT-3.3 reprend `TOURNEE` (sans phases) : l'imprévu n'existe que dans `TOURNEE_IMPREVU`, que
+// seule l'activité ENT-3.2 déclare.
 
 import { creerTournee } from '../core/types/tournee.js';
 import { creerCarte } from '../core/types/carte.js';
 import { VELO } from './boost.js';
 import { CARTE } from './boost-ent32-carte.js';
+import { IMPREVU } from './boost-ent32-imprevu.js';
 
 export const TRANSPORT_ID = 'boost-ent32';
 
@@ -99,10 +118,12 @@ export const TOURNEE = {
       const service = n * JOURNEE.service;
 
       // Le créneau : distance jusqu'au client concerné, déduite de son heure d'arrivée dans le bilan.
+      // Le client à créneau est celui de la PHASE en cours (après l'imprévu, ce n'est plus le même).
+      const CR = (b.creneaux || [])[0] || null;
       let kmC = null, rang = -1, attenduC = null;
-      if (CRENEAU) {
-        rang = b.retenus.findIndex((p) => String(p.id) === String(CRENEAU.id));
-        const arr = b.arrivees[String(CRENEAU.id)];
+      if (CR) {
+        rang = b.retenus.findIndex((p) => String(p.id) === String(CR.id));
+        const arr = b.arrivees[String(CR.id)];
         if (rang >= 0 && b.departPose && arr != null) {
           kmC = Math.round(((arr - JOURNEE.depart - rang * JOURNEE.service) * JOURNEE.vitesse / 60) * 10) / 10;
           attenduC = JOURNEE.depart + kmC / JOURNEE.vitesse * 60 + rang * JOURNEE.service;
@@ -111,7 +132,7 @@ export const TOURNEE = {
       const attente = '(posez d’abord le départ et ce client)';
 
       return [
-        ...LIGNES_TETE,
+        ...lignesTete(b),
         {},
         { A: 'Distance du parcours (km)', B: km },
         { A: 'Vitesse en ville (km/h)', B: JOURNEE.vitesse },
@@ -138,17 +159,17 @@ export const TOURNEE = {
                format: 'heure', libelle: 'heure d’arrivée' } },
         { A: 'Départ du train (contrainte)', type: 'contrainte',
           B: { valeur: JOURNEE.limite, format: 'heure' } },
-        ...(!CRENEAU ? [] : [
+        ...(!CR ? [] : [
           {},
-          { A: `Distance jusqu’à ${CRENEAU.nom} (km)`, B: kmC == null ? attente : kmC },
+          { A: `Distance jusqu’à ${CR.nom} (km)`, B: kmC == null ? attente : kmC },
           { A: 'Arrêts servis avant lui', B: rang < 0 ? attente : rang },
-          { A: `Heure d’arrivée chez ${CRENEAU.nom}`, type: 'resultat',
+          { A: `Heure d’arrivée chez ${CR.nom}`, type: 'resultat',
             note: 'Heure de départ + temps de route jusqu’à lui (distance ÷ vitesse × 60) + arrêts déjà servis × temps par arrêt.',
             B: attenduC == null ? attente
               : { saisie: true, formule: true, attendu: attenduC, tolerance: 0.5, format: 'heure',
                   libelle: 'heure d’arrivée chez le client à créneau' } },
           { A: 'Heure limite de livraison (contrainte)', type: 'contrainte',
-            B: { valeur: CRENEAU.creneau.avant, format: 'heure' } },
+            B: { valeur: CR.avant, format: 'heure' } },
         ]),
       ];
     },
@@ -167,31 +188,31 @@ export const TOURNEE = {
 
 // Le début de la feuille : les huit poids de la fiche, le total, la charge utile, ce qu'on écarte,
 // ce qu'on charge. Défini après TOURNEE pour que les adresses se déduisent de la place des lignes.
-const LIGNES_TETE = [
-  { A: 'Client', B: 'Poids (kg)', entete: true },
-  ...CLIENTS.map((c, i) => ({ A: `${i + 1} · ${c.nom}`, B: c.kg })),
-  { A: 'Poids total des commandes (kg)', type: 'resultat',
-    note: `Additionnez les ${CLIENTS.length} poids avec SOMME.`,
-    B: { saisie: true, formule: true, attendu: TOTAL, libelle: 'poids total des commandes' } },
-  { A: 'Charge utile maximale (kg)', type: 'contrainte', B: JOURNEE.chargeUtile },
-  { A: 'Poids à laisser à quai, au moins (kg)', type: 'resultat',
-    note: 'Poids total − charge utile : ce qu’il faut au minimum retirer du vélo-cargo.',
-    B: { saisie: true, formule: true, attendu: TOTAL - JOURNEE.chargeUtile, libelle: 'poids à laisser à quai' } },
-  { A: 'Poids chargé dans le vélo-cargo (kg)', type: 'resultat',
-    note: 'Poids total − poids de ce qui reste à quai. À comparer à la charge utile.',
-    B: { saisie: true, formule: true, attendu: null, libelle: 'poids chargé' } },
-];
-// L'attendu du dernier résultat dépend de la tournée : on le pose à chaque dessin.
-const lignesBrutes = TOURNEE.grille.lignes;
-TOURNEE.grille.lignes = (b) => {
-  const L = lignesBrutes(b);
-  const i = L.findIndex((l) => l.A === 'Poids chargé dans le vélo-cargo (kg)');
-  L[i] = Object.assign({}, L[i], { B: Object.assign({}, L[i].B, { attendu: b.cumuls.charge }) });
-  return L;
+// Après l'imprévu, la commande annulée garde sa ligne (les adresses ne bougent pas, `=SOMME(B2:B9)`
+// reste juste) mais pèse 0 kg : le total, ce qu'on écarte et ce qu'on charge suivent la phase.
+const lignesTete = (b) => {
+  const an = (b && b.annules) || [];
+  const total = CLIENTS.filter((c) => !an.includes(String(c.id))).reduce((t, c) => t + c.kg, 0);
+  return [
+    { A: 'Client', B: 'Poids (kg)', entete: true },
+    ...CLIENTS.map((c, i) => (an.includes(String(c.id))
+      ? { A: `${i + 1} · ${c.nom} — commande annulée`, B: 0 }
+      : { A: `${i + 1} · ${c.nom}`, B: c.kg })),
+    { A: 'Poids total des commandes (kg)', type: 'resultat',
+      note: `Additionnez les ${CLIENTS.length} poids avec SOMME.`,
+      B: { saisie: true, formule: true, attendu: total, libelle: 'poids total des commandes' } },
+    { A: 'Charge utile maximale (kg)', type: 'contrainte', B: JOURNEE.chargeUtile },
+    { A: 'Poids à laisser à quai, au moins (kg)', type: 'resultat',
+      note: 'Poids total − charge utile : ce qu’il faut au minimum retirer du vélo-cargo.',
+      B: { saisie: true, formule: true, attendu: total - JOURNEE.chargeUtile, libelle: 'poids à laisser à quai' } },
+    { A: 'Poids chargé dans le vélo-cargo (kg)', type: 'resultat',
+      note: 'Poids total − poids de ce qui reste à quai. À comparer à la charge utile.',
+      B: { saisie: true, formule: true, attendu: b ? b.cumuls.charge : null, libelle: 'poids chargé' } },
+  ];
 };
 
 // Les adresses des deux cellules que le jalon « choix » lit : jamais écrites en dur.
-const adresseDe = (intitule) => `B${LIGNES_TETE.findIndex((l) => l.A === intitule) + 1}`;
+const adresseDe = (intitule) => `B${lignesTete(null).findIndex((l) => l.A === intitule) + 1}`;
 export const REF_TOTAL = adresseDe('Poids total des commandes (kg)');
 export const REF_ECART = adresseDe('Poids à laisser à quai, au moins (kg)');
 
@@ -214,12 +235,9 @@ export const A_QUAI = (() => {
   return seuls.length === 1 ? String(seuls[0].id) : null;
 })();
 
-let _optimum;
-export function optimum() {
-  if (_optimum !== undefined) return _optimum;
-  _optimum = null;
-  if (!A_QUAI) return _optimum;
-  const S = CLIENTS.filter((c) => String(c.id) !== A_QUAI);
+// La meilleure tournée qui tient tout, sur une liste de clients à charger : le plus court des
+// ordres qui attrapent le train et tiennent chaque créneau. Sert aux deux phases.
+function meilleureTournee(S) {
   let meilleur = null;
   for (const p of permutations(S.map((c) => String(c.id)))) {
     const ch = ['depart', ...p, 'arrivee'];
@@ -238,9 +256,49 @@ export function optimum() {
     if (fin > JOURNEE.limite) continue;
     if (!meilleur || m < meilleur.m) meilleur = { p, m };
   }
-  if (meilleur) _optimum = { ordre: meilleur.p, km: meilleur.m / 1000 };
+  return meilleur ? { ordre: meilleur.p, km: meilleur.m / 1000 } : null;
+}
+
+let _optimum;
+export function optimum() {
+  if (_optimum !== undefined) return _optimum;
+  _optimum = A_QUAI ? meilleureTournee(CLIENTS.filter((c) => String(c.id) !== A_QUAI)) : null;
   return _optimum;
 }
+
+// ── La journée après l'imprévu (phase 2) ─────────────────────────────────────────────────
+// Recalculée ici depuis `IMPREVU`, jamais recopiée : le client annulé sort, les créneaux de la
+// phase remplacent ceux du matin, la Cave reste à quai. Puis les 720 ordres des six autres.
+export const CLIENTS_IMPREVU = CLIENTS.filter((c) => !IMPREVU.annules.includes(String(c.id))).map((c) => {
+  if (!Object.prototype.hasOwnProperty.call(IMPREVU.creneaux, String(c.id))) return c;
+  const q = Object.assign({}, c);
+  if (IMPREVU.creneaux[String(c.id)]) q.creneau = IMPREVU.creneaux[String(c.id)]; else delete q.creneau;
+  return q;
+});
+export const ANNULE = CLIENTS.find((c) => IMPREVU.annules.includes(String(c.id)));
+export const CRENEAU_IMPREVU = CLIENTS_IMPREVU.find((c) => c.creneau) || null;
+let _optimum2;
+export function optimumImprevu() {
+  if (_optimum2 !== undefined) return _optimum2;
+  _optimum2 = meilleureTournee(CLIENTS_IMPREVU.filter((c) => String(c.id) !== String(IMPREVU.aQuai)));
+  return _optimum2;
+}
+
+// La tournée d'ENT-3.2, avec sa phase 2. ENT-3.3 reprend `TOURNEE`, qui n'en a pas.
+export const TOURNEE_IMPREVU = Object.assign({}, TOURNEE, {
+  phases: {
+    2: {
+      annules: IMPREVU.annules,
+      creneaux: IMPREVU.creneaux,
+      // *« Ma tournée d'avant ne tient plus et rien à l'écran ne me le dit : je dois recalculer. »*
+      sansVerdict: true,
+      consigne: 'La journée a changé : lisez le message de M. Morin. Le vélo-cargo part toujours de l’entrepôt '
+        + `à ${h(JOURNEE.depart)}, doit être à la gare avant ${h(JOURNEE.limite)} et emporte au plus ${JOURNEE.chargeUtile} kg. `
+        + 'Vérifiez dans la feuille de calcul si votre tournée tient encore et, sinon, replanifiez-la. '
+        + 'L’écran ne vous dit plus si les limites sont tenues : c’est votre calcul qui le montre.',
+    },
+  },
+});
 
 /* ====================================================================== l'accueil ===== */
 
@@ -290,10 +348,45 @@ export const VOLET = {
       ],
     };
   },
+  // L'imprévu : il arrive quand la phase 1 est FINIE (voir `phase1Finie`), une seule fois, et fait
+  // passer la tournée en phase 2 au même instant. « Il est 14 h 00 » : avant le départ de 14 h 10,
+  // la tournée n'est pas partie (choix de Tristan). Texte courant, comme un vrai message : l'élève
+  // cherche ce qui change, on ne lui donne pas de tableau. Tout ce qu'il dit est lu dans `IMPREVU`.
+  declencheurs: [{
+    id: 'imprevu',
+    quand: (db) => phase1Finie(db),
+    phaseTournee: 2,
+    semer(prenom) {
+      // Le client qui perd son créneau : celui du matin, s'il n'est plus le client à créneau.
+      const leve = CRENEAU && (!CRENEAU_IMPREVU || CRENEAU.id !== CRENEAU_IMPREVU.id) ? CRENEAU : null;
+      const quai = CLIENTS.find((c) => String(c.id) === String(IMPREVU.aQuai));
+      return {
+        mails: [
+          { folder: 'in', ts: Date.now(), from: 'M. Morin, responsable d’exploitation',
+            fromMail: 'exploitation@boost.example', to: prenom,
+            subject: 'Changement pour la tournée de cet après-midi', kind: 'text',
+            text: `Bonjour ${prenom},\n\nIl est 14 h 00 et la journée vient de changer, avant même votre départ. `
+              + 'Deux appels coup sur coup.\n\n'
+              + `${ANNULE.nom} vient d’annuler sa commande : l’atelier est fermé cet après-midi, ils la reprendront `
+              + 'plus tard. Ne la chargez pas.\n\n'
+              + (CRENEAU_IMPREVU ? `${CRENEAU_IMPREVU.nom} ferme exceptionnellement plus tôt aujourd’hui : la livraison doit `
+                + `y arriver avant ${h(CRENEAU_IMPREVU.creneau.avant)}, sinon personne ne pourra la recevoir. ` : '')
+              + (leve ? `En revanche, ${leve.nom} a quelqu’un au magasin tout l’après-midi : plus besoin d’y passer `
+                + `avant ${h(leve.creneau.avant)}.` : '')
+              + `\n\n${quai ? `${quai.nom} reste à quai comme prévu : elle est déjà prévenue pour demain. ` : ''}`
+              + `Le train de ${h(JOURNEE.limite)}, lui, ne change pas, et le vélo-cargo emporte toujours ${JOURNEE.chargeUtile} kg au plus.\n\n`
+              + 'Votre tournée était prévue pour la journée d’avant ces deux appels. Vérifiez qu’elle tient encore, '
+              + 'refaites vos calculs, et replanifiez-la si besoin. Là encore, moins on roule, mieux c’est.\n\n'
+              + 'Merci,\nM. Morin' },
+        ],
+      };
+    },
+  }],
 };
 
 /* ============================ Suivi de l'exercice ============================
- * Huit jalons, chacun vaut 2,5 points sur 20 (la séance déclare un barème, pas de notation) :
+ * Dix jalons, chacun vaut 2 points sur 20 (la séance déclare un barème, pas de notation).
+ * Les huit de la phase 1 (FIGÉS à l'arrivée de l'imprévu : ils lisent `phase.avant`) :
  *
  *   reperage  les nouveaux clients sont situés
  *   choix     le calcul du poids à écarter est juste (formules) ET le bon client est à quai
@@ -304,15 +397,28 @@ export const VOLET = {
  *   trajet10  la tournée tient tout ET fait moins de 10 % de plus que la meilleure possible
  *   trajet5   idem, à moins de 5 %
  *
+ * Les deux de la phase 2 (« en attente » tant que le message n'est pas arrivé) :
+ *
+ *   replanif  la tournée replanifiée tient tout : client annulé absent, Cave à quai, charge,
+ *             train, nouveau créneau, chaîne complète — et elle a CHANGÉ depuis le message
+ *   trajet2   elle tient tout ET fait moins de 10 % de plus que la meilleure de la phase 2
+ *
  * Les jalons ne recalculent RIEN eux-mêmes : ils montent une seconde instance des vues et lui
  * demandent leur bilan. Deux calculs parallèles finiraient par ne plus dire la même chose.
  */
 
-const VUE = creerTournee(Object.assign({ plan: PLAN }, TOURNEE));
+const VUE = creerTournee(Object.assign({ plan: PLAN }, TOURNEE_IMPREVU));
 const VUE_CARTE = creerCarte(PLAN);
 
 const etatDe = (db, vue) => (db && db.transport && db.transport[TRANSPORT_ID]
   ? db.transport[TRANSPORT_ID][vue] : null);
+// La tournée que jugent les jalons de la PHASE 1 : la tournée en cours tant que l'imprévu n'est
+// pas arrivé, puis celle (et sa feuille) gardée à l'instant du message. Elle ne porte pas de
+// `phase` : son bilan se fait sur la journée d'avant l'imprévu.
+const tour1 = (db) => {
+  const e = etatDe(db, 'tournee');
+  return e && e.phase && e.phase.avant ? e.phase.avant : e;
+};
 
 // Comme ENT-3.1 : le vélo-cargo part VIDE, donc « charge respectée » serait vrai avant que l'élève
 // ait touché à quoi que ce soit. Il a commencé dès qu'il a chargé un client ou posé un bout.
@@ -332,7 +438,7 @@ const bonChargement = (e) => {
 // créneau), puis être assez courte. `marge` : 0,10 puis 0,05.
 function jalonTrajet(marge) {
   return (db) => {
-    const e = etatDe(db, 'tournee');
+    const e = tour1(db);
     if (!e || !e.ordre) return { status: 'na' };
     if (!commencee(e)) return { status: 'attente' };
     const opt = optimum();
@@ -352,6 +458,47 @@ function jalonTrajet(marge) {
   };
 }
 
+// ── La phase 1 est-elle finie ? (le déclencheur de l'imprévu) ──────────────────────────────
+// La tournée tient tout — même condition que les paliers de trajet, sans la distance : bon client
+// à quai, chaîne complète, charge, train, créneau — ET la feuille de calcul est vérifiée juste.
+// Choix de Tristan (03/10/2026) : l'élève a fini son travail et a eu le temps de chercher plus
+// court ; les jalons de la phase 1 sont figés à cet instant. Jamais en phase 2.
+function phase1Finie(db) {
+  const e = etatDe(db, 'tournee');
+  if (!e || !e.ordre || e.phase) return false;
+  const b = VUE.bilan(e);
+  if (!b.complete || !bonChargement(e)) return false;
+  if (b.cumuls.charge > JOURNEE.chargeUtile || b.enRetard || b.creneauRate) return false;
+  const g = e.grille;
+  const juge = (g && g.juge) || {};
+  return !!(g && g.valide && Object.keys(juge).length && Object.values(juge).every((x) => x === 'ok'));
+}
+
+// ── Les jalons de la phase 2 ─────────────────────────────────────────────────────────────
+// La tournée en cours tient-elle tout sur la journée d'APRÈS l'imprévu ? Rend un statut, ou le
+// bilan quand elle tient. « En attente » tant que le message n'est pas arrivé : on n'accuse
+// jamais avant que l'élève ait pu agir.
+function tientPhase2(db) {
+  const e = etatDe(db, 'tournee');
+  if (!e || !e.ordre) return { status: 'na' };
+  if (!e.phase || e.phase.n < 2) return { status: 'attente', detail: 'Le message de l’imprévu n’est pas encore arrivé.' };
+  const b = VUE.bilan(e);
+  if (!b.complete) return { status: 'attente', detail: 'Placez le départ et l’arrivée.' };
+  const quai = (e.quai || []).map(String);
+  if (quai.length !== 1 || quai[0] !== String(IMPREVU.aQuai)) {
+    return { status: 'ko', detail: `Le chargement n’est pas le bon : ${quai.length ? `à quai, ${quai.map(nomDe).join(', ')}` : 'rien n’est à quai'}.` };
+  }
+  // Ne pas récompenser l'inaction : la tournée laissée telle qu'à l'arrivée du message ne vaut
+  // rien, même si elle tenait (le calage garantit qu'elle ne tient pas, ce garde le dit en plus).
+  const d = e.phase.depart || {};
+  const cle = (x) => JSON.stringify([(x.ordre || []).map(String), !!x.depart, !!x.arrivee]);
+  if (cle(e) === cle(d)) return { status: 'ko', detail: 'La tournée n’a pas été replanifiée depuis le message.' };
+  if (b.cumuls.charge > JOURNEE.chargeUtile) return { status: 'ko', detail: 'Le vélo-cargo est surchargé.' };
+  if (b.enRetard) return { status: 'ko', detail: 'La tournée replanifiée manque le train.' };
+  if (b.creneauRate) return { status: 'ko', detail: `La tournée replanifiée rate le créneau${CRENEAU_IMPREVU ? ` de ${CRENEAU_IMPREVU.nom}` : ''}.` };
+  return { status: 'ok', b };
+}
+
 export const ETAPES = [
   {
     id: 'reperage',
@@ -368,7 +515,7 @@ export const ETAPES = [
     id: 'choix',
     titre: 'Le poids à écarter calculé, et la bonne commande laissée à quai',
     verifier(db) {
-      const e = etatDe(db, 'tournee');
+      const e = tour1(db);
       if (!e || !e.ordre) return { status: 'na' };
       const calculOk = grilleOk(e, REF_TOTAL) && grilleOk(e, REF_ECART);
       const quai = (e.quai || []).map(String);
@@ -385,7 +532,7 @@ export const ETAPES = [
     id: 'charge',
     titre: 'La charge utile du vélo-cargo est respectée',
     verifier(db) {
-      const e = etatDe(db, 'tournee');
+      const e = tour1(db);
       if (!e || !e.ordre) return { status: 'na' };
       if (!commencee(e)) return { status: 'attente' };
       const b = VUE.bilan(e);
@@ -398,7 +545,7 @@ export const ETAPES = [
     id: 'horaire',
     titre: `Le train de ${h(JOURNEE.limite)} est attrapé`,
     verifier(db) {
-      const e = etatDe(db, 'tournee');
+      const e = tour1(db);
       if (!e || !e.ordre) return { status: 'na' };
       if (!commencee(e)) return { status: 'attente' };
       const b = VUE.bilan(e);
@@ -416,7 +563,7 @@ export const ETAPES = [
     id: 'creneau',
     titre: CRENEAU ? `Le créneau de ${CRENEAU.nom} est tenu` : 'Le créneau de livraison est tenu',
     verifier(db) {
-      const e = etatDe(db, 'tournee');
+      const e = tour1(db);
       if (!e || !e.ordre) return { status: 'na' };
       if (!commencee(e)) return { status: 'attente' };
       const b = VUE.bilan(e);
@@ -435,7 +582,7 @@ export const ETAPES = [
     id: 'formules',
     titre: 'Les formules de la feuille de calcul sont justes',
     verifier(db) {
-      const e = etatDe(db, 'tournee');
+      const e = tour1(db);
       const g = e && e.grille;
       if (!g) return { status: 'na' };
       const saisies = Object.keys(g.cases || {}).some((k) => String(g.cases[k] || '').trim() !== '');
@@ -459,5 +606,28 @@ export const ETAPES = [
     id: 'trajet5',
     titre: 'La tournée tient tout, à moins de 5 % de la meilleure tournée possible',
     verifier: jalonTrajet(0.05),
+  },
+  {
+    id: 'replanif',
+    titre: 'Après l’imprévu, la tournée replanifiée tient tout',
+    verifier(db) {
+      const r = tientPhase2(db);
+      if (r.status !== 'ok') return r;
+      return { status: 'ok', detail: `${r.b.km.toFixed(1)} km, ${r.b.retenus.length} arrêts : charge, train et créneau tenus.` };
+    },
+  },
+  {
+    id: 'trajet2',
+    titre: 'Après l’imprévu, la nouvelle tournée est à moins de 10 % de la meilleure possible',
+    verifier(db) {
+      const r = tientPhase2(db);
+      if (r.status !== 'ok') return r.status === 'ko' ? { status: 'ko', detail: `${r.detail} La distance ne se juge pas.` } : r;
+      const opt = optimumImprevu();
+      if (!opt) return { status: 'na', detail: 'Imprévu mal calé : pas de meilleure tournée.' };
+      const ecart = (r.b.km / opt.km - 1) * 100;
+      const detail = `${r.b.km.toFixed(1)} km pour une meilleure tournée de ${opt.km.toFixed(1)} km `
+        + `(${ecart >= 0 ? '+' : ''}${ecart.toFixed(1)} %), seuil 10 %.`;
+      return { status: r.b.km <= opt.km * 1.10 + 1e-9 ? 'ok' : 'ko', detail };
+    },
   },
 ];

@@ -7,6 +7,10 @@
 // Les décisions sont dans `claude/prepalog-boost-cadrage-ent32-34.md`, le contenu dans
 // `contenus/boost-ent32.js`, la journée dans `contenus/boost-ent32-carte.js` (généré).
 //
+// L'IMPRÉVU (03/10/2026, brief `docs/briefs/ENT-3.2-imprevu.md`) : une fois la tournée juste et
+// la feuille vérifiée, un message du responsable change la journée (un client annule, le créneau
+// change de client). L'élève replanifie : dix jalons au lieu de huit. Détails dans le contenu.
+//
 // ── `pret: false` ───────────────────────────────────────────────────────────────────────
 // Tant que Tristan ne l'a pas validée à l'écran, la séance est cachée aux ÉLÈVES (l'enseignant
 // la voit, étiquetée « en préparation »). On passe `pret: true` après son essai.
@@ -24,7 +28,8 @@ export const meta = {
   code: 'ENT-3.2',
   titre: 'Boost — la tournée sous contrainte',
   desc: 'Situer quatre nouveaux clients sur la carte de Nîmes, décider ce qui reste à quai, puis '
-    + 'ordonner les arrêts pour tenir le train et le créneau d’un client, par le trajet le plus court.',
+    + 'ordonner les arrêts pour tenir le train et le créneau d’un client, par le trajet le plus court. '
+    + 'Puis un imprévu change la journée : replanifier la tournée.',
   rubrique: 'logisim',
   competences: ['C2.4'],
   temps: 'entrainement',
@@ -56,7 +61,8 @@ const moteur = creerEntreprise({
   transportSection: 'Tournées',
   transportId: SEANCE.TRANSPORT_ID,
   plan: SEANCE.PLAN,
-  tournee: SEANCE.TOURNEE,
+  // La tournée AVEC sa phase d'imprévu : seule ENT-3.2 la déclare (ENT-3.3 reprend `TOURNEE`).
+  tournee: SEANCE.TOURNEE_IMPREVU,
 });
 
 export function rendre(hote, ctx) { moteur.rendre(hote, ctx); }
