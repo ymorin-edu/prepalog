@@ -506,14 +506,16 @@ etape(7, "Répondre à Nadia Ferrand")
 p("Tu as tout ce qu'il faut. Il reste à répondre à Nadia comme elle le demande : six lignes, une information par "
   "ligne.")
 encadre("À lire AVANT d'écrire :",
-        "le suivi lit tes lignes. Recopie chaque intitulé exactement comme Nadia l'écrit. Écris les nombres en "
+        "le suivi lit tes lignes. Les six intitulés sont déjà écrits dans le champ de réponse : ne les modifie pas, "
+        "écris ta réponse à la suite, sur la même ligne. Écris les nombres en "
         "chiffres (« 15 » et non « quinze »). Sur la ligne du stock actuel, un seul nombre. Sur la ligne du calcul, "
         "écris ton calcul, avec le résultat tout à la fin de la ligne. Sur la ligne des commandes, cite seulement "
         "celles qui ont des écouteurs. Pour un document, recopie son code en entier (par exemple « CMD-123456 »).")
 consignes([
     "Prépare d'abord tes six lignes dans le tableau ci-dessous.",
     "Dans « Messagerie », ouvre « Écouteurs ECO-BT-01 : racontez-moi la semaine » et clique sur « Répondre ».",
-    "Recopie les six intitulés, un par ligne, chacun suivi de ta réponse. Relis, puis clique sur « Envoyer ».",
+    "Les six intitulés de Nadia sont déjà écrits dans le champ. Complète chaque ligne avec ta réponse, à la suite de "
+    "l'intitulé, sans rien effacer. Relis, puis clique sur « Envoyer ».",
 ])
 tableau(['Ligne de Nadia', "Ce que j'écris sur cette ligne"], 0, [Cm(5.2), Cm(11.8)], hauteur=Cm(1.1),
         remplis=[[i_, ''] for i_ in INTITULES])
