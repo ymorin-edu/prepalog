@@ -6,7 +6,7 @@ import { ech, toast, confirmer } from './ui.js';
 import { seancesDepuis } from './parcours.js';
 import { chargerActivites, activite, entreprisesDe } from '../activites/index.js';
 import { versCSV, telecharger, ouvrirJeu } from './store.js';
-import { NIVEAUX, libelleNiveau, courtNiveau, libelleNiveaux, activiteVisible, horsNiveau } from './niveaux.js';
+import { NIVEAUX, libelleNiveau, courtNiveau, libelleNiveaux, activiteVisible, horsNiveau, ouvertureParProf } from './niveaux.js';
 import { BAREME_AFFICHE, noteSur20, noteConvertie, formaterNote } from './notes.js';
 import { estCopie, estRendue, libelleRendu, ramasser, rouvrir } from './copie.js';
 import { TEMPS, COEFS_DEFAUT, coefsDuGroupe, seancesParCompetence, moyenneCompetence } from './competences.js';
@@ -919,6 +919,7 @@ export async function rendreEspaceProf(hote, ctx) {
           ${force === true && horsNiveau(m, g) ? `<span class="etiq" style="color:var(--terre)">ouverte hors niveau</span>` : ''}
           ${prepa ? `<span class="etiq etiq-prepa" title="Cachée aux élèves tant qu'elle n'est pas validée (pret: false). Vous pouvez l'essayer depuis l'accueil.">en préparation</span>` : ''}
           ${!prepa && force === false ? `<span class="etiq" style="color:var(--terre)">fermée</span>` : ''}
+          ${!prepa && force === undefined && ouvertureParProf(m) ? `<span class="etiq" data-a-ouvrir title="Cette séance ne s'ouvre aux élèves que quand vous la cochez pour ce groupe.">à ouvrir : cochez-la</span>` : ''}
         </span>
       </label>`;
     };
@@ -928,7 +929,8 @@ export async function rendreEspaceProf(hote, ctx) {
         <h2>Ouverture des activités</h2>
         <p class="note">Groupe <strong>${ech(g.nom)}</strong>, niveau ${ech(libelleNiveau(g.niveau))}.
           Les activités de ce niveau sont proposées d'office ; vous pouvez en fermer une, ou en
-          ouvrir une d'un autre niveau.</p>
+          ouvrir une d'un autre niveau. Celles marquées « à ouvrir » restent fermées aux élèves
+          tant que vous ne les cochez pas.</p>
 
         <h3 style="margin-top:18px">Niveau du groupe</h3>
         ${duNiveau.length === 0 ? `<div class="note">Aucune activité pour ce niveau.</div>`

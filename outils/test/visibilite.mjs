@@ -2,20 +2,20 @@
 // (02/10/2026, demande de Tristan : « possible que les enseignants voient tout ? »), les élèves
 // seulement celles qui leur sont ouvertes. `node outils/test.mjs visibilite` ne lance que ce bloc.
 //
+// RÉÉCRIT le 03/10/2026 (brief `docs/briefs/MOTEUR-ouverture-par-enseignant.md`) : le bloc
+// n'exige plus qu'une séance du registre soit en préparation. Il éprouve trois états, posés
+// dans CE navigateur de test seulement (le vrai fichier de la séance est servi, un seul drapeau
+// est réécrit au passage, rien n'est modifié dans le dépôt) :
+//   - ENT-2.1 (`cdiscount-mouvements`) servie avec `pret: false` : « en préparation » ;
+//   - ENT-2.3 (`cdiscount-regularise`) servie avec `ouverture: 'prof'` : fermée aux élèves tant
+//     que l'enseignant ne l'a pas cochée dans « Conduite de séance » ;
+//   - une séance Cdiscount prête, sans `ouverture` : comportement d'avant (le niveau décide).
 // Ce que ces cas gardent :
-//   - une séance en préparation (`pret: false`) a sa tuile chez l'enseignant, avec « Cachée aux
-//     élèves : en préparation », et reste invisible aux élèves ;
-//   - une séance fermée pour le groupe garde sa tuile chez l'enseignant (« fermée pour ce groupe ») ;
-//   - dans la conduite de séance, la case d'une séance en préparation est grisée : avant, elle se
-//     laissait cocher, se redécochait, et un second clic enregistrait « fermée » sans le montrer
-//     (constaté par Tristan le 02/10 sur ENT-2.2).
-// Il travaille sur les vraies métas du registre : la séance « en préparation » est cherchée parmi
-// celles qui ont `pret: false` au moment du test (aucune → le cas le dit, il ne passe pas à vide).
-//
-// Depuis le 03/10/2026, plus aucune séance du registre n'est en préparation (ENT-2.1, ENT-2.3 et
-// ENT-3.2 ouvertes). Pour que le bloc garde de quoi éprouver, le navigateur de test reçoit ENT-2.3
-// (`cdiscount-regularise.js`) avec `pret: false` : le fichier servi est le vrai, seul ce drapeau
-// est réécrit, et dans ce contexte de test seulement. Rien n'est modifié dans le dépôt.
+//   - l'enseignant voit toutes les tuiles, avec ce que voient les élèves ;
+//   - la case d'une séance en préparation est grisée (constaté par Tristan le 02/10 sur ENT-2.2) ;
+//   - une séance « ouverture par l'enseignant » est décochée par défaut, invisible à l'élève,
+//     visible dès qu'elle est cochée, invisible de nouveau une fois décochée — sans commit ;
+//   - une séance fermée garde sa tuile chez l'enseignant (« fermée pour ce groupe »).
 
 export default async function bloc({ v, nav }) {
 
@@ -23,33 +23,40 @@ const ctxV = await nav.newContext({ viewport: { width: 1280, height: 900 } });
 const pg = await ctxV.newPage();
 pg.setDefaultTimeout(6000);
 const erreursV = [];
-let prepaForcee = false;
-await ctxV.route('**/activites/cdiscount-regularise.js*', async (route) => {
+// Les deux séances dont on réécrit un drapeau, et ce qu'on y met.
+const PREPA = 'cdiscount-mouvements';
+const A_OUVRIR = 'cdiscount-regularise';
+const forcees = {};
+const forcer = (id, remplacer) => ctxV.route(`**/activites/${id}.js*`, async (route) => {
   const r = await route.fetch();
   const corps = await r.text();
-  prepaForcee = /pret:\s*true,/.test(corps);
-  await route.fulfill({ response: r, body: corps.replace(/pret:\s*true,/, 'pret: false,') });
+  forcees[id] = /pret:\s*true,/.test(corps);
+  await route.fulfill({ response: r, body: corps.replace(/pret:\s*true,/, remplacer) });
 });
+await forcer(PREPA, 'pret: false,');
+await forcer(A_OUVRIR, "pret: true, ouverture: 'prof',");
 pg.on('pageerror', (e) => erreursV.push('PAGEERROR: ' + e.message));
 pg.on('dialog', (d) => d.accept());
 await pg.goto('http://127.0.0.1:8099/');
 await pg.waitForSelector('#btnProf', { timeout: 8000 });
 
 const metas = await pg.evaluate(async () => (await (await import('/activites/index.js')).chargerActivites())
-  .map((m) => ({ id: m.meta.id, code: m.meta.code, pret: !!m.meta.pret, rubrique: m.meta.rubrique })));
-const prepa = metas.find((m) => !m.pret && m.rubrique === 'logisim') || metas.find((m) => !m.pret);
+  .map((m) => ({ id: m.meta.id, code: m.meta.code, pret: !!m.meta.pret, ouverture: m.meta.ouverture || null,
+    rubrique: m.meta.rubrique })));
+const prepa = metas.find((m) => m.id === PREPA);
+const aOuvrir = metas.find((m) => m.id === A_OUVRIR);
 // Logisim est rangé par entreprise (02/10/2026) : le premier nombre du code dit l'entreprise.
 const entDe = (m) => (m && m.rubrique === 'logisim' ? String(((m.code || '').match(/-(\d+)/) || [])[1]) : null);
-// Une séance prête de la même rubrique (et de la même entreprise), qu'on fermera pour le groupe.
-const prete = metas.find((m) => m.pret && m.rubrique === (prepa || {}).rubrique && m.id !== (prepa || {}).id
-  && entDe(m) === entDe(prepa));
+// Une séance prête de la même entreprise, sans `ouverture`, qu'on fermera pour le groupe.
+const prete = metas.find((m) => m.pret && !m.ouverture && m.rubrique === 'logisim' && entDe(m) === entDe(prepa)
+  && m.id !== PREPA && m.id !== A_OUVRIR);
 
 const tuiles = () => pg.$$eval('.module-tile', (els) => els.map((e) => ({
   id: e.dataset.act, cachee: e.querySelector('[data-cachee]')?.dataset.cachee || null })));
 // Retour à l'accueil d'où que l'on soit : la liste d'une entreprise ne mène qu'aux logos.
 const versAccueil = async () => {
   if (await pg.$('#btnLogisim')) await pg.click('#btnLogisim');
-  await pg.click('#btnAccueil');
+  if (await pg.$('#btnAccueil')) await pg.click('#btnAccueil');
 };
 const ouvrirRubrique = async (rub, ent) => {
   await pg.click('#btnAccueil').catch(() => {});
@@ -58,14 +65,74 @@ const ouvrirRubrique = async (rub, ent) => {
   if (ent) await pg.click(`[data-ent="${ent}"]`);   // Logisim : le logo de l'entreprise
   await pg.waitForSelector('.module-tile, .ent-bandeau');
 };
+const commeEleve = async () => {
+  await versAccueil();
+  await pg.click('#btnDeco');
+  await pg.waitForSelector('#mat');
+  await pg.fill('#mat', '3901');
+  await pg.fill('#code', 'vv01');
+  await pg.click('#btnEleve');
+  await pg.waitForSelector('text=Bonjour Élève');
+};
+const commeProf = async () => {
+  await versAccueil();
+  await pg.click('#btnDeco');
+  await pg.waitForSelector('#btnProf');
+  await pg.click('#btnProf');
+  await pg.waitForSelector('#btnProfEspace');
+};
+// Les tuiles Cdiscount que voit l'ÉLÈVE (aucune si l'entreprise n'a plus de séance ouverte).
+const tuilesEleve = async () => {
+  await pg.click('#btnAccueil').catch(() => {});
+  const rubs = await pg.evaluate(() => [...document.querySelectorAll('[data-rub]')].map((b) => b.dataset.rub));
+  if (!rubs.includes('logisim')) return [];
+  await pg.click('[data-rub="logisim"]');
+  await pg.waitForTimeout(300);
+  const ent = entDe(prepa);
+  if (!(await pg.$(`[data-ent="${ent}"]`))) return [];
+  await pg.click(`[data-ent="${ent}"]`);
+  await pg.waitForTimeout(300);
+  return tuiles();
+};
+const conduite = async () => {
+  await versAccueil();
+  await pg.click('#btnProfEspace');
+  await pg.click('[data-ong="seance"]');
+  await pg.waitForSelector(`[data-ouvre="${A_OUVRIR}"]`);
+};
+const cocher = async (id, oui) => {
+  if (oui) await pg.check(`[data-ouvre="${id}"]`); else await pg.uncheck(`[data-ouvre="${id}"]`);
+  await pg.waitForFunction(([x, o]) => document.querySelector(`[data-ouvre="${x}"]`).checked === o, [id, oui]);
+  await pg.waitForTimeout(200);
+};
 
-await v('visibilité : il existe une séance en préparation à éprouver', async () => {
-  if (!prepa) throw new Error('aucune séance `pret: false` dans le registre : ce bloc ne prouve rien tant qu’il n’y en a pas');
-  if (!prepaForcee && prepa.id === 'cdiscount-regularise') throw new Error('ENT-2.3 n’a pas été mise « en préparation » pour le test');
-  if (!prete) throw new Error('aucune séance prête dans la rubrique ' + prepa.rubrique);
+await v('visibilité : les trois états à éprouver sont posés (en préparation, à ouvrir, prête)', async () => {
+  if (!forcees[PREPA] || !prepa || prepa.pret) throw new Error('ENT-2.1 n’a pas été mise « en préparation » : ' + JSON.stringify(prepa));
+  if (!forcees[A_OUVRIR] || !aOuvrir || !aOuvrir.pret || aOuvrir.ouverture !== 'prof') throw new Error('ENT-2.3 n’est pas « à ouvrir » : ' + JSON.stringify(aOuvrir));
+  if (!prete) throw new Error('aucune autre séance Cdiscount prête');
 });
 
-await v('visibilité : l’enseignant voit la séance en préparation, étiquetée « cachée aux élèves »', async () => {
+await v('visibilité : la règle — « à ouvrir » fermée sans coche, ouverte cochée (même hors niveau), fermée décochée ; sans le champ, rien ne change', async () => {
+  const r = await pg.evaluate(async () => {
+    const { activiteVisible: vis, raisonCachee: rai } = await import('/core/niveaux.js');
+    const p = { id: 'x', pret: true, ouverture: 'prof', niveaux: ['1re'] };
+    const n = { id: 'x', pret: true, niveaux: ['1re'] };
+    const g = (ouverts, niveau = '1re') => ({ niveau, ouverts });
+    return [
+      vis(p, g({})), rai(p, g({})),
+      vis(p, g({ x: true })), vis(p, g({ x: true }, 'tle')), rai(p, g({ x: true })),
+      vis(p, g({ x: false })), rai(p, g({ x: false })),
+      vis(p, null),
+      vis(n, g({})), vis(n, g({}, 'tle')), rai(n, g({}, 'tle')),
+      vis({ id: 'x', pret: false, ouverture: 'prof' }, g({ x: true })),
+    ];
+  });
+  const attendu = [false, 'pas encore ouverte à ce groupe', true, true, null, false, 'fermée pour ce groupe', true,
+    true, false, 'hors niveau du groupe', false];
+  if (JSON.stringify(r) !== JSON.stringify(attendu)) throw new Error(JSON.stringify(r));
+});
+
+await v('visibilité : l’enseignant voit les trois séances, chacune avec ce que voient ses élèves', async () => {
   await pg.click('#btnProf');
   await pg.waitForSelector('#btnProfEspace');
   await pg.click('#btnProfEspace');
@@ -81,54 +148,58 @@ await v('visibilité : l’enseignant voit la séance en préparation, étiquet�
   await pg.click('#btnRetour');
   await ouvrirRubrique(prepa.rubrique, entDe(prepa));
   const t = await tuiles();
-  const x = t.find((y) => y.id === prepa.id);
-  if (!x) throw new Error(`${prepa.code} absente chez l’enseignant : ` + t.map((y) => y.id).join(', '));
-  if (x.cachee !== 'en préparation') throw new Error('étiquette : ' + x.cachee);
-  const p = t.find((y) => y.id === prete.id);
-  if (!p || p.cachee) throw new Error(`${prete.code} : ` + JSON.stringify(p));
+  const de = (id) => t.find((y) => y.id === id);
+  if (!de(PREPA) || de(PREPA).cachee !== 'en préparation') throw new Error('ENT-2.1 : ' + JSON.stringify(de(PREPA)));
+  if (!de(A_OUVRIR) || de(A_OUVRIR).cachee !== 'pas encore ouverte à ce groupe') throw new Error('ENT-2.3 : ' + JSON.stringify(de(A_OUVRIR)));
+  if (!de(prete.id) || de(prete.id).cachee) throw new Error(`${prete.code} : ` + JSON.stringify(de(prete.id)));
 });
 
-await v('visibilité : la case d’une séance en préparation est grisée dans la conduite de séance', async () => {
-  await versAccueil();
-  await pg.click('#btnProfEspace');
-  await pg.click('[data-ong="seance"]');
-  await pg.waitForSelector(`[data-ouvre="${prepa.id}"]`);
-  const c = await pg.$eval(`[data-ouvre="${prepa.id}"]`, (e) => ({ dis: e.disabled, coche: e.checked,
+await v('visibilité : conduite de séance — « en préparation » grisée, « à ouvrir » décochée et cochable, la prête cochée', async () => {
+  await conduite();
+  const c = (id) => pg.$eval(`[data-ouvre="${id}"]`, (e) => ({ dis: e.disabled, coche: e.checked,
     etiq: e.closest('label').textContent.replace(/\s+/g, ' ') }));
-  if (!c.dis || c.coche) throw new Error('case : ' + JSON.stringify(c));
-  if (!/en préparation/.test(c.etiq)) throw new Error('étiquette : ' + c.etiq);
+  const p = await c(PREPA), a = await c(A_OUVRIR), r = await c(prete.id);
+  if (!p.dis || p.coche || !/en préparation/.test(p.etiq)) throw new Error('ENT-2.1 : ' + JSON.stringify(p));
+  if (a.dis || a.coche || !/à ouvrir/.test(a.etiq)) throw new Error('ENT-2.3 : ' + JSON.stringify(a));
+  if (r.dis || !r.coche || /à ouvrir/.test(r.etiq)) throw new Error(`${prete.code} : ` + JSON.stringify(r));
   // On ferme la séance prête pour ce groupe : elle doit rester visible chez l'enseignant.
-  await pg.uncheck(`[data-ouvre="${prete.id}"]`);
-  await pg.waitForFunction((id) => !document.querySelector(`[data-ouvre="${id}"]`).checked, prete.id);
+  await cocher(prete.id, false);
 });
 
 await v('visibilité : une séance fermée garde sa tuile chez l’enseignant, « fermée pour ce groupe »', async () => {
   await pg.click('#btnRetour');
   await ouvrirRubrique(prepa.rubrique, entDe(prepa));
-  const t = await tuiles();
-  const p = t.find((y) => y.id === prete.id);
+  const p = (await tuiles()).find((y) => y.id === prete.id);
   if (!p || p.cachee !== 'fermée pour ce groupe') throw new Error(JSON.stringify(p));
 });
 
-await v('visibilité : l’élève ne voit ni la séance en préparation ni la séance fermée', async () => {
-  await versAccueil();
-  await pg.click('#btnDeco');
-  await pg.waitForSelector('#mat');
-  await pg.fill('#mat', '3901');
-  await pg.fill('#code', 'vv01');
-  await pg.click('#btnEleve');
-  await pg.waitForSelector('text=Bonjour Élève');
-  const ids = await pg.evaluate(() => [...document.querySelectorAll('[data-rub]')].map((b) => b.dataset.rub));
-  if (ids.includes(prepa.rubrique)) {
-    await pg.click(`[data-rub="${prepa.rubrique}"]`);
-    await pg.waitForTimeout(400);
-    // Logisim : une entreprise dont aucune séance n'est ouverte à l'élève n'a pas de carte.
-    const ent = entDe(prepa);
-    if (ent && await pg.$(`[data-ent="${ent}"]`)) { await pg.click(`[data-ent="${ent}"]`); await pg.waitForTimeout(400); }
-  }
-  const t = await tuiles();
-  if (t.some((y) => y.id === prepa.id || y.id === prete.id)) throw new Error('visible à l’élève : ' + t.map((y) => y.id).join(', '));
+await v('visibilité : l’élève ne voit ni la séance en préparation, ni celle « à ouvrir », ni la séance fermée', async () => {
+  await commeEleve();
+  const t = await tuilesEleve();
+  const vues = t.filter((y) => [PREPA, A_OUVRIR, prete.id].includes(y.id)).map((y) => y.id);
+  if (vues.length) throw new Error('visible à l’élève : ' + vues.join(', '));
   if (t.some((y) => y.cachee)) throw new Error('étiquette d’enseignant chez l’élève');
+});
+
+await v('visibilité : l’enseignant coche la séance « à ouvrir » — l’élève la voit, sans rien commiter', async () => {
+  await commeProf();
+  await conduite();
+  await cocher(A_OUVRIR, true);
+  await commeEleve();
+  const t = await tuilesEleve();
+  if (!t.some((y) => y.id === A_OUVRIR)) throw new Error('ENT-2.3 cochée mais invisible : ' + t.map((y) => y.id).join(', '));
+  if (t.some((y) => y.id === PREPA)) throw new Error('la séance en préparation est apparue');
+});
+
+await v('visibilité : l’enseignant la décoche — elle disparaît pour l’élève, et reste « fermée » chez lui', async () => {
+  await commeProf();
+  await conduite();
+  await cocher(A_OUVRIR, false);
+  const a = await pg.$eval(`[data-ouvre="${A_OUVRIR}"]`, (e) => e.closest('label').textContent.replace(/\s+/g, ' '));
+  if (!/fermée/.test(a)) throw new Error('étiquette après décochage : ' + a);
+  await commeEleve();
+  const t = await tuilesEleve();
+  if (t.some((y) => y.id === A_OUVRIR)) throw new Error('ENT-2.3 décochée mais encore visible');
 });
 
 await v('visibilité : aucune erreur JavaScript', async () => {

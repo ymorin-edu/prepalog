@@ -51,16 +51,24 @@ export function concerneNiveau(niveaux, niveauGroupe) {
  *
  *   ouverts[id] === true   → forcée ouverte, même hors niveau
  *   ouverts[id] === false  → fermée, même si le niveau correspond
- *   ouverts[id] absent     → le niveau décide
+ *   ouverts[id] absent     → le niveau décide — sauf `meta.ouverture === 'prof'` : fermée
+ *
+ * `ouverture: 'prof'` (03/10/2026, brief `MOTEUR-ouverture-par-enseignant`) : la séance est
+ * construite et validée (`pret: true`), mais aucun élève ne la voit tant que l'enseignant ne l'a
+ * pas cochée pour son groupe dans « Conduite de séance ». Ouvrir une séance ne demande plus de
+ * commit. Sans ce champ, rien ne change.
  *
  * Sans groupe (enseignant sans groupe actif), tout est visible.
  */
+export const ouvertureParProf = (meta) => !!meta && meta.ouverture === 'prof';
+
 export function activiteVisible(meta, groupe) {
   if (!meta.pret) return false;
   if (!groupe) return true;
   const forcage = groupe.ouverts ? groupe.ouverts[meta.id] : undefined;
   if (forcage === false) return false;
   if (forcage === true) return true;
+  if (ouvertureParProf(meta)) return false;   // pas encore cochée pour ce groupe
   const niveaux = meta.niveaux && meta.niveaux.length ? meta.niveaux : TOUS_NIVEAUX;
   if (!groupe.niveau) return true;            // groupe sans niveau : on n'exclut rien
   return niveaux.includes(groupe.niveau);
@@ -75,7 +83,8 @@ export function raisonCachee(meta, groupe) {
   if (!meta.pret) return 'en préparation';
   if (activiteVisible(meta, groupe)) return null;
   const forcage = groupe && groupe.ouverts ? groupe.ouverts[meta.id] : undefined;
-  return forcage === false ? 'fermée pour ce groupe' : 'hors niveau du groupe';
+  if (forcage === false) return 'fermée pour ce groupe';
+  return ouvertureParProf(meta) ? 'pas encore ouverte à ce groupe' : 'hors niveau du groupe';
 }
 
 // Vrai si l'activité ne correspond pas au niveau du groupe et n'est visible
