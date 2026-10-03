@@ -122,7 +122,10 @@ export const LIGNES_REPONSE = [
 
 function mailMission(prenom, now) {
   const inv = fdate(dateInventaire(now));
-  return { folder: 'in', ts: now - 3600e3 * 1, from: `${EQUIPE.cheffe.nom}, ${EQUIPE.cheffe.role}`,
+  // Ordre d'arrivée = ordre de la trame (Bienvenue, consigne, retour, casse). Les deux documents
+  // sont datés APRÈS la consigne : Nadia les « a fait suivre ». Le mouvement de stock garde sa
+  // vraie date ; seul le mail porte l'heure de sa réception.
+  return { folder: 'in', ts: now - 3600e3 * 3, from: `${EQUIPE.cheffe.nom}, ${EQUIPE.cheffe.role}`,
     fromMail: EQUIPE.cheffe.mail, to: prenom,
     subject: 'Écouteurs ECO-BT-01 : racontez-moi la semaine', kind: 'text',
     text: `Bonjour ${prenom},\n\nOn a fait l'inventaire de l'allée A-01 à A-04 le ${inv}. Depuis, le stock des écouteurs sans fil (référence ${ECO}) a beaucoup bougé et je veux comprendre pourquoi avant le prochain comptage.\n\nTout est dans le système. Pour cet article seulement :\n\n1. Relevez son stock actuel.\n2. Listez ses mouvements depuis l'inventaire (Stock, onglet Mouvements, ou console : .movements ${ECO}).\n3. Pour chaque mouvement, retrouvez le document qui l'a provoqué : une réception fournisseur (menu Réceptions), une commande client (menu Commandes : un bon de préparation BP-xxxxxx porte les mêmes chiffres que sa commande CMD-xxxxxx), un retour client ou un constat de casse (je vous les ai fait suivre dans la messagerie).\n4. Refaites le calcul à l'envers : à partir du stock actuel, retrouvez le stock compté le jour de l'inventaire.\n\nRépondez à ce message en recopiant ces six lignes et en les complétant :\n\n${LIGNES_REPONSE[0]} (le nombre d'écouteurs en stock aujourd'hui)\n${LIGNES_REPONSE[1]} (le numéro de la réception REC-… qui a fait entrer des écouteurs, et la quantité entrée)\n${LIGNES_REPONSE[2]} (les numéros CMD-… de toutes les commandes parties avec des écouteurs, et seulement celles-là)\n${LIGNES_REPONSE[3]} (le numéro du document de retour client)\n${LIGNES_REPONSE[4]} (le numéro du constat de casse)\n${LIGNES_REPONSE[5]} (votre calcul, avec le résultat à la fin de la ligne)\n\nUne ligne par information, s'il vous plaît : c'est comme ça que je les relis.\n\nMerci,\n${EQUIPE.cheffe.nom}` };
@@ -188,10 +191,10 @@ export const VOLET = {
     const aDejaBienvenue = ((db && db.mails) || []).some((m) => /^Bienvenue à l’entrepôt/.test(m.subject || ''));
     const mails = [
       ...(aDejaBienvenue ? [] : [mailBienvenue(prenom, now - 3600e3 * 26)]),
-      { folder: 'in', ts: tRetour + 3600e3 * 0.2, from: EQUIPE.retours.nom, fromMail: EQUIPE.retours.mail, to: prenom,
+      { folder: 'in', ts: now - 3600e3 * 2, from: EQUIPE.retours.nom, fromMail: EQUIPE.retours.mail, to: prenom,
         subject: `Retour client ${RETOUR.no} remis en stock`, kind: 'text',
         text: `Bonjour,\n\nRetour client enregistré.\n\nDocument : ${RETOUR.no}\nCommande d'origine : ${RETOUR.commande} (${c.prenom} ${c.nom}, ${c.ville})\nArticle : ${RETOUR.sku}, écouteurs sans fil Bluetooth\nQuantité : ${RETOUR.qty}\nMotif du client : « ne me convient pas »\nContrôle : emballage d'origine intact, article neuf\nDécision : remis en stock à l'emplacement ${CATALOGUE.VM[RETOUR.sku].loc}\n\nService retours, Cestas` },
-      { folder: 'in', ts: tCasse + 3600e3 * 0.3, from: `${EQUIPE.quai.nom}, ${EQUIPE.quai.role}`, fromMail: EQUIPE.quai.mail, to: prenom,
+      { folder: 'in', ts: now - 3600e3 * 1, from: `${EQUIPE.quai.nom}, ${EQUIPE.quai.role}`, fromMail: EQUIPE.quai.mail, to: prenom,
         subject: `Constat de casse ${CASSE.no}`, kind: 'text',
         text: `Bonjour,\n\nConstat de casse.\n\nDocument : ${CASSE.no}\nArticle : ${CASSE.sku}, écouteurs sans fil Bluetooth\nQuantité : ${CASSE.qty}\nCirconstance : un carton est tombé du chariot en allée A-02 ; un boîtier d'écouteurs est écrasé, invendable.\nDécision : sorti du stock et mis au rebut.\n\n${EQUIPE.quai.nom}` },
       mailMission(prenom, now),
