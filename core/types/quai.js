@@ -47,6 +47,20 @@
 // Une palette peut aussi porter plusieurs références (`refs`, une par groupe de couches : un
 // comptage et une étiquette par référence) et une étiquette avant déchirée (`etiqAvant:
 // 'dechiree'` : la vraie se lit sur la face arrière).
+//
+// QUAI « DÉJÀ RÉCEPTIONNÉ » (03/10/2026, chantier P5, brief `docs/briefs/ENT-4.3-picard-reception-de-nuit.md` §7).
+// `mode: 'controle'` : un collègue a reçu le camion, les palettes sont en chambre froide, l'élève contrôle
+// son travail. Pas d'étapes ni d'horloge : deux onglets, « le dossier » (BL signé, ticket, fiche de comptage
+// et de sonde, tout pris dans `dossier` du contenu, donc jamais modifiable : rien n'en est rangé dans la
+// base) et « en chambre froide » (palette en 3D : faire le tour, re-sonder, relire l'étiquette, recompter ;
+// les relevés de l'élève à côté de ceux du collègue, sans verdict). Deux temps, comme ENT-3.3 :
+//   - temps 1 « Contrôler » : on regarde, on ne corrige rien (aucun bouton « Bloquer ») ;
+//   - temps 2 « Corriger », ouvert par un message déclenché (`phaseQuai: 2` dans `volet.declencheurs`, voir
+//     `entreprise.js`) : « Bloquer — qualité » / « Débloquer », puis « J'ai terminé » (deux clics, définitif)
+//     qui fige tout et affiche le bilan.
+// Un bouton « Messagerie » mène à l'environnement (le diagnostic et la protestation s'y écrivent). Les jalons
+// de la vue : la (les) palette(s) à bloquer (`bloquer: true` dans le contenu) et « aucune palette conforme
+// bloquée » ; la séance ajoute les siens (messages) par `jalonsDossier: { avant(db, e), apres(db, e) }`.
 
 // Pas d'import de `ui.js` : le corrigé d'une séance (`contenus/corriges/`) importe ce module, et la
 // suite de tests charge les corrigés hors du navigateur.
@@ -119,6 +133,7 @@ function reglages(Q) {
     D: Object.assign({ ouverture: 0.5, parPalette: 1 }, Q.dechargement || {}),
     couts: Object.assign({}, COUTS_DEFAUT, Q.couts || {}),
     aides, camions, palettes, multi: camions.length > 1,
+    controle: Q.mode === 'controle', dossier: Q.dossier || {},
     depart: minutesDe(Q.debut || (camions[0] && camions[0].arrivee)),
   };
 }
@@ -148,8 +163,17 @@ function effective(p, e, R) {
 export const dureeDechargement = (n, D) => D.ouverture + n * D.parPalette;
 
 /* ======================================================================= état */
+// Le jour de la séance (« aaaa-mm-jj », heure locale) : la date de la réception de nuit sur le BL.
+const aujourdhui = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+export const jourAffiche = (j) => (j ? j.split('-').reverse().join('/') : '');
 export function etatNeuf(Q) {
   const R = reglages(Q);
+  if (R.controle) {
+    const pal = {};
+    R.palettes.forEach((p) => { pal[p.id] = paletteNeuve(); });
+    return { v: 1, mode: 'controle', phase: 1, jour: aujourdhui(), reel: 0, tiersTemps: false, sel: 0, onglet: 'dossier',
+      palettes: pal, fini: false, termine: null };
+  }
   const palettes = {};
   R.palettes.forEach((p) => { palettes[p.id] = paletteNeuve(); });
   const e = Object.assign({ v: 1, etape: 1, minute: 0, reel: 0, tiersTemps: false, sel: 0, journal: [], palettes, fini: false }, camionNeuf());
@@ -162,6 +186,14 @@ const paletteNeuve = () => ({ vue: 0, vues: [0], sonde: null, compte: null, etiq
 function normaliser(e, R) {
   if (!e.palettes) e.palettes = {};
   R.palettes.forEach((p) => { if (!e.palettes[p.id]) e.palettes[p.id] = paletteNeuve(); });
+  if (R.controle) {
+    if (!(e.phase >= 1)) e.phase = 1;
+    if (!e.jour) e.jour = aujourdhui();
+    if (e.onglet !== 'chambre') e.onglet = 'dossier';
+    if (!(e.sel >= 0 && e.sel < R.palettes.length)) e.sel = 0;
+    if (typeof e.reel !== 'number') e.reel = 0;
+    return;
+  }
   if (!Array.isArray(e.journal)) e.journal = [];
   if (!Array.isArray(e.lignes)) e.lignes = [];
   if (typeof e.reel !== 'number') e.reel = 0;
@@ -211,6 +243,7 @@ const compteJuste = (p, s) => (p.refs ? p.refs.every((r) => s.comptes && +s.comp
 // inaction : « mention non ajoutée » demande des réserves écrites, « lot rentré » un geste.
 export function jalonsQuai(db, Q) {
   const R = reglages(Q);
+  if (R.controle) return jalonsControle(db, Q, R);
   const e = db && db.quais && db.quais[Q.id];
   const L = [];
   let pts = 0, max = 0;
@@ -280,6 +313,35 @@ export function jalonsQuai(db, Q) {
   }
   R.camions.forEach((c, ci) => j(`signature${suff(c)}`, libC('Signature du chauffeur sous les réserves', c), KS[ci].signe ? 'obtenue' : 'pas de signature', 'obtenue', KS[ci].signe));
   R.camions.forEach((c, ci) => j(`rentre${suff(c)}`, libC('Lot rentré en chambre froide', c), KS[ci].rentre ? `oui, après ${fmtMin(KS[ci].froid)} hors froid` : 'non', 'oui', KS[ci].rentre));
+  return { L, pts, max };
+}
+
+// Quai « déjà réceptionné » : les jalons du contenu sur les messages (`jalonsDossier.avant`, le diagnostic),
+// ceux de la vue sur le blocage, puis ceux du contenu après (`apres`, la protestation). Aucun n'est vrai par
+// inaction : « aucune palette conforme bloquée » demande d'avoir bloqué quelque chose.
+function jalonsControle(db, Q, R) {
+  const e = db && db.quais && db.quais[Q.id];
+  const L = [];
+  let pts = 0, max = 0;
+  const ajouter = (l) => {
+    const compte = l.compte !== false;
+    if (compte) { max++; if (l.ok) pts++; }
+    L.push(Object.assign({}, l, { ok: !!l.ok, compte }));
+  };
+  const D = Q.jalonsDossier || {};
+  // Un jalon de contenu qui plante sur une base incomplète ne fait rien tomber : il manque, c'est tout.
+  const lire = (f) => { try { return (f && f(db || {}, e || null)) || []; } catch (x) { return []; } };
+  lire(D.avant).forEach(ajouter);
+  const s = (p) => (e && e.palettes && e.palettes[p.id]) || {};
+  const aBloquer = R.palettes.filter((p) => p.bloquer);
+  const bloquees = R.palettes.filter((p) => s(p).bloque);
+  aBloquer.forEach((p) => ajouter({ id: `${p.id}-bloquee`, lib: `${p.id} bloquée (qualité)`, fait: s(p).bloque ? 'bloquée' : 'non bloquée',
+    attendu: 'bloquée', ok: !!s(p).bloque }));
+  const aTort = bloquees.filter((p) => !p.bloquer);
+  ajouter({ id: 'bloque-autres', lib: 'Aucune palette conforme bloquée',
+    fait: bloquees.length ? `bloquée${bloquees.length > 1 ? 's' : ''} : ${bloquees.map((p) => p.id).join(', ')}` : 'aucune palette bloquée',
+    attendu: `seulement ${aBloquer.map((p) => p.id).join(', ')}`, ok: bloquees.length > 0 && !aTort.length });
+  lire(D.apres).forEach(ajouter);
   return { L, pts, max };
 }
 
@@ -999,14 +1061,27 @@ export function creerQuai(Q, opts = {}) {
             <select id="qDecision" data-q-decision ${dis}>${Object.entries(DECISIONS).map(([kk, v]) => `<option value="${kk}" ${s.decision === kk ? 'selected' : ''}>${v}</option>`).join('')}</select></div>
           <div class="quai-champ"><label for="qMotif">Motif de la réserve ou du refus</label>
             <select id="qMotif" data-q-motif ${dis}>${Object.entries(MOTIFS).map(([kk, v]) => `<option value="${kk}" ${s.motif === kk ? 'selected' : ''}>${v}</option>`).join('')}</select></div>
-          <div class="quai-ligne"><button class="btn btn-p" data-q="valider" ${!s.decision || e.fini ? 'disabled' : ''}>✓ Valider cette palette</button>
-            <span class="note" data-q-valide>${s.valide ? 'Palette validée.' : (s.decision ? '' : 'Choisis d’abord une décision.')}</span></div>
+          <div class="quai-ligne"><button class="btn btn-p" data-q="valider" ${manqueValider(p, s) || e.fini ? 'disabled' : ''}>✓ Valider cette palette</button>
+            <span class="note" data-q-valide>${s.valide ? 'Palette validée.' : manqueValider(p, s)}</span></div>
         </div>
       </div>
       <div class="quai-journal" aria-live="polite">${e.journal.map((l) => `<div>${ech(l)}</div>`).join('')}</div>
     </section>`;
   }
 
+  // « Valider cette palette » (demande de Tristan, 03/10/2026) : seulement le comptage noté (chaque
+  // référence d'une palette multi-références), la décision choisie, et un motif quand la décision est
+  // des réserves ou un refus. Sinon, la phrase dit ce qui manque ('' = tout est rempli).
+  function manqueValider(p, s) {
+    const compte = p.refs ? p.refs.every((r) => s.comptes && s.comptes[r.ref] != null && s.comptes[r.ref] !== '') : s.compte !== null && s.compte !== undefined;
+    const manque = [];
+    if (!compte) manque.push(p.refs ? 'note le comptage de chaque référence' : 'note le comptage');
+    if (!s.decision) manque.push('choisis une décision');
+    else if (s.decision !== 'accepter' && (!s.motif || s.motif === 'aucun')) manque.push('donne le motif de la réserve ou du refus');
+    if (!manque.length) return '';
+    const t = manque.join(', ');
+    return `Pour valider : ${t.charAt(0).toLowerCase()}${t.slice(1)}.`;
+  }
   const aEcrire = (e, ci = 0) => PAL[ci].filter((p) => ['reserves', 'refuser'].includes(st(e, p).decision));
   const toutFini = (e) => R.camions.every((_, ci) => K(e, ci).rentre && K(e, ci).signe);
   function ecran4(e, api) {
@@ -1281,7 +1356,7 @@ export function creerQuai(Q, opts = {}) {
       // suivante non validée du même camion.
       on('valider', geste(() => {
         const pal = p();
-        if (!s().decision) return;
+        if (manqueValider(pal, s())) return;
         s().valide = true; ui.arme4 = false; ui.msgCompte = '';
         const L = PAL[pal.camion], i = L.indexOf(pal);
         const suite = L.slice(i + 1).concat(L.slice(0, i)).find((q) => !st(e, q).valide);

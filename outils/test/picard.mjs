@@ -829,6 +829,8 @@ await v('contrôle : « Valider cette palette » coche l’onglet et passe à la
   await debut42(pg2);
   await decharger42(pg2, 0);
   vrai(await pg2.isDisabled(`${Z} [data-q="valider"]`), 'valider sans décision');
+  await pg2.fill(`${Z} [data-q-compte]`, '36');
+  await clic(pg2, '[data-q="compter"]');
   await pg2.selectOption(`${Z} [data-q-decision]`, 'accepter');
   await clic(pg2, '[data-q="valider"]');
   const e = await etat42(pg2);
@@ -839,6 +841,40 @@ await v('contrôle : « Valider cette palette » coche l’onglet et passe à la
   vrai(!(await pg2.isDisabled(`${Z} [data-q-decision]`)), 'A1 figée après validation');
   await pg2.selectOption(`${Z} [data-q-decision]`, 'reserves');
   egal((await etat42(pg2)).palettes.A1.decision, 'reserves', 'décision changée');
+});
+
+await v('contrôle : « Valider » grisé tant qu’il manque le comptage, la décision ou le motif ; actif quand tout est rempli', async () => {
+  await monter42(pg2);
+  await debut42(pg2);
+  await decharger42(pg2, 0);
+  const phrase = () => texte(pg2, `${Z} [data-q-valide]`);
+  // A1 : rien de rempli.
+  vrai(await pg2.isDisabled(`${Z} [data-q="valider"]`), 'actif sans rien');
+  vrai((await phrase()).includes('note le comptage'), 'phrase : ' + await phrase());
+  // Décision « réserves » sans comptage ni motif : toujours grisé, la phrase dit les deux.
+  await pg2.selectOption(`${Z} [data-q-decision]`, 'reserves');
+  vrai(await pg2.isDisabled(`${Z} [data-q="valider"]`), 'actif sans comptage');
+  vrai((await phrase()).includes('note le comptage') && (await phrase()).includes('motif'), 'phrase : ' + await phrase());
+  // Comptage noté, motif encore « aucun » : grisé.
+  await pg2.fill(`${Z} [data-q-compte]`, '36');
+  await clic(pg2, '[data-q="compter"]');
+  vrai(await pg2.isDisabled(`${Z} [data-q="valider"]`), 'actif sans motif');
+  vrai(!(await phrase()).includes('comptage') && (await phrase()).includes('motif'), 'phrase : ' + await phrase());
+  await pg2.selectOption(`${Z} [data-q-motif]`, 'temperature');
+  vrai(!(await pg2.isDisabled(`${Z} [data-q="valider"]`)), 'grisé alors que tout est rempli');
+  egal(await phrase(), '', 'phrase quand tout est rempli');
+  // A2, deux références : une seule notée ne suffit pas (le bouton « Noter » refuse un champ vide).
+  await clic(pg2, '[data-q="sel"][data-n="1"]');
+  await pg2.selectOption(`${Z} [data-q-decision]`, 'accepter');
+  vrai(await pg2.isDisabled(`${Z} [data-q="valider"]`), 'A2 actif sans comptage');
+  vrai((await phrase()).includes('chaque référence'), 'phrase A2 : ' + await phrase());
+  await pg2.fill(`${Z} #qCompte-SCI-500`, '18');
+  await pg2.fill(`${Z} #qCompte-SFR-500`, '6');
+  await clic(pg2, '[data-q="compter"]');
+  vrai(!(await pg2.isDisabled(`${Z} [data-q="valider"]`)), 'A2 grisé une fois les deux références notées');
+  // Accepter n'exige pas de motif : A2 se valide.
+  await clic(pg2, '[data-q="valider"]');
+  vrai((await etat42(pg2)).palettes.A2.valide, 'A2 non validée');
 });
 
 await v('contrôle : le bouton des réserves est en haut à droite et demande confirmation (palettes non validées comptées)', async () => {
