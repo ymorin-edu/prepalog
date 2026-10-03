@@ -11,7 +11,7 @@ la préparation de contenu et les supports peuvent avancer en parallèle.
 | A | Consigne d'ENT-3.3 + pastilles d'avancement | `ENT-3.3-consigne-trois-etapes.md` | **livré et validé** (03/10, suite 346/346) | petit | Sonnet |
 | B | Carte réelle dans ENT-3.1 | `ENT-3.1-refonte-carte.md` | **livré**, `pret: true`, trame et corrigé régénérés | gros | Opus (fait) |
 | C | Un imprévu en cours de journée (ENT-3.2) | `ENT-3.2-imprevu.md` | **livré**, validé à l’écran, ouvert aux élèves (03/10) | moyen à gros | Opus |
-| D | Feuille de calcul moins guidée + données qui changent | `ENT-3.x-feuille-moins-guidee.md` | **lot 1 (moteur) livré le 03/10**, page d'essai `outils/essai-feuille.html` à valider ; puis lot 2 (3.2 / 3.3), avant ENT-3.4 | gros | lot 1 Opus, lot 2 Sonnet |
+| D | Feuille de calcul moins guidée + données qui changent | `ENT-3.x-feuille-moins-guidee.md` | **lots 1 et 2 livrés le 03/10** (3.2 et 3.3 recalées, jeu A, F1) ; essai à l'écran de Tristan ; puis ENT-3.4 | gros | lot 1 Opus, lot 2 Sonnet |
 
 ## Qui touche quoi (moteur)
 

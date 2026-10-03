@@ -12,7 +12,7 @@
 > Lis docs/briefs/COORDINATION-boost.md puis implémente le LOT 2 du brief ENT-3.x-feuille-moins-guidee. Annonce la durée, propose-moi 2 ou 3 jeux de valeurs chiffrés avec le script de calage (journée ET imprévu) et 2 ou 3 formules fausses pour Inès, et attends mon choix avant de coder.
 > ```
 
-**Statut** : **à implémenter** — décisions prises par Tristan le 03/10/2026 (questions fermées, §1).
+**Statut** : **livré** (lots 1 et 2, 03/10/2026), en attente d'essai à l'écran — décisions prises par Tristan le 03/10/2026 (questions fermées, §1).
 **Date du brief** : 03/10/2026, **recadré le 03/10/2026 après-midi** (Cowork).
 **Maquette** : « Maquette tableur ENT-3.x » (Cowork, 03/10/2026). **Attention** : la maquette met les arrêts dans un seul
 tableau ; la décision finale est **deux tableaux** (§2). La page d'essai du lot 1 fait foi.
@@ -170,9 +170,9 @@ Inès et sa feuille sont **construits**. Les adresses des clients restent réell
 
 ## 8. Questions encore ouvertes (à poser par Claude Code au moment voulu)
 
-- [ ] Lot 2 : quel jeu de valeurs (journée + imprévu) parmi ceux proposés par le script.
-- [ ] Lot 2 : quelle formule fausse pour Inès ; quel jalon.
-- [ ] Lot 2 : « données recopiées justes » = jalon à part, ou dans « formules » ? (nombre de jalons de 3.2)
+- [x] Lot 2 : quel jeu de valeurs (journée + imprévu) parmi ceux proposés par le script. **Jeu A.**
+- [x] Lot 2 : quelle formule fausse pour Inès ; quel jalon. **F1 ; jalon « formule » à part.**
+- [x] Lot 2 : « données recopiées justes » = jalon à part, ou dans « formules » ? **Jalon à part : 11 jalons.**
 - [x] À l'écran (page d'essai) : la règle « une erreur de lecture ne se paie qu'une fois » convient-elle ? **Oui (Tristan, 03/10).**
 - [ ] 3.4 (brief 3.4, pas ici) : matinée, charge, colis, mail moins explicite — valeurs à caler avec le script, **même méthode qu'en §4.1**
       (les valeurs 9 h 30 / 11 h 50 / 15 km/h / 160 kg du premier brief sont probablement trop larges, comme celles de 3.2).
@@ -222,10 +222,40 @@ Inès et sa feuille sont **construits**. Les adresses des clients restent réell
   avant le lot 2. Journée de l'essai provisoire (14 h 30, 14 km/h, 5 min, 190 kg, train 16 h 10, Pâtisserie avant 15 h 00) :
   ~5 % des ordres tiennent tout ; le lot 2 recale avec le script.
 
-### Lot 2
-- **Fichiers créés / modifiés** :
-- **Valeurs retenues (journée, imprévu, formule d'Inès)** :
-- **Écarts par rapport au brief** :
-- **Tests** :
-- **Commits** :
-- **Reste ouvert** :
+### Lot 2 — livré le 03/10/2026 (Claude Code), en attente d'essai à l'écran
+- **Fichiers créés / modifiés** : `contenus/boost-ent32.js` (journée, feuille `feuille()`, mail, jalons),
+  `contenus/boost-ent32-imprevu.js`, `outils/carte/boost-ent32.json` + `contenus/boost-ent32-carte.js` (régénéré par
+  `construire.py` : seul le créneau change), `contenus/boost-ent33.js` (feuille d'Inès, message, jalon), `activites/boost-ent32.js`
+  (commentaire), `core/types/grille.js` + `styles/base.css` (deux petites options, voir plus bas), `outils/test/boost.mjs`.
+- **Valeurs retenues** (jeu A, choix de Tristan) : départ 14 h 35, 14 km/h (vélo à assistance électrique), 5 min par arrêt,
+  190 kg, train 16 h 15, Pâtisserie Arnaud avant 15 h 05 ; imprévu : Ribot annule, Pâtisserie sans créneau, Épicerie Roussel
+  avant 14 h 55, Cave à quai. `calibrer.mjs` : seule la Cave suffit (52 kg pour 40) ; 264 ordres sur 5 040 tiennent tout (5,2 %) ;
+  le plus court rate le créneau ; meilleure 12,54 km (gare 16 h 04) ; après l'imprévu, aucune des 264 ne tient, 120 sur 720
+  tiennent, meilleure 12,38 km, différente de l'ancienne. **Formule d'Inès : F1**, son poids chargé `=SOMME(B22:B27)` oublie
+  la dernière ligne (Cave Teissier, 52 kg) : sa feuille dit 166 kg, son message « la charge passe », le vrai poids est 218 kg.
+- **Jalons** : ENT-3.2 en a **11** (ajout de « données recopiées justes », réponse de Tristan) ; ENT-3.3 en a **7** (ajout de
+  « formule fausse d'Inès corrigée », jugé sans que l'élève clique ; la réponse à Inès reste en six lignes).
+- **Écarts et décisions prises en route** :
+  - Tristan (03/10) : **pas de bouton « Vérifier » sur la feuille d'Inès** (il montrerait la formule fausse en rouge) → option
+    moteur `verifier: false` ; et **un bouton « ↺ »** sur une case pré-remplie modifiée, qui remet ce qu'Inès avait écrit
+    (réponse 4b) → `libelleOrigine`.
+  - « Formules » ne juge plus que les cases de formules (les données ont leur jalon) ; **l'imprévu arrive quand les formules
+    sont justes**, même si une donnée est mal recopiée (sinon une erreur de lecture bloquait toute la phase 2).
+  - Après l'imprévu, la commande annulée garde sa ligne à 0 kg ; la donnée « Limite du créneau » change de client et doit
+    être **retapée** (14:55).
+  - En 3.3, la feuille d'Inès affiche ses heures **justes** (gare 15 h 59, Pâtisserie 15 h 40) : le créneau raté se lit sur sa
+    feuille (dit à Tristan au moment du choix de F1). La pastille « Contrôler » passe au vert dès que l'élève corrige une case.
+  - Bug corrigé : l'objet du mail de 3.2 écrivait « départ 14 h 10 » en dur.
+  - B38 (arrivée chez la Pâtisserie) vaut 14 h 56 sur la feuille et 14 h 55 au bilan : la feuille part de la distance arrondie au
+    dixième, comme l'élève la lit (tolérance 0,5 min, sans effet sur le jugement).
+- **Tests** (alerte 7) : cas d'ENT-3.2, d'ENT-3.3 et deux cas « Moteur tournée » **réécrits** aux nouvelles valeurs (écrites à la
+  main) ; ajoutés : feuille en trois blocs, « ? », poids mal recopié, jalon « formule », écran d'Inès. Sabotages éprouvés :
+  total jugé contre le mail, « données » toujours juste, imprévu bloqué par une donnée, poids d'arrêt mal recopié, aide qui
+  donne l'heure du jour, formule d'Inès juste d'origine, jalon « formule » qui récompense l'inaction, bouton « Vérifier » gardé :
+  chacun fait tomber son cas. Hors bloc `boost` : dans `carte.mjs` et `copie.mjs`, les montages d'essai sur la carte d'ENT-3.2
+  (journée du 02/10, 14 h 10) ont leur créneau **épinglé à 14 h 45** pour ne plus dépendre du contenu, et le cas « moteur et
+  calage comptent les mêmes ordres » lit maintenant la vraie journée d'ENT-3.2 (celle que le script vérifie). Suite 380/380.
+  Les sabotages du lot 1 (tableau Tournée, cellule qui bouge, « ? » qui enregistre) restent gardés
+  par la page d'essai.
+- **Reste ouvert** : essai à l'écran par Tristan (ENT-3.2 et 3.3 restent `pret: true`, ouvertes ; personne n'avait commencé).
+  Corrigés enseignant : `contenus/corriges/` ne contient que celui d’ENT-3.1, rien à régénérer pour 3.2 / 3.3.
