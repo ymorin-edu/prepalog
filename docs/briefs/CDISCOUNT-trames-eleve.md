@@ -6,7 +6,7 @@
 > Lis docs/briefs/CDISCOUNT-trames-eleve.md : commite les fichiers de trame Cdiscount déposés par Cowork (liste §2), sans rien déclarer, puis fais le petit correctif moteur du §4 (apostrophes dans les titres de colonnes), commité à part, avec son test. Ne touche à aucun autre fichier.
 > ```
 
-**Statut** : livré (04/10/2026) — fichiers commités, correctif du §4 fait. Trames **non relues** par Tristan, **non déclarées**.
+**Statut** : livré (04/10/2026) — fichiers commités, correctif du §4 fait, trames **déclarées** (Tristan les fait avec les élèves sans relecture préalable et note les incohérences en classe).
 
 ## 1. Ce que c'est
 
@@ -107,3 +107,11 @@ changer. **Test** (bloc `tableur-export`) : le contrôle « Valeur de l’écart
   ajouté au bloc `tableur-export` (colonne « Valeur de l'écart » tapée au clavier, contrôle « Valeur de l’écart ») ;
   éprouvé dans les deux sens (sans le pliage : « colonne introuvable », 0/10). Suite entière : 592/592.
 - Restent pour Tristan : la relecture des trames (§6) et les écarts de texte du §5 (à trancher).
+- **Suite, même jour (réponses de Tristan)** : §3 fait pour les cinq séances (`trame` dans `creerEntreprise`,
+  `corrige` dans `meta`, « Tout à l'écran » retiré d'ENT-2.3). §5 : mission de Nadia → « d'après la colonne Motif de
+  l'export » (note du corrigé ENT-2.4 alignée, dans le .js et dans `corriges_cdiscount.py`) ; « le 1er octobre » ;
+  encadré Réception selon le cas (messagerie seulement si un mail `kind: 'bl'` vise cette réception). Au passage :
+  trames de Picard ENT-4.1 à 4.3 et Boost ENT-3.1 rangées dans `meta`, donc jamais montrées — déplacées.
+  Tests : cas ENT-2.3 du bandeau **réécrit** (liens de trame au lieu de l'étiquette), encadré vérifié chez Cdiscount
+  (pas de messagerie) et Spartoo (messagerie), test statique « trame jamais dans meta » ; sabotages éprouvés.
+  Suite entière : 593/593.
