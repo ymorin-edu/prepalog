@@ -6,7 +6,7 @@
 > Lis docs/EN-COURS.md, puis le brief docs/briefs/MOTEUR-vue-planning.md et ouvre la maquette docs/briefs/planning/maquette-planning.html. Annonce la durée avant de commencer, découpe en lots (§9), puis enchaîne sans attendre : les questions du §12 ont toutes une valeur par défaut, applique-la et note au compte rendu ce que tu as choisi.
 > ```
 
-**Statut** : à implémenter *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
+**Statut** : à valider par Tristan *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
 **Date du brief** : 04/10/2026
 **Conversation d'origine** : Cowork (Opus) ; fiches projet `claude/prepalog-planning-cadrage.md` (20 décisions, maquette v8),
 `claude/prepalog-2de-s1-cadrage.md` (S1 Smoby → Kuehne+Nagel), `claude/prepalog-2de-hors-socle-et-vues.md` (vue n° 1 de la 2de)
@@ -361,11 +361,62 @@ dans la zone de la grille, jamais de la page) ; la bulle se trouve sans chercher
 
 ---
 
-## Compte rendu *(rempli par Claude Code à la livraison)*
+## Compte rendu *(rempli par Claude Code à la livraison, 04/10/2026)*
 
 - **Fichiers créés / modifiés** :
+  - créés : `core/types/planning.js` (vue, 13 types de règles, jalons, `etapesPlanning`, `notePlanning`),
+    `styles/planning.css`, `contenus/planning-essai.js` (les 3 cas de la maquette), `outils/essai-planning.html` + `.js`
+    (page d'essai : cas, temps, élève / enseignant), `outils/test/planning.mjs` (bloc `planning`, 22 cas) ;
+  - modifiés : `core/types/entreprise.js` (entrée de menu, `db.plannings`, `phasePlanning` dans `declencher()`, note
+    d'évaluation, variables du papier), `core/declencheurs.js` (`apresPlanning`), `index.html` (feuille de style),
+    `outils/test.mjs` (**une ligne dans `BLOCS`** : alerte 7), `activites/FICHE-SEANCE.md` (section « Vue Planning »).
 - **Écarts par rapport au brief** (et pourquoi) :
+  - API du §4 adaptée sur quelques points, tous décrits dans `FICHE-SEANCE.md` : les lignes des cartes viennent d'une
+    fonction `cartes.details(c, o)` (le moteur ne sait pas ce qu'est un camion) ; la ligne de durée se déclare par
+    `libDuree` + `detailDuree` ; les phrases « Camions sans quai : … » par `cartes.nonPosees` et
+    `affectation.nonAffectees` ; les compteurs du cas personnel par `compteurs: [{ lib, valeur, regle }]` ;
+    `aides.fenetre` est un objet `{ invite, carte(c) }` (les phrases de la maquette diffèrent d'un cas à l'autre) ;
+    `sansNecessite` reçoit `avec: [règles]` ; une règle peut dire où se montre son bloc fautif (`marque`) ; le titre de
+    la grille (`lignes.titre`) porte lui-même la date.
+  - « Camions sans cariste » ne liste que les camions **posés** sans cariste (la maquette y remettait aussi les camions
+    pas encore posés, déjà dits dans « Camions sans quai »).
+  - Cas personnel : chaque jalon exige aussi « sans se chevaucher » (dans la maquette, « tout est posé » le comprenait) ;
+    même résultat, recontrôlé par la recherche exhaustive.
+  - Contrastes mesurés : l'ambre et le rouge du site tombaient sous 4,5 sur les teintes jaune et violette (ambre 4,1 / 3,6
+    en clair ; rouge 2,6 sur le jaune en sombre). La vue a donc son ambre et son rouge (`--pl-ambre`, `--pl-rouge`) et, en
+    sombre, des teintes moins opaques : tout est ≥ 4,8 (valeurs en tête de `styles/planning.css`).
+  - Colonnes d'un quart d'heure à 20 px (24 dans la maquette) pour que la journée du quai tienne sans défiler à côté
+    du menu de l'environnement sur un écran de 1366 px ; 18 px pour les 56 colonnes des chauffeurs (défilement dans la
+    zone de la grille, jamais de la page : testé).
 - **Décisions prises en route** :
-- **Tests** : bloc / suite entière, nombre de cas, sabotages éprouvés
-- **Commits** : *(hash + message)*
+  - Le temps se lit dans `meta.temps` (`erreur` = entraînement ; absent = guidage) ; `copie` impose l'évaluation. Le
+    contenu déclare ses aides une fois : c'est le moteur qui n'en garde que `regles` hors guidage (tableau du §3.5).
+  - Sans déclencheur `phasePlanning` dans la séance, la vue passe seule en phase 2 au 1er envoi (filet). Après
+    « Recommencer » au bilan, l'aléa déjà reçu reste acquis : le 1er envoi mène directement à la phase 2.
+  - Au clavier, Entrée sur un bloc **sans** seconde ressource (cas personnel) le prend, comme Espace.
+  - Le choix fait dans la bulle : bordure de 3 px + coche + `aria-pressed`, fond du panneau (testé).
+  - **Questions du §12, valeurs par défaut appliquées** : note = jalons seuls (réussis / 10 × 20, réglable par
+    `note.sur`) ; compteurs « Présents » visibles en évaluation (un contenu qui n'en veut pas ne déclare pas `compteurs`) ;
+    simplifications du cas chauffeurs gardées (pause comptée seulement si une carte Pause est posée ; trajet = conduite) ;
+    aléa déclenché par l'envoi du 1er planning (`apresPlanning`, juste ou faux) ; marquage cœur / complément hors chantier.
+- **Tests** : bloc `planning`, 22 cas, verts : parcours justes 10 / 10 dans les trois cas (solutions écrites à la main,
+  **recontrôlées contre le moteur** : justes) ; 1er envoi juste gardé après l'aléa = 8, 5, 9 / 10 ; recherche exhaustive du
+  cas personnel **8 avant, 0 qui survit, 5 après** (le 9 de la fiche de cadrage était faux) ; inaction 0 / 10 ; pièges de
+  la maquette ; « que, pas de combien » (aucun chiffre restant dans les messages des 21 sabotages) ; entraînement, évaluation (20, 14, et 10
+  pour une copie ramassée après le seul 1er envoi) ; aléa unique au rechargement ; réinitialiser (la version envoyée
+  reste) ; cloisonnement de deux séances ; bulle ; parcours clavier complet du quai ; glisser-déposer à la souris
+  (`boundingBox`) ; défilement des 56 colonnes. **Sabotages** : 21 règles, chacune fait tomber son jalon et ne le fait
+  plus tomber une fois retirée du contenu ; 5 casses du moteur (signalement en évaluation, bulle, réinitialiser,
+  fenêtre, clic sur un bloc) toutes vues par au moins un test. Suite entière : **567 / 567** (04/10/2026).
+- **Commits** : `c492f30` inscription + brief et maquette ; `77ea8e3` moteur, contenus et page d'essai ; `e51314c` tests et contrastes ; le commit suivant : fiche, compte rendu, décision.
 - **Reste ouvert** :
+  - **À juger à l'écran par Tristan** : `outils/essai-planning.html` (après `lancer.bat`), trois cas × trois temps, élève
+    et enseignant ; au vidéoprojecteur, la taille des blocs et du texte (réglable par le contenu : `echelle.largeur`,
+    `echelle.col1`).
+  - Une entreprise à charte sombre (`THEME.sombre`, comme Boost) n'a pas été essayée : les teintes y suivent le thème du
+    site, à remesurer le jour où une séance de ce type déclare un planning.
+  - Le parcours clavier passe d'une carte à la suivante en lui donnant le focus (l'équivalent de Tab) ; tout le reste
+    se fait au clavier.
+  - Chantiers suivants, hors de celui-ci (§12) : mots cliquables avec définition, message par phrases à choisir,
+    indicateurs de repérage pour l'enseignant (les données sont déjà rangées : clics sur « Vérifier », premier geste,
+    envois), marquage cœur / complément.

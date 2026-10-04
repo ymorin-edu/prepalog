@@ -214,6 +214,86 @@ séance qui ne tire que ses données (sans quai ni inventaire tirés) déclare `
 Le stock de départ d'un jeu tiré se pose dans `semer` (la base de départ ne connaît pas la graine). Voir
 `contenus/cdiscount-compte-a-rebours.js` et son corrigé par élève `contenus/corriges/ENT-2.5.js`.
 
+## Vue « Planning » (cartes sur une grille) — `core/types/planning.js`
+
+Depuis le 04/10/2026 (brief `docs/briefs/MOTEUR-vue-planning.md`, maquette v8). Planifier : poser des cartes
+(camions, absences, enlèvements, pauses) sur une grille **lignes = ressources × colonnes = créneaux**, voir les
+conflits, replanifier après un aléa. La séance déclare `planning` dans `creerEntreprise` et `etapes:
+etapesPlanning(PLANNING)` (importé de `core/types/planning.js`) ; une entrée de menu s'ajoute (libellé `libelle`).
+L'état vit dans `db.plannings[<planning.id>]` (cloisonné par séance). Exemples complets, les trois cas de la
+maquette : `contenus/planning-essai.js` ; page d'essai `outils/essai-planning.html` ; tests : bloc `planning`.
+
+```js
+planning: {
+  id: 'smoby-quais', libelle: 'Planning des quais', titre, date,
+  infos: (o) => [html…],         // o = { guidage, phase, lignes, ressources, reprise(l) } — panneau consigne
+  echelle: { type: 'heures', debut: '06:00', fin: '14:00', pas: 15 }      // ou { type: 'jours', jours: [...], semaine: 5 }
+  lignes: { titre, legende?, liste: [{ id, nom, note?, de?, a?, dispo?, arrivee?, finHier?, …champs du contenu }] },
+  affectation: { question: 'Qui charge le camion {carte} ?', manque: 'cariste ?', lien: 'le cariste',   // facultatif
+                 liste: [{ id, nom, de?, a?, dispo?, … }], nonAffectees?: (cartes) => texte,
+                 lecture: { titre, legende, bloc: (carte, ligne) => texte } },   // grille en lecture seule
+  cartes: { titre, legende?, aPlacer?, liste: [{ id, titre, court?, famille, des?, avant?, date?, … }],
+            details: (c, o) => [html…], duree: (c) => minutes (jours en échelle « jours »),
+            libDuree?: 'Chargement', detailDuree?: (c) => '10 min + 33 × 2 min',     // détail : guidage seulement
+            ligne?: (c) => c.qui, semaineEntiere?: true, impose?: …,                   // cas « personnel »
+            pauses?: { nombre: 4, duree: 45, libelle: 'Pause 45 min' }, nonPosees?: (cartes) => texte },
+  familles: { semi: { teinte: 'a', legende: 'semi-remorque' }, porteur: { teinte: 'b', … } },   // a = jaune, b = violet
+  compteurs: [{ lib: 'Présents', valeur: 'presents' | 'besoin' | 'filtre', regle: 'effectif' }],  // lignes sous la grille
+  regles: [ … ], jalons: [ … ], aides: { … }, alea: { … }, note: { sur: 20 },
+}
+```
+
+Heures en `'HH:MM'`, durées en **minutes** (en jours pour l'échelle « jours ») : le moteur les met en créneaux, durée
+**arrondie au créneau supérieur**. Une carte reçue par les fonctions du contenu garde tous ses champs ; le moteur y
+ajoute `_des`, `_avant`, `_L` (créneaux), `_dem` (jour demandé), `modifie` (champs changés par l'aléa, pour écrire
+« (nouvelle heure) »), `nouveau`, `pause`.
+
+**Règles** : `{ id, type, …, message }`. Le message est une fonction (ou un texte) ; celui par défaut dit **que** la
+règle n'est pas respectée, jamais **de combien** — les vôtres aussi (un test relit tous les messages).
+
+| `type` | Paramètres | Vérifie | `message(…)` |
+|---|---|---|---|
+| `unAlaFois` | `sur: 'ligne' \| 'affectation'` | deux blocs qui se recouvrent sur la même ressource (une pause compte sur sa ligne) | `(a, b, ressource, o)` |
+| `compatible` | `sur`, `si: (carte) => bool`, `exige: (ressource, carte) => bool` | ressource qui ne convient pas | `(carte, ressource, o)` |
+| `disponible` | `sur` ; la ressource porte `de`/`a`, `dispo`, `arrivee` | bloc hors de la présence de la ressource | `(carte, ressource, o)` |
+| `fenetre` | — (`des`, `avant` de la carte) | début avant `des`, fin après `avant` | `{ debut(c), fin(c) }` |
+| `attenteMax` | `minutes` | attente entre `des` et le début > `minutes` | `(carte, o)` |
+| `dateImposee` | — (`impose`, `date` de la carte) | carte imposée posée ailleurs qu'à sa date | `(carte, o)` |
+| `effectif` | `besoin: [par colonne]` | présents < besoin (présent = colonne sans carte, après l'arrivée) | `(jour, t)` |
+| `auMoinsUn` | `filtre: (ligne) => bool`, `libelle` | aucun présent qui vérifie le filtre | `(jour, t)` |
+| `cumulSansPause` | `max` (min) | cumul d'une ligne > max **sans carte Pause entre deux** | `(ligne, o)` |
+| `plafond` | `max` (min) | somme des durées d'une ligne > max | `(ligne, o)` |
+| `reposDepuisVeille` | `repos` (min) ; la ligne porte `finHier` | premier départ avant fin d'hier + repos | `(ligne, o)` |
+| `sansNecessite` | `avec: [ids de règles]` | carte non imposée décalée alors que sa date demandée respectait les règles `avec` ; jugé quand tout est posé | `(carte, o)` |
+| `critere` | `verifier({ D, I, place, o }) => [{ texte, cartes }]` | dernier recours | — |
+
+`marque: 'ligne' | 'affectation' | 'tous'` règle où le bloc fautif se montre (grille seule, ou aussi la grille en
+lecture seule et le nom de la seconde ressource). Un type inconnu ou un jalon qui cite une règle absente arrête la
+séance avec la raison en clair.
+
+**Jalons** : `[{ id, lib, regles: [ids] }]`, lus sur les versions **envoyées** (`v1` « 1er envoi », `v2` « Après
+l'aléa » : 5 + 5 = 10 étapes du suivi). Un jalon est vrai si toutes les cartes sont posées (et affectées) **et**
+qu'aucune de ses règles n'a de problème. Rien n'est vrai avant l'envoi ; envoyer à vide = 0. Un critère métier cite
+aussi les règles sans lesquelles il serait trivial (l'attente avec la fenêtre).
+
+**Temps** (lu dans `meta.temps` ; `copie` impose l'évaluation ; `erreur` = entraînement) : guidage = problèmes en
+direct, blocs fautifs, toutes les `aides.consignes`, bande ambrée (`aides.fenetre: { invite, carte(c) }`), détail de
+durée (`aides.detailDuree`), reprise et repos hachuré (`aides.reprise`), compteur de conduite
+(`aides.compteurConduite`), envoi avec problèmes à confirmer ; entraînement = « Vérifier mon planning » (liste effacée
+au geste suivant), aide `regles` seule ; évaluation = rien, aide `regles` seule. Les compteurs restent visibles à tous
+les temps (en rouge en guidage seulement).
+
+**Aléa** : `alea: { de, texte, cartes: { D: { des: '09:00' } }, ajoutCartes, ajoutLignes, ressources: { s2: { dispo:
+'12:00' } } }`. Il arrive par la messagerie : `volet.declencheurs: [{ id: 'alea', quand: apresPlanning('smoby-quais'),
+semer: (prenom) => ({ mails: [...] }), phasePlanning: 2 }]` (`apresPlanning` dans `core/declencheurs.js`, vrai dès le
+1er envoi, juste ou faux). Le message s'affiche aussi en tête du panneau ; le planning de l'élève est gardé tel quel.
+Sans aléa : un seul envoi, puis le bilan. « Réinitialiser le planning » vide le planning **en cours**, jamais une
+version envoyée.
+
+**Évaluation** : `meta.copie: true`, `copie: meta.copie`, `export const noter = (db) => moteur.noter(db)` ; le dernier
+envoi rend la copie. Note = jalons réussis / jalons × `note.sur` (20 par défaut), détail jalon par jalon, clics sur
+« Vérifier », heure du premier geste et des envois dans `detail.planning` (rangés, montrés nulle part).
+
 ## Pièges
 
 - Une séance en cours d'écriture reste en `pret: false` et peut être commitée à tout moment.
