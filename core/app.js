@@ -34,7 +34,7 @@ function fermerJeuCourant() {
 // ------------------------------------------------------------------ connexion
 function vueConnexion() {
   app.innerHTML = `
-    ${entete({ marque: CONFIG.marque, institution: CONFIG.institution, profil: null, grand: true, logo: 'complet' })}
+    ${entete({ marque: CONFIG.marque, institution: CONFIG.institution, profil: null, grand: true })}
     <div class="preambule">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.6v.9"/></svg>
       <span>${ech(CONFIG.preambule)}</span>
@@ -114,7 +114,7 @@ async function vueAccueil() {
 
   const rub = rubriqueActive ? RUBRIQUES.find((r) => r.id === rubriqueActive) : null;
   const cartouche = `
-    ${entete({ marque: CONFIG.marque, institution: CONFIG.institution, profil, logo: 'complet' })}
+    ${entete({ marque: CONFIG.marque, institution: CONFIG.institution, profil, logo: rub?.id === 'simulog' ? 'simulog' : undefined })}
     ${!estProf && !groupe ? `<div class="avis avis-err">Vous n'êtes rattaché à aucun groupe. Prévenez votre enseignant.</div>` : ''}
     ${estProf && !groupeActif ? `<div class="avis">Aucun groupe actif. Ouvrez l'espace enseignant pour en créer un.</div>` : ''}`;
 
@@ -276,7 +276,7 @@ async function vueActivite(aid) {
     app.innerHTML = `<div id="hoteActivite" class="immersif"><div class="vide">Chargement…</div></div>`;
   } else {
     app.innerHTML = `
-      ${entete({ marque: CONFIG.marque, institution: CONFIG.institution, profil })}
+      ${entete({ marque: CONFIG.marque, institution: CONFIG.institution, profil, logo: rubriqueActive === 'simulog' ? 'simulog' : undefined })}
       <button class="lien-accueil" id="btnRetour">← ${rubriqueActive ? ech((RUBRIQUES.find((r) => r.id === rubriqueActive) || {}).label || 'RETOUR').toUpperCase() : 'ACCUEIL'}</button>
       <h1>${ech(m.meta.titre)}</h1>
       <p class="note">${ech(m.meta.code || '')} ${m.meta.desc ? '· ' + ech(m.meta.desc) : ''}

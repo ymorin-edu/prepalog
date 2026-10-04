@@ -71,8 +71,8 @@ export const ICONES = {
   transport: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.4 5.9h11.2v9.9H2.4z"/><path d="M13.6 9.2h3.8l3.2 3.9v2.7h-7"/><path d="M2.4 15.8h3.1M8.6 15.8h6.2M18.2 15.8h2.4"/><circle cx="7.1" cy="17.9" r="2.1"/><circle cx="16.8" cy="17.9" r="2.1"/></svg>`,
   // registre ouvert
   gestion: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 6.7C12 6.7 10 4.9 4.2 4.9v13.2C10 18.1 12 19.9 12 19.9s2-1.8 7.8-1.8V4.9C14 4.9 12 6.7 12 6.7Z"/><path d="M12 6.7v13.2"/></svg>`,
-  // l'entreprise, avec sa porte
-  entreprise: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.2 20.6h17.6"/><path d="M5.6 20.6V7.3L12 4.1l6.4 3.2v13.3"/><path d="M9.2 9.9h1.7M13.1 9.9h1.7M9.2 13.3h1.7M13.1 13.3h1.7"/><path d="M10.1 20.6v-3.7h3.8v3.7"/></svg>`,
+  // écran et carton : le logiciel de l'entreprise (Simulog)
+  simulog: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.8" y="3.6" width="18.4" height="13" rx="1.6"/><path d="M12 16.6v3.3M8.2 20.3h7.6"/><path d="M12 6.4 15.7 8.25 12 10.1 8.3 8.25z"/><path d="M8.3 8.25v3.7 L12 13.8 15.7 11.95V8.25M12 10.1v3.7"/></svg>`,
   // deux comptes, pas un
   comptes: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9.4" cy="8.3" r="3.3"/><path d="M3.5 19.6c0-3.3 2.6-5.8 5.9-5.8s5.9 2.5 5.9 5.8"/><path d="M16.2 6.2a3.3 3.3 0 0 1 0 6.2"/><path d="M17.5 19.6c0-2.4-.8-4.3-2.2-5.4"/></svg>`,
   // des résultats qui montent (c'était la grille du tableur, en double)
@@ -96,7 +96,7 @@ export const RUBRIQUES = [
     desc: 'Compléter un classeur, le déposer, obtenir la correction automatique.' },
 
   // bande 3 — les outils de travail
-  { id: 'simulog', label: 'Simulog', bande: 3, cat: 'simulog', icone: 'entreprise', parEntreprise: true,
+  { id: 'simulog', label: 'Simulog', bande: 3, cat: 'simulog', icone: 'simulog', parEntreprise: true,
     desc: "Des environnements d'entreprise complets. Chaque élève travaille dans sa propre base." },
   { id: 'magasin', label: 'Magasin', bande: 3, ids: ['magasin'], icone: 'magasin',
     desc: 'La base du magasin pédagogique : produits, emplacements et état du stock.' },

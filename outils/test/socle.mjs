@@ -679,29 +679,64 @@ await v('bascule du thème et persistance', async () => {
   if (apresRechargement !== attr) throw new Error('thème non conservé au rechargement');
 });
 
-// ---------- 13 bis. nouveau logo (04/10/2026) : connexion et accueil seulement
-// Le logo complet porte déjà le mot « Prepalog » : la marque écrite ne doit pas le
-// doubler. Les écrans intérieurs gardent l'ancien logo suivi de la marque.
-const logoComplet = async (ou) => {
+// ---------- 13 bis. logos du bandeau (04/10/2026, décision de Tristan)
+// Le logo porte déjà son nom en tracés : la marque écrite ne doit pas le doubler. Prepalog
+// complet sur tous les écrans ; Simulog seul à l'intérieur de la rubrique Simulog.
+const logoDuBandeau = async (ou, fichier = 'prepalog-logo-bandeau.svg', nom = 'Prepalog') => {
+  // l'image se charge après l'affichage : sa largeur n'existe qu'une fois chargée
+  await page.waitForFunction(() => document.querySelector('.entete .logo')?.complete, null, { timeout: 4000 }).catch(() => {});
   const r = await page.$eval('.entete', (h) => ({
     src: h.querySelector('.logo')?.getAttribute('src') || '',
     alt: h.querySelector('.logo')?.getAttribute('alt') || '',
     larg: h.querySelector('.logo')?.getBoundingClientRect().width || 0,
     marque: !!h.querySelector('.marque'),
   }));
-  if (!/prepalog-logo-bandeau\.svg$/.test(r.src)) throw new Error(`${ou} : pas le nouveau logo (${r.src})`);
-  if (r.alt !== 'Prepalog') throw new Error(`${ou} : texte de remplacement « ${r.alt} »`);
-  if (r.marque) throw new Error(`${ou} : le nom « Prepalog » apparaît deux fois`);
+  if (!r.src.endsWith('/' + fichier)) throw new Error(`${ou} : logo ${r.src}, attendu ${fichier}`);
+  if (r.alt !== nom) throw new Error(`${ou} : texte de remplacement « ${r.alt} »`);
+  if (r.marque) throw new Error(`${ou} : le nom apparaît deux fois (marque écrite)`);
   if (r.larg < 150) throw new Error(`${ou} : logo écrasé (${Math.round(r.larg)} px de large)`);
 };
-await v('nouveau logo à l\'accueil enseignant, ancien dans l\'espace enseignant', async () => {
-  await logoComplet('accueil enseignant');
+const logoSimulog = (ou) => logoDuBandeau(ou, 'simulog-logo-bandeau.svg', 'Simulog');
+// Le pictogramme Simulog (écran + carton) : l'écran est le seul rectangle à x = 2.8 ;
+// l'ancien bâtiment avait son toit en « M5.6 20.6V7.3 ».
+const pictoSimulog = async (sel, ou) => {
+  const p = await page.$eval(sel, (d) => ({
+    ecran: !!d.querySelector('rect[x="2.8"][width="18.4"]'),
+    batiment: d.innerHTML.includes('M5.6 20.6V7.3'),
+  }));
+  if (!p.ecran || p.batiment) throw new Error(`${ou} : pas le pictogramme Simulog ` + JSON.stringify(p));
+};
+await v('logo Prepalog complet partout, logo Simulog dans la rubrique Simulog seulement', async () => {
+  await logoDuBandeau('accueil enseignant');
+  await pictoSimulog('[data-rub="simulog"] .rubrique-disc', 'carte Simulog de l’accueil');
+  // rubrique Tableur, puis une activité ouverte (non immersive)
+  await page.click('[data-rub="tableur"]');
+  await page.waitForSelector('[data-act="inventaire-tableur"]', { timeout: 6000 });
+  await logoDuBandeau('rubrique Tableur');
+  await page.click('[data-act="inventaire-tableur"]');
+  await page.waitForSelector('#btnRetour', { timeout: 6000 });
+  await logoDuBandeau('activité TAB ouverte');
+  await page.click('#btnRetour');
+  await page.waitForSelector('#btnAccueil', { timeout: 6000 });
+  await page.click('#btnAccueil');
+  // rubrique Simulog : les logos des entreprises, puis les séances d'une entreprise
+  await page.waitForSelector('[data-rub="simulog"]', { timeout: 6000 });
+  await page.click('[data-rub="simulog"]');
+  await page.waitForSelector('.entreprise', { timeout: 6000 });
+  await logoSimulog('Simulog, liste des entreprises');
+  await pictoSimulog('.rubrique-disc', 'en-tête de la rubrique Simulog');
+  await page.click('.entreprise[data-ent]');
+  await page.waitForSelector('#btnSimulog', { timeout: 6000 });
+  await logoSimulog('Simulog, séances d’une entreprise');
+  await page.click('#btnSimulog');
+  await page.waitForSelector('#btnAccueil', { timeout: 6000 });
+  await page.click('#btnAccueil');
+  await page.waitForSelector('[data-rub="simulog"]', { timeout: 6000 });
+  await logoDuBandeau('retour à l’accueil');
+  // espace enseignant
   await page.click('#btnProfEspace');
   await page.waitForSelector('.prof-onglets, #hoteProf');
-  const src = await page.getAttribute('.entete .logo', 'src');
-  if (!/\/logo-bandeau\.png$/.test(src)) throw new Error('espace enseignant : ' + src);
-  const m = await page.textContent('.entete .marque');
-  if (!/Prepalog/.test(m || '')) throw new Error('espace enseignant : marque absente');
+  await logoDuBandeau('espace enseignant');
 });
 
 // ---------- 14. écran de connexion : préambule, hiérarchie, touche Entrée
@@ -726,12 +761,12 @@ await v('écran de connexion', async () => {
   await page.waitForSelector('text=Bonjour Léa', { timeout: 6000 });
 });
 
-// ---------- 14 bis. nouveau logo : accueil élève et écran de connexion
+// ---------- 14 bis. logo Prepalog : accueil élève et écran de connexion
 await v('nouveau logo à l\'accueil élève et à la connexion', async () => {
-  await logoComplet('accueil élève');
+  await logoDuBandeau('accueil élève');
   await page.click('#btnDeco');
   await page.waitForSelector('#mat');
-  await logoComplet('connexion');
+  await logoDuBandeau('connexion');
   // on laisse la page comme le test précédent l'avait laissée
   await page.fill('#mat', '2601');
   await page.fill('#code', 'aaa1');

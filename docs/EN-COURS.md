@@ -9,7 +9,6 @@ est déjà modifié ou inscrit ci-dessous, **elle s'arrête et le dit à Tristan
 |---|---|---|
 | Cowork — reprise des trames élève (audit du 04/10) : Picard 4.1 et 4.2, puis Cdiscount, puis Spartoo ; PDF regénérés à la fin | `outils/trame-*.py`, `outils/corriges_data.py`, `outils/corriges_cdiscount.py`, `contenus/trames/*.docx`, `contenus/corriges/*-trame.js` et `ENT-1.x`/`ENT-2.x`/`ENT-3.1`.js | 04/10 |
 | Claude Code — séance ENT-5.1 Smoby recrutement (+ lot 7 : entreprise n° 5) | `activites/smoby-recrutement.js`, `activites/index.js`, `contenus/smoby.js`, `contenus/smoby-ent51.js`, `contenus/corriges/ENT-5.1.js`, `outils/test/smoby.mjs`, `docs/briefs/ENT-5.1-smoby-recrutement.md` | 04/10 |
-| Claude Code — logo Simulog et logo Prepalog partout (`docs/briefs/LOGO-simulog-et-partout.md`), dans une copie à part (`prepalog-logo`) | `core/ui.js`, `core/app.js`, `activites/index.js` (pictogrammes et rubrique Simulog seulement), `styles/simulog-logo-bandeau.svg`, `outils/test/socle.mjs` (cas du logo) | 04/10 |
 
 Rappel : un seul chantier à la fois dans `core/types/tournee.js`, `core/types/grille.js`,
 `core/types/entreprise.js`, `styles/base.css` et `outils/test/boost.mjs` (voir `docs/briefs/COORDINATION-boost.md`).
