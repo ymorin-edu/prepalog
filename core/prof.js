@@ -622,28 +622,41 @@ export async function rendreEspaceProf(hote, ctx) {
       const blocs = notees.filter((m) => m.portee === 'eleve' && m.immersif).map((m) => {
         const rep = (e) => { const t = par[e.uid]?.[m.id]; return t && t.detail && t.detail.indicateurs && t.detail.indicateurs[m.id]; };
         if (!eleves.some(rep)) return '';
+        // « Documents ouverts » : seulement pour une séance qui joint des documents (04/10/2026). « 4 / 6 » =
+        // 4 documents différents ouverts sur 6 ; le survol dit lesquels et combien de fois.
+        const docsDe = (e) => { const t = par[e.uid]?.[m.id]; return t && t.detail && t.detail.documents; };
+        const avecDocs = eleves.some(docsDe);
+        const caseDocs = (e, r) => {
+          if (!avecDocs) return '';
+          const D = docsDe(e);
+          if (!D) return '<td class="num" data-rep="docs">—</td>';
+          const ouverts = Object.entries(r.docs || {}).filter(([id, n]) => n > 0 && D.noms[id]);
+          const titre = ouverts.length ? liste(Object.fromEntries(ouverts.map(([id, n]) => [D.noms[id], n]))) : 'Aucun document ouvert';
+          return `<td class="num" data-rep="docs" title="${ech(titre)}">${ouverts.length} / ${D.total}</td>`;
+        };
         const lignes = eleves.map((e) => {
           const r = rep(e);
-          if (!r) return `<tr><td>${ech(e.nom)} ${ech(e.prenom)}</td><td class="num note" colspan="4">—</td></tr>`;
+          if (!r) return `<tr><td>${ech(e.nom)} ${ech(e.prenom)}</td><td class="num note" colspan="${avecDocs ? 5 : 4}">—</td></tr>`;
           const reel = par[e.uid][m.id].detail.quai && par[e.uid][m.id].detail.quai.reel;
           const p = Object.entries(r.premier || {});
           const ok = p.filter(([, st]) => st === 'ok').map(([k]) => k), ko = p.filter(([, st]) => st !== 'ok').map(([k]) => k);
           return `<tr data-rep-eleve="${ech(e.uid)}"><td>${ech(e.nom)} ${ech(e.prenom)}</td>
             <td class="num" data-rep="temps">${minutes(r.temps || 0)}${reel ? `<span class="note"> (quai : ${minutes(reel)})</span>` : ''}</td>
             <td class="num" data-rep="mots" title="${ech(liste(r.mots))}">${somme(r.mots)}</td>
-            <td class="num" data-rep="aides" title="${ech(liste(r.aides))}">${somme(r.aides)}</td>
+            <td class="num" data-rep="aides" title="${ech(liste(r.aides))}">${somme(r.aides)}</td>${caseDocs(e, r)}
             <td class="num" data-rep="premier" title="${ech(`Justes du premier coup : ${ok.join(', ') || '—'}. Ratés au premier jugement : ${ko.join(', ') || '—'}.`)}">${p.length ? `${ok.length} / ${p.length}` : '—'}</td></tr>`;
         }).join('');
         return `<details class="reperage" data-reperage="${ech(m.id)}"><summary>${ech(m.code)} — ${ech(m.titre)}</summary>
           <div style="overflow:auto"><table>
             <thead><tr><th>Élève</th><th class="num">Temps passé</th><th class="num">Mots ouverts</th>
-              <th class="num">Autres aides</th><th class="num">Jalons justes du premier coup</th></tr></thead>
+              <th class="num">Autres aides</th>${avecDocs ? '<th class="num">Documents ouverts</th>' : ''}<th class="num">Jalons justes du premier coup</th></tr></thead>
             <tbody>${lignes}</tbody></table></div></details>`;
       }).join('');
       if (!blocs) return '';
       return `<section class="panneau" id="reperage">
         <strong>Repérage des élèves (vous seul le voyez)</strong>
         <p class="note">Par séance : le temps passé l'écran ouvert, les mots cliquables et les autres aides ouverts,
+          les documents ouverts (s'il y en a : ouverts, pas forcément lus),
           et les jalons justes au premier jugement (premier envoi, premier dépôt, première validation) sur les
           jalons déjà jugés. Survolez une case pour le détail. Rien n'est calculé à votre place : vous réglez
           vous-même le niveau standard / confirmé de chaque élève.</p>

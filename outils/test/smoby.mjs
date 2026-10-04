@@ -415,6 +415,8 @@ await v('Repérage : l’enseignant voit, par séance d’entreprise, temps, mot
     egal(lu.mots, ['3', 'CACES (2), CDD (1)'], 'mots');
     egal(lu.aides, '1', 'aides');
     egal(lu.premier, ['2 / 3', 'Justes du premier coup : a, c. Ratés au premier jugement : b.'], 'premier coup');
+    // Une séance sans documents joints : pas de colonne « Documents ouverts ».
+    vrai(!(await page.$(`#reperage [data-reperage="${ids.aid}"] [data-rep="docs"]`)), 'colonne des documents sans documents');
     // Un élève sans repérage dans le même groupe : un tiret, pas des zéros.
     const autre = await page.$$eval(`#reperage [data-reperage="${ids.aid}"] tbody tr:not([data-rep-eleve])`, (L) => L.length);
     vrai(autre > 0, 'les autres élèves du groupe n’apparaissent pas');
@@ -429,6 +431,61 @@ await v('Repérage : l’enseignant voit, par séance d’entreprise, temps, mot
   // indicateurs sur d'autres séances : on ne regarde que la sienne).
   await ouvrirSuivi();
   vrai(!(await page.$(`#reperage [data-reperage="${ids.aid}"]`)), 'l’encadré de la séance reste affiché sans aucune donnée');
+});
+
+await v('Repérage : « Documents ouverts » = documents différents ouverts sur ceux de la séance, détail au survol', async () => {
+  // Le détail tel que le moteur le range (`noter` de l'univers d'essai), écrit sur une séance d'entreprise du registre.
+  const detail = await pg.evaluate(async () => {
+    const { creerEntreprise } = await import('/core/types/entreprise.js');
+    const E = await import('/outils/essai-2de.js');
+    return creerEntreprise(E.univers({})).noter({ v: 1, mails: [], indicateurs: { 'essai-2de': { docs: { yanis: 3, laura: 1 } } } }).detail;
+  });
+  egal(detail.documents.total, 6, 'documents rangés avec la note');
+  await page.reload();
+  await page.waitForSelector('#btnProfEspace, #btnProf, #btnDeco', { timeout: 8000 });
+  if (!(await page.$('#btnProfEspace'))) {
+    if (!(await page.$('#btnProf'))) { await page.click('#btnDeco'); await page.waitForSelector('#btnProf', { timeout: 8000 }); }
+    await page.click('#btnProf');
+  }
+  await page.waitForSelector('#btnProfEspace', { timeout: 8000 });
+  await page.click('#btnProfEspace');
+  await page.click('[data-ong="suivi"]');
+  await page.waitForSelector('#btnCsvSuivi', { timeout: 6000 });
+  const nomGroupe = (await page.textContent('#btnCsvSuivi >> xpath=ancestor::div[1]//strong')).replace(/^Suivi de /, '').trim();
+  const ids = await page.evaluate(async ({ nomGroupe, detail }) => {
+    const k = Object.keys(localStorage).find((x) => /groupes$/.test(x));
+    const gs = JSON.parse(localStorage.getItem(k));
+    const gid = Object.keys(gs).find((id) => gs[id].nom === nomGroupe);
+    const { B } = await import('/core/backend.js');
+    await B.creerEleves(gid, [{ nom: 'DOCS', prenom: 'Test', matricule: 'docs-test', code: 'x' }]);
+    const el = (await B.elevesDuGroupe(gid)).find((x) => x.nom === 'DOCS');
+    const { chargerActivites } = await import('/activites/index.js');
+    const m = (await chargerActivites()).map((x) => x.meta).find((x) => x.portee === 'eleve' && x.immersif && x.bareme && !x.copie);
+    // Les indicateurs du moteur sont rangés sous l'id de la séance : on les recopie sous celle du registre.
+    // `ancien` : un document qui n'est plus dans la séance (retiré depuis) ne compte pas.
+    const d = { documents: detail.documents, indicateurs: { [m.id]: { temps: 600, docs: { ...detail.indicateurs['essai-2de'].docs, ancien: 2 } } } };
+    await B.ecrireScore(gid, el.uid, m.id, { score: 1, max: 5, detail: d });
+    return { gid, uid: el.uid, aid: m.id };
+  }, { nomGroupe, detail });
+  try {
+    await page.reload();
+    await page.waitForSelector('#btnProfEspace', { timeout: 8000 });
+    await page.click('#btnProfEspace');
+    await page.click('[data-ong="suivi"]');
+    await page.waitForSelector(`#reperage [data-reperage="${ids.aid}"]`, { timeout: 6000 });
+    const lu = await page.$eval(`#reperage [data-reperage="${ids.aid}"]`, (b, uid) => {
+      const c = b.querySelector(`tr[data-rep-eleve="${uid}"] [data-rep="docs"]`);
+      return { entete: [...b.querySelectorAll('thead th')].map((t) => t.textContent).includes('Documents ouverts'),
+        case: c && [c.textContent, c.title] };
+    }, ids.uid);
+    egal(lu, { entete: true, case: ['2 / 6', 'Yanis Morel (3), Laura Petit (1)'] }, 'colonne des documents');
+  } finally {
+    await page.evaluate(async ({ gid, uid, aid }) => {
+      const { B } = await import('/core/backend.js');
+      await B.poserNote(gid, uid, aid, null);
+      await B.supprimerEleve(uid);
+    }, ids);
+  }
 });
 
 // ── Documents joints (brief MOTEUR-documents-formulaire, lot 1, `core/types/documents.js`) ─────────

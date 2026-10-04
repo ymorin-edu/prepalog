@@ -184,6 +184,10 @@ export function creerEntreprise(U) {
     // Le repérage de l'élève (2de, lot 6) : temps, aides ouvertes, jalons réussis du premier coup,
     // par séance. Lu par l'enseignant seul, dans le suivi de classe ; jamais montré à l'élève.
     if (db && db.indicateurs) detail.indicateurs = db.indicateurs;
+    // Les documents de la séance (nombre et noms courts), pour la colonne « Documents ouverts » du repérage :
+    // le suivi ne charge pas la séance, il lit tout ici.
+    if (VDOC) detail.documents = { total: VDOC.ids().length,
+      noms: Object.fromEntries(VDOC.ids().map((id) => [id, VDOC.doc(id).court || VDOC.doc(id).titre || id])) };
     // Le quai range aussi ses temps dans le détail : le temps réel passé en guidage sert à caler
     // les seuils de rapidité de l'évaluation (décision de Tristan, 03/10/2026). En évaluation, la
     // note n'est plus le nombre d'étapes : 15 points de réception + 5 de rapidité (`noteQuai`).

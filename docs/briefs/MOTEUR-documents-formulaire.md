@@ -152,7 +152,8 @@ déplié sur un écran de Boost ou de Picard ; au vidéoprojecteur.
   menu replié : rien de cassé, aucune erreur. `outils/test.mjs` et `commun.mjs` non touchés.
 - **Commits** : 79fb73b (lot 1), e8c85b4 (lot 2), lot 3 (ce commit).
 - **Reste ouvert** :
-  - Le suivi enseignant (« Repérage ») ne montre pas encore une colonne « documents ouverts » : les ouvertures
-    sont comptées dans la base (`indicateurs[…].docs`) mais `core/prof.js` ne les affiche pas. À décider.
+  - ~~Colonne « Documents ouverts » du repérage~~ : **ajoutée le 04/10/2026** à la demande de Tristan. « 4 / 6 » =
+    documents différents ouverts sur ceux de la séance, détail au survol ; seulement pour une séance qui joint
+    des documents. Le moteur range `detail.documents = { total, noms }` avec la note.
   - Lot 4 (blocs `cases`, `ordre`, `texte`, `nombre`, `date`, `heure`) avec ENT-5.2 et ENT-5.8.
   - ENT-5.1 peut maintenant se construire (`documents`, `documentsStyle`, `fiche`, `pieces`, `ouvreFiche`).

@@ -7,7 +7,6 @@ est déjà modifié ou inscrit ci-dessous, **elle s'arrête et le dit à Tristan
 
 | Chantier | Fichiers qu'il touche | Depuis |
 |---|---|---|
-| Repérage : colonne « Documents ouverts » | `core/prof.js`, `core/types/entreprise.js`, `outils/test/smoby.mjs`, `docs/briefs/MOTEUR-documents-formulaire.md` | 04/10 |
 | Cowork — reprise des trames élève (audit du 04/10) : Picard 4.1 et 4.2, puis Cdiscount, puis Spartoo ; PDF regénérés à la fin | `outils/trame-*.py`, `outils/corriges_data.py`, `outils/corriges_cdiscount.py`, `contenus/trames/*.docx`, `contenus/corriges/*-trame.js` et `ENT-1.x`/`ENT-2.x`/`ENT-3.1`.js | 04/10 |
 
 Rappel : un seul chantier à la fois dans `core/types/tournee.js`, `core/types/grille.js`,
