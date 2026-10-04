@@ -1252,7 +1252,7 @@ Ce qui cloche : DEM-26-0027 : 2 - 1 = 1`;
   const S23 = await imp('contenus/cdiscount-regularise.js');
   const STOCK_23 = { 'BOU-17L': 16, 'GRP-2F': 11, 'MIX-PLG': 9, 'MUL-4P': 37, 'PIL-AA-8': 75, 'VEI-LED': 9 };
   // Les six jalons de l'ENQUÊTE. Depuis le 04/10/2026 (C7), deux jalons tableur les précèdent : ils ont leurs cas plus bas.
-  const ENQ23 = S23.ETAPES.slice(2);
+  const ENQ23 = S23.ETAPES.slice(3);
   const statuts6 = (db) => statuts({ ETAPES: ENQ23, CATALOGUE: S23.CATALOGUE }, db);
   const ids23 = ENQ23.map((x) => x.id);
   const tombes23 = (db) => { const st = statuts6(db); return ids23.filter((x, i) => st[i] !== 'ok'); };
@@ -1497,8 +1497,8 @@ Suite à donner : Réclamation auprès de Gardéo, livraison incomplète`;
     if (res.receptions !== 2 || res.commandes !== 8) throw new Error(`${res.receptions} réceptions, ${res.commandes} commandes`);
     if (res.colisMixeurs !== 8) throw new Error('les colis de mixeurs à l\'écran ne font pas 8 : ' + res.colisMixeurs);
     if (/messagerie/.test(res.avisRec) || !/bon de livraison/.test(res.avisRec)) throw new Error('encadré de la réception : ' + res.avisRec);
-    // Les six jalons de l'enquête ; les deux du tableur attendent un dépôt.
-    if (!res.score || res.score.score !== 6 || res.score.max !== 8) throw new Error('score remonté : ' + JSON.stringify(res.score));
+    // Les six jalons de l'enquête ; les trois du tableur (export compris) attendent un dépôt.
+    if (!res.score || res.score.score !== 6 || res.score.max !== 9) throw new Error('score remonté : ' + JSON.stringify(res.score));
     const reste = await page.evaluate(() => document.body.classList.contains('immersion'));
     if (reste) throw new Error('la page n\'a pas été rendue propre');
   });
@@ -1577,6 +1577,7 @@ Suite à donner : Réclamation auprès de Gardéo, livraison incomplète`;
   const SYNTHESE_22 = { 'CAB-USBC-1M': 2, 'CHG-20W': 3, 'ECO-BT-01': 0, 'SOU-SF-02': 0, 'BAT-10K': 1, 'CLE-64G': 0, 'AMP-LED-E27': 0, 'COQ-UNI-01': 2 };
   const ouvrirC = (aisance) => declencher(S2, ouvrir(S2, 'Léa', aisance));
   const exportC = (db) => GT.construireExport(S2.TABLEUR.exports[0], db, {});
+  const G_lignes = (ex) => JSON.stringify(ex.feuilles[0].lignes);
   // Le classeur de l'élève. `o` : ses erreurs (tape : écarts tapés ; sansSi : une autre fonction que
   // SI dans la colonne L ; syn : valeurs de synthèse écrites à la place des bonnes).
   const classeurC = (db, o = {}) => {
@@ -1608,7 +1609,7 @@ Suite à donner : Réclamation auprès de Gardéo, livraison incomplète`;
     GT.enregistrerDepot(db, S2.ID_DEPOT, res, { retour: 'guidage', fichier: 'x.xlsx' });
     return res;
   };
-  const exporterC = (db) => { db.tableur = db.tableur || {}; db.tableur.exports = { [S2.ID_EXPORT]: { at: Date.now(), n: 30 } }; return db; };
+  const exporterC = (db) => { const e = S2.TABLEUR.exports[0]; GT.enregistrerExport(db, e, GT.criteresJustes(e, db), 30); return db; };
   const stC = (db) => Object.fromEntries(S2.ETAPES.map((e) => [e.id, e.verifier(db).status]));
 
   await v('ENT-2.2 : export standard — 30 lignes (A-01 à A-04), les 8 constats et la synthèse écrits à la main', async () => {
@@ -1705,7 +1706,7 @@ Suite à donner : Réclamation auprès de Gardéo, livraison incomplète`;
     if (stC(db2).si !== 'ok') throw new Error('redépôt juste non retenu');
   });
 
-  await v('ENT-2.2 : à l\'écran — Exporter sur Commandes (30 lignes), déposer dans Fichiers (retour détaillé), écrire à Nadia, 5/5', async () => {
+  await v('ENT-2.2 : à l\'écran — Extractions, critères déjà réglés (niveau 1) : Exporter (30 lignes), déposer dans Fichiers (retour détaillé), écrire à Nadia, 5/5', async () => {
     const ctx2 = await nav.newContext({ acceptDownloads: true });
     const p = await ctx2.newPage();
     p.setDefaultTimeout(6000);
@@ -1725,9 +1726,13 @@ Suite à donner : Réclamation auprès de Gardéo, livraison incomplète`;
       });
       const Z = '#hote2 .ent-main';
       const aller = async (vue) => { await p.click(`#hote2 .ent-nav[data-vue="${vue}"]`); await p.waitForTimeout(80); };
-      await aller('commandes');
+      if (await p.$(`#hote2 .ent-nav[data-vue="commandes"]`) && (await aller('commandes'), await p.$(`${Z} [data-exporter]`))) throw new Error('un bouton Exporter reste sur Commandes');
+      await aller('extractions');
+      // Niveau 1 : les critères de la demande sont déjà réglés.
+      if (await p.inputValue(`${Z} [data-filtre="allee"]`) !== 'A' || await p.inputValue(`${Z} [data-filtre="periode"]`) !== '30j') throw new Error('critères non préréglés');
+      if (!/30 lignes/.test(await p.textContent(`${Z} [data-ext-compte]`))) throw new Error('compte à l\'écran : ' + await p.textContent(`${Z} [data-ext-compte]`));
       const [dl] = await Promise.all([p.waitForEvent('download'), p.click(`${Z} [data-exporter="preparations"]`)]);
-      if (dl.suggestedFilename() !== 'cdiscount-preparations-allee-A.xlsx') throw new Error('nom : ' + dl.suggestedFilename());
+      if (dl.suggestedFilename() !== 'cdiscount-lignes-de-preparation.xlsx') throw new Error('nom : ' + dl.suggestedFilename());
       const wb = XL.read(fs.readFileSync(await dl.path()), { type: 'buffer' });
       const n = XL.utils.sheet_to_json(wb.Sheets['Préparations']).length;
       if (n !== 30) throw new Error(`${n} lignes exportées`);
@@ -1740,8 +1745,12 @@ Suite à donner : Réclamation auprès de Gardéo, livraison incomplète`;
       await p.setInputFiles('#fichierTableur', { name: 'analyse.xlsx', mimeType: 'application/octet-stream', buffer: classeurC(db) });
       await p.waitForTimeout(400);
       if (!/68 résultats justes sur 68/.test((await p.textContent(Z)).replace(/\s+/g, ' '))) throw new Error('redépôt juste');
+      if (!await p.$(`${Z} [data-depot-export="ok"]`)) throw new Error('retour sur l\'export absent');
       await p.click('#hote2 [data-aide-tableur]');
-      if (!/SI\(test ; si vrai ; si faux\)/.test(await p.textContent('#hote2 [data-aide-tableur-texte]'))) throw new Error('rappel du bandeau');
+      const aide = await p.textContent('#hote2 [data-aide-tableur-texte]');
+      if (!/SI\(test ; si vrai ; si faux\)/.test(aide)) throw new Error('rappel du bandeau');
+      // Retour de Tristan (04/10) : les guillemets, la cellule A1, le format texte.
+      if (!/entre guillemets : =NB\.SI\(G:G;"Casse"\)/.test(aide) || !/=NB\.SI\(G:G;A1\)/.test(aide) || !/format texte/.test(aide)) throw new Error('rappel des guillemets : ' + aide);
       await aller('mail');
       await p.click(`${Z} .ent-mitem >> text=Allée A : ce que disent les chiffres`);
       await p.click(`${Z} [data-repondre]`);
@@ -1777,9 +1786,9 @@ Suite à donner : Réclamation auprès de Gardéo, livraison incomplète`;
     ws['!ref'] = `A1:${J}${F.lignes.length + 1}`;
     const motifs = Object.entries(o.syn || S23.parMotif(db));
     const ws2 = XL.utils.aoa_to_sheet([['Motif', 'Nombre'], ...motifs]);
-    motifs.forEach((m, k) => { ws2['B' + (k + 2)] = { t: 'n', v: m[1], f: `COUNTIF(Ajustements!${G}:${G},A${k + 2})` }; });
+    motifs.forEach((m, k) => { ws2['B' + (k + 2)] = { t: 'n', v: m[1], f: `COUNTIF(Mouvements!${G}:${G},A${k + 2})` }; });
     const wb = XL.utils.book_new();
-    XL.utils.book_append_sheet(wb, ws, 'Ajustements');
+    XL.utils.book_append_sheet(wb, ws, 'Mouvements');
     XL.utils.book_append_sheet(wb, ws2, 'Synthèse');
     return XL.write(wb, { bookType: 'xlsx', type: 'buffer' });
   };
@@ -1793,18 +1802,19 @@ Suite à donner : Réclamation auprès de Gardéo, livraison incomplète`;
   await v('ENT-2.4 : export des ajustements du mois — 20 lignes, une seule sans document (AJ-26-0217, les mixeurs), 7 / 5 / 3 / 5 par motif', async () => {
     const db = ouvrir(S23);
     const F = exportA(db).feuilles[0];
-    if (F.colonnes.join('|') !== 'Date|N° ajustement|Référence|Désignation|Allée|Quantité|Motif|Document|Saisi par') throw new Error('colonnes');
+    if (F.colonnes.join('|') !== 'Date|Type|N° mouvement|Référence|Désignation|Allée|Quantité|Motif|Document|Saisi par') throw new Error('colonnes');
     if (F.lignes.length !== 20) throw new Error(`${F.lignes.length} lignes au lieu de 20`);
-    const sans = F.lignes.filter((l) => !l[7]);
-    if (sans.length !== 1 || sans[0][1] !== 'AJ-26-0217' || sans[0][2] !== 'MIX-PLG' || sans[0][5] !== -4 || sans[0][6] !== 'Démarque inconnue') throw new Error('sans document : ' + JSON.stringify(sans));
-    const grp = F.lignes.find((l) => l[2] === 'GRP-2F' && l[1] === 'AJ-26-0219');
-    if (!grp || grp[7] !== 'DEM-26-0036' || grp[6] !== 'Casse') throw new Error('grille-pain : ' + JSON.stringify(grp));
+    if (F.lignes.some((l) => l[1] !== 'Ajustement inventaire')) throw new Error('la demande ne contient que des ajustements');
+    const sans = F.lignes.filter((l) => !l[8]);
+    if (sans.length !== 1 || sans[0][2] !== 'AJ-26-0217' || sans[0][3] !== 'MIX-PLG' || sans[0][6] !== -4 || sans[0][7] !== 'Démarque inconnue') throw new Error('sans document : ' + JSON.stringify(sans));
+    const grp = F.lignes.find((l) => l[3] === 'GRP-2F' && l[2] === 'AJ-26-0219');
+    if (!grp || grp[8] !== 'DEM-26-0036' || grp[7] !== 'Casse') throw new Error('grille-pain : ' + JSON.stringify(grp));
     if (JSON.stringify(S23.parMotif(db)) !== JSON.stringify({ Casse: 7, 'Erreur de prélèvement': 5, 'Erreur de réception': 3, 'Démarque inconnue': 5 })) throw new Error('par motif : ' + JSON.stringify(S23.parMotif(db)));
-    if (new Set(F.lignes.map((l) => l[4])).size !== 3) throw new Error('tout l\'entrepôt : allées ' + [...new Set(F.lignes.map((l) => l[4]))].join());
+    if (new Set(F.lignes.map((l) => l[5])).size !== 3) throw new Error('tout l\'entrepôt : allées ' + [...new Set(F.lignes.map((l) => l[5]))].join());
     // Rien de l'historique ne contredit la base : aucune ligne de l'allée B après le dernier inventaire, hors celles de Samir.
     const depuis = S23.dateInventaire(db.moves[db.moves.length - 1].ts);
-    const bApres = F.lignes.filter((l) => l[4] === 'B' && l[0] >= depuis && !['AJ-26-0217', 'AJ-26-0219'].includes(l[1]));
-    if (bApres.length) throw new Error('ajustement de l\'allée B absent des mouvements : ' + bApres.map((l) => l[1]).join());
+    const bApres = F.lignes.filter((l) => l[5] === 'B' && l[0] >= depuis && !['AJ-26-0217', 'AJ-26-0219'].includes(l[2]));
+    if (bApres.length) throw new Error('ajustement de l\'allée B absent des mouvements : ' + bApres.map((l) => l[2]).join());
     for (let i = 1; i < F.lignes.length; i++) if (F.lignes[i][0] < F.lignes[i - 1][0]) throw new Error('lignes dans le désordre');
   });
 
@@ -1812,7 +1822,7 @@ Suite à donner : Réclamation auprès de Gardéo, livraison incomplète`;
     const db = ouvrir(S23, 'Léa', 'confirme');
     const F = exportA(db).feuilles[0];
     if (F.lignes.length !== 30) throw new Error(`${F.lignes.length} lignes au lieu de 30`);
-    if (F.lignes.filter((l) => !l[7]).map((l) => l[1]).join() !== 'AJ-26-0217') throw new Error('sans document');
+    if (F.lignes.filter((l) => !l[8]).map((l) => l[2]).join() !== 'AJ-26-0217') throw new Error('sans document');
     if (JSON.stringify(S23.parMotif(db)) !== JSON.stringify({ Casse: 10, 'Erreur de prélèvement': 8, 'Erreur de réception': 5, 'Démarque inconnue': 7 })) throw new Error('par motif : ' + JSON.stringify(S23.parMotif(db)));
     if (JSON.stringify(ouvrir(S23, 'Léa', 'confirme').mails.map((m) => m.text)) !== JSON.stringify(ouvrir(S23).mails.map((m) => m.text))) throw new Error('les messages trahissent le niveau');
   });
@@ -1843,14 +1853,15 @@ Suite à donner : Réclamation auprès de Gardéo, livraison incomplète`;
     if (!m.text.includes(`le ${rec}`)) throw new Error('date de la réception absente du message : ' + rec);
     if (!/^.*\.example>/m.test(m.text)) throw new Error('adresse du vendeur hors .example');
     const mission = db.mails.find((x) => /Ajustements de la semaine/.test(x.subject));
-    if (!/Commencez par le tableur : dans Stock, onglet Mouvements, exportez les ajustements du mois\./.test(mission.text)) throw new Error('mission sans le tableur');
+    // Niveau 2 : la mission donne les critères en clair.
+    if (!/Commencez par le tableur : dans Extractions, liste « Mouvements de stock », exportez les ajustements du mois avec ces critères : Type de mouvement « Ajustement inventaire », Allée « Toutes », Période « 30 derniers jours »\./.test(mission.text)) throw new Error('mission sans le tableur');
     for (const f of ['activites/cdiscount-regularise.js', 'contenus/cdiscount-regularise.js']) {
       if (/VLOOKUP|RECHERCHEV/i.test(fs.readFileSync(path.join(ROOT, f), 'utf8'))) throw new Error('RECHERCHEV dans ' + f);
     }
     if (S23.controles(db).some((c) => (c.fonctions || []).some((x) => /VLOOKUP/.test(x)))) throw new Error('RECHERCHEV exigée');
   });
 
-  await v('ENT-2.4 : à l\'écran — « Exporter les ajustements du mois » sur Stock, dépôt : « n résultats justes sur m », sans détail', async () => {
+  await v('ENT-2.4 : à l\'écran — Extractions (niveau 2) : critères du logiciel au départ, export faux puis juste, dépôt : « n résultats justes sur m » et ce qui cloche dans l\'export', async () => {
     const ctx2 = await nav.newContext({ acceptDownloads: true });
     const p = await ctx2.newPage();
     p.setDefaultTimeout(6000);
@@ -1870,16 +1881,37 @@ Suite à donner : Réclamation auprès de Gardéo, livraison incomplète`;
       });
       const Z = '#hote4 .ent-main';
       const aller = async (vue) => { await p.click(`#hote4 .ent-nav[data-vue="${vue}"]`); await p.waitForTimeout(80); };
-      await aller('stock');
+      await aller('extractions');
+      const compte = async () => Number((await p.textContent(`${Z} [data-ext-compte]`)).match(/\d+/)[0]);
+      // Niveau 2 : les critères du logiciel (tous les types, 7 derniers jours), pas ceux de la demande.
+      if (await p.inputValue(`${Z} [data-filtre="type"]`) !== '*' || await p.inputValue(`${Z} [data-filtre="periode"]`) !== '7j') throw new Error('critères de départ');
+      // Un export faux (tous les types, 7 jours), déposé : le retour dit ce qui cloche dans l'export.
+      await Promise.all([p.waitForEvent('download'), p.click(`${Z} [data-exporter="ajustements"]`)]);
+      let db = await p.evaluate(() => JSON.parse(JSON.stringify(window.__c24.db)));
+      await aller('fichiers');
+      const exF = GT.construireExport(S23.TABLEUR.exports[0], db, { criteres: db.tableur.criteres ? db.tableur.criteres.ajustements : GT.criteresDepart(S23.TABLEUR.exports[0], db) });
+      if (!exF.propres.length) throw new Error('export faux vide');
+      await p.setInputFiles('#fichierTableur', { name: 'faux.xlsx', mimeType: 'application/octet-stream', buffer: classeurA(db, {}) });
+      await p.waitForTimeout(400);
+      const tf = (await p.textContent(`${Z} [data-depot-export]`)).replace(/\s+/g, ' ');
+      if (!/lignes? en trop : leur « Type de mouvement » ne correspond pas à la demande/.test(tf) || !/Il manque \d+ lignes demandées/.test(tf)) throw new Error('retour export niveau 2 : ' + tf);
+      if (/choisissez/.test(tf)) throw new Error('le niveau 2 donne le critère à choisir');
+      // Les bons critères : le tableau se filtre, le compte suit, les critères restent dans la base.
+      await aller('extractions');
+      await p.selectOption(`${Z} [data-filtre="type"]`, 'Ajustement inventaire'); await p.waitForTimeout(60);
+      await p.selectOption(`${Z} [data-filtre="periode"]`, '30j'); await p.waitForTimeout(60);
+      if (await compte() !== 20) throw new Error('compte : ' + await compte());
+      if (await p.evaluate(() => window.__c24.db.tableur.criteres.ajustements.periode) !== '30j') throw new Error('critères non rangés dans la base');
       const [dl] = await Promise.all([p.waitForEvent('download'), p.click(`${Z} [data-exporter="ajustements"]`)]);
-      if (dl.suggestedFilename() !== 'cdiscount-ajustements-du-mois.xlsx') throw new Error('nom : ' + dl.suggestedFilename());
+      if (dl.suggestedFilename() !== 'cdiscount-mouvements-de-stock.xlsx') throw new Error('nom : ' + dl.suggestedFilename());
       const wb = XL.read(fs.readFileSync(await dl.path()), { type: 'buffer' });
-      if (XL.utils.sheet_to_json(wb.Sheets.Ajustements).length !== 20) throw new Error('lignes exportées');
-      if (wb.SheetNames.join() !== 'Ajustements,Synthèse') throw new Error('feuilles : ' + wb.SheetNames.join());
-      const db = await p.evaluate(() => JSON.parse(JSON.stringify(window.__c24.db)));
+      if (XL.utils.sheet_to_json(wb.Sheets.Mouvements).length !== 20) throw new Error('lignes exportées');
+      if (wb.SheetNames.join() !== 'Mouvements,Synthèse') throw new Error('feuilles : ' + wb.SheetNames.join());
+      db = await p.evaluate(() => JSON.parse(JSON.stringify(window.__c24.db)));
       await aller('fichiers');
       await p.setInputFiles('#fichierTableur', { name: 'ajustements.xlsx', mimeType: 'application/octet-stream', buffer: classeurA(db, { tape: true }) });
       await p.waitForTimeout(400);
+      if (!await p.$(`${Z} [data-depot-export="ok"]`)) throw new Error('export juste non reconnu');
       const t = (await p.textContent(Z)).replace(/\s+/g, ' ');
       // « À VÉRIFIER » tapé, sans formule : la colonne est fausse partout (0 / 20), la synthèse juste (4 / 4).
       if (!/4 résultats justes sur 24\./.test(t)) throw new Error('retour : ' + (await p.textContent('[data-depot-retour]')));
@@ -1960,6 +1992,7 @@ Suite à donner : Réclamation auprès de Gardéo, livraison incomplète`;
     return XL.write(wb, { bookType: 'xlsx', type: 'buffer' });
   };
   const deposer6 = (db, o) => {
+    { const e = S6.TABLEUR.exports[0]; GT.enregistrerExport(db, e, GT.criteresJustes(e, db), 0); }
     const res = GT.controlerDepot(XL.read(classeur6(db, o), { type: 'buffer', cellFormula: true }), S6.controles(db), export6(db).propres);
     GT.enregistrerDepot(db, S6.ID_DEPOT, res, { retour: 'entrainement', fichier: 'x.xlsx' });
     return res;
@@ -2058,9 +2091,11 @@ Suite à donner : Réclamation auprès de Gardéo, livraison incomplète`;
       });
       const Z = '#hote6 .ent-main';
       const aller = async (vue) => { await p.click(`#hote6 .ent-nav[data-vue="${vue}"]`); await p.waitForTimeout(80); };
-      await aller('commandes');
+      await aller('extractions');
+      // Niveau 3 : la demande métier seule — à l'élève de régler la période (le mois).
+      await p.selectOption(`${Z} [data-filtre="periode"]`, '30j'); await p.waitForTimeout(80);
       const [dl] = await Promise.all([p.waitForEvent('download'), p.click(`${Z} [data-exporter="preparations"]`)]);
-      if (dl.suggestedFilename() !== 'cdiscount-preparations-allees-A-B.xlsx') throw new Error('nom : ' + dl.suggestedFilename());
+      if (dl.suggestedFilename() !== 'cdiscount-lignes-de-preparation.xlsx') throw new Error('nom : ' + dl.suggestedFilename());
       const wb = XL.read(fs.readFileSync(await dl.path()), { type: 'buffer' });
       if (wb.SheetNames.join() !== 'Préparations,Tarifs,Synthèse') throw new Error('feuilles');
       const brut = XL.utils.sheet_to_json(wb.Sheets['Préparations'], { header: 1, blankrows: true }).length - 1;
@@ -2072,6 +2107,7 @@ Suite à donner : Réclamation auprès de Gardéo, livraison incomplète`;
       await p.waitForTimeout(500);
       const t = (await p.textContent(Z)).replace(/\s+/g, ' ');
       if (!/37 résultats justes sur 37\./.test(t)) throw new Error('retour : ' + (await p.textContent('[data-depot-retour]')));
+      if (!await p.$(`${Z} [data-depot-export="ok"]`)) throw new Error('export juste non reconnu');
       if (errs.length) throw new Error(errs.join(' | '));
     } finally { await ctx2.close(); }
   });
@@ -2145,7 +2181,7 @@ Suite à donner : Réclamation auprès de Gardéo, livraison incomplète`;
     db.inventaires = { [S5.ID_INVENTAIRE]: e };
     return db;
   };
-  const exporter5 = (db) => { db.tableur = db.tableur || {}; db.tableur.exports = { [S5.ID_EXPORT]: { at: 1, n: 38 } }; return db; };
+  const exporter5 = (db) => { const e = S5.TABLEUR.exports[0]; GT.enregistrerExport(db, e, GT.criteresJustes(e, db), 38, 1); return db; };
   const parcours5 = (o = {}) => {
     const db = exporter5(ouvrir25('eleve-test'));
     deposer5(db, o.syn ? { syn: o.syn } : {});
@@ -2206,16 +2242,16 @@ Suite à donner : Réclamation auprès de Gardéo, livraison incomplète`;
     if (/absent/i.test(s)) throw new Error('« absent » écrit');
   });
 
-  await v('ENT-2.5 : parcours juste → 11/11 ; une décision fausse → 10/11 ; sans travail, rien', async () => {
+  await v('ENT-2.5 : parcours juste → 12/12 ; une décision fausse → 11/12 ; sans travail, rien', async () => {
     if (Object.values(st5(ouvrir25('eleve-test'))).some((x) => x !== 'attente')) throw new Error('avant travail : ' + JSON.stringify(st5(ouvrir25('eleve-test'))));
     const db = parcours5();
-    if (note5(db) !== 11) throw new Error('parcours juste : ' + JSON.stringify(st5(db)));
+    if (note5(db) !== 12) throw new Error('parcours juste : ' + JSON.stringify(st5(db)));
     const r = S5.corrige(S5.jeuDeBase(db));
     if (r.taux !== 5 || r.valeur !== 3.2 || r.regularise !== 'COR-SAU' || r.liste.join() !== LISTE5.join()) throw new Error('corrigé : ' + JSON.stringify(r));
     const faux = parcours5({ inv: { decisions: { [J5.rayon]: ['regul', 'Démarque inconnue'], [J5.regul]: ['regul', 'Démarque inconnue'], [J5.recompter]: ['recompter'] },
       regul: [[J5.rayon, -3], [J5.regul, -1]] }, cr: 'Régularisé : LAM-FRO, COR-SAU\nValeur régularisée : 3 × 6,30 + 1 × 3,20 = 22,10 €' });
     const st = st5(faux);
-    if (note5(faux) !== 10 || st.rayon !== 'ko') throw new Error('une décision fausse : ' + JSON.stringify(st));
+    if (note5(faux) !== 11 || st.rayon !== 'ko') throw new Error('une décision fausse : ' + JSON.stringify(st));
   });
 
   await v('ENT-2.5 : liste avec un oubli → jalon 4 ko, l\'aléa arrive, l\'inventaire reste jouable ; le taux se lit sur le périmètre', async () => {
@@ -2244,10 +2280,31 @@ Suite à donner : Réclamation auprès de Gardéo, livraison incomplète`;
   await v('ENT-2.5 : corrigé par élève — son allée, l\'attendu, ses jalons, sa note ; avant ouverture, l\'allée qu\'il recevra', async () => {
     const c = COR5.corrigeEleve(parcours5(), 'eleve-test');
     const t = JSON.stringify(c);
-    if (!/Liste juste : COR-SAU, LAM-FRO, ELA-FIT-3/.test(t) || !/Valeur régularisée : 3,20 €/.test(t) || !/20 \/ 20 \(11 jalons sur 11\)/.test(t)) throw new Error(t.slice(0, 400));
+    if (!/Liste juste : COR-SAU, LAM-FRO, ELA-FIT-3/.test(t) || !/Valeur régularisée : 3,20 €/.test(t) || !/20 \/ 20 \(12 jalons sur 12\)/.test(t)) throw new Error(t.slice(0, 400));
     const avant = COR5.corrigeEleve({}, 'eleve-test');
     if (!/pas encore ouvert/.test(avant.texte) || avant.items.length !== 1) throw new Error('avant ouverture');
     if (!/COR-SAU/.test(JSON.stringify(avant.items))) throw new Error('le jeu de l\'élève (graine = identifiant)');
+  });
+
+  await v('Cdiscount, export filtré : dans les quatre séances à tableur, les bons critères redonnent l\'export d\'avant, aucune ligne à écarter ne passe la demande, et le niveau d\'indication est celui décidé', async () => {
+    const cas = [['ENT-2.2', S2, (a) => ouvrirC(a), 1], ['ENT-2.4', S23, (a) => ouvrir(S23, 'Léa', a), 2],
+      ['ENT-2.6', S6, (a) => ouvrir6(a), 3], ['ENT-2.5', S5, (a) => ouvrir25('eleve-test', a), 4]];
+    for (const [code, S, ouvre, niv] of cas) {
+      const e = S.TABLEUR.exports[0];
+      if (e.indications !== niv) throw new Error(`${code} : niveau ${e.indications}, attendu ${niv}`);
+      if (e.ecran || e.libelle) throw new Error(`${code} : reste de l'ancien bouton (ecran / libelle)`);
+      for (const a of [undefined, 'confirme']) {
+        const db = ouvre(a);
+        const sans = G_lignes(GT.construireExport(e, db, {}));
+        if (sans !== G_lignes(GT.construireExport(e, db, { criteres: GT.criteresJustes(e, db) }))) throw new Error(`${code} ${a || ''} : les bons critères changent le fichier`);
+        const autres = e.autres(db);
+        if (autres.length < 10) throw new Error(`${code} : ${autres.length} lignes à écarter seulement`);
+        const tout = GT.comparerExport(e, db, Object.fromEntries(e.filtres.map((f) => [f.id, f.periode ? 'tout' : '*'])));
+        if (tout.nEnTrop !== autres.length) throw new Error(`${code} ${a || ''} : ${autres.length - tout.nEnTrop} ligne(s) à écarter passent la demande`);
+        const dep = GT.comparerExport(e, db, GT.criteresDepart(e, db));
+        if (niv === 1 ? !dep.juste : dep.juste) throw new Error(`${code} : critères de départ ${JSON.stringify(GT.criteresDepart(e, db))}`);
+      }
+    }
   });
 
   await v('ENT-2.5 : à l\'écran — copie, un seul dépôt « Fichier reçu. », aucune correction de l\'inventaire, remise = ramassage', async () => {
@@ -2272,15 +2329,19 @@ Suite à donner : Réclamation auprès de Gardéo, livraison incomplète`;
       const Z = '#hote5 .ent-main';
       const aller = async (vue) => { await p.click(`#hote5 .ent-nav[data-vue="${vue}"]`); await p.waitForTimeout(80); };
       if (await p.evaluate(() => window.__c25.db.tirage.graine) !== 'eleve-test') throw new Error('graine non posée');
-      await aller('commandes');
+      await aller('extractions');
+      // Niveau 4 : critères du logiciel au départ ; l'élève règle l'allée C et le mois.
+      await p.selectOption(`${Z} [data-filtre="allee"]`, 'C'); await p.waitForTimeout(60);
+      await p.selectOption(`${Z} [data-filtre="periode"]`, '30j'); await p.waitForTimeout(60);
       const [dl] = await Promise.all([p.waitForEvent('download'), p.click(`${Z} [data-exporter="preparations"]`)]);
-      if (dl.suggestedFilename() !== 'cdiscount-preparations-allee-C.xlsx') throw new Error('nom');
+      if (dl.suggestedFilename() !== 'cdiscount-lignes-de-preparation.xlsx') throw new Error('nom');
       const db0 = await p.evaluate(() => JSON.parse(JSON.stringify(window.__c25.db)));
       await aller('fichiers');
       await p.setInputFiles('#fichierTableur', { name: 'eval.xlsx', mimeType: 'application/octet-stream', buffer: classeur5(db0) });
       await p.waitForTimeout(400);
       const t = (await p.textContent(Z)).replace(/\s+/g, ' ');
       if (!/Fichier reçu\./.test(t) || /résultats? justes?/.test(t)) throw new Error('retour : ' + t.slice(0, 300));
+      if (await p.$(`${Z} [data-depot-export]`)) throw new Error('évaluation : un retour sur l\'export');
       if (await p.$('#fichierTableur')) throw new Error('second dépôt possible');
       // La liste, par la messagerie.
       await aller('mail');
@@ -2317,7 +2378,7 @@ Suite à donner : Réclamation auprès de Gardéo, livraison incomplète`;
       await p.click('#hote5 [data-copie-rendre]');
       await p.waitForFunction(() => !!window.__c25.remis);
       const r = await p.evaluate(() => window.__c25.remis);
-      if (r.score !== 11 || r.max !== 11) throw new Error('copie : ' + JSON.stringify(r));
+      if (r.score !== 12 || r.max !== 12) throw new Error('copie : ' + JSON.stringify(r));
       const ramasse = await p.evaluate(() => window.__c25.A.noter(JSON.parse(JSON.stringify(window.__c25.db))));
       if (ramasse.score !== r.score || ramasse.max !== r.max) throw new Error('ramassage ≠ remise');
       if (errs.length) throw new Error(errs.join(' | '));

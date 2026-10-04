@@ -296,6 +296,84 @@ export default async function bloc({ v, nav, ROOT, baseXlsx }) {
     if (G.retourDeTemps('guidage') !== 'guidage' || G.retourDeTemps('erreur') !== 'entrainement' || G.retourDeTemps('evaluation') !== 'evaluation') throw new Error('retour par temps');
   });
 
+  /* =========================================================== 2 bis. export filtré (04/10/2026) */
+  // L'élève choisit ce qu'il exporte (brief `MOTEUR-export-filtre.md`). Une liste d'essai : trois
+  // ajustements demandés (J-3, J-10, J-25), une réception du mois et un ajustement de J-40 à écarter.
+  const AUJ = new Date(2026, 9, 27).getTime();
+  const Jm = (j) => AUJ - j * 864e5 + 10 * 3600e3;
+  const EXF = (indications = 2) => ({
+    id: 'mv', liste: 'Mouvements', fichier: 'mv.xlsx', indications, aujourdhui: () => AUJ,
+    feuilles: [{ nom: 'Mouvements', colonnes: ['Date', 'Type', 'N°', 'Motif', 'Document'], types: { Date: 'date' },
+      lignes: () => [[Jm(25), 'Ajustement', 'AJ-3', 'Démarque', 'FR-1'], [Jm(10), 'Ajustement', 'AJ-2', 'Casse', ''], [Jm(3), 'Ajustement', 'AJ-1', 'Casse', 'DEM-1']] },
+    { nom: 'Synthèse', colonnes: ['Motif', 'Nombre'], lignes: () => [] }],
+    autres: () => [[Jm(5), 'Réception', 'REC-1', '', ''], [Jm(40), 'Ajustement', 'AJ-0', 'Casse', 'DEM-0']],
+    filtres: [{ id: 'type', libelle: 'Type de mouvement', colonne: 'Type', juste: 'Ajustement' },
+      { id: 'periode', libelle: 'Période', periode: 'Date', juste: '30j' }],
+  });
+
+  await v('Export filtré : sans critère, la demande exactement ; critères de départ par niveau ; lignes en trop et manquantes comptées par critère', async () => {
+    const e = EXF(), db = {};
+    const nos = (c) => G.construireExport(e, db, { criteres: c }).feuilles[0].lignes.map((l) => l[2]).join();
+    if (nos(null) !== 'AJ-3,AJ-2,AJ-1') throw new Error('sans critère : ' + nos(null));
+    if (nos(G.criteresJustes(e, db)) !== 'AJ-3,AJ-2,AJ-1') throw new Error('critères justes : ' + nos(G.criteresJustes(e, db)));
+    if (JSON.stringify(G.criteresDepart(EXF(1), db)) !== '{"type":"Ajustement","periode":"30j"}') throw new Error('niveau 1 : critères de la demande');
+    if (JSON.stringify(G.criteresDepart(e, db)) !== '{"type":"*","periode":"7j"}') throw new Error('niveau 2 : critères du logiciel');
+    const dep = G.comparerExport(e, db, G.criteresDepart(e, db));
+    if (dep.juste || dep.nEnTrop !== 1 || dep.enTrop.type !== 1 || dep.manque !== 2) throw new Error('départ : ' + JSON.stringify(dep));
+    const tout = G.comparerExport(e, db, { type: '*', periode: 'tout' });
+    if (tout.nEnTrop !== 2 || tout.enTrop.type !== 1 || tout.enTrop.periode !== 1 || tout.manque !== 0) throw new Error('tout : ' + JSON.stringify(tout));
+    // Une période personnalisée qui donne les mêmes lignes est juste (on juge les lignes, pas le menu).
+    if (!G.comparerExport(e, db, { type: 'Ajustement', periode: 'perso', du: '2026-09-30', au: '2026-10-27' }).juste) throw new Error('période personnalisée équivalente refusée');
+    if (G.comparerExport(e, db, { type: 'Ajustement', periode: 'perso', du: '2026-10-05', au: '2026-10-27' }).manque !== 1) throw new Error('période personnalisée trop courte');
+    if (G.optionsFiltre(e, db, e.filtres[0]).map(([k]) => k).join() !== '*,Ajustement,Réception') throw new Error('options du filtre');
+  });
+
+  await v('Export filtré : le retour au dépôt selon le niveau — 1 dit quel critère choisir, 2 ce qui cloche, 3 « relisez la demande », 4 rien', async () => {
+    const db = {};
+    const ex = (n) => { const e = EXF(n); const c = { type: '*', periode: '7j' };
+      return [e, { juste: false, criteres: c, comparaison: G.comparerExport(e, db, c), justes: G.criteresJustes(e, db) }]; };
+    const t = (n) => G.retourExportHtml(...ex(n)).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+    if (!/« Type de mouvement » : choisissez « Ajustement »/.test(t(1)) || !/« Période » : choisissez « 30 derniers jours »/.test(t(1))) throw new Error('niveau 1 : ' + t(1));
+    if (!/1 ligne en trop : leur « Type de mouvement » ne correspond pas à la demande/.test(t(2)) || !/Il manque 2 lignes demandées/.test(t(2)) || /choisissez/.test(t(2))) throw new Error('niveau 2 : ' + t(2));
+    if (!/Relisez-la/.test(t(3)) || /en trop|choisissez/.test(t(3))) throw new Error('niveau 3 : ' + t(3));
+    if (t(4).trim() !== '') throw new Error('niveau 4 : ' + t(4));
+    const e = EXF(2), c = G.criteresJustes(e, db);
+    if (!/✓ Export/.test(G.retourExportHtml(e, { juste: true, criteres: c, comparaison: G.comparerExport(e, db, c) }))) throw new Error('export juste');
+  });
+
+  await v('Export filtré : une erreur ne se paie qu\'une fois — le dépôt est contrôlé contre l\'export DE L\'ÉLÈVE ; jalon « bon export » à part, en attente avant le dépôt', async () => {
+    const e = EXF(2);
+    const compte = (propres) => { const o = {}; propres.forEach((l) => { if (l.Motif) o[l.Motif] = (o[l.Motif] || 0) + 1; }); return o; };
+    const depot = { id: 'd', export: 'mv', controles: (db, propres) => [{ type: 'table', id: 'syn', feuille: 'Synthèse', cle: 'Motif', colonne: 'Nombre', attendu: compte(propres) }] };
+    // Le classeur fabriqué sur un export donné, synthèse juste POUR CET export.
+    const classeur = (db, c) => {
+      const ex = G.construireExport(e, db, { criteres: c });
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([ex.feuilles[0].colonnes, ...ex.feuilles[0].lignes]), 'Mouvements');
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([['Motif', 'Nombre'], ...Object.entries(compte(ex.propres))]), 'Synthèse');
+      return XLSX.read(XLSX.write(wb, { bookType: 'xlsx', type: 'buffer' }), { type: 'buffer' });
+    };
+    const faux = { type: '*', periode: 'tout' };
+    const db = {};
+    if (G.statutExport(db, 'mv', 'd').status !== 'attente') throw new Error('rien fait : attente');
+    G.enregistrerExport(db, e, faux, 5);
+    if (G.statutExport(db, 'mv', 'd').status !== 'attente') throw new Error('export sans dépôt : le jalon attend le dépôt');
+    let r = G.controlerContreExports(classeur(db, faux), e, depot, db);
+    if (!r.resultats[0].ok || r.exporte.juste) throw new Error('formules justes sur un export faux : ' + JSON.stringify(r.resultats[0]) + ' ' + r.exporte.juste);
+    G.enregistrerDepot(db, 'd', r.resultats, { exporte: r.exporte });
+    if (G.statutExport(db, 'mv', 'd').status !== 'ko' || G.resultatDepot(db, 'd').controles.syn.ok !== true) throw new Error('jalons après export faux');
+    // Il refait l'export juste puis redépose : le meilleur dépôt est celui de l'export juste.
+    G.enregistrerExport(db, e, G.criteresJustes(e, db), 3);
+    if (db.tableur.exports.mv.faits.length !== 2 || db.tableur.exports.mv.n !== 5 || db.tableur.exports.mv.essais !== 2) throw new Error('trace des exports : ' + JSON.stringify(db.tableur.exports.mv));
+    r = G.controlerContreExports(classeur(db, G.criteresJustes(e, db)), e, depot, db);
+    if (!r.exporte.juste) throw new Error('fichier de l\'export juste attribué à l\'export faux');
+    G.enregistrerDepot(db, 'd', r.resultats, { exporte: r.exporte });
+    if (G.statutExport(db, 'mv', 'd').status !== 'ok') throw new Error('export juste au second dépôt');
+    // Le même export refait ne s'empile pas.
+    G.enregistrerExport(db, e, G.criteresJustes(e, db), 3);
+    if (db.tableur.exports.mv.faits.length !== 2) throw new Error('critères identiques empilés');
+  });
+
   /* =========================================================== 3. dans le navigateur */
 
   const ctx = await nav.newContext({ acceptDownloads: true });
@@ -310,9 +388,9 @@ export default async function bloc({ v, nav, ROOT, baseXlsx }) {
   const choisir = async (retour) => { await pg.selectOption('select[name="retour"]', retour); await pg.waitForTimeout(150); };
   const ouvrir = async (vue) => { await pg.click(`#hote .ent-nav[data-vue="${vue}"]`); await pg.waitForTimeout(80); };
   const texte = async (sel) => ((await pg.textContent(sel || Z)) || '').replace(/\s+/g, ' ').trim();
-  // Exporter depuis Commandes : le vrai téléchargement, relu par SheetJS (Node).
+  // Exporter depuis l'écran Extractions : le vrai téléchargement, relu par SheetJS (Node).
   const exporter = async () => {
-    await ouvrir('commandes');
+    await ouvrir('extractions');
     const [dl] = await Promise.all([pg.waitForEvent('download'), pg.click(`${Z} [data-exporter="preparations"]`)]);
     const p = await dl.path();
     return { nom: dl.suggestedFilename(), wb: XLSX.read(fs.readFileSync(p), { type: 'buffer', cellDates: true }) };
@@ -330,7 +408,7 @@ export default async function bloc({ v, nav, ROOT, baseXlsx }) {
     return XLSX.write(classeurEleve(ex, opts), { bookType: 'xlsx', type: 'buffer' });
   };
 
-  await v('Tableur (écran) : « Exporter » sur Commandes donne un vrai .xlsx de l\'élève ; menu Fichiers ; rappel dans le bandeau d\'aide', async () => {
+  await v('Tableur (écran) : « Exporter » dans Extractions donne un vrai .xlsx de l\'élève ; Fichiers ne sert qu\'au dépôt ; rappel dans le bandeau d\'aide', async () => {
     await choisir('guidage');
     const { nom, wb } = await exporter();
     if (nom !== 'essai-preparations.xlsx') throw new Error('nom : ' + nom);
@@ -338,9 +416,11 @@ export default async function bloc({ v, nav, ROOT, baseXlsx }) {
     if (!ws || !(ws.A2.v instanceof Date) || ws.B2.v !== 'BP-732101') throw new Error('contenu : ' + JSON.stringify(ws && ws.A2));
     const db = await pg.evaluate(() => window.__essai.db.tableur);
     if (!db || !db.exports.preparations || db.exports.preparations.n !== 10) throw new Error('trace de l\'export : ' + JSON.stringify(db));
-    if (await pg.$(`${Z} [data-exporter]`) && !(await pg.$(`${Z} .ent-tete [data-exporter]`))) throw new Error('le bouton doit être dans l\'en-tête');
-    await ouvrir('stock');
-    if (await pg.$(`${Z} .ent-tete [data-exporter]`)) throw new Error('bouton Exporter sur un écran non déclaré');
+    // Plus aucun bouton Exporter sur les écrans métier, ni dans Fichiers (retour de Tristan du 04/10).
+    for (const vue of ['commandes', 'stock', 'fichiers']) {
+      await ouvrir(vue);
+      if (await pg.$(`${Z} [data-exporter]`)) throw new Error('bouton Exporter sur l\'écran ' + vue);
+    }
     // Le rappel des fonctions : dans le bandeau d'aide, jamais dans l'écran de travail.
     if (await pg.$('[data-aide-tableur-texte]')) throw new Error('aide ouverte d\'office');
     await pg.click('[data-aide-tableur]');

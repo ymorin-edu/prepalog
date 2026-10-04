@@ -683,6 +683,13 @@ body.immersion .app{ max-width:1720px; padding:14px 24px 0 }
 .btn-export{ display:inline-flex; align-items:center; gap:7px }
 .btn-export .btn-fichier-icone svg{ width:17px; height:17px }
 .depot-detail td{ vertical-align:top }
+/* Écran « Extractions » (geste tableur) : critères au-dessus du tableau, on exporte ce qu'on voit. */
+.ext-filtres{ gap:10px 16px; align-items:flex-end; margin-bottom:10px }
+.ext-champ{ display:flex; flex-direction:column; gap:3px; font-size:.85rem; color:var(--encre-douce) }
+.ext-champ select, .ext-champ input{ color:var(--encre) }
+.ext-bas{ justify-content:space-between; margin:4px 0 8px }
+.ext-table{ max-height:440px }
+.ext-table td{ white-space:nowrap }
 .ent-main :disabled{ cursor:not-allowed }
 /* Le suivi : une copie rendue porte sa mention ; « ramasser » reste discret à côté du tiret. */
 .copie-cell{ white-space:nowrap }

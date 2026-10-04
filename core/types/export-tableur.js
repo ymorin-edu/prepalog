@@ -34,16 +34,38 @@
 //       salissures: { vides: 4, doublons: 3, datesTexte: 5 }, // 1re feuille, déterministe
 //       // Viser des lignes (04/10, ENT-2.6) : `cible(ligne)` (objet colonne → valeur) ; au moins
 //       // `doublonsCible` doublons et `datesTexteCible` dates en texte tombent sur ces lignes-là.
+//
+//       // L'ÉLÈVE CHOISIT CE QU'IL EXPORTE (04/10/2026, brief `MOTEUR-export-filtre.md`) : écran
+//       // « Extractions », critères AU-DESSUS du tableau, « Exporter » sort ce qu'on voit (toutes
+//       // les colonnes). La 1re feuille montre `lignes(db)` (= la demande, exactement l'export d'avant)
+//       // PLUS `autres(db)` (lignes à écarter, même format) ; les autres feuilles ne bougent pas.
+//       liste: 'Mouvements de stock',                       // nom de la liste dans Extractions
+//       autres: (db) => [[…], …],                           // PURE ; aucune ne doit passer la demande
+//       aujourdhui: (db) => ts,                             // le jour de la séance (défaut : aujourd'hui)
+//       filtres: [
+//         { id: 'type', libelle: 'Type de mouvement', colonne: 'Type', tous: 'Tous', juste: 'Ajustement inventaire' },
+//         { id: 'allee', libelle: 'Allée', valeur: (l) => l.Emplacement[0], tous: 'Toutes', juste: '*' },
+//         { id: 'periode', libelle: 'Période', periode: 'Date', juste: '30j', defaut: '7j' },
+//       ],                                                  // `juste` peut être une fonction de la base
+//       indications: 1 | 2 | 3 | 4,  // 1 : critères de la demande déjà réglés, retour qui dit quel critère
+//                                    // changer ; 2 : retour qui dit ce qui cloche ; 3 : « relisez la
+//                                    // demande » ; 4 : aucun retour sur l'export (évaluation)
 //     }],
 //     depot: {
 //       id: 'analyse', export: 'preparations', libelle: 'Déposer mon fichier',
 //       retour: 'guidage' | 'entrainement' | 'evaluation',     // défaut : déduit du temps de la séance
-//       controles(db) { return [ … ]; },                       // voir `controlerDepot`
-//     },
+//       controles(db, propres) { return [ … ]; },              // voir `controlerDepot` ; `propres` :
+//     },                                                       // les lignes de l'export DE L'ÉLÈVE
 //   }
 //
+// Une erreur ne se paie qu'une fois : le dépôt est contrôlé contre le fichier que l'élève a
+// RÉELLEMENT exporté (le meilleur de ses exports), et le bon choix des lignes est un jalon à part
+// (`exportJuste`).
+//
 // ÉTAT dans la base de l'élève (cloisonné : c'est la base de la séance) :
-//   db.tableur.exports[id] = { at, n }                    premier export (un jalon peut le lire)
+//   db.tableur.criteres[id] = { [filtre]: valeur, du, au }   les critères à l'écran
+//   db.tableur.exports[id] = { at, n, essais, criteres, juste, faits: [critères…] }
+//                                                         `at`, `n` : premier export ; le reste : le dernier
 //   db.tableur.depots[id]  = { essais, dernier: { at, fichier, resultats }, meilleur: { … } }
 // En guidage et entraînement, le MEILLEUR dépôt compte (un redépôt moins bon ne fait rien
 // perdre) ; en évaluation, un seul dépôt (un fichier refusé pour son format n'en est pas un).
@@ -90,21 +112,111 @@ const dateTexte = (t) => { const d = new Date(t); return `${pad(d.getDate())}/${
 // positions différentes.
 export const graineExport = (eleve, seance, exportId) => `${eleve || ''}|${seance || ''}|${exportId || ''}`;
 
-// Les feuilles d'un export, PURES : mêmes base et graine → mêmes lignes. `propres` : les lignes
-// de la première feuille avant salissures, en objets (colonne → valeur) — c'est contre elles que
-// le dépôt se contrôle. `aveugle` : vrai tant qu'un comptage à l'aveugle n'est pas validé.
-export function construireExport(exp, db, { graine = '', aveugle = false } = {}) {
-  const feuilles = exp.feuilles.map((F) => {
+/* ---------------------------------------------------------- les critères d'extraction (purs) */
+
+const JOUR = 864e5;
+const minuitDe = (t) => { const d = new Date(t); d.setHours(0, 0, 0, 0); return d.getTime(); };
+export const TOUS = '*';
+// Les périodes proposées, comptées depuis le jour de la séance (aujourd'hui compris).
+export const PERIODES = [
+  ['jour', "Aujourd'hui"], ['7j', '7 derniers jours'], ['30j', '30 derniers jours'],
+  ['tout', "Tout l'historique"], ['perso', 'Personnalisée'],
+];
+const libellePeriode = (k) => (PERIODES.find(([x]) => x === k) || [k, k])[1];
+const isoJour = (t) => { const d = new Date(t); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
+const deIso = (s) => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(s || '')); return m ? new Date(+m[1], +m[2] - 1, +m[3]).getTime() : null; };
+
+const aFiltres = (exp) => !!(exp && exp.filtres && exp.filtres.length);
+const aujourdhuiDe = (exp, db) => minuitDe(exp.aujourdhui ? exp.aujourdhui(db) : Date.now());
+const valeurJuste = (f, db) => (typeof f.juste === 'function' ? f.juste(db) : f.juste === undefined ? TOUS : f.juste);
+
+// Les critères de la demande (ceux qui redonnent exactement l'export déclaré).
+export function criteresJustes(exp, db) {
+  return Object.fromEntries((exp.filtres || []).map((f) => [f.id, valeurJuste(f, db)]));
+}
+// Les critères à l'ouverture : ceux de la demande au niveau 1, ceux du logiciel sinon.
+export function criteresDepart(exp, db) {
+  if ((exp.indications || 1) <= 1) return criteresJustes(exp, db);
+  return Object.fromEntries((exp.filtres || []).map((f) => [f.id, f.defaut !== undefined ? f.defaut : f.periode ? '7j' : TOUS]));
+}
+// La valeur d'une ligne (objet colonne → valeur) pour un filtre.
+const valeurDe = (f, o) => (f.valeur ? f.valeur(o) : o[f.colonne]);
+// Une ligne passe-t-elle un filtre ?
+function passe(f, o, c, auj) {
+  const v = c[f.id];
+  if (f.periode) {
+    const t = o[f.periode];
+    if (typeof t !== 'number' || v === 'tout') return true;
+    let du, au;
+    if (v === 'perso') { du = deIso(c.du); au = deIso(c.au); au = au == null ? null : au + JOUR; }
+    else { const n = v === 'jour' ? 1 : v === '7j' ? 7 : 30; du = auj - (n - 1) * JOUR; au = auj + JOUR; }
+    return (du == null || t >= du) && (au == null || t < au);
+  }
+  return v === undefined || v === TOUS || String(valeurDe(f, o)) === String(v);
+}
+// Les lignes de la 1re feuille : la demande (`lignes`) et les lignes à écarter (`autres`), triées
+// par date si la feuille en a une (tri stable : l'ordre de la demande est gardé). `demande` : vrai
+// pour une ligne de la demande.
+function univers(exp, db) {
+  const F = exp.feuilles[0];
+  const L = (F.lignes(db) || []).map((l) => ({ l, demande: true }))
+    .concat(((exp.autres && exp.autres(db)) || []).map((l) => ({ l, demande: false })));
+  const iDate = F.colonnes.findIndex((c) => F.types && F.types[c]);
+  if (iDate >= 0 && exp.autres) L.sort((a, b) => (a.l[iDate] || 0) - (b.l[iDate] || 0));
+  return L.map((x) => ({ ...x, o: Object.fromEntries(F.colonnes.map((c, i) => [c, x.l[i] === undefined ? null : x.l[i]])) }));
+}
+// Les lignes que les critères laissent voir (sans critère : la demande, exactement).
+function retenues(exp, db, criteres) {
+  const U = univers(exp, db);
+  if (!aFiltres(exp) || !criteres) return U.filter((x) => x.demande);
+  const auj = aujourdhuiDe(exp, db);
+  return U.filter((x) => exp.filtres.every((f) => passe(f, x.o, criteres, auj)));
+}
+// Ce que les critères de l'élève donnent, comparé à la demande : lignes en trop (par filtre
+// qu'elles ne passent pas dans la demande), lignes manquantes, critères qui diffèrent.
+export function comparerExport(exp, db, criteres) {
+  if (!aFiltres(exp)) return { juste: true, enTrop: {}, nEnTrop: 0, manque: 0, ecarts: [] };
+  const U = univers(exp, db);
+  const auj = aujourdhuiDe(exp, db);
+  const J = criteresJustes(exp, db);
+  const vu = U.filter((x) => exp.filtres.every((f) => passe(f, x.o, criteres, auj)));
+  const enTrop = {};
+  let nEnTrop = 0;
+  vu.filter((x) => !x.demande).forEach((x) => {
+    nEnTrop++;
+    exp.filtres.filter((f) => !passe(f, x.o, J, auj)).forEach((f) => { enTrop[f.id] = (enTrop[f.id] || 0) + 1; });
+  });
+  const manque = U.filter((x) => x.demande).length - vu.filter((x) => x.demande).length;
+  const ecarts = exp.filtres.filter((f) => String(criteres[f.id]) !== String(J[f.id])).map((f) => f.id);
+  return { juste: !nEnTrop && !manque, enTrop, nEnTrop, manque, ecarts };
+}
+// Les options d'un filtre (hors période) : « Tous », puis les valeurs rencontrées, triées.
+export function optionsFiltre(exp, db, f) {
+  const vals = [...new Set(univers(exp, db).map((x) => valeurDe(f, x.o)).filter((v) => v != null && v !== ''))]
+    .map(String).sort((a, b) => a.localeCompare(b, 'fr'));
+  return [[TOUS, f.tous || 'Tous'], ...vals.map((v) => [v, v])];
+}
+// Le libellé d'une valeur de critère, pour un retour à l'élève.
+const libelleValeur = (f, v) => (f.periode ? libellePeriode(v) : v === TOUS ? (f.tous || 'Tous') : v);
+
+// Les feuilles d'un export, PURES : mêmes base, critères et graine → mêmes lignes. `propres` : les
+// lignes de la première feuille avant salissures, en objets (colonne → valeur) — c'est contre elles
+// que le dépôt se contrôle. `aveugle` : vrai tant qu'un comptage à l'aveugle n'est pas validé.
+// `criteres` : ceux de l'élève (absents : la demande, exactement). `salissures: false` : ce que
+// montre l'écran Extractions (le fichier exporté, lui, est sale).
+export function construireExport(exp, db, { graine = '', aveugle = false, criteres = null, salissures = true } = {}) {
+  const feuilles = exp.feuilles.map((F, k) => {
     const masque = aveugle ? (F.aveugle || []) : [];
     const garde = F.colonnes.map((c, i) => [c, i]).filter(([c]) => !masque.includes(c));
-    const brutes = (F.lignes(db) || []).map((l) => garde.map(([, i]) => (l[i] === undefined ? null : l[i])));
+    const source = k === 0 ? retenues(exp, db, criteres).map((x) => x.l) : (F.lignes(db) || []);
+    const brutes = source.map((l) => garde.map(([, i]) => (l[i] === undefined ? null : l[i])));
     return { nom: F.nom, colonnes: garde.map(([c]) => c), types: F.types || {}, lignes: brutes };
   });
   const premiere = feuilles[0];
   const propres = premiere ? premiere.lignes.map((l) => Object.fromEntries(premiere.colonnes.map((c, i) => [c, l[i]]))) : [];
   // Les salissures peuvent dépendre de la base (le niveau de l'élève) : `salissures(db)`.
   const S = typeof exp.salissures === 'function' ? exp.salissures(db) : exp.salissures;
-  if (premiere && S) {
+  if (premiere && S && salissures) {
     const h = hasard(graine);
     let L = premiere.lignes.map((l) => l.slice());
     // Dates tapées en texte : `datesTexte` cellules de date tirées au hasard.
@@ -347,15 +459,20 @@ export const totalControles = (res) => (res || []).reduce((a, r) => a + (r.total
 export const retourDeTemps = (temps) => (temps === 'guidage' ? 'guidage' : temps === 'evaluation' ? 'evaluation' : 'entrainement');
 
 // Range un dépôt contrôlé dans la base. Rend faux si le dépôt est refusé (évaluation déjà déposée).
-export function enregistrerDepot(db, idDepot, resultats, { retour = 'entrainement', fichier = '', at = Date.now() } = {}) {
+// `exporte` : l'export contre lequel le fichier a été contrôlé ({ juste, criteres, comparaison }).
+// Le meilleur dépôt : le plus de résultats justes ; à égalité, celui dont l'export est juste.
+export function enregistrerDepot(db, idDepot, resultats, { retour = 'entrainement', fichier = '', at = Date.now(), exporte = null } = {}) {
   if (!db.tableur) db.tableur = {};
   if (!db.tableur.depots) db.tableur.depots = {};
   const D = db.tableur.depots[idDepot] || (db.tableur.depots[idDepot] = { essais: 0, dernier: null, meilleur: null });
   if (retour === 'evaluation' && D.essais > 0) return false;
   const depot = { at, fichier, resultats };
+  if (exporte) depot.exporte = exporte;
   D.essais += 1;
   D.dernier = depot;
-  if (!D.meilleur || totalJustes(resultats) >= totalJustes(D.meilleur.resultats)) D.meilleur = depot;
+  const n = totalJustes(resultats), m = D.meilleur ? totalJustes(D.meilleur.resultats) : -1;
+  const exJuste = (d) => !!(d && d.exporte && d.exporte.juste);
+  if (!D.meilleur || n > m || (n === m && (exJuste(depot) || !exJuste(D.meilleur)))) D.meilleur = depot;
   return true;
 }
 
@@ -369,7 +486,85 @@ export function resultatDepot(db, idDepot) {
 }
 export const exportFait = (db, idExport) => !!(db && db.tableur && db.tableur.exports && db.tableur.exports[idExport]);
 
+// Le jalon « bon export » : l'export contre lequel le meilleur dépôt a été contrôlé ; sans dépôt,
+// le dernier export. Faux tant que rien n'est exporté.
+export function exportJuste(db, idExport, idDepot) {
+  const T = (db && db.tableur) || {};
+  const D = idDepot && T.depots && T.depots[idDepot];
+  if (D && D.meilleur && D.meilleur.exporte) return !!D.meilleur.exporte.juste;
+  const E = T.exports && T.exports[idExport];
+  return !!(E && E.juste);
+}
+
+// Le statut du jalon « bon export » : en attente tant que rien n'est déposé (l'élève n'a aucun
+// retour sur son export avant le dépôt), puis juste ou faux.
+export function statutExport(db, idExport, idDepot) {
+  if (!resultatDepot(db, idDepot).depose) return { status: 'attente' };
+  return exportJuste(db, idExport, idDepot) ? { status: 'ok' } : { status: 'ko', detail: 'Les lignes exportées ne sont pas celles demandées.' };
+}
+
+// Les critères à l'écran (rangés dans la base), à défaut ceux de départ.
+export function criteresEleve(exp, db) {
+  const C = db && db.tableur && db.tableur.criteres && db.tableur.criteres[exp.id];
+  return C ? { ...criteresDepart(exp, db), ...C } : criteresDepart(exp, db);
+}
+// Range un export fait par l'élève : premier export (`at`, `n`), dernier (`criteres`, `juste`),
+// et les critères DIFFÉRENTS déjà exportés (`faits`, les huit derniers) : au dépôt, le fichier est
+// contrôlé contre celui qui lui ressemble le plus.
+export function enregistrerExport(db, exp, criteres, n, at = Date.now()) {
+  if (!db.tableur) db.tableur = {};
+  if (!db.tableur.exports) db.tableur.exports = {};
+  const E = db.tableur.exports[exp.id] || (db.tableur.exports[exp.id] = { at, n, essais: 0 });
+  E.essais = (E.essais || 0) + 1;
+  if (aFiltres(exp)) {
+    const c = { ...criteres };
+    E.criteres = c;
+    E.juste = comparerExport(exp, db, c).juste;
+    const cle = JSON.stringify(c);
+    E.faits = (E.faits || []).filter((x) => JSON.stringify(x) !== cle).concat([c]).slice(-8);
+  } else E.juste = true;
+  return E;
+}
+// Contrôle un classeur déposé contre CHACUN des exports de l'élève (critères différents) et garde
+// le meilleur : ses formules sont jugées sur SON fichier. Sans export filtré : l'export déclaré.
+export function controlerContreExports(classeur, exp, depot, db, { graine = '' } = {}) {
+  const E = db.tableur && db.tableur.exports && db.tableur.exports[exp.id];
+  const faits = aFiltres(exp) ? ((E && E.faits && E.faits.length) ? E.faits.slice().reverse() : [criteresEleve(exp, db)]) : [null];
+  let mieux = null;
+  faits.forEach((c) => {
+    const ex = construireExport(exp, db, { graine, criteres: c });
+    const resultats = controlerDepot(classeur, depot.controles(db, ex.propres), ex.propres);
+    if (!mieux || totalJustes(resultats) > totalJustes(mieux.resultats)) mieux = { resultats, criteres: c };
+  });
+  const comparaison = mieux.criteres ? comparerExport(exp, db, mieux.criteres) : null;
+  return { resultats: mieux.resultats,
+    exporte: comparaison ? { juste: comparaison.juste, criteres: mieux.criteres, comparaison } : null };
+}
+
 /* ===================================================================== l'écran */
+
+// Ce que l'élève lit sur son export au dépôt, selon le niveau d'indication (1 à 4).
+export function retourExportHtml(exp, exporte) {
+  const niv = exp.indications || 1;
+  if (!exporte || !aFiltres(exp) || niv >= 4) return '';
+  const C = exporte.comparaison;
+  if (C.juste) return '<p class="juste" data-depot-export="ok">✓ Export : vos critères donnent bien les lignes demandées.</p>';
+  if (niv === 3) return '<p class="faux" data-depot-export="ko">✗ Export : votre fichier ne correspond pas à la demande. Relisez-la, puis refaites l\'export (Extractions).</p>';
+  const nom = (id) => (exp.filtres.find((f) => f.id === id) || { libelle: id }).libelle;
+  const pb = [];
+  if (niv === 1) {
+    const J = exporte.justes || {};
+    C.ecarts.forEach((id) => {
+      const f = exp.filtres.find((x) => x.id === id);
+      if (f && J[id] !== undefined) pb.push(`« ${f.libelle} » : choisissez « ${libelleValeur(f, J[id])} ».`);
+    });
+  }
+  if (niv === 2 || !pb.length) {
+    Object.entries(C.enTrop).forEach(([id, n]) => pb.push(`${n} ${pluriel(n, 'ligne')} en trop : leur « ${nom(id)} » ne correspond pas à la demande.`));
+    if (C.manque) pb.push(`Il manque ${C.manque} ${pluriel(C.manque, 'ligne demandée', 'lignes demandées')}.`);
+  }
+  return `<div class="faux" data-depot-export="ko"><p>✗ Export à refaire (Extractions) :</p><ul>${pb.map((p) => `<li>${ech(p)}</li>`).join('')}</ul></div>`;
+}
 
 // Le retour montré après un dépôt, selon le temps.
 export function retourHtml(resultats, retour) {
@@ -385,18 +580,36 @@ export function retourHtml(resultats, retour) {
     </tbody></table></div>`;
 }
 
-// Le geste dans l'environnement : boutons « Exporter », écran « Fichiers », aide.
+// Le rappel commun à toute séance qui déclare une aide (retour de Tristan du 04/10/2026) : les
+// guillemets, la cellule A1, le format texte.
+export const RAPPEL_TEXTE = 'Un texte s’écrit entre guillemets : =NB.SI(G:G;"Casse"). Une cellule s’écrit sans guillemets : =NB.SI(G:G;A1) — avec des guillemets, "A1" chercherait le texte A1. '
+  + 'Un nombre au format texte (calé à gauche dans la cellule) n’est pas compté comme un nombre : passez la colonne au format Nombre.';
+
+// Une cellule de l'écran Extractions : une date lisible, le reste tel quel.
+function celluleHtml(v, type) {
+  if (v == null) return '';
+  if (type && typeof v === 'number') {
+    const d = new Date(v);
+    return dateTexte(v) + (type === 'dateHeure' ? ` ${pad(d.getHours())}:${pad(d.getMinutes())}` : '');
+  }
+  return ech(v);
+}
+
+// Le geste dans l'environnement : écran « Extractions » (critères, tableau, « Exporter »), écran
+// « Fichiers » (le dépôt), aide.
 // `api` (fourni par l'environnement à chaque dessin) : { db, sauver, toast, redessiner, graine,
 // retour, aveugle(), fige() }.
 export function creerGesteTableur(T) {
   const exports = T.exports || [];
   const depot = T.depot || null;
-  const ui = { msg: null, lecture: false };
+  const ui = { msg: null, lecture: false, liste: exports[0] ? exports[0].id : null };
+  const expDe = (id) => exports.find((x) => x.id === id) || exports[0];
 
   async function telecharger(exp, api) {
     let XLSX;
     try { XLSX = await chargerXLSX(); } catch (e) { api.toast(e.message); return; }
-    const ex = construireExport(exp, api.db, { graine: graineExport(api.graine, api.seance, exp.id), aveugle: api.aveugle() });
+    const criteres = aFiltres(exp) ? criteresEleve(exp, api.db) : null;
+    const ex = construireExport(exp, api.db, { graine: graineExport(api.graine, api.seance, exp.id), aveugle: api.aveugle(), criteres });
     const wb = classeurExport(XLSX, ex);
     const donnees = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
     const url = URL.createObjectURL(new Blob([donnees], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
@@ -404,14 +617,9 @@ export function creerGesteTableur(T) {
     a.href = url; a.download = exp.fichier || `${exp.id}.xlsx`;
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 4000);
-    if (!api.db.tableur) api.db.tableur = {};
-    if (!api.db.tableur.exports) api.db.tableur.exports = {};
-    if (!api.db.tableur.exports[exp.id]) { api.db.tableur.exports[exp.id] = { at: Date.now(), n: ex.feuilles[0] ? ex.feuilles[0].lignes.length : 0 }; api.sauver(); }
+    if (!api.fige()) { enregistrerExport(api.db, exp, criteres, ex.feuilles[0] ? ex.feuilles[0].lignes.length : 0); api.sauver(); }
     api.toast(`Fichier exporté : ${a.download}`);
   }
-
-  const bouton = (exp) => `<button class="btn btn-s btn-export" data-exporter="${ech(exp.id)}">
-    <span class="btn-fichier-icone">${ICONE_TELECHARGER}</span><span>${ech(exp.libelle || 'Exporter')}</span></button>`;
 
   async function deposerFichier(fichier, api) {
     const fmt = formatDepot(fichier && fichier.name);
@@ -429,35 +637,89 @@ export function creerGesteTableur(T) {
       ui.lecture = false; ui.msg = ['err', MSG_PAS_CLASSEUR]; api.redessiner(); return;
     }
     const exp = exports.find((x) => x.id === depot.export) || exports[0];
-    const ex = exp ? construireExport(exp, api.db, { graine: graineExport(api.graine, api.seance, exp.id), aveugle: false }) : { propres: [] };
-    const resultats = controlerDepot(classeur, depot.controles(api.db), ex.propres);
-    enregistrerDepot(api.db, depot.id, resultats, { retour: api.retour, fichier: fichier.name });
+    let resultats, exporte = null;
+    if (exp) {
+      ({ resultats, exporte } = controlerContreExports(classeur, exp, depot, api.db, { graine: graineExport(api.graine, api.seance, exp.id) }));
+      if (exporte) exporte.justes = criteresJustes(exp, api.db);
+    } else resultats = controlerDepot(classeur, depot.controles(api.db, []), []);
+    enregistrerDepot(api.db, depot.id, resultats, { retour: api.retour, fichier: fichier.name, exporte });
     ui.lecture = false;
     api.sauver();
     api.redessiner();
   }
 
+  // L'écran Extractions : la liste, ses critères au-dessus, le tableau de ce qui sera exporté.
+  function htmlExtractions(api) {
+    const exp = expDe(ui.liste);
+    if (!exp) return '<div class="ent-tete"><h2>Extractions</h2></div>';
+    const c = aFiltres(exp) ? criteresEleve(exp, api.db) : null;
+    const ex = construireExport(exp, api.db, { aveugle: api.aveugle(), criteres: c, salissures: false });
+    const F = ex.feuilles[0];
+    const n = F.lignes.length;
+    const champ = (f) => {
+      if (f.periode) {
+        return `<label class="ext-champ"><span>${ech(f.libelle)}</span><select data-filtre="${ech(f.id)}">${PERIODES.map(([k, l]) =>
+          `<option value="${k}" ${c[f.id] === k ? 'selected' : ''}>${ech(l)}</option>`).join('')}</select></label>
+          ${c[f.id] === 'perso' ? `<label class="ext-champ"><span>Du</span><input type="date" data-filtre-date="du" value="${ech(c.du || '')}"></label>
+            <label class="ext-champ"><span>Au</span><input type="date" data-filtre-date="au" value="${ech(c.au || '')}"></label>` : ''}`;
+      }
+      return `<label class="ext-champ"><span>${ech(f.libelle)}</span><select data-filtre="${ech(f.id)}">${optionsFiltre(exp, api.db, f).map(([v, l]) =>
+        `<option value="${ech(v)}" ${String(c[f.id]) === v ? 'selected' : ''}>${ech(l)}</option>`).join('')}</select></label>`;
+    };
+    return `<div class="ent-tete"><h2>Extractions</h2><p class="note">Choisissez une liste et réglez les critères : le tableau montre ce que contiendra le fichier.</p></div>
+      ${exports.length > 1 ? `<div class="rangee ext-filtres"><label class="ext-champ"><span>Liste</span><select data-liste>${exports.map((x) =>
+        `<option value="${ech(x.id)}" ${x.id === exp.id ? 'selected' : ''}>${ech(x.liste || x.feuilles[0].nom)}</option>`).join('')}</select></label></div>` : ''}
+      <section class="panneau" data-extraction="${ech(exp.id)}">
+        <h3>${ech(exp.liste || F.nom)}</h3>
+        ${aFiltres(exp) ? `<div class="rangee ext-filtres">${exp.filtres.map(champ).join('')}</div>` : ''}
+        <div class="rangee ext-bas"><span class="note" data-ext-compte>${n} ${pluriel(n, 'ligne')}</span>
+          <button class="btn btn-s btn-export" data-exporter="${ech(exp.id)}" ${n ? '' : 'disabled'}>
+            <span class="btn-fichier-icone">${ICONE_TELECHARGER}</span><span>Exporter</span></button></div>
+        <div class="ent-scroll ext-table"><table><thead><tr>${F.colonnes.map((col) => `<th>${ech(col)}</th>`).join('')}</tr></thead><tbody>
+          ${F.lignes.map((l) => `<tr>${l.map((v, i) => `<td class="${typeof v === 'number' && !F.types[F.colonnes[i]] ? 'num' : ''}">${celluleHtml(v, F.types[F.colonnes[i]])}</td>`).join('')}</tr>`).join('')}
+        </tbody></table></div>
+      </section>`;
+  }
+
+  function brancherExtractions(z, api) {
+    const exp = expDe(ui.liste);
+    if (!exp) return;
+    z.querySelector('[data-liste]')?.addEventListener('change', (e) => { ui.liste = e.target.value; api.redessiner(); });
+    z.querySelectorAll('[data-exporter]').forEach((b) => b.addEventListener('click', () => telecharger(exp, api)));
+    // Un critère change : rangé dans la base (l'élève le retrouve), le tableau se redessine, le
+    // focus revient sur le même champ (clavier).
+    const poser = (cle, valeur, sel) => {
+      const db = api.db;
+      if (!db.tableur) db.tableur = {};
+      if (!db.tableur.criteres) db.tableur.criteres = {};
+      const c = criteresEleve(exp, db);
+      c[cle] = valeur;
+      // Période personnalisée choisie : le mois en cours, prérempli (l'élève ajuste).
+      if (cle !== 'du' && cle !== 'au' && valeur === 'perso' && !c.du) {
+        const auj = aujourdhuiDe(exp, db), d = new Date(auj);
+        c.du = isoJour(new Date(d.getFullYear(), d.getMonth(), 1).getTime()); c.au = isoJour(auj);
+      }
+      db.tableur.criteres[exp.id] = c;
+      if (!api.fige()) api.sauver();
+      api.redessiner();
+      document.querySelector(sel)?.focus();
+    };
+    z.querySelectorAll('[data-filtre]').forEach((s) => s.addEventListener('change', () => poser(s.dataset.filtre, s.value, `[data-filtre="${s.dataset.filtre}"]`)));
+    z.querySelectorAll('[data-filtre-date]').forEach((s) => s.addEventListener('change', () => poser(s.dataset.filtreDate, s.value, `[data-filtre-date="${s.dataset.filtreDate}"]`)));
+  }
+
   return {
     nav: { id: 'fichiers', libelle: 'Fichiers' },
-    aide: T.aide || '',
-    aDesExports: (ecran) => exports.some((x) => x.ecran === ecran),
-
-    // Les boutons « Exporter » d'un écran, posés dans son en-tête (à côté du titre).
-    poserExports(z, ecran, api) {
-      const ici = exports.filter((x) => x.ecran === ecran);
-      const tete = z.querySelector('.ent-tete');
-      if (!ici.length || !tete) return;
-      tete.insertAdjacentHTML('beforeend', `<div class="rangee ent-exports">${ici.map(bouton).join('')}</div>`);
-      tete.querySelectorAll('[data-exporter]').forEach((b) => b.addEventListener('click', () => telecharger(exports.find((x) => x.id === b.dataset.exporter), api)));
-    },
+    navExtractions: exports.length ? { id: 'extractions', libelle: 'Extractions' } : null,
+    aide: T.aide ? `${T.aide}\n${RAPPEL_TEXTE}` : '',
+    htmlExtractions,
+    brancherExtractions,
 
     html(api) {
       const D = depot && api.db.tableur && api.db.tableur.depots && api.db.tableur.depots[depot.id];
       const evalDeposee = api.retour === 'evaluation' && D && D.essais > 0;
-      return `<div class="ent-tete"><h2>Fichiers</h2><p class="note">Vos exports, et le dépôt de votre fichier travaillé.</p></div>
-        ${exports.length ? `<section class="panneau"><h3>Exports</h3>
-          <p class="note">Un export est fabriqué à partir des données du système, à l'instant où vous cliquez.</p>
-          <div class="rangee">${exports.map(bouton).join('')}</div></section>` : ''}
+      const exp = depot && (exports.find((x) => x.id === depot.export) || exports[0]);
+      return `<div class="ent-tete"><h2>Fichiers</h2><p class="note">Le dépôt de votre fichier travaillé.${exports.length ? ' Les exports se font dans <b>Extractions</b>.' : ''}</p></div>
         ${depot ? `<section class="panneau"><h3>${ech(depot.libelle || 'Déposer mon fichier')}</h3>
           ${evalDeposee ? '' : `<div class="depot" id="depotTableur" data-depot-zone>
             <input type="file" id="fichierTableur" accept=".xlsx,.xlsm,.ods" hidden>
@@ -471,12 +733,12 @@ export function creerGesteTableur(T) {
           ${ui.msg ? `<div class="avis ${ui.msg[0] === 'ok' ? 'avis-ok' : 'avis-err'}" data-depot-msg>${ech(ui.msg[1])}</div>` : ''}
           ${D && D.dernier ? `<p class="note">Dernier fichier déposé : <span class="mono">${ech(D.dernier.fichier)}</span>${
             api.retour !== 'evaluation' && D.essais > 1 ? ` · ${D.essais} dépôts, le meilleur est retenu` : ''}</p>
+            ${api.retour !== 'evaluation' && exp ? retourExportHtml(exp, D.dernier.exporte) : ''}
             ${retourHtml(D.dernier.resultats, api.retour)}` : ''}
         </section>` : ''}`;
     },
 
     brancher(z, api) {
-      z.querySelectorAll('[data-exporter]').forEach((b) => b.addEventListener('click', () => telecharger(exports.find((x) => x.id === b.dataset.exporter), api)));
       const champ = z.querySelector('#fichierTableur');
       const zone = z.querySelector('#depotTableur');
       if (!champ || !zone) return;

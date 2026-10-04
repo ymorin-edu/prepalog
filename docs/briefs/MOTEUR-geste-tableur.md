@@ -241,7 +241,7 @@ et des noms de fonctions ; retour selon le temps pédagogique ; fichier jamais s
   au fichier « à ouvrir dans Excel », seul un octet diffère) : à refaire un jour à la main pour un vrai essai Excel.
   Tristan doit déposer à l'écran un fichier Excel ET un LibreOffice sur `outils/essai-tableur.html`.
 
-## Retours de Tristan du 04/10/2026 (à traiter dans un chantier à part)
+## Retours de Tristan du 04/10/2026 — traités par `MOTEUR-export-filtre.md` (04/10/2026)
 
 1. **« Rappel tableur »** : il doit bien parler du **format « texte »** et de la **cellule A1**, **avec les guillemets**.
    *Compréhension de Claude Code, à confirmer avant d'écrire* : expliquer qu'un critère texte s'écrit entre guillemets

@@ -11,7 +11,7 @@
 // Recadrée le 04/10/2026 (brief `docs/briefs/ENT-2.4-regularise-export.md`) : l'élève commence par
 // le TABLEUR (export des ajustements du mois depuis Stock, SI, NB.SI, dépôt dans Fichiers, retour
 // « n résultats justes sur m »), et un vendeur de la place de marché (fictif) se plaint de la même
-// réception. Huit jalons : deux pour le tableur, les six d'avant pour l'enquête.
+// réception. Neuf jalons : le bon export, deux pour le tableur, les six d'avant pour l'enquête.
 //
 // Livrée fermée (`ouverture: 'prof'`) : Tristan l'essaie, puis l'ouvre lui-même.
 // Trame élève et corrigé : déposés par Cowork, branchés le 04/10/2026 (brief `docs/briefs/CDISCOUNT-trames-eleve.md`).

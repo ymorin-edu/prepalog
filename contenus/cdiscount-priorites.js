@@ -2,7 +2,7 @@
 // Écrite le 04/10/2026 (brief `docs/briefs/ENT-2.6-bonus.md`, chantier C9).
 //
 // Avant le Black Friday, l'équipe inventaire ne peut recompter que CINQ références des allées A et
-// B. L'élève exporte un mois de lignes de préparation (≈ 150 lignes, export BRUT : lignes vides,
+// B. L'élève exporte un mois de lignes de préparation (écran Extractions, critères à choisir ; ≈ 150 lignes, export BRUT : lignes vides,
 // doublons, dates écrites en texte), le nettoie, compte par référence les constats d'écart DEPUIS
 // LE DERNIER INVENTAIRE (NB.SI.ENS), chiffre l'écart de chaque référence avec son coût (RECHERCHEV
 // vers la feuille Tarifs), et choisit les cinq où l'écart pèse le plus EN EUROS.
@@ -26,7 +26,8 @@
 import { CATALOGUE as CATALOGUE_COMPLET, EQUIPE, mailBienvenue, lignesPreparation, sousCatalogue } from './cdiscount.js';
 import { extraireRefs, LIGNE_LISTE } from './cdiscount-inventaire.js';
 import { hasard } from '../core/tirage.js';
-import { resultatDepot } from '../core/types/export-tableur.js';
+import { resultatDepot, statutExport } from '../core/types/export-tableur.js';
+import { preparationsAEcarter, filtreAllee } from './cdiscount.js';
 import { ligne, nrm } from '../core/declencheurs.js';
 
 export const MODELES = ['CAB-USBC-1M', 'CHG-20W', 'ECO-BT-01', 'SOU-SF-02', 'BAT-10K', 'CLE-64G', 'AMP-LED-E27', 'COQ-UNI-01',
@@ -162,17 +163,23 @@ const coutDe = (sku) => CATALOGUE_COMPLET.VM[sku].model.cost;
 // Le dernier inventaire, relu dans la base (l'ajustement de BAT-10K).
 const inventaireDe = (db) => { const a = ((db && db.moves) || []).find((m) => m.type === 'Ajustement inventaire' && String(m.ref).startsWith(ID_INVENTAIRE)); return a ? a.ts : dateInventaire(); };
 
+// Les lignes sur lesquelles on calcule : celles de la demande, ou celles de l'export que l'élève a
+// réellement fait (`propres`, objets colonne → valeur) — une erreur d'export ne se paie qu'une fois.
+const source = (db, propres) => (propres
+  ? propres.map((o) => ({ sku: o['Référence'], trouve: o['Stock trouvé'], logiciel: o['Stock logiciel'], ts: o.Date }))
+  : lignes(db));
+
 // Constats par référence (trouvé ≠ logiciel), depuis le jour du dernier inventaire — ou tous.
-export function constats(db, { depuisInventaire = true } = {}) {
+export function constats(db, { depuisInventaire = true, propres = null } = {}) {
   const t = minuit(inventaireDe(db));
-  const L = lignes(db).filter((p) => p.trouve !== p.logiciel && (!depuisInventaire || p.ts >= t));
+  const L = source(db, propres).filter((p) => p.trouve !== p.logiciel && (!depuisInventaire || p.ts >= t));
   return Object.fromEntries(MODELES.map((r) => [r, L.filter((p) => p.sku === r).length]));
 }
 // L'écart d'une référence : celui de son premier constat (il est constant) — ce que rend la
 // RECHERCHEV sur « Réf. en écart » ; 0 sans constat.
-export function ecarts(db, { depuisInventaire = true } = {}) {
+export function ecarts(db, { depuisInventaire = true, propres = null } = {}) {
   const t = minuit(inventaireDe(db));
-  const L = lignes(db).filter((p) => p.trouve !== p.logiciel && (!depuisInventaire || p.ts >= t));
+  const L = source(db, propres).filter((p) => p.trouve !== p.logiciel && (!depuisInventaire || p.ts >= t));
   return Object.fromEntries(MODELES.map((r) => { const p = L.find((x) => x.sku === r); return [r, p ? p.trouve - p.logiciel : 0]; }));
 }
 export const valeurs = (db, o) => { const e = ecarts(db, o); return Object.fromEntries(MODELES.map((r) => [r, Math.round(e[r] * coutDe(r) * 100) / 100])); };
@@ -187,23 +194,32 @@ const enEcartApres = (db) => { const t = minuit(inventaireDe(db)); return (l) =>
 
 export const AIDE = 'NB.SI.ENS(plage1 ; critère1 ; plage2 ; critère2 …) — RECHERCHEV(valeur ; table ; n° de colonne ; FAUX).';
 
-export function controles(db) {
-  const n = lignes(db).length;
+// Les lignes à écarter de la liste d'extraction : les allées A et B AVANT le mois (aucune autre
+// allée dans cette séance : la demande, c'est « toutes les allées » sur 30 jours).
+const PREPARATEURS_VOISINS = ['Yanis Cazenave', 'Inès Lagarde', 'Sofiane Brettes'];
+export const aujourdhui = (db) => (db && db.created) || Date.now();
+export const lignesAEcarter = (db) => preparationsAEcarter('ent26-mois-precedent',
+  { refs: MODELES, jours: [32, 45], n: 14, now: aujourdhui(db), numero: 728601, preparateurs: PREPARATEURS_VOISINS }).map(versLigne);
+
+export function controles(db, propres = null) {
+  const n = propres ? propres.length : lignes(db).length;
   return [
     { type: 'lignes', id: 'nettoye', libelle: 'Export nettoyé (lignes vides, doublons, dates en texte)', feuille: 'Préparations',
       attendu: n, colonneDate: 'Date' },
     { type: 'table', id: 'constats', libelle: 'Constats depuis le dernier inventaire (fonction NB.SI.ENS)', feuille: 'Synthèse',
-      cle: 'Référence', colonne: 'Constats', attendu: constats(db), fonctions: ['COUNTIFS'] },
+      cle: 'Référence', colonne: 'Constats', attendu: constats(db, { propres }), fonctions: ['COUNTIFS'] },
     { type: 'table', id: 'valeur', libelle: 'Valeur de l’écart (RECHERCHEV)', feuille: 'Synthèse',
-      cle: 'Référence', colonne: 'Valeur de l’écart', attendu: valeurs(db), tolerance: 0.01, formule: true, fonctionsFeuille: ['VLOOKUP'] },
+      cle: 'Référence', colonne: 'Valeur de l’écart', attendu: valeurs(db, { propres }), tolerance: 0.01, formule: true, fonctionsFeuille: ['VLOOKUP'] },
   ];
 }
 
 export const TABLEUR = {
   aide: AIDE,
   exports: [{
-    id: ID_EXPORT, ecran: 'commandes', libelle: 'Exporter les lignes de préparation',
-    fichier: 'cdiscount-preparations-allees-A-B.xlsx',
+    id: ID_EXPORT, liste: 'Lignes de préparation', fichier: 'cdiscount-lignes-de-preparation.xlsx',
+    // Niveau 3 (entraînement) : la demande métier seule (« les lignes de préparation du mois »).
+    indications: 3, autres: lignesAEcarter, aujourdhui,
+    filtres: [filtreAllee('*'), { id: 'periode', libelle: 'Période', periode: 'Date', juste: '30j' }],
     feuilles: [
       { nom: 'Préparations', colonnes: COLONNES, types: { Date: 'date' }, lignes: (db) => lignes(db).map(versLigne) },
       { nom: 'Tarifs', colonnes: ['Référence', 'Désignation', 'Coût unitaire'],
@@ -227,7 +243,7 @@ export const ACCUEIL = {
   kpis: ['mail', 'commandes'],
   etapes: [
     ['Lire le message de Nadia Ferrand', 'Messagerie. Cinq recomptages seulement, dans les allées A et B.'],
-    ['Exporter les lignes de préparation', 'Menu Commandes. L’export sort brut du logiciel : il faut le nettoyer.'],
+    ['Exporter les lignes de préparation', 'Menu Extractions : choisissez les critères qui répondent à la demande de Nadia. L’export sort brut du logiciel : il faut le nettoyer.'],
     ['Nettoyer, compter, chiffrer', 'Lignes vides, doublons, dates en texte ; NB.SI.ENS depuis le dernier inventaire ; RECHERCHEV vers Tarifs.'],
     ['Déposer votre fichier', 'Menu Fichiers. Le site vous dit combien de résultats sont justes.'],
     ['Écrire à Nadia les cinq références', 'Une ligne « À recompter : », les cinq où l’écart pèse le plus en euros.'],
@@ -307,6 +323,7 @@ const jalonControle = (id) => (db) => {
 };
 
 export const ETAPES = [
+  { id: 'export', titre: 'Les lignes du mois exportées (bons critères)', verifier: (db) => statutExport(db, ID_EXPORT, ID_DEPOT) },
   { id: 'nettoye', titre: 'Export nettoyé', verifier: jalonControle('nettoye') },
   { id: 'constats', titre: 'Constats comptés depuis le dernier inventaire (NB.SI.ENS)', verifier: jalonControle('constats') },
   { id: 'valeur', titre: 'Écarts chiffrés en euros (RECHERCHEV)', verifier: jalonControle('valeur') },

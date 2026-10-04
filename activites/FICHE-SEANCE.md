@@ -197,22 +197,51 @@ déclare `tableur` dans `creerEntreprise` ; sans lui, rien ne change.
 ```js
 tableur: {
   aide: 'SI(test ; si vrai ; si faux) — NB.SI(plage ; critère)',  // « Rappel tableur » du bandeau, jamais dans l'écran
+                                                     // (le moteur y ajoute le rappel guillemets / A1 / format texte)
   exports: [{
-    id: 'preparations', ecran: 'commandes',            // écran qui porte « Exporter » (en-tête)
-    libelle: 'Exporter les lignes de préparation', fichier: 'x.xlsx',
-    feuilles: [{ nom: 'Préparations', colonnes: [...], lignes: (db) => [[ts, 'BP-…', …]],  // PURE
+    id: 'preparations', liste: 'Lignes de préparation', fichier: 'x.xlsx',   // `liste` : son nom dans Extractions
+    feuilles: [{ nom: 'Préparations', colonnes: [...], lignes: (db) => [[ts, 'BP-…', …]],  // PURE : LA DEMANDE
                  types: { Date: 'date' },              // 'date' | 'dateHeure' : la valeur est un horodatage
                  aveugle: ['Stock logiciel'] },        // retirée tant qu'un comptage à l'aveugle n'est pas validé
                { nom: 'Synthèse', colonnes: ['Référence', 'Nb constats'], lignes: (db) => [['CAB-USBC-1M', null]] }],
     salissures: { vides: 4, doublons: 3, datesTexte: 5 },   // 1re feuille ; graine = élève + séance
+    // L'élève choisit ce qu'il exporte (04/10/2026, brief `docs/briefs/MOTEUR-export-filtre.md`) :
+    autres: (db) => [[…], …],                         // lignes À ÉCARTER, même format ; aucune ne passe la demande
+    aujourdhui: (db) => db.created,                    // le jour de la séance (pour les périodes)
+    filtres: [{ id: 'allee', libelle: 'Allée', valeur: (l) => l.Emplacement[0], tous: 'Toutes', juste: 'A' },
+              { id: 'type', libelle: 'Type de mouvement', colonne: 'Type', juste: 'Ajustement inventaire' },
+              { id: 'periode', libelle: 'Période', periode: 'Date', juste: '30j', defaut: '7j' }],
+    indications: 1,                                    // 1 à 4, voir ci-dessous
   }],
   depot: { id: 'analyse', export: 'preparations', libelle: 'Déposer mon fichier',
            retour: 'guidage' | 'entrainement' | 'evaluation',   // défaut : déduit de meta.temps
-           controles: (db) => [ … ] },
+           controles: (db, propres) => [ … ] },         // `propres` : les lignes de l'export DE L'ÉLÈVE
 }
 ```
 
-Contrôles (`controles(db)`, calculés sur la base, jamais en dur) — l'élève trie, filtre, insère des colonnes :
+**Où l'élève exporte** : l'écran **Extractions** (menu Outils) — la liste, ses critères AU-DESSUS du tableau, le
+nombre de lignes, « Exporter » qui sort ce qu'on voit (toutes les colonnes). **Fichiers** ne sert plus qu'au dépôt.
+Aucun bouton d'export sur les écrans métier. Périodes : aujourd'hui, 7 jours, 30 jours, tout, personnalisée
+(du / au) ; un filtre sans `periode` propose « Tous » + les valeurs rencontrées.
+
+**Niveaux d'indication** (décision de Tristan, 04/10/2026) — déclarés par la séance, jamais déduits du niveau 2de / 1re :
+
+| `indications` | Pour | Critères à l'ouverture | Retour sur l'export, au dépôt |
+|---|---|---|---|
+| 1 | guidage, 2de | ceux de la demande, déjà réglés | dit quel critère choisir |
+| 2 | guidage 1re, premier entraînement | ceux du logiciel (`defaut`, sinon « Tous » / 7 jours) | dit ce qui cloche (lignes en trop par critère, lignes manquantes) |
+| 3 | entraînement | idem | « ne correspond pas à la demande, relisez-la » |
+| 4 | évaluation | idem | aucun |
+
+**Une erreur ne se paie qu'une fois** : le dépôt est contrôlé contre l'export que l'élève a RÉELLEMENT fait (celui
+de ses exports qui donne le plus de résultats justes) ; `controles(db, propres)` calcule ses `attendu` sur
+`propres` (défaut : la demande). Le bon choix des lignes est un jalon à part :
+`statutExport(db, idExport, idDepot)` (`attente` tant que rien n'est déposé, puis `ok` / `ko`). Sans critère,
+`construireExport` rend la demande exactement : un test vérifie, séance par séance, que les bons critères
+redonnent ce fichier et qu'aucune ligne de `autres` ne passe la demande. Une trame n'écrit jamais un nombre de
+lignes attendu (les exports diffèrent d'un élève à l'autre).
+
+Contrôles (`controles(db, propres)`, calculés sur la base, jamais en dur) — l'élève trie, filtre, insère des colonnes :
 
 | `type` | Déclaration | Vérifie |
 |---|---|---|

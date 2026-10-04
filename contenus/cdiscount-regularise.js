@@ -29,7 +29,7 @@
 // Volume : 6 références, 11 documents, 22 mouvements (ENT-2.1 : 5, 10, 19 ; ENT-2.3 : 8, 16, 27).
 //
 // RECADRÉE LE 04/10/2026 (brief `docs/briefs/ENT-2.4-regularise-export.md`, chantier C7) : l'élève
-// COMMENCE PAR LE TABLEUR — il exporte les ajustements du mois (écran Stock), repère avec SI ceux
+// COMMENCE PAR LE TABLEUR — il exporte les ajustements du mois (écran Extractions), repère avec SI ceux
 // qui n'ont pas de justificatif, les compte par motif avec NB.SI, dépose son fichier (retour
 // d'entraînement : « n résultats justes sur m ») — puis enquête comme avant. Un SECOND PLAIGNANT,
 // un vendeur de la place de marché, pointe la même réception : les 12 mixeurs de REC-26-0447 ont
@@ -47,7 +47,7 @@
 
 import { CATALOGUE as CATALOGUE_COMPLET, CUSTOMERS, EQUIPE, mailBienvenue, sousCatalogue } from './cdiscount.js';
 import { ligne, nombres } from './cdiscount-mouvements.js';
-import { resultatDepot } from '../core/types/export-tableur.js';
+import { resultatDepot, statutExport, TOUS } from '../core/types/export-tableur.js';
 
 /* ------------------------------------------------------------------ périmètre */
 
@@ -174,7 +174,7 @@ export function dateInventaire(now = Date.now()) {
 
 export const ID_EXPORT = 'ajustements';
 export const ID_DEPOT = 'analyse';
-export const COLONNES = ['Date', 'N° ajustement', 'Référence', 'Désignation', 'Allée', 'Quantité', 'Motif', 'Document', 'Saisi par'];
+export const COLONNES = ['Date', 'Type', 'N° mouvement', 'Référence', 'Désignation', 'Allée', 'Quantité', 'Motif', 'Document', 'Saisi par'];
 const designation = (sku) => { const v = CATALOGUE_COMPLET.VM[sku]; return v ? [v.model.brand, v.model.name].filter(Boolean).join(' ') : sku; };
 const allee = (sku) => { const v = CATALOGUE_COMPLET.VM[sku]; return v ? v.loc.slice(0, 1) : ''; };
 const estConfirme = (db) => !!db && db.aisance === 'confirme';
@@ -199,33 +199,74 @@ export function lignesAjustements(db) {
   const histo = AJUSTEMENTS_AUTRES.filter((a) => !a[8] || estConfirme(db))
     .map(([no, j, h, sku, qty, motif, doc, par]) => ({ ts: quand(now, j, h), no, sku, qty, motif, doc, par }));
   return [...base, ...histo].sort((a, b) => a.ts - b.ts || (a.no < b.no ? -1 : 1))
-    .map((a) => [a.ts, a.no, a.sku, designation(a.sku), allee(a.sku), a.qty, a.motif, a.doc, a.par]);
+    .map((a) => [a.ts, TYPES.ajustement, a.no, a.sku, designation(a.sku), allee(a.sku), a.qty, a.motif, a.doc, a.par]);
+}
+
+// Les lignes À ÉCARTER de la liste « Mouvements de stock » (04/10/2026, export filtré) : les
+// réceptions et préparations de la base de l'élève, quelques mouvements du mois dans les autres
+// allées, et les ajustements du MOIS PRÉCÉDENT (plus de 30 jours, tous avec un document). Aucune
+// ne passe la demande (type Ajustement inventaire, 30 derniers jours) : un test le vérifie.
+export const MOUVEMENTS_VOISINS = [
+  // [jour, heure, type, N°, référence, quantité, par]
+  [22, 9, 'reception', 'REC-26-0405', 'CAB-USBC-1M', 40, 'Équipe quai'],
+  [18, 14, 'preparation', 'BP-731871', 'BAL-FOOT', -2, 'Équipe préparation'],
+  [14, 10.5, 'preparation', 'BP-731920', 'CHG-20W', -1, 'Équipe préparation'],
+  [11, 8.5, 'reception', 'REC-26-0420', 'LAM-FRO', 24, 'Équipe quai'],
+  [7, 15, 'preparation', 'BP-732071', 'TAP-YOG', -1, 'Équipe préparation'],
+  [2, 11, 'preparation', 'BP-732688', 'CLE-64G', -3, 'Équipe préparation'],
+];
+export const AJUSTEMENTS_MOIS_PRECEDENT = [
+  // [N°, jour, heure, référence, quantité, motif, document, par]
+  ['AJ-26-0171', 44, 9, 'CHG-20W', -1, 'Casse', 'DEM-26-0001', KEVIN],
+  ['AJ-26-0174', 42, 15, 'PIL-AA-8', -2, 'Erreur de prélèvement', 'BP-731602', SOFIANE],
+  ['AJ-26-0177', 40, 10, 'BAL-FOOT', 1, 'Erreur de réception', 'REC-26-0371', NADIA],
+  ['AJ-26-0180', 38, 14, 'VEI-LED', -1, 'Démarque inconnue', 'FR-26-0009', SAMIR_NOM],
+  ['AJ-26-0183', 36, 8.5, 'LAM-FRO', -1, 'Casse', 'DEM-26-0004', KEVIN],
+  ['AJ-26-0186', 34, 16, 'ECO-BT-01', -2, 'Erreur de prélèvement', 'BP-731690', SOFIANE],
+  ['AJ-26-0188', 32, 11, 'GOU-ISO-75', -1, 'Casse', 'DEM-26-0006', KEVIN],
+];
+export function lignesAEcarter(db) {
+  const now = jourDeSeance(db);
+  const base = ((db && db.moves) || []).filter((m) => m.type !== TYPES.ajustement)
+    .map((m) => [m.ts, m.type, m.ref, m.sku, designation(m.sku), allee(m.sku), m.delta, '', '', m.by || '']);
+  const voisins = MOUVEMENTS_VOISINS.map(([j, h, t, no, sku, q, par]) => [quand(now, j, h), TYPES[t], no, sku, designation(sku), allee(sku), q, '', '', par]);
+  const anciens = AJUSTEMENTS_MOIS_PRECEDENT.map(([no, j, h, sku, q, motif, doc, par]) => [quand(now, j, h), TYPES.ajustement, no, sku, designation(sku), allee(sku), q, motif, doc, par]);
+  return [...base, ...voisins, ...anciens];
 }
 
 export const AIDE = 'SI(test ; si vrai ; si faux) — NB.SI(plage ; ce qu’on compte). Une cellule vide s’écrit "" .';
 
-// Les comptes par motif de l'export de l'élève (calculés, jamais en dur).
-export function parMotif(db) {
+// Les comptes par motif (calculés, jamais en dur) : ceux de la demande, ou ceux de l'export que
+// l'élève a réellement fait (`propres`, objets colonne → valeur) — une erreur d'export ne se paie
+// qu'une fois.
+export function parMotif(db, propres = null) {
   const o = {};
-  lignesAjustements(db).forEach((l) => { if (l[6]) o[l[6]] = (o[l[6]] || 0) + 1; });
+  const motifs = propres ? propres.map((l) => l.Motif) : lignesAjustements(db).map((l) => l[7]);
+  motifs.forEach((m) => { if (m) o[m] = (o[m] || 0) + 1; });
   return o;
 }
 
-export function controles(db) {
+export function controles(db, propres = null) {
   return [
-    { type: 'colonne', id: 'averifier', libelle: 'Colonne « À vérifier » (fonction SI)', feuille: 'Ajustements',
-      titre: 'À vérifier', cle: 'N° ajustement', attendu: (l) => (l.Document ? '' : 'À VÉRIFIER'), fonctions: ['IF'] },
+    { type: 'colonne', id: 'averifier', libelle: 'Colonne « À vérifier » (fonction SI)', feuille: 'Mouvements',
+      titre: 'À vérifier', cle: 'N° mouvement', attendu: (l) => (l.Document ? '' : 'À VÉRIFIER'), fonctions: ['IF'] },
     { type: 'table', id: 'synthese', libelle: 'Synthèse : nombre d’ajustements par motif (fonction NB.SI)', feuille: 'Synthèse',
-      cle: 'Motif', colonne: 'Nombre', attendu: parMotif(db), fonctions: ['COUNTIF'] },
+      cle: 'Motif', colonne: 'Nombre', attendu: parMotif(db, propres), fonctions: ['COUNTIF'] },
   ];
 }
 
 export const TABLEUR = {
   aide: AIDE,
   exports: [{
-    id: ID_EXPORT, ecran: 'stock', libelle: 'Exporter les ajustements du mois',
-    fichier: 'cdiscount-ajustements-du-mois.xlsx',
-    feuilles: [{ nom: 'Ajustements', colonnes: COLONNES, types: { Date: 'date' }, lignes: lignesAjustements },
+    id: ID_EXPORT, liste: 'Mouvements de stock', fichier: 'cdiscount-mouvements-de-stock.xlsx',
+    // Niveau 2 (premier entraînement) : le message de Nadia donne les critères en clair.
+    indications: 2, autres: lignesAEcarter, aujourdhui: jourDeSeance,
+    filtres: [
+      { id: 'type', libelle: 'Type de mouvement', colonne: 'Type', tous: 'Tous', juste: TYPES.ajustement },
+      { id: 'allee', libelle: 'Allée', colonne: 'Allée', tous: 'Toutes', juste: TOUS },
+      { id: 'periode', libelle: 'Période', periode: 'Date', juste: '30j' },
+    ],
+    feuilles: [{ nom: 'Mouvements', colonnes: COLONNES, types: { Date: 'date' }, lignes: lignesAjustements },
       // L'amorce de la synthèse : les en-têtes seuls (entraînement : l'élève écrit les motifs).
       { nom: 'Synthèse', colonnes: ['Motif', 'Nombre'], lignes: () => [] }],
   }],
@@ -241,7 +282,7 @@ export const ACCUEIL = {
   kpis: ['mail', 'stock'],
   etapes: [
     ['Lire le message de Nadia Ferrand', 'Messagerie. Elle vous confie les ajustements de la semaine et vous dit ce qu’elle attend dans votre réponse.'],
-    ['Commencer par le tableur', 'Stock : « Exporter les ajustements du mois ». Colonne « À vérifier » (SI), feuille Synthèse (NB.SI), puis menu Fichiers pour déposer.'],
+    ['Commencer par le tableur', 'Extractions : la liste « Mouvements de stock », avec les critères que donne Nadia, puis « Exporter ». Colonne « À vérifier » (SI), feuille Synthèse (NB.SI), puis menu Fichiers pour déposer.'],
     ['Retrouver les ajustements', 'Menu Stock, onglet Mouvements : un ajustement est une ligne « Ajustement inventaire », avec son motif et son auteur.'],
     ['Chercher un document pour chacun', 'Un constat de casse, une réception, une commande… Un ajustement sans document est un ajustement orphelin.'],
     ['Remonter à l’origine de l’écart', 'Reprenez les mouvements de l’article, puis ouvrez le document d’entrée : le bon de livraison dit ce qui était annoncé, les colis disent ce qui est arrivé.'],
@@ -274,7 +315,7 @@ function mailMission(prenom, now) {
   return { folder: 'in', ts: now - 3600e3 * 2, from: `${EQUIPE.cheffe.nom}, ${EQUIPE.cheffe.role}`,
     fromMail: EQUIPE.cheffe.mail, to: prenom,
     subject: `Ajustements de la semaine : à vérifier avant la clôture (${ID_CAMPAGNE})`, kind: 'text',
-    text: `Bonjour ${prenom},\n\nCe mois-ci, la démarque inconnue me paraît élevée, et un vendeur de la place de marché se plaint (je vous transfère son message). Commencez par le tableur : dans Stock, onglet Mouvements, exportez les ajustements du mois. Ajoutez une colonne « À vérifier » qui affiche À VÉRIFIER quand un ajustement n'a pas de document justificatif (fonction SI), et, dans la feuille Synthèse, comptez les ajustements par motif (fonction NB.SI). Déposez votre fichier (menu Fichiers). Ensuite seulement, enquêtez.\n\nSamir a passé deux ajustements dans l'allée B cette semaine (campagne ${ID_CAMPAGNE}). Je clôture le mois ce soir et je ne signe pas un ajustement dont je ne connais pas la cause : un ajustement change le stock pour de bon, et il efface la trace de ce qui s'est passé.\n\nPour chacun :\n\n1. Retrouvez-le dans le système (Stock, onglet Mouvements : lignes « Ajustement inventaire »).\n2. Cherchez le document qui le justifie : un constat de casse, une réception, une commande. Lisez vos messages.\n3. Si un ajustement ne se justifie par aucun document, remontez l'historique de l'article : réceptions et commandes. Au menu Réceptions, le bon de livraison dit ce qui était annoncé, et les colis disent ce qui est arrivé : additionnez-les.\n\nRépondez à ce message en recopiant ces huit lignes et en les complétant :\n\n${LIGNES_REPONSE[0]} (la référence de l'article et la quantité de l'ajustement qui ne se justifie pas)\n${LIGNES_REPONSE[1]} (la référence de l'article et le document qui le justifie)\n${LIGNES_REPONSE[2]} (le numéro REC-… où l'écart est né)\n${LIGNES_REPONSE[3]} (la quantité annoncée pour cet article)\n${LIGNES_REPONSE[4]} (la quantité réellement arrivée, d'après les colis)\n${LIGNES_REPONSE[5]} (la quantité manquante × le prix d'achat, en euros)\n${LIGNES_REPONSE[6]} (le motif qui aurait dû figurer sur l'ajustement, d'après la colonne Motif de l'export)\n${LIGNES_REPONSE[7]} (ce qu'il faut faire maintenant, et auprès de qui)\n\nUne ligne par information, s'il vous plaît.\n\nAttention au temps : notre fournisseur n'accepte une réclamation que dans les ${DELAI_RECLAMATION} jours qui suivent la livraison.\n\nMerci,\n${EQUIPE.cheffe.nom}` };
+    text: `Bonjour ${prenom},\n\nCe mois-ci, la démarque inconnue me paraît élevée, et un vendeur de la place de marché se plaint (je vous transfère son message). Commencez par le tableur : dans Extractions, liste « Mouvements de stock », exportez les ajustements du mois avec ces critères : Type de mouvement « Ajustement inventaire », Allée « Toutes », Période « 30 derniers jours ». Ajoutez une colonne « À vérifier » qui affiche À VÉRIFIER quand un ajustement n'a pas de document justificatif (fonction SI), et, dans la feuille Synthèse, comptez les ajustements par motif (fonction NB.SI). Déposez votre fichier (menu Fichiers). Ensuite seulement, enquêtez.\n\nSamir a passé deux ajustements dans l'allée B cette semaine (campagne ${ID_CAMPAGNE}). Je clôture le mois ce soir et je ne signe pas un ajustement dont je ne connais pas la cause : un ajustement change le stock pour de bon, et il efface la trace de ce qui s'est passé.\n\nPour chacun :\n\n1. Retrouvez-le dans le système (Stock, onglet Mouvements : lignes « Ajustement inventaire »).\n2. Cherchez le document qui le justifie : un constat de casse, une réception, une commande. Lisez vos messages.\n3. Si un ajustement ne se justifie par aucun document, remontez l'historique de l'article : réceptions et commandes. Au menu Réceptions, le bon de livraison dit ce qui était annoncé, et les colis disent ce qui est arrivé : additionnez-les.\n\nRépondez à ce message en recopiant ces huit lignes et en les complétant :\n\n${LIGNES_REPONSE[0]} (la référence de l'article et la quantité de l'ajustement qui ne se justifie pas)\n${LIGNES_REPONSE[1]} (la référence de l'article et le document qui le justifie)\n${LIGNES_REPONSE[2]} (le numéro REC-… où l'écart est né)\n${LIGNES_REPONSE[3]} (la quantité annoncée pour cet article)\n${LIGNES_REPONSE[4]} (la quantité réellement arrivée, d'après les colis)\n${LIGNES_REPONSE[5]} (la quantité manquante × le prix d'achat, en euros)\n${LIGNES_REPONSE[6]} (le motif qui aurait dû figurer sur l'ajustement, d'après la colonne Motif de l'export)\n${LIGNES_REPONSE[7]} (ce qu'il faut faire maintenant, et auprès de qui)\n\nUne ligne par information, s'il vous plaît.\n\nAttention au temps : notre fournisseur n'accepte une réclamation que dans les ${DELAI_RECLAMATION} jours qui suivent la livraison.\n\nMerci,\n${EQUIPE.cheffe.nom}` };
 }
 
 // Le vendeur, transféré par Nadia à l'ouverture (pas de déclencheur). Il pointe la même réception.
@@ -464,6 +505,7 @@ const jalonControle = (id) => (db) => {
 };
 
 export const ETAPES = [
+  { id: 'export', titre: 'Les ajustements du mois exportés (bons critères)', verifier: (db) => statutExport(db, ID_EXPORT, ID_DEPOT) },
   { id: 'averifier', titre: 'Ajustements sans justificatif repérés avec SI', verifier: jalonControle('averifier') },
   { id: 'parmotif', titre: 'Ajustements comptés par motif avec NB.SI', verifier: jalonControle('synthese') },
   {

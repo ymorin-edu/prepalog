@@ -111,8 +111,8 @@ export function creerEntreprise(U) {
   };
   let VINV = INV_TIRE ? invDeGraine('') : (U.inventaire ? creerInventaire(U.inventaire, CATALOGUE) : null);
   // Le GESTE TABLEUR (04/10/2026, chantier C5, `core/types/export-tableur.js`) : il n'existe que si
-  // la séance déclare un `tableur` — boutons « Exporter » sur les écrans déclarés, entrée de menu
-  // « Fichiers » (exports et dépôt), rappel dans le bandeau d'aide.
+  // la séance déclare un `tableur` — écran « Extractions » (critères au-dessus du tableau,
+  // « Exporter » sort ce qu'on voit), écran « Fichiers » (le dépôt), rappel dans le bandeau d'aide.
   const VTAB = U.tableur ? creerGesteTableur(U.tableur) : null;
   // L'écran « Quai de réception » (03/10/2026, chantier P1, pilote Picard), même principe : il
   // n'existe que si la séance déclare un `quai` (format en tête de `core/types/quai.js`). Son
@@ -661,7 +661,7 @@ export function creerEntreprise(U) {
               <span class="ent-barre" aria-hidden="true"></span>
               <button class="ent-sortie" data-quitter>Quitter</button>
             </header>
-            ${VTAB && VTAB.aide && E.aideTableur ? `<div class="ent-aide" data-aide-tableur-texte>${ech(VTAB.aide)}</div>` : ''}
+            ${VTAB && VTAB.aide && E.aideTableur ? `<div class="ent-aide" data-aide-tableur-texte style="white-space:pre-line">${ech(VTAB.aide)}</div>` : ''}
             <div class="ent-shell">
               <aside class="ent-side">
                 ${item('accueil', 'Accueil')}
@@ -683,6 +683,7 @@ export function creerEntreprise(U) {
                 ${item('fournisseurs', 'Fournisseurs')}
                 <div class="ent-sep">Outils</div>
                 ${item('console', 'Console')}
+                ${VTAB && VTAB.navExtractions ? item('extractions', VTAB.navExtractions.libelle) : ''}
                 ${VTAB ? item('fichiers', VTAB.nav.libelle) : ''}
               </aside>
               <div class="ent-main" id="entMain"></div>
@@ -818,10 +819,10 @@ export function creerEntreprise(U) {
           quai: VQUAI ? vueQuai : vueAccueil,
           planning: VPL ? vuePlanning : vueAccueil,
           fichiers: VTAB ? vueFichiers : vueAccueil,
+          extractions: VTAB && VTAB.navExtractions ? vueExtractions : vueAccueil,
           clients: vueClients, fournisseurs: vueFournisseurs, console: vueConsole,
         };
         z.innerHTML = (vues[E.vue] || vueAccueil)();
-        if (VTAB) VTAB.poserExports(z, E.vue, apiTableur());
         brancher(z);
         figerVue(z);
         if (E.vue === 'catalogue') majCatalogue();
@@ -1659,8 +1660,10 @@ export function creerEntreprise(U) {
         seance: (ctx.meta && ctx.meta.id) || '',
         retour: (U.tableur && U.tableur.depot && U.tableur.depot.retour) || retourDeTemps(ctx.meta && ctx.meta.temps),
         aveugle: () => !!VINV && VINV.bloqueStock(lireInventaire()),
+        fige: () => rendue(),
       });
       function vueFichiers() { return VTAB.html(apiTableur()); }
+      function vueExtractions() { return VTAB.htmlExtractions(apiTableur()); }
 
       /* ---------------------------------------------------------- quai de réception */
       // L'état vit dans la base de l'élève, sous l'identifiant du quai de la séance. Il est créé dès
@@ -2308,6 +2311,7 @@ export function creerEntreprise(U) {
           ouvrirMail(Number(b.dataset.tourNotifOuvrir));
         }));
         if (E.vue === 'fichiers' && VTAB) VTAB.brancher(z, apiTableur());
+        if (E.vue === 'extractions' && VTAB && VTAB.navExtractions) VTAB.brancherExtractions(z, apiTableur());
         if (E.vue === 'inventaire' && VINV && !VINV.attente(db)) VINV.brancher(z, etatInventaire(), apiInventaire());
         if (E.vue === 'quai' && VQUAI) VQUAI.brancher(z, etatQuai(), apiQuai());
         if (E.vue === 'planning' && VPL) VPL.brancher(z, etatPlanning(), apiPlanning());

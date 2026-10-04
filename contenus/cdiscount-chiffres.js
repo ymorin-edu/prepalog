@@ -4,7 +4,7 @@
 // À la fin d'ENT-2.1, Nadia a dit : « une erreur sur un article, il y en a peut-être d'autres ».
 // Le stock affiché EST la somme des mouvements : le recalculer ne montrerait rien. Le signal, ce
 // sont les constats des préparateurs : chaque ligne de bon de préparation porte le stock du
-// logiciel et le « stock trouvé » au rayon. L'élève EXPORTE ces lignes (écran Commandes), calcule
+// logiciel et le « stock trouvé » au rayon. L'élève EXPORTE ces lignes (écran Extractions), calcule
 // l'écart, isole les références en écart (SI), compte les constats par référence (NB.SI), DÉPOSE
 // son fichier (menu Fichiers, retour détaillé : c'est du guidage), puis écrit à Nadia les
 // références à recompter. ENT-2.3 recomptera sa liste.
@@ -25,9 +25,9 @@
 // préparateurs. Le geste « exporter, retravailler dans un tableur, décider » est réel (référentiel
 // 2025, savoirs « maniement d'un tableur professionnel, d'un WMS »).
 
-import { EQUIPE, mailBienvenue, lignesPreparation, sousCatalogue } from './cdiscount.js';
+import { EQUIPE, mailBienvenue, lignesPreparation, sousCatalogue, preparationsAEcarter, refsAllees, filtreAllee } from './cdiscount.js';
 import * as I from './cdiscount-inventaire.js';
-import { resultatDepot, exportFait } from '../core/types/export-tableur.js';
+import { resultatDepot, statutExport } from '../core/types/export-tableur.js';
 import { ligne, nrm } from '../core/declencheurs.js';
 
 export const CATALOGUE = I.CATALOGUE;
@@ -112,16 +112,29 @@ export const refsExport = (db) => (estConfirme(db) ? I.MODELES : A01_A04);
 export const lignesExport = (db) => lignesPreparation(db, CATALOGUE, (o, sku) => refsExport(db).includes(sku));
 const versLigne = (p) => [p.ts, p.bon, p.commande, p.sku, p.designation, p.emplacement, p.qty, p.logiciel, p.trouve, p.preparateur];
 
-// Les constats de l'export (calculés, jamais en dur) : référence → nombre de lignes en écart.
-export function constats(db) {
-  const L = lignesExport(db);
+// Les constats de l'export (calculés, jamais en dur) : référence → nombre de lignes en écart. Ceux
+// de la demande, ou ceux de l'export que l'élève a réellement fait (`propres`, objets colonne →
+// valeur) : une erreur d'export ne se paie qu'une fois.
+export function constats(db, propres = null) {
+  const L = propres ? propres.map((o) => ({ sku: o['Référence'], trouve: o['Stock trouvé'], logiciel: o['Stock logiciel'] })) : lignesExport(db);
   return Object.fromEntries(refsExport(db).map((r) => [r, L.filter((p) => p.sku === r && p.trouve !== p.logiciel).length]));
+}
+
+// Les lignes à écarter de la liste d'extraction : les allées B et C dans le mois, l'allée A avant.
+const PREPARATEURS_VOISINS = ['Yanis Cazenave', 'Inès Lagarde', 'Sofiane Brettes'];
+export const aujourdhui = (db) => (db && db.created) || Date.now();
+export function lignesAEcarter(db) {
+  const now = aujourdhui(db);
+  return [
+    ...preparationsAEcarter('ent22-autres-allees', { refs: refsAllees(['B', 'C']), jours: [1, 20], n: 12, now, numero: 739101, preparateurs: PREPARATEURS_VOISINS }),
+    ...preparationsAEcarter('ent22-mois-precedent', { refs: refsExport(db), jours: [32, 45], n: 8, now, numero: 728101, preparateurs: PREPARATEURS_VOISINS }),
+  ].map(versLigne);
 }
 export const refsEnEcart = (db) => Object.entries(constats(db)).filter(([, n]) => n > 0).map(([r]) => r);
 
 export const AIDE = 'SI(test ; si vrai ; si faux) — NB.SI(plage ; ce qu\'on compte). Une formule commence par = .';
 
-export function controles(db) {
+export function controles(db, propres = null) {
   return [
     { type: 'colonne', id: 'ecart', libelle: 'Colonne « Écart » (stock trouvé − stock logiciel)', feuille: 'Préparations',
       titre: 'Écart', cle: ['N° bon', 'Référence'], attendu: (l) => l['Stock trouvé'] - l['Stock logiciel'], formule: true },
@@ -129,15 +142,17 @@ export function controles(db) {
       titre: 'Réf. en écart', cle: ['N° bon', 'Référence'],
       attendu: (l) => (l['Stock trouvé'] !== l['Stock logiciel'] ? l['Référence'] : ''), fonctions: ['IF'] },
     { type: 'table', id: 'synthese', libelle: 'Synthèse : nombre de constats par référence (fonction NB.SI)', feuille: 'Synthèse',
-      cle: 'Référence', colonne: 'Nb constats', attendu: constats(db), fonctions: ['COUNTIF'] },
+      cle: 'Référence', colonne: 'Nb constats', attendu: constats(db, propres), fonctions: ['COUNTIF'] },
   ];
 }
 
 export const TABLEUR = {
   aide: AIDE,
   exports: [{
-    id: ID_EXPORT, ecran: 'commandes', libelle: 'Exporter les lignes de préparation',
-    fichier: 'cdiscount-preparations-allee-A.xlsx',
+    id: ID_EXPORT, liste: 'Lignes de préparation', fichier: 'cdiscount-lignes-de-preparation.xlsx',
+    // Niveau 1 (guidage) : les critères de la demande sont déjà réglés ; la trame dit pourquoi.
+    indications: 1, autres: lignesAEcarter, aujourdhui,
+    filtres: [filtreAllee('A'), { id: 'periode', libelle: 'Période', periode: 'Date', juste: '30j' }],
     feuilles: [{
       nom: 'Préparations', colonnes: COLONNES, types: { Date: 'date' },
       lignes: (db) => lignesExport(db).map(versLigne),
@@ -159,7 +174,7 @@ export const ACCUEIL = {
   kpis: ['mail', 'commandes'],
   etapes: [
     ['Lire la mission de Nadia Ferrand', 'Messagerie. Elle vous dit ce qu’elle attend, étape par étape.'],
-    ['Exporter les lignes de préparation', 'Menu Commandes, bouton « Exporter les lignes de préparation ».'],
+    ['Exporter les lignes de préparation', 'Menu Extractions, liste « Lignes de préparation » : les critères sont déjà réglés (allée A, 30 derniers jours). Vérifiez-les, puis « Exporter ».'],
     ['Calculer dans le tableur', 'Colonne « Écart », colonne « Réf. en écart » (SI), feuille Synthèse (NB.SI).'],
     ['Déposer votre fichier', 'Menu Fichiers. Le site vous dit ce qui est juste et ce qui cloche : corrigez et redéposez.'],
     ['Écrire à Nadia les références à recompter', 'Une ligne « À recompter : », seulement ce que les chiffres désignent.'],
@@ -177,7 +192,7 @@ export const LIGNE_LISTE = I.LIGNE_LISTE;
 function mailMission(prenom, now) {
   return { folder: 'in', ts: now - 3600e3, from: signature, fromMail: EQUIPE.cheffe.mail, to: prenom,
     subject: 'Allée A : ce que disent les chiffres', kind: 'text', amorce: `${LIGNE_LISTE} `,
-    text: `Bonjour ${prenom},\n\nAprès l'histoire des écouteurs, je veux savoir si d'autres références de l'allée A ont un stock faux. Les préparateurs notent sur chaque bon le stock qu'ils trouvent au rayon : quand il ne correspond pas au logiciel, c'est un signal.\n\n1. Dans Commandes, exportez les lignes de préparation depuis le dernier inventaire.\n2. Dans le tableur, ajoutez la colonne « Écart » (stock trouvé moins stock logiciel), puis la colonne « Réf. en écart » qui recopie la référence seulement quand l'écart n'est pas nul (fonction SI).\n3. Dans la feuille Synthèse, comptez les constats par référence (fonction NB.SI).\n4. Déposez votre fichier (menu Fichiers).\n5. Écrivez-moi les références à faire recompter, sur une ligne qui commence par « ${LIGNE_LISTE} ».\n\nOn ne recompte pas tout : seulement ce que les chiffres désignent.\n\n${EQUIPE.cheffe.nom}` };
+    text: `Bonjour ${prenom},\n\nAprès l'histoire des écouteurs, je veux savoir si d'autres références de l'allée A ont un stock faux. Les préparateurs notent sur chaque bon le stock qu'ils trouvent au rayon : quand il ne correspond pas au logiciel, c'est un signal.\n\n1. Dans Extractions, liste « Lignes de préparation », exportez les lignes de l'allée A sur les 30 derniers jours : les critères sont déjà réglés, vérifiez-les.\n2. Dans le tableur, ajoutez la colonne « Écart » (stock trouvé moins stock logiciel), puis la colonne « Réf. en écart » qui recopie la référence seulement quand l'écart n'est pas nul (fonction SI).\n3. Dans la feuille Synthèse, comptez les constats par référence (fonction NB.SI).\n4. Déposez votre fichier (menu Fichiers).\n5. Écrivez-moi les références à faire recompter, sur une ligne qui commence par « ${LIGNE_LISTE} ».\n\nOn ne recompte pas tout : seulement ce que les chiffres désignent.\n\n${EQUIPE.cheffe.nom}` };
 }
 
 export const VOLET = {
@@ -237,8 +252,8 @@ const jalonControle = (id) => (db) => {
 export const ETAPES = [
   {
     id: 'export',
-    titre: 'Lignes de préparation exportées',
-    verifier(db) { return exportFait(db, ID_EXPORT) ? { status: 'ok' } : { status: 'attente' }; },
+    titre: 'Lignes de préparation exportées (bons critères)',
+    verifier: (db) => statutExport(db, ID_EXPORT, ID_DEPOT),
   },
   { id: 'ecart', titre: 'Écart calculé en formule', verifier: jalonControle('ecart') },
   { id: 'si', titre: 'Références en écart isolées avec SI', verifier: jalonControle('si') },

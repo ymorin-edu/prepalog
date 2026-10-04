@@ -2,7 +2,7 @@
 // Écrite le 04/10/2026 (brief `docs/briefs/ENT-2.5-compte-a-rebours.md`, chantier C8).
 //
 // L'élève mène SEUL la boucle complète, sur une allée neuve (l'allée C, jamais vue dans la série) :
-// exporter les lignes de préparation, analyser dans le tableur (Écart, SI, NB.SI), déposer son
+// exporter les lignes de préparation (écran Extractions, critères à choisir), analyser dans le tableur (Écart, SI, NB.SI), déposer son
 // fichier (UN dépôt, aucun retour), envoyer à Nadia sa liste « À recompter : », faire l'inventaire
 // de cette liste (écran Inventaire, aveugle, AUCUNE correction), rendre compte (« Régularisé : »,
 // « Valeur régularisée : »), rendre sa copie. Aucune notion nouvelle, aucun retour à l'écran.
@@ -36,7 +36,8 @@ import { CATALOGUE as CATALOGUE_COMPLET, EQUIPE, mailBienvenue, lignesPreparatio
 import { extraireRefs, LIGNE_LISTE } from './cdiscount-inventaire.js';
 import { tirerJeu, hasard, graineDeBase } from '../core/tirage.js';
 import { bilanInventaire } from '../core/types/inventaire.js';
-import { resultatDepot } from '../core/types/export-tableur.js';
+import { resultatDepot, statutExport } from '../core/types/export-tableur.js';
+import { preparationsAEcarter, refsAllees, filtreAllee } from './cdiscount.js';
 import { ligne, nombres, nrm } from '../core/declencheurs.js';
 
 export const MODELES = ['GOU-ISO-75', 'COR-SAU', 'TAP-YOG', 'BAL-FOOT', 'LAM-FRO', 'ELA-FIT-3'];
@@ -226,23 +227,39 @@ export const COLONNES = ['Date', 'N° bon', 'Commande', 'Référence', 'Désigna
   'Qté préparée', 'Stock logiciel', 'Stock trouvé', 'Préparateur'];
 const versLigne = (p) => [p.ts, p.bon, p.commande, p.sku, p.designation, p.emplacement, p.qty, p.logiciel, p.trouve, p.preparateur];
 export const lignesExport = (db) => lignesPreparation(db, CATALOGUE);
-export function constats(db) {
-  const L = lignesExport(db);
+// Ceux de la demande, ou ceux de l'export que l'élève a réellement fait (`propres`) : une erreur
+// d'export ne se paie qu'une fois.
+export function constats(db, propres = null) {
+  const L = propres ? propres.map((o) => ({ sku: o['Référence'], trouve: o['Stock trouvé'], logiciel: o['Stock logiciel'] })) : lignesExport(db);
   return Object.fromEntries(MODELES.map((r) => [r, L.filter((p) => p.sku === r && p.trouve !== p.logiciel).length]));
 }
-export function controles(db) {
+// Les lignes à écarter de la liste d'extraction : les allées A et B dans le mois, l'allée C avant.
+const PREPARATEURS_VOISINS = ['Yanis Cazenave', 'Inès Lagarde', 'Sofiane Brettes'];
+export const aujourdhui = (db) => (db && db.created) || Date.now();
+export function lignesAEcarter(db) {
+  const now = aujourdhui(db);
+  return [
+    ...preparationsAEcarter('ent25-autres-allees', { refs: refsAllees(['A', 'B']), jours: [1, 20], n: 14, now, numero: 739501, preparateurs: PREPARATEURS_VOISINS }),
+    ...preparationsAEcarter('ent25-mois-precedent', { refs: MODELES, jours: [32, 45], n: 8, now, numero: 728501, preparateurs: PREPARATEURS_VOISINS }),
+  ].map(versLigne);
+}
+
+export function controles(db, propres = null) {
   return [
     { type: 'colonne', id: 'ecart', libelle: 'Colonne « Écart »', feuille: 'Préparations', titre: 'Écart',
       cle: ['N° bon', 'Référence'], attendu: (l) => l['Stock trouvé'] - l['Stock logiciel'], formule: true },
     { type: 'colonne', id: 'si', libelle: 'Colonne « Réf. en écart » (SI)', feuille: 'Préparations', titre: 'Réf. en écart',
       cle: ['N° bon', 'Référence'], attendu: (l) => (l['Stock trouvé'] !== l['Stock logiciel'] ? l['Référence'] : ''), fonctions: ['IF'] },
     { type: 'table', id: 'synthese', libelle: 'Synthèse (NB.SI)', feuille: 'Synthèse', cle: 'Référence', colonne: 'Nb constats',
-      attendu: constats(db), fonctions: ['COUNTIF'] },
+      attendu: constats(db, propres), fonctions: ['COUNTIF'] },
   ];
 }
 export const TABLEUR = {
   exports: [{
-    id: ID_EXPORT, ecran: 'commandes', libelle: 'Exporter les lignes de préparation', fichier: 'cdiscount-preparations-allee-C.xlsx',
+    id: ID_EXPORT, liste: 'Lignes de préparation', fichier: 'cdiscount-lignes-de-preparation.xlsx',
+    // Niveau 4 (évaluation) : la demande métier seule, aucun retour sur l'export.
+    indications: 4, autres: lignesAEcarter, aujourdhui,
+    filtres: [filtreAllee('C'), { id: 'periode', libelle: 'Période', periode: 'Date', juste: '30j' }],
     feuilles: [{ nom: 'Préparations', colonnes: COLONNES, types: { Date: 'date' }, lignes: (db) => lignesExport(db).map(versLigne) },
       { nom: 'Synthèse', colonnes: ['Référence', 'Nb constats'], lignes: () => [] }],
   }],
@@ -257,7 +274,7 @@ export const ACCUEIL = {
   kpis: ['mail'],
   etapes: [
     ['Lire la mission de Nadia Ferrand', 'Messagerie.'],
-    ['Exporter, analyser, déposer', 'Commandes, puis le tableur, puis le menu Fichiers. Un seul dépôt.'],
+    ['Exporter, analyser, déposer', 'Extractions, puis le tableur, puis le menu Fichiers. Un seul dépôt.'],
     ['Envoyer votre liste', 'À Nadia : « À recompter : ».'],
     ['Faire l’inventaire de votre liste', 'Menu Inventaire.'],
     ['Rendre compte, puis rendre votre copie', 'À Nadia : « Régularisé : » et « Valeur régularisée : ».'],
@@ -335,7 +352,7 @@ export const VOLET = {
         text: `Bonjour,\n\nConstat de casse.\n\nDocument : ${ev.casse.no}\nArticle : ${ev.casse.sku}, ${nomCourt(ev.casse.sku)}\nQuantité : ${ev.casse.qty}\nDécision : sorti du stock et mis au rebut.\n\n${EQUIPE.quai.nom}` },
       { folder: 'in', ts: now - 3600e3, from: signature, fromMail: EQUIPE.cheffe.mail, to: prenom,
         subject: 'Allée C : le compte à rebours', kind: 'text', amorce: `${LIGNE_LISTE} `,
-        text: `Bonjour ${prenom},\n\nLe Black Friday approche : l'allée C doit être juste. Exportez les lignes de préparation, analysez les constats des préparateurs, envoyez-moi votre liste (« ${LIGNE_LISTE} »), faites l'inventaire de cette liste, puis rendez-moi compte (« ${LIGNES_CR[0]} », « ${LIGNES_CR[1]} »). Quand tout est fait, rendez votre copie.\n\n${EQUIPE.cheffe.nom}` },
+        text: `Bonjour ${prenom},\n\nLe Black Friday approche : l'allée C doit être juste. Exportez les lignes de préparation de l'allée C sur le mois, analysez les constats des préparateurs, envoyez-moi votre liste (« ${LIGNE_LISTE} »), faites l'inventaire de cette liste, puis rendez-moi compte (« ${LIGNES_CR[0]} », « ${LIGNES_CR[1]} »). Quand tout est fait, rendez votre copie.\n\n${EQUIPE.cheffe.nom}` },
     ];
     return { receptions: P.receptions, orders: P.orders, mouvements: P.mouvements, mails };
   },
@@ -374,7 +391,7 @@ export const VOLET = {
 
 /* ================================================================== les onze jalons
  * Calculés sur le jeu de l'élève, jamais écrits en dur. Aucun verdict avant la remise (copie) ;
- * rien n'est acquis sans action (`attente`). Note = jalons réussis / 11 × 20, figée à la remise.
+ * rien n'est acquis sans action (`attente`). Note = jalons réussis / 12 × 20, figée à la remise.
  */
 const bilan = (db) => bilanInventaire(db, inventaireDeBase(db), CATALOGUE);
 const jalonControle = (id) => (db) => {
@@ -425,6 +442,7 @@ function compteRendu(db) {
 }
 
 export const ETAPES = [
+  { id: 'export', titre: 'Lignes de préparation de l’allée C exportées (bons critères)', verifier: (db) => statutExport(db, ID_EXPORT, ID_DEPOT) },
   { id: 'ecart', titre: 'Écart calculé en formule', verifier: jalonControle('ecart') },
   { id: 'si', titre: 'Références en écart isolées avec SI', verifier: jalonControle('si') },
   { id: 'synthese', titre: 'Constats comptés par référence avec NB.SI', verifier: jalonControle('synthese') },

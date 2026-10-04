@@ -49,6 +49,7 @@
 // le bandeau et sur les trames, **jamais** en en-tête d'un document commercial fabriqué.
 
 import { catalogueSimple, pad, rng } from './entreprise-commun.js';
+import { hasard } from '../core/tirage.js';
 
 /* ====================================================== identité et vocabulaire ====== */
 
@@ -256,6 +257,32 @@ export function mailBienvenue(prenom, ts) {
     subject: 'Bienvenue à l’entrepôt de Cestas', kind: 'text',
     text: `Bonjour ${prenom},\n\nBienvenue dans l'équipe stock de l'entrepôt Cdiscount de Cestas, en Gironde. Ici, on expédie chaque jour des milliers de petits colis de moins de 30 kg, commandés sur cdiscount.com.\n\nNotre travail : que le stock affiché dans le système soit le stock réel, celui qui est dans les rayons. Si le système se trompe, on vend des articles qu'on n'a plus, ou on rachète ce qu'on a déjà.\n\nVous aurez besoin de trois écrans :\n- Stock : les quantités par référence, et l'onglet Mouvements, qui garde la trace de tout ce qui est entré et sorti (le code d'accès vous est donné par votre enseignant) ;\n- Réceptions et Commandes : les documents qui ont fait bouger le stock ;\n- la Console, par exemple .movements suivi d'une référence, pour ne voir que les mouvements d'un article.\n\nBon courage,\n${EQUIPE.cheffe.nom}` };
 }
+
+// Des lignes de préparation FABRIQUÉES pour la liste « Lignes de préparation » de l'écran
+// Extractions (04/10/2026, export filtré, brief `MOTEUR-export-filtre.md`) : des lignes À ÉCARTER
+// — d'autres allées dans la période, ou la bonne allée AVANT la période demandée. Déterministes
+// (graine fixe), sans écart (le stock trouvé est celui du logiciel) : elles n'existent que pour que
+// le choix des critères compte. Même forme que `lignesPreparation`. `jours` : [min, max] avant
+// `now` ; `numero` : premier numéro de bon (choisi hors des bons de la séance).
+export function preparationsAEcarter(graine, { refs, jours, n, now, numero, preparateurs }) {
+  const h = hasard(graine);
+  const minuitDe = (t) => { const d = new Date(t); d.setHours(0, 0, 0, 0); return d.getTime(); };
+  const L = [];
+  for (let k = 0; k < n; k++) {
+    const sku = refs[h.entier(0, refs.length - 1)];
+    const v = CATALOGUE.VM[sku];
+    const ts = minuitDe(now) - h.entier(jours[0], jours[1]) * 864e5 + Math.round((8 + h.entier(0, 36) / 4) * 3600e3);
+    const stock = h.entier(8, 60);
+    L.push({ ts, bon: `BP-${numero + k}`, commande: `CMD-${numero + k}`, sku,
+      designation: [v.model.brand, v.model.name].filter(Boolean).join(' '), emplacement: v.loc, qty: h.entier(1, 3),
+      logiciel: stock, trouve: stock, preparateur: preparateurs[k % preparateurs.length] });
+  }
+  return L.sort((a, b) => a.ts - b.ts);
+}
+// Les références d'une ou plusieurs allées du catalogue.
+export const refsAllees = (allees) => Object.keys(CATALOGUE.VM).filter((r) => allees.includes(CATALOGUE.VM[r].loc[0]));
+// Le filtre « Allée » d'une liste de lignes de préparation (la lettre de l'emplacement).
+export const filtreAllee = (juste) => ({ id: 'allee', libelle: 'Allée', valeur: (l) => String(l.Emplacement || '').slice(0, 1), tous: 'Toutes', juste });
 
 // Les lignes des bons de préparation d'une base, comme les exporte le logiciel (geste tableur,
 // 04/10/2026) : une ligne par article préparé, dans l'ordre du temps. « Stock logiciel » = le
