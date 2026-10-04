@@ -18,9 +18,13 @@ une entreprise, fabriquer une trame ou un diaporama → **Cowork**.
 
 ## Qui écrit où
 
-- **Cowork n'écrit QUE dans `docs/`.** Jamais dans `core/`, `activites/`, `contenus/`, `styles/`,
-  `outils/`, jamais dans `CLAUDE.md` sans le dire. C'est la règle qui évite les collisions : deux
-  outils qui modifient le même fichier de code, c'est l'écriture périmée assurée.
+- **Cowork écrit dans `docs/` et dans les SUPPORTS** (règle élargie par Tristan le 04/10/2026) :
+  les trames et corrigés (`contenus/trames/`, `contenus/corriges/`) et leurs générateurs
+  (`outils/trame-*.py`, `outils/corriges_*.py`). Jamais dans `core/`, `activites/`, les autres
+  fichiers de `contenus/`, `styles/`, `outils/test*`, jamais dans `CLAUDE.md` sans le dire. Cowork ne
+  commite pas : Claude Code relit, lance la suite (les corrigés sont chargés par le site), commite et
+  pousse. Le code des séances reste à Claude Code seul : deux outils qui modifient le même fichier de
+  code, c'est l'écriture périmée assurée.
 - **Claude Code écrit partout**, et met `docs/` à jour quand une décision change en cours de route
   (une ligne dans `docs/decisions.md`, le compte rendu du brief).
 - **Ne pas travailler dans les deux en même temps sur le dépôt.** Quand Tristan ouvre Claude Code

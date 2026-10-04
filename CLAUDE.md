@@ -286,8 +286,12 @@ cycle d'une séance et les règles d'écriture. En résumé :
 - Si un brief est incomplet, ambigu, ou contredit le code ou la finalité : **pose la question à
   Tristan avant d'écrire**, ne comble pas les trous toi-même (surtout sur l'entreprise : ne rien
   inventer de « réel » sans source).
-- **Cowork n'écrit que dans `docs/`.** Si tu trouves des changements dans le dépôt que tu n'as pas
-  faits, regarde `git status` et `git diff` avant de les écraser, et dis-le à Tristan.
+- **Cowork écrit dans `docs/` et dans les supports** (depuis le 04/10/2026) : trames et corrigés
+  (`contenus/trames/`, `contenus/corriges/`) et leurs générateurs (`outils/trame-*.py`,
+  `outils/corriges_*.py`) ; jamais dans le code des séances ni le moteur. Il ne commite pas : quand
+  Tristan dit que Cowork a fini, relis ses fichiers (texte des trames, aucun nombre attendu là où les
+  données varient), lance la suite, commite par nom et pousse. Pour tout autre changement que tu n'as
+  pas fait, regarde `git status` et `git diff` avant de l'écraser, et dis-le à Tristan.
 
 Fiches de référence copiées dans `docs/fiches/` : `prepalog-finalite` (la boussole),
 `prepalog-nomenclature`, `prepalog-progression-pedagogique`, `prepalog-entreprises-reelles`,
