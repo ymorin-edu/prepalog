@@ -679,6 +679,31 @@ await v('bascule du thème et persistance', async () => {
   if (apresRechargement !== attr) throw new Error('thème non conservé au rechargement');
 });
 
+// ---------- 13 bis. nouveau logo (04/10/2026) : connexion et accueil seulement
+// Le logo complet porte déjà le mot « Prepalog » : la marque écrite ne doit pas le
+// doubler. Les écrans intérieurs gardent l'ancien logo suivi de la marque.
+const logoComplet = async (ou) => {
+  const r = await page.$eval('.entete', (h) => ({
+    src: h.querySelector('.logo')?.getAttribute('src') || '',
+    alt: h.querySelector('.logo')?.getAttribute('alt') || '',
+    larg: h.querySelector('.logo')?.getBoundingClientRect().width || 0,
+    marque: !!h.querySelector('.marque'),
+  }));
+  if (!/prepalog-logo-bandeau\.svg$/.test(r.src)) throw new Error(`${ou} : pas le nouveau logo (${r.src})`);
+  if (r.alt !== 'Prepalog') throw new Error(`${ou} : texte de remplacement « ${r.alt} »`);
+  if (r.marque) throw new Error(`${ou} : le nom « Prepalog » apparaît deux fois`);
+  if (r.larg < 150) throw new Error(`${ou} : logo écrasé (${Math.round(r.larg)} px de large)`);
+};
+await v('nouveau logo à l\'accueil enseignant, ancien dans l\'espace enseignant', async () => {
+  await logoComplet('accueil enseignant');
+  await page.click('#btnProfEspace');
+  await page.waitForSelector('.prof-onglets, #hoteProf');
+  const src = await page.getAttribute('.entete .logo', 'src');
+  if (!/\/logo-bandeau\.png$/.test(src)) throw new Error('espace enseignant : ' + src);
+  const m = await page.textContent('.entete .marque');
+  if (!/Prepalog/.test(m || '')) throw new Error('espace enseignant : marque absente');
+});
+
 // ---------- 14. écran de connexion : préambule, hiérarchie, touche Entrée
 await v('écran de connexion', async () => {
   await page.click('#btnDeco');
@@ -695,6 +720,19 @@ await v('écran de connexion', async () => {
   const t = await page.$eval('#mat', (e) => parseFloat(getComputedStyle(e).fontSize));
   if (t < 18) throw new Error(`champ trop petit (${t}px)`);
   // validation au clavier
+  await page.fill('#mat', '2601');
+  await page.fill('#code', 'aaa1');
+  await page.press('#code', 'Enter');
+  await page.waitForSelector('text=Bonjour Léa', { timeout: 6000 });
+});
+
+// ---------- 14 bis. nouveau logo : accueil élève et écran de connexion
+await v('nouveau logo à l\'accueil élève et à la connexion', async () => {
+  await logoComplet('accueil élève');
+  await page.click('#btnDeco');
+  await page.waitForSelector('#mat');
+  await logoComplet('connexion');
+  // on laisse la page comme le test précédent l'avait laissée
   await page.fill('#mat', '2601');
   await page.fill('#code', 'aaa1');
   await page.press('#code', 'Enter');

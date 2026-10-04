@@ -52,15 +52,22 @@ export function messageErreur(e) {
 // chez eux — un poste réglé en sombre au niveau du système affichera toujours
 // Prepalog en sombre, puisque le thème 'auto' suit prefers-color-scheme. Pour
 // l'imposer, il faudrait appliquerTheme('clair') à la connexion d'un élève.
-export function entete({ marque, institution, profil, grand }) {
+//
+// logo: 'complet' (connexion et accueil, depuis le 04/10/2026) : le logo qui porte
+// déjà le mot « Prepalog » en tracés ; la marque écrite n'est donc pas répétée.
+// Les autres écrans gardent l'ancien logo suivi de la marque.
+export function entete({ marque, institution, profil, grand, logo }) {
   const estProf = !!profil && profil.role === 'prof';
   const qui = profil
     ? `${ech(profil.prenom || '')} ${ech(profil.nom || '')} · ${profil.role === 'prof' ? 'enseignant' : 'élève'}`
     : '';
+  const complet = logo === 'complet';
   return `
   <header class="entete${grand ? ' entete-accueil' : ''}">
-    <img class="logo" src="./styles/logo-bandeau.png" alt="">
-    <span class="marque">${ech(marque)}</span>
+    ${complet
+      ? `<img class="logo logo-complet" src="./styles/prepalog-logo-bandeau.svg" alt="Prepalog">`
+      : `<img class="logo" src="./styles/logo-bandeau.png" alt="">
+    <span class="marque">${ech(marque)}</span>`}
     <span class="institution">${ech(institution)}</span>
     <span class="pousse rangee">
       ${profil ? `<span class="qui">${qui}</span>` : ''}

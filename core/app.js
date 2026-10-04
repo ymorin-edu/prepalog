@@ -34,7 +34,7 @@ function fermerJeuCourant() {
 // ------------------------------------------------------------------ connexion
 function vueConnexion() {
   app.innerHTML = `
-    ${entete({ marque: CONFIG.marque, institution: CONFIG.institution, profil: null, grand: true })}
+    ${entete({ marque: CONFIG.marque, institution: CONFIG.institution, profil: null, grand: true, logo: 'complet' })}
     <div class="preambule">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.6v.9"/></svg>
       <span>${ech(CONFIG.preambule)}</span>
@@ -114,7 +114,7 @@ async function vueAccueil() {
 
   const rub = rubriqueActive ? RUBRIQUES.find((r) => r.id === rubriqueActive) : null;
   const cartouche = `
-    ${entete({ marque: CONFIG.marque, institution: CONFIG.institution, profil })}
+    ${entete({ marque: CONFIG.marque, institution: CONFIG.institution, profil, logo: 'complet' })}
     ${!estProf && !groupe ? `<div class="avis avis-err">Vous n'êtes rattaché à aucun groupe. Prévenez votre enseignant.</div>` : ''}
     ${estProf && !groupeActif ? `<div class="avis">Aucun groupe actif. Ouvrez l'espace enseignant pour en créer un.</div>` : ''}`;
 
