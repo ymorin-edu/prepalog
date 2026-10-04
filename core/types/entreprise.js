@@ -18,6 +18,7 @@ import { creerCarte } from './carte.js';
 import { creerTournee } from './tournee.js';
 import { creerInventaire } from './inventaire.js';
 import { creerQuai } from './quai.js';
+import { creerPlanning } from './planning.js';
 import { creerGesteTableur, retourDeTemps } from './export-tableur.js';
 import { graineDeBase, poserGraine } from '../tirage.js';
 
@@ -130,6 +131,10 @@ export function creerEntreprise(U) {
   const quaiDeBase = (db) => (QUAI_TIRE ? quaiDeGraine(graineDeBase(db)) : QUAI_FIXE);
   // Le quai de l'écran ouvert : celui de la base de l'élève, fixé par `rendre`.
   let VQUAI = QUAI_TIRE ? quaiDeGraine('') : QUAI_FIXE;
+  // L'écran « Planning » (04/10/2026, brief `docs/briefs/MOTEUR-vue-planning.md`), même principe : il
+  // n'existe que si la séance déclare un `planning` (format en tête de `core/types/planning.js`). Son
+  // état vit dans `db.plannings[<planning.id>]`. L'aléa arrive par un déclencheur `phasePlanning: 2`.
+  const VPL = U.planning ? creerPlanning(U.planning, COPIE ? { copie: true } : {}) : null;
 
   const unite = (n) => ((n > 1 || n === 0) ? VOCAB.unitPl : VOCAB.unit);
   // Catalogue « simple » (02/10/2026, chantier E) : des articles sans couleur ni taille — un
@@ -168,6 +173,12 @@ export function creerEntreprise(U) {
     // Le quai range aussi ses temps dans le détail : le temps réel passé en guidage sert à caler
     // les seuils de rapidité de l'évaluation (décision de Tristan, 03/10/2026). En évaluation, la
     // note n'est plus le nombre d'étapes : 15 points de réception + 5 de rapidité (`noteQuai`).
+    // Le planning en évaluation : jalons réussis / jalons × 20, détail jalon par jalon (brief §7).
+    if (VPL && VPL.note) {
+      const n = VPL.note(db);
+      detail.planning = n.detail;
+      return { score: n.score, max: n.max, detail };
+    }
     const VQ = quaiDeBase(db);
     if (VQ) {
       const q = (db && db.quais && db.quais[VQ.id]) || {};
@@ -324,6 +335,8 @@ export function creerEntreprise(U) {
           if (d.phaseTournee && VTOUR) VTOUR.passerPhase(etatTransport('tournee'), d.phaseTournee);
           // Même principe pour un quai « déjà réceptionné » (ENT-4.3) : le temps 2 s'ouvre avec le message.
           if (d.phaseQuai && VQUAI && VQUAI.passerPhase) VQUAI.passerPhase(etatQuai(), d.phaseQuai);
+          // Et pour un planning : l'aléa s'applique, le planning de l'élève reste tel quel (« à reprendre »).
+          if (d.phasePlanning && VPL) VPL.passerPhase(etatPlanning(), d.phasePlanning);
           db.volets[cle] = Date.now();
           fait = true;
           if ((g.mails || []).length) toast(avant + 'Nouveau message : ' + (g.mails[0].from || 'Messagerie'));
@@ -378,7 +391,9 @@ export function creerEntreprise(U) {
             '--ardoise:#107c41', '--ardoise-fond:#107c41', '--sur-ardoise:#ffffff', '--ardoise-clair:#e3f1e8',
             '--terre:#9c620a', '--vert:#0b7a41', '--vert-fond:#0a8449', '--sur-vert:#ffffff', '--vert-pale:#e4f1e5',
             '--rouge:#9d2727', '--gele-fond:#fcf3e2', '--toast-fond:#1a1915', '--toast-texte:#ffffff',
-            '--ombre:0 1px 2px rgba(40,34,24,.06)', '--quai-froid:#2a6fb0', '--quai-chaud:#b8431b', 'color-scheme:light');
+            '--ombre:0 1px 2px rgba(40,34,24,.06)', '--quai-froid:#2a6fb0', '--quai-chaud:#b8431b',
+            '--pl-a-trait:#b38a00', '--pl-b-trait:#7c4fe0', '--pl-fenetre:rgba(156,98,10,.13)', '--pl-hachure:rgba(85,80,71,.18)',
+            'color-scheme:light');
         }
         const a = THEME.accent;
         if (a) {
@@ -591,6 +606,7 @@ export function creerEntreprise(U) {
                 ${item('commandes', 'Commandes', aFaire, ['commandes', 'commande'])}
                 ${item('receptions', 'Réceptions', aRecevoir, ['receptions', 'reception'])}
                 ${VQUAI ? item('quai', VQUAI.nav.libelle) : ''}
+                ${VPL ? item('planning', VPL.nav.libelle) : ''}
                 ${VPLAN || VTOUR ? `<div class="ent-sep">${ech(U.transportSection || 'Transport')}</div>` : ''}
                 ${VPLAN ? item('plan', VPLAN.nav.libelle) : ''}
                 ${VTOUR ? item('tournee', VTOUR.nav.libelle) : ''}
@@ -732,6 +748,7 @@ export function creerEntreprise(U) {
           catalogue: vueCatalogue, produit: vueProduit, stock: vueStock, blocage: vueBlocage,
           inventaire: VINV ? vueInventaire : vueAccueil,
           quai: VQUAI ? vueQuai : vueAccueil,
+          planning: VPL ? vuePlanning : vueAccueil,
           fichiers: VTAB ? vueFichiers : vueAccueil,
           clients: vueClients, fournisseurs: vueFournisseurs, console: vueConsole,
         };
@@ -1561,6 +1578,30 @@ export function creerEntreprise(U) {
       });
       function vueQuai() { return VQUAI.html(etatQuai(), apiQuai()); }
 
+      /* ---------------------------------------------------------- planning */
+      // L'état vit dans la base de l'élève, sous l'identifiant du planning de la séance (cloisonné par
+      // séance). Le temps pédagogique vient du meta (`temps`) ; une évaluation (`copie`) l'impose.
+      function etatPlanning() {
+        if (!db.plannings) db.plannings = {};
+        if (!db.plannings[VPL.id]) db.plannings[VPL.id] = VPL.etatNeuf();
+        return db.plannings[VPL.id];
+      }
+      const tempsPlanning = () => {
+        const t = ctx.meta && ctx.meta.temps;
+        return t === 'evaluation' || t === 'entrainement' || t === 'guidage' ? t : t === 'erreur' ? 'entrainement' : 'guidage';
+      };
+      const apiPlanning = () => ({
+        sauver, toast, estProf, temps: tempsPlanning(),
+        redessiner: dessinerVue,
+        zone: () => hote.querySelector('#entMain'),
+        haut: () => hote.scrollIntoView({ block: 'start' }),
+        // Un déclencheur de la séance ouvre-t-il la phase 2 ? Sinon la vue y passe seule au 1er envoi.
+        aleaParMessage: !!(volet && (volet.declencheurs || []).some((d) => d.phasePlanning)),
+        copieRendue: rendue,
+        rendreCopie: () => { if (COPIE && !estProf) rendreLaCopie(); },
+      });
+      function vuePlanning() { return VPL.html(etatPlanning(), apiPlanning()); }
+
       // Le chrono réel. Il compte en secondes, par écart d'horloge (un onglet en arrière-plan ne
       // reçoit plus qu'un tic par minute), s'arrête à la clôture de la réception ou à la remise
       // de la copie, et ne tourne pas tant qu'on ne sait pas si la copie est déjà rendue. Il est
@@ -2140,6 +2181,7 @@ export function creerEntreprise(U) {
         if (E.vue === 'fichiers' && VTAB) VTAB.brancher(z, apiTableur());
         if (E.vue === 'inventaire' && VINV && !VINV.attente(db)) VINV.brancher(z, etatInventaire(), apiInventaire());
         if (E.vue === 'quai' && VQUAI) VQUAI.brancher(z, etatQuai(), apiQuai());
+        if (E.vue === 'planning' && VPL) VPL.brancher(z, etatPlanning(), apiPlanning());
       }
 
       // Un message déclenché dont la condition est déjà vraie à l'ouverture (travail fait sur un

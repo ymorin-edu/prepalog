@@ -7,6 +7,7 @@
 //
 //   quand: apresJalon(ETAPES, 'feuille')                     l'élève a fini une étape
 //   quand: apresMail({ a: CHEFFE, ligne: 'Stock actuel :', nombre: true })   il a rendu compte
+//   quand: apresPlanning('smoby-quais')                      il a envoyé son planning
 //   quand: tous(apresJalon(…), apresMail(…))                 les deux
 //
 // Décision de Tristan : **aucun clic de menu, aucune ouverture d'écran, aucune minuterie** ne
@@ -58,6 +59,14 @@ export function apresMail({ a, ligne: intitule, nombre = false } = {}) {
     if (l === null) return false;
     return !nombre || nombres(l).length > 0;
   });
+}
+
+// Vrai dès que l'élève a ENVOYÉ la version `version` de son planning (vue Planning, 04/10/2026,
+// `core/types/planning.js`) : envoyer son planning au chef est un geste métier, comme envoyer un mail.
+// **Juste ou faux, peu importe** : la condition ne regarde pas le contenu de la version (sinon elle
+// la révélerait). Modèle : l'aléa des plannings d'essai (`phasePlanning: 2`).
+export function apresPlanning(id, version = 1) {
+  return (db) => !!(db.plannings && db.plannings[id] && db.plannings[id][`v${version}`]);
 }
 
 // Vrai quand toutes les conditions le sont.
