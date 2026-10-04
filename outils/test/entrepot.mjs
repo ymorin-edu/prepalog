@@ -529,6 +529,30 @@ await v('Préparation : réserve refusée ; réappro par le Porteur refusé ; r�
   vrai((await texte(pg, '[data-pe-emp="B1-T01-N3-E1"]')).includes('libre'), 'libre dans la vue de face');
 });
 
+await v('Préparation, écran partagé : travée ouverte → palette à gauche, travée à droite ; fiche à droite, palette toujours à gauche ; la palette grandit après Prélever', async () => {
+  await monter(pg, { cas: 'preparation' });
+  vrai(!(await present(pg, '[data-pe-palmini]')), 'pas de palette à gauche sur le plan');
+  await allerA(pg, 'A1-T01-N1-E1');
+  const x = (sel) => pg.$eval(`${ZP} ${sel}`, (el) => el.getBoundingClientRect().x);
+  const cartons = () => pg.$$eval(`${ZP} [data-pe-palmini] svg rect[stroke="#6e4a22"]`, (L) => L.length);
+  vrai(await present(pg, '[data-pe-palmini]') && await present(pg, '.pe-partage-d .pe-face'), 'palette et travée ensemble');
+  vrai(await x('[data-pe-palmini]') < await x('.pe-partage-d .pe-face'), 'palette à gauche de la travée');
+  vrai(!(await present(pg, '[data-pe="voir"]')), 'plus de bouton « Palette de commande » dans l’en-tête');
+  egal(await cartons(), 0, 'palette vide');
+  await pg.click(`${ZP} [data-pe-emp="A1-T01-N1-E1"]`);
+  vrai(await present(pg, '.pe-partage-d [data-pe-fiche]') && !(await present(pg, '.pe-partage-d .pe-face')), 'la fiche remplace la travée à droite');
+  vrai(await x('[data-pe-palmini]') < await x('[data-pe-fiche]'), 'palette toujours à gauche');
+  await pg.fill('#peNb', '2');
+  await pg.click(`${ZP} [data-pe="prelever"]`);
+  vrai(await present(pg, '.pe-partage-d .pe-face') && await present(pg, '[data-pe-palmini]'), 'retour à la travée, palette à gauche');
+  egal(await cartons(), 2, 'deux cartons sur la palette');
+  egal(await texte(pg, '[data-pe-palmini] [data-pe-kg]'), '125 kg', 'poids de la palette (2 × 50 kg + palette 25 kg)');
+  // la zone d'expédition du plan ouvre toujours la palette entière
+  await pg.click(`${ZP} [data-pe="retour"]`);
+  await pg.click(`${ZP} [data-pe-voir]`);
+  vrai(await present(pg, '.pe-palcmd') && !(await present(pg, '[data-pe-palmini]')), 'palette entière depuis le plan');
+});
+
 await v('Préparation : palette vide terminée → 0 / 9 ; une seule ligne puis Terminer → parcours faux (garde « lignes justes »)', async () => {
   await monter(pg, { cas: 'preparation' });
   vrai(await pg.$eval(`${ZP} [data-pe="terminer"]`, (b) => b.disabled), 'Terminer actif sur une palette vide');

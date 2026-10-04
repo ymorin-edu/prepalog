@@ -1202,6 +1202,16 @@ export function creerEntrepot(P, opts = {}) {
       <div class="pe-palcmd-cote">${fin}</div></div>`;
   }
 
+  // En préparation, une travée ouverte coupe le grand espace en deux : la palette de commande toujours à
+  // gauche (elle se monte sous les yeux de l'élève), la travée puis la fiche de prélèvement à droite.
+  function htmlPaletteMini(e) {
+    const C = M.C, X = calculPrep(M, e);
+    return `<div class="pe-palmini" data-pe-palmini>
+        <div class="pe-palcmd-tete"><b>Palette de commande</b>
+          <span class="pe-petit"><b data-pe-kg>${X.poids.toLocaleString('fr-FR')} kg</b> / ${C.kgMax} kg · <b data-pe-h>${virg(X.hauteur)} m</b> / ${virg(C.hMax)} m</span></div>
+        <div class="pe-palsvg">${dessinPalette(e, X)}</div></div>`;
+  }
+
   function htmlEntetePrep(e, R) {
     const palette = ui.voir || e.fin || R.fige;
     const parts = ['Plan'];
@@ -1213,13 +1223,11 @@ export function creerEntrepot(P, opts = {}) {
       }
       if (ui.empl) parts.push(`<b>Prélèvement</b> <span class="pe-mono">${ech(ui.empl)}</span>`);
     }
-    const voirPal = ui.trav && !palette && !ui.empl && !ui.reappro
-      ? `<button type="button" class="btn" data-pe="voir" data-pe-cle="b:voir">Palette de commande (${e.faits.length})</button>` : '';
-    const lib = ui.reappro ? '✕ Annuler le réapprovisionnement' : (ui.empl || (ui.voir && ui.trav)) ? '← Retour à la travée' : '← Retour au plan';
+    const lib = ui.reappro ? '✕ Annuler le réapprovisionnement' : ui.empl ? '← Retour à la travée' : '← Retour au plan';
     const retour = e.fin || R.fige ? '' : `<button type="button" class="btn btn-p pe-retour" data-pe="retour" data-pe-cle="b:retour">${lib}</button>`;
     return `<div class="pe-entete"><div class="pe-fil">${parts.join(' › ')}</div>
       <div class="pe-msg-vue"><div class="pe-msg ${ui.msgType ? `pe-${ui.msgType}` : ''}" data-pe-msg>${ui.msg}</div></div>
-      ${voirPal}${retour}</div>`;
+      ${retour}</div>`;
   }
 
   /* ------------------------------------------------ PRÉPARATION : les gestes */
@@ -1282,7 +1290,6 @@ export function creerEntrepot(P, opts = {}) {
   function brancherPrep(racine, e, R, on, activer, sauver, redessiner) {
     const fait = () => { sauver(); redessiner(); };
     racine.querySelectorAll('[data-pe-voir]').forEach((g) => activer(g, () => { ui.voir = true; ui.empl = null; ui.reappro = null; dire(''); redessiner(); }));
-    on('voir', () => { ui.voir = true; ui.reappro = null; dire(''); ui.focus = 'b:retour'; redessiner(); });
     const nb = racine.querySelector('[data-pe-nb]');
     if (nb) {
       nb.addEventListener('input', () => { ui.nb = nb.value; });
@@ -1331,9 +1338,11 @@ export function creerEntrepot(P, opts = {}) {
       let espace;
       if (!ouverte) espace = `<div class="pe-plan">${htmlPlan(e, R)}</div>`;
       else if (!PREP) espace = `${htmlEntete(e, R)}<div class="pe-face">${htmlFace(e, R)}</div>`;
-      else if (ui.empl) espace = `${htmlEntetePrep(e, R)}<div class="pe-vue">${htmlFiche(e, R)}</div>`;
       else if (ui.voir || e.fin || R.fige) espace = `${htmlEntetePrep(e, R)}<div class="pe-vue">${htmlPalette(e, R, api)}</div>`;
-      else espace = `${htmlEntetePrep(e, R)}<div class="pe-face">${htmlFace(e, R)}</div>`;
+      else {
+        const droite = ui.empl ? `<div class="pe-vue">${htmlFiche(e, R)}</div>` : `<div class="pe-face">${htmlFace(e, R)}</div>`;
+        espace = `${htmlEntetePrep(e, R)}<div class="pe-partage">${htmlPaletteMini(e)}<div class="pe-partage-d">${droite}</div></div>`;
+      }
       return `<div class="pe${PREP ? ' pe-prep' : ''}" data-entrepot="${ech(P.id)}" data-pe-mode="${M.mode}" data-pe-temps="${R.t}" data-pe-ouverte="${ouverte}">
         <div class="pe-adresse" data-pe-adresse>${htmlAdresse(e, R, null)}</div>
         ${PREP ? htmlBandeauPrep(e, R) : htmlBandeau(e, R, api)}

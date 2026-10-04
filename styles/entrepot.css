@@ -188,6 +188,13 @@
 .pe-palcmd-tete{ margin-bottom:4px }
 .pe-palsvg svg{ display:block; width:100%; height:calc(var(--pe-dispo, 560px) - 64px) }
 .pe-palcmd-cote{ display:flex; flex-direction:column; gap:10px; min-width:0 }
+/* travée ouverte en préparation : la palette toujours à gauche, la travée ou la fiche à droite */
+.pe-partage{ display:grid; grid-template-columns:minmax(0,2fr) minmax(0,3fr); gap:10px; align-items:start }
+.pe-palmini{ height:var(--pe-dispo, 560px); display:flex; flex-direction:column; min-width:0; padding:0 4px;
+  border-right:1px solid var(--filet) }
+.pe-palmini .pe-palsvg{ flex:1; min-height:0 }
+.pe-palmini .pe-palsvg svg{ height:100% }
+.pe-partage-d{ min-width:0 }
 .pe-finir{ display:flex; flex-direction:column; gap:6px; border:1px solid var(--filet); border-radius:var(--r); padding:8px 10px; background:var(--survol) }
 .pe-finir select{ width:auto; display:inline-block }
 .pe-etq{ display:flex; flex-wrap:wrap; gap:2px 14px }

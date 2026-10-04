@@ -6,8 +6,7 @@
 > Lis docs/briefs/MOTEUR-entrepot-preparation-ecran-partage.md et applique-le (attends que le chantier « verdict du guidage » soit effacé de docs/EN-COURS.md). Annonce la durée avant de commencer.
 > ```
 
-**Statut** : à implémenter — **après** le chantier « Plan d'entrepôt : verdict du guidage » (une autre conversation
-écrit dans `core/types/entrepot.js` le 04/10 au soir).
+**Statut** : livré (04/10/2026).
 **Date du brief** : 04/10/2026 (demande de Tristan après l'essai du lot 4)
 **Modèle** : Sonnet (agencement d'une vue existante).
 
@@ -45,3 +44,18 @@ En mode **préparation** seulement (le rangement ne change pas) :
 ---
 
 ## Compte rendu *(rempli par Claude Code à la livraison)*
+
+- **Fait** (`core/types/entrepot.js`, `styles/entrepot.css`) : en préparation, dès qu'une travée est ouverte, le grand
+  espace se coupe en deux, **40 % / 60 %** : à gauche la palette de commande (titre, poids / maximum, hauteur / maximum,
+  dessin qui remplit la hauteur), à droite la travée vue de face, puis la fiche de prélèvement à sa place après le clic
+  sur un emplacement (« ← Retour à la travée » la rend). Pendant un réapprovisionnement, la travée reste à droite.
+- Le bouton « Palette de commande (n) » de l'en-tête est **retiré** ; la palette entière (avec film, étiquettes, bilan)
+  reste ouverte depuis la zone d'expédition du plan, et s'affiche seule une fois la préparation terminée, comme avant.
+- **Vérifié à l'écran** en 1366 × 768, menu ouvert, sur la page d'essai (cas ③) : la travée (3 emplacements) et la fiche
+  (saisie à gauche, cartons dessinés à droite, deux colonnes gardées) restent lisibles ; la palette se monte à gauche à
+  chaque Prélever. Pas de page d'essai : la répartition ne s'est pas révélée serrée. L'en-tête garde sa hauteur fixe
+  (les emplacements ne bougent pas sous la souris).
+- **Tests** (bloc `entrepot`) : un cas ajouté (travée → palette à gauche et travée à droite ; fiche à droite, palette
+  toujours à gauche ; deux cartons et 125 kg après Prélever ; la zone d'expédition du plan ouvre toujours la palette
+  entière), éprouvé dans les deux sens (palette mise à droite → il tombe). **Aucun cas existant réécrit** : contrairement à
+  ce que prévoyait le §3, aucun ne cliquait `[data-pe="voir"]`.
