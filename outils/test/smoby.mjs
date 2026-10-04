@@ -1137,6 +1137,225 @@ await v('Sans froid : la note d’évaluation n’a pas de points de temps hors 
   egal(n, { max: 17, sansFroid: true }, 'note');
 });
 
+// ── ENT-5.4 « premier déchargement » (brief `docs/briefs/ENT-5.4-smoby-reception.md`) ─────────────
+// La séance réelle, montée par son activité (`activites/smoby-reception.js`). Les attendus sont écrits À
+// LA MAIN d'après le brief : réels 8 / 45 / 36 / 34 ; P3 réserves 1 carton écrasé ; P4 réserves 2 manquants.
+const T54 = '#s54';
+const Z54 = `${T54} .ent-main`;
+const monter54 = (o = {}) => pg.evaluate(async (o) => {
+  const act = await import('/activites/smoby-reception.js');
+  for (const id of ['smTest', 's51', 's54']) document.getElementById(id)?.remove();
+  const hote = document.createElement('div'); hote.id = 's54'; document.body.appendChild(hote);
+  const db = {};
+  window.__54 = { db, suivi: [] };
+  act.rendre(hote, {
+    meta: act.meta,
+    profil: { prenom: 'Lea', nom: 'Test', role: 'eleve', uid: o.uid || 'u-54' },
+    jeu: { etat: () => db, sauver: () => {} },
+    enregistrer: (r) => { window.__54.suivi.push(JSON.parse(JSON.stringify(r))); }, quitter: () => {}, codeStock: 'ABC',
+    lireScore: async () => null,
+  });
+}, o);
+const DIX = ['securite-signalee', 'securite-constat', 'P1-palette', 'P2-palette', 'P3-palette', 'P4-palette', 'P3-reserve', 'P4-reserve',
+  'signature', 'message'];
+const etapes54 = () => pg.evaluate(async () => {
+  const S = await import('/contenus/smoby-ent54.js');
+  return Object.fromEntries(S.ETAPES.map((e) => [e.id, e.verifier(window.__54.db).status]));
+});
+const dernierScore54 = () => pg.evaluate(() => { const s = window.__54.suivi; return s.length ? [s[s.length - 1].score, s[s.length - 1].max] : null; });
+const sujets54 = () => pg.evaluate(() => window.__54.db.mails.filter((m) => m.folder === 'in').map((m) => m.subject));
+const SECU54 = { cale: 'ko', moteur: 'ok', chauffeur: 'ok', niveleur: 'ok', plancher: 'ok', epi: 'ok' };
+const JUSTE54 = { P1: [8, 'accepter'], P2: [45, 'accepter'], P3: [36, 'reserves', 'avarie'], P4: [34, 'reserves', 'manquant'] };
+const PHR54 = { salutation: 'Bonjour Bruno,', reserves: 'Réserves : 1 carton écrasé sur l’établi Black+Decker et 2 porteurs manquants.',
+  fin: 'Bonne fin de journée, Yanis' };
+async function auQuai54() {
+  await pg.click(`${T54} .ent-nav[data-vue="quai"]`);
+  await pg.waitForSelector(`${Z54} [data-q-securite]`);
+}
+// L'étape ⓪ : le constat, puis signaler AVANT de commencer (ou commencer d'abord : arrêt du chef de quai).
+async function securite54({ constat = SECU54, signalerAvant = true } = {}) {
+  for (const [id, val] of Object.entries(constat)) await pg.click(`${Z54} #qSecu-${id}-${val}`);
+  if (signalerAvant) await pg.click(`${Z54} [data-q="signaler"]`);
+  await pg.click(`${Z54} [data-q="commencer"]`);
+  if (!signalerAvant) {
+    await pg.waitForSelector(`${Z54} [data-q-secu-arret]`);
+    await pg.click(`${Z54} [data-q="signaler"]`);
+    await pg.click(`${Z54} [data-q="commencer"]`);
+  }
+  await pg.waitForSelector(`${Z54} [data-q="decharger"]:not([disabled])`);
+}
+async function decharger54() {
+  await pg.click(`${Z54} [data-q="decharger"]`);
+  await pg.waitForSelector(`${Z54} [data-q-scene2]`);
+  if (await pg.isVisible(`${Z54} [data-q="passer"]`)) await pg.click(`${Z54} [data-q="passer"]`);
+  await pg.click(`${Z54} [data-q="vers3"]`);
+  await pg.waitForSelector(`${Z54} [data-q-fiche]`);
+}
+async function controler54(decisions = JUSTE54) {
+  for (const [n, id] of ['P1', 'P2', 'P3', 'P4'].entries()) {
+    const [c, d, m] = decisions[id];
+    await pg.click(`${Z54} [data-q="sel"][data-n="${n}"]`);
+    await pg.fill(`${Z54} [data-q-compte]`, String(c)); await pg.press(`${Z54} [data-q-compte]`, 'Enter');
+    await pg.click(`${Z54} #qDec-${d}`);
+    if (m) await pg.click(`${Z54} #qMot-${m}`);
+  }
+  await pg.click(`${Z54} [data-q="vers4"]`);
+  if (await pg.$(`${Z54} [data-q="vers4"].quai-arme`)) await pg.click(`${Z54} [data-q="vers4"]`);
+  await pg.waitForSelector(`${Z54} [data-q="rentrer"]`);
+}
+async function papiers54(reserves = { P3: 1, P4: 2 }) {
+  for (const [id, n] of Object.entries(reserves)) if (await pg.$(`${Z54} #qRes-${id}`)) await pg.fill(`${Z54} #qRes-${id}`, String(n));
+  await pg.click(`${Z54} [data-q="ecrire"]`);
+  await pg.click(`${Z54} [data-q="rentrer"]`);
+  await pg.click(`${Z54} [data-q="signer"]`);
+}
+async function repondre54(remplace = {}) {
+  await pg.click(`${T54} .ent-nav[data-vue="mail"]`);
+  await pg.click(`${Z54} [data-dossier="in"]`);
+  await pg.click(`${Z54} .ent-obj:text-is("La navette d’Arinthod")`);
+  await pg.click(`${Z54} [data-repondre]`);
+  await pg.waitForSelector(`${Z54} #formPhr:not([hidden])`);
+  for (const [l, t] of Object.entries({ ...PHR54, ...remplace })) await pg.selectOption(`${Z54} [data-phrase="${l}"]`, { label: t });
+  await pg.click(`${Z54} #formPhr button[type="submit"]`);
+}
+async function parcours54({ uid, secu = {}, decisions, reserves, phrases } = {}) {
+  await monter54({ uid });
+  await auQuai54();
+  await securite54(secu);
+  await decharger54();
+  await controler54(decisions);
+  await papiers54(reserves);
+  await repondre54(phrases);
+}
+const statuts54 = (ko = []) => Object.fromEntries(DIX.map((id) => [id, ko.includes(id) ? 'ko' : 'ok']));
+
+await v('ENT-5.4 : déclaration (code, 2de, C1.2 et C1.4, 10 jalons, livrée fermée aux élèves), photos du quai de Smoby servies', async () => {
+  const r = await pg.evaluate(async () => {
+    const A = await import('/activites/smoby-reception.js');
+    const I = await import('/activites/index.js');
+    const S = await import('/contenus/smoby-ent54.js');
+    const m = A.meta, Q = S.QUAI_ENT54;
+    const urls = [Q.photos.arrivee, Q.photos.quai, Q.securite.photo];
+    const st = await Promise.all(urls.map((u) => fetch(u).then((x) => [u, x.status, x.headers.get('content-type')])));
+    return { m: [m.id, m.code, m.rubrique, m.niveaux, m.competences, m.domaines, m.temps, m.bareme, m.pret, m.ouverture, m.portee],
+      st, inscrite: (await Promise.all(I.ACTIVITES.map((f) => f()))).some((x) => x.meta.id === 'smoby-reception') };
+  });
+  egal(r.m, ['smoby-reception', 'ENT-5.4', 'simulog', ['2de'], ['C1.2', 'C1.4'], ['D4', 'D5'], 'guidage', 10, true, 'prof', 'eleve'], 'meta');
+  egal(r.st, [['./contenus/smoby/quai-remorques.jpg', 200, 'image/jpeg'], ['./contenus/smoby/quai-interieur.jpg', 200, 'image/jpeg'],
+    ['./contenus/smoby/quai-exterieur.jpg', 200, 'image/jpeg']], 'photos');
+  vrai(r.inscrite, 'séance absente du registre');
+});
+
+await v('ENT-5.4 : les attendus calculés sont ceux du brief (réels, réserves, phrase juste) et le corrigé les reprend', async () => {
+  const r = await pg.evaluate(async () => {
+    const S = await import('/contenus/smoby-ent54.js');
+    const { jalonsQuai } = await import('/core/types/quai.js');
+    const C = (await import('/contenus/corriges/ENT-5.4.js')).CORRIGE;
+    const L = jalonsQuai({}, S.QUAI_ENT54).L;
+    return { reels: L.filter((l) => /-comptage$/.test(l.id)).map((l) => l.attendu),
+      reserves: L.filter((l) => /-reserve$/.test(l.id)).map((l) => [l.id, l.attendu]),
+      ligne: S.LIGNE_RESERVES, corrige: C.items.map((i) => i.reponses || i.rep) };
+  });
+  egal(r.reels, ['8 cartons (BL : 8)', '45 cartons (BL : 45)', '36 cartons (BL : 36)', '34 cartons (BL : 36)'], 'cartons réels');
+  egal(r.reserves, [['P3-reserve', 'P3 SMB-EBD : acceptée sous réserve — 1 carton endommagé (écrasé).'],
+    ['P4-reserve', 'P4 SMB-PLS : acceptée sous réserve — manque 2 cartons (BL 36, reçu 34).']], 'réserves attendues');
+  egal(r.ligne, 'Réserves : 1 carton écrasé sur l’établi Black+Decker et 2 porteurs manquants.', 'phrase juste');
+  egal(r.corrige[0][0], ['Camion calé (cale ou bloqueur de roue)', 'Pas OK → signaler'], 'corrigé : la cale, sans marque de mot cliquable');
+  egal(r.corrige[1].map((l) => [l[0], l[3], l[5]]), [['P1', '8 (2 × 2 × 2)', 'Accepter — aucun motif'], ['P2', '45 (4 × 3 × 4 − 3)', 'Accepter — aucun motif'],
+    ['P3', '36 (4 × 3 × 3)', 'Accepter avec réserves — Cartons endommagés'], ['P4', '34 (3 × 3 × 4 − 2)', 'Accepter avec réserves — Manquant']], 'corrigé : palettes');
+  vrai(r.corrige[3].includes(r.ligne), 'corrigé : message');
+});
+
+await v('ENT-5.4 : à l’ouverture, le message de Bruno seul, aucun jalon vrai : l’inaction vaut 0', async () => {
+  await monter54();
+  egal(await sujets54(), ['Ton premier camion à 14 h 00'], 'messages au départ');
+  egal(await etapes54(), Object.fromEntries(DIX.map((id) => [id, 'attente'])), 'étapes à l’ouverture');
+  const s = await dernierScore54();
+  vrai(!s || s[0] === 0, `score sans rien faire : ${JSON.stringify(s)}`);
+});
+
+await v('ENT-5.4 : parcours juste à l’écran → 10 / 10, réponse de Bruno ; rien de froid ; déchargement sur le décor fixe de Smoby', async () => {
+  await monter54();
+  await auQuai54();
+  egal(await pg.$eval(`${Z54} [data-q-securite] img`, (i) => i.getAttribute('src')), './contenus/smoby/quai-exterieur.jpg', 'photo de l’étape ⓪');
+  await securite54();
+  vrai(!(await pg.$(`${Z54} [data-q="ticket"]`)) && !(await pg.$(`${Z54} .quai-h-froid`)), 'ticket ou jauge du froid');
+  await pg.click(`${Z54} [data-q="decharger"]`);
+  await pg.waitForSelector(`${Z54} [data-q-scene2]`);
+  const sc = await pg.$eval(`${Z54} [data-q-scene2]`, (s) => ({ img: s.querySelector('image').getAttribute('href'), sol: !!s.querySelector('[data-q-sol] rect'),
+    porte: s.querySelector('[data-g="porte"]').innerHTML, remorque: s.querySelector('[data-g="remorque"]').innerHTML,
+    afficheur: !!s.querySelector('[data-q-afficheur]') }));
+  egal(sc, { img: './contenus/smoby/quai-interieur.jpg', sol: true, porte: '', remorque: '', afficheur: false }, 'scène du déchargement');
+  await pg.waitForFunction((z) => /Yanis (entre dans la remorque|sort la palette)/.test((document.querySelector(`${z} [data-q-leg]`) || {}).textContent || ''), Z54);
+  if (await pg.isVisible(`${Z54} [data-q="passer"]`)) await pg.click(`${Z54} [data-q="passer"]`);
+  await pg.click(`${Z54} [data-q="vers3"]`);
+  await pg.waitForSelector(`${Z54} [data-q-fiche]`);
+  vrai(!(await pg.$(`${Z54} [data-q="sonder"]`)), 'sonde');
+  egal(await pg.$$eval(`${Z54} [data-q-fiche-k]`, (I) => I.map((i) => i.dataset.qFicheK)), ['ref', 'endo', 'manq'], 'cases de la fiche');
+  await controler54();
+  await papiers54();
+  egal(await sujets54(), ['Ton premier camion à 14 h 00', 'La navette d’Arinthod'], 'Bruno demande le compte rendu après la signature');
+  await repondre54();
+  egal(await etapes54(), statuts54(), 'étapes');
+  egal(await dernierScore54(), [10, 10], 'score remonté au suivi');
+  vrai((await sujets54()).includes('RE : La navette d’Arinthod'), 'la réponse de Bruno n’arrive pas');
+});
+
+await v('ENT-5.4 : décor fixe — légende sans porte qui se lève, étiquette sans date de consommation, aucun mot du froid au quai', async () => {
+  await monter54({ uid: 'u-54-decor' });
+  await auQuai54();
+  await securite54();
+  await pg.click(`${Z54} [data-q="decharger"]`);
+  await pg.waitForFunction((z) => /entre dans la remorque/.test((document.querySelector(`${z} [data-q-leg]`) || {}).textContent || ''), Z54);
+  egal((await pg.textContent(`${Z54} [data-q-leg]`)).replace(/^[^—]*— /, ''), 'Yanis entre dans la remorque au chariot.', 'légende du début');
+  if (await pg.isVisible(`${Z54} [data-q="passer"]`)) await pg.click(`${Z54} [data-q="passer"]`);
+  await pg.click(`${Z54} [data-q="vers3"]`);
+  await pg.waitForSelector(`${Z54} [data-q-fiche]`);
+  await pg.click(`${Z54} [data-q-etiq] >> nth=-1`);
+  const etiq = await pg.textContent(`${Z54} [data-q-etiquette]`);
+  vrai(/Lot : ARI-26-4812/.test(etiq) && !/consommer/.test(etiq), `étiquette : ${etiq}`);
+  vrai(!/froid|°C/i.test(await pg.textContent(`${Z54} .quai`)), 'un mot du froid au quai');
+});
+
+await v('ENT-5.4 : décharger sans signaler → arrêt du chef de quai, jalon 1 faux même après avoir signalé (9 / 10)', async () => {
+  await monter54({ uid: 'u-54-arret' });
+  await auQuai54();
+  await securite54({ signalerAvant: false });
+  await pg.click(`${Z54} .quai-stepper button[data-n="0"]`);
+  egal(await pg.textContent(`${Z54} [data-q-secu-chef]`), 'Le chef de quai : « Bien vu ! Je fais poser la cale. C’est bon, tu peux décharger. »', 'réponse du chef');
+  await pg.click(`${Z54} .quai-stepper button[data-n="1"]`);
+  await decharger54(); await controler54(); await papiers54(); await repondre54();
+  egal(await etapes54(), statuts54(['securite-signalee']), 'étapes');
+  egal(await dernierScore54(), [9, 10], 'score');
+});
+
+await v('ENT-5.4 : le texte de l’arrêt du chef de quai est celui du brief', async () => {
+  await monter54({ uid: 'u-54-stop' });
+  await auQuai54();
+  for (const [id, val] of Object.entries(SECU54)) await pg.click(`${Z54} #qSecu-${id}-${val}`);
+  await pg.click(`${Z54} [data-q="commencer"]`);
+  egal(await pg.textContent(`${Z54} [data-q-secu-arret]`), 'Le chef de quai : « Stop ! Le camion n’est pas calé : il peut bouger pendant que tu es dedans. »', 'arrêt');
+  egal((await etapes54())['securite-signalee'], 'ko', 'jalon 1 après l’arrêt');
+});
+
+await v('ENT-5.4 : chaque piège fait tomber son jalon (constat, P2 refusée, P3 acceptée sans le tour, P4 comptée 36, réserves, message)', async () => {
+  const cas = [
+    [['securite-constat'], { secu: { constat: { ...SECU54, epi: 'ko' } } }],
+    // Une palette refusée demande sa ligne de réserve (le chauffeur ne signe pas une réserve vide).
+    [['P2-palette'], { decisions: { ...JUSTE54, P2: [45, 'refuser', 'manquant'] }, reserves: { P2: 3, P3: 1, P4: 2 } }],
+    [['P3-palette', 'P3-reserve'], { decisions: { ...JUSTE54, P3: [36, 'accepter'] } }],
+    [['P4-palette'], { decisions: { ...JUSTE54, P4: [36, 'reserves', 'manquant'] } }],
+    [['P4-reserve'], { reserves: { P3: 1, P4: 1 } }],
+    [['message'], { phrases: { reserves: 'Tout est conforme.' } }],
+    [['message'], { phrases: { reserves: 'Réserves : 2 cartons écrasés.' } }],
+  ];
+  for (const [n, [ko, o]] of cas.entries()) {
+    await parcours54({ uid: `u-54-piege-${n}`, ...o });
+    egal(await etapes54(), statuts54(ko), `sabotage ${ko.join(', ')}`);
+    egal(await dernierScore54(), [10 - ko.length, 10], `score avec ${ko.join(', ')} faux`);
+  }
+});
+
 await v('Smoby : aucune erreur JavaScript dans le bloc', async () => {
   if (erreursS.length) throw new Error([...new Set(erreursS)].slice(0, 5).join(' | '));
 });

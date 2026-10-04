@@ -53,6 +53,7 @@ export const ACTIVITES = [
   () => import('./picard-ent44.js'),
   // Smoby (Moirans-en-Montagne) puis Kuehne+Nagel — ENT-5.x. Scénario S1 de la 2de GATL.
   () => import('./smoby-recrutement.js'),
+  () => import('./smoby-reception.js'),
 ];
 
 // Pictogrammes des rubriques. Une seule grille pour les dix : trait de 1,6 px, bouts et

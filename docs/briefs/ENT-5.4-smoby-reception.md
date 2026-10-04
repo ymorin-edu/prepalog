@@ -6,7 +6,7 @@
 > Lis docs/briefs/COORDINATION-smoby.md puis implémente le brief docs/briefs/ENT-5.4-smoby-reception.md (il faut que les lots 2, 3, 4, 5 et 7 de MOTEUR-2de-S1 soient livrés). Annonce la durée avant de commencer et dis-moi si un point du brief contredit le code.
 > ```
 
-**Statut** : à implémenter
+**Statut** : livré (04/10/2026, `pret: true, ouverture: 'prof'` : fermée aux élèves, à essayer à l'écran)
 **Date du brief** : 04/10/2026
 **Conversation d'origine** : Cowork (Opus) ; fiche projet `claude/prepalog-2de-s1-cadrage.md` (section « Séance C1 »).
 **Modèle** : Opus.
@@ -137,9 +137,40 @@ un élève de 2de finit en 45 min.
 
 ## Compte rendu *(rempli par Claude Code à la livraison)*
 
-- **Fichiers créés / modifiés** :
+- **Fichiers créés / modifiés** : `activites/smoby-reception.js` (+ une ligne dans `activites/index.js`) ; `contenus/smoby-ent54.js` (et non
+  `smoby-ent53.js` : ancien numéro) ; `contenus/smoby/` (les trois photos, empreintes vérifiées, `LISEZMOI.md`) ;
+  `contenus/corriges/ENT-5.4.js` (calculé) ; moteur : `core/types/quai.js` (**décor fixe**, étiquette sans date de consommation) ;
+  `activites/FICHE-SEANCE.md` (quai sans froid, sécurité, décor fixe) ; tests : `outils/test/smoby.mjs` (+8 cas) et **un cas
+  existant de `outils/test/socle.mjs` complété** (la liste des séances Simulog dans l'ordre, ENT-5.4 ajoutée).
 - **Écarts par rapport au brief** :
-- **Décisions prises en route** :
-- **Tests** :
-- **Commits** :
+  - **Déchargement sur la photo intérieure de Smoby en décor fixe** (choix de Tristan, 04/10) : l'animation de Picard (porte qui se
+    lève) ne marchait pas avec une photo prise porte ouverte. Petit ajout au moteur : `photos.decor: 'fixe'` — la photo reste telle
+    quelle, le chariot dessiné sort de l'ouverture de la remorque et pose les palettes sur une dalle dessinée sous la photo ; légende
+    « Yanis entre dans la remorque au chariot » au lieu de « La porte du quai se lève ». Le cariste de la photo reste visible au fond
+    de la remorque pendant que le chariot dessiné sort les palettes.
+  - **10 jalons composés depuis les 15 lignes de la vue quai** : une palette = comptage **et** décision justes (un seul jalon).
+    « Sous réserve de déballage » et « palettes rentrées en zone de réception » ne sont **pas notés** (le chef de quai en parle à
+    l'étape ④ ; le bilan de la vue les affiche quand même, sans les compter dans la note de la séance).
+  - `coeur: true, domaines: ['D4', 'D5']` au lieu de `parcours: 'coeur'` (nom déjà pris, comme ENT-5.1). Pas de « Réinitialiser »
+    (réservé aux séances X.1).
+  - Bruno écrit à **Yanis** (l'élève joue Yanis) ; son second message (la demande de compte rendu, par phrases) arrive **quand le BL est
+    signé** ; la ligne « J'ai reçu les 4 palettes d'Arinthod. » est **imposée** (pas de choix) ; salutation et fin à choisir, non
+    notées (seule la ligne des réserves compte, jalon 10).
+  - L'arrêt du chef de quai **nomme la cale** (texte du brief), alors que le moteur, par défaut, n'en dit rien.
+  - Une palette refusée demande sa ligne de réserve : le chauffeur ne signe pas une réserve vide (comportement de la vue).
+- **Décisions prises en route** : `docs/decisions.md` (décor fixe ; jalons composés). Étiquettes des palettes : la ligne « À consommer de
+  préférence avant fin » disparaît quand le contenu ne donne pas de date (jouets) — Picard inchangé.
+- **Tests** : bloc `smoby` 117 / 117 (8 cas ENT-5.4 : déclaration et photos servies ; attendus et corrigé écrits à la main ; inaction 0 ;
+  parcours juste 10 / 10 avec décor fixe et rien de froid ; légende, étiquette sans date ; décharger sans signaler 9 / 10 ; texte de
+  l'arrêt ; 7 pièges, chacun fait tomber son seul jalon). Quatre sabotages (décor fixe ignoré, comptage non lu, phrase juste mal
+  calculée, date toujours affichée) font chacun tomber au moins un cas. Suite entière 654 / 655, puis le seul échec corrigé
+  (`reinitialisable` retiré) et ses blocs relancés : verts.
+- **Commits** : voir l'historique du 04/10/2026 (décor fixe du quai ; séance ENT-5.4).
 - **Reste ouvert** :
+  - **Demande au moteur** : à l'étape ① sans froid, le bouton dit toujours « Oui, vous pouvez ouvrir et décharger » et la légende
+    « portes fermées », alors qu'ici c'est Yanis qui décharge ; le chauffeur dit aussi « Je recharge les palettes refusées » même
+    sans refus. Libellés à rendre déclarables (petit lot).
+  - Le transporteur s'écrit « Transports Jurassiens (fictif) » dans son nom (la marque « fictif » du moteur aurait aussi marqué
+    l'usine d'Arinthod, réelle) : sous la signature, cela donne « Le chauffeur (Transports Jurassiens (fictif)) ».
+  - Trame courte par Cowork, après l'essai à l'écran (brief §9).
+  - Plus tard : étape sécurité sur image à inspecter (vue n° 6).

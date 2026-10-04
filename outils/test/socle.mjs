@@ -183,7 +183,7 @@ await v('rubriques : les activités sont rangées par numéro de module', async 
   // (ENT-1.x), puis Cdiscount (ENT-2.x, depuis le 02/10/2026), puis Boost (ENT-3.x), puis Picard
   // (ENT-4.x, 03/10/2026). Une séance nouvelle s'insère à son rang : on ne touche à cette liste
   // qu'en l'allongeant.
-  repere('Simulog', 'ENT-1.1 ENT-1.2 ENT-1.3 ENT-2.1 ENT-2.2 ENT-2.3 ENT-2.4 ENT-2.5 ENT-2.6 ENT-3.1 ENT-3.2 ENT-3.3 ENT-4.1 ENT-4.2 ENT-4.3 ENT-4.4 ENT-5.1');
+  repere('Simulog', 'ENT-1.1 ENT-1.2 ENT-1.3 ENT-2.1 ENT-2.2 ENT-2.3 ENT-2.4 ENT-2.5 ENT-2.6 ENT-3.1 ENT-3.2 ENT-3.3 ENT-4.1 ENT-4.2 ENT-4.3 ENT-4.4 ENT-5.1 ENT-5.4');
 });
 
 // ---------- 7. l'élève voit la base commune de la classe
