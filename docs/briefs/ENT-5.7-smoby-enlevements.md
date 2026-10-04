@@ -1,9 +1,13 @@
-# Brief de séance — ENT-5.6 Kuehne+Nagel, affecter chauffeurs et camions aux enlèvements de Noël (2de, poste B — agent d'exploitation, guidage)
+# Brief de séance — ENT-5.7 Kuehne+Nagel, affecter chauffeurs et camions aux enlèvements de Noël (2de, poste B — agent d'exploitation, guidage)
+
+> **Renuméroté par Cowork le 04/10/2026 (soir)** : la préparation de la palette mixte d'E1 s'insère avant les séances K+N et
+> prend ENT-5.6 ; cette séance (`id` inchangé : `smoby-enlevements`) devient **ENT-5.7**. Ancien fichier
+> `ENT-5.6-smoby-enlevements.md` à supprimer (`git rm`) par Claude Code.
 
 > **📋 Phrase à copier-coller dans ccode :**
 >
 > ```
-> Lis docs/briefs/COORDINATION-smoby.md puis implémente le brief docs/briefs/ENT-5.6-smoby-enlevements.md (il faut que la vue Planning et les lots 1, 3 et 7 de MOTEUR-2de-S1 soient livrés). Annonce la durée avant de commencer et dis-moi si un point du brief contredit le code.
+> Lis docs/briefs/COORDINATION-smoby.md puis implémente le brief docs/briefs/ENT-5.7-smoby-enlevements.md (il faut que la vue Planning et les lots 1, 3 et 7 de MOTEUR-2de-S1 soient livrés). Annonce la durée avant de commencer et dis-moi si un point du brief contredit le code.
 > ```
 
 **Statut** : à implémenter — **attend la vue Planning** (`MOTEUR-vue-planning.md`)
@@ -16,13 +20,13 @@ maquette `docs/briefs/planning/` (cas « chauffeurs et camions », v8 validée).
 
 | Champ | Valeur |
 |---|---|
-| `code` | ENT-5.6 |
+| `code` | ENT-5.7 |
 | `id` | `smoby-enlevements` |
 | Titre / desc | « Kuehne+Nagel — les enlèvements de Noël » / « Agent d'exploitation à l'agence Kuehne+Nagel de Besançon : affecter un chauffeur et un camion à chacun des 5 enlèvements de la commande de Noël chez Smoby, en respectant permis, pauses, temps de conduite et repos, puis replanifier après une panne. » |
 | Rubrique | simulog, entreprise n° 5 Smoby |
 | Niveau(x) | 2de |
 | Compétence(s) | **OTM-C2.2** (réserver et planifier l'opération), **OTM-C3.2** (temps de conduite, notion) ; domaine D2 |
-| Temps pédagogique | guidage ; `parcours: 'coeur'` |
+| Temps pédagogique | guidage ; `coeur: true` (nom retenu au lot 1 de `MOTEUR-2de-S1`) |
 | Notation | jalons + note sur 20 |
 | Barème | 10 |
 | `pret` à la livraison | `pret: true, ouverture: 'prof'` |
@@ -41,12 +45,12 @@ maquette `docs/briefs/planning/` (cas « chauffeurs et camions », v8 validée).
 
 L'élève sait **planifier une journée d'exploitation** : un chauffeur et un camion par enlèvement, un trajet à la fois, le
 bon permis et le bon camion, dans la fenêtre du client, en respectant **pauses, plafond journalier et repos**, puis
-**replanifier** quand un camion tombe en panne. Suit ENT-5.5 (la marchandise est en stock, la commande peut partir) ;
-précède ENT-5.7 (lettre de voiture d'E1).
+**replanifier** quand un camion tombe en panne. Suit ENT-5.6 (préparation : la palette mixte d'E1 est prête, la commande peut partir) ;
+précède ENT-5.8 (lettre de voiture d'E1).
 
 ## 4. Déroulé
 
-Accueil — message du **cariste (Yanis) relayé par Bruno, chef de quai Smoby** (passage de relais de ENT-5.5, texte proposé) :
+Accueil — message du **cariste (Yanis) relayé par Bruno, chef de quai Smoby** (passage de relais de ENT-5.6, texte proposé) :
 « Bonjour l'exploitation ! La commande de Noël est en stock, prête à partir **jeudi 10 décembre** : 5 enlèvements
 (détail joint). Bruno — Smoby Moirans » ; puis le **responsable d'exploitation** de l'agence : « {prénom}, planifie les
 5 enlèvements de jeudi : un chauffeur et un camion pour chacun. Attention aux temps de conduite ! »
@@ -73,7 +77,7 @@ l'envoi ; inaction 0/10 (déjà vérifié dans la maquette).
 
 `contenus/smoby-ent55.js` : déclaration `planning` du cas chauffeurs (API livrée par le chantier Planning ; données exactes
 en tête du script de la maquette), messages, imprévu (`apresPlanning` + `phasePlanning: 2`), étapes. **Mêmes chauffeurs,
-camions et trajets que ENT-5.7** (mettre ces données dans `contenus/smoby.js` pour ne pas les recopier).
+camions et trajets que ENT-5.8** (mettre ces données dans `contenus/smoby.js` pour ne pas les recopier).
 
 ## 7. Demandes au moteur
 
@@ -87,7 +91,7 @@ plus après la panne ; Marc sur une semi → jalon chauffeurs faux ; Nadia avant
 ## 9. Supports
 
 Trame courte (lexique, les trois règles de conduite, la grille vierge) : Cowork, après validation. Corrigé
-`contenus/corriges/ENT-5.6.js` (une solution avant / après la panne), calculé.
+`contenus/corriges/ENT-5.7.js` (une solution avant / après la panne), calculé.
 
 ## 10. Critères de validation par Tristan
 
@@ -97,7 +101,7 @@ La séance se joue comme le cas « chauffeurs et camions » de la maquette v8, d
 
 - [ ] Compte rendu de la replanification par un message (phrases à choisir) : **non** pour l'instant (barème 10, comme la
   maquette) ; à ajouter si Tristan le demande après essai.
-- [ ] Le passage de relais de ENT-5.5 vient de Bruno, chef de quai (oui).
+- [ ] Le passage de relais de ENT-5.6 (préparation) vient de Bruno, chef de quai (oui).
 
 ---
 

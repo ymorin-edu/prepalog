@@ -1,0 +1,1292 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Plan d'entrepôt v2</title>
+<style>
+:root{
+  --fond:#f4f1ea; --panneau:#fdfbf7; --survol:#f9f6ef; --filet:#e3ded3;
+  --encre:#1a1915; --encre-douce:#555047;
+  --ardoise:#107c41; --ardoise-fond:#107c41; --sur-ardoise:#fff; --ardoise-voile:rgba(16,124,65,.16);
+  --terre:#9c620a; --rouge:#9d2727; --rouge-fond:#fbecec; --vert-fond:#e6f4ea;
+  --montant:#2f5f9e; --lisse:#e07b1a; --plaque:#f3d04a;
+  --sol:#e4dfd3; --sol2:#d6d0c2; --carton:#c89a63; --carton-trait:#8f6532;
+  --gris:#bdb7aa; --gris-trait:#8a8478; --jaune-sol:#e5b800;
+  --litige:rgba(157,39,39,.10); --hachure:rgba(157,39,39,.35);
+  --r:6px; --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --fond:#10161c; --panneau:#1a222b; --survol:#202a35; --filet:#2c3846;
+    --encre:#e4eaf0; --encre-douce:#9aabbb;
+    --ardoise:#6fd196; --ardoise-fond:#18724a; --sur-ardoise:#f2f7fb; --ardoise-voile:rgba(111,209,150,.18);
+    --terre:#e0ac4d; --rouge:#e2726f; --rouge-fond:#3a2224; --vert-fond:#183326;
+    --montant:#6c9be0; --lisse:#e8913f; --plaque:#e6c23a;
+    --sol:#232c36; --sol2:#2d3845; --carton:#a87e4c; --carton-trait:#d6ad76;
+    --gris:#4a5563; --gris-trait:#7d8b9b; --jaune-sol:#c9a20a;
+    --litige:rgba(226,114,111,.12); --hachure:rgba(226,114,111,.4);
+  }
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0; background:var(--fond); color:var(--encre); font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif; font-size:16px; line-height:1.4}
+button,input{font:inherit; color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--ardoise); outline-offset:2px}
+
+/* barre du haut : une ligne */
+.barre{display:flex; align-items:center; gap:8px; padding:8px 14px; background:var(--panneau); border-bottom:1px solid var(--filet); flex-wrap:wrap}
+.barre h1{font-size:1rem; margin:0 10px 0 0}
+.onglet{border:1px solid var(--filet); background:var(--panneau); border-radius:var(--r); padding:8px 14px; font-weight:700; min-height:40px}
+.onglet[aria-pressed="true"]{background:var(--ardoise-fond); color:var(--sur-ardoise); border-color:var(--ardoise-fond)}
+.barre .sep{flex:1}
+.niveaux{display:inline-flex; border:1px solid var(--filet); border-radius:var(--r); overflow:hidden; margin-left:6px}
+.niv{border:0; border-right:1px solid var(--filet); background:var(--panneau); padding:8px 12px; font-weight:600; font-size:.88rem; min-height:40px}
+.niv:last-child{border-right:0}
+.niv[aria-pressed="true"]{background:var(--survol); box-shadow:inset 0 -3px 0 var(--ardoise); font-weight:800}
+.petit{font-size:.85rem; color:var(--encre-douce)}
+.btn{border:1px solid var(--ardoise); color:var(--ardoise); background:var(--panneau); border-radius:var(--r); padding:8px 14px; font-weight:700; min-height:40px}
+.btn.plein{background:var(--ardoise-fond); color:var(--sur-ardoise); border-color:var(--ardoise-fond)}
+.btn:disabled{opacity:.45; cursor:not-allowed}
+.case{display:flex; align-items:center; gap:6px; font-size:.88rem; color:var(--encre-douce)}
+.case input{width:18px; height:18px}
+
+/* l'adresse qui se construit */
+.adresse{display:flex; align-items:center; gap:6px; padding:5px 14px; background:var(--fond); border-bottom:1px solid var(--filet); flex-wrap:wrap; min-height:48px}
+.adresse .lbl{font-weight:700; margin-right:4px}
+.slot{display:inline-flex; flex-direction:column; align-items:center; min-width:60px; border:2px dashed var(--gris-trait); border-radius:var(--r); padding:0 9px; background:var(--panneau)}
+.slot b{font-family:var(--mono); font-size:1.15rem; line-height:1.1}
+@media (max-height:800px){ .cache-bas{display:none} }
+.slot small{font-size:.66rem; line-height:1.1; color:var(--encre-douce)}
+.slot.plein{border-style:solid; border-color:var(--ardoise)}
+.slot.attend{box-shadow:0 0 0 3px var(--ardoise-voile); border-color:var(--ardoise)}
+.tiret{font-family:var(--mono); font-size:1.5rem; font-weight:800}
+.consigne{margin-left:14px; font-size:1rem; flex:1; min-width:260px}
+.consigne .num{display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:50%; background:var(--ardoise-fond); color:var(--sur-ardoise); font-weight:800; margin-right:6px}
+
+/* le jeu : 3 colonnes qui tiennent dans l'écran */
+.jeu{display:grid; grid-template-columns:minmax(0,1.05fr) minmax(0,1fr); grid-template-rows:auto minmax(0,1fr); gap:8px; padding:8px 14px; height:calc(100vh - 106px); min-height:520px}
+.col{background:var(--panneau); border:1px solid var(--filet); border-radius:var(--r); padding:10px; min-height:0; display:flex; flex-direction:column; overflow:auto}
+.col h2{font-size:.82rem; text-transform:uppercase; letter-spacing:.04em; color:var(--encre-douce); margin:0 0 6px}
+.col svg{display:block; width:100%; height:100%; min-height:0}
+.svgbox{flex:1; min-height:0; display:flex}
+/* deux « onglets » sous le bandeau : le plan OU la vue ouverte, en grand */
+.jeu.vue-plan #droite, .jeu.vue-face #colPlan{display:none}
+.jeu{grid-template-columns:230px minmax(0,1fr)}
+#gauche{grid-row:1}
+#cote{grid-column:1; grid-row:2; gap:8px}
+#colPlan,#droite{grid-column:2; grid-row:2}
+#colPlan{padding:4px}
+.jeu.vue-face #astuce{display:none}
+#cote .cons-ligne{margin:0; min-height:0; font-size:.88rem; line-height:1.35; padding:6px 8px}
+#cote .astuce{font-size:.86rem; background:var(--survol); border-left:3px solid var(--ardoise); padding:6px 8px; border-radius:0 var(--r) var(--r) 0}
+#cote .implant{flex-direction:column; flex-wrap:nowrap; gap:3px; font-size:.86rem; margin:0}
+#cote .implant>span{display:block}
+.entete-vue{display:flex; align-items:center; gap:10px; padding-bottom:6px; margin-bottom:6px; border-bottom:1px solid var(--filet)}
+.entete-vue{min-height:58px}
+.entete-vue .fil{flex:0 1 auto; font-size:.92rem; color:var(--encre-douce); max-width:34%}
+.msg-vue{flex:1; min-width:0}
+.msg-vue .msg{margin:0; min-height:0; padding:6px 10px; font-size:.92rem}
+.entete-vue .fil b{color:var(--encre)}
+.entete-vue .fil .mono{font-family:var(--mono); font-weight:800; color:var(--encre)}
+.retour-haut{background:var(--ardoise-fond); color:var(--sur-ardoise); border-color:var(--ardoise-fond); font-size:1rem; min-height:44px; padding:8px 18px}
+.contenu-vue{flex:1; min-height:0; display:flex; flex-direction:column}
+.contenu-vue>.releve,.contenu-vue>.fiche,.contenu-vue>.vide-face{flex-shrink:1}
+/* carte palette : une ligne = une information */
+.pal .ttl{display:flex; align-items:baseline; gap:6px; margin-bottom:3px}
+.pal .ttl b{flex:1}
+.pal .etat{font-size:.74rem; font-weight:800; padding:1px 6px; border-radius:3px; white-space:nowrap; border:1px solid var(--ardoise); color:var(--ardoise)}
+.pal .etat.adr{font-family:var(--mono)}
+.pal dl{display:grid; grid-template-columns:6.4em 1fr; gap:0 4px; margin:0}
+.pal dd{white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.pal .pid{display:inline-block; background:var(--carton); border:1.5px solid var(--carton-trait); color:#1a1915; border-radius:3px; padding:0 5px; margin-right:3px; font-size:.82rem}
+.pal dt{color:var(--encre-douce); font-size:.76rem; padding-top:1px}
+.pal dd{margin:0; font-weight:600}
+.pal dd.res{color:var(--rouge); white-space:normal}
+/* le bandeau (message, liste, boutons) : une ligne au-dessus du plan et de la vue de face */
+#gauche{grid-column:1 / -1; flex-direction:row; align-items:stretch; gap:10px; padding:8px; overflow:visible; position:relative; z-index:5}
+#gauche>*{flex-shrink:0}
+#gauche .bruno{flex:0 1 200px; min-width:160px; margin:0; font-size:.82rem; line-height:1.28; padding:6px 10px}
+#gauche .bruno b{font-size:.74rem}
+.b-liste{flex:1 1 auto !important; min-width:0; display:flex; flex-direction:column}
+.b-liste h2{margin:0 0 4px}
+.b-cartes{display:flex; gap:6px; overflow-x:auto; padding-bottom:2px}
+.b-cartes .pal{width:auto; flex:1 1 0; min-width:190px; margin:0; align-items:flex-start; padding:6px; gap:8px; min-height:0}
+.b-cartes .pal .ico{width:30px; height:30px; font-size:.85rem}
+.b-cartes .pal .txt{font-size:.82rem; line-height:1.25; width:100%}
+.b-cartes .pal .txt b{font-size:.88rem}
+.b-act{display:flex; flex-direction:column; gap:6px; justify-content:flex-start; min-width:150px; max-width:200px}
+.b-act .btn{width:100%; min-height:34px; padding:5px 10px; font-size:.9rem}
+.puce{border:1px solid var(--filet); border-radius:var(--r); padding:4px 8px; font-size:.84rem; line-height:1.25; background:var(--panneau); flex:1 1 0; min-width:118px}
+.puce .a{font-family:var(--mono); font-weight:700; font-size:.8rem; white-space:nowrap}
+.puce .q{font-family:var(--mono); font-weight:800; white-space:nowrap}
+.puce.fait{background:var(--vert-fond)}
+.puce.ecart .q{color:var(--terre)}
+.puce.ici{outline:2px solid var(--ardoise); outline-offset:-2px}
+.b-cartes.grille{display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); overflow:visible}
+.b-regles{position:relative}
+.b-regles summary{list-style:none; cursor:pointer; border:1px solid var(--ardoise); color:var(--ardoise); border-radius:var(--r); padding:8px 12px; font-weight:700; text-align:center; min-height:34px; font-size:.9rem}
+.b-regles summary::-webkit-details-marker{display:none}
+.b-regles[open] summary{background:var(--ardoise-voile)}
+.b-regles .regles{position:absolute; right:0; top:calc(100% + 6px); width:440px; max-width:90vw; background:var(--panneau); border:1px solid var(--filet); border-radius:var(--r); box-shadow:0 8px 24px rgba(0,0,0,.25); padding:10px 12px; margin:0; z-index:30}
+.choix.compact{margin:0; padding:3px 8px; font-size:.76rem; gap:1px; line-height:1.2}
+.choix.compact input{width:15px; height:15px}
+#implant{font-size:.74rem; margin-bottom:2px; gap:1px 8px; line-height:1.25}
+.col h2{margin-bottom:3px}
+@media (max-width:1050px){ .jeu{grid-template-columns:1fr; height:auto} #cote,#colPlan,#droite{grid-column:1; grid-row:auto} .col{overflow:visible} .svgbox{min-height:420px} #gauche{flex-wrap:wrap} }
+
+/* colonne de gauche */
+.bruno{background:var(--survol); border-left:4px solid var(--plaque); padding:8px 10px; font-size:.92rem; border-radius:0 var(--r) var(--r) 0; margin-bottom:10px}
+.bruno b{display:block; font-size:.78rem; color:var(--encre-douce)}
+.col>*{flex-shrink:0}
+.col>.svgbox,.col>.releve,.col>.fiche,.col>.vide-face{flex-shrink:1}
+.pal{display:flex; align-items:center; gap:10px; width:100%; text-align:left; border:2px solid var(--filet); background:var(--panneau); border-radius:var(--r); padding:8px; margin-bottom:6px; min-height:56px}
+.pal .ico{flex:none; width:40px; height:40px; border-radius:4px; background:var(--carton); border:2px solid var(--carton-trait); display:flex; align-items:center; justify-content:center; font-weight:800; color:#1a1915}
+.pal .txt{font-size:.88rem; line-height:1.25}
+.pal .txt b{font-size:.95rem}
+.pal.en-main{border-color:var(--ardoise); background:var(--ardoise-voile)}
+.pal.posee{opacity:.75}
+.pal .ou{font-family:var(--mono); font-weight:700; color:var(--ardoise)}
+.regles{margin-top:8px; font-size:.86rem; border-top:1px solid var(--filet); padding-top:8px}
+.regles ol{margin:4px 0 0; padding-left:20px}
+.regles li{margin-bottom:3px}
+.encadre{margin-top:8px; font-size:.82rem; background:var(--survol); border-radius:var(--r); padding:6px 8px; color:var(--encre-douce)}
+.liste-adr{width:100%; border-collapse:collapse; font-size:.9rem}
+.liste-adr td{padding:6px 4px; border-bottom:1px solid var(--filet)}
+.liste-adr .a{font-family:var(--mono); font-weight:700}
+.liste-adr tr.fait td{background:var(--vert-fond)}
+.liste-adr tr.ici td{outline:2px solid var(--ardoise); outline-offset:-2px}
+.liste-adr .n{text-align:right; font-family:var(--mono); font-weight:700; white-space:nowrap}
+
+/* plan */
+.implant{display:flex; flex-wrap:wrap; gap:4px 10px; font-size:.84rem; margin-bottom:6px}
+.implant span b{font-family:var(--mono)}
+.implant .t{color:var(--encre-douce); font-weight:700}
+.trav{cursor:pointer}
+.trav:hover .fond-trav{fill:var(--ardoise-voile)}
+.trav:focus{outline:none}
+.trav:focus .fond-trav{stroke:var(--ardoise); stroke-width:4}
+.palq,.lit{cursor:pointer}
+
+/* vue de face */
+.titre-face{font-size:1rem; margin-bottom:4px}
+.titre-face .depuis{font-size:.82rem; color:var(--encre-douce)}
+.releve{flex:1; min-height:0; display:flex; transform-origin:50% 100%}
+.releve.anim{animation:releve .6s cubic-bezier(.3,.7,.3,1)}
+@keyframes releve{from{transform:perspective(900px) rotateX(75deg); opacity:.3} to{transform:none; opacity:1}}
+@media (prefers-reduced-motion: reduce){ .releve.anim{animation:none} }
+.emp{cursor:pointer}
+.emp:hover .cible,.emp:focus .cible{fill:var(--ardoise-voile); stroke:var(--ardoise); stroke-width:3}
+.emp:focus{outline:none}
+.vide-face{flex:1; display:flex; align-items:center; justify-content:center; text-align:center; color:var(--encre-douce); border:2px dashed var(--filet); border-radius:var(--r); padding:20px; font-size:1rem}
+.retour{align-self:flex-start; margin-bottom:6px}
+
+/* messages */
+.msg{min-height:44px; margin-top:8px; padding:8px 10px; border-radius:var(--r); font-size:.95rem}
+.msg.non{background:var(--rouge-fond); color:var(--rouge); font-weight:700}
+.msg.oui{background:var(--vert-fond)}
+.msg:empty{background:none}
+
+/* fiche de comptage */
+.fiche{flex:1; display:flex; flex-direction:column; min-height:0}
+.etiq{display:flex; gap:10px; align-items:center; background:#fff; color:#1a1915; border:1px solid #bbb; border-radius:4px; padding:6px 10px; font-size:.9rem; align-self:flex-start}
+.etiq .code{font-family:var(--mono); font-weight:800}
+.saisie{display:flex; align-items:center; gap:8px; margin-top:8px; flex-wrap:wrap}
+.saisie input{width:110px; font-size:1.4rem; font-family:var(--mono); padding:6px 8px; border:2px solid var(--gris-trait); border-radius:var(--r); background:var(--panneau)}
+.saisie input:focus{border-color:var(--ardoise)}
+.aide-couches{font-size:.84rem; color:var(--encre-douce); margin-top:6px}
+
+/* écarts */
+.ecarts{width:100%; border-collapse:collapse; font-size:.95rem}
+.ecarts th{font-size:.78rem; text-transform:uppercase; color:var(--encre-douce); text-align:left; padding:4px; border-bottom:2px solid var(--filet)}
+.ecarts td{padding:5px 4px; border-bottom:1px solid var(--filet)}
+.ecarts .a{font-family:var(--mono); font-weight:700; font-size:.86rem; white-space:nowrap}
+.ecarts .n{font-family:var(--mono); text-align:right; font-weight:700}
+.ecarts input{width:70px; font-family:var(--mono); font-size:1.05rem; padding:4px; border:2px solid var(--gris-trait); border-radius:4px; background:var(--panneau); text-align:right}
+.ecarts td.ok{color:var(--ardoise); font-weight:800}
+.ecarts td.ko{color:var(--rouge); font-weight:800}
+
+.pal .cons{display:block; margin-top:4px; padding:4px 6px; border-left:3px solid var(--ardoise); background:var(--survol); font-size:.82rem}
+.pal .ok{color:var(--ardoise); font-weight:800}
+.pal .ko{color:var(--rouge); font-weight:800}
+.bilan{margin-top:8px}
+.bilan div{padding:4px 0; border-bottom:1px solid var(--filet); font-size:.92rem}
+.bilan .ok{color:var(--ardoise); font-weight:700}
+.bilan .ko{color:var(--rouge); font-weight:700}
+
+/* cas 3 : préparation */
+.bp{width:100%; border-collapse:collapse; font-size:.84rem}
+.bp th{font-size:.7rem; text-transform:uppercase; color:var(--encre-douce); text-align:left; padding:3px; border-bottom:2px solid var(--filet)}
+.bp td{padding:5px 3px; border-bottom:1px solid var(--filet); vertical-align:top}
+.bp .a{font-family:var(--mono); font-weight:700; font-size:.8rem; white-space:nowrap}
+.bp .n{text-align:right; font-family:var(--mono); font-weight:700; white-space:nowrap}
+.bp tr.fait td{background:var(--vert-fond)}
+.bp tr.ecart td.n:last-child{color:var(--terre)}
+.bp tr.ici td{outline:2px solid var(--ardoise); outline-offset:-2px}
+.bp .tag{display:inline-block; font-size:.68rem; font-weight:800; padding:0 4px; border-radius:3px; margin-left:2px}
+.tag.lourd{background:var(--plaque); color:#1a1915}
+.tag.fragile{background:var(--rouge-fond); color:var(--rouge); border:1px solid var(--rouge)}
+.choix{display:flex; flex-direction:column; gap:4px; margin:6px 0; padding:6px 8px; border:2px solid var(--ardoise); border-radius:var(--r); font-size:.86rem}
+.choix label{display:flex; gap:6px; align-items:flex-start}
+.choix input{width:18px; height:18px; flex:none; margin-top:1px}
+.stockpick{margin:6px 0 0; font-size:.95rem}
+.stockpick.bas{color:var(--rouge)}
+.finir{display:flex; flex-direction:column; gap:6px; margin-top:8px; font-size:.9rem; border-top:1px solid var(--filet); padding-top:8px}
+.finir select{font:inherit; padding:4px; border:2px solid var(--gris-trait); border-radius:4px; background:var(--panneau); color:var(--encre)}
+.finir .etq{display:flex; flex-wrap:wrap; gap:4px 12px}
+.finir .etq label{display:flex; gap:4px; align-items:center}
+.finir .etq input{width:18px; height:18px}
+.ind{margin-top:8px; font-size:.92rem}
+.ind h3{font-size:.82rem; text-transform:uppercase; letter-spacing:.04em; color:var(--encre-douce); margin:8px 0 4px}
+.ind div{padding:3px 0; border-bottom:1px solid var(--filet)}
+.ind .ok{color:var(--ardoise); font-weight:700}
+.ind .ko{color:var(--rouge); font-weight:700}
+.ind .gros{font-size:1.15rem; font-family:var(--mono); font-weight:800}
+.palbox{flex:1 0 auto; height:280px; min-height:280px; display:flex}
+.ligne-haut{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+.ligne-haut .btn{min-height:34px; padding:4px 10px}
+.pilebox{min-height:170px; margin-top:2px}
+.cons-ligne{margin-top:5px; font-size:.84rem; line-height:1.3; padding:3px 8px; min-height:calc(2.6em + 6px)}
+.pal .verd{display:block; font-size:.8rem; line-height:1.25; margin-top:2px}
+.consG{margin-top:4px; padding:4px 8px; line-height:1.3; border-left:3px solid var(--ardoise); background:var(--survol); font-size:.88rem}
+.reap{background:var(--plaque); color:#1a1915; border-radius:var(--r); padding:6px 10px; font-weight:700; margin-bottom:6px; font-size:.9rem}
+details.brief{margin:0 14px 14px; background:var(--panneau); border:1px solid var(--filet); border-radius:var(--r); padding:8px 12px; font-size:.85rem}
+details.brief summary{cursor:pointer; font-weight:700}
+details.brief pre{white-space:pre-wrap; font-family:var(--mono); font-size:.78rem; background:var(--survol); padding:8px; border-radius:var(--r); overflow:auto}
+</style>
+</head>
+<body>
+
+<div class="barre">
+  <h1>Plan d'entrepôt v2</h1>
+  <button class="onglet" id="oRang" aria-pressed="true">① Rangement</button>
+  <button class="onglet" id="oInv" aria-pressed="false">② Inventaire</button>
+  <button class="onglet" id="oPrep" aria-pressed="false">③ Préparation</button>
+  <span class="niveaux" id="niveaux"><button class="niv" data-n="guidage">Guidage</button><button class="niv" data-n="entrainement">Entraînement</button><button class="niv" data-n="evaluation">Évaluation</button></span>
+  <span class="sep"></span>
+  <label class="case" id="caseCharge"><input type="checkbox" id="chkCharge" checked> charge déjà posée</label>
+  <button class="btn" id="bRaz">Recommencer</button>
+</div>
+
+<div class="adresse" id="adresse"></div>
+
+<div class="jeu">
+  <div class="col" id="gauche"></div>
+  <div class="col" id="cote">
+    <div id="consCote"></div>
+    <div class="astuce" id="astuce">Cliquez une <b>travée</b> sur le plan : elle s'ouvre en grand, vue de face.</div>
+    <div class="implant" id="implant"></div>
+  </div>
+  <div class="col" id="colPlan">
+    <div class="svgbox"><svg id="plan" viewBox="0 0 800 562" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Plan de la plateforme, travées cliquables"></svg></div>
+  </div>
+  <div class="col" id="droite">
+    <div class="entete-vue"><div class="fil" id="filVue"></div><div class="msg-vue" id="msgVue"></div><span id="extraVue"></span><button class="btn retour-haut" id="bRetour">← Retour au plan</button></div>
+    <div class="contenu-vue" id="contenuVue"></div>
+  </div>
+</div>
+
+<details class="brief">
+  <summary>Pour l'enseignant : ce que la séance déclare au moteur (brouillon du brief)</summary>
+  <pre id="decl"></pre>
+</details>
+
+<script>
+"use strict";
+/* =====================================================================
+   1. LE PLAN DÉCLARÉ PAR LA SÉANCE (le moteur fournit les briques)
+   ===================================================================== */
+const PLAN = {
+  // côtés de rack : A1 et A2 de part et d'autre de l'allée A, B1 et B2 de part et d'autre de l'allée B.
+  // gammes = plan d'implantation (type de produit) ; charge = charge maximale d'un niveau (3 palettes ensemble)
+  cotes: [
+    { id:'A1', allee:'A', x:30,  regard:'ouest', gammes:['MAT'],        charge:{1:3000, 2:1200, 3:1200} },
+    { id:'A2', allee:'A', x:200, regard:'est',   gammes:['PLA'],        charge:{1:3000, 2:800,  3:800} },
+    { id:'B1', allee:'B', x:284, regard:'ouest', gammes:['VEH'],        charge:{1:3000, 2:1000, 3:1000} },
+    { id:'B2', allee:'B', x:454, regard:'est',   gammes:['CUI','MAT'],  charge:{1:3000, 2:800,  3:800}, note:'ancien rack' },
+  ],
+  travees: 4, niveaux: 3, emplacements: 3,          // 3 palettes par niveau
+  horsService: ['A1-T02-N2-E2', 'A2-T02-N3-E2', 'B1-T04-N2-E3', 'B2-T03-N2-E1'],
+  litiges: ['L1', 'L2'],
+  debutParcours: 'A', finParcours: 'B',             // le parcours entre par l'allée A et ressort par l'allée B
+  // implantation : lourds en début de parcours, fragiles en fin de parcours (ils seront posés en haut de la palette préparée)
+  // rotation (classe ABC sur le nombre de sorties) : A près des quais et en bas, B ensuite, C au fond, tous niveaux.
+  // Sources : rackdestockage.eu (A travées 1 à N/5, niveaux 1-2 ; B N/5 à 2N/5, niveaux 1-3 ; C le reste, tous niveaux),
+  // mecalux.fr (A en bas près des quais de sortie, C en haut et loin). Ici N = 4 travées.
+  rotation: {
+    A:{ lib:'rapide',  travees:[1],   niveaux:[1,2],   texte:'T01, niveau N1 ou N2' },
+    B:{ lib:'moyenne', travees:[2],   niveaux:[1,2,3], texte:'T02' },
+    C:{ lib:'lente',   travees:[3,4], niveaux:[1,2,3], texte:'T03 ou T04' },
+  },
+};
+const GAMMES = { MAT:'Maisons et ateliers', CUI:'Cuisines', VEH:'Véhicules', PLA:'Plein air' };
+const pad = n => String(n).padStart(2, '0');
+const adr = (c, t, n, e) => `${c}-T${pad(t)}-N${n}-E${e}`;
+const decoupe = a => { const m = a.match(/^(\w\d)-T(\d\d)-N(\d)-E(\d)$/); return m ? { c:m[1], t:+m[2], n:+m[3], e:+m[4] } : null; };
+const cote = id => PLAN.cotes.find(c => c.id === id);
+const cotesDeGamme = g => PLAN.cotes.filter(c => c.gammes.includes(g)).map(c => c.id);
+
+/* Produits Smoby (gammes réelles, références et poids construits) : cartons W × D × couches */
+const PROD = {
+  MAI:{ nom:'Maison Neo Jura Lodge',  ref:'SM-810405', g:'MAT', kg:[380,430], c:[2,2,2], box:[1.4,1.2,1.3] },
+  ETA:{ nom:'Établi Black+Decker',    ref:'SM-360701', g:'MAT', kg:[270,310], c:[4,3,3], box:[1,.8,.75] },
+  CUI:{ nom:'Cuisine Tefal',          ref:'SM-311054', g:'CUI', kg:[250,300], c:[4,3,4], box:[1,.8,.7] },
+  POR:{ nom:'Porteur Little Smoby',   ref:'SM-140501', g:'VEH', kg:[160,200], c:[3,3,4], box:[1,.9,.8] },
+  TRO:{ nom:'Trotteur Cotoons',       ref:'SM-110403', g:'VEH', kg:[130,170], c:[3,2,4], box:[1,.8,.8] },
+  TRI:{ nom:'Tricycle Be Fun',        ref:'SM-740327', g:'VEH', kg:[180,230], c:[2,2,4], box:[1.2,1,.9] },
+  TOB:{ nom:'Toboggan XL',            ref:'SM-310261', g:'PLA', kg:[220,280], c:[2,2,3], box:[1.3,1,1.1] },
+  BAC:{ nom:'Bac à sable',            ref:'SM-310060', g:'PLA', kg:[200,260], c:[2,2,3], box:[1.3,1.1,.6] },
+};
+
+/* Stock de départ : d'abord les emplacements imposés (pièges et liste d'inventaire), puis un remplissage tiré une fois
+   pour toutes (graine fixe) qui respecte la gamme du côté, la charge maximale de chaque niveau et « pas de fragile en N3 ». */
+const IMPOSE = {
+  // --- P1 (maison, lourde, rotation A) : une seule bonne réponse, A1-T01-N1-E3
+  'A1-T01-N1-E1':{k:'MAI', kg:420}, 'A1-T01-N1-E2':{k:'MAI', kg:410}, 'A1-T01-N1-E3':null,   // la solution
+  'A1-T01-N2-E1':{k:'MAI', kg:430}, 'A1-T01-N2-E2':{k:'MAI', kg:410}, 'A1-T01-N2-E3':null,   // 840 + 420 > 1 200
+  'A1-T02-N1-E1':{k:'ETA', kg:290}, 'A1-T02-N1-E2':null,             'A1-T02-N1-E3':{k:'MAI', kg:400},   // T02 = rotation moyenne
+  'A1-T02-N2-E1':{k:'ETA', kg:300},                                  'A1-T02-N2-E3':{k:'MAI', kg:420},   // E2 hors service
+  'B2-T01-N1-E1':{k:'CUI', kg:280}, 'B2-T01-N1-E2':{k:'MAI', kg:400}, 'B2-T01-N1-E3':null,   // gamme juste, mais fin de parcours (E1 = picking Cuisine du cas 3)
+  'A1-T03-N1-E1':null,                                                                        // gamme juste, mais rotation lente
+  // --- P2 (cuisine, rotation B, fragile) : deux bonnes réponses, B2-T02-N1-E2 et B2-T02-N1-E3 (fin de parcours)
+  'B2-T02-N1-E1':{k:'CUI', kg:280}, 'B2-T02-N1-E2':null,             'B2-T02-N1-E3':null,
+  'B2-T02-N2-E1':{k:'CUI', kg:290}, 'B2-T02-N2-E2':null,             'B2-T02-N2-E3':{k:'CUI', kg:270},   // 560 + 270 > 800
+  'B2-T02-N3-E1':{k:'ETA', kg:270}, 'B2-T02-N3-E2':null,             'B2-T02-N3-E3':{k:'ETA', kg:250},   // fragile : pas en N3
+  'B2-T03-N1-E1':{k:'CUI', kg:300}, 'B2-T03-N1-E2':{k:'CUI', kg:260}, 'B2-T03-N1-E3':null,   // T03 = rotation lente
+  'B2-T01-N2-E3':null,                                                                        // rotation rapide : pas pour P2
+  // --- P4 (porteur, rotation C) : plusieurs bonnes réponses en B1-T03 / T04
+  'B1-T03-N3-E1':null, 'B1-T04-N1-E2':null, 'B1-T04-N3-E2':null, 'B1-T01-N2-E3':null,
+  'B1-T03-N2-E1':{k:'POR', kg:170}, 'B1-T04-N2-E1':{k:'TRI', kg:200}, 'B1-T04-N2-E2':{k:'TRO', kg:150}, 'B1-T04-N3-E3':{k:'POR', kg:180},
+  // --- liste d'inventaire (écarts réels cachés à l'élève)
+  'A1-T03-N2-E3':{k:'ETA', kg:300, ecart:-2},
+  'A2-T02-N2-E2':{k:'TOB', kg:250},
+  'A2-T04-N1-E1':{k:'BAC', kg:230},
+  'B1-T01-N2-E1':{k:'POR', kg:180},
+  'B1-T03-N1-E3':{k:'TRO', kg:150, ecart:-3},
+  'B2-T04-N2-E2':{k:'CUI', kg:270, ecart:+1},
+};
+const CTN = {
+  MAI:{ kg:50,  parCouche:2, h:.45, lourd:true },
+  ETA:{ kg:8,   parCouche:6, h:.25 },
+  CUI:{ kg:5.5, parCouche:8, h:.20, fragile:true },
+  POR:{ kg:5,   parCouche:6, h:.22 },
+  TRO:{ kg:6,   parCouche:6, h:.22 },
+  TRI:{ kg:12,  parCouche:4, h:.25 },
+  TOB:{ kg:21,  parCouche:2, h:.50, lourd:true },
+  BAC:{ kg:19,  parCouche:2, h:.35, lourd:true },
+};
+const STOCK = (() => {
+  let g = 20261209; const rnd = () => (g = (g * 1103515245 + 12345) % 2147483648) / 2147483648;
+  const taux = {1:.86, 2:.62, 3:.5}, st = {};
+  for (const [a, v] of Object.entries(IMPOSE)) if (v) st[a] = { ecart:0, ...v };
+  for (const c of PLAN.cotes) for (let t = 1; t <= PLAN.travees; t++) for (let n = 1; n <= 3; n++){
+    let tot = 0; for (let e = 1; e <= 3; e++){ const a = adr(c.id, t, n, e); if (st[a]) tot += st[a].kg; }
+    for (let e = 1; e <= 3; e++){
+      const a = adr(c.id, t, n, e), tire = rnd();
+      const codes = Object.keys(PROD).filter(k => c.gammes.includes(PROD[k].g)), k = codes[Math.floor(rnd() * codes.length)], p = PROD[k];
+      const kg = Math.round((p.kg[0] + rnd() * (p.kg[1] - p.kg[0])) / 10) * 10;
+      if (a in IMPOSE || PLAN.horsService.includes(a) || tire >= taux[n]) continue;
+      if (n === 3 && CTN[k].fragile) continue;            // jamais de fragile en N3
+      if (tot + kg > c.charge[n] - 80) continue;          // jamais de niveau déjà en surcharge au départ
+      st[a] = { k, kg, ecart:0 }; tot += kg;
+    }
+  }
+  return st;
+})();
+
+/* Cas 1 : les 4 palettes reçues d'Arinthod (ENT-5.4), avec leur fiche produit */
+const PALETTES = {
+  P1:{ k:'MAI', nom:'Maison Neo Jura Lodge', kg:420, rot:'A', lourd:true,  note:'' },
+  P2:{ k:'CUI', nom:'Cuisine Tefal',         kg:270, rot:'B', fragile:true, note:'' },
+  P3:{ k:'ETA', nom:'Établi Black+Decker',   kg:290, rot:'B', lourd:true,  note:'1 carton écrasé', litige:true },
+  P4:{ k:'POR', nom:'Porteur Little Smoby',  kg:180, rot:'C', note:'2 cartons manquants' },
+};
+
+/* Cas 2 : la liste d'adresses à recompter */
+const LISTE = ['A1-T01-N1-E2','A1-T03-N2-E3','A2-T02-N2-E2','A2-T04-N1-E1','B1-T01-N2-E1','B1-T03-N1-E3','B2-T02-N1-E1','B2-T04-N2-E2'];
+const theorique = a => { const s = STOCK[a], c = PROD[s.k].c; return c[0] * c[1] * c[2]; };
+const reel = a => theorique(a) + STOCK[a].ecart;
+
+/* Cas 3 : préparation de commande au colis complet (N1 = picking, N2-N3 = réserve).
+   Cartons : poids et rangement sur la palette Europe 80 × 120 (construits). Lourd = 15 kg et plus le carton. */
+const CMD = {
+  num:'BP-1210-JDR', client:'Jouets du Rhône', enlevement:'E1', transporteur:'Kuehne+Nagel', heure:'14 h',
+  hMax:1.80, kgMax:800, hPalette:.15, kgPalette:25,          // valeurs transporteur : construites
+  // ordre du serpentin : on monte l'allée A (T01 puis T02), on redescend l'allée B (T02 puis T01)
+  lignes:[
+    { a:'A1-T01-N1-E1', k:'MAI', q:2 },
+    { a:'A1-T02-N1-E1', k:'ETA', q:6 },
+    { a:'B1-T02-N1-E3', k:'TRI', q:4 },
+    { a:'B1-T01-N1-E2', k:'POR', q:6 },
+    { a:'B1-T01-N1-E1', k:'TRO', q:6 },                     // rupture : 2 cartons au picking, minimum 6
+    { a:'B2-T01-N1-E1', k:'CUI', q:8 },                     // fragile, en fin de parcours : prélevée en dernier
+  ],
+  desordre:[4, 5, 3, 0, 2, 1],                               // la liste remise en entraînement et en évaluation
+};
+// picking (N1) des lignes de la commande : cartons restants et minimum ; les autres N1 : palette pleine, min = 1/4
+const PICK0 = {
+  'A1-T01-N1-E1':{ q:5,  min:2 }, 'A1-T02-N1-E1':{ q:20, min:6 }, 'B2-T01-N1-E1':{ q:30, min:8 },
+  'B1-T02-N1-E3':{ q:10, min:4 }, 'B1-T01-N1-E2':{ q:22, min:6 }, 'B1-T01-N1-E1':{ q:2,  min:6 },
+};
+const minPick = a => PICK0[a] ? PICK0[a].min : Math.max(2, Math.round(theorique(a) / 4));
+const court = k => PROD[k].nom.replace(' Black+Decker', '').replace(' Neo Jura Lodge', '').replace(' Little Smoby', '').replace(' Cotoons', '').replace(' Be Fun', '');
+
+/* Le parcours : points de prélèvement au milieu de l'allée, devant la travée. Le quai d'expédition est sur l'allée
+   principale. Serpentin = sens unique (on monte A, passage du haut, on redescend B, retour par l'allée principale).
+   Retour = on entre dans chaque allée par l'allée principale et on en ressort par le même bout. 100 px = 3 m. */
+const XALLEE = { A:126, B:438 }, YPRINC = 500, QUAI = [300, 500], M_PAR_PX = .03;
+const CYCLE = [[126,500],[126,29],[438,29],[438,500],[126,500]];
+const LONG = [0]; for (let i = 1; i < CYCLE.length; i++) LONG.push(LONG[i - 1] + Math.abs(CYCLE[i][0] - CYCLE[i - 1][0]) + Math.abs(CYCLE[i][1] - CYCLE[i - 1][1]));
+const TOUR = LONG[LONG.length - 1];
+const pointDe = a => { const d = decoupe(a); return [XALLEE[cote(d.c).allee], yTrav(d.t) + TH / 2]; };
+function sDe([x, y]){
+  for (let i = 1; i < CYCLE.length; i++){
+    const [x0, y0] = CYCLE[i - 1], [x1, y1] = CYCLE[i];
+    if ((x0 === x1 && x === x0 && y >= Math.min(y0, y1) && y <= Math.max(y0, y1)) || (y0 === y1 && y === y0 && x >= Math.min(x0, x1) && x <= Math.max(x0, x1)))
+      return LONG[i - 1] + Math.abs(x - x0) + Math.abs(y - y0);
+  }
+  return 0;
+}
+function pointA(s){
+  s = ((s % TOUR) + TOUR) % TOUR;
+  for (let i = 1; i < CYCLE.length; i++) if (s <= LONG[i]){
+    const [x0, y0] = CYCLE[i - 1], [x1, y1] = CYCLE[i], f = (s - LONG[i - 1]) / (LONG[i] - LONG[i - 1]);
+    return [x0 + (x1 - x0) * f, y0 + (y1 - y0) * f];
+  }
+  return CYCLE[0];
+}
+function troncon(p, q, mode){
+  if (mode === 'serpentin'){
+    const s0 = sDe(p); let L = sDe(q) - s0; if (L < 0) L += TOUR;
+    const pts = [p];
+    for (const k of [...LONG.slice(1), ...LONG.slice(1).map(v => v + TOUR)]) if (k > s0 && k < s0 + L) pts.push(pointA(k));
+    pts.push(q); return { L, pts };
+  }
+  if (p[0] === q[0]) return { L:Math.abs(p[1] - q[1]), pts:[p, q] };
+  return { L:(YPRINC - p[1]) + Math.abs(p[0] - q[0]) + (YPRINC - q[1]), pts:[p, [p[0], YPRINC], [q[0], YPRINC], q] };
+}
+// longueur d'un tour : quai → points dans l'ordre → quai
+function longueurTour(points, mode){
+  const seq = [QUAI];
+  for (const p of points) if (seq[seq.length - 1][0] !== p[0] || seq[seq.length - 1][1] !== p[1]) seq.push(p);
+  if (seq.length === 1) return { L:0, pts:[] };
+  seq.push(QUAI);
+  let L = 0, pts = [];
+  for (let i = 1; i < seq.length; i++){ const t = troncon(seq[i - 1], seq[i], mode); L += t.L; pts = pts.concat(i > 1 ? t.pts.slice(1) : t.pts); }
+  return { L, pts };
+}
+// le meilleur tour (toutes les lignes, dans le meilleur ordre) pour un mode de parcours
+function meilleurTour(mode){
+  const pts = []; for (const l of CMD.lignes){ const p = pointDe(l.a); if (!pts.some(q => q[0] === p[0] && q[1] === p[1])) pts.push(p); }
+  let best = Infinity;
+  const perm = (reste, fait) => { if (!reste.length){ best = Math.min(best, longueurTour(fait, mode).L); return; }
+    reste.forEach((p, i) => perm(reste.filter((_, j) => j !== i), [...fait, p])); };
+  perm(pts, []); return best;
+}
+const metres = px => Math.round(px * M_PAR_PX);
+const nbTours = L => Math.round(L / TOUR);
+
+/* =====================================================================
+   2. ÉTAT
+   ===================================================================== */
+const S = { mode:'rang', niveau:'guidage', main:null, trav:null, anim:false, place:{}, msg:'', msgType:'', aideCharge:true,
+            verif:false, empl:null, compte:{}, fini:false, ecartsSaisis:{}, ecartsVus:false, p:null };
+const nouvellePrep = () => ({ faits:[], pick:{}, vides:[], reappros:[], reappro:null, essaisReserve:[],
+  parcours: S.niveau === 'evaluation' ? null : 'serpentin', fin:false, film:'', etiq:{}, bilan:false, voirPalette:false });
+S.p = nouvellePrep();
+// en préparation, une palette de réserve descendue au picking libère son emplacement
+const stockEn = a => (S.mode === 'prep' && S.p.vides.includes(a)) ? null : STOCK[a];
+const stockPick = a => a in S.p.pick ? S.p.pick[a] : PICK0[a] ? PICK0[a].q : theorique(a);
+const occupant = a => Object.keys(S.place).find(k => S.place[k] === a);
+const kgEn = a => STOCK[a] ? STOCK[a].kg : occupant(a) ? PALETTES[occupant(a)].kg : 0;
+const chargeNiveau = (c, t, n) => { let s = 0; for (let e = 1; e <= 3; e++) s += kgEn(adr(c, t, n, e)); return s; };
+const etatEmp = a => PLAN.horsService.includes(a) ? 'hs' : stockEn(a) ? 'stock' : occupant(a) ? 'eleve' : 'libre';
+
+/* =====================================================================
+   3. L'ADRESSE QUI SE CONSTRUIT + LA CONSIGNE
+   ===================================================================== */
+function rendreAdresse(survol){
+  const t = S.trav ? decoupe(S.trav + '-N1-E1') : null;
+  const e = survol || (S.empl ? decoupe(S.empl) : null);
+  const v = [t && t.c, t && 'T' + pad(t.t), e && 'N' + e.n, e && 'E' + e.e];
+  const lib = ['allée · côté', 'travée', 'niveau', 'emplacement'];
+  const prochain = v.findIndex(x => !x);
+  const slots = v.map((x, i) => `<span class="slot ${x ? 'plein' : ''} ${i === prochain && (i >= 2 ? !!S.trav : true) ? 'attend' : ''}"><b>${x || '?'}</b><small>${lib[i]}</small></span>`).join('<span class="tiret">-</span>');
+  document.getElementById('adresse').innerHTML = `<span class="lbl">Adresse</span>${slots}<span class="consigne">${consigne()}</span>`;
+}
+function consigne(){
+  const n = (k, txt) => `<span class="num">${k}</span>${txt}`;
+  if (S.mode === 'rang'){
+    if (Object.keys(S.place).length === 4 && !S.main) return S.verif ? n('✓', 'Une palette mal rangée ? Cliquez-la en haut pour la reprendre en main.') : n('✓', 'Les 4 palettes sont posées. Cliquez <b>Vérifier mon rangement</b> (en haut à droite).');
+    if (!S.main) return n(1, 'Prenez une palette (en haut ou dans la zone de réception du plan)' + (S.niveau === 'guidage' ? ' : sa consigne s\'affiche à gauche du plan.' : '.'));
+    const p = PALETTES[S.main];
+    if (!S.trav) return n(2, `<b>${S.main}</b> en main (${p.kg} kg). Choisissez une <b>travée</b> sur le plan${p.litige && S.niveau === 'guidage' ? ' — ou la zone litiges' : ''}.`);
+    return n(3, `<b>${S.main}</b> en main (${p.kg} kg). Choisissez le <b>niveau</b> et l'<b>emplacement</b> dans la vue de face.`);
+  }
+  if (S.mode === 'prep') return consignePrep(n);
+  if (S.fini) return n('✓', 'Comptage terminé. Calculez l\'<b>écart</b> de chaque ligne : compté − théorique.');
+  if (S.empl) return n(3, 'Comptez les cartons de la palette, puis cliquez <b>Enregistrer</b>.');
+  if (!S.trav) return n(1, 'Lisez la première adresse de la liste, puis cliquez la <b>travée</b> sur le plan.');
+  return n(2, 'Cliquez l\'<b>emplacement</b> de votre liste dans la vue de face.');
+}
+
+/* =====================================================================
+   4. LE PLAN VU DE DESSUS
+   ===================================================================== */
+const Y0 = 70, TH = 100, RW = 80;                 // haut des racks, hauteur d'une travée, largeur d'un rack
+const yTrav = t => Y0 + (PLAN.travees - t) * TH;  // T01 près de l'allée principale (en bas)
+const F = 'font-family="Inter,system-ui,sans-serif"';
+function rendrePlan(){
+  const ink = 'var(--encre)', soft = 'var(--encre-douce)';
+  let s = `<defs>
+    <pattern id="hach" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="10" height="10" fill="var(--litige)"/><line x1="0" y1="0" x2="0" y2="10" stroke="var(--hachure)" stroke-width="4"/></pattern>
+    <marker id="fl" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--jaune-sol)"/></marker>
+    <marker id="oeil" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="var(--ardoise)"/></marker></defs>`;
+  s += `<rect x="10" y="10" width="780" height="545" fill="var(--sol)" stroke="${ink}" stroke-width="5"/>`;
+  // allées A et B (entre les racks)
+  for (const [k, x] of [['A', 110], ['B', 364]]){
+    s += `<rect x="${x}" y="${Y0 - 54}" width="90" height="${4 * TH + 54}" fill="var(--sol2)"/>`;
+    s += `<text x="${x + 45}" y="${Y0 + 2 * TH}" text-anchor="middle" font-size="22" font-weight="800" fill="${soft}" ${F} letter-spacing="3" transform="rotate(-90 ${x + 45} ${Y0 + 2 * TH})">ALLÉE ${k}</text>`;
+  }
+  // passage du haut, qui relie les allées A et B (le parcours de prélèvement y passe)
+  s += `<rect x="110" y="16" width="344" height="26" fill="var(--sol2)"/>`;
+  // allée principale
+  s += `<rect x="16" y="482" width="768" height="54" fill="var(--sol2)"/>
+    <line x1="16" y1="482" x2="784" y2="482" stroke="var(--jaune-sol)" stroke-width="4"/><line x1="16" y1="536" x2="784" y2="536" stroke="var(--jaune-sol)" stroke-width="4"/>
+    ${S.mode === 'prep' && S.niveau === 'evaluation' ? '' : '<line x1="360" y1="500" x2="240" y2="500" stroke="var(--jaune-sol)" stroke-width="3" marker-end="url(#fl)"/><line x1="60" y1="518" x2="180" y2="518" stroke="var(--jaune-sol)" stroke-width="3" marker-end="url(#fl)"/>'}
+    <text x="380" y="514" font-size="13" font-weight="700" fill="${soft}" ${F}>ALLÉE PRINCIPALE</text>`;
+  // zones de rotation (guidage seulement) : A près des quais, B ensuite, C au fond
+  if (S.mode === 'rang' && S.niveau === 'guidage'){
+    const bandes = [['A', 1, 1, .20, 'A · RAPIDE'], ['B', 2, 2, .10, 'B · MOYENNE'], ['C', 4, 3, 0, 'C · LENTE']];
+    for (const [k, tHaut, tBas, op, lib] of bandes){
+      const y = yTrav(tHaut), h = (tHaut - tBas + 1) * TH;
+      if (op) s += `<rect x="16" y="${y}" width="538" height="${h}" fill="rgba(201,120,10,${op})"/>`;
+      s += `<text x="548" y="${y + h / 2}" text-anchor="middle" font-size="11.5" font-weight="800" fill="var(--terre)" ${F} transform="rotate(-90 548 ${y + h / 2})">${lib}</text>`;
+    }
+  }
+  // racks
+  for (const c of PLAN.cotes) s += rack(c);
+  // parcours de prélèvement, à sens unique : on monte l'allée A, on redescend l'allée B
+  if (S.mode === 'rang' || (S.mode === 'prep' && S.niveau !== 'evaluation')){
+    s += `<path d="M126,500 L126,29 L438,29 L438,500" fill="none" stroke="var(--ardoise)" stroke-width="3" stroke-dasharray="9 6" marker-mid="url(#oeil)"/>
+      <path d="M126,500 L126,300 M126,300 L126,120" fill="none" stroke="var(--ardoise)" stroke-width="3" marker-end="url(#oeil)"/>
+      <path d="M438,140 L438,320" fill="none" stroke="var(--ardoise)" stroke-width="3" marker-end="url(#oeil)"/>
+      <rect x="96" y="${yTrav(1) + TH - 4}" width="60" height="18" rx="9" fill="var(--panneau)" stroke="var(--ardoise)" stroke-width="2"/><text x="126" y="${yTrav(1) + TH + 9}" text-anchor="middle" font-size="11" font-weight="800" fill="var(--ardoise)" ${F}>départ</text>
+      <rect x="406" y="${yTrav(1) + TH - 4}" width="64" height="18" rx="9" fill="var(--panneau)" stroke="var(--ardoise)" stroke-width="2"/><text x="438" y="${yTrav(1) + TH + 9}" text-anchor="middle" font-size="11" font-weight="800" fill="var(--ardoise)" ${F}>arrivée</text>
+      <text x="282" y="25" text-anchor="middle" font-size="10.5" font-weight="700" fill="var(--ardoise)" ${F}>PARCOURS DE PRÉLÈVEMENT →</text>`;
+  }
+  if (S.mode === 'prep') s += planPrep();
+  // regard de l'élève sur la travée choisie
+  if (S.trav){
+    const d = decoupe(S.trav + '-N1-E1'), c = cote(d.c), y = yTrav(d.t) + TH / 2;
+    const xAllee = c.allee === 'A' ? 155 : 409, xRack = c.regard === 'ouest' ? c.x + RW + 4 : c.x - 4;
+    s += `<line x1="${xAllee + (c.regard === 'ouest' ? 22 : -22)}" y1="${y}" x2="${xRack}" y2="${y}" stroke="var(--ardoise)" stroke-width="4" marker-end="url(#oeil)"/>
+      <circle cx="${xAllee + (c.regard === 'ouest' ? 30 : -30)}" cy="${y}" r="11" fill="var(--panneau)" stroke="var(--ardoise)" stroke-width="3"/><circle cx="${xAllee + (c.regard === 'ouest' ? 30 : -30)}" cy="${y}" r="4" fill="var(--ardoise)"/>`;
+  }
+  // colonne de droite du bâtiment (à côté des racks) : litiges, bureau, zone de réception / d'expédition
+  const ZX = 572, ZW = 210;
+  s += `<rect x="${ZX}" y="40" width="${ZW}" height="104" fill="url(#hach)" stroke="var(--rouge)" stroke-width="2.5" stroke-dasharray="8 5"/>
+    <text x="${ZX + ZW / 2}" y="60" text-anchor="middle" font-size="15" font-weight="800" fill="var(--rouge)" ${F}>ZONE LITIGES</text>`;
+  PLAN.litiges.forEach((l, i) => {
+    const x = ZX + 16 + i * 94, p = occupant(l);
+    s += `<g class="lit" data-l="${l}" tabindex="0" role="button" aria-label="Zone litiges ${l}">
+      <rect x="${x}" y="70" width="84" height="64" rx="3" fill="${p ? 'var(--carton)' : 'var(--panneau)'}" stroke="var(--rouge)" stroke-width="2"/>
+      <text x="${x + 42}" y="${p ? 96 : 108}" text-anchor="middle" font-family="monospace" font-size="16" font-weight="700" fill="${p ? '#1a1915' : soft}">${l}</text>
+      ${p ? `<text x="${x + 42}" y="120" text-anchor="middle" font-size="16" font-weight="800" fill="#1a1915" ${F}>${p}</text>` : ''}</g>`;
+  });
+  s += `<rect x="${ZX}" y="162" width="${ZW}" height="54" fill="var(--panneau)" stroke="${ink}" stroke-width="2.5"/>
+    <text x="${ZX + ZW / 2}" y="186" text-anchor="middle" font-size="14" font-weight="700" fill="${ink}" ${F}>Bureau</text><text x="${ZX + ZW / 2}" y="203" text-anchor="middle" font-size="12" fill="${soft}" ${F}>chef de quai</text>`;
+  s += `<rect x="${ZX}" y="290" width="${ZW}" height="186" fill="none" stroke="var(--jaune-sol)" stroke-width="3" stroke-dasharray="12 6"/>
+    <text x="${ZX + 10}" y="310" font-size="13" font-weight="800" fill="${ink}" ${F}>${S.mode === 'prep' ? 'ZONE D\'EXPÉDITION' : 'ZONE DE RÉCEPTION'}</text>`;
+  if (S.mode === 'prep'){
+    const nb = S.p.faits.length, h = hauteurPalette();
+    s += `<g class="cdeq" tabindex="0" role="button" aria-label="Voir la palette de commande">
+      <rect x="${ZX + 16}" y="324" width="${ZW - 32}" height="80" rx="3" fill="${nb ? 'var(--carton)' : 'var(--panneau)'}" stroke="var(--ardoise)" stroke-width="${!S.trav && !S.empl ? 5 : 2}"/>
+      <rect x="${ZX + 36}" y="334" width="${ZW - 72}" height="24" rx="2" fill="#fff"/><text x="${ZX + ZW / 2}" y="352" text-anchor="middle" font-size="15" font-weight="800" fill="#1a1915" ${F}>${CMD.client.split(' ')[0]} · E1</text>
+      <text x="${ZX + ZW / 2}" y="389" text-anchor="middle" font-size="14" font-weight="700" fill="${nb ? '#1a1915' : soft}" ${F}>${nb ? h.toFixed(2).replace('.', ',') + ' m' : 'palette vide'}</text></g>
+      <text x="${ZX + ZW / 2}" y="428" text-anchor="middle" font-size="13" fill="${soft}" ${F}>↑ palette de commande</text><text x="${ZX + ZW / 2}" y="446" text-anchor="middle" font-size="13" fill="${soft}" ${F}>(cliquez pour la voir)</text>`;
+  }
+  if (S.mode === 'rang') Object.keys(PALETTES).forEach((id, i) => {
+    if (S.place[id]) return;
+    const x = ZX + 16 + (i % 2) * 94, y = 322 + Math.floor(i / 2) * 76, on = S.main === id;
+    s += `<g class="palq" data-p="${id}" tabindex="0" role="button" aria-label="Palette ${id}">
+      <rect x="${x}" y="${y}" width="84" height="66" rx="3" fill="var(--carton)" stroke="${on ? 'var(--ardoise)' : 'var(--carton-trait)'}" stroke-width="${on ? 6 : 2}"/>
+      <rect x="${x + 16}" y="${y + 7}" width="52" height="24" rx="2" fill="#fff"/><text x="${x + 42}" y="${y + 25}" text-anchor="middle" font-size="17" font-weight="800" fill="#1a1915" ${F}>${id}</text>
+      <text x="${x + 42}" y="${y + 54}" text-anchor="middle" font-size="15" font-weight="700" fill="#1a1915" ${F}>${PALETTES[id].kg} kg</text></g>`;
+  });
+  // quais, sur le mur du bas (sous l'allée principale)
+  [[S.mode === 'prep' ? 'QUAI 1 · E1' : 'QUAI 1', 270], ['QUAI 2', 370], ['QUAI 3', 470]].forEach(([q, x]) => s += `<rect x="${x}" y="538" width="80" height="15" fill="var(--jaune-sol)"/><text x="${x + 40}" y="550" text-anchor="middle" font-size="10.5" font-weight="800" fill="#1a1915" ${F}>${q}</text>`);
+  // nord
+  s += `<g transform="translate(${ZX + ZW - 12},20)"><circle r="12" fill="var(--panneau)" stroke="${soft}"/><path d="M0,-8 L3.5,3.5 L0,1 L-3.5,3.5 z" fill="${ink}"/><text x="-18" y="4" text-anchor="middle" font-size="10" font-weight="800" fill="${ink}" ${F}>N</text></g>`;
+  const svg = document.getElementById('plan');
+  svg.innerHTML = s;
+  svg.querySelectorAll('.trav').forEach(g => brancher(g, () => choisirTravee(g.dataset.trav)));
+  svg.querySelectorAll('.palq').forEach(g => brancher(g, () => prendre(g.dataset.p)));
+  svg.querySelectorAll('.lit').forEach(g => brancher(g, () => poserLitige(g.dataset.l)));
+  svg.querySelectorAll('.cdeq').forEach(g => brancher(g, voirPalette));
+}
+// Un côté de rack vu de dessus, découpé entre chaque échelle ; chaque travée montre ses 3 niveaux × 3 emplacements
+function rack(c){
+  const x = c.x;
+  let g = `<text x="${x + RW / 2}" y="${Y0 - 10}" text-anchor="middle" font-size="20" font-weight="800" fill="var(--encre)" ${F}>${c.id}</text>`;
+  // échelles (montants) entre les travées
+  for (let t = 0; t <= PLAN.travees; t++){ const y = Y0 + t * TH; g += `<rect x="${x - 2}" y="${y - 4}" width="${RW + 4}" height="8" fill="var(--montant)"/>`; }
+  for (let t = 1; t <= PLAN.travees; t++){
+    const y = yTrav(t), id = `${c.id}-T${pad(t)}`, on = S.trav === id;
+    const lisseX = c.regard === 'ouest' ? x + RW - 3 : x;    // les lisses sont côté allée
+    g += `<g class="trav" data-trav="${id}" tabindex="0" role="button" aria-label="Travée ${id}, 3 niveaux">
+      <rect class="fond-trav" x="${x}" y="${y + 5}" width="${RW}" height="${TH - 10}" rx="2" fill="${on ? 'var(--ardoise-voile)' : 'var(--panneau)'}" stroke="${on ? 'var(--ardoise)' : 'var(--gris-trait)'}" stroke-width="${on ? 4 : 1.2}"/>
+      <rect x="${lisseX}" y="${y + 5}" width="3" height="${TH - 10}" fill="var(--lisse)"/>
+      <text x="${x + RW / 2}" y="${y + 24}" text-anchor="middle" font-family="monospace" font-size="15" font-weight="800" fill="var(--encre)">T${pad(t)}</text>`;
+    // pile de 3 niveaux (rappel : la travée cache 3 niveaux)
+    for (let n = 1; n <= 3; n++) for (let e = 1; e <= 3; e++){
+      const a = adr(c.id, t, n, e), st = etatEmp(a), compte = S.mode === 'inv' && S.compte[a] !== undefined;
+      const fx = x + 14 + (e - 1) * 18, fy = y + 82 - n * 17;
+      const fill = compte ? 'var(--ardoise)' : st === 'stock' ? 'var(--gris)' : st === 'eleve' ? 'var(--carton)' : st === 'hs' ? 'url(#hach)' : 'var(--panneau)';
+      g += `<rect x="${fx}" y="${fy}" width="16" height="13" fill="${fill}" stroke="${st === 'hs' ? 'var(--rouge)' : 'var(--gris-trait)'}" stroke-width=".8"/>`;
+    }
+    for (let n = 1; n <= 3; n++) g += `<line x1="${x + 12}" y1="${y + 82 - (n - 1) * 17 - 2}" x2="${x + 68}" y2="${y + 82 - (n - 1) * 17 - 2}" stroke="var(--lisse)" stroke-width="1.5"/>`;
+    g += `<text x="${x + RW / 2}" y="${y + 96}" text-anchor="middle" font-size="9.5" fill="var(--encre-douce)" ${F}>3 niveaux</text></g>`;
+  }
+  return g;
+}
+function brancher(el, f){ el.onclick = f; el.onkeydown = e => { if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); f(); } }; }
+
+/* =====================================================================
+   5. LA VUE DE FACE D'UNE TRAVÉE (3 niveaux × 3 emplacements)
+   ===================================================================== */
+function rendreFace(){
+  const box = document.getElementById('contenuVue');
+  document.getElementById('msgVue').innerHTML = ''; document.getElementById('extraVue').innerHTML = '';
+  if (S.mode === 'inv' && S.fini){ rendreEcarts(box); return; }
+  if (S.mode === 'inv' && S.empl){ rendreFiche(box); return; }
+  if (S.mode === 'prep' && S.empl){ rendrePrelev(box); return; }
+  if (S.mode === 'prep' && (!S.trav || S.p.fin || S.p.voirPalette)){ rendrePalette(box); return; }
+  if (!S.trav){
+    box.innerHTML = `<h2>La travée vue de face</h2><div class="vide-face"><div>Revenez au plan et cliquez une travée.</div></div><div class="msg ${S.msgType}">${S.msg}</div>`;
+    return;
+  }
+  const d = decoupe(S.trav + '-N1-E1'), c = cote(d.c), PW = 160, X0 = 40, Y = {1:400, 2:270, 3:140};
+  let s = `<defs><pattern id="hachF" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="10" height="10" fill="var(--litige)"/><line x1="0" y1="0" x2="0" y2="10" stroke="var(--hachure)" stroke-width="4"/></pattern></defs>`;
+  s += `<rect x="0" y="406" width="560" height="30" fill="var(--sol)"/>`;
+  // travées voisines vues depuis l'allée
+  const gauche = c.regard === 'ouest' ? d.t - 1 : d.t + 1, droite = c.regard === 'ouest' ? d.t + 1 : d.t - 1;
+  const voisin = (t, x, rot) => (t >= 1 && t <= PLAN.travees) ? `<text x="${x}" y="270" text-anchor="middle" font-size="13" fill="var(--encre-douce)" ${F} transform="rotate(${rot} ${x} 270)">${rot < 0 ? '← ' : ''}T${pad(t)}${rot > 0 ? ' →' : ''}</text>` : '';
+  s += voisin(gauche, 14, -90) + voisin(droite, 546, 90);
+  for (let n = 1; n <= 3; n++){
+    const yb = Y[n], total = chargeNiveau(c.id, d.t, n);
+    for (let e = 1; e <= 3; e++){
+      const a = adr(c.id, d.t, n, e), st = stockEn(a), p = occupant(a), hs = PLAN.horsService.includes(a), x = X0 + (e - 1) * PW;
+      s += `<g class="emp" data-a="${a}" tabindex="0" role="button" aria-label="${a}">
+        <rect class="cible" x="${x + 3}" y="${yb - 116}" width="${PW - 6}" height="112" rx="3" fill="${hs ? 'url(#hachF)' : 'transparent'}" stroke="transparent"/>`;
+      if (st || p){
+        const pal = p ? PALETTES[p] : null;
+        s += `<rect x="${x + 14}" y="${yb - 92}" width="${PW - 28}" height="78" fill="${p || (S.mode === 'prep' && n === 1) ? 'var(--carton)' : 'var(--gris)'}" stroke="${p ? 'var(--carton-trait)' : 'var(--gris-trait)'}" stroke-width="${p ? 2.5 : 1}"/>
+          <rect x="${x + 14}" y="${yb - 14}" width="${PW - 28}" height="11" fill="#a87b45"/>`;
+        if (S.mode === 'rang'){
+          s += `<text x="${x + PW / 2}" y="${yb - 58}" text-anchor="middle" font-size="13" font-weight="${p ? 800 : 600}" fill="#1a1915" ${F}>${p ? p : PROD[st.k].nom.split(' ')[0]}</text>
+            <text x="${x + PW / 2}" y="${yb - 38}" text-anchor="middle" font-size="15" font-weight="800" fill="#1a1915" ${F}>${p ? pal.kg : st.kg} kg</text>`;
+        } else if (S.mode === 'prep'){
+          if (n === 1){
+            const q = stockPick(a), mn = minPick(a), bas = q < mn;
+            s += `<text x="${x + PW / 2}" y="${yb - 66}" text-anchor="middle" font-size="13" font-weight="800" fill="#1a1915" ${F}>${court(st.k)}</text>
+              <rect x="${x + 26}" y="${yb - 58}" width="${PW - 52}" height="38" rx="2" fill="#fff" stroke="${bas ? 'var(--rouge)' : '#999'}" stroke-width="${bas ? 2.5 : 1}"/>
+              <text x="${x + PW / 2}" y="${yb - 42}" text-anchor="middle" font-size="13" font-weight="800" fill="${bas ? '#9d2727' : '#1a1915'}" ${F}>${q} ctn</text>
+              <text x="${x + PW / 2}" y="${yb - 26}" text-anchor="middle" font-size="11" font-weight="600" fill="${bas ? '#9d2727' : '#555047'}" ${F}>min ${mn}</text>`;
+          } else {
+            s += `<text x="${x + PW / 2}" y="${yb - 58}" text-anchor="middle" font-size="13" font-weight="700" fill="#1a1915" ${F}>${court(st.k)}</text>
+              <text x="${x + PW / 2}" y="${yb - 38}" text-anchor="middle" font-size="12" fill="#1a1915" ${F}>réserve</text>`;
+          }
+        } else {
+          s += `<rect x="${x + 34}" y="${yb - 70}" width="${PW - 68}" height="30" rx="2" fill="#fff" stroke="#999"/>
+            <text x="${x + PW / 2}" y="${yb - 50}" text-anchor="middle" font-family="monospace" font-size="12" font-weight="700" fill="#1a1915">${PROD[st.k].ref}</text>`;
+        }
+      } else if (hs){
+        s += `<text x="${x + PW / 2}" y="${yb - 56}" text-anchor="middle" font-size="13" font-weight="800" fill="var(--rouge)" ${F}>HORS SERVICE</text>`;
+      } else {
+        s += `<text x="${x + PW / 2}" y="${yb - 52}" text-anchor="middle" font-size="13" fill="var(--encre-douce)" ${F}>libre</text>`;
+      }
+      s += `<text x="${x + PW / 2}" y="${yb - 100}" text-anchor="middle" font-family="monospace" font-size="13" font-weight="700" fill="var(--encre-douce)">E${e}</text></g>`;
+    }
+    if (n > 1) s += `<rect x="${X0}" y="${yb}" width="${3 * PW}" height="12" fill="var(--lisse)"/>`;
+    // étiquette de niveau + plaque de charge
+    const py = n === 1 ? yb + 8 : yb - 2;
+    s += `<rect x="${X0 + 4}" y="${py}" width="132" height="18" rx="2" fill="var(--panneau)" stroke="var(--encre-douce)"/><text x="${X0 + 70}" y="${py + 14}" text-anchor="middle" font-family="monospace" font-size="12" font-weight="800" fill="var(--encre)">${c.id}-T${pad(d.t)}-N${n}</text>`;
+    if (S.mode === 'rang'){
+      s += `<rect x="${X0 + 3 * PW - 168}" y="${py}" width="164" height="18" rx="2" fill="var(--plaque)"/><text x="${X0 + 3 * PW - 86}" y="${py + 14}" text-anchor="middle" font-family="monospace" font-size="12" font-weight="800" fill="#1a1915">max ${c.charge[n].toLocaleString('fr-FR')} kg / niveau</text>`;
+      if (S.aideCharge){   // pastille lisible sur la lisse, dans les deux thèmes
+        const trop = total > c.charge[n], xd = X0 + 3 * PW - 172 - 150;
+        s += `<rect x="${xd}" y="${py}" width="146" height="18" rx="2" fill="var(--panneau)" stroke="${trop ? 'var(--rouge)' : 'var(--encre-douce)'}" stroke-width="${trop ? 2 : 1}"/>
+          <text x="${xd + 73}" y="${py + 14}" text-anchor="middle" font-size="12" font-weight="800" fill="${trop ? 'var(--rouge)' : 'var(--encre)'}" ${F}>déjà posé : ${total.toLocaleString('fr-FR')} kg</text>`;
+      }
+    }
+    s += `<text x="${X0 - 6}" y="${yb - 52}" text-anchor="end" font-size="13" font-weight="800" fill="var(--encre-douce)" ${F}>N${n}</text>`;
+  }
+  for (const x of [X0, X0 + 3 * PW]) s += `<rect x="${x - 6}" y="20" width="12" height="388" fill="var(--montant)"/>`;
+  box.innerHTML = `<div class="releve ${S.anim ? 'anim' : ''}"><svg viewBox="0 0 560 440" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Travée ${S.trav} vue de face">${s}</svg></div>`;
+  document.getElementById('msgVue').innerHTML = S.msg ? `<div class="msg ${S.msgType}">${S.msg}</div>` : '';
+  if (S.mode === 'prep'){
+    document.getElementById('extraVue').innerHTML = `<button class="btn" id="bVoirPal">Palette de commande (${S.p.faits.length})</button>`;
+    document.getElementById('bVoirPal').onclick = voirPalette;
+  }
+  if (S.mode === 'prep' && S.p.reappro) box.insertAdjacentHTML('afterbegin', `<div class="reap">↻ Réapprovisionnement de ${S.p.reappro} : cliquez la palette de réserve (N2-N3) de la même référence. Échap pour annuler.</div>`);
+  S.anim = false;
+  box.querySelectorAll('.emp').forEach(g => {
+    brancher(g, () => cliquerEmplacement(g.dataset.a));
+    g.onmouseenter = g.onfocus = () => rendreAdresse(decoupe(g.dataset.a));
+    g.onmouseleave = g.onblur = () => rendreAdresse();
+  });
+}
+
+/* =====================================================================
+   6. CAS 1 — RANGEMENT
+   ===================================================================== */
+function prendre(id){
+  if (S.mode !== 'rang') return;
+  if (S.place[id]){ delete S.place[id]; }                 // reprendre une palette déjà posée
+  S.main = S.main === id ? null : id; S.msg = ''; S.verif = false; tout();
+}
+function choisirTravee(t){ S.trav = t; S.anim = true; S.empl = null; S.msg = ''; if (S.p) S.p.voirPalette = false; tout(); }
+function poserLitige(l){
+  if (S.mode !== 'rang' || !S.main) return;
+  if (occupant(l)){ dire(`${l} est déjà occupé.`, 'non'); return; }
+  S.place[S.main] = l; dire(`<b>${S.main}</b> posée en zone litiges ${l}.`, 'oui'); S.main = null; tout();
+}
+function cliquerEmplacement(a){
+  if (S.mode === 'inv'){ ouvrirComptage(a); return; }
+  if (S.mode === 'prep'){ cliquerPrep(a); return; }
+  if (!S.main){ dire(`<b>${a}</b> : prenez d'abord une palette.`, ''); return; }
+  if (STOCK[a] || occupant(a)){ dire('Emplacement déjà occupé. La palette reste en main.', 'non'); return; }
+  S.place[S.main] = a; dire(`<b>${S.main}</b> posée en <b>${a}</b>.`, 'oui'); S.main = null; S.verif = false; tout();
+}
+function dire(t, type){ S.msg = t; S.msgType = type; rendreFace(); rendreAdresse(); }
+// Les critères de rangement, déclarés par la séance. Renvoie la liste des critères non respectés si la palette « id »
+// était posée en « a » (les autres palettes restant où elles sont).
+function fautes(id, a){
+  const p = PALETTES[id], F = [];
+  if (!a) return [{ crit:'rangement', txt:'pas posée' }];
+  if (p.litige) return a.startsWith('L') ? [] : [{ crit:'litige', txt:'carton écrasé : elle va en zone litiges' }];
+  if (a.startsWith('L')) return [{ crit:'litige', txt:'elle n\'est pas en litige : elle va en stock' }];
+  const d = decoupe(a), c = cote(d.c), r = PLAN.rotation[p.rot];
+  if (PLAN.horsService.includes(a)) F.push({ crit:'état', txt:'emplacement hors service' });
+  if (!c.gammes.includes(PROD[p.k].g)) F.push({ crit:'type de produit', txt:`la gamme ${GAMMES[PROD[p.k].g]} se range en ${cotesDeGamme(PROD[p.k].g).join(' ou ')}` });
+  else if (p.lourd && c.allee !== PLAN.debutParcours) F.push({ crit:'parcours', txt:`produit lourd : en début de parcours (allée ${PLAN.debutParcours})` });
+  else if (p.fragile && c.allee !== PLAN.finParcours) F.push({ crit:'parcours', txt:`produit fragile : en fin de parcours (allée ${PLAN.finParcours})` });
+  if (!r.travees.includes(d.t) || !r.niveaux.includes(d.n)) F.push({ crit:'rotation', txt:`rotation ${r.lib} : ${r.texte}` });
+  if (p.fragile && d.n === 3) F.push({ crit:'produit fragile', txt:'pas au niveau N3' });
+  let tot = p.kg; for (let e = 1; e <= 3; e++){ const b = adr(d.c, d.t, d.n, e), o = occupant(b); if (b === a) continue; tot += STOCK[b] ? STOCK[b].kg : (o && o !== id) ? PALETTES[o].kg : 0; }
+  if (tot > c.charge[d.n]) F.push({ crit:'poids', txt:'la charge totale du niveau dépasse son maximum' });
+  return F;
+}
+const juger = id => fautes(id, S.place[id]);
+// toutes les bonnes réponses d'une palette, sur le stock de départ (pour l'enseignant)
+function solutions(id){
+  const sol = [];
+  const tous = [...PLAN.litiges];
+  for (const c of PLAN.cotes) for (let t = 1; t <= PLAN.travees; t++) for (let n = 1; n <= 3; n++) for (let e = 1; e <= 3; e++) tous.push(adr(c.id, t, n, e));
+  for (const a of tous) if (!STOCK[a] && !fautes(id, a).length) sol.push(a);
+  return sol;
+}
+function verdict(id){
+  const f = juger(id);
+  if (!f.length) return `<span class="verd ok">✓ bien rangée</span>`;
+  if (S.niveau === 'evaluation') return `<span class="verd ko">✗ à revoir</span>`;
+  if (S.niveau === 'entrainement') return `<span class="verd ko">✗ critère : ${[...new Set(f.map(x => x.crit))].join(', ')}</span>`;
+  return `<span class="verd ko">${f.map(x => `✗ ${x.crit} : ${x.txt}`).join(' · ')}</span>`;
+}
+// la consigne précise d'une palette (guidage)
+function consignePalette(id){
+  const p = PALETTES[id], r = PLAN.rotation[p.rot], g = PROD[p.k].g;
+  if (p.litige) return 'Carton écrasé : <b>zone litiges</b>.';
+  const morceaux = [`gamme ${GAMMES[g]} : côté <b>${cotesDeGamme(g).join(' ou ')}</b>`];
+  if (p.lourd) morceaux.push(`produit lourd : <b>début de parcours (allée ${PLAN.debutParcours})</b>`);
+  morceaux.push(`rotation ${r.lib} : <b>${r.texte}</b>`);
+  if (p.fragile) morceaux.push(`fragile : <b>fin de parcours (allée ${PLAN.finParcours}), pas en N3</b>`);
+  morceaux.push('vérifie la <b>charge du niveau</b>');
+  return morceaux.join(' · ') + '.';
+}
+const BRUNO = {
+  guidage:'Yanis, on range les 4 palettes d\'Arinthod. Suis la consigne écrite sur chaque palette.',
+  entrainement:'Yanis, range les 4 palettes d\'Arinthod en appliquant les règles de l\'entrepôt.',
+  evaluation:'Yanis, les 4 palettes d\'Arinthod sont à ranger.',
+};
+function fichePalette(id){
+  const p = PALETTES[id], r = PLAN.rotation[p.rot];
+  const contraintes = [p.lourd && 'lourd', p.fragile && 'fragile'].filter(Boolean).join(', ') || '—';
+  return `<dl><dt>Poids</dt><dd>${p.kg} kg</dd><dt>Gamme</dt><dd>${GAMMES[PROD[p.k].g]}</dd>
+    <dt>Rotation</dt><dd>${p.rot} (${r.lib})</dd><dt>Contrainte</dt><dd>${contraintes}</dd>
+    <dt>Réception</dt><dd class="${p.note ? 'res' : ''}">${p.note || 'conforme'}</dd>
+    <dt>Emplacement</dt><dd>${S.place[id] ? `<span class="etat adr">${S.place[id]}</span>` : S.main === id ? '<span class="etat">en main</span>' : '—'}</dd></dl>`;
+}
+const boiteRegles = (html, titre = 'Les règles') => html ? `<details class="b-regles" ${S.reglesOuvertes ? 'open' : ''}><summary>${titre} ▾</summary>${html}</details>` : '';
+function brancherRegles(el){ const d = el.querySelector('.b-regles'); if (d) d.ontoggle = () => { S.reglesOuvertes = d.open; }; }
+function rendreGaucheRang(){
+  const el = document.getElementById('gauche'), niv = S.niveau;
+  const regles = niv === 'guidage' || niv === 'entrainement' ? `<div class="regles"><b>Les règles de l'entrepôt</b><ol>
+      <li><b>Type de produit</b> : le côté de sa gamme (plan d'implantation).</li>
+      <li><b>Parcours</b> : un produit <b>lourd</b> en début de parcours (allée A), un produit <b>fragile</b> en fin de parcours (allée B) : à la préparation, le lourd fait la base de la palette, le fragile va en haut.</li>
+      <li><b>Produit fragile</b> : jamais au niveau N3.</li>
+      <li><b>Rotation</b> : A rapide → T01 (près des quais), N1 ou N2 · B moyenne → T02 · C lente → T03-T04, tous niveaux.</li>
+      <li><b>Poids</b> : la charge totale du niveau ne dépasse pas la plaque jaune.</li>
+      <li>Un emplacement <b>libre</b> et <b>en service</b> ; une palette <b>en litige</b> va en zone litiges.</li></ol>
+      <div class="encadre">Monter aux niveaux 2 et 3 demande le chariot rétractable : il faut le <b>CACES 5</b>. Yanis l'a.</div></div>` : '';
+  el.innerHTML = `<div class="bruno"><b>Bruno, chef de quai · mer. 9 déc., 17 h</b>${BRUNO[niv]}</div>
+    <div class="b-liste"><h2>Palettes à ranger</h2><div class="b-cartes">
+    ${Object.keys(PALETTES).map(id => `<button class="pal ${S.main === id ? 'en-main' : ''} ${S.place[id] ? 'posee' : ''}" data-p="${id}">
+      <span class="txt"><span class="ttl"><b><span class="pid">${id}</span> ${PALETTES[id].nom}</b></span>${fichePalette(id)}${S.verif ? verdict(id) : ''}</span></button>`).join('')}</div>
+</div>
+    <div class="b-act"><button class="btn plein" id="bVerif" ${Object.keys(S.place).length ? '' : 'disabled'}>Vérifier mon rangement</button>
+    ${boiteRegles(regles)}</div>`;
+  brancherRegles(el);
+  document.getElementById('consCote').innerHTML = niv === 'guidage' ? `<div class="consG cons-ligne">${S.main ? `<b>Consigne pour ${S.main}</b><br>${consignePalette(S.main).replace(/ · /g, '<br>')}` : 'Prenez une palette : sa consigne s\'affiche ici.'}</div>` : '';
+  el.querySelectorAll('.pal').forEach(b => b.onclick = () => prendre(b.dataset.p));
+  el.querySelector('#bVerif').onclick = () => { S.verif = true; tout(); };
+}
+
+/* =====================================================================
+   7. CAS 2 — INVENTAIRE À UNE LISTE D'ADRESSES (comptage à l'aveugle)
+   ===================================================================== */
+function rendreGaucheInv(){
+  document.getElementById('consCote').innerHTML = '';
+  const el = document.getElementById('gauche'), n = Object.keys(S.compte).length;
+  el.innerHTML = `<div class="bruno"><b>Bruno, chef de quai · jeu. 10 déc., 7 h 30</b>Yanis, avant l'enlèvement, recompte ces 8 emplacements. Compte les cartons, sans regarder l'écran Stock.</div>
+    <div class="b-liste"><h2>Liste de comptage INV-1210 · ${n}/8</h2>
+    <div class="b-cartes grille">${LISTE.map(a => `<div class="puce ${S.compte[a] !== undefined ? 'fait' : ''} ${S.empl === a ? 'ici' : ''}"><span class="a">${a}</span> <span class="q">${S.compte[a] !== undefined ? S.compte[a] + ' ctn' : '…'}</span></div>`).join('')}</div></div>
+    <div class="b-act"><button class="btn plein" id="bFin" ${n === 8 && !S.fini ? '' : 'disabled'}>Terminer le comptage</button>
+    ${boiteRegles(`<div class="regles"><b>Compter une palette</b><ol>
+      <li>Cartons d'une <b>couche</b> = largeur × profondeur.</li>
+      <li>× nombre de <b>couches complètes</b>.</li>
+      <li>+ les cartons de la <b>couche du dessus</b>.</li></ol>
+      <div class="encadre">L'adresse se lit dans l'ordre : allée et côté, travée, niveau, emplacement.</div></div>`, 'Compter une palette')}</div>`;
+  brancherRegles(el);
+  el.querySelector('#bFin').onclick = () => { S.fini = true; S.empl = null; tout(); };
+}
+function ouvrirComptage(a){
+  if (!STOCK[a]){ dire(`<b>${a}</b> : emplacement vide.`, ''); return; }
+  // toute palette s'ouvre : aucun signal si l'adresse n'est pas sur la liste (l'élève cherche seul)
+  S.empl = a; S.msg = ''; tout();
+}
+function rendreFiche(box){
+  const a = S.empl, st = STOCK[a], p = PROD[st.k];
+  box.innerHTML = `<div class="fiche"><div class="etiq"><span class="code">${p.ref}</span><span>${p.nom}</span></div>
+      <div class="svgbox" style="margin-top:6px">${pile(p.c, st.ecart, p.box)}</div>
+      <div class="saisie"><label for="nb"><b>Cartons comptés</b></label><input id="nb" type="number" min="0" inputmode="numeric" value="${S.compte[a] ?? ''}"><button class="btn plein" id="bEnr">Enregistrer</button></div>
+      <div class="aide-couches">Les couches du dessous sont complètes. Regardez bien la couche du dessus.</div>
+      <div class="msg ${S.msgType}">${S.msg}</div></div>`;
+  const inp = box.querySelector('#nb'); inp.focus();
+  const enr = () => { const v = parseInt(inp.value, 10); if (isNaN(v) || v < 0){ S.msg = 'Saisissez un nombre de cartons.'; S.msgType = 'non'; rendreFace(); return; }
+    S.compte[a] = v; S.empl = null; S.msg = `<b>${a}</b> : ${v} cartons enregistrés.`; S.msgType = 'oui'; tout(); };
+  box.querySelector('#bEnr').onclick = enr; inp.onkeydown = e => { if (e.key === 'Enter') enr(); };
+}
+// Palette de cartons en perspective (couches du dessous complètes ; écart visible sur la couche du dessus)
+function pile([W, D, L], ecart, box = [1, 1, .8]){
+  const cubes = [];
+  for (let z = 0; z < L; z++) for (let x = 0; x < W; x++) for (let y = 0; y < D; y++) cubes.push([x, y, z]);
+  if (ecart < 0){   // il manque des cartons : on les retire par le haut, couche après couche, en commençant par le fond
+    const haut = [...cubes].sort((p, q) => (q[2] - p[2]) || ((p[0] + p[1]) - (q[0] + q[1]))).slice(0, -ecart);
+    haut.forEach(h => cubes.splice(cubes.indexOf(h), 1));
+  }
+  if (ecart > 0) for (let i = 0; i < ecart; i++) cubes.push([W - 1 - i % W, D - 1 - Math.floor(i / W) % D, L + Math.floor(i / (W * D))]);   // carton(s) en trop posé(s) dessus
+  const [bw, bd, bh] = box, a = 30, k = .87;
+  // projection d'un point exprimé en « cartons » (x, y, z) vers l'écran
+  const P = (x, y, z) => [(x * bw - y * bd) * a * k, (x * bw + y * bd) * a * .5 - z * bh * a];
+  const pt = (x, y, z) => P(x, y, z).map(v => v.toFixed(1)).join(',');
+  const poly = pts => pts.map(q => pt(...q)).join(' ');
+  let s = '';
+  // palette en bois (plateau + 3 semelles visibles)
+  const b = -.22 / bh;
+  s += `<polygon points="${poly([[0,0,0],[W,0,0],[W,D,0],[0,D,0]])}" fill="#b98b55"/>`;
+  s += `<polygon points="${poly([[W,0,b],[W,D,b],[W,D,0],[W,0,0]])}" fill="#8f6532"/><polygon points="${poly([[0,D,b],[W,D,b],[W,D,0],[0,D,0]])}" fill="#a87b45"/>`;
+  for (const f of [.15, .5, .85]){ const x0 = W * f - .12, x1 = W * f + .12; s += `<polygon points="${poly([[x0,D,b],[x1,D,b],[x1,D,b*.35],[x0,D,b*.35]])}" fill="#4a3520"/>`; }
+  cubes.sort((p, q) => (p[0] + p[1] + p[2]) - (q[0] + q[1] + q[2]) || p[2] - q[2]);
+  const trait = '#6e4a22';
+  for (const [x, y, z] of cubes){
+    // dessus, côté droit, face avant
+    s += `<polygon points="${poly([[x,y,z+1],[x+1,y,z+1],[x+1,y+1,z+1],[x,y+1,z+1]])}" fill="#e6c48f" stroke="${trait}" stroke-width="1.1" stroke-linejoin="round"/>`;
+    s += `<polygon points="${poly([[x+1,y,z],[x+1,y+1,z],[x+1,y+1,z+1],[x+1,y,z+1]])}" fill="#b98a50" stroke="${trait}" stroke-width="1.1" stroke-linejoin="round"/>`;
+    s += `<polygon points="${poly([[x,y+1,z],[x+1,y+1,z],[x+1,y+1,z+1],[x,y+1,z+1]])}" fill="#d0a066" stroke="${trait}" stroke-width="1.1" stroke-linejoin="round"/>`;
+    // ruban adhésif sur le dessus et qui descend sur la face avant
+    s += `<polygon points="${poly([[x+.44,y,z+1],[x+.56,y,z+1],[x+.56,y+1,z+1],[x+.44,y+1,z+1]])}" fill="#c9a571" opacity=".9"/>`;
+    s += `<polygon points="${poly([[x+.44,y+1,z+1],[x+.56,y+1,z+1],[x+.56,y+1,z+.78],[x+.44,y+1,z+.78]])}" fill="#b98f58" opacity=".9"/>`;
+    // rabats : pli au milieu du dessus
+    s += `<line x1="${P(x,y+.5,z+1)[0].toFixed(1)}" y1="${P(x,y+.5,z+1)[1].toFixed(1)}" x2="${P(x+1,y+.5,z+1)[0].toFixed(1)}" y2="${P(x+1,y+.5,z+1)[1].toFixed(1)}" stroke="${trait}" stroke-width=".6" opacity=".55"/>`;
+    // étiquette sur la face avant
+    s += `<polygon points="${poly([[x+.12,y+1,z+.22],[x+.38,y+1,z+.22],[x+.38,y+1,z+.5],[x+.12,y+1,z+.5]])}" fill="#fbfaf6" stroke="#9a8f80" stroke-width=".5"/>`;
+    // flèches « haut » sur le côté
+    const c = P(x + 1, y + .5, z + .55);
+    s += `<path d="M${c[0].toFixed(1)},${(c[1]-5).toFixed(1)} l-3,4 m3,-4 l3,4 m-3,-4 v9" stroke="${trait}" stroke-width=".9" fill="none" opacity=".7"/>`;
+  }
+  const Lh = L + Math.max(1, Math.ceil(Math.max(0, ecart) / (W * D)));
+  const xs = [P(0, D, 0)[0], P(W, 0, 0)[0]], ys = [P(0, 0, Lh)[1], P(W, D, b)[1]];
+  const m = 12, vb = `${(xs[0] - m).toFixed(1)} ${(ys[0] - m).toFixed(1)} ${(xs[1] - xs[0] + 2 * m).toFixed(1)} ${(ys[1] - ys[0] + 2 * m).toFixed(1)}`;
+  return `<svg viewBox="${vb}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Palette de cartons à compter">${s}</svg>`;
+}
+function rendreEcarts(box){
+  const lignes = LISTE.map(a => {
+    const th = theorique(a), c = S.compte[a], juste = c - th, saisi = S.ecartsSaisis[a];
+    const etat = S.ecartsVus ? (parseInt(saisi, 10) === juste ? 'ok' : 'ko') : '';
+    return `<tr><td class="a">${a}</td><td>${PROD[STOCK[a].k].nom}</td><td class="n">${c}</td><td class="n">${th}</td>
+      <td><input data-a="${a}" type="text" inputmode="numeric" value="${saisi ?? ''}" aria-label="Écart ${a}" placeholder="?"></td>
+      <td class="${etat}">${S.ecartsVus ? (etat === 'ok' ? '✓' : '✗') : ''}</td></tr>`;
+  }).join('');
+  const comptesJustes = LISTE.filter(a => S.compte[a] === reel(a)).length;
+  box.innerHTML = `<h2>Les écarts d'inventaire</h2>
+    <p style="margin:0 0 6px; font-size:.92rem">Le stock théorique s'affiche maintenant. <b>Écart = compté − théorique</b> (négatif : il manque des cartons ; 0 : pas d'écart).</p>
+    <div style="overflow:auto"><table class="ecarts"><thead><tr><th>Adresse</th><th>Produit</th><th>Compté</th><th>Théorique</th><th>Écart</th><th></th></tr></thead><tbody>${lignes}</tbody></table></div>
+    <div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap"><button class="btn plein" id="bEc">Vérifier mes écarts</button></div>
+    ${S.ecartsVus ? `<div class="msg">Écarts justes : <b>${LISTE.filter(a => parseInt(S.ecartsSaisis[a], 10) === S.compte[a] - theorique(a)).length}/8</b> · comptages justes : <b>${comptesJustes}/8</b></div>` : ''}`;
+  box.querySelectorAll('input').forEach(i => i.oninput = () => { S.ecartsSaisis[i.dataset.a] = i.value.trim(); });
+  box.querySelector('#bEc').onclick = () => { S.ecartsVus = true; rendreEcarts(box); };
+}
+
+/* =====================================================================
+   7 bis. CAS 3 — PRÉPARATION DE COMMANDE (colis complet, N1 = picking, N2-N3 = réserve)
+   ===================================================================== */
+const prelev = l => S.p.faits.filter(f => f.a === l.a).reduce((t, f) => t + f.q, 0);
+const ordreLignes = () => S.niveau === 'guidage' ? CMD.lignes.map((_, i) => i) : CMD.desordre;
+const prochaineLigne = () => ordreLignes().map(i => CMD.lignes[i]).find(l => prelev(l) < l.q) || null;
+function horsCommande(){
+  const h = {};
+  for (const f of S.p.faits) if (!CMD.lignes.some(l => l.a === f.a)) h[f.a] = { a:f.a, k:f.k, q:(h[f.a] ? h[f.a].q : 0) + f.q };
+  return Object.values(h);
+}
+const tourEleve = () => longueurTour(S.p.faits.map(f => pointDe(f.a)), S.p.parcours || 'serpentin');
+const hauteurPalette = () => CMD.hPalette + S.p.faits.reduce((t, f) => t + Math.ceil(f.q / CTN[f.k].parCouche) * CTN[f.k].h, 0);
+const poidsPalette = () => Math.round(CMD.kgPalette + S.p.faits.reduce((t, f) => t + f.q * CTN[f.k].kg, 0));
+const virgule = (x, d = 2) => x.toFixed(d).replace('.', ',');
+const ETQ = [['avant', 'face avant'], ['arriere', 'face arrière'], ['gauche', 'côté gauche'], ['droite', 'côté droit'], ['dessus', 'dessus']];
+
+function consignePrep(n){
+  if (S.p.bilan) return n('✓', 'Lisez vos indicateurs. <b>Reprendre la préparation</b> pour corriger.');
+  if (S.p.fin) return n(4, 'Filmez et étiquetez la palette, puis cliquez <b>Vérifier ma préparation</b>.');
+  if (S.p.reappro) return n('↻', 'Réapprovisionnement : cliquez une palette de <b>réserve</b> (N2-N3) de la même référence.');
+  if (S.niveau === 'evaluation' && !S.p.parcours) return n(1, 'Choisissez votre <b>parcours</b> (en haut).');
+  if (S.empl) return n(3, 'Saisissez le nombre de cartons à prélever, puis cliquez <b>Prélever</b>.');
+  const suiv = prochaineLigne();
+  if (!suiv) return n('✓', 'Toutes les lignes sont prélevées. Cliquez <b>Terminer la préparation</b> (en haut).');
+  if (!S.trav || S.p.voirPalette){
+    if (S.niveau === 'guidage') return n(1, `Ligne ${ordreLignes().indexOf(CMD.lignes.indexOf(suiv)) + 1} : cliquez la travée <b>${suiv.a.slice(0, 6)}</b> sur le plan.`);
+    return n(1, 'Choisissez la ligne suivante du bon et cliquez sa <b>travée</b> sur le plan.');
+  }
+  return n(2, 'Cliquez l\'emplacement de <b>picking</b> (niveau N1) de la ligne.');
+}
+
+// sur le plan : numéros des lignes (guidage) et trace du tour de l'élève (tous niveaux)
+function planPrep(){
+  let s = '';
+  const pts = S.p.faits.map(f => pointDe(f.a));
+  if (pts.length){
+    const t = longueurTour(pts, S.p.parcours || 'serpentin').pts;
+    s += `<g transform="translate(7,-7)" pointer-events="none"><polyline points="${t.map(p => p.map(v => v.toFixed(0)).join(',')).join(' ')}" fill="none" stroke="var(--terre)" stroke-width="5" stroke-linejoin="round" opacity=".85"/>`;
+    for (const p of pts) s += `<circle cx="${p[0]}" cy="${p[1]}" r="6" fill="var(--terre)"/>`;
+    s += `</g>`;
+  }
+  if (S.niveau === 'guidage'){
+    const vus = {};
+    CMD.lignes.forEach((l, i) => {
+      const d = decoupe(l.a), c = cote(d.c), cle = d.c + d.t, j = vus[cle] = (vus[cle] ?? -1) + 1;
+      const cx = j === 0 ? c.x + RW - 11 : c.x + 11, cy = yTrav(d.t) + 19, fait = prelev(l) === l.q;
+      s += `<g pointer-events="none"><circle cx="${cx}" cy="${cy}" r="10" fill="${fait ? 'var(--ardoise-fond)' : 'var(--plaque)'}" stroke="var(--encre)" stroke-width="1.2"/>
+        <text x="${cx}" y="${cy + 4.5}" text-anchor="middle" font-size="12" font-weight="800" fill="${fait ? 'var(--sur-ardoise)' : '#1a1915'}" ${F}>${fait ? '✓' : i + 1}</text></g>`;
+    });
+  }
+  return s;
+}
+
+function voirPalette(){ if (S.mode !== 'prep') return; S.p.voirPalette = true; S.empl = null; S.msg = ''; tout(); }
+
+function cliquerPrep(a){
+  if (S.p.fin){ dire('La préparation est terminée : cliquez <b>Reprendre la préparation</b> pour prélever encore.', ''); return; }
+  const d = decoupe(a), st = stockEn(a);
+  if (S.p.reappro){
+    const cible = S.p.reappro, k = STOCK[cible].k;
+    if (d.n === 1){ dire('La réserve est aux niveaux <b>N2-N3</b>, au-dessus du picking.', 'non'); return; }
+    if (!st){ dire(`<b>${a}</b> : emplacement vide.`, 'non'); return; }
+    if (st.k !== k){ dire(`<b>${a}</b> : ce n'est pas la même référence (${PROD[st.k].ref}, ${PROD[st.k].nom}).`, 'non'); return; }
+    S.p.pick[cible] = stockPick(cible) + theorique(a); S.p.vides.push(a); S.p.reappros.push({ pour:cible, de:a }); S.p.reappro = null;
+    S.msg = `Réapprovisionnement fait : la palette de <b>${a}</b> est descendue en <b>${cible}</b> par le cariste (CACES 5). Picking : ${stockPick(cible)} cartons.`;
+    S.msgType = 'oui'; tout(); return;
+  }
+  if (!st){ dire(`<b>${a}</b> : emplacement vide.`, ''); return; }
+  if (d.n > 1){ S.p.essaisReserve.push(a); dire(`<b>${a}</b> est une palette de <b>réserve</b> : on prélève au niveau <b>N1</b> (picking).`, 'non'); return; }
+  if (S.niveau === 'evaluation' && !S.p.parcours){ dire('Choisissez d\'abord votre parcours (en haut).', 'non'); return; }
+  S.empl = a; S.msg = ''; tout();
+}
+
+function rendrePrelev(box){
+  const a = S.empl, st = STOCK[a], p = PROD[st.k], c = CTN[st.k], q = stockPick(a), mn = minPick(a), bas = q < mn;
+  const ligne = CMD.lignes.find(l => l.a === a), reste = ligne ? ligne.q - prelev(ligne) : 0;
+  let aide = '';
+  if (S.niveau === 'guidage'){
+    if (!ligne) aide = 'Cette adresse n\'est pas sur le bon de préparation.';
+    else if (reste <= 0) aide = 'Cette ligne est déjà prélevée.';
+    else if (q < reste) aide = `Il faut <b>${reste}</b> cartons et il n'en reste que <b>${q}</b> : le picking est sous son minimum. Cliquez <b>Demander la descente de la réserve</b> : une palette de la même référence est juste au-dessus.`;
+    else aide = `Ligne du bon : prélevez <b>${reste}</b> carton${reste > 1 ? 's' : ''}.`;
+  }
+  box.innerHTML = `<div class="fiche"><div class="ligne-haut"><div class="etiq"><span class="code">${p.ref}</span><span>${p.nom}</span><span class="code">${a}</span></div></div>
+      <div class="stockpick ${bas ? 'bas' : ''}">Picking : <b>${q} carton${q > 1 ? 's' : ''}</b> · minimum ${mn}${bas ? ' — <b>sous le minimum</b>' : ''}
+        <span class="petit">· ${c.kg.toLocaleString('fr-FR')} kg le carton${c.lourd ? ' · <b>lourd</b>' : ''}${c.fragile ? ' · <b>fragile</b>' : ''}</span></div>
+      ${aide ? `<div class="consG">${aide}</div>` : ''}
+      <div class="svgbox pilebox">${pile(p.c, q - theorique(a), p.box)}</div>
+      <div class="saisie"><label for="nb"><b>Cartons à prélever</b></label><input id="nb" type="number" min="1" inputmode="numeric"><button class="btn plein" id="bPrel">Prélever</button>
+        <button class="btn" id="bReap">↻ Descente de la réserve</button></div>
+      ${S.msg ? `<div class="msg ${S.msgType}">${S.msg}</div>` : ''}</div>`;
+  const inp = box.querySelector('#nb'); inp.focus();
+  const go = () => {
+    const v = parseInt(inp.value, 10), q2 = stockPick(a);
+    if (isNaN(v) || v < 1){ S.msg = 'Saisissez un nombre de cartons.'; S.msgType = 'non'; rendreFace(); return; }
+    if (v > q2){ S.msg = `Il n'y a que <b>${q2}</b> carton${q2 > 1 ? 's' : ''} au picking.`; S.msgType = 'non'; rendreFace(); return; }
+    S.p.pick[a] = q2 - v; S.p.faits.push({ a, k:st.k, q:v }); S.empl = null;
+    S.msg = `${v} × ${p.nom} posé${v > 1 ? 's' : ''} sur la palette de commande.`; S.msgType = 'oui'; tout();
+  };
+  box.querySelector('#bPrel').onclick = go; inp.onkeydown = e => { if (e.key === 'Enter') go(); };
+  box.querySelector('#bReap').onclick = () => {
+    if (stockPick(a) >= minPick(a)){ S.msg = 'Le picking n\'est pas sous son minimum : pas de réapprovisionnement.'; S.msgType = 'non'; rendreFace(); return; }
+    S.p.reappro = a; S.empl = null; S.msg = ''; tout();
+  };
+}
+
+// la palette de commande, vue de face, montée dans l'ordre du prélèvement
+function dessinPalette(){
+  const K = 200, W = 220, X = 16, h = hauteurPalette(), hv = Math.max(h, CMD.hMax) + .14, H = hv * K + 30, Y = H - 18;
+  let s = `<rect x="0" y="${Y}" width="440" height="18" fill="var(--sol)"/>`;
+  const hp = CMD.hPalette * K;
+  s += `<rect x="${X}" y="${Y - hp}" width="${W}" height="8" fill="#b98b55"/>`;
+  for (const f of [0, .45, .9]) s += `<rect x="${X + f * W}" y="${Y - hp + 8}" width="${W * .1}" height="${hp - 8}" fill="#8f6532"/>`;
+  let y = Y - hp;
+  if (!S.p.faits.length) s += `<text x="${X + W / 2}" y="${Y - hp - 30}" text-anchor="middle" font-size="14" fill="var(--encre-douce)" ${F}>Palette vide : prélevez la première ligne.</text>`;
+  S.p.faits.forEach((f, i) => {
+    const c = CTN[f.k], n = Math.ceil(f.q / c.parCouche), bh = c.h * K, bw = W / c.parCouche;
+    for (let k = 0; k < n; k++){
+      const dans = Math.min(c.parCouche, f.q - k * c.parCouche);
+      for (let j = 0; j < dans; j++) s += `<rect x="${(X + j * bw + 1).toFixed(1)}" y="${(y - bh * (k + 1) + 1).toFixed(1)}" width="${(bw - 2).toFixed(1)}" height="${(bh - 2).toFixed(1)}" fill="${c.fragile ? '#f2dcb8' : c.lourd ? '#b07c40' : '#d4a46a'}" stroke="#6e4a22" stroke-width="1.2"/>`;
+    }
+    const top = y - bh * n, ym = (y + top) / 2;
+    if (c.fragile) s += `<text x="${X + W / 2}" y="${ym + 4}" text-anchor="middle" font-size="11" font-weight="800" fill="#9d2727" ${F}>FRAGILE</text>`;
+    s += `<line x1="${X + W + 2}" y1="${ym}" x2="${X + W + 12}" y2="${ym}" stroke="var(--encre-douce)"/>
+      <text x="${X + W + 16}" y="${ym + 4}" font-size="15" font-weight="700" fill="var(--encre)" ${F}>${i + 1}. ${court(f.k)} × ${f.q} <tspan font-weight="400" fill="var(--encre-douce)">(${Math.round(f.q * c.kg)} kg${c.lourd ? ', lourd' : ''})</tspan></text>`;
+    y = top;
+  });
+  if (S.p.film) s += `<rect x="${X - 3}" y="${y - 2}" width="${W + 6}" height="${Y - hp - y + 10}" fill="rgba(150,190,230,.22)" stroke="rgba(120,160,210,.8)" stroke-width="1.5"/>`;
+  if (S.p.etiq.avant && S.p.faits.length) s += `<rect x="${X + W - 54}" y="${(y + Y - hp) / 2 - 14}" width="44" height="28" fill="#fff" stroke="#555"/><text x="${X + W - 32}" y="${(y + Y - hp) / 2 + 4}" text-anchor="middle" font-size="9" font-weight="800" fill="#1a1915" ${F}>JDR · E1</text>`;
+  if (S.p.etiq.dessus && S.p.faits.length) s += `<rect x="${X + W / 2 - 22}" y="${y - 6}" width="44" height="6" fill="#fff" stroke="#555"/>`;
+  const yMax = Y - CMD.hMax * K;
+  s += `<line x1="${X - 10}" y1="${yMax}" x2="${X + W + 10}" y2="${yMax}" stroke="var(--rouge)" stroke-width="2" stroke-dasharray="7 5"/>
+    <text x="${X + W + 16}" y="${yMax + 5}" font-size="14" font-weight="800" fill="var(--rouge)" ${F}>${virgule(CMD.hMax)} m max (${CMD.transporteur})</text>`;
+  return `<svg viewBox="0 0 440 ${H.toFixed(0)}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Palette de commande vue de face">${s}</svg>`;
+}
+
+function reglesPalette(){
+  const F = S.p.faits, R = [];
+  let nonLourd = false, okLourd = true;
+  for (const f of F){ if (CTN[f.k].lourd && nonLourd) okLourd = false; if (!CTN[f.k].lourd) nonLourd = true; }
+  R.push({ crit:'lourds en bas', ok:okLourd, txt:'les cartons lourds (Maison, 50 kg) se prélèvent en premier : ils font la base de la palette' });
+  // classes : lourd > normal > fragile ; jamais une classe plus lourde posée sur une classe plus fragile
+  const okFrag = !F.some((f, i) => CTN[f.k].fragile && F.slice(i + 1).some(g => !CTN[g.k].fragile));
+  R.push({ crit:'fragiles en haut', ok:okFrag, txt:'des cartons ont été posés sur un carton fragile (Cuisine Tefal) : les fragiles se prélèvent en dernier' });
+  R.push({ crit:'poids', ok:poidsPalette() <= CMD.kgMax, txt:`${poidsPalette()} kg pour ${CMD.kgMax} kg maximum` });
+  R.push({ crit:'hauteur', ok:hauteurPalette() <= CMD.hMax + 1e-9, txt:`${virgule(hauteurPalette())} m pour ${virgule(CMD.hMax)} m maximum` });
+  const t = parseInt(S.p.film, 10);
+  R.push({ crit:'film', ok:t >= 3 && t <= 5, txt:'3 à 5 tours de film, du socle au sommet' });
+  const e = ETQ.map(x => x[0]).filter(k => S.p.etiq[k]).sort().join(',');
+  R.push({ crit:'étiquettes', ok:e === 'arriere,avant,dessus' || e === 'dessus,droite,gauche', txt:'une étiquette sur deux côtés opposés et une sur le dessus' });
+  return R;
+}
+
+function bilanPrep(){
+  const niv = S.niveau, L = tourEleve().L;
+  const best = niv === 'evaluation' ? Math.min(meilleurTour('serpentin'), meilleurTour('retour')) : meilleurTour('serpentin');
+  const plus = L > best + .5 ? Math.round((L - best) / best * 100) : 0;
+  const lj = CMD.lignes.filter(l => prelev(l) === l.q).length, hors = horsCommande();
+  const nbL = CMD.lignes.length + hors.length, err = nbL - lj, taux = Math.round(err / nbL * 100);
+  let h = `<div class="ind"><h3>Indicateurs</h3>
+    <div>Mètres parcourus : <span class="gros">${metres(L)} m</span>${(S.p.parcours || 'serpentin') === 'serpentin' && nbTours(L) > 1 ? ` (<b>${nbTours(L)} tours</b> au lieu d'un)` : ''} · meilleur tour ${niv === 'evaluation' ? 'possible' : 'en serpentin'} : ${metres(best)} m
+      ${plus ? `<span class="ko">(+${plus} %)</span>` : '<span class="ok">✓</span>'}</div>`;
+  if (niv === 'guidage' && plus) h += `<div>En sens unique, revenir en arrière oblige à refaire un tour complet : suivez la liste dans l'ordre du parcours.</div>`;
+  h += `<div>Lignes justes : <span class="gros">${lj}/${CMD.lignes.length}</span> · taux d'erreur : <b>${taux} %</b>${hors.length ? ` (${hors.length} ligne${hors.length > 1 ? 's' : ''} hors commande)` : ''}</div>`;
+  if (niv !== 'evaluation'){
+    for (const l of CMD.lignes){
+      const pr = prelev(l); if (pr === l.q) continue;
+      if (niv === 'entrainement'){ h += `<div class="ko">✗ ${l.a} : quantité</div>`; continue; }
+      const rupture = PICK0[l.a] && PICK0[l.a].q < l.q && !S.p.reappros.some(r => r.pour === l.a);
+      h += `<div class="ko">✗ ${l.a} ${PROD[l.k].nom} : ${pr} prélevé${pr > 1 ? 's' : ''} sur ${l.q}${rupture ? ' — picking en rupture : il fallait demander la descente de la réserve' : ''}</div>`;
+    }
+    for (const x of hors) h += `<div class="ko">✗ ${x.a}${niv === 'guidage' ? ' ' + PROD[x.k].nom + ' : ' + x.q + ' carton(s) qui ne sont pas sur le bon' : ' : hors commande'}</div>`;
+  }
+  const R = reglesPalette(), nOk = R.filter(r => r.ok).length;
+  h += `<h3>Palette conforme ?</h3><div>${nOk === R.length ? '<span class="ok">✓ palette conforme</span>' : `<span class="ko">✗ palette non conforme</span>`} · ${nOk}/${R.length} règles</div>`;
+  if (niv !== 'evaluation') h += R.map(r => r.ok ? `<div class="ok">✓ ${r.crit}</div>` : `<div class="ko">✗ ${r.crit}${niv === 'guidage' ? ' : ' + r.txt : ''}</div>`).join('');
+  return h + '</div>';
+}
+
+function rendrePalette(box){
+  const h = hauteurPalette(), kg = poidsPalette();
+  let html = `<h2>La palette de commande · ${CMD.client} · ${CMD.enlevement}</h2>
+    <div class="petit">Palette Europe 80 × 120, montée dans l'ordre du prélèvement · <b>${kg.toLocaleString('fr-FR')} kg</b> / ${CMD.kgMax} kg · <b>${virgule(h)} m</b> / ${virgule(CMD.hMax)} m</div>
+    <div class="palbox">${dessinPalette()}</div>`;
+  if (!S.p.fin){
+    html += `<div class="msg ${S.msgType}">${S.msg}</div>`;
+  } else {
+    html += `<div class="finir"><b>Avant l'enlèvement</b>
+      <label>Film étirable : <select id="film"><option value="">— tours —</option>${[1, 2, 3, 4, 5, 6].map(t => `<option ${S.p.film == t ? 'selected' : ''}>${t}</option>`).join('')}</select> tours</label>
+      <div>Étiquette d'expédition sur :</div>
+      <div class="etq">${ETQ.map(([k, lib]) => `<label><input type="checkbox" data-e="${k}" ${S.p.etiq[k] ? 'checked' : ''}> ${lib}</label>`).join('')}</div>
+      <div style="display:flex; gap:6px; flex-wrap:wrap"><button class="btn plein" id="bVerP">Vérifier ma préparation</button><button class="btn" id="bRepP">Reprendre la préparation</button></div></div>
+      ${S.p.bilan ? bilanPrep() : ''}`;
+  }
+  box.innerHTML = html;
+  if (S.p.fin){
+    box.querySelector('#film').onchange = e => { S.p.film = e.target.value; rendreFace(); };
+    box.querySelectorAll('[data-e]').forEach(i => i.onchange = () => { S.p.etiq[i.dataset.e] = i.checked; rendreFace(); });
+    box.querySelector('#bVerP').onclick = () => { S.p.bilan = true; tout(); };
+    box.querySelector('#bRepP').onclick = () => { S.p.fin = false; S.p.bilan = false; S.msg = ''; tout(); };
+  }
+}
+
+const BRUNO_PREP = {
+  guidage:'Yanis, on prépare la commande de Noël de Jouets du Rhône pour l\'enlèvement E1 de 14 h. La liste est triée dans l\'ordre du parcours : suis-la ligne par ligne.',
+  entrainement:'Yanis, prépare la commande de Jouets du Rhône pour l\'enlèvement E1 de 14 h. La liste n\'est pas triée : à toi de choisir l\'ordre. Les allées sont à sens unique.',
+  evaluation:'Yanis, la commande de Jouets du Rhône part à 14 h (enlèvement E1). Aujourd\'hui les allées sont à double sens : choisis ton parcours.',
+};
+function rendreGauchePrep(){
+  document.getElementById('consCote').innerHTML = '';
+  const el = document.getElementById('gauche'), niv = S.niveau, suiv = prochaineLigne(), verrou = S.p.faits.length ? 'disabled' : '';
+  const rows = ordreLignes().map((i, j) => {
+    const l = CMD.lignes[i], c = CTN[l.k], pr = prelev(l);
+    return `<div class="puce ${pr === l.q ? 'fait' : pr ? 'ecart' : ''} ${niv === 'guidage' && suiv === l && !S.p.fin ? 'ici' : ''}">
+      <b>${j + 1}.</b> <span class="a">${l.a}</span><br><span title="${PROD[l.k].nom} · ${c.kg.toLocaleString('fr-FR')} kg le carton">${court(l.k)}</span>${c.lourd ? ' <span class="tag lourd">LOURD</span>' : ''}${c.fragile ? ' <span class="tag fragile">FRAGILE</span>' : ''}
+      <br>cde <span class="q">${l.q}</span> · prél. <span class="q">${pr || '…'}</span></div>`;
+  }).join('');
+  const hors = horsCommande();
+  const choix = niv === 'evaluation' ? `<div class="choix compact"><b>Mon parcours</b>
+      <label title="On monte l'allée A, on traverse en haut, on redescend l'allée B."><input type="radio" name="parc" value="serpentin" ${S.p.parcours === 'serpentin' ? 'checked' : ''} ${verrou}><span><b>Serpentin</b> : monter A, redescendre B</span></label>
+      <label title="On entre dans chaque allée par l'allée principale et on ressort par le même bout."><input type="radio" name="parc" value="retour" ${S.p.parcours === 'retour' ? 'checked' : ''} ${verrou}><span><b>Retour</b> : ressortir de chaque allée par le bas</span></label></div>` : '';
+  const regles = niv !== 'evaluation' ? `<div class="regles"><b>Les règles de la préparation</b><ol>
+      <li><b>Parcours</b> à sens unique : on monte l'allée A, on redescend l'allée B. Revenir en arrière = refaire un tour.</li>
+      <li>On prélève au <b>picking (N1)</b> ; N2-N3 = <b>réserve</b>.</li>
+      <li>Picking <b>sous son minimum</b> : demander la descente d'une palette de réserve de la même référence.</li>
+      <li><b>Palette</b> : lourds en bas (prélevés en premier), fragiles en haut (prélevés en dernier) ; ${CMD.kgMax} kg et ${virgule(CMD.hMax)} m au plus.</li>
+      <li>Avant l'enlèvement : <b>film</b> 3 à 5 tours ; <b>étiquette</b> sur 2 côtés opposés et sur le dessus.</li></ol>
+      <div class="encadre">Carton lourd : 15 kg et plus. L'implantation prépare l'ordre : lourds en début de parcours, fragiles à la fin. Valeurs ${CMD.transporteur} (${CMD.kgMax} kg, ${virgule(CMD.hMax)} m) : construites pour la séance.</div></div>` : '';
+  el.innerHTML = `<div class="bruno"><b>Bruno, chef de quai · jeu. 10 déc., 10 h</b>${BRUNO_PREP[niv]}</div>
+    <div class="b-liste"><h2>Bon de préparation ${CMD.num} <span style="text-transform:none; letter-spacing:0; font-weight:400">· ${CMD.client} · enlèvement ${CMD.enlevement} · ${CMD.transporteur}, ${CMD.heure}</span></h2>
+    <div class="b-cartes">${rows}</div>
+    ${hors.length ? `<div class="petit" style="margin-top:2px">Aussi sur la palette : ${hors.map(x => `<span class="a" style="font-family:var(--mono)">${x.a}</span> × ${x.q}`).join(', ')}</div>` : ''}</div>
+    <div class="b-act">${choix}
+      <button class="btn plein" id="bFinP" ${S.p.faits.length && !S.p.fin ? '' : 'disabled'}>Terminer la préparation</button>
+      <button class="btn" id="bAnnP" ${S.p.faits.length && !S.p.fin ? '' : 'disabled'}>↶ Reposer le dernier</button>
+      ${boiteRegles(regles)}</div>`;
+  brancherRegles(el);
+  el.querySelectorAll('input[name=parc]').forEach(i => i.onchange = () => { S.p.parcours = i.value; S.msg = ''; tout(); });
+  el.querySelector('#bFinP').onclick = () => { S.p.fin = true; S.p.reappro = null; S.empl = null; S.msg = ''; tout(); };
+  el.querySelector('#bAnnP').onclick = () => {
+    const f = S.p.faits.pop(); if (!f) return;
+    S.p.pick[f.a] = stockPick(f.a) + f.q; S.msg = `${f.q} × ${PROD[f.k].nom} reposé${f.q > 1 ? 's' : ''} en ${f.a}.`; S.msgType = ''; tout();
+  };
+}
+
+/* =====================================================================
+   8. CHANGER DE CAS, RECOMMENCER
+   ===================================================================== */
+// la vue ouverte en grand (sinon : le plan)
+function vueOuverte(){
+  if (S.mode === 'inv') return S.fini || !!S.trav || !!S.empl;
+  if (S.mode === 'prep') return !!S.trav || !!S.empl || S.p.fin || S.p.voirPalette;
+  return !!S.trav;
+}
+function retour(){
+  if (S.mode === 'prep' && S.p.reappro) S.p.reappro = null;
+  else if (S.empl) S.empl = null;
+  else if (S.mode === 'prep' && S.p.voirPalette) S.p.voirPalette = false;
+  else S.trav = null;
+  S.msg = ''; tout();
+  if (!vueOuverte()) document.getElementById('plan').scrollIntoView({ block:'nearest' });
+}
+function rendreEntete(){
+  const fil = document.getElementById('filVue'), b = document.getElementById('bRetour');
+  const m = x => `<span class="mono">${x}</span>`, parts = ['Plan'];
+  const palette = S.mode === 'prep' && (S.p.fin || S.p.voirPalette || !S.trav) && !S.empl;
+  if (S.mode === 'inv' && S.fini) parts.push('<b>Écarts d\'inventaire</b>');
+  else if (palette) parts.push('<b>Palette de commande</b>');
+  else {
+    if (S.trav){ const c = cote(S.trav.slice(0, 2));
+      parts.push((S.empl ? 'Travée ' : '<b>Travée</b> ') + m(S.trav) + (S.empl ? '' : ` <span class="petit">(vue depuis l'allée ${c.allee}${c.note ? ', ' + c.note : ''})</span>`)); }
+    if (S.empl) parts.push(`<b>${S.mode === 'inv' ? 'Comptage' : 'Prélèvement'}</b> ` + m(S.empl));
+  }
+  fil.innerHTML = parts.join(' › ');
+  const fige = (S.mode === 'inv' && S.fini) || (S.mode === 'prep' && S.p.fin);
+  b.style.visibility = fige ? 'hidden' : 'visible';
+  b.textContent = S.mode === 'prep' && S.p.reappro ? '✕ Annuler le réapprovisionnement'
+    : (S.empl || (S.mode === 'prep' && S.p.voirPalette && S.trav)) ? '← Retour à la travée' : '← Retour au plan';
+}
+function tout(){
+  const ouverte = vueOuverte(), jeu = document.querySelector('.jeu');
+  jeu.classList.toggle('vue-face', ouverte); jeu.classList.toggle('vue-plan', !ouverte);
+  document.getElementById('oRang').setAttribute('aria-pressed', S.mode === 'rang');
+  document.getElementById('oInv').setAttribute('aria-pressed', S.mode === 'inv');
+  document.getElementById('oPrep').setAttribute('aria-pressed', S.mode === 'prep');
+  document.getElementById('caseCharge').style.visibility = S.mode === 'rang' && S.niveau !== 'evaluation' ? 'visible' : 'hidden';
+  document.getElementById('niveaux').style.visibility = S.mode !== 'inv' ? 'visible' : 'hidden';
+  document.querySelectorAll('.niv').forEach(b => b.setAttribute('aria-pressed', b.dataset.n === S.niveau));
+  document.getElementById('chkCharge').checked = S.aideCharge;
+  S.mode === 'rang' ? rendreGaucheRang() : S.mode === 'inv' ? rendreGaucheInv() : rendreGauchePrep();
+  document.getElementById('implant').innerHTML = `<span class="t">Implantation :</span>` + PLAN.cotes.map(c => `<span><b>${c.id}</b> ${c.gammes.map(g => GAMMES[g]).join(' + ')}</span>`).join('')
+    + (S.mode === 'prep' ? `<span style="flex-basis:100%"><span class="t">N1 = picking · N2-N3 = réserve</span> · parcours ${S.p.parcours ? '<b>' + S.p.parcours + '</b>' : 'à choisir'} : <b style="font-family:var(--mono)">${metres(tourEleve().L)} m</b>${(S.p.parcours || 'serpentin') === 'serpentin' && nbTours(tourEleve().L) > 1 ? ` <b style="color:var(--rouge)">· ${nbTours(tourEleve().L)} tours</b>` : ''} <span class="petit">(retour au quai compris)</span></span>` : '');
+  rendrePlan(); rendreFace(); rendreAdresse(); rendreEntete();
+}
+function raz(mode){
+  document.getElementById('gauche').scrollTop = 0;
+  Object.assign(S, { mode, main:null, trav:null, place:{}, msg:'', msgType:'', verif:false, empl:null, compte:{}, fini:false, ecartsSaisis:{}, ecartsVus:false });
+  S.p = nouvellePrep();
+  tout();
+}
+document.getElementById('oRang').onclick = () => raz('rang');
+document.getElementById('oInv').onclick = () => raz('inv');
+document.getElementById('oPrep').onclick = () => raz('prep');
+document.querySelectorAll('.niv').forEach(b => b.onclick = () => { S.niveau = b.dataset.n; S.aideCharge = S.niveau !== 'evaluation'; raz(S.mode === 'inv' ? 'rang' : S.mode); });
+document.getElementById('bRaz').onclick = () => raz(S.mode);
+document.getElementById('chkCharge').onchange = e => { S.aideCharge = e.target.checked; rendreFace(); };
+document.getElementById('bRetour').onclick = retour;
+document.addEventListener('keydown', e => { if (e.key !== 'Escape' || e.target.tagName === 'INPUT') return;
+  if (vueOuverte() && document.getElementById('bRetour').style.visibility !== 'hidden') retour();
+  else if (S.main){ S.main = null; S.msg = ''; tout(); } });
+
+document.getElementById('decl').textContent =
+`Briques : palettier (côtés A1 A2 B1 B2, allées à double sens), zone litiges, zone de réception, quais, parcours de prélèvement.
+Rack : ${PLAN.travees} travées × ${PLAN.niveaux} niveaux × ${PLAN.emplacements} emplacements par côté (N1 = sol). Adresse : A1-T03-N2-E1.
+Plan d'implantation : ${PLAN.cotes.map(c => c.id + ' ' + c.gammes.map(g => GAMMES[g]).join(' + ')).join(' · ')}.
+Charge maximale N2/N3 (kg) : ${PLAN.cotes.map(c => c.id + ' ' + c.charge[2] + (c.note ? ' (' + c.note + ')' : '')).join(' · ')} ; N1 (sol) 3 000.
+Hors service : ${PLAN.horsService.join(', ')}.
+Rotation : ${Object.entries(PLAN.rotation).map(([k, r]) => k + ' ' + r.lib + ' → ' + r.texte).join(' · ')}.
+Parcours de prélèvement : on monte l'allée A, on redescend l'allée B ; produit lourd → allée A (début), produit fragile → allée B (fin). Produit fragile → pas en N3.
+Stock de départ : gamme du côté, aucun niveau en surcharge, aucun fragile en N3.
+
+Cas 1 · rangement — critères : type de produit, parcours (lourd au début, fragile à la fin), rotation, fragile pas en N3, poids (charge totale du niveau), état (libre, en service), litige.
+  Occupé : refus immédiat. Pas de règle « lourd en bas » dans le rack.
+  Guidage : consigne précise par palette, zones de rotation dessinées, erreurs expliquées.
+  Entraînement : règles affichées, l'erreur nomme seulement le critère. Évaluation : fiches produits seules, ✓ / ✗.
+${Object.keys(PALETTES).map(id => { const so = solutions(id); return '  ' + id + ' ' + PALETTES[id].nom + ' : ' + so.length + ' bonne(s) réponse(s) — ' + so.join(', '); }).join('\n')}
+
+Cas 2 · inventaire — liste de ${LISTE.length} adresses, comptage à l'aveugle, l'élève calcule l'écart.
+  Écarts réels : ${LISTE.filter(a => STOCK[a].ecart).map(a => a + ' (' + (STOCK[a].ecart > 0 ? '+' : '') + STOCK[a].ecart + ')').join(', ')}.
+  Comptage hors liste : trace d'erreur, fait perdre des points (jalon juste seulement si les 8 adresses sont comptées).
+
+Cas 3 · préparation de commande au colis complet — ${CMD.num}, ${CMD.client}, enlèvement ${CMD.enlevement} (${CMD.transporteur}, ${CMD.heure}).
+  N1 = picking (stock et minimum affichés), N2-N3 = réserve (on n'y prélève pas). Unité de charge : palette Europe 80 × 120.
+  Lignes (ordre du serpentin) : ${CMD.lignes.map(l => l.a + ' ' + PROD[l.k].nom + ' × ' + l.q).join(' · ')}.
+  Rupture : B1-T01-N1-E1 Trotteur, 2 cartons au picking (min 6) pour 6 commandés → descente d'une palette de réserve
+  de même référence (B1-T01-N2-E2 ou B1-T01-N3-E1/E2/E3). Réappro refusé si le picking n'est pas sous son minimum.
+  Cuisine Tefal (fragile) en B2-T01, même arrêt que Porteur et Trotteur : à cet arrêt, la Cuisine se prélève en dernier.
+  Parcours : guidage = liste triée + serpentin dessiné ; entraînement = liste dans le désordre, serpentin imposé ;
+  évaluation = liste dans le désordre, l'élève choisit serpentin ou retour, parcours non dessiné (affiché au mur).
+  Meilleur tour : serpentin ${metres(meilleurTour('serpentin'))} m · retour ${metres(meilleurTour('retour'))} m (toutes les lignes sont en T01-T02 : le retour gagne).
+  Palette (montée dans l'ordre du prélèvement) : classes lourd > normal > fragile, jamais une classe plus lourde sur une plus
+  fragile = lourds en bas (≥ 15 kg/carton, prélevés en premier), fragiles en haut (prélevés en dernier) ; ≤ ${CMD.kgMax} kg ; ≤ ${CMD.hMax.toFixed(2).replace('.', ',')} m (valeurs Kuehne+Nagel construites) ; film 3 à 5 tours ; étiquette 2 côtés opposés + dessus.
+  Bonne palette : ${(CMD.kgPalette + CMD.lignes.reduce((t, l) => t + l.q * CTN[l.k].kg, 0))} kg, ${(CMD.hPalette + CMD.lignes.reduce((t, l) => t + Math.ceil(l.q / CTN[l.k].parCouche) * CTN[l.k].h, 0)).toFixed(2).replace('.', ',')} m.
+  Indicateurs : mètres parcourus (comparés au meilleur tour), lignes justes / lignes et taux d'erreur, palette conforme.`;
+
+tout();
+</script>
+</body>
+</html>

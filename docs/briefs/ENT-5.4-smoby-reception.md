@@ -129,7 +129,7 @@ un élève de 2de finit en 45 min.
 
 ## 11. Questions ouvertes (valeur par défaut)
 
-- [ ] Prénom du chef de quai (Bruno).
+- [x] Prénom du chef de quai : Bruno (gardé par Tristan le 04/10).
 - [x] Photos : trois photos fournies et retouchées le 04/10 (voir §2).
 - [ ] Plus tard : l'étape sécurité passera sur une **image à inspecter** (vue n° 6) — décision de Tristan, après Leroy Merlin.
 

@@ -1,5 +1,9 @@
 # Brief de séance — ENT-5.5 Smoby, ranger les palettes et saisir l'entrée en stock (2de, poste C — cariste, guidage)
 
+> **⚠ Recalé par Cowork le 04/10 (soir) sur la maquette v2 validée** (`docs/briefs/plan-entrepot/`) : rangement à
+> **critères** (type de produit, parcours, rotation, fragile, poids, état, litige), implantation, palettes et bonnes réponses
+> ci-dessous. Vue décrite dans `MOTEUR-vue-plan-entrepot.md`.
+
 > **⚠ Mis à jour par Cowork le 04/10 (après-midi)** : décisions de Tristan sur le Plan d'entrepôt (logique travée → emplacement,
 > 3 palettes par niveau, plus de règle « lourd en bas », vocabulaire « emplacement »). **Renumérotation** : une séance « visite
 > de la plateforme » s'insère avant la réception ; **cette séance est désormais ENT-5.5** (voir `COORDINATION-smoby.md`).
@@ -10,9 +14,8 @@
 > Lis docs/briefs/COORDINATION-smoby.md puis implémente le brief docs/briefs/ENT-5.5-smoby-rangement.md (il faut que la vue « Plan d'entrepôt » et les lots 1, 2, 3 et 7 de MOTEUR-2de-S1 soient livrés). Annonce la durée avant de commencer et dis-moi si un point du brief contredit le code.
 > ```
 
-**Statut** : **en attente** — la vue « Plan d'entrepôt » a une page d'essai (`Claude outputs\essai-plan-zone.html`, piste A)
-mais **pas encore de maquette v2 ni de brief moteur**. Ce brief fixe la séance ; les données du plan (§4, étape 1) seront
-**recalées sur la maquette v2** quand Tristan l'aura jouée.
+**Statut** : **en attente du chantier `MOTEUR-vue-plan-entrepot.md`** (brief écrit le 04/10, maquette v2 validée par
+Tristan) et des lots 1, 2, 3, 7 de `MOTEUR-2de-S1.md`. Les données du plan (§4) sont **recalées sur la maquette v2**.
 **Date du brief** : 04/10/2026
 **Conversation d'origine** : Cowork (Opus) ; fiche projet `claude/prepalog-2de-s1-cadrage.md` (section « Séance C2 »).
 **Modèle** : Opus.
@@ -23,7 +26,7 @@ mais **pas encore de maquette v2 ni de brief moteur**. Ce brief fixe la séance 
 |---|---|
 | `code` | ENT-5.5 |
 | `id` | `smoby-rangement` |
-| Titre / desc | « Smoby — ranger et saisir l'entrée » / « Cariste : ranger sur le plan de l'entrepôt les palettes reçues d'Arinthod (choisir la travée, puis l'emplacement) en respectant les règles (emplacement libre et en service, charge maximale du niveau, zone litiges), saisir l'entrée en stock des quantités réellement reçues, vérifier le stock et prévenir l'exploitation Kuehne+Nagel. » |
+| Titre / desc | « Smoby — ranger et saisir l'entrée » / « Cariste : ranger sur le plan de l'entrepôt les palettes reçues d'Arinthod (choisir la travée, puis l'emplacement) en respectant les règles de l'entrepôt (type de produit, parcours, rotation, produit fragile, charge maximale du niveau, emplacement libre et en service, zone litiges), saisir l'entrée en stock des quantités réellement reçues, vérifier le stock et prévenir l'exploitation Kuehne+Nagel. » |
 | Rubrique | logisim, entreprise n° 5 Smoby |
 | Niveau(x) | 2de |
 | Compétence(s) | **C1.5** (mettre en stock), **C1.6** (suivi des stocks : flux d'information des entrées, C1.6.1) ; domaine D4 |
@@ -43,7 +46,7 @@ mais **pas encore de maquette v2 ni de brief moteur**. Ce brief fixe la séance 
 
 L'élève sait **choisir un emplacement** en respectant des règles de stockage, **isoler une marchandise en litige**, **saisir
 une entrée en stock à la quantité réellement reçue** (pas celle du BL) et **vérifier** l'écran Stock. Suit ENT-5.4 (les
-4 palettes reçues, réserves portées : dossier propre) ; précède ENT-5.6 (la commande de Noël peut partir).
+4 palettes reçues, réserves portées : dossier propre) ; précède ENT-5.6 (préparation de la palette mixte d'E1, nouvelle séance du 04/10 au soir).
 
 ## 4. Déroulé
 
@@ -67,25 +70,39 @@ mercredi 9 décembre 2026, fin d'après-midi.
    - Pour la 2de : **2 allées (A, B)** et la **zone litiges** au sol près du quai suffisent (proposition de Cowork) ; les
      zones produits dangereux, forte valeur et rotation sont pour un cas de 1re.
 
-   Palettes (reprises d'ENT-5.4, poids **à recaler sur la maquette v2**) :
+   **Plan de la séance = plan de la maquette v2** (`docs/briefs/plan-entrepot/donnees-maquette.json`, stock de départ
+   figé, 99 emplacements occupés) : côtés **A1 | allée A | A2 · B1 | allée B | B2**, 4 travées × 3 niveaux × 3 emplacements,
+   T01 près de l'allée principale. **Implantation** : **A1 Maisons et ateliers · A2 Plein air · B1 Véhicules · B2 Cuisines +
+   Maisons et ateliers (suite, ancien rack)**. Charges N2/N3 : A1 1 200 · A2 800 · B1 1 000 · B2 800 kg ; N1 (sol) 3 000.
+   Hors service : A1-T02-N2-E2, A2-T02-N3-E2, B1-T04-N2-E3, B2-T03-N2-E1. Parcours de prélèvement à sens unique : on monte
+   l'allée A, on redescend l'allée B. Zone litiges L1, L2 (à droite du plan).
 
-   | Palette | Produit | Cartons en stock | Poids (construit) | Attendu |
-   |---|---|---|---|---|
-   | P1 | Maison Neo Jura Lodge | 8 | 420 kg | un emplacement libre où **la charge du niveau** le permet |
-   | P2 | Cuisine Tefal | 45 | 270 kg | idem |
-   | P3 | Établi Black+Decker | 36 (1 écrasé) | 290 kg | **zone litiges** |
-   | P4 | Porteur Little Smoby | 34 | 180 kg | idem P1 |
+   Palettes (reprises d'ENT-5.4 ; fiche produit sur la carte, une ligne par information ; classes, contraintes et poids
+   **construits**) :
 
-   **Charge maximale par niveau** (pour les 3 palettes du niveau ensemble), affichée sur une plaque de la lisse ; des niveaux
-   déjà presque pleins font le piège (« la somme dépasse »). Valeurs : à recaler sur la maquette v2.
-2. **Les règles** (encadré, une ligne chacune) : (1) un emplacement **libre et en service** ; (2) la **charge totale du
-   niveau** ne dépasse pas sa charge maximale ; (3) une palette **en litige ne va pas en stock** : zone litiges.
+   | Palette | Produit | Cartons | Poids | Gamme | Rotation | Contrainte | Réception | Bonne(s) réponse(s) |
+   |---|---|---|---|---|---|---|---|---|
+   | P1 | Maison Neo Jura Lodge | 8 | 420 kg | Maisons et ateliers | A | lourd | conforme | **A1-T01-N1-E3** (seule) |
+   | P2 | Cuisine Tefal | 45 | 270 kg | Cuisines | B | fragile | conforme | **B2-T02-N1-E2**, **B2-T02-N1-E3** |
+   | P3 | Établi Black+Decker | 36 (1 écrasé) | 290 kg | Maisons et ateliers | B | lourd | 1 carton écrasé | **L1** ou **L2** |
+   | P4 | Porteur Little Smoby | 34 | 180 kg | Véhicules | C | — | 2 cartons manquants | **B1-T03-N3-E1**, **B1-T04-N1-E2**, **B1-T04-N3-E2** |
+
+   Pièges (un seul critère faux chacun) : P1 en A1-T01-N2-E3 (poids), A1-T02-N1-E2 et A1-T03-N1-E1 (rotation), B2-T01-N1-E3
+   (**parcours** : bonne gamme, fin de parcours) ; P2 en B2-T02-N2-E2 (poids), B2-T02-N3-E2 (**fragile en N3**), B2-T03-N1-E3
+   et B2-T01-N1-E3 (rotation) ; P4 en B1-T01-N2-E3 (rotation), B1-T04-N2-E3 (hors service). **Bonnes réponses calculées par le
+   moteur** sur le stock de départ : les recontrôler (bloc de tests).
+2. **Les règles** (bouton « Les règles ▾ », une ligne chacune) : (1) **type de produit** : le côté de sa gamme (plan
+   d'implantation) ; (2) **parcours** : un produit **lourd** en début de parcours (allée A), un produit **fragile** en fin
+   de parcours (allée B) — à la préparation, le lourd fait la base de la palette, le fragile va en haut ; (3) **produit
+   fragile** : jamais au niveau N3 ; (4) **rotation** : A rapide → T01 (près des quais), N1 ou N2 · B moyenne → T02 · C
+   lente → T03-T04, tous niveaux ; (5) **poids** : la charge totale du niveau ne dépasse pas la plaque jaune ; (6) un
+   emplacement **libre et en service** ; une palette **en litige** va en zone litiges.
    **Décision de Tristan (04/10) : pas de règle « lourd en bas » dans un rack** — chaque palette repose sur une lisse ;
    une palette n'est jamais refusée ni signalée parce qu'une plus légère est en dessous, **aucun conseil non plus**.
    « Lourd en bas » ne vaut que quand une charge en écrase une autre (gerbage, préparation de commandes) : autre séance.
-   Ancienne formulation, remplacée : « Mettre en bas les produits lourds (et les
-   produits en picking) est un **conseil de bon sens**, pas une erreur. Encadré : « Monter aux niveaux 2 et 3 demande le
-   chariot rétractable : il faut le **CACES 5**. Yanis l'a. »
+   Encadré : « Monter aux niveaux 2 et 3 demande le chariot rétractable : il faut le **CACES 5**. Yanis l'a. »
+   **Guidage** (temps de cette séance) : consigne précise de la palette en main (colonne à gauche du plan), bandes de
+   rotation et parcours dessinés sur le plan, erreurs expliquées critère par critère, aide « charge déjà posée ».
 3. **Saisie de l'entrée en stock** (écran Réceptions de l'environnement, existant) : la réception d'Arinthod (BL
    ARI-26-1209) est ouverte ; l'élève saisit **les quantités réellement reçues** : P1 = 8, P2 = 45, **P4 = 34 (BL 36)** ;
    **P3 n'est pas saisie en stock disponible** (statut « en litige », lot 0 du brief moteur : à vérifier).
@@ -101,7 +118,7 @@ Mots cliquables : emplacement, travée, niveau, charge maximale, litige, chariot
 
 | # | Jalon | Ce qu'il lit | Piège à éviter |
 |---|---|---|---|
-| 1-4 | Chaque palette au bon endroit (règles 1 à 3) | le plan | palette non posée = faux |
+| 1-4 | Chaque palette au bon endroit (critères 1 à 6, jalon `palette(id)` de la vue) | le plan | palette non posée = faux |
 | 5 | P1 et P2 saisies justes | réception | — |
 | 6 | P4 saisie avec 2 cartons de moins (34) | réception | 36 = faux |
 | 7 | P3 non saisie en stock disponible | réception / stock | **vrai seulement si l'entrée a été saisie** (sinon vrai par inaction) |
@@ -115,18 +132,15 @@ d'ENT-5.4 (`contenus/smoby.js`).
 
 ## 7. Demandes au moteur
 
-- **Vue « Plan d'entrepôt »** (n° 7 de la liste des vues, avancée pour S1) : **maquette v2 à faire par Cowork et à jouer
-  par Tristan**, puis brief `MOTEUR-vue-plan-entrepot.md`. Principe retenu le 04/10 : **le moteur fournit des briques**
-  (types de zones, racks paramétrables — allées, travées, niveaux, emplacements par niveau, charge par niveau —, règles
-  types, vues activables) et **chaque séance déclare son plan**. Règles de cette séance : libre / hors service, charge
-  totale du niveau, zone imposée. Mêmes gestes que le Planning. Les modes « visite » (vue du ciel, repères photo, photo
-  légendée, photo à cliquer) de la séance de visite vont dans le même brief moteur.
+- **Vue « Plan d'entrepôt »**, mode **rangement** : brief **`MOTEUR-vue-plan-entrepot.md`** (04/10), maquette v2 validée et
+  données figées dans `docs/briefs/plan-entrepot/`. Critères déclarés par cette séance : état, litige, gamme, parcours,
+  rotation, fragile pas en N3, charge.
 - `MOTEUR-2de-S1.md` : lot 0 (statut « en litige » d'une ligne de réception : existe-t-il ? `bloquer` du quai, `annulee` des
   commandes ?), lots 1, 2, 3, 7.
 
 ## 8. Tests attendus
 
-Bloc `smoby` : parcours juste 9/9 ; une palette posée sur un niveau dont la **charge totale dépasserait** → jalon faux ;
+Bloc `smoby` : parcours juste 9/9 (bonnes réponses du §4) ; chaque piège du §4 → jalon de la palette faux ; une palette posée sur un niveau dont la **charge totale dépasserait** → jalon faux ;
 une palette posée **au-dessus d'une plus légère, charge respectée → jalon juste** (garde de la décision du 04/10) ; P3 en
 rack → faux ; emplacement hors service → faux ; P4 saisie 36 → jalon 6 faux ; rien saisi → jalon 7 faux ; inaction 0/9.
 
@@ -144,7 +158,9 @@ réserves d'ENT-5.4.
 
 - [x] ~~Seuil « lourd » (400 kg)~~ : **supprimé** (décision de Tristan du 04/10 : seule la charge totale du niveau compte).
 - [x] Le plan : **vue de dessus découpée par travée → vue de face de la travée (3 niveaux × 3 emplacements)** (Tristan, 04/10).
-- [ ] Charges maximales par niveau, poids des palettes, stock de départ : à recaler sur la maquette v2.
+- [x] Charges maximales par niveau, poids des palettes, stock de départ : **recalés sur la maquette v2** (04/10, §4).
+- [x] Critères du rangement : **type de produit, parcours (lourd au début, fragile à la fin), rotation, fragile pas en N3, poids,
+  état, litige** (Tristan, 04/10 : « l'élève prend une réelle décision », solutions parfois uniques, parfois multiples).
 - [x] Format d'adresse : **`A1-T03-N2-E1`** (décision de Tristan, 04/10), côtés d'allée numérotés selon le plan.
 - [x] Emplacement occupé : refusé. Imprévu : aucun. Conseil « lourd en bas » : aucun dans un rack (Tristan, 04/10).
 

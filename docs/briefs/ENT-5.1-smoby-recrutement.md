@@ -144,8 +144,8 @@ La séance se lit sans décrocher (3 lignes par bloc), les CV ressemblent à l'e
 
 ## 11. Questions ouvertes (valeur par défaut entre parenthèses)
 
-- [ ] Fin du CDD (vendredi 8 janvier 2027, construit).
-- [ ] Nom de famille de Sophie (Martin).
+- [x] Fin du CDD : vendredi 8 janvier 2027 (construit, gardé par Tristan le 04/10).
+- [x] Nom de famille de Sophie : Martin (gardé par Tristan le 04/10).
 
 ---
 
