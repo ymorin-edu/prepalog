@@ -6,7 +6,7 @@
 > Lis docs/briefs/COORDINATION-smoby.md, docs/EN-COURS.md, puis le brief docs/briefs/MOTEUR-2de-S1.md. Commence par le lot 0 (état des lieux, lecture seule) et donne-moi le compte rendu avant d'écrire. Annonce la durée de chaque lot.
 > ```
 
-**Statut** : en cours — lot 0 rendu, lots 1, 2 et 3 livrés le 04/10/2026 *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
+**Statut** : en cours — lot 0 rendu, lots 1, 2, 3 et 6 livrés le 04/10/2026 ; lots 4, 5, 7 à faire *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
 **Date du brief** : 04/10/2026
 **Conversation d'origine** : Cowork (Opus), cadrage de S1 ; fiches projet `claude/prepalog-2de-s1-cadrage.md`,
 `claude/prepalog-2de-eleve-debut-annee.md`, `claude/prepalog-2de-socle-transversal.md`
@@ -237,9 +237,53 @@ du lycée.
 - **Bulle** : bouton réel, `aria-expanded`, Entrée ouvre, Échap ferme et rend le focus au mot, un clic ailleurs **ou sur la
   bulle** la ferme (elle peut couvrir le mot de la ligne suivante), une seule ouverte à la fois, recalée vers la gauche près du
   bord droit de l'écran.
-- **Comptage** : chaque ouverture (pas les fermetures) dans `db.reperage[idSeance].mots[mot]`, chez l'élève seulement (ni
+- **Comptage** : chaque ouverture (pas les fermetures) dans `db.indicateurs[idSeance].mots[mot]`, chez l'élève seulement (ni
   enseignant, ni copie rendue).
 - **Question ouverte appliquée par défaut** : marque `[[mot]]`, plus `[[mot|forme affichée]]` pour « calé / cale » (ENT-5.4).
 - **Tests** : bloc `smoby` 15 / 15. Sept sabotages (fermeture comptée, écran non observé, bouton dans un bouton, focus non
   rendu, enseignant compté, mot inconnu transformé, bulle non recalée) font chacun tomber au moins un cas. Suite entière
   587 / 587.
+
+### Lot 6 — livré le 04/10/2026
+
+- **Fichiers modifiés** : `core/types/entreprise.js` (temps passé, premier jugement des étapes, « Rappel tableur » compté,
+  repérage dans le détail du score, conservé par « Réinitialiser »), `core/prof.js` (encadré « Repérage des élèves » dans le
+  Suivi de classe), `styles/base.css` (`.reperage`), `outils/test/smoby.mjs` (4 cas), `outils/test.mjs` (**une ligne :
+  `smoby` lancé seul est précédé de `socle`**, comme `spartoo` et `groupes`, pour le cas qui lit le suivi de classe),
+  `activites/FICHE-SEANCE.md`, `outils/test/boost.mjs` (**un cas existant modifié d'une condition** : le cas ENT-3.1
+  qui exige « tous les jalons au vert sauf formules » lisait chaque clé du détail comme un jalon ; il ignore maintenant
+  `indicateurs`).
+- **Nom** : rangé sous `db.indicateurs[idSeance]` et `detail.indicateurs` (pas `reperage` : ENT-3.1 a déjà une étape
+  `reperage`, et la première version écrasait son statut dans le détail ; trouvé par la suite entière).
+- **Ce que voit l'enseignant** : sous le tableau du suivi, un encadré dépliable par séance d'entreprise où au moins un élève a
+  des données : temps passé (et temps réel au quai), mots cliquables ouverts, autres aides ouvertes (survol = le détail),
+  « jalons justes du premier coup » `n / m` (m = jalons déjà jugés ; survol = lesquels). Élève sans données : un tiret. Pas
+  d'export, pas de recommandation.
+- **Choix faits** :
+  - **Temps** : compté toutes les 5 s, seulement l'onglet visible ; **aucune écriture de plus** vers Firebase (il part avec
+    la sauvegarde suivante de l'élève et au bouton « Quitter »). **Pas de sauvegarde à la fermeture de l'onglet** : la
+    première version en faisait une, et elle réécrivait la base juste après un effacement voulu (la page d'essai de la
+    feuille de Boost, qui repart de zéro, retrouvait l'ancien travail ; trouvé par la suite). Au pire, les dernières secondes
+    avant la fermeture de l'onglet sont perdues. Un élève qui laisse l'écran ouvert sans rien faire compte quand même.
+  - **Premier coup** : le premier jugement `ok` / `ko` de chaque étape, posé une fois. Repose sur une convention (écrite dans
+    la fiche séance) : une étape rend `'attente'` tant que l'élève n'a rien tenté. Les séances de S1 devront la respecter.
+  - **Aides comptées** : mots cliquables et « Rappel tableur ». **Pas comptés** : les « ? » de la feuille de tournée
+    (`grille.js`, chantier à part) et les amorces (aucune séance de S1 ne s'en sert).
+  - **Réinitialiser** ne l'efface pas : repartir de zéro ne doit pas effacer la trace des aides.
+- **Tests** : 4 cas (premier coup gardé même corrigé et rien avant le premier envoi ; temps visible seulement, rien chez
+  l'enseignant ; repérage conservé par « Réinitialiser » ; affichage enseignant et absence d'encadré sans données). Huit
+  sabotages (premier réécrit, « attente » notée, onglet caché compté, repérage effacé, absent du détail, temps de
+  l'enseignant, premier coup mal compté, encadré vide affiché) font chacun tomber au moins un cas. Suite entière 591 / 591.
+
+### Pause du 04/10/2026 — ce qui reste
+
+- **Lots 4 et 5** (quai sans froid, chariot, étape « Avant de décharger ») : code et tests **écrits mais pas appliqués**,
+  dans `docs/briefs/brouillons/` (mode d'emploi : `LISEZMOI.md` du dossier). Choix déjà faits dans ce brouillon : `froid:
+  false` (et non `lieu.refrigere`, qui ne changeait qu'une étiquette), `motifs: [...]` pour restreindre la liste, `zone: { nom
+  }` pour l'étape ④, `dechargement: { par: 'cariste', nom }`, étape ⓪ dans la vue quai (pas un écran à part), un seul camion
+  en mode sans froid. Page d'essai : photos du quai de Picard (les seules calibrées).
+- **Lot 7** (Smoby n° 5 dans `activites/index.js`) : **accord de Tristan pour le logo donné le 04/10**, logo déjà dans
+  `docs/briefs/smoby/logo-smoby.svg` ; à copier (empreinte vérifiée) avec la première séance.
+- La renumérotation des briefs Smoby (visite = ENT-5.3, réception = **ENT-5.4**) a été faite par une autre session (commit
+  822c98d) : la séance du quai sans froid est désormais ENT-5.4.
+
