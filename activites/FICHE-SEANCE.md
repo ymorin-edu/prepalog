@@ -81,6 +81,11 @@ le dit. Envoi refusé tant qu'il manque une réponse (travail gardé) ; envoyée
 n'est pas envoyée. Déclencheur : `apresFiche(id)` (vrai à l'envoi, juste ou faux). Exemple : `FICHE` dans
 `outils/essai-2de.js`.
 
+**Menu de gauche rétractable** (04/10/2026, même brief, lot 3) : dans toutes les entreprises, sans rien
+déclarer. Un bouton en tête du menu le replie en une bande étroite (« » » pour le rouvrir) ; le choix est
+rangé dans la base de l'élève (`db.menuReplie`), gardé d'un écran à l'autre, à la séance suivante et à
+« Réinitialiser ». « Agrandir le planning » cache le menu entier, puis le rend dans cet état.
+
 **Repérage pour l'enseignant** (04/10/2026, lot 6) : tout environnement d'entreprise range, chez l'élève,
 `db.indicateurs[idSeance] = { temps, mots, aides, premier }` (temps en secondes, onglet visible seulement ;
 mots cliquables et « Rappel tableur » ouverts ; premier jugement de chaque étape, `'ok'` ou `'ko'`). Il

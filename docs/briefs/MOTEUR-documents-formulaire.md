@@ -6,7 +6,7 @@
 > Lis docs/briefs/COORDINATION-smoby.md, docs/EN-COURS.md, puis implémente le brief docs/briefs/MOTEUR-documents-formulaire.md (lot 1, puis 2, puis 3). Annonce la durée de chaque lot.
 > ```
 
-**Statut** : en cours — lots 1 et 2 livrés le 04/10/2026 *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
+**Statut** : à valider par Tristan — lots 1, 2 et 3 livrés le 04/10/2026 *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
 **Date du brief** : 04/10/2026
 **Conversation d'origine** : Claude Code, en ouvrant ENT-5.1 (le moteur ne savait ni montrer un document ni faire remplir une
 fiche). Maquette **validée par Tristan le 04/10/2026, agencement B (côte à côte)** :
@@ -109,16 +109,50 @@ déplié sur un écran de Boost ou de Picard ; au vidéoprojecteur.
 
 ## Questions ouvertes (valeur par défaut entre parenthèses)
 
-- [ ] Style des documents : `documentsStyle` déclaré par la séance (oui, sauf mieux trouvé en construisant).
-- [ ] Une fiche envoyée peut-elle être renvoyée en guidage ? (non : figée, comme dans la maquette validée).
+- [x] Style des documents : `documentsStyle` déclaré par la séance — **retenu** (voir compte rendu).
+- [x] Une fiche envoyée peut-elle être renvoyée en guidage ? **Non** (valeur par défaut) : figée.
 
 ---
 
 ## Compte rendu *(rempli par Claude Code à la livraison)*
 
-- **Fichiers créés / modifiés** :
+- **Fichiers créés / modifiés** : nouveaux `core/types/documents.js` (pièces jointes, visionneuse, style des
+  documents) et `core/types/fiche.js` (fiche à remplir, `ficheEnvoyee`) ; `core/types/entreprise.js` (branchement,
+  bouton du mail, écran « fiche », menu rétractable) ; `core/declencheurs.js` (`apresFiche`) ; `styles/base.css`
+  (feuille de papier, fiche, menu) ; page d'essai : `outils/essai-2de.js` + nouveau `outils/essai-2de-documents.js`
+  (fiche de poste et 5 CV **repris tels quels de la maquette validée**, sans le logo) ; `activites/FICHE-SEANCE.md` ;
+  `outils/test/smoby.mjs` (14 cas ajoutés).
 - **Écarts par rapport au brief** (et pourquoi) :
-- **Décisions prises en route** :
-- **Tests** :
-- **Commits** :
+  - Le code n'est pas tout dans `entreprise.js` (déjà 2 300 lignes) : deux modules à part, sur le modèle de
+    `planning.js`. `entreprise.js` ne fait que brancher.
+  - Une case oui / non choisie prend le contour de l'**accent** de l'entreprise, pas forcément du vert : le vert
+    voudrait dire « juste », or rien n'est jugé avant l'envoi. Pour Smoby (accent `#006FA6`), ce sera bleu.
+  - Le premier document affiché d'office à l'ouverture de la fiche n'est pas compté comme « ouvert » (seuls les
+    clics de l'élève le sont).
+  - La date de « Fiche envoyée … le 04/10 à 17:41 » est l'heure **réelle** du poste, comme celle des mails (la
+    maquette écrivait 30/11 en dur).
+  - Le message « Il manque : … » s'efface dès que l'élève remplit une case (il ne reste pas affiché faux).
+  - Flèches gauche / droite pour passer d'un onglet de document à l'autre (clavier), non demandé.
+- **Décisions prises en route** (ligne dans `docs/decisions.md`) :
+  - `documentsStyle` : chaque règle est imbriquée sous `.ent-doc` (imbrication CSS native, Chrome / Edge
+    récents) ; elle ne peut rien toucher hors des documents et part avec la séance. Le **papier** est celui du
+    moteur, les couleurs du site y sont redéfinies : un document reste clair en thème sombre (testé).
+  - **Piège pour ENT-5.1** : les classes du site (`.pied`, `.note`, `.btn`…) s'appliquent aussi dans un
+    document. La maquette utilisait `.pied`, qui prenait la marge de 40 px du pied de page du site : corrigé dans
+    l'essai par `.pied{margin:0}`. À la construction de la séance, préférer des noms propres (`.cv-pied`).
+  - Menu replié : `db.menuReplie` (base de l'élève, par séance), gardé d'un écran à l'autre, à la réouverture et
+    à « Réinitialiser » (c'est un réglage d'écran, pas du travail). Replié, une bande de 56 px avec « » » ; sur
+    écran étroit, seul le bouton reste.
+  - **Planning** : pas de contradiction. Menu replié puis « Agrandir le planning » → tout le menu disparaît
+    (bande comprise) ; « Réduire » → la bande repliée revient. Vérifié à l'écran sur `outils/essai-planning.html`.
+- **Tests** : bloc `smoby` 85/85 (5 cas documents, 5 cas fiche, 1 cas menu, + 1 cas complété en route) ; chaque
+  cas éprouvé par sabotage (20 sabotages, tous tombent ; deux tests renforcés parce qu'un sabotage passait :
+  revenir au mail des CV, et clic sur une fiche figée). Suite entière verte après chaque lot (616, 621, puis
+  622 cas). Coup d'œil (captures) sur Boost ENT-3.2, Picard ENT-4.1 et Cdiscount ENT-2.1 avec le
+  menu replié : rien de cassé, aucune erreur. `outils/test.mjs` et `commun.mjs` non touchés.
+- **Commits** : 79fb73b (lot 1), e8c85b4 (lot 2), lot 3 (ce commit).
 - **Reste ouvert** :
+  - Le suivi enseignant (« Repérage ») ne montre pas encore une colonne « documents ouverts » : les ouvertures
+    sont comptées dans la base (`indicateurs[…].docs`) mais `core/prof.js` ne les affiche pas. À décider.
+  - Lot 4 (blocs `cases`, `ordre`, `texte`, `nombre`, `date`, `heure`) avec ENT-5.2 et ENT-5.8.
+  - ENT-5.1 peut maintenant se construire (`documents`, `documentsStyle`, `fiche`, `pieces`, `ouvreFiche`).

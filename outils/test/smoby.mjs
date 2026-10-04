@@ -679,6 +679,46 @@ await v('Fiche : sans déclaration, ni écran, ni entrée de menu, ni bouton dan
   egal(r, { menu: false, bouton: false, pj: 6, fiches: false }, 'environnement sans fiche');
 });
 
+// ── Menu de gauche rétractable (même brief, lot 3) ─────────────────────────────────────────────────
+const menu = () => pg.evaluate(() => {
+  const h = document.querySelector('#smTest'), b = h.querySelector('[data-menu-replier]');
+  return { replie: h.querySelector('.ent-shell').classList.contains('ent-menu-replie'), liste: !h.querySelector('#entMenuListe').hidden,
+    entrees: [...h.querySelectorAll('.ent-nav')].filter((x) => x.offsetParent !== null).length,
+    expanded: b.getAttribute('aria-expanded'), label: b.getAttribute('aria-label'),
+    largeur: Math.round(h.querySelector('.ent-side').getBoundingClientRect().width), db: window.__s.db.menuReplie };
+});
+
+await v('Menu : replié sur place (focus gardé, sans redessin), gardé d’un écran à l’autre, à la réouverture et à « Réinitialiser »', async () => {
+  await pg.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith('essai-2de-base-')).forEach((k) => localStorage.removeItem(k)));
+  await monter({ garder: true, uid: 'u-menu' });
+  const avant = await menu();
+  egal([avant.replie, avant.liste, avant.expanded, avant.label, avant.db], [false, true, 'true', 'Replier le menu', undefined], 'menu déplié au départ');
+  vrai(avant.entrees > 5 && avant.largeur > 150, 'menu déplié visible');
+  await ouvrirRecrut();
+  await pg.$eval(`${Z} .ent-lecteur`, (l) => { l.__marque = true; });
+  await pg.focus('#smTest [data-menu-replier]');
+  await pg.keyboard.press('Enter');
+  const r = await menu();
+  egal([r.replie, r.liste, r.entrees, r.expanded, r.label, r.db], [true, false, 0, 'false', 'Déplier le menu', true], 'menu replié');
+  vrai(r.largeur < 70, `bande étroite : ${r.largeur} px`);
+  vrai(await pg.evaluate(() => document.activeElement && document.activeElement.hasAttribute('data-menu-replier')), 'focus perdu');
+  vrai(await pg.$eval(`${Z} .ent-lecteur`, (l) => l.__marque === true), 'l’écran a été redessiné');
+  // Un autre écran (par le bouton du mail) : toujours replié.
+  await pg.click(`${Z} .ent-lecteur button:has-text("Ouvrir la fiche de sélection")`);
+  await pg.waitForSelector(F);
+  egal((await menu()).replie, true, 'replié sur un autre écran');
+  await monter({ garder: true, uid: 'u-menu' });
+  egal((await menu()).replie, true, 'replié à la réouverture');
+  pg.once('dialog', (d) => d.accept());
+  await pg.click('#smTest [data-raz]');
+  egal((await menu()).replie, true, 'replié après « Réinitialiser »');
+  await pg.click('#smTest [data-menu-replier]');
+  const d = await menu();
+  egal([d.replie, d.liste, d.expanded, d.db], [false, true, 'true', false], 'déplié');
+  await monter({ garder: true, uid: 'u-menu' });
+  egal((await menu()).replie, false, 'déplié à la réouverture');
+});
+
 await v('Smoby : aucune erreur JavaScript dans le bloc', async () => {
   if (erreursS.length) throw new Error([...new Set(erreursS)].slice(0, 5).join(' | '));
 });

@@ -642,6 +642,12 @@ export function creerEntreprise(U) {
         const horsCo = !!(db.transport && db.transport[cleTransport]
           && db.transport[cleTransport].plan && db.transport[cleTransport].plan.secours);
 
+        // Le menu de gauche replié (lot 3 du brief MOTEUR-documents-formulaire, 04/10/2026) : sur tous les
+        // écrans de toutes les entreprises. Le choix est rangé dans la base de l'élève (`db.menuReplie`) :
+        // gardé d'un écran à l'autre, retrouvé à la séance suivante. Le Planning garde « Agrandir le
+        // planning », qui cache le menu entier (bande comprise) puis le rend dans l'état choisi ici.
+        const replie = !!db.menuReplie;
+
         hote.innerHTML = `
           <div class="ent-page" style="${styleTheme()}${THEME.papier ? ';color:var(--encre);background:var(--fond)' : ''}">
             <header class="ent-bandeau">
@@ -679,8 +685,10 @@ export function creerEntreprise(U) {
               <button class="ent-sortie" data-quitter>Quitter</button>
             </header>
             ${VTAB && VTAB.aide && E.aideTableur ? `<div class="ent-aide" data-aide-tableur-texte style="white-space:pre-line">${ech(VTAB.aide)}</div>` : ''}
-            <div class="ent-shell">
+            <div class="ent-shell${replie ? ' ent-menu-replie' : ''}">
               <aside class="ent-side">
+                ${boutonMenu(replie)}
+                <div class="ent-side-liste" id="entMenuListe"${replie ? ' hidden' : ''}>
                 ${item('accueil', 'Accueil')}
                 ${item('mail', 'Messagerie', nonLus)}
                 ${VFICHE ? item('fiche', VFICHE.nav.libelle) : ''}
@@ -703,12 +711,22 @@ export function creerEntreprise(U) {
                 ${item('console', 'Console')}
                 ${VTAB && VTAB.navExtractions ? item('extractions', VTAB.navExtractions.libelle) : ''}
                 ${VTAB ? item('fichiers', VTAB.nav.libelle) : ''}
+                </div>
               </aside>
               <div class="ent-main" id="entMain"></div>
             </div>
           </div>`;
 
         hote.querySelectorAll('[data-vue]').forEach((b) => b.addEventListener('click', () => aller(b.dataset.vue)));
+        // Replier / déplier sur place, sans redessin : le focus reste sur le bouton.
+        hote.querySelector('[data-menu-replier]').addEventListener('click', (ev) => {
+          const r = !db.menuReplie;
+          db.menuReplie = r;
+          hote.querySelector('.ent-shell').classList.toggle('ent-menu-replie', r);
+          hote.querySelector('#entMenuListe').hidden = r;
+          poserBoutonMenu(ev.currentTarget, r);
+          if (!rendue()) ctx.jeu.sauver();
+        });
         hote.querySelector('[data-raz]')?.addEventListener('click', reinitialiser);
         hote.querySelector('[data-aide-tableur]')?.addEventListener('click', () => {
           E.aideTableur = !E.aideTableur;
@@ -729,6 +747,17 @@ export function creerEntreprise(U) {
         hote.querySelector('[data-copie-annuler]')?.addEventListener('click', () => { copie.arme = false; dessiner(); });
         habiller();
         dessinerVue();
+      }
+
+      // Le bouton en tête du menu. Déplié : « « Replier le menu » ; replié : « » » seul, dans la bande étroite.
+      const MENU = { false: ['« Replier le menu', 'Replier le menu pour donner toute la largeur au travail'],
+        true: ['»', 'Déplier le menu'] };
+      const boutonMenu = (r) => `<button type="button" class="ent-replier" data-menu-replier aria-controls="entMenuListe"
+        aria-expanded="${!r}" aria-label="${r ? 'Déplier le menu' : 'Replier le menu'}" title="${MENU[r][1]}">${ech(MENU[r][0])}</button>`;
+      function poserBoutonMenu(b, r) {
+        b.setAttribute('aria-expanded', String(!r));
+        b.setAttribute('aria-label', r ? 'Déplier le menu' : 'Replier le menu');
+        b.title = MENU[r][1]; b.textContent = MENU[r][0];
       }
 
       /* ------------------------------------------------------------- la copie rendue */
@@ -779,7 +808,7 @@ export function creerEntreprise(U) {
       // verrouillée sans rien savoir de la copie. Restent libres : le menu, la sortie, le zoom
       // de la carte. `sauver` ne fait plus rien non plus : deux gardes valent mieux qu'une.
       // `[data-libre]` : ce qu'une vue déclare consultable (les étapes et onglets du quai).
-      const LIBRE = '.ent-nav, [data-aide-tableur], [data-quitter], [data-ct-zoom], [data-ct-ensemble], [data-libre]';
+      const LIBRE = '.ent-nav, [data-menu-replier], [data-aide-tableur], [data-quitter], [data-ct-zoom], [data-ct-ensemble], [data-libre]';
       if (COPIE && !estProf) {
         const verrou = (ev) => {
           if (!rendue()) return;
@@ -855,7 +884,7 @@ export function creerEntreprise(U) {
         // Ce qui survit à la remise à zéro : les photos de fin de séance (la validation reste
         // acquise) et la reprise demandée par l'enseignant (voir core/app.js), qui sans cela
         // serait rejouée à la prochaine ouverture et effacerait le travail refait depuis.
-        const reprise = db.reprise, points = db.points, indicateurs = db.indicateurs;
+        const reprise = db.reprise, points = db.points, indicateurs = db.indicateurs, menuReplie = db.menuReplie;
         const photo = ctx.meta.precedente && points && points[ctx.meta.precedente];
         Object.keys(db).forEach((k) => delete db[k]);
         if (photo) {
@@ -874,6 +903,8 @@ export function creerEntreprise(U) {
         if (points) db.points = points;
         // Le repérage n'est pas du travail : repartir de zéro n'efface ni le temps ni les aides ouvertes.
         if (indicateurs) db.indicateurs = indicateurs;
+        // Le menu replié est un réglage d'écran, pas du travail.
+        if (menuReplie) db.menuReplie = true;
         normaliserBase();
         semerVolet();
         E.vue = 'accueil'; E.mailSel = null; E.no = null;

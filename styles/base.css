@@ -721,6 +721,18 @@ body.immersion .app{ max-width:1720px; padding:14px 24px 0 }
   padding:2px 14px 24px 24px; margin:0 18px 0 -24px;
 }
 .ent-side .ent-nav:first-child{ margin-top:0 }
+/* Le menu rétractable (04/10/2026, brief MOTEUR-documents-formulaire, lot 3) : un bouton en tête du
+   menu le replie en une bande étroite, sur tous les écrans. `.ent-side-liste` ne change rien à la mise
+   en page des entrées (display:contents) ; repliée, elle est simplement cachée. */
+.ent-side-liste:not([hidden]){ display:contents }
+.ent-replier{
+  align-self:flex-start; font:inherit; font-size:.82rem; cursor:pointer; color:var(--encre-douce);
+  background:none; border:1px solid transparent; border-radius:var(--r); padding:4px 8px; margin:0 0 6px;
+}
+.ent-replier:hover{ color:var(--ardoise); border-color:var(--filet); background:var(--survol) }
+.ent-shell.ent-menu-replie{ grid-template-columns:56px minmax(0,1fr) }
+.ent-shell.ent-menu-replie > .ent-side{ padding-right:6px }
+.ent-menu-replie .ent-replier{ font-size:1.1rem; line-height:1; padding:6px 9px; border-color:var(--filet) }
 .ent-nav{
   display:flex; align-items:center; gap:8px; width:100%; text-align:left;
   font:inherit; cursor:pointer; padding:8px 12px; border-radius:var(--r);
@@ -950,6 +962,8 @@ fieldset[disabled] .ent-ouinon button{ cursor:default }
   }
   .ent-nav{ width:auto }
   .ent-sep{ display:none }
+  .ent-shell.ent-menu-replie{ grid-template-columns:1fr }
+  .ent-replier{ margin:0 }
   .ent-boite{ grid-template-columns:1fr }
 }
 
