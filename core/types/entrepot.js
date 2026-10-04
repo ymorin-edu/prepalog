@@ -52,8 +52,8 @@
 // revient au plan, les palettes posées restent posées).
 //
 // Le temps pédagogique (`api.temps`) décide de ce qui est montré (brief §8) : guidage = consigne de la
-// palette en main, bandes de rotation, parcours dessiné, verdict expliqué critère par critère ;
-// entraînement = parcours seul, nom du critère seul ; évaluation = rien avant la copie rendue (comme le
+// palette en main, bandes de rotation, parcours dessiné ; après « Vérifier », le nom du critère seul (comme en
+// entraînement : le texte de la faute dirait où aller) ; entraînement = parcours seul, nom du critère seul ; évaluation = rien avant la copie rendue (comme le
 // Planning, décision de Tristan du 04/10). On dit QUE un critère n'est pas respecté, jamais DE COMBIEN.
 //
 // PRÉPARATION de commande au colis complet (`mode: 'preparation'`, brief §5.3, §5.4, §6.2, §7) :
@@ -658,8 +658,9 @@ export function creerEntrepot(P, opts = {}) {
     }
     if (!e.verifie) return '';
     if (!f.length) return '<span class="pe-verd pe-ok" data-pe-verdict="ok">✓ bien rangée</span>';
-    if (R.entr) return `<span class="pe-verd pe-ko" data-pe-verdict="ko">✗ critère : ${ech([...new Set(f.map((x) => x.nom))].join(', '))}</span>`;
-    return `<span class="pe-verd pe-ko" data-pe-verdict="ko">${f.map((x) => `✗ ${ech(x.nom)} : ${ech(x.txt)}`).join(' · ')}</span>`;
+    // Guidage comme entraînement : le NOM du critère, jamais le texte qui dit où aller (sinon « Vérifier »
+    // illimité range à la place de l'élève ; décision de Tristan du 04/10, brief MOTEUR-entrepot-verdict-guidage).
+    return `<span class="pe-verd pe-ko" data-pe-verdict="ko">✗ critère : ${ech([...new Set(f.map((x) => x.nom))].join(', '))}</span>`;
   }
   function fichePalette(e, p) {
     const r = (P.plan.rotation || {})[p.rotation];

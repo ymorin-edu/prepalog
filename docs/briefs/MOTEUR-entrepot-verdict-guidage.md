@@ -6,7 +6,7 @@
 > Lis docs/briefs/MOTEUR-entrepot-verdict-guidage.md et applique-le (attends que le chantier « Plan d'entrepôt, lot 4 » soit effacé de docs/EN-COURS.md). Annonce la durée avant de commencer.
 > ```
 
-**Statut** : à implémenter
+**Statut** : livré (04/10/2026)
 **Date du brief** : 04/10/2026
 **Conversation d'origine** : Cowork (essai d'ENT-5.5 par Tristan)
 **Modèle** : Sonnet (correctif de quelques lignes dans une vue existante, pas une vue nouvelle).
@@ -60,3 +60,21 @@ Code concerné (lu le 04/10) : `core/types/entrepot.js`, fonction `verdict()` du
 ---
 
 ## Compte rendu *(rempli par Claude Code à la livraison)*
+
+- **Fichiers modifiés** : `core/types/entrepot.js` (`verdict()` : une seule ligne pour guidage et entraînement, plus le
+  commentaire d'en-tête) ; `activites/FICHE-SEANCE.md` (phrase « Temps » du mode rangement) ; `outils/test/entrepot.mjs` ;
+  renvoi ajouté dans le compte rendu d'ENT-5.5 ; une ligne dans `docs/decisions.md`. Les textes de faute
+  (`CRITERES[...].juger`) restent écrits : la vue ne les montre plus à l'élève, `fautes()` les calcule toujours.
+- **Écarts** : aucun. Au lieu d'écrire `if (R.entr || R.g)`, la ligne du texte long est supprimée : après l'évaluation
+  (traitée plus haut), il ne reste que guidage et entraînement, qui ont maintenant le même verdict.
+- **Tests** : cas « charge totale dépasserait… » **réécrit** (attend exactement `✗ critère : poids` / `litige` / `état`).
+  Cas **ajouté** : en guidage, 4 palettes mal rangées (rotation, type, litige, hors service), « Vérifier » → chaque verdict
+  commence par `✗ critère :` et ne contient ni côté (`A1`), ni travée (`T0…`), ni niveau, ni « allée ». Éprouvé dans les
+  deux sens : l'ancien texte remis fait tomber les deux cas ; le texte long collé derrière « critère : » fait tomber le
+  cas ajouté sur la recherche d'adresse. Bloc `smoby` : aucun cas ENT-5.5 ne lisait le texte long. Suite entière : 693/693.
+- **Question ouverte 1 (mode préparation, ENT-5.6) : regardé, pas touché.** Son bilan en guidage explique chaque faute
+  (« 2 prélevés sur 6 — picking en rupture : il fallait demander la descente de la réserve », « les lourds se prélèvent en
+  premier… ») et « Reprendre la préparation » permet de rejouer. Le défaut est **plus faible** qu'au rangement : le texte
+  rappelle une règle, il ne donne pas d'adresse ; et le guidage de la préparation mène déjà l'élève pas à pas (bon trié
+  dans l'ordre, « cliquez la travée … »). À trancher par Tristan après son essai d'ENT-5.6.
+- **Question ouverte 2 (consigne de la palette en main)** : gardée telle quelle, comme prévu.

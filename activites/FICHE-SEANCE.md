@@ -465,8 +465,8 @@ entrepot: {
   stock de départ sans faute. L'enseignant les voit dans la colonne de côté ; les tests les écrivent **à la main**.
 - **Les critères** disent *que*, jamais *de combien* (« la charge totale du niveau dépasse son maximum »). Le critère
   `parcours` n'est jugé que si le type de produit est juste. Un message remplacé par la séance doit tenir la même règle.
-- **Temps** : guidage = consigne de la palette en main (colonne de côté), bandes de rotation, parcours dessiné, verdict
-  critère par critère après « Vérifier mon rangement » ; entraînement = parcours seul, nom du critère seul ;
+- **Temps** : guidage = consigne de la palette en main (colonne de côté), bandes de rotation, parcours dessiné, après
+  « Vérifier mon rangement », le **nom** du critère seul (`✗ critère : rotation`, jamais où aller) ; entraînement = parcours seul, nom du critère seul ;
   évaluation (`copie: true`) = rien de signalé, « Rendre mon travail » en deux clics, note jalons × 20.
 - La vue tient dans l'écran à 1366 × 768 (le plan prend la hauteur qui reste sous le bandeau). Les textes peuvent porter
   des `[[mots cliquables]]`, sauf dans les cartes de palettes (ce sont des boutons).

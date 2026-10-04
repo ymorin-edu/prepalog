@@ -254,10 +254,24 @@ await v('Entrepôt : une palette posée sur un niveau dont la charge totale dép
   await poserTout(pg, [['P1', 'A1-T01-N2-E3'], ['P2', 'B2-T02-N1-E2'], ['P3', 'A1-T03-N1-E1'], ['P4', 'B1-T04-N2-E3']]);
   egal(await jalons(pg), [false, true, false, false], 'jalons');
   await pg.click(`${Z} [data-pe="verifier"]`);
-  const v1 = await texte(pg, '[data-pe-verd="P1"]');
-  vrai(v1.includes('poids : la charge totale du niveau dépasse son maximum'), `verdict P1 : ${v1}`);
-  vrai((await texte(pg, '[data-pe-verd="P3"]')).includes('litige'), 'verdict P3');
-  vrai((await texte(pg, '[data-pe-verd="P4"]')).includes('état : emplacement hors service'), 'verdict P4');
+  // En guidage aussi, le verdict ne donne que le NOM du critère (brief MOTEUR-entrepot-verdict-guidage).
+  egal(await texte(pg, '[data-pe-verd="P1"]'), '✗ critère : poids', 'verdict P1');
+  egal(await texte(pg, '[data-pe-verd="P3"]'), '✗ critère : litige', 'verdict P3');
+  egal(await texte(pg, '[data-pe-verd="P4"]'), '✗ critère : état', 'verdict P4');
+});
+
+await v('Entrepôt guidage : après « Vérifier », aucun verdict ne dit où aller (ni côté, ni travée, ni allée)', async () => {
+  await monter(pg);
+  const MAL = [['P1', 'A1-T02-N1-E2'], ['P2', 'A1-T03-N2-E2'], ['P3', 'A1-T03-N1-E1'], ['P4', 'B1-T04-N2-E3']];
+  await poserTout(pg, MAL);
+  egal((await etat(pg)).place, Object.fromEntries(MAL), 'toutes posées');
+  await pg.click(`${Z} [data-pe="verifier"]`);
+  const V = await pg.$$eval(`${Z} [data-pe-verd]`, (L) => L.map((x) => x.textContent.trim()));
+  egal(V.length, 4, 'verdicts');
+  for (const t of V) {
+    vrai(/^✗ critère : /.test(t), `verdict sans faute signalée : ${t}`);
+    vrai(!/[A-Z][12]|T0\d|allée|N[1-9]/.test(t), `verdict qui dit où aller : ${t}`);
+  }
 });
 
 await v('Entrepôt : inaction → 0 / 4, « Vérifier » grisé ; la note en évaluation vaut 0', async () => {

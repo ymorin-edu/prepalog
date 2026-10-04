@@ -192,3 +192,6 @@ réserves d'ENT-5.4.
 - **Commits** : voir `git log` (« ENT-5.5 Smoby : … »).
 - **Reste ouvert** : trame élève courte (Cowork, après validation à l'écran) ; la fiche à remplir pourra porter la
   question du stock en case « nombre » quand le lot 4 de `MOTEUR-documents-formulaire` sera fait.
+- **Modifié le 04/10/2026 après l'essai de Tristan** : en guidage, « Vérifier mon rangement » ne dit plus que le **nom**
+  du critère faux (`✗ critère : rotation`), comme en entraînement. Les « erreurs expliquées critère par critère » du §2
+  ne valent plus : voir `docs/briefs/MOTEUR-entrepot-verdict-guidage.md`.
