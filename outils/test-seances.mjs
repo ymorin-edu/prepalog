@@ -108,15 +108,15 @@ async function connecterEleve(mat = '2601', code = 'aaa1') {
   await page.waitForSelector('#mat');
   await page.fill('#mat', mat); await page.fill('#code', code);
   await page.press('#code', 'Enter');
-  await page.waitForSelector('[data-rub="logisim"]');
+  await page.waitForSelector('[data-rub="simulog"]');
 }
 // Le titre de l'activité tel que la TRAME le cite à l'élève (« ouvre l'activité … »).
 const TUILE_TRAME = { 'spartoo-reception': 'Spartoo — réception', spartoo: 'Spartoo — préparation', 'spartoo-tracabilite': 'Spartoo — traçabilité' };
 async function ouvrirSeance(aid) {
   if (await page.$('[data-quitter]')) { await page.click('[data-quitter]'); }
-  await page.waitForSelector('[data-rub="logisim"], [data-act]');
-  // Logisim est rangé par entreprise (02/10/2026) : pastille, puis logo Spartoo, puis la séance.
-  if (await page.$('[data-rub="logisim"]')) { await page.click('[data-rub="logisim"]'); await page.click('[data-ent="1"]'); }
+  await page.waitForSelector('[data-rub="simulog"], [data-act]');
+  // Simulog est rangé par entreprise (02/10/2026) : pastille, puis logo Spartoo, puis la séance.
+  if (await page.$('[data-rub="simulog"]')) { await page.click('[data-rub="simulog"]'); await page.click('[data-ent="1"]'); }
   await page.waitForSelector(`[data-act="${aid}"]`);
   attendre(`la tuile ${aid} n'a pas le titre « ${TUILE_TRAME[aid]} » cité par la trame`, (await lire(`[data-act="${aid}"]`)).includes(TUILE_TRAME[aid]));
   await page.click(`[data-act="${aid}"]`);
@@ -125,9 +125,9 @@ async function ouvrirSeance(aid) {
 // La séance est-elle fermée à l'élève connecté ? On regarde la tuile ET on tente de l'ouvrir.
 async function tuileFermee(aid) {
   if (await page.$('[data-quitter]')) await page.click('[data-quitter]');
-  await page.waitForSelector('[data-rub="logisim"], [data-act]');
-  // Logisim est rangé par entreprise (02/10/2026) : pastille, puis logo Spartoo, puis la séance.
-  if (await page.$('[data-rub="logisim"]')) { await page.click('[data-rub="logisim"]'); await page.click('[data-ent="1"]'); }
+  await page.waitForSelector('[data-rub="simulog"], [data-act]');
+  // Simulog est rangé par entreprise (02/10/2026) : pastille, puis logo Spartoo, puis la séance.
+  if (await page.$('[data-rub="simulog"]')) { await page.click('[data-rub="simulog"]'); await page.click('[data-ent="1"]'); }
   await page.waitForSelector(`[data-act="${aid}"]`);
   const classe = (await page.getAttribute(`[data-act="${aid}"]`, 'class')) || '';
   const texte = await lire(`[data-act="${aid}"]`);

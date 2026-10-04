@@ -20,7 +20,7 @@ export const meta = {
   code: 'ENT-2.5',
   titre: 'Cdiscount — le compte à rebours',
   desc: 'Seul, sur une allée neuve : exporter, analyser, choisir quoi compter, compter, décider, rendre compte. Tu rends ta copie.',
-  rubrique: 'logisim',
+  rubrique: 'simulog',
   // Compétences et temps pédagogique : voir core/competences.js.
   competences: ['C1.6'],
   temps: 'evaluation',

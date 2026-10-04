@@ -23,7 +23,7 @@ export const meta = {
   code: 'ENT-2.1',
   titre: 'Cdiscount — le stock raconte',
   desc: "Une cliente n'a pas reçu ses écouteurs : remonter les mouvements de stock jusqu'à l'erreur.",
-  rubrique: 'logisim',
+  rubrique: 'simulog',
   // Compétences et temps pédagogique : voir core/competences.js.
   competences: ['C1.6'],
   temps: 'guidage',

@@ -18,7 +18,7 @@
 | `code` | ENT-5.7 |
 | `id` | `smoby-lettre-voiture` |
 | Titre / desc | « Kuehne+Nagel — la lettre de voiture et le retard » / « Agent d'exploitation à l'agence Kuehne+Nagel de Besançon : remplir la lettre de voiture d'un enlèvement chez Smoby, puis gérer un retard et prévenir le client et l'expéditeur. » |
-| Rubrique | logisim, entreprise n° 5 Smoby (le scénario S1 réunit Smoby et K+N) |
+| Rubrique | simulog, entreprise n° 5 Smoby (le scénario S1 réunit Smoby et K+N) |
 | Niveau(x) | 2de |
 | Compétence(s) | **OTM-C2.1** (constituer le dossier transport), **OTM-C2.3** (suivre l'opération, rendre compte) ; domaines D3, D1 |
 | Temps pédagogique | guidage ; `parcours: 'coeur'` |

@@ -308,7 +308,7 @@ par = d.add_paragraph(); par.paragraph_format.space_after = Pt(2)
 par.paragraph_format.tab_stops.add_tab_stop(Cm(17.0), WD_TAB_ALIGNMENT.RIGHT)
 if os.path.exists(LOGO_PREPALOG):
     par.add_run().add_picture(LOGO_PREPALOG, height=Cm(1.15))
-r = par.add_run('  Logisim')
+r = par.add_run('  Simulog')
 r.bold = True; r.font.size = Pt(20); r.font.color.rgb = TITRE
 par.add_run('\t')
 if os.path.exists(LOGO):
@@ -386,7 +386,7 @@ reflechir([
 
 # ==================================================================== étape 2
 etape(2, "Ouvrir son environnement et lire la consigne")
-p("Connecte-toi à Prepalog, ouvre la rubrique Logisim, puis l'activité « Boost — la tournée du vélo-cargo ». "
+p("Connecte-toi à Prepalog, ouvre la rubrique Simulog, puis l'activité « Boost — la tournée du vélo-cargo ». "
   "Le logiciel s'ouvre aux couleurs de Boost. Tu dois voir, à gauche, un menu avec « Messagerie ». Clique dessus : "
   "un message t'attend. Lis-le en entier avant de toucher à autre chose.")
 consignes([

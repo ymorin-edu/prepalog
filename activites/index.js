@@ -30,7 +30,7 @@ export const ACTIVITES = [
   () => import('./bouygues-telecom.js'),
   () => import('./brasseries-gatinais.js'),
   () => import('./reception-plateforme.js'),
-  // Environnements d'entreprise (LogiSim). Une tuile par séance, dans l'ordre de la
+  // Environnements d'entreprise (Simulog). Une tuile par séance, dans l'ordre de la
   // séquence : on réceptionne, puis on prépare, puis on remonte la traçabilité.
   () => import('./spartoo-reception.js'),
   () => import('./spartoo.js'),
@@ -96,13 +96,13 @@ export const RUBRIQUES = [
     desc: 'Compléter un classeur, le déposer, obtenir la correction automatique.' },
 
   // bande 3 — les outils de travail
-  { id: 'logisim', label: 'Logisim', bande: 3, cat: 'logisim', icone: 'entreprise', parEntreprise: true,
+  { id: 'simulog', label: 'Simulog', bande: 3, cat: 'simulog', icone: 'entreprise', parEntreprise: true,
     desc: "Des environnements d'entreprise complets. Chaque élève travaille dans sa propre base." },
   { id: 'magasin', label: 'Magasin', bande: 3, ids: ['magasin'], icone: 'magasin',
     desc: 'La base du magasin pédagogique : produits, emplacements et état du stock.' },
 ];
 
-// Les entreprises de Logisim (02/10/2026, décision de Tristan) : la pastille Logisim montre
+// Les entreprises de Simulog (02/10/2026, décision de Tristan) : la pastille Simulog montre
 // d'abord leurs logos, puis les séances de l'entreprise choisie. Une séance appartient à
 // l'entreprise du PREMIER NOMBRE de son code : ENT-3.2 → 3. Une entreprise nouvelle = une ligne.
 // Le nom et le métier sont recopiés du `sousTitre` des contenus (contenus/<nom>.js) : ces

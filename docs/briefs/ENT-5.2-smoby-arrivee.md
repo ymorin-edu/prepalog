@@ -19,7 +19,7 @@ maquette `docs/briefs/planning/` (cas « personnel », v8 validée).
 | `code` | ENT-5.2 |
 | `id` | `smoby-arrivee` |
 | Titre / desc | « Smoby — l'arrivée de Yanis » / « Assistant RH : préparer l'arrivée du cariste recruté (pièces à demander, programme du premier jour), puis planifier les présences et les congés de l'équipe avant le pic, et replanifier après un imprévu. » |
-| Rubrique | logisim, entreprise n° 5 Smoby |
+| Rubrique | simulog, entreprise n° 5 Smoby |
 | Niveau(x) | 2de |
 | Compétence(s) | **AGO-3.1** (procédures d'entrée), **AGO-3.2** (planifier présences et congés) ; domaines D2, D3 |
 | Temps pédagogique | guidage ; `parcours: 'coeur'` |

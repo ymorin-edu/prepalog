@@ -19,7 +19,7 @@ maquette `docs/briefs/planning/` (cas « chauffeurs et camions », v8 validée).
 | `code` | ENT-5.6 |
 | `id` | `smoby-enlevements` |
 | Titre / desc | « Kuehne+Nagel — les enlèvements de Noël » / « Agent d'exploitation à l'agence Kuehne+Nagel de Besançon : affecter un chauffeur et un camion à chacun des 5 enlèvements de la commande de Noël chez Smoby, en respectant permis, pauses, temps de conduite et repos, puis replanifier après une panne. » |
-| Rubrique | logisim, entreprise n° 5 Smoby |
+| Rubrique | simulog, entreprise n° 5 Smoby |
 | Niveau(x) | 2de |
 | Compétence(s) | **OTM-C2.2** (réserver et planifier l'opération), **OTM-C3.2** (temps de conduite, notion) ; domaine D2 |
 | Temps pédagogique | guidage ; `parcours: 'coeur'` |

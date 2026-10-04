@@ -669,13 +669,13 @@ await v('quai : guidage — « Recommencer la réception » repart d’un quai n
 await v('ENT-4.1 : déclaration (C1.4, guidage, 1re, 18 jalons, livrée fermée aux élèves)', async () => {
   const m = await pg2.evaluate(async () => (await import('/activites/picard-ent41.js')).meta);
   egal([m.id, m.code, m.rubrique, m.competences, m.temps, m.niveaux, m.bareme, m.pret, m.ouverture, m.immersif, m.portee, !!m.copie],
-    ['picard-ent41', 'ENT-4.1', 'logisim', ['C1.4'], 'guidage', ['1re'], 18, true, 'prof', true, 'eleve', false], 'meta');
+    ['picard-ent41', 'ENT-4.1', 'simulog', ['C1.4'], 'guidage', ['1re'], 18, true, 'prof', true, 'eleve', false], 'meta');
 });
 
-await v('ENT-4.1 : sous le logo Picard dans Logisim, elle s’ouvre sur l’accueil et le mail du chef de quai', async () => {
+await v('ENT-4.1 : sous le logo Picard dans Simulog, elle s’ouvre sur l’accueil et le mail du chef de quai', async () => {
   const p = await nouvellePage();
   await p.click('#btnProf');
-  await p.click('[data-rub="logisim"]');
+  await p.click('[data-rub="simulog"]');
   await p.click('[data-ent="4"]');
   vrai((await texte(p, '[data-entreprise="4"]')).includes('Picard'), 'bloc Picard absent');
   await p.click('[data-act="picard-ent41"]');
@@ -795,7 +795,7 @@ async function jouer42(p, ecarts = {}) {
 await v('ENT-4.2 : déclaration (C1.4 + C1.3, entraînement, 1re, 30 jalons, livrée fermée aux élèves)', async () => {
   const m = await pg2.evaluate(async () => (await import('/activites/picard-ent42.js')).meta);
   egal([m.id, m.code, m.rubrique, m.competences, m.temps, m.niveaux, m.bareme, m.pret, m.ouverture, m.immersif, !!m.copie],
-    ['picard-ent42', 'ENT-4.2', 'logisim', ['C1.4', 'C1.3'], 'entrainement', ['1re'], 30, true, 'prof', true, false], 'meta');
+    ['picard-ent42', 'ENT-4.2', 'simulog', ['C1.4', 'C1.3'], 'entrainement', ['1re'], 30, true, 'prof', true, false], 'meta');
 });
 
 await v('ENT-4.2 : écran ① — deux camions, l’ordre ne se choisit qu’après les deux tickets, aucune aide', async () => {
@@ -1100,11 +1100,11 @@ await v('Picard : chaque palette déclarée suit la règle −18 / −15 (accept
   egal(fautes, [], 'palettes hors de la règle');
 });
 
-await v('ENT-4.2 : sous le logo Picard dans Logisim, elle s’ouvre sur l’accueil et le mail des deux camions', async () => {
+await v('ENT-4.2 : sous le logo Picard dans Simulog, elle s’ouvre sur l’accueil et le mail des deux camions', async () => {
   // Contexte neuf : celui du bloc garde la session enseignant ouverte par le test d'ENT-4.1.
   const { ctx, pg: p, erreurs } = await contexte();
   await p.click('#btnProf');
-  await p.click('[data-rub="logisim"]');
+  await p.click('[data-rub="simulog"]');
   await p.click('[data-ent="4"]');
   await p.click('[data-act="picard-ent42"]');
   await p.waitForSelector('.ent-bandeau');
@@ -1170,7 +1170,7 @@ const terminer43 = async (p) => { await clic(p, '[data-q="terminer"]'); await cl
 await v('ENT-4.3 : meta (erreur induite C1.4, 1re, livrée fermée aux élèves, dix jalons)', async () => {
   const m = await pg2.evaluate(async () => (await import('/activites/picard-ent43.js')).meta);
   egal([m.id, m.code, m.rubrique, m.competences, m.temps, m.niveaux, m.bareme, m.pret, m.ouverture, m.immersif, m.portee, !!m.copie],
-    ['picard-ent43', 'ENT-4.3', 'logisim', ['C1.4'], 'erreur', ['1re'], 10, true, 'prof', true, 'eleve', false], 'meta');
+    ['picard-ent43', 'ENT-4.3', 'simulog', ['C1.4'], 'erreur', ['1re'], 10, true, 'prof', true, 'eleve', false], 'meta');
 });
 
 await v('ENT-4.3 : contenu — N2 acceptée à tort au-dessus de −15 °C, N3 37 pour 40, N1 conforme ; tout à −21 °C aujourd’hui', async () => {
@@ -1321,10 +1321,10 @@ await v('ENT-4.3 : corrigé — palettes, diagnostic et protestation', async () 
   vrai(c.items[1].rep.includes('Palette acceptée à tort : N2') && c.items[3].rep.includes('BL : SL-26-1207'), 'messages');
 });
 
-await v('ENT-4.3 : sous le logo Picard dans Logisim, elle s’ouvre sur l’accueil et les trois messages', async () => {
+await v('ENT-4.3 : sous le logo Picard dans Simulog, elle s’ouvre sur l’accueil et les trois messages', async () => {
   const { ctx, pg: p, erreurs } = await contexte();
   await p.click('#btnProf');
-  await p.click('[data-rub="logisim"]');
+  await p.click('[data-rub="simulog"]');
   await p.click('[data-ent="4"]');
   await p.click('[data-act="picard-ent43"]');
   await p.waitForSelector('.ent-bandeau');
@@ -1483,7 +1483,7 @@ await v('ENT-4.4 : meta (évaluation, copie rendue, fermée aux élèves, 20 jal
   const r = await pg2.evaluate(async () => { const A = await import('/activites/picard-ent44.js'); return { m: A.meta, noter: typeof A.noter }; });
   const m = r.m;
   egal([m.id, m.code, m.rubrique, m.competences, m.temps, m.niveaux, m.bareme, m.immersif, m.ouverture, m.pret, m.portee, m.copie, !!m.reinitialisable, r.noter],
-    ['picard-ent44', 'ENT-4.4', 'logisim', ['C1.4'], 'evaluation', ['1re'], 20, true, 'prof', true, 'eleve', true, false, 'function'], 'meta');
+    ['picard-ent44', 'ENT-4.4', 'simulog', ['C1.4'], 'evaluation', ['1re'], 20, true, 'prof', true, 'eleve', true, false, 'function'], 'meta');
 });
 
 await v('ENT-4.4 : l’élève reçoit son camion (graine posée), aucune aide, un second motif sur chaque palette', async () => {
@@ -1669,10 +1669,10 @@ await v('ENT-4.4 : corrigé — par élève dans l’onglet Corrigés (camion, j
   await ctx.close();
 });
 
-await v('ENT-4.4 : sous le logo Picard dans Logisim, elle s’ouvre sur l’accueil et le mail court du chef de quai', async () => {
+await v('ENT-4.4 : sous le logo Picard dans Simulog, elle s’ouvre sur l’accueil et le mail court du chef de quai', async () => {
   const { ctx, pg: p, erreurs } = await contexte();
   await p.click('#btnProf');
-  await p.click('[data-rub="logisim"]');
+  await p.click('[data-rub="simulog"]');
   await p.click('[data-ent="4"]');
   await p.click('[data-act="picard-ent44"]');
   await p.waitForSelector('.ent-bandeau');

@@ -62,7 +62,7 @@ export const CORRIGE = {
         "Premier camion arrivé",
         "Second camion arrivé"
       ],
-      "contexte": "Connecte-toi à Prepalog, ouvre la rubrique Logisim, puis l'activité « Picard — deux camions, un seul quai ». Dans le menu de gauche, clique sur « Messagerie » et ouvre le message du chef de quai : « Quai 32 : deux camions ce matin ».",
+      "contexte": "Connecte-toi à Prepalog, ouvre la rubrique Simulog, puis l'activité « Picard — deux camions, un seul quai ». Dans le menu de gauche, clique sur « Messagerie » et ouvre le message du chef de quai : « Quai 32 : deux camions ce matin ».",
       "reponses": [
         [
           "Heure d'arrivée",

@@ -4,7 +4,7 @@
 // si possible, où il doit saisir la formule pour trouver le temps. Même chose pour le poids :
 // il doit construire avec une somme pour avoir le poids total. »* Ça change la nature de
 // l'exercice — on ne demande plus à l'élève de TROUVER deux nombres, on lui demande de
-// CONSTRUIRE le calcul — et ça relie les environnements Logisim au tableur, qui est le fil de
+// CONSTRUIRE le calcul — et ça relie les environnements Simulog au tableur, qui est le fil de
 // tout le reste du site (TAB-1 à TAB-4).
 //
 // Ce que ce fichier n'est pas : un tableur. Il ne fait ni les références absolues (`$B$2`), ni

@@ -21,7 +21,7 @@ export const meta = {
   code: 'ENT-2.3',
   titre: 'Cdiscount — inventaire tournant',
   desc: "Recompter les références qu'on a choisies, calculer les écarts, retrouver leur cause, décider et valider l'inventaire.",
-  rubrique: 'logisim',
+  rubrique: 'simulog',
   // Compétences et temps pédagogique : voir core/competences.js.
   competences: ['C1.6'],
   temps: 'entrainement',

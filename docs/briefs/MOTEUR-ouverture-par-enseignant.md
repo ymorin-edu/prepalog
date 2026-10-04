@@ -33,7 +33,7 @@ Proposition de forme (à confirmer par Claude Code s'il voit plus simple) :
 
 `ENT-2.1` (`activites/cdiscount-mouvements.js`), `ENT-2.3` (`activites/cdiscount-regularise.js`), `ENT-3.2` (`activites/boost-ent32.js`) : passer `pret: true` **et** déclarer `ouverture: 'prof'`. Elles restent donc invisibles aux élèves **jusqu'à ce que Tristan les coche** pour son groupe. Les séances à venir (ENT-3.4, 2.4) naissent directement ainsi.
 
-## 5. Tests (blocs concernés : `visibilite`, `socle` si la liste des séances Logisim y est)
+## 5. Tests (blocs concernés : `visibilite`, `socle` si la liste des séances Simulog y est)
 
 - **Le test `visibilite` est à réécrire : le dire explicitement à Tristan** (alerte n° 7). Il ne doit plus dépendre de l'existence d'une séance `pret: false` ; il doit prouver (a) une séance `ouverture: 'prof'` est invisible à l'élève tant qu'elle n'est pas cochée, (b) visible après la coche, (c) invisible de nouveau après décochage, (d) une séance sans `ouverture` se comporte comme avant, (e) l'enseignant voit toujours la tuile avec le bon motif. Garder un cas `pret: false` s'il en existe encore, mais **ne jamais exiger sa présence**.
 - Éprouver chaque cas dans les deux sens (un sabotage qui ne fait rien tomber est un test mal écrit).
@@ -53,7 +53,7 @@ Proposition de forme (à confirmer par Claude Code s'il voit plus simple) :
 
 ## 8. Questions ouvertes
 
-- [x] *(oui : une case par activité du registre, Logisim compris ; seule une séance `pret: false` a sa case grisée)* La case « Conduite de séance » existe-t-elle pour **toutes** les séances, y compris Logisim ? (à confirmer en lisant `core/prof.js` autour des lignes 900-990)
+- [x] *(oui : une case par activité du registre, Simulog compris ; seule une séance `pret: false` a sa case grisée)* La case « Conduite de séance » existe-t-elle pour **toutes** les séances, y compris Simulog ? (à confirmer en lisant `core/prof.js` autour des lignes 900-990)
 - [x] *(non construit)* Faut-il une ouverture « pour tous mes groupes d'un coup » ? **Non demandé** : à ne pas construire sans le lui demander.
 - [x] *(non par le site : pas d'adresse par activité, on n'entre que par les tuiles ; seul un bricolage dans la console du navigateur le permettrait, comme déjà pour `pret: false`. Un élève ne peut pas écrire `ouverts` : `firestore.rules` réserve la mise à jour d'un groupe à ses enseignants, aucune règle touchée)* Un élève peut-il atteindre une activité fermée par son adresse ? (voir §6)
 

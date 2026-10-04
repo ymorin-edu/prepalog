@@ -171,7 +171,7 @@ await v('rubriques : les activités sont rangées par numéro de module', async 
   if (!avant('ENT-1.9', 'ENT-1.10')) throw new Error('comparateur du test : 1.10 avant 1.9');
   if (!avant('ENT-1.2', 'ENT-2.1')) throw new Error('comparateur du test : 2.1 avant 1.2');
 
-  // Repères explicites : Tableur, la rubrique qui portait le défaut, et Logisim, dont les
+  // Repères explicites : Tableur, la rubrique qui portait le défaut, et Simulog, dont les
   // numéros sont à deux niveaux — une séance par tuile, une entreprise par premier chiffre.
   const repere = (label, attendu) => {
     const r = par.find((x) => x.label === label);
@@ -183,7 +183,7 @@ await v('rubriques : les activités sont rangées par numéro de module', async 
   // (ENT-1.x), puis Cdiscount (ENT-2.x, depuis le 02/10/2026), puis Boost (ENT-3.x), puis Picard
   // (ENT-4.x, 03/10/2026). Une séance nouvelle s'insère à son rang : on ne touche à cette liste
   // qu'en l'allongeant.
-  repere('Logisim', 'ENT-1.1 ENT-1.2 ENT-1.3 ENT-2.1 ENT-2.2 ENT-2.3 ENT-2.4 ENT-2.5 ENT-2.6 ENT-3.1 ENT-3.2 ENT-3.3 ENT-4.1 ENT-4.2 ENT-4.3 ENT-4.4');
+  repere('Simulog', 'ENT-1.1 ENT-1.2 ENT-1.3 ENT-2.1 ENT-2.2 ENT-2.3 ENT-2.4 ENT-2.5 ENT-2.6 ENT-3.1 ENT-3.2 ENT-3.3 ENT-4.1 ENT-4.2 ENT-4.3 ENT-4.4');
 });
 
 // ---------- 7. l'élève voit la base commune de la classe
@@ -1421,8 +1421,8 @@ await v('tableur : contrôle de liste à ordre libre', async () => {
 });
 
 
-// ---------- Logisim rangé par entreprise (02/10/2026, brief MOTEUR-logisim-par-entreprise)
-// Pastille Logisim → les logos → les séances de l'entreprise. Fenêtre à part : ces cas créent
+// ---------- Simulog rangé par entreprise (02/10/2026, brief MOTEUR-simulog-par-entreprise)
+// Pastille Simulog → les logos → les séances de l'entreprise. Fenêtre à part : ces cas créent
 // leur propre groupe et ne dérangent pas la page partagée des autres cas.
 {
 const ctxL = await nav.newContext({ viewport: { width: 1280, height: 900 } });
@@ -1455,7 +1455,7 @@ const tuilesL = () => pl.$$eval('.module-tile', (els) => els.map((e) => ({
 
 // Quatre logos depuis Picard (ENT-4.1, 03/10/2026). ENT-4.1 est livrée fermée aux élèves
 // (`ouverture: 'prof'`) : chez l'élève, la carte Picard n'apparaît donc pas (cas plus bas).
-await v('Logisim : l’enseignant voit quatre logos, et rien d’autre sur la carte', async () => {
+await v('Simulog : l’enseignant voit quatre logos, et rien d’autre sur la carte', async () => {
   await pl.click('#btnProf');
   await pl.waitForSelector('#btnProfEspace');
   await pl.click('#btnProfEspace');
@@ -1469,7 +1469,7 @@ await v('Logisim : l’enseignant voit quatre logos, et rien d’autre sur la ca
   await pl.click('#btnLot');
   await pl.waitForTimeout(400);
   await pl.click('#btnRetour');
-  await pl.click('[data-rub="logisim"]');
+  await pl.click('[data-rub="simulog"]');
   await pl.waitForSelector('.entreprise');
   // Les logos se chargent après l'affichage : on leur laisse le temps, sans en faire une condition.
   await pl.waitForFunction(() => [...document.querySelectorAll('.entreprise img')].every((i) => i.complete), null, { timeout: 4000 }).catch(() => {});
@@ -1486,7 +1486,7 @@ await v('Logisim : l’enseignant voit quatre logos, et rien d’autre sur la ca
   if ((await tuilesL()).length) throw new Error('des tuiles de séance s’affichent à côté des logos');
 });
 
-await v('Logisim : un logo ouvre les séances de son entreprise, nom et métier en tête', async () => {
+await v('Simulog : un logo ouvre les séances de son entreprise, nom et métier en tête', async () => {
   await pl.click('[data-ent="3"]');
   await pl.waitForSelector('.entreprise-tete');
   const h = await pl.$eval('.entreprise-tete', (e) => ({ h1: e.querySelector('h1').textContent, p: e.querySelector('p').textContent }));
@@ -1498,18 +1498,18 @@ await v('Logisim : un logo ouvre les séances de son entreprise, nom et métier 
   if (!t.some((x) => x.cachee === 'en préparation')) throw new Error('aucune séance Boost étiquetée « en préparation »');
 });
 
-await v('Logisim : « ← LOGISIM » ramène aux logos, « ← ACCUEIL » à l’accueil', async () => {
-  const lib = (await pl.textContent('#btnLogisim')).trim();
-  if (lib !== '← LOGISIM') throw new Error('libellé : ' + lib);
-  await pl.click('#btnLogisim');
+await v('Simulog : « ← SIMULOG » ramène aux logos, « ← ACCUEIL » à l’accueil', async () => {
+  const lib = (await pl.textContent('#btnSimulog')).trim();
+  if (lib !== '← SIMULOG') throw new Error('libellé : ' + lib);
+  await pl.click('#btnSimulog');
   await pl.waitForSelector('.entreprise');
   if ((await cartes()).length !== 4) throw new Error('retour aux logos incomplet');
   await pl.click('#btnAccueil');
-  await pl.waitForSelector('[data-rub="logisim"]');
+  await pl.waitForSelector('[data-rub="simulog"]');
   if (await pl.$('.entreprise')) throw new Error('les logos restent affichés à l’accueil');
 });
 
-await v('Logisim : l’élève ne voit pas la carte d’une entreprise sans séance ouverte', async () => {
+await v('Simulog : l’élève ne voit pas la carte d’une entreprise sans séance ouverte', async () => {
   // On ferme pour ce groupe TOUTES les séances ouvertes de Cdiscount (il y en a plusieurs depuis
   // le 03/10/2026).
   await pl.click('#btnProfEspace');
@@ -1529,7 +1529,7 @@ await v('Logisim : l’élève ne voit pas la carte d’une entreprise sans séa
   }
   // L'enseignant, lui, garde la carte Cdiscount.
   await pl.click('#btnRetour');
-  await pl.click('[data-rub="logisim"]');
+  await pl.click('[data-rub="simulog"]');
   await pl.waitForSelector('.entreprise');
   if (!(await cartes()).some((x) => x.id === '2')) throw new Error('l’enseignant a perdu la carte Cdiscount');
   await pl.click('[data-ent="3"]');               // on quitte l'enseignant DANS une entreprise
@@ -1542,13 +1542,13 @@ await v('Logisim : l’élève ne voit pas la carte d’une entreprise sans séa
   await pl.waitForSelector('text=Bonjour Inès');
   // Un changement de session repart de l'accueil, pas de l'entreprise de l'utilisateur précédent.
   if (await pl.$('.entreprise-tete')) throw new Error('l’élève arrive dans l’entreprise ouverte par l’enseignant');
-  await pl.click('[data-rub="logisim"]');
+  await pl.click('[data-rub="simulog"]');
   await pl.waitForSelector('.entreprise');
   const ids = (await cartes()).map((x) => x.id).join();
   if (ids !== '1,3') throw new Error('cartes chez l’élève : ' + ids);
 });
 
-await v('Logisim : une entreprise dont seules certaines séances sont ouvertes montre la liste, sans la séance en préparation', async () => {
+await v('Simulog : une entreprise dont seules certaines séances sont ouvertes montre la liste, sans la séance en préparation', async () => {
   // Boost : ENT-3.1 et ENT-3.3 sont prêtes ; ENT-3.2 est mise « en préparation » pour ce test
   // (voir la réécriture du drapeau en tête de ces cas), donc cachée à l'élève.
   await pl.click('[data-ent="3"]');
@@ -1559,7 +1559,7 @@ await v('Logisim : une entreprise dont seules certaines séances sont ouvertes m
   if (await pl.$('.ent-shell')) throw new Error('la séance s’est ouverte sans passer par la liste');
 });
 
-await v('Logisim : « Quitter » une séance ramène à la liste de son entreprise', async () => {
+await v('Simulog : « Quitter » une séance ramène à la liste de son entreprise', async () => {
   await pl.click('[data-act="boost-ent33"]');
   await pl.waitForSelector('[data-quitter]');
   await pl.click('[data-quitter]');
@@ -1569,7 +1569,7 @@ await v('Logisim : « Quitter » une séance ramène à la liste de son entrepri
   if (!(await pl.$('[data-act="boost-ent33"]'))) throw new Error('la tuile ENT-3.3 manque au retour');
 });
 
-await v('Logisim : une séance au numéro d’entreprise inconnu reste visible (« Autres »)', async () => {
+await v('Simulog : une séance au numéro d’entreprise inconnu reste visible (« Autres »)', async () => {
   const r = await pl.evaluate(async () => {
     const { entreprisesDe } = await import('/activites/index.js');
     const m = (code) => ({ meta: { id: code, code } });
@@ -1581,7 +1581,7 @@ await v('Logisim : une séance au numéro d’entreprise inconnu reste visible (
   if (r.find((e) => e.id === 'autres').logo) throw new Error('« Autres » ne doit pas avoir de logo');
 });
 
-await v('Logisim : aucune requête hors du site, aucune erreur JavaScript', async () => {
+await v('Simulog : aucune requête hors du site, aucune erreur JavaScript', async () => {
   if (horsSite.length) throw new Error('requêtes hors du site : ' + horsSite.slice(0, 3).join(', '));
   if (erreursL.length) throw new Error(erreursL.slice(0, 3).join(' / '));
 });
@@ -1615,11 +1615,11 @@ await pi.goto('http://127.0.0.1:8099/');
 await pi.waitForSelector('#btnProf', { timeout: 8000 });
 const liensBandeau = () => pi.$$eval('.ent-bandeau [data-intention]', (l) => l.map((a) => a.getAttribute('href')));
 const ouvrirSeanceI = async (ent, id) => {
-  // Depuis la liste d'une entreprise (retour de « Quitter »), « ← LOGISIM » ramène aux logos.
-  if (await pi.$('#btnLogisim')) await pi.click('#btnLogisim');
+  // Depuis la liste d'une entreprise (retour de « Quitter »), « ← SIMULOG » ramène aux logos.
+  if (await pi.$('#btnSimulog')) await pi.click('#btnSimulog');
   else {
     if (await pi.$('#btnAccueil')) await pi.click('#btnAccueil');
-    await pi.click('[data-rub="logisim"]');
+    await pi.click('[data-rub="simulog"]');
   }
   await pi.click(`[data-ent="${ent}"]`);
   await pi.click(`[data-act="${id}"]`);
@@ -1667,7 +1667,7 @@ await v('fiche d’intention : dans le bandeau de la séance quand l’enseignan
 });
 
 await v('fiche d’intention : jamais dans le bandeau d’un élève', async () => {
-  if (await pi.$('#btnLogisim')) await pi.click('#btnLogisim');
+  if (await pi.$('#btnSimulog')) await pi.click('#btnSimulog');
   await pi.click('#btnDeco');
   await pi.waitForSelector('#mat');
   await pi.fill('#mat', '3961');

@@ -12,7 +12,7 @@
 | `code` | ENT-2.4 |
 | `id` (jamais modifié ensuite) | à choisir en suivant les `id` voisins (`cdiscount-mouvements`, `cdiscount-inventaire`, `cdiscount-regularise`…) — **le noter dans le compte rendu** |
 | Titre / desc | « Cdiscount — l'inventaire de la semaine » (titre à affiner) / un inventaire neuf, seul, sans correction : tu rends ta copie |
-| Rubrique | logisim |
+| Rubrique | simulog |
 | Entreprise | Cdiscount (validé, vérifié) — `contenus/cdiscount.js` |
 | Niveau(x) | 1re Bac Pro Logistique |
 | Compétence(s) | C1.6 Gérer le suivi des stocks (C1.6.1 flux d'information, C1.6.2 inventaire) |
@@ -62,7 +62,7 @@ Un jalon faux ne fait tomber que lui. Barème : jalons réussis / jalons, à la 
 ## 6. Contenu (données)
 
 Fichiers à créer : `contenus/cdiscount-evaluation.js`, `activites/cdiscount-evaluation.js` (noms indicatifs : **suivre la convention des fichiers voisins**),
-`export const noter = (db) => moteur.noter(db);`, une ligne dans `activites/index.js`, bloc de test dans `outils/test/cdiscount.mjs`, ligne de la liste Logisim de `outils/test/socle.mjs`,
+`export const noter = (db) => moteur.noter(db);`, une ligne dans `activites/index.js`, bloc de test dans `outils/test/cdiscount.mjs`, ligne de la liste Simulog de `outils/test/socle.mjs`,
 une option dans `outils/essai-cdiscount.html`.
 
 Scénario à construire (**propositions**, Claude Code vérifie la cohérence puis fait relire par Tristan) :

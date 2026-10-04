@@ -21,7 +21,7 @@ Fil rouge de la série : `claude/prepalog-cdiscount-recadrage.md`.
 | `code` / `id` | ENT-2.1 / `cdiscount-mouvements` (**id inchangé**) |
 | Titre | « Cdiscount — le stock raconte » (inchangé) |
 | desc | « Une cliente n'a pas reçu ses écouteurs : remonter les mouvements de stock jusqu'à l'erreur. » |
-| Rubrique | logisim |
+| Rubrique | simulog |
 | Niveau | 1re |
 | Compétence | C1.6 (C1.6.1 flux d'information ; prépare C1.6.2 inventaire) |
 | Temps | **guidage** |

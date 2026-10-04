@@ -22,7 +22,7 @@ export const meta = {
   titre: 'Picard — le rush du lundi',
   desc: 'Évaluation : réceptionner seul un camion de six palettes de surgelés au quai 32, sans aide, '
     + 'sur un camion tiré pour toi. La note tient compte de la réception et de la rapidité.',
-  rubrique: 'logisim',
+  rubrique: 'simulog',
   niveaux: ['1re'],
   competences: ['C1.4'],
   temps: 'evaluation',

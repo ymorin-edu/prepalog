@@ -35,7 +35,7 @@ await v('Spartoo : ouverture de l\'environnement', async () => {
   await page.waitForSelector('#mat');
   await page.fill('#mat', '2601'); await page.fill('#code', 'aaa1');
   await page.press('#code', 'Enter');
-  await page.waitForSelector('[data-rub="logisim"]', { timeout: 6000 });
+  await page.waitForSelector('[data-rub="simulog"]', { timeout: 6000 });
   // Parcours strict (02/10/2026) : ENT-1.2 et ENT-1.3 ne s'ouvrent qu'après validation de la séance
   // précédente. Ces cas-ci testent le CONTENU des séances, pas l'ordre (c'est `test-seances.mjs`) :
   // on pose donc, comme le ferait le bouton « Débloquer » de l'enseignant, les deux drapeaux.
@@ -47,10 +47,10 @@ await v('Spartoo : ouverture de l\'environnement', async () => {
         JSON.stringify({ uid, aid: '_debloque-' + aid, gid: '1-log-a', score: 0, max: 0, meilleur: 0, tentatives: 0 }));
     });
   });
-  // La rubrique Logisim porte désormais une tuile par SÉANCE de l'entreprise : réception,
+  // La rubrique Simulog porte désormais une tuile par SÉANCE de l'entreprise : réception,
   // préparation. On ouvre ici la préparation ; la réception est testée plus bas.
-  await page.click('[data-rub="logisim"]');
-  await page.click('[data-ent="1"]');          // Logisim est rangé par entreprise : le logo Spartoo
+  await page.click('[data-rub="simulog"]');
+  await page.click('[data-ent="1"]');          // Simulog est rangé par entreprise : le logo Spartoo
   await page.waitForSelector('[data-act="spartoo"]', { timeout: 6000 });
   await page.click('[data-act="spartoo"]');
   await page.waitForSelector('.ent-shell', { timeout: 6000 });
@@ -277,9 +277,9 @@ await v('Spartoo réception : la séance s\'ajoute à la base de l\'élève', as
   await page.waitForSelector('#mat');
   await page.fill('#mat', '2601'); await page.fill('#code', 'aaa1');
   await page.press('#code', 'Enter');
-  await page.waitForSelector('[data-rub="logisim"]', { timeout: 6000 });
-  await page.click('[data-rub="logisim"]');
-  await page.click('[data-ent="1"]');          // Logisim est rangé par entreprise : le logo Spartoo
+  await page.waitForSelector('[data-rub="simulog"]', { timeout: 6000 });
+  await page.click('[data-rub="simulog"]');
+  await page.click('[data-ent="1"]');          // Simulog est rangé par entreprise : le logo Spartoo
   await page.waitForSelector('[data-act="spartoo-reception"]', { timeout: 6000 });
   await page.click('[data-act="spartoo-reception"]');
   await page.waitForSelector('.ent-shell', { timeout: 6000 });
@@ -375,9 +375,9 @@ await v('Spartoo traçabilité : l\'aval est semé et le lot se remonte', async 
   await page.waitForSelector('#mat');
   await page.fill('#mat', '2601'); await page.fill('#code', 'aaa1');
   await page.press('#code', 'Enter');
-  await page.waitForSelector('[data-rub="logisim"]', { timeout: 6000 });
-  await page.click('[data-rub="logisim"]');
-  await page.click('[data-ent="1"]');          // Logisim est rangé par entreprise : le logo Spartoo
+  await page.waitForSelector('[data-rub="simulog"]', { timeout: 6000 });
+  await page.click('[data-rub="simulog"]');
+  await page.click('[data-ent="1"]');          // Simulog est rangé par entreprise : le logo Spartoo
   await page.waitForSelector('[data-act="spartoo-tracabilite"]', { timeout: 6000 });
   await page.click('[data-act="spartoo-tracabilite"]');
   await page.waitForSelector('.ent-shell', { timeout: 6000 });
@@ -514,7 +514,7 @@ await v('Spartoo traçabilité : jouable sans les deux séances précédentes', 
   await page.waitForSelector('#mat');
   await page.fill('#mat', '2602'); await page.fill('#code', 'bbb2');
   await page.press('#code', 'Enter');
-  await page.waitForSelector('[data-rub="logisim"]', { timeout: 6000 });
+  await page.waitForSelector('[data-rub="simulog"]', { timeout: 6000 });
   // Séance fermée à qui n'a pas validé la 1.2 : l'enseignant la débloque (voir test-seances.mjs).
   await page.evaluate(() => {
     let uid = localStorage.getItem('prepalog:session');
@@ -522,8 +522,8 @@ await v('Spartoo traçabilité : jouable sans les deux séances précédentes', 
     localStorage.setItem(`prepalog:travaux/1-log-a/${uid}/_debloque-spartoo-tracabilite`,
       JSON.stringify({ uid, aid: '_debloque-spartoo-tracabilite', gid: '1-log-a', score: 0, max: 0, meilleur: 0, tentatives: 0 }));
   });
-  await page.click('[data-rub="logisim"]');
-  await page.click('[data-ent="1"]');          // Logisim est rangé par entreprise : le logo Spartoo
+  await page.click('[data-rub="simulog"]');
+  await page.click('[data-ent="1"]');          // Simulog est rangé par entreprise : le logo Spartoo
   await page.waitForSelector('[data-act="spartoo-tracabilite"]', { timeout: 6000 });
   await page.click('[data-act="spartoo-tracabilite"]');
   await page.waitForSelector('.ent-shell', { timeout: 6000 });

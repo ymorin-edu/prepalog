@@ -1,9 +1,9 @@
 > *Copie du 02/10/2026 de la fiche `claude/prepalog-progression-pedagogique.md` du projet Claude
 > PREPALOG (source de conception : le projet). Voir `docs/LISEZMOI.md`.*
 
-# Prepalog — la progression pédagogique des scénarios Logisim (02/10/2026)
+# Prepalog — la progression pédagogique des scénarios Simulog (02/10/2026)
 
-**Doctrine énoncée par Tristan le 02/10, à appliquer à tous les environnements Logisim**, pas
+**Doctrine énoncée par Tristan le 02/10, à appliquer à tous les environnements Simulog**, pas
 seulement à Boost. Elle décide du découpage en séances, du mode de notation et de ce qu'on rend
 à l'élève pendant l'exercice. **Ne pas la rediscuter ; s'y conformer en écrivant un scénario.**
 

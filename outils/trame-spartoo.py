@@ -272,7 +272,7 @@ par = d.add_paragraph(); par.paragraph_format.space_after = Pt(2)
 par.paragraph_format.tab_stops.add_tab_stop(Cm(17.0), WD_TAB_ALIGNMENT.RIGHT)
 if os.path.exists(LOGO_PREPALOG):
     par.add_run().add_picture(LOGO_PREPALOG, height=Cm(1.15))
-r = par.add_run('  Logisim')
+r = par.add_run('  Simulog')
 r.bold = True; r.font.size = Pt(20); r.font.color.rgb = TITRE
 par.add_run('\t')
 if os.path.exists(LOGO):
@@ -326,7 +326,7 @@ consignes([
  "Va sur Prepalog et saisis ton matricule et ton code (ceux que ton enseignant t'a donnés, "
  "le même matricule que celui noté en première page).",
  "Clique sur « Entrer ».",
- "Sur la page d'accueil, clique sur la pastille « Logisim », puis ouvre l'activité « Spartoo — préparation » (ENT-1.2). "
+ "Sur la page d'accueil, clique sur la pastille « Simulog », puis ouvre l'activité « Spartoo — préparation » (ENT-1.2). "
  "Il y a trois activités Spartoo : vérifie que le bandeau en haut affiche bien « ENT-1.2 ».",
 ])
 encadre('Garde bien ton matricule :', "c'est lui qui permet à ton enseignant de retrouver ton travail. "

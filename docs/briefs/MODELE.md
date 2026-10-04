@@ -15,7 +15,7 @@
 | `code` | ENT-x.y |
 | `id` (jamais modifié ensuite) | `nom-en-minuscules` |
 | Titre / desc | |
-| Rubrique | logisim |
+| Rubrique | simulog |
 | Entreprise | *(réelle, vérifiée : voir §2)* |
 | Niveau(x) | 2de / 1re / Tle / CAP |
 | Compétence(s) | ex. C2.4 |

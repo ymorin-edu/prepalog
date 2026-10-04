@@ -20,7 +20,7 @@ s'arrêter sur ce point** (une séance n'écrit pas dans `core/`).
 | `code` / `id` | ENT-2.2 / **`cdiscount-chiffres`** (nouveau, jamais modifié ensuite) |
 | Titre | « Cdiscount — ce que disent les chiffres » |
 | desc | « Exporter les constats des préparateurs, les analyser dans le tableur et choisir les références à recompter. » |
-| Rubrique / niveau | logisim / 1re |
+| Rubrique / niveau | simulog / 1re |
 | Compétences | **C1.6** (C1.6.1 flux d'information, C1.6.2 préparer l'inventaire) ; **C3.2** si le code des compétences le porte (savoirs « tableur professionnel ») — sinon C1.6 seule, le dire |
 | Temps | **guidage** (du geste tableur) |
 | Notation | `avancement`, 5 jalons |
@@ -178,7 +178,7 @@ bandeau d'aide ; NB.SI.ENS réservé au bonus.
 - **Fichiers créés / modifiés** : `activites/cdiscount-chiffres.js`, `contenus/cdiscount-chiffres.js` (neufs), une ligne dans
   `activites/index.js` ; `contenus/cdiscount-inventaire.js` (préparateurs nommés, voir plus bas) ; `outils/essai-cdiscount.html`
   (ENT-2.2 dans le sélecteur) ; `outils/test/cdiscount.mjs` (8 cas) ; `outils/test/socle.mjs` (ENT-2.2 ajoutée à la liste des
-  codes Logisim). Moteur : le contrôle « table » rend aussi `lu` (commit à part).
+  codes Simulog). Moteur : le contrôle « table » rend aussi `lu` (commit à part).
 - **Écarts par rapport au brief** :
   - **Compétence : C1.6 seule.** C3.2 existe dans `core/competences.js`, mais c'est « traçabilité » : y ranger une séance
     de tableur fausserait cette note.

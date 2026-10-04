@@ -15,7 +15,7 @@ let profil = null;
 let groupeActif = null;
 let jeuOuvert = null;
 let rubriqueActive = null;   // null = pastilles d'accueil ; sinon id de la rubrique ouverte
-let entrepriseActive = null; // rubrique rangée par entreprise (Logisim) : null = les logos ; sinon id de l'entreprise
+let entrepriseActive = null; // rubrique rangée par entreprise (Simulog) : null = les logos ; sinon id de l'entreprise
 
 // L'enseignant retrouve le groupe sur lequel il travaillait, d'une séance à l'autre.
 const CLE_GROUPE = 'prepalog:groupe:';
@@ -122,7 +122,7 @@ async function vueAccueil() {
   if (rub) {
     let acts = activitesDeRubrique(rub, visibles);
 
-    // Rubrique rangée par entreprise (Logisim) : d'abord les logos, puis les séances de
+    // Rubrique rangée par entreprise (Simulog) : d'abord les logos, puis les séances de
     // l'entreprise choisie. Toujours le même chemin, même pour une entreprise à une séance.
     let ent = null;
     if (rub.parEntreprise) {
@@ -157,7 +157,7 @@ async function vueAccueil() {
       try { verrous[x.meta.id] = await verrou(metas, x.meta, profil, groupeActif); } catch (e) { verrous[x.meta.id] = null; }
     }));
     const tete = ent
-      ? `<button class="lien-accueil" id="btnLogisim">← ${ech(rub.label.toUpperCase())}</button>
+      ? `<button class="lien-accueil" id="btnSimulog">← ${ech(rub.label.toUpperCase())}</button>
         <div class="entreprise-tete" data-entreprise="${ech(ent.id)}">
           ${ent.logo ? `<span class="plaque"><img src="${ech(ent.logo)}" alt=""></span>` : ''}
           <div><h1>${ech(ent.nom)}</h1><p>${ech(ent.metier)}</p></div>
@@ -228,7 +228,7 @@ async function vueAccueil() {
     document.getElementById('btnAccueil')?.addEventListener('click', () => {
       rubriqueActive = null; entrepriseActive = null; vueAccueil();
     });
-    document.getElementById('btnLogisim')?.addEventListener('click', () => {
+    document.getElementById('btnSimulog')?.addEventListener('click', () => {
       entrepriseActive = null; vueAccueil();
     });
     document.querySelectorAll('[data-ent]').forEach((b) => b.addEventListener('click', () => {

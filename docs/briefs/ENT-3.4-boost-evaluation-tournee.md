@@ -12,7 +12,7 @@
 | `code` | ENT-3.4 |
 | `id` (jamais modifié ensuite) | à choisir en suivant les `id` voisins d'`activites/index.js` (ex. `boost-evaluation`) — **le noter dans le compte rendu** |
 | Titre / desc | « Boost — évaluation de la tournée » / une journée neuve, seul, sans retour : tu rends ta copie |
-| Rubrique | logisim |
+| Rubrique | simulog |
 | Entreprise | Boost (Nîmes), vélo-cargo — `contenus/boost.js` |
 | Niveau(x) | 1re Bac Pro Logistique |
 | Compétence(s) | C2.4 Organiser une tournée de livraison |
@@ -93,7 +93,7 @@ Bloc `boost`, cas préfixés **« ENT-3.4 »**. **Ajouter le test du suivi ensei
 - remise : **une seule** (la 2ᵉ est refusée), note figée, `ecrireScore` ne la remplace plus, écran « Copie rendue » sans note ;
 - **ramasser** une copie non rendue → note calculée et marquée « ramassée » ; **rouvrir** → l'élève peut reprendre ; ensuite re-remise possible ;
 - jalons : copie vide = 0 ; copie juste = tout ; **clics sur mauvaise rue** font baisser `reperage` ; `trajet10`/`trajet5` recalculés (jamais recopiés) ;
-- `test-seances.mjs` vert ; liste Logisim de `socle.mjs` + ENT-3.4 ; **émulateur Firebase** : les 7 cas de `outils/test-regles.mjs` (`outils\tester-regles.bat`) n'ont jamais tourné — **ne pas s'appuyer dessus tant que Tristan ne les a pas lancés**.
+- `test-seances.mjs` vert ; liste Simulog de `socle.mjs` + ENT-3.4 ; **émulateur Firebase** : les 7 cas de `outils/test-regles.mjs` (`outils\tester-regles.bat`) n'ont jamais tourné — **ne pas s'appuyer dessus tant que Tristan ne les a pas lancés**.
 
 **Sabotages à éprouver** : verdict visible pendant l'épreuve ; 2ᵉ remise acceptée ; essais ratés non comptés ; optimum recopié ; note recalculée après remise ; jalon qui lit `valide`/`juge`.
 

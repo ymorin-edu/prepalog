@@ -15,7 +15,7 @@
 | `code` | ENT-3.3 |
 | `id` (jamais modifié ensuite) | à choisir en suivant les `id` voisins d'`activites/index.js` (ex. `boost-diagnostic`) — **le noter dans le compte rendu** |
 | Titre / desc | « Boost — la tournée à corriger » / la tournée d'un collègue ne tient pas : dis laquelle des contraintes est violée et pourquoi, puis répare-la |
-| Rubrique | logisim |
+| Rubrique | simulog |
 | Entreprise | Boost (Nîmes), vélo-cargo — déjà dans `contenus/boost.js` |
 | Niveau(x) | 1re Bac Pro Logistique |
 | Compétence(s) | C2.4 Organiser une tournée de livraison |
@@ -122,7 +122,7 @@ Bloc `boost` (`outils/test/boost.mjs`), cas préfixés **« ENT-3.3 »**. Moteur
 - D2 : chiffres justes sous plusieurs écritures ; chiffres faux = ko ;
 - R1-R4 : **tournée du collègue laissée intacte = tous ko** ; bonne réparation = tous ok ; réparation qui tient tout mais à plus de 10 % = R4 ko seul ;
 - jauges muettes **sans fuite** (ni à l'écran, ni dans un message de refus) ;
-- `test-seances.mjs` vert ; liste Logisim de `outils/test/socle.mjs` **allongée de ENT-3.3** (accord de Tristan déjà donné pour cette ligne).
+- `test-seances.mjs` vert ; liste Simulog de `outils/test/socle.mjs` **allongée de ENT-3.3** (accord de Tristan déjà donné pour cette ligne).
 
 **Sabotages à éprouver** (script qui remplace une chaîne, lance le bloc, restaure) : état initial réécrasé à la réouverture ; jauge parlante ; pastille
 visible ; D1 qui accepte « tout cocher » ; R1 qui accepte la tournée du collègue ; optimum recopié au lieu de recalculé ; créneau jugé sans le départ.
@@ -159,7 +159,7 @@ donne **aucun** jalon de réparation ; (4) accuser la mauvaise contrainte me co�
   - `activites/boost-ent33.js` (créé) : `meta`, **`id: 'boost-ent33'`**, `code: 'ENT-3.3'`, `temps: 'erreur'`, `pret: false` ;
   - `activites/index.js` : une ligne (après ENT-3.2) ;
   - `outils/test/boost.mjs` : 16 cas « ENT-3.3 » ajoutés à la fin du bloc (aucun cas existant réécrit) ;
-  - `outils/test/socle.mjs` : liste Logisim allongée de ENT-3.3 (accord déjà donné) **et** une entrée
+  - `outils/test/socle.mjs` : liste Simulog allongée de ENT-3.3 (accord déjà donné) **et** une entrée
     `'ENT-3.3': ['C2.4', 'erreur']` dans la liste des compétences déclarées (allongement seulement).
   - Chantier moteur (commit précédent `560e6f8`) : `core/types/tournee.js`, `core/types/entreprise.js`.
 - **Écarts par rapport au brief** (et pourquoi) :

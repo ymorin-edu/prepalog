@@ -75,7 +75,7 @@ export async function rendreEspaceProf(hote, ctx) {
   // fichier est servi par le dépôt public, donc lisible par qui connaît son adresse.
   //
   // Rangement (03/10/2026, décision de Tristan) : entreprise puis séance, comme la pastille
-  // Logisim de l'accueil. On choisit une séance, seul son corrigé s'affiche (et se charge).
+  // Simulog de l'accueil. On choisit une séance, seul son corrigé s'affiche (et se charge).
   async function vueCorriges(z) {
     // Au changement de séance, on garde l'écran en place pendant le chargement (pas de saut).
     if (!z.querySelector('#corrSommaire')) z.innerHTML = `<div class="note">Chargement des corrigés…</div>`;

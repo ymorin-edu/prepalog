@@ -2469,7 +2469,7 @@ await v('ENT-3.3 : la séance est l’erreur induite de C2.4, validée par Trist
     return { meta, ids: ETAPES.map((e) => e.id), inscrite: liste.some((x) => x.meta.id === 'boost-ent33') };
   });
   const m = r.meta;
-  if (m.code !== 'ENT-3.3' || m.temps !== 'erreur' || m.competences.join() !== 'C2.4' || m.rubrique !== 'logisim') throw new Error('déclaration : ' + JSON.stringify(m));
+  if (m.code !== 'ENT-3.3' || m.temps !== 'erreur' || m.competences.join() !== 'C2.4' || m.rubrique !== 'simulog') throw new Error('déclaration : ' + JSON.stringify(m));
   if (m.pret !== true) throw new Error('pret devrait être true : Tristan a validé la séance le 03/10/2026');
   if ('notation' in m || m.copie) throw new Error('jalons et note sur 20 : ni `notation`, ni `copie`');
   if (m.jeuId !== 'boost' || m.reinitialisable) throw new Error('base de Boost partagée : ni jeu à part, ni remise à zéro');

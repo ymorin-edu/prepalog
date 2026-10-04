@@ -303,7 +303,7 @@ def entete(logo, titre, encadres, sommaire, nom_logo='LOGO'):
     par.paragraph_format.tab_stops.add_tab_stop(Cm(17.0), WD_TAB_ALIGNMENT.RIGHT)
     if os.path.exists(LOGO_PREPALOG):
         par.add_run().add_picture(LOGO_PREPALOG, height=Cm(1.15))
-    r = par.add_run('  Logisim'); r.bold = True; r.font.size = Pt(20); r.font.color.rgb = TITRE
+    r = par.add_run('  Simulog'); r.bold = True; r.font.size = Pt(20); r.font.color.rgb = TITRE
     par.add_run('\t')
     if os.path.exists(logo):
         par.add_run().add_picture(logo, height=Cm(1.5))

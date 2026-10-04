@@ -21,7 +21,7 @@ export const meta = {
   titre: 'Picard — la réception de nuit',
   desc: 'Mathis a réceptionné un camion à 3 h : contrôler son travail à partir des documents et des palettes en chambre '
     + 'froide, puis bloquer ce qui doit l’être et protester auprès du transporteur dans le délai.',
-  rubrique: 'logisim',
+  rubrique: 'simulog',
   niveaux: ['1re'],
   competences: ['C1.4'],
   temps: 'erreur',

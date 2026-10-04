@@ -47,9 +47,9 @@ ENT-3.1, les quatre valeurs attendues sont même identiques quel que soit l'ordr
 sont violées** (`exigeConforme: true`). L'élève est renvoyé à sa tournée, pas à son calcul, et
 l'écran cesse de se contredire.
 
-## Ce qu'est Logisim, rappelé par Tristan le 02/10 au soir
+## Ce qu'est Simulog, rappelé par Tristan le 02/10 au soir
 
-> *« Les objectifs de Logisim sont de recréer des environnements numériques d'entreprise. De
+> *« Les objectifs de Simulog sont de recréer des environnements numériques d'entreprise. De
 > permettre aux élèves de travailler les compétences du référentiel dans un environnement
 > immersif, ludique et pédagogique. »*
 

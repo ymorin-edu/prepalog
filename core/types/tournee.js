@@ -141,7 +141,7 @@ const fr = (n, d = 2) => new Intl.NumberFormat('fr-FR', { maximumFractionDigits:
 export function creerTournee(T) {
   // Le plan est FACULTATIF. Une séance peut n'avoir qu'une contrainte de charge — ordonner
   // des arrêts et voir le plafond — sans aucune carte : c'est le cas de la plupart des
-  // scénarios Logisim, où le transport n'est qu'une contrainte de plus et non le sujet.
+  // scénarios Simulog, où le transport n'est qu'une contrainte de plus et non le sujet.
   // Sans plan, pas de carte dessinée et pas de distance, donc pas d'horaire : seuls les
   // cumuls et leurs plafonds jouent. Avec plan, tout fonctionne.
   //
@@ -232,7 +232,7 @@ export function creerTournee(T) {
   // Donc : **on construit la tournée en cliquant les points sur la carte, dans l'ordre où on
   // veut y passer.** Un clic sur un point à quai l'ajoute À LA FIN de la tournée ; un clic sur
   // un point déjà chargé le retire. C'est aussi plus proche du métier — un logiciel de tournées
-  // se pilote à la carte — et c'est le cahier des charges de Logisim.
+  // se pilote à la carte — et c'est le cahier des charges de Simulog.
   //
   // **Ajouter à la fin** est la règle la plus simple à expliquer à une classe : on ne discute
   // pas de l'endroit où l'arrêt se glisse, on le met au bout et on retouche ensuite avec les

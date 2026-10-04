@@ -20,7 +20,7 @@ Entreprises déjà citées par Tristan, à vérifier avant usage (secteur, impla
 
 | Entreprise | Usage | État |
 |---|---|---|
-| **Spartoo** | environnement Logisim `ENT-1.x` | en production |
+| **Spartoo** | environnement Simulog `ENT-1.x` | en production |
 | **Boost**, à Nîmes | environnement `ENT-3.x`, C2.4 et C2.6 | vérifiée le 01/10, maquette faite |
 | **Sagenta** | produits dangereux (ADR, étiquetage) | à vérifier |
 
@@ -32,7 +32,7 @@ Il en donnera d'autres. Ne pas en inventer à sa place ; lui demander.
 
 Le nom, le secteur, les implantations réelles, les gammes réelles, l'organisation, les volumes
 publiés. « Vous êtes préparateur de commandes sur la plateforme de… ». C'est déjà ce que fait
-**Spartoo** dans Logisim (`ENT-1`), et ça marche.
+**Spartoo** dans Simulog (`ENT-1`), et ça marche.
 
 Mieux : **aller chercher les données réelles** par recherche web plutôt que les inventer. Les
 références, les unités de conditionnement, les flux d'une vraie enseigne sont plus parlants et

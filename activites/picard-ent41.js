@@ -25,7 +25,7 @@ export const meta = {
   titre: 'Picard — le premier camion',
   desc: 'Réceptionner un camion de surgelés au quai 32 : lire le ticket de température, faire décharger, '
     + 'contrôler chaque palette, refuser ou émettre des réserves précises, rentrer le lot en chambre froide.',
-  rubrique: 'logisim',
+  rubrique: 'simulog',
   niveaux: ['1re'],
   competences: ['C1.4'],
   temps: 'guidage',

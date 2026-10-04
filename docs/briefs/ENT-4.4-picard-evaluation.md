@@ -132,7 +132,7 @@ ne sait pas le faire — le dire au compte rendu). `contenus/corriges/ENT-4.4.js
   - `contenus/picard.js` (fournisseur fictif F-CDD, `catalogue(produits, fournisseur)`), `activites/index.js` (une
     ligne), `activites/FICHE-SEANCE.md` (tirage et second motif) ;
   - tests : 13 cas ENT-4.4 dans `outils/test/picard.mjs` ; **une ligne d'un cas existant de `outils/test/socle.mjs`
-    réécrite** (la liste des séances Logisim gagne ENT-4.4). `outils/test.mjs` et `commun.mjs` non touchés.
+    réécrite** (la liste des séances Simulog gagne ENT-4.4). `outils/test.mjs` et `commun.mjs` non touchés.
 - **Écarts par rapport au brief** :
   - **Seuils hors froid inatteignables avec 6 palettes** : un parcours juste sans aucun geste en trop prend déjà
     21 min 30 hors froid (6 min 30 de déchargement + 6 sondes + 6 comptages + 3 min pour rentrer le lot) ; un élève
@@ -171,7 +171,7 @@ ne sait pas le faire — le dire au compte rendu). `contenus/corriges/ENT-4.4.js
   remise, copie 19/20, ramassage = même note ; deux problèmes (ligne de réserve, un seul motif → faux, motifs dans
   l'autre ordre → juste, motif en trop → faux) ; seconde quantité fausse → seule la réserve tombe ; notes du brief
   (rapide 20, palette fausse 18,42, BL non signé 14,25, tiers-temps 13 min 20 → 20 au lieu de 19) ; rechargement ;
-  voisins ; corrigé par élève dans l'onglet ; ouverture dans Logisim. Éprouvés à l'envers : graine identique pour
+  voisins ; corrigé par élève dans l'onglet ; ouverture dans Simulog. Éprouvés à l'envers : graine identique pour
   tous → 8 cas tombent ; second motif ignoré → le cas « deux problèmes » tombe.
 - **Commits** : voir `git log` (« ENT-4.4 Picard : … »).
 - **Validé par Tristan le 03/10/2026** (choix faits seul ci-dessus compris). **Reste ouvert** : seuils du temps réel

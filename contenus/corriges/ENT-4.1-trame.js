@@ -79,7 +79,7 @@ export const CORRIGE = {
         "Information",
         "Ce que tu relèves"
       ],
-      "contexte": "Connecte-toi à Prepalog, ouvre la rubrique Logisim, puis l'activité « Picard — le premier camion ». Le logiciel s'ouvre aux couleurs de Picard. L'accueil te donne les cinq étapes de la séance.",
+      "contexte": "Connecte-toi à Prepalog, ouvre la rubrique Simulog, puis l'activité « Picard — le premier camion ». Le logiciel s'ouvre aux couleurs de Picard. L'accueil te donne les cinq étapes de la séance.",
       "reponses": [
         [
           "Heure d'arrivée du camion",

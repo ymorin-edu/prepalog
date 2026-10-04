@@ -29,7 +29,7 @@ export const meta = {
   titre: 'Boost — la tournée du vélo-cargo',
   desc: 'Situer sept clients sur un plan de Nîmes, choisir ce que le vélo-cargo peut emporter, '
     + 'puis ordonner les arrêts pour attraper le train de 16 h 10.',
-  rubrique: 'logisim',
+  rubrique: 'simulog',
   // Compétences et temps pédagogique : voir core/competences.js (validé par Tristan, 02/10/2026).
   competences: ['C2.4'],
   temps: 'guidage',

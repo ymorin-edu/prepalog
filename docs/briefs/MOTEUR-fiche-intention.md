@@ -16,7 +16,7 @@ dans `docs/EN-COURS.md`. **Peut passer n'importe quand** dans la série (petit, 
 
 ## 1. Décision de Tristan (03/10/2026, décision 17)
 
-Chaque scénario Logisim a **une fiche d'intention pédagogique** (compétences, savoirs, parcours élève séance par
+Chaque scénario Simulog a **une fiche d'intention pédagogique** (compétences, savoirs, parcours élève séance par
 séance, ce que l'enseignant doit dire ou savoir, pièges voulus, filet de sécurité). **Word + PDF générés par Cowork**
 (générateur reproductible, comme les trames), **rangés dans le dépôt**, ouverts par un **bouton « Fiche d'intention »
 sur chaque séance du scénario, visible de l'enseignant seul, à côté du corrigé**. Pour tous les scénarios ; la

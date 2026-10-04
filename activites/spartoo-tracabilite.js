@@ -19,7 +19,7 @@ export const meta = {
   code: 'ENT-1.3',
   titre: 'Spartoo — traçabilité',
   desc: "Remonter un lot défectueux dans les deux sens, bloquer le stock restant et rendre compte.",
-  rubrique: 'logisim',
+  rubrique: 'simulog',
   // Compétences et temps pédagogique : voir core/competences.js (validé par Tristan, 02/10/2026).
   competences: ['C3.2'],
   temps: 'guidage',

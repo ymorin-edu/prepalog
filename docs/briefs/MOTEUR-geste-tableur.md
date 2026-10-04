@@ -17,7 +17,7 @@ témoins), `claude/prepalog-cdiscount-serie-decisions.md` (décision 9), `docs/d
 
 ## 1. Le geste (décision de Tristan, 03/10/2026)
 
-En entrepôt, on **exporte** une liste du logiciel, on la **retravaille** dans un tableur, on **décide**. Dans Logisim :
+En entrepôt, on **exporte** une liste du logiciel, on la **retravaille** dans un tableur, on **décide**. Dans Simulog :
 
 | Temps | Où | L'élève | Le site |
 |---|---|---|---|

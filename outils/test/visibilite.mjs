@@ -52,24 +52,24 @@ const metas = await pg.evaluate(async () => (await (await import('/activites/ind
     rubrique: m.meta.rubrique })));
 const prepa = metas.find((m) => m.id === PREPA);
 const aOuvrir = metas.find((m) => m.id === A_OUVRIR);
-// Logisim est rangé par entreprise (02/10/2026) : le premier nombre du code dit l'entreprise.
-const entDe = (m) => (m && m.rubrique === 'logisim' ? String(((m.code || '').match(/-(\d+)/) || [])[1]) : null);
+// Simulog est rangé par entreprise (02/10/2026) : le premier nombre du code dit l'entreprise.
+const entDe = (m) => (m && m.rubrique === 'simulog' ? String(((m.code || '').match(/-(\d+)/) || [])[1]) : null);
 // Une séance prête de la même entreprise, sans `ouverture`, qu'on fermera pour le groupe.
-const prete = metas.find((m) => m.pret && !m.ouverture && m.rubrique === 'logisim' && entDe(m) === entDe(prepa)
+const prete = metas.find((m) => m.pret && !m.ouverture && m.rubrique === 'simulog' && entDe(m) === entDe(prepa)
   && m.id !== PREPA && m.id !== A_OUVRIR);
 
 const tuiles = () => pg.$$eval('.module-tile', (els) => els.map((e) => ({
   id: e.dataset.act, cachee: e.querySelector('[data-cachee]')?.dataset.cachee || null })));
 // Retour à l'accueil d'où que l'on soit : la liste d'une entreprise ne mène qu'aux logos.
 const versAccueil = async () => {
-  if (await pg.$('#btnLogisim')) await pg.click('#btnLogisim');
+  if (await pg.$('#btnSimulog')) await pg.click('#btnSimulog');
   if (await pg.$('#btnAccueil')) await pg.click('#btnAccueil');
 };
 const ouvrirRubrique = async (rub, ent) => {
   if (await pg.$('#btnAccueil')) await pg.click('#btnAccueil');
   await pg.waitForSelector(`[data-rub="${rub}"]`);
   await pg.click(`[data-rub="${rub}"]`);
-  if (ent) await pg.click(`[data-ent="${ent}"]`);   // Logisim : le logo de l'entreprise
+  if (ent) await pg.click(`[data-ent="${ent}"]`);   // Simulog : le logo de l'entreprise
   await pg.waitForSelector('.module-tile, .ent-bandeau');
 };
 const commeEleve = async () => {
@@ -92,8 +92,8 @@ const commeProf = async () => {
 const tuilesEleve = async () => {
   if (await pg.$('#btnAccueil')) await pg.click('#btnAccueil');
   const rubs = await pg.evaluate(() => [...document.querySelectorAll('[data-rub]')].map((b) => b.dataset.rub));
-  if (!rubs.includes('logisim')) return [];
-  await pg.click('[data-rub="logisim"]');
+  if (!rubs.includes('simulog')) return [];
+  await pg.click('[data-rub="simulog"]');
   await pg.waitForTimeout(300);
   const ent = entDe(prepa);
   if (!(await pg.$(`[data-ent="${ent}"]`))) return [];

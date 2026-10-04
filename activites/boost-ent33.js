@@ -28,7 +28,7 @@ export const meta = {
   titre: 'Boost — la tournée à corriger',
   desc: 'La tournée d’une collègue ne tient pas : dire quelles contraintes elle viole, le prouver '
     + 'par le calcul, puis la réparer.',
-  rubrique: 'logisim',
+  rubrique: 'simulog',
   competences: ['C2.4'],
   temps: 'erreur',
   bareme: SEANCE.ETAPES.length,

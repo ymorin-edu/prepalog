@@ -24,7 +24,7 @@ export const meta = {
   code: 'ENT-2.2',
   titre: 'Cdiscount — ce que disent les chiffres',
   desc: 'Exporter les constats des préparateurs, les analyser dans le tableur et choisir les références à recompter.',
-  rubrique: 'logisim',
+  rubrique: 'simulog',
   // Compétences et temps pédagogique : voir core/competences.js.
   competences: ['C1.6'],
   temps: 'guidage',

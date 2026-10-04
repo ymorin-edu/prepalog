@@ -5,6 +5,11 @@ n'est pas évident)**. Claude Code y ajoute toute décision prise en cours de ro
 reporte dans les fiches du projet PREPALOG. Une décision de fond sur la pédagogie reste dans
 `docs/fiches/prepalog-finalite.md`.
 
+- 04/10/2026 · Tristan · **Logisim devient Simulog** (le site s'appelle Prepalog) : pastille d'accueil, lien « ← SIMULOG »,
+  identifiant de rubrique `simulog` (jamais enregistré, aucune note touchée), tests, docs et trames Word régénérées.
+  Gardés tels quels : les mentions historiques de « LogiSim d'origine » (l'ancienne application d'où vient Spartoo),
+  les lignes plus anciennes de ce journal, la fiche Cowork `logisim.md` et le document d'essai `jeux/logisim` des tests de
+  règles. **Les PDF des trames restent à refaire depuis les Word** (pas de convertisseur ici).
 - 04/10/2026 · Claude Code · **2de : compétences OTM et AGOrA dans le moteur (MOTEUR-2de-S1, lot 1).** Les 11 compétences OTM (`OTM-C1.1` à `OTM-C3.4`) et les 9 activités AGOrA (`AGO-1.1` à `AGO-3.3`) entrent toutes dans `core/competences.js`, pas seulement les 6 de S1. Libellés vérifiés au mot près dans les annexes officielles (Éduscol) : la fiche OTM raccourcissait C3.3 et C3.4, la fiche AGOrA les activités ; le résumé du brief (« réserver et planifier ») n'est pas le libellé officiel de C2.2 (« Exécuter la demande du client/donneur d'ordre »). **Moyenne par spécialité** (Logistique / Transport (OTM) / Gestion (AGOrA)) : tableau à part sous le tableau par compétence, groupes de **2de seulement**, même calcul ; une séance compte **une fois** par spécialité même si elle y a deux compétences. Pas dans l'export CSV (à demander si utile). Champ **`meta.coeur: true | false`** pour cœur / complément (`parcours` est déjà pris) et `meta.domaines: ['D1'…'D5']`, tous deux lus nulle part pour l'instant.
 - 04/10/2026 · Tristan · **Vue « Planning » validée à l'écran** (page d'essai, avec « Agrandir » et les couleurs libres). Prochaine étape : les séances A2 et B1 de S1, qui la déclarent.
 - 04/10/2026 · Tristan · **Planning : bouton « Agrandir » et couleurs libres par séance.** « Agrandir le planning » replie
@@ -82,7 +87,7 @@ reporte dans les fiches du projet PREPALOG. Une décision de fond sur la pédago
   logo, toujours en dernier ; la plaque `#f7f4ee` reste une couleur fixe et non une variable (elle ne doit pas
   suivre le thème) ; l'enseignant voit la carte de toute entreprise qui a au moins une séance au registre.
 - 02/10/2026 · Tristan · **Logisim rangé par entreprise** (chantier moteur, brief
-  `docs/briefs/MOTEUR-logisim-par-entreprise.md`) : Logisim → logos des entreprises (logo seul) → séances de
+  `docs/briefs/MOTEUR-simulog-par-entreprise.md`) : Logisim → logos des entreprises (logo seul) → séances de
   l'entreprise ; la liste s'affiche même pour une seule séance ; « Quitter » ramène à la liste de l'entreprise.
   Maquette cliquable dans « Claude outputs ». Plaque claire fixe sous les logos (choix de Claude Code, signalé).
 - 02/10/2026 · Tristan · **ENT-3.3 sans `niveaux`**, comme ENT-3.1 et ENT-3.2 : les trois séances Boost restent

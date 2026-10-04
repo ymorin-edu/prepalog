@@ -17,7 +17,7 @@
 | `code` | ENT-4.1 |
 | `id` (jamais modifié ensuite) | `picard-ent41` |
 | Titre / desc | « Picard — le premier camion » / « Réceptionner un camion de surgelés au quai 32 : lire le ticket de température, faire décharger, contrôler chaque palette, refuser ou émettre des réserves précises, rentrer le lot en chambre froide. » |
-| Rubrique | logisim ; **ligne nouvelle dans `ENTREPRISES`** : `{ n: 4, nom: 'Picard', metier: 'Entrepôt de surgelés — Sainghin-en-Mélantois', logo: … }` |
+| Rubrique | simulog ; **ligne nouvelle dans `ENTREPRISES`** : `{ n: 4, nom: 'Picard', metier: 'Entrepôt de surgelés — Sainghin-en-Mélantois', logo: … }` |
 | Entreprise | Picard (réelle, vérifiée : §2) |
 | Niveau(x) | 1re (`niveaux: ['1re']`) |
 | Compétence(s) | **C1.4** « Traiter les opérations de réception de produits selon les procédures » (référentiel 2025 ; vérifier que `core/competences.js` porte le même libellé) |
@@ -100,7 +100,7 @@ Bloc `outils/test/picard.mjs` : parcours juste (18/18), un sabotage par jalon, e
 
 ## 10. Critères de validation par Tristan
 
-La séance se joue comme la maquette v8 en guidage, sous le logo Picard, dans le bloc « Picard » de l'accueil Logisim.
+La séance se joue comme la maquette v8 en guidage, sous le logo Picard, dans le bloc « Picard » de l'accueil Simulog.
 
 ## 11. Questions ouvertes
 
@@ -128,7 +128,7 @@ La séance se joue comme la maquette v8 en guidage, sous le logo Picard, dans le
   - Le mail d'accueil reprend le texte validé tel quel ; objet ajouté : « Quai 32 : premier camion à 6 h 00 ».
 - **Décisions prises en route** : accueil de séance en 5 étapes (messagerie → quai → papiers → contrôle → froid puis
   papiers) ; `reinitialisable: true` (séance X.1, base à elle).
-- **Tests** : bloc `picard` 35/35 (dont la séance ouverte depuis l'accueil Logisim et le corrigé, valeurs écrites à la
+- **Tests** : bloc `picard` 35/35 (dont la séance ouverte depuis l'accueil Simulog et le corrigé, valeurs écrites à la
   main) ; suite entière **418/418**. Le cas « l'élève ne voit pas la carte d'une entreprise sans séance ouverte » confirme
   que Picard reste caché aux élèves tant que la séance n'est pas ouverte.
 - **Commits** : `2740b6a` (fond papier), `ea7b3ad` (séance).

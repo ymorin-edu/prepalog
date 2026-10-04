@@ -30,7 +30,7 @@ export const meta = {
   desc: 'Situer quatre nouveaux clients sur la carte de Nîmes, décider ce qui reste à quai, puis '
     + 'ordonner les arrêts pour tenir le train et le créneau d’un client, par le trajet le plus court. '
     + 'Puis un imprévu change la journée : replanifier la tournée.',
-  rubrique: 'logisim',
+  rubrique: 'simulog',
   competences: ['C2.4'],
   temps: 'entrainement',
   bareme: SEANCE.ETAPES.length,

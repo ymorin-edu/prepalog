@@ -123,7 +123,7 @@ Trame élève Word/PDF (Cowork, après validation à l'écran) ; corrigé `conte
 - **Fichiers créés / modifiés** : `core/types/quai.js` (plusieurs camions, réchauffement, multi-références, étiquette
   par face, une jauge par lot) ; `contenus/picard-ent42.js` (neuf) ; `activites/picard-ent42.js` (neuf) ;
   `activites/index.js` (une ligne) ; `contenus/corriges/ENT-4.2.js` (neuf, calculé) ; `activites/FICHE-SEANCE.md` ;
-  `outils/test/picard.mjs` (11 cas ENT-4.2) ; `outils/test/socle.mjs` (liste Logisim allongée de ENT-4.2, seule
+  `outils/test/picard.mjs` (11 cas ENT-4.2) ; `outils/test/socle.mjs` (liste Simulog allongée de ENT-4.2, seule
   modification d'un cas existant). `outils/test.mjs` n'est pas touché. ENT-4.1 : aucun changement de comportement
   (35 cas inchangés et verts), sauf l'accord « 1 carton » au singulier dans une réserve (ENT-4.1 n'a que des 2).
 - **Écarts par rapport au brief** :

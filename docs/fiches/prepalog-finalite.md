@@ -13,7 +13,7 @@ lui faire valider si elles posent problème.
 
 Le site qui fait travailler aux élèves de Bac Pro Logistique et de CAP OL **la totalité des
 compétences de leur référentiel qui ne demandent pas de manipulation physique**, niveau par
-niveau, dans des environnements numériques d'**entreprises réelles** (Logisim), avec un suivi
+niveau, dans des environnements numériques d'**entreprises réelles** (Simulog), avec un suivi
 de classe et des **notes par compétence** qui comptent.
 
 ## Les décisions (Tristan, 02/10/2026, confirmées)
@@ -35,7 +35,7 @@ de classe et des **notes par compétence** qui comptent.
    possible un jour : ne rien fermer qui l'empêcherait, mais ne pas concevoir pour elle.
 5. **Périmètre : tout le référentiel, par niveau et par classe**, hors compétences qui
    demandent une vraie manipulation (bloc 4, conduite d'engins, en premier lieu).
-   **Objectif : environ 15 entreprises par niveau** dans Logisim, qui portent à elles toutes
+   **Objectif : environ 15 entreprises par niveau** dans Simulog, qui portent à elles toutes
    l'ensemble des compétences travaillées.
 6. **Niveaux : 2de, 1re et Terminale Bac Pro, plus le CAP OL** (Opérateur/Opératrice
    logistique), qui a **son propre référentiel**, à relever avant d'y écrire une séance.
@@ -51,18 +51,18 @@ de classe et des **notes par compétence** qui comptent.
     FAIT le 02/10** (ci-dessous, B, et `prepalog-notes-competences.md`). **ENT-3.2 écrite le
     02/10 (cachée, à valider à l'écran) ; restent ENT-3.3 et 3.4**, chaque séance déclarée
     d'emblée avec `competences` et `temps`. Cdiscount (ENT-2.1 à 2.3) est en place.
-11. **Prepalog et Logisim ne se mélangent pas** (Tristan, 02/10) :
+11. **Prepalog et Simulog ne se mélangent pas** (Tristan, 02/10) :
     - **Prepalog** est la plateforme d'entrée. Elle porte les **entraînements sans logique de
       scénario** (tableur, quiz de notions), le **magasin pédagogique** et l'**organisation des
       activités** (groupes, suivi, compétences, conduite de séance).
-    - **Logisim** est le module qui **simule des scénarios à travers des entreprises** ; il
+    - **Simulog** est le module qui **simule des scénarios à travers des entreprises** ; il
       fonctionne **toujours** dans une logique de scénario.
     - But : ne pas tout mélanger et ne pas faire de l'outil une usine à gaz. Avant d'ajouter
       quelque chose, se demander de quel côté il va.
 12. **Le module SCE (rubrique « Scénario », SCE-1 à SCE-5) regroupe d'anciens travaux de
-    Tristan** et **sera supprimé à terme pour être inclus dans Logisim.** Ne pas l'enrichir. Au
+    Tristan** et **sera supprimé à terme pour être inclus dans Simulog.** Ne pas l'enrichir. Au
     moment de la migration : reprendre `competences` et `temps` de chaque SCE dans la séance
-    Logisim qui le remplace, sinon ses notes sortent du tableau par compétence (les scores
+    Simulog qui le remplace, sinon ses notes sortent du tableau par compétence (les scores
     restent dans la base, mais une séance retirée du registre n'est plus lue).
 13. **Des expériences ludiques et innovantes** (Tristan, 03/10/2026). Si une compétence peut être
     abordée sous un nouvel angle grâce à de nouvelles vues, **on prend le temps de les insérer dans le

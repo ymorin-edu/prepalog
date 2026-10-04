@@ -72,7 +72,7 @@ T.reflechir([
 
 # ==================================================================== étape 2
 T.etape(2, "Ouvrir son environnement et lire le message")
-T.p("Connecte-toi à Prepalog, ouvre la rubrique Logisim, puis l'activité « Picard — le premier camion ». Le "
+T.p("Connecte-toi à Prepalog, ouvre la rubrique Simulog, puis l'activité « Picard — le premier camion ». Le "
     "logiciel s'ouvre aux couleurs de Picard. L'accueil te donne les cinq étapes de la séance.")
 T.consignes([
     "Dans le menu de gauche, clique sur « Messagerie ».",

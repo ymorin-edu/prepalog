@@ -20,7 +20,7 @@ export const meta = {
   code: 'ENT-2.6',
   titre: 'Cdiscount — cinq recomptages, pas un de plus',
   desc: "Bonus : nettoyer un export d'un mois sur deux allées, chiffrer les écarts et choisir les cinq références à recompter.",
-  rubrique: 'logisim',
+  rubrique: 'simulog',
   // Compétences et temps pédagogique : voir core/competences.js.
   competences: ['C1.6'],
   temps: 'entrainement',

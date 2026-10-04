@@ -81,7 +81,7 @@ Cadrage : `prepalog-finalite.md`, section B.
 
 - **Hors tableau** (transversaux, voulu) : TAB-1, TAB-3, QUI-8, QUI-9, QUI-10. ACT-1 sans note.
 - Codes de compétence (C1.6), pas les sous-codes, pour l'instant.
-- Le module SCE sera migré dans Logisim (finalité, décision 12) : reporter ces lignes.
+- Le module SCE sera migré dans Simulog (finalité, décision 12) : reporter ces lignes.
 
 ## Pour toute séance nouvelle
 

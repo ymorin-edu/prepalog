@@ -361,7 +361,7 @@ td.juste .note{color:inherit; opacity:.85}
 .lien-accueil:hover{ color:var(--ardoise) }
 
 .module-grid{ display:grid; gap:14px; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)) }
-/* Logisim rangé par entreprise : la carte d'une entreprise est son logo seul, posé sur une
+/* Simulog rangé par entreprise : la carte d'une entreprise est son logo seul, posé sur une
    plaque claire. La plaque garde la même teinte papier quel que soit le thème, exprès (pas une
    variable) : les logos ont un fond blanc ou une encre sombre, et deviendraient illisibles sur
    le fond du thème sombre. `multiply` fond le blanc d'un JPEG (Spartoo) dans la plaque. */

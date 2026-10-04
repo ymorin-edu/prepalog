@@ -66,7 +66,7 @@ T.reflechir([
 
 # ==================================================================== étape 2
 T.etape(2, "Ouvrir son environnement et lire le message")
-T.p("Connecte-toi à Prepalog, ouvre la rubrique Logisim, puis l'activité « Picard — deux camions, un seul "
+T.p("Connecte-toi à Prepalog, ouvre la rubrique Simulog, puis l'activité « Picard — deux camions, un seul "
     "quai ». Dans le menu de gauche, clique sur « Messagerie » et ouvre le message du chef de quai : « Quai 32 : "
     "deux camions ce matin ».")
 T.tableau(['Information', 'Premier camion arrivé', 'Second camion arrivé'], 0, [Cm(5.6), Cm(5.7), Cm(5.7)],

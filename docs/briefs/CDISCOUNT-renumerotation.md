@@ -53,7 +53,7 @@ doublon de `code` dans `activites/index.js`. **Sabotage** : donner le même code
 
 ## 4. Critères de validation par Tristan
 
-Dans la pastille Logisim, sous le logo Cdiscount : ENT-2.1, ENT-2.3, ENT-2.4 dans cet ordre, toutes trois marquées
+Dans la pastille Simulog, sous le logo Cdiscount : ENT-2.1, ENT-2.3, ENT-2.4 dans cet ordre, toutes trois marquées
 fermées aux élèves ; aucune séance ne s'appelle encore ENT-2.2.
 
 ## 5. Ce que ça ne fait pas

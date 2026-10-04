@@ -37,7 +37,7 @@ décision de fond, la **finalité** ci-dessous passe avant tout.
 
 Prepalog fait travailler aux élèves de **Bac Pro Logistique (2de, 1re, Tle) et de CAP OL** la
 totalité des compétences du référentiel **qui ne demandent pas de manipulation physique**, dans
-des environnements numériques d'**entreprises réelles** (Logisim), avec suivi de classe et notes
+des environnements numériques d'**entreprises réelles** (Simulog), avec suivi de classe et notes
 par compétence. Public : Tristan et son équipe (diffusion plus large possible un jour, ne rien
 fermer qui l'empêche, mais ne pas concevoir pour elle).
 
@@ -55,11 +55,11 @@ Décisions pédagogiques arrêtées :
    les donne. Pas de visages de salariés, pas de paroles prêtées à un salarié réel identifié.
    Pas de faux document conçu pour passer pour authentique (mention en pied sur un document
    reconstitué). TechPro Distribution (fictive) est **abandonnée**.
-4. **Prepalog ≠ Logisim.** Prepalog = plateforme d'entrée (entraînements sans scénario : tableur,
-   quiz ; magasin ; groupes, suivi, compétences, conduite de séance). Logisim = simulation de
+4. **Prepalog ≠ Simulog.** Prepalog = plateforme d'entrée (entraînements sans scénario : tableur,
+   quiz ; magasin ; groupes, suivi, compétences, conduite de séance). Simulog = simulation de
    scénarios d'entreprise, toujours en logique de scénario. Avant d'ajouter quelque chose, se
    demander de quel côté il va. Pas d'usine à gaz.
-5. Le module **SCE (SCE-1 à SCE-5) est ancien** et sera absorbé par Logisim : ne pas l'enrichir.
+5. Le module **SCE (SCE-1 à SCE-5) est ancien** et sera absorbé par Simulog : ne pas l'enrichir.
    **Spartoo (ENT-1.x) reste tel quel** (point de comparaison) : ne pas le prendre pour modèle.
    **Le modèle, c'est Boost** (ENT-3.x).
 6. Une séance nouvelle doit se fabriquer **avec les vues existantes**, en déclarant du contenu.
@@ -115,7 +115,7 @@ export const meta = {
   code: 'QUI-5',            // ce que lit l'élève ET ce qui décide du rang d'affichage
   titre, desc, rubrique,    // rubrique = pastille d'accueil, doit exister dans activites/index.js
   niveaux: ['2de','1re'],   // absent = tous niveaux
-  competences: [], temps,   // pour les notes par compétence (séance Logisim : toujours déclarés)
+  competences: [], temps,   // pour les notes par compétence (séance Simulog : toujours déclarés)
   bareme: 6,                // présence = apparaît dans le suivi de classe
   notation: 'prof' | 'avancement',  // absent = score auto ramené sur 20
   portee: 'eleve' | 'equipe' | 'groupe' | 'commun',

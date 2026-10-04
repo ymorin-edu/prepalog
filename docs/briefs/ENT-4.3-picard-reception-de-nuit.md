@@ -166,7 +166,7 @@ Trame élève Word/PDF (Cowork) ; corrigé `contenus/corriges/ENT-4.3.js` (diagn
 - **Tests** : bloc `picard` 65/65 (14 cas ENT-4.3 + 1 pour « Valider »). Cas ENT-4.2 réécrit : « Valider cette palette coche
   l'onglet… » note maintenant le comptage avant de valider. Éprouvés dans les deux sens (temps 1 non figé, temps 2 jamais
   ouvert, sonde qui lit la fiche, inaction récompensée, « J'ai terminé » non définitif, « Valider » toujours actif : chaque
-  sabotage fait tomber des cas). `outils/test/socle.mjs` : la liste figée des séances Logisim est allongée d’ENT-4.3.
+  sabotage fait tomber des cas). `outils/test/socle.mjs` : la liste figée des séances Simulog est allongée d’ENT-4.3.
   Suite complète 448/448.
 - **Commits** : « Vue quai : Valider cette palette… » puis « ENT-4.3 Picard la réception de nuit… ».
 - **Reste ouvert** : trame élève Word/PDF (Cowork) ; essai à l'écran par Tristan (lire les textes des trois messages et les

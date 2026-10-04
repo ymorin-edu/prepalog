@@ -23,7 +23,7 @@
 | `code` | ENT-5.3 |
 | `id` | `smoby-visite` |
 | Titre / desc | « Smoby — la visite de la plateforme » / « Premier jour de Yanis : découvrir la plateforme vue du ciel, suivre le parcours de visite dans l'entrepôt, apprendre les mots du rack et lire une adresse d'emplacement. » |
-| Rubrique | logisim, entreprise n° 5 Smoby |
+| Rubrique | simulog, entreprise n° 5 Smoby |
 | Niveau(x) | 2de |
 | Compétence(s) | à confirmer (repérage des zones et du vocabulaire de l'entrepôt, préalable à **C1.2** et **C1.5**) ; domaine D4 |
 | Temps pédagogique | guidage ; `parcours: 'coeur'` |

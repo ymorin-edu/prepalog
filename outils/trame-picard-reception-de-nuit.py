@@ -81,7 +81,7 @@ T.reflechir([
 
 # ==================================================================== étape 2
 T.etape(2, "Lire les messages")
-T.p("Connecte-toi à Prepalog, ouvre la rubrique Logisim, puis l'activité « Picard — la réception de nuit ». "
+T.p("Connecte-toi à Prepalog, ouvre la rubrique Simulog, puis l'activité « Picard — la réception de nuit ». "
     "Dans le menu de gauche, clique sur « Messagerie ». Trois messages t'attendent. Lis-les tous, dans l'ordre "
     "où ils sont arrivés.")
 T.tableau(['Qui écrit ?', 'Ce qu\'il dit, en une phrase'], 0, [Cm(5.0), Cm(12.0)], hauteur=Cm(1.3),

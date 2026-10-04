@@ -24,7 +24,7 @@ export const meta = {
   titre: 'Picard — deux camions, un seul quai',
   desc: 'Deux camions de surgelés attendent au quai 32 : lire les deux tickets, choisir et justifier l’ordre de '
     + 'déchargement, puis réceptionner les deux lots sans aide (huit palettes, quatre aléas).',
-  rubrique: 'logisim',
+  rubrique: 'simulog',
   niveaux: ['1re'],
   competences: ['C1.4', 'C1.3'],
   temps: 'entrainement',

@@ -78,7 +78,7 @@ export const CORRIGE = {
         "Information",
         "Ce que tu relèves"
       ],
-      "contexte": "Connecte-toi à Prepalog, ouvre la rubrique Logisim, puis l'activité « Boost — la tournée du vélo-cargo ». Le logiciel s'ouvre aux couleurs de Boost. Tu dois voir, à gauche, un menu avec « Messagerie ». Clique dessus : un message t'attend. Lis-le en entier avant de toucher à autre chose.",
+      "contexte": "Connecte-toi à Prepalog, ouvre la rubrique Simulog, puis l'activité « Boost — la tournée du vélo-cargo ». Le logiciel s'ouvre aux couleurs de Boost. Tu dois voir, à gauche, un menu avec « Messagerie ». Clique dessus : un message t'attend. Lis-le en entier avant de toucher à autre chose.",
       "reponses": [
         [
           "Heure de départ de l'entrepôt",

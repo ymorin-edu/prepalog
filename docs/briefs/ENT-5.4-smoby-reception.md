@@ -18,7 +18,7 @@
 | `code` | ENT-5.4 |
 | `id` | `smoby-reception` |
 | Titre / desc | « Smoby — premier déchargement » / « Cariste au quai de réception de la plateforme de Moirans : vérifier la sécurité avant de décharger, décharger au chariot un camion de l'usine d'Arinthod, contrôler 4 palettes de jouets et porter des réserves précises. » |
-| Rubrique | logisim, entreprise n° 5 Smoby |
+| Rubrique | simulog, entreprise n° 5 Smoby |
 | Niveau(x) | 2de |
 | Compétence(s) | **C1.2** (sécurité), **C1.4** (réception ; C1.4.2 litige) ; domaines D4, D5 |
 | Temps pédagogique | guidage ; `parcours: 'coeur'` |

@@ -29,7 +29,7 @@ Format de l'`id` : minuscules, tirets, sans numéro ni préfixe de rubrique — 
 |---|---|---|
 | `DEC` | découverte, notions | DEC-1 La chaîne logistique |
 | `ACT` | outil ou activité métier | ACT-1 Base du magasin, ACT-2 Préparation, ACT-3 Réception, ACT-4 Agenda, ACT-5 Flotte |
-| `ENT` | environnement d'entreprise complet (LogiSim) | ENT-1.1 Spartoo réception, ENT-1.2 Spartoo préparation, ENT-1.3 Spartoo traçabilité, ENT-2.1 Cdiscount, ENT-3.1 Boost… |
+| `ENT` | environnement d'entreprise complet (Simulog) | ENT-1.1 Spartoo réception, ENT-1.2 Spartoo préparation, ENT-1.3 Spartoo traçabilité, ENT-2.1 Cdiscount, ENT-3.1 Boost… |
 | `TAB` | tableur | TAB-1 Excel pas à pas, TAB-2 Stocks, TAB-3 Calculs commerciaux, TAB-4 Une journée en entrepôt, TAB-5 Inventaire |
 | `REF` | exercices par compétence du référentiel | REF-1 à REF-3 (pôles 1, 2, 3) |
 | `SCE` | scénario évalué | SCE-1 Yves Rocher, SCE-2 Foot Locker, SCE-3 Bouygues, SCE-4 Brasseries, SCE-5 Réception plateforme |
@@ -228,14 +228,14 @@ Dans l'ordre d'affichage, qui est celui des codes. Source de vérité : `activit
 | `bouygues-telecom` | SCE-3 | scenario | évaluation | C1.6 | saisie par l'enseignant | oui |
 | `brasseries-gatinais` | SCE-4 | scenario | guidage | C1.5 | saisie par l'enseignant | oui |
 | `reception-plateforme` | SCE-5 | scenario | guidage | C1.3, C1.4 | saisie par l'enseignant | oui |
-| `spartoo-reception` | ENT-1.1 | logisim | guidage | C1.4 | jalons (avancement) | oui |
-| `spartoo` | ENT-1.2 | logisim | guidage | C2.2 | jalons (avancement) | oui |
-| `spartoo-tracabilite` | ENT-1.3 | logisim | guidage | C3.2 | jalons (avancement) | oui |
-| `cdiscount-mouvements` | ENT-2.1 | logisim | guidage | C1.6 | jalons (avancement) | **non** |
-| `cdiscount-inventaire` | ENT-2.2 | logisim | entraînement | C1.6 | jalons (avancement) | oui (validation à confirmer) |
-| `cdiscount-regularise` | ENT-2.3 | logisim | erreur induite | C1.6 | jalons (avancement) | **non** |
-| `boost-tournee` | ENT-3.1 | logisim | guidage | C2.4 | note sur 20 (6 jalons) | oui |
-| `boost-ent32` | ENT-3.2 | logisim | entraînement | C2.4 | note sur 20 (8 jalons) | **non** |
+| `spartoo-reception` | ENT-1.1 | simulog | guidage | C1.4 | jalons (avancement) | oui |
+| `spartoo` | ENT-1.2 | simulog | guidage | C2.2 | jalons (avancement) | oui |
+| `spartoo-tracabilite` | ENT-1.3 | simulog | guidage | C3.2 | jalons (avancement) | oui |
+| `cdiscount-mouvements` | ENT-2.1 | simulog | guidage | C1.6 | jalons (avancement) | **non** |
+| `cdiscount-inventaire` | ENT-2.2 | simulog | entraînement | C1.6 | jalons (avancement) | oui (validation à confirmer) |
+| `cdiscount-regularise` | ENT-2.3 | simulog | erreur induite | C1.6 | jalons (avancement) | **non** |
+| `boost-tournee` | ENT-3.1 | simulog | guidage | C2.4 | note sur 20 (6 jalons) | oui |
+| `boost-ent32` | ENT-3.2 | simulog | entraînement | C2.4 | note sur 20 (8 jalons) | **non** |
 
 *(Notation, 02/10 : les séances SCE se notent à la main ; les séances Spartoo et Cdiscount sont en
 jalons ; Boost passe par la note sur 20 calculée depuis les jalons, sans `notation`. Voir
@@ -247,5 +247,5 @@ moteur : pré-remplir un ordre de passage), **ENT-3.4** (Boost, évaluation en c
 Les trois séances Spartoo portaient `ENT-1`, `ENT-2`, `ENT-3` jusqu'au 01/10/2026 au soir ; les `id`
 n'ont pas bougé, **aucun score d'élève n'est perdu**.
 
-Reste à migrer : les pôles de compétences (REF-1 à REF-3), les SCE dans Logisim, les modules
+Reste à migrer : les pôles de compétences (REF-1 à REF-3), les SCE dans Simulog, les modules
 transport et les quiz d'entraînement restants. *(TechPro Distribution : abandonnée le 02/10.)*

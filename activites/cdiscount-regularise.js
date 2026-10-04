@@ -25,7 +25,7 @@ export const meta = {
   code: 'ENT-2.4',
   titre: 'Cdiscount — régularisé à l’aveugle',
   desc: "Exporter les ajustements du mois, repérer celui qui n'a pas de justificatif, remonter à la réception et dire quoi faire.",
-  rubrique: 'logisim',
+  rubrique: 'simulog',
   // Compétences et temps pédagogique : voir core/competences.js.
   competences: ['C1.6'],
   temps: 'erreur',

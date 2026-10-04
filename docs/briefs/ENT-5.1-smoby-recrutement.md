@@ -19,7 +19,7 @@
 | `code` | ENT-5.1 |
 | `id` (jamais modifié ensuite) | `smoby-recrutement` |
 | Titre / desc | « Smoby — recruter le cariste de Noël » / « Assistant RH à la plateforme Smoby de Moirans-en-Montagne : lire une fiche de poste, trier cinq CV, choisir le bon candidat et le bon contrat, rendre compte à sa tutrice. » |
-| Rubrique | logisim, entreprise **n° 5 Smoby** (lot 7 de `MOTEUR-2de-S1`) |
+| Rubrique | simulog, entreprise **n° 5 Smoby** (lot 7 de `MOTEUR-2de-S1`) |
 | Entreprise | Smoby (réelle, vérifiée : §2) |
 | Niveau(x) | 2de (`niveaux: ['2de']`) |
 | Compétence(s) | **AGO-3.1** (suivi de carrière : procédures d'entrée) ; domaine D1 |

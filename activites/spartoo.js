@@ -18,7 +18,7 @@ export const meta = {
   code: 'ENT-1.2',
   titre: 'Spartoo — préparation',
   desc: "Traiter une commande client : contrôle du stock, bon de préparation et réapprovisionnement.",
-  rubrique: 'logisim',
+  rubrique: 'simulog',
   // Compétences et temps pédagogique : voir core/competences.js (validé par Tristan, 02/10/2026).
   competences: ['C2.2'],
   temps: 'guidage',

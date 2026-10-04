@@ -67,7 +67,7 @@ export const CORRIGE = {
         "Qui écrit ?",
         "Ce qu'il dit, en une phrase"
       ],
-      "contexte": "Connecte-toi à Prepalog, ouvre la rubrique Logisim, puis l'activité « Picard — la réception de nuit ». Dans le menu de gauche, clique sur « Messagerie ». Trois messages t'attendent. Lis-les tous, dans l'ordre où ils sont arrivés.",
+      "contexte": "Connecte-toi à Prepalog, ouvre la rubrique Simulog, puis l'activité « Picard — la réception de nuit ». Dans le menu de gauche, clique sur « Messagerie ». Trois messages t'attendent. Lis-les tous, dans l'ordre où ils sont arrivés.",
       "reponses": [
         [
           "Transports Givrex",

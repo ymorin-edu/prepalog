@@ -79,7 +79,7 @@ T.reflechir([
 
 # ==================================================================== étape 2
 T.etape(2, "Lire la messagerie : le problème de ce matin")
-T.p("Connecte-toi à Prepalog, ouvre la rubrique Logisim, puis l'activité « Cdiscount — le stock raconte ». Le "
+T.p("Connecte-toi à Prepalog, ouvre la rubrique Simulog, puis l'activité « Cdiscount — le stock raconte ». Le "
     "logiciel s'ouvre aux couleurs de Cdiscount, avec un menu à gauche. L'accueil liste le travail de la séance, "
     "dans l'ordre.")
 T.consignes([
