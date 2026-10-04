@@ -237,7 +237,7 @@ planning: {
             libDuree?: 'Chargement', detailDuree?: (c) => '10 min + 33 × 2 min',     // détail : guidage seulement
             ligne?: (c) => c.qui, semaineEntiere?: true, impose?: …,                   // cas « personnel »
             pauses?: { nombre: 4, duree: 45, libelle: 'Pause 45 min' }, nonPosees?: (cartes) => texte },
-  familles: { semi: { teinte: 'a', legende: 'semi-remorque' }, porteur: { teinte: 'b', … } },   // a = jaune, b = violet
+  familles: { semi: { couleur: '#f0be00', nom: 'jaune', legende: 'semi-remorque' }, porteur: { couleur: '#8b5cf6', … } },
   compteurs: [{ lib: 'Présents', valeur: 'presents' | 'besoin' | 'filtre', regle: 'effectif' }],  // lignes sous la grille
   regles: [ … ], jalons: [ … ], aides: { … }, alea: { … }, note: { sur: 20 },
 }
@@ -247,6 +247,18 @@ Heures en `'HH:MM'`, durées en **minutes** (en jours pour l'échelle « jours �
 **arrondie au créneau supérieur**. Une carte reçue par les fonctions du contenu garde tous ses champs ; le moteur y
 ajoute `_des`, `_avant`, `_L` (créneaux), `_dem` (jour demandé), `modifie` (champs changés par l'aléa, pour écrire
 « (nouvelle heure) »), `nouveau`, `pause`.
+
+**Couleurs** (libres par séance, décision de Tristan du 04/10/2026, sans lien avec la charte de l'entreprise) : chaque
+famille déclare `couleur: '#rrggbb'` (le trait ; le fond est la même couleur translucide), `nom` (écrit dans la légende,
+facultatif) et `legende`. `teinte: 'a'` / `'b'` reste un raccourci pour le jaune / violet. Le moteur **refuse** une
+couleur verte, bleue ou rouge (elles ont déjà un sens), deux familles trop proches, ou une couleur sous laquelle un texte
+de la carte descend sous 4,5 de contraste en thème clair ou sombre : la séance ne se charge pas, avec la raison en clair.
+Acceptées au 04/10 : jaune `#f0be00`, violet `#8b5cf6`, orange `#f08c00`, rose `#e64980`, sable `#c8a46e`, gris `#868e96`.
+Pour en essayer une : les sélecteurs de couleur de `outils/essai-planning.html`.
+
+**« Agrandir le planning »** : un bouton en tête de la vue replie le menu de l'environnement et le panneau des consignes
+(« Voir les consignes » les rouvre ; le message de l'aléa reste visible). Le choix est rangé dans l'état (`agrandi`) et
+retrouvé à la séance suivante ; les autres écrans gardent leur menu. Rien à déclarer.
 
 **Règles** : `{ id, type, …, message }`. Le message est une fonction (ou un texte) ; celui par défaut dit **que** la
 règle n'est pas respectée, jamais **de combien** — les vôtres aussi (un test relit tous les messages).

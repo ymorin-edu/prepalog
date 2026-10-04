@@ -420,3 +420,10 @@ dans la zone de la grille, jamais de la page) ; la bulle se trouve sans chercher
   - Chantiers suivants, hors de celui-ci (§12) : mots cliquables avec définition, message par phrases à choisir,
     indicateurs de repérage pour l'enseignant (les données sont déjà rangées : clics sur « Vérifier », premier geste,
     envois), marquage cœur / complément.
+- **Retouches du 04/10/2026, après la livraison (demandes de Tristan)** :
+  - **« Agrandir le planning »** (choix de Tristan parmi trois) : un bouton replie le menu de l'environnement et le
+    panneau des consignes, la journée du quai tient alors sans défiler sur un écran de 1366 px ; « Voir les consignes »
+    les rouvre ; le message de l'aléa reste en tête ; le choix est retenu (`agrandi` dans l'état).
+  - **Couleurs libres par séance** (choix de Tristan parmi trois) : `familles.x.couleur`, sans lien avec la charte.
+    Le moteur refuse vert, bleu, rouge, deux familles trop proches, et toute couleur qui fait passer un texte sous 4,5
+    (thèmes clair et sombre). Sélecteurs de couleur sur la page d'essai. Tests : 24 cas dans le bloc, suite 569 / 569.

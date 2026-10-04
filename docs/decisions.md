@@ -5,6 +5,11 @@ n'est pas évident)**. Claude Code y ajoute toute décision prise en cours de ro
 reporte dans les fiches du projet PREPALOG. Une décision de fond sur la pédagogie reste dans
 `docs/fiches/prepalog-finalite.md`.
 
+- 04/10/2026 · Tristan · **Planning : bouton « Agrandir » et couleurs libres par séance.** « Agrandir le planning » replie
+  le menu de l'environnement et les consignes (écrans étroits du lycée), choix retenu pour l'élève. Les couleurs des
+  familles de cartes sont libres, déclarées par chaque séance, sans lien avec la charte de l'entreprise ; le moteur refuse
+  vert, bleu, rouge, deux couleurs trop proches et tout contraste de texte sous 4,5 (choix de Claude Code pour rendre
+  la liberté sûre).
 - 04/10/2026 · Claude Code · **Vue « Planning » livrée à l'essai** (brief `docs/briefs/MOTEUR-vue-planning.md`) : cartes
   sur une grille créneaux × ressources (heures ou jours), glisser-déposer + clic-clic + clavier, bulle de la seconde
   ressource, grille en lecture seule, **13 types de règles déclarées par le contenu**, jalons lus sur les versions

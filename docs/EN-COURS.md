@@ -7,8 +7,7 @@ est déjà modifié ou inscrit ci-dessous, **elle s'arrête et le dit à Tristan
 
 | Chantier | Fichiers qu'il touche | Depuis |
 |---|---|---|
-| Planning : bouton « Agrandir » et couleurs libres par séance | `core/types/planning.js`, `core/types/entreprise.js`, `styles/planning.css`, `contenus/planning-essai.js`, `outils/test/planning.mjs`, `activites/FICHE-SEANCE.md` | 04/10/2026 |
-| Cowork · S1 Smoby : logo et photos (fichiers de référence, pas de code) | `docs/briefs/smoby/` (logo, photos, `LISEZMOI.md`), `docs/briefs/COORDINATION-smoby.md`, `docs/briefs/ENT-5.3-smoby-reception.md` | 04/10/2026 |
+| *(personne d'inscrit)* | | |
 
 Rappel : un seul chantier à la fois dans `core/types/tournee.js`, `core/types/grille.js`,
 `core/types/entreprise.js`, `styles/base.css` et `outils/test/boost.mjs` (voir `docs/briefs/COORDINATION-boost.md`).
