@@ -12,11 +12,15 @@
 // le même mail ouvre ; Sophie répond quand la fiche est envoyée (`apresFiche`, juste ou faux).
 //
 // Les personnes (Sophie Martin, les candidats) sont CONSTRUITES, comme dans le brief de la séance.
+//
+// Lots 4 et 5 : `univers({ quai: { securite, evaluation } })` ajoute un quai sans froid, déchargé par un
+// cariste au chariot, précédé (ou non) de l'étape « Avant de décharger », et ses jalons aux étapes.
 
 import { catalogueSimple } from '../contenus/entreprise-commun.js';
 import { apresMail, apresFiche } from '../core/declencheurs.js';
 import { phrasesJustes } from '../core/phrases.js';
 import { DOCUMENTS, STYLE_DOCUMENTS } from './essai-2de-documents.js';
+import { etapesQuai } from '../core/types/quai.js';
 
 export const MENTION = 'Page d’essai des briques de la 2de. <b>Construit</b> : Sophie Martin, les candidats et '
   + 'leurs situations (personnes fictives, comme dans le brief ENT-5.1).';
@@ -125,7 +129,60 @@ export const ETAPES = [{
   },
 }];
 
-export function univers({ temps = 'guidage' } = {}) {
+
+// Lots 4 et 5 : un quai SANS FROID, déchargé par un cariste au chariot, précédé de l'étape « Avant de
+// décharger ». Palettes, BL, fournisseur, transporteur, scène et points de sécurité : CONSTRUITS pour
+// l'essai (la séance ENT-5.4 apportera les siens, et ses propres photos). Les photos du quai sont
+// celles de Picard (les seules calibrées aujourd'hui : porte, places au sol).
+export const PALETTES_QUAI = [
+  { id: 'P1', ref: 'JEU-101', nom: 'Jouets d’essai A', bl: 24,
+    etiq: { ref: 'JEU-101', nom: 'JOUETS D’ESSAI A', poids: '1 jouet par carton', lot: 'L26-4401', ddm: '—' },
+    W: 3, D: 2, L: 4, manque: [], avarie: {}, temp: 18, attendu: 'accepter', motifAttendu: 'aucun' },
+  { id: 'P2', ref: 'JEU-102', nom: 'Jouets d’essai B', bl: 24,
+    etiq: { ref: 'JEU-102', nom: 'JOUETS D’ESSAI B', poids: '1 jouet par carton', lot: 'L26-4402', ddm: '—' },
+    W: 3, D: 2, L: 4, manque: [], avarie: {}, temp: 18, attendu: 'accepter', motifAttendu: 'aucun' },
+  { id: 'P3', ref: 'JEU-103', nom: 'Jouets d’essai C', bl: 20,
+    etiq: { ref: 'JEU-103', nom: 'JOUETS D’ESSAI C', poids: '1 jouet par carton', lot: 'L26-4403', ddm: '—' },
+    W: 2, D: 2, L: 5, manque: [], avarie: { '1,0,3': [0, -1] }, temp: 18, attendu: 'reserves', motifAttendu: 'avarie' },
+  { id: 'P4', ref: 'JEU-104', nom: 'Jouets d’essai D', bl: 24,
+    etiq: { ref: 'JEU-104', nom: 'JOUETS D’ESSAI D', poids: '2 jouets par carton', lot: 'L26-4404', ddm: '—' },
+    W: 3, D: 2, L: 4, manque: ['0,0,3', '2,1,3'], avarie: {}, temp: 18, attendu: 'reserves', motifAttendu: 'manquant' },
+];
+
+export const SECURITE_QUAI = {
+  scene: 'Le semi est à quai, quai 2, 07:10. Le chauffeur a coupé le moteur et te tend ses clés. '
+    + 'Le niveleur est en place. Avant d’entrer dans la remorque, regarde si tout est en sécurité.',
+  points: [
+    { id: 'moteur', lib: 'Moteur coupé, clés remises', ok: true },
+    { id: 'cale', lib: 'Camion calé (cale sous la roue)', ok: false },
+    { id: 'niveleur', lib: 'Niveleur en place', ok: true },
+    { id: 'epi', lib: 'Chaussures de sécurité et gilet', ok: true },
+  ],
+  signaler: { bouton: 'Signaler au chef de quai', reponse: 'Bien vu, je fais poser la cale. Tu peux décharger.' },
+};
+
+export function quaiSansFroid({ securite = true, evaluation = false } = {}) {
+  return {
+    id: `essai-2de-quai${evaluation ? '-eval' : ''}`,
+    titre: 'Essai — quai de réception sans froid',
+    destinataire: 'Smoby (essai)',
+    avertissement: 'Page d’essai : palettes, fournisseur, transporteur, scène de sécurité <b>construits</b> ; photos du quai reprises de Picard.',
+    froid: false,
+    motifs: ['avarie', 'manquant'],
+    lieu: { nom: 'Quai 2', temp: 15, refrigere: false },
+    zone: { nom: 'Zone de réception' },
+    dechargement: { ouverture: 0.5, parPalette: 1, par: 'cariste', nom: 'Yanis' },
+    aides: evaluation ? {} : { regleCouches: true, detailComptage: false, repere: true, chefDeQuai: true, consignes: true },
+    photos: { arrivee: './contenus/picard/quai-remorques.jpg', quai: './contenus/picard/quai-interieur.jpg',
+      porte: { x0: 455, x1: 786, y0: 352, y1: 585 }, altArrivee: 'Camions à quai devant un entrepôt' },
+    securite: securite ? SECURITE_QUAI : undefined,
+    camions: [{ transporteur: 'Transports d’essai', fournisseur: 'Usine d’essai', fictif: true, bl: 'ESS-26-0001', arrivee: '07:10',
+      palettes: PALETTES_QUAI }],
+  };
+}
+
+export function univers({ temps = 'guidage', quai = null } = {}) {
+  const Q = quai ? quaiSansFroid(quai) : null;
   return {
     ENTREPRISE: { id: 'essai-2de', nom: 'Smoby — essai 2de', sousTitre: 'Plateforme de Moirans-en-Montagne (39)', exercice: 'Essai des briques de la 2de' },
     VOCAB: { unit: 'unité', unitPl: 'unités', sizeLabel: '', sizeShort: '', configWord: '', icone: 'carton', mailDomain: 'smoby-essai.example' },
@@ -133,11 +190,12 @@ export function univers({ temps = 'guidage' } = {}) {
     SUPPLIERS: [], SUP_BY_ID: {}, CUSTOMERS: [], CM: {}, THEME: {},
     baseDeDepart: () => ({ v: 1, created: Date.now(), stock: {}, moves: [], mails: [], orders: [], receptions: [],
       customers: [], suppliers: [], seq: 1, _depart: [] }),
-    etapes: ETAPES, exercice: 'Essai des briques de la 2de',
+    etapes: Q ? ETAPES.concat(etapesQuai(Q)) : ETAPES, exercice: 'Essai des briques de la 2de',
     volet: voletEssai(),
     lexique: LEXIQUE,
     documents: DOCUMENTS, documentsStyle: STYLE_DOCUMENTS,
     fiche: FICHE,
-    copie: temps === 'evaluation', sansTrame: "Tout à l'écran",
+    ...(Q ? { quai: Q } : {}),
+    copie: temps === 'evaluation' || !!(quai && quai.evaluation), sansTrame: "Tout à l'écran",
   };
 }

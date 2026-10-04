@@ -6,7 +6,7 @@
 > Lis docs/briefs/COORDINATION-smoby.md, docs/EN-COURS.md, puis le brief docs/briefs/MOTEUR-2de-S1.md. Commence par le lot 0 (état des lieux, lecture seule) et donne-moi le compte rendu avant d'écrire. Annonce la durée de chaque lot.
 > ```
 
-**Statut** : en cours — lot 0 rendu, lots 1, 2, 3 et 6 livrés le 04/10/2026 ; lots 4, 5, 7 à faire *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
+**Statut** : à valider par Tristan — lots 1, 2, 3, 6 et 7 livrés ; **lots 4 et 5 livrés le 04/10/2026 (soir), à essayer à l'écran** (`outils/essai-2de.html`, réglage « Quai ») *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
 **Date du brief** : 04/10/2026
 **Conversation d'origine** : Cowork (Opus), cadrage de S1 ; fiches projet `claude/prepalog-2de-s1-cadrage.md`,
 `claude/prepalog-2de-eleve-debut-annee.md`, `claude/prepalog-2de-socle-transversal.md`
@@ -286,4 +286,43 @@ du lycée.
   `docs/briefs/smoby/logo-smoby.svg` ; à copier (empreinte vérifiée) avec la première séance.
 - La renumérotation des briefs Smoby (visite = ENT-5.3, réception = **ENT-5.4**) a été faite par une autre session (commit
   822c98d) : la séance du quai sans froid est désormais ENT-5.4.
+
+### Lots 4 et 5 — livrés le 04/10/2026 (soir), à valider à l'écran
+
+Le brouillon de la pause a été repris et **adapté au quai d'aujourd'hui** (fiche de contrôle, zone de calcul, décision et
+motifs en boutons, arrivés entre-temps). Brouillons effacés (`docs/briefs/brouillons/`).
+
+- **Déclaration** (rien de « Smoby » dans `core/`) : `froid: false` ; `motifs: ['avarie', 'manquant']` (liste des motifs
+  proposés, utilisable par toute séance ; jamais « température » sans froid) ; `zone: { nom }` (« Zone de réception » par
+  défaut) ; `dechargement: { par: 'cariste', nom: 'Yanis' }` ; `securite: { scene, points: [{ id, lib, ok }], signaler: {
+  bouton, reponse, rien, vide }, arret, commencer, photo, alt }`.
+- **Sans froid** : plus de ticket ni sa question, de sonde (le bloc ② devient « Lire l'étiquette »), de case « Température à
+  cœur » dans la fiche de contrôle (**trois cases** au lieu de quatre, à l'étape ③ comme au tableau de l'étape ④), de jauge
+  ni d'afficheur de température, de brume, de chambre froide (une scène « zone de réception » la remplace), de « le froid
+  d'abord » du chef de quai, de points de temps hors froid dans la note. Une décision juste ne demande plus d'avoir sondé.
+  Étape ④ : « Réserves et zone de réception ». **Un seul camion** prévu dans ce mode (plusieurs camions : l'ordre se décide
+  sur les tickets, donc sur le froid) — non bloqué par le code, à ne pas déclarer.
+- **Chariot** : un chariot élévateur frontal dessiné (jaune), cariste assis sans visage, gilet haute visibilité ; légende
+  « Yanis sort la palette P2 au chariot » ; mouvement réduit respecté.
+- **Étape ⓪ « Avant de décharger »** (dans la vue quai, pas un écran à part) : scène de 3 lignes, chaque point jugé par
+  **deux boutons « OK » / « Pas OK »** (les mêmes que la décision du poste — choix fait en route : la première version en
+  boutons ronds jurait avec le reste du quai), « Signaler au chef de quai », « Commencer à décharger ». Les étapes ①–④ restent
+  fermées tant que l'élève n'a pas commencé ; il peut revenir relire ⓪, figée. **Guidage** : commencer avec un danger non
+  signalé → le chef de quai arrête l'élève **sans dire lequel** ; **évaluation** : rien ne l'arrête. Signaler un point juste →
+  « Ce que tu me signales est en ordre. » Signaler sans rien cocher « Pas OK » → le chef demande quoi (pas de signalement
+  rangé).
+- **Jalons** : `securiteSignalee` (tous les points faux signalés **avant** l'arrêt ; signaler après l'arrêt ne le rattrape
+  pas) et `securiteConstat` (chaque point jugé juste, faux si un seul est vide). Aucun vrai par inaction.
+- **Page d'essai** `outils/essai-2de.html` : réglage « Quai » (sans froid avec / sans la sécurité / en évaluation). Palettes,
+  fournisseur, transporteur et scène de sécurité **construits** ; photos du quai de **Picard** (les seules calibrées). La page
+  ne chargeait pas `styles/quai.css` : ajouté.
+- **CSS** : quelques lignes dans `styles/quai.css` (tableau de l'étape ⓪), rien dans `base.css`.
+- **Tests** (bloc `smoby`, +10 cas) : étape ⓪ ouverte seule ; arrêt sans dire quoi, signalement tardif non rattrapé ; constat
+  juste figé et gardé ; point juste signalé ; évaluation sans arrêt ; sans froid (ni ticket, jauge, afficheur, sonde, case
+  température ; motifs restreints) ; parcours juste complet sans sonde, zone de réception, sans « froid d'abord » ; décision
+  fausse qui reste fausse ; chariot et mouvement réduit ; note sans points hors froid. Cinq sabotages (signalement tardif
+  compté, sonde exigée, pas d'arrêt, motifs non restreints, constat juste par inaction) font chacun tomber un cas. Le
+  montage du bloc accepte `quai` (et déclare `copie` en évaluation). Bloc `picard` inchangé et vert ; suite entière 647 / 647.
+- **Reste pour ENT-5.4** : ses propres photos (celles de `docs/briefs/smoby/`) devront être **calibrées** (position de la
+  porte dans la photo, `photos.porte`), comme celles de Picard.
 

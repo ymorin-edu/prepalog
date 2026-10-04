@@ -3,6 +3,7 @@
 //
 // `node outils/test.mjs smoby` ne lance que ce bloc. Il monte l'environnement d'entreprise à la main,
 // dans un contexte de navigateur à lui.
+// Lots 4 et 5 : quai sans froid, chariot, étape « Avant de décharger » (`monter({ quai })`).
 // Lot 2 (04/10/2026) : la réponse par phrases à choisir (`core/phrases.js`). Les phrases justes sont
 // écrites À LA MAIN ici (jamais relues dans le contenu).
 
@@ -29,16 +30,18 @@ const monter = (o = {}) => pg.evaluate(async (o) => {
   const hote = document.createElement('div'); hote.id = 'smTest'; document.body.appendChild(hote);
   const CLE = 'essai-2de-base-' + (o.uid || 'u-lea');
   const db = o.garder ? JSON.parse(localStorage.getItem(CLE) || '{}') : {};
-  const moteur = creerEntreprise(E.univers({}));
-  window.__s = { db };
+  const moteur = creerEntreprise(E.univers({ quai: o.quai || null }));
+  window.__s = { db, quaiOpts: o.quai || null };
   moteur.rendre(hote, {
-    meta: { id: 'essai-2de', code: 'ESSAI', titre: 'Essai 2de', portee: 'eleve', immersif: true, temps: 'guidage', reinitialisable: true },
+    meta: { id: 'essai-2de', code: 'ESSAI', titre: 'Essai 2de', portee: 'eleve', immersif: true, temps: 'guidage', reinitialisable: true,
+      ...(o.quai && o.quai.evaluation ? { copie: true } : {}) },
     profil: { prenom: o.prenom || 'Lea', nom: 'Test', role: o.role || 'eleve', uid: o.uid || 'u-lea' },
     jeu: { etat: () => db, sauver: () => { if (o.garder) localStorage.setItem(CLE, JSON.stringify(db)); } },
     enregistrer: (res) => { window.__s.enreg = JSON.parse(JSON.stringify(res)); }, quitter: () => {}, codeStock: 'ABC',
     lireScore: async () => null, rendreCopie: async () => ({ rendu: Date.now() }),
   });
-  document.querySelector('#smTest .ent-nav[data-vue="mail"]').click();
+  // En évaluation, le menu n'arrive qu'une fois la copie lue (`lireScore`) : le test va lui-même au quai.
+  document.querySelector('#smTest .ent-nav[data-vue="mail"]')?.click();
 }, o);
 
 const Z = '#smTest .ent-main';
@@ -960,6 +963,178 @@ await v('ENT-5.1 : une réponse libre au premier message n’ouvre pas la suite 
   const e = await etapes51();
   egal([e.raison, e.ton], ['attente', 'attente'], 'message non envoyé');
   egal(await dernierScore51(), [7, 9], 'score sans le message');
+});
+
+// ── Lots 4 et 5 : quai sans froid, cariste au chariot, étape « Avant de décharger » ─────────────
+// Le poste de contrôle d'aujourd'hui : total noté par Entrée, décision et motifs en boutons, « OK /
+// Pas OK » de la sécurité en boutons. Les décisions justes sont écrites À LA MAIN ici.
+const QZ = '#smTest .ent-main';
+const allerQuai = async (o = {}) => {
+  await monter(Object.assign({ quai: { securite: true } }, o));
+  await pg.click('#smTest .ent-nav[data-vue="quai"]');
+  await pg.waitForSelector(`${QZ} .quai`);
+};
+const etatQ = () => pg.evaluate(() => JSON.parse(JSON.stringify(Object.values(window.__s.db.quais || {})[0] || null)));
+const jalonsQ = () => pg.evaluate(async () => {
+  const { jalonsQuai } = await import('/core/types/quai.js');
+  const E = await import('/outils/essai-2de.js');
+  const Q = E.quaiSansFroid(window.__s.quaiOpts || {});
+  return jalonsQuai(window.__s.db, Q).L.map((l) => [l.id, l.ok]);
+});
+const secu = (id, val) => pg.click(`${QZ} #qSecu-${id}-${val}`);
+const toutBien = async () => { await secu('moteur', 'ok'); await secu('cale', 'ko'); await secu('niveleur', 'ok'); await secu('epi', 'ok'); };
+const versControle = async () => {
+  await pg.click(`${QZ} [data-q="decharger"]`);
+  await pg.waitForSelector(`${QZ} [data-q-scene2]`);
+  if (await pg.isVisible(`${QZ} [data-q="passer"]`)) await pg.click(`${QZ} [data-q="passer"]`);
+  await pg.click(`${QZ} [data-q="vers3"]`);
+  await pg.waitForSelector(`${QZ} [data-q-fiche]`);
+};
+
+await v('Sécurité : le quai s’ouvre sur l’étape ⓪, les suivantes sont fermées ; sans rien faire, aucun jalon de sécurité', async () => {
+  await allerQuai();
+  vrai(await pg.isVisible(`${QZ} [data-q-securite]`), 'l’étape ⓪ n’est pas affichée');
+  const pas = await pg.$$eval(`${QZ} .quai-stepper button`, (B) => B.map((b) => [b.textContent.trim(), b.disabled]));
+  egal(pas, [['⓪ Avant de décharger', false], ['① Le camion arrive', true], ['② Déchargement', true], ['③ Contrôle des palettes', true],
+    ['④ Réserves et zone de réception', true]], 'étapes');
+  const J = Object.fromEntries(await jalonsQ());
+  egal([J.securiteSignalee, J.securiteConstat], [false, false], 'jalons de sécurité sans rien faire');
+});
+
+await v('Sécurité : décharger sans signaler → le chef de quai arrête l’élève (sans dire quoi) ; signaler après l’arrêt ne rattrape pas le jalon', async () => {
+  await allerQuai();
+  await toutBien();
+  await pg.click(`${QZ} [data-q="commencer"]`);
+  const arret = await pg.textContent(`${QZ} [data-q-secu-arret]`);
+  vrai(/Stop/.test(arret) && !/cale/i.test(arret), `arrêt : ${arret}`);
+  vrai(await pg.isVisible(`${QZ} [data-q-securite]`), 'l’élève a quitté l’étape ⓪');
+  egal((await etatQ()).securite.fait, false, 'déchargement commencé');
+  await pg.click(`${QZ} [data-q="signaler"]`);
+  egal(await pg.textContent(`${QZ} [data-q-secu-chef]`), 'Le chef de quai : « Bien vu, je fais poser la cale. Tu peux décharger. »', 'réponse du chef');
+  await pg.click(`${QZ} [data-q="commencer"]`);
+  await pg.waitForSelector(`${QZ} [data-q="decharger"]:not([disabled])`);
+  const J = Object.fromEntries(await jalonsQ());
+  egal([J.securiteSignalee, J.securiteConstat], [false, true], 'jalons (signalé après l’arrêt, constat juste)');
+});
+
+await v('Sécurité : constat juste et signalé avant → deux jalons justes ; le constat se fige quand on commence', async () => {
+  await allerQuai();
+  await toutBien();
+  await pg.click(`${QZ} [data-q="signaler"]`);
+  await pg.click(`${QZ} [data-q="commencer"]`);
+  await pg.waitForSelector(`${QZ} [data-q="decharger"]:not([disabled])`);
+  const J = Object.fromEntries(await jalonsQ());
+  egal([J.securiteSignalee, J.securiteConstat], [true, true], 'jalons');
+  await pg.click(`${QZ} .quai-stepper button[data-n="0"]`);
+  egal(await pg.$$eval(`${QZ} [data-q="secu"]`, (B) => B.length === 8 && B.every((b) => b.disabled)), true, 'réponses figées');
+  egal(await pg.$$eval(`${QZ} [data-q="secu"][aria-checked="true"]`, (B) => B.map((b) => b.id)),
+    ['qSecu-moteur-ok', 'qSecu-cale-ko', 'qSecu-niveleur-ok', 'qSecu-epi-ok'], 'réponses gardées');
+});
+
+await v('Sécurité : signaler un point juste (pas le danger) → réponse neutre, jalon faux ; un « pas OK » sur un point juste rend le constat faux', async () => {
+  await allerQuai();
+  await secu('moteur', 'ok'); await secu('cale', 'ok'); await secu('niveleur', 'ko'); await secu('epi', 'ok');
+  await pg.click(`${QZ} [data-q="signaler"]`);
+  egal(await pg.textContent(`${QZ} [data-q-secu-chef]`), 'Le chef de quai : « Je viens voir… Ce que tu me signales est en ordre. »', 'réponse du chef');
+  const J = Object.fromEntries(await jalonsQ());
+  egal([J.securiteSignalee, J.securiteConstat], [false, false], 'jalons');
+});
+
+await v('Sécurité : en évaluation, personne n’arrête l’élève ; le jalon reste faux', async () => {
+  await allerQuai({ quai: { securite: true, evaluation: true } });
+  await pg.click(`${QZ} [data-q="commencer"]`);
+  await pg.waitForSelector(`${QZ} [data-q="decharger"]`);
+  vrai(!(await pg.$(`${QZ} [data-q-secu-arret]`)), 'arrêt du chef de quai en évaluation');
+  const J = Object.fromEntries(await jalonsQ());
+  egal([J.securiteSignalee, J.securiteConstat], [false, false], 'jalons');
+});
+
+await v('Sans froid : ni ticket, ni jauge, ni afficheur, ni sonde, ni case température ; motifs restreints ; étape ④ en zone de réception', async () => {
+  await allerQuai({ quai: { securite: false } });
+  vrai(!(await pg.$(`${QZ} [data-q="ticket"]`)), 'bouton du ticket');
+  vrai(!(await pg.$(`${QZ} .quai-h-froid`)), 'jauge du temps hors froid');
+  vrai(!/frigorifique/.test(await pg.textContent(`${QZ} .quai-tete`)), 'camion frigorifique dans la tête');
+  await pg.click(`${QZ} [data-q="decharger"]`);
+  await pg.waitForSelector(`${QZ} [data-q-scene2]`);
+  vrai(!(await pg.$(`${QZ} [data-q-afficheur]`)), 'afficheur de température');
+  if (await pg.isVisible(`${QZ} [data-q="passer"]`)) await pg.click(`${QZ} [data-q="passer"]`);
+  await pg.click(`${QZ} [data-q="vers3"]`);
+  await pg.waitForSelector(`${QZ} [data-q-fiche]`);
+  vrai(!(await pg.$(`${QZ} [data-q="sonder"]`)), 'bouton de la sonde');
+  egal(await pg.$$eval(`${QZ} [data-q-fiche-k]`, (I) => I.map((i) => i.dataset.qFicheK)), ['ref', 'endo', 'manq'], 'cases de la fiche');
+  await pg.click(`${QZ} #qDec-reserves`);
+  egal(await pg.$$eval(`${QZ} [data-q="motif"]`, (B) => B.map((b) => b.dataset.v)), ['avarie', 'manquant'], 'motifs proposés');
+  const J = (await jalonsQ()).map(([id]) => id);
+  vrai(!J.some((id) => /^ticket|securite/.test(id)), `jalons du ticket ou de la sécurité : ${J.join(', ')}`);
+});
+
+await v('Sans froid : une décision juste n’exige pas la sonde ; parcours complet, lot rentré en zone de réception, sans le « froid d’abord »', async () => {
+  await allerQuai({ quai: { securite: false } });
+  await versControle();
+  const JUSTE = [['P1', 24, 'accepter'], ['P2', 24, 'accepter'], ['P3', 20, 'reserves', 'avarie'], ['P4', 22, 'reserves', 'manquant']];
+  for (const [n, [id, c, d, m]] of JUSTE.entries()) {
+    await pg.click(`${QZ} [data-q="sel"][data-n="${n}"]`);
+    await pg.fill(`${QZ} [data-q-compte]`, String(c)); await pg.press(`${QZ} [data-q-compte]`, 'Enter');
+    await pg.click(`${QZ} #qDec-${d}`);
+    if (m) await pg.click(`${QZ} #qMot-${m}`);
+    egal(await pg.textContent(`${QZ} [data-q="sel"][data-n="${n}"]`), `${id}comptée, décidée`, `onglet de ${id}`);
+  }
+  await pg.click(`${QZ} [data-q="vers4"]`);
+  if (await pg.$(`${QZ} [data-q="vers4"].quai-arme`)) await pg.click(`${QZ} [data-q="vers4"]`);
+  await pg.waitForSelector(`${QZ} [data-q="rentrer"]`);
+  egal((await pg.textContent(`${QZ} [data-q="rentrer"]`)).replace(/\s+/g, ' ').trim(), 'Rentrer les palettes acceptées en zone de réception · 3 min de manutention', 'bouton rentrer');
+  // Écrire avant de rentrer : sans froid, le chef de quai ne dit pas « le froid d'abord ».
+  await pg.fill(`${QZ} #qRes-P3`, '1');
+  await pg.fill(`${QZ} #qRes-P4`, '2');
+  await pg.click(`${QZ} [data-q="ecrire"]`);
+  vrai(!(await pg.$(`${QZ} [data-q-chef]`)), 'le chef de quai parle du froid');
+  await pg.click(`${QZ} [data-q="rentrer"]`);
+  await pg.click(`${QZ} [data-q="signer"]`);
+  await pg.click(`${QZ} [data-q="clore"]`);
+  if (await pg.$(`${QZ} [data-q="clore"].quai-arme`)) await pg.click(`${QZ} [data-q="clore"]`);
+  const J = await jalonsQ();
+  egal(J.filter(([, ok]) => !ok), [], 'jalons faux');
+  egal(J.map(([id]) => id).slice(-1), ['rentre'], 'dernier jalon');
+  await pg.waitForSelector(`${QZ} [data-q-bilan]`);
+  egal(await pg.textContent(`${QZ} [data-q-bilan] tr[data-jalon="rentre"] td`), 'Palettes rentrées en zone de réception', 'libellé du jalon');
+  vrai(!/hors froid/.test(await pg.textContent(`${QZ} .quai`)), 'l’écran parle du temps hors froid');
+});
+
+await v('Sans froid : une décision fausse reste fausse (sabotage du parcours juste)', async () => {
+  await allerQuai({ quai: { securite: false } });
+  await versControle();
+  await pg.click(`${QZ} [data-q="sel"][data-n="2"]`);
+  await pg.fill(`${QZ} [data-q-compte]`, '20'); await pg.press(`${QZ} [data-q-compte]`, 'Enter');
+  await pg.click(`${QZ} #qDec-accepter`);
+  const J = Object.fromEntries(await jalonsQ());
+  egal([J['P3-comptage'], J['P3-decision']], [true, false], 'P3 acceptée sans réserve');
+});
+
+await v('Chariot : un cariste sort les palettes au chariot élévateur (légende) ; mouvement réduit : tout est posé d’un coup', async () => {
+  await allerQuai({ quai: { securite: false } });
+  await pg.click(`${QZ} [data-q="decharger"]`);
+  await pg.waitForFunction((z) => /Yanis sort la palette P1 au chariot/.test((document.querySelector(`${z} [data-q-leg]`) || {}).textContent || ''), QZ, { timeout: 6000 });
+  // Le chariot (carrosserie jaune #e0a514) est dessiné, pas le transpalette (#d9a514).
+  const mob = await pg.$eval(`${QZ} [data-g="mobile"]`, (g) => g.innerHTML);
+  vrai(mob.includes('#e0a514') && !mob.includes('#d9a514'), 'le chariot n’est pas dessiné');
+  await pg.emulateMedia({ reducedMotion: 'reduce' });
+  try {
+    await allerQuai({ quai: { securite: false } });
+    await pg.click(`${QZ} [data-q="decharger"]`);
+    await pg.waitForSelector(`${QZ} [data-q-nb]`);
+    egal(await pg.textContent(`${QZ} [data-q-nb]`), '4 / 4', 'palettes posées');
+  } finally { await pg.emulateMedia({ reducedMotion: null }); }
+});
+
+await v('Sans froid : la note d’évaluation n’a pas de points de temps hors froid', async () => {
+  const n = await pg.evaluate(async () => {
+    const { noteQuai } = await import('/core/types/quai.js');
+    const E = await import('/outils/essai-2de.js');
+    const Q = Object.assign(E.quaiSansFroid({ securite: false, evaluation: true }), { note: { reception: 15, horsFroid: [[20, 3]], reel: [[12, 2]] } });
+    const r = noteQuai({}, Q);
+    return { max: r.max, sansFroid: r.sansFroid };
+  });
+  egal(n, { max: 17, sansFroid: true }, 'note');
 });
 
 await v('Smoby : aucune erreur JavaScript dans le bloc', async () => {

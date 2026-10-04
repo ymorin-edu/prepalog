@@ -69,6 +69,27 @@
 // Un bouton « Messagerie » mène à l'environnement (le diagnostic et la protestation s'y écrivent). Les jalons
 // de la vue : la (les) palette(s) à bloquer (`bloquer: true` dans le contenu) et « aucune palette conforme
 // bloquée » ; la séance ajoute les siens (messages) par `jalonsDossier: { avant(db, e), apres(db, e) }`.
+//
+// QUAI SANS FROID (04/10/2026, lot 4 du brief `docs/briefs/MOTEUR-2de-S1.md`, 2de, Smoby). `froid: false` :
+// marchandise sèche (des jouets), plus rien de ce qui tient au froid — ni ticket de l'enregistreur ni sa
+// question, ni sonde, ni temps hors froid (jauge, afficheur, brume), ni chambre froide, ni note de rapidité
+// sur le froid, ni motif « température » ; une décision juste ne demande plus d'avoir sondé. L'étape ④
+// rentre les palettes en `zone` (« Zone de réception » par défaut, `zone: { nom }`). `motifs: ['avarie',
+// 'manquant']` restreint la liste des motifs proposés (toutes les séances peuvent s'en servir).
+// `dechargement: { par: 'cariste', nom: 'Yanis' }` : un chariot élévateur frontal conduit par une
+// silhouette sans visage sort les palettes, au lieu du chauffeur au transpalette (légende « Yanis sort la
+// palette P2 au chariot »). Un seul camion dans ce mode (plusieurs camions : l'ordre se décide sur les
+// tickets, donc sur le froid).
+//
+// SÉCURITÉ AVANT DÉCHARGEMENT (04/10/2026, lot 5). `securite: { scene, points: [{ id, lib, ok }], signaler:
+// { bouton, reponse, rien }, arret, commencer, photo }` ajoute une étape ⓪ « Avant de décharger » : une
+// scène de trois lignes, chaque point jugé « OK » / « Pas OK », deux boutons « Signaler au chef de quai »
+// et « Commencer à décharger ». Les étapes suivantes restent fermées tant que l'élève n'a pas commencé.
+// Commencer alors qu'un point faux n'a pas été signalé : en guidage, le chef de quai l'arrête (sans dire
+// lequel) et l'élève peut corriger ; en évaluation, rien ne l'arrête. Jalons : `securiteSignalee` (tous
+// les points faux signalés AVANT la première tentative de décharger) et `securiteConstat` (chaque point
+// jugé, aucun « OK » sur un point faux, aucun « Pas OK » sur un point juste). La liste `points` ne dépend
+// pas de l'affichage : la même étape pourra se jouer sur une image à inspecter.
 
 // Pas d'import de `ui.js` : le corrigé d'une séance (`contenus/corriges/`) importe ce module, et la
 // suite de tests charge les corrigés hors du navigateur.
@@ -97,8 +118,8 @@ const CONSTATS = [
 ];
 const ficheNeuve = () => ({ temp: '', ref: '', endo: '', manq: '' });
 const CHOIX_DEC = ['accepter', 'reserves', 'refuser'];
-const CHOIX_MOTIF = Object.keys(MOTIFS).filter((m) => m !== 'aucun');
 const ETAPES = ['① Le camion arrive', '② Déchargement', '③ Contrôle des palettes', '④ Réserves et chambre froide'];
+const ETAPE_SECU = '⓪ Avant de décharger';
 const COUTS_DEFAUT = { ticket: 2, sonder: 1, tourner: 0.5, etiquette: 0.5, compter: 1, rentrer: 3, ligne: 1, signer: 1 };
 
 /* ==================================================================== formats */
@@ -152,13 +173,19 @@ function reglages(Q) {
       avaries: Object.keys(avarie).length, manquants: bl - reel }));
   }));
   const aides = Object.assign({ regleCouches: false, detailComptage: false, repere: false, chefDeQuai: false, consignes: false }, Q.aides || {});
+  const froid = Q.froid !== false;
+  // Les motifs proposés : tous, ou ceux que la séance déclare ; jamais « température » sans froid.
+  const motifs = Object.keys(MOTIFS).filter((m) => m === 'aucun' || ((!Q.motifs || Q.motifs.includes(m)) && (froid || m !== 'temperature')));
+  const S = Q.securite && Array.isArray(Q.securite.points) && Q.securite.points.length ? Q.securite : null;
   return {
+    froid, motifs, securite: S,
+    zone: Object.assign({ nom: 'Zone de réception' }, Q.zone || {}),
     lieu: Object.assign({ nom: 'Quai', temp: 4, refrigere: true, chambre: { nom: 'Chambre froide', temp: -23 } }, Q.lieu || {}),
     seuil: Q.seuilHorsFroid || 30,
     seuilRefus: Q.seuilRefus != null ? Q.seuilRefus : -15,
     seuilReserve: Q.seuilReserve != null ? Q.seuilReserve : -18,
     manoeuvre: Q.manoeuvre != null ? Q.manoeuvre : 3,
-    D: Object.assign({ ouverture: 0.5, parPalette: 1 }, Q.dechargement || {}),
+    D: Object.assign({ ouverture: 0.5, parPalette: 1, par: 'chauffeur' }, Q.dechargement || {}),
     couts: Object.assign({}, COUTS_DEFAUT, Q.couts || {}),
     aides, camions, palettes, multi: camions.length > 1,
     controle: Q.mode === 'controle', dossier: Q.dossier || {},
@@ -209,10 +236,14 @@ export function etatNeuf(Q) {
   }
   const palettes = {};
   R.palettes.forEach((p) => { palettes[p.id] = paletteNeuve(); });
-  const e = Object.assign({ v: 1, etape: 1, minute: 0, reel: 0, tiersTemps: false, sel: 0, journal: [], palettes, fini: false }, camionNeuf());
+  const e = Object.assign({ v: 1, etape: R.securite ? 0 : 1, minute: 0, reel: 0, tiersTemps: false, sel: 0, journal: [], palettes, fini: false }, camionNeuf());
+  if (R.securite) e.securite = securiteNeuve();
   if (R.multi) Object.assign(e, { suivants: R.camions.slice(1).map(camionNeuf), ordre: { premier: null, phrase: null }, actif: 0 });
   return e;
 }
+// L'étape ⓪ : la réponse à chaque point, les signalements (avec les points « pas OK » à ce moment-là, et
+// s'ils viennent après un arrêt du chef de quai), l'arrêt, et le départ du déchargement.
+const securiteNeuve = () => ({ rep: {}, signaux: [], arrete: false, fait: false, chef: '' });
 const paletteNeuve = () => ({ vue: 0, vues: [0], sonde: null, compte: null, etiqVue: false, detail: {}, decision: '', motif: 'aucun', res: '', motif2: 'aucun', res2: '', fiche: ficheNeuve(), calcul: {} });
 
 // Une base écrite avec une autre version du contenu : on complète sans rien effacer.
@@ -230,6 +261,7 @@ function normaliser(e, R) {
   R.palettes.forEach((p) => { const s = e.palettes[p.id]; s.fiche = Object.assign(ficheNeuve(), s.fiche || {}); if (!s.calcul || typeof s.calcul !== 'object') s.calcul = {}; });
   if (!Array.isArray(e.journal)) e.journal = [];
   if (!Array.isArray(e.lignes)) e.lignes = [];
+  if (R.securite && !e.securite) e.securite = securiteNeuve();
   if (typeof e.reel !== 'number') e.reel = 0;
   if (e.sel >= R.palettes.length) e.sel = 0;
   if (R.multi) {
@@ -281,9 +313,9 @@ export const libMotifs = (L) => (L.length ? L.map((m) => MOTIFS[m]).join(' + ') 
 // La valeur saisie pour un motif : `res` pour le premier menu, `res2` pour le second.
 const valeurDe = (s, m) => (s.motif === m ? s.res : s.motif2 === m ? s.res2 : '');
 const ligneAttendue = (p) => texteLigne(p, p.attendu, motifsAttendus(p).map((m) => [m, CHAMP_RES[m].attendu(p)]));
-// Une décision juste demande la palette sondée ; et, quand l'étiquette avant est déchirée, un refus
-// « produit différent » demande d'avoir lu l'étiquette arrière (la seule preuve).
-const paletteJuste = (p, s) => s.decision === p.attendu && memesMotifs(p, s) && s.sonde !== null
+// Une décision juste demande la palette sondée (sauf quai sans froid : rien à sonder) ; et, quand
+// l'étiquette avant est déchirée, un refus « produit différent » demande d'avoir lu l'étiquette arrière.
+const paletteJuste = (p, s, froid = true) => s.decision === p.attendu && memesMotifs(p, s) && (!froid || s.sonde !== null)
   && !(p.etiqAvant === 'dechiree' && p.motifAttendu === 'produit' && !(s.etiqLues || []).includes('arriere'));
 // Le comptage : un total, ou un nombre par référence pour une palette multi-références.
 const compteJuste = (p, s) => (p.refs ? p.refs.every((r) => s.comptes && +s.comptes[r.ref] === r.reel && s.comptes[r.ref] !== '') : s.compte === p.reel);
@@ -314,7 +346,9 @@ export function jalonsQuai(db, Q) {
     j('ordre', 'Ordre de déchargement et justification', fait, `camion ${cP.nom} d’abord — « ${ph[O.juste] || O.juste} »`,
       !!e && unDecharge(E, R) && o.premier === O.premier && o.phrase === O.juste);
   }
-  R.camions.forEach((c, ci) => {
+  // L'étape ⓪ (sécurité) : ses deux jalons d'abord, dans l'ordre du jeu.
+  if (R.securite) jalonsSecurite(e, R).forEach((l) => j(l.id, l.lib, l.fait, l.attendu, l.ok));
+  if (R.froid) R.camions.forEach((c, ci) => {
     const k = K(E, ci);
     const lib = Object.fromEntries((c.qcmTicket && c.qcmTicket.choix || QCM_TICKET).map((x) => [x.v, x.court || x.lib]));
     const attenduTicket = (c.qcmTicket && c.qcmTicket.attendu) || 'long';
@@ -338,8 +372,8 @@ export function jalonsQuai(db, Q) {
     } else {
       j(`${p.id}-comptage`, `${p.id} comptage`, s.compte === null ? 'pas compté' : `${s.compte} cartons`, `${p.reel} cartons (BL : ${p.bl})`, s.compte === p.reel);
     }
-    const fait = s.decision ? `${DECISIONS[s.decision]} — ${libMotifs(motifsChoisis(s))}${s.sonde === null ? ' (sans sonder)' : ''}` : 'sans contrôle ni décision';
-    j(`${p.id}-decision`, `${p.id} décision`, fait, `${DECISIONS[p.attendu]} — ${libMotifs(motifsAttendus(p))}`, paletteJuste(p, s));
+    const fait = s.decision ? `${DECISIONS[s.decision]} — ${libMotifs(motifsChoisis(s))}${R.froid && s.sonde === null ? ' (sans sonder)' : ''}` : 'sans contrôle ni décision';
+    j(`${p.id}-decision`, `${p.id} décision`, fait, `${DECISIONS[p.attendu]} — ${libMotifs(motifsAttendus(p))}`, paletteJuste(p, s, R.froid));
   });
   // Une ligne de réserve par palette qui en demande une ; pour un camion qui peut se réchauffer, ses
   // palettes ont TOUJOURS un jalon de réserve (le nombre de jalons ne dépend pas du parcours) :
@@ -362,8 +396,34 @@ export function jalonsQuai(db, Q) {
     j('deballage', 'Mention « sous réserve de déballage »', E.mentionEcrite ? 'ajoutée' : 'non ajoutée', 'non ajoutée (aucune valeur juridique)', E.ecrit && !E.mentionEcrite);
   }
   R.camions.forEach((c, ci) => j(`signature${suff(c)}`, libC('Signature du chauffeur sous les réserves', c), KS[ci].signe ? 'obtenue' : 'pas de signature', 'obtenue', KS[ci].signe));
-  R.camions.forEach((c, ci) => j(`rentre${suff(c)}`, libC('Lot rentré en chambre froide', c), KS[ci].rentre ? `oui, après ${fmtMin(KS[ci].froid)} hors froid` : 'non', 'oui', KS[ci].rentre));
+  R.camions.forEach((c, ci) => j(`rentre${suff(c)}`, R.froid ? libC('Lot rentré en chambre froide', c) : libC(`Palettes rentrées en ${minuscule(R.zone.nom)}`, c),
+    KS[ci].rentre ? (R.froid ? `oui, après ${fmtMin(KS[ci].froid)} hors froid` : 'oui') : 'non', 'oui', KS[ci].rentre));
   return { L, pts, max };
+}
+const minuscule = (t) => String(t).charAt(0).toLowerCase() + String(t).slice(1);
+
+// Les jalons de l'étape ⓪. Aucun n'est vrai par inaction : un signalement demande un clic, un constat
+// demande chaque point jugé.
+function jalonsSecurite(e, R) {
+  const S = R.securite, sec = (e && e.securite) || securiteNeuve();
+  const faux = S.points.filter((x) => !x.ok).map((x) => x.id);
+  const lib = (id) => (S.points.find((x) => x.id === id) || {}).lib || id;
+  const L = [];
+  if (faux.length) {
+    const bon = (sec.signaux || []).find((g) => !g.apresArret && faux.every((id) => (g.points || []).includes(id)));
+    const g0 = (sec.signaux || [])[0];
+    const fait = bon ? `signalé : ${faux.map(lib).join(', ')}`
+      : g0 ? `signalé${g0.apresArret ? ' après l’arrêt du chef de quai' : ''} : ${(g0.points || []).map(lib).join(', ') || 'rien de précis'}`
+        : (sec.arrete ? 'arrêté par le chef de quai avant d’avoir signalé' : 'rien signalé');
+    L.push({ id: 'securiteSignalee', lib: 'Danger signalé avant de décharger', fait, attendu: `signaler : ${faux.map(lib).join(', ')}`, ok: !!bon });
+  }
+  const rep = sec.rep || {};
+  const juges = S.points.filter((x) => rep[x.id]);
+  const justes = S.points.every((x) => rep[x.id] === (x.ok ? 'ok' : 'ko'));
+  L.push({ id: 'securiteConstat', lib: 'Constat de sécurité juste',
+    fait: juges.length ? S.points.map((x) => `${x.lib} : ${rep[x.id] === 'ok' ? 'OK' : rep[x.id] === 'ko' ? 'pas OK' : '?'}`).join(' · ') : 'rien de coché',
+    attendu: S.points.map((x) => `${x.lib} : ${x.ok ? 'OK' : 'pas OK'}`).join(' · '), ok: justes });
+  return L;
 }
 
 // Quai « déjà réceptionné » : les jalons du contenu sur les messages (`jalonsDossier.avant`, le diagnostic),
@@ -436,19 +496,20 @@ export function noteQuai(db, Q) {
   const s = (p) => (e.palettes && e.palettes[p.id]) || paletteNeuve();
   const KS = R.camions.map((_, ci) => K(e, ci));
   const complet = R.palettes.every((p) => s(p).decision) && KS.every((k) => k.rentre && k.signe);
-  const justes = R.palettes.filter((p) => paletteJuste(effective(p, e, R), s(p))).length;
+  const justes = R.palettes.filter((p) => paletteJuste(effective(p, e, R), s(p), R.froid)).length;
   const prop = R.palettes.length ? justes / R.palettes.length : 0;
   const fac = e.tiersTemps ? N.tiersTemps : 1;
   // Plusieurs camions : la rapidité se lit sur le lot resté le plus longtemps hors du froid.
   const froidMax = Math.max(0, ...KS.map((k) => k.froid || 0));
-  const ptsFroid = KS.every((k) => k.decharge) ? palier(froidMax, N.horsFroid) : 0;
+  // Quai sans froid : la rapidité ne se lit que sur le temps réel.
+  const ptsFroid = R.froid && KS.every((k) => k.decharge) ? palier(froidMax, N.horsFroid) : 0;
   const ptsReel = palier((e.reel || 0) / 60, N.reel.map(([m, p]) => [m * fac, p]));
-  const maxVitesse = (N.horsFroid[0] ? N.horsFroid[0][1] : 0) + (N.reel[0] ? N.reel[0][1] : 0);
+  const maxVitesse = (R.froid && N.horsFroid[0] ? N.horsFroid[0][1] : 0) + (N.reel[0] ? N.reel[0][1] : 0);
   const vitesse = complet ? (ptsFroid + ptsReel) * prop : 0;
   const reception = max ? pts / max * N.reception : 0;
   const note = Math.round((reception + vitesse) * 100) / 100;
   return { score: note, max: N.reception + maxVitesse, L, pts, nJalons: max, complet, justes, nPalettes: R.palettes.length,
-    prop, ptsFroid, ptsReel, vitesse, reception, froid: froidMax, reel: e.reel || 0, tiersTemps: !!e.tiersTemps, N, fac };
+    prop, ptsFroid, ptsReel, vitesse, reception, froid: froidMax, reel: e.reel || 0, tiersTemps: !!e.tiersTemps, N, fac, sansFroid: !R.froid };
 }
 
 /* ============================================================ palette en 3D */
@@ -614,20 +675,29 @@ export function creerQuai(Q, opts = {}) {
   const formule = (ci = 0) => { const n = PAL[ci].length; return `${n} palettes × ${fmtMin(R.D.parPalette)} + ${fmtMin(R.D.ouverture)} d’ouverture = ${fmtMin(dureeDechargement(n, R.D))}`; };
   const fictif = (nom, f) => `${ech(nom)}${f ? ' (fictif)' : ''}`;
   const lieuMin = R.lieu.nom.charAt(0).toLowerCase() + R.lieu.nom.slice(1);
+  const F = R.froid, SEC = R.securite;
+  const zoneMin = minuscule(R.zone.nom);
+  // Qui sort les palettes : le chauffeur au transpalette, ou un cariste au chariot élévateur.
+  const CARISTE = R.D.par === 'cariste';
+  const quiSort = CARISTE ? (R.D.nom || 'Le cariste') : 'Le chauffeur';
+  const secuFaite = (e) => !SEC || !!(e.securite && e.securite.fait);
   const accepte = (s) => s.decision === 'accepter' || s.decision === 'reserves';
   const st = (e, p) => e.palettes[p.id];
+  // Quai sans froid : la fiche n'a pas de case « température », les motifs sont ceux que la séance garde.
+  const CONST = CONSTATS.filter((c) => R.froid || c.k !== 'temp');
+  const MOTIFS_Q = R.motifs.filter((m) => m !== 'aucun');
   const nomCam = (ci) => `camion ${R.camions[ci].nom}`;
   // L'état d'écran : ce qui n'est pas du travail (chef de quai affiché, animation en cours…).
   // `tente` : la palette dont « Valider » a été cliqué avec un manque (le message s'écrit sous la case) ;
   // `sonde` : la palette qui vient d'être sondée (l'afficheur se stabilise une fois, pas à chaque redessin).
   const ui = { chef4: false, arme: false, arme4: false, armeRaz: false, anim: null, lancer: false, jouerCf: false, focus: null,
-    tente: null, tropMotifs: false, sonde: null };
+    tente: null, tropMotifs: false, sonde: null, arretSecu: false };
 
   // Chaque geste avance l'horloge du quai, et le temps hors froid de CHAQUE lot sorti du camion et
   // pas encore rentré en chambre froide.
   function avancer(e, min, texte) {
     e.minute += min;
-    R.camions.forEach((_, ci) => { const k = K(e, ci); if (k.decharge && !e.fini && !k.rentre) k.froid += min; });
+    if (F) R.camions.forEach((_, ci) => { const k = K(e, ci); if (k.decharge && !e.fini && !k.rentre) k.froid += min; });
     e.journal.unshift(`${hhmm(e.minute)} — ${texte} (+${fmtMin(min)})`);
     if (e.journal.length > 80) e.journal.length = 80;
   }
@@ -715,6 +785,39 @@ export function creerQuai(Q, opts = {}) {
     s += '</g>';
     return s;
   }
+  // Chariot élévateur frontal (quai sans froid, `dechargement.par: 'cariste'`) : la palette sur les
+  // fourches, le mât juste derrière elle, le cariste assis sous le toit de protection (silhouette sans
+  // visage). Vu de trois quarts arrière : il recule depuis la remorque vers sa place au sol.
+  function chariot(x, y, e, wPal) {
+    let s = '';
+    const g = x - wPal / 2 - 4 * e, sol = y + 4 * e;           // bord gauche de la palette, sol
+    const c = '#232a31', jaune = '#e0a514', noir = '#22272c';
+    s += `<ellipse cx="${f1(g - 44 * e)}" cy="${f1(sol + 2 * e)}" rx="${f1(56 * e)}" ry="${f1(8 * e)}" fill="#000" opacity=".3"/>`;
+    // mât (deux montants) et fourches sous la palette
+    s += `<rect x="${f1(g - 9 * e)}" y="${f1(sol - 150 * e)}" width="${f1(5 * e)}" height="${f1(150 * e)}" fill="${noir}"/>`;
+    s += `<rect x="${f1(g - 2 * e)}" y="${f1(sol - 150 * e)}" width="${f1(5 * e)}" height="${f1(150 * e)}" fill="${noir}"/>`;
+    s += `<rect x="${f1(g - 9 * e)}" y="${f1(sol - 152 * e)}" width="${f1(12 * e)}" height="${f1(5 * e)}" fill="${noir}"/>`;
+    s += `<rect x="${f1(g)}" y="${f1(sol - 7 * e)}" width="${f1(wPal * .9)}" height="${f1(4 * e)}" fill="#555c63"/>`;
+    // carrosserie, contrepoids, roues
+    s += `<rect x="${f1(g - 82 * e)}" y="${f1(sol - 52 * e)}" width="${f1(74 * e)}" height="${f1(40 * e)}" rx="${f1(6 * e)}" fill="${jaune}" stroke="#5b4508" stroke-width="${f1(e)}"/>`;
+    s += `<rect x="${f1(g - 92 * e)}" y="${f1(sol - 46 * e)}" width="${f1(16 * e)}" height="${f1(36 * e)}" rx="${f1(5 * e)}" fill="${noir}"/>`;
+    s += `<circle cx="${f1(g - 22 * e)}" cy="${f1(sol - 10 * e)}" r="${f1(11 * e)}" fill="#1c1c1c"/><circle cx="${f1(g - 22 * e)}" cy="${f1(sol - 10 * e)}" r="${f1(4 * e)}" fill="#777"/>`;
+    s += `<circle cx="${f1(g - 70 * e)}" cy="${f1(sol - 9 * e)}" r="${f1(9 * e)}" fill="#1c1c1c"/><circle cx="${f1(g - 70 * e)}" cy="${f1(sol - 9 * e)}" r="${f1(3.5 * e)}" fill="#777"/>`;
+    // toit de protection (deux montants et le toit)
+    s += `<line x1="${f1(g - 16 * e)}" y1="${f1(sol - 52 * e)}" x2="${f1(g - 18 * e)}" y2="${f1(sol - 124 * e)}" stroke="${noir}" stroke-width="${f1(4 * e)}"/>`;
+    s += `<line x1="${f1(g - 74 * e)}" y1="${f1(sol - 52 * e)}" x2="${f1(g - 70 * e)}" y2="${f1(sol - 124 * e)}" stroke="${noir}" stroke-width="${f1(4 * e)}"/>`;
+    s += `<rect x="${f1(g - 76 * e)}" y="${f1(sol - 128 * e)}" width="${f1(62 * e)}" height="${f1(6 * e)}" rx="${f1(2 * e)}" fill="${noir}"/>`;
+    // le cariste, assis : buste, bras vers le volant, tête sans visage, gilet haute visibilité
+    s += `<g fill="${c}" stroke="${c}" stroke-linecap="round">`;
+    s += `<rect x="${f1(g - 58 * e)}" y="${f1(sol - 96 * e)}" width="${f1(22 * e)}" height="${f1(44 * e)}" rx="${f1(9 * e)}" stroke="none"/>`;
+    s += `<rect x="${f1(g - 58 * e)}" y="${f1(sol - 84 * e)}" width="${f1(22 * e)}" height="${f1(5 * e)}" fill="#c9d64a" stroke="none"/>`;
+    s += `<rect x="${f1(g - 58 * e)}" y="${f1(sol - 70 * e)}" width="${f1(22 * e)}" height="${f1(4 * e)}" fill="#c9d64a" stroke="none"/>`;
+    s += `<line x1="${f1(g - 40 * e)}" y1="${f1(sol - 86 * e)}" x2="${f1(g - 26 * e)}" y2="${f1(sol - 66 * e)}" stroke-width="${f1(7 * e)}"/>`;
+    s += `<circle cx="${f1(g - 47 * e)}" cy="${f1(sol - 106 * e)}" r="${f1(10 * e)}" stroke="none"/>`;
+    s += '</g>';
+    s += `<line x1="${f1(g - 30 * e)}" y1="${f1(sol - 70 * e)}" x2="${f1(g - 22 * e)}" y2="${f1(sol - 56 * e)}" stroke="${noir}" stroke-width="${f1(3 * e)}"/>`;
+    return s;
+  }
   // Brume froide : l'air froid tombe et coule au sol.
   function brume(t) {
     let s = '';
@@ -743,7 +846,8 @@ export function creerQuai(Q, opts = {}) {
         const x0 = VP.x, y0 = SOL_Y0 + 4, cx = VP.x + (xf - VP.x) * .12, cy = yf - 10;
         const x = (1 - u) * (1 - u) * x0 + 2 * (1 - u) * u * cx + u * u * xf, y = (1 - u) * (1 - u) * y0 + 2 * (1 - u) * u * cy + u * u * yf;
         const ee = echelle(y);
-        mobile = paletteFace(p, x, y, ee) + transpalette(x, y, ee, (t - depart(n)) / 110, p.W * 32 * ee);
+        mobile = CARISTE ? chariot(x, y, ee, p.W * 32 * ee) + paletteFace(p, x, y, ee)
+          : paletteFace(p, x, y, ee) + transpalette(x, y, ee, (t - depart(n)) / 110, p.W * 32 * ee);
         enCours = n;
       }
     });
@@ -752,14 +856,14 @@ export function creerQuai(Q, opts = {}) {
     let leg;
     if (attente) leg = `${hhmm(e.minute)} — Le camion est à quai, portes fermées.`;
     else if (t < T_OUVRE) leg = `${hhmm(e.minute)} — Le chauffeur ouvre les portes arrière de sa remorque.`;
-    else if (t < T_DEB) leg = `${hhmm(e.minute)} — La porte du quai se lève : l'air froid s'échappe et tombe au sol. Le temps hors froid démarre.`;
-    else if (nb < P.length) leg = `${hhmm(e.minute)} — Le chauffeur sort la palette ${P[enCours ?? nb].id} au transpalette (${Math.min(nb + 1, P.length)} sur ${P.length}).`;
+    else if (t < T_DEB) leg = F ? `${hhmm(e.minute)} — La porte du quai se lève : l'air froid s'échappe et tombe au sol. Le temps hors froid démarre.` : `${hhmm(e.minute)} — La porte du quai se lève.`;
+    else if (nb < P.length) leg = `${hhmm(e.minute)} — ${quiSort} sort la palette ${P[enCours ?? nb].id} ${CARISTE ? 'au chariot' : 'au transpalette'} (${Math.min(nb + 1, P.length)} sur ${P.length}).`;
     else leg = `${hhmm(e.minute)} — Les ${P.length} palettes sont sur le quai. Le camion attend la fin de tes contrôles.`;
     const posIds = new Set(posees.map((q) => q[0].id));
     return {
       porte: `translate(0 ${f1(-montee * (PORTE.y1 - PORTE.y0 + 3))})`,
       remorque: interieur(attente ? P : P.filter((_, n) => t < depart(n)), P.length),
-      brume: attente ? '' : brume(t),
+      brume: attente || !F ? '' : brume(t),
       posees: posees.map(([p, x, y]) => paletteFace(p, x, y, echelle(y))).join(''),
       mobile, leg, nb,
       pastilles: P.map((p) => `<i class="${posIds.has(p.id) ? 'sur' : ''}">${ech(p.id)}</i>`).join(''),
@@ -774,7 +878,7 @@ export function creerQuai(Q, opts = {}) {
     const ax = PORTE.x1 + 14;
     const tempQuai = `${R.lieu.temp > 0 ? '+' : ''}${virgule(Number(R.lieu.temp).toFixed(1))} °C`;
     return `<div class="quai-scene2">
-      <svg data-q-scene2 viewBox="${cx} ${cy} ${cw} ${chh}" preserveAspectRatio="xMidYMid slice" role="img" aria-label="${ech(R.lieu.nom)} : la porte s'ouvre, le chauffeur sort les palettes une à une au transpalette">
+      <svg data-q-scene2 viewBox="${cx} ${cy} ${cw} ${chh}" preserveAspectRatio="xMidYMid slice" role="img" aria-label="${ech(R.lieu.nom)} : la porte s'ouvre, ${ech(minuscule(quiSort))} sort les palettes une à une ${CARISTE ? 'au chariot élévateur' : 'au transpalette'}">
         <defs>
           <clipPath id="quaiCPorte"><rect x="${PORTE.x0}" y="${PORTE.y0}" width="${pw}" height="${ph}"/></clipPath>
           <clipPath id="quaiCPorte2"><rect x="${PORTE.x0}" y="${PORTE.y0}" width="${pw}" height="${ph}"/></clipPath>
@@ -786,11 +890,11 @@ export function creerQuai(Q, opts = {}) {
           <g data-g="remorque">${im.remorque}</g>
           <g data-g="porte" transform="${im.porte}"><image href="${ech(PH.quai)}" x="0" y="0" width="${PH.largeur}" height="${PH.hauteur}" clip-path="url(#quaiCPorte2)"/></g>
         </g>
-        <g aria-label="Afficheur de température du quai">
+        ${F ? `<g aria-label="Afficheur de température du quai">
           <rect x="${ax}" y="${PORTE.y0 + 14}" width="96" height="54" rx="4" fill="#1b2228" stroke="#8d969c" stroke-width="2"/>
           <text x="${ax + 48}" y="${PORTE.y0 + 30}" text-anchor="middle" font-size="10" fill="#c9d2d8" font-family="system-ui,sans-serif" letter-spacing="1">${ech(R.lieu.nom.toUpperCase())}</text>
           <text data-q-afficheur x="${ax + 48}" y="${PORTE.y0 + 56}" text-anchor="middle" font-size="18" font-weight="700" fill="#8fd0ff" font-family="ui-monospace,Consolas,monospace">${tempQuai}</text>
-        </g>
+        </g>` : ''}
         <g aria-label="Horloge du quai">
           <rect x="${ax}" y="${PORTE.y0 + 78}" width="96" height="44" rx="4" fill="#1b2228" stroke="#8d969c" stroke-width="2"/>
           <text data-q-mur-lib x="${ax + 48}" y="${PORTE.y0 + 92}" text-anchor="middle" font-size="9" fill="#c9d2d8" font-family="system-ui,sans-serif" letter-spacing="1">${EVAL ? 'TEMPS PASSÉ' : 'HEURE DU QUAI'}</text>
@@ -811,7 +915,8 @@ export function creerQuai(Q, opts = {}) {
         <button class="btn btn-p" data-q="vers3" data-libre ${fini ? '' : 'disabled'}>Contrôler les palettes →</button>
       </div>
     </div>
-    ${A.consignes ? `<p class="quai-aide">Le quai est réfrigéré (<b>${tempQuai}</b>, voir l'afficheur à droite de la porte), mais c'est bien plus chaud que la remorque à ${fmtT((cm.ticket && cm.ticket.consigne) || -20)}. Dès que la porte s'ouvre, <b>tout le lot sort du froid</b> : regarde la jauge en haut, elle a démarré. Le chauffeur pose les palettes ; à toi ensuite de les contrôler <b>vite et bien</b>, chaque geste coûte du temps.</p>` : ''}`;
+    ${A.consignes && F ? `<p class="quai-aide">Le quai est réfrigéré (<b>${tempQuai}</b>, voir l'afficheur à droite de la porte), mais c'est bien plus chaud que la remorque à ${fmtT((cm.ticket && cm.ticket.consigne) || -20)}. Dès que la porte s'ouvre, <b>tout le lot sort du froid</b> : regarde la jauge en haut, elle a démarré. Le chauffeur pose les palettes ; à toi ensuite de les contrôler <b>vite et bien</b>, chaque geste coûte du temps.</p>` : ''}
+    ${A.consignes && !F ? `<p class="quai-aide">${ech(quiSort)} pose les palettes sur le quai. À toi ensuite de les contrôler <b>une par une</b> : faire le tour, compter, lire l'étiquette, décider.</p>` : ''}`;
   }
   // Le contrôleur de l'animation, posé sur la scène affichée. Les événements du temps du quai
   // (porte ouverte, chaque palette posée) ne passent qu'une fois, jamais en « revoir » ; s'ils
@@ -869,6 +974,7 @@ export function creerQuai(Q, opts = {}) {
 
   /* ------------------------------------------------------ chambre froide (④) */
   function sceneCf(e, u) {
+    if (!F) return sceneZone(e, u);
     let s = `<defs>${DEFS_FILM}</defs>`;
     s += '<rect x="0" y="0" width="640" height="300" fill="#3a4349"/>';
     s += '<polygon points="0,210 640,210 640,300 0,300" fill="#59636a"/>';
@@ -898,6 +1004,34 @@ export function creerQuai(Q, opts = {}) {
     });
     items.sort((a, b) => a[0] - b[0]).forEach(([, gg, o]) => { s += `<g opacity="${o.toFixed(2)}">${gg}</g>`; });
     if (u >= 1 && acc.length) s += `<text x="135" y="130" text-anchor="middle" font-size="13" fill="#cfe6f7" font-family="system-ui">${acc.length} palettes au froid ✓</text>`;
+    return s;
+  }
+  // Quai sans froid : la zone de réception, à gauche, sans afficheur de température.
+  function sceneZone(e, u) {
+    let s = `<defs>${DEFS_FILM}</defs>`;
+    s += '<rect x="0" y="0" width="640" height="300" fill="#4a5258"/>';
+    s += '<polygon points="0,210 640,210 640,300 0,300" fill="#6a737a"/>';
+    s += '<rect x="20" y="150" width="230" height="60" fill="none" stroke="#e3b21b" stroke-width="3" stroke-dasharray="10 6"/>';
+    s += `<text x="135" y="140" text-anchor="middle" font-size="13" font-weight="700" fill="#f2f4f5" font-family="system-ui">${ech(R.zone.nom)}</text>`;
+    s += '<rect x="540" y="60" width="100" height="150" fill="#cfd4d8"/><rect x="552" y="72" width="88" height="138" fill="#1d252b"/>';
+    s += '<text x="590" y="232" text-anchor="middle" font-size="12" fill="#e4e8eb" font-family="system-ui">Camion (refus)</text>';
+    s += `<text x="320" y="292" text-anchor="middle" font-size="12" fill="#e4e8eb" font-family="system-ui">${ech(R.lieu.nom)}</text>`;
+    const P = PAL[ca(e)];
+    const acc = P.filter((p) => accepte(st(e, p))), ref = P.filter((p) => !accepte(st(e, p)));
+    const items = [];
+    const pasA = Math.min(48, 220 / Math.max(1, acc.length));
+    acc.forEach((p, k) => {
+      const x0 = 300 + k * pasA, y0 = 262, uu = Math.max(0, Math.min(1, u * 1.4 - k * .1));
+      const xf = 50 + k * Math.min(44, 180 / Math.max(1, acc.length)), yf = 205;
+      items.push([y0, paletteFace(p, x0 + (xf - x0) * uu, y0 + (yf - y0) * uu, .55 - .1 * uu), 1]);
+    });
+    const pasR = Math.min(48, 150 / Math.max(1, ref.length));
+    ref.forEach((p, k) => {
+      const x0 = 420 + k * pasR, y0 = 262;
+      items.push([y0, paletteFace(p, x0, y0, .55) + `<text x="${x0}" y="${y0 + 16}" text-anchor="middle" font-size="11" font-weight="700" fill="#ff9a8a" font-family="system-ui">refusée</text>`, 1]);
+    });
+    items.sort((a, b) => a[0] - b[0]).forEach(([, gg, o]) => { s += `<g opacity="${o.toFixed(2)}">${gg}</g>`; });
+    if (u >= 1 && acc.length) s += `<text x="135" y="235" text-anchor="middle" font-size="13" fill="#f2f4f5" font-family="system-ui">${acc.length} palette${acc.length > 1 ? 's' : ''} rangée${acc.length > 1 ? 's' : ''} ✓</text>`;
     return s;
   }
   function jouerCf(z, e) {
@@ -938,7 +1072,7 @@ export function creerQuai(Q, opts = {}) {
         <div class="quai-val" data-q-heure>${hhmm(e.minute)}</div>
         <div class="note">avance seulement quand tu fais un geste</div>
       </div>
-      ${R.camions.map((_, ci) => jauge(ci)).join('')}
+      ${F ? R.camions.map((_, ci) => jauge(ci)).join('') : ''}
       ${EVAL ? `<div class="quai-horloge quai-h-reel">
         <div class="quai-lib">Temps passé (temps réel)</div>
         <div class="quai-val" data-q-reel>${mmss(e.reel)}</div>
@@ -981,6 +1115,7 @@ export function creerQuai(Q, opts = {}) {
 
   function ecran1(e) {
     if (M) return ecran1Multi(e);
+    if (!F) return ecran1SansFroid(e);
     return `<section class="quai-carte">
       <div class="quai-photo">
         <img src="${ech(PH.arrivee)}" alt="Remorques frigorifiques à quai devant un entrepôt">
@@ -1001,18 +1136,61 @@ export function creerQuai(Q, opts = {}) {
         </div>
       </div>
       <p class="note">Tant que les portes sont fermées, la marchandise est au froid : c'est le bon moment pour lire les papiers.</p>
-      <p><button class="btn btn-p" data-q="decharger" ${e.decharge || e.fini ? 'disabled' : ''}>« Oui, vous pouvez ouvrir et décharger »</button>
+      <p><button class="btn btn-p" data-q="decharger" ${e.decharge || e.fini || !secuFaite(e) ? 'disabled' : ''}>« Oui, vous pouvez ouvrir et décharger »</button>
         <span class="quai-cout">le chauffeur pose toutes les palettes sur le quai ; le temps hors froid démarre · durée : ${formule()}</span></p>
+    </section>`;
+  }
+
+  // L'étape ⓪ : constater avant de décharger (lot 5). Les réponses se figent quand le déchargement commence.
+  function ecran0(e) {
+    const sec = e.securite, fige = sec.fait || e.fini, dis = fige ? 'disabled' : '';
+    const S0 = SEC, sig = S0.signaler || {};
+    // Chaque point : deux boutons « OK » / « Pas OK », comme la décision du poste de contrôle.
+    const lignes = S0.points.map((x) => `<tr data-q-point="${ech(x.id)}"><th scope="row" id="qLibSecu-${ech(x.id)}">${ech(x.lib)}</th>
+        <td><div class="quai-choix" role="radiogroup" aria-labelledby="qLibSecu-${ech(x.id)}">${['ok', 'ko'].map((v) => `<button type="button" id="qSecu-${ech(x.id)}-${v}" role="radio" aria-checked="${sec.rep[x.id] === v}" class="${sec.rep[x.id] === v ? 'on' : ''}" data-q="secu" data-p="${ech(x.id)}" data-v="${v}" ${dis}>${v === 'ok' ? 'OK' : 'Pas OK'}</button>`).join('')}</div></td></tr>`).join('');
+    return `<section class="quai-carte" data-q-securite>
+      <h2 class="quai-h2"><span class="quai-pastille-etape">0</span>Avant de décharger : la sécurité</h2>
+      ${S0.photo ? `<div class="quai-photo"><img src="${ech(S0.photo)}" alt="${ech(S0.alt || 'Le camion à quai')}"></div>` : ''}
+      <p class="quai-secu-scene">${ech(S0.scene || '')}</p>
+      <table class="quai-secu"><thead><tr><th scope="col">À vérifier</th><th scope="col">Mon constat</th></tr></thead><tbody>${lignes}</tbody></table>
+      ${sec.chef ? `<div class="quai-alerte" role="status" data-q-secu-chef><b>Le chef de quai :</b> « ${ech(sec.chef)} »</div>` : ''}
+      ${ui.arretSecu ? `<div class="quai-alerte" role="alert" data-q-secu-arret><b>Le chef de quai :</b> « ${ech(S0.arret || 'Stop ! Avant d’entrer dans la remorque, tout doit être en sécurité. Regarde encore la liste et signale ce qui ne va pas.')} »</div>` : ''}
+      <p class="quai-ligne">
+        <button class="btn" data-q="signaler" ${dis}>${ech(sig.bouton || 'Signaler au chef de quai')}</button>
+        <button class="btn btn-p" data-q="commencer" ${dis}>${ech(S0.commencer || 'Commencer à décharger')} →</button>
+      </p>
+      ${sec.fait ? '<p class="note">Le déchargement a commencé : ce constat est figé.</p>' : ''}
+    </section>`;
+  }
+
+  // Quai sans froid : le BL seul (pas de ticket), puis l'ordre de décharger.
+  function ecran1SansFroid(e) {
+    return `<section class="quai-carte">
+      <div class="quai-photo">
+        <img src="${ech(PH.arrivee)}" alt="${ech(PH.altArrivee || 'Camion à quai devant un entrepôt')}">
+        <div class="quai-legende">${ech(cam.arrivee || '')} — ${ech(R.lieu.nom)}. Le camion de ${fictif(cam.transporteur, cam.fictif)} est à quai, portes fermées.</div>
+      </div>
+      <div class="quai-chauffeur">${silhouette()}
+        <p><b>Le chauffeur :</b> « ${ech(cam.parole || `Bonjour, livraison ${cam.fournisseur || ''}. Voilà mon bon de livraison. Je peux ouvrir ?`)} »</p>
+      </div>
+      <div class="quai-doc">
+        <div class="quai-doc-titre">📄 Bon de livraison</div>
+        ${blHtml()}
+        <div class="quai-reconst">BL n° ${ech(cam.bl)} — Document pédagogique, reconstitution, non contractuel.</div>
+      </div>
+      <p><button class="btn btn-p" data-q="decharger" ${e.decharge || e.fini || !secuFaite(e) ? 'disabled' : ''}>« Oui, vous pouvez ouvrir et décharger »</button>
+        <span class="quai-cout">${ech(quiSort)} ${CARISTE ? 'sort' : 'pose'} toutes les palettes sur le quai · durée : ${formule()}</span></p>
     </section>`;
   }
 
   // Plusieurs camions : les papiers de chacun, puis le choix de l'ordre et sa justification, puis
   // un camion à la fois sur l'unique quai.
-  const tousLus = (e) => R.camions.every((_, ci) => K(e, ci).ticketLu);
+  const tousLus = (e) => !F || R.camions.every((_, ci) => K(e, ci).ticketLu);
   const auQuai = (e) => R.camions.findIndex((_, ci) => K(e, ci).decharge && !K(e, ci).signe);
   function peutDecharger(e, ci) {
     const k = K(e, ci);
     if (k.decharge || e.fini) return false;
+    if (!secuFaite(e)) return false;
     if (!unDecharge(e, R)) return tousLus(e) && e.ordre && e.ordre.premier === ci && !!e.ordre.phrase;
     return auQuai(e) < 0;
   }
@@ -1066,16 +1244,16 @@ export function creerQuai(Q, opts = {}) {
     const cle = s.etiqMontre || (s.etiqVue ? 'avant' : null);
     if (!cle) return `<span class="note">🔍 Clique sur l'étiquette d'un carton pour la lire de près (${fmtMin(C.etiquette)}).</span>`;
     if (cle === 'avant' && p.etiqAvant === 'dechiree') {
-      return `<div class="quai-etiq quai-etiq-dechiree" data-q-etiquette>${ech(cm.fournisseur)} — produit surgelé, cons…<br><i>(étiquette déchirée : la référence et la désignation sont arrachées, illisibles)</i></div>`;
+      return `<div class="quai-etiq quai-etiq-dechiree" data-q-etiquette>${ech(cm.fournisseur)}${F ? ' — produit surgelé, cons…' : ' — …'}<br><i>(étiquette déchirée : la référence et la désignation sont arrachées, illisibles)</i></div>`;
     }
     const r = p.refs ? (p.refs.find((x) => x.ref === cle) || p.refs[0]) : null;
     const et = r ? r.etiq : p.etiq;
-    return `<div class="quai-etiq" data-q-etiquette><b>${ech(cm.fournisseur)}</b> — produit surgelé, conserver à −18 °C<br>Réf. ${ech(et.ref)}<br><b>${ech(et.nom)}</b><br>Contenu : ${ech(et.poids)}<br>Lot : ${ech(et.lot)} · À consommer de préférence avant fin : ${ech(et.ddm)}<div class="quai-code">||| |||| || ||||| | ||| 3 760000 ${ech(String(et.ref).replace('-', ''))}</div></div><div class="quai-reconst">Étiquette reconstituée, non contractuelle.</div>`;
+    return `<div class="quai-etiq" data-q-etiquette><b>${ech(cm.fournisseur)}</b>${F ? ' — produit surgelé, conserver à −18 °C' : ''}<br>Réf. ${ech(et.ref)}<br><b>${ech(et.nom)}</b><br>Contenu : ${ech(et.poids)}<br>Lot : ${ech(et.lot)} · À consommer de préférence avant fin : ${ech(et.ddm)}<div class="quai-code">||| |||| || ||||| | ||| 3 760000 ${ech(String(et.ref).replace('-', ''))}</div></div><div class="quai-reconst">Étiquette reconstituée, non contractuelle.</div>`;
   }
 
   // Ce que dit l'onglet d'une palette.
   const etatOnglet = (q, sq) => (sq.valide ? '✓ validée'
-    : [sq.sonde !== null ? 'sondée' : null, (q.refs ? sq.comptes && Object.keys(sq.comptes).length : sq.compte !== null) ? 'comptée' : null,
+    : [F && sq.sonde !== null ? 'sondée' : null, (q.refs ? sq.comptes && Object.keys(sq.comptes).length : sq.compte !== null) ? 'comptée' : null,
       sq.decision ? 'décidée' : null].filter(Boolean).join(', ') || 'à contrôler');
   // La phrase sous le comptage : ce qui est noté, ou comment le noter.
   const texteCompte = (p, s) => {
@@ -1095,17 +1273,17 @@ export function creerQuai(Q, opts = {}) {
     motif: !!s.decision && s.decision !== 'accepter' && !motifsChoisis(s).length,
   });
 
-  // La fiche de contrôle de la palette ouverte : quatre cases, l'unité à côté.
+  // La fiche de contrôle de la palette ouverte : quatre cases (trois sans froid), l'unité à côté.
   const ficheBloc = (p, s, dis) => `<div class="quai-doc quai-fiche" data-q-fiche="${ech(p.id)}">
       <div class="quai-doc-titre"><span class="quai-num">3</span> 📝 Ma fiche de contrôle — ${ech(p.id)} <span class="quai-fiche-ref">${ech(p.ref)}</span></div>
-      <div class="quai-fiche-champs">${CONSTATS.map((c) => `<label for="qFiche-${c.k}">${c.lib}</label>
+      <div class="quai-fiche-champs">${CONST.map((c) => `<label for="qFiche-${c.k}">${c.lib}</label>
         <span class="quai-fiche-val"><input id="qFiche-${c.k}" type="text" inputmode="${c.mode || 'text'}" autocomplete="off" data-q-fiche-k="${c.k}" value="${ech(s.fiche[c.k])}" ${dis}><span class="quai-unite">${c.unite}</span></span>`).join('')}</div>
     </div>`;
   // La fiche entière, en lecture, à l'étape ④ : l'élève y lit ce qu'il reporte dans ses réserves.
   const ficheTableau = (e, ci) => `<div class="quai-doc quai-fiche" data-q-fiche4>
       <div class="quai-doc-titre">📝 Ma fiche de contrôle <span class="quai-fiche-ref">notée à l’étape 3</span></div>
-      <table class="quai-bl"><thead><tr><th>Palette</th>${CONSTATS.map((c) => `<th>${c.court}</th>`).join('')}</tr></thead>
-        <tbody>${PAL[ci].map((p) => `<tr data-q-fiche4-ligne="${ech(p.id)}"><td>${ech(p.id)}</td>${CONSTATS.map((c) => {
+      <table class="quai-bl"><thead><tr><th>Palette</th>${CONST.map((c) => `<th>${c.court}</th>`).join('')}</tr></thead>
+        <tbody>${PAL[ci].map((p) => `<tr data-q-fiche4-ligne="${ech(p.id)}"><td>${ech(p.id)}</td>${CONST.map((c) => {
     const v = String(st(e, p).fiche[c.k] || '').trim();
     return `<td data-k="${c.k}">${v ? ech(v) : '<span class="note">—</span>'}</td>`;
   }).join('')}</tr>`).join('')}</tbody></table>
@@ -1243,7 +1421,7 @@ export function creerQuai(Q, opts = {}) {
     const choisis = motifsChoisis(s);
     const motif = s.decision === 'reserves' || s.decision === 'refuser'
       ? `<div class="quai-champ"><span class="quai-lib-champ" id="qLibMot">Motif ${s.decision === 'refuser' ? 'du refus' : 'de la réserve'}${R.deuxMotifs ? ' <span class="quai-cout">· deux au plus</span>' : ''}</span>
-          <div class="quai-choix quai-choix-motif" role="group" aria-labelledby="qLibMot">${CHOIX_MOTIF.map((k) => `<button type="button" id="qMot-${k}" aria-pressed="${choisis.includes(k)}" class="${choisis.includes(k) ? 'on' : ''}" data-q="motif" data-v="${k}" ${dis}>${MOTIFS[k]}</button>`).join('')}</div>
+          <div class="quai-choix quai-choix-motif" role="group" aria-labelledby="qLibMot">${MOTIFS_Q.map((k) => `<button type="button" id="qMot-${k}" aria-pressed="${choisis.includes(k)}" class="${choisis.includes(k) ? 'on' : ''}" data-q="motif" data-v="${k}" ${dis}>${MOTIFS[k]}</button>`).join('')}</div>
           ${ui.tropMotifs ? '<span class="quai-manque" role="alert" data-q-trop>Deux motifs au plus : décoche-en un d’abord.</span>' : ''}${alerte('motif', 'Donne le motif.')}</div>`
       : '';
     return `<div class="quai-doc quai-bloc" data-q-bloc="decider">
@@ -1266,7 +1444,7 @@ export function creerQuai(Q, opts = {}) {
     const vers4 = ui.arme4
       ? `<button class="btn quai-arme" data-q="vers4" data-libre>${nonVal ? `${nonVal} palette${nonVal > 1 ? 's' : ''} non validée${nonVal > 1 ? 's' : ''} : passer quand même ?` : 'Passer aux réserves ?'} Cliquez pour confirmer</button>
         <button class="btn" data-q="desarmer4" data-libre>Annuler</button>`
-      : `<button class="btn${nonVal ? '' : ' btn-p'}" data-q="vers4" data-libre>Contrôles terminés → réserves et chambre froide</button>`;
+      : `<button class="btn${nonVal ? '' : ' btn-p'}" data-q="vers4" data-libre>Contrôles terminés → réserves et ${F ? 'chambre froide' : ech(zoneMin)}</button>`;
     const m = manques(p, s), vu = ui.tente === p.id;
     // Disposition (maquette du 04/10/2026) : la palette reste à l'écran à gauche pendant que la colonne de
     // droite suit l'ordre du travail — compter, sonder et lire l'étiquette, noter sur la fiche, décider.
@@ -1289,9 +1467,9 @@ export function creerQuai(Q, opts = {}) {
         <div class="quai-outils">
           ${blocCompter(p, s, dis, m, vu)}
           <div class="quai-doc quai-bloc" data-q-bloc="sonder">
-            <div class="quai-doc-titre"><span class="quai-num">2</span> Sonder et lire l’étiquette</div>
-            <div class="quai-ligne"><button class="btn" data-q="sonder" ${dis}>Sonder à cœur <span class="quai-cout">· ${fmtMin(C.sonder)}</span></button></div>
-            ${s.sonde !== null ? sonde(p, s, ui.sonde === p.id) : ''}
+            <div class="quai-doc-titre"><span class="quai-num">2</span> ${F ? 'Sonder et lire l’étiquette' : 'Lire l’étiquette'}</div>
+            ${F ? `<div class="quai-ligne"><button class="btn" data-q="sonder" ${dis}>Sonder à cœur <span class="quai-cout">· ${fmtMin(C.sonder)}</span></button></div>
+            ${s.sonde !== null ? sonde(p, s, ui.sonde === p.id) : ''}` : ''}
             <div class="quai-zoom">${zoomEtiquette(p, s, R.camions[p.camion])}</div>
           </div>
           ${ficheBloc(p, s, dis)}
@@ -1339,9 +1517,11 @@ export function creerQuai(Q, opts = {}) {
     const suivant = M && k.signe && reste.length && !e.fini
       ? `<div class="quai-doc" data-q-suivant><p>Le camion ${ech(cm.nom)} repart, le quai est libre. ${reste.map((cj) => `Le camion ${ech(R.camions[cj].nom)}`).join(', ')} attend porte fermée.</p>${reste.map((cj) => boutonDecharger(e, cj)).join('')}</div>` : '';
     return `<section class="quai-carte">
-      <h2 class="quai-h2"><span class="quai-pastille-etape">4</span>Rentrer le lot en chambre froide, écrire les réserves, faire signer${M ? ` — camion ${ech(cm.nom)}` : ''}</h2>
+      <h2 class="quai-h2"><span class="quai-pastille-etape">4</span>${F ? 'Rentrer le lot en chambre froide' : `Rentrer les palettes en ${ech(zoneMin)}`}, écrire les réserves, faire signer${M ? ` — camion ${ech(cm.nom)}` : ''}</h2>
       ${choixCamion(e)}
-      ${A.consignes ? `<p class="quai-aide">Règle du quai : <b>le froid d'abord, les papiers ensuite</b>. 1) <b>Rentre le lot</b> accepté en chambre froide (le temps hors froid s'arrête). 2) <b>Écris tes réserves sur le BL</b> et fais-les signer par le chauffeur. Le chauffeur peut attendre ; les surgelés, non.<br>
+      ${A.consignes && !F ? `<p class="quai-aide">Règle du quai : <b>rentre les palettes acceptées</b> en ${ech(zoneMin)}, puis <b>écris tes réserves sur le BL</b> et fais-les signer par le chauffeur.<br>
+        Une réserve doit être <b>précise</b> : quelle palette, quoi, combien. « Sous réserve de déballage » ne vaut rien : ce n'est pas une réserve.</p>` : ''}
+      ${A.consignes && F ? `<p class="quai-aide">Règle du quai : <b>le froid d'abord, les papiers ensuite</b>. 1) <b>Rentre le lot</b> accepté en chambre froide (le temps hors froid s'arrête). 2) <b>Écris tes réserves sur le BL</b> et fais-les signer par le chauffeur. Le chauffeur peut attendre ; les surgelés, non.<br>
         Une réserve doit être <b>précise</b> : quelle palette, quoi, combien. « Sous réserve de déballage » ne vaut rien : ce n'est pas une réserve.</p>` : ''}
       ${ui.chef4 ? `<div class="quai-alerte" role="alert" data-q-chef>
         <p><b>Le chef de quai :</b> « Attends ! Tes palettes sont toujours sur le quai. <b>Rentre d'abord le lot accepté en chambre froide</b> : le chauffeur, lui, peut attendre cinq minutes ; les surgelés, non. Les papiers, tu les feras juste après. »</p>
@@ -1351,11 +1531,11 @@ export function creerQuai(Q, opts = {}) {
       ${A.chefDeQuai && k.mentionEcrite ? '<div class="quai-alerte" role="alert" data-q-chef-deballage><b>Le chef de quai :</b> « « Sous réserve de déballage », ça ne te protège de rien : ça ne dit ni quoi, ni combien, ni sur quelle palette. Ce sont tes réserves précises qui comptent. »</div>' : ''}
       <div class="quai-grille2">
         <div class="quai-gauche"><div class="quai-doc">
-          <div class="quai-doc-titre">🧊 ${ech(R.lieu.chambre.nom)}</div>
-          <svg class="quai-cf" data-q-cf viewBox="0 0 640 300" role="img" aria-label="Le quai et l'entrée de la chambre froide">${sceneCf(e, k.rentre ? 1 : 0)}</svg>
-          <p class="note" data-q-etatcf>${k.rentre ? `Lot rentré à ${hhmm(k.heureRentre ?? e.minute)} : ${nAcc} palettes en chambre froide, ${N - nAcc} refusée(s) au quai.`
-            : (toutDecide ? `${nAcc} palettes à rentrer · temps hors froid : ${fmtMin(k.froid)}.` : 'Décide d’abord pour chaque palette.')}</p>
-          <button class="btn btn-p" data-q="rentrer" ${!k.decharge || !toutDecide || k.rentre || e.fini ? 'disabled' : ''}>Rentrer le lot accepté en chambre froide <span class="quai-cout">· ${fmtMin(C.rentrer)} de manutention</span></button>
+          <div class="quai-doc-titre">${F ? `🧊 ${ech(R.lieu.chambre.nom)}` : `📦 ${ech(R.zone.nom)}`}</div>
+          <svg class="quai-cf" data-q-cf viewBox="0 0 640 300" role="img" aria-label="${F ? 'Le quai et l\'entrée de la chambre froide' : `Le quai et la ${ech(zoneMin)}`}">${sceneCf(e, k.rentre ? 1 : 0)}</svg>
+          <p class="note" data-q-etatcf>${k.rentre ? `Lot rentré à ${hhmm(k.heureRentre ?? e.minute)} : ${nAcc} palettes en ${F ? 'chambre froide' : ech(zoneMin)}, ${N - nAcc} refusée(s) au quai.`
+            : (toutDecide ? `${nAcc} palettes à rentrer${F ? ` · temps hors froid : ${fmtMin(k.froid)}` : ''}.` : 'Décide d’abord pour chaque palette.')}</p>
+          <button class="btn btn-p" data-q="rentrer" ${!k.decharge || !toutDecide || k.rentre || e.fini ? 'disabled' : ''}>${F ? 'Rentrer le lot accepté en chambre froide' : `Rentrer les palettes acceptées en ${ech(zoneMin)}`} <span class="quai-cout">· ${fmtMin(C.rentrer)} de manutention</span></button>
           <p class="note">Les palettes refusées restent au quai et repartent dans le camion.</p>
         </div>
         ${ficheTableau(e, ci)}</div>
@@ -1412,7 +1592,7 @@ export function creerQuai(Q, opts = {}) {
           : '';
         return `<p class="note" data-q-bilan-camion="${ech(c.lettre)}">Camion ${ech(c.nom)} : temps hors froid du lot ${k.decharge ? fmtMin(k.froid) : '—'} (repère ${R.seuil} min).${chaud}${ordre(k)}</p>`;
       }).join('')
-      : `<p class="note">Temps hors froid du lot : ${e.decharge ? fmtMin(e.froid) : '—'} (repère ${R.seuil} min).${ordre(e)}</p>`;
+      : (F ? `<p class="note">Temps hors froid du lot : ${e.decharge ? fmtMin(e.froid) : '—'} (repère ${R.seuil} min).${ordre(e)}</p>` : '');
     return `<div class="quai-bilan-bloc">
       <h3>Bilan de ta réception</h3>
       ${teteProf}${tableau}
@@ -1427,7 +1607,7 @@ export function creerQuai(Q, opts = {}) {
     const sr = n.N.reel.map(([m, p]) => `≤ ${v1(m * n.fac)} min : ${p}`).join(' · ');
     return `<table class="quai-note" data-q-note><tbody>
       <tr><td>Réception</td><td>${n.pts}/${n.nJalons} jalons</td><td>${v1(n.reception)} / ${n.N.reception}</td></tr>
-      <tr><td>Temps hors froid</td><td>${fmtMin(n.froid)}</td><td>${n.ptsFroid} / ${n.N.horsFroid[0][1]} (${sf})</td></tr>
+      ${n.sansFroid ? '' : `<tr><td>Temps hors froid</td><td>${fmtMin(n.froid)}</td><td>${n.ptsFroid} / ${n.N.horsFroid[0][1]} (${sf})</td></tr>`}
       <tr><td>Temps réel</td><td>${mmss(n.reel)}${n.tiersTemps ? ' (tiers-temps)' : ''}</td><td>${n.ptsReel} / ${n.N.reel[0][1]} (${sr})</td></tr>
       <tr><td>Rapidité retenue</td><td>${n.complet ? `réception complète, ${n.justes}/${n.nPalettes} palettes justes` : 'réception incomplète : pas de points de rapidité'}</td><td>${v1(n.vitesse)} / ${n.max - n.N.reception}</td></tr>
     </tbody></table>`;
@@ -1453,13 +1633,14 @@ export function creerQuai(Q, opts = {}) {
   function rentrer(e, api, ci = ca(e)) {
     const k = K(e, ci);
     const n = PAL[ci].filter((p) => accepte(st(e, p))).length;
-    avancer(e, C.rentrer, `lot${M ? ` du ${nomCam(ci)}` : ''} rentré en chambre froide (${n} palettes)`);
+    avancer(e, C.rentrer, `lot${M ? ` du ${nomCam(ci)}` : ''} rentré en ${F ? 'chambre froide' : zoneMin} (${n} palettes)`);
     k.ordreFroidDabord = !k.ecrit;
     k.rentre = true; k.heureRentre = e.minute;
     ui.jouerCf = true;
     api.sauver(); api.redessiner();
   }
   function aller(e, n, api) {
+    if (n >= 1 && !secuFaite(e)) return;
     if (n > 1 && !unDecharge(e, R)) return;
     if (ui.anim) ui.anim.finir();
     e.etape = n; ui.chef4 = false; ui.tente = null; ui.tropMotifs = false; ui.arme4 = false;
@@ -1470,7 +1651,7 @@ export function creerQuai(Q, opts = {}) {
   // est libre (camion précédent reparti), après la manœuvre de mise à quai.
   function decharger(e, ci, api) {
     const k = K(e, ci);
-    if (k.decharge) return;
+    if (k.decharge || !secuFaite(e)) return;
     if (M) {
       if (!peutDecharger(e, ci)) return;
       if (unDecharge(e, R)) avancer(e, R.manoeuvre, `${nomCam(ci)} mis à quai à la place du camion reparti`);
@@ -1710,12 +1891,15 @@ export function creerQuai(Q, opts = {}) {
       // La palette sélectionnée appartient au camion montré.
       if (M && R.palettes[e.sel] && R.palettes[e.sel].camion !== ca(e) && PAL[ca(e)].length) e.sel = R.palettes.indexOf(PAL[ca(e)][0]);
       const ouvert = unDecharge(e, R);
-      const etape = ouvert ? (e.etape || 1) : 1;
-      const corps = etape === 1 ? ecran1(e) : etape === 2 ? `<section class="quai-carte">${scene2(e)}</section>` : etape === 3 ? ecran3(e) : ecran4(e, api);
-      const libs = M ? ['① Les camions arrivent'].concat(ETAPES.slice(1)) : ETAPES;
+      // Étape ⓪ (sécurité) : tant que l'élève n'a pas commencé à décharger, ou s'il y revient pour relire.
+      const etape = ouvert ? (e.etape ?? 1) || 1 : (SEC && (!secuFaite(e) || e.etape === 0) ? 0 : 1);
+      const corps = etape === 0 ? ecran0(e) : etape === 1 ? ecran1(e) : etape === 2 ? `<section class="quai-carte">${scene2(e)}</section>` : etape === 3 ? ecran3(e) : ecran4(e, api);
+      const libs4 = (M ? ['① Les camions arrivent'].concat(ETAPES.slice(1)) : ETAPES.slice()).map((l, i) => (i === 3 && !F ? `④ Réserves et ${zoneMin}` : l));
+      const libs = SEC ? [ETAPE_SECU].concat(libs4) : libs4;
+      const n0 = SEC ? 0 : 1;   // numéro de la première étape affichée
       const tete = M
         ? R.camions.map((c) => `Camion « ${fictif(c.nom, c.fictif)} », transporteur ${fictif(c.transporteur, c.fictif)}`).join(' · ')
-        : `Livraison « ${fictif(cam.fournisseur, cam.fictif)} » · camion frigorifique ${fictif(cam.transporteur, cam.fictif)}`;
+        : `Livraison « ${fictif(cam.fournisseur, cam.fictif)} » · camion ${F ? 'frigorifique ' : ''}${fictif(cam.transporteur, cam.fictif)}`;
       return `<div class="quai" data-quai="${ech(Q.id)}">
         <div class="quai-tete">
           <div><h2>${ech(Q.titre || R.lieu.nom)}</h2>
@@ -1724,7 +1908,8 @@ export function creerQuai(Q, opts = {}) {
         ${Q.avertissement ? `<div class="quai-avert">${Q.avertissement}</div>` : ''}
         ${horloges(e)}
         <nav class="quai-stepper" aria-label="Étapes de la réception">
-          ${libs.map((l, i) => `<button data-q="etape" data-libre data-n="${i + 1}" class="${etape === i + 1 ? 'on' : ''}" ${i > 0 && !ouvert ? 'disabled' : ''} ${etape === i + 1 ? 'aria-current="step"' : ''}>${l}</button>`).join('')}
+          ${libs.map((l, i) => { const n = i + n0, ferme = (n >= 1 && !secuFaite(e)) || (n > 1 && !ouvert);
+            return `<button data-q="etape" data-libre data-n="${n}" class="${etape === n ? 'on' : ''}" ${ferme ? 'disabled' : ''} ${etape === n ? 'aria-current="step"' : ''}>${l}</button>`; }).join('')}
         </nav>
         ${corps}
       </div>`;
@@ -1742,7 +1927,39 @@ export function creerQuai(Q, opts = {}) {
       }));
       if (clavier && ui.focus) { const f = z.querySelector(ui.focus); if (f && !f.disabled) f.focus(); }
 
-      on('etape', (ev, b) => aller(e, +b.dataset.n, api));
+      on('etape', (ev, b) => {
+        const n = +b.dataset.n;
+        if (n === 0 && SEC) { if (ui.anim) ui.anim.finir(); e.etape = 0; api.sauver(); api.redessiner(); return; }
+        aller(e, n, api);
+      });
+      // L'étape ⓪ : chaque réponse est rangée tout de suite ; rien n'est corrigé avant la fin.
+      on('secu', geste((ev, b) => {
+        const sec = e.securite;
+        if (!sec || sec.fait || !SEC.points.some((x) => x.id === b.dataset.p) || !['ok', 'ko'].includes(b.dataset.v)) return;
+        sec.rep[b.dataset.p] = b.dataset.v; api.sauver(); api.redessiner();
+      }));
+      on('signaler', geste(() => {
+        const sec = e.securite;
+        if (!sec || sec.fait) return;
+        const ko = SEC.points.filter((x) => sec.rep[x.id] === 'ko').map((x) => x.id);
+        const sig = SEC.signaler || {};
+        if (!ko.length) { sec.chef = sig.vide || 'Qu’est-ce qui ne va pas ? Coche « Pas OK » sur ce que tu veux me signaler.'; api.sauver(); api.redessiner(); return; }
+        sec.signaux.push({ points: ko, apresArret: !!sec.arrete });
+        const vrai = SEC.points.some((x) => !x.ok && ko.includes(x.id));
+        sec.chef = vrai ? (sig.reponse || 'Bien vu, je m’en occupe. Tu peux décharger.') : (sig.rien || 'Je viens voir… Ce que tu me signales est en ordre.');
+        ui.arretSecu = false;
+        api.sauver(); api.redessiner();
+      }));
+      on('commencer', geste(() => {
+        const sec = e.securite;
+        if (!sec || sec.fait) return;
+        // Un point faux pas encore signalé : en guidage, le chef de quai arrête l'élève (sans dire lequel).
+        const signales = new Set([].concat(...sec.signaux.map((g) => g.points || [])));
+        const oublie = SEC.points.some((x) => !x.ok && !signales.has(x.id));
+        if (oublie && !EVAL) { sec.arrete = true; ui.arretSecu = true; api.sauver(); api.redessiner(); return; }
+        sec.fait = true; ui.arretSecu = false; e.etape = 1;
+        api.sauver(); api.redessiner(); if (api.haut) api.haut();
+      }));
       on('ticket', geste((ev, b) => {
         const ci = ciDe(b), k = K(e, ci);
         if (k.ticketLu) return;
@@ -1795,7 +2012,7 @@ export function creerQuai(Q, opts = {}) {
           ui.tente = pal.id; api.redessiner();
           const z2 = api.zone();
           const vide = pal.refs && pal.refs.find((r) => !(ss.comptes && ss.comptes[r.ref] != null && ss.comptes[r.ref] !== ''));
-          const cible = m.compte ? (vide ? `[data-q-compte-ref="${vide.ref}"]` : '#qCompte') : m.decision ? '#qDec-accepter' : `#qMot-${CHOIX_MOTIF[0]}`;
+          const cible = m.compte ? (vide ? `[data-q-compte-ref="${vide.ref}"]` : '#qCompte') : m.decision ? '#qDec-accepter' : `#qMot-${MOTIFS_Q[0]}`;
           const el = z2.querySelector(cible);
           if (el) el.focus();
           return;
@@ -1824,7 +2041,7 @@ export function creerQuai(Q, opts = {}) {
       // troisième est refusé. Recliquer décoche. Le premier coché reste `motif` (et sa valeur `res`).
       on('motif', geste((ev, b) => {
         const ss = s(), m = b.dataset.v;
-        if (ss.valide || !CHOIX_MOTIF.includes(m) || !['reserves', 'refuser'].includes(ss.decision)) return;
+        if (ss.valide || !MOTIFS_Q.includes(m) || !['reserves', 'refuser'].includes(ss.decision)) return;
         const m1 = ss.motif && ss.motif !== 'aucun' ? ss.motif : null, m2 = R.deuxMotifs && ss.motif2 && ss.motif2 !== 'aucun' ? ss.motif2 : null;
         ui.tropMotifs = false;
         if (!R.deuxMotifs) { ss.motif = m1 === m ? 'aucun' : m; ss.motif2 = 'aucun'; }
@@ -1841,7 +2058,7 @@ export function creerQuai(Q, opts = {}) {
       }));
       // La sonde lit la température RÉELLE (un camion qui a attendu s'est réchauffé) ; le thermomètre se
       // stabilise une fois, juste après ce geste.
-      on('sonder', geste(() => { s().sonde = tempReelle(p(), e, R); ui.sonde = p().id; avancer(e, C.sonder, `${p().id} sondée`); api.sauver(); api.redessiner(); }));
+      on('sonder', geste(() => { if (!F) return; s().sonde = tempReelle(p(), e, R); ui.sonde = p().id; avancer(e, C.sonder, `${p().id} sondée`); api.sauver(); api.redessiner(); }));
       if (ui.sonde) {
         const id = ui.sonde; ui.sonde = null;
         if (id === p().id && s().sonde !== null) animerSonde(z, Number(s().sonde));
@@ -1958,7 +2175,7 @@ export function creerQuai(Q, opts = {}) {
       on('ecrire', geste(() => {
         // Guidage : apprendre l'ordre (le froid d'abord, les papiers ensuite) sans l'imposer.
         const k = kc();
-        if (A.chefDeQuai && !k.rentre && !k.chefVu) { k.chefVu = true; ui.chef4 = true; api.sauver(); api.redessiner(); api.zone().querySelector('[data-q-chef]')?.scrollIntoView({ block: 'center' }); return; }
+        if (A.chefDeQuai && F && !k.rentre && !k.chefVu) { k.chefVu = true; ui.chef4 = true; api.sauver(); api.redessiner(); api.zone().querySelector('[data-q-chef]')?.scrollIntoView({ block: 'center' }); return; }
         ecrireReserves(e, api);
       }));
       on('chefRentrer', geste(() => { ui.chef4 = false; rentrer(e, api); }));

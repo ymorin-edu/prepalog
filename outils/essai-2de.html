@@ -12,6 +12,7 @@
 <link rel="icon" href="./styles/logo.png">
 <link rel="stylesheet" href="./styles/polices.css">
 <link rel="stylesheet" href="./styles/base.css">
+<link rel="stylesheet" href="./styles/quai.css">
 <style>
   .essai-reglages{ background:#fff7d6; border-bottom:1px solid #e8d48a; padding:8px 16px; font:14px/1.5 sans-serif; color:#3b3200 }
   .essai-reglages label{ display:inline-block; margin:2px 16px 2px 0; white-space:nowrap; font-weight:400; color:#3b3200 }
@@ -25,6 +26,7 @@
   <b>Page d'essai</b> — chaque changement repart d'une base neuve :
   <label>Prénom de l'élève <select name="prenom"><option>Lea</option><option>Noah</option><option>Jade</option></select></label>
   <label>Voir comme <select name="role"><option value="eleve">élève</option><option value="prof">enseignant</option></select></label>
+  <label>Quai <select name="quai"><option value="">aucun</option><option value="secu" selected>sans froid, avec la sécurité</option><option value="simple">sans froid, sans la sécurité</option><option value="eval">sans froid, avec la sécurité, en évaluation</option></select></label>
   <button type="button" id="bilan">Ce que lit le jalon</button>
 </form>
 <div class="essai-mention" id="mention"></div>
@@ -45,9 +47,11 @@ function monter() {
   const neuf = hote.cloneNode(false); hote.replaceWith(neuf);
   boite.hidden = true;
   db = {};
-  const moteur = creerEntreprise(univers({}));
+  const q = f.get('quai');
+  const quai = q ? { securite: q !== 'simple', evaluation: q === 'eval' } : null;
+  const moteur = creerEntreprise(univers({ quai }));
   moteur.rendre(neuf, {
-    meta: { id: 'essai-2de', code: 'ESSAI', titre: 'Essai 2de', portee: 'eleve', immersif: true, temps: 'guidage' },
+    meta: { id: 'essai-2de', code: 'ESSAI', titre: 'Essai 2de', portee: 'eleve', immersif: true, temps: 'guidage', ...(q === 'eval' ? { copie: true } : {}) },
     // L'ordre des phrases est tiré sur l'identifiant de l'élève : changer de prénom le change.
     profil: { prenom: f.get('prenom'), nom: 'Essai', role: f.get('role'), uid: 'essai-' + f.get('prenom') },
     jeu: { etat: () => db, sauver: () => {} },
