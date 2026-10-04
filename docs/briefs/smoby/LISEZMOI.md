@@ -21,6 +21,10 @@ provenance (`xmlns:c2pa="http://c2pa.org/manifest"` dans la balise `<svg>` et un
 vérifier l'empreinte. `logo-smoby.svg.txt` est un doublon d'essai (même problème) : **à supprimer**. Les JPEG arrivent
 intacts (empreintes vérifiées sur le disque).
 
+✅ **Nettoyé par Claude Code le 04/10/2026** : le même bloc de provenance (segment APP11 C2PA, 5 771 octets) avait aussi été
+ajouté à `quai-remorques.jpg` et `quai-interieur.jpg`. Bloc retiré des trois fichiers (logo compris), rien d'autre touché :
+les quatre empreintes du tableau correspondent maintenant exactement. Doublon `logo-smoby.svg.txt` supprimé.
+
 **Pour l'animation du déchargement** : la photo intérieure montre la porte **déjà ouverte** et un cariste au chariot dans
 la remorque : c'est exactement la scène d'ENT-5.3 (« Yanis décharge au chariot »). Proposition : s'en servir comme **décor
 fixe** de l'étape 2 (les palettes sortent une à une, dessinées comme au quai Picard, depuis l'ouverture de la porte) au lieu
