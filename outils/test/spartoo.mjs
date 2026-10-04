@@ -105,6 +105,22 @@ await v('toute trame déclarée existe dans le dépôt', async () => {
   if (manquants.length) throw new Error('trame déclarée mais absente : ' + manquants.join(', '));
 });
 
+// ---------- 26 ter bis. une trame se déclare dans la config du moteur, pas dans `meta`
+// Le bandeau lit `trame` dans ce que reçoit `creerEntreprise` ; rangée dans `meta`, elle n'y
+// apparaît jamais, sans que rien ne le dise (Picard ENT-4.1 à 4.3, corrigé le 04/10/2026).
+await v('une trame déclarée l\'est dans creerEntreprise, jamais dans meta (sinon le bandeau ne la montre pas)', async () => {
+  const fautifs = [];
+  for (const e of fs.readdirSync(path.join(ROOT, 'activites'))) {
+    if (!/\.js$/.test(e)) continue;
+    const src = fs.readFileSync(path.join(ROOT, 'activites', e), 'utf8');
+    const i = src.indexOf('export const meta');
+    if (i < 0) continue;
+    const fin = src.indexOf('\n};', i);
+    if (/^\s*trame:\s*\{/m.test(src.slice(i, fin))) fautifs.push(e);
+  }
+  if (fautifs.length) throw new Error('trame rangée dans meta : ' + fautifs.join(', '));
+});
+
 // ---------- 26 quater. tout corrigé déclaré existe et reste cohérent
 // Statique, comme le test des trames. Un QCM de trame doit avoir trois choix et une bonne
 // réponse valide : le générateur Python l'assure, ce test garde le fichier produit.
@@ -291,6 +307,7 @@ await v('Spartoo réception : trois jalons au vert', async () => {
   if (!/LOT-PM-2609/.test(await page.textContent('.ent-lecteur'))) throw new Error('le numéro de lot n\'est pas sur le bon de livraison');
   await page.click('[data-ouvrir-rec]');
   await page.waitForSelector('#recLot');
+  if (!/Le bon de livraison est dans votre messagerie/.test(await page.textContent('.ent-main .avis'))) throw new Error("l'encadré ne renvoie plus à la messagerie");
 
   // Ce que l'élève doit trouver : 12 conformes, 6 au lieu de 8, 6 dans un carton abîmé.
   await page.fill('#recLot', 'LOT-PM-2609');

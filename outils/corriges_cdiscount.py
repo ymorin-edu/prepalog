@@ -379,7 +379,7 @@ ENT_2_4 = {
    ["Valeur du manque :", "4 × 12,60 = 50,40 €"],
    ["Motif exact :", "Erreur de réception"],
    ["Suite à donner :", "Réclamation auprès de Gardéo (livraison incomplète), dans les 8 jours"],
- ], "note": "Ce que lisent les jalons : MIX-PLG sur « à revoir » sans GRP ; GRP-2F et DEM-26-0036 sur « justifié » ; REC-26-0447 seule ; 12 et 8 ; dernier nombre 50,40 ; « erreur de réception » (ou livraison incomplète) ; « réclam », « litige », « avoir » ou « réserve » sur la suite. La mission dit « d'après la liste de l'écran Inventaire », écran absent de cette séance : la trame renvoie à la colonne Motif de l'export."},
+ ], "note": "Ce que lisent les jalons : MIX-PLG sur « à revoir » sans GRP ; GRP-2F et DEM-26-0036 sur « justifié » ; REC-26-0447 seule ; 12 et 8 ; dernier nombre 50,40 ; « erreur de réception » (ou livraison incomplète) ; « réclam », « litige », « avoir » ou « réserve » sur la suite. La mission renvoie, comme la trame, à la colonne Motif de l'export."},
  "Julien Mounet attend une réponse": {"pistes": [
    "Ses 4 mixeurs ne sont jamais arrivés : Gardéo en a livré 8, pas 12 ; ce n'est ni une perte ni un vol à Cestas.",
    "Cdiscount réclame auprès de Gardéo (dans les 8 jours) et corrige l'ajustement : motif « Erreur de réception ».",

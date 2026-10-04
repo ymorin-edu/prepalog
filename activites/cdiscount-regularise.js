@@ -13,8 +13,8 @@
 // « n résultats justes sur m »), et un vendeur de la place de marché (fictif) se plaint de la même
 // réception. Huit jalons : deux pour le tableur, les six d'avant pour l'enquête.
 //
-// Livrée fermée (`ouverture: 'prof'`) : Tristan l'essaie, puis l'ouvre lui-même. Pas encore de
-// trame (Cowork, après validation à l'écran).
+// Livrée fermée (`ouverture: 'prof'`) : Tristan l'essaie, puis l'ouvre lui-même.
+// Trame élève et corrigé : déposés par Cowork, branchés le 04/10/2026 (brief `docs/briefs/CDISCOUNT-trames-eleve.md`).
 
 import { creerEntreprise } from '../core/types/entreprise.js';
 import * as CDISCOUNT from '../contenus/cdiscount.js';
@@ -39,6 +39,7 @@ export const meta = {
   // 02/10/2026, gardée par un test du bloc « transport »). L'élève peut en revanche renvoyer sa
   // réponse : le meilleur essai est retenu.
   tables: {},
+  corrige: './contenus/corriges/ENT-2.4.js',
   pret: true,
   // Fermée aux élèves pendant la refonte Cdiscount (brief `CDISCOUNT-renumerotation.md`, 03/10/2026).
   ouverture: 'prof',
@@ -59,6 +60,10 @@ const moteur = creerEntreprise({
   etapes: SEANCE.ETAPES,
   tableur: SEANCE.TABLEUR,
   THEME: CDISCOUNT.THEME,
+  trame: {
+    pdf: './contenus/trames/ENT-2.4-cdiscount-regularise-trame-eleve.pdf',
+    docx: './contenus/trames/ENT-2.4-cdiscount-regularise-trame-eleve.docx',
+  },
 });
 
 export function rendre(hote, ctx) { moteur.rendre(hote, ctx); }

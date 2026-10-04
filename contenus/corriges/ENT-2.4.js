@@ -402,7 +402,7 @@ export const CORRIGE = {
           "Réclamation auprès de Gardéo (livraison incomplète), dans les 8 jours"
         ]
       ],
-      "note": "Ce que lisent les jalons : MIX-PLG sur « à revoir » sans GRP ; GRP-2F et DEM-26-0036 sur « justifié » ; REC-26-0447 seule ; 12 et 8 ; dernier nombre 50,40 ; « erreur de réception » (ou livraison incomplète) ; « réclam », « litige », « avoir » ou « réserve » sur la suite. La mission dit « d'après la liste de l'écran Inventaire », écran absent de cette séance : la trame renvoie à la colonne Motif de l'export."
+      "note": "Ce que lisent les jalons : MIX-PLG sur « à revoir » sans GRP ; GRP-2F et DEM-26-0036 sur « justifié » ; REC-26-0447 seule ; 12 et 8 ; dernier nombre 50,40 ; « erreur de réception » (ou livraison incomplète) ; « réclam », « litige », « avoir » ou « réserve » sur la suite. La mission renvoie, comme la trame, à la colonne Motif de l'export."
     },
     {
       "etape": 8,

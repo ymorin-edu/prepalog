@@ -1396,7 +1396,11 @@ export function creerEntreprise(U) {
             <td>${select('decision', choixDecision, 'Décision pour ' + sku)}</td></tr>`;
         }).join('');
 
-        const cLot = fige ? `<b class="mono">${ech(c.lot || '—')}</b>`
+        // L'encadré ne renvoie à la messagerie que si le bon de livraison y est arrivé (Spartoo) ;
+        // ailleurs (Cdiscount) aucun bon n'y arrive, et l'élève l'y chercherait pour rien.
+        const blParMessage = (db.mails || []).some((m) => m.kind === 'bl' && m.rec === r.no);
+
+        const cLot = fige ?`<b class="mono">${ech(c.lot || '—')}</b>`
           : `<input type="text" id="recLot" class="mono" value="${ech(c.lot)}" placeholder="ex. LOT-XX-0000" style="width:190px" aria-label="Numéro de lot">`;
 
         return `<button class="lien-accueil" data-vue2="receptions">← RÉCEPTIONS</button>
@@ -1406,9 +1410,9 @@ export function creerEntreprise(U) {
             <dt>Transporteur</dt><dd>${ech(r.transporteur || '—')}</dd>
             <dt>Bon de livraison</dt><dd class="mono">${ech(r.bl.no)}</dd>
             <dt>Arrivée sur le quai</dt><dd>${fdt(r.ts)}</dd></dl>
-            <div class="avis">Le bon de livraison est dans votre messagerie : c'est lui qui donne les
-              quantités annoncées et le numéro de lot. Les colis ci-dessous sont ce que le
-              transporteur a réellement déposé.</div></section>
+            <div class="avis">${blParMessage ? 'Le bon de livraison est dans votre messagerie : c\'est lui'
+              : 'C\'est le bon de livraison'} qui donne les quantités annoncées et le numéro de lot. Les colis
+              ci-dessous sont ce que le transporteur a réellement déposé.</div></section>
           <section class="panneau"><h3>Colis reçus sur le quai</h3>
             <p class="note">${(r.colis || []).length} colis. Additionnez-les par référence pour obtenir la quantité réellement reçue.</p>
             <div class="ent-scroll"><table><thead><tr><th class="num">Colis</th><th>Réf.</th><th>Article</th>

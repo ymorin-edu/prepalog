@@ -10,7 +10,7 @@
 // Détail et données : `contenus/cdiscount-inventaire.js` ; écran : `core/types/inventaire.js`.
 //
 // Livrée fermée (`pret: true, ouverture: 'prof'`) : Tristan l'essaie, puis l'ouvre lui-même.
-// Pas encore de trame papier (« Tout à l'écran ») : Cowork la fera après validation à l'écran.
+// Trame élève et corrigé : déposés par Cowork, branchés le 04/10/2026 (brief `docs/briefs/CDISCOUNT-trames-eleve.md`).
 
 import { creerEntreprise } from '../core/types/entreprise.js';
 import * as CDISCOUNT from '../contenus/cdiscount.js';
@@ -36,6 +36,7 @@ export const meta = {
   // 02/10/2026, gardée par un test du bloc « transport »). L'inventaire validé est définitif :
   // l'élève voit sa correction détaillée, mais ne refait pas la séance de lui-même.
   tables: {},
+  corrige: './contenus/corriges/ENT-2.3.js',
   pret: true,
   // Fermée aux élèves pendant la refonte Cdiscount (brief `CDISCOUNT-renumerotation.md`, 03/10/2026).
   ouverture: 'prof',
@@ -55,9 +56,11 @@ const moteur = creerEntreprise({
   volet: SEANCE.VOLET,
   etapes: SEANCE.ETAPES,
   inventaire: SEANCE.INVENTAIRE,
-  // Pas de trame papier : le bandeau le dit.
-  sansTrame: "Tout à l'écran",
   THEME: CDISCOUNT.THEME,
+  trame: {
+    pdf: './contenus/trames/ENT-2.3-cdiscount-inventaire-trame-eleve.pdf',
+    docx: './contenus/trames/ENT-2.3-cdiscount-inventaire-trame-eleve.docx',
+  },
 });
 
 export function rendre(hote, ctx) { moteur.rendre(hote, ctx); }

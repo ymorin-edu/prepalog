@@ -12,9 +12,7 @@
 // Livrée fermée (`ouverture: 'prof'`, demandé dans `docs/decisions.md`) : Tristan la rouvre lui-même
 // dans « Conduite de séance » après l'avoir essayée.
 //
-// La trame élève et son corrigé (`ENT-2.1.js`) datent d'AVANT le recadrage : Cowork les refait après
-// validation à l'écran. La trame n'est pas déclarée (`trame:`) ; le corrigé l'est, mais il est faux
-// tant qu'il n'est pas régénéré.
+// Trame élève et corrigé : déposés par Cowork, branchés le 04/10/2026 (brief `docs/briefs/CDISCOUNT-trames-eleve.md`).
 
 import { creerEntreprise } from '../core/types/entreprise.js';
 import * as CDISCOUNT from '../contenus/cdiscount.js';
@@ -39,8 +37,7 @@ export const meta = {
   // peut donc repartir de zéro sans rien perdre d'une autre séance.
   reinitialisable: true,
   tables: {},
-  // Corrigé de la trame (espace enseignant). La trame elle-même n'est PAS déclarée (`trame:`) :
-  // déclarer, c'est valider, et elle n'est pas encore relue.
+  // Corrigé de la trame (espace enseignant).
   corrige: './contenus/corriges/ENT-2.1.js',
   pret: true,
   ouverture: 'prof',
@@ -60,6 +57,10 @@ const moteur = creerEntreprise({
   volet: SEANCE.VOLET,
   etapes: SEANCE.ETAPES,
   THEME: CDISCOUNT.THEME,
+  trame: {
+    pdf: './contenus/trames/ENT-2.1-cdiscount-mouvements-trame-eleve.pdf',
+    docx: './contenus/trames/ENT-2.1-cdiscount-mouvements-trame-eleve.docx',
+  },
 });
 
 export function rendre(hote, ctx) { moteur.rendre(hote, ctx); }

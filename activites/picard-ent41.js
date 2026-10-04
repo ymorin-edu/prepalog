@@ -34,10 +34,6 @@ export const meta = {
   portee: 'eleve',
   reinitialisable: true,
   tables: {},
-  trame: {
-    pdf: './contenus/trames/ENT-4.1-picard-premier-camion-trame-eleve.pdf',
-    docx: './contenus/trames/ENT-4.1-picard-premier-camion-trame-eleve.docx',
-  },
   corrige: './contenus/corriges/ENT-4.1.js',
   pret: true,
   ouverture: 'prof',
@@ -58,6 +54,10 @@ const moteur = creerEntreprise({
   accueil: SEANCE.ACCUEIL,
   volet: SEANCE.VOLET,
   quai: SEANCE.QUAI_ENT41,
+  trame: {
+    pdf: './contenus/trames/ENT-4.1-picard-premier-camion-trame-eleve.pdf',
+    docx: './contenus/trames/ENT-4.1-picard-premier-camion-trame-eleve.docx',
+  },
 });
 
 export function rendre(hote, ctx) { moteur.rendre(hote, ctx); }

@@ -8,7 +8,8 @@
 // pèse le plus en euros. Écrite le 04/10/2026 (brief `docs/briefs/ENT-2.6-bonus.md`). Données :
 // `contenus/cdiscount-priorites.js` ; geste : `core/types/export-tableur.js`.
 //
-// Livrée fermée (`pret: true, ouverture: 'prof'`). Pas encore de trame (Cowork, après validation).
+// Livrée fermée (`pret: true, ouverture: 'prof'`).
+// Trame élève et corrigé : déposés par Cowork, branchés le 04/10/2026 (brief `docs/briefs/CDISCOUNT-trames-eleve.md`).
 
 import { creerEntreprise } from '../core/types/entreprise.js';
 import * as CDISCOUNT from '../contenus/cdiscount.js';
@@ -28,6 +29,7 @@ export const meta = {
   immersif: true,
   portee: 'eleve',
   tables: {},
+  corrige: './contenus/corriges/ENT-2.6.js',
   pret: true,
   ouverture: 'prof',
 };
@@ -47,6 +49,10 @@ const moteur = creerEntreprise({
   etapes: SEANCE.ETAPES,
   tableur: SEANCE.TABLEUR,
   THEME: CDISCOUNT.THEME,
+  trame: {
+    pdf: './contenus/trames/ENT-2.6-cdiscount-priorites-trame-eleve.pdf',
+    docx: './contenus/trames/ENT-2.6-cdiscount-priorites-trame-eleve.docx',
+  },
 });
 
 export function rendre(hote, ctx) { moteur.rendre(hote, ctx); }

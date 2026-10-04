@@ -1225,12 +1225,12 @@ Ce qui cloche : DEM-26-0027 : 2 - 1 = 1`;
     if (await pg.$(`${Z22} [data-stock-bloque]`)) throw new Error('Stock bloqué pour l\'enseignant');
   });
 
-  await v('ENT-2.3 : le bandeau dit « Tout à l\'écran » à la place des liens de trame (aucune trame, aucun lien mort)', async () => {
+  await v("ENT-2.3 : le bandeau propose la trame (PDF et Word), plus d'étiquette « Tout à l'écran »", async () => {
     await monter22();
-    const b = await pg.$$eval('#hote22 .ent-bandeau .ent-sans-trame', (e) => e.map((x) => x.textContent.trim()));
-    if (b.length !== 1 || !/Tout à l.écran/.test(b[0])) throw new Error('étiquette du bandeau : ' + JSON.stringify(b));
-    const liens = await pg.$$eval('#hote22 .ent-bandeau a[download]', (e) => e.length);
-    if (liens) throw new Error(liens + ' lien(s) de trame alors qu\'il n\'y a pas de trame');
+    const sans = await pg.$$eval('#hote22 .ent-bandeau .ent-sans-trame', (e) => e.length);
+    if (sans) throw new Error("étiquette « Tout à l'écran » encore affichée");
+    const liens = await pg.$$eval('#hote22 .ent-bandeau a[download]', (e) => e.map((a) => a.getAttribute('href')));
+    if (liens.join('|') !== './contenus/trames/ENT-2.3-cdiscount-inventaire-trame-eleve.pdf|./contenus/trames/ENT-2.3-cdiscount-inventaire-trame-eleve.docx') throw new Error('liens : ' + liens.join('|'));
   });
 
   await v('ENT-2.3 : aucune erreur de console ni d\'exception pendant ces parcours', async () => {
@@ -1468,6 +1468,8 @@ Suite à donner : Réclamation auprès de Gardéo, livraison incomplète`;
       // Les lignes de colis : [n°, référence, désignation, contenu, état] ; le contrôle, lui, est ailleurs.
       out.colisMixeurs = lignes.filter((l) => l[1] === 'MIX-PLG' && /^\d+$/.test(l[0])).reduce((n, l) => n + Number(l[3] || 0), 0);
       out.controleMixeurs = (lignes.find((l) => l[0] === 'MIX-PLG' && l.includes('Accepté')) || []).join('/');
+      // Aucun bon de livraison n'arrive par message chez Cdiscount : l'encadré ne renvoie pas à la messagerie.
+      out.avisRec = (hote.querySelector('.panneau .avis') || {}).textContent || '';
       await clic('[data-vue="commandes"]');
       out.commandes = hote.querySelectorAll('[data-ouvrir-cmd]').length;
       // Répondre à la cheffe, comme l'élève.
@@ -1494,6 +1496,7 @@ Suite à donner : Réclamation auprès de Gardéo, livraison incomplète`;
     if (res.lignesMouv !== 22) throw new Error(`${res.lignesMouv} mouvements à l'écran au lieu de 22`);
     if (res.receptions !== 2 || res.commandes !== 8) throw new Error(`${res.receptions} réceptions, ${res.commandes} commandes`);
     if (res.colisMixeurs !== 8) throw new Error('les colis de mixeurs à l\'écran ne font pas 8 : ' + res.colisMixeurs);
+    if (/messagerie/.test(res.avisRec) || !/bon de livraison/.test(res.avisRec)) throw new Error('encadré de la réception : ' + res.avisRec);
     // Les six jalons de l'enquête ; les deux du tableur attendent un dépôt.
     if (!res.score || res.score.score !== 6 || res.score.max !== 8) throw new Error('score remonté : ' + JSON.stringify(res.score));
     const reste = await page.evaluate(() => document.body.classList.contains('immersion'));

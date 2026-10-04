@@ -48,10 +48,6 @@ export const meta = {
   pret: true,
   // Trame élève : déclarer, c'est valider (relue le 03/10/2026). Un test vérifie que les deux
   // fichiers existent dans le dépôt.
-  trame: {
-    pdf: './contenus/trames/ENT-3.1-boost-tournee-trame-eleve.pdf',
-    docx: './contenus/trames/ENT-3.1-boost-tournee-trame-eleve.docx',
-  },
   // Corrigé des QCM d'éco-droit de la trame : affiché dans l'onglet « Corrigés » de l'espace
   // enseignant, jamais côté élève. Fichier généré par le générateur de la trame.
   corrige: './contenus/corriges/ENT-3.1.js',
@@ -77,6 +73,10 @@ const moteur = creerEntreprise({
   transportId: SEANCE.TRANSPORT_ID,
   plan: SEANCE.PLAN,
   tournee: SEANCE.TOURNEE,
+  trame: {
+    pdf: './contenus/trames/ENT-3.1-boost-tournee-trame-eleve.pdf',
+    docx: './contenus/trames/ENT-3.1-boost-tournee-trame-eleve.docx',
+  },
 });
 
 export function rendre(hote, ctx) { moteur.rendre(hote, ctx); }

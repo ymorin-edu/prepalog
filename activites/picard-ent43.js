@@ -29,10 +29,6 @@ export const meta = {
   immersif: true,
   portee: 'eleve',
   tables: {},
-  trame: {
-    pdf: './contenus/trames/ENT-4.3-picard-reception-de-nuit-trame-eleve.pdf',
-    docx: './contenus/trames/ENT-4.3-picard-reception-de-nuit-trame-eleve.docx',
-  },
   corrige: './contenus/corriges/ENT-4.3.js',
   pret: true,
   ouverture: 'prof',
@@ -53,6 +49,10 @@ const moteur = creerEntreprise({
   accueil: SEANCE.ACCUEIL,
   volet: SEANCE.VOLET,
   quai: SEANCE.QUAI_ENT43,
+  trame: {
+    pdf: './contenus/trames/ENT-4.3-picard-reception-de-nuit-trame-eleve.pdf',
+    docx: './contenus/trames/ENT-4.3-picard-reception-de-nuit-trame-eleve.docx',
+  },
 });
 
 export function rendre(hote, ctx) { moteur.rendre(hote, ctx); }
