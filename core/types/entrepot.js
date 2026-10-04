@@ -5,8 +5,9 @@
 // mode RANGEMENT), d'après la maquette v2 validée par Tristan (`docs/briefs/plan-entrepot/`), qui FAIT
 // FOI pour l'interaction : mêmes gestes, mêmes textes. Le code de la maquette était jetable (état
 // global, géométrie écrite à la main, stock tiré par un générateur) : ici on reprend le comportement,
-// le plan est DÉCLARÉ par le contenu et dessiné par le moteur. Les modes « comptage » et
-// « préparation » (lots 3 et 4) ne sont pas encore écrits : une séance qui les déclare ne se charge pas.
+// le plan est DÉCLARÉ par le contenu et dessiné par le moteur. Le mode « préparation » (lot 4) est
+// venu le même jour (voir plus bas, « PRÉPARATION ») ; le mode « comptage » (lot 3) n'est pas encore
+// écrit : une séance qui le déclare ne se charge pas.
 //
 // Elle vit dans l'environnement d'entreprise (`entreprise.js`), comme le quai et le planning, et
 // n'existe que si la séance déclare `entrepot` (`plan` est déjà la vue de transport). Elle ne connaît
@@ -54,6 +55,28 @@
 // palette en main, bandes de rotation, parcours dessiné, verdict expliqué critère par critère ;
 // entraînement = parcours seul, nom du critère seul ; évaluation = rien avant la copie rendue (comme le
 // Planning, décision de Tristan du 04/10). On dit QUE un critère n'est pas respecté, jamais DE COMBIEN.
+//
+// PRÉPARATION de commande au colis complet (`mode: 'preparation'`, brief §5.3, §5.4, §6.2, §7) :
+// N1 = picking, N2 et au-dessus = réserve. L'élève prélève chaque ligne du bon au picking, demande la
+// descente d'une palette de réserve quand le picking est sous son minimum, monte la palette de
+// commande (dans l'ordre du prélèvement), la filme et l'étiquette. Ce que la séance ajoute :
+//
+//   produits: { MAI: { …, couches: [2, 2, 2], classe: 'lourd' | 'fragile' (rien = normal),
+//                      carton: { kg: 50, parCouche: 2, h: 0.45 } }, … },   // h en mètres
+//   plan.metres: { travee: 3, entreAllees: 9.4, avant: 0.9, arriere: 1.2, quai: 5.2 },
+//       // en mètres : longueur d'une travée ; d'une allée à la suivante ; de l'allée principale au bas
+//       // des racks ; du haut des racks au passage du haut ; position du quai sur l'allée principale,
+//       // comptée depuis la première allée
+//   commande: { num, client, enlevement, transporteur, heure, quai: 'QUAI 1', etiquette?: 'JDR · E1',
+//               hMax: 1.8, kgMax: 800, support: { h: 0.15, kg: 25 },
+//               lignes: [{ a: 'A1-T01-N1-E1', produit: 'MAI', q: 2 }, …],    // l'ordre du serpentin
+//               desordre: [4, 5, 3, 0, 2, 1] },                                // l'ordre remis hors guidage
+//   picking: { 'B1-T01-N1-E1': { q: 2, min: 6 }, … },   // les autres N1 : palette pleine, min = max(2, plein/4)
+//   jalons: [{ id, lib, type }, …],   // types : JALONS_PREP plus bas ; défaut : les 9 du brief
+//
+// L'état : `db.entrepots[<id>]` = { faits: [{ a, k, q }] (les prélèvements, dans l'ordre), pick (cartons
+// restants au picking), vides (réserves descendues), reappros, essaisReserve, parcours, fin, film, etiq,
+// verifie, verifs, premierGeste }.
 
 // Pas d'import de `ui.js` : un corrigé de séance peut importer ce module hors du navigateur.
 const ech = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -152,7 +175,7 @@ function compiler(P) {
   const err = (m) => { throw new Error(`entrepot ${P && P.id} : ${m}`); };
   if (!P || !P.id) err('il manque un id');
   const mode = P.mode || 'rangement';
-  if (mode !== 'rangement') err(`le mode « ${mode} » n'est pas encore écrit dans le moteur (lots 3 et 4 du brief)`);
+  if (mode !== 'rangement' && mode !== 'preparation') err(`le mode « ${mode} » n'est pas encore écrit dans le moteur (lot 3 du brief)`);
   const L = P.plan || err('il manque le plan');
   const T = L.travees || 4, N = L.niveaux || 3, E = L.emplacements || 3;
   if (N > 4 || E > 4) err('4 niveaux et 4 emplacements par niveau au plus');
@@ -209,13 +232,220 @@ function compiler(P) {
     for (let e = 1; e <= E; e++) s += kgEn(place, adresse(d.c, d.t, d.n, e), sauf);
     return s;
   };
-  const M = { P, T, N, E, allees, cotes, ordre, toutes, existe, hs, litiges, zones, produits, stock, pal, crit,
+  const M = { P, mode, T, N, E, allees, cotes, ordre, toutes, existe, hs, litiges, zones, produits, stock, pal, crit,
     nomGamme, gammeDe, cotesDeGamme, estLitige, occupant, chargeNiveau };
-  M.jalons = (P.jalons || (P.palettes || []).map((p) => ({ id: `palette-${p.id}`, palette: p.id,
-    lib: `${p.id} bien rangée (${p.nom || produits[p.produit].nom})` })));
-  M.jalons.forEach((j) => { if (!pal[j.palette]) err(`jalon ${j.id} : palette inconnue (${j.palette})`); });
+  if (mode === 'preparation') compilerPrep(M, err);
+  else {
+    M.jalons = (P.jalons || (P.palettes || []).map((p) => ({ id: `palette-${p.id}`, palette: p.id,
+      lib: `${p.id} bien rangée (${p.nom || produits[p.produit].nom})` })));
+    M.jalons.forEach((j) => { if (!pal[j.palette]) err(`jalon ${j.id} : palette inconnue (${j.palette})`); });
+  }
   COMPILES.set(P, M);
   return M;
+}
+
+/* ============================================================ PRÉPARATION */
+// Les jalons types de la préparation (brief §7). Les critères de la palette ne comptent QUE si toutes
+// les lignes sont justes : une palette vide ou incomplète respecte « lourds en bas », poids et hauteur
+// (piège d'inaction). Le parcours : au moins une ligne prélevée par défaut ; `garde: 'lignesJustes'`
+// pour ne le compter, lui aussi, que sur une commande complète (ENT-5.6).
+const JALONS_PREP = {
+  lignesJustes: 'Lignes prélevées justes',
+  reappro: 'Réapprovisionnement depuis la bonne référence',
+  lourds: 'Lourds en bas',
+  fragiles: 'Fragiles en haut',
+  poids: 'Poids de la palette',
+  hauteur: 'Hauteur de la palette',
+  film: 'Film étirable',
+  etiquettes: 'Étiquettes d’expédition',
+  parcours: 'Parcours le plus court',
+};
+export const TYPES_JALONS_PREP = Object.keys(JALONS_PREP);
+const CRIT_PALETTE = ['lourds', 'fragiles', 'poids', 'hauteur', 'film', 'etiquettes'];
+export const ETIQUETTES = [['avant', 'face avant'], ['arriere', 'face arrière'], ['gauche', 'côté gauche'], ['droite', 'côté droit'], ['dessus', 'dessus']];
+
+function compilerPrep(M, err) {
+  const P = M.P, C = P.commande || err('il manque la commande (mode préparation)');
+  const classe = (k) => M.produits[k].classe || 'normal';
+  Object.entries(M.produits).forEach(([k, p]) => {
+    const c = p.carton;
+    if (!c || !(c.kg > 0) || !(c.parCouche > 0) || !(c.h > 0)) err(`le produit ${k} n'a pas de carton { kg, parCouche, h }`);
+    if (!Array.isArray(p.couches) || p.couches.length !== 3) err(`le produit ${k} n'a pas ses couches [largeur, profondeur, hauteur]`);
+    if (!['normal', 'lourd', 'fragile'].includes(classe(k))) err(`le produit ${k} a une classe inconnue (${p.classe})`);
+  });
+  const lignes = C.lignes || [];
+  if (!lignes.length) err('la commande n’a aucune ligne');
+  const vues = new Set();
+  lignes.forEach((l, i) => {
+    const d = decoupe(l.a);
+    if (!d || !M.existe.has(l.a)) err(`ligne ${i + 1} : adresse inconnue (${l.a})`);
+    if (d.n !== 1) err(`ligne ${i + 1} : ${l.a} n'est pas au picking (niveau N1)`);
+    if (!M.stock[l.a] || M.stock[l.a].produit !== l.produit) err(`ligne ${i + 1} : le stock de ${l.a} n'est pas ${l.produit}`);
+    if (!(l.q > 0)) err(`ligne ${i + 1} : quantité absente`);
+    if (vues.has(l.a)) err(`ligne ${i + 1} : ${l.a} est déjà sur le bon`);
+    vues.add(l.a);
+  });
+  const desordre = C.desordre || lignes.map((_, i) => i);
+  if ([...desordre].sort((a, b) => a - b).join() !== lignes.map((_, i) => i).join()) err('commande.desordre n’est pas un ordre des lignes');
+  if (!(C.hMax > 0) || !(C.kgMax > 0)) err('la commande n’a pas de hauteur et de poids maximaux (hMax, kgMax)');
+  const support = Object.assign({ h: 0, kg: 0 }, C.support || {});
+  const PK = P.picking || {};
+  Object.keys(PK).forEach((a) => { const d = decoupe(a); if (!d || d.n !== 1 || !M.stock[a]) err(`picking : ${a} n'est pas un emplacement N1 occupé`); });
+  const plein = (a) => M.produits[M.stock[a].produit].couches.reduce((x, y) => x * y, 1);
+  const pick0 = (a) => (PK[a] && PK[a].q != null ? PK[a].q : plein(a));
+  const minPick = (a) => (PK[a] && PK[a].min != null ? PK[a].min : Math.max(2, Math.round(plein(a) / 4)));
+  // Une ligne en rupture : le picking n'a pas de quoi la servir. Il doit être sous son minimum (sinon
+  // la descente est refusée) et une palette de réserve de la même référence doit exister.
+  const ruptures = lignes.filter((l) => pick0(l.a) < l.q).map((l) => l.a);
+  ruptures.forEach((a) => {
+    if (pick0(a) >= minPick(a)) err(`${a} : en rupture mais pas sous son minimum (le réapprovisionnement serait refusé)`);
+    if (!Object.keys(M.stock).some((r) => decoupe(r).n > 1 && M.stock[r].produit === M.stock[a].produit)) err(`${a} : en rupture, sans palette de réserve de la même référence`);
+  });
+  M.jalons = (P.jalons || TYPES_JALONS_PREP.filter((t) => t !== 'reappro' || ruptures.length).map((t) => ({ type: t })))
+    .map((j) => {
+      if (!JALONS_PREP[j.type]) err(`jalon de type inconnu : ${j.type} (types : ${TYPES_JALONS_PREP.join(', ')})`);
+      return Object.assign({ id: j.type, lib: JALONS_PREP[j.type] }, j);
+    });
+  // Les mètres (§5.4) : les points de prélèvement sont au milieu de l'allée, devant la travée ; y = 0
+  // sur l'allée principale. Le serpentin est à sens unique : on monte la 1re allée, on redescend la
+  // suivante… puis on rentre par l'allée principale.
+  const m = P.plan.metres || err('il manque plan.metres (mode préparation)');
+  ['travee', 'entreAllees', 'avant', 'arriere', 'quai'].forEach((k) => { if (!(m[k] >= 0)) err(`plan.metres.${k} manque`); });
+  const xs = M.allees.map((_, i) => i * m.entreAllees);
+  const xAl = Object.fromEntries(M.allees.map((al, i) => [al.id, xs[i]]));
+  const haut = m.avant + M.T * m.travee + m.arriere;
+  const point = (a) => { const d = decoupe(a); return [xAl[M.cotes[d.c].allee], m.avant + (d.t - 0.5) * m.travee]; };
+  const quai = [m.quai, 0];
+  const cyc = [[xs[0], 0]];
+  xs.forEach((x, i) => { const monte = i % 2 === 0; if (i) cyc.push([x, monte ? 0 : haut]); cyc.push([x, monte ? haut : 0]); });
+  if (xs.length % 2) cyc.push([xs[xs.length - 1], 0]);
+  cyc.push([xs[0], 0]);
+  const long = [0];
+  for (let i = 1; i < cyc.length; i++) long.push(long[i - 1] + Math.abs(cyc[i][0] - cyc[i - 1][0]) + Math.abs(cyc[i][1] - cyc[i - 1][1]));
+  const tour = long[long.length - 1];
+  const eps = 1e-9;
+  const sDe = ([x, y]) => {
+    for (let i = 1; i < cyc.length; i++) {
+      const [x0, y0] = cyc[i - 1], [x1, y1] = cyc[i];
+      const surV = Math.abs(x0 - x1) < eps && Math.abs(x - x0) < eps && y >= Math.min(y0, y1) - eps && y <= Math.max(y0, y1) + eps;
+      const surH = Math.abs(y0 - y1) < eps && Math.abs(y - y0) < eps && x >= Math.min(x0, x1) - eps && x <= Math.max(x0, x1) + eps;
+      if (surV || surH) return long[i - 1] + Math.abs(x - x0) + Math.abs(y - y0);
+    }
+    return 0;
+  };
+  const pointA = (s) => {
+    s = ((s % tour) + tour) % tour;
+    for (let i = 1; i < cyc.length; i++) {
+      if (s <= long[i] + eps) {
+        const [x0, y0] = cyc[i - 1], [x1, y1] = cyc[i], d = long[i] - long[i - 1], f = d ? (s - long[i - 1]) / d : 0;
+        return [x0 + (x1 - x0) * f, y0 + (y1 - y0) * f];
+      }
+    }
+    return cyc[0];
+  };
+  const troncon = (p, q, mode) => {
+    if (mode === 'serpentin') {
+      const s0 = sDe(p);
+      let L = sDe(q) - s0;
+      if (L < -eps) L += tour;
+      const pts = [p];
+      for (const k of [...long.slice(1), ...long.slice(1).map((v) => v + tour)]) if (k > s0 + eps && k < s0 + L - eps) pts.push(pointA(k));
+      pts.push(q);
+      return { L, pts };
+    }
+    if (Math.abs(p[0] - q[0]) < eps) return { L: Math.abs(p[1] - q[1]), pts: [p, q] };
+    return { L: p[1] + Math.abs(p[0] - q[0]) + q[1], pts: [p, [p[0], 0], [q[0], 0], q] };
+  };
+  // Un tour : quai → les points dans l'ordre (deux prélèvements de suite au même point n'en font qu'un) → quai.
+  const longueurTour = (points, mode) => {
+    const seq = [quai];
+    points.forEach((p) => { const z = seq[seq.length - 1]; if (Math.abs(z[0] - p[0]) > eps || Math.abs(z[1] - p[1]) > eps) seq.push(p); });
+    if (seq.length === 1) return { L: 0, pts: [] };
+    seq.push(quai);
+    let L = 0, pts = [];
+    for (let i = 1; i < seq.length; i++) { const t = troncon(seq[i - 1], seq[i], mode); L += t.L; pts = pts.concat(i > 1 ? t.pts.slice(1) : t.pts); }
+    return { L, pts };
+  };
+  const distincts = [];
+  lignes.forEach((l) => { const p = point(l.a); if (!distincts.some((q) => q[0] === p[0] && q[1] === p[1])) distincts.push(p); });
+  if (distincts.length > 8) err('plus de 8 points de prélèvement : le meilleur tour ne se calcule plus par essais');
+  const meilleur = (mode) => {
+    let best = Infinity;
+    const perm = (reste, fait) => {
+      if (!reste.length) { best = Math.min(best, longueurTour(fait, mode).L); return; }
+      reste.forEach((p, i) => perm(reste.filter((_, j) => j !== i), [...fait, p]));
+    };
+    perm(distincts, []);
+    return best;
+  };
+  Object.assign(M, { C, lignes, desordre, support, classe, plein, pick0, minPick, ruptures, point, longueurTour,
+    tourLong: tour, cycle: cyc, metres: m, haut,
+    meilleur: { serpentin: meilleur('serpentin'), retour: meilleur('retour') } });
+}
+
+const etatPrepNeuf = () => ({ faits: [], pick: {}, vides: [], reappros: [], essaisReserve: [], parcours: null,
+  fin: false, film: '', etiq: {}, verifie: false, verifs: 0, premierGeste: null });
+
+// Tout ce que la préparation calcule sur une base (état de l'élève) : lu par la vue, les jalons, la note.
+function calculPrep(M, e) {
+  const faits = e.faits || [];
+  const C = M.C;
+  const prelev = (l) => faits.filter((f) => f.a === l.a).reduce((t, f) => t + f.q, 0);
+  const hors = {};
+  faits.forEach((f) => { if (!M.lignes.some((l) => l.a === f.a)) hors[f.a] = { a: f.a, k: f.k, q: (hors[f.a] ? hors[f.a].q : 0) + f.q }; });
+  const horsCommande = Object.values(hors);
+  const justes = M.lignes.filter((l) => prelev(l) === l.q).length;
+  const lignesJustes = justes === M.lignes.length && !horsCommande.length;
+  // La palette : deux prélèvements de suite à la même adresse font une seule couche (on complète la
+  // couche du dessus), comme le ferait un préparateur.
+  const couches = [];
+  faits.forEach((f) => {
+    const z = couches[couches.length - 1];
+    if (z && z.a === f.a) z.q += f.q; else couches.push({ a: f.a, k: f.k, q: f.q });
+  });
+  const carton = (k) => M.produits[k].carton;
+  const hauteur = M.support.h + couches.reduce((t, c) => t + Math.ceil(c.q / carton(c.k).parCouche) * carton(c.k).h, 0);
+  const poids = Math.round(M.support.kg + faits.reduce((t, f) => t + f.q * carton(f.k).kg, 0));
+  // « Jamais une classe plus lourde posée sur une classe plus fragile » (§6.2), en deux critères.
+  let nonLourd = false, okLourds = true;
+  faits.forEach((f) => { if (M.classe(f.k) === 'lourd' && nonLourd) okLourds = false; if (M.classe(f.k) !== 'lourd') nonLourd = true; });
+  const okFragiles = !faits.some((f, i) => M.classe(f.k) === 'fragile' && faits.slice(i + 1).some((g) => M.classe(g.k) !== 'fragile'));
+  const tours = parseInt(e.film, 10);
+  const etq = ETIQUETTES.map((x) => x[0]).filter((k) => (e.etiq || {})[k]).sort().join(',');
+  const virg = (x) => x.toFixed(2).replace('.', ',');
+  const regles = [
+    { id: 'lourds', crit: 'lourds en bas', ok: okLourds, txt: 'un carton lourd a été posé sur un carton plus léger : les lourds se prélèvent en premier, ils font la base de la palette' },
+    { id: 'fragiles', crit: 'fragiles en haut', ok: okFragiles, txt: 'des cartons ont été posés sur un carton fragile : les fragiles se prélèvent en dernier' },
+    { id: 'poids', crit: 'poids', ok: poids <= C.kgMax, txt: `la palette dépasse le poids maximum du transporteur (${C.kgMax} kg)` },
+    { id: 'hauteur', crit: 'hauteur', ok: hauteur <= C.hMax + 1e-9, txt: `la palette dépasse la hauteur maximum du transporteur (${virg(C.hMax)} m)` },
+    { id: 'film', crit: 'film', ok: tours >= 3 && tours <= 5, txt: '3 à 5 tours de film, du socle au sommet' },
+    { id: 'etiquettes', crit: 'étiquettes', ok: etq === 'arriere,avant,dessus' || etq === 'dessus,droite,gauche', txt: 'une étiquette sur deux côtés opposés et une sur le dessus' },
+  ];
+  const mode = e.parcours || 'serpentin';
+  const T = M.longueurTour(faits.map((f) => M.point(f.a)), mode);
+  const nbTours = mode === 'serpentin' && T.L > 0 ? Math.round(T.L / M.tourLong) : 0;
+  const reappro = M.ruptures.length > 0 && M.ruptures.every((a) => (e.reappros || []).some((r) => r.pour === a));
+  return { faits, prelev, horsCommande, justes, lignesJustes, couches, hauteur, poids, regles, metres: T.L, trace: T.pts,
+    tours: nbTours, mode, reappro };
+}
+// Le meilleur tour auquel l'élève se compare : en évaluation, le parcours est à choisir (allées à double
+// sens) et le meilleur des deux compte (comme la maquette) ; sinon, le serpentin imposé.
+const meilleurTour = (M, temps) => (temps === 'evaluation' ? Math.min(M.meilleur.serpentin, M.meilleur.retour) : M.meilleur.serpentin);
+
+function jalonsPrep(M, e, temps) {
+  const X = calculPrep(M, e);
+  const best = meilleurTour(M, temps);
+  const juge = (j) => {
+    if (j.type === 'lignesJustes') return X.lignesJustes;
+    if (j.type === 'reappro') return X.reappro;
+    if (CRIT_PALETTE.includes(j.type)) return X.lignesJustes && X.regles.find((r) => r.id === j.type).ok;
+    if (j.type === 'parcours') {
+      const garde = j.garde === 'lignesJustes' ? X.lignesJustes : X.faits.length > 0;
+      return garde && X.metres <= best + 1e-6;
+    }
+    return false;
+  };
+  return M.jalons.map((j) => ({ id: j.id, lib: j.lib, type: j.type, ok: juge(j) }));
 }
 
 // Les fautes de la palette `id` si elle était posée en `a`, les autres palettes de l'élève restant où
@@ -249,19 +479,25 @@ function solutions(M, id) {
   return [...M.litiges, ...M.toutes].filter((a) => !M.stock[a] && !fautes(M, {}, id, a).length);
 }
 
-export function etatNeuf() {
+export function etatNeuf(mode) {
+  if (mode === 'preparation') return etatPrepNeuf();
   return { place: {}, verifie: false, verifs: 0, premierGeste: null, aideCharge: true };
 }
-const etatDe = (db, P) => (db && db.entrepots && db.entrepots[P.id]) || etatNeuf();
+const etatDe = (db, P) => (db && db.entrepots && db.entrepots[P.id]) || etatNeuf(P.mode);
 
-// Les jalons d'une base : une palette est juste si elle est posée ET qu'aucun critère n'est faux à son
-// adresse. Non posée = faux (l'inaction ne rapporte rien).
-export function jalonsEntrepot(db, P) {
+// Les jalons d'une base. Rangement : une palette est juste si elle est posée ET qu'aucun critère n'est
+// faux à son adresse ; non posée = faux (l'inaction ne rapporte rien). Préparation : voir `jalonsPrep`.
+// `temps` ne compte que pour le parcours de la préparation (en évaluation, le meilleur des deux).
+export function jalonsEntrepot(db, P, temps = P.temps) {
   const M = compiler(P);
   const e = etatDe(db, P);
-  const place = e.place || {};
-  const L = M.jalons.map((j) => ({ id: j.id, lib: j.lib, palette: j.palette,
-    ok: !!place[j.palette] && !fautes(M, place, j.palette, place[j.palette]).length }));
+  let L;
+  if (M.mode === 'preparation') L = jalonsPrep(M, Object.assign(etatPrepNeuf(), e), temps);
+  else {
+    const place = e.place || {};
+    L = M.jalons.map((j) => ({ id: j.id, lib: j.lib, palette: j.palette,
+      ok: !!place[j.palette] && !fautes(M, place, j.palette, place[j.palette]).length }));
+  }
   return { L, ok: L.filter((l) => l.ok).length, total: L.length };
 }
 
@@ -277,11 +513,18 @@ export function etapesEntrepot(P) {
 }
 
 // La note d'évaluation : jalons réussis / jalons × `note.sur` (comme le Planning).
-export function noteEntrepot(db, P) {
+export function noteEntrepot(db, P, temps = P.temps) {
   const N = Object.assign({ sur: 20 }, P.note || {});
-  const { L, ok, total } = jalonsEntrepot(db, P);
+  const { L, ok, total } = jalonsEntrepot(db, P, temps);
   const e = etatDe(db, P);
-  return { score: total ? Math.round(ok / total * N.sur * 100) / 100 : 0, max: N.sur, ok, total,
+  const score = total ? Math.round(ok / total * N.sur * 100) / 100 : 0;
+  if (compiler(P).mode === 'preparation') {
+    const X = calculPrep(compiler(P), Object.assign(etatPrepNeuf(), e));
+    return { score, max: N.sur, ok, total,
+      detail: { jalons: L.map((l) => ({ jalon: l.lib, ok: l.ok })), metres: Math.round(X.metres), tours: X.tours,
+        parcours: X.mode, essaisReserve: (e.essaisReserve || []).length, verifs: e.verifs || 0, premierGeste: e.premierGeste || null } };
+  }
+  return { score, max: N.sur, ok, total,
     detail: { jalons: L.map((l) => ({ jalon: l.lib, ok: l.ok, adresse: (e.place || {})[l.palette] || null })),
       verifs: e.verifs || 0, premierGeste: e.premierGeste || null } };
 }
@@ -291,6 +534,17 @@ export function bonnesReponses(P) {
   const M = compiler(P);
   return Object.fromEntries(Object.keys(M.pal).map((id) => [id, solutions(M, id)]));
 }
+// Ce que la préparation attend (page d'essai, côté enseignant, tests) : les meilleurs tours, et la
+// palette montée dans l'ordre du serpentin. JAMAIS montré à l'élève.
+export function attendusPreparation(P) {
+  const M = compiler(P);
+  const juste = calculPrep(M, Object.assign(etatPrepNeuf(), { faits: M.lignes.map((l) => ({ a: l.a, k: l.produit, q: l.q })) }));
+  const desordre = calculPrep(M, Object.assign(etatPrepNeuf(), { faits: M.desordre.map((i) => M.lignes[i]).map((l) => ({ a: l.a, k: l.produit, q: l.q })) }));
+  return { serpentin: M.meilleur.serpentin, retour: M.meilleur.retour, poids: juste.poids, hauteur: juste.hauteur,
+    ordreSerpentin: juste.metres, desordre: { metres: desordre.metres, tours: desordre.tours } };
+}
+// Ce qu'une base donne en préparation (tests) : mètres, tours, poids, hauteur, règles de la palette.
+export function calculPreparation(P, e) { return calculPrep(compiler(P), Object.assign(etatPrepNeuf(), e)); }
 // Les fautes d'une palette posée à une adresse (tests : « chaque piège nomme son critère, et lui seul »).
 export function fautesEntrepot(P, id, a, place = {}) { return fautes(compiler(P), place, id, a); }
 
@@ -323,7 +577,11 @@ function geometrie(M) {
 export function creerEntrepot(P, opts = {}) {
   const M = compiler(P);
   const G = geometrie(M);
-  const ui = { main: null, trav: null, msg: '', msgType: '', anim: false, regles: false, confirmer: false, focus: null };
+  const PREP = M.mode === 'preparation';
+  // `empl` : la fiche de prélèvement ouverte ; `reappro` : le picking qu'on réapprovisionne (on attend le
+  // clic sur la palette de réserve) ; `voir` : la palette de commande ouverte ; `nb` : la saisie en cours.
+  const ui = { main: null, trav: null, msg: '', msgType: '', anim: false, regles: false, confirmer: false, focus: null,
+    empl: null, reappro: null, voir: false, nb: '' };
 
   const tempsDe = (api) => (opts.copie ? 'evaluation' : P.temps || (api && api.temps) || 'guidage');
   function regime(api) {
@@ -331,12 +589,16 @@ export function creerEntrepot(P, opts = {}) {
     const rendue = !!(api && api.copieRendue && api.copieRendue());
     return { t, g: t === 'guidage', entr: t === 'entrainement', eval: t === 'evaluation', rendue,
       fige: t === 'evaluation' && rendue,
-      bandes: t === 'guidage', parcours: t !== 'evaluation', regles: t !== 'evaluation', aideCharge: t !== 'evaluation' };
+      bandes: t === 'guidage' && !PREP, parcours: t !== 'evaluation', regles: t !== 'evaluation', aideCharge: t !== 'evaluation' && !PREP };
   }
   const produit = (p) => M.produits[p.produit];
   const nomPal = (p) => p.nom || produit(p).nom;
   const court = (k) => { const p = M.produits[k]; return p.court || String(p.nom).split(' ')[0]; };
-  const etatEmp = (place, a) => (M.hs.has(a) ? 'hs' : M.stock[a] ? 'stock' : M.occupant(place, a) ? 'eleve' : 'libre');
+  // En préparation, une palette de réserve descendue au picking libère son emplacement (`vides`).
+  const etatEmp = (e, a) => (M.hs.has(a) ? 'hs' : M.stock[a] && !(e.vides || []).includes(a) ? 'stock' : M.occupant(e.place, a) ? 'eleve' : 'libre');
+  // Le grand espace montre la vue ouverte (sinon le plan) : une travée, et en préparation la fiche de
+  // prélèvement ou la palette de commande (toujours elle, une fois la préparation terminée).
+  const vueOuverte = (e, R) => (PREP ? !!(ui.trav || ui.empl || ui.voir || e.fin || R.fige) : !!ui.trav);
 
   /* ----------------------------------------------------------- les gestes */
   function noterGeste(e) { if (!e.premierGeste) e.premierGeste = Date.now(); }
@@ -363,7 +625,7 @@ export function creerEntrepot(P, opts = {}) {
   /* ----------------------------------------------- l'adresse qui se construit */
   function htmlAdresse(e, R, survol) {
     const t = ui.trav ? decoupe(`${ui.trav}-N1-E1`) : null;
-    const s = survol ? decoupe(survol) : null;
+    const s = survol ? decoupe(survol) : ui.empl ? decoupe(ui.empl) : null;
     const v = [t && t.c, t && `T${pad2(t.t)}`, s && `N${s.n}`, s && `E${s.e}`];
     const lib = ['allée · côté', 'travée', 'niveau', 'emplacement'];
     const prochain = v.findIndex((x) => !x);
@@ -372,6 +634,7 @@ export function creerEntrepot(P, opts = {}) {
     return `<span class="pe-lbl">Adresse</span>${cases}<span class="pe-consigne" data-pe-consigne>${consigne(e, R)}</span>`;
   }
   function consigne(e, R) {
+    if (PREP) return consignePrep(e, R);
     const n = (k, txt) => `<span class="pe-num">${k}</span>${txt}`;
     const nb = Object.keys(e.place).length, total = Object.keys(M.pal).length;
     if (R.fige) return n('✓', 'Copie rendue. Le résultat sera donné par votre enseignant.');
@@ -494,7 +757,7 @@ export function creerEntrepot(P, opts = {}) {
     // l'allée principale (flèches de sens unique)
     s += `<rect x="16" y="${yPr}" width="${W - 32}" height="54" fill="var(--pe-sol2)"/>
       <line x1="16" y1="${yPr}" x2="${W - 16}" y2="${yPr}" stroke="var(--pe-jaune-sol)" stroke-width="4"/><line x1="16" y1="${yPr + 54}" x2="${W - 16}" y2="${yPr + 54}" stroke="var(--pe-jaune-sol)" stroke-width="4"/>
-      <line x1="360" y1="${yPr + 18}" x2="240" y2="${yPr + 18}" stroke="var(--pe-jaune-sol)" stroke-width="3" marker-end="url(#peFl)"/><line x1="60" y1="${yPr + 36}" x2="180" y2="${yPr + 36}" stroke="var(--pe-jaune-sol)" stroke-width="3" marker-end="url(#peFl)"/>
+      ${PREP && R.eval ? '' : `<line x1="360" y1="${yPr + 18}" x2="240" y2="${yPr + 18}" stroke="var(--pe-jaune-sol)" stroke-width="3" marker-end="url(#peFl)"/><line x1="60" y1="${yPr + 36}" x2="180" y2="${yPr + 36}" stroke="var(--pe-jaune-sol)" stroke-width="3" marker-end="url(#peFl)"/>`}
       <text x="380" y="${yPr + 32}" font-size="13" font-weight="700" fill="${soft}" ${TXT}>ALLÉE PRINCIPALE</text>`;
     // les bandes de rotation (guidage) : A près des quais, puis B, puis C au fond
     if (R.bandes && P.plan.rotation) {
@@ -543,8 +806,11 @@ export function creerEntrepot(P, opts = {}) {
     }
     const pals = Object.values(M.pal), rangs = Math.max(1, Math.ceil(pals.length / 2));
     const hR = rangs * 76 + 34, yR = yPr - 6 - hR;
-    s += `<rect x="${ZX}" y="${yR}" width="${ZW}" height="${hR}" fill="none" stroke="var(--pe-jaune-sol)" stroke-width="3" stroke-dasharray="12 6"/>
-      <text x="${ZX + 10}" y="${yR + 20}" font-size="13" font-weight="800" fill="${ink}" ${TXT}>ZONE DE RÉCEPTION</text>`;
+    if (PREP) s += htmlPlanPrep(e, R);
+    else {
+      s += `<rect x="${ZX}" y="${yR}" width="${ZW}" height="${hR}" fill="none" stroke="var(--pe-jaune-sol)" stroke-width="3" stroke-dasharray="12 6"/>
+        <text x="${ZX + 10}" y="${yR + 20}" font-size="13" font-weight="800" fill="${ink}" ${TXT}>ZONE DE RÉCEPTION</text>`;
+    }
     pals.forEach((p, i) => {
       if (e.place[p.id]) return;
       const x = ZX + 16 + (i % 2) * 94, yp = yR + 32 + Math.floor(i / 2) * 76, on = ui.main === p.id;
@@ -556,7 +822,8 @@ export function creerEntrepot(P, opts = {}) {
     // les quais, sur le mur du bas
     (M.zones.quais || []).forEach((q, i) => {
       const x = 270 + i * 100;
-      s += `<rect x="${x}" y="${H - 24}" width="80" height="15" fill="var(--pe-jaune-sol)"/><text x="${x + 40}" y="${H - 12}" text-anchor="middle" font-size="10.5" font-weight="800" fill="#1a1915" ${TXT}>${ech(q)}</text>`;
+      const lib = PREP && q === M.C.quai && M.C.enlevement ? `${q} · ${M.C.enlevement}` : q;
+      s += `<rect x="${x}" y="${H - 24}" width="80" height="15" fill="var(--pe-jaune-sol)"/><text x="${x + 40}" y="${H - 12}" text-anchor="middle" font-size="10.5" font-weight="800" fill="#1a1915" ${TXT}>${ech(lib)}</text>`;
     });
     s += `<g transform="translate(${W - 30},20)"><circle r="12" fill="var(--panneau)" stroke="${soft}"/><path d="M0,-8 L3.5,3.5 L0,1 L-3.5,3.5 z" fill="${ink}"/><text x="-18" y="4" text-anchor="middle" font-size="10" font-weight="800" fill="${ink}" ${TXT}>N</text></g>`;
     return `<svg class="pe-svg-plan" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Plan de l'entrepôt, travées cliquables">${s}</svg>`;
@@ -575,7 +842,7 @@ export function creerEntrepot(P, opts = {}) {
         <rect x="${lisseX}" y="${y + 5}" width="3" height="${TH - 10}" fill="var(--pe-lisse)"/>
         <text x="${x + RW / 2}" y="${y + 24}" text-anchor="middle" class="pe-mono" font-size="15" font-weight="800" fill="var(--encre)">T${pad2(t)}</text>`;
       for (let n = 1; n <= M.N; n++) for (let e2 = 1; e2 <= M.E; e2++) {
-        const a = adresse(c, t, n, e2), st = etatEmp(e.place, a);
+        const a = adresse(c, t, n, e2), st = etatEmp(e, a);
         const fill = st === 'stock' ? 'var(--pe-gris)' : st === 'eleve' ? 'var(--pe-carton)' : st === 'hs' ? 'url(#peHach)' : 'var(--panneau)';
         s += `<rect x="${(x + 13 + (e2 - 1) * cw).toFixed(1)}" y="${(y + 82 - n * ch).toFixed(1)}" width="${(cw - 2).toFixed(1)}" height="${(ch - 4).toFixed(1)}" fill="${fill}" stroke="${st === 'hs' ? 'var(--rouge)' : 'var(--pe-gris-trait)'}" stroke-width=".8" data-pe-mini="${a}" data-pe-etat="${st}"/>`;
       }
@@ -599,11 +866,15 @@ export function creerEntrepot(P, opts = {}) {
     for (let n = 1; n <= M.N; n++) {
       const yb = Y(n), total = M.chargeNiveau(e.place, { c: d.c, t: d.t, n }, null);
       for (let k = 1; k <= M.E; k++) {
-        const a = adresse(d.c, d.t, n, k), st = M.stock[a], p = M.occupant(e.place, a), hs = M.hs.has(a), x = XG + (k - 1) * PW;
-        const lib = st ? `${court(st.produit)}, ${kg(st.kg)}` : p ? `votre palette ${p}, ${kg(M.pal[p].kg)}` : hs ? 'hors service' : 'libre';
+        const a = adresse(d.c, d.t, n, k), p = M.occupant(e.place, a), hs = M.hs.has(a), x = XG + (k - 1) * PW;
+        const st = PREP && (e.vides || []).includes(a) ? null : M.stock[a];
+        const lib = st ? (PREP ? `${court(st.produit)}, ${n === 1 ? `picking, ${pickDe(e, a)} cartons` : 'réserve'}` : `${court(st.produit)}, ${kg(st.kg)}`)
+          : p ? `votre palette ${p}, ${kg(M.pal[p].kg)}` : hs ? 'hors service' : 'libre';
         s += `<g class="pe-emp" data-pe-emp="${a}" data-pe-cle="emp:${a}" tabindex="0" role="button" aria-label="${a} : ${ech(lib)}">
           <rect class="pe-cible" x="${x + 3}" y="${yb - 116}" width="${PW - 6}" height="112" rx="3" fill="${hs ? 'url(#peHachF)' : 'transparent'}" stroke="transparent"/>`;
-        if (st || p) {
+        const contenuPrep = PREP ? empPrep(e, a, n, x, yb, PW) : null;
+        if (contenuPrep) s += contenuPrep;
+        else if (st || p) {
           s += `<rect x="${x + 14}" y="${yb - 92}" width="${PW - 28}" height="78" fill="${p ? 'var(--pe-carton)' : 'var(--pe-gris)'}" stroke="${p ? 'var(--pe-carton-trait)' : 'var(--pe-gris-trait)'}" stroke-width="${p ? 2.5 : 1}"/>
             <rect x="${x + 14}" y="${yb - 14}" width="${PW - 28}" height="11" fill="#a87b45"/>
             <text x="${x + PW / 2}" y="${yb - 58}" text-anchor="middle" font-size="13" font-weight="${p ? 800 : 600}" fill="${p ? '#1a1915' : 'var(--pe-sur-gris)'}" ${TXT}>${ech(p || court(st.produit))}</text>
@@ -619,7 +890,7 @@ export function creerEntrepot(P, opts = {}) {
       // étiquette du niveau, plaque de charge, et l'aide « déjà posé » (désactivable, coupée en évaluation)
       const py = n === 1 ? yb + 8 : yb - 2, xr = XG + M.E * PW;
       s += `<rect x="${XG + 4}" y="${py}" width="132" height="18" rx="2" fill="var(--panneau)" stroke="var(--encre-douce)"/><text x="${XG + 70}" y="${py + 14}" text-anchor="middle" class="pe-mono" font-size="12" font-weight="800" fill="var(--encre)">${ech(d.c)}-T${pad2(d.t)}-N${n}</text>`;
-      s += `<rect x="${xr - 168}" y="${py}" width="164" height="18" rx="2" fill="var(--pe-plaque)" data-pe-plaque="${n}"/><text x="${xr - 86}" y="${py + 14}" text-anchor="middle" class="pe-mono" font-size="12" font-weight="800" fill="#1a1915">max ${kg(c.charge[n])} / niveau</text>`;
+      if (!PREP) s += `<rect x="${xr - 168}" y="${py}" width="164" height="18" rx="2" fill="var(--pe-plaque)" data-pe-plaque="${n}"/><text x="${xr - 86}" y="${py + 14}" text-anchor="middle" class="pe-mono" font-size="12" font-weight="800" fill="#1a1915">max ${kg(c.charge[n])} / niveau</text>`;
       if (R.aideCharge && e.aideCharge !== false) {
         const trop = total > c.charge[n], xd = xr - 172 - 150;
         s += `<rect x="${xd}" y="${py}" width="146" height="18" rx="2" fill="var(--panneau)" stroke="${trop ? 'var(--rouge)' : 'var(--encre-douce)'}" stroke-width="${trop ? 2 : 1}"/>
@@ -640,27 +911,433 @@ export function creerEntrepot(P, opts = {}) {
       ${aide}<button type="button" class="btn btn-p pe-retour" data-pe="retour" data-pe-cle="b:retour">← Retour au plan</button></div>`;
   }
 
+  /* ================================================== PRÉPARATION : la vue */
+  const virg = (x, d = 2) => Number(x).toFixed(d).replace('.', ',');
+  const reserve = `N2${M.N > 2 ? `-N${M.N}` : ''}`;
+  const ordreLignes = (R) => (R.g ? M.lignes.map((_, i) => i) : M.desordre);
+  const pickDe = (e, a) => (a in (e.pick || {}) ? e.pick[a] : M.pick0(a));
+  const prochaine = (R, X) => ordreLignes(R).map((i) => M.lignes[i]).find((l) => X.prelev(l) < l.q) || null;
+  const travDe = (a) => { const d = decoupe(a); return `${d.c}-T${pad2(d.t)}`; };
+  const quaiLib = (q) => String(q || '').replace(/^QUAI\s*/i, 'quai n° ');
+
+  function consignePrep(e, R) {
+    const n = (k, txt) => `<span class="pe-num">${k}</span>${txt}`;
+    if (R.fige) return n('✓', 'Copie rendue. Le résultat sera donné par votre enseignant.');
+    if (e.fin) {
+      if (e.verifie) return n('✓', 'Lisez votre bilan. <b>Reprendre la préparation</b> pour corriger.');
+      return n(4, `Filmez et étiquetez la palette, puis cliquez <b>${R.eval ? 'Rendre mon travail' : 'Vérifier ma préparation'}</b>.`);
+    }
+    if (ui.reappro) return n('↻', `Réapprovisionnement : cliquez une palette de <b>réserve</b> (${reserve}) de la même référence.`);
+    if (R.eval && !e.parcours) return n(1, 'Choisissez votre <b>parcours</b> (en haut à droite).');
+    if (ui.empl) return n(3, 'Saisissez le nombre de cartons à prélever, puis cliquez <b>Prélever</b>.');
+    const X = calculPrep(M, e), s = prochaine(R, X);
+    if (!s) return n('✓', 'Toutes les lignes sont prélevées. Cliquez <b>Terminer la préparation</b> (en haut).');
+    if (!ui.trav || ui.voir) {
+      if (R.g) return n(1, `Ligne ${ordreLignes(R).indexOf(M.lignes.indexOf(s)) + 1} : cliquez la travée <b>${ech(travDe(s.a))}</b> sur le plan.`);
+      return n(1, 'Choisissez la ligne suivante du bon et cliquez sa <b>travée</b> sur le plan.');
+    }
+    return n(2, 'Cliquez l’emplacement de <b>picking</b> (niveau N1) de la ligne.');
+  }
+
+  // Le bandeau : le personnage, le bon de préparation (une carte par ligne), les boutons.
+  function htmlBandeauPrep(e, R) {
+    const per = P.personnage || {}, C = M.C, X = calculPrep(M, e);
+    const ici = R.g && !e.fin ? prochaine(R, X) : null;
+    const cartes = ordreLignes(R).map((i, j) => {
+      const l = M.lignes[i], pr = X.prelev(l), cl = M.classe(l.produit), p = M.produits[l.produit];
+      return `<div class="pe-ligne${ici === l ? ' pe-ici' : ''}" data-pe-ligne="${i}" title="${ech(`${p.nom} · ${String(p.carton.kg).replace('.', ',')} kg le carton`)}">
+        <span class="pe-ttl"><span class="pe-pid">${j + 1}</span><span class="pe-mono">${ech(l.a)}</span></span>
+        <span class="pe-des">${ech(court(l.produit))}${cl === 'lourd' ? ' <span class="pe-tag">LOURD</span>' : ''}${cl === 'fragile' ? ' <span class="pe-tag pe-fragile">FRAGILE</span>' : ''}</span>
+        <span>cde <b class="pe-mono">${l.q}</b> · prél. <b class="pe-mono" data-pe-prel="${i}">${pr || '…'}</b></span></div>`;
+    }).join('');
+    const verrou = e.faits.length || R.fige ? 'disabled' : '';
+    const choix = R.eval ? `<fieldset class="pe-choix"><legend>Mon parcours</legend>
+        <label title="On monte la première allée, on traverse en haut, on redescend la suivante."><input type="radio" name="peParcours" value="serpentin" data-pe-cle="b:serpentin" ${e.parcours === 'serpentin' ? 'checked' : ''} ${verrou}> <b>Serpentin</b></label>
+        <label title="On entre dans chaque allée par l’allée principale et on ressort par le même bout."><input type="radio" name="peParcours" value="retour" data-pe-cle="b:retour-parcours" ${e.parcours === 'retour' ? 'checked' : ''} ${verrou}> <b>Retour</b></label></fieldset>` : '';
+    const actif = e.faits.length && !e.fin && !R.fige ? '' : 'disabled';
+    const RG = P.regles;
+    const regles = R.regles && RG ? `<details class="pe-regles" data-pe-regles ${ui.regles ? 'open' : ''}><summary data-pe-cle="b:regles">${ech(RG.titre || 'Les règles')} ▾</summary>
+      <div class="pe-regles-corps"><b>${ech(RG.entete || 'Les règles de la préparation')}</b><ol>${(RG.lignes || []).map((l) => `<li>${l}</li>`).join('')}</ol>
+      ${RG.encadre ? `<div class="pe-encadre">${RG.encadre}</div>` : ''}</div></details>` : '';
+    return `<div class="pe-bandeau pe-bandeau-prep">
+      <div class="pe-perso"><b>${ech([per.nom, per.role].filter(Boolean).join(', '))}${per.date ? ` · ${ech(per.date)}` : ''}</b>${(per.texte || {})[R.t] || ''}</div>
+      <div class="pe-liste"><h3 class="pe-bon">Bon de préparation <b class="pe-mono">${ech(C.num || '')}</b> · ${ech(C.client || '')} · enlèvement ${ech(C.enlevement || '')} · ${ech(C.transporteur || '')}, <span data-pe-heure>${ech(C.heure || '')}</span>${C.quai ? ` · ${ech(quaiLib(C.quai))}` : ''}</h3>
+        <div class="pe-cartes">${cartes}</div></div>
+      <div class="pe-act">${choix}
+        <button type="button" class="btn btn-p" data-pe="terminer" data-pe-cle="b:terminer" ${actif}>Terminer la préparation</button>
+        <button type="button" class="btn" data-pe="reposer" data-pe-cle="b:reposer" ${actif}>↶ Reposer le dernier</button>${regles}</div></div>`;
+  }
+
+  // La colonne de côté : picking / réserve, le compteur de mètres, ce qui est hors commande.
+  function htmlCotePrep(e, R, api) {
+    const X = calculPrep(M, e);
+    let h = '';
+    if (!vueOuverte(e, R)) {
+      h += `<div class="pe-msg-cote pe-msg ${ui.msgType ? `pe-${ui.msgType}` : ''}" data-pe-msg-plan>${ui.msg}</div>`;
+      h += '<div class="pe-astuce">Cliquez une <b>travée</b> sur le plan : elle s’ouvre en grand, vue de face.</div>';
+    }
+    const mode = e.parcours || (R.eval ? null : 'serpentin');
+    h += `<div class="pe-metres" data-pe-metres><span class="pe-t">N1 = picking · ${reserve} = réserve</span>
+      <span>Parcours ${mode ? `<b>${mode}</b>` : 'à choisir'} : <b class="pe-mono" data-pe-m>${Math.round(X.metres)} m</b>${X.tours > 1 ? ` <b class="${R.eval ? '' : 'pe-ko'}" data-pe-tours>· ${X.tours} tours</b>` : ''}</span>
+      <span class="pe-petit">(retour au quai compris)</span></div>`;
+    if (X.horsCommande.length) h += `<div class="pe-hors">Aussi sur la palette : ${X.horsCommande.map((x) => `<span class="pe-mono">${ech(x.a)}</span> × ${x.q}`).join(', ')}</div>`;
+    h += `<div class="pe-implant"><span class="pe-t">Implantation :</span>${M.ordre.map((c) => `<span><b>${ech(c)}</b> ${ech(M.cotes[c].gammes.map(M.nomGamme).join(' + '))}</span>`).join('')}</div>`;
+    h += `<div class="pe-legende"><span><i class="pe-puce pe-p-stock"></i>occupé</span><span><i class="pe-puce pe-p-hs"></i>hors service</span><span><i class="pe-puce"></i>libre</span></div>`;
+    if (api.estProf) {
+      const A = attendusPreparation(P);
+      h += `<details class="pe-prof"><summary>Côté enseignant : attendus</summary>
+        <div>Meilleur tour : serpentin <b>${Math.round(A.serpentin)} m</b>, retour <b>${Math.round(A.retour)} m</b></div>
+        <div>Liste dans le désordre suivie en serpentin : ${Math.round(A.desordre.metres)} m (${A.desordre.tours} tours)</div>
+        <div>Palette dans l’ordre du bon : ${A.poids} kg, ${virg(A.hauteur)} m</div>
+        ${M.ruptures.length ? `<div>Rupture : <span class="pe-mono">${M.ruptures.map(ech).join(', ')}</span></div>` : ''}</details>`;
+    }
+    return `<aside class="pe-cote">${h}</aside>`;
+  }
+
+  // Sur le plan : le tracé du tour de l'élève, les numéros des lignes (guidage), la zone d'expédition.
+  function versSvg([xm, ym]) {
+    const m = M.metres, xsM = M.allees.map((_, i) => i * m.entreAllees), xsS = M.allees.map((al) => G.allees[al.id].cx);
+    const pxT = TH / m.travee;
+    let x;
+    if (xsM.length < 2 || xm <= xsM[0]) x = xsS[0] + (xm - xsM[0]) * pxT;
+    else if (xm >= xsM[xsM.length - 1]) x = xsS[xsS.length - 1] + (xm - xsM[xsM.length - 1]) * pxT;
+    else {
+      const i = xsM.findIndex((v, k) => xm >= v && xm <= xsM[k + 1]);
+      x = xsS[i] + (xm - xsM[i]) / (xsM[i + 1] - xsM[i]) * (xsS[i + 1] - xsS[i]);
+    }
+    const yPrC = G.yPr + 27, racks = m.avant + M.T * m.travee;
+    let y;
+    if (ym <= m.avant) y = yPrC + (G.yBas - yPrC) * (m.avant ? ym / m.avant : 1);
+    else if (ym <= racks) y = G.yBas - (ym - m.avant) / m.travee * TH;
+    else y = Y0 + (29 - Y0) * (m.arriere ? (ym - racks) / m.arriere : 1);
+    return [x, y];
+  }
+  function htmlPlanPrep(e, R) {
+    const X = calculPrep(M, e);
+    let s = '';
+    if (X.trace.length) {
+      const pts = X.trace.map(versSvg).map((p) => p.map((v) => v.toFixed(0)).join(',')).join(' ');
+      s += `<g transform="translate(7,-7)" pointer-events="none" data-pe-trace><polyline points="${pts}" fill="none" stroke="var(--terre)" stroke-width="5" stroke-linejoin="round" opacity=".85"/>`;
+      X.faits.forEach((f) => { const [x, y] = versSvg(M.point(f.a)); s += `<circle cx="${x.toFixed(0)}" cy="${y.toFixed(0)}" r="6" fill="var(--terre)"/>`; });
+      s += '</g>';
+    }
+    if (R.g) {
+      const vus = {};
+      M.lignes.forEach((l, i) => {
+        const d = decoupe(l.a), g = G.racks[d.c], cle = `${d.c}${d.t}`, j = vus[cle] = (vus[cle] == null ? -1 : vus[cle]) + 1;
+        const cx = j === 0 ? g.x + RW - 11 : g.x + 11, cy = G.yTrav(d.t) + 19, fait = X.prelev(l) === l.q;
+        s += `<g pointer-events="none" data-pe-numero="${i + 1}"><circle cx="${cx}" cy="${cy}" r="10" fill="${fait ? 'var(--panneau)' : 'var(--pe-plaque)'}" stroke="${fait ? 'var(--ardoise)' : 'var(--encre)'}" stroke-width="${fait ? 2 : 1.2}"/>
+          <text x="${cx}" y="${cy + 4.5}" text-anchor="middle" font-size="12" font-weight="800" fill="${fait ? 'var(--ardoise)' : '#1a1915'}" ${TXT}>${fait ? '✓' : i + 1}</text></g>`;
+      });
+    }
+    // la zone d'expédition et la palette de commande (cliquable)
+    const hR = 112, yR = G.yPr - 6 - hR, ZX = G.ZX, nb = X.faits.reduce((t, f) => t + f.q, 0);
+    s += `<rect x="${ZX}" y="${yR}" width="${ZW}" height="${hR}" fill="none" stroke="var(--pe-jaune-sol)" stroke-width="3" stroke-dasharray="12 6"/>
+      <text x="${ZX + 10}" y="${yR + 20}" font-size="13" font-weight="800" fill="var(--encre)" ${TXT}>ZONE D’EXPÉDITION</text>
+      <g class="pe-palq" data-pe-voir data-pe-cle="voir:plan" tabindex="0" role="button" aria-label="Palette de commande, ${nb} cartons">
+        <rect x="${ZX + 16}" y="${yR + 30}" width="${ZW - 32}" height="70" rx="3" fill="var(--pe-carton)" stroke="var(--pe-carton-trait)" stroke-width="2"/>
+        <text x="${ZX + ZW / 2}" y="${yR + 58}" text-anchor="middle" font-size="15" font-weight="800" fill="#1a1915" ${TXT}>Palette de commande</text>
+        <text x="${ZX + ZW / 2}" y="${yR + 82}" text-anchor="middle" font-size="14" font-weight="700" fill="#1a1915" ${TXT}>${nb} carton${nb > 1 ? 's' : ''} · ${kg(X.poids)}</text></g>`;
+    return s;
+  }
+
+  // Le contenu d'un emplacement dans la vue de face : N1 = picking (cartons, minimum), au-dessus = réserve.
+  function empPrep(e, a, n, x, yb, PW) {
+    const st = (e.vides || []).includes(a) ? null : M.stock[a];
+    if (!st) return null;
+    if (n === 1) {
+      const q = pickDe(e, a), mn = M.minPick(a), bas = q < mn;
+      return `<rect x="${x + 14}" y="${yb - 92}" width="${PW - 28}" height="78" fill="var(--pe-carton)" stroke="var(--pe-carton-trait)" stroke-width="1.5"/>
+        <rect x="${x + 14}" y="${yb - 14}" width="${PW - 28}" height="11" fill="#a87b45"/>
+        <text x="${x + PW / 2}" y="${yb - 70}" text-anchor="middle" font-size="13" font-weight="800" fill="#1a1915" ${TXT}>${ech(court(st.produit))}</text>
+        <rect x="${x + 26}" y="${yb - 62}" width="${PW - 52}" height="40" rx="2" fill="#fbfaf6" stroke="${bas ? 'var(--rouge)' : '#8a8478'}" stroke-width="${bas ? 2.5 : 1}" data-pe-bas="${bas}"/>
+        <text x="${x + PW / 2}" y="${yb - 45}" text-anchor="middle" font-size="14" font-weight="800" fill="${bas ? '#9d2727' : '#1a1915'}" ${TXT} data-pe-q="${a}">${q} ctn</text>
+        <text x="${x + PW / 2}" y="${yb - 28}" text-anchor="middle" font-size="12" font-weight="600" fill="${bas ? '#9d2727' : '#555047'}" ${TXT}>min ${mn}</text>`;
+    }
+    return `<rect x="${x + 14}" y="${yb - 92}" width="${PW - 28}" height="78" fill="var(--pe-gris)" stroke="var(--pe-gris-trait)" stroke-width="1"/>
+      <rect x="${x + 14}" y="${yb - 14}" width="${PW - 28}" height="11" fill="#a87b45"/>
+      <text x="${x + PW / 2}" y="${yb - 58}" text-anchor="middle" font-size="13" font-weight="700" fill="var(--pe-sur-gris)" ${TXT}>${ech(court(st.produit))}</text>
+      <text x="${x + PW / 2}" y="${yb - 38}" text-anchor="middle" font-size="12" fill="var(--pe-sur-gris)" ${TXT}>réserve</text>`;
+  }
+
+  // Une palette de cartons en perspective (fiche de prélèvement) : couches du dessous complètes, les
+  // cartons manquants sur la couche du dessus, ceux en trop posés dessus. Repris de la maquette (`pile`).
+  function pile([W, D, L], ecart) {
+    const cubes = [];
+    for (let z = 0; z < L; z++) for (let x = 0; x < W; x++) for (let y = 0; y < D; y++) cubes.push([x, y, z]);
+    if (ecart < 0) {
+      const hautC = [...cubes].sort((p, q) => (q[2] - p[2]) || ((p[0] + p[1]) - (q[0] + q[1]))).slice(0, -ecart);
+      hautC.forEach((h) => cubes.splice(cubes.indexOf(h), 1));
+    }
+    if (ecart > 0) for (let i = 0; i < ecart; i++) cubes.push([W - 1 - i % W, D - 1 - Math.floor(i / W) % D, L + Math.floor(i / (W * D))]);
+    const a = 30, k = 0.87, bh = 0.8;
+    const Pj = (x, y, z) => [(x - y) * a * k, (x + y) * a * 0.5 - z * bh * a];
+    const poly = (pts) => pts.map((q) => Pj(...q).map((v) => v.toFixed(1)).join(',')).join(' ');
+    const b = -0.22 / bh, trait = '#6e4a22';
+    let s = `<polygon points="${poly([[0, 0, 0], [W, 0, 0], [W, D, 0], [0, D, 0]])}" fill="#b98b55"/>`;
+    s += `<polygon points="${poly([[W, 0, b], [W, D, b], [W, D, 0], [W, 0, 0]])}" fill="#8f6532"/><polygon points="${poly([[0, D, b], [W, D, b], [W, D, 0], [0, D, 0]])}" fill="#a87b45"/>`;
+    cubes.sort((p, q) => (p[0] + p[1] + p[2]) - (q[0] + q[1] + q[2]) || p[2] - q[2]);
+    for (const [x, y, z] of cubes) {
+      s += `<polygon points="${poly([[x, y, z + 1], [x + 1, y, z + 1], [x + 1, y + 1, z + 1], [x, y + 1, z + 1]])}" fill="#e6c48f" stroke="${trait}" stroke-width="1.1" stroke-linejoin="round"/>`;
+      s += `<polygon points="${poly([[x + 1, y, z], [x + 1, y + 1, z], [x + 1, y + 1, z + 1], [x + 1, y, z + 1]])}" fill="#b98a50" stroke="${trait}" stroke-width="1.1" stroke-linejoin="round"/>`;
+      s += `<polygon points="${poly([[x, y + 1, z], [x + 1, y + 1, z], [x + 1, y + 1, z + 1], [x, y + 1, z + 1]])}" fill="#d0a066" stroke="${trait}" stroke-width="1.1" stroke-linejoin="round"/>`;
+      s += `<polygon points="${poly([[x + 0.44, y, z + 1], [x + 0.56, y, z + 1], [x + 0.56, y + 1, z + 1], [x + 0.44, y + 1, z + 1]])}" fill="#c9a571" opacity=".9"/>`;
+      s += `<polygon points="${poly([[x + 0.12, y + 1, z + 0.22], [x + 0.38, y + 1, z + 0.22], [x + 0.38, y + 1, z + 0.5], [x + 0.12, y + 1, z + 0.5]])}" fill="#fbfaf6" stroke="#9a8f80" stroke-width=".5"/>`;
+    }
+    const Lh = L + Math.max(1, Math.ceil(Math.max(0, ecart) / (W * D)));
+    const xs = [Pj(0, D, 0)[0], Pj(W, 0, 0)[0]], ys = [Pj(0, 0, Lh)[1], Pj(W, D, b)[1]], mg = 12;
+    return `<svg viewBox="${(xs[0] - mg).toFixed(1)} ${(ys[0] - mg).toFixed(1)} ${(xs[1] - xs[0] + 2 * mg).toFixed(1)} ${(ys[1] - ys[0] + 2 * mg).toFixed(1)}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Les cartons du picking">${s}</svg>`;
+  }
+
+  // La fiche de prélèvement d'un emplacement de picking.
+  function htmlFiche(e, R) {
+    const a = ui.empl, st = M.stock[a], p = M.produits[st.produit], c = p.carton, cl = M.classe(st.produit);
+    const q = pickDe(e, a), mn = M.minPick(a), bas = q < mn;
+    const X = calculPrep(M, e), l = M.lignes.find((x) => x.a === a), reste = l ? l.q - X.prelev(l) : 0;
+    let aide = '';
+    if (R.g) {
+      if (!l) aide = 'Cette adresse n’est pas sur le bon de préparation.';
+      else if (reste <= 0) aide = 'Cette ligne est déjà prélevée.';
+      else if (q < reste) aide = `Il faut <b>${reste}</b> cartons et il n’en reste que <b>${q}</b> : le picking est sous son minimum. Cliquez <b>↻ Descente de la réserve</b> : une palette de la même référence est stockée au-dessus, en réserve.`;
+      else aide = `Ligne du bon : prélevez <b>${reste}</b> carton${reste > 1 ? 's' : ''}.`;
+    }
+    return `<div class="pe-fiche" data-pe-fiche="${ech(a)}">
+      <div class="pe-etiq"><span class="pe-mono">${ech(p.ref || '')}</span><span>${ech(p.nom)}</span><span class="pe-mono">${ech(a)}</span></div>
+      <div class="pe-pick${bas ? ' pe-bas' : ''}" data-pe-pick>Picking : <b>${q} carton${q > 1 ? 's' : ''}</b> · minimum ${mn}${bas ? ' — <b>sous le minimum</b>' : ''}
+        <span class="pe-petit">· ${String(c.kg).replace('.', ',')} kg le carton${cl === 'lourd' ? ' · <b>lourd</b>' : ''}${cl === 'fragile' ? ' · <b>fragile</b>' : ''}</span></div>
+      <div class="pe-fiche-corps"><div class="pe-fiche-g">
+        ${aide ? `<div class="pe-aide" data-pe-aide>${aide}</div>` : ''}
+        <div class="pe-saisie"><label for="peNb"><b>Cartons à prélever</b></label>
+          <input id="peNb" type="number" min="1" inputmode="numeric" value="${ech(ui.nb)}" data-pe-nb data-pe-cle="b:nb">
+          <button type="button" class="btn btn-p" data-pe="prelever" data-pe-cle="b:prelever">Prélever</button></div>
+        <div><button type="button" class="btn" data-pe="reappro" data-pe-cle="b:reappro">↻ Descente de la réserve</button></div></div>
+        <div class="pe-pile">${pile(p.couches, q - M.plein(a))}</div></div></div>`;
+  }
+
+  // La palette de commande, vue de face, montée dans l'ordre du prélèvement.
+  function dessinPalette(e, X) {
+    const C = M.C, K = 200, W = 220, X0 = 16, hv = Math.max(X.hauteur, C.hMax) + 0.14, H = hv * K + 30, Yb = H - 18;
+    const hp = M.support.h * K;
+    let s = `<rect x="0" y="${Yb}" width="460" height="18" fill="var(--pe-sol)"/>`;
+    s += `<rect x="${X0}" y="${Yb - hp}" width="${W}" height="8" fill="#b98b55"/>`;
+    [0, 0.45, 0.9].forEach((f) => { s += `<rect x="${X0 + f * W}" y="${Yb - hp + 8}" width="${W * 0.1}" height="${Math.max(0, hp - 8)}" fill="#8f6532"/>`; });
+    let y = Yb - hp;
+    if (!X.couches.length) s += `<text x="${X0 + W / 2}" y="${Yb - hp - 30}" text-anchor="middle" font-size="14" fill="var(--encre-douce)" ${TXT}>Palette vide : prélevez la première ligne.</text>`;
+    X.couches.forEach((f, i) => {
+      const c = M.produits[f.k].carton, cl = M.classe(f.k), n = Math.ceil(f.q / c.parCouche), bh = c.h * K, bw = W / c.parCouche;
+      for (let k = 0; k < n; k++) {
+        const dans = Math.min(c.parCouche, f.q - k * c.parCouche);
+        for (let j = 0; j < dans; j++) s += `<rect x="${(X0 + j * bw + 1).toFixed(1)}" y="${(y - bh * (k + 1) + 1).toFixed(1)}" width="${(bw - 2).toFixed(1)}" height="${(bh - 2).toFixed(1)}" fill="${cl === 'fragile' ? '#f2dcb8' : cl === 'lourd' ? '#b07c40' : '#d4a46a'}" stroke="#6e4a22" stroke-width="1.2"/>`;
+      }
+      const top = y - bh * n, ym = (y + top) / 2;
+      if (cl === 'fragile') s += `<text x="${X0 + W / 2}" y="${ym + 4}" text-anchor="middle" font-size="11" font-weight="800" fill="#9d2727" ${TXT}>FRAGILE</text>`;
+      s += `<line x1="${X0 + W + 2}" y1="${ym}" x2="${X0 + W + 12}" y2="${ym}" stroke="var(--encre-douce)"/>
+        <text x="${X0 + W + 16}" y="${ym + 5}" font-size="15" font-weight="700" fill="var(--encre)" ${TXT}>${i + 1}. ${ech(court(f.k))} × ${f.q} <tspan font-weight="400" fill="var(--encre-douce)">(${Math.round(f.q * c.kg)} kg${cl === 'lourd' ? ', lourd' : ''})</tspan></text>`;
+      y = top;
+    });
+    if (e.film) s += `<rect x="${X0 - 3}" y="${y - 2}" width="${W + 6}" height="${Yb - hp - y + 10}" fill="rgba(150,190,230,.22)" stroke="rgba(120,160,210,.8)" stroke-width="1.5" data-pe-filme/>`;
+    if ((e.etiq || {}).avant && X.couches.length) s += `<rect x="${X0 + W - 58}" y="${(y + Yb - hp) / 2 - 14}" width="50" height="28" fill="#fbfaf6" stroke="#555"/><text x="${X0 + W - 33}" y="${(y + Yb - hp) / 2 + 4}" text-anchor="middle" font-size="9" font-weight="800" fill="#1a1915" ${TXT}>${ech(C.etiquette || C.enlevement || '')}</text>`;
+    if ((e.etiq || {}).dessus && X.couches.length) s += `<rect x="${X0 + W / 2 - 22}" y="${y - 6}" width="44" height="6" fill="#fbfaf6" stroke="#555"/>`;
+    const yMax = Yb - C.hMax * K;
+    s += `<line x1="${X0 - 10}" y1="${yMax}" x2="${X0 + W + 10}" y2="${yMax}" stroke="var(--rouge)" stroke-width="2" stroke-dasharray="7 5"/>
+      <text x="${X0 + W + 16}" y="${yMax + 5}" font-size="14" font-weight="800" fill="var(--rouge)" ${TXT}>${virg(C.hMax)} m max${C.transporteur ? ` (${ech(C.transporteur)})` : ''}</text>`;
+    return `<svg viewBox="0 0 460 ${H.toFixed(0)}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Palette de commande vue de face">${s}</svg>`;
+  }
+
+  // Le bilan, selon le temps (§8) : expliqué en guidage, nom du critère en entraînement, chiffres et
+  // global en évaluation (après la copie rendue, pour l'enseignant). « Que », jamais « de combien ».
+  function htmlBilan(e, R, X) {
+    const best = meilleurTour(M, R.t), L = X.metres;
+    const plus = L > best + 0.5 ? Math.round((L - best) / best * 100) : 0;
+    const nbL = M.lignes.length + X.horsCommande.length, err = nbL - X.justes, taux = Math.round(err / nbL * 100);
+    let h = `<div class="pe-bilan" data-pe-bilan><h3>Indicateurs</h3>
+      <div data-pe-bilan-m>Mètres parcourus : <b class="pe-gros">${Math.round(L)} m</b>${X.mode === 'serpentin' && X.tours > 1 ? ` (<b>${X.tours} tours</b> au lieu d’un)` : ''} · meilleur tour ${R.eval ? 'possible' : 'en serpentin'} : ${Math.round(best)} m
+        ${plus ? `<span class="pe-ko">(+${plus} %)</span>` : '<span class="pe-ok">✓</span>'}</div>`;
+    if (R.g && plus) h += '<div>En sens unique, revenir en arrière oblige à refaire un tour complet : suivez la liste dans l’ordre du parcours.</div>';
+    h += `<div data-pe-bilan-l>Lignes justes : <b class="pe-gros">${X.justes}/${M.lignes.length}</b> · taux d’erreur : <b>${taux} %</b>${X.horsCommande.length ? ` (${X.horsCommande.length} ligne${X.horsCommande.length > 1 ? 's' : ''} hors commande)` : ''}</div>`;
+    if (!R.eval) {
+      M.lignes.forEach((l) => {
+        const pr = X.prelev(l);
+        if (pr === l.q) return;
+        if (R.entr) { h += `<div class="pe-ko">✗ ${ech(l.a)} : quantité</div>`; return; }
+        const rupture = M.ruptures.includes(l.a) && !(e.reappros || []).some((r) => r.pour === l.a);
+        h += `<div class="pe-ko">✗ ${ech(l.a)} ${ech(M.produits[l.produit].nom)} : ${pr} prélevé${pr > 1 ? 's' : ''} sur ${l.q}${rupture ? ' — picking en rupture : il fallait demander la descente de la réserve' : ''}</div>`;
+      });
+      X.horsCommande.forEach((x) => { h += `<div class="pe-ko">✗ ${ech(x.a)}${R.g ? ` ${ech(M.produits[x.k].nom)} : ${x.q} carton(s) qui ne sont pas sur le bon` : ' : hors commande'}</div>`; });
+    }
+    const nOk = X.regles.filter((r) => r.ok).length;
+    h += `<h3>Palette conforme ?</h3><div data-pe-bilan-p>${nOk === X.regles.length ? '<span class="pe-ok">✓ palette conforme</span>' : '<span class="pe-ko">✗ palette non conforme</span>'} · ${nOk}/${X.regles.length} règles</div>`;
+    if (!R.eval) h += X.regles.map((r) => `<div class="${r.ok ? 'pe-ok' : 'pe-ko'}" data-pe-regle="${r.id}" data-ok="${r.ok}">${r.ok ? '✓' : '✗'} ${ech(r.crit)}${!r.ok && R.g ? ` : ${ech(r.txt)}` : ''}</div>`).join('');
+    return `${h}</div>`;
+  }
+
+  function htmlPalette(e, R, api) {
+    const C = M.C, X = calculPrep(M, e);
+    let fin = '';
+    if (e.fin || R.fige) {
+      const off = R.fige ? 'disabled' : '';
+      let boutons;
+      if (R.eval) {
+        boutons = R.rendue ? '<button type="button" class="btn" disabled>Copie rendue</button>'
+          : ui.confirmer ? `<span class="pe-confirme">Rendre la copie ? Vous ne pourrez plus rien changer.
+              <button type="button" class="btn btn-p" data-pe="rendreOui" data-pe-cle="b:rendreOui">Oui, rendre</button>
+              <button type="button" class="btn" data-pe="rendreNon" data-pe-cle="b:rendreNon">Non</button></span>`
+            : '<button type="button" class="btn btn-p" data-pe="rendre" data-pe-cle="b:rendre">Rendre mon travail</button>';
+      } else boutons = '<button type="button" class="btn btn-p" data-pe="verifierPrep" data-pe-cle="b:verifierPrep">Vérifier ma préparation</button>';
+      if (!R.fige) boutons += '<button type="button" class="btn" data-pe="reprendre" data-pe-cle="b:reprendre">Reprendre la préparation</button>';
+      fin = `<div class="pe-finir"><b>Avant l’enlèvement</b>
+        <label>Film étirable : <select data-pe-film data-pe-cle="b:film" ${off}><option value="">— tours —</option>${[1, 2, 3, 4, 5, 6].map((t) => `<option value="${t}" ${String(e.film) === String(t) ? 'selected' : ''}>${t}</option>`).join('')}</select> tours</label>
+        <div>Étiquette d’expédition sur :</div>
+        <div class="pe-etq">${ETIQUETTES.map(([k, lib]) => `<label><input type="checkbox" data-pe-etiq="${k}" data-pe-cle="etiq:${k}" ${(e.etiq || {})[k] ? 'checked' : ''} ${off}> ${lib}</label>`).join('')}</div>
+        <div class="pe-boutons">${boutons}</div></div>
+        ${(!R.eval && e.verifie) || (R.eval && R.rendue && api.estProf) ? htmlBilan(e, R, X) : ''}`;
+    } else {
+      fin = `<div class="pe-finir pe-petit">La palette se monte dans l’ordre du prélèvement. Quand toutes les lignes sont prélevées : <b>Terminer la préparation</b> (en haut).</div>`;
+    }
+    return `<div class="pe-palcmd"><div class="pe-palcmd-dessin">
+        <div class="pe-palcmd-tete"><b>Palette de commande · ${ech(C.client || '')} · ${ech(C.enlevement || '')}</b>
+          <span class="pe-petit">Palette Europe 80 × 120, montée dans l’ordre du prélèvement · <b data-pe-kg>${X.poids.toLocaleString('fr-FR')} kg</b> / ${C.kgMax} kg · <b data-pe-h>${virg(X.hauteur)} m</b> / ${virg(C.hMax)} m</span></div>
+        <div class="pe-palsvg">${dessinPalette(e, X)}</div></div>
+      <div class="pe-palcmd-cote">${fin}</div></div>`;
+  }
+
+  function htmlEntetePrep(e, R) {
+    const palette = ui.voir || e.fin || R.fige;
+    const parts = ['Plan'];
+    if (palette && !ui.empl) parts.push('<b>Palette de commande</b>');
+    else {
+      if (ui.trav) {
+        const c = M.cotes[ui.trav.split('-')[0]];
+        parts.push(ui.empl ? `Travée <span class="pe-mono">${ech(ui.trav)}</span>` : `<b>Travée</b> <span class="pe-mono">${ech(ui.trav)}</span> <span class="pe-petit">(vue depuis l'allée ${ech(c.allee)})</span>`);
+      }
+      if (ui.empl) parts.push(`<b>Prélèvement</b> <span class="pe-mono">${ech(ui.empl)}</span>`);
+    }
+    const voirPal = ui.trav && !palette && !ui.empl && !ui.reappro
+      ? `<button type="button" class="btn" data-pe="voir" data-pe-cle="b:voir">Palette de commande (${e.faits.length})</button>` : '';
+    const lib = ui.reappro ? '✕ Annuler le réapprovisionnement' : (ui.empl || (ui.voir && ui.trav)) ? '← Retour à la travée' : '← Retour au plan';
+    const retour = e.fin || R.fige ? '' : `<button type="button" class="btn btn-p pe-retour" data-pe="retour" data-pe-cle="b:retour">${lib}</button>`;
+    return `<div class="pe-entete"><div class="pe-fil">${parts.join(' › ')}</div>
+      <div class="pe-msg-vue"><div class="pe-msg ${ui.msgType ? `pe-${ui.msgType}` : ''}" data-pe-msg>${ui.msg}</div></div>
+      ${voirPal}${retour}</div>`;
+  }
+
+  /* ------------------------------------------------ PRÉPARATION : les gestes */
+  function cliquerPrep(e, a, R) {
+    if (e.fin) { dire('La préparation est terminée : cliquez <b>Reprendre la préparation</b> pour prélever encore.'); return; }
+    const d = decoupe(a), st = (e.vides || []).includes(a) ? null : M.stock[a];
+    if (ui.reappro) {
+      const cible = ui.reappro, k = M.stock[cible].produit;
+      if (d.n === 1) { dire(`La réserve est aux niveaux <b>${reserve}</b>, au-dessus du picking.`, 'non'); return; }
+      if (!st) { dire(`<b>${ech(a)}</b> : emplacement vide.`, 'non'); return; }
+      if (st.produit !== k) { const p = M.produits[st.produit]; dire(`<b>${ech(a)}</b> : ce n’est pas la même référence (${ech([p.ref, court(st.produit)].filter(Boolean).join(', '))}).`, 'non'); return; }
+      e.pick[cible] = pickDe(e, cible) + M.plein(a);
+      e.vides.push(a); e.reappros.push({ pour: cible, de: a }); ui.reappro = null; e.verifie = false;
+      noterGeste(e);
+      dire(`Réapprovisionnement fait : la palette de <b>${ech(a)}</b> est descendue en <b>${ech(cible)}</b> par le cariste (CACES 5). Picking : ${pickDe(e, cible)} cartons.`, 'oui');
+      return;
+    }
+    if (!st) { dire(`<b>${ech(a)}</b> : emplacement vide.`); return; }
+    if (d.n > 1) {
+      e.essaisReserve.push(a); noterGeste(e);
+      dire(`<b>${ech(a)}</b> est une palette de <b>réserve</b> : on prélève au niveau <b>N1</b> (picking).`, 'non');
+      return;
+    }
+    if (R.eval && !e.parcours) { dire('Choisissez d’abord votre parcours (en haut à droite).', 'non'); return; }
+    ui.empl = a; ui.nb = ''; ui.focus = 'b:nb'; dire('');
+  }
+  function prelever(e) {
+    const a = ui.empl, v = parseInt(ui.nb, 10), q = pickDe(e, a);
+    if (Number.isNaN(v) || v < 1) { dire('Saisissez un nombre de cartons.', 'non'); ui.focus = 'b:nb'; return; }
+    if (v > q) { dire(`Il n’y a que <b>${q}</b> carton${q > 1 ? 's' : ''} au picking.`, 'non'); ui.focus = 'b:nb'; return; }
+    const k = M.stock[a].produit;
+    e.pick[a] = q - v; e.faits.push({ a, k, q: v }); e.verifie = false;
+    ui.empl = null; ui.nb = ''; ui.focus = `emp:${a}`;
+    noterGeste(e);
+    dire(`${v} × ${ech(M.produits[k].nom)} posé${v > 1 ? 's' : ''} sur la palette de commande.`, 'oui');
+  }
+  function demanderReappro(e) {
+    const a = ui.empl;
+    if (pickDe(e, a) >= M.minPick(a)) { dire('Le picking n’est pas sous son minimum : pas de réapprovisionnement.', 'non'); return; }
+    ui.reappro = a; ui.empl = null; ui.nb = '';
+    dire(`↻ Réapprovisionnement de <b>${ech(a)}</b> : cliquez la palette de réserve (${reserve}) de la même référence. Échap pour annuler.`);
+  }
+  function reposer(e) {
+    const f = e.faits.pop();
+    if (!f) return;
+    e.pick[f.a] = pickDe(e, f.a) + f.q; e.verifie = false;
+    dire(`${f.q} × ${ech(M.produits[f.k].nom)} reposé${f.q > 1 ? 's' : ''} en ${ech(f.a)}.`);
+  }
+  // Retour (bouton, Échap) : on annule le réappro, on referme la fiche, la palette, puis la travée.
+  function fermerPrep(e) {
+    if (ui.reappro) ui.reappro = null;
+    else if (ui.empl) { ui.focus = `emp:${ui.empl}`; ui.empl = null; }
+    else if (ui.voir) ui.voir = false;
+    else if (ui.trav) { ui.focus = `trav:${ui.trav}`; ui.trav = null; }
+    else return false;
+    dire('');
+    return true;
+  }
+
+  function brancherPrep(racine, e, R, on, activer, sauver, redessiner) {
+    const fait = () => { sauver(); redessiner(); };
+    racine.querySelectorAll('[data-pe-voir]').forEach((g) => activer(g, () => { ui.voir = true; ui.empl = null; ui.reappro = null; dire(''); redessiner(); }));
+    on('voir', () => { ui.voir = true; ui.reappro = null; dire(''); ui.focus = 'b:retour'; redessiner(); });
+    const nb = racine.querySelector('[data-pe-nb]');
+    if (nb) {
+      nb.addEventListener('input', () => { ui.nb = nb.value; });
+      nb.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); ui.nb = nb.value; prelever(e); fait(); } });
+      // la fiche s'ouvre prête à la saisie (souris comme clavier)
+      if (ui.focus === 'b:nb') nb.focus({ preventScroll: true });
+    }
+    on('prelever', () => { if (nb) ui.nb = nb.value; prelever(e); fait(); });
+    on('reappro', () => { demanderReappro(e); fait(); });
+    on('reposer', () => { reposer(e); ui.focus = 'b:reposer'; fait(); });
+    on('terminer', () => {
+      e.fin = true; e.verifie = false; ui.reappro = null; ui.empl = null; ui.voir = false; ui.trav = null; dire('');
+      ui.focus = 'b:film'; fait();
+    });
+    on('reprendre', () => { e.fin = false; e.verifie = false; ui.confirmer = false; dire(''); fait(); });
+    on('verifierPrep', () => {
+      e.verifie = true; e.verifs = (e.verifs || 0) + 1; ui.focus = 'b:verifierPrep'; fait();
+      const bilan = document.querySelector(`[data-entrepot="${CSS.escape(P.id)}"] [data-pe-bilan]`);
+      if (bilan) bilan.scrollIntoView({ block: 'nearest' });
+    });
+    racine.querySelectorAll('input[name="peParcours"]').forEach((i) => i.addEventListener('change', () => {
+      if (e.faits.length) return;
+      e.parcours = i.value; dire(''); ui.focus = i.dataset.peCle; fait();
+    }));
+    const film = racine.querySelector('[data-pe-film]');
+    if (film) film.addEventListener('change', () => { e.film = film.value; ui.focus = 'b:film'; fait(); });
+    racine.querySelectorAll('[data-pe-etiq]').forEach((c) => c.addEventListener('change', () => {
+      e.etiq = Object.assign({}, e.etiq, { [c.dataset.peEtiq]: c.checked }); ui.focus = c.dataset.peCle; fait();
+    }));
+  }
+
   return {
     id: P.id,
     nav: { libelle: P.libelle || "Plan de l'entrepôt" },
-    etatNeuf,
+    etatNeuf: () => etatNeuf(M.mode),
     jalons: (db) => jalonsEntrepot(db, P),
-    note: P.note || opts.copie ? (db) => noteEntrepot(db, P) : null,
-    bonnesReponses: () => bonnesReponses(P),
-    // Ce que lisent les tests et la page d'essai : la palette en main, la travée ouverte.
-    lire: () => ({ main: ui.main, trav: ui.trav, msg: ui.msg }),
+    note: P.note || opts.copie ? (db) => noteEntrepot(db, P, opts.copie ? 'evaluation' : undefined) : null,
+    bonnesReponses: () => (PREP ? attendusPreparation(P) : bonnesReponses(P)),
+    // Ce que lisent les tests et la page d'essai : la palette en main, la travée ouverte, la fiche…
+    lire: () => ({ main: ui.main, trav: ui.trav, msg: ui.msg, empl: ui.empl, reappro: ui.reappro, voir: ui.voir }),
     html(e, api) {
-      if (!e.place) Object.assign(e, etatNeuf(), e);
+      if (PREP ? !e.faits : !e.place) Object.assign(e, etatNeuf(M.mode), e);
       const R = regime(api);
-      if (R.fige) { ui.main = null; ui.confirmer = false; }
-      const ouverte = !!ui.trav;
-      return `<div class="pe" data-entrepot="${ech(P.id)}" data-pe-temps="${R.t}" data-pe-ouverte="${ouverte}">
+      if (R.fige) { ui.main = null; ui.confirmer = false; ui.empl = null; ui.reappro = null; }
+      const ouverte = vueOuverte(e, R);
+      let espace;
+      if (!ouverte) espace = `<div class="pe-plan">${htmlPlan(e, R)}</div>`;
+      else if (!PREP) espace = `${htmlEntete(e, R)}<div class="pe-face">${htmlFace(e, R)}</div>`;
+      else if (ui.empl) espace = `${htmlEntetePrep(e, R)}<div class="pe-vue">${htmlFiche(e, R)}</div>`;
+      else if (ui.voir || e.fin || R.fige) espace = `${htmlEntetePrep(e, R)}<div class="pe-vue">${htmlPalette(e, R, api)}</div>`;
+      else espace = `${htmlEntetePrep(e, R)}<div class="pe-face">${htmlFace(e, R)}</div>`;
+      return `<div class="pe${PREP ? ' pe-prep' : ''}" data-entrepot="${ech(P.id)}" data-pe-mode="${M.mode}" data-pe-temps="${R.t}" data-pe-ouverte="${ouverte}">
         <div class="pe-adresse" data-pe-adresse>${htmlAdresse(e, R, null)}</div>
-        ${htmlBandeau(e, R, api)}
-        <div class="pe-jeu">${htmlCote(e, R, api)}
-          <section class="pe-espace">${ouverte
-            ? `${htmlEntete(e, R)}<div class="pe-face">${htmlFace(e, R)}</div>`
-            : `<div class="pe-plan">${htmlPlan(e, R)}</div>`}</section></div></div>`;
+        ${PREP ? htmlBandeauPrep(e, R) : htmlBandeau(e, R, api)}
+        <div class="pe-jeu">${PREP ? htmlCotePrep(e, R, api) : htmlCote(e, R, api)}
+          <section class="pe-espace">${espace}</section></div></div>`;
     },
     brancher(z, e, api) {
       const racine = z.querySelector('.pe');
@@ -675,6 +1352,7 @@ export function creerEntrepot(P, opts = {}) {
       };
       const on = (cle, fn) => racine.querySelectorAll(`[data-pe="${cle}"]`).forEach((b) => activer(b, fn));
       const fermer = () => {
+        if (PREP) { if (!fermerPrep(e)) return false; redessiner(); return true; }
         if (!ui.trav) return false;
         ui.focus = `trav:${ui.trav}`; ui.trav = null; dire('');
         redessiner();
@@ -707,6 +1385,7 @@ export function creerEntrepot(P, opts = {}) {
       // Une travée : elle s'ouvre en grand, vue de face (la travée se relève).
       racine.querySelectorAll('[data-pe-trav]').forEach((g) => activer(g, () => {
         ui.trav = g.dataset.peTrav; ui.anim = true; dire('');
+        ui.voir = false; ui.empl = null;
         ui.focus = `emp:${ui.trav}-N1-E1`;
         redessiner();
       }));
@@ -718,7 +1397,10 @@ export function creerEntrepot(P, opts = {}) {
       // Un emplacement de la vue de face : poser la palette en main. Le survol remplit l'adresse.
       const barre = racine.querySelector('[data-pe-adresse]');
       racine.querySelectorAll('[data-pe-emp]').forEach((g) => {
-        activer(g, () => { poser(e, g.dataset.peEmp); sauver(); redessiner(); });
+        activer(g, () => {
+          if (PREP) cliquerPrep(e, g.dataset.peEmp, R); else poser(e, g.dataset.peEmp);
+          sauver(); redessiner();
+        });
         const sur = () => { barre.innerHTML = htmlAdresse(e, R, g.dataset.peEmp); };
         const hors = () => { barre.innerHTML = htmlAdresse(e, R, null); };
         g.addEventListener('mouseenter', sur); g.addEventListener('focus', sur);
@@ -729,6 +1411,7 @@ export function creerEntrepot(P, opts = {}) {
       on('rendre', () => { ui.confirmer = true; ui.focus = 'b:rendreOui'; redessiner(); });
       on('rendreNon', () => { ui.confirmer = false; ui.focus = 'b:rendre'; redessiner(); });
       on('rendreOui', () => { ui.confirmer = false; ui.main = null; ui.trav = null; sauver(); if (api.rendreCopie) api.rendreCopie(); redessiner(); });
+      if (PREP) brancherPrep(racine, e, R, on, activer, sauver, redessiner);
     },
   };
 }

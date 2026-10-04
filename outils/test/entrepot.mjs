@@ -1,5 +1,6 @@
 // Suite de tests de Prepalog — bloc « entrepot » : la vue « Plan d'entrepôt » (core/types/entrepot.js),
-// brief `docs/briefs/MOTEUR-vue-plan-entrepot.md` §11, lots 1 et 2 (le cœur, le mode rangement).
+// brief `docs/briefs/MOTEUR-vue-plan-entrepot.md` §11, lots 1 et 2 (le cœur, le mode rangement) et lot 4
+// (le mode préparation, en fin de fichier).
 //
 // `node outils/test.mjs entrepot` ne lance que ce bloc. Il n'a besoin d'aucun autre : il monte
 // l'environnement d'entreprise à la main, dans un contexte de navigateur à lui, sur le cas « rangement »
@@ -33,7 +34,9 @@ const monter = (p, o = {}) => p.evaluate(async (o) => {
   document.querySelector('#peTest')?.remove();
   const hote = document.createElement('div'); hote.id = 'peTest'; document.body.appendChild(hote);
   const temps = o.temps || 'guidage';
-  let P = C.RANGEMENT;
+  let P = o.cas === 'preparation' ? C.PREPARATION : C.RANGEMENT;
+  if (o.commande) P = Object.assign({}, P, { commande: Object.assign({}, P.commande, o.commande) });
+  if (o.jalons) P = Object.assign({}, P, { jalons: o.jalons });
   if (o.sansCritere) P = Object.assign({}, P, { criteres: P.criteres.filter((c) => c.type !== o.sansCritere) });
   if (o.id) P = Object.assign({}, P, { id: o.id });
   const U = E.univers({ temps, entrepot: P });
@@ -379,6 +382,269 @@ await v('Entrepôt : côté enseignant, les bonnes réponses ; jamais côté él
   vrai(!(await present(pg, '.pe-prof')), 'bonnes réponses montrées à l’élève');
   await monter(pg, { role: 'prof' });
   vrai((await texte(pg, '.pe-prof')).includes('P2 : B2-T02-N1-E2, B2-T02-N1-E3'), 'bonnes réponses côté enseignant');
+  egal(erreursE, [], 'erreurs JS');
+});
+
+/* =========================================================== PRÉPARATION (lot 4) */
+// Le cas ③ de la maquette (`contenus/entrepot-essai.js`, PREPARATION). Valeurs écrites À LA MAIN (maquette
+// du 04/10, recontrôlées contre le moteur) : bon dans l'ordre du serpentin A1-T01-N1-E1 Maison × 2 ·
+// A1-T02-N1-E1 Établi × 6 · B1-T02-N1-E3 Tricycle × 4 · B1-T01-N1-E2 Porteur × 6 · B1-T01-N1-E1 Trotteur × 6
+// (rupture : 2 au picking, minimum 6 ; réserve juste B1-T01-N2-E2, piège B1-T01-N2-E1 = Porteur) ·
+// B2-T01-N1-E1 Cuisine × 8. Serpentin dans l'ordre 47 m ; retour 40 m ; désordre en serpentin 141 m,
+// 3 tours ; palette 331 kg, 1,74 m.
+const ZP = '#peTest .pe';
+const etatP = (p) => p.evaluate(() => JSON.parse(JSON.stringify(((window.__e.db.entrepots) || {})['essai-preparation'] || null)));
+const jalonsP = (p, temps) => p.evaluate(async (temps) => {
+  const E = await import('/core/types/entrepot.js');
+  const C = await import('/contenus/entrepot-essai.js');
+  return E.jalonsEntrepot(window.__e.db, C.PREPARATION, temps).L.map((l) => l.ok);
+}, temps);
+const calculP = (p) => p.evaluate(async () => {
+  const E = await import('/core/types/entrepot.js');
+  const C = await import('/contenus/entrepot-essai.js');
+  const X = E.calculPreparation(C.PREPARATION, window.__e.db.entrepots['essai-preparation']);
+  return { m: Math.round(X.metres), tours: X.tours, kg: X.poids, h: Math.round(X.hauteur * 100) / 100,
+    regles: Object.fromEntries(X.regles.map((r) => [r.id, r.ok])) };
+});
+const LIGNES = [['A1-T01-N1-E1', 2], ['A1-T02-N1-E1', 6], ['B1-T02-N1-E3', 4], ['B1-T01-N1-E2', 6], ['B1-T01-N1-E1', 6], ['B2-T01-N1-E1', 8]];
+const travDe = (a) => a.slice(0, 6);
+// Ouvrir la travée d'une adresse (en revenant d'abord au plan), cliquer le picking, saisir, Prélever.
+async function allerA(p, a) {
+  for (let i = 0; i < 4 && await present(p, '[data-pe="retour"]'); i++) await p.click(`${ZP} [data-pe="retour"]`);
+  await p.click(`${ZP} [data-pe-trav="${travDe(a)}"]`);
+}
+async function prelever(p, a, q, { ouvrir = true } = {}) {
+  if (ouvrir) await allerA(p, a);
+  await p.click(`${ZP} [data-pe-emp="${a}"]`);
+  await p.fill('#peNb', String(q));
+  await p.click(`${ZP} [data-pe="prelever"]`);
+}
+// La rupture du Trotteur : descente de la palette de réserve B1-T01-N2-E2, puis prélèvement.
+async function reapproTrotteur(p) {
+  await allerA(p, 'B1-T01-N1-E1');
+  await p.click(`${ZP} [data-pe-emp="B1-T01-N1-E1"]`);
+  await p.click(`${ZP} [data-pe="reappro"]`);
+  await p.click(`${ZP} [data-pe-emp="B1-T01-N2-E2"]`);
+}
+async function prelevertout(p, ordre = [0, 1, 2, 3, 4, 5]) {
+  for (const i of ordre) {
+    const [a, q] = LIGNES[i];
+    if (a === 'B1-T01-N1-E1') { await reapproTrotteur(p); await prelever(p, a, q, { ouvrir: false }); } else await prelever(p, a, q);
+  }
+}
+async function finir(p, film = '4', etiq = ['avant', 'arriere', 'dessus']) {
+  await p.click(`${ZP} [data-pe="terminer"]`);
+  await p.selectOption(`${ZP} [data-pe-film]`, film);
+  for (const k of etiq) await p.check(`${ZP} [data-pe-etiq="${k}"]`);
+}
+
+await v('Préparation : la vue s’ouvre ; bon trié dans l’ordre du serpentin (guidage), heure jeudi 6 h, quai n° 1 · E1', async () => {
+  await monter(pg, { cas: 'preparation' });
+  egal(await pg.textContent('#peTest .ent-nav[data-vue="entrepot"]').then((t) => t.trim()), 'Préparer la commande', 'entrée de menu');
+  egal(await pg.$$eval(`${ZP} [data-pe-ligne] .pe-ttl .pe-mono`, (L) => L.map((x) => x.textContent)), LIGNES.map((l) => l[0]), 'ordre du bon');
+  egal(await texte(pg, '[data-pe-heure]'), 'jeudi 10 décembre, 6 h 00', 'heure de l’enlèvement');
+  vrai((await texte(pg, '.pe-bon')).includes('quai n° 1'), 'quai');
+  vrai(await pg.$eval(`${ZP} .pe-plan svg`, (s) => s.textContent.includes('QUAI 1 · E1')), 'quai sur le plan');
+  egal(await pg.$$eval(`${ZP} [data-pe-numero]`, (L) => L.length), 6, 'numéros des lignes sur le plan');
+  vrai(await present(pg, '[data-pe-parcours]'), 'parcours dessiné');
+  egal(await texte(pg, '[data-pe-m]'), '0 m', 'compteur');
+  egal(await jalonsP(pg), [false, false, false, false, false, false, false, false, false], 'inaction : 0 / 9');
+});
+
+await v('Préparation guidage, à la souris (1366 × 768) : dans l’ordre → 47 m, 6/6, 331 kg, 1,74 m, 9 / 9', async () => {
+  await monter(pg, { cas: 'preparation' });
+  const h0 = await pg.$eval(`${ZP} .pe-bandeau`, (el) => el.getBoundingClientRect().height);
+  // Première ligne pilotée à la souris : boîte de la travée, puis de l'emplacement, saisie, Prélever.
+  const clic = async (sel) => { const el = await pg.$(`${ZP} ${sel}`); await el.scrollIntoViewIfNeeded(); const b = await el.boundingBox(); await pg.mouse.click(b.x + b.width / 2, b.y + b.height / 2); };
+  await clic('[data-pe-trav="A1-T01"]');
+  await pg.waitForTimeout(700);    // la travée se relève
+  await clic('[data-pe-emp="A1-T01-N1-E1"]');
+  egal(await pg.evaluate(() => document.activeElement.id), 'peNb', 'la fiche s’ouvre prête à la saisie');
+  vrai((await texte(pg, '[data-pe-aide]')).includes('prélevez 2 cartons'), 'aide « reste à prélever »');
+  await pg.keyboard.type('2');
+  await pg.keyboard.press('Enter');
+  egal((await etatP(pg)).faits, [{ a: 'A1-T01-N1-E1', k: 'MAI', q: 2 }], 'premier prélèvement');
+  egal(Math.round(await pg.$eval(`${ZP} .pe-bandeau`, (el) => el.getBoundingClientRect().height)), Math.round(h0), 'hauteur du bandeau');
+  await prelevertout(pg, [1, 2, 3, 4, 5]);
+  egal(await calculP(pg), { m: 47, tours: 1, kg: 331, h: 1.74, regles: { lourds: true, fragiles: true, poids: true, hauteur: true, film: false, etiquettes: false } }, 'calcul');
+  egal(await texte(pg, '[data-pe-m]'), '47 m', 'compteur');
+  await finir(pg);
+  vrai((await texte(pg, '[data-pe-kg]')) === '331 kg' && (await texte(pg, '[data-pe-h]')) === '1,74 m', 'poids et hauteur affichés');
+  await pg.click(`${ZP} [data-pe="verifierPrep"]`);
+  vrai((await texte(pg, '[data-pe-bilan-l]')).includes('6/6'), 'lignes 6/6');
+  vrai((await texte(pg, '[data-pe-bilan-p]')).includes('palette conforme · 6/6'), 'palette conforme');
+  egal(await jalonsP(pg), [true, true, true, true, true, true, true, true, true], '9 / 9');
+  egal((await etatP(pg)).reappros, [{ pour: 'B1-T01-N1-E1', de: 'B1-T01-N2-E2' }], 'réappro');
+  egal(Math.round(await pg.$eval(`${ZP} .pe-bandeau`, (el) => el.getBoundingClientRect().height)), Math.round(h0), 'hauteur du bandeau à la fin');
+});
+
+await v('Préparation : réserve refusée ; réappro par le Porteur refusé ; réappro d’un picking au-dessus du minimum refusé ; trop de cartons refusé', async () => {
+  await monter(pg, { cas: 'preparation' });
+  await allerA(pg, 'B1-T01-N1-E1');
+  await pg.click(`${ZP} [data-pe-emp="B1-T01-N2-E2"]`);
+  vrai((await texte(pg, '[data-pe-msg]')).includes('palette de réserve : on prélève au niveau N1'), 'prélever en réserve');
+  vrai(!(await present(pg, '[data-pe-fiche]')), 'fiche ouverte sur la réserve');
+  egal((await etatP(pg)).essaisReserve, ['B1-T01-N2-E2'], 'essai en réserve gardé (repérage)');
+  // un picking au-dessus de son minimum : pas de réapprovisionnement
+  await pg.click(`${ZP} [data-pe-emp="B1-T01-N1-E2"]`);
+  await pg.click(`${ZP} [data-pe="reappro"]`);
+  vrai((await texte(pg, '[data-pe-msg]')).includes('pas sous son minimum'), 'réappro au-dessus du minimum');
+  // plus que le picking : refusé
+  await pg.fill('#peNb', '23');
+  await pg.click(`${ZP} [data-pe="prelever"]`);
+  vrai((await texte(pg, '[data-pe-msg]')).includes('Il n’y a que 22 cartons'), 'trop de cartons');
+  egal((await etatP(pg)).faits, [], 'rien prélevé');
+  await pg.click(`${ZP} [data-pe="retour"]`);
+  // la rupture : la palette juste au-dessus (B1-T01-N2-E1) est un Porteur
+  await pg.click(`${ZP} [data-pe-emp="B1-T01-N1-E1"]`);
+  vrai((await texte(pg, '[data-pe-aide]')).includes('sous son minimum'), 'rupture expliquée');
+  await pg.click(`${ZP} [data-pe="reappro"]`);
+  egal(await texte(pg, '[data-pe="retour"]'), '✕ Annuler le réapprovisionnement', 'bouton pendant le réappro');
+  await pg.click(`${ZP} [data-pe-emp="B1-T01-N2-E1"]`);
+  vrai((await texte(pg, '[data-pe-msg]')).includes('pas la même référence'), 'réappro par le Porteur');
+  await pg.click(`${ZP} [data-pe-emp="B1-T01-N1-E2"]`);
+  vrai((await texte(pg, '[data-pe-msg]')).includes('au-dessus du picking'), 'réappro depuis le N1');
+  egal((await etatP(pg)).reappros, [], 'aucun réappro');
+  await pg.keyboard.press('Escape');
+  vrai(!(await texte(pg, '[data-pe="retour"]')).includes('Annuler'), 'Échap annule le réappro');
+  await pg.click(`${ZP} [data-pe-emp="B1-T01-N1-E1"]`);
+  await pg.click(`${ZP} [data-pe="reappro"]`);
+  await pg.click(`${ZP} [data-pe-emp="B1-T01-N3-E1"]`);
+  vrai((await texte(pg, '[data-pe-msg]')).includes('Picking : 26 cartons'), 'réappro fait (2 + 24)');
+  egal((await etatP(pg)).vides, ['B1-T01-N3-E1'], 'emplacement de réserve libéré');
+  vrai((await texte(pg, '[data-pe-emp="B1-T01-N3-E1"]')).includes('libre'), 'libre dans la vue de face');
+});
+
+await v('Préparation : palette vide terminée → 0 / 9 ; une seule ligne puis Terminer → parcours faux (garde « lignes justes »)', async () => {
+  await monter(pg, { cas: 'preparation' });
+  vrai(await pg.$eval(`${ZP} [data-pe="terminer"]`, (b) => b.disabled), 'Terminer actif sur une palette vide');
+  await prelever(pg, 'A1-T01-N1-E1', 2);
+  await pg.click(`${ZP} [data-pe="reposer"]`);
+  egal((await etatP(pg)).faits, [], 'reposé');
+  egal((await etatP(pg)).pick['A1-T01-N1-E1'], 5, 'picking rendu');
+  // forcer « terminer » sur une palette vide (le bouton est grisé) : aucun jalon
+  await pg.evaluate(() => { window.__e.db.entrepots['essai-preparation'].fin = true; window.__e.db.entrepots['essai-preparation'].film = '4'; window.__e.db.entrepots['essai-preparation'].etiq = { avant: true, arriere: true, dessus: true }; });
+  egal(await jalonsP(pg), [false, false, false, false, false, false, false, false, false], 'palette vide terminée');
+  await monter(pg, { cas: 'preparation' });
+  await prelever(pg, 'A1-T01-N1-E1', 2);
+  await finir(pg);
+  egal(await jalonsP(pg), [false, false, false, false, false, false, false, false, false], 'une seule ligne');
+  // le même tour, avec la garde par défaut (« au moins une ligne ») : le parcours compte
+  await monter(pg, { cas: 'preparation', jalons: [{ type: 'lignesJustes' }, { type: 'parcours' }] });
+  await prelever(pg, 'A1-T01-N1-E1', 2);
+  egal(await pg.evaluate(async () => {
+    const E = await import('/core/types/entrepot.js'); const C = await import('/contenus/entrepot-essai.js');
+    return E.jalonsEntrepot(window.__e.db, Object.assign({}, C.PREPARATION, { jalons: [{ type: 'lignesJustes' }, { type: 'parcours' }] })).L.map((l) => l.ok);
+  }), [false, true], 'garde par défaut');
+});
+
+await v('Préparation : Cuisine avant Porteur et Trotteur → 47 m mais « fragiles en haut » faux ; film 2 tours et étiquettes voisines faux', async () => {
+  await monter(pg, { cas: 'preparation' });
+  await prelevertout(pg, [0, 1, 2, 5, 3, 4]);
+  const X = await calculP(pg);
+  egal([X.m, X.regles.fragiles, X.regles.lourds], [47, false, true], 'mètres et règles');
+  await finir(pg, '2', ['avant', 'gauche', 'dessus']);
+  await pg.click(`${ZP} [data-pe="verifierPrep"]`);
+  egal(await pg.$$eval(`${ZP} [data-pe-regle]`, (L) => Object.fromEntries(L.map((x) => [x.dataset.peRegle, x.dataset.ok === 'true']))),
+    { lourds: true, fragiles: false, poids: true, hauteur: true, film: false, etiquettes: false }, 'bilan');
+  egal(await jalonsP(pg), [true, true, true, false, true, true, false, false, true], 'jalons');
+  vrai((await texte(pg, '[data-pe-regle="fragiles"]')).includes('posés sur un carton fragile'), 'expliqué en guidage');
+  // « que, pas de combien » : aucun écart chiffré dans le bilan
+  vrai(!/de \d+ ?(kg|m|cm)/.test(await texte(pg, '[data-pe-bilan]')), 'écart chiffré dans le bilan');
+  // corriger : Reprendre, film 4 tours, étiquettes opposées
+  await pg.click(`${ZP} [data-pe="reprendre"]`);
+  await pg.click(`${ZP} [data-pe="terminer"]`);
+  await pg.selectOption(`${ZP} [data-pe-film]`, '4');
+  await pg.uncheck(`${ZP} [data-pe-etiq="gauche"]`);
+  await pg.check(`${ZP} [data-pe-etiq="arriere"]`);
+  egal(await jalonsP(pg), [true, true, true, false, true, true, true, true, true], 'après correction');
+});
+
+await v('Préparation : Trotteur prélevé en deux fois (2, descente de la réserve, puis 4) → une seule couche, 1,74 m', async () => {
+  await monter(pg, { cas: 'preparation' });
+  await prelevertout(pg, [0, 1, 2, 3]);
+  await prelever(pg, 'B1-T01-N1-E1', 2, { ouvrir: false });
+  await pg.click(`${ZP} [data-pe-emp="B1-T01-N1-E1"]`);
+  await pg.click(`${ZP} [data-pe="reappro"]`);
+  await pg.click(`${ZP} [data-pe-emp="B1-T01-N2-E2"]`);
+  await prelever(pg, 'B1-T01-N1-E1', 4, { ouvrir: false });
+  await prelever(pg, 'B2-T01-N1-E1', 8);
+  const X = await calculP(pg);
+  egal([X.m, X.h, X.kg], [47, 1.74, 331], 'mètres, hauteur, poids');
+  egal(await jalonsP(pg), [true, true, true, true, true, true, false, false, true], 'jalons (film et étiquettes à faire)');
+});
+
+await v('Préparation : sabotages — poids et hauteur du transporteur tombent quand on baisse la limite', async () => {
+  await monter(pg, { cas: 'preparation', commande: { kgMax: 300, hMax: 1.6 } });
+  await prelevertout(pg);
+  await finir(pg);
+  await pg.click(`${ZP} [data-pe="verifierPrep"]`);
+  egal(await pg.$$eval(`${ZP} [data-pe-regle]`, (L) => L.filter((x) => x.dataset.ok !== 'true').map((x) => x.dataset.peRegle)), ['poids', 'hauteur'], 'règles fausses');
+  vrai((await texte(pg, '[data-pe-regle="poids"]')).includes('dépasse le poids maximum du transporteur (300 kg)'), 'message poids');
+  vrai(!(await texte(pg, '[data-pe-bilan]')).includes('331'), 'le poids réel répété dans le message');
+});
+
+await v('Préparation entraînement : liste dans le désordre suivie → 141 m, 3 tours ; bilan = nom du critère seul', async () => {
+  await monter(pg, { cas: 'preparation', temps: 'entrainement' });
+  egal(await pg.$$eval(`${ZP} [data-pe-ligne] .pe-ttl .pe-mono`, (L) => L.map((x) => x.textContent)),
+    ['B1-T01-N1-E1', 'B2-T01-N1-E1', 'B1-T01-N1-E2', 'A1-T01-N1-E1', 'B1-T02-N1-E3', 'A1-T02-N1-E1'], 'désordre');
+  egal(await pg.$$eval(`${ZP} [data-pe-numero]`, (L) => L.length), 0, 'numéros en entraînement');
+  await prelevertout(pg, [4, 5, 3, 0, 2, 1]);
+  const X = await calculP(pg);
+  egal([X.m, X.tours, X.regles.lourds, X.regles.fragiles], [141, 3, false, false], 'désordre');
+  vrai((await texte(pg, '[data-pe-tours]')).includes('3 tours'), 'tours au compteur');
+  await finir(pg);
+  await pg.click(`${ZP} [data-pe="verifierPrep"]`);
+  egal(await texte(pg, '[data-pe-regle="fragiles"]'), '✗ fragiles en haut', 'nom seul');
+  vrai((await texte(pg, '[data-pe-bilan-m]')).includes('3 tours'), 'tours au bilan');
+});
+
+await v('Préparation évaluation : parcours à choisir puis verrouillé ; retour → 40 m ; rien avant la copie ; note sur 20', async () => {
+  await monter(pg, { cas: 'preparation', temps: 'evaluation' });
+  vrai(!(await present(pg, '[data-pe-parcours]')), 'parcours dessiné en évaluation');
+  vrai(!(await present(pg, '[data-pe-regles]')), 'Les règles en évaluation');
+  await allerA(pg, 'A1-T01-N1-E1');
+  await pg.click(`${ZP} [data-pe-emp="A1-T01-N1-E1"]`);
+  vrai((await texte(pg, '[data-pe-msg]')).includes('Choisissez d’abord votre parcours'), 'parcours avant de prélever');
+  await pg.click(`${ZP} [data-pe="retour"]`);
+  await pg.check(`${ZP} input[name="peParcours"][value="retour"]`);
+  await prelevertout(pg);
+  vrai(await pg.$eval(`${ZP} input[name="peParcours"][value="serpentin"]`, (i) => i.disabled), 'parcours verrouillé');
+  egal(await texte(pg, '[data-pe-m]'), '40 m', 'retour');
+  await finir(pg);
+  vrai(!(await present(pg, '[data-pe="verifierPrep"]')), 'Vérifier en évaluation');
+  vrai(!(await present(pg, '[data-pe-bilan]')), 'bilan avant la copie');
+  vrai(!(await present(pg, '[data-pe-aide]')), 'aide en évaluation');
+  await pg.click(`${ZP} [data-pe="rendre"]`);
+  await pg.click(`${ZP} [data-pe="rendreOui"]`);
+  await pg.waitForFunction(() => window.__e.remis);
+  const r = await pg.evaluate(() => ({ score: window.__e.remis.score, max: window.__e.remis.max, m: window.__e.remis.detail.entrepot.metres, J: window.__e.remis.detail.entrepot.jalons.map((j) => j.ok) }));
+  egal(r, { score: 20, max: 20, m: 40, J: [true, true, true, true, true, true, true, true, true] }, 'note');
+  vrai(!(await present(pg, '[data-pe-bilan]')), 'bilan montré à l’élève après la copie');
+  // le serpentin dans l'ordre (47 m) ne fait pas le meilleur tour possible en évaluation (40 m)
+  await monter(pg, { cas: 'preparation', temps: 'evaluation' });
+  await pg.check(`${ZP} input[name="peParcours"][value="serpentin"]`);
+  await prelevertout(pg);
+  egal((await jalonsP(pg, 'evaluation'))[8], false, 'serpentin en évaluation');
+});
+
+await v('Préparation : état retrouvé après rechargement ; rangement et préparation ne se mélangent pas ; enseignant seul voit les attendus', async () => {
+  await pg.evaluate(() => localStorage.removeItem('essai-entrepot-base'));
+  await monter(pg, { cas: 'preparation', garder: true });
+  await prelever(pg, 'A1-T01-N1-E1', 2);
+  await pg.reload();
+  await pg.waitForSelector('#btnProf');
+  await monter(pg, { cas: 'preparation', garder: true });
+  egal((await etatP(pg)).faits, [{ a: 'A1-T01-N1-E1', k: 'MAI', q: 2 }], 'état retrouvé');
+  egal(await texte(pg, '[data-pe-prel="0"]'), '2', 'carte du bon');
+  await monter(pg, { garder: true });
+  egal(await pg.evaluate(() => Object.keys(window.__e.db.entrepots).sort()), ['essai-preparation', 'essai-rangement'], 'clés');
+  egal(await pg.evaluate(() => window.__e.db.entrepots['essai-rangement'].place), {}, 'rangement intact');
+  await pg.evaluate(() => localStorage.removeItem('essai-entrepot-base'));
+  await monter(pg, { cas: 'preparation' });
+  vrai(!(await present(pg, '.pe-prof')), 'attendus montrés à l’élève');
+  await monter(pg, { cas: 'preparation', role: 'prof' });
+  vrai((await texte(pg, '.pe-prof')).includes('serpentin 47 m, retour 40 m'), 'attendus côté enseignant');
   egal(erreursE, [], 'erreurs JS');
 });
 

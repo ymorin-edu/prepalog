@@ -13,16 +13,18 @@
 export const GAMMES = { MAT: 'Maisons et ateliers', CUI: 'Cuisines', VEH: 'Véhicules', PLA: 'Plein air' };
 
 // Les produits (gammes réelles ; références, poids et cartons construits). `couches` : cartons en largeur ×
-// profondeur × hauteur d'une palette complète (les mêmes qu'à la réception d'ENT-5.4).
+// profondeur × hauteur d'une palette complète (les mêmes qu'à la réception d'ENT-5.4). `carton` : poids,
+// cartons par couche sur une palette Europe 80 × 120 et hauteur d'un carton (m), pour la préparation de
+// commande (ENT-5.6) ; `classe` : lourd (carton de 15 kg et plus) ou fragile, rien = normal.
 export const PRODUITS = {
-  MAI: { nom: 'Maison Neo Jura Lodge', ref: 'SMB-NJL', gamme: 'MAT', couches: [2, 2, 2] },
-  ETA: { nom: 'Établi Black+Decker', ref: 'SMB-EBD', gamme: 'MAT', couches: [4, 3, 3] },
-  CUI: { nom: 'Cuisine Tefal', ref: 'SMB-CTF', gamme: 'CUI', couches: [4, 3, 4] },
-  POR: { nom: 'Porteur Little Smoby', ref: 'SMB-PLS', gamme: 'VEH', couches: [3, 3, 4] },
-  TRO: { nom: 'Trotteur Cotoons', ref: 'SMB-TCO', gamme: 'VEH', couches: [3, 2, 4] },
-  TRI: { nom: 'Tricycle Be Fun', ref: 'SMB-TBF', gamme: 'VEH', couches: [2, 2, 4] },
-  TOB: { nom: 'Toboggan XL', ref: 'SMB-TXL', gamme: 'PLA', couches: [2, 2, 3] },
-  BAC: { nom: 'Bac à sable', ref: 'SMB-BAS', gamme: 'PLA', couches: [2, 2, 3] },
+  MAI: { nom: 'Maison Neo Jura Lodge', ref: 'SMB-NJL', gamme: 'MAT', couches: [2, 2, 2], classe: 'lourd', carton: { kg: 50, parCouche: 2, h: 0.45 } },
+  ETA: { nom: 'Établi Black+Decker', ref: 'SMB-EBD', gamme: 'MAT', couches: [4, 3, 3], carton: { kg: 8, parCouche: 6, h: 0.25 } },
+  CUI: { nom: 'Cuisine Tefal', ref: 'SMB-CTF', gamme: 'CUI', couches: [4, 3, 4], classe: 'fragile', carton: { kg: 5.5, parCouche: 8, h: 0.2 } },
+  POR: { nom: 'Porteur Little Smoby', ref: 'SMB-PLS', gamme: 'VEH', couches: [3, 3, 4], carton: { kg: 5, parCouche: 6, h: 0.22 } },
+  TRO: { nom: 'Trotteur Cotoons', ref: 'SMB-TCO', gamme: 'VEH', couches: [3, 2, 4], carton: { kg: 6, parCouche: 6, h: 0.22 } },
+  TRI: { nom: 'Tricycle Be Fun', ref: 'SMB-TBF', gamme: 'VEH', couches: [2, 2, 4], carton: { kg: 12, parCouche: 4, h: 0.25 } },
+  TOB: { nom: 'Toboggan XL', ref: 'SMB-TXL', gamme: 'PLA', couches: [2, 2, 3], classe: 'lourd', carton: { kg: 21, parCouche: 2, h: 0.5 } },
+  BAC: { nom: 'Bac à sable', ref: 'SMB-BAS', gamme: 'PLA', couches: [2, 2, 3], classe: 'lourd', carton: { kg: 19, parCouche: 2, h: 0.35 } },
 };
 // Cartons d'une palette complète d'un produit.
 export const parPalette = (k) => PRODUITS[k].couches.reduce((a, b) => a * b, 1);
@@ -41,6 +43,10 @@ export const PLAN = {
   zones: { litiges: ['L1', 'L2'], bureau: 'chef de quai', quais: ['QUAI 1', 'QUAI 2', 'QUAI 3'] },
   // Le parcours de prélèvement, à sens unique : on monte l'allée A, on redescend l'allée B.
   parcours: { debut: 'A', fin: 'B' },
+  // Les distances, en mètres (préparation de commande) : une travée de 3 m ; 9,4 m d'une allée à l'autre ;
+  // 0,9 m de l'allée principale au bas des racks ; 1,2 m du haut des racks au passage du haut ; le quai
+  // n° 1 à 5,2 m de l'allée A. Recalées sur la maquette v2 (100 px = 3 m) : serpentin 47 m, retour 40 m.
+  metres: { travee: 3, entreAllees: 9.4, avant: 0.9, arriere: 1.2, quai: 5.2 },
   // Rotation (sources : rackdestockage.eu, mecalux.fr) : A près des quais et en bas, C au fond.
   rotation: {
     A: { lib: 'rapide', travees: [1], niveaux: [1, 2], texte: 'T01, niveau N1 ou N2' },

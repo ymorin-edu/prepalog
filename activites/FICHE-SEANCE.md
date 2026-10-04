@@ -420,11 +420,11 @@ version envoyée.
 envoi rend la copie. Note = jalons réussis / jalons × `note.sur` (20 par défaut), détail jalon par jalon, clics sur
 « Vérifier », heure du premier geste et des envois dans `detail.planning` (rangés, montrés nulle part).
 
-## Vue « Plan d'entrepôt » (ranger des palettes) — `core/types/entrepot.js`
+## Vue « Plan d'entrepôt » (ranger des palettes, préparer une commande) — `core/types/entrepot.js`
 
 Depuis le 04/10/2026 (brief `docs/briefs/MOTEUR-vue-plan-entrepot.md`, maquette v2 de `docs/briefs/plan-entrepot/`).
-**Seul le mode `rangement` est écrit** (lots 1 et 2) ; une séance qui déclare `comptage` ou `preparation` ne se charge
-pas tant que les lots 3 et 4 ne sont pas faits. L'élève prend une palette (carte du bandeau ou zone de réception du
+Deux modes sont écrits : **`rangement`** (lots 1 et 2) et **`preparation`** (lot 4, plus bas) ; une séance qui déclare
+`comptage` ne se charge pas tant que le lot 3 n'est pas fait. En rangement, l'élève prend une palette (carte du bandeau ou zone de réception du
 plan), choisit une **travée** sur le plan vu de dessus (elle s'ouvre en grand, vue de face), puis un **emplacement**.
 L'adresse s'écrit `A1-T03-N2-E1` (allée A côté 1, travée 03, niveau 2 — niveau 1 = sol —, emplacement 1). Emplacement
 occupé : refusé tout de suite. **Aucune règle « lourd en bas » dans un rack** : seule la charge totale du niveau compte.
@@ -470,6 +470,55 @@ entrepot: {
   évaluation (`copie: true`) = rien de signalé, « Rendre mon travail » en deux clics, note jalons × 20.
 - La vue tient dans l'écran à 1366 × 768 (le plan prend la hauteur qui reste sous le bandeau). Les textes peuvent porter
   des `[[mots cliquables]]`, sauf dans les cartes de palettes (ce sont des boutons).
+
+### Mode `preparation` : préparer une commande au colis complet (lot 4, 04/10/2026)
+
+**N1 = picking, N2 et au-dessus = réserve.** L'élève lit le bon (une carte par ligne dans le bandeau), ouvre la travée,
+clique l'emplacement de picking : la **fiche de prélèvement** s'ouvre (cartons restants, minimum, poids du carton, cartons
+dessinés), il saisit le nombre de cartons. Cliquer une palette de réserve : refusé (gardé pour le repérage, `essaisReserve`).
+Picking **sous son minimum** : « ↻ Descente de la réserve », puis clic sur une palette de réserve de la même référence
+(autre référence, N1, vide : refusé) ; le cariste la descend, l'emplacement de réserve se libère. La **palette de commande**
+se monte dans l'ordre du prélèvement (zone d'expédition du plan, ou bouton « Palette de commande (n) ») ; deux prélèvements
+de suite à la même adresse font **une seule couche**. « ↶ Reposer le dernier » ; « Terminer la préparation » → film (1 à 6
+tours) et étiquettes (5 faces) → « Vérifier ma préparation » (bilan) / « Reprendre la préparation ».
+
+Ce que la séance ajoute à la déclaration (exemple complet : `PREPARATION` dans `contenus/entrepot-essai.js`) :
+
+```js
+entrepot: {
+  id: 'smoby-preparation', libelle: 'Préparer la commande', mode: 'preparation',
+  personnage, gammes, stock,                                  // comme en rangement
+  plan: { …, metres: { travee: 3, entreAllees: 9.4, avant: 0.9, arriere: 1.2, quai: 5.2 } },   // en mètres (§5.4 du brief)
+  produits: { MAI: { nom, ref, gamme, couches: [2, 2, 2], classe: 'lourd' | 'fragile', carton: { kg: 50, parCouche: 2, h: 0.45 } }, … },
+  commande: { num, client, enlevement, transporteur, heure: 'jeudi 10 décembre, 6 h 00', quai: 'QUAI 1', etiquette?: 'JDR · E1',
+              hMax: 1.8, kgMax: 800, support: { h: 0.15, kg: 25 },
+              lignes: [{ a: 'A1-T01-N1-E1', produit: 'MAI', q: 2 }, …],    // dans l'ordre du serpentin
+              desordre: [4, 5, 3, 0, 2, 1] },                             // l'ordre remis en entraînement et en évaluation
+  picking: { 'B1-T01-N1-E1': { q: 2, min: 6 }, … },          // les autres N1 : palette pleine, min = max(2, plein / 4)
+  regles: { titre?, entete?, lignes, encadre? },
+  jalons?: [{ type: 'lignesJustes' }, { type: 'reappro' }, { type: 'lourds' }, { type: 'fragiles' }, { type: 'poids' },
+            { type: 'hauteur' }, { type: 'film' }, { type: 'etiquettes' }, { type: 'parcours', garde?: 'lignesJustes' }],
+}
+```
+
+- **Classes des cartons** : `lourd` > normal > `fragile` ; « jamais une classe plus lourde sur une plus fragile », jugé en deux
+  critères (`lourds` : aucun lourd prélevé après un non-lourd ; `fragiles` : rien après un fragile).
+- **Jalons** : les six critères de la palette ne comptent **que si toutes les lignes sont justes** (une palette vide respecte
+  « lourds en bas »). `parcours` = mètres ≤ meilleur tour, sans marge ; garde par défaut « au moins une ligne prélevée »,
+  `garde: 'lignesJustes'` pour ne le compter que sur une commande complète. `reappro` : chaque ligne en rupture a eu sa
+  descente de réserve (le moteur refuse une autre référence). Défaut : les 9 jalons, sans `reappro` s'il n'y a pas de rupture.
+- **Les mètres** : points de prélèvement au milieu de l'allée, devant la travée ; tour = quai → points → quai. Serpentin
+  (sens unique, revenir en arrière = un tour de plus) ou retour (on ressort de chaque allée par le bas). Le moteur vérifie
+  la déclaration (une ligne en rupture doit être sous son minimum et avoir une réserve de la même référence, sinon la
+  séance ne se charge pas).
+- **Temps** : guidage = bon trié dans l'ordre du serpentin, numéros des lignes sur le plan, parcours dessiné, aide sur la
+  fiche (reste à prélever, rupture expliquée), bilan ligne par ligne et règle par règle expliqué ; entraînement = bon dans
+  le désordre, parcours dessiné, bilan = nom du critère ; évaluation = bon dans le désordre, **l'élève choisit serpentin ou
+  retour** (verrouillé au premier prélèvement), rien de dessiné ni de signalé, « Rendre mon travail », et le jalon
+  `parcours` se compare au **meilleur des deux** parcours (comme la maquette).
+- Le compteur de mètres (colonne de côté) et le poids / la hauteur de la palette sont des **informations**, montrées dans
+  les trois temps ; les messages de faute disent *que* (« la palette dépasse le poids maximum du transporteur (800 kg) »).
+- `attendusPreparation(ENTREPOT)` (meilleurs tours, palette juste) : côté enseignant et pour les tests (valeurs à la main).
 
 ## Pièges
 

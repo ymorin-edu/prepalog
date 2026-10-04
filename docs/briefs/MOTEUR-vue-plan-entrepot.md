@@ -6,7 +6,7 @@
 > Lis docs/EN-COURS.md, puis le brief docs/briefs/MOTEUR-vue-plan-entrepot.md et ouvre la maquette docs/briefs/plan-entrepot/maquette-plan-entrepot-v2.html. Annonce la durée avant de commencer, découpe en lots (§10), puis enchaîne sans attendre : les questions du §13 ont toutes une valeur par défaut, applique-la et note au compte rendu ce que tu as choisi.
 > ```
 
-**Statut** : en cours — **lots 1 et 2 (le cœur, le mode rangement) livrés le 04/10/2026, à valider par Tristan** sur `outils/essai-entrepot.html` ; lots 3 (comptage), 4 (préparation) et 5 à faire *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
+**Statut** : en cours — **lots 1 et 2 (le cœur, le mode rangement) et lot 4 (le mode préparation) livrés le 04/10/2026, à valider par Tristan** sur `outils/essai-entrepot.html` ; lot 3 (comptage, renvoyé à S2 France Boissons) et lot 5 à faire *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
 **Date du brief** : 04/10/2026
 **Conversation d'origine** : Cowork (Opus) ; fiche projet `claude/prepalog-plan-entrepot-cadrage.md` (décisions 1 à 22,
 recalage Smoby, onglets, plan agrandi), `claude/prepalog-2de-s1-cadrage.md`.
@@ -475,3 +475,33 @@ maquette, dans les trois temps ; les bonnes réponses et les mètres sont ceux d
 - **Reste ouvert** : lots 3 (comptage), 4 (préparation, mètres 47 / 40 / 141), 5 ; le plan est dessiné pour 4 travées
   et 3 niveaux (géométrie générale, mais seul ce cas est essayé) ; rendu en thème sombre non essayé à l'écran (Smoby
   impose le papier).
+
+*Lot 4 (04/10/2026, Claude Code) — le mode préparation.*
+
+- **Fichiers modifiés** : `core/types/entrepot.js` (mode `preparation` : compilation et contrôles de la déclaration,
+  calcul des mètres, de la palette et des jalons, vue — bon, colonne de côté, tracé sur le plan, vue de face picking /
+  réserve, fiche de prélèvement, palette de commande, bilan — et gestes ; exports `attendusPreparation`,
+  `calculPreparation`, `TYPES_JALONS_PREP`, `ETIQUETTES`) ; `styles/entrepot.css` (aucune variable nouvelle) ;
+  `contenus/smoby-entrepot.js` (cartons et classes des 8 produits, `plan.metres`) ; `contenus/entrepot-essai.js` (cas
+  `PREPARATION`) ; `outils/essai-entrepot.html` (choix du cas ③) ; `outils/test/entrepot.mjs` (12 cas, et la fonction
+  `monter` accepte `cas`, `commande`, `jalons`) ; `activites/FICHE-SEANCE.md` ; `docs/decisions.md`.
+- **Écarts par rapport au brief** : les mètres se déclarent en mètres (`plan.metres`), pas en pixels ; deux prélèvements
+  de suite à la même adresse = une seule couche ; le jalon `parcours` accepte `garde: 'lignesJustes'` (ENT-5.6) ; le bon
+  tient en deux rangées de trois cartes ; la fiche de prélèvement est en deux colonnes ; les refus s'affichent dans
+  l'en-tête de la vue ouverte (pas de bandeau ambré au-dessus de la travée : il faisait bouger les emplacements) ;
+  « Aussi sur la palette » (hors commande) va dans la colonne de côté.
+- **Valeurs recontrôlées contre le moteur** : serpentin dans l'ordre **47 m**, retour **40 m** (40,4), désordre en
+  serpentin **141 m, 3 tours**, palette **331 kg, 1,74 m** — celles du §11, sans recalcul.
+- **Tests** : bloc `entrepot`, 30 cas (dont 12 de préparation) : ordre du bon, heure, quai ; parcours juste **à la souris**
+  à 1366 × 768 → 9 / 9 ; réserve, mauvaise référence, picking au-dessus du minimum, trop de cartons : refusés ; Échap
+  annule le réappro ; palette vide terminée et inaction → 0 / 9 ; une ligne seule → parcours faux avec la garde, vrai
+  sans ; Cuisine avant Porteur → 47 m et « fragiles en haut » faux ; film 2 tours, étiquettes voisines ; poids et hauteur
+  (limites baissées) ; « que, pas de combien » ; entraînement 141 m / 3 tours / nom seul ; évaluation (choix verrouillé,
+  retour 40 m, rien avant la copie, 20 / 20 ; serpentin 47 m → parcours faux) ; Trotteur en deux fois → 1,74 m ;
+  rechargement, cloisonnement rangement / préparation, attendus côté enseignant seulement. **Sabotages éprouvés** (garde
+  des critères retirée, réappro toute référence, garde du parcours ignorée, couches non fusionnées, réserve prélevable) :
+  chacun fait tomber un cas.
+- **Reste ouvert** : lot 3 (comptage) ; les indicateurs de repérage propres à la préparation (essais en réserve, tours)
+  sont gardés dans l'état de l'élève (et dans `detail.entrepot` de la note en évaluation), pas encore dans le tableau
+  « Repérage » de l'enseignant (ENT-5.6 les demande : à voir avec la séance) ; rendu en
+  thème sombre non essayé à l'écran (Smoby impose le papier).

@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Essai — Plan d'entrepôt (Prepalog)</title>
-<!-- Page d'ESSAI de l'écran `core/types/entrepot.js`, dans le vrai moteur d'entreprise, sur le cas
-     « rangement » de la maquette v2 (`contenus/entrepot-essai.js`). Elle n'est liée nulle part et rien
+<!-- Page d'ESSAI de l'écran `core/types/entrepot.js`, dans le vrai moteur d'entreprise, sur les cas
+     « rangement » et « préparation » de la maquette v2 (`contenus/entrepot-essai.js`). Elle n'est liée nulle part et rien
      n'y est enregistré : la base vit en mémoire, un changement de réglage repart de zéro.
      Ouvrir avec `lancer.bat`, puis http://localhost:8000/outils/essai-entrepot.html -->
 <base href="../">
@@ -24,7 +24,7 @@
 <body>
 <form class="essai-reglages" id="reglages">
   <b>Page d'essai</b> — chaque changement repart d'une base neuve :
-  <label>Cas <select name="cas"><option value="rangement">① Rangement (ENT-5.5)</option></select></label>
+  <label>Cas <select name="cas"><option value="rangement">① Rangement (ENT-5.5)</option><option value="preparation">③ Préparation (ENT-5.6)</option></select></label>
   <label>Temps <select name="temps"><option value="guidage">guidage</option><option value="entrainement">entraînement</option><option value="evaluation">évaluation (copie rendue)</option></select></label>
   <label>Voir comme <select name="role"><option value="eleve">élève</option><option value="prof">enseignant (bonnes réponses)</option></select></label>
 </form>
@@ -58,7 +58,7 @@ function monter() {
       const J = (res.detail && res.detail.entrepot && res.detail.entrepot.jalons) || [];
       boite.hidden = false;
       boite.innerHTML = `<b>Copie rendue (simulée).</b> Note calculée : <b>${String(res.score).replace('.', ',')} / ${res.max}</b>
-        (${J.filter((j) => j.ok).length} / ${J.length} jalons).<br>${J.map((j) => `${j.ok ? '✓' : '✗'} ${j.jalon} (${j.adresse || 'non posée'})`).join('<br>')}`;
+        (${J.filter((j) => j.ok).length} / ${J.length} jalons).<br>${J.map((j) => `${j.ok ? '✓' : '✗'} ${j.jalon}${'adresse' in j ? ` (${j.adresse || 'non posée'})` : ''}`).join('<br>')}`;
       return { rendu: Date.now() };
     },
   });
