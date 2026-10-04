@@ -69,8 +69,10 @@ export function valeurCellule(classeur, ctrl, feuilleParDefaut) {
 }
 
 // Comparaison de texte indulgente : la casse, les accents et les espaces en trop ne
-// doivent pas coûter un point à un élève qui a compris l'exercice.
+// doivent pas coûter un point à un élève qui a compris l'exercice. L'apostrophe non plus :
+// Excel garde l'apostrophe droite du clavier (') là où le contenu écrit la typographique (’).
 export const pliage = (s) => String(s ?? '')
+  .replace(/[\u2018\u2019\u02BC\u00B4`]/g, "'")
   .normalize('NFD').replace(/[̀-ͯ]/g, '')
   .toLowerCase().replace(/\s+/g, ' ').trim();
 

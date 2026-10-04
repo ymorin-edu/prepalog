@@ -188,6 +188,15 @@ export default async function bloc({ v, nav, ROOT, baseXlsx }) {
     if (JSON.stringify(syn) !== JSON.stringify({ 'CAB-USBC-1M': 1, 'CHG-20W': 2, 'ECO-BT-01': 0, 'SOU-SF-02': 0, 'BAT-10K': 0, 'CLE-64G': 0, 'AMP-LED-E27': 0, 'COQ-UNI-01': 1 })) throw new Error('synthèse attendue : ' + JSON.stringify(syn));
   });
 
+  await v('Tableur : titre « Valeur de l\'écart » tapé avec l\'apostrophe du clavier = « Valeur de l’écart » du contenu (Excel)', async () => {
+    const { db } = baseEssai();
+    const ex = G.construireExport(EXP(), db, {});
+    const ctrl = E.controlesEssai(db);
+    ctrl[0] = { ...ctrl[0], titre: 'Valeur de l’écart' };
+    const res = G.controlerDepot(classeurEleve(ex, { titreEcart: 'Valeur de l\'écart' }), ctrl, ex.propres);
+    if (`${res[0].justes}/${res[0].total}` !== '10/10' || !res[0].ok) throw new Error(dire(res));
+  });
+
   await v('Tableur : ce qui cloche est repéré ligne par ligne — nombre tapé, SI absent, valeur fausse, COUNTIFS au lieu de COUNTIF', async () => {
     const { db } = baseEssai();
     const ex = G.construireExport(EXP(), db, {});

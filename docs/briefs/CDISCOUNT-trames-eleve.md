@@ -6,7 +6,7 @@
 > Lis docs/briefs/CDISCOUNT-trames-eleve.md : commite les fichiers de trame Cdiscount déposés par Cowork (liste §2), sans rien déclarer, puis fais le petit correctif moteur du §4 (apostrophes dans les titres de colonnes), commité à part, avec son test. Ne touche à aucun autre fichier.
 > ```
 
-**Statut** : à commiter. Trames **non relues** par Tristan, **non déclarées**.
+**Statut** : livré (04/10/2026) — fichiers commités, correctif du §4 fait. Trames **non relues** par Tristan, **non déclarées**.
 
 ## 1. Ce que c'est
 
@@ -100,3 +100,10 @@ changer. **Test** (bloc `tableur-export`) : le contrôle « Valeur de l’écart
   étapes 5 et 6, 2.3 étape 6) ; ouvrir le .docx dans Word pour vérifier.
 
 ## Compte rendu *(rempli par Claude Code)*
+
+- **04/10/2026** — §2 : fichiers de Cowork commités tels quels (commit « Cdiscount : trames élève… »), rien de
+  déclaré. Les modifications Smoby de Cowork (adresse `A1-T03-N2-E1`…) commitées à part.
+- §4 : `pliage()` (`core/types/classeur.js`) ramène ’ ‘ ʼ ´ ` à l'apostrophe droite avant le reste. Test
+  ajouté au bloc `tableur-export` (colonne « Valeur de l'écart » tapée au clavier, contrôle « Valeur de l’écart ») ;
+  éprouvé dans les deux sens (sans le pliage : « colonne introuvable », 0/10). Suite entière : 592/592.
+- Restent pour Tristan : la relecture des trames (§6) et les écarts de texte du §5 (à trancher).
