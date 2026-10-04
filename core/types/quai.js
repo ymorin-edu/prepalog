@@ -81,6 +81,11 @@
 // palette P2 au chariot »). Un seul camion dans ce mode (plusieurs camions : l'ordre se décide sur les
 // tickets, donc sur le froid).
 //
+// DÉCOR FIXE (04/10/2026, ENT-5.4). `photos: { quai, decor: 'fixe', porte, cadre, places, horloge }` : la
+// photo du quai est prise porte ouverte, remorque visible. Rien ne s'anime dessus : le chariot sort de
+// l'ouverture (`porte`) et pose les palettes sur une dalle dessinée sous la photo (le `cadre` descend
+// plus bas que la photo ; `places` dans cette bande). Sans `decor`, la porte se lève comme chez Picard.
+//
 // SÉCURITÉ AVANT DÉCHARGEMENT (04/10/2026, lot 5). `securite: { scene, points: [{ id, lib, ok }], signaler:
 // { bouton, reponse, rien }, arret, commencer, photo }` ajoute une étape ⓪ « Avant de décharger » : une
 // scène de trois lignes, chaque point jugé « OK » / « Pas OK », deux boutons « Signaler au chef de quai »
@@ -706,6 +711,11 @@ export function creerQuai(Q, opts = {}) {
   // Coordonnées dans la photo du quai (1280 × 853 pour Picard). Tout se déduit de la porte.
   const PH = Object.assign({ porte: { x0: 455, x1: 786, y0: 352, y1: 585 }, cadre: [0, 190, 1280, 663], largeur: 1280, hauteur: 853 }, Q.photos || {});
   const PORTE = PH.porte;
+  // `photos.decor: 'fixe'` : une photo prise porte OUVERTE (remorque visible, ENT-5.4). Ni porte qui se
+  // lève, ni remorque dessinée : la photo reste telle quelle, et le cadre descend sous elle sur une bande
+  // de sol dessinée où le chariot pose les palettes (`places` déclarées dans cette bande). `porte` y
+  // désigne l'ouverture de la remorque (d'où sort le chariot). `horloge: [x, y]` place l'horloge du quai.
+  const FIXE = PH.decor === 'fixe';
   const OUV = { L: PORTE.x0 + 23, R: PORTE.x1 - 23, T: PORTE.y0 + 20, B: PORTE.y1 - 19 };
   const VP = { x: (PORTE.x0 + PORTE.x1) / 2, y: PORTE.y0 + 106 }, PROF = .36;
   const SOL_Y0 = OUV.B, SOL_Y1 = PH.cadre[1] + PH.cadre[3] - 18;
@@ -818,6 +828,17 @@ export function creerQuai(Q, opts = {}) {
     s += `<line x1="${f1(g - 30 * e)}" y1="${f1(sol - 70 * e)}" x2="${f1(g - 22 * e)}" y2="${f1(sol - 56 * e)}" stroke="${noir}" stroke-width="${f1(3 * e)}"/>`;
     return s;
   }
+  // Décor fixe : la dalle du quai sous la photo, du bas de la photo au bas du cadre (béton, joints,
+  // bande jaune de l'allée de sécurité au ras de la photo).
+  function solFixe() {
+    const [cx, cy, cw, chh] = PH.cadre, y0 = PH.hauteur, y1 = cy + chh;
+    if (y1 <= y0) return '';
+    let s = `<rect x="${cx}" y="${y0}" width="${cw}" height="${y1 - y0}" fill="#9a9c98"/>`;
+    s += `<rect x="${cx}" y="${y0}" width="${cw}" height="10" fill="#6f716d"/>`;
+    s += `<rect x="${cx}" y="${y0 + 22}" width="${cw}" height="8" fill="#e3b21b"/>`;
+    for (let x = cx + 160; x < cx + cw; x += 320) s += `<line x1="${x}" y1="${y0 + 30}" x2="${x}" y2="${y1}" stroke="#8a8c88" stroke-width="2"/>`;
+    return s;
+  }
   // Brume froide : l'air froid tombe et coule au sol.
   function brume(t) {
     let s = '';
@@ -834,7 +855,7 @@ export function creerQuai(Q, opts = {}) {
   function image(t, e, attente) {
     const P = PAL[ca(e)];
     const depart = (n) => T_DEB + n * T_PAL;
-    const montee = attente ? 0 : ease((t - T_OUVRE) / T_PORTE);
+    const montee = attente || FIXE ? 0 : ease((t - T_OUVRE) / T_PORTE);
     const posees = [];
     let mobile = '', enCours = null;
     P.forEach((p, n) => {
@@ -855,14 +876,15 @@ export function creerQuai(Q, opts = {}) {
     const nb = posees.length;
     let leg;
     if (attente) leg = `${hhmm(e.minute)} — Le camion est à quai, portes fermées.`;
+    else if (FIXE && t < T_DEB) leg = `${hhmm(e.minute)} — ${quiSort} entre dans la remorque ${CARISTE ? 'au chariot' : 'au transpalette'}.`;
     else if (t < T_OUVRE) leg = `${hhmm(e.minute)} — Le chauffeur ouvre les portes arrière de sa remorque.`;
     else if (t < T_DEB) leg = F ? `${hhmm(e.minute)} — La porte du quai se lève : l'air froid s'échappe et tombe au sol. Le temps hors froid démarre.` : `${hhmm(e.minute)} — La porte du quai se lève.`;
     else if (nb < P.length) leg = `${hhmm(e.minute)} — ${quiSort} sort la palette ${P[enCours ?? nb].id} ${CARISTE ? 'au chariot' : 'au transpalette'} (${Math.min(nb + 1, P.length)} sur ${P.length}).`;
     else leg = `${hhmm(e.minute)} — Les ${P.length} palettes sont sur le quai. Le camion attend la fin de tes contrôles.`;
     const posIds = new Set(posees.map((q) => q[0].id));
     return {
-      porte: `translate(0 ${f1(-montee * (PORTE.y1 - PORTE.y0 + 3))})`,
-      remorque: interieur(attente ? P : P.filter((_, n) => t < depart(n)), P.length),
+      porte: FIXE ? '' : `translate(0 ${f1(-montee * (PORTE.y1 - PORTE.y0 + 3))})`,
+      remorque: FIXE ? '' : interieur(attente ? P : P.filter((_, n) => t < depart(n)), P.length),
       brume: attente || !F ? '' : brume(t),
       posees: posees.map(([p, x, y]) => paletteFace(p, x, y, echelle(y))).join(''),
       mobile, leg, nb,
@@ -876,9 +898,10 @@ export function creerQuai(Q, opts = {}) {
     const [cx, cy, cw, chh] = PH.cadre;
     const pw = PORTE.x1 - PORTE.x0, ph = PORTE.y1 - PORTE.y0;
     const ax = PORTE.x1 + 14;
+    const [hx, hy] = PH.horloge || [ax, PORTE.y0 + 78];
     const tempQuai = `${R.lieu.temp > 0 ? '+' : ''}${virgule(Number(R.lieu.temp).toFixed(1))} °C`;
     return `<div class="quai-scene2">
-      <svg data-q-scene2 viewBox="${cx} ${cy} ${cw} ${chh}" preserveAspectRatio="xMidYMid slice" role="img" aria-label="${ech(R.lieu.nom)} : la porte s'ouvre, ${ech(minuscule(quiSort))} sort les palettes une à une ${CARISTE ? 'au chariot élévateur' : 'au transpalette'}">
+      <svg data-q-scene2 viewBox="${cx} ${cy} ${cw} ${chh}" preserveAspectRatio="xMidYMid slice" role="img" aria-label="${ech(R.lieu.nom)} : ${FIXE ? 'la remorque est ouverte' : 'la porte s’ouvre'}, ${ech(minuscule(quiSort))} sort les palettes une à une ${CARISTE ? 'au chariot élévateur' : 'au transpalette'}">
         <defs>
           <clipPath id="quaiCPorte"><rect x="${PORTE.x0}" y="${PORTE.y0}" width="${pw}" height="${ph}"/></clipPath>
           <clipPath id="quaiCPorte2"><rect x="${PORTE.x0}" y="${PORTE.y0}" width="${pw}" height="${ph}"/></clipPath>
@@ -886,19 +909,19 @@ export function creerQuai(Q, opts = {}) {
           ${DEFS_FILM}
         </defs>
         <image href="${ech(PH.quai)}" x="0" y="0" width="${PH.largeur}" height="${PH.hauteur}"/>
-        <g clip-path="url(#quaiCPorte)">
+        ${FIXE ? `<g data-q-sol>${solFixe()}</g><g data-g="remorque"></g><g data-g="porte"></g>` : `<g clip-path="url(#quaiCPorte)">
           <g data-g="remorque">${im.remorque}</g>
           <g data-g="porte" transform="${im.porte}"><image href="${ech(PH.quai)}" x="0" y="0" width="${PH.largeur}" height="${PH.hauteur}" clip-path="url(#quaiCPorte2)"/></g>
-        </g>
+        </g>`}
         ${F ? `<g aria-label="Afficheur de température du quai">
           <rect x="${ax}" y="${PORTE.y0 + 14}" width="96" height="54" rx="4" fill="#1b2228" stroke="#8d969c" stroke-width="2"/>
           <text x="${ax + 48}" y="${PORTE.y0 + 30}" text-anchor="middle" font-size="10" fill="#c9d2d8" font-family="system-ui,sans-serif" letter-spacing="1">${ech(R.lieu.nom.toUpperCase())}</text>
           <text data-q-afficheur x="${ax + 48}" y="${PORTE.y0 + 56}" text-anchor="middle" font-size="18" font-weight="700" fill="#8fd0ff" font-family="ui-monospace,Consolas,monospace">${tempQuai}</text>
         </g>` : ''}
         <g aria-label="Horloge du quai">
-          <rect x="${ax}" y="${PORTE.y0 + 78}" width="96" height="44" rx="4" fill="#1b2228" stroke="#8d969c" stroke-width="2"/>
-          <text data-q-mur-lib x="${ax + 48}" y="${PORTE.y0 + 92}" text-anchor="middle" font-size="9" fill="#c9d2d8" font-family="system-ui,sans-serif" letter-spacing="1">${EVAL ? 'TEMPS PASSÉ' : 'HEURE DU QUAI'}</text>
-          <text data-q-mur x="${ax + 48}" y="${PORTE.y0 + 114}" text-anchor="middle" font-size="18" font-weight="700" fill="#ffd27a" font-family="ui-monospace,Consolas,monospace">${EVAL ? mmss(e.reel) : hhmm(e.minute).slice(0, 5)}</text>
+          <rect x="${hx}" y="${hy}" width="96" height="44" rx="4" fill="#1b2228" stroke="#8d969c" stroke-width="2"/>
+          <text data-q-mur-lib x="${hx + 48}" y="${hy + 14}" text-anchor="middle" font-size="9" fill="#c9d2d8" font-family="system-ui,sans-serif" letter-spacing="1">${EVAL ? 'TEMPS PASSÉ' : 'HEURE DU QUAI'}</text>
+          <text data-q-mur x="${hx + 48}" y="${hy + 36}" text-anchor="middle" font-size="18" font-weight="700" fill="#ffd27a" font-family="ui-monospace,Consolas,monospace">${EVAL ? mmss(e.reel) : hhmm(e.minute).slice(0, 5)}</text>
         </g>
         <g data-g="brume" filter="url(#quaiFlou)">${im.brume}</g>
         <g data-g="posees">${im.posees}</g>
@@ -925,7 +948,7 @@ export function creerQuai(Q, opts = {}) {
     let fait = false;
     const k = K(e, ci), P = PAL[ci];
     if (k.evts === 0 && t >= T_OUVRE) {
-      k.evts = 1; avancer(e, R.D.ouverture, `porte du quai ouverte, début du déchargement${M ? ` du ${nomCam(ci)}` : ''}`); fait = true;
+      k.evts = 1; avancer(e, R.D.ouverture, `${FIXE ? 'remorque ouverte' : 'porte du quai ouverte'}, début du déchargement${M ? ` du ${nomCam(ci)}` : ''}`); fait = true;
     }
     while (k.evts >= 1 && k.evts <= P.length && t >= T_DEB + (k.evts - 1) * T_PAL + T_TRAJET) {
       avancer(e, R.D.parPalette, `${P[k.evts - 1].id} posée sur le quai`); k.evts++; fait = true;
@@ -1248,7 +1271,7 @@ export function creerQuai(Q, opts = {}) {
     }
     const r = p.refs ? (p.refs.find((x) => x.ref === cle) || p.refs[0]) : null;
     const et = r ? r.etiq : p.etiq;
-    return `<div class="quai-etiq" data-q-etiquette><b>${ech(cm.fournisseur)}</b>${F ? ' — produit surgelé, conserver à −18 °C' : ''}<br>Réf. ${ech(et.ref)}<br><b>${ech(et.nom)}</b><br>Contenu : ${ech(et.poids)}<br>Lot : ${ech(et.lot)} · À consommer de préférence avant fin : ${ech(et.ddm)}<div class="quai-code">||| |||| || ||||| | ||| 3 760000 ${ech(String(et.ref).replace('-', ''))}</div></div><div class="quai-reconst">Étiquette reconstituée, non contractuelle.</div>`;
+    return `<div class="quai-etiq" data-q-etiquette><b>${ech(cm.fournisseur)}</b>${F ? ' — produit surgelé, conserver à −18 °C' : ''}<br>Réf. ${ech(et.ref)}<br><b>${ech(et.nom)}</b><br>Contenu : ${ech(et.poids)}<br>Lot : ${ech(et.lot)}${et.ddm ? ` · À consommer de préférence avant fin : ${ech(et.ddm)}` : ''}<div class="quai-code">||| |||| || ||||| | ||| 3 760000 ${ech(String(et.ref).replace('-', ''))}</div></div><div class="quai-reconst">Étiquette reconstituée, non contractuelle.</div>`;
   }
 
   // Ce que dit l'onglet d'une palette.

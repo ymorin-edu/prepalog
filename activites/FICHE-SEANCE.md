@@ -147,6 +147,14 @@ message déclenché portant `phaseQuai: 2` : « Bloquer — qualité » / « Dé
 et bilan. Palette à bloquer : `bloquer: true`. Jalons des messages : `jalonsDossier: { avant(db, e), apres(db, e) }` (lignes
 `{ id, lib, fait, attendu, ok }`), placés avant et après ceux du blocage. Un bouton « Messagerie » mène aux messages, un lien y
 ramène au quai.
+**Quai sans froid** (04/10/2026, `MOTEUR-2de-S1` lots 4-5, exemple : `contenus/smoby-ent54.js`) : `froid: false` (ni
+ticket, ni sonde, ni temps hors froid, fiche de contrôle à trois cases), `motifs: ['avarie', 'manquant']` (motifs proposés),
+`zone: { nom }` (étape ④), `dechargement: { par: 'cariste', nom }` (chariot élévateur) et `securite: { scene, points: [{ id,
+lib, ok }], signaler: { bouton, reponse }, arret, photo, alt }` (étape ⓪ « Avant de décharger », jalons `securiteSignalee` et
+`securiteConstat` en tête). Un seul camion. **Décor fixe** (04/10/2026, ENT-5.4) : `photos.decor: 'fixe'` pour une photo
+prise porte ouverte : `porte` = l'ouverture de la remorque, `cadre` descend sous la photo (dalle dessinée), `places` dans
+cette dalle, `horloge: [x, y]`. Les jalons de la vue se regroupent au besoin dans les `etapes` de la séance (ENT-5.4 : comptage
+et décision d'une palette en un seul jalon, en lisant `jalonsQuai(db, QUAI).L`).
 
 **Un jeu tiré par élève** (évaluation, 03/10/2026, chantier P6, pilote ENT-4.4 ; décision
 `docs/briefs/DECISION-jeu-unique-evaluations.md`). Le tirage est générique, dans `core/tirage.js` :
