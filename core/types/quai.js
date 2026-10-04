@@ -1276,7 +1276,7 @@ export function creerQuai(Q, opts = {}) {
         <div class="quai-ligne" data-q-vers4>${vers4}</div>
       </div>
       ${choixCamion(e)}
-      <div class="quai-onglets" role="tablist">${onglets}</div>
+      <div class="quai-onglets" role="tablist" data-q-onglets>${onglets}</div>
       <details class="quai-rappel-bl" data-libre><summary data-libre>📄 Revoir le bon de livraison${M ? ` du camion ${ech(cm.nom)}` : ''}</summary>${blHtml(ci)}</details>
       <div class="quai-poste quai-poste-egal">
         <div class="quai-gauche quai-collee">
@@ -1806,7 +1806,12 @@ export function creerQuai(Q, opts = {}) {
       on('modifier', geste(() => { const k = K(e, p().camion); if (k.rentre || k.ecrit) return; s().valide = false; ui.tente = null; api.sauver(); api.redessiner(); }));
       const choisir = (n) => { e.sel = n; ui.tente = null; ui.tropMotifs = false; ui.arme4 = false; api.sauver(); api.redessiner(); };
       on('sel', (ev, b) => choisir(+b.dataset.n));
-      on('suivante', (ev, b) => choisir(+b.dataset.n));
+      // « Palette suivante » : la vue remonte aux onglets des palettes, pour repartir de la palette et de
+      // « Compter » (demande de Tristan, 04/10/2026).
+      on('suivante', (ev, b) => {
+        choisir(+b.dataset.n);
+        api.zone().querySelector('[data-q-onglets]')?.scrollIntoView({ block: 'start', behavior: reduit() ? 'auto' : 'smooth' });
+      });
       // La décision : trois boutons. « Accepter » efface les motifs.
       on('dec', geste((ev, b) => {
         const ss = s();

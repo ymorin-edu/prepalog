@@ -1069,9 +1069,14 @@ await v('contrôle : « Valider » passe la palette en résumé sur place ; « M
   // Repasser à « Accepter » efface les motifs.
   await decider(pg2, 'accepter');
   egal([(await etat42(pg2)).palettes.A1.motif, await pg2.$$eval(`${Z} [data-q="motif"]`, (x) => x.length)], ['aucun', 0], 'motifs après « Accepter »');
-  // « Palette suivante » mène à A2, puis A3 ; sur A3, la dernière du camion, il n'y en a pas.
+  // « Palette suivante » mène à A2, puis A3 ; sur A3, la dernière du camion, il n'y en a pas. La vue remonte
+  // aux onglets des palettes (demande de Tristan, 04/10/2026).
+  await pg2.$eval(`${Z} [data-q="suivante"]`, (b) => b.scrollIntoView({ block: 'end' }));
   await clic(pg2, '[data-q="suivante"]');
   egal((await etat42(pg2)).sel, 1, 'vers A2');
+  await pg2.waitForTimeout(900);
+  const haut = await pg2.$eval(`${Z} [data-q-onglets]`, (x) => Math.round(x.getBoundingClientRect().top));
+  vrai(haut >= -2 && haut < 60, `la vue n’est pas remontée aux onglets (haut des onglets à ${haut} px)`);
   await clic(pg2, '[data-q="suivante"]');
   egal((await etat42(pg2)).sel, 2, 'vers A3');
   egal(await pg2.$$eval(`${Z} [data-q="suivante"]`, (x) => x.length), 0, '« Palette suivante » sur la dernière palette');
