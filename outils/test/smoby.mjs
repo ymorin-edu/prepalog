@@ -552,6 +552,133 @@ await v('Documents : sans déclaration, ni pièce jointe ni mise en page (un mai
   egal(r, { pj: 0, style: 0, texte: true }, 'environnement sans documents');
 });
 
+// ── Fiche à remplir (même brief, lot 2, `core/types/fiche.js`) ──────────────────────────────────────
+const F = `${Z} .ent-fiche`;
+const ouvrirFiche = async () => { await pg.click('#smTest .ent-nav[data-vue="fiche"]'); await pg.waitForSelector(F); };
+const ouinon = (l, c, oui) => pg.click(`${F} [data-ouinon="tri|${l}|${c}|${oui ? 1 : 0}"]`);
+const fiche = () => pg.evaluate(async () => {
+  const { ficheEnvoyee } = await import('/core/types/fiche.js');
+  return JSON.parse(JSON.stringify(ficheEnvoyee(window.__s.db, 'selection')));
+});
+const toutRemplir = async () => {
+  for (const l of ['yanis', 'laura', 'mehdi', 'thomas', 'sabrina']) for (const c of ['caces', 'dispo', 'cdd']) await ouinon(l, c, l === 'yanis');
+  await pg.selectOption(`${F} [data-fiche-champ="candidat"]`, 'yanis');
+  await pg.check(`${F} input[data-fiche-champ="contrat"][value="CDD"]`);
+};
+const manqueAffiche = () => pg.textContent(`${F} [data-fiche-manque]`);
+const recusFiche = () => pg.evaluate(() => window.__s.db.mails.filter((m) => m.subject === 'Fiche de sélection reçue').length);
+
+await v('Fiche : une entrée de menu et un bouton dans le mail ; documents en onglets à gauche, la fiche ne bouge pas quand on change d’onglet', async () => {
+  await monter();
+  await ouvrirRecrut();
+  await pg.click(`${Z} .ent-lecteur button:has-text("Ouvrir la fiche de sélection")`);
+  await pg.waitForSelector(F);
+  egal(await pg.textContent(`${Z} .ent-tete h2`), 'Fiche de sélection', 'titre');
+  const onglets = () => pg.$$eval(`${F} [data-fiche-doc]`, (L) => L.map((b) => [b.dataset.ficheDoc, b.getAttribute('aria-selected')]));
+  egal((await onglets()).map((x) => x[0]), ['poste', 'yanis', 'laura', 'mehdi', 'thomas', 'sabrina'], 'onglets');
+  egal(await pg.$eval(`${F} [data-fiche-panneau] .ent-doc`, (d) => d.dataset.doc), 'poste', 'premier document affiché');
+  await ouinon('yanis', 'caces', true);
+  await pg.$eval(`${F} form[data-fiche]`, (f) => { f.__marque = true; });
+  await pg.click(`${F} [data-fiche-doc="laura"]`);
+  egal(await pg.$eval(`${F} [data-fiche-panneau] .ent-doc`, (d) => d.dataset.doc), 'laura', 'document après clic');
+  egal((await onglets()).filter((x) => x[1] === 'true').map((x) => x[0]), ['laura'], 'onglet choisi');
+  vrai(await pg.$eval(`${F} form[data-fiche]`, (f) => f.__marque === true), 'la fiche a été redessinée en changeant d’onglet');
+  // Flèche droite au clavier : onglet suivant, focus dessus.
+  await pg.focus(`${F} [data-fiche-doc="laura"]`);
+  await pg.keyboard.press('ArrowRight');
+  egal([await pg.$eval(`${F} [data-fiche-panneau] .ent-doc`, (d) => d.dataset.doc), await pg.evaluate(() => document.activeElement.dataset.ficheDoc)],
+    ['mehdi', 'mehdi'], 'flèche droite');
+  egal(await docsComptes(), { laura: 1, mehdi: 1 }, 'onglets ouverts comptés (pas le premier, affiché d’office)');
+});
+
+await v('Fiche : oui / non sans redessin ni perte de focus, un contour et jamais un aplat, rien de jugé ; le travail est gardé', async () => {
+  await pg.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith('essai-2de-base-')).forEach((k) => localStorage.removeItem(k)));
+  await monter({ garder: true, uid: 'u-fiche' });
+  await ouvrirFiche();
+  const b = `${F} [data-ouinon="tri|mehdi|caces|0"]`;
+  await pg.$eval(b, (x) => { x.__marque = true; });
+  await pg.focus(b);
+  await pg.keyboard.press('Enter');
+  const r = await pg.$eval(b, (x) => ({ marque: x.__marque === true, focus: document.activeElement === x, pressed: x.getAttribute('aria-pressed'),
+    autre: x.parentElement.querySelector('[data-ouinon$="|1"]').getAttribute('aria-pressed'),
+    fond: getComputedStyle(x).backgroundColor, bord: getComputedStyle(x).borderTopWidth }));
+  egal(r, { marque: true, focus: true, pressed: 'true', autre: 'false', fond: 'rgba(0, 0, 0, 0)', bord: '2px' }, 'case « non » choisie');
+  await ouinon('mehdi', 'caces', true);
+  egal(await pg.$eval(b, (x) => x.getAttribute('aria-pressed')), 'false', 'changer d’avis');
+  // Rien de jugé avant l'envoi : aucun signe juste / faux dans la fiche.
+  vrai(!(await pg.$(`${F} .ok, ${F} .ko, ${F} .juste, ${F} .faux, ${F} .avis-ok`)), 'un jugement s’affiche avant l’envoi');
+  egal((await fiche()).valeurs, { tri: { mehdi: { caces: true } } }, 'valeurs rangées');
+  await monter({ garder: true, uid: 'u-fiche' });
+  await ouvrirFiche();
+  egal(await pg.$eval(`${F} [data-ouinon="tri|mehdi|caces|1"]`, (x) => x.getAttribute('aria-pressed')), 'true', 'case retrouvée à la réouverture');
+});
+
+await v('Fiche : un envoi incomplet est refusé, la raison s’écrit sous le bouton, le travail reste', async () => {
+  await monter();
+  await ouvrirFiche();
+  await pg.click(`${F} [data-fiche-envoyer]`);
+  egal(await manqueAffiche(), 'Il manque : 15 cases du tableau sans réponse, le candidat, le contrat.', 'tout vide');
+  await toutRemplir();
+  egal(await manqueAffiche(), '', 'la raison reste affichée après une saisie');
+  await ouinon('thomas', 'cdd', true);
+  await pg.evaluate(() => { delete window.__s.db.fiches.selection.valeurs.tri.sabrina; });
+  await pg.click(`${F} [data-fiche-envoyer]`);
+  egal(await manqueAffiche(), 'Il manque : 3 cases du tableau sans réponse.', 'une ligne effacée');
+  const e = await fiche();
+  egal([e.envoye, e.valeurs.candidat, e.valeurs.contrat, e.valeurs.tri.yanis], [false, 'yanis', 'CDD', { caces: true, dispo: true, cdd: true }], 'travail gardé');
+  egal(await recusFiche(), 0, 'Sophie répond à une fiche non envoyée');
+});
+
+await v('Fiche : envoyée, elle est figée et relue ; `apresFiche` une seule fois, `ficheEnvoyee` lit les valeurs', async () => {
+  await pg.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith('essai-2de-base-')).forEach((k) => localStorage.removeItem(k)));
+  await monter({ garder: true, uid: 'u-envoi' });
+  await ouvrirFiche();
+  await toutRemplir();
+  await ouinon('laura', 'caces', true);
+  await pg.click(`${F} [data-fiche-envoyer]`);
+  await pg.waitForSelector(`${F} [data-fiche-envoyee]`);
+  vrai(/^Fiche envoyée à Sophie le \d\d\/\d\d à \d\d:\d\d\. Réponds-lui maintenant dans la Messagerie\./.test(await pg.textContent(`${F} [data-fiche-envoyee]`)),
+    'message d’envoi');
+  const r = await pg.evaluate(() => ({ fs: document.querySelector('#smTest .ent-fiche fieldset').disabled,
+    bouton: !!document.querySelector('#smTest [data-fiche-envoyer]') }));
+  egal(r, { fs: true, bouton: false }, 'fiche figée');
+  // Un clic sur une case figée ne change rien, même si l'écran la laissait passer (cadre réactivé à la main).
+  await pg.$eval(`${F} [data-ouinon="tri|mehdi|caces|1"]`, (x) => { x.closest('fieldset').disabled = false; x.click(); });
+  const e = await fiche();
+  egal([e.envoye, typeof e.at, e.valeurs.tri.laura.caces, e.valeurs.tri.mehdi.caces], [true, 'number', true, false], 'ficheEnvoyee après l’envoi');
+  egal(await recusFiche(), 1, 'Sophie répond (apresFiche)');
+  await monter({ garder: true, uid: 'u-envoi' });
+  await ouvrirFiche();
+  vrai(await pg.$eval(`${F} fieldset`, (f) => f.disabled), 'fiche plus figée à la réouverture');
+  egal(await recusFiche(), 1, 'apresFiche rejoué à la réouverture');
+  // « Ouvrir la Messagerie » mène au message de Sophie.
+  await pg.click(`${F} [data-fiche-envoyee] button`);
+  await pg.waitForSelector(`${Z} .ent-mitem`);
+  vrai((await pg.textContent(`${Z} .ent-mlist`)).includes('Fiche de sélection reçue'), 'le message de Sophie n’est pas dans la Messagerie');
+});
+
+await v('Fiche : sans déclaration, ni écran, ni entrée de menu, ni bouton dans le mail', async () => {
+  const r = await pg.evaluate(async () => {
+    const { creerEntreprise } = await import('/core/types/entreprise.js');
+    const E = await import('/outils/essai-2de.js');
+    const U = E.univers({});
+    delete U.fiche;
+    document.querySelector('#smTest')?.remove();
+    const hote = document.createElement('div'); hote.id = 'smTest'; document.body.appendChild(hote);
+    const db = {};
+    creerEntreprise(U).rendre(hote, {
+      meta: { id: 'essai-2de', code: 'ESSAI', titre: 'Essai', portee: 'eleve', immersif: true, temps: 'guidage' },
+      profil: { prenom: 'Lea', nom: 'T', role: 'eleve', uid: 'u-sans' }, jeu: { etat: () => db, sauver: () => {} },
+      enregistrer: () => {}, quitter: () => {}, lireScore: async () => null, rendreCopie: async () => ({}),
+    });
+    hote.querySelector('.ent-nav[data-vue="mail"]').click();
+    [...hote.querySelectorAll('.ent-mitem')].find((b) => b.textContent.includes('Recrutement')).click();
+    return { menu: !!hote.querySelector('.ent-nav[data-vue="fiche"]'), bouton: !!hote.querySelector('.ent-lecteur [data-vue2="fiche"]'),
+      pj: hote.querySelectorAll('.ent-pj').length, fiches: 'fiches' in db };
+  });
+  egal(r, { menu: false, bouton: false, pj: 6, fiches: false }, 'environnement sans fiche');
+});
+
 await v('Smoby : aucune erreur JavaScript dans le bloc', async () => {
   if (erreursS.length) throw new Error([...new Set(erreursS)].slice(0, 5).join(' | '));
 });

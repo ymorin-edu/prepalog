@@ -7,7 +7,7 @@ est déjà modifié ou inscrit ci-dessous, **elle s'arrête et le dit à Tristan
 
 | Chantier | Fichiers qu'il touche | Depuis |
 |---|---|---|
-| MOTEUR documents joints, fiche à remplir, menu rétractable | `core/types/entreprise.js`, `core/types/documents.js` (nouveau), `core/declencheurs.js`, `styles/base.css`, `outils/essai-2de.html`, `outils/test/smoby.mjs`, `docs/briefs/MOTEUR-documents-formulaire.md` | 04/10 |
+| MOTEUR documents joints, fiche à remplir, menu rétractable | `core/types/entreprise.js`, `core/types/documents.js` et `core/types/fiche.js` (nouveaux), `core/declencheurs.js`, `styles/base.css`, `outils/essai-2de.html`, `outils/test/smoby.mjs`, `docs/briefs/MOTEUR-documents-formulaire.md` | 04/10 |
 | Cowork — reprise des trames élève (audit du 04/10) : Picard 4.1 et 4.2, puis Cdiscount, puis Spartoo ; PDF regénérés à la fin | `outils/trame-*.py`, `outils/corriges_data.py`, `outils/corriges_cdiscount.py`, `contenus/trames/*.docx`, `contenus/corriges/*-trame.js` et `ENT-1.x`/`ENT-2.x`/`ENT-3.1`.js | 04/10 |
 
 Rappel : un seul chantier à la fois dans `core/types/tournee.js`, `core/types/grille.js`,

@@ -68,6 +68,19 @@ mention en pied (« CV fictif — document pédagogique Prepalog ») est écrite
 seulement ceux que le document marque `[[…]]`. Ouvertures comptées dans `db.indicateurs[idSeance].docs`.
 Exemple : `outils/essai-2de-documents.js`.
 
+**Fiche à remplir** (04/10/2026, `core/types/fiche.js`, même brief, lot 2) : `creerEntreprise({ …, fiche: { id,
+libelle, titre, sousTitre, documents: [ids], bouton, blocs: […], envoi: { bouton, a, suite } } })` ajoute une
+entrée de menu (`libelle`) ; un mail semé portant `ouvreFiche: '<fiche.id>'` montre le bouton `bouton`. Avec
+`documents`, ils sont à gauche en onglets (restent à l'écran), la fiche à droite ; l'un sous l'autre si la place
+manque. Blocs : `ouinon` (`lignes`, `colonnes`, `entete`), `liste` (`choix: [{ v, lib }]`, `vide`), `choix`
+(boutons radio, `choix: ['CDD', 'CDI']`), `encadre` (`titre`, `texte`) ; `manque` = ce que dit « Il manque : … »
+pour une liste ou un choix vide. **Rien n'est jugé ni corrigé à l'écran**, même en guidage : c'est le bilan qui
+le dit. Envoi refusé tant qu'il manque une réponse (travail gardé) ; envoyée, la fiche est figée. État :
+`db.fiches[id] = { valeurs, envoye: { at } }`. Jalon : `ficheEnvoyee(db, id)` → `{ envoye, valeurs, at }`
+(`valeurs.tri.yanis.caces === true`, `valeurs.contrat === 'CDD'`) ; l'étape rend `'attente'` tant que la fiche
+n'est pas envoyée. Déclencheur : `apresFiche(id)` (vrai à l'envoi, juste ou faux). Exemple : `FICHE` dans
+`outils/essai-2de.js`.
+
 **Repérage pour l'enseignant** (04/10/2026, lot 6) : tout environnement d'entreprise range, chez l'élève,
 `db.indicateurs[idSeance] = { temps, mots, aides, premier }` (temps en secondes, onglet visible seulement ;
 mots cliquables et « Rappel tableur » ouverts ; premier jugement de chaque étape, `'ok'` ou `'ko'`). Il

@@ -8,6 +8,7 @@
 //   quand: apresJalon(ETAPES, 'feuille')                     l'élève a fini une étape
 //   quand: apresMail({ a: CHEFFE, ligne: 'Stock actuel :', nombre: true })   il a rendu compte
 //   quand: apresPlanning('smoby-quais')                      il a envoyé son planning
+//   quand: apresFiche('selection')                           il a envoyé sa fiche
 //   quand: tous(apresJalon(…), apresMail(…))                 les deux
 //
 // Décision de Tristan : **aucun clic de menu, aucune ouverture d'écran, aucune minuterie** ne
@@ -67,6 +68,12 @@ export function apresMail({ a, ligne: intitule, nombre = false } = {}) {
 // la révélerait). Modèle : l'aléa des plannings d'essai (`phasePlanning: 2`).
 export function apresPlanning(id, version = 1) {
   return (db) => !!(db.plannings && db.plannings[id] && db.plannings[id][`v${version}`]);
+}
+
+// Vrai dès que l'élève a ENVOYÉ la fiche `id` (fiche à remplir, `core/types/fiche.js`, 04/10/2026).
+// **Juste ou faux, peu importe** : envoyer sa fiche est le geste, son contenu n'est pas regardé.
+export function apresFiche(id) {
+  return (db) => !!(db.fiches && db.fiches[id] && db.fiches[id].envoye);
 }
 
 // Vrai quand toutes les conditions le sont.

@@ -862,6 +862,53 @@ a.ent-nav{ text-decoration:none }
   border:1px solid #e3ded3; box-shadow:0 2px 8px rgba(40,34,24,.10);
   width:560px; max-width:100%; flex:none; font-size:14.5px; line-height:1.45; text-align:left;
 }
+
+/* Fiche à remplir (04/10/2026, même brief, lot 2, core/types/fiche.js). Agencement B, validé par
+   Tristan : documents à gauche en onglets (ils restent à l'écran quand on descend dans la fiche), fiche
+   à droite ; l'un sous l'autre quand la place manque — mesurée sur la fiche elle-même (requête de
+   conteneur), donc le menu replié lui rend aussitôt sa largeur. Une case cochée prend un CONTOUR et un
+   ✓, jamais un aplat : rien n'est jugé avant l'envoi. */
+.ent-fiche{ container-type:inline-size }
+.ent-fiche-cote{ display:flex; gap:16px; align-items:flex-start }
+.ent-fiche-cote > *{ flex:1 1 0; min-width:0 }
+.ent-fiche-docs{ position:sticky; top:8px; max-height:calc(100vh - 16px); overflow:auto }
+@container (max-width:760px){
+  .ent-fiche-cote{ flex-wrap:wrap }
+  .ent-fiche-cote > *{ flex-basis:100% }
+  .ent-fiche-docs{ position:static; max-height:none }
+}
+.ent-onglets{ display:flex; flex-wrap:wrap; gap:4px; border-bottom:1px solid var(--filet); margin-bottom:12px }
+.ent-onglets button{ font:inherit; font-size:.9rem; color:var(--encre); cursor:pointer; background:transparent;
+  border:1px solid transparent; border-bottom:0; border-radius:var(--r) var(--r) 0 0; padding:6px 10px }
+.ent-onglets button:hover{ color:var(--ardoise) }
+.ent-onglets button[aria-selected="true"]{ border-color:var(--filet); background:var(--panneau); color:var(--ardoise);
+  font-weight:700; margin-bottom:-1px }
+.ent-fiche-form{ margin-top:0 }
+.ent-fiche-form fieldset{ border:0; padding:0; margin:0; min-width:0 }
+.ent-fiche-bloc + .ent-fiche-bloc{ margin-top:16px }
+.ent-fiche-h{ margin:0 0 6px; font-size:1.02rem }
+.ent-fiche-lib{ display:block; font-weight:600; margin-bottom:4px }
+table.ent-tri{ border-collapse:collapse; width:100%; font-size:.92rem }
+table.ent-tri th, table.ent-tri td{ border:1px solid var(--filet); padding:6px 8px; text-align:center; vertical-align:middle }
+table.ent-tri thead th{ background:var(--survol); font-weight:600 }
+table.ent-tri tbody th{ text-align:left; font-weight:400; text-transform:none; letter-spacing:normal; font-size:inherit; font-family:inherit; color:var(--encre) }
+.ent-ouinon{ display:inline-flex; gap:4px }
+.ent-ouinon button{ font:inherit; min-width:50px; cursor:pointer; color:var(--encre-douce); background:transparent;
+  border:1px solid var(--filet); border-radius:var(--r); padding:3px 6px }
+.ent-ouinon button:hover{ border-color:var(--encre-douce) }
+.ent-ouinon button[aria-pressed="true"]{ border:2px solid var(--ardoise); color:var(--ardoise); font-weight:700; padding:2px 5px }
+.ent-ouinon button[aria-pressed="true"]::before{ content:"✓ " }
+fieldset[disabled] .ent-ouinon button{ cursor:default }
+.ent-radios{ display:flex; flex-wrap:wrap; gap:6px 18px }
+.ent-radios label{ display:inline-flex; align-items:center; gap:6px; cursor:pointer; font-weight:400 }
+.ent-encadre{ border-left:3px solid var(--terre); background:rgba(156,98,10,.07); padding:8px 12px; font-size:.92rem;
+  border-radius:0 var(--r) var(--r) 0 }
+.ent-encadre > b:first-child{ display:block; color:var(--terre) }
+.ent-fiche-manque{ color:var(--rouge); font-size:.9rem; margin:8px 0 0 }
+.ent-fiche-manque:empty{ display:none }
+.ent-fiche-form > .btn{ margin-top:14px }
+.ent-fiche-envoyee{ border:1px solid var(--ardoise); border-radius:var(--r); padding:10px 12px; margin-top:14px }
+.ent-fiche-envoyee .lien-accueil{ margin:6px 0 0; display:block }
 /* mots cliquables (2de, core/lexique.js) : un mot souligné, sa définition dans une bulle sous lui */
 .lex{ position:relative; display:inline }
 .lex-mot{ font:inherit; color:inherit; background:none; border:0; padding:0; margin:0; cursor:help;
