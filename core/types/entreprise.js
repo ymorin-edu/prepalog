@@ -22,6 +22,7 @@ import { creerPlanning } from './planning.js';
 import { creerGesteTableur, retourDeTemps } from './export-tableur.js';
 import { graineDeBase, poserGraine } from '../tirage.js';
 import { preparerPhrases, texteCompose } from '../phrases.js';
+import { brancherLexique, compterAide } from '../lexique.js';
 
 /* ------------------------------------------------------------------ formats */
 export const eur = (n) => Number(n).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' });
@@ -440,7 +441,13 @@ export function creerEntreprise(U) {
         document.body.classList.remove('immersion');
         document.body.removeAttribute('style');
       }
-      const sortir = (fn) => { arreterChrono(); deshabiller(); if (fn) fn(); };
+      // Les mots cliquables (2de, `core/lexique.js`) : seulement si le contenu déclare un lexique.
+      // Chaque ouverture est comptée pour l'enseignant (lot 6), jamais chez l'enseignant lui-même.
+      const debrancherLexique = U.lexique ? brancherLexique(hote, U.lexique, (mot) => {
+        if (estProf || rendue()) return;
+        compterAide(db, ctx.meta.id, 'mots', mot); sauver();
+      }) : () => {};
+      const sortir = (fn) => { arreterChrono(); debrancherLexique(); deshabiller(); if (fn) fn(); };
 
       // L'état de la copie (évaluation). `charge` : on sait si elle est déjà rendue — tant qu'on
       // ne le sait pas, le bouton « Rendre » n'est pas offert. Côté enseignant, rien à rendre.

@@ -3,8 +3,8 @@
 // La page `outils/essai-2de.html` et le bloc de tests `outils/test/smoby.mjs` montent le vrai moteur
 // d'entreprise sur ce petit univers. Lot 2 : la réponse à Sophie par phrases à choisir (texte du brief
 // ENT-5.1), la réponse de Sophie qui arrive après l'envoi (juste ou faux), et un jalon qui lit les
-// choix (`phrasesJustes`). Les lots suivants (mots cliquables, quai sans froid, sécurité, indicateurs)
-// viendront s'y ajouter.
+// choix (`phrasesJustes`). Lot 3 : les mots cliquables du mail de Sophie (lexique d'ENT-5.1 ; « fiche
+// de poste » est marqué mais absent du lexique : il doit s'afficher en texte normal).
 //
 // Les personnes (Sophie Martin, les candidats) sont CONSTRUITES, comme dans le brief de la séance.
 
@@ -15,7 +15,16 @@ import { phrasesJustes } from '../core/phrases.js';
 export const MENTION = 'Page d’essai des briques de la 2de. <b>Construit</b> : Sophie Martin, les candidats et '
   + 'leurs situations (personnes fictives, comme dans le brief ENT-5.1).';
 
-export const SOPHIE = 'sophie.martin@smoby-essai.example';
+// Définitions en une phrase (brief ENT-5.1 : CACES mot pour mot, CDD / CDI d'après l'encadré).
+export const LEXIQUE = {
+  CACES: 'Certificat qui prouve qu’on sait conduire un type d’engin ; une catégorie par sorte de chariot ; valable 5 ans.',
+  CDD: 'Contrat de travail avec une date de fin, pour un besoin limité dans le temps.',
+  CDI: 'Contrat de travail sans date de fin.',
+  saisonnier: 'Se dit d’un travail qui revient chaque année à la même période (Noël, les vendanges…).',
+  cariste: 'Personne qui conduit un chariot élévateur pour déplacer et ranger les palettes.',
+};
+
+export const SOPHIE ='sophie.martin@smoby-essai.example';
 export const CANDIDATS = ['Yanis Morel', 'Léa Garnier', 'Hugo Petit', 'Inès Benali', 'Tom Leroy'];
 
 // La réponse à Sophie (brief ENT-5.1, étape 6). `juste` = rang dans l'ordre déclaré ci-dessous.
@@ -42,7 +51,7 @@ function voletEssai() {
       mails: [{
         folder: 'in', ts: Date.now(), from: 'Sophie Martin', fromMail: SOPHIE, to: prenom,
         subject: 'Le cariste pour le pic de Noël', kind: 'text',
-        text: `Bonjour ${prenom},\n\nTu as trié les candidatures. Réponds-moi : qui retiens-tu, pourquoi, et quel contrat ?\n\nSophie`,
+        text: `Bonjour ${prenom},\n\nTu as trié les candidatures pour le poste de [[cariste]] (voir la [[fiche de poste]]). Il faut le [[CACES]] 3.\nRéponds-moi : qui retiens-tu, pourquoi, et quel contrat ([[CDD]] [[saisonnier]] ou [[cdi|CDI]]) ?\n\nSophie`,
         phrases: PHRASES_SOPHIE,
       }],
     }),
@@ -80,6 +89,7 @@ export function univers({ temps = 'guidage' } = {}) {
       customers: [], suppliers: [], seq: 1, _depart: [] }),
     etapes: ETAPES, exercice: 'Essai des briques de la 2de',
     volet: voletEssai(),
+    lexique: LEXIQUE,
     copie: temps === 'evaluation', sansTrame: "Tout à l'écran",
   };
 }

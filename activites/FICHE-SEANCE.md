@@ -47,6 +47,14 @@ envois, premierCoup }`, lu sur le **dernier** envoi ; rien d'envoyé = toutes le
 ligne `texte` n'est jamais jugée. Seulement en **réponse** à un mail reçu (pas de « Nouveau message »
 par phrases : faire écrire d'abord le destinataire). Essai : `outils/essai-2de.html`.
 
+**Mots cliquables** (2de, 04/10/2026, `core/lexique.js`, lot 3) : `creerEntreprise({ …, lexique: { CACES:
+'Une phrase.', … } })`, puis dans n'importe quel texte du contenu (mail, accueil, quai…) `[[CACES]]` ou
+`[[cale|calé]]` (mot du lexique | ce qui s'affiche). Le mot devient un bouton souligné ; clic ou Entrée
+ouvre la définition dans une bulle, Échap / clic ailleurs / clic sur la bulle la ferment. Recherche sans
+majuscules ni accents ; un mot absent du lexique s'affiche en texte normal ; dans un bouton, un lien ou une
+liste, le mot reste du texte. Rien n'est transformé sans `lexique`. Chaque ouverture est comptée chez
+l'élève (`db.reperage[idSeance].mots`), pas chez l'enseignant.
+
 **Commande annulée** (03/10/2026, brief `MOTEUR-statut-annulee`) : une commande semée peut porter
 `annulee: { motif: 'Rupture : emplacement vide à la préparation', at: <timestamp> }`. Elle s'affiche
 « Annulée » (pastille rouge) partout, **avant tout autre statut** (même préparée ou commencée), ne se

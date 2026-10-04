@@ -33,7 +33,7 @@ const monter = (o = {}) => pg.evaluate(async (o) => {
   window.__s = { db };
   moteur.rendre(hote, {
     meta: { id: 'essai-2de', code: 'ESSAI', titre: 'Essai 2de', portee: 'eleve', immersif: true, temps: 'guidage' },
-    profil: { prenom: o.prenom || 'Lea', nom: 'Test', role: 'eleve', uid: o.uid || 'u-lea' },
+    profil: { prenom: o.prenom || 'Lea', nom: 'Test', role: o.role || 'eleve', uid: o.uid || 'u-lea' },
     jeu: { etat: () => db, sauver: () => { if (o.garder) localStorage.setItem(CLE, JSON.stringify(db)); } },
     enregistrer: () => {}, quitter: () => {}, codeStock: 'ABC',
     lireScore: async () => null, rendreCopie: async () => ({ rendu: Date.now() }),
@@ -202,6 +202,120 @@ await v('Phrases : ligne imposée (texte) dans le message, jamais jugée ; valeu
   egal(r.texte, 'Bonjour,\nJ’ai reçu les 4 palettes.\n12 cartons', 'texte composé');
   egal([r.juge.justes, r.juge.faux], [['a', 'c'], []], 'la ligne imposée est jugée');
   vrai(r.json, 'le mail préparé garde une fonction (il ne survivrait pas à la sauvegarde)');
+});
+
+// ── Lot 3 : les mots cliquables (`core/lexique.js`) ─────────────────────────────────────────────
+const ouvrirSophie = async () => {
+  await pg.click(`${Z} [data-dossier="in"]`);
+  await pg.click(`${Z} .ent-obj:text-is("Le cariste pour le pic de Noël")`);
+  await pg.waitForSelector(`${Z} .ent-lecteur .lex-mot`);
+};
+const corps = () => pg.$eval(`${Z} .ent-lecteur`, (l) => ({
+  mots: [...l.querySelectorAll('.lex-mot')].map((b) => [b.textContent, b.dataset.lex]),
+  texte: l.textContent.replace(/\s+/g, ' '),
+}));
+const reperage = () => pg.evaluate(() => JSON.parse(JSON.stringify((window.__s.db.reperage || {})['essai-2de'] || null)));
+const bulleOuverte = () => pg.$$eval(`${Z} .lex-bulle:not([hidden])`, (L) => L.map((b) => b.textContent));
+
+await v('Mots : les mots du lexique deviennent des boutons, un mot absent reste du texte, plus aucun crochet', async () => {
+  await monter();
+  await ouvrirSophie();
+  const c = await corps();
+  egal(c.mots, [['cariste', 'cariste'], ['CACES', 'CACES'], ['CDD', 'CDD'], ['saisonnier', 'saisonnier'], ['CDI', 'CDI']], 'mots cliquables');
+  vrai(c.texte.includes('voir la fiche de poste)'), 'le mot absent du lexique n’est pas affiché en texte normal');
+  vrai(!c.texte.includes('[[') && !c.texte.includes(']]'), 'des crochets restent à l’écran');
+  egal(await bulleOuverte(), [], 'bulles ouvertes au départ');
+  // Après un redessin (changer de dossier et revenir), les mots sont toujours cliquables.
+  await pg.click(`${Z} [data-dossier="out"]`);
+  await ouvrirSophie();
+  egal((await corps()).mots.length, 5, 'mots cliquables après un redessin');
+});
+
+await v('Mots : un clic ouvre la définition en une bulle, un autre mot la remplace, Échap ferme et rend le focus', async () => {
+  await monter();
+  await ouvrirSophie();
+  await pg.click(`${Z} .lex-mot[data-lex="CACES"]`);
+  egal(await bulleOuverte(), ['CACES : Certificat qui prouve qu’on sait conduire un type d’engin ; une catégorie par sorte de chariot ; valable 5 ans.'], 'bulle de CACES');
+  egal(await pg.getAttribute(`${Z} .lex-mot[data-lex="CACES"]`, 'aria-expanded'), 'true', 'aria-expanded');
+  await pg.click(`${Z} .lex-mot[data-lex="CDD"]`);
+  const b = await bulleOuverte();
+  egal([b.length, b[0].startsWith('CDD : ')], [1, true], 'une seule bulle, celle de CDD');
+  // Le focus est parti ailleurs dans l'écran (Tab) : Échap le ramène sur le mot dont la bulle est ouverte.
+  await pg.focus(`${Z} [data-repondre]`);
+  await pg.keyboard.press('Escape');
+  egal(await bulleOuverte(), [], 'bulles après Échap');
+  egal(await pg.evaluate(() => document.activeElement.dataset.lex), 'CDD', 'focus après Échap');
+  // Au clavier : Entrée sur le mot ouvre la bulle, un clic ailleurs la ferme.
+  await pg.focus(`${Z} .lex-mot[data-lex="cariste"]`);
+  await pg.keyboard.press('Enter');
+  egal((await bulleOuverte()).length, 1, 'bulle ouverte par Entrée');
+  await pg.click(`${Z} .ent-lecteur h3`);
+  egal(await bulleOuverte(), [], 'bulles après un clic ailleurs');
+  // La messagerie est restée à l'écran (aucun changement de vue).
+  vrai(await pg.isVisible(`${Z} .ent-lecteur`), 'le mail n’est plus affiché');
+});
+
+await v('Mots : chaque ouverture est comptée par mot et par séance (pas les fermetures, pas l’enseignant)', async () => {
+  await monter();
+  egal(await reperage(), null, 'repérage au départ');
+  await ouvrirSophie();
+  await pg.click(`${Z} .lex-mot[data-lex="CACES"]`);   // ouvre
+  await pg.click(`${Z} .lex-mot[data-lex="CACES"]`);   // ferme : ne compte pas
+  await pg.click(`${Z} .lex-mot[data-lex="CACES"]`);   // rouvre
+  await pg.click(`${Z} .lex-bulle:not([hidden])`);   // un clic sur la bulle la ferme (elle couvre le mot suivant)
+  egal(await bulleOuverte(), [], 'bulles après un clic sur la bulle');
+  await pg.click(`${Z} .lex-mot[data-lex="CDI"]`);
+  egal(await reperage(), { mots: { CACES: 2, CDI: 1 } }, 'repérage de l’élève');
+  await monter({ role: 'prof' });
+  await ouvrirSophie();
+  await pg.click(`${Z} .lex-mot[data-lex="CACES"]`);
+  egal((await bulleOuverte()).length, 1, 'bulle chez l’enseignant');
+  egal(await reperage(), null, 'repérage chez l’enseignant');
+});
+
+await v('Mots : sur un écran étroit, la bulle d’un mot proche du bord droit reste entière à l’écran', async () => {
+  await pg.setViewportSize({ width: 800, height: 900 });
+  try {
+    await monter();
+    await ouvrirSophie();
+    const dedans = [];
+    for (const mot of ['cariste', 'CACES', 'CDD', 'saisonnier', 'CDI']) {
+      await pg.click(`${Z} .lex-mot[data-lex="${mot}"]`);
+      dedans.push(await pg.$eval(`${Z} .lex-bulle:not([hidden])`, (b) => {
+        const r = b.getBoundingClientRect();
+        return r.left >= 0 && r.right <= document.documentElement.clientWidth;
+      }));
+    }
+    egal(dedans, [true, true, true, true, true], 'bulles entières à l’écran');
+  } finally { await pg.setViewportSize({ width: 1366, height: 1000 }); }
+});
+
+await v('Mots : pas de bouton dans un bouton, et rien n’est transformé sans lexique déclaré', async () => {
+  const r = await pg.evaluate(async () => {
+    const { brancherLexique } = await import('/core/lexique.js');
+    const a = document.createElement('div'); document.body.appendChild(a);
+    a.innerHTML = '<button>Le [[CACES]]</button><p>Le [[caces]] et le [[Inconnu]].</p>';
+    const fin = brancherLexique(a, { CACES: 'Déf.' }, () => {});
+    const b = document.createElement('div'); document.body.appendChild(b);
+    b.innerHTML = '<p>Le [[CACES]].</p>';
+    brancherLexique(b, {}, () => {});
+    // Un texte ajouté APRÈS le branchement est transformé aussi (l'écran est observé).
+    a.insertAdjacentHTML('beforeend', '<p>Encore le [[CACES]].</p>');
+    await new Promise((ok) => setTimeout(ok, 30));
+    const out = { btn: a.querySelector('button').innerHTML, p: a.querySelector('p').textContent,
+      n: a.querySelectorAll('.lex-mot').length, sans: b.innerHTML };
+    fin();
+    a.insertAdjacentHTML('beforeend', '<p>Après [[CACES]].</p>');
+    await new Promise((ok) => setTimeout(ok, 30));
+    out.apres = a.lastElementChild.textContent;
+    a.remove(); b.remove();
+    return out;
+  });
+  egal(r.btn, 'Le CACES', 'mot dans un bouton');
+  egal(r.p, 'Le cacesCACES : Déf. et le Inconnu.', 'paragraphe (mot, bulle fermée, mot inconnu)');
+  egal(r.n, 2, 'mots cliquables (paragraphe + texte ajouté ensuite)');
+  egal(r.sans, '<p>Le [[CACES]].</p>', 'sans lexique');
+  egal(r.apres, 'Après [[CACES]].', 'après débranchement');
 });
 
 await v('Smoby : aucune erreur JavaScript dans le bloc', async () => {

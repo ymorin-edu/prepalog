@@ -6,7 +6,7 @@
 > Lis docs/briefs/COORDINATION-smoby.md, docs/EN-COURS.md, puis le brief docs/briefs/MOTEUR-2de-S1.md. Commence par le lot 0 (état des lieux, lecture seule) et donne-moi le compte rendu avant d'écrire. Annonce la durée de chaque lot.
 > ```
 
-**Statut** : en cours — lot 0 rendu, lots 1 et 2 livrés le 04/10/2026 *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
+**Statut** : en cours — lot 0 rendu, lots 1, 2 et 3 livrés le 04/10/2026 *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
 **Date du brief** : 04/10/2026
 **Conversation d'origine** : Cowork (Opus), cadrage de S1 ; fiches projet `claude/prepalog-2de-s1-cadrage.md`,
 `claude/prepalog-2de-eleve-debut-annee.md`, `claude/prepalog-2de-socle-transversal.md`
@@ -222,3 +222,24 @@ du lycée.
   (tout jugé juste, pas de mélange, choix non gardés, redessin à chaque choix, envoi incomplet accepté, `juste` calculé ignoré)
   font chacun tomber au moins un cas. Suite entière 582 / 582.
 - **Reste ouvert** : lots 3 à 7.
+
+### Lot 3 — livré le 04/10/2026
+
+- **Fichiers créés / modifiés** : `core/lexique.js` (nouveau : `brancherLexique`, `compterAide`, `nrmMot`),
+  `core/types/entreprise.js` (branchement si `lexique` est déclaré, comptage, débranchement à la sortie), `styles/base.css`
+  (règles `.lex*`, aucune variable nouvelle), `outils/essai-2de.js` (lexique d'ENT-5.1 dans le mail de Sophie),
+  `outils/test/smoby.mjs` (5 cas ajoutés), `activites/FICHE-SEANCE.md`.
+- **Fonctionnement** : `lexique: { mot: 'une phrase' }` dans `creerEntreprise` ; `[[mot]]` ou `[[mot|affiché]]` dans n'importe
+  quel texte. Le moteur **observe l'écran** et transforme les textes après leur affichage : toutes les vues (mail, accueil,
+  quai, planning…) sont servies sans rien changer en elles. Recherche sans majuscules ni accents. Mot absent du lexique = texte
+  normal. Dans un bouton, un lien ou une liste, le mot reste du texte (pas de bouton dans un bouton : le sujet d'un mail dans
+  la liste, par exemple). Rien n'est observé sans lexique (alerte 13).
+- **Bulle** : bouton réel, `aria-expanded`, Entrée ouvre, Échap ferme et rend le focus au mot, un clic ailleurs **ou sur la
+  bulle** la ferme (elle peut couvrir le mot de la ligne suivante), une seule ouverte à la fois, recalée vers la gauche près du
+  bord droit de l'écran.
+- **Comptage** : chaque ouverture (pas les fermetures) dans `db.reperage[idSeance].mots[mot]`, chez l'élève seulement (ni
+  enseignant, ni copie rendue).
+- **Question ouverte appliquée par défaut** : marque `[[mot]]`, plus `[[mot|forme affichée]]` pour « calé / cale » (ENT-5.3).
+- **Tests** : bloc `smoby` 15 / 15. Sept sabotages (fermeture comptée, écran non observé, bouton dans un bouton, focus non
+  rendu, enseignant compté, mot inconnu transformé, bulle non recalée) font chacun tomber au moins un cas. Suite entière
+  587 / 587.
