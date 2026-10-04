@@ -51,12 +51,12 @@ export const CORRIGE = {
       "etape": 2,
       "etapeTitre": "Repérer les fournisseurs et les clients",
       "genre": "tableau",
-      "texte": "Code | Marque fournisseur",
+      "texte": "Code (par exemple F001) | Trois marques fournisseurs",
       "entetes": [
-        "Code",
-        "Marque fournisseur"
+        "Code (par exemple F001)",
+        "Trois marques fournisseurs"
       ],
-      "contexte": "Cite trois fournisseurs avec leur code (par exemple F001) :",
+      "contexte": "Dans le menu de gauche, ouvre l'écran Fournisseurs : ce sont les marques de chaussures qui livrent Spartoo.",
       "reponses": [
         [
           "F001",
@@ -99,13 +99,13 @@ export const CORRIGE = {
       "etape": 2,
       "etapeTitre": "Repérer les fournisseurs et les clients",
       "genre": "tableau",
-      "texte": "Code | Nom | Ville",
+      "texte": "Code | Deux clients : nom | Ville",
       "entetes": [
         "Code",
-        "Nom",
+        "Deux clients : nom",
         "Ville"
       ],
-      "contexte": "Cite deux clients :",
+      "contexte": "Ouvre maintenant l'écran Clients.",
       "reponses": [
         [
           "C0001",
@@ -142,17 +142,6 @@ export const CORRIGE = {
       "pistes": [
         "Les clients ont un prénom et un nom (pas un nom de société), une adresse de particulier (rue, ville), un e-mail personnel.",
         "On ne trouve ni raison sociale, ni SIRET, ni numéro de TVA : indices d'un client particulier (B2C)."
-      ]
-    },
-    {
-      "etape": 2,
-      "etapeTitre": "Repérer les fournisseurs et les clients",
-      "genre": "reflexion",
-      "texte": "Dans une entreprise, pourquoi garde-t-on pour chaque fournisseur son délai de livraison et son minimum de commande ?",
-      "pistes": [
-        "Le délai de livraison dit quand recommander : il faut commander assez tôt pour ne pas être en rupture avant l'arrivée.",
-        "Le minimum de commande dit combien il faut commander au moins : on regroupe plusieurs références pour l'atteindre.",
-        "Garder ces informations évite d'avoir à les redemander au fournisseur à chaque commande."
       ]
     },
     {
@@ -312,17 +301,6 @@ export const CORRIGE = {
       "etape": 4,
       "etapeTitre": "Répondre à une question client sur le stock",
       "genre": "reflexion",
-      "texte": "Pourquoi ces attentes sont-elles importantes dans une entreprise ?",
-      "pistes": [
-        "Un message professionnel donne une bonne image de l'entreprise : le client est un client potentiel.",
-        "Un message clair évite les allers-retours, donc fait gagner du temps aux deux côtés.",
-        "L'information chiffrée évite les malentendus (« quelques paires » ne dit pas combien)."
-      ]
-    },
-    {
-      "etape": 4,
-      "etapeTitre": "Répondre à une question client sur le stock",
-      "genre": "reflexion",
       "texte": "Si le stock avait été de zéro paire, qu'aurais-tu répondu à Léa Dubois ?",
       "pistes": [
         "Dire honnêtement qu'il n'y en a plus (« 0 paire » écrit en chiffres).",
@@ -428,30 +406,10 @@ export const CORRIGE = {
       "etape": 5,
       "etapeTitre": "Traiter la commande CMD-048213",
       "genre": "reflexion",
-      "texte": "Pour la ligne où tu ne peux pas tout préparer, pourquoi la quantité préparée est-elle inférieure à la quantité commandée ?",
-      "pistes": [
-        "Parce qu'il n'y a pas assez de paires en stock : on ne peut pas préparer ce qu'on n'a pas.",
-        "La quantité commandée est ce que le client veut, la quantité préparée est ce qui existe réellement ; la différence devient le reliquat."
-      ]
-    },
-    {
-      "etape": 5,
-      "etapeTitre": "Traiter la commande CMD-048213",
-      "genre": "reflexion",
       "texte": "Que dirais-tu à un client dont une ligne de commande part en reliquat ?",
       "pistes": [
         "Lui dire clairement qu'une partie de sa commande part tout de suite et le reste plus tard, avec une date si possible.",
         "S'excuser, proposer une alternative ou un remboursement de la ligne manquante s'il ne veut pas attendre."
-      ]
-    },
-    {
-      "etape": 5,
-      "etapeTitre": "Traiter la commande CMD-048213",
-      "genre": "reflexion",
-      "texte": "Pourquoi relever le stock réel avant de préparer, plutôt que se fier à la quantité commandée ?",
-      "pistes": [
-        "La commande dit ce que le client veut, pas ce qu'il y a en stock : il faut aller voir pour ne pas promettre ce qu'on n'a pas.",
-        "Se fier à la quantité commandée ferait un stock négatif ou une ligne marquée préparée alors que les paires n'existent pas."
       ]
     },
     {
@@ -532,30 +490,158 @@ export const CORRIGE = {
       "etape": 6,
       "etapeTitre": "Réapprovisionner un fournisseur",
       "genre": "reflexion",
-      "texte": "Pourquoi une entreprise se fixe-t-elle un stock maximum, et pas seulement un seuil d'alerte ?",
-      "pistes": [
-        "Stocker coûte : place, argent immobilisé, risque d'invendus ou de démarque.",
-        "Le seuil dit quand commander, le maximum dit combien : sans lui on commanderait au hasard."
-      ]
-    },
-    {
-      "etape": 6,
-      "etapeTitre": "Réapprovisionner un fournisseur",
-      "genre": "reflexion",
-      "texte": "Pourquoi un fournisseur impose-t-il un minimum de commande ?",
-      "pistes": [
-        "Préparer et expédier une commande a un coût fixe : une commande trop petite ne serait pas rentable pour lui.",
-        "C'est une clause du contrat : en commandant, l'entreprise l'accepte."
-      ]
-    },
-    {
-      "etape": 6,
-      "etapeTitre": "Réapprovisionner un fournisseur",
-      "genre": "reflexion",
       "texte": "Si tu as ajouté une référence, quel critère as-tu utilisé pour la choisir ?",
       "pistes": [
         "Critère attendu : une référence du même fournisseur en rupture ou sous son seuil, pour ne pas commander ce qui n'est pas nécessaire.",
         "Valoriser aussi : une référence qui se vend bien, ou qui permet de dépasser le minimum sans dépasser le maximum."
+      ]
+    },
+    {
+      "etape": 7,
+      "etapeTitre": "Cours à détacher",
+      "genre": "fait",
+      "texte": "Avant de préparer, on relève le stock ………………… de chaque ligne.",
+      "rep": "réel."
+    },
+    {
+      "etape": 7,
+      "etapeTitre": "Cours à détacher",
+      "genre": "fait",
+      "texte": "On prélève les articles dans l'ordre des ………………… pour parcourir moins de chemin.",
+      "rep": "emplacements."
+    },
+    {
+      "etape": 7,
+      "etapeTitre": "Cours à détacher",
+      "genre": "fait",
+      "texte": "Une réponse à un client donne l'information demandée en ………………….",
+      "rep": "chiffres."
+    },
+    {
+      "etape": 7,
+      "etapeTitre": "Cours à détacher",
+      "genre": "fait",
+      "texte": "Une commande au fournisseur précise chaque référence et sa ………………….",
+      "rep": "quantité."
+    },
+    {
+      "etape": 7,
+      "etapeTitre": "Cours à détacher",
+      "genre": "tableau",
+      "texte": "Mot | Définition (complète avec la banque de mots)",
+      "entetes": [
+        "Mot",
+        "Définition (complète avec la banque de mots)"
+      ],
+      "contexte": "",
+      "reponses": [
+        [
+          "Bon de préparation (BP)",
+          "sortir"
+        ],
+        [
+          "Emplacement de stockage",
+          "rangée"
+        ],
+        [
+          "Minimum de commande",
+          "accepte"
+        ],
+        [
+          "Délai de livraison",
+          "arrivée"
+        ],
+        [
+          "Réapprovisionner",
+          "remonter"
+        ],
+        [
+          "Fournisseur",
+          "vend"
+        ],
+        [
+          "Mouvement de stock",
+          "entrée"
+        ],
+        [
+          "Stock du système",
+          "affiche"
+        ]
+      ],
+      "note": "Un mot de la banque par trou."
+    },
+    {
+      "etape": 8,
+      "etapeTitre": "À la maison",
+      "genre": "tableau",
+      "texte": "Référence | Stock | Seuil | Stock maximum | Sous le seuil ? | À commander",
+      "entetes": [
+        "Référence",
+        "Stock",
+        "Seuil",
+        "Stock maximum",
+        "Sous le seuil ?",
+        "À commander"
+      ],
+      "contexte": "Kicks (fournisseur inventé pour l'exercice) impose un minimum de commande de 20 paires. On commande les références dont le stock est sous le seuil, pour les amener à leur stock maximum.",
+      "reponses": [
+        [
+          "KX-01",
+          "2",
+          "5",
+          "15",
+          "oui",
+          "13 (15 − 2)"
+        ],
+        [
+          "KX-02",
+          "8",
+          "6",
+          "14",
+          "non",
+          "0"
+        ],
+        [
+          "KX-03",
+          "3",
+          "6",
+          "12",
+          "oui",
+          "9 (12 − 3)"
+        ]
+      ]
+    },
+    {
+      "etape": 8,
+      "etapeTitre": "À la maison",
+      "genre": "fait",
+      "texte": "Total commandé",
+      "rep": "22 paires (13 + 9)."
+    },
+    {
+      "etape": 8,
+      "etapeTitre": "À la maison",
+      "genre": "fait",
+      "texte": "Le minimum de commande est-il atteint ?",
+      "rep": "Oui : 22 ≥ 20."
+    },
+    {
+      "etape": 8,
+      "etapeTitre": "À la maison",
+      "genre": "question",
+      "texte": "Écris ta commande au fournisseur, en deux lignes.",
+      "rep": "« Bonjour, merci de nous livrer : KX-01, 13 paires ; KX-03, 9 paires. »",
+      "note": "Attendu : chaque référence avec sa quantité, en chiffres (KX-01 : 13 ; KX-03 : 9)."
+    },
+    {
+      "etape": 8,
+      "etapeTitre": "À la maison",
+      "genre": "reflexion",
+      "texte": "Si le minimum de commande était de 30 paires, que ferais-tu ? Explique.",
+      "pistes": [
+        "Ajouter KX-02 jusqu'à son maximum (6 paires) : 28, toujours sous 30.",
+        "Pour atteindre 30, il faudrait dépasser un stock maximum : on peut le faire en le disant, ou attendre une commande plus grosse.",
+        "Toute réponse qui pèse les deux règles l'une contre l'autre."
       ]
     }
   ]

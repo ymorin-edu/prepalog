@@ -477,6 +477,132 @@ export const CORRIGE = {
         "Les sept commandes (237 kg) tiendraient en une fois : plus de client laissé à quai.",
         "Le choix devient uniquement un problème d'ordre, et le temps aux arrêts (7 × 6 = 42 min) et les kilomètres du septième arrêt pèsent davantage : à vérifier face au train (la tournée dans l'ordre de la fiche, à sept arrêts, fait 23,9 km et arrive à 16 h 42 : train manqué)."
       ]
+    },
+    {
+      "etape": 8,
+      "etapeTitre": "Cours à détacher",
+      "genre": "fait",
+      "texte": "Avant de partir, on vérifie que le poids chargé ne dépasse pas la ………………….",
+      "rep": "charge utile."
+    },
+    {
+      "etape": 8,
+      "etapeTitre": "Cours à détacher",
+      "genre": "fait",
+      "texte": "Heure d'arrivée = heure de départ + temps de ………………… + temps aux arrêts.",
+      "rep": "route."
+    },
+    {
+      "etape": 8,
+      "etapeTitre": "Cours à détacher",
+      "genre": "fait",
+      "texte": "Changer l'ordre des arrêts change les kilomètres, donc le ………………….",
+      "rep": "temps."
+    },
+    {
+      "etape": 8,
+      "etapeTitre": "Cours à détacher",
+      "genre": "fait",
+      "texte": "Quand tout ne rentre pas, on choisit ce qui reste à quai en ………………… ce qu'il faut retirer.",
+      "rep": "calculant."
+    },
+    {
+      "etape": 8,
+      "etapeTitre": "Cours à détacher",
+      "genre": "tableau",
+      "texte": "Mot | Définition (complète avec la banque de mots)",
+      "entetes": [
+        "Mot",
+        "Définition (complète avec la banque de mots)"
+      ],
+      "contexte": "",
+      "reponses": [
+        [
+          "Tournée",
+          "livre"
+        ],
+        [
+          "Charge utile",
+          "maximal"
+        ],
+        [
+          "Ordre de passage",
+          "sert"
+        ],
+        [
+          "Temps de route",
+          "vitesse"
+        ],
+        [
+          "Temps aux arrêts",
+          "arrêt"
+        ],
+        [
+          "Contrainte",
+          "dépasser"
+        ],
+        [
+          "Vélo-cargo",
+          "transporte"
+        ],
+        [
+          "Laisser à quai",
+          "jour"
+        ]
+      ],
+      "note": "Un mot de la banque par trou."
+    },
+    {
+      "etape": 9,
+      "etapeTitre": "À la maison",
+      "genre": "fait",
+      "texte": "Poids total des cinq commandes (kg)",
+      "rep": "445 kg."
+    },
+    {
+      "etape": 9,
+      "etapeTitre": "À la maison",
+      "genre": "fait",
+      "texte": "Poids à laisser à quai, au moins (kg)",
+      "rep": "115 kg (445 − 330)."
+    },
+    {
+      "etape": 9,
+      "etapeTitre": "À la maison",
+      "genre": "fait",
+      "texte": "Quel client laisses-tu à quai ?",
+      "rep": "D (140 kg) : le seul qui suffit à lui seul."
+    },
+    {
+      "etape": 9,
+      "etapeTitre": "À la maison",
+      "genre": "fait",
+      "texte": "Temps de route (min)",
+      "rep": "36 min (18 ÷ 30 × 60)."
+    },
+    {
+      "etape": 9,
+      "etapeTitre": "À la maison",
+      "genre": "fait",
+      "texte": "Temps aux arrêts (min)",
+      "rep": "40 min (4 × 10)."
+    },
+    {
+      "etape": 9,
+      "etapeTitre": "À la maison",
+      "genre": "fait",
+      "texte": "Heure de retour",
+      "rep": "9 h 16 (8 h 00 + 36 + 40 min)."
+    },
+    {
+      "etape": 9,
+      "etapeTitre": "À la maison",
+      "genre": "reflexion",
+      "texte": "Si deux clients pesaient chacun plus que le poids à retirer, lequel laisserais-tu à quai ? Explique.",
+      "pistes": [
+        "Le plus léger des deux : on laisse le moins possible à quai.",
+        "Ou celui qui est le moins pressé, ou le plus loin : toute raison argumentée."
+      ]
     }
   ]
 };

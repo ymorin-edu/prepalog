@@ -415,6 +415,139 @@ export const CORRIGE = {
         "Le service qualité de l'entrepôt.",
         "Accepter toute réponse qui montre qu'un aléa se signale, il ne se garde pas pour soi."
       ]
+    },
+    {
+      "etape": 7,
+      "etapeTitre": "Cours à détacher",
+      "genre": "fait",
+      "texte": "Quand plusieurs camions attendent pour un seul quai, on choisit l'………………… de déchargement en lisant leurs tickets.",
+      "rep": "ordre."
+    },
+    {
+      "etape": 7,
+      "etapeTitre": "Cours à détacher",
+      "genre": "fait",
+      "texte": "On fait passer en premier le camion dont la marchandise risque le plus de se ………………….",
+      "rep": "réchauffer."
+    },
+    {
+      "etape": 7,
+      "etapeTitre": "Cours à détacher",
+      "genre": "fait",
+      "texte": "Un camion qui attend porte ………………… ne garde son froid que si son groupe froid marche.",
+      "rep": "fermée."
+    },
+    {
+      "etape": 7,
+      "etapeTitre": "Cours à détacher",
+      "genre": "fait",
+      "texte": "Chaque camion a son propre temps hors froid : il commence à l'ouverture de sa ………………….",
+      "rep": "porte."
+    },
+    {
+      "etape": 7,
+      "etapeTitre": "Cours à détacher",
+      "genre": "tableau",
+      "texte": "Mot | Définition (complète avec la banque de mots)",
+      "entetes": [
+        "Mot",
+        "Définition (complète avec la banque de mots)"
+      ],
+      "contexte": "Le bilan compare, ligne par ligne, ce que tu as fait et ce qui était attendu. Chaque ligne finit par « ✓ juste » ou « ✗ à revoir ». Lis-le en entier.",
+      "reponses": [
+        [
+          "Quai",
+          "déchargé"
+        ],
+        [
+          "Aléa",
+          "imprévu"
+        ],
+        [
+          "Ordre de déchargement",
+          "passer"
+        ],
+        [
+          "Temps hors froid",
+          "chambre froide"
+        ],
+        [
+          "Chambre froide",
+          "maintenu"
+        ],
+        [
+          "Palette multi-références",
+          "produits"
+        ],
+        [
+          "Réserve",
+          "chauffeur"
+        ],
+        [
+          "Chaîne du froid",
+          "coupure"
+        ]
+      ],
+      "note": "Un mot de la banque par trou."
+    },
+    {
+      "etape": 8,
+      "etapeTitre": "À la maison",
+      "genre": "tableau",
+      "texte": "Heure | Camion A (viandes surgelées) | Camion B (crèmes glacées)",
+      "entetes": [
+        "Heure",
+        "Camion A (viandes surgelées)",
+        "Camion B (crèmes glacées)"
+      ],
+      "contexte": "Mercredi, 5 h 30. Deux camions arrivent en même temps. Tu n'as qu'un quai. Voici leurs tickets (consigne : −20 °C pour les deux).",
+      "reponses": [
+        [
+          "Ce que montre le ticket",
+          "Rien à signaler : la température est stable",
+          "La température remonte de plus en plus vite : le groupe froid faiblit"
+        ]
+      ],
+      "note": "Seule la dernière ligne est à compléter."
+    },
+    {
+      "etape": 8,
+      "etapeTitre": "À la maison",
+      "genre": "fait",
+      "texte": "Quel camion fais-tu décharger en premier ?",
+      "rep": "Le camion B (crèmes glacées)."
+    },
+    {
+      "etape": 8,
+      "etapeTitre": "À la maison",
+      "genre": "question",
+      "texte": "Écris en une phrase, pour le chef de quai, la raison de ton choix.",
+      "rep": "« Le ticket du camion B montre que son froid faiblit : les glaces se réchauffent s'il attend. »"
+    },
+    {
+      "etape": 8,
+      "etapeTitre": "À la maison",
+      "genre": "fait",
+      "texte": "Température du camion B après 20 minutes d'attente",
+      "rep": "−14,0 °C.",
+      "note": "−18,0 + 20 × 0,2 = −18,0 + 4,0."
+    },
+    {
+      "etape": 8,
+      "etapeTitre": "À la maison",
+      "genre": "fait",
+      "texte": "Que faudrait-il faire alors de ses palettes ?",
+      "rep": "Les refuser : −14,0 °C est plus chaud que −15 °C."
+    },
+    {
+      "etape": 8,
+      "etapeTitre": "À la maison",
+      "genre": "reflexion",
+      "texte": "Un troisième camion arrive, avec un ticket parfait. À quelle place le mets-tu ? Explique.",
+      "pistes": [
+        "Après B, et sans doute après A ou à égalité : un ticket parfait peut attendre porte fermée.",
+        "Valoriser l'élève qui pense à sonder quand même ses palettes."
+      ]
     }
   ]
 };

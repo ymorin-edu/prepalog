@@ -39,8 +39,8 @@ T.entete(LOGO, "ENT-4.1 — Carnet de suivi : le premier camion", [
     ('Découvrir Picard', 'Sur Internet'),
     ('Ouvrir son environnement et lire le message', 'Dans Prepalog'),
     ('Lire les papiers avant d\'ouvrir', 'Dans Prepalog'),
-    ('Compter chaque palette', 'Dans Prepalog'),
-    ('Contrôler et décider', 'Dans Prepalog'),
+    ('Contrôler la première palette, P1', 'Dans Prepalog'),
+    ('Contrôler les palettes P2 à P5', 'Dans Prepalog'),
     ('Le froid d\'abord, les papiers ensuite', 'Dans Prepalog'),
     ('Lire ton bilan', 'Dans Prepalog'),
 ])
@@ -128,63 +128,66 @@ T.reflechir([
 ])
 
 # ==================================================================== étape 4
-T.etape(4, "Compter chaque palette")
-T.p("Clique sur « Oui, vous pouvez ouvrir et décharger ». La porte se lève : regarde la jauge « Temps hors froid "
-    "du lot », en haut. Elle démarre maintenant. Quand les palettes sont posées, clique sur « Contrôler les "
-    "palettes → ».")
+# Réécrite le 04/10/2026 (Cowork) pour le nouveau poste du quai : fiche de contrôle, zone de calcul, décision en
+# boutons, ordre ① Compter → ② Sonder et lire l'étiquette → ③ Ma fiche de contrôle → ④ Décider (brief
+# MOTEUR-quai-fiche-controle.md). Choix de Tristan : la trame suit l'écran, P1 guidée bloc par bloc, puis P2 à P5.
+# Libellés repris de core/types/quai.js, pas encore vus à l'écran par Cowork.
+T.etape(4, "Contrôler la première palette, P1")
+T.p("Clique sur « Oui, vous pouvez ouvrir et décharger ». La porte se lève : la jauge « Temps hors froid du lot », "
+    "en haut, démarre maintenant. Quand les palettes sont posées, clique sur « Contrôler les palettes → ».")
 T.encadre('À savoir :',
           "le quai est réfrigéré (+4 °C), mais c'est bien plus chaud que le camion. Dès que la porte s'ouvre, tout "
           "le lot sort du froid. Le repère de l'exercice : moins de 30 minutes hors froid.")
-T.p("Tu es à l'étape ③. Une palette est faite de couches de cartons posées les unes sur les autres. Pour la "
-    "compter sans compter chaque carton :", apres=4)
+T.p("Tu es à l'étape ③. À gauche, la palette. À droite, quatre blocs numérotés : fais-les dans l'ordre, de haut "
+    "en bas.", apres=4)
 T.consignes([
-    "Clique sur l'onglet de la palette (P1, P2…).",
-    "Clique sur « Faire le tour de la palette » pour voir ses quatre côtés.",
-    "Compte les cartons d'une couche complète, puis le nombre de couches.",
-    "Regarde bien la couche du dessus : compte les cartons qui manquent.",
-    "Remplis les trois cases à l'écran, puis le total. Clique sur « Noter le comptage ».",
+    "Clique sur l'onglet P1, puis sur « Faire le tour de la palette » pour voir ses quatre côtés.",
+    "Bloc ① Compter : dans la zone de calcul, remplis B1, B2 et B3. En B4, écris la formule (le rappel te montre comment).",
+    "Écris toi-même le résultat dans la case « Total », puis appuie sur Entrée.",
+    "Bloc ② : clique sur « Sonder à cœur ». Puis clique sur l'étiquette d'un carton, sur la palette.",
+    "Bloc ③ « Ma fiche de contrôle » : note ce que tu as relevé. Une case sans problème reste vide.",
+    "Bloc ④ Décider : clique sur une décision. Pour une réserve ou un refus, coche le motif. Puis « ✓ Valider P1 ».",
 ])
-T.encadre_liste('Un exemple, avec d\'autres chiffres que les tiens :', [
-    "une couche complète de 3 × 2 = 6 cartons, et 5 couches : 6 × 5 = 30 cartons ;",
-    "s'il manque 2 cartons sur la couche du dessus : 30 − 2 = 28 cartons.",
+T.encadre_liste('Trois mots à connaître :', [
+    "une couche : un étage de cartons sur la palette ;",
+    "sonder à cœur : planter une sonde au centre d'un carton. On lit la température du produit, pas celle de l'air ;",
+    "la fiche de contrôle : tes notes. Personne ne les corrige, mais tu les reporteras sur le bon de livraison.",
 ])
-T.tableau(['Palette', 'Cartons par couche', 'Couches', 'Manquants dessus', 'Total compté', 'BL'], 0,
-          [Cm(1.8), Cm(3.4), Cm(2.4), Cm(3.4), Cm(3.0), Cm(3.0)], hauteur=Cm(1.0),
-          remplis=[[x, '', '', '', '', ''] for x in PALETTES])
-T.reflechir([
-    "Pour la palette la plus difficile à compter, comment as-tu fait ?",
-])
-
-# ==================================================================== étape 5
-T.etape(5, "Contrôler et décider")
-T.p("Toujours à l'étape ③, palette par palette. Le comptage ne suffit pas : un carton peut être abîmé, chaud ou "
-    "ne pas être le bon produit. Pour chaque palette :", apres=4)
-T.consignes([
-    "Fais le tour complet de la palette : regarde l'état des cartons sur chaque côté.",
-    "Clique sur « Sonder à cœur » (1 min) et note la température.",
-    "Clique sur l'étiquette d'un carton pour la lire de près. Compare la référence avec le BL.",
-    "Choisis une décision et un motif dans les deux menus.",
-    "Clique sur « Valider cette palette ».",
-])
-T.encadre('Sonder à cœur :',
-          "planter une sonde au centre d'un carton. On lit la température du produit lui-même, pas celle de l'air.")
 T.encadre_liste('Règle du quai pour la température à cœur (règle de l\'exercice) :', [
     "−18 °C ou plus froid : on accepte ;",
     "entre −18 °C et −15 °C : on accepte avec réserves, en écrivant la température relevée ;",
     "plus chaud que −15 °C : on refuse.",
 ])
-T.tableau(['Palette', 'T° à cœur', 'Référence lue = BL ?', 'État des cartons', 'Décision — motif'], 0,
-          [Cm(1.8), Cm(2.4), Cm(3.4), Cm(3.6), Cm(5.8)], hauteur=Cm(1.15),
-          remplis=[[x, '', '', '', ''] for x in PALETTES])
-T.saut_avant()
 T.encadre_liste('Ce que tu dois voir :', [
-    "l'onglet de la palette passe à « ✓ validée » ;",
-    "le logiciel passe tout seul à la palette suivante ;",
-    "le bouton « Valider cette palette » reste gris tant que le comptage, la décision et le motif ne sont pas faits.",
+    "après Entrée dans « Total » : « Comptage noté : … cartons (BL : …) » ;",
+    "le thermomètre cherche sa valeur, puis affiche la température à cœur ;",
+    "si tu valides trop tôt, un message sous la case te dit ce qui manque ;",
+    "une fois validée, un résumé « ✓ P1 validée » et un bouton « Modifier ».",
 ])
+T.encadre_liste('Tu peux passer à l\'étape 5 quand :', [
+    "l'onglet P1 affiche « ✓ validée ».",
+])
+T.reflechir([
+    "Sur P1, la couche du dessus n'est pas complète. Comment as-tu su s'il manquait des cartons ou non ?",
+])
+
+# ==================================================================== étape 5
+T.etape(5, "Contrôler les palettes P2 à P5")
+T.p("Clique sur « Palette suivante : P2 → ». Refais les quatre blocs, dans le même ordre, pour chaque palette. "
+    "Le comptage ne suffit pas : un carton peut être abîmé, trop chaud ou ne pas être le bon produit. Remplis le "
+    "tableau au fur et à mesure (recopie aussi P1).", apres=4)
+T.encadre_liste('Pour chaque palette, n\'oublie aucun geste :', [
+    "fais le tour complet : chaque côté peut montrer quelque chose ;",
+    "sonde à cœur ;",
+    "lis l'étiquette et compare-la au BL (« Revoir le bon de livraison », au-dessus de la palette) ;",
+    "note tes constats sur ta fiche de contrôle.",
+])
+T.tableau(['Palette', 'Total compté', 'BL', 'T° à cœur', 'Référence lue = BL ?', 'Endommagés', 'Décision — motif'], 0,
+          [Cm(1.6), Cm(1.9), Cm(1.4), Cm(2.0), Cm(2.6), Cm(2.6), Cm(4.9)], hauteur=Cm(1.0),
+          remplis=[[x, '', '', '', '', '', ''] for x in PALETTES])
 T.encadre_liste('Tu peux passer à l\'étape 6 quand :', [
-    "les cinq onglets sont à « ✓ validée » ;",
-    "ton tableau de la page précédente est rempli.",
+    "les cinq onglets sont à « ✓ validée » (sous P5, « Palette suivante » est remplacé par « Contrôles terminés ») ;",
+    "ton tableau est rempli.",
 ])
 T.reflechir([
     "Pour une palette que tu as refusée, qu'est-ce qui t'a décidé ?",
@@ -193,13 +196,14 @@ T.reflechir([
 
 # ==================================================================== étape 6
 T.etape(6, "Le froid d'abord, les papiers ensuite")
-T.p("En haut à droite, clique sur « Contrôles terminés → réserves et chambre froide », puis confirme. Tu es à "
-    "l'étape ④. Il reste trois choses à faire : rentrer le lot, écrire les réserves, faire signer le chauffeur.")
+T.p("Clique sur « Contrôles terminés → réserves et chambre froide », puis confirme. Tu es à l'étape ④. Il reste "
+    "trois choses à faire : rentrer le lot, écrire les réserves, faire signer le chauffeur.")
 T.encadre('Une réserve :',
           "c'est ce que tu écris sur le BL, devant le chauffeur, quand quelque chose ne va pas. Elle doit être "
           "précise : quelle palette, quoi, combien.")
 T.consignes([
     "Lis la règle du quai affichée en haut de l'étape ④.",
+    "À gauche, sous la chambre froide, relis ta fiche de contrôle : c'est elle que tu reportes dans tes réserves.",
     "Fais les trois gestes dans l'ordre que tu choisis : « Rentrer le lot accepté en chambre froide », remplir "
     "tes réserves puis « Écrire les réserves sur le BL », « Faire signer le chauffeur ».",
     "Note dans le tableau ce que tu as écrit dans chaque case de réserve.",
@@ -242,5 +246,9 @@ T.reflechir([
 NOTIONS = [["Un produit surgelé doit être conservé", "Chaîne du froid",
             "Un surgelé se conserve à −18 °C ou plus froid, en tout point du produit (directive 89/108/CEE). "
             "Une remontée brève jusqu'à −15 °C est tolérée au chargement et au déchargement."]]
+# Feuille à détacher (cours + activité à la maison), décision de Tristan du 04/10/2026 :
+# contenu dans `feuilles_detachables.py`.
+T.feuille_detachable('ENT-4.1')
+
 T.finir('ENT-4.1', 'Picard — le premier camion', 'ENT-4.1-picard-premier-camion-trame-eleve', NOTIONS,
         os.path.basename(__file__))

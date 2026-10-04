@@ -78,13 +78,10 @@ ENT_1_1 = {
    ["PM-SUE-MA-41", "8", "6", "conforme", "accepté sous réserve"],
    ["PM-RSX-BL-42", "6", "6", "colis endommagé", "accepté sous réserve"],
  ], "note": "Numéro de lot saisi : LOT-PM-2609. Attendu par le suivi (jalon « contrôle »)."},
- "Pourquoi accepte-t-on quand même une ligne": {"pistes": [
-   "Les paires reçues sont utilisables : les refuser bloquerait la vente de marchandise bonne.",
-   "On ne refuse que si la marchandise est inutilisable (règle de M. Morin). On entre ce qui est là en stock, et on signale l'écart au fournisseur le jour même.",
- ]},
- "Que se passerait-il, pour l'inventaire": {"pistes": [
-   "Le stock informatique serait plus grand que le stock réel (2 paires fantômes) : à l'inventaire, un écart inexplicable.",
-   "Un client pourrait commander une paire que l'on n'a pas, donc une rupture découverte trop tard.",
+ "Pour la ligne où il manque des paires, pourquoi as-tu choisi": {"pistes": [
+   "Attendu : « accepté sous réserve ». Les paires reçues sont utilisables : les refuser bloquerait la vente de marchandise bonne.",
+   "On ne refuse que si la marchandise est inutilisable (règle de M. Morin) ; on entre ce qui est là, et on signale l'écart au fournisseur le jour même.",
+   "Si l'élève a mis une autre décision, l'amener à relire la procédure de M. Morin.",
  ]},
  "Combien de paires, au total, sont entrées": {"rep": "24 paires (12 + 6 + 6). Les trois lignes sont acceptées, deux sous réserve."},
  "Quel type de mouvement apparaît": {"rep": "« Entrée : réception ».", "note": "Type tel qu'écrit dans .movements pour les entrées de la réception."},
@@ -98,10 +95,6 @@ ENT_1_1 = {
  "Brouillon de ton message à Puma": {"modele": "Bonjour,\n\nNous avons réceptionné ce jour la livraison correspondant au bon de livraison BL-77421, lot LOT-PM-2609, réception REC-04127. Nous émettons les réserves suivantes :\n\n- PM-SUE-MA-41 : 8 paires annoncées, 6 reçues, il manque 2 paires ;\n- PM-RSX-BL-42 : 6 paires reçues dans un carton endommagé (carton enfoncé), l'état des paires reste à vérifier.\n\nMerci de nous indiquer la suite que vous donnez à ces réserves (envoi complémentaire ou avoir).\n\nCordialement,\n[prénom], service logistique, Spartoo",
    "criteres": ["Numéro de lot LOT-PM-2609 présent (c'est ce que contrôle le jalon).", "Quantité manquante écrite en chiffres (2) avec la référence PM-SUE-MA-41.", "Colis endommagé signalé avec sa référence PM-RSX-BL-42.", "Formules de politesse, signature, ton professionnel.", "Bonus : n° de bon de livraison (BL-77421) et de réception (REC-04127), demande d'une suite (envoi complémentaire ou avoir)."]},
  "Quelles informations un fournisseur": {"rep": "Le numéro de lot (et du bon de livraison), les références concernées, la nature du problème (manquant ou abîmé), les quantités exactes, et la date de réception.", "note": "Toute réponse qui permet au fournisseur d'identifier la livraison et le défaut est acceptée."},
- "Pourquoi faut-il écrire au fournisseur le jour même": {"pistes": [
-   "Les délais de réserve sont courts (3 jours pour le transporteur, 48 h demandées par Puma dans l'exercice) : passé ce délai, on peut perdre ses droits.",
-   "Plus on attend, plus il est facile au fournisseur de dire que le dommage s'est produit chez nous.",
- ]},
  "Qu'aurait-il fallu faire, en plus": {"pistes": [
    "Refuser la ligne (marchandise inutilisable) : ne pas l'entrer en stock.",
    "Prévenir le fournisseur et demander un remplacement ou un avoir ; garder les paires en zone séparée en attendant sa réponse.",
@@ -119,19 +112,14 @@ ENT_1_2 = {
    "Le stock total seul ne dit pas ce qui manque : il rassure à tort.",
  ]},
  "Combien de fournisseurs sont référencés": {"rep": "10 (F001 à F010).", "note": "Peut être plus si l'élève en a ajouté avec .addsupplier."},
- "T: Code | Marque fournisseur": {"lignes": [["F001", "Nike"], ["F002", "adidas"], ["F003", "Puma"]], "note": "N'importe quels trois parmi : F001 Nike, F002 adidas, F003 Puma, F004 New Balance, F005 Converse, F006 Vans, F007 ASICS, F008 Reebok, F009 Skechers, F010 Timberland."},
+ "T: Code (par exemple F001) | Trois marques fournisseurs": {"lignes": [["F001", "Nike"], ["F002", "adidas"], ["F003", "Puma"]], "note": "N'importe quels trois parmi : F001 Nike, F002 adidas, F003 Puma, F004 New Balance, F005 Converse, F006 Vans, F007 ASICS, F008 Reebok, F009 Skechers, F010 Timberland."},
  "Choisis un de ces fournisseurs : quel est son délai": {"rep": "Selon le fournisseur choisi : Nike 3 j, adidas 4 j, Puma 4 j, New Balance 5 j, Converse 6 j, Vans 5 j, ASICS 4 j, Reebok 5 j, Skechers 3 j, Timberland 6 j."},
  "Quel est son minimum de commande": {"rep": "Selon le fournisseur : Nike 24 paires, adidas 20, Puma 20, New Balance 24, Converse 16, Vans 16, ASICS 20, Reebok 16, Skechers 12, Timberland 24."},
  "Les clients de Spartoo sont-ils": {"rep": "Des particuliers.", "note": "Les 32 clients ont un prénom, un nom, une adresse personnelle et une ville : ce sont des personnes, pas des sociétés."},
- "T: Code | Nom | Ville": {"lignes": [["C0001", "Camille Thomas", "Lille"], ["C0002", "Lucas Laurent", "Rennes"]], "note": "N'importe quels deux parmi les 32 clients (C0001 à C0032)."},
+ "T: Code | Deux clients : nom | Ville": {"lignes": [["C0001", "Camille Thomas", "Lille"], ["C0002", "Lucas Laurent", "Rennes"]], "note": "N'importe quels deux parmi les 32 clients (C0001 à C0032)."},
  "Qu'as-tu observé dans l'écran Clients": {"pistes": [
    "Les clients ont un prénom et un nom (pas un nom de société), une adresse de particulier (rue, ville), un e-mail personnel.",
    "On ne trouve ni raison sociale, ni SIRET, ni numéro de TVA : indices d'un client particulier (B2C).",
- ]},
- "Dans une entreprise, pourquoi garde-t-on": {"pistes": [
-   "Le délai de livraison dit quand recommander : il faut commander assez tôt pour ne pas être en rupture avant l'arrivée.",
-   "Le minimum de commande dit combien il faut commander au moins : on regroupe plusieurs références pour l'atteindre.",
-   "Garder ces informations évite d'avoir à les redemander au fournisseur à chaque commande.",
  ]},
  "Par quel caractère commence toujours": {"rep": "Par un point (« . »).", "note": "Message de la console : « Une commande commence par un point. »"},
  "T: Commande | Ce qu'elle fait": {"lignes": [
@@ -154,11 +142,6 @@ ENT_1_2 = {
  "Combien de paires sont disponibles": {"rep": "3 paires.", "note": "Valeur de départ du catalogue. C'est ce nombre, écrit en chiffres, que le jalon cherche dans la réponse de l'élève."},
  "Brouillon de ta réponse à Léa Dubois": {"modele": "Bonjour Madame,\n\nMerci pour votre message. Nous avons actuellement 3 paires de Stan Smith blanches en pointure 44 en stock.\n\nN'hésitez pas à nous contacter pour toute autre question.\n\nCordialement,\n[prénom]\nService logistique, Spartoo",
    "criteres": ["Le nombre de paires écrit en CHIFFRES (3) : c'est ce que vérifie le suivi.", "Formule de politesse au début et à la fin.", "Information claire en une lecture : combien, quel article, quelle pointure.", "Signature (prénom, service).", "Orthographe soignée, phrases complètes, pas d'abréviations."]},
- "Pourquoi ces attentes sont-elles importantes": {"pistes": [
-   "Un message professionnel donne une bonne image de l'entreprise : le client est un client potentiel.",
-   "Un message clair évite les allers-retours, donc fait gagner du temps aux deux côtés.",
-   "L'information chiffrée évite les malentendus (« quelques paires » ne dit pas combien).",
- ]},
  "Si le stock avait été de zéro paire": {"pistes": [
    "Dire honnêtement qu'il n'y en a plus (« 0 paire » écrit en chiffres).",
    "Proposer une suite : une autre couleur ou pointure, ou une date de réapprovisionnement (4 jours chez adidas), et prévenir le client.",
@@ -174,17 +157,9 @@ ENT_1_2 = {
  "Que dois-tu faire lorsque tu es en rupture": {"rep": "Mettre 0 à préparer et le statut « Rupture », valider la préparation (la ligne part en reliquat), et prévenir le client / prévoir de réapprovisionner (c'est l'étape 6)."},
  "Qu'appelle-t-on un « reliquat »": {"rep": "La partie d'une commande qui n'a pas pu être préparée faute de stock (ici 1 paire d'AD-STS-BL-41 et 1 paire de PM-SUE-NR-40) : elle sera livrée plus tard, quand le stock sera revenu."},
  "Que se passe-t-il exactement dans le stock": {"rep": "Le stock diminue des quantités préparées et les mouvements de sortie sont enregistrés : NK-AM270-NR-42 passe de 8 à 7, AD-STS-BL-41 de 1 à 0, PM-SUE-NR-40 reste à 0.", "note": "Type de mouvement : « Sortie : préparation » (bon de préparation BP-048213)."},
- "Pour la ligne où tu ne peux pas tout préparer": {"pistes": [
-   "Parce qu'il n'y a pas assez de paires en stock : on ne peut pas préparer ce qu'on n'a pas.",
-   "La quantité commandée est ce que le client veut, la quantité préparée est ce qui existe réellement ; la différence devient le reliquat.",
- ]},
  "Que dirais-tu à un client dont une ligne": {"pistes": [
    "Lui dire clairement qu'une partie de sa commande part tout de suite et le reste plus tard, avec une date si possible.",
    "S'excuser, proposer une alternative ou un remboursement de la ligne manquante s'il ne veut pas attendre.",
- ]},
- "Pourquoi relever le stock réel avant de préparer": {"pistes": [
-   "La commande dit ce que le client veut, pas ce qu'il y a en stock : il faut aller voir pour ne pas promettre ce qu'on n'a pas.",
-   "Se fier à la quantité commandée ferait un stock négatif ou une ligne marquée préparée alors que les paires n'existent pas.",
  ]},
  "T: Référence | Stock actuel | Seuil | Stock maximum | Quantité à commander": {"lignes": [
    ["PM-SUE-NR-40", "0", "4", "12", "12 (12 − 0)"],
@@ -194,14 +169,6 @@ ENT_1_2 = {
  "Quelle est la différence entre le seuil": {"rep": "Le seuil est le minimum qui déclenche une commande ; le stock maximum est le niveau à ne pas dépasser (place, argent immobilisé). On commande pour revenir au maximum, pas au seuil."},
  "Dans la liste des destinataires": {"rep": "Au nom de la marque (Puma) et à son code F003 / son adresse e-mail (b2b@puma-pro.example), qui correspondent à la référence PM-SUE-NR-40 (fournisseur indiqué sur la fiche produit)."},
  "As-tu dû ajouter une deuxième référence": {"rep": "Oui : PM-SUE-NR-40 seule donne 12 paires, le minimum de Puma est 20.", "note": "Si l'élève répond non, il a probablement commandé plus que le maximum (le suivi le signale : quantité ≠ maximum − stock)."},
- "Pourquoi une entreprise se fixe-t-elle un stock maximum": {"pistes": [
-   "Stocker coûte : place, argent immobilisé, risque d'invendus ou de démarque.",
-   "Le seuil dit quand commander, le maximum dit combien : sans lui on commanderait au hasard.",
- ]},
- "Pourquoi un fournisseur impose-t-il un minimum": {"pistes": [
-   "Préparer et expédier une commande a un coût fixe : une commande trop petite ne serait pas rentable pour lui.",
-   "C'est une clause du contrat : en commandant, l'entreprise l'accepte.",
- ]},
  "Si tu as ajouté une référence": {"pistes": [
    "Critère attendu : une référence du même fournisseur en rupture ou sous son seuil, pour ne pas commander ce qui n'est pas nécessaire.",
    "Valoriser aussi : une référence qui se vend bien, ou qui permet de dépasser le minimum sans dépasser le maximum.",
@@ -217,10 +184,6 @@ ENT_1_3 = {
  "Si une entreprise ne sait pas dans quel lot": {"pistes": [
    "Elle doit rappeler ou bloquer toutes les paires de la référence, ou de toute la période, sans savoir lesquelles sont défectueuses.",
    "Elle doit prévenir tous ses clients ayant acheté ce produit, faute de pouvoir cibler.",
- ]},
- "Pourquoi cela lui coûte-t-il beaucoup plus cher": {"pistes": [
-   "Plus de paires à retirer, plus de clients à prévenir et à rembourser, plus de temps de travail.",
-   "Image de l'entreprise abîmée et risque juridique plus grand si un client est blessé.",
  ]},
  "T: Information | Ce que tu relèves": None,   # géré plus bas : deux tableaux portent cet intitulé, voir TABLEAUX_PAR_ETAPE
  "Le défaut est-il visible à l'œil nu": {"rep": "Non (« le défaut n'est pas visible à l'œil nu »)."},
@@ -256,7 +219,6 @@ ENT_1_3 = {
    "On bloquerait aussi des paires saines venant d'autres lots : elles ne pourraient plus être vendues, donc perte de ventes inutile.",
    "Le logiciel refuse d'ailleurs un blocage supérieur au reste du lot (« Le lot ne contient pas autant de paires de cette référence en stock »).",
  ]},
- "Que vaut maintenant le « Reste en stock »": {"rep": "0 : tout ce qui restait du lot a été bloqué (18 paires)."},
  "Quel type de mouvement apparaît dans le tableau": {"rep": "« Blocage qualité ».", "note": "Dans .getlot, les sorties comptent les ventes (6 paires) puis les blocages (18 paires)."},
  "À quoi sert le motif": {"pistes": [
    "À comprendre plus tard pourquoi ces paires ont quitté le stock : défaut fabricant, et non vente ou casse.",
@@ -264,10 +226,6 @@ ENT_1_3 = {
  ]},
  "Brouillon de ton compte rendu": {"modele": "Bonjour M. Morin,\n\nCompte rendu sur le lot LOT-PM-2609 (fournisseur : Puma).\n\n- Entré en stock le [jj/mm/aaaa : date lue dans .getlot], réception REC-04127.\n- Commandes parties avec des paires de ce lot : CMD-048301, CMD-048307 et CMD-048312.\n- Stock restant bloqué : 9 paires PM-SUE-RG-39, 5 paires PM-SUE-MA-41, 4 paires PM-RSX-BL-42 (total 18), motif : blocage qualité, défaut fabricant.\n\nCordialement,\n[prénom]",
    "criteres": ["Numéro du lot LOT-PM-2609.", "Date d'entrée au format jj/mm/aaaa (date de la réception de l'élève, lue dans .getlot).", "Nom du fournisseur : Puma.", "Les trois numéros de commande au format CMD-000000 : CMD-048301, CMD-048307, CMD-048312.", "Ce qui a été bloqué, référence par référence (9 / 5 / 4)."], "note": "Date et numéro de réception propres à chaque élève. Un élève sans séance 1 a REC-04118 (réception d'un collègue) : lire la base."},
- "Pourquoi le compte rendu doit-il donner les numéros de commande": {"pistes": [
-   "Un numéro de commande est unique et se retrouve dans le logiciel et chez Puma ; un nom peut avoir des homonymes ou être mal orthographié.",
-   "Puma doit contacter ces clients : le numéro de commande permet de les retrouver sans erreur.",
- ]},
  "Quelle première action Spartoo devra-t-elle mener": {"pistes": [
    "Retrouver la commande du client et vérifier que sa paire vient bien du lot LOT-PM-2609.",
    "Remplacer ou rembourser le client, et ne pas remettre la paire en stock ; informer Puma.",
@@ -276,10 +234,10 @@ ENT_1_3 = {
 # Deux tableaux portent le même intitulé « Information | Ce que tu relèves » en ENT-1.3 (étapes 2 et 3).
 TABLEAUX_PAR_ETAPE_1_3 = {
  2: {"lignes": [
-   ["Lot concerné", "LOT-PM-2609"],
-   ["Fournisseur / expéditeur de l'alerte", "Puma France, B2B — qualité (Marc Oberlé)"],
+   ["Numéro du lot en cause", "LOT-PM-2609"],
    ["Nature du défaut", "Collage de la semelle insuffisant sur une partie de la production"],
    ["Ce que Puma demande", "1. ne plus expédier de paires du lot ; 2. indiquer les commandes déjà livrées avec ce lot ; 3. isoler le stock restant"],
+   ["Qui a envoyé l'alerte", "Puma France, B2B — qualité (Marc Oberlé)"],
  ], "note": "Informations de l'alerte « URGENT — rappel qualité sur le lot LOT-PM-2609 » (lignes exactes à adapter à la fiche imprimée dans la trame)."},
  3: {"lignes": [
    ["Numéro de lot", "LOT-PM-2609"],
@@ -448,23 +406,17 @@ ENT_4_1 = {
    "Portes fermées, la marchandise reste au froid : lire le ticket ne lui coûte rien.",
    "Le ticket dit s'il faudra sonder chaque palette, ou même refuser le camion.",
    "Une fois les palettes sur le quai, chaque minute compte dans le temps hors froid."]},
- "T: Palette | Cartons par couche | Couches": {"lignes": [
-   ["P1", "12 (4 × 3)", "5", "3", "57", "57"],
-   ["P2", "9 (3 × 3)", "4", "0", "36", "36"],
-   ["P3", "12 (4 × 3)", "4", "0", "48", "48"],
-   ["P4", "6 (3 × 2)", "4", "2", "22", "24"],
-   ["P5", "6 (3 × 2)", "5", "0", "30", "30"],
- ], "note": "P4 : un des deux manquants est dans le coin du fond, visible seulement en faisant le tour. P1 : la couche du dessus est incomplète mais le total est conforme au BL. Le bilan marque « à revoir (non compté) » les lignes « détail » si l'élève n'a rempli que le total."},
- "Pour la palette la plus difficile à compter": {"pistes": [
-   "Souvent P4 (le carton manquant du fond ne se voit qu'en faisant le tour) ou P1 (couche du dessus incomplète).",
-   "Valoriser la méthode : couche × nombre de couches − manquants, faire le tour, recompter.",]},
- "T: Palette | T° à cœur | Référence lue": {"lignes": [
-   ["P1", "−21,5 °C", "oui (HVE-1000)", "bon état", "Accepter — aucun motif"],
-   ["P2", "−19,8 °C", "oui (CRB-070)", "2 cartons écrasés, visibles de l'arrière", "Accepter avec réserves — cartons endommagés"],
-   ["P3", "−14,2 °C", "oui (GVA-1000)", "bon état", "Refuser — température non conforme"],
-   ["P4", "−20,4 °C", "oui (CAB-400)", "bon état (2 cartons manquants)", "Accepter avec réserves — manquant"],
-   ["P5", "−20,9 °C", "NON : EPB-450 (épinards en branches) au lieu de EPH-450", "bon état", "Refuser — produit différent"],
- ], "note": "Le jalon de décision exige aussi la palette sondée. P3 : plus chaud que −15 °C, refus (règle du quai)."},
+ "Sur P1, la couche du dessus n'est pas complète": {"pistes": [
+   "On compare au BL : 12 cartons par couche × 5 couches − 3 manquants dessus = 57, et le BL annonce 57. Rien ne manque.",
+   "Une couche du dessus incomplète est normale : le fournisseur charge ce qui est commandé. Ce qui compte, c'est le total face au BL.",
+   "Sur la fiche, la case « Cartons manquants » reste donc vide pour P1. Valoriser l'élève qui cite son calcul et le BL."]},
+ "T: Palette | Total compté | BL | T° à cœur": {"lignes": [
+   ["P1", "57", "57", "−21,5 °C", "oui (HVE-1000)", "0", "Accepter — aucun motif"],
+   ["P2", "36", "36", "−19,8 °C", "oui (CRB-070)", "2 (écrasés, visibles de l'arrière)", "Accepter avec réserves — cartons endommagés"],
+   ["P3", "48", "48", "−14,2 °C", "oui (GVA-1000)", "0", "Refuser — température non conforme"],
+   ["P4", "22", "24", "−20,4 °C", "oui (CAB-400)", "0", "Accepter avec réserves — manquant (2)"],
+   ["P5", "30", "30", "−20,9 °C", "NON : EPB-450 (épinards en branches) au lieu de EPH-450", "0", "Refuser — produit différent"],
+ ], "note": "Comptages : P1 12 (4 × 3) × 5 − 3 ; P2 9 × 4 ; P3 12 × 4 ; P4 6 (3 × 2) × 4 − 2 ; P5 6 × 5. P4 : un des deux manquants est dans le coin du fond, visible seulement en faisant le tour. Le jalon de décision exige aussi la palette sondée. P3 : plus chaud que −15 °C, refus (règle du quai). Les lignes « détail » du bilan (non comptées) se lisent dans la zone de calcul de l'élève (B1, B2, B3)."},
  "Pour une palette que tu as refusée": {"pistes": [
    "P3 : la sonde (−14,2 °C) est au-dessus de −15 °C : refus, quelle que soit la quantité.",
    "P5 : l'étiquette dit EPB-450, le BL EPH-450 : ce n'est pas le produit commandé.",
@@ -734,6 +686,8 @@ def ecrire_corrige(code, titre, trame, items, cles, notions, dossier, script, fi
                 utilises.add(('d', cands[0][0])); rep = cands[0][1]
         if rep is None:
             manques.append(('sans réponse', cible)); continue
+        if it['genre'] == 'tableau' and 'lignes' in rep and not rep['lignes']:
+            continue   # tableau donné (« À la maison ») : rien à corriger, absent du corrigé
         if it['genre'] == 'tableau':
             o['entetes'] = it['texte'].split(' | ')
             o['contexte'] = it.get('contexte') or ''

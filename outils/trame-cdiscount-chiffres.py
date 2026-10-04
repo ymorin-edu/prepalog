@@ -122,7 +122,8 @@ T.encadre('Pour voir, avant d\'exporter :',
           "mets « Allée » sur « Toutes » et regarde le tableau et le nombre de lignes changer. Puis remets « A ». "
           "Fais-le aussi avec la « Période ». Exporte seulement quand les deux critères sont revenus sur ceux de "
           "Nadia.")
-T.questions([("Avec « Allée » sur « Toutes », le nombre de lignes augmente ou diminue ? Pourquoi ?", 2)])
+T.faits(["Avec « Allée » sur « Toutes », le nombre de lignes augmente-t-il ou diminue-t-il ?"])
+T.questions([("Explique pourquoi, avec ce que tu vois dans le tableau.", 2)])
 T.faits(["Nombre de lignes affiché dans Extractions, avec les critères de Nadia"])
 T.encadre_liste('Ce que tu dois voir dans ton fichier :', [
     "deux onglets en bas : « Préparations » et « Synthèse » ;",
@@ -290,5 +291,9 @@ NOTIONS = [["Exporter des données d'un logiciel", "Export",
             "Exporter, c'est copier des données d'un logiciel (ici le WMS) dans un fichier qu'on ouvre ailleurs, "
             "par exemple un tableur. Les données restent dans le logiciel. Avant d'exporter, on choisit les lignes "
             "à sortir avec des critères (une zone, une période…) : le fichier contient ce qu'on voit à l'écran."]]
+# Feuille à détacher (cours + activité à la maison), décision de Tristan du 04/10/2026 :
+# contenu dans `feuilles_detachables.py`.
+T.feuille_detachable('ENT-2.2')
+
 T.finir(CODE, 'Cdiscount — ce que disent les chiffres', 'ENT-2.2-cdiscount-chiffres-trame-eleve', NOTIONS,
         os.path.basename(__file__), fichier=CODE)

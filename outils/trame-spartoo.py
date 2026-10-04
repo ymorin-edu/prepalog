@@ -136,6 +136,24 @@ def encadre(titre, texte):
     r2 = par.add_run(texte); r2.font.size = Pt(10)
     d.add_paragraph().paragraph_format.space_after = Pt(2)
 
+
+def encadre_liste(titre, items):
+    """Encadré gris en liste à puces (règle du 03/10/2026 : une idée par ligne). Ajouté le 04/10/2026."""
+    colle_au_suivant()
+    t = d.add_table(rows=1, cols=1); t.style = 'Table Grid'; t.alignment = WD_TABLE_ALIGNMENT.LEFT
+    row = t.rows[0]; row._tr.get_or_add_trPr().append(OxmlElement('w:cantSplit'))
+    c = row.cells[0]; ombre(c, 'F2F2F2')
+    par = c.paragraphs[0]; par.paragraph_format.space_after = Pt(2); par.paragraph_format.keep_with_next = True
+    if _consomme(): par.paragraph_format.page_break_before = True
+    r = par.add_run(titre); r.bold = True; r.font.size = Pt(10); r.font.color.rgb = TITRE
+    for i, it in enumerate(items):
+        o = c.add_paragraph(); o.paragraph_format.space_before = Pt(0)
+        o.paragraph_format.space_after = Pt(2 if i < len(items) - 1 else 0)
+        o.paragraph_format.left_indent = Cm(0.7); o.paragraph_format.first_line_indent = Cm(-0.4)
+        if i < len(items) - 1: o.paragraph_format.keep_with_next = True
+        o.add_run('\u2022  ' + it).font.size = Pt(10)
+    d.add_paragraph().paragraph_format.space_after = Pt(2)
+
 def questions(liste, lignes=2):
     """Une question, UNE zone de réponse, puis la suivante (Tristan, 02/10/2026) : pas de double
     question. Un élément est un texte, ou (texte, nombre de lignes) pour adapter la zone :
@@ -298,11 +316,15 @@ t.rows[2].cells[1].merge(t.rows[2].cells[3])
 for row in t.rows: row.height = Cm(1.0)
 d.add_paragraph().paragraph_format.space_after = Pt(4)
 
+# Page 1 uniformisée avec les autres entreprises (reprise du 04/10/2026).
 encadre('Ce document est ta trame de travail :',
-        "il se complète étape par étape, au fil de la séance. Garde-le sous les yeux pendant que tu travailles, "
-        "et note ce que tu trouves à chaque étape. Ton enseignant peut voir, dans son suivi de classe, si le "
-        "travail demandé à chaque étape est fait correctement — pense donc à bien suivre les consignes "
-        "(par exemple : écrire clairement un nombre dans un message si on te le demande).")
+        "tu peux le suivre seul, étape par étape. Chaque étape dit où cliquer et ce que tu dois voir à l'écran.")
+encadre('Ce que ton enseignant voit dans son suivi :',
+        "trois points : ta réponse à Léa Dubois (le stock écrit en chiffres), la commande CMD-048213 préparée et "
+        "validée, et ta commande de réapprovisionnement à Puma. Tes réponses écrites ici servent à réfléchir.")
+encadre('Ce qui est vrai, ce qui est inventé :',
+        "Spartoo et les marques de chaussures sont réels. Les produits, les stocks, les clients, les coordonnées "
+        "des fournisseurs et les messages sont inventés pour l'exercice.")
 
 # ==================================================================== étape 0
 soustitre("Le déroulé de ta séance")
@@ -319,19 +341,21 @@ tableau(['N°', 'Étape', 'Où travailles-tu ?'], 0, [Cm(1.4), Cm(11.0), Cm(4.6)
 # ==================================================================== étape 1
 etape(1, "Ouvrir ton environnement de travail")
 p("Tu connais déjà Spartoo grâce à la séance de réception. Aujourd'hui, tu ouvres l'environnement de travail de l'entreprise pour préparer des commandes.")
-encadre('Attention :', "dans l'outil, tu retrouveras le nom Spartoo mais avec des données fictives (produits, "
-        "stocks, clients, fournisseurs) : c'est un entraînement, pas le vrai site.")
 consignes([
  "Ouvre un navigateur internet (Chrome, Edge…).",
  "Va sur Prepalog et saisis ton matricule et ton code (ceux que ton enseignant t'a donnés, "
  "le même matricule que celui noté en première page).",
  "Clique sur « Entrer ».",
- "Sur la page d'accueil, clique sur la pastille « Simulog », puis ouvre l'activité « Spartoo — préparation » (ENT-1.2). "
- "Il y a trois activités Spartoo : vérifie que le bandeau en haut affiche bien « ENT-1.2 ».",
+ "Sur la page d'accueil, clique sur la pastille « Simulog ».",
+ "Ouvre l'activité « Spartoo — préparation ». Vérifie que le bandeau en haut affiche « ENT-1.2 ».",
 ])
 encadre('Garde bien ton matricule :', "c'est lui qui permet à ton enseignant de retrouver ton travail. "
         "Ta base est personnelle : ce que tu fais n'apparaît pas chez tes camarades, et inversement.")
 p("Observe l'écran d'accueil avant d'aller plus loin :", taille=10.5, gras=True, avant=8)
+encadre_liste('Ce que tu dois voir :', [
+ "à gauche, le menu de l'entreprise : Messagerie, Commandes, Stock, Fournisseurs, Clients, Console… ;",
+ "sur l'accueil, quatre chiffres : messages non lus, commandes à préparer, paires en stock, références en rupture.",
+])
 faits(["Combien de messages non lus t'attendent en arrivant ?", 'Combien de paires y a-t-il en stock au total ?', 'Combien de références sont en rupture ?'])
 reflechir([
  'Parmi ces trois chiffres, lequel un responsable de stock doit-il regarder en premier le matin ?',
@@ -339,33 +363,25 @@ reflechir([
 
 # ==================================================================== étape 2
 etape(2, "Repérer les fournisseurs et les clients")
-p("Dans le menu de gauche, il y a deux écrans : Fournisseurs et Clients. Tu vas ouvrir les deux, l'un après l'autre.")
-soustitre('Les fournisseurs')
-p("Ouvre l'écran Fournisseurs. Ce sont les marques de chaussures qui livrent Spartoo (des vraies marques, "
-  "mais avec des coordonnées fictives).", taille=10.5)
+p("Dans le menu de gauche, ouvre l'écran Fournisseurs : ce sont les marques de chaussures qui livrent Spartoo.")
 faits(['Combien de fournisseurs sont référencés ?'])
-p("Cite trois fournisseurs avec leur code (par exemple F001) :", taille=10.5, gras=True, avant=6)
-tableau(['Code', 'Marque fournisseur'], 3, [Cm(4.0), Cm(13.0)], hauteur=Cm(1.0))
+tableau(['Code (par exemple F001)', 'Trois marques fournisseurs'], 3, [Cm(4.0), Cm(13.0)], hauteur=Cm(0.8))
 faits(['Choisis un de ces fournisseurs : quel est son délai de livraison ?', 'Quel est son minimum de commande ?'])
-soustitre('Les clients')
-p("Ouvre l'écran Clients.", taille=10.5)
+p("Ouvre maintenant l'écran Clients.", avant=6, apres=4)
 faits(['Les clients de Spartoo sont-ils des entreprises ou des particuliers ?'])
-p("Cite deux clients :", taille=10.5, gras=True, avant=6)
-tableau(['Code', 'Nom', 'Ville'], 2, [Cm(3.0), Cm(8.0), Cm(6.0)], hauteur=Cm(1.0))
-saut_avant()
+tableau(['Code', 'Deux clients : nom', 'Ville'], 2, [Cm(3.0), Cm(8.0), Cm(6.0)], hauteur=Cm(0.8))
 qcm([
  ("Entre un fournisseur et Spartoo, qu'est-ce qui circule ?",
   ["de l'argent seulement", "des marchandises seulement", "des marchandises dans un sens, de l'argent dans l'autre"], 2),
 ])
 reflechir([
  "Qu'as-tu observé dans l'écran Clients qui te permet de dire s'il s'agit d'entreprises ou de particuliers ?",
- 'Dans une entreprise, pourquoi garde-t-on pour chaque fournisseur son délai de livraison et son minimum de commande ?',
 ])
 
 # ==================================================================== étape 3
 etape(3, "Comprendre la console et la commande .help")
 p("La console permet d'interroger et de modifier la base avec des commandes qui commencent toujours par un "
-  "point. Les références ne sont pas sensibles à la casse (majuscules/minuscules).")
+  "point. Tu peux écrire les références en majuscules ou en minuscules : la console comprend les deux.")
 consignes([
  "Va dans Console.",
  "Tape .help et appuie sur Entrée : la liste complète des commandes disponibles s'affiche.",
@@ -427,8 +443,10 @@ qcm([
   ["lui dire que le produit n'est pas disponible", "lui envoyer un autre produit sans la prévenir", "ne pas lui répondre"], 0),
 ])
 reflechir([
- 'Pourquoi ces attentes sont-elles importantes dans une entreprise ?',
  "Si le stock avait été de zéro paire, qu'aurais-tu répondu à Léa Dubois ?",
+])
+encadre_liste('Tu peux passer à l\'étape 5 quand :', [
+ "ta réponse à Léa Dubois est envoyée, avec le nombre de paires écrit en chiffres.",
 ])
 
 # ==================================================================== étape 5
@@ -438,11 +456,10 @@ p("Une nouvelle commande web vient d'arriver. Tu vas la traiter de bout en bout,
 consignes([
  "Va dans Messagerie et ouvre le message « Nouvelle commande web n° CMD-048213 ».",
  "Clique sur « Enregistrer la commande », puis ouvre-la dans la rubrique Commandes.",
- "Pour chaque ligne, trouve toi-même dans la console les commandes qui donnent le stock réel et "
- "l'emplacement d'une référence (aide-toi de .help si besoin), puis remplis le stock trouvé, "
- "l'emplacement, la quantité à préparer et le statut. Il n'y a pas de bouton pour vérifier chaque "
- "ligne : c'est à toi d'être rigoureux.",
- "Une fois toutes les lignes remplies, édite le bon de préparation puis clique sur « Valider la préparation ».",
+ "Pour chaque ligne, trouve dans la console le stock réel et l'emplacement de la référence (aide-toi de .help).",
+ "Remplis le stock trouvé, l'emplacement, la quantité à préparer et le statut. Aucun bouton ne vérifie une "
+ "ligne : relis-toi.",
+ "Clique sur « Éditer le bon de préparation », puis sur « Valider la préparation (sortie de stock) ».",
 ])
 p("Recopie ici ce que tu as trouvé pour chaque ligne, avant de valider :", taille=10.5, gras=True, avant=6)
 tableau(['Référence', 'Stock trouvé', 'Emplacement', 'À préparer', 'Statut'], 3,
@@ -461,10 +478,12 @@ qcm([
  ("Une ligne de la commande part en reliquat. Que doit faire le vendeur ?",
   ["le prévenir que la ligne arrive plus tard", "ne rien dire", "annuler toute la commande"], 0),
 ])
+encadre_liste('Ce que tu dois voir :', [
+ "le bon de préparation range les articles par emplacement ;",
+ "après la validation, la commande n'est plus comptée dans « commandes à préparer », sur l'accueil.",
+])
 reflechir([
- 'Pour la ligne où tu ne peux pas tout préparer, pourquoi la quantité préparée est-elle inférieure à la quantité commandée ?',
  'Que dirais-tu à un client dont une ligne de commande part en reliquat ?',
- 'Pourquoi relever le stock réel avant de préparer, plutôt que se fier à la quantité commandée ?',
 ])
 encadre('Une fois validé :', "ton enseignant voit automatiquement, dans son suivi de classe, que la commande a "
         "bien été traitée (et si elle est complète ou avec un reliquat).")
@@ -480,9 +499,9 @@ consignes([
  "Calcule la quantité à commander pour amener cette référence à son stock maximum.",
  "Va dans l'écran Fournisseurs, repère le fournisseur de cette référence et note son "
  "minimum de commande.",
- "Si la quantité calculée à l'étape 1 est inférieure à ce minimum, trouve une autre référence du même "
- "fournisseur qui a besoin d'être réapprovisionnée (regarde son stock par rapport à son seuil) et "
- "calcule, de la même façon, la quantité pour l'amener à son propre stock maximum.",
+ "Si la quantité du point 2 est inférieure à ce minimum, cherche une autre référence du même fournisseur "
+ "dont le stock est sous son seuil.",
+ "Calcule, de la même façon, la quantité qui l'amène à son stock maximum.",
  "Dans Messagerie, clique sur « Nouveau message », choisis ce fournisseur comme destinataire, et écris "
  "un message précisant chaque référence et la quantité correspondante.",
  "Envoie le message : l'outil te répond automatiquement pour te dire si le minimum de commande est atteint.",
@@ -490,6 +509,7 @@ consignes([
 p("Note ici ton calcul :", taille=10.5, gras=True, avant=6)
 tableau(['Référence', 'Stock actuel', 'Seuil', 'Stock maximum', 'Quantité à commander'], 3,
         [Cm(4.6), Cm(2.8), Cm(2.0), Cm(3.2), Cm(4.4)], hauteur=Cm(1.2))
+saut_avant()   # coupure choisie : le calcul / les questions (reprise du 04/10/2026)
 questions([
  ("Qu'est-ce que le « seuil » d'une référence ?", 2),
  ('Quelle est la différence entre le seuil et le stock maximum ?', 2),
@@ -498,19 +518,24 @@ questions([
  ('Dans la liste des destinataires, comment as-tu reconnu le bon fournisseur ?', 2),
 ])
 faits(['As-tu dû ajouter une deuxième référence pour atteindre le minimum de commande ?'])
-saut_avant()
 qcm([
  ("Le minimum de commande est une clause du contrat avec le fournisseur. Une clause, c'est quoi ?",
   ["une règle écrite dans le contrat", "un type de camion", "une réduction de prix"], 0),
 ])
 reflechir([
- "Pourquoi une entreprise se fixe-t-elle un stock maximum, et pas seulement un seuil d'alerte ?",
- 'Pourquoi un fournisseur impose-t-il un minimum de commande ?',
  'Si tu as ajouté une référence, quel critère as-tu utilisé pour la choisir ?',
 ])
 encadre("Si le minimum n'est pas atteint :", "le fournisseur te le dit dans sa réponse. Retourne dans "
         "Messagerie, clique sur « Nouveau message » et renvoie une commande complétée : ton enseignant verra "
         "dans son suivi si l'une de tes tentatives est correcte.")
+
+# Feuille à détacher (cours + activité à la maison), décision de Tristan du 04/10/2026. Ce générateur n'utilise
+# pas trame_commun : on lui prête le document en cours, puis on reprend les questions de la feuille pour le corrigé.
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import trame_commun as TC
+TC.d = d; TC.ETAPE_NUM = ETAPE_NUM; TC.ITEMS.clear()
+TC.feuille_detachable('ENT-1.2')
+ITEMS.extend(TC.ITEMS)
 
 SORTIE = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                       '..', 'contenus', 'trames', 'ENT-1.2-spartoo-preparation-trame-eleve.docx')

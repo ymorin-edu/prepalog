@@ -109,7 +109,8 @@ ENT_2_1 = {
    ["CMD-731590", "2", "3", "non"],
    ["CMD-731602 (annulée)", "0", "1", "non"],
  ], "note": "Le « Stock trouvé » est le stock réel vu au rayon. Il décroche d'une unité à partir de CMD-731530, juste après la casse. Confirmé : avant la casse tout est pareil (CMD-731420 10 / 10, CMD-731402 7 / 7, CMD-731488 15 / 15, CMD-731515 14 / 14) ; après, mêmes valeurs que le standard."},
- "À partir de quelle commande le « Stock trouvé »": {"rep": "CMD-731530 ; juste avant, il y a eu la casse DEM-26-0027.", "note": "Seconde preuve, indépendante du constat : le rayon a toujours un écouteur de moins que le système après la casse."},
+ "À partir de quelle commande le « Stock trouvé »": {"rep": "CMD-731530."},
+ "Quel mouvement a eu lieu juste avant cette commande": {"rep": "La casse DEM-26-0027.", "note": "Seconde preuve, indépendante du constat : le rayon a toujours un écouteur de moins que le système après la casse."},
  "Comment as-tu su quel document était faux": {"pistes": [
    "En comparant ligne par ligne : une seule quantité ne correspondait pas.",
    "Le constat dit « saisi sur le terminal » : il fallait vérifier la saisie.",
@@ -169,7 +170,8 @@ ENT_2_2 = {
    "Recompter prend du temps et mobilise des personnes, alors que l'entrepôt continue d'expédier.",
    "Les chiffres permettent de viser les références à risque : on recompte là où il y a un signal.",
    "Avant le Black Friday, le temps de l'équipe est précieux."]},
- "Avec « Allée » sur « Toutes »": {"rep": "Il augmente : s'ajoutent les lignes de préparation des allées B et C du mois, que Nadia ne demande pas.", "note": "12 lignes de plus (allées B et C, préparées dans les 20 derniers jours). Avec « Tout l'historique », 8 lignes de plus (allée A, il y a 32 à 45 jours). Valoriser l'élève qui explique par la colonne « Emplacement » ou « Date »."},
+ "Avec « Allée » sur « Toutes »": {"rep": "Il augmente."},
+ "Explique pourquoi, avec ce que tu vois dans le tableau": {"rep": "S'ajoutent les lignes de préparation des allées B et C du mois, que Nadia ne demande pas.", "note": "12 lignes de plus (allées B et C, préparées dans les 20 derniers jours). Avec « Tout l'historique », 8 lignes de plus (allée A, il y a 32 à 45 jours). Valoriser l'élève qui explique par la colonne « Emplacement » ou « Date »."},
  "Nombre de lignes affiché dans Extractions": {"rep": "Lu à l'écran par l'élève : 30 avec les critères réglés (confirmé : 45).", "note": "La trame ne donne jamais ce nombre : il dépend du niveau (confirmé = toute l'allée A, A-01 à A-06). Le corrigé par élève (onglet Corrigés) donne son bon export. Les 30 lignes couvrent le mois, dont 12 d'avant le dernier inventaire, toutes sans écart."},
  "Ton fichier a-t-il le même nombre de lignes": {"rep": "Oui : le fichier contient exactement ce que montrait l'écran (sans la ligne des titres).", "note": "Si « non » : l'élève compte souvent la ligne des titres, ou a changé un critère entre la lecture et l'export."},
  "Pourquoi choisir les lignes dans le logiciel": {"pistes": [
@@ -453,6 +455,10 @@ ENT_2_6 = {
    "Valoriser la méthode : trier, regarder l'alignement, compter avant / après."]},
  "Formule que tu as écrite en L2": {"rep": "=SI(ET(K2<>0;A2>=DATE(aaaa;mm;jj));D2;\"\")", "note": "Avec la date du dernier inventaire du message (J-14), par exemple DATE(2026;9;20) pour une séance ouverte le 04/10/2026. M2 : =K2."},
  "Une référence avait beaucoup d'écarts avant l'inventaire": {"rep": "Ses écarts ont été corrigés (régularisés) le jour de l'inventaire : ils n'existent plus dans le stock. La recompter serait un recomptage perdu.", "note": "BAT-10K : 5 constats avant J-14 (6 en confirmé), aucun après. Sans critère de date, elle entre 2e dans les cinq."},
+ "Si tu avais oublié le critère de date": {"pistes": [
+   "Des références déjà régularisées à l'inventaire seraient revenues dans la liste (BAT-10K entrait 2e) : un recomptage perdu.",
+   "Une référence vraiment en difficulté aurait pu sortir des cinq.",
+   "Valoriser l'élève qui cite une référence de son fichier."]},
  "Formule que tu as écrite en B2": {"rep": "=NB.SI.ENS(Préparations!D:D;A2;Préparations!K:K;\"<>0\";Préparations!A:A;\">=\"&DATE(aaaa;mm;jj))", "note": "Le contrôle exige NB.SI.ENS (COUNTIFS) et les bonnes valeurs (voir l'en-tête du dictionnaire). Variante acceptée : compter la colonne L (Réf. en écart) avec NB.SI.ENS sur la seule référence."},
  "Pourquoi as-tu besoin de trois critères": {"pistes": [
    "Il faut à la fois la bonne référence, un écart non nul ET une date après l'inventaire.",

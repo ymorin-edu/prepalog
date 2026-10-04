@@ -156,15 +156,17 @@ T.consignes([
     "peut-être pas besoin de toutes les lignes.",
 ])
 T.tableau(['Date', 'Document (Origine)', 'Entrée', 'Sortie', 'Stock après'], 0,
-          [Cm(3.7), Cm(5.1), Cm(2.2), Cm(2.2), Cm(3.8)], hauteur=Cm(0.68),
+          [Cm(3.7), Cm(5.1), Cm(2.2), Cm(2.2), Cm(3.8)], hauteur=Cm(0.62),
           remplis=[['Dernier inventaire', 'Inventaire', '', '', 'à trouver à l\'étape 7']]
           + [['', '', '', '', ''] for _ in range(12)])
-for _r in T.d.tables[-1].rows:   # hauteur exacte : la fiche (13 lignes) et sa question tiennent sur une page
+for _r in T.d.tables[-1].rows[1:]:   # hauteur exacte : la fiche (13 lignes) et sa question tiennent sur une page.
+    # Pas la ligne d'en-tête : sans hauteur, la règle « exacte » la réduisait à zéro (titres de colonnes invisibles, relevé le 04/10/2026).
     _r.height_rule = WD_ROW_HEIGHT_RULE.EXACTLY
 T.encadre_liste('Ce que tu dois voir :', [
     "sur chaque ligne, le « Stock après » = celui de la ligne du dessus + l'entrée − la sortie ;",
-    "la dernière ligne de ta fiche donne le stock actuel de l'étape 3.",
-], intro="Sinon, tu as sauté un mouvement, ou tes lignes ne sont pas dans l'ordre.")
+    "la dernière ligne de ta fiche donne le stock actuel de l'étape 3 ;",
+    "si ce n'est pas le cas : tu as sauté un mouvement, ou tes lignes ne sont pas dans l'ordre.",
+])
 T.reflechir([
     "Regarde la colonne « Type » de l'écran pour les lignes de ta fiche. Que remarques-tu ?",
 ])
@@ -232,8 +234,10 @@ T.encadre('Une seconde preuve :',
           "après » de la ligne du dessus, sur ta fiche).")
 T.tableau(['Commande', 'Stock trouvé (bon de préparation)', 'Stock du système juste avant', 'Pareil ?'], 9,
           [Cm(4.2), Cm(5.2), Cm(4.8), Cm(2.8)], hauteur=Cm(0.8))
-T.questions([("À partir de quelle commande le « Stock trouvé » ne suit-il plus le stock du système ? Quel "
-              "mouvement a eu lieu juste avant ?", 2)])
+T.faits([
+    "À partir de quelle commande le « Stock trouvé » ne suit-il plus le stock du système ?",
+    "Quel mouvement a eu lieu juste avant cette commande ?",
+])
 T.reflechir([
     "Comment as-tu su quel document était faux ?",
 ])
@@ -294,5 +298,9 @@ T.reflechir([
 NOTIONS = [["Cdiscount vend ses produits", "Place de marché (commerce en ligne)",
             "Une place de marché est un site où des vendeurs indépendants vendent leurs produits à côté de ceux du "
             "site. Cdiscount a ouvert la sienne en 2010 (« C le marché »)."]]
+# Feuille à détacher (cours + activité à la maison), décision de Tristan du 04/10/2026 :
+# contenu dans `feuilles_detachables.py`.
+T.feuille_detachable('ENT-2.1')
+
 T.finir(CODE, 'Cdiscount — le stock raconte', 'ENT-2.1-cdiscount-mouvements-trame-eleve', NOTIONS,
         os.path.basename(__file__), fichier=CODE)

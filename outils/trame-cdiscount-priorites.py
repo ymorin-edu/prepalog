@@ -155,8 +155,10 @@ T.faits([
 ])
 T.encadre('Ce que tu dois voir :',
           "des écarts non nuls avant l'inventaire, qui n'apparaissent pas dans la colonne L : c'est voulu.")
+T.questions([("Une référence avait beaucoup d'écarts avant l'inventaire, aucun après. Pourquoi ne faut-il pas la "
+              "compter ?", 2)])
 T.reflechir([
-    "Une référence avait beaucoup d'écarts avant l'inventaire, aucun après. Pourquoi ne faut-il pas la compter ?",
+    "Si tu avais oublié le critère de date, qu'est-ce que cela aurait changé pour la liste que tu rends à Nadia ?",
 ])
 
 # ==================================================================== étape 5
@@ -238,5 +240,9 @@ T.reflechir([
 ])
 
 NOTIONS = []
+# Feuille à détacher (cours + activité à la maison), décision de Tristan du 04/10/2026 :
+# contenu dans `feuilles_detachables.py`.
+T.feuille_detachable('ENT-2.6')
+
 T.finir(CODE, 'Cdiscount — cinq recomptages, pas un de plus', 'ENT-2.6-cdiscount-priorites-trame-eleve', NOTIONS,
         os.path.basename(__file__), fichier=CODE)

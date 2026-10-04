@@ -255,5 +255,9 @@ T.reflechir([
 NOTIONS = [["Un ajustement de stock, c'est", "Ajustement (régularisation)",
             "Un ajustement corrige le stock du système pour qu'il corresponde au stock compté. Il doit porter un "
             "motif et, normalement, un document justificatif : sans lui, on efface la trace de la cause."]]
+# Feuille à détacher (cours + activité à la maison), décision de Tristan du 04/10/2026 :
+# contenu dans `feuilles_detachables.py`.
+T.feuille_detachable('ENT-2.4')
+
 T.finir(CODE, 'Cdiscount — régularisé à l’aveugle', 'ENT-2.4-cdiscount-regularise-trame-eleve', NOTIONS,
         os.path.basename(__file__), fichier=CODE)

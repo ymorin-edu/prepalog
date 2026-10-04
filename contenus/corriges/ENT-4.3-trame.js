@@ -425,6 +425,128 @@ export const CORRIGE = {
         "Réponse personnelle : relier l'erreur à une pièce mal lue ou à un geste oublié (recompter N3, accuser N1 à tort, oublier la date).",
         "S'il n'a rien à revoir : la preuve la plus solide (souvent la fiche de Mathis pour N2)."
       ]
+    },
+    {
+      "etape": 8,
+      "etapeTitre": "Cours à détacher",
+      "genre": "fait",
+      "texte": "Le travail d'un collègue se ………………… avant d'être signé : on relit chaque pièce du dossier.",
+      "rep": "contrôle."
+    },
+    {
+      "etape": 8,
+      "etapeTitre": "Cours à détacher",
+      "genre": "fait",
+      "texte": "Une réserve dit quelle palette, quel problème et ………………….",
+      "rep": "combien."
+    },
+    {
+      "etape": 8,
+      "etapeTitre": "Cours à détacher",
+      "genre": "fait",
+      "texte": "Pour protester contre le transporteur, on respecte un ………………… fixé par la loi.",
+      "rep": "délai."
+    },
+    {
+      "etape": 8,
+      "etapeTitre": "Cours à détacher",
+      "genre": "fait",
+      "texte": "Un lot douteux se ………………… en attendant la réponse du transporteur ou du fournisseur.",
+      "rep": "bloque."
+    },
+    {
+      "etape": 8,
+      "etapeTitre": "Cours à détacher",
+      "genre": "tableau",
+      "texte": "Mot | Définition (complète avec la banque de mots)",
+      "entetes": [
+        "Mot",
+        "Définition (complète avec la banque de mots)"
+      ],
+      "contexte": "Le « Bilan de ton contrôle » compare, ligne par ligne, ce que tu as fait et ce qui était attendu. Lis-le en entier.",
+      "reponses": [
+        [
+          "Litige",
+          "livraison"
+        ],
+        [
+          "Dossier litige",
+          "documents"
+        ],
+        [
+          "Protestation motivée",
+          "décrit"
+        ],
+        [
+          "Destinataire",
+          "reçoit"
+        ],
+        [
+          "Fiche de contrôle",
+          "note"
+        ],
+        [
+          "Bloquer un lot",
+          "vendu"
+        ],
+        [
+          "Réserve",
+          "chauffeur"
+        ],
+        [
+          "Transporteur",
+          "conduit"
+        ]
+      ],
+      "note": "Un mot de la banque par trou."
+    },
+    {
+      "etape": 9,
+      "etapeTitre": "À la maison",
+      "genre": "question",
+      "texte": "Qu'est-ce qui ne va pas dans la réserve écrite par ton collègue ?",
+      "rep": "Elle ne dit rien : ni la palette, ni le problème, ni la valeur. « Sous réserve de déballage » n'a aucune valeur."
+    },
+    {
+      "etape": 9,
+      "etapeTitre": "À la maison",
+      "genre": "question",
+      "texte": "Réécris une réserve précise pour cette palette.",
+      "rep": "« Palette … : remontée de température pendant le transport, jusqu'à −13,5 °C entre 2 h 00 et 2 h 45 (ticket de l'enregistreur, consigne −20 °C). »",
+      "note": "Attendu : la palette, le problème, la valeur et sa source."
+    },
+    {
+      "etape": 9,
+      "etapeTitre": "À la maison",
+      "genre": "fait",
+      "texte": "La palette est à −20,5 °C ce matin. Quelle pièce du dossier montre qu'elle a eu chaud ?",
+      "rep": "Le ticket de l'enregistreur (−13,5 °C dans la nuit)."
+    },
+    {
+      "etape": 9,
+      "etapeTitre": "À la maison",
+      "genre": "fait",
+      "texte": "Que fais-tu de la palette en attendant ?",
+      "rep": "Je la bloque (ni vendue ni expédiée)."
+    },
+    {
+      "etape": 9,
+      "etapeTitre": "À la maison",
+      "genre": "fait",
+      "texte": "La réception a eu lieu le lundi 9 mars. Quel est le dernier jour pour envoyer la protestation ?",
+      "rep": "Le jeudi 12 mars 2026.",
+      "note": "Trois jours qui suivent la réception : mardi 10, mercredi 11, jeudi 12 (aucun jour férié)."
+    },
+    {
+      "etape": 9,
+      "etapeTitre": "À la maison",
+      "genre": "reflexion",
+      "texte": "Si tu étais le chef de quai, que demanderais-tu au collègue de nuit pour la prochaine fois ?",
+      "pistes": [
+        "Lire le ticket avant d'ouvrir, et sonder la nuit même.",
+        "Écrire une réserve précise (palette, problème, valeur).",
+        "Toute réponse qui part d'une erreur réelle du dossier."
+      ]
     }
   ]
 };

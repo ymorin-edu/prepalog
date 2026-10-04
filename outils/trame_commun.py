@@ -369,3 +369,87 @@ def encadre_texte(titre, paragraphes, source=''):
         o = c.add_paragraph(); o.paragraph_format.space_after = Pt(0)
         r = o.add_run(source); r.font.size = Pt(8.5); r.font.color.rgb = GRIS
     d.add_paragraph().paragraph_format.space_after = Pt(2)
+
+
+# ============================================================ la feuille à détacher (04/10/2026)
+# Décision de Tristan, 04/10/2026 : à la fin de chaque trame, UNE feuille à détacher — le cours au recto
+# (« L'essentiel » à trous + un lexique à compléter, avec une banque de mots), une activité à faire à la
+# maison au verso. La feuille commence TOUJOURS sur une page de droite (section « page impaire » : Word et
+# LibreOffice ajoutent un verso blanc si besoin), pour qu'aucune étape ne parte avec elle en recto-verso.
+# Les trous et les questions entrent dans le corrigé comme les autres questions (étapes « Cours » et
+# « À la maison », numérotées après la dernière étape de la trame).
+TROU = '…………………'
+
+
+def _entete_feuille(code, quoi, competence):
+    par = d.add_paragraph(); par.paragraph_format.space_after = Pt(2)
+    r = par.add_run('✂  Feuille à détacher et à ranger dans ton classeur'); r.font.size = Pt(9); r.font.color.rgb = GRIS
+    par = d.add_paragraph(); par.paragraph_format.space_after = Pt(2)
+    r = par.add_run(f'{code} — {quoi}'); r.bold = True; r.font.size = Pt(16); r.font.color.rgb = TITRE
+    par = d.add_paragraph(); par.paragraph_format.space_after = Pt(8)
+    r = par.add_run(f'{competence}        Nom : ………………………………        Classe : …………')
+    r.font.size = Pt(10); r.font.color.rgb = GRIS
+
+
+def feuille_cours(code, titre_cours, competence, essentiel, banque, lexique):
+    """Recto de la feuille à détacher. `essentiel` : 3 ou 4 phrases contenant TROU ; `lexique` : liste de
+    (mot, définition contenant TROU) ; `banque` : les mots à placer (triés à l'affichage)."""
+    global ETAPE_NUM, ETAPE_TITRE
+    from docx.enum.section import WD_SECTION
+    s = d.add_section(WD_SECTION.ODD_PAGE)
+    s.top_margin = Cm(1.2); s.bottom_margin = Cm(1.3); s.left_margin = s.right_margin = Cm(1.9)
+    ETAPE_NUM, ETAPE_TITRE = ETAPE_NUM + 1, 'Cours à détacher'
+    _entete_feuille(code, titre_cours, competence)
+    encadre('Banque de mots :', '   ·   '.join(sorted(banque, key=lambda x: x.lower())))
+    soustitre("L'essentiel")
+    for i, phrase in enumerate(essentiel, 1):
+        _note('fait', phrase)
+        par = d.add_paragraph(); par.paragraph_format.space_after = Pt(7)
+        par.paragraph_format.left_indent = Cm(0.6); par.paragraph_format.first_line_indent = Cm(-0.6)
+        r = par.add_run(f'{i}.  '); r.bold = True
+        par.add_run(phrase).font.size = Pt(11)
+    soustitre('Lexique')
+    tableau(['Mot', 'Définition (complète avec la banque de mots)'], 0, [Cm(4.4), Cm(12.6)], hauteur=Cm(1.05),
+            remplis=[[m, df] for m, df in lexique])
+
+
+def feuille_activite(titre, situation):
+    """Verso de la feuille à détacher : l'en-tête et la situation. Les questions suivent avec les fonctions
+    habituelles (tableau, faits, questions, reflechir). Le tout doit tenir sur UNE page."""
+    global ETAPE_NUM, ETAPE_TITRE
+    ETAPE_NUM, ETAPE_TITRE = ETAPE_NUM + 1, 'À la maison'
+    par = d.add_paragraph(); par.paragraph_format.page_break_before = True; par.paragraph_format.space_after = Pt(2)
+    r = par.add_run('À la maison — pour aller plus loin'); r.bold = True; r.font.size = Pt(9.5)
+    r.font.color.rgb = GRIS; r.font.name = 'Consolas'
+    par = d.add_paragraph(); par.paragraph_format.space_after = Pt(6)
+    r = par.add_run(titre); r.bold = True; r.font.size = Pt(15); r.font.color.rgb = TITRE
+    p(situation, apres=4)
+
+
+def feuille_detachable(code):
+    """La feuille à détacher de la séance `code`, lue dans `feuilles_detachables.py` : le cours au recto, l'activité
+    au verso. Inscrit aussi ses réponses dans le corrigé (trous, lexique, activité). À appeler juste avant `finir`."""
+    sys.path.insert(0, ICI)
+    import feuilles_detachables as F, corriges_data
+    F.verifier()
+    f = F.FEUILLES[code]
+    lexique = [(m, F.LEXIQUE[m][0].format(TROU)) for m in f['mots']]
+    banque = [mot for _, mot in f['essentiel']] + [F.LEXIQUE[m][1] for m in f['mots']]
+    feuille_cours(code, f['titre'], f['competence'], [ph.format(TROU) for ph, _ in f['essentiel']], banque, lexique)
+    a = f['activite']
+    feuille_activite(a['titre'], a['situation'])
+    for b in a['blocs']:
+        if b[0] == 'liste': encadre_liste(b[1], b[2])
+        elif b[0] == 'encadre': encadre(b[1], b[2])
+        elif b[0] == 'tableau':
+            n = len(b[1])
+            tableau(b[1], 0, [Cm(x) for x in b[2]], hauteur=Cm(b[4]), remplis=[(r + [''] * n)[:n] for r in b[3]])
+        elif b[0] == 'faits': faits(b[1])
+        elif b[0] == 'questions': questions(b[1])
+        elif b[0] == 'reflechir': reflechir(b[1])
+        else: raise ValueError(b[0])
+    rep = {ph.split('{}')[0].strip(): {"rep": mot + '.'} for ph, mot in f['essentiel']}
+    rep['T: Mot | Définition (complète avec la banque de mots)'] = {
+        "lignes": [[m, F.LEXIQUE[m][1]] for m in f['mots']], "note": "Un mot de la banque par trou."}
+    rep.update(a['corrige'])
+    corriges_data._DICOS.setdefault(code, []).append(rep)

@@ -408,20 +408,11 @@ export const CORRIGE = {
       "etape": 6,
       "etapeTitre": "Remplir le bon de réception",
       "genre": "reflexion",
-      "texte": "Pourquoi accepte-t-on quand même une ligne à laquelle il manque des paires, au lieu de tout refuser ?",
+      "texte": "Pour la ligne où il manque des paires, pourquoi as-tu choisi ta décision plutôt qu'une autre ?",
       "pistes": [
-        "Les paires reçues sont utilisables : les refuser bloquerait la vente de marchandise bonne.",
-        "On ne refuse que si la marchandise est inutilisable (règle de M. Morin). On entre ce qui est là en stock, et on signale l'écart au fournisseur le jour même."
-      ]
-    },
-    {
-      "etape": 6,
-      "etapeTitre": "Remplir le bon de réception",
-      "genre": "reflexion",
-      "texte": "Que se passerait-il, pour l'inventaire, si tu saisissais la quantité annoncée au lieu de la quantité comptée ?",
-      "pistes": [
-        "Le stock informatique serait plus grand que le stock réel (2 paires fantômes) : à l'inventaire, un écart inexplicable.",
-        "Un client pourrait commander une paire que l'on n'a pas, donc une rupture découverte trop tard."
+        "Attendu : « accepté sous réserve ». Les paires reçues sont utilisables : les refuser bloquerait la vente de marchandise bonne.",
+        "On ne refuse que si la marchandise est inutilisable (règle de M. Morin) ; on entre ce qui est là, et on signale l'écart au fournisseur le jour même.",
+        "Si l'élève a mis une autre décision, l'amener à relire la procédure de M. Morin."
       ]
     },
     {
@@ -505,20 +496,143 @@ export const CORRIGE = {
       "etape": 8,
       "etapeTitre": "Signaler les réserves au fournisseur",
       "genre": "reflexion",
-      "texte": "Pourquoi faut-il écrire au fournisseur le jour même, et pas la semaine suivante ?",
-      "pistes": [
-        "Les délais de réserve sont courts (3 jours pour le transporteur, 48 h demandées par Puma dans l'exercice) : passé ce délai, on peut perdre ses droits.",
-        "Plus on attend, plus il est facile au fournisseur de dire que le dommage s'est produit chez nous."
-      ]
-    },
-    {
-      "etape": 8,
-      "etapeTitre": "Signaler les réserves au fournisseur",
-      "genre": "reflexion",
       "texte": "Qu'aurait-il fallu faire, en plus, si la marchandise du carton endommagé avait été inutilisable ?",
       "pistes": [
         "Refuser la ligne (marchandise inutilisable) : ne pas l'entrer en stock.",
         "Prévenir le fournisseur et demander un remplacement ou un avoir ; garder les paires en zone séparée en attendant sa réponse."
+      ]
+    },
+    {
+      "etape": 9,
+      "etapeTitre": "Cours à détacher",
+      "genre": "fait",
+      "texte": "On compare toujours ce qui est ………………… sur le bon de livraison à ce qui est réellement arrivé.",
+      "rep": "annoncé."
+    },
+    {
+      "etape": 9,
+      "etapeTitre": "Cours à détacher",
+      "genre": "fait",
+      "texte": "Plusieurs colis peuvent contenir la même référence : on les ………………….",
+      "rep": "additionne."
+    },
+    {
+      "etape": 9,
+      "etapeTitre": "Cours à détacher",
+      "genre": "fait",
+      "texte": "Le logiciel ne corrige rien : ce qu'on saisit entre ………………… dans le stock.",
+      "rep": "vraiment."
+    },
+    {
+      "etape": 9,
+      "etapeTitre": "Cours à détacher",
+      "genre": "fait",
+      "texte": "Après la validation, on vérifie dans la base que les entrées portent le bon ………………….",
+      "rep": "lot."
+    },
+    {
+      "etape": 9,
+      "etapeTitre": "Cours à détacher",
+      "genre": "tableau",
+      "texte": "Mot | Définition (complète avec la banque de mots)",
+      "entetes": [
+        "Mot",
+        "Définition (complète avec la banque de mots)"
+      ],
+      "contexte": "",
+      "reponses": [
+        [
+          "Fournisseur",
+          "vend"
+        ],
+        [
+          "Transporteur",
+          "conduit"
+        ],
+        [
+          "Quai",
+          "déchargé"
+        ],
+        [
+          "Colis",
+          "étiquette"
+        ],
+        [
+          "Écart de livraison",
+          "annoncée"
+        ],
+        [
+          "Bon de réception",
+          "reçu"
+        ],
+        [
+          "Mouvement de stock",
+          "entrée"
+        ],
+        [
+          "Stock du système",
+          "affiche"
+        ]
+      ],
+      "note": "Un mot de la banque par trou."
+    },
+    {
+      "etape": 10,
+      "etapeTitre": "À la maison",
+      "genre": "tableau",
+      "texte": "Référence | Annoncé | Compté | Écart | État | Décision",
+      "entetes": [
+        "Référence",
+        "Annoncé",
+        "Compté",
+        "Écart",
+        "État",
+        "Décision"
+      ],
+      "contexte": "Un fournisseur (inventé pour l'exercice) livre trois références. Voici son bon de livraison et les colis déposés sur le quai.",
+      "reponses": [
+        [
+          "BK-RUN-40",
+          "10",
+          "10 (5 + 5)",
+          "0",
+          "bon état",
+          "accepté"
+        ],
+        [
+          "BK-RUN-42",
+          "6",
+          "4",
+          "−2",
+          "bon état",
+          "accepté sous réserve (manque 2 paires)"
+        ],
+        [
+          "BK-TRL-41",
+          "8",
+          "8",
+          "0",
+          "carton mouillé",
+          "accepté sous réserve (carton abîmé)"
+        ]
+      ]
+    },
+    {
+      "etape": 10,
+      "etapeTitre": "À la maison",
+      "genre": "question",
+      "texte": "Écris en deux phrases ton message de réserves au fournisseur.",
+      "rep": "« Livraison BL-5512, lot LOT-BN-0704 : il manque 2 paires de BK-RUN-42 (4 reçues pour 6 annoncées). Le colis de BK-TRL-41 est arrivé mouillé : nous l'acceptons sous réserve. »",
+      "note": "Attendu : le lot (ou le BL), la référence et la quantité manquante en chiffres, la référence au carton abîmé."
+    },
+    {
+      "etape": 10,
+      "etapeTitre": "À la maison",
+      "genre": "reflexion",
+      "texte": "Le chauffeur est pressé et te demande de signer sans compter. Que lui réponds-tu ?",
+      "pistes": [
+        "Je compte d'abord : une signature sans réserve vaut « livraison complète ».",
+        "Je peux compter vite (colis par colis) et écrire mes réserves devant lui."
       ]
     }
   ]

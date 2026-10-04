@@ -446,6 +446,118 @@ export const CORRIGE = {
         "S'excuser du délai et lui dire quand son stock affiché sera juste.",
         "Pas de jalon sur ce point : valoriser une réponse claire, polie, qui ne promet pas ce qu'on ne maîtrise pas."
       ]
+    },
+    {
+      "etape": 9,
+      "etapeTitre": "Cours à détacher",
+      "genre": "fait",
+      "texte": "Tout ajustement doit pouvoir être relié à un ………………….",
+      "rep": "justificatif."
+    },
+    {
+      "etape": 9,
+      "etapeTitre": "Cours à détacher",
+      "genre": "fait",
+      "texte": "Un ajustement sans document se remonte jusqu'à son ………………… : souvent une réception mal comptée.",
+      "rep": "origine."
+    },
+    {
+      "etape": 9,
+      "etapeTitre": "Cours à détacher",
+      "genre": "fait",
+      "texte": "On regroupe les ajustements par ………………… pour voir d'où viennent les pertes.",
+      "rep": "type."
+    },
+    {
+      "etape": 9,
+      "etapeTitre": "Cours à détacher",
+      "genre": "tableau",
+      "texte": "Mot | Définition (complète avec la banque de mots)",
+      "entetes": [
+        "Mot",
+        "Définition (complète avec la banque de mots)"
+      ],
+      "contexte": "Pour l'ajustement orphelin, remonte l'histoire de l'article : d'où viennent les articles qui manquent ?",
+      "reponses": [
+        [
+          "Régulariser",
+          "compté"
+        ],
+        [
+          "Ajustement orphelin",
+          "document"
+        ],
+        [
+          "Motif",
+          "écrite"
+        ],
+        [
+          "Clôture du mois",
+          "arrête"
+        ],
+        [
+          "Démarque inconnue",
+          "cause"
+        ],
+        [
+          "Bon de réception",
+          "reçu"
+        ],
+        [
+          "Fonction SI",
+          "vraie"
+        ],
+        [
+          "Fonction NB.SI",
+          "compte"
+        ]
+      ],
+      "note": "Un mot de la banque par trou."
+    },
+    {
+      "etape": 10,
+      "etapeTitre": "À la maison",
+      "genre": "fait",
+      "texte": "Formule en F2 : « À VÉRIFIER » si E2 est vide, sinon rien",
+      "rep": "=SI(E2=\"\";\"À VÉRIFIER\";\"\")"
+    },
+    {
+      "etape": 10,
+      "etapeTitre": "À la maison",
+      "genre": "fait",
+      "texte": "Combien de lignes sont à vérifier ?",
+      "rep": "2 (lignes 4 et 6)."
+    },
+    {
+      "etape": 10,
+      "etapeTitre": "À la maison",
+      "genre": "fait",
+      "texte": "Formule qui compte les « Inventaire » de D2 à D7",
+      "rep": "=NB.SI(D2:D7;\"Inventaire\")"
+    },
+    {
+      "etape": 10,
+      "etapeTitre": "À la maison",
+      "genre": "fait",
+      "texte": "Résultat de ce comptage",
+      "rep": "2."
+    },
+    {
+      "etape": 10,
+      "etapeTitre": "À la maison",
+      "genre": "question",
+      "texte": "Pour la ligne 4 (−4 mixeurs, sans document), où chercherais-tu d'abord ?",
+      "rep": "Dans les réceptions récentes de mixeurs MX-2 : un bon de réception mal compté explique souvent un manque."
+    },
+    {
+      "etape": 10,
+      "etapeTitre": "À la maison",
+      "genre": "reflexion",
+      "texte": "Que risque l'entreprise si personne ne vérifie ces lignes avant la clôture du mois ?",
+      "pistes": [
+        "Signer des chiffres de stock faux à la clôture.",
+        "Ne jamais retrouver une erreur de réception, et la payer (au fournisseur ou au vendeur)."
+      ]
     }
   ]
 };

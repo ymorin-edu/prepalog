@@ -17,7 +17,7 @@
 //
 // ── Pas de `notation` ───────────────────────────────────────────────────────────────────
 // Comme ENT-3.1 : jalons ET note sur 20 (le suivi ramène le score sur 20), voir l'en-tête de
-// `activites/boost-tournee.js`. Pas de trame élève : déclarer une trame, c'est la valider.
+// `activites/boost-tournee.js`.
 
 import { creerEntreprise } from '../core/types/entreprise.js';
 import * as BOOST from '../contenus/boost.js';
@@ -42,6 +42,11 @@ export const meta = {
   jeuId: 'boost',
   tables: {},
   pret: true,
+  // Trame élève : déclarer, c'est valider (trames validées par Tristan le 04/10/2026). Un test
+  // vérifie que les deux fichiers existent dans le dépôt.
+  // Corrigé de la trame : affiché dans l'onglet « Corrigés » de l'espace enseignant, jamais côté
+  // élève. Fichier généré par le générateur de la trame.
+  corrige: './contenus/corriges/ENT-3.2.js',
 };
 
 const moteur = creerEntreprise({
@@ -63,6 +68,10 @@ const moteur = creerEntreprise({
   plan: SEANCE.PLAN,
   // La tournée AVEC sa phase d'imprévu : seule ENT-3.2 la déclare (ENT-3.3 reprend `TOURNEE`).
   tournee: SEANCE.TOURNEE_IMPREVU,
+  trame: {
+    pdf: './contenus/trames/ENT-3.2-boost-sous-contrainte-trame-eleve.pdf',
+    docx: './contenus/trames/ENT-3.2-boost-sous-contrainte-trame-eleve.docx',
+  },
 });
 
 export function rendre(hote, ctx) { moteur.rendre(hote, ctx); }

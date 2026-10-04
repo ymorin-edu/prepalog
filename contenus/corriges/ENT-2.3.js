@@ -380,6 +380,165 @@ export const CORRIGE = {
         "Réponse personnelle. Le plus souvent : la paire câbles / chargeurs qui s'annule, ou le fait qu'une réintégration juste peut laisser un article au mauvais endroit.",
         "Valoriser l'élève qui relie son erreur à un indice qu'il n'avait pas lu (note du relevé, message)."
       ]
+    },
+    {
+      "etape": 8,
+      "etapeTitre": "Cours à détacher",
+      "genre": "fait",
+      "texte": "Avant de régulariser un écart, on cherche s'il a une ………………… : un mouvement oublié, un article mal rangé…",
+      "rep": "explication."
+    },
+    {
+      "etape": 8,
+      "etapeTitre": "Cours à détacher",
+      "genre": "fait",
+      "texte": "On ne régularise que l'écart que plus ………………… n'explique.",
+      "rep": "rien."
+    },
+    {
+      "etape": 8,
+      "etapeTitre": "Cours à détacher",
+      "genre": "fait",
+      "texte": "Une régularisation change le stock pour de ………………….",
+      "rep": "bon."
+    },
+    {
+      "etape": 8,
+      "etapeTitre": "Cours à détacher",
+      "genre": "fait",
+      "texte": "Taux d'écart = somme des écarts sans leur signe ÷ somme des stocks du système × ………………….",
+      "rep": "100."
+    },
+    {
+      "etape": 8,
+      "etapeTitre": "Cours à détacher",
+      "genre": "tableau",
+      "texte": "Mot | Définition (complète avec la banque de mots)",
+      "entetes": [
+        "Mot",
+        "Définition (complète avec la banque de mots)"
+      ],
+      "contexte": "Le taux d'écart dit si l'inventaire est bon : plus il est petit, plus le stock du système est fiable.",
+      "reponses": [
+        [
+          "Inventaire",
+          "comparer"
+        ],
+        [
+          "Écart d'inventaire",
+          "comptée"
+        ],
+        [
+          "Emplacement",
+          "niveau"
+        ],
+        [
+          "Recomptage",
+          "confirmer"
+        ],
+        [
+          "Relevé d'inventaire",
+          "écrit"
+        ],
+        [
+          "Ajustement de stock",
+          "motif"
+        ],
+        [
+          "Taux d'écart",
+          "pourcentage"
+        ],
+        [
+          "Stock du système",
+          "affiche"
+        ]
+      ],
+      "note": "Un mot de la banque par trou."
+    },
+    {
+      "etape": 9,
+      "etapeTitre": "À la maison",
+      "genre": "tableau",
+      "texte": "Référence | Système | Compté | Écart | Ta décision",
+      "entetes": [
+        "Référence",
+        "Système",
+        "Compté",
+        "Écart",
+        "Ta décision"
+      ],
+      "contexte": "Tu as compté cinq références. Deux informations sont arrivées : « 2 chargeurs CHG-USB attendent au poste des retours, pas encore rangés » et « la souris SOU-SF reçue ce matin n'est pas encore saisie ».",
+      "reponses": [
+        [
+          "PIL-AA",
+          "40",
+          "40",
+          "0",
+          "rien à faire"
+        ],
+        [
+          "CHG-USB",
+          "15",
+          "13",
+          "−2",
+          "ne pas régulariser : ranger les 2 chargeurs du poste des retours"
+        ],
+        [
+          "ECO-BT",
+          "8",
+          "5",
+          "−3",
+          "recompter, puis régulariser (−3) si l'écart se confirme"
+        ],
+        [
+          "CAB-HDMI",
+          "12",
+          "12",
+          "0",
+          "rien à faire"
+        ],
+        [
+          "SOU-SF",
+          "6",
+          "7",
+          "+1",
+          "ne pas régulariser : saisir la réception de ce matin"
+        ]
+      ]
+    },
+    {
+      "etape": 9,
+      "etapeTitre": "À la maison",
+      "genre": "fait",
+      "texte": "Combien de références sont en écart ?",
+      "rep": "3."
+    },
+    {
+      "etape": 9,
+      "etapeTitre": "À la maison",
+      "genre": "fait",
+      "texte": "Taux d'écart (en %, arrondi au dixième) = somme des écarts sans leur signe ÷ somme des stocks du système × 100",
+      "rep": "7,4 %.",
+      "note": "Règle de l'écran d'ENT-2.3 : (2 + 3 + 1) ÷ (40 + 15 + 8 + 12 + 6) × 100 = 6 ÷ 81 × 100 = 7,41. Corrigé le 04/10 : la première version calculait 3 références sur 5 (60 %), ce qui n'est pas la règle de la séance."
+    },
+    {
+      "etape": 9,
+      "etapeTitre": "À la maison",
+      "genre": "question",
+      "texte": "Pour la référence que tu régularises, qu'est-ce qui te permet de le faire ?",
+      "rep": "ECO-BT : aucune information n'explique l'écart, et le recomptage le confirme."
+    },
+    {
+      "etape": 9,
+      "etapeTitre": "À la maison",
+      "genre": "reflexion",
+      "texte": "Si tu avais régularisé les trois écarts tout de suite, que serait devenu le stock du système le lendemain ?",
+      "pistes": [
+        "Faux pour CHG-USB et SOU-SF : une fois les chargeurs rangés et la souris saisie, l'écart repartirait dans l'autre sens.",
+        "CHG-USB : le système passerait à 13 ; une fois les 2 chargeurs rangés, il y en aurait 15 au rayon pour 13 au système.",
+        "SOU-SF : le système passerait à 7 ; une fois la réception saisie (+1), il dirait 8 pour 7 au rayon.",
+        "Valoriser l'élève qui chiffre la nouvelle erreur créée."
+      ]
     }
   ]
 };

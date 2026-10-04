@@ -227,5 +227,9 @@ NOTIONS = [["Le destinataire n'envoie rien dans le délai", "Droit du transport 
             "La réception éteint toute action contre le transporteur pour avarie ou perte partielle si, dans les 3 "
             "jours (jours fériés non compris), le destinataire n'a pas notifié sa protestation motivée par acte "
             "extrajudiciaire ou lettre recommandée."]]
+# Feuille à détacher (cours + activité à la maison), décision de Tristan du 04/10/2026 :
+# contenu dans `feuilles_detachables.py`.
+T.feuille_detachable('ENT-4.3')
+
 T.finir('ENT-4.3', 'Picard — la réception de nuit', 'ENT-4.3-picard-reception-de-nuit-trame-eleve', NOTIONS,
         os.path.basename(__file__))

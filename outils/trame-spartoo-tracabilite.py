@@ -136,6 +136,24 @@ def encadre(titre, texte):
     r2 = par.add_run(texte); r2.font.size = Pt(10)
     d.add_paragraph().paragraph_format.space_after = Pt(2)
 
+
+def encadre_liste(titre, items):
+    """Encadré gris en liste à puces (règle du 03/10/2026 : une idée par ligne). Ajouté le 04/10/2026."""
+    colle_au_suivant()
+    t = d.add_table(rows=1, cols=1); t.style = 'Table Grid'; t.alignment = WD_TABLE_ALIGNMENT.LEFT
+    row = t.rows[0]; row._tr.get_or_add_trPr().append(OxmlElement('w:cantSplit'))
+    c = row.cells[0]; ombre(c, 'F2F2F2')
+    par = c.paragraphs[0]; par.paragraph_format.space_after = Pt(2); par.paragraph_format.keep_with_next = True
+    if _consomme(): par.paragraph_format.page_break_before = True
+    r = par.add_run(titre); r.bold = True; r.font.size = Pt(10); r.font.color.rgb = TITRE
+    for i, it in enumerate(items):
+        o = c.add_paragraph(); o.paragraph_format.space_before = Pt(0)
+        o.paragraph_format.space_after = Pt(2 if i < len(items) - 1 else 0)
+        o.paragraph_format.left_indent = Cm(0.7); o.paragraph_format.first_line_indent = Cm(-0.4)
+        if i < len(items) - 1: o.paragraph_format.keep_with_next = True
+        o.add_run('\u2022  ' + it).font.size = Pt(10)
+    d.add_paragraph().paragraph_format.space_after = Pt(2)
+
 def questions(liste, lignes=2):
     """Une question, UNE zone de réponse, puis la suivante (Tristan, 02/10/2026) : pas de double
     question. Un élément est un texte, ou (texte, nombre de lignes) pour adapter la zone :
@@ -295,11 +313,18 @@ t.rows[2].cells[1].merge(t.rows[2].cells[3])
 for row in t.rows: row.height = Cm(0.9)
 d.add_paragraph().paragraph_format.space_after = Pt(4)
 
+# Page 1 uniformisée avec les autres entreprises (reprise du 04/10/2026).
 encadre('Ce document est ta trame de travail :',
-        "il se complète étape par étape, au fil de la séance. Aujourd'hui, le fournisseur signale un défaut de "
-        "fabrication sur un lot que tu as reçu. Tu dois retrouver où sont parties les paires de ce lot, bloquer "
-        "celles qui restent, et rendre compte par écrit. Ton enseignant voit dans son suivi de classe si le "
-        "travail est fait correctement.")
+        "tu peux le suivre seul, étape par étape. Aujourd'hui, le fournisseur signale un défaut de fabrication sur "
+        "un lot que tu as reçu : retrouve où sont parties ses paires, bloque celles qui restent, et rends compte "
+        "par écrit.")
+encadre('Ce que ton enseignant voit dans son suivi :',
+        "trois points : ton compte rendu donne le lot, sa date d'entrée et son fournisseur ; il cite toutes les "
+        "commandes parties avec des paires du lot ; le reste du lot est bloqué, référence par référence. Tes "
+        "réponses écrites ici servent à réfléchir.")
+encadre('Ce qui est vrai, ce qui est inventé :',
+        "Spartoo, Puma et les rappels de produits (le site RappelConso existe vraiment) sont réels. Le défaut, le "
+        "lot, les quantités, les clients et les messages sont inventés pour l'exercice.")
 
 # ==================================================================== étape 1
 soustitre("Le déroulé de ta séance")
@@ -332,7 +357,6 @@ questions([
 ])
 reflechir([
  'Si une entreprise ne sait pas dans quel lot était un article, que doit-elle faire en cas de défaut ?',
- 'Pourquoi cela lui coûte-t-il beaucoup plus cher ?',
 ])
 
 # ==================================================================== étape 2
@@ -344,12 +368,14 @@ consignes([
  "Ouvre ensuite le message de M. Morin : c'est lui qui dit ce que tu dois faire, et dans quel ordre.",
 ])
 p("Relève les informations de l'alerte :", taille=10.5, gras=True, avant=6)
-tableau(['Information', 'Ce que tu relèves'], 4, [Cm(6.4), Cm(10.6)], hauteur=Cm(1.0))
-p("Dans la colonne de gauche, écris : numéro du lot en cause — nature du défaut — ce que Puma demande — "
-  "qui a envoyé l'alerte.", taille=9.5, apres=8)
+tableau(['Information', 'Ce que tu relèves'], 0, [Cm(6.4), Cm(10.6)], hauteur=Cm(1.0),
+        remplis=[['Numéro du lot en cause', ''], ['Nature du défaut', ''], ['Ce que Puma demande', ''],
+                 ["Qui a envoyé l'alerte", '']])
 faits(["Le défaut est-il visible à l'œil nu ?"])
+questions([
+ ('Quelle conséquence cela a-t-il pour le contrôle en entrepôt ?', 2),
+])
 reflechir([
- 'Quelle conséquence cela a-t-il pour le contrôle en entrepôt ?',
  "Puma écrit que les paires de la même référence venues d'autres livraisons ne sont pas en cause. Pourquoi, avec tes mots ?",
 ])
 
@@ -363,9 +389,11 @@ consignes([
  "Lis le tableau « Entrées » : il donne les références concernées, une ligne par référence.",
 ])
 p("Remplis la fiche d'identité du lot :", taille=10.5, gras=True, avant=6)
-tableau(['Information', 'Ce que tu relèves'], 5, [Cm(6.4), Cm(10.6)], hauteur=Cm(1.0))
-p("Dans la colonne de gauche, écris : numéro de lot — fournisseur — date d'entrée en stock — numéro de "
-  "réception — nombre total de paires entrées.", taille=9.5, apres=8)
+encadre('Ce que tu dois voir :', "un résumé du lot (Entrées, Sorties, Reste en stock), puis deux tableaux, "
+        "« Entrées » et « Sorties ».")
+tableau(['Information', 'Ce que tu relèves'], 0, [Cm(6.4), Cm(10.6)], hauteur=Cm(0.85),
+        remplis=[['Numéro de lot', ''], ['Fournisseur', ''], ["Date d'entrée en stock", ''],
+                 ['Numéro de réception', ''], ['Nombre total de paires entrées', '']])
 p("Recopie maintenant le détail des entrées :", taille=10.5, gras=True, avant=6)
 tableau(['Référence article', 'Article', 'Quantité entrée'], 3, [Cm(5.4), Cm(7.6), Cm(4.0)], hauteur=Cm(1.15))
 encadre('Attention à la date :', "tu devras la recopier dans ton compte rendu de l'étape 7, écrite au format "
@@ -410,8 +438,11 @@ p("Fais ton calcul ici, avant de toucher au stock :", taille=10.5, gras=True, av
 tableau(['Référence article', 'Entré avec ce lot', 'Déjà sorti', 'Reste à bloquer'], 4,
         [Cm(5.4), Cm(3.9), Cm(3.4), Cm(4.3)], hauteur=Cm(1.2))
 faits(["Avec .getstock suivi d'une de ces références, quel est le stock total de cette référence ?", 'Combien reste-t-il de paires de ce lot pour cette même référence ?'])
-reflechir([
- 'Pourquoi ces deux nombres sont-ils différents ?',
+questions([
+ ('Pourquoi ces deux nombres sont-ils différents ?', 2),
+])
+encadre_liste('Tu peux passer à l\'étape 6 quand :', [
+ "le total de ta colonne « Reste à bloquer » est égal au « Reste en stock » affiché par .getlot.",
 ])
 reflechir([
  'Que se passerait-il si tu bloquais le stock total de la référence au lieu du reste du lot ?',
@@ -431,10 +462,12 @@ consignes([
 encadre('Si le logiciel refuse :', "c'est que la quantité demandée dépasse ce qu'il reste de ce lot, ou que le "
         "numéro de lot ou la référence sont mal recopiés. Reprends ton calcul de l'étape 5 et le tableau des "
         "entrées de l'étape 3 : le message ne te donnera pas la réponse.")
-consignes([
- "Quand tout est bloqué, retourne dans la Console et tape à nouveau .getlot suivi du numéro de lot.",
+p("Quand tout est bloqué, retourne dans la Console et tape à nouveau .getlot suivi du numéro de lot.", apres=4)
+encadre_liste('Tu peux passer à l\'étape 7 quand :', [
+ "le « Reste en stock » du lot est à 0 ;",
+ "chaque référence du lot a sa ligne dans le tableau du bas de « Blocage qualité ».",
 ])
-faits(['Que vaut maintenant le « Reste en stock » du lot ?', 'Quel type de mouvement apparaît dans le tableau des sorties, à côté des ventes ?'])
+faits(['Quel type de mouvement apparaît dans le tableau des sorties, à côté des ventes ?'])
 reflechir([
  "À quoi sert le motif, plusieurs mois plus tard, quand quelqu'un relit l'historique des mouvements ?",
 ])
@@ -455,10 +488,21 @@ p("Rédige d'abord ton brouillon ici, puis recopie-le dans la messagerie :", tai
 questions([
  ('Brouillon de ton compte rendu à M. Morin :', 8),
 ])
+encadre_liste('Tu as terminé la séance quand :', [
+ "ton compte rendu est envoyé, en réponse au message de M. Morin ;",
+ "toutes les questions de ce carnet ont une réponse.",
+])
 reflechir([
- 'Pourquoi le compte rendu doit-il donner les numéros de commande, et pas seulement les noms des clients ?',
  'Quelle première action Spartoo devra-t-elle mener si un client rapporte une paire du lot ?',
 ])
+
+# Feuille à détacher (cours + activité à la maison), décision de Tristan du 04/10/2026. Ce générateur n'utilise
+# pas trame_commun : on lui prête le document en cours, puis on reprend les questions de la feuille pour le corrigé.
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import trame_commun as TC
+TC.d = d; TC.ETAPE_NUM = ETAPE_NUM; TC.ITEMS.clear()
+TC.feuille_detachable('ENT-1.3')
+ITEMS.extend(TC.ITEMS)
 
 SORTIE = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                       '..', 'contenus', 'trames', 'ENT-1.3-spartoo-tracabilite-trame-eleve.docx')

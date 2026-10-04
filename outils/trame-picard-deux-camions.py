@@ -122,12 +122,14 @@ T.reflechir([
 T.etape(4, "Réceptionner le premier camion")
 T.p("Clique sur « Oui, vous pouvez ouvrir et décharger ». Le temps hors froid de CE lot démarre ; l'autre camion "
     "attend porte fermée. Quand les palettes sont posées, clique sur « Contrôler les palettes → ».")
-T.encadre_liste('Les gestes, pour chaque palette (pas d\'aide aujourd\'hui) :', [
+# Réécrit le 04/10/2026 (Cowork) : ordre du nouveau poste du quai (brief MOTEUR-quai-fiche-controle.md).
+T.encadre_liste('Les gestes, pour chaque palette, dans l\'ordre des blocs de l\'écran (pas d\'aide aujourd\'hui) :', [
     "fais le tour complet : chaque côté peut montrer quelque chose ;",
-    "sonde à cœur ;",
-    "lis l'étiquette et compare-la au BL. Si une étiquette est illisible, cherche-en une autre ;",
-    "compte. Si le BL a deux lignes pour la même palette, compte chaque référence à part ;",
-    "décide (décision + motif), puis « Valider cette palette ».",
+    "① compte. La zone de calcul t'aide ; écris toi-même le résultat dans « Total », puis Entrée. Si le BL a "
+    "deux lignes pour la même palette, compte chaque référence à part ;",
+    "② sonde à cœur, puis lis l'étiquette et compare-la au BL. Si une étiquette est illisible, cherche-en une autre ;",
+    "③ note tes constats sur ta fiche de contrôle : tu les reporteras dans tes réserves ;",
+    "④ décide (décision, puis motif), puis « ✓ Valider ».",
 ])
 T.encadre_liste('Règle du quai pour la température à cœur (règle de l\'exercice) :', [
     "−18 °C ou plus froid : on accepte ;",
@@ -141,7 +143,8 @@ T.saut_avant()
 T.p("Clique sur « Contrôles terminés → réserves et chambre froide », puis confirme. À l'étape ④ :", apres=4)
 T.consignes([
     "Rentre le lot accepté en chambre froide.",
-    "Remplis tes réserves, puis « Écrire les réserves sur le BL ».",
+    "Remplis tes réserves en relisant ta fiche de contrôle (à gauche, sous la chambre froide), puis « Écrire les "
+    "réserves sur le BL ».",
     "Clique sur « Faire signer le chauffeur ». Le camion repart.",
 ])
 T.faits([
@@ -196,5 +199,9 @@ T.reflechir([
 NOTIONS = [["Le groupe froid d'un camion tombe en panne", "Chaîne du froid — transport",
             "Sans groupe froid, rien ne retient la chaleur : la température de l'air de la remorque monte, et le "
             "ticket de l'enregistreur le montre (c'est à ça qu'il sert)."]]
+# Feuille à détacher (cours + activité à la maison), décision de Tristan du 04/10/2026 :
+# contenu dans `feuilles_detachables.py`.
+T.feuille_detachable('ENT-4.2')
+
 T.finir('ENT-4.2', 'Picard — deux camions, un seul quai', 'ENT-4.2-picard-deux-camions-trame-eleve', NOTIONS,
         os.path.basename(__file__))

@@ -136,6 +136,24 @@ def encadre(titre, texte):
     r2 = par.add_run(texte); r2.font.size = Pt(10)
     d.add_paragraph().paragraph_format.space_after = Pt(2)
 
+
+def encadre_liste(titre, items):
+    """Encadré gris en liste à puces (règle du 03/10/2026 : une idée par ligne). Ajouté le 04/10/2026."""
+    colle_au_suivant()
+    t = d.add_table(rows=1, cols=1); t.style = 'Table Grid'; t.alignment = WD_TABLE_ALIGNMENT.LEFT
+    row = t.rows[0]; row._tr.get_or_add_trPr().append(OxmlElement('w:cantSplit'))
+    c = row.cells[0]; ombre(c, 'F2F2F2')
+    par = c.paragraphs[0]; par.paragraph_format.space_after = Pt(2); par.paragraph_format.keep_with_next = True
+    if _consomme(): par.paragraph_format.page_break_before = True
+    r = par.add_run(titre); r.bold = True; r.font.size = Pt(10); r.font.color.rgb = TITRE
+    for i, it in enumerate(items):
+        o = c.add_paragraph(); o.paragraph_format.space_before = Pt(0)
+        o.paragraph_format.space_after = Pt(2 if i < len(items) - 1 else 0)
+        o.paragraph_format.left_indent = Cm(0.7); o.paragraph_format.first_line_indent = Cm(-0.4)
+        if i < len(items) - 1: o.paragraph_format.keep_with_next = True
+        o.add_run('\u2022  ' + it).font.size = Pt(10)
+    d.add_paragraph().paragraph_format.space_after = Pt(2)
+
 def questions(liste, lignes=2):
     """Une question, UNE zone de réponse, puis la suivante (Tristan, 02/10/2026) : pas de double
     question. Un élément est un texte, ou (texte, nombre de lignes) pour adapter la zone :
@@ -294,11 +312,18 @@ t.rows[2].cells[1].merge(t.rows[2].cells[3])
 for row in t.rows: row.height = Cm(1.0)
 d.add_paragraph().paragraph_format.space_after = Pt(4)
 
+# Page 1 uniformisée avec les autres entreprises (reprise du 04/10/2026).
 encadre('Ce document est ta trame de travail :',
-        "il se complète étape par étape, au fil de la séance. Aujourd'hui, tu es au quai de réception de "
-        "Spartoo : une livraison arrive, et c'est toi qui la contrôles. Le logiciel ne compte rien à ta place "
-        "et ne corrige aucune erreur — ce que tu saisis entre vraiment dans le stock. Ton enseignant voit dans "
-        "son suivi de classe si le travail est fait correctement.")
+        "tu peux le suivre seul, étape par étape. Aujourd'hui, tu es au quai de réception de Spartoo : une "
+        "livraison arrive, et c'est toi qui la contrôles. Le logiciel ne compte rien à ta place et ne corrige "
+        "aucune erreur : ce que tu saisis entre vraiment dans le stock.")
+encadre('Ce que ton enseignant voit dans son suivi :',
+        "trois points : ton contrôle à réception (numéro de lot, quantités, état et décision de chaque ligne), "
+        "l'entrée en stock avec le bon lot, et ton message de réserves à Puma. Tes réponses écrites ici servent à "
+        "réfléchir.")
+encadre('Ce qui est vrai, ce qui est inventé :',
+        "Spartoo, son métier (la vente de chaussures en ligne) et la marque Puma sont réels. Le bon de livraison, "
+        "les quantités, les numéros, les coordonnées de Puma et M. Morin sont inventés pour l'exercice.")
 
 # ==================================================================== étape 2
 soustitre("Le déroulé de ta séance")
@@ -352,6 +377,8 @@ questions([
  ("Que veut dire « émettre des réserves » à la réception d'une marchandise ?", 2),
 ])
 faits(['De combien de jours dispose-t-on, en général, pour confirmer ses réserves au transporteur ?'])
+encadre('Deux destinataires :', "les réserves se confirment au transporteur, qui a apporté la marchandise. On "
+        "prévient aussi le fournisseur : c'est lui qui doit livrer ce qui a été commandé.")
 qcm([
  ("Spartoo signe un bon de livraison sans réserve, alors qu'il manque des paires. Que se passe-t-il ?",
   ["le fournisseur rembourse les paires manquantes", "le fournisseur peut dire que la livraison était complète", "le bon de livraison n'a aucune valeur"], 1),
@@ -381,8 +408,6 @@ qcm([
 reflechir([
  'Quelle règle de M. Morin te paraît la plus difficile à appliquer sur un quai ?',
 ])
-encadre('Retiens bien la règle :', "dès qu'il y a un écart de quantité OU un carton endommagé, la ligne est "
-        "« acceptée sous réserve ». On l'entre quand même en stock, et on prévient le fournisseur le jour même.")
 
 # ==================================================================== étape 4
 etape(4, "Lire le bon de livraison")
@@ -390,9 +415,9 @@ p("Toujours dans la Messagerie, ouvre le message de Puma France : « Bon de livr
   "est affiché sous le message. C'est ce que le fournisseur annonce avoir expédié — pas forcément ce qui est "
   "arrivé.")
 p("Relève les informations du document :", taille=10.5, gras=True, avant=6)
-tableau(['Information', 'Ce que tu relèves'], 5, [Cm(6.4), Cm(10.6)], hauteur=Cm(1.0))
-p("Dans la colonne de gauche, écris : numéro du bon de livraison — date d'expédition — transporteur — "
-  "numéro de lot — nombre total de paires annoncées.", taille=9.5, apres=8)
+tableau(['Information', 'Ce que tu relèves'], 0, [Cm(6.4), Cm(10.6)], hauteur=Cm(1.0),
+        remplis=[['Numéro du bon de livraison', ''], ["Date d'expédition", ''], ['Transporteur', ''],
+                 ['Numéro de lot', ''], ['Nombre total de paires annoncées', '']])
 p("Recopie maintenant les lignes annoncées :", taille=10.5, gras=True, avant=6)
 tableau(['Référence article', 'Article', 'Quantité annoncée'], 3, [Cm(5.4), Cm(7.6), Cm(4.0)], hauteur=Cm(1.15))
 encadre('Le numéro de lot :', "note-le très soigneusement, avec ses tirets et sans espace. Tu devras le "
@@ -415,6 +440,11 @@ consignes([
 p("Fais ton comptage ici, avant de saisir quoi que ce soit dans le logiciel :", taille=10.5, gras=True, avant=6)
 tableau(['Référence article', 'Colis concernés', 'Quantité comptée', 'Quantité annoncée', 'Écart'], 3,
         [Cm(4.4), Cm(3.4), Cm(3.0), Cm(3.0), Cm(3.2)], hauteur=Cm(1.2))
+encadre_liste('Ce que tu dois voir :', [
+ "en haut, le fournisseur, le transporteur et le bon de livraison de la réception ;",
+ "le tableau « Colis reçus sur le quai » : une ligne par colis, avec son contenu et l'état du carton ;",
+ "plus bas, le « Bon de réception », encore vide : tu le rempliras à l'étape 6.",
+])
 faits(['Sur quelle référence y a-t-il un écart ?', 'De combien de paires est cet écart ?', 'Quelle référence est arrivée dans un carton endommagé ?'])
 qcm([
  ("Le fournisseur livre moins de paires que prévu. Qu'est-ce qui n'est pas respecté ?",
@@ -435,23 +465,31 @@ consignes([
  "Applique la règle de M. Morin : écart de quantité ou carton endommagé → accepté sous réserve.",
  "Vérifie ta saisie ligne par ligne avant de valider : après validation, tu ne peux plus la modifier.",
 ])
+encadre_liste('Ce que tu dois voir :', [
+ "le bouton « Valider la réception (entrée en stock) » reste gris tant que le numéro de lot et toutes les lignes ne sont pas remplis ;",
+ "quand tout est rempli, il devient cliquable. Ne clique pas encore : recopie d'abord ta saisie ci-dessous.",
+])
 p("Recopie ici ce que tu as saisi :", taille=10.5, gras=True, avant=6)
 tableau(['Référence article', 'Annoncé', 'Compté', 'État des colis', 'Décision'], 3,
         [Cm(4.4), Cm(2.2), Cm(2.2), Cm(4.0), Cm(4.2)], hauteur=Cm(1.2))
 reflechir([
- 'Pourquoi accepte-t-on quand même une ligne à laquelle il manque des paires, au lieu de tout refuser ?',
- "Que se passerait-il, pour l'inventaire, si tu saisissais la quantité annoncée au lieu de la quantité comptée ?",
+ "Pour la ligne où il manque des paires, pourquoi as-tu choisi ta décision plutôt qu'une autre ?",
 ])
 
 # ==================================================================== étape 7
 etape(7, "Valider et vérifier dans la base")
-p("Clique sur « Valider la réception ». Les quantités acceptées entrent en stock, avec leur numéro de lot. "
+p("Clique sur « Valider la réception (entrée en stock) ». Les quantités acceptées entrent en stock, avec leur numéro de lot. "
   "Un professionnel ne s'arrête pas là : il vérifie que sa saisie a bien produit ce qu'il attendait.")
 consignes([
  "Va dans la Console.",
  "Tape .movements pour voir les derniers mouvements de stock.",
  "Tape .getstock suivi d'une des références réceptionnées.",
  "Tape .getlot suivi du numéro de lot : tu vois tout ce qui concerne ce lot.",
+])
+encadre_liste('Ce que tu dois voir :', [
+ "après le clic, le message « Réception validée : … entrées en stock » ;",
+ "le bon de réception ne se modifie plus ;",
+ "dans la Console, tes entrées, avec le numéro de lot que tu as saisi.",
 ])
 faits(['Combien de paires, au total, sont entrées en stock avec ce lot ?', 'Quel type de mouvement apparaît dans .movements pour ces entrées ?', 'Quel fournisseur .getlot associe-t-il à ce lot ?'])
 questions([
@@ -489,10 +527,21 @@ qcm([
  ("Si le fournisseur ne répond pas, Spartoo peut demander des dommages-intérêts. Que sont des dommages-intérêts ?",
   ["une réduction offerte aux clients fidèles", "un impôt payé à l'État", "une somme d'argent versée pour réparer le dommage subi"], 2),
 ])
+encadre_liste('Tu as terminé la séance quand :', [
+ "ton message à Puma est envoyé ;",
+ "toutes les questions de ce carnet ont une réponse.",
+])
 reflechir([
- 'Pourquoi faut-il écrire au fournisseur le jour même, et pas la semaine suivante ?',
  "Qu'aurait-il fallu faire, en plus, si la marchandise du carton endommagé avait été inutilisable ?",
 ])
+
+# Feuille à détacher (cours + activité à la maison), décision de Tristan du 04/10/2026. Ce générateur n'utilise
+# pas trame_commun : on lui prête le document en cours, puis on reprend les questions de la feuille pour le corrigé.
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import trame_commun as TC
+TC.d = d; TC.ETAPE_NUM = ETAPE_NUM; TC.ITEMS.clear()
+TC.feuille_detachable('ENT-1.1')
+ITEMS.extend(TC.ITEMS)
 
 SORTIE = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                       '..', 'contenus', 'trames', 'ENT-1.1-spartoo-reception-trame-eleve.docx')

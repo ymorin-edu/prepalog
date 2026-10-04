@@ -191,10 +191,21 @@ export const CORRIGE = {
     {
       "etape": 4,
       "etapeTitre": "Repérer les écarts depuis l'inventaire",
-      "genre": "reflexion",
+      "genre": "question",
       "texte": "Une référence avait beaucoup d'écarts avant l'inventaire, aucun après. Pourquoi ne faut-il pas la compter ?",
       "rep": "Ses écarts ont été corrigés (régularisés) le jour de l'inventaire : ils n'existent plus dans le stock. La recompter serait un recomptage perdu.",
       "note": "BAT-10K : 5 constats avant J-14 (6 en confirmé), aucun après. Sans critère de date, elle entre 2e dans les cinq."
+    },
+    {
+      "etape": 4,
+      "etapeTitre": "Repérer les écarts depuis l'inventaire",
+      "genre": "reflexion",
+      "texte": "Si tu avais oublié le critère de date, qu'est-ce que cela aurait changé pour la liste que tu rends à Nadia ?",
+      "pistes": [
+        "Des références déjà régularisées à l'inventaire seraient revenues dans la liste (BAT-10K entrait 2e) : un recomptage perdu.",
+        "Une référence vraiment en difficulté aurait pu sortir des cinq.",
+        "Valoriser l'élève qui cite une référence de son fichier."
+      ]
     },
     {
       "etape": 5,
@@ -315,6 +326,133 @@ export const CORRIGE = {
         "Par constats : PIL, CAB, SUP, CHG, CLA ; par valeur : ECO, CHG, CLA, BOU, MIX. Trois différences.",
         "Les piles et les câbles sont souvent signalés, mais pour 1 ou 2 unités bon marché ; les écouteurs, deux fois seulement, mais 3 × 19,90 €.",
         "Un surplus (MIX-PLG, +2) coûte aussi : de la marchandise qu'on ne vend pas parce que le système l'ignore."
+      ]
+    },
+    {
+      "etape": 8,
+      "etapeTitre": "Cours à détacher",
+      "genre": "fait",
+      "texte": "Un export doit être ………………… avant de calculer : une ligne vide ou un doublon fausse les comptes.",
+      "rep": "nettoyé."
+    },
+    {
+      "etape": 8,
+      "etapeTitre": "Cours à détacher",
+      "genre": "fait",
+      "texte": "Une date écrite en ………………… n'est pas comprise par le tableur comme une date.",
+      "rep": "texte."
+    },
+    {
+      "etape": 8,
+      "etapeTitre": "Cours à détacher",
+      "genre": "fait",
+      "texte": "Pour aller chercher une valeur dans un autre tableau, on utilise une fonction de ………………….",
+      "rep": "recherche."
+    },
+    {
+      "etape": 8,
+      "etapeTitre": "Cours à détacher",
+      "genre": "tableau",
+      "texte": "Mot | Définition (complète avec la banque de mots)",
+      "entetes": [
+        "Mot",
+        "Définition (complète avec la banque de mots)"
+      ],
+      "contexte": "Tu sais combien de fois chaque référence a été signalée. Il te faut maintenant ce que l'écart coûte.",
+      "reponses": [
+        [
+          "Nettoyer un export",
+          "vides"
+        ],
+        [
+          "Doublon",
+          "deux"
+        ],
+        [
+          "Fonction NB.SI.ENS",
+          "plusieurs"
+        ],
+        [
+          "Priorité",
+          "premier"
+        ],
+        [
+          "Coût d'un écart",
+          "prix"
+        ],
+        [
+          "Constat d'écart",
+          "différent"
+        ],
+        [
+          "Écart",
+          "trouvé"
+        ]
+      ],
+      "note": "Un mot de la banque par trou."
+    },
+    {
+      "etape": 9,
+      "etapeTitre": "À la maison",
+      "genre": "tableau",
+      "texte": "Référence | Articles en écart | Prix unitaire | Coût de l'écart",
+      "entetes": [
+        "Référence",
+        "Articles en écart",
+        "Prix unitaire",
+        "Coût de l'écart"
+      ],
+      "contexte": "L'équipe n'a le temps de recompter qu'une seule référence aujourd'hui. Voici les écarts et les prix.",
+      "reponses": [
+        [
+          "BAT-10K",
+          "2",
+          "24,90 €",
+          "49,80 €"
+        ],
+        [
+          "PIL-AA",
+          "6",
+          "0,80 €",
+          "4,80 €"
+        ],
+        [
+          "CHG-USB",
+          "1",
+          "12,00 €",
+          "12,00 €"
+        ],
+        [
+          "ECO-BT",
+          "3",
+          "19,90 €",
+          "59,70 €"
+        ]
+      ]
+    },
+    {
+      "etape": 9,
+      "etapeTitre": "À la maison",
+      "genre": "fait",
+      "texte": "Quelle référence fais-tu recompter ?",
+      "rep": "ECO-BT (59,70 €)."
+    },
+    {
+      "etape": 9,
+      "etapeTitre": "À la maison",
+      "genre": "fait",
+      "texte": "Formule qui va chercher le prix de la référence A2 dans la feuille Tarifs (A2:B50, prix en colonne 2)",
+      "rep": "=RECHERCHEV(A2;Tarifs!A2:B50;2;FAUX)",
+      "note": "Accepter $A$2:$B$50 ou A:B."
+    },
+    {
+      "etape": 9,
+      "etapeTitre": "À la maison",
+      "genre": "reflexion",
+      "texte": "La référence qui a le plus d'articles en écart n'est pas celle que tu as choisie. Comment l'expliquerais-tu à un collègue ?",
+      "pistes": [
+        "PIL-AA a 6 articles en écart, mais ils ne coûtent que 4,80 € : une erreur sur ECO-BT coûte bien plus.",
+        "On recompte d'abord ce qui coûte le plus, pas ce qui est le plus fréquent."
       ]
     }
   ]

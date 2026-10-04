@@ -45,16 +45,6 @@ export const CORRIGE = {
       ]
     },
     {
-      "etape": 1,
-      "etapeTitre": "Comprendre la traçabilité",
-      "genre": "reflexion",
-      "texte": "Pourquoi cela lui coûte-t-il beaucoup plus cher ?",
-      "pistes": [
-        "Plus de paires à retirer, plus de clients à prévenir et à rembourser, plus de temps de travail.",
-        "Image de l'entreprise abîmée et risque juridique plus grand si un client est blessé."
-      ]
-    },
-    {
       "etape": 2,
       "etapeTitre": "Lire l'alerte du fournisseur et la consigne",
       "genre": "tableau",
@@ -66,12 +56,8 @@ export const CORRIGE = {
       "contexte": "Relève les informations de l'alerte :",
       "reponses": [
         [
-          "Lot concerné",
+          "Numéro du lot en cause",
           "LOT-PM-2609"
-        ],
-        [
-          "Fournisseur / expéditeur de l'alerte",
-          "Puma France, B2B — qualité (Marc Oberlé)"
         ],
         [
           "Nature du défaut",
@@ -80,6 +66,10 @@ export const CORRIGE = {
         [
           "Ce que Puma demande",
           "1. ne plus expédier de paires du lot ; 2. indiquer les commandes déjà livrées avec ce lot ; 3. isoler le stock restant"
+        ],
+        [
+          "Qui a envoyé l'alerte",
+          "Puma France, B2B — qualité (Marc Oberlé)"
         ]
       ],
       "note": "Informations de l'alerte « URGENT — rappel qualité sur le lot LOT-PM-2609 » (lignes exactes à adapter à la fiche imprimée dans la trame)."
@@ -94,7 +84,7 @@ export const CORRIGE = {
     {
       "etape": 2,
       "etapeTitre": "Lire l'alerte du fournisseur et la consigne",
-      "genre": "reflexion",
+      "genre": "question",
       "texte": "Quelle conséquence cela a-t-il pour le contrôle en entrepôt ?",
       "pistes": [
         "On ne peut pas le repérer en regardant les chaussures : un contrôle visuel à la réception ne suffit pas.",
@@ -313,7 +303,7 @@ export const CORRIGE = {
     {
       "etape": 5,
       "etapeTitre": "Compter ce qui reste, référence par référence",
-      "genre": "reflexion",
+      "genre": "question",
       "texte": "Pourquoi ces deux nombres sont-ils différents ?",
       "pistes": [
         "Le stock total d'une référence regroupe plusieurs lots (paires arrivées avant, de livraisons sans défaut) ; le « reste du lot » ne compte que les paires de LOT-PM-2609 encore en stock.",
@@ -329,13 +319,6 @@ export const CORRIGE = {
         "On bloquerait aussi des paires saines venant d'autres lots : elles ne pourraient plus être vendues, donc perte de ventes inutile.",
         "Le logiciel refuse d'ailleurs un blocage supérieur au reste du lot (« Le lot ne contient pas autant de paires de cette référence en stock »)."
       ]
-    },
-    {
-      "etape": 6,
-      "etapeTitre": "Bloquer le stock restant",
-      "genre": "fait",
-      "texte": "Que vaut maintenant le « Reste en stock » du lot ?",
-      "rep": "0 : tout ce qui restait du lot a été bloqué (18 paires)."
     },
     {
       "etape": 6,
@@ -374,20 +357,148 @@ export const CORRIGE = {
       "etape": 7,
       "etapeTitre": "Rendre compte à M. Morin",
       "genre": "reflexion",
-      "texte": "Pourquoi le compte rendu doit-il donner les numéros de commande, et pas seulement les noms des clients ?",
-      "pistes": [
-        "Un numéro de commande est unique et se retrouve dans le logiciel et chez Puma ; un nom peut avoir des homonymes ou être mal orthographié.",
-        "Puma doit contacter ces clients : le numéro de commande permet de les retrouver sans erreur."
-      ]
-    },
-    {
-      "etape": 7,
-      "etapeTitre": "Rendre compte à M. Morin",
-      "genre": "reflexion",
       "texte": "Quelle première action Spartoo devra-t-elle mener si un client rapporte une paire du lot ?",
       "pistes": [
         "Retrouver la commande du client et vérifier que sa paire vient bien du lot LOT-PM-2609.",
         "Remplacer ou rembourser le client, et ne pas remettre la paire en stock ; informer Puma."
+      ]
+    },
+    {
+      "etape": 8,
+      "etapeTitre": "Cours à détacher",
+      "genre": "fait",
+      "texte": "En cas de défaut, on ne rappelle pas toute la production : seulement le ………………… concerné.",
+      "rep": "lot."
+    },
+    {
+      "etape": 8,
+      "etapeTitre": "Cours à détacher",
+      "genre": "fait",
+      "texte": "Ce qui reste d'un lot = ce qui est entré − ce qui est ………………….",
+      "rep": "sorti."
+    },
+    {
+      "etape": 8,
+      "etapeTitre": "Cours à détacher",
+      "genre": "fait",
+      "texte": "On bloque seulement le reste du lot, pas tout le stock de la ………………….",
+      "rep": "référence."
+    },
+    {
+      "etape": 8,
+      "etapeTitre": "Cours à détacher",
+      "genre": "fait",
+      "texte": "Un blocage s'annonce par écrit, avec les ………………… des commandes concernées.",
+      "rep": "numéros."
+    },
+    {
+      "etape": 8,
+      "etapeTitre": "Cours à détacher",
+      "genre": "tableau",
+      "texte": "Mot | Définition (complète avec la banque de mots)",
+      "entetes": [
+        "Mot",
+        "Définition (complète avec la banque de mots)"
+      ],
+      "contexte": "",
+      "reponses": [
+        [
+          "Rappel de produit",
+          "retirer"
+        ],
+        [
+          "Amont",
+          "avant"
+        ],
+        [
+          "Aval",
+          "après"
+        ],
+        [
+          "Blocage qualité",
+          "douteux"
+        ],
+        [
+          "Compte rendu",
+          "fait"
+        ],
+        [
+          "Fournisseur",
+          "vend"
+        ],
+        [
+          "Mouvement de stock",
+          "entrée"
+        ],
+        [
+          "Stock du système",
+          "affiche"
+        ]
+      ],
+      "note": "Un mot de la banque par trou."
+    },
+    {
+      "etape": 9,
+      "etapeTitre": "À la maison",
+      "genre": "tableau",
+      "texte": "Référence | Entré avec le lot | Déjà sorti | Reste à bloquer",
+      "entetes": [
+        "Référence",
+        "Entré avec le lot",
+        "Déjà sorti",
+        "Reste à bloquer"
+      ],
+      "contexte": "Un fabricant (inventé pour l'exercice) signale un défaut sur le lot LOT-AD-1203. Voici ce que donne le logiciel pour ce lot.",
+      "reponses": [
+        [
+          "AD-A",
+          "10",
+          "3 (2 + 1)",
+          "7"
+        ],
+        [
+          "AD-B",
+          "8",
+          "3",
+          "5"
+        ],
+        [
+          "AD-C",
+          "6",
+          "2",
+          "4"
+        ]
+      ]
+    },
+    {
+      "etape": 9,
+      "etapeTitre": "À la maison",
+      "genre": "fait",
+      "texte": "Combien de clients ont reçu des paires du lot ?",
+      "rep": "3 (Mme Roux, M. Petit, Mme Garnier)."
+    },
+    {
+      "etape": 9,
+      "etapeTitre": "À la maison",
+      "genre": "fait",
+      "texte": "Total à bloquer",
+      "rep": "16 paires (7 + 5 + 4)."
+    },
+    {
+      "etape": 9,
+      "etapeTitre": "À la maison",
+      "genre": "fait",
+      "texte": "Le stock total de AD-A est de 15 paires. Combien restent vendables après le blocage ?",
+      "rep": "8 paires (15 − 7) : elles viennent d'un autre lot."
+    },
+    {
+      "etape": 9,
+      "etapeTitre": "À la maison",
+      "genre": "reflexion",
+      "texte": "Pour aller plus vite, un collègue propose de bloquer tout le stock des trois références. Qu'en penses-tu ?",
+      "pistes": [
+        "On bloquerait aussi des paires saines, venues d'autres livraisons : des ventes perdues pour rien.",
+        "C'est plus simple, mais le numéro de lot sert justement à ne bloquer que ce qui est en cause."
       ]
     }
   ]

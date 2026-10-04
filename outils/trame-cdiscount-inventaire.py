@@ -205,5 +205,9 @@ NOTIONS = [["La démarque inconnue, c'est", "Démarque inconnue",
             "La démarque inconnue est la différence entre le stock du système et le stock réel quand on n'en "
             "connaît pas la cause (vol, erreur non retrouvée, perte). La démarque connue a une cause identifiée "
             "(casse constatée, produit périmé)."]]
+# Feuille à détacher (cours + activité à la maison), décision de Tristan du 04/10/2026 :
+# contenu dans `feuilles_detachables.py`.
+T.feuille_detachable('ENT-2.3')
+
 T.finir(CODE, 'Cdiscount — inventaire tournant', 'ENT-2.3-cdiscount-inventaire-trame-eleve', NOTIONS,
         os.path.basename(__file__), fichier=CODE)

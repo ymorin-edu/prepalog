@@ -164,127 +164,82 @@ export const CORRIGE = {
     },
     {
       "etape": 4,
-      "etapeTitre": "Compter chaque palette",
-      "genre": "tableau",
-      "texte": "Palette | Cartons par couche | Couches | Manquants dessus | Total compté | BL",
-      "entetes": [
-        "Palette",
-        "Cartons par couche",
-        "Couches",
-        "Manquants dessus",
-        "Total compté",
-        "BL"
-      ],
-      "contexte": "Tu es à l'étape ③. Une palette est faite de couches de cartons posées les unes sur les autres. Pour la compter sans compter chaque carton :",
-      "reponses": [
-        [
-          "P1",
-          "12 (4 × 3)",
-          "5",
-          "3",
-          "57",
-          "57"
-        ],
-        [
-          "P2",
-          "9 (3 × 3)",
-          "4",
-          "0",
-          "36",
-          "36"
-        ],
-        [
-          "P3",
-          "12 (4 × 3)",
-          "4",
-          "0",
-          "48",
-          "48"
-        ],
-        [
-          "P4",
-          "6 (3 × 2)",
-          "4",
-          "2",
-          "22",
-          "24"
-        ],
-        [
-          "P5",
-          "6 (3 × 2)",
-          "5",
-          "0",
-          "30",
-          "30"
-        ]
-      ],
-      "note": "P4 : un des deux manquants est dans le coin du fond, visible seulement en faisant le tour. P1 : la couche du dessus est incomplète mais le total est conforme au BL. Le bilan marque « à revoir (non compté) » les lignes « détail » si l'élève n'a rempli que le total."
-    },
-    {
-      "etape": 4,
-      "etapeTitre": "Compter chaque palette",
+      "etapeTitre": "Contrôler la première palette, P1",
       "genre": "reflexion",
-      "texte": "Pour la palette la plus difficile à compter, comment as-tu fait ?",
+      "texte": "Sur P1, la couche du dessus n'est pas complète. Comment as-tu su s'il manquait des cartons ou non ?",
       "pistes": [
-        "Souvent P4 (le carton manquant du fond ne se voit qu'en faisant le tour) ou P1 (couche du dessus incomplète).",
-        "Valoriser la méthode : couche × nombre de couches − manquants, faire le tour, recompter."
+        "On compare au BL : 12 cartons par couche × 5 couches − 3 manquants dessus = 57, et le BL annonce 57. Rien ne manque.",
+        "Une couche du dessus incomplète est normale : le fournisseur charge ce qui est commandé. Ce qui compte, c'est le total face au BL.",
+        "Sur la fiche, la case « Cartons manquants » reste donc vide pour P1. Valoriser l'élève qui cite son calcul et le BL."
       ]
     },
     {
       "etape": 5,
-      "etapeTitre": "Contrôler et décider",
+      "etapeTitre": "Contrôler les palettes P2 à P5",
       "genre": "tableau",
-      "texte": "Palette | T° à cœur | Référence lue = BL ? | État des cartons | Décision — motif",
+      "texte": "Palette | Total compté | BL | T° à cœur | Référence lue = BL ? | Endommagés | Décision — motif",
       "entetes": [
         "Palette",
+        "Total compté",
+        "BL",
         "T° à cœur",
         "Référence lue = BL ?",
-        "État des cartons",
+        "Endommagés",
         "Décision — motif"
       ],
-      "contexte": "Toujours à l'étape ③, palette par palette. Le comptage ne suffit pas : un carton peut être abîmé, chaud ou ne pas être le bon produit. Pour chaque palette :",
+      "contexte": "Clique sur « Palette suivante : P2 → ». Refais les quatre blocs, dans le même ordre, pour chaque palette. Le comptage ne suffit pas : un carton peut être abîmé, trop chaud ou ne pas être le bon produit. Remplis le tableau au fur et à mesure (recopie aussi P1).",
       "reponses": [
         [
           "P1",
+          "57",
+          "57",
           "−21,5 °C",
           "oui (HVE-1000)",
-          "bon état",
+          "0",
           "Accepter — aucun motif"
         ],
         [
           "P2",
+          "36",
+          "36",
           "−19,8 °C",
           "oui (CRB-070)",
-          "2 cartons écrasés, visibles de l'arrière",
+          "2 (écrasés, visibles de l'arrière)",
           "Accepter avec réserves — cartons endommagés"
         ],
         [
           "P3",
+          "48",
+          "48",
           "−14,2 °C",
           "oui (GVA-1000)",
-          "bon état",
+          "0",
           "Refuser — température non conforme"
         ],
         [
           "P4",
+          "22",
+          "24",
           "−20,4 °C",
           "oui (CAB-400)",
-          "bon état (2 cartons manquants)",
-          "Accepter avec réserves — manquant"
+          "0",
+          "Accepter avec réserves — manquant (2)"
         ],
         [
           "P5",
+          "30",
+          "30",
           "−20,9 °C",
           "NON : EPB-450 (épinards en branches) au lieu de EPH-450",
-          "bon état",
+          "0",
           "Refuser — produit différent"
         ]
       ],
-      "note": "Le jalon de décision exige aussi la palette sondée. P3 : plus chaud que −15 °C, refus (règle du quai)."
+      "note": "Comptages : P1 12 (4 × 3) × 5 − 3 ; P2 9 × 4 ; P3 12 × 4 ; P4 6 (3 × 2) × 4 − 2 ; P5 6 × 5. P4 : un des deux manquants est dans le coin du fond, visible seulement en faisant le tour. Le jalon de décision exige aussi la palette sondée. P3 : plus chaud que −15 °C, refus (règle du quai). Les lignes « détail » du bilan (non comptées) se lisent dans la zone de calcul de l'élève (B1, B2, B3)."
     },
     {
       "etape": 5,
-      "etapeTitre": "Contrôler et décider",
+      "etapeTitre": "Contrôler les palettes P2 à P5",
       "genre": "reflexion",
       "texte": "Pour une palette que tu as refusée, qu'est-ce qui t'a décidé ?",
       "pistes": [
@@ -295,7 +250,7 @@ export const CORRIGE = {
     },
     {
       "etape": 5,
-      "etapeTitre": "Contrôler et décider",
+      "etapeTitre": "Contrôler les palettes P2 à P5",
       "genre": "reflexion",
       "texte": "Quel geste t'a fait découvrir un problème que tu n'aurais pas vu sans lui ?",
       "pistes": [
@@ -314,7 +269,7 @@ export const CORRIGE = {
         "Décision",
         "Ce que tu as écrit (nombre, température ou référence)"
       ],
-      "contexte": "En haut à droite, clique sur « Contrôles terminés → réserves et chambre froide », puis confirme. Tu es à l'étape ④. Il reste trois choses à faire : rentrer le lot, écrire les réserves, faire signer le chauffeur.",
+      "contexte": "Clique sur « Contrôles terminés → réserves et chambre froide », puis confirme. Tu es à l'étape ④. Il reste trois choses à faire : rentrer le lot, écrire les réserves, faire signer le chauffeur.",
       "reponses": [
         [
           "P2",
@@ -417,6 +372,137 @@ export const CORRIGE = {
         "Le fournisseur, pour qu'il renvoie les bons produits.",
         "Les magasins qui attendaient ces produits, s'il y a un risque de rupture.",
         "Accepter toute réponse qui montre que le refus a des suites."
+      ]
+    },
+    {
+      "etape": 8,
+      "etapeTitre": "Cours à détacher",
+      "genre": "fait",
+      "texte": "Avant d'ouvrir le camion, on lit le ………………… de l'enregistreur de température.",
+      "rep": "ticket."
+    },
+    {
+      "etape": 8,
+      "etapeTitre": "Cours à détacher",
+      "genre": "fait",
+      "texte": "Dès que la porte s'ouvre, le lot sort du froid : on le rentre en ………………… avant de remplir les papiers.",
+      "rep": "chambre froide."
+    },
+    {
+      "etape": 8,
+      "etapeTitre": "Cours à détacher",
+      "genre": "fait",
+      "texte": "Pour chaque palette, on compte les cartons, on sonde à ………………… et on lit l'étiquette.",
+      "rep": "cœur."
+    },
+    {
+      "etape": 8,
+      "etapeTitre": "Cours à détacher",
+      "genre": "fait",
+      "texte": "Un problème s'écrit sur le bon de livraison : c'est une …………………. Elle dit quelle palette, quoi, combien.",
+      "rep": "réserve."
+    },
+    {
+      "etape": 8,
+      "etapeTitre": "Cours à détacher",
+      "genre": "tableau",
+      "texte": "Mot | Définition (complète avec la banque de mots)",
+      "entetes": [
+        "Mot",
+        "Définition (complète avec la banque de mots)"
+      ],
+      "contexte": "Le bilan compare, ligne par ligne, ce que tu as fait et ce qui était attendu. Chaque ligne finit par « ✓ juste » ou « ✗ à revoir ». Lis-le en entier, jusqu'au « Bon à savoir ».",
+      "reponses": [
+        [
+          "Bon de livraison (BL)",
+          "fournisseur"
+        ],
+        [
+          "Fournisseur",
+          "vend"
+        ],
+        [
+          "Transporteur",
+          "conduit"
+        ],
+        [
+          "Enregistreur de température",
+          "air"
+        ],
+        [
+          "Consigne de température",
+          "tenir"
+        ],
+        [
+          "Sonder à cœur",
+          "centre"
+        ],
+        [
+          "Réserve",
+          "chauffeur"
+        ],
+        [
+          "Chaîne du froid",
+          "coupure"
+        ]
+      ],
+      "note": "Un mot de la banque par trou."
+    },
+    {
+      "etape": 9,
+      "etapeTitre": "À la maison",
+      "genre": "tableau",
+      "texte": "Palette | Mon calcul du comptage | Cartons | Décision | Motif",
+      "entetes": [
+        "Palette",
+        "Mon calcul du comptage",
+        "Cartons",
+        "Décision",
+        "Motif"
+      ],
+      "contexte": "Mardi, 6 h 00, quai 32. Un camion arrive avec trois palettes. Le ticket de l'enregistreur est parfait : la consigne est −20 °C et la température est restée entre −20,5 °C et −21,2 °C. Voici ce que tu relèves.",
+      "reponses": [
+        [
+          "M1",
+          "4 × 2 = 8 ; 8 × 5 = 40 ; 40 − 2",
+          "38",
+          "Accepter avec réserves",
+          "Manquant (2 cartons)"
+        ],
+        [
+          "M2",
+          "6 × 6",
+          "36",
+          "Accepter avec réserves",
+          "Température non conforme (−16,4 °C)"
+        ],
+        [
+          "M3",
+          "6 × 5",
+          "30",
+          "Refuser",
+          "Produit différent (FRI-750 au lieu de FRI-1000)"
+        ]
+      ],
+      "note": "Valeurs inventées pour l'activité. M2 : entre −18 et −15 °C (règle du quai de l'exercice)."
+    },
+    {
+      "etape": 9,
+      "etapeTitre": "À la maison",
+      "genre": "question",
+      "texte": "Écris la réserve de la palette M2, comme tu l'écrirais sur le BL.",
+      "rep": "« M2, poêlée de légumes : acceptée sous réserve, température à cœur relevée −16,4 °C (−18 °C exigé). »",
+      "note": "Attendu : la palette, le problème, la valeur relevée."
+    },
+    {
+      "etape": 9,
+      "etapeTitre": "À la maison",
+      "genre": "reflexion",
+      "texte": "Le ticket du camion était parfait. Qu'aurais-tu laissé passer si tu ne t'étais fié qu'à lui ?",
+      "pistes": [
+        "La palette M2, trop chaude : le ticket mesure l'air de la remorque, pas le produit.",
+        "Les 2 cartons manquants de M1 et la mauvaise référence de M3 : le ticket ne dit rien du contenu.",
+        "Valoriser l'élève qui distingue ce que chaque contrôle peut voir."
       ]
     }
   ]

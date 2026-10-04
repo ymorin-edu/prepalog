@@ -570,6 +570,14 @@ reflechir([
     "Si le vélo-cargo pouvait porter 250 kg, qu'est-ce que cela changerait à ta tournée ?",
 ])
 
+# Feuille à détacher (cours + activité à la maison), décision de Tristan du 04/10/2026. Ce générateur n'utilise
+# pas trame_commun : on lui prête le document en cours, puis on reprend les questions de la feuille pour le corrigé.
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import trame_commun as TC
+TC.d = d; TC.ETAPE_NUM = ETAPE_NUM; TC.ITEMS.clear()
+TC.feuille_detachable('ENT-3.1')
+ITEMS.extend(TC.ITEMS)
+
 SORTIE = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                       '..', 'contenus', 'trames', 'ENT-3.1-boost-tournee-trame-eleve.docx')
 # ------------------------------------------------------------------ corrigé pour l'espace enseignant

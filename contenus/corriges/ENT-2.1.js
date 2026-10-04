@@ -552,9 +552,16 @@ export const CORRIGE = {
     {
       "etape": 6,
       "etapeTitre": "Comparer chaque document à son mouvement",
-      "genre": "question",
-      "texte": "À partir de quelle commande le « Stock trouvé » ne suit-il plus le stock du système ? Quel mouvement a eu lieu juste avant ?",
-      "rep": "CMD-731530 ; juste avant, il y a eu la casse DEM-26-0027.",
+      "genre": "fait",
+      "texte": "À partir de quelle commande le « Stock trouvé » ne suit-il plus le stock du système ?",
+      "rep": "CMD-731530."
+    },
+    {
+      "etape": 6,
+      "etapeTitre": "Comparer chaque document à son mouvement",
+      "genre": "fait",
+      "texte": "Quel mouvement a eu lieu juste avant cette commande ?",
+      "rep": "La casse DEM-26-0027.",
       "note": "Seconde preuve, indépendante du constat : le rayon a toujours un écouteur de moins que le système après la casse."
     },
     {
@@ -672,6 +679,169 @@ export const CORRIGE = {
         "Vérifier les autres articles de l'allée : une erreur de saisie peut se répéter (c'est le mot de clôture de Nadia, et la suite de la série).",
         "Rappeler la règle à l'équipe : saisir la quantité du constat.",
         "Accepter : prévenir le service client, recontacter la cliente."
+      ]
+    },
+    {
+      "etape": 9,
+      "etapeTitre": "Cours à détacher",
+      "genre": "fait",
+      "texte": "Stock après = stock d'avant + les ………………… − les sorties.",
+      "rep": "entrées."
+    },
+    {
+      "etape": 9,
+      "etapeTitre": "Cours à détacher",
+      "genre": "fait",
+      "texte": "Chaque mouvement de stock doit avoir son ………………… : bon de livraison, bon de préparation, constat…",
+      "rep": "document."
+    },
+    {
+      "etape": 9,
+      "etapeTitre": "Cours à détacher",
+      "genre": "fait",
+      "texte": "Quand le rayon et le système ne disent pas la même chose, on cherche l'………………… dans les mouvements depuis le dernier inventaire.",
+      "rep": "erreur."
+    },
+    {
+      "etape": 9,
+      "etapeTitre": "Cours à détacher",
+      "genre": "fait",
+      "texte": "Pour retrouver un stock passé, on refait le calcul à l'………………… : on retire les entrées et on remet les sorties.",
+      "rep": "envers."
+    },
+    {
+      "etape": 9,
+      "etapeTitre": "Cours à détacher",
+      "genre": "tableau",
+      "texte": "Mot | Définition (complète avec la banque de mots)",
+      "entetes": [
+        "Mot",
+        "Définition (complète avec la banque de mots)"
+      ],
+      "contexte": "Tu as tout ce qu'il faut. Envoie à Nadia la réponse complète : sept lignes, une information par ligne.",
+      "reponses": [
+        [
+          "Stock",
+          "présente"
+        ],
+        [
+          "Stock du système",
+          "affiche"
+        ],
+        [
+          "Mouvement de stock",
+          "entrée"
+        ],
+        [
+          "Fiche de stock",
+          "article"
+        ],
+        [
+          "Inventaire",
+          "comparer"
+        ],
+        [
+          "Bon de préparation (BP)",
+          "sortir"
+        ],
+        [
+          "Retour client",
+          "renvoie"
+        ],
+        [
+          "Casse",
+          "abîmé"
+        ]
+      ],
+      "note": "Un mot de la banque par trou."
+    },
+    {
+      "etape": 10,
+      "etapeTitre": "À la maison",
+      "genre": "tableau",
+      "texte": "Date | Document | Entrée | Sortie | Stock après",
+      "entetes": [
+        "Date",
+        "Document",
+        "Entrée",
+        "Sortie",
+        "Stock après"
+      ],
+      "contexte": "Le 1er mars, l'inventaire a compté 12 chargeurs CHG-USB. Voici les mouvements de la semaine. Le constat de casse DEM-14 dit : « 3 chargeurs écrasés ».",
+      "reponses": [
+        [
+          "1er mars",
+          "Inventaire",
+          "",
+          "",
+          "12"
+        ],
+        [
+          "3 mars",
+          "Réception REC-31",
+          "20",
+          "",
+          "32"
+        ],
+        [
+          "4 mars",
+          "Bon de préparation BP-102",
+          "",
+          "5",
+          "27"
+        ],
+        [
+          "5 mars",
+          "Bon de préparation BP-118",
+          "",
+          "8",
+          "19"
+        ],
+        [
+          "6 mars",
+          "Retour client RET-07",
+          "1",
+          "",
+          "20"
+        ],
+        [
+          "7 mars",
+          "Casse DEM-14",
+          "",
+          "2",
+          "18"
+        ]
+      ]
+    },
+    {
+      "etape": 10,
+      "etapeTitre": "À la maison",
+      "genre": "fait",
+      "texte": "Stock du système le 7 mars",
+      "rep": "18."
+    },
+    {
+      "etape": 10,
+      "etapeTitre": "À la maison",
+      "genre": "fait",
+      "texte": "Quel document de la semaine ne correspond pas à son mouvement ?",
+      "rep": "Le constat de casse DEM-14 : 3 chargeurs écrasés, mais 2 seulement sortis du stock."
+    },
+    {
+      "etape": 10,
+      "etapeTitre": "À la maison",
+      "genre": "fait",
+      "texte": "Combien de chargeurs devrait-il vraiment rester ?",
+      "rep": "17."
+    },
+    {
+      "etape": 10,
+      "etapeTitre": "À la maison",
+      "genre": "reflexion",
+      "texte": "Si personne ne corrige cette erreur, que risque-t-il de se passer pour un client ?",
+      "pistes": [
+        "Le site vend un chargeur qui n'existe pas : la commande ne peut pas être préparée.",
+        "Le client attend, puis voit sa commande annulée."
       ]
     }
   ]

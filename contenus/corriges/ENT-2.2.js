@@ -112,9 +112,16 @@ export const CORRIGE = {
     {
       "etape": 3,
       "etapeTitre": "Vérifier l'extraction, exporter, ouvrir",
+      "genre": "fait",
+      "texte": "Avec « Allée » sur « Toutes », le nombre de lignes augmente-t-il ou diminue-t-il ?",
+      "rep": "Il augmente."
+    },
+    {
+      "etape": 3,
+      "etapeTitre": "Vérifier l'extraction, exporter, ouvrir",
       "genre": "question",
-      "texte": "Avec « Allée » sur « Toutes », le nombre de lignes augmente ou diminue ? Pourquoi ?",
-      "rep": "Il augmente : s'ajoutent les lignes de préparation des allées B et C du mois, que Nadia ne demande pas.",
+      "texte": "Explique pourquoi, avec ce que tu vois dans le tableau.",
+      "rep": "S'ajoutent les lignes de préparation des allées B et C du mois, que Nadia ne demande pas.",
       "note": "12 lignes de plus (allées B et C, préparées dans les 20 derniers jours). Avec « Tout l'historique », 8 lignes de plus (allée A, il y a 32 à 45 jours). Valoriser l'élève qui explique par la colonne « Emplacement » ou « Date »."
     },
     {
@@ -349,6 +356,183 @@ export const CORRIGE = {
         "Quatre références au lieu de huit (ou douze) : deux à trois fois moins de travail, au moment où l'entrepôt est chargé.",
         "La liste est justifiée par des chiffres, pas au hasard.",
         "Limite à accepter : une référence sans constat peut aussi être fausse (personne ne l'a préparée) — d'où l'inventaire complet de temps en temps."
+      ]
+    },
+    {
+      "etape": 9,
+      "etapeTitre": "Cours à détacher",
+      "genre": "fait",
+      "texte": "Avant d'exporter, on vérifie le ………………… de lignes affiché.",
+      "rep": "nombre."
+    },
+    {
+      "etape": 9,
+      "etapeTitre": "Cours à détacher",
+      "genre": "fait",
+      "texte": "Écart = stock trouvé − stock du ………………….",
+      "rep": "logiciel."
+    },
+    {
+      "etape": 9,
+      "etapeTitre": "Cours à détacher",
+      "genre": "fait",
+      "texte": "Le tableur sert à repérer vite les lignes en ………………… au milieu de centaines d'autres.",
+      "rep": "écart."
+    },
+    {
+      "etape": 9,
+      "etapeTitre": "Cours à détacher",
+      "genre": "fait",
+      "texte": "Un résultat de formule se ………………… sur quelques lignes calculées à la main.",
+      "rep": "vérifie."
+    },
+    {
+      "etape": 9,
+      "etapeTitre": "Cours à détacher",
+      "genre": "tableau",
+      "texte": "Mot | Définition (complète avec la banque de mots)",
+      "entetes": [
+        "Mot",
+        "Définition (complète avec la banque de mots)"
+      ],
+      "contexte": "Ma liste de références à recompter (garde-la pour ENT-2.3) :",
+      "reponses": [
+        [
+          "Constat d'écart",
+          "différent"
+        ],
+        [
+          "Écart",
+          "trouvé"
+        ],
+        [
+          "Extraction",
+          "choisies"
+        ],
+        [
+          "Tableur",
+          "formules"
+        ],
+        [
+          "Cellule",
+          "chiffre"
+        ],
+        [
+          "Formule",
+          "="
+        ],
+        [
+          "Fonction SI",
+          "vraie"
+        ],
+        [
+          "Fonction NB.SI",
+          "compte"
+        ]
+      ],
+      "note": "Un mot de la banque par trou."
+    },
+    {
+      "etape": 10,
+      "etapeTitre": "À la maison",
+      "genre": "tableau",
+      "texte": "Ligne | A · Référence | B · Logiciel | C · Trouvé | D · Écart | E · Repère",
+      "entetes": [
+        "Ligne",
+        "A · Référence",
+        "B · Logiciel",
+        "C · Trouvé",
+        "D · Écart",
+        "E · Repère"
+      ],
+      "contexte": "Un extrait de constats d'écart, comme dans ton tableur. Colonne B : stock du logiciel ; colonne C : stock trouvé au rayon.",
+      "reponses": [
+        [
+          "2",
+          "CHG-USB",
+          "14",
+          "14",
+          "0",
+          ""
+        ],
+        [
+          "3",
+          "ECO-BT",
+          "9",
+          "7",
+          "−2",
+          "écart"
+        ],
+        [
+          "4",
+          "CAB-HDMI",
+          "20",
+          "20",
+          "0",
+          ""
+        ],
+        [
+          "5",
+          "SOU-SF",
+          "6",
+          "8",
+          "2",
+          "écart"
+        ],
+        [
+          "6",
+          "CLE-32",
+          "11",
+          "11",
+          "0",
+          ""
+        ],
+        [
+          "7",
+          "PIL-AA",
+          "30",
+          "27",
+          "−3",
+          "écart"
+        ]
+      ]
+    },
+    {
+      "etape": 10,
+      "etapeTitre": "À la maison",
+      "genre": "fait",
+      "texte": "Formule de l'écart, en D2",
+      "rep": "=C2-B2"
+    },
+    {
+      "etape": 10,
+      "etapeTitre": "À la maison",
+      "genre": "fait",
+      "texte": "Formule en E2 : « écart » si D2 n'est pas 0, sinon rien",
+      "rep": "=SI(D2<>0;\"écart\";\"\")"
+    },
+    {
+      "etape": 10,
+      "etapeTitre": "À la maison",
+      "genre": "fait",
+      "texte": "Formule qui compte les « écart » de E2 à E7",
+      "rep": "=NB.SI(E2:E7;\"écart\")"
+    },
+    {
+      "etape": 10,
+      "etapeTitre": "À la maison",
+      "genre": "fait",
+      "texte": "Résultat de ce comptage",
+      "rep": "3."
+    },
+    {
+      "etape": 10,
+      "etapeTitre": "À la maison",
+      "genre": "reflexion",
+      "texte": "Avec 600 lignes au lieu de 6, qu'est-ce que le tableur changerait pour toi ?",
+      "pistes": [
+        "On écrit la formule une fois et on la recopie : le tableur fait les 600 calculs.",
+        "On ne peut plus repérer les écarts à l'œil : SI et NB.SI le font sans oubli."
       ]
     }
   ]
