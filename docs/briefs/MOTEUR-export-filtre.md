@@ -1,6 +1,6 @@
 # Brief de chantier — MOTEUR : l'élève choisit ce qu'il exporte (export filtré, 4 niveaux d'indication)
 
-**Statut** : à valider par Tristan (livré le 04/10/2026) *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
+**Statut** : livré — validé à l'écran par Tristan le 04/10/2026 (ENT-2.2, 2.4, 2.6, 2.5) *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
 **Origine** : retours de Tristan du 04/10/2026 sur le geste tableur (`MOTEUR-geste-tableur.md`, fin du brief).
 **Page d'essai** : `G:\Mon Drive\Travail\Logistique\1L\Claude outputs\essai-export-niveaux.html` (04/10/2026).
 **Modèle** : Sonnet (retouche du moteur, pas de vue nouvelle).
