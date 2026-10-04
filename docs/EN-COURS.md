@@ -7,7 +7,7 @@ est déjà modifié ou inscrit ci-dessous, **elle s'arrête et le dit à Tristan
 
 | Chantier | Fichiers qu'il touche | Depuis |
 |---|---|---|
-| *(personne d'inscrit)* | | |
+| Cdiscount : trames branchées + 3 petits textes (session du 04/10) | `activites/cdiscount-*.js`, `contenus/cdiscount-regularise.js`, `core/types/entreprise.js` (encadré Réception) | 04/10/2026 |
 
 Rappel : un seul chantier à la fois dans `core/types/tournee.js`, `core/types/grille.js`,
 `core/types/entreprise.js`, `styles/base.css` et `outils/test/boost.mjs` (voir `docs/briefs/COORDINATION-boost.md`).
