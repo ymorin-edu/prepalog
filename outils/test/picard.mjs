@@ -1801,6 +1801,76 @@ await v('ENT-4.4 : sous le logo Picard dans Simulog, elle s’ouvre sur l’accu
   await ctx.close();
 });
 
+// Précédent du navigateur pendant l'évaluation (04/10/2026, suite de NAVIGATION-precedent) : l'élève
+// sort par erreur. Même effet que « Quitter » : copie NON rendue, travail et chrono enregistrés, le
+// chrono s'arrête dehors (le temps passé hors de la séance ne compte pas) et repart de sa valeur.
+await v('ENT-4.4 : Précédent par erreur — copie non rendue, travail gardé, chrono arrêté dehors puis repris', async () => {
+  const { ctx, pg: p, erreurs } = await contexte({ viewport: { width: 1366, height: 1000 } });
+  // L'enseignant : un groupe de 1re, un élève, ENT-4.4 ouverte au groupe.
+  await p.click('#btnProf');
+  await p.click('#btnProfEspace');
+  await p.waitForSelector('#gNom');
+  await p.fill('#gNom', 'PREC 1');
+  await p.selectOption('#gNiveau', '1re');
+  await p.click('#btnCreerG');
+  await p.waitForSelector('text=PREC 1');
+  await p.click('[data-ong="comptes"]');
+  await p.fill('#lot', 'PRECEDENT ; Lou ; 3981 ; pp01');
+  await p.click('#btnLot');
+  await p.waitForSelector('text=1 compte créé');
+  await p.click('[data-ong="seance"]');
+  await p.check('[data-ouvre="picard-ent44"]');
+  await p.waitForFunction(() => document.querySelector('[data-ouvre="picard-ent44"]').checked);
+  await p.click('#btnRetour');
+  await p.click('#btnDeco');
+  // L'élève ouvre son évaluation et commence le quai.
+  await p.fill('#mat', '3981');
+  await p.fill('#code', 'pp01');
+  await p.click('#btnEleve');
+  await p.waitForSelector('text=Bonjour Lou');
+  await p.click('[data-rub="simulog"]');
+  await p.click('[data-ent="4"]');
+  await p.click('[data-act="picard-ent44"]');
+  await p.waitForSelector('.ent-bandeau');
+  await p.click('.ent-nav[data-vue="quai"]');
+  await p.click('.ent-main [data-q="ticket"]');
+  await p.check(`.ent-main [data-q="ticketRep"][value="long"]`);
+  await p.waitForTimeout(3500);
+  const lire = () => p.evaluate(() => {
+    const k = (pre) => Object.keys(localStorage).find((x) => x.startsWith('prepalog:' + pre) && x.endsWith('/picard-ent44'));
+    const l = (x) => (x ? JSON.parse(localStorage.getItem(x)) : null);
+    const prive = l(k('prive/')), travaux = l(k('travaux/'));
+    const q = prive && prive.data && prive.data.quais && prive.data.quais['picard-ent44'];
+    return { reel: q ? q.reel : null, ticketRep: q ? q.ticketRep : null, rendu: !!(travaux && travaux.rendu) };
+  });
+  // Précédent par erreur.
+  await p.goBack({ waitUntil: 'commit' });
+  await p.waitForSelector('.entreprise-tete[data-entreprise="4"]');
+  vrai(!(await p.$('.ent-shell')), 'la séance est restée affichée');
+  vrai(!(await p.evaluate(() => document.body.classList.contains('immersion'))), 'charte Picard restée sur le site');
+  const a = await lire();
+  egal([a.ticketRep, a.rendu], ['long', false], 'travail / copie après Précédent');
+  vrai(a.reel >= 2.5, 'chrono non enregistré à la sortie : ' + a.reel);
+  // Dehors, le chrono ne tourne pas. 11 s : au-delà de sa sauvegarde toutes les 10 s, sans quoi un
+  // chrono resté en marche ne laisserait aucune trace (éprouvé : avec 3 s, le sabotage passait).
+  await p.waitForTimeout(11000);
+  egal((await lire()).reel, a.reel, 'chrono qui tourne hors de la séance');
+  // L'élève rouvre : il retrouve son travail, la copie est toujours à rendre, le chrono repart de sa valeur.
+  await p.click('[data-act="picard-ent44"]');
+  await p.waitForSelector('.ent-bandeau');
+  await p.click('.ent-nav[data-vue="quai"]');
+  vrai(await p.isChecked(`.ent-main [data-q="ticketRep"][value="long"]`), 'réponse au ticket perdue à la réouverture');
+  vrai(!(await p.$('.ent-copie-rendue')), 'copie marquée rendue');
+  await p.waitForTimeout(1500);
+  await p.goBack({ waitUntil: 'commit' });
+  await p.waitForSelector('.entreprise-tete[data-entreprise="4"]');
+  const b = await lire();
+  vrai(b.reel >= a.reel + 0.5 && b.reel < a.reel + 2.5, `chrono à la reprise : ${a.reel} puis ${b.reel} (11 s dehors non comptées)`);
+  egal(b.rendu, false, 'copie rendue');
+  egal(erreurs, [], 'erreurs JS');
+  await ctx.close();
+});
+
 await v('quai : aucune erreur JavaScript dans le bloc', async () => {
   egal(erreursQ, [], 'erreurs');
 });

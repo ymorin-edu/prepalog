@@ -165,3 +165,12 @@ le cas « le score remonte à la sortie » tombe, et lui seul.
 **Non vérifié** : Alt + ← et le bouton « retour » de la souris (mêmes événements que la flèche
 du navigateur, à essayer par Tristan) ; le mode réel Firebase (même code de navigation, mais
 non couvert par la suite).
+
+**Ajout du 04/10/2026 (demande de Tristan) : Précédent pendant une évaluation.** Cas neuf dans le
+bloc `picard` : l'élève ouvre ENT-4.4, commence le quai, fait Précédent → copie **non rendue**,
+travail et chrono enregistrés, chrono **arrêté dehors** (11 s d'attente : au-delà de sa
+sauvegarde toutes les 10 s), puis repris à sa valeur à la réouverture. Éprouvé : il tombe quand
+le chrono reste en marche hors de la séance. Il ne tombe pas si l'on retire seulement
+`ctx.surSortie` : le chrono s'arrête aussi de lui-même quand la séance quitte l'écran, et la base
+est écrite à la fermeture. Deux protections, l'une suffit.
+
