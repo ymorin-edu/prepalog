@@ -10,31 +10,31 @@ export const CORRIGE = {
       "genre": "fait",
       "texte": "En quelle année Cdiscount a-t-elle été créée ?",
       "rep": "1998.",
-      "note": "Source : Wikipédia (« Cdiscount »), à recouper ; relevé le 02/10/2026. Une page Internet peut changer."
+      "note": "Source : Wikipédia, article « Cdiscount » (relu le 04/10/2026) : fondée en 1998 à Bordeaux par Hervé, Christophe et Nicolas Charle."
     },
     {
       "etape": 1,
       "etapeTitre": "Découvrir Cdiscount",
       "genre": "fait",
       "texte": "Dans quelle ville a-t-elle été fondée ?",
-      "rep": "Bordeaux.",
-      "note": "Source : Wikipédia (« Cdiscount »), à recouper ; relevé le 02/10/2026."
-    },
-    {
-      "etape": 1,
-      "etapeTitre": "Découvrir Cdiscount",
-      "genre": "fait",
-      "texte": "Dans quel département se trouve son entrepôt de Cestas ?",
-      "rep": "La Gironde (33).",
-      "note": "Entrepôt de Cestas, près de Bordeaux. Source : Journal du Net, article ancien : à dater et rafraîchir."
+      "rep": "Bordeaux (Gironde).",
+      "note": "Même source. Le siège est toujours à Bordeaux."
     },
     {
       "etape": 1,
       "etapeTitre": "Découvrir Cdiscount",
       "genre": "fait",
       "texte": "Quel est le nom de sa filiale logistique ?",
-      "rep": "C-Logistics.",
-      "note": "Source : GlobeNewswire, 06/10/2022."
+      "rep": "C-Logistics (créée en 2019).",
+      "note": "Source : Voxlog, reportage du 04/10/2023 sur l'entrepôt de Réau (« la filiale logistique de Cdiscount créée en 2019 »)."
+    },
+    {
+      "etape": 1,
+      "etapeTitre": "Découvrir Cdiscount",
+      "genre": "fait",
+      "texte": "Quels produits l'entrepôt de Cestas traite-t-il (quel poids) ?",
+      "rep": "Les produits de moins de 30 kg.",
+      "note": "Source : Voxlog (04/10/2023) : Cestas (33) traite les produits de moins de 30 kg ; les encombrants (plus de 30 kg) vont près de Saint-Étienne. Accepter aussi « les petits colis »."
     },
     {
       "etape": 1,
@@ -47,110 +47,108 @@ export const CORRIGE = {
         "un grossiste"
       ],
       "bonne": 0,
-      "explication": "Une place de marché est un site où des vendeurs indépendants vendent leurs produits à côté de ceux du site : Cdiscount vend les siens et héberge aussi ceux d'autres vendeurs.",
+      "explication": "Une place de marché est un site où des vendeurs indépendants vendent leurs produits à côté de ceux du site. Cdiscount a ouvert la sienne en 2010 (« C le marché »).",
       "notion": "Place de marché (commerce en ligne)"
     },
     {
       "etape": 1,
       "etapeTitre": "Découvrir Cdiscount",
       "genre": "reflexion",
-      "texte": "Pour un site de vente en ligne, pourquoi est-il important que le stock affiché soit le stock réel ?",
+      "texte": "D'après ce que tu as trouvé, pourquoi une erreur de stock coûte-t-elle plus cher à Cdiscount en novembre qu'en mars ?",
       "pistes": [
-        "Le client commande ce qu'il voit disponible : si le stock affiché est faux, on vend un article qu'on n'a plus (client déçu, commande annulée, remboursement).",
-        "À l'inverse, un stock affiché trop bas fait perdre des ventes, et on peut racheter à tort ce qu'on a déjà.",
-        "Accepter toute réponse qui relie le stock affiché à la vente, à la satisfaction du client ou au coût."
+        "Fin novembre (Black Friday) puis jusqu'à Noël, les ventes explosent : un article affiché à tort se vend beaucoup plus de fois.",
+        "Plus de commandes annulées, plus de clients mécontents, au moment où ils comparent les sites.",
+        "Repère daté : à Noël 2017, Cestas expédiait 300 000 colis par jour, « en plein rush depuis Black Friday » (France Bleu, 19/12/2017). Chiffre ancien, à présenter comme tel.",
+        "Accepter toute réponse qui relie la période chargée au nombre de ventes touchées par l'erreur."
       ]
     },
     {
       "etape": 2,
-      "etapeTitre": "Ouvrir son environnement et lire le message de Nadia",
+      "etapeTitre": "Lire la messagerie : le problème de ce matin",
       "genre": "tableau",
       "texte": "Information | Ce que tu relèves",
       "entetes": [
         "Information",
         "Ce que tu relèves"
       ],
-      "contexte": "Connecte-toi à Prepalog, ouvre la rubrique Logisim, puis l'activité « Cdiscount — le stock raconte ». Le logiciel s'ouvre aux couleurs de Cdiscount : un bandeau bleu en haut, un menu à gauche. Clique sur « Messagerie » : plusieurs messages t'attendent.",
+      "contexte": "Connecte-toi à Prepalog, ouvre la rubrique Logisim, puis l'activité « Cdiscount — le stock raconte ». Le logiciel s'ouvre aux couleurs de Cdiscount, avec un menu à gauche. L'accueil liste le travail de la séance, dans l'ordre.",
       "reponses": [
         [
           "Qui t'écrit, et quel est son poste ?",
           "Nadia Ferrand, cheffe d'équipe stock"
         ],
         [
-          "Selon le message de bienvenue, le stock affiché dans le système doit être égal à quoi ?",
-          "Au stock réel, celui qui est dans les rayons"
+          "Quelle commande a été annulée ce matin (numéro) ?",
+          "CMD-731602 (Mme Moreau)"
         ],
         [
-          "De quel article parle Nadia (nom et référence) ?",
-          "Écouteurs sans fil Bluetooth, ECO-BT-01"
+          "Référence de l'article commandé",
+          "ECO-BT-01 (écouteurs sans fil Bluetooth)"
         ],
         [
-          "À quelle date a eu lieu le dernier inventaire ?",
-          "Il y a 7 jours (la date du jour moins 7 : le message l'écrit)"
+          "Ce que le préparateur a trouvé à l'emplacement",
+          "L'emplacement A-02-1 vide"
         ],
         [
-          "Combien de lignes doit contenir ta réponse ?",
-          "6"
+          "Combien d'articles le système dit-il qu'il en reste ?",
+          "1 (« il en reste un »)"
+        ],
+        [
+          "Date du dernier inventaire de l'allée",
+          "Il y a 7 jours (la date est écrite dans le message)"
+        ],
+        [
+          "Combien de lignes doit contenir ta réponse complète ?",
+          "7"
         ]
       ],
-      "note": "La date de l'inventaire change chaque jour : elle est calculée à l'ouverture de la séance."
+      "note": "La date d'inventaire est calculée à l'ouverture : J-7. Le message dit « il en reste un » en toutes lettres : c'est l'énoncé, l'élève le vérifie à l'étape 3."
     },
     {
       "etape": 2,
-      "etapeTitre": "Ouvrir son environnement et lire le message de Nadia",
+      "etapeTitre": "Lire la messagerie : le problème de ce matin",
       "genre": "reflexion",
-      "texte": "Nadia veut comprendre comment le stock est arrivé là, pas seulement connaître son chiffre. Pourquoi, à ton avis ?",
+      "texte": "Le système dit qu'il reste des écouteurs, le rayon est vide. D'après toi, avant de chercher, qu'est-ce qui a pu se passer ?",
       "pistes": [
-        "Le chiffre seul ne dit pas d'où vient un écart : ce sont les mouvements et leurs documents qui permettent de comprendre, puis de corriger.",
-        "Avant de recompter, on veut savoir ce qui est normal (ventes, réceptions) et ce qui est anormal (casse, retour, erreur de saisie).",
-        "Accepter toute idée de justification, de contrôle ou de recherche d'erreur."
+        "Une erreur de saisie, un article cassé ou perdu sans être enregistré, un vol, un article rangé ailleurs.",
+        "Question de prévision : toute hypothèse est recevable ; on y revient à l'étape 6."
       ]
     },
     {
       "etape": 3,
-      "etapeTitre": "Relever le stock actuel",
+      "etapeTitre": "Relever le stock actuel et l'envoyer",
       "genre": "tableau",
       "texte": "Où as-tu lu le stock ? | Stock actuel de l'article",
       "entetes": [
         "Où as-tu lu le stock ?",
         "Stock actuel de l'article"
       ],
-      "contexte": "Tu vas relever le stock d'écouteurs qu'affiche le système aujourd'hui. Il y a deux façons de le faire : essaie les deux.",
+      "contexte": "Tu vas relever le stock d'écouteurs que le système affiche aujourd'hui. Il y a deux façons de le faire : essaie les deux.",
       "reponses": [
         [
           "Écran « Stock »",
-          "27"
+          "1"
         ],
         [
-          "Console (.getstock ECO-BT-01)",
-          "27"
+          "Console",
+          "1 (.getstock ECO-BT-01 : « 1 article », statut « Faible »)"
         ]
       ],
-      "note": "Les deux façons donnent le même nombre. Écran Stock : code d'accès donné par l'enseignant (STOCK24 sur la page d'essai)."
+      "note": "Code d'accès de l'écran Stock : donné par l'enseignant (STOCK24 sur la page d'essai). Confirmé : 1 aussi."
     },
     {
       "etape": 3,
-      "etapeTitre": "Relever le stock actuel",
+      "etapeTitre": "Relever le stock actuel et l'envoyer",
       "genre": "reflexion",
-      "texte": "Quelle façon de lire le stock te paraît la plus sûre ? Explique ton choix.",
+      "texte": "Ce nombre te dit-il comment le stock est arrivé là ? Explique ta réponse.",
       "pistes": [
-        "Réponse personnelle : la console est plus rapide quand on connaît la référence ; l'écran est plus visuel et montre tous les articles.",
-        "Accepter tout choix argumenté."
-      ]
-    },
-    {
-      "etape": 3,
-      "etapeTitre": "Relever le stock actuel",
-      "genre": "reflexion",
-      "texte": "Ce nombre dit-il à lui seul comment le stock est arrivé là ? Explique.",
-      "pistes": [
-        "Non : un stock de 27 ne dit pas si c'est normal. Il faut savoir ce qui est entré et sorti, et pourquoi.",
-        "C'est exactement ce que l'onglet Mouvements va montrer à l'étape suivante."
+        "Non : 1 ne dit ni ce qui est entré, ni ce qui est sorti, ni pourquoi. Il faut les mouvements.",
+        "Et il ne dit pas si ce 1 est vrai : le préparateur a trouvé le rayon vide."
       ]
     },
     {
       "etape": 4,
-      "etapeTitre": "Lister les mouvements et remplir la fiche de stock",
+      "etapeTitre": "Lister les mouvements sur une fiche de stock",
       "genre": "tableau",
       "texte": "Date | Document (Origine) | Entrée | Sortie | Stock après",
       "entetes": [
@@ -160,93 +158,89 @@ export const CORRIGE = {
         "Sortie",
         "Stock après"
       ],
-      "contexte": "Fiche de stock de l'article (référence) : …………………………………………",
+      "contexte": "Un mouvement de stock, c'est chaque fois que des articles entrent ou sortent. Le système les garde tous. Tu vas recopier ceux de l'article sur une fiche de stock.",
       "reponses": [
         [
-          "Il y a 7 jours",
+          "Dernier inventaire (J-7)",
           "Inventaire",
           "",
           "",
-          "24 (trouvé à l'étape 6)"
+          "4 (trouvé à l'étape 7)"
         ],
         [
-          "Il y a 6 jours, 15 h 30",
-          "BP-731402 (commande CMD-731402)",
+          "J-6, 15 h 30",
+          "BP-731402",
           "",
           "2",
-          "22"
+          "2"
         ],
         [
-          "Il y a 5 jours, 10 h 00",
+          "J-5, 10 h 00",
           "REC-26-0415",
-          "12",
+          "10",
           "",
-          "34"
+          "12"
         ],
         [
-          "Il y a 4 jours, 11 h 00",
-          "BP-731488 (commande CMD-731488)",
+          "J-4, 11 h 00",
+          "BP-731488",
           "",
           "1",
-          "33"
+          "11"
         ],
         [
-          "Il y a 4 jours, 16 h 45",
+          "J-4, 16 h 45",
           "RET-26-0091",
           "1",
           "",
-          "34"
+          "12"
         ],
         [
-          "Il y a 3 jours, 9 h 30",
+          "J-3, 9 h 30",
           "DEM-26-0027",
           "",
           "1",
-          "33"
+          "11"
         ],
         [
-          "Il y a 3 jours, 14 h 00",
-          "BP-731530 (commande CMD-731530)",
+          "J-3, 14 h 00",
+          "BP-731530",
           "",
           "3",
-          "30"
+          "8"
         ],
         [
-          "Il y a 2 jours, 10 h 15",
-          "BP-731561 (commande CMD-731561)",
+          "J-2, 10 h 15",
+          "BP-731561",
+          "",
+          "3",
+          "5"
+        ],
+        [
+          "J-1, 9 h 36",
+          "BP-731578",
           "",
           "2",
-          "28"
+          "3"
         ],
         [
-          "Il y a 1 jour, 13 h 42",
-          "BP-731602 (commande CMD-731602)",
+          "J-1, 15 h 12",
+          "BP-731590",
           "",
-          "1",
-          "27"
+          "2",
+          "1"
         ]
       ],
-      "note": "8 mouvements pour l'article ECO-BT-01 (la fiche en imprime 11 lignes). Piège de l'ordre : l'écran liste du plus récent au plus ancien, et le premier mouvement (une commande d'il y a 6 jours) est plus ancien que la réception. Les autres articles bougent aussi (19 mouvements au total) : il faut trier. Accepter BP-… ou CMD-… dans la colonne « Document »."
+      "note": "9 mouvements (la fiche imprime 13 lignes vides). L'écran met le plus récent en haut. Confirmé : 12 mouvements — en plus REC-26-0409 (J-7, 14 h, +6 → 10), BP-731420 (J-6, 11 h, −3 → 7, avant BP-731402 qui laisse alors 5), BP-731515 (J-4, 13 h 30, −3) ; le stock actuel reste 1."
     },
     {
       "etape": 4,
-      "etapeTitre": "Lister les mouvements et remplir la fiche de stock",
+      "etapeTitre": "Lister les mouvements sur une fiche de stock",
       "genre": "reflexion",
-      "texte": "Regarde la colonne « Type » de ta fiche : que remarques-tu ?",
+      "texte": "Regarde la colonne « Type » de l'écran pour les lignes de ta fiche. Que remarques-tu ?",
       "pistes": [
-        "Les mouvements n'ont pas tous le même type : réception, préparation (commande), mais aussi retour client et casse.",
-        "Une entrée n'est pas toujours un achat (un retour client), une sortie n'est pas toujours une vente (une casse). La colonne « Type » le dit."
-      ]
-    },
-    {
-      "etape": 4,
-      "etapeTitre": "Lister les mouvements et remplir la fiche de stock",
-      "genre": "reflexion",
-      "texte": "Pourquoi, à ton avis, le système garde-t-il le « Stock après » à chaque ligne, et pas seulement le stock du jour ?",
-      "pistes": [
-        "Pouvoir vérifier chaque ligne (stock avant + entrée − sortie) et repérer l'endroit exact où le chiffre devient faux.",
-        "Retrouver le stock d'un jour passé sans recompter : c'est justement ce que fait l'étape 6.",
-        "Accepter toute idée de contrôle, de preuve ou de traçabilité."
+        "Il n'y a pas que des réceptions et des préparations : un retour client (une entrée) et une casse (une sortie).",
+        "Une entrée n'est pas toujours un achat, une sortie n'est pas toujours une vente."
       ]
     },
     {
@@ -258,7 +252,7 @@ export const CORRIGE = {
         "Type de mouvement",
         "Où je retrouve le document"
       ],
-      "contexte": "Un mouvement de stock doit toujours avoir un document : sans lui, personne ne peut dire pourquoi le stock a bougé. La colonne « Origine » de ta fiche te donne le code de ce document. À toi de retrouver chacun d'eux.",
+      "contexte": "Un mouvement de stock doit toujours avoir un document : sans lui, personne ne peut dire pourquoi le stock a bougé. La colonne « Document » de ta fiche te donne son code. Retrouve chacun de ces documents.",
       "reponses": [
         [
           "Entrée : réception",
@@ -266,15 +260,15 @@ export const CORRIGE = {
         ],
         [
           "Sortie : préparation",
-          "Menu « Commandes » (bon de préparation BP-… = commande CMD-… aux mêmes chiffres)"
+          "Menu « Commandes » (BP-… = CMD-… aux mêmes chiffres)"
         ],
         [
           "Entrée : retour client",
-          "Messagerie (message du service retours)"
+          "Messagerie (Service retours)"
         ],
         [
           "Sortie : casse",
-          "Messagerie (message du cariste)"
+          "Messagerie (Kevin Larrieu, cariste)"
         ]
       ]
     },
@@ -292,98 +286,115 @@ export const CORRIGE = {
       "contexte": "Dans « Réceptions », ouvre chaque réception de la liste :",
       "reponses": [
         [
+          "REC-26-0415",
+          "Sonoria",
+          "oui",
+          "10"
+        ],
+        [
           "REC-26-0412",
           "Kabeo",
           "non (câbles, chargeurs, batteries)",
           "—"
-        ],
-        [
-          "REC-26-0415",
-          "Sonoria",
-          "oui",
-          "12"
         ]
       ],
-      "note": "Piège : REC-26-0412 est une vraie réception de la semaine, mais sans écouteurs : l'élève qui la cite se trompe de ligne. Le tableau imprime 4 lignes pour ne pas donner le nombre de réceptions."
+      "note": "Piège : REC-26-0412 est bien de la semaine mais sans écouteurs. Confirmé : aussi REC-26-0409, Sonoria, oui, 6. Quatre lignes imprimées pour ne pas donner le nombre."
     },
     {
       "etape": 5,
       "etapeTitre": "Relier chaque mouvement à son document",
       "genre": "tableau",
-      "texte": "N° de commande | Client | Écouteurs dans la commande ? | Quantité d'écouteurs",
+      "texte": "Bon de ta fiche (BP-…) | Commande (CMD-…) | Client | Écouteurs commandés",
       "entetes": [
-        "N° de commande",
+        "Bon de ta fiche (BP-…)",
+        "Commande (CMD-…)",
         "Client",
-        "Écouteurs dans la commande ?",
-        "Quantité d'écouteurs"
+        "Écouteurs commandés"
       ],
-      "contexte": "Dans « Commandes », ouvre chaque commande de la liste (tu n'auras peut-être pas besoin de toutes les lignes) :",
+      "contexte": "Dans « Commandes », ouvre la commande de chaque bon de préparation de ta fiche :",
       "reponses": [
         [
+          "BP-731402",
           "CMD-731402",
           "Léa Guérin",
-          "oui",
           "2"
         ],
         [
-          "CMD-731455",
-          "Louis Roux",
-          "non (câbles et chargeur)",
-          "—"
-        ],
-        [
+          "BP-731488",
           "CMD-731488",
           "Enzo Lacoste",
-          "oui",
           "1"
         ],
         [
+          "BP-731530",
           "CMD-731530",
           "Emma Simon",
-          "oui",
           "3"
         ],
         [
+          "BP-731561",
           "CMD-731561",
           "Jade Darrieux",
-          "oui",
+          "3"
+        ],
+        [
+          "BP-731578",
+          "CMD-731578",
+          "Chloé Laffitte",
           "2"
         ],
         [
-          "CMD-731602",
-          "Clara Moreau",
-          "oui",
-          "1"
+          "BP-731590",
+          "CMD-731590",
+          "Maxime Fournier",
+          "2"
         ]
       ],
-      "note": "Piège : CMD-731455 n'a aucun écouteur. Cinq commandes sur six sont à citer. Les noms de clients sont générés par la base (même graine à chaque fois). Le tableau imprime 8 lignes."
+      "note": "Six commandes (confirmé : huit, avec CMD-731420 et CMD-731515, 3 chacune). CMD-731455 et CMD-731545 n'ont pas d'écouteurs : elles ne sont pas sur la fiche. Noms des clients relevés sur la page d'essai (même base pour tous)."
+    },
+    {
+      "etape": 5,
+      "etapeTitre": "Relier chaque mouvement à son document",
+      "genre": "fait",
+      "texte": "Dans la liste « Commandes », quel est le statut de la commande de la cliente ?",
+      "rep": "Annulée (CMD-731602, Clara Moreau).",
+      "note": "L'écran de la commande dit : « Annulée le … à 7 h 24 — Rupture : emplacement A-02-1 vide à la préparation »."
+    },
+    {
+      "etape": 5,
+      "etapeTitre": "Relier chaque mouvement à son document",
+      "genre": "question",
+      "texte": "Cette commande a-t-elle fait bouger le stock d'écouteurs ? Justifie avec ce que tu as vu à l'écran.",
+      "rep": "Non : aucun mouvement BP-731602 dans la liste ; son bon dit « Stock trouvé 0 », « À préparer 0 », « Rupture ».",
+      "note": "C'est le piège du jalon 3 : la citer sur la ligne « Commandes » rend le jalon faux."
     },
     {
       "etape": 5,
       "etapeTitre": "Relier chaque mouvement à son document",
       "genre": "tableau",
-      "texte": "Document reçu (n°) | De qui ? | Que s'est-il passé ? | Entrée ou sortie ?",
+      "texte": "Document (n°) | De qui ? | Que s'est-il passé ? | Entrée ou sortie ?",
       "entetes": [
-        "Document reçu (n°)",
+        "Document (n°)",
         "De qui ?",
         "Que s'est-il passé ?",
         "Entrée ou sortie ?"
       ],
-      "contexte": "Dans la « Messagerie », les services ont écrit à Nadia au sujet de deux mouvements de ta fiche :",
+      "contexte": "Dans la « Messagerie », deux services t'ont écrit au sujet de deux mouvements de ta fiche :",
       "reponses": [
         [
           "RET-26-0091",
           "Service retours",
-          "Retour client : une paire d'écouteurs neuve, emballage intact, renvoyée par le client de CMD-731402 et remise en rayon",
+          "Un client (commande CMD-731402) renvoie 1 paire neuve, emballage intact, remise en rayon A-02-1",
           "Entrée"
         ],
         [
           "DEM-26-0027",
           "Kevin Larrieu, cariste",
-          "Casse : un boîtier tombé du chariot, écrasé, invendable, mis au rebut",
+          "Un carton tombé du chariot en allée A-02 : 2 boîtiers écrasés, mis au rebut, « saisi sur le terminal »",
           "Sortie"
         ]
-      ]
+      ],
+      "note": "Ces deux messages arrivent après le premier envoi « Stock actuel : … » (juste ou faux)."
     },
     {
       "etape": 5,
@@ -391,24 +402,175 @@ export const CORRIGE = {
       "genre": "reflexion",
       "texte": "Parmi les mouvements de ta fiche, lesquels ne sont ni un achat ni une vente ? Explique pourquoi le stock a bougé quand même.",
       "pistes": [
-        "Le retour client est une entrée qui n'est pas un achat : l'article revient en rayon, le stock remonte.",
-        "La casse est une sortie qui n'est pas une vente : l'article est jeté, le stock baisse sans qu'aucune commande ne soit partie.",
-        "Les deux modifient le stock sans que l'entreprise gagne ou paie une vente : d'où l'intérêt de les distinguer dans les mouvements."
-      ]
-    },
-    {
-      "etape": 5,
-      "etapeTitre": "Relier chaque mouvement à son document",
-      "genre": "reflexion",
-      "texte": "Dans une vraie entreprise, que risque-t-on si un mouvement de stock n'a aucun document ?",
-      "pistes": [
-        "On ne peut plus expliquer un écart : on ne sait pas s'il vient d'une erreur, d'un vol, d'une casse ou d'une vente non enregistrée.",
-        "Le stock du système devient impossible à justifier, donc à corriger sans risque (voir l'inventaire).",
-        "Accepter : perte de traçabilité, litige avec un client ou un fournisseur, difficulté de comptabilité."
+        "Le retour client : une entrée sans achat ; l'article revient en rayon.",
+        "La casse : une sortie sans vente ; l'article est jeté.",
+        "Valoriser l'élève qui ajoute qu'il faut donc lire le type, pas seulement le signe."
       ]
     },
     {
       "etape": 6,
+      "etapeTitre": "Comparer chaque document à son mouvement",
+      "genre": "tableau",
+      "texte": "Document | Quantité écrite sur le document | Quantité du mouvement | Pareil ?",
+      "entetes": [
+        "Document",
+        "Quantité écrite sur le document",
+        "Quantité du mouvement",
+        "Pareil ?"
+      ],
+      "contexte": "Le système ne sait que ce qu'on lui a saisi. Un document dit ce qui s'est passé dans l'entrepôt ; le mouvement dit ce qui a été saisi. Les deux doivent dire la même quantité.",
+      "reponses": [
+        [
+          "BP-731402 (CMD-731402)",
+          "2",
+          "2",
+          "oui"
+        ],
+        [
+          "REC-26-0415",
+          "10 (annoncé 10, compté 10)",
+          "10",
+          "oui"
+        ],
+        [
+          "BP-731488 (CMD-731488)",
+          "1",
+          "1",
+          "oui"
+        ],
+        [
+          "RET-26-0091",
+          "1",
+          "1",
+          "oui"
+        ],
+        [
+          "DEM-26-0027",
+          "2 (« Quantité : 2 »)",
+          "1",
+          "non"
+        ],
+        [
+          "BP-731530 (CMD-731530)",
+          "3",
+          "3",
+          "oui"
+        ],
+        [
+          "BP-731561 (CMD-731561)",
+          "3",
+          "3",
+          "oui"
+        ],
+        [
+          "BP-731578 (CMD-731578)",
+          "2",
+          "2",
+          "oui"
+        ],
+        [
+          "BP-731590 (CMD-731590)",
+          "2",
+          "2",
+          "oui"
+        ]
+      ],
+      "note": "Une seule ligne diffère. Confirmé : trois lignes de plus, toutes « oui »."
+    },
+    {
+      "etape": 6,
+      "etapeTitre": "Comparer chaque document à son mouvement",
+      "genre": "fait",
+      "texte": "Quel document ne dit pas la même chose que son mouvement ?",
+      "rep": "DEM-26-0027 (le constat de casse)."
+    },
+    {
+      "etape": 6,
+      "etapeTitre": "Comparer chaque document à son mouvement",
+      "genre": "fait",
+      "texte": "Écart entre le document et le mouvement (en nombre d'écouteurs)",
+      "rep": "1 (2 constatés, 1 saisi)."
+    },
+    {
+      "etape": 6,
+      "etapeTitre": "Comparer chaque document à son mouvement",
+      "genre": "tableau",
+      "texte": "Commande | Stock trouvé (bon de préparation) | Stock du système juste avant | Pareil ?",
+      "entetes": [
+        "Commande",
+        "Stock trouvé (bon de préparation)",
+        "Stock du système juste avant",
+        "Pareil ?"
+      ],
+      "contexte": "Le système ne sait que ce qu'on lui a saisi. Un document dit ce qui s'est passé dans l'entrepôt ; le mouvement dit ce qui a été saisi. Les deux doivent dire la même quantité.",
+      "reponses": [
+        [
+          "CMD-731402",
+          "4",
+          "4",
+          "oui"
+        ],
+        [
+          "CMD-731488",
+          "12",
+          "12",
+          "oui"
+        ],
+        [
+          "CMD-731530",
+          "10",
+          "11",
+          "non"
+        ],
+        [
+          "CMD-731561",
+          "7",
+          "8",
+          "non"
+        ],
+        [
+          "CMD-731578",
+          "4",
+          "5",
+          "non"
+        ],
+        [
+          "CMD-731590",
+          "2",
+          "3",
+          "non"
+        ],
+        [
+          "CMD-731602 (annulée)",
+          "0",
+          "1",
+          "non"
+        ]
+      ],
+      "note": "Le « Stock trouvé » est le stock réel vu au rayon. Il décroche d'une unité à partir de CMD-731530, juste après la casse. Confirmé : avant la casse tout est pareil (CMD-731420 10 / 10, CMD-731402 7 / 7, CMD-731488 15 / 15, CMD-731515 14 / 14) ; après, mêmes valeurs que le standard."
+    },
+    {
+      "etape": 6,
+      "etapeTitre": "Comparer chaque document à son mouvement",
+      "genre": "question",
+      "texte": "À partir de quelle commande le « Stock trouvé » ne suit-il plus le stock du système ? Quel mouvement a eu lieu juste avant ?",
+      "rep": "CMD-731530 ; juste avant, il y a eu la casse DEM-26-0027.",
+      "note": "Seconde preuve, indépendante du constat : le rayon a toujours un écouteur de moins que le système après la casse."
+    },
+    {
+      "etape": 6,
+      "etapeTitre": "Comparer chaque document à son mouvement",
+      "genre": "reflexion",
+      "texte": "Comment as-tu su quel document était faux ?",
+      "pistes": [
+        "En comparant ligne par ligne : une seule quantité ne correspondait pas.",
+        "Le constat dit « saisi sur le terminal » : il fallait vérifier la saisie.",
+        "La colonne « Stock trouvé » décroche juste après la casse.",
+        "Valoriser l'élève qui dit avoir d'abord soupçonné le retour client (fausse piste) puis vérifié."
+      ]
+    },
+    {
+      "etape": 7,
       "etapeTitre": "Refaire le calcul à l'envers",
       "genre": "tableau",
       "texte": "Ce que je calcule | Mon calcul | Résultat",
@@ -417,59 +579,49 @@ export const CORRIGE = {
         "Mon calcul",
         "Résultat"
       ],
-      "contexte": "Tu connais le stock d'aujourd'hui et tout ce qui a bougé depuis l'inventaire. Tu peux donc retrouver le stock du jour de l'inventaire en remontant le temps : ce qui est entré depuis, on le retire ; ce qui est sorti depuis, on le remet.",
+      "contexte": "Tu connais le stock d'aujourd'hui et tout ce qui a bougé depuis l'inventaire. Tu peux retrouver le stock du jour de l'inventaire en remontant le temps : ce qui est entré depuis, on le retire ; ce qui est sorti depuis, on le remet.",
       "reponses": [
         [
           "Total des entrées (colonne « Entrée »)",
-          "12 + 1",
-          "13"
+          "10 + 1",
+          "11"
         ],
         [
           "Total des sorties (colonne « Sortie »)",
-          "2 + 1 + 1 + 3 + 2 + 1",
-          "10"
+          "2 + 1 + 1 + 3 + 3 + 2 + 2",
+          "14"
         ],
         [
           "Stock actuel (étape 3)",
-          "27",
-          "27"
+          "",
+          "1"
         ],
         [
           "Stock du dernier inventaire, calculé à l'envers",
-          "27 − 13 + 10",
-          "24"
+          "1 − 11 + 14",
+          "4"
         ],
         [
           "Vérification à l'endroit : inventaire + entrées − sorties",
-          "24 + 13 − 10",
-          "27"
+          "4 + 11 − 14",
+          "1"
         ]
       ],
-      "note": "La ligne « Inventaire » de la fiche doit donc afficher 24, et la ligne suivante se vérifie : 24 − 2 = 22."
-    },
-    {
-      "etape": 6,
-      "etapeTitre": "Refaire le calcul à l'envers",
-      "genre": "reflexion",
-      "texte": "Si ta vérification n'était pas tombée juste, par où aurais-tu commencé à chercher l'erreur ?",
-      "pistes": [
-        "Refaire les totaux, puis vérifier l'ordre des lignes de la fiche, puis chercher un mouvement oublié (ou en trop : celui d'un autre article).",
-        "Contrôler la fiche ligne à ligne grâce à la règle « stock après = ligne du dessus + entrée − sortie » (étape 4).",
-        "Ne pas modifier un résultat « pour que ça tombe juste »."
-      ]
-    },
-    {
-      "etape": 6,
-      "etapeTitre": "Refaire le calcul à l'envers",
-      "genre": "reflexion",
-      "texte": "Au prochain inventaire, le comptage donne 2 articles de moins que le stock du système. Que ferais-tu en premier ?",
-      "pistes": [
-        "Ne pas corriger tout de suite : recompter, puis chercher dans les mouvements ce qui explique les 2 articles manquants (casse non déclarée, retour non enregistré, erreur de préparation).",
-        "Seulement ensuite, si rien ne l'explique, régulariser avec un motif écrit. C'est la démarche de l'inventaire tournant (ENT-2.3)."
-      ]
+      "note": "Confirmé : entrées 6 + 10 + 1 = 17, sorties 3 + 2 + 1 + 3 + 1 + 3 + 3 + 2 + 2 = 20 ; 1 − 17 + 20 = 4. On calcule avec les mouvements saisis : c'est bien le 4 de l'inventaire."
     },
     {
       "etape": 7,
+      "etapeTitre": "Refaire le calcul à l'envers",
+      "genre": "reflexion",
+      "texte": "Si le système avait enregistré la quantité écrite sur le document de l'étape 6, qu'est-ce que ça aurait changé pour la cliente ?",
+      "pistes": [
+        "Le système afficherait 0 (4 + 11 − 15 = 0) au lieu de 1.",
+        "Les écouteurs seraient affichés « en rupture » : le site n'aurait pas vendu la paire de la cliente, sa commande n'aurait pas été annulée.",
+        "Accepter la réponse sans le calcul si l'idée est là : un de moins, donc zéro."
+      ]
+    },
+    {
+      "etape": 8,
       "etapeTitre": "Répondre à Nadia Ferrand",
       "genre": "tableau",
       "texte": "Ligne de Nadia | Ce que j'écris sur cette ligne",
@@ -477,19 +629,19 @@ export const CORRIGE = {
         "Ligne de Nadia",
         "Ce que j'écris sur cette ligne"
       ],
-      "contexte": "Tu as tout ce qu'il faut. Il reste à envoyer à Nadia la réponse complète : six lignes, une information par ligne.",
+      "contexte": "Tu as tout ce qu'il faut. Envoie à Nadia la réponse complète : sept lignes, une information par ligne.",
       "reponses": [
         [
           "Stock actuel :",
-          "27"
+          "1"
         ],
         [
           "Réception :",
-          "REC-26-0415, 12 écouteurs"
+          "REC-26-0415, 10"
         ],
         [
           "Commandes :",
-          "CMD-731402, CMD-731488, CMD-731530, CMD-731561, CMD-731602 (pas CMD-731455, sans écouteurs)"
+          "CMD-731402, CMD-731488, CMD-731530, CMD-731561, CMD-731578, CMD-731590"
         ],
         [
           "Retour :",
@@ -501,30 +653,25 @@ export const CORRIGE = {
         ],
         [
           "Stock au dernier inventaire :",
-          "27 − 13 + 10 = 24"
+          "1 − 11 + 14 = 4"
+        ],
+        [
+          "Ce qui cloche :",
+          "DEM-26-0027 : 2 constatés, 1 saisi, écart 1"
         ]
       ],
-      "note": "Ce que lisent les 5 jalons du suivi : dernier nombre de la ligne « Stock actuel » ; numéro ET quantité sur « Réception », sans citer REC-26-0412 ; toutes les commandes à écouteurs et aucune autre ; RET et DEM sur leurs lignes ; dernier nombre de la ligne « Stock au dernier inventaire » (le calcul reste visible)."
+      "note": "Ce que lisent les six jalons : dernier nombre de « Stock actuel » (1) ; « Réception » : REC-26-0415 et 10, sans REC-26-0412 ; « Commandes » : les six, ni CMD-731455, ni CMD-731545, ni CMD-731602 (annulée) ; RET et DEM sur leurs lignes ; dernier nombre de « Stock au dernier inventaire » (4) ; « Ce qui cloche » : DEM-26-0027, aucun autre document, dernier nombre 1. Confirmé : Réception REC-26-0409 et REC-26-0415, 16 (ou 6 et 10) ; Commandes + CMD-731420 et CMD-731515 ; calcul 1 − 17 + 20 = 4."
     },
     {
-      "etape": 7,
+      "etape": 8,
       "etapeTitre": "Répondre à Nadia Ferrand",
       "genre": "reflexion",
-      "texte": "Le stock du système n'est pas un comptage. Qu'est-ce qui pourrait faire que le stock réel du rayon soit différent du chiffre de l'écran ?",
+      "texte": "Si tu étais à la place de Nadia, que ferais-tu maintenant pour que le système dise de nouveau la vérité ?",
       "pistes": [
-        "Une erreur de saisie, un mouvement non enregistré, une casse non déclarée, un vol, un article rangé au mauvais emplacement.",
-        "Le système ne sait que ce qu'on lui a dit : seul le comptage physique (l'inventaire) dit ce qu'il y a vraiment dans le rayon.",
-        "Accepter toute cause plausible avec une explication."
-      ]
-    },
-    {
-      "etape": 7,
-      "etapeTitre": "Répondre à Nadia Ferrand",
-      "genre": "reflexion",
-      "texte": "Relis ta réponse comme si tu étais Nadia : peut-elle comprendre comment tu as trouvé chaque nombre ? Explique.",
-      "pistes": [
-        "Réponse personnelle : les numéros de documents (REC, CMD, RET, DEM) et le calcul visible permettent de retrouver chaque nombre sans le logiciel.",
-        "Valoriser l'élève qui constate qu'il manque une justification ou qui la complète."
+        "Corriger le stock du système : sortir l'écouteur cassé non saisi (un ajustement de −1, avec le constat comme justificatif).",
+        "Vérifier les autres articles de l'allée : une erreur de saisie peut se répéter (c'est le mot de clôture de Nadia, et la suite de la série).",
+        "Rappeler la règle à l'équipe : saisir la quantité du constat.",
+        "Accepter : prévenir le service client, recontacter la cliente."
       ]
     }
   ]

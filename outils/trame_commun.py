@@ -332,15 +332,21 @@ def entete(logo, titre, encadres, sommaire, nom_logo='LOGO'):
             remplis=[[str(i), e, o] for i, (e, o) in enumerate(sommaire, 1)])
 
 
-def finir(code, titre, nom_fichier, notions, script):
+def finir(code, titre, nom_fichier, notions, script, fichier=None):
     """Écrit le .docx dans contenus/trames/ et le corrigé de la trame dans
     contenus/corriges/<code>-trame.js (le corrigé <code>.js de la séance, calculé par Claude Code
-    depuis les données du quai, n'est pas touché)."""
+    depuis les données du quai, n'est pas touché). `fichier` : un autre nom (Cdiscount : <code>, quand la séance
+    n'a pas de corrigé calculé)."""
     sys.path.insert(0, ICI)
     from corriges_data import ecrire_corrige
     ecrire_corrige(code, titre, nom_fichier, ITEMS, CLES, notions,
-                   os.path.join(RACINE, 'contenus', 'corriges'), script, fichier=code + '-trame')
+                   os.path.join(RACINE, 'contenus', 'corriges'), script, fichier=fichier or (code + '-trame'))
     sortie = os.path.join(RACINE, 'contenus', 'trames', nom_fichier + '.docx')
+    # Espaces insécables dans les guillemets (« Mouvements ») : un guillemet ne reste jamais seul en début de
+    # ligne (04/10/2026, trames Cdiscount).
+    for t in d.element.body.iter(qn('w:t')):
+        if t.text and ('« ' in t.text or ' »' in t.text):
+            t.text = t.text.replace('« ', '«\u00a0').replace(' »', '\u00a0»')
     d.save(sortie)
     print('trame :', sortie)
 
