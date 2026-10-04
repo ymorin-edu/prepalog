@@ -6,7 +6,7 @@
 > Lis docs/briefs/COORDINATION-smoby.md puis implémente le brief docs/briefs/ENT-5.1-smoby-recrutement.md (il faut que les lots 1, 2, 3 et 7 de MOTEUR-2de-S1 soient livrés). Annonce la durée avant de commencer et dis-moi si un point du brief contredit le code.
 > ```
 
-**Statut** : **en attente** de `MOTEUR-documents-formulaire.md` (lots 1 à 3) — le moteur ne savait ni montrer les CV ni faire remplir le tableau de tri (constaté le 04/10/2026) *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
+**Statut** : à valider par Tristan — livré le 04/10/2026 (`pret: true, ouverture: 'prof'`) *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
 **Date du brief** : 04/10/2026
 **Conversation d'origine** : Cowork (Opus) ; fiche projet `claude/prepalog-2de-s1-cadrage.md` (section « Séance A1 »),
 `claude/prepalog-2de-eleve-debut-annee.md` (règles d'écriture). Exemple de CV validé : `docs/briefs/smoby/exemple-cv-A1.html`.
@@ -159,9 +159,36 @@ La séance se lit sans décrocher (3 lignes par bloc), les CV ressemblent à l'e
 
 ## Compte rendu *(rempli par Claude Code à la livraison)*
 
-- **Fichiers créés / modifiés** :
+- **Fichiers créés / modifiés** : `activites/smoby-recrutement.js` (la séance), `contenus/smoby.js` (univers commun des ENT-5.x :
+  identité, charte, Sophie, lexique), `contenus/smoby-ent51.js` (poste, candidats, documents, fiche, phrases, messages, 9 jalons,
+  accueil), `contenus/corriges/ENT-5.1.js` (corrigé calculé), `contenus/trames/logos/smoby.svg` (logo, empreinte `c93a59bf…3b25`
+  vérifiée à la copie) ; `activites/index.js` : une ligne au registre **et la ligne `ENTREPRISES` n° 5 Smoby (lot 7 de
+  `MOTEUR-2de-S1`)** ; tests : 8 cas ENT-5.1 dans `outils/test/smoby.mjs`, et 3 cas du bloc `socle` **allongés** (cinq logos au lieu
+  de quatre, ENT-5.1 au bout de la liste Simulog).
 - **Écarts par rapport au brief** (et pourquoi) :
-- **Décisions prises en route** :
-- **Tests** :
-- **Commits** :
+  - La réponse par phrases arrive dans un **second message de Sophie, déclenché par l'envoi de la fiche** (« j'ai bien reçu ta
+    fiche, écris-moi qui tu retiens… »), au lieu d'être portée par le message d'accueil : une consigne par écran, et l'élève ne
+    peut pas répondre avant d'avoir trié. La suite (« La direction valide Yanis… ») n'arrive qu'après la réponse **par phrases**
+    (une réponse libre au premier message ne la déclenche pas).
+  - `meta.coeur: true` et `meta.domaines: ['D1']` au lieu de `parcours: 'coeur'` (le nom `parcours` est déjà pris : voir
+    `activites/FICHE-SEANCE.md`). Champs lus nulle part pour l'instant.
+  - **Charte : accent rouge Smoby `#E40613`** (décision de Tristan, voir `docs/decisions.md`) au lieu du bleu `#006FA6` proposé par
+    Cowork ; fond papier de Prepalog.
+  - Mot cliquable « fiche de poste » : définition écrite par Claude Code (« Document qui décrit un poste : les missions, le lieu, les
+    horaires, le contrat et le profil recherché. »), à relire.
+- **Décisions prises en route** : la date sans mois du CACES de Thomas (« 2023 ») est lue comme janvier 2023 (cas le moins
+  favorable, valable quand même) ; les lignes « choix » et « contrat » du message ne sont pas notées (déjà jugées dans la fiche),
+  comme le prévoit le §5 ; le dernier envoi du message compte (un élève peut se corriger).
+- **Tests** : bloc `smoby`, 8 cas ENT-5.1 : déclaration et entreprise n° 5 ; attendus calculés = tableau du brief écrit à la main ;
+  inaction = 0 ; parcours juste à l'écran 9 / 9 ; **sabotage de chacun des 9 jalons à l'écran** (8 / 9, le seul jalon visé tombe) ;
+  « Salut ! » et correction ; réponse libre sans effet, message non envoyé. Éprouvés dans l'autre sens : jalon « ton » saboté et
+  validité du CACES passée à 6 ans → les tests tombent. Suite entière verte avant le push.
+- **Commits** : voir `git log` (« ENT-5.1 Smoby : recruter le cariste de Noël »).
 - **Reste ouvert** :
+  - Le menu de l'environnement montre aussi Commandes, Réceptions, Stock, Clients… vides dans une séance RH : **demande au moteur**
+    possible (une séance déclare les écrans qu'elle montre), à décider par Tristan.
+  - **Police Quicksand** de smoby.com non reprise (il faudrait l'ajouter au dépôt, dans `styles/polices/`, avec sa licence) : à
+    décider par Tristan.
+  - Une case oui / non choisie prend le contour de l'accent, donc **rouge** chez Smoby : à regarder à l'écran (rien n'est jugé
+    avant l'envoi, mais un élève peut le lire comme « faux »).
+  - Trame élève : Cowork, après validation à l'écran (§9).

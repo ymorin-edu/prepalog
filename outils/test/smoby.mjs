@@ -776,6 +776,192 @@ await v('Menu : replié sur place (focus gardé, sans redessin), gardé d’un �
   egal((await menu()).replie, false, 'déplié à la réouverture');
 });
 
+// ── ENT-5.1 « recruter le cariste de Noël » (brief `docs/briefs/ENT-5.1-smoby-recrutement.md`) ─────
+// La séance réelle, montée par son activité (`activites/smoby-recrutement.js`). Les attendus sont écrits
+// À LA MAIN ici, d'après le brief (§4, tableau des candidats), jamais relus dans le contenu.
+const T51 = '#s51';
+const Z51 = `${T51} .ent-main`;
+const F51 = `${Z51} .ent-fiche`;
+const monter51 = (o = {}) => pg.evaluate(async (o) => {
+  const act = await import('/activites/smoby-recrutement.js');
+  document.querySelector('#smTest')?.remove();
+  document.querySelector('#s51')?.remove();
+  const hote = document.createElement('div'); hote.id = 's51'; document.body.appendChild(hote);
+  const db = {};
+  window.__51 = { db, suivi: [] };
+  act.rendre(hote, {
+    meta: act.meta,
+    profil: { prenom: 'Lea', nom: 'Test', role: o.role || 'eleve', uid: o.uid || 'u-51' },
+    jeu: { etat: () => db, sauver: () => {} },
+    enregistrer: (r) => { window.__51.suivi.push(JSON.parse(JSON.stringify(r))); }, quitter: () => {}, codeStock: 'ABC',
+    lireScore: async () => null,
+  });
+}, o);
+// L'état des neuf étapes, lu par les jalons de la séance sur la base de l'élève.
+const etapes51 = () => pg.evaluate(async () => {
+  const S = await import('/contenus/smoby-ent51.js');
+  return Object.fromEntries(S.ETAPES.map((e) => [e.id, e.verifier(window.__51.db).status]));
+});
+const dernierScore51 = () => pg.evaluate(() => { const s = window.__51.suivi; return s.length ? [s[s.length - 1].score, s[s.length - 1].max] : null; });
+const nav51 = (vue) => pg.click(`${T51} .ent-nav[data-vue="${vue}"]`);
+const ouvrirMail51 = async (sujet) => {
+  await nav51('mail');
+  await pg.click(`${Z51} [data-dossier="in"]`);
+  await pg.click(`${Z51} .ent-obj:text-is("${sujet}")`);
+};
+// Le tableau juste, écrit à la main d'après le brief : Laura (CACES de mars 2021, périmé), Mehdi (CACES 1A),
+// Thomas (libre le 4 janvier), Sabrina (CDI seulement) ; Yanis coche tout.
+const TRI51 = {
+  yanis: { caces: true, dispo: true, cdd: true },
+  laura: { caces: false, dispo: true, cdd: true },
+  mehdi: { caces: false, dispo: true, cdd: true },
+  thomas: { caces: true, dispo: false, cdd: true },
+  sabrina: { caces: true, dispo: true, cdd: false },
+};
+const PHR51 = {
+  salutation: 'Bonjour Sophie,',
+  choix: 'Je retiens la candidature de Yanis Morel',
+  raison: 'car il a le CACES 3 valide, il est disponible le 9 décembre et il accepte un CDD.',
+  contrat: 'Je propose un CDD saisonnier.',
+  fin: 'Pouvez-vous valider ? Cordialement,',
+};
+// Remplit et envoie la fiche (`tri` : le tableau à cocher ; `candidat`, `contrat`).
+async function envoyerFiche51({ tri = TRI51, candidat = 'yanis', contrat = 'CDD' } = {}) {
+  await pg.click(`${Z51} .ent-lecteur button:has-text("Ouvrir la fiche de sélection")`);
+  await pg.waitForSelector(F51);
+  for (const [l, cols] of Object.entries(tri)) for (const [c, oui] of Object.entries(cols)) {
+    await pg.click(`${F51} [data-ouinon="tri|${l}|${c}|${oui ? 1 : 0}"]`);
+  }
+  await pg.selectOption(`${F51} [data-fiche-champ="candidat"]`, candidat);
+  await pg.check(`${F51} input[data-fiche-champ="contrat"][value="${contrat}"]`);
+  await pg.click(`${F51} [data-fiche-envoyer]`);
+  await pg.waitForSelector(`${F51} [data-fiche-envoyee]`);
+}
+// Répond à Sophie par phrases (`remplace` : les lignes à changer).
+async function repondre51(remplace = {}) {
+  await ouvrirMail51('Ton choix pour le poste de cariste');
+  await pg.click(`${Z51} [data-repondre]`);
+  await pg.waitForSelector(`${Z51} #formPhr:not([hidden])`);
+  for (const [l, t] of Object.entries({ ...PHR51, ...remplace })) await pg.selectOption(`${Z51} [data-phrase="${l}"]`, { label: t });
+  await pg.click(`${Z51} #formPhr button[type="submit"]`);
+}
+const sujets51 = () => pg.evaluate(() => window.__51.db.mails.filter((m) => m.folder === 'in').map((m) => m.subject));
+const NEUF = ['ligne-yanis', 'ligne-laura', 'ligne-mehdi', 'ligne-thomas', 'ligne-sabrina', 'candidat', 'contrat', 'raison', 'ton'];
+const statuts = (ok, ko = []) => Object.fromEntries(NEUF.map((id) => [id, ko.includes(id) ? 'ko' : ok]));
+
+await v('ENT-5.1 : déclaration (code, 2de, AGO-3.1, 9 jalons, livrée fermée aux élèves) et entreprise n° 5 avec son logo', async () => {
+  const r = await pg.evaluate(async () => {
+    const A = await import('/activites/smoby-recrutement.js');
+    const I = await import('/activites/index.js');
+    const C = await import('/core/competences.js');
+    const e = I.ENTREPRISES.find((x) => x.n === 5);
+    const logo = await fetch(e.logo);
+    const m = A.meta;
+    return { m: [m.id, m.code, m.rubrique, m.niveaux, m.competences, m.temps, m.bareme, m.pret, m.ouverture, m.portee, m.immersif],
+      compConnue: JSON.stringify(C).includes('AGO-3.1'), e: [e.nom, logo.status, (await logo.text()).includes('<svg')],
+      inscrite: (await Promise.all(I.ACTIVITES.map((f) => f()))).some((x) => x.meta.id === 'smoby-recrutement') };
+  });
+  egal(r.m, ['smoby-recrutement', 'ENT-5.1', 'simulog', ['2de'], ['AGO-3.1'], 'guidage', 9, true, 'prof', 'eleve', true], 'meta');
+  vrai(r.compConnue, 'AGO-3.1 absente de core/competences.js');
+  egal(r.e, ['Smoby', 200, true], 'entreprise n° 5');
+  vrai(r.inscrite, 'séance absente du registre');
+});
+
+await v('ENT-5.1 : les attendus calculés sont ceux du brief (tableau, Yanis, CDD) et un seul candidat coche tout', async () => {
+  const r = await pg.evaluate(async () => {
+    const S = await import('/contenus/smoby-ent51.js');
+    return { tri: S.TRI_ATTENDU, retenu: S.RETENU.id, contrat: S.POSTE.contrat,
+      complets: Object.entries(S.TRI_ATTENDU).filter(([, l]) => l.caces && l.dispo && l.cdd).map(([id]) => id) };
+  });
+  egal(r.tri, TRI51, 'tableau attendu');
+  egal([r.retenu, r.contrat, r.complets], ['yanis', 'CDD', ['yanis']], 'choix attendu');
+});
+
+await v('ENT-5.1 : à l’ouverture, un seul message (6 pièces jointes, la fiche), aucun jalon vrai : l’inaction vaut 0', async () => {
+  await monter51();
+  egal(await sujets51(), ['Recrutement du cariste de Noël'], 'messages au départ');
+  await ouvrirMail51('Recrutement du cariste de Noël');
+  egal(await pg.$$eval(`${Z51} .ent-pj`, (L) => L.map((b) => b.dataset.pj)), ['poste', 'yanis', 'laura', 'mehdi', 'thomas', 'sabrina'], 'pièces jointes');
+  // Les mots cliquables du message (lexique de la séance) : « fiche de poste » compris.
+  const mots = await pg.$$eval(`${Z51} .ent-lecteur .lex-mot, ${Z51} .ent-lecteur [data-lex]`, (L) => L.map((b) => b.textContent.trim()));
+  vrai(['cariste', 'CDD', 'saisonnier', 'fiche de poste'].every((m) => mots.includes(m)), `mots cliquables : ${mots.join(', ')}`);
+  // La fiche de poste porte le logo de Smoby (fichier du dépôt) et la mention de document reconstitué.
+  await pg.click(`${Z51} .ent-pj[data-pj="poste"]`);
+  const fp = await pg.$eval(`${Z51} .ent-doc`, (d) => ({ logo: d.querySelector('img') && d.querySelector('img').getAttribute('src'),
+    charge: d.querySelector('img') ? d.querySelector('img').naturalWidth > 0 : false, pied: d.textContent.includes('reconstitution, non contractuel') }));
+  egal([fp.logo, fp.pied], ['./contenus/trames/logos/smoby.svg', true], 'fiche de poste');
+  egal(await etapes51(), statuts('attente'), 'étapes à l’ouverture');
+  const s = await dernierScore51();
+  vrai(!s || s[0] === 0, `score sans rien faire : ${JSON.stringify(s)}`);
+});
+
+await v('ENT-5.1 : parcours juste à l’écran → fiche, message de Sophie par phrases, réponse, 9 / 9', async () => {
+  await monter51();
+  await ouvrirMail51('Recrutement du cariste de Noël');
+  await envoyerFiche51();
+  // Fiche envoyée : les lignes jugées, le message pas encore (pas de réponse envoyée).
+  egal(await etapes51(), { ...statuts('ok'), raison: 'attente', ton: 'attente' }, 'après la fiche');
+  egal(await sujets51(), ['Recrutement du cariste de Noël', 'Ton choix pour le poste de cariste'], 'Sophie demande la réponse');
+  await repondre51();
+  egal(await etapes51(), statuts('ok'), 'après la réponse');
+  egal(await dernierScore51(), [9, 9], 'score remonté au suivi');
+  vrai((await sujets51()).includes('RE : Ton choix pour le poste de cariste'), 'la réponse de Sophie (suite de l’histoire) n’arrive pas');
+});
+
+await v('ENT-5.1 : chaque piège fait tomber son jalon, et lui seul (sabotage par jalon, à l’écran)', async () => {
+  // Un tableau avec UNE case fausse sur la ligne d'un candidat → seul son jalon tombe.
+  const flip = (id, col) => ({ ...TRI51, [id]: { ...TRI51[id], [col]: !TRI51[id][col] } });
+  const cas = [
+    ['ligne-yanis', { tri: flip('yanis', 'dispo') }],
+    ['ligne-laura', { tri: flip('laura', 'caces') }],   // Laura cochée « CACES valide » (piège du brief)
+    ['ligne-mehdi', { tri: flip('mehdi', 'caces') }],
+    ['ligne-thomas', { tri: flip('thomas', 'dispo') }],
+    ['ligne-sabrina', { tri: flip('sabrina', 'cdd') }],
+    ['candidat', { candidat: 'sabrina' }],
+    ['contrat', { contrat: 'CDI' }],
+    ['raison', null, { raison: 'car il a le CACES.' }],
+    ['ton', null, { fin: 'Bisous' }],
+  ];
+  for (const [jalon, fiche, phrases] of cas) {
+    await monter51({ uid: 'u-' + jalon });
+    await ouvrirMail51('Recrutement du cariste de Noël');
+    await envoyerFiche51(fiche || {});
+    await repondre51(phrases || {});
+    egal(await etapes51(), statuts('ok', [jalon]), `sabotage de « ${jalon} »`);
+    egal(await dernierScore51(), [8, 9], `score avec « ${jalon} » faux`);
+  }
+});
+
+await v('ENT-5.1 : « Salut ! » fait aussi tomber le ton ; la réponse se corrige (le dernier envoi compte)', async () => {
+  await monter51({ uid: 'u-salut' });
+  await ouvrirMail51('Recrutement du cariste de Noël');
+  await envoyerFiche51();
+  await repondre51({ salutation: 'Salut !' });
+  egal((await etapes51()).ton, 'ko', 'ton avec « Salut ! »');
+  await repondre51();
+  egal(await etapes51(), statuts('ok'), 'après correction');
+  // La suite de l'histoire n'arrive qu'une fois.
+  egal((await sujets51()).filter((s) => s.startsWith('RE :')).length, 1, 'réponse de Sophie en double');
+});
+
+await v('ENT-5.1 : une réponse libre au premier message n’ouvre pas la suite ; message sans envoi = jalons 8 et 9 jamais vrais', async () => {
+  await monter51({ uid: 'u-libre' });
+  await ouvrirMail51('Recrutement du cariste de Noël');
+  await pg.click(`${Z51} [data-repondre]`);
+  await pg.fill(`${Z51} #formRep textarea`, 'Je retiens Yanis, CDD.');
+  await pg.click(`${Z51} #formRep button[type="submit"]`);
+  egal(await sujets51(), ['Recrutement du cariste de Noël'], 'aucun message ne doit arriver');
+  await ouvrirMail51('Recrutement du cariste de Noël');
+  await envoyerFiche51();
+  // Phrases choisies mais pas envoyées.
+  await ouvrirMail51('Ton choix pour le poste de cariste');
+  await pg.click(`${Z51} [data-repondre]`);
+  for (const [l, t] of Object.entries(PHR51)) await pg.selectOption(`${Z51} [data-phrase="${l}"]`, { label: t });
+  const e = await etapes51();
+  egal([e.raison, e.ton], ['attente', 'attente'], 'message non envoyé');
+  egal(await dernierScore51(), [7, 9], 'score sans le message');
+});
+
 await v('Smoby : aucune erreur JavaScript dans le bloc', async () => {
   if (erreursS.length) throw new Error([...new Set(erreursS)].slice(0, 5).join(' | '));
 });

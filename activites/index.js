@@ -51,6 +51,8 @@ export const ACTIVITES = [
   () => import('./picard-ent42.js'),
   () => import('./picard-ent43.js'),
   () => import('./picard-ent44.js'),
+  // Smoby (Moirans-en-Montagne) puis Kuehne+Nagel — ENT-5.x. Scénario S1 de la 2de GATL.
+  () => import('./smoby-recrutement.js'),
 ];
 
 // Pictogrammes des rubriques. Une seule grille pour les dix : trait de 1,6 px, bouts et
@@ -117,6 +119,7 @@ export const ENTREPRISES = [
   { n: 2, nom: 'Cdiscount', metier: 'Entrepôt de Cestas — suivi des stocks', logo: './contenus/trames/logos/cdiscount.png' },
   { n: 3, nom: 'Boost', metier: 'Logistique e-commerce — Nîmes', logo: './contenus/trames/logos/boost.png' },
   { n: 4, nom: 'Picard', metier: 'Entrepôt de surgelés — Sainghin-en-Mélantois', logo: './contenus/trames/logos/picard.svg' },
+  { n: 5, nom: 'Smoby', metier: 'Jouets — plateforme de Moirans-en-Montagne (Jura)', logo: './contenus/trames/logos/smoby.svg' },
 ];
 
 // ------------------------------------------------------------------- l'ordre
