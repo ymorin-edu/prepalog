@@ -6,7 +6,7 @@
 // Lot 2 (04/10/2026) : la réponse par phrases à choisir (`core/phrases.js`). Les phrases justes sont
 // écrites À LA MAIN ici (jamais relues dans le contenu).
 
-export default async function bloc({ v, nav }) {
+export default async function bloc({ v, nav, page }) {
 
 const egal = (a, b, quoi) => { if (JSON.stringify(a) !== JSON.stringify(b)) throw new Error(`${quoi} : ${JSON.stringify(a)} au lieu de ${JSON.stringify(b)}`); };
 const vrai = (c, quoi) => { if (!c) throw new Error(quoi); };
@@ -32,10 +32,10 @@ const monter = (o = {}) => pg.evaluate(async (o) => {
   const moteur = creerEntreprise(E.univers({}));
   window.__s = { db };
   moteur.rendre(hote, {
-    meta: { id: 'essai-2de', code: 'ESSAI', titre: 'Essai 2de', portee: 'eleve', immersif: true, temps: 'guidage' },
+    meta: { id: 'essai-2de', code: 'ESSAI', titre: 'Essai 2de', portee: 'eleve', immersif: true, temps: 'guidage', reinitialisable: true },
     profil: { prenom: o.prenom || 'Lea', nom: 'Test', role: o.role || 'eleve', uid: o.uid || 'u-lea' },
     jeu: { etat: () => db, sauver: () => { if (o.garder) localStorage.setItem(CLE, JSON.stringify(db)); } },
-    enregistrer: () => {}, quitter: () => {}, codeStock: 'ABC',
+    enregistrer: (res) => { window.__s.enreg = JSON.parse(JSON.stringify(res)); }, quitter: () => {}, codeStock: 'ABC',
     lireScore: async () => null, rendreCopie: async () => ({ rendu: Date.now() }),
   });
   document.querySelector('#smTest .ent-nav[data-vue="mail"]').click();
@@ -214,7 +214,7 @@ const corps = () => pg.$eval(`${Z} .ent-lecteur`, (l) => ({
   mots: [...l.querySelectorAll('.lex-mot')].map((b) => [b.textContent, b.dataset.lex]),
   texte: l.textContent.replace(/\s+/g, ' '),
 }));
-const reperage = () => pg.evaluate(() => JSON.parse(JSON.stringify((window.__s.db.reperage || {})['essai-2de'] || null)));
+const reperage = () => pg.evaluate(() => JSON.parse(JSON.stringify((window.__s.db.indicateurs || {})['essai-2de'] || null)));
 const bulleOuverte = () => pg.$$eval(`${Z} .lex-bulle:not([hidden])`, (L) => L.map((b) => b.textContent));
 
 await v('Mots : les mots du lexique deviennent des boutons, un mot absent reste du texte, plus aucun crochet', async () => {
@@ -316,6 +316,119 @@ await v('Mots : pas de bouton dans un bouton, et rien n’est transformé sans l
   egal(r.n, 2, 'mots cliquables (paragraphe + texte ajouté ensuite)');
   egal(r.sans, '<p>Le [[CACES]].</p>', 'sans lexique');
   egal(r.apres, 'Après [[CACES]].', 'après débranchement');
+});
+
+// ── Lot 6 : le repérage pour l'enseignant (temps, aides, premier coup) ───────────────────────────
+const repondre = async (fausse) => {
+  await ouvrirReponse();
+  for (const l of LIGNES) await choisir(l, l === 'raison' && fausse ? 'car il habite le plus près.' : JUSTES[l]);
+  await envoyer();
+};
+
+await v('Repérage : un jalon raté au premier envoi reste « raté du premier coup » même corrigé ; rien avant le premier envoi', async () => {
+  await monter();
+  await ouvrirSophie();
+  await pg.click(`${Z} .lex-mot[data-lex="CACES"]`);
+  // Un geste qui sauve sans rien envoyer : l'étape est « en attente », aucun premier jugement.
+  egal(((await reperage()) || {}).premier, undefined, 'premier jugement avant tout envoi');
+  await repondre(true);
+  egal((await reperage()).premier, { message: 'ko' }, 'après un 1er envoi faux');
+  await repondre(false);
+  egal((await reperage()).premier, { message: 'ko' }, 'après correction');
+  // Le détail remonté (lu par l'enseignant) porte le repérage de la séance.
+  const d = await pg.evaluate(() => window.__s.enreg.detail.indicateurs['essai-2de']);
+  egal([d.premier, d.mots], [{ message: 'ko' }, { CACES: 1 }], 'repérage dans le détail remonté');
+  await monter();
+  await repondre(false);
+  egal((await reperage()).premier, { message: 'ok' }, 'juste au 1er envoi');
+});
+
+await v('Repérage : le temps passé compte l’onglet visible seulement, jamais chez l’enseignant', async () => {
+  await monter();
+  await pg.waitForTimeout(5600);
+  const t1 = ((await reperage()) || {}).temps || 0;
+  vrai(t1 >= 4.5 && t1 <= 7, `temps après 5,6 s visibles : ${t1}`);
+  // Onglet caché : le temps s'arrête.
+  await pg.evaluate(() => Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'hidden' }));
+  await pg.waitForTimeout(5600);
+  const t2 = (await reperage()).temps;
+  await pg.evaluate(() => { delete document.visibilityState; });
+  egal(t2, t1, 'temps pendant que l’onglet est caché');
+  await monter({ role: 'prof' });
+  await pg.waitForTimeout(5600);
+  egal(await reperage(), null, 'repérage chez l’enseignant');
+});
+
+await v('Repérage : « Réinitialiser » efface le travail mais garde le temps, les aides et le premier coup', async () => {
+  await monter();
+  await ouvrirSophie();
+  await pg.click(`${Z} .lex-mot[data-lex="CDD"]`);
+  await repondre(true);
+  pg.once('dialog', (d) => d.accept());
+  await pg.click('#smTest [data-raz]');
+  const r = await pg.evaluate(() => ({ envoyes: window.__s.db.mails.filter((m) => m.folder === 'out').length,
+    rep: window.__s.db.indicateurs['essai-2de'] }));
+  egal(r.envoyes, 0, 'mails envoyés après remise à zéro');
+  egal([r.rep.mots, r.rep.premier], [{ CDD: 1 }, { message: 'ko' }], 'repérage après remise à zéro');
+});
+
+await v('Repérage : l’enseignant voit, par séance d’entreprise, temps, mots, aides et premier coup de chaque élève', async () => {
+  // Le groupe affiché par le suivi (les blocs précédents peuvent en avoir changé) : on le lit à l'écran.
+  // Un bloc précédent a pu quitter le mode enseignant : on y revient (comme le bloc `groupes`).
+  const ouvrirSuivi = async () => {
+    await page.reload();
+    await page.waitForSelector('#btnProfEspace, #btnProf, #btnDeco', { timeout: 8000 });
+    if (!(await page.$('#btnProfEspace'))) {
+      if (!(await page.$('#btnProf'))) { await page.click('#btnDeco'); await page.waitForSelector('#btnProf', { timeout: 8000 }); }
+      await page.click('#btnProf');
+    }
+    await page.waitForSelector('#btnProfEspace', { timeout: 8000 });
+    await page.click('#btnProfEspace');
+    await page.click('[data-ong="suivi"]');
+    await page.waitForSelector('#btnCsvSuivi', { timeout: 6000 });
+  };
+  await ouvrirSuivi();
+  const nomGroupe = (await page.textContent('#btnCsvSuivi >> xpath=ancestor::div[1]//strong')).replace(/^Suivi de /, '').trim();
+  const ids = await page.evaluate(async (nomGroupe) => {
+    const k = Object.keys(localStorage).find((x) => /groupes$/.test(x));
+    const gs = JSON.parse(localStorage.getItem(k));
+    const gid = Object.keys(gs).find((id) => gs[id].nom === nomGroupe);
+    const { B } = await import('/core/backend.js');
+    await B.creerEleves(gid, [{ nom: 'REPERAGE', prenom: 'Test', matricule: 'reperage-test', code: 'x' }]);
+    const el = (await B.elevesDuGroupe(gid)).find((x) => x.nom === 'REPERAGE');
+    const { chargerActivites } = await import('/activites/index.js');
+    const m = (await chargerActivites()).map((x) => x.meta).find((x) => x.portee === 'eleve' && x.immersif && x.bareme && !x.copie);
+    await B.ecrireScore(gid, el.uid, m.id, { score: 2, max: 5, detail: { quai: { reel: 300 }, indicateurs: { [m.id]: {
+      temps: 1500, mots: { CACES: 2, CDD: 1 }, aides: { 'Rappel tableur': 1 }, premier: { a: 'ok', b: 'ko', c: 'ok' } } } } });
+    return { gid, uid: el.uid, aid: m.id };
+  }, nomGroupe);
+  try {
+    await ouvrirSuivi();
+    await page.waitForSelector(`#reperage [data-reperage="${ids.aid}"]`, { timeout: 6000 });
+    const lu = await page.$eval(`#reperage [data-reperage="${ids.aid}"] tr[data-rep-eleve="${ids.uid}"]`, (tr) => ({
+      temps: tr.querySelector('[data-rep="temps"]').textContent.replace(/\s+/g, ' ').trim(),
+      mots: [tr.querySelector('[data-rep="mots"]').textContent, tr.querySelector('[data-rep="mots"]').title],
+      aides: tr.querySelector('[data-rep="aides"]').textContent,
+      premier: [tr.querySelector('[data-rep="premier"]').textContent, tr.querySelector('[data-rep="premier"]').title],
+    }));
+    egal(lu.temps, '25 min (quai : 5 min)', 'temps');
+    egal(lu.mots, ['3', 'CACES (2), CDD (1)'], 'mots');
+    egal(lu.aides, '1', 'aides');
+    egal(lu.premier, ['2 / 3', 'Justes du premier coup : a, c. Ratés au premier jugement : b.'], 'premier coup');
+    // Un élève sans repérage dans le même groupe : un tiret, pas des zéros.
+    const autre = await page.$$eval(`#reperage [data-reperage="${ids.aid}"] tbody tr:not([data-rep-eleve])`, (L) => L.length);
+    vrai(autre > 0, 'les autres élèves du groupe n’apparaissent pas');
+  } finally {
+    await page.evaluate(async ({ gid, uid, aid }) => {
+      const { B } = await import('/core/backend.js');
+      await B.poserNote(gid, uid, aid, null);
+      await B.supprimerEleve(uid);
+    }, ids);
+  }
+  // Plus de données pour cette séance : son encadré disparaît (d'autres blocs ont pu laisser des
+  // indicateurs sur d'autres séances : on ne regarde que la sienne).
+  await ouvrirSuivi();
+  vrai(!(await page.$(`#reperage [data-reperage="${ids.aid}"]`)), 'l’encadré de la séance reste affiché sans aucune donnée');
 });
 
 await v('Smoby : aucune erreur JavaScript dans le bloc', async () => {

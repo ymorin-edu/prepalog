@@ -13,7 +13,7 @@
 // pas de lexique (alerte 13). Dans un bouton, un lien ou une liste, le mot reste du texte (pas de bouton
 // dans un bouton).
 //
-// Chaque ouverture est comptée par séance et par mot : `db.reperage[idSeance].mots[mot]` (lot 6).
+// Chaque ouverture est comptée par séance et par mot : `db.indicateurs[idSeance].mots[mot]` (lot 6).
 
 export const nrmMot = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
 
@@ -23,8 +23,8 @@ const SANS_BOUTON = 'button, a, label, select, option, textarea, input, script, 
 // Compte une aide ouverte (mot cliquable, bouton d'aide…) dans la base, cloisonnée par séance.
 // `sorte` : 'mots' ou 'aides'. Rend la base modifiée (à sauver par l'appelant).
 export function compterAide(db, seance, sorte, cle) {
-  if (!db.reperage) db.reperage = {};
-  const r = db.reperage[seance] || (db.reperage[seance] = {});
+  if (!db.indicateurs) db.indicateurs = {};
+  const r = db.indicateurs[seance] || (db.indicateurs[seance] = {});
   const t = r[sorte] || (r[sorte] = {});
   t[cle] = (t[cle] || 0) + 1;
   return db;

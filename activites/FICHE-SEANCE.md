@@ -53,7 +53,16 @@ par phrases : faire écrire d'abord le destinataire). Essai : `outils/essai-2de.
 ouvre la définition dans une bulle, Échap / clic ailleurs / clic sur la bulle la ferment. Recherche sans
 majuscules ni accents ; un mot absent du lexique s'affiche en texte normal ; dans un bouton, un lien ou une
 liste, le mot reste du texte. Rien n'est transformé sans `lexique`. Chaque ouverture est comptée chez
-l'élève (`db.reperage[idSeance].mots`), pas chez l'enseignant.
+l'élève (`db.indicateurs[idSeance].mots`), pas chez l'enseignant.
+
+**Repérage pour l'enseignant** (04/10/2026, lot 6) : tout environnement d'entreprise range, chez l'élève,
+`db.indicateurs[idSeance] = { temps, mots, aides, premier }` (temps en secondes, onglet visible seulement ;
+mots cliquables et « Rappel tableur » ouverts ; premier jugement de chaque étape, `'ok'` ou `'ko'`). Il
+remonte dans le détail du score et s'affiche dans le **Suivi de classe**, encadré « Repérage des élèves »
+(enseignant seul, sans export ni recommandation). Il survit à « Réinitialiser ». **Règle pour une séance** :
+une étape rend `'attente'` tant que l'élève n'a rien tenté (premier envoi, premier dépôt, première
+validation), sinon le « premier coup » la compte comme ratée. Les « ? » de la feuille (`grille.js`) et les
+amorces ne sont pas comptés (aucune séance de S1 ne s'en sert) : demande au moteur si besoin.
 
 **Commande annulée** (03/10/2026, brief `MOTEUR-statut-annulee`) : une commande semée peut porter
 `annulee: { motif: 'Rupture : emplacement vide à la préparation', at: <timestamp> }`. Elle s'affiche

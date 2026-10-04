@@ -172,6 +172,9 @@ export function creerEntreprise(U) {
     if (db && db.aisance === 'confirme') detail.niveau = 'confirmé';
     // Un jeu tiré par élève (inventaire tiré, ou `tirage: true`) : la graine, pour retrouver son jeu.
     if (INV_TIRE || U.tirage) detail.graine = graineDeBase(db);
+    // Le repérage de l'élève (2de, lot 6) : temps, aides ouvertes, jalons réussis du premier coup,
+    // par séance. Lu par l'enseignant seul, dans le suivi de classe ; jamais montré à l'élève.
+    if (db && db.indicateurs) detail.indicateurs = db.indicateurs;
     // Le quai range aussi ses temps dans le détail : le temps réel passé en guidage sert à caler
     // les seuils de rapidité de l'évaluation (décision de Tristan, 03/10/2026). En évaluation, la
     // note n'est plus le nombre d'étapes : 15 points de réception + 5 de rapidité (`noteQuai`).
@@ -447,7 +450,29 @@ export function creerEntreprise(U) {
         if (estProf || rendue()) return;
         compterAide(db, ctx.meta.id, 'mots', mot); sauver();
       }) : () => {};
-      const sortir = (fn) => { arreterChrono(); debrancherLexique(); deshabiller(); if (fn) fn(); };
+      // Le temps passé dans la séance (repérage, lot 6) : compté en secondes, par écart d'horloge, seulement
+      // quand l'onglet est visible. Aucune écriture de plus : il part avec la prochaine sauvegarde de l'élève,
+      // et au bouton « Quitter ». PAS de sauvegarde à la fermeture de l'onglet (`pagehide`) : elle réécrivait
+      // la base juste après un effacement voulu (page d'essai qui repart de zéro). Au pire, les dernières
+      // secondes avant la fermeture de l'onglet sont perdues.
+      let minuterieTemps = null;
+      if (!estProf) {
+        let dernierTic = Date.now();
+        minuterieTemps = setInterval(() => {
+          if (!hote.isConnected) { clearInterval(minuterieTemps); minuterieTemps = null; return; }
+          const t = Date.now(), dt = Math.min(70, (t - dernierTic) / 1000);
+          dernierTic = t;
+          if (document.visibilityState === 'hidden' || rendue() || (COPIE && !copie.charge)) return;
+          const r = reperageSeance();
+          r.temps = Math.round(((r.temps || 0) + dt) * 10) / 10;
+        }, 5000);
+      }
+      function arreterTemps() {
+        if (!minuterieTemps) return;
+        clearInterval(minuterieTemps); minuterieTemps = null;
+        if (!rendue()) { ctx.jeu.sauver(); remonterEtapes(); }
+      }
+      const sortir = (fn) => { arreterChrono(); arreterTemps(); debrancherLexique(); deshabiller(); if (fn) fn(); };
 
       // L'état de la copie (évaluation). `charge` : on sait si elle est déjà rendue — tant qu'on
       // ne le sait pas, le bouton « Rendre » n'est pas offert. Côté enseignant, rien à rendre.
@@ -481,6 +506,7 @@ export function creerEntreprise(U) {
       function remonterEtapes() {
         if (estProf || !etapes.length) return;
         const { score: ok, max, detail: res } = noterBase(db);
+        noterPremiers(res);
         // Évaluation : rien ne remonte pendant le travail, seule la remise compte.
         if (!COPIE) ctx.enregistrer({ score: ok, max, detail: res });
         // Séance validée : on range une photo du travail, une fois pour toutes. Elle ouvre la
@@ -493,6 +519,30 @@ export function creerEntreprise(U) {
             ctx.jeu.sauver();
           }
         }
+      }
+
+      // Le repérage (2de, lot 6 de MOTEUR-2de-S1) : `db.indicateurs[idSeance]` = { temps (s), mots, aides,
+      // premier }. `premier[idEtape]` = le PREMIER jugement de l'étape ('ok' ou 'ko'), posé une fois :
+      // une étape juste du premier coup est une étape dont le premier jugement était 'ok'. Il suppose
+      // qu'une étape rend 'attente' tant que l'élève n'a rien tenté (premier envoi, premier dépôt,
+      // première validation) — une étape qui rend 'ko' avant tout geste compte comme ratée.
+      // Rien chez l'enseignant ni dans une copie rendue. Il survit à « Réinitialiser ».
+      const SEANCE = ctx.meta.id;
+      const reperageSeance = () => {
+        if (!db.indicateurs) db.indicateurs = {};
+        return db.indicateurs[SEANCE] || (db.indicateurs[SEANCE] = {});
+      };
+      function noterPremiers(res) {
+        if (estProf || rendue()) return;
+        const dejaVu = (db.indicateurs && db.indicateurs[SEANCE] && db.indicateurs[SEANCE].premier) || {};
+        etapes.forEach((e) => {
+          if (dejaVu[e.id]) return;
+          let st = res && res[e.id];
+          if (st === undefined) { try { st = e.verifier(db, U).status; } catch (x) { st = 'attente'; } }
+          if (st !== 'ok' && st !== 'ko') return;
+          const r = reperageSeance();
+          (r.premier || (r.premier = {}))[e.id] = st;
+        });
       }
 
       /* ====================================================== commandes clients */
@@ -641,7 +691,12 @@ export function creerEntreprise(U) {
 
         hote.querySelectorAll('[data-vue]').forEach((b) => b.addEventListener('click', () => aller(b.dataset.vue)));
         hote.querySelector('[data-raz]')?.addEventListener('click', reinitialiser);
-        hote.querySelector('[data-aide-tableur]')?.addEventListener('click', () => { E.aideTableur = !E.aideTableur; dessiner(); });
+        hote.querySelector('[data-aide-tableur]')?.addEventListener('click', () => {
+          E.aideTableur = !E.aideTableur;
+          // Une ouverture du rappel est une aide ouverte (repérage, lot 6) ; la fermeture ne compte pas.
+          if (E.aideTableur && !estProf && !rendue()) { compterAide(db, ctx.meta.id, 'aides', 'Rappel tableur'); sauver(); }
+          dessiner();
+        });
         hote.querySelector('[data-hors-connexion]')?.addEventListener('click', () => {
           VPLAN.activerHorsConnexion(etatTransport('plan'));
           sauver(); dessiner();
@@ -780,7 +835,7 @@ export function creerEntreprise(U) {
         // Ce qui survit à la remise à zéro : les photos de fin de séance (la validation reste
         // acquise) et la reprise demandée par l'enseignant (voir core/app.js), qui sans cela
         // serait rejouée à la prochaine ouverture et effacerait le travail refait depuis.
-        const reprise = db.reprise, points = db.points;
+        const reprise = db.reprise, points = db.points, indicateurs = db.indicateurs;
         const photo = ctx.meta.precedente && points && points[ctx.meta.precedente];
         Object.keys(db).forEach((k) => delete db[k]);
         if (photo) {
@@ -797,6 +852,8 @@ export function creerEntreprise(U) {
         }
         if (reprise) db.reprise = reprise;
         if (points) db.points = points;
+        // Le repérage n'est pas du travail : repartir de zéro n'efface ni le temps ni les aides ouvertes.
+        if (indicateurs) db.indicateurs = indicateurs;
         normaliserBase();
         semerVolet();
         E.vue = 'accueil'; E.mailSel = null; E.no = null;

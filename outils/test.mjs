@@ -24,7 +24,7 @@ const BLOCS = ['socle', 'spartoo', 'groupes', 'dependances', 'transport', 'boost
   'copie',
   'visibilite',
   'amenagements'];
-const PREREQUIS = { spartoo: ['socle'], groupes: ['socle'] };
+const PREREQUIS = { spartoo: ['socle'], groupes: ['socle'], smoby: ['socle'] };
 
 // Un fichier de bloc posé dans `outils/test/` mais oublié dans `BLOCS` ne tournerait jamais,
 // sans que rien ne le dise : la suite resterait verte avec des cas en moins. On refuse de partir.

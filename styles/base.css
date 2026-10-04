@@ -1494,3 +1494,8 @@ a.ent-nav{ text-decoration:none }
 .tour-onglet-texte{ margin:10px 0 4px }
 .tour-suivant{ margin-top:16px; justify-content:flex-end }
 .tour-termine{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px; margin-top:14px }
+
+/* repérage des élèves (suivi de classe, 2de) : un encadré dépliable par séance */
+.reperage{ border:1px solid var(--filet); border-radius:var(--r); padding:8px 12px; margin-top:10px }
+.reperage summary{ cursor:pointer; font-weight:600 }
+.reperage[open] summary{ margin-bottom:8px }

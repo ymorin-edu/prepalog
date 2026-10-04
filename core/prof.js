@@ -611,6 +611,45 @@ export async function rendreEspaceProf(hote, ctx) {
         <span class="note">(${t.tentatives})</span></td>`;
     };
 
+    // Le REPÉRAGE (2de, lot 6 de MOTEUR-2de-S1) : pour chaque séance d'entreprise où des élèves en ont,
+    // le temps passé, les aides ouvertes (mots cliquables, rappels) et les jalons justes au premier
+    // jugement. Rangé par le moteur dans le détail du score (`detail.indicateurs[idSeance]`) ; lecture
+    // seule, sans export, sans recommandation : l'enseignant règle lui-même standard / confirmé.
+    const minutes = (s) => (s >= 60 ? `${Math.round(s / 60)} min` : s > 0 ? '< 1 min' : '—');
+    const somme = (o) => Object.values(o || {}).reduce((a, n) => a + n, 0);
+    const liste = (o) => Object.entries(o || {}).sort((a, b) => b[1] - a[1]).map(([k, n]) => `${k} (${n})`).join(', ');
+    function sectionReperage() {
+      const blocs = notees.filter((m) => m.portee === 'eleve' && m.immersif).map((m) => {
+        const rep = (e) => { const t = par[e.uid]?.[m.id]; return t && t.detail && t.detail.indicateurs && t.detail.indicateurs[m.id]; };
+        if (!eleves.some(rep)) return '';
+        const lignes = eleves.map((e) => {
+          const r = rep(e);
+          if (!r) return `<tr><td>${ech(e.nom)} ${ech(e.prenom)}</td><td class="num note" colspan="4">—</td></tr>`;
+          const reel = par[e.uid][m.id].detail.quai && par[e.uid][m.id].detail.quai.reel;
+          const p = Object.entries(r.premier || {});
+          const ok = p.filter(([, st]) => st === 'ok').map(([k]) => k), ko = p.filter(([, st]) => st !== 'ok').map(([k]) => k);
+          return `<tr data-rep-eleve="${ech(e.uid)}"><td>${ech(e.nom)} ${ech(e.prenom)}</td>
+            <td class="num" data-rep="temps">${minutes(r.temps || 0)}${reel ? `<span class="note"> (quai : ${minutes(reel)})</span>` : ''}</td>
+            <td class="num" data-rep="mots" title="${ech(liste(r.mots))}">${somme(r.mots)}</td>
+            <td class="num" data-rep="aides" title="${ech(liste(r.aides))}">${somme(r.aides)}</td>
+            <td class="num" data-rep="premier" title="${ech(`Justes du premier coup : ${ok.join(', ') || '—'}. Ratés au premier jugement : ${ko.join(', ') || '—'}.`)}">${p.length ? `${ok.length} / ${p.length}` : '—'}</td></tr>`;
+        }).join('');
+        return `<details class="reperage" data-reperage="${ech(m.id)}"><summary>${ech(m.code)} — ${ech(m.titre)}</summary>
+          <div style="overflow:auto"><table>
+            <thead><tr><th>Élève</th><th class="num">Temps passé</th><th class="num">Mots ouverts</th>
+              <th class="num">Autres aides</th><th class="num">Jalons justes du premier coup</th></tr></thead>
+            <tbody>${lignes}</tbody></table></div></details>`;
+      }).join('');
+      if (!blocs) return '';
+      return `<section class="panneau" id="reperage">
+        <strong>Repérage des élèves (vous seul le voyez)</strong>
+        <p class="note">Par séance : le temps passé l'écran ouvert, les mots cliquables et les autres aides ouverts,
+          et les jalons justes au premier jugement (premier envoi, premier dépôt, première validation) sur les
+          jalons déjà jugés. Survolez une case pour le détail. Rien n'est calculé à votre place : vous réglez
+          vous-même le niveau standard / confirmé de chaque élève.</p>
+        ${blocs}</section>`;
+    }
+
     z.innerHTML = `
       <section class="panneau">
         <div class="rangee" style="margin-bottom:12px">
@@ -654,6 +693,7 @@ export async function rendreEspaceProf(hote, ctx) {
           </div>
         </div>`}
       </section>
+      ${sectionReperage()}
       ${seancesBase.length === 0 || eleves.length === 0 ? '' : `
       <section class="panneau" id="porteSortie">
         <strong>Élève bloqué : remettre sa base au début d'une séance</strong>
