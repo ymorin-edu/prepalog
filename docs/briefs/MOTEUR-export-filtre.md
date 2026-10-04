@@ -64,7 +64,8 @@ export. Claude Code relit les trames d'ENT-2.2, 2.4, 2.5, 2.6 et signale tout no
 - `statutExport(db, idExport, idDepot)` pour le jalon « bon export » : **en attente tant que rien n'est déposé**
   (l'élève n'a aucun retour sur son export avant le dépôt, même en guidage), puis juste / faux ;
 - retour sur l'export au dépôt (`retourExportHtml`), au-dessus du retour des formules, selon le niveau ; rien en
-  évaluation ;
+  évaluation. Niveau 2, après l'essai de Tristan (04/10) : les lignes manquantes disent aussi quel critère vérifier,
+  sans la valeur (« Il manque 16 lignes demandées : vérifiez « Période ». ») ;
 - **Rappel tableur** : le moteur ajoute à toute aide déclarée le rappel des guillemets (`=NB.SI(G:G;"Casse")`), de la
   cellule sans guillemets (`=NB.SI(G:G;A1)`, `"A1"` chercherait le texte A1) et du nombre au format texte. ENT-2.5
   (évaluation) n'a pas d'aide : rien ne change pour elle.

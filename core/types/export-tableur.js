@@ -187,8 +187,14 @@ export function comparerExport(exp, db, criteres) {
     exp.filtres.filter((f) => !passe(f, x.o, J, auj)).forEach((f) => { enTrop[f.id] = (enTrop[f.id] || 0) + 1; });
   });
   const manque = U.filter((x) => x.demande).length - vu.filter((x) => x.demande).length;
+  // Les lignes demandées que les critères de l'élève cachent, comptées par critère qui les cache
+  // (retour de Tristan du 04/10 : au niveau 2, dire quel critère vérifier, sans donner la valeur).
+  const manquePar = {};
+  U.filter((x) => x.demande && !vu.includes(x)).forEach((x) => {
+    exp.filtres.filter((f) => !passe(f, x.o, criteres, auj)).forEach((f) => { manquePar[f.id] = (manquePar[f.id] || 0) + 1; });
+  });
   const ecarts = exp.filtres.filter((f) => String(criteres[f.id]) !== String(J[f.id])).map((f) => f.id);
-  return { juste: !nEnTrop && !manque, enTrop, nEnTrop, manque, ecarts };
+  return { juste: !nEnTrop && !manque, enTrop, nEnTrop, manque, manquePar, ecarts };
 }
 // Les options d'un filtre (hors période) : « Tous », puis les valeurs rencontrées, triées.
 export function optionsFiltre(exp, db, f) {
@@ -561,7 +567,10 @@ export function retourExportHtml(exp, exporte) {
   }
   if (niv === 2 || !pb.length) {
     Object.entries(C.enTrop).forEach(([id, n]) => pb.push(`${n} ${pluriel(n, 'ligne')} en trop : leur « ${nom(id)} » ne correspond pas à la demande.`));
-    if (C.manque) pb.push(`Il manque ${C.manque} ${pluriel(C.manque, 'ligne demandée', 'lignes demandées')}.`);
+    if (C.manque) {
+      const ids = Object.keys(C.manquePar || {});
+      pb.push(`Il manque ${C.manque} ${pluriel(C.manque, 'ligne demandée', 'lignes demandées')}${ids.length ? ` : vérifiez ${ids.map((id) => `« ${nom(id)} »`).join(' et ')}` : ''}.`);
+    }
   }
   return `<div class="faux" data-depot-export="ko"><p>✗ Export à refaire (Extractions) :</p><ul>${pb.map((p) => `<li>${ech(p)}</li>`).join('')}</ul></div>`;
 }

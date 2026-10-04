@@ -1894,7 +1894,7 @@ Suite à donner : Réclamation auprès de Gardéo, livraison incomplète`;
       await p.setInputFiles('#fichierTableur', { name: 'faux.xlsx', mimeType: 'application/octet-stream', buffer: classeurA(db, {}) });
       await p.waitForTimeout(400);
       const tf = (await p.textContent(`${Z} [data-depot-export]`)).replace(/\s+/g, ' ');
-      if (!/lignes? en trop : leur « Type de mouvement » ne correspond pas à la demande/.test(tf) || !/Il manque \d+ lignes demandées/.test(tf)) throw new Error('retour export niveau 2 : ' + tf);
+      if (!/lignes? en trop : leur « Type de mouvement » ne correspond pas à la demande/.test(tf) || !/Il manque \d+ lignes demandées : vérifiez « Période »\./.test(tf)) throw new Error('retour export niveau 2 : ' + tf);
       if (/choisissez/.test(tf)) throw new Error('le niveau 2 donne le critère à choisir');
       // Les bons critères : le tableau se filtre, le compte suit, les critères restent dans la base.
       await aller('extractions');

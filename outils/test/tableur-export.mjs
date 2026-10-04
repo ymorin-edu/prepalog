@@ -319,7 +319,7 @@ export default async function bloc({ v, nav, ROOT, baseXlsx }) {
     if (JSON.stringify(G.criteresDepart(EXF(1), db)) !== '{"type":"Ajustement","periode":"30j"}') throw new Error('niveau 1 : critères de la demande');
     if (JSON.stringify(G.criteresDepart(e, db)) !== '{"type":"*","periode":"7j"}') throw new Error('niveau 2 : critères du logiciel');
     const dep = G.comparerExport(e, db, G.criteresDepart(e, db));
-    if (dep.juste || dep.nEnTrop !== 1 || dep.enTrop.type !== 1 || dep.manque !== 2) throw new Error('départ : ' + JSON.stringify(dep));
+    if (dep.juste || dep.nEnTrop !== 1 || dep.enTrop.type !== 1 || dep.manque !== 2 || JSON.stringify(dep.manquePar) !== '{"periode":2}') throw new Error('départ : ' + JSON.stringify(dep));
     const tout = G.comparerExport(e, db, { type: '*', periode: 'tout' });
     if (tout.nEnTrop !== 2 || tout.enTrop.type !== 1 || tout.enTrop.periode !== 1 || tout.manque !== 0) throw new Error('tout : ' + JSON.stringify(tout));
     // Une période personnalisée qui donne les mêmes lignes est juste (on juge les lignes, pas le menu).
@@ -334,7 +334,7 @@ export default async function bloc({ v, nav, ROOT, baseXlsx }) {
       return [e, { juste: false, criteres: c, comparaison: G.comparerExport(e, db, c), justes: G.criteresJustes(e, db) }]; };
     const t = (n) => G.retourExportHtml(...ex(n)).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
     if (!/« Type de mouvement » : choisissez « Ajustement »/.test(t(1)) || !/« Période » : choisissez « 30 derniers jours »/.test(t(1))) throw new Error('niveau 1 : ' + t(1));
-    if (!/1 ligne en trop : leur « Type de mouvement » ne correspond pas à la demande/.test(t(2)) || !/Il manque 2 lignes demandées/.test(t(2)) || /choisissez/.test(t(2))) throw new Error('niveau 2 : ' + t(2));
+    if (!/1 ligne en trop : leur « Type de mouvement » ne correspond pas à la demande/.test(t(2)) || !/Il manque 2 lignes demandées : vérifiez « Période »\./.test(t(2)) || /choisissez/.test(t(2))) throw new Error('niveau 2 : ' + t(2));
     if (!/Relisez-la/.test(t(3)) || /en trop|choisissez/.test(t(3))) throw new Error('niveau 3 : ' + t(3));
     if (t(4).trim() !== '') throw new Error('niveau 4 : ' + t(4));
     const e = EXF(2), c = G.criteresJustes(e, db);
