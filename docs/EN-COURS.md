@@ -7,7 +7,7 @@ est déjà modifié ou inscrit ci-dessous, **elle s'arrête et le dit à Tristan
 
 | Chantier | Fichiers qu'il touche | Depuis |
 |---|---|---|
-| MOTEUR-2de-S1, lot 2 (message par phrases) | `core/types/entreprise.js`, `core/phrases.js`, `styles/base.css`, `outils/essai-2de.*`, `outils/test/smoby.mjs`, `outils/test.mjs`, `activites/FICHE-SEANCE.md` | 04/10/2026 |
+| *(personne d'inscrit)* | | |
 
 Rappel : un seul chantier à la fois dans `core/types/tournee.js`, `core/types/grille.js`,
 `core/types/entreprise.js`, `styles/base.css` et `outils/test/boost.mjs` (voir `docs/briefs/COORDINATION-boost.md`).
