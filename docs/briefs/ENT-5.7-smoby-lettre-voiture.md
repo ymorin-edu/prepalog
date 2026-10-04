@@ -1,9 +1,9 @@
-# Brief de séance — ENT-5.6 Smoby / Kuehne+Nagel, la lettre de voiture et le retard (2de, poste B — agent d'exploitation, guidage)
+# Brief de séance — ENT-5.7 Smoby / Kuehne+Nagel, la lettre de voiture et le retard (2de, poste B — agent d'exploitation, guidage)
 
 > **📋 Phrase à copier-coller dans ccode :**
 >
 > ```
-> Lis docs/briefs/COORDINATION-smoby.md puis implémente le brief docs/briefs/ENT-5.6-smoby-lettre-voiture.md (il faut que les lots 1, 2, 3 et 7 de MOTEUR-2de-S1 soient livrés). Annonce la durée avant de commencer et dis-moi si un point du brief contredit le code.
+> Lis docs/briefs/COORDINATION-smoby.md puis implémente le brief docs/briefs/ENT-5.7-smoby-lettre-voiture.md (il faut que les lots 1, 2, 3 et 7 de MOTEUR-2de-S1 soient livrés). Annonce la durée avant de commencer et dis-moi si un point du brief contredit le code.
 > ```
 
 **Statut** : à implémenter
@@ -15,7 +15,7 @@
 
 | Champ | Valeur |
 |---|---|
-| `code` | ENT-5.6 |
+| `code` | ENT-5.7 |
 | `id` | `smoby-lettre-voiture` |
 | Titre / desc | « Kuehne+Nagel — la lettre de voiture et le retard » / « Agent d'exploitation à l'agence Kuehne+Nagel de Besançon : remplir la lettre de voiture d'un enlèvement chez Smoby, puis gérer un retard et prévenir le client et l'expéditeur. » |
 | Rubrique | logisim, entreprise n° 5 Smoby (le scénario S1 réunit Smoby et K+N) |
@@ -42,7 +42,7 @@
 
 L'élève sait **constituer un document de transport** à partir de plusieurs documents sources, puis **réagir à un incident**
 pendant le transport : calculer la nouvelle heure d'arrivée et **prévenir** le client et l'expéditeur. Dernière séance de S1 ;
-la séance précédente (ENT-5.5) a planifié l'enlèvement E1 (dossier propre : son planning est fourni juste).
+la séance précédente (ENT-5.6) a planifié l'enlèvement E1 (dossier propre : son planning est fourni juste).
 
 ## 4. Déroulé
 
@@ -56,7 +56,7 @@ palettes pour Lyon). / Prépare sa **lettre de voiture** avec l'ordre d'enlèvem
      (39260) ; marchandise « jouets (maisons de jardin, cuisines, porteurs) », **33 palettes Europe**, **poids brut 5 940 kg**
      (construit) ; enlèvement jeudi 10/12 à partir de 06:00.
    - **Fiche client** : Jouets du Rhône (fictif), entrepôt, Corbas (69960) ; **livraison avant 12:00**, quai 4.
-   - **Planning d'ENT-5.5** (extrait) : E1 → **Julie**, **Semi n° 1**, départ 06:00, 4 h de conduite (arrivée prévue 10:00).
+   - **Planning d'ENT-5.6** (extrait) : E1 → **Julie**, **Semi n° 1**, départ 06:00, 4 h de conduite (arrivée prévue 10:00).
 2. **Remplir la lettre de voiture nationale** (formulaire dessiné comme le document) — cases : n° (prérempli), date ;
    **expéditeur** (nom, adresse) ; **destinataire** (nom, adresse) ; **transporteur** (Kuehne+Nagel, agence Route de
    Besançon) ; **lieu et date de chargement** ; **lieu et date de livraison** ; **nature de la marchandise** ; **nombre de
@@ -95,7 +95,7 @@ Valeurs attendues **calculées** depuis les données (heure prévue + retard), j
 ## 6. Contenu
 
 `contenus/smoby-ent56.js` (documents sources, formulaire de la lettre, messages, déclencheur du retard, étapes) ; univers
-`contenus/smoby.js` (K+N agence de Besançon, Julie, Semi n° 1 : **mêmes données que le cas chauffeurs d'ENT-5.5**).
+`contenus/smoby.js` (K+N agence de Besançon, Julie, Semi n° 1 : **mêmes données que le cas chauffeurs d'ENT-5.6**).
 
 ## 7. Demandes au moteur
 
@@ -112,7 +112,7 @@ Bloc `smoby` : parcours juste 8/8 ; expéditeur / destinataire inversés → jal
 ## 9. Supports
 
 Trame courte (lexique, lettre de voiture vierge à remplir sur papier) : Cowork, après validation. Corrigé
-`contenus/corriges/ENT-5.6.js` (lettre attendue, heure, messages), calculé. « Contrôler une lettre remplie avec erreurs » :
+`contenus/corriges/ENT-5.7.js` (lettre attendue, heure, messages), calculé. « Contrôler une lettre remplie avec erreurs » :
 gardé pour **S2** (vue « Document à contrôler »).
 
 ## 10. Critères de validation par Tristan

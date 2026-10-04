@@ -1,9 +1,9 @@
-# Brief de séance — ENT-5.3 Smoby, sécurité au quai et premier déchargement (2de, poste C — cariste, guidage)
+# Brief de séance — ENT-5.4 Smoby, sécurité au quai et premier déchargement (2de, poste C — cariste, guidage)
 
 > **📋 Phrase à copier-coller dans ccode :**
 >
 > ```
-> Lis docs/briefs/COORDINATION-smoby.md puis implémente le brief docs/briefs/ENT-5.3-smoby-reception.md (il faut que les lots 2, 3, 4, 5 et 7 de MOTEUR-2de-S1 soient livrés). Annonce la durée avant de commencer et dis-moi si un point du brief contredit le code.
+> Lis docs/briefs/COORDINATION-smoby.md puis implémente le brief docs/briefs/ENT-5.4-smoby-reception.md (il faut que les lots 2, 3, 4, 5 et 7 de MOTEUR-2de-S1 soient livrés). Annonce la durée avant de commencer et dis-moi si un point du brief contredit le code.
 > ```
 
 **Statut** : à implémenter
@@ -15,7 +15,7 @@
 
 | Champ | Valeur |
 |---|---|
-| `code` | ENT-5.3 |
+| `code` | ENT-5.4 |
 | `id` | `smoby-reception` |
 | Titre / desc | « Smoby — premier déchargement » / « Cariste au quai de réception de la plateforme de Moirans : vérifier la sécurité avant de décharger, décharger au chariot un camion de l'usine d'Arinthod, contrôler 4 palettes de jouets et porter des réserves précises. » |
 | Rubrique | logisim, entreprise n° 5 Smoby |
@@ -120,7 +120,7 @@ tour → réserve manquée ; P4 comptée 36 → faux ; inaction 0/10 ; aucun él
 ## 9. Supports
 
 Trame courte (contexte, lexique, les 6 points de sécurité, le tableau des palettes à remplir) : Cowork, après validation.
-Corrigé `contenus/corriges/ENT-5.3.js` (constat attendu, tableau des palettes, réserves écrites), calculé.
+Corrigé `contenus/corriges/ENT-5.4.js` (constat attendu, tableau des palettes, réserves écrites), calculé.
 
 ## 10. Critères de validation par Tristan
 

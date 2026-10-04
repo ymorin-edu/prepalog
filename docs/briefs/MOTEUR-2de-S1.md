@@ -95,7 +95,7 @@ Besoin (décision 20) : un mot métier souligné dans un texte du contenu ; un c
 
 ## Lot 4 — Vue quai : mode « sans froid » et « cariste au chariot » (Opus, ~2 h)
 
-Besoin : séance C1 (`ENT-5.3`), réception de jouets venant de l'usine Smoby d'Arinthod. Réutiliser la vue quai de Picard
+Besoin : séance C1 (`ENT-5.4`), réception de jouets venant de l'usine Smoby d'Arinthod. Réutiliser la vue quai de Picard
 **en version simple**.
 - `lieu.refrigere: false` (ou un champ `froid: false`, au choix de Claude Code) **éteint** : le ticket de l'enregistreur et son
   QCM, la sonde à cœur, le temps hors froid (jauge, horloge, chambre froide), la note de rapidité, les motifs de température.
@@ -212,7 +212,7 @@ du lycée.
   premierCoup }`, lu sur le **dernier** envoi.
 - **Écarts par rapport au brief** : seulement en **réponse** à un mail reçu (pas de « Nouveau message » déclaré par phrases :
   aucune séance de S1 n'en a besoin si le destinataire écrit d'abord ; à demander si besoin). Lignes imposées (`texte`)
-  ajoutées : les briefs ENT-5.2 à 5.6 en ont (« J'ai reçu les 4 palettes d'Arinthod. »). L'envoi exige un choix à chaque ligne
+  ajoutées : les briefs ENT-5.2 à 5.7 en ont (« J'ai reçu les 4 palettes d'Arinthod. »). L'envoi exige un choix à chaque ligne
   (un message incomplet ne part pas, l'élève garde ses choix).
 - **Questions ouvertes appliquées par défaut** : liste déroulante (plus compacte). Une phrase longue est coupée dans la liste
   fermée sur un écran étroit ; l'aperçu, lui, la montre en entier.
@@ -239,7 +239,7 @@ du lycée.
   bord droit de l'écran.
 - **Comptage** : chaque ouverture (pas les fermetures) dans `db.reperage[idSeance].mots[mot]`, chez l'élève seulement (ni
   enseignant, ni copie rendue).
-- **Question ouverte appliquée par défaut** : marque `[[mot]]`, plus `[[mot|forme affichée]]` pour « calé / cale » (ENT-5.3).
+- **Question ouverte appliquée par défaut** : marque `[[mot]]`, plus `[[mot|forme affichée]]` pour « calé / cale » (ENT-5.4).
 - **Tests** : bloc `smoby` 15 / 15. Sept sabotages (fermeture comptée, écran non observé, bouton dans un bouton, focus non
   rendu, enseignant compté, mot inconnu transformé, bulle non recalée) font chacun tomber au moins un cas. Suite entière
   587 / 587.
