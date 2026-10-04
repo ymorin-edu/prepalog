@@ -7,6 +7,7 @@ est déjà modifié ou inscrit ci-dessous, **elle s'arrête et le dit à Tristan
 
 | Chantier | Fichiers qu'il touche | Depuis |
 |---|---|---|
+| Nouveau logo dans le bandeau (connexion + accueil) | `core/ui.js`, `core/app.js`, `styles/base.css` (bandeau seul), `styles/prepalog-logo-bandeau.svg`, `outils/test/socle.mjs`, `docs/briefs/LOGO-bandeau.md` | 04/10/2026 |
 | *(personne d'inscrit)* | | |
 | Cowork · briefs de la visite ENT-5.3 (non commités) | `docs/briefs/ENT-5.3-smoby-visite.md`, `docs/briefs/MOTEUR-modes-visite.md` (nouveau), `docs/briefs/smoby/visite/` (maquette v2, photos, `LISEZMOI.md`), `docs/briefs/COORDINATION-smoby.md`, `docs/decisions.md` (une ligne) | 04/10/2026 |
 
