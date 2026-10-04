@@ -19,6 +19,7 @@ import { creerTournee } from './tournee.js';
 import { creerInventaire } from './inventaire.js';
 import { creerQuai } from './quai.js';
 import { creerPlanning } from './planning.js';
+import { creerDocuments } from './documents.js';
 import { creerGesteTableur, retourDeTemps } from './export-tableur.js';
 import { graineDeBase, poserGraine } from '../tirage.js';
 import { preparerPhrases, texteCompose } from '../phrases.js';
@@ -137,6 +138,10 @@ export function creerEntreprise(U) {
   // n'existe que si la séance déclare un `planning` (format en tête de `core/types/planning.js`). Son
   // état vit dans `db.plannings[<planning.id>]`. L'aléa arrive par un déclencheur `phasePlanning: 2`.
   const VPL = U.planning ? creerPlanning(U.planning, COPIE ? { copie: true } : {}) : null;
+  // Les DOCUMENTS JOINTS (04/10/2026, brief `docs/briefs/MOTEUR-documents-formulaire.md`, lot 1) : une
+  // fiche de poste, des CV… que l'élève lit sans les saisir. Ils n'existent que si la séance les déclare
+  // (format en tête de `core/types/documents.js`) ; un mail semé les joint par `pieces: [ids]`.
+  const VDOC = U.documents ? creerDocuments(U.documents, U.documentsStyle) : null;
 
   const unite = (n) => ((n > 1 || n === 0) ? VOCAB.unitPl : VOCAB.unit);
   // Catalogue « simple » (02/10/2026, chantier E) : des articles sans couleur ni taille — un
@@ -355,6 +360,9 @@ export function creerEntreprise(U) {
       const E = {
         vue: 'accueil', no: null, ref: null,
         mailSel: null, dossier: 'in', redige: false,
+        // La pièce jointe ouverte dans le lecteur du mail (null : le texte du mail). `vus` : les pièces
+        // ouvertes par l'enseignant, qui ne laisse rien dans le repérage.
+        piece: null, vus: {},
         // Message par phrases en cours de composition, par mail : { idMail: { idLigne: n } }. Hors de
         // la base (rien n'est envoyé tant que l'élève n'a pas cliqué), mais à l'abri d'un redessin.
         brouillon: {},
@@ -439,10 +447,13 @@ export function creerEntreprise(U) {
       function habiller() {
         document.body.classList.add('immersion');
         document.body.setAttribute('style', styleTheme());
+        // La mise en page des documents de la séance (`documentsStyle`), et rien de celle d'avant.
+        if (VDOC) VDOC.poserStyle(); else document.head.querySelectorAll('style[data-ent-documents]').forEach((x) => x.remove());
       }
       function deshabiller() {
         document.body.classList.remove('immersion');
         document.body.removeAttribute('style');
+        document.head.querySelectorAll('style[data-ent-documents]').forEach((x) => x.remove());
       }
       // Les mots cliquables (2de, `core/lexique.js`) : seulement si le contenu déclare un lexique.
       // Chaque ouverture est comptée pour l'enseignant (lot 6), jamais chez l'enseignant lui-même.
@@ -952,11 +963,15 @@ export function creerEntreprise(U) {
             }
             actions += '<button class="btn" data-repondre>Répondre</button>';
           }
-          lecteur = `<div class="ent-lecteur">
+          // Une pièce jointe ouverte prend la place du texte, dans le même lecteur.
+          const piece = VDOC && E.piece && VDOC.pieces(sel.pieces).includes(E.piece) ? E.piece : null;
+          if (piece) lecteur = `<div class="ent-lecteur">${VDOC.visionneuse(piece, sel.pieces)}</div>`;
+          else lecteur = `<div class="ent-lecteur">
             <button class="lien-accueil" data-mail-retour>← Retour</button>
             <h3>${ech(sel.subject)}</h3>
             <p class="note">${E.dossier === 'in' ? 'De : ' + ech(sel.from + ' <' + sel.fromMail + '>') : 'À : ' + ech(sel.to + ' <' + (sel.toMail || '') + '>')} · ${fdt(sel.ts)}</p>
             ${corps}
+            ${VDOC ? VDOC.rangee(sel.pieces, docVu) : ''}
             ${actions ? `<div class="rangee" style="margin-top:14px">${actions}</div>` : ''}
             ${E.dossier === 'in' && sel.phrases ? formPhrases(sel) : `<form id="formRep" hidden style="margin-top:14px">
               <div class="champ"><label for="repT">Votre réponse</label><textarea id="repT" rows="${sel.amorce ? 8 : 6}">${ech(sel.amorce || '')}</textarea></div>
@@ -1016,8 +1031,20 @@ export function creerEntreprise(U) {
         if (!arrive) toast('Réponse envoyée.');
       }
 
+      // Une pièce jointe ouverte (lot 1) : comptée à chaque ouverture, onglet ou précédent / suivant compris.
+      const docVu = (id) => !!(E.vus[id] || (db.indicateurs && db.indicateurs[SEANCE]
+        && db.indicateurs[SEANCE].docs && db.indicateurs[SEANCE].docs[id]));
+      function compterDoc(id) {
+        if (estProf || rendue()) { E.vus[id] = true; return; }
+        compterAide(db, SEANCE, 'docs', id); sauver();
+      }
+      function ouvrirPiece(id) {
+        E.piece = id; compterDoc(id); dessinerVue();
+        hote.querySelector('.ent-lecteur')?.scrollIntoView({ block: 'nearest' });
+      }
+
       function ouvrirMail(id) {
-        E.mailSel = id;
+        E.mailSel = id; E.piece = null;
         const m = db.mails.find((x) => x.id === id);
         if (m && !m.read) { m.read = true; sauver(); }
         dessiner();
@@ -2227,9 +2254,14 @@ export function creerEntreprise(U) {
         }));
         z.querySelectorAll('[data-mail]').forEach((b) => b.addEventListener('click', () => ouvrirMail(+b.dataset.mail)));
         z.querySelectorAll('[data-dossier]').forEach((b) => b.addEventListener('click', () => {
-          E.dossier = b.dataset.dossier; E.mailSel = null; dessiner();
+          E.dossier = b.dataset.dossier; E.mailSel = null; E.piece = null; dessiner();
         }));
-        z.querySelector('[data-mail-retour]')?.addEventListener('click', () => { E.mailSel = null; dessiner(); });
+        z.querySelector('[data-mail-retour]')?.addEventListener('click', () => { E.mailSel = null; E.piece = null; dessiner(); });
+        z.querySelectorAll('[data-pj]').forEach((b) => b.addEventListener('click', () => ouvrirPiece(b.dataset.pj)));
+        z.querySelector('[data-pj-retour]')?.addEventListener('click', () => {
+          const pj = E.piece; E.piece = null; dessinerVue();
+          z.querySelector(`[data-pj="${pj}"]`)?.focus();
+        });
         z.querySelector('[data-nouveau]')?.addEventListener('click', () => { E.redige = true; dessiner(); });
         z.querySelector('[data-retour-quai]')?.addEventListener('click', () => { E.retourQuai = false; aller('quai'); });
         z.querySelector('[data-annuler]')?.addEventListener('click', () => { E.redige = false; dessiner(); });

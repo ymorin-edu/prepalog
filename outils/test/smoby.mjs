@@ -431,6 +431,127 @@ await v('Repérage : l’enseignant voit, par séance d’entreprise, temps, mot
   vrai(!(await page.$(`#reperage [data-reperage="${ids.aid}"]`)), 'l’encadré de la séance reste affiché sans aucune donnée');
 });
 
+// ── Documents joints (brief MOTEUR-documents-formulaire, lot 1, `core/types/documents.js`) ─────────
+const RECRUT = 'Recrutement du cariste de Noël';
+const ouvrirRecrut = async () => {
+  await pg.click(`${Z} [data-dossier="in"]`);
+  await pg.click(`${Z} .ent-obj:text-is("${RECRUT}")`);
+  await pg.waitForSelector(`${Z} .ent-pj-liste`);
+};
+const pj = () => pg.$$eval(`${Z} .ent-pj`, (L) => L.map((b) => [b.dataset.pj, b.classList.contains('vu'), b.textContent.includes('· ouvert')]));
+const visio = () => pg.$eval(`${Z} .ent-visio`, (v) => ({
+  doc: v.dataset.visio, titre: v.querySelector('.ent-visio-titre').textContent,
+  prec: v.querySelector('.ent-visio-nav button:first-child').dataset.pj || null,
+  suiv: v.querySelector('.ent-visio-nav button:last-child').dataset.pj || null,
+  feuille: v.querySelector('.ent-doc').dataset.doc,
+}));
+const docsComptes = async () => ((await reperage()) || {}).docs || null;
+
+await v('Documents : le mail montre ses pièces jointes ; un clic ouvre le document dans le lecteur, précédent / suivant entre les pièces', async () => {
+  await monter();
+  await ouvrirRecrut();
+  egal(await pj(), ['poste', 'yanis', 'laura', 'mehdi', 'thomas', 'sabrina'].map((id) => [id, false, false]), 'pièces avant ouverture');
+  vrai((await pg.textContent(`${Z} .ent-lecteur`)).includes('bienvenue au service RH'), 'le texte du mail n’est pas affiché');
+  await pg.click(`${Z} .ent-pj[data-pj="yanis"]`);
+  egal(await visio(), { doc: 'yanis', titre: 'CV — Yanis Morel', prec: 'poste', suiv: 'laura', feuille: 'yanis' }, 'visionneuse (Yanis)');
+  vrai(!(await pg.textContent(`${Z} .ent-lecteur`)).includes('bienvenue au service RH'), 'le document ne remplace pas le texte du mail');
+  await pg.click(`${Z} .ent-visio-nav button:has-text("Précédent")`);
+  const p = await visio();
+  egal([p.doc, p.prec, p.suiv], ['poste', null, 'yanis'], 'première pièce');
+  vrai(await pg.$eval(`${Z} .ent-visio-nav button:first-child`, (b) => b.disabled), '« Précédent » actif sur la première pièce');
+  await pg.click(`${Z} [data-pj-retour]`);
+  vrai((await pg.textContent(`${Z} .ent-lecteur`)).includes('bienvenue au service RH'), '« Retour au message » ne rend pas le texte');
+  egal(await pj(), [['poste', true, true], ['yanis', true, true], ['laura', false, false], ['mehdi', false, false],
+    ['thomas', false, false], ['sabrina', false, false]], 'mention « ouvert » après lecture');
+  // Le focus revient sur la pièce qu'on lisait (clavier : on reprend où on était).
+  egal(await pg.evaluate(() => document.activeElement && document.activeElement.dataset.pj), 'poste', 'focus au retour');
+  // Sur la dernière pièce, « Suivant » est grisé.
+  await pg.click(`${Z} .ent-pj[data-pj="sabrina"]`);
+  vrai(await pg.$eval(`${Z} .ent-visio-nav button:last-child`, (b) => b.disabled), '« Suivant » actif sur la dernière pièce');
+  // Changer de message referme le document.
+  await pg.click(`${Z} .ent-obj:text-is("Le cariste pour le pic de Noël")`);
+  vrai(!(await pg.$(`${Z} .ent-visio`)), 'le document reste ouvert sur un autre message');
+  vrai(!(await pg.$(`${Z} .ent-pj-liste`)), 'un mail sans pièce jointe en montre');
+  await pg.click(`${Z} .ent-obj:text-is("${RECRUT}")`);
+  vrai(!(await pg.$(`${Z} .ent-visio`)) && (await pg.textContent(`${Z} .ent-lecteur`)).includes('bienvenue au service RH'),
+    'revenir au mail rouvre le document lu avant, pas le texte');
+});
+
+await v('Documents : chaque ouverture est comptée (repérage), jamais chez l’enseignant ; la mention « ouvert » survit à la réouverture', async () => {
+  await pg.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith('essai-2de-base-')).forEach((k) => localStorage.removeItem(k)));
+  await monter({ garder: true, uid: 'u-docs' });
+  await ouvrirRecrut();
+  egal(await docsComptes(), null, 'compte avant toute ouverture');
+  await pg.click(`${Z} .ent-pj[data-pj="laura"]`);
+  await pg.click(`${Z} .ent-visio-nav button:has-text("Suivant")`);      // mehdi
+  await pg.click(`${Z} .ent-visio-nav button:has-text("Précédent")`);    // laura, 2e fois
+  egal(await docsComptes(), { laura: 2, mehdi: 1 }, 'ouvertures comptées');
+  await monter({ garder: true, uid: 'u-docs' });
+  await ouvrirRecrut();
+  egal((await pj()).filter((x) => x[2]).map((x) => x[0]), ['laura', 'mehdi'], '« ouvert » après réouverture');
+  await monter({ role: 'prof' });
+  await ouvrirRecrut();
+  await pg.click(`${Z} .ent-pj[data-pj="yanis"]`);
+  await pg.click(`${Z} [data-pj-retour]`);
+  egal(await reperage(), null, 'repérage chez l’enseignant');
+  egal((await pj()).filter((x) => x[2]).map((x) => x[0]), ['yanis'], '« ouvert » chez l’enseignant (le temps de l’écran)');
+});
+
+await v('Documents : une feuille de papier quel que soit le thème, la mise en page de la séance seulement dans les documents, et retirée à la sortie', async () => {
+  await pg.emulateMedia({ colorScheme: 'dark' });
+  try {
+    await monter();
+    await ouvrirRecrut();
+    await pg.click(`${Z} .ent-pj[data-pj="yanis"]`);
+    const r = await pg.evaluate(() => {
+      const d = document.querySelector('#smTest .ent-doc');
+      const pied = d.querySelector('.pied');
+      const site = document.createElement('div'); site.className = 'cv1'; document.querySelector('#smTest .ent-main').appendChild(site);
+      const hors = getComputedStyle(site).display; site.remove();
+      return { fond: getComputedStyle(d).backgroundColor, encre: getComputedStyle(d).color,
+        filet: getComputedStyle(pied).borderTopColor, grille: getComputedStyle(d.querySelector('.cv1')).display, hors,
+        style: document.head.querySelector('style[data-ent-documents]').textContent.startsWith('.ent-doc{') };
+    });
+    egal(r, { fond: 'rgb(253, 251, 247)', encre: 'rgb(26, 25, 21)', filet: 'rgb(227, 222, 211)', grille: 'grid', hors: 'block', style: true },
+      'feuille en thème sombre');
+  } finally { await pg.emulateMedia({ colorScheme: 'light' }); }
+  await pg.click('#smTest [data-quitter]');
+  egal(await pg.$$eval('style[data-ent-documents]', (L) => L.length), 0, 'mise en page restée après « Quitter »');
+});
+
+await v('Documents : les mots cliquables d’un document sont ceux que le contenu marque, et seulement eux', async () => {
+  await monter();
+  await ouvrirRecrut();
+  await pg.click(`${Z} .ent-pj[data-pj="poste"]`);
+  const r = await pg.$eval(`${Z} .ent-doc`, (d) => ({ mots: [...d.querySelectorAll('.lex-mot')].map((b) => b.dataset.lex),
+    caces: d.textContent.includes('CACES R489'), crochets: d.textContent.includes('[[') }));
+  egal(r, { mots: ['cariste'], caces: true, crochets: false }, 'mots du document');
+  await pg.click(`${Z} .ent-doc .lex-mot`);
+  egal(((await reperage()) || {}).mots, { cariste: 1 }, 'mot ouvert dans un document, compté');
+});
+
+await v('Documents : sans déclaration, ni pièce jointe ni mise en page (un mail qui en nomme n’affiche rien)', async () => {
+  const r = await pg.evaluate(async () => {
+    const { creerEntreprise } = await import('/core/types/entreprise.js');
+    const E = await import('/outils/essai-2de.js');
+    const U = E.univers({});
+    delete U.documents; delete U.documentsStyle;
+    document.querySelector('#smTest')?.remove();
+    const hote = document.createElement('div'); hote.id = 'smTest'; document.body.appendChild(hote);
+    const db = {};
+    creerEntreprise(U).rendre(hote, {
+      meta: { id: 'essai-2de', code: 'ESSAI', titre: 'Essai', portee: 'eleve', immersif: true, temps: 'guidage' },
+      profil: { prenom: 'Lea', nom: 'T', role: 'eleve', uid: 'u-sans' }, jeu: { etat: () => db, sauver: () => {} },
+      enregistrer: () => {}, quitter: () => {}, lireScore: async () => null, rendreCopie: async () => ({}),
+    });
+    hote.querySelector('.ent-nav[data-vue="mail"]').click();
+    [...hote.querySelectorAll('.ent-mitem')].find((b) => b.textContent.includes('Recrutement')).click();
+    return { pj: hote.querySelectorAll('.ent-pj').length, style: document.head.querySelectorAll('style[data-ent-documents]').length,
+      texte: hote.querySelector('.ent-lecteur').textContent.includes('bienvenue') };
+  });
+  egal(r, { pj: 0, style: 0, texte: true }, 'environnement sans documents');
+});
+
 await v('Smoby : aucune erreur JavaScript dans le bloc', async () => {
   if (erreursS.length) throw new Error([...new Set(erreursS)].slice(0, 5).join(' | '));
 });

@@ -6,11 +6,15 @@
 // choix (`phrasesJustes`). Lot 3 : les mots cliquables du mail de Sophie (lexique d'ENT-5.1 ; « fiche
 // de poste » est marqué mais absent du lexique : il doit s'afficher en texte normal).
 //
+// Documents joints (brief `MOTEUR-documents-formulaire.md`, lot 1) : le mail « Recrutement du cariste de
+// Noël » porte la fiche de poste et les cinq CV de la maquette validée (`outils/essai-2de-documents.js`).
+//
 // Les personnes (Sophie Martin, les candidats) sont CONSTRUITES, comme dans le brief de la séance.
 
 import { catalogueSimple } from '../contenus/entreprise-commun.js';
 import { apresMail } from '../core/declencheurs.js';
 import { phrasesJustes } from '../core/phrases.js';
+import { DOCUMENTS, STYLE_DOCUMENTS } from './essai-2de-documents.js';
 
 export const MENTION = 'Page d’essai des briques de la 2de. <b>Construit</b> : Sophie Martin, les candidats et '
   + 'leurs situations (personnes fictives, comme dans le brief ENT-5.1).';
@@ -49,6 +53,15 @@ function voletEssai() {
     id: 'essai-2de',
     semer: (prenom) => ({
       mails: [{
+        folder: 'in', ts: Date.now() - 60000, from: 'Sophie Martin', fromMail: SOPHIE, to: prenom,
+        subject: 'Recrutement du cariste de Noël', kind: 'text',
+        text: `Bonjour ${prenom}, bienvenue au service RH !
+
+Pour le pic de Noël, nous recrutons un [[cariste]] en CDD saisonnier. Tu trouveras ci-dessous la fiche de poste et les cinq CV reçus.
+
+Sophie`,
+        pieces: ['poste', 'yanis', 'laura', 'mehdi', 'thomas', 'sabrina'],
+      }, {
         folder: 'in', ts: Date.now(), from: 'Sophie Martin', fromMail: SOPHIE, to: prenom,
         subject: 'Le cariste pour le pic de Noël', kind: 'text',
         text: `Bonjour ${prenom},\n\nTu as trié les candidatures pour le poste de [[cariste]] (voir la [[fiche de poste]]). Il faut le [[CACES]] 3.\nRéponds-moi : qui retiens-tu, pourquoi, et quel contrat ([[CDD]] [[saisonnier]] ou [[cdi|CDI]]) ?\n\nSophie`,
@@ -90,6 +103,7 @@ export function univers({ temps = 'guidage' } = {}) {
     etapes: ETAPES, exercice: 'Essai des briques de la 2de',
     volet: voletEssai(),
     lexique: LEXIQUE,
+    documents: DOCUMENTS, documentsStyle: STYLE_DOCUMENTS,
     copie: temps === 'evaluation', sansTrame: "Tout à l'écran",
   };
 }

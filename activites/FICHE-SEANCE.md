@@ -55,6 +55,19 @@ majuscules ni accents ; un mot absent du lexique s'affiche en texte normal ; dan
 liste, le mot reste du texte. Rien n'est transformé sans `lexique`. Chaque ouverture est comptée chez
 l'élève (`db.indicateurs[idSeance].mots`), pas chez l'enseignant.
 
+**Documents joints** (04/10/2026, `core/types/documents.js`, brief `MOTEUR-documents-formulaire`, lot 1) :
+`creerEntreprise({ …, documents: [{ id, titre, court, html }], documentsStyle: '<css>' })`, et un mail semé
+porte `pieces: ['poste', 'yanis', …]`. Sous le texte du mail, une pièce jointe par id (`court`, « · ouvert »
+une fois lue) ; un clic ouvre le document dans le lecteur du mail (« ← Retour au message », `titre`,
+« ‹ Précédent / Suivant › » entre les pièces du même mail). Le moteur fournit la **feuille de papier**
+(`.ent-doc` : fond papier, couleurs du thème clair, 560 px) quel que soit le thème ; `documentsStyle` ne
+donne que la mise en page, chaque règle étant imbriquée sous `.ent-doc` (ne touche rien d'autre, retirée à
+la sortie). **Piège** : les classes du site (`.pied`, `.note`, `.panneau`, `.btn`…) s'appliquent aussi dans
+un document — préférer des noms propres, ou remettre à zéro ce qu'on emprunte (`.pied{margin:0}`). La
+mention en pied (« CV fictif — document pédagogique Prepalog ») est écrite par le contenu. Mots cliquables :
+seulement ceux que le document marque `[[…]]`. Ouvertures comptées dans `db.indicateurs[idSeance].docs`.
+Exemple : `outils/essai-2de-documents.js`.
+
 **Repérage pour l'enseignant** (04/10/2026, lot 6) : tout environnement d'entreprise range, chez l'élève,
 `db.indicateurs[idSeance] = { temps, mots, aides, premier }` (temps en secondes, onglet visible seulement ;
 mots cliquables et « Rappel tableur » ouverts ; premier jugement de chaque étape, `'ok'` ou `'ko'`). Il
