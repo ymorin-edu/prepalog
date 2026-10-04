@@ -240,3 +240,12 @@ et des noms de fonctions ; retour selon le temps pédagogique ; fichier jamais s
 - **Reste ouvert** : **le témoin « Excel » n'a probablement jamais été réenregistré par Excel** (contenu identique
   au fichier « à ouvrir dans Excel », seul un octet diffère) : à refaire un jour à la main pour un vrai essai Excel.
   Tristan doit déposer à l'écran un fichier Excel ET un LibreOffice sur `outils/essai-tableur.html`.
+
+## Retours de Tristan du 04/10/2026 (à traiter dans un chantier à part)
+
+1. **« Rappel tableur »** : il doit bien parler du **format « texte »** et de la **cellule A1**, **avec les guillemets**.
+   *Compréhension de Claude Code, à confirmer avant d'écrire* : expliquer qu'un critère texte s'écrit entre guillemets
+   (`=NB.SI(B:B;"Cassé")`), qu'une référence de cellule s'écrit sans guillemets (`=NB.SI(B:B;A1)`), et qu'un nombre
+   « au format texte » n'est pas compté comme un nombre.
+2. **Menu « Fichiers » (l'export)** : il ne respecte pas le geste d'entreprise : **l'élève doit choisir ce qu'il exporte**
+   (aujourd'hui l'export déclaré par la séance part tel quel).
