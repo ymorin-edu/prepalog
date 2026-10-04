@@ -20,7 +20,7 @@
 // (`export default async function bloc({ v, page, nav, … })`), puis l'inscrire dans `BLOCS`.
 
 const BLOCS = ['socle', 'spartoo', 'groupes', 'dependances', 'transport', 'boost', 'quiz', 'carte', 'inventaire',
-  'cdiscount', 'picard', 'tableur-export', 'planning',
+  'cdiscount', 'picard', 'tableur-export', 'planning', 'smoby',
   'copie',
   'visibilite',
   'amenagements'];

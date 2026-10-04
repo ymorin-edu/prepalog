@@ -824,6 +824,13 @@ a.ent-nav{ text-decoration:none }
 .ent-obj{ display:block; margin-top:2px; font-size:13.5px }
 .ent-lecteur, .ent-vide-lect{ border:1px solid var(--filet); border-radius:var(--r); padding:16px 18px; background:var(--panneau) }
 .ent-lecteur h3{ margin:8px 0 2px }
+/* réponse par phrases à choisir (2de, core/phrases.js) : une liste par ligne, l'aperçu en dessous */
+.ent-phrases{ margin-top:14px }
+.ent-phr-lignes{ margin:6px 0 12px; padding-left:24px; display:flex; flex-direction:column; gap:8px }
+.ent-phr-lignes select{ width:100%; max-width:640px }
+.ent-phr-fixe{ padding:6px 0 }
+.ent-phr-apercu{ border:1px dashed var(--filet); border-radius:var(--r); padding:10px 12px; margin:4px 0 12px; line-height:1.6 }
+.ent-phr-trou{ color:var(--encre-douce) }
 
 /* bon de préparation : un document, pas un écran */
 .ent-doc{ border-width:2px }

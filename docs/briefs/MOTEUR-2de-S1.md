@@ -6,7 +6,7 @@
 > Lis docs/briefs/COORDINATION-smoby.md, docs/EN-COURS.md, puis le brief docs/briefs/MOTEUR-2de-S1.md. Commence par le lot 0 (état des lieux, lecture seule) et donne-moi le compte rendu avant d'écrire. Annonce la durée de chaque lot.
 > ```
 
-**Statut** : en cours — lot 0 rendu, lot 1 livré le 04/10/2026 *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
+**Statut** : en cours — lot 0 rendu, lots 1 et 2 livrés le 04/10/2026 *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
 **Date du brief** : 04/10/2026
 **Conversation d'origine** : Cowork (Opus), cadrage de S1 ; fiches projet `claude/prepalog-2de-s1-cadrage.md`,
 `claude/prepalog-2de-eleve-debut-annee.md`, `claude/prepalog-2de-socle-transversal.md`
@@ -196,3 +196,29 @@ du lycée.
   préfixe ignoré) font chacun tomber leur cas ; suite entière 572 / 572.
 - **Commits** : voir `git log` (« 2de : compétences OTM et AGOrA… »).
 - **Reste ouvert** : lots 2 à 7, page d'essai `outils/essai-2de.html`.
+
+### Lot 2 — livré le 04/10/2026
+
+- **Fichiers créés / modifiés** : `core/phrases.js` (nouveau : `preparerPhrases`, `texteCompose`, `phrasesJustes`),
+  `core/types/entreprise.js` (formulaire de réponse par phrases, envoi), `styles/base.css` (6 règles `.ent-phr-*`, aucune
+  variable nouvelle), `outils/essai-2de.html` + `outils/essai-2de.js` (page d'essai, univers « réponse à Sophie » d'ENT-5.1),
+  `outils/test/smoby.mjs` (nouveau bloc, 10 cas), `outils/test.mjs` (**une ligne : `smoby` ajouté à `BLOCS`**),
+  `activites/FICHE-SEANCE.md`.
+- **API** : `phrases: { id, lignes: [{ id, choix, juste } | { id, texte }], melanger }` sur un mail semé (volet ou
+  déclencheur). `choix` / `juste` peuvent être des fonctions de la base, calculées **une fois** à l'entrée du mail dans la base
+  (une base ne garde pas de fonction). `juste` = rang dans l'ordre déclaré. Ordre affiché tiré sur la graine de l'élève
+  (`graine|id|ligne`) et rangé avec le mail (`ordre`), donc stable. Mail envoyé : `kind: 'text'`, texte des lignes, et
+  `phrases: { id, choix: { ligne: rang déclaré } }`. Jalon : `phrasesJustes(db, id)` → `{ envoye, justes, faux, envois,
+  premierCoup }`, lu sur le **dernier** envoi.
+- **Écarts par rapport au brief** : seulement en **réponse** à un mail reçu (pas de « Nouveau message » déclaré par phrases :
+  aucune séance de S1 n'en a besoin si le destinataire écrit d'abord ; à demander si besoin). Lignes imposées (`texte`)
+  ajoutées : les briefs ENT-5.2 à 5.6 en ont (« J'ai reçu les 4 palettes d'Arinthod. »). L'envoi exige un choix à chaque ligne
+  (un message incomplet ne part pas, l'élève garde ses choix).
+- **Questions ouvertes appliquées par défaut** : liste déroulante (plus compacte). Une phrase longue est coupée dans la liste
+  fermée sur un écran étroit ; l'aperçu, lui, la montre en entier.
+- **Tests** : bloc `smoby` 10 / 10 (liste par ligne sans jugement avant l'envoi, aperçu sans redessin et focus gardé, message
+  incomplet refusé, inaction = tout faux, message juste / une ligne fausse / correction au 2e envoi, `apresMail` juste ou faux et
+  une seule fois, ordre stable à la réouverture et différent entre élèves, ligne imposée et valeurs calculées). Six sabotages
+  (tout jugé juste, pas de mélange, choix non gardés, redessin à chaque choix, envoi incomplet accepté, `juste` calculé ignoré)
+  font chacun tomber au moins un cas. Suite entière 582 / 582.
+- **Reste ouvert** : lots 3 à 7.

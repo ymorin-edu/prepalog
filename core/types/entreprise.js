@@ -21,6 +21,7 @@ import { creerQuai } from './quai.js';
 import { creerPlanning } from './planning.js';
 import { creerGesteTableur, retourDeTemps } from './export-tableur.js';
 import { graineDeBase, poserGraine } from '../tirage.js';
+import { preparerPhrases, texteCompose } from '../phrases.js';
 
 /* ------------------------------------------------------------------ formats */
 export const eur = (n) => Number(n).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' });
@@ -350,6 +351,9 @@ export function creerEntreprise(U) {
       const E = {
         vue: 'accueil', no: null, ref: null,
         mailSel: null, dossier: 'in', redige: false,
+        // Message par phrases en cours de composition, par mail : { idMail: { idLigne: n } }. Hors de
+        // la base (rien n'est envoyé tant que l'élève n'a pas cliqué), mais à l'abri d'un redessin.
+        brouillon: {},
         onglet: {}, console: [{ cmd: null, html: '<span class="note">Console. Tapez <b>.help</b> pour la liste des commandes.</span>' }],
         stockOuvert: estProf, erreurCode: '',
         blocage: { lot: '', ref: '', qte: '', motif: '' }, erreurBlocage: '', okBlocage: '',
@@ -448,6 +452,8 @@ export function creerEntreprise(U) {
 
       function ajouterMail(m) {
         m.id = db.seq++; if (m.read === undefined) m.read = false;
+        // Réponse par phrases à choisir (2de) : choix calculés et ordre tiré une fois pour toutes.
+        if (m.phrases) preparerPhrases(m, db, graineDeBase(db) || ctx.profil.uid || prenom);
         db.mails.push(m); return m;
       }
       // Le numéro de lot voyage avec le mouvement. C'est lui qui rend la traçabilité possible :
@@ -887,9 +893,9 @@ export function creerEntreprise(U) {
             <p class="note">${E.dossier === 'in' ? 'De : ' + ech(sel.from + ' <' + sel.fromMail + '>') : 'À : ' + ech(sel.to + ' <' + (sel.toMail || '') + '>')} · ${fdt(sel.ts)}</p>
             ${corps}
             ${actions ? `<div class="rangee" style="margin-top:14px">${actions}</div>` : ''}
-            <form id="formRep" hidden style="margin-top:14px">
+            ${E.dossier === 'in' && sel.phrases ? formPhrases(sel) : `<form id="formRep" hidden style="margin-top:14px">
               <div class="champ"><label for="repT">Votre réponse</label><textarea id="repT" rows="${sel.amorce ? 8 : 6}">${ech(sel.amorce || '')}</textarea></div>
-              <button class="btn btn-p" type="submit">Envoyer</button></form></div>`;
+              <button class="btn btn-p" type="submit">Envoyer</button></form>`}</div>`;
         }
 
         // Venu du quai par son bouton « Messagerie » (ENT-4.3) : un lien pour y revenir.
@@ -903,6 +909,46 @@ export function creerEntreprise(U) {
             </div>
             <div class="ent-boite ${sel ? 'sel' : ''}"><div class="ent-mlist">${items}</div>${lecteur}</div>
           </section>`;
+      }
+
+      // La réponse par phrases à choisir (2de, `core/phrases.js`) : une liste déroulante par ligne, dans
+      // l'ordre tiré pour l'élève, une ligne imposée en clair, l'aperçu du message en dessous. Le
+      // formulaire reste ouvert d'un redessin à l'autre tant qu'un choix est commencé.
+      function formPhrases(sel) {
+        const P = sel.phrases, b = E.brouillon[sel.id] || {};
+        const lignes = P.lignes.map((l, k) => {
+          if (l.texte != null) return `<li class="ent-phr-fixe">${ech(l.texte)}</li>`;
+          const val = Number.isInteger(b[l.id]) ? b[l.id] : '';
+          return `<li><select id="phr-${k}" data-phrase="${ech(l.id)}" aria-label="Ligne ${k + 1} du message">
+              <option value=""${val === '' ? ' selected' : ''}>Choisir une phrase…</option>
+              ${l.ordre.map((i) => `<option value="${i}"${val === i ? ' selected' : ''}>${ech(l.choix[i])}</option>`).join('')}
+            </select></li>`;
+        }).join('');
+        return `<form id="formPhr" ${E.brouillon[sel.id] ? '' : 'hidden'} class="ent-phrases">
+            <p class="note">Choisissez une phrase à chaque ligne.</p>
+            <ol class="ent-phr-lignes">${lignes}</ol>
+            <p class="note">Aperçu du message</p>
+            <div class="ent-phr-apercu" data-phr-apercu>${apercuPhrases(sel)}</div>
+            <button class="btn btn-p" type="submit">Envoyer</button></form>`;
+      }
+      const apercuPhrases = (sel) => texteCompose(sel.phrases, E.brouillon[sel.id] || {}).split('\n')
+        .map((x) => (x ? ech(x) : '<span class="ent-phr-trou">…</span>')).join('<br>');
+
+      function envoyerPhrases() {
+        const m = db.mails.find((x) => x.id === E.mailSel);
+        if (!m || !m.phrases) return;
+        const b = E.brouillon[m.id] || {};
+        const manque = m.phrases.lignes.some((l) => l.texte == null && !Number.isInteger(b[l.id]));
+        if (manque) return toast('Choisissez une phrase à chaque ligne.');
+        const choix = {};
+        m.phrases.lignes.forEach((l) => { if (l.texte == null) choix[l.id] = b[l.id]; });
+        ajouterMail({ folder: 'out', ts: Date.now(), from: prenom, fromMail: '', to: m.from, toMail: m.fromMail,
+          subject: 'RE : ' + m.subject.replace(/^RE : /, ''), kind: 'text', text: texteCompose(m.phrases, choix),
+          phrases: { id: m.phrases.id, choix }, read: true });
+        delete E.brouillon[m.id];
+        const arrive = !rendue() && declencher('Réponse envoyée. ');
+        sauver(); E.dossier = 'out'; E.mailSel = null; dessiner();
+        if (!arrive) toast('Réponse envoyée.');
       }
 
       function ouvrirMail(id) {
@@ -2118,6 +2164,12 @@ export function creerEntreprise(U) {
         z.querySelector('[data-annuler]')?.addEventListener('click', () => { E.redige = false; dessiner(); });
         z.querySelector('[data-envoyer-fou]')?.addEventListener('click', envoyerAuFournisseur);
         z.querySelector('[data-repondre]')?.addEventListener('click', () => {
+          const fp = z.querySelector('#formPhr');
+          if (fp) {
+            fp.hidden = !fp.hidden;
+            if (!fp.hidden) fp.querySelector('select')?.focus();
+            return;
+          }
           const f = z.querySelector('#formRep'); f.hidden = !f.hidden;
           if (f.hidden) return;
           const t = z.querySelector('#repT'); t.focus();
@@ -2125,6 +2177,15 @@ export function creerEntreprise(U) {
           if (t.value) { const i = t.value.indexOf('\n'); const p = i < 0 ? t.value.length : i; t.setSelectionRange(p, p); }
         });
         z.querySelector('#formRep')?.addEventListener('submit', (e) => { e.preventDefault(); envoyerReponse(); });
+        z.querySelector('#formPhr')?.addEventListener('submit', (e) => { e.preventDefault(); envoyerPhrases(); });
+        // Un choix met à jour l'aperçu sur place (pas de redessin : le focus reste dans la liste).
+        z.querySelectorAll('[data-phrase]').forEach((el) => el.addEventListener('change', () => {
+          const sel = db.mails.find((x) => x.id === E.mailSel);
+          if (!sel) return;
+          const b = E.brouillon[sel.id] || (E.brouillon[sel.id] = {});
+          if (el.value === '') delete b[el.dataset.phrase]; else b[el.dataset.phrase] = +el.value;
+          const ap = z.querySelector('[data-phr-apercu]'); if (ap) ap.innerHTML = apercuPhrases(sel);
+        }));
         z.querySelectorAll('[data-enreg-cmd]').forEach((b) => b.addEventListener('click', () => enregistrerCommande(+b.dataset.enregCmd)));
         z.querySelectorAll('[data-ouvrir-cmd]').forEach((b) => b.addEventListener('click', () => aller('commande', { no: b.dataset.ouvrirCmd })));
         z.querySelectorAll('[data-ouvrir-rec]').forEach((b) => b.addEventListener('click', () => aller('reception', { no: b.dataset.ouvrirRec })));

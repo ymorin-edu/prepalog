@@ -35,6 +35,18 @@ lui-même qu'elle est finie), `tous(…)` pour combiner. Jamais de clic de menu,
 minuterie. Si l'élève a pu recevoir ces messages autrement (séance déjà ouverte), `semer` vérifie
 par l'objet qu'ils ne sont pas déjà là.
 
+**Réponse par phrases à choisir** (2de, 04/10/2026, `core/phrases.js`, lot 2 de `MOTEUR-2de-S1`) : un
+mail semé (volet ou déclencheur) peut porter `phrases: { id: 'reponse-sophie', lignes: [{ id: 'salut',
+choix: ['Bonjour Sophie,', 'Salut !'], juste: 0 }, { id: 'recu', texte: 'Ligne imposée.' }, …], melanger:
+true }`. « Répondre » ouvre alors une liste déroulante par ligne (ordre tiré par élève, rangé avec le
+mail) et l'aperçu ; « Envoyer » exige un choix à chaque ligne et range un mail envoyé ordinaire
+(`apresMail` marche, juste ou faux). `choix` et `juste` peuvent être des fonctions `(db) => …`,
+calculées une fois quand le mail entre dans la base ; `juste` = rang dans l'ordre **déclaré**. Pas de
+correction avant l'envoi. Jalon : `phrasesJustes(db, 'reponse-sophie')` → `{ envoye, justes, faux,
+envois, premierCoup }`, lu sur le **dernier** envoi ; rien d'envoyé = toutes les lignes fausses. Une
+ligne `texte` n'est jamais jugée. Seulement en **réponse** à un mail reçu (pas de « Nouveau message »
+par phrases : faire écrire d'abord le destinataire). Essai : `outils/essai-2de.html`.
+
 **Commande annulée** (03/10/2026, brief `MOTEUR-statut-annulee`) : une commande semée peut porter
 `annulee: { motif: 'Rupture : emplacement vide à la préparation', at: <timestamp> }`. Elle s'affiche
 « Annulée » (pastille rouge) partout, **avant tout autre statut** (même préparée ou commencée), ne se
