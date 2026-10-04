@@ -15,8 +15,14 @@ const NOMS = {
   chauf: ['Kuehne+Nagel — essai du planning', 'Agence Route de Besançon (25) — exploitation'],
 };
 
-export function univers({ cas = 'quai', temps = 'guidage', planning = null } = {}) {
-  const P = planning || CAS[cas];
+// `couleurs` : une couleur par famille de cartes, dans l'ordre de déclaration (essai des couleurs libres).
+export function univers({ cas = 'quai', temps = 'guidage', planning = null, couleurs = null } = {}) {
+  let P = planning || CAS[cas];
+  if (couleurs) {
+    const familles = {};
+    Object.entries(P.familles || {}).forEach(([id, f], i) => { familles[id] = Object.assign({}, f, couleurs[i] ? { couleur: couleurs[i], nom: '' } : {}); });
+    P = Object.assign({}, P, { familles });
+  }
   const [nom, sousTitre] = NOMS[cas] || NOMS.quai;
   return {
     ENTREPRISE: { id: 'essai-planning', nom, sousTitre, exercice: "Essai de l'écran Planning" },

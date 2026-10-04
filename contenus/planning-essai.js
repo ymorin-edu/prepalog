@@ -76,7 +76,7 @@ export const QUAI = {
       + 'ou choisissez « Déplacer ». Clavier : Entrée pour prendre une carte (ou ouvrir la bulle sur le planning), Espace pour déplacer '
       + 'un bloc, flèches, Suppr pour retirer, Échap pour fermer.',
   },
-  familles: { semi: { teinte: 'a', legende: 'semi-remorque' }, porteur: { teinte: 'b', legende: 'porteur' } },
+  familles: { semi: { couleur: '#f0be00', nom: 'jaune', legende: 'semi-remorque' }, porteur: { couleur: '#8b5cf6', nom: 'violet', legende: 'porteur' } },
   regles: [
     { id: 'quaiUnique', type: 'unAlaFois', sur: 'ligne',
       message: (a, b, q) => `${q.nom} : les camions ${a.id} et ${b.id} sont sur le quai en même temps.` },
@@ -172,7 +172,7 @@ export const PERSO = {
     legende: 'Violet : absence imposée · jaune : congé demandé. Glissez une carte sur le planning (elle se pose sur la ligne de la personne, au jour visé), '
       + 'ou cliquez-la puis cliquez le jour. Clavier : Entrée pour la prendre, flèches gauche/droite, Suppr pour la retirer.',
   },
-  familles: { impose: { teinte: 'b', legende: 'absence imposée' }, conge: { teinte: 'a', legende: 'congé demandé' } },
+  familles: { impose: { couleur: '#8b5cf6', nom: 'violet', legende: 'absence imposée' }, conge: { couleur: '#f0be00', nom: 'jaune', legende: 'congé demandé' } },
   compteurs: [
     { lib: 'Présents', valeur: 'presents', regle: 'effectif' },
     { lib: 'Besoin', valeur: 'besoin', regle: 'effectif' },
@@ -274,7 +274,7 @@ export const CHAUF = {
       + '« Déplacer ». Clavier : Entrée pour prendre une carte (ou ouvrir la bulle sur le planning), Espace pour déplacer un bloc, flèches, Suppr '
       + 'pour retirer, Échap pour fermer.',
   },
-  familles: { semi: { teinte: 'a', legende: 'semi-remorque' }, porteur: { teinte: 'b', legende: 'porteur' } },
+  familles: { semi: { couleur: '#f0be00', nom: 'jaune', legende: 'semi-remorque' }, porteur: { couleur: '#8b5cf6', nom: 'violet', legende: 'porteur' } },
   regles: [
     { id: 'chauffeurUnique', type: 'unAlaFois', sur: 'ligne',
       message: (a, b, l) => `${l.nom} a deux choses en même temps (${a.pause ? 'pause' : a.id} et ${b.pause ? 'pause' : b.id}).` },

@@ -568,6 +568,76 @@ await v('Planning (souris, glisser-déposer) : carte sur une case, bloc pris par
   egal((await etat(pg, 'quai')).place.B, undefined, 'bloc ramené dans les cartes : retiré');
 });
 
+/* =========================================================== agrandir, couleurs (04/10/2026) */
+await v('Planning : « Agrandir » replie le menu et les consignes, la journée du quai tient sans défiler ; retenu au rechargement ; les autres écrans gardent leur menu', async () => {
+  await pg.evaluate(() => localStorage.removeItem('essai-planning-base'));
+  await monter(pg, { cas: 'quai', garder: true });
+  const zone = () => pg.$eval(`${Z} .pl-zone`, (z) => [z.clientWidth, z.scrollWidth]);
+  const [avant] = await zone();
+  await pg.click(`${Z} [data-pl="agrandir"]`);
+  vrai(await pg.$eval('#plTest .ent-shell', (s) => s.classList.contains('pl-agrandi')), 'coque pas agrandie');
+  egal(await pg.$eval('#plTest .ent-side', (s) => getComputedStyle(s).display), 'none', 'menu de l’environnement');
+  vrai(!(await present(pg, '.pl-gauche')), 'consignes encore là');
+  const [apres, total] = await zone();
+  vrai(apres > avant + 200, `la grille n'a pas gagné de place (${avant} → ${apres})`);
+  vrai(total <= apres, `la journée du quai défile encore (${total} > ${apres})`);
+  egal(await texte(pg, `${Z} [data-pl="agrandir"]`), '⤡ Réduire le planning', 'libellé');
+  await pg.click(`${Z} [data-pl="consignes"]`);
+  vrai(await present(pg, '.pl-gauche'), 'consignes pas rouvertes');
+  egal(await pg.$eval('#plTest .ent-side', (s) => getComputedStyle(s).display), 'none', 'menu revenu avec les consignes');
+  egal((await etat(pg, 'quai')).agrandi, true, 'choix rangé');
+  // Après l'envoi, consignes repliées : le message de l'aléa reste en tête de la colonne de droite.
+  await pg.click(`${Z} [data-pl="consignes"]`);
+  await envoyer(pg);
+  vrai(await present(pg, '.pl-droite [data-pl-message]'), 'message de l’aléa caché');
+  await monter(pg, { cas: 'quai', garder: true });
+  vrai(await pg.$eval('#plTest .ent-shell', (s) => s.classList.contains('pl-agrandi')), 'pas retenu au rechargement');
+  // Un autre écran (ici par le menu, cliqué en script : il est replié) retrouve son menu.
+  await pg.evaluate(() => document.querySelector('#plTest .ent-nav[data-vue="mail"]').click());
+  vrai(!(await pg.$eval('#plTest .ent-shell', (s) => s.classList.contains('pl-agrandi'))), 'menu encore replié sur la messagerie');
+  await pg.evaluate(() => document.querySelector('#plTest .ent-nav[data-vue="planning"]').click());
+  await pg.click(`${Z} [data-pl="agrandir"]`);
+  egal(await pg.$eval('#plTest .ent-side', (s) => getComputedStyle(s).display) !== 'none', true, '« Réduire » ne rend pas le menu');
+  await pg.evaluate(() => localStorage.removeItem('essai-planning-base'));
+});
+
+await v('Planning : couleurs libres — posées sur les cartes et les blocs, refusées si illisibles, trop proches, vertes, bleues ou rouges', async () => {
+  await monter(pg, { cas: 'quai' });
+  await poser(pg, 'A', 'Q1', 0, 'lea');
+  const fonds = await pg.evaluate(() => {
+    const c = document.querySelector('#plTest [data-pl-id="A"][data-pl-vue="b"]'), b = document.querySelector('#plTest [data-pl-id="B"][data-pl-vue="b"]');
+    const bl = document.querySelector('#plTest [data-pl-id="A"][data-pl-vue="g"]');
+    return [getComputedStyle(b).backgroundColor, getComputedStyle(bl).backgroundColor, getComputedStyle(bl).borderLeftColor, c.style.getPropertyValue('--pl-c')];
+  });
+  // Thème clair : la couleur déclarée (jaune #f0be00, violet #8b5cf6) à 30 % sur le panneau.
+  egal(fonds, ['rgba(139, 92, 246, 0.3)', 'rgba(240, 190, 0, 0.3)', 'rgb(240, 190, 0)', '240,190,0'], 'couleurs posées');
+  vrai((await texte(pg, `${Z} [data-pl-legende-couleurs]`)).includes('jaune : semi-remorque · violet : porteur'), 'légende des couleurs');
+  const r = await pg.evaluate(async () => {
+    const { verifierCouleurs, creerPlanning } = await import('/core/types/planning.js');
+    const C = await import('/contenus/planning-essai.js');
+    const un = (c) => verifierCouleurs({ x: { couleur: c } });
+    let refus = '';
+    try { creerPlanning(Object.assign({}, C.QUAI, { familles: { semi: { couleur: '#1c7ed6' }, porteur: { couleur: '#8b5cf6' } } })); } catch (e) { refus = e.message; }
+    return {
+      bons: ['#f0be00', '#8b5cf6', '#f08c00', '#e64980', '#c8a46e', '#868e96'].map((c) => un(c).length),
+      vert: un('#12b886').join(' '), bleu: un('#1c7ed6').join(' '), rouge: un('#e03131').join(' '), noir: un('#111111').join(' '),
+      pasCouleur: un('jaune').join(' '),
+      proches: verifierCouleurs({ a: { couleur: '#f0be00' }, b: { couleur: '#c9a227' } }).join(' '),
+      raccourcis: verifierCouleurs({ a: { teinte: 'a' }, b: { teinte: 'b' } }).length,
+      refus,
+    };
+  });
+  egal(r.bons, [0, 0, 0, 0, 0, 0], 'couleurs lisibles acceptées');
+  vrai(r.vert.includes('verte'), `vert : ${r.vert}`);
+  vrai(r.bleu.includes('bleue'), `bleu : ${r.bleu}`);
+  vrai(r.rouge.includes('rouge, couleur réservée'), `rouge : ${r.rouge}`);
+  vrai(r.noir.includes('illisible en thème clair'), `noir : ${r.noir}`);
+  vrai(r.pasCouleur.includes("n'est pas une couleur"), `« jaune » : ${r.pasCouleur}`);
+  vrai(r.proches.includes('trop proches'), `proches : ${r.proches}`);
+  egal(r.raccourcis, 0, 'raccourcis jaune / violet');
+  vrai(r.refus.includes('planning essai-quais') && r.refus.includes('bleue'), `séance avec une couleur refusée : ${r.refus}`);
+});
+
 await v('Planning : 56 colonnes (chauffeurs) — la grille défile dans sa zone, jamais la page', async () => {
   await monter(pg, { cas: 'chauf' });
   const r = await pg.evaluate(() => {

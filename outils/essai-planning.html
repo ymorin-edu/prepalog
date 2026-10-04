@@ -17,6 +17,7 @@
   .essai-reglages{ background:#fff7d6; border-bottom:1px solid #e8d48a; padding:8px 16px; font:14px/1.5 sans-serif; color:#3b3200 }
   .essai-reglages label{ display:inline-block; margin:2px 16px 2px 0; white-space:nowrap; font-weight:400; color:#3b3200 }
   .essai-reglages select{ width:auto; display:inline-block; padding:2px 4px }
+  .essai-reglages input[type=color]{ width:42px; height:26px; padding:0; vertical-align:middle; display:inline-block }
   .essai-note{ background:#fff7d6; border:1px solid #e8d48a; color:#3b3200; padding:8px 16px; font:14px/1.5 sans-serif }
   .essai-mention{ font:12.5px/1.5 sans-serif; color:#3b3200; background:#fffbea; padding:4px 16px; border-bottom:1px solid #e8d48a }
 </style>
@@ -27,6 +28,8 @@
   <label>Cas <select name="cas"><option value="quai">Rendez-vous de quai (heures)</option><option value="perso">Absences du personnel (jours)</option><option value="chauf">Chauffeurs et camions (heures)</option></select></label>
   <label>Temps <select name="temps"><option value="guidage">guidage</option><option value="entrainement">entraînement</option><option value="evaluation">évaluation (copie rendue)</option></select></label>
   <label>Voir comme <select name="role"><option value="eleve">élève</option><option value="prof">enseignant</option></select></label>
+  <label>Couleurs <input type="color" name="c1" value="#f0be00"> <input type="color" name="c2" value="#8b5cf6"></label>
+  <button type="button" id="couleursDefaut">Couleurs d'origine</button>
 </form>
 <div class="essai-mention" id="mention"></div>
 <div id="essaiNote" class="essai-note" hidden></div>
@@ -42,11 +45,21 @@ const boite = document.getElementById('essaiNote');
 function monter() {
   const f = new FormData(form);
   const temps = f.get('temps');
-  const moteur = creerEntreprise(univers({ cas: f.get('cas'), temps }));
-  const db = {};
-  boite.hidden = true;
   const hote = document.getElementById('hote');
   const neuf = hote.cloneNode(false); hote.replaceWith(neuf);
+  boite.hidden = true;
+  // Dans le cas personnel, la 1re famille est « absence imposée » (violet) et la 2e « congé » (jaune).
+  const cas = f.get('cas');
+  const couleurs = cas === 'perso' ? [f.get('c2'), f.get('c1')] : [f.get('c1'), f.get('c2')];
+  let moteur;
+  try { moteur = creerEntreprise(univers({ cas, temps, couleurs })); }
+  catch (e) {
+    // Une couleur refusée par le moteur : la séance ne s'ouvrirait pas. On dit pourquoi.
+    boite.hidden = false;
+    boite.innerHTML = `<b>Couleur refusée</b> (une séance ainsi déclarée ne s'ouvrirait pas) :<br>${e.message.replace(/^planning [^:]+ : /, '').replace(/</g, '&lt;')}`;
+    return;
+  }
+  const db = {};
   moteur.rendre(neuf, {
     meta: { id: 'essai-planning', code: 'ESSAI', titre: 'Essai du planning', portee: 'eleve', immersif: true, temps, copie: temps === 'evaluation' },
     profil: { prenom: 'Essai', nom: 'Planning', role: f.get('role') },
@@ -66,6 +79,7 @@ function monter() {
   document.querySelector('.ent-nav[data-vue="planning"]')?.click();
 }
 form.addEventListener('change', monter);
+document.getElementById('couleursDefaut').addEventListener('click', () => { form.c1.value = '#f0be00'; form.c2.value = '#8b5cf6'; monter(); });
 monter();
 </script>
 </body>

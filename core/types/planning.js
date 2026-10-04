@@ -398,6 +398,8 @@ function compiler(P) {
   (P.jalons || []).forEach((j) => (j.regles || []).forEach((id) => {
     if (!ids.has(id)) throw new Error(`planning ${P.id} : le jalon « ${j.id} » cite la règle « ${id} », qui n'existe pas.`);
   }));
+  const pbCouleurs = verifierCouleurs(P.familles);
+  if (pbCouleurs.length) throw new Error(`planning ${P.id} : ${pbCouleurs.join(' ')}`);
   const E = echelleDe(P);
   const M = { P, E, D: { 1: donnees(P, E, 1), 2: donnees(P, E, 2) } };
   M.lire = (place, phase) => analyser(P, E, M.D[phase >= 2 && P.alea ? 2 : 1], place, null);
@@ -452,8 +454,70 @@ export function notePlanning(db, P) {
 }
 
 /* ======================================================================= vue */
-const TEINTES = { a: 'pl-a', b: 'pl-b', pause: 'pl-pause' };
-const NOMS_TEINTES = { a: 'jaune', b: 'violet' };
+/* ================================================================== couleurs */
+// Les couleurs des familles sont LIBRES, déclarées par la séance (décision de Tristan, 04/10/2026),
+// et sans lien avec la charte de l'entreprise : `familles: { semi: { couleur: '#f0be00', nom: 'jaune',
+// legende: 'semi-remorque' } }`. La couleur sert de trait ; le fond est cette couleur TRANSLUCIDE posée
+// sur le panneau (opacité `--pl-alpha` : 0,30 en thème clair, 0,16 en sombre, dans styles/planning.css).
+// Le moteur REFUSE une couleur qui rendrait le texte illisible (contraste < 4,5 dans un des deux
+// thèmes), qui serait trop proche d'une autre famille du même planning, ou qui est verte (« juste »),
+// bleue (le client, sur les vues de transport) ou rouge (« faux ») : la séance ne se charge pas, et la
+// suite de tests le voit avant tout envoi. `teinte: 'a'` / `'b'` reste un raccourci (jaune / violet).
+const RACCOURCIS = { a: { couleur: '#f0be00', nom: 'jaune' }, b: { couleur: '#8b5cf6', nom: 'violet' } };
+const COULEUR_DEFAUT = '#b8a582';
+// Ce qui s'écrit sur les cartes et les blocs, par thème : à garder égal à styles/planning.css et base.css.
+export const FONDS_PLANNING = {
+  clair: { panneau: '#fdfbf7', alpha: 0.30, textes: { encre: '#1a1915', 'encre douce': '#555047', ambre: '#7d4e07', rouge: '#9d2727' } },
+  sombre: { panneau: '#1a222b', alpha: 0.16, textes: { encre: '#e4eaf0', 'encre douce': '#9aabbb', ambre: '#f0c070', rouge: '#ff8f8a' } },
+};
+const rgbDe = (h) => {
+  let x = String(h || '').trim().replace(/^#/, '');
+  if (/^[0-9a-f]{3}$/i.test(x)) x = x.split('').map((c) => c + c).join('');
+  return /^[0-9a-f]{6}$/i.test(x) ? x.match(/../g).map((v) => parseInt(v, 16)) : null;
+};
+const lumiere = (rgb) => {
+  const l = (c) => { c /= 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; };
+  return 0.2126 * l(rgb[0]) + 0.7152 * l(rgb[1]) + 0.0722 * l(rgb[2]);
+};
+export const contraste = (a, b) => { const x = lumiere(a), y = lumiere(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+const teinteDe = (rgb) => {
+  const [r, g, b] = rgb.map((v) => v / 255), mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
+  const l = (mx + mn) / 2, sat = d === 0 ? 0 : d / (1 - Math.abs(2 * l - 1));
+  let h = 0;
+  if (d) h = mx === r ? 60 * (((g - b) / d) % 6) : mx === g ? 60 * ((b - r) / d + 2) : 60 * ((r - g) / d + 4);
+  return { h: (h + 360) % 360, sat };
+};
+const familleDe = (f) => Object.assign({}, (f && RACCOURCIS[f.teinte]) || {}, f || {});
+
+// Les problèmes d'un jeu de familles, en clair (vide = tout va bien). Exportée pour les tests.
+export function verifierCouleurs(familles) {
+  const out = [], vus = [];
+  Object.entries(familles || {}).forEach(([id, f0]) => {
+    const f = familleDe(f0);
+    if (!f.couleur) return;
+    const rgb = rgbDe(f.couleur);
+    if (!rgb) { out.push(`famille « ${id} » : « ${f.couleur} » n'est pas une couleur (écrire #rrggbb).`); return; }
+    const { h, sat } = teinteDe(rgb);
+    if (sat >= 0.25) {
+      if (h < 15 || h >= 340) out.push(`famille « ${id} » : ${f.couleur} est rouge, couleur réservée à « faux ».`);
+      else if (h >= 75 && h < 170) out.push(`famille « ${id} » : ${f.couleur} est verte, couleur réservée à « juste ».`);
+      else if (h >= 180 && h < 250) out.push(`famille « ${id} » : ${f.couleur} est bleue, couleur réservée au client sur les vues de transport.`);
+    }
+    Object.entries(FONDS_PLANNING).forEach(([theme, T]) => {
+      const pan = rgbDe(T.panneau);
+      const fond = rgb.map((c, i) => T.alpha * c + (1 - T.alpha) * pan[i]);
+      Object.entries(T.textes).forEach(([nom, t]) => {
+        const c = contraste(rgbDe(t), fond);
+        if (c < 4.5) out.push(`famille « ${id} » : avec ${f.couleur}, le texte ${nom} devient illisible en thème ${theme} (contraste ${(Math.floor(c * 100) / 100).toFixed(2).replace('.', ',')} au lieu de 4,5 au moins).`);
+      });
+    });
+    vus.forEach(([id2, rgb2]) => {
+      if (Math.hypot(rgb[0] - rgb2[0], rgb[1] - rgb2[1], rgb[2] - rgb2[2]) < 70) out.push(`familles « ${id2} » et « ${id} » : couleurs trop proches, on ne les distinguerait pas.`);
+    });
+    vus.push([id, rgb]);
+  });
+  return out;
+}
 
 export function creerPlanning(P, opts = {}) {
   const M = compiler(P);
@@ -464,7 +528,14 @@ export function creerPlanning(P, opts = {}) {
 
   const tempsDe = (api) => (opts.copie ? 'evaluation' : P.temps || (api && api.temps) || 'guidage');
   const phaseDonnees = (e) => (e.phase === 1 || !P.alea ? 1 : 2);
-  const teinte = (c) => (c.pause ? 'pl-pause' : TEINTES[((P.familles || {})[c.famille] || {}).teinte] || 'pl-a');
+  // La couleur de la famille, posée en variables sur la carte ou le bloc (le CSS en fait le fond et le trait).
+  const teinte = (c) => (c.pause ? 'pl-pause' : 'pl-fam');
+  const couleur = (c) => {
+    if (c.pause) return '';
+    const f = familleDe((P.familles || {})[c.famille]);
+    const rgb = rgbDe(f.couleur) || rgbDe(COULEUR_DEFAUT);
+    return `--pl-c:${rgb.join(',')};--pl-t:rgb(${rgb.join(',')});`;
+  };
   const famLib = (c) => ((P.familles || {})[c.famille] || {}).legende || '';
   const nomLigne = (D, id) => (D.L[id] ? D.L[id].nom : '');
   const nomRes = (D, id) => (D.R[id] ? D.R[id].nom : '');
@@ -529,6 +600,8 @@ export function creerPlanning(P, opts = {}) {
   }
 
   /* -------------------------------------------------------------------- html */
+  const htmlMessage = (e) => (e.phase === 2 && P.alea
+    ? `<div class="pl-message" data-pl-message><div class="pl-de">Message reçu — ${ech(P.alea.de || '')}</div>${P.alea.texte || ''}</div>` : '');
   function htmlConsigne(e, D, R) {
     const A = P.aides || {};
     const cons = A.consignes || {};
@@ -537,9 +610,7 @@ export function creerPlanning(P, opts = {}) {
       h: E.lib, duree: E.fmt };
     const infos = typeof P.infos === 'function' ? P.infos(o) : (P.infos || []);
     const aides = R.g ? Object.values(cons) : (cons.regles ? [cons.regles] : []);
-    const message = e.phase === 2 && P.alea
-      ? `<div class="pl-message" data-pl-message><div class="pl-de">Message reçu — ${ech(P.alea.de || '')}</div>${P.alea.texte || ''}</div>` : '';
-    return `${message}<div class="pl-panneau pl-consigne">
+    return `${htmlMessage(e)}<div class="pl-panneau pl-consigne">
       <h3>${ech(P.titre || '')}</h3>${P.date ? `<div class="pl-lbl">${ech(P.date)}</div>` : ''}
       ${infos.length ? `<ul>${infos.map((x) => `<li>${x}</li>`).join('')}</ul>` : ''}
       ${aides.map((t) => `<div class="pl-aide">${t}</div>`).join('')}
@@ -575,7 +646,7 @@ export function creerPlanning(P, opts = {}) {
       }
       etat += ` <button class="pl-lien" data-pl-act="retirer" data-pour="${ech(c.id)}">Retirer</button>`;
     }
-    return `<div class="pl-carte ${teinte(c)}${ui.sel === c.id ? ' pl-sel' : ''}${pose ? ' pl-posee' : ''}" draggable="true" data-pl-id="${ech(c.id)}" data-pl-vue="b"
+    return `<div class="pl-carte ${teinte(c)}${ui.sel === c.id ? ' pl-sel' : ''}${pose ? ' pl-posee' : ''}" style="${couleur(c)}" draggable="true" data-pl-id="${ech(c.id)}" data-pl-vue="b"
         tabindex="0" role="button" aria-label="${ech(c.titre)}${pose ? ', posée' : ''}">
       <b>${ech(c.titre)}${c.nouveau ? ' (nouveau)' : ''}</b>
       ${det.map((x) => `<span class="pl-det">${x}</span>`).join('')}${dur}
@@ -632,7 +703,7 @@ export function creerPlanning(P, opts = {}) {
         const k = c._affecter ? (x.k ? ech(nomRes(D, x.k)) : `<span class="pl-manque">${ech(AF.manque || '?')}</span>`) : '';
         const lib = c.pause ? ech(c.court) : c._affecter ? `<b>${ech(c.id)}</b> ${k}` : ech(c.court);
         h += `<button class="pl-bloc ${teinte(c)}${cl[c.id] ? ' pl-decale' : ''}${faux ? ' pl-bloc-faux' : ''}${ui.sel === c.id ? ' pl-sel' : ''}" draggable="true"
-          data-pl-id="${ech(c.id)}" data-pl-vue="g" style="grid-row:${r};grid-column:${x.s + 2} / span ${c._L}"
+          data-pl-id="${ech(c.id)}" data-pl-vue="g" style="${couleur(c)}grid-row:${r};grid-column:${x.s + 2} / span ${c._L}"
           title="${ech(c.titre)} ${ech(E.plage(x.s, x.e))}" aria-label="${ech(c.titre)}, ${ech(l.nom)}, ${ech(E.plage(x.s, x.e))}${faux ? ', problème' : ''}">${lib}</button>`;
         if (ui.bulle === c.id && c._affecter) h += htmlBulle(e, D, c, x, r);
       });
@@ -682,7 +753,7 @@ export function creerPlanning(P, opts = {}) {
       ici.forEach((x) => {
         const faux = R.g && an.fauxK[x.id];
         const lib = Lc.bloc ? Lc.bloc(x.c, D.L[x.r]) : `${x.c.id} ${nomLigne(D, x.r)}`;
-        h += `<div class="pl-bloc pl-lect ${teinte(x.c)}${cl[x.id] ? ' pl-decale' : ''}${faux ? ' pl-bloc-faux' : ''}" data-pl-lect="${ech(x.id)}" style="grid-row:${r};grid-column:${x.s + 2} / span ${x.c._L}">${ech(lib)}</div>`;
+        h += `<div class="pl-bloc pl-lect ${teinte(x.c)}${cl[x.id] ? ' pl-decale' : ''}${faux ? ' pl-bloc-faux' : ''}" data-pl-lect="${ech(x.id)}" style="${couleur(x.c)}grid-row:${r};grid-column:${x.s + 2} / span ${x.c._L}">${ech(lib)}</div>`;
       });
     });
     return h + `</div></div>${Lc.legende ? `<div class="pl-legende">${ech(Lc.legende)}</div>` : ''}</div>`;
@@ -734,13 +805,14 @@ export function creerPlanning(P, opts = {}) {
     const ou = AF ? ` : une bulle s'ouvre pour choisir ${AF.lien || 'la seconde ressource'}` : '';
     return `Glissez une carte sur le planning${ou}. Ou cliquez la carte, puis la case.${AF ? ' Sur le planning, cliquez un bloc pour rouvrir sa bulle ; pour le déplacer, glissez-le ou choisissez « Déplacer ».' : ''} Clavier : Entrée pour prendre une carte${AF ? ' (ou ouvrir la bulle sur le planning)' : ''}, Espace pour déplacer un bloc, flèches, Suppr pour retirer, Échap pour fermer.`;
   }
+  // La légende des couleurs : une pastille de la couleur, son nom s'il est donné, et ce qu'elle désigne.
   function legendeFamilles() {
-    const F = P.familles || {};
-    const L = Object.values(F).filter((f) => NOMS_TEINTES[f.teinte]).map((f) => `${NOMS_TEINTES[f.teinte]} : ${f.legende}`);
-    if (C.pauses) L.push('hachuré : pause');
-    if (!L.length) return '';
-    const t = L.join(' · ');
-    return t.charAt(0).toUpperCase() + t.slice(1) + '.';
+    const L = Object.values(P.familles || {}).map(familleDe).filter((f) => f.legende).map((f) => {
+      const rgb = rgbDe(f.couleur) || rgbDe(COULEUR_DEFAUT);
+      return `<span class="pl-puce" style="--pl-c:${rgb.join(',')};--pl-t:rgb(${rgb.join(',')})"></span>${f.nom ? `${ech(f.nom)} : ` : ''}${ech(f.legende)}`;
+    });
+    if (C.pauses) L.push('<span class="pl-puce pl-pause"></span>hachuré : pause');
+    return L.join(' · ');
   }
 
   return {
@@ -772,15 +844,23 @@ export function creerPlanning(P, opts = {}) {
           ? `<span class="pl-fen-ech"></span> ${(F && typeof F.carte === 'function') ? F.carte(sel, outils(E, D)) : `${ech(sel.titre)} : la bande ambrée montre où le placer.`}`
           : ech((F && F.invite) || 'Cliquez une carte : une bande ambrée montre où elle peut se placer.')}</div>` : '';
       const fam = legendeFamilles();
-      return `<div class="pl" data-planning="${ech(P.id)}" data-pl-temps="${R.t}" data-pl-phase="${e.phase}">
-        <aside class="pl-gauche">${htmlConsigne(e, D, R)}</aside>
-        <section class="pl-droite">
+      // « Agrandir le planning » (04/10/2026, écrans étroits du lycée) : le menu de l'environnement et le
+      // panneau des consignes se replient, la grille prend toute la largeur. Les consignes se rouvrent d'un
+      // clic ; le message de l'aléa, lui, reste toujours visible (en tête de la colonne de droite).
+      const grand = !!e.agrandi, voirConsignes = !grand || ui.consignes;
+      const barre = `<div class="pl-barre">
+          <button class="btn" data-pl="agrandir" data-libre aria-pressed="${grand}">${grand ? '⤡ Réduire le planning' : '⤢ Agrandir le planning'}</button>
+          ${grand ? `<button class="btn" data-pl="consignes" data-libre aria-expanded="${!!ui.consignes}">${ui.consignes ? 'Masquer les consignes' : 'Voir les consignes'}</button>` : ''}
+        </div>`;
+      return `<div class="pl${grand ? ' pl-agrandi' : ''}${voirConsignes ? '' : ' pl-sans-consignes'}" data-planning="${ech(P.id)}" data-pl-temps="${R.t}" data-pl-phase="${e.phase}">
+        ${voirConsignes ? `<aside class="pl-gauche">${htmlConsigne(e, D, R)}</aside>` : ''}
+        <section class="pl-droite">${barre}${voirConsignes ? '' : htmlMessage(e)}
           <div class="pl-panneau"><h3>${ech(C.titre || 'Cartes')}</h3>
             <div class="pl-cartes" data-pl-bac>${D.toutes.map((c) => htmlCarte(e, D, c, an, R)).join('')}</div>
             <div class="pl-legende">${ech(legendeCartes())}</div></div>
           <div class="pl-panneau"><h3>${ech((P.lignes && P.lignes.titre) || 'Planning')}</h3>${info}
             <div class="pl-zone">${htmlGrille(e, D, an, R)}</div>
-            ${fam ? `<div class="pl-legende">${ech(fam)}</div>` : ''}${P.lignes && P.lignes.legende ? `<div class="pl-legende">${ech(P.lignes.legende)}</div>` : ''}</div>
+            ${fam ? `<div class="pl-legende" data-pl-legende-couleurs>${fam}</div>` : ''}${P.lignes && P.lignes.legende ? `<div class="pl-legende">${ech(P.lignes.legende)}</div>` : ''}</div>
           ${htmlLecture(D, an, R)}
           ${htmlProblemes(e, an, R)}
         </section>
@@ -793,13 +873,19 @@ export function creerPlanning(P, opts = {}) {
       const D = M.D[phaseDonnees(e)];
       const redessiner = () => api.redessiner();
       const on = (cle, fn) => racine.querySelectorAll(`[data-pl="${cle}"]`).forEach((b) => b.addEventListener('click', fn));
+      // Le menu de l'environnement se replie avec le planning agrandi. Changer d'écran redessine tout
+      // l'environnement (`aller` dans entreprise.js) : les autres écrans retrouvent leur menu.
+      const coque = racine.closest('.ent-shell');
+      if (coque) coque.classList.toggle('pl-agrandi', !!e.agrandi && e.phase !== 'fini');
+      on('agrandir', () => { e.agrandi = !e.agrandi; ui.consignes = false; ui.focus = { pl: 'agrandir' }; api.sauver(); redessiner(); });
+      on('consignes', () => { ui.consignes = !ui.consignes; ui.focus = { pl: 'consignes' }; redessiner(); });
 
       // Le bilan : recommencer en deux clics (la version envoyée et l'aléa reçu restent acquis).
       on('refaire', () => { ui.refaire = true; redessiner(); });
       on('refaireNon', () => { ui.refaire = false; redessiner(); });
       on('refaireOui', () => {
         ui.refaire = false; ui.sel = null; ui.bulle = null;
-        const garde = { aleaVu: e.aleaVu || !!e.v1, verifs: e.verifs || 0, envois: e.envois || [], premierGeste: e.premierGeste };
+        const garde = { aleaVu: e.aleaVu || !!e.v1, verifs: e.verifs || 0, envois: e.envois || [], premierGeste: e.premierGeste, agrandi: !!e.agrandi };
         Object.keys(e).forEach((k) => delete e[k]);
         Object.assign(e, etatNeuf(), garde);
         api.sauver(); redessiner();

@@ -2,37 +2,36 @@
    Vue « Planning » (core/types/planning.js) — 04/10/2026.
    D'après la maquette v8 (docs/briefs/planning/), dans la charte Prepalog :
    l'accent est celui de l'entreprise (--ardoise, posé par son THEME).
-   Les FONDS des familles sont translucides (jaune = famille « a », violet =
-   famille « b ») : posés sur le panneau, ils suivent sa teinte. Toutes les
+   Les couleurs des familles sont LIBRES, déclarées par la séance (et
+   vérifiées par le moteur, voir core/types/planning.js) : posées en
+   --pl-c (r,g,b) et --pl-t (trait) sur chaque carte et chaque bloc. Le fond
+   est cette couleur TRANSLUCIDE (--pl-alpha) posée sur le panneau. Toutes les
    variables sont déclarées trois fois (clair, sombre choisi, sombre du
    système), comme dans base.css. Ni vert plein (il ne dit que « juste »), ni
    bleu (réservé au client sur les vues de transport).
    ============================================================ */
 
 :root{
-  --pl-a-fond:rgba(240,190,0,.30); --pl-b-fond:rgba(139,92,246,.25);
-  --pl-a-trait:#b38a00; --pl-b-trait:#7c4fe0;
+  --pl-alpha:.30;
   --pl-fenetre:rgba(156,98,10,.13); --pl-hachure:rgba(85,80,71,.18);
   --pl-ambre:#7d4e07; --pl-rouge:#9d2727;
 }
 :root[data-theme="sombre"]{
-  --pl-a-fond:rgba(240,190,0,.16); --pl-b-fond:rgba(139,92,246,.20);
-  --pl-a-trait:#e0b84d; --pl-b-trait:#a98cf5;
+  --pl-alpha:.16;
   --pl-fenetre:rgba(224,172,77,.14); --pl-hachure:rgba(154,171,187,.2);
   --pl-ambre:#f0c070; --pl-rouge:#ff8f8a;
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="clair"]){
-    --pl-a-fond:rgba(240,190,0,.16); --pl-b-fond:rgba(139,92,246,.20);
-    --pl-a-trait:#e0b84d; --pl-b-trait:#a98cf5;
+    --pl-alpha:.16;
     --pl-fenetre:rgba(224,172,77,.14); --pl-hachure:rgba(154,171,187,.2);
     --pl-ambre:#f0c070; --pl-rouge:#ff8f8a;
   }
 }
-/* Contrastes mesurés le 04/10/2026 (texte sur la teinte posée sur le panneau), tous ≥ 4,5 :
-   clair — encre 14,5 / 12,5 ; ambre 5,8 / 5,0 ; rouge 6,3 / 5,4 ; encre douce 6,6 / 5,7 (jaune / violet) ;
-   sombre — encre 9,4 / 10,6 ; ambre 6,8 / 7,6 ; rouge 5,2 / 5,8 ; encre douce 4,8 / 5,4.
-   L'ambre et le rouge du site (--terre, --rouge) tombaient sous 4,5 sur les teintes : la vue a les siens. */
+/* Les contrastes (texte sur la couleur posée sur le panneau) ne sont plus mesurés ici une fois pour
+   toutes : le moteur les calcule pour CHAQUE couleur déclarée et refuse celle qui descend sous 4,5
+   (FONDS_PLANNING dans planning.js : garder ses valeurs égales à celles d'ici et de base.css).
+   L'ambre et le rouge du site (--terre, --rouge) tombaient sous 4,5 sur le jaune et le violet : la vue a les siens. */
 /* Une entreprise qui impose le papier (THEME.papier) repose ces valeurs sur <body> (entreprise.js). */
 
 .pl{ display:grid; grid-template-columns:280px minmax(0,1fr); gap:16px; align-items:start }
@@ -52,9 +51,8 @@
 /* --- les cartes -------------------------------------------------------- */
 .pl-cartes{ display:grid; grid-template-columns:repeat(auto-fill, minmax(210px,1fr)); gap:8px; min-height:60px; padding:4px;
   border:1px dashed var(--filet); border-radius:var(--r) }
-.pl-carte{ display:flex; flex-direction:column; gap:2px; border:1px solid var(--filet); border-left:5px solid var(--pl-a-trait);
-  background:var(--pl-a-fond); border-radius:var(--r); padding:6px 8px; cursor:grab; font-size:13.5px; text-align:left; color:var(--encre) }
-.pl-carte.pl-b{ border-left-color:var(--pl-b-trait); background:var(--pl-b-fond) }
+.pl-carte{ display:flex; flex-direction:column; gap:2px; border:1px solid var(--filet); border-left:5px solid var(--pl-t, var(--encre-douce));
+  background:rgba(var(--pl-c, 184,165,130), var(--pl-alpha)); border-radius:var(--r); padding:6px 8px; cursor:grab; font-size:13.5px; text-align:left; color:var(--encre) }
 .pl-carte.pl-posee{ background:transparent }
 .pl-carte b{ display:block }
 .pl-det{ color:var(--encre-douce); font-size:12.8px }
@@ -89,11 +87,11 @@
 .pl-grille .pl-case.pl-lect:hover{ background-color:transparent }
 .pl-case:focus-visible, .pl-bloc:focus-visible, .pl-carte:focus-visible, .pl-choix:focus-visible{ outline:3px solid var(--ardoise); outline-offset:-2px }
 
-.pl-bloc{ z-index:2; margin:4px 1px; border:1px solid var(--pl-a-trait); border-left:5px solid var(--pl-a-trait); background:var(--pl-a-fond);
+.pl-bloc{ z-index:2; margin:4px 1px; border:1px solid var(--pl-t, var(--encre-douce)); border-left:5px solid var(--pl-t, var(--encre-douce));
+  background:rgba(var(--pl-c, 184,165,130), var(--pl-alpha));
   border-radius:var(--r); font:inherit; font-size:12.5px; padding:2px 5px; cursor:grab; color:var(--encre);
   overflow:hidden; white-space:nowrap; text-overflow:ellipsis; text-align:left; align-self:start; height:42px; min-width:0 }
-.pl-bloc.pl-b{ border-color:var(--pl-b-trait); background:var(--pl-b-fond) }
-.pl-bloc.pl-pause{ border-color:var(--encre-douce) }
+.pl-bloc.pl-pause{ border-color:var(--encre-douce); background:repeating-linear-gradient(45deg,var(--pl-hachure) 0 5px,transparent 5px 10px) }
 .pl-bloc.pl-decale{ align-self:end; height:22px; margin-bottom:2px; z-index:3 }
 /* Un bloc fautif : bordure rouge en tirets et texte rouge, SANS aplat. */
 .pl-bloc.pl-bloc-faux{ border-style:dashed; border-color:var(--pl-rouge); color:var(--pl-rouge) }
@@ -131,3 +129,15 @@
 .pl-pastille.pl-oui{ background:var(--vert-fond); color:var(--sur-vert) }
 .pl-pastille.pl-non{ color:var(--rouge) }
 .pl-prof{ margin-top:14px }
+
+/* --- légende des couleurs ------------------------------------------------------ */
+.pl-puce{ display:inline-block; width:14px; height:12px; vertical-align:-1px; margin-right:5px; border-radius:2px;
+  background:rgba(var(--pl-c, 184,165,130), var(--pl-alpha)); border:1px solid var(--pl-t, var(--encre-douce)); border-left-width:4px }
+.pl-puce.pl-pause{ border-color:var(--encre-douce); background:repeating-linear-gradient(45deg,var(--pl-hachure) 0 3px,transparent 3px 6px) }
+
+/* --- « Agrandir le planning » (écrans étroits) ------------------------------------- */
+.pl-barre{ display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; margin-bottom:10px }
+.pl.pl-sans-consignes{ grid-template-columns:minmax(0,1fr) }
+/* Le menu de l'environnement disparaît tant que le planning est agrandi (classe posée par la vue). */
+.ent-shell.pl-agrandi{ grid-template-columns:minmax(0,1fr) }
+.ent-shell.pl-agrandi > .ent-side{ display:none }
