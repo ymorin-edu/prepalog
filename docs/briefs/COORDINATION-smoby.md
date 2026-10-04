@@ -51,8 +51,10 @@ changer. Poids d'E1 recalculé : **6 091 kg** (32 × 180 + la palette mixte de 3
 
 1. **Vue Planning** (`MOTEUR-vue-planning.md`, en cours le 04/10).
 2. **`MOTEUR-2de-S1.md`** : lot 0 (état des lieux, compte rendu à Tristan **avant** d'écrire) puis lots 1 → 7.
-3. Séances **ENT-5.1, 5.8, 5.4** (ne demandent pas de vue nouvelle), puis **5.2 et 5.7** (Planning).
-4. **Plan d'entrepôt** : maquette v2 **validée par Tristan le 04/10** → brief **`MOTEUR-vue-plan-entrepot.md`** (plan, vue
+3. **`MOTEUR-documents-formulaire.md`** (04/10 : documents joints, fiche à remplir, menu de gauche rétractable ; maquette
+   validée, agencement B) — demandé par ENT-5.1, 5.2 et 5.8.
+4. Séances **ENT-5.1, 5.8, 5.4** (5.4 attend aussi les lots 4-5 de `MOTEUR-2de-S1`), puis **5.2 et 5.7** (Planning).
+5. **Plan d'entrepôt** : maquette v2 **validée par Tristan le 04/10** → brief **`MOTEUR-vue-plan-entrepot.md`** (plan, vue
    de face, modes rangement / comptage / préparation) → construction → séances **ENT-5.5** (rangement, données recalées) et **ENT-5.6** (préparation, mode préparation en guidage).
    **Les modes « visite » sont un second chantier** (décision de Tristan, 04/10) : maquette de la visite **v2 validée le 04/10
    au soir** → brief **`MOTEUR-modes-visite.md`** (accueil, photo à points, photo à cliquer, parcours sur le plan,

@@ -7,7 +7,7 @@ est déjà modifié ou inscrit ci-dessous, **elle s'arrête et le dit à Tristan
 
 | Chantier | Fichiers qu'il touche | Depuis |
 |---|---|---|
-| ENT-5.1 Smoby recrutement (+ lot 7) | `activites/smoby-recrutement.js`, `contenus/smoby*.js`, `activites/index.js`, `outils/test/smoby.mjs`, `docs/briefs/ENT-5.1-*` | 04/10 |
+| *(personne d'inscrit)* | | |
 
 Rappel : un seul chantier à la fois dans `core/types/tournee.js`, `core/types/grille.js`,
 `core/types/entreprise.js`, `styles/base.css` et `outils/test/boost.mjs` (voir `docs/briefs/COORDINATION-boost.md`).

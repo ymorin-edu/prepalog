@@ -6,7 +6,7 @@
 > Lis docs/briefs/COORDINATION-smoby.md puis implémente le brief docs/briefs/ENT-5.1-smoby-recrutement.md (il faut que les lots 1, 2, 3 et 7 de MOTEUR-2de-S1 soient livrés). Annonce la durée avant de commencer et dis-moi si un point du brief contredit le code.
 > ```
 
-**Statut** : à implémenter *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
+**Statut** : **en attente** de `MOTEUR-documents-formulaire.md` (lots 1 à 3) — le moteur ne savait ni montrer les CV ni faire remplir le tableau de tri (constaté le 04/10/2026) *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
 **Date du brief** : 04/10/2026
 **Conversation d'origine** : Cowork (Opus) ; fiche projet `claude/prepalog-2de-s1-cadrage.md` (section « Séance A1 »),
 `claude/prepalog-2de-eleve-debut-annee.md` (règles d'écriture). Exemple de CV validé : `docs/briefs/smoby/exemple-cv-A1.html`.
@@ -121,6 +121,14 @@ accueil). Une base par séance (pas de `jeuId`).
 **Niveau confirmé** : non utilisé en S1 (S1 sert à repérer ; décision 4).
 
 ## 7. Demandes au moteur
+
+**Constat du 04/10/2026 (Claude Code)** : ni pièce jointe ni écran « à remplir » dans l'environnement → brief
+`MOTEUR-documents-formulaire.md`. Maquette **validée par Tristan, agencement B** (documents en onglets à gauche, fiche à
+droite) : `docs/briefs/smoby/maquette-documents-fiche.html`. Elle contient **le texte des 5 CV** (Mehdi, Thomas et Sabrina
+écrits par Claude Code sur le modèle validé, mises en page 3, 4, 5) et de la **fiche de poste** (horaires « semaine du
+matin ou de l'après-midi » : construit) : les reprendre tels quels dans `contenus/smoby-ent51.js`. Choix de la maquette :
+envoi refusé tant qu'une case manque, fiche figée après l'envoi, rien de jugé avant.
+
 
 Toutes dans `MOTEUR-2de-S1.md` : lot 1 (`AGO-3.1`), lot 2 (phrases à choisir), lot 3 (mots cliquables), lot 7 (entreprise
 n° 5). **À vérifier au lot 0** : comment afficher une fiche de poste et des CV (pièces jointes HTML d'un mail ? écran
