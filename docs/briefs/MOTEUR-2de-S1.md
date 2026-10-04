@@ -6,7 +6,7 @@
 > Lis docs/briefs/COORDINATION-smoby.md, docs/EN-COURS.md, puis le brief docs/briefs/MOTEUR-2de-S1.md. Commence par le lot 0 (état des lieux, lecture seule) et donne-moi le compte rendu avant d'écrire. Annonce la durée de chaque lot.
 > ```
 
-**Statut** : à implémenter *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
+**Statut** : en cours — lot 0 rendu, lot 1 livré le 04/10/2026 *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
 **Date du brief** : 04/10/2026
 **Conversation d'origine** : Cowork (Opus), cadrage de S1 ; fiches projet `claude/prepalog-2de-s1-cadrage.md`,
 `claude/prepalog-2de-eleve-debut-annee.md`, `claude/prepalog-2de-socle-transversal.md`
@@ -167,9 +167,32 @@ du lycée.
 
 ## Compte rendu *(rempli par Claude Code à la livraison)*
 
-- **Fichiers créés / modifiés** :
-- **Écarts par rapport au brief** (et pourquoi) :
-- **Décisions prises en route** :
-- **Tests** :
-- **Commits** :
-- **Reste ouvert** :
+### Lot 0 — état des lieux (04/10/2026, rendu à Tristan en conversation)
+
+- Messagerie : réponse = texte libre (`#repT`, `amorce`) ; « Nouveau message » n'écrit qu'aux fournisseurs ; `apresMail` lit le
+  texte envoyé (destinataire, ligne, nombre) → un message par phrases rangé comme un mail envoyé ordinaire garde les déclencheurs.
+- Déjà enregistré : temps réel au quai seulement (`detail.quai.reel`) ; aides **non comptées** (les « ? » du tableur restent en
+  mémoire de la page) ; essais : dépôt tableur et carte (`premierCoup`) ; rien pour les mails, le quai, les amorces.
+- Quai : `lieu.refrigere` ne change qu'une étiquette ; ticket, sonde, hors froid, chambre froide, rapidité toujours actifs ; une
+  décision n'est juste **que si la palette a été sondée** (à lever en mode sans froid). Motifs « Cartons endommagés » et
+  « Manquant » existent.
+- Réceptions : quantité comptée libre, décision accepté / sous réserve / refusé ; pas de statut « en litige » (blocage qualité au
+  quai ENT-4.3 et à l'écran stock).
+- `meta.parcours` déjà pris (parcours strict).
+
+### Lot 1 — livré le 04/10/2026
+
+- **Fichiers créés / modifiés** : `core/competences.js` (11 codes OTM, 9 AGOrA, `SPECIALITES`, `specialite()`,
+  `seancesParSpecialite()`), `core/prof.js` (tableau « Moyennes par spécialité », `#tabSpe`, groupes de 2de),
+  `activites/FICHE-SEANCE.md` (`competences`, `domaines`, `coeur`), `outils/test/socle.mjs` (3 cas **ajoutés**, aucun réécrit),
+  `docs/fiches/referentiel-bac-otm.md` et `-agora.md` (déposées par Tristan, avec une note de vérification en tête).
+- **Écarts par rapport au brief** : tous les codes OTM et AGOrA ajoutés, pas seulement les 6 de S1 (S2, S3 et la 1re en
+  auront besoin ; libellés vérifiés une fois pour toutes). Libellés officiels, pas les résumés du brief (OTM-C2.2 = « Exécuter la
+  demande du client/donneur d'ordre », OTM-C2.3 = « Suivre l'opération de transport et communiquer avec les interlocuteurs »).
+  Cœur / complément : `meta.coeur: true | false` (le nom `parcours` est pris).
+- **Décisions prises en route** : une séance compte une fois par spécialité ; tableau par spécialité séparé (le tableau par
+  compétence et son export ne bougent pas) ; pas d'export CSV par spécialité ; apostrophes droites, comme les libellés existants.
+- **Tests** : bloc `socle` 53 / 53 ; trois sabotages (séance comptée deux fois, tableau pour un groupe de 1re, domaine `D7`,
+  préfixe ignoré) font chacun tomber leur cas ; suite entière 572 / 572.
+- **Commits** : voir `git log` (« 2de : compétences OTM et AGOrA… »).
+- **Reste ouvert** : lots 2 à 7, page d'essai `outils/essai-2de.html`.

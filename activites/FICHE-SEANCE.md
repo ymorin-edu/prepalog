@@ -125,7 +125,9 @@ séance 2), `TAB` tableur, `REF` exercices par compétence, `SCE` scénario anci
 | Champ | Contenu | À savoir |
 |---|---|---|
 | `niveaux` | `['2de','1re']` | Absent = tous les niveaux. L'enseignant peut forcer l'ouverture ou la fermeture par groupe. |
-| `competences` | `['C2.4']` | Codes du référentiel 2025 (C1.1 à C3.4, liste dans `core/competences.js`). Toute séance Logisim les déclare. |
+| `competences` | `['C2.4']`, `['C1.4', 'OTM-C2.1']` | Codes de la liste de `core/competences.js` : Logistique 2025 sans préfixe (C1.1 à C3.4), transport `OTM-C1.1` à `OTM-C3.4`, gestion `AGO-1.1` à `AGO-3.3` (activités AGOrA). Un code absent de la liste fait tomber la suite. Toute séance Logisim les déclare. Le préfixe donne la **spécialité** : pour un groupe de 2de, l'onglet « Compétences » ajoute une moyenne par spécialité (une séance y compte une fois). |
+| `domaines` | `['D2', 'D4']` | Domaines D1 à D5 de la 2de. **Lu nulle part pour l'instant** (déclaré pour plus tard, aucun écran). |
+| `coeur` | `true` / `false` | `true` : séance du **cœur** (parcours minimal qui couvre les compétences du niveau) ; `false` : **complément**. Absent = pas encore rangée. **Lu nulle part pour l'instant.** Le nom `parcours`, proposé dans les fiches, est déjà pris (parcours strict, plus bas). |
 | `temps` | `'guidage'` / `'entrainement'` / `'erreur'` / `'evaluation'` | Fixe le coefficient (1, 1, 1, 3 par défaut). |
 | `bareme` | nombre | **Sa présence = la séance apparaît dans le suivi de classe.** Pour entrer dans le tableau par compétence il faut en plus `competences` et un `temps` valide. |
 | `notation` | `'prof'` / `'avancement'` | Absent = score calculé par le moteur, ramené sur 20. `'prof'` : saisie à la main. `'avancement'` : jalons (ramenés sur 20 seulement dans le tableau par compétence). |

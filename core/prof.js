@@ -10,7 +10,7 @@ import { versCSV, telecharger, ouvrirJeu } from './store.js';
 import { NIVEAUX, libelleNiveau, courtNiveau, libelleNiveaux, activiteVisible, horsNiveau, ouvertureParProf } from './niveaux.js';
 import { BAREME_AFFICHE, noteSur20, noteConvertie, formaterNote } from './notes.js';
 import { estCopie, estRendue, libelleRendu, ramasser, rouvrir, baseDeLEleve } from './copie.js';
-import { TEMPS, COEFS_DEFAUT, coefsDuGroupe, seancesParCompetence, moyenneCompetence } from './competences.js';
+import { TEMPS, COEFS_DEFAUT, coefsDuGroupe, seancesParCompetence, seancesParSpecialite, moyenneCompetence } from './competences.js';
 
 export async function rendreEspaceProf(hote, ctx) {
   let onglet = ctx.onglet || 'groupes';
@@ -847,6 +847,8 @@ export async function rendreEspaceProf(hote, ctx) {
       B.elevesDuGroupe(g.id), B.suivi(g.id), chargerActivites(),
     ]);
     const comps = seancesParCompetence(mods.map((m) => m.meta));
+    // En 2de seulement : une moyenne par spécialité (logistique, transport, gestion), même calcul.
+    const specs = g.niveau === '2de' ? seancesParSpecialite(mods.map((m) => m.meta)) : [];
     const coefs = coefsDuGroupe(g);
     const par = {};
     travaux.forEach((t) => { (par[t.uid] = par[t.uid] || {})[t.aid] = t; });
@@ -854,13 +856,14 @@ export async function rendreEspaceProf(hote, ctx) {
     const ligneDetail = (d) => `${d.meta.code} (${TEMPS[d.temps].toLowerCase()}, coef ${formaterNote(d.coef)}) : `
       + (d.note === null ? 'pas faite' : `${formaterNote(d.note)} / ${BAREME_AFFICHE}`);
 
-    const cellule = (e, c) => {
+    // `attr` : l'attribut qui porte le code de la colonne (`data-comp`, ou `data-spe` par spécialité).
+    const cellule = (e, c, attr = 'data-comp') => {
       const b = moyenneCompetence(c.seances, par[e.uid], coefs);
       const titre = ech(b.detail.map(ligneDetail).join('\n'));
       if (b.moyenne === null) return `<td class="num note" title="${titre}">—</td>`;
       const part = b.moyenne / BAREME_AFFICHE;
       const classe = part >= 0.7 ? 'juste' : part < 0.4 ? 'faux' : '';
-      return `<td class="num ${classe}" title="${titre}" data-comp="${ech(c.code)}" data-uid="${ech(e.uid)}"
+      return `<td class="num ${classe}" title="${titre}" ${attr}="${ech(c.code)}" data-uid="${ech(e.uid)}"
         >${formaterNote(b.moyenne)}<span class="note">/${BAREME_AFFICHE}</span>
         <span class="note">(${b.nbNotes}/${c.seances.length})</span></td>`;
     };
@@ -901,6 +904,22 @@ export async function rendreEspaceProf(hote, ctx) {
           Entre parenthèses : séances faites sur séances de la compétence. Survolez une moyenne
           pour voir le détail. Une séance qui travaille deux compétences compte pour les deux.</p>`}
       </section>
+      ${specs.length && eleves.length ? `
+      <section class="panneau" id="panSpe">
+        <strong>Moyennes par spécialité — ${ech(g.nom)}</strong>
+        <div style="overflow:auto"><table id="tabSpe">
+          <thead><tr><th>Élève</th>${specs.map((c) => `
+            <th data-spe="${ech(c.code)}">${ech(c.libelle)}<span class="note"> /${BAREME_AFFICHE}</span></th>`).join('')}</tr></thead>
+          <tbody>${eleves.map((e) => `<tr>
+            <td>${ech(e.nom)} ${ech(e.prenom)}</td>
+            ${specs.map((c) => cellule(e, c, 'data-spe')).join('')}
+          </tr>`).join('')}</tbody>
+        </table></div>
+        <p class="note">Même calcul que par compétence, sur toutes les séances de la spécialité.
+          Une séance compte une seule fois dans une spécialité, même si elle y travaille deux
+          compétences ; elle compte dans deux spécialités si ses compétences y sont. Codes
+          « OTM- » : transport ; « AGO- » : gestion ; les autres : logistique.</p>
+      </section>` : ''}
       ${comps.length === 0 ? '' : `
       <section class="panneau" id="panSeancesComp">
         <strong>Les séances de chaque compétence</strong>

@@ -488,6 +488,124 @@ await v('compétences : l\'écran, les coefficients du groupe et l\'export CSV',
   await saisir('SCE-2', '');
 });
 
+// ---------- 2de : trois référentiels et moyenne par spécialité (MOTEUR-2de-S1, lot 1, 04/10/2026)
+await v('compétences : OTM et AGOrA, spécialité par préfixe et séance comptée une fois, à l\'unité', async () => {
+  const C = await import(pathToFileURL(path.join(ROOT, 'core/competences.js')).href);
+  // Libellés écrits à la main d'après les annexes officielles (Éduscol), relues le 04/10/2026.
+  const LIB = {
+    'OTM-C2.1': 'Constituer le dossier transport',
+    'OTM-C2.2': "Exécuter la demande du client/donneur d'ordre",
+    'OTM-C2.3': "Suivre l'opération de transport et communiquer avec les interlocuteurs",
+    'OTM-C3.2': 'Participer à la gestion des moyens matériels et humains',
+    'AGO-3.1': 'Suivi de la carrière du personnel',
+    'AGO-3.2': "Suivi organisationnel et financier de l'activité du personnel",
+    'C1.4': 'Traiter les opérations de réception de produits selon les procédures',
+  };
+  const faux = Object.entries(LIB).filter(([k, l]) => C.COMPETENCES[k] !== l).map(([k]) => `${k} : ${C.COMPETENCES[k]}`);
+  // 16 Logistique + 11 OTM + 9 AGOrA.
+  const n = Object.keys(C.COMPETENCES);
+  if (n.length !== 36) faux.push(`${n.length} codes au lieu de 36`);
+  if (n.filter((k) => k.startsWith('OTM-')).length !== 11) faux.push('OTM : pas 11 codes');
+  if (n.filter((k) => k.startsWith('AGO-')).length !== 9) faux.push('AGO : pas 9 codes');
+  const spe = { 'C1.4': 'LOG', 'OTM-C2.1': 'OTM', 'AGO-3.2': 'AGO', 'X-1': 'LOG', '': 'LOG' };
+  Object.entries(spe).forEach(([c, s]) => { if (C.specialite(c) !== s) faux.push(`spécialité de « ${c} » : ${C.specialite(c)}`); });
+  if (faux.length) throw new Error(faux.join(' | '));
+
+  // a : deux compétences logistiques (une seule fois en LOG) ; b : logistique ET transport ;
+  // c : gestion seule ; d : transport, pas faite ; e : sans temps, hors tableau.
+  const a = { id: 'a', bareme: 10, temps: 'guidage', competences: ['C1.2', 'C1.4'] };
+  const b = { id: 'b', bareme: 10, temps: 'evaluation', competences: ['C1.4', 'OTM-C2.1'] };
+  const c = { id: 'c', bareme: 10, temps: 'guidage', competences: ['AGO-3.1'] };
+  const d = { id: 'd', bareme: 10, temps: 'guidage', competences: ['OTM-C2.2'] };
+  const e = { id: 'e', bareme: 10, competences: ['OTM-C2.3'] };
+  const ps = C.seancesParSpecialite([a, b, c, d, e]);
+  const ids = ps.map((s) => `${s.code}:${s.seances.map((m) => m.id).join('')}`).join(' ');
+  if (ids !== 'LOG:ab OTM:bd AGO:c') throw new Error('séances par spécialité : ' + ids);
+  if (ps.map((s) => s.libelle).join(' / ') !== 'Logistique / Transport (OTM) / Gestion (AGOrA)') throw new Error('libellés : ' + ps.map((s) => s.libelle));
+  const travaux = { a: { meilleur: 5, max: 10 }, b: { meilleur: 8, max: 10 }, c: { meilleur: 9, max: 10 } };
+  const co = C.coefsDuGroupe({});
+  // LOG : (10×1 + 16×3) / 4 = 14,5 (a ne compte qu'une fois) ; OTM : 16 seule (d pas faite) ; AGO : 18.
+  const m = ps.map((s) => C.moyenneCompetence(s.seances, travaux, co));
+  if (m[0].moyenne !== 14.5 || m[0].nbNotes !== 2) throw new Error('LOG : ' + m[0].moyenne + ' sur ' + m[0].nbNotes);
+  if (m[1].moyenne !== 16 || m[1].nbNotes !== 1) throw new Error('OTM : ' + m[1].moyenne + ' sur ' + m[1].nbNotes);
+  if (m[2].moyenne !== 18) throw new Error('AGO : ' + m[2].moyenne);
+  // Les compétences OTM se rangent après la logistique, dans l'ordre de la liste.
+  const pc = C.seancesParCompetence([a, b, c, d]).map((x) => x.code).join(',');
+  if (pc !== 'C1.2,C1.4,OTM-C2.1,OTM-C2.2,AGO-3.1') throw new Error('ordre des compétences : ' + pc);
+});
+
+await v('séances : `domaines` et `coeur`, quand ils sont déclarés, ont des valeurs connues', async () => {
+  const faux = await page.evaluate(async () => {
+    const { chargerActivites } = await import('/activites/index.js');
+    const f = [];
+    (await chargerActivites()).forEach(({ meta: m }) => {
+      if (m.domaines !== undefined && !(Array.isArray(m.domaines) && m.domaines.every((x) => /^D[1-5]$/.test(x)))) f.push(`${m.code} : domaines ${JSON.stringify(m.domaines)}`);
+      if (m.coeur !== undefined && typeof m.coeur !== 'boolean') f.push(`${m.code} : coeur ${JSON.stringify(m.coeur)}`);
+    });
+    return f;
+  });
+  if (faux.length) throw new Error(faux.join(' | '));
+});
+
+await v('compétences : la moyenne par spécialité, pour un groupe de 2de seulement', async () => {
+  // Le groupe passe en 2de le temps du test. Un élève neuf, créé pour ce cas et supprimé à la fin (DUPONT
+  // porte déjà les notes des cas précédents), reçoit deux notes sur C1.6 (logistique) : SCE-1 8, SCE-2 16.
+  const ids = await page.evaluate(async () => {
+    const k = Object.keys(localStorage).find((x) => /groupes$/.test(x));
+    const gs = JSON.parse(localStorage.getItem(k));
+    const gid = Object.keys(gs).find((id) => gs[id].nom === '1 LOG A');
+    const { B } = await import('/core/backend.js');
+    await B.creerEleves(gid, [{ nom: 'SPECIALITE', prenom: 'Test', matricule: 'spe-2de-test', code: 'x' }]);
+    const el = (await B.elevesDuGroupe(gid)).find((x) => x.nom === 'SPECIALITE');
+    const { chargerActivites } = await import('/activites/index.js');
+    const { seancesParSpecialite } = await import('/core/competences.js');
+    const metas = (await chargerActivites()).map((x) => x.meta);
+    const aid = (code) => metas.find((m) => m.code === code).id;
+    const n = Object.fromEntries(seancesParSpecialite(metas).map((s) => [s.code, s.seances.length]));
+    await B.poserNote(gid, el.uid, aid('SCE-1'), { score: 8, max: 20 });
+    await B.poserNote(gid, el.uid, aid('SCE-2'), { score: 16, max: 20 });
+    await B.majGroupe(gid, { niveau: '2de' });
+    return { gid, uid: el.uid, a1: aid('SCE-1'), a2: aid('SCE-2'), niveau: gs[gid].niveau, n };
+  });
+  const rouvrir = async () => {
+    await page.reload();
+    await page.waitForSelector('#btnProfEspace', { timeout: 8000 });
+    await page.click('#btnProfEspace');
+    await page.click('[data-ong="competences"]');
+    await page.waitForSelector('#tabComp', { timeout: 6000 });
+  };
+  try {
+    await rouvrir();
+    if (!(await page.$('#tabSpe'))) throw new Error('pas de tableau par spécialité pour un groupe de 2de');
+    const lu = await page.$$eval('#tabSpe', ([t]) => {
+      const th = [...t.querySelectorAll('thead th')].map((x) => x.textContent.replace(/\s+/g, ' ').trim());
+      const l = [...t.querySelectorAll('tbody tr')].find((x) => /SPECIALITE/.test(x.textContent));
+      return { th, td: [...l.children].slice(1).map((x) => x.textContent.replace(/\s+/g, ' ').trim()) };
+    });
+    if (lu.th.join(' | ') !== 'Élève | Logistique /20 | Transport (OTM) /20 | Gestion (AGOrA) /20') throw new Error('en-têtes : ' + lu.th.join(' | '));
+    // (8×1 + 16×3) / 4 = 14 ; rien en transport ni en gestion : un tiret, pas un zéro.
+    if (lu.td[0] !== `14/20 (2/${ids.n.LOG})`) throw new Error('Logistique : ' + lu.td[0] + ` au lieu de 14/20 (2/${ids.n.LOG})`);
+    if (lu.td[1] !== '—' || lu.td[2] !== '—') throw new Error('transport / gestion : ' + lu.td.slice(1).join(' | '));
+    // Le tableau par compétence n'a pas bougé.
+    const c16 = await page.$eval('#tabComp tbody tr td[data-comp="C1.6"]', (x) => x.textContent.replace(/\s+/g, ' ').trim()).catch(() => null);
+    if (!c16) throw new Error('colonne C1.6 disparue');
+    // Un groupe d'un autre niveau : pas de tableau par spécialité.
+    await page.evaluate(async ({ gid }) => { const { B } = await import('/core/backend.js'); await B.majGroupe(gid, { niveau: '1re' }); }, ids);
+    await rouvrir();
+    if (await page.$('#tabSpe')) throw new Error('tableau par spécialité affiché pour un groupe de 1re');
+  } finally {
+    // On remet le groupe comme on l'a trouvé.
+    await page.evaluate(async ({ gid, uid, a1, a2, niveau }) => {
+      const { B } = await import('/core/backend.js');
+      await B.poserNote(gid, uid, a1, null);
+      await B.poserNote(gid, uid, a2, null);
+      await B.supprimerEleve(uid);
+      await B.majGroupe(gid, { niveau });
+    }, ids);
+    await rouvrir();
+  }
+});
+
 await v('suivi : mettre 0 à un élève présent qui n\'a rien fait, l\'effacer, le voir remplacé', async () => {
   const BTN = '.btn-zero[aria-label="Mettre 0 — QUI-7 — DUPONT Léa"]';
   const EFF = '.btn-zero-eff[aria-label="Effacer le 0 — QUI-7 — DUPONT Léa"]';

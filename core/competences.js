@@ -14,7 +14,7 @@
 //
 // Comment une séance entre dans le tableau : elle déclare dans son `meta`
 //
-//   competences: ['C1.6'],          // une ou plusieurs, codes du référentiel 2025
+//   competences: ['C1.6'],          // une ou plusieurs : référentiel Logistique 2025, ou OTM-…, AGO-… (liste plus bas)
 //   temps: 'entrainement',          // 'guidage' | 'entrainement' | 'erreur' | 'evaluation'
 //
 // et elle a un `bareme` (sinon elle n'a pas de note). Une séance sans compétence reste dans le
@@ -54,7 +54,49 @@ export const COMPETENCES = Object.freeze({
   'C3.2': 'Mettre en œuvre le processus de traçabilité dans la chaîne logistique',
   'C3.3': "Proposer des axes d'amélioration de l'activité logistique dans le cadre d'une démarche RSE",
   'C3.4': 'Coordonner une petite équipe logistique',
+
+  // La 2de GATL pioche aussi dans deux autres référentiels (décision du 03/10/2026, `docs/decisions.md`).
+  // Leurs codes portent un préfixe : les codes C1.1 à C3.4 de l'OTM existent aussi en Logistique,
+  // avec d'autres intitulés. Libellés recopiés le 04/10/2026 depuis les annexes officielles (Éduscol),
+  // au mot près ; fiches `docs/fiches/referentiel-bac-otm.md` et `referentiel-bac-agora.md`.
+
+  // Bac Pro Organisation de transport de marchandises, arrêté du 28 février 2020.
+  'OTM-C1.1': "Prendre en compte la demande du client/donneur d'ordre",
+  'OTM-C1.2': "Choisir les modalités de l'opération de transport",
+  'OTM-C1.3': "Optimiser l'offre de transport",
+  'OTM-C1.4': "Élaborer la cotation de l'offre de transport",
+  'OTM-C2.1': 'Constituer le dossier transport',
+  'OTM-C2.2': "Exécuter la demande du client/donneur d'ordre",
+  'OTM-C2.3': "Suivre l'opération de transport et communiquer avec les interlocuteurs",
+  'OTM-C3.1': "Contrôler les engagements contractuels avec le client/donneur d'ordre",
+  'OTM-C3.2': 'Participer à la gestion des moyens matériels et humains',
+  'OTM-C3.3': "Actualiser les tableaux de bord liés à l'activité de transport",
+  'OTM-C3.4': "Contribuer à l'amélioration de la performance de l'entreprise",
+
+  // Bac Pro AGOrA, arrêté du 18 février 2020. Le référentiel range ses compétences sous des
+  // ACTIVITÉS numérotées : le code est celui de l'activité.
+  'AGO-1.1': "Préparation et prise en charge de la relation avec le client, l'usager ou l'adhérent",
+  'AGO-1.2': "Traitement des opérations administratives et de gestion liées aux relations avec le client, l'usager ou l'adhérent",
+  'AGO-1.3': "Actualisation du système d'information en lien avec le client, l'usager ou l'adhérent",
+  'AGO-2.1': "Suivi administratif de l'activité de production",
+  'AGO-2.2': "Suivi financier de l'activité de production",
+  'AGO-2.3': 'Gestion opérationnelle des espaces (physiques et virtuels) de travail',
+  'AGO-3.1': 'Suivi de la carrière du personnel',
+  'AGO-3.2': "Suivi organisationnel et financier de l'activité du personnel",
+  'AGO-3.3': "Participation à l'activité sociale de l'organisation",
 });
+
+// La spécialité d'une compétence se lit sur son préfixe : `OTM-` transport, `AGO-` gestion,
+// sans préfixe logistique. L'ordre est celui de l'écran.
+export const SPECIALITES = Object.freeze({
+  LOG: 'Logistique',
+  OTM: 'Transport (OTM)',
+  AGO: 'Gestion (AGOrA)',
+});
+export function specialite(code) {
+  const p = String(code || '').split('-')[0];
+  return p !== code && SPECIALITES[p] ? p : 'LOG';
+}
 
 // Les quatre temps pédagogiques (doctrine du 02/10, `prepalog-progression-pedagogique.md`).
 // L'ordre est celui de l'écran des coefficients.
@@ -119,7 +161,22 @@ export function seancesParCompetence(metas) {
 }
 
 /**
- * Moyenne pondérée d'un élève sur une compétence.
+ * Les trois spécialités, chacune avec ses séances (accord de Tristan, 03/10/2026 : en 2de, une
+ * moyenne par spécialité à côté de la moyenne par compétence). Une séance compte UNE fois dans
+ * une spécialité, même si elle y travaille deux compétences (C1.2 et C1.4 : une seule note en
+ * logistique) ; elle compte dans deux spécialités si ses compétences y sont (C1.4 et OTM-C2.1).
+ * La moyenne se calcule ensuite comme celle d'une compétence (`moyenneCompetence`).
+ * Rend [{ code: 'LOG', libelle, seances: [meta…] }], les trois toujours, dans l'ordre de l'écran.
+ */
+export function seancesParSpecialite(metas) {
+  const comptees = metas.filter(compteParCompetence);
+  return Object.entries(SPECIALITES).map(([code, libelle]) => ({
+    code, libelle, seances: comptees.filter((m) => m.competences.some((c) => specialite(c) === code)),
+  }));
+}
+
+/**
+ * Moyenne pondérée d'un élève sur une compétence (ou sur une spécialité).
  * `travaux` : { [idSeance]: travail } pour cet élève.
  * Rend { moyenne, detail: [{ meta, temps, coef, note }], nbNotes }.
  * `moyenne` est null tant qu'aucune séance notée n'a un coefficient non nul.
