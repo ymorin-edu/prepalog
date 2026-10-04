@@ -3,9 +3,8 @@
    D'après la maquette v8 (docs/briefs/planning/), dans la charte Prepalog :
    l'accent est celui de l'entreprise (--ardoise, posé par son THEME).
    Les FONDS des familles sont translucides (jaune = famille « a », violet =
-   famille « b ») : posés sur le panneau, ils suivent la charte claire ou
-   sombre de l'entreprise, comme les surbrillances de la feuille de calcul.
-   Les TRAITS, eux, sont déclarés trois fois (clair, sombre choisi, sombre du
+   famille « b ») : posés sur le panneau, ils suivent sa teinte. Toutes les
+   variables sont déclarées trois fois (clair, sombre choisi, sombre du
    système), comme dans base.css. Ni vert plein (il ne dit que « juste »), ni
    bleu (réservé au client sur les vues de transport).
    ============================================================ */
@@ -14,17 +13,26 @@
   --pl-a-fond:rgba(240,190,0,.30); --pl-b-fond:rgba(139,92,246,.25);
   --pl-a-trait:#b38a00; --pl-b-trait:#7c4fe0;
   --pl-fenetre:rgba(156,98,10,.13); --pl-hachure:rgba(85,80,71,.18);
+  --pl-ambre:#7d4e07; --pl-rouge:#9d2727;
 }
 :root[data-theme="sombre"]{
+  --pl-a-fond:rgba(240,190,0,.16); --pl-b-fond:rgba(139,92,246,.20);
   --pl-a-trait:#e0b84d; --pl-b-trait:#a98cf5;
   --pl-fenetre:rgba(224,172,77,.14); --pl-hachure:rgba(154,171,187,.2);
+  --pl-ambre:#f0c070; --pl-rouge:#ff8f8a;
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="clair"]){
+    --pl-a-fond:rgba(240,190,0,.16); --pl-b-fond:rgba(139,92,246,.20);
     --pl-a-trait:#e0b84d; --pl-b-trait:#a98cf5;
     --pl-fenetre:rgba(224,172,77,.14); --pl-hachure:rgba(154,171,187,.2);
+    --pl-ambre:#f0c070; --pl-rouge:#ff8f8a;
   }
 }
+/* Contrastes mesurés le 04/10/2026 (texte sur la teinte posée sur le panneau), tous ≥ 4,5 :
+   clair — encre 14,5 / 12,5 ; ambre 5,8 / 5,0 ; rouge 6,3 / 5,4 ; encre douce 6,6 / 5,7 (jaune / violet) ;
+   sombre — encre 9,4 / 10,6 ; ambre 6,8 / 7,6 ; rouge 5,2 / 5,8 ; encre douce 4,8 / 5,4.
+   L'ambre et le rouge du site (--terre, --rouge) tombaient sous 4,5 sur les teintes : la vue a les siens. */
 /* Une entreprise qui impose le papier (THEME.papier) repose ces valeurs sur <body> (entreprise.js). */
 
 .pl{ display:grid; grid-template-columns:280px minmax(0,1fr); gap:16px; align-items:start }
@@ -52,8 +60,8 @@
 .pl-det{ color:var(--encre-douce); font-size:12.8px }
 .pl-det b{ display:inline; color:var(--encre) }
 .pl-etat{ font-size:12.8px; font-weight:600; margin-top:4px }
-.pl-manque{ color:var(--terre); font-weight:700 }
-.pl-faux-t{ color:var(--rouge); font-weight:700 }
+.pl-manque{ color:var(--pl-ambre); font-weight:700 }
+.pl-faux-t{ color:var(--pl-rouge); font-weight:700 }
 .pl-lien{ background:none; border:0; color:var(--ardoise); text-decoration:underline; cursor:pointer; padding:0 0 0 6px; font:inherit; font-size:12.8px }
 .pl-pause{ border-color:var(--encre-douce); border-left-color:var(--encre-douce);
   background:repeating-linear-gradient(45deg,var(--pl-hachure) 0 5px,transparent 5px 10px) }
@@ -88,7 +96,7 @@
 .pl-bloc.pl-pause{ border-color:var(--encre-douce) }
 .pl-bloc.pl-decale{ align-self:end; height:22px; margin-bottom:2px; z-index:3 }
 /* Un bloc fautif : bordure rouge en tirets et texte rouge, SANS aplat. */
-.pl-bloc.pl-bloc-faux{ border-style:dashed; border-color:var(--rouge); color:var(--rouge) }
+.pl-bloc.pl-bloc-faux{ border-style:dashed; border-color:var(--pl-rouge); color:var(--pl-rouge) }
 .pl-bloc.pl-lect{ cursor:default; height:36px }
 
 /* --- compteurs (cas personnel) --------------------------------------------- */
