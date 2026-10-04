@@ -6,7 +6,7 @@
 > Lis docs/briefs/COORDINATION-smoby.md, docs/EN-COURS.md, puis implémente le brief docs/briefs/MOTEUR-documents-formulaire.md (lot 1, puis 2, puis 3). Annonce la durée de chaque lot.
 > ```
 
-**Statut** : à valider par Tristan — lots 1, 2 et 3 livrés le 04/10/2026 *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
+**Statut** : livré — lots 1, 2 et 3 validés à l'écran par Tristan le 04/10/2026 *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
 **Date du brief** : 04/10/2026
 **Conversation d'origine** : Claude Code, en ouvrant ENT-5.1 (le moteur ne savait ni montrer un document ni faire remplir une
 fiche). Maquette **validée par Tristan le 04/10/2026, agencement B (côte à côte)** :
