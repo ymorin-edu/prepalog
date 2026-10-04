@@ -22,7 +22,13 @@ const CLE_GROUPE = 'prepalog:groupe:';
 const groupeMemorise = (uid) => { try { return localStorage.getItem(CLE_GROUPE + uid); } catch (e) { return null; } };
 const memoriserGroupe = (uid, gid) => { try { localStorage.setItem(CLE_GROUPE + uid, gid || ''); } catch (e) {} };
 
+// Le nettoyage que l'activité ouverte a déclaré (`ctx.surSortie`) : arrêt des minuteries,
+// dernière sauvegarde. Appelé quelle que soit la sortie : bouton du site, bouton de la séance,
+// flèche « Précédent » du navigateur, déconnexion.
+let surSortie = null;
+
 function fermerJeuCourant() {
+  if (surSortie) { const f = surSortie; surSortie = null; try { f(); } catch (e) { console.error(e); } }
   if (jeuOuvert) { try { jeuOuvert.fermer(); } catch (e) {} jeuOuvert = null; }
   B.fermerJeux();
   // Filet de sécurité : une activité immersive repeint <body> à ses couleurs. Quelle que
@@ -30,6 +36,87 @@ function fermerJeuCourant() {
   document.body.classList.remove('immersion');
   document.body.removeAttribute('style');
 }
+
+// ---------------------------------------------------------------- historique
+// Chaque écran (accueil, rubrique, entreprise, activité, espace enseignant) est une étape de
+// l'historique du navigateur : « Précédent » revient d'un écran en arrière au lieu de quitter le
+// site (décision du 04/10/2026). L'adresse ne change pas : recharger ramène à l'accueil.
+// Les onglets de l'espace enseignant et les écrans internes d'une séance ne sont pas des étapes.
+//
+// `s` désigne la session de connexion (unique, même d'un rechargement à l'autre) : une étape
+// d'une session précédente (autre élève sur le même poste, après une déconnexion, ou page
+// rechargée) n'est jamais réaffichée. `n` est le rang de l'étape, et
+// `pile` garde les écrans de la session pour qu'un bouton retour du site recule dans
+// l'historique (au lieu d'empiler) quand il mène à l'étape précédente.
+const ACCUEIL = { rub: null, ent: null, act: null, prof: null };
+const PAGE = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+let numSession = 0;
+let sessionNav = '';
+let pile = [];
+let rang = 0;
+
+const ecranCourant = (act = null, prof = null) => ({ rub: rubriqueActive, ent: entrepriseActive, act, prof });
+const memeEcran = (a, b) => !!a && !!b && a.rub === b.rub && a.ent === b.ent && a.act === b.act && a.prof === b.prof;
+
+function poserEtape(e, remplacer) {
+  if (!remplacer) rang += 1;
+  pile.length = rang;
+  pile[rang] = e;
+  const st = { prepalog: true, s: sessionNav, n: rang, ...e };
+  if (remplacer) history.replaceState(st, ''); else history.pushState(st, '');
+}
+
+function nouvelleSession(e) {
+  numSession += 1;
+  sessionNav = PAGE + '-' + numSession;
+  pile = []; rang = 0;
+  poserEtape(e, true);
+}
+
+// Affiche l'écran `e` sans toucher à l'historique.
+async function afficher(e) {
+  rubriqueActive = e.rub; entrepriseActive = e.ent;
+  if (e.prof != null) return vueProf(e.prof || undefined);
+  if (e.act) {
+    const ouverte = await vueActivite(e.act);
+    // Activité devenue inaccessible (verrou, groupe) : on montre l'écran d'où elle s'ouvre.
+    if (!ouverte) { history.replaceState({ prepalog: true, s: sessionNav, n: rang, ...ecranCourant() }, ''); pile[rang] = ecranCourant(); return vueAccueil(); }
+    return;
+  }
+  return vueAccueil();
+}
+
+// Va à l'écran `e` comme le ferait l'utilisateur. Si c'est l'étape précédente de l'historique,
+// on y recule (« ← ACCUEIL » puis Précédent ne rouvre pas l'écran qu'on vient de quitter) ;
+// sinon on empile une étape.
+async function aller(e) {
+  if (rang > 0 && memeEcran(pile[rang - 1], e)) { history.back(); return; }
+  if (e.act) {
+    rubriqueActive = e.rub; entrepriseActive = e.ent;
+    // L'étape n'est posée que si l'activité s'ouvre vraiment (pas de verrou, groupe présent).
+    await vueActivite(e.act, () => poserEtape(e));
+    return;
+  }
+  poserEtape(e);
+  return afficher(e);
+}
+
+window.addEventListener('popstate', (ev) => {
+  const st = ev.state;
+  // Personne de connecté : on reste sur la connexion, quelle que soit l'étape visée.
+  if (!profil) return;
+  if (!st || !st.prepalog || st.s !== sessionNav) {
+    // Étape d'une autre session (ou hors du site) : l'accueil de l'utilisateur connecté.
+    rubriqueActive = null; entrepriseActive = null;
+    nouvelleSession(ACCUEIL);
+    vueAccueil();
+    return;
+  }
+  rang = st.n;
+  const e = { rub: st.rub ?? null, ent: st.ent ?? null, act: st.act ?? null, prof: st.prof ?? null };
+  pile[rang] = e;
+  afficher(e);
+});
 
 // ------------------------------------------------------------------ connexion
 function vueConnexion() {
@@ -225,48 +312,49 @@ async function vueAccueil() {
   function brancher() {
     brancherEntete(async () => { fermerJeuCourant(); await B.deconnexion(); });
 
-    document.getElementById('btnAccueil')?.addEventListener('click', () => {
-      rubriqueActive = null; entrepriseActive = null; vueAccueil();
-    });
-    document.getElementById('btnSimulog')?.addEventListener('click', () => {
-      entrepriseActive = null; vueAccueil();
-    });
-    document.querySelectorAll('[data-ent]').forEach((b) => b.addEventListener('click', () => {
-      entrepriseActive = b.dataset.ent; vueAccueil();
-    }));
+    document.getElementById('btnAccueil')?.addEventListener('click', () => aller(ACCUEIL));
+    document.getElementById('btnSimulog')?.addEventListener('click', () =>
+      aller({ ...ACCUEIL, rub: rubriqueActive }));
+    document.querySelectorAll('[data-ent]').forEach((b) => b.addEventListener('click', () =>
+      aller({ ...ACCUEIL, rub: rubriqueActive, ent: b.dataset.ent })));
 
     document.querySelectorAll('[data-rub]').forEach((b) => b.addEventListener('click', () => {
       const r = RUBRIQUES.find((x) => x.id === b.dataset.rub);
       const acts = activitesDeRubrique(r, visibles);
       // Une rubrique à activité unique ouvre directement : un clic de moins. Sauf une rubrique
       // rangée par entreprise : toujours logos, puis séances (décision de Tristan, 02/10/2026).
-      if (acts.length === 1 && !r.parEntreprise) return vueActivite(acts[0].meta.id);
-      rubriqueActive = r.id;
-      entrepriseActive = null;
-      vueAccueil();
+      if (acts.length === 1 && !r.parEntreprise) return aller({ ...ACCUEIL, act: acts[0].meta.id });
+      aller({ ...ACCUEIL, rub: r.id });
     }));
 
     document.querySelectorAll('[data-act]').forEach((b) =>
-      b.addEventListener('click', () => vueActivite(b.dataset.act)));
+      b.addEventListener('click', () => aller(ecranCourant(b.dataset.act))));
 
-    document.getElementById('btnProfEspace')?.addEventListener('click', () => vueProf());
-    document.getElementById('btnProfSuivi')?.addEventListener('click', () => vueProf('suivi'));
+    // `prof` : '' = l'espace enseignant à son premier onglet, 'suivi' = le suivi de classe.
+    document.getElementById('btnProfEspace')?.addEventListener('click', () => aller({ ...ACCUEIL, prof: '' }));
+    document.getElementById('btnProfSuivi')?.addEventListener('click', () => aller({ ...ACCUEIL, prof: 'suivi' }));
   }
 }
 
 // ------------------------------------------------------------------- activité
-async function vueActivite(aid) {
+// Rend `false` si l'activité ne s'ouvre pas (le message dit pourquoi). `avant` est appelé une
+// fois les vérifications passées, juste avant de dessiner (pose de l'étape d'historique).
+async function vueActivite(aid, avant) {
   const m = await activite(aid);
-  if (!m) return toast('Activité introuvable.');
+  if (!m) { toast('Activité introuvable.'); return false; }
 
   if (m.meta.portee !== 'eleve' && !groupeActif) {
-    return toast("Cette activité demande un groupe. L'enseignant doit en activer un.");
+    toast("Cette activité demande un groupe. L'enseignant doit en activer un.");
+    return false;
   }
   // Parcours strict : une séance dont la précédente n'est pas validée reste fermée.
   {
     const raison = await verrou((await chargerActivites()).map((x) => x.meta), m.meta, profil, groupeActif);
-    if (raison) return toast(raison);
+    if (raison) { toast(raison); return false; }
   }
+  if (avant) avant();
+  // L'écran d'où l'activité s'ouvre : c'est là que ramènent « ← RUBRIQUE » et « Quitter ».
+  const origine = ecranCourant();
 
   // Une activité « immersive » prend toute la page : pas de bandeau Prepalog, pas de titre
   // de module. L'élève doit avoir l'impression d'entrer dans le logiciel de l'entreprise,
@@ -285,7 +373,7 @@ async function vueActivite(aid) {
           : `· noté sur ${m.meta.bareme}`) : ''}</p>
       <div id="hoteActivite"><div class="vide">Chargement…</div></div>`;
     brancherEntete(async () => { fermerJeuCourant(); await B.deconnexion(); });
-    document.getElementById('btnRetour').addEventListener('click', () => vueAccueil());
+    document.getElementById('btnRetour').addEventListener('click', () => aller(origine));
   }
 
   fermerJeuCourant();
@@ -372,7 +460,10 @@ async function vueActivite(aid) {
     // Sortie de l'environnement, pour une activité immersive qui dessine son propre bouton.
     // La rubrique et l'entreprise ouvertes sont gardées : on revient à la liste des séances
     // de l'entreprise, pas à l'accueil général.
-    quitter() { vueAccueil(); },
+    quitter() { aller(origine); },
+    // L'activité déclare ici ce qu'il faut faire en la quittant (minuteries, dernière
+    // sauvegarde). Appelé une fois, quelle que soit la sortie, Précédent du navigateur compris.
+    surSortie(fn) { surSortie = fn; },
     async deconnexion() { fermerJeuCourant(); await B.deconnexion(); },
     // Le travail déjà enregistré pour cette activité, ou null. Utile aux activités
     // notées à la main : l'élève retrouve sa note en ouvrant le module.
@@ -396,6 +487,7 @@ async function vueActivite(aid) {
   };
 
   m.rendre(document.getElementById('hoteActivite'), ctx);
+  return true;
 }
 
 // ------------------------------------------------------------- espace prof
@@ -408,7 +500,7 @@ async function vueProf(ongletInitial) {
     groupeActif,
     onglet: ongletInitial,
     setGroupe: (gid) => { groupeActif = gid; memoriserGroupe(profil.uid, gid); },
-    retour: () => { rubriqueActive = null; entrepriseActive = null; vueAccueil(); },
+    retour: () => aller(ACCUEIL),
   });
   // L'espace enseignant peut changer le groupe actif : on le relit au retour.
 }
@@ -450,6 +542,8 @@ function vuePanne(e) {
     // l'utilisateur précédent resterait affichée après la connexion suivante.
     rubriqueActive = null;
     entrepriseActive = null;
+    // Et un historique propre : Précédent ne remonte jamais vers les écrans de la session d'avant.
+    nouvelleSession(ACCUEIL);
     if (!p) {
       fermerJeuCourant();
       groupeActif = null;

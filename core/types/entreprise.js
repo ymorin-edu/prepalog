@@ -493,7 +493,14 @@ export function creerEntreprise(U) {
         clearInterval(minuterieTemps); minuterieTemps = null;
         if (!rendue()) { ctx.jeu.sauver(); remonterEtapes(); }
       }
-      const sortir = (fn) => { arreterChrono(); arreterTemps(); debrancherLexique(); deshabiller(); if (fn) fn(); };
+      // Une seule fois, quelle que soit la sortie : bouton « Quitter », Précédent du navigateur
+      // (le site appelle le nettoyage déclaré par `ctx.surSortie`), retour à l'accueil.
+      let sortie = false;
+      const sortir = (fn) => {
+        if (!sortie) { sortie = true; arreterChrono(); arreterTemps(); debrancherLexique(); deshabiller(); }
+        if (fn) fn();
+      };
+      ctx.surSortie?.(() => sortir());
 
       // L'état de la copie (évaluation). `charge` : on sait si elle est déjà rendue — tant qu'on
       // ne le sait pas, le bouton « Rendre » n'est pas offert. Côté enseignant, rien à rendre.

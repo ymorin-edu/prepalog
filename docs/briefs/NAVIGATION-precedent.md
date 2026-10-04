@@ -1,6 +1,6 @@
 # Brief — La flèche « Précédent » du navigateur revient d'un écran en arrière
 
-- **Statut** : à implémenter
+- **Statut** : livré (04/10/2026)
 - **Rédigé par** : Cowork, 04/10/2026
 - **Modèle conseillé** : Sonnet (navigation dans `core/app.js`, pas de vue nouvelle)
 - **Durée estimée** : ~30 à 45 min, dont les essais à l'écran et la suite complète (~5 min).
@@ -116,3 +116,52 @@ faire un geste, Précédent, rouvrir : rien n'est perdu. Se déconnecter, Préc�
 la connexion.
 
 ## 6. Compte rendu (à remplir par Claude Code)
+
+**Livré le 04/10/2026 par Claude Code.** Suite complète verte (636/636), dont 6 cas neufs à la fin
+du bloc `socle`. `outils/test.mjs` et `commun.mjs` **non touchés**.
+
+**Ce qui a été fait**
+- `core/app.js` : chaque écran (accueil, rubrique, logos Simulog, séances d'une entreprise,
+  activité, espace enseignant, suivi de classe) pose une étape d'historique (`history.pushState`),
+  l'adresse ne change pas (pas de `#`). Un écouteur `popstate` réaffiche l'écran visé sans
+  repousser d'étape. Les onglets de l'espace enseignant et les écrans internes d'une séance ne
+  sont pas des étapes.
+- Une activité n'empile son étape **que si elle s'ouvre vraiment** (pas de verrou de parcours,
+  groupe présent) : un clic refusé n'allonge pas l'historique.
+- Boutons du site (« ← ACCUEIL », « ← SIMULOG », « ← TABLEUR »…, « Quitter » d'une séance,
+  retour de l'espace enseignant) : s'ils mènent à l'étape précédente, ils **reculent** dans
+  l'historique (comme Précédent) ; sinon ils empilent une étape. `ctx.quitter()` ramène toujours
+  à la liste des séances de l'entreprise.
+- **Connexion / déconnexion** : chaque connexion (et chaque déconnexion) ouvre une « session
+  d'historique » neuve, avec un identifiant unique même d'un rechargement à l'autre. Une étape
+  d'une autre session n'est jamais réaffichée : déconnecté, Précédent reste sur la connexion ;
+  reconnecté, Précédent ou Suivant vers une étape de l'utilisateur d'avant montre l'accueil de
+  l'utilisateur connecté.
+- **Quitter une séance par Précédent = cliquer « Quitter »** : nouvelle entrée `ctx.surSortie(fn)`
+  (fiche de séance mise à jour) ; le site appelle ce nettoyage une fois, quelle que soit la sortie
+  (bouton, Précédent, déconnexion). `core/types/entreprise.js` y déclare sa sortie (arrêt du
+  chrono, arrêt du temps passé **avec sauvegarde et score remonté**, lexique, charte), protégée
+  contre un double appel.
+
+**Ce qui se passe exactement avec « ← ACCUEIL » puis Précédent**
+- Accueil → Tableur → « ← ACCUEIL » : le bouton recule (l'accueil était l'étape d'avant).
+  Précédent quitte donc le site, comme depuis l'accueil ; Suivant rouvre Tableur.
+- Accueil → Tableur → activité → « ← TABLEUR » → « ← ACCUEIL » : deux reculs, rien n'est rouvert.
+- Cas où l'écran visé n'est pas l'étape d'avant (rare : après une suite de Précédent / Suivant,
+  ou « ← ACCUEIL » depuis la liste d'une entreprise) : le bouton empile l'accueil, et Précédent
+  ramène à l'écran qu'on vient de quitter (pas à une activité).
+
+**Autres types d'activités** : toutes les séances immersives passent par le moteur d'entreprise ;
+c'est le seul type qui a des minuteries. Pour les autres (tableur, quiz, inventaire, tournée,
+grille…), Précédent passe exactement par le même chemin que « ← ACCUEIL » : rien de plus n'est
+perdu. Évaluation (`meta.copie`) : Précédent ne rend pas la copie, comme « Quitter ».
+
+**Vérifié** : suite complète ; à l'écran (panneau du navigateur, enseignant) : accueil → Simulog
+→ Boost → séance, puis trois Précédent : séances de Boost (charte du site revenue), logos,
+accueil. Tests éprouvés dans les deux sens : sans l'écouteur `popstate`, 46 cas du bloc tombent
+(les boutons du site reculent désormais par l'historique) ; sans `ctx.surSortie` dans la séance,
+le cas « le score remonte à la sortie » tombe, et lui seul.
+
+**Non vérifié** : Alt + ← et le bouton « retour » de la souris (mêmes événements que la flèche
+du navigateur, à essayer par Tristan) ; le mode réel Firebase (même code de navigation, mais
+non couvert par la suite).

@@ -229,6 +229,7 @@ séance 2), `TAB` tableur, `REF` exercices par compétence, `SCE` scénario anci
 | `rendreCopie({score, max, detail})` | Remise d'une évaluation (`copie: true` seulement). Une seule fois. |
 | `lireScore()` | Le travail déjà enregistré, utile pour une séance notée à la main. |
 | `quitter()`, `deconnexion()` | Sortie d'une séance immersive. |
+| `surSortie(fn)` | Déclare le nettoyage à faire en quittant l'activité (minuteries, dernière sauvegarde). Le site l'appelle une fois, quelle que soit la sortie : bouton du site, `quitter()`, **flèche « Précédent » du navigateur**, déconnexion. Chaque écran du site est une étape de l'historique (04/10/2026) ; les écrans internes d'une séance n'en sont pas. |
 
 ## Geste tableur (Exporter, traiter, Déposer) — `core/types/export-tableur.js`
 

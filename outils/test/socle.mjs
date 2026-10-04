@@ -1757,4 +1757,179 @@ await v('fiche d’intention : jamais dans le bandeau d’un élève', async () 
 await ctxI.close();
 }
 
+// ---------- Précédent du navigateur (04/10/2026, brief NAVIGATION-precedent)
+// Chaque écran est une étape de l'historique : Précédent revient d'un écran en arrière au lieu de
+// quitter le site. Quitter une séance par Précédent = cliquer « Quitter » (dernière sauvegarde,
+// score remonté, charte du site revenue). Après une déconnexion, Précédent reste sur la connexion.
+{
+const ctxN = await nav.newContext({ viewport: { width: 1280, height: 900 } });
+const pn = await ctxN.newPage();
+pn.setDefaultTimeout(6000);
+const erreursN = [];
+pn.on('pageerror', (e) => erreursN.push('PAGEERROR: ' + e.message));
+pn.on('dialog', (d) => d.accept());
+await pn.goto('http://127.0.0.1:8099/');
+await pn.waitForSelector('#btnProf', { timeout: 8000 });
+// Ce que montre l'écran, en un mot : l'accueil, une rubrique, les logos, une entreprise, une activité…
+const ecranN = () => pn.evaluate(() => {
+  const h1 = document.querySelector('.rubrique-head h1, .entreprise-tete h1, #app > h1');
+  if (document.querySelector('.ent-shell')) return 'seance:' + (document.body.classList.contains('immersion') ? 'habillee' : 'nue');
+  if (document.querySelector('#hoteActivite')) return 'activite:' + (h1 ? h1.textContent : '');
+  if (document.querySelector('#hoteProf')) return 'prof';
+  if (document.querySelector('.entreprise-tete')) return 'entreprise:' + document.querySelector('.entreprise-tete').dataset.entreprise;
+  if (document.querySelector('.entreprises')) return 'logos';
+  if (document.querySelector('.rubrique-head')) return 'rubrique:' + h1.textContent;
+  if (document.querySelector('.accueil-tete')) return 'accueil';
+  if (document.querySelector('#mat')) return 'connexion';
+  return '?';
+});
+// Attend que l'écran soit `attendu` (les vues se dessinent après un aller-retour asynchrone).
+const surN = async (attendu, quoi) => {
+  const fin = Date.now() + 4000;
+  let vu = '';
+  while (Date.now() < fin) { vu = await ecranN(); if (vu === attendu) return; await pn.waitForTimeout(80); }
+  throw new Error(`${quoi} : écran « ${vu} » au lieu de « ${attendu} »`);
+};
+const retourN = () => pn.goBack({ waitUntil: 'commit' }).catch(() => {});
+const avanceN = () => pn.goForward({ waitUntil: 'commit' }).catch(() => {});
+
+await v('Précédent : activité → rubrique → accueil, et Suivant refait le chemin', async () => {
+  await pn.click('#btnProf');
+  await pn.waitForSelector('#btnProfEspace');
+  await pn.click('#btnProfEspace');
+  await pn.waitForSelector('#gNom');
+  await pn.fill('#gNom', 'NAVIG 1');
+  await pn.click('#btnCreerG');
+  await pn.waitForSelector('text=NAVIG 1');
+  await pn.click('[data-ong="comptes"]');
+  await pn.waitForSelector('#lot');
+  await pn.fill('#lot', 'NAVIGUE ; Tom ; 3971 ; nn01');
+  await pn.click('#btnLot');
+  await pn.waitForTimeout(400);
+  await pn.click('#btnRetour');
+  await surN('accueil', 'retour de l’espace enseignant');
+  await pn.click('[data-rub="tableur"]');
+  await surN('rubrique:Tableur', 'rubrique ouverte');
+  const titre = (await pn.textContent('.module-tile .titre')).trim();
+  await pn.click('.module-tile');
+  await surN('activite:' + titre, 'activité ouverte');
+  await retourN(); await surN('rubrique:Tableur', 'Précédent depuis l’activité');
+  await retourN(); await surN('accueil', 'Précédent depuis la rubrique');
+  await avanceN(); await surN('rubrique:Tableur', 'Suivant depuis l’accueil');
+  await avanceN(); await surN('activite:' + titre, 'Suivant depuis la rubrique');
+});
+
+await v('Précédent : les boutons du site reculent dans l’historique quand ils mènent à l’étape d’avant', async () => {
+  // Activité → « ← TABLEUR » → « ← ACCUEIL » : deux reculs, rien d'empilé. Suivant retrouve donc
+  // la rubrique, comme après deux Précédent.
+  await pn.click('#btnRetour');
+  await surN('rubrique:Tableur', '« ← TABLEUR »');
+  await pn.click('#btnAccueil');
+  await surN('accueil', '« ← ACCUEIL »');
+  await avanceN(); await surN('rubrique:Tableur', 'Suivant après « ← ACCUEIL »');
+  await pn.click('#btnAccueil');
+  await surN('accueil', '« ← ACCUEIL » (bis)');
+  // Le suivi de classe est une étape ; ses onglets n'en sont pas.
+  await pn.click('#btnProfSuivi');
+  await surN('prof', 'suivi de classe');
+  await pn.click('[data-ong="comptes"]');
+  await retourN(); await surN('accueil', 'Précédent depuis le suivi de classe (après un changement d’onglet)');
+});
+
+await v('Précédent : « ← SIMULOG » recule, Suivant retrouve l’entreprise', async () => {
+  await pn.click('[data-rub="simulog"]');
+  await surN('logos', 'Simulog');
+  await pn.click('[data-ent="3"]');
+  await surN('entreprise:3', 'Boost');
+  await pn.click('#btnSimulog');
+  await surN('logos', '« ← SIMULOG » (recule)');
+  await avanceN(); await surN('entreprise:3', 'Suivant après « ← SIMULOG »');
+  // « ← ACCUEIL » depuis les logos (étape d'avant = l'accueil) recule aussi.
+  await retourN(); await surN('logos', 'Précédent');
+  await pn.click('#btnAccueil');
+  await surN('accueil', '« ← ACCUEIL » depuis les logos');
+});
+
+await v('Précédent : une séance immersive ramène aux séances de l’entreprise, charte du site revenue, puis aux logos', async () => {
+  await pn.click('#btnDeco');
+  await pn.waitForSelector('#mat');
+  await pn.fill('#mat', '3971');
+  await pn.fill('#code', 'nn01');
+  await pn.click('#btnEleve');
+  await pn.waitForSelector('text=Bonjour Tom');
+  await pn.click('[data-rub="simulog"]');
+  await surN('logos', 'Simulog (élève)');
+  await pn.click('[data-ent="3"]');
+  await surN('entreprise:3', 'Boost (élève)');
+  await pn.click('[data-act="boost-ent33"]');
+  await surN('seance:habillee', 'séance ouverte');
+  await retourN(); await surN('entreprise:3', 'Précédent depuis la séance');
+  const b = await pn.evaluate(() => ({ cl: document.body.className, st: document.body.getAttribute('style'),
+    docs: document.head.querySelectorAll('style[data-ent-documents]').length }));
+  if (/immersion/.test(b.cl) || b.st || b.docs) throw new Error('charte de la séance restée : ' + JSON.stringify(b));
+  await retourN(); await surN('logos', 'Précédent depuis l’entreprise');
+  await avanceN(); await surN('entreprise:3', 'Suivant');
+});
+
+await v('Précédent dans une séance = « Quitter » : le geste et le temps passé sont enregistrés, le score remonte', async () => {
+  // La base de la séance est celle de Boost (`jeuId: 'boost'`) ; le score est rangé sous la séance.
+  const lireN = () => pn.evaluate(() => {
+    const k = (p, aid) => Object.keys(localStorage).find((x) => x.startsWith('prepalog:' + p) && x.endsWith('/' + aid));
+    const lire = (x) => (x ? JSON.parse(localStorage.getItem(x)) : null);
+    return { prive: lire(k('prive/', 'boost')), travaux: lire(k('travaux/', 'boost-ent33')) };
+  });
+  await pn.click('[data-act="boost-ent33"]');
+  await surN('seance:habillee', 'séance rouverte');
+  // Le geste : ouvrir un message reçu (il passe « lu »).
+  await pn.click('.ent-nav[data-vue="mail"]');
+  await pn.click('.ent-main .ent-obj');
+  const lus = () => lireN().then((c) => (c.prive?.data?.mails || []).filter((m) => m.read).length);
+  // Le temps passé est compté toutes les 5 s : on reste un peu plus.
+  await pn.waitForTimeout(5600);
+  const avant = Date.now();
+  await retourN(); await surN('entreprise:3', 'Précédent depuis la séance');
+  await pn.waitForTimeout(300);
+  const c = await lireN();
+  const nLus = await lus();
+  if (!nLus) throw new Error('aucun message enregistré « lu »');
+  const tPrive = c.prive?.data?.indicateurs?.['boost-ent33']?.temps || 0;
+  if (!(tPrive >= 5)) throw new Error('temps passé dans la base : ' + tPrive);
+  // Le score remonté à la sortie (ce que lit l'enseignant) porte ce temps : c'est le nettoyage de
+  // la séance (`ctx.surSortie`) qui l'écrit, rien d'autre n'écrit le score à ce moment-là.
+  if (!c.travaux || !(c.travaux.dateMaj >= avant)) throw new Error('aucun score remonté à la sortie');
+  const tScore = c.travaux.detail?.indicateurs?.['boost-ent33']?.temps || 0;
+  if (!(tScore >= 5)) throw new Error('temps passé dans le score remonté : ' + tScore);
+  // Rouvrir : le message est toujours lu, à l'écran.
+  await pn.click('[data-act="boost-ent33"]');
+  await surN('seance:habillee', 'séance rouverte (bis)');
+  await pn.click('.ent-nav[data-vue="mail"]');
+  if ((await lus()) !== nLus) throw new Error('messages lus perdus à la réouverture');
+  await retourN(); await surN('entreprise:3', 'Précédent (bis)');
+});
+
+await v('Précédent après une déconnexion : on reste sur la connexion, aucun nom à l’écran', async () => {
+  await pn.click('#btnDeco');
+  await pn.waitForSelector('#mat');
+  // Deux étapes de l'élève (logos, entreprise) sont derrière : un troisième Précédent quitte le site.
+  for (let i = 0; i < 2; i++) {
+    await retourN();
+    await pn.waitForTimeout(250);
+    const e = await ecranN();
+    if (e !== 'connexion') throw new Error(`Précédent n° ${i + 1} après déconnexion : écran « ${e} »`);
+    if (/Tom|NAVIGUE/.test(await pn.textContent('body'))) throw new Error('le nom de l’élève est à l’écran');
+  }
+  // Nouvelle connexion (l'enseignant) : Suivant ne rejoue aucun écran de l'élève d'avant.
+  await pn.click('#btnProf');
+  await surN('accueil', 'connexion enseignant');
+  await avanceN();
+  await pn.waitForTimeout(300);
+  const e = await ecranN();
+  if (e !== 'accueil') throw new Error('Suivant après une nouvelle connexion : écran « ' + e + ' »');
+  if (/Tom/.test(await pn.textContent('.accueil-tete'))) throw new Error('accueil de l’élève d’avant');
+  if (erreursN.length) throw new Error(erreursN.slice(0, 3).join(' / '));
+});
+
+await ctxN.close();
+}
+
 }
