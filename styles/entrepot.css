@@ -1,0 +1,144 @@
+/* ============================================================
+   Vue « Plan d'entrepôt » (core/types/entrepot.js) — 04/10/2026.
+   D'après la maquette v2 (docs/briefs/plan-entrepot/), dans la charte
+   Prepalog : l'accent est celui de l'entreprise (--ardoise, posé par son
+   THEME). Le décor du rack a ses couleurs propres (montants bleus, lisses
+   orange, plaques jaunes, cartons) : toutes déclarées trois fois (clair,
+   sombre choisi, sombre du système), comme dans base.css, et reposées par
+   entreprise.js quand l'entreprise impose le papier (THEME.papier).
+   Le vert plein ne dit que « juste » : la palette en main se distingue par
+   une bordure épaisse, jamais par un aplat. Le texte posé sur un carton ou
+   une plaque est toujours foncé (#1a1915) : ces fonds restent clairs dans
+   les deux thèmes (contraste ≥ 4,5 mesuré : 4,8 sur le carton sombre).
+   ============================================================ */
+
+:root{
+  --pe-montant:#2f5f9e; --pe-lisse:#e07b1a; --pe-plaque:#f3d04a;
+  --pe-sol:#e4dfd3; --pe-sol2:#d6d0c2; --pe-carton:#c89a63; --pe-carton-trait:#8f6532;
+  --pe-gris:#bdb7aa; --pe-gris-trait:#8a8478; --pe-sur-gris:#1a1915; --pe-jaune-sol:#e5b800;
+  --pe-litige:rgba(157,39,39,.10); --pe-hachure:rgba(157,39,39,.35); --pe-bande:201,120,10;
+}
+:root[data-theme="sombre"]{
+  --pe-montant:#6c9be0; --pe-lisse:#e8913f; --pe-plaque:#e6c23a;
+  --pe-sol:#232c36; --pe-sol2:#2d3845; --pe-carton:#a87e4c; --pe-carton-trait:#d6ad76;
+  --pe-gris:#4a5563; --pe-gris-trait:#7d8b9b; --pe-sur-gris:#e4eaf0; --pe-jaune-sol:#c9a20a;
+  --pe-litige:rgba(226,114,111,.12); --pe-hachure:rgba(226,114,111,.4); --pe-bande:224,172,77;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="clair"]){
+    --pe-montant:#6c9be0; --pe-lisse:#e8913f; --pe-plaque:#e6c23a;
+    --pe-sol:#232c36; --pe-sol2:#2d3845; --pe-carton:#a87e4c; --pe-carton-trait:#d6ad76;
+    --pe-gris:#4a5563; --pe-gris-trait:#7d8b9b; --pe-sur-gris:#e4eaf0; --pe-jaune-sol:#c9a20a;
+    --pe-litige:rgba(226,114,111,.12); --pe-hachure:rgba(226,114,111,.4); --pe-bande:224,172,77;
+  }
+}
+
+.pe{ display:flex; flex-direction:column; gap:8px; min-width:0 }
+.pe-mono{ font-family:"IBM Plex Mono", ui-monospace, Consolas, monospace }
+.pe-petit{ font-size:.85rem; color:var(--encre-douce) }
+
+/* --- l'adresse qui se construit ------------------------------------------ */
+.pe-adresse{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; min-height:46px; padding:3px 10px;
+  background:var(--panneau); border:1px solid var(--filet); border-radius:var(--r) }
+.pe-lbl{ font-weight:700; margin-right:4px }
+.pe-case{ display:inline-flex; flex-direction:column; align-items:center; min-width:60px; padding:0 9px;
+  border:2px dashed var(--pe-gris-trait); border-radius:var(--r); background:var(--fond) }
+.pe-case b{ font-family:"IBM Plex Mono", ui-monospace, Consolas, monospace; font-size:1.15rem; line-height:1.15 }
+.pe-case small{ font-size:.68rem; line-height:1.1; color:var(--encre-douce) }
+.pe-case.pe-plein{ border-style:solid; border-color:var(--ardoise) }
+.pe-case.pe-attend{ border-color:var(--ardoise); box-shadow:0 0 0 3px var(--ardoise-clair) }
+.pe-tiret{ font-family:"IBM Plex Mono", ui-monospace, Consolas, monospace; font-size:1.5rem; font-weight:800 }
+.pe-consigne{ margin-left:12px; flex:1; min-width:260px }
+.pe-num{ display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:50%;
+  border:2px solid var(--ardoise); color:var(--ardoise); font-weight:800; margin-right:6px }
+
+/* --- le bandeau : personnage, cartes, boutons (hauteur fixe pendant la manipulation) --- */
+.pe-bandeau{ display:flex; gap:10px; align-items:stretch; padding:8px; position:relative; z-index:5;
+  background:var(--panneau); border:1px solid var(--filet); border-radius:var(--r) }
+.pe-perso{ flex:0 1 190px; min-width:150px; font-size:.8rem; line-height:1.28; padding:5px 9px;
+  border-left:4px solid var(--pe-plaque); background:var(--survol); border-radius:0 var(--r) var(--r) 0 }
+.pe-perso b{ display:block; font-size:.76rem; color:var(--encre-douce) }
+.pe-liste{ flex:1 1 auto; min-width:0; display:flex; flex-direction:column }
+.pe-liste h3{ font-size:.78rem; text-transform:uppercase; letter-spacing:.04em; color:var(--encre-douce); margin:0 0 4px }
+.pe-cartes{ display:flex; gap:6px }
+.pe-pal{ flex:1 1 0; min-width:0; display:block; text-align:left; font:inherit; color:var(--encre); cursor:pointer;
+  border:2px solid var(--filet); background:var(--panneau); border-radius:var(--r); padding:5px 7px; font-size:.8rem; line-height:1.2 }
+.pe-pal:hover{ border-color:var(--ardoise) }
+.pe-pal.pe-en-main{ border:3px solid var(--ardoise); padding:4px 6px; background:var(--ardoise-clair) }
+.pe-pal.pe-posee{ opacity:.8 }
+.pe-pal:disabled{ cursor:default }
+.pe-ttl{ display:block; font-weight:800; font-size:.88rem; margin-bottom:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+.pe-pid{ display:inline-block; background:var(--pe-carton); border:1.5px solid var(--pe-carton-trait); color:#1a1915;
+  border-radius:3px; padding:0 5px; margin-right:3px; font-size:.82rem }
+.pe-pal dl{ display:grid; grid-template-columns:6.2em minmax(0,1fr); gap:0 4px; margin:0 }
+.pe-pal dt{ color:var(--encre-douce); font-size:.76rem; padding-top:1px }
+.pe-pal dd{ margin:0; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+.pe-pal dd.pe-res{ color:var(--rouge); white-space:normal }
+.pe-etat{ font-size:.74rem; font-weight:800; padding:0 6px; border-radius:3px; border:1px solid var(--ardoise); color:var(--ardoise) }
+.pe-verd-l{ display:block; margin-top:1px }
+.pe-verd-l:empty{ display:none }
+.pe-verd{ display:block; font-size:.8rem; line-height:1.25; font-weight:800 }
+.pe-ok{ color:var(--vert) }
+.pe-ko{ color:var(--rouge) }
+.pe-act{ display:flex; flex-direction:column; gap:6px; flex:0 0 150px }
+.pe-act .btn{ width:100% }
+.pe-confirme{ font-size:.86rem; display:flex; flex-direction:column; gap:4px }
+.pe-regles{ position:relative }
+.pe-regles summary{ list-style:none; cursor:pointer; border:1px solid var(--ardoise); color:var(--ardoise); border-radius:var(--r);
+  padding:7px 12px; font-weight:700; text-align:center; font-size:.9rem }
+.pe-regles summary::-webkit-details-marker{ display:none }
+.pe-regles[open] summary{ background:var(--ardoise-clair) }
+.pe-regles-corps{ position:absolute; right:0; top:calc(100% + 6px); width:460px; max-width:90vw; z-index:30;
+  background:var(--panneau); border:1px solid var(--filet); border-radius:var(--r); box-shadow:0 8px 24px rgba(0,0,0,.25);
+  padding:10px 12px; font-size:.88rem }
+.pe-regles-corps ol{ margin:4px 0 0; padding-left:20px }
+.pe-regles-corps li{ margin-bottom:3px }
+.pe-encadre{ margin-top:8px; font-size:.84rem; background:var(--survol); border-radius:var(--r); padding:6px 8px }
+
+/* --- la colonne de côté et le grand espace (le plan OU la vue ouverte) ----- */
+.pe-jeu{ display:grid; grid-template-columns:230px minmax(0,1fr); gap:8px; align-items:start }
+@media (max-width:900px){ .pe-jeu{ grid-template-columns:minmax(0,1fr) } .pe-bandeau{ flex-wrap:wrap } }
+.pe-cote{ display:flex; flex-direction:column; gap:8px; font-size:.88rem; line-height:1.35; min-width:0 }
+.pe-cote > *{ background:var(--panneau); border:1px solid var(--filet); border-radius:var(--r); padding:6px 8px }
+.pe-cons{ border-left:3px solid var(--ardoise) !important; min-height:4.2em }
+.pe-cons span{ display:block }
+.pe-astuce{ border-left:3px solid var(--ardoise) !important }
+.pe-implant span{ display:block }
+.pe-t{ color:var(--encre-douce); font-weight:700 }
+.pe-legende{ display:flex; flex-wrap:wrap; gap:2px 10px; font-size:.8rem; color:var(--encre-douce) }
+.pe-puce{ display:inline-block; width:12px; height:10px; margin-right:4px; vertical-align:-1px; border:1px solid var(--pe-gris-trait); background:var(--panneau) }
+.pe-p-stock{ background:var(--pe-gris) }
+.pe-p-eleve{ background:var(--pe-carton) }
+.pe-p-hs{ background:repeating-linear-gradient(45deg, var(--pe-hachure) 0 3px, transparent 3px 6px); border-color:var(--rouge) }
+.pe-msg{ min-height:2.2em; padding:5px 10px; border-radius:var(--r); font-size:.92rem }
+.pe-msg:empty{ padding:0; border:0 !important; background:none !important; min-height:0 }
+.pe-msg.pe-non{ color:var(--rouge); font-weight:700; border:1px solid var(--rouge) }
+.pe-msg.pe-oui{ border:1px solid var(--ardoise) }
+.pe-cote > .pe-msg:empty{ display:none }
+.pe-prof{ font-size:.82rem }
+.pe-prof summary{ cursor:pointer; font-weight:700 }
+
+.pe-espace{ background:var(--panneau); border:1px solid var(--filet); border-radius:var(--r); padding:6px; min-width:0 }
+/* Le plan et la vue de face tiennent dans la hauteur d'écran qui reste sous le bandeau (--pe-dispo,
+   mesurée par la vue à chaque dessin) : comme dans la maquette, tout se voit sans défiler. */
+.pe-plan svg, .pe-face svg{ display:block; width:100%; height:var(--pe-dispo, 560px) }
+.pe-trav, .pe-palq, .pe-lit, .pe-emp{ cursor:pointer }
+.pe-trav:focus, .pe-palq:focus, .pe-lit:focus, .pe-emp:focus{ outline:none }
+.pe-trav:hover .pe-fond-trav{ fill:var(--ardoise-clair) }
+.pe-trav:focus-visible .pe-fond-trav{ stroke:var(--ardoise); stroke-width:4 }
+.pe-palq:focus-visible rect:first-child, .pe-lit:focus-visible rect:first-child{ stroke:var(--ardoise); stroke-width:5 }
+.pe-emp:hover .pe-cible, .pe-emp:focus-visible .pe-cible{ fill:var(--ardoise-clair); stroke:var(--ardoise); stroke-width:3 }
+
+/* l'en-tête fixe de la vue ouverte : fil, message (hauteur fixe), aide, retour */
+.pe-entete{ display:flex; align-items:center; gap:10px; min-height:50px; padding-bottom:4px; margin-bottom:4px; border-bottom:1px solid var(--filet) }
+.pe-fil{ flex:0 1 auto; max-width:36%; font-size:.92rem; color:var(--encre-douce) }
+.pe-fil b, .pe-fil .pe-mono{ color:var(--encre) }
+.pe-fil .pe-mono{ font-weight:800 }
+.pe-msg-vue{ flex:1; min-width:0; height:2.6em; display:flex; align-items:center }
+.pe-msg-vue .pe-msg{ width:100% }
+.pe-case-aide{ display:flex; align-items:center; gap:6px; font-size:.86rem; color:var(--encre-douce); white-space:nowrap }
+.pe-retour{ font-size:1rem; min-height:44px; padding:8px 18px; white-space:nowrap }
+.pe-releve{ transform-origin:50% 100% }
+.pe-releve.pe-anim{ animation:pe-releve .6s cubic-bezier(.3,.7,.3,1) }
+@keyframes pe-releve{ from{ transform:perspective(900px) rotateX(75deg); opacity:.3 } to{ transform:none; opacity:1 } }
+@media (prefers-reduced-motion: reduce){ .pe-releve.pe-anim{ animation:none } }

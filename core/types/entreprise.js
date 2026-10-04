@@ -19,6 +19,7 @@ import { creerTournee } from './tournee.js';
 import { creerInventaire } from './inventaire.js';
 import { creerQuai } from './quai.js';
 import { creerPlanning } from './planning.js';
+import { creerEntrepot } from './entrepot.js';
 import { creerDocuments } from './documents.js';
 import { creerFiche } from './fiche.js';
 import { creerGesteTableur, retourDeTemps } from './export-tableur.js';
@@ -139,6 +140,10 @@ export function creerEntreprise(U) {
   // n'existe que si la séance déclare un `planning` (format en tête de `core/types/planning.js`). Son
   // état vit dans `db.plannings[<planning.id>]`. L'aléa arrive par un déclencheur `phasePlanning: 2`.
   const VPL = U.planning ? creerPlanning(U.planning, COPIE ? { copie: true } : {}) : null;
+  // L'écran « Plan d'entrepôt » (04/10/2026, brief `docs/briefs/MOTEUR-vue-plan-entrepot.md`), même
+  // principe : il n'existe que si la séance déclare un `entrepot` (format en tête de
+  // `core/types/entrepot.js`). Son état vit dans `db.entrepots[<entrepot.id>]`.
+  const VENT = U.entrepot ? creerEntrepot(U.entrepot, COPIE ? { copie: true } : {}) : null;
   // Les DOCUMENTS JOINTS (04/10/2026, brief `docs/briefs/MOTEUR-documents-formulaire.md`, lot 1) : une
   // fiche de poste, des CV… que l'élève lit sans les saisir. Ils n'existent que si la séance les déclare
   // (format en tête de `core/types/documents.js`) ; un mail semé les joint par `pieces: [ids]`.
@@ -195,6 +200,12 @@ export function creerEntreprise(U) {
     if (VPL && VPL.note) {
       const n = VPL.note(db);
       detail.planning = n.detail;
+      return { score: n.score, max: n.max, detail };
+    }
+    // Le plan d'entrepôt en évaluation : même principe (jalons réussis / jalons × 20).
+    if (VENT && VENT.note) {
+      const n = VENT.note(db);
+      detail.entrepot = n.detail;
       return { score: n.score, max: n.max, detail };
     }
     const VQ = quaiDeBase(db);
@@ -419,6 +430,11 @@ export function creerEntreprise(U) {
             '--rouge:#9d2727', '--gele-fond:#fcf3e2', '--toast-fond:#1a1915', '--toast-texte:#ffffff',
             '--ombre:0 1px 2px rgba(40,34,24,.06)', '--quai-froid:#2a6fb0', '--quai-chaud:#b8431b',
             '--pl-alpha:.30', '--pl-fenetre:rgba(156,98,10,.13)', '--pl-hachure:rgba(85,80,71,.18)', '--pl-ambre:#7d4e07', '--pl-rouge:#9d2727',
+            // Le décor du plan d'entrepôt (mêmes valeurs que `:root` dans styles/entrepot.css).
+            '--pe-montant:#2f5f9e', '--pe-lisse:#e07b1a', '--pe-plaque:#f3d04a', '--pe-sol:#e4dfd3', '--pe-sol2:#d6d0c2',
+            '--pe-carton:#c89a63', '--pe-carton-trait:#8f6532', '--pe-gris:#bdb7aa', '--pe-gris-trait:#8a8478',
+            '--pe-sur-gris:#1a1915', '--pe-jaune-sol:#e5b800', '--pe-litige:rgba(157,39,39,.10)',
+            '--pe-hachure:rgba(157,39,39,.35)', '--pe-bande:201,120,10',
             'color-scheme:light');
         }
         const a = THEME.accent;
@@ -707,6 +723,7 @@ export function creerEntreprise(U) {
                 ${item('receptions', 'Réceptions', aRecevoir, ['receptions', 'reception'])}
                 ${VQUAI ? item('quai', VQUAI.nav.libelle) : ''}
                 ${VPL ? item('planning', VPL.nav.libelle) : ''}
+                ${VENT ? item('entrepot', VENT.nav.libelle) : ''}
                 ${VPLAN || VTOUR ? `<div class="ent-sep">${ech(U.transportSection || 'Transport')}</div>` : ''}
                 ${VPLAN ? item('plan', VPLAN.nav.libelle) : ''}
                 ${VTOUR ? item('tournee', VTOUR.nav.libelle) : ''}
@@ -876,6 +893,7 @@ export function creerEntreprise(U) {
           inventaire: VINV ? vueInventaire : vueAccueil,
           quai: VQUAI ? vueQuai : vueAccueil,
           planning: VPL ? vuePlanning : vueAccueil,
+          entrepot: VENT ? vueEntrepot : vueAccueil,
           fiche: VFICHE ? vueFiche : vueAccueil,
           fichiers: VTAB ? vueFichiers : vueAccueil,
           extractions: VTAB && VTAB.navExtractions ? vueExtractions : vueAccueil,
@@ -1799,6 +1817,22 @@ export function creerEntreprise(U) {
       });
       function vuePlanning() { return VPL.html(etatPlanning(), apiPlanning()); }
 
+      /* ---------------------------------------------------------- plan d'entrepôt */
+      // Cloisonné par séance : `db.entrepots[<id de l'entrepôt de cette séance>]`. Même temps
+      // pédagogique et même copie rendue que le planning.
+      function etatEntrepot() {
+        if (!db.entrepots) db.entrepots = {};
+        if (!db.entrepots[VENT.id]) db.entrepots[VENT.id] = VENT.etatNeuf();
+        return db.entrepots[VENT.id];
+      }
+      const apiEntrepot = () => ({
+        sauver, estProf, temps: tempsPlanning(),
+        redessiner: dessinerVue,
+        copieRendue: rendue,
+        rendreCopie: () => { if (COPIE && !estProf) rendreLaCopie(); },
+      });
+      function vueEntrepot() { return VENT.html(etatEntrepot(), apiEntrepot()); }
+
       /* ---------------------------------------------------------- fiche à remplir */
       // Cloisonnée par séance : `db.fiches[<id de la fiche de cette séance>]`.
       function etatFiche() {
@@ -2418,6 +2452,7 @@ export function creerEntreprise(U) {
         if (E.vue === 'inventaire' && VINV && !VINV.attente(db)) VINV.brancher(z, etatInventaire(), apiInventaire());
         if (E.vue === 'quai' && VQUAI) VQUAI.brancher(z, etatQuai(), apiQuai());
         if (E.vue === 'planning' && VPL) VPL.brancher(z, etatPlanning(), apiPlanning());
+        if (E.vue === 'entrepot' && VENT) VENT.brancher(z, etatEntrepot(), apiEntrepot());
         if (E.vue === 'fiche' && VFICHE) VFICHE.brancher(z, etatFiche(), E.fiche, apiFiche());
       }
 

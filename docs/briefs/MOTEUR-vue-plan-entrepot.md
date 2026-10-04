@@ -6,7 +6,7 @@
 > Lis docs/EN-COURS.md, puis le brief docs/briefs/MOTEUR-vue-plan-entrepot.md et ouvre la maquette docs/briefs/plan-entrepot/maquette-plan-entrepot-v2.html. Annonce la durée avant de commencer, découpe en lots (§10), puis enchaîne sans attendre : les questions du §13 ont toutes une valeur par défaut, applique-la et note au compte rendu ce que tu as choisi.
 > ```
 
-**Statut** : à implémenter *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
+**Statut** : en cours — **lots 1 et 2 (le cœur, le mode rangement) livrés le 04/10/2026, à valider par Tristan** sur `outils/essai-entrepot.html` ; lots 3 (comptage), 4 (préparation) et 5 à faire *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
 **Date du brief** : 04/10/2026
 **Conversation d'origine** : Cowork (Opus) ; fiche projet `claude/prepalog-plan-entrepot-cadrage.md` (décisions 1 à 22,
 recalage Smoby, onglets, plan agrandi), `claude/prepalog-2de-s1-cadrage.md`.
@@ -447,9 +447,31 @@ maquette, dans les trois temps ; les bonnes réponses et les mètres sont ceux d
 
 ## Compte rendu *(rempli par Claude Code à la livraison)*
 
-- **Fichiers créés / modifiés** :
-- **Écarts par rapport au brief** (et pourquoi) :
-- **Décisions prises en route** :
-- **Tests** : bloc / suite entière, nombre de cas, sabotages éprouvés
-- **Commits** :
-- **Reste ouvert** :
+*Lots 1 et 2 (04/10/2026, Claude Code) — le reste viendra avec les lots 3 à 5.*
+
+- **Fichiers créés / modifiés** : `core/types/entrepot.js` (nouveau : vue, critères, jalons, `etapesEntrepot`,
+  `noteEntrepot`, `bonnesReponses`) ; `core/types/entreprise.js` (câblage : menu, état `db.entrepots`, note en
+  évaluation, couleurs du décor reposées quand l'entreprise impose le papier) ; `styles/entrepot.css` (nouveau, variables
+  déclarées trois fois) et sa ligne dans `index.html` ; `contenus/entrepot-essai.js` (cas rangement, stock figé repris de
+  `donnees-maquette.json` par script) ; `outils/essai-entrepot.html` + `.js` ; `outils/test/entrepot.mjs` et **une ligne
+  dans `BLOCS` de `outils/test.mjs`** ; `activites/FICHE-SEANCE.md` (section « Plan d'entrepôt ») ; `docs/decisions.md`.
+- **Écarts par rapport au brief** : la vue tient dans l'environnement d'entreprise (menu à gauche, bandeau rouge en haut)
+  et non sur tout l'écran comme la maquette : le plan prend la hauteur qui reste sous le bandeau (420 px environ à
+  1366 × 768) ; la case « charge déjà posée » passe dans l'en-tête de la vue ouverte ; pas d'œil « regard » sur le plan
+  (il est caché quand la travée est ouverte, le fil dit « vue depuis l'allée … ») ; le message d'un geste fait sur le plan
+  (zone litiges) s'affiche dans la colonne de côté.
+- **Décisions prises en route (§13)** : 2. clé `entrepot` / `db.entrepots` (défaut) ; 3. « ← Retour au plan » en
+  **bouton plein à l'accent de l'entreprise** : la charte l'autorise déjà pour les boutons d'action (« Envoyer »,
+  `btn btn-p`) ; 4. un mode par déclaration (défaut) ; 8. teintes de la maquette en variables `--pe-*`, texte foncé sur
+  carton et plaque dans les deux thèmes (4,8 sur le carton sombre). Le critère `parcours` n'est jugé que si le type de
+  produit est juste (comme la maquette).
+- **Tests** : bloc `entrepot`, 20 cas : bonnes réponses écrites à la main = celles du moteur ; les 13 pièges du §11
+  nomment chacun leur critère seul ; « que, pas de combien » ; décision 7 (au-dessus d'une plus légère → aucune faute) ;
+  parcours juste **à la souris** à 1366 × 768 ; chaque jalon tombe quand sa palette est mal rangée ; occupé refusé ;
+  inaction 0/4 ; les trois temps ; évaluation 15/20 sur 3 palettes justes ; onglets, Échap, clavier, hauteur du bandeau ;
+  rechargement et cloisonnement. **Sabotages du moteur éprouvés** (charge sans le stock, occupé non refusé, Échap
+  coupé) : 7 cas tombent. Suite entière : voir le commit.
+- **Commits** : voir `git log` (« Plan d'entrepôt : … »).
+- **Reste ouvert** : lots 3 (comptage), 4 (préparation, mètres 47 / 40 / 141), 5 ; le plan est dessiné pour 4 travées
+  et 3 niveaux (géométrie générale, mais seul ce cas est essayé) ; rendu en thème sombre non essayé à l'écran (Smoby
+  impose le papier).

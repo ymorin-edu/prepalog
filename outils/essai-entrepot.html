@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Essai — Plan d'entrepôt (Prepalog)</title>
+<!-- Page d'ESSAI de l'écran `core/types/entrepot.js`, dans le vrai moteur d'entreprise, sur le cas
+     « rangement » de la maquette v2 (`contenus/entrepot-essai.js`). Elle n'est liée nulle part et rien
+     n'y est enregistré : la base vit en mémoire, un changement de réglage repart de zéro.
+     Ouvrir avec `lancer.bat`, puis http://localhost:8000/outils/essai-entrepot.html -->
+<base href="../">
+<link rel="icon" href="./styles/logo.png">
+<link rel="stylesheet" href="./styles/polices.css">
+<link rel="stylesheet" href="./styles/base.css">
+<link rel="stylesheet" href="./styles/entrepot.css">
+<style>
+  .essai-reglages{ background:#fff7d6; border-bottom:1px solid #e8d48a; padding:8px 16px; font:14px/1.5 sans-serif; color:#3b3200 }
+  .essai-reglages label{ display:inline-block; margin:2px 16px 2px 0; white-space:nowrap; font-weight:400; color:#3b3200 }
+  .essai-reglages select{ width:auto; display:inline-block; padding:2px 4px }
+  .essai-note{ background:#fff7d6; border:1px solid #e8d48a; color:#3b3200; padding:8px 16px; font:14px/1.5 sans-serif }
+  .essai-mention{ font:12.5px/1.5 sans-serif; color:#3b3200; background:#fffbea; padding:4px 16px; border-bottom:1px solid #e8d48a }
+</style>
+</head>
+<body>
+<form class="essai-reglages" id="reglages">
+  <b>Page d'essai</b> — chaque changement repart d'une base neuve :
+  <label>Cas <select name="cas"><option value="rangement">① Rangement (ENT-5.5)</option></select></label>
+  <label>Temps <select name="temps"><option value="guidage">guidage</option><option value="entrainement">entraînement</option><option value="evaluation">évaluation (copie rendue)</option></select></label>
+  <label>Voir comme <select name="role"><option value="eleve">élève</option><option value="prof">enseignant (bonnes réponses)</option></select></label>
+</form>
+<div class="essai-mention" id="mention"></div>
+<div id="essaiNote" class="essai-note" hidden></div>
+<div id="hote"></div>
+<script type="module">
+import { creerEntreprise } from './core/types/entreprise.js';
+import { univers } from './outils/essai-entrepot.js';
+import { MENTION } from './contenus/entrepot-essai.js';
+
+document.getElementById('mention').innerHTML = MENTION;
+const form = document.getElementById('reglages');
+const boite = document.getElementById('essaiNote');
+function monter() {
+  const f = new FormData(form);
+  const temps = f.get('temps');
+  const hote = document.getElementById('hote');
+  const neuf = hote.cloneNode(false); hote.replaceWith(neuf);
+  boite.hidden = true;
+  const moteur = creerEntreprise(univers({ cas: f.get('cas'), temps }));
+  const db = {};
+  moteur.rendre(neuf, {
+    meta: { id: 'essai-entrepot', code: 'ESSAI', titre: 'Essai du plan d’entrepôt', portee: 'eleve', immersif: true, temps, copie: temps === 'evaluation' },
+    profil: { prenom: 'Essai', nom: 'Entrepôt', role: f.get('role') },
+    jeu: { etat: () => db, sauver: () => {} },
+    enregistrer: () => {}, quitter: () => { location.reload(); }, codeStock: 'ESSAI',
+    lireScore: async () => null,
+    // La remise de la copie, simulée : la note calculée s'affiche en haut (ce que l'enseignant lira).
+    rendreCopie: async (res) => {
+      const J = (res.detail && res.detail.entrepot && res.detail.entrepot.jalons) || [];
+      boite.hidden = false;
+      boite.innerHTML = `<b>Copie rendue (simulée).</b> Note calculée : <b>${String(res.score).replace('.', ',')} / ${res.max}</b>
+        (${J.filter((j) => j.ok).length} / ${J.length} jalons).<br>${J.map((j) => `${j.ok ? '✓' : '✗'} ${j.jalon} (${j.adresse || 'non posée'})`).join('<br>')}`;
+      return { rendu: Date.now() };
+    },
+  });
+  window.__essai = { db, moteur };
+  document.querySelector('.ent-nav[data-vue="entrepot"]')?.click();
+}
+form.addEventListener('change', monter);
+monter();
+</script>
+</body>
+</html>

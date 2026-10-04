@@ -416,6 +416,57 @@ version envoyée.
 envoi rend la copie. Note = jalons réussis / jalons × `note.sur` (20 par défaut), détail jalon par jalon, clics sur
 « Vérifier », heure du premier geste et des envois dans `detail.planning` (rangés, montrés nulle part).
 
+## Vue « Plan d'entrepôt » (ranger des palettes) — `core/types/entrepot.js`
+
+Depuis le 04/10/2026 (brief `docs/briefs/MOTEUR-vue-plan-entrepot.md`, maquette v2 de `docs/briefs/plan-entrepot/`).
+**Seul le mode `rangement` est écrit** (lots 1 et 2) ; une séance qui déclare `comptage` ou `preparation` ne se charge
+pas tant que les lots 3 et 4 ne sont pas faits. L'élève prend une palette (carte du bandeau ou zone de réception du
+plan), choisit une **travée** sur le plan vu de dessus (elle s'ouvre en grand, vue de face), puis un **emplacement**.
+L'adresse s'écrit `A1-T03-N2-E1` (allée A côté 1, travée 03, niveau 2 — niveau 1 = sol —, emplacement 1). Emplacement
+occupé : refusé tout de suite. **Aucune règle « lourd en bas » dans un rack** : seule la charge totale du niveau compte.
+
+La séance déclare `entrepot` dans `creerEntreprise` et `etapes: etapesEntrepot(ENTREPOT)` (importé de
+`core/types/entrepot.js` ; un jalon = une palette bien rangée, à composer avec les étapes propres de la séance) ;
+une entrée de menu s'ajoute (libellé `libelle`). L'état vit dans `db.entrepots[<entrepot.id>]` (cloisonné par séance) :
+`{ place: { P1: 'A1-T01-N1-E3', P3: 'L1' }, verifie, verifs, premierGeste, aideCharge }`. Exemple complet :
+`contenus/entrepot-essai.js` ; page d'essai `outils/essai-entrepot.html` ; tests : bloc `entrepot`.
+
+```js
+entrepot: {
+  id: 'smoby-rangement', libelle: 'Plan de l’entrepôt', mode: 'rangement',
+  personnage: { nom: 'Bruno', role: 'chef de quai', date: 'mer. 9 déc., 17 h', texte: { guidage, entrainement, evaluation } },
+  plan: {
+    allees: [{ id: 'A', cotes: ['A1', 'A2'] }, { id: 'B', cotes: ['B1', 'B2'] }],   // de gauche à droite, 1 ou 2 côtés
+    cotes: { A1: { gammes: ['MAT'], charge: { 1: 3000, 2: 1200, 3: 1200 }, note? }, … },  // charge max d'UN niveau
+    travees: 4, niveaux: 3, emplacements: 3,                // T01 en bas, près de l'allée principale
+    horsService: ['A1-T02-N2-E2', …],
+    zones: { litiges: ['L1', 'L2'], bureau: 'chef de quai', quais: ['QUAI 1', …] },
+    parcours: { debut: 'A', fin: 'B' },                     // dessiné (guidage, entraînement) et critère « parcours »
+    rotation: { A: { lib: 'rapide', travees: [1], niveaux: [1, 2], texte: 'T01, niveau N1 ou N2' }, … },
+  },
+  gammes: { MAT: 'Maisons et ateliers', … },
+  produits: { MAI: { nom, ref, gamme: 'MAT', court? }, … },  // court : le mot montré sur la vue de face
+  stock: { 'A1-T01-N1-E1': { produit: 'MAI', kg: 420 }, … }, // FIGÉ, aucun tirage
+  palettes: [{ id: 'P1', nom?, produit: 'MAI', kg: 420, rotation: 'A', contrainte: 'lourd' | 'fragile',
+               reception: '1 carton écrasé', litige: true }, …],
+  criteres: [{ type: 'etat' }, { type: 'litige' }, { type: 'gamme' }, { type: 'parcours' }, { type: 'rotation' },
+             { type: 'niveauInterdit', si: 'fragile', niveaux: [3] }, { type: 'charge' }],   // nom?, message? pour remplacer
+  regles: { titre?, lignes: [html…], encadre?: html },       // « Les règles ▾ » (guidage, entraînement)
+  jalons?: [{ id, lib, palette: 'P1' }],                     // défaut : un jalon par palette
+  note?: { sur: 20 },                                        // évaluation : jalons réussis / jalons × 20
+}
+```
+
+- **Les bonnes réponses sont calculées par le moteur** (`bonnesReponses(ENTREPOT)`) : tous les emplacements libres du
+  stock de départ sans faute. L'enseignant les voit dans la colonne de côté ; les tests les écrivent **à la main**.
+- **Les critères** disent *que*, jamais *de combien* (« la charge totale du niveau dépasse son maximum »). Le critère
+  `parcours` n'est jugé que si le type de produit est juste. Un message remplacé par la séance doit tenir la même règle.
+- **Temps** : guidage = consigne de la palette en main (colonne de côté), bandes de rotation, parcours dessiné, verdict
+  critère par critère après « Vérifier mon rangement » ; entraînement = parcours seul, nom du critère seul ;
+  évaluation (`copie: true`) = rien de signalé, « Rendre mon travail » en deux clics, note jalons × 20.
+- La vue tient dans l'écran à 1366 × 768 (le plan prend la hauteur qui reste sous le bandeau). Les textes peuvent porter
+  des `[[mots cliquables]]`, sauf dans les cartes de palettes (ce sont des boutons).
+
 ## Pièges
 
 - Une séance en cours d'écriture reste en `pret: false` et peut être commitée à tout moment.
