@@ -58,7 +58,12 @@ mercredi 9 décembre 2026, fin d'après-midi.
      niveaux) ;
    - un clic sur une travée la fait **basculer en vue de face** : **3 niveaux × 3 emplacements** (3 palettes par niveau,
      décision de Tristan) ; l'élève clique l'emplacement (ou glisse la palette) ;
-   - **l'adresse se construit sous ses yeux** : allée - travée - niveau - emplacement (`A-03-2-1`) ; **niveau 1 = sol**.
+   - **l'adresse se construit sous ses yeux**, en 4 parties **lettrées** (décision de Tristan, 04/10) : **`A1-T03-N2-E1`**
+     = allée A côté 1, travée 03, niveau 2, emplacement 1 ; **niveau 1 = sol**. Les allées sont **à double sens** : A1 et
+     A2 sont les deux racks de part et d'autre de l'allée A ; la numérotation des côtés **se suit selon le plan** (A1, A2,
+     B1, B2…) et elle est **déclarée par le contenu** ;
+   - un emplacement **déjà occupé est refusé tout de suite** (« Emplacement déjà occupé », la palette reste en main) ;
+   - **pas d'imprévu** en cours de séance (décision de Tristan, 04/10).
    - Pour la 2de : **2 allées (A, B)** et la **zone litiges** au sol près du quai suffisent (proposition de Cowork) ; les
      zones produits dangereux, forte valeur et rotation sont pour un cas de 1re.
 
@@ -75,8 +80,10 @@ mercredi 9 décembre 2026, fin d'après-midi.
    déjà presque pleins font le piège (« la somme dépasse »). Valeurs : à recaler sur la maquette v2.
 2. **Les règles** (encadré, une ligne chacune) : (1) un emplacement **libre et en service** ; (2) la **charge totale du
    niveau** ne dépasse pas sa charge maximale ; (3) une palette **en litige ne va pas en stock** : zone litiges.
-   **Décision de Tristan (04/10) : plus de règle « lourd en bas » bloquante** — une palette n'est jamais refusée parce
-   qu'une plus légère est en dessous, si la charge du niveau est respectée. Mettre en bas les produits lourds (et les
+   **Décision de Tristan (04/10) : pas de règle « lourd en bas » dans un rack** — chaque palette repose sur une lisse ;
+   une palette n'est jamais refusée ni signalée parce qu'une plus légère est en dessous, **aucun conseil non plus**.
+   « Lourd en bas » ne vaut que quand une charge en écrase une autre (gerbage, préparation de commandes) : autre séance.
+   Ancienne formulation, remplacée : « Mettre en bas les produits lourds (et les
    produits en picking) est un **conseil de bon sens**, pas une erreur. Encadré : « Monter aux niveaux 2 et 3 demande le
    chariot rétractable : il faut le **CACES 5**. Yanis l'a. »
 3. **Saisie de l'entrée en stock** (écran Réceptions de l'environnement, existant) : la réception d'Arinthod (BL
@@ -138,7 +145,8 @@ réserves d'ENT-5.4.
 - [x] ~~Seuil « lourd » (400 kg)~~ : **supprimé** (décision de Tristan du 04/10 : seule la charge totale du niveau compte).
 - [x] Le plan : **vue de dessus découpée par travée → vue de face de la travée (3 niveaux × 3 emplacements)** (Tristan, 04/10).
 - [ ] Charges maximales par niveau, poids des palettes, stock de départ : à recaler sur la maquette v2.
-- [ ] Format d'adresse `A-03-2-1` (allée-travée-niveau-emplacement, niveau 1 = sol) : proposé par Cowork, à confirmer.
+- [x] Format d'adresse : **`A1-T03-N2-E1`** (décision de Tristan, 04/10), côtés d'allée numérotés selon le plan.
+- [x] Emplacement occupé : refusé. Imprévu : aucun. Conseil « lourd en bas » : aucun dans un rack (Tristan, 04/10).
 
 ---
 

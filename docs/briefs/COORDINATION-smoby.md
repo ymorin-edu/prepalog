@@ -86,8 +86,13 @@ ENT-5.6 (planning de la journée) et ENT-5.7 (départ d'E1 à 6 h, retard à 8 h
 
 - Le palettier est **découpé entre chaque échelle** ; logique **« je choisis la travée, puis l'emplacement »** (vue de dessus →
   vue de face de la travée).
-- **3 palettes par niveau** ; **charge maximale par niveau** (somme) ; **plus de règle « lourd en bas » bloquante** (conseil
-  seulement) ; un **cas picking** sera à ajouter (niveau du sol pour la préparation).
-- Vocabulaire : **« emplacement », jamais « place »** ; adresse proposée `A-03-2-1` (allée-travée-niveau-emplacement,
-  niveau 1 = sol).
+- **3 palettes par niveau** ; **charge maximale par niveau** (somme) ; **plus de règle « lourd en bas »** ; un **cas
+  picking** sera à ajouter plus tard (niveau du sol pour la préparation).
+- Vocabulaire : **« emplacement », jamais « place »** ; **adresse `A1-T03-N2-E1`** (allée A côté 1, travée, niveau,
+  emplacement ; lettres devant chaque partie ; niveau 1 = sol). **Allées à double sens** : A1 / A2 de part et d'autre de
+  l'allée A, numérotation qui se suit selon le plan (A1, A2, B1, B2…), déclarée par le contenu.
+- Emplacement occupé **refusé** ; **pas d'imprévu** dans le rangement ; **aucun conseil « lourd en bas » dans un rack**
+  (il ne vaut que pour le gerbage et la préparation de commandes).
+- **Maquette v2 du Plan d'entrepôt : deux cas, Smoby rangement (2de) et Inventaire** (comptage à une liste d'adresses,
+  à l'aveugle).
 - **Pas de maquette universelle** : le moteur fournit des briques, chaque séance déclare son plan.

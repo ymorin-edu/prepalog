@@ -68,8 +68,9 @@ Mercredi 9 décembre 2026, 8 h : Yanis arrive.
    filmée, allée, niveau, travée, croisillons (définition d'une phrase chacun ; ce sont aussi des **mots cliquables**).
 5. **Quiz sur une autre photo, sans légende** : « Cliquez sur une échelle », « … sur une lisse », « … sur une palette
    filmée », « … sur l'allée » (zones de réponse déclarées par le contenu).
-6. **Lire une adresse** : une étiquette `A-03-2-1` ; l'élève associe chaque partie à son sens (allée / travée / niveau /
-   emplacement). **Vocabulaire : « emplacement », jamais « place »** (décision de Tristan).
+6. **Lire une adresse** : une étiquette **`A1-T03-N2-E1`** (format décidé par Tristan le 04/10 : une lettre devant
+   chaque partie) ; l'élève associe chaque partie à son sens (allée A côté 1 / travée 03 / niveau 2 / emplacement 1).
+   Une phrase explique que les allées sont **à double sens** (A1 et A2 de part et d'autre de l'allée A). **Vocabulaire : « emplacement », jamais « place »** (décision de Tristan).
 
 ## 5. Jalons / notation (8)
 
