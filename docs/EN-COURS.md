@@ -7,7 +7,7 @@ est déjà modifié ou inscrit ci-dessous, **elle s'arrête et le dit à Tristan
 
 | Chantier | Fichiers qu'il touche | Depuis |
 |---|---|---|
-| *(personne d'inscrit)* | | |
+| MOTEUR vue Planning (brief `MOTEUR-vue-planning.md`) | `core/types/planning.js` (nouveau), `core/types/entreprise.js`, `core/declencheurs.js`, `styles/planning.css`, `index.html`, `contenus/planning-essai.js`, `outils/essai-planning.*`, `outils/test/planning.mjs`, `outils/test.mjs`, `activites/FICHE-SEANCE.md` | 04/10/2026 |
 
 Rappel : un seul chantier à la fois dans `core/types/tournee.js`, `core/types/grille.js`,
 `core/types/entreprise.js`, `styles/base.css` et `outils/test/boost.mjs` (voir `docs/briefs/COORDINATION-boost.md`).

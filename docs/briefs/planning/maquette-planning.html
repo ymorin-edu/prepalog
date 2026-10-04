@@ -1,0 +1,926 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maquette Planning</title>
+<style>
+:root{
+  --fond:#f4f1ea; --panneau:#fdfbf7; --survol:#f9f6ef; --filet:#e3ded3;
+  --encre:#1a1915; --encre-douce:#555047;
+  --ardoise:#107c41; --ardoise-fond:#107c41; --sur-ardoise:#fff;
+  --terre:#9c620a; --vert:#0b7a41; --rouge:#9d2727;
+  --semi-fond:rgba(240,190,0,.30); --semi-trait:#b38a00;
+  --porteur-fond:rgba(139,92,246,.25); --porteur-trait:#7c4fe0;
+  --jour-fond:rgba(240,190,0,.38);
+  --fenetre:rgba(156,98,10,.13);
+  --hachure:rgba(85,80,71,.18);
+  --r:4px; --mono:"IBM Plex Mono",ui-monospace,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --fond:#10161c; --panneau:#1a222b; --survol:#202a35; --filet:#2c3846;
+    --encre:#e4eaf0; --encre-douce:#9aabbb;
+    --ardoise:#6fd196; --ardoise-fond:#18724a; --sur-ardoise:#f2f7fb;
+    --terre:#e0ac4d; --vert:#5fd79a; --rouge:#e2726f;
+    --semi-trait:#e0b84d; --porteur-trait:#a98cf5;
+    --fenetre:rgba(224,172,77,.14); --hachure:rgba(154,171,187,.2);
+  }
+}
+*{box-sizing:border-box}
+body{margin:0; background:var(--fond); color:var(--encre);
+  font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif; font-size:15px; line-height:1.4}
+button{font:inherit; color:inherit}
+header{display:flex; flex-wrap:wrap; gap:12px 24px; align-items:center; padding:12px 16px;
+  background:var(--panneau); border-bottom:1px solid var(--filet)}
+header h1{font-size:1.05rem; margin:0}
+.seg{display:inline-flex; border:1px solid var(--filet); border-radius:var(--r); overflow:hidden}
+.seg button{background:none; border:0; padding:6px 12px; cursor:pointer; border-left:1px solid var(--filet)}
+.seg button:first-child{border-left:0}
+.seg button[aria-pressed="true"]{background:var(--ardoise-fond); color:var(--sur-ardoise)}
+.lbl{font-size:.8rem; color:var(--encre-douce); margin-right:6px}
+.btn{background:var(--panneau); border:1px solid var(--ardoise); color:var(--ardoise);
+  border-radius:var(--r); padding:7px 14px; cursor:pointer; font-weight:600}
+.btn.plein{background:var(--ardoise-fond); color:var(--sur-ardoise); border-color:var(--ardoise-fond)}
+.btn:disabled{opacity:.5; cursor:default}
+.mention{font-size:.78rem; color:var(--encre-douce); padding:6px 16px}
+main{display:grid; grid-template-columns:300px 1fr; gap:16px; padding:0 16px 24px}
+@media (max-width:900px){ main{grid-template-columns:1fr} }
+.panneau{background:var(--panneau); border:1px solid var(--filet); border-radius:var(--r); padding:12px 14px; margin-bottom:12px}
+.panneau h2{font-size:.95rem; margin:0 0 8px}
+.panneau ul{margin:0; padding-left:18px}
+.panneau li{margin:3px 0}
+.aide{border:1px dashed var(--terre); border-radius:var(--r); padding:8px 10px; font-size:.88rem; margin-top:8px}
+.message{border-left:4px solid var(--terre); background:var(--panneau); padding:10px 14px; margin-bottom:12px; border-radius:var(--r)}
+.message .de{font-size:.8rem; color:var(--encre-douce)}
+.bac{min-height:60px; display:flex; flex-direction:column; gap:6px; padding:6px; border:1px dashed var(--filet); border-radius:var(--r)}
+.bac.cible{border-color:var(--ardoise)}
+.bac .vide{font-size:.85rem; color:var(--encre-douce); padding:6px}
+.carte{border:1px solid var(--filet); border-left:5px solid var(--semi-trait); background:var(--semi-fond);
+  border-radius:var(--r); padding:6px 8px; cursor:grab; font-size:.85rem; text-align:left; width:100%}
+.carte.porteur{border-left-color:var(--porteur-trait); background:var(--porteur-fond)}
+.carte b{display:block}
+.carte .det{color:var(--encre-douce); font-size:.8rem}
+.sel{outline:3px solid var(--ardoise); outline-offset:1px}
+.zone{overflow-x:auto; background:var(--panneau); border:1px solid var(--filet); border-radius:var(--r); padding:10px}
+.grille{display:grid; position:relative; min-width:860px}
+.grille .tete{font-size:.75rem; color:var(--encre-douce); padding:2px 0 4px 3px; border-left:1px solid var(--filet); font-family:var(--mono)}
+.grille .res{font-weight:600; font-size:.88rem; padding:4px 6px; display:flex; flex-direction:column; justify-content:center; border-top:1px solid var(--filet)}
+.grille .res small{font-weight:400; color:var(--encre-douce); font-size:.75rem}
+.case{border:0; border-top:1px solid var(--filet); border-left:1px solid var(--filet); min-height:50px; cursor:pointer; background:none; padding:0}
+.case.h{border-left-color:var(--encre-douce)}
+.case.fen{background:var(--fenetre)}
+.case:hover{background:var(--survol)}
+.bloc{z-index:2; margin:4px 1px; border:1px solid var(--semi-trait); border-left:5px solid var(--semi-trait);
+  background:var(--semi-fond); border-radius:var(--r); font-size:.78rem; padding:2px 5px; cursor:grab;
+  overflow:hidden; white-space:nowrap; text-overflow:ellipsis; text-align:left; align-self:start; height:42px}
+.bloc.porteur{border-color:var(--porteur-trait); background:var(--porteur-fond)}
+.bloc.decale{align-self:end; height:22px; margin-bottom:2px}
+.bloc.faux{border-style:dashed; border-color:var(--rouge); color:var(--rouge)}
+.compte{font-family:var(--mono); font-size:.8rem; text-align:center; border-top:1px solid var(--filet); border-left:1px solid var(--filet); padding:3px 0}
+.compte.faux, .faux-t{color:var(--rouge); font-weight:700}
+.jour{border:0; border-top:1px solid var(--filet); border-left:1px solid var(--filet); min-height:38px; background:none; cursor:pointer;
+  font-size:.75rem; padding:0; touch-action:none; user-select:none}
+.jour.sem{border-left:3px solid var(--encre-douce)}
+.jour.on{background:var(--jour-fond); font-weight:700}
+.jour.indispo{background-image:repeating-linear-gradient(45deg,var(--hachure) 0 6px,transparent 6px 12px); color:var(--encre-douce)}
+.jour.on.indispo{background-color:var(--jour-fond)}
+.jour.faux{color:var(--rouge); outline:2px dashed var(--rouge); outline-offset:-3px}
+.jour:focus-visible,.case:focus-visible,.bloc:focus-visible,.carte:focus-visible{outline:3px solid var(--ardoise); outline-offset:-2px}
+.problemes li{color:var(--rouge)}
+.ok{color:var(--vert); font-weight:700}
+.actions{display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:12px}
+table.bilan{border-collapse:collapse; width:100%; font-size:.9rem}
+table.bilan td,table.bilan th{border-bottom:1px solid var(--filet); padding:5px 6px; text-align:left; vertical-align:top}
+.pastille{display:inline-block; min-width:22px; text-align:center; font-weight:700}
+.pastille.oui{background:var(--ardoise-fond); color:var(--sur-ardoise); border-radius:var(--r)}
+.pastille.non{color:var(--rouge)}
+.legende{font-size:.78rem; color:var(--encre-douce); margin-top:6px}
+.case.hors{background-image:repeating-linear-gradient(45deg,var(--hachure) 0 5px,transparent 5px 10px)}
+.case.hors.fen{background-color:var(--fenetre)}
+.grille .sec{font-weight:700; font-size:.82rem; text-transform:uppercase; letter-spacing:.04em; color:var(--encre-douce);
+  padding:12px 0 4px; border-bottom:2px solid var(--filet)}
+.grille .marque{font-family:var(--mono); font-size:.78rem; color:var(--terre); font-weight:700; padding:2px 0 2px 2px;
+  border-left:2px solid var(--terre); white-space:nowrap}
+.grille .marque.sel-t{background:var(--fenetre)}
+.grille .res.arr{border-top:0; font-size:.8rem; color:var(--encre-douce); font-weight:600}
+.grille .bac{z-index:0; border:1px dashed var(--filet); border-radius:var(--r); min-height:48px; display:block; padding:0}
+.grille .bac .vide{display:block; padding:14px 10px}
+.bloc.carte-b{z-index:3}
+.info-sel{font-size:.85rem; padding:8px 4px 0; min-height:28px}
+.fen-ech{display:inline-block; width:28px; height:12px; background:var(--fenetre); border:1px solid var(--terre); vertical-align:middle; margin-right:4px}
+.onglets{display:flex; gap:4px; margin-bottom:-1px}
+.onglets button{background:var(--fond); border:1px solid var(--filet); border-bottom:0; border-radius:var(--r) var(--r) 0 0; padding:8px 16px; cursor:pointer; font-weight:600; color:var(--encre-douce)}
+.onglets button[aria-selected="true"]{background:var(--panneau); color:var(--ardoise); border-top:3px solid var(--ardoise)}
+.compteur{font-family:var(--mono); font-size:.78rem; font-weight:400; margin-left:4px}
+.cartes{display:grid; grid-template-columns:repeat(auto-fill, minmax(210px,1fr)); gap:8px; min-height:60px; padding:4px; border:1px dashed var(--filet); border-radius:var(--r)}
+.carte{display:flex; flex-direction:column; gap:2px}
+.carte .det b{display:inline}
+.carte.posee{background:transparent}
+.carte .etat{font-size:.8rem; font-weight:600; margin-top:4px}
+.lien{background:none; border:0; color:var(--ardoise); text-decoration:underline; cursor:pointer; padding:0 0 0 6px; font-size:.8rem}
+.case.lecture{cursor:default}
+.case.lecture:hover{background:none}
+.bloc.lecture{cursor:default}
+table.affect select{font:inherit; padding:4px; border:1px solid var(--filet); border-radius:var(--r); background:var(--panneau); color:var(--encre)}
+.choix-log{display:flex; flex-direction:column; gap:3px; font-size:.8rem; font-weight:600; margin-top:6px}
+.choix-log select{font:inherit; font-weight:400; padding:4px; border:1px solid var(--filet); border-radius:var(--r); background:var(--panneau); color:var(--encre)}
+.carte.pause,.bloc.pause{border-color:var(--encre-douce); border-left-color:var(--encre-douce);
+  background:repeating-linear-gradient(45deg,var(--hachure) 0 5px,transparent 5px 10px)}
+.carte.pause{max-width:160px}
+.bulle-ancre{z-index:6; align-self:start; height:0; position:relative}
+.bulle{position:absolute; top:48px; left:0; width:max-content; max-width:520px; background:var(--panneau); border:2px solid var(--ardoise);
+  border-radius:var(--r); box-shadow:0 4px 14px rgba(0,0,0,.18); padding:8px 10px; display:flex; flex-wrap:wrap; gap:6px; align-items:center; white-space:nowrap}
+.bulle .q{width:100%; font-weight:700; font-size:.85rem}
+.bulle .btn[aria-pressed="true"]{background:var(--ardoise-fond); color:var(--sur-ardoise)}
+.bloc .acam{color:var(--terre); font-weight:700}
+.compteurs{font-family:var(--mono); font-size:.72rem; font-weight:400; color:var(--encre-douce)}
+.jcase{min-height:44px; font-size:.72rem; color:var(--encre-douce)}
+.jcase.sem{border-left:3px solid var(--encre-douce)}
+</style>
+</head>
+<body>
+<header>
+  <h1>Maquette — vue Planning</h1>
+  <div><span class="lbl">Cas</span><span class="seg" id="segCas">
+    <button data-cas="quai">Rendez-vous de quai (heures)</button><button data-cas="perso">Absences du personnel (jours)</button><button data-cas="chauf">Chauffeurs et camions (heures)</button></span></div>
+  <div><span class="lbl">Temps</span><span class="seg" id="segTemps">
+    <button data-temps="guidage">Guidage</button><button data-temps="entrainement">Entraînement</button><button data-temps="evaluation">Évaluation</button></span></div>
+  <button class="btn" id="btnReset">Recommencer</button>
+</header>
+<div class="mention">Maquette jetable v8 (04/10/2026). <b>Vérifié</b> : Smoby Toys a une plateforme logistique à Moirans-en-Montagne (Jura) ; Kuehne+Nagel est un transporteur réel, avec une agence Route à Besançon ; règles de conduite et de repos du règlement CE 561/2006.
+<b>Construit</b> : quais, horaires, palettes, salariés, effectifs, règles internes ; transporteurs et clients marqués « (fictif) » ; chauffeurs, camions, trajets et durées.</div>
+<main>
+  <aside id="gauche"></aside>
+  <section id="droite"></section>
+</main>
+<script>
+"use strict";
+/* ================== DONNÉES (seraient dans contenus/ de la séance) ================== */
+const QUAI = {
+  titre: "Quais d'expédition — plateforme Smoby, Moirans-en-Montagne",
+  date: "Jeudi 10 décembre",
+  debut: 6*60, pas: 15, n: 32,
+  quais: [
+    {id:'Q1', nom:'Quai 1', semi:true},
+    {id:'Q2', nom:'Quai 2', semi:true},
+    {id:'Q3', nom:'Quai 3', semi:false, note:'sans niveleur : porteurs seulement'},
+  ],
+  logisticiens: [
+    {id:'lea',    nom:'Léa',    caces:true,  de:0, a:28},   // 06:00–13:00
+    {id:'karim',  nom:'Karim',  caces:true,  de:4, a:32},   // 07:00–14:00
+    {id:'mathis', nom:'Mathis', caces:false, de:0, a:32},   // 06:00–14:00
+  ],
+  attenteMax: 2,               // en créneaux (30 min) — critère métier
+  chargement: {ouverture:10, parPalette:2},   // minutes
+  camions: [
+    {id:'A', transp:'Kuehne+Nagel', type:'semi',    pal:33, arr:0,  dep:10},
+    {id:'B', transp:'Transports Comtois (fictif)', type:'porteur', pal:12, arr:2, dep:12},
+    {id:'C', transp:'Kuehne+Nagel', type:'semi',    pal:26, arr:4,  dep:16},
+    {id:'D', transp:'Rhône Fret (fictif)', type:'semi', pal:30, arr:8, dep:20},
+    {id:'E', transp:'Jura Express (fictif)', type:'porteur', pal:8, arr:12, dep:20},
+    {id:'F', transp:'Kuehne+Nagel', type:'semi',    pal:20, arr:16, dep:28},
+  ],
+  alea: {camion:'D', arr:12, de:'Rhône Fret (fictif) — exploitation',
+    texte:"Notre chauffeur est bloqué par la neige au col de la Savine. Il arrivera à <b>09:00</b> au lieu de 08:00. Son départ au plus tard ne change pas : <b>11:00</b>."},
+  aides: {
+    regles: "Chaque camion se charge sur <b>un quai</b>, par <b>un cariste</b> (bulle qui s'ouvre sur le planning). Le chargement dure 10 min (ouverture, documents) + 2 min par palette, arrondi au quart d'heure supérieur.",
+    logisticiens: "Un cariste ne charge qu'un camion à la fois, et seulement pendant ses horaires (les heures hachurées, il n'est pas là). Une semi-remorque se charge au chariot élévateur : il faut un cariste qui a le <b>CACES</b>. Un porteur se charge au transpalette : tout le monde peut le faire.",
+    attente: "Un chauffeur qui attend coûte de l'argent au transporteur (et à Smoby s'il le refacture). Règle de la plateforme : pas plus de 30 min d'attente.",
+  }
+};
+const PERSO = {
+  titre: "Équipe de préparation — plateforme Smoby, Moirans-en-Montagne",
+  date: "Semaines du 7 et du 14 décembre",
+  jours: ['lun 7','mar 8','mer 9','jeu 10','ven 11','lun 14','mar 15','mer 16','jeu 17','ven 18'],
+  semaine: 5,                                   // jours par semaine (une absence ne passe pas le week-end)
+  besoin: [4,4,4,5,5, 5,5,5,5,4],
+  salaries: [
+    {id:'karim', nom:'Karim', caces:true},
+    {id:'lea',   nom:'Léa',   caces:true},
+    {id:'mathis',nom:'Mathis'},
+    {id:'ines',  nom:'Inès'},
+    {id:'chloe', nom:'Chloé'},
+    {id:'yanis', nom:'Yanis', caces:true, interim:true, arrivee:2},   // arrive le mer 9
+  ],
+  // Demandes d'absence : impose = date non négociable ; sinon congé souhaité, à accorder ou à décaler.
+  absences: [
+    {id:'form-mathis', qui:'mathis', lib:'Formation CACES',  L:2, date:1, impose:true,  motif:"Organisme de formation : session fixée."},
+    {id:'visite-ines', qui:'ines',   lib:'Visite médicale',  L:1, date:3, impose:true,  motif:"Médecine du travail : rendez-vous fixé."},
+    {id:'cp-chloe',    qui:'chloe',  lib:'Congé payé',       L:2, date:5, impose:false, motif:"Demandé le 2 novembre."},
+    {id:'cp-karim',    qui:'karim',  lib:'Congé payé',       L:1, date:7, impose:false, motif:"Demandé le 20 novembre."},
+    {id:'cp-lea',      qui:'lea',    lib:'Congé payé',       L:3, date:7, impose:false, motif:"Demandé le 5 novembre."},
+  ],
+  alea: {de:'Responsable de la plateforme',
+    texte:"Inès est en <b>arrêt maladie du lundi 14 au mercredi 16</b> (une nouvelle carte est arrivée dans les demandes). L'agence d'intérim nous envoie <b>Noa</b> (intérimaire, <b>sans CACES</b>) à partir du <b>mardi 15</b>. Reprenez le planning des absences et renvoyez-le-moi.",
+    absence: {id:'am-ines', qui:'ines', lib:'Arrêt maladie', L:3, date:5, impose:true, motif:"Certificat reçu ce matin.", nouveau:true},
+    ajout: {id:'noa', nom:'Noa', interim:true, arrivee:6}},
+  aides: {
+    regles: "Posez chaque absence sur la ligne de la personne. Les absences <b>imposées</b> (formation, visite, arrêt) se posent à leur date. Les <b>congés</b> se posent à la date demandée… sauf s'il manque alors du monde : il faut les décaler. Un jour sans absence, la personne est présente.",
+    caces: "Le chargement des camions se fait au chariot : il faut au moins un cariste qui a le CACES présent chaque jour.",
+    conge: "Un congé se refuse ou se décale seulement s'il met l'équipe en difficulté. Quand c'est possible, on l'accorde à la date demandée.",
+  }
+};
+
+const CHAUF = {
+  titre: "Exploitation — Kuehne+Nagel, agence Route de Besançon",
+  date: "Jeudi 10 décembre — enlèvements de la commande de Noël chez Smoby (Moirans-en-Montagne)",
+  debut: 5*60, pas: 15, n: 56,                  // 05:00 → 19:00, au quart d'heure
+  pause: 3,                                     // carte Pause = 45 min (3 créneaux)
+  maxContinu: 18, maxJour: 36, repos: 11*60,    // 4 h 30, 9 h (en créneaux) ; repos en minutes
+  chauffeurs: [
+    {id:'sofiane', nom:'Sofiane', permis:'CE', finHier: 20*60},
+    {id:'julie',   nom:'Julie',   permis:'CE', finHier: 17*60},
+    {id:'marc',    nom:'Marc',    permis:'C',  finHier: 18*60},
+    {id:'nadia',   nom:'Nadia',   permis:'CE', finHier: 23*60},
+  ],
+  camions: [
+    {id:'s1', nom:'Semi n° 1', type:'semi'},
+    {id:'s2', nom:'Semi n° 2', type:'semi'},
+    {id:'p3', nom:'Porteur n° 3', type:'porteur'},
+  ],
+  // conduite = durée du trajet (en créneaux de 15 min) ; tot / avant = fenêtre (créneaux depuis 05:00)
+  trajets: [
+    {id:'E1', vers:'Lyon — Jouets du Rhône (fictif)',        type:'semi',    pal:33, cond:16, tot:4,  avant:28},
+    {id:'E2', vers:'Dijon — Maxi Jouets (fictif)',           type:'semi',    pal:26, cond:14, tot:12, avant:36},
+    {id:'E3', vers:'Besançon — magasin Ludik (fictif)',      type:'porteur', pal:12, cond:10, tot:8,  avant:28},
+    {id:'E4', vers:'Mâcon — Centrale du Jouet (fictif)',     type:'semi',    pal:30, cond:12, tot:24, avant:48},
+    {id:'E5', vers:'Besançon — magasin Ludik (fictif), 2e livraison', type:'porteur', pal:8, cond:8, tot:28, avant:48},
+  ],
+  pauses: ['pa','pb','pc','pd'],
+  alea: {de:'Atelier Kuehne+Nagel Besançon', camion:'s2', dispo:28,
+    texte:"Le <b>Semi n° 2</b> a un problème de freins : il reste à l'atelier jusqu'à <b>12:00</b>. Il ne peut faire aucun trajet avant cette heure. Reprenez le planning des chauffeurs et renvoyez-le-moi."},
+  aides: {
+    regles: "Chaque enlèvement se pose sur la ligne d'<b>un chauffeur</b>, à l'heure du départ, et reçoit <b>un camion</b> (bulle qui s'ouvre sur le planning). Un chauffeur et un camion ne font qu'un trajet à la fois. Une semi-remorque demande le permis <b>CE</b> ; un porteur se conduit avec le permis <b>C</b> (le permis CE le permet aussi).",
+    conduite: "Temps de conduite : <b>4 h 30</b> au plus sans pause ; la pause dure <b>45 min</b> (posez une carte Pause sur la ligne du chauffeur, entre deux trajets). <b>9 h</b> de conduite au plus dans la journée.",
+    repos: "Entre la fin de service d'hier et le premier départ d'aujourd'hui : <b>11 h de repos</b> au moins.",
+  }
+};
+
+/* ================== ÉTAT ================== */
+let S;
+function etatNeuf(cas, temps){
+  return {cas, temps, phase:1, place:{}, pres:{}, ch:{}, v1:null, sel:null, onglet:'quais', verif:null, confirmer:false, prof:false};
+}
+S = etatNeuf('quai','guidage');
+
+/* ================== OUTILS ================== */
+const hhmm = s => { const m = QUAI.debut + s*QUAI.pas; return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0'); };
+const duree = c => Math.ceil((QUAI.chargement.ouverture + QUAI.chargement.parPalette*c.pal)/QUAI.pas);
+const fmtDuree = sl => { const m = sl*QUAI.pas; return (m>=60? Math.floor(m/60)+' h ':'') + (m%60? String(m%60).padStart(2,'0')+(m>=60?'':' min'):''); };
+const esc = t => String(t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const cp = o => JSON.parse(JSON.stringify(o));
+function camions(phase){ // données effectives (aléa appliqué en phase 2)
+  return QUAI.camions.map(c => (phase>=2 && c.id===QUAI.alea.camion) ? {...c, arr:QUAI.alea.arr, retard:true} : c);
+}
+function salaries(phase){
+  return phase>=2 ? [...PERSO.salaries, PERSO.alea.ajout] : PERSO.salaries;
+}
+
+/* ================== RÈGLES — QUAI ================== */
+function analyseQuai(place, phase){
+  const cams = camions(phase), P = [], ok = {tous:true, quai:true, log:true, fen:true, att:true}, fauxQ = {}, fauxL = {};
+  const sansQ = [], sansL = [];
+  for (const c of cams){ const p = place[c.id]; if (!p || !p.q) sansQ.push(c.id); if (!p || !p.l) sansL.push(c.id); }
+  if (sansQ.length || sansL.length) ok.tous = false;
+  if (sansQ.length) P.push(`Camions sans quai : ${sansQ.join(', ')}.`);
+  if (sansL.length) P.push(`Camions sans cariste : ${sansL.join(', ')}.`);
+  const placs = cams.filter(c => place[c.id]).map(c => ({c, ...place[c.id], e: place[c.id].s + duree(c)}));
+  for (const p of placs){
+    if (p.q){ const q = QUAI.quais.find(x => x.id===p.q);
+      if (p.c.type==='semi' && !q.semi){ ok.quai=false; fauxQ[p.c.id]=true; P.push(`${q.nom} : le camion ${p.c.id} est une semi-remorque, ce quai n'a pas de niveleur.`); } }
+    if (p.l){ const L = QUAI.logisticiens.find(x => x.id===p.l);
+      if (p.s < L.de || p.e > L.a){ ok.log=false; fauxL[p.c.id]=true; P.push(`${L.nom} ne travaille pas à l'heure du chargement du camion ${p.c.id}.`); }
+      if (p.c.type==='semi' && !L.caces){ ok.log=false; fauxL[p.c.id]=true; P.push(`${L.nom} n'a pas le CACES : il ne peut pas charger la semi-remorque ${p.c.id}.`); } }
+    if (p.s < p.c.arr){ ok.fen=false; fauxQ[p.c.id]=fauxL[p.c.id]=true; P.push(`Camion ${p.c.id} : le chargement commence avant l'arrivée du camion.`); }
+    if (p.e > p.c.dep){ ok.fen=false; fauxQ[p.c.id]=fauxL[p.c.id]=true; P.push(`Camion ${p.c.id} : le chargement finit après l'heure de départ du camion.`); }
+    if (p.s >= p.c.arr && p.s - p.c.arr > QUAI.attenteMax){ ok.att=false; fauxQ[p.c.id]=fauxL[p.c.id]=true; P.push(`Camion ${p.c.id} : le chauffeur attend plus de 30 min avant d'être chargé.`); }
+  }
+  for (let i=0;i<placs.length;i++) for (let j=i+1;j<placs.length;j++){
+    const a=placs[i], b=placs[j];
+    if (!(a.s<b.e && b.s<a.e)) continue;
+    if (a.q && a.q===b.q){ ok.quai=false; fauxQ[a.c.id]=fauxQ[b.c.id]=true;
+      P.push(`${QUAI.quais.find(x=>x.id===a.q).nom} : les camions ${a.c.id} et ${b.c.id} sont sur le quai en même temps.`); }
+    if (a.l && a.l===b.l){ ok.log=false; fauxL[a.c.id]=fauxL[b.c.id]=true;
+      P.push(`${QUAI.logisticiens.find(x=>x.id===a.l).nom} charge les camions ${a.c.id} et ${b.c.id} en même temps.`); }
+  }
+  const J = [
+    ['Chaque camion a un quai et un cariste', ok.tous],
+    ['Quais : un camion à la fois, sur un quai qui lui convient', ok.tous && ok.quai],
+    ['Caristes : un camion à la fois, pendant leurs horaires, avec le CACES pour les semi-remorques', ok.tous && ok.log],
+    ['Chaque chargement commence après l\'arrivée du camion et finit avant son départ', ok.tous && ok.fen],
+    ['Critère métier : aucun chauffeur n\'attend plus de 30 min', ok.tous && ok.att && ok.fen],
+  ];
+  return {P, J, fauxQ, fauxL};
+}
+
+/* ================== RÈGLES — PERSONNEL ================== */
+const absencesDe = phase => phase>=2 ? [...PERSO.absences, PERSO.alea.absence] : PERSO.absences;
+// une absence ne passe pas le week-end : on la ramène dans la semaine de son premier jour
+function caleAbs(a, s){
+  const n = PERSO.jours.length, w = PERSO.semaine;
+  s = Math.max(0, Math.min(n - a.L, s));
+  const fin = (Math.floor(s/w)+1)*w; if (s + a.L > fin) s = fin - a.L;
+  return s;
+}
+function etatJours(pos, phase){       // présents / caristes par jour + chevauchements
+  const sal = salaries(phase), n = PERSO.jours.length, off = {}, chev = new Set();
+  sal.forEach(s => { off[s.id] = new Set(); for (let d=0; d<(s.arrivee||0); d++) off[s.id].add(d); });
+  const avant = {}; sal.forEach(s => avant[s.id] = new Set(off[s.id]));
+  for (const a of absencesDe(phase)) if (pos[a.id]!==undefined)
+    for (let d=pos[a.id]; d<pos[a.id]+a.L; d++){ if (off[a.qui].has(d)) chev.add(a.id); off[a.qui].add(d); }
+  const cnt = [], car = [];
+  for (let d=0; d<n; d++){ const pr = sal.filter(s => !off[s.id].has(d)); cnt.push(pr.length); car.push(pr.filter(s=>s.caces).length); }
+  return {cnt, car, chev, off};
+}
+function equipeOk(pos, phase){
+  const e = etatJours(pos, phase);
+  return e.chev.size===0 && e.cnt.every((c,d) => c >= PERSO.besoin[d]) && e.car.every(c => c>0);
+}
+function analysePerso(pos, phase){
+  const abs = absencesDe(phase), P = [], faux = {}, n = PERSO.jours.length, sal = salaries(phase);
+  const nom = id => sal.find(s=>s.id===id).nom, de = id => (/^[AEIOUYÉÈÎ]/.test(nom(id)) ? "d'" : 'de ') + nom(id);
+  const e = etatJours(pos, phase);
+  const nonPosees = abs.filter(a => pos[a.id]===undefined);
+  let tous = nonPosees.length===0 && e.chev.size===0, imp = true, couv = true, cac = true, crit = true;
+  if (nonPosees.length) P.push(`Absences pas encore posées : ${nonPosees.map(a=>a.lib.toLowerCase()+' '+de(a.qui)).join(', ')}.`);
+  e.chev.forEach(id => { const a = abs.find(x=>x.id===id); faux[id]=true; P.push(`${nom(a.qui)} : cette absence tombe un jour où la personne est déjà absente ou pas encore arrivée.`); });
+  for (const a of abs) if (pos[a.id]!==undefined && a.impose && pos[a.id]!==a.date){ imp=false; faux[a.id]=true; P.push(`${a.lib} ${de(a.qui)} : la date est imposée (${PERSO.jours[a.date]}), elle ne se déplace pas.`); }
+  for (let d=0; d<n; d++){
+    if (e.cnt[d] < PERSO.besoin[d]){ couv=false; P.push(`${PERSO.jours[d]} : pas assez de monde présent.`); }
+    if (e.car[d] === 0){ cac=false; P.push(`${PERSO.jours[d]} : aucun cariste CACES présent.`); }
+  }
+  // critère métier : un congé décalé alors que la date demandée était possible (jugé quand tout est posé)
+  if (nonPosees.length===0) for (const a of abs) if (!a.impose && pos[a.id]!==undefined && pos[a.id]!==a.date){
+    if (equipeOk({...pos, [a.id]:a.date}, phase)){ crit=false; faux[a.id]=true; P.push(`Le congé ${de(a.qui)} pouvait être accordé à la date demandée.`); }
+  }
+  const J = [
+    ['Toutes les absences sont posées, sans se chevaucher', tous],
+    ['Les absences imposées (formation, visite, arrêt) sont à leur date', tous && imp],
+    ['Chaque jour a assez de monde présent', tous && couv],
+    ['Chaque jour a au moins un cariste CACES présent', tous && cac],
+    ['Critère métier : aucun congé décalé sans nécessité', tous && crit && imp && couv && cac],
+  ];
+  return {P, J, faux, e};
+}
+
+/* ================== RÈGLES — CHAUFFEURS ================== */
+const hhC = s => { const m = CHAUF.debut + s*CHAUF.pas; return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0'); };
+const hhMin = m => { m = ((m%1440)+1440)%1440; return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0'); };
+const fmtC = sl => { const m = sl*CHAUF.pas; return Math.floor(m/60)+' h '+String(m%60).padStart(2,'0'); };
+const repriseMin = c => c.finHier + CHAUF.repos - 24*60;                 // minutes depuis minuit, aujourd'hui
+const repriseSl = c => Math.max(0, Math.ceil((repriseMin(c) - CHAUF.debut)/CHAUF.pas));
+const estPause = id => CHAUF.pauses.includes(id);
+const longueur = id => estPause(id) ? CHAUF.pause : CHAUF.trajets.find(t=>t.id===id).cond;
+const camionsDispo = phase => CHAUF.camions.map(k => (phase>=2 && k.id===CHAUF.alea.camion) ? {...k, dispo:CHAUF.alea.dispo} : k);
+
+function analyseChauf(place, phase){
+  const P = [], ok = {tous:true, ch:true, cam:true, fen:true, cond:true}, faux = {}, fauxK = {};
+  const cams = camionsDispo(phase), nomCh = id => CHAUF.chauffeurs.find(c=>c.id===id).nom;
+  const sansC = CHAUF.trajets.filter(t => !place[t.id]).map(t=>t.id);
+  const sansK = CHAUF.trajets.filter(t => place[t.id] && !place[t.id].k).map(t=>t.id);
+  if (sansC.length || sansK.length) ok.tous = false;
+  if (sansC.length) P.push(`Enlèvements sans chauffeur : ${sansC.join(', ')}.`);
+  if (sansK.length) P.push(`Enlèvements sans camion : ${sansK.join(', ')}.`);
+  const items = Object.keys(place).map(id => ({id, ...place[id], e: place[id].s + longueur(id), t: CHAUF.trajets.find(t=>t.id===id)}));
+  for (const it of items.filter(i=>i.t)){
+    const t = it.t, Ch = CHAUF.chauffeurs.find(c=>c.id===it.r);
+    if (t.type==='semi' && Ch.permis!=='CE'){ ok.ch=false; faux[t.id]=true; P.push(`${Ch.nom} a le permis C : il ne peut pas conduire la semi-remorque de ${t.id}.`); }
+    if (it.k){ const K = cams.find(k=>k.id===it.k);
+      if (K.type!==t.type){ ok.cam=false; fauxK[t.id]=true; P.push(`${t.id} demande un ${t.type==='semi'?'semi':'porteur'} : le ${K.nom} ne convient pas.`); }
+      if (K.dispo!==undefined && it.s < K.dispo){ ok.cam=false; fauxK[t.id]=true; P.push(`${t.id} : le ${K.nom} est à l'atelier jusqu'à ${hhC(K.dispo)}.`); } }
+    if (it.s < t.tot){ ok.fen=false; faux[t.id]=true; P.push(`${t.id} : le départ est prévu avant que la marchandise soit prête.`); }
+    if (it.e > t.avant){ ok.fen=false; faux[t.id]=true; P.push(`${t.id} : la livraison arrive après l'heure limite.`); }
+  }
+  for (let i=0;i<items.length;i++) for (let j=i+1;j<items.length;j++){
+    const a=items[i], b=items[j]; if (!(a.s<b.e && b.s<a.e)) continue;
+    if (a.r===b.r){ ok.ch=false; faux[a.id]=faux[b.id]=true; P.push(`${nomCh(a.r)} a deux choses en même temps (${a.t?a.id:'pause'} et ${b.t?b.id:'pause'}).`); }
+    if (a.t && b.t && a.k && a.k===b.k){ ok.cam=false; fauxK[a.id]=fauxK[b.id]=true; P.push(`Le ${cams.find(k=>k.id===a.k).nom} fait ${a.id} et ${b.id} en même temps.`); }
+  }
+  for (const Ch of CHAUF.chauffeurs){
+    const siens = items.filter(i => i.r===Ch.id).sort((a,b)=>a.s-b.s), traj = siens.filter(i=>i.t);
+    if (!traj.length) continue;
+    if (traj[0].s < repriseSl(Ch)){ ok.cond=false; faux[traj[0].id]=true; P.push(`${Ch.nom} n'a pas eu ses 11 h de repos depuis hier soir.`); }
+    let acc = 0, dit = false;
+    for (const it of siens){ if (!it.t){ acc = 0; continue; } acc += it.t.cond;
+      if (acc > CHAUF.maxContinu && !dit){ dit = true; ok.cond=false; faux[it.id]=true; P.push(`${Ch.nom} conduit plus de 4 h 30 sans pause.`); } }
+    const tot = traj.reduce((a,i)=>a+i.t.cond,0);
+    if (tot > CHAUF.maxJour){ ok.cond=false; traj.forEach(i=>faux[i.id]=true); P.push(`${Ch.nom} conduit plus de 9 h dans la journée.`); }
+  }
+  const J = [
+    ['Chaque enlèvement a un chauffeur et un camion', ok.tous],
+    ['Chauffeurs : un trajet à la fois, avec le bon permis', ok.tous && ok.ch],
+    ['Camions : un trajet à la fois, du bon type, disponibles', ok.tous && ok.cam],
+    ['Chaque trajet part quand la marchandise est prête et livre avant l\'heure limite', ok.tous && ok.fen],
+    ['Temps de conduite et repos respectés (4 h 30, 9 h, 11 h)', ok.tous && ok.cond],
+  ];
+  return {P, J, faux, fauxK};
+}
+
+/* ---------- CHAUFFEURS : rendu ---------- */
+function rendreChauf(){
+  const ph = S.phase, an = analyseChauf(S.ch, ph), direct = montrerEnDirect(), g = S.temps==='guidage';
+  const n = CHAUF.n, cams = camionsDispo(ph), sel = g && S.sel && CHAUF.trajets.find(t=>t.id===S.sel);
+  G.innerHTML = blocMessage() + blocConsigne(CHAUF.titre, CHAUF.date, CHAUF.aides,
+    `<ul>${CHAUF.chauffeurs.map(c=>`<li><b>${c.nom}</b> : permis ${c.permis} · fin de service hier <b>${hhMin(c.finHier)}</b>${g?` → départ possible dès <b>${hhMin(repriseMin(c))}</b>`:''}</li>`).join('')}
+     <li>Conduite : 4 h 30 au plus sans pause de 45 min · 9 h au plus par jour · 11 h de repos depuis hier</li>
+     ${cams.map(k=>`<li>${k.nom} (${k.type==='semi'?'semi-remorque':'porteur'})${k.dispo!==undefined?` · <b>à l'atelier jusqu'à ${hhC(k.dispo)}</b>`:''}</li>`).join('')}</ul>`);
+  const carte = t => {
+    const p = S.ch[t.id], pose = !!p, fk = direct && an.fauxK[t.id];
+    return `<div class="carte ${t.type}${S.sel===t.id?' sel':''}${pose?' posee':''}" draggable="true" data-bloc="${t.id}" data-vue="b" tabindex="0" role="button" aria-label="Enlèvement ${t.id}${pose?', posé':''}">
+      <b>${t.id} — Moirans → ${esc(t.vers)}</b>
+      <span class="det">${t.type==='semi'?'Semi-remorque':'Porteur'} · ${t.pal} palettes · trajet <b>${fmtC(t.cond)}</b> de conduite</span>
+      <span class="det">Prêt à partir dès <b>${hhC(t.tot)}</b> · livré avant <b>${hhC(t.avant)}</b></span>
+      <span class="etat">${pose ? `Posé : ${CHAUF.chauffeurs.find(c=>c.id===p.r).nom}, ${hhC(p.s)}–${hhC(p.s+t.cond)} · <span class="${fk?'faux-t':''}">${p.k ? esc(cams.find(k=>k.id===p.k).nom) : '<span class="acam" style="color:var(--terre)">camion ?</span>'}</span> <button class="lien" data-bulle="${t.id}">${p.k?'Changer le camion':'Choisir le camion'}</button> <button class="lien" data-retirer="${t.id}">Retirer</button>` : 'À placer'}</span>
+    </div>`;
+  };
+  const cartePause = id => { const p = S.ch[id];
+    return `<div class="carte pause${S.sel===id?' sel':''}${p?' posee':''}" draggable="true" data-bloc="${id}" data-vue="b" tabindex="0" role="button" aria-label="Pause 45 min${p?', posée':''}">
+      <b>Pause 45 min</b><span class="etat">${p ? `${CHAUF.chauffeurs.find(c=>c.id===p.r).nom}, ${hhC(p.s)} <button class="lien" data-retirer="${id}">Retirer</button>` : 'À poser si besoin'}</span></div>`; };
+  let h = `<div class="panneau"><h2>Enlèvements du jour</h2><div class="cartes" id="bacC">${CHAUF.trajets.map(carte).join('')}${CHAUF.pauses.map(cartePause).join('')}</div>
+    <div class="legende">Glissez un enlèvement sur la ligne d'un chauffeur, à l'heure du départ : une bulle s'ouvre pour choisir son camion. Même geste pour une pause. Ou cliquez la carte, puis la case. Sur le planning, cliquez un enlèvement pour rouvrir sa bulle ; pour le déplacer, glissez-le ou choisissez « Déplacer ». Clavier : Entrée pour prendre une carte (ou ouvrir la bulle sur le planning), Espace pour déplacer un bloc, flèches, Suppr pour retirer, Échap pour fermer.</div></div>`;
+  h += `<div class="panneau"><h2>Planning des chauffeurs — jeudi 10 décembre</h2>
+    ${g ? `<div class="info-sel">${sel ? `<span class="fen-ech"></span> ${sel.id} : prêt dès <b>${hhC(sel.tot)}</b>, livré avant <b>${hhC(sel.avant)}</b>. Le trajet doit tenir dans la bande ambrée.` : `Cliquez un enlèvement : une bande ambrée montre quand il peut rouler. Hachures : le chauffeur est encore en repos.`}</div>` : ''}
+    <div class="zone"><div class="grille" id="grilleC" style="${S.bulle?'padding-bottom:110px;':''}grid-template-columns:170px repeat(${n}, minmax(18px,1fr))"><div style="grid-row:1"></div>`;
+  for (let t=0;t<n;t+=4) h += `<div class="tete" style="grid-row:1;grid-column:${t+2} / span 4">${hhC(t)}</div>`;
+  CHAUF.chauffeurs.forEach((c,i) => {
+    const r = i+2, rep = repriseSl(c);
+    const tot = CHAUF.trajets.filter(t => S.ch[t.id] && S.ch[t.id].r===c.id).reduce((a,t)=>a+t.cond,0);
+    h += `<div class="res" style="grid-row:${r}">${c.nom}<small>permis ${c.permis}${g?` · conduite ${fmtC(tot)} / 9 h`:''}</small></div>`;
+    for (let t=0;t<n;t++){
+      const fen = sel && t>=sel.tot && t<sel.avant, hors = g && t<rep;
+      h += `<button class="case${t%4===0?' h':''}${fen?' fen':''}${hors?' hors':''}" style="grid-row:${r};grid-column:${t+2}" data-vue="c" data-res="${c.id}" data-t="${t}" tabindex="-1" aria-label="${c.nom}, ${hhC(t)}"></button>`;
+    }
+    const ici = Object.keys(S.ch).filter(id => S.ch[id].r===c.id).map(id => ({id, s:S.ch[id].s, e:S.ch[id].s+longueur(id)}));
+    const cl = couloirs(ici);
+    ici.forEach(({id,s,e}) => {
+      const t = CHAUF.trajets.find(x=>x.id===id), faux = direct && (an.faux[id] || an.fauxK[id]);
+      const K = t && S.ch[id].k ? cams.find(k=>k.id===S.ch[id].k).nom : null;
+      h += `<button class="bloc ${t?t.type:'pause'}${cl[id]?' decale':''}${faux?' faux':''}${S.sel===id?' sel':''}" draggable="true" data-bloc="${id}" data-vue="c"
+        style="grid-row:${r};grid-column:${s+2} / span ${e-s}" title="${t?esc(t.vers):'Pause'} ${hhC(s)}–${hhC(e)}">${t?`<b>${id}</b> ${K?esc(K):'<span class="acam">camion ?</span>'}`:'Pause'}</button>`;
+      if (t && S.bulle===id){
+        const c0 = Math.min(s, n-24);
+        h += `<div class="bulle-ancre" style="grid-row:${r};grid-column:${c0+2} / span 24"><div class="bulle" role="group" aria-label="Camion de ${id}">
+          <span class="q">Quel camion pour ${id} ? <span class="lbl">(${t.type==='semi'?'semi-remorque':'porteur'}, ${hhC(s)}–${hhC(e)})</span></span>
+          ${cams.map(k=>`<button class="btn" data-choixcam="${k.id}" data-pour="${id}" aria-pressed="${S.ch[id].k===k.id}">${esc(k.nom)}</button>`).join('')}
+          <button class="lien" data-deplacer="${id}">Déplacer</button><button class="lien" data-retirer="${id}">Retirer</button><button class="lien" data-fermer="1">Fermer</button>
+        </div></div>`;
+      }
+    });
+  });
+  h += `</div></div><div class="legende">Jaune : semi-remorque · violet : porteur · hachuré : pause.</div></div>`;
+  // Utilisation des camions (lecture seule)
+  h += `<div class="panneau"><h2>Utilisation des camions</h2>
+    <div class="zone"><div class="grille" style="grid-template-columns:170px repeat(${n}, minmax(18px,1fr))"><div style="grid-row:1"></div>`;
+  for (let t=0;t<n;t+=4) h += `<div class="tete" style="grid-row:1;grid-column:${t+2} / span 4">${hhC(t)}</div>`;
+  cams.forEach((k,i) => {
+    const r = i+2;
+    h += `<div class="res" style="grid-row:${r}">${k.nom}<small>${k.type==='semi'?'semi-remorque':'porteur'}</small></div>`;
+    for (let t=0;t<n;t++) h += `<div class="case lecture${t%4===0?' h':''}${(k.dispo!==undefined && t<k.dispo)?' hors':''}" style="grid-row:${r};grid-column:${t+2}"></div>`;
+    const ici = CHAUF.trajets.filter(t => S.ch[t.id] && S.ch[t.id].k===k.id).map(t => ({t, id:t.id, s:S.ch[t.id].s, e:S.ch[t.id].s+t.cond}));
+    const cl = couloirs(ici);
+    ici.forEach(({t,s,e}) => {
+      const faux = direct && an.fauxK[t.id];
+      h += `<div class="bloc lecture ${t.type}${cl[t.id]?' decale':''}${faux?' faux':''}" style="grid-row:${r};grid-column:${s+2} / span ${e-s}"><b>${t.id}</b> ${CHAUF.chauffeurs.find(c=>c.id===S.ch[t.id].r).nom}</div>`;
+    });
+  });
+  h += `</div></div><div class="legende">Ce planning se remplit tout seul quand vous choisissez un camion. Hachures : camion à l'atelier.</div></div>`;
+  D.innerHTML = h + blocProblemes(an);
+  brancherChauf();
+  brancherActions(an);
+}
+function poserC(id, r, s){
+  const L = longueur(id); s = Math.max(0, Math.min(CHAUF.n - L, s));
+  const p = S.ch[id] || {}; p.r = r; p.s = s; S.ch[id] = p; S.verif = null; S.confirmer = false;
+  S.bulle = (!estPause(id) && !p.k) ? id : null;
+}
+function retirerC(id){ delete S.ch[id]; S.verif = null; S.confirmer = false; S.bulle = null; }
+function brancherChauf(){
+  let prise = 0;
+  const grille = document.getElementById('grilleC');
+  D.querySelectorAll('[data-retirer]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); retirerC(b.dataset.retirer); S.sel=null; rendre(); }));
+  D.querySelectorAll('[data-choixcam]').forEach(b => b.addEventListener('click', e => { e.stopPropagation();
+    const id = b.dataset.pour; S.ch[id].k = b.dataset.choixcam; S.bulle = null; S.verif = null; S.confirmer = false; rendre();
+    const bl = D.querySelector(`[data-bloc="${id}"][data-vue="c"]`); if (bl && window.__clavier) bl.focus(); }));
+  D.querySelectorAll('[data-bulle]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); S.bulle = b.dataset.bulle; S.sel = null; rendre();
+    const x = D.querySelector('.bulle .btn'); if (x) { x.scrollIntoView({block:'nearest', inline:'nearest'}); if (window.__clavier) x.focus(); } }));
+  D.querySelectorAll('[data-deplacer]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); S.sel = b.dataset.deplacer; S.bulle = null; rendre(); }));
+  D.querySelectorAll('[data-fermer]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); S.bulle = null; rendre(); }));
+  const bu = D.querySelector('.bulle'); if (bu) bu.addEventListener('keydown', e => { if (e.key==='Escape'){ e.stopPropagation(); const id = S.bulle; S.bulle = null; rendre();
+    const bl = D.querySelector(`[data-bloc="${id}"][data-vue="c"]`); if (bl) bl.focus(); } });
+  D.querySelectorAll('[data-bloc]').forEach(el => {
+    el.addEventListener('dragstart', e => {
+      const id = el.dataset.bloc; e.dataTransfer.setData('text/plain', id);
+      const larg = grille.querySelector('.case').getBoundingClientRect().width;
+      prise = el.dataset.vue==='c' ? Math.floor((e.clientX - el.getBoundingClientRect().left)/larg) : 0;
+      S.sel = id; if (S.temps==='guidage') setTimeout(() => surlignerC(id), 0);
+    });
+    el.addEventListener('click', e => {
+      if (e.target.closest('button.lien')) return;
+      if (S.sel && S.sel!==el.dataset.bloc && el.dataset.vue==='c'){
+        const c = document.elementsFromPoint(e.clientX, e.clientY).find(x => x.classList && x.classList.contains('case'));
+        if (c){ poserC(S.sel, c.dataset.res, +c.dataset.t); S.sel=null; rendre(); return; }
+      }
+      if (el.dataset.vue==='c' && S.sel===el.dataset.bloc){   // bloc « en main » : on le pose sur la case visée
+        const c = document.elementsFromPoint(e.clientX, e.clientY).find(x => x.classList && x.classList.contains('case'));
+        const p = S.ch[el.dataset.bloc];
+        if (c && (+c.dataset.t!==p.s || c.dataset.res!==p.r)){ poserC(S.sel, c.dataset.res, +c.dataset.t); S.sel=null; rendre(); return; }
+      }
+      if (el.dataset.vue==='c' && !estPause(el.dataset.bloc) && S.sel!==el.dataset.bloc){   // bloc posé : la bulle du camion
+        S.bulle = (S.bulle===el.dataset.bloc) ? null : el.dataset.bloc; S.sel = null; rendre(); return; }
+      S.sel = (S.sel===el.dataset.bloc) ? null : el.dataset.bloc; S.bulle = null; rendre(); });
+    el.addEventListener('keydown', e => {
+      if (e.target.tagName==='SELECT') return;
+      const id = el.dataset.bloc, vue = el.dataset.vue;
+      if (e.key==='Escape'){ S.sel=null; rendre(); return; }
+      if (vue==='b' && (e.key==='Enter' || e.key===' ') && e.target===el){ e.preventDefault(); S.sel = (S.sel===id)?null:id; S.bulle=null; rendre(); return; }
+      if (vue==='c' && e.key==='Enter' && !estPause(id) && S.sel!==id){ e.preventDefault(); S.bulle = id; rendre(); const x = D.querySelector('.bulle .btn'); if (x) x.focus(); return; }
+      if (vue==='c' && e.key===' ' && S.sel!==id){ e.preventDefault(); S.sel = id; S.bulle = null; rendre(); return; }
+      if (S.sel!==id) return;
+      const liste = CHAUF.chauffeurs.map(c=>c.id);
+      if (e.key==='Delete' || e.key==='Backspace'){ e.preventDefault(); retirerC(id); S.sel=null; rendre(); return; }
+      if (!S.ch[id]){ if (e.key==='ArrowDown'){ e.preventDefault(); const t = CHAUF.trajets.find(x=>x.id===id); poserC(id, liste[0], t?t.tot:0); window.__focusVue='c'; rendre(); } return; }
+      const p = S.ch[id]; let s = p.s, i = liste.indexOf(p.r);
+      if (e.key==='ArrowRight') s++; else if (e.key==='ArrowLeft') s--;
+      else if (e.key==='ArrowDown') i=Math.min(liste.length-1,i+1); else if (e.key==='ArrowUp') i=Math.max(0,i-1);
+      else return;
+      e.preventDefault(); poserC(id, liste[i], s); window.__focusVue='c'; rendre();
+    });
+  });
+  const caseSous = (x, y) => document.elementsFromPoint(x, y).find(el => el.classList && el.classList.contains('case'));
+  grille.addEventListener('dragover', e => e.preventDefault());
+  grille.addEventListener('drop', e => { e.preventDefault(); const c = caseSous(e.clientX, e.clientY); if (!c) return;
+    poserC(e.dataTransfer.getData('text/plain'), c.dataset.res, +c.dataset.t - prise); S.sel=null; rendre(); });
+  grille.querySelectorAll('.case').forEach(el => el.addEventListener('click', () => { if (!S.sel){ if (S.bulle){ S.bulle=null; rendre(); } return; } poserC(S.sel, el.dataset.res, +el.dataset.t); S.sel=null; rendre(); }));
+  const bac = document.getElementById('bacC');
+  bac.addEventListener('dragover', e => e.preventDefault());
+  bac.addEventListener('drop', e => { e.preventDefault(); retirerC(e.dataTransfer.getData('text/plain')); S.sel=null; rendre(); });
+}
+function surlignerC(id){
+  const t = CHAUF.trajets.find(x=>x.id===id); if (!t) return;
+  document.querySelectorAll('#grilleC .case').forEach(el => el.classList.toggle('fen', +el.dataset.t>=t.tot && +el.dataset.t<t.avant));
+}
+
+const analyse = () => S.cas==='quai' ? analyseQuai(S.place, S.phase>=2?2:1) : S.cas==='chauf' ? analyseChauf(S.ch, S.phase>=2?2:1) : analysePerso(S.pres, S.phase>=2?2:1);
+const montrerEnDirect = () => S.temps==='guidage' && S.phase!=='fini';
+
+/* ================== RENDU ================== */
+const G = document.getElementById('gauche'), D = document.getElementById('droite');
+function rendre(){
+  document.querySelectorAll('#segCas button').forEach(b => b.setAttribute('aria-pressed', b.dataset.cas===S.cas));
+  document.querySelectorAll('#segTemps button').forEach(b => b.setAttribute('aria-pressed', b.dataset.temps===S.temps));
+  const focus = document.activeElement && document.activeElement.dataset ? {...document.activeElement.dataset} : null;
+  const clavier = window.__clavier;
+  if (S.phase==='fini'){ rendreBilan(); return; }
+  if (S.cas==='quai') rendreQuai(); else if (S.cas==='chauf') rendreChauf(); else rendrePerso();
+  if (focus && clavier){
+    const vue = window.__focusVue || focus.vue; window.__focusVue = null;
+    const sel = focus.abs ? (document.querySelector(`[data-abs="${focus.abs}"][data-vue="${vue}"]`) ? `[data-abs="${focus.abs}"][data-vue="${vue}"]` : `[data-abs="${focus.abs}"]`) : focus.bloc ? (document.querySelector(`[data-bloc="${focus.bloc}"][data-vue="${vue}"]`) ? `[data-bloc="${focus.bloc}"][data-vue="${vue}"]` : `[data-bloc="${focus.bloc}"]`) : focus.cle ? `[data-cle="${focus.cle}"]` : focus.cellq ? `[data-cellq="${focus.cellq}"][data-t="${focus.t}"]` : null;
+    const el = sel && document.querySelector(sel); if (el) el.focus();
+  }
+}
+
+function blocConsigne(titre, date, aides, extra){
+  const g = S.temps==='guidage';
+  return `<div class="panneau"><h2>${esc(titre)}</h2><div class="lbl">${esc(date)}</div>
+    ${extra}
+    ${g ? Object.values(aides).map(t => `<div class="aide">${t}</div>`).join('') : `<div class="aide">${aides.regles}</div>`}
+  </div>`;
+}
+function blocMessage(){
+  if (S.phase!==2) return '';
+  const a = S.cas==='quai' ? QUAI.alea : S.cas==='chauf' ? CHAUF.alea : PERSO.alea;
+  return `<div class="message"><div class="de">Message reçu — ${esc(a.de)}</div>${a.texte}</div>`;
+}
+function blocProblemes(an){
+  let h = '';
+  if (montrerEnDirect()){
+    h = an.P.length ? `<ul class="problemes">${an.P.map(p=>`<li>${esc(p)}</li>`).join('')}</ul>` : `<p class="ok">Aucun problème : le planning respecte toutes les règles.</p>`;
+  } else if (S.temps==='entrainement' && S.verif){
+    h = S.verif.length ? `<ul class="problemes">${S.verif.map(p=>`<li>${esc(p)}</li>`).join('')}</ul>` : `<p class="ok">Aucun problème trouvé.</p>`;
+  } else if (S.temps==='entrainement'){
+    h = `<p class="lbl">Cliquez sur « Vérifier mon planning » quand vous pensez avoir fini.</p>`;
+  } else {
+    h = `<p class="lbl">Évaluation : le site ne signale rien. Relisez les règles vous-même.</p>`;
+  }
+  const libEnv = S.phase===1 ? 'Envoyer le planning au chef' : (S.temps==='evaluation' ? 'Envoyer le planning corrigé et rendre ma copie' : 'Envoyer le planning corrigé');
+  return `<div class="panneau"><h2>${S.phase===1?'Votre planning':'Planning à reprendre'}</h2>${h}
+    <div class="actions">
+      ${S.temps==='entrainement' ? `<button class="btn" id="btnVerif">Vérifier mon planning</button>` : ''}
+      <button class="btn plein" id="btnEnvoyer">${libEnv}</button>
+      ${S.raz ? `<span>Tout effacer ? <button class="btn" id="btnRazOui">Oui, réinitialiser</button> <button class="btn" id="btnRazNon">Non</button></span>`
+              : `<button class="btn" id="btnRaz">Réinitialiser le planning</button>`}
+      ${S.confirmer ? `<span>Il reste des problèmes. <button class="btn" id="btnEnvoyerQuandMeme">Envoyer quand même</button></span>` : ''}
+    </div></div>`;
+}
+
+/* ---------- QUAI ---------- */
+// couloirs : range des intervalles [s,e) en lignes sans chevauchement ; renvoie {id: rang}
+function couloirs(items){
+  const fins = [], r = {};
+  items.slice().sort((a,b)=>a.s-b.s).forEach(it => {
+    let k = fins.findIndex(f => f <= it.s); if (k<0){ k = fins.length; fins.push(0); }
+    fins[k] = it.e; r[it.id] = k;
+  });
+  return r;
+}
+const nomDe = (liste, id) => (liste.find(x=>x.id===id)||{}).nom;
+function rendreQuai(){
+  const ph = S.phase, cams = camions(ph), an = analyseQuai(S.place, ph), direct = montrerEnDirect(), g = S.temps==='guidage';
+  G.innerHTML = blocMessage() + blocConsigne(QUAI.titre, QUAI.date, QUAI.aides,
+      `<ul><li>3 quais ; le quai 3 n'a pas de niveleur (porteurs seulement)</li>
+       ${QUAI.logisticiens.map(L=>`<li><b>${L.nom}</b> (cariste) : ${hhmm(L.de)}–${hhmm(L.a)}${L.caces?' · CACES':' · sans CACES'}</li>`).join('')}
+       <li>Attente d'un chauffeur : 30 min au plus</li></ul>`);
+  const surQuai = cams.filter(c => S.place[c.id] && S.place[c.id].q);
+  D.innerHTML = ongletQuais(cams, an, direct, g) + journeeCaristes(surQuai, an, direct) + blocProblemes(an);
+  brancherQuai();
+  brancherActions(an);
+}
+
+/* Onglet 1 : bloc camions + bloc planning des quais */
+function ongletQuais(cams, an, direct, g){
+  const n = QUAI.n, sel = g && S.sel && cams.find(c=>c.id===S.sel);   // surbrillance : guidage seulement
+  const carte = c => {
+    const p = S.place[c.id], d = duree(c), pose = p && p.q;
+    return `<div class="carte ${c.type}${S.sel===c.id?' sel':''}${pose?' posee':''}" draggable="true" data-bloc="${c.id}" data-vue="b" tabindex="0" role="button"
+        aria-label="Camion ${c.id}${pose?', posé':''}">
+      <b>${c.id} — ${esc(c.transp)}</b>
+      <span class="det">${c.type==='semi'?'Semi-remorque':'Porteur'} · ${c.pal} palettes</span>
+      <span class="det">Arrivée <b>${hhmm(c.arr)}</b>${c.retard?' <b>(nouvelle heure)</b>':''} · départ au plus tard <b>${hhmm(c.dep)}</b></span>
+      <span class="det">${g ? `Chargement : ${QUAI.chargement.ouverture} min + ${c.pal} × ${QUAI.chargement.parPalette} min → <b>${fmtDuree(d)}</b>` : `Chargement : ${fmtDuree(d)}`}</span>
+      <span class="etat">${pose ? `Posé : ${nomDe(QUAI.quais,p.q)}, ${hhmm(p.s)}–${hhmm(p.s+d)} · <span class="${direct && an.fauxL[c.id]?'faux-t':''}">${p.l ? esc(nomDe(QUAI.logisticiens,p.l)) : '<span style="color:var(--terre)">cariste ?</span>'}</span> <button class="lien" data-bulleq="${c.id}">${p.l?'Changer le cariste':'Choisir le cariste'}</button> <button class="lien" data-retirer="${c.id}">Retirer</button>` : 'À placer'}</span>
+    </div>`;
+  };
+  let h = `<div class="panneau"><h2>Camions du jour</h2>
+    <div class="cartes" id="bac">${cams.map(carte).join('')}</div>
+    <div class="legende">Glissez un camion sur un quai, à l'heure où commence son chargement : une bulle s'ouvre pour choisir le cariste. Ou cliquez le camion, puis la case. Sur le planning, cliquez un camion pour rouvrir sa bulle ; pour le déplacer, glissez-le ou choisissez « Déplacer ». Clavier : Entrée pour prendre une carte (ou ouvrir la bulle sur le planning), Espace pour déplacer un bloc, flèches, Suppr pour retirer, Échap pour fermer.</div></div>`;
+  h += `<div class="panneau"><h2>Planning des quais — ${QUAI.date}</h2>
+    ${g ? `<div class="info-sel">${sel
+      ? `<span class="fen-ech"></span> Camion <b>${sel.id}</b> : il arrive à <b>${hhmm(sel.arr)}</b> et doit être parti à <b>${hhmm(sel.dep)}</b>. Son chargement doit tenir dans la bande ambrée.`
+      : `Cliquez un camion : une bande ambrée montre de quelle heure à quelle heure on peut le charger.`}</div>` : ''}
+    <div class="zone"><div class="grille" id="grilleQ" style="${S.bulle?'padding-bottom:110px;':''}grid-template-columns:150px repeat(${n}, minmax(24px,1fr))">`;
+  h += `<div style="grid-row:1"></div>`;
+  for (let t=0;t<n;t+=4) h += `<div class="tete" style="grid-row:1;grid-column:${t+2} / span 4">${hhmm(t)}</div>`;
+  QUAI.quais.forEach((q,i) => {
+    const r = i+2;
+    h += `<div class="res" style="grid-row:${r}">${q.nom}${q.note?`<small>${q.note}</small>`:''}</div>`;
+    for (let t=0;t<n;t++){
+      const fen = sel && t>=sel.arr && t<sel.dep;
+      h += `<button class="case${t%4===0?' h':''}${fen?' fen':''}" style="grid-row:${r};grid-column:${t+2}" data-vue="q" data-res="${q.id}" data-t="${t}" tabindex="-1" aria-label="${q.nom}, ${hhmm(t)}"></button>`;
+    }
+    const ici = cams.filter(c => S.place[c.id] && S.place[c.id].q===q.id).map(c => ({c, id:c.id, s:S.place[c.id].s, e:S.place[c.id].s+duree(c)}));
+    const cl = couloirs(ici);
+    ici.forEach(({c,s,e}) => {
+      const faux = direct && an.fauxQ[c.id];
+      const Ln = nomDe(QUAI.logisticiens, S.place[c.id].l), fauxL = direct && an.fauxL[c.id];
+      h += `<button class="bloc ${c.type}${cl[c.id]?' decale':''}${(faux||fauxL)?' faux':''}${S.sel===c.id?' sel':''}" draggable="true" data-bloc="${c.id}" data-vue="q"
+        style="grid-row:${r};grid-column:${s+2} / span ${duree(c)}" title="${esc(c.transp)} ${hhmm(s)}–${hhmm(e)}">
+        <b>${c.id}</b> ${Ln ? esc(Ln) : '<span class="acam">cariste ?</span>'}</button>`;
+      if (S.bulle===c.id){
+        const c0 = Math.min(s, n-16);
+        h += `<div class="bulle-ancre" style="grid-row:${r};grid-column:${c0+2} / span 16"><div class="bulle" role="group" aria-label="Cariste du camion ${c.id}">
+          <span class="q">Qui charge le camion ${c.id} ? <span class="lbl">(${c.type==='semi'?'semi-remorque':'porteur'}, ${hhmm(s)}–${hhmm(e)})</span></span>
+          ${QUAI.logisticiens.map(L=>`<button class="btn" data-choixlog="${L.id}" data-pour="${c.id}" aria-pressed="${S.place[c.id].l===L.id}">${esc(L.nom)}</button>`).join('')}
+          <button class="lien" data-deplacer="${c.id}">Déplacer</button><button class="lien" data-retirer="${c.id}">Retirer</button><button class="lien" data-fermer="1">Fermer</button>
+        </div></div>`;
+      }
+    });
+  });
+  h += `</div></div><div class="legende">Jaune : semi-remorque · violet : porteur.</div></div>`;
+  return h;
+}
+/* Journée des caristes (lecture seule), sous le planning des quais */
+function journeeCaristes(surQuai, an, direct){
+  const n = QUAI.n;
+  let h = `<div class="panneau"><h2>Journée des caristes</h2>
+    <div class="zone"><div class="grille" style="grid-template-columns:150px repeat(${n}, minmax(24px,1fr))"><div style="grid-row:1"></div>`;
+  for (let t=0;t<n;t+=4) h += `<div class="tete" style="grid-row:1;grid-column:${t+2} / span 4">${hhmm(t)}</div>`;
+  QUAI.logisticiens.forEach((L,i) => {
+    const r = i+2;
+    h += `<div class="res" style="grid-row:${r}">${L.nom}<small>${hhmm(L.de)}–${hhmm(L.a)} · ${L.caces?'CACES':'sans CACES'}</small></div>`;
+    for (let t=0;t<n;t++) h += `<div class="case lecture${t%4===0?' h':''}${(t<L.de||t>=L.a)?' hors':''}" style="grid-row:${r};grid-column:${t+2}"></div>`;
+    const ici = surQuai.filter(c => S.place[c.id].l===L.id).map(c => ({c, id:c.id, s:S.place[c.id].s, e:S.place[c.id].s+duree(c)}));
+    const cl = couloirs(ici);
+    ici.forEach(({c,s}) => {
+      const faux = direct && an.fauxL[c.id];
+      h += `<div class="bloc lecture ${c.type}${cl[c.id]?' decale':''}${faux?' faux':''}" style="grid-row:${r};grid-column:${s+2} / span ${duree(c)}"><b>${c.id}</b> ${nomDe(QUAI.quais,S.place[c.id].q)}</div>`;
+    });
+  });
+  h += `</div></div><div class="legende">Ce planning se remplit tout seul quand vous choisissez un cariste. Hachures : le cariste n'est pas encore arrivé ou est déjà parti.</div></div>`;
+  return h;
+}
+
+function poser(id, res, s){
+  const c = camions(S.phase).find(x=>x.id===id); const d = duree(c);
+  s = Math.max(0, Math.min(QUAI.n - d, s));
+  const p = S.place[id] || {}; p.s = s; p.q = res;
+  S.place[id] = p; S.verif = null; S.confirmer = false;
+  S.bulle = p.l ? null : id;
+}
+function retirer(id){ delete S.place[id]; S.verif = null; S.confirmer = false; S.bulle = null; }   // le logisticien part avec le quai
+
+function brancherQuai(){
+  let prise = 0;
+  const grilleQ = document.getElementById('grilleQ');
+  D.querySelectorAll('[data-retirer]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); retirer(b.dataset.retirer); S.sel=null; rendre(); }));
+  D.querySelectorAll('[data-choixlog]').forEach(b => b.addEventListener('click', e => { e.stopPropagation();
+    const id = b.dataset.pour; S.place[id].l = b.dataset.choixlog; S.bulle = null; S.verif = null; S.confirmer = false; rendre();
+    const bl = D.querySelector(`[data-bloc="${id}"][data-vue="q"]`); if (bl && window.__clavier) bl.focus(); }));
+  D.querySelectorAll('[data-bulleq]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); S.bulle = b.dataset.bulleq; S.sel = null; rendre();
+    const x = D.querySelector('.bulle .btn'); if (x){ x.scrollIntoView({block:'nearest', inline:'nearest'}); if (window.__clavier) x.focus(); } }));
+  D.querySelectorAll('[data-deplacer]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); S.sel = b.dataset.deplacer; S.bulle = null; rendre(); }));
+  D.querySelectorAll('[data-fermer]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); S.bulle = null; rendre(); }));
+  const bu = D.querySelector('.bulle'); if (bu) bu.addEventListener('keydown', e => { if (e.key==='Escape'){ e.stopPropagation(); const id = S.bulle; S.bulle = null; rendre();
+    const bl = D.querySelector(`[data-bloc="${id}"][data-vue="q"]`); if (bl) bl.focus(); } });
+  D.querySelectorAll('[data-bloc]').forEach(el => {
+    el.addEventListener('dragstart', e => {
+      const id = el.dataset.bloc; e.dataTransfer.setData('text/plain', id);
+      const larg = grilleQ.querySelector('.case').getBoundingClientRect().width;
+      prise = el.dataset.vue==='q' ? Math.floor((e.clientX - el.getBoundingClientRect().left)/larg) : 0;
+      S.sel = id; if (S.temps==='guidage') setTimeout(() => surligner(id), 0);
+    });
+    el.addEventListener('click', e => {
+      if (e.target.closest('button.lien')) return;
+      // Un camion « en main » se pose sur la case visée, même si un autre camion y est déjà dessiné.
+      if (S.sel && el.dataset.vue==='q'){
+        const c = document.elementsFromPoint(e.clientX, e.clientY).find(x => x.classList && x.classList.contains('case'));
+        const p = S.place[S.sel];
+        if (c && (S.sel!==el.dataset.bloc || !p || +c.dataset.t!==p.s || c.dataset.res!==p.q)){ poser(S.sel, c.dataset.res, +c.dataset.t); S.sel=null; rendre(); return; }
+      }
+      if (el.dataset.vue==='q' && S.sel!==el.dataset.bloc){ S.bulle = (S.bulle===el.dataset.bloc) ? null : el.dataset.bloc; S.sel = null; rendre(); return; }
+      S.sel = (S.sel===el.dataset.bloc) ? null : el.dataset.bloc; S.bulle = null; rendre(); });
+    el.addEventListener('keydown', e => {
+      const id = el.dataset.bloc, vue = el.dataset.vue;
+      if (e.key==='Escape'){ S.sel=null; rendre(); return; }
+      if (vue==='b' && (e.key==='Enter' || e.key===' ') && e.target===el){ e.preventDefault(); S.sel = (S.sel===id)?null:id; S.bulle=null; rendre(); return; }
+      if (vue==='q' && e.key==='Enter' && S.sel!==id){ e.preventDefault(); S.bulle = id; rendre(); const x = D.querySelector('.bulle .btn'); if (x) x.focus(); return; }
+      if (vue==='q' && e.key===' ' && S.sel!==id){ e.preventDefault(); S.sel = id; S.bulle = null; rendre(); return; }
+      if (S.sel!==id) return;
+      const c = camions(S.phase).find(x=>x.id===id), liste = QUAI.quais.map(x=>x.id);
+      if (e.key==='Delete' || e.key==='Backspace'){ e.preventDefault(); retirer(id); S.sel=null; rendre(); return; }
+      if (!S.place[id]){ if (e.key==='ArrowDown'){ e.preventDefault(); poser(id, liste[0], c.arr); window.__focusVue='q'; rendre(); } return; }
+      const p = S.place[id]; let s = p.s, i = liste.indexOf(p.q);
+      if (e.key==='ArrowRight') s++; else if (e.key==='ArrowLeft') s--;
+      else if (e.key==='ArrowDown') i=Math.min(liste.length-1,i+1); else if (e.key==='ArrowUp') i=Math.max(0,i-1);
+      else return;
+      e.preventDefault(); poser(id, liste[i], s); window.__focusVue='q'; rendre();
+    });
+  });
+  const caseSous = (x, y) => document.elementsFromPoint(x, y).find(el => el.classList && el.classList.contains('case'));
+  grilleQ.addEventListener('dragover', e => e.preventDefault());
+  grilleQ.addEventListener('drop', e => {
+    e.preventDefault(); const c = caseSous(e.clientX, e.clientY); if (!c) return;
+    poser(e.dataTransfer.getData('text/plain'), c.dataset.res, +c.dataset.t - prise); S.sel=null; rendre();
+  });
+  grilleQ.querySelectorAll('.case').forEach(el => el.addEventListener('click', () => {
+    if (!S.sel){ if (S.bulle){ S.bulle=null; rendre(); } return; } poser(S.sel, el.dataset.res, +el.dataset.t); S.sel=null; rendre(); }));
+  const bac = document.getElementById('bac');   // redéposer un camion dans le bloc = le retirer du planning
+  bac.addEventListener('dragover', e => e.preventDefault());
+  bac.addEventListener('drop', e => { e.preventDefault(); retirer(e.dataTransfer.getData('text/plain')); S.sel=null; rendre(); });
+}
+function surligner(id){
+  const c = camions(S.phase).find(x=>x.id===id);
+  document.querySelectorAll('#grilleQ .case').forEach(el => el.classList.toggle('fen', +el.dataset.t>=c.arr && +el.dataset.t<c.dep));
+}
+
+/* ---------- PERSONNEL ---------- */
+function rendrePerso(){
+  const ph = S.phase, sal = salaries(ph), abs = absencesDe(ph), an = analysePerso(S.pres, ph), direct = montrerEnDirect(), g = S.temps==='guidage';
+  const n = PERSO.jours.length, nom = id => sal.find(s=>s.id===id).nom, sel = g && S.sel && abs.find(a=>a.id===S.sel);
+  G.innerHTML = blocMessage() + blocConsigne(PERSO.titre, PERSO.date, PERSO.aides,
+      `<ul><li>Besoin du jour : ligne « Besoin »</li><li>Au moins un cariste CACES présent par jour</li>
+       ${sal.map(s=>`<li><b>${s.nom}</b>${s.caces?' · CACES':''}${s.interim?' · intérimaire':''}${s.arrivee?` · arrive le ${PERSO.jours[s.arrivee]}`:''}</li>`).join('')}</ul>`);
+  const carte = a => {
+    const p = S.pres[a.id], pose = p!==undefined;
+    const dates = j => `${PERSO.jours[j]}${a.L>1?' → '+PERSO.jours[j+a.L-1]:''}`;
+    return `<div class="carte ${a.impose?'porteur':'semi'}${S.sel===a.id?' sel':''}${pose?' posee':''}" draggable="true" data-abs="${a.id}" data-vue="b" tabindex="0" role="button">
+      <b>${esc(nom(a.qui))} — ${esc(a.lib)}${a.nouveau?' (nouveau)':''}</b>
+      <span class="det">${a.L} jour${a.L>1?'s':''} · ${a.impose ? 'date <b>imposée</b>' : 'congé <b>demandé</b>'}</span>
+      <span class="det">${a.impose ? 'Date' : 'Dates souhaitées'} : <b>${dates(a.date)}</b></span>
+      <span class="det">${esc(a.motif)}</span>
+      <span class="etat">${pose ? `Posé : ${dates(p)}${!a.impose && p!==a.date ? ' (décalé)' : ''} <button class="lien" data-retirer-abs="${a.id}">Retirer</button>` : 'À poser'}</span></div>`;
+  };
+  let h = `<div class="panneau"><h2>Demandes d'absence</h2><div class="cartes" id="bacP">${abs.map(carte).join('')}</div>
+    <div class="legende">Violet : absence imposée · jaune : congé demandé. Glissez une carte sur le planning (elle se pose sur la ligne de la personne, au jour visé), ou cliquez-la puis cliquez le jour. Clavier : Entrée pour la prendre, flèches gauche/droite, Suppr pour la retirer.</div></div>`;
+  h += `<div class="panneau"><h2>Planning des présences — ${PERSO.date}</h2>
+    ${g ? `<div class="info-sel">${sel ? `<span class="fen-ech"></span> ${esc(nom(sel.qui))} — ${esc(sel.lib)} : ${sel.impose?'date imposée':'dates souhaitées'} en ambré.` : `Cliquez une demande : ses dates ${''}(imposées ou souhaitées) s'affichent en ambré sur la ligne de la personne.`}</div>` : ''}
+    <div class="zone"><div class="grille" id="grilleP" style="grid-template-columns:130px repeat(${n}, minmax(60px,1fr))"><div style="grid-row:1;grid-column:1"></div>`;
+  PERSO.jours.forEach((j,d) => h += `<div class="tete" style="grid-row:1;grid-column:${d+2};${d===PERSO.semaine?'border-left:3px solid var(--encre-douce)':''}">${j}</div>`);
+  sal.forEach((s,i) => {
+    const r = i+2;
+    h += `<div class="res" style="grid-row:${r}">${s.nom}<small>${[s.caces?'CACES':'', s.interim?'intérim':''].filter(Boolean).join(' · ')}</small></div>`;
+    for (let d=0; d<n; d++){
+      const pasLa = d < (s.arrivee||0), fen = sel && sel.qui===s.id && d>=sel.date && d<sel.date+sel.L;
+      h += `<button class="case jcase${d===PERSO.semaine?' sem':''}${pasLa?' hors':''}${fen?' fen':''}" style="grid-row:${r};grid-column:${d+2}" data-vue="p" data-res="${s.id}" data-t="${d}" tabindex="-1" aria-label="${s.nom}, ${PERSO.jours[d]}">${pasLa?'pas là':''}</button>`;
+    }
+    abs.filter(a => a.qui===s.id && S.pres[a.id]!==undefined).forEach(a => {
+      const p = S.pres[a.id], faux = direct && an.faux[a.id];
+      h += `<button class="bloc ${a.impose?'porteur':'semi'}${faux?' faux':''}${S.sel===a.id?' sel':''}" draggable="true" data-abs="${a.id}" data-vue="p"
+        style="grid-row:${r};grid-column:${p+2} / span ${a.L}" title="${esc(a.lib)}">${esc(a.lib)}</button>`;
+    });
+  });
+  const r0 = sal.length+2;
+  const ligne = (r, lib, vals, fauxFn) => { h += `<div class="res" style="grid-row:${r}">${lib}</div>`;
+    vals.forEach((v,d) => h += `<div class="compte${direct && fauxFn && fauxFn(d)?' faux':''}" style="grid-row:${r};grid-column:${d+2};${d===PERSO.semaine?'border-left:3px solid var(--encre-douce)':''}">${v}</div>`); };
+  ligne(r0, 'Présents', an.e.cnt, d => an.e.cnt[d] < PERSO.besoin[d]);
+  ligne(r0+1, 'Besoin', PERSO.besoin);
+  ligne(r0+2, 'Caristes CACES', an.e.car, d => an.e.car[d]===0);
+  h += `</div></div><div class="legende">Un jour sans absence, la personne est présente. Hachures : pas encore arrivé·e.</div></div>`;
+  D.innerHTML = h + blocProblemes(an);
+  brancherPerso();
+  brancherActions(an);
+}
+function poserAbs(id, d){
+  const a = absencesDe(S.phase).find(x=>x.id===id); S.pres[id] = caleAbs(a, d);
+  S.verif = null; S.confirmer = false;
+}
+function brancherPerso(){
+  let prise = 0;
+  const grille = document.getElementById('grilleP');
+  D.querySelectorAll('[data-retirer-abs]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); delete S.pres[b.dataset.retirerAbs]; S.sel=null; S.verif=null; rendre(); }));
+  D.querySelectorAll('[data-abs]').forEach(el => {
+    el.addEventListener('dragstart', e => {
+      e.dataTransfer.setData('text/plain', el.dataset.abs);
+      const larg = grille.querySelector('.case').getBoundingClientRect().width;
+      prise = el.dataset.vue==='p' ? Math.floor((e.clientX - el.getBoundingClientRect().left)/larg) : 0;
+    });
+    el.addEventListener('click', e => {
+      if (S.sel && S.sel!==el.dataset.abs && el.dataset.vue==='p'){
+        const c = document.elementsFromPoint(e.clientX, e.clientY).find(x => x.classList && x.classList.contains('case'));
+        if (c){ poserAbs(S.sel, +c.dataset.t); S.sel=null; rendre(); return; }
+      }
+      S.sel = (S.sel===el.dataset.abs) ? null : el.dataset.abs; rendre(); });
+    el.addEventListener('keydown', e => {
+      const id = el.dataset.abs;
+      if (e.key==='Escape'){ S.sel=null; rendre(); return; }
+      if (el.dataset.vue==='b' && (e.key==='Enter' || e.key===' ') && e.target===el){ e.preventDefault(); S.sel=(S.sel===id)?null:id; rendre(); return; }
+      if (S.sel!==id) return;
+      const a = absencesDe(S.phase).find(x=>x.id===id), p = S.pres[id];
+      if (e.key==='Delete' || e.key==='Backspace'){ e.preventDefault(); delete S.pres[id]; S.sel=null; rendre(); return; }
+      if (e.key==='ArrowRight' || e.key==='ArrowLeft' || e.key==='ArrowDown'){
+        e.preventDefault(); const base = p===undefined ? a.date : p + (e.key==='ArrowRight'?1:e.key==='ArrowLeft'?-1:0);
+        poserAbs(id, base); window.__focusVue='p'; rendre(); }
+    });
+  });
+  const caseSous = (x, y) => document.elementsFromPoint(x, y).find(el => el.classList && el.classList.contains('case'));
+  grille.addEventListener('dragover', e => e.preventDefault());
+  grille.addEventListener('drop', e => { e.preventDefault(); const c = caseSous(e.clientX, e.clientY); if (!c) return;
+    poserAbs(e.dataTransfer.getData('text/plain'), +c.dataset.t - prise); S.sel=null; rendre(); });
+  grille.querySelectorAll('.case').forEach(el => el.addEventListener('click', () => { if (!S.sel) return; poserAbs(S.sel, +el.dataset.t); S.sel=null; rendre(); }));
+  const bac = document.getElementById('bacP');
+  bac.addEventListener('dragover', e => e.preventDefault());
+  bac.addEventListener('drop', e => { e.preventDefault(); delete S.pres[e.dataTransfer.getData('text/plain')]; S.sel=null; S.verif=null; rendre(); });
+}
+
+/* ---------- ACTIONS COMMUNES ---------- */
+function brancherActions(an){
+  const v = document.getElementById('btnVerif');
+  if (v) v.onclick = () => { S.verif = analyse().P; rendre(); };
+  document.getElementById('btnEnvoyer').onclick = () => {
+    if (S.temps==='guidage' && an.P.length && !S.confirmer){ S.confirmer = true; rendre(); return; }
+    envoyer();
+  };
+  const q = document.getElementById('btnEnvoyerQuandMeme'); if (q) q.onclick = envoyer;
+  // Réinitialiser : vide le planning en cours (quais, logisticiens ou jours), sans toucher à la version déjà envoyée.
+  const z = document.getElementById('btnRaz'); if (z) z.onclick = () => { S.raz = true; rendre(); };
+  const zo = document.getElementById('btnRazOui'); if (zo) zo.onclick = () => { S.place = {}; S.pres = {}; S.ch = {}; S.bulle = null; S.sel = null; S.verif = null; S.confirmer = false; S.raz = false; S.onglet = 'quais'; rendre(); };
+  const zn = document.getElementById('btnRazNon'); if (zn) zn.onclick = () => { S.raz = false; rendre(); };
+}
+function envoyer(){
+  S.confirmer = false; S.verif = null; S.sel = null; S.bulle = null;
+  if (S.phase===1){ S.v1 = {place:cp(S.place), pres:cp(S.pres), ch:cp(S.ch)}; S.phase = 2; }
+  else { S.v2 = {place:cp(S.place), pres:cp(S.pres), ch:cp(S.ch)}; S.phase = 'fini'; }
+  rendre(); window.scrollTo(0,0);
+}
+
+/* ---------- BILAN ---------- */
+function rendreBilan(){
+  const a1 = S.cas==='quai' ? analyseQuai(S.v1.place,1) : S.cas==='chauf' ? analyseChauf(S.v1.ch,1) : analysePerso(S.v1.pres,1);
+  const a2 = S.cas==='quai' ? analyseQuai(S.v2.place,2) : S.cas==='chauf' ? analyseChauf(S.v2.ch,2) : analysePerso(S.v2.pres,2);
+  const J = [...a1.J.map(j=>['1er envoi', ...j]), ...a2.J.map(j=>['Après l\'aléa', ...j])];
+  const ok = J.filter(j=>j[2]).length, note = Math.round(ok/J.length*20*10)/10;
+  const table = `<table class="bilan"><tr><th>Version</th><th>Jalon</th><th></th></tr>${J.map(j=>`<tr><td>${j[0]}</td><td>${esc(j[1])}</td><td><span class="pastille ${j[2]?'oui':'non'}">${j[2]?'✓':'✗'}</span></td></tr>`).join('')}</table>`;
+  G.innerHTML = '';
+  if (S.temps==='evaluation'){
+    D.innerHTML = `<div class="panneau"><h2>Copie rendue</h2><p>Votre planning a été envoyé. Le résultat sera donné par votre enseignant.</p>
+      <button class="btn" id="btnProf">${S.prof?'Masquer':'Voir'} le côté enseignant</button>
+      ${S.prof ? `<h2 style="margin-top:14px">Côté enseignant — ${ok} / ${J.length} jalons, note ${String(note).replace('.',',')} / 20</h2>${table}` : ''}</div>`;
+    document.getElementById('btnProf').onclick = () => { S.prof = !S.prof; rendre(); };
+  } else {
+    D.innerHTML = `<div class="panneau"><h2>Bilan — ${ok} / ${J.length} jalons</h2>${table}
+      <div class="actions"><button class="btn" id="btnRefaire">Recommencer</button></div></div>`;
+    document.getElementById('btnRefaire').onclick = () => { S = etatNeuf(S.cas, S.temps); rendre(); };
+  }
+}
+
+/* ---------- EN-TÊTE ---------- */
+document.querySelectorAll('#segCas button').forEach(b => b.onclick = () => { S = etatNeuf(b.dataset.cas, S.temps); rendre(); });
+document.querySelectorAll('#segTemps button').forEach(b => b.onclick = () => { S = etatNeuf(S.cas, b.dataset.temps); rendre(); });
+document.getElementById('btnReset').onclick = () => { S = etatNeuf(S.cas, S.temps); rendre(); };
+window.__clavier = false;
+addEventListener('keydown', () => window.__clavier = true, true);
+addEventListener('pointerdown', () => window.__clavier = false, true);
+rendre();
+</script>
+</body>
+</html>
