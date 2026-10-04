@@ -1356,6 +1356,191 @@ await v('ENT-5.4 : chaque piège fait tomber son jalon (constat, P2 refusée, P3
   }
 });
 
+// ── ENT-5.5 « ranger et saisir l'entrée » (brief `docs/briefs/ENT-5.5-smoby-rangement.md`) ──────────────
+// La séance réelle, montée par son activité (`activites/smoby-rangement.js`). Les attendus sont écrits À
+// LA MAIN d'après le brief : adresses justes P1 A1-T01-N1-E3, P2 B2-T02-N1-E2/E3, P3 L1/L2, P4 B1-T03-N3-E1,
+// B1-T04-N1-E2, B1-T04-N3-E2 ; saisie 8 / 45 / P3 en litige / 34 ; porteurs : 10 palettes × 36 = 360 au
+// départ, 394 après l'entrée ; départ de la commande de Noël jeudi 10 décembre.
+const T55 = '#s55';
+const Z55 = `${T55} .ent-main`;
+const monter55 = (o = {}) => pg.evaluate(async (o) => {
+  const act = await import('/activites/smoby-rangement.js');
+  for (const id of ['smTest', 's51', 's54', 's55']) document.getElementById(id)?.remove();
+  const hote = document.createElement('div'); hote.id = 's55'; document.body.appendChild(hote);
+  const db = {};
+  window.__55 = { db, suivi: [] };
+  act.rendre(hote, {
+    meta: act.meta,
+    profil: { prenom: 'Lea', nom: 'Test', role: 'eleve', uid: o.uid || 'u-55' },
+    jeu: { etat: () => db, sauver: () => {} },
+    enregistrer: (r) => { window.__55.suivi.push(JSON.parse(JSON.stringify(r))); }, quitter: () => {}, codeStock: 'ABC',
+    lireScore: async () => null,
+  });
+}, o);
+const NEUF55 = ['P1-rangee', 'P2-rangee', 'P3-rangee', 'P4-rangee', 'saisie-p1-p2', 'saisie-p4', 'p3-litige', 'stock-lu', 'message-kn'];
+const etapes55 = () => pg.evaluate(async () => {
+  const S = await import('/contenus/smoby-ent55.js');
+  return Object.fromEntries(S.ETAPES.map((e) => [e.id, e.verifier(window.__55.db).status]));
+});
+const statuts55 = (ko = []) => Object.fromEntries(NEUF55.map((id) => [id, ko.includes(id) ? 'ko' : 'ok']));
+const dernierScore55 = () => pg.evaluate(() => { const s = window.__55.suivi; return s.length ? [s[s.length - 1].score, s[s.length - 1].max] : null; });
+const sujets55 = () => pg.evaluate(() => window.__55.db.mails.filter((m) => m.folder === 'in').map((m) => m.subject));
+const stock55 = (sku) => pg.evaluate((sku) => window.__55.db.stock[sku], sku);
+const RANGE55 = { P1: 'A1-T01-N1-E3', P2: 'B2-T02-N1-E2', P3: 'L1', P4: 'B1-T03-N3-E1' };
+// Ranger au plan : prendre la palette, ouvrir la travée, cliquer l'emplacement (la zone litiges se clique sur le plan).
+async function ranger55(place = RANGE55) {
+  await pg.click(`${T55} .ent-nav[data-vue="entrepot"]`);
+  for (const [id, a] of Object.entries(place)) {
+    await pg.click(`${Z55} .pe-bandeau [data-pe-pal="${id}"]`);
+    if (a.startsWith('L')) { await pg.click(`${Z55} [data-pe-lit="${a}"]`); continue; }
+    await pg.click(`${Z55} [data-pe-trav="${a.slice(0, 6)}"]`);
+    await pg.click(`${Z55} [data-pe-emp="${a}"]`);
+    await pg.click(`${Z55} [data-pe="retour"]`);
+  }
+}
+const SAISIE55 = { 'SMB-NJL': [8, 8, 'ok', 'accepte'], 'SMB-CTF': [45, 45, 'ok', 'accepte'], 'SMB-EBD': [36, 36, 'abime', 'litige'],
+  'SMB-PLS': [36, 34, 'ok', 'reserve'] };
+async function saisir55(lignes = SAISIE55, valider = true) {
+  await pg.click(`${T55} .ent-nav[data-vue="receptions"]`);
+  await pg.click(`${Z55} [data-ouvrir-rec]`);
+  await pg.fill(`${Z55} #recLot`, 'ARI-26-49');
+  for (const [sku, [an, co, et, de]] of Object.entries(lignes)) {
+    await pg.fill(`${Z55} input[data-rec="annonce"][data-sku="${sku}"]`, String(an));
+    await pg.fill(`${Z55} input[data-rec="compte"][data-sku="${sku}"]`, String(co));
+    await pg.selectOption(`${Z55} select[data-rec="etat"][data-sku="${sku}"]`, et);
+    await pg.selectOption(`${Z55} select[data-rec="decision"][data-sku="${sku}"]`, de);
+  }
+  if (valider) await pg.click(`${Z55} [data-valider-rec]`);
+}
+async function repondre55(sujet, choix) {
+  await pg.click(`${T55} .ent-nav[data-vue="mail"]`);
+  await pg.click(`${Z55} [data-dossier="in"]`);
+  await pg.click(`${Z55} .ent-obj:text-is("${sujet}")`);
+  await pg.click(`${Z55} [data-repondre]`);
+  await pg.waitForSelector(`${Z55} #formPhr:not([hidden])`);
+  for (const [l, t] of Object.entries(choix)) await pg.selectOption(`${Z55} [data-phrase="${l}"]`, { label: t });
+  await pg.click(`${Z55} #formPhr button[type="submit"]`);
+}
+const STOCK55 = { stock: 'Il y a maintenant 394 cartons de porteurs Little Smoby en stock.' };
+const KN55 = { salutation: 'Bonjour,', stock: 'La marchandise d’Arinthod est en stock.', depart: 'La commande de Noël pourra partir jeudi 10 décembre.',
+  fin: 'Cordialement, Yanis — Smoby Moirans' };
+async function parcours55({ uid, place, saisie, stock = {}, kn = {} } = {}) {
+  await monter55({ uid });
+  await ranger55(place);
+  await saisir55(saisie);
+  await repondre55('Le stock de porteurs', { ...STOCK55, ...stock });
+  await repondre55('Commande de Noël : la marchandise d’Arinthod', { ...KN55, ...kn });
+}
+
+await v('ENT-5.5 : déclaration (code, 2de, C1.5 et C1.6, 9 jalons, livrée fermée aux élèves), inscrite au registre', async () => {
+  const r = await pg.evaluate(async () => {
+    const A = await import('/activites/smoby-rangement.js');
+    const I = await import('/activites/index.js');
+    const m = A.meta;
+    return { m: [m.id, m.code, m.rubrique, m.niveaux, m.competences, m.domaines, m.temps, m.bareme, m.pret, m.ouverture, m.portee, m.coeur],
+      inscrite: (await Promise.all(I.ACTIVITES.map((f) => f()))).some((x) => x.meta.id === 'smoby-rangement') };
+  });
+  egal(r.m, ['smoby-rangement', 'ENT-5.5', 'simulog', ['2de'], ['C1.5', 'C1.6'], ['D4'], 'guidage', 9, true, 'prof', 'eleve', true], 'meta');
+  vrai(r.inscrite, 'séance absente du registre');
+});
+
+await v('ENT-5.5 : les attendus calculés sont ceux du brief (palettes d’ENT-5.4, bonnes adresses, 360 → 394) et le corrigé les reprend', async () => {
+  const r = await pg.evaluate(async () => {
+    const S = await import('/contenus/smoby-ent55.js');
+    const { bonnesReponses } = await import('/core/types/entrepot.js');
+    const C = (await import('/contenus/corriges/ENT-5.5.js')).CORRIGE;
+    return { pal: S.PALETTES.map((p) => [p.id, p.produit, p.kg, p.rotation, p.contrainte || '', p.reception || '', !!p.litige]),
+      B: bonnesReponses(S.ENTREPOT), depart: S.STOCK_DEPART['SMB-PLS'], apres: S.PORTEURS_APRES,
+      att: S.ATTENDU.map((a) => [a.sku, a.annonce, a.compte, a.litige]), corrige: C.items.map((i) => i.reponses || i.rep) };
+  });
+  egal(r.pal, [['P1', 'MAI', 420, 'A', 'lourd', '', false], ['P2', 'CUI', 270, 'B', 'fragile', '', false],
+    ['P3', 'ETA', 290, 'B', 'lourd', '1 carton écrasé', true], ['P4', 'POR', 180, 'C', '', '2 cartons manquants', false]], 'palettes');
+  egal(r.B, { P1: ['A1-T01-N1-E3'], P2: ['B2-T02-N1-E2', 'B2-T02-N1-E3'], P3: ['L1', 'L2'],
+    P4: ['B1-T03-N3-E1', 'B1-T04-N1-E2', 'B1-T04-N3-E2'] }, 'bonnes adresses');
+  egal([r.depart, r.apres], [360, 394], 'porteurs avant / après');
+  egal(r.att, [['SMB-NJL', 8, 8, false], ['SMB-CTF', 45, 45, false], ['SMB-EBD', 36, 36, true], ['SMB-PLS', 36, 34, false]], 'saisie attendue');
+  egal(r.corrige[0].map((l) => [l[0], l[5]]), [['P1', 'A1-T01-N1-E3'], ['P2', 'B2-T02-N1-E2, B2-T02-N1-E3'], ['P3', 'L1, L2'],
+    ['P4', 'B1-T03-N3-E1, B1-T04-N1-E2, B1-T04-N3-E2']], 'corrigé : adresses');
+  vrai(r.corrige[2].startsWith('394 cartons'), `corrigé : stock ${r.corrige[2]}`);
+  vrai(r.corrige[3].includes('jeudi 10 décembre'), 'corrigé : message');
+});
+
+await v('ENT-5.5 : à l’ouverture, le message de Bruno et le BL, aucun jalon vrai ; la décision « En litige » est proposée', async () => {
+  await monter55();
+  egal(await sujets55(), ['On range les palettes d’Arinthod', 'BL ARI-26-1209 avec tes réserves'], 'messages au départ');
+  egal(await etapes55(), Object.fromEntries(NEUF55.map((id) => [id, 'attente'])), 'étapes à l’ouverture');
+  const s = await dernierScore55();
+  vrai(!s || s[0] === 0, `score sans rien faire : ${JSON.stringify(s)}`);
+  await pg.click(`${T55} .ent-nav[data-vue="receptions"]`);
+  await pg.click(`${Z55} [data-ouvrir-rec]`);
+  egal(await pg.$$eval(`${Z55} select[data-rec="decision"][data-sku="SMB-EBD"] option`, (O) => O.map((o) => o.value)),
+    ['', 'accepte', 'reserve', 'refuse', 'litige'], 'décisions');
+  vrai((await pg.textContent(Z55)).includes('Une ligne refusée ou en litige n’entre pas en stock.'.replace('’', "'")), 'consigne du bon de réception');
+});
+
+await v('ENT-5.5 : sans `receptionLitige`, l’écran Réceptions garde ses trois décisions (les autres séances ne changent pas)', async () => {
+  const r = await pg.evaluate(async () => {
+    const { creerEntreprise } = await import('/core/types/entreprise.js');
+    const S = await import('/contenus/smoby-ent55.js');
+    const SM = await import('/contenus/smoby.js');
+    for (const id of ['smTest', 's51', 's54', 's55']) document.getElementById(id)?.remove();
+    const hote = document.createElement('div'); hote.id = 's55'; document.body.appendChild(hote);
+    const db = {};
+    creerEntreprise({ ENTREPRISE: SM.ENTREPRISE, VOCAB: S.VOCAB, CATALOGUE: S.CATALOGUE, SUPPLIERS: [S.FOURNISSEUR],
+      SUP_BY_ID: { ARI: S.FOURNISSEUR }, CUSTOMERS: [], CM: {}, baseDeDepart: S.baseDeDepart, THEME: SM.THEME, etapes: [],
+      volet: S.VOLET }).rendre(hote, { meta: { id: 'x55', portee: 'eleve' }, profil: { prenom: 'A', role: 'eleve' },
+      jeu: { etat: () => db, sauver: () => {} }, enregistrer: () => {}, quitter: () => {} });
+    hote.querySelector('.ent-nav[data-vue="receptions"]').click();
+    hote.querySelector('[data-ouvrir-rec]').click();
+    return [...hote.querySelector('select[data-rec="decision"]').options].map((o) => o.value);
+  });
+  egal(r, ['', 'accepte', 'reserve', 'refuse'], 'décisions sans l’option');
+});
+
+await v('ENT-5.5 : parcours juste à l’écran → 9 / 9 ; P3 n’entre pas en stock, porteurs 394 ; Kuehne+Nagel puis le relais de Bruno', async () => {
+  await monter55();
+  await ranger55();
+  egal(await pg.evaluate(() => window.__55.db.entrepots['smoby-ent55'].place), RANGE55, 'palettes posées');
+  await saisir55();
+  egal([await stock55('SMB-PLS'), await stock55('SMB-EBD'), await stock55('SMB-NJL'), await stock55('SMB-CTF')], [394, 684, 136, 429], 'stock après l’entrée');
+  egal(await sujets55(), ['On range les palettes d’Arinthod', 'BL ARI-26-1209 avec tes réserves', 'Le stock de porteurs'], 'Bruno demande le stock après la saisie');
+  await repondre55('Le stock de porteurs', STOCK55);
+  egal((await sujets55()).slice(3), ['Commande de Noël : la marchandise d’Arinthod'], 'Kuehne+Nagel écrit après la réponse à Bruno');
+  await repondre55('Commande de Noël : la marchandise d’Arinthod', KN55);
+  egal((await sujets55()).slice(4), ['Merci, et la suite'], 'relais vers ENT-5.6');
+  egal(await etapes55(), statuts55(), 'étapes');
+  egal(await dernierScore55(), [9, 9], 'score remonté au suivi');
+});
+
+await v('ENT-5.5 : chaque piège fait tomber son jalon (mal rangée, P4 saisie 36, P3 acceptée ou refusée, stock du BL, vendredi 11)', async () => {
+  const cas = [
+    [['P1-rangee'], { place: { ...RANGE55, P1: 'A1-T02-N1-E2' } }],
+    [['P2-rangee'], { place: { ...RANGE55, P2: 'B2-T02-N3-E2' } }],
+    [['P3-rangee'], { place: { ...RANGE55, P3: 'A1-T03-N1-E1' } }],
+    [['P4-rangee'], { place: { ...RANGE55, P4: 'B1-T04-N2-E3' } }],
+    [['saisie-p4'], { saisie: { ...SAISIE55, 'SMB-PLS': [36, 36, 'ok', 'accepte'] } }],
+    [['saisie-p1-p2'], { saisie: { ...SAISIE55, 'SMB-CTF': [45, 48, 'ok', 'accepte'] } }],
+    [['p3-litige'], { saisie: { ...SAISIE55, 'SMB-EBD': [36, 36, 'abime', 'reserve'] } }],
+    [['p3-litige'], { saisie: { ...SAISIE55, 'SMB-EBD': [36, 36, 'abime', 'refuse'] } }],
+    [['stock-lu'], { stock: { stock: 'Il y a maintenant 396 cartons de porteurs Little Smoby en stock.' } }],
+    [['message-kn'], { kn: { depart: 'La commande de Noël pourra partir vendredi 11 décembre.' } }],
+    [['message-kn'], { kn: { stock: 'Tout est parti.' } }],
+  ];
+  for (const [n, [ko, o]] of cas.entries()) {
+    await parcours55({ uid: `u-55-piege-${n}`, ...o });
+    egal(await etapes55(), statuts55(ko), `sabotage ${ko.join(', ')}`);
+    egal(await dernierScore55(), [9 - ko.length, 9], `score avec ${ko.join(', ')} faux`);
+  }
+});
+
+await v('ENT-5.5 : P3 « En litige » sans valider l’entrée ne rapporte rien (pas de jalon par inaction)', async () => {
+  await monter55();
+  await saisir55(SAISIE55, false);
+  const e = await etapes55();
+  egal([e['p3-litige'], e['saisie-p1-p2'], e['saisie-p4']], ['attente', 'attente', 'attente'], 'jalons de la saisie avant validation');
+  egal(await stock55('SMB-PLS'), 360, 'stock avant validation');
+});
+
 await v('Smoby : aucune erreur JavaScript dans le bloc', async () => {
   if (erreursS.length) throw new Error([...new Set(erreursS)].slice(0, 5).join(' | '));
 });

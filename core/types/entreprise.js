@@ -1468,7 +1468,11 @@ export function creerEntreprise(U) {
         const complet = !!(c.lot || '').trim() && refs.every((sku) => ligneRecRemplie(c.rows[sku]));
 
         const choixEtat = [['', 'Choisir…'], ['ok', 'Conforme'], ['abime', 'Colis endommagé']];
-        const choixDecision = [['', 'Choisir…'], ['accepte', 'Accepté'], ['reserve', 'Accepté sous réserve'], ['refuse', 'Refusé']];
+        // « En litige (zone litiges) » (04/10/2026, ENT-5.5) : la marchandise est là, mais elle attend la
+        // réponse du fournisseur ; elle n'entre pas en stock disponible. Seulement si la séance le déclare
+        // (`receptionLitige: true`) : les autres séances gardent leurs trois décisions.
+        const choixDecision = [['', 'Choisir…'], ['accepte', 'Accepté'], ['reserve', 'Accepté sous réserve'], ['refuse', 'Refusé'],
+          ...(U.receptionLitige ? [['litige', 'En litige (zone litiges)']] : [])];
 
         const colis = (r.colis || []).map((k) => {
           const v = VM[k.sku];
@@ -1519,7 +1523,7 @@ export function creerEntreprise(U) {
           <section class="panneau"><h3>Bon de réception</h3>
             <p class="note">Reportez le numéro de lot du bon de livraison, puis, pour chaque référence,
               la quantité annoncée, la quantité que vous avez comptée, l'état des colis et votre décision.
-              Une ligne refusée n'entre pas en stock.</p>
+              Une ligne refusée${U.receptionLitige ? ' ou en litige' : ''} n'entre pas en stock.</p>
             <div class="champ" style="max-width:260px"><label for="recLot">Numéro de lot</label>${cLot}</div>
             <div class="ent-scroll"><table><thead><tr><th>Réf.</th><th>Article</th><th class="num">Annoncé</th>
               <th class="num">Compté</th><th>État</th><th>Décision</th></tr></thead><tbody>${lignes}</tbody></table></div>
@@ -1564,7 +1568,7 @@ export function creerEntreprise(U) {
         refsReception(r).forEach((sku) => {
           const x = c.rows[sku];
           if (!VM[sku]) return;
-          const q = x.decision === 'refuse' ? 0 : (parseInt(x.compte, 10) || 0);
+          const q = x.decision === 'refuse' || x.decision === 'litige' ? 0 : (parseInt(x.compte, 10) || 0);
           if (q <= 0) return;
           db.stock[sku] = stockDe(sku) + q;
           mouvement(sku, 'Entrée : réception', q, r.no, lot);

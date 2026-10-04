@@ -47,6 +47,10 @@ envois, premierCoup }`, lu sur le **dernier** envoi ; rien d'envoyé = toutes le
 ligne `texte` n'est jamais jugée. Seulement en **réponse** à un mail reçu (pas de « Nouveau message »
 par phrases : faire écrire d'abord le destinataire). Essai : `outils/essai-2de.html`.
 
+**Décision « En litige » à la réception** (04/10/2026, ENT-5.5) : `creerEntreprise({ …, receptionLitige: true })`
+ajoute « En litige (zone litiges) » aux décisions du bon de réception (écran Réceptions) ; la ligne n'entre pas en
+stock, comme une ligne refusée. Sans l'option, les trois décisions habituelles (les séances existantes ne bougent pas).
+
 **Mots cliquables** (2de, 04/10/2026, `core/lexique.js`, lot 3) : `creerEntreprise({ …, lexique: { CACES:
 'Une phrase.', … } })`, puis dans n'importe quel texte du contenu (mail, accueil, quai…) `[[CACES]]` ou
 `[[cale|calé]]` (mot du lexique | ce qui s'affiche). Le mot devient un bouton souligné ; clic ou Entrée

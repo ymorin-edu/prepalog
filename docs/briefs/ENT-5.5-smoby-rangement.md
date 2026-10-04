@@ -14,7 +14,7 @@
 > Lis docs/briefs/COORDINATION-smoby.md puis implémente le brief docs/briefs/ENT-5.5-smoby-rangement.md (il faut que la vue « Plan d'entrepôt » et les lots 1, 2, 3 et 7 de MOTEUR-2de-S1 soient livrés). Annonce la durée avant de commencer et dis-moi si un point du brief contredit le code.
 > ```
 
-**Statut** : **en attente du chantier `MOTEUR-vue-plan-entrepot.md`** (brief écrit le 04/10, maquette v2 validée par
+**Statut** : **livré** (04/10/2026, `pret: true, ouverture: 'prof'` : fermée aux élèves, à essayer à l'écran). Avant : en attente du chantier `MOTEUR-vue-plan-entrepot.md` (brief écrit le 04/10, maquette v2 validée par
 Tristan) et des lots 1, 2, 3, 7 de `MOTEUR-2de-S1.md`. Les données du plan (§4) sont **recalées sur la maquette v2**.
 **Date du brief** : 04/10/2026
 **Conversation d'origine** : Cowork (Opus) ; fiche projet `claude/prepalog-2de-s1-cadrage.md` (section « Séance C2 »).
@@ -168,9 +168,27 @@ réserves d'ENT-5.4.
 
 ## Compte rendu *(rempli par Claude Code à la livraison)*
 
-- **Fichiers créés / modifiés** :
-- **Écarts par rapport au brief** :
-- **Décisions prises en route** :
-- **Tests** :
-- **Commits** :
-- **Reste ouvert** :
+- **Fichiers créés / modifiés** : `activites/smoby-rangement.js` (+ une ligne dans `activites/index.js`) ;
+  `contenus/smoby-ent55.js` (palettes, réception, messages, 9 jalons, lexique) ; `contenus/smoby-entrepot.js` (nouveau :
+  la plateforme Smoby — plan, produits, stock figé, critères — partagée avec ENT-5.6 et la page d'essai, qui la reprend) ;
+  `contenus/corriges/ENT-5.5.js` (calculé) ; `core/types/entreprise.js` (décision « En litige », option
+  `receptionLitige`) ; `outils/test/smoby.mjs` (8 cas ajoutés) ; `outils/test/socle.mjs` (liste Simulog **allongée**
+  d'ENT-5.5) ; `activites/FICHE-SEANCE.md`.
+- **Écarts par rapport au brief** : la vue « Plan d'entrepôt » n'a d'abord été construite que pour le rangement
+  (lots 1 et 2 du chantier moteur, même jour). **Lecture de l'écran Stock** : par phrases à choisir dans une réponse à
+  Bruno (la fiche à remplir n'a pas encore de case « nombre ») — 394 juste, pièges 396 (quantité du BL) et 360 (entrée
+  pas validée). Fichier de données `smoby-ent55.js` (le §6 disait `smoby-ent54.js`, coquille).
+- **Décisions prises en route** : P3 = **« En litige (zone litiges) »**, nouvelle décision de l'écran Réceptions
+  (Tristan, 04/10), activée par la séance seule. Jalons 5 et 6 : la quantité réellement reçue, ligne **acceptée avec ou
+  sans réserve** (le brief juge la quantité ; la décision a été jugée en ENT-5.4). Jalon 9 : toutes les lignes justes.
+  Références des 8 produits au format d'ENT-5.4 (`SMB-NJL`, `SMB-CTF`, `SMB-EBD`, `SMB-PLS`, et `SMB-TCO`, `SMB-TBF`,
+  `SMB-TXL`, `SMB-BAS` construites). Stock de départ de l'écran Stock **calculé** : palettes du plan × cartons d'une
+  palette (porteurs : 10 × 36 = 360). **Construits** : numéro de lot `ARI-26-49` (semaine 49), adresse
+  `exploitation@kn-besancon.example`, le relais « à 17 h 30 on prépare la palette mixte ». Le BL arrive par un message
+  de Bruno (« signé avec tes réserves »). « Demain » se déduit de la date donnée par Bruno (mercredi 9 décembre).
+- **Tests** : bloc `smoby` 124 cas (dont 8 pour ENT-5.5 : déclaration, attendus calculés = brief, ouverture et
+  inaction, trois décisions sans l'option, parcours juste à l'écran 9 / 9, 11 pièges qui font tomber chacun leur jalon,
+  P3 « en litige » sans validation = aucun jalon). Suite entière : voir le commit.
+- **Commits** : voir `git log` (« ENT-5.5 Smoby : … »).
+- **Reste ouvert** : trame élève courte (Cowork, après validation à l'écran) ; la fiche à remplir pourra porter la
+  question du stock en case « nombre » quand le lot 4 de `MOTEUR-documents-formulaire` sera fait.
