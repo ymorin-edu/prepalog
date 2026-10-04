@@ -95,9 +95,14 @@ juste, phrases: [{ v, lib }] }` (choix de l'ordre + justification, ouvert une fo
 d'une palette réchauffée devient « refuser — température »). Une palette peut porter `refs: [{ ref, nom, bl, couches,
 teinte, etiq }]` (plusieurs références, un comptage par référence) ou `etiqAvant: 'dechiree'` (la vraie étiquette, `etiq`,
 se lit sur la face arrière ; le refus « produit » n'est juste qu'une fois l'arrière lu).
-À l'étape ③, chaque palette se valide (« Valider cette palette » : une coche sur l'onglet, rien de figé ; seulement le
-comptage noté — chaque référence —, la décision choisie et un motif pour des réserves ou un refus, sinon une phrase dit ce
-qui manque) ; le bouton « Contrôles terminés → réserves » est en haut à droite et demande toujours une confirmation (03/10/2026).
+À l'étape ③ (poste refait le 04/10/2026, brief `docs/briefs/MOTEUR-quai-fiche-controle.md`) : à gauche la palette et,
+dessous, la **fiche de contrôle** (quatre constats notés par l'élève, `palettes[id].fiche = { temp, ref, endo, manq }` :
+rien de prérempli, rien de corrigé, aucun coût, aucun jalon ; relue en entier à l'étape ④ à côté des réserves) ; à droite
+la sonde (thermomètre dessiné), l'étiquette, le total noté par Entrée, la décision en trois boutons et les motifs à cocher
+(un seul, ou **deux au plus** si le quai déclare `deuxMotifs`). « Valider » reste cliquable : il faut le comptage (chaque
+référence), la décision et un motif pour des réserves ou un refus, sinon le manque s'écrit sous la case ; une palette
+validée devient un résumé (« Modifier » la rouvre), « Palette suivante » en dessous. Le bouton « Contrôles terminés →
+réserves » est en haut à droite et demande toujours une confirmation (03/10/2026).
 **Quai « déjà réceptionné »** (03/10/2026, ENT-4.3, exemple : `contenus/picard-ent43.js`) : `mode: 'controle'`, un seul
 camion, et `dossier: { receptionnaire, heure, reserves: [lignes du BL], fiche: [{ id, compte, temp, decision, remarque }], mot,
 rappelProtestation }` (le travail du collègue, lu dans le contenu : jamais modifiable). Pas d'étapes ni d'horloge : onglets

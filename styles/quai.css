@@ -128,6 +128,41 @@
 .quai-champ label{ margin:0 }
 .quai .quai-court{ width:110px }
 .quai-journal{ font-size:12px; color:var(--encre-douce); max-height:110px; overflow:auto; border-top:1px dashed var(--filet); padding-top:6px }
+/* Le poste de contrôle (fiche de contrôle, 04/10/2026) : deux colonnes égales ; à gauche la palette,
+   cadrée serré, et la fiche juste en dessous ; à droite les outils et la validation. */
+.quai-poste.quai-poste-egal{ grid-template-columns:minmax(0,1fr) minmax(0,1fr) }
+@media (max-width:820px){ .quai-poste.quai-poste-egal{ grid-template-columns:1fr } }
+.quai-gauche{ display:grid; gap:12px; align-content:start; min-width:0 }
+.quai-poste-egal .quai-scene svg{ max-height:250px }
+.quai-poste-egal .quai-vue-lib{ margin:0 0 6px }
+.quai-fiche-ref{ font-weight:400; font-size:12px; color:var(--encre-douce); margin-left:6px }
+.quai-fiche-champs{ display:grid; grid-template-columns:1fr auto; gap:8px 12px; align-items:center; font-size:14px }
+.quai-fiche-champs label{ margin:0 }
+.quai-fiche-val{ display:flex; gap:6px; align-items:center }
+.quai .quai-fiche-val input{ width:120px }
+.quai-unite{ font-size:13px; color:var(--encre-douce); min-width:52px }
+.quai-fiche{ overflow-x:auto }
+.quai-fiche .quai-bl td, .quai-fiche .quai-bl th{ padding:4px 6px }
+.quai-fiche .quai-bl th{ text-transform:none; letter-spacing:0; font-size:12px }
+.quai-lib-champ{ display:block; font-size:.82rem; font-weight:500; color:var(--encre-douce) }
+/* Décision et motifs : l'état choisi se dit par la bordure, le texte d'accent et le signe (●, ☑), jamais par un aplat. */
+.quai-choix{ display:flex; flex-wrap:wrap; gap:6px }
+.quai-choix button{
+  font:inherit; font-size:14px; border:1px solid var(--filet); background:var(--panneau); color:var(--encre);
+  padding:7px 12px; border-radius:var(--r); cursor:pointer;
+}
+.quai-choix button:hover:not(:disabled){ border-color:var(--ardoise) }
+.quai-choix button.on{ border-color:var(--ardoise); color:var(--ardoise); font-weight:600; box-shadow:inset 0 0 0 1px var(--ardoise) }
+.quai-choix button[role="radio"].on::before{ content:"● "; font-size:11px }
+.quai-choix-motif button{ font-size:13px; padding:5px 10px }
+.quai-choix-motif button::before{ content:"☐ " }
+.quai-choix-motif button.on::before{ content:"☑ " }
+.quai-choix button:disabled{ opacity:.5; cursor:not-allowed }
+.quai-choix button:focus-visible{ outline:2px solid var(--ardoise); outline-offset:2px }
+.quai-manque{ font-size:13px; color:var(--terre); font-weight:600 }
+.quai-resume{ border:1px solid var(--filet); border-left:3px solid var(--ardoise); border-radius:var(--r); padding:10px; background:var(--fond); display:grid; gap:6px }
+.quai-sonde{ max-width:300px }
+.quai-sonde svg{ display:block; width:100%; height:auto }
 .quai-ok{ color:var(--vert); font-weight:600 }
 .quai-ko{ color:var(--rouge); font-weight:600 }
 

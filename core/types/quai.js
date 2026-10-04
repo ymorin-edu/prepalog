@@ -48,6 +48,14 @@
 // comptage et une étiquette par référence) et une étiquette avant déchirée (`etiqAvant:
 // 'dechiree'` : la vraie se lit sur la face arrière).
 //
+// LA FICHE DE CONTRÔLE (04/10/2026, brief `docs/briefs/MOTEUR-quai-fiche-controle.md`, ergonomie arrêtée avec
+// Tristan sur `docs/briefs/picard/essai-fiche-controle.html`). À l'étape ③, sous la palette, l'élève note ses
+// constats (température à cœur, référence lue, cartons endommagés, cartons manquants) ; à l'étape ④, la fiche
+// entière s'affiche à côté des réserves et il les y reporte. Toujours les quatre cases, rien de prérempli, rien
+// de corrigé, aucun jalon, et noter ne coûte rien : s'il a mal noté, il recopie son erreur, c'est la réserve qui
+// est jugée. Les notes vivent dans `palettes[id].fiche`. Le poste se valide par des boutons (décision, motifs à
+// cocher) ; le comptage se note par Entrée ; « Valider » reste cliquable et dit sous la case ce qui manque.
+//
 // QUAI « DÉJÀ RÉCEPTIONNÉ » (03/10/2026, chantier P5, brief `docs/briefs/ENT-4.3-picard-reception-de-nuit.md` §7).
 // `mode: 'controle'` : un collègue a reçu le camion, les palettes sont en chambre froide, l'élève contrôle
 // son travail. Pas d'étapes ni d'horloge : deux onglets, « le dossier » (BL signé, ticket, fiche de comptage
@@ -78,6 +86,16 @@ const QCM_TICKET = [
   { v: 'bref', lib: 'Un pic très bref, sans conséquence', court: 'pic bref' },
   { v: 'long', lib: 'Une remontée qui a duré : je la signale et je sonde chaque palette à cœur', court: 'remontée qui a duré' },
 ];
+// Les quatre constats de la fiche de contrôle, dans l'ordre des cases.
+const CONSTATS = [
+  { k: 'temp', lib: 'Température à cœur', court: 'Temp. à cœur (°C)', unite: '°C' },
+  { k: 'ref', lib: 'Référence lue sur l’étiquette', court: 'Réf. lue', unite: '' },
+  { k: 'endo', lib: 'Cartons endommagés', court: 'Endommagés', unite: 'cartons', mode: 'numeric' },
+  { k: 'manq', lib: 'Cartons manquants', court: 'Manquants', unite: 'cartons', mode: 'numeric' },
+];
+const ficheNeuve = () => ({ temp: '', ref: '', endo: '', manq: '' });
+const CHOIX_DEC = ['accepter', 'reserves', 'refuser'];
+const CHOIX_MOTIF = Object.keys(MOTIFS).filter((m) => m !== 'aucun');
 const ETAPES = ['① Le camion arrive', '② Déchargement', '③ Contrôle des palettes', '④ Réserves et chambre froide'];
 const COUTS_DEFAUT = { ticket: 2, sonder: 1, tourner: 0.5, etiquette: 0.5, compter: 1, rentrer: 3, ligne: 1, signer: 1 };
 
@@ -183,7 +201,7 @@ export function etatNeuf(Q) {
   if (R.multi) Object.assign(e, { suivants: R.camions.slice(1).map(camionNeuf), ordre: { premier: null, phrase: null }, actif: 0 });
   return e;
 }
-const paletteNeuve = () => ({ vue: 0, vues: [0], sonde: null, compte: null, etiqVue: false, detail: {}, decision: '', motif: 'aucun', res: '', motif2: 'aucun', res2: '' });
+const paletteNeuve = () => ({ vue: 0, vues: [0], sonde: null, compte: null, etiqVue: false, detail: {}, decision: '', motif: 'aucun', res: '', motif2: 'aucun', res2: '', fiche: ficheNeuve() });
 
 // Une base écrite avec une autre version du contenu : on complète sans rien effacer.
 function normaliser(e, R) {
@@ -197,6 +215,7 @@ function normaliser(e, R) {
     if (typeof e.reel !== 'number') e.reel = 0;
     return;
   }
+  R.palettes.forEach((p) => { const s = e.palettes[p.id]; s.fiche = Object.assign(ficheNeuve(), s.fiche || {}); });
   if (!Array.isArray(e.journal)) e.journal = [];
   if (!Array.isArray(e.lignes)) e.lignes = [];
   if (typeof e.reel !== 'number') e.reel = 0;
@@ -564,6 +583,8 @@ if (typeof document !== 'undefined') {
   document.addEventListener('pointerdown', () => { clavier = false; }, true);
 }
 const reduit = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+// L'afficheur du thermomètre à sonde : « −19,6 ».
+const lcd = (v) => (v < 0 ? '−' : '') + Math.abs(v).toFixed(1).replace('.', ',');
 
 /* ==================================================================== la vue */
 export function creerQuai(Q, opts = {}) {
@@ -585,7 +606,10 @@ export function creerQuai(Q, opts = {}) {
   const st = (e, p) => e.palettes[p.id];
   const nomCam = (ci) => `camion ${R.camions[ci].nom}`;
   // L'état d'écran : ce qui n'est pas du travail (chef de quai affiché, animation en cours…).
-  const ui = { chef4: false, arme: false, arme4: false, armeRaz: false, msgCompte: '', anim: null, lancer: false, jouerCf: false, focus: null };
+  // `tente` : la palette dont « Valider » a été cliqué avec un manque (le message s'écrit sous la case) ;
+  // `sonde` : la palette qui vient d'être sondée (l'afficheur se stabilise une fois, pas à chaque redessin).
+  const ui = { chef4: false, arme: false, arme4: false, armeRaz: false, anim: null, lancer: false, jouerCf: false, focus: null,
+    tente: null, tropMotifs: false, sonde: null };
 
   // Chaque geste avance l'horloge du quai, et le temps hors froid de CHAQUE lot sorti du camion et
   // pas encore rentré en chambre froide.
@@ -1037,31 +1061,133 @@ export function creerQuai(Q, opts = {}) {
     return `<div class="quai-etiq" data-q-etiquette><b>${ech(cm.fournisseur)}</b> — produit surgelé, conserver à −18 °C<br>Réf. ${ech(et.ref)}<br><b>${ech(et.nom)}</b><br>Contenu : ${ech(et.poids)}<br>Lot : ${ech(et.lot)} · À consommer de préférence avant fin : ${ech(et.ddm)}<div class="quai-code">||| |||| || ||||| | ||| 3 760000 ${ech(String(et.ref).replace('-', ''))}</div></div><div class="quai-reconst">Étiquette reconstituée, non contractuelle.</div>`;
   }
 
+  // Ce que dit l'onglet d'une palette.
+  const etatOnglet = (q, sq) => (sq.valide ? '✓ validée'
+    : [sq.sonde !== null ? 'sondée' : null, (q.refs ? sq.comptes && Object.keys(sq.comptes).length : sq.compte !== null) ? 'comptée' : null,
+      sq.decision ? 'décidée' : null].filter(Boolean).join(', ') || 'à contrôler');
+  // La phrase sous le comptage : ce qui est noté, ou comment le noter.
+  const texteCompte = (p, s) => {
+    if (p.refs) {
+      const notes = p.refs.filter((r) => s.comptes && s.comptes[r.ref] != null && s.comptes[r.ref] !== '');
+      return notes.length ? `Comptage noté : ${notes.map((r) => `${r.ref} : ${s.comptes[r.ref]} (BL : ${r.bl})`).join(' · ')}.` : 'Tape chaque total puis Entrée : il est noté.';
+    }
+    return s.compte !== null && s.compte !== undefined ? `Comptage noté : ${s.compte} cartons (BL : ${p.bl}).` : 'Tape le total puis Entrée : il est noté.';
+  };
+  // Ce qui manque pour valider une palette (demande de Tristan, 03/10/2026) : le comptage noté (chaque
+  // référence d'une palette multi-références), la décision, et un motif pour des réserves ou un refus.
+  // La fiche de contrôle n'en fait pas partie : elle n'est pas corrigée.
+  const manques = (p, s) => ({
+    compte: !(p.refs ? p.refs.every((r) => s.comptes && s.comptes[r.ref] != null && s.comptes[r.ref] !== '') : s.compte !== null && s.compte !== undefined),
+    decision: !s.decision,
+    motif: !!s.decision && s.decision !== 'accepter' && !motifsChoisis(s).length,
+  });
+
+  // La fiche de contrôle de la palette ouverte : quatre cases, l'unité à côté.
+  const ficheBloc = (p, s, dis) => `<div class="quai-doc quai-fiche" data-q-fiche="${ech(p.id)}">
+      <div class="quai-doc-titre">📝 Ma fiche de contrôle — ${ech(p.id)} <span class="quai-fiche-ref">${ech(p.ref)}</span></div>
+      <div class="quai-fiche-champs">${CONSTATS.map((c) => `<label for="qFiche-${c.k}">${c.lib}</label>
+        <span class="quai-fiche-val"><input id="qFiche-${c.k}" type="text" inputmode="${c.mode || 'text'}" autocomplete="off" data-q-fiche-k="${c.k}" value="${ech(s.fiche[c.k])}" ${dis}><span class="quai-unite">${c.unite}</span></span>`).join('')}</div>
+    </div>`;
+  // La fiche entière, en lecture, à l'étape ④ : l'élève y lit ce qu'il reporte dans ses réserves.
+  const ficheTableau = (e, ci) => `<div class="quai-doc quai-fiche" data-q-fiche4>
+      <div class="quai-doc-titre">📝 Ma fiche de contrôle <span class="quai-fiche-ref">notée à l’étape 3</span></div>
+      <table class="quai-bl"><thead><tr><th>Palette</th>${CONSTATS.map((c) => `<th>${c.court}</th>`).join('')}</tr></thead>
+        <tbody>${PAL[ci].map((p) => `<tr data-q-fiche4-ligne="${ech(p.id)}"><td>${ech(p.id)}</td>${CONSTATS.map((c) => {
+    const v = String(st(e, p).fiche[c.k] || '').trim();
+    return `<td data-k="${c.k}">${v ? ech(v) : '<span class="note">—</span>'}</td>`;
+  }).join('')}</tr>`).join('')}</tbody></table>
+    </div>`;
+
+  // Le thermomètre à sonde (appareil générique, sans marque), planté dans un carton : un objet, comme le
+  // BL, ses couleurs ne suivent pas le thème. `anime` : l'afficheur part de la température du quai et se
+  // stabilise (`animerSonde`) ; sinon il montre directement la valeur, « HOLD ».
+  function sonde(p, s, anime) {
+    const v = Number(s.sonde);
+    return `<div class="quai-sonde" data-q-sonde="${lcd(v)}">
+      <svg viewBox="0 0 330 120" role="img" aria-label="Thermomètre à sonde planté dans un carton de ${ech(p.id)} : ${lcd(v)} °C à cœur">
+        <defs><linearGradient id="quaiSondeBoitier" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4a5560"/><stop offset="1" stop-color="#2b333b"/></linearGradient></defs>
+        <rect x="200" y="58" width="122" height="54" fill="#cfa86c" stroke="#7a5a2c"/>
+        <path d="M200 70 h122" stroke="#b08a55" stroke-width="2"/>
+        <text x="261" y="100" text-anchor="middle" font-size="10" fill="#5e4424" font-family="system-ui,sans-serif">${ech(p.id)}</text>
+        <path d="M150 52 C180 50 196 44 214 46" fill="none" stroke="#222" stroke-width="4" stroke-linecap="round"/>
+        <rect x="210" y="40" width="22" height="12" rx="3" fill="#2b333b"/>
+        <path d="M232 46 L262 46 L262 58" fill="none" stroke="#9aa4ad" stroke-width="3"/>
+        <path d="M262 58 L262 96" stroke="#b9c2ca" stroke-width="3" stroke-linecap="round"/>
+        <rect x="8" y="8" width="146" height="104" rx="14" fill="url(#quaiSondeBoitier)" stroke="#1b2127"/>
+        <rect x="20" y="18" width="122" height="54" rx="5" fill="#b9c7a6" stroke="#1b2127" stroke-width="2"/>
+        <text data-q-lcd x="132" y="62" text-anchor="end" font-family="Consolas,'Courier New',monospace" font-size="30" font-weight="700" fill="#1e2a1a">${lcd(anime ? Number(R.lieu.temp) || 0 : v)}</text>
+        <text x="134" y="34" text-anchor="end" font-family="system-ui,sans-serif" font-size="11" font-weight="700" fill="#1e2a1a">°C</text>
+        <text data-q-stab x="26" y="32" font-family="system-ui,sans-serif" font-size="9" font-weight="700" fill="#1e2a1a">${anime ? 'STAB…' : 'HOLD'}</text>
+        <circle cx="48" cy="92" r="9" fill="#9d2727" stroke="#1b2127"/><circle cx="80" cy="92" r="9" fill="#55606a" stroke="#1b2127"/><circle cx="112" cy="92" r="9" fill="#55606a" stroke="#1b2127"/>
+      </svg>
+    </div>`;
+  }
+  // ~1,2 s pour se stabiliser, « STAB… » clignote ; `prefers-reduced-motion` : la valeur directement.
+  function animerSonde(z, cible) {
+    const el = z.querySelector('[data-q-lcd]'), stab = z.querySelector('[data-q-stab]');
+    if (!el) return;
+    const finir = () => { el.textContent = lcd(cible); if (stab) stab.textContent = 'HOLD'; };
+    if (reduit()) { finir(); return; }
+    const depart = Number(R.lieu.temp) || 0;
+    let t0 = null;
+    const pas = (t) => {
+      if (!el.isConnected) return;
+      if (t0 === null) t0 = t;
+      const u = Math.min(1, (t - t0) / 1200);
+      if (u >= 1) { finir(); return; }
+      const k = 1 - Math.pow(1 - u, 3);
+      el.textContent = lcd(Math.round((depart + (cible - depart) * k) * 10) / 10);
+      if (stab) stab.textContent = Math.floor(t / 250) % 2 ? 'STAB…' : '';
+      requestAnimationFrame(pas);
+    };
+    requestAnimationFrame(pas);
+  }
+
+  // Le comptage, la décision, les motifs et « Valider » ; une fois validée, le résumé et « Modifier ».
+  // En dessous, « Palette suivante » (la palette d'après dans l'ordre, absente sur la dernière).
+  function blocValidation(p, s, dis) {
+    const L = PAL[p.camion], apres = L[L.indexOf(p) + 1];
+    const suivante = apres ? `<div class="quai-ligne"><button class="btn" data-q="suivante" data-libre data-n="${R.palettes.indexOf(apres)}">Palette suivante : ${ech(apres.id)} →</button></div>` : '';
+    if (s.valide) {
+      return `<div class="quai-resume" data-q-resume><div><b>✓ ${ech(p.id)} validée :</b> ${DECISIONS[s.decision]}${s.decision !== 'accepter' ? ` — ${ech(libMotifs(motifsChoisis(s)))}` : ''}</div>
+          <div class="note">${ech(texteCompte(p, s))}</div>
+          <div class="quai-ligne"><button class="btn" data-q="modifier" ${dis}>Modifier</button></div>
+        </div>${suivante}`;
+    }
+    const m = manques(p, s), vu = ui.tente === p.id;
+    const alerte = (k, t) => (vu && m[k] ? `<span class="quai-manque" role="alert" data-q-manque="${k}">${t}</span>` : '');
+    const comptage = p.refs
+      ? `<div class="quai-champ"><span class="quai-lib-champ">Cartons comptés, référence par référence <span class="quai-cout">· ${fmtMin(C.compter)} par référence</span></span>
+          ${p.refs.map((r) => `<label for="qCompte-${ech(r.ref)}">${ech(r.ref)} — ${ech(r.nom)}</label><input id="qCompte-${ech(r.ref)}" class="quai-court" type="number" min="0" inputmode="numeric" data-q-compte-ref="${ech(r.ref)}" value="${s.comptes && s.comptes[r.ref] != null ? s.comptes[r.ref] : ''}" ${dis}>`).join('')}
+          <span class="note" data-q-rcompte>${ech(texteCompte(p, s))}</span>${alerte('compte', 'Note le comptage de chaque référence.')}
+        </div>`
+      : `<div class="quai-champ">
+          <label for="qCompte">Total : cartons comptés sur cette palette <span class="quai-cout">· ${fmtMin(C.compter)}</span></label>
+          <input id="qCompte" class="quai-court" type="number" min="0" inputmode="numeric" data-q-compte value="${s.compte ?? ''}" ${dis}>
+          <span class="note" data-q-rcompte>${ech(texteCompte(p, s))}</span>${alerte('compte', 'Note le comptage.')}
+        </div>`;
+    const decision = `<div class="quai-champ"><span class="quai-lib-champ" id="qLibDec">Décision</span>
+        <div class="quai-choix" role="radiogroup" aria-labelledby="qLibDec">${CHOIX_DEC.map((k) => `<button type="button" id="qDec-${k}" role="radio" aria-checked="${s.decision === k}" class="${s.decision === k ? 'on' : ''}" data-q="dec" data-v="${k}" ${dis}>${DECISIONS[k]}</button>`).join('')}</div>
+        ${alerte('decision', 'Choisis une décision.')}</div>`;
+    const choisis = motifsChoisis(s);
+    const motif = s.decision === 'reserves' || s.decision === 'refuser'
+      ? `<div class="quai-champ"><span class="quai-lib-champ" id="qLibMot">Motif ${s.decision === 'refuser' ? 'du refus' : 'de la réserve'}${R.deuxMotifs ? ' <span class="quai-cout">· deux au plus</span>' : ''}</span>
+          <div class="quai-choix quai-choix-motif" role="group" aria-labelledby="qLibMot">${CHOIX_MOTIF.map((k) => `<button type="button" id="qMot-${k}" aria-pressed="${choisis.includes(k)}" class="${choisis.includes(k) ? 'on' : ''}" data-q="motif" data-v="${k}" ${dis}>${MOTIFS[k]}</button>`).join('')}</div>
+          ${ui.tropMotifs ? '<span class="quai-manque" role="alert" data-q-trop>Deux motifs au plus : décoche-en un d’abord.</span>' : ''}${alerte('motif', 'Donne le motif.')}</div>`
+      : '';
+    return `${comptage}${decision}${motif}
+      <div class="quai-ligne"><button class="btn btn-p" data-q="valider" ${dis}>✓ Valider ${ech(p.id)}</button></div>
+      ${suivante}`;
+  }
+
   function ecran3(e) {
     const ci = ca(e), cm = R.camions[ci];
     const p = R.palettes[e.sel], s = st(e, p), k = K(e, p.camion);
     const fige = e.fini || k.rentre || k.ecrit;
     const dis = fige ? 'disabled' : '';
-    const onglets = R.palettes.map((q, n) => {
-      if (q.camion !== ci) return '';
-      const sq = st(e, q);
-      const compte = q.refs ? sq.comptes && Object.keys(sq.comptes).length : sq.compte !== null;
-      const fait = sq.valide ? '✓ validée' : [sq.sonde !== null ? 'sondée' : null, compte ? 'comptée' : null, sq.decision ? 'décidée' : null].filter(Boolean).join(', ') || 'à contrôler';
-      return `<button role="tab" data-q="sel" data-libre data-n="${n}" aria-selected="${n === e.sel}" class="${n === e.sel ? 'on' : ''}">${ech(q.id)}<span class="quai-etat">${fait}</span></button>`;
-    }).join('');
+    const onglets = R.palettes.map((q, n) => (q.camion !== ci ? ''
+      : `<button role="tab" data-q="sel" data-libre data-n="${n}" aria-selected="${n === e.sel}" class="${n === e.sel ? 'on' : ''}">${ech(q.id)}<span class="quai-etat">${etatOnglet(q, st(e, q))}</span></button>`)).join('');
     const d = s.detail || {};
-    const comptage = p.refs
-      ? `<div class="quai-champ"><span class="quai-lib-champ">Cartons comptés, référence par référence</span>
-          ${p.refs.map((r) => `<label for="qCompte-${ech(r.ref)}">${ech(r.ref)} — ${ech(r.nom)}</label><input id="qCompte-${ech(r.ref)}" class="quai-court" type="number" min="0" inputmode="numeric" data-q-compte-ref="${ech(r.ref)}" value="${s.comptes && s.comptes[r.ref] != null ? s.comptes[r.ref] : ''}" ${dis}>`).join('')}
-          <div class="quai-ligne"><button class="btn" data-q="compter" ${dis}>Noter le comptage <span class="quai-cout">· ${fmtMin(C.compter * p.refs.length)}</span></button></div>
-          <span class="note" data-q-rcompte>${ui.msgCompte ? ech(ui.msgCompte) : (s.comptes ? `Comptage noté : ${p.refs.map((r) => `${r.ref} : ${s.comptes[r.ref]} (BL : ${r.bl})`).join(' · ')}.` : '')}</span>
-        </div>`
-      : `<div class="quai-champ">
-          <label for="qCompte">Total : cartons comptés sur cette palette</label>
-          <div class="quai-ligne"><input id="qCompte" class="quai-court" type="number" min="0" inputmode="numeric" data-q-compte value="${s.compte ?? ''}" ${dis}>
-            <button class="btn" data-q="compter" ${dis}>Noter le comptage <span class="quai-cout">· ${fmtMin(C.compter)}</span></button></div>
-          <span class="note" data-q-rcompte>${ui.msgCompte ? ech(ui.msgCompte) : (s.compte !== null ? `Comptage noté : ${s.compte} cartons (BL : ${p.bl}).` : '')}</span>
-        </div>`;
     // Passer aux réserves : en haut à droite, toujours avec confirmation (qui dit ce qui n'est pas validé).
     const nonVal = PAL[ci].filter((q) => !st(e, q).valide).length;
     const vers4 = ui.arme4
@@ -1076,16 +1202,19 @@ export function creerQuai(Q, opts = {}) {
       ${choixCamion(e)}
       <div class="quai-onglets" role="tablist">${onglets}</div>
       <details class="quai-rappel-bl" data-libre><summary data-libre>📄 Revoir le bon de livraison${M ? ` du camion ${ech(cm.nom)}` : ''}</summary>${blHtml(ci)}</details>
-      <div class="quai-poste">
-        <div class="quai-scene">
-          <svg data-q-palette viewBox="0 0 460 380" role="img" aria-label="Palette ${ech(p.id)} vue en trois dimensions">${palette3d(p, s, A.repere)}</svg>
-          <div class="quai-vue-lib">Côtés déjà vus : ${s.vues.length} sur 4</div>
-          <button class="btn" data-q="tourner" ${dis}>↻ Faire le tour de la palette <span class="quai-cout">· ${fmtMin(C.tourner)}</span></button>
+      <div class="quai-poste quai-poste-egal">
+        <div class="quai-gauche">
+          <div class="quai-scene">
+            <svg data-q-palette viewBox="40 40 380 340" role="img" aria-label="Palette ${ech(p.id)} vue en trois dimensions">${palette3d(p, s, A.repere)}</svg>
+            <div class="quai-vue-lib">Côtés déjà vus : ${s.vues.length} sur 4</div>
+            <button class="btn" data-q="tourner" ${dis}>↻ Faire le tour de la palette <span class="quai-cout">· ${fmtMin(C.tourner)}</span></button>
+          </div>
+          ${ficheBloc(p, s, dis)}
         </div>
         <div class="quai-outils">
-          ${A.consignes ? '<div class="quai-aide">Pour compter sans tout compter : combien de cartons dans une couche ? combien de couches ? Puis regarde bien la couche du dessus.</div>' : ''}
-          <div class="quai-ligne"><button class="btn" data-q="sonder" ${dis}>Sonder à cœur <span class="quai-cout">· ${fmtMin(C.sonder)}</span></button>
-            ${s.sonde !== null ? `<span class="quai-constat" data-q-sonde>${virgule(Number(s.sonde).toFixed(1)).replace('-', '−')} °C à cœur</span>` : ''}</div>
+          ${A.consignes ? '<div class="quai-aide">Pour compter sans tout compter : combien de cartons dans une couche ? combien de couches ? Puis regarde bien la couche du dessus. Note ce que tu constates sur ta fiche, sous la palette : tu le reporteras sur le bon de livraison.</div>' : ''}
+          <div class="quai-ligne"><button class="btn" data-q="sonder" ${dis}>Sonder à cœur <span class="quai-cout">· ${fmtMin(C.sonder)}</span></button></div>
+          ${s.sonde !== null ? sonde(p, s, ui.sonde === p.id) : ''}
           <div class="quai-zoom">${zoomEtiquette(p, s, R.camions[p.camion])}</div>
           ${A.regleCouches ? `<div class="quai-aide">Règle du quai : sur une palette, toutes les couches <b>sous la couche du dessus</b> sont complètes. Les cartons que tu ne vois pas au cœur sont donc bien là.${A.repere ? ' Le carton marqué <b>P1, P2…</b> te sert de repère quand tu fais le tour.' : ''}</div>` : ''}
           ${A.detailComptage && !p.refs ? `<div class="quai-detail">
@@ -1093,34 +1222,13 @@ export function creerQuai(Q, opts = {}) {
             <label for="qdCouches">Nombre de couches</label><input id="qdCouches" type="number" min="0" data-q-detail="dCouches" value="${ech(d.dCouches ?? '')}" ${dis}>
             <label for="qdManque">Cartons manquants dans la couche du dessus</label><input id="qdManque" type="number" min="0" data-q-detail="dManque" value="${ech(d.dManque ?? '')}" ${dis}>
           </div>` : ''}
-          ${comptage}
-          <div class="quai-champ"><label for="qDecision">Décision</label>
-            <select id="qDecision" data-q-decision ${dis}>${Object.entries(DECISIONS).map(([kk, v]) => `<option value="${kk}" ${s.decision === kk ? 'selected' : ''}>${v}</option>`).join('')}</select></div>
-          <div class="quai-champ"><label for="qMotif">Motif de la réserve ou du refus</label>
-            <select id="qMotif" data-q-motif ${dis}>${Object.entries(MOTIFS).map(([kk, v]) => `<option value="${kk}" ${s.motif === kk ? 'selected' : ''}>${v}</option>`).join('')}</select></div>
-          ${R.deuxMotifs ? `<div class="quai-champ"><label for="qMotif2">Second motif, si la palette a un autre problème</label>
-            <select id="qMotif2" data-q-motif2 ${dis}>${Object.entries(MOTIFS).map(([kk, v]) => `<option value="${kk}" ${(s.motif2 || 'aucun') === kk ? 'selected' : ''}>${kk === 'aucun' ? 'aucun autre problème' : v}</option>`).join('')}</select></div>` : ''}
-          <div class="quai-ligne"><button class="btn btn-p" data-q="valider" ${manqueValider(p, s) || e.fini ? 'disabled' : ''}>✓ Valider cette palette</button>
-            <span class="note" data-q-valide>${s.valide ? 'Palette validée.' : manqueValider(p, s)}</span></div>
+          ${blocValidation(p, s, dis)}
         </div>
       </div>
       <div class="quai-journal" aria-live="polite">${e.journal.map((l) => `<div>${ech(l)}</div>`).join('')}</div>
     </section>`;
   }
 
-  // « Valider cette palette » (demande de Tristan, 03/10/2026) : seulement le comptage noté (chaque
-  // référence d'une palette multi-références), la décision choisie, et un motif quand la décision est
-  // des réserves ou un refus. Sinon, la phrase dit ce qui manque ('' = tout est rempli).
-  function manqueValider(p, s) {
-    const compte = p.refs ? p.refs.every((r) => s.comptes && s.comptes[r.ref] != null && s.comptes[r.ref] !== '') : s.compte !== null && s.compte !== undefined;
-    const manque = [];
-    if (!compte) manque.push(p.refs ? 'note le comptage de chaque référence' : 'note le comptage');
-    if (!s.decision) manque.push('choisis une décision');
-    else if (s.decision !== 'accepter' && (!s.motif || s.motif === 'aucun')) manque.push('donne le motif de la réserve ou du refus');
-    if (!manque.length) return '';
-    const t = manque.join(', ');
-    return `Pour valider : ${t.charAt(0).toLowerCase()}${t.slice(1)}.`;
-  }
   const aEcrire = (e, ci = 0) => PAL[ci].filter((p) => ['reserves', 'refuser'].includes(st(e, p).decision));
   const toutFini = (e) => R.camions.every((_, ci) => K(e, ci).rentre && K(e, ci).signe);
   function ecran4(e, api) {
@@ -1169,7 +1277,7 @@ export function creerQuai(Q, opts = {}) {
       </div>` : ''}
       ${A.chefDeQuai && k.mentionEcrite ? '<div class="quai-alerte" role="alert" data-q-chef-deballage><b>Le chef de quai :</b> « « Sous réserve de déballage », ça ne te protège de rien : ça ne dit ni quoi, ni combien, ni sur quelle palette. Ce sont tes réserves précises qui comptent. »</div>' : ''}
       <div class="quai-grille2">
-        <div class="quai-doc">
+        <div class="quai-gauche"><div class="quai-doc">
           <div class="quai-doc-titre">🧊 ${ech(R.lieu.chambre.nom)}</div>
           <svg class="quai-cf" data-q-cf viewBox="0 0 640 300" role="img" aria-label="Le quai et l'entrée de la chambre froide">${sceneCf(e, k.rentre ? 1 : 0)}</svg>
           <p class="note" data-q-etatcf>${k.rentre ? `Lot rentré à ${hhmm(k.heureRentre ?? e.minute)} : ${nAcc} palettes en chambre froide, ${N - nAcc} refusée(s) au quai.`
@@ -1177,6 +1285,7 @@ export function creerQuai(Q, opts = {}) {
           <button class="btn btn-p" data-q="rentrer" ${!k.decharge || !toutDecide || k.rentre || e.fini ? 'disabled' : ''}>Rentrer le lot accepté en chambre froide <span class="quai-cout">· ${fmtMin(C.rentrer)} de manutention</span></button>
           <p class="note">Les palettes refusées restent au quai et repartent dans le camion.</p>
         </div>
+        ${ficheTableau(e, ci)}</div>
         <div class="quai-doc">
           <div class="quai-doc-titre">✍️ Tes réserves</div>
           <div>${form}</div>
@@ -1280,7 +1389,7 @@ export function creerQuai(Q, opts = {}) {
   function aller(e, n, api) {
     if (n > 1 && !unDecharge(e, R)) return;
     if (ui.anim) ui.anim.finir();
-    e.etape = n; ui.chef4 = false; ui.msgCompte = ''; ui.arme4 = false;
+    e.etape = n; ui.chef4 = false; ui.tente = null; ui.tropMotifs = false; ui.arme4 = false;
     api.sauver(); api.redessiner();
     if (api.haut) api.haut();
   }
@@ -1579,7 +1688,7 @@ export function creerQuai(Q, opts = {}) {
         const ci = ciDe(b);
         if (!K(e, ci).decharge || ci === ca(e)) return;
         if (ui.anim) ui.anim.finir();
-        e.actif = ci; e.sel = R.palettes.indexOf(PAL[ci][0]); ui.chef4 = false; ui.msgCompte = '';
+        e.actif = ci; e.sel = R.palettes.indexOf(PAL[ci][0]); ui.chef4 = false; ui.tente = null;
         api.sauver(); api.redessiner();
       });
       // Le déchargement démarre dans l'écran qu'on vient de dessiner. `prefers-reduced-motion` :
@@ -1604,38 +1713,105 @@ export function creerQuai(Q, opts = {}) {
         aller(e, 4, api);
       });
       on('desarmer4', () => { ui.arme4 = false; api.redessiner(); });
-      // Valider une palette : une coche, rien de figé (décision de Tristan, 03/10/2026). On passe à la
-      // suivante non validée du même camion.
+      // Valider une palette (décision de Tristan, 03/10/2026 ; ergonomie du 04/10/2026) : toujours
+      // cliquable. S'il manque quelque chose, le message s'écrit sous la case concernée et le focus y va ;
+      // sinon la palette passe en résumé, sur place (« Modifier » la rouvre).
       on('valider', geste(() => {
-        const pal = p();
-        if (manqueValider(pal, s())) return;
-        s().valide = true; ui.arme4 = false; ui.msgCompte = '';
-        const L = PAL[pal.camion], i = L.indexOf(pal);
-        const suite = L.slice(i + 1).concat(L.slice(0, i)).find((q) => !st(e, q).valide);
-        if (suite) e.sel = R.palettes.indexOf(suite);
+        const pal = p(), ss = s(), m = manques(pal, ss);
+        if (m.compte || m.decision || m.motif) {
+          ui.tente = pal.id; api.redessiner();
+          const z2 = api.zone();
+          const vide = pal.refs && pal.refs.find((r) => !(ss.comptes && ss.comptes[r.ref] != null && ss.comptes[r.ref] !== ''));
+          const cible = m.compte ? (vide ? `[data-q-compte-ref="${vide.ref}"]` : '#qCompte') : m.decision ? '#qDec-accepter' : `#qMot-${CHOIX_MOTIF[0]}`;
+          const el = z2.querySelector(cible);
+          if (el) el.focus();
+          return;
+        }
+        ss.valide = true; ui.tente = null; ui.tropMotifs = false; ui.arme4 = false;
         api.sauver(); api.redessiner();
       }));
-      on('sel', (ev, b) => { e.sel = +b.dataset.n; ui.msgCompte = ''; ui.arme4 = false; api.sauver(); api.redessiner(); });
+      on('modifier', geste(() => { const k = K(e, p().camion); if (k.rentre || k.ecrit) return; s().valide = false; ui.tente = null; api.sauver(); api.redessiner(); }));
+      const choisir = (n) => { e.sel = n; ui.tente = null; ui.tropMotifs = false; ui.arme4 = false; api.sauver(); api.redessiner(); };
+      on('sel', (ev, b) => choisir(+b.dataset.n));
+      on('suivante', (ev, b) => choisir(+b.dataset.n));
+      // La décision : trois boutons. « Accepter » efface les motifs.
+      on('dec', geste((ev, b) => {
+        const ss = s();
+        if (ss.valide || !CHOIX_DEC.includes(b.dataset.v)) return;
+        ss.decision = b.dataset.v; ui.tropMotifs = false;
+        if (ss.decision === 'accepter') { ss.motif = 'aucun'; ss.motif2 = 'aucun'; }
+        api.sauver(); api.redessiner();
+      }));
+      // Les motifs, à cocher : un seul (le clic remplace), ou deux au plus avec `deuxMotifs` (ENT-4.4) ; un
+      // troisième est refusé. Recliquer décoche. Le premier coché reste `motif` (et sa valeur `res`).
+      on('motif', geste((ev, b) => {
+        const ss = s(), m = b.dataset.v;
+        if (ss.valide || !CHOIX_MOTIF.includes(m) || !['reserves', 'refuser'].includes(ss.decision)) return;
+        const m1 = ss.motif && ss.motif !== 'aucun' ? ss.motif : null, m2 = R.deuxMotifs && ss.motif2 && ss.motif2 !== 'aucun' ? ss.motif2 : null;
+        ui.tropMotifs = false;
+        if (!R.deuxMotifs) { ss.motif = m1 === m ? 'aucun' : m; ss.motif2 = 'aucun'; }
+        else if (m1 === m) { ss.motif = m2 || 'aucun'; ss.res = m2 ? ss.res2 : ss.res; ss.motif2 = 'aucun'; if (m2) ss.res2 = ''; }
+        else if (m2 === m) ss.motif2 = 'aucun';
+        else if (!m1) ss.motif = m;
+        else if (!m2) ss.motif2 = m;
+        else ui.tropMotifs = true;
+        api.sauver(); api.redessiner();
+      }));
       on('tourner', geste(() => {
         const ss = s(); ss.vue = (ss.vue + 1) % 4; if (!ss.vues.includes(ss.vue)) ss.vues.push(ss.vue);
         avancer(e, C.tourner, `${p().id} : ${VUES[ss.vue]}`); api.sauver(); api.redessiner();
       }));
-      // La sonde lit la température RÉELLE (un camion qui a attendu s'est réchauffé).
-      on('sonder', geste(() => { s().sonde = tempReelle(p(), e, R); avancer(e, C.sonder, `${p().id} sondée`); api.sauver(); api.redessiner(); }));
-      on('compter', geste(() => {
-        const pal = p();
+      // La sonde lit la température RÉELLE (un camion qui a attendu s'est réchauffé) ; le thermomètre se
+      // stabilise une fois, juste après ce geste.
+      on('sonder', geste(() => { s().sonde = tempReelle(p(), e, R); ui.sonde = p().id; avancer(e, C.sonder, `${p().id} sondée`); api.sauver(); api.redessiner(); }));
+      if (ui.sonde) {
+        const id = ui.sonde; ui.sonde = null;
+        if (id === p().id && s().sonde !== null) animerSonde(z, Number(s().sonde));
+      }
+      // Le comptage : le total tapé est noté par Entrée ou en quittant la case, avec le coût `compter` ; une
+      // case par référence pour une palette multi-références. Mise à jour EN PLACE, sans redessiner : un
+      // clic sur un bouton juste après la frappe (la case perd le focus) doit arriver à ce bouton.
+      const noterCompte = (i) => {
+        const pal = p(), ss = s(), k = K(e, pal.camion);
+        if (e.fini || ss.valide || k.rentre || k.ecrit) return;
+        const v = parseInt(String(i.value).trim(), 10);
+        if (Number.isNaN(v)) return;
         if (pal.refs) {
-          const champs = [...z.querySelectorAll('[data-q-compte-ref]')];
-          const vals = champs.map((i) => parseInt(i.value, 10));
-          if (vals.some((v) => Number.isNaN(v))) { ui.msgCompte = 'Écris d’abord le nombre de cartons de chaque référence.'; api.redessiner(); return; }
-          ui.msgCompte = ''; s().comptes = Object.fromEntries(champs.map((i, n) => [i.dataset.qCompteRef, vals[n]]));
-          avancer(e, C.compter * pal.refs.length, `${pal.id} : ${champs.map((i, n) => `${i.dataset.qCompteRef} ${vals[n]}`).join(', ')} cartons notés`);
-          api.sauver(); api.redessiner(); return;
+          const ref = i.dataset.qCompteRef;
+          if (ss.comptes && ss.comptes[ref] === v) return;
+          ss.comptes = Object.assign({}, ss.comptes || {}, { [ref]: v });
+          avancer(e, C.compter, `${pal.id} : ${ref} ${v} cartons notés`);
+        } else {
+          if (ss.compte === v) return;
+          ss.compte = v;
+          avancer(e, C.compter, `${pal.id} : ${v} cartons notés`);
         }
-        const v = parseInt(z.querySelector('[data-q-compte]').value, 10);
-        if (Number.isNaN(v)) { ui.msgCompte = 'Écris d’abord le nombre de cartons que tu as comptés.'; api.redessiner(); return; }
-        ui.msgCompte = ''; s().compte = v; avancer(e, C.compter, `${pal.id} : ${v} cartons notés`); api.sauver(); api.redessiner();
-      }));
+        api.sauver();
+        majHorloges(z, e);
+        const r = z.querySelector('[data-q-rcompte]');
+        if (r) r.textContent = texteCompte(pal, ss);
+        if (!manques(pal, ss).compte) z.querySelector('[data-q-manque="compte"]')?.remove();
+        const o = z.querySelector(`[data-q="sel"][data-n="${e.sel}"] .quai-etat`);
+        if (o) o.textContent = etatOnglet(pal, ss);
+        const j = z.querySelector('.quai-journal');
+        if (j) j.innerHTML = e.journal.map((l) => `<div>${ech(l)}</div>`).join('');
+      };
+      z.querySelectorAll('[data-q-compte], [data-q-compte-ref]').forEach((i) => {
+        i.addEventListener('change', () => noterCompte(i));
+        i.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); noterCompte(i); } });
+      });
+      // La fiche de contrôle : l'état suit la frappe (sans redessiner, sans coût) ; Entrée passe à la case
+      // suivante, puis au comptage.
+      const casesFiche = [...z.querySelectorAll('[data-q-fiche-k]')];
+      casesFiche.forEach((i, n) => {
+        i.addEventListener('input', () => { if (e.fini) return; s().fiche[i.dataset.qFicheK] = i.value; api.sauver(); });
+        i.addEventListener('keydown', (ev) => {
+          if (ev.key !== 'Enter') return;
+          ev.preventDefault();
+          const suite = casesFiche[n + 1] || z.querySelector('[data-q-compte]:not(:disabled), [data-q-compte-ref]:not(:disabled)');
+          if (suite) suite.focus();
+        });
+      });
       z.querySelector('[data-q-palette]')?.addEventListener('click', (ev) => {
         const g = ev.target.closest('[data-q-etiq]');
         const k = K(e, p().camion);
@@ -1652,9 +1828,6 @@ export function creerQuai(Q, opts = {}) {
         api.sauver(); api.redessiner();
       });
       z.querySelectorAll('[data-q-detail]').forEach((i) => i.addEventListener('input', () => { s().detail[i.dataset.qDetail] = i.value; api.sauver(); }));
-      z.querySelector('[data-q-decision]')?.addEventListener('change', (ev) => { s().decision = ev.target.value; api.sauver(); api.redessiner(); });
-      z.querySelector('[data-q-motif]')?.addEventListener('change', (ev) => { s().motif = ev.target.value; api.sauver(); api.redessiner(); });
-      z.querySelector('[data-q-motif2]')?.addEventListener('change', (ev) => { s().motif2 = ev.target.value; api.sauver(); api.redessiner(); });
       z.querySelectorAll('[data-q-res]').forEach((i) => i.addEventListener('input', () => { e.palettes[i.dataset.qRes].res = i.value; api.sauver(); }));
       z.querySelectorAll('[data-q-res2]').forEach((i) => i.addEventListener('input', () => { e.palettes[i.dataset.qRes2].res2 = i.value; api.sauver(); }));
       z.querySelector('[data-q-deballage]')?.addEventListener('change', (ev) => { kc().deballage = ev.target.checked; api.sauver(); });

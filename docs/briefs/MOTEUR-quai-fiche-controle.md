@@ -1,6 +1,6 @@
 # Brief de chantier — MOTEUR : la fiche de contrôle du quai (Picard ENT-4.1 à 4.4)
 
-**Statut** : à implémenter — **ergonomie arrêtée avec Tristan le 04/10/2026** sur la page d'essai
+**Statut** : livré le 04/10/2026 (à essayer à l'écran par Tristan) — **ergonomie arrêtée avec Tristan le 04/10/2026** sur la page d'essai
 `docs/briefs/picard/essai-fiche-controle.html` (section 3 ci-dessous) : c'est la référence d'interaction
 *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
 **Origine** : essai d'ENT-4.4 à l'écran par Tristan, 04/10/2026.
@@ -119,3 +119,51 @@ expert : 7 min 44 de temps réel en arrivant à l'étape ④, 24 min hors froid.
 plus : les seuils de 12 / 16 min paraissent trop courts. À reprendre une fois la fiche livrée.
 
 ## Compte rendu *(rempli par Claude Code)*
+
+Livré le 04/10/2026 (Claude Code, Opus). Commit « Quai : fiche de contrôle… ».
+
+**Ce qui est fait** (`core/types/quai.js`, `styles/quai.css`, rien dans `base.css`) :
+- Étape ③ : deux colonnes égales ; à gauche la palette (cadrée serré, 250 px de haut au plus) puis la fiche de la
+  palette ouverte (`.quai-doc`, quatre cases avec unité, `palettes[id].fiche = { temp, ref, endo, manq }`, complétée
+  par `normaliser()` sur les bases anciennes). Rien de prérempli, rien de corrigé, aucun coût, aucun jalon ; Entrée
+  passe à la case suivante, puis au comptage.
+- Sonde : thermomètre dessiné, sans marque ; l'afficheur part de la température du quai et se stabilise en 1,2 s
+  (« STAB… » clignote, puis « HOLD ») ; `prefers-reduced-motion` → valeur directe ; revenir sur la palette ne rejoue pas.
+- Validation : total noté par Entrée ou en quittant la case (coût `compter`, une case par référence pour une palette
+  multi-références) ; décision en trois boutons ; motifs à cocher, affichés pour une réserve ou un refus seulement,
+  un seul (le clic remplace) ou deux au plus avec `deuxMotifs` (le troisième est refusé avec le message) ; « Accepter »
+  efface les motifs ; « Valider » toujours cliquable, le manque s'écrit sous la case et le focus y va ; palette
+  validée = résumé + « Modifier » ; « Palette suivante » dessous, absent sur la dernière.
+- Étape ④ : colonne de gauche = chambre froide puis la fiche entière en lecture seule (toutes les palettes du camion).
+- Le mode « déjà réceptionné » d'ENT-4.3 (`vueControle`) **n'est pas touché** : il a son propre poste (recompter,
+  re-sonder, bloquer), sans décision ni motif.
+
+**Vérifié** : bloc `picard` 85/85 ; suite entière 603/603 ; sept sabotages du moteur (fiche préremplie par la sonde,
+troisième motif accepté, « Palette suivante » sur la dernière, Entrée qui saute une case, Valider sans contrôle, deux
+motifs sans `deuxMotifs`) font tomber exactement les sept cas visés. Écran regardé dans le navigateur (③ et ④).
+
+**Tests réécrits** (`outils/test/picard.mjs`, à savoir) : les parcours (`jouer`, `camion42`, `jouer44`) passent par deux
+aides `compter` (Entrée) et `decider` (boutons) au lieu des menus et du bouton « Noter le comptage » ; les deux cas
+« Valider » réécrits (résumé + Modifier + Palette suivante ; manques sous la case) ; la sonde d'ENT-4.2 se lit sur
+l'attribut `data-q-sonde` ; le cas « second motif sur chaque palette » d'ENT-4.4 lit « deux au plus » ; le cas
+`prefers-reduced-motion` vérifie aussi le thermomètre. **Nouveaux cas** : fiche vide / gratuite / gardée / rechargée /
+relue à ④ en lecture seule ; jamais corrigée (notes fausses ou vides = mêmes jalons et même note, contre-épreuve sur une
+décision) ; Entrée ; motifs sans `deuxMotifs` et pas d'aplat ; thermomètre ; troisième motif refusé (ENT-4.4).
+
+**Décisions prises en route** (aussi dans `docs/decisions.md`) :
+- Le comptage noté ne redessine pas l'écran (mise à jour sur place) : sinon un clic sur « Valider » juste après la
+  frappe se perdait (la case perd le focus, l'écran se redessinait sous la souris).
+- Sans `deuxMotifs`, recliquer un motif coché le décoche (cohérent avec la case ☑). Décocher le premier de deux motifs
+  fait passer le second en premier, avec sa valeur de réserve.
+- Sur la dernière palette, rien à la place de « Palette suivante » (l'idée « Contrôles terminés → réserves » n'était pas
+  tranchée ; le bouton en haut à droite passe déjà en plein quand tout est validé).
+- Case « Température » de la fiche en clavier texte (le clavier « décimal » des tablettes n'a pas de signe moins).
+- Guidage (`aides.consignes`) : la consigne de l'étape ③ dit en plus « Note ce que tu constates sur ta fiche, sous la
+  palette : tu le reporteras sur le bon de livraison. »
+
+**À faire ailleurs** :
+- **Cowork : trames Picard à revoir.** `outils/trame-picard-premier-camion.py` (l. 145, 166-167, 183 : « Noter le
+  comptage », « les deux menus », « Valider cette palette » qui « reste gris ») et `outils/trame-picard-deux-camions.py`
+  (l. 130) décrivent l'ancien poste ; dire plutôt : noter ses constats sur la fiche, taper le total puis Entrée, cliquer la
+  décision et le motif, « ✓ Valider P1 ». ENT-4.3 et 4.4 : rien à changer a priori.
+- Reprendre l'essai d'ENT-4.4 (seuils de temps réel 12 / 16 min, §5).

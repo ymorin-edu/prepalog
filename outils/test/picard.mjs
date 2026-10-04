@@ -76,6 +76,18 @@ const texte = async (p, sel) => ((await p.textContent(sel)) || '').replace(/\s+/
 const clic = async (p, sel) => { await p.click(`${Z} ${sel}`); await p.waitForTimeout(40); };
 // « Contrôles terminés → réserves » demande une confirmation (deuxième clic) depuis le 03/10/2026.
 const vers4 = async (p) => { await clic(p, '[data-q="vers4"]'); if (await p.$(`${Z} [data-q="vers4"].quai-arme`)) await clic(p, '[data-q="vers4"]'); };
+// Le poste de contrôle depuis la fiche de contrôle (04/10/2026) : le total se note par Entrée ; la décision et
+// les motifs sont des boutons (`decider` décoche d'abord les motifs déjà cochés, puis coche ceux donnés).
+const compter = async (p, n, ref) => {
+  const sel = `${Z} ${ref ? `#qCompte-${ref}` : '[data-q-compte]'}`;
+  await p.fill(sel, String(n)); await p.press(sel, 'Enter'); await p.waitForTimeout(40);
+};
+const decider = async (p, decision, ...motifs) => {
+  await clic(p, `#qDec-${decision}`);
+  while (await p.$(`${Z} [data-q="motif"][aria-pressed="true"]`)) await clic(p, '[data-q="motif"][aria-pressed="true"]');
+  for (const m of motifs) if (m && m !== 'aucun') await clic(p, `#qMot-${m}`);
+};
+const valeursFiche = (p) => p.$$eval(`${Z} [data-q-fiche-k]`, (x) => x.map((i) => i.value));
 const jalons = (p, o = {}) => p.evaluate(async () => {
   const { jalonsQuai } = await import('/core/types/quai.js');
   const r = jalonsQuai(window.__q.db, window.__q.U.quai);
@@ -106,9 +118,8 @@ async function jouer(p, ecarts = {}) {
     for (let t = 0; t < (pal.tours || 0); t++) await clic(p, '[data-q="tourner"]');
     // L'étiquette du carton le plus en avant (dessiné en dernier) : celle que l'élève voit.
     if (pal.etiquette) await clic(p, '[data-q-etiq] >> nth=-1');
-    if (pal.compte != null) { await p.fill(`${Z} [data-q-compte]`, String(pal.compte)); await clic(p, '[data-q="compter"]'); }
-    await p.selectOption(`${Z} [data-q-decision]`, pal.decision);
-    await p.selectOption(`${Z} [data-q-motif]`, pal.motif);
+    if (pal.compte != null) { await compter(p, String(pal.compte)); }
+    await decider(p, pal.decision, pal.motif);
   }
   await vers4(p);
   const remplir = async () => {
@@ -250,7 +261,7 @@ await v('quai : guidage — le chef de quai arrête l’élève qui écrit avant
   await clic(pg, '[data-q="decharger"]');
   if (await pg.isVisible(`${Z} [data-q="passer"]`)) await clic(pg, '[data-q="passer"]');
   await clic(pg, '[data-q="vers3"]');
-  for (let n = 0; n < 5; n++) { await clic(pg, `[data-q="sel"][data-n="${n}"]`); await pg.selectOption(`${Z} [data-q-decision]`, 'accepter'); }
+  for (let n = 0; n < 5; n++) { await clic(pg, `[data-q="sel"][data-n="${n}"]`); await decider(pg, 'accepter'); }
   await vers4(pg);
   await clic(pg, '[data-q="ecrire"]');
   vrai((await texte(pg, `${Z} [data-q-chef]`)).includes('Rentre d\'abord le lot accepté en chambre froide'), 'chef de quai absent');
@@ -354,7 +365,7 @@ await v('quai : état retrouvé après fermeture de l’onglet (étape, palette 
   await clic(pg, '[data-q="passer"]');
   await clic(pg, '[data-q="vers3"]');
   await clic(pg, '[data-q="sonder"]');
-  await pg.fill(`${Z} [data-q-compte]`, '57'); await clic(pg, '[data-q="compter"]');
+  await compter(pg, '57');
   await pg.close();
   const p2 = await nouvellePage();
   pg2 = p2;
@@ -410,8 +421,120 @@ await v('quai : prefers-reduced-motion — pas d’animation, le déchargement e
   egal([e.evts, e.minute, e.froid, e.etape], [6, 5.5, 5.5, 2], 'état après le clic');
   vrai(!(await pr.isVisible(`${Z} [data-q="passer"]`)), 'bouton « Passer » affiché');
   vrai(!(await pr.isDisabled(`${Z} [data-q="vers3"]`)), '« Contrôler les palettes » fermé');
+  // Le thermomètre à sonde montre sa valeur tout de suite (fiche de contrôle, 04/10/2026).
+  await clic(pr, '[data-q="vers3"]');
+  await clic(pr, '[data-q="sonder"]');
+  egal([await pr.$eval(`${Z} [data-q-lcd]`, (t) => t.textContent), await pr.$eval(`${Z} [data-q-stab]`, (t) => t.textContent)], ['−21,5', 'HOLD'], 'thermomètre sans animation');
   egal(erreurs, [], 'erreurs JS');
   await ctx.close();
+});
+
+/* ================================================ la fiche de contrôle (04/10/2026) */
+
+// Brief MOTEUR-quai-fiche-controle : à l'étape ③ l'élève note ses constats sous la palette ; à l'étape ④ il
+// les relit à côté de ses réserves. Rien de prérempli, rien de corrigé, aucun coût, aucun jalon.
+const ouvrir3 = async (p) => {
+  await clic(p, '[data-q="decharger"]');
+  if (await p.isVisible(`${Z} [data-q="passer"]`)) await clic(p, '[data-q="passer"]');
+  await clic(p, '[data-q="vers3"]');
+};
+
+await v('fiche de contrôle : vide au départ, notée sans coût, gardée d’une palette à l’autre et au rechargement, relue à ④ en lecture seule', async () => {
+  await pg2.evaluate(() => localStorage.removeItem('essai-quai-base'));
+  await monter(pg2, { garder: true });
+  await ouvrir3(pg2);
+  // Rien de prérempli, même la palette sondée et son étiquette lue.
+  await clic(pg2, '[data-q="sonder"]');
+  await clic(pg2, '[data-q-etiq] >> nth=-1');
+  egal(await valeursFiche(pg2), ['', '', '', ''], 'fiche préremplie');
+  const avant = (await etat(pg2)).minute;
+  await pg2.fill(`${Z} #qFiche-temp`, '-21,5');
+  await pg2.fill(`${Z} #qFiche-ref`, 'HVE-1000');
+  egal((await etat(pg2)).minute, avant, 'noter sur la fiche coûte du temps');
+  await clic(pg2, '[data-q="sel"][data-n="2"]');
+  egal(await valeursFiche(pg2), ['', '', '', ''], 'les notes de P1 sur la fiche de P3');
+  await pg2.fill(`${Z} #qFiche-endo`, '4');
+  await clic(pg2, '[data-q="sel"][data-n="0"]');
+  egal(await valeursFiche(pg2), ['-21,5', 'HVE-1000', '', ''], 'notes de P1 au retour');
+  // Rechargement : tout est retrouvé.
+  const p3 = await nouvellePage();
+  await monter(p3, { garder: true });
+  egal(await valeursFiche(p3), ['-21,5', 'HVE-1000', '', ''], 'notes de P1 après rechargement');
+  egal((await etat(p3)).palettes.P3.fiche, { temp: '', ref: '', endo: '4', manq: '' }, 'notes de P3 en base');
+  // Étape ④ : la fiche entière (palettes acceptées comprises), en lecture seule.
+  await vers4(p3);
+  egal(await p3.$$eval(`${Z} [data-q-fiche4] input, ${Z} [data-q-fiche-k]`, (x) => x.length), 0, 'fiche modifiable à l’étape 4');
+  const lignes = await p3.$$eval(`${Z} [data-q-fiche4] tbody tr`, (x) => x.map((r) => [...r.cells].map((c) => c.textContent.trim())));
+  egal(lignes, [['P1', '-21,5', 'HVE-1000', '—', '—'], ['P2', '—', '—', '—', '—'], ['P3', '—', '—', '4', '—'],
+    ['P4', '—', '—', '—', '—'], ['P5', '—', '—', '—', '—']], 'fiche à l’étape 4');
+  await p3.close();
+});
+
+await v('fiche de contrôle : jamais corrigée — des notes fausses ou vides ne changent ni un jalon ni la note', async () => {
+  await monter(pg2);
+  await jouer(pg2);
+  const r = await pg2.evaluate(async () => {
+    const { jalonsQuai, noteQuai } = await import('/core/types/quai.js');
+    const Q = window.__q.U.quai, db = window.__q.db, e = db.quais[Q.id];
+    const lire = () => JSON.stringify([jalonsQuai(db, Q).L, noteQuai(db, Q).score]);
+    const juste = lire();
+    Object.values(e.palettes).forEach((s) => { s.fiche = { temp: '+40', ref: 'XXX', endo: '99', manq: '-3' }; });
+    const fausses = lire();
+    Object.values(e.palettes).forEach((s) => { s.fiche = { temp: '', ref: '', endo: '', manq: '' }; });
+    const vides = lire();
+    // Dans l'autre sens : une décision changée, elle, fait tomber un jalon (la comparaison voit bien un écart).
+    e.palettes.P2.decision = 'accepter';
+    return [fausses === juste, vides === juste, lire() === juste];
+  });
+  egal(r, [true, true, false], 'jalons et note selon la fiche');
+  egal(await pg2.$$eval(`${Z} [data-q-fiche4] .quai-ok, ${Z} [data-q-fiche4] .quai-ko`, (x) => x.length), 0, 'verdict sur la fiche');
+});
+
+await v('fiche de contrôle : Entrée passe à la case suivante, puis au comptage', async () => {
+  await monter(pg2);
+  await ouvrir3(pg2);
+  await pg2.focus(`${Z} #qFiche-temp`);
+  const ids = [];
+  for (let n = 0; n < 4; n++) { await pg2.keyboard.press('Enter'); ids.push(await pg2.evaluate(() => document.activeElement.id)); }
+  egal(ids, ['qFiche-ref', 'qFiche-endo', 'qFiche-manq', 'qCompte'], 'ordre des cases');
+  egal((await etat(pg2)).palettes.P1.compte, null, 'comptage noté en passant');
+});
+
+await v('contrôle : motifs à cocher — absents pour « Accepter », un seul sans `deuxMotifs` (le clic remplace, recliquer décoche), jamais d’aplat', async () => {
+  await monter(pg2);
+  await ouvrir3(pg2);
+  await clic(pg2, '#qDec-accepter');
+  egal(await pg2.$$eval(`${Z} [data-q="motif"]`, (x) => x.length), 0, 'motifs pour « Accepter »');
+  await clic(pg2, '#qDec-refuser');
+  egal(await texte(pg2, `${Z} #qLibMot`), 'Motif du refus', 'libellé');
+  const coches = () => pg2.$$eval(`${Z} [data-q="motif"][aria-pressed="true"]`, (x) => x.map((b) => b.dataset.v));
+  await clic(pg2, '#qMot-avarie');
+  await clic(pg2, '#qMot-manquant');
+  egal(await coches(), ['manquant'], 'le second clic remplace');
+  const s = (await etat(pg2)).palettes.P1;
+  egal([s.decision, s.motif, s.motif2], ['refuser', 'manquant', 'aucun'], 'état');
+  await clic(pg2, '#qMot-manquant');
+  egal(await coches(), [], 'recliquer décoche');
+  // La décision choisie se dit par la bordure et le texte, pas par un aplat.
+  const c = await pg2.evaluate(() => ['#qDec-refuser', '#qDec-accepter'].map((id) => {
+    const b = document.querySelector(`#quaiTest ${id}`); return [b.getAttribute('aria-checked'), getComputedStyle(b).backgroundColor];
+  }));
+  egal([c[0][0], c[1][0], c[0][1] === c[1][1]], ['true', 'false', true], 'décision choisie');
+});
+
+await v('contrôle : le thermomètre se stabilise une fois après la sonde ; revenir sur la palette réaffiche la valeur ; rien ne s’inscrit sur la fiche', async () => {
+  await monter(pg2);
+  await ouvrir3(pg2);
+  await pg2.click(`${Z} [data-q="sonder"]`);
+  const lcd = () => pg2.$eval(`${Z} [data-q-lcd]`, (t) => t.textContent);
+  const stab = () => pg2.$eval(`${Z} [data-q-stab]`, (t) => t.textContent);
+  vrai((await lcd()) !== '−21,5' && (await stab()) !== 'HOLD', 'valeur affichée d’emblée : ' + await lcd());
+  await pg2.waitForFunction(() => document.querySelector('#quaiTest [data-q-stab]')?.textContent === 'HOLD', null, { timeout: 3000 });
+  egal(await lcd(), '−21,5', 'valeur stabilisée');
+  await clic(pg2, '[data-q="sel"][data-n="1"]');
+  await clic(pg2, '[data-q="sel"][data-n="0"]');
+  egal([await lcd(), await stab()], ['−21,5', 'HOLD'], 'au retour sur la palette');
+  egal(await valeursFiche(pg2), ['', '', '', ''], 'la sonde remplit la fiche');
 });
 
 /* ========================================================= évaluation */
@@ -425,7 +548,7 @@ await v('quai : évaluation — aucune aide (consignes, règle, détail, repère
   await clic(pg2, '[data-q="vers3"]');
   egal([await pg2.$$eval(`${Z} .quai-aide`, (x) => x.length), !!(await pg2.$(`${Z} [data-q-detail]`)), !!(await pg2.$(`${Z} [data-q-repere]`))],
     [0, false, false], 'aides / détail / repère');
-  for (let n = 0; n < 5; n++) { await clic(pg2, `[data-q="sel"][data-n="${n}"]`); await pg2.selectOption(`${Z} [data-q-decision]`, 'accepter'); }
+  for (let n = 0; n < 5; n++) { await clic(pg2, `[data-q="sel"][data-n="${n}"]`); await decider(pg2, 'accepter'); }
   await vers4(pg2);
   await clic(pg2, '[data-q="ecrire"]');
   vrai(!(await pg2.$(`${Z} [data-q-chef]`)), 'chef de quai en évaluation');
@@ -638,12 +761,10 @@ async function camion42(p, ids, ecarts = {}, rapide = false) {
       if (pal.avant) await clic(p, '[data-q-etiq][data-k="avant"] >> nth=-1');
       if (pal.arriere) { await clic(p, '[data-q="tourner"]'); await clic(p, '[data-q-etiq][data-k="arriere"] >> nth=-1'); }
       if (pal.comptes) {
-        for (const [r, n] of Object.entries(pal.comptes)) await p.fill(`${Z} #qCompte-${r}`, String(n));
-        await clic(p, '[data-q="compter"]');
-      } else if (pal.compte != null) { await p.fill(`${Z} [data-q-compte]`, String(pal.compte)); await clic(p, '[data-q="compter"]'); }
+        for (const [r, n] of Object.entries(pal.comptes)) await compter(p, n, r);
+      } else if (pal.compte != null) { await compter(p, String(pal.compte)); }
     }
-    await p.selectOption(`${Z} [data-q-decision]`, pal.decision);
-    await p.selectOption(`${Z} [data-q-motif]`, pal.motif);
+    await decider(p, pal.decision, pal.motif);
   }
   await vers4(p);
   if (!rapide) await clic(p, '[data-q="rentrer"]');
@@ -734,7 +855,7 @@ await v('ENT-4.2 : B d’abord, au plus vite → les glaces de A à −14,9 °C,
   egal(e.ouvertA, 14.5, 'A ouvert au plus tôt après B');
   await clic(pg2, '[data-q="sel"][data-n="0"]');
   await clic(pg2, '[data-q="sonder"]');
-  vrai((await texte(pg2, `${Z} [data-q-sonde]`)).includes('−14,9 °C à cœur'), 'sonde de A1');
+  egal(await pg2.getAttribute(`${Z} [data-q-sonde]`, 'data-q-sonde'), '−14,9', 'sonde de A1');
   const r = await pg2.evaluate(async () => {
     const { jalonsQuai } = await import('/core/types/quai.js');
     const L = jalonsQuai(window.__q.db, window.__q.U.quai).L;
@@ -744,10 +865,9 @@ await v('ENT-4.2 : B d’abord, au plus vite → les glaces de A à −14,9 °C,
     'A1-decision': 'Refuser — Température non conforme',
     'A1-reserve': 'A1 GVA-2500 : palette REFUSÉE — température à cœur −14,9 °C (−18 °C exigé). 36 cartons repris par le chauffeur.' }, 'attendus');
   // Accepter les glaces est faux ; les refuser pour la température, avec la valeur relevée, est juste.
-  await pg2.selectOption(`${Z} [data-q-decision]`, 'accepter');
+  await decider(pg2, 'accepter');
   vrai((await jalons(pg2)).ko.includes('A1-decision'), 'accepter des glaces à −14,9 °C compte juste');
-  await pg2.selectOption(`${Z} [data-q-decision]`, 'refuser');
-  await pg2.selectOption(`${Z} [data-q-motif]`, 'temperature');
+  await decider(pg2, 'refuser', 'temperature');
   vrai(!(await jalons(pg2)).ko.includes('A1-decision'), 'le refus des glaces ne compte pas juste');
 });
 
@@ -824,54 +944,75 @@ await v('ENT-4.2 : un seul quai — B ne se met à quai qu’une fois A reparti 
   egal([e.suivants[0].ouvertA - avant, e.actif], [3, 1], 'manœuvre / camion montré');
 });
 
-await v('contrôle : « Valider cette palette » coche l’onglet et passe à la suivante ; rien n’est figé', async () => {
+// Réécrits le 04/10/2026 (fiche de contrôle) : « Valider » reste sur la palette, qui passe en résumé ;
+// « Modifier » la rouvre (fin du dé-validage silencieux) ; « Palette suivante » mène à la suivante.
+await v('contrôle : « Valider » passe la palette en résumé sur place ; « Modifier » la rouvre ; « Palette suivante » absent sur la dernière', async () => {
   await monter42(pg2);
   await debut42(pg2);
   await decharger42(pg2, 0);
-  vrai(await pg2.isDisabled(`${Z} [data-q="valider"]`), 'valider sans décision');
-  await pg2.fill(`${Z} [data-q-compte]`, '36');
-  await clic(pg2, '[data-q="compter"]');
-  await pg2.selectOption(`${Z} [data-q-decision]`, 'accepter');
+  await compter(pg2, 36);
+  await decider(pg2, 'accepter');
+  egal(await texte(pg2, `${Z} [data-q="suivante"]`), 'Palette suivante : A2 →', 'palette suivante');
   await clic(pg2, '[data-q="valider"]');
   const e = await etat42(pg2);
-  egal([e.palettes.A1.valide, e.sel], [true, 1], 'A1 validée, A2 sélectionnée');
+  egal([e.palettes.A1.valide, e.sel], [true, 0], 'A1 validée, on reste sur A1');
+  const resume = await texte(pg2, `${Z} [data-q-resume]`);
+  vrai(resume.includes('✓ A1 validée : Accepter') && resume.includes('Comptage noté : 36 cartons'), 'résumé : ' + resume);
+  egal(await pg2.$$eval(`${Z} [data-q="dec"], [data-q-compte]`, (x) => x.length), 0, 'décision ou comptage modifiable sans « Modifier »');
   vrai((await texte(pg2, `${Z} [data-q="sel"][data-n="0"]`)).includes('✓ validée'), 'onglet de A1');
-  // Rien de figé : on revient sur A1 et on change la décision.
-  await clic(pg2, '[data-q="sel"][data-n="0"]');
-  vrai(!(await pg2.isDisabled(`${Z} [data-q-decision]`)), 'A1 figée après validation');
-  await pg2.selectOption(`${Z} [data-q-decision]`, 'reserves');
-  egal((await etat42(pg2)).palettes.A1.decision, 'reserves', 'décision changée');
+  // « Modifier » rouvre la palette : la décision change, elle n'est plus validée.
+  await clic(pg2, '[data-q="modifier"]');
+  await decider(pg2, 'reserves', 'temperature');
+  const e2 = await etat42(pg2);
+  egal([e2.palettes.A1.valide, e2.palettes.A1.decision, e2.palettes.A1.motif], [false, 'reserves', 'temperature'], 'A1 modifiée');
+  // Repasser à « Accepter » efface les motifs.
+  await decider(pg2, 'accepter');
+  egal([(await etat42(pg2)).palettes.A1.motif, await pg2.$$eval(`${Z} [data-q="motif"]`, (x) => x.length)], ['aucun', 0], 'motifs après « Accepter »');
+  // « Palette suivante » mène à A2, puis A3 ; sur A3, la dernière du camion, il n'y en a pas.
+  await clic(pg2, '[data-q="suivante"]');
+  egal((await etat42(pg2)).sel, 1, 'vers A2');
+  await clic(pg2, '[data-q="suivante"]');
+  egal((await etat42(pg2)).sel, 2, 'vers A3');
+  egal(await pg2.$$eval(`${Z} [data-q="suivante"]`, (x) => x.length), 0, '« Palette suivante » sur la dernière palette');
+  vrai(await pg2.$(`${Z} [data-q="valider"]`), 'Valider absent sur la dernière palette');
 });
 
-await v('contrôle : « Valider » grisé tant qu’il manque le comptage, la décision ou le motif ; actif quand tout est rempli', async () => {
+await v('contrôle : « Valider » toujours cliquable ; ce qui manque s’écrit sous la case, le focus y va, rien n’est validé', async () => {
   await monter42(pg2);
   await debut42(pg2);
   await decharger42(pg2, 0);
-  const phrase = () => texte(pg2, `${Z} [data-q-valide]`);
+  const manques = () => pg2.$$eval(`${Z} [data-q-manque]`, (x) => x.map((m) => m.textContent.trim()));
+  const focus = () => pg2.evaluate(() => document.activeElement && document.activeElement.id);
+  vrai(!(await pg2.isDisabled(`${Z} [data-q="valider"]`)), 'Valider grisé');
+  egal(await manques(), [], 'message avant tout clic');
   // A1 : rien de rempli.
-  vrai(await pg2.isDisabled(`${Z} [data-q="valider"]`), 'actif sans rien');
-  vrai((await phrase()).includes('note le comptage'), 'phrase : ' + await phrase());
-  // Décision « réserves » sans comptage ni motif : toujours grisé, la phrase dit les deux.
-  await pg2.selectOption(`${Z} [data-q-decision]`, 'reserves');
-  vrai(await pg2.isDisabled(`${Z} [data-q="valider"]`), 'actif sans comptage');
-  vrai((await phrase()).includes('note le comptage') && (await phrase()).includes('motif'), 'phrase : ' + await phrase());
-  // Comptage noté, motif encore « aucun » : grisé.
-  await pg2.fill(`${Z} [data-q-compte]`, '36');
-  await clic(pg2, '[data-q="compter"]');
-  vrai(await pg2.isDisabled(`${Z} [data-q="valider"]`), 'actif sans motif');
-  vrai(!(await phrase()).includes('comptage') && (await phrase()).includes('motif'), 'phrase : ' + await phrase());
-  await pg2.selectOption(`${Z} [data-q-motif]`, 'temperature');
-  vrai(!(await pg2.isDisabled(`${Z} [data-q="valider"]`)), 'grisé alors que tout est rempli');
-  egal(await phrase(), '', 'phrase quand tout est rempli');
-  // A2, deux références : une seule notée ne suffit pas (le bouton « Noter » refuse un champ vide).
+  await clic(pg2, '[data-q="valider"]');
+  egal(await manques(), ['Note le comptage.', 'Choisis une décision.'], 'messages sans rien');
+  egal(await focus(), 'qCompte', 'focus sans rien');
+  // Réserves sans motif : le comptage et le motif.
+  await clic(pg2, '#qDec-reserves');
+  egal(await manques(), ['Note le comptage.', 'Donne le motif.'], 'messages sans comptage ni motif');
+  // Le comptage se note par Entrée (1 min) et son message s'efface ; le retaper à l'identique ne coûte rien.
+  const m0 = (await etat42(pg2)).minute;
+  await compter(pg2, 36);
+  await compter(pg2, 36);
+  egal([(await etat42(pg2)).minute - m0, (await etat42(pg2)).palettes.A1.compte], [1, 36], 'coût / comptage noté');
+  vrai((await texte(pg2, `${Z} [data-q-rcompte]`)).includes('Comptage noté : 36 cartons'), 'phrase du comptage');
+  egal(await manques(), ['Donne le motif.'], 'message du comptage resté');
+  await clic(pg2, '[data-q="valider"]');
+  egal([await manques(), await focus()], [['Donne le motif.'], 'qMot-temperature'], 'message et focus sans motif');
+  vrai(!(await etat42(pg2)).palettes.A1.valide, 'A1 validée sans motif');
+  // A2, deux références : une seule notée ne suffit pas, le focus va à celle qui manque.
   await clic(pg2, '[data-q="sel"][data-n="1"]');
-  await pg2.selectOption(`${Z} [data-q-decision]`, 'accepter');
-  vrai(await pg2.isDisabled(`${Z} [data-q="valider"]`), 'A2 actif sans comptage');
-  vrai((await phrase()).includes('chaque référence'), 'phrase A2 : ' + await phrase());
-  await pg2.fill(`${Z} #qCompte-SCI-500`, '18');
-  await pg2.fill(`${Z} #qCompte-SFR-500`, '6');
-  await clic(pg2, '[data-q="compter"]');
-  vrai(!(await pg2.isDisabled(`${Z} [data-q="valider"]`)), 'A2 grisé une fois les deux références notées');
+  egal(await manques(), [], 'messages de A1 restés sur A2');
+  await decider(pg2, 'accepter');
+  await compter(pg2, 18, 'SCI-500');
+  await clic(pg2, '[data-q="valider"]');
+  egal([await manques(), await focus()], [['Note le comptage de chaque référence.'], 'qCompte-SFR-500'], 'A2 avec une seule référence');
+  vrai(!(await etat42(pg2)).palettes.A2.valide, 'A2 validée avec une seule référence');
+  await compter(pg2, 6, 'SFR-500');
+  const t = await texte(pg2, `${Z} [data-q-rcompte]`);
+  vrai(t.includes('SCI-500 : 18') && t.includes('SFR-500 : 6'), 'phrase A2 : ' + t);
   // Accepter n'exige pas de motif : A2 se valide.
   await clic(pg2, '[data-q="valider"]');
   vrai((await etat42(pg2)).palettes.A2.valide, 'A2 non validée');
@@ -1244,10 +1385,8 @@ async function jouer44(p, ecarts = {}) {
     const x = pal(ids[n]);
     await clic(p, `[data-q="sel"][data-n="${n}"]`);
     await clic(p, '[data-q="sonder"]');
-    await p.fill(`${Z} [data-q-compte]`, String(x.compte)); await clic(p, '[data-q="compter"]');
-    await p.selectOption(`${Z} [data-q-decision]`, x.decision);
-    await p.selectOption(`${Z} [data-q-motif]`, x.motif);
-    if (x.motif2) await p.selectOption(`${Z} [data-q-motif2]`, x.motif2);
+    await compter(p, String(x.compte));
+    await decider(p, x.decision, x.motif, x.motif2);
   }
   await vers4(p);
   await clic(p, '[data-q="rentrer"]');
@@ -1349,12 +1488,34 @@ await v('ENT-4.4 : l’élève reçoit son camion (graine posée), aucune aide, 
   await clic(pg2, '[data-q="decharger"]');
   if (await pg2.isVisible(`${Z} [data-q="passer"]`)) await clic(pg2, '[data-q="passer"]');
   await clic(pg2, '[data-q="vers3"]');
+  // Deux motifs au plus, sur chaque palette (la liste ne dit pas laquelle en porte deux).
   for (let n = 0; n < 6; n++) {
     await clic(pg2, `[data-q="sel"][data-n="${n}"]`);
-    vrai(await pg2.$(`${Z} [data-q-motif2]`), `pas de second motif sur la palette ${n + 1}`);
+    await clic(pg2, '#qDec-reserves');
+    vrai((await texte(pg2, `${Z} #qLibMot`)).includes('deux au plus'), `pas de second motif sur la palette ${n + 1}`);
   }
   egal([await pg2.$$eval(`${Z} .quai-aide`, (x) => x.length), !!(await pg2.$(`${Z} [data-q-detail]`)), !!(await pg2.$(`${Z} [data-q-repere]`))],
     [0, false, false], 'aides / détail / repère');
+});
+
+await v('ENT-4.4 : deux motifs au plus — un troisième est refusé avec un message ; recliquer décoche', async () => {
+  await monter44(pg2);
+  await clic(pg2, '[data-q="decharger"]');
+  if (await pg2.isVisible(`${Z} [data-q="passer"]`)) await clic(pg2, '[data-q="passer"]');
+  await clic(pg2, '[data-q="vers3"]');
+  await clic(pg2, '#qDec-reserves');
+  await clic(pg2, '#qMot-manquant');
+  await clic(pg2, '#qMot-avarie');
+  await clic(pg2, '#qMot-temperature');
+  const coches = () => pg2.$$eval(`${Z} [data-q="motif"][aria-pressed="true"]`, (x) => x.map((b) => b.dataset.v));
+  egal(await coches(), ['avarie', 'manquant'], 'motifs cochés après un troisième clic');
+  egal(await texte(pg2, `${Z} [data-q-trop]`), 'Deux motifs au plus : décoche-en un d’abord.', 'message');
+  const s = (await etat44(pg2)).palettes.P1;
+  egal([s.motif, s.motif2], ['manquant', 'avarie'], 'état');
+  await clic(pg2, '#qMot-manquant');
+  egal([await coches(), !!(await pg2.$(`${Z} [data-q-trop]`))], [['avarie'], false], 'recliquer décoche, le message part');
+  const s2 = (await etat44(pg2)).palettes.P1;
+  egal([s2.motif, s2.motif2], ['avarie', 'aucun'], 'le second motif devient le premier');
 });
 
 await v('ENT-4.4 : parcours juste → aucun verdict avant la remise, copie 20/20 (21 min 30 hors froid ≤ 25), ramassage = même note', async () => {
