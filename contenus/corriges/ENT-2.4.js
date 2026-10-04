@@ -119,7 +119,7 @@ export const CORRIGE = {
       "genre": "fait",
       "texte": "Nombre de lignes affiché dans Extractions, une fois les critères réglés",
       "rep": "Lu à l'écran par l'élève : 20 avec les critères de Nadia (confirmé : 30).",
-      "note": "La trame ne donne jamais ce nombre. Tout l'entrepôt (allées A, B, C) sur 30 jours. Un ajustement passé par l'élève à la console s'y ajoute. Le corrigé par élève (onglet Corrigés) donne son bon export. Erreurs typiques : Type laissé sur « Tous » (réceptions et préparations en trop), Allée sur « B » (les ajustements de Samir seulement), Période laissée sur « 7 derniers jours » (ajustements manquants) ou « Tout l'historique » (7 ajustements du mois précédent en trop)."
+      "note": "La trame ne donne jamais ce nombre. Tout l'entrepôt (allées A, B, C) sur 30 jours. Un ajustement passé par l'élève à la console s'y ajoute. Le corrigé par élève (onglet Corrigés) donne son bon export. Erreurs typiques : Type laissé sur « Tous » (réceptions et préparations en trop), Allée sur « B » (4 ajustements seulement, dont les deux de Samir : 16 manquent, 26 en confirmé), Période laissée sur « 7 derniers jours » (ajustements manquants) ou « Tout l'historique » (7 ajustements du mois précédent en trop)."
     },
     {
       "etape": 3,
