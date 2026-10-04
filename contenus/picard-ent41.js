@@ -44,6 +44,7 @@ export const QUAI_ENT41 = {
   seuilHorsFroid: SEUIL_HORS_FROID,
   dechargement: DECHARGEMENT,
   couts: COUTS,
+  calcul: { forme: 'feuille', rappel: true },   // zone de calcul : lignes nommées + rappel de la formule (guidage)
   aides: { regleCouches: true, detailComptage: true, repere: true, chefDeQuai: true, consignes: true },
   photos: PHOTOS,
   camions: [{

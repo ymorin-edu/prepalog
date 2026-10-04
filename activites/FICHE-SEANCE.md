@@ -103,6 +103,11 @@ la sonde (thermomètre dessiné), l'étiquette, le total noté par Entrée, la d
 référence), la décision et un motif pour des réserves ou un refus, sinon le manque s'écrit sous la case ; une palette
 validée devient un résumé (« Modifier » la rouvre), « Palette suivante » en dessous. Le bouton « Contrôles terminés →
 réserves » est en haut à droite et demande toujours une confirmation (03/10/2026).
+Depuis la maquette du 04/10/2026 (`docs/briefs/picard/maquette-quai-calcul.html`), la palette reste à l'écran à gauche
+et la colonne de droite suit l'ordre ① Compter → ② Sonder et lire l'étiquette → ③ fiche → ④ Décider. La séance déclare
+sa **zone de calcul** par `calcul: { forme: 'feuille' | 'brouillon', rappel }` (feuille = lignes nommées, formule en B4,
+`rappel` = le geste pas à pas ; brouillon = 2 × 5 cases libres ; absente = pas de zone). Cases cliquables pendant une
+formule ; jamais notée ; le résultat n'est pas recopié dans « Total ». Palette multi-références : toujours le brouillon.
 **Quai « déjà réceptionné »** (03/10/2026, ENT-4.3, exemple : `contenus/picard-ent43.js`) : `mode: 'controle'`, un seul
 camion, et `dossier: { receptionnaire, heure, reserves: [lignes du BL], fiche: [{ id, compte, temp, decision, remarque }], mot,
 rappelProtestation }` (le travail du collègue, lu dans le contenu : jamais modifiable). Pas d'étapes ni d'horloge : onglets

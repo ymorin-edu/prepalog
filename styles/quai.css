@@ -133,7 +133,34 @@
 .quai-poste.quai-poste-egal{ grid-template-columns:minmax(0,1fr) minmax(0,1fr) }
 @media (max-width:820px){ .quai-poste.quai-poste-egal{ grid-template-columns:1fr } }
 .quai-gauche{ display:grid; gap:12px; align-content:start; min-width:0 }
-.quai-poste-egal .quai-scene svg{ max-height:250px }
+.quai-poste-egal .quai-scene svg{ max-height:340px }
+/* La palette reste à l'écran pendant que la colonne de droite défile (maquette du 04/10/2026). */
+.quai-collee{ position:sticky; top:12px; align-self:start }
+@media (max-width:820px){ .quai-collee{ position:static } }
+.quai-bloc{ display:grid; gap:8px }
+.quai-bloc .quai-doc-titre{ margin-bottom:0 }
+.quai-num{
+  display:inline-block; min-width:22px; text-align:center; font-size:12px; font-weight:600; color:var(--ardoise);
+  border:1px solid var(--ardoise); border-radius:20px; padding:0 6px; margin-right:4px;
+}
+.quai-rappel{ font-size:13.5px; border-left:3px solid var(--ardoise); padding:4px 8px; background:var(--ardoise-clair); color:var(--encre) }
+.quai-rappel code{ font-family:var(--mono); font-size:13px }
+/* La zone de calcul : un petit tableur. Cases sans aplat ; celle de la formule repérée par une bordure. */
+.quai-calc{ border-collapse:collapse; width:100%; font-size:13.5px; background:var(--panneau) }
+.quai-calc th{ text-transform:none; letter-spacing:0; font-size:12px; text-align:center; padding:3px 6px; border:1px solid var(--filet); color:var(--encre-douce); font-weight:600; background:var(--fond) }
+.quai-calc td{ border:1px solid var(--filet); padding:0; vertical-align:middle }
+.quai-calc td[data-q-ref]{ cursor:cell }
+.quai-calc .quai-calc-num{ width:30px; text-align:center; color:var(--encre-douce); font-size:12px; background:var(--fond) }
+.quai-calc .quai-calc-lib{ padding:5px 8px; color:var(--encre) }
+.quai-calc .quai-calc-colb{ width:46% }
+.quai-calc-case{ display:flex; align-items:center; gap:4px }
+.quai .quai-calc input{ border:0; border-radius:0; background:transparent; padding:6px 8px; font-family:var(--mono); font-size:13.5px; min-width:0; width:100% }
+.quai .quai-calc input:focus{ outline:2px solid var(--ardoise); outline-offset:-2px }
+.quai-calc td.quai-calc-saisie{ box-shadow:inset 0 0 0 1px var(--ardoise) }
+.quai-calc td.quai-pointee{ outline:2px dashed var(--ardoise); outline-offset:-3px }
+.quai-calc-res{ font-family:var(--mono); font-size:13px; color:var(--ardoise); font-weight:600; padding-right:8px; white-space:nowrap }
+.quai-calc-err{ font-family:var(--mono); font-size:12px; color:var(--rouge); font-weight:600; padding-right:8px; white-space:nowrap }
+.quai-calc-aide{ font-size:12.5px; color:var(--rouge); padding:0 8px 4px }
 .quai-poste-egal .quai-vue-lib{ margin:0 0 6px }
 .quai-fiche-ref{ font-weight:400; font-size:12px; color:var(--encre-douce); margin-left:6px }
 .quai-fiche-champs{ display:grid; grid-template-columns:1fr auto; gap:8px 12px; align-items:center; font-size:14px }

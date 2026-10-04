@@ -72,6 +72,8 @@
 
 // Pas d'import de `ui.js` : le corrigé d'une séance (`contenus/corriges/`) importe ce module, et la
 // suite de tests charge les corrigés hors du navigateur.
+import { evaluerGrille, afficher, estFormule } from '../formules.js';
+
 const ech = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 /* ================================================================== libellés */
@@ -111,6 +113,14 @@ const palier = (v, paliers) => { for (const [seuil, pts] of paliers) if (v <= se
 const nombre = (brut) => {
   const t = String(brut == null ? '' : brut).trim().replace(/\s/g, '').replace(/[−–]/g, '-').replace(',', '.');
   return t === '' || !/^[+-]?\d+(\.\d+)?$/.test(t) ? NaN : Number(t);
+};
+
+// Ce que la mini-feuille de calcul dit du détail du comptage (ligne « détail » du bilan en guidage, non
+// comptée) : B1 cartons par couche, B2 couches, B3 manquants. La feuille elle-même n'est jamais notée.
+const detailDeFeuille = (s) => {
+  const v = evaluerGrille((s && s.calcul) || {}).valeurs;
+  const t = (ref) => (v[ref] == null ? '' : String(v[ref]));
+  return { dCouche: t('B1'), dCouches: t('B2'), dManque: t('B3') };
 };
 
 /* =================================================================== réglages */
@@ -155,6 +165,8 @@ function reglages(Q) {
     // Un second motif proposé pour CHAQUE palette (ENT-4.4 : une palette porte deux problèmes) : la
     // liste ne dit donc pas laquelle. Absent : l'écran d'ENT-4.1 à 4.3, un seul motif.
     deuxMotifs: !!Q.deuxMotifs,
+    // La zone de calcul de l'étape ③ : `{ forme: 'feuille' | 'brouillon', rappel }` (absente : pas de zone).
+    calcul: Q.calcul && Q.calcul.forme ? { forme: Q.calcul.forme === 'brouillon' ? 'brouillon' : 'feuille', rappel: !!Q.calcul.rappel } : null,
     depart: minutesDe(Q.debut || (camions[0] && camions[0].arrivee)),
   };
 }
@@ -201,7 +213,7 @@ export function etatNeuf(Q) {
   if (R.multi) Object.assign(e, { suivants: R.camions.slice(1).map(camionNeuf), ordre: { premier: null, phrase: null }, actif: 0 });
   return e;
 }
-const paletteNeuve = () => ({ vue: 0, vues: [0], sonde: null, compte: null, etiqVue: false, detail: {}, decision: '', motif: 'aucun', res: '', motif2: 'aucun', res2: '', fiche: ficheNeuve() });
+const paletteNeuve = () => ({ vue: 0, vues: [0], sonde: null, compte: null, etiqVue: false, detail: {}, decision: '', motif: 'aucun', res: '', motif2: 'aucun', res2: '', fiche: ficheNeuve(), calcul: {} });
 
 // Une base écrite avec une autre version du contenu : on complète sans rien effacer.
 function normaliser(e, R) {
@@ -215,7 +227,7 @@ function normaliser(e, R) {
     if (typeof e.reel !== 'number') e.reel = 0;
     return;
   }
-  R.palettes.forEach((p) => { const s = e.palettes[p.id]; s.fiche = Object.assign(ficheNeuve(), s.fiche || {}); });
+  R.palettes.forEach((p) => { const s = e.palettes[p.id]; s.fiche = Object.assign(ficheNeuve(), s.fiche || {}); if (!s.calcul || typeof s.calcul !== 'object') s.calcul = {}; });
   if (!Array.isArray(e.journal)) e.journal = [];
   if (!Array.isArray(e.lignes)) e.lignes = [];
   if (typeof e.reel !== 'number') e.reel = 0;
@@ -313,7 +325,7 @@ export function jalonsQuai(db, Q) {
   PE.forEach((p) => {
     const s = (E.palettes && E.palettes[p.id]) || s0;
     if (R.aides.detailComptage) {
-      const d = s.detail || {}, couche = p.W * p.D, haut = p.manque.length;
+      const d = R.calcul && R.calcul.forme === 'feuille' && !p.refs ? detailDeFeuille(s) : (s.detail || {}), couche = p.W * p.D, haut = p.manque.length;
       const okD = +d.dCouche === couche && +d.dCouches === p.L && +(d.dManque || 0) === haut;
       j(`${p.id}-detail`, `${p.id} détail`, d.dCouche ? `${d.dCouche} par couche × ${d.dCouches || '?'} couches − ${d.dManque || 0}` : 'non rempli',
         `${couche} par couche × ${p.L} couches − ${haut}`, okD, false);
@@ -1071,7 +1083,8 @@ export function creerQuai(Q, opts = {}) {
       const notes = p.refs.filter((r) => s.comptes && s.comptes[r.ref] != null && s.comptes[r.ref] !== '');
       return notes.length ? `Comptage noté : ${notes.map((r) => `${r.ref} : ${s.comptes[r.ref]} (BL : ${r.bl})`).join(' · ')}.` : 'Tape chaque total puis Entrée : il est noté.';
     }
-    return s.compte !== null && s.compte !== undefined ? `Comptage noté : ${s.compte} cartons (BL : ${p.bl}).` : 'Tape le total puis Entrée : il est noté.';
+    return s.compte !== null && s.compte !== undefined ? `Comptage noté : ${s.compte} cartons (BL : ${p.bl}).`
+      : R.calcul ? 'Reporte le résultat de ton calcul, puis Entrée : il est noté.' : 'Tape le total puis Entrée : il est noté.';
   };
   // Ce qui manque pour valider une palette (demande de Tristan, 03/10/2026) : le comptage noté (chaque
   // référence d'une palette multi-références), la décision, et un motif pour des réserves ou un refus.
@@ -1084,7 +1097,7 @@ export function creerQuai(Q, opts = {}) {
 
   // La fiche de contrôle de la palette ouverte : quatre cases, l'unité à côté.
   const ficheBloc = (p, s, dis) => `<div class="quai-doc quai-fiche" data-q-fiche="${ech(p.id)}">
-      <div class="quai-doc-titre">📝 Ma fiche de contrôle — ${ech(p.id)} <span class="quai-fiche-ref">${ech(p.ref)}</span></div>
+      <div class="quai-doc-titre"><span class="quai-num">3</span> 📝 Ma fiche de contrôle — ${ech(p.id)} <span class="quai-fiche-ref">${ech(p.ref)}</span></div>
       <div class="quai-fiche-champs">${CONSTATS.map((c) => `<label for="qFiche-${c.k}">${c.lib}</label>
         <span class="quai-fiche-val"><input id="qFiche-${c.k}" type="text" inputmode="${c.mode || 'text'}" autocomplete="off" data-q-fiche-k="${c.k}" value="${ech(s.fiche[c.k])}" ${dis}><span class="quai-unite">${c.unite}</span></span>`).join('')}</div>
     </div>`;
@@ -1143,10 +1156,77 @@ export function creerQuai(Q, opts = {}) {
     requestAnimationFrame(pas);
   }
 
-  // Le comptage, la décision, les motifs et « Valider » ; une fois validée, le résumé et « Modifier ».
+  // La zone de calcul (maquette validée par Tristan le 04/10/2026, `docs/briefs/picard/maquette-quai-calcul.html`) :
+  // un petit tableur où l'élève calcule son comptage. Jamais noté, jamais recopié : il REPORTE lui-même le
+  // résultat dans « Total ». `feuille` : lignes nommées en colonne A, valeurs et formule en B (guidage,
+  // entraînement) ; `brouillon` : 2 colonnes × 5 lignes vides (évaluation, et palette multi-références).
+  // Les cases se pointent au clic pendant qu'on écrit une formule (geste du tableur).
+  const LIGNES_FEUILLE = ['Cartons dans une couche complète', 'Nombre de couches', 'Cartons manquants dans la couche du dessus', 'Total (formule)'];
+  const formeCalcul = (p) => (R.calcul ? (R.calcul.forme === 'brouillon' || p.refs ? 'brouillon' : 'feuille') : null);
+  const casesCalcul = (p) => (formeCalcul(p) === 'feuille' ? ['B1', 'B2', 'B3', 'B4'] : ['A1', 'B1', 'A2', 'B2', 'A3', 'B3', 'A4', 'B4', 'A5', 'B5']);
+  // Le résultat affiché à côté d'une case qui porte une formule (« = 57 », « #VALEUR! »), et l'aide d'une
+  // erreur fréquente : multiplier avec « x ».
+  const resultatCase = (s, ref, r) => {
+    const brut = String((s.calcul || {})[ref] || '').trim();
+    if (!estFormule(brut)) return { html: '', aide: '' };
+    const err = r.erreurs[ref];
+    const aide = err && /[x×]/i.test(brut.slice(1)) ? 'Pour multiplier, le tableur veut une étoile : *' : '';
+    if (err) return { html: `<span class="quai-calc-err" data-q-res>${ech(err)}</span>`, aide };
+    const v = afficher(ref, r);
+    return { html: v === '' ? '' : `<span class="quai-calc-res" data-q-res>= ${ech(v)}</span>`, aide };
+  };
+  function caseCalcul(s, ref, r, dis, saisie) {
+    const x = resultatCase(s, ref, r);
+    return `<td data-q-ref="${ref}" class="${saisie ? 'quai-calc-saisie' : ''}"><div class="quai-calc-case"><input id="qCase-${ref}" data-q-case="${ref}" value="${ech((s.calcul || {})[ref] || '')}" aria-label="Case ${ref}" autocomplete="off" spellcheck="false" ${dis}>${x.html}</div>${x.aide ? `<div class="quai-calc-aide" data-q-calc-aide>${x.aide}</div>` : ''}</td>`;
+  }
+  function zoneCalcul(p, s, dis) {
+    const forme = formeCalcul(p);
+    if (!forme) return '';
+    const r = evaluerGrille(s.calcul || {});
+    if (forme === 'brouillon') {
+      return `<table class="quai-calc" data-q-calc="brouillon"><thead><tr><th></th><th>A</th><th>B</th></tr></thead><tbody>
+        ${[1, 2, 3, 4, 5].map((n) => `<tr><td class="quai-calc-num">${n}</td>${caseCalcul(s, `A${n}`, r, dis)}${caseCalcul(s, `B${n}`, r, dis)}</tr>`).join('')}</tbody></table>`;
+    }
+    return `<table class="quai-calc" data-q-calc="feuille"><thead><tr><th></th><th>A</th><th class="quai-calc-colb">B</th></tr></thead><tbody>
+      ${LIGNES_FEUILLE.map((l, i) => `<tr><td class="quai-calc-num">${i + 1}</td><td class="quai-calc-lib" data-q-ref="A${i + 1}">${l}</td>${caseCalcul(s, `B${i + 1}`, r, dis, i === 3)}</tr>`).join('')}</tbody></table>`;
+  }
+
+  // ① Compter : l'explication (guidage), le rappel de la formule (si déclaré), la zone de calcul, le total.
+  function blocCompter(p, s, dis, m, vu) {
+    const alerte = (k, t) => (vu && m[k] ? `<span class="quai-manque" role="alert" data-q-manque="${k}">${t}</span>` : '');
+    const d = s.detail || {};
+    const disC = dis || (s.valide ? 'disabled' : '');
+    const explication = [
+      A.consignes ? '<div class="quai-aide">Pour compter sans tout compter : combien de cartons dans <b>une</b> couche ? combien de couches ? Puis regarde bien la couche du dessus : combien de cartons y manquent ? Fais le tour de la palette si besoin.</div>' : '',
+      A.regleCouches ? `<div class="quai-aide">Règle du quai : sur une palette, toutes les couches <b>sous la couche du dessus</b> sont complètes. Les cartons que tu ne vois pas au cœur sont donc bien là.${A.repere ? ` Le carton marqué <b>${ech(p.id)}</b> te sert de repère quand tu fais le tour.` : ''}</div>` : '',
+    ].join('');
+    const rappel = R.calcul && R.calcul.rappel && formeCalcul(p) === 'feuille'
+      ? '<div class="quai-rappel" data-q-rappel><b>Rappel :</b> total = cartons dans une couche × nombre de couches − manquants. En B4 : tape <code>=</code>, clique sur B1, tape <code>*</code>, clique sur B2, tape <code>-</code>, clique sur B3, puis Entrée → <code>=B1*B2-B3</code></div>' : '';
+    const detail = A.detailComptage && !p.refs && !R.calcul ? `<div class="quai-detail">
+        <label for="qdCouche">Cartons dans une couche complète</label><input id="qdCouche" type="number" min="0" data-q-detail="dCouche" value="${ech(d.dCouche ?? '')}" ${dis}>
+        <label for="qdCouches">Nombre de couches</label><input id="qdCouches" type="number" min="0" data-q-detail="dCouches" value="${ech(d.dCouches ?? '')}" ${dis}>
+        <label for="qdManque">Cartons manquants dans la couche du dessus</label><input id="qdManque" type="number" min="0" data-q-detail="dManque" value="${ech(d.dManque ?? '')}" ${dis}>
+      </div>` : '';
+    const comptage = p.refs
+      ? `<div class="quai-champ"><span class="quai-lib-champ">Cartons comptés, référence par référence <span class="quai-cout">· ${fmtMin(C.compter)} par référence</span></span>
+          ${p.refs.map((r) => `<label for="qCompte-${ech(r.ref)}">${ech(r.ref)} — ${ech(r.nom)}</label><input id="qCompte-${ech(r.ref)}" class="quai-court" type="number" min="0" inputmode="numeric" data-q-compte-ref="${ech(r.ref)}" value="${s.comptes && s.comptes[r.ref] != null ? s.comptes[r.ref] : ''}" ${disC}>`).join('')}
+          <span class="note" data-q-rcompte>${ech(texteCompte(p, s))}</span>${alerte('compte', 'Note le comptage de chaque référence.')}
+        </div>`
+      : `<div class="quai-champ">
+          <label for="qCompte">Total : cartons comptés sur cette palette <span class="quai-cout">· ${fmtMin(C.compter)}</span></label>
+          <input id="qCompte" class="quai-court" type="number" min="0" inputmode="numeric" data-q-compte value="${s.compte ?? ''}" ${disC}>
+          <span class="note" data-q-rcompte>${ech(texteCompte(p, s))}</span>${alerte('compte', 'Note le comptage.')}
+        </div>`;
+    return `<div class="quai-doc quai-bloc" data-q-bloc="compter">
+        <div class="quai-doc-titre"><span class="quai-num">1</span> Compter${R.calcul ? ` <span class="quai-fiche-ref">${formeCalcul(p) === 'brouillon' ? 'brouillon de calcul, libre' : 'zone de calcul'}</span>` : ''}</div>
+        ${explication}${rappel}${zoneCalcul(p, s, disC)}${detail}${comptage}
+      </div>`;
+  }
+
+  // ④ Décider : la décision, les motifs et « Valider » ; une fois validée, le résumé et « Modifier ».
   // En dessous, « Palette suivante » (la palette d'après dans l'ordre) ; sur la dernière, à la place, le même
   // bouton « Contrôles terminés → réserves » qu'en haut à droite (`fin`, demande de Tristan, 04/10/2026).
-  function blocValidation(p, s, dis, fin) {
+  function blocValidation(p, s, dis, fin, m, vu) {
     const L = PAL[p.camion], apres = L[L.indexOf(p) + 1];
     const suivante = apres ? `<div class="quai-ligne"><button class="btn" data-q="suivante" data-libre data-n="${R.palettes.indexOf(apres)}">Palette suivante : ${ech(apres.id)} →</button></div>`
       : `<div class="quai-ligne" data-q-vers4-bas>${fin}</div>`;
@@ -1156,18 +1236,7 @@ export function creerQuai(Q, opts = {}) {
           <div class="quai-ligne"><button class="btn" data-q="modifier" ${dis}>Modifier</button></div>
         </div>${suivante}`;
     }
-    const m = manques(p, s), vu = ui.tente === p.id;
     const alerte = (k, t) => (vu && m[k] ? `<span class="quai-manque" role="alert" data-q-manque="${k}">${t}</span>` : '');
-    const comptage = p.refs
-      ? `<div class="quai-champ"><span class="quai-lib-champ">Cartons comptés, référence par référence <span class="quai-cout">· ${fmtMin(C.compter)} par référence</span></span>
-          ${p.refs.map((r) => `<label for="qCompte-${ech(r.ref)}">${ech(r.ref)} — ${ech(r.nom)}</label><input id="qCompte-${ech(r.ref)}" class="quai-court" type="number" min="0" inputmode="numeric" data-q-compte-ref="${ech(r.ref)}" value="${s.comptes && s.comptes[r.ref] != null ? s.comptes[r.ref] : ''}" ${dis}>`).join('')}
-          <span class="note" data-q-rcompte>${ech(texteCompte(p, s))}</span>${alerte('compte', 'Note le comptage de chaque référence.')}
-        </div>`
-      : `<div class="quai-champ">
-          <label for="qCompte">Total : cartons comptés sur cette palette <span class="quai-cout">· ${fmtMin(C.compter)}</span></label>
-          <input id="qCompte" class="quai-court" type="number" min="0" inputmode="numeric" data-q-compte value="${s.compte ?? ''}" ${dis}>
-          <span class="note" data-q-rcompte>${ech(texteCompte(p, s))}</span>${alerte('compte', 'Note le comptage.')}
-        </div>`;
     const decision = `<div class="quai-champ"><span class="quai-lib-champ" id="qLibDec">Décision</span>
         <div class="quai-choix" role="radiogroup" aria-labelledby="qLibDec">${CHOIX_DEC.map((k) => `<button type="button" id="qDec-${k}" role="radio" aria-checked="${s.decision === k}" class="${s.decision === k ? 'on' : ''}" data-q="dec" data-v="${k}" ${dis}>${DECISIONS[k]}</button>`).join('')}</div>
         ${alerte('decision', 'Choisis une décision.')}</div>`;
@@ -1177,8 +1246,11 @@ export function creerQuai(Q, opts = {}) {
           <div class="quai-choix quai-choix-motif" role="group" aria-labelledby="qLibMot">${CHOIX_MOTIF.map((k) => `<button type="button" id="qMot-${k}" aria-pressed="${choisis.includes(k)}" class="${choisis.includes(k) ? 'on' : ''}" data-q="motif" data-v="${k}" ${dis}>${MOTIFS[k]}</button>`).join('')}</div>
           ${ui.tropMotifs ? '<span class="quai-manque" role="alert" data-q-trop>Deux motifs au plus : décoche-en un d’abord.</span>' : ''}${alerte('motif', 'Donne le motif.')}</div>`
       : '';
-    return `${comptage}${decision}${motif}
-      <div class="quai-ligne"><button class="btn btn-p" data-q="valider" ${dis}>✓ Valider ${ech(p.id)}</button></div>
+    return `<div class="quai-doc quai-bloc" data-q-bloc="decider">
+        <div class="quai-doc-titre"><span class="quai-num">4</span> Décider</div>
+        ${decision}${motif}
+        <div class="quai-ligne"><button class="btn btn-p" data-q="valider" ${dis}>✓ Valider ${ech(p.id)}</button></div>
+      </div>
       ${suivante}`;
   }
 
@@ -1189,13 +1261,15 @@ export function creerQuai(Q, opts = {}) {
     const dis = fige ? 'disabled' : '';
     const onglets = R.palettes.map((q, n) => (q.camion !== ci ? ''
       : `<button role="tab" data-q="sel" data-libre data-n="${n}" aria-selected="${n === e.sel}" class="${n === e.sel ? 'on' : ''}">${ech(q.id)}<span class="quai-etat">${etatOnglet(q, st(e, q))}</span></button>`)).join('');
-    const d = s.detail || {};
     // Passer aux réserves : en haut à droite, toujours avec confirmation (qui dit ce qui n'est pas validé).
     const nonVal = PAL[ci].filter((q) => !st(e, q).valide).length;
     const vers4 = ui.arme4
       ? `<button class="btn quai-arme" data-q="vers4" data-libre>${nonVal ? `${nonVal} palette${nonVal > 1 ? 's' : ''} non validée${nonVal > 1 ? 's' : ''} : passer quand même ?` : 'Passer aux réserves ?'} Cliquez pour confirmer</button>
         <button class="btn" data-q="desarmer4" data-libre>Annuler</button>`
       : `<button class="btn${nonVal ? '' : ' btn-p'}" data-q="vers4" data-libre>Contrôles terminés → réserves et chambre froide</button>`;
+    const m = manques(p, s), vu = ui.tente === p.id;
+    // Disposition (maquette du 04/10/2026) : la palette reste à l'écran à gauche pendant que la colonne de
+    // droite suit l'ordre du travail — compter, sonder et lire l'étiquette, noter sur la fiche, décider.
     return `<section class="quai-carte">
       <div class="quai-titre-ligne">
         <h2 class="quai-h2"><span class="quai-pastille-etape">3</span>Le quai : contrôler chaque palette${M ? ` du camion ${ech(cm.nom)}` : ''}</h2>
@@ -1205,26 +1279,23 @@ export function creerQuai(Q, opts = {}) {
       <div class="quai-onglets" role="tablist">${onglets}</div>
       <details class="quai-rappel-bl" data-libre><summary data-libre>📄 Revoir le bon de livraison${M ? ` du camion ${ech(cm.nom)}` : ''}</summary>${blHtml(ci)}</details>
       <div class="quai-poste quai-poste-egal">
-        <div class="quai-gauche">
+        <div class="quai-gauche quai-collee">
           <div class="quai-scene">
             <svg data-q-palette viewBox="40 40 380 340" role="img" aria-label="Palette ${ech(p.id)} vue en trois dimensions">${palette3d(p, s, A.repere)}</svg>
             <div class="quai-vue-lib">Côtés déjà vus : ${s.vues.length} sur 4</div>
             <button class="btn" data-q="tourner" ${dis}>↻ Faire le tour de la palette <span class="quai-cout">· ${fmtMin(C.tourner)}</span></button>
           </div>
-          ${ficheBloc(p, s, dis)}
         </div>
         <div class="quai-outils">
-          ${A.consignes ? '<div class="quai-aide">Pour compter sans tout compter : combien de cartons dans une couche ? combien de couches ? Puis regarde bien la couche du dessus. Note ce que tu constates sur ta fiche, sous la palette : tu le reporteras sur le bon de livraison.</div>' : ''}
-          <div class="quai-ligne"><button class="btn" data-q="sonder" ${dis}>Sonder à cœur <span class="quai-cout">· ${fmtMin(C.sonder)}</span></button></div>
-          ${s.sonde !== null ? sonde(p, s, ui.sonde === p.id) : ''}
-          <div class="quai-zoom">${zoomEtiquette(p, s, R.camions[p.camion])}</div>
-          ${A.regleCouches ? `<div class="quai-aide">Règle du quai : sur une palette, toutes les couches <b>sous la couche du dessus</b> sont complètes. Les cartons que tu ne vois pas au cœur sont donc bien là.${A.repere ? ' Le carton marqué <b>P1, P2…</b> te sert de repère quand tu fais le tour.' : ''}</div>` : ''}
-          ${A.detailComptage && !p.refs ? `<div class="quai-detail">
-            <label for="qdCouche">Cartons dans une couche complète</label><input id="qdCouche" type="number" min="0" data-q-detail="dCouche" value="${ech(d.dCouche ?? '')}" ${dis}>
-            <label for="qdCouches">Nombre de couches</label><input id="qdCouches" type="number" min="0" data-q-detail="dCouches" value="${ech(d.dCouches ?? '')}" ${dis}>
-            <label for="qdManque">Cartons manquants dans la couche du dessus</label><input id="qdManque" type="number" min="0" data-q-detail="dManque" value="${ech(d.dManque ?? '')}" ${dis}>
-          </div>` : ''}
-          ${blocValidation(p, s, dis, vers4)}
+          ${blocCompter(p, s, dis, m, vu)}
+          <div class="quai-doc quai-bloc" data-q-bloc="sonder">
+            <div class="quai-doc-titre"><span class="quai-num">2</span> Sonder et lire l’étiquette</div>
+            <div class="quai-ligne"><button class="btn" data-q="sonder" ${dis}>Sonder à cœur <span class="quai-cout">· ${fmtMin(C.sonder)}</span></button></div>
+            ${s.sonde !== null ? sonde(p, s, ui.sonde === p.id) : ''}
+            <div class="quai-zoom">${zoomEtiquette(p, s, R.camions[p.camion])}</div>
+          </div>
+          ${ficheBloc(p, s, dis)}
+          ${blocValidation(p, s, dis, vers4, m, vu)}
         </div>
       </div>
       <div class="quai-journal" aria-live="polite">${e.journal.map((l) => `<div>${ech(l)}</div>`).join('')}</div>
@@ -1802,15 +1873,60 @@ export function creerQuai(Q, opts = {}) {
         i.addEventListener('change', () => noterCompte(i));
         i.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); noterCompte(i); } });
       });
+      // La zone de calcul : l'état suit la frappe, les résultats se recalculent SUR PLACE (un redessin ferait
+      // perdre le curseur au milieu d'une formule). Rien n'est noté ni recopié dans « Total ».
+      const casesCalc = [...z.querySelectorAll('[data-q-case]')];
+      const marquer = () => {
+        const a = document.activeElement;
+        const f = a && a.dataset && a.dataset.qCase && estFormule(a.value) ? a.value.toUpperCase() : '';
+        const refs = new Set(f.match(/[A-Z]\d+/g) || []);
+        z.querySelectorAll('[data-q-ref]').forEach((td) => td.classList.toggle('quai-pointee', refs.has(td.dataset.qRef)));
+      };
+      const recalculer = () => {
+        const ss = s(), r = evaluerGrille(ss.calcul);
+        casesCalc.forEach((i) => {
+          const td = i.closest('td'), x = resultatCase(ss, i.dataset.qCase, r);
+          td.querySelector('[data-q-res]')?.remove(); td.querySelector('[data-q-calc-aide]')?.remove();
+          if (x.html) i.insertAdjacentHTML('afterend', x.html);
+          if (x.aide) td.insertAdjacentHTML('beforeend', `<div class="quai-calc-aide" data-q-calc-aide>${x.aide}</div>`);
+        });
+        marquer();
+      };
+      casesCalc.forEach((i) => {
+        i.addEventListener('input', () => { if (e.fini) return; s().calcul[i.dataset.qCase] = i.value; api.sauver(); recalculer(); });
+        i.addEventListener('focus', marquer);
+        i.addEventListener('blur', () => setTimeout(marquer, 0));
+        // Entrée : la case du dessous (comme un tableur), puis le total.
+        i.addEventListener('keydown', (ev) => {
+          if (ev.key !== 'Enter') return;
+          ev.preventDefault();
+          const ref = i.dataset.qCase, dessous = z.querySelector(`[data-q-case="${ref[0]}${+ref.slice(1) + 1}"]`);
+          (dessous || z.querySelector('[data-q-compte]:not(:disabled), [data-q-compte-ref]:not(:disabled)'))?.focus();
+        });
+      });
+      // Pointer une case (geste du tableur) : pendant qu'on écrit une formule, juste après « = », un signe, une
+      // parenthèse ou un point-virgule, un clic sur une autre case écrit sa référence au curseur, sans quitter
+      // la formule. Ailleurs, le clic va dans la case, comme dans Excel.
+      z.querySelectorAll('[data-q-ref]').forEach((td) => td.addEventListener('mousedown', (ev) => {
+        const a = document.activeElement;
+        if (!a || !a.dataset || !a.dataset.qCase || a.disabled || td.dataset.qRef === a.dataset.qCase || !estFormule(a.value)) return;
+        const pos = a.selectionStart ?? a.value.length, avant = a.value.slice(0, pos);
+        if (!/[=+\-*/(;:]\s*$/.test(avant)) return;
+        ev.preventDefault();
+        a.value = avant + td.dataset.qRef + a.value.slice(a.selectionEnd ?? pos);
+        const n = pos + td.dataset.qRef.length;
+        a.setSelectionRange(n, n);
+        a.dispatchEvent(new Event('input', { bubbles: true }));
+      }));
       // La fiche de contrôle : l'état suit la frappe (sans redessiner, sans coût) ; Entrée passe à la case
-      // suivante, puis au comptage.
+      // suivante, puis à la décision (la fiche vient juste avant, maquette du 04/10/2026).
       const casesFiche = [...z.querySelectorAll('[data-q-fiche-k]')];
       casesFiche.forEach((i, n) => {
         i.addEventListener('input', () => { if (e.fini) return; s().fiche[i.dataset.qFicheK] = i.value; api.sauver(); });
         i.addEventListener('keydown', (ev) => {
           if (ev.key !== 'Enter') return;
           ev.preventDefault();
-          const suite = casesFiche[n + 1] || z.querySelector('[data-q-compte]:not(:disabled), [data-q-compte-ref]:not(:disabled)');
+          const suite = casesFiche[n + 1] || z.querySelector('[data-q="dec"]:not(:disabled)');
           if (suite) suite.focus();
         });
       });

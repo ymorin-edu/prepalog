@@ -490,13 +490,13 @@ await v('fiche de contrôle : jamais corrigée — des notes fausses ou vides ne
   egal(await pg2.$$eval(`${Z} [data-q-fiche4] .quai-ok, ${Z} [data-q-fiche4] .quai-ko`, (x) => x.length), 0, 'verdict sur la fiche');
 });
 
-await v('fiche de contrôle : Entrée passe à la case suivante, puis au comptage', async () => {
+await v('fiche de contrôle : Entrée passe à la case suivante, puis à la décision (la fiche vient juste avant)', async () => {
   await monter(pg2);
   await ouvrir3(pg2);
   await pg2.focus(`${Z} #qFiche-temp`);
   const ids = [];
   for (let n = 0; n < 4; n++) { await pg2.keyboard.press('Enter'); ids.push(await pg2.evaluate(() => document.activeElement.id)); }
-  egal(ids, ['qFiche-ref', 'qFiche-endo', 'qFiche-manq', 'qCompte'], 'ordre des cases');
+  egal(ids, ['qFiche-ref', 'qFiche-endo', 'qFiche-manq', 'qDec-accepter'], 'ordre des cases');
   egal((await etat(pg2)).palettes.P1.compte, null, 'comptage noté en passant');
 });
 
@@ -535,6 +535,95 @@ await v('contrôle : le thermomètre se stabilise une fois après la sonde ; rev
   await clic(pg2, '[data-q="sel"][data-n="0"]');
   egal([await lcd(), await stab()], ['−21,5', 'HOLD'], 'au retour sur la palette');
   egal(await valeursFiche(pg2), ['', '', '', ''], 'la sonde remplit la fiche');
+});
+
+/* ============================================ la zone de calcul (maquette validée le 04/10/2026) */
+
+// Un petit tableur sous « Compter » : l'élève y calcule, puis REPORTE le résultat dans « Total ». Jamais noté,
+// jamais recopié. Guidage : lignes nommées + rappel pas à pas ; entraînement : lignes nommées seules ;
+// évaluation (et palette multi-références) : un brouillon libre 2 × 5. La palette reste à l'écran à gauche.
+const caseCalc = async (p, ref, v) => { await p.fill(`${Z} #qCase-${ref}`, v); await p.waitForTimeout(20); };
+const resCalc = (p, ref) => p.$eval(`${Z} [data-q-ref="${ref}"]`, (td) => (td.querySelector('[data-q-res]') || {}).textContent || '');
+
+await v('zone de calcul (guidage) : ordre du poste, rappel, formule par clic sur les cases, rien de noté ni de recopié', async () => {
+  await pg2.evaluate(() => localStorage.removeItem('essai-quai-base'));
+  await monter(pg2, { garder: true });
+  await ouvrir3(pg2);
+  egal(await pg2.$$eval(`${Z} .quai-outils > *`, (x) => x.map((b) => b.dataset.qBloc || (b.dataset.qFiche ? 'fiche' : 'suite'))),
+    ['compter', 'sonder', 'fiche', 'decider', 'suite'], 'ordre des blocs');
+  egal(await pg2.$eval(`${Z} .quai-collee`, (x) => getComputedStyle(x).position), 'sticky', 'palette fixe à l’écran');
+  vrai((await texte(pg2, `${Z} [data-q-rappel]`)).includes('=B1*B2-B3'), 'rappel de la formule');
+  egal(await pg2.$$eval(`${Z} [data-q-calc="feuille"] .quai-calc-lib`, (x) => x.map((t) => t.textContent)),
+    ['Cartons dans une couche complète', 'Nombre de couches', 'Cartons manquants dans la couche du dessus', 'Total (formule)'], 'colonne A');
+  egal(await pg2.$$eval(`${Z} [data-q-detail]`, (x) => x.length), 0, 'les trois cases « détail » en plus de la feuille');
+  const avant = await etat(pg2);
+  await caseCalc(pg2, 'B1', '12'); await caseCalc(pg2, 'B2', '5'); await caseCalc(pg2, 'B3', '3');
+  // Le geste du tableur : « = », clic sur B1, « * », clic sur B2, « - », clic sur B3.
+  await pg2.click(`${Z} #qCase-B4`);
+  await pg2.keyboard.type('=');
+  await pg2.click(`${Z} [data-q-ref="B1"]`);
+  await pg2.keyboard.type('*');
+  await pg2.click(`${Z} [data-q-ref="B2"]`);
+  await pg2.keyboard.type('-');
+  await pg2.click(`${Z} [data-q-ref="B3"]`);
+  egal([await pg2.inputValue(`${Z} #qCase-B4`), await resCalc(pg2, 'B4')], ['=B1*B2-B3', '= 57'], 'formule pointée');
+  egal(await pg2.$$eval(`${Z} .quai-pointee`, (x) => x.map((t) => t.dataset.qRef)), ['B1', 'B2', 'B3'], 'cases citées repérées');
+  // Hors d'une formule (curseur après une référence), un clic va dans la case : rien n'est écrit dans B4.
+  await pg2.click(`${Z} [data-q-ref="B2"]`);
+  egal(await pg2.evaluate(() => document.activeElement.id), 'qCase-B2', 'clic hors formule');
+  egal(await pg2.inputValue(`${Z} #qCase-B4`), '=B1*B2-B3', 'B4 modifiée par un clic hors formule');
+  // Rien n'est recopié dans « Total », rien ne coûte, rien ne compte.
+  const e = await etat(pg2);
+  egal([await pg2.inputValue(`${Z} [data-q-compte]`), e.palettes.P1.compte, e.minute], ['', null, avant.minute], 'total / comptage / temps');
+  egal(e.palettes.P1.calcul, { B1: '12', B2: '5', B3: '3', B4: '=B1*B2-B3' }, 'feuille en base');
+  // Rechargement : la feuille revient, son résultat aussi.
+  const p3 = await nouvellePage();
+  await monter(p3, { garder: true });
+  egal([await p3.inputValue(`${Z} #qCase-B4`), await resCalc(p3, 'B4')], ['=B1*B2-B3', '= 57'], 'feuille après rechargement');
+  await p3.close();
+});
+
+await v('zone de calcul : une erreur s’affiche comme dans Excel (multiplier avec « x » : l’aide le dit) ; Entrée descend d’une case', async () => {
+  await monter(pg2);
+  await ouvrir3(pg2);
+  await caseCalc(pg2, 'B4', '=12x5-3');
+  egal(await pg2.$eval(`${Z} [data-q-ref="B4"]`, (td) => [(td.querySelector('.quai-calc-err') || {}).textContent, (td.querySelector('[data-q-calc-aide]') || {}).textContent]),
+    ['#VALEUR!', 'Pour multiplier, le tableur veut une étoile : *'], 'erreur et aide');
+  await caseCalc(pg2, 'B4', '=12*5-3');
+  egal([await resCalc(pg2, 'B4'), await pg2.$$eval(`${Z} [data-q-calc-aide]`, (x) => x.length)], ['= 57', 0], 'corrigée');
+  await pg2.focus(`${Z} #qCase-B1`);
+  const ids = [];
+  for (let n = 0; n < 4; n++) { await pg2.keyboard.press('Enter'); ids.push(await pg2.evaluate(() => document.activeElement.id)); }
+  egal(ids, ['qCase-B2', 'qCase-B3', 'qCase-B4', 'qCompte'], 'Entrée');
+});
+
+await v('zone de calcul : jamais notée — une feuille fausse, vide ou juste donne les mêmes jalons comptés et la même note', async () => {
+  await monter(pg2);
+  await jouer(pg2);
+  const r = await pg2.evaluate(async () => {
+    const { jalonsQuai, noteQuai } = await import('/core/types/quai.js');
+    const Q = window.__q.U.quai, db = window.__q.db, e = db.quais[Q.id];
+    const lire = () => JSON.stringify([jalonsQuai(db, Q).L.filter((l) => l.compte), noteQuai(db, Q).score]);
+    const vide = lire();
+    Object.values(e.palettes).forEach((s) => { s.calcul = { B1: '99', B2: '=1/0', B3: 'x', B4: '=B1*B2' }; });
+    const fausse = lire();
+    e.palettes.P1.calcul = { B1: '12', B2: '5', B3: '3', B4: '=B1*B2-B3' };
+    const juste = lire();
+    e.palettes.P2.decision = 'accepter';   // contre-épreuve : une décision, elle, compte
+    return [fausse === vide, juste === vide, lire() === vide];
+  });
+  egal(r, [true, true, false], 'jalons comptés et note selon la feuille');
+});
+
+await v('zone de calcul (guidage) : la ligne « détail » du bilan (non comptée) se lit sur la feuille', async () => {
+  await monter(pg2);
+  await ouvrir3(pg2);
+  await caseCalc(pg2, 'B1', '12'); await caseCalc(pg2, 'B2', '5'); await caseCalc(pg2, 'B3', '3');
+  const l = await pg2.evaluate(async () => {
+    const { jalonsQuai } = await import('/core/types/quai.js');
+    return jalonsQuai(window.__q.db, window.__q.U.quai).L.find((x) => x.id === 'P1-detail');
+  });
+  egal([l.fait, l.ok, l.compte], ['12 par couche × 5 couches − 3', true, false], 'ligne détail de P1');
 });
 
 /* ========================================================= évaluation */
@@ -930,6 +1019,17 @@ await v('ENT-4.2 : étiquettes — avant déchirée, arrière lisible ; une éti
   vrai((await texte(pg2, `${Z} [data-q-etiquette]`)).includes('Réf. CFL-1000'), 'étiquette arrière');
 });
 
+await v('ENT-4.2 : zone de calcul sans rappel (colonne A remplie) ; palette à deux références : brouillon libre', async () => {
+  await monter42(pg2);
+  await debut42(pg2);
+  await decharger42(pg2, 0);
+  egal([await pg2.$eval(`${Z} [data-q-calc]`, (x) => x.dataset.qCalc), !!(await pg2.$(`${Z} [data-q-rappel]`)), await pg2.$$eval(`${Z} .quai-aide`, (x) => x.length)],
+    ['feuille', false, 0], 'A1 : forme / rappel / explication');
+  egal(await pg2.$$eval(`${Z} .quai-calc-lib`, (x) => x.length), 4, 'colonne A remplie');
+  await clic(pg2, '[data-q="sel"][data-n="1"]');
+  egal([await pg2.$eval(`${Z} [data-q-calc]`, (x) => x.dataset.qCalc), await pg2.$$eval(`${Z} [data-q-case]`, (x) => x.length)], ['brouillon', 10], 'A2 (deux références)');
+});
+
 await v('ENT-4.2 : un seul quai — B ne se met à quai qu’une fois A reparti ; la manœuvre coûte 3 min', async () => {
   await monter42(pg2);
   await debut42(pg2);
@@ -959,7 +1059,7 @@ await v('contrôle : « Valider » passe la palette en résumé sur place ; « M
   egal([e.palettes.A1.valide, e.sel], [true, 0], 'A1 validée, on reste sur A1');
   const resume = await texte(pg2, `${Z} [data-q-resume]`);
   vrai(resume.includes('✓ A1 validée : Accepter') && resume.includes('Comptage noté : 36 cartons'), 'résumé : ' + resume);
-  egal(await pg2.$$eval(`${Z} [data-q="dec"], [data-q-compte]`, (x) => x.length), 0, 'décision ou comptage modifiable sans « Modifier »');
+  egal([await pg2.$$eval(`${Z} [data-q="dec"]`, (x) => x.length), await pg2.isDisabled(`${Z} [data-q-compte]`)], [0, true], 'décision ou comptage modifiable sans « Modifier »');
   vrai((await texte(pg2, `${Z} [data-q="sel"][data-n="0"]`)).includes('✓ validée'), 'onglet de A1');
   // « Modifier » rouvre la palette : la décision change, elle n'est plus validée.
   await clic(pg2, '[data-q="modifier"]');
@@ -1503,6 +1603,17 @@ await v('ENT-4.4 : l’élève reçoit son camion (graine posée), aucune aide, 
   }
   egal([await pg2.$$eval(`${Z} .quai-aide`, (x) => x.length), !!(await pg2.$(`${Z} [data-q-detail]`)), !!(await pg2.$(`${Z} [data-q-repere]`))],
     [0, false, false], 'aides / détail / repère');
+});
+
+await v('ENT-4.4 : un brouillon de tableur libre (10 cases, ni rappel ni lignes nommées), qui calcule', async () => {
+  await monter44(pg2);
+  await clic(pg2, '[data-q="decharger"]');
+  if (await pg2.isVisible(`${Z} [data-q="passer"]`)) await clic(pg2, '[data-q="passer"]');
+  await clic(pg2, '[data-q="vers3"]');
+  egal([await pg2.$eval(`${Z} [data-q-calc]`, (x) => x.dataset.qCalc), await pg2.$$eval(`${Z} [data-q-case]`, (x) => x.length),
+    !!(await pg2.$(`${Z} [data-q-rappel]`)), await pg2.$$eval(`${Z} .quai-calc-lib`, (x) => x.length)], ['brouillon', 10, false, 0], 'brouillon');
+  await caseCalc(pg2, 'A1', '12'); await caseCalc(pg2, 'B1', '=A1*3+SOMME(A1;1)');
+  egal(await resCalc(pg2, 'B1'), '= 49', 'calcul du brouillon');
 });
 
 await v('ENT-4.4 : deux motifs au plus — un troisième est refusé avec un message ; recliquer décoche', async () => {

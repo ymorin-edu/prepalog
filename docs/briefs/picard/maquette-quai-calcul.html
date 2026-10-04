@@ -1,0 +1,567 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maquette poste de contrôle</title>
+<style>
+/* Reprise des variables et des styles du quai (styles/base.css + styles/quai.css), accent Picard. */
+:root{
+  --fond:#f4f1ea; --panneau:#fdfbf7; --survol:#f9f6ef; --filet:#e3ded3;
+  --encre:#1a1915; --encre-douce:#555047;
+  --ardoise:#0011ac; --ardoise-fond:#0011ac; --sur-ardoise:#ffffff; --ardoise-clair:#e6e8f7;
+  --terre:#9c620a; --vert:#0b7a41; --rouge:#9d2727;
+  --quai-froid:#2a6fb0; --quai-chaud:#b8431b;
+  --r:4px; --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--fond);color:var(--encre);font-size:15px;line-height:1.55}
+h1,h2,h3{margin:0 0 .5em;line-height:1.25;font-weight:600}
+p{margin:0 0 .8em}
+.app{max-width:1150px;margin:0 auto;padding:16px 16px 64px}
+.btn{font:inherit;font-weight:500;cursor:pointer;border:1px solid var(--filet);background:var(--panneau);color:var(--encre);border-radius:var(--r);padding:8px 14px}
+.btn:hover{border-color:var(--ardoise)}
+.btn:focus-visible{outline:2px solid var(--ardoise);outline-offset:2px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn-p{background:var(--ardoise-fond);border-color:var(--ardoise-fond);color:var(--sur-ardoise)}
+label{display:block;font-size:.82rem;font-weight:500;color:var(--encre-douce);margin-bottom:4px}
+input,select,textarea{font:inherit;color:var(--encre);background:var(--panneau);border:1px solid var(--filet);border-radius:var(--r);padding:7px 9px;width:100%}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--ardoise);outline-offset:-1px;border-color:var(--ardoise)}
+input[readonly]{background:transparent;border-style:dashed}
+table{width:100%;border-collapse:collapse;font-size:.9rem}
+th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--filet)}
+th{font-weight:600;font-size:.74rem;letter-spacing:.04em;text-transform:uppercase;color:var(--encre-douce)}
+.note{font-size:.85rem;color:var(--encre-douce)}
+
+/* ---- barre des variantes (propre à la page d'essai) ---- */
+.essai{border:2px dashed var(--terre);border-radius:6px;padding:12px 14px;background:rgba(156,98,10,.06);margin-bottom:16px}
+.essai h1{font-size:1.1rem;margin:0 0 4px}
+.essai > p{font-size:13.5px;color:var(--encre-douce);margin:0 0 10px}
+.var-grille{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px 18px}
+.var{display:grid;gap:4px;align-content:start}
+.var-titre{font-size:12.5px;font-weight:700;color:var(--terre);text-transform:uppercase;letter-spacing:.04em}
+.seg{display:flex;flex-wrap:wrap;gap:4px;align-items:flex-start}
+.seg button{font:inherit;font-size:13px;border:1px solid var(--filet);background:var(--panneau);color:var(--encre);padding:5px 10px;border-radius:999px;cursor:pointer}
+.seg button.on{border-color:var(--terre);color:var(--terre);font-weight:700;box-shadow:inset 0 0 0 1px var(--terre)}
+.seg button:focus-visible{outline:2px solid var(--terre);outline-offset:2px}
+.var-aide{font-size:12px;color:var(--encre-douce);line-height:1.4}
+.essai-bas{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}
+
+/* ---- le quai (repris de quai.css) ---- */
+.quai{display:grid;gap:14px}
+.quai-cout{color:var(--encre-douce);font-size:12px;font-weight:400}
+.btn-p .quai-cout{color:inherit;opacity:.8}
+.quai-ligne{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.quai-horloges{display:flex;gap:12px;flex-wrap:wrap}
+.quai-horloge{background:var(--panneau);border:1px solid var(--filet);border-radius:var(--r);padding:8px 14px;min-width:220px}
+.quai-lib{font-size:12px;color:var(--encre-douce);text-transform:uppercase;letter-spacing:.04em}
+.quai-val{font-size:24px;font-weight:700;font-variant-numeric:tabular-nums;font-family:var(--mono)}
+.quai-stepper{display:flex;gap:6px;flex-wrap:wrap}
+.quai-stepper button{font:inherit;font-size:14px;border:1px solid var(--filet);background:var(--panneau);color:var(--encre-douce);padding:8px 12px;border-radius:999px;cursor:pointer}
+.quai-stepper button.on{border-color:var(--ardoise);color:var(--ardoise);font-weight:600;box-shadow:inset 0 0 0 1px var(--ardoise)}
+.quai-stepper button:disabled{opacity:.45;cursor:not-allowed}
+.quai-carte{background:var(--panneau);border:1px solid var(--filet);border-radius:var(--r);padding:14px;display:grid;gap:12px}
+.quai-h2{font-size:16px;margin:0}
+.quai-pastille-etape{display:inline-block;font-size:12px;color:var(--ardoise);border:1px solid var(--ardoise);border-radius:20px;padding:1px 8px;margin-right:6px;vertical-align:2px}
+.quai-titre-ligne{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+.quai-onglets{display:flex;gap:6px;flex-wrap:wrap}
+.quai-onglets button{font:inherit;font-size:13px;border:1px solid var(--filet);background:var(--fond);color:var(--encre);padding:5px 10px;border-radius:var(--r);cursor:pointer}
+.quai-onglets button.on{border-color:var(--ardoise);color:var(--ardoise);font-weight:600}
+.quai-etat{font-size:11px;color:var(--encre-douce);margin-left:6px;font-weight:400}
+.quai-poste{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}
+.quai-gauche{display:grid;gap:12px;align-content:start}
+@media (max-width:820px){.quai-poste,.quai-grille2{grid-template-columns:1fr}}
+.quai-scene{background:var(--fond);border:1px solid var(--filet);border-radius:var(--r);padding:8px;text-align:center}
+.quai-scene svg{width:100%;height:auto;max-height:250px}
+.quai-scene .quai-vue-lib{margin:0 0 6px}
+.quai-etiq-clic{cursor:zoom-in}
+.quai-vue-lib{font-size:13px;color:var(--encre-douce);margin:4px 0 8px}
+.quai-outils{display:grid;gap:10px;align-content:start}
+.quai-constat{font-size:13px;border-left:3px solid var(--ardoise);padding:4px 8px;background:var(--ardoise-clair)}
+.quai-zoom{border:1px solid var(--filet);border-radius:var(--r);padding:10px;background:var(--fond)}
+.quai-etiq{background:#f6f1e4;color:#222;border:1px solid #999;border-radius:4px;padding:8px 12px;font:13px/1.5 var(--mono);max-width:340px}
+.quai-etiq b{font-family:system-ui,sans-serif}
+.quai-champ{display:grid;gap:4px}
+.quai-champ label{margin:0}
+.quai-court{width:110px}
+.quai-journal{font-size:12px;color:var(--encre-douce);max-height:110px;overflow:auto;border-top:1px dashed var(--filet);padding-top:6px}
+.quai-rappel-bl{font-size:15px;border:1px solid var(--filet);border-radius:var(--r);padding:8px 12px;background:var(--fond)}
+.quai-rappel-bl summary{cursor:pointer;color:var(--ardoise);font-size:16px;font-weight:600}
+.quai-grille2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.quai-doc{border:1px solid var(--filet);border-radius:var(--r);padding:10px;background:var(--fond);min-width:0}
+.quai-doc-titre{font-weight:600;margin-bottom:8px}
+.quai-res-ligne{border-top:1px dashed var(--filet);padding:8px 0;display:grid;gap:4px;font-size:13px}
+.quai-res-lib{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:0;font-size:13px;color:var(--encre)}
+.quai-papier{background:#f6f1e4;color:#222}
+.quai-papier th{color:#555}
+.quai-papier th,.quai-papier td{border-color:#cfc6b4}
+.quai-zone-res{border:1px solid #bbb;border-radius:4px;min-height:70px;margin-top:10px;padding:6px 10px}
+.quai-lib-res{font-size:12px;color:#555}
+.quai-manuscrit{font-family:"Segoe Print","Bradley Hand","Comic Sans MS",cursive;color:#1d3a7a;font-size:15px;line-height:1.6}
+.quai-reconst{font-size:11px;color:#666;margin-top:6px;font-style:italic}
+
+/* ---- NOUVEAU : la fiche de contrôle — même habillage que les autres blocs du quai (.quai-doc) ---- */
+.fiche{border:1px solid var(--filet);border-radius:var(--r);background:var(--fond);color:var(--encre);padding:10px}
+.fiche-titre{font-weight:600;display:flex;justify-content:space-between;gap:8px;align-items:baseline;margin-bottom:8px}
+.fiche-titre span{font-weight:400;font-size:12px;color:var(--encre-douce)}
+.fiche label{margin:0}
+.fiche textarea{min-height:64px;resize:vertical}
+.fiche-champs{display:grid;grid-template-columns:1fr auto;gap:8px 12px;align-items:center}
+.fiche-val{display:flex;gap:6px;align-items:center}
+.fiche-val input{width:110px}
+.fiche-unite{font-size:.82rem;color:var(--encre-douce);min-width:48px}
+.fiche .vide{font-size:.85rem;color:var(--encre-douce);font-style:italic}
+.fiche table{font-size:13px}
+.fiche th{padding:4px 6px}
+.fiche td{padding:4px 6px;vertical-align:middle}
+.fiche td input{width:100%;min-width:70px}
+.fiche tr.cours td{background:var(--ardoise-clair)}
+.fiche tr.cours td:first-child{box-shadow:inset 3px 0 0 var(--ardoise)}
+.fiche .manus,.note-sous .manus{font-weight:600}
+.fiche .sonde-auto{font-family:var(--mono);font-size:13px}
+.note-sous{font-size:13px;background:var(--fond);border:1px solid var(--filet);border-radius:var(--r);padding:3px 8px}
+.retenu{font-size:13.5px;margin:0 0 10px}
+.retenu ul{margin:4px 0 0;padding-left:20px}
+.retenu li{margin:2px 0}
+/* ---- validation retravaillée ---- */
+.lib-champ{display:block;font-size:.82rem;font-weight:500;color:var(--encre-douce)}
+.choix{display:flex;flex-wrap:wrap;gap:6px}
+.choix button{font:inherit;font-size:14px;border:1px solid var(--filet);background:var(--panneau);color:var(--encre);padding:7px 12px;border-radius:var(--r);cursor:pointer}
+.choix button:hover{border-color:var(--ardoise)}
+.choix button.on{border-color:var(--ardoise);color:var(--ardoise);font-weight:600;box-shadow:inset 0 0 0 1px var(--ardoise)}
+.choix button.on::before{content:"● ";font-size:11px}
+.choix button.case::before{content:"☐ ";font-size:13px}
+.choix button.case.on::before{content:"☑ ";font-size:13px}
+.choix button:focus-visible{outline:2px solid var(--ardoise);outline-offset:2px}
+.choix-motif button{font-size:13px;padding:5px 10px}
+.manque-msg{font-size:13px;color:var(--terre);font-weight:600}
+.capteur{max-width:300px}
+.capteur svg{width:100%;height:auto;display:block}
+.cf-place{height:150px;border-radius:var(--r);background:#2a3238;color:#c9d2da;display:flex;align-items:center;justify-content:center;font-size:13px;margin-bottom:8px;text-align:center;padding:0 12px}
+.resume-val{border:1px solid var(--filet);border-left:3px solid var(--ardoise);border-radius:var(--r);padding:10px;background:var(--fond)}
+.pied{font-size:12px;color:var(--encre-douce);margin-top:18px}
+/* ---- maquette du 04/10/2026 : palette fixe à gauche, calcul en tête de colonne ---- */
+@media (max-width:820px){.quai-poste{grid-template-columns:1fr}}
+.feuille td.lib{min-width:0}
+.quai-gauche{position:sticky;top:12px;align-self:start}
+@media (max-width:820px){.quai-gauche{position:static}}
+.quai-scene svg{max-height:340px}
+.quai-outils{gap:12px}
+.bloc{border:1px solid var(--filet);border-radius:var(--r);background:var(--fond);padding:10px;display:grid;gap:8px}
+.bloc-titre{font-weight:600;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.bloc-titre span{font-weight:400;font-size:12px;color:var(--encre-douce)}
+.etape-num{display:inline-block;min-width:22px;text-align:center;font-size:12px;color:var(--ardoise);border:1px solid var(--ardoise);border-radius:20px;padding:0 6px;font-weight:600}
+.quai-aide{border:1px dashed var(--ardoise);border-radius:var(--r);padding:8px 10px;font-size:13px;color:var(--encre-douce);margin:0}
+.rappel{font-size:13.5px;border-left:3px solid var(--ardoise);padding:4px 8px;background:var(--ardoise-clair);color:var(--encre)}
+.rappel code{font-family:var(--mono);font-size:13px}
+/* la mini-feuille */
+.feuille{border-collapse:collapse;width:100%;font-size:13.5px;background:var(--panneau)}
+.feuille th{background:var(--survol);text-transform:none;letter-spacing:0;font-size:12px;text-align:center;padding:3px 6px;border:1px solid var(--filet);color:var(--encre-douce);font-weight:600}
+.feuille td{border:1px solid var(--filet);padding:0;vertical-align:middle}
+.feuille td.lib{padding:5px 8px;color:var(--encre)}
+.feuille td.num{width:34px;text-align:center;background:var(--survol);color:var(--encre-douce);font-size:12px}
+.feuille input{border:0;border-radius:0;background:transparent;padding:6px 8px;font-family:var(--mono);font-size:13.5px;min-width:0}
+.feuille input:focus{outline:2px solid var(--ardoise);outline-offset:-2px}
+.cellule{display:flex;align-items:center;gap:4px}
+.cellule .res{font-family:var(--mono);font-size:13px;color:var(--ardoise);font-weight:600;padding-right:8px;white-space:nowrap}
+.cellule .err{font-family:var(--mono);font-size:12px;color:var(--rouge);font-weight:600;padding-right:8px;white-space:nowrap}
+.feuille td.saisie{box-shadow:inset 0 0 0 1px var(--ardoise)}
+.err-aide{font-size:12.5px;color:var(--rouge)}
+.feuille td[data-ref]{cursor:cell}
+.feuille td.pointee{outline:2px dashed var(--ardoise);outline-offset:-3px}
+.total-ligne{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.total-ligne input{width:110px}
+.manque-msg{font-size:13px;color:var(--terre);font-weight:600}
+.retenu{font-size:13.5px;margin:0 0 6px}
+.retenu ul{margin:4px 0 0;padding-left:20px}
+.retenu li{margin:2px 0}
+.ouvert{font-size:13px;border-left:3px solid var(--terre);padding:4px 8px;margin-top:8px;color:var(--encre)}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="essai" id="essai"></div>
+  <div class="quai" id="quai"></div>
+  <p class="pied">Maquette — poste de contrôle du quai Picard, étape ③ (04/10/2026). Les cinq palettes d'ENT-4.1 ; fournisseur et transporteur fictifs, comme dans la séance. Palette et thermomètre dessinés par le code du vrai quai ; le reste est jetable. Rien n'est corrigé ni enregistré.</p>
+</div>
+<script>
+'use strict';
+/* =========================================================== données (celles d'ENT-4.1) */
+const PAL = [
+  { id:'P1', ref:'HVE-1000', nom:'Haricots verts extra-fins 1 kg', bl:57, W:4, D:3, L:5, manque:['0,0,4','1,0,4','2,0,4'], avarie:{}, temp:-21.5,
+    etiq:{ ref:'HVE-1000', nom:'HARICOTS VERTS EXTRA-FINS', lot:'L26-2741', ddm:'09/2028' } },
+  { id:'P2', ref:'CRB-070', nom:'Croissants pur beurre à cuire', bl:36, W:3, D:3, L:4, manque:[], avarie:{ '1,0,2':[0,-1], '2,0,1':[0,-1] }, temp:-19.8,
+    etiq:{ ref:'CRB-070', nom:'CROISSANTS PUR BEURRE À CUIRE', lot:'L26-2688', ddm:'03/2028' } },
+  { id:'P3', ref:'GVA-1000', nom:'Glaces vanille 1 L', bl:48, W:4, D:3, L:4, manque:[], avarie:{}, temp:-14.2,
+    etiq:{ ref:'GVA-1000', nom:'CRÈME GLACÉE VANILLE 1 L', lot:'L26-2702', ddm:'06/2028' } },
+  { id:'P4', ref:'CAB-400', nom:'Filets de cabillaud 400 g', bl:24, W:3, D:2, L:4, manque:['2,1,3','0,0,3'], avarie:{}, temp:-20.4,
+    etiq:{ ref:'CAB-400', nom:'FILETS DE CABILLAUD', lot:'L26-2719', ddm:'12/2027' } },
+  { id:'P5', ref:'EPH-450', nom:'Épinards hachés 450 g', bl:30, W:3, D:2, L:5, manque:[], avarie:{}, temp:-20.9,
+    etiq:{ ref:'EPB-450', nom:'ÉPINARDS EN BRANCHES', lot:'L26-2733', ddm:'10/2028' } },
+];
+const FOURN = 'Surgelés du Littoral', NUMBL = 'SL-26-1184', TEMP_QUAI = 4;
+const VUES3D = ['vue de face', 'vue du côté droit', 'vue de l’arrière', 'vue du côté gauche'];
+const VUES_LIB = ['vue de l’avant','vue du côté droit','vue de l’arrière','vue du côté gauche'];
+const MOTIFS = { temperature:'Température non conforme', avarie:'Cartons endommagés', manquant:'Manquant', produit:'Produit différent de la commande' };
+const DECISIONS = { accepter:'Accepter', reserves:'Accepter avec réserves', refuser:'Refuser' };
+const CONSTATS = [
+  { k:'temp', lib:'Température à cœur', unite:'°C' }, { k:'ref', lib:'Référence lue sur l’étiquette', unite:'' },
+  { k:'endo', lib:'Cartons endommagés', unite:'cartons' }, { k:'manq', lib:'Cartons manquants', unite:'cartons' },
+];
+const COUT = { sonder:1, tourner:0.5, etiquette:0.5, compter:1 };
+const SEANCES = {
+  guidage:{ lib:'Guidage (ENT-4.1)', aide:'Explication pour compter, mini-feuille aux lignes nommées, rappel de la formule pas à pas (taper =, cliquer B1, taper *…). Un seul motif.' },
+  entrainement:{ lib:'Entraînement (ENT-4.2)', aide:'Pas d’explication ni de rappel : même mini-feuille, colonne A déjà remplie ; l’élève écrit la formule lui-même.' },
+  evaluation:{ lib:'Évaluation (ENT-4.4)', aide:'Ni explication ni rappel : un brouillon de tableur vide (2 colonnes × 5 lignes), libre. Deux motifs au plus.' },
+};
+let SEANCE = 'guidage';
+
+/* =========================================================== état */
+const neuf = () => ({ sel:0, minute:5.5, arme4:false, journal:['Déchargement terminé : 5 palettes au quai.'],
+  pal: Object.fromEntries(PAL.map((p) => [p.id, { vue:0, vues:[0], sonde:null, etiq:false, cases:{}, compte:'', compteNote:null,
+    decision:'', motif:'aucun', motif2:'aucun', valide:false, tente:false, trop:false, fiche:{ temp:'', ref:'', endo:'', manq:'' } }])) });
+let S = neuf();
+const ech = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+const fmtMin = (m) => { const e = Math.floor(m), s = m - e >= 0.5; if (!e && s) return '30 s'; return s ? `${e} min 30` : `${e} min`; };
+const hhmm = (m) => { const t = 360 + m; return `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(Math.floor(t % 60)).padStart(2, '0')}${t % 1 ? '’30' : ''}`; };
+const st = (p) => S.pal[p.id];
+const avancer = (min, txt) => { S.minute += min; S.journal.unshift(`${hhmm(S.minute)} — ${txt} (+${fmtMin(min)})`); };
+const lcd = (v) => (v < 0 ? '−' : '') + Math.abs(v).toFixed(1).replace('.', ',');
+const choisis = (s) => [s.motif, s.motif2].filter((m) => m && m !== 'aucun');
+
+function tourner(i, j, W, D, r) {
+  if (r === 0) return [i, j];
+  if (r === 1) return [D - 1 - j, i];
+  if (r === 2) return [W - 1 - i, D - 1 - j];
+  return [j, W - 1 - i];
+}
+function tournerDir([dx, dy], r) {
+  if (r === 0) return [dx, dy];
+  if (r === 1) return [-dy, dx];
+  if (r === 2) return [-dx, -dy];
+  return [dy, -dx];
+}
+function palette3d(p, s, repereOn) {
+  const r = s.vue, W2 = (r % 2) ? p.D : p.W, D2 = (r % 2) ? p.W : p.D;
+  const S = 34, H = 26;
+  const cx = 230 + (D2 - W2) * S * 0.866 / 2;
+  const base = 330 - (W2 + D2) * S * 0.5;
+  const P = (a, b, z) => [cx + (a - b) * S * 0.866, base + (a + b) * S * 0.5 - z * H];
+  const poly = (pts, fill, extra = '') => `<polygon points="${pts.map((q) => q.map((n) => n.toFixed(1)).join(',')).join(' ')}" fill="${fill}" stroke="#5e4424" stroke-width="1" ${extra}/>`;
+  let o = '';
+  const z0 = -0.55, z1 = 0;
+  o += poly([P(0, 0, z1), P(W2, 0, z1), P(W2, D2, z1), P(0, D2, z1)], '#c9a46b');
+  o += poly([P(W2, 0, z0), P(W2, D2, z0), P(W2, D2, z1), P(W2, 0, z1)], '#a07a43');
+  o += poly([P(0, D2, z0), P(W2, D2, z0), P(W2, D2, z1), P(0, D2, z1)], '#8a6634');
+  const manque = new Set(p.manque);
+  // Carton repère : en vue de face, le plus haut à gauche (i = 0, j = D-1, couche la plus haute présente).
+  let kRep = p.L - 1; while (kRep > 0 && manque.has(`0,${p.D - 1},${kRep}`)) kRep--;
+  const repere = repereOn ? `0,${p.D - 1},${kRep}` : null;
+  const boites = [];
+  for (let k = 0; k < p.L; k++) for (let i = 0; i < p.W; i++) for (let j = 0; j < p.D; j++) {
+    if (manque.has(`${i},${j},${k}`)) continue;
+    const [a, b] = tourner(i, j, p.W, p.D, r);
+    const av = p.avarie[`${i},${j},${k}`];
+    boites.push({ a, b, k, av: av ? tournerDir(av, r) : null, rep: `${i},${j},${k}` === repere });
+  }
+  boites.sort((x, y) => (x.a + x.b + x.k) - (y.a + y.b + y.k) || x.k - y.k);
+  const fr = tournerDir([0, 1], r), frb = tournerDir([0, -1], r);
+  // Multi-références : chaque carton appartient à la référence de sa couche (bande de couleur sur ses
+  // côtés, étiquette de SA référence). Étiquette avant déchirée : on en pose aussi sur la face arrière.
+  const refDe = (k) => (p.refs ? p.refs.find((x) => x.couches.includes(k)) : null);
+  const arriere = p.etiqAvant === 'dechiree';
+  for (const { a, b, k, av, rep } of boites) {
+    const top = [P(a, b, k + 1), P(a + 1, b, k + 1), P(a + 1, b + 1, k + 1), P(a, b + 1, k + 1)];
+    const droite = [P(a + 1, b, k), P(a + 1, b + 1, k), P(a + 1, b + 1, k + 1), P(a + 1, b, k + 1)];
+    const gauche = [P(a, b + 1, k), P(a + 1, b + 1, k), P(a + 1, b + 1, k + 1), P(a, b + 1, k + 1)];
+    o += poly(top, '#e6cfa3') + poly(droite, '#c9a26a') + poly(gauche, '#b08550');
+    o += `<line x1="${((top[0][0] + top[3][0]) / 2).toFixed(1)}" y1="${((top[0][1] + top[3][1]) / 2).toFixed(1)}" x2="${((top[1][0] + top[2][0]) / 2).toFixed(1)}" y2="${((top[1][1] + top[2][1]) / 2).toFixed(1)}" stroke="#a88a5a" stroke-width="2"/>`;
+    const rf = refDe(k);
+    const surFace = (F) => (u, v) => [F[0][0] + (F[1][0] - F[0][0]) * u + (F[3][0] - F[0][0]) * v, F[0][1] + (F[1][1] - F[0][1]) * u + (F[3][1] - F[0][1]) * v];
+    if (rf && rf.teinte) for (const F of [droite, gauche]) { const m = surFace(F); o += `<polygon data-q-bande points="${[m(0, .74), m(1, .74), m(1, .9), m(0, .9)].map((q) => q.map((n) => n.toFixed(1)).join(',')).join(' ')}" fill="${rf.teinte}"/>`; }
+    if (rep) {
+      const c = [(top[0][0] + top[2][0]) / 2, (top[0][1] + top[2][1]) / 2];
+      o += `<g data-q-repere><ellipse cx="${c[0].toFixed(1)}" cy="${c[1].toFixed(1)}" rx="15" ry="9" fill="#f6f1e4" style="stroke:var(--ardoise)" stroke-width="1.5"/><text x="${c[0].toFixed(1)}" y="${(c[1] + 4).toFixed(1)}" text-anchor="middle" font-size="11" font-weight="700" style="fill:var(--ardoise)">${ech(p.id)}</text></g>`;
+    }
+    // L'étiquette du carton, sur la face avant de la palette quand elle est tournée vers l'élève
+    // (et sur la face arrière pour une palette dont l'étiquette avant est déchirée).
+    const etiquette = (dir, cle, dechiree) => {
+      const F = dir[0] === 1 && dir[1] === 0 ? droite : dir[0] === 0 && dir[1] === 1 ? gauche : null;
+      if (!F) return '';
+      const m = surFace(F);
+      const ln = (u1, v1_, u2, v2) => `<line x1="${m(u1, v1_)[0].toFixed(1)}" y1="${m(u1, v1_)[1].toFixed(1)}" x2="${m(u2, v2)[0].toFixed(1)}" y2="${m(u2, v2)[1].toFixed(1)}" stroke="#777" stroke-width="1"/>`;
+      const corps = dechiree
+        ? poly([m(.3, .2), m(.52, .2), m(.46, .3), m(.58, .38), m(.5, .5), m(.62, .62), m(.3, .62)], '#f6f1e4', 'stroke-width=".6" data-q-dechiree')
+        : `${poly([m(.3, .2), m(.75, .2), m(.75, .62), m(.3, .62)], '#f6f1e4', 'stroke-width=".6"')}${ln(.36, .35, .68, .35)}${ln(.36, .48, .6, .48)}`;
+      return `<g class="quai-etiq-clic" data-a="etiq" data-k="${ech(cle)}"><title>Lire l'étiquette</title>${corps}</g>`;
+    };
+    o += etiquette(fr, rf ? rf.ref : 'avant', arriere);
+    if (arriere) o += etiquette(frb, 'arriere', false);
+    // Carton écrasé : visible seulement si son côté abîmé fait face à l'élève.
+    const face = av && av[0] === 1 && av[1] === 0 ? droite : av && av[0] === 0 && av[1] === 1 ? gauche : null;
+    if (face) {
+      const m = (u, v) => [face[0][0] + (face[1][0] - face[0][0]) * u + (face[3][0] - face[0][0]) * v, face[0][1] + (face[1][1] - face[0][1]) * u + (face[3][1] - face[0][1]) * v];
+      o += `<g data-q-avarie>${poly([m(.15, .25), m(.5, .05), m(.85, .3), m(.75, .8), m(.35, .9), m(.2, .6)], '#6e4c22', 'opacity=".85"')}`;
+      o += `<polyline points="${[m(.25, .5), m(.45, .35), m(.55, .6), m(.75, .45)].map((q) => q.map((n) => n.toFixed(1)).join(',')).join(' ')}" fill="none" stroke="#2b1c0b" stroke-width="1.5"/></g>`;
+    }
+  }
+  o += `<text x="230" y="372" text-anchor="middle" font-size="12" style="fill:var(--encre-douce)">${ech(p.id)} · ${VUES3D[r]}</text>`;
+  return o;
+}
+
+/* =========================================================== la mini-feuille (évaluateur jetable) */
+// Nombres à virgule, cases A1 à B5, + − * / et parenthèses, SOMME(A1:B3) ou SOMME(A1;B2). Erreurs à la mode Excel.
+const nb = (t) => { const x = String(t).trim().replace(/\s/g, '').replace(',', '.'); return x !== '' && /^[+-]?\d+(\.\d+)?$/.test(x) ? Number(x) : null; };
+function valeur(cases, ref, vus = []) {
+  const brut = String(cases[ref] || '').trim();
+  if (!brut) return { v:null };
+  if (brut[0] !== '=') { const n = nb(brut); return n === null ? { texte:brut } : { v:n }; }
+  if (vus.includes(ref)) return { err:'#CIRC!' };
+  let e = brut.slice(1).toUpperCase().replace(/\s/g, '');
+  if (/[X×]/.test(e)) return { err:'#NOM?', aide:'Pour multiplier, le tableur veut une étoile : *' };
+  e = e.replace(/SOMME\(([A-B][1-5]):([A-B][1-5])\)/g, (_, a, b) => `(${plage(a, b).join('+')})`);
+  e = e.replace(/SOMME\(([^()]*)\)/g, (_, l) => `(${l.split(';').join('+')})`);
+  e = e.replace(/,/g, '.');
+  let err = null;
+  e = e.replace(/[A-Z]+\d+/g, (r) => {
+    if (!/^[AB][1-5]$/.test(r)) { err = '#REF!'; return '0'; }
+    const x = valeur(cases, r, vus.concat(ref));
+    if (x.err) { err = x.err; return '0'; }
+    if (x.texte != null) { err = '#VALEUR!'; return '0'; }
+    return x.v == null ? '0' : `(${x.v})`;
+  });
+  if (err) return { err };
+  if (/[A-Z]/.test(e)) return { err:'#NOM?' };
+  if (!/^[0-9+\-*/().]*$/.test(e) || e === '') return { err:'#VALEUR!' };
+  try { const v = Function(`"use strict";return (${e});`)(); return Number.isFinite(v) ? { v:Math.round(v * 1000) / 1000 } : { err:'#DIV/0!' }; }
+  catch (_) { return { err:'#VALEUR!' }; }
+}
+function plage(a, b) { const out = []; for (const c of ['A','B']) for (let r = 1; r <= 5; r++) { const ref = c + r;
+  if (c >= (a[0] < b[0] ? a[0] : b[0]) && c <= (a[0] > b[0] ? a[0] : b[0]) && r >= Math.min(+a[1], +b[1]) && r <= Math.max(+a[1], +b[1])) out.push(ref); } return out; }
+const affV = (v) => String(v).replace('.', ',');
+function cellule(p, ref, saisie) {
+  const s = st(p), x = valeur(s.cases, ref), brut = s.cases[ref] || '';
+  const res = String(brut).trim().startsWith('=') ? (x.err ? `<span class="err">${x.err}</span>` : x.v != null ? `<span class="res">= ${affV(x.v)}</span>` : '') : '';
+  return `<td data-ref="${ref}" class="${saisie ? 'saisie' : ''}"><div class="cellule"><input id="c-${ref}" data-case="${ref}" value="${ech(brut)}" aria-label="Case ${ref}" autocomplete="off">${res}</div>
+    ${x.aide ? `<div class="err-aide" style="padding:0 8px 4px">${x.aide}</div>` : ''}</td>`;
+}
+function feuille(p) {
+  if (SEANCE === 'evaluation') {
+    return `<table class="feuille"><thead><tr><th></th><th>A</th><th>B</th></tr></thead><tbody>
+      ${[1,2,3,4,5].map((r) => `<tr><td class="num">${r}</td>${cellule(p, 'A' + r)}${cellule(p, 'B' + r)}</tr>`).join('')}</tbody></table>`;
+  }
+  const L = ['Cartons dans une couche complète', 'Nombre de couches', 'Cartons manquants dans la couche du dessus', 'Total (formule)'];
+  return `<table class="feuille"><thead><tr><th></th><th>A</th><th style="width:46%">B</th></tr></thead><tbody>
+    ${L.map((l, i) => `<tr><td class="num">${i + 1}</td><td class="lib" data-ref="A${i + 1}">${l}</td>${cellule(p, 'B' + (i + 1), i === 3)}</tr>`).join('')}</tbody></table>`;
+}
+
+/* =========================================================== le thermomètre (repris du moteur) */
+let animeSonde = null;
+function sonde(p, s) {
+  const anime = animeSonde === p.id;
+  return `<div style="max-width:300px"><svg viewBox="0 0 330 120" role="img" aria-label="Thermomètre à sonde planté dans un carton de ${p.id}" style="width:100%;height:auto;display:block">
+    <defs><linearGradient id="cBoit" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4a5560"/><stop offset="1" stop-color="#2b333b"/></linearGradient></defs>
+    <rect x="200" y="58" width="122" height="54" fill="#cfa86c" stroke="#7a5a2c"/><path d="M200 70 h122" stroke="#b08a55" stroke-width="2"/>
+    <text x="261" y="100" text-anchor="middle" font-size="10" fill="#5e4424" font-family="system-ui">${p.id}</text>
+    <path d="M150 52 C180 50 196 44 214 46" fill="none" stroke="#222" stroke-width="4" stroke-linecap="round"/>
+    <rect x="210" y="40" width="22" height="12" rx="3" fill="#2b333b"/><path d="M232 46 L262 46 L262 58" fill="none" stroke="#9aa4ad" stroke-width="3"/>
+    <path d="M262 58 L262 96" stroke="#b9c2ca" stroke-width="3" stroke-linecap="round"/>
+    <rect x="8" y="8" width="146" height="104" rx="14" fill="url(#cBoit)" stroke="#1b2127"/>
+    <rect x="20" y="18" width="122" height="54" rx="5" fill="#b9c7a6" stroke="#1b2127" stroke-width="2"/>
+    <text id="lcdVal" x="132" y="62" text-anchor="end" font-family="Consolas,monospace" font-size="30" font-weight="700" fill="#1e2a1a">${lcd(anime ? TEMP_QUAI : s.sonde)}</text>
+    <text x="134" y="34" text-anchor="end" font-family="system-ui" font-size="11" font-weight="700" fill="#1e2a1a">°C</text>
+    <text id="lcdStab" x="26" y="32" font-family="system-ui" font-size="9" font-weight="700" fill="#1e2a1a">${anime ? 'STAB…' : 'HOLD'}</text>
+    <circle cx="48" cy="92" r="9" fill="#9d2727" stroke="#1b2127"/><circle cx="80" cy="92" r="9" fill="#55606a" stroke="#1b2127"/><circle cx="112" cy="92" r="9" fill="#55606a" stroke="#1b2127"/>
+  </svg></div>`;
+}
+function animer() {
+  if (!animeSonde) return; const p = PAL.find((q) => q.id === animeSonde); animeSonde = null;
+  const el = document.getElementById('lcdVal'), stb = document.getElementById('lcdStab'); if (!el) return;
+  const t0 = performance.now();
+  const pas = (t) => { if (!el.isConnected) return; const u = Math.min(1, (t - t0) / 1200), k = 1 - Math.pow(1 - u, 3);
+    if (u >= 1) { el.textContent = lcd(p.temp); stb.textContent = 'HOLD'; return; }
+    el.textContent = lcd(Math.round((TEMP_QUAI + (p.temp - TEMP_QUAI) * k) * 10) / 10); stb.textContent = Math.floor(t / 250) % 2 ? 'STAB…' : ''; requestAnimationFrame(pas); };
+  requestAnimationFrame(pas);
+}
+
+/* =========================================================== l'écran ③ */
+function ecran3() {
+  const p = PAL[S.sel], s = st(p), dernier = S.sel === PAL.length - 1;
+  const nonVal = PAL.filter((q) => !st(q).valide).length;
+  const vers4 = S.arme4 ? `<button class="btn" data-a="vers4" style="border-color:var(--terre);color:var(--terre)">${nonVal ? `${nonVal} palette${nonVal > 1 ? 's' : ''} non validée${nonVal > 1 ? 's' : ''} : passer quand même ?` : 'Passer aux réserves ?'} Cliquez pour confirmer</button>`
+    : `<button class="btn${nonVal ? '' : ' btn-p'}" data-a="vers4">Contrôles terminés → réserves et chambre froide</button>`;
+  const onglets = PAL.map((q, n) => { const sq = st(q);
+    const fait = sq.valide ? '✓ validée' : [sq.sonde !== null ? 'sondée' : null, sq.compteNote !== null ? 'comptée' : null, sq.decision ? 'décidée' : null].filter(Boolean).join(', ') || 'à contrôler';
+    return `<button data-a="sel" data-n="${n}" class="${n === S.sel ? 'on' : ''}">${q.id}<span class="quai-etat">${fait}</span></button>`; }).join('');
+  const vu = s.tente, manqueCompte = s.compteNote === null, manqueDec = !s.decision, manqueMotif = ['reserves','refuser'].includes(s.decision) && !choisis(s).length;
+  const alerte = (c, t) => (vu && c ? `<span class="manque-msg" role="alert">${t}</span>` : '');
+  const rappel = SEANCE === 'guidage'
+    ? '<div class="rappel"><b>Rappel :</b> total = cartons dans une couche × nombre de couches − manquants. En B4 : tape <code>=</code>, clique sur B1, tape <code>*</code>, clique sur B2, tape <code>-</code>, clique sur B3, puis Entrée → <code>=B1*B2-B3</code></div>'
+    : '';
+  const explication = SEANCE === 'guidage'
+    ? `<div class="quai-aide">Pour compter sans tout compter : combien de cartons dans <b>une</b> couche ? combien de couches ? Puis regarde bien la couche du dessus : combien de cartons y manquent ? Fais le tour de la palette si besoin.<br>
+       Règle du quai : toutes les couches <b>sous la couche du dessus</b> sont complètes. Le carton marqué <b>${p.id}</b> te sert de repère quand tu fais le tour.</div>` : '';
+  const i = S.sel, apres = PAL[i + 1];
+  const bas = apres ? `<div class="quai-ligne"><button class="btn" data-a="sel" data-n="${i + 1}">Palette suivante : ${apres.id} →</button></div>` : `<div class="quai-ligne">${vers4}</div>`;
+  let validation;
+  if (s.valide) {
+    validation = `<div class="bloc" style="border-left:3px solid var(--ardoise)"><div><b>✓ ${p.id} validée :</b> ${DECISIONS[s.decision]}${s.decision !== 'accepter' ? ` — ${choisis(s).map((m) => MOTIFS[m]).join(' + ')}` : ''}</div>
+      <div class="note">Comptage noté : ${s.compteNote} cartons (BL : ${p.bl}).</div><div><button class="btn" data-a="modifier">Modifier</button></div></div>`;
+  } else {
+    const deux = SEANCE === 'evaluation';
+    validation = `<div class="bloc"><div class="bloc-titre"><span class="etape-num">4</span> Décider</div>
+      <div class="quai-champ"><span class="lib-champ">Décision</span><div class="choix">${Object.entries(DECISIONS).map(([k, l]) => `<button id="qDec-${k}" class="${s.decision === k ? 'on' : ''}" role="radio" aria-checked="${s.decision === k}" data-a="dec" data-v="${k}">${l}</button>`).join('')}</div>${alerte(manqueDec, 'Choisis une décision.')}</div>
+      ${['reserves','refuser'].includes(s.decision) ? `<div class="quai-champ"><span class="lib-champ">Motif ${s.decision === 'refuser' ? 'du refus' : 'de la réserve'}${deux ? ' <span class="quai-cout">· deux au plus</span>' : ''}</span>
+        <div class="choix choix-motif">${Object.entries(MOTIFS).map(([k, l]) => `<button id="qMot-${k}" class="case${choisis(s).includes(k) ? ' on' : ''}" data-a="motif" data-v="${k}">${l}</button>`).join('')}</div>
+        ${s.trop ? '<span class="manque-msg" role="alert">Deux motifs au plus : décoche-en un d’abord.</span>' : ''}${alerte(manqueMotif, 'Donne le motif.')}</div>` : ''}
+      <div class="quai-ligne"><button class="btn btn-p" data-a="valider">✓ Valider ${p.id}</button></div></div>`;
+  }
+  return `<section class="quai-carte">
+    <div class="quai-titre-ligne"><h2 class="quai-h2"><span class="quai-pastille-etape">3</span>Le quai : contrôler chaque palette</h2><div class="quai-ligne">${vers4}</div></div>
+    <div class="quai-onglets">${onglets}</div>
+    <details class="quai-rappel-bl"><summary>📄 Revoir le bon de livraison</summary><table><thead><tr><th>Palette</th><th>Réf.</th><th>Désignation</th><th>Cartons</th></tr></thead><tbody>
+      ${PAL.map((q) => `<tr><td>${q.id}</td><td>${q.ref}</td><td>${q.nom}</td><td>${q.bl}</td></tr>`).join('')}</tbody></table></details>
+    <div class="quai-poste">
+      <div class="quai-gauche"><div class="quai-scene">
+        <svg viewBox="40 40 380 340" role="img" aria-label="Palette ${p.id} vue en trois dimensions" id="svgPal">${palette3d(p, s, SEANCE === 'guidage')}</svg>
+        <div class="quai-vue-lib">Côtés déjà vus : ${s.vues.length} sur 4</div>
+        <button class="btn" data-a="tourner">↻ Faire le tour de la palette <span class="quai-cout">· ${fmtMin(COUT.tourner)}</span></button>
+      </div></div>
+      <div class="quai-outils">
+        <div class="bloc"><div class="bloc-titre"><span class="etape-num">1</span> Compter <span>${SEANCE === 'evaluation' ? 'brouillon de calcul, libre' : 'zone de calcul'}</span></div>
+          ${explication}${rappel}
+          ${feuille(p)}
+          <div class="quai-champ"><label for="qCompte">Total : cartons comptés sur cette palette <span class="quai-cout">· ${fmtMin(COUT.compter)}</span></label>
+            <div class="total-ligne"><input id="qCompte" type="number" min="0" inputmode="numeric" value="${ech(s.compte)}" ${s.valide ? 'disabled' : ''}>
+            <span class="note" id="rCompte">${s.compteNote !== null ? `Comptage noté : ${s.compteNote} cartons (BL : ${p.bl}).` : 'Reporte le résultat de ton calcul, puis Entrée : il est noté.'}</span></div>
+            ${alerte(manqueCompte, 'Note le comptage.')}</div>
+        </div>
+        <div class="bloc"><div class="bloc-titre"><span class="etape-num">2</span> Sonder et lire l’étiquette</div>
+          <div><button class="btn" data-a="sonder">Sonder à cœur <span class="quai-cout">· ${fmtMin(COUT.sonder)}</span></button></div>
+          ${s.sonde !== null ? sonde(p, s) : ''}
+          <div class="quai-zoom">${s.etiq ? `<div class="quai-etiq"><b>${FOURN}</b> — produit surgelé, conserver à −18 °C<br>Réf. ${p.etiq.ref}<br><b>${p.etiq.nom}</b><br>Lot : ${p.etiq.lot} · DDM fin ${p.etiq.ddm}</div><div class="quai-reconst">Étiquette reconstituée, non contractuelle.</div>`
+            : `<span class="note">🔍 Clique sur l'étiquette d'un carton, sur la palette, pour la lire de près (${fmtMin(COUT.etiquette)}).</span>`}</div>
+        </div>
+        <div class="fiche"><div class="fiche-titre"><span><span class="etape-num">3</span> 📝 Ma fiche de contrôle — ${p.id}</span><span>${p.ref}</span></div>
+          <div class="fiche-champs">${CONSTATS.map((c) => `<label for="f-${c.k}">${c.lib}</label><span class="fiche-val"><input id="f-${c.k}" data-fiche="${c.k}" type="text" value="${ech(s.fiche[c.k])}" ${s.valide ? 'disabled' : ''}><span class="fiche-unite">${c.unite}</span></span>`).join('')}</div></div>
+        ${validation}
+        ${bas}
+      </div>
+    </div>
+    <div class="quai-journal">${S.journal.map((l) => `<div>${ech(l)}</div>`).join('')}</div>
+  </section>`;
+}
+
+function rendreEssai() {
+  document.getElementById('essai').innerHTML = `<h1>Maquette — le poste de contrôle avec une zone de calcul (étape ③)</h1>
+    <p>Ce qui change par rapport à l’écran en ligne : la palette reste <b>fixe à gauche</b> pendant qu’on fait défiler la colonne de droite, et la colonne de droite suit l’ordre du travail :
+    ① <b>compter</b> (explication, zone de calcul, puis le total à reporter) → ② <b>sonder</b> et lire l’étiquette → ③ la <b>fiche de contrôle</b> → ④ <b>décider</b> et valider.</p>
+    <div class="var"><div class="var-titre">Voir la séance comme</div>
+      <div class="seg">${Object.entries(SEANCES).map(([k, x]) => `<button data-seance="${k}" class="${SEANCE === k ? 'on' : ''}">${x.lib}</button>`).join('')}</div>
+      <div class="var-aide">${SEANCES[SEANCE].aide}</div></div>
+    <div class="ouvert"><b>À trancher en essayant :</b> le résultat du calcul ne se recopie pas tout seul — l’élève le <b>reporte</b> dans « Total » (comme il reporte sa fiche sur le BL), et la zone de calcul n’est <b>pas notée</b>. Si tu préfères que le résultat devienne directement le comptage, ou que la formule soit notée, dis-le.
+    Essaie aussi une erreur : <code>=12x5-3</code> au lieu de <code>=12*5-3</code>.<br>
+    <b>Cases cliquables (geste du tableur) :</b> pendant qu’on écrit une formule, juste après <code>=</code>, un signe ou une parenthèse, un clic sur une case écrit sa référence (B1…) ; les cases citées par la formule sont entourées en pointillé. Ailleurs, un clic va simplement dans la case, comme dans Excel.</div>
+    <div class="essai-bas"><button class="btn" data-a="raz">Tout effacer</button></div>`;
+}
+function rendre() {
+  const a = document.activeElement, id = a && a.id, kb = rendre.clavier;
+  document.getElementById('quai').innerHTML = `<div class="quai-horloges"><div class="quai-horloge"><div class="quai-lib">Horloge du quai (temps simulé)</div><div class="quai-val">${hhmm(S.minute)}</div></div>
+    <div class="quai-horloge"><div class="quai-lib">Temps hors froid du lot</div><div class="quai-val">${fmtMin(S.minute)}</div></div></div>
+    <nav class="quai-stepper">${['① Le camion arrive','② Déchargement','③ Contrôle des palettes','④ Réserves et chambre froide'].map((l, i) => `<button class="${i === 2 ? 'on' : ''}" ${i === 2 ? '' : 'disabled'}>${l}</button>`).join('')}</nav>
+    ${ecran3()}`;
+  if (id && kb) { const b = document.getElementById(id); if (b) b.focus(); }
+  animer();
+}
+document.addEventListener('keydown', () => { rendre.clavier = true; }, true);
+document.addEventListener('mousedown', () => { rendre.clavier = false; }, true);
+
+/* =========================================================== actions */
+document.addEventListener('click', (ev) => {
+  const sb = ev.target.closest('[data-seance]');
+  if (sb) { SEANCE = sb.dataset.seance; S = neuf(); rendreEssai(); rendre(); return; }
+  const p = PAL[S.sel], s = st(p);
+  const b = ev.target.closest('[data-a]'); if (!b || b.disabled) return;
+  switch (b.dataset.a) {
+    case 'raz': S = neuf(); break;
+    case 'etiq': if (!s.etiq) { s.etiq = true; avancer(COUT.etiquette, `${p.id} : étiquette lue`); } break;
+    case 'sel': S.sel = +b.dataset.n; S.arme4 = false; break;
+    case 'vers4': if (!S.arme4) { S.arme4 = true; break; } alert('Ici, on passerait à l’étape ④ (hors de cette maquette).'); S.arme4 = false; break;
+    case 'tourner': s.vue = (s.vue + 1) % 4; if (!s.vues.includes(s.vue)) s.vues.push(s.vue); avancer(COUT.tourner, `${p.id} : ${VUES_LIB[s.vue]}`); break;
+    case 'sonder': s.sonde = p.temp; animeSonde = p.id; avancer(COUT.sonder, `${p.id} sondée`); break;
+    case 'dec': s.decision = b.dataset.v; s.trop = false; if (s.decision === 'accepter') { s.motif = 'aucun'; s.motif2 = 'aucun'; } break;
+    case 'motif': { const k = b.dataset.v; s.trop = false;
+      if (SEANCE !== 'evaluation') { s.motif = s.motif === k ? 'aucun' : k; break; }
+      if (s.motif === k) { s.motif = s.motif2; s.motif2 = 'aucun'; } else if (s.motif2 === k) s.motif2 = 'aucun';
+      else if (s.motif === 'aucun') s.motif = k; else if (s.motif2 === 'aucun') s.motif2 = k; else s.trop = true; break; }
+    case 'valider':
+      if (s.compteNote === null || !s.decision || (['reserves','refuser'].includes(s.decision) && !choisis(s).length)) {
+        s.tente = true; rendre();
+        const cible = s.compteNote === null ? 'qCompte' : !s.decision ? 'qDec-accepter' : 'qMot-temperature';
+        document.getElementById(cible)?.focus(); return; }
+      s.valide = true; s.tente = false; break;
+    case 'modifier': s.valide = false; break;
+    default: return;
+  }
+  rendre();
+});
+// Saisie : l'état suit la frappe ; la feuille recalcule sur place (sans redessiner, pour garder le curseur).
+document.addEventListener('input', (ev) => {
+  const t = ev.target, p = PAL[S.sel], s = st(p);
+  if (t.dataset.fiche) { s.fiche[t.dataset.fiche] = t.value; return; }
+  if (t.id === 'qCompte') { s.compte = t.value; return; }
+  if (t.dataset.case) {
+    s.cases[t.dataset.case] = t.value;
+    document.querySelectorAll('[data-case]').forEach((i) => {
+      const td = i.closest('td'), x = valeur(s.cases, i.dataset.case), brut = String(s.cases[i.dataset.case] || '').trim();
+      const cel = td.querySelector('.cellule'); cel.querySelector('.res, .err')?.remove(); td.querySelector('.err-aide')?.remove();
+      if (brut.startsWith('=')) cel.insertAdjacentHTML('beforeend', x.err ? `<span class="err">${x.err}</span>` : x.v != null ? `<span class="res">= ${affV(x.v)}</span>` : '');
+      if (x.aide) td.insertAdjacentHTML('beforeend', `<div class="err-aide" style="padding:0 8px 4px">${x.aide}</div>`);
+    });
+  }
+});
+// Pointer une case (geste du tableur) : pendant qu'on écrit une formule, juste après =, un signe, une parenthèse ou
+// un point-virgule, un clic sur une autre case écrit sa référence au curseur, sans quitter la formule.
+document.addEventListener('mousedown', (ev) => {
+  const td = ev.target.closest('.feuille td[data-ref]'), a = document.activeElement;
+  if (!td || !a || !a.dataset || !a.dataset.case || td.dataset.ref === a.dataset.case) return;
+  if (!String(a.value).trim().startsWith('=')) return;
+  const pos = a.selectionStart ?? a.value.length, avant = a.value.slice(0, pos);
+  if (!/[=+\-*/(;:]\s*$/.test(avant)) return;
+  ev.preventDefault();
+  a.value = avant + td.dataset.ref + a.value.slice(a.selectionEnd ?? pos);
+  const n = pos + td.dataset.ref.length; a.setSelectionRange(n, n);
+  a.dispatchEvent(new Event('input', { bubbles:true }));
+});
+// Les cases citées par la formule de la case active, entourées en pointillé.
+function marquer() {
+  const a = document.activeElement, f = a && a.dataset && a.dataset.case && String(a.value).trim().startsWith('=') ? a.value.toUpperCase() : '';
+  const refs = new Set(f.match(/[AB][1-5]/g) || []);
+  document.querySelectorAll('.feuille td[data-ref]').forEach((td) => td.classList.toggle('pointee', refs.has(td.dataset.ref)));
+}
+document.addEventListener('focusin', marquer);
+document.addEventListener('focusout', () => setTimeout(marquer, 0));
+document.addEventListener('input', marquer);
+function noter() {
+  const p = PAL[S.sel], s = st(p), v = String(document.getElementById('qCompte').value).trim();
+  if (v === '' || +v === s.compteNote) return;
+  s.compteNote = +v; avancer(COUT.compter, `${p.id} : ${v} cartons notés`); rendre();
+}
+document.addEventListener('change', (ev) => { if (ev.target.id === 'qCompte') noter(); });
+document.addEventListener('keydown', (ev) => {
+  const t = ev.target; if (ev.key !== 'Enter') return;
+  if (t.id === 'qCompte') { ev.preventDefault(); noter(); return; }
+  // Entrée dans une case : la case suivante (comme un tableur, on descend), puis le total.
+  if (t.dataset.case || t.dataset.fiche) {
+    ev.preventDefault();
+    const L = [...document.querySelectorAll(t.dataset.case ? '[data-case]' : '[data-fiche]')], i = L.indexOf(t);
+    let n = L[i + 1];
+    if (t.dataset.case && SEANCE === 'evaluation') { const r = +t.dataset.case[1]; n = document.getElementById(`c-${t.dataset.case[0]}${r + 1}`); }
+    (n || (t.dataset.case ? document.getElementById('qCompte') : document.getElementById('qDec-accepter')))?.focus();
+  }
+});
+rendreEssai(); rendre();
+</script>
+</body>
+</html>

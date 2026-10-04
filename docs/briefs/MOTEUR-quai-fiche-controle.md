@@ -167,3 +167,50 @@ décision) ; Entrée ; motifs sans `deuxMotifs` et pas d'aplat ; thermomètre ; 
   (l. 130) décrivent l'ancien poste ; dire plutôt : noter ses constats sur la fiche, taper le total puis Entrée, cliquer la
   décision et le motif, « ✓ Valider P1 ». ENT-4.3 et 4.4 : rien à changer a priori.
 - Reprendre l'essai d'ENT-4.4 (seuils de temps réel 12 / 16 min, §5).
+
+## Suite du 04/10/2026 : la zone de calcul et la nouvelle disposition de l'étape ③ *(livrée)*
+
+**Demande de Tristan** (essai d'ENT-4.1 à l'écran) : une petite zone tableur pour calculer le comptage, et voir la
+palette pendant qu'on remplit. Maquette validée : `docs/briefs/picard/maquette-quai-calcul.html` (copie dans
+`Claude outputs`).
+
+**Arrêté avec Tristan :**
+- **Disposition** : à gauche, la palette **reste à l'écran** (elle ne défile pas) ; à droite, dans l'ordre du travail :
+  **① Compter** (explication en guidage, zone de calcul, puis la case « Total ») → **② Sonder et lire l'étiquette** →
+  **③ la fiche de contrôle** → **④ Décider** (décision, motifs, Valider) → « Palette suivante » ou « Contrôles terminés ».
+- **Zone de calcul**, déclarée par la séance (`quai.calcul`) :
+  - guidage ENT-4.1 : `{ forme: 'feuille', rappel: true }` : lignes nommées en colonne A (cartons dans une couche,
+    couches, manquants, total), valeurs et formule en B, rappel pas à pas (« tape =, clique sur B1, tape *… ») ;
+  - entraînement ENT-4.2 : `{ forme: 'feuille' }` : colonne A remplie, **sans rappel** ni explication ;
+  - évaluation ENT-4.4 : `{ forme: 'brouillon' }` : 2 colonnes × 5 lignes vides, libres.
+- **Cases cliquables** (geste du tableur) : pendant qu'on écrit une formule, juste après `=`, un signe ou une
+  parenthèse, un clic sur une case écrit sa référence ; les cases citées sont entourées en pointillé.
+- Le résultat **ne se recopie pas** : l'élève remplit lui-même « Total ». La zone **n'est pas notée**.
+
+**Fait** (`core/types/quai.js`, `styles/quai.css`, déclarations dans `contenus/picard-ent41.js`, `-ent42.js`,
+`-ent44.js`, `outils/essai-quai.js`) : calculs par `core/formules.js` (le moteur des feuilles Boost : virgule, SOMME,
+erreurs comme Excel) ; résultats recalculés sur place, sans redessin (le curseur reste dans la formule) ; Entrée descend
+d'une case, puis va au Total ; `=12x5-3` affiche « #VALEUR! » et « Pour multiplier, le tableur veut une étoile : * ».
+La feuille vit dans `palettes[id].calcul` (complétée par `normaliser()`), sans coût en temps simulé.
+
+**Décisions prises en route** (aussi dans `docs/decisions.md`) :
+- Palette à **plusieurs références** (ENT-4.2, A2) : la feuille aux lignes nommées n'a pas de sens (un comptage par
+  référence) ; elle reçoit le **brouillon libre**.
+- En guidage, les trois cases « détail du comptage » disparaissent (la feuille les remplace) ; la ligne « détail » du
+  bilan, **non comptée**, se lit sur la feuille (B1, B2, B3).
+- Entrée dans la dernière case de la fiche mène maintenant à la décision (la fiche vient juste avant).
+- Une palette validée garde son Total visible mais grisé ; la fiche reste modifiable (ce ne sont que des notes).
+- La consigne de guidage de l'étape ③ est maintenant l'explication du bloc « Compter » (la phrase « Note ce que tu
+  constates sur ta fiche… » ajoutée plus tôt est retirée : la fiche est numérotée ③ dans l'ordre du poste).
+
+**Vérifié** : bloc `picard` 91/91 ; suite entière 609/609 ; contre-épreuves (palette non fixée, aide « x » retirée,
+feuille comptée, rappel en entraînement, feuille en évaluation, clic sur case inactif, résultat recopié dans Total) :
+chacune fait tomber son test. Geste du clic sur les cases essayé à la souris dans le navigateur.
+
+**Tests** : deux cas existants ajustés (Entrée en fin de fiche → décision ; Total grisé sur une palette validée) ;
+nouveaux : ordre du poste et palette fixe, feuille + rappel + clic sur les cases + rien de recopié + rechargement,
+erreur « x » et Entrée, jamais notée, ligne « détail » ; ENT-4.2 sans rappel et brouillon pour A2 ; ENT-4.4 brouillon.
+
+**À faire ailleurs** : **Cowork, trames Picard** (ENT-4.1, 4.2, et 4.4 si elle décrit l'écran) : le poste a changé
+d'ordre (compter avec la zone de calcul, puis sonder, puis la fiche, puis décider).
+

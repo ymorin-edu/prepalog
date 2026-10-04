@@ -170,6 +170,7 @@ export function quaiDuJeu(jeu) {
     dechargement: DECHARGEMENT,
     couts: COUTS,
     aides: {},            // évaluation : aucune aide (ni chef de quai, ni repère, ni règle des couches)
+    calcul: { forme: 'brouillon' },   // un brouillon de tableur libre, sans rappel (jamais noté)
     deuxMotifs: true,     // un second motif proposé pour chaque palette (une seule en a besoin)
     note: NOTE_ENT44,
     photos: PHOTOS,

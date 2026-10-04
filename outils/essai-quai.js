@@ -31,6 +31,7 @@ export function quaiEssai({ evaluation = false, huit = false } = {}) {
   return Object.assign({}, QUAI_ENT41, {
     id: `essai-quai${evaluation ? '-eval' : ''}${huit ? '-8' : ''}`,
     aides: evaluation ? {} : QUAI_ENT41.aides,
+    calcul: evaluation ? { forme: 'brouillon' } : QUAI_ENT41.calcul,
     note: evaluation ? NOTE_PROVISOIRE : undefined,
     camions: [Object.assign({}, QUAI_ENT41.camions[0], { palettes })],
   });

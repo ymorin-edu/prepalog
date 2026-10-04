@@ -93,6 +93,7 @@ export const QUAI_ENT42 = {
   seuilHorsFroid: SEUIL_HORS_FROID,
   dechargement: DECHARGEMENT,
   couts: COUTS,
+  calcul: { forme: 'feuille' },                  // zone de calcul : lignes nommées, sans rappel (entraînement)
   aides: {},
   photos: PHOTOS,
   // L'élève prend son poste à 6 h 10 : les deux camions sont là.
