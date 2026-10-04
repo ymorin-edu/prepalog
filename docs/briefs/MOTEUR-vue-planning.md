@@ -6,7 +6,7 @@
 > Lis docs/EN-COURS.md, puis le brief docs/briefs/MOTEUR-vue-planning.md et ouvre la maquette docs/briefs/planning/maquette-planning.html. Annonce la durée avant de commencer, découpe en lots (§9), puis enchaîne sans attendre : les questions du §12 ont toutes une valeur par défaut, applique-la et note au compte rendu ce que tu as choisi.
 > ```
 
-**Statut** : à valider par Tristan *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
+**Statut** : livré (validé à l'écran par Tristan le 04/10/2026) *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
 **Date du brief** : 04/10/2026
 **Conversation d'origine** : Cowork (Opus) ; fiches projet `claude/prepalog-planning-cadrage.md` (20 décisions, maquette v8),
 `claude/prepalog-2de-s1-cadrage.md` (S1 Smoby → Kuehne+Nagel), `claude/prepalog-2de-hors-socle-et-vues.md` (vue n° 1 de la 2de)

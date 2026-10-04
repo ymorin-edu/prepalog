@@ -5,6 +5,7 @@ n'est pas évident)**. Claude Code y ajoute toute décision prise en cours de ro
 reporte dans les fiches du projet PREPALOG. Une décision de fond sur la pédagogie reste dans
 `docs/fiches/prepalog-finalite.md`.
 
+- 04/10/2026 · Tristan · **Vue « Planning » validée à l'écran** (page d'essai, avec « Agrandir » et les couleurs libres). Prochaine étape : les séances A2 et B1 de S1, qui la déclarent.
 - 04/10/2026 · Tristan · **Planning : bouton « Agrandir » et couleurs libres par séance.** « Agrandir le planning » replie
   le menu de l'environnement et les consignes (écrans étroits du lycée), choix retenu pour l'élève. Les couleurs des
   familles de cartes sont libres, déclarées par chaque séance, sans lien avec la charte de l'entreprise ; le moteur refuse
