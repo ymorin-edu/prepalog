@@ -28,7 +28,7 @@ GRIS  = RGBColor(0x59, 0x59, 0x59)   # le code « ÉTAPE n »
 # entreprise à côté et changer cette ligne : le reste suit.
 RACINE = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
 LOGO = os.path.join(RACINE, 'contenus', 'trames', 'logos', 'spartoo.jpg')
-LOGO_PREPALOG = os.path.join(RACINE, 'styles', 'logo.png')
+LOGO_SIMULOG = os.path.join(RACINE, 'contenus', 'trames', 'logos', 'simulog.png')
 
 d = Document()
 st = d.styles['Normal']
@@ -285,10 +285,10 @@ def tableau(entetes, nlignes, largeurs=None, hauteur=Cm(1.15), remplis=None):
 from docx.enum.text import WD_TAB_ALIGNMENT
 par = d.add_paragraph(); par.paragraph_format.space_after = Pt(2)
 par.paragraph_format.tab_stops.add_tab_stop(Cm(17.0), WD_TAB_ALIGNMENT.RIGHT)
-if os.path.exists(LOGO_PREPALOG):
-    par.add_run().add_picture(LOGO_PREPALOG, height=Cm(1.15))
-r = par.add_run('  Simulog')
-r.bold = True; r.font.size = Pt(20); r.font.color.rgb = TITRE
+if os.path.exists(LOGO_SIMULOG):
+    par.add_run().add_picture(LOGO_SIMULOG, height=Cm(1.3))
+else:
+    r = par.add_run('Simulog'); r.bold = True; r.font.size = Pt(20); r.font.color.rgb = TITRE
 par.add_run('\t')
 if os.path.exists(LOGO):
     par.add_run().add_picture(LOGO, height=Cm(1.5))

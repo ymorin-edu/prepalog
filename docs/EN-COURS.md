@@ -7,7 +7,6 @@ est déjà modifié ou inscrit ci-dessous, **elle s'arrête et le dit à Tristan
 
 | Chantier | Fichiers qu'il touche | Depuis |
 |---|---|---|
-| Claude Code — logo Simulog en tête des 14 trames (`docs/briefs/TRAMES-logo-simulog.md`) | `outils/trame_commun.py`, `outils/trame-boost-tournee.py`, `outils/trame-spartoo*.py`, `contenus/trames/*.{docx,pdf}`, `contenus/trames/logos/simulog.png` | 04/10 |
 
 Rappel : un seul chantier à la fois dans `core/types/tournee.js`, `core/types/grille.js`,
 `core/types/entreprise.js`, `styles/base.css` et `outils/test/boost.mjs` (voir `docs/briefs/COORDINATION-boost.md`).
