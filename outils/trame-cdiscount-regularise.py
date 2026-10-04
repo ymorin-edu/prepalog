@@ -9,6 +9,11 @@ l'écran Stock, classeur recalculé par LibreOffice, dépôt « 24 résultats ju
 Temps « erreur induite » : la trame donne la méthode (tableur, puis enquête) mais ne dit ni quel ajustement est
 orphelin, ni où l'écart est né. Le retour du dépôt est celui de l'entraînement (« n résultats justes sur m », sans
 détail) : la trame le dit.
+Refaite le 04/10/2026 par Cowork après l'export filtré (brief `docs/briefs/MOTEUR-export-filtre.md`) : l'export part
+de l'écran « Extractions », liste « Mouvements de stock », niveau d'indication 2 (le message de Nadia donne les
+critères ; l'écran s'ouvre sur Tous / Toutes / 7 derniers jours). La trame renvoie au message SANS redonner les
+critères. Export à 10 colonnes (A Date, B Type … H Motif, I Document, J Saisi par), feuille « Mouvements ».
+9 jalons (export + 2 tableur + 6 enquête). Aucun nombre de lignes attendu.
 Corrigé : `contenus/corriges/ENT-2.4.js` (réponses dans `corriges_cdiscount.py`).
 """
 import os
@@ -29,8 +34,9 @@ T.entete(LOGO, "ENT-2.4 — Carnet de suivi : régularisé à l'aveugle", [
      "tu peux le suivre seul. Tu travailles dans Prepalog et dans un tableur (Excel ou LibreOffice Calc), comme en "
      "ENT-2.2."),
     ('Ce que ton enseignant voit dans son suivi :',
-     "huit points : deux pour ton fichier (SI et NB.SI), six pour ta réponse à ta cheffe d'équipe. Cette fois, le "
-     "dépôt ne te dit que le nombre de résultats justes, pas lesquels."),
+     "neuf points : ton export (jugé à part, au moment du dépôt), deux pour ton fichier (SI et NB.SI), six pour ta "
+     "réponse à ta cheffe d'équipe. Cette fois, pour tes formules, le dépôt ne te dit que le nombre de résultats "
+     "justes, pas lesquels. Pour ton export, il te dit ce qui cloche (lignes en trop, lignes qui manquent)."),
     ('Ce qui est vrai, ce qui est construit :',
      "Cdiscount, son entrepôt de Cestas et sa place de marché sont réels, comme le service qui stocke chez Cdiscount "
      "les produits de vendeurs indépendants. Le vendeur Julien Mounet et sa boutique Bassin Cuisine sont "
@@ -38,7 +44,7 @@ T.entete(LOGO, "ENT-2.4 — Carnet de suivi : régularisé à l'aveugle", [
 ], [
     ('La place de marché et ses vendeurs', 'Sur Internet'),
     ('Lire les messages', 'Dans Prepalog'),
-    ('Exporter et repérer avec SI', 'Prepalog, puis tableur'),
+    ('Extraire, exporter, repérer avec SI', 'Prepalog, puis tableur'),
     ('Compter par motif avec NB.SI', 'Dans le tableur'),
     ('Déposer ton fichier', 'Dans Prepalog'),
     ('Retrouver chaque ajustement et son document', 'Dans Prepalog'),
@@ -75,6 +81,9 @@ T.p("Ouvre l'activité « Cdiscount — régularisé à l'aveugle ». Dans « Me
     "commençant par ceux de Nadia Ferrand : sa mission, puis le message qu'elle te transfère.")
 T.tableau(['Information', 'Ce que tu relèves'], 0, [Cm(8.6), Cm(8.4)], hauteur=Cm(0.95),
           remplis=[["Par quoi Nadia te demande-t-elle de commencer ?", ''],
+                   ["Les critères de l'extraction : « Type de mouvement »", ''],
+                   ["Les critères de l'extraction : « Allée »", ''],
+                   ["Les critères de l'extraction : « Période »", ''],
                    ["Combien d'ajustements Samir a-t-il passés dans l'allée B ?", ''],
                    ["Combien de lignes doit contenir ta réponse ?", ''],
                    ["Délai pour réclamer auprès du fournisseur", ''],
@@ -89,27 +98,48 @@ T.reflechir([
 ])
 
 # ==================================================================== étape 3
-T.etape(3, "Exporter et repérer avec SI")
+T.etape(3, "Extraire, exporter, repérer avec SI")
+T.p("Nadia t'a donné, dans son message, les critères de l'extraction. Tu les as relevés à l'étape 2 : c'est à toi "
+    "de les régler.")
 T.consignes([
-    "Clique sur « Stock » (code donné par ton enseignant si l'écran est verrouillé), puis sur l'onglet « Mouvements ».",
-    "En haut de l'écran, clique sur « Exporter les ajustements du mois ». Ouvre le fichier dans ton tableur et "
-    "enregistre-le en .xlsx ou .ods.",
-    "Dans la feuille « Ajustements », écris le titre À vérifier dans la première colonne vide.",
+    "Dans le menu de gauche, partie « Outils », clique sur « Extractions ». La liste « Mouvements de stock » "
+    "s'affiche, avec ses critères au-dessus du tableau.",
+    "Au départ, les critères ne sont pas ceux de Nadia. Règle « Type de mouvement », « Allée » et « Période » "
+    "comme elle le demande. Le tableau change sous tes yeux.",
+    "Vérifie le tableau (encadré ci-dessous), puis lis le nombre de lignes, à gauche du bouton « Exporter ».",
+    "Clique sur « Exporter ». Le fichier cdiscount-mouvements-de-stock.xlsx se télécharge. Ouvre-le dans ton "
+    "tableur et enregistre-le en .xlsx ou .ods.",
+])
+T.encadre_liste('Vérifie avant d\'exporter :', [
+    "colonne « Type » : seulement des lignes du type demandé par Nadia, aucune réception ni préparation ;",
+    "colonne « Date » : aucune ligne plus ancienne que la période demandée ;",
+    "colonne « Allée » : les allées que demande Nadia, pas une de moins.",
+])
+T.encadre('Si tu as perdu ton fichier :',
+          "retourne dans « Extractions » : tes critères sont restés réglés. Exporte de nouveau. Le menu « Fichiers » "
+          "ne sert qu'à déposer.")
+T.faits([
+    "Nombre de lignes affiché dans Extractions, une fois les critères réglés",
+    "Ton fichier a-t-il autant de lignes de données ? (oui / non)",
+])
+T.consignes([
+    "Dans la feuille « Mouvements », écris le titre À vérifier dans la première colonne vide.",
     "En ligne 2, écris une formule SI : si la case « Document » de la ligne est vide, elle affiche À VÉRIFIER ; "
     "sinon, elle laisse la case vide. Recopie-la jusqu'en bas.",
 ])
 T.encadre_liste('Rappel SI (vu en ENT-2.2) :', [
     "=SI(test ; valeur si vrai ; valeur si faux) ; un texte entre guillemets ;",
     "pour tester qu'une case est vide : =SI(B2=\"\";…) (deux guillemets collés = « rien ») ;",
-    "le bouton « Rappel tableur », en haut de l'écran, redonne l'écriture des fonctions.",
+    "le bouton « Rappel tableur », en haut de l'écran, redonne l'écriture des fonctions et l'usage des guillemets.",
 ])
 T.faits([
-    "Combien d'ajustements contient l'export ?",
     "Lettre de la colonne « Document »",
     "Formule que tu as écrite en ligne 2",
     "Combien de lignes affichent À VÉRIFIER ?",
 ])
 T.reflechir([
+    "Au départ, la période était sur « 7 derniers jours ». Si tu l'avais laissée, qu'aurait-il manqué à Nadia pour "
+    "clôturer son mois ?",
     "Un ajustement sans document : pourquoi est-ce un problème pour Nadia, qui doit signer la clôture du mois ?",
 ])
 
@@ -121,10 +151,10 @@ T.consignes([
     "Sous « Motif », écris un motif par ligne : ceux qui apparaissent dans la colonne « Motif » de l'export, "
     "écrits exactement pareil.",
     "Sous « Nombre », écris une formule NB.SI qui compte ce motif dans la colonne « Motif » de la feuille "
-    "« Ajustements ». Recopie-la.",
+    "« Mouvements ». Recopie-la.",
 ])
 T.encadre('Rappel NB.SI (vu en ENT-2.2) :',
-          "=NB.SI(plage ; ce qu'on compte). Pour la plage, clique sur l'onglet « Ajustements » et sélectionne la "
+          "=NB.SI(plage ; ce qu'on compte). Pour la plage, clique sur l'onglet « Mouvements » et sélectionne la "
           "colonne entière. Pour ce qu'on compte, l'adresse de la case du motif.")
 T.tableau(['Motif', 'Nombre'], 5, [Cm(10.0), Cm(7.0)], hauteur=Cm(0.85))
 T.faits(["Formule que tu as écrite en B2"])
@@ -140,10 +170,16 @@ T.consignes([
 ])
 T.encadre_liste('Ce que tu dois voir :', [
     "« Dernier fichier déposé : » et le nom de ton fichier ;",
+    "une ligne sur ton export : « ✓ Export : vos critères donnent bien les lignes demandées. », ou « ✗ Export à "
+    "refaire (Extractions) » avec ce qui cloche (des lignes en trop, des lignes qui manquent) ;",
     "une phrase « … résultats justes sur … ».",
 ])
+T.encadre('Si l\'export est ✗ :',
+          "relis les critères de Nadia, règle-les dans « Extractions », exporte de nouveau, recopie tes formules dans "
+          "le nouveau fichier et redépose. Une erreur d'export ne te coûte que ce point-là : tes formules sont "
+          "contrôlées sur le fichier que tu as réellement exporté.")
 T.encadre('Attention, ce n\'est plus du guidage :',
-          "le site ne dit pas ce qui cloche. Si tout n'est pas juste, vérifie toi-même : la formule SI recopiée "
+          "pour tes formules, le site ne dit pas ce qui cloche. Si tout n'est pas juste, vérifie toi-même : la formule SI recopiée "
           "jusqu'en bas, les motifs écrits exactement comme dans l'export, la plage du NB.SI. Tu peux redéposer.")
 T.tableau(['Dépôt', 'Résultats justes', 'Ce que j\'ai corrigé avant de redéposer'], 0,
           [Cm(2.4), Cm(4.0), Cm(10.6)], hauteur=Cm(1.0),

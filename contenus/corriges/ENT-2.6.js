@@ -60,6 +60,10 @@ export const CORRIGE = {
           "5"
         ],
         [
+          "Quelles lignes Nadia te demande-t-elle d'exporter ? (recopie ses mots)",
+          "« les lignes de préparation du mois »"
+        ],
+        [
           "Quelles allées ?",
           "A et B"
         ],
@@ -93,15 +97,50 @@ export const CORRIGE = {
     },
     {
       "etape": 3,
-      "etapeTitre": "Exporter et nettoyer",
+      "etapeTitre": "Choisir l'extraction, exporter, nettoyer",
       "genre": "fait",
-      "texte": "Nombre de lignes de données avant nettoyage (sans les titres)",
-      "rep": "158.",
-      "note": "Confirmé : 234."
+      "texte": "Critère « Allée » que tu as choisi",
+      "rep": "Toutes.",
+      "note": "La demande porte sur les allées A et B ; la liste ne contient que ces deux allées. « A » ou « B » seule ferait manquer la moitié des lignes. Au départ, l'écran est déjà sur « Toutes »."
     },
     {
       "etape": 3,
-      "etapeTitre": "Exporter et nettoyer",
+      "etapeTitre": "Choisir l'extraction, exporter, nettoyer",
+      "genre": "fait",
+      "texte": "Critère « Période » que tu as choisi",
+      "rep": "30 derniers jours.",
+      "note": "« Du mois ». Au départ, l'écran est sur « 7 derniers jours » : il manquerait les constats depuis l'inventaire du J-14 et la ligne-piège BAT-10K. « Tout l'historique » ajoute 14 lignes d'avant le mois. Une période « Personnalisée » qui donne les mêmes lignes est jugée juste (on juge les lignes, pas le menu)."
+    },
+    {
+      "etape": 3,
+      "etapeTitre": "Choisir l'extraction, exporter, nettoyer",
+      "genre": "fait",
+      "texte": "Nombre de lignes affiché dans Extractions",
+      "rep": "Lu à l'écran par l'élève : 151 avec les bons critères (confirmé : 223).",
+      "note": "La trame ne donne jamais ce nombre. L'écran montre les lignes PROPRES ; le fichier sort brut (lignes vides et doublons en plus). Le corrigé par élève (onglet Corrigés) donne son bon export."
+    },
+    {
+      "etape": 3,
+      "etapeTitre": "Choisir l'extraction, exporter, nettoyer",
+      "genre": "reflexion",
+      "texte": "Explique tes deux choix avec les mots de la demande de Nadia. Pourquoi pas une autre valeur ?",
+      "pistes": [
+        "« Dans les allées A et B » : il faut les deux, donc « Toutes » (la liste n'a pas d'autres allées).",
+        "« Du mois » : 30 derniers jours ; 7 jours ferait manquer des constats depuis l'inventaire, tout l'historique ajouterait des lignes anciennes.",
+        "Au dépôt, le site dit seulement « ne correspond pas à la demande » : relire la demande est la seule aide (niveau 3)."
+      ]
+    },
+    {
+      "etape": 3,
+      "etapeTitre": "Choisir l'extraction, exporter, nettoyer",
+      "genre": "fait",
+      "texte": "Nombre de lignes de données avant nettoyage (sans les titres)",
+      "rep": "158 avec les bons critères.",
+      "note": "Confirmé : 234. Plus que le nombre affiché dans Extractions : les lignes vides et les doublons ne sont que dans le fichier."
+    },
+    {
+      "etape": 3,
+      "etapeTitre": "Choisir l'extraction, exporter, nettoyer",
       "genre": "fait",
       "texte": "Nombre de lignes vides supprimées",
       "rep": "4.",
@@ -109,7 +148,7 @@ export const CORRIGE = {
     },
     {
       "etape": 3,
-      "etapeTitre": "Exporter et nettoyer",
+      "etapeTitre": "Choisir l'extraction, exporter, nettoyer",
       "genre": "fait",
       "texte": "Nombre de doublons supprimés",
       "rep": "3.",
@@ -117,7 +156,7 @@ export const CORRIGE = {
     },
     {
       "etape": 3,
-      "etapeTitre": "Exporter et nettoyer",
+      "etapeTitre": "Choisir l'extraction, exporter, nettoyer",
       "genre": "fait",
       "texte": "Nombre de dates en texte corrigées",
       "rep": "5.",
@@ -125,15 +164,15 @@ export const CORRIGE = {
     },
     {
       "etape": 3,
-      "etapeTitre": "Exporter et nettoyer",
+      "etapeTitre": "Choisir l'extraction, exporter, nettoyer",
       "genre": "fait",
-      "texte": "Nombre de lignes de données après nettoyage",
-      "rep": "151.",
-      "note": "Confirmé : 223."
+      "texte": "Nombre de lignes de données après nettoyage : est-ce celui d'Extractions ?",
+      "rep": "151 avec les bons critères : oui, le même nombre que dans Extractions.",
+      "note": "Confirmé : 223. C'est le contrôle que la trame donne à l'élève à la place d'un nombre attendu."
     },
     {
       "etape": 3,
-      "etapeTitre": "Exporter et nettoyer",
+      "etapeTitre": "Choisir l'extraction, exporter, nettoyer",
       "genre": "reflexion",
       "texte": "Comment as-tu repéré la salissure la plus difficile à trouver ?",
       "pistes": [
@@ -265,7 +304,7 @@ export const CORRIGE = {
       "genre": "fait",
       "texte": "Résultats justes à ton dernier dépôt",
       "rep": "37 sur 37 si tout est juste.",
-      "note": "1 (export nettoyé) + 18 constats + 18 valeurs = 37."
+      "note": "1 (export nettoyé) + 18 constats + 18 valeurs = 37. L'export est jugé à part, au-dessus (niveau 3) : « ✓ Export : vos critères donnent bien les lignes demandées. » ou « ✗ Export : votre fichier ne correspond pas à la demande. Relisez-la, puis refaites l'export (Extractions). » Les formules sont contrôlées sur le fichier de l'élève : une erreur d'export ne se paie qu'au jalon « export », en attente tant que rien n'est déposé."
     },
     {
       "etape": 7,

@@ -39,7 +39,7 @@ export const CORRIGE = {
         "les envoyer au client"
       ],
       "bonne": 0,
-      "explication": "Exporter, c'est copier des données d'un logiciel (ici le WMS) dans un fichier qu'on ouvre ailleurs, par exemple un tableur. Les données restent dans le logiciel.",
+      "explication": "Exporter, c'est copier des données d'un logiciel (ici le WMS) dans un fichier qu'on ouvre ailleurs, par exemple un tableur. Les données restent dans le logiciel. Avant d'exporter, on choisit les lignes à sortir avec des critères (une zone, une période…) : le fichier contient ce qu'on voit à l'écran.",
       "notion": "Export"
     },
     {
@@ -69,8 +69,12 @@ export const CORRIGE = {
           "L'allée A"
         ],
         [
-          "Où trouves-tu le bouton pour exporter (quel menu) ?",
-          "Commandes (bouton « Exporter les lignes de préparation »)"
+          "Dans quel menu fais-tu l'export ?",
+          "Extractions (partie Outils du menu de gauche)"
+        ],
+        [
+          "Quelle liste exportes-tu ?",
+          "« Lignes de préparation »"
         ],
         [
           "Nom de la première colonne à ajouter",
@@ -107,42 +111,69 @@ export const CORRIGE = {
     },
     {
       "etape": 3,
-      "etapeTitre": "Exporter et ouvrir le fichier",
-      "genre": "fait",
-      "texte": "Combien de lignes de préparation contient l'export (sans la ligne des titres) ?",
-      "rep": "30.",
-      "note": "Confirmé : 45 (toute l'allée A, A-01 à A-06). L'export couvre le mois : 12 lignes d'avant le dernier inventaire, toutes sans écart."
+      "etapeTitre": "Vérifier l'extraction, exporter, ouvrir",
+      "genre": "question",
+      "texte": "Avec « Allée » sur « Toutes », le nombre de lignes augmente ou diminue ? Pourquoi ?",
+      "rep": "Il augmente : s'ajoutent les lignes de préparation des allées B et C du mois, que Nadia ne demande pas.",
+      "note": "12 lignes de plus (allées B et C, préparées dans les 20 derniers jours). Avec « Tout l'historique », 8 lignes de plus (allée A, il y a 32 à 45 jours). Valoriser l'élève qui explique par la colonne « Emplacement » ou « Date »."
     },
     {
       "etape": 3,
-      "etapeTitre": "Exporter et ouvrir le fichier",
+      "etapeTitre": "Vérifier l'extraction, exporter, ouvrir",
+      "genre": "fait",
+      "texte": "Nombre de lignes affiché dans Extractions, avec les critères de Nadia",
+      "rep": "Lu à l'écran par l'élève : 30 avec les critères réglés (confirmé : 45).",
+      "note": "La trame ne donne jamais ce nombre : il dépend du niveau (confirmé = toute l'allée A, A-01 à A-06). Le corrigé par élève (onglet Corrigés) donne son bon export. Les 30 lignes couvrent le mois, dont 12 d'avant le dernier inventaire, toutes sans écart."
+    },
+    {
+      "etape": 3,
+      "etapeTitre": "Vérifier l'extraction, exporter, ouvrir",
+      "genre": "fait",
+      "texte": "Ton fichier a-t-il le même nombre de lignes que l'écran Extractions ? (oui / non)",
+      "rep": "Oui : le fichier contient exactement ce que montrait l'écran (sans la ligne des titres).",
+      "note": "Si « non » : l'élève compte souvent la ligne des titres, ou a changé un critère entre la lecture et l'export."
+    },
+    {
+      "etape": 3,
+      "etapeTitre": "Vérifier l'extraction, exporter, ouvrir",
       "genre": "fait",
       "texte": "Lettre de la colonne « Stock logiciel »",
       "rep": "H."
     },
     {
       "etape": 3,
-      "etapeTitre": "Exporter et ouvrir le fichier",
+      "etapeTitre": "Vérifier l'extraction, exporter, ouvrir",
       "genre": "fait",
       "texte": "Lettre de la colonne « Stock trouvé »",
       "rep": "I."
     },
     {
       "etape": 3,
-      "etapeTitre": "Exporter et ouvrir le fichier",
+      "etapeTitre": "Vérifier l'extraction, exporter, ouvrir",
       "genre": "fait",
       "texte": "Lettre de la première colonne vide, à droite du tableau",
       "rep": "K."
     },
     {
       "etape": 3,
-      "etapeTitre": "Exporter et ouvrir le fichier",
+      "etapeTitre": "Vérifier l'extraction, exporter, ouvrir",
       "genre": "reflexion",
       "texte": "Choisis une ligne où le stock trouvé n'est pas égal au stock logiciel. Qu'a-t-il pu se passer dans le rayon ?",
       "pistes": [
         "Trouvé < logiciel : article cassé, perdu ou volé sans être saisi ; une erreur de préparation passée ; une réception saisie en trop.",
         "Trouvé > logiciel (câbles CAB-USBC-1M) : un retour ou une réception rangés sans être saisis, un article d'un autre emplacement.",
         "Accepter toute cause plausible reliée à la ligne choisie."
+      ]
+    },
+    {
+      "etape": 3,
+      "etapeTitre": "Vérifier l'extraction, exporter, ouvrir",
+      "genre": "reflexion",
+      "texte": "Pourquoi choisir les lignes dans le logiciel, plutôt que tout exporter et faire le tri dans le tableur ?",
+      "pistes": [
+        "Le fichier est plus petit et ne contient que ce qu'on va analyser : moins de risques de compter une ligne d'une autre allée ou d'un autre mois.",
+        "Dans un vrai WMS, l'export complet peut faire des milliers de lignes ; on extrait ce qu'on veut.",
+        "Les critères disent clairement sur quoi porte l'analyse : quelqu'un d'autre peut refaire le même export."
       ]
     },
     {
@@ -267,7 +298,7 @@ export const CORRIGE = {
           "Variable"
         ]
       ],
-      "note": "Total des contrôles : 30 écarts + 30 « Réf. en écart » + 8 lignes de synthèse = 68 (confirmé : 45 + 45 + 12 = 102). Messages fréquents : « la cellule contient un nombre tapé, pas une formule » ; fonction SI ou NB.SI absente."
+      "note": "Total des contrôles, pour le bon export : 30 écarts + 30 « Réf. en écart » + 8 lignes de synthèse = 68 (confirmé : 45 + 45 + 12 = 102) ; il change si l'export de l'élève a d'autres lignes (les formules sont contrôlées sur SON fichier). L'export est jugé à part, au-dessus : « ✓ Export : vos critères donnent bien les lignes demandées. » ou « ✗ Export à refaire (Extractions) » avec le critère à changer (« « Allée » : choisissez « A ». »). Le jalon « export » reste en attente tant que rien n'est déposé. Messages fréquents : « la cellule contient un nombre tapé, pas une formule » ; fonction SI ou NB.SI absente."
     },
     {
       "etape": 7,

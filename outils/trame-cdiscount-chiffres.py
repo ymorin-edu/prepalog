@@ -6,6 +6,11 @@ NB.SI, cadre « Ma liste de références à recompter » que l'élève garde pou
 `trame_commun.py`. Libellés relevés en jouant la séance sur la page d'essai, le 04/10/2026 : export téléchargé,
 classeur travaillé puis recalculé par LibreOffice, déposé deux fois (nombres tapés, puis formules), liste envoyée.
 
+Refaite le 04/10/2026 par Cowork après l'export filtré (brief `docs/briefs/MOTEUR-export-filtre.md`) : l'export part
+de l'écran « Extractions », niveau d'indication 1 (critères DÉJÀ RÉGLÉS : Allée A, 30 derniers jours) ; la trame
+nomme les critères, dit pourquoi et les fait vérifier ; le dépôt juge l'export à part (« quel critère changer »).
+Aucun nombre de lignes attendu : les exports diffèrent d'un élève à l'autre (niveau, ce qu'il a fait dans le logiciel).
+
 Les trois exigences :
   1. autonomie : où cliquer, ce qu'on doit voir, le geste tableur expliqué pas à pas (exemples sur d'autres
      données, jamais sur celles de l'élève) ; le dépôt dit lui-même ce qui cloche (guidage) ;
@@ -30,8 +35,9 @@ T.entete(LOGO, "ENT-2.2 — Carnet de suivi : ce que disent les chiffres", [
      "Calc)."),
     ('Ce que ton enseignant voit dans son suivi :',
      "cinq points : ton export, tes trois calculs dans le fichier que tu déposes, et la liste que tu envoies à ta "
-     "cheffe d'équipe. Quand tu déposes ton fichier, le site te dit ce qui est juste et ce qui cloche : tu peux le "
-     "corriger et le déposer de nouveau."),
+     "cheffe d'équipe. Quand tu déposes ton fichier, le site juge aussi ton export, à part : s'il n'a pas les bonnes "
+     "lignes, il te dit quel critère changer. Pour tes calculs, il te dit ce qui est juste et ce qui cloche : tu peux "
+     "corriger et déposer de nouveau."),
     ('Ce qui est vrai, ce qui est construit :',
      "Cdiscount, son entrepôt de Cestas et le travail sur tableur à partir d'un export du logiciel d'entrepôt sont "
      "réels. Les commandes, les chiffres, les préparateurs et l'équipe sont construits pour l'exercice."),
@@ -39,7 +45,7 @@ T.entete(LOGO, "ENT-2.2 — Carnet de suivi : ce que disent les chiffres", [
 ], [
     ('Pourquoi un tableur ?', 'Sur Internet'),
     ('Lire la mission de Nadia', 'Dans Prepalog'),
-    ('Exporter et ouvrir le fichier', 'Prepalog, puis tableur'),
+    ('Vérifier l\'extraction, exporter, ouvrir', 'Prepalog, puis tableur'),
     ('Calculer l\'écart', 'Dans le tableur'),
     ('Isoler les références en écart (SI)', 'Dans le tableur'),
     ('Compter les constats (NB.SI)', 'Dans le tableur'),
@@ -79,7 +85,8 @@ T.encadre('Un mot de métier :',
           "Il le note sur son bon de préparation, dans la colonne « Stock trouvé ».")
 T.tableau(['Information', 'Ce que tu relèves'], 0, [Cm(8.6), Cm(8.4)], hauteur=Cm(1.0),
           remplis=[["Quelle allée Nadia veut-elle vérifier ?", ''],
-                   ["Où trouves-tu le bouton pour exporter (quel menu) ?", ''],
+                   ["Dans quel menu fais-tu l'export ?", ''],
+                   ["Quelle liste exportes-tu ?", ''],
                    ["Nom de la première colonne à ajouter", ''],
                    ["Nom de la deuxième colonne à ajouter", ''],
                    ["Fonction à utiliser dans la deuxième colonne", ''],
@@ -90,29 +97,52 @@ T.reflechir([
 ])
 
 # ==================================================================== étape 3
-T.etape(3, "Exporter et ouvrir le fichier")
+T.etape(3, "Vérifier l'extraction, exporter, ouvrir")
+T.p("Dans un logiciel d'entrepôt, on n'exporte pas tout : on choisit d'abord les lignes à sortir, avec des "
+    "critères. Ici, les critères sont déjà réglés pour toi. Ton travail : les vérifier et comprendre pourquoi ce "
+    "sont les bons.")
 T.consignes([
-    "Dans le menu de gauche, clique sur « Commandes ». En haut de la liste, clique sur « Exporter les lignes de "
-    "préparation ».",
-    "Le fichier cdiscount-preparations-allee-A.xlsx se télécharge. Ouvre-le dans ton tableur.",
+    "Dans le menu de gauche, partie « Outils », clique sur « Extractions ». La liste « Lignes de préparation » "
+    "s'affiche : ses critères sont au-dessus du tableau.",
+    "Vérifie les deux critères : « Allée » doit être sur « A », et « Période » sur « 30 derniers jours ».",
+    "Sous les critères, à gauche du bouton « Exporter », lis le nombre de lignes : c'est ce que contiendra ton "
+    "fichier.",
+    "Clique sur « Exporter ». Le fichier cdiscount-lignes-de-preparation.xlsx se télécharge. Ouvre-le dans ton "
+    "tableur.",
     "Dès l'ouverture, enregistre-le dans ton dossier, au format .xlsx (Excel) ou .ods (LibreOffice). Jamais en "
     ".csv : un .csv perd tes formules.",
 ])
-T.encadre_liste('Ce que tu dois voir :', [
+T.encadre_liste('Pourquoi ces critères ?', [
+    "Allée « A » : Nadia veut vérifier l'allée A. Les lignes des allées B et C ne la concernent pas : elles "
+    "fausseraient tes comptes ;",
+    "Période « 30 derniers jours » : Nadia veut savoir si le stock est faux maintenant. Un constat d'il y a deux "
+    "mois ne dit plus grand-chose : le stock a pu être corrigé depuis.",
+])
+T.encadre('Pour voir, avant d\'exporter :',
+          "mets « Allée » sur « Toutes » et regarde le tableau et le nombre de lignes changer. Puis remets « A ». "
+          "Fais-le aussi avec la « Période ». Exporte seulement quand les deux critères sont revenus sur ceux de "
+          "Nadia.")
+T.questions([("Avec « Allée » sur « Toutes », le nombre de lignes augmente ou diminue ? Pourquoi ?", 2)])
+T.faits(["Nombre de lignes affiché dans Extractions, avec les critères de Nadia"])
+T.encadre_liste('Ce que tu dois voir dans ton fichier :', [
     "deux onglets en bas : « Préparations » et « Synthèse » ;",
-    "dans « Préparations », une ligne par article préparé, avec le stock du logiciel et le stock trouvé ;",
+    "dans « Préparations », une ligne par article préparé, avec le stock du logiciel et le stock trouvé ; "
+    "toutes les lignes sont de l'allée A (colonne « Emplacement » : A-…) ;",
+    "autant de lignes de données (sans la ligne des titres) que le nombre affiché dans Extractions ;",
     "dans « Synthèse », la liste des références, et une colonne « Nb constats » vide.",
 ])
 T.encadre('Si tu as perdu ton fichier :',
-          "le bouton est aussi dans le menu « Fichiers ». Un nouvel export redonne les mêmes lignes.")
+          "retourne dans « Extractions » et exporte de nouveau, avec les mêmes critères : tu obtiens les mêmes "
+          "lignes. Le menu « Fichiers » ne sert qu'à déposer.")
 T.faits([
-    "Combien de lignes de préparation contient l'export (sans la ligne des titres) ?",
+    "Ton fichier a-t-il le même nombre de lignes que l'écran Extractions ? (oui / non)",
     "Lettre de la colonne « Stock logiciel »",
     "Lettre de la colonne « Stock trouvé »",
     "Lettre de la première colonne vide, à droite du tableau",
 ])
 T.reflechir([
     "Choisis une ligne où le stock trouvé n'est pas égal au stock logiciel. Qu'a-t-il pu se passer dans le rayon ?",
+    "Pourquoi choisir les lignes dans le logiciel, plutôt que tout exporter et faire le tri dans le tableur ?",
 ])
 
 # ==================================================================== étape 4
@@ -213,9 +243,15 @@ T.consignes([
 ])
 T.encadre_liste('Ce que tu dois voir :', [
     "« Dernier fichier déposé : » et le nom de ton fichier ;",
+    "une ligne sur ton export : « ✓ Export : vos critères donnent bien les lignes demandées. », ou « ✗ Export à "
+    "refaire (Extractions) » suivi du critère à changer ;",
     "une phrase « … résultats justes sur … » ;",
     "un tableau : une ligne par calcul, ✓ s'il est juste, ✗ sinon, et la colonne « Ce qui cloche ».",
 ])
+T.encadre('Si l\'export est ✗ :',
+          "le site te dit quel critère changer. Retourne dans « Extractions », règle-le, exporte de nouveau, recopie "
+          "tes formules dans le nouveau fichier et redépose. Une erreur d'export ne te coûte que ce point-là : tes "
+          "calculs sont contrôlés sur le fichier que tu as réellement exporté.")
 T.encadre('Si un calcul est ✗ :',
           "lis « Ce qui cloche » (par exemple « la cellule contient un nombre tapé, pas une formule »), corrige ton "
           "fichier, enregistre-le et dépose-le de nouveau. Tu peux le faire autant de fois que tu veux : le "
@@ -224,7 +260,7 @@ T.tableau(['Dépôt', 'Résultats justes', 'Ce qui clochait (en quelques mots)']
           [Cm(2.4), Cm(4.0), Cm(10.6)], hauteur=Cm(1.0),
           remplis=[['1er', '', ''], ['2e', '', ''], ['3e', '', '']])
 T.encadre('Tu peux passer à l\'étape 8 quand :',
-          "le site affiche « Tout est juste. »")
+          "le site affiche « ✓ Export » et « Tout est juste. »")
 T.reflechir([
     "Si ton premier dépôt n'était pas tout juste, qu'as-tu corrigé ?",
 ])
@@ -252,6 +288,7 @@ T.reflechir([
 
 NOTIONS = [["Exporter des données d'un logiciel", "Export",
             "Exporter, c'est copier des données d'un logiciel (ici le WMS) dans un fichier qu'on ouvre ailleurs, "
-            "par exemple un tableur. Les données restent dans le logiciel."]]
+            "par exemple un tableur. Les données restent dans le logiciel. Avant d'exporter, on choisit les lignes "
+            "à sortir avec des critères (une zone, une période…) : le fichier contient ce qu'on voit à l'écran."]]
 T.finir(CODE, 'Cdiscount — ce que disent les chiffres', 'ENT-2.2-cdiscount-chiffres-trame-eleve', NOTIONS,
         os.path.basename(__file__), fichier=CODE)

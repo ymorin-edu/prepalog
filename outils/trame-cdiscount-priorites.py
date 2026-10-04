@@ -9,6 +9,12 @@ LibreOffice, dépôt « 37 résultats justes sur 37 », cinq références envoy�
 Réserve connue (à corriger dans le moteur avant d'ouvrir la séance) : le titre « Valeur de l'écart » tapé avec une
 apostrophe droite (') n'est pas reconnu par le contrôle, qui attend l'apostrophe typographique (’) : la colonne
 entière est comptée fausse, sans détail (retour d'entraînement). Voir le brief de commit des trames.
+Refaite le 04/10/2026 par Cowork après l'export filtré (brief `docs/briefs/MOTEUR-export-filtre.md`) : l'export part
+de l'écran « Extractions », niveau d'indication 3 (demande métier seule : « les lignes de préparation du mois »,
+allées A et B ; bon réglage Allée Toutes, 30 derniers jours). La trame ne donne PAS les critères ; au dépôt, le site
+dit seulement « relisez la demande ». 5 jalons (export + nettoyé + constats + valeur + priorités). Aucun nombre de
+lignes attendu : l'élève compare son fichier nettoyé au nombre affiché dans Extractions (l'écran montre les lignes
+propres, le fichier sort brut).
 Corrigé : `contenus/corriges/ENT-2.6.js` (réponses dans `corriges_cdiscount.py`).
 """
 import os
@@ -26,15 +32,16 @@ T.entete(LOGO, "ENT-2.6 — Carnet de suivi : cinq recomptages, pas un de plus",
      "pour ceux qui ont fini. Tu travailles seul, dans Prepalog et dans un tableur. Tu réutilises ce que tu as "
      "appris en ENT-2.2 et ENT-2.4, et tu découvres deux fonctions : NB.SI.ENS et RECHERCHEV."),
     ('Ce que ton enseignant voit dans son suivi :',
-     "quatre points : ton export nettoyé, tes constats comptés, tes écarts chiffrés en euros, et les cinq "
-     "références que tu choisis. Le dépôt te dit combien de résultats sont justes, pas lesquels."),
+     "cinq points : ton export (jugé à part, au moment du dépôt), ton export nettoyé, tes constats comptés, tes "
+     "écarts chiffrés en euros, et les cinq références que tu choisis. Le dépôt te dit combien de résultats sont "
+     "justes, pas lesquels ; pour l'export, il te dit seulement s'il correspond à la demande."),
     ('Ce qui est vrai, ce qui est construit :',
      "Cdiscount et le travail sur tableur à partir d'un export sont réels. Les commandes, les chiffres, les coûts "
      "et l'équipe sont construits pour l'exercice."),
 ], [
     ('Découvrir RECHERCHEV', 'Sur Internet'),
     ('Lire la mission de Nadia', 'Dans Prepalog'),
-    ('Exporter et nettoyer', 'Prepalog, puis tableur'),
+    ('Choisir l\'extraction, exporter, nettoyer', 'Prepalog, puis tableur'),
     ('Repérer les écarts depuis l\'inventaire', 'Dans le tableur'),
     ('Compter les constats (NB.SI.ENS)', 'Dans le tableur'),
     ('Chiffrer les écarts (RECHERCHEV)', 'Dans le tableur'),
@@ -66,6 +73,7 @@ T.p("Ouvre l'activité « Cdiscount — cinq recomptages, pas un de plus ». Dan
     "Nadia Ferrand : « Bonus : cinq recomptages, pas un de plus ».")
 T.tableau(['Information', 'Ce que tu relèves'], 0, [Cm(8.6), Cm(8.4)], hauteur=Cm(1.0),
           remplis=[["Combien de références l'équipe peut-elle recompter ?", ''],
+                   ["Quelles lignes Nadia te demande-t-elle d'exporter ? (recopie ses mots)", ''],
                    ["Quelles allées ?", ''],
                    ["Date du dernier inventaire", ''],
                    ["Quelle fonction pour compter les constats ?", ''],
@@ -76,11 +84,29 @@ T.reflechir([
 ])
 
 # ==================================================================== étape 3
-T.etape(3, "Exporter et nettoyer")
+T.etape(3, "Choisir l'extraction, exporter, nettoyer")
+T.p("Cette fois, personne ne règle les critères pour toi : c'est la demande de Nadia, relevée à l'étape 2, qui dit "
+    "quelles lignes sortir.")
 T.consignes([
-    "Dans « Commandes », clique sur « Exporter les lignes de préparation ». Ouvre le fichier et enregistre-le en "
-    ".xlsx ou .ods.",
-    "Regarde les trois feuilles : « Préparations », « Tarifs », « Synthèse ».",
+    "Dans le menu de gauche, partie « Outils », clique sur « Extractions ». La liste « Lignes de préparation » "
+    "s'affiche, avec ses critères au-dessus du tableau.",
+    "Pour chaque critère, choisis la valeur qui répond à la demande de Nadia. Regarde le tableau et le nombre de "
+    "lignes changer.",
+    "Avant d'exporter, vérifie dans le tableau que tu as bien toutes les lignes demandées, et rien de plus. Note "
+    "le nombre de lignes affiché.",
+    "Clique sur « Exporter ». Le fichier cdiscount-lignes-de-preparation.xlsx se télécharge. Ouvre-le et "
+    "enregistre-le en .xlsx ou .ods.",
+])
+T.faits([
+    "Critère « Allée » que tu as choisi",
+    "Critère « Période » que tu as choisi",
+    "Nombre de lignes affiché dans Extractions",
+])
+T.reflechir([
+    "Explique tes deux choix avec les mots de la demande de Nadia. Pourquoi pas une autre valeur ?",
+])
+T.consignes([
+    "Dans ton fichier, regarde les trois feuilles : « Préparations », « Tarifs », « Synthèse ».",
     "Nettoie la feuille « Préparations » : l'export sort brut du logiciel. Suis l'encadré ci-dessous.",
 ])
 T.encadre_liste('Nettoyer un export, en trois gestes :', [
@@ -94,12 +120,16 @@ T.encadre_liste('Nettoyer un export, en trois gestes :', [
 T.encadre('Pourquoi c\'est important :',
           "un doublon compte un constat deux fois ; une date en texte n'est pas reconnue comme une date, et une "
           "formule qui trie par date l'oublie. Tes calculs seraient faux sans que tu le voies.")
+T.encadre('Pour vérifier ton nettoyage :',
+          "l'écran Extractions montre les lignes propres, mais le fichier sort brut, avec des lignes vides et des "
+          "doublons en plus. Une fois nettoyé, ton fichier doit avoir exactement le nombre de lignes affiché dans "
+          "Extractions.")
 T.faits([
     "Nombre de lignes de données avant nettoyage (sans les titres)",
     "Nombre de lignes vides supprimées",
     "Nombre de doublons supprimés",
     "Nombre de dates en texte corrigées",
-    "Nombre de lignes de données après nettoyage",
+    "Nombre de lignes de données après nettoyage : est-ce celui d'Extractions ?",
 ])
 T.reflechir([
     "Comment as-tu repéré la salissure la plus difficile à trouver ?",
@@ -187,6 +217,9 @@ T.etape(7, "Déposer, choisir et écrire à Nadia")
 T.consignes([
     "Enregistre ton fichier, puis dépose-le dans « Fichiers ». Lis « … résultats justes sur … ». Si tout n'est pas "
     "juste, vérifie seul et redépose.",
+    "Lis aussi la ligne sur ton export : « ✓ Export : vos critères donnent bien les lignes demandées. », ou « ✗ "
+    "Export : votre fichier ne correspond pas à la demande ». Si c'est ✗, le site ne dit pas quel critère : relis "
+    "la demande de Nadia, refais l'extraction, nettoie, recopie tes formules et redépose.",
     "Dans ta synthèse, classe les références de la plus grande valeur à la plus petite, sans tenir compte du signe "
     "(un surplus coûte aussi).",
     "Recopie ci-dessous les références qui ont une valeur, puis entoure les cinq plus grandes.",

@@ -66,7 +66,19 @@ export const CORRIGE = {
       "reponses": [
         [
           "Par quoi Nadia te demande-t-elle de commencer ?",
-          "Par le tableur : exporter les ajustements du mois (Stock, onglet Mouvements)"
+          "Par le tableur : exporter les ajustements du mois (Extractions, liste « Mouvements de stock »)"
+        ],
+        [
+          "Les critères de l'extraction : « Type de mouvement »",
+          "Ajustement inventaire"
+        ],
+        [
+          "Les critères de l'extraction : « Allée »",
+          "Toutes"
+        ],
+        [
+          "Les critères de l'extraction : « Période »",
+          "30 derniers jours"
         ],
         [
           "Combien d'ajustements Samir a-t-il passés dans l'allée B ?",
@@ -103,30 +115,38 @@ export const CORRIGE = {
     },
     {
       "etape": 3,
-      "etapeTitre": "Exporter et repérer avec SI",
+      "etapeTitre": "Extraire, exporter, repérer avec SI",
       "genre": "fait",
-      "texte": "Combien d'ajustements contient l'export ?",
-      "rep": "20.",
-      "note": "Confirmé : 30. Tout l'entrepôt (allées A, B, C), du 10 du mois à hier."
+      "texte": "Nombre de lignes affiché dans Extractions, une fois les critères réglés",
+      "rep": "Lu à l'écran par l'élève : 20 avec les critères de Nadia (confirmé : 30).",
+      "note": "La trame ne donne jamais ce nombre. Tout l'entrepôt (allées A, B, C) sur 30 jours. Un ajustement passé par l'élève à la console s'y ajoute. Le corrigé par élève (onglet Corrigés) donne son bon export. Erreurs typiques : Type laissé sur « Tous » (réceptions et préparations en trop), Allée sur « B » (les ajustements de Samir seulement), Période laissée sur « 7 derniers jours » (ajustements manquants) ou « Tout l'historique » (7 ajustements du mois précédent en trop)."
     },
     {
       "etape": 3,
-      "etapeTitre": "Exporter et repérer avec SI",
+      "etapeTitre": "Extraire, exporter, repérer avec SI",
+      "genre": "fait",
+      "texte": "Ton fichier a-t-il autant de lignes de données ? (oui / non)",
+      "rep": "Oui : le fichier contient ce que montrait l'écran (sans la ligne des titres)."
+    },
+    {
+      "etape": 3,
+      "etapeTitre": "Extraire, exporter, repérer avec SI",
       "genre": "fait",
       "texte": "Lettre de la colonne « Document »",
-      "rep": "H."
+      "rep": "I.",
+      "note": "L'export a maintenant 10 colonnes : la colonne B « Type » s'est ajoutée."
     },
     {
       "etape": 3,
-      "etapeTitre": "Exporter et repérer avec SI",
+      "etapeTitre": "Extraire, exporter, repérer avec SI",
       "genre": "fait",
       "texte": "Formule que tu as écrite en ligne 2",
-      "rep": "=SI(H2=\"\";\"À VÉRIFIER\";\"\")",
-      "note": "Équivalents : =SI(ESTVIDE(H2);\"À VÉRIFIER\";\"\"). Le contrôle exige SI (IF) et lit « À VÉRIFIER » sans tenir compte des majuscules ni des accents."
+      "rep": "=SI(I2=\"\";\"À VÉRIFIER\";\"\")",
+      "note": "Écrite en K2. Équivalents : =SI(ESTVIDE(I2);\"À VÉRIFIER\";\"\"). Le contrôle exige SI (IF) et lit « À VÉRIFIER » sans tenir compte des majuscules ni des accents."
     },
     {
       "etape": 3,
-      "etapeTitre": "Exporter et repérer avec SI",
+      "etapeTitre": "Extraire, exporter, repérer avec SI",
       "genre": "fait",
       "texte": "Combien de lignes affichent À VÉRIFIER ?",
       "rep": "1 (AJ-26-0217, MIX-PLG, −4, Démarque inconnue, Samir Benkhelifa).",
@@ -134,7 +154,18 @@ export const CORRIGE = {
     },
     {
       "etape": 3,
-      "etapeTitre": "Exporter et repérer avec SI",
+      "etapeTitre": "Extraire, exporter, repérer avec SI",
+      "genre": "reflexion",
+      "texte": "Au départ, la période était sur « 7 derniers jours ». Si tu l'avais laissée, qu'aurait-il manqué à Nadia pour clôturer son mois ?",
+      "pistes": [
+        "Les ajustements de plus d'une semaine : Nadia clôture le MOIS, elle doit tous les voir.",
+        "Le compte par motif serait faux (trop peu d'ajustements) et la démarque inconnue paraîtrait plus faible ou plus forte qu'elle n'est.",
+        "Au dépôt, le site l'aurait dit : « Il manque n lignes demandées »."
+      ]
+    },
+    {
+      "etape": 3,
+      "etapeTitre": "Extraire, exporter, repérer avec SI",
       "genre": "reflexion",
       "texte": "Un ajustement sans document : pourquoi est-ce un problème pour Nadia, qui doit signer la clôture du mois ?",
       "pistes": [
@@ -178,8 +209,8 @@ export const CORRIGE = {
       "etapeTitre": "Compter par motif avec NB.SI",
       "genre": "fait",
       "texte": "Formule que tu as écrite en B2",
-      "rep": "=NB.SI(Ajustements!G:G;A2)",
-      "note": "Sous LibreOffice : =NB.SI($Ajustements.G:G;A2). Le contrôle exige NB.SI (COUNTIF)."
+      "rep": "=NB.SI(Mouvements!H:H;A2)",
+      "note": "Sous LibreOffice : =NB.SI($Mouvements.H:H;A2). Le contrôle exige NB.SI (COUNTIF)."
     },
     {
       "etape": 4,
@@ -210,7 +241,7 @@ export const CORRIGE = {
           "Variable"
         ]
       ],
-      "note": "Total : 20 lignes « À vérifier » + 4 motifs = 24 (confirmé : 30 + 4 = 34). Retour d'entraînement : « n résultats justes sur m. Vous pouvez corriger votre fichier et le déposer de nouveau. », sans détail."
+      "note": "Total, pour le bon export : 20 lignes « À vérifier » + 4 motifs = 24 (confirmé : 30 + 4 = 34) ; il change si l'export de l'élève a d'autres lignes (les formules sont contrôlées sur SON fichier). Retour d'entraînement : « n résultats justes sur m. Vous pouvez corriger votre fichier et le déposer de nouveau. », sans détail. L'export est jugé à part, au-dessus (niveau 2) : « ✓ Export : vos critères donnent bien les lignes demandées. » ou « ✗ Export à refaire (Extractions) » avec « n lignes en trop : leur « Type de mouvement » ne correspond pas à la demande » ou « Il manque n lignes demandées ». Le jalon « export » reste en attente tant que rien n'est déposé."
     },
     {
       "etape": 5,
@@ -219,7 +250,7 @@ export const CORRIGE = {
       "texte": "Sans le détail des erreurs, comment as-tu vérifié ton fichier ?",
       "pistes": [
         "Compter soi-même les lignes sans document et les motifs (filtre, tri) et comparer avec ses formules.",
-        "Vérifier que la somme de la synthèse égale le nombre de lignes de l'export (20).",
+        "Vérifier que la somme de la synthèse égale le nombre de lignes de son export (celui affiché dans Extractions).",
         "Relire une formule recopiée en bas du tableau."
       ]
     },

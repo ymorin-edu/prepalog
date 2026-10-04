@@ -157,7 +157,8 @@ ENT_2_2 = {
    "On garde une trace de l'analyse et on peut la transmettre."]},
  "T: Information | Ce que tu relèves": {"lignes": [
    ["Quelle allée Nadia veut-elle vérifier ?", "L'allée A"],
-   ["Où trouves-tu le bouton pour exporter (quel menu) ?", "Commandes (bouton « Exporter les lignes de préparation »)"],
+   ["Dans quel menu fais-tu l'export ?", "Extractions (partie Outils du menu de gauche)"],
+   ["Quelle liste exportes-tu ?", "« Lignes de préparation »"],
    ["Nom de la première colonne à ajouter", "Écart"],
    ["Nom de la deuxième colonne à ajouter", "Réf. en écart"],
    ["Fonction à utiliser dans la deuxième colonne", "SI"],
@@ -168,7 +169,13 @@ ENT_2_2 = {
    "Recompter prend du temps et mobilise des personnes, alors que l'entrepôt continue d'expédier.",
    "Les chiffres permettent de viser les références à risque : on recompte là où il y a un signal.",
    "Avant le Black Friday, le temps de l'équipe est précieux."]},
- "Combien de lignes de préparation contient l'export": {"rep": "30.", "note": "Confirmé : 45 (toute l'allée A, A-01 à A-06). L'export couvre le mois : 12 lignes d'avant le dernier inventaire, toutes sans écart."},
+ "Avec « Allée » sur « Toutes »": {"rep": "Il augmente : s'ajoutent les lignes de préparation des allées B et C du mois, que Nadia ne demande pas.", "note": "12 lignes de plus (allées B et C, préparées dans les 20 derniers jours). Avec « Tout l'historique », 8 lignes de plus (allée A, il y a 32 à 45 jours). Valoriser l'élève qui explique par la colonne « Emplacement » ou « Date »."},
+ "Nombre de lignes affiché dans Extractions": {"rep": "Lu à l'écran par l'élève : 30 avec les critères réglés (confirmé : 45).", "note": "La trame ne donne jamais ce nombre : il dépend du niveau (confirmé = toute l'allée A, A-01 à A-06). Le corrigé par élève (onglet Corrigés) donne son bon export. Les 30 lignes couvrent le mois, dont 12 d'avant le dernier inventaire, toutes sans écart."},
+ "Ton fichier a-t-il le même nombre de lignes": {"rep": "Oui : le fichier contient exactement ce que montrait l'écran (sans la ligne des titres).", "note": "Si « non » : l'élève compte souvent la ligne des titres, ou a changé un critère entre la lecture et l'export."},
+ "Pourquoi choisir les lignes dans le logiciel": {"pistes": [
+   "Le fichier est plus petit et ne contient que ce qu'on va analyser : moins de risques de compter une ligne d'une autre allée ou d'un autre mois.",
+   "Dans un vrai WMS, l'export complet peut faire des milliers de lignes ; on extrait ce qu'on veut.",
+   "Les critères disent clairement sur quoi porte l'analyse : quelqu'un d'autre peut refaire le même export."]},
  "Lettre de la colonne « Stock logiciel »": {"rep": "H."},
  "Lettre de la colonne « Stock trouvé »": {"rep": "I."},
  "Lettre de la première colonne vide": {"rep": "K."},
@@ -197,7 +204,7 @@ ENT_2_2 = {
    "Accepter tout choix argumenté ; à la séance suivante, toutes seront recomptées."]},
  "T: Dépôt | Résultats justes | Ce qui clochait": {"lignes": [
    ["1er", "Variable (68 sur 68 si tout est juste)", "Variable"],
- ], "note": "Total des contrôles : 30 écarts + 30 « Réf. en écart » + 8 lignes de synthèse = 68 (confirmé : 45 + 45 + 12 = 102). Messages fréquents : « la cellule contient un nombre tapé, pas une formule » ; fonction SI ou NB.SI absente."},
+ ], "note": "Total des contrôles, pour le bon export : 30 écarts + 30 « Réf. en écart » + 8 lignes de synthèse = 68 (confirmé : 45 + 45 + 12 = 102) ; il change si l'export de l'élève a d'autres lignes (les formules sont contrôlées sur SON fichier). L'export est jugé à part, au-dessus : « ✓ Export : vos critères donnent bien les lignes demandées. » ou « ✗ Export à refaire (Extractions) » avec le critère à changer (« « Allée » : choisissez « A ». »). Le jalon « export » reste en attente tant que rien n'est déposé. Messages fréquents : « la cellule contient un nombre tapé, pas une formule » ; fonction SI ou NB.SI absente."},
  "Si ton premier dépôt n'était pas tout juste": {"pistes": [
    "Réponse personnelle : remplacer des nombres tapés par une formule, recopier la formule jusqu'en bas, corriger le test du SI, la plage du NB.SI.",
    "Valoriser l'élève qui cite le message « Ce qui cloche » et le geste qui l'a corrigé."]},
@@ -302,7 +309,10 @@ ENT_2_3 = {
 # « Démarque inconnue » (Samir). Motifs : Casse 7, Erreur de prélèvement 5, Erreur de réception 3, Démarque inconnue 5
 # (confirmé 10 / 8 / 5 / 7). Enquête : GRP-2F −1 « Casse » justifié par DEM-26-0036 ; MIX-PLG : REC-26-0447,
 # BL 12, colis 4 + 4 = 8, prix d'achat 12,60 €, manque 4 × 12,60 = 50,40 € ; motif « Erreur de réception » ;
-# réclamation auprès de Gardéo dans les 8 jours. Colonnes : A Date … G Motif, H Document, I Saisi par → J « À vérifier ».
+# réclamation auprès de Gardéo dans les 8 jours. Export filtré (04/10/2026) : écran Extractions, liste « Mouvements de
+# stock », critères du message de Nadia (Ajustement inventaire / Toutes / 30 derniers jours ; départ Tous / Toutes / 7 j).
+# Colonnes : A Date, B Type, C N° mouvement, D Référence, E Désignation, F Allée, G Quantité, H Motif, I Document,
+# J Saisi par → K « À vérifier ». Feuille « Mouvements ».
 ENT_2_4 = {
  "Nom du service qui stocke et expédie": {"rep": "Octopia Fulfillment (« Fulfillment by Cdiscount »).", "note": "Source : marketplace.cdiscount.com, page « Octopia Fulfillment » (relue le 04/10/2026). Accepter « Cdiscount Fulfilment »."},
  "Dans quel entrepôt vont les petits produits": {"rep": "Cestas (Gironde).", "note": "Même page : Cestas pour les produits de moins de 30 kg et de moins de 2 m."},
@@ -312,7 +322,10 @@ ENT_2_4 = {
    "Les clients du vendeur (commandes annulées) ; Cdiscount, responsable de la marchandise qu'on lui confie.",
    "Valoriser l'élève qui voit que la marchandise n'appartient pas à Cdiscount."]},
  "T: Information | Ce que tu relèves": {"lignes": [
-   ["Par quoi Nadia te demande-t-elle de commencer ?", "Par le tableur : exporter les ajustements du mois (Stock, onglet Mouvements)"],
+   ["Par quoi Nadia te demande-t-elle de commencer ?", "Par le tableur : exporter les ajustements du mois (Extractions, liste « Mouvements de stock »)"],
+   ["Les critères de l'extraction : « Type de mouvement »", "Ajustement inventaire"],
+   ["Les critères de l'extraction : « Allée »", "Toutes"],
+   ["Les critères de l'extraction : « Période »", "30 derniers jours"],
    ["Combien d'ajustements Samir a-t-il passés dans l'allée B ?", "2 (campagne INV-2026-47)"],
    ["Combien de lignes doit contenir ta réponse ?", "8"],
    ["Délai pour réclamer auprès du fournisseur", "8 jours après la livraison"],
@@ -323,9 +336,14 @@ ENT_2_4 = {
    "Il a recompté, mais il n'a pas cherché de cause : « ça arrive » n'est pas une explication.",
    "Un ajustement efface la trace : sans enquête, on ne pourra plus réclamer à personne.",
    "Question de prévision : toute réponse argumentée est recevable."]},
- "Combien d'ajustements contient l'export": {"rep": "20.", "note": "Confirmé : 30. Tout l'entrepôt (allées A, B, C), du 10 du mois à hier."},
- "Lettre de la colonne « Document »": {"rep": "H."},
- "Formule que tu as écrite en ligne 2": {"rep": "=SI(H2=\"\";\"À VÉRIFIER\";\"\")", "note": "Équivalents : =SI(ESTVIDE(H2);\"À VÉRIFIER\";\"\"). Le contrôle exige SI (IF) et lit « À VÉRIFIER » sans tenir compte des majuscules ni des accents."},
+ "Nombre de lignes affiché dans Extractions": {"rep": "Lu à l'écran par l'élève : 20 avec les critères de Nadia (confirmé : 30).", "note": "La trame ne donne jamais ce nombre. Tout l'entrepôt (allées A, B, C) sur 30 jours. Un ajustement passé par l'élève à la console s'y ajoute. Le corrigé par élève (onglet Corrigés) donne son bon export. Erreurs typiques : Type laissé sur « Tous » (réceptions et préparations en trop), Allée sur « B » (les ajustements de Samir seulement), Période laissée sur « 7 derniers jours » (ajustements manquants) ou « Tout l'historique » (7 ajustements du mois précédent en trop)."},
+ "Ton fichier a-t-il autant de lignes de données": {"rep": "Oui : le fichier contient ce que montrait l'écran (sans la ligne des titres)."},
+ "Au départ, la période était sur « 7 derniers jours »": {"pistes": [
+   "Les ajustements de plus d'une semaine : Nadia clôture le MOIS, elle doit tous les voir.",
+   "Le compte par motif serait faux (trop peu d'ajustements) et la démarque inconnue paraîtrait plus faible ou plus forte qu'elle n'est.",
+   "Au dépôt, le site l'aurait dit : « Il manque n lignes demandées »."]},
+ "Lettre de la colonne « Document »": {"rep": "I.", "note": "L'export a maintenant 10 colonnes : la colonne B « Type » s'est ajoutée."},
+ "Formule que tu as écrite en ligne 2": {"rep": "=SI(I2=\"\";\"À VÉRIFIER\";\"\")", "note": "Écrite en K2. Équivalents : =SI(ESTVIDE(I2);\"À VÉRIFIER\";\"\"). Le contrôle exige SI (IF) et lit « À VÉRIFIER » sans tenir compte des majuscules ni des accents."},
  "Combien de lignes affichent À VÉRIFIER": {"rep": "1 (AJ-26-0217, MIX-PLG, −4, Démarque inconnue, Samir Benkhelifa).", "note": "Une seule aussi en confirmé. Si l'élève a passé lui-même un ajustement à la console, il entre dans l'export, sans document."},
  "Un ajustement sans document : pourquoi": {"pistes": [
    "Elle signe sans savoir pourquoi le stock a changé : si c'est une erreur, elle l'officialise.",
@@ -334,17 +352,17 @@ ENT_2_4 = {
  "T: Motif | Nombre": {"lignes": [
    ["Casse", "7"], ["Erreur de prélèvement", "5"], ["Erreur de réception", "3"], ["Démarque inconnue", "5"],
  ], "note": "Confirmé : 10 / 8 / 5 / 7. Les motifs doivent être écrits comme dans l'export (le contrôle ignore majuscules et accents)."},
- "Formule que tu as écrite en B2": {"rep": "=NB.SI(Ajustements!G:G;A2)", "note": "Sous LibreOffice : =NB.SI($Ajustements.G:G;A2). Le contrôle exige NB.SI (COUNTIF)."},
+ "Formule que tu as écrite en B2": {"rep": "=NB.SI(Mouvements!H:H;A2)", "note": "Sous LibreOffice : =NB.SI($Mouvements.H:H;A2). Le contrôle exige NB.SI (COUNTIF)."},
  "Regarde ta synthèse. La démarque inconnue": {"pistes": [
    "5 sur 20, un quart des ajustements : c'est beaucoup pour un motif qui veut dire « on ne sait pas ».",
    "Et l'un d'eux (les mixeurs) n'a même pas de fiche de recomptage : c'est lui qui gonfle le chiffre sans preuve.",
    "Accepter une réponse nuancée si elle s'appuie sur les nombres."]},
  "T: Dépôt | Résultats justes | Ce que j'ai corrigé": {"lignes": [
    ["1er", "Variable (24 sur 24 si tout est juste)", "Variable"],
- ], "note": "Total : 20 lignes « À vérifier » + 4 motifs = 24 (confirmé : 30 + 4 = 34). Retour d'entraînement : « n résultats justes sur m. Vous pouvez corriger votre fichier et le déposer de nouveau. », sans détail."},
+ ], "note": "Total, pour le bon export : 20 lignes « À vérifier » + 4 motifs = 24 (confirmé : 30 + 4 = 34) ; il change si l'export de l'élève a d'autres lignes (les formules sont contrôlées sur SON fichier). Retour d'entraînement : « n résultats justes sur m. Vous pouvez corriger votre fichier et le déposer de nouveau. », sans détail. L'export est jugé à part, au-dessus (niveau 2) : « ✓ Export : vos critères donnent bien les lignes demandées. » ou « ✗ Export à refaire (Extractions) » avec « n lignes en trop : leur « Type de mouvement » ne correspond pas à la demande » ou « Il manque n lignes demandées ». Le jalon « export » reste en attente tant que rien n'est déposé."},
  "Sans le détail des erreurs, comment as-tu vérifié": {"pistes": [
    "Compter soi-même les lignes sans document et les motifs (filtre, tri) et comparer avec ses formules.",
-   "Vérifier que la somme de la synthèse égale le nombre de lignes de l'export (20).",
+   "Vérifier que la somme de la synthèse égale le nombre de lignes de son export (celui affiché dans Extractions).",
    "Relire une formule recopiée en bas du tableau."]},
  "T: Référence | Quantité | Motif saisi | Document": {"lignes": [
    ["MIX-PLG", "−4", "Démarque inconnue", "aucun (ajustement orphelin)"],
@@ -395,6 +413,8 @@ ENT_2_4 = {
 # PIL-AA-8 8 / −2 / −6,20 ; CAB-USBC-1M 7 / +1 / +4,90 ; SUP-VOIT 5 / −2 / −9,60 ; CHG-20W 4 / −3 / −29,70 ;
 # CLA-SF-01 3 / −2 / −28,40 ; ECO-BT-01 2 / −3 / −59,70 ; BOU-17L 2 / −2 / −27,80 ; MIX-PLG 2 / +2 / +25,20.
 # Top 5 en valeur : ECO, CHG, CLA, BOU, MIX. Top 5 en fréquence : PIL, CAB, SUP, CHG, CLA. Piège : BAT-10K (avant J-14).
+# Export filtré (04/10/2026) : niveau 3, bon réglage Allée « Toutes », Période « 30 derniers jours » (départ : Toutes,
+# 7 derniers jours) ; 14 lignes des allées A et B d'avant le mois à écarter. L'écran montre les lignes propres (151).
 ENT_2_6 = {
  "Que fait la fonction RECHERCHEV": {"rep": "Elle cherche une valeur dans la première colonne d'un tableau et rend la valeur d'une autre colonne, sur la même ligne.", "note": "Source : support.microsoft.com, « RECHERCHEV, fonction » (relue le 04/10/2026)."},
  "Dans quelle colonne de la plage doit se trouver": {"rep": "Dans la première colonne de la plage."},
@@ -406,6 +426,7 @@ ENT_2_6 = {
    "Accepter tout exemple avec une clé (référence, numéro) et une information rendue."]},
  "T: Information | Ce que tu relèves": {"lignes": [
    ["Combien de références l'équipe peut-elle recompter ?", "5"],
+   ["Quelles lignes Nadia te demande-t-elle d'exporter ? (recopie ses mots)", "« les lignes de préparation du mois »"],
    ["Quelles allées ?", "A et B"],
    ["Date du dernier inventaire", "Il y a 14 jours (date écrite dans le message)"],
    ["Quelle fonction pour compter les constats ?", "NB.SI.ENS"],
@@ -415,11 +436,18 @@ ENT_2_6 = {
  "Nadia écrit : « Une erreur coûte plus cher": {"pistes": [
    "Un écart d'une batterie (24,90 €) coûte autant que huit lots de piles (3,10 €).",
    "Ce n'est pas le nombre d'erreurs qui compte, c'est leur valeur : on recompte d'abord ce qui coûte cher."]},
- "Nombre de lignes de données avant nettoyage": {"rep": "158.", "note": "Confirmé : 234."},
+ "Critère « Allée » que tu as choisi": {"rep": "Toutes.", "note": "La demande porte sur les allées A et B ; la liste ne contient que ces deux allées. « A » ou « B » seule ferait manquer la moitié des lignes. Au départ, l'écran est déjà sur « Toutes »."},
+ "Critère « Période » que tu as choisi": {"rep": "30 derniers jours.", "note": "« Du mois ». Au départ, l'écran est sur « 7 derniers jours » : il manquerait les constats depuis l'inventaire du J-14 et la ligne-piège BAT-10K. « Tout l'historique » ajoute 14 lignes d'avant le mois. Une période « Personnalisée » qui donne les mêmes lignes est jugée juste (on juge les lignes, pas le menu)."},
+ "Nombre de lignes affiché dans Extractions": {"rep": "Lu à l'écran par l'élève : 151 avec les bons critères (confirmé : 223).", "note": "La trame ne donne jamais ce nombre. L'écran montre les lignes PROPRES ; le fichier sort brut (lignes vides et doublons en plus). Le corrigé par élève (onglet Corrigés) donne son bon export."},
+ "Explique tes deux choix avec les mots de la demande": {"pistes": [
+   "« Dans les allées A et B » : il faut les deux, donc « Toutes » (la liste n'a pas d'autres allées).",
+   "« Du mois » : 30 derniers jours ; 7 jours ferait manquer des constats depuis l'inventaire, tout l'historique ajouterait des lignes anciennes.",
+   "Au dépôt, le site dit seulement « ne correspond pas à la demande » : relire la demande est la seule aide (niveau 3)."]},
+ "Nombre de lignes de données avant nettoyage": {"rep": "158 avec les bons critères.", "note": "Confirmé : 234. Plus que le nombre affiché dans Extractions : les lignes vides et les doublons ne sont que dans le fichier."},
  "Nombre de lignes vides supprimées": {"rep": "4.", "note": "Positions tirées pour chaque élève (graine) ; le nombre ne change pas pour un niveau donné."},
  "Nombre de doublons supprimés": {"rep": "3.", "note": "Au moins un doublon tombe sur un constat d'après l'inventaire : non supprimé, il fausse NB.SI.ENS."},
  "Nombre de dates en texte corrigées": {"rep": "5.", "note": "Au moins trois sur des constats d'après l'inventaire. Le contrôle « Export nettoyé » vérifie le nombre de lignes, les doublons ET la colonne Date entièrement en vraies dates."},
- "Nombre de lignes de données après nettoyage": {"rep": "151.", "note": "Confirmé : 223."},
+ "Nombre de lignes de données après nettoyage": {"rep": "151 avec les bons critères : oui, le même nombre que dans Extractions.", "note": "Confirmé : 223. C'est le contrôle que la trame donne à l'élève à la place d'un nombre attendu."},
  "Comment as-tu repéré la salissure": {"pistes": [
    "Souvent les dates en texte (elles ressemblent aux autres) ou les doublons (il faut trier pour les voir).",
    "Valoriser la méthode : trier, regarder l'alignement, compter avant / après."]},
@@ -441,7 +469,7 @@ ENT_2_6 = {
    ["BOU-17L", "2", "−27,80", "", "", ""],
    ["MIX-PLG", "2", "+25,20", "", "", ""],
  ], "note": "Les cinq à entourer : ECO-BT-01, CHG-20W, CLA-SF-01, BOU-17L, MIX-PLG. Mêmes valeurs et même top 5 en confirmé (plus de constats). À égalité au 5e rang, l'une ou l'autre est acceptée."},
- "Résultats justes à ton dernier dépôt": {"rep": "37 sur 37 si tout est juste.", "note": "1 (export nettoyé) + 18 constats + 18 valeurs = 37."},
+ "Résultats justes à ton dernier dépôt": {"rep": "37 sur 37 si tout est juste.", "note": "1 (export nettoyé) + 18 constats + 18 valeurs = 37. L'export est jugé à part, au-dessus (niveau 3) : « ✓ Export : vos critères donnent bien les lignes demandées. » ou « ✗ Export : votre fichier ne correspond pas à la demande. Relisez-la, puis refaites l'export (Extractions). » Les formules sont contrôlées sur le fichier de l'élève : une erreur d'export ne se paie qu'au jalon « export », en attente tant que rien n'est déposé."},
  "Compare tes cinq références aux cinq": {"pistes": [
    "Par constats : PIL, CAB, SUP, CHG, CLA ; par valeur : ECO, CHG, CLA, BOU, MIX. Trois différences.",
    "Les piles et les câbles sont souvent signalés, mais pour 1 ou 2 unités bon marché ; les écouteurs, deux fois seulement, mais 3 × 19,90 €.",
