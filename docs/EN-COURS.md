@@ -7,7 +7,6 @@ est déjà modifié ou inscrit ci-dessous, **elle s'arrête et le dit à Tristan
 
 | Chantier | Fichiers qu'il touche | Depuis |
 |---|---|---|
-| Plan d’entrepôt : préparation en écran partagé (palette à gauche, travée/fiche à droite) | core/types/entrepot.js, styles/entrepot.css, outils/test/entrepot.mjs, brief MOTEUR-entrepot-preparation-ecran-partage | 04/10 |
 
 Rappel : un seul chantier à la fois dans `core/types/tournee.js`, `core/types/grille.js`,
 `core/types/entreprise.js`, `styles/base.css` et `outils/test/boost.mjs` (voir `docs/briefs/COORDINATION-boost.md`).
