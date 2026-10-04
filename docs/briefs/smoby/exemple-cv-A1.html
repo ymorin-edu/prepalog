@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Exemple CV A1</title>
+<style>
+:root{ --fond:#f4f1ea; --papier:#fdfbf7; --filet:#e3ded3; --encre:#1a1915; --douce:#555047; --accent:#107c41; --terre:#9c620a; }
+*{box-sizing:border-box}
+body{margin:0; background:var(--fond); color:var(--encre); font-family:Inter,system-ui,"Segoe UI",sans-serif; font-size:15px; line-height:1.45}
+header{padding:14px 18px; background:var(--papier); border-bottom:1px solid var(--filet)}
+header h1{font-size:1.05rem; margin:0 0 4px}
+header p{margin:0; color:var(--douce); font-size:.88rem}
+main{display:flex; flex-wrap:wrap; gap:22px; padding:18px; align-items:flex-start}
+.cv{background:var(--papier); border:1px solid var(--filet); width:520px; max-width:100%; box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.pied{font-size:.72rem; color:var(--douce); border-top:1px solid var(--filet); padding:6px 22px; text-align:right}
+/* Mise en page 1 : bandeau à gauche */
+.cv1{display:grid; grid-template-columns:170px 1fr}
+.cv1 .gauche{background:rgba(16,124,65,.08); padding:22px 16px; font-size:.85rem}
+.cv1 .gauche h3{font-size:.78rem; text-transform:uppercase; letter-spacing:.05em; color:var(--accent); margin:16px 0 6px}
+.cv1 .gauche h3:first-child{margin-top:0}
+.cv1 .gauche p{margin:2px 0}
+.cv1 .droite{padding:22px 22px 14px}
+.cv1 .nom{font-size:1.4rem; font-weight:800; margin:0}
+.cv1 .titre{color:var(--accent); font-weight:600; margin:2px 0 14px}
+.cv1 h2{font-size:.85rem; text-transform:uppercase; letter-spacing:.05em; border-bottom:2px solid var(--accent); padding-bottom:3px; margin:14px 0 8px}
+.cv1 .pied{grid-column:1 / -1}
+/* Mise en page 2 : classique centrée */
+.cv2 .corps{padding:24px 26px 14px}
+.cv2 .nom{font-size:1.35rem; font-weight:700; text-align:center; margin:0; letter-spacing:.03em; text-transform:uppercase}
+.cv2 .coord{text-align:center; color:var(--douce); font-size:.85rem; margin:4px 0 6px}
+.cv2 .titre{text-align:center; font-weight:600; margin:0 0 14px; color:var(--terre)}
+.cv2 h2{font-size:.9rem; margin:14px 0 6px; color:var(--terre)}
+.cv2 h2::after{content:""; display:block; height:1px; background:var(--filet); margin-top:3px}
+.ligne{display:grid; grid-template-columns:96px 1fr; gap:8px; margin:5px 0; font-size:.9rem}
+.ligne .quand{color:var(--douce); font-size:.84rem}
+.ligne b{display:block}
+ul{margin:4px 0; padding-left:18px; font-size:.9rem}
+.recherche{background:rgba(156,98,10,.08); border-left:3px solid var(--terre); padding:7px 10px; font-size:.88rem; margin-top:12px}
+.note{max-width:1080px; margin:0 18px 22px; background:var(--papier); border:1px dashed var(--terre); padding:10px 14px; font-size:.88rem}
+.note h2{font-size:.95rem; margin:0 0 6px}
+.note li{margin:3px 0}
+</style>
+</head>
+<body>
+<header>
+  <h1>Exemple pour A1 — deux des cinq CV, tels que l'élève les verrait</h1>
+  <p>À gauche : le bon candidat. À droite : un piège (CACES 3 périmé). Les autres CV auront chacun leur propre mise en page.</p>
+</header>
+<main>
+
+  <!-- CV 1 : le bon candidat -->
+  <article class="cv cv1" aria-label="CV de Yanis Morel">
+    <div class="gauche">
+      <h3>Contact</h3>
+      <p>12 rue du Pré</p><p>39200 Saint-Claude</p><p>06 00 00 00 01</p><p>y.morel@exemple.fr</p>
+      <h3>Permis et CACES</h3>
+      <p><b>Permis B</b></p>
+      <p><b>CACES R489 cat. 3</b><br>obtenu en mai 2024</p>
+      <p><b>CACES R489 cat. 5</b><br>obtenu en mai 2024</p>
+      <h3>Langues</h3>
+      <p>Français</p><p>Anglais : notions</p>
+      <h3>Centres d'intérêt</h3>
+      <p>Football (club de Saint-Claude), VTT</p>
+    </div>
+    <div class="droite">
+      <p class="nom">Yanis MOREL</p>
+      <p class="titre">Cariste – magasinier</p>
+      <h2>Expérience</h2>
+      <div class="ligne"><span class="quand">2024 – 2026</span><span><b>Cariste (intérim)</b>Plateforme de distribution, Oyonnax (01)<br>Chargement et déchargement de camions, rangement en hauteur.</span></div>
+      <div class="ligne"><span class="quand">2023</span><span><b>Préparateur de commandes</b>Entrepôt de matériaux, Lons-le-Saunier (39)</span></div>
+      <h2>Formation</h2>
+      <div class="ligne"><span class="quand">2024</span><span><b>Formation CACES R489 cat. 3 et 5</b>Centre de formation, Lons-le-Saunier</span></div>
+      <div class="ligne"><span class="quand">2023</span><span><b>CAP Opérateur logistique</b>Lycée professionnel, Saint-Claude</span></div>
+      <div class="recherche"><b>Ce que je recherche :</b> un poste de cariste, CDD ou CDI. <b>Disponible dès le 30 novembre 2026.</b></div>
+    </div>
+    <div class="pied">CV fictif — document pédagogique Prepalog</div>
+  </article>
+
+  <!-- CV 2 : piège CACES 3 périmé -->
+  <article class="cv cv2" aria-label="CV de Laura Petit">
+    <div class="corps">
+      <p class="nom">Laura Petit</p>
+      <p class="coord">4 place de l'Église, 39260 Moirans-en-Montagne · 06 00 00 00 02 · laura.petit@exemple.fr</p>
+      <p class="titre">Cariste expérimentée</p>
+      <h2>Expériences professionnelles</h2>
+      <div class="ligne"><span class="quand">2021 – 2025</span><span><b>Cariste</b>Usine de plasturgie, Oyonnax (01)<br>Approvisionnement des lignes au chariot frontal.</span></div>
+      <div class="ligne"><span class="quand">2025 – 2026</span><span><b>Agente d'accueil</b>Office de tourisme, Saint-Claude (39)</span></div>
+      <h2>Diplômes et certificats</h2>
+      <div class="ligne"><span class="quand">2021</span><span><b>CACES R489 cat. 3</b>obtenu en mars 2021</span></div>
+      <div class="ligne"><span class="quand">2019</span><span><b>Bac pro Métiers de la logistique</b>Lycée professionnel, Lons-le-Saunier</span></div>
+      <h2>Compétences</h2>
+      <ul><li>Conduite de chariot frontal</li><li>Lecture d'un bon de livraison</li><li>Travail en équipe</li></ul>
+      <div class="recherche"><b>Ce que je recherche :</b> reprendre un poste de cariste, CDD accepté. <b>Disponible immédiatement.</b></div>
+    </div>
+    <div class="pied">CV fictif — document pédagogique Prepalog</div>
+  </article>
+
+</main>
+<section class="note">
+  <h2>Ce qui est voulu (pour toi, pas pour l'élève)</h2>
+  <ul>
+    <li><b>Yanis</b> coche tout : CACES 3 valide (mai 2024, valable jusqu'en mai 2029), CACES 5 en plus, disponible le 30 novembre, accepte un CDD.</li>
+    <li><b>Laura</b> a l'air parfaite (expérience, disponible tout de suite, CDD accepté) : le piège est la <b>date du CACES</b>, mars 2021, donc périmé depuis mars 2026. L'élève doit lire la date, pas seulement le mot « CACES ».</li>
+    <li>Les informations ne sont jamais au même endroit d'un CV à l'autre, comme dans la réalité : c'est ce qui rend le tableau de tri utile.</li>
+    <li>Aucune photo, noms et coordonnées inventés (numéros en 06 00 00 00 0x, adresses @exemple.fr), villes réelles du Jura et de l'Ain.</li>
+  </ul>
+</section>
+</body>
+</html>
