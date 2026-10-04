@@ -1144,10 +1144,12 @@ export function creerQuai(Q, opts = {}) {
   }
 
   // Le comptage, la décision, les motifs et « Valider » ; une fois validée, le résumé et « Modifier ».
-  // En dessous, « Palette suivante » (la palette d'après dans l'ordre, absente sur la dernière).
-  function blocValidation(p, s, dis) {
+  // En dessous, « Palette suivante » (la palette d'après dans l'ordre) ; sur la dernière, à la place, le même
+  // bouton « Contrôles terminés → réserves » qu'en haut à droite (`fin`, demande de Tristan, 04/10/2026).
+  function blocValidation(p, s, dis, fin) {
     const L = PAL[p.camion], apres = L[L.indexOf(p) + 1];
-    const suivante = apres ? `<div class="quai-ligne"><button class="btn" data-q="suivante" data-libre data-n="${R.palettes.indexOf(apres)}">Palette suivante : ${ech(apres.id)} →</button></div>` : '';
+    const suivante = apres ? `<div class="quai-ligne"><button class="btn" data-q="suivante" data-libre data-n="${R.palettes.indexOf(apres)}">Palette suivante : ${ech(apres.id)} →</button></div>`
+      : `<div class="quai-ligne" data-q-vers4-bas>${fin}</div>`;
     if (s.valide) {
       return `<div class="quai-resume" data-q-resume><div><b>✓ ${ech(p.id)} validée :</b> ${DECISIONS[s.decision]}${s.decision !== 'accepter' ? ` — ${ech(libMotifs(motifsChoisis(s)))}` : ''}</div>
           <div class="note">${ech(texteCompte(p, s))}</div>
@@ -1222,7 +1224,7 @@ export function creerQuai(Q, opts = {}) {
             <label for="qdCouches">Nombre de couches</label><input id="qdCouches" type="number" min="0" data-q-detail="dCouches" value="${ech(d.dCouches ?? '')}" ${dis}>
             <label for="qdManque">Cartons manquants dans la couche du dessus</label><input id="qdManque" type="number" min="0" data-q-detail="dManque" value="${ech(d.dManque ?? '')}" ${dis}>
           </div>` : ''}
-          ${blocValidation(p, s, dis)}
+          ${blocValidation(p, s, dis, vers4)}
         </div>
       </div>
       <div class="quai-journal" aria-live="polite">${e.journal.map((l) => `<div>${ech(l)}</div>`).join('')}</div>

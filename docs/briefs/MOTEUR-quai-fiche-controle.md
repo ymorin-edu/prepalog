@@ -155,8 +155,8 @@ décision) ; Entrée ; motifs sans `deuxMotifs` et pas d'aplat ; thermomètre ; 
   frappe se perdait (la case perd le focus, l'écran se redessinait sous la souris).
 - Sans `deuxMotifs`, recliquer un motif coché le décoche (cohérent avec la case ☑). Décocher le premier de deux motifs
   fait passer le second en premier, avec sa valeur de réserve.
-- Sur la dernière palette, rien à la place de « Palette suivante » (l'idée « Contrôles terminés → réserves » n'était pas
-  tranchée ; le bouton en haut à droite passe déjà en plein quand tout est validé).
+- Sur la dernière palette, à la place de « Palette suivante » : le bouton « Contrôles terminés → réserves et chambre
+  froide », le même qu'en haut à droite (même confirmation). Tranché par Tristan le 04/10/2026, après livraison.
 - Case « Température » de la fiche en clavier texte (le clavier « décimal » des tablettes n'a pas de signe moins).
 - Guidage (`aides.consignes`) : la consigne de l'étape ③ dit en plus « Note ce que tu constates sur ta fiche, sous la
   palette : tu le reporteras sur le bon de livraison. »

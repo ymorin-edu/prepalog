@@ -946,13 +946,14 @@ await v('ENT-4.2 : un seul quai — B ne se met à quai qu’une fois A reparti 
 
 // Réécrits le 04/10/2026 (fiche de contrôle) : « Valider » reste sur la palette, qui passe en résumé ;
 // « Modifier » la rouvre (fin du dé-validage silencieux) ; « Palette suivante » mène à la suivante.
-await v('contrôle : « Valider » passe la palette en résumé sur place ; « Modifier » la rouvre ; « Palette suivante » absent sur la dernière', async () => {
+await v('contrôle : « Valider » passe la palette en résumé sur place ; « Modifier » la rouvre ; « Palette suivante », puis « Contrôles terminés » sur la dernière', async () => {
   await monter42(pg2);
   await debut42(pg2);
   await decharger42(pg2, 0);
   await compter(pg2, 36);
   await decider(pg2, 'accepter');
   egal(await texte(pg2, `${Z} [data-q="suivante"]`), 'Palette suivante : A2 →', 'palette suivante');
+  egal(await pg2.$$eval(`${Z} [data-q-vers4-bas]`, (x) => x.length), 0, '« Contrôles terminés » en bas de la première palette');
   await clic(pg2, '[data-q="valider"]');
   const e = await etat42(pg2);
   egal([e.palettes.A1.valide, e.sel], [true, 0], 'A1 validée, on reste sur A1');
@@ -975,6 +976,12 @@ await v('contrôle : « Valider » passe la palette en résumé sur place ; « M
   egal((await etat42(pg2)).sel, 2, 'vers A3');
   egal(await pg2.$$eval(`${Z} [data-q="suivante"]`, (x) => x.length), 0, '« Palette suivante » sur la dernière palette');
   vrai(await pg2.$(`${Z} [data-q="valider"]`), 'Valider absent sur la dernière palette');
+  // À la place, le bouton des réserves (le même qu'en haut : confirmation, puis étape 4).
+  egal(await texte(pg2, `${Z} [data-q-vers4-bas]`), 'Contrôles terminés → réserves et chambre froide', 'bouton du bas sur la dernière palette');
+  await clic(pg2, '[data-q-vers4-bas] [data-q="vers4"]');
+  vrai((await texte(pg2, `${Z} [data-q-vers4-bas]`)).includes('3 palettes non validées : passer quand même ? Cliquez pour confirmer'), 'confirmation : ' + await texte(pg2, `${Z} [data-q-vers4-bas]`));
+  await clic(pg2, '[data-q-vers4-bas] [data-q="vers4"]');
+  egal((await etat42(pg2)).etape, 4, 'passé aux réserves par le bouton du bas');
 });
 
 await v('contrôle : « Valider » toujours cliquable ; ce qui manque s’écrit sous la case, le focus y va, rien n’est validé', async () => {
