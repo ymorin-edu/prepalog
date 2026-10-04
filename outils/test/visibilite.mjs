@@ -66,7 +66,7 @@ const versAccueil = async () => {
   if (await pg.$('#btnAccueil')) await pg.click('#btnAccueil');
 };
 const ouvrirRubrique = async (rub, ent) => {
-  await pg.click('#btnAccueil').catch(() => {});
+  if (await pg.$('#btnAccueil')) await pg.click('#btnAccueil');
   await pg.waitForSelector(`[data-rub="${rub}"]`);
   await pg.click(`[data-rub="${rub}"]`);
   if (ent) await pg.click(`[data-ent="${ent}"]`);   // Logisim : le logo de l'entreprise
@@ -90,7 +90,7 @@ const commeProf = async () => {
 };
 // Les tuiles Cdiscount que voit l'ÉLÈVE (aucune si l'entreprise n'a plus de séance ouverte).
 const tuilesEleve = async () => {
-  await pg.click('#btnAccueil').catch(() => {});
+  if (await pg.$('#btnAccueil')) await pg.click('#btnAccueil');
   const rubs = await pg.evaluate(() => [...document.querySelectorAll('[data-rub]')].map((b) => b.dataset.rub));
   if (!rubs.includes('logisim')) return [];
   await pg.click('[data-rub="logisim"]');

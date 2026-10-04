@@ -175,7 +175,7 @@ modifier une séance**, et la corriger si le code a changé.
 
 ## Tests
 
-- Suite Playwright en mode démonstration : `node outils/test.mjs` (~1 min 40, ~276 cas).
+- Suite Playwright en mode démonstration : `node outils/test.mjs` (~5 min, ~545 cas).
   Un bloc seul : `node outils/test.mjs boost` (plusieurs : `boost carte`). Un bloc par fichier
   dans `outils/test/` ; un fichier non inscrit dans `BLOCS` du lanceur fait refuser le départ.
 - Installation locale (pas globale) : `npm install --no-save --no-package-lock playwright

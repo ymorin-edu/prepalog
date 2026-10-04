@@ -71,7 +71,7 @@ const uidDe = (mat) => pg.evaluate((m) => {
 // Ouvre la séance témoin comme le ferait l'élève, et rend ce qu'elle a reçu.
 const ouvrirSeance = async (p = pg) => {
   await p.evaluate(() => { window.__ctxSeance = null; });
-  await p.click('#btnAccueil').catch(() => {});
+  if (await p.$('#btnAccueil')) await p.click('#btnAccueil');
   await p.click('[data-rub="quiz"]');
   await p.click(`[data-act="${SEANCE}"]`);
   await p.waitForFunction(() => window.__ctxSeance);

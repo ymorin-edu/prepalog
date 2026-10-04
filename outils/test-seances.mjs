@@ -451,7 +451,8 @@ await v('ENT-1.2 · étape 5 : la commande CMD-048213, remplie comme le corrigé
     comparer(`emplacement ${sku}`, (lc.match(/[A-Z]-\d{2}-\d/) || [])[0], loc);
   }
   await vue('commandes');
-  await page.click('[data-ouvrir-cmd], tr[data-cmd], [data-commande]').catch(() => {});
+  const ligneCmd = '[data-ouvrir-cmd], tr[data-cmd], [data-commande]';
+  if (await page.$(ligneCmd)) await page.click(ligneCmd);
   if (!(await page.$('[data-prep="seen"]'))) {
     await ouvrirMail('Nouvelle commande web');
     await page.click('[data-ouvrir-cmd]');

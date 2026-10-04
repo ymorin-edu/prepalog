@@ -15,10 +15,10 @@ export default async function bloc({ v, page, ROOT }) {
 // ---------- 26. Spartoo : l'environnement s'ouvre et la base de l'élève est semée
 await v('Spartoo : ouverture de l\'environnement', async () => {
   // On revient de l'activité précédente vers l'espace enseignant, sur le bon groupe.
-  await page.click('#btnListe').catch(() => {});
+  if (await page.$('#btnListe')) await page.click('#btnListe');
   await page.click('#btnRetour');
   await page.waitForSelector('#btnAccueil').catch(() => {});
-  await page.click('#btnAccueil').catch(() => {});
+  if (await page.$('#btnAccueil')) await page.click('#btnAccueil');
   await page.waitForSelector('#btnProfEspace', { timeout: 6000 });
   await page.click('#btnProfEspace');
   await page.waitForSelector('[data-ong="groupes"]');
