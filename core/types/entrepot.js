@@ -18,6 +18,9 @@
 //     niveau 1 = sol ; on dit « emplacement », jamais « place » ;
 //   - un emplacement occupé est refusé tout de suite, la palette reste en main ;
 //   - AUCUNE règle ni remarque « lourd en bas » dans un rack : seule compte la charge TOTALE du niveau ;
+//   - AUCUNE limite de poids au sol (niveau 1) : la palette ne charge aucune lisse (05/10/2026) ;
+//   - l'aide « déjà posé » reste en évaluation (sans rouge) ; en guidage, le calcul « déjà posé + palette
+//     en main = total » est fait pour l'élève ; en entraînement et en évaluation, la calculette du site (05/10/2026) ;
 //   - le plan OU la vue ouverte, dans le même grand espace (onglets dans la page, Échap pour revenir).
 //
 // Une déclaration (exemple complet : `contenus/entrepot-essai.js`) :
@@ -83,7 +86,8 @@
 import { compilerVisite, jalonsVisite, detailVisite, creerVisite, etatVisiteNeuf } from './entrepot-visite.js';
 const ech = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const pad2 = (n) => String(n).padStart(2, '0');
-const kg = (n) => `${Number(n).toLocaleString('fr-FR')} kg`;
+const nb = (n) => Number(n).toLocaleString('fr-FR');
+const kg = (n) => `${nb(n)} kg`;
 
 export const adresse = (cote, t, n, e) => `${cote}-T${pad2(t)}-N${n}-E${e}`;
 export function decoupe(a) {
@@ -157,9 +161,10 @@ const CRITERES = {
   },
   // La charge TOTALE du niveau (stock + palettes de l'élève + celle-ci) ne dépasse pas la plaque.
   // Aucune règle « lourd en bas » : une palette sur une lisse n'écrase rien (décision du 04/10).
+  // Au sol (niveau 1), aucune limite : la palette ne repose sur aucune lisse (décision du 05/10).
   charge: {
     nom: 'poids',
-    juger: (x) => (x.M.chargeNiveau(x.place, x.d, x.p.id) + x.p.kg > x.cote.charge[x.d.n]
+    juger: (x) => (x.d.n > 1 && x.M.chargeNiveau(x.place, x.d, x.p.id) + x.p.kg > x.cote.charge[x.d.n]
       ? 'la charge totale du niveau dépasse son maximum' : null),
   },
   // Le litige se juge à part (avant tout le reste) : une palette en litige va en zone litiges, une
@@ -186,7 +191,8 @@ function compiler(P) {
   const cotes = {};
   allees.forEach((al) => al.cotes.forEach((id, i) => {
     const c = (L.cotes || {})[id] || err(`le côté ${id} n'est pas décrit dans plan.cotes`);
-    for (let n = 1; n <= N; n++) if (!(c.charge && c.charge[n] > 0)) err(`le côté ${id} n'a pas de charge maximale au niveau ${n}`);
+    // Le sol (N1) n'a pas de plaque : sa charge peut être déclarée, elle n'est pas lue.
+    for (let n = 2; n <= N; n++) if (!(c.charge && c.charge[n] > 0)) err(`le côté ${id} n'a pas de charge maximale au niveau ${n}`);
     cotes[id] = { id, allee: al.id, gauche: i === 0, gammes: c.gammes || [], charge: c.charge, note: c.note || '' };
   }));
   const ordre = allees.flatMap((al) => al.cotes);
@@ -610,7 +616,7 @@ export function creerEntrepot(P, opts = {}) {
     const rendue = !!(api && api.copieRendue && api.copieRendue());
     return { t, g: t === 'guidage', entr: t === 'entrainement', eval: t === 'evaluation', rendue,
       fige: t === 'evaluation' && rendue,
-      bandes: t === 'guidage' && !PREP, parcours: t !== 'evaluation', regles: t !== 'evaluation', aideCharge: t !== 'evaluation' && !PREP };
+      bandes: t === 'guidage' && !PREP, parcours: t !== 'evaluation', regles: t !== 'evaluation', aideCharge: !PREP };
   }
   const produit = (p) => M.produits[p.produit];
   const nomPal = (p) => p.nom || produit(p).nom;
@@ -928,12 +934,13 @@ export function creerEntrepot(P, opts = {}) {
         s += `<text x="${x + PW / 2}" y="${yb - 100}" text-anchor="middle" class="pe-mono" font-size="13" font-weight="700" fill="var(--encre-douce)">E${k}</text></g>`;
       }
       if (n > 1) s += `<rect x="${XG}" y="${yb}" width="${M.E * PW}" height="12" fill="var(--pe-lisse)"/>`;
-      // étiquette du niveau, plaque de charge, et l'aide « déjà posé » (désactivable, coupée en évaluation)
+      // étiquette du niveau, plaque de charge, et l'aide « déjà posé » (désactivable ; en évaluation, jamais
+      // en rouge : elle dirait « faux » avant la copie). Au sol, ni plaque ni aide : pas de limite.
       const py = n === 1 ? yb + 8 : yb - 2, xr = XG + M.E * PW;
       s += `<rect x="${XG + 4}" y="${py}" width="132" height="18" rx="2" fill="var(--panneau)" stroke="var(--encre-douce)"/><text x="${XG + 70}" y="${py + 14}" text-anchor="middle" class="pe-mono" font-size="12" font-weight="800" fill="var(--encre)">${ech(d.c)}-T${pad2(d.t)}-N${n}</text>`;
-      if (!PREP) s += `<rect x="${xr - 168}" y="${py}" width="164" height="18" rx="2" fill="var(--pe-plaque)" data-pe-plaque="${n}"/><text x="${xr - 86}" y="${py + 14}" text-anchor="middle" class="pe-mono" font-size="12" font-weight="800" fill="#1a1915">max ${kg(c.charge[n])} / niveau</text>`;
-      if (R.aideCharge && e.aideCharge !== false) {
-        const trop = total > c.charge[n], xd = xr - 172 - 150;
+      if (!PREP && n > 1) s += `<rect x="${xr - 168}" y="${py}" width="164" height="18" rx="2" fill="var(--pe-plaque)" data-pe-plaque="${n}"/><text x="${xr - 86}" y="${py + 14}" text-anchor="middle" class="pe-mono" font-size="12" font-weight="800" fill="#1a1915">max ${kg(c.charge[n])} / niveau</text>`;
+      if (R.aideCharge && e.aideCharge !== false && n > 1) {
+        const trop = !R.eval && total > c.charge[n], xd = xr - 172 - 150;
         s += `<rect x="${xd}" y="${py}" width="146" height="18" rx="2" fill="var(--panneau)" stroke="${trop ? 'var(--rouge)' : 'var(--encre-douce)'}" stroke-width="${trop ? 2 : 1}"/>
           <text x="${xd + 73}" y="${py + 14}" text-anchor="middle" font-size="12" font-weight="800" fill="${trop ? 'var(--rouge)' : 'var(--encre)'}" ${TXT} data-pe-deja="${n}">déjà posé : ${kg(total)}</text>`;
       }
@@ -949,7 +956,20 @@ export function creerEntrepot(P, opts = {}) {
     const aide = R.aideCharge && !R.fige ? `<label class="pe-case-aide"><input type="checkbox" data-pe="aideCharge" data-pe-cle="b:aideCharge" ${e.aideCharge !== false ? 'checked' : ''}> charge déjà posée</label>` : '';
     return `<div class="pe-entete"><div class="pe-fil">${fil}</div>
       <div class="pe-msg-vue"><div class="pe-msg ${ui.msgType ? `pe-${ui.msgType}` : ''}" data-pe-msg>${ui.msg}</div></div>
-      ${aide}<button type="button" class="btn btn-p pe-retour" data-pe="retour" data-pe-cle="b:retour">← Retour au plan</button></div>`;
+      ${aide}<button type="button" class="btn btn-p pe-retour" data-pe="retour" data-pe-cle="b:retour">← Retour au plan</button></div>${htmlCalcul(e, R)}`;
+  }
+  // Guidage : le calcul de charge est fait pour l'élève, niveau par niveau (le sol n'a pas de limite) ;
+  // il lui reste à comparer chaque total à la plaque. Suit la case « charge déjà posée ».
+  function htmlCalcul(e, R) {
+    if (!R.g || !R.aideCharge || R.fige || e.aideCharge === false || !ui.main || !ui.trav) return '';
+    const p = M.pal[ui.main], d = decoupe(`${ui.trav}-N1-E1`);
+    const L = [];
+    for (let n = M.N; n >= 2; n--) {
+      const deja = M.chargeNiveau(e.place, { c: d.c, t: d.t, n }, p.id);
+      L.push(`<span data-pe-calc="${n}"><b>N${n}</b> : ${nb(deja)} + ${nb(p.kg)} = <b>${kg(deja + p.kg)}</b></span>`);
+    }
+    L.push('<span><b>N1</b> (sol) : pas de limite</span>');
+    return `<div class="pe-calcul" data-pe-calcul>Si vous posez <b>${ech(p.id)}</b> (${kg(p.kg)}) dans cette travée : ${L.join('<span class="pe-sep"> · </span>')}</div>`;
   }
 
   /* ================================================== PRÉPARATION : la vue */
@@ -1374,6 +1394,9 @@ export function creerEntrepot(P, opts = {}) {
     etatNeuf: () => etatNeuf(M.mode),
     jalons: (db) => jalonsEntrepot(db, P),
     note: P.note || opts.copie ? (db) => noteEntrepot(db, P, opts.copie ? 'evaluation' : undefined) : null,
+    // La calculette du site (core/calculette.js), en rangement, hors guidage : c'est l'environnement
+    // d'entreprise qui la pose quand l'écran du plan est ouvert et la retire ailleurs.
+    calculette: (api) => !PREP && !regime(api).g,
     bonnesReponses: () => (PREP ? attendusPreparation(P) : bonnesReponses(P)),
     // Ce que lisent les tests et la page d'essai : la palette en main, la travée ouverte, la fiche…
     lire: () => ({ main: ui.main, trav: ui.trav, msg: ui.msg, empl: ui.empl, reappro: ui.reappro, voir: ui.voir }),

@@ -142,6 +142,9 @@
 .pe-prep .pe-msg-vue .pe-msg{ font-size:.86rem; line-height:1.22; padding:3px 8px; max-height:3.3em; overflow:hidden }
 .pe-msg-vue .pe-msg{ width:100% }
 .pe-case-aide{ display:flex; align-items:center; gap:6px; font-size:.86rem; color:var(--encre-douce); white-space:nowrap }
+/* Guidage : le calcul de charge fait pour l'élève, sous l'en-tête de la vue de face. */
+.pe-calcul{ font-size:.9rem; color:var(--encre); padding:4px 8px; margin:0 0 6px; border:1px dashed var(--encre-douce); border-radius:4px }
+.pe-calcul .pe-sep{ color:var(--encre-douce) }
 .pe-retour{ font-size:1rem; min-height:44px; padding:8px 18px; white-space:nowrap }
 .pe-releve{ transform-origin:50% 100% }
 .pe-releve.pe-anim{ animation:pe-releve .6s cubic-bezier(.3,.7,.3,1) }

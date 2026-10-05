@@ -21,6 +21,7 @@ import { creerQuai } from './quai.js';
 import { creerPlanning } from './planning.js';
 import { creerLecteur } from './animation.js';
 import { creerEntrepot } from './entrepot.js';
+import { monterCalculette, demonterCalculette } from '../calculette.js';
 import { creerDocuments } from './documents.js';
 import { creerFiche } from './fiche.js';
 import { creerGesteTableur, retourDeTemps } from './export-tableur.js';
@@ -564,7 +565,7 @@ export function creerEntreprise(U) {
       // (le site appelle le nettoyage déclaré par `ctx.surSortie`), retour à l'accueil.
       let sortie = false;
       const sortir = (fn) => {
-        if (!sortie) { sortie = true; arreterChrono(); arreterTemps(); debrancherLexique(); deshabiller(); }
+        if (!sortie) { sortie = true; arreterChrono(); arreterTemps(); debrancherLexique(); deshabiller(); demonterCalculette(); }
         if (fn) fn();
       };
       ctx.surSortie?.(() => sortir());
@@ -2539,6 +2540,15 @@ export function creerEntreprise(U) {
         if (E.vue === 'quai' && VQUAI) VQUAI.brancher(z, etatQuai(), apiQuai());
         if (E.vue === 'planning' && VPL) VPL.brancher(z, etatPlanning(), apiPlanning());
         if (E.vue === 'entrepot' && VENT) VENT.brancher(z, etatEntrepot(), apiEntrepot());
+        // La calculette du site, sur l'écran du plan seulement (entraînement, évaluation : voir entrepot.js).
+        // Posée sur la page, hors de la zone de la séance : elle prendrait l'accent de la charte (le rouge de
+        // Smoby dirait « faux », un vert « juste »). Son bouton est donc à l'encre, quelle que soit l'entreprise.
+        if (VENT) {
+          if (E.vue === 'entrepot' && VENT.calculette && VENT.calculette(apiEntrepot())) {
+            const b = monterCalculette().querySelector('.calc-fab');
+            if (b) { b.style.background = 'var(--encre)'; b.style.color = 'var(--panneau)'; }
+          } else demonterCalculette();
+        }
         const VFv = ficheDeVue(E.vue);
         if (VFv) VFv.brancher(z, etatFiche(VFv), uiFiche(VFv), apiFiche());
         const VAv = animDeVue(E.vue);

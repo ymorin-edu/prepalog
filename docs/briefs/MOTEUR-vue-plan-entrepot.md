@@ -505,3 +505,16 @@ maquette, dans les trois temps ; les bonnes réponses et les mètres sont ceux d
   sont gardés dans l'état de l'élève (et dans `detail.entrepot` de la note en évaluation), pas encore dans le tableau
   « Repérage » de l'enseignant (ENT-5.6 les demande : à voir avec la séance) ; rendu en
   thème sombre non essayé à l'écran (Smoby impose le papier).
+
+*Aides au poids du rangement (05/10/2026, Claude Code) — après l'essai de l'évaluation par Tristan.*
+
+- **« Déjà posé : … kg »** reste en évaluation (il était coupé), sans jamais passer en rouge en évaluation.
+- **Calcul de charge selon le temps** : en guidage, sous l'en-tête de la travée, « Si vous posez P2 (270 kg) dans cette
+  travée : N3 : 1 110 + 270 = 1 380 kg · N2 : … · N1 (sol) : pas de limite » (suit la case « charge déjà posée ») ; en
+  entraînement et en évaluation, la calculette du site (`core/calculette.js`) sur l'écran du plan seulement, bouton à
+  l'encre (jamais l'accent rouge de Smoby). `creerEntrepot(…).calculette(api)` dit quand ; `entreprise.js` la pose et la retire.
+- **Au sol (N1), aucune limite** : ni plaque ni « déjà posé », critère « poids » non jugé ; `plan.cotes[x].charge[1]`
+  devient facultatif (les contenus Smoby gardent 3 000 kg, non lus).
+- Tests (bloc `entrepot`, 54 cas) : cas « aide de charge en évaluation » **réécrit** (elle est désormais présente) ;
+  3 cas ajoutés ou complétés (sol, rouge / calculette, calcul en guidage). Sept sabotages, chacun fait tomber un cas.
+- Lot 5 : l'évaluation existait déjà (lots 2 et 4) ; reste la fiche et ce compte rendu final.
