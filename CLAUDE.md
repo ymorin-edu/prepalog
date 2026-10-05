@@ -46,6 +46,9 @@ Décisions pédagogiques arrêtées :
 1. **Trois temps obligatoires, dans des séances distinctes** : guidage → entraînement (± erreur
    induite) → évaluation. Une compétence = 3 ou 4 séances. Guidage/entraînement = formatif,
    coefficient 1 ; évaluation = sommatif, coefficient 3 (modifiable par l'enseignant dans le site).
+   **Exception 2de GATL** (05/10/2026) : pas d'évaluation sans au moins un temps de travail avant ;
+   logistique à un seul temps = découverte, reprise en 1re/Tle ; OTM et AGOrA = un temps + l'évaluation
+   dans l'année de 2de (détail dans `docs/fiches/prepalog-finalite.md`, décision 3).
 2. **La note porte sur une compétence.** Export élève × compétence (scénarios associés + notes).
 3. **On part du métier réel de l'entreprise** et on y travaille les compétences qui s'y
    prêtent, jamais l'inverse. Limiter le fictif : le réel porte métier, lieux, produits,

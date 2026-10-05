@@ -1,5 +1,5 @@
 > *Copie de la fiche `claude/prepalog-finalite.md` du projet Claude PREPALOG, **mise à jour le
-> 02/10/2026 au soir**. Source de conception : le projet. Voir `docs/LISEZMOI.md`. Les renvois à
+> 02/10/2026 au soir ; exception 2de des trois temps ajoutée le 05/10/2026**. Source de conception : le projet. Voir `docs/LISEZMOI.md`. Les renvois à
 > d'autres fiches `claude/…` pointent vers des fiches restées dans le projet, sauf celles recopiées
 > dans ce dossier. Le commit et le push sont désormais faits par Claude Code.*
 
@@ -31,6 +31,16 @@ de classe et des **notes par compétence** qui comptent.
 3. **Les trois temps sont obligatoires pour tous les travaux à venir** : guidage →
    entraînement (± erreur induite) → évaluation, chacun dans une séance distincte
    (`prepalog-progression-pedagogique.md`). Ne jamais écrire une compétence en une seule séance.
+   **Exception pour la 2de GATL (Tristan, 05/10/2026)** : *« en seconde on a la partie transport
+   et GA en plus, donc on a qu'une année pour 3 fois plus de compétences »*. En 2de :
+   - **pas d'évaluation sans travail avant** : une compétence n'est évaluée que si elle a été
+     travaillée au moins une fois avant (guidée ou entraînée) ; les trois temps complets ne sont
+     pas exigés ;
+   - **Logistique** : une compétence qui n'a eu qu'un temps en 2de compte comme « découverte »
+     (formative) et revient en 1re / Tle ;
+   - **OTM et AGOrA** : pas forcément revues en 1re / Tle, donc **au moins un temps de travail
+     ET leur évaluation dans l'année de 2de**.
+   La 1re, la Terminale et le CAP gardent la règle complète.
 4. **Public : Tristan et l'équipe du lycée pour l'instant.** Une diffusion plus large est
    possible un jour : ne rien fermer qui l'empêcherait, mais ne pas concevoir pour elle.
 5. **Périmètre : tout le référentiel, par niveau et par classe**, hors compétences qui
