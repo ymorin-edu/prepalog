@@ -4,7 +4,8 @@
 // reprises TELLES QUELLES de `donnees-maquette.json` (stock de départ figé : 99 emplacements occupés,
 // aucun générateur). Il sert à la page `outils/essai-entrepot.html` et au bloc de tests
 // `outils/test/entrepot.mjs`. Le cas « préparation » (lot 4) suit la maquette (cas ③), sauf l'heure de
-// l'enlèvement : jeudi 6 h 00 (décision de Tristan, brief ENT-5.6). Le cas « comptage » viendra avec son lot.
+// l'enlèvement : jeudi 6 h 00 (décision de Tristan, brief ENT-5.6). Le cas « visite » (second chantier, 05/10)
+// est la déclaration de la séance ENT-5.3 elle-même. Le cas « comptage » viendra avec son lot.
 //
 // La plateforme (plan, produits, stock, règles) est celle de `contenus/smoby-entrepot.js`, partagée avec
 // les séances ENT-5.5 et ENT-5.6.
@@ -74,4 +75,8 @@ export const PREPARATION = {
   ],
 };
 
-export const CAS = { rangement: RANGEMENT, preparation: PREPARATION };
+// La visite de la plateforme (ENT-5.3), mode `visite` (brief MOTEUR-modes-visite).
+export { VISITE } from './smoby-ent53.js';
+import { VISITE } from './smoby-ent53.js';
+
+export const CAS = { rangement: RANGEMENT, preparation: PREPARATION, visite: VISITE };

@@ -423,7 +423,7 @@ envoi rend la copie. Note = jalons réussis / jalons × `note.sur` (20 par défa
 ## Vue « Plan d'entrepôt » (ranger des palettes, préparer une commande) — `core/types/entrepot.js`
 
 Depuis le 04/10/2026 (brief `docs/briefs/MOTEUR-vue-plan-entrepot.md`, maquette v2 de `docs/briefs/plan-entrepot/`).
-Deux modes sont écrits : **`rangement`** (lots 1 et 2) et **`preparation`** (lot 4, plus bas) ; une séance qui déclare
+Trois modes sont écrits : **`rangement`** (lots 1 et 2), **`preparation`** (lot 4) et **`visite`** (second chantier), plus bas ; une séance qui déclare
 `comptage` ne se charge pas tant que le lot 3 n'est pas fait. En rangement, l'élève prend une palette (carte du bandeau ou zone de réception du
 plan), choisit une **travée** sur le plan vu de dessus (elle s'ouvre en grand, vue de face), puis un **emplacement**.
 L'adresse s'écrit `A1-T03-N2-E1` (allée A côté 1, travée 03, niveau 2 — niveau 1 = sol —, emplacement 1). Emplacement
@@ -519,6 +519,52 @@ entrepot: {
 - Le compteur de mètres (colonne de côté) et le poids / la hauteur de la palette sont des **informations**, montrées dans
   les trois temps ; les messages de faute disent *que* (« la palette dépasse le poids maximum du transporteur (800 kg) »).
 - `attendusPreparation(ENTREPOT)` (meilleurs tours, palette juste) : côté enseignant et pour les tests (valeurs à la main).
+
+### Mode `visite` : faire visiter une plateforme (second chantier, 05/10/2026) — `core/types/entrepot-visite.js`
+
+Brief `docs/briefs/MOTEUR-modes-visite.md`, maquette de la visite v2 (`docs/briefs/smoby/visite/`). Le moteur fournit des
+**briques** ; la séance déclare ses étapes, ses photos, ses coordonnées et ses textes (rien d'une entreprise dans le moteur).
+Une **file d'étapes** en haut (l'élève revient sur une étape faite, **ne saute pas en avant** ; l'enseignant navigue
+librement), un **bandeau** (message du personnage avec l'heure de l'étape, consigne numérotée, « Suivant → » actif seulement
+quand l'étape est finie), la **colonne de côté** et la **vue en grand** (photo ou plan, à la plus grande taille qui tient
+sans défilement). Une photo du parcours, ou la travée de l'adresse, s'ouvre en onglet dans la page (« ← Retour au plan »,
+Échap). Pas d'évaluation (une visite est un guidage : `copie: true` ne se charge pas).
+
+```js
+entrepot: {
+  id: 'smoby-visite', libelle: 'Visite de la plateforme', mode: 'visite',
+  plan, gammes, produits, stock,                      // ceux du rangement : le plan se dessine, la travée de l'adresse aussi
+  zones: { reception: { note: 'vide à 8 h' }, passagePietons: { devant: 'reception' } },   // décor (facultatif)
+  personnage: { nom: 'Bruno', role: 'chef de quai', date: 'mercredi 9 décembre' },
+  images: { ciel: { src: './contenus/…jpg', repere: [1600, 1066], alt, mention: 'Photo d’un autre entrepôt : …' }, … },
+  etapes: [{ id, type, titre, heure: '8:05', texte (message du personnage), aide, consigne, … }, …],
+  fin?: { heure, texte, consigne, image?, grandTitre? },
+}
+```
+
+Le **repère** d'une image est celui des coordonnées ; il a la proportion du fichier (≤ 1 %, vérifié par un test et à
+l'affichage). Les photos sont **dans le dépôt** (`contenus/<entreprise>/…`), jamais dans `docs/`. Les types d'étape :
+
+| `type` | Ce que la séance déclare | Finie quand | Jalons |
+|---|---|---|---|
+| `accueil` | `image`, `surTitre`, `grandTitre`, `intro`, `programme: [html]`, `encadre` | d'emblée | — |
+| `photoPoints` | `image`, `effet: 'zoom'` (drone) ou `'bulle'` (étiquette), `rayon`, `points: [{ n, x, y, mot, def, zoom?: { cx, cy, s }, cx?, cy? }]`, `consigne` (`{n}`), `consigneTous`, `consigneFini`, `puis?` (des questions sur la même photo, lancées **par leur bouton** `bouton`, jamais automatiquement) | tous les points ouverts (et les questions de `puis`) | ceux de `puis` |
+| `photoQuestions` | `image`, `questions: [{ id, q? \| mot?, zones: [[x0, y0, x1, y1]…], aide?, jalon? }]`, `consigne` (`{q}`, `{mot}`), `juste`, `faux` (`{aide}`, `{mot}`), `encadre` | toutes réussies | un par question |
+| `parcours` | `etapes: [{ n, ancre, decalage?, titre, images: [clé…], dir (°, 0 = est, 90 = sud), cone, texte }]`, `debut`, `ordreMsg` (`{n}`), `ordre: false` pour libérer l'ordre | toutes ouvertes | — |
+| `delimiter` | `image`, `coins: { hg, hd, bg, bd }`, `tolerance`, `noms?`, `messages: { juste, faux ({coins}) }`, `correction: { legendes: [{ texte, x, y, rot?, plein? }] }`, `jalon?`, `puis?: { type: 'zones', x: [x0, x1], marge, cibles: [{ nom, y0, y1, x? }], pieges: [{ y0, y1, x?, message }], horsEtendue, horsCible, dejaTrouve, juste ({nom}), jalon? }` | coins justes (et toutes les cibles) | coins ; cibles |
+| `adresse` | `code`, `sens` (4), `choix` (ordre des listes), `consigne`, `rappel`, `encadre`, `consigneTravee` / `consigneEmplacement` (`{code}`), `trouve` (`{adresse} {produit} {kg}`, lus dans le stock), `jalons?: { decomposer, retrouver }` | décomposée et retrouvée | décomposer ; retrouver |
+| `fin` | `texte`, `consigne`, `image?`, `grandTitre?` | d'emblée | — |
+
+- **Ancres du parcours** (jamais de pixels) : `quai:<nom du quai>`, `zone:reception`, `zone:litiges`, `zone:bureau`,
+  `allee:principale`, `allee:<id>`. La trace se calcule (on descend à l'allée principale, on la longe, on remonte).
+- **Jalons** : chacun rend `'attente'` tant que l'élève n'a rien tenté, puis `'ok'` / `'ko'` (`etapesEntrepot` le passe au
+  suivi : le repérage en tire « du premier coup »). **Un clic faux ne fait pas perdre le jalon** : l'élève recommence.
+  L'adresse se décompose en **une seule** validation (la correction reste affichée). Un re-clic sur une cible déjà trouvée
+  n'est pas compté faux. La découverte (points, parcours) ne donne pas de jalon : l'inaction fait 0.
+- **Rien d'attendu n'est montré** avant la réponse : zones, coins, bandes, emplacement cherché (marqué en vert une fois trouvé).
+- **Couleurs** : `--pe-visite` (violet, trace, étapes, cônes) ; sur les photos, repères fixes quel que soit le thème (`--pv-*`).
+- L'état : `db.entrepots[<id>]` = `{ courante, atteinte, x: { <id d'étape>: … } }`. Exemple complet : `contenus/smoby-ent53.js`
+  (aussi le cas « visite » de la page d'essai) ; tests : bloc `entrepot` (fin du fichier).
 
 ## Pièges
 

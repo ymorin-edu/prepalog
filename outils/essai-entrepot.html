@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Essai — Plan d'entrepôt (Prepalog)</title>
 <!-- Page d'ESSAI de l'écran `core/types/entrepot.js`, dans le vrai moteur d'entreprise, sur les cas
-     « rangement » et « préparation » de la maquette v2 (`contenus/entrepot-essai.js`). Elle n'est liée nulle part et rien
+     « rangement », « préparation » (maquette v2) et « visite » (ENT-5.3) — `contenus/entrepot-essai.js`. Elle n'est liée nulle part et rien
      n'y est enregistré : la base vit en mémoire, un changement de réglage repart de zéro.
      Ouvrir avec `lancer.bat`, puis http://localhost:8000/outils/essai-entrepot.html -->
 <base href="../">
@@ -24,9 +24,9 @@
 <body>
 <form class="essai-reglages" id="reglages">
   <b>Page d'essai</b> — chaque changement repart d'une base neuve :
-  <label>Cas <select name="cas"><option value="rangement">① Rangement (ENT-5.5)</option><option value="preparation">③ Préparation (ENT-5.6)</option></select></label>
+  <label>Cas <select name="cas"><option value="rangement">① Rangement (ENT-5.5)</option><option value="preparation">③ Préparation (ENT-5.6)</option><option value="visite">Visite (ENT-5.3)</option></select></label>
   <label>Temps <select name="temps"><option value="guidage">guidage</option><option value="entrainement">entraînement</option><option value="evaluation">évaluation (copie rendue)</option></select></label>
-  <label>Voir comme <select name="role"><option value="eleve">élève</option><option value="prof">enseignant (bonnes réponses)</option></select></label>
+  <label>Voir comme <select name="role"><option value="eleve">élève</option><option value="prof">enseignant (bonnes réponses, visite : navigation libre)</option></select></label>
 </form>
 <div class="essai-mention" id="mention"></div>
 <div id="essaiNote" class="essai-note" hidden></div>
@@ -41,7 +41,9 @@ const form = document.getElementById('reglages');
 const boite = document.getElementById('essaiNote');
 function monter() {
   const f = new FormData(form);
-  const temps = f.get('temps');
+  // La visite est un guidage : pas d'évaluation (brief MOTEUR-modes-visite §6).
+  if (f.get('cas') === 'visite') form.temps.value = 'guidage';
+  const temps = f.get('cas') === 'visite' ? 'guidage' : f.get('temps');
   const hote = document.getElementById('hote');
   const neuf = hote.cloneNode(false); hote.replaceWith(neuf);
   boite.hidden = true;

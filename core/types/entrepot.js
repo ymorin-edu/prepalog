@@ -79,6 +79,8 @@
 // verifie, verifs, premierGeste }.
 
 // Pas d'import de `ui.js` : un corrigé de séance peut importer ce module hors du navigateur.
+// Le mode VISITE (second chantier, 05/10/2026) vit dans son propre fichier : voir sa tête.
+import { compilerVisite, jalonsVisite, detailVisite, creerVisite, etatVisiteNeuf } from './entrepot-visite.js';
 const ech = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const pad2 = (n) => String(n).padStart(2, '0');
 const kg = (n) => `${Number(n).toLocaleString('fr-FR')} kg`;
@@ -175,7 +177,7 @@ function compiler(P) {
   const err = (m) => { throw new Error(`entrepot ${P && P.id} : ${m}`); };
   if (!P || !P.id) err('il manque un id');
   const mode = P.mode || 'rangement';
-  if (mode !== 'rangement' && mode !== 'preparation') err(`le mode « ${mode} » n'est pas encore écrit dans le moteur (lot 3 du brief)`);
+  if (!['rangement', 'preparation', 'visite'].includes(mode)) err(`le mode « ${mode} » n'est pas encore écrit dans le moteur (lot 3 du brief)`);
   const L = P.plan || err('il manque le plan');
   const T = L.travees || 4, N = L.niveaux || 3, E = L.emplacements || 3;
   if (N > 4 || E > 4) err('4 niveaux et 4 emplacements par niveau au plus');
@@ -193,7 +195,8 @@ function compiler(P) {
   const existe = new Set(toutes);
   const hs = new Set(L.horsService || []);
   hs.forEach((a) => { if (!existe.has(a)) err(`emplacement hors service inconnu : ${a}`); });
-  const zones = L.zones || {};
+  // Le décor (zone de réception, passage piétons de la visite) peut aussi se déclarer à côté du plan.
+  const zones = Object.assign({}, L.zones || {}, P.zones || {});
   const litiges = zones.litiges || [];
   const produits = P.produits || {};
   const gammes = P.gammes || {};
@@ -235,6 +238,7 @@ function compiler(P) {
   const M = { P, mode, T, N, E, allees, cotes, ordre, toutes, existe, hs, litiges, zones, produits, stock, pal, crit,
     nomGamme, gammeDe, cotesDeGamme, estLitige, occupant, chargeNiveau };
   if (mode === 'preparation') compilerPrep(M, err);
+  else if (mode === 'visite') compilerVisite(M, err);
   else {
     M.jalons = (P.jalons || (P.palettes || []).map((p) => ({ id: `palette-${p.id}`, palette: p.id,
       lib: `${p.id} bien rangée (${p.nom || produits[p.produit].nom})` })));
@@ -481,6 +485,7 @@ function solutions(M, id) {
 
 export function etatNeuf(mode) {
   if (mode === 'preparation') return etatPrepNeuf();
+  if (mode === 'visite') return etatVisiteNeuf();
   return { place: {}, verifie: false, verifs: 0, premierGeste: null, aideCharge: true };
 }
 const etatDe = (db, P) => (db && db.entrepots && db.entrepots[P.id]) || etatNeuf(P.mode);
@@ -493,6 +498,7 @@ export function jalonsEntrepot(db, P, temps = P.temps) {
   const e = etatDe(db, P);
   let L;
   if (M.mode === 'preparation') L = jalonsPrep(M, Object.assign(etatPrepNeuf(), e), temps);
+  else if (M.mode === 'visite') L = jalonsVisite(M, e);
   else {
     const place = e.place || {};
     L = M.jalons.map((j) => ({ id: j.id, lib: j.lib, palette: j.palette,
@@ -501,13 +507,14 @@ export function jalonsEntrepot(db, P, temps = P.temps) {
   return { L, ok: L.filter((l) => l.ok).length, total: L.length };
 }
 
-// Les étapes à donner à `creerEntreprise` : un jalon = une étape du suivi.
+// Les étapes à donner à `creerEntreprise` : un jalon = une étape du suivi. La visite rend aussi 'ko' (un
+// essai faux), pour que le repérage sache ce qui n'a pas été réussi du premier coup.
 export function etapesEntrepot(P) {
   return jalonsEntrepot({}, P).L.map(({ id, lib }) => ({
     id, titre: lib,
     verifier(db) {
       const l = jalonsEntrepot(db, P).L.find((x) => x.id === id);
-      return { status: l && l.ok ? 'ok' : 'attente' };
+      return { status: l && l.etat ? l.etat : l && l.ok ? 'ok' : 'attente' };
     },
   }));
 }
@@ -518,6 +525,9 @@ export function noteEntrepot(db, P, temps = P.temps) {
   const { L, ok, total } = jalonsEntrepot(db, P, temps);
   const e = etatDe(db, P);
   const score = total ? Math.round(ok / total * N.sur * 100) / 100 : 0;
+  if (compiler(P).mode === 'visite') {
+    return { score, max: N.sur, ok, total, detail: { jalons: L.map((l) => ({ jalon: l.lib, ok: l.ok })), visite: detailVisite(compiler(P), e) } };
+  }
   if (compiler(P).mode === 'preparation') {
     const X = calculPrep(compiler(P), Object.assign(etatPrepNeuf(), e));
     return { score, max: N.sur, ok, total,
@@ -569,13 +579,24 @@ function geometrie(M) {
   const ZX = droite + 38;
   const yBas = Y0 + M.T * TH;          // bas des racks
   const yPr = yBas + 12;               // allée principale
-  return { racks, allees, droite, ZX, W: ZX + ZW + 18, H: yBas + 92, yBas, yPr,
+  // À droite des racks, de haut en bas : zone litiges, bureau ; la zone de réception descend jusqu'à
+  // l'allée principale (en visite, elle est vide : sa place ne dépend plus des palettes).
+  let y = 40;
+  const litiges = M.litiges.length ? { y, h: 30 + Math.ceil(M.litiges.length / 2) * 74 } : null;
+  if (litiges) y += litiges.h + 18;
+  const bureau = M.zones.bureau ? { y, h: 54 } : null;
+  if (bureau) y += 54 + 18;
+  const yRec = Math.max(y, yPr - 192);
+  return { racks, allees, droite, ZX, W: ZX + ZW + 18, H: yBas + 92, yBas, yPr, litiges, bureau,
+    recep: { y: yRec, h: yPr - 6 - yRec },
+    quaiX: (i) => 270 + i * 100,
     yTrav: (t) => Y0 + (M.T - t) * TH }; // T01 en bas, près de l'allée principale
 }
 
 /* ======================================================================= vue */
 export function creerEntrepot(P, opts = {}) {
   const M = compiler(P);
+  if (M.mode === 'visite' && opts.copie) throw new Error(`entrepot ${P.id} : le mode visite n'a pas d'évaluation`);
   const G = geometrie(M);
   const PREP = M.mode === 'preparation';
   // `empl` : la fiche de prélèvement ouverte ; `reappro` : le picking qu'on réapprovisionne (on attend le
@@ -739,7 +760,9 @@ export function creerEntrepot(P, opts = {}) {
 
   /* -------------------------------------------------- le plan vu de dessus */
   const TXT = 'font-family="inherit"';
-  function htmlPlan(e, R) {
+  // `o.lecture` : travées non cliquables (parcours de visite) ; `o.dessus` : ce qu'une visite pose sur le
+  // plan (trace, étapes, cônes de vue) ; `o.aria` : la description du plan.
+  function htmlPlan(e, R, o = {}) {
     const { racks, allees, ZX, W, H, yBas, yPr, yTrav } = G;
     const ink = 'var(--encre)', soft = 'var(--encre-douce)';
     const ids = M.allees.map((a) => a.id);
@@ -759,7 +782,15 @@ export function creerEntrepot(P, opts = {}) {
     s += `<rect x="16" y="${yPr}" width="${W - 32}" height="54" fill="var(--pe-sol2)"/>
       <line x1="16" y1="${yPr}" x2="${W - 16}" y2="${yPr}" stroke="var(--pe-jaune-sol)" stroke-width="4"/><line x1="16" y1="${yPr + 54}" x2="${W - 16}" y2="${yPr + 54}" stroke="var(--pe-jaune-sol)" stroke-width="4"/>
       ${PREP && R.eval ? '' : `<line x1="360" y1="${yPr + 18}" x2="240" y2="${yPr + 18}" stroke="var(--pe-jaune-sol)" stroke-width="3" marker-end="url(#peFl)"/><line x1="60" y1="${yPr + 36}" x2="180" y2="${yPr + 36}" stroke="var(--pe-jaune-sol)" stroke-width="3" marker-end="url(#peFl)"/>`}
-      <text x="380" y="${yPr + 32}" font-size="13" font-weight="700" fill="${soft}" ${TXT}>ALLÉE PRINCIPALE</text>`;
+      <text x="${o.dessus ? 470 : 380}" y="${yPr + 32}" font-size="13" font-weight="700" fill="${soft}" ${TXT}>ALLÉE PRINCIPALE</text>`;
+    // le passage piétons (décor de visite) : il traverse l'allée principale devant la zone déclarée
+    const PP = M.zones.passagePietons;
+    if (PP) {
+      const xp = PP.x || G.ZX + 108;
+      s += `<pattern id="peZebre" width="12" height="12" patternUnits="userSpaceOnUse"><rect width="6" height="12" fill="#f3f0e8"/></pattern>
+        <rect x="${xp - 20}" y="${yPr + 2}" width="40" height="50" fill="url(#peZebre)" stroke="${soft}" stroke-dasharray="3 3" data-pe-pietons/>
+        <text x="${xp + 26}" y="${yPr + 24}" font-size="10.5" font-weight="700" fill="${soft}" ${TXT}>passage</text><text x="${xp + 26}" y="${yPr + 38}" font-size="10.5" font-weight="700" fill="${soft}" ${TXT}>piétons</text>`;
+    }
     // les bandes de rotation (guidage) : A près des quais, puis B, puis C au fond
     if (R.bandes && P.plan.rotation) {
       const op = [0.2, 0.1, 0];
@@ -770,7 +801,7 @@ export function creerEntrepot(P, opts = {}) {
         s += `<text x="${xl}" y="${y + h / 2}" text-anchor="middle" font-size="11.5" font-weight="800" fill="var(--terre)" ${TXT} transform="rotate(-90 ${xl} ${y + h / 2})">${ech(k)} · ${ech(String(r.lib).toUpperCase())}</text>`;
       });
     }
-    M.allees.forEach((al) => al.cotes.forEach((c) => { s += htmlRack(e, c, racks[c]); }));
+    M.allees.forEach((al) => al.cotes.forEach((c) => { s += htmlRack(e, c, racks[c], o.lecture); }));
     // le parcours de prélèvement, à sens unique : il monte la première allée et redescend la suivante
     if (R.parcours && P.plan.parcours) {
       const yh = 29, yb = yPr + 18;
@@ -808,7 +839,12 @@ export function creerEntrepot(P, opts = {}) {
     const pals = Object.values(M.pal), rangs = Math.max(1, Math.ceil(pals.length / 2));
     const hR = rangs * 76 + 34, yR = yPr - 6 - hR;
     if (PREP) s += htmlPlanPrep(e, R);
-    else {
+    else if (M.mode === 'visite') {
+      const Z = M.zones.reception || {}, r = G.recep;
+      s += `<rect x="${ZX}" y="${r.y}" width="${ZW}" height="${r.h}" fill="none" stroke="var(--pe-jaune-sol)" stroke-width="3" stroke-dasharray="12 6"/>
+        <text x="${ZX + 10}" y="${r.y + 20}" font-size="13" font-weight="800" fill="${ink}" ${TXT}>ZONE DE RÉCEPTION</text>
+        ${Z.note ? `<text x="${ZX + 10}" y="${r.y + 38}" font-size="12" fill="${soft}" ${TXT}>${ech(Z.note)}</text>` : ''}`;
+    } else {
       s += `<rect x="${ZX}" y="${yR}" width="${ZW}" height="${hR}" fill="none" stroke="var(--pe-jaune-sol)" stroke-width="3" stroke-dasharray="12 6"/>
         <text x="${ZX + 10}" y="${yR + 20}" font-size="13" font-weight="800" fill="${ink}" ${TXT}>ZONE DE RÉCEPTION</text>`;
     }
@@ -822,15 +858,16 @@ export function creerEntrepot(P, opts = {}) {
     });
     // les quais, sur le mur du bas
     (M.zones.quais || []).forEach((q, i) => {
-      const x = 270 + i * 100;
+      const x = G.quaiX(i);
       const lib = PREP && q === M.C.quai && M.C.enlevement ? `${q} · ${M.C.enlevement}` : q;
       s += `<rect x="${x}" y="${H - 24}" width="80" height="15" fill="var(--pe-jaune-sol)"/><text x="${x + 40}" y="${H - 12}" text-anchor="middle" font-size="10.5" font-weight="800" fill="#1a1915" ${TXT}>${ech(lib)}</text>`;
     });
     s += `<g transform="translate(${W - 30},20)"><circle r="12" fill="var(--panneau)" stroke="${soft}"/><path d="M0,-8 L3.5,3.5 L0,1 L-3.5,3.5 z" fill="${ink}"/><text x="-18" y="4" text-anchor="middle" font-size="10" font-weight="800" fill="${ink}" ${TXT}>N</text></g>`;
-    return `<svg class="pe-svg-plan" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Plan de l'entrepôt, travées cliquables">${s}</svg>`;
+    if (o.dessus) s += o.dessus;
+    return `<svg class="pe-svg-plan" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="${ech(o.aria || "Plan de l'entrepôt, travées cliquables")}">${s}</svg>`;
   }
   // Un côté de rack vu de dessus, découpé entre chaque échelle ; chaque travée montre ses niveaux.
-  function htmlRack(e, c, g) {
+  function htmlRack(e, c, g, lecture) {
     const x = g.x;
     let s = `<text x="${x + RW / 2}" y="${Y0 - 10}" text-anchor="middle" font-size="20" font-weight="800" fill="var(--encre)" ${TXT}>${ech(c)}</text>`;
     for (let t = 0; t <= M.T; t++) s += `<rect x="${x - 2}" y="${Y0 + t * TH - 4}" width="${RW + 4}" height="8" fill="var(--pe-montant)"/>`;
@@ -838,7 +875,7 @@ export function creerEntrepot(P, opts = {}) {
     for (let t = 1; t <= M.T; t++) {
       const y = G.yTrav(t), id = `${c}-T${pad2(t)}`;
       const lisseX = g.regard === 'ouest' ? x + RW - 3 : x;   // les lisses sont côté allée
-      s += `<g class="pe-trav" data-pe-trav="${id}" data-pe-cle="trav:${id}" tabindex="0" role="button" aria-label="Travée ${id}, ${M.N} niveaux">
+      s += `<g ${lecture ? 'class="pe-trav-l"' : `class="pe-trav" data-pe-trav="${id}" data-pe-cle="trav:${id}" tabindex="0" role="button" aria-label="Travée ${id}, ${M.N} niveaux"`}>
         <rect class="pe-fond-trav" x="${x}" y="${y + 5}" width="${RW}" height="${TH - 10}" rx="2" fill="var(--panneau)" stroke="var(--pe-gris-trait)" stroke-width="1.2"/>
         <rect x="${lisseX}" y="${y + 5}" width="3" height="${TH - 10}" fill="var(--pe-lisse)"/>
         <text x="${x + RW / 2}" y="${y + 24}" text-anchor="middle" class="pe-mono" font-size="15" font-weight="800" fill="var(--encre)">T${pad2(t)}</text>`;
@@ -871,8 +908,11 @@ export function creerEntrepot(P, opts = {}) {
         const st = PREP && (e.vides || []).includes(a) ? null : M.stock[a];
         const lib = st ? (PREP ? `${court(st.produit)}, ${n === 1 ? `picking, ${pickDe(e, a)} cartons` : 'réserve'}` : `${court(st.produit)}, ${kg(st.kg)}`)
           : p ? `votre palette ${p}, ${kg(M.pal[p].kg)}` : hs ? 'hors service' : 'libre';
-        s += `<g class="pe-emp" data-pe-emp="${a}" data-pe-cle="emp:${a}" tabindex="0" role="button" aria-label="${a} : ${ech(lib)}">
-          <rect class="pe-cible" x="${x + 3}" y="${yb - 116}" width="${PW - 6}" height="112" rx="3" fill="${hs ? 'url(#peHachF)' : 'transparent'}" stroke="transparent"/>`;
+        // La visite met en avant l'emplacement trouvé, et lui seul, en vert : il dit « juste » (l'accent de
+        // l'entreprise peut être rouge, comme chez Smoby).
+        const marque = ui.marque === a;
+        s += `<g class="pe-emp${marque ? ' pe-marque' : ''}" data-pe-emp="${a}" data-pe-cle="emp:${a}" tabindex="0" role="button" aria-label="${a} : ${ech(lib)}">
+          <rect class="pe-cible" x="${x + 3}" y="${yb - 116}" width="${PW - 6}" height="112" rx="3" fill="${hs ? 'url(#peHachF)' : marque ? 'var(--vert-pale)' : 'transparent'}" stroke="${marque ? 'var(--vert)' : 'transparent'}" stroke-width="${marque ? 4 : 0}"/>`;
         const contenuPrep = PREP ? empPrep(e, a, n, x, yb, PW) : null;
         if (contenuPrep) s += contenuPrep;
         else if (st || p) {
@@ -1319,6 +1359,13 @@ export function creerEntrepot(P, opts = {}) {
     racine.querySelectorAll('[data-pe-etiq]').forEach((c) => c.addEventListener('change', () => {
       e.etiq = Object.assign({}, e.etiq, { [c.dataset.peEtiq]: c.checked }); ui.focus = c.dataset.peCle; fait();
     }));
+  }
+
+  // La visite prête au mode du second chantier ce que celui-ci a déjà : le plan, la vue de face, l'état
+  // d'écran partagé, Échap, le clavier. Ici seulement : toutes les fonctions ci-dessus sont prêtes.
+  if (M.mode === 'visite') {
+    return creerVisite(P, M, { G, ui, Y0, TH, htmlPlan, htmlFace,
+      echap: (racine, fn) => { echap = { racine, fn }; }, clavier: () => clavier });
   }
 
   return {

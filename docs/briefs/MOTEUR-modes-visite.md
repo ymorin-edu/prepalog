@@ -6,7 +6,7 @@
 > Lis docs/EN-COURS.md, puis le brief docs/briefs/MOTEUR-modes-visite.md et ouvre la maquette docs/briefs/smoby/visite/maquette-visite-2de-v2.html. Il faut que MOTEUR-vue-plan-entrepot.md soit livré (sinon arrête-toi et dis-le). Annonce la durée avant de commencer, découpe en lots (§9), puis enchaîne : les questions du §12 ont toutes une valeur par défaut, applique-la et note au compte rendu ce que tu as choisi.
 > ```
 
-**Statut** : à implémenter *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
+**Statut** : à valider par Tristan — livré le 05/10/2026, à essayer sur la page d'essai (`outils/essai-entrepot.html`, cas « Visite (ENT-5.3) ») *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
 **Date du brief** : 04/10/2026
 **Conversation d'origine** : Cowork (Opus) ; fiche projet `claude/prepalog-2de-s1-visite.md` (décisions 1 à 11 de Tristan,
 maquette v2 validée le 04/10 au soir).
@@ -420,9 +420,48 @@ soit montrée ; côté élève, pas de saut en avant.
 
 ## Compte rendu *(rempli par Claude Code à la livraison)*
 
-- **Fichiers créés / modifiés** :
+- **Fichiers créés / modifiés** : `core/types/entrepot-visite.js` (nouveau : les briques, la navigation, les jalons) ;
+  `core/types/entrepot.js` (mode `visite` accepté et compilé, décor de visite sur le plan — zone de réception vide avec sa
+  note, passage piétons —, plan « en lecture » et calque posé dessus, emplacement trouvé marqué dans la vue de face, jalons
+  `attente / ok / ko` passés au suivi) ; `core/types/entreprise.js` (les deux couleurs de visite dans le thème « papier ») ;
+  `styles/entrepot.css` (section « mode visite », `--pe-visite` déclarée trois fois) ; `contenus/smoby-ent53.js` (nouveau :
+  **la déclaration d'ENT-5.3**, textes au mot près du §6 de son brief) ; `contenus/entrepot-essai.js` et
+  `outils/essai-entrepot.html` (cas « Visite (ENT-5.3) », temps forcé à guidage, « enseignant » = navigation libre) ;
+  `contenus/smoby/visite/` (9 photos copiées, empreintes recalculées et identiques) et `contenus/smoby/LISEZMOI.md` ;
+  `outils/test/entrepot.mjs` (cas **ajoutés** en fin de fichier, aucun cas existant touché) ; `activites/FICHE-SEANCE.md`
+  (section « Mode visite ») ; `docs/decisions.md`.
 - **Écarts par rapport au brief** (et pourquoi) :
-- **Décisions prises en route** :
-- **Tests** : bloc / suite entière, nombre de cas, sabotages éprouvés
-- **Commits** :
-- **Reste ouvert** :
+  - Un seul gros lot au lieu de cinq commits : les briques partagent la file, le bandeau, le calage des photos et l'état ;
+    tout a été écrit, essayé à l'écran puis testé d'un tenant.
+  - Le contenu de la page d'essai **est** celui de la séance (`contenus/smoby-ent53.js`) plutôt qu'une copie dans
+    `entrepot-essai.js` : un seul endroit à corriger. La séance ENT-5.3 n'aura plus qu'à déclarer son activité.
+  - Les jalons se déclarent **dans les étapes** (`jalon` d'une question, `jalon` d'une délimitation, `jalons` de
+    l'adresse) et non dans une liste `jalons` à part : le moteur les déduit des étapes (11 pour ENT-5.3).
+  - Les consignes se déclarent par étape (`consigne`, `consigneTous`, `consigneFini`, `consigneTravee`…) avec `{n}`,
+    `{q}`, `{mot}`, `{aide}`, `{coins}`, `{nom}`, `{code}` à remplacer ; le moteur n'a que des textes génériques par défaut.
+  - Une étape `fin` affiche la photo de l'accueil, titrée « Fin de la visite », et dans la colonne la liste des étapes
+    cochées : pas d'écran de bilan (défaut du §12).
+- **Décisions prises en route** (valeurs par défaut du §12) : 1. pas d'écran de bilan ; 2. ancres `quai:QUAI 2`,
+  `zone:reception`, `zone:litiges`, `zone:bureau`, `allee:principale`, `allee:A` (+ `decalage`), calculées sur la
+  géométrie du premier chantier : elles retombent **exactement** sur les points de la maquette (la trace est vérifiée
+  par un test, écrite à la main) ; 3. photo à cliquer à la souris seulement (points, étapes, listes, boutons au clavier) ;
+  4. **deux fichiers** (`entrepot.js` faisait déjà 1 428 lignes) ; 5. couleurs des repères sur photo fixes, propres à la
+  vue (`--pv-pose` bleu, `--pv-faux` rouge, `--pv-juste` vert, `--pv-vu` violet, `--pv-actif` jaune).
+  Couleur de la visite : **violet** (`#6b3fa0` clair, `#c3a3f0` sombre ; contraste ≥ 4,5 sur le panneau), distinct du vert,
+  du bleu des clients et du rouge de Smoby. Comme l'accent de Smoby est rouge, l'emplacement trouvé, les messages « Oui »
+  et les ✓ des étapes finies sont **en vert** (trait, texte) dans la visite, pour ne pas se lire comme une faute.
+  Un point vu est un disque plein violet (pas de vert pâle). Une fois la photo zoomée, les points hors du cadre se
+  rouvrent par la liste ou « ⤢ Vue d'ensemble » (comme la maquette).
+- **Tests** : bloc `entrepot` 50 / 50 (33 cas existants + **17 cas de visite** : navigation élève et enseignant, vue du
+  ciel et bouton des questions, zoom calculé à la main, quiz, travée dans le désordre / coins du bas trop hauts / 5e clic /
+  enlever, tolérance 79 et 81, lisses et pièges, adresse inversée puis retrouvée sans surbrillance, « Trouvé » lu dans le
+  stock, parcours dans l'ordre et trace, inaction 0 / 11, parcours juste 11 / 11 et premier coup 11 / 11, sabotages,
+  rechargement et cloisonnement, images et repères, déclarations fautives, aucun défilement à 1366 × 768 et 1280 × 720).
+  Clics des photos à la vraie souris. **Éprouvés dans les deux sens** : cinq sabotages du moteur à la fois (re-clic compté
+  faux, ordre du parcours libéré, questions lancées sans le bouton, toute zone juste, repère d'une image faux) → 10 cas
+  tombent, chacun sur sa règle. Suite entière : voir le commit.
+- **Commits** : voir `git log` (« Plan d'entrepôt : mode visite… »).
+- **Reste ouvert** : (1) le **nombre de clics** pour retrouver l'emplacement est dans la base et dans le détail de la note
+  (`detail.visite`), mais pas encore dans une colonne du repérage de l'enseignant (le « du premier coup » de ce jalon le
+  dit déjà : 1 seul clic) ; (2) la séance **ENT-5.3** elle-même (fichier d'activité, `lexique` des 8 mots, une ligne dans
+  `activites/index.js`) : Sonnet suffit ; (3) le thème sombre n'a pas été regardé à l'écran (Smoby impose le papier clair).

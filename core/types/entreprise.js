@@ -434,7 +434,7 @@ export function creerEntreprise(U) {
             '--pe-montant:#2f5f9e', '--pe-lisse:#e07b1a', '--pe-plaque:#f3d04a', '--pe-sol:#e4dfd3', '--pe-sol2:#d6d0c2',
             '--pe-carton:#c89a63', '--pe-carton-trait:#8f6532', '--pe-gris:#bdb7aa', '--pe-gris-trait:#8a8478',
             '--pe-sur-gris:#1a1915', '--pe-jaune-sol:#e5b800', '--pe-litige:rgba(157,39,39,.10)',
-            '--pe-hachure:rgba(157,39,39,.35)', '--pe-bande:201,120,10',
+            '--pe-hachure:rgba(157,39,39,.35)', '--pe-bande:201,120,10', '--pe-visite:#6b3fa0', '--pe-visite-voile:rgba(107,63,160,.16)',
             'color-scheme:light');
         }
         const a = THEME.accent;

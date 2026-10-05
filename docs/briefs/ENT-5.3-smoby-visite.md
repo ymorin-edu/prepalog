@@ -6,8 +6,9 @@
 > Lis docs/briefs/COORDINATION-smoby.md puis implémente le brief docs/briefs/ENT-5.3-smoby-visite.md. Il faut que MOTEUR-vue-plan-entrepot.md et MOTEUR-modes-visite.md soient livrés, ainsi que le lot 7 de MOTEUR-2de-S1 (Smoby dans activites/index.js) : sinon arrête-toi et dis-le. Annonce la durée avant de commencer et dis-moi si un point du brief contredit le code.
 > ```
 
-**Statut** : **en attente** — dépend de `MOTEUR-vue-plan-entrepot.md` (premier chantier) **et** de
-`MOTEUR-modes-visite.md` (second chantier). Brief **à jour de la maquette v2 validée** (04/10/2026, soir).
+**Statut** : **à implémenter** — les deux chantiers moteur sont livrés (mode visite le 05/10/2026) ; **le contenu du §6 est
+déjà déclaré** dans `contenus/smoby-ent53.js` (cas « visite » de la page d'essai) : reste le fichier d'activité, le `lexique`
+des 8 mots et la ligne dans `activites/index.js`. Brief **à jour de la maquette v2 validée** (04/10/2026, soir).
 **Date du brief** : 04/10/2026 (mis à jour le 04/10 au soir : maquette v2, 8 étapes, 11 jalons)
 **Conversation d'origine** : Cowork (Opus) ; fiches projet `claude/prepalog-2de-s1-visite.md` (décisions 1 à 11) et
 `claude/prepalog-plan-entrepot-cadrage.md`.

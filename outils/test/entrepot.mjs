@@ -1,6 +1,6 @@
 // Suite de tests de Prepalog — bloc « entrepot » : la vue « Plan d'entrepôt » (core/types/entrepot.js),
 // brief `docs/briefs/MOTEUR-vue-plan-entrepot.md` §11, lots 1 et 2 (le cœur, le mode rangement) et lot 4
-// (le mode préparation, en fin de fichier).
+// (le mode préparation) ; puis le mode visite (`docs/briefs/MOTEUR-modes-visite.md` §10, en fin de fichier).
 //
 // `node outils/test.mjs entrepot` ne lance que ce bloc. Il n'a besoin d'aucun autre : il monte
 // l'environnement d'entreprise à la main, dans un contexte de navigateur à lui, sur le cas « rangement »
@@ -687,4 +687,426 @@ await v('Préparation : état retrouvé après rechargement ; rangement et prép
 });
 
 await ctxE.close();
+
+/* =========================================================== VISITE (second chantier, 05/10/2026) */
+// Brief `docs/briefs/MOTEUR-modes-visite.md` §10, contenu d'ENT-5.3 (`contenus/smoby-ent53.js`). Toutes les
+// valeurs attendues sont écrites À LA MAIN ici, reprises du brief (§6 d'ENT-5.3) : zones, coins, bandes,
+// trace du parcours, messages. Les clics sur les photos passent par la vraie souris, aux coordonnées de la
+// photo converties en position à l'écran (le calque SVG suit la photo, même agrandie).
+// Contexte à mouvement réduit : le zoom de la vue du ciel est immédiat (pas d'attente de 1,4 s).
+const ctxV = await nav.newContext({ viewport: { width: 1366, height: 768 }, reducedMotion: 'reduce' });
+const erreursV = [];
+const pv = await ctxV.newPage();
+pv.setDefaultTimeout(6000);
+pv.on('pageerror', (e) => erreursV.push('PAGEERROR: ' + e.message));
+pv.on('console', (m) => { if (m.type() === 'error' && !/\b404\b/.test(m.text())) erreursV.push('CONSOLE: ' + m.text()); });
+await pv.goto('http://127.0.0.1:8099/');
+await pv.waitForSelector('#btnProf', { timeout: 8000 });
+
+// Monte l'environnement sur la visite. `db` : base de départ (état injecté) ; `garder` : la base est rangée
+// dans le stockage du navigateur ; `id` : autre clé d'état ; `sabotage` : casse une règle de la déclaration.
+const monterV = (p, o = {}) => p.evaluate(async (o) => {
+  const { creerEntreprise } = await import('/core/types/entreprise.js');
+  const E = await import('/outils/essai-entrepot.js');
+  const C = await import('/contenus/entrepot-essai.js');
+  document.querySelector('#peTest')?.remove();
+  const hote = document.createElement('div'); hote.id = 'peTest'; document.body.appendChild(hote);
+  const P = structuredClone(C.VISITE);
+  const et = (id) => P.etapes.find((t) => t.id === id);
+  if (o.id) P.id = o.id;
+  if (o.sabotage === 'zone') et('ciel').puis.questions[0].zones = [[0, 0, 300, 200]];
+  if (o.sabotage === 'tolerance') et('travee').tolerance = 0.001;
+  if (o.sabotage === 'piege') et('travee').puis.cibles.push({ nom: 'barre du fond', y0: 145, y1: 178 });
+  if (o.sabotage === 'adresse') { const s = et('adresse').sens; [s[1], s[2]] = [s[2], s[1]]; }
+  if (o.sabotage === 'stock') P.stock = Object.assign({}, P.stock, { 'A1-T03-N2-E1': { produit: 'ETA', kg: 290 } });
+  const U = E.univers({ temps: 'guidage', entrepot: P });
+  const CLE = 'essai-visite-base';
+  const db = o.garder ? JSON.parse(localStorage.getItem(CLE) || '{}') : structuredClone(o.db || {});
+  const moteur = creerEntreprise(U);
+  window.__e = { db, moteur, P };
+  moteur.rendre(hote, {
+    meta: { id: 'essai-entrepot', code: 'ESSAI', titre: 'Essai', portee: 'eleve', immersif: true, temps: 'guidage' },
+    profil: { prenom: 'Lea', nom: 'Test', role: o.role || 'eleve', uid: 'u-test' },
+    jeu: { etat: () => db, sauver: () => { if (o.garder) localStorage.setItem(CLE, JSON.stringify(db)); } },
+    enregistrer: () => {}, quitter: () => {}, codeStock: 'ABC', lireScore: async () => null,
+  });
+  document.querySelector('#peTest .ent-nav[data-vue="entrepot"]').click();
+}, o);
+const ZV = '#peTest .pv';
+const etapeV = (p) => p.$eval(ZV, (e) => e.dataset.pvEtape);
+const texteV = async (p, sel) => ((await p.textContent(`${ZV} ${sel}`)) || '').replace(/\s+/g, ' ').trim();
+const msgV = (p) => texteV(p, '[data-pv-msg]');
+const jalonsV = (p) => p.evaluate(async () => {
+  const E = await import('/core/types/entrepot.js');
+  return E.jalonsEntrepot(window.__e.db, window.__e.P).L.map((l) => l.etat);
+});
+const premiersV = (p) => p.evaluate(() => ((window.__e.db.indicateurs || {})['essai-entrepot'] || {}).premier || {});
+const xV = (p, id) => p.evaluate((id) => JSON.parse(JSON.stringify(((window.__e.db.entrepots || {})['smoby-visite'] || { x: {} }).x[id] || {})), id);
+// La souris sur un point de la photo (repère de la photo), après avoir amené la photo à l'écran.
+async function clicPhoto(p, x, y) {
+  const [a, b] = await p.evaluate(([x, y]) => {
+    const svg = document.querySelector('#peTest .pv-calque');
+    svg.scrollIntoView({ block: 'nearest' });
+    const q = new DOMPoint(x, y).matrixTransform(svg.getScreenCTM());
+    return [q.x, q.y];
+  }, [x, y]);
+  await p.mouse.click(a, b);
+}
+// Une base où l'élève est déjà rendu à l'étape `k` (index), sans rien avoir fait ailleurs.
+const rendu = (k, x = {}) => ({ entrepots: { 'smoby-visite': { courante: k, atteinte: k, x } } });
+const ETAPES_V = ['accueil', 'ciel', 'parcours', 'mots', 'quiz', 'travee', 'adresse', 'fin'];
+const TOUT_ATTENTE = Array(11).fill('attente');
+
+// Les gestes justes, étape par étape (valeurs du brief).
+async function cielJuste(p) {
+  for (const n of [1, 2, 3, 4, 5, 6]) await p.click(`${ZV} button[data-pv-point="${n}"]`);
+  await p.click(`${ZV} [data-pv="questions"]`);
+  await clicPhoto(p, 1000, 560); await clicPhoto(p, 400, 575); await clicPhoto(p, 500, 400);
+}
+async function parcoursJuste(p) {
+  for (const n of [1, 2, 3, 4, 5, 6]) {
+    if (await p.$(`${ZV} [data-pv="retour"]`)) await p.click(`${ZV} [data-pv="retour"]`);
+    await p.click(`${ZV} g[data-pv-etape="${n}"]`);
+  }
+}
+async function quizJuste(p) {
+  await clicPhoto(p, 300, 500); await clicPhoto(p, 800, 400); await clicPhoto(p, 450, 600); await clicPhoto(p, 800, 1700);
+}
+async function coins(p, L) { for (const [x, y] of L) await clicPhoto(p, x, y); }
+const COINS_JUSTES = [[287, 45], [847, 47], [258, 1175], [876, 1173]];
+async function traveeJuste(p) {
+  await coins(p, COINS_JUSTES);
+  await p.click(`${ZV} [data-pv="verifierCoins"]`);
+  await clicPhoto(p, 570, 80); await clicPhoto(p, 570, 454); await clicPhoto(p, 570, 687);
+}
+async function choisirV(p, L) { for (let i = 0; i < 4; i++) await p.selectOption(`${ZV} [data-pv-choix="${i}"]`, L[i]); }
+const SENS_JUSTES = ['allée et côté', 'travée', 'niveau', 'emplacement'];
+async function adresseJuste(p) {
+  await choisirV(p, SENS_JUSTES);
+  await p.click(`${ZV} [data-pv="valider"]`);
+  await p.click(`${ZV} [data-pe-trav="A1-T03"]`);
+  await p.click(`${ZV} [data-pe-emp="A1-T03-N2-E1"]`);
+}
+const suivant = (p) => p.click(`${ZV} [data-pv="suivant"]`);
+
+await v('Visite : la vue s’ouvre par son entrée de menu, 8 étapes, l’accueil, aucune erreur ; tout est en attente', async () => {
+  await monterV(pv);
+  egal(await pv.textContent('#peTest .ent-nav[data-vue="entrepot"]').then((t) => t.trim()), 'Visite de la plateforme', 'entrée de menu');
+  egal(await pv.$$eval(`${ZV} .pv-file button`, (L) => L.map((b) => b.lastChild.textContent.trim())),
+    ['Accueil', 'Vue du ciel', 'Le parcours', 'Les mots du rack', 'Quiz', 'La travée', 'L’adresse', 'Fin'], 'les étapes');
+  egal(await etapeV(pv), 'accueil', 'étape de départ');
+  vrai((await texteV(pv, '.pv-perso')).startsWith('Bruno, chef de quai · mercredi 9 décembre, 8:00'), 'en-tête de Bruno');
+  egal(await jalonsV(pv), TOUT_ATTENTE, 'jalons');
+  egal(erreursV, [], 'erreurs JS');
+});
+
+await v('Visite : élève — pas de saut en avant, « Suivant » seulement sur une étape finie, retour sans rien perdre', async () => {
+  await monterV(pv);
+  egal(await pv.$$eval(`${ZV} .pv-file button`, (L) => L.map((b) => b.disabled)), [false, true, true, true, true, true, true, true], 'file à l’accueil');
+  await suivant(pv);
+  egal(await etapeV(pv), 'ciel', 'Suivant depuis l’accueil');
+  vrai(await pv.$eval(`${ZV} [data-pv="suivant"]`, (b) => b.disabled), 'Suivant actif sur une étape pas finie');
+  vrai(await pv.$eval(`${ZV} [data-pv-aller="2"]`, (b) => b.disabled), 'étape 3 cliquable depuis l’étape 2');
+  await pv.click(`${ZV} button[data-pv-point="2"]`);
+  await pv.click(`${ZV} [data-pv-aller="0"]`);
+  egal(await etapeV(pv), 'accueil', 'retour à l’accueil');
+  await pv.click(`${ZV} [data-pv-aller="1"]`);
+  egal((await xV(pv, 'ciel')).vus, [2], 'point ouvert gardé');
+  vrai(!(await pv.$(`${ZV} .pv-pas.pv-fait`)), '✓ sur une étape pas finie');
+  await cielJuste(pv);
+  await suivant(pv);
+  egal(await pv.$$eval(`${ZV} .pv-pas.pv-fait`, (L) => L.map((b) => b.dataset.pvAller)), ['1'], '✓ seulement sur la vue du ciel finie');
+});
+
+await v('Visite : enseignant — navigation libre dans les étapes', async () => {
+  await monterV(pv, { role: 'prof' });
+  vrai(await pv.$$eval(`${ZV} .pv-file button`, (L) => L.every((b) => !b.disabled)), 'une étape fermée à l’enseignant');
+  await pv.click(`${ZV} [data-pv-aller="6"]`);
+  egal(await etapeV(pv), 'adresse', 'saut à l’adresse');
+});
+
+await v('Visite : vue du ciel — les 6 points ne lancent pas les questions ; le bouton les lance ; clic à côté puis juste', async () => {
+  await monterV(pv, { db: rendu(1) });
+  // sur la photo, puis par la liste (une fois la photo zoomée, les autres points peuvent être hors du cadre)
+  await pv.click(`${ZV} g[data-pv-point="1"]`);
+  egal(await pv.$eval(`${ZV} [data-pv-drone]`, (d) => d.style.transform), 'translate(-60.363%, 0%) scale(1.62)', 'zoom sur le point 1 (800 − 1090 × 1,62 = −965,8 sur 1600 ; en haut, bordé à 0)');
+  await pv.click(`${ZV} [data-pv="vueEnsemble"]`);
+  egal(await pv.$eval(`${ZV} [data-pv-drone]`, (d) => d.style.transform), 'none', 'vue d’ensemble');
+  for (const n of [2, 3, 4, 5, 6]) await pv.click(`${ZV} button[data-pv-point="${n}"]`);
+  vrai(!(await pv.$(`${ZV} .pv-vise`)), 'photo en mode question avant le bouton');
+  vrai(!(await pv.$(`${ZV} [data-pv-q]`)), 'questions affichées avant le bouton');
+  vrai((await texteV(pv, '[data-pv-consigne]')).includes('Passer aux 3 questions'), 'consigne du bouton');
+  egal(await jalonsV(pv), TOUT_ATTENTE, 'jalons après les 6 points');
+  await pv.click(`${ZV} [data-pv="questions"]`);
+  vrai(!(await pv.$(`${ZV} g[data-pv-point]`)), 'points encore sur la photo pendant les questions');
+  await clicPhoto(pv, 100, 100);
+  egal(await msgV(pv), 'Pas ici. Relisez le point n° 3.', 'message faux');
+  egal((await jalonsV(pv))[0], 'ko', 'jalon après le clic faux');
+  await clicPhoto(pv, 1000, 560);
+  egal(await msgV(pv), 'Oui, c’est bien ici.', 'message juste');
+  egal((await jalonsV(pv))[0], 'ok', 'jalon après le bon clic');
+  egal((await premiersV(pv))['ciel-camions'], 'ko', 'premier coup');
+  // passage piétons : les deux zones comptent
+  await clicPhoto(pv, 100, 500);
+  egal((await jalonsV(pv))[1], 'ok', 'piétons, seconde zone');
+  await monterV(pv, { db: rendu(1, { ciel: { vus: [1, 2, 3, 4, 5, 6], q: true, rep: { camions: true }, essais: { camions: 1 } } }) });
+  await clicPhoto(pv, 400, 575);
+  egal((await jalonsV(pv))[1], 'ok', 'piétons, première zone');
+});
+
+await v('Visite : quiz — une lisse cliquée sur la lisse juste, sur l’allée faux ; « (2 essais) »', async () => {
+  await monterV(pv, { db: rendu(4) });
+  await clicPhoto(pv, 300, 500);
+  egal(await msgV(pv), 'Oui : c’est une échelle.', 'échelle');
+  await clicPhoto(pv, 800, 1600);
+  egal(await msgV(pv), 'Non, pas ici. Revoyez le mot à l’étape précédente si besoin.', 'lisse sur l’allée');
+  egal((await jalonsV(pv)).slice(3, 5), ['ok', 'ko'], 'jalons échelle, lisse');
+  await clicPhoto(pv, 800, 400);
+  egal(await msgV(pv), 'Oui : c’est une lisse.', 'lisse');
+  vrai((await texteV(pv, '[data-pv-q="lisse"]')).includes('(2 essais)'), 'essais de la lisse');
+  egal((await jalonsV(pv)).slice(3, 5), ['ok', 'ok'], 'jalons après la lisse');
+});
+
+await v('Visite : travée — 4 coins dans le désordre ; coins du bas trop hauts ; enlever un point ; 5e clic sans effet', async () => {
+  await monterV(pv, { db: rendu(5) });
+  await coins(pv, [[876, 1173], [287, 45], [258, 1175], [847, 47]]);
+  await pv.click(`${ZV} [data-pv="verifierCoins"]`);
+  vrai(!!(await pv.$(`${ZV} [data-pv-coins-ok]`)), 'coins justes dans le désordre');
+  egal((await jalonsV(pv))[7], 'ok', 'jalon des coins');
+  vrai(!!(await pv.$(`${ZV} [data-pv-correction]`)), 'correction légendée');
+  await monterV(pv, { db: rendu(5) });
+  await coins(pv, [[287, 45], [847, 47], [258, 1050], [876, 1050]]);
+  await clicPhoto(pv, 550, 600);
+  egal(await pv.$$eval(`${ZV} [data-pv-pose]`, (L) => L.length), 4, '5e clic');
+  await pv.click(`${ZV} [data-pv="verifierCoins"]`);
+  egal(await msgV(pv), 'Pas encore : coins en bas à gauche, en bas à droite. Un coin se place là où une échelle touche le sol ou s’arrête en haut. Cliquez le point rouge pour l’enlever.', 'message');
+  egal(await pv.$$eval(`${ZV} [data-pv-coin]`, (L) => L.map((e) => e.dataset.ok)), ['true', 'true', 'false', 'false'], 'coins jugés');
+  egal(await pv.$$eval(`${ZV} [data-pv-pose]`, (L) => L.map((g) => g.dataset.faux)), ['false', 'false', 'true', 'true'], 'seuls les coins du bas en rouge');
+  egal((await jalonsV(pv))[7], 'ko', 'jalon après un Vérifier faux');
+  await clicPhoto(pv, 258, 1050);
+  egal(await pv.$$eval(`${ZV} [data-pv-pose]`, (L) => L.length), 3, 'point enlevé');
+  egal((await xV(pv, 'travee')).pts.length, 3, 'état après l’enlèvement');
+});
+
+await v('Visite : travée — tolérance 80 (79 juste, 81 faux, écrits dans la base)', async () => {
+  const essai = async (d) => {
+    await monterV(pv, { db: rendu(5, { travee: { pts: [[287 + d, 45], [847, 47], [258, 1175], [876, 1173]] } }) });
+    await pv.click(`${ZV} [data-pv="verifierCoins"]`);
+    return (await jalonsV(pv))[7];
+  };
+  egal(await essai(79), 'ok', 'à 79');
+  egal(await essai(81), 'ko', 'à 81');
+});
+
+await v('Visite : lisses — fond, travée d’à côté, pas une lisse, déjà trouvée (pas compté) ; sans faute = premier coup', async () => {
+  const delimitee = { travee: { pts: COINS_JUSTES, ok: true, verifie: true, verifs: 1, faux: [] } };
+  await monterV(pv, { db: rendu(5, delimitee) });
+  await clicPhoto(pv, 570, 80);
+  egal(await msgV(pv), 'Oui : c’est la lisse du haut.', 'lisse du haut');
+  await clicPhoto(pv, 570, 160);
+  egal(await msgV(pv), 'Cette barre est au fond, sur le rack de derrière. Cherchez les lisses accrochées aux échelles de devant.', 'fond');
+  await clicPhoto(pv, 950, 450);
+  egal(await msgV(pv), 'C’est bien une lisse, mais celle de la travée d’à côté. Restez entre les deux échelles de votre travée.', 'travée d’à côté');
+  await clicPhoto(pv, 570, 600);
+  egal(await msgV(pv), 'Ici, ce n’est pas une lisse. Une lisse est une barre horizontale orange, entre les deux échelles.', 'pas une lisse');
+  await clicPhoto(pv, 570, 80);
+  egal(await msgV(pv), 'Celle-ci est déjà trouvée.', 'déjà trouvée');
+  const x = await xV(pv, 'travee');
+  egal([x.cibles, x.fauxCibles], [[0], 3], 'cibles et clics faux (le re-clic ne compte pas)');
+  egal((await jalonsV(pv))[8], 'ko', 'jalon des lisses en cours, après des fautes');
+  await monterV(pv, { db: rendu(5, delimitee) });
+  await clicPhoto(pv, 570, 80); await clicPhoto(pv, 570, 454);
+  egal((await jalonsV(pv))[8], 'attente', 'deux lisses sans faute : encore en attente');
+  await clicPhoto(pv, 570, 687);
+  egal((await jalonsV(pv))[8], 'ok', 'trois lisses');
+  egal((await premiersV(pv))['travee-cibles'], 'ok', 'premier coup');
+  vrai(!(await pv.$(`${ZV} .pv-vise`)), 'photo encore cliquable une fois l’étape finie');
+});
+
+await v('Visite : adresse — travée et niveau inversés, puis retrouver (côté, niveau, trouvé, rien de montré avant)', async () => {
+  await monterV(pv, { db: rendu(6) });
+  vrai(await pv.$eval(`${ZV} [data-pv="valider"]`, (b) => b.disabled), 'Valider actif sans les 4 choix');
+  await choisirV(pv, ['allée et côté', 'niveau', 'travée', 'emplacement']);
+  await pv.click(`${ZV} [data-pv="valider"]`);
+  egal((await jalonsV(pv))[9], 'ko', 'jalon décomposer');
+  egal(await pv.$$eval(`${ZV} [data-pv-part]`, (L) => L.map((e) => e.dataset.ok)), ['true', 'false', 'false', 'true'], 'correction affichée');
+  vrai((await texteV(pv, '[data-pv-part="1"]')).includes('(vous : niveau)'), 'ce que l’élève a choisi');
+  vrai(!(await pv.$(`${ZV} [data-pv-choix]`)), 'second essai de la décomposition');
+  await pv.click(`${ZV} [data-pe-trav="A2-T03"]`);
+  egal(await pv.$$eval(`${ZV} .pe-cible`, (L) => L.filter((r) => r.getAttribute('stroke') !== 'transparent').length), 0, 'surbrillance avant le clic juste');
+  await pv.hover(`${ZV} [data-pe-emp="A2-T03-N2-E1"]`);
+  egal(await pv.$$eval(`${ZV} [data-pv-barre] .pe-case b`, (L) => L.map((b) => b.textContent)), ['A2', 'T03', 'N2', 'E1'], 'barre au survol');
+  await pv.click(`${ZV} [data-pe-emp="A2-T03-N2-E1"]`);
+  egal(await msgV(pv), '✗ A2-T03-N2-E1 : le côté (vous êtes en A2, il faut A1). Revenez au plan.', 'côté faux');
+  await pv.click(`${ZV} [data-pv="retour"]`);
+  await pv.click(`${ZV} [data-pe-trav="A1-T03"]`);
+  await pv.click(`${ZV} [data-pe-emp="A1-T03-N3-E1"]`);
+  egal(await msgV(pv), '✗ A1-T03-N3-E1 : le niveau (N3 au lieu de N2 — le sol est N1).', 'niveau faux');
+  vrai(!(await pv.$(`${ZV} .pe-marque`)), 'cible montrée avant d’être trouvée');
+  await pv.click(`${ZV} [data-pe-emp="A1-T03-N2-E1"]`);
+  egal(await msgV(pv), '✓ Trouvé : A1-T03-N2-E1 — une Maison Neo Jura Lodge de 420 kg.', 'trouvé');
+  egal(await pv.$$eval(`${ZV} .pe-marque`, (L) => L.map((g) => g.dataset.peEmp)), ['A1-T03-N2-E1'], 'seul l’emplacement trouvé est marqué');
+  await pv.click(`${ZV} [data-pe-emp="A1-T03-N1-E1"]`);
+  egal((await xV(pv, 'adresse')).clics.length, 3, 'un clic après « Trouvé » ne compte plus');
+  egal((await jalonsV(pv)).slice(9), ['ko', 'ok'], 'jalons de l’adresse');
+  egal((await premiersV(pv))['adresse-retrouver'], 'ko', 'premier coup de l’emplacement');
+  vrai(!(await pv.$eval(`${ZV} [data-pv="suivant"]`, (b) => b.disabled)), 'Suivant une fois l’adresse finie');
+});
+
+await v('Visite : le message « Trouvé » lit la désignation et le poids dans le stock (sabotage du stock)', async () => {
+  await monterV(pv, { db: rendu(6, { adresse: { choix: SENS_JUSTES, valide: true } }), sabotage: 'stock' });
+  await pv.click(`${ZV} [data-pe-trav="A1-T03"]`);
+  await pv.click(`${ZV} [data-pe-emp="A1-T03-N2-E1"]`);
+  egal(await msgV(pv), '✓ Trouvé : A1-T03-N2-E1 — une Établi Black+Decker de 290 kg.', 'message lu dans le stock saboté');
+});
+
+await v('Visite : parcours — ordre imposé, photo en onglet (Échap), deux images aux litiges, trace = celle de la maquette', async () => {
+  await monterV(pv, { db: rendu(2) });
+  egal(await pv.$eval(`${ZV} [data-pv-trace]`, (e) => e.getAttribute('points')),
+    '410,505 680,505 680,400 680,505 300,505 155,505 155,330 155,505 553,505 553,92 553,189', 'trace');
+  vrai(!(await pv.$(`${ZV} [data-pe-trav]`)), 'travées cliquables pendant le parcours');
+  await pv.click(`${ZV} g[data-pv-etape="3"]`);
+  egal(await msgV(pv), 'Dans l’ordre : l’étape suivante est la n° 1.', 'ordre');
+  vrai(!(await pv.$(`${ZV} [data-pv-img]`)), 'photo ouverte hors de l’ordre');
+  await pv.click(`${ZV} g[data-pv-etape="1"]`);
+  egal(await pv.$$eval(`${ZV} [data-pv-img]`, (L) => L.map((i) => i.dataset.pvImg)), ['quaiInt'], 'photo du quai');
+  vrai((await texteV(pv, '.pe-fil')).includes('1. Le quai'), 'fil');
+  await pv.keyboard.press('Escape');
+  vrai(!!(await pv.$(`${ZV} [data-pv-trace]`)), 'Échap revient au plan');
+  vrai(!!(await pv.$(`${ZV} [data-pv="revoir"]`)), 'Revoir la photo');
+  for (const n of [2, 3, 4, 5]) {
+    if (await pv.$(`${ZV} [data-pv="retour"]`)) await pv.click(`${ZV} [data-pv="retour"]`);
+    await pv.click(`${ZV} g[data-pv-etape="${n}"]`);
+  }
+  egal(await pv.$$eval(`${ZV} [data-pv-img]`, (L) => L.map((i) => i.dataset.pvImg)), ['litiges', 'litigesDessin'], 'deux images aux litiges');
+  egal(await pv.$$eval(`${ZV} .pv-mention`, (L) => L.length), 2, 'une mention par image');
+  vrai(await pv.$eval(`${ZV} [data-pv="suivant"]`, (b) => b.disabled), 'Suivant avant la 6e étape');
+  egal(await jalonsV(pv), TOUT_ATTENTE, 'le parcours ne donne pas de jalon');
+});
+
+await v('Visite : inaction 0 / 11 ; toute la découverte sans répondre (points, bouton des questions, parcours, mots) : 0 / 11', async () => {
+  await monterV(pv);
+  egal(await jalonsV(pv), TOUT_ATTENTE, 'séance ouverte puis rien');
+  await suivant(pv);
+  for (const n of [1, 2, 3, 4, 5, 6]) await pv.click(`${ZV} button[data-pv-point="${n}"]`);
+  await pv.click(`${ZV} [data-pv="questions"]`);
+  egal(await jalonsV(pv), TOUT_ATTENTE, 'questions lancées, pas de clic');
+  await monterV(pv, { db: rendu(5, { ciel: { vus: [1, 2, 3, 4, 5, 6], q: true }, parcours: { vus: [1, 2, 3, 4, 5, 6] }, mots: { vus: [1, 2, 3, 4, 5, 6, 7, 8] } }) });
+  egal(await jalonsV(pv), TOUT_ATTENTE, 'toute la découverte faite');
+  egal(await pv.evaluate(async () => { const E = await import('/core/types/entrepot.js'); return E.jalonsEntrepot(window.__e.db, window.__e.P).ok; }), 0, '0 / 11');
+});
+
+await v('Visite : parcours juste de bout en bout → 11 / 11, premier coup 11 / 11, la fin', async () => {
+  await monterV(pv);
+  await suivant(pv); await cielJuste(pv);
+  await suivant(pv); await parcoursJuste(pv);
+  await suivant(pv); for (const n of [1, 2, 3, 4, 5, 6, 7, 8]) await pv.click(`${ZV} button[data-pv-point="${n}"]`);
+  await suivant(pv); await quizJuste(pv);
+  await suivant(pv); await traveeJuste(pv);
+  await suivant(pv); await adresseJuste(pv);
+  await suivant(pv);
+  egal(await etapeV(pv), 'fin', 'dernière étape');
+  vrai(!(await pv.$(`${ZV} [data-pv="suivant"]`)), 'Suivant sur la fin');
+  egal(await jalonsV(pv), Array(11).fill('ok'), 'jalons');
+  const P = await premiersV(pv);
+  egal([Object.keys(P).length, Object.values(P).filter((x) => x === 'ok').length], [11, 11], 'premier coup');
+  egal(erreursV, [], 'erreurs JS');
+});
+
+await v('Visite : sabotages — chaque jalon tombe quand on casse sa règle (zone, tolérance, piège en cible, adresse)', async () => {
+  await monterV(pv, { db: rendu(1, { ciel: { vus: [1, 2, 3, 4, 5, 6], q: true } }), sabotage: 'zone' });
+  await clicPhoto(pv, 1000, 560);
+  egal((await jalonsV(pv))[0], 'ko', 'zone décalée');
+  await monterV(pv, { db: rendu(5), sabotage: 'tolerance' });
+  await coins(pv, COINS_JUSTES); await pv.click(`${ZV} [data-pv="verifierCoins"]`);
+  egal((await jalonsV(pv))[7], 'ko', 'tolérance à 0');
+  await monterV(pv, { db: rendu(5), sabotage: 'piege' });
+  await traveeJuste(pv);
+  egal((await jalonsV(pv))[8], 'attente', 'piège rangé en cible');
+  await monterV(pv, { db: rendu(6), sabotage: 'adresse' });
+  await choisirV(pv, SENS_JUSTES); await pv.click(`${ZV} [data-pv="valider"]`);
+  egal((await jalonsV(pv))[9], 'ko', 'adresse inversée');
+});
+
+await v('Visite : état retrouvé après rechargement ; deux séances ne se mélangent pas', async () => {
+  await pv.evaluate(() => localStorage.removeItem('essai-visite-base'));
+  await monterV(pv, { garder: true });
+  await suivant(pv);
+  await pv.click(`${ZV} button[data-pv-point="4"]`);
+  await pv.reload();
+  await pv.waitForSelector('#btnProf');
+  await monterV(pv, { garder: true });
+  egal(await etapeV(pv), 'ciel', 'étape retrouvée');
+  egal((await xV(pv, 'ciel')).vus, [4], 'point ouvert retrouvé');
+  await monterV(pv, { garder: true, id: 'autre-visite' });
+  egal(await etapeV(pv), 'accueil', 'autre séance : départ neuf');
+  egal(await pv.evaluate(() => Object.keys(window.__e.db.entrepots).sort()), ['autre-visite', 'smoby-visite'], 'clés');
+  await pv.evaluate(() => localStorage.removeItem('essai-visite-base'));
+});
+
+await v('Visite : chaque image déclarée existe dans le dépôt, repère à la proportion du fichier (≤ 1 %)', async () => {
+  const r = await pv.evaluate(async () => {
+    const C = await import('/contenus/smoby-ent53.js');
+    const out = {};
+    for (const [k, im] of Object.entries(C.IMAGES)) {
+      const i = new Image(); i.src = im.src.replace(/^\.\//, '/');
+      try { await i.decode(); } catch (e) { out[k] = 'introuvable'; continue; }
+      const ecart = Math.abs(i.naturalWidth / i.naturalHeight - im.repere[0] / im.repere[1]) / (im.repere[0] / im.repere[1]);
+      out[k] = ecart <= 0.01 ? 'ok' : `écart ${(ecart * 100).toFixed(1)} %`;
+    }
+    return out;
+  });
+  egal(Object.keys(r).length, 10, 'nombre d’images');
+  egal(Object.entries(r).filter(([, x]) => x !== 'ok'), [], 'images');
+});
+
+await v('Visite : une déclaration fautive ne se charge pas (ancre, image, type, adresse) ; pas d’évaluation', async () => {
+  const r = await pv.evaluate(async () => {
+    const { creerEntrepot } = await import('/core/types/entrepot.js');
+    const C = await import('/contenus/smoby-ent53.js');
+    const essai = (f, o) => { const P = structuredClone(C.VISITE); P.id = `x${Math.random()}`; f(P); try { creerEntrepot(P, o); return ''; } catch (e) { return e.message; } };
+    const et = (P, id) => P.etapes.find((t) => t.id === id);
+    return [
+      essai((P) => { et(P, 'parcours').etapes[0].ancre = 'quai:QUAI 9'; }),
+      essai((P) => { et(P, 'quiz').image = 'inconnue'; }),
+      essai((P) => { et(P, 'quiz').type = 'carrousel'; }),
+      essai((P) => { et(P, 'adresse').code = 'A1-T09-N2-E1'; }),
+      essai(() => {}, { copie: true }),
+      essai(() => {}),
+    ];
+  });
+  vrai(r[0].includes('ancre inconnue'), `ancre : ${r[0]}`);
+  vrai(r[1].includes('image inconnue'), `image : ${r[1]}`);
+  vrai(r[2].includes('type inconnu'), `type : ${r[2]}`);
+  vrai(r[3].includes('adresse inconnue'), `adresse : ${r[3]}`);
+  vrai(r[4].includes('pas d'), `évaluation : ${r[4]}`);
+  egal(r[5], '', 'la déclaration d’ENT-5.3');
+});
+
+await v('Visite : aucun défilement de page, chaque étape, à 1366 × 768 et 1280 × 720 (page d’essai sans ses bandeaux)', async () => {
+  const pe = await ctxV.newPage();
+  const err = [];
+  pe.on('pageerror', (e) => err.push(e.message));
+  for (const [w, h] of [[1366, 768], [1280, 720]]) {
+    await pe.setViewportSize({ width: w, height: h });
+    await pe.goto('http://127.0.0.1:8099/outils/essai-entrepot.html');
+    await pe.waitForSelector('.pe');
+    await pe.selectOption('#reglages select[name="role"]', 'prof');
+    await pe.selectOption('#reglages select[name="cas"]', 'visite');
+    await pe.waitForSelector('.pv');
+    await pe.evaluate(() => { document.querySelector('#reglages').style.display = 'none'; document.querySelector('#mention').style.display = 'none'; });
+    const trop = [];
+    for (let k = 0; k < 8; k++) {
+      await pe.click(`.pv [data-pv-aller="${k}"]`);
+      await pe.evaluate(() => window.dispatchEvent(new Event('resize')));
+      const d = await pe.evaluate(() => document.documentElement.scrollHeight - window.innerHeight);
+      if (d > 0) trop.push(`${k + 1} (+${d} px)`);
+    }
+    egal(trop, [], `étapes qui défilent à ${w} × ${h}`);
+  }
+  egal(err, [], 'erreurs JS');
+  await pe.close();
+});
+
+await ctxV.close();
 }
