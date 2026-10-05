@@ -89,8 +89,8 @@ Buchelay. »
      | Heineken | fût 20 L | **0** |
      | Eau minérale plate 1 L, verre consigné | casier de 12 | 60 |
 
-     Ces chiffres sont **ceux du plan de stockage de masse d'ENT-6.5** (Heineken 30 L : 4 palettes de 4 fûts en M01 ;
-     Pelforth : 16 + 8 en M03 et M04 ; Affligem : 1 palette de 2 en M05 ; Edelweiss : 6 palettes de 4 en M07), recalés le
+     Ces chiffres sont **ceux du plan de stockage de masse d'ENT-6.5** (palettes de 8 fûts, décision 52 : Heineken 30 L : 2 palettes en M01 ;
+     Pelforth : 16 + 8 en M03 et M04 ; Affligem : 1 palette de 2 en M05 ; Edelweiss : 3 palettes en M07), recalés le
      05/10/2026 (Tristan) pour que le stock reste le même d'une séance à l'autre.
    - **Conditions de vente CHR** (extrait) : **minimum de 10 fûts par livraison** (les casiers ne comptent pas) ; commande
      reçue **avant 12 h la veille** = livrée le jour de la tournée ; consigne : **40 € par fût** et **4 € par casier** (taux fixés par l'arrêté du 6 février 2026, en vigueur depuis le

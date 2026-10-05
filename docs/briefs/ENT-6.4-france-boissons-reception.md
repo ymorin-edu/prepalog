@@ -37,11 +37,16 @@ Règles d'écriture 2de : `claude/prepalog-2de-eleve-debut-annee.md` (3 lignes p
   éclairage.
 - **Construit (annoncé comme tel)** : le flux Mons → Buchelay, le quai 12, l'heure, le BL n° **MON-27-0617**, les défauts,
   la palette mal étiquetée, le fût qui fuit.
-- **Règle de l'exercice (décision 37 de Tristan, 05/10/2026)** : **1 palette = 4 fûts** (une couche 2 × 2), posés sur une
-  **palette de rétention noire en plastique** (caillebotis percé, nervures, pieds) — **jamais de palette en bois** sur les
-  illustrations. Choix pédagogique, à dire comme tel dans la trame : **dans la réalité**, les fûts arrivent par 8 sur des palettes
-  mères, puis sont repalettisés par 6 au plus pour les clients (INRS, ci-dessous). La même règle vaut en ENT-6.5.
-- **Vérifié (05/10, INRS, [Travail et Sécurité n° 843, 13/12/2022](https://www.travail-et-securite.fr/ts/843/EI/une-logistique-qui-met-la-pression-sur-les-manutentions.html), plateforme France Boissons de Gennevilliers)** : les fûts arrivent des brasseurs « par lots de huit sur des palettes mères de 1,23 m par 1,12 m » ; ils sont repalettisés sur des palettes 1,20 × 0,80 de 6 fûts au plus pour les clients ; stockage de masse ; portique à fûts. Buchelay (site France Boissons) : 7 000 places palettes, 2 300 références, cales de roue et marquage au sol. Ces chiffres réels sont dits dans la trame ; la séance applique la règle de l'exercice (4 fûts par palette de rétention).
+- **Règle de l'exercice (décision 52 de Tristan, 05/10/2026, remplace la 37)** : **1 palette = 8 fûts posés à plat en
+  quinconce** (rangées de 3, 2 et 3, une seule couche) sur une **palette de rétention noire en plastique de 1,30 × 1,30 m**
+  (caillebotis percé, bac, pieds) — **jamais de palette en bois** sur les illustrations.
+  **Vérifié** : 8 fûts par palette mère (INRS, ci-dessous) ; la palette de rétention « 4 fûts de 200 L » du commerce mesure
+  1,30 × 1,30 m ([Denios](https://www.denios.fr/bac-de-retention-classic-line-en-polyethylene-pe-pour-4-futs-caillebotis-pe-1300-x-1300-x-375-162289/162289)) ;
+  un fût Euro de 20 ou 30 L fait **39,5 cm de diamètre** ([Thielmann](https://www.thielmann.com/en/stainless-steel-kegs/euro-keg)).
+  **Construit, à dire dans la trame** : 8 fûts de bière sur une palette de rétention (usage non vérifié chez France Boissons ; la
+  source ne dit ni la matière de la palette mère ni la disposition des fûts) ; la disposition à plat en quinconce (calcul :
+  1,19 × 1,08 m). La même règle vaut en ENT-6.5 et 6.6.
+- **Vérifié (05/10, INRS, [Travail et Sécurité n° 843, 13/12/2022](https://www.travail-et-securite.fr/ts/843/EI/une-logistique-qui-met-la-pression-sur-les-manutentions.html), plateforme France Boissons de Gennevilliers)** : les fûts arrivent des brasseurs « par lots de huit sur des palettes mères de 1,23 m par 1,12 m » ; ils sont repalettisés sur des palettes 1,20 × 0,80 de 6 fûts au plus pour les clients ; stockage de masse ; portique à fûts. Buchelay (site France Boissons) : 7 000 places palettes, 2 300 références, cales de roue et marquage au sol. Ces chiffres réels sont dits dans la trame ; la séance applique la règle de l'exercice (8 fûts par palette de rétention).
 - **Image de la scène de sécurité : dessinée par Cowork** (aucune photo libre ne montre un vrai défaut de quai) —
   `docs/briefs/france-boissons/scene-quai-securite.svg`, validée par Tristan le 05/10 (v2). Légende à l'écran : « Dessin —
   scène construite, ce n'est pas la plateforme de Buchelay. » Aucun visage détaillé, aucune marque.
@@ -61,7 +66,7 @@ Fil rouge : ce camion apporte le **réassort d'Affligem** qui manquait à Malo e
 pas la bonne : il manquera encore de l'Affligem pour la tournée du vendredi. Calendrier de S2 (décision de Tristan du 05/10/2026, « A : lundi → vendredi ») : 6.1 lun. 14 juin · 6.2 mar. 15 · 6.3 mar. 15 après-midi · 6.4 mer. 16, 14 h · 6.5 mer. 16, 16 h · 6.6 jeu. 17, 7 h · 6.7 jeu. 17 après-midi · 6.8 ven. 18, 6 h · 6.9 ven. 18, 6 h 30 · 6.10 ven. 18, 17 h. L'élève joue **son propre rôle** : « Tu es en renfort au quai de réception. »
 
 1. **Message de Nadia, cheffe de quai** (3 blocs) : « Bonjour {prénom}, bienvenue au quai ! / Le camion de la brasserie de
-   Mons arrive au quai 12 : 4 palettes de fûts, dont l'Affligem qu'on attendait. / Avant de décharger, regarde bien la scène.
+   Mons arrive au quai 12 : 4 palettes de 8 fûts, dont l'Affligem qu'on attendait. / Avant de décharger, regarde bien la scène.
    Nadia »
 2. **Avant de décharger — image à inspecter** (vue nouvelle, §7.3). La scène dessinée s'affiche avec une consigne d'une
    ligne : « Clique sur ce qui ne va pas, puis signale-le à Nadia. » **Aucune liste de points** (entraînement : l'élève y pense
@@ -84,12 +89,12 @@ pas la bonne : il manquera encore de l'Affligem pour la tournée du vendredi. Ca
 4. **Contrôle des palettes**, aides de guidage **éteintes** (zone de calcul `{ forme: 'feuille' }` sans rappel, pas de
    détail du comptage, pas de chef de quai qui explique) ; fiche de contrôle comme Picard / Smoby.
 
-   | Palette | Article au BL | Réel (étiquette) | Fûts (couches) | BL | Réel | Aléa | Attendu |
+   | Palette | Article au BL | Réel (étiquette) | Fûts (disposition) | BL | Réel | Aléa | Attendu |
    |---|---|---|---|---|---|---|---|
-   | P1 | Heineken fût 30 L | Heineken fût 30 L | 2 × 2 | 4 | 4 | aucun | Accepter |
-   | P2 | **Affligem Blonde fût 20 L** | **Pelforth Blonde fût 20 L** | 2 × 2 | 4 | 4 | **référence différente** (erreur du BL) | Réserves — produit différent (référence lue : Pelforth Blonde 20 L) |
-   | P3 | Affligem Blonde fût 20 L | Affligem Blonde fût 20 L | 2 × 2 | 4 | 4 | **1 fût qui fuit**, visible **seulement de l'arrière** (coulure + flaque) | Réserves — fût endommagé (1) |
-   | P4 | Edelweiss fût 20 L | Edelweiss fût 20 L | 2 × 2, **une place vide** | 3 | 3 | palette incomplète **mais conforme au BL** (piège de comptage) | Accepter |
+   | P1 | Heineken fût 30 L | Heineken fût 30 L | 3 + 2 + 3 | 8 | 8 | aucun | Accepter |
+   | P2 | **Affligem Blonde fût 20 L** | **Pelforth Blonde fût 20 L** | 3 + 2 + 3 | 8 | 8 | **référence différente** (erreur du BL) | Réserves — produit différent (référence lue : Pelforth Blonde 20 L) |
+   | P3 | Affligem Blonde fût 20 L | Affligem Blonde fût 20 L | 3 + 2 + 3 | 8 | 8 | **1 fût qui fuit**, visible **seulement de l'arrière** (coulure + flaque) | Réserves — fût endommagé (1) |
+   | P4 | Edelweiss fût 20 L | Edelweiss fût 20 L | 3 + 2 + 3, **une place vide** | 7 | 7 | palette incomplète **mais conforme au BL** (piège de comptage) | Accepter |
 
    Toutes les palettes sont des **palettes de rétention noires** (règle de l'exercice, §2).
 
@@ -103,7 +108,7 @@ pas la bonne : il manquera encore de l'Affligem pour la tournée du vendredi. Ca
    |---|---|---|
    | salutation | « Bonjour Nadia, » | « Salut ! » · « Coucou Nadia » |
    | reçu (imposée) | « J'ai reçu les 4 palettes de Mons. » | — |
-   | réserves | « Réserves : la palette P2 est de la Pelforth Blonde au lieu de l'Affligem, et un fût d'Affligem fuit. » | « Tout est conforme. » · « Réserves : il manque 4 fûts d'Affligem. » · « Réserves : 2 fûts d'Affligem fuient. » |
+   | réserves | « Réserves : la palette P2 est de la Pelforth Blonde au lieu de l'Affligem, et un fût d'Affligem fuit. » | « Tout est conforme. » · « Réserves : il manque 8 fûts d'Affligem. » · « Réserves : 2 fûts d'Affligem fuient. » |
    | fût qui fuit | « J'ai mis le fût qui fuit en zone litiges. » | « J'ai rangé le fût qui fuit en stock avec les autres. » · « J'ai rendu le fût qui fuit au chauffeur. » |
    | fin | « Cordialement, {prénom} » | « À plus ! » · « Bisous » |
 
@@ -119,10 +124,10 @@ Mots cliquables : fût, niveleur, cale, réserve, BL, zone litiges, produit diff
 | 1 | Chauffeur / moteur signalé **avant** de décharger | image à inspecter (§7.3) | faux si l'élève décharge d'abord ; la vitre et la fumée comptent pour le même défaut |
 | 2 | Niveleur signalé **avant** de décharger | idem | idem |
 | 3 | Aucun faux signalement (cale, lampe, butoir) | idem | **ne récompense pas l'inaction** : faux si aucun défaut n'est signalé |
-| 4 | P1 comptée 4 et acceptée | vue quai | — |
+| 4 | P1 comptée 8 et acceptée | vue quai | — |
 | 5 | P2 : réserve « produit différent », référence lue = Pelforth | vue quai + fiche | P2 acceptée sans réserve = faux ; « Affligem » recopié du BL = faux |
 | 6 | P3 : réserve « fût endommagé », 1 fût | vue quai | sans faire le tour, la fuite ne se voit pas |
-| 7 | P4 comptée 3 et acceptée | vue quai | 4 (palette supposée pleine) = faux ; réserve « manquant » = faux |
+| 7 | P4 comptée 7 et acceptée | vue quai | 8 (palette supposée pleine) = faux ; réserve « manquant » = faux |
 | 8 | BL signé | vue quai | — |
 | 9 | Phrase « réserves » juste | `phrasesJustes` | message non envoyé = faux |
 | 10 | Phrase « zone litiges » juste | `phrasesJustes` | idem |
@@ -155,7 +160,7 @@ Maquette cliquable de référence (jetable, ne pas recopier le code) : `G:\Mon D
    fût endommagé, manquant, produit différent). Sans changer Picard ni Smoby. *(Le compte rendu d'ENT-5.4 demandait déjà des
    libellés déclarables à l'étape ① : à grouper.)*
 2. **Palette de fûts dans la vue quai** : dessiner des **cylindres** (fûts) au lieu de cartons quand le contenu le déclare
-   (`forme: 'fut'`), **4 fûts (2 × 2) posés sur une palette de rétention noire** (plastique, caillebotis, pas de bois) ; la coulure du fût abîmé visible **seulement depuis l'arrière** (comme le carton écrasé de Smoby) ; l'unité
+   (`forme: 'fut'`), **8 fûts à plat en quinconce (rangées de 3, 2 et 3) posés sur une palette de rétention noire de 1,30 × 1,30 m** (plastique, caillebotis, pas de bois) ; la coulure du fût abîmé visible **seulement depuis l'arrière** (comme le carton écrasé de Smoby) ; l'unité
    devient « fûts » partout (comptage, réserves, BL). Si c'est trop cher : cartons gardés, unité « fûts » seule, et le dire.
 3. **Image à inspecter** (vue n° 6 de `prepalog-2de-hors-socle-et-vues.md`, ou mode « zones à trouver » du brief
    `MOTEUR-modes-visite.md` — **à trancher par Tristan à l'état des lieux**) : une image + des zones déclarées (défaut ou
@@ -171,7 +176,7 @@ choisir, mots cliquables.
 
 Bloc `france-boissons` : parcours juste 10/10 ; inaction 0/10 ; décharger sans signaler → jalons 1 et 2 faux ; cale signalée →
 jalon 3 faux ; aucun signalement → jalon 3 faux aussi ; vitre seule ou fumée seule → jalon 1 juste ; P2 acceptée → jalon 5 faux ;
-P2 avec « Affligem » en référence → jalon 5 faux ; P3 sans faire le tour (pas de réserve) → jalon 6 faux ; P4 comptée 4 → jalon 7
+P2 avec « Affligem » en référence → jalon 5 faux ; P3 sans faire le tour (pas de réserve) → jalon 6 faux ; P4 comptée 8 → jalon 7
 faux ; phrase « en stock avec les autres » → jalon 10 faux ; sabotage par jalon.
 
 ## 9. Supports
@@ -200,7 +205,7 @@ de 2de finit en 45 min ; le bilan ne donne jamais la réponse sur l'image.
 - [x] Date : **mercredi 16 juin 2027, 14 h** (calendrier « lundi → vendredi », Tristan, 05/10).
 - [ ] Image à inspecter : vue n° 6 ou mode des modes visite (à l'état des lieux).
 - [x] **Palettes mères de 8 fûts (1,23 m × 1,12 m)** : vérifié (Tristan, 05/10), dit dans la trame.
-- [x] **Règle de l'exercice : 4 fûts par palette de rétention noire** (Tristan, 05/10, décision 37), en 6.4 et 6.5.
+- [x] ~~4 fûts par palette de rétention (décision 37)~~ → **8 fûts à plat en quinconce sur palette de rétention noire de 1,30 × 1,30 m** (Tristan, 05/10, décision 52), en 6.4, 6.5 et 6.6.
 
 ---
 

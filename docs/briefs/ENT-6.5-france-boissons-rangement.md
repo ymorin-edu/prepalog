@@ -44,9 +44,11 @@ Règles d'écriture 2de : `claude/prepalog-2de-eleve-debut-annee.md` (3 lignes p
 - **Vérifié (05/10)** : le **chariot élévateur frontal en porte-à-faux** jusqu'à 6 t relève du **CACES R489 catégorie 3**
   ([caces.fr](https://www.caces.fr/guides/caces-r489-categorie-3.html), [Formalogistics](https://formalogistics.com/machines/caces-r489-chariot-categorie-3/)).
   Pour le conduire, l'employeur délivre une **autorisation de conduite** (le CACES est la formation reconnue pour l'obtenir).
-- **Règle de l'exercice (décision 37 de Tristan, 05/10)** : **1 palette = 4 fûts** (une couche 2 × 2) sur une **palette de
-  rétention noire en plastique** (caillebotis percé, nervures, pieds), **jamais de bois**. Même règle qu'en ENT-6.4. Le réel (8 puis
-  6 fûts) est dit dans la trame. La palette de rétention est un **choix pédagogique** (contenir une fuite, sol glissant) : les
+- **Règle de l'exercice (décision 52 de Tristan, 05/10/2026, remplace la 37)** : **1 palette = 8 fûts posés à plat en
+  quinconce** (rangées de 3, 2 et 3, une seule couche) sur une **palette de rétention noire en plastique de 1,30 × 1,30 m**
+  (caillebotis percé, bac, pieds) — **jamais de palette en bois** sur les illustrations. Même règle qu'en ENT-6.4 (sources et
+  part construite au §2 d'ENT-6.4 : palette de rétention 1,30 × 1,30 du commerce, fût Euro de 39,5 cm). Le réel (8 fûts par palette
+  mère, puis 6 au plus vers les clients) est dit dans la trame. La palette de rétention est un **choix pédagogique** (contenir une fuite, sol glissant) : les
   fournisseurs la présentent surtout pour les produits dangereux ; ce n'est **pas** une pratique vérifiée chez France Boissons, et
   l'écran le dit.
 - **Construit (annoncé comme tel)** : le plan de la zone de masse (8 couloirs M01-M08 de 4 places), les lots (semaines S18 à S24),
@@ -84,8 +86,8 @@ au début, avant l'animation).
 
 | Écran | Dessin | Texte |
 |---|---|---|
-| Le chariot frontal | chariot frontal portant une palette de rétention de 4 fûts, fourches levées sur une pile | « Le chariot frontal porte la palette devant lui, sur ses fourches. Il peut la lever pour **gerber** : poser une palette sur une autre. / Pour le conduire, il faut une **autorisation de conduite** de l'employeur, après une formation comme le **CACES R489 catégorie 3**. / Sécurité : on roule **fourches baissées**, et on ne passe jamais sous une charge levée. » |
-| La palette de rétention | palette de rétention noire vue de 3/4, 4 fûts dessus, un fût qui goutte dans le bac | « Ici, chaque palette de fûts est posée sur une **palette de rétention** : un bac en plastique couvert d'une grille. / Si un fût fuit, la bière coule dans le bac, pas sur le sol : personne ne glisse. / Dans les entrepôts, on s'en sert surtout pour les produits dangereux. Ici, c'est un choix de l'exercice. » |
+| Le chariot frontal | chariot frontal portant une palette de rétention de 8 fûts, fourches levées sur une pile | « Le chariot frontal porte la palette devant lui, sur ses fourches. Il peut la lever pour **gerber** : poser une palette sur une autre. / Pour le conduire, il faut une **autorisation de conduite** de l'employeur, après une formation comme le **CACES R489 catégorie 3**. / Sécurité : on roule **fourches baissées**, et on ne passe jamais sous une charge levée. » |
+| La palette de rétention | palette de rétention noire vue de 3/4, 8 fûts dessus en quinconce, un fût qui goutte dans le bac | « Ici, chaque palette de fûts est posée sur une **palette de rétention** : un bac en plastique couvert d'une grille. / Si un fût fuit, la bière coule dans le bac, pas sur le sol : personne ne glisse. / Dans les entrepôts, on s'en sert surtout pour les produits dangereux. Ici, c'est un choix de l'exercice. » |
 
 Dessins : **à fournir par Cowork** en SVG (`docs/briefs/france-boissons/materiel-chariot-frontal.svg`,
 `materiel-palette-retention.svg`), tirés du code de dessin des deux maquettes (même chariot, même palette).
@@ -97,7 +99,7 @@ Dessins : **à fournir par Cowork** en SVG (`docs/briefs/france-boissons/materie
    ce qui se passe quand on range mal. »
 2. **L'animation en deux temps** (vue nouvelle §7.2, maquette `animation-6.5-couloir-2temps.html`, à reproduire **telle quelle**) :
    3D iso, couloirs M01 / M02 de 3 places, panneaux au mur du fond, flèches au sol ENTRÉE (verte) / SORTIE (rouge), chariot frontal,
-   palettes de rétention de 4 fûts, étiquettes de lot (S20 jaune, S24 bleu), « posée en 1re / 2e / 3e » au sol, bulles fléchées
+   palettes de rétention de 8 fûts, étiquettes de lot (S20 jaune, S24 bleu), « posée en 1re / 2e / 3e » au sol, bulles fléchées
    (rouge = problème, vert = bonne façon), **sans son**, vitesse 0,8 (réglable dans le contenu), tient dans 1280 × 720.
    - **Partie 1, l'erreur (≈ 35 s)** : ① le chariot range le lot S20 par le fond de M01 ; ② il pose le lot S24 devant, même couloir ;
      ③ une commande arrive : il sort le S24, seul accessible ; ④ le S20 reste bloqué (« ! ») → **arrêt** : « Arrête-toi et
@@ -148,14 +150,14 @@ ligne : « Prends une palette (clique sa carte), puis clique un couloir sur le p
 
 | Couloir | Contenu | Rôle |
 |---|---|---|
-| M01 | Heineken 30 L, lot **S20** : 2 piles de 2 (positions 1 et 2) = 16 fûts | piège lot pour P1 |
+| M01 | Heineken 30 L, lot **S20** : pile de 2 (pos. 1) = 16 fûts | piège lot pour P1 |
 | M02 | vide | place de P1 (ou P3) |
-| M03 | Pelforth Blonde 20 L, lot **S24** : pile de 3 (pos. 1) + pile de 1 (pos. 2) = 16 fûts | place de P2 |
-| M04 | Pelforth Blonde 20 L, lot **S19** : pile de 2 (pos. 1) = 8 fûts | piège lot pour P2 |
+| M03 | Pelforth Blonde 20 L, lot **S24** : pile de 2 (pos. 1) = 16 fûts | place de P2 |
+| M04 | Pelforth Blonde 20 L, lot **S19** : 1 palette (pos. 1) = 8 fûts | piège lot pour P2 |
 | M05 | Affligem Blonde 20 L, lot **S18** : 1 palette de **2 fûts** (pos. 1) | piège lot pour P3 (rupture de 6.2) |
 | M06 | vide | place de P3 (ou P1) |
-| M07 | Edelweiss 20 L, lot **S24** : 2 piles de 3 (pos. 1 et 2) = 24 fûts | place de P4 |
-| M08 | **VIDES** (retours clients) : piles de 3, 2, 1 | piège |
+| M07 | Edelweiss 20 L, lot **S24** : pile de 3 (pos. 1) = 24 fûts | place de P4 |
+| M08 | **VIDES** (retours clients) : pile de 2 (8 + 8, pos. 1) + 1 palette de 6 (pos. 2) = 22 fûts | piège |
 
 Ce stock est **celui de l'extrait de stock d'ENT-6.2** (aligné le 05/10 : Heineken 30 L 16, Affligem 2, Pelforth 24, Edelweiss 24).
 
@@ -163,10 +165,13 @@ Ce stock est **celui de l'extrait de stock d'ENT-6.2** (aligné le 05/10 : Heine
 
 | Palette | Référence | Fûts | Poids | Réception (6.4) | Bonne(s) place(s) | Pièges (un critère faux chacun) |
 |---|---|---|---|---|---|---|
-| P1 | Heineken fût 30 L | 4 | 190 kg | conforme | **M02 ou M06, position 1, niv. 1** | M01 devant ou sur le S20 (lot) ; pile de 3 (hauteur 30 L) ; M02 position 4 (par le fond) |
-| P2 | Pelforth Blonde fût 20 L | 4 | 140 kg | réserve « produit différent » : c'est de la Pelforth | **M03 sur la pile de 1 (pos. 2, niv. 2)** ou **M03 pos. 3, niv. 1** | M04 (lot S19) ; M05 (référence) |
-| P3 | Affligem Blonde fût 20 L | **3** | 110 kg | le 4e fuit, il est en zone litiges | **M02 ou M06, position 1, niv. 1** (le couloir resté libre) | M05 devant ou sur le S18 (lot) |
-| P4 | Edelweiss fût 20 L | **3** | 110 kg | conforme (une place vide, comme 6.4) | **M07 pos. 3, niv. 1** | sur une pile de 3 de M07 (hauteur) ; M08 (VIDES) |
+| P1 | Heineken fût 30 L | 8 | 350 kg | conforme | **M02 ou M06, position 1, niv. 1** | M01 devant le S20 (lot) ; sur la pile de 2 de M01 (lot et hauteur 30 L) ; M02 position 4 (par le fond) |
+| P2 | Pelforth Blonde fût 20 L | 8 | 260 kg | réserve « produit différent » : c'est de la Pelforth | **M03 sur la pile de 2 (pos. 1, niv. 3)** ou **M03 pos. 2, niv. 1** | M04 (lot S19) ; M05 (référence) |
+| P3 | Affligem Blonde fût 20 L | **7** | 230 kg | le 8e fuit, il est en zone litiges | **M02 ou M06, position 1, niv. 1** (le couloir resté libre) | M05 devant ou sur le S18 (lot) |
+| P4 | Edelweiss fût 20 L | **7** | 230 kg | conforme (une place vide, comme 6.4) | **M07 pos. 2, niv. 1** | sur la pile de 3 de M07 (hauteur) ; M08 (VIDES) |
+
+Poids **calculés** : fût plein ≈ 40 kg (30 L) et ≈ 29 kg (20 L) (tare du fabricant Thielmann + bière), palette de rétention
+≈ 30 kg (**construit**), arrondis à la dizaine.
 
 Bonnes réponses **calculées par le moteur** à partir des critères et du stock de départ (les recontrôler au bloc de tests).
 **Remarque de Cowork (à voir à l'essai)** : un élève qui ouvre un couloir vide pour P2 ou P4 respecte les règles, mais il ne
@@ -192,10 +197,10 @@ une seule fiche avec l'emplacement, **pas de message séparé** (6.4 en avait d�
 
 | Palette | Référence attendue | Entrée | Stock avant → après | Couloir |
 |---|---|---|---|---|
-| P1 | Heineken fût 30 L | 4 | 16 → **20** | celui où l'élève a rangé P1 |
-| P2 | **Pelforth** Blonde fût 20 L (pas Affligem) | 4 | 24 → **28** | idem P2 |
-| P3 | Affligem Blonde fût 20 L | **3** (le 4e est en litiges) | 2 → **5** | idem P3 |
-| P4 | Edelweiss fût 20 L | **3** | 24 → **27** | idem P4 |
+| P1 | Heineken fût 30 L | 8 | 16 → **24** | celui où l'élève a rangé P1 |
+| P2 | **Pelforth** Blonde fût 20 L (pas Affligem) | 8 | 24 → **32** | idem P2 |
+| P3 | Affligem Blonde fût 20 L | **7** (le 8e est en litiges) | 2 → **9** | idem P3 |
+| P4 | Edelweiss fût 20 L | **7** | 24 → **31** | idem P4 |
 
 Une ligne de stock **par référence** ; P1 à P4 portent chacune une référence différente, donc pas de cumul dans cette séance.
 
@@ -215,10 +220,10 @@ litiges, entrée en stock.
 | 4 | P2 rangée juste | idem | idem |
 | 5 | P3 rangée juste | idem | idem |
 | 6 | P4 rangée juste | idem | idem |
-| 7 | Ligne P1 juste : Heineken 30 L, 4, stock après 20, **couloir = celui où l'élève a posé P1** | fiche envoyée | fiche non envoyée = faux |
-| 8 | Ligne P2 juste : **Pelforth**, 4, stock après 28, couloir de P2 | idem | « Affligem » recopié du BL = faux |
-| 9 | Ligne P3 juste : Affligem, **3**, stock après **5**, couloir de P3 | idem | 4 fûts (le fût qui fuit compté) = faux ; 6 = faux |
-| 10 | Ligne P4 juste : Edelweiss, **3**, stock après **27**, couloir de P4 | idem | 4 (palette supposée pleine) = faux |
+| 7 | Ligne P1 juste : Heineken 30 L, 8, stock après 24, **couloir = celui où l'élève a posé P1** | fiche envoyée | fiche non envoyée = faux |
+| 8 | Ligne P2 juste : **Pelforth**, 8, stock après 32, couloir de P2 | idem | « Affligem » recopié du BL = faux |
+| 9 | Ligne P3 juste : Affligem, **7**, stock après **9**, couloir de P3 | idem | 8 fûts (le fût qui fuit compté) = faux ; 10 = faux |
+| 10 | Ligne P4 juste : Edelweiss, **7**, stock après **31**, couloir de P4 | idem | 8 (palette supposée pleine) = faux |
 
 « Rangée juste » = aucun critère faux parmi : une seule référence, un seul lot, hauteur de gerbage, par le fond, couloir VIDES.
 **Une erreur de rangement n'est pas comptée deux fois** (décision de Tristan) : le couloir de la fiche est comparé à l'endroit où
@@ -240,8 +245,8 @@ et désignations d'ENT-6.4). Dessins : `contenus/images/france-boissons/` (SVG d
      **panneaux de couloir**, **flèches ENTRÉE / SORTIE au sol**, zones déclarées (réception, litiges, VIDES), piles, étiquettes de
      lot au sommet, apparition des palettes, palette qui tombe, `prefers-reduced-motion`.
    - **Briques déclarées** : couloirs (`id`, profondeur, zone), stock de départ par position et par niveau, palettes (`ref`, `lot`,
-     `futs`, `poids`), formats et hauteur maximale par format, **forme de la charge** (`fut` : 4 fûts 2 × 2, ou moins, sur
-     **palette de rétention noire**), couleurs de lot.
+     `futs`, `poids`), formats et hauteur maximale par format, **forme de la charge** (`fut` : 8 fûts à plat en quinconce 3 + 2 + 3, ou moins, sur
+     **palette de rétention noire de 1,30 × 1,30 m**), couleurs de lot.
    - **Gestes** : prendre / poser (places accessibles seulement), reprendre si accessible, valider (fige l'état).
    - **Critères types** fournis par le moteur, choisis par la séance : `uneReference`, `unSeulLot`, `hauteurGerbage`, `parLeFond`,
      `zoneReservee` (VIDES) ; bilan d'entraînement qui **nomme le critère**.
@@ -264,12 +269,12 @@ Ce que la séance réutilise tel quel : messages d'accueil et `apresFiche`, docu
 
 ## 8. Tests attendus
 
-Bloc `france-boissons` : parcours juste 10/10 (P1 M02 pos. 1, P2 M03 sur la pile de 1, P3 M06 pos. 1, P4 M07 pos. 3 ; fiche juste ;
-Q1 et Q2 justes du premier coup) ; **variante juste** (P1 M06, P3 M02 ; P2 M03 pos. 3 niv. 1) → 10/10 ; inaction 0/10 ;
-Q1 fausse puis juste → jalon 1 faux ; P1 en M01 devant le S20 → jalon 3 faux (critère « un seul lot par couloir ») ; P1 sur une pile
-de 2 → hauteur ; P1 en M02 pos. 4 → « par le fond » ; P2 en M04 → jalon 4 faux ; P3 en M05 → jalon 5 faux ; P4 sur une pile de 3 →
+Bloc `france-boissons` : parcours juste 10/10 (P1 M02 pos. 1, P2 M03 sur la pile de 2, P3 M06 pos. 1, P4 M07 pos. 2 ; fiche juste ;
+Q1 et Q2 justes du premier coup) ; **variante juste** (P1 M06, P3 M02 ; P2 M03 pos. 2 niv. 1) → 10/10 ; inaction 0/10 ;
+Q1 fausse puis juste → jalon 1 faux ; P1 en M01 devant le S20 → jalon 3 faux (critère « un seul lot par couloir ») ; P1 sur la pile
+de 2 de M01 → lot et hauteur ; P1 en M02 pos. 4 → « par le fond » ; P2 en M04 → jalon 4 faux ; P3 en M05 → jalon 5 faux ; P4 sur une pile de 3 →
 jalon 6 faux ; P4 en M08 → jalon 6 faux ; poser derrière une pile → refusé (geste impossible) ; reprendre une palette bloquée →
-refusé ; ligne P2 en Affligem → jalon 8 faux ; ligne P3 à 4 → jalon 9 faux ; stock après Affligem 6 → jalon 9 faux ; P1 rangée en
+refusé ; ligne P2 en Affligem → jalon 8 faux ; ligne P3 à 8 → jalon 9 faux ; stock après Affligem 10 → jalon 9 faux ; P1 rangée en
 M01 (faux) **et** fiche « M01 » → jalon 3 faux, **jalon 7 juste** (pas de double peine) ; fiche non envoyée → jalons 7 à 10 faux ;
 sabotage par jalon.
 
@@ -277,7 +282,8 @@ sabotage par jalon.
 
 - Trame courte (contexte, lexique : FIFO, lot, gerber ; plan de la zone de masse à compléter sur papier ; tableau d'entrée en stock) :
   Cowork, **après validation à l'écran**. La trame dit **le réel** : palettes mères de 8 fûts, 6 au plus vers les clients, stockage de
-  masse vérifié chez France Boissons (INRS) ; 4 fûts par palette de rétention = règle de l'exercice.
+  masse vérifié chez France Boissons (INRS) ; 8 fûts à plat sur palette de rétention = règle de l'exercice (ce n'est pas la palette
+  mère réelle).
 - Corrigé `contenus/corriges/ENT-6.5.js` : réponses des deux questions, places justes (toutes), fiche attendue ; calculé.
 - **Question « Pour réfléchir » de la trame** (règle 32 ; **une seule gardée** par Tristan le 05/10) :
   - « Jeudi, tu prépares les 2 Affligem de Malo : quel lot sortiras-tu en premier, et dans quel couloir ? »
@@ -295,7 +301,7 @@ aide sur un écran de lycée ; un élève de 2de finit en 50 min ; le bilan ne d
 - [x] Stockage de masse plutôt que racks (Tristan, 05/10, décision 33).
 - [x] Étapes : comprendre le FIFO + animation, puis vue entrepôt (Tristan, décision 35) ; matériel du poste au début (05/10).
 - [x] Animation en deux temps, « parfait » (Tristan, 05/10) ; vue entrepôt 3D iso validée (décision 36).
-- [x] 4 fûts par palette de rétention noire (Tristan, décision 37).
+- [x] ~~4 fûts par palette de rétention (décision 37)~~ → **8 fûts à plat en quinconce sur palette de rétention noire de 1,30 × 1,30 m** (Tristan, 05/10, décision 52).
 - [x] Panneaux de couloir et flèches ENTRÉE / SORTIE dans la vue entrepôt (05/10).
 - [x] Règle « un seul lot par couloir » au lieu de « premier entré, premier sorti » (Tristan, 05/10).
 - [x] Les deux questions de l'animation comptent, première réponse (Tristan, 05/10).

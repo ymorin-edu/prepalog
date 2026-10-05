@@ -93,11 +93,12 @@ Consigne d'une ligne : « Écoute (ou lis) le terminal, va au couloir, compte, r
 1. « Couloir M04. Code de contrôle ? » → l'élève lit le **code à 2 chiffres** écrit sur le **panneau du couloir** (mur du fond) et le
    tape. Code faux : « Code faux. Vérifie le couloir. » (le terminal redemande ; **trace** visible de l'enseignant, **non notée**).
 2. « Pelforth Blonde 20 litres. Lot S19. Combien de fûts ? » → l'élève ouvre le couloir en 3D, compte, tape un **nombre**.
-3. « Compris : 4. » puis la ligne suivante. Bouton « Répète » (redit la dernière phrase). Pas de retour sur une ligne validée.
+3. « Compris : 0. » puis la ligne suivante (ici le couloir M04 est vide : **0 est une réponse**, une case vide n'en est pas une ;
+   le terminal refuse de passer à la ligne suivante sans nombre). Bouton « Répète » (redit la dernière phrase). Pas de retour sur une ligne validée.
 
 - **À l'aveugle** : la quantité du logiciel n'apparaît **nulle part** (ni dans le terminal, ni sur les étiquettes, ni dans un KPI
   d'accueil — voir la fuite d'ENT-2.2 : `kpis: ['mail']`).
-- **Compter une pile** : encadré « Compter les fûts » (3 lignes) : « Une palette pleine = 4 fûts. / Compte les palettes de chaque
+- **Compter une pile** : encadré « Compter les fûts » (3 lignes) : « Une palette pleine = 8 fûts. / Compte les palettes de chaque
   pile, puis regarde s'il manque des fûts sur une palette. / Ne compte que la référence demandée. »
 - **Palettes incomplètes** : toujours **au sommet** d'une pile (on ne gerbe pas sur une palette incomplète) ; les places vides se
   voient sur le dessin.
@@ -107,21 +108,21 @@ Consigne d'une ligne : « Écoute (ou lis) le terminal, va au couloir, compte, r
 - **Hors liste** : tout couloir s'ouvre ; compter un couloir hors liste n'est pas possible depuis le terminal (il impose l'ordre de sa
   liste) — rien à tracer.
 
-**Liste du terminal (7 lignes, dans cet ordre) et stock** (construit ; position 1 = fond ; une palette pleine = 4 fûts) :
+**Liste du terminal (7 lignes, dans cet ordre) et stock** (construit ; position 1 = fond ; une palette pleine = 8 fûts, à plat en quinconce) :
 
 | # | Couloir · code | Référence, lot | Ce qu'on voit (réel) | Théorique (logiciel) | Réel | Cause (construite) |
 |---|---|---|---|---|---|---|
-| 1 | M01 · 47 | Heineken 30 L, S20 | pile 1 : 4 + 4 ; pile 2 : 4 + **3** (une place vide au sommet) | 16 | **15** | fût percé hier 19 h, posé en zone litiges, **casse non saisie** |
-| 2 | M02 · 82 | Heineken 30 L, S24 | pos. 1 : Heineken S24 (4) **et, posée dessus, une palette Pelforth S19 (4)** | 4 | **4** | conforme… **mais** la Pelforth posée dessus ne se compte pas ici |
-| 3 | M03 · 15 | Pelforth 20 L, S24 | pile 1 : 4 + 4 + 4 ; pile 2 : 4 + 4 | 20 | 20 | conforme |
-| 4 | M04 · 63 | Pelforth 20 L, S19 | pos. 1 : une seule palette (4) | 8 | **4** | la 2e palette a été **remise au mauvais couloir** hier soir (en M02, ligne 2) |
+| 1 | M01 · 47 | Heineken 30 L, S20 | pos. 1 : pile de 2 : 8 + **7** (une place vide sur la palette du dessus) | 16 | **15** | fût percé hier 19 h, posé en zone litiges, **casse non saisie** |
+| 2 | M02 · 82 | Heineken 30 L, S24 | pos. 1 : Heineken S24 (8) **et, posée dessus, une palette Pelforth S19 (8)** | 8 | **8** | conforme… **mais** la Pelforth posée dessus ne se compte pas ici |
+| 3 | M03 · 15 | Pelforth 20 L, S24 | pos. 1 : pile de 3 : 8 + 8 + 8 | 24 | 24 | conforme |
+| 4 | M04 · 63 | Pelforth 20 L, S19 | **couloir vide** | 8 | **0** | sa seule palette a été **reposée au mauvais couloir** hier soir (en M02, ligne 2) |
 | 5 | M05 · 29 | Affligem 20 L, S18 | pos. 1 : une palette de 2 | 2 | 2 | conforme |
-| 6 | M06 · 54 | Affligem 20 L, S24 | pos. 1 : une palette de 3 | 3 | 3 | conforme (le 4e fût est en litiges depuis ENT-6.4) |
-| 7 | M08 · 91 | **Fûts vides** (retours clients) | pile 1 : 4 + 4 + 3 ; pile 2 : 4 + 2 ; pile 3 : 2 | 22 | **19** | **3 vides manquants** (cause inconnue à ce stade : reprise mal comptée ?) |
+| 6 | M06 · 54 | Affligem 20 L, S24 | pos. 1 : une palette de 7 | 7 | 7 | conforme (le 8e fût est en litiges depuis ENT-6.4) |
+| 7 | M08 · 91 | **Fûts vides** (retours clients) | pos. 1 : pile de 2 : 8 + 8 ; pos. 2 : une palette de **3** | 22 | **19** | **3 vides manquants** (cause inconnue à ce stade : reprise mal comptée ?) |
 
 Stock du soir d'ENT-6.5 avec les palettes rangées à leur **bonne place** (chaque séance repart d'un dossier propre) : P1 en M02, P2 sur
-la pile de 1 de M03, P3 en M06, P4 en M07. M07 (Edelweiss, 27) **n'est pas compté** (pas dans la commande de vendredi). **Écarts
-réels : M01 −1 · M04 −4 · M08 −3 ; conformes : M02, M03, M05, M06.**
+la pile de 2 de M03, P3 en M06, P4 en M07. M07 (Edelweiss, 31) **n'est pas compté** (pas dans la commande de vendredi). **Écarts
+réels : M01 −1 · M04 −8 · M08 −3 ; conformes : M02, M03, M05, M06.**
 
 ### Étape 2 — Écarts et décisions (≈ 15 min, 3 jalons)
 
@@ -132,7 +133,7 @@ l'élève** (écart = compté − théorique, mode `ecarts: 'eleve'`) ; puis une
 | Ligne | Décision attendue | Pièges |
 |---|---|---|
 | M01 −1 | **Régulariser −1, motif « Casse »** (indice : la zone litiges) | « Remettre en place » ; régulariser sans motif |
-| M04 −4 | **Ne pas régulariser : remettre la palette en M04** (`'rayon'`, libellé « Remettre en place ») — elle est en M02 | régulariser −4 (le stock deviendrait faux de 4 quand on retrouvera la palette) |
+| M04 −8 | **Ne pas régulariser : remettre la palette en M04** (`'rayon'`, libellé « Remettre en place ») — elle est en M02 | régulariser −8 (le stock deviendrait faux de 8 quand on retrouvera la palette) |
 | M08 −3 | **Régulariser −3, motif « Vides manquants »** et le signaler (étape 3) | ne rien faire |
 
 Encadré « Avant de corriger » (3 lignes) : « Un écart, c'est un signal. / Cherche d'abord **pourquoi** : une palette ailleurs ? un fût
@@ -159,11 +160,11 @@ fût vide, consigne, réemploi, taux de fiabilité, terminal vocal, code de cont
 
 | # | Jalon | Ce qu'il lit | Piège à éviter |
 |---|---|---|---|
-| 1 | M01 compté **15** | terminal (§7.2) | 16 (palette du dessus supposée pleine) ; 17 (fût des litiges ajouté) |
-| 2 | M02 compté **4** | idem | 8 (la Pelforth posée dessus comptée comme de la Heineken) |
-| 3 | M04 compté **4** | idem | 8 (stock supposé) |
+| 1 | M01 compté **15** | terminal (§7.2) | 16 (palette du dessus supposée pleine, ou fût des litiges ajouté) |
+| 2 | M02 compté **8** | idem | 16 (la Pelforth posée dessus comptée comme de la Heineken) |
+| 3 | M04 compté **0** | idem | 8 (stock supposé) ; ligne non comptée = faux |
 | 4 | M08 compté **19** | idem | 22, 24 (palettes supposées pleines) |
-| 5 | M03 **20**, M05 **2**, M06 **3** tous justes | idem | un seul faux = faux |
+| 5 | M03 **24**, M05 **2**, M06 **7** tous justes | idem | un seul faux = faux |
 | 6 | Les 7 écarts calculés justes (**écart = compté de l'élève − théorique**) | écran Inventaire | écarts non saisis = faux |
 | 7 | M04 : **remettre en place**, pas de régularisation | idem | décision absente = faux |
 | 8 | M01 : **régulariser −1, motif Casse** | idem | autre motif = faux |
@@ -213,10 +214,10 @@ Ce que la séance réutilise tel quel : messages d'accueil et `apresFiche`, docu
 
 ## 8. Tests attendus
 
-Bloc `france-boissons` : parcours juste 10/10 (comptages 15 · 4 · 20 · 4 · 2 · 3 · 19 ; écarts −1 · 0 · 0 · −4 · 0 · 0 · −3 ; M01
+Bloc `france-boissons` : parcours juste 10/10 (comptages 15 · 8 · 24 · 0 · 2 · 7 · 19 ; écarts −1 · 0 · 0 · −8 · 0 · 0 · −3 ; M01
 régul −1 Casse ; M04 remettre en place ; vides régul −3 ; fiche 120 € et 57 %) ; inaction 0/10 ; M01 compté 16 → jalon 1 faux,
-**jalon 6 juste si l'écart saisi est 0**, jalon 10 juste si l'élève écrit 71 % (5 ÷ 7) ; M02 compté 8 → jalon 2 faux ; M08 compté 22 →
-jalon 4 faux, jalon 9 juste si l'élève écrit 0 € ; M04 régularisé −4 → jalon 7 faux ; M01 « remettre en place » → jalon 8 faux ;
+**jalon 6 juste si l'écart saisi est 0**, jalon 10 juste si l'élève écrit 71 % (5 ÷ 7) ; M02 compté 16 → jalon 2 faux ; M08 compté 22 →
+jalon 4 faux, jalon 9 juste si l'élève écrit 0 € ; M04 régularisé −8 → jalon 7 faux ; M01 « remettre en place » → jalon 8 faux ;
 code de contrôle faux → redemandé, **aucun jalon perdu**, trace présente ; **aucune quantité théorique dans le DOM avant la fin du
 comptage** (test de fuite, KPI compris) ; son coupé par défaut ; groupe « son activé » → l'élève voit « Couper le son » mais aucun
 bouton pour l'activer s'il est coupé par l'enseignant ; aucune requête hors du domaine (voix locale) ; fiche non envoyée → jalons 9
@@ -226,7 +227,7 @@ et 10 faux ; sabotage par jalon.
 
 - Trame courte (contexte ; lexique : inventaire tournant, à l'aveugle, écart, régulariser, consigne, réemploi ; tableau de comptage à
   compléter sur papier ; calcul du taux) : Cowork, **après validation à l'écran**. La trame dit **le réel** (préparation vocale
-  vérifiée chez France Boissons, inventaire à la voix construit ; 4 fûts par palette = règle de l'exercice ; montant de consigne de
+  vérifiée chez France Boissons, inventaire à la voix construit ; 8 fûts à plat par palette de rétention = règle de l'exercice ; montant de consigne de
   l'arrêté de 2026 ; chiffres de réemploi de 2014).
 - **Question d'éco-droit (RSE, module 3, non notée)** dans la trame, décision 40 : « Pourquoi France Boissons a-t-elle intérêt à
   récupérer tous ses fûts vides ? Donne une raison économique et une raison environnementale. »
@@ -248,9 +249,9 @@ M04 se résout en trouvant la palette en M02, pas en corrigeant le stock ; la s�
 - [x] RSE : fil léger sur 6.6, 6.8, 6.10, questions d'éco-droit non notées (Tristan, 05/10, décision 40).
 - [x] Son : deux modes, réglé par l'enseignant seul, coupé par défaut (Tristan, 05/10, décision 41).
 - [ ] Maquette cliquable du terminal vocal avant le brief moteur (défaut : oui, Cowork la fabrique avec l'écran 6.7).
-- [ ] Vides : « recompter » avant de régulariser (défaut : non, une seule décision « régulariser, Vides manquants » en 2de).
-- [ ] Codes de contrôle à 2 chiffres (défaut : oui, valeurs construites ci-dessus).
-- [ ] Question « Pour réfléchir » (défaut : celle du §9).
+- [x] Vides : pas de « recompter », une seule décision « régulariser, Vides manquants » en 2de (Tristan, 05/10).
+- [x] Codes de contrôle à 2 chiffres, valeurs construites ci-dessus (Tristan, 05/10).
+- [x] Question « Pour réfléchir » : celle du §9 (Tristan, 05/10).
 - [ ] Dessin du terminal vocal (défaut : Cowork le fournit avant l'implémentation de la séance).
 
 ---
