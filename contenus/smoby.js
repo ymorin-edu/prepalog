@@ -72,3 +72,35 @@ export function baseDeDepart() {
     customers: [], suppliers: [], seq: 1, _depart: [],
   };
 }
+
+// ─────────────────────────────────────────── Kuehne+Nagel, agence Route de Besançon (ENT-5.7, ENT-5.8)
+// Vérifié : Kuehne+Nagel, transporteur réel, a une agence Route à Besançon (École-Valentin) ; règles de
+// conduite et de repos du règlement CE 561/2006 (4 h 30 puis 45 min de pause, 9 h par jour, 11 h de
+// repos journalier) ; une semi-remorque demande le permis CE.
+// Construit : le contrat Smoby ↔ K+N, les chauffeurs, les camions, les trajets, durées et fenêtres, les
+// clients (marqués « (fictif) »). Données reprises TELLES QUELLES du cas « chauffeurs et camions » de la
+// maquette Planning v8, validée par Tristan le 04/10/2026 (`contenus/planning-essai.js`, `CHAUF`).
+// Communes à ENT-5.7 (le planning de la journée) et ENT-5.8 (la lettre de voiture d'E1).
+export const KN_AGENCE = { nom: 'Kuehne+Nagel', agence: 'agence Route de Besançon', lieu: 'École-Valentin (25)',
+  mailDomain: 'kn-besancon.example' };
+export const CHAUFFEURS = [
+  { id: 'sofiane', nom: 'Sofiane', permis: 'CE', finHier: '20:00', note: 'permis CE' },
+  { id: 'julie', nom: 'Julie', permis: 'CE', finHier: '17:00', note: 'permis CE' },
+  { id: 'marc', nom: 'Marc', permis: 'C', finHier: '18:00', note: 'permis C' },
+  { id: 'nadia', nom: 'Nadia', permis: 'CE', finHier: '23:00', note: 'permis CE' },
+];
+export const CAMIONS = [
+  { id: 's1', nom: 'Semi n° 1', type: 'semi', note: 'semi-remorque' },
+  { id: 's2', nom: 'Semi n° 2', type: 'semi', note: 'semi-remorque' },
+  { id: 'p3', nom: 'Porteur n° 3', type: 'porteur', note: 'porteur' },
+];
+// `conduite` : minutes de conduite du trajet ; `des` / `avant` : prêt à partir dès, livré avant.
+const enlevement = (id, vers, type, pal, conduite, des, avant) => ({ id, vers, type, famille: type, pal, conduite, des, avant,
+  titre: `${id} — Moirans → ${vers}` });
+export const ENLEVEMENTS = [
+  enlevement('E1', 'Lyon — Jouets du Rhône (fictif)', 'semi', 33, 240, '06:00', '12:00'),
+  enlevement('E2', 'Dijon — Maxi Jouets (fictif)', 'semi', 26, 210, '08:00', '14:00'),
+  enlevement('E3', 'Besançon — magasin Ludik (fictif)', 'porteur', 12, 150, '07:00', '12:00'),
+  enlevement('E4', 'Mâcon — Centrale du Jouet (fictif)', 'semi', 30, 180, '11:00', '17:00'),
+  enlevement('E5', 'Besançon — magasin Ludik (fictif), 2e livraison', 'porteur', 8, 120, '12:00', '17:00'),
+];

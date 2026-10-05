@@ -10,7 +10,7 @@
 > Lis docs/briefs/COORDINATION-smoby.md puis implémente le brief docs/briefs/ENT-5.7-smoby-enlevements.md (il faut que la vue Planning et les lots 1, 3 et 7 de MOTEUR-2de-S1 soient livrés). Annonce la durée avant de commencer et dis-moi si un point du brief contredit le code.
 > ```
 
-**Statut** : à implémenter — **attend la vue Planning** (`MOTEUR-vue-planning.md`)
+**Statut** : **livré** (05/10/2026, `pret: true, ouverture: 'prof'` : fermée aux élèves, à essayer à l'écran)
 **Date du brief** : 04/10/2026
 **Conversation d'origine** : Cowork (Opus) ; fiche projet `claude/prepalog-2de-s1-cadrage.md` (décisions 11, 12, 18) ;
 maquette `docs/briefs/planning/` (cas « chauffeurs et camions », v8 validée).
@@ -107,9 +107,20 @@ La séance se joue comme le cas « chauffeurs et camions » de la maquette v8, d
 
 ## Compte rendu *(rempli par Claude Code à la livraison)*
 
-- **Fichiers créés / modifiés** :
-- **Écarts par rapport au brief** :
-- **Décisions prises en route** :
-- **Tests** :
-- **Commits** :
-- **Reste ouvert** :
+- **Fichiers créés / modifiés** : `activites/smoby-enlevements.js` (nouveau), une ligne dans `activites/index.js` ;
+  `contenus/smoby-ent57.js` (nouveau : planning, messages, accueil, lexique, solution) ; `contenus/smoby.js` (bloc
+  Kuehne+Nagel : `KN_AGENCE`, `CHAUFFEURS`, `CAMIONS`, `ENLEVEMENTS`, communs à ENT-5.8) ; `contenus/corriges/ENT-5.7.js`
+  (nouveau, calculé) ; `outils/test/smoby.mjs` (6 cas) ; `outils/test/socle.mjs` (ENT-5.7 ajouté au repère de l'ordre Simulog).
+- **Écarts par rapport au brief** : fichier de données `contenus/smoby-ent57.js` et non `smoby-ent55.js` (nom déjà pris par
+  ENT-5.5). Les messages de départ sont deux mails : Bruno (Smoby) annonce les 5 enlèvements (liste calculée depuis les données),
+  le responsable d'exploitation confie le planning. Après le 2e envoi, un mail de fin du responsable (« demain, la lettre de
+  voiture d'E1 »), sans dire si c'était juste.
+- **Décisions prises en route** : environnement Smoby (logo, charte), sous-titre et adresse de messagerie de l'agence K+N
+  (`docs/decisions.md`). Données et règles du planning reprises telles quelles du cas « chauffeurs » de la maquette v8.
+- **Tests** : bloc `smoby` 152 / 152 (déclaration et rang ; les deux solutions à 10 / 10 et le 1er envoi qui ne tient plus
+  après la panne ; Marc sur une semi → jalon chauffeurs faux seul ; Nadia à 07:00 → conduite fausse seule ; 7 h sans pause →
+  conduite fausse ; ouverture sans jalon ; parcours juste à l'écran 10 / 10 ; rien posé envoyé deux fois → 0 / 10). Éprouvés
+  dans l'autre sens : Marc en permis CE et panne retirée font tomber les deux cas visés. Suite complète : voir le commit.
+- **Commits** : voir `git log` (« ENT-5.7 Smoby / K+N : les enlèvements de Noël… »).
+- **Reste ouvert** : compte rendu de la replanification par phrases (non pour l'instant, brief §11) ; trame courte (Cowork,
+  après essai à l'écran).

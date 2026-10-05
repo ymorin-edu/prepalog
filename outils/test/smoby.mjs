@@ -2108,6 +2108,136 @@ await v('ENT-5.3 : une adresse décomposée fausse (travée et niveau inversés)
   egal(st.map((s, i) => s === 'ok' ? null : i).filter((i) => i !== null), [15], 'seul le jalon 16 (décomposer) tombe');
 });
 
+// ── ENT-5.7 « les enlèvements de Noël » (brief `docs/briefs/ENT-5.7-smoby-enlevements.md`) ─────────────
+// La séance réelle, montée par son activité (`activites/smoby-enlevements.js`). Les placements sont écrits
+// À LA MAIN ici (créneau = quart d'heure depuis 05:00 : 07:00 → 8), d'après la recherche de Cowork sur la
+// maquette v8 ; les règles elles-mêmes sont éprouvées par le bloc `planning` (même cas « chauffeurs »).
+const T57 = '#s57';
+const Z57 = `${T57} .ent-main`;
+const monter57 = (o = {}) => pg.evaluate(async (o) => {
+  const act = await import('/activites/smoby-enlevements.js');
+  ['#smTest', '#s51', '#s52', '#s57'].forEach((s) => document.querySelector(s)?.remove());
+  const hote = document.createElement('div'); hote.id = 's57'; document.body.appendChild(hote);
+  const db = {};
+  window.__57 = { db, suivi: [] };
+  act.rendre(hote, {
+    meta: act.meta,
+    profil: { prenom: 'Lea', nom: 'Test', role: o.role || 'eleve', uid: o.uid || 'u-57' },
+    jeu: { etat: () => db, sauver: () => {} },
+    enregistrer: (r) => { window.__57.suivi.push(JSON.parse(JSON.stringify(r))); }, quitter: () => {}, codeStock: 'ABC',
+    lireScore: async () => null,
+  });
+}, o);
+const etapes57 = () => pg.evaluate(async () => {
+  const S = await import('/contenus/smoby-ent57.js');
+  return S.ETAPES.map((e) => e.verifier(window.__57.db).status);
+});
+const dernierScore57 = () => pg.evaluate(() => { const s = window.__57.suivi; return s.length ? [s[s.length - 1].score, s[s.length - 1].max] : null; });
+const sujets57 = () => pg.evaluate(() => window.__57.db.mails.filter((m) => m.folder === 'in').map((m) => m.subject));
+const ACCUEIL57 = ['Commande de Noël : 5 enlèvements jeudi', 'Planning de jeudi'];
+// Juge des placements { carte: { r, s, k } } pour les deux versions, sans passer par l'écran.
+const juger57 = (v1, v2) => pg.evaluate(async ([v1, v2]) => {
+  const S = await import('/contenus/smoby-ent57.js');
+  const P = await import('/core/types/planning.js');
+  const db = { plannings: { [S.PLANNING.id]: { v1: { place: v1 }, ...(v2 ? { v2: { place: v2 } } : {}) } } };
+  return P.jalonsPlanning(db, S.PLANNING).L.map((l) => l.ok);
+}, [v1, v2]);
+// Une solution juste avant la panne, et une après (Semi n° 2 à l'atelier jusqu'à 12:00).
+const CH1 = { E1: { r: 'sofiane', s: 8, k: 's1' }, E3: { r: 'marc', s: 8, k: 'p3' }, E2: { r: 'julie', s: 12, k: 's2' },
+  'pause-1': { r: 'julie', s: 26 }, 'pause-2': { r: 'sofiane', s: 24 }, E4: { r: 'sofiane', s: 27, k: 's1' }, E5: { r: 'julie', s: 29, k: 'p3' } };
+const CH2 = { E1: { r: 'julie', s: 4, k: 's1' }, E3: { r: 'marc', s: 8, k: 'p3' }, 'pause-1': { r: 'julie', s: 20 },
+  E2: { r: 'sofiane', s: 20, k: 's1' }, E4: { r: 'julie', s: 28, k: 's2' }, 'pause-2': { r: 'sofiane', s: 34 }, E5: { r: 'sofiane', s: 37, k: 'p3' } };
+// À l'écran : la carte, puis la case, puis le camion dans la bulle (même geste que le bloc `planning`).
+async function poser57(id, { r, s, k }) {
+  await pg.click(`${Z57} [data-pl-id="${id}"][data-pl-vue="b"]`);
+  const sel = `${Z57} [data-pl-grille] [data-pl-case][data-r="${r}"][data-t="${s}"]`;
+  await pg.$eval(sel, (el) => el.scrollIntoView({ block: 'center', inline: 'center' }));
+  await pg.click(sel, { force: true });
+  if (k) await pg.click(`${Z57} .pl-bulle [data-pl-choix="${k}"]`);
+}
+async function envoyer57() {
+  await pg.click(`${Z57} [data-pl="envoyer"]`);
+  if (await pg.$(`${Z57} [data-pl="quandMeme"]`)) await pg.click(`${Z57} [data-pl="quandMeme"]`);
+}
+const tous57 = (s) => Array(10).fill(s);
+
+await v('ENT-5.7 : déclaration (code, 2de, OTM-C2.2 et C3.2, 10 jalons, livrée fermée aux élèves), inscrite au registre après ENT-5.6', async () => {
+  const r = await pg.evaluate(async () => {
+    const A = await import('/activites/smoby-enlevements.js');
+    const I = await import('/activites/index.js');
+    const C = await import('/core/competences.js');
+    const m = A.meta;
+    const metas = (await Promise.all(I.ACTIVITES.map((f) => f()))).map((x) => x.meta);
+    return { m: [m.id, m.code, m.rubrique, m.niveaux, m.competences, m.domaines, m.temps, m.bareme, m.pret, m.ouverture, m.portee, m.immersif, m.coeur],
+      comp: ['OTM-C2.2', 'OTM-C3.2'].every((c) => JSON.stringify(C).includes(c)),
+      rang: metas.filter((x) => /^ENT-5\./.test(x.code)).map((x) => x.code) };
+  });
+  egal(r.m, ['smoby-enlevements', 'ENT-5.7', 'simulog', ['2de'], ['OTM-C2.2', 'OTM-C3.2'], ['D2'], 'guidage', 10, true, 'prof', 'eleve', true, true], 'meta');
+  vrai(r.comp, 'OTM-C2.2 ou OTM-C3.2 absente de core/competences.js');
+  egal(r.rang.slice(-2), ['ENT-5.6', 'ENT-5.7'], 'rang dans le registre');
+});
+
+await v('ENT-5.7 : les deux solutions valent 10 / 10, celle du 1er envoi ne tient plus après la panne ; le corrigé se charge', async () => {
+  egal(await juger57(CH1, CH2), tous57(true), 'solutions avant / après la panne');
+  egal(await juger57(CH1, CH1), [true, true, true, true, true, true, true, false, true, true], '1er envoi renvoyé tel quel après la panne : camions faux');
+  const c = await pg.evaluate(async () => {
+    const C = await import('/contenus/corriges/ENT-5.7.js');
+    return [C.CORRIGE.code, C.CORRIGE.items.length, C.CORRIGE.items[1].reponses.find((x) => x[1].startsWith('E1'))];
+  });
+  egal(c, ['ENT-5.7', 2, ['Julie', 'E1 — Moirans → Lyon — Jouets du Rhône (fictif)', 'Semi n° 1', '06:00 → 10:00', 'prêt dès 06:00, livré avant 12:00']],
+    'corrigé (E1 après la panne : celui que reprend ENT-5.8)');
+});
+
+await v('ENT-5.7 : pièges — Marc sur une semi (chauffeurs faux), Nadia avant 10:00 (conduite fausse), 7 h sans pause (conduite fausse)', async () => {
+  // Marc fait E3 puis E4 : la pause de Sofiane passe chez lui (sinon 5 h 30 sans pause ferait aussi tomber la conduite).
+  const marc = { ...CH1, E4: { r: 'marc', s: 27, k: 's1' }, 'pause-2': { r: 'marc', s: 18 } };
+  egal((await juger57(marc)).slice(0, 5), [true, false, true, true, true], 'Marc sur le Semi n° 1');
+  const nadia = { ...CH1, E3: { r: 'nadia', s: 8, k: 'p3' } };
+  egal((await juger57(nadia)).slice(0, 5), [true, true, true, true, false], 'Nadia à 07:00');
+  const sansPause = { ...CH1 };
+  delete sansPause['pause-2'];
+  egal((await juger57(sansPause)).slice(0, 5), [true, true, true, true, false], 'Sofiane 7 h sans pause');
+});
+
+await v('ENT-5.7 : à l’ouverture, Bruno et le responsable K+N, le planning au menu, les mots cliquables ; aucun jalon (inaction 0 / 10)', async () => {
+  await monter57();
+  egal((await sujets57()).slice().sort(), ACCUEIL57.slice().sort(), 'messages au départ');
+  egal(await pg.$$eval(`${T57} .ent-nav`, (L) => L.some((b) => b.dataset.vue === 'planning')), true, 'entrée du planning au menu');
+  await pg.click(`${T57} .ent-nav[data-vue="planning"]`);
+  const mots = await pg.$$eval(`${Z57} .pl-gauche [data-lex]`, (L) => L.map((b) => b.textContent.trim()));
+  vrai(['temps de conduite', 'pause', 'repos journalier', 'semi-remorque', 'porteur'].every((m) => mots.includes(m)), `mots du planning : ${mots}`);
+  egal(await etapes57(), tous57('attente'), 'étapes à l’ouverture');
+  const s = await dernierScore57();
+  vrai(!s || s[0] === 0, `score sans rien faire : ${JSON.stringify(s)}`);
+  vrai(/kn-besancon/.test(await pg.evaluate(() => JSON.stringify(window.__57.db.mails))), 'adresses de l’agence K+N');
+});
+
+await v('ENT-5.7 : parcours juste à l’écran → 1er envoi, panne de l’atelier, planning repris : 10 / 10, puis la suite de l’histoire', async () => {
+  await monter57({ uid: 'u-57-juste' });
+  await pg.click(`${T57} .ent-nav[data-vue="planning"]`);
+  for (const [id, p] of Object.entries(CH1)) await poser57(id, p);
+  egal((await sujets57()).length, 2, 'pas de panne avant l’envoi');
+  await envoyer57();
+  egal((await etapes57()).slice(0, 5), Array(5).fill('ok'), '1er envoi');
+  vrai((await sujets57()).includes('Changement : planning à reprendre'), 'la panne n’arrive pas après l’envoi');
+  await pg.click(`${T57} .ent-nav[data-vue="planning"]`);
+  for (const id of Object.keys(CH1)) await pg.click(`${Z57} [data-pl-id="${id}"][data-pl-vue="b"] [data-pl-act="retirer"]`);
+  for (const [id, p] of Object.entries(CH2)) await poser57(id, p);
+  await envoyer57();
+  egal(await etapes57(), tous57('ok'), 'après la panne');
+  egal(await dernierScore57(), [10, 10], 'score remonté au suivi');
+  vrai((await sujets57()).includes('RE : Planning de jeudi'), 'la suite de l’histoire');
+});
+
+await v('ENT-5.7 : rien posé, envoyé deux fois → 0 / 10', async () => {
+  await monter57({ uid: 'u-57-rien' });
+  await pg.click(`${T57} .ent-nav[data-vue="planning"]`);
+  await envoyer57();
+  await envoyer57();
+  egal((await etapes57()).filter((s) => s === 'ok').length, 0, 'jalons vrais sans rien faire');
+  vrai((await sujets57()).includes('RE : Planning de jeudi'), 'les deux envois ont bien eu lieu');
+});
+
 await v('Smoby : aucune erreur JavaScript dans le bloc', async () => {
   if (erreursS.length) throw new Error([...new Set(erreursS)].slice(0, 5).join(' | '));
 });

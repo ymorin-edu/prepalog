@@ -58,6 +58,7 @@ export const ACTIVITES = [
   () => import('./smoby-reception.js'),
   () => import('./smoby-rangement.js'),
   () => import('./smoby-preparation.js'),
+  () => import('./smoby-enlevements.js'),
 ];
 
 // Pictogrammes des rubriques. Une seule grille pour les dix : trait de 1,6 px, bouts et
