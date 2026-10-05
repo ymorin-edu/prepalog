@@ -7,7 +7,6 @@ est déjà modifié ou inscrit ci-dessous, **elle s'arrête et le dit à Tristan
 
 | Chantier | Fichiers qu'il touche | Depuis |
 |---|---|---|
-| MOTEUR plan d'entrepôt : « posée » sur la carte de palette (retire le contour du plan) | `core/types/entrepot.js`, `styles/entrepot.css`, `outils/test/entrepot.mjs`, brief MOTEUR-vue-plan-entrepot, `docs/decisions.md` | 06/10/2026 |
 
 Rappel : un seul chantier à la fois dans `core/types/tournee.js`, `core/types/grille.js`,
 `core/types/entreprise.js`, `styles/base.css` et `outils/test/boost.mjs` (voir `docs/briefs/COORDINATION-boost.md`).
