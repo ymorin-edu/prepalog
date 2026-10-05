@@ -739,6 +739,95 @@ await v('Fiche : sans déclaration, ni écran, ni entrée de menu, ni bouton dan
   egal(r, { menu: false, bouton: false, pj: 6, fiches: false }, 'environnement sans fiche');
 });
 
+// ── Fiche à remplir, lot 4 (05/10/2026) : blocs `cases` (cocher plusieurs) et `ordre` (remettre dans l'ordre) ──
+// Une fiche d'essai déclarée ici (l'univers de la page d'essai, sa fiche remplacée). Valeurs écrites à la main.
+const FB = `${Z} .ent-fiche`;
+const monterBlocs = (o = {}) => pg.evaluate(async (o) => {
+  const { creerEntreprise } = await import('/core/types/entreprise.js');
+  const E = await import('/outils/essai-2de.js');
+  const U = E.univers({});
+  U.fiche = { id: 'essai-blocs', libelle: 'Fiche d’essai', titre: 'Fiche d’essai',
+    blocs: [
+      { type: 'cases', id: 'pieces', titre: '1. Pièces', choix: [{ v: 'a', lib: 'Alpha' }, { v: 'b', lib: 'Bravo' }, { v: 'c', lib: 'Charlie' }] },
+      { type: 'ordre', id: 'jour', titre: '2. Ordre', choix: [{ v: 'z3', lib: 'Trois' }, { v: 'z1', lib: 'Un' }, { v: 'z2', lib: 'Deux' }] },
+    ],
+    envoi: { bouton: 'Envoyer', a: 'Sophie' } };
+  document.querySelector('#smTest')?.remove();
+  const hote = document.createElement('div'); hote.id = 'smTest'; document.body.appendChild(hote);
+  const CLE = 'essai-blocs-' + (o.uid || 'u-b');
+  const db = o.garder ? JSON.parse(localStorage.getItem(CLE) || '{}') : {};
+  window.__s = { db };
+  creerEntreprise(U).rendre(hote, {
+    meta: { id: 'essai-2de', code: 'ESSAI', titre: 'Essai', portee: 'eleve', immersif: true, temps: 'guidage' },
+    profil: { prenom: 'Lea', nom: 'T', role: 'eleve', uid: o.uid || 'u-b' },
+    jeu: { etat: () => db, sauver: () => { if (o.garder) localStorage.setItem(CLE, JSON.stringify(db)); } },
+    enregistrer: () => {}, quitter: () => {}, lireScore: async () => null, rendreCopie: async () => ({}),
+  });
+  hote.querySelector('.ent-nav[data-vue="fiche"]').click();
+}, o);
+const valeursBlocs = () => pg.evaluate(() => JSON.parse(JSON.stringify((window.__s.db.fiches || {})['essai-blocs'] || null)));
+const lignesOrdre = () => pg.$$eval(`${FB} [data-fiche-ordre="jour"] li`, (L) => L.map((li) => [li.querySelector('.ent-ordre-rang').textContent,
+  li.dataset.v, li.querySelector('[data-ordre-sens="-1"]').disabled, li.querySelector('[data-ordre-sens="1"]').disabled]));
+
+await v('Fiche, lot 4 : cases à cocher sans redessin ni perte de focus, rangées dans l’ordre déclaré, un contour et jamais un aplat', async () => {
+  await monterBlocs();
+  await pg.waitForSelector(FB);
+  await pg.$eval(`${FB} form[data-fiche]`, (f) => { f.__marque = true; });
+  egal(await valeursBlocs(), { valeurs: {} }, 'rien de rangé avant un geste');
+  await pg.click(`${FB} label:has([data-fiche-case="pieces"][value="c"])`);
+  await pg.focus(`${FB} [data-fiche-case="pieces"][value="a"]`);
+  await pg.keyboard.press('Space');
+  egal((await valeursBlocs()).valeurs.pieces, ['a', 'c'], 'cochées, dans l’ordre déclaré');
+  egal(await pg.evaluate(() => document.activeElement.value), 'a', 'focus après Espace');
+  vrai(await pg.$eval(`${FB} form[data-fiche]`, (f) => f.__marque === true), 'la fiche a été redessinée');
+  await pg.click(`${FB} label:has([data-fiche-case="pieces"][value="c"])`);
+  egal((await valeursBlocs()).valeurs.pieces, ['a'], 'décochée');
+  // La case cochée : un contour de 2 px, aucun fond (charte : un champ ne prend jamais d'aplat).
+  const st = await pg.$eval(`${FB} label:has([value="a"])`, (l) => { const c = getComputedStyle(l); return [c.borderTopWidth, c.backgroundColor]; });
+  egal(st, ['2px', 'rgba(0, 0, 0, 0)'], 'style d’une case cochée');
+  vrai(!(await pg.$(`${FB} .ok, ${FB} .ko, ${FB} .juste, ${FB} .faux`)), 'un jugement s’affiche avant l’envoi');
+});
+
+await v('Fiche, lot 4 : remise en ordre par les flèches, sans redessin, le focus suit la ligne ; gardée à la réouverture', async () => {
+  await pg.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith('essai-blocs-')).forEach((k) => localStorage.removeItem(k)));
+  await monterBlocs({ garder: true, uid: 'u-ordre' });
+  await pg.waitForSelector(FB);
+  egal(await lignesOrdre(), [['1', 'z3', true, false], ['2', 'z1', false, false], ['3', 'z2', false, true]], 'départ = ordre déclaré, bouts désactivés');
+  await pg.$eval(`${FB} form[data-fiche]`, (f) => { f.__marque = true; });
+  // « Un » monte d'un cran : il passe premier, son ↑ se désactive, le focus va sur son ↓.
+  await pg.click(`${FB} li[data-v="z1"] [data-ordre-sens="-1"]`);
+  egal(await lignesOrdre(), [['1', 'z1', true, false], ['2', 'z3', false, false], ['3', 'z2', false, true]], 'après ↑ sur « Un »');
+  egal(await pg.evaluate(() => [document.activeElement.closest('li').dataset.v, document.activeElement.dataset.ordreSens]), ['z1', '1'], 'focus après ↑ en tête');
+  // Au clavier : « Trois » descend (Entrée sur son ↓), le focus reste sur ce bouton puis passe à ↑ en bas.
+  await pg.focus(`${FB} li[data-v="z3"] [data-ordre-sens="1"]`);
+  await pg.keyboard.press('Enter');
+  egal(await lignesOrdre(), [['1', 'z1', true, false], ['2', 'z2', false, false], ['3', 'z3', false, true]], 'après ↓ sur « Trois »');
+  egal(await pg.evaluate(() => [document.activeElement.closest('li').dataset.v, document.activeElement.dataset.ordreSens]), ['z3', '-1'], 'focus après ↓ en bas');
+  egal(await pg.textContent(`${FB} [data-ordre-annonce]`), 'Trois : position 3 sur 3.', 'annonce aux lecteurs d’écran');
+  vrai(await pg.$eval(`${FB} form[data-fiche]`, (f) => f.__marque === true), 'la fiche a été redessinée');
+  egal((await valeursBlocs()).valeurs.jour, ['z1', 'z2', 'z3'], 'ordre rangé');
+  await monterBlocs({ garder: true, uid: 'u-ordre' });
+  await pg.waitForSelector(FB);
+  egal((await lignesOrdre()).map((l) => l[1]), ['z1', 'z2', 'z3'], 'ordre à la réouverture');
+});
+
+await v('Fiche, lot 4 : envoyée sans rien toucher, rien ne manque ; cases vides et ordre de départ rangés ; figée ensuite', async () => {
+  await monterBlocs();
+  await pg.waitForSelector(FB);
+  await pg.click(`${FB} [data-fiche-envoyer]`);
+  await pg.waitForSelector(`${FB} [data-fiche-envoyee]`);
+  const f = await pg.evaluate(async () => {
+    const { ficheEnvoyee } = await import('/core/types/fiche.js');
+    return JSON.parse(JSON.stringify(ficheEnvoyee(window.__s.db, 'essai-blocs')));
+  });
+  egal([f.envoye, f.valeurs], [true, { jour: ['z3', 'z1', 'z2'], pieces: [] }], 'fiche envoyée sans geste');
+  egal(await pg.$$eval(`${FB} [data-ordre-sens], ${FB} [data-fiche-case]`, (L) => L.every((b) => b.closest('fieldset').disabled)), true, 'figée');
+  // Même un clic forcé ne change rien.
+  await pg.$eval(`${FB} li[data-v="z1"] [data-ordre-sens="-1"]`, (b) => { b.closest('fieldset').disabled = false; b.click(); });
+  await pg.$eval(`${FB} [data-fiche-case][value="b"]`, (c) => { c.click(); });
+  egal((await valeursBlocs()).valeurs, { jour: ['z3', 'z1', 'z2'], pieces: [] }, 'valeurs après des clics sur une fiche figée');
+});
+
 // ── Menu de gauche rétractable (même brief, lot 3) ─────────────────────────────────────────────────
 const menu = () => pg.evaluate(() => {
   const h = document.querySelector('#smTest'), b = h.querySelector('[data-menu-replier]');

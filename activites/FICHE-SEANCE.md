@@ -96,6 +96,11 @@ le dit. Envoi refusé tant qu'il manque une réponse (travail gardé) ; envoyée
 (`valeurs.tri.yanis.caces === true`, `valeurs.contrat === 'CDD'`) ; l'étape rend `'attente'` tant que la fiche
 n'est pas envoyée. Déclencheur : `apresFiche(id)` (vrai à l'envoi, juste ou faux). Exemple : `FICHE` dans
 `outils/essai-2de.js`.
+Lot 4 (05/10/2026, ENT-5.2) : `cases` (`choix: [{ v, lib }]`, cocher plusieurs ; `valeurs.pieces = ['identite',
+'rib']` dans l'ordre déclaré, `[]` si rien : **aucune case cochée n'est pas un manque**, au jalon « rien de trop »
+d'exiger au moins une case) et `ordre` (`choix` dans l'ordre **de départ**, mélangé par le contenu, jamais juste ;
+flèches ↑ ↓ par ligne, sans redessin ; `valeurs.jour` = toutes les valeurs dans l'ordre de l'élève, l'ordre de départ
+si l'élève n'a rien bougé). `texte`, `nombre`, `date`, `heure` restent à faire (ENT-5.8).
 
 **Menu de gauche rétractable** (04/10/2026, même brief, lot 3) : dans toutes les entreprises, sans rien
 déclarer. Un bouton en tête du menu le replie en une bande étroite (« » » pour le rouvrir) ; le choix est

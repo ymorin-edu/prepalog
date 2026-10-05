@@ -155,5 +155,11 @@ déplié sur un écran de Boost ou de Picard ; au vidéoprojecteur.
   - ~~Colonne « Documents ouverts » du repérage~~ : **ajoutée le 04/10/2026** à la demande de Tristan. « 4 / 6 » =
     documents différents ouverts sur ceux de la séance, détail au survol ; seulement pour une séance qui joint
     des documents. Le moteur range `detail.documents = { total, noms }` avec la note.
-  - Lot 4 (blocs `cases`, `ordre`, `texte`, `nombre`, `date`, `heure`) avec ENT-5.2 et ENT-5.8.
+  - Lot 4 : **`cases` et `ordre` livrés le 05/10/2026** (pour ENT-5.2, décision de Tristan) ; `texte`, `nombre`, `date`,
+    `heure` restent pour ENT-5.8. `cases` : cases à cocher natives dans une étiquette encadrée (cochée = contour de 2 px
+    de l'accent, jamais d'aplat), aucune case cochée n'est un « manque » (la séance garde son jalon « rien de trop » sous
+    condition). `ordre` : l'ordre déclaré est l'ordre de départ (le contenu le mélange), flèches ↑ ↓ par ligne, sans
+    redessin, le focus suit la ligne, annonce pour lecteur d'écran ; un ordre jamais touché part tel quel. Pas de
+    glisser-déposer (les flèches suffisent au clavier comme à la souris). Tests : 3 cas dans le bloc `smoby`, 5 sabotages
+    qui tombent tous ; suite entière 732 / 732.
   - ENT-5.1 peut maintenant se construire (`documents`, `documentsStyle`, `fiche`, `pieces`, `ouvreFiche`).

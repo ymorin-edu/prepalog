@@ -16,6 +16,10 @@
 //           choix: [{ v: 'yanis', lib: 'Yanis Morel' }, …] },
 //         { type: 'choix', id: 'contrat', lib: 'Contrat proposé', manque: 'le contrat', choix: ['CDD', 'CDI'] },
 //         { type: 'encadre', titre: 'CDD ou CDI ?', texte: '…' },
+//         { type: 'cases', id: 'pieces', titre: '1. Pièces à demander', consigne: '…',
+//           choix: [{ v: 'identite', lib: 'Pièce d’identité' }, …] },             // cocher plusieurs
+//         { type: 'ordre', id: 'jour', titre: '2. Le premier jour', consigne: '…',
+//           choix: [{ v: 'epi', lib: 'Remise des EPI' }, …] },                     // ordre de DÉPART, mélangé par le contenu
 //       ],
 //       envoi: { bouton: 'Envoyer la fiche à Sophie', a: 'Sophie', suite: 'Réponds-lui maintenant dans la Messagerie.' },
 //     },
@@ -31,13 +35,20 @@
 //
 // État : `db.fiches[<fiche.id>] = { valeurs, envoye: { at } }` (cloisonné par séance : l'id est celui de
 // la fiche de CETTE séance). `valeurs[bloc]` : pour `ouinon`, `{ ligne: { colonne: true | false } }` ;
-// pour `liste` et `choix`, la valeur choisie.
+// pour `liste` et `choix`, la valeur choisie ; pour `cases`, les valeurs cochées (dans l'ordre déclaré,
+// `[]` si aucune) ; pour `ordre`, toutes les valeurs dans l'ordre de l'élève.
 // Jalons : `ficheEnvoyee(db, 'selection')` → `{ envoye, valeurs, at }` ; les attendus restent dans la
 // séance (calculés depuis ses données). Convention du repérage : une étape rend 'attente' tant que la fiche
 // n'est pas envoyée. Déclencheur : `apresFiche('selection')` (core/declencheurs.js), vrai à l'envoi.
 //
-// Blocs de ce lot : `ouinon`, `liste`, `choix`, `encadre` (ceux d'ENT-5.1). `cases`, `ordre`, `texte`,
-// `nombre`, `date`, `heure` viendront avec ENT-5.2 et ENT-5.8 (lot 4).
+// Blocs : `ouinon`, `liste`, `choix`, `encadre` (lot 2, ENT-5.1) ; `cases` et `ordre` (lot 4, 05/10/2026,
+// ENT-5.2). `texte`, `nombre`, `date`, `heure` viendront avec ENT-5.8.
+//   - `cases` : une case à cocher par choix. Aucune case cochée est une réponse (rien ne « manque ») : c'est
+//     à la séance de ne pas récompenser l'inaction (un jalon « rien de trop » exige au moins une case).
+//   - `ordre` : les choix s'affichent dans l'ordre DÉCLARÉ, qui est l'ordre de départ ; le contenu le
+//     mélange lui-même (le moteur ne connaît pas l'ordre juste et ne mélange rien : même départ pour tous,
+//     jamais déjà juste). Flèches ↑ ↓ sur chaque ligne, sans redessin, le focus suit la ligne déplacée.
+//     Rien ne « manque » : un ordre jamais touché part tel quel à l'envoi (et sera faux).
 
 import { ech } from '../ui.js';
 
@@ -52,6 +63,12 @@ const jourHeure = (t) => {
 };
 const minus = (s) => String(s || '').charAt(0).toLowerCase() + String(s || '').slice(1);
 const options = (choix) => (choix || []).map((c) => (typeof c === 'object' ? c : { v: c, lib: c }));
+// L'ordre d'un bloc `ordre` : celui de l'élève s'il est complet, sinon l'ordre déclaré (le départ).
+const ordreDe = (b, v) => {
+  const O = options(b.choix), x = v && v[b.id];
+  const complet = Array.isArray(x) && x.length === O.length && O.every((o) => x.includes(o.v));
+  return complet ? x.map((id) => O.find((o) => o.v === id)) : O;
+};
 
 export function creerFiche(F, VDOC) {
   const blocs = F.blocs || [];
@@ -107,6 +124,22 @@ export function creerFiche(F, VDOC) {
             v[b.id] === o.v ? ' checked' : ''}> ${ech(o.lib)}</label>`).join('')}
         </div></div>`;
     }
+    if (b.type === 'cases') {
+      const coches = Array.isArray(v[b.id]) ? v[b.id] : [];
+      return `${titre}${consigne}<div class="ent-cases" role="group" aria-label="${ech(b.titre || b.lib || b.id)}">
+        ${options(b.choix).map((o) => `<label><input type="checkbox" value="${ech(o.v)}" data-fiche-case="${ech(b.id)}"${
+          coches.includes(o.v) ? ' checked' : ''}> <span>${ech(o.lib)}</span></label>`).join('')}
+      </div>`;
+    }
+    if (b.type === 'ordre') {
+      const L = ordreDe(b, v), n = L.length;
+      return `${titre}${consigne}<ol class="ent-ordre" data-fiche-ordre="${ech(b.id)}" aria-label="${ech(b.titre || b.lib || b.id)}">
+        ${L.map((o, k) => `<li data-v="${ech(o.v)}"><span class="ent-ordre-rang" aria-hidden="true">${k + 1}</span>
+          <span class="ent-ordre-lib">${ech(o.lib)}</span><span class="ent-ordre-fleches">
+          <button type="button" data-ordre-sens="-1" aria-label="Monter « ${ech(o.lib)} »"${k === 0 ? ' disabled' : ''}>↑</button>
+          <button type="button" data-ordre-sens="1" aria-label="Descendre « ${ech(o.lib)} »"${k === n - 1 ? ' disabled' : ''}>↓</button></span></li>`).join('')}
+      </ol><p class="ent-ordre-annonce" aria-live="polite" data-ordre-annonce></p>`;
+    }
     if (b.type === 'encadre') {
       return `<div class="ent-encadre">${b.titre ? `<b>${ech(b.titre)}</b>` : ''}${ech(b.texte || '').replace(/\n/g, '<br>')}</div>`;
     }
@@ -160,6 +193,33 @@ export function creerFiche(F, VDOC) {
       e.valeurs[el.dataset.ficheChamp] = el.value === '' ? null : el.value;
       ecrit();
     }));
+    // Cases à cocher : la liste des cochées, dans l'ordre déclaré.
+    z.querySelectorAll('[data-fiche-case]').forEach((el) => el.addEventListener('change', () => {
+      if (e.envoye || api.figee) return;
+      const id = el.dataset.ficheCase;
+      e.valeurs[id] = [...z.querySelectorAll('[data-fiche-case]')].filter((x) => x.dataset.ficheCase === id && x.checked).map((x) => x.value);
+      ecrit();
+    }));
+    // Remise en ordre : la ligne change de place dans la page (pas de redessin), le focus la suit.
+    z.querySelectorAll('[data-ordre-sens]').forEach((btn) => btn.addEventListener('click', () => {
+      if (e.envoye || api.figee) return;
+      const li = btn.closest('li'), ol = li.parentElement, sens = Number(btn.dataset.ordreSens);
+      const voisin = sens < 0 ? li.previousElementSibling : li.nextElementSibling;
+      if (!voisin) return;
+      if (sens < 0) ol.insertBefore(li, voisin); else ol.insertBefore(voisin, li);
+      const L = [...ol.children];
+      L.forEach((x, k) => {
+        x.querySelector('.ent-ordre-rang').textContent = k + 1;
+        x.querySelector('[data-ordre-sens="-1"]').disabled = k === 0;
+        x.querySelector('[data-ordre-sens="1"]').disabled = k === L.length - 1;
+      });
+      e.valeurs[ol.dataset.ficheOrdre] = L.map((x) => x.dataset.v);
+      const k = L.indexOf(li);
+      (btn.disabled ? li.querySelector(`[data-ordre-sens="${-sens}"]`) : btn).focus();
+      const annonce = ol.nextElementSibling;
+      if (annonce) annonce.textContent = `${li.querySelector('.ent-ordre-lib').textContent} : position ${k + 1} sur ${L.length}.`;
+      ecrit();
+    }));
     z.querySelector('[data-fiche]')?.addEventListener('submit', (ev) => {
       ev.preventDefault();
       if (e.envoye || api.figee) return;
@@ -170,6 +230,9 @@ export function creerFiche(F, VDOC) {
         return;
       }
       ui.manque = '';
+      // Un ordre jamais touché part tel quel (celui de départ) ; des cases jamais cochées, vides.
+      blocs.filter((b) => b.type === 'ordre').forEach((b) => { e.valeurs[b.id] = ordreDe(b, e.valeurs).map((o) => o.v); });
+      blocs.filter((b) => b.type === 'cases' && !Array.isArray(e.valeurs[b.id])).forEach((b) => { e.valeurs[b.id] = []; });
       e.envoye = { at: Date.now() };
       api.envoyee();
       z.querySelector('[data-fiche-envoyee]')?.focus({ preventScroll: true });

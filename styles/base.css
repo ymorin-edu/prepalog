@@ -913,6 +913,24 @@ table.ent-tri tbody th{ text-align:left; font-weight:400; text-transform:none; l
 fieldset[disabled] .ent-ouinon button{ cursor:default }
 .ent-radios{ display:flex; flex-wrap:wrap; gap:6px 18px }
 .ent-radios label{ display:inline-flex; align-items:center; gap:6px; cursor:pointer; font-weight:400 }
+.ent-cases{ display:flex; flex-direction:column; gap:4px }
+.ent-cases label{ display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:400;
+  border:1px solid var(--filet); border-radius:var(--r); padding:6px 10px }
+.ent-cases label:hover{ border-color:var(--encre-douce) }
+.ent-cases input{ width:18px; height:18px; margin:0; accent-color:var(--ardoise) }
+.ent-cases label:has(input:checked){ border:2px solid var(--ardoise); padding:5px 9px; font-weight:600 }
+fieldset[disabled] .ent-cases label{ cursor:default }
+.ent-ordre{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:6px }
+.ent-ordre li{ display:flex; align-items:center; gap:10px; border:1px solid var(--filet); border-radius:var(--r); padding:6px 8px 6px 10px }
+.ent-ordre-rang{ flex:0 0 auto; width:24px; height:24px; border-radius:50%; border:1px solid var(--ardoise); color:var(--ardoise);
+  font-family:var(--mono); font-size:.8rem; display:flex; align-items:center; justify-content:center }
+.ent-ordre-lib{ flex:1 1 auto; line-height:1.4 }
+.ent-ordre-fleches{ flex:0 0 auto; display:flex; gap:4px }
+.ent-ordre-fleches button{ font:inherit; min-width:34px; cursor:pointer; color:var(--encre); background:transparent;
+  border:1px solid var(--filet); border-radius:var(--r); padding:2px 6px }
+.ent-ordre-fleches button:hover:not(:disabled){ border-color:var(--ardoise); color:var(--ardoise) }
+.ent-ordre-fleches button:disabled{ opacity:.35; cursor:default }
+.ent-ordre-annonce{ position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; margin:0 }
 .ent-encadre{ border-left:3px solid var(--terre); background:rgba(156,98,10,.07); padding:8px 12px; font-size:.92rem;
   border-radius:0 var(--r) var(--r) 0 }
 .ent-encadre > b:first-child{ display:block; color:var(--terre) }
