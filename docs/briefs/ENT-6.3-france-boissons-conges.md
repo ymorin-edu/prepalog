@@ -1,0 +1,164 @@
+# Brief de séance — ENT-6.3 France Boissons, les congés d'été des chauffeurs et l'annonce du saisonnier (2de, poste A, entraînement)
+
+> **📋 Phrase à copier-coller dans ccode :**
+>
+> ```
+> Lis docs/briefs/ENT-6.3-france-boissons-conges.md puis implémente-le (après ENT-6.2 et ENT-6.1). Commence par refaire le calage du §4 par script avant d'écrire. Annonce la durée avant de commencer et dis-moi si un point du brief contredit le code.
+> ```
+
+**Statut** : à implémenter
+**Date du brief** : 05/10/2026
+**Conversation d'origine** : Cowork (Opus) ; cadrage `claude/prepalog-2de-s2-cadrage.md` (décisions 5, 14) ; choix de
+Tristan du 05/10 : **chauffeurs-livreurs seuls**, besoin du saisonnier **né d'un imprévu**, annonce **avec pièges de
+discrimination**, accueil par **Inès** (assistante administrative, ventes et RH).
+**Modèle** : Opus (séance nouvelle de bout en bout, calage).
+
+## 1. Identité
+
+| Champ | Valeur |
+|---|---|
+| `code` | ENT-6.3 |
+| `id` | `france-boissons-conges` |
+| Titre / desc | « France Boissons — les congés d'été » / « Planifier les congés d'été des chauffeurs-livreurs de la tournée de la côte, replanifier après un départ, rédiger l'annonce du chauffeur saisonnier et répondre à un chauffeur dont le congé est décalé. » |
+| Rubrique | simulog, entreprise n° 6 France Boissons |
+| Niveau(x) | 2de |
+| Compétence(s) | **AGO-3.2** (planifier présences et congés), **AGO-3.1** (procédures d'entrée : l'annonce) ; D2, D3 |
+| Temps pédagogique | **entraînement** (`temps: 'erreur'` côté Planning : « Vérifier mon planning », aide `regles` seule ; S1 ENT-5.2 était le guidage) |
+| Notation | jalons + note sur 20 |
+| Barème | 16 |
+| `pret` à la livraison | `pret: true, ouverture: 'prof'` |
+
+## 2. Vérifié / construit
+
+- **Vérifié (05/10/2026)** : France Boissons publie des offres « **SAISON – Chauffeur livreur VL** » en CDD (titres
+  d'annonces, cadrage) ; le permis **B** suffit pour un véhicule léger (moins de 3,5 t) ; 30 tournées par jour en haute
+  saison à Buchelay. **Mentions interdites dans une offre d'emploi** (Code du travail, code.travail.gouv.fr) :
+  le **sexe** et la **situation de famille** (art. [L1142-1](https://code.travail.gouv.fr/code-du-travail/l1142-1)) ; une
+  **limite d'âge supérieure** (art. [L5331-2](https://code.travail.gouv.fr/code-du-travail/l5331-2), sauf condition d'âge
+  imposée par la loi) ; tout motif de discrimination de l'art. L1132-1, dont l'**origine** et la **nationalité**
+  (art. [L5321-2](https://code.travail.gouv.fr/code-du-travail/l5321-2)).
+- **Construit (annoncé)** : l'équipe (prénoms), les demandes de congés, les besoins par semaine, la règle interne de
+  priorité, le départ de Kevin, les dates du CDD.
+
+## 3. Objectif pédagogique
+
+Entraînement de ce qu'ENT-5.2 a guidé (Smoby) : planifier des **congés** sous contraintes, **replanifier** après un
+imprévu, **justifier** un refus par un message ; puis **rédiger une annonce** légale (AGO-3.1, entraînée après ENT-5.1).
+S'appuie sur ENT-6.1 : Karim **décide** (hiérarchique), Inès **enregistre et informe** (fonctionnel).
+
+## 4. Déroulé (séance chargée, comme ENT-5.2 : un élève qui n'a pas fini reprend la fois suivante)
+
+**Date du scénario : vendredi 18 juin 2027**, le lendemain de la commande de Malo (ENT-6.2, jeudi 17) : les dates suivent
+l'ordre de jeu.
+
+1. **Message d'Inès** (3 blocs) : « Bonjour {prénom} ! / Les chauffeurs ont posé leurs congés d'été. Karim veut le
+   planning **ce soir** : il doit rester assez de chauffeurs chaque semaine. / Place les congés, puis envoie-le.
+   Inès »
+2. **Planning** (vue Planning, cas « personnel », échelle en **semaines**) :
+   - Colonnes : **8 semaines du pic** (S1 = semaine du 5 juillet … S8 = semaine du 23 août) **+ une 9e « semaine du
+     30 août (après le pic) »**, où un congé peut être reporté.
+   - Lignes : 7 chauffeurs-livreurs de la tournée de la côte : **Lucas, Amandine, Julien** (connaissent la côte, repère
+     visible), Sébastien, Fatou, Yoann, Kevin.
+   - **Besoin** (présents) : **6** par semaine en juillet (S1-S4), **5** en août (S5-S8), 0 après le pic.
+   - **Au moins un chauffeur qui connaît la côte** chaque semaine (`auMoinsUn`).
+   - Cartes (date demandée · durée · **date de la demande**) :
+
+     | Chauffeur | Congé demandé | Durée | Demandé le | Note |
+     |---|---|---|---|---|
+     | Amandine | S3 (19 juil.) | 1 sem. | 2 mars | |
+     | Sébastien | S5-S6 (2 août) | 2 sem. | 18 mars | |
+     | Lucas | S2-S3 (12 juil.) | 2 sem. | 5 mai | |
+     | Fatou | S6-S7 (9 août) | 2 sem. | 12 mai | |
+     | Yoann | S7-S8 (16 août) | 2 sem. | 20 mai | |
+     | Kevin | S8 (23 août) | 1 sem. | 28 mai | |
+     | Julien | S5 (2 août) | 1 sem. | — | **déjà validé** (imposé) |
+
+   - **Règle interne** (construite, dans les consignes) : « En cas de conflit, la **demande la plus ancienne** garde sa
+     date. On décale le moins de congés possible. » → règles `effectif`, `auMoinsUn`, `dateImposee`, `sansNecessite`, et un
+     `critere` « priorité à la demande la plus ancienne ».
+   - **Calage fait par Cowork (énumération, à refaire par script)** : 1er envoi → **une seule solution** qui ne décale
+     qu'un congé en respectant la priorité : **Lucas en S1-S2** (5-16 juillet). Amandine (demandée la première) garde S3.
+3. **L'imprévu** (après le 1er envoi, `apresPlanning` + `phasePlanning: 2`) : message d'Inès : « Kevin a trouvé un poste
+   près de chez lui : son dernier jour est le **vendredi 2 juillet**. Karim a obtenu un **chauffeur saisonnier**, mais il
+   ne pourra commencer que le **lundi 12 juillet** (le temps de recruter). Reprends le planning. » → ligne Kevin retirée
+   (sa carte aussi), ligne **« Saisonnier (à recruter) »** disponible de S2 à S8, ne connaît pas la côte.
+   **Calage (énumération)** : en S1 il faut les 6 restants → aucun congé en S1 ; **seule solution** qui ne décale qu'un
+   congé avec la priorité : **Lucas en S8 + semaine du 30 août** (23 août – 3 septembre). C'est le congé de Lucas qui
+   saute deux fois : c'est le cœur du message.
+4. **Message à Lucas par phrases à choisir** (copie à Karim ; ordre des choix tiré par élève) :
+
+   | Ligne | Juste | Pièges |
+   |---|---|---|
+   | salutation | « Bonjour Lucas, » | « Salut Lucas ! » |
+   | décision | « Votre congé du 12 au 23 juillet ne peut pas être accordé. » | « Votre congé est accepté. » · « Votre congé est annulé. » |
+   | raison | « Avec le départ de Kevin, il faut six chauffeurs chaque semaine de juillet, et Amandine avait demandé la semaine du 19 juillet avant vous. » | « Karim ne veut pas. » · « Il y a trop de travail. » (incomplète) |
+   | proposition | « Karim vous propose du 23 août au 3 septembre. » | « Vous prendrez vos congés en septembre. » · « Vous n'aurez pas de congé cet été. » |
+   | fin | « Je reste à votre disposition. Cordialement, {prénom}, pour Inès » | « Désolé ! » · « Bisous » |
+
+5. **Annonce du saisonnier** (fiche à remplir, documents à gauche : le message de Karim sur le besoin et une **fiche de
+   poste** courte : chauffeur-livreur VL, tournées CHR depuis Buchelay, livraison de fûts et casiers, reprise des vides) :
+   - Intitulé (`liste`) : **Chauffeur-livreur VL saisonnier (H/F)** · Chauffeur poids lourd (H/F) · Préparateur de
+     commandes (H/F).
+   - Contrat (`choix`) : **CDD saisonnier** · CDI · Stage.
+   - Dates (`liste`) : **du 12 juillet au 27 août 2027** · du 5 juillet au 27 août · à partir du 12 juillet, sans date de
+     fin.
+   - Rattaché à (`liste`) : **Karim, responsable d'exploitation transport** · Inès · Nadia.
+   - « À écrire dans l'annonce ? » (`ouinon`, 8 lignes) — **oui** : Permis B exigé · Manutention de fûts et de casiers ·
+     Lieu : Buchelay (78) · Horaires et salaire ; **non** : « Moins de 30 ans » · « Homme de préférence » · « Nationalité
+     française exigée » · « Célibataire sans enfant ».
+   - Encadré (3 lignes) : « Une annonce ne peut pas trier les candidats sur leur âge, leur sexe, leur origine ou leur
+     famille : c'est une **discrimination**, interdite par le Code du travail. On demande ce qui sert au poste. »
+   - Envoi : « Envoyer l'annonce à Karim ».
+6. **Réponse de Karim** (`apresFiche`) : « Merci, je la transmets à Hélène pour validation. » (rappel du lien
+   hiérarchique d'ENT-6.1 ; ne dit pas si c'est juste).
+
+Mots cliquables : congé, effectif, CDD saisonnier, VL, permis B, discrimination, rattaché, priorité.
+
+## 5. Jalons (16)
+
+| # | Jalon | Ce qu'il lit | Piège à éviter |
+|---|---|---|---|
+| 1-5 | 1er envoi : effectif · un chauffeur de la côte · congé de Julien à sa date · priorité à la plus ancienne · aucun congé décalé sans nécessité | `etapesPlanning` (v1) | rien de vrai avant l'envoi ; envoyer à vide = 0 |
+| 6-10 | Après l'imprévu : les mêmes 5 | `etapesPlanning` (v2) | idem |
+| 11 | Intitulé, contrat et dates justes | `ficheEnvoyee` | non envoyée = faux |
+| 12 | Rattaché à Karim | idem | — |
+| 13 | Les 4 mentions utiles cochées « oui » | idem | — |
+| 14 | Les 4 mentions interdites cochées « non » | idem | toutes les lignes sont obligatoires à l'envoi : pas de vrai par inaction |
+| 15 | Message à Lucas : décision + raison + proposition justes | `phrasesJustes` | non envoyé = faux |
+| 16 | Ton : salutation et fin justes | idem | idem |
+
+## 6. Contenu
+
+`contenus/france-boissons-ent62.js` (planning, imprévu, phrases, fiche de poste, annonce, jalons, accueil). Les attendus
+du planning sont **calculés par le moteur** (règles), jamais recopiés ; le calage est vérifié par un script d'énumération
+(sur le modèle de `outils/carte/calibrer.mjs`) qui échoue si la solution n'est plus unique.
+
+## 7. Demandes au moteur
+
+**À vérifier au lot 0 (lecture seule)** :
+- l'échelle `jours` accepte des colonnes **semaines** (libellés libres, durée en colonnes) et une colonne à besoin 0 ;
+- une ligne **retirée** par l'aléa (Kevin) : `alea` sait-il retirer une ligne et sa carte ? Sinon : Kevin reste, avec
+  `dispo` vide à partir de S1, et sa carte devient sans objet → demande au moteur à écrire ici ;
+- la règle « priorité à la demande la plus ancienne » en `critere`.
+Rien d'autre : fiche à remplir (`liste`, `choix`, `ouinon`, `encadre`), phrases à choisir, déclencheurs existent.
+
+## 8. Tests attendus
+
+Bloc `france-boissons` : parcours juste 16/16 ; inaction 0/16 ; Amandine décalée au lieu de Lucas → jalon 4 (puis 9)
+faux ; « Moins de 30 ans » coché oui → jalon 14 faux ; CDI → jalon 11 faux ; message « Votre congé est annulé » → jalon 15
+faux ; calage : le script d'énumération retrouve 1 solution au 1er envoi et 1 après l'imprévu.
+
+## 9. Supports
+
+Trame : Cowork, après validation. Corrigé `contenus/corriges/ENT-6.3.js` (les deux plannings, l'annonce, le message).
+
+## 10. Critères de validation par Tristan
+
+Le planning en semaines se lit au vidéoprojecteur ; l'imprévu se comprend sans aide ; le contraste « ce qu'on peut écrire
+/ ce qu'on n'a pas le droit d'écrire » marche en classe.
+
+## 11. Questions ouvertes (valeur par défaut entre parenthèses)
+
+- [x] Date : vendredi 18 juin 2027 (suit l'ordre de jeu après la renumérotation du 05/10).
+- [ ] Durée réelle : planning × 2 + message + annonce, c'est la séance la plus dense de S2. Si l'essai déborde, l'annonce
+  peut passer en début d'ENT-6.4. (Garder tout.)
