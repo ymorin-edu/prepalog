@@ -944,6 +944,25 @@ fieldset[disabled] .ent-cases label{ cursor:default }
 .ent-fiche-form > .btn{ margin-top:14px }
 .ent-fiche-envoyee{ border:1px solid var(--ardoise); border-radius:var(--r); padding:10px 12px; margin-top:14px }
 .ent-fiche-envoyee .lien-accueil{ margin:6px 0 0; display:block }
+/* Fiche dessinée comme un document (ENT-5.8, lettre de voiture) : en-tête, cases numérotées, mention en pied.
+   Saisies : un trait, jamais d'aplat (charte). */
+.ent-fiche-entete{ border-bottom:2px solid var(--encre); padding-bottom:8px; margin-bottom:14px }
+.ent-fiche-pied{ border-top:1px solid var(--filet); margin:14px 0 0; padding-top:6px; font-size:.8rem; color:var(--encre-douce); font-style:italic }
+.ent-fiche-grille .ent-fiche-blocs{ display:grid; grid-template-columns:repeat(auto-fit, minmax(230px, 1fr)); gap:10px }
+.ent-fiche-grille .ent-fiche-bloc + .ent-fiche-bloc{ margin-top:0 }
+.ent-fiche-grille .ent-fiche-bloc.large{ grid-column:1 / -1 }
+.ent-cadre{ border:1px solid var(--encre-douce); border-radius:2px; padding:8px 10px 10px; height:100%; box-sizing:border-box }
+.ent-cadre-t{ margin:0 0 6px; font-size:.82rem; text-transform:uppercase; letter-spacing:.04em; color:var(--encre-douce) }
+.ent-cadre-bloc + .ent-cadre-bloc{ margin-top:8px }
+.ent-cadre .champ{ margin-bottom:0 }
+.ent-saisie label{ display:block; font-weight:600; margin-bottom:4px }
+.ent-saisie-case{ display:inline-flex; align-items:center; gap:6px; max-width:100% }
+.ent-saisie-case input{ min-width:0 }
+.ent-saisie-nombre input{ width:9em; font-family:var(--mono) }
+.ent-saisie-heure input{ width:5.5em; font-family:var(--mono) }
+.ent-saisie-texte input{ width:16em; max-width:100% }
+.ent-saisie input[readonly]{ border-style:dashed; color:var(--encre-douce) }
+.ent-saisie-unite{ color:var(--encre-douce) }
 /* mots cliquables (2de, core/lexique.js) : un mot souligné, sa définition dans une bulle sous lui */
 .lex{ position:relative; display:inline }
 .lex-mot{ font:inherit; color:inherit; background:none; border:0; padding:0; margin:0; cursor:help;

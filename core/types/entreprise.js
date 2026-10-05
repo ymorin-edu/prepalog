@@ -150,7 +150,12 @@ export function creerEntreprise(U) {
   const VDOC = U.documents ? creerDocuments(U.documents, U.documentsStyle) : null;
   // La FICHE À REMPLIR (même brief, lot 2) : un écran de plus, seulement si la séance déclare `fiche`
   // (format en tête de `core/types/fiche.js`). Son état vit dans `db.fiches[<fiche.id>]`.
-  const VFICHE = U.fiche ? creerFiche(U.fiche, VDOC) : null;
+  // Plusieurs fiches (05/10/2026, ENT-5.8) : `fiches: [F1, F2]` ; la première garde l'écran `fiche`, les
+  // autres ont `fiche:<id>`. Une fiche qui déclare `quand(db)` reste hors du menu tant que c'est faux.
+  const VFICHES = [].concat(U.fiche || [], U.fiches || []).map((F) => creerFiche(F, VDOC));
+  const VFICHE = VFICHES[0] || null;
+  const vueDeFiche = (VF) => (VF === VFICHE ? 'fiche' : `fiche:${VF.id}`);
+  const ficheDeVue = (v) => VFICHES.find((VF) => vueDeFiche(VF) === v) || null;
 
   const unite = (n) => ((n > 1 || n === 0) ? VOCAB.unitPl : VOCAB.unit);
   // Catalogue « simple » (02/10/2026, chantier E) : des articles sans couleur ni taille — un
@@ -397,8 +402,8 @@ export function creerEntreprise(U) {
         // La pièce jointe ouverte dans le lecteur du mail (null : le texte du mail). `vus` : les pièces
         // ouvertes par l'enseignant, qui ne laisse rien dans le repérage.
         piece: null, vus: {},
-        // La fiche : le document affiché à gauche, et la raison d'un envoi refusé (gardée d'un écran à l'autre).
-        fiche: { doc: null, manque: '' },
+        // Les fiches, par id : le document affiché à gauche, et la raison d'un envoi refusé (gardée d'un écran à l'autre).
+        fiche: {},
         // Message par phrases en cours de composition, par mail : { idMail: { idLigne: n } }. Hors de
         // la base (rien n'est envoyé tant que l'élève n'a pas cliqué), mais à l'abri d'un redessin.
         brouillon: {},
@@ -758,7 +763,8 @@ export function creerEntreprise(U) {
                 ${item('accueil', 'Accueil')}
                 ${item('mail', 'Messagerie', nonLus)}
                 ${groupe((VPLAN || VTOUR) && !VFICHE && !VQUAI && !VPL && !VENT && !VINV ? U.transportSection || 'Transport' : 'Mon poste', [
-                  VFICHE && item('fiche', VFICHE.nav.libelle), VQUAI && item('quai', VQUAI.nav.libelle),
+                  ...VFICHES.filter((VF) => !VF.quand || VF.quand(db)).map((VF) => item(vueDeFiche(VF), VF.nav.libelle)),
+                  VQUAI && item('quai', VQUAI.nav.libelle),
                   VPL && item('planning', VPL.nav.libelle), VENT && item('entrepot', VENT.nav.libelle),
                   VPLAN && item('plan', VPLAN.nav.libelle), VTOUR && item('tournee', VTOUR.nav.libelle),
                   VINV && item('inventaire', VINV.nav.libelle)])}
@@ -927,7 +933,8 @@ export function creerEntreprise(U) {
           quai: VQUAI ? vueQuai : vueAccueil,
           planning: VPL ? vuePlanning : vueAccueil,
           entrepot: VENT ? vueEntrepot : vueAccueil,
-          fiche: VFICHE ? vueFiche : vueAccueil,
+          ...Object.fromEntries(VFICHES.map((VF) => [vueDeFiche(VF), () => vueFiche(VF)])),
+          fiche: VFICHE ? () => vueFiche(VFICHE) : vueAccueil,
           fichiers: VTAB ? vueFichiers : vueAccueil,
           extractions: VTAB && VTAB.navExtractions ? vueExtractions : vueAccueil,
           clients: vueClients, fournisseurs: vueFournisseurs, console: vueConsole,
@@ -1060,9 +1067,9 @@ export function creerEntreprise(U) {
                 ? `<button class="btn btn-p" data-ouvrir-cmd="${ech(sel.order.no)}">Ouvrir la commande</button>`
                 : `<button class="btn btn-p" data-enreg-cmd="${sel.id}">Enregistrer la commande</button>`;
             }
-            if (VFICHE && sel.ouvreFiche === VFICHE.id) {
-              actions += `<button class="btn btn-p" data-vue2="fiche" data-libre>${ech(VFICHE.bouton)}</button>`;
-            }
+            VFICHES.filter((VF) => sel.ouvreFiche === VF.id && (!VF.quand || VF.quand(db))).forEach((VF) => {
+              actions += `<button class="btn btn-p" data-vue2="${ech(vueDeFiche(VF))}" data-libre>${ech(VF.bouton)}</button>`;
+            });
             if (sel.kind === 'bl' && recDuMail) {
               actions += `<button class="btn btn-p" data-ouvrir-rec="${ech(recDuMail.no)}">Ouvrir la réception</button>`;
             }
@@ -1876,11 +1883,13 @@ export function creerEntreprise(U) {
 
       /* ---------------------------------------------------------- fiche à remplir */
       // Cloisonnée par séance : `db.fiches[<id de la fiche de cette séance>]`.
-      function etatFiche() {
+      function etatFiche(VF) {
         if (!db.fiches) db.fiches = {};
-        if (!db.fiches[VFICHE.id]) db.fiches[VFICHE.id] = VFICHE.etatNeuf();
-        return db.fiches[VFICHE.id];
+        if (!db.fiches[VF.id]) db.fiches[VF.id] = VF.etatNeuf();
+        return db.fiches[VF.id];
       }
+      // Ce qui reste à l'écran d'une fiche (document choisi, raison d'un envoi refusé), fiche par fiche.
+      const uiFiche = (VF) => E.fiche[VF.id] || (E.fiche[VF.id] = { doc: null, manque: '' });
       const apiFiche = () => ({
         sauver, docVu, compterDoc, figee: rendue(),
         // L'envoi : un geste métier comme un mail (les déclencheurs `apresFiche` le lisent), puis la fiche figée.
@@ -1890,7 +1899,7 @@ export function creerEntreprise(U) {
           if (!arrive) toast('Fiche envoyée.');
         },
       });
-      function vueFiche() { return VFICHE.html(etatFiche(), E.fiche, apiFiche()); }
+      function vueFiche(VF) { return VF.html(etatFiche(VF), uiFiche(VF), apiFiche()); }
 
       // Le chrono réel. Il compte en secondes, par écart d'horloge (un onglet en arrière-plan ne
       // reçoit plus qu'un tic par minute), s'arrête à la clôture de la réception ou à la remise
@@ -2494,7 +2503,8 @@ export function creerEntreprise(U) {
         if (E.vue === 'quai' && VQUAI) VQUAI.brancher(z, etatQuai(), apiQuai());
         if (E.vue === 'planning' && VPL) VPL.brancher(z, etatPlanning(), apiPlanning());
         if (E.vue === 'entrepot' && VENT) VENT.brancher(z, etatEntrepot(), apiEntrepot());
-        if (E.vue === 'fiche' && VFICHE) VFICHE.brancher(z, etatFiche(), E.fiche, apiFiche());
+        const VFv = ficheDeVue(E.vue);
+        if (VFv) VFv.brancher(z, etatFiche(VFv), uiFiche(VFv), apiFiche());
       }
 
       // Un message déclenché dont la condition est déjà vraie à l'ouverture (travail fait sur un

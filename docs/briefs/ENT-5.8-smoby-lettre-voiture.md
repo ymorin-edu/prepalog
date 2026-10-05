@@ -10,7 +10,7 @@
 > Lis docs/briefs/COORDINATION-smoby.md puis implémente le brief docs/briefs/ENT-5.8-smoby-lettre-voiture.md (il faut que les lots 1, 2, 3 et 7 de MOTEUR-2de-S1 soient livrés). Annonce la durée avant de commencer et dis-moi si un point du brief contredit le code.
 > ```
 
-**Statut** : à implémenter
+**Statut** : livré (05/10/2026, `pret: true, ouverture: 'prof'` : à essayer à l'écran, puis à ouvrir au groupe)
 **Date du brief** : 04/10/2026
 **Conversation d'origine** : Cowork (Opus) ; fiche projet `claude/prepalog-2de-s1-cadrage.md` (section « Séance B2 »).
 **Modèle** : Opus.
@@ -133,9 +133,39 @@ information dans les trois documents ; le retard arrive au bon moment.
 
 ## Compte rendu *(rempli par Claude Code à la livraison)*
 
-- **Fichiers créés / modifiés** :
+- **Fichiers créés / modifiés** : `activites/smoby-lettre-voiture.js` (nouveau), une ligne dans `activites/index.js` ;
+  `contenus/smoby-ent58.js` (nouveau : documents, deux fiches, messages, déclencheurs, jalons, accueil, lexique) ;
+  `contenus/corriges/ENT-5.8.js` (nouveau, calculé) ; **moteur** (lot 4 de `MOTEUR-documents-formulaire`, annoncé pour cette
+  séance) : `core/types/fiche.js` (saisies `texte` / `nombre` / `date` / `heure`, `cadre`, `grille`, `entete`, `pied`,
+  `envoi.incomplet`, `lireNombre`, `lireHeure`), `core/types/entreprise.js` (plusieurs fiches par séance, `quand`),
+  `styles/base.css` (cadres et saisies, sans couleur nouvelle) ; `activites/FICHE-SEANCE.md` ; tests `outils/test/smoby.mjs`
+  (9 cas) et `outils/test/socle.mjs` (ENT-5.8 au repère de l'ordre Simulog).
 - **Écarts par rapport au brief** :
-- **Décisions prises en route** :
-- **Tests** :
-- **Commits** :
-- **Reste ouvert** :
+  - Données dans `contenus/smoby-ent58.js` (le brief disait `smoby-ent56.js`, déjà pris par ENT-5.6).
+  - **Décision de Tristan (05/10)** : la lettre peut partir **incomplète** (sinon le jalon 5 ne pouvait jamais être faux) ;
+    une case vide fait tomber le jalon 5 **et** celui de son groupe (chaque case appartient à un des jalons 1 à 4).
+  - **Décision de Tristan (05/10)** : la nouvelle heure se saisit dans une **2e fiche** « Suivi de l'enlèvement E1 », ouverte
+    par le message de Julie (absente du menu avant). Le jalon 6 lit l'heure **et** le « oui, avant l'heure limite ».
+  - La date d'établissement de la lettre est jugée avec les lieux et dates (jalon 3).
+  - Les messages par phrases ne se font qu'en réponse (règle du moteur) : après le suivi, le **client** écrit (« Tout se
+    passe bien ? ») ; une fois le client prévenu, **Bruno** (Smoby) demande des nouvelles d'E1 ; puis un mot de fin du
+    responsable, sans dire si c'était juste. Pièges ajoutés : « quai 1 » (celui de Smoby) au client, « Pouvez-vous prévenir
+    le client ? » à Smoby, et une cause ou une livraison fausse sur une ligne.
+  - Le planning joint montre les 5 enlèvements (l'élève cherche la ligne d'E1), pas seulement E1.
+- **Décisions prises en route** : n° de lettre `LV-BES-26-12-0417` et date d'émission de l'ordre (09/12) construits ;
+  listes de choix communes (les trois mêmes noms, les trois mêmes lieux partout : le piège est de les confondre) ; la fiche
+  « Lettre de voiture » est dessinée en cases numérotées (1 Expéditeur … 7 Signatures) dans la fiche du moteur, avec la
+  mention de reconstitution en pied. Valeurs **calculées** : chauffeur, camion et départ d'E1 depuis la solution du
+  planning d'ENT-5.7 ; poids = (33 − 1) × 180 kg + la palette mixte d'ENT-5.6 pesée comme le moteur (331 kg) ; arrivée =
+  06:00 + 4 h + 1 h = 11:00.
+- **Tests** : bloc `smoby` 161 / 161 — moteur : saisies sans redessin, Entrée n'envoie pas, manques, case préremplie ;
+  envoi incomplet et 2e fiche qui attend sa condition ; lecture des nombres et des heures. Séance : déclaration et rang ;
+  valeurs calculées (6 091 kg, et 331 kg = le moteur d'ENT-5.6) et corrigé ; inaction 0 / 8 ; le retard n'arrive qu'après
+  la lettre, puis le client, puis Smoby ; parcours juste à l'écran 8 / 8 ; pièges (inversés → jalon 1 seul ; poids vide →
+  jalons 4 et 5 ; 10:00 → jalon 6 seul ; Smoby transporteur, 10 h 00 au client, Smoby prié de prévenir → 2, 7, 8).
+  Éprouvés dans l'autre sens : Entrée qui envoie, condition de la 2e fiche retirée, retard sans condition, poids sans la
+  palette mixte, envoi incomplet refusé — chacun fait tomber ses cas. Un cas existant d'ENT-5.7 réécrit (il vérifiait
+  qu'ENT-5.7 était la dernière séance Smoby ; il vérifie maintenant qu'elle suit ENT-5.6). Suite complète : voir le commit.
+- **Commits** : voir `git log` (« Fiche à remplir : saisies… » puis « ENT-5.8 Smoby / K+N : la lettre de voiture… »).
+- **Reste ouvert** : trame courte (Cowork, après essai à l'écran) ; « Contrôler une lettre remplie avec erreurs » gardé
+  pour S2 ; la date « Fiche envoyée le … » est l'heure réelle du poste (comme les mails), pas celle de l'histoire.

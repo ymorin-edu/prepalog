@@ -100,7 +100,17 @@ Lot 4 (05/10/2026, ENT-5.2) : `cases` (`choix: [{ v, lib }]`, cocher plusieurs ;
 'rib']` dans l'ordre déclaré, `[]` si rien : **aucune case cochée n'est pas un manque**, au jalon « rien de trop »
 d'exiger au moins une case) et `ordre` (`choix` dans l'ordre **de départ**, mélangé par le contenu, jamais juste ;
 flèches ↑ ↓ par ligne, sans redessin ; `valeurs.jour` = toutes les valeurs dans l'ordre de l'élève, l'ordre de départ
-si l'élève n'a rien bougé). `texte`, `nombre`, `date`, `heure` restent à faire (ENT-5.8).
+si l'élève n'a rien bougé).
+Lot 4 suite (05/10/2026, ENT-5.8) : saisies `texte` (`valeur` + `fige: true` = case préremplie non modifiable), `nombre`
+(`unite`), `heure` (HH:MM) et `date` (calendrier, rangée `'AAAA-MM-JJ'`), rangées **telles que tapées** à chaque touche,
+sans redessin ; les jalons les lisent avec `lireNombre` (« 6 091 », « 2,5 ») et `lireHeure` (« 11:00 », « 11h00 », « 11 h »)
+de `core/types/fiche.js`. Une saisie vide « manque » ; envoyée vide, elle vaut `null`. Entrée dans une case n'envoie jamais.
+`cadre` (`titre`, `blocs`, `large`) encadre des blocs comme les cases numérotées d'un document ; `grille: true` les pose sur
+deux colonnes ; `entete` (HTML) et `pied` (mention de reconstitution) sur la fiche. `envoi: { incomplet: true }` laisse
+partir la fiche avec des cases vides (à un jalon de dire « incomplète »). **Plusieurs fiches** : `fiches: [F1, F2]`, une
+entrée de menu chacune (la 1re garde l'écran `fiche`, les autres `fiche:<id>`) ; une fiche qui porte `quand(db)` (ex.
+`apresFiche('lettre')`) n'apparaît, au menu comme au bouton de son mail (`ouvreFiche`), qu'une fois la condition vraie.
+Exemple : `contenus/smoby-ent58.js` (lettre de voiture, suivi du retard).
 
 **Menu de gauche rétractable** (04/10/2026, même brief, lot 3) : dans toutes les entreprises, sans rien
 déclarer. Un bouton en tête du menu le replie en une bande étroite (« » » pour le rouvrir) ; le choix est

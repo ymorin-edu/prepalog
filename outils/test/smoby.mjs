@@ -2174,7 +2174,7 @@ await v('ENT-5.7 : déclaration (code, 2de, OTM-C2.2 et C3.2, 10 jalons, livrée
   });
   egal(r.m, ['smoby-enlevements', 'ENT-5.7', 'simulog', ['2de'], ['OTM-C2.2', 'OTM-C3.2'], ['D2'], 'guidage', 10, true, 'prof', 'eleve', true, true], 'meta');
   vrai(r.comp, 'OTM-C2.2 ou OTM-C3.2 absente de core/competences.js');
-  egal(r.rang.slice(-2), ['ENT-5.6', 'ENT-5.7'], 'rang dans le registre');
+  egal(r.rang.slice(r.rang.indexOf('ENT-5.6'), r.rang.indexOf('ENT-5.6') + 2), ['ENT-5.6', 'ENT-5.7'], 'rang dans le registre');
 });
 
 await v('ENT-5.7 : les deux solutions valent 10 / 10, celle du 1er envoi ne tient plus après la panne ; le corrigé se charge', async () => {
@@ -2236,6 +2236,277 @@ await v('ENT-5.7 : rien posé, envoyé deux fois → 0 / 10', async () => {
   await envoyer57();
   egal((await etapes57()).filter((s) => s === 'ok').length, 0, 'jalons vrais sans rien faire');
   vrai((await sujets57()).includes('RE : Planning de jeudi'), 'les deux envois ont bien eu lieu');
+});
+
+// ── Fiche à remplir, lot 4 suite (05/10/2026, ENT-5.8) : saisies, cadres, envoi incomplet, plusieurs fiches ──
+// Une fiche d'essai déclarée ici (l'univers de la page d'essai, ses fiches remplacées). Valeurs écrites à la main.
+const monterSaisies = (o = {}) => pg.evaluate(async (o) => {
+  const { creerEntreprise } = await import('/core/types/entreprise.js');
+  const { apresFiche } = await import('/core/declencheurs.js');
+  const E = await import('/outils/essai-2de.js');
+  const U = E.univers({});
+  delete U.fiche;
+  U.fiches = [{ id: 'essai-saisies', libelle: 'Saisies', titre: 'Saisies', grille: true, entete: '<p>EN-TÊTE</p>', pied: 'Mention en pied',
+    blocs: [
+      { type: 'cadre', titre: '1. Cadre', large: true, blocs: [
+        { type: 'texte', id: 'num', lib: 'N°', valeur: 'LV-1', fige: true },
+        { type: 'nombre', id: 'kg', lib: 'Poids', unite: 'kg', manque: 'le poids' }] },
+      { type: 'cadre', titre: '2. Cadre', blocs: [{ type: 'heure', id: 'h', lib: 'Heure', manque: 'l’heure' }] },
+      { type: 'cadre', titre: '3. Cadre', blocs: [{ type: 'date', id: 'd', lib: 'Date', manque: 'la date' }] },
+    ],
+    envoi: { bouton: 'Envoyer', a: 'Sophie', incomplet: !!o.incomplet } },
+  { id: 'essai-suite', libelle: 'La suite', titre: 'La suite', quand: apresFiche('essai-saisies'),
+    blocs: [{ type: 'texte', id: 'mot', lib: 'Un mot' }], envoi: { bouton: 'Envoyer la suite' } }];
+  document.querySelector('#smTest')?.remove();
+  const hote = document.createElement('div'); hote.id = 'smTest'; document.body.appendChild(hote);
+  const db = {};
+  window.__s = { db };
+  creerEntreprise(U).rendre(hote, {
+    meta: { id: 'essai-2de', code: 'ESSAI', titre: 'Essai', portee: 'eleve', immersif: true, temps: 'guidage' },
+    profil: { prenom: 'Lea', nom: 'T', role: 'eleve', uid: 'u-s' },
+    jeu: { etat: () => db, sauver: () => {} },
+    enregistrer: () => {}, quitter: () => {}, lireScore: async () => null, rendreCopie: async () => ({}),
+  });
+  hote.querySelector('.ent-nav[data-vue="fiche"]').click();
+}, o);
+const valeursSaisies = () => pg.evaluate(() => JSON.parse(JSON.stringify((window.__s.db.fiches || {})['essai-saisies'] || null)));
+const vuesMenu = () => pg.$$eval('#smTest .ent-nav', (L) => L.map((b) => b.dataset.vue).filter((x) => /^fiche/.test(x)));
+
+await v('Fiche, saisies : rangées telles que tapées, sans redessin ; Entrée ne fait pas partir ; une saisie vide manque ; la case préremplie part avec sa valeur', async () => {
+  await monterSaisies();
+  await pg.waitForSelector(FB);
+  egal(await pg.$$eval(`${FB} .ent-cadre-t`, (L) => L.map((h) => h.textContent)), ['1. Cadre', '2. Cadre', '3. Cadre'], 'cadres');
+  egal(await pg.$eval(`${FB} #fi-num`, (i) => [i.value, i.readOnly, i.hasAttribute('data-fiche-saisie')]), ['LV-1', true, false], 'case préremplie');
+  egal([await pg.textContent(`${FB} .ent-fiche-entete`), await pg.textContent(`${FB} .ent-fiche-pied`)], ['EN-TÊTE', 'Mention en pied'], 'en-tête et pied');
+  await pg.$eval(`${FB} form[data-fiche]`, (f) => { f.__marque = true; });
+  await pg.fill(`${FB} #fi-kg`, '6 091');
+  await pg.press(`${FB} #fi-kg`, 'Enter');
+  vrai(!(await pg.$(`${FB} [data-fiche-envoyee]`)), 'Entrée dans une case a envoyé la fiche');
+  egal(await pg.evaluate(() => document.activeElement.id), 'fi-kg', 'focus après la saisie');
+  vrai(await pg.$eval(`${FB} form[data-fiche]`, (f) => f.__marque === true), 'la fiche a été redessinée');
+  await pg.click(`${FB} [data-fiche-envoyer]`);
+  egal(await pg.textContent(`${FB} [data-fiche-manque]`), 'Il manque : l’heure, la date.', 'manque des saisies vides');
+  await pg.fill(`${FB} #fi-h`, '11h00');
+  await pg.fill(`${FB} #fi-d`, '2026-12-10');
+  await pg.click(`${FB} [data-fiche-envoyer]`);
+  await pg.waitForSelector(`${FB} [data-fiche-envoyee]`);
+  egal((await valeursSaisies()).valeurs, { kg: '6 091', h: '11h00', d: '2026-12-10', num: 'LV-1' }, 'valeurs envoyées');
+  egal(await pg.$$eval(`${FB} input`, (L) => L.every((i) => i.closest('fieldset').disabled)), true, 'figée');
+});
+
+await v('Fiche, envoi incomplet : la fiche part avec ses cases vides (null) ; une 2e fiche n’apparaît qu’une fois sa condition vraie, sur son propre écran', async () => {
+  await monterSaisies({ incomplet: true });
+  await pg.waitForSelector(FB);
+  egal(await vuesMenu(), ['fiche'], 'menu avant l’envoi');
+  await pg.fill(`${FB} #fi-kg`, '  ');
+  await pg.press(`${FB} #fi-kg`, 'Enter');
+  vrai(!(await pg.$(`${FB} [data-fiche-envoyee]`)), 'Entrée dans une case a envoyé la fiche incomplète');
+  await pg.click(`${FB} [data-fiche-envoyer]`);
+  await pg.waitForSelector(`${FB} [data-fiche-envoyee]`);
+  egal((await valeursSaisies()).valeurs, { kg: null, num: 'LV-1', h: null, d: null }, 'valeurs envoyées vides');
+  egal(await vuesMenu(), ['fiche', 'fiche:essai-suite'], 'menu après l’envoi');
+  await pg.click('#smTest .ent-nav[data-vue="fiche:essai-suite"]');
+  egal(await pg.textContent(`${FB} [data-fiche-envoyer]`), 'Envoyer la suite', 'écran de la 2e fiche');
+  await pg.click(`${FB} [data-fiche-envoyer]`);
+  egal(await pg.textContent(`${FB} [data-fiche-manque]`), 'Il manque : « Un mot ».', 'la 2e fiche refuse l’envoi incomplet');
+  await pg.click('#smTest .ent-nav[data-vue="fiche"]');
+  vrai(!!(await pg.$(`${FB} [data-fiche-envoyee]`)) && !(await pg.$(`${FB} [data-fiche-manque]`)), 'la 1re fiche a pris l’état de la 2e');
+});
+
+await v('Fiche, saisies : lecture des nombres et des heures (lireNombre, lireHeure), et la copie de la séance ENT-5.8 dit la même chose', async () => {
+  const r = await pg.evaluate(async () => {
+    const F = await import('/core/types/fiche.js');
+    const S = await import('/contenus/smoby-ent58.js');
+    const N = ['6 091', '6091', '6 091', ' 33 ', '2,5', '6.091', '6 091 kg', '', null, 'abc'];
+    const H = ['11:00', '11h00', '11 h', '11H', '9:05', '11:0', '24:00', '11:60', '', 'onze'];
+    return { n: N.map(F.lireNombre), h: H.map(F.lireHeure), memeN: N.every((x) => Object.is(F.lireNombre(x), S.lireNombre(x))),
+      memeH: H.every((x) => Object.is(F.lireHeure(x), S.lireHeure(x))) };
+  });
+  egal(r.n, [6091, 6091, 6091, 33, 2.5, 6.091, null, null, null, null], 'nombres');
+  egal(r.h, [660, 660, 660, 660, 545, null, null, null, null, null], 'heures');
+  vrai(r.memeN && r.memeH, 'la séance et le moteur ne lisent pas pareil');
+});
+
+// ── ENT-5.8 « la lettre de voiture et le retard » (brief `docs/briefs/ENT-5.8-smoby-lettre-voiture.md`) ─────────
+// La séance réelle, montée par son activité. Les attendus sont écrits à la main d'après le brief.
+const T58 = '#s58';
+const Z58 = `${T58} .ent-main`;
+const F58 = `${Z58} .ent-fiche`;
+const monter58 = (o = {}) => pg.evaluate(async (o) => {
+  const act = await import('/activites/smoby-lettre-voiture.js');
+  ['#smTest', '#s51', '#s52', '#s57', '#s58'].forEach((s) => document.querySelector(s)?.remove());
+  const hote = document.createElement('div'); hote.id = 's58'; document.body.appendChild(hote);
+  const db = {};
+  window.__58 = { db, suivi: [] };
+  act.rendre(hote, {
+    meta: act.meta,
+    profil: { prenom: 'Lea', nom: 'Test', role: o.role || 'eleve', uid: o.uid || 'u-58' },
+    jeu: { etat: () => db, sauver: () => {} },
+    enregistrer: (r) => { window.__58.suivi.push(JSON.parse(JSON.stringify(r))); }, quitter: () => {}, codeStock: 'ABC',
+    lireScore: async () => null,
+  });
+}, o);
+const etapes58 = () => pg.evaluate(async () => {
+  const S = await import('/contenus/smoby-ent58.js');
+  return S.ETAPES.map((e) => e.verifier(window.__58.db).status);
+});
+const details58 = () => pg.evaluate(async () => {
+  const S = await import('/contenus/smoby-ent58.js');
+  return S.ETAPES.map((e) => e.verifier(window.__58.db).detail || '');
+});
+const dernierScore58 = () => pg.evaluate(() => { const s = window.__58.suivi; return s.length ? [s[s.length - 1].score, s[s.length - 1].max] : null; });
+const sujets58 = () => pg.evaluate(() => window.__58.db.mails.filter((m) => m.folder === 'in').map((m) => m.subject));
+const nav58 = (vue) => pg.click(`${T58} .ent-nav[data-vue="${vue}"]`);
+const ouvrirMail58 = async (sujet) => {
+  await nav58('mail');
+  await pg.click(`${Z58} [data-dossier="in"]`);
+  await pg.click(`${Z58} .ent-obj:text-is("${sujet}")`);
+};
+// La lettre juste, écrite à la main : Smoby → Jouets du Rhône, K+N, Julie sur le Semi n° 1, jeudi 10/12,
+// 33 palettes, 6 091 kg (32 × 180 + la palette mixte de 331 kg d'ENT-5.6).
+const LETTRE58 = {
+  date: '2026-12-10', expNom: 'smoby', expLieu: 'moirans', destNom: 'jdr', destLieu: 'corbas',
+  transporteur: 'kn', chauffeur: 'julie', vehicule: 's1', chargLieu: 'moirans', chargDate: '2026-12-10',
+  livLieu: 'corbas', livDate: '2026-12-10', nature: 'jouets', palettes: '33', poids: '6 091',
+};
+async function envoyerLettre58(remplace = {}) {
+  await ouvrirMail58('Lettre de voiture d’E1');
+  await pg.click(`${Z58} .ent-lecteur button:has-text("Ouvrir la lettre de voiture")`);
+  await pg.waitForSelector(F58);
+  for (const [k, x] of Object.entries({ ...LETTRE58, ...remplace })) {
+    if (x == null) continue;
+    const tag = await pg.$eval(`${F58} #fi-${k}`, (el) => el.tagName);
+    if (tag === 'SELECT') await pg.selectOption(`${F58} #fi-${k}`, x); else await pg.fill(`${F58} #fi-${k}`, x);
+  }
+  await pg.click(`${F58} [data-fiche-envoyer]`);
+  await pg.waitForSelector(`${F58} [data-fiche-envoyee]`);
+}
+async function envoyerSuivi58({ heure = '11:00', avant = 'Oui' } = {}) {
+  await ouvrirMail58('E1 : accident sur l’A40');
+  await pg.click(`${Z58} .ent-lecteur button:has-text("Ouvrir le suivi de l’enlèvement E1")`);
+  await pg.waitForSelector(`${F58} #fi-arrivee`);
+  await pg.fill(`${F58} #fi-arrivee`, heure);
+  await pg.check(`${F58} input[data-fiche-champ="avant"][value="${avant}"]`);
+  await pg.click(`${F58} [data-fiche-envoyer]`);
+  await pg.waitForSelector(`${F58} [data-fiche-envoyee]`);
+}
+const CLIENT58 = {
+  salut: 'Bonjour,', cause: 'Notre camion a 1 h de retard à cause d’un accident sur l’A40.',
+  heure: 'Il arrivera vers 11 h 00, avant votre heure limite.', quai: 'Pouvez-vous nous confirmer que le quai 4 sera libre ?',
+  fin: 'Cordialement, l’exploitation Kuehne+Nagel Besançon',
+};
+const SMOBY58 = {
+  salut: 'Bonjour Bruno,', retard: 'La livraison E1 pour Jouets du Rhône aura 1 h de retard (accident).',
+  client: 'Le client est prévenu.', fin: 'Cordialement,',
+};
+async function repondre58(sujet, lignes) {
+  await ouvrirMail58(sujet);
+  await pg.click(`${Z58} [data-repondre]`);
+  await pg.waitForSelector(`${Z58} #formPhr:not([hidden])`);
+  for (const [l, t] of Object.entries(lignes)) await pg.selectOption(`${Z58} [data-phrase="${l}"]`, { label: t });
+  await pg.click(`${Z58} #formPhr button[type="submit"]`);
+}
+async function parcours58({ lettre = {}, suivi = {}, client = {}, smoby = {} } = {}) {
+  await envoyerLettre58(lettre);
+  await envoyerSuivi58(suivi);
+  await repondre58('Livraison E1 de ce matin', { ...CLIENT58, ...client });
+  await repondre58('E1 bien parti ?', { ...SMOBY58, ...smoby });
+}
+const huit = (ok, ko = []) => Array.from({ length: 8 }, (_, i) => (ko.includes(i + 1) ? 'ko' : ok));
+
+await v('ENT-5.8 : déclaration (code, 2de, OTM-C2.1 et C2.3, 8 jalons, livrée fermée aux élèves), inscrite au registre après ENT-5.7', async () => {
+  const r = await pg.evaluate(async () => {
+    const A = await import('/activites/smoby-lettre-voiture.js');
+    const I = await import('/activites/index.js');
+    const C = await import('/core/competences.js');
+    const m = A.meta;
+    const metas = (await Promise.all(I.ACTIVITES.map((f) => f()))).map((x) => x.meta);
+    return { m: [m.id, m.code, m.rubrique, m.niveaux, m.competences, m.domaines, m.temps, m.bareme, m.pret, m.ouverture, m.portee, m.immersif, m.coeur],
+      comp: ['OTM-C2.1', 'OTM-C2.3'].every((c) => JSON.stringify(C).includes(c)),
+      rang: metas.filter((x) => /^ENT-5\./.test(x.code)).map((x) => x.code) };
+  });
+  egal(r.m, ['smoby-lettre-voiture', 'ENT-5.8', 'simulog', ['2de'], ['OTM-C2.1', 'OTM-C2.3'], ['D3', 'D1'], 'guidage', 8, true, 'prof', 'eleve', true, true], 'meta');
+  vrai(r.comp, 'OTM-C2.1 ou OTM-C2.3 absente de core/competences.js');
+  egal(r.rang.slice(-2), ['ENT-5.7', 'ENT-5.8'], 'rang dans le registre');
+});
+
+await v('ENT-5.8 : valeurs calculées — 6 091 kg (et la palette mixte pèse ce que dit le moteur d’ENT-5.6), départ 06:00, arrivée 11:00 ; le corrigé se charge', async () => {
+  const r = await pg.evaluate(async () => {
+    const S = await import('/contenus/smoby-ent58.js');
+    const P = await import('/contenus/smoby-ent56.js');
+    const EN = await import('/core/types/entrepot.js');
+    const C = (await import('/contenus/corriges/ENT-5.8.js')).CORRIGE;
+    return { v: [S.POIDS, S.KG_MIXTE, S.DEPART, S.ARRIVEE_PREVUE, S.ARRIVEE, S.LIMITE, S.ATTENDU.chauffeur, S.ATTENDU.vehicule],
+      moteur: EN.attendusPreparation(P.ENTREPOT).poids, c: [C.code, C.items.length, C.items[0].reponses[4][1], C.items[0].reponses[7][1], C.items[1].rep] };
+  });
+  egal(r.v, [6091, 331, 360, 600, 660, 720, 'julie', 's1'], 'valeurs');
+  egal(r.moteur, 331, 'poids de la palette mixte selon le moteur');
+  egal(r.c.slice(0, 4), ['ENT-5.8', 4, 'Julie · Semi n° 1', 'Jouets (maisons de jardin, cuisines, porteurs) · 33 palettes · 6 091 kg'], 'corrigé');
+  vrai(r.c[4].startsWith('06:00 + 4 h de conduite = 10:00 prévu ; + 1 h de retard = 11:00. Oui'), `corrigé, heure : ${r.c[4]}`);
+});
+
+await v('ENT-5.8 : inaction 0 / 8 — lettre envoyée vide : jalons 1 à 5 faux ; le suivi refuse de partir vide', async () => {
+  await monter58();
+  egal(await etapes58(), huit('attente'), 'avant tout geste');
+  await ouvrirMail58('Lettre de voiture d’E1');
+  await pg.click(`${Z58} .ent-lecteur button:has-text("Ouvrir la lettre de voiture")`);
+  await pg.click(`${F58} [data-fiche-envoyer]`);
+  await pg.waitForSelector(`${F58} [data-fiche-envoyee]`);
+  const e = await etapes58();
+  egal(e, ['ko', 'ko', 'ko', 'ko', 'ko', 'attente', 'attente', 'attente'], 'lettre vide');
+  vrai((await details58())[4].startsWith('Cases vides : date de la lettre, nom de l’expéditeur'), 'détail du jalon 5');
+  await nav58('fiche:suivi');
+  await pg.click(`${F58} [data-fiche-envoyer]`);
+  egal(await pg.textContent(`${F58} [data-fiche-manque]`), 'Il manque : l’heure d’arrivée, la réponse oui / non.', 'suivi vide');
+  egal((await etapes58()).filter((s) => s === 'ok').length, 0, 'jalons vrais sans rien faire');
+});
+
+await v('ENT-5.8 : le retard n’arrive qu’après l’envoi de la lettre (message de Julie, suivi au menu et dans le mail) ; puis le client, puis Smoby', async () => {
+  await monter58();
+  egal(await sujets58(), ['Lettre de voiture d’E1'], 'messages au départ');
+  egal(await pg.$$eval(`${T58} .ent-nav`, (L) => L.map((b) => b.dataset.vue)), ['accueil', 'mail', 'fiche'], 'menu au départ');
+  // La lettre remplie mais pas envoyée : rien n'arrive.
+  await ouvrirMail58('Lettre de voiture d’E1');
+  await pg.click(`${Z58} .ent-lecteur button:has-text("Ouvrir la lettre de voiture")`);
+  await pg.selectOption(`${F58} #fi-expNom`, 'smoby');
+  await nav58('mail');
+  egal(await sujets58(), ['Lettre de voiture d’E1'], 'messages avant l’envoi');
+  await envoyerLettre58({ poids: '5760' });
+  egal(await sujets58(), ['Lettre de voiture d’E1', 'E1 : accident sur l’A40'], 'après la lettre (même fausse)');
+  egal(await pg.$$eval(`${T58} .ent-nav`, (L) => L.map((b) => b.dataset.vue)), ['accueil', 'mail', 'fiche', 'fiche:suivi'], 'menu après la lettre');
+  await envoyerSuivi58();
+  vrai((await sujets58()).includes('Livraison E1 de ce matin') && !(await sujets58()).includes('E1 bien parti ?'), 'après le suivi : le client seul');
+  await repondre58('Livraison E1 de ce matin', CLIENT58);
+  vrai((await sujets58()).includes('E1 bien parti ?'), 'Smoby après le client');
+  await repondre58('E1 bien parti ?', SMOBY58);
+  vrai((await sujets58()).includes('RE : Lettre de voiture d’E1'), 'message de fin');
+  egal(await etapes58(), huit('ok', [4]), 'poids faux (32 × 180 kg, sans la palette mixte)');
+});
+
+await v('ENT-5.8 : parcours juste à l’écran, 8 / 8, score remonté au suivi', async () => {
+  await monter58();
+  await parcours58();
+  egal(await etapes58(), huit('ok'), 'jalons');
+  egal(await dernierScore58(), [8, 8], 'score');
+});
+
+await v('ENT-5.8 : pièges — expéditeur et destinataire inversés (jalon 1 seul), une case vide (jalons 4 et 5), 10:00 (jalon 6 seul), 10 h 00 au client (jalon 7)', async () => {
+  await monter58();
+  await parcours58({ lettre: { expNom: 'jdr', expLieu: 'corbas', destNom: 'smoby', destLieu: 'moirans' } });
+  egal(await etapes58(), huit('ok', [1]), 'inversés');
+  vrai((await details58())[0].includes('inversés'), 'le bilan dit « inversés »');
+  await monter58();
+  await parcours58({ lettre: { poids: null } });
+  egal(await etapes58(), huit('ok', [4, 5]), 'poids vide');
+  egal((await details58())[4], 'Case vide : poids.', 'détail du jalon 5');
+  await monter58();
+  await parcours58({ suivi: { heure: '10:00' } });
+  egal(await etapes58(), huit('ok', [6]), '10:00 au suivi');
+  vrai((await details58())[5].includes('il manque le retard'), 'le bilan dit « il manque le retard »');
+  await monter58();
+  await parcours58({ lettre: { transporteur: 'smoby' }, client: { heure: 'Il arrivera vers 10 h 00, avant votre heure limite.' },
+    smoby: { client: 'Pouvez-vous prévenir le client ?' } });
+  egal(await etapes58(), huit('ok', [2, 7, 8]), 'Smoby transporteur, 10 h 00 au client, demander à Smoby de prévenir le client');
 });
 
 await v('Smoby : aucune erreur JavaScript dans le bloc', async () => {

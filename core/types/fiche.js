@@ -42,15 +42,46 @@
 // n'est pas envoyée. Déclencheur : `apresFiche('selection')` (core/declencheurs.js), vrai à l'envoi.
 //
 // Blocs : `ouinon`, `liste`, `choix`, `encadre` (lot 2, ENT-5.1) ; `cases` et `ordre` (lot 4, 05/10/2026,
-// ENT-5.2). `texte`, `nombre`, `date`, `heure` viendront avec ENT-5.8.
+// ENT-5.2) ; `texte`, `nombre`, `date`, `heure` et `cadre` (lot 4, 05/10/2026, ENT-5.8).
 //   - `cases` : une case à cocher par choix. Aucune case cochée est une réponse (rien ne « manque ») : c'est
 //     à la séance de ne pas récompenser l'inaction (un jalon « rien de trop » exige au moins une case).
 //   - `ordre` : les choix s'affichent dans l'ordre DÉCLARÉ, qui est l'ordre de départ ; le contenu le
 //     mélange lui-même (le moteur ne connaît pas l'ordre juste et ne mélange rien : même départ pour tous,
 //     jamais déjà juste). Flèches ↑ ↓ sur chaque ligne, sans redessin, le focus suit la ligne déplacée.
 //     Rien ne « manque » : un ordre jamais touché part tel quel à l'envoi (et sera faux).
+//   - Les SAISIES (ENT-5.8) : `{ type: 'nombre', id, lib, unite: 'kg', manque }`, `{ type: 'heure', … }` (HH:MM),
+//     `{ type: 'date', … }` (calendrier du navigateur, rangée 'AAAA-MM-JJ'), `{ type: 'texte', … }` ; `texte` peut
+//     porter `valeur` et `fige: true` (case préremplie, non modifiable : un numéro de document). Rangées TELLES QUE
+//     TAPÉES, sans redessin ; les jalons les lisent avec `lireNombre` (« 6 091 », « 6091 », « 2,5 ») et
+//     `lireHeure` (« 11:00 », « 11h00 », « 11 h ») ci-dessous. Une saisie vide « manque ». Entrée dans une case ne
+//     part jamais (seul le bouton envoie).
+//   - `cadre` : `{ type: 'cadre', titre: '1. Expéditeur', large: true, blocs: [...] }` encadre ses blocs, comme les
+//     cases numérotées d'un document. `grille: true` sur la fiche les pose sur deux colonnes (un cadre `large`
+//     prend toute la ligne). La fiche peut aussi porter `entete` (HTML du contenu : titre du document, numéro…)
+//     et `pied` (texte : « Document pédagogique, reconstitution, non contractuel »).
+//
+// Envoi incomplet (ENT-5.8) : `envoi: { incomplet: true }` laisse partir la fiche avec des cases vides, comme
+// une vraie lettre mal remplie (c'est alors à un jalon de la séance de dire « incomplète »). Sans l'option,
+// l'envoi est refusé tant qu'il manque une réponse.
+//
+// Plusieurs fiches dans une séance (ENT-5.8) : `creerEntreprise({ …, fiches: [F1, F2] })` (ou `fiche` + `fiches`).
+// Une entrée de menu par fiche ; la première garde l'écran `fiche`, les autres `fiche:<id>`. Une fiche qui porte
+// `quand(db)` n'apparaît (menu, bouton du mail) qu'une fois la condition vraie : un écran qui attend un message.
 
 import { ech } from '../ui.js';
+
+// Une saisie de nombre, telle que tapée → un nombre, ou NaN. Espaces (milliers), virgule décimale.
+export function lireNombre(s) {
+  const t = String(s == null ? '' : s).replace(/[\s\u00a0\u202f]/g, '').replace(',', '.');
+  return /^-?\d+(\.\d+)?$/.test(t) ? Number(t) : NaN;
+}
+// Une saisie d'heure → minutes depuis minuit, ou NaN. « 11:00 », « 11h00 », « 11 h ».
+export function lireHeure(s) {
+  const m = String(s == null ? '' : s).trim().toLowerCase().match(/^(\d{1,2})\s*(?:[:h]\s*(\d{2})?)?$/);
+  if (!m) return NaN;
+  const h = Number(m[1]), mn = m[2] ? Number(m[2]) : 0;
+  return h < 24 && mn < 60 ? h * 60 + mn : NaN;
+}
 
 export function ficheEnvoyee(db, id) {
   const f = db && db.fiches && db.fiches[id];
@@ -61,6 +92,9 @@ const jourHeure = (t) => {
   const d = new Date(t), z = (n) => String(n).padStart(2, '0');
   return `${z(d.getDate())}/${z(d.getMonth() + 1)} à ${z(d.getHours())}:${z(d.getMinutes())}`;
 };
+const SAISIES = ['texte', 'nombre', 'date', 'heure'];
+// Les blocs d'une fiche à plat (ceux d'un cadre compris), dans l'ordre de la fiche.
+const aPlat = (L) => (L || []).flatMap((b) => (b.type === 'cadre' ? aPlat(b.blocs) : [b]));
 const minus = (s) => String(s || '').charAt(0).toLowerCase() + String(s || '').slice(1);
 const options = (choix) => (choix || []).map((c) => (typeof c === 'object' ? c : { v: c, lib: c }));
 // L'ordre d'un bloc `ordre` : celui de l'élève s'il est complet, sinon l'ordre déclaré (le départ).
@@ -71,7 +105,7 @@ const ordreDe = (b, v) => {
 };
 
 export function creerFiche(F, VDOC) {
-  const blocs = F.blocs || [];
+  const blocs = aPlat(F.blocs);
   const docs = VDOC ? VDOC.pieces(F.documents) : [];
   const envoi = F.envoi || {};
   const libelle = F.libelle || F.titre || 'Fiche';
@@ -87,8 +121,8 @@ export function creerFiche(F, VDOC) {
           if (x !== true && x !== false) n++;
         }));
         if (n) L.push(b.manque ? b.manque.replace('{n}', n) : `${n} case${n > 1 ? 's' : ''} du tableau sans réponse`);
-      } else if (b.type === 'liste' || b.type === 'choix') {
-        if (v[b.id] == null || v[b.id] === '') L.push(b.manque || `« ${b.lib || b.titre || b.id} »`);
+      } else if (b.type === 'liste' || b.type === 'choix' || (SAISIES.includes(b.type) && !b.fige)) {
+        if (v[b.id] == null || String(v[b.id]).trim() === '') L.push(b.manque || `« ${b.lib || b.titre || b.id} »`);
       }
     });
     return L;
@@ -140,6 +174,22 @@ export function creerFiche(F, VDOC) {
           <button type="button" data-ordre-sens="1" aria-label="Descendre « ${ech(o.lib)} »"${k === n - 1 ? ' disabled' : ''}>↓</button></span></li>`).join('')}
       </ol><p class="ent-ordre-annonce" aria-live="polite" data-ordre-annonce></p>`;
     }
+    if (SAISIES.includes(b.type)) {
+      const val = b.fige ? (b.valeur == null ? '' : b.valeur) : (v[b.id] == null ? '' : v[b.id]);
+      const attrs = {
+        texte: 'type="text"',
+        nombre: 'type="text" inputmode="decimal" autocomplete="off"',
+        heure: 'type="text" inputmode="numeric" autocomplete="off" placeholder="HH:MM" maxlength="5"',
+        date: 'type="date"',
+      }[b.type];
+      return `${titre}${consigne}<div class="champ ent-saisie ent-saisie-${b.type}"><label for="fi-${ech(b.id)}">${ech(b.lib || '')}</label>
+        <span class="ent-saisie-case"><input id="fi-${ech(b.id)}" ${attrs} value="${ech(val)}"${b.fige ? ' readonly' : ` data-fiche-saisie="${ech(b.id)}"`}>${
+          b.unite ? `<span class="ent-saisie-unite">${ech(b.unite)}</span>` : ''}</span></div>`;
+    }
+    if (b.type === 'cadre') {
+      return `<section class="ent-cadre" aria-label="${ech(b.titre || '')}">${b.titre ? `<h3 class="ent-cadre-t">${ech(b.titre)}</h3>` : ''}${consigne}${
+        (b.blocs || []).map((x) => `<div class="ent-cadre-bloc">${bloc(x, e)}</div>`).join('')}</section>`;
+    }
     if (b.type === 'encadre') {
       return `<div class="ent-encadre">${b.titre ? `<b>${ech(b.titre)}</b>` : ''}${ech(b.texte || '').replace(/\n/g, '<br>')}</div>`;
     }
@@ -159,8 +209,10 @@ export function creerFiche(F, VDOC) {
 
   function html(e, ui, api) {
     const fige = !!e.envoye || api.figee;
-    const formulaire = `<form class="panneau ent-fiche-form" data-fiche="${ech(F.id)}" novalidate>
-        <fieldset${fige ? ' disabled' : ''}>${blocs.map((b) => `<div class="ent-fiche-bloc">${bloc(b, e)}</div>`).join('')}</fieldset>
+    const formulaire = `<form class="panneau ent-fiche-form${F.grille ? ' ent-fiche-grille' : ''}" data-fiche="${ech(F.id)}" novalidate>
+        <fieldset${fige ? ' disabled' : ''}>${F.entete ? `<div class="ent-fiche-entete">${F.entete}</div>` : ''}<div class="ent-fiche-blocs">${
+          (F.blocs || []).map((b) => `<div class="ent-fiche-bloc${b.type === 'cadre' && b.large ? ' large' : ''}">${bloc(b, e)}</div>`).join('')}</div>${
+          F.pied ? `<p class="ent-fiche-pied">${ech(F.pied)}</p>` : ''}</fieldset>
         ${e.envoye
           ? `<div class="ent-fiche-envoyee" data-fiche-envoyee tabindex="-1">Fiche envoyée${envoi.a ? ` à ${ech(envoi.a)}` : ''} le ${
             ech(jourHeure(e.envoye.at))}.${envoi.suite ? ' ' + ech(envoi.suite) : ''}
@@ -193,6 +245,16 @@ export function creerFiche(F, VDOC) {
       e.valeurs[el.dataset.ficheChamp] = el.value === '' ? null : el.value;
       ecrit();
     }));
+    // Les saisies : rangées telles que tapées, à chaque touche (rien n'est perdu si l'élève change d'écran).
+    z.querySelectorAll('[data-fiche-saisie]').forEach((el) => el.addEventListener('input', () => {
+      if (e.envoye || api.figee) return;
+      e.valeurs[el.dataset.ficheSaisie] = el.value === '' ? null : el.value;
+      ecrit();
+    }));
+    // Entrée dans une case ne fait pas partir la fiche (un envoi incomplet serait possible) : seul le bouton envoie.
+    z.querySelector('[data-fiche]')?.addEventListener('keydown', (ev) => {
+      if (ev.key === 'Enter' && ev.target.tagName === 'INPUT') ev.preventDefault();
+    });
     // Cases à cocher : la liste des cochées, dans l'ordre déclaré.
     z.querySelectorAll('[data-fiche-case]').forEach((el) => el.addEventListener('change', () => {
       if (e.envoye || api.figee) return;
@@ -223,7 +285,7 @@ export function creerFiche(F, VDOC) {
     z.querySelector('[data-fiche]')?.addEventListener('submit', (ev) => {
       ev.preventDefault();
       if (e.envoye || api.figee) return;
-      const m = manque(e);
+      const m = envoi.incomplet ? [] : manque(e);
       if (m.length) {
         ui.manque = `Il manque : ${m.join(', ')}.`;
         z.querySelector('[data-fiche-manque]').textContent = ui.manque;
@@ -233,6 +295,11 @@ export function creerFiche(F, VDOC) {
       // Un ordre jamais touché part tel quel (celui de départ) ; des cases jamais cochées, vides.
       blocs.filter((b) => b.type === 'ordre').forEach((b) => { e.valeurs[b.id] = ordreDe(b, e.valeurs).map((o) => o.v); });
       blocs.filter((b) => b.type === 'cases' && !Array.isArray(e.valeurs[b.id])).forEach((b) => { e.valeurs[b.id] = []; });
+      // Une case préremplie part avec sa valeur ; une saisie laissée vide part vide (`null`).
+      blocs.filter((b) => SAISIES.includes(b.type)).forEach((b) => {
+        const x = e.valeurs[b.id];
+        e.valeurs[b.id] = b.fige ? (b.valeur == null ? null : String(b.valeur)) : (x == null || String(x).trim() === '' ? null : x);
+      });
       e.envoye = { at: Date.now() };
       api.envoyee();
       z.querySelector('[data-fiche-envoyee]')?.focus({ preventScroll: true });
@@ -260,7 +327,7 @@ export function creerFiche(F, VDOC) {
   }
 
   return {
-    id: F.id, docs, nav: { libelle },
+    id: F.id, docs, nav: { libelle }, quand: F.quand || null,
     bouton: F.bouton || `Ouvrir la ${minus(libelle)}`,
     etatNeuf: () => ({ valeurs: {} }),
     manque, html, brancher,

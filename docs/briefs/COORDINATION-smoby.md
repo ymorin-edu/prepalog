@@ -26,7 +26,7 @@ annoncé comme tel**.
 | ENT-5.5 | Cariste | Ranger, saisir l'entrée en stock | `ENT-5.5-smoby-rangement.md` | **vue Plan d'entrepôt** + lots 1, 2, 3, 7 | 9 |
 | **ENT-5.6** | Cariste | **Préparer la palette mixte d'E1** (picking, réappro, palette, film, étiquettes) — **livrée le 05/10** | `ENT-5.6-smoby-preparation.md` | **vue Plan d'entrepôt** (mode préparation) + lot 7 | **9** |
 | ENT-5.7 | Agent K+N | Chauffeurs et camions — **livrée le 05/10** | `ENT-5.7-smoby-enlevements.md` *(ancien `ENT-5.6-…`)* | **vue Planning** + lots 1, 3, 7 | 10 |
-| ENT-5.8 | Agent K+N | Lettre de voiture et retard | `ENT-5.8-smoby-lettre-voiture.md` *(ancien `ENT-5.7-…`)* | lots 1, 2, 3, 7 | 8 |
+| ENT-5.8 | Agent K+N | Lettre de voiture et retard — **livrée le 05/10** | `ENT-5.8-smoby-lettre-voiture.md` *(ancien `ENT-5.7-…`)* | lots 1, 2, 3, 7 | 8 |
 
 ### Renumérotation du 04/10 — **faite** par Claude Code (commit 822c98d, ligne dans `docs/decisions.md`)
 
