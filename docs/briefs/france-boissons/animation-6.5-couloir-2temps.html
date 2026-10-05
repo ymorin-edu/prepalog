@@ -43,7 +43,7 @@ svg{display:block;width:100%;height:auto;max-height:calc(100vh - 240px)}
 </head>
 <body>
 <div class="page">
-<div class="note"><b>Maquette d'animation Cowork, à valider</b> — ENT-6.5 : pourquoi « un seul lot par couloir ». Vue 3D isométrique, palettes de rétention de 4 fûts (règle de l'exercice). Dessin et scénario construits. Sans son. En deux temps : arrêt sur l'erreur et question, puis la bonne façon et une seconde question.</div>
+<div class="note"><b>Maquette d'animation Cowork, à valider</b> — ENT-6.5 : pourquoi « un seul lot par couloir ». Vue 3D isométrique, palettes de rétention de 8 fûts à plat en quinconce (règle de l'exercice, décision 52). Dessin et scénario construits. Sans son. En deux temps : arrêt sur l'erreur et question, puis la bonne façon et une seconde question.</div>
 <div class="cadre">
  <div class="legende"><span class="num" id="num">1</span><span id="texte">…</span></div>
  <div class="scene"><svg id="svg" viewBox="0 0 1000 600" role="img" aria-label="Animation en 3D : un chariot range et reprend des palettes de fûts dans deux couloirs de stockage de masse">
@@ -72,8 +72,9 @@ function P(x,y,z){return [OX+(x-y)*C30*ISO,OY+(x+y)*S30*ISO-z*ISO]}
 function pts(a){return a.map(p=>P(...p).map(v=>v.toFixed(1)).join(',')).join(' ')}
 function face(a,fill,stroke='rgba(0,0,0,.25)'){return `<polygon points="${pts(a)}" fill="${fill}" stroke="${stroke}" stroke-width="1"/>`}
 function boite(x,y,z,w,d,h,c){return face([[x,y+d,z],[x+w,y+d,z],[x+w,y+d,z+h],[x,y+d,z+h]],c[1])+face([[x+w,y,z],[x+w,y+d,z],[x+w,y+d,z+h],[x+w,y,z+h]],c[2])+face([[x,y,z+h],[x+w,y,z+h],[x+w,y+d,z+h],[x,y+d,z+h]],c[0]);}
-// ---------- palette de rétention + 4 fûts ----------
-const ZB=0.2,KH=0.46,KR=0.2,PH=ZB+KH;
+// ---------- palette de rétention + 8 fûts en quinconce (3, 2, 3) ----------
+const ZB=0.2,KH=0.36,KR=0.152,PH=ZB+KH;
+const QX=0.304,QY=0.263,QUINC=[];[-1,0,1].forEach(j=>{(j===0?[-.5,.5]:[-1,0,1]).forEach(i=>QUINC.push([.5+i*QX,.5+j*QY]))});
 const LOTS={S20:{c:'#e5b800',t:'#1a1915'},S24:{c:'#2f5f9e',t:'#fff'}};
 function fut(cx,cy,z){
  const [bx,by]=P(cx,cy,z),[tx,ty]=P(cx,cy,z+KH),rx=KR*ISO*K1,ry=KR*ISO*K2;
@@ -89,7 +90,7 @@ function retention(x,y,z){
 }
 function palette(p){ // p : {x,y,z,lot,alerte}
  let g=retention(p.x,p.y,p.z);
- [[.28,.28],[.72,.28],[.28,.72],[.72,.72]].sort((a,b)=>(a[0]+a[1])-(b[0]+b[1])).forEach(([dx,dy])=>g+=fut(p.x+dx,p.y+dy,p.z+ZB));
+ QUINC.slice().sort((a,b)=>(a[0]+a[1])-(b[0]+b[1])).forEach(([dx,dy])=>g+=fut(p.x+dx,p.y+dy,p.z+ZB));
  const [cx,cy]=P(p.x+.5,p.y+.5,p.z+PH+.12),L=LOTS[p.lot];
  g+=`<rect x="${cx-34}" y="${cy-22}" width="68" height="22" rx="5" fill="${L.c}" stroke="rgba(0,0,0,.35)"/><text x="${cx}" y="${cy-6}" text-anchor="middle" font-size="14" font-weight="800" fill="${L.t}">lot ${p.lot}</text>`;
  if(p.etiq){if(p.x<1){const [ex,ey]=P(p.x+1.08,p.y+.62,0);g+=`<text x="${ex}" y="${ey}" font-size="13" font-weight="700" fill="${p.etiqC||'#1a1915'}">${p.etiq}</text>`;}else g+=`<text x="${cx}" y="${cy-30}" text-anchor="middle" font-size="13" font-weight="700" fill="${p.etiqC||'#1a1915'}">${p.etiq}</text>`;}
