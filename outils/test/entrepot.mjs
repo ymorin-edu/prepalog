@@ -966,7 +966,7 @@ await v('Visite : le message « Trouvé » lit la désignation et le poids dans 
 await v('Visite : parcours — ordre imposé, photo en onglet (Échap), deux images aux litiges, trace = celle de la maquette', async () => {
   await monterV(pv, { db: rendu(2) });
   egal(await pv.$eval(`${ZV} [data-pv-trace]`, (e) => e.getAttribute('points')),
-    '410,505 680,505 680,400 680,505 300,505 155,505 155,330 155,505 553,505 553,92 553,189', 'trace');
+    '410,505 680,505 680,400 680,505 220,505 155,505 155,410 155,505 553,505 553,92 553,189', 'trace (allée principale décalée de 80 vers la gauche, étape 4 de 80 vers le bas : demandes de Tristan)');
   vrai(!(await pv.$(`${ZV} [data-pe-trav]`)), 'travées cliquables pendant le parcours');
   await pv.click(`${ZV} g[data-pv-etape="3"]`);
   egal(await msgV(pv), 'Dans l’ordre : l’étape suivante est la n° 1.', 'ordre');
