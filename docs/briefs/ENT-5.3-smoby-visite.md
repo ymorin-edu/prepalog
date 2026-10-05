@@ -6,9 +6,8 @@
 > Lis docs/briefs/COORDINATION-smoby.md puis implémente le brief docs/briefs/ENT-5.3-smoby-visite.md. Il faut que MOTEUR-vue-plan-entrepot.md et MOTEUR-modes-visite.md soient livrés, ainsi que le lot 7 de MOTEUR-2de-S1 (Smoby dans activites/index.js) : sinon arrête-toi et dis-le. Annonce la durée avant de commencer et dis-moi si un point du brief contredit le code.
 > ```
 
-**Statut** : **à implémenter** — les deux chantiers moteur sont livrés (mode visite le 05/10/2026) ; **le contenu du §6 est
-déjà déclaré** dans `contenus/smoby-ent53.js` (cas « visite » de la page d'essai) : reste le fichier d'activité, le `lexique`
-des 8 mots et la ligne dans `activites/index.js`. Brief **à jour de la maquette v2 validée** (04/10/2026, soir).
+**Statut** : **livré** (05/10/2026, `pret: true, ouverture: 'prof'` : fermée aux élèves, à essayer à l'écran). Avant : contenu
+déclaré dans `contenus/smoby-ent53.js` (cas « visite » de la page d'essai), restait la séance.
 **Date du brief** : 04/10/2026 (mis à jour le 04/10 au soir : maquette v2, 8 étapes, 11 jalons)
 **Conversation d'origine** : Cowork (Opus) ; fiches projet `claude/prepalog-2de-s1-visite.md` (décisions 1 à 11) et
 `claude/prepalog-plan-entrepot-cadrage.md`.
@@ -312,9 +311,21 @@ délimite la travée et trouve ses lisses, lit l'adresse et retrouve l'emplaceme
 
 ## Compte rendu *(rempli par Claude Code à la livraison)*
 
-- **Fichiers créés / modifiés** :
-- **Écarts par rapport au brief** :
-- **Décisions prises en route** :
-- **Tests** :
-- **Commits** :
-- **Reste ouvert** :
+- **Fichiers créés / modifiés** : `activites/smoby-visite.js` (nouveau) ; `activites/index.js` (une ligne, entre ENT-5.1 et
+  ENT-5.4) ; `contenus/smoby-ent53.js` (ajouts en fin de fichier : `ETAPES`, `VOCAB`, `LEXIQUE`, `VOLET`, `ACCUEIL` — la
+  déclaration de la visite n'a pas bougé) ; `outils/test/smoby.mjs` (4 cas) ; `outils/test/socle.mjs` (ENT-5.3 ajoutée à la
+  liste attendue des séances Simulog).
+- **Écarts par rapport au brief** : **17 jalons** (barème 17), comme l'ajout du 05/10 (« Où est-ce ? »), et non 11 comme
+  les §1 et §5. Le contenu est dans `contenus/smoby-ent53.js` (et non `smoby-ent53-visite.js`, §6).
+- **Décisions prises en route** : un **message de Bruno** dans la messagerie (« Ton premier jour : la visite », envoie vers
+  le menu « Visite de la plateforme ») et un accueil en 3 lignes, **écrits par Claude Code, à valider à l'écran** — le
+  brief ne prévoit pas de messagerie, mais chaque séance Smoby en a une. Le lexique reprend les 8 mots et leurs
+  définitions **lus dans l'étape « Les mots du rack »** (jamais recopiés) ; « travée » et « niveau » y ont donc la
+  définition de cette séance, pas celle d'ENT-5.5. Menu : aucun écran de données (`menu: []`). Pas de corrigé ni de trame
+  (après validation, §9).
+- **Tests** : bloc `smoby` + 4 cas (déclaration et rang dans le registre ; ouverture : un message, 0 / 17, menu seul,
+  8 mots cliquables ; visite juste de bout en bout à l'écran → 17 / 17 au suivi ; adresse fausse → seul ce jalon
+  tombe). Le reste du §8 (ordre, pièges, tolérance, sabotages, images, aucun défilement) est déjà couvert par le bloc
+  `entrepot` sur la même déclaration. Sabotage vérifié (lexique retiré → le cas d'ouverture tombe).
+- **Commits** : voir `git log` (« ENT-5.3 : … »).
+- **Reste ouvert** : écran de bilan dans la vue (§11, défaut non) ; trame et corrigé (Cowork, après l'essai à l'écran).

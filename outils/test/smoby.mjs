@@ -1685,6 +1685,120 @@ await v('ENT-5.6 : chaque piège fait tomber son jalon (Cuisine avant Porteur et
   }
 });
 
+// ── ENT-5.3 « la visite de la plateforme » (brief `docs/briefs/ENT-5.3-smoby-visite.md`) ──────────────
+// La séance réelle, montée par son activité (`activites/smoby-visite.js`). Les mécaniques du mode visite
+// (ordre, pièges, tolérance, sabotages, images) sont testées dans le bloc `entrepot` sur la même
+// déclaration ; ici, ce que la séance ajoute : sa déclaration, son ouverture et le score remonté au suivi.
+// Gestes justes écrits À LA MAIN d'après le brief (mêmes valeurs que le bloc `entrepot`).
+const T53 = '#s53';
+const Z53 = `${T53} .pv`;
+const monter53 = (o = {}) => pg.evaluate(async (o) => {
+  const act = await import('/activites/smoby-visite.js');
+  for (const id of ['smTest', 's51', 's54', 's55', 's56', 's53']) document.getElementById(id)?.remove();
+  const hote = document.createElement('div'); hote.id = 's53'; document.body.appendChild(hote);
+  const db = {};
+  window.__53 = { db, suivi: [] };
+  act.rendre(hote, {
+    meta: act.meta,
+    profil: { prenom: 'Lea', nom: 'Test', role: 'eleve', uid: o.uid || 'u-53' },
+    jeu: { etat: () => db, sauver: () => {} },
+    enregistrer: (r) => { window.__53.suivi.push(JSON.parse(JSON.stringify(r))); }, quitter: () => {}, codeStock: 'ABC',
+    lireScore: async () => null,
+  });
+}, o);
+const etapes53 = () => pg.evaluate(async () => {
+  const S = await import('/contenus/smoby-ent53.js');
+  return S.ETAPES.map((e) => e.verifier(window.__53.db).status);
+});
+const dernierScore53 = () => pg.evaluate(() => { const s = window.__53.suivi; return s.length ? [s[s.length - 1].score, s[s.length - 1].max] : null; });
+async function clic53(x, y) {
+  const [a, b] = await pg.evaluate(([x, y]) => {
+    const svg = document.querySelector('#s53 .pv-calque');
+    svg.scrollIntoView({ block: 'nearest' });
+    const q = new DOMPoint(x, y).matrixTransform(svg.getScreenCTM());
+    return [q.x, q.y];
+  }, [x, y]);
+  await pg.mouse.click(a, b);
+}
+const suivant53 = () => pg.click(`${Z53} [data-pv="suivant"]`);
+
+await v('ENT-5.3 : déclaration (code, 2de, C1.2 et C1.5, 17 jalons, livrée fermée aux élèves), inscrite au registre, rangée avant ENT-5.4', async () => {
+  const r = await pg.evaluate(async () => {
+    const A = await import('/activites/smoby-visite.js');
+    const I = await import('/activites/index.js');
+    const m = A.meta;
+    const codes = (await Promise.all(I.ACTIVITES.map((f) => f()))).map((x) => x.meta.code).filter((c) => /^ENT-5\./.test(c));
+    return { m: [m.id, m.code, m.rubrique, m.niveaux, m.competences, m.domaines, m.temps, m.bareme, m.pret, m.ouverture, m.portee, m.coeur],
+      codes };
+  });
+  egal(r.m, ['smoby-visite', 'ENT-5.3', 'simulog', ['2de'], ['C1.2', 'C1.5'], ['D4'], 'guidage', 17, true, 'prof', 'eleve', true], 'meta');
+  vrai(r.codes.includes('ENT-5.3'), 'séance absente du registre');
+  vrai(r.codes.indexOf('ENT-5.3') === r.codes.indexOf('ENT-5.4') - 1, `ordre du registre : ${r.codes.join(', ')}`);
+});
+
+await v('ENT-5.3 : à l’ouverture, le message de Bruno, aucun jalon (0 / 17) ; menu « Visite de la plateforme » seul, les 8 mots du rack cliquables', async () => {
+  await monter53();
+  egal(await pg.evaluate(() => window.__53.db.mails.filter((m) => m.folder === 'in').map((m) => m.subject)), ['Ton premier jour : la visite'], 'messages au départ');
+  egal(await etapes53(), Array(17).fill('attente'), 'étapes à l’ouverture');
+  const s = await dernierScore53();
+  vrai(!s || s[0] === 0, `score sans rien faire : ${JSON.stringify(s)}`);
+  egal(await pg.$$eval(`${T53} .ent-side-liste > *`, (L) => L.map((e) => e.dataset.vue || `[${e.textContent.trim()}]`)),
+    ['accueil', 'mail', '[Mon poste]', 'entrepot'], 'menu');
+  egal((await pg.textContent(`${T53} .ent-nav[data-vue="entrepot"]`)).trim(), 'Visite de la plateforme', 'entrée de menu');
+  const lex = await pg.evaluate(async () => {
+    const S = await import('/contenus/smoby-ent53.js');
+    return ['échelle', 'lisse', 'étiquette d’adresse', 'palette filmée', 'allée', 'niveau', 'travée', 'croisillons'].map((k) => S.LEXIQUE[k] || null);
+  });
+  egal(lex.map((d) => !!d), Array(8).fill(true), 'les 8 mots dans le lexique');
+  vrai(lex[6].startsWith('L’espace entre deux échelles'), `définition de travée : ${lex[6]}`);
+  await pg.waitForSelector(`${T53} .lex`, { timeout: 3000 });
+  await pg.click(`${T53} .ent-nav[data-vue="entrepot"]`);
+  egal(await pg.$eval(Z53, (e) => e.dataset.pvEtape), 'accueil', 'la visite s’ouvre sur l’accueil');
+});
+
+await v('ENT-5.3 : la visite juste de bout en bout à l’écran → 17 / 17 remonté au suivi', async () => {
+  await monter53({ uid: 'u-53-juste' });
+  await pg.click(`${T53} .ent-nav[data-vue="entrepot"]`);
+  await suivant53();
+  for (const n of [1, 2, 3, 4, 5, 6]) await pg.click(`${Z53} button[data-pv-point="${n}"]`);
+  await pg.click(`${Z53} [data-pv="questions"]`);
+  await clic53(1000, 560); await clic53(400, 575); await clic53(500, 400);
+  await suivant53();
+  for (const n of [1, 2, 3, 4, 5, 6]) {
+    if (await pg.$(`${Z53} [data-pv="retour"]`)) await pg.click(`${Z53} [data-pv="retour"]`);
+    await pg.click(`${Z53} g[data-pv-etape="${n}"]`);
+  }
+  await suivant53();
+  for (const n of [4, 1, 6, 2, 5, 3]) await pg.click(`${Z53} [data-pv-num="${n}"]`);
+  await suivant53();
+  for (const n of [1, 2, 3, 4, 5, 6, 7, 8]) await pg.click(`${Z53} button[data-pv-point="${n}"]`);
+  await suivant53();
+  await clic53(300, 500); await clic53(800, 400); await clic53(450, 600); await clic53(800, 1700);
+  await suivant53();
+  for (const [x, y] of [[287, 45], [847, 47], [258, 1175], [876, 1173]]) await clic53(x, y);
+  await pg.click(`${Z53} [data-pv="verifierCoins"]`);
+  await clic53(570, 80); await clic53(570, 454); await clic53(570, 687);
+  await suivant53();
+  const sens = ['allée et côté', 'travée', 'niveau', 'emplacement'];
+  for (let i = 0; i < 4; i++) await pg.selectOption(`${Z53} [data-pv-choix="${i}"]`, sens[i]);
+  await pg.click(`${Z53} [data-pv="valider"]`);
+  await pg.click(`${Z53} [data-pe-trav="A1-T03"]`);
+  await pg.click(`${Z53} [data-pe-emp="A1-T03-N2-E1"]`);
+  await suivant53();
+  egal(await pg.$eval(Z53, (e) => e.dataset.pvEtape), 'fin', 'dernière étape');
+  egal(await etapes53(), Array(17).fill('ok'), 'étapes');
+  egal(await dernierScore53(), [17, 17], 'score remonté au suivi');
+});
+
+await v('ENT-5.3 : une adresse décomposée fausse (travée et niveau inversés) fait tomber ce seul jalon : 16 / 17', async () => {
+  await pg.evaluate(() => {
+    const x = window.__53.db.entrepots['smoby-visite'].x.adresse;
+    x.choix = ['allée et côté', 'niveau', 'travée', 'emplacement'];
+  });
+  const st = await etapes53();
+  egal(st.map((s, i) => s === 'ok' ? null : i).filter((i) => i !== null), [15], 'seul le jalon 16 (décomposer) tombe');
+});
+
 await v('Smoby : aucune erreur JavaScript dans le bloc', async () => {
   if (erreursS.length) throw new Error([...new Set(erreursS)].slice(0, 5).join(' | '));
 });

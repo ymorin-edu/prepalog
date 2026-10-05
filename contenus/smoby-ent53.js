@@ -11,6 +11,9 @@
 //
 // Les coordonnées sont dans le repère de chaque image (`repere`), reprises de la maquette v2.
 
+import { etapesEntrepot } from '../core/types/entrepot.js';
+import { LEXIQUE as LEXIQUE_SMOBY, VOCAB as VOCAB_SMOBY } from './smoby.js';
+import { BRUNO } from './smoby-ent54.js';
 import { GAMMES, PRODUITS, PLAN, STOCK } from './smoby-entrepot.js';
 
 const D = './contenus/smoby/visite/';
@@ -227,4 +230,42 @@ export const VISITE = {
     consigne: 'La visite est terminée.',
     grandTitre: 'Fin de la visite',
   },
+};
+
+// ─────────────────────────────────────────────────────────────── la séance (activites/smoby-visite.js)
+
+// Les jalons, dans l'ordre du suivi : un jalon de la visite = une étape (17 : 3 du ciel, 6 photos à placer,
+// 4 du quiz, 2 de la travée, 2 de l'adresse). 'ko' = un essai faux, pour le repérage « du premier coup ».
+export const ETAPES = etapesEntrepot(VISITE);
+
+export const VOCAB = Object.assign({}, VOCAB_SMOBY, { unit: 'palette', unitPl: 'palettes' });
+
+// Les 8 mots du rack, cliquables partout dans la séance, avec la définition de l'étape « Les mots du rack »
+// (brief §6.5 : même définition) — lue dans la déclaration, jamais recopiée.
+const MOTS = VISITE.etapes.find((e) => e.id === 'mots').points;
+export const LEXIQUE = Object.assign({}, LEXIQUE_SMOBY,
+  Object.fromEntries(MOTS.map((p) => [p.mot.charAt(0).toLowerCase() + p.mot.slice(1), p.def])));
+
+// Un seul message, qui envoie vers la visite (le brief ne prévoit pas de messagerie ; écrit par Claude Code,
+// à valider à l'écran). Tout le reste se dit dans la visite, étape par étape.
+export const VOLET = {
+  id: 'smoby-visite',
+  semer: () => ({
+    mails: [{
+      folder: 'in', ts: Date.now() - 60000, from: BRUNO.nom, fromMail: BRUNO.mail, to: 'Yanis',
+      subject: 'Ton premier jour : la visite', kind: 'text',
+      text: 'Bienvenue Yanis !\n\nAvant de toucher un chariot, on fait le tour de la plateforme. '
+        + 'Menu « Visite de la plateforme » : je t’attends à la première étape.\n\nBruno',
+    }],
+  }),
+};
+
+export const ACCUEIL = {
+  titre: 'La visite de la plateforme',
+  kpis: ['mail'],
+  etapes: [
+    ['Lire le message de Bruno', 'Menu Messagerie : ton premier jour commence par la visite.'],
+    ['Faire la visite avec Bruno', 'Menu Visite de la plateforme : une étape après l’autre, « Suivant » quand elle est finie.'],
+    ['Les mots du métier', 'Les mots soulignés s’ouvrent d’un clic : [[échelle]], [[lisse]], [[travée]], [[niveau]]…'],
+  ],
 };
