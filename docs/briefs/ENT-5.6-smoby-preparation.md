@@ -12,7 +12,7 @@
 > Lis docs/briefs/COORDINATION-smoby.md puis implémente le brief docs/briefs/ENT-5.6-smoby-preparation.md (il faut que la vue « Plan d'entrepôt » et son mode préparation soient livrés — MOTEUR-vue-plan-entrepot.md, lot 4 —, ainsi que le lot 7 de MOTEUR-2de-S1). Annonce la durée avant de commencer et dis-moi si un point du brief contredit le code.
 > ```
 
-**Statut** : **en attente** — dépend de `MOTEUR-vue-plan-entrepot.md` (mode préparation, lot 4 de ce chantier).
+**Statut** : **livré** (05/10/2026, `pret: true, ouverture: 'prof'` : fermée aux élèves, à essayer à l'écran). Avant : en attente du mode préparation de `MOTEUR-vue-plan-entrepot.md` (lot 4, livré le 04/10).
 **Date du brief** : 04/10/2026 (soir)
 **Conversation d'origine** : Cowork (Opus) ; décisions de Tristan du 04/10 au soir (questions posées une à une) ; maquette
 `docs/briefs/plan-entrepot/maquette-plan-entrepot-v2.html`, **cas ③ Préparation**, et ses données figées
@@ -161,9 +161,23 @@ descente de la réserve ; le bilan explique chaque ligne et chaque règle ; la c
 
 ## Compte rendu *(rempli par Claude Code à la livraison)*
 
-- **Fichiers créés / modifiés** :
-- **Écarts par rapport au brief** :
-- **Décisions prises en route** :
-- **Tests** :
-- **Commits** :
-- **Reste ouvert** :
+- **Fichiers créés / modifiés** : `activites/smoby-preparation.js` (nouveau), `contenus/smoby-ent56.js` (nouveau : vue,
+  règles, messages, lexique, accueil, jalons), `contenus/corriges/ENT-5.6.js` (nouveau, calculé),
+  `contenus/smoby-entrepot.js` (la commande E1 et le picking y passent, source commune), `contenus/entrepot-essai.js` (les
+  reprend de là au lieu de les déclarer), `activites/index.js` (une ligne), `outils/test/smoby.mjs` (6 cas ENT-5.6),
+  `outils/test/socle.mjs` (liste des séances Simulog allongée d'ENT-5.6).
+- **Écarts par rapport au brief** : le contenu s'appelle `contenus/smoby-ent56.js` (comme `smoby-ent51/54/55.js`) et non
+  `smoby-ent56-preparation.js`. Le cas « palette vide terminée » ne se joue pas à l'écran (le bouton « Terminer » est
+  inactif sur une palette vide) : le test pose l'état à la main. Les refus (réserve, réappro par le Porteur, picking
+  au-dessus du minimum) ne sont pas re-testés dans le bloc `smoby` : ils le sont dans le bloc `entrepot`, sur les mêmes
+  données (même commande, même stock).
+- **Décisions prises en route** : le message de fin de Bruno arrive quand la préparation est **terminée, vérifiée et juste
+  sur les jalons 1 à 8** (lignes et palette) ; le parcours n'y entre pas, un détour ne se rattrapant pas en reprenant la
+  préparation. Accueil en quatre étapes (lire, prélever, rupture, terminer) ; aucun KPI autre que la messagerie.
+- **Tests** : bloc `smoby` (déclaration et registre ; attendus 47 m / 331 kg / 1,74 m et réserve du Trotteur, corrigé ;
+  ouverture : message de Bruno, 0 / 9, menu, heure jeudi 6 h 00, bon trié, mots cliquables ; parcours juste à l'écran →
+  9 / 9 remonté au suivi + message de fin ; palette vide et une seule ligne → 0 / 9 ; pièges Cuisine avant Porteur et
+  Trotteur, film 2 tours, étiquettes voisines → un jalon faux chacun, 47 m inchangés, pas de message de fin). Suite entière.
+- **Commits** : voir `git log` (« ENT-5.6 : … »).
+- **Reste ouvert** : textes de Bruno (accueil, fin) à relire à l'écran ; quai n° 1 (construit) ; trame courte (Cowork,
+  après validation à l'écran) ; fiche d'intention à recaler (ENT-5.6 n'y est plus provisoire).

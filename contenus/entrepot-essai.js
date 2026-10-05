@@ -12,9 +12,9 @@
 export const MENTION = 'Essai du moteur. Réels : Smoby et ses gammes. <b>Construits pour l’exercice</b> : le plan '
   + 'de la zone, le stock, les poids, les références et les palettes.';
 
-import { GAMMES, PRODUITS, PLAN, STOCK, CRITERES, REGLES } from './smoby-entrepot.js';
+import { GAMMES, PRODUITS, PLAN, STOCK, CRITERES, REGLES, COMMANDE, PICKING } from './smoby-entrepot.js';
 
-export { GAMMES, PRODUITS, PLAN, STOCK, CRITERES, REGLES };
+export { GAMMES, PRODUITS, PLAN, STOCK, CRITERES, REGLES, COMMANDE, PICKING };
 
 // Les 4 palettes reçues d'Arinthod (ENT-5.4), avec leur fiche produit.
 export const PALETTES = [
@@ -53,26 +53,6 @@ export const REGLES_PREP = {
   ],
   encadre: 'Carton lourd : 15 kg et plus. L’implantation prépare l’ordre : lourds en début de parcours, fragiles à la fin. '
     + 'Valeurs Kuehne+Nagel (800 kg, 1,80 m) : construites pour la séance.',
-};
-export const COMMANDE = {
-  num: 'BP-1210-JDR', client: 'Jouets du Rhône', enlevement: 'E1', transporteur: 'Kuehne+Nagel',
-  heure: 'jeudi 10 décembre, 6 h 00', quai: 'QUAI 1', etiquette: 'JDR · E1',
-  hMax: 1.8, kgMax: 800, support: { h: 0.15, kg: 25 },
-  // dans l'ordre du serpentin : on monte l'allée A (T01 puis T02), on redescend l'allée B (T02 puis T01)
-  lignes: [
-    { a: 'A1-T01-N1-E1', produit: 'MAI', q: 2 },
-    { a: 'A1-T02-N1-E1', produit: 'ETA', q: 6 },
-    { a: 'B1-T02-N1-E3', produit: 'TRI', q: 4 },
-    { a: 'B1-T01-N1-E2', produit: 'POR', q: 6 },
-    { a: 'B1-T01-N1-E1', produit: 'TRO', q: 6 },        // rupture : 2 cartons au picking, minimum 6
-    { a: 'B2-T01-N1-E1', produit: 'CUI', q: 8 },        // fragile, en fin de parcours
-  ],
-  desordre: [4, 5, 3, 0, 2, 1],
-};
-// Le picking des lignes du bon : cartons restants et minimum (les autres N1 : palette pleine).
-export const PICKING = {
-  'A1-T01-N1-E1': { q: 5, min: 2 }, 'A1-T02-N1-E1': { q: 20, min: 6 }, 'B2-T01-N1-E1': { q: 30, min: 8 },
-  'B1-T02-N1-E3': { q: 10, min: 4 }, 'B1-T01-N1-E2': { q: 22, min: 6 }, 'B1-T01-N1-E1': { q: 2, min: 6 },
 };
 export const PREPARATION = {
   id: 'essai-preparation',

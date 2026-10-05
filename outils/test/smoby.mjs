@@ -1541,6 +1541,150 @@ await v('ENT-5.5 : P3 « En litige » sans valider l’entrée ne rapporte rien 
   egal(await stock55('SMB-PLS'), 360, 'stock avant validation');
 });
 
+// ── ENT-5.6 « la palette de la commande de Noël » (brief `docs/briefs/ENT-5.6-smoby-preparation.md`) ───────
+// La séance réelle, montée par son activité (`activites/smoby-preparation.js`). Les mécaniques de la vue
+// (refus en réserve, réappro par le Porteur, écran partagé…) sont testées dans le bloc `entrepot` ; ici, ce
+// que la séance déclare. Attendus écrits À LA MAIN d'après le brief : serpentin 47 m, 331 kg, 1,74 m ;
+// rupture du Trotteur (2 au picking, 6 commandés), réserve juste B1-T01-N2-E2 ou B1-T01-N3-E1/E2/E3 ;
+// départ jeudi 10 décembre, 6 h 00.
+const T56 = '#s56';
+const Z56 = `${T56} .ent-main`;
+const monter56 = (o = {}) => pg.evaluate(async (o) => {
+  const act = await import('/activites/smoby-preparation.js');
+  for (const id of ['smTest', 's51', 's54', 's55', 's56']) document.getElementById(id)?.remove();
+  const hote = document.createElement('div'); hote.id = 's56'; document.body.appendChild(hote);
+  const db = {};
+  window.__56 = { db, suivi: [] };
+  act.rendre(hote, {
+    meta: act.meta,
+    profil: { prenom: 'Lea', nom: 'Test', role: 'eleve', uid: o.uid || 'u-56' },
+    jeu: { etat: () => db, sauver: () => {} },
+    enregistrer: (r) => { window.__56.suivi.push(JSON.parse(JSON.stringify(r))); }, quitter: () => {}, codeStock: 'ABC',
+    lireScore: async () => null,
+  });
+}, o);
+const NEUF56 = ['lignesJustes', 'reappro', 'lourds', 'fragiles', 'poids', 'hauteur', 'film', 'etiquettes', 'parcours'];
+const etapes56 = () => pg.evaluate(async () => {
+  const S = await import('/contenus/smoby-ent56.js');
+  return Object.fromEntries(S.ETAPES.map((e) => [e.id, e.verifier(window.__56.db).status]));
+});
+const statuts56 = (ko = []) => Object.fromEntries(NEUF56.map((id) => [id, ko.includes(id) ? 'attente' : 'ok']));
+const dernierScore56 = () => pg.evaluate(() => { const s = window.__56.suivi; return s.length ? [s[s.length - 1].score, s[s.length - 1].max] : null; });
+const sujets56 = () => pg.evaluate(() => window.__56.db.mails.filter((m) => m.folder === 'in').map((m) => m.subject));
+const metres56 = () => pg.evaluate(async () => {
+  const S = await import('/contenus/smoby-ent56.js');
+  const E = await import('/core/types/entrepot.js');
+  return Math.round(E.calculPreparation(S.ENTREPOT, window.__56.db.entrepots['smoby-ent56']).metres);
+});
+const L56 = [['A1-T01-N1-E1', 2], ['A1-T02-N1-E1', 6], ['B1-T02-N1-E3', 4], ['B1-T01-N1-E2', 6], ['B1-T01-N1-E1', 6], ['B2-T01-N1-E1', 8]];
+const P56 = `${Z56} .pe`;
+async function prelever56(a, q) {
+  for (let i = 0; i < 4 && await pg.$(`${P56} [data-pe="retour"]`); i++) await pg.click(`${P56} [data-pe="retour"]`);
+  await pg.click(`${P56} [data-pe-trav="${a.slice(0, 6)}"]`);
+  if (a === 'B1-T01-N1-E1') {
+    await pg.click(`${P56} [data-pe-emp="${a}"]`);
+    await pg.click(`${P56} [data-pe="reappro"]`);
+    await pg.click(`${P56} [data-pe-emp="B1-T01-N2-E2"]`);
+  }
+  await pg.click(`${P56} [data-pe-emp="${a}"]`);
+  await pg.fill('#peNb', String(q));
+  await pg.click(`${P56} [data-pe="prelever"]`);
+}
+async function finir56({ film = '4', etiq = ['avant', 'arriere', 'dessus'] } = {}) {
+  for (let i = 0; i < 4 && await pg.$(`${P56} [data-pe="retour"]`); i++) await pg.click(`${P56} [data-pe="retour"]`);
+  await pg.click(`${P56} [data-pe="terminer"]`);
+  await pg.selectOption(`${P56} [data-pe-film]`, film);
+  for (const k of etiq) await pg.check(`${P56} [data-pe-etiq="${k}"]`);
+  await pg.click(`${P56} [data-pe="verifierPrep"]`);
+}
+async function parcours56({ uid, ordre = [0, 1, 2, 3, 4, 5], ...fin } = {}) {
+  await monter56({ uid });
+  await pg.click(`${T56} .ent-nav[data-vue="entrepot"]`);
+  for (const i of ordre) await prelever56(...L56[i]);
+  await finir56(fin);
+}
+
+await v('ENT-5.6 : déclaration (code, 2de, C2.1, 9 jalons, livrée fermée aux élèves), inscrite au registre', async () => {
+  const r = await pg.evaluate(async () => {
+    const A = await import('/activites/smoby-preparation.js');
+    const I = await import('/activites/index.js');
+    const m = A.meta;
+    return { m: [m.id, m.code, m.rubrique, m.niveaux, m.competences, m.domaines, m.temps, m.bareme, m.pret, m.ouverture, m.portee, m.coeur],
+      inscrite: (await Promise.all(I.ACTIVITES.map((f) => f()))).some((x) => x.meta.id === 'smoby-preparation') };
+  });
+  egal(r.m, ['smoby-preparation', 'ENT-5.6', 'simulog', ['2de'], ['C2.1'], ['D4'], 'guidage', 9, true, 'prof', 'eleve', true], 'meta');
+  vrai(r.inscrite, 'séance absente du registre');
+});
+
+await v('ENT-5.6 : les attendus calculés sont ceux du brief (47 m, 331 kg, 1,74 m, réserve du Trotteur) et le corrigé les reprend', async () => {
+  const r = await pg.evaluate(async () => {
+    const S = await import('/contenus/smoby-ent56.js');
+    const E = await import('/core/types/entrepot.js');
+    const C = (await import('/contenus/corriges/ENT-5.6.js')).CORRIGE;
+    const A = E.attendusPreparation(S.ENTREPOT);
+    return { A: [Math.round(A.serpentin), A.poids, Math.round(A.hauteur * 100) / 100], heure: S.COMMANDE.heure,
+      ordre: S.COMMANDE.lignes.map((l) => [l.a, l.q]), corrige: C.items.map((i) => i.reponses || i.rep) };
+  });
+  egal(r.A, [47, 331, 1.74], 'serpentin, poids, hauteur');
+  egal(r.heure, 'jeudi 10 décembre, 6 h 00', 'heure de l’enlèvement');
+  egal(r.ordre, L56, 'lignes du bon dans l’ordre du serpentin');
+  egal(r.corrige[0].map((l) => [l[1], l[4]]), L56.map(([a, q]) => [a, String(q)]), 'corrigé : lignes');
+  vrai(r.corrige[1].includes('B1-T01-N2-E2, B1-T01-N3-E1, B1-T01-N3-E2, B1-T01-N3-E3'), `corrigé : réserve ${r.corrige[1]}`);
+  vrai(r.corrige[2].startsWith('331 kg') && r.corrige[2].includes('1,74 m'), `corrigé : palette ${r.corrige[2]}`);
+  vrai(r.corrige[3].startsWith('47 m'), `corrigé : parcours ${r.corrige[3]}`);
+});
+
+await v('ENT-5.6 : à l’ouverture, le message de Bruno, aucun jalon (inaction 0 / 9) ; menu « Préparer la commande », départ jeudi 6 h', async () => {
+  await monter56();
+  egal(await sujets56(), ['La palette de la commande de Noël'], 'messages au départ');
+  egal(await etapes56(), Object.fromEntries(NEUF56.map((id) => [id, 'attente'])), 'étapes à l’ouverture');
+  const s = await dernierScore56();
+  vrai(!s || s[0] === 0, `score sans rien faire : ${JSON.stringify(s)}`);
+  egal((await pg.textContent(`${T56} .ent-nav[data-vue="entrepot"]`)).trim(), 'Préparer la commande', 'entrée de menu');
+  await pg.click(`${T56} .ent-nav[data-vue="entrepot"]`);
+  egal((await pg.textContent(`${P56} [data-pe-heure]`)).trim(), 'jeudi 10 décembre, 6 h 00', 'heure affichée');
+  egal(await pg.$$eval(`${P56} [data-pe-ligne] .pe-ttl .pe-mono`, (L) => L.map((x) => x.textContent)), L56.map((l) => l[0]), 'bon trié (guidage)');
+  await pg.waitForSelector(`${P56} .lex`, { timeout: 3000 });
+});
+
+await v('ENT-5.6 : parcours juste à l’écran → 47 m, 9 / 9 remonté au suivi, puis le message de fin de Bruno', async () => {
+  await parcours56();
+  egal(await metres56(), 47, 'mètres');
+  egal(await etapes56(), statuts56(), 'étapes');
+  egal(await dernierScore56(), [9, 9], 'score remonté au suivi');
+  egal(await sujets56(), ['La palette de la commande de Noël', 'La palette est prête'], 'Bruno conclut');
+});
+
+await v('ENT-5.6 : palette vide terminée → 0 / 9 ; une seule ligne puis Terminer → 0 / 9, parcours compris', async () => {
+  await monter56({ uid: 'u-56-vide' });
+  await pg.click(`${T56} .ent-nav[data-vue="entrepot"]`);
+  await prelever56(...L56[0]);
+  await pg.click(`${P56} [data-pe="reposer"]`);
+  vrai(await pg.$eval(`${P56} [data-pe="terminer"]`, (b) => b.disabled), 'Terminer actif sur une palette vide');
+  // L'écran refuse de terminer une palette vide : l'état est posé à la main (film et étiquettes justes).
+  await pg.evaluate(() => Object.assign(window.__56.db.entrepots['smoby-ent56'],
+    { fin: true, verifie: true, film: '4', etiq: { avant: true, arriere: true, dessus: true } }));
+  egal(await etapes56(), statuts56(NEUF56), 'palette vide');
+  await parcours56({ uid: 'u-56-une', ordre: [0] });
+  egal(await etapes56(), statuts56(NEUF56), 'une seule ligne');
+  egal(await sujets56(), ['La palette de la commande de Noël'], 'pas de message de fin');
+});
+
+await v('ENT-5.6 : chaque piège fait tomber son jalon (Cuisine avant Porteur et Trotteur, film 2 tours, étiquettes voisines), sans message de fin', async () => {
+  const cas = [
+    [['fragiles'], { ordre: [0, 1, 2, 5, 3, 4] }],
+    [['film'], { film: '2' }],
+    [['etiquettes'], { etiq: ['avant', 'gauche', 'dessus'] }],
+  ];
+  for (const [n, [ko, o]] of cas.entries()) {
+    await parcours56({ uid: `u-56-piege-${n}`, ...o });
+    egal(await etapes56(), statuts56(ko), `sabotage ${ko.join(', ')}`);
+    egal(await dernierScore56(), [9 - ko.length, 9], `score avec ${ko.join(', ')} faux`);
+    egal(await metres56(), 47, `mètres inchangés (${ko.join(', ')})`);
+    egal((await sujets56()).length, 1, `pas de message de fin (${ko.join(', ')})`);
+  }
+});
+
 await v('Smoby : aucune erreur JavaScript dans le bloc', async () => {
   if (erreursS.length) throw new Error([...new Set(erreursS)].slice(0, 5).join(' | '));
 });

@@ -24,7 +24,7 @@ annoncé comme tel**.
 | **ENT-5.3** | Cariste | **La visite de la plateforme** (vue du ciel, parcours, vocabulaire du rack, **la travée**, adresse) — **nouvelle** | `ENT-5.3-smoby-visite.md` | **vue Plan d'entrepôt** + **`MOTEUR-modes-visite.md`** + lot 7 (lots 1, 3, 6 livrés) | **11** |
 | ENT-5.4 | Cariste | Sécurité au quai, premier déchargement | `ENT-5.4-smoby-reception.md` | lots 2, 3, **4, 5**, 7 | 10 |
 | ENT-5.5 | Cariste | Ranger, saisir l'entrée en stock | `ENT-5.5-smoby-rangement.md` | **vue Plan d'entrepôt** + lots 1, 2, 3, 7 | 9 |
-| **ENT-5.6** | Cariste | **Préparer la palette mixte d'E1** (picking, réappro, palette, film, étiquettes) — **nouvelle** | `ENT-5.6-smoby-preparation.md` | **vue Plan d'entrepôt** (mode préparation) + lot 7 | **9** |
+| **ENT-5.6** | Cariste | **Préparer la palette mixte d'E1** (picking, réappro, palette, film, étiquettes) — **livrée le 05/10** | `ENT-5.6-smoby-preparation.md` | **vue Plan d'entrepôt** (mode préparation) + lot 7 | **9** |
 | ENT-5.7 | Agent K+N | Chauffeurs et camions | `ENT-5.7-smoby-enlevements.md` *(ancien `ENT-5.6-…`)* | **vue Planning** + lots 1, 3, 7 | 10 |
 | ENT-5.8 | Agent K+N | Lettre de voiture et retard | `ENT-5.8-smoby-lettre-voiture.md` *(ancien `ENT-5.7-…`)* | lots 1, 2, 3, 7 | 8 |
 
