@@ -416,7 +416,7 @@ export const VOLET = {
     // À l'ouverture : la demande de liste et les messages d'enquête. Le relevé et la mission
     // n'arrivent qu'une fois la liste reconnue (déclencheur « liste » ci-dessous).
     const mails = [
-      ...(aDejaBienvenue ? [] : [mailBienvenue(prenom, now - 3600e3 * 30)]),
+      ...(aDejaBienvenue ? [] : [mailBienvenue(prenom, now - 3600e3 * 30, ['stock', 'commandes', 'console', 'inventaire'])]),
       { folder: 'in', ts: P.tRei + 3600e3 * 0.4, from: `${PREPA.nom}, ${PREPA.role}`, fromMail: PREPA.mail, to: prenom,
         subject: `Annulation de ${REINTEGRATION.commande}`, kind: 'text',
         text: `Bonjour,\n\nLe client de ${REINTEGRATION.commande} a annulé alors que j'avais déjà sorti ses articles. J'ai fait la réintégration ${REINTEGRATION.no}.\n\nArticle : ${BAT}, batterie externe 10 000 mAh\nQuantité : ${REINTEGRATION.qty}\nDécision : remise en rayon\n\nLe bac habituel était plein, je les ai posées dans l'allée A-03, sur l'étagère d'en face. Je ne sais plus dans quel bac exactement.\n\n${PREPA.nom}` },

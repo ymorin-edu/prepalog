@@ -2396,4 +2396,31 @@ Suite à donner : Réclamation auprès de Gardéo, livraison incomplète`;
       if (errs.length) throw new Error(errs.join(' | '));
     } finally { await ctx2.close(); }
   });
+
+  // 05/10/2026 : le mail d'accueil annonçait partout « Stock, Réceptions et Commandes, la Console »,
+  // faux depuis le menu par séance (ENT-2.2 et 2.6 n'ont ni Réceptions ni Console). Écrans attendus
+  // écrits à la main, relevés sur le `menu` de chaque séance (activites/cdiscount-*.js).
+  await v('Cdiscount : le mail d\'accueil de chaque séance n\'annonce que les écrans de cette séance', async () => {
+    const MOTS = { stock: /^- Stock :/m, commandes: /^- Commandes :/m, receptions: /^- Réceptions :/m,
+      console: /^- la Console/m, inventaire: /^- Inventaire :/m, extractions: /^- Extractions/m };
+    const cas = [
+      ['ENT-2.1', () => ouvrir(S21), ['stock', 'commandes', 'receptions', 'console']],
+      ['ENT-2.2', () => ouvrirC(), ['stock', 'commandes', 'extractions']],
+      ['ENT-2.3', () => ouvrir(S22), ['stock', 'commandes', 'console', 'inventaire']],
+      ['ENT-2.4', () => ouvrir(S23), ['stock', 'commandes', 'receptions', 'console', 'extractions']],
+      ['ENT-2.5', () => ouvrir25('eleve-test'), ['stock', 'commandes', 'console', 'inventaire', 'extractions']],
+      ['ENT-2.6', () => ouvrir6(), ['commandes', 'extractions']]];
+    const errs = [];
+    cas.forEach(([code, ouvre, attendus]) => {
+      const bienvenue = ouvre().mails.filter((x) => /^Bienvenue/.test(x.subject));
+      if (bienvenue.length !== 1) { errs.push(`${code} : ${bienvenue.length} mail(s) d'accueil`); return; }
+      const t = bienvenue[0].text;
+      for (const [e, re] of Object.entries(MOTS)) {
+        if (re.test(t) !== attendus.includes(e)) errs.push(`${code} : « ${e} » ${attendus.includes(e) ? 'manque' : 'annoncé à tort'}`);
+      }
+      if (/trois écrans/.test(t)) errs.push(`${code} : reste « trois écrans »`);
+      if (!/\.\n\nBon courage/.test(t)) errs.push(`${code} : la liste ne finit pas par un point`);
+    });
+    if (errs.length) throw new Error(errs.join(' | '));
+  });
 }

@@ -337,7 +337,7 @@ export const VOLET = {
     const { ev } = jeu;
     const aDejaBienvenue = ((db && db.mails) || []).some((m) => /^Bienvenue à l’entrepôt/.test(m.subject || ''));
     const mails = [
-      ...(aDejaBienvenue ? [] : [mailBienvenue(prenom, now - 3600e3 * 30)]),
+      ...(aDejaBienvenue ? [] : [mailBienvenue(prenom, now - 3600e3 * 30, ['stock', 'commandes', 'console', 'inventaire', 'extractions'])]),
       { folder: 'in', ts: P.t(ev.annulation.j, ev.annulation.h + 2.3), from: `${LUCIE.nom}, ${LUCIE.role}`, fromMail: LUCIE.mail, to: prenom,
         subject: `Annulation de ${ev.annulation.no}`, kind: 'text',
         text: `Bonjour,\n\nLe client de ${ev.annulation.no} a annulé alors que j'avais déjà sorti ses articles. J'ai fait la réintégration ${ev.annulation.rei} : j'ai réintégré ${ev.annulation.qty} ${nomCourt(ev.annulation.sku)} (${ev.annulation.sku}).\n\nLe bac était plein, je les ai posés sur l'étagère d'en face, je ne sais plus où.\n\n${LUCIE.nom}` },

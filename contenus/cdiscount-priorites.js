@@ -270,7 +270,7 @@ export const VOLET = {
     const P = periode(now, estConfirme(db));
     const aDejaBienvenue = ((db && db.mails) || []).some((m) => /^Bienvenue à l’entrepôt/.test(m.subject || ''));
     return { orders: P.orders, mouvements: P.mouvements,
-      mails: [...(aDejaBienvenue ? [] : [mailBienvenue(prenom, now - 3600e3 * 30)]), mailMission(prenom, now)] };
+      mails: [...(aDejaBienvenue ? [] : [mailBienvenue(prenom, now - 3600e3 * 30, ['commandes', 'extractions'])]), mailMission(prenom, now)] };
   },
   // Nadia accuse réception, NEUTRE, dès qu'une liste porte au moins une référence connue.
   declencheurs: [{

@@ -202,7 +202,7 @@ export const VOLET = {
     const P = periodeChiffres(now);
     const aDejaBienvenue = ((db && db.mails) || []).some((m) => /^Bienvenue à l’entrepôt/.test(m.subject || ''));
     return { receptions: P.receptions, orders: P.orders, mouvements: P.mouvements,
-      mails: [...(aDejaBienvenue ? [] : [mailBienvenue(prenom, now - 3600e3 * 30)]), mailMission(prenom, now)] };
+      mails: [...(aDejaBienvenue ? [] : [mailBienvenue(prenom, now - 3600e3 * 30, ['stock', 'commandes', 'extractions'])]), mailMission(prenom, now)] };
   },
   // Nadia accuse réception de la liste, JUSTE OU FAUSSE (neutre : l'arrivée ne révèle rien) ;
   // l'amorce envoyée telle quelle (aucune référence) ne fait rien arriver.

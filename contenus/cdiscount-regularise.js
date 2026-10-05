@@ -390,7 +390,7 @@ export const VOLET = {
     const tRec = quand(now, RECEPTIONS[1].j, RECEPTIONS[1].h);
     const aDejaBienvenue = ((db && db.mails) || []).some((m) => /^Bienvenue à l’entrepôt/.test(m.subject || ''));
     const mails = [
-      ...(aDejaBienvenue ? [] : [mailBienvenue(prenom, now - 3600e3 * 30)]),
+      ...(aDejaBienvenue ? [] : [mailBienvenue(prenom, now - 3600e3 * 30, ['stock', 'commandes', 'receptions', 'console', 'extractions'])]),
       // L'INDICE de la livraison : un cariste a vu un vide sur la palette, sans y donner suite. Il
       // l'écrit après coup, quand la réception était déjà validée.
       { folder: 'in', ts: tRec + 3600e3 * 4, from: `${EQUIPE.quai.nom}, ${EQUIPE.quai.role}`, fromMail: EQUIPE.quai.mail, to: prenom,

@@ -249,13 +249,25 @@ export const EQUIPE = {
   inventaire: { nom: 'Équipe inventaire', mail: 'inventaire.cestas@cdiscount.example' },
 };
 
-// Le message de bienvenue, le même pour toutes les séances : chaque séance est une journée à
-// part, et l'élève y arrive comme un nouveau venu dans l'équipe stock.
-export function mailBienvenue(prenom, ts) {
+// Le message de bienvenue : chaque séance est une journée à part, et l'élève y arrive comme un
+// nouveau venu dans l'équipe stock. Le début est le même partout ; la liste des écrans est celle
+// de la séance (`ecrans`, dans l'ordre ci-dessous) : depuis le menu par séance (05/10/2026),
+// ENT-2.2 et 2.6 n'ont plus ni Réceptions ni Console, le mail ne doit pas les annoncer.
+const ECRANS_BIENVENUE = {
+  stock: "Stock : les quantités par référence, et l'onglet Mouvements, qui garde la trace de tout ce qui est entré et sorti (le code d'accès vous est donné par votre enseignant) ;",
+  commandes: 'Commandes : les commandes des clients et leurs bons de préparation, qui font sortir la marchandise ;',
+  receptions: 'Réceptions : les livraisons des fournisseurs, qui font entrer la marchandise ;',
+  console: "la Console, par exemple .movements suivi d'une référence, pour ne voir que les mouvements d'un article ;",
+  inventaire: "Inventaire : pour saisir un comptage et décider de chaque écart ;",
+  extractions: 'Extractions, pour exporter des données vers le tableur, et Fichiers, pour déposer votre fichier ;',
+};
+export function mailBienvenue(prenom, ts, ecrans) {
+  const lignes = Object.keys(ECRANS_BIENVENUE).filter((e) => ecrans.includes(e)).map((e) => `- ${ECRANS_BIENVENUE[e]}`);
+  lignes[lignes.length - 1] = lignes[lignes.length - 1].replace(/ ;$/, '.');
   return { folder: 'in', ts, from: `${EQUIPE.cheffe.nom}, ${EQUIPE.cheffe.role}`,
     fromMail: EQUIPE.cheffe.mail, to: prenom,
     subject: 'Bienvenue à l’entrepôt de Cestas', kind: 'text',
-    text: `Bonjour ${prenom},\n\nBienvenue dans l'équipe stock de l'entrepôt Cdiscount de Cestas, en Gironde. Ici, on expédie chaque jour des milliers de petits colis de moins de 30 kg, commandés sur cdiscount.com.\n\nNotre travail : que le stock affiché dans le système soit le stock réel, celui qui est dans les rayons. Si le système se trompe, on vend des articles qu'on n'a plus, ou on rachète ce qu'on a déjà.\n\nVous aurez besoin de trois écrans :\n- Stock : les quantités par référence, et l'onglet Mouvements, qui garde la trace de tout ce qui est entré et sorti (le code d'accès vous est donné par votre enseignant) ;\n- Réceptions et Commandes : les documents qui ont fait bouger le stock ;\n- la Console, par exemple .movements suivi d'une référence, pour ne voir que les mouvements d'un article.\n\nBon courage,\n${EQUIPE.cheffe.nom}` };
+    text: `Bonjour ${prenom},\n\nBienvenue dans l'équipe stock de l'entrepôt Cdiscount de Cestas, en Gironde. Ici, on expédie chaque jour des milliers de petits colis de moins de 30 kg, commandés sur cdiscount.com.\n\nNotre travail : que le stock affiché dans le système soit le stock réel, celui qui est dans les rayons. Si le système se trompe, on vend des articles qu'on n'a plus, ou on rachète ce qu'on a déjà.\n\nAujourd'hui, vous aurez besoin de ces écrans :\n${lignes.join('\n')}\n\nBon courage,\n${EQUIPE.cheffe.nom}` };
 }
 
 // Des lignes de préparation FABRIQUÉES pour la liste « Lignes de préparation » de l'écran

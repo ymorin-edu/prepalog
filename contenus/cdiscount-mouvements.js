@@ -279,7 +279,7 @@ export const VOLET = {
     const aDejaBienvenue = ((db && db.mails) || []).some((m) => /^Bienvenue à l’entrepôt/.test(m.subject || ''));
     // Le retour client et la casse n'arrivent PAS ici : voir `declencheurs` ci-dessous.
     const mails = [
-      ...(aDejaBienvenue ? [] : [mailBienvenue(prenom, now - 3600e3 * 26)]),
+      ...(aDejaBienvenue ? [] : [mailBienvenue(prenom, now - 3600e3 * 26, ['stock', 'commandes', 'receptions', 'console'])]),
       mailMission(prenom, now),
     ];
 
