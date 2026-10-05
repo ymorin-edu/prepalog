@@ -528,3 +528,6 @@ maquette, dans les trois temps ; les bonnes réponses et les mètres sont ceux d
 - La case devient « capteur de charge » ; la ligne de calcul du guidage reste sous l'en-tête. Au sol, pas de capteur.
 - Tests (bloc `entrepot`, 55 cas) : trois cas **réécrits** (guidage, rouge/calculette, évaluation) et un ajouté (palette en
   main en évaluation) ; deux sabotages (rouge en évaluation, palette en main oubliée) font chacun tomber deux cas.
+- **Contour des travées posées** (demande de Tristan, même soir) : sur le plan vu de dessus, une travée où l'élève a posé au
+  moins une palette prend un contour épais à l'encre (6 px ; le brun « votre palette » se perdait parmi les lisses orange), dans les trois temps (ni vert
+  ni rouge : il ne juge rien). Pas en préparation. Test ajouté (bloc `entrepot`, 56 cas), éprouvé par sabotage.

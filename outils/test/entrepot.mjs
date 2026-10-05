@@ -364,6 +364,18 @@ await v('Entrepôt évaluation : le capteur ajoute la palette en main, sans rien
   egal(await pg.$$eval(`${Z} [data-pe-cadre]`, (L) => L.map((t) => t.getAttribute('stroke'))), ['#1a1915', '#1a1915'], 'cadre en rouge');
 });
 
+await v('Entrepôt : sur le plan, contour épais à l’encre des travées où l’élève a posé, en évaluation aussi', async () => {
+  await monter(pg, { temps: 'evaluation' });
+  const posees = () => pg.$$eval(`${Z} [data-pe-posee]`, (L) => L.map((r) => r.closest('[data-pe-trav]').dataset.peTrav));
+  egal(await posees(), [], 'travées entourées avant de poser');
+  await poser(pg, 'P1', 'A1-T01-N2-E3');
+  await poser(pg, 'P3', 'L2');
+  if (await present(pg, '[data-pe="retour"]')) await pg.click(`${Z} [data-pe="retour"]`);
+  egal(await posees(), ['A1-T01'], 'travées entourées (une palette en rack, une en litiges)');
+  egal(await pg.$eval(`${Z} [data-pe-posee]`, (r) => r.getAttribute('stroke')), 'var(--encre)', 'couleur du contour');
+  egal(await pg.$eval(`${Z} [data-pe-trav="A1-T02"] .pe-fond-trav`, (r) => r.getAttribute('stroke-width')), '1.2', 'contour d’une travée voisine');
+});
+
 await v('Entrepôt entraînement : parcours seul (pas de bandes, pas de consigne), verdict = nom du critère seul', async () => {
   await monter(pg, { temps: 'entrainement' });
   egal((await pg.$$(`${Z} [data-pe-bande]`)).length, 0, 'bandes');
