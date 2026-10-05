@@ -6,10 +6,9 @@
 > Lis docs/briefs/COORDINATION-smoby.md puis implémente le brief docs/briefs/ENT-5.2-smoby-arrivee.md (il faut que la vue Planning et les lots 1, 2, 3 et 7 de MOTEUR-2de-S1 soient livrés). Annonce la durée avant de commencer et dis-moi si un point du brief contredit le code.
 > ```
 
-**Statut** : à implémenter — la vue Planning est livrée (cas « personnel » dans `contenus/planning-essai.js`). **Vérifié le
-05/10/2026 (§7)** : la fiche à remplir (`core/types/fiche.js`) n'a pas encore les blocs `cases` (liste à cocher) et `ordre`
-(remise en ordre) ; **décision de Tristan : les construire d'abord** (lot 4 de `MOTEUR-documents-formulaire.md`, ces deux
-blocs seulement), puis la séance.
+**Statut** : livré le 05/10/2026 (`pret: true, ouverture: 'prof'`) — fermée aux élèves, à essayer à l'écran par Tristan
+puis à ouvrir dans « Conduite de séance ». Les blocs `cases` et `ordre` de la fiche ont été construits d'abord (lot 4 de
+`MOTEUR-documents-formulaire.md`, décision de Tristan du 05/10).
 **Date du brief** : 04/10/2026
 **Conversation d'origine** : Cowork (Opus) ; fiche projet `claude/prepalog-2de-s1-cadrage.md` (section « Séance A2 ») ;
 maquette `docs/briefs/planning/` (cas « personnel », v8 validée).
@@ -129,11 +128,52 @@ maquette v8 (cas personnel).
 
 ---
 
-## Compte rendu *(rempli par Claude Code à la livraison)*
+## Compte rendu *(rempli par Claude Code à la livraison, 05/10/2026)*
 
 - **Fichiers créés / modifiés** :
-- **Écarts par rapport au brief** :
+  - moteur (lot 4, commit séparé) : `core/types/fiche.js` (blocs `cases` et `ordre`), `styles/base.css` (leur allure),
+    `activites/FICHE-SEANCE.md`, 3 cas dans `outils/test/smoby.mjs` ;
+  - séance : `activites/smoby-arrivee.js`, `contenus/smoby-ent52.js`, `contenus/corriges/ENT-5.2.js`, une ligne dans
+    `activites/index.js` (après ENT-5.1), 6 cas dans `outils/test/smoby.mjs`, `ENT-5.2` ajouté à la liste des codes du
+    test `socle` (liste seulement allongée).
+- **Écarts par rapport au brief** (et pourquoi) :
+  - **Pas de `note` dans la déclaration du planning** : avec elle, la note du planning seul (sur 20) remplaçait celle de
+    la séance, la fiche et le message ne comptaient plus. La note est celle des 14 étapes (vu par un test : 20/20 au
+    lieu de 14/14 au premier essai).
+  - L'imprévu vient du **responsable de la plateforme**, texte de la maquette tel quel (vouvoiement) : le bouton du
+    planning dit « Envoyer le planning au chef », c'est donc le responsable qui le reçoit. Sophie l'annonce dans son
+    message (« c'est le responsable de la plateforme qui le valide ») et demande ensuite le point.
+  - Message à Sophie : la phrase « J'ai repris le planning après l'arrêt d'Inès. » est **imposée** (pas de choix),
+    comme dans le brief ; pièges de ton : « Salut ! », « Coucou Sophie », « Tu valides vite stp », « Bisous ».
+  - Après le point, Sophie répond (« Mercredi matin, j'accueille Yanis, puis Bruno lui fait visiter la plateforme »)
+    pour enchaîner avec ENT-5.3 (visite à 8 h). Le §3 du brief disait « Yanis au quai l'après-midi » : c'est la
+    coordination du 04/10 au soir qui fait foi (visite le matin, réception à 14 h).
+  - Les 8 mots cliquables sont dans les messages, les consignes de la fiche, l'encadré et le panneau du planning ;
+    **pas dans les libellés des cases ni des étapes** (dans une case à cocher, un mot ne peut pas être un bouton).
 - **Décisions prises en route** :
-- **Tests** :
-- **Commits** :
+  - Ordre de départ du premier jour : autorisation, déchargement, EPI, accueil, visite (aucune étape à sa place,
+    vérifié par un test) ; le même pour tous les élèves.
+  - Bilan de la fiche : chaque pièce oubliée ou en trop est dite avec sa phrase d'explication ; pour l'ordre,
+    « L'autorisation de conduite se donne après la visite des lieux » quand c'est l'erreur, sinon l'ordre en clair.
+  - Corrigé : la solution du planning (avant / après l'imprévu) est déclarée dans le contenu (`SOLUTION`) et **jugée
+    10 / 10 par le moteur** dans la suite ; le corrigé l'affiche avec « date imposée / accordé / décalé (demandé : …) ».
+    D'autres solutions sont justes.
+- **Tests** : bloc `smoby` 145 / 145 : déclaration et rang ; attendus du brief écrits à la main (4 pièces, ordre,
+  départ sans étape à sa place, solution 10 / 10, corrigé) ; ouverture (un message, menu Fiche + Planning, **Yanis
+  étiqueté « CDD »**, inaction 0 / 14) ; **parcours juste à l'écran 14 / 14** (fiche aux flèches, planning, imprévu
+  avec la carte d'Inès et la ligne de Noa, reprise, point à Sophie, suite de l'histoire) ; pièges de la fiche (aucune
+  case → 1 et 2 faux ; casier judiciaire → 2 seul ; une pièce oubliée → 1 seul ; autorisation avant la visite → 3
+  seul) ; tout envoyé sans rien toucher → 0 / 14, constat « Il manque du monde mardi 15 » → message faux. Règles du
+  planning : celles du bloc `planning` (même cas). Sabotages : jalon 2 sans sa garde, Yanis remis en intérim, ordre
+  de départ en partie juste, message sans le constat — tous tombent. Retirer `phasePlanning` ne fait rien tomber : le
+  moteur passe seul à la reprise au 1er envoi (filet voulu). Suite entière : 737 / 738, le seul échec venait de
+  `reinitialisable: true` (règle existante : le bouton « Réinitialiser » n'existe qu'en séance X.1, l'histoire ne
+  repart pas de zéro) ; retiré, blocs `transport` et `smoby` relancés : 178 / 178.
+- **Commits** : lot 4 `b8edc68` ; séance : ce commit.
 - **Reste ouvert** :
+  - **À juger à l'écran par Tristan** : la case cochée et les numéros de l'ordre prennent la couleur d'accent de
+    Smoby, **rouge** (comme les oui / non d'ENT-5.1) ; le rouge veut dire « faux » ailleurs dans le site. Si ça gêne,
+    c'est un choix moteur à faire (une couleur neutre pour « choisi »), pas dans la séance.
+  - L'enchaînement tient-il dans l'heure ? (critère §10) ; reprise à la séance suivante : la base est gardée, rien à
+    construire — **à dire dans la fiche enseignant** (Cowork).
+  - Trame courte : Cowork, après validation.

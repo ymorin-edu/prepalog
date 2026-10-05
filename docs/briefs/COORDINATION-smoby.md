@@ -20,7 +20,7 @@ annoncé comme tel**.
 | Code | Poste | Séance | Brief | Dépend de | Jalons |
 |---|---|---|---|---|---|
 | ENT-5.1 | RH | Recruter le cariste | `ENT-5.1-smoby-recrutement.md` | MOTEUR-2de-S1 lots 1, 2, 3, 7 | 9 |
-| ENT-5.2 | RH | L'arrivée de Yanis + planning des présences | `ENT-5.2-smoby-arrivee.md` | **vue Planning** + lots 1, 2, 3, 7 | 14 |
+| ENT-5.2 | RH | L'arrivée de Yanis + planning des présences — **livrée le 05/10** | `ENT-5.2-smoby-arrivee.md` | **vue Planning** + lots 1, 2, 3, 7 + fiche lot 4 | 14 |
 | **ENT-5.3** | Cariste | **La visite de la plateforme** (vue du ciel, parcours, vocabulaire du rack, **la travée**, adresse) — **nouvelle** | `ENT-5.3-smoby-visite.md` | **vue Plan d'entrepôt** + **`MOTEUR-modes-visite.md`** + lot 7 (lots 1, 3, 6 livrés) | **11** |
 | ENT-5.4 | Cariste | Sécurité au quai, premier déchargement | `ENT-5.4-smoby-reception.md` | lots 2, 3, **4, 5**, 7 | 10 |
 | ENT-5.5 | Cariste | Ranger, saisir l'entrée en stock | `ENT-5.5-smoby-rangement.md` | **vue Plan d'entrepôt** + lots 1, 2, 3, 7 | 9 |

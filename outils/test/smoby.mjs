@@ -1054,6 +1054,193 @@ await v('ENT-5.1 : une réponse libre au premier message n’ouvre pas la suite 
   egal(await dernierScore51(), [7, 9], 'score sans le message');
 });
 
+// ── ENT-5.2 « l'arrivée de Yanis » (brief `docs/briefs/ENT-5.2-smoby-arrivee.md`) ─────────────────
+// La séance réelle, montée par son activité (`activites/smoby-arrivee.js`). Les attendus (pièces, ordre,
+// placements du planning, phrases) sont écrits À LA MAIN ici, d'après le brief, jamais relus dans le contenu.
+// Les règles du planning sont éprouvées par le bloc `planning` (même cas « personnel ») : ici, le parcours.
+const T52 = '#s52';
+const Z52 = `${T52} .ent-main`;
+const F52 = `${Z52} .ent-fiche`;
+const monter52 = (o = {}) => pg.evaluate(async (o) => {
+  const act = await import('/activites/smoby-arrivee.js');
+  ['#smTest', '#s51', '#s52'].forEach((s) => document.querySelector(s)?.remove());
+  const hote = document.createElement('div'); hote.id = 's52'; document.body.appendChild(hote);
+  const db = {};
+  window.__52 = { db, suivi: [] };
+  act.rendre(hote, {
+    meta: act.meta,
+    profil: { prenom: 'Lea', nom: 'Test', role: o.role || 'eleve', uid: o.uid || 'u-52' },
+    jeu: { etat: () => db, sauver: () => {} },
+    enregistrer: (r) => { window.__52.suivi.push(JSON.parse(JSON.stringify(r))); }, quitter: () => {}, codeStock: 'ABC',
+    lireScore: async () => null,
+  });
+}, o);
+const etapes52 = () => pg.evaluate(async () => {
+  const S = await import('/contenus/smoby-ent52.js');
+  return S.ETAPES.map((e) => e.verifier(window.__52.db).status);
+});
+const dernierScore52 = () => pg.evaluate(() => { const s = window.__52.suivi; return s.length ? [s[s.length - 1].score, s[s.length - 1].max] : null; });
+const sujets52 = () => pg.evaluate(() => window.__52.db.mails.filter((m) => m.folder === 'in').map((m) => m.subject));
+const ouvrirMail52 = async (sujet) => {
+  await pg.click(`${T52} .ent-nav[data-vue="mail"]`);
+  await pg.click(`${Z52} [data-dossier="in"]`);
+  await pg.click(`${Z52} .ent-obj:text-is("${sujet}")`);
+};
+const ACCUEIL52 = 'L’arrivée de Yanis';
+// Les pièces à demander et le premier jour, écrits à la main d'après le brief (§4, étapes 1 et 2).
+const PIECES52 = ['identite', 'vitale', 'rib', 'caces'];
+const JOUR52 = ['accueil', 'epi', 'visite', 'autorisation', 'dechargement'];
+// Remplit la fiche à l'écran : cases cochées, puis l'ordre voulu par les flèches ↑, puis l'envoi.
+async function envoyerFiche52({ pieces = PIECES52, ordre = JOUR52 } = {}) {
+  await ouvrirMail52(ACCUEIL52);
+  await pg.click(`${Z52} .ent-lecteur button:has-text("Ouvrir la fiche d’arrivée")`);
+  await pg.waitForSelector(F52);
+  for (const p of pieces) await pg.check(`${F52} [data-fiche-case="pieces"][value="${p}"]`);
+  for (let k = 0; k < ordre.length; k++) {
+    for (;;) {
+      const pos = await pg.$$eval(`${F52} [data-fiche-ordre="jour"] li`, (L, v) => L.findIndex((li) => li.dataset.v === v), ordre[k]);
+      if (pos <= k) break;
+      await pg.click(`${F52} li[data-v="${ordre[k]}"] [data-ordre-sens="-1"]`);
+    }
+  }
+  await pg.click(`${F52} [data-fiche-envoyer]`);
+  await pg.waitForSelector(`${F52} [data-fiche-envoyee]`);
+}
+// Le planning : jour = rang (lun 7 = 0 … ven 18 = 9). Une solution juste, écrite à la main et
+// recontrôlée par le bloc `planning` (maquette v8) : Karim décalé au lun 7 (Karim et Léa le mer 16 =
+// pas assez de monde) ; après l'arrêt d'Inès, le congé de Chloé passe au jeu 17.
+const PL1 = [['form-mathis', 'mathis', 1], ['visite-ines', 'ines', 3], ['cp-chloe', 'chloe', 5], ['cp-karim', 'karim', 0], ['cp-lea', 'lea', 7]];
+const PL2 = [['cp-chloe', 'chloe', 8], ['am-ines', 'ines', 5]];
+async function poser52(id, r, t) {
+  await pg.click(`${T52} .ent-nav[data-vue="planning"]`);
+  await pg.click(`${Z52} [data-pl-id="${id}"][data-pl-vue="b"]`);
+  const sel = `${Z52} [data-pl-grille] [data-pl-case][data-r="${r}"][data-t="${t}"]`;
+  await pg.$eval(sel, (el) => el.scrollIntoView({ block: 'center', inline: 'center' }));
+  await pg.click(sel, { force: true });
+}
+async function envoyerPlanning52(L) {
+  await pg.click(`${T52} .ent-nav[data-vue="planning"]`);
+  for (const [id, r, t] of L) await poser52(id, r, t);
+  await pg.click(`${Z52} [data-pl="envoyer"]`);
+  if (await pg.$(`${Z52} [data-pl="quandMeme"]`)) await pg.click(`${Z52} [data-pl="quandMeme"]`);
+}
+const PHR52 = { salut: 'Bonjour Sophie,', constat: 'Chaque jour a assez de monde et au moins un cariste CACES.', fin: 'Pouvez-vous valider ? Cordialement,' };
+async function repondre52(remplace = {}) {
+  await ouvrirMail52('Le point sur le planning');
+  await pg.click(`${Z52} [data-repondre]`);
+  await pg.waitForSelector(`${Z52} #formPhr:not([hidden])`);
+  for (const [l, t] of Object.entries({ ...PHR52, ...remplace })) await pg.selectOption(`${Z52} [data-phrase="${l}"]`, { label: t });
+  await pg.click(`${Z52} #formPhr button[type="submit"]`);
+}
+// Les 14 jalons, dans l'ordre du brief §5 : 1-3 la fiche, 4-8 le 1er envoi, 9-13 après l'imprévu, 14 le message.
+const tous52 = (s) => Array(14).fill(s);
+
+await v('ENT-5.2 : déclaration (code, 2de, AGO-3.1 et 3.2, 14 jalons, livrée fermée aux élèves), inscrite au registre après ENT-5.1', async () => {
+  const r = await pg.evaluate(async () => {
+    const A = await import('/activites/smoby-arrivee.js');
+    const I = await import('/activites/index.js');
+    const C = await import('/core/competences.js');
+    const m = A.meta;
+    const metas = (await Promise.all(I.ACTIVITES.map((f) => f()))).map((x) => x.meta);
+    return { m: [m.id, m.code, m.rubrique, m.niveaux, m.competences, m.domaines, m.temps, m.bareme, m.pret, m.ouverture, m.portee, m.immersif, m.coeur],
+      comp: ['AGO-3.1', 'AGO-3.2'].every((c) => JSON.stringify(C).includes(c)),
+      rang: metas.filter((x) => /^ENT-5\./.test(x.code)).map((x) => x.code) };
+  });
+  egal(r.m, ['smoby-arrivee', 'ENT-5.2', 'simulog', ['2de'], ['AGO-3.1', 'AGO-3.2'], ['D2', 'D3'], 'guidage', 14, true, 'prof', 'eleve', true, true], 'meta');
+  vrai(r.comp, 'AGO-3.1 ou AGO-3.2 absente de core/competences.js');
+  egal(r.rang.slice(0, 3), ['ENT-5.1', 'ENT-5.2', 'ENT-5.3'], 'rang dans le registre');
+});
+
+await v('ENT-5.2 : les attendus calculés sont ceux du brief ; l’ordre de départ n’a aucune étape à sa place ; la solution vaut 10 / 10 ; le corrigé se charge', async () => {
+  const r = await pg.evaluate(async () => {
+    const S = await import('/contenus/smoby-ent52.js');
+    const P = await import('/core/types/planning.js');
+    const C = await import('/contenus/corriges/ENT-5.2.js');
+    const place = (v) => Object.fromEntries(Object.entries(S.SOLUTION[v]).map(([id, s]) => [id, { r: id === 'am-ines' ? 'ines' : S.PLANNING.cartes.liste.concat(S.PLANNING.alea.ajoutCartes).find((c) => c.id === id).qui, s }]));
+    const db = { plannings: { [S.PLANNING.id]: { v1: { place: place('v1') }, v2: { place: place('v2') } } } };
+    const depart = S.FICHE.blocs.find((b) => b.type === 'ordre').choix.map((c) => c.v);
+    return { pieces: S.PIECES_ATTENDUES, ordre: S.ORDRE_ATTENDU, depart, nPieces: S.PIECES.length,
+      jalons: P.jalonsPlanning(db, S.PLANNING).ok, items: C.CORRIGE.items.length, code: C.CORRIGE.code };
+  });
+  egal([r.pieces, r.ordre, r.nPieces], [PIECES52, JOUR52, 8], 'pièces et ordre attendus');
+  vrai(r.depart.every((v, k) => v !== JOUR52[k]) && r.depart.slice().sort().join() === JOUR52.slice().sort().join(), `ordre de départ : ${r.depart}`);
+  egal([r.jalons, r.items, r.code], [10, 5, 'ENT-5.2'], 'solution jugée par le moteur, corrigé');
+});
+
+await v('ENT-5.2 : à l’ouverture, un message de Sophie, la fiche et le planning au menu, Yanis étiqueté CDD ; aucun jalon (inaction 0 / 14)', async () => {
+  await monter52();
+  egal(await sujets52(), [ACCUEIL52], 'messages au départ');
+  await ouvrirMail52(ACCUEIL52);
+  const mots = await pg.$$eval(`${Z52} .ent-lecteur [data-lex]`, (L) => L.map((b) => b.textContent.trim()));
+  vrai(mots.includes('CDD saisonnier'), `mots cliquables du message : ${mots.join(', ')}`);
+  vrai(await pg.isVisible(`${Z52} .ent-lecteur button:has-text("Ouvrir la fiche d’arrivée")`), 'bouton de la fiche absent du message');
+  egal(await pg.$$eval(`${T52} .ent-nav`, (L) => ['fiche', 'planning'].map((v) => L.some((b) => b.dataset.vue === v))), [true, true], 'entrées du menu');
+  await pg.click(`${T52} .ent-nav[data-vue="planning"]`);
+  const yanis = await pg.$$eval(`${Z52} .pl-res`, (L) => (L.find((x) => x.textContent.startsWith('Yanis')) || {}).textContent);
+  egal(yanis, 'YanisCACES · CDD', 'ligne de Yanis dans le planning');
+  const infos = await pg.$eval(`${Z52} .pl-gauche`, (g) => { const c = g.cloneNode(true); c.querySelectorAll('.lex-bulle').forEach((b) => b.remove()); return c.textContent.replace(/\s+/g, ' '); });
+  vrai(infos.includes('Yanis · CACES · CDD saisonnier · arrive le mer 9') && !/Yanis[^·]*·[^·]*· intérimaire/.test(infos), 'Yanis pas dit en CDD dans les informations');
+  egal(await etapes52(), tous52('attente'), 'étapes à l’ouverture');
+  const s = await dernierScore52();
+  vrai(!s || s[0] === 0, `score sans rien faire : ${JSON.stringify(s)}`);
+});
+
+await v('ENT-5.2 : parcours juste à l’écran → fiche, planning, imprévu, planning repris, point à Sophie : 14 / 14', async () => {
+  await monter52();
+  await envoyerFiche52();
+  egal((await etapes52()).slice(0, 4), ['ok', 'ok', 'ok', 'attente'], 'après la fiche');
+  egal(await sujets52(), [ACCUEIL52, 'Le planning des présences'], 'Sophie passe au planning');
+  await envoyerPlanning52(PL1);
+  egal(await sujets52(), [ACCUEIL52, 'Le planning des présences', 'Changement : planning à reprendre'], 'l’imprévu arrive');
+  vrai(await pg.$(`${Z52} [data-pl-id="am-ines"][data-pl-vue="b"]`), 'la carte de l’arrêt d’Inès n’est pas arrivée');
+  vrai(await pg.$(`${Z52} [data-pl-case][data-r="noa"]`), 'la ligne de Noa n’est pas arrivée');
+  egal((await etapes52()).slice(3, 8), Array(5).fill('ok'), '1er envoi');
+  await envoyerPlanning52(PL2);
+  egal((await etapes52()).slice(8, 13), Array(5).fill('ok'), 'après l’imprévu');
+  egal((await sujets52()).slice(-1), ['Le point sur le planning'], 'Sophie demande le point');
+  await repondre52();
+  egal(await etapes52(), tous52('ok'), 'après le point');
+  egal(await dernierScore52(), [14, 14], 'score remonté au suivi');
+  egal((await sujets52()).slice(-1), ['RE : Le point sur le planning'], 'la suite de l’histoire');
+  const E = await pg.evaluate(() => window.__52.db.mails.filter((m) => m.folder === 'out').map((m) => m.text));
+  egal(E, ['Bonjour Sophie,\nJ’ai repris le planning après l’arrêt d’Inès.\nChaque jour a assez de monde et au moins un cariste CACES.\nPouvez-vous valider ? Cordialement,'], 'message envoyé');
+});
+
+await v('ENT-5.2 : pièges de la fiche — aucune case (1 et 2 faux), casier judiciaire en trop (2 seul), autorisation avant la visite (3 seul)', async () => {
+  const cas = [
+    [{ pieces: [] }, ['ko', 'ko', 'ok']],
+    [{ pieces: [...PIECES52, 'casier'] }, ['ok', 'ko', 'ok']],
+    [{ pieces: ['identite', 'rib', 'caces'] }, ['ko', 'ok', 'ok']],
+    [{ ordre: ['accueil', 'epi', 'autorisation', 'visite', 'dechargement'] }, ['ok', 'ok', 'ko']],
+  ];
+  for (const [fiche, attendu] of cas) {
+    await monter52({ uid: 'u-52-' + JSON.stringify(fiche) });
+    await envoyerFiche52(fiche);
+    egal((await etapes52()).slice(0, 3), attendu, `fiche ${JSON.stringify(fiche)}`);
+  }
+  // Le bilan dit pourquoi : la pièce en trop et l'ordre.
+  const d = await pg.evaluate(async () => {
+    const S = await import('/contenus/smoby-ent52.js');
+    return S.ETAPES[2].verifier(window.__52.db).detail;
+  });
+  egal(d, 'L’autorisation de conduite se donne après la visite des lieux.', 'détail du jalon 3');
+});
+
+await v('ENT-5.2 : rien touché, tout envoyé → 0 / 14 ; un constat faux fait tomber le message seul', async () => {
+  await monter52({ uid: 'u-52-rien' });
+  await ouvrirMail52(ACCUEIL52);
+  await pg.click(`${Z52} .ent-lecteur button:has-text("Ouvrir la fiche d’arrivée")`);
+  await pg.click(`${F52} [data-fiche-envoyer]`);
+  await pg.waitForSelector(`${F52} [data-fiche-envoyee]`);
+  await envoyerPlanning52([]);
+  await envoyerPlanning52([]);
+  egal((await etapes52()).filter((s) => s === 'ok').length, 0, 'jalons vrais sans rien faire');
+  await repondre52({ constat: 'Il manque du monde mardi 15.' });
+  const e = await etapes52();
+  egal([e.filter((s) => s === 'ok').length, e[13]], [0, 'ko'], 'message au constat faux');
+  egal(await dernierScore52(), [0, 14], 'score');
+});
+
 // ── Lots 4 et 5 : quai sans froid, cariste au chariot, étape « Avant de décharger » ─────────────
 // Le poste de contrôle d'aujourd'hui : total noté par Entrée, décision et motifs en boutons, « OK /
 // Pas OK » de la sécurité en boutons. Les décisions justes sont écrites À LA MAIN ici.
