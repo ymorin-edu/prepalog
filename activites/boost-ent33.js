@@ -49,6 +49,8 @@ export const meta = {
 // Pas de `plan` : tous les clients sont déjà sur la carte, il n'y a rien à situer. La tournée
 // porte le plan elle-même.
 const moteur = creerEntreprise({
+  // Les écrans de données du menu (05/10/2026) : ceux dont la séance se sert, et au moindre doute on les garde.
+  menu: ['clients'],
   ENTREPRISE: BOOST.ENTREPRISE,
   VOCAB: BOOST.VOCAB,
   CATALOGUE: BOOST.CATALOGUE,

@@ -159,6 +159,17 @@ export function creerEntreprise(U) {
   // Pour un tel catalogue (`catalogueSimple`, contenus/entreprise-commun.js), les colonnes
   // Couleur et Taille disparaissent partout ; rien ne change pour Spartoo.
   const SIMPLE = !!CATALOGUE.simple;
+  // Le menu de la séance (05/10/2026, demande de Tristan : « il est mélangé, parfois on a des données parfois
+  // non »). Les écrans propres à la séance (fiche, quai, planning, plan d'entrepôt, plan, tournée, inventaire,
+  // extractions, fichiers) n'apparaissent que si elle les déclare, comme avant. Les écrans de DONNÉES,
+  // communs à toutes les entreprises, se choisissent avec `menu: ['receptions', 'stock', …]` ; sans `menu`,
+  // tous restent (rien ne disparaît d'une séance qui ne l'a pas demandé). Accueil et Messagerie : toujours.
+  const ECRANS_DONNEES = ['commandes', 'receptions', 'stock', 'catalogue', 'blocage', 'clients', 'fournisseurs', 'console'];
+  if (U.menu) U.menu.forEach((id) => { if (!ECRANS_DONNEES.includes(id)) throw new Error(`menu : écran inconnu « ${id} » (écrans : ${ECRANS_DONNEES.join(', ')})`); });
+  const MENU = U.menu ? new Set(U.menu) : null;
+  // Un écran de données absent du menu ne s'ouvre pas non plus par un lien (tuile de l'accueil, retour).
+  const montre = (v) => !MENU || !ECRANS_DONNEES.includes(v) || MENU.has(v)
+    || (v === 'commande' && MENU.has('commandes')) || (v === 'reception' && MENU.has('receptions')) || (v === 'produit' && MENU.has('catalogue'));
   // Les exemples des champs et de l'aide de la console : une vraie référence du catalogue de la séance
   // (05/10/2026 : une référence Spartoo écrite en dur s'affichait dans toutes les entreprises).
   const REF_EX = VARIANTS.length ? VARIANTS[0].sku : '';
@@ -392,7 +403,9 @@ export function creerEntreprise(U) {
         // la base (rien n'est envoyé tant que l'élève n'a pas cliqué), mais à l'abri d'un redessin.
         brouillon: {},
         onglet: {}, console: [{ cmd: null, html: '<span class="note">Console. Tapez <b>.help</b> pour la liste des commandes.</span>' }],
-        stockOuvert: estProf, erreurCode: '',
+        // Le Stock est verrouillé pour l'élève (Spartoo : forcer la console) ; une séance l'ouvre avec
+        // `stockOuvert: true` (Smoby, décision de Tristan du 05/10/2026).
+        stockOuvert: estProf || !!U.stockOuvert, erreurCode: '',
         blocage: { lot: '', ref: '', qte: '', motif: '' }, erreurBlocage: '', okBlocage: '',
       };
 
@@ -656,6 +669,8 @@ export function creerEntreprise(U) {
         const nonLus = db.mails.filter((m) => m.folder === 'in' && !m.read).length;
         const aFaire = db.orders.filter((o) => ['À préparer', 'En cours'].includes(statutCommande(o)[0])).length;
         const aRecevoir = (db.receptions || []).filter((r) => !r.ctrl || !r.ctrl.validated).length;
+        // Un groupe du menu : son titre, puis ses entrées ; rien du tout s'il n'en a aucune.
+        const groupe = (titre, L) => { const ok = L.filter(Boolean); return ok.length ? `<div class="ent-sep">${ech(titre)}</div>${ok.join('')}` : ''; };
         const item = (id, lbl, n, alias) => {
           const actif = (alias || [id]).includes(E.vue);
           return `<button class="ent-nav ${actif ? 'on' : ''}" data-vue="${id}">
@@ -722,27 +737,20 @@ export function creerEntreprise(U) {
                 <div class="ent-side-liste" id="entMenuListe"${replie ? ' hidden' : ''}>
                 ${item('accueil', 'Accueil')}
                 ${item('mail', 'Messagerie', nonLus)}
-                ${VFICHE ? item('fiche', VFICHE.nav.libelle) : ''}
-                ${item('commandes', 'Commandes', aFaire, ['commandes', 'commande'])}
-                ${item('receptions', 'Réceptions', aRecevoir, ['receptions', 'reception'])}
-                ${VQUAI ? item('quai', VQUAI.nav.libelle) : ''}
-                ${VPL ? item('planning', VPL.nav.libelle) : ''}
-                ${VENT ? item('entrepot', VENT.nav.libelle) : ''}
-                ${VPLAN || VTOUR ? `<div class="ent-sep">${ech(U.transportSection || 'Transport')}</div>` : ''}
-                ${VPLAN ? item('plan', VPLAN.nav.libelle) : ''}
-                ${VTOUR ? item('tournee', VTOUR.nav.libelle) : ''}
-                <div class="ent-sep">Articles</div>
-                ${item('catalogue', 'Catalogue', 0, ['catalogue', 'produit'])}
-                ${item('stock', 'Stock')}
-                ${VINV ? item('inventaire', VINV.nav.libelle) : ''}
-                ${item('blocage', 'Blocage qualité')}
-                <div class="ent-sep">Tiers</div>
-                ${item('clients', 'Clients')}
-                ${item('fournisseurs', 'Fournisseurs')}
-                <div class="ent-sep">Outils</div>
-                ${item('console', 'Console')}
-                ${VTAB && VTAB.navExtractions ? item('extractions', VTAB.navExtractions.libelle) : ''}
-                ${VTAB ? item('fichiers', VTAB.nav.libelle) : ''}
+                ${groupe((VPLAN || VTOUR) && !VFICHE && !VQUAI && !VPL && !VENT && !VINV ? U.transportSection || 'Transport' : 'Mon poste', [
+                  VFICHE && item('fiche', VFICHE.nav.libelle), VQUAI && item('quai', VQUAI.nav.libelle),
+                  VPL && item('planning', VPL.nav.libelle), VENT && item('entrepot', VENT.nav.libelle),
+                  VPLAN && item('plan', VPLAN.nav.libelle), VTOUR && item('tournee', VTOUR.nav.libelle),
+                  VINV && item('inventaire', VINV.nav.libelle)])}
+                ${groupe('Données', [
+                  montre('commandes') && item('commandes', 'Commandes', aFaire, ['commandes', 'commande']),
+                  montre('receptions') && item('receptions', 'Réceptions', aRecevoir, ['receptions', 'reception']),
+                  montre('stock') && item('stock', 'Stock'),
+                  montre('catalogue') && item('catalogue', 'Catalogue', 0, ['catalogue', 'produit']),
+                  montre('blocage') && item('blocage', 'Blocage qualité')])}
+                ${groupe('Tiers', [montre('clients') && item('clients', 'Clients'), montre('fournisseurs') && item('fournisseurs', 'Fournisseurs')])}
+                ${groupe('Outils', [montre('console') && item('console', 'Console'),
+                  VTAB && VTAB.navExtractions && item('extractions', VTAB.navExtractions.libelle), VTAB && item('fichiers', VTAB.nav.libelle)])}
                 </div>
               </aside>
               <div class="ent-main" id="entMain"></div>
@@ -882,6 +890,7 @@ export function creerEntreprise(U) {
       }
 
       function aller(v, p) {
+        if (!montre(v)) return;
         E.vue = v; Object.assign(E, p || {});
         dessiner();
         hote.scrollIntoView({ block: 'start', behavior: 'smooth' });
@@ -979,7 +988,8 @@ export function creerEntreprise(U) {
             <p class="note">${ech(ENTREPRISE.nom)} · ${ech(exercice)}</p></div>
           <div class="ent-kpis">
             ${kpis.filter((k) => KPI[k]).map((k) => { const x = KPI[k];
-              return `<button class="ent-kpi" data-vue2="${x[0]}"><b>${x[1]}</b><span>${ech(x[2])}</span></button>`; }).join('')}
+              return montre(x[0]) ? `<button class="ent-kpi" data-vue2="${x[0]}"><b>${x[1]}</b><span>${ech(x[2])}</span></button>`
+                : `<div class="ent-kpi fixe"><b>${x[1]}</b><span>${ech(x[2])}</span></div>`; }).join('')}
           </div>
           <section class="panneau"><h3>${ech(bloc.titre)}</h3>
             <ol class="ent-etapes">
@@ -1148,15 +1158,18 @@ export function creerEntreprise(U) {
       }
 
       // Le fournisseur répond tout seul : l'outil retrouve dans le message les références et
-      // les quantités citées, et rappelle le minimum de commande — respecté ou non.
-      const RE_SKU = /\b([A-Z]{2,3}-[A-Z0-9]+-[A-Z]{2}-\d{1,2})\b[^0-9]{0,20}?(\d{1,4})/g;
+      // les quantités citées, et rappelle le minimum de commande — respecté ou non. On cherche les
+      // références DU CATALOGUE de ce fournisseur, quel que soit leur format (05/10/2026 : seul le format
+      // Spartoo `XX-MODELE-CC-NN` était reconnu, les autres entreprises recevaient « référence introuvable »).
+      const echRe = (t) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       function lireRefsQtes(texte, supId) {
-        const out = []; let m; RE_SKU.lastIndex = 0;
-        while ((m = RE_SKU.exec(texte))) {
-          const sku = m[1].toUpperCase(), qty = parseInt(m[2], 10), v = VM[sku];
-          if (v && v.model.sup === supId) out.push({ sku, qty, v });
-        }
-        return out;
+        const T = String(texte || '').toUpperCase(), out = [];
+        VARIANTS.filter((v) => v.model.sup === supId).forEach((v) => {
+          const re = new RegExp(`(?:^|[^A-Z0-9-])${echRe(v.sku)}(?![A-Z0-9-])[^0-9]{0,20}?(\\d{1,4})`, 'g');
+          let m;
+          while ((m = re.exec(T))) out.push({ sku: v.sku, qty: parseInt(m[1], 10), v, i: m.index });
+        });
+        return out.sort((a, b) => a.i - b.i);
       }
 
       function envoyerAuFournisseur() {
@@ -1231,7 +1244,7 @@ export function creerEntreprise(U) {
           const cStock = fige ? `<b class="mono">${r.seen === '' ? '—' : r.seen}</b>`
             : `<input type="number" min="0" data-prep="seen" data-sku="${ech(l.sku)}" value="${r.seen === '' ? '' : r.seen}" style="width:70px" aria-label="Stock trouvé pour ${ech(l.sku)}">`;
           const cEmpl = fige ? ech(r.loc || '—')
-            : `<input type="text" data-prep="loc" data-sku="${ech(l.sku)}" value="${ech(r.loc)}" placeholder="ex. B-01-1" style="width:112px" aria-label="Emplacement pour ${ech(l.sku)}">`;
+            : `<input type="text" data-prep="loc" data-sku="${ech(l.sku)}" value="${ech(r.loc)}" placeholder="emplacement" style="width:112px" aria-label="Emplacement pour ${ech(l.sku)}">`;
           const cQte = fige ? (r.qty === '' ? '—' : r.qty)
             : `<input type="number" min="0" data-prep="qty" data-sku="${ech(l.sku)}" value="${r.qty === '' ? '' : r.qty}" style="width:70px" aria-label="Quantité à préparer pour ${ech(l.sku)}">`;
           const cStatut = fige ? libelleStatut(r.status)
@@ -1639,10 +1652,10 @@ export function creerEntreprise(U) {
         return `<div class="ent-tete"><h2>Blocage qualité</h2>
             <p class="note">Retirer du stock les articles d'un lot mis en cause, référence par référence.</p></div>
           <section class="panneau" style="max-width:620px">
-            <div class="avis">Un blocage ne concerne qu'un lot : les paires de la même référence
+            <div class="avis">Un blocage ne concerne qu'un lot : les ${ech(VOCAB.unitPl)} de la même référence
               entrées par une autre livraison restent vendables. Renseignez le lot, la référence
               complète et la quantité que vous voulez sortir. Le motif est enregistré avec le
-              mouvement : c'est lui qui expliquera plus tard pourquoi ces paires ont disparu.</div>
+              mouvement : c'est lui qui expliquera plus tard pourquoi ces ${ech(VOCAB.unitPl)} ont disparu.</div>
             ${E.erreurBlocage ? `<div class="avis avis-err">${ech(E.erreurBlocage)}</div>` : ''}
             ${E.okBlocage ? `<div class="avis avis-ok">${ech(E.okBlocage)}</div>` : ''}
             <form id="formBloc" autocomplete="off">
@@ -2158,7 +2171,7 @@ export function creerEntreprise(U) {
           return `<div class="note">Les références ne tiennent pas compte des majuscules. ${exemple}</div>${tbl(['Commande', 'Effet'], lignes)}`;
         }],
         find: ['.find <texte>', 'Cherche un modèle par nom, marque ou catégorie', (a) => {
-          const q = norm(a.join(' ')); if (!q) throw new Error('Exemple : .find air max');
+          const q = norm(a.join(' ')); if (!q) throw new Error(`Exemple : .find ${MODELS.length ? String(MODELS[0].brand || MODELS[0].name).split(' ')[0].toLowerCase() : '<nom ou marque>'}`);
           const r = MODELS.filter((m) => norm(`${m.brand} ${m.name} ${m.ref} ${m.cat}`).includes(q));
           if (!r.length) throw new Error(`Aucun modèle trouvé pour « ${ech(q)} ».`);
           return tbl(['Réf. modèle', 'Modèle', 'Catégorie', 'Prix TTC'],
@@ -2230,7 +2243,7 @@ export function creerEntreprise(U) {
             [VOCAB.unitPl.charAt(0).toUpperCase() + VOCAB.unitPl.slice(1), n], ['Valeur achat HT', `<b>${eur(val)}</b>`]]);
         }],
         getclient: ['.getclient <code ou nom>', 'Fiche client', (a) => {
-          const q = norm(a.join(' ')); if (!q) throw new Error('Exemple : .getclient C0007 ou .getclient dubois');
+          const q = norm(a.join(' ')); if (!q) throw new Error(CUSTOMERS.length ? `Exemple : .getclient ${CUSTOMERS[0].id} ou .getclient ${String(CUSTOMERS[0].nom || '').toLowerCase()}` : 'Exemple : .getclient <code ou nom>');
           const r = tousClients().filter((c) => norm(`${c.id} ${c.prenom} ${c.nom}`).includes(q)).slice(0, 10);
           if (!r.length) throw new Error('Aucun client trouvé.');
           return r.length === 1
@@ -2240,7 +2253,7 @@ export function creerEntreprise(U) {
             : tbl(['Code', 'Nom', 'Ville'], r.map((c) => [ech(c.id), ech(c.prenom + ' ' + c.nom), ech(c.ville)]));
         }],
         getsupplier: ['.getsupplier <code ou marque>', 'Fiche fournisseur', (a) => {
-          const q = norm(a.join(' ')); if (!q) throw new Error('Exemple : .getsupplier nike ou .getsupplier F002');
+          const q = norm(a.join(' ')); if (!q) throw new Error(SUPPLIERS.length ? `Exemple : .getsupplier ${String(SUPPLIERS[0].brand || SUPPLIERS[0].name || '').split(' ')[0].toLowerCase()} ou .getsupplier ${SUPPLIERS[0].id}` : 'Exemple : .getsupplier <code ou nom>');
           const r = tousFournisseurs().filter((s) => norm(`${s.id} ${s.brand} ${s.name}`).includes(q));
           if (!r.length) throw new Error('Aucun fournisseur trouvé.');
           return r.map((s) => kv([['Code', ech(s.id)], ['Marque', ech(s.brand)], ['Société', ech(s.name)],
@@ -2277,7 +2290,7 @@ export function creerEntreprise(U) {
           return `<div class="avis avis-ok">Nouveau fournisseur créé.</div>${kv([['Code', `<b>${ech(id)}</b>`], ['Marque', ech(p[0])], ['Société', ech(p[1])]])}`;
         }],
         getorder: ['.getorder <n°>', "Détail d'une commande enregistrée", (a) => {
-          const q = String(a[0] || '').toUpperCase(); if (!q) throw new Error('Exemple : .getorder CMD-048213');
+          const q = String(a[0] || '').toUpperCase(); if (!q) throw new Error('Exemple : .getorder <numéro de commande>');
           const o = db.orders.find((x) => x.no.includes(q));
           if (!o) throw new Error('Commande non enregistrée. Ouvrez le mail de commande et cliquez sur « Enregistrer la commande ».');
           const c = clientDe(o.customerId), t = totaux(o), s = statutCommande(o);
@@ -2298,7 +2311,7 @@ export function creerEntreprise(U) {
         }],
         getlot: ['.getlot <n° de lot>', "Remonter un lot : ce qui est entré, ce qui est sorti, et où c'est parti", (a) => {
           const lot = String(a[0] || '').toUpperCase().trim();
-          if (!lot) throw new Error('Exemple : .getlot LOT-PS-2409');
+          if (!lot) throw new Error('Exemple : .getlot <numéro de lot>');
           const mv = db.moves.filter((m) => String(m.lot || '').toUpperCase() === lot);
           if (!mv.length) throw new Error(`Aucun mouvement pour le lot ${ech(lot)}. Vérifiez le numéro sur le bon de livraison.`);
           const entrees = mv.filter((m) => m.delta > 0), sorties = mv.filter((m) => m.delta < 0);

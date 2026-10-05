@@ -1137,6 +1137,18 @@ Ce qui cloche : DEM-26-0027 : 2 - 1 = 1`;
     for (const n of ['64', '44', '37']) if (new RegExp(`(Stock|stock)\\D{0,12}\\b${n}\\b`).test(cat)) throw new Error('le Catalogue montre un stock du système : ' + n);
   });
 
+  await v('Fournisseur (réponse automatique) : une référence Cdiscount est reconnue, plus seulement le format Spartoo', async () => {
+    await monter22();
+    await ouvrir22('mail');
+    await pg.click('#hote22 [data-nouveau]');
+    await pg.selectOption('#hote22 #mTo', 'F01');
+    await pg.fill('#hote22 #mTxt', 'Bonjour,\n\ncab-usbc-1m : 20\n\nCordialement');
+    await pg.click('#hote22 [data-envoyer-fou]');
+    await pg.waitForTimeout(300);
+    const rep = (await dbPage()).mails.filter((m) => m.folder === 'in').pop();
+    if (!/Commande bien reçue, pour un total de 20/.test(rep.text || '')) throw new Error('réponse du fournisseur : ' + String(rep.text).slice(0, 160));
+  });
+
   await v('ENT-2.3 : CMD-732153 s\'affiche « Annulée » dans Commandes', async () => {
     await monter22();
     await ouvrir22('commandes');

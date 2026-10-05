@@ -35,6 +35,8 @@ export const meta = {
 };
 
 const moteur = creerEntreprise({
+  // Les écrans de données du menu (05/10/2026) : ceux dont la séance se sert, et au moindre doute on les garde.
+  menu: [],
   ENTREPRISE: PICARD.ENTREPRISE,
   VOCAB: PICARD.VOCAB,
   CATALOGUE: PICARD.catalogue(SEANCE.PRODUITS_ENT43),

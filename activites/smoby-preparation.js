@@ -36,6 +36,9 @@ export const meta = {
 };
 
 const moteur = creerEntreprise({
+  // Les écrans de données du menu (05/10/2026) : ceux dont la séance se sert, et au moindre doute on les garde.
+  menu: [],
+  stockOuvert: true,            // pas de code pour le Stock chez Smoby (décision de Tristan, 05/10/2026)
   ENTREPRISE: SMOBY.ENTREPRISE,
   VOCAB: SEANCE.VOCAB,
   CATALOGUE: catalogueSimple([]),

@@ -1689,5 +1689,34 @@ await v('Smoby : aucune erreur JavaScript dans le bloc', async () => {
   if (erreursS.length) throw new Error([...new Set(erreursS)].slice(0, 5).join(' | '));
 });
 
+// ── Le menu de gauche déclaré par séance (05/10/2026, demande de Tristan) ────────────────────────────
+await v('Menu : ENT-5.5 — Mon poste, Données, Outils ; seuls ses écrans ; le Stock s’ouvre sans code chez Smoby', async () => {
+  await monter55();
+  egal(await pg.$$eval(`${T55} .ent-side-liste > *`, (L) => L.map((e) => e.dataset.vue || `[${e.textContent.trim()}]`)),
+    ['accueil', 'mail', '[Mon poste]', 'entrepot', '[Données]', 'receptions', 'stock', '[Outils]', 'console'], 'menu');
+  await pg.click(`${T55} .ent-nav[data-vue="stock"]`);
+  vrai(!(await pg.$(`${Z55} #codeStock`)), 'le Stock demande un code');
+  vrai(!!(await pg.$(`${Z55} table`)), 'tableau du Stock');
+});
+
+await v('Menu : un écran inconnu dans `menu` empêche la séance de se charger ; sans `menu`, tous les écrans restent', async () => {
+  const r = await pg.evaluate(async () => {
+    const { creerEntreprise } = await import('/core/types/entreprise.js');
+    const E = await import('/outils/essai-entrepot.js');
+    let err = '';
+    try { creerEntreprise(Object.assign(E.univers({}), { menu: ['stock', 'planning'] })); } catch (e) { err = e.message; }
+    document.getElementById('smMenu')?.remove();
+    const h = document.createElement('div'); h.id = 'smMenu'; document.body.appendChild(h);
+    const U = E.univers({}); delete U.menu;
+    creerEntreprise(U).rendre(h, { meta: { id: 'x', portee: 'eleve' }, profil: { prenom: 'A', role: 'eleve' },
+      jeu: { etat: () => ({}), sauver: () => {} }, enregistrer: () => {}, quitter: () => {} });
+    const vues = [...h.querySelectorAll('.ent-nav[data-vue]')].map((b) => b.dataset.vue);
+    h.remove();
+    return { err, vues };
+  });
+  vrai(r.err.includes('écran inconnu « planning »'), `erreur : ${r.err}`);
+  egal(r.vues, ['accueil', 'mail', 'entrepot', 'commandes', 'receptions', 'stock', 'catalogue', 'blocage', 'clients', 'fournisseurs', 'console'], 'sans menu');
+});
+
 await ctxS.close();
 }

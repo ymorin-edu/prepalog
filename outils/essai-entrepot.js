@@ -21,5 +21,6 @@ export function univers({ cas = 'rangement', temps = 'guidage', entrepot = null 
       customers: [], suppliers: [], seq: 1, _depart: [] }),
     etapes: etapesEntrepot(P), exercice: 'Essai de l’écran Plan d’entrepôt',
     entrepot: P, copie: temps === 'evaluation', sansTrame: "Tout à l'écran",
+    menu: ['receptions', 'stock'],     // un menu court, comme une séance Smoby (la visite tient sans défiler)
   };
 }

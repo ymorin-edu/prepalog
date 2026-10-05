@@ -51,6 +51,18 @@ par phrases : faire écrire d'abord le destinataire). Essai : `outils/essai-2de.
 ajoute « En litige (zone litiges) » aux décisions du bon de réception (écran Réceptions) ; la ligne n'entre pas en
 stock, comme une ligne refusée. Sans l'option, les trois décisions habituelles (les séances existantes ne bougent pas).
 
+**Le menu de gauche** (05/10/2026) : `creerEntreprise({ …, menu: ['receptions', 'stock', 'console'] })` choisit les
+écrans de **données** affichés parmi `commandes`, `receptions`, `stock`, `catalogue`, `blocage`, `clients`,
+`fournisseurs`, `console` (un nom inconnu empêche la séance de se charger). Accueil et Messagerie sont toujours là ;
+les écrans propres à la séance (fiche, quai, planning, plan d'entrepôt, plan, tournée, inventaire, extractions,
+fichiers) apparaissent dès qu'elle les déclare. Le menu se range en groupes : **Mon poste** (« Transport », ou `transportSection`,
+quand il ne contient que le plan et la tournée), **Données**, **Tiers**, **Outils** ; un groupe vide disparaît. Un écran hors du menu
+ne s'ouvre pas non plus par une tuile de l'accueil. Sans `menu`, tous les écrans de données restent. Règle de
+Tristan : **au moindre doute, l'écran reste**. Les 20 séances d'entreprise le déclarent.
+
+**Stock sans code** : `stockOuvert: true` ouvre l'écran Stock à l'élève sans le code de l'enseignant (Smoby). Sans
+l'option, le Stock reste verrouillé (Spartoo : il pousse vers la console `.getstock`).
+
 **Mots cliquables** (2de, 04/10/2026, `core/lexique.js`, lot 3) : `creerEntreprise({ …, lexique: { CACES:
 'Une phrase.', … } })`, puis dans n'importe quel texte du contenu (mail, accueil, quai…) `[[CACES]]` ou
 `[[cale|calé]]` (mot du lexique | ce qui s'affiche). Le mot devient un bouton souligné ; clic ou Entrée
