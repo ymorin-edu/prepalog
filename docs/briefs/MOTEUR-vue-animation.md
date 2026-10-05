@@ -350,8 +350,8 @@ Repérées le 05/10 ; chacune arrivera par **son** brief de séance, avec en §7
   (chacun fait tomber au moins un cas) : garder la dernière réponse ; ranger le rang affiché ; accuser avant de commencer ;
   boucle qui continue après la sortie ; partie 2 ouverte d'emblée ; état non cloisonné ; enseignant qui écrit ; attentes
   supprimées en mouvement réduit (ce dernier passait au départ : le test a été renforcé, il mesure la durée).
-  Suite entière : voir le commit.
-- **Commits** : *(voir `git log` : « Moteur : vue animation à questions… »)*
+  Suite entière : 767 / 767.
+- **Commits** : `d047960` ENT-6.5 : l'animation à questions passe par un brief moteur à part (Cowork) · `71f9d01` Moteur : vue animation à questions et kit de dessin isométrique. Suite entière : **767 / 767** avant le push.
 - **Reste ouvert** :
   - **Tristan** : comparer à l'écran avec la maquette (`outils/essai-animation.html`, lien « Ouvrir la maquette ») ; jouer
     en élève (faux puis juste, recharger avec « Garder mes réponses ») ; **ouvrir la maquette sur un poste de la salle 112**.
