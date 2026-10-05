@@ -881,12 +881,8 @@ export function creerEntrepot(P, opts = {}) {
     for (let t = 1; t <= M.T; t++) {
       const y = G.yTrav(t), id = `${c}-T${pad2(t)}`;
       const lisseX = g.regard === 'ouest' ? x + RW - 3 : x;   // les lisses sont côté allée
-      // Une travée où l'élève a posé une palette prend un contour épais à l'encre (05/10/2026) :
-      // il la retrouve d'un coup d'œil sur le plan. Ni vert ni rouge : il ne dit rien du juste ou du faux.
-      let posee = false;
-      if (!PREP) for (let n = 1; n <= M.N && !posee; n++) for (let e2 = 1; e2 <= M.E; e2++) if (etatEmp(e, adresse(c, t, n, e2)) === 'eleve') { posee = true; break; }
       s += `<g ${lecture ? 'class="pe-trav-l"' : `class="pe-trav" data-pe-trav="${id}" data-pe-cle="trav:${id}" tabindex="0" role="button" aria-label="Travée ${id}, ${M.N} niveaux"`}>
-        <rect class="pe-fond-trav" x="${x}" y="${y + 5}" width="${RW}" height="${TH - 10}" rx="2" fill="var(--panneau)" stroke="${posee ? 'var(--encre)' : 'var(--pe-gris-trait)'}" stroke-width="${posee ? 6 : 1.2}"${posee ? ' data-pe-posee' : ''}/>
+        <rect class="pe-fond-trav" x="${x}" y="${y + 5}" width="${RW}" height="${TH - 10}" rx="2" fill="var(--panneau)" stroke="var(--pe-gris-trait)" stroke-width="1.2"/>
         <rect x="${lisseX}" y="${y + 5}" width="3" height="${TH - 10}" fill="var(--pe-lisse)"/>
         <text x="${x + RW / 2}" y="${y + 24}" text-anchor="middle" class="pe-mono" font-size="15" font-weight="800" fill="var(--encre)">T${pad2(t)}</text>`;
       for (let n = 1; n <= M.N; n++) for (let e2 = 1; e2 <= M.E; e2++) {

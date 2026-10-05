@@ -531,3 +531,6 @@ maquette, dans les trois temps ; les bonnes réponses et les mètres sont ceux d
 - **Contour des travées posées** (demande de Tristan, même soir) : sur le plan vu de dessus, une travée où l'élève a posé au
   moins une palette prend un contour épais à l'encre (6 px ; le brun « votre palette » se perdait parmi les lisses orange), dans les trois temps (ni vert
   ni rouge : il ne juge rien). Pas en préparation. Test ajouté (bloc `entrepot`, 56 cas), éprouvé par sabotage.
+- **Remplacé le 06/10/2026** (Tristan) : le contour des travées sur le plan est **retiré** ; l'indicateur va sur la **carte de
+  la palette** dans « Palettes à ranger » : posée = trait épais brun « votre palette » et fond carton léger (au lieu d'une
+  simple transparence), pour lire d'un coup d'œil fait / à faire. Test remplacé (bloc `entrepot`).

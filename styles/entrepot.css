@@ -68,7 +68,9 @@
   border:2px solid var(--filet); background:var(--panneau); border-radius:var(--r); padding:5px 7px; font-size:.8rem; line-height:1.2 }
 .pe-pal:hover{ border-color:var(--ardoise) }
 .pe-pal.pe-en-main{ border:3px solid var(--ardoise); padding:4px 6px; background:var(--ardoise-clair) }
-.pe-pal.pe-posee{ opacity:.8 }
+/* Posée (06/10/2026) : trait épais couleur « votre palette » et fond carton léger, pour lire d'un coup d'œil
+   les palettes faites et à faire. Ni vert ni rouge : rien sur le juste ou le faux. En main, le cadre d'en main l'emporte. */
+.pe-pal.pe-posee{ border:3px solid var(--pe-carton-trait); padding:4px 6px; background:rgba(200,154,99,.16) }
 .pe-pal:disabled{ cursor:default }
 .pe-ttl{ display:block; font-weight:800; font-size:.88rem; margin-bottom:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
 .pe-pid{ display:inline-block; background:var(--pe-carton); border:1.5px solid var(--pe-carton-trait); color:#1a1915;
