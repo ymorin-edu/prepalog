@@ -7,6 +7,13 @@
 > ```
 
 **Statut** : à valider par Tristan *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
+
+> **⚠ Correctif demandé par Tristan (05/10/2026, soir, décision 52)** : la palette de rétention porte désormais **8 fûts posés à
+> plat en quinconce** (rangées de 3, 2 et 3, une seule couche) et mesure **1,30 × 1,30 m** (format du commerce). À changer dans le
+> kit iso : **8 fûts par défaut** (et moins), rayon du fût ≈ 0,152 de la largeur de la palette (39,5 cm pour 1,30 m), entraxe
+> 0,304 dans une rangée, 0,263 entre rangées ; les fûts manquants d'une palette incomplète sont **ceux de devant** (on les voit).
+> Hauteur d'un fût abaissée (0,36 au lieu de 0,46 dans la maquette) pour garder les proportions. Maquette de référence mise à jour :
+> `docs/briefs/france-boissons/animation-6.5-couloir-2temps.html` (constantes `KR`, `KH`, `QUINC`). Briefs 6.4, 6.5, 6.6 recalculés.
 **Date du brief** : 05/10/2026
 **Conversation d'origine** : Cowork (Opus), « tour des scénarios : où une animation 3D iso aiderait-elle ? » (05/10/2026, soir).
 **Modèle** : **Opus** (vue nouvelle du moteur).
@@ -57,7 +64,7 @@ Ce qu'on y trouve et que le moteur doit savoir faire :
 - **Projection** : `P(x, y, z)` (isométrique 30°, unité = une place de palette), `face`, `boite` (trois faces visibles),
   cadrage automatique du `viewBox` sur le décor.
 - **Objets** : fût (cylindre métal, cerclages, bonde), **palette de rétention noire** (pieds, caillebotis, nervures) portant
-  **4 fûts**, **étiquette de lot** au sommet (couleur par lot), étiquette au sol (« posée en 1re »), **pastille « ! »**
+  **8 fûts à plat en quinconce** (~~4 fûts~~, décision 52), **étiquette de lot** au sommet (couleur par lot), étiquette au sol (« posée en 1re »), **pastille « ! »**
   d'alerte, **chariot élévateur frontal** (fourches, mât, tablier, caisse orange, contrepoids, cariste en silhouette **sans
   visage**, protège-conducteur), charge portée par les fourches.
 - **Décor** : sol, mur du fond, **couloirs de stockage de masse** (places en pointillé), **panneau de couloir** sur le mur
