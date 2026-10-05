@@ -65,9 +65,11 @@ Décisions pédagogiques arrêtées :
 5. Le module **SCE (SCE-1 à SCE-5) est ancien** et sera absorbé par Simulog : ne pas l'enrichir.
    **Spartoo (ENT-1.x) reste tel quel** (point de comparaison) : ne pas le prendre pour modèle.
    **Le modèle, c'est Boost** (ENT-3.x).
-6. Une séance nouvelle doit se fabriquer **avec les vues existantes**, en déclarant du contenu.
-   Une vue nouvelle du moteur est un **investissement rare** : décider en sachant combien de
-   séances elle servira.
+6. Une séance nouvelle se fabrique **d'abord avec les vues existantes**, en déclarant du contenu.
+   Mais si une compétence peut être abordée sous un **angle nouveau, ludique ou innovant** grâce à
+   une vue nouvelle, **on prend le temps de l'insérer dans le moteur** (décision 13 du 03/10/2026).
+   Garde-fous : durée annoncée, un seul chantier moteur à la fois, vue pensée pour servir à
+   plusieurs séances.
 
 ## L'application
 
