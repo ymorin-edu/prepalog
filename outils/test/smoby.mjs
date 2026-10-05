@@ -1241,6 +1241,39 @@ await v('ENT-5.2 : rien touché, tout envoyé → 0 / 14 ; un constat faux fait 
   egal(await dernierScore52(), [0, 14], 'score');
 });
 
+await v('Charte rouge ou verte : l’accent reste au bandeau et au menu, la zone de travail passe à l’encre (Smoby, Spartoo, Boost sauf ses aplats bleus) ; Picard garde son bleu', async () => {
+  const r = await pg.evaluate(async () => {
+    const out = {};
+    for (const [nom, f] of [['smoby', 'smoby-arrivee'], ['spartoo', 'spartoo'], ['boost', 'boost-ent32'], ['picard', 'picard-ent41']]) {
+      let act;
+      try { act = await import(`/activites/${f}.js`); } catch (e) { out[nom] = 'absente : ' + f; continue; }
+      document.querySelector('#neutre')?.remove();
+      const hote = document.createElement('div'); hote.id = 'neutre'; document.body.appendChild(hote);
+      const db = {};
+      act.rendre(hote, { meta: act.meta, profil: { prenom: 'Lea', nom: 'T', role: 'eleve', uid: 'u-n' }, jeu: { etat: () => db, sauver: () => {} },
+        enregistrer: () => {}, quitter: () => {}, codeStock: 'ABC', lireScore: async () => null, rendreCopie: async () => ({}) });
+      const page = hote.querySelector('.ent-page'), main = hote.querySelector('.ent-main');
+      const v = (el, k) => getComputedStyle(el).getPropertyValue(k).trim().toLowerCase();
+      out[nom] = { classe: page.classList.contains('ent-travail-neutre'), menu: v(page, '--ardoise'), travail: v(main, '--ardoise') === v(main, '--encre'),
+        fond: v(main, '--ardoise-fond') === v(main, '--encre') ? 'encre' : v(main, '--ardoise-fond') };
+      hote.remove();
+    }
+    return out;
+  });
+  egal(r.smoby, { classe: true, menu: '#e40613', travail: true, fond: 'encre' }, 'Smoby');
+  egal([r.spartoo.classe, r.spartoo.travail, r.spartoo.fond], [true, true, 'encre'], 'Spartoo');
+  // Boost : le texte menthe passe à l'encre, les aplats bleus (le client) restent.
+  egal([r.boost.classe, r.boost.travail, r.boost.fond], [true, true, '#345cfd'], 'Boost');
+  egal([r.picard.classe, r.picard.travail, r.picard.fond], [false, false, '#0011ac'], 'Picard');
+  // À l'écran : une case cochée d'ENT-5.2 a son contour à l'encre, plus en rouge.
+  await monter52({ uid: 'u-52-encre' });
+  await ouvrirMail52(ACCUEIL52);
+  await pg.click(`${Z52} .ent-lecteur button:has-text("Ouvrir la fiche d’arrivée")`);
+  await pg.check(`${F52} [data-fiche-case="pieces"][value="rib"]`);
+  const c = await pg.$eval(`${F52} label:has([value="rib"])`, (l) => [getComputedStyle(l).borderTopColor, getComputedStyle(l.closest('.ent-main')).color]);
+  egal(c[0], c[1], 'contour de la case cochée = couleur du texte');
+});
+
 // ── Lots 4 et 5 : quai sans froid, cariste au chariot, étape « Avant de décharger » ─────────────
 // Le poste de contrôle d'aujourd'hui : total noté par Entrée, décision et motifs en boutons, « OK /
 // Pas OK » de la sécurité en boutons. Les décisions justes sont écrites À LA MAIN ici.

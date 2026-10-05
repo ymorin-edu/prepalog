@@ -432,6 +432,26 @@ export function creerEntreprise(U) {
         return L > 0.4 ? '#07261c' : '#ffffff';
       };
 
+      // Une charte ROUGE ou VERTE garde sa couleur sur le bandeau et le menu, jamais dans la zone où
+      // l'élève travaille (décision de Tristan, 05/10/2026) : le rouge y voudrait dire « faux », le vert
+      // « juste ». Là, l'accent devient l'encre du texte (classe `ent-travail-neutre`, styles/base.css).
+      // Reconnu à la teinte : rouge (≤ 20° ou ≥ 330°) ou vert (75° à 170°), assez saturé pour être une couleur.
+      const accentRougeOuVert = (h) => {
+        if (!h) return false;
+        const [r, g, b] = h.replace('#', '').match(/../g).map((x) => parseInt(x, 16) / 255);
+        const max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min;
+        const l = (max + min) / 2, sat = d === 0 ? 0 : d / (1 - Math.abs(2 * l - 1));
+        if (sat < 0.35) return false;
+        const t = max === r ? ((g - b) / d) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+        const teinte = (t * 60 + 360) % 360;
+        return teinte <= 20 || teinte >= 330 || (teinte >= 75 && teinte <= 170);
+      };
+      // Deux accents à juger séparément : celui des textes et bordures, celui des aplats (Boost : texte menthe à
+      // neutraliser, aplats bleus à garder, ils disent « le client » sur la carte et dans la liste).
+      const SOMBRE = THEME.sombre || {};
+      const TRAVAIL_NEUTRE = accentRougeOuVert(SOMBRE.accent || THEME.accent);
+      const TRAVAIL_NEUTRE_FOND = accentRougeOuVert(SOMBRE.accentFond || SOMBRE.accent || THEME.accent);
+
       function styleTheme() {
         const v = [];
         // THEME.papier (03/10/2026, Picard) : l'entreprise impose le thème clair « papier » de
@@ -695,7 +715,7 @@ export function creerEntreprise(U) {
         const replie = !!db.menuReplie;
 
         hote.innerHTML = `
-          <div class="ent-page" style="${styleTheme()}${THEME.papier ? ';color:var(--encre);background:var(--fond)' : ''}">
+          <div class="ent-page${TRAVAIL_NEUTRE ? ' ent-travail-neutre' : ''}${TRAVAIL_NEUTRE_FOND ? ' ent-travail-neutre-fond' : ''}" style="${styleTheme()}${THEME.papier ? ';color:var(--encre);background:var(--fond)' : ''}">
             <header class="ent-bandeau">
               ${ENTREPRISE.logo ? `<img class="ent-logo" src="${ech(ENTREPRISE.logo)}" alt="${ech(ENTREPRISE.nom)}">` : ''}
               <span class="ent-marque">${ech(ENTREPRISE.nom)}</span>

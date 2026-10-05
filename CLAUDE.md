@@ -171,6 +171,9 @@ modifier une séance**, et la corriger si le code a changé.
 - Sur les cartes/vues de transport : **vert = l'ordre de la tournée, bleu = le client et son
   emplacement**, partout à la fois. Le décor d'une carte ne reprend aucune couleur de repère et
   on ne déplace jamais un point pour faire de la place à une étiquette.
+- **Charte rouge ou verte** (Smoby, Spartoo, Boost) : sa couleur reste au bandeau et au menu, **jamais dans la zone où
+  l'élève travaille** (le rouge y dirait « faux », le vert « juste ») : le moteur y remplace l'accent par l'encre, tout
+  seul, d'après la teinte (décision de Tristan, 05/10/2026). Texte et aplats sont jugés à part.
 - Une entreprise prend **sa** charte, mais vérifier que son accent et son vert ne sont pas la
   même couleur. Contrastes WCAG ≥ 4,5 pour le texte.
 - Interface qui se redessine à chaque action : conserver le focus (au clavier seulement).
