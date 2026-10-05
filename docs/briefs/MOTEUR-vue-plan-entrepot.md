@@ -518,3 +518,13 @@ maquette, dans les trois temps ; les bonnes réponses et les mètres sont ceux d
 - Tests (bloc `entrepot`, 54 cas) : cas « aide de charge en évaluation » **réécrit** (elle est désormais présente) ;
   3 cas ajoutés ou complétés (sol, rouge / calculette, calcul en guidage). Sept sabotages, chacun fait tomber un cas.
 - Lot 5 : l'évaluation existait déjà (lots 2 et 4) ; reste la fiche et ce compte rendu final.
+
+*Capteur de charge (05/10/2026, Claude Code) — demandé par Tristan sur la page d'essai (maquette B, sans barre).*
+
+- L'étiquette « déjà posé : … kg » devient un **capteur** : boîtier sombre fixé au montant droit de la vue de face, un
+  par niveau au-dessus du sol (« CHARGE N2 », chiffres jaunes, « MAX 1 200 kg », puis « posé » ou « dont 290 en main »).
+- Il **ajoute la palette en main** au déjà posé, **dans les trois temps** (il calcule). En guidage et en entraînement,
+  chiffres et cadre passent au rouge avec « SURCHARGE » au-delà de la plaque ; **en évaluation, jamais** (ni rouge ni mot).
+- La case devient « capteur de charge » ; la ligne de calcul du guidage reste sous l'en-tête. Au sol, pas de capteur.
+- Tests (bloc `entrepot`, 55 cas) : trois cas **réécrits** (guidage, rouge/calculette, évaluation) et un ajouté (palette en
+  main en évaluation) ; deux sabotages (rouge en évaluation, palette en main oubliée) font chacun tomber deux cas.

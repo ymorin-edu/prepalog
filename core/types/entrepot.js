@@ -899,8 +899,28 @@ export function creerEntrepot(P, opts = {}) {
   /* ------------------------------------------- la travée vue de face */
   function htmlFace(e, R) {
     const d = decoupe(`${ui.trav}-N1-E1`), c = M.cotes[d.c], g = G.racks[d.c];
-    const PW = 160, XG = 40, WF = XG * 2 + M.E * PW, base = 140 + (M.N - 1) * 130, HF = base + 40;
+    // Le capteur de charge (05/10/2026) : un boîtier fixé au montant droit, un par niveau au-dessus du sol. Il
+    // affiche ce qui est posé sur le niveau, plus la palette en main (dans les trois temps : il calcule). En
+    // guidage et en entraînement, chiffres et cadre passent au rouge avec « SURCHARGE » au-delà de la plaque ;
+    // en évaluation, jamais : il dirait « faux » avant la copie. Désactivable (case « capteur de charge »).
+    const aide = R.aideCharge && e.aideCharge !== false, CG = 14, CW = 104;
+    const PW = 160, XG = 40, WF = XG * 2 + M.E * PW + (aide ? CG + CW : 0), base = 140 + (M.N - 1) * 130, HF = base + 40;
     const Y = (n) => base - (n - 1) * 130;
+    const pm = ui.main ? M.pal[ui.main] : null;
+    const capteur = (n, yb, x, pose, max) => {
+      const v = pm ? M.chargeNiveau(e.place, { c: d.c, t: d.t, n }, pm.id) + pm.kg : pose;
+      const trop = !R.eval && v > max, y = yb - 104, h = 92, lum = trop ? '#ff8a7a' : '#f3d04a';
+      const bas = trop ? 'SURCHARGE' : pm ? `dont ${nb(pm.kg)} en main` : 'posé';
+      return `<g data-pe-capteur="${n}" role="img" aria-label="Capteur de charge N${n} : ${kg(v)}${pm ? `, dont ${kg(pm.kg)} en main` : ''}">
+        <line x1="${x - CG}" y1="${yb - 20}" x2="${x}" y2="${yb - 20}" stroke="#555047" stroke-width="3"/>
+        <rect x="${x}" y="${y}" width="${CW}" height="${h}" rx="8" fill="#2a2d31" stroke="${trop ? 'var(--rouge)' : '#1a1915'}" stroke-width="${trop ? 3 : 1.5}" data-pe-cadre="${n}"/>
+        <text x="${x + CW / 2}" y="${y + 16}" text-anchor="middle" font-size="10.5" font-weight="700" fill="#c9c3b8" letter-spacing=".08em" ${TXT}>CHARGE N${n}</text>
+        <rect x="${x + 8}" y="${y + 23}" width="${CW - 16}" height="34" rx="3" fill="#141a12"/>
+        <text x="${x + 13}" y="${y + 33}" font-size="9" fill="#a39c8e" class="pe-mono">kg</text>
+        <text x="${x + CW - 13}" y="${y + 50}" text-anchor="end" font-size="21" font-weight="700" fill="${lum}" class="pe-mono" data-pe-deja="${n}">${nb(v)}</text>
+        <text x="${x + CW / 2}" y="${y + 71}" text-anchor="middle" font-size="10" fill="#c9c3b8" class="pe-mono">MAX ${nb(max)} kg</text>
+        <text x="${x + CW / 2}" y="${y + 85}" text-anchor="middle" font-size="10" font-weight="700" fill="${trop ? lum : '#a39c8e'}" ${TXT} data-pe-bas="${n}">${bas}</text></g>`;
+    };
     let s = `<defs><pattern id="peHachF" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="10" height="10" fill="var(--pe-litige)"/><line x1="0" y1="0" x2="0" y2="10" stroke="var(--pe-hachure)" stroke-width="4"/></pattern></defs>`;
     s += `<rect x="0" y="${base + 6}" width="${WF}" height="30" fill="var(--pe-sol)"/>`;
     // les travées voisines, vues depuis l'allée
@@ -934,16 +954,11 @@ export function creerEntrepot(P, opts = {}) {
         s += `<text x="${x + PW / 2}" y="${yb - 100}" text-anchor="middle" class="pe-mono" font-size="13" font-weight="700" fill="var(--encre-douce)">E${k}</text></g>`;
       }
       if (n > 1) s += `<rect x="${XG}" y="${yb}" width="${M.E * PW}" height="12" fill="var(--pe-lisse)"/>`;
-      // étiquette du niveau, plaque de charge, et l'aide « déjà posé » (désactivable ; en évaluation, jamais
-      // en rouge : elle dirait « faux » avant la copie). Au sol, ni plaque ni aide : pas de limite.
+      // étiquette du niveau, plaque de charge, et le capteur (voir plus haut). Au sol, ni plaque ni capteur : pas de limite.
       const py = n === 1 ? yb + 8 : yb - 2, xr = XG + M.E * PW;
       s += `<rect x="${XG + 4}" y="${py}" width="132" height="18" rx="2" fill="var(--panneau)" stroke="var(--encre-douce)"/><text x="${XG + 70}" y="${py + 14}" text-anchor="middle" class="pe-mono" font-size="12" font-weight="800" fill="var(--encre)">${ech(d.c)}-T${pad2(d.t)}-N${n}</text>`;
       if (!PREP && n > 1) s += `<rect x="${xr - 168}" y="${py}" width="164" height="18" rx="2" fill="var(--pe-plaque)" data-pe-plaque="${n}"/><text x="${xr - 86}" y="${py + 14}" text-anchor="middle" class="pe-mono" font-size="12" font-weight="800" fill="#1a1915">max ${kg(c.charge[n])} / niveau</text>`;
-      if (R.aideCharge && e.aideCharge !== false && n > 1) {
-        const trop = !R.eval && total > c.charge[n], xd = xr - 172 - 150;
-        s += `<rect x="${xd}" y="${py}" width="146" height="18" rx="2" fill="var(--panneau)" stroke="${trop ? 'var(--rouge)' : 'var(--encre-douce)'}" stroke-width="${trop ? 2 : 1}"/>
-          <text x="${xd + 73}" y="${py + 14}" text-anchor="middle" font-size="12" font-weight="800" fill="${trop ? 'var(--rouge)' : 'var(--encre)'}" ${TXT} data-pe-deja="${n}">déjà posé : ${kg(total)}</text>`;
-      }
+      if (aide && n > 1) s += capteur(n, yb, xr + 6 + CG, total, c.charge[n]);
       s += `<text x="${XG - 6}" y="${yb - 52}" text-anchor="end" font-size="13" font-weight="800" fill="var(--encre-douce)" ${TXT}>N${n}</text>`;
     }
     for (const x of [XG, XG + M.E * PW]) s += `<rect x="${x - 6}" y="${Y(M.N) - 120}" width="12" height="${base - Y(M.N) + 128}" fill="var(--pe-montant)"/>`;
@@ -953,13 +968,13 @@ export function creerEntrepot(P, opts = {}) {
   function htmlEntete(e, R) {
     const c = M.cotes[ui.trav.split('-')[0]];
     const fil = `Plan › <b>Travée</b> <span class="pe-mono">${ech(ui.trav)}</span> <span class="pe-petit">(vue depuis l'allée ${ech(c.allee)}${c.note ? `, ${ech(c.note)}` : ''})</span>`;
-    const aide = R.aideCharge && !R.fige ? `<label class="pe-case-aide"><input type="checkbox" data-pe="aideCharge" data-pe-cle="b:aideCharge" ${e.aideCharge !== false ? 'checked' : ''}> charge déjà posée</label>` : '';
+    const aide = R.aideCharge && !R.fige ? `<label class="pe-case-aide"><input type="checkbox" data-pe="aideCharge" data-pe-cle="b:aideCharge" ${e.aideCharge !== false ? 'checked' : ''}> capteur de charge</label>` : '';
     return `<div class="pe-entete"><div class="pe-fil">${fil}</div>
       <div class="pe-msg-vue"><div class="pe-msg ${ui.msgType ? `pe-${ui.msgType}` : ''}" data-pe-msg>${ui.msg}</div></div>
       ${aide}<button type="button" class="btn btn-p pe-retour" data-pe="retour" data-pe-cle="b:retour">← Retour au plan</button></div>${htmlCalcul(e, R)}`;
   }
   // Guidage : le calcul de charge est fait pour l'élève, niveau par niveau (le sol n'a pas de limite) ;
-  // il lui reste à comparer chaque total à la plaque. Suit la case « charge déjà posée ».
+  // il lui reste à comparer chaque total à la plaque. Suit la case « capteur de charge ».
   function htmlCalcul(e, R) {
     if (!R.g || !R.aideCharge || R.fige || e.aideCharge === false || !ui.main || !ui.trav) return '';
     const p = M.pal[ui.main], d = decoupe(`${ui.trav}-N1-E1`);

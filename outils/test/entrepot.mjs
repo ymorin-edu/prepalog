@@ -298,16 +298,19 @@ await v('Entrepôt guidage : consigne de la palette en main, bandes de rotation,
   vrai(await present(pg, '[data-pe-parcours]'), 'parcours dessiné');
   vrai(await present(pg, '[data-pe-regles]'), 'Les règles');
   await pg.click(`${Z} [data-pe-trav="A1-T01"]`);
-  egal(await texte(pg, '[data-pe-deja="2"]'), 'déjà posé : 840 kg', 'aide charge N2');
+  // Le capteur de charge (05/10/2026) ajoute la palette en main : N2 840 + 270, N3 1 110 + 270 > 1 200.
+  egal(await texte(pg, '[data-pe-deja="2"]'), '1 110', 'capteur N2 (840 posés + P2 en main)');
+  egal(await texte(pg, '[data-pe-bas="2"]'), 'dont 270 en main', 'bas du capteur N2');
+  egal(await texte(pg, '[data-pe-bas="3"]'), 'SURCHARGE', 'capteur N3 dépassé en guidage');
   // Le calcul fait pour l'élève (05/10/2026) : stock de A1-T01 N2 430 + 410, N3 410 + 410 + 290 ; P2 270 kg.
   egal(await texte(pg, '[data-pe-calcul]'),
     'Si vous posez P2 (270 kg) dans cette travée : N3 : 1 110 + 270 = 1 380 kg · N2 : 840 + 270 = 1 110 kg · N1 (sol) : pas de limite', 'calcul de charge');
   // Au sol, ni plaque ni « déjà posé » : pas de limite.
   vrai(await present(pg, '[data-pe-plaque="2"]') && !(await present(pg, '[data-pe-plaque="1"]')), 'plaque de charge au sol');
-  vrai(!(await present(pg, '[data-pe-deja="1"]')), '« déjà posé » au sol');
+  vrai(!(await present(pg, '[data-pe-capteur="1"]')) && await present(pg, '[data-pe-capteur="2"]'), 'capteur au sol');
   vrai(!(await pg.$('#calculetteFlottante')), 'calculette en guidage');
   await pg.click(`${Z} [data-pe="aideCharge"]`);
-  vrai(!(await present(pg, '[data-pe-deja]')), 'aide toujours là une fois décochée');
+  vrai(!(await present(pg, '[data-pe-capteur]')), 'capteur toujours là une fois décoché');
   vrai(!(await present(pg, '[data-pe-calcul]')), 'calcul toujours là une fois l’aide décochée');
   egal((await etat(pg)).aideCharge, false, 'aide décochée gardée');
 });
@@ -330,21 +333,35 @@ await v('Entrepôt : au sol, aucune limite de poids (05/10/2026) — même avec 
   egal(r.sansN1, [], 'déclaration sans charge au sol');
 });
 
-await v('Entrepôt : « déjà posé » jamais en rouge en évaluation, en rouge en entraînement ; calculette hors guidage, sur le plan seulement', async () => {
+await v('Entrepôt : capteur de charge jamais en rouge en évaluation, en rouge en entraînement ; calculette hors guidage, sur le plan seulement', async () => {
   // P1 (420 kg) en A1-T01-N2 : 840 + 420 = 1 260 kg > 1 200.
   const rouge = () => pg.$eval(`${Z} [data-pe-deja="2"]`, (t) => t.getAttribute('fill'));
-  for (const [temps, attendu] of [['entrainement', 'var(--rouge)'], ['evaluation', 'var(--encre)']]) {
+  for (const [temps, attendu, bas] of [['entrainement', '#ff8a7a', 'SURCHARGE'], ['evaluation', '#f3d04a', 'posé']]) {
     await monter(pg, { temps });
     vrai(!!(await pg.$('#calculetteFlottante')), `calculette en ${temps}`);
     // Son bouton est à l'encre, jamais à l'accent de la charte (rouge chez Smoby : il dirait « faux »).
     egal(await pg.$eval('#calculetteFlottante .calc-fab', (b) => b.style.background), 'var(--encre)', `bouton de la calculette en ${temps}`);
     await poser(pg, 'P1', 'A1-T01-N2-E3');
     await pg.click(`${Z} [data-pe-trav="A1-T01"]`);
-    egal(await rouge(), attendu, `« déjà posé » dépassé en ${temps}`);
+    egal(await texte(pg, '[data-pe-deja="2"]'), '1 260', `capteur N2 en ${temps}`);
+    egal(await rouge(), attendu, `chiffres du capteur dépassé en ${temps}`);
+    egal(await texte(pg, '[data-pe-bas="2"]'), bas, `bas du capteur dépassé en ${temps}`);
     vrai(!(await present(pg, '[data-pe-calcul]')), `calcul de charge en ${temps}`);
   }
   await pg.click('#peTest .ent-nav[data-vue="stock"]');
   vrai(!(await pg.$('#calculetteFlottante')), 'calculette restée hors du plan');
+});
+
+await v('Entrepôt évaluation : le capteur ajoute la palette en main, sans rien dire du juste ou du faux', async () => {
+  await monter(pg, { temps: 'evaluation' });
+  await pg.click(`${Z} .pe-bandeau [data-pe-pal="P1"]`);
+  await pg.click(`${Z} [data-pe-trav="A1-T01"]`);
+  // N2 : 840 + 420 = 1 260 kg > 1 200 ; N3 : 1 110 + 420.
+  egal(await texte(pg, '[data-pe-deja="2"]'), '1 260', 'capteur N2 avec P1 en main');
+  egal(await texte(pg, '[data-pe-deja="3"]'), '1 530', 'capteur N3 avec P1 en main');
+  egal(await texte(pg, '[data-pe-bas="2"]'), 'dont 420 en main', 'bas du capteur');
+  egal(await pg.$$eval(`${Z} [data-pe-deja]`, (L) => L.map((t) => t.getAttribute('fill'))), ['#f3d04a', '#f3d04a'], 'chiffres en rouge');
+  egal(await pg.$$eval(`${Z} [data-pe-cadre]`, (L) => L.map((t) => t.getAttribute('stroke'))), ['#1a1915', '#1a1915'], 'cadre en rouge');
 });
 
 await v('Entrepôt entraînement : parcours seul (pas de bandes, pas de consigne), verdict = nom du critère seul', async () => {
@@ -367,7 +384,7 @@ await v('Entrepôt évaluation : rien avant la copie, « Rendre mon travail » e
   await poserTout(pg, [['P1', 'A1-T01-N1-E3'], ['P2', 'B2-T02-N1-E3'], ['P3', 'L2'], ['P4', 'B1-T01-N2-E3']]);
   await pg.click(`${Z} [data-pe-trav="A1-T01"]`);
   // L'aide « déjà posé » reste en évaluation (05/10/2026) ; le calcul fait pour l'élève, non.
-  egal(await texte(pg, '[data-pe-deja="2"]'), 'déjà posé : 840 kg', 'aide de charge en évaluation');
+  egal(await texte(pg, '[data-pe-deja="2"]'), '840', 'capteur de charge en évaluation');
   vrai(!(await present(pg, '[data-pe-calcul]')), 'calcul de charge en évaluation');
   await pg.click(`${Z} [data-pe="retour"]`);
   egal(await pg.$$eval(`${Z} .pe-verd`, (L) => L.length), 0, 'verdict avant la copie');
