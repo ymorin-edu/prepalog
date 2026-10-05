@@ -1886,7 +1886,9 @@ await v('Précédent dans une séance = « Quitter » : le geste et le temps pas
   const lus = () => lireN().then((c) => (c.prive?.data?.mails || []).filter((m) => m.read).length);
   // Le temps passé est compté toutes les 5 s : on reste un peu plus.
   await pn.waitForTimeout(5600);
-  const avant = Date.now();
+  // Le repère est le score déjà enregistré (horloge du navigateur), pas l'heure de Node : les deux
+  // horloges diffèrent de quelques millisecondes, autant que l'écart à mesurer (échec intermittent).
+  const avant = (await lireN()).travaux?.dateMaj || 0;
   await retourN(); await surN('entreprise:3', 'Précédent depuis la séance');
   await pn.waitForTimeout(300);
   const c = await lireN();
@@ -1896,7 +1898,7 @@ await v('Précédent dans une séance = « Quitter » : le geste et le temps pas
   if (!(tPrive >= 5)) throw new Error('temps passé dans la base : ' + tPrive);
   // Le score remonté à la sortie (ce que lit l'enseignant) porte ce temps : c'est le nettoyage de
   // la séance (`ctx.surSortie`) qui l'écrit, rien d'autre n'écrit le score à ce moment-là.
-  if (!c.travaux || !(c.travaux.dateMaj >= avant)) throw new Error('aucun score remonté à la sortie');
+  if (!c.travaux || !(c.travaux.dateMaj > avant)) throw new Error('aucun score remonté à la sortie');
   const tScore = c.travaux.detail?.indicateurs?.['boost-ent33']?.temps || 0;
   if (!(tScore >= 5)) throw new Error('temps passé dans le score remonté : ' + tScore);
   // Rouvrir : le message est toujours lu, à l'écran.
