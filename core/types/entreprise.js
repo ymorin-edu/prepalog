@@ -19,6 +19,7 @@ import { creerTournee } from './tournee.js';
 import { creerInventaire } from './inventaire.js';
 import { creerQuai } from './quai.js';
 import { creerPlanning } from './planning.js';
+import { creerLecteur } from './animation.js';
 import { creerEntrepot } from './entrepot.js';
 import { creerDocuments } from './documents.js';
 import { creerFiche } from './fiche.js';
@@ -154,6 +155,14 @@ export function creerEntreprise(U) {
   // autres ont `fiche:<id>`. Une fiche qui déclare `quand(db)` reste hors du menu tant que c'est faux.
   const VFICHES = [].concat(U.fiche || [], U.fiches || []).map((F) => creerFiche(F, VDOC));
   const VFICHE = VFICHES[0] || null;
+  // L'ANIMATION À QUESTIONS (05/10/2026, brief `docs/briefs/MOTEUR-vue-animation.md`) : un écran de plus,
+  // seulement si la séance déclare `animation` (ou `animations: [A, B]`, rare) — format en tête de
+  // `core/types/animation.js`. Son état vit dans `db.animations[<animation.id>]`. Le contenu est vérifié
+  // ici : un pas, une place ou un objet inconnu empêche la séance de se charger.
+  const VANIMS = [].concat(U.animation || [], U.animations || []).map((A) => creerLecteur(A));
+  VANIMS.forEach((VA, i) => { if (VANIMS.findIndex((x) => x.id === VA.id) !== i) throw new Error(`animation ${VA.id} déclarée deux fois`); });
+  const vueAnim = (VA) => `animation:${VA.id}`;
+  const animDeVue = (v) => VANIMS.find((VA) => vueAnim(VA) === v) || null;
   const vueDeFiche = (VF) => (VF === VFICHE ? 'fiche' : `fiche:${VF.id}`);
   const ficheDeVue = (v) => VFICHES.find((VF) => vueDeFiche(VF) === v) || null;
 
@@ -762,7 +771,8 @@ export function creerEntreprise(U) {
                 <div class="ent-side-liste" id="entMenuListe"${replie ? ' hidden' : ''}>
                 ${item('accueil', 'Accueil')}
                 ${item('mail', 'Messagerie', nonLus)}
-                ${groupe((VPLAN || VTOUR) && !VFICHE && !VQUAI && !VPL && !VENT && !VINV ? U.transportSection || 'Transport' : 'Mon poste', [
+                ${groupe((VPLAN || VTOUR) && !VFICHE && !VQUAI && !VPL && !VENT && !VINV && !VANIMS.length ? U.transportSection || 'Transport' : 'Mon poste', [
+                  ...VANIMS.map((VA) => item(vueAnim(VA), VA.nav.libelle)),
                   ...VFICHES.filter((VF) => !VF.quand || VF.quand(db)).map((VF) => item(vueDeFiche(VF), VF.nav.libelle)),
                   VQUAI && item('quai', VQUAI.nav.libelle),
                   VPL && item('planning', VPL.nav.libelle), VENT && item('entrepot', VENT.nav.libelle),
@@ -934,6 +944,7 @@ export function creerEntreprise(U) {
           planning: VPL ? vuePlanning : vueAccueil,
           entrepot: VENT ? vueEntrepot : vueAccueil,
           ...Object.fromEntries(VFICHES.map((VF) => [vueDeFiche(VF), () => vueFiche(VF)])),
+          ...Object.fromEntries(VANIMS.map((VA) => [vueAnim(VA), () => VA.html(etatAnim(VA), apiAnim())])),
           fiche: VFICHE ? () => vueFiche(VFICHE) : vueAccueil,
           fichiers: VTAB ? vueFichiers : vueAccueil,
           extractions: VTAB && VTAB.navExtractions ? vueExtractions : vueAccueil,
@@ -1008,6 +1019,8 @@ export function creerEntreprise(U) {
           receptions: ['receptions', aRecevoir, 'livraisons à contrôler'],
           stock: ['stock', total, unite(total) + ' en stock'],
           rupture: ['stock', rupture, 'références en rupture'],
+          // La tuile de l'animation (`accueil.kpis: ['animation', …]`), qui ouvre la première déclarée.
+          animation: VANIMS.length ? [vueAnim(VANIMS[0]), '▶', VANIMS[0].nav.libelle] : null,
         };
 
         return `
@@ -1901,6 +1914,25 @@ export function creerEntreprise(U) {
       });
       function vueFiche(VF) { return VF.html(etatFiche(VF), uiFiche(VF), apiFiche()); }
 
+      /* ---------------------------------------------------------- animation à questions */
+      // Cloisonnée par séance : `db.animations[<id de l'animation de cette séance>]`. L'enseignant n'y
+      // écrit rien (le lecteur le sait par `estProf`). Une réponse rangée n'est jamais suivie d'un redessin
+      // de l'écran (l'animation repartirait) : un message déclenché attend la prochaine navigation.
+      function etatAnim(VA) {
+        if (!db.animations) db.animations = {};
+        if (!db.animations[VA.id]) db.animations[VA.id] = VA.etatNeuf();
+        return db.animations[VA.id];
+      }
+      const apiAnim = () => ({
+        estProf, figee: rendue(), graine: ctx.profil.uid || prenom,
+        sauver() {
+          if (rendue()) return;
+          const arrive = declencher();
+          ctx.jeu.sauver(); remonterEtapes();
+          if (arrive) toast('Nouveau message dans la messagerie.');
+        },
+      });
+
       // Le chrono réel. Il compte en secondes, par écart d'horloge (un onglet en arrière-plan ne
       // reçoit plus qu'un tic par minute), s'arrête à la clôture de la réception ou à la remise
       // de la copie, et ne tourne pas tant qu'on ne sait pas si la copie est déjà rendue. Il est
@@ -2505,6 +2537,8 @@ export function creerEntreprise(U) {
         if (E.vue === 'entrepot' && VENT) VENT.brancher(z, etatEntrepot(), apiEntrepot());
         const VFv = ficheDeVue(E.vue);
         if (VFv) VFv.brancher(z, etatFiche(VFv), uiFiche(VFv), apiFiche());
+        const VAv = animDeVue(E.vue);
+        if (VAv) VAv.brancher(z, etatAnim(VAv), apiAnim());
       }
 
       // Un message déclenché dont la condition est déjà vraie à l'ouverture (travail fait sur un

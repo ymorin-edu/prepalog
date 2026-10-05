@@ -594,6 +594,89 @@ l'affichage). Les photos sont **dans le dépôt** (`contenus/<entreprise>/…`),
 - L'état : `db.entrepots[<id>]` = `{ courante, atteinte, x: { <id d'étape>: … } }`. Exemple complet : `contenus/smoby-ent53.js`
   (aussi le cas « visite » de la page d'essai) ; tests : bloc `entrepot` (fin du fichier).
 
+## Vue « animation à questions » (scène isométrique, arrêt, question) — `core/types/animation.js`
+
+Depuis le 05/10/2026 (brief `docs/briefs/MOTEUR-vue-animation.md`, maquette d'ENT-6.5). Montrer **un geste
+du métier dont la conséquence se voit** (une palette coincée au fond d'un couloir…), **s'arrêter**, poser une
+question à choix, corriger, enchaîner. L'animation vient **avant** la décision : la séance place cet écran
+**avant** l'écran de travail dans son déroulé (le moteur ne verrouille rien). Exemple complet : la maquette
+reproduite, `contenus/animation-essai.js` ; page d'essai `outils/essai-animation.html` (Simulog ou hors Simulog,
+élève ou enseignant) ; tests : bloc `animation`.
+
+**Dans une séance Simulog** : `animation: A` (ou `animations: [A, B]`, rare) dans `creerEntreprise`, et
+`etapes: [...etapesAnimation(A), ...]` (importé de `core/types/animation.js`). Une entrée « Mon poste » s'ajoute
+(libellé `libelle`) ; une tuile d'accueil si la séance la demande (`accueil: { kpis: ['animation', 'mail'] }`).
+**Hors Simulog** (activité Prepalog sans scénario) : `const anim = creerAnimation(A);`
+`export const rendre = (h, c) => anim.rendre(h, c); export const noter = (db) => anim.noter(db);`, avec
+`meta.bareme` = nombre de questions (une question = un point, ramené sur 20). Sans question : pas de `bareme`.
+
+```js
+{
+  id: 'fb-fifo',                 // clé de l'état dans la base de l'élève, JAMAIS modifiée
+  libelle: 'Comprendre le FIFO', // entrée du menu
+  vitesse: 0.8,                  // facultatif (1) : attentes et déplacements divisés par elle
+  alt: 'Animation : …',          // texte de remplacement de la scène
+  scene: {
+    decor: [                     // dessiné une fois, dans l'ordre déclaré (coordonnées : ici seulement)
+      { type: 'sol', de: [x, y], a: [x, y] },
+      { type: 'mur', y, de, a, hauteur },                    // y = face avant du mur
+      { type: 'allee', de: [x, y], a: [x, y] },              // le sol plus clair de l'allée
+      { type: 'couloirMasse', id: 'M01', x, y?: 0, profondeur: 3, panneau?: 'M01', fleches?: true },
+      { type: 'reperesProfondeur', couloir: 'M02' },         // « fond / milieu / devant » au sol, à droite
+      { type: 'texteSol', texte, en: [x, y], style?: 'allee', rotation? },
+    ],
+    lots: { S20: { couleur: 'jaune' } },   // couleurs du kit : jaune, bleu, gris, ambre, violet
+    acteurs: { chariot: { type: 'chariotFrontal' } },
+  },
+  parties: [{
+    titre: 'Partie 1 sur 2 — l’erreur',
+    depart: { palettes: [{ id: 'a', lot: 'S20', place: 'M01.fond', futs?: 4, etiquette?, ton? }] },
+    pas: [ … ],                  // voir ci-dessous
+    question: { id: 'q1', titre, enonce, choix: [...], juste: 1, explication, suite?: '▶ Voir la bonne façon' },
+  }],                            // une partie sans question : un bouton « Suite ▶ » ; la dernière : « Tout revoir »
+  aRetenir: 'HTML court (<b>, <u>)',
+}
+```
+
+- **Places nommées** : un couloir de masse de profondeur n a les places `M01.1` (fond) à `M01.n` (devant), et pour
+  n = 3 `M01.fond`, `M01.milieu`, `M01.devant` (n = 2 : `fond`, `devant`). Un geste vise une **place**, jamais des
+  coordonnées.
+- **Pas** (fermés) : `{ legende: 'html' }` (numérotée toute seule sur toutes les parties ; les points de progression
+  sont comptés), `{ attendre: ms }`, `{ nouvelle: 'a', lot, futs? }` (charge invisible), `{ placer: 'a', place }`,
+  `{ geste: 'poser' | 'reprendre', acteur: 'chariot', objet: 'a', place }`, `{ etiquette: 'a', texte, ton? }`
+  (`neutre`, `ok`, `alerte`), `{ alerte: ['a'] }` / `{ finAlerte: [...] }` (pastille « ! »),
+  `{ bulle: 'nom', lignes: [...], vers: place | objet | [x, y, z], hauteur?, decalage: [dx, dy], ton?, fleche?: false }`,
+  `{ effacer: ['nom'] }`.
+- **Contrôlé au chargement** (la séance ne s'ouvre pas, message clair) : pas inconnu, type de décor ou d'acteur
+  inconnu, place inexistante ou déjà prise, objet pas encore créé, charge reprise qui n'est posée nulle part, bulle
+  effacée qui n'existe pas, lot sans couleur du kit, `juste` hors des choix, question en double.
+- **État** : `db.animations[<id>]` = `{ reponses: { q1: { premiere, juste, quand } }, ordres: { q1: [2,0,3,1] },
+  partie }`. `premiere` = rang **dans l'ordre déclaré** du premier choix validé, écrit une fois (« Répondre de
+  nouveau » et « Tout revoir » n'y touchent pas) ; `ordres` = ordre d'affichage tiré par élève (graine = son
+  identifiant) et rangé ; `partie` = la plus loin qu'il peut ouvrir (0 = la première ; pas de saut en avant).
+- **Jalons** : `etapesAnimation(A)` = un jalon par question (« Question 1 de l'animation : première réponse
+  juste ») ; non répondue = « à faire », jamais une erreur ; au bilan, non répondue = non franchie.
+  `reponseAnimation(db, A, 'q1')` → `{ repondu, premiereJuste }` pour composer un jalon propre.
+- **Enseignant** : navigue librement (Partie 1 · Question 1 · …), voit la bonne réponse marquée, rien n'est écrit.
+- **Mouvement réduit** : déplacements instantanés, les attentes et les bulles restent. Quitter l'écran arrête tout.
+- **Charte** : l'interface (légende, commandes, question, bulles) ne prend que les variables du thème ; la scène est
+  une image (fond clair en sombre aussi). Signalétique au sol (panneaux verts, flèches ENTRÉE / SORTIE) : exception
+  notée dans `docs/decisions.md`.
+
+### Le kit de dessin isométrique — `core/iso.js`
+
+**Jamais de code de dessin dans `contenus/`.** Le kit contient : projection (`projection()`, unité = une place de
+palette), `face`, `boite`, cadrage automatique sur le décor ; décor (sol, mur, allée, couloir de masse et ses places,
+panneau, flèches et textes au sol, repères de profondeur) ; charge `retention` (palette de rétention noire, 0 à 4
+fûts, étiquette de lot, texte au sol, pastille « ! ») ; acteur `chariotFrontal` (gestes `poser`, `reprendre`,
+cariste en silhouette sans visage). Il est conçu pour servir aussi au futur mode « stockage de masse » du Plan
+d'entrepôt (ENT-6.5 §7.1).
+
+**Un objet qui manque** (camion, transpalette, rack, quai…) : l'écrire dans la section 7 du brief de la séance
+(« objets à ajouter au kit » : ce qu'on doit voir, les gestes, une image de référence) ; un chantier moteur l'ajoute à
+`core/iso.js` (type dans `TYPES_DECOR`, `TYPES_CHARGE` ou `TYPES_ACTEUR`, gestes dans `GESTES`), avec ses textes
+contrôlés (contraste ≥ 4,5, test du bloc `animation`).
+
 ## Pièges
 
 - Une séance en cours d'écriture reste en `pret: false` et peut être commitée à tout moment.
