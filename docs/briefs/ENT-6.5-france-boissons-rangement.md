@@ -248,7 +248,7 @@ et désignations d'ENT-6.4). Dessins : `contenus/images/france-boissons/` (SVG d
    - **Jalon** `palette(id)` lu dans l'état validé, et **position de chaque palette** exposée à la fiche (jalons 7 à 10).
    - Ergonomie : écran 1366 × 768 sans défilement (message de Nadia et boutons sur une ligne, cartes P1-P4 compactes à gauche, 3D
      cadrée automatiquement).
-2. **Vue « animation à questions »** (nouvelle ; ou intégrée au mode masse si c'est plus simple) : une animation **scénarisée par le
+2. **Vue « animation à questions »** — **brief à part : `docs/briefs/MOTEUR-vue-animation.md`** (décidé le 05/10 : vue du moteur, kit iso qui grandit, à construire **avant** le mode masse) : une animation **scénarisée par le
    contenu** (étapes, positions, bulles, légende numérotée), **arrêt** à un point déclaré, **question à choix** (place des choix tirée
    par élève), « Revoir l'animation », **première réponse gardée** et lue par les jalons, explication après validation, enchaînement
    partie 2 → question 2 → « À retenir ». Vitesse réglable dans le contenu (0,8 par défaut). Sans son. Référence :
@@ -304,7 +304,7 @@ aide sur un écran de lycée ; un élève de 2de finit en 50 min ; le bilan ne d
 - [x] Stock de 6.2 aligné sur le plan (Tristan, 05/10).
 - [x] 10 jalons ; une seule question « Pour réfléchir » (Tristan, 05/10).
 - [ ] Mode masse dans la vue Plan d'entrepôt ou vue à part (défaut : mode de la vue existante).
-- [ ] Animation à questions : vue à part ou intégrée au mode masse (défaut : vue à part, réutilisable).
+- [x] Animation à questions : **vue à part, réutilisable** (Tristan, 05/10) → brief moteur `docs/briefs/MOTEUR-vue-animation.md` (kit iso qui grandit ; à construire avant le mode masse, qui réutilisera le kit).
 - [ ] Dessins des écrans matériel (défaut : Cowork les fournit avant l'implémentation de la séance).
 
 ---
