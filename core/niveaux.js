@@ -62,12 +62,38 @@ export function concerneNiveau(niveaux, niveauGroupe) {
  */
 export const ouvertureParProf = (meta) => !!meta && meta.ouverture === 'prof';
 
-export function activiteVisible(meta, groupe) {
+// Demi-groupes (brief MOTEUR-demi-groupes, 06/10/2026). Une classe peut être coupée en
+// demi-groupes (1L → 1L1 / 1L2), rangés DANS le document du groupe comme les équipes :
+//   demis: [{ id, nom }]          — l'id est technique et stable, le nom libre et renommable ;
+//   demiDe: { uid: idDemi }       — affectation des élèves (absent = aucun demi-groupe) ;
+//   ouvertsDemi: { idDemi: { aid: bool } } — ouverture propre à un demi-groupe.
+export const demisDe = (groupe) => (groupe && Array.isArray(groupe.demis) ? groupe.demis : []);
+export const nomDemi = (groupe, id) => demisDe(groupe).find((d) => d.id === id)?.nom || '';
+
+// Le demi-groupe d'un élève dans cette classe, ou null. Une affectation à un demi-groupe qui
+// n'existe plus ne compte pas : l'élève suit alors la classe.
+export function demiDe(groupe, uid) {
+  const id = groupe && groupe.demiDe ? groupe.demiDe[uid] : null;
+  return id && demisDe(groupe).some((d) => d.id === id) ? id : null;
+}
+
+// Le réglage d'ouverture qui s'applique : celui du demi-groupe s'il en porte un pour cette
+// activité, sinon celui de la classe. « Toute la classe » reste le réglage par défaut, le
+// demi-groupe ne fait que le contredire.
+export function forcage(meta, groupe, demi) {
+  if (!groupe) return undefined;
+  const d = demi && groupe.ouvertsDemi ? groupe.ouvertsDemi[demi] : null;
+  if (d && typeof d[meta.id] === 'boolean') return d[meta.id];
+  return groupe.ouverts ? groupe.ouverts[meta.id] : undefined;
+}
+
+// `demi` : l'id du demi-groupe de l'élève (ou de celui que l'enseignant règle), sinon rien.
+export function activiteVisible(meta, groupe, demi) {
   if (!meta.pret) return false;
   if (!groupe) return true;
-  const forcage = groupe.ouverts ? groupe.ouverts[meta.id] : undefined;
-  if (forcage === false) return false;
-  if (forcage === true) return true;
+  const f = forcage(meta, groupe, demi);
+  if (f === false) return false;
+  if (f === true) return true;
   if (ouvertureParProf(meta)) return false;   // pas encore cochée pour ce groupe
   const niveaux = meta.niveaux && meta.niveaux.length ? meta.niveaux : TOUS_NIVEAUX;
   if (!groupe.niveau) return true;            // groupe sans niveau : on n'exclut rien
@@ -79,11 +105,15 @@ export function activiteVisible(meta, groupe) {
 // l'enseignant voit TOUTES les activités à l'accueil, y compris celles qu'il faut encore valider
 // (`pret: false`) : c'est le seul moyen de les essayer dans le vrai site. Sa tuile dit alors ce
 // que voient les élèves, pour qu'il ne croie pas une séance ouverte alors qu'elle ne l'est pas.
-export function raisonCachee(meta, groupe) {
+// Une séance fermée à la classe mais ouverte à un demi-groupe le dit (« ouverte pour 1L1 seulement »).
+export function raisonCachee(meta, groupe, demi) {
   if (!meta.pret) return 'en préparation';
-  if (activiteVisible(meta, groupe)) return null;
-  const forcage = groupe && groupe.ouverts ? groupe.ouverts[meta.id] : undefined;
-  if (forcage === false) return 'fermée pour ce groupe';
+  if (activiteVisible(meta, groupe, demi)) return null;
+  if (!demi) {
+    const ouverts = demisDe(groupe).filter((d) => activiteVisible(meta, groupe, d.id)).map((d) => d.nom);
+    if (ouverts.length) return `ouverte pour ${ouverts.join(', ')} seulement`;
+  }
+  if (forcage(meta, groupe, demi) === false) return 'fermée pour ce groupe';
   return ouvertureParProf(meta) ? 'pas encore ouverte à ce groupe' : 'hors niveau du groupe';
 }
 

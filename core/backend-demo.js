@@ -339,6 +339,16 @@ export function creerBackendDemo() {
       const k = `${chemin}/meta`;
       ecrire(k, { ...lire(k, {}), ...patch }); publier(k);
     },
+    // Efface une base partagée entière (tables et meta) : sert à retirer un demi-groupe.
+    // Le « / » final ne laisse pas `magasin~d1` emporter `magasin~d10`.
+    async effacerJeu(chemin) {
+      try {
+        Object.keys(localStorage).filter((k) => k.startsWith(`${P}${chemin}/`)).forEach((k) => {
+          localStorage.removeItem(k);
+          publier(k.slice(P.length));
+        });
+      } catch (e) {}
+    },
     fermerJeux() { /* rien à fermer en démo */ },
   };
 }

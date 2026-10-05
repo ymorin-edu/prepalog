@@ -491,6 +491,12 @@ export async function creerBackendFirebase() {
       ouvrirRt();
       await DB.update(DB.ref(rt, `${chemin}/meta`), patch);
     },
+    // Efface une base partagée entière (tables et meta) : sert à retirer un demi-groupe.
+    // Les règles le permettent à l'enseignant du groupe (`.write` sur `jeux/{gid}`).
+    async effacerJeu(chemin) {
+      ouvrirRt();
+      await DB.remove(DB.ref(rt, chemin));
+    },
 
     fermerJeux() {
       ecouteurs.forEach((stop) => { try { stop(); } catch (e) {} });

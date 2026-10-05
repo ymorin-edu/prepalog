@@ -23,7 +23,8 @@ const BLOCS = ['socle', 'spartoo', 'groupes', 'dependances', 'transport', 'boost
   'cdiscount', 'picard', 'tableur-export', 'planning', 'entrepot', 'smoby', 'animation',
   'copie',
   'visibilite',
-  'amenagements'];
+  'amenagements',
+  'demi-groupes'];
 const PREREQUIS = { spartoo: ['socle'], groupes: ['socle'], smoby: ['socle'] };
 
 // Un fichier de bloc posé dans `outils/test/` mais oublié dans `BLOCS` ne tournerait jamais,

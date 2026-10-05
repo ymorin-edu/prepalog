@@ -13,10 +13,13 @@ import { B } from './backend.js';
 
 export const PORTEES = ['eleve', 'equipe', 'groupe', 'commun'];
 
-function cheminDe(portee, aid, gid, eqId) {
+// `demi` : le demi-groupe de l'élève (brief MOTEUR-demi-groupes). Une base de classe y est
+// propre à chaque demi-groupe : `jeux/{gid}/{aid}~{demi}`. Le séparateur `~` ne se confond pas
+// avec `__` des équipes. Sans demi-groupe, la base de classe de toujours.
+export function cheminDe(portee, aid, gid, eqId, demi) {
   if (portee === 'commun') return `communs/${aid}`;
   if (portee === 'equipe') return `jeux/${gid}/${aid}__${eqId || 'eq0'}`;
-  return `jeux/${gid}/${aid}`;
+  return demi ? `jeux/${gid}/${aid}~${demi}` : `jeux/${gid}/${aid}`;
 }
 
 // ---------------------------------------------------------------- portée élève
@@ -129,11 +132,11 @@ function jeuPartage(portee, chemin, tables) {
 }
 
 // ----------------------------------------------------------------- fabrique
-export async function ouvrirJeu({ aid, portee, tables = {}, uid, gid, eqId }) {
+export async function ouvrirJeu({ aid, portee, tables = {}, uid, gid, eqId, demi }) {
   if (!PORTEES.includes(portee)) throw new Error(`Portée inconnue : ${portee}`);
   const jeu = portee === 'eleve'
     ? jeuPrive(aid, uid, tables)
-    : jeuPartage(portee, cheminDe(portee, aid, gid, eqId), tables);
+    : jeuPartage(portee, cheminDe(portee, aid, gid, eqId, demi), tables);
   jeu.tables = tables;
   return jeu.ouvrir();
 }

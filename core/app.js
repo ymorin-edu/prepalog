@@ -3,7 +3,7 @@
 import { demarrerBackend, B } from './backend.js';
 import { CONFIG, DEMO } from './config.js';
 import { ech, toast, entete, brancherEntete, messageErreur } from './ui.js';
-import { activiteVisible, raisonCachee, courtNiveau, libelleNiveaux } from './niveaux.js';
+import { activiteVisible, raisonCachee, courtNiveau, libelleNiveaux, demiDe } from './niveaux.js';
 import { chargerActivites, activite, RUBRIQUES, ICONES, activitesDeRubrique, entreprisesDe, intentionDe } from '../activites/index.js';
 import { ouvrirJeu } from './store.js';
 import { rendreEspaceProf } from './prof.js';
@@ -196,7 +196,9 @@ async function vueAccueil() {
   // Le niveau du groupe décide, sauf forçage explicite par l'enseignant.
   // L'ENSEIGNANT voit tout (02/10/2026) : les séances en préparation, fermées ou d'un autre
   // niveau gardent leur tuile chez lui, avec une étiquette qui dit ce que voient les élèves.
-  const visibles = mods.filter((m) => estProf || activiteVisible(m.meta, groupe));
+  // Un élève d'un demi-groupe suit les réglages de son demi-groupe là où il en a (MOTEUR-demi-groupes).
+  const demi = estProf ? null : demiDe(groupe, profil.uid);
+  const visibles = mods.filter((m) => estProf || activiteVisible(m.meta, groupe, demi));
   const cachee = (m) => (estProf ? raisonCachee(m.meta, groupe) : null);
 
   const rub = rubriqueActive ? RUBRIQUES.find((r) => r.id === rubriqueActive) : null;
@@ -387,6 +389,8 @@ async function vueActivite(aid, avant) {
     aid: m.meta.jeuId || aid, portee: m.meta.portee, tables: m.meta.tables || {},
     uid: profil.uid, gid: groupeActif,
     eqId: objGroupe?.equipes?.[profil.uid],
+    // Base de classe : une par demi-groupe ; l'élève sans demi-groupe (et l'enseignant) ont celle de la classe.
+    demi: demiDe(objGroupe, profil.uid),
   });
 
   // Reprise demandée par l'enseignant pour un élève bloqué (espace enseignant > Suivi).

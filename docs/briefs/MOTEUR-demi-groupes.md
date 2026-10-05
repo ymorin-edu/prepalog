@@ -6,7 +6,7 @@
 > Lis docs/EN-COURS.md puis implémente le brief docs/briefs/MOTEUR-demi-groupes.md. Annonce la durée et dis-moi avant de coder si tu vois un point qui contredit le code.
 > ```
 
-**Statut** : à implémenter
+**Statut** : livré (06/10/2026)
 **Date du brief** : 05/10/2026
 **Modèle** : Opus (touche `core/app.js` et la visibilité des séances pour les élèves).
 **Durée estimée par Cowork** : 3 à 4 h, dont la moitié en tests (ouverture et bases partagées, élève par élève).
@@ -115,3 +115,44 @@ exporté porte le demi-groupe (`suivi-1L-1L1.csv`). Les résultats ne bougent pa
 
 ## 6. Compte rendu (à remplir par Claude Code)
 
+**Livré le 06/10/2026** (Claude Code, Opus). Bloc de tests `demi-groupes` : 12 cas, éprouvés dans les deux sens
+(priorité, chemin des bases, filtre du suivi, effacement au retrait : chaque sabotage fait tomber au moins un cas).
+
+Ce qui a été fait, conforme au brief :
+
+- **Stockage** dans le document du groupe : `demis`, `demiDe`, `ouvertsDemi`. Id technique `d` + horodatage (jamais
+  réutilisé), nom libre (40 caractères au plus, unique dans la classe sans tenir compte des majuscules).
+- **Groupes** : panneau « Demi-groupes de <classe active> » (ajouter, renommer au changement, retirer). On règle les
+  demi-groupes de la classe **active** ; pour une autre classe, l'activer d'abord.
+- **Comptes élèves** : colonne « Demi-groupe » (seulement si la classe en a), enregistrée sans redessiner, refus = valeur
+  remise ; avis « N élèves sans demi-groupe » mis à jour en direct ; colonne dans l'export de la liste ; supprimer un
+  élève retire aussi son affectation (rien d'invisible dans le groupe).
+- **Visibilité** (`core/niveaux.js`) : `forcage(meta, groupe, demi)` applique la priorité demi-groupe → classe → niveau /
+  `ouverture: 'prof'`. Une affectation à un demi-groupe disparu ne compte pas (l'élève suit la classe).
+- **Conduite de séance** : sélecteur « Réglages pour », étiquettes « comme la classe » / « réglé pour 1L1 » + bouton
+  « revenir au réglage de la classe » (supprime la clé). Sous « Toute la classe », une étiquette dit quel demi-groupe
+  contredit la ligne (« ouverte pour 1L2 »). Semer / Geler / Réinitialiser agissent sur la base du demi-groupe choisi.
+- **Accueil de l'enseignant** : une séance fermée à la classe mais ouverte à un demi-groupe dit « ouverte pour 1L2
+  seulement ».
+- **Bases** : `jeux/{gid}/{aid}~{demi}` ; élève sans demi-groupe et enseignant sous « Toute la classe » = base de classe.
+  Retirer un demi-groupe efface ses bases (nouvelle fonction `B.effacerJeu`, dans les deux backends) **avant** de
+  nettoyer le groupe : un effacement interrompu laisse le demi-groupe en place, on peut recommencer.
+- **Suivi, Compétences, exports** : sélecteur « Élèves : » ; fichiers `suivi-<classe>-<demi>.csv`,
+  `competences-<classe>-<demi>.csv`. Sous un demi-groupe, « Ramasser les copies » ne ramasse que ses élèves (l'autre
+  moitié peut encore être en train de composer).
+
+Décisions prises en route (reportées dans `docs/decisions.md`) :
+
+1. **Un seul choix de demi-groupe pour Suivi, Compétences et Conduite de séance** : l'enseignant qui a 1L1 devant lui
+   le choisit une fois ; il revient à « Toute la classe » quand on change de classe active.
+2. **Ramassage des copies filtré** par le demi-groupe choisi.
+3. Correctif au passage : Semer / Geler / Réinitialiser tiennent compte de `jeuId` (comme l'élève). Sans effet
+   aujourd'hui (ACT-1 Magasin n'en a pas).
+
+Vérifié : règles Firebase **inchangées** (l'enseignant met déjà à jour tout le document du groupe et a l'écriture sur
+`jeux/{gid}` ; `~` est permis dans une clé RTDB) — rien à publier dans la console. Non couvert par la suite : le mode réel
+(Firestore/RTDB), comme toujours ; `effacerJeu` en mode réel est un `remove()` sur un chemin que les règles ouvrent déjà
+à l'enseignant.
+
+Limite connue (acceptée par le brief) : un élève de 1L1 peut techniquement lire la base de 1L2 (même classe, même droit
+de lecture sur `jeux/{gid}`), comme entre équipes. Seule ACT-1 Magasin a aujourd'hui une base de classe.

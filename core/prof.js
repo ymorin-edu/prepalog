@@ -6,8 +6,9 @@ import { ech, toast, confirmer } from './ui.js';
 import { AISANCES, amenagements } from './amenagements.js';
 import { seancesDepuis } from './parcours.js';
 import { chargerActivites, activite, entreprisesDe } from '../activites/index.js';
-import { versCSV, telecharger, ouvrirJeu } from './store.js';
-import { NIVEAUX, libelleNiveau, courtNiveau, libelleNiveaux, activiteVisible, horsNiveau, ouvertureParProf } from './niveaux.js';
+import { versCSV, telecharger, ouvrirJeu, cheminDe } from './store.js';
+import { NIVEAUX, libelleNiveau, courtNiveau, libelleNiveaux, activiteVisible, horsNiveau, ouvertureParProf,
+  demisDe, nomDemi, forcage } from './niveaux.js';
 import { BAREME_AFFICHE, noteSur20, noteConvertie, formaterNote } from './notes.js';
 import { estCopie, estRendue, libelleRendu, ramasser, rouvrir, baseDeLEleve } from './copie.js';
 import { TEMPS, COEFS_DEFAUT, coefsDuGroupe, seancesParCompetence, seancesParSpecialite, moyenneCompetence } from './competences.js';
@@ -20,9 +21,35 @@ export async function rendreEspaceProf(hote, ctx) {
   let gidActif = ctx.groupeActif || groupes[0]?.id || null;
   let dernierLot = null;   // résultat de la dernière création de comptes, conservé à l'affichage
   let sansGroupe = [];     // élèves rattachés à aucun groupe — invisibles partout ailleurs
+  // Demi-groupe choisi (brief MOTEUR-demi-groupes) : '' = toute la classe. Un seul choix pour
+  // Suivi, Compétences et Conduite de séance : l'enseignant qui a 1L1 devant lui le règle une fois.
+  let demiActif = '';
 
   // Le groupe actif est partagé avec l'accueil : l'y remonter à chaque changement.
-  function activer(gid) { gidActif = gid; if (ctx.setGroupe) ctx.setGroupe(gid); }
+  function activer(gid) { if (gid !== gidActif) demiActif = ''; gidActif = gid; if (ctx.setGroupe) ctx.setGroupe(gid); }
+
+  // Le sélecteur « Toute la classe / 1L1 / 1L2 », absent d'une classe sans demi-groupes.
+  function choixDemi(g, libelle) {
+    const demis = demisDe(g);
+    if (!demis.length) return '';
+    return `<label class="rangee" style="gap:6px">${ech(libelle)}
+      <select data-choix-demi style="width:auto">
+        <option value=""${demiActif ? '' : ' selected'}>Toute la classe</option>
+        ${demis.map((d) => `<option value="${ech(d.id)}"${d.id === demiActif ? ' selected' : ''}>${ech(d.nom)}</option>`).join('')}
+      </select></label>`;
+  }
+  function brancherChoixDemi(z) {
+    const s = z.querySelector('[data-choix-demi]');
+    s?.addEventListener('change', async () => {
+      const auClavier = s.matches(':focus-visible');
+      demiActif = s.value;
+      await dessiner();
+      if (auClavier) hote.querySelector('[data-choix-demi]')?.focus();
+    });
+  }
+  // Le demi-groupe ne fait que filtrer : les résultats restent rangés par classe.
+  const dansDemi = (g, e) => !demiActif || (g.demiDe || {})[e.uid] === demiActif;
+  const suffixeDemi = (g) => (demiActif ? '-' + nomDemi(g, demiActif).replace(/[^\p{L}\p{N}_-]+/gu, '-') : '');
   activer(gidActif);
 
   // Relue à l'ouverture de l'espace et après chaque action qui peut en créer ou en défaire
@@ -38,6 +65,7 @@ export async function rendreEspaceProf(hote, ctx) {
 
   async function dessiner() {
     const g = groupes.find((x) => x.id === gidActif) || null;
+    if (demiActif && !demisDe(g).some((d) => d.id === demiActif)) demiActif = '';
     hote.innerHTML = `
       <button class="lien-accueil" id="btnRetour">← ACCUEIL</button>
       <h1>Espace enseignant</h1>
@@ -214,6 +242,7 @@ export async function rendreEspaceProf(hote, ctx) {
 
   // ------------------------------------------------------------------ groupes
   async function vueGroupes(z) {
+    const gActif = groupes.find((x) => x.id === gidActif) || null;
     z.innerHTML = `
       ${sansGroupe.length ? `<div class="avis avis-err" style="margin-bottom:14px">
         <strong>${sansGroupe.length} élève${sansGroupe.length > 1 ? 's ne sont rattachés' : ' n\'est rattaché'} à aucun groupe.</strong>
@@ -253,7 +282,94 @@ export async function rendreEspaceProf(hote, ctx) {
             </tr>`).join('')}
           </tbody></table>`}
         </section>
-      </div>`;
+      </div>
+      ${gActif ? `
+      <section class="panneau" id="panDemis" style="margin-top:16px">
+        <h2>Demi-groupes de ${ech(gActif.nom)}</h2>
+        <p class="note">Pour une classe coupée en deux (ou plus) qui ne travaille pas toujours en même temps.
+          Le nom est libre et se change à tout moment sans rien casser. Les élèves se répartissent dans
+          « Comptes élèves » ; le suivi se filtre, une séance s'ouvre et une base de classe se sépare
+          par demi-groupe. Pour une autre classe, activez-la d'abord.</p>
+        ${demisDe(gActif).map((d) => `<div class="rangee" style="margin-bottom:8px" data-demi="${ech(d.id)}">
+          <input data-renommer="${ech(d.id)}" value="${ech(d.nom)}" style="width:12em" aria-label="Nom du demi-groupe ${ech(d.nom)}">
+          <button class="btn btn-s" data-retirer-demi="${ech(d.id)}" style="color:var(--rouge)">Retirer</button>
+        </div>`).join('')}
+        <div class="rangee">
+          <input id="demiNouveau" placeholder="ex : 1L1" style="width:12em" aria-label="Nom du nouveau demi-groupe">
+          <button class="btn btn-s" id="btnAjoutDemi">Ajouter un demi-groupe</button>
+        </div>
+      </section>` : ''}`;
+
+    // ---- demi-groupes (brief MOTEUR-demi-groupes). L'id est technique et ne change jamais :
+    // c'est lui qui est écrit dans les affectations, les ouvertures et le chemin des bases.
+    const nomLibre = (nom, sauf) => !demisDe(gActif).some((d) => d.id !== sauf && d.nom.toLowerCase() === nom.toLowerCase());
+    const ajouterDemi = async () => {
+      const inp = z.querySelector('#demiNouveau');
+      const nom = inp.value.trim();
+      if (!nom) return toast('Donnez un nom au demi-groupe.');
+      if (nom.length > 40) return toast('Nom trop long (40 caractères au plus).');
+      if (!nomLibre(nom)) return toast('Cette classe a déjà un demi-groupe de ce nom.');
+      const demis = [...demisDe(gActif), { id: 'd' + Date.now().toString(36), nom }];
+      try {
+        await B.majGroupe(gActif.id, { demis });
+        gActif.demis = demis;
+        toast(`Demi-groupe ${nom} ajouté.`);
+        await dessiner();
+        hote.querySelector('#demiNouveau')?.focus();
+      } catch (e) { toast("Le demi-groupe n'a pas pu être ajouté."); }
+    };
+    z.querySelector('#btnAjoutDemi')?.addEventListener('click', ajouterDemi);
+    z.querySelector('#demiNouveau')?.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') ajouterDemi(); });
+
+    z.querySelectorAll('[data-renommer]').forEach((inp) => inp.addEventListener('change', async () => {
+      const id = inp.dataset.renommer;
+      const avant = nomDemi(gActif, id);
+      const nom = inp.value.trim();
+      if (!nom || nom.length > 40 || !nomLibre(nom, id)) {
+        inp.value = avant;
+        return toast(!nom ? 'Un demi-groupe garde un nom.' : nom.length > 40 ? 'Nom trop long (40 caractères au plus).'
+          : 'Cette classe a déjà un demi-groupe de ce nom.');
+      }
+      if (nom === avant) return;
+      const demis = demisDe(gActif).map((d) => (d.id === id ? { ...d, nom } : d));
+      try {
+        await B.majGroupe(gActif.id, { demis });
+        gActif.demis = demis;
+        inp.value = nom;
+        toast(`${avant} s'appelle maintenant ${nom}.`);
+      } catch (e) { inp.value = avant; toast("Le nom n'a pas pu être enregistré."); }
+    }));
+
+    // Retirer un demi-groupe ne laisse rien d'invisible derrière lui : ses bases de classe sont
+    // effacées, ses ouvertures et ses affectations retirées. Les bases d'abord : si l'effacement
+    // s'arrête en route, le demi-groupe est encore là et l'on peut recommencer.
+    z.querySelectorAll('[data-retirer-demi]').forEach((b) => b.addEventListener('click', async () => {
+      const id = b.dataset.retirerDemi;
+      const nom = nomDemi(gActif, id);
+      const eleves = (await B.elevesDuGroupe(gActif.id)).filter((e) => (gActif.demiDe || {})[e.uid] === id);
+      const bases = [...new Map((await chargerActivites()).map((x) => x.meta)
+        .filter((m) => m.portee === 'groupe').map((m) => [m.jeuId || m.id, m])).values()];
+      const noms = eleves.map((e) => `${e.prenom} ${e.nom}`);
+      if (!confirmer(`Retirer le demi-groupe « ${nom} » de ${gActif.nom} ?\n\n`
+        + (eleves.length
+          ? `${eleves.length} élève${eleves.length > 1 ? 's repassent' : ' repasse'} sans demi-groupe (il${eleves.length > 1 ? 's suivront' : ' suivra'} la classe) : `
+            + (noms.length <= 12 ? noms.join(', ') : `${noms.slice(0, 12).join(', ')}… et ${noms.length - 12} autres`) + '.\n\n'
+          : 'Aucun élève n\'y est affecté.\n\n')
+        + (bases.length ? `Seront effacées définitivement : ses bases partagées (${bases.map((m) => m.code || m.id).join(', ')}) `
+          + `et ses réglages d'ouverture.` : `Ses réglages d'ouverture seront effacés.`)
+        + `\n\nLes résultats des élèves ne bougent pas.`)) return;
+      try {
+        for (const m of bases) await B.effacerJeu(cheminDe('groupe', m.jeuId || m.id, gActif.id, null, id));
+        const demis = demisDe(gActif).filter((d) => d.id !== id);
+        const demiDe = Object.fromEntries(Object.entries(gActif.demiDe || {}).filter(([, d]) => d !== id));
+        const ouvertsDemi = { ...(gActif.ouvertsDemi || {}) };
+        delete ouvertsDemi[id];
+        await B.majGroupe(gActif.id, { demis, demiDe, ouvertsDemi });
+        Object.assign(gActif, { demis, demiDe, ouvertsDemi });
+        toast(`Demi-groupe ${nom} retiré.`);
+        await dessiner();
+      } catch (e) { toast('Le demi-groupe n\'a pas pu être retiré entièrement : recommencez.'); }
+    }));
 
     z.querySelector('#btnVoirOrphelins')?.addEventListener('click', () => { onglet = 'orphelins'; dessiner(); });
 
@@ -332,6 +448,14 @@ export async function rendreEspaceProf(hote, ctx) {
   // ------------------------------------------------------------------ comptes
   async function vueComptes(z, g) {
     const eleves = await B.elevesDuGroupe(g.id);
+    // Demi-groupes : la colonne n'apparaît que si la classe en a.
+    const demis = demisDe(g);
+    const demiEleve = (uid) => { const d = (g.demiDe || {})[uid]; return demis.some((x) => x.id === d) ? d : ''; };
+    const sansDemi = () => eleves.filter((e) => !demiEleve(e.uid)).length;
+    const avisSansDemi = () => {
+      const n = sansDemi();
+      return n ? `${n} élève${n > 1 ? 's' : ''} sans demi-groupe : ${n > 1 ? 'ils suivent' : 'il suit'} les réglages de la classe et sa base partagée.` : '';
+    };
     z.innerHTML = `
       <div class="grille grille-2">
         <section class="panneau">
@@ -355,11 +479,16 @@ export async function rendreEspaceProf(hote, ctx) {
             <strong>${eleves.length} élève${eleves.length > 1 ? 's' : ''} dans ${ech(g.nom)}</strong>
             <span class="pousse"><button class="btn btn-s" id="btnCsvEleves">Exporter la liste</button></span>
           </div>
+          ${demis.length && eleves.length ? `<p class="note" id="avisSansDemi"${sansDemi() ? '' : ' hidden'}>${ech(avisSansDemi())}</p>` : ''}
           ${eleves.length === 0 ? `<div class="vide">Aucun élève.</div>` : `
           <table><thead><tr><th>Nom</th><th>Prénom</th><th>Matricule</th><th>Code</th>
-            <th>Niveau</th><th>Tiers-temps</th><th></th></tr></thead><tbody>
+            ${demis.length ? '<th>Demi-groupe</th>' : ''}<th>Niveau</th><th>Tiers-temps</th><th></th></tr></thead><tbody>
             ${eleves.map((e) => { const a = amenagements(e); return `<tr><td>${ech(e.nom)}</td><td>${ech(e.prenom)}</td>
               <td class="mono">${ech(e.matricule)}</td><td class="mono">${ech(e.code || '—')}</td>
+              ${demis.length ? `<td><select data-demi-eleve="${ech(e.uid)}" style="width:auto;min-width:6em" aria-label="Demi-groupe de ${ech(e.prenom)} ${ech(e.nom)}">
+                <option value="">—</option>
+                ${demis.map((d) => `<option value="${ech(d.id)}"${demiEleve(e.uid) === d.id ? ' selected' : ''}>${ech(d.nom)}</option>`).join('')}
+              </select></td>` : ''}
               <td><select data-aisance="${ech(e.uid)}" style="width:auto;min-width:8.5em" aria-label="Niveau de ${ech(e.prenom)} ${ech(e.nom)}">
                 ${AISANCES.map((x) => `<option value="${x.id}"${a.aisance === x.id ? ' selected' : ''}>${x.label}</option>`).join('')}
               </select></td>
@@ -375,7 +504,11 @@ export async function rendreEspaceProf(hote, ctx) {
              complets dans les séances qui le prévoient ; les autres restent identiques.
              <strong>Tiers-temps</strong> : seuils de temps × 4/3 dans les épreuves chronométrées.
              Le tiers-temps ne s'affiche qu'ici et chez l'élève concerné ; il n'est ni exporté
-             ni visible dans le suivi de classe. Pris en compte à la prochaine séance ouverte.</p>`}
+             ni visible dans le suivi de classe. Pris en compte à la prochaine séance ouverte.</p>
+          ${demis.length ? `<p class="note"><strong>Demi-groupe</strong> : décide des séances ouvertes à l'élève
+             (« Conduite de séance ») et de la base partagée où il travaille. Changer un élève de demi-groupe
+             ne touche pas à ses résultats ; il passe sur la base partagée de son nouveau demi-groupe à la
+             prochaine séance ouverte.</p>` : ''}`}
         </section>
       </div>`;
 
@@ -417,6 +550,27 @@ export async function rendreEspaceProf(hote, ctx) {
       regler('tiersTemps', c.dataset.tiers, c.checked, () => { c.checked = !c.checked; });
     }));
 
+    // Demi-groupe : enregistré au changement, sans redessiner, comme le niveau. Les changements
+    // passent l'un après l'autre (file) : deux listes changées coup sur coup ne s'écrasent pas.
+    let file = Promise.resolve();
+    z.querySelectorAll('[data-demi-eleve]').forEach((s) => s.addEventListener('change', () => {
+      const uid = s.dataset.demiEleve;
+      const el = eleves.find((x) => x.uid === uid);
+      const valeur = s.value;
+      file = file.then(async () => {
+        const avant = demiEleve(uid);
+        const demiDe = { ...(g.demiDe || {}) };
+        if (valeur) demiDe[uid] = valeur; else delete demiDe[uid];
+        try {
+          await B.majGroupe(g.id, { demiDe });
+          g.demiDe = demiDe;
+          toast(`${el.prenom} ${el.nom} : ${valeur ? nomDemi(g, valeur) : 'sans demi-groupe'}.`);
+        } catch (e) { s.value = avant; toast('Demi-groupe non enregistré.'); }
+        const avis = z.querySelector('#avisSansDemi');
+        if (avis) { avis.textContent = avisSansDemi(); avis.hidden = !sansDemi(); }
+      });
+    }));
+
     z.querySelectorAll('[data-suppre]').forEach((b) => b.addEventListener('click', async () => {
       const el = eleves.find((x) => x.uid === b.dataset.suppre);
       if (!el) return;
@@ -428,6 +582,12 @@ export async function rendreEspaceProf(hote, ctx) {
         + `console Firebase.`)) return;
       try {
         const r = await B.supprimerEleve(el.uid);
+        // Son affectation à un demi-groupe part avec lui : rien d'invisible dans le groupe.
+        if (g.demiDe && el.uid in g.demiDe) {
+          const demiDe = { ...g.demiDe };
+          delete demiDe[el.uid];
+          try { await B.majGroupe(g.id, { demiDe }); g.demiDe = demiDe; } catch (e) { /* une clé orpheline ne gêne rien */ }
+        }
         toast(r && r.compte
           ? 'Élève et compte supprimés.'
           : 'Données supprimées. Le compte de connexion subsiste : retirez-le depuis la console Firebase.');
@@ -436,8 +596,10 @@ export async function rendreEspaceProf(hote, ctx) {
     }));
 
     z.querySelector('#btnCsvEleves').addEventListener('click', () => telecharger(`eleves-${g.id}.csv`,
-      versCSV(eleves, [{ cle: 'nom', label: 'Nom' }, { cle: 'prenom', label: 'Prénom' },
-        { cle: 'matricule', label: 'Matricule' }, { cle: 'code', label: 'Code' }])));
+      versCSV(eleves.map((e) => ({ ...e, demi: nomDemi(g, demiEleve(e.uid)) })),
+        [{ cle: 'nom', label: 'Nom' }, { cle: 'prenom', label: 'Prénom' },
+          { cle: 'matricule', label: 'Matricule' }, { cle: 'code', label: 'Code' },
+          ...(demis.length ? [{ cle: 'demi', label: 'Demi-groupe' }] : [])])));
   }
 
   // -------------------------------------------------------- élèves sans groupe
@@ -525,9 +687,12 @@ export async function rendreEspaceProf(hote, ctx) {
   // -------------------------------------------------------------------- suivi
   async function vueSuivi(z, g) {
     z.innerHTML = `<div class="panneau"><div class="vide">Chargement du suivi…</div></div>`;
-    const [eleves, travaux, mods] = await Promise.all([
+    const [tous, travaux, mods] = await Promise.all([
       B.elevesDuGroupe(g.id), B.suivi(g.id), chargerActivites(),
     ]);
+    // Sous un demi-groupe, seuls ses élèves : tableau, repérage, ramassage des copies et export.
+    const eleves = tous.filter((e) => dansDemi(g, e));
+    const deDemi = demiActif ? ` — ${nomDemi(g, demiActif)}` : '';
     // Seules les activités notées apparaissent : c'est le barème qui les y fait entrer.
     const notees = mods.map((m) => m.meta).filter((m) => m.bareme);
     // Celles que le noyau ne sait pas corriger (scénario sur Padlet, oral, dossier
@@ -666,7 +831,8 @@ export async function rendreEspaceProf(hote, ctx) {
     z.innerHTML = `
       <section class="panneau">
         <div class="rangee" style="margin-bottom:12px">
-          <strong>Suivi de ${ech(g.nom)}</strong>
+          <strong>Suivi de ${ech(g.nom + deDemi)}</strong>
+          ${choixDemi(g, 'Élèves :')}
           <span class="pousse"><button class="btn btn-s" id="btnCsvSuivi">Exporter en CSV</button></span>
         </div>
         ${notees.length === 0 ? `<div class="vide">Aucune activité notée pour l'instant.</div>` : `
@@ -702,7 +868,7 @@ export async function rendreEspaceProf(hote, ctx) {
             l'élève l'a laissée, puis figée. La croix « × » d'une copie la rouvre (note effacée,
             l'élève reprend son travail).</p>
           <div class="rangee">${notees.filter(estCopie).map((m) => `
-            <button class="btn btn-s" data-copie-tout="${ech(m.id)}">Ramasser les copies de ${ech(m.code)}</button>`).join('')}
+            <button class="btn btn-s" data-copie-tout="${ech(m.id)}">Ramasser les copies de ${ech(m.code + (demiActif ? ` (${nomDemi(g, demiActif)})` : ''))}</button>`).join('')}
           </div>
         </div>`}
       </section>
@@ -727,6 +893,8 @@ export async function rendreEspaceProf(hote, ctx) {
             title="Ouvre la séance à cet élève sans qu'il ait validé la précédente">Débloquer cette séance</button>` : ''}
         </div>
       </section>`}`;
+
+    brancherChoixDemi(z);
 
     z.querySelectorAll('.note-saisie').forEach((inp) => {
       // Dernière valeur acceptée : c'est elle qu'on restaure si la saisie est refusée,
@@ -886,7 +1054,7 @@ export async function rendreEspaceProf(hote, ctx) {
         });
         return o;
       });
-      telecharger(`suivi-${g.id}.csv`, versCSV(lignes, champs));
+      telecharger(`suivi-${g.id}${suffixeDemi(g)}.csv`, versCSV(lignes, champs));
     });
   }
 
@@ -896,9 +1064,11 @@ export async function rendreEspaceProf(hote, ctx) {
   // au-dessus dans les onglets, ne change pas : les jalons y restent des jalons.
   async function vueCompetences(z, g) {
     z.innerHTML = `<div class="panneau"><div class="vide">Chargement des compétences…</div></div>`;
-    const [eleves, travaux, mods] = await Promise.all([
+    const [tous, travaux, mods] = await Promise.all([
       B.elevesDuGroupe(g.id), B.suivi(g.id), chargerActivites(),
     ]);
+    const eleves = tous.filter((e) => dansDemi(g, e));
+    const deDemi = demiActif ? ` — ${nomDemi(g, demiActif)}` : '';
     const comps = seancesParCompetence(mods.map((m) => m.meta));
     // En 2de seulement : une moyenne par spécialité (logistique, transport, gestion), même calcul.
     const specs = g.niveau === '2de' ? seancesParSpecialite(mods.map((m) => m.meta)) : [];
@@ -938,11 +1108,12 @@ export async function rendreEspaceProf(hote, ctx) {
       </section>
       <section class="panneau">
         <div class="rangee" style="margin-bottom:12px">
-          <strong>Notes par compétence — ${ech(g.nom)}</strong>
+          <strong>Notes par compétence — ${ech(g.nom + deDemi)}</strong>
+          ${choixDemi(g, 'Élèves :')}
           <span class="pousse"><button class="btn btn-s" id="btnCsvComp">Exporter en CSV</button></span>
         </div>
         ${comps.length === 0 ? `<div class="vide">Aucune séance ne déclare encore de compétence.</div>`
-          : eleves.length === 0 ? `<div class="vide">Aucun élève dans ce groupe.</div>` : `
+          : eleves.length === 0 ? `<div class="vide">Aucun élève dans ${demiActif ? 'ce demi-groupe' : 'ce groupe'}.</div>` : `
         <div style="overflow:auto"><table id="tabComp">
           <thead><tr><th>Élève</th>${comps.map((c) => `
             <th title="${ech(c.libelle)}">${ech(c.code)}<span class="note"> /${BAREME_AFFICHE}</span></th>`).join('')}</tr></thead>
@@ -959,7 +1130,7 @@ export async function rendreEspaceProf(hote, ctx) {
       </section>
       ${specs.length && eleves.length ? `
       <section class="panneau" id="panSpe">
-        <strong>Moyennes par spécialité — ${ech(g.nom)}</strong>
+        <strong>Moyennes par spécialité — ${ech(g.nom + deDemi)}</strong>
         <div style="overflow:auto"><table id="tabSpe">
           <thead><tr><th>Élève</th>${specs.map((c) => `
             <th data-spe="${ech(c.code)}">${ech(c.libelle)}<span class="note"> /${BAREME_AFFICHE}</span></th>`).join('')}</tr></thead>
@@ -987,6 +1158,8 @@ export async function rendreEspaceProf(hote, ctx) {
         <p class="note">Les modules sans compétence (prise en main d'Excel, calculs commerciaux,
           quiz de calcul) restent dans le suivi de classe mais n'entrent dans aucune moyenne.</p>
       </section>`}`;
+
+    brancherChoixDemi(z);
 
     // ---- coefficients
     async function enregistrer(nouv) {
@@ -1035,7 +1208,7 @@ export async function rendreEspaceProf(hote, ctx) {
           moyenne: b.moyenne === null ? '' : formaterNote(b.moyenne),
         });
       }));
-      telecharger(`competences-${g.id}.csv`, versCSV(lignes, champs));
+      telecharger(`competences-${g.id}${suffixeDemi(g)}.csv`, versCSV(lignes, champs));
     });
   }
 
@@ -1047,9 +1220,23 @@ export async function rendreEspaceProf(hote, ctx) {
     const duNiveau = metas.filter((m) => !horsNiveau(m, g));
     const dAutresNiveaux = metas.filter((m) => horsNiveau(m, g));
 
+    // Demi-groupe choisi : ses réglages contredisent ceux de la classe, ligne par ligne.
+    const demi = demiActif || null;
+    const nomD = demi ? nomDemi(g, demi) : '';
+    const propreAuDemi = (m, d) => typeof g.ouvertsDemi?.[d]?.[m.id] === 'boolean';
     const ligneOuverture = (m) => {
-      const visible = activiteVisible(m, g);
-      const force = g.ouverts?.[m.id];
+      const visible = activiteVisible(m, g, demi);
+      const force = forcage(m, g, demi);
+      // D'où vient l'état de la ligne : sous un demi-groupe, « comme la classe » ou « réglé pour 1L1 »
+      // (et le retour au réglage de la classe) ; sous « Toute la classe », les demi-groupes qui la contredisent.
+      const origine = demi
+        ? (propreAuDemi(m, demi)
+          ? `<span class="etiq" data-origine="demi">réglé pour ${ech(nomD)}</span>
+             <button type="button" class="btn btn-s" data-comme-classe="${ech(m.id)}"
+               title="Effacer le réglage propre à ${ech(nomD)} : la séance suivra de nouveau la classe">revenir au réglage de la classe</button>`
+          : `<span class="note" data-origine="classe">· comme la classe</span>`)
+        : demisDe(g).filter((d) => propreAuDemi(m, d.id) && activiteVisible(m, g, d.id) !== visible)
+          .map((d) => `<span class="etiq" data-contredit="${ech(d.id)}">${activiteVisible(m, g, d.id) ? 'ouverte' : 'fermée'} pour ${ech(d.nom)}</span>`).join('');
       // Une séance en préparation (`pret: false`) reste cachée aux élèves quoi qu'on coche : la
       // case est donc grisée. Avant le 02/10/2026 elle se laissait cocher, se redécochait aussitôt,
       // et un second clic enregistrait « fermée » sans que rien ne le montre — la séance restait
@@ -1067,6 +1254,7 @@ export async function rendreEspaceProf(hote, ctx) {
           ${prepa ? `<span class="etiq etiq-prepa" title="Cachée aux élèves tant qu'elle n'est pas validée (pret: false). Vous pouvez l'essayer depuis l'accueil.">en préparation</span>` : ''}
           ${!prepa && force === false ? `<span class="etiq" style="color:var(--terre)">fermée</span>` : ''}
           ${!prepa && force === undefined && ouvertureParProf(m) ? `<span class="etiq" data-a-ouvrir title="Cette séance ne s'ouvre aux élèves que quand vous la cochez pour ce groupe.">à ouvrir : cochez-la</span>` : ''}
+          ${prepa ? '' : origine}
         </span>
       </label>`;
     };
@@ -1074,10 +1262,14 @@ export async function rendreEspaceProf(hote, ctx) {
     z.innerHTML = `
       <section class="panneau">
         <h2>Ouverture des activités</h2>
+        ${choixDemi(g, 'Réglages pour :')}
         <p class="note">Groupe <strong>${ech(g.nom)}</strong>, niveau ${ech(libelleNiveau(g.niveau))}.
           Les activités de ce niveau sont proposées d'office ; vous pouvez en fermer une, ou en
           ouvrir une d'un autre niveau. Celles marquées « à ouvrir » restent fermées aux élèves
           tant que vous ne les cochez pas.</p>
+        ${demi ? `<p class="note">Vous réglez <strong>${ech(nomD)}</strong> seulement. Une ligne « comme la classe »
+          suit le réglage de toute la classe ; la cocher ou la décocher la règle pour ${ech(nomD)} seul,
+          jusqu'à ce que vous reveniez au réglage de la classe. Les élèves sans demi-groupe suivent la classe.</p>` : ''}
 
         <h3 style="margin-top:18px">Niveau du groupe</h3>
         ${duNiveau.length === 0 ? `<div class="note">Aucune activité pour ce niveau.</div>`
@@ -1100,11 +1292,14 @@ export async function rendreEspaceProf(hote, ctx) {
         </div>
       </section>
       <section class="panneau">
-        <h2>Bases partagées</h2>
+        <h2>Bases partagées${demi ? ` — ${ech(nomD)}` : ''}</h2>
+        ${demi ? `<p class="note">Les bases de classe (portée groupe) ci-dessous sont celles de ${ech(nomD)} :
+          chaque demi-groupe a la sienne, les élèves sans demi-groupe gardent celle de la classe.</p>` : ''}
         ${partagees.length === 0 ? `<div class="vide">Aucune activité à base partagée.</div>` :
           partagees.map((m) => `<div class="rangee" style="padding:10px 0;border-bottom:1px solid var(--filet)">
             <span><span class="etiq">${ech(m.code || m.id)}</span> ${ech(m.titre)}
-              <span class="note">— portée ${ech(m.portee)}</span></span>
+              <span class="note">— portée ${ech(m.portee)}${m.portee === 'groupe' && demisDe(g).length
+                ? (demi ? `, base de ${ech(nomD)}` : ', base de la classe (élèves sans demi-groupe)') : ''}</span></span>
             <span class="pousse rangee">
               <button class="btn btn-s" data-semer="${ech(m.id)}">Semer le contenu de départ</button>
               <button class="btn btn-s" data-geler="${ech(m.id)}">Geler / dégeler</button>
@@ -1125,19 +1320,46 @@ export async function rendreEspaceProf(hote, ctx) {
       } catch (e) { toast("Le code n'a pas pu être enregistré."); }
     });
 
+    brancherChoixDemi(z);
+
+    // Sous un demi-groupe, la case écrit dans `ouvertsDemi[demi]` ; sinon dans `ouverts` (la classe).
     z.querySelectorAll('[data-ouvre]').forEach((c) => c.addEventListener('change', async () => {
-      const ouverts = { ...(g.ouverts || {}) };
-      ouverts[c.dataset.ouvre] = c.checked;
-      await B.majGroupe(g.id, { ouverts });
-      g.ouverts = ouverts;
-      groupes = await B.groupesDuProf(ctx.profil.uid);
-      toast(c.checked ? 'Activité ouverte.' : 'Activité fermée.');
+      try {
+        if (demi) {
+          const ouvertsDemi = { ...(g.ouvertsDemi || {}) };
+          ouvertsDemi[demi] = { ...(ouvertsDemi[demi] || {}), [c.dataset.ouvre]: c.checked };
+          await B.majGroupe(g.id, { ouvertsDemi });
+        } else {
+          const ouverts = { ...(g.ouverts || {}) };
+          ouverts[c.dataset.ouvre] = c.checked;
+          await B.majGroupe(g.id, { ouverts });
+        }
+        groupes = await B.groupesDuProf(ctx.profil.uid);
+        toast(`${c.checked ? 'Activité ouverte' : 'Activité fermée'}${demi ? ` pour ${nomD}` : ''}.`);
+      } catch (e) { toast("Le réglage n'a pas pu être enregistré."); }
+      dessiner();
+    }));
+    // Revenir au réglage de la classe : la clé du demi-groupe est SUPPRIMÉE, jamais mise à false.
+    z.querySelectorAll('[data-comme-classe]').forEach((b) => b.addEventListener('click', async (ev) => {
+      ev.preventDefault();
+      const ouvertsDemi = { ...(g.ouvertsDemi || {}) };
+      const propre = { ...(ouvertsDemi[demi] || {}) };
+      delete propre[b.dataset.commeClasse];
+      if (Object.keys(propre).length) ouvertsDemi[demi] = propre; else delete ouvertsDemi[demi];
+      try {
+        await B.majGroupe(g.id, { ouvertsDemi });
+        groupes = await B.groupesDuProf(ctx.profil.uid);
+        toast(`${nomD} suit de nouveau la classe pour cette activité.`);
+      } catch (e) { toast("Le réglage n'a pas pu être enregistré."); }
       dessiner();
     }));
 
+    // La base sur laquelle agissent Semer / Geler / Réinitialiser : celle du demi-groupe choisi
+    // pour une base de classe. `jeuId` comme chez l'élève : plusieurs séances peuvent partager une base.
     async function jeuDe(aid) {
       const m = await activite(aid);
-      return ouvrirJeu({ aid, portee: m.meta.portee, tables: m.meta.tables || {}, uid: ctx.profil.uid, gid: g.id });
+      return ouvrirJeu({ aid: m.meta.jeuId || aid, portee: m.meta.portee, tables: m.meta.tables || {},
+        uid: ctx.profil.uid, gid: g.id, demi: m.meta.portee === 'groupe' ? demi : null });
     }
 
     z.querySelectorAll('[data-semer]').forEach((b) => b.addEventListener('click', async () => {
@@ -1160,7 +1382,7 @@ export async function rendreEspaceProf(hote, ctx) {
 
     z.querySelectorAll('[data-raz]').forEach((b) => b.addEventListener('click', async () => {
       const m = await activite(b.dataset.raz);
-      if (!confirmer(`Vider toutes les tables de « ${m.meta.titre} » pour ce groupe ?`)) return;
+      if (!confirmer(`Vider toutes les tables de « ${m.meta.titre} » pour ${demi && m.meta.portee === 'groupe' ? `le demi-groupe ${nomD}` : 'ce groupe'} ?`)) return;
       const jeu = await jeuDe(b.dataset.raz);
       for (const t of Object.keys(m.meta.tables || {})) await jeu.vider(t);
       jeu.fermer();
