@@ -129,6 +129,11 @@ await v('Inventaire : console sur un catalogue simple (.getstock, .getlocation, 
   vrai(h.includes('Référence article : RAM-A4-80') && !h.includes('NK-AM270'), '.help : ' + h.slice(0, 160));
 });
 
+await v('Blocage qualité : l’exemple du champ « Référence article » vient du catalogue de la séance (plus de référence Spartoo)', async () => {
+  await ouvrir('blocage');
+  egal(await pg.$eval(`${Z} #blRef`, (e) => e.placeholder), 'ex. RAM-A4-80', 'exemple');
+});
+
 /* ================================================================ l'écran et le blocage */
 
 await v('Inventaire : l\'entrée de menu n\'existe que si la séance déclare un inventaire', async () => {

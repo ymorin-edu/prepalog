@@ -159,6 +159,10 @@ export function creerEntreprise(U) {
   // Pour un tel catalogue (`catalogueSimple`, contenus/entreprise-commun.js), les colonnes
   // Couleur et Taille disparaissent partout ; rien ne change pour Spartoo.
   const SIMPLE = !!CATALOGUE.simple;
+  // Les exemples des champs et de l'aide de la console : une vraie référence du catalogue de la séance
+  // (05/10/2026 : une référence Spartoo écrite en dur s'affichait dans toutes les entreprises).
+  const REF_EX = VARIANTS.length ? VARIANTS[0].sku : '';
+  const MODELE_EX = VARIANTS.length ? VARIANTS[0].model.ref : '';
   const label = (v) => [v.model.brand, v.model.name].filter(Boolean).join(' ');
   const nomCouleur = (c) => (COLORS[c] ? COLORS[c][0] : '');
   const swatch = (c) => (COLORS[c] ? `<span class="teinte" style="background:${COLORS[c][1]}"></span>${ech(COLORS[c][0])}` : '');
@@ -1647,7 +1651,7 @@ export function creerEntreprise(U) {
                   <input id="blLot" class="mono" value="${ech(b.lot)}" placeholder="ex. LOT-XX-0000"
                     autocapitalize="characters" spellcheck="false"></div>
                 <div class="champ"><label for="blRef">Référence article</label>
-                  <input id="blRef" class="mono" value="${ech(b.ref)}" placeholder="ex. NK-AM270-NR-42"
+                  <input id="blRef" class="mono" value="${ech(b.ref)}" placeholder="${REF_EX ? `ex. ${ech(REF_EX)}` : 'référence de l’article'}"
                     autocapitalize="characters" spellcheck="false"></div>
                 <div class="champ"><label for="blQte">Quantité à bloquer</label>
                   <input id="blQte" type="number" min="1" step="1" value="${ech(b.qte)}" style="width:120px"></div>
@@ -2108,7 +2112,7 @@ export function creerEntreprise(U) {
 
       function resoudre(brut) {
         const ref = String(brut || '').toUpperCase().trim();
-        if (!ref) throw new Error('Il manque la référence. Exemple : .getstock NK-AM270-NR-42');
+        if (!ref) throw new Error(`Il manque la référence. Exemple : .getstock ${REF_EX || 'REF'}`);
         if (VM[ref]) return { v: VM[ref] };
         if (MM[ref]) return { m: MM[ref] };
         const part = VARIANTS.filter((v) => v.sku.indexOf(ref) === 0);
@@ -2150,7 +2154,7 @@ export function creerEntreprise(U) {
             .map((k) => [`<span class="mono">${ech(CMDS[k][0])}</span>`, ech(CMDS[k][1])]);
           const exemple = SIMPLE
             ? `Référence article : ${ech(VARIANTS[0] ? VARIANTS[0].sku : 'REF')}.`
-            : `Référence modèle : NK-AM270. Référence article : NK-AM270-NR-42 (modèle, couleur, ${ech(VOCAB.configWord)}).`;
+            : `Référence modèle : ${ech(MODELE_EX)}. Référence article : ${ech(REF_EX)} (modèle, couleur, ${ech(VOCAB.configWord)}).`;
           return `<div class="note">Les références ne tiennent pas compte des majuscules. ${exemple}</div>${tbl(['Commande', 'Effet'], lignes)}`;
         }],
         find: ['.find <texte>', 'Cherche un modèle par nom, marque ou catégorie', (a) => {
