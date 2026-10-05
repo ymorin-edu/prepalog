@@ -461,6 +461,10 @@ soit montrée ; côté élève, pas de saut en avant.
   faux, ordre du parcours libéré, questions lancées sans le bouton, toute zone juste, repère d'une image faux) → 10 cas
   tombent, chacun sur sa règle. Suite entière : voir le commit.
 - **Commits** : voir `git log` (« Plan d'entrepôt : mode visite… »).
+- **Ajout du 05/10/2026 (demande de Tristan)** : brique **`associer`** (plan à gauche avec les numéros d'une étape
+  `parcours`, sans titres ni trace ; une photo à la fois à droite ; clic sur le bon numéro = photo suivante, faux = message
+  et on recommence ; un jalon par photo, comme une question). ENT-5.3 passe à 9 étapes et 17 jalons. 1 cas de test ajouté,
+  les cas de visite du matin recalés sur la nouvelle numérotation ; sabotage éprouvé (tout numéro accepté → le cas tombe).
 - **Reste ouvert** : (1) le **nombre de clics** pour retrouver l'emplacement est dans la base et dans le détail de la note
   (`detail.visite`), mais pas encore dans une colonne du repérage de l'enseignant (le « du premier coup » de ce jalon le
   dit déjà : 1 seul clic) ; (2) la séance **ENT-5.3** elle-même (fichier d'activité, `lexique` des 8 mots, une ligne dans

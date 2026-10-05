@@ -754,8 +754,8 @@ async function clicPhoto(p, x, y) {
 }
 // Une base où l'élève est déjà rendu à l'étape `k` (index), sans rien avoir fait ailleurs.
 const rendu = (k, x = {}) => ({ entrepots: { 'smoby-visite': { courante: k, atteinte: k, x } } });
-const ETAPES_V = ['accueil', 'ciel', 'parcours', 'mots', 'quiz', 'travee', 'adresse', 'fin'];
-const TOUT_ATTENTE = Array(11).fill('attente');
+const ETAPES_V = ['accueil', 'ciel', 'parcours', 'reperer', 'mots', 'quiz', 'travee', 'adresse', 'fin'];
+const TOUT_ATTENTE = Array(17).fill('attente');
 
 // Les gestes justes, étape par étape (valeurs du brief).
 async function cielJuste(p) {
@@ -769,6 +769,9 @@ async function parcoursJuste(p) {
     await p.click(`${ZV} g[data-pv-etape="${n}"]`);
   }
 }
+// Les photos de « Où est-ce ? », dans l'ordre déclaré : allée A (4), quai (1), bureau (6), réception (2), litiges (5), allée principale (3).
+const ASSOCIER = [4, 1, 6, 2, 5, 3];
+async function associerJuste(p) { for (const n of ASSOCIER) await p.click(`${ZV} [data-pv-num="${n}"]`); }
 async function quizJuste(p) {
   await clicPhoto(p, 300, 500); await clicPhoto(p, 800, 400); await clicPhoto(p, 450, 600); await clicPhoto(p, 800, 1700);
 }
@@ -793,7 +796,7 @@ await v('Visite : la vue s’ouvre par son entrée de menu, 8 étapes, l’accue
   await monterV(pv);
   egal(await pv.textContent('#peTest .ent-nav[data-vue="entrepot"]').then((t) => t.trim()), 'Visite de la plateforme', 'entrée de menu');
   egal(await pv.$$eval(`${ZV} .pv-file button`, (L) => L.map((b) => b.lastChild.textContent.trim())),
-    ['Accueil', 'Vue du ciel', 'Le parcours', 'Les mots du rack', 'Quiz', 'La travée', 'L’adresse', 'Fin'], 'les étapes');
+    ['Accueil', 'Vue du ciel', 'Le parcours', 'Où est-ce ?', 'Les mots du rack', 'Quiz', 'La travée', 'L’adresse', 'Fin'], 'les étapes');
   egal(await etapeV(pv), 'accueil', 'étape de départ');
   vrai((await texteV(pv, '.pv-perso')).startsWith('Bruno, chef de quai · mercredi 9 décembre, 8:00'), 'en-tête de Bruno');
   egal(await jalonsV(pv), TOUT_ATTENTE, 'jalons');
@@ -802,7 +805,7 @@ await v('Visite : la vue s’ouvre par son entrée de menu, 8 étapes, l’accue
 
 await v('Visite : élève — pas de saut en avant, « Suivant » seulement sur une étape finie, retour sans rien perdre', async () => {
   await monterV(pv);
-  egal(await pv.$$eval(`${ZV} .pv-file button`, (L) => L.map((b) => b.disabled)), [false, true, true, true, true, true, true, true], 'file à l’accueil');
+  egal(await pv.$$eval(`${ZV} .pv-file button`, (L) => L.map((b) => b.disabled)), [false, true, true, true, true, true, true, true, true], 'file à l’accueil');
   await suivant(pv);
   egal(await etapeV(pv), 'ciel', 'Suivant depuis l’accueil');
   vrai(await pv.$eval(`${ZV} [data-pv="suivant"]`, (b) => b.disabled), 'Suivant actif sur une étape pas finie');
@@ -821,7 +824,7 @@ await v('Visite : élève — pas de saut en avant, « Suivant » seulement sur 
 await v('Visite : enseignant — navigation libre dans les étapes', async () => {
   await monterV(pv, { role: 'prof' });
   vrai(await pv.$$eval(`${ZV} .pv-file button`, (L) => L.every((b) => !b.disabled)), 'une étape fermée à l’enseignant');
-  await pv.click(`${ZV} [data-pv-aller="6"]`);
+  await pv.click(`${ZV} [data-pv-aller="7"]`);
   egal(await etapeV(pv), 'adresse', 'saut à l’adresse');
 });
 
@@ -855,26 +858,26 @@ await v('Visite : vue du ciel — les 6 points ne lancent pas les questions ; le
 });
 
 await v('Visite : quiz — une lisse cliquée sur la lisse juste, sur l’allée faux ; « (2 essais) »', async () => {
-  await monterV(pv, { db: rendu(4) });
+  await monterV(pv, { db: rendu(5) });
   await clicPhoto(pv, 300, 500);
   egal(await msgV(pv), 'Oui : c’est une échelle.', 'échelle');
   await clicPhoto(pv, 800, 1600);
   egal(await msgV(pv), 'Non, pas ici. Revoyez le mot à l’étape précédente si besoin.', 'lisse sur l’allée');
-  egal((await jalonsV(pv)).slice(3, 5), ['ok', 'ko'], 'jalons échelle, lisse');
+  egal((await jalonsV(pv)).slice(9, 11), ['ok', 'ko'], 'jalons échelle, lisse');
   await clicPhoto(pv, 800, 400);
   egal(await msgV(pv), 'Oui : c’est une lisse.', 'lisse');
   vrai((await texteV(pv, '[data-pv-q="lisse"]')).includes('(2 essais)'), 'essais de la lisse');
-  egal((await jalonsV(pv)).slice(3, 5), ['ok', 'ok'], 'jalons après la lisse');
+  egal((await jalonsV(pv)).slice(9, 11), ['ok', 'ok'], 'jalons après la lisse');
 });
 
 await v('Visite : travée — 4 coins dans le désordre ; coins du bas trop hauts ; enlever un point ; 5e clic sans effet', async () => {
-  await monterV(pv, { db: rendu(5) });
+  await monterV(pv, { db: rendu(6) });
   await coins(pv, [[876, 1173], [287, 45], [258, 1175], [847, 47]]);
   await pv.click(`${ZV} [data-pv="verifierCoins"]`);
   vrai(!!(await pv.$(`${ZV} [data-pv-coins-ok]`)), 'coins justes dans le désordre');
-  egal((await jalonsV(pv))[7], 'ok', 'jalon des coins');
+  egal((await jalonsV(pv))[13], 'ok', 'jalon des coins');
   vrai(!!(await pv.$(`${ZV} [data-pv-correction]`)), 'correction légendée');
-  await monterV(pv, { db: rendu(5) });
+  await monterV(pv, { db: rendu(6) });
   await coins(pv, [[287, 45], [847, 47], [258, 1050], [876, 1050]]);
   await clicPhoto(pv, 550, 600);
   egal(await pv.$$eval(`${ZV} [data-pv-pose]`, (L) => L.length), 4, '5e clic');
@@ -882,7 +885,7 @@ await v('Visite : travée — 4 coins dans le désordre ; coins du bas trop haut
   egal(await msgV(pv), 'Pas encore : coins en bas à gauche, en bas à droite. Un coin se place là où une échelle touche le sol ou s’arrête en haut. Cliquez le point rouge pour l’enlever.', 'message');
   egal(await pv.$$eval(`${ZV} [data-pv-coin]`, (L) => L.map((e) => e.dataset.ok)), ['true', 'true', 'false', 'false'], 'coins jugés');
   egal(await pv.$$eval(`${ZV} [data-pv-pose]`, (L) => L.map((g) => g.dataset.faux)), ['false', 'false', 'true', 'true'], 'seuls les coins du bas en rouge');
-  egal((await jalonsV(pv))[7], 'ko', 'jalon après un Vérifier faux');
+  egal((await jalonsV(pv))[13], 'ko', 'jalon après un Vérifier faux');
   await clicPhoto(pv, 258, 1050);
   egal(await pv.$$eval(`${ZV} [data-pv-pose]`, (L) => L.length), 3, 'point enlevé');
   egal((await xV(pv, 'travee')).pts.length, 3, 'état après l’enlèvement');
@@ -890,9 +893,9 @@ await v('Visite : travée — 4 coins dans le désordre ; coins du bas trop haut
 
 await v('Visite : travée — tolérance 80 (79 juste, 81 faux, écrits dans la base)', async () => {
   const essai = async (d) => {
-    await monterV(pv, { db: rendu(5, { travee: { pts: [[287 + d, 45], [847, 47], [258, 1175], [876, 1173]] } }) });
+    await monterV(pv, { db: rendu(6, { travee: { pts: [[287 + d, 45], [847, 47], [258, 1175], [876, 1173]] } }) });
     await pv.click(`${ZV} [data-pv="verifierCoins"]`);
-    return (await jalonsV(pv))[7];
+    return (await jalonsV(pv))[13];
   };
   egal(await essai(79), 'ok', 'à 79');
   egal(await essai(81), 'ko', 'à 81');
@@ -900,7 +903,7 @@ await v('Visite : travée — tolérance 80 (79 juste, 81 faux, écrits dans la 
 
 await v('Visite : lisses — fond, travée d’à côté, pas une lisse, déjà trouvée (pas compté) ; sans faute = premier coup', async () => {
   const delimitee = { travee: { pts: COINS_JUSTES, ok: true, verifie: true, verifs: 1, faux: [] } };
-  await monterV(pv, { db: rendu(5, delimitee) });
+  await monterV(pv, { db: rendu(6, delimitee) });
   await clicPhoto(pv, 570, 80);
   egal(await msgV(pv), 'Oui : c’est la lisse du haut.', 'lisse du haut');
   await clicPhoto(pv, 570, 160);
@@ -913,22 +916,22 @@ await v('Visite : lisses — fond, travée d’à côté, pas une lisse, déjà 
   egal(await msgV(pv), 'Celle-ci est déjà trouvée.', 'déjà trouvée');
   const x = await xV(pv, 'travee');
   egal([x.cibles, x.fauxCibles], [[0], 3], 'cibles et clics faux (le re-clic ne compte pas)');
-  egal((await jalonsV(pv))[8], 'ko', 'jalon des lisses en cours, après des fautes');
-  await monterV(pv, { db: rendu(5, delimitee) });
+  egal((await jalonsV(pv))[14], 'ko', 'jalon des lisses en cours, après des fautes');
+  await monterV(pv, { db: rendu(6, delimitee) });
   await clicPhoto(pv, 570, 80); await clicPhoto(pv, 570, 454);
-  egal((await jalonsV(pv))[8], 'attente', 'deux lisses sans faute : encore en attente');
+  egal((await jalonsV(pv))[14], 'attente', 'deux lisses sans faute : encore en attente');
   await clicPhoto(pv, 570, 687);
-  egal((await jalonsV(pv))[8], 'ok', 'trois lisses');
+  egal((await jalonsV(pv))[14], 'ok', 'trois lisses');
   egal((await premiersV(pv))['travee-cibles'], 'ok', 'premier coup');
   vrai(!(await pv.$(`${ZV} .pv-vise`)), 'photo encore cliquable une fois l’étape finie');
 });
 
 await v('Visite : adresse — travée et niveau inversés, puis retrouver (côté, niveau, trouvé, rien de montré avant)', async () => {
-  await monterV(pv, { db: rendu(6) });
+  await monterV(pv, { db: rendu(7) });
   vrai(await pv.$eval(`${ZV} [data-pv="valider"]`, (b) => b.disabled), 'Valider actif sans les 4 choix');
   await choisirV(pv, ['allée et côté', 'niveau', 'travée', 'emplacement']);
   await pv.click(`${ZV} [data-pv="valider"]`);
-  egal((await jalonsV(pv))[9], 'ko', 'jalon décomposer');
+  egal((await jalonsV(pv))[15], 'ko', 'jalon décomposer');
   egal(await pv.$$eval(`${ZV} [data-pv-part]`, (L) => L.map((e) => e.dataset.ok)), ['true', 'false', 'false', 'true'], 'correction affichée');
   vrai((await texteV(pv, '[data-pv-part="1"]')).includes('(vous : niveau)'), 'ce que l’élève a choisi');
   vrai(!(await pv.$(`${ZV} [data-pv-choix]`)), 'second essai de la décomposition');
@@ -948,13 +951,13 @@ await v('Visite : adresse — travée et niveau inversés, puis retrouver (côt�
   egal(await pv.$$eval(`${ZV} .pe-marque`, (L) => L.map((g) => g.dataset.peEmp)), ['A1-T03-N2-E1'], 'seul l’emplacement trouvé est marqué');
   await pv.click(`${ZV} [data-pe-emp="A1-T03-N1-E1"]`);
   egal((await xV(pv, 'adresse')).clics.length, 3, 'un clic après « Trouvé » ne compte plus');
-  egal((await jalonsV(pv)).slice(9), ['ko', 'ok'], 'jalons de l’adresse');
+  egal((await jalonsV(pv)).slice(15), ['ko', 'ok'], 'jalons de l’adresse');
   egal((await premiersV(pv))['adresse-retrouver'], 'ko', 'premier coup de l’emplacement');
   vrai(!(await pv.$eval(`${ZV} [data-pv="suivant"]`, (b) => b.disabled)), 'Suivant une fois l’adresse finie');
 });
 
 await v('Visite : le message « Trouvé » lit la désignation et le poids dans le stock (sabotage du stock)', async () => {
-  await monterV(pv, { db: rendu(6, { adresse: { choix: SENS_JUSTES, valide: true } }), sabotage: 'stock' });
+  await monterV(pv, { db: rendu(7, { adresse: { choix: SENS_JUSTES, valide: true } }), sabotage: 'stock' });
   await pv.click(`${ZV} [data-pe-trav="A1-T03"]`);
   await pv.click(`${ZV} [data-pe-emp="A1-T03-N2-E1"]`);
   egal(await msgV(pv), '✓ Trouvé : A1-T03-N2-E1 — une Établi Black+Decker de 290 kg.', 'message lu dans le stock saboté');
@@ -984,22 +987,48 @@ await v('Visite : parcours — ordre imposé, photo en onglet (Échap), deux ima
   egal(await jalonsV(pv), TOUT_ATTENTE, 'le parcours ne donne pas de jalon');
 });
 
-await v('Visite : inaction 0 / 11 ; toute la découverte sans répondre (points, bouton des questions, parcours, mots) : 0 / 11', async () => {
+await v('Visite : « Où est-ce ? » — plan à gauche (numéros seuls), une photo à droite ; faux : on reste ; juste : photo suivante', async () => {
+  await monterV(pv, { db: rendu(3) });
+  egal(await pv.$$eval(`${ZV} [data-pv-num]`, (L) => L.map((g) => g.dataset.pvNum)), ['1', '2', '3', '4', '5', '6'], 'numéros sur le plan');
+  vrai(!(await pv.$(`${ZV} [data-pv-trace]`)), 'trace du parcours sur le plan');
+  vrai(!(await pv.$(`${ZV} [data-pe-trav]`)), 'travées cliquables');
+  egal(await pv.$eval(`${ZV} [data-pv-photo] img`, (i) => i.dataset.pvImg), 'allee', 'première photo');
+  egal(await jalonsV(pv).then((J) => J.slice(3, 9)), Array(6).fill('attente'), 'jalons avant tout clic');
+  await pv.click(`${ZV} [data-pv-num="2"]`);
+  egal(await msgV(pv), 'Non, pas depuis le n° 2. Regardez bien la photo, ou revoyez le parcours.', 'faux');
+  egal(await pv.$eval(`${ZV} [data-pv-photo] img`, (i) => i.dataset.pvImg), 'allee', 'la photo reste après un faux');
+  egal((await jalonsV(pv))[3], 'ko', 'jalon après le faux');
+  await pv.click(`${ZV} [data-pv-num="4"]`);
+  egal(await msgV(pv), 'Oui : n° 4, Les allées de stockage.', 'juste');
+  egal(await pv.$eval(`${ZV} [data-pv-photo] img`, (i) => i.dataset.pvImg), 'quaiInt', 'photo suivante');
+  egal(await pv.$eval(`${ZV} [data-pv-num="4"] circle`, (c) => c.getAttribute('fill')), 'var(--pe-visite)', 'numéro trouvé rempli');
+  vrai(await pv.$eval(`${ZV} [data-pv="suivant"]`, (b) => b.disabled), 'Suivant avant la fin');
+  for (const n of ASSOCIER.slice(1)) await pv.click(`${ZV} [data-pv-num="${n}"]`);
+  egal(await jalonsV(pv).then((J) => J.slice(3, 9)), Array(6).fill('ok'), 'jalons des 6 photos (le faux ne fait pas perdre le jalon)');
+  egal((await premiersV(pv))['reperer-allee'], 'ko', 'premier coup de la photo ratée une fois');
+  egal((await premiersV(pv))['reperer-quai'], 'ok', 'premier coup');
+  vrai(!(await pv.$eval(`${ZV} [data-pv="suivant"]`, (b) => b.disabled)), 'Suivant une fois les 6 photos associées');
+  await pv.click(`${ZV} [data-pv-num="1"]`);
+  egal((await xV(pv, 'reperer')).essais.allee, 2, 'un clic après la fin ne compte plus');
+});
+
+await v('Visite : inaction 0 / 17 ; toute la découverte sans répondre (points, bouton des questions, parcours, mots) : 0 / 17', async () => {
   await monterV(pv);
   egal(await jalonsV(pv), TOUT_ATTENTE, 'séance ouverte puis rien');
   await suivant(pv);
   for (const n of [1, 2, 3, 4, 5, 6]) await pv.click(`${ZV} button[data-pv-point="${n}"]`);
   await pv.click(`${ZV} [data-pv="questions"]`);
   egal(await jalonsV(pv), TOUT_ATTENTE, 'questions lancées, pas de clic');
-  await monterV(pv, { db: rendu(5, { ciel: { vus: [1, 2, 3, 4, 5, 6], q: true }, parcours: { vus: [1, 2, 3, 4, 5, 6] }, mots: { vus: [1, 2, 3, 4, 5, 6, 7, 8] } }) });
+  await monterV(pv, { db: rendu(6, { ciel: { vus: [1, 2, 3, 4, 5, 6], q: true }, parcours: { vus: [1, 2, 3, 4, 5, 6] }, mots: { vus: [1, 2, 3, 4, 5, 6, 7, 8] } }) });
   egal(await jalonsV(pv), TOUT_ATTENTE, 'toute la découverte faite');
-  egal(await pv.evaluate(async () => { const E = await import('/core/types/entrepot.js'); return E.jalonsEntrepot(window.__e.db, window.__e.P).ok; }), 0, '0 / 11');
+  egal(await pv.evaluate(async () => { const E = await import('/core/types/entrepot.js'); return E.jalonsEntrepot(window.__e.db, window.__e.P).ok; }), 0, '0 / 17');
 });
 
-await v('Visite : parcours juste de bout en bout → 11 / 11, premier coup 11 / 11, la fin', async () => {
+await v('Visite : parcours juste de bout en bout → 17 / 17, premier coup 17 / 17, la fin', async () => {
   await monterV(pv);
   await suivant(pv); await cielJuste(pv);
   await suivant(pv); await parcoursJuste(pv);
+  await suivant(pv); await associerJuste(pv);
   await suivant(pv); for (const n of [1, 2, 3, 4, 5, 6, 7, 8]) await pv.click(`${ZV} button[data-pv-point="${n}"]`);
   await suivant(pv); await quizJuste(pv);
   await suivant(pv); await traveeJuste(pv);
@@ -1007,9 +1036,9 @@ await v('Visite : parcours juste de bout en bout → 11 / 11, premier coup 11 / 
   await suivant(pv);
   egal(await etapeV(pv), 'fin', 'dernière étape');
   vrai(!(await pv.$(`${ZV} [data-pv="suivant"]`)), 'Suivant sur la fin');
-  egal(await jalonsV(pv), Array(11).fill('ok'), 'jalons');
+  egal(await jalonsV(pv), Array(17).fill('ok'), 'jalons');
   const P = await premiersV(pv);
-  egal([Object.keys(P).length, Object.values(P).filter((x) => x === 'ok').length], [11, 11], 'premier coup');
+  egal([Object.keys(P).length, Object.values(P).filter((x) => x === 'ok').length], [17, 17], 'premier coup');
   egal(erreursV, [], 'erreurs JS');
 });
 
@@ -1017,15 +1046,15 @@ await v('Visite : sabotages — chaque jalon tombe quand on casse sa règle (zon
   await monterV(pv, { db: rendu(1, { ciel: { vus: [1, 2, 3, 4, 5, 6], q: true } }), sabotage: 'zone' });
   await clicPhoto(pv, 1000, 560);
   egal((await jalonsV(pv))[0], 'ko', 'zone décalée');
-  await monterV(pv, { db: rendu(5), sabotage: 'tolerance' });
+  await monterV(pv, { db: rendu(6), sabotage: 'tolerance' });
   await coins(pv, COINS_JUSTES); await pv.click(`${ZV} [data-pv="verifierCoins"]`);
-  egal((await jalonsV(pv))[7], 'ko', 'tolérance à 0');
-  await monterV(pv, { db: rendu(5), sabotage: 'piege' });
+  egal((await jalonsV(pv))[13], 'ko', 'tolérance à 0');
+  await monterV(pv, { db: rendu(6), sabotage: 'piege' });
   await traveeJuste(pv);
-  egal((await jalonsV(pv))[8], 'attente', 'piège rangé en cible');
-  await monterV(pv, { db: rendu(6), sabotage: 'adresse' });
+  egal((await jalonsV(pv))[14], 'attente', 'piège rangé en cible');
+  await monterV(pv, { db: rendu(7), sabotage: 'adresse' });
   await choisirV(pv, SENS_JUSTES); await pv.click(`${ZV} [data-pv="valider"]`);
-  egal((await jalonsV(pv))[9], 'ko', 'adresse inversée');
+  egal((await jalonsV(pv))[15], 'ko', 'adresse inversée');
 });
 
 await v('Visite : état retrouvé après rechargement ; deux séances ne se mélangent pas', async () => {
@@ -1096,7 +1125,7 @@ await v('Visite : aucun défilement de page, chaque étape, à 1366 × 768 et 12
     await pe.waitForSelector('.pv');
     await pe.evaluate(() => { document.querySelector('#reglages').style.display = 'none'; document.querySelector('#mention').style.display = 'none'; });
     const trop = [];
-    for (let k = 0; k < 8; k++) {
+    for (let k = 0; k < 9; k++) {
       await pe.click(`.pv [data-pv-aller="${k}"]`);
       await pe.evaluate(() => window.dispatchEvent(new Event('resize')));
       const d = await pe.evaluate(() => document.documentElement.scrollHeight - window.innerHeight);

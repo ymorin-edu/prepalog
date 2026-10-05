@@ -40,6 +40,9 @@
 //                  questions: [{ id, q? | mot?, zones: [[x0, y0, x1, y1], …], aide?, jalon? }]
 //   parcours       consigne, debut (encadré avant la 1re), ordre ({n}), etapes: [{ n, ancre, decalage?,
 //                  titre, images: [clé…], dir (degrés, 0 = est, 90 = sud), cone (longueur), texte }]
+//   associer       parcours (id de l'étape parcours : ses numéros et ses ancres), liste, consigne, consigneFini,
+//                  juste ({n} {titre}), faux, photos: [{ id, image, n (l'étape du parcours d'où elle est prise), jalon? }]
+//                  — le plan à gauche avec les numéros, une photo à la fois à droite (dans l'ordre déclaré)
 //   delimiter      image, coins: { hg, hd, bg, bd }, tolerance, noms, consigne, rappel, messages: { juste, faux
 //                  ({coins}) }, correction: { legendes: [{ texte, x, y, rot?, plein? }] }, jalon?,
 //                  puis?: { type: 'zones', consigne, rappel, liste, x: [x0, x1], marge, cibles: [{ nom, y0, y1,
@@ -67,7 +70,7 @@ const decoupe = (a) => {
 };
 const dansZones = (x, y, zs) => zs.some(([a, b, c, d]) => x >= a && x <= c && y >= b && y <= d);
 
-export const TYPES_ETAPES = ['accueil', 'photoPoints', 'photoQuestions', 'parcours', 'delimiter', 'adresse', 'fin'];
+export const TYPES_ETAPES = ['accueil', 'photoPoints', 'photoQuestions', 'parcours', 'associer', 'delimiter', 'adresse', 'fin'];
 const COINS = ['hg', 'hd', 'bg', 'bd'];
 const NOMS_COINS = { hg: 'en haut à gauche', hd: 'en haut à droite', bg: 'en bas à gauche', bd: 'en bas à droite' };
 
@@ -137,6 +140,20 @@ export function compilerVisite(M, err) {
         (p.images || []).forEach((k2) => image(k2, `${ou}, étape n° ${p.n}`));
       });
     }
+    if (et.type === 'associer') {
+      const par = (P.etapes || []).find((t) => t.id === et.parcours && t.type === 'parcours');
+      if (!par) err(`${ou} : il faut l'id d'une étape parcours (parcours: …)`);
+      if (!Array.isArray(et.photos) || !et.photos.length) err(`${ou} : aucune photo`);
+      const vues = new Set();
+      et.photos.forEach((ph) => {
+        if (!ph.id || vues.has(ph.id)) err(`${ou} : photo sans id ou en double`);
+        vues.add(ph.id);
+        image(ph.image, ou);
+        const cible = par.etapes.find((q) => q.n === ph.n);
+        if (!cible) err(`${ou}, photo ${ph.id} : le parcours n'a pas d'étape n° ${ph.n}`);
+        jalons.push({ id: `${et.id}-${ph.id}`, etape: et.id, type: 'question', question: ph.id, lib: ph.jalon || `${et.titre} : la photo « ${cible.titre} »` });
+      });
+    }
     if (et.type === 'delimiter') {
       if (!et.image) err(`${ou} : il manque l'image`);
       COINS.forEach((k) => { const c = (et.coins || {})[k]; if (!Array.isArray(c) || c.length !== 2) err(`${ou} : coin ${k} manquant`); });
@@ -173,6 +190,7 @@ function finie(et, x = {}) {
   if (et.type === 'photoPoints') return (x.vus || []).length === et.points.length && (!et.puis || questionsFinies(et.puis, x));
   if (et.type === 'photoQuestions') return questionsFinies(et, x);
   if (et.type === 'parcours') return (x.vus || []).length === et.etapes.length;
+  if (et.type === 'associer') return et.photos.every((ph) => (x.rep || {})[ph.id]);
   if (et.type === 'delimiter') return !!x.ok && (!et.puis || (x.cibles || []).length === et.puis.cibles.length);
   if (et.type === 'adresse') return !!x.valide && !!x.trouve;
   return true;
@@ -422,6 +440,45 @@ export function creerVisite(P, M, O) {
     }
     return { consigne, cote, espace };
   };
+
+  /* ------------------------------------------- associer une photo au plan */
+  // Le plan (les numéros du parcours, sans titres ni trace) à gauche, une photo à la fois à droite : l'élève
+  // clique le numéro de l'endroit d'où la photo est prise. Juste : photo suivante ; faux : il recommence.
+  const parcoursDe = (et) => ET.find((t) => t.id === et.parcours);
+  const photoCourante = (et, x) => et.photos.findIndex((ph) => !(x.rep || {})[ph.id]);
+  B.associer = (e, et) => {
+    const x = xDe(e, et), rep = x.rep || {}, par = parcoursDe(et), N = et.photos.length, i = photoCourante(et, x);
+    const titre = (n) => par.etapes[n - 1].titre;
+    const consigne = i < 0 ? num('✓', et.consigneFini || 'Étape terminée. Cliquez <b>Suivant</b>.')
+      : num(`${i + 1}/${N}`, et.consigne || 'D’où a été prise cette photo ? Cliquez son numéro sur le plan.');
+    const faites = et.photos.filter((ph) => rep[ph.id]).length;
+    const cote = `<h3>${ech(et.liste || 'Les photos')} (${faites} / ${N})</h3><div class="pv-liste">${et.photos.map((ph, k) => {
+      const ok = rep[ph.id], ess = (x.essais || {})[ph.id] || 0;
+      return `<div class="pv-ligne${ok ? ' pv-vu' : ''}${k === i ? ' pv-ici' : ''}" data-pv-q="${ech(ph.id)}">${ok ? `✓ Photo ${k + 1} : n° ${ph.n}, ${ech(titre(ph.n))}` : k === i ? `→ Photo ${k + 1}` : `· Photo ${k + 1}`}${ok && ess > 1 ? ` <span class="pe-petit">(${ess} essais)</span>` : ''}</div>`;
+    }).join('')}</div>${htmlMsg(et)}${et.encadre ? `<div class="pe-encadre">${et.encadre}</div>` : ''}`;
+    // Un numéro dont la photo est trouvée se remplit ; rien d'autre ne distingue les endroits.
+    const trouves = new Set(et.photos.filter((ph) => rep[ph.id]).map((ph) => ph.n));
+    const dessus = par.etapes.map((p) => {
+      const [cx, cy] = ancre(p), plein = trouves.has(p.n);
+      return `<g class="pv-etape" data-pv-num="${p.n}" data-pe-cle="num:${p.n}" tabindex="0" role="button" aria-label="Endroit n° ${p.n}">
+        <circle cx="${cx}" cy="${cy}" r="24" fill="${plein ? 'var(--pe-visite)' : 'var(--panneau)'}" stroke="var(--pe-visite)" stroke-width="4"/>
+        <text x="${cx}" y="${cy + 8}" text-anchor="middle" font-size="22" font-weight="800" fill="${plein ? 'var(--panneau)' : 'var(--pe-visite)'}">${p.n}</text></g>`;
+    }).join('');
+    const k = i < 0 ? N - 1 : i, ph = et.photos[k];
+    const espace = `<div class="pv-duo pv-associer"><div class="pv-col pv-col-plan"><div class="pv-main">${O.htmlPlan(E0, R0, { lecture: true, dessus, aria: 'Plan de la plateforme : les endroits du parcours, numérotés' })}</div></div>
+      <div class="pv-col" data-pv-photo="${ech(ph.id)}">${photo(ph.image, null, { alt: `Photo ${k + 1}` })}</div></div>`;
+    return { consigne, cote, espace };
+  };
+  function associer(et, x, n) {
+    const i = photoCourante(et, x);
+    if (i < 0) return;
+    const ph = et.photos[i], par = parcoursDe(et);
+    x.essais = x.essais || {}; x.rep = x.rep || {};
+    x.essais[ph.id] = (x.essais[ph.id] || 0) + 1;
+    if (n === ph.n) { x.rep[ph.id] = true; dire(et, fmt(et.juste || 'Oui.', { n, titre: ech(par.etapes[n - 1].titre) }), 'oui'); }
+    else dire(et, fmt(et.faux || 'Non.', { n }), 'non');
+  }
+
   function entete(fil, msg) {
     return `<div class="pe-entete pv-entete"><div class="pe-fil">${fil}</div><div class="pe-msg-vue">${msg}</div>
       <button type="button" class="btn btn-p pe-retour" data-pv="retour" data-pe-cle="b:retour">← Retour au plan</button></div>`;
@@ -712,6 +769,9 @@ export function creerVisite(P, M, O) {
       };
       racine.querySelectorAll('[data-pv-etape]').forEach((g) => activer(g, () => ouvrir(+g.dataset.pvEtape)));
       on('revoir', () => { ui.photo = ui.actif[et.id]; ui.focus = 'b:retour'; redessiner(); });
+    }
+    if (et.type === 'associer') {
+      racine.querySelectorAll('[data-pv-num]').forEach((g) => activer(g, () => { associer(et, x, +g.dataset.pvNum); ui.focus = `num:${g.dataset.pvNum}`; fait(); }));
     }
     if (et.type === 'delimiter') {
       const svg = racine.querySelector('.pv-calque.pv-vise');

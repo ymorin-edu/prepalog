@@ -18,6 +18,12 @@ ne fait que déclarer du contenu).
 (`maquette-visite-2de.html`, ancien plan, adresse `A-03-2-1`) est **dépassée** : à supprimer (`git rm`) au commit de ces
 briefs.
 
+> **Ajout du 05/10/2026 (Tristan)** : une étape **« Où est-ce ? »** s'insère après le parcours (4e étape, 8:25) : le plan
+> à gauche avec les numéros du parcours, une photo à droite ; l'élève clique le numéro d'où la photo est prise, juste =
+> photo suivante (6 photos dans le désordre, litiges = la vraie photo). **Un jalon par photo : 9 étapes, 17 jalons**
+> (barème 17). Déclarée dans `contenus/smoby-ent53.js` ; titre, message de Bruno et messages écrits par Claude Code, à
+> valider à l'écran. Le programme de l'accueil gagne la ligne « Reconnaître chaque endroit sur une photo ».
+
 ## 1. Identité
 
 | Champ | Valeur |

@@ -60,7 +60,8 @@ export const VISITE = {
       grandTitre: 'Premier jour de Yanis :<br>la visite de la plateforme',
       intro: 'Mercredi 9 décembre, 8 h. Yanis commence au poste de cariste. Avant de toucher un chariot, Bruno, le chef de quai, lui fait faire le tour.',
       programme: [
-        'Découvrir la plateforme vue du ciel', 'Suivre le parcours de visite dans l’entrepôt', 'Apprendre les mots du rack',
+        'Découvrir la plateforme vue du ciel', 'Suivre le parcours de visite dans l’entrepôt',
+        'Reconnaître chaque endroit sur une photo', 'Apprendre les mots du rack',
         'Les retrouver sur une autre photo', 'Délimiter vous-même une travée',
         `Lire une adresse d’emplacement (<b class="pe-mono">${ADRESSE}</b>) et la retrouver dans l’entrepôt`,
       ],
@@ -114,6 +115,22 @@ export const VISITE = {
           texte: '« Une palette abîmée ou en attente d’une réponse du fournisseur vient ici, en L1 ou L2. Elle ne va pas en stock. »' },
         { n: 6, ancre: 'zone:bureau', titre: 'Le bureau du chef de quai', images: ['bureau'], dir: 0, cone: 50,
           texte: '« Mon bureau. Un problème, un document à signer : c’est ici. »' },
+      ],
+    },
+    {
+      // Demande de Tristan (05/10/2026) : après le parcours, l'élève associe chaque photo à son endroit du plan.
+      // Photos dans le désordre ; litiges : la vraie photo (pas le dessin). Textes de Claude Code, à valider.
+      id: 'reperer', type: 'associer', titre: 'Où est-ce ?', heure: '8:25', parcours: 'parcours',
+      texte: 'À toi. Je te montre une photo : tu me dis de quel endroit du parcours elle a été prise.',
+      aide: 'Associez les 6 photos à leur endroit.',
+      liste: 'Les photos',
+      consigne: 'D’où a été prise cette photo ? <b>Cliquez son numéro sur le plan.</b>',
+      consigneFini: 'Les 6 photos sont associées. Cliquez <b>Suivant</b>.',
+      juste: 'Oui : n° {n}, {titre}.',
+      faux: 'Non, pas depuis le n° {n}. Regardez bien la photo, ou revoyez le parcours.',
+      photos: [
+        { id: 'allee', image: 'allee', n: 4 }, { id: 'quai', image: 'quaiInt', n: 1 }, { id: 'bureau', image: 'bureau', n: 6 },
+        { id: 'reception', image: 'reception', n: 2 }, { id: 'litiges', image: 'litiges', n: 5 }, { id: 'principale', image: 'principale', n: 3 },
       ],
     },
     {
