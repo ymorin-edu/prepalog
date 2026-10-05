@@ -1851,9 +1851,9 @@ await v('ENT-4.4 : Précédent par erreur — copie non rendue, travail gardé, 
   const a = await lire();
   egal([a.ticketRep, a.rendu], ['long', false], 'travail / copie après Précédent');
   vrai(a.reel >= 2.5, 'chrono non enregistré à la sortie : ' + a.reel);
-  // Dehors, le chrono ne tourne pas. 11 s : au-delà de sa sauvegarde toutes les 10 s, sans quoi un
+  // Dehors, le chrono ne tourne pas. 61 s : au-delà de sa sauvegarde toutes les 60 s, sans quoi un
   // chrono resté en marche ne laisserait aucune trace (éprouvé : avec 3 s, le sabotage passait).
-  await p.waitForTimeout(11000);
+  await p.waitForTimeout(61000);
   egal((await lire()).reel, a.reel, 'chrono qui tourne hors de la séance');
   // L'élève rouvre : il retrouve son travail, la copie est toujours à rendre, le chrono repart de sa valeur.
   await p.click('[data-act="picard-ent44"]');
@@ -1865,7 +1865,7 @@ await v('ENT-4.4 : Précédent par erreur — copie non rendue, travail gardé, 
   await p.goBack({ waitUntil: 'commit' });
   await p.waitForSelector('.entreprise-tete[data-entreprise="4"]');
   const b = await lire();
-  vrai(b.reel >= a.reel + 0.5 && b.reel < a.reel + 2.5, `chrono à la reprise : ${a.reel} puis ${b.reel} (11 s dehors non comptées)`);
+  vrai(b.reel >= a.reel + 0.5 && b.reel < a.reel + 2.5, `chrono à la reprise : ${a.reel} puis ${b.reel} (61 s dehors non comptées)`);
   egal(b.rendu, false, 'copie rendue');
   egal(erreurs, [], 'erreurs JS');
   await ctx.close();

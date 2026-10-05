@@ -1909,6 +1909,51 @@ await v('Précédent dans une séance = « Quitter » : le geste et le temps pas
   await retourN(); await surN('entreprise:3', 'Précédent (bis)');
 });
 
+await v('Séance d’entreprise : un geste qui ne change pas la note ne la réécrit pas en base (quota Firebase)', async () => {
+  // Chaque écriture de la note augmente `tentatives` (backend) : c'est le compteur des écritures.
+  const tentatives = () => pn.evaluate(() => {
+    const k = Object.keys(localStorage).find((x) => x.startsWith('prepalog:travaux/') && x.endsWith('/boost-ent33'));
+    return k ? JSON.parse(localStorage.getItem(k)).tentatives : 0;
+  });
+  const lus = () => pn.evaluate(() => {
+    const k = Object.keys(localStorage).find((x) => x.startsWith('prepalog:prive/') && x.endsWith('/boost'));
+    const d = k ? JSON.parse(localStorage.getItem(k)).data : null;
+    return ((d && d.mails) || []).filter((m) => m.read).length;
+  });
+  // La boîte de la séance n'a qu'un message : on en glisse trois copies non lues dans la base de
+  // l'élève, pour avoir des gestes enregistrés (« lu ») qui ne touchent à aucune étape.
+  await pn.evaluate(() => {
+    const k = Object.keys(localStorage).find((x) => x.startsWith('prepalog:prive/') && x.endsWith('/boost'));
+    const v = JSON.parse(localStorage.getItem(k));
+    const m = v.data.mails[0];
+    for (let i = 1; i <= 3; i++) v.data.mails.push({ ...m, id: 9000 + i, read: false });
+    localStorage.setItem(k, JSON.stringify(v));
+  });
+  await pn.click('[data-act="boost-ent33"]');
+  await surN('seance:habillee', 'séance ouverte');
+  await pn.click('.ent-nav[data-vue="mail"]');
+  // Premier geste : la note part (première écriture depuis l'ouverture).
+  await pn.click('.ent-main .ent-obj >> nth=0');
+  await pn.waitForTimeout(300);
+  const t0 = await tentatives(), l0 = await lus();
+  // Gestes enregistrés mais sans effet sur les étapes : ouvrir d'autres messages (ils passent « lus »).
+  const n = Math.min(4, await pn.locator('.ent-main .ent-obj').count());
+  for (let i = 1; i < n; i++) {
+    await pn.click('.ent-nav[data-vue="mail"]');
+    await pn.click(`.ent-main .ent-obj >> nth=${i}`);
+  }
+  await pn.waitForTimeout(800);
+  // Le témoin : ces gestes ont bien été enregistrés (sinon le test ne prouverait rien).
+  if (!((await lus()) > l0)) throw new Error(`aucun geste enregistré (${n} messages, ${l0} lus)`);
+  const t1 = await tentatives();
+  if (t1 !== t0) throw new Error(`note réécrite sans changement : ${t0} puis ${t1} écritures`);
+  // La sortie l'écrit quand même (le temps passé, lu par l'enseignant) : une écriture, pas plus.
+  await retourN(); await surN('entreprise:3', 'Précédent depuis la séance');
+  await pn.waitForTimeout(300);
+  const t2 = await tentatives();
+  if (t2 !== t1 + 1) throw new Error(`sortie : ${t1} puis ${t2} écritures (une attendue)`);
+});
+
 await v('Précédent après une déconnexion : on reste sur la connexion, aucun nom à l’écran', async () => {
   await pn.click('#btnDeco');
   await pn.waitForSelector('#mat');

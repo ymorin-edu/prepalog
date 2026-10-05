@@ -437,6 +437,8 @@ async function vueActivite(aid, avant) {
     profil.tiersTemps = am.tiersTemps;
   }
 
+  // La dernière note écrite en base depuis l'ouverture de l'activité (voir `enregistrer`).
+  let derniereNote = null;
   const ctx = {
     profil, groupe: groupeActif, meta: m.meta, jeu: jeuOuvert,
     // Réglés élève par élève par l'enseignant (onglet « Comptes élèves »). `aisance` :
@@ -477,11 +479,20 @@ async function vueActivite(aid, avant) {
       if (!m.meta.copie || profil.role !== 'eleve' || !groupeActif) throw new Error('pas de copie à rendre ici');
       return B.rendreCopie(groupeActif, profil.uid, aid, { score: res.score, max: res.max, detail: res.detail || null });
     },
-    async enregistrer(res) {
+    // `opts.siChange` : pour une vue qui remonte la note à chaque geste (entreprise, animation).
+    // Une note identique à la dernière envoyée depuis l'ouverture n'est pas réécrite : sans ça,
+    // chaque clic coûte une lecture et une écriture en base, et une classe épuise le quota gratuit
+    // de Firebase dans la journée. Les vues à bouton « Valider » ne le passent pas : chaque envoi
+    // y reste une tentative, même à score égal. `opts.cle` : ce qui est comparé, quand une partie
+    // du détail bouge toute seule (le temps passé) et ne doit pas, à elle seule, déclencher l'écriture.
+    async enregistrer(res, opts = {}) {
       if (!m.meta.bareme || profil.role !== 'eleve' || !groupeActif) return;
       // Une évaluation ne remonte rien pendant le travail : seule la remise compte.
       if (m.meta.copie) return;
-      try { await B.ecrireScore(groupeActif, profil.uid, aid, { score: res.score, max: res.max, detail: res.detail || null }); }
+      const note = { score: res.score, max: res.max, detail: res.detail || null };
+      const cle = opts.cle ?? JSON.stringify(note);
+      if (opts.siChange && cle === derniereNote) return;
+      try { await B.ecrireScore(groupeActif, profil.uid, aid, note); derniereNote = cle; }
       catch (e) { toast("Le score n'a pas pu être enregistré."); }
     },
   };

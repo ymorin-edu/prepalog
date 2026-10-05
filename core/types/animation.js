@@ -561,7 +561,7 @@ export function creerAnimation(A) {
         sauver() {
           ctx.jeu.sauver();
           if (!estProf && L.modele.questions.length) {
-            Promise.resolve(ctx.enregistrer(scoreAnimation(db, A))).catch(() => toast("Le score n'a pas pu être enregistré."));
+            Promise.resolve(ctx.enregistrer(scoreAnimation(db, A), { siChange: true })).catch(() => toast("Le score n'a pas pu être enregistré."));
           }
         },
       };

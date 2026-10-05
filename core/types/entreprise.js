@@ -558,7 +558,7 @@ export function creerEntreprise(U) {
       function arreterTemps() {
         if (!minuterieTemps) return;
         clearInterval(minuterieTemps); minuterieTemps = null;
-        if (!rendue()) { ctx.jeu.sauver(); remonterEtapes(); }
+        if (!rendue()) { ctx.jeu.sauver(); remonterEtapes(true); }
       }
       // Une seule fois, quelle que soit la sortie : bouton « Quitter », Précédent du navigateur
       // (le site appelle le nettoyage déclaré par `ctx.surSortie`), retour à l'accueil.
@@ -597,13 +597,16 @@ export function creerEntreprise(U) {
         return prefixe + pad(mx + 1, largeur);
       }
 
-      // Le score du suivi de classe : le nombre d'étapes réussies.
-      function remonterEtapes() {
+      // Le score du suivi de classe : le nombre d'étapes réussies. Il n'est réécrit en base que s'il
+      // a changé, temps passé mis à part (il avance tout seul) ; `forcer` (sortie de la séance)
+      // l'écrit quoi qu'il arrive, pour que l'enseignant lise le temps à jour.
+      function remonterEtapes(forcer) {
         if (estProf || !etapes.length) return;
         const { score: ok, max, detail: res } = noterBase(db);
         noterPremiers(res);
+        const cle = JSON.stringify({ ok, max, res }, (k, v) => (k === 'temps' && typeof v === 'number' ? undefined : v));
         // Évaluation : rien ne remonte pendant le travail, seule la remise compte.
-        if (!COPIE) ctx.enregistrer({ score: ok, max, detail: res });
+        if (!COPIE) ctx.enregistrer({ score: ok, max, detail: res }, { siChange: !forcer, cle });
         // Séance validée : on range une photo du travail, une fois pour toutes. Elle ouvre la
         // séance suivante et sert de point de reprise (voir core/parcours.js).
         if (ctx.meta.parcours && ok === max) {
@@ -1936,7 +1939,8 @@ export function creerEntreprise(U) {
       // Le chrono réel. Il compte en secondes, par écart d'horloge (un onglet en arrière-plan ne
       // reçoit plus qu'un tic par minute), s'arrête à la clôture de la réception ou à la remise
       // de la copie, et ne tourne pas tant qu'on ne sait pas si la copie est déjà rendue. Il est
-      // rangé dans la base toutes les 10 s et à la sortie : il survit à un rechargement.
+      // rangé dans la base toutes les 60 s et à la sortie : il survit à un rechargement. (60 s et non
+      // 10 s : chaque sauvegarde est une écriture Firebase, et le quota gratuit est compté par jour.)
       // Le tiers-temps de l'élève (brief MOTEUR-tiers-temps, à venir) est recopié dans l'état à
       // chaque ouverture : `noter(db)` et le ramassage le lisent là.
       let minuterie = null;
@@ -1962,7 +1966,7 @@ export function creerEntreprise(U) {
           const q = etatQuai();
           if (q.fini) return;
           q.reel = Math.round(((q.reel || 0) + dt) * 10) / 10;
-          if (t - sauve >= 10000) { sauve = t; ctx.jeu.sauver(); }
+          if (t - sauve >= 60000) { sauve = t; ctx.jeu.sauver(); }
           if (E.vue === 'quai') VQUAI.tic(hote.querySelector('#entMain'), q);
         }, 1000);
         window.addEventListener('pagehide', sauverChrono);
