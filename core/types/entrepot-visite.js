@@ -335,7 +335,7 @@ export function creerVisite(P, M, O) {
     const lignePoint = (p) => {
       const vu = vus.includes(p.n), on = actif === p.n;
       if (zoom) return `<button type="button" class="pv-btn-ligne${vu ? ' pv-vu' : ''}" data-pv-point="${p.n}" data-pe-cle="ligne:${p.n}" aria-pressed="${on}"><b>${p.n}. ${vu ? ech(p.mot) : '…'}</b>${vu ? (on ? `<span class="pv-def">${ech(p.def)}</span>` : '') : `<span class="pe-petit">${ech(et.indice || 'cliquer pour zoomer')}</span>`}</button>`;
-      return `<button type="button" class="pv-btn-ligne${vu ? ' pv-vu' : ''}" data-pv-point="${p.n}" data-pe-cle="ligne:${p.n}" aria-pressed="${on}"><b>${p.n}. ${ech(p.mot)}</b>${vu ? `<span class="pv-def">${ech(p.def)}</span>` : `<span class="pe-petit">${ech(et.indice || 'cliquer pour lire')}</span>`}</button>`;
+      return `<button type="button" class="pv-btn-ligne${vu ? ' pv-vu' : ''}" data-pv-point="${p.n}" data-pe-cle="ligne:${p.n}" aria-pressed="${on}"><b>${p.n}. ${ech(p.mot)}</b>${on ? `<span class="pv-def">${ech(p.def)}</span>` : vu ? '' : `<span class="pe-petit">${ech(et.indice || 'cliquer pour lire')}</span>`}</button>`;
     };
     let cote;
     if (enQ) {

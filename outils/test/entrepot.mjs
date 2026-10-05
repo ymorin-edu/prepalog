@@ -1012,6 +1012,15 @@ await v('Visite : « Où est-ce ? » — plan à gauche (numéros seuls), une ph
   egal((await xV(pv, 'reperer')).essais.allee, 2, 'un clic après la fin ne compte plus');
 });
 
+await v('Visite : mots du rack — un mot ouvert à la fois (sa définition seule), les autres refermés', async () => {
+  await monterV(pv, { db: rendu(4) });
+  await pv.click(`${ZV} button[data-pv-point="1"]`);
+  await pv.click(`${ZV} button[data-pv-point="2"]`);
+  egal(await pv.$$eval(`${ZV} .pv-def`, (L) => L.map((d) => d.closest('[data-pv-point]').dataset.pvPoint)), ['2'], 'définitions ouvertes');
+  egal(await pv.$$eval(`${ZV} [data-pv-bulle]`, (L) => L.map((t) => t.dataset.pvBulle)), ['2'], 'étiquette sur la photo');
+  egal((await xV(pv, 'mots')).vus, [1, 2], 'mots vus');
+});
+
 await v('Visite : inaction 0 / 17 ; toute la découverte sans répondre (points, bouton des questions, parcours, mots) : 0 / 17', async () => {
   await monterV(pv);
   egal(await jalonsV(pv), TOUT_ATTENTE, 'séance ouverte puis rien');
