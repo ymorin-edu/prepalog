@@ -37,15 +37,18 @@ Règles d'écriture 2de : `claude/prepalog-2de-eleve-debut-annee.md` (3 lignes p
 - **Vérifié le 05/10** : Heineken, Affligem, Pelforth et Edelweiss sont des marques de Heineken France
   ([heinekenfrance.fr](https://www.heinekenfrance.fr/nos-marques/nos-systemes-de-pression/)) ; **Affligem Blonde et
   Pelforth Blonde existent en fût de 20 L** chez des distributeurs CHR (fiches produit Le Chai Prulière, Adam Boissons).
-- **Consignes, vérifié le 05/10** : **30 € par fût** (Heineken 30 L chez Atlantique Boissons, 197,48 € HT + 30 € de
-  consigne ; « 30 € par fût » donné comme montant courant par [The Beer Lantern](https://www.thebeerlantern.com/la-logistique-des-futs-vides-chainon-manquant-de-la-supply-chain-brassicole/), 2024) ;
-  **4,20 € par casier de 12 bouteilles d'eau de 1 L en verre consigné** (deux revendeurs : ClicMarket, Le Chai Prulière).
-  Le montant exact pour un fût de 20 L n'a pas été trouvé : on garde 30 €, comme pour le 30 L. Les montants **propres à
-  France Boissons** ne sont pas publics : ceux-ci sont ceux du marché.
+- **Consignes, vérifié le 05/10 (soir)** : la scène se passe en juin 2027, donc on applique l'**arrêté du 6 février 2026**
+  (JO du 26/02/2026, en vigueur le **1er janvier 2027**) qui fixe les taux de consignation du secteur des boissons :
+  **40 € par fût de 20 à 50 L** (au lieu de 30 € depuis 2001), **4 € par casier** (taux unique, au lieu de 1,80 € à 4,60 €),
+  bouteilles ≥ 50 cl 0,30 €, palette 13,50 € (inchangé) ([FNB](https://www.fnb-info.fr/actualites/economie/consignation-des-emballages-dans-le-secteur-des-boissons-%C2%A0-%C2%A0),
+  [L'Officiel des métiers](https://www.lofficieldesmetiers.fr/consigne-des-emballages-ce-qui-va-changer-a-partir-du-1er-janvier-2027/),
+  [Légifrance JORFTEXT000053580478](https://www.legifrance.gouv.fr/jorf/id/JORFTEXT000053580478) — texte de l'arrêté non relu, Légifrance
+  bloqué). Le fût de 20 L et celui de 30 L sont donc tous deux à 40 €. Montants valables pour **toute la S2** (6.2 à 6.10).
+  *Ancienne version (30 € / 4,20 €, montants du marché 2024) remplacée le 05/10, décision de Tristan.*
 - **Construit (annoncé comme tel)** : le bar « La Cabane à Malo » (Villers-sur-Mer, nom vérifié libre) et son gérant Malo ;
   Inès (administration des ventes, fictive, prénom seul) ; le fait que Malo écrive par mail plutôt que de passer par eazle
   (plausible pour une grosse commande d'événement) ; les formats, les stocks, le minimum de commande, l'heure limite, le
-  jour de tournée, les montants de consigne, le numéro client.
+  jour de tournée, le numéro client.
 - **Documents reconstitués** : en pied « Document pédagogique — reconstitution, non contractuel ». Aucun visage.
 
 ## 3. Objectif pédagogique
@@ -90,8 +93,8 @@ Buchelay. »
      Pelforth : 16 + 8 en M03 et M04 ; Affligem : 1 palette de 2 en M05 ; Edelweiss : 6 palettes de 4 en M07), recalés le
      05/10/2026 (Tristan) pour que le stock reste le même d'une séance à l'autre.
    - **Conditions de vente CHR** (extrait) : **minimum de 10 fûts par livraison** (les casiers ne comptent pas) ; commande
-     reçue **avant 12 h la veille** = livrée le jour de la tournée ; consigne : **30 € par fût** et **4,20 € par casier de 12 bouteilles d'eau en verre** (montants vérifiés chez des
-     distributeurs, §2) ;
+     reçue **avant 12 h la veille** = livrée le jour de la tournée ; consigne : **40 € par fût** et **4 € par casier** (taux fixés par l'arrêté du 6 février 2026, en vigueur depuis le
+     1er janvier 2027, §2) ;
      vides repris par le chauffeur à la livraison.
 4. **Bon de commande** (fiche à remplir, documents à gauche, agencement B) :
    - Heineken fût 30 L : [nombre]
@@ -189,7 +192,7 @@ saute aux yeux.
 - [x] Piège en chaîne complet (décision de Tristan, 05/10).
 - [x] Saisie des quantités : demande au moteur, case « nombre » (décision de Tristan, 05/10).
 - [x] Tutrice : Inès, administration des ventes (décision de Tristan, 05/10).
-- [x] Montants de consigne : 30 € le fût, 4,20 € le casier d'eau en verre (vérifiés sur le marché le 05/10, §2).
+- [x] Montants de consigne : **40 € le fût, 4 € le casier** (arrêté du 6/02/2026, en vigueur au 1/01/2027 ; remplace 30 € / 4,20 €, 05/10 soir, §2).
 - [x] Logo France Boissons : **accord de Tristan le 05/10/2026**. Claude Code le récupère par script dans
   `contenus/trames/logos/` (lire, encoder, écrire, relire, vérifier par empreinte : alerte 10), relève la charte
   (accent, police) et vérifie que l'accent ne se confond pas avec le vert « juste ». Logo seul : aucune autre image.
