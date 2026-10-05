@@ -58,7 +58,8 @@ reviendront en 6.10.
 
 ## 4. Déroulé (≈ 45 min de travail)
 
-**Date du scénario : jeudi 17 juin 2027, 9 h 40.** La Fête de la musique tombe le **lundi 21 juin 2027** (vérifié au
+**Date du scénario : mardi 15 juin 2027, 9 h 40** (livraison demandée pour la Fête de la musique, tournée de la côte du vendredi 18). Calendrier de S2 (décision de Tristan du 05/10/2026, « A : lundi → vendredi ») : 6.1 lun. 14 juin · 6.2 mar. 15 · 6.3 mar. 15 après-midi · 6.4 mer. 16, 14 h · 6.5 mer. 16, 16 h · 6.6 jeu. 17, 7 h · 6.7 jeu. 17 après-midi · 6.8 ven. 18, 6 h · 6.9 ven. 18, 6 h 30 · 6.10 ven. 18, 17 h.
+ La Fête de la musique tombe le **lundi 21 juin 2027** (vérifié au
 calendrier). L'élève joue **son propre rôle** : « Tu es en renfort à l'administration des ventes de France Boissons, à
 Buchelay. »
 
@@ -74,17 +75,20 @@ Buchelay. »
 3. **Documents** (pièces jointes, aussi à gauche de la fiche) :
    - **Fiche client** : La Cabane à Malo, bar de plage, Villers-sur-Mer (14) ; n° client construit ; **tournée de la côte :
      le vendredi** ; ouverture du bar à 10 h ; consignes chez le client : 9 fûts, 5 casiers.
-   - **Extrait du stock de Buchelay** (jeudi 17/06, 9 h) :
+   - **Extrait du stock de Buchelay** (mardi 15/06, 9 h ; le réassort d'Affligem attendu de la brasserie n'est pas encore reçu : on ne promet que le stock disponible) :
 
      | Article | Format | Disponible |
      |---|---|---|
-     | Heineken | fût 30 L | 48 |
+     | Heineken | fût 30 L | 16 |
      | Affligem Blonde | fût 20 L | **2** |
      | Pelforth Blonde | fût 20 L | 24 |
-     | Edelweiss (bière **blanche**) | fût 20 L | 30 |
+     | Edelweiss (bière **blanche**) | fût 20 L | 24 |
      | Heineken | fût 20 L | **0** |
      | Eau minérale plate 1 L, verre consigné | casier de 12 | 60 |
 
+     Ces chiffres sont **ceux du plan de stockage de masse d'ENT-6.5** (Heineken 30 L : 4 palettes de 4 fûts en M01 ;
+     Pelforth : 16 + 8 en M03 et M04 ; Affligem : 1 palette de 2 en M05 ; Edelweiss : 6 palettes de 4 en M07), recalés le
+     05/10/2026 (Tristan) pour que le stock reste le même d'une séance à l'autre.
    - **Conditions de vente CHR** (extrait) : **minimum de 10 fûts par livraison** (les casiers ne comptent pas) ; commande
      reçue **avant 12 h la veille** = livrée le jour de la tournée ; consigne : **30 € par fût** et **4,20 € par casier de 12 bouteilles d'eau en verre** (montants vérifiés chez des
      distributeurs, §2) ;
@@ -108,11 +112,11 @@ Buchelay. »
    | salutation | « Bonjour Malo, » | « Salut Malo ! » · « Coucou, » |
    | commande | « Votre commande pour la Fête de la musique est bien enregistrée. » | « C'est bon, j'ai noté ta commande. » |
    | rupture | « Il ne nous reste que 2 fûts d'Affligem : je vous propose 2 fûts de Pelforth Blonde 20 L à la place. » | « L'Affligem est en rupture, je retire la ligne. » · « Je vous livre bien 4 fûts d'Affligem. » · « …2 fûts d'Edelweiss à la place. » |
-   | livraison | « Vous serez livré demain, vendredi 18 juin, par notre tournée de la côte. » | « …samedi 19 juin, comme vous le souhaitez. » · « …lundi 21 juin. » |
+   | livraison | « Vous serez livré vendredi 18 juin, par notre tournée de la côte. » | « …samedi 19 juin, comme vous le souhaitez. » · « …lundi 21 juin. » |
    | vides | « Le chauffeur reprendra vos 9 fûts et 5 casiers vides. » | « …vos 5 fûts et 9 casiers vides. » · « Gardez vos vides jusqu'à la prochaine fois. » |
    | fin | « Cordialement, {prénom}, administration des ventes France Boissons » | « Bisous » · « À plus ! » |
 
-7. **Réponse de Malo** (`apresMail`, juste ou faux, ne dit pas si c'était juste) : « Ok pour la Pelforth, à demain !
+7. **Réponse de Malo** (`apresMail`, juste ou faux, ne dit pas si c'était juste) : « Ok pour la Pelforth, à vendredi !
    Malo ». Transition vers ENT-6.3.
 
 Mots cliquables : fût, consigne, vides, casier, CHR, rupture, minimum de commande, tournée, bon de commande.
@@ -169,6 +173,10 @@ Case nombre : vide refusée, négatif refusé, valeur gardée sans redessin.
 
 - Trame élève courte (contexte, lexique, bon de commande sur papier) : Cowork, **après validation à l'écran**.
 - Corrigé `contenus/corriges/ENT-6.2.js` : bon de commande attendu + message attendu, calculés.
+- **Questions « Pour réfléchir » de la trame** (décision de Tristan, 05/10/2026) : elles portent sur ce que l'élève vient de faire **et** le replacent dans la semaine de S2 (lundi 14 → vendredi 18 juin, fil rouge de la commande de Malo) : d'où vient ce qu'il a reçu, qui se servira de ce qu'il a produit, ce que son erreur aurait coûté plus loin. Pistes :
+  - « Tu as remplacé 2 Affligem par 2 Pelforth : qui, d'ici vendredi, va travailler à partir de ton bon de commande ? »
+  - « Tu as noté 9 fûts vides à reprendre : que se passera-t-il vendredi soir si ton chiffre est faux ? »
+  Règles inchangées (`claude/prepalog-trames-eleve.md`) : une question à la fois, sur le travail de l'élève, sans réponse unique.
 
 ## 10. Critères de validation par Tristan
 
@@ -177,7 +185,7 @@ saute aux yeux.
 
 ## 11. Questions ouvertes (valeur par défaut entre parenthèses)
 
-- [x] Date : mi-juin, jeudi 17 juin 2027 (décision de Tristan, 05/10).
+- [x] Date : mi-juin (décision de Tristan, 05/10) ; **mardi 15 juin 2027** depuis le calendrier « lundi → vendredi » (Tristan, 05/10).
 - [x] Piège en chaîne complet (décision de Tristan, 05/10).
 - [x] Saisie des quantités : demande au moteur, case « nombre » (décision de Tristan, 05/10).
 - [x] Tutrice : Inès, administration des ventes (décision de Tristan, 05/10).

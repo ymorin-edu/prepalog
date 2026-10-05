@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maquette 6.5 — stockage de masse</title>
+<style>
+:root{--fond:#f4f1ea;--panneau:#fdfbf7;--encre:#1a1915;--doux:#555047;--filet:#e3ded3;--ardoise:#107c41;--rouge:#9d2727;--rouge-fond:#fbecec;--jaune:#e5b800;--sol:#e4dfd3;--carton:#c89a63;--carton-trait:#8f6532;--gris:#bdb7aa;--metal1:#e3e6e8;--metal2:#9aa2a7;--bleu:#2f5f9e}
+*{box-sizing:border-box}
+body{margin:0;background:var(--fond);color:var(--encre);font:15px/1.4 Inter,system-ui,"Segoe UI",sans-serif}
+.note{margin:10px 14px 0;font-size:12.5px;color:var(--doux);border:1px dashed var(--filet);border-radius:6px;padding:6px 10px;background:var(--panneau)}
+header{display:flex;align-items:center;gap:14px;padding:10px 14px}
+header h1{font-size:17px;margin:0}
+.onglet{border:2px solid var(--ardoise);color:var(--ardoise);border-radius:7px;padding:6px 12px;font-weight:600}
+.niv{margin-left:auto;font-size:13px;color:var(--doux)}
+.haut{display:grid;grid-template-columns:1fr 600px;gap:10px;align-items:start;margin:0 14px;background:var(--panneau);border:1px solid var(--filet);border-radius:8px;padding:10px}
+.tuteur{border-left:4px solid var(--jaune);padding:4px 10px;font-size:13.5px;background:var(--fond);border-radius:4px}
+.tuteur b{display:block;font-size:12px;color:var(--doux)}
+.cartes{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px}
+.haut>div:last-child{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start}.haut>div:last-child .btn{width:auto;flex:1;margin:0}.haut>div:last-child .regles{flex-basis:100%}
+.carte{border:1px solid var(--filet);border-radius:7px;padding:5px 7px;font-size:11.5px;cursor:pointer;background:var(--panneau)}
+.carte:hover{border-color:var(--ardoise)}
+.carte.main{border:2px solid var(--ardoise);box-shadow:0 0 0 3px rgba(16,124,65,.12)}
+.carte.posee{opacity:.8}
+.carte h3{margin:0 0 4px;font-size:13.5px;display:flex;gap:6px;align-items:center}
+.pid{background:var(--carton);color:#2b1d0c;border-radius:4px;padding:0 6px;font-size:12px}
+.carte table{border-collapse:collapse;width:100%}
+.carte td{padding:0 0;vertical-align:top}.carte td:first-child{color:var(--doux);width:38%}
+.rouge{color:var(--rouge)}
+.btn{display:block;width:100%;border:2px solid var(--ardoise);background:transparent;color:var(--ardoise);border-radius:7px;padding:8px;font:600 14px Inter,system-ui,sans-serif;cursor:pointer;margin-bottom:8px}
+.btn.plein{background:var(--ardoise);color:#fff}
+.btn:disabled{opacity:.45;cursor:default}
+.regles{font-size:12.5px;background:var(--fond);border-radius:6px;padding:6px 8px;display:none}
+.regles.ouv{display:block}
+.regles ol{margin:4px 0 0;padding-left:18px}.regles li{margin-bottom:3px}
+.bas{display:grid;grid-template-columns:330px 1fr;gap:10px;margin:10px 14px 16px}
+.cote{background:var(--panneau);border:1px solid var(--filet);border-radius:8px;padding:10px;font-size:13.5px}
+.consigne{border-left:4px solid var(--ardoise);background:var(--fond);padding:6px 9px;border-radius:4px;margin-bottom:8px}
+.verdict{margin-top:8px}.verdict div{padding:3px 0;border-bottom:1px solid var(--filet)}
+.ok{color:var(--ardoise);font-weight:600}.ko{color:var(--rouge);font-weight:600}
+.vue svg{max-height:calc(100vh - 265px)}
+.vue{min-height:0 !important}
+.vue{background:var(--panneau);border:1px solid var(--filet);border-radius:8px;padding:10px;min-height:520px}
+.fil{font-size:13px;color:var(--doux);margin-bottom:6px;display:flex;justify-content:space-between;align-items:center}
+.fil button{border:1px solid var(--filet);background:var(--fond);border-radius:6px;padding:4px 10px;cursor:pointer;font:inherit}
+svg{display:block;width:100%;height:auto}
+.couloir{cursor:pointer}
+.couloir:hover .cadre{stroke:var(--ardoise);stroke-width:3}
+.slot{cursor:pointer}
+.slot rect{fill:rgba(16,124,65,.08);stroke:var(--ardoise);stroke-width:2;stroke-dasharray:7 5}
+.slot:hover rect{fill:rgba(16,124,65,.2)}
+.msg{min-height:22px;font-size:13.5px;margin-top:6px}
+</style>
+</head>
+<body>
+<div class="note"><b>Maquette Cowork, à jeter</b> — ENT-6.5 France Boissons, mode « stockage de masse » (nouveau) du Plan d'entrepôt, niveau entraînement. Plan, lots, hauteurs de gerbage et couloirs <b>construits</b> ; stockage de masse <b>vérifié</b> ; <b>4 fûts par palette de rétention pour cet exercice</b> (choix de Tristan) (INRS, Travail et Sécurité n° 843, 2022, plateforme France Boissons de Gennevilliers). Le code n'est pas à reprendre.</div>
+<header><h1>Plan d'entrepôt</h1><span class="onglet">Stockage de masse</span><span class="niv">Entraînement · mercredi 16 juin 2027, 16 h</span></header>
+
+<div class="haut">
+ <div class="tuteur"><b>Nadia, cheffe de quai</b>On range les palettes de Mons dans la zone de masse. Le fût qui fuit reste en zone litiges. Regarde bien les lots.</div>
+ <div>
+  <button class="btn plein" id="verifier" disabled>Vérifier mon rangement</button>
+  <button class="btn" id="btnRegles">Les règles ▾</button>
+  <div class="regles" id="regles"><ol>
+   <li>Un couloir = <b>une seule référence</b>.</li>
+   <li><b>Un seul lot par couloir</b> : le chariot entre par l'allée et reprend la palette de devant ; on ne pose donc jamais un lot devant ni sur un lot plus ancien (c'est ce qui permet de respecter le FIFO).</li>
+   <li><b>Hauteur de gerbage</b> : fûts 30 L → 2 palettes au plus ; fûts 20 L → 3 au plus.</li>
+   <li>On remplit un couloir <b>par le fond</b>.</li>
+   <li>Le couloir <b>VIDES</b> ne reçoit que les fûts vides rendus par les clients.</li>
+  </ol></div>
+  <button class="btn" id="raz" style="border-color:var(--filet);color:var(--doux)">Recommencer</button>
+ </div>
+</div>
+
+<div class="bas">
+ <div class="cote">
+  <div class="cartes" id="cartes"></div>
+  <div class="consigne" id="consigne">Prends une palette (clique sa carte), puis clique un couloir sur le plan.</div>
+  <div class="msg" id="msg"></div>
+  <div class="verdict" id="verdict"></div>
+ </div>
+ <div class="vue"><div class="fil" id="fil"></div><div id="dessin"></div></div>
+</div>
+
+<script>
+const MAX={30:2,20:3};
+const REFS={HEI30:{nom:'Heineken',fmt:30},PEL20:{nom:'Pelforth Blonde',fmt:20},AFF20:{nom:'Affligem Blonde',fmt:20},EDW20:{nom:'Edelweiss',fmt:20},VIDE:{nom:'Fûts vides',fmt:0}};
+const PALETTES=[
+ {id:'P1',ref:'HEI30',futs:4,poids:190,lot:24,recep:'conforme'},
+ {id:'P2',ref:'PEL20',futs:4,poids:140,lot:24,recep:'produit différent (réserve) : c\'est de la Pelforth'},
+ {id:'P3',ref:'AFF20',futs:3,poids:110,lot:24,recep:'3 fûts : le 4e fuit, il est en zone litiges'},
+ {id:'P4',ref:'EDW20',futs:3,poids:110,lot:24,recep:'conforme'}
+];
+// position 0 = devant (côté allée), 3 = fond
+function depart(){return [
+ {id:'M01',zone:'plein',stacks:[[],[],[p('HEI30',20),p('HEI30',20)],[p('HEI30',20),p('HEI30',20)]]},
+ {id:'M02',zone:'plein',stacks:[[],[],[],[]]},
+ {id:'M03',zone:'plein',stacks:[[],[],[p('PEL20',24)],[p('PEL20',24),p('PEL20',24),p('PEL20',24)]]},
+ {id:'M04',zone:'plein',stacks:[[],[],[],[p('PEL20',19),p('PEL20',19)]]},
+ {id:'M05',zone:'plein',stacks:[[],[],[],[p('AFF20',18,'2 fûts')]]},
+ {id:'M06',zone:'plein',stacks:[[],[],[],[]]},
+ {id:'M07',zone:'plein',stacks:[[],[],[p('EDW20',24),p('EDW20',24),p('EDW20',24)],[p('EDW20',24),p('EDW20',24),p('EDW20',24)]]},
+ {id:'M08',zone:'vides',stacks:[[],[p('VIDE',0)],[p('VIDE',0),p('VIDE',0)],[p('VIDE',0),p('VIDE',0),p('VIDE',0)]]}
+];}
+function p(ref,lot,info){return {ref,lot,info}}
+let S;
+function init(){dejaVu=false;S={couloirs:depart(),main:null,ouvert:null,pos:{},verdict:null,msg:''};rendre();}
+const $=id=>document.getElementById(id);
+function refDe(c){const r=c.stacks.flat().find(x=>x);return r?r.ref:null}
+function lotDe(c){const l=c.stacks.flat().filter(x=>x&&!x.pid).map(x=>x.lot);return l.length?Math.min(...l):null}
+function titreCouloir(c){if(c.zone==='vides')return'VIDES (retours clients)';const r=refDe(c);if(!r)return'vide';const lots=[...new Set(c.stacks.flat().map(x=>'S'+x.lot))];return REFS[r].nom+' '+REFS[r].fmt+' L · lot '+lots.join(', ')}
+
+function cartes(){
+ $('cartes').innerHTML=PALETTES.map(P=>{const r=REFS[P.ref];const o=S.pos[P.id];
+  return `<div class="carte ${S.main===P.id?'main':''} ${o?'posee':''}" data-p="${P.id}"><h3><span class="pid">${P.id}</span>${r.nom} ${r.fmt} L</h3><table>
+  <tr><td>Fûts · poids</td><td>${P.futs} · ${P.poids} kg</td></tr><tr><td>Lot</td><td>S${P.lot}</td></tr>
+  <tr><td>Réception</td><td class="${P.recep==='conforme'?'':'rouge'}">${P.recep}</td></tr>
+  <tr><td>Posée</td><td><b>${o?o.c+' · pos. '+(4-o.i)+' · niv. '+o.n:'—'}</b></td></tr></table></div>`}).join('');
+ document.querySelectorAll('.carte').forEach(el=>el.onclick=()=>prendre(el.dataset.p));
+}
+function prendre(id){
+ if(S.pos[id]){ // reprendre si accessible (au sommet et rien devant)
+  const o=S.pos[id];const c=S.couloirs.find(x=>x.id===o.c);const st=c.stacks[o.i];
+  const devantVide=c.stacks.slice(0,o.i).every(s=>s.length===0);
+  if(st[st.length-1].pid!==id||!devantVide){S.msg='Impossible de la reprendre : une autre palette la bloque.';rendre();return}
+  st.pop();delete S.pos[id];
+ }
+ S.main=id;S.msg='';S.verdict=null;rendre();
+}
+
+// ---------- vue d'ensemble en 3D isométrique ----------
+let ISO=40,OX=372,OY=175;const C30=0.866,S30=0.5,K1=1.2247,K2=0.7071;
+const PH=0.66,ZB=0.2,KH=0.46,KR=0.2; // hauteur palette, palette de rétention, hauteur d'un fût, rayon d'un fût
+const LOTCOUL={18:'#b8862b',19:'#c99a2e',20:'#e5b800',24:'#2f5f9e',0:'#8a8478'};
+function P(x,y,z){return [OX+(x-y)*C30*ISO,OY+(x+y)*S30*ISO-z*ISO]}
+function pts(a){return a.map(p=>P(...p).map(v=>v.toFixed(1)).join(',')).join(' ')}
+function face(a,fill,stroke='rgba(0,0,0,.25)'){return `<polygon points="${pts(a)}" fill="${fill}" stroke="${stroke}" stroke-width="1"/>`}
+function fleches(x,ya,yb,mots,taille){ // flèche verte ENTRÉE (vers le fond), flèche rouge SORTIE (vers l'allée), au sol
+ const L=yb-ya,t=L*.42;let g='';
+ g+=face([[x+.22,yb,0],[x+.38,yb,0],[x+.38,ya+t,0],[x+.47,ya+t,0],[x+.3,ya,0],[x+.13,ya+t,0],[x+.22,ya+t,0]],'#107c41','none');
+ g+=face([[x+.62,ya,0],[x+.78,ya,0],[x+.78,yb-t,0],[x+.87,yb-t,0],[x+.7,yb,0],[x+.53,yb-t,0],[x+.62,yb-t,0]],'#9d2727','none');
+ if(mots){const [gx,gy]=P(x+.3,yb+.12,0),[rx,ry]=P(x+.7,yb+.12,0);
+  g+=`<text x="${gx.toFixed(1)}" y="${(gy+taille).toFixed(1)}" text-anchor="end" font-size="${taille}" font-weight="800" fill="#107c41">ENTRÉE</text><text x="${(rx+2).toFixed(1)}" y="${(ry+taille).toFixed(1)}" text-anchor="start" font-size="${taille}" font-weight="800" fill="#9d2727">SORTIE</text>`;}
+ return g;
+}
+function panneau(x,yMur,z0,z1,nom,taille){ // panneau du couloir accroché au mur du fond
+ let g=face([[x+.12,yMur,z0],[x+.88,yMur,z0],[x+.88,yMur,z1],[x+.12,yMur,z1]],'#1f5f3a','#0f3d24');
+ const [lx,ly]=P(x+.5,yMur,(z0+z1)/2);g+=`<text x="${lx.toFixed(1)}" y="${(ly+taille*.36).toFixed(1)}" text-anchor="middle" font-size="${taille}" font-weight="800" fill="#fff" transform="rotate(30 ${lx.toFixed(1)} ${ly.toFixed(1)})">${nom}</text>`;
+ return g;
+}
+function boite(x,y,z,w,d,h,c){ // faces visibles : dessus, avant-gauche (y+d), avant-droite (x+w)
+ return face([[x,y+d,z],[x+w,y+d,z],[x+w,y+d,z+h],[x,y+d,z+h]],c[1])+face([[x+w,y,z],[x+w,y+d,z],[x+w,y+d,z+h],[x+w,y,z+h]],c[2])+face([[x,y,z+h],[x+w,y,z+h],[x+w,y+d,z+h],[x,y+d,z+h]],c[0]);
+}
+function futIso(cx,cy,z,vide,fuit){
+ const [bx,by]=P(cx,cy,z),[tx,ty]=P(cx,cy,z+KH),rx=KR*ISO*K1,ry=KR*ISO*K2;
+ const corps=vide?'url(#isoVide)':'url(#isoMetal)';
+ let g=`<path d="M${(bx-rx).toFixed(1)},${by.toFixed(1)} L${(tx-rx).toFixed(1)},${ty.toFixed(1)} L${(tx+rx).toFixed(1)},${ty.toFixed(1)} L${(bx+rx).toFixed(1)},${by.toFixed(1)} A${rx.toFixed(1)},${ry.toFixed(1)} 0 0 1 ${(bx-rx).toFixed(1)},${by.toFixed(1)} Z" fill="${corps}" stroke="#6f777c" stroke-width=".8"/>`;
+ [0.22,0.78].forEach(f=>{const yy=by+(ty-by)*f;g+=`<path d="M${(bx-rx).toFixed(1)},${yy.toFixed(1)} A${rx.toFixed(1)},${ry.toFixed(1)} 0 0 0 ${(bx+rx).toFixed(1)},${yy.toFixed(1)}" fill="none" stroke="#7d858a" stroke-width="1.6"/>`});
+ g+=`<ellipse cx="${tx.toFixed(1)}" cy="${ty.toFixed(1)}" rx="${rx.toFixed(1)}" ry="${ry.toFixed(1)}" fill="${vide?'#dcdfe1':'#eef0f1'}" stroke="#7d858a" stroke-width="1"/><ellipse cx="${tx.toFixed(1)}" cy="${ty.toFixed(1)}" rx="${(rx*.32).toFixed(1)}" ry="${(ry*.32).toFixed(1)}" fill="#4a4f52"/>`;
+ if(fuit)g+=`<path d="M${(bx+rx*.2).toFixed(1)},${(by-4).toFixed(1)} q3,8 0,14" stroke="#c9a227" stroke-width="2.5" fill="none"/><ellipse cx="${(bx+rx*.5).toFixed(1)}" cy="${(by+ry+8).toFixed(1)}" rx="${(rx*1.1).toFixed(1)}" ry="${(ry*.8).toFixed(1)}" fill="#d9b84a" opacity=".55"/>`;
+ return g;
+}
+function retentionIso(x,y,z){ // palette de rétention : bac plastique noir, caillebotis percé, pieds
+ let g='';
+ [[.06,.06],[.78,.06],[.06,.78],[.78,.78]].forEach(([a,b])=>g+=boite(x+a,y+b,z,.16,.16,.05,['#2a2d2f','#1e2123','#16191a']));
+ g+=boite(x+.03,y+.03,z+.05,.94,.94,ZB-.05,['#3d4245','#2f3336','#24282a']);
+ // nervures sur les flancs
+ for(let k=1;k<6;k++){const t=.03+k*.94/6;g+=`<polyline points="${pts([[x+t,y+.97,z+.06],[x+t,y+.97,z+ZB-.02]])}" stroke="#1b1e20" stroke-width="2"/><polyline points="${pts([[x+.97,y+t,z+.06],[x+.97,y+t,z+ZB-.02]])}" stroke="#1b1e20" stroke-width="2"/>`;}
+ // caillebotis : trous du dessus
+ for(let i=0;i<7;i++)for(let j=0;j<7;j++){const [hx,hy]=P(x+.1+i*.8/6,y+.1+j*.8/6,z+ZB);g+=`<ellipse cx="${hx.toFixed(1)}" cy="${hy.toFixed(1)}" rx="1.8" ry="1.1" fill="#16191a"/>`;}
+ return g;
+}
+function paletteIso(x,y,z,z0){ // z0 : la palette { ref, lot, pid } — 4 fûts sur une palette de rétention
+ const vide=z0.ref==='VIDE';
+ let g=retentionIso(x,y,z);
+ const C=[[.28,.28],[.72,.28],[.28,.72],[.72,.72]].sort((a,b)=>(a[0]+a[1])-(b[0]+b[1]));
+ const n=z0.nb??4;C.slice(0,n).forEach(([dx,dy])=>g+=futIso(x+dx,y+dy,z+ZB,vide));
+ return g;
+}
+function etiquetteIso(x,y,z,txt,coul,neuf){
+ const [cx,cy]=P(x+.5,y+.5,z+.12);const w=txt.length*7.4+14;
+ return `<g><rect x="${(cx-w/2).toFixed(1)}" y="${(cy-21).toFixed(1)}" width="${w.toFixed(1)}" height="18" rx="4" fill="${coul}" stroke="${neuf?'#107c41':'rgba(0,0,0,.35)'}" stroke-width="${neuf?3:1}"/><text x="${cx.toFixed(1)}" y="${(cy-8).toFixed(1)}" text-anchor="middle" font-size="11.5" font-weight="800" fill="${coul==='#e5b800'||coul==='#c99a2e'||coul==='#b8862b'?'#1a1915':'#fff'}">${txt}</text></g>`;
+}
+function isoDefs(){return `<defs>
+  <linearGradient id="isoMetal" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#8f979c"/><stop offset=".35" stop-color="#e6e9eb"/><stop offset=".7" stop-color="#b3bac0"/><stop offset="1" stop-color="#7f878c"/></linearGradient>
+  <linearGradient id="isoVide" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#a9afb3"/><stop offset=".4" stop-color="#d6d9db"/><stop offset="1" stop-color="#9aa0a4"/></linearGradient>
+  <pattern id="hachRouge" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="10" height="10" fill="#fbecec"/><rect width="4" height="10" fill="#e8b4b4"/></pattern>
+ </defs>`;}
+let dejaVu=false;
+function plan(){
+ const W=1000,H=640;
+ let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="La zone de stockage de masse en 3D">${isoDefs()}<style>
+  .tombe{animation:tombe .7s cubic-bezier(.3,1.4,.6,1) both}
+  .apparait{animation:apparait .45s ease-out both}
+  @keyframes tombe{from{transform:translateY(-120px);opacity:0}to{transform:none;opacity:1}}
+  @keyframes apparait{from{transform:translateY(-30px);opacity:0}to{transform:none;opacity:1}}
+  @media (prefers-reduced-motion:reduce){.tombe,.apparait{animation:none}}
+  .couloir:hover .sol{fill:rgba(16,124,65,.18);stroke:#107c41;stroke-width:2.5}
+ </style>`;
+ s+=`<rect width="${W}" height="${H}" fill="#f6f2e9"/>`;
+ // dalle du bâtiment
+ s+=face([[-0.6,-0.6,0],[15.4,-0.6,0],[15.4,6.6,0],[-0.6,6.6,0]],'#e4dfd3','#c9c3b6');
+ // allée de circulation
+ s+=face([[-0.6,4.25,0],[15.4,4.25,0],[15.4,5.6,0],[-0.6,5.6,0]],'#efeadf','none');
+ for(let k=0;k<8;k++){s+=face([[k*2,5.12,0],[k*2+1,5.12,0],[k*2+1,5.21,0],[k*2,5.21,0]],'#e5b800','none');}
+ const [ax,ay]=P(6.5,5.2,0);s+=`<text x="${ax}" y="${ay+22}" font-size="12" font-weight="800" fill="#555047" text-anchor="middle" letter-spacing="2" transform="rotate(30 ${ax} ${ay+22})">ALLÉE — LE CHARIOT ENTRE PAR ICI</text>`;
+ // quais
+ for(let k=0;k<5;k++){const x=1+k*2.6;s+=face([[x,6.1,0],[x+1.6,6.1,0],[x+1.6,6.55,0],[x,6.55,0]],'#e5b800','#8a6d00');const [qx,qy]=P(x+.8,6.33,0);s+=`<text x="${qx}" y="${qy+4}" text-anchor="middle" font-size="10" font-weight="800" transform="rotate(30 ${qx} ${qy+4})">QUAI ${10+k}</text>`;}
+ // mur du fond
+ s+=face([[-0.6,-0.6,0],[15.4,-0.6,0],[15.4,-0.6,2.9],[-0.6,-0.6,2.9]],'#d3cdc0','#a9a397');
+ S.couloirs.forEach((c,k)=>{s+=`<g class="couloir" data-c="${c.id}">${panneau(k*1.3,-0.6,2.32,2.78,c.id,13)}</g>`;});
+ // couloirs
+ let ordre=0;
+ S.couloirs.forEach((c,k)=>{const x=k*1.3;
+  s+=`<g class="couloir" data-c="${c.id}">`;
+  s+=`<polygon class="sol" points="${pts([[x-.05,-.05,0],[x+1.05,-.05,0],[x+1.05,4.05,0],[x-.05,4.05,0]])}" fill="${c.zone==='vides'?'rgba(120,90,160,.10)':'rgba(255,255,255,.55)'}" stroke="#b9b3a6" stroke-width="1.5"/>`;
+  for(let i=3;i>=0;i--){const y=3-i;const st=c.stacks[i];
+   if(!st.length)s+=`<polygon points="${pts([[x+.08,y+.08,0],[x+.92,y+.08,0],[x+.92,y+.92,0],[x+.08,y+.92,0]])}" fill="none" stroke="#b9b3a6" stroke-dasharray="4 3"/>`;
+   st.forEach((z,n)=>{const neuf=z.pid&&S.anim===z.pid;const cls=neuf?'tombe':(!dejaVu?'apparait':'');
+    s+=`<g class="${cls}" style="animation-delay:${neuf?0:(ordre++)*45}ms">${paletteIso(x,y,n*PH,z)}</g>`;});
+   if(st.length){const top=st[st.length-1];s+=etiquetteIso(x,y,st.length*PH,top.ref==='VIDE'?'VIDES':(top.pid?top.pid+' · ':'')+'S'+top.lot,LOTCOUL[top.ref==='VIDE'?0:top.lot]||'#2f5f9e',!!top.pid);}
+  }
+  s+=fleches(x,4.3,5.02,k===0,11);
+  s+=`</g>`;
+ });
+ // zone litiges + bac de rétention
+ s+=face([[11.6,0,0],[15,0,0],[15,1.7,0],[11.6,1.7,0]],'url(#hachRouge)','#9d2727');
+ s+=retentionIso(12.8,.35,0); // palette de rétention
+ s+=futIso(13.3,.85,ZB,false,true);
+ const [zx,zy]=P(13.3,0,0);s+=`<text x="${zx+40}" y="${zy-26}" font-size="12" font-weight="800" fill="#9d2727">ZONE LITIGES</text><text x="${zx+40}" y="${zy-12}" font-size="10.5" fill="#9d2727">fût qui fuit, sur palette de rétention</text>`;
+ // zone de réception
+ s+=face([[11.6,2.05,0],[15.2,2.05,0],[15.2,4.4,0],[11.6,4.4,0]],'rgba(229,184,0,.12)','#e5b800');
+ const [rx0,ry0]=P(15.2,3.2,0);s+=`<text x="${rx0+12}" y="${ry0+4}" font-size="12" font-weight="800">ZONE DE</text><text x="${rx0+12}" y="${ry0+18}" font-size="12" font-weight="800">RÉCEPTION</text>`;
+ const placesR=[[11.8,2.2],[13.9,2.2],[11.8,3.3],[13.9,3.3]];
+ PALETTES.forEach((Pp,k)=>{if(S.pos[Pp.id])return;const [x,y]=placesR[k];
+  s+=`<g data-p="${Pp.id}" style="cursor:pointer" class="${!dejaVu?'apparait':''}">${paletteIso(x,y,0,{ref:Pp.ref,lot:Pp.lot,nb:Pp.futs})}${etiquetteIso(x,y,PH,Pp.id+(S.main===Pp.id?' ✋':''),S.main===Pp.id?'#107c41':'#2f5f9e',S.main===Pp.id)}</g>`;});
+ s+=`</svg>`;dejaVu=true;S.anim=null;return s;
+}
+
+// ---------- vue de côté d'un couloir ----------
+function futs(x,y,w,ref,lot,info,neuf,pid){ // une palette mère vue de côté
+ const vide=ref==='VIDE';let g=`<g>`;
+ g+=`<rect x="${x}" y="${y+62}" width="${w}" height="8" fill="#b88a55"/>`;[0,.45,.9].forEach(f=>g+=`<rect x="${x+f*(w-14)}" y="${y+70}" width="14" height="8" fill="#9c7243"/>`);
+ for(let r=0;r<2;r++)for(let k=0;k<2;k++){const fx=x+6+k*(w/2-2),fy=y+2+r*30,fw=w/2-10;
+  g+=`<rect x="${fx}" y="${fy}" width="${fw}" height="28" rx="6" fill="${vide?'#cfd3d6':'url(#metal)'}" stroke="#7f878c"/><rect x="${fx}" y="${fy+6}" width="${fw}" height="2" fill="#7f878c"/><rect x="${fx}" y="${fy+20}" width="${fw}" height="2" fill="#7f878c"/>`;}
+ const lib=vide?'VIDES':(pid?pid+' · ':'')+REFS[ref].nom+' · S'+lot+(info?' · '+info:'');
+ g+=`<rect x="${x+4}" y="${y+22}" width="${w-8}" height="18" rx="3" fill="${neuf?'var(--ardoise)':'#fdfbf7'}" opacity=".95"/><text x="${x+w/2}" y="${y+35}" text-anchor="middle" font-size="11" font-weight="700" fill="${neuf?'#fff':'#1a1915'}">${lib}</text>`;
+ return g+`</g>`;
+}
+function cote(c){
+ const sauve=[ISO,OX,OY];ISO=74;OX=420;OY=150;
+ let s=`<svg viewBox="0 0 1000 700" role="img" aria-label="Couloir ${c.id} en 3D">${isoDefs()}<style>.slot{cursor:pointer}.slot polygon{fill:rgba(16,124,65,.10);stroke:#107c41;stroke-width:2;stroke-dasharray:7 5}.slot:hover polygon{fill:rgba(16,124,65,.28)}</style><rect width="1000" height="700" fill="#f6f2e9"/>`;
+ s+=face([[-1.3,-0.5,0],[2.6,-0.5,0],[2.6,5.7,0],[-1.3,5.7,0]],'#e4dfd3','#c9c3b6');
+ // mur du fond
+ s+=boite(-1.3,-0.75,0,3.9,0.25,3.3,['#b9b3a6','#c9c3b6','#a9a397']);
+ const [mx,my]=P(-0.7,-0.5,3.0);s+=`<text x="${mx}" y="${my}" text-anchor="middle" font-size="14" font-weight="800" fill="#555047">MUR — FOND DU COULOIR</text>`;
+ s+=panneau(0,-0.5,2.55,3.15,c.id,22);
+ // allée + flèche d'entrée
+ s+=face([[-1.3,4.25,0],[2.6,4.25,0],[2.6,5.7,0],[-1.3,5.7,0]],'#efeadf','none');
+ s+=fleches(0,4.3,5.45,true,14);
+ const [ex,ey]=P(1.5,5.1,0);s+=`<text x="${ex+10}" y="${ey+6}" font-size="14" font-weight="800" fill="#107c41">ALLÉE : le chariot entre et sort par ici</text>`;
+ // sol du couloir
+ s+=face([[-.05,-.05,0],[1.05,-.05,0],[1.05,4.05,0],[-.05,4.05,0]],c.zone==='vides'?'rgba(120,90,160,.12)':'#f6f2e9','#b9b3a6');
+ const k=c.stacks.findIndex(st=>st.length>0);const prem=k===-1?3:k;
+ for(let i=3;i>=0;i--){const y=3-i,st=c.stacks[i];
+  const [lx,ly]=P(1.12,y+.5,0);s+=`<text x="${lx+6}" y="${ly+5}" font-size="13" font-weight="700" fill="#555047">position ${4-i}${i===3?' (fond)':i===0?' (devant)':''}</text>`;
+  if(!st.length)s+=`<polygon points="${pts([[.08,y+.08,0],[.92,y+.08,0],[.92,y+.92,0],[.08,y+.92,0]])}" fill="none" stroke="#b9b3a6" stroke-dasharray="5 4"/>`;
+  st.forEach((z,n)=>{const neuf=z.pid&&S.anim===z.pid;s+=`<g class="${neuf?'tombe':''}">${paletteIso(0,y,n*PH,z)}</g>`;});
+  if(st.length){const top=st[st.length-1];s+=etiquetteIso(0,y,st.length*PH,top.ref==='VIDE'?'VIDES':(top.pid?top.pid+' · ':'')+REFS[top.ref].nom+' · S'+top.lot,LOTCOUL[top.ref==='VIDE'?0:top.lot]||'#2f5f9e',!!top.pid);}
+  if(S.main&&i<=prem&&!(i<prem&&st.length)){const n=st.length,z0=n*PH;
+   if(n<4){s+=`<g class="slot" data-i="${i}">`+[[[.03,y+.97,z0],[.97,y+.97,z0],[.97,y+.97,z0+PH],[.03,y+.97,z0+PH]],[[.97,y+.03,z0],[.97,y+.97,z0],[.97,y+.97,z0+PH],[.97,y+.03,z0+PH]],[[.03,y+.03,z0+PH],[.97,y+.03,z0+PH],[.97,y+.97,z0+PH],[.03,y+.97,z0+PH]]].map(f=>`<polygon points="${pts(f)}"/>`).join('');
+    const [tx,ty]=P(.5,y+.5,z0+PH);s+=`<text x="${tx}" y="${ty+5}" text-anchor="middle" font-size="12.5" font-weight="800" fill="#107c41">${S.main} ici · niv. ${n+1}</text></g>`;}
+  }
+  if(S.main&&i>prem){s+=`<text x="${lx+6}" y="${ly+21}" font-size="11.5" fill="#9d2727">inaccessible (une pile devant)</text>`;}
+ }
+ // chariot rappel : hauteur
+ s+=`</svg>`;[ISO,OX,OY]=sauve;S.anim=null;return s;
+}
+function cadrer(){const sv=$('dessin').querySelector('svg');if(!sv)return;const fond=sv.querySelector(':scope > rect');fond.style.display='none';const bb=sv.getBBox();fond.style.display='';const m=12;sv.setAttribute('viewBox',`${bb.x-m} ${bb.y-m-30} ${bb.width+2*m} ${bb.height+2*m+30}`);fond.setAttribute('x',bb.x-m);fond.setAttribute('y',bb.y-m-30);fond.setAttribute('width',bb.width+2*m);fond.setAttribute('height',bb.height+2*m+30);}
+function rendre(){
+ cartes();
+ const tous=PALETTES.every(P=>S.pos[P.id]);$('verifier').disabled=!tous;
+ if(S.ouvert){const c=S.couloirs.find(x=>x.id===S.ouvert);
+  $('fil').innerHTML=`<span>Plan › <b>${c.id}</b> en 3D — ${titreCouloir(c)}</span><button id="retour">← Retour au plan</button>`;
+  $('dessin').innerHTML=cote(c);cadrer();$('retour').onclick=()=>{S.ouvert=null;rendre()};
+  document.querySelectorAll('.slot').forEach(g=>g.onclick=()=>poser(c,+g.dataset.i));
+ }else{$('fil').innerHTML=`<span>Zone de stockage de masse, en 3D — clique un couloir pour l'ouvrir en grand et y poser ta palette</span>`;$('dessin').innerHTML=plan();{const sv=$('dessin').querySelector('svg');const fond=sv.querySelector('rect');fond.style.display='none';const bb=sv.getBBox();fond.style.display='';const m=12;sv.setAttribute('viewBox',`${bb.x-m} ${bb.y-m-30} ${bb.width+2*m} ${bb.height+2*m+30}`);fond.setAttribute('x',bb.x-m);fond.setAttribute('y',bb.y-m-30);fond.setAttribute('width',bb.width+2*m);fond.setAttribute('height',bb.height+2*m+30);}
+  document.querySelectorAll('[data-c]').forEach(g=>g.onclick=()=>{S.ouvert=g.dataset.c;S.msg='';rendre()});
+  document.querySelectorAll('svg [data-p]').forEach(g=>g.onclick=()=>prendre(g.dataset.p));}
+ $('consigne').textContent=S.main?`${S.main} en main. Clique un couloir, puis la place où la poser.`:(tous?'Toutes les palettes sont posées : vérifie ton rangement.':'Prends une palette (clique sa carte), puis clique un couloir sur le plan.');
+ $('msg').textContent=S.msg;
+ $('verdict').innerHTML=S.verdict||'';
+}
+function poser(c,i){
+ const P=PALETTES.find(x=>x.id===S.main);const st=c.stacks[i];
+ st.push({ref:P.ref,lot:P.lot,pid:P.id,nb:P.futs,info:P.futs+' fûts'});S.pos[P.id]={c:c.id,i,n:st.length};S.main=null;S.anim=P.id;S.msg=`${P.id} posée en ${c.id}, position ${4-i}, niveau ${st.length}.`;rendre();
+}
+function critere(P){
+ const o=S.pos[P.id];const c=S.couloirs.find(x=>x.id===o.c);const autres=c.stacks.flat().filter(z=>z.pid!==P.id);
+ if(c.zone==='vides')return'couloir des vides';
+ if(autres.some(z=>z.ref!==P.ref))return'une seule référence par couloir';
+ if(autres.some(z=>z.lot!==P.lot))return'un seul lot par couloir';
+ if(o.n>MAX[REFS[P.ref].fmt])return'hauteur de gerbage';
+ if(o.n===1&&o.i<3&&c.stacks[o.i+1].length===0)return'remplir par le fond';
+ return null;
+}
+$('verifier').onclick=()=>{S.verdict=PALETTES.map(P=>{const k=critere(P);return `<div>${P.id} ${k?`<span class="ko">✗ critère : ${k}</span>`:'<span class="ok">✓</span>'}</div>`}).join('')+'<div style="border:0;color:var(--doux);font-size:12.5px;padding-top:6px">Entraînement : seul le nom du critère est donné.</div>';rendre()};
+$('btnRegles').onclick=()=>{$('regles').classList.toggle('ouv');$('btnRegles').textContent=$('regles').classList.contains('ouv')?'Les règles ▴':'Les règles ▾'};
+$('raz').onclick=init;
+init();
+</script>
+</body>
+</html>

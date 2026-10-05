@@ -48,6 +48,8 @@ Ces notions resservent tout le scénario : en ENT-6.3, Karim valide le congé de
 
 ## 4. Déroulé (≈ 30 min)
 
+**Date du scénario : lundi 14 juin 2027, 8 h** (premier jour en renfort). Calendrier de S2 (décision de Tristan du 05/10/2026, « A : lundi → vendredi ») : 6.1 lun. 14 juin · 6.2 mar. 15 · 6.3 mar. 15 après-midi · 6.4 mer. 16, 14 h · 6.5 mer. 16, 16 h · 6.6 jeu. 17, 7 h · 6.7 jeu. 17 après-midi · 6.8 ven. 18, 6 h · 6.9 ven. 18, 6 h 30 · 6.10 ven. 18, 17 h.
+
 1. **Message d'Inès** (3 blocs) : « Bonjour {prénom}, bienvenue à Buchelay ! / Tu vas travailler avec plusieurs
    services cet été. Avant tout, regarde l'organigramme de la plateforme. / Complète ensuite la fiche « Qui fait quoi ? »
    et renvoie-la-moi. Inès »
@@ -123,7 +125,11 @@ A et B inversées → jalon 1 faux ; sabotage par jalon.
 
 ## 9. Supports
 
-Trame courte (l'organigramme à compléter sur papier) : Cowork, après validation à l'écran. Corrigé `contenus/corriges/ENT-6.1.js`.
+- Trame courte (l'organigramme à compléter sur papier) : Cowork, après validation à l'écran. Corrigé `contenus/corriges/ENT-6.1.js`.
+- **Questions « Pour réfléchir » de la trame** (décision de Tristan, 05/10/2026) : elles portent sur ce que l'élève vient de faire **et** le replacent dans la semaine de S2 (lundi 14 → vendredi 18 juin, fil rouge de la commande de Malo) : d'où vient ce qu'il a reçu, qui se servira de ce qu'il a produit, ce que son erreur aurait coûté plus loin. Pistes :
+  - « Tu as relié Nadia aux chauffeurs par un lien fonctionnel : à quel moment de ta semaine ce lien va-t-il servir ? »
+  - « Cette semaine tu changes de poste presque chaque jour : à qui t'adresseras-tu si un problème touche la commande d'un client ? »
+  Règles inchangées (`claude/prepalog-trames-eleve.md`) : une question à la fois, sur le travail de l'élève, sans réponse unique.
 
 ## 10. Critères de validation par Tristan
 

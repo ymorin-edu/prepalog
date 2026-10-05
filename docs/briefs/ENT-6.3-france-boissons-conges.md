@@ -48,8 +48,8 @@ S'appuie sur ENT-6.1 : Karim **décide** (hiérarchique), Inès **enregistre et 
 
 ## 4. Déroulé (séance chargée, comme ENT-5.2 : un élève qui n'a pas fini reprend la fois suivante)
 
-**Date du scénario : vendredi 18 juin 2027**, le lendemain de la commande de Malo (ENT-6.2, jeudi 17) : les dates suivent
-l'ordre de jeu.
+**Date du scénario : mardi 15 juin 2027, après-midi**, le jour de la commande de Malo (ENT-6.2, le matin) : les dates
+suivent l'ordre de jeu. Calendrier de S2 (décision de Tristan du 05/10/2026, « A : lundi → vendredi ») : 6.1 lun. 14 juin · 6.2 mar. 15 · 6.3 mar. 15 après-midi · 6.4 mer. 16, 14 h · 6.5 mer. 16, 16 h · 6.6 jeu. 17, 7 h · 6.7 jeu. 17 après-midi · 6.8 ven. 18, 6 h · 6.9 ven. 18, 6 h 30 · 6.10 ven. 18, 17 h.
 
 1. **Message d'Inès** (3 blocs) : « Bonjour {prénom} ! / Les chauffeurs ont posé leurs congés d'été. Karim veut le
    planning **ce soir** : il doit rester assez de chauffeurs chaque semaine. / Place les congés, puis envoie-le.
@@ -150,7 +150,11 @@ faux ; calage : le script d'énumération retrouve 1 solution au 1er envoi et 1 
 
 ## 9. Supports
 
-Trame : Cowork, après validation. Corrigé `contenus/corriges/ENT-6.3.js` (les deux plannings, l'annonce, le message).
+- Trame : Cowork, après validation. Corrigé `contenus/corriges/ENT-6.3.js` (les deux plannings, l'annonce, le message).
+- **Questions « Pour réfléchir » de la trame** (décision de Tristan, 05/10/2026) : elles portent sur ce que l'élève vient de faire **et** le replacent dans la semaine de S2 (lundi 14 → vendredi 18 juin, fil rouge de la commande de Malo) : d'où vient ce qu'il a reçu, qui se servira de ce qu'il a produit, ce que son erreur aurait coûté plus loin. Pistes :
+  - « Ton planning garde un chauffeur de la côte chaque semaine : pour quelle tournée de la semaine est-ce important ? »
+  - « Si ton annonce n'avait trouvé personne avant le 12 juillet, qu'aurais-tu dû changer dans ton planning ? »
+  Règles inchangées (`claude/prepalog-trames-eleve.md`) : une question à la fois, sur le travail de l'élève, sans réponse unique.
 
 ## 10. Critères de validation par Tristan
 
@@ -159,6 +163,6 @@ Le planning en semaines se lit au vidéoprojecteur ; l'imprévu se comprend sans
 
 ## 11. Questions ouvertes (valeur par défaut entre parenthèses)
 
-- [x] Date : vendredi 18 juin 2027 (suit l'ordre de jeu après la renumérotation du 05/10).
+- [x] Date : **mardi 15 juin 2027, après-midi** (calendrier « lundi → vendredi », Tristan, 05/10).
 - [ ] Durée réelle : planning × 2 + message + annonce, c'est la séance la plus dense de S2. Si l'essai déborde, l'annonce
   peut passer en début d'ENT-6.4. (Garder tout.)
