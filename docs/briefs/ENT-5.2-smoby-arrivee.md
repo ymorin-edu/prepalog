@@ -6,7 +6,10 @@
 > Lis docs/briefs/COORDINATION-smoby.md puis implémente le brief docs/briefs/ENT-5.2-smoby-arrivee.md (il faut que la vue Planning et les lots 1, 2, 3 et 7 de MOTEUR-2de-S1 soient livrés). Annonce la durée avant de commencer et dis-moi si un point du brief contredit le code.
 > ```
 
-**Statut** : à implémenter — **attend la vue Planning** (`MOTEUR-vue-planning.md`)
+**Statut** : à implémenter — la vue Planning est livrée (cas « personnel » dans `contenus/planning-essai.js`). **Vérifié le
+05/10/2026 (§7)** : la fiche à remplir (`core/types/fiche.js`) n'a pas encore les blocs `cases` (liste à cocher) et `ordre`
+(remise en ordre) ; **décision de Tristan : les construire d'abord** (lot 4 de `MOTEUR-documents-formulaire.md`, ces deux
+blocs seulement), puis la séance.
 **Date du brief** : 04/10/2026
 **Conversation d'origine** : Cowork (Opus) ; fiche projet `claude/prepalog-2de-s1-cadrage.md` (section « Séance A2 ») ;
 maquette `docs/briefs/planning/` (cas « personnel », v8 validée).
