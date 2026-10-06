@@ -251,6 +251,7 @@ séance 2), `TAB` tableur, `REF` exercices par compétence, `SCE` scénario anci
 | `reinitialisable` | `false` | Bouton « Réinitialiser » d'une séance d'entreprise. Mettre `false` quand la base est partagée avec d'autres séances (X.2, X.3…). |
 | `parcours` | `true` | La séance fait partie d'un parcours strict. |
 | `precedente` | `'<id>'` | Avec `parcours` : la séance qui doit être validée avant. Absent sur la première. Sa validation range une **photo** du travail, qui sert de point de reprise. |
+| `versionBase` | `2` | Avec `parcours` (06/10/2026, refonte d'ENT-1.1) : numéro de version de la base partagée. Une base d'une version antérieure **repart de zéro** à sa prochaine ouverture, une seule fois (photos, scores du parcours et déblocages effacés, `core/app.js`) ; d'ici là, les séances suivantes sont fermées. Le monter = remettre à zéro tous les élèves du parcours : le dire à Tristan. Une séance de parcours affiche aussi le **bandeau de fin de séance** à l'élève (étapes fausses nommées par leur titre). |
 | `immersif` | `true` | Prend toute la page, sans bandeau Prepalog : la séance dessine son propre en-tête et sa sortie (`ctx.quitter()`). Compte aussi pour le parcours et la reprise par l'enseignant. |
 | `corrige` | `'./contenus/corriges/ENT-3.1.js'` | Fichier de corrigé montré dans l'onglet « Corrigés » de l'enseignant. L'élève ne le voit pas, mais le fichier est public (voir CLAUDE.md). |
 | `volume` | `VOLUME` | Volume déclaré de la séance (séances Cdiscount). **Aucun code du site ne le lit aujourd'hui** : c'est une information portée pour la suite. |
@@ -691,3 +692,15 @@ contrôlés (contraste ≥ 4,5, test du bloc `animation`).
   récompenser l'inaction. Un chiffre caché à l'élève ne doit pas être déductible ailleurs.
 - Avant d'ajouter la séance : `node outils/test.mjs`, et un bloc de test dans `outils/test/`
   pour une entreprise nouvelle (une ligne dans `BLOCS` de `outils/test.mjs`).
+
+### Réglages ajoutés le 06/10/2026 (refonte d'ENT-1.1), à passer à `creerEntreprise`
+
+- `fermetures: { <écran>: { ouvertSi: (db) => booléen, message } }` : l'entrée du menu reste grisée avec le message tant que la
+  condition est fausse, pour l'élève seulement (ENT-1.1 : le quai, tant que le questionnaire n'est pas envoyé).
+- Une réception semée peut porter `annoncee: true` (visible, non saisissable), `colisVisibles: false` (pas de tableau des colis),
+  `colisLibelle` (colonne « Colis » de la liste) et `consigneQuai` (l'encadré qui remplace le tableau).
+- Quai : `rendu: 'iso'` (quai sans froid, un camion ; voir l'en-tête de `core/types/quai.js`), et sur le camion `commande`, `lot`,
+  `expedie` (date ou jours par rapport à aujourd'hui) pour l'en-tête du BL ; `parCarton` sur les `refs`.
+- Fiche : un bloc `choix` peut porter `colonne: true` (réponses longues l'une sous l'autre). Tout envoi définitif (fiche, phrases,
+  planning, bon de réception) passe par une confirmation dans la page : un test qui clique « Envoyer » doit ensuite cliquer
+  `[data-confirme-oui]`.

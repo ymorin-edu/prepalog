@@ -3,7 +3,7 @@
 > Écrit par Cowork (conception), lu et complété par Claude Code (construction).
 > **Ne rien inventer** : ce qui n'est pas décidé va dans « Questions ouvertes ».
 
-**Statut** : en construction (Claude Code, 06/10 soir) — **le quai passe en 2D iso (§7.8) : chantier moteur d'abord**
+**Statut** : livré (06/10/2026, soir) — sauf §7.7, chantier commun à venir — **le quai passe en 2D iso (§7.8) : chantier moteur d'abord**
 **Maquette du quai iso VALIDÉE par Tristan le 06/10/2026** (`docs/briefs/spartoo/maquette-quai-spartoo-iso.html`) : elle fait foi
 pour le rendu et l'interaction ; le code de la maquette est jetable (on reprend le comportement, pas le code).
 
@@ -402,9 +402,21 @@ mêmes commandes CMD-048301 / 048307 / 048312), Reste **60** : à bloquer **RG-3
 
 ## Compte rendu *(rempli par Claude Code à la livraison)*
 
-- **Fichiers créés / modifiés** :
-- **Écarts par rapport au brief** (et pourquoi) :
-- **Décisions prises en route** :
-- **Tests** :
-- **Commits** :
-- **Reste ouvert** :
+- **Fichiers créés / modifiés** : `core/iso.js` (roues rondes, objets du quai), `core/types/quai.js` (`rendu: 'iso'`, BL avec
+  en-tête, fiche par référence), `core/types/entreprise.js` (réception « Annoncée » et sans colis, `fermetures`, bandeau de fin
+  de séance, confirmation du bon de réception et des phrases), `core/types/fiche.js` (`colonne`, confirmation), `core/types/planning.js`
+  (confirmation), `core/ui.js` (`confirmerDansLaPage`), `core/app.js` et `core/parcours.js` (`versionBase`, séance suivante, tuile
+  « validée ✓ »), `styles/quai.css`, `styles/base.css`, `activites/spartoo-reception.js`, `contenus/spartoo-reception.js` ; tests :
+  `outils/test/spartoo.mjs`, `animation.mjs`, `smoby.mjs`, `planning.mjs`, `outils/test-seances.mjs`. Trame et corrigés : Cowork
+  (`docs/briefs/COWORK-trames-spartoo-refonte-1.1.md`).
+- **Écarts par rapport au brief** (et pourquoi) : 8 jalons (§6.3 bis) et non 7 ; §7.5 non fait (le maximum est par modèle, ENT-1.2
+  en dépend) ; la réserve écrite au quai ne nomme pas la référence (limite de la vue quai) ; pas d'étape « rentrer » en rendu iso
+  (la palette est posée en zone de réception, comme la maquette) ; l'avis d'expédition est daté de la veille au soir.
+- **Décisions prises en route** : voir `docs/decisions.md` (06/10/2026).
+- **Tests** : bloc spartoo 85+ cas (quai iso, questionnaire, piège, remise à zéro des bases, bandeau, confirmation, fiche par
+  référence), chacun éprouvé par sabotage ; `test-seances.mjs` recalé sur les corrigés de Cowork (aucun écart) ; suite entière verte.
+  Le cas « Repérage » de `smoby.mjs` échoue quand on lance `spartoo smoby` seuls (il prend la première séance d'entreprise, qui
+  dépend des blocs déjà passés) : vert dans la suite entière et sur GitHub, à rendre indépendant un jour.
+- **Commits** : dc0676a (quai iso, moteur), 5d286d2 (réceptions, fermetures), b5f15de (ENT-1.1), 0812cab (bandeau), 83f234e
+  (confirmation), 5b6afa5 (fiche par référence), puis le commit des trames et corrigés.
+- **Reste ouvert** : §7.7 détail des jalons au Suivi (chantier commun avec Smoby C4) ; retours Smoby (lots A, B, puis C3, C5-C7).
