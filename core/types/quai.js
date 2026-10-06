@@ -1509,13 +1509,35 @@ export function creerQuai(Q, opts = {}) {
   });
 
   // La fiche de contrôle de la palette ouverte : quatre cases (trois sans froid), l'unité à côté.
-  const ficheBloc = (p, s, dis) => `<div class="quai-doc quai-fiche" data-q-fiche="${ech(p.id)}">
+  // FICHE PAR RÉFÉRENCE (rendu iso, palette multi-références ; demande de Tristan, 06/10/2026) : une ligne par
+  // référence, colonnes « RAS » (case à cocher), « Cartons endommagés », « Cartons manquants ». Comme la fiche
+  // ordinaire : rien de prérempli, rien de corrigé, aucun jalon. État : `fiche.parRef[réf.] = { ras, endo, manq }`.
+  const ficheParRef = (p) => ISO && !!p.refs;
+  const ligneRef = (s, ref) => Object.assign({ ras: false, endo: '', manq: '' }, ((s.fiche && s.fiche.parRef) || {})[ref] || {});
+  const ficheBlocRefs = (p, s, dis) => `<div class="quai-doc quai-fiche" data-q-fiche="${ech(p.id)}">
+      <div class="quai-doc-titre"><span class="quai-num">3</span> 📝 Ma fiche de contrôle — ${ech(p.id)}</div>
+      <table class="quai-fiche-refs"><thead><tr><th scope="col">Référence</th><th scope="col">RAS</th><th scope="col">Cartons endommagés</th><th scope="col">Cartons manquants</th></tr></thead>
+        <tbody>${p.refs.map((r) => { const l = ligneRef(s, r.ref), id = `qFr-${ech(r.ref)}`;
+    return `<tr data-q-fiche-ref="${ech(r.ref)}"><th scope="row" class="mono" id="${id}">${ech(r.ref)}</th>
+          <td><input type="checkbox" data-q-fr="ras" data-ref="${ech(r.ref)}" aria-label="RAS ${ech(r.ref)}" ${l.ras ? 'checked' : ''} ${dis}></td>
+          <td><input type="text" inputmode="numeric" autocomplete="off" class="quai-fr-nb" data-q-fr="endo" data-ref="${ech(r.ref)}" aria-label="Cartons endommagés ${ech(r.ref)}" value="${ech(l.endo)}" ${dis}></td>
+          <td><input type="text" inputmode="numeric" autocomplete="off" class="quai-fr-nb" data-q-fr="manq" data-ref="${ech(r.ref)}" aria-label="Cartons manquants ${ech(r.ref)}" value="${ech(l.manq)}" ${dis}></td></tr>`; }).join('')}</tbody></table>
+    </div>`;
+  const ficheBloc = (p, s, dis) => (ficheParRef(p) ? ficheBlocRefs(p, s, dis) : `<div class="quai-doc quai-fiche" data-q-fiche="${ech(p.id)}">
       <div class="quai-doc-titre"><span class="quai-num">3</span> 📝 Ma fiche de contrôle — ${ech(p.id)} <span class="quai-fiche-ref">${ech(p.ref)}</span></div>
       <div class="quai-fiche-champs">${CONST.map((c) => `<label for="qFiche-${c.k}">${c.lib}</label>
         <span class="quai-fiche-val"><input id="qFiche-${c.k}" type="text" inputmode="${c.mode || 'text'}" autocomplete="off" data-q-fiche-k="${c.k}" value="${ech(s.fiche[c.k])}" ${dis}><span class="quai-unite">${c.unite}</span></span>`).join('')}</div>
-    </div>`;
+    </div>`);
   // La fiche entière, en lecture, à l'étape ④ : l'élève y lit ce qu'il reporte dans ses réserves.
-  const ficheTableau = (e, ci) => `<div class="quai-doc quai-fiche" data-q-fiche4>
+  // À l'étape ④, la fiche par référence se relit telle quelle (une ligne par référence).
+  const ficheTableauRefs = (e, ci) => `<div class="quai-doc quai-fiche" data-q-fiche4>
+      <div class="quai-doc-titre">📝 Ma fiche de contrôle <span class="quai-fiche-ref">notée à l’étape 3</span></div>
+      <table class="quai-bl"><thead><tr><th>Palette</th><th>Référence</th><th>RAS</th><th>Endommagés</th><th>Manquants</th></tr></thead>
+        <tbody>${PAL[ci].map((p) => (p.refs || []).map((r) => { const l = ligneRef(st(e, p), r.ref), v = (x) => (String(x || '').trim() ? ech(x) : '<span class="note">—</span>');
+    return `<tr data-q-fiche4-ligne="${ech(r.ref)}"><td>${ech(p.id)}</td><td class="mono">${ech(r.ref)}</td><td data-k="ras">${l.ras ? '✓' : '<span class="note">—</span>'}</td><td data-k="endo">${v(l.endo)}</td><td data-k="manq">${v(l.manq)}</td></tr>`; }).join('')).join('')}</tbody></table>
+    </div>`;
+  const ficheTableau = (e, ci) => (PAL[ci].some(ficheParRef) ? ficheTableauRefs(e, ci) : ficheTableauCases(e, ci));
+  const ficheTableauCases = (e, ci) => `<div class="quai-doc quai-fiche" data-q-fiche4>
       <div class="quai-doc-titre">📝 Ma fiche de contrôle <span class="quai-fiche-ref">notée à l’étape 3</span></div>
       <table class="quai-bl"><thead><tr><th>Palette</th>${CONST.map((c) => `<th>${c.court}</th>`).join('')}</tr></thead>
         <tbody>${PAL[ci].map((p) => `<tr data-q-fiche4-ligne="${ech(p.id)}"><td>${ech(p.id)}</td>${CONST.map((c) => {
@@ -2393,6 +2415,14 @@ export function creerQuai(Q, opts = {}) {
       }));
       // La fiche de contrôle : l'état suit la frappe (sans redessiner, sans coût) ; Entrée passe à la case
       // suivante, puis à la décision (la fiche vient juste avant, maquette du 04/10/2026).
+      // La fiche par référence : l'état suit la frappe et la case RAS, sans redessiner, sans coût.
+      z.querySelectorAll('[data-q-fr]').forEach((i) => i.addEventListener(i.type === 'checkbox' ? 'change' : 'input', () => {
+        if (e.fini) return;
+        const ss = s(), ref = i.dataset.ref;
+        if (!ss.fiche.parRef) ss.fiche.parRef = {};
+        ss.fiche.parRef[ref] = Object.assign(ligneRef(ss, ref), { [i.dataset.qFr]: i.type === 'checkbox' ? i.checked : i.value });
+        api.sauver();
+      }));
       const casesFiche = [...z.querySelectorAll('[data-q-fiche-k]')];
       casesFiche.forEach((i, n) => {
         i.addEventListener('input', () => { if (e.fini) return; s().fiche[i.dataset.qFicheK] = i.value; api.sauver(); });

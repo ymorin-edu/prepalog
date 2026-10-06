@@ -354,6 +354,15 @@ await v('Spartoo réception : quai en 2D iso — BL remis, palette qu’on fait 
   await page.waitForSelector('[data-q="vers3"]:not([disabled])');
   await page.click('[data-q="vers3"]');
   await page.waitForSelector('[data-q-palette] [data-q-carton]');
+  // La fiche de contrôle, une ligne par référence : RAS, cartons endommagés, cartons manquants (demande de Tristan).
+  const lignesFiche = await page.$$eval('.quai-fiche-refs tbody tr', (R) => R.map((r) => r.dataset.qFicheRef));
+  if (JSON.stringify(lignesFiche) !== '["PM-SUE-RG-39","PM-RSX-BL-42","PM-SUE-MA-41"]') throw new Error('lignes de la fiche : ' + lignesFiche);
+  const colonnes = await page.$$eval('.quai-fiche-refs thead th', (L) => L.map((x) => x.textContent.trim()));
+  if (colonnes.join('|') !== 'Référence|RAS|Cartons endommagés|Cartons manquants') throw new Error('colonnes de la fiche : ' + colonnes.join(' | '));
+  if (await page.$('[data-q-fiche-k="ref"]')) throw new Error('la case « Référence lue » est encore là');
+  await page.check('[data-q-fr="ras"][data-ref="PM-SUE-RG-39"]');
+  await page.fill('[data-q-fr="endo"][data-ref="PM-RSX-BL-42"]', '1');
+  await page.fill('[data-q-fr="manq"][data-ref="PM-SUE-MA-41"]', '1');
   const cartons = await page.$$eval('[data-q-palette] [data-q-carton]', (L) => L.map((g) => +g.dataset.qCarton).sort((a, b) => a - b));
   if (JSON.stringify(cartons) !== JSON.stringify([1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12])) throw new Error('cartons dessinés : ' + cartons);
   const enfonce = () => page.$$eval('[data-q-palette] [data-iso-avarie]', (L) => L.length);
@@ -374,6 +383,9 @@ await v('Spartoo réception : quai en 2D iso — BL remis, palette qu’on fait 
   await page.click('[data-q="valider"]');
   await page.click('[data-q="vers4"]'); await page.click('[data-q="vers4"]');
   await page.waitForSelector('#qRes-P1');
+  // La fiche se relit à l'étape ④ telle qu'elle a été notée, ligne par ligne.
+  const relue = await page.$$eval('[data-q-fiche4-ligne]', (R) => R.map((r) => [...r.querySelectorAll('[data-k]')].map((c) => c.textContent.trim()).join('|')));
+  if (JSON.stringify(relue) !== '["✓|—|—","—|1|—","—|—|1"]') throw new Error('fiche relue à l’étape 4 : ' + JSON.stringify(relue));
   if (await page.$('[data-q="rentrer"]')) throw new Error('rendu iso : la palette est déjà en zone de réception, rien à rentrer');
   await page.fill('#qRes-P1', '1'); await page.fill('#qRes2-P1', '1');
   await page.click('[data-q="ecrire"]');

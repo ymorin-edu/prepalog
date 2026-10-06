@@ -261,3 +261,9 @@ p.quai-main{ margin:8px 0 0; font-size:15px }
 .quai-etiq-dest{ font-size:12px }
 .quai-etiq-ref{ font-size:18px; font-weight:800; letter-spacing:.5px; margin:2px 0 }
 .quai-etat-carton{ font-size:13px; margin-top:6px }
+/* Fiche de contrôle par référence (ENT-1.1, 06/10/2026) : une ligne par référence. */
+.quai-fiche-refs{ width:100%; border-collapse:collapse; font-size:14px }
+.quai-fiche-refs th, .quai-fiche-refs td{ padding:4px 6px; text-align:center; border-bottom:1px solid var(--filet) }
+.quai-fiche-refs th[scope="row"]{ text-align:left; font-weight:600 }
+.quai-fiche-refs input[type="checkbox"]{ width:18px; height:18px }
+.quai .quai-fiche-refs .quai-fr-nb{ width:64px; text-align:center }
