@@ -17,7 +17,7 @@ import * as SEANCE from '../contenus/smoby-ent52.js';
 export const meta = {
   id: 'smoby-arrivee',
   code: 'ENT-5.2',
-  titre: 'Smoby — l’arrivée de Yanis',
+  titre: 'Smoby — l’arrivée du cariste',
   desc: 'Assistant RH : préparer l’arrivée du cariste recruté (pièces à demander, programme du premier jour), puis planifier '
     + 'les présences et les congés de l’équipe avant le pic, et replanifier après un imprévu.',
   rubrique: 'simulog',

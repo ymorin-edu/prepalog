@@ -131,10 +131,11 @@ Pas de trame 5.1 / 5.2 (« Tout à l'écran ») : Cowork les écrit après la va
   puis ouverte et 5.1 « validée ✓ » une fois la photo posée.
 - **Poussé le soir du 06/10, à la demande de Tristan**, avant le test en classe du 07/10 (le brief prévoyait d'attendre).
 - **Reste ouvert** :
-  - la tuile grisée de 5.2 montre toujours son titre et sa description (« l'arrivée de Yanis ») : un élève qui n'a
-    pas fini 5.1 lit la réponse si 5.2 est cochée pour le groupe. Changer le titre ? (à trancher par Tristan) ;
-  - la confirmation de « Remettre au début » (`core/prof.js`) dit « il repart de ce qu'il avait à la fin de la séance
-    précédente » : faux pour Smoby (base de départ). Fichier inscrit par le chantier ENT-1.1 : pas touché ;
+  - ~~titre de 5.2 qui donne la réponse de 5.1~~ : **fait le 06/10** (décision de Tristan) : « Smoby — l'arrivée du
+    cariste » (tuile et corrigé) ; le nom reste à l'intérieur de la séance ;
+  - ~~confirmation de « Remettre au début » fausse pour Smoby~~ : **fait le 06/10** à la demande de Tristan
+    (`core/prof.js`, bien qu'inscrit par le chantier ENT-1.1, sans modification en cours de ce chantier) : « Il repart
+    de la base de départ de chaque séance » pour une base par séance ; Spartoo inchangé ; la note du panneau le dit aussi ;
   - le bandeau de fin dit « Relis ta trame à ces étapes » : 5.2 n'a pas encore de trame ;
   - `outils/intention-smoby.py` (Cowork) cite encore « car il habite le plus près » : à recaler par Cowork.
 

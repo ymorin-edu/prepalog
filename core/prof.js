@@ -4,7 +4,7 @@
 import { B } from './backend.js';
 import { ech, toast, confirmer } from './ui.js';
 import { AISANCES, amenagements } from './amenagements.js';
-import { seancesDepuis } from './parcours.js';
+import { seancesDepuis, memeBase } from './parcours.js';
 import { chargerActivites, activite, entreprisesDe } from '../activites/index.js';
 import { versCSV, telecharger, ouvrirJeu, cheminDe } from './store.js';
 import { NIVEAUX, libelleNiveau, courtNiveau, libelleNiveaux, activiteVisible, horsNiveau, ouvertureParProf,
@@ -878,7 +878,7 @@ export async function rendreEspaceProf(hote, ctx) {
         <strong>Élève bloqué : remettre sa base au début d'une séance</strong>
         <p class="note">La base de l'élève revient à ce qu'elle était <strong>à la fin de la séance
           précédente</strong> (ce qu'il a réellement fait), ou à la base de départ s'il n'a pas validé
-          la précédente. Les scores de la séance choisie et des suivantes sont effacés du suivi ;
+          la précédente ; à la base de départ pour une entreprise à une base par séance (Smoby). Les scores de la séance choisie et des suivantes sont effacés du suivi ;
           les séances d'avant restent. Demandez d'abord à l'élève de quitter la séance, puis de la
           rouvrir.</p>
         <div class="rangee">
@@ -999,9 +999,14 @@ export async function rendreEspaceProf(hote, ctx) {
       const el = eleves.find((e) => e.uid === uid);
       if (!m || !el) return;
       const touchees = seancesDepuis(metasTous, m);
+      // Base par séance (Smoby) : rien de la séance précédente n'est repris (core/parcours.js).
+      const prec = m.precedente && metasTous.find((x) => x.id === m.precedente);
+      const depart = prec && memeBase(prec, m)
+        ? 'Il repart de ce qu\'il avait à la fin de la séance précédente.'
+        : 'Il repart de la base de départ de chaque séance.';
       if (!confirmer(`Remettre la base de ${el.prenom} ${el.nom} au début de ${m.code} ?\n\n`
         + `Son travail dans ${touchees.map((x) => x.code).join(', ')} est effacé et leurs scores `
-        + `disparaissent du suivi. Il repart de ce qu'il avait à la fin de la séance précédente.`)) return;
+        + `disparaissent du suivi. ${depart}`)) return;
       try {
         // Un drapeau que le poste de l'élève lira à sa prochaine ouverture : l'enseignant
         // n'écrit jamais dans la base privée de l'élève.

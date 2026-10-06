@@ -19,7 +19,7 @@ const juste = (l) => (l.texte != null ? l.texte : l.choix[l.juste]);
 
 export const CORRIGE = {
   code: 'ENT-5.2',
-  titre: 'Smoby — l’arrivée de Yanis',
+  titre: 'Smoby — l’arrivée du cariste',
   items: [
     { etape: 1, etapeTitre: 'Fiche d’arrivée', genre: 'tableau', texte: 'Les pièces à demander à Yanis',
       contexte: 'L’employeur ne demande que ce qui a un lien direct et nécessaire avec le poste (Code du travail, art. L1221-6).',
