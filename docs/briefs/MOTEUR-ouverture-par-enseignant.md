@@ -1,6 +1,6 @@
 # Brief moteur — ouvrir une séance aux élèves depuis « Conduite de séance », sans commit
 
-**Statut** : **à valider par Tristan** (livré le 03/10/2026) *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
+**Statut** : livré — validé à l'écran par Tristan le 06/10/2026
 **Date du brief** : 03/10/2026
 **Modèle conseillé** : Sonnet (pas une vue nouvelle du moteur). **Durée annoncée** : environ 30 à 45 minutes, dont l'essentiel est la réécriture du bloc de test `visibilite` et la suite entière.
 **Origine** : Tristan, 03/10/2026 — « on perd trop de temps avec ces ouvertures / fermetures ». Option 2 choisie parmi trois.

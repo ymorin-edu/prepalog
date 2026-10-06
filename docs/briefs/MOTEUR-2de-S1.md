@@ -6,7 +6,7 @@
 > Lis docs/briefs/COORDINATION-smoby.md, docs/EN-COURS.md, puis le brief docs/briefs/MOTEUR-2de-S1.md. Commence par le lot 0 (état des lieux, lecture seule) et donne-moi le compte rendu avant d'écrire. Annonce la durée de chaque lot.
 > ```
 
-**Statut** : à valider par Tristan — lots 1, 2, 3, 6 et 7 livrés ; **lots 4 et 5 livrés le 04/10/2026 (soir), à essayer à l'écran** (`outils/essai-2de.html`, réglage « Quai ») *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
+**Statut** : livré — lots 4 et 5 validés à l'écran par Tristan le 06/10/2026 (zone de réception reposée au sol à cette occasion)
 **Date du brief** : 04/10/2026
 **Conversation d'origine** : Cowork (Opus), cadrage de S1 ; fiches projet `claude/prepalog-2de-s1-cadrage.md`,
 `claude/prepalog-2de-eleve-debut-annee.md`, `claude/prepalog-2de-socle-transversal.md`

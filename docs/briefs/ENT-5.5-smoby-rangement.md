@@ -14,7 +14,7 @@
 > Lis docs/briefs/COORDINATION-smoby.md puis implémente le brief docs/briefs/ENT-5.5-smoby-rangement.md (il faut que la vue « Plan d'entrepôt » et les lots 1, 2, 3 et 7 de MOTEUR-2de-S1 soient livrés). Annonce la durée avant de commencer et dis-moi si un point du brief contredit le code.
 > ```
 
-**Statut** : **livré** (04/10/2026, `pret: true, ouverture: 'prof'` : fermée aux élèves, à essayer à l'écran). Avant : en attente du chantier `MOTEUR-vue-plan-entrepot.md` (brief écrit le 04/10, maquette v2 validée par
+**Statut** : **livré** (04/10/2026), validé à l'écran par Tristan le 06/10/2026 (`pret: true, ouverture: 'prof'`)
 Tristan) et des lots 1, 2, 3, 7 de `MOTEUR-2de-S1.md`. Les données du plan (§4) sont **recalées sur la maquette v2**.
 **Date du brief** : 04/10/2026
 **Conversation d'origine** : Cowork (Opus) ; fiche projet `claude/prepalog-2de-s1-cadrage.md` (section « Séance C2 »).

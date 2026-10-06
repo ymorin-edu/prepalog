@@ -6,7 +6,7 @@
 > Lis docs/EN-COURS.md, puis le brief docs/briefs/MOTEUR-modes-visite.md et ouvre la maquette docs/briefs/smoby/visite/maquette-visite-2de-v2.html. Il faut que MOTEUR-vue-plan-entrepot.md soit livré (sinon arrête-toi et dis-le). Annonce la durée avant de commencer, découpe en lots (§9), puis enchaîne : les questions du §12 ont toutes une valeur par défaut, applique-la et note au compte rendu ce que tu as choisi.
 > ```
 
-**Statut** : à valider par Tristan — livré le 05/10/2026, à essayer sur la page d'essai (`outils/essai-entrepot.html`, cas « Visite (ENT-5.3) ») *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
+**Statut** : livré — validé à l'écran par Tristan le 06/10/2026
 **Date du brief** : 04/10/2026
 **Conversation d'origine** : Cowork (Opus) ; fiche projet `claude/prepalog-2de-s1-visite.md` (décisions 1 à 11 de Tristan,
 maquette v2 validée le 04/10 au soir).

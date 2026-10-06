@@ -6,7 +6,7 @@
 > Lis docs/EN-COURS.md, puis le brief docs/briefs/MOTEUR-vue-plan-entrepot.md et ouvre la maquette docs/briefs/plan-entrepot/maquette-plan-entrepot-v2.html. Annonce la durée avant de commencer, découpe en lots (§10), puis enchaîne sans attendre : les questions du §13 ont toutes une valeur par défaut, applique-la et note au compte rendu ce que tu as choisi.
 > ```
 
-**Statut** : en cours — **lots 1 et 2 (le cœur, le mode rangement) et lot 4 (le mode préparation) livrés le 04/10/2026, à valider par Tristan** sur `outils/essai-entrepot.html` ; lot 3 (comptage, renvoyé à S2 France Boissons) et lot 5 à faire *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
+**Statut** : en cours — **lots 1 et 2 (le cœur, le mode rangement) et lot 4 (le mode préparation) livrés le 04/10/2026, validés à l'écran par Tristan le 06/10/2026** sur `outils/essai-entrepot.html` ; lot 3 (comptage, renvoyé à S2 France Boissons) et lot 5 à faire *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
 **Date du brief** : 04/10/2026
 **Conversation d'origine** : Cowork (Opus) ; fiche projet `claude/prepalog-plan-entrepot-cadrage.md` (décisions 1 à 22,
 recalage Smoby, onglets, plan agrandi), `claude/prepalog-2de-s1-cadrage.md`.

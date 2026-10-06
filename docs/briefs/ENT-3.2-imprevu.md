@@ -6,7 +6,7 @@
 > Lis docs/briefs/COORDINATION-boost.md puis implémente le brief ENT-3.2-imprevu. Annonce la durée avant de commencer, propose-moi 2 ou 3 imprévus chiffrés avec le script de calage, et attends mon choix avant de coder.
 > ```
 
-**Statut** : **livré** le 03/10/2026, `pret: false`, à valider à l'écran *(chantier moteur + séance ; Opus)*
+**Statut** : **livré**, `pret: true` et déjà ouverte aux élèves (statut mis à jour le 06/10/2026)
 **Date du brief** : 03/10/2026
 **Maquette validée** : « Maquette imprévu ENT-3.2 » (Cowork, 03/10/2026) : le message du responsable et l'écran Tournée.
 **Séance concernée** : ENT-3.2 `boost-ent32`, **aujourd'hui `pret: false`** (cachée aux élèves) : on peut donc la

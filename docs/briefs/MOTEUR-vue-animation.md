@@ -6,7 +6,7 @@
 > Lis docs/EN-COURS.md, puis le brief docs/briefs/MOTEUR-vue-animation.md et ouvre la maquette docs/briefs/france-boissons/animation-6.5-couloir-2temps.html. Fais d'abord l'état des lieux (lecture seule) : ce qui existe déjà dans core/ pour la projection isométrique, les écrans de séance et les jalons, et si un point du brief contredit le code. Annonce la durée, découpe en lots (§9), puis enchaîne : les questions du §12 ont toutes une valeur par défaut, applique-la et note au compte rendu ce que tu as choisi.
 > ```
 
-**Statut** : à valider par Tristan *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
+**Statut** : livré — validé à l'écran par Tristan le 06/10/2026 (page d'essai)
 
 > **⚠ Correctif demandé par Tristan (05/10/2026, soir, décision 52)** : la palette de rétention porte désormais **8 fûts posés à
 > plat en quinconce** (rangées de 3, 2 et 3, une seule couche) et mesure **1,30 × 1,30 m** (format du commerce). À changer dans le

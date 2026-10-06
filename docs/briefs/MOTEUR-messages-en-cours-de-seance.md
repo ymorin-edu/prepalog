@@ -6,7 +6,7 @@
 > Lis docs/EN-COURS.md puis implémente le brief docs/briefs/MOTEUR-messages-en-cours-de-seance.md. Annonce la durée avant de commencer, vérifie les points du §7 dans le code et dis-moi s'il y a un écart avec le brief avant de coder.
 > ```
 
-**Statut** : à valider par Tristan *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
+**Statut** : livré — validé à l'écran par Tristan le 06/10/2026
 **Date du brief** : 03/10/2026
 **Conversation d'origine** : Cowork, « cadrer l'option B » (Opus), fiche projet `claude/prepalog-reprise-option-b.md`
 **Séance pilote** : ENT-2.1 `cdiscount-mouvements`, **aujourd'hui `pret: true` (ouverte aux élèves)** : voir §6.4 sur les élèves qui ont déjà commencé.
