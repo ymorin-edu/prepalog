@@ -3,7 +3,7 @@
 > Écrit par Cowork (conception), lu et complété par Claude Code (construction).
 > **Ne rien inventer** : ce qui n'est pas décidé va dans « Questions ouvertes ».
 
-**Statut** : à implémenter — **le quai passe en 2D iso (§7.8) : chantier moteur d'abord**
+**Statut** : en construction (Claude Code, 06/10 soir) — **le quai passe en 2D iso (§7.8) : chantier moteur d'abord**
 **Maquette du quai iso VALIDÉE par Tristan le 06/10/2026** (`docs/briefs/spartoo/maquette-quai-spartoo-iso.html`) : elle fait foi
 pour le rendu et l'interaction ; le code de la maquette est jetable (on reprend le comportement, pas le code).
 
@@ -337,6 +337,66 @@ le tour, le manquant aussi), les réserves, la signature ; puis trouver REC-0412
 - [x] Retour à l'élève en fin de séance : **bandeau qui nomme le jalon faux, sans la réponse** (Tristan, 06/10) → §7.6. Maquette : `docs/briefs/spartoo/maquette-retours-jalons-1.1.html`.
 - [x] Détail des jalons faux au Suivi : **infobulle avec la phrase de détail** (Tristan, 06/10) → §7.7.
 - [x] Quai fermé tant que le questionnaire de la procédure n'est pas envoyé : **oui** (Tristan, 06/10) → §6.3 bis, §7.10.
+
+---
+
+## Pour Cowork — trame d'ENT-1.1 et corrigés 1.1 / 1.2 / 1.3 (06/10/2026, soir)
+
+> Écrit par Claude Code. Décision de Tristan (06/10, soir) : la nouvelle 1.1 part en ligne **ce soir avec sa trame**.
+> Tout ce qui suit est **lu à l'écran** de la version locale (vérifié en jouant la séance), sauf mention.
+
+**Le déroulé à l'écran (menu de la séance)** : Accueil · Messagerie · *Questionnaire procédure* · *Quai de réception*
+(grisé « Réponds d'abord au questionnaire de la procédure (Messagerie) » tant que le questionnaire n'est pas envoyé) ·
+Réceptions · Fournisseurs · Console. **Plus d'écran Stock.**
+
+**Messagerie** (3 messages) : Bienvenue (inchangé) ; « Procédure de réception : à lire avant le quai » (M. Morin, tutoie,
+5 règles + la console : `.help`, `.movements`, `.getstock <réf.>`, `.getlot <lot>`, bouton « Répondre au questionnaire ») ;
+« Avis d'expédition — commande CF-20261003 » (Puma : Geodis tournée 14, BL-77421, 1 palette, livraison demain matin,
+réserves sous 48 h en rappelant le lot). **Le BL n'est plus dans la messagerie** : le chauffeur le remet au quai.
+
+**Questionnaire** (envoyé à M. Morin ; le quai s'ouvre à l'envoi, même faux) : les 5 questions du §6.3 bis, une réponse
+chacune ; ordre des choix à l'écran = celui du tableau du §6.3 bis, juste en 2e, 3e, 1re, 3e, 2e position.
+
+**Quai — ① le camion arrive** : 10:30, porte 7. BL remis : **BL-77421**, Puma France B2B, commande **CF-20261003**,
+expédié **la veille de la séance** (date du jour − 1, calculée), transporteur **Geodis, tournée 14**, lot **LOT-PM-2609**.
+Lignes (palette P1) : PM-SUE-RG-39 · 4 cartons · 6 paires ; PM-RSX-BL-42 · 4 · 6 paires ; PM-SUE-MA-41 · 4 · 6 paires ;
+total **1 palette mixte, 12 cartons**. Bouton « Oui, vous pouvez décharger ». ② le chauffeur sort la palette au transpalette.
+
+**③ Compter la palette** : 3 couches, une par référence (bas RG-39, milieu RSX-BL-42, haut MA-41). Cartons numérotés « n / 12 »
+sur leur étiquette. **Comptés : RG-39 = 4, RSX-BL-42 = 4, MA-41 = 3** (le carton **n° 9** manque, au fond de la couche du
+haut, invisible de face). **1 carton endommagé : n° 6, PM-RSX-BL-42**, enfoncé sur la face **arrière** (visible seulement
+en tournant). Fiche de contrôle : « Réf. lue », « Endommagés », « Manquants ». Décision : **Accepter avec réserves**,
+motifs **Cartons endommagés + Manquant**.
+
+**④ Réserves et signature** : deux cases « Nombre de cartons endommagés » = **1**, « Nombre de cartons manquants » = **1**.
+Ligne écrite sur le BL (texte exact) : « P1 PM-SUE-RG-39 + PM-RSX-BL-42 + PM-SUE-MA-41 : acceptée sous réserve — 1 carton
+endommagé (écrasé) ; manque 1 carton (BL 12, reçu 11). » Ne pas cocher « Sous réserve de déballage ». Faire signer.
+⚠ La ligne ne nomme pas la référence concernée (limite de la vue quai, voir « Reste ouvert ») : la trame peut demander de
+l'écrire à la main sur le BL papier, l'écran ne le juge pas.
+
+**Données > Réceptions** (10 lignes, la plus récente en haut) : REC-04131 Reebok BL-RB-2266 *Annoncée* (« camion pas encore
+arrivé », pas de bouton) · **REC-04129 Puma BL-77412 À contrôler (le piège)** · **REC-04127 Puma BL-77421 À contrôler (la
+bonne)** · REC-04125 ASICS · 04122 Converse · 04120 Puma BL-77398 · 04116 New Balance · 04114 Vans · 04111 adidas · 04109 Nike
+(*Réceptionnée*). Colonne « Colis » : « 1 palette ». Dans REC-04127, **plus de tableau des colis** : l'encadré dit « Les
+cartons ont été comptés au quai : reprends ta fiche de contrôle. Sur le bon de réception, on écrit des paires. »
+
+**Bon de réception attendu (en paires)** : lot **LOT-PM-2609** ; PM-SUE-RG-39 annoncé **24**, compté **24**, Conforme, Accepté ;
+PM-RSX-BL-42 **24 / 24**, Colis endommagé, Accepté sous réserve ; PM-SUE-MA-41 **24 / 18**, Conforme, Accepté sous réserve.
+Total 72 annoncées, **66 entrées**.
+
+**Console** : `.getlot LOT-PM-2609` → Entrées **66 paires** (24 + 24 + 18, « Entrée : réception », REC-04127), Sorties 0,
+Reste **66**, « Aucune sortie : tout le lot est encore en stock. » `.movements` : « Entrée : réception ».
+
+**Message à Puma** : jugé juste avec le lot, PM-SUE-MA-41 et le manquant **« 6 » (paires) ou « 1 carton »**, et PM-RSX-BL-42.
+
+**Jalons (8)**, titres lus par l'élève : Procédure lue : questionnaire juste · Palette comptée, référence par référence ·
+Décision pour la palette · Réserves précises écrites sur le BL · BL signé par le chauffeur · Contrôle à réception du bon
+BL-77421 · Entrée en stock des quantités acceptées, avec le lot · Réserves signalées à Puma. Suivi : **8/8**.
+
+**Effets sur 1.2 et 1.3 (calculés, à vérifier par le test des séances)** : après 1.1, le stock contient **42 paires de plus**
+qu'avant la refonte (66 au lieu de 24 au lot). ENT-1.3 : Entrées **66**, Sorties **6** (RG-39 : 3, MA-41 : 1, RSX-BL-42 : 2,
+mêmes commandes CMD-048301 / 048307 / 048312), Reste **60** : à bloquer **RG-39 = 21, RSX-BL-42 = 22, MA-41 = 17**
+(avant : 9, 4, 5). La réception du collègue (élève sans 1.1, REC-04118) suit les mêmes chiffres.
 
 ---
 
