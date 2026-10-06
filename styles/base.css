@@ -740,6 +740,10 @@ body.immersion .app{ max-width:1720px; padding:14px 24px 0 }
 }
 .ent-nav:hover{ background:var(--survol); border-color:var(--filet) }
 a.ent-nav{ text-decoration:none }
+/* Écran fermé par une condition de la séance (ENT-1.1, 06/10/2026) : visible, grisé, avec la raison. */
+.ent-nav.ent-nav-ferme{ flex-wrap:wrap; cursor:not-allowed; color:var(--encre-douce) }
+.ent-nav.ent-nav-ferme:hover{ background:none; border-color:transparent }
+.ent-nav-pourquoi{ flex-basis:100%; font-size:12px; line-height:1.3 }
 .ent-nav.on{
   background:var(--ardoise-clair); border-color:var(--ardoise); font-weight:600;
   box-shadow:inset 3px 0 0 var(--ardoise);

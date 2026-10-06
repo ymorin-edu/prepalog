@@ -183,6 +183,10 @@ export function creerEntreprise(U) {
   if (U.menu) U.menu.forEach((id) => { if (!ECRANS_DONNEES.includes(id)) throw new Error(`menu : écran inconnu « ${id} » (écrans : ${ECRANS_DONNEES.join(', ')})`); });
   const MENU = U.menu ? new Set(U.menu) : null;
   // Un écran de données absent du menu ne s'ouvre pas non plus par un lien (tuile de l'accueil, retour).
+  // ÉCRAN FERMÉ PAR UNE CONDITION (ENT-1.1 §7.10, 06/10/2026) : `fermetures: { quai: { ouvertSi(db), message } }`.
+  // L'entrée du menu reste visible, grisée, avec le message, tant que `ouvertSi(db)` est faux ; l'écran ne
+  // s'ouvre pas non plus par un autre chemin. Pour l'élève seulement : l'enseignant navigue librement.
+  const FERMETURES = U.fermetures || {};
   const montre = (v) => !MENU || !ECRANS_DONNEES.includes(v) || MENU.has(v)
     || (v === 'commande' && MENU.has('commandes')) || (v === 'reception' && MENU.has('receptions')) || (v === 'produit' && MENU.has('catalogue'));
   // Les exemples des champs et de l'aide de la console : une vraie référence du catalogue de la séance
@@ -276,6 +280,13 @@ export function creerEntreprise(U) {
       const db = ctx.jeu.etat();
       const prenom = ctx.profil.prenom || ctx.profil.nom || 'Élève';
       const estProf = ctx.profil.role === 'prof';
+      // Le message d'un écran fermé par sa condition (voir FERMETURES), ou '' s'il est ouvert. Une condition
+      // qui plante sur une base incomplète n'enferme personne.
+      const fermeture = (v) => {
+        const F = FERMETURES[v];
+        if (!F || estProf) return '';
+        try { return F.ouvertSi(db) ? '' : (F.message || 'Pas encore ouvert.'); } catch (x) { return ''; }
+      };
 
       // Le niveau de l'élève DANS CETTE SÉANCE (brief MOTEUR-statut-annulee, 03/10/2026) :
       // `db.aisance`, 'standard' ou 'confirme', recopié du réglage de l'enseignant (`ctx.aisance`,
@@ -716,11 +727,14 @@ export function creerEntreprise(U) {
       function dessiner() {
         const nonLus = db.mails.filter((m) => m.folder === 'in' && !m.read).length;
         const aFaire = db.orders.filter((o) => ['À préparer', 'En cours'].includes(statutCommande(o)[0])).length;
-        const aRecevoir = (db.receptions || []).filter((r) => !r.ctrl || !r.ctrl.validated).length;
+        const aRecevoir = (db.receptions || []).filter((r) => !r.annoncee && (!r.ctrl || !r.ctrl.validated)).length;
         // Un groupe du menu : son titre, puis ses entrées ; rien du tout s'il n'en a aucune.
         const groupe = (titre, L) => { const ok = L.filter(Boolean); return ok.length ? `<div class="ent-sep">${ech(titre)}</div>${ok.join('')}` : ''; };
         const item = (id, lbl, n, alias) => {
           const actif = (alias || [id]).includes(E.vue);
+          const f = fermeture(id);
+          if (f) return `<button class="ent-nav ent-nav-ferme" data-vue-fermee="${id}" disabled title="${ech(f)}">
+            <span>${ech(lbl)}</span><span class="ent-nav-pourquoi">${ech(f)}</span></button>`;
           return `<button class="ent-nav ${actif ? 'on' : ''}" data-vue="${id}">
             <span>${ech(lbl)}</span>${n ? `<span class="ent-n">${n}</span>` : ''}</button>`;
         };
@@ -940,7 +954,7 @@ export function creerEntreprise(U) {
       }
 
       function aller(v, p) {
-        if (!montre(v)) return;
+        if (!montre(v) || fermeture(v)) return;
         E.vue = v; Object.assign(E, p || {});
         dessiner();
         hote.scrollIntoView({ block: 'start', behavior: 'smooth' });
@@ -964,6 +978,8 @@ export function creerEntreprise(U) {
           extractions: VTAB && VTAB.navExtractions ? vueExtractions : vueAccueil,
           clients: vueClients, fournisseurs: vueFournisseurs, console: vueConsole,
         };
+        // Un écran fermé par sa condition (accès direct, base rouverte dessus) : on reste à l'accueil.
+        if (fermeture(E.vue)) E.vue = 'accueil';
         z.innerHTML = (vues[E.vue] || vueAccueil)();
         brancher(z);
         figerVue(z);
@@ -1009,7 +1025,7 @@ export function creerEntreprise(U) {
       function vueAccueil() {
         const nonLus = db.mails.filter((m) => m.folder === 'in' && !m.read).length;
         const aFaire = db.orders.filter((o) => ['À préparer', 'En cours'].includes(statutCommande(o)[0])).length;
-        const aRecevoir = (db.receptions || []).filter((r) => !r.ctrl || !r.ctrl.validated).length;
+        const aRecevoir = (db.receptions || []).filter((r) => !r.annoncee && (!r.ctrl || !r.ctrl.validated)).length;
         let total = 0, rupture = 0;
         VARIANTS.forEach((v) => { const q = stockDe(v.sku); total += q; if (q <= 0) rupture++; });
 
@@ -1502,7 +1518,10 @@ export function creerEntreprise(U) {
       const ligneRecRemplie = (x) => x.annonce !== '' && x.annonce != null && x.compte !== '' && x.compte != null
         && !!x.etat && !!x.decision;
 
+      // « Annoncée » (ENT-1.1, 06/10/2026) : le camion n'est pas encore arrivé ; la réception se voit dans la
+      // liste mais ne se saisit pas (`annoncee: true` dans la réception semée).
       function statutReception(r) {
+        if (r.annoncee) return ['Annoncée', 'info'];
         if (!r.ctrl) return ['À contrôler', 'warn'];
         if (r.ctrl.validated) return ['Réceptionnée', 'ok'];
         const debut = r.ctrl.lot || Object.keys(r.ctrl.rows).some((k) => ligneRecRemplie(r.ctrl.rows[k])
@@ -1516,9 +1535,10 @@ export function creerEntreprise(U) {
           const sup = SUP_BY_ID[r.supId] || (db.suppliers || []).find((s) => s.id === r.supId) || { brand: r.supId, name: '' };
           const s = statutReception(r);
           return `<tr><td class="mono">${ech(r.no)}</td><td>${fdate(r.ts)}</td><td>${ech(sup.brand)}</td>
-            <td class="mono">${ech(r.bl.no)}</td><td class="num">${(r.colis || []).length}</td>
+            <td class="mono">${ech(r.bl.no)}</td><td class="num">${ech(r.colisLibelle || (r.colis || []).length)}</td>
             <td>${pastille(s[0], s[1])}</td>
-            <td class="num"><button class="btn btn-s" data-ouvrir-rec="${ech(r.no)}">Ouvrir</button></td></tr>`;
+            <td class="num">${r.annoncee ? '<span class="note" data-rec-annoncee>camion pas encore arrivé</span>'
+              : `<button class="btn btn-s" data-ouvrir-rec="${ech(r.no)}">Ouvrir</button>`}</td></tr>`;
         }).join('');
         return `<div class="ent-tete"><h2>Réceptions</h2>
             <p class="note">Les livraisons annoncées par les fournisseurs et les colis reçus sur le quai.</p></div>
@@ -1531,7 +1551,7 @@ export function creerEntreprise(U) {
 
       function vueReception() {
         const r = receptionDe(E.no);
-        if (!r) return vueReceptions();
+        if (!r || r.annoncee) return vueReceptions();
         preparerReception(r);
         const sup = SUP_BY_ID[r.supId] || (db.suppliers || []).find((s) => s.id === r.supId) || { brand: r.supId, name: '', contact: '' };
         const s = statutReception(r), c = r.ctrl, fige = c.validated;
@@ -1573,6 +1593,10 @@ export function creerEntreprise(U) {
         // L'encadré ne renvoie à la messagerie que si le bon de livraison y est arrivé (Spartoo) ;
         // ailleurs (Cdiscount) aucun bon n'y arrive, et l'élève l'y chercherait pour rien.
         const blParMessage = (db.mails || []).some((m) => m.kind === 'bl' && m.rec === r.no);
+        // Réception SANS tableau des colis (ENT-1.1, 06/10/2026) : la vérité est sur la palette, au quai ; le
+        // tableau la donnait. `colis` reste dans la base (comptes attendus, références du bon), seulement caché.
+        // `consigneQuai` : l'encadré qui le remplace (HTML du contenu) ; `colisLibelle` : la colonne de la liste.
+        const sansColis = r.colisVisibles === false;
 
         const cLot = fige ?`<b class="mono">${ech(c.lot || '—')}</b>`
           : `<input type="text" id="recLot" class="mono" value="${ech(c.lot)}" placeholder="ex. LOT-XX-0000" style="width:190px" aria-label="Numéro de lot">`;
@@ -1584,13 +1608,14 @@ export function creerEntreprise(U) {
             <dt>Transporteur</dt><dd>${ech(r.transporteur || '—')}</dd>
             <dt>Bon de livraison</dt><dd class="mono">${ech(r.bl.no)}</dd>
             <dt>Arrivée sur le quai</dt><dd>${fdt(r.ts)}</dd></dl>
-            <div class="avis">${blParMessage ? 'Le bon de livraison est dans votre messagerie : c\'est lui'
+            ${sansColis ? `<div class="avis" data-rec-sans-colis>${r.consigneQuai || 'Les cartons ont été comptés au quai : reprends ta fiche de contrôle.'}</div></section>`
+              : `<div class="avis">${blParMessage ? 'Le bon de livraison est dans votre messagerie : c\'est lui'
               : 'C\'est le bon de livraison'} qui donne les quantités annoncées et le numéro de lot. Les colis
               ci-dessous sont ce que le transporteur a réellement déposé.</div></section>
           <section class="panneau"><h3>Colis reçus sur le quai</h3>
             <p class="note">${(r.colis || []).length} colis. Additionnez-les par référence pour obtenir la quantité réellement reçue.</p>
             <div class="ent-scroll"><table><thead><tr><th class="num">Colis</th><th>Réf.</th><th>Article</th>
-              <th class="num">Contenu</th><th>État du carton</th></tr></thead><tbody>${colis}</tbody></table></div></section>
+              <th class="num">Contenu</th><th>État du carton</th></tr></thead><tbody>${colis}</tbody></table></div></section>`}
           <section class="panneau"><h3>Bon de réception</h3>
             <p class="note">Reportez le numéro de lot du bon de livraison, puis, pour chaque référence,
               la quantité annoncée, la quantité que vous avez comptée, l'état des colis et votre décision.
@@ -1631,7 +1656,7 @@ export function creerEntreprise(U) {
       }
 
       function validerReception() {
-        const r = receptionDe(E.no); if (!r || !r.ctrl || r.ctrl.validated) return;
+        const r = receptionDe(E.no); if (!r || r.annoncee || !r.ctrl || r.ctrl.validated) return;
         majBoutonRec();
         const c = r.ctrl, lot = (c.lot || '').trim().toUpperCase();
         if (!lot) return toast('Le numéro de lot est obligatoire : il est sur le bon de livraison.');

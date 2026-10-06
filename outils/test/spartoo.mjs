@@ -541,4 +541,54 @@ await v('Spartoo traçabilité : jouable sans les deux séances précédentes', 
   await page.waitForSelector('#btnDeco', { timeout: 6000 });
 });
 
+// ---------- 39. le moteur de la refonte ENT-1.1 (brief §7.1, §7.3, §7.10), sur une entreprise d'essai
+// Une réception « Annoncée » (camion pas arrivé) se voit sans s'ouvrir ; une réception sans tableau des colis
+// garde son bon de réception ; un écran fermé par une condition reste grisé pour l'élève, jamais pour
+// l'enseignant, et s'ouvre quand la condition devient vraie.
+const monterEssai = (role) => page.evaluate(async (role) => {
+  const { creerEntreprise } = await import('/core/types/entreprise.js');
+  const E = await import('/outils/essai-animation.js');
+  document.querySelector('#essaiRefonte')?.remove();
+  const hote = document.createElement('div'); hote.id = 'essaiRefonte'; document.body.prepend(hote);
+  const U = E.univers({ animations: [] });
+  const depart = U.baseDeDepart;
+  const rec = (no, plus) => Object.assign({ no, supId: 'F1', ts: Date.now(), bl: { no: 'BL-' + no, date: Date.now(), lot: 'LOT-1', lines: [{ sku: 'ESSAI', qty: 6 }] },
+    colis: [{ no: 1, sku: 'ESSAI', qty: 6, etat: 'ok' }], ctrl: null }, plus);
+  U.baseDeDepart = () => Object.assign(depart(), { receptions: [
+    rec('REC-1', { annoncee: true }),
+    rec('REC-2', { colisVisibles: false, colisLibelle: '1 palette', consigneQuai: 'Reprends ta fiche de contrôle.' }),
+  ] });
+  U.fermetures = { console: { ouvertSi: (db) => !!db.questionnaire, message: 'Réponds d’abord au questionnaire.' } };
+  const db = U.baseDeDepart();
+  window.__r = { db };
+  creerEntreprise(U).rendre(hote, {
+    meta: { id: 'essai-refonte', code: 'ESSAI', titre: 'Essai', portee: 'eleve', immersif: true, temps: 'guidage', bareme: 0 },
+    profil: { prenom: 'Lea', nom: 'Test', role, uid: 'u-essai' },
+    jeu: { etat: () => db, sauver: () => {} }, enregistrer: () => {}, quitter: () => {}, codeStock: 'ABC', lireScore: async () => null,
+  });
+}, role);
+await v('Moteur ENT-1.1 : réception « Annoncée », réception sans colis, écran fermé par une condition', async () => {
+  const Z = '#essaiRefonte';
+  await monterEssai('eleve');
+  if (await page.$(`${Z} [data-vue="console"]`)) throw new Error('la console est ouverte avant le questionnaire');
+  if (!/questionnaire/.test(await page.textContent(`${Z} [data-vue-fermee="console"]`))) throw new Error('l’entrée fermée ne dit pas pourquoi');
+  await page.click(`${Z} [data-vue="receptions"]`);
+  const liste = await page.textContent(`${Z} .ent-main`);
+  if (!/Annoncée/.test(liste) || !(await page.$(`${Z} [data-rec-annoncee]`))) throw new Error('la réception annoncée n’est pas marquée');
+  if (await page.$(`${Z} [data-ouvrir-rec="REC-1"]`)) throw new Error('la réception annoncée s’ouvre');
+  if (!/1 palette/.test(liste)) throw new Error('la colonne de la liste ne dit pas « 1 palette »');
+  await page.click(`${Z} [data-ouvrir-rec="REC-2"]`);
+  await page.waitForSelector(`${Z} [data-rec-sans-colis]`);
+  if (/Colis reçus sur le quai/.test(await page.textContent(`${Z} .ent-main`))) throw new Error('le tableau des colis est encore là');
+  if (!(await page.$(`${Z} #recLot`))) throw new Error('le bon de réception a disparu avec le tableau des colis');
+  // Le questionnaire envoyé (même faux) : la condition devient vraie, l'entrée s'ouvre au prochain dessin.
+  await page.evaluate(() => { window.__r.db.questionnaire = true; });
+  await page.click(`${Z} [data-vue="accueil"]`);
+  await page.waitForSelector(`${Z} [data-vue="console"]`);
+  // L'enseignant navigue librement.
+  await monterEssai('prof');
+  if (!(await page.$(`${Z} [data-vue="console"]`))) throw new Error('l’enseignant trouve la console fermée');
+  await page.evaluate(() => document.querySelector('#essaiRefonte')?.remove());
+});
+
 }
