@@ -3,6 +3,8 @@
 Brief déposé par Cowork le 06/10/2026. **Modèle : Sonnet** (correctif moteur, pas une vue nouvelle).
 **Durée estimée : 30 à 45 min**, surtout pour les tests.
 
+**Statut** : livré — 06/10/2026
+
 ## Le défaut constaté en classe (06/10/2026, 1L, ENT 1.1)
 
 Trois élèves ont travaillé la séance le matin. Dans « Repérage des élèves » (onglet Suivi de classe),
@@ -84,3 +86,30 @@ gonflées) ; supprimer la sauvegarde du jeu privé (temps qui redescend à la r�
 **Essai sur un poste avant une séance** (alerte n° 6). Ouvrir une séance avec un compte élève, ne rien
 toucher pendant 5 minutes, fermer l'onglet sans « Quitter », puis regarder le repérage côté enseignant :
 il doit afficher environ 4 à 5 min.
+
+## Compte rendu *(rempli par Claude Code à la livraison)*
+
+*06/10/2026 — livré.*
+
+- **Fichiers modifiés** : `core/types/entreprise.js` (minuterie : envoi toutes les 120 s de temps compté,
+  sauvegarde du jeu privé au même moment, repli sur `remonterEtapes(true)` si le résultat n'existe pas ;
+  commentaire réécrit), `core/app.js` (`ctx.enregistrerTemps`), `core/backend-demo.js` et
+  `core/backend-firebase.js` (`majTemps`). Aucune règle Firebase touchée, rien dans `core/prof.js`.
+- **Tests** : bloc nouveau `outils/test/temps.mjs` (9 cas), inscrit dans `BLOCS` et dans le groupe 1 de
+  `GROUPES` (`outils/test.mjs` : deux lignes ajoutées, rien de réécrit). Les cas du brief y sont, l'évaluation
+  et le compte enseignant sur banc d'essai (moteur seul). Sabotages éprouvés : sans envoi périodique (4 cas
+  tombent), envoi par `ecrireScore` (2 cas : tentatives 0 → 4), sans sauvegarde du jeu privé (1 cas), sans
+  garde « évaluation » (1 cas).
+- **Écarts par rapport au brief** :
+  - Le seuil est simplement « 120 s de temps compté depuis le dernier envoi » (la condition des 60 s s'y
+    trouve incluse).
+  - Côté Firebase, **pas de lecture avant l'envoi** pour garder le maximum : le jeu privé étant sauvé au
+    même moment, le temps ne repart jamais plus bas (le test de réouverture le vérifie en démonstration,
+    où `majTemps` garde en plus le maximum, sans coût).
+  - Constaté en route : à l'ouverture, la séance remonte déjà sa note une fois (code d'avant), donc le
+    résultat existe presque toujours ; le repli « document absent » reste comme filet. Cette écriture à
+    l'ouverture compte une tentative à chaque réouverture : comportement inchangé.
+- **Non vérifié** : le mode réel (Firebase) n'est pas couvert par la suite. `updateDoc` avec `FieldPath`
+  et l'erreur `not-found` sont l'usage documenté du SDK, mais seul l'essai sur un poste le confirmera.
+- **Pour Tristan** : l'essai décrit ci-dessus (5 min sans rien toucher, fermer l'onglet sans « Quitter »,
+  regarder le repérage) avant la prochaine séance.
