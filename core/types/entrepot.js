@@ -367,11 +367,12 @@ function compilerPrep(M, err) {
     return { L: p[1] + Math.abs(p[0] - q[0]) + q[1], pts: [p, [p[0], 0], [q[0], 0], q] };
   };
   // Un tour : quai → les points dans l'ordre (deux prélèvements de suite au même point n'en font qu'un) → quai.
-  const longueurTour = (points, mode) => {
+  // `retour: false` s'arrête au dernier point (le tracé d'une préparation en cours).
+  const longueurTour = (points, mode, retour = true) => {
     const seq = [quai];
     points.forEach((p) => { const z = seq[seq.length - 1]; if (Math.abs(z[0] - p[0]) > eps || Math.abs(z[1] - p[1]) > eps) seq.push(p); });
     if (seq.length === 1) return { L: 0, pts: [] };
-    seq.push(quai);
+    if (retour) seq.push(quai);
     let L = 0, pts = [];
     for (let i = 1; i < seq.length; i++) { const t = troncon(seq[i - 1], seq[i], mode); L += t.L; pts = pts.concat(i > 1 ? t.pts.slice(1) : t.pts); }
     return { L, pts };
@@ -433,9 +434,12 @@ function calculPrep(M, e) {
   ];
   const mode = e.parcours || 'serpentin';
   const T = M.longueurTour(faits.map((f) => M.point(f.a)), mode);
+  // Le tracé avance avec la préparation : du quai au dernier prélèvement ; le retour au quai ne se dessine
+  // qu'une fois la préparation terminée (choix de Tristan, 06/10/2026). Les mètres comptent le tour entier.
+  const trace = e.fin ? T.pts : M.longueurTour(faits.map((f) => M.point(f.a)), mode, false).pts;
   const nbTours = mode === 'serpentin' && T.L > 0 ? Math.round(T.L / M.tourLong) : 0;
   const reappro = M.ruptures.length > 0 && M.ruptures.every((a) => (e.reappros || []).some((r) => r.pour === a));
-  return { faits, prelev, horsCommande, justes, lignesJustes, couches, hauteur, poids, regles, metres: T.L, trace: T.pts,
+  return { faits, prelev, horsCommande, justes, lignesJustes, couches, hauteur, poids, regles, metres: T.L, trace,
     tours: nbTours, mode, reappro };
 }
 // Le meilleur tour auquel l'élève se compare : en évaluation, le parcours est à choisir (allées à double

@@ -652,6 +652,31 @@ await v('Préparation : palette vide terminée → 0 / 9 ; une seule ligne puis 
   }), [false, true], 'garde par défaut');
 });
 
+// Le tracé avance avec la préparation (Tristan, 06/10/2026) : du quai au dernier prélèvement, le retour au
+// quai seulement une fois terminée. Les mètres comptent toujours le tour entier.
+await v('Préparation : le tracé part du quai et s’arrête au dernier prélèvement ; le retour au quai n’apparaît qu’à « Terminer »', async () => {
+  await monter(pg, { cas: 'preparation' });
+  vrai(!(await present(pg, '[data-pe-trace]')), 'tracé avant tout prélèvement');
+  await prelever(pg, 'A1-T01-N1-E1', 2);
+  await prelever(pg, 'A1-T02-N1-E1', 6);
+  // Le tracé calculé (en mètres) : premier et dernier point.
+  const bouts = () => pg.evaluate(async () => {
+    const E = await import('/core/types/entrepot.js');
+    const C = await import('/contenus/entrepot-essai.js');
+    const X = E.calculPreparation(C.PREPARATION, window.__e.db.entrepots['essai-preparation']);
+    return { d: X.trace[0].join(','), f: X.trace[X.trace.length - 1].join(','), m: Math.round(X.metres) };
+  });
+  const a = await bouts();
+  vrai(a.d !== a.f, `tracé refermé sur le quai en cours de préparation (${a.d} → ${a.f})`);
+  // et à l'écran : le tracé du plan s'arrête au même endroit (il n'est pas refermé)
+  for (let i = 0; i < 4 && await present(pg, '[data-pe="retour"]'); i++) await pg.click(`${ZP} [data-pe="retour"]`);
+  const ecran = await pg.$eval(`${ZP} [data-pe-trace] polyline`, (l) => { const P = l.getAttribute('points').split(' '); return P[0] === P[P.length - 1]; });
+  egal(ecran, false, 'tracé du plan refermé en cours de préparation');
+  await finir(pg);
+  const b = await bouts();
+  egal([b.f, b.m], [b.d, a.m], 'tracé revenu au quai une fois terminé ; les mètres comptent le tour entier avant comme après');
+});
+
 await v('Préparation : Cuisine avant Porteur et Trotteur → 47 m mais « fragiles en haut » faux ; film 2 tours et étiquettes voisines faux', async () => {
   await monter(pg, { cas: 'preparation' });
   await prelevertout(pg, [0, 1, 2, 5, 3, 4]);
