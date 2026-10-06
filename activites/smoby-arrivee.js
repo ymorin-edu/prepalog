@@ -8,7 +8,8 @@
 //
 // Pas de `notation` : quatorze jalons ramenés sur 20. Une base par séance (pas de `jeuId`) : un élève qui
 // n'a pas fini reprend où il en était à la séance suivante.
-// Pas encore de trame élève : Cowork l'écrit après la validation à l'écran (brief §9).
+// Trame élève (format long, 7 étapes, brief `docs/briefs/COWORK-trame-smoby-5.2.md`, relue par Tristan le 06/10/2026) ;
+// son corrigé s'ajoute au corrigé calculé (`meta.corrige`).
 
 import { creerEntreprise } from '../core/types/entreprise.js';
 import * as SMOBY from '../contenus/smoby.js';
@@ -58,7 +59,10 @@ const moteur = creerEntreprise({
   lexique: SEANCE.LEXIQUE,
   fiche: SEANCE.FICHE,
   planning: SEANCE.PLANNING,
-  sansTrame: "Tout à l'écran",
+  trame: {
+    pdf: './contenus/trames/ENT-5.2-smoby-arrivee-trame-eleve.pdf',
+    docx: './contenus/trames/ENT-5.2-smoby-arrivee-trame-eleve.docx',
+  },
 });
 
 export function rendre(hote, ctx) { moteur.rendre(hote, ctx); }

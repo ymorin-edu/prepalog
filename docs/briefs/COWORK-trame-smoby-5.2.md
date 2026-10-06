@@ -6,8 +6,7 @@
 > Lis docs/briefs/COWORK-trame-smoby-5.2.md : commite les fichiers de la trame ENT-5.2 déposés par Cowork (liste §2), sans rien déclarer. Ne touche à aucun autre fichier.
 > ```
 
-**Statut** : **brouillon**, à ne pas commiter avant le retour de Tristan sur le test en classe du 07/10, sauf s'il le
-demande. Trame **non déclarée**.
+**Statut** : **livré** le 06/10/2026 au soir (relue par Tristan, déclarée pour la classe du 07/10).
 
 ## 1. Ce que c'est
 
@@ -60,3 +59,13 @@ Message de commit proposé : « Smoby : trame élève ENT-5.2 et son corrigé (b
 - Construit (comme la séance) : Sophie, l'équipe, les besoins, les absences, l'imprévu.
 
 ## Compte rendu *(rempli par Claude Code)*
+
+06/10/2026 au soir, à la demande de Tristan (trame relue par lui, sert en classe le 07/10) :
+- Fichiers du §2 commités tels que déposés (générateur non relancé : `.docx`/`.pdf` sont ceux de Cowork).
+- §4 fait : `sansTrame` retiré et `trame: { pdf, docx }` déclaré dans `activites/smoby-arrivee.js` ; le corrigé de la
+  trame (42 questions) s'ajoute après le corrigé calculé dans `contenus/corriges/ENT-5.2.js`, étapes marquées
+  « (trame) » comme chez Picard.
+- À savoir : la trame s'intitule « l'arrivée de Yanis » alors que le titre de la tuile dit depuis ce soir « l'arrivée du
+  cariste » (l'écran de la séance, lui, dit toujours « Séance 2 : l'arrivée de Yanis »). Non corrigé : c'est au
+  générateur de Cowork de changer s'il le faut.
+- Le §3 (à revoir après le test) reste ouvert.

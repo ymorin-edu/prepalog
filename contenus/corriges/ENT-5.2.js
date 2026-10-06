@@ -5,6 +5,12 @@
 // la suite de tests) avant et après l'imprévu, et le message juste. Rien n'est recopié.
 
 import { PIECES, PREMIER_JOUR, PLANNING, SOLUTION, PHRASES } from '../smoby-ent52.js';
+import { CORRIGE as TRAME } from './ENT-5.2-trame.js';
+
+// Le corrigé de la trame élève (généré, relue par Tristan le 06/10/2026), après celui calculé
+// depuis la séance. Ses étapes sont celles de la trame : marquées « (trame) », sinon l'onglet
+// Corrigés, qui regroupe par numéro d'étape, les mêlerait aux étapes de l'écran (mêmes numéros).
+const DE_LA_TRAME = TRAME.items.map((it) => ({ ...it, etape: `${it.etape} (trame)` }));
 
 const JOURS = PLANNING.echelle.jours;
 const CARTES = PLANNING.cartes.liste.concat(PLANNING.alea.ajoutCartes);
@@ -20,6 +26,7 @@ const juste = (l) => (l.texte != null ? l.texte : l.choix[l.juste]);
 export const CORRIGE = {
   code: 'ENT-5.2',
   titre: 'Smoby — l’arrivée du cariste',
+  trame: TRAME.trame,
   items: [
     { etape: 1, etapeTitre: 'Fiche d’arrivée', genre: 'tableau', texte: 'Les pièces à demander à Yanis',
       contexte: 'L’employeur ne demande que ce qui a un lien direct et nécessaire avec le poste (Code du travail, art. L1221-6).',
@@ -45,5 +52,6 @@ export const CORRIGE = {
     { etape: 4, etapeTitre: 'Le point à Sophie', genre: 'question', texte: 'Le message juste (phrases à choisir)',
       rep: PHRASES.lignes.map(juste).join(' '),
       note: 'Jalon 14 : la salutation, le constat et la formule de fin. Le dernier envoi compte.' },
+    ...DE_LA_TRAME,
   ],
 };

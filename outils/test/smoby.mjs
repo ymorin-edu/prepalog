@@ -1188,11 +1188,14 @@ await v('ENT-5.2 : les attendus calculés sont ceux du brief ; l’ordre de dép
     const db = { plannings: { [S.PLANNING.id]: { v1: { place: place('v1') }, v2: { place: place('v2') } } } };
     const depart = S.FICHE.blocs.find((b) => b.type === 'ordre').choix.map((c) => c.v);
     return { pieces: S.PIECES_ATTENDUES, ordre: S.ORDRE_ATTENDU, depart, nPieces: S.PIECES.length,
-      jalons: P.jalonsPlanning(db, S.PLANNING).ok, items: C.CORRIGE.items.length, code: C.CORRIGE.code };
+      jalons: P.jalonsPlanning(db, S.PLANNING).ok, code: C.CORRIGE.code,
+      items: C.CORRIGE.items.filter((it) => !/\(trame\)$/.test(String(it.etape))).length,
+      trame: C.CORRIGE.items.filter((it) => /\(trame\)$/.test(String(it.etape))).length };
   });
   egal([r.pieces, r.ordre, r.nPieces], [PIECES52, JOUR52, 8], 'pièces et ordre attendus');
   vrai(r.depart.every((v, k) => v !== JOUR52[k]) && r.depart.slice().sort().join() === JOUR52.slice().sort().join(), `ordre de départ : ${r.depart}`);
-  egal([r.jalons, r.items, r.code], [10, 5, 'ENT-5.2'], 'solution jugée par le moteur, corrigé');
+  // Le corrigé de la trame (42 questions, déclarée le 06/10/2026) s'ajoute après les 5 calculés.
+  egal([r.jalons, r.items, r.trame, r.code], [10, 5, 42, 'ENT-5.2'], 'solution jugée par le moteur, corrigé (écran, trame)');
 });
 
 await v('ENT-5.2 : à l’ouverture, un message de Sophie, la fiche et le planning au menu, Yanis étiqueté CDD ; aucun jalon (inaction 0 / 14)', async () => {
