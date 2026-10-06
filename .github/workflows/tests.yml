@@ -33,8 +33,27 @@ jobs:
       - name: Installer Playwright et xlsx
         run: npm install --no-save --no-package-lock playwright xlsx@0.18.5
 
+      # Le navigateur téléchargé est gardé d'un passage à l'autre (lot 5 de MOTEUR-tests-rapides,
+      # 06/10/2026), sous une clé qui porte la version de Playwright : une nouvelle version de
+      # Playwright retélécharge son navigateur. Les bibliothèques du système, elles, ne se gardent pas.
+      - name: Version de Playwright
+        id: pw
+        run: echo "version=$(node -p "require('playwright/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Navigateur gardé en réserve
+        id: cache-pw
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
+
       - name: Installer Chromium
+        if: steps.cache-pw.outputs.cache-hit != 'true'
         run: npx playwright install --with-deps chromium
+
+      - name: Bibliothèques du système pour Chromium
+        if: steps.cache-pw.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
 
       - name: Suite de tests (groupe ${{ matrix.groupe }})
         run: node outils/test.mjs --groupe ${{ matrix.groupe }} 2>&1 | tee sortie-tests.txt; exit "${PIPESTATUS[0]}"
