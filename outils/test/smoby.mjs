@@ -2570,5 +2570,94 @@ await v('Menu : un écran inconnu dans `menu` empêche la séance de se charger 
   egal(r.vues, ['accueil', 'mail', 'entrepot', 'commandes', 'receptions', 'stock', 'catalogue', 'blocage', 'clients', 'fournisseurs', 'console'], 'sans menu');
 });
 
+// ── Parcours strict de Smoby (brief SMOBY-retours-5.1-5.2, lot B, 06/10/2026) ─────────────────────────────
+// Une base PAR SÉANCE (pas de `jeuId`) : la photo de fin de 5.1 reste dans la base de 5.1, et c'est là que le
+// verrou de 5.2 doit la lire. Spartoo (une base commune) est éprouvé à côté : il ne doit pas bouger.
+// Les codes et identifiants attendus sont écrits à la main.
+const SMOBY = ['ENT-5.1', 'ENT-5.2', 'ENT-5.3', 'ENT-5.4', 'ENT-5.5', 'ENT-5.6', 'ENT-5.7', 'ENT-5.8'];
+await v('Parcours Smoby : les 8 séances se suivent malgré leurs bases séparées ; « remettre au début de 5.2 » touche 5.2 à 5.8 ; Spartoo inchangé', async () => {
+  const r = await pg.evaluate(async () => {
+    const { chargerActivites } = await import('/activites/index.js');
+    const P = await import('/core/parcours.js');
+    const metas = (await chargerActivites()).map((x) => x.meta);
+    const de = (id) => metas.find((x) => x.id === id);
+    return {
+      smoby: P.seancesDuParcours(metas, de('smoby-arrivee')).map((x) => x.code),
+      depuis: P.seancesDepuis(metas, de('smoby-arrivee')).map((x) => x.code),
+      spartoo: P.seancesDuParcours(metas, de('spartoo')).map((x) => x.id),
+      boost: P.seancesDuParcours(metas, de('smoby-recrutement')).some((x) => !/^ENT-5\./.test(x.code)),
+    };
+  });
+  egal(r.smoby, SMOBY, 'séances du parcours Smoby');
+  egal(r.depuis, SMOBY.slice(1), 'séances défaites par « remettre au début de 5.2 »');
+  egal(r.spartoo, ['spartoo-reception', 'spartoo', 'spartoo-tracabilite'], 'parcours Spartoo');
+  vrai(!r.boost, 'une séance d’une autre entreprise est entrée dans le parcours Smoby');
+});
+
+await v('Verrou Smoby : 5.2 fermée sans la photo de 5.1 (même rangée dans la base de 5.2), ouverte avec, ouverte par « Débloquer » ; Spartoo inchangé', async () => {
+  const r = await pg.evaluate(async () => {
+    const { chargerActivites } = await import('/activites/index.js');
+    const { verrou, versionDuParcours } = await import('/core/parcours.js');
+    const metas = (await chargerActivites()).map((x) => x.meta);
+    const de = (id) => metas.find((x) => x.id === id);
+    const uid = 'u-verrou-smoby', gid = 'g-verrou-smoby', profil = { role: 'eleve', uid };
+    const cles = [];
+    const base = (jeu, data) => { const k = `prepalog:prive/${uid}/${jeu}`; cles.push(k); localStorage.setItem(k, JSON.stringify({ data, ts: 1 })); };
+    const debloquer = (aid) => { const k = `prepalog:travaux/${gid}/${uid}/_debloque-${aid}`; cles.push(k);
+      localStorage.setItem(k, JSON.stringify({ uid, aid: '_debloque-' + aid, gid, score: 0, max: 0, meilleur: 0, tentatives: 0 })); };
+    const V = async (id) => verrou(metas, de(id), profil, gid);
+    const o = {};
+    o.rien = [await V('smoby-recrutement'), await V('smoby-arrivee')];
+    base('smoby-arrivee', { v: 1, points: { 'smoby-recrutement': { v: 1 } } });
+    o.mauvaiseBase = await V('smoby-arrivee');
+    base('smoby-recrutement', { v: 1, points: { 'smoby-recrutement': { v: 1 } } });
+    o.photo = [await V('smoby-arrivee'), await V('smoby-visite')];
+    debloquer('smoby-visite');
+    o.debloque = [await V('smoby-visite'), await V('smoby-reception')];
+    o.spartooRien = await V('spartoo');
+    base('spartoo', { v: 1, versionBase: versionDuParcours(metas, de('spartoo')), points: { 'spartoo-reception': { v: 1 } } });
+    o.spartooPhoto = [await V('spartoo'), await V('spartoo-tracabilite')];
+    cles.forEach((k) => localStorage.removeItem(k));
+    return o;
+  });
+  egal(r.rien, [null, 'Termine d\'abord ENT-5.1.'], 'aucune photo');
+  egal(r.mauvaiseBase, 'Termine d\'abord ENT-5.1.', 'photo de 5.1 rangée dans la base de 5.2 (pas la sienne)');
+  egal(r.photo, [null, 'Termine d\'abord ENT-5.2.'], 'photo de 5.1 dans la base de 5.1');
+  egal(r.debloque, [null, 'Termine d\'abord ENT-5.3.'], '5.3 débloquée à la main');
+  egal(r.spartooRien, 'Termine d\'abord ENT-1.1.', 'Spartoo sans photo');
+  egal(r.spartooPhoto, [null, 'Termine d\'abord ENT-1.2.'], 'Spartoo avec la photo de 1.1 dans la base commune');
+});
+
+await v('Reprise Smoby : « remettre au début de 5.2 » remet 5.2 et 5.3 à leur base de départ (sans la photo de 5.1), laisse 5.1, une seule fois ; Spartoo inchangé', async () => {
+  const r = await pg.evaluate(async () => {
+    const { chargerActivites } = await import('/activites/index.js');
+    const { appliquerReprise } = await import('/core/parcours.js');
+    const metas = (await chargerActivites()).map((x) => x.meta);
+    const de = (id) => metas.find((x) => x.id === id);
+    const drapeaux = (D) => async (id) => D[id] || null;
+    const lire = drapeaux({ 'smoby-arrivee': { dateMaj: 100 } });
+    const b51 = { v: 1, travail: '5.1', points: { 'smoby-recrutement': { v: 1, travail: '5.1' } } };
+    const b52 = { v: 1, travail: '5.2', points: { 'smoby-arrivee': { v: 1 } } };
+    const b53 = { v: 1, travail: '5.3', points: { 'smoby-visite': { v: 1 } } };
+    const o = {
+      a51: await appliquerReprise(metas, de('smoby-recrutement'), b51, lire),
+      a52: await appliquerReprise(metas, de('smoby-arrivee'), b52, lire),
+      a53: await appliquerReprise(metas, de('smoby-visite'), b53, lire),
+    };
+    o.encore = await appliquerReprise(metas, de('smoby-arrivee'), b52, lire);
+    Object.assign(o, { b51, b52, b53 });
+    // Spartoo, base commune : la reprise de 1.2 s'applique même ouverte depuis 1.1, et rend la photo de 1.1.
+    const bs = { v: 2, travail: '1.3', versionBase: 2, points: { 'spartoo-reception': { v: 1, travail: '1.1' }, spartoo: { v: 1 }, 'spartoo-tracabilite': { v: 1 } } };
+    o.as = await appliquerReprise(metas, de('spartoo-reception'), bs, drapeaux({ spartoo: { dateMaj: 50 } }));
+    o.bs = bs;
+    return o;
+  });
+  egal([r.a51, r.a52, r.a53, r.encore], [false, true, true, false], 'reprises appliquées');
+  egal(r.b51, { v: 1, travail: '5.1', points: { 'smoby-recrutement': { v: 1, travail: '5.1' } } }, 'base de 5.1 (reste telle quelle)');
+  egal(r.b52, { reprise: 100 }, 'base de 5.2 (repart de sa base de départ)');
+  egal(r.b53, { reprise: 100 }, 'base de 5.3');
+  egal([r.as, r.bs], [true, { v: 1, travail: '1.1', points: { 'spartoo-reception': { v: 1, travail: '1.1' } }, versionBase: 2, reprise: 50 }], 'Spartoo');
+});
+
 await ctxS.close();
 }

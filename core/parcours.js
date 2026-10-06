@@ -9,14 +9,31 @@
 //     la séance N, c'est-à-dire ce que l'élève a RÉELLEMENT fait, pas une base fabriquée.
 // L'enseignant peut débloquer à la main un élève qui n'a pas la photo ; il repart alors de la base
 // de départ. Une séance déclare `parcours: true` et, sauf la première, `precedente: '<id>'`.
+//
+// Deux façons de ranger un parcours (brief SMOBY-retours-5.1-5.2, lot B, 06/10/2026) :
+//   - UNE base commune (Spartoo : `jeuId` partagé) ; la photo de la séance N est dans cette base ;
+//   - UNE base PAR SÉANCE (Smoby : pas de `jeuId`) ; les séances ne sont liées que par `precedente`,
+//     la photo de la séance N reste dans la base de N, et chaque séance repart de SA base de départ.
+// Les séances d'un parcours sont donc celles qui partagent la base OU que relie la chaîne des `precedente`.
 import { B } from './backend.js';
 
 const comparer = (a, b) => String(a.code).localeCompare(String(b.code), 'fr', { numeric: true });
 
+// La base d'une séance, et deux séances qui partagent la leur.
+export const baseDeSeance = (m) => m.jeuId || m.id;
+export const memeBase = (a, b) => baseDeSeance(a) === baseDeSeance(b);
+
 // Les séances d'un même parcours, dans l'ordre de leur code.
 export function seancesDuParcours(metas, m) {
-  return metas.filter((x) => (x.parcours || x.immersif) && x.portee === 'eleve' && (x.jeuId || x.id) === (m.jeuId || m.id))
-    .sort(comparer);
+  const L = metas.filter((x) => (x.parcours || x.immersif) && x.portee === 'eleve');
+  const dedans = new Set(L.filter((x) => memeBase(x, m)).map((x) => x.id));
+  for (let n = -1; n !== dedans.size;) {
+    n = dedans.size;
+    L.forEach((x) => {
+      if (x.parcours && x.precedente && (dedans.has(x.id) || dedans.has(x.precedente))) { dedans.add(x.id); dedans.add(x.precedente); }
+    });
+  }
+  return L.filter((x) => dedans.has(x.id)).sort(comparer);
 }
 // La séance choisie et toutes les suivantes : ce que « remettre au début » défait.
 export function seancesDepuis(metas, m) {
@@ -42,16 +59,49 @@ export async function baseDe(uid, jeuId) {
 export async function verrou(metas, m, profil, gid) {
   if (!m.parcours || !m.precedente || profil.role !== 'eleve' || !gid) return null;
   const prec = metas.find((x) => x.id === m.precedente);
-  const base = await baseDe(profil.uid, m.jeuId || m.id);
+  const base = await baseDe(profil.uid, baseDeSeance(m));
   const V = versionDuParcours(metas, m);
   if (V && base.v && base.versionBase !== V) {
     const premiere = seancesDuParcours(metas, m)[0];
     return `Cette entreprise a changé : recommence par ${premiere ? premiere.code : 'la première séance'}.`;
   }
-  if (base.points && base.points[m.precedente]) return null;
+  // La photo de la séance précédente est dans SA base : celle de la séance quand elle est commune (Spartoo).
+  const basePrec = !prec || memeBase(prec, m) ? base : await baseDe(profil.uid, baseDeSeance(prec));
+  if (basePrec.points && basePrec.points[m.precedente]) return null;
   try {
     const f = await B.lireScore(gid, profil.uid, '_debloque-' + m.id);
     if (f) return null;
   } catch (e) { /* un drapeau illisible ne doit pas enfermer l'élève */ }
   return `Termine d'abord ${prec ? prec.code : 'la séance précédente'}.`;
+}
+
+// Reprise demandée par l'enseignant (« Remettre au début de la séance S », espace enseignant > Suivi) :
+// le drapeau `_reprise-<S>` le plus récent, pas encore appliqué à cette base (`base.reprise`), est appliqué
+// à l'ouverture de la séance `m` (voir core/app.js, qui dit pourquoi c'est l'élève qui le fait).
+// « Au début de S » = la photo de la séance précédente quand elle est dans cette base (base commune), sinon
+// la base de départ. Les photos de S et des suivantes sont retirées. Base par séance : une reprise de S ne
+// touche que les bases de S et des suivantes ; celle d'une séance d'avant reste telle quelle.
+// `lireDrapeau(id)` rend le drapeau `_reprise-<id>` ou null. Rend vrai si la base a été remise.
+export async function appliquerReprise(metas, m, base, lireDrapeau) {
+  let derniere = null;
+  for (const x of seancesDuParcours(metas, m)) {
+    if (!memeBase(x, m) && comparer(m, x) < 0) continue;
+    const rep = await lireDrapeau(x.id);
+    if (rep && rep.dateMaj > (base.reprise || 0) && (!derniere || rep.dateMaj > derniere.rep.dateMaj)) derniere = { x, rep };
+  }
+  if (!derniere) return false;
+  const { x, rep } = derniere;
+  const prec = metas.find((y) => y.id === x.precedente);
+  const photo = prec && memeBase(prec, m) && base.points && base.points[x.precedente];
+  const aDefaire = new Set(seancesDepuis(metas, x).map((y) => y.id));
+  const versionBase = base.versionBase;
+  const gardees = {};
+  Object.keys(base.points || {}).forEach((k) => { if (!aDefaire.has(k)) gardees[k] = base.points[k]; });
+  Object.keys(base).forEach((k) => delete base[k]);
+  if (photo) Object.assign(base, JSON.parse(JSON.stringify(photo)));
+  else Object.keys(m.tables || {}).forEach((t) => { base[t] = []; });
+  if (Object.keys(gardees).length) base.points = gardees;
+  if (versionBase) base.versionBase = versionBase;
+  base.reprise = rep.dateMaj;
+  return true;
 }

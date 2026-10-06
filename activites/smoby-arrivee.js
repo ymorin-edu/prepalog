@@ -28,6 +28,9 @@ export const meta = {
   temps: 'guidage',
   bareme: SEANCE.ETAPES.length,
   immersif: true,
+  // Parcours strict : ne s'ouvre qu'à l'élève qui a validé ENT-5.1 (voir core/parcours.js).
+  parcours: true,
+  precedente: 'smoby-recrutement',
   portee: 'eleve',
   tables: {},
   corrige: './contenus/corriges/ENT-5.2.js',

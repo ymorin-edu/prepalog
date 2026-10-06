@@ -7,7 +7,7 @@ import { activiteVisible, raisonCachee, courtNiveau, libelleNiveaux, demiDe } fr
 import { chargerActivites, activite, RUBRIQUES, ICONES, activitesDeRubrique, entreprisesDe, intentionDe } from '../activites/index.js';
 import { ouvrirJeu } from './store.js';
 import { rendreEspaceProf } from './prof.js';
-import { verrou, seancesDepuis, seancesDuParcours, versionDuParcours, baseDe } from './parcours.js';
+import { verrou, seancesDuParcours, versionDuParcours, baseDe, appliquerReprise } from './parcours.js';
 import { amenagements } from './amenagements.js';
 
 const app = document.getElementById('app');
@@ -444,30 +444,14 @@ async function vueActivite(aid, avant) {
   // du drapeau est retenue dans la base : un drapeau n'est appliqué qu'une fois.
   //
   // « Au début de la séance S » = la photo prise à la fin de la séance précédente, c'est-à-dire ce
-  // que l'élève a réellement fait. Sans photo (séance débloquée à la main), la base de départ.
-  // Les photos de S et des suivantes sont retirées : ces séances sont à refaire.
+  // que l'élève a réellement fait. Sans photo (séance débloquée à la main, ou base par séance comme
+  // Smoby), la base de départ. Les photos de S et des suivantes sont retirées : ces séances sont à
+  // refaire. Le détail est dans `appliquerReprise` (core/parcours.js).
   if (m.meta.portee === 'eleve' && profil.role === 'eleve' && groupeActif && (m.meta.parcours || m.meta.immersif)) {
     try {
       const metas = (await chargerActivites()).map((x) => x.meta);
-      const base = jeuOuvert.etat();
-      let derniere = null;
-      for (const x of seancesDuParcours(metas, m.meta)) {
-        const rep = await B.lireScore(groupeActif, profil.uid, '_reprise-' + x.id);
-        if (rep && rep.dateMaj > (base.reprise || 0) && (!derniere || rep.dateMaj > derniere.rep.dateMaj)) derniere = { x, rep };
-      }
-      if (derniere) {
-        const { x, rep } = derniere;
-        const photo = x.precedente && base.points && base.points[x.precedente];
-        const aDefaire = new Set(seancesDepuis(metas, x).map((y) => y.id));
-        const versionBase = base.versionBase;
-        const gardees = {};
-        Object.keys(base.points || {}).forEach((k) => { if (!aDefaire.has(k)) gardees[k] = base.points[k]; });
-        Object.keys(base).forEach((k) => delete base[k]);
-        if (photo) Object.assign(base, JSON.parse(JSON.stringify(photo)));
-        else Object.keys(m.meta.tables || {}).forEach((t) => { base[t] = []; });
-        if (Object.keys(gardees).length) base.points = gardees;
-        if (versionBase) base.versionBase = versionBase;
-        base.reprise = rep.dateMaj;
+      const lireDrapeau = (id) => B.lireScore(groupeActif, profil.uid, '_reprise-' + id);
+      if (await appliquerReprise(metas, m.meta, jeuOuvert.etat(), lireDrapeau)) {
         jeuOuvert.sauver();
         toast('Ton enseignant a remis ton travail au début de la séance.');
       }

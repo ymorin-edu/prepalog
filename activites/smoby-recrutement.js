@@ -26,6 +26,9 @@ export const meta = {
   temps: 'guidage',
   bareme: SEANCE.ETAPES.length,
   immersif: true,
+  // Parcours strict, base par séance (brief SMOBY-retours-5.1-5.2, lot B) : ENT-5.2 ne s'ouvre qu'à l'élève
+  // qui a validé celle-ci (voir core/parcours.js).
+  parcours: true,
   portee: 'eleve',
   reinitialisable: true,
   tables: {},
