@@ -3,7 +3,7 @@
 > Écrit par Cowork (diagnostic), lu et complété par Claude Code (construction).
 > **Ne rien inventer** : ce qui n'est pas décidé va dans « Questions ouvertes ».
 
-**Statut** : lots 1-3 livrés ; lot 4 diagnostiqué (en attente de Tristan) ; lot 5 non commencé
+**Statut** : livré (lots 1 à 4, lot 5 point 2) — 06/10/2026
 **Date du brief** : 06/10/2026
 **Origine** : audit Cowork du 06/10 (`claude/prepalog-audit-tests-06-10.md` dans le projet)
 **Périmètre** : `outils/test.mjs`, `outils/test/*.mjs`, `.github/workflows/tests.yml`. **Aucun fichier de `core/`,
@@ -81,14 +81,14 @@ une séance**. Puis ajouter un 4e job au workflow (port 8098, déjà prévu par 
 - En local, `node outils/test.mjs` marche comme avant.
 
 ## 5. Questions ouvertes
-- [ ] Lot 4 : pour les écarts ENT-1.3, qui a raison, l'écran ou le corrigé ? (Claude Code prépare le diagnostic, Tristan tranche.)
-- [ ] Lot 5 : faire tourner les tests Firebase (`test-regles.mjs`) sur GitHub, oui ou non ?
+- [x] Lot 4 : ni l'un ni l'autre n'avait tort, le test était en retard ; Tristan a validé la correction du test seul (06/10).
+- [x] Lot 5 : Tristan a choisi le seul point 2 (réserve du navigateur) ; `test-regles.mjs` sur GitHub non demandé (06/10).
 
 ---
 
 ## Compte rendu *(rempli par Claude Code à la livraison)*
 
-*06/10/2026 — lots 1, 2, 3 livrés ; lot 4 diagnostiqué, en attente de Tristan ; lot 5 non commencé.*
+*06/10/2026 — lots 1 à 4 livrés, lot 5 point 2 livré.*
 
 - **Fichiers créés / modifiés** : `outils/test.mjs` (GROUPES, `--groupe N`, garde des groupes, durée par
   bloc), `outils/test/commun.mjs` (`PORT_TESTS`, `BASE`), les 17 blocs qui écrivaient `127.0.0.1:8099`
@@ -143,6 +143,18 @@ une séance**. Puis ajouter un 4e job au workflow (port 8098, déjà prévu par 
   Correction proposée, **dans le test seulement** : lire les lignes du tableau par leur intitulé ;
   remplacer la question disparue par le nombre écrit dans la note du corrigé (ou ne plus comparer ce
   point) ; vérifier REC-04127 par la console (`.getlot`) au lieu du menu Réceptions. Puis 4e job sur
-  GitHub (port 8098). **En attente de l'accord de Tristan.**
-- **Reste ouvert** : lot 4 (accord de Tristan) ; lot 5 (accord de Tristan) ; question `test-regles.mjs`
-  sur GitHub.
+  GitHub (port 8098). **Tristan a validé ces recommandations (06/10).**
+- **Lot 4 fait** (3c17ac0) : les trois corrections ci-dessus, **dans `outils/test-seances.mjs` seulement**
+  (aucun corrigé, aucune séance touchés) ; « reste en stock après blocage = 0 » est écrit à la main
+  (la question n'existe plus dans le corrigé). **31/31.** Éprouvé par sabotage, en un seul lancer :
+  expéditeur faussé dans le corrigé (« Marc Durand »), reste attendu à 1, réception attendue REC-04128
+  → les trois écarts apparaissent ; corrigé restauré (vérifié par `git status`). 4e coche « Tests
+  séances » dans le workflow ; le résumé des échecs reprend aussi ses « ✗ » et ses écarts.
+  GitHub (#244) : **quatre coches vertes, 4 min 27 au total**.
+- **Lot 5, point 2 fait** (c6d98b5, choix de Tristan) : le navigateur de Playwright est gardé d'un
+  passage à l'autre (`actions/cache`, clé = version de Playwright) ; restent installées à chaque fois
+  les bibliothèques du système. Premier passage (#242) : remplit la réserve ; suivant (#243) :
+  « Installer Chromium » sauté, coche 1 en **4 min 00 au lieu de 4 min 13**, total 4 min 38. Gain
+  modeste, comme annoncé. Points 1 (`egal`/`vrai` dans `commun.mjs`) et 3 (`test-regles.mjs` sur
+  GitHub) **non faits**, Tristan ne les a pas demandés.
+- **Reste ouvert** : lot 5 points 1 et 3, si Tristan le demande un jour.
