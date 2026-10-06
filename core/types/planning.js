@@ -693,8 +693,8 @@ export function creerPlanning(P, opts = {}) {
           if (E.type === 'jours') fen = (sel._ligne ? sel._ligne === l.id : true) && sel._dem != null && t >= sel._dem && t < sel._dem + sel._L;
           else fen = (sel._des == null || t >= sel._des) && (sel._avant == null || t < sel._avant) && (sel._des != null || sel._avant != null);
         }
-        h += `<button class="pl-case${E.fort(t) ? ' pl-fort' : ''}${pasLa || repos ? ' pl-hors' : ''}${fen ? ' pl-fen' : ''}" style="grid-row:${r};grid-column:${t + 2}"
-          data-pl-case data-r="${ech(l.id)}" data-t="${t}" tabindex="-1" aria-label="${ech(l.nom)}, ${ech(E.lib(t))}">${pasLa && E.type === 'jours' ? 'pas là' : ''}</button>`;
+        h += `<button class="pl-case${E.fort(t) ? ' pl-fort' : ''}${pasLa ? ' pl-hors' : repos ? ' pl-repos' : ''}${fen ? ' pl-fen' : ''}" style="grid-row:${r};grid-column:${t + 2}"
+          data-pl-case data-r="${ech(l.id)}" data-t="${t}" tabindex="-1" aria-label="${ech(l.nom)}, ${ech(E.lib(t))}${repos && !pasLa ? ', repos obligatoire' : ''}">${pasLa && E.type === 'jours' ? 'pas là' : ''}</button>`;
       }
       const ici = an.I.filter((x) => x.r === l.id);
       const cl = couloirs(ici);
@@ -807,12 +807,16 @@ export function creerPlanning(P, opts = {}) {
     return `Glissez une carte sur le planning${ou}. Ou cliquez la carte, puis la case.${AF ? ' Sur le planning, cliquez un bloc pour rouvrir sa bulle ; pour le déplacer, glissez-le ou choisissez « Déplacer ».' : ''} Clavier : Entrée pour prendre une carte${AF ? ' (ou ouvrir la bulle sur le planning)' : ''}, Espace pour déplacer un bloc, flèches, Suppr pour retirer, Échap pour fermer.`;
   }
   // La légende des couleurs : une pastille de la couleur, son nom s'il est donné, et ce qu'elle désigne.
-  function legendeFamilles() {
+  // `R` : le repos depuis la veille n'a sa ligne de légende que là où il est dessiné (guidage, `reprise`) ;
+  // son motif (quadrillé) ne se confond pas avec le hachuré des pauses (Tristan, 06/10/2026).
+  function legendeFamilles(D, R) {
     const L = Object.values(P.familles || {}).map(familleDe).filter((f) => f.legende).map((f) => {
       const rgb = rgbDe(f.couleur) || rgbDe(COULEUR_DEFAUT);
       return `<span class="pl-puce" style="--pl-c:${rgb.join(',')};--pl-t:rgb(${rgb.join(',')})"></span>${f.nom ? `${ech(f.nom)} : ` : ''}${ech(f.legende)}`;
     });
     if (C.pauses) L.push('<span class="pl-puce pl-pause"></span>hachuré : pause');
+    const rRepos = regle('reposDepuisVeille');
+    if (R && R.reprise && rRepos && D.lignes.some((l) => repriseSlot(rRepos, l, E) > 0)) L.push('<span class="pl-puce pl-repos"></span>quadrillé : repos obligatoire');
     return L.join(' · ');
   }
 
@@ -844,7 +848,7 @@ export function creerPlanning(P, opts = {}) {
         ? `<div class="pl-info-sel" data-pl-info>${sel && !sel.pause
           ? `<span class="pl-fen-ech"></span> ${(F && typeof F.carte === 'function') ? F.carte(sel, outils(E, D)) : `${ech(sel.titre)} : la bande ambrée montre où le placer.`}`
           : ech((F && F.invite) || 'Cliquez une carte : une bande ambrée montre où elle peut se placer.')}</div>` : '';
-      const fam = legendeFamilles();
+      const fam = legendeFamilles(D, R);
       // « Agrandir le planning » (04/10/2026, écrans étroits du lycée) : le menu de l'environnement et le
       // panneau des consignes se replient, la grille prend toute la largeur. Les consignes se rouvrent d'un
       // clic ; le message de l'aléa, lui, reste toujours visible (en tête de la colonne de droite).

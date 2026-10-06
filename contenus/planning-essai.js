@@ -307,7 +307,7 @@ export const CHAUF = {
       repos: "Entre la fin de service d'hier et le premier départ d'aujourd'hui : <b>11 h de repos</b> au moins.",
     },
     fenetre: {
-      invite: 'Cliquez un enlèvement : une bande ambrée montre quand il peut rouler. Hachures : le chauffeur est encore en repos.',
+      invite: 'Cliquez un enlèvement : une bande ambrée montre quand il peut rouler. Quadrillé : le chauffeur est encore en repos.',
       carte: (c) => `${c.id} : prêt dès <b>${c.des}</b>, livré avant <b>${c.avant}</b>. Le trajet doit tenir dans la bande ambrée.`,
     },
     reprise: true,

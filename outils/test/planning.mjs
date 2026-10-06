@@ -310,9 +310,12 @@ await v('Planning chauffeurs (guidage) : permis C sur une semi, mauvais type de 
   vrai(P.includes('Le Porteur n° 3 fait E1 et E3 en même temps.'), `camion : ${P}`);
   await poser(pg, 'E2', 'nadia', 12, 's2');
   vrai((await problemes(pg)).includes("Nadia n'a pas eu ses 11 h de repos depuis hier soir."), 'repos de Nadia');
-  // Guidage : la reprise est hachurée et dite dans les informations.
-  vrai(await present(pg, '[data-pl-grille] [data-pl-case][data-r="nadia"][data-t="19"].pl-hors'), 'repos de Nadia pas hachuré');
-  vrai(!(await present(pg, '[data-pl-grille] [data-pl-case][data-r="nadia"][data-t="20"].pl-hors')), 'Nadia hachurée après 10:00');
+  // Guidage : la reprise est quadrillée (pas hachurée comme une pause, Tristan 06/10/2026), légendée, et dite
+  // dans les informations.
+  vrai(await present(pg, '[data-pl-grille] [data-pl-case][data-r="nadia"][data-t="19"].pl-repos'), 'repos de Nadia pas quadrillé');
+  vrai(!(await present(pg, '[data-pl-grille] [data-pl-case][data-r="nadia"][data-t="19"].pl-hors')), 'repos de Nadia hachuré comme une pause');
+  vrai(!(await present(pg, '[data-pl-grille] [data-pl-case][data-r="nadia"][data-t="20"].pl-repos')), 'Nadia quadrillée après 10:00');
+  vrai((await texte(pg, `${Z} [data-pl-legende-couleurs]`)).includes('quadrillé : repos obligatoire'), 'repos absent de la légende');
   vrai((await texte(pg, `${Z} .pl-gauche`)).includes('départ possible dès 10:00'), 'reprise pas dite');
   await monter(pg, { cas: 'chauf' });
   await poser(pg, 'E1', 'sofiane', 8, 's1');

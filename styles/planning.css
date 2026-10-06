@@ -83,6 +83,10 @@
 .pl-case.pl-fen{ background:var(--pl-fenetre) }
 .pl-case.pl-hors{ background-image:repeating-linear-gradient(45deg,var(--pl-hachure) 0 5px,transparent 5px 10px) }
 .pl-case.pl-hors.pl-fen{ background-color:var(--pl-fenetre) }
+/* Le repos obligatoire (depuis la veille) : un quadrillé, distinct du hachuré des pauses et de l'atelier. */
+.pl-case.pl-repos{ background-image:linear-gradient(var(--pl-hachure) 1.5px,transparent 1.5px),linear-gradient(90deg,var(--pl-hachure) 1.5px,transparent 1.5px);
+  background-size:8px 8px }
+.pl-case.pl-repos.pl-fen{ background-color:var(--pl-fenetre) }
 .pl-case.pl-lect{ cursor:default; min-height:46px }
 .pl-grille .pl-case.pl-lect:hover{ background-color:transparent }
 .pl-case:focus-visible, .pl-bloc:focus-visible, .pl-carte:focus-visible, .pl-choix:focus-visible{ outline:3px solid var(--ardoise); outline-offset:-2px }
@@ -134,6 +138,8 @@
 .pl-puce{ display:inline-block; width:14px; height:12px; vertical-align:-1px; margin-right:5px; border-radius:2px;
   background:rgba(var(--pl-c, 184,165,130), var(--pl-alpha)); border:1px solid var(--pl-t, var(--encre-douce)); border-left-width:4px }
 .pl-puce.pl-pause{ border-color:var(--encre-douce); background:repeating-linear-gradient(45deg,var(--pl-hachure) 0 3px,transparent 3px 6px) }
+.pl-puce.pl-repos{ border-color:var(--encre-douce); background:linear-gradient(var(--pl-hachure) 1.5px,transparent 1.5px),linear-gradient(90deg,var(--pl-hachure) 1.5px,transparent 1.5px);
+  background-size:5px 5px }
 
 /* --- « Agrandir le planning » (écrans étroits) ------------------------------------- */
 .pl-barre{ display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; margin-bottom:10px }
