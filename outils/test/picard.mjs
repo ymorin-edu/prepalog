@@ -1806,6 +1806,10 @@ await v('ENT-4.4 : sous le logo Picard dans Simulog, elle s’ouvre sur l’accu
 // chrono s'arrête dehors (le temps passé hors de la séance ne compte pas) et repart de sa valeur.
 await v('ENT-4.4 : Précédent par erreur — copie non rendue, travail gardé, chrono arrêté dehors puis repris', async () => {
   const { ctx, pg: p, erreurs } = await contexte({ viewport: { width: 1366, height: 1000 } });
+  // Horloge simulée (06/10/2026, lot 2 de MOTEUR-tests-rapides) : le temps s'écoule normalement, et
+  // `runFor` l'avance d'un coup en déclenchant les minuteries du chrono (tic 1 s, sauvegarde 60 s).
+  // Installée avant l'ouverture de la séance, donc avant que le chrono ne pose sa minuterie.
+  await p.clock.install();
   // L'enseignant : un groupe de 1re, un élève, ENT-4.4 ouverte au groupe.
   await p.click('#btnProf');
   await p.click('#btnProfEspace');
@@ -1835,7 +1839,7 @@ await v('ENT-4.4 : Précédent par erreur — copie non rendue, travail gardé, 
   await p.click('.ent-nav[data-vue="quai"]');
   await p.click('.ent-main [data-q="ticket"]');
   await p.check(`.ent-main [data-q="ticketRep"][value="long"]`);
-  await p.waitForTimeout(3500);
+  await p.clock.runFor(3500);
   const lire = () => p.evaluate(() => {
     const k = (pre) => Object.keys(localStorage).find((x) => x.startsWith('prepalog:' + pre) && x.endsWith('/picard-ent44'));
     const l = (x) => (x ? JSON.parse(localStorage.getItem(x)) : null);
@@ -1852,8 +1856,9 @@ await v('ENT-4.4 : Précédent par erreur — copie non rendue, travail gardé, 
   egal([a.ticketRep, a.rendu], ['long', false], 'travail / copie après Précédent');
   vrai(a.reel >= 2.5, 'chrono non enregistré à la sortie : ' + a.reel);
   // Dehors, le chrono ne tourne pas. 61 s : au-delà de sa sauvegarde toutes les 60 s, sans quoi un
-  // chrono resté en marche ne laisserait aucune trace (éprouvé : avec 3 s, le sabotage passait).
-  await p.waitForTimeout(61000);
+  // chrono resté en marche ne laisserait aucune trace (éprouvé : avec 3 s, le sabotage passait ; avec
+  // l'horloge simulée, 61 s avancées d'un coup, le sabotage tombe toujours — éprouvé le 06/10/2026).
+  await p.clock.runFor(61000);
   egal((await lire()).reel, a.reel, 'chrono qui tourne hors de la séance');
   // L'élève rouvre : il retrouve son travail, la copie est toujours à rendre, le chrono repart de sa valeur.
   await p.click('[data-act="picard-ent44"]');
@@ -1861,7 +1866,7 @@ await v('ENT-4.4 : Précédent par erreur — copie non rendue, travail gardé, 
   await p.click('.ent-nav[data-vue="quai"]');
   vrai(await p.isChecked(`.ent-main [data-q="ticketRep"][value="long"]`), 'réponse au ticket perdue à la réouverture');
   vrai(!(await p.$('.ent-copie-rendue')), 'copie marquée rendue');
-  await p.waitForTimeout(1500);
+  await p.clock.runFor(1500);
   await p.goBack({ waitUntil: 'commit' });
   await p.waitForSelector('.entreprise-tete[data-entreprise="4"]');
   const b = await lire();

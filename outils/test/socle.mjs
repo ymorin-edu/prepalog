@@ -1878,6 +1878,9 @@ await v('Précédent dans une séance = « Quitter » : le geste et le temps pas
     const lire = (x) => (x ? JSON.parse(localStorage.getItem(x)) : null);
     return { prive: lire(k('prive/', 'boost')), travaux: lire(k('travaux/', 'boost-ent33')) };
   });
+  // Horloge simulée (06/10/2026, lot 2 de MOTEUR-tests-rapides) : installée avant d'ouvrir la séance,
+  // qui pose la minuterie du temps passé ; `runFor` l'avance d'un coup.
+  await pn.clock.install();
   await pn.click('[data-act="boost-ent33"]');
   await surN('seance:habillee', 'séance rouverte');
   // Le geste : ouvrir un message reçu (il passe « lu »).
@@ -1885,7 +1888,7 @@ await v('Précédent dans une séance = « Quitter » : le geste et le temps pas
   await pn.click('.ent-main .ent-obj');
   const lus = () => lireN().then((c) => (c.prive?.data?.mails || []).filter((m) => m.read).length);
   // Le temps passé est compté toutes les 5 s : on reste un peu plus.
-  await pn.waitForTimeout(5600);
+  await pn.clock.runFor(5600);
   // Le repère est le score déjà enregistré (horloge du navigateur), pas l'heure de Node : les deux
   // horloges diffèrent de quelques millisecondes, autant que l'écart à mesurer (échec intermittent).
   const avant = (await lireN()).travaux?.dateMaj || 0;

@@ -350,18 +350,21 @@ await v('Repérage : un jalon raté au premier envoi reste « raté du premier c
 });
 
 await v('Repérage : le temps passé compte l’onglet visible seulement, jamais chez l’enseignant', async () => {
+  // Horloge simulée (06/10/2026, lot 2 de MOTEUR-tests-rapides) : `runFor` avance le temps d'un coup
+  // et déclenche le comptage toutes les 5 s. Installée avant `monter()`, qui pose la minuterie.
+  await pg.clock.install();
   await monter();
-  await pg.waitForTimeout(5600);
+  await pg.clock.runFor(5600);
   const t1 = ((await reperage()) || {}).temps || 0;
   vrai(t1 >= 4.5 && t1 <= 7, `temps après 5,6 s visibles : ${t1}`);
   // Onglet caché : le temps s'arrête.
   await pg.evaluate(() => Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'hidden' }));
-  await pg.waitForTimeout(5600);
+  await pg.clock.runFor(5600);
   const t2 = (await reperage()).temps;
   await pg.evaluate(() => { delete document.visibilityState; });
   egal(t2, t1, 'temps pendant que l’onglet est caché');
   await monter({ role: 'prof' });
-  await pg.waitForTimeout(5600);
+  await pg.clock.runFor(5600);
   egal(await reperage(), null, 'repérage chez l’enseignant');
 });
 
