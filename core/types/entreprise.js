@@ -540,13 +540,16 @@ export function creerEntreprise(U) {
         compterAide(db, ctx.meta.id, 'mots', mot); sauver();
       }) : () => {};
       // Le temps passé dans la séance (repérage, lot 6) : compté en secondes, par écart d'horloge, seulement
-      // quand l'onglet est visible. Aucune écriture de plus : il part avec la prochaine sauvegarde de l'élève,
-      // et au bouton « Quitter ». PAS de sauvegarde à la fermeture de l'onglet (`pagehide`) : elle réécrivait
-      // la base juste après un effacement voulu (page d'essai qui repart de zéro). Au pire, les dernières
-      // secondes avant la fermeture de l'onglet sont perdues.
+      // quand l'onglet est visible. Toutes les 2 minutes de temps compté (brief MOTEUR-temps-passe, 06/10/2026),
+      // il est envoyé à l'enseignant par une écriture légère (`ctx.enregistrerTemps` : ni score ni tentative),
+      // et le jeu privé est sauvé au même moment — sinon, à la réouverture, l'élève repartirait d'un temps plus
+      // bas et la prochaine écriture le ferait redescendre. Document pas encore créé : une fois, la remontée
+      // complète (`remonterEtapes(true)`), qui le crée. Rien en évaluation (seule la remise compte).
+      // PAS de sauvegarde à la fermeture de l'onglet (`pagehide`) : elle réécrivait la base juste après un
+      // effacement voulu (page d'essai qui repart de zéro). Au pire, moins de 2 minutes sont perdues.
       let minuterieTemps = null;
       if (!estProf) {
-        let dernierTic = Date.now();
+        let dernierTic = Date.now(), tempsEnvoye = null;
         minuterieTemps = setInterval(() => {
           if (!hote.isConnected) { clearInterval(minuterieTemps); minuterieTemps = null; return; }
           const t = Date.now(), dt = Math.min(70, (t - dernierTic) / 1000);
@@ -554,6 +557,13 @@ export function creerEntreprise(U) {
           if (document.visibilityState === 'hidden' || rendue() || (COPIE && !copie.charge)) return;
           const r = reperageSeance();
           r.temps = Math.round(((r.temps || 0) + dt) * 10) / 10;
+          if (tempsEnvoye === null) tempsEnvoye = r.temps - dt;
+          if (COPIE || r.temps - tempsEnvoye < 120) return;
+          tempsEnvoye = r.temps;
+          ctx.jeu.sauver();
+          Promise.resolve(ctx.enregistrerTemps?.(r.temps)).then((fait) => {
+            if (fait === false && hote.isConnected && !rendue()) remonterEtapes(true);
+          }, () => {});
         }, 5000);
       }
       function arreterTemps() {

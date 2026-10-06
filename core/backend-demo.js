@@ -220,6 +220,21 @@ export function creerBackendDemo() {
       if (!idx.includes(k)) { idx.push(k); ecrire(`travauxIdx/${gid}`, idx); }
       return nouv;
     },
+    // Le temps passé seul (repérage) : `detail.indicateurs[idSeance].temps`, sans toucher au score, aux
+    // tentatives ni à l'index. Jamais à la baisse. Rend false si le résultat n'existe pas encore.
+    async majTemps(gid, uid, aid, idSeance, secondes) {
+      const cle = `travaux/${gid}/${uid}/${aid}`;
+      const anc = lire(cle, null);
+      if (!anc) return false;
+      if (anc.rendu) return true;
+      const detail = { ...(anc.detail || {}) };
+      const ind = { ...(detail.indicateurs || {}) };
+      const r = { ...(ind[idSeance] || {}) };
+      r.temps = Math.max(r.temps || 0, secondes);
+      ind[idSeance] = r; detail.indicateurs = ind;
+      ecrire(cle, { ...anc, detail, dateMaj: Date.now() });
+      return true;
+    },
     // Note posée par l'enseignant sur une activité sans correction automatique
     // (`notation: 'prof'`). Elle remplace le score au lieu de s'y ajouter : une note
     // corrigée à la baisse doit descendre. `res = null` efface la note.

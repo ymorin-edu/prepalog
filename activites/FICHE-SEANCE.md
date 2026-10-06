@@ -265,6 +265,7 @@ séance 2), `TAB` tableur, `REF` exercices par compétence, `SCE` scénario anci
 | `meta` | Le `meta` de la séance. |
 | `jeu` | La base ouverte : `etat()`, `sauver()`, `semer()`, `vider()`… |
 | `enregistrer({score, max, detail})` | Remonte le score au suivi. Sans effet pour l'enseignant, sans groupe, sans `bareme`, ou en `copie`. |
+| `enregistrerTemps(secondes)` | Le temps passé seul (`detail.indicateurs[id].temps`), sans score ni tentative ; utilisé par la vue entreprise toutes les 2 min. Mêmes gardes ; rend `false` si le résultat n'existe pas encore. |
 | `rendreCopie({score, max, detail})` | Remise d'une évaluation (`copie: true` seulement). Une seule fois. |
 | `lireScore()` | Le travail déjà enregistré, utile pour une séance notée à la main. |
 | `quitter()`, `deconnexion()` | Sortie d'une séance immersive. |

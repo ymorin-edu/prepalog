@@ -499,6 +499,15 @@ async function vueActivite(aid, avant) {
       try { await B.ecrireScore(groupeActif, profil.uid, aid, note); derniereNote = cle; }
       catch (e) { toast("Le score n'a pas pu être enregistré."); }
     },
+    // Le temps passé seul (repérage, brief MOTEUR-temps-passe) : une écriture légère, envoyée toutes les
+    // 2 minutes par la vue, qui ne touche ni au score ni aux tentatives. Mêmes gardes qu'`enregistrer`.
+    // Rend false si le résultat n'existe pas encore (la vue le crée alors par `enregistrer`), null si
+    // rien n'est à écrire ici. Un échec (réseau) est silencieux : le prochain envoi rattrape.
+    async enregistrerTemps(secondes) {
+      if (!m.meta.bareme || profil.role !== 'eleve' || !groupeActif || m.meta.copie) return null;
+      try { return await B.majTemps(groupeActif, profil.uid, aid, m.meta.id, secondes); }
+      catch (e) { return null; }
+    },
   };
 
   m.rendre(document.getElementById('hoteActivite'), ctx);

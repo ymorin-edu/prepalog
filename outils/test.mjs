@@ -29,7 +29,8 @@ const BLOCS = ['socle', 'spartoo', 'groupes', 'dependances', 'transport', 'boost
   'copie',
   'visibilite',
   'amenagements',
-  'demi-groupes'];
+  'demi-groupes',
+  'temps'];
 const PREREQUIS = { spartoo: ['socle'], groupes: ['socle'], smoby: ['socle'] };
 
 // Un fichier de bloc posé dans `outils/test/` mais oublié dans `BLOCS` ne tournerait jamais,
@@ -49,7 +50,7 @@ const PREREQUIS = { spartoo: ['socle'], groupes: ['socle'], smoby: ['socle'] };
 // autant (mesures du 06/10/2026, voir docs/briefs/MOTEUR-tests-rapides.md). Un bloc et ses
 // prérequis restent dans le même groupe : sinon le prérequis tournerait deux fois.
 const GROUPES = {
-  1: ['quiz', 'carte', 'picard', 'demi-groupes'],
+  1: ['quiz', 'carte', 'picard', 'demi-groupes', 'temps'],
   2: ['socle', 'spartoo', 'groupes', 'tableur-export', 'smoby', 'animation', 'visibilite'],
   3: ['dependances', 'transport', 'boost', 'inventaire', 'cdiscount', 'planning', 'entrepot', 'copie', 'amenagements'],
 };

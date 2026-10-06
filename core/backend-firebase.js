@@ -359,6 +359,21 @@ export async function creerBackendFirebase() {
       await FS.setDoc(ref, nouv);
       return nouv;
     },
+    // Le temps passé seul (repérage) — voir le même nom dans backend-demo.js. Un seul champ mis à jour
+    // (chemin par `FieldPath` : les identifiants de séance portent des tirets), sans lecture préalable :
+    // le jeu privé est sauvé au même moment, le temps ne repart donc jamais d'une valeur plus basse.
+    // `updateDoc` échoue sur un document absent : on rend false, la vue le crée. Les règles
+    // (firestore.rules) refusent déjà l'écriture d'une copie rendue.
+    async majTemps(gid, uid, aid, idSeance, secondes) {
+      const ref = dref('travaux', gid, 'eleves', uid, 'activites', aid);
+      try {
+        await FS.updateDoc(ref, new FS.FieldPath('detail', 'indicateurs', idSeance, 'temps'), secondes, 'dateMaj', Date.now());
+        return true;
+      } catch (e) {
+        if (e && e.code === 'not-found') return false;
+        throw e;
+      }
+    },
     // Copie rendue (évaluation, `meta.copie`) : une seule remise, note figée — voir le même
     // nom dans backend-demo.js. La garde de l'élève est dans firestore.rules : un document qui
     // porte `rendu` ne se modifie plus que par l'enseignant du groupe.
