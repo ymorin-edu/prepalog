@@ -9,6 +9,14 @@
 
 export default async function bloc({ v, nav, page, BASE }) {
 
+// Envoi définitif : la confirmation dans la page (06/10/2026, Smoby C2 / ENT-1.1 §7.11) n'apparaît que s'il ne
+// manque rien ; on y répond « Oui ». Un envoi refusé (« Il manque… ») n'en montre pas : on continue.
+const cliquerEtConfirmer = async (p, sel) => {
+  await p.click(sel);
+  const b = await p.waitForSelector('[data-confirme-oui]', { timeout: 1500 }).catch(() => null);
+  if (b) await b.click();
+};
+
 const egal = (a, b, quoi) => { if (JSON.stringify(a) !== JSON.stringify(b)) throw new Error(`${quoi} : ${JSON.stringify(a)} au lieu de ${JSON.stringify(b)}`); };
 const vrai = (c, quoi) => { if (!c) throw new Error(quoi); };
 
@@ -63,7 +71,7 @@ async function ouvrirReponse() {
 }
 const choisir = (ligne, texte) => pg.selectOption(`${Z} [data-phrase="${ligne}"]`, { label: texte });
 const ordreAffiche = () => pg.$$eval(`${Z} [data-phrase]`, (S) => S.map((s) => [...s.options].slice(1).map((o) => o.textContent)));
-const envoyer = () => pg.click(`${Z} #formPhr button[type="submit"]`);
+const envoyer = () => cliquerEtConfirmer(pg, `${Z} #formPhr button[type="submit"]`);
 const juge = (id = 'reponse-sophie') => pg.evaluate(async (id) => {
   const { phrasesJustes } = await import('/core/phrases.js');
   return phrasesJustes(window.__s.db, id);
@@ -87,6 +95,20 @@ await v('Phrases : « Répondre » ouvre une liste par ligne, avec tous les choi
   // Rien n'est corrigé ni marqué avant l'envoi.
   await choisir('salut', 'Salut !');
   vrai(!(await pg.$(`${Z} #formPhr .faux, ${Z} #formPhr .juste`)), 'une marque juste/faux apparaît avant l’envoi');
+});
+
+// Envoi définitif (06/10/2026, Smoby C2) : une confirmation dans la page ; « Non » n'envoie rien.
+await v('Phrases : l’envoi demande confirmation dans la page, « Non » n’envoie rien', async () => {
+  await monter();
+  await ouvrirReponse();
+  for (const l of LIGNES) await choisir(l, JUSTES[l]);
+  await pg.click(`${Z} #formPhr button[type="submit"]`);
+  await pg.waitForSelector(`${Z} [data-confirme]`);
+  vrai(/Tu envoies ta réponse à .+\? Tu ne pourras plus la modifier\./.test(await pg.textContent(`${Z} [data-confirme]`)), 'texte de la confirmation');
+  await pg.click(`${Z} [data-confirme-non]`);
+  egal((await envoyes()).length, 0, 'messages envoyés après « Non »');
+  await envoyer();
+  egal((await envoyes()).length, 1, 'messages envoyés après « Oui »');
 });
 
 await v('Phrases : l’aperçu se compose ligne à ligne et le focus reste dans la liste', async () => {
@@ -682,13 +704,13 @@ await v('Fiche : oui / non sans redessin ni perte de focus, un contour et jamais
 await v('Fiche : un envoi incomplet est refusé, la raison s’écrit sous le bouton, le travail reste', async () => {
   await monter();
   await ouvrirFiche();
-  await pg.click(`${F} [data-fiche-envoyer]`);
+  await cliquerEtConfirmer(pg, `${F} [data-fiche-envoyer]`);
   egal(await manqueAffiche(), 'Il manque : 15 cases du tableau sans réponse, le candidat, le contrat.', 'tout vide');
   await toutRemplir();
   egal(await manqueAffiche(), '', 'la raison reste affichée après une saisie');
   await ouinon('thomas', 'cdd', true);
   await pg.evaluate(() => { delete window.__s.db.fiches.selection.valeurs.tri.sabrina; });
-  await pg.click(`${F} [data-fiche-envoyer]`);
+  await cliquerEtConfirmer(pg, `${F} [data-fiche-envoyer]`);
   egal(await manqueAffiche(), 'Il manque : 3 cases du tableau sans réponse.', 'une ligne effacée');
   const e = await fiche();
   egal([e.envoye, e.valeurs.candidat, e.valeurs.contrat, e.valeurs.tri.yanis], [false, 'yanis', 'CDD', { caces: true, dispo: true, cdd: true }], 'travail gardé');
@@ -701,7 +723,7 @@ await v('Fiche : envoyée, elle est figée et relue ; `apresFiche` une seule foi
   await ouvrirFiche();
   await toutRemplir();
   await ouinon('laura', 'caces', true);
-  await pg.click(`${F} [data-fiche-envoyer]`);
+  await cliquerEtConfirmer(pg, `${F} [data-fiche-envoyer]`);
   await pg.waitForSelector(`${F} [data-fiche-envoyee]`);
   vrai(/^Fiche envoyée à Sophie le \d\d\/\d\d à \d\d:\d\d\. Réponds-lui maintenant dans la Messagerie\./.test(await pg.textContent(`${F} [data-fiche-envoyee]`)),
     'message d’envoi');
@@ -820,7 +842,7 @@ await v('Fiche, lot 4 : remise en ordre par les flèches, sans redessin, le focu
 await v('Fiche, lot 4 : envoyée sans rien toucher, rien ne manque ; cases vides et ordre de départ rangés ; figée ensuite', async () => {
   await monterBlocs();
   await pg.waitForSelector(FB);
-  await pg.click(`${FB} [data-fiche-envoyer]`);
+  await cliquerEtConfirmer(pg, `${FB} [data-fiche-envoyer]`);
   await pg.waitForSelector(`${FB} [data-fiche-envoyee]`);
   const f = await pg.evaluate(async () => {
     const { ficheEnvoyee } = await import('/core/types/fiche.js');
@@ -932,7 +954,7 @@ async function envoyerFiche51({ tri = TRI51, candidat = 'yanis', contrat = 'CDD'
   }
   await pg.selectOption(`${F51} [data-fiche-champ="candidat"]`, candidat);
   await pg.check(`${F51} input[data-fiche-champ="contrat"][value="${contrat}"]`);
-  await pg.click(`${F51} [data-fiche-envoyer]`);
+  await cliquerEtConfirmer(pg, `${F51} [data-fiche-envoyer]`);
   await pg.waitForSelector(`${F51} [data-fiche-envoyee]`);
 }
 // Répond à Sophie par phrases (`remplace` : les lignes à changer).
@@ -941,7 +963,7 @@ async function repondre51(remplace = {}) {
   await pg.click(`${Z51} [data-repondre]`);
   await pg.waitForSelector(`${Z51} #formPhr:not([hidden])`);
   for (const [l, t] of Object.entries({ ...PHR51, ...remplace })) await pg.selectOption(`${Z51} [data-phrase="${l}"]`, { label: t });
-  await pg.click(`${Z51} #formPhr button[type="submit"]`);
+  await cliquerEtConfirmer(pg, `${Z51} #formPhr button[type="submit"]`);
 }
 const sujets51 = () => pg.evaluate(() => window.__51.db.mails.filter((m) => m.folder === 'in').map((m) => m.subject));
 const NEUF = ['ligne-yanis', 'ligne-laura', 'ligne-mehdi', 'ligne-thomas', 'ligne-sabrina', 'candidat', 'contrat', 'raison', 'ton'];
@@ -1109,7 +1131,7 @@ async function envoyerFiche52({ pieces = PIECES52, ordre = JOUR52 } = {}) {
       await pg.click(`${F52} li[data-v="${ordre[k]}"] [data-ordre-sens="-1"]`);
     }
   }
-  await pg.click(`${F52} [data-fiche-envoyer]`);
+  await cliquerEtConfirmer(pg, `${F52} [data-fiche-envoyer]`);
   await pg.waitForSelector(`${F52} [data-fiche-envoyee]`);
 }
 // Le planning : jour = rang (lun 7 = 0 … ven 18 = 9). Une solution juste, écrite à la main et
@@ -1127,7 +1149,7 @@ async function poser52(id, r, t) {
 async function envoyerPlanning52(L) {
   await pg.click(`${T52} .ent-nav[data-vue="planning"]`);
   for (const [id, r, t] of L) await poser52(id, r, t);
-  await pg.click(`${Z52} [data-pl="envoyer"]`);
+  await cliquerEtConfirmer(pg, `${Z52} [data-pl="envoyer"]`);
   if (await pg.$(`${Z52} [data-pl="quandMeme"]`)) await pg.click(`${Z52} [data-pl="quandMeme"]`);
 }
 const PHR52 = { salut: 'Bonjour Sophie,', constat: 'Chaque jour a assez de monde et au moins un cariste CACES.', fin: 'Pouvez-vous valider ? Cordialement,' };
@@ -1136,7 +1158,7 @@ async function repondre52(remplace = {}) {
   await pg.click(`${Z52} [data-repondre]`);
   await pg.waitForSelector(`${Z52} #formPhr:not([hidden])`);
   for (const [l, t] of Object.entries({ ...PHR52, ...remplace })) await pg.selectOption(`${Z52} [data-phrase="${l}"]`, { label: t });
-  await pg.click(`${Z52} #formPhr button[type="submit"]`);
+  await cliquerEtConfirmer(pg, `${Z52} #formPhr button[type="submit"]`);
 }
 // Les 14 jalons, dans l'ordre du brief §5 : 1-3 la fiche, 4-8 le 1er envoi, 9-13 après l'imprévu, 14 le message.
 const tous52 = (s) => Array(14).fill(s);
@@ -1236,7 +1258,7 @@ await v('ENT-5.2 : rien touché, tout envoyé → 0 / 14 ; un constat faux fait 
   await monter52({ uid: 'u-52-rien' });
   await ouvrirMail52(ACCUEIL52);
   await pg.click(`${Z52} .ent-lecteur button:has-text("Ouvrir la fiche d’arrivée")`);
-  await pg.click(`${F52} [data-fiche-envoyer]`);
+  await cliquerEtConfirmer(pg, `${F52} [data-fiche-envoyer]`);
   await pg.waitForSelector(`${F52} [data-fiche-envoyee]`);
   await envoyerPlanning52([]);
   await envoyerPlanning52([]);
@@ -1531,7 +1553,7 @@ async function repondre54(remplace = {}) {
   await pg.click(`${Z54} [data-repondre]`);
   await pg.waitForSelector(`${Z54} #formPhr:not([hidden])`);
   for (const [l, t] of Object.entries({ ...PHR54, ...remplace })) await pg.selectOption(`${Z54} [data-phrase="${l}"]`, { label: t });
-  await pg.click(`${Z54} #formPhr button[type="submit"]`);
+  await cliquerEtConfirmer(pg, `${Z54} #formPhr button[type="submit"]`);
 }
 async function parcours54({ uid, secu = {}, decisions, reserves, phrases } = {}) {
   await monter54({ uid });
@@ -1725,7 +1747,7 @@ async function saisir55(lignes = SAISIE55, valider = true) {
     await pg.selectOption(`${Z55} select[data-rec="etat"][data-sku="${sku}"]`, et);
     await pg.selectOption(`${Z55} select[data-rec="decision"][data-sku="${sku}"]`, de);
   }
-  if (valider) await pg.click(`${Z55} [data-valider-rec]`);
+  if (valider) await cliquerEtConfirmer(pg, `${Z55} [data-valider-rec]`);
 }
 async function repondre55(sujet, choix) {
   await pg.click(`${T55} .ent-nav[data-vue="mail"]`);
@@ -1734,7 +1756,7 @@ async function repondre55(sujet, choix) {
   await pg.click(`${Z55} [data-repondre]`);
   await pg.waitForSelector(`${Z55} #formPhr:not([hidden])`);
   for (const [l, t] of Object.entries(choix)) await pg.selectOption(`${Z55} [data-phrase="${l}"]`, { label: t });
-  await pg.click(`${Z55} #formPhr button[type="submit"]`);
+  await cliquerEtConfirmer(pg, `${Z55} #formPhr button[type="submit"]`);
 }
 const STOCK55 = { stock: 'Il y a maintenant 394 cartons de porteurs Little Smoby en stock.' };
 const KN55 = { salutation: 'Bonjour,', stock: 'La marchandise d’Arinthod est en stock.', depart: 'La commande de Noël pourra partir jeudi 10 décembre.',
@@ -2162,7 +2184,7 @@ async function poser57(id, { r, s, k }) {
   if (k) await pg.click(`${Z57} .pl-bulle [data-pl-choix="${k}"]`);
 }
 async function envoyer57() {
-  await pg.click(`${Z57} [data-pl="envoyer"]`);
+  await cliquerEtConfirmer(pg, `${Z57} [data-pl="envoyer"]`);
   if (await pg.$(`${Z57} [data-pl="quandMeme"]`)) await pg.click(`${Z57} [data-pl="quandMeme"]`);
 }
 const tous57 = (s) => Array(10).fill(s);
@@ -2290,11 +2312,11 @@ await v('Fiche, saisies : rangées telles que tapées, sans redessin ; Entrée n
   vrai(!(await pg.$(`${FB} [data-fiche-envoyee]`)), 'Entrée dans une case a envoyé la fiche');
   egal(await pg.evaluate(() => document.activeElement.id), 'fi-kg', 'focus après la saisie');
   vrai(await pg.$eval(`${FB} form[data-fiche]`, (f) => f.__marque === true), 'la fiche a été redessinée');
-  await pg.click(`${FB} [data-fiche-envoyer]`);
+  await cliquerEtConfirmer(pg, `${FB} [data-fiche-envoyer]`);
   egal(await pg.textContent(`${FB} [data-fiche-manque]`), 'Il manque : l’heure, la date.', 'manque des saisies vides');
   await pg.fill(`${FB} #fi-h`, '11h00');
   await pg.fill(`${FB} #fi-d`, '2026-12-10');
-  await pg.click(`${FB} [data-fiche-envoyer]`);
+  await cliquerEtConfirmer(pg, `${FB} [data-fiche-envoyer]`);
   await pg.waitForSelector(`${FB} [data-fiche-envoyee]`);
   egal((await valeursSaisies()).valeurs, { kg: '6 091', h: '11h00', d: '2026-12-10', num: 'LV-1' }, 'valeurs envoyées');
   egal(await pg.$$eval(`${FB} input`, (L) => L.every((i) => i.closest('fieldset').disabled)), true, 'figée');
@@ -2307,13 +2329,13 @@ await v('Fiche, envoi incomplet : la fiche part avec ses cases vides (null) ; un
   await pg.fill(`${FB} #fi-kg`, '  ');
   await pg.press(`${FB} #fi-kg`, 'Enter');
   vrai(!(await pg.$(`${FB} [data-fiche-envoyee]`)), 'Entrée dans une case a envoyé la fiche incomplète');
-  await pg.click(`${FB} [data-fiche-envoyer]`);
+  await cliquerEtConfirmer(pg, `${FB} [data-fiche-envoyer]`);
   await pg.waitForSelector(`${FB} [data-fiche-envoyee]`);
   egal((await valeursSaisies()).valeurs, { kg: null, num: 'LV-1', h: null, d: null }, 'valeurs envoyées vides');
   egal(await vuesMenu(), ['fiche', 'fiche:essai-suite'], 'menu après l’envoi');
   await pg.click('#smTest .ent-nav[data-vue="fiche:essai-suite"]');
   egal(await pg.textContent(`${FB} [data-fiche-envoyer]`), 'Envoyer la suite', 'écran de la 2e fiche');
-  await pg.click(`${FB} [data-fiche-envoyer]`);
+  await cliquerEtConfirmer(pg, `${FB} [data-fiche-envoyer]`);
   egal(await pg.textContent(`${FB} [data-fiche-manque]`), 'Il manque : « Un mot ».', 'la 2e fiche refuse l’envoi incomplet');
   await pg.click('#smTest .ent-nav[data-vue="fiche"]');
   vrai(!!(await pg.$(`${FB} [data-fiche-envoyee]`)) && !(await pg.$(`${FB} [data-fiche-manque]`)), 'la 1re fiche a pris l’état de la 2e');
@@ -2384,7 +2406,7 @@ async function envoyerLettre58(remplace = {}) {
     const tag = await pg.$eval(`${F58} #fi-${k}`, (el) => el.tagName);
     if (tag === 'SELECT') await pg.selectOption(`${F58} #fi-${k}`, x); else await pg.fill(`${F58} #fi-${k}`, x);
   }
-  await pg.click(`${F58} [data-fiche-envoyer]`);
+  await cliquerEtConfirmer(pg, `${F58} [data-fiche-envoyer]`);
   await pg.waitForSelector(`${F58} [data-fiche-envoyee]`);
 }
 async function envoyerSuivi58({ heure = '11:00', avant = 'Oui' } = {}) {
@@ -2393,7 +2415,7 @@ async function envoyerSuivi58({ heure = '11:00', avant = 'Oui' } = {}) {
   await pg.waitForSelector(`${F58} #fi-arrivee`);
   await pg.fill(`${F58} #fi-arrivee`, heure);
   await pg.check(`${F58} input[data-fiche-champ="avant"][value="${avant}"]`);
-  await pg.click(`${F58} [data-fiche-envoyer]`);
+  await cliquerEtConfirmer(pg, `${F58} [data-fiche-envoyer]`);
   await pg.waitForSelector(`${F58} [data-fiche-envoyee]`);
 }
 const CLIENT58 = {
@@ -2410,7 +2432,7 @@ async function repondre58(sujet, lignes) {
   await pg.click(`${Z58} [data-repondre]`);
   await pg.waitForSelector(`${Z58} #formPhr:not([hidden])`);
   for (const [l, t] of Object.entries(lignes)) await pg.selectOption(`${Z58} [data-phrase="${l}"]`, { label: t });
-  await pg.click(`${Z58} #formPhr button[type="submit"]`);
+  await cliquerEtConfirmer(pg, `${Z58} #formPhr button[type="submit"]`);
 }
 async function parcours58({ lettre = {}, suivi = {}, client = {}, smoby = {} } = {}) {
   await envoyerLettre58(lettre);
@@ -2456,13 +2478,13 @@ await v('ENT-5.8 : inaction 0 / 8 — lettre envoyée vide : jalons 1 à 5 faux 
   egal(await etapes58(), huit('attente'), 'avant tout geste');
   await ouvrirMail58('Lettre de voiture d’E1');
   await pg.click(`${Z58} .ent-lecteur button:has-text("Ouvrir la lettre de voiture")`);
-  await pg.click(`${F58} [data-fiche-envoyer]`);
+  await cliquerEtConfirmer(pg, `${F58} [data-fiche-envoyer]`);
   await pg.waitForSelector(`${F58} [data-fiche-envoyee]`);
   const e = await etapes58();
   egal(e, ['ko', 'ko', 'ko', 'ko', 'ko', 'attente', 'attente', 'attente'], 'lettre vide');
   vrai((await details58())[4].startsWith('Cases vides : date de la lettre, nom de l’expéditeur'), 'détail du jalon 5');
   await nav58('fiche:suivi');
-  await pg.click(`${F58} [data-fiche-envoyer]`);
+  await cliquerEtConfirmer(pg, `${F58} [data-fiche-envoyer]`);
   egal(await pg.textContent(`${F58} [data-fiche-manque]`), 'Il manque : l’heure d’arrivée, la réponse oui / non.', 'suivi vide');
   egal((await etapes58()).filter((s) => s === 'ok').length, 0, 'jalons vrais sans rien faire');
 });

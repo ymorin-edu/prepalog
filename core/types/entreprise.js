@@ -11,7 +11,7 @@
 // d'un élève et dire si le travail attendu est fait. Le score remonté au suivi de classe
 // est le nombre d'étapes réussies.
 
-import { ech, toast, confirmer } from '../ui.js';
+import { ech, toast, confirmer, confirmerDansLaPage } from '../ui.js';
 import { COLORS, SHIP, pad } from '../../contenus/entreprise-commun.js';
 import { creerPlan } from './plan.js';
 import { creerCarte } from './carte.js';
@@ -1208,12 +1208,20 @@ export function creerEntreprise(U) {
       const apercuPhrases = (sel) => texteCompose(sel.phrases, E.brouillon[sel.id] || {}).split('\n')
         .map((x) => (x ? ech(x) : '<span class="ent-phr-trou">…</span>')).join('<br>');
 
+      let confirmeEnvoi = false;
       function envoyerPhrases() {
         const m = db.mails.find((x) => x.id === E.mailSel);
         if (!m || !m.phrases) return;
         const b = E.brouillon[m.id] || {};
         const manque = m.phrases.lignes.some((l) => l.texte == null && !Number.isInteger(b[l.id]));
         if (manque) return toast('Choisissez une phrase à chaque ligne.');
+        // Envoi définitif : d'abord une confirmation dans la page (06/10/2026, Smoby C2).
+        if (!confirmeEnvoi) {
+          confirmerDansLaPage(hote.querySelector('#formPhr button[type="submit"]'), `Tu envoies ta réponse à ${m.from} ? Tu ne pourras plus la modifier.`,
+            () => { confirmeEnvoi = true; envoyerPhrases(); });
+          return;
+        }
+        confirmeEnvoi = false;
         const choix = {};
         m.phrases.lignes.forEach((l) => { if (l.texte == null) choix[l.id] = b[l.id]; });
         ajouterMail({ folder: 'out', ts: Date.now(), from: prenom, fromMail: '', to: m.from, toMail: m.fromMail,
@@ -1694,11 +1702,23 @@ export function creerEntreprise(U) {
         if (aide) aide.hidden = complet;
       }
 
+      let confirmeRec = false;
       function validerReception() {
         const r = receptionDe(E.no); if (!r || r.annoncee || !r.ctrl || r.ctrl.validated) return;
         majBoutonRec();
         const c = r.ctrl, lot = (c.lot || '').trim().toUpperCase();
         if (!lot) return toast('Le numéro de lot est obligatoire : il est sur le bon de livraison.');
+        // Validation définitive : d'abord une confirmation qui rappelle le n° de réception ET le n° de BL — la
+        // dernière chance de voir qu'on n'est pas sur sa réception (ENT-1.1 §7.11, 06/10/2026).
+        if (!confirmeRec) {
+          const refs = refsReception(r), rows = refs.map((sku) => c.rows[sku] || {});
+          const entre = rows.filter((x) => x.decision === 'accepte' || x.decision === 'reserve').reduce((n, x) => n + (Number(x.compte) || 0), 0);
+          confirmerDansLaPage(hote.querySelector('[data-valider-rec]'),
+            `Tu valides la réception ${r.no} du BL ${r.bl.no} : ${refs.length} ligne${refs.length > 1 ? 's' : ''}, ${entre} ${unite(entre)} en stock. Après validation, tu ne pourras plus la modifier.`,
+            () => { confirmeRec = true; validerReception(); }, { oui: 'Valider', non: 'Annuler' });
+          return;
+        }
+        confirmeRec = false;
         let entrees = 0;
         refsReception(r).forEach((sku) => {
           const x = c.rows[sku];

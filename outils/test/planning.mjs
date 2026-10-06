@@ -22,6 +22,14 @@
 
 export default async function bloc({ v, nav, BASE }) {
 
+// Envoi définitif : la confirmation dans la page (06/10/2026, Smoby C2 / ENT-1.1 §7.11) n'apparaît que s'il ne
+// manque rien ; on y répond « Oui ». Un envoi refusé (« Il manque… ») n'en montre pas : on continue.
+const cliquerEtConfirmer = async (p, sel) => {
+  await p.click(sel);
+  const b = await p.waitForSelector('[data-confirme-oui]', { timeout: 1500 }).catch(() => null);
+  if (b) await b.click();
+};
+
 const egal = (a, b, quoi) => { if (JSON.stringify(a) !== JSON.stringify(b)) throw new Error(`${quoi} : ${JSON.stringify(a)} au lieu de ${JSON.stringify(b)}`); };
 const vrai = (c, quoi) => { if (!c) throw new Error(quoi); };
 
@@ -95,7 +103,12 @@ async function poser(p, id, r, t, k) {
 }
 async function envoyer(p) {
   await p.click(`${Z} [data-pl="envoyer"]`);
-  if (await present(p, '[data-pl="quandMeme"]')) await p.click(`${Z} [data-pl="quandMeme"]`);
+  // Guidage avec des problèmes : « Envoyer quand même » (c'est déjà une confirmation). Sinon, la confirmation dans
+  // la page (06/10/2026, Smoby C2) DOIT apparaître : son absence fait tomber le test.
+  if (await present(p, '[data-pl="quandMeme"]')) { await p.click(`${Z} [data-pl="quandMeme"]`); return; }
+  const c = await p.waitForSelector(`${Z} [data-confirme]`, { timeout: 3000 }).catch(() => null);
+  if (!c || !/Tu envoies ton planning/.test(await c.textContent())) throw new Error('pas de confirmation avant l’envoi du planning');
+  await p.click(`${Z} [data-confirme-oui]`);
 }
 
 const QUAI1 = [['A', 'Q1', 0, 'lea'], ['B', 'Q2', 2, 'mathis'], ['C', 'Q1', 6, 'lea'], ['D', 'Q2', 8, 'karim'], ['E', 'Q1', 12, 'lea'], ['F', 'Q1', 16, 'lea']];
@@ -266,7 +279,7 @@ await v('Planning quai (guidage) : A avec Karim, C avec Mathis, semi sur le quai
   await poser(pg, 'D', 'Q3', 8, 'karim');
   vrai((await problemes(pg)).includes("Quai 3 : le camion D est une semi-remorque, ce quai n'a pas de niveleur."), 'semi sur le quai 3');
   // Guidage : envoyer avec des problèmes demande une confirmation.
-  await pg.click(`${Z} [data-pl="envoyer"]`);
+  await cliquerEtConfirmer(pg, `${Z} [data-pl="envoyer"]`);
   vrai((await texte(pg, `${Z} .pl-confirme`)).includes('Il reste des problèmes.'), 'pas de confirmation');
   egal((await etat(pg, 'quai')).v1, null, 'envoyé sans confirmation');
 });
@@ -418,7 +431,7 @@ await v('Planning entraînement : rien avant « Vérifier », liste effacée au 
   await poser(pg, 'B', 'Q2', 2, 'mathis');
   vrai(!(await present(pg, '[data-pl-problemes]')), 'liste pas effacée au geste suivant');
   // Entraînement : envoi direct, sans confirmation.
-  await pg.click(`${Z} [data-pl="envoyer"]`);
+  await cliquerEtConfirmer(pg, `${Z} [data-pl="envoyer"]`);
   egal((await etat(pg, 'quai')).phase, 2, 'envoi direct');
 });
 

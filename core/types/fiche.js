@@ -69,7 +69,7 @@
 // Une entrée de menu par fiche ; la première garde l'écran `fiche`, les autres `fiche:<id>`. Une fiche qui porte
 // `quand(db)` n'apparaît (menu, bouton du mail) qu'une fois la condition vraie : un écran qui attend un message.
 
-import { ech } from '../ui.js';
+import { ech, confirmerDansLaPage } from '../ui.js';
 
 // Une saisie de nombre, telle que tapée → un nombre, ou NaN. Espaces (milliers), virgule décimale.
 export function lireNombre(s) {
@@ -293,6 +293,13 @@ export function creerFiche(F, VDOC) {
         return;
       }
       ui.manque = '';
+      // Envoi définitif : d'abord une confirmation dans la page (06/10/2026, Smoby C2).
+      if (!ui.confirme) {
+        confirmerDansLaPage(z.querySelector('[data-fiche-envoyer]'), `Tu envoies ta fiche${envoi.a ? ` à ${envoi.a}` : ''} ? Tu ne pourras plus la modifier.`,
+          () => { ui.confirme = true; z.querySelector('[data-fiche]').requestSubmit(); });
+        return;
+      }
+      ui.confirme = false;
       // Un ordre jamais touché part tel quel (celui de départ) ; des cases jamais cochées, vides.
       blocs.filter((b) => b.type === 'ordre').forEach((b) => { e.valeurs[b.id] = ordreDe(b, e.valeurs).map((o) => o.v); });
       blocs.filter((b) => b.type === 'cases' && !Array.isArray(e.valeurs[b.id])).forEach((b) => { e.valeurs[b.id] = []; });

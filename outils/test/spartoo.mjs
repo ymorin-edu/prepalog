@@ -12,6 +12,14 @@ import { pathToFileURL } from 'node:url';
 
 export default async function bloc({ v, page, ROOT }) {
 
+// Envoi définitif : la confirmation dans la page (06/10/2026, Smoby C2 / ENT-1.1 §7.11) n'apparaît que s'il ne
+// manque rien ; on y répond « Oui ». Un envoi refusé (« Il manque… ») n'en montre pas : on continue.
+const cliquerEtConfirmer = async (p, sel) => {
+  await p.click(sel);
+  const b = await p.waitForSelector('[data-confirme-oui]', { timeout: 1500 }).catch(() => null);
+  if (b) await b.click();
+};
+
 // ---------- 26. Spartoo : l'environnement s'ouvre et la base de l'élève est semée
 await v('Spartoo : ouverture de l\'environnement', async () => {
   // On revient de l'activité précédente vers l'espace enseignant, sur le bon groupe.
@@ -315,7 +323,11 @@ await v('Spartoo réception : quai fermé jusqu’à l’envoi du questionnaire,
   const R = { q1: 'après avoir compté', q2: 'acceptée sous réserve', q3: 'accepté sous réserve', q4: 'le carton est sale',
     q5: 'retrouver d’où vient une paire et chez qui elle est partie' };
   for (const [q, val] of Object.entries(R)) await page.check(`input[name="fi-${q}"][value="${val}"]`);
+  // Envoi définitif : la confirmation dans la page d'abord (Smoby C2 = ENT-1.1 §7.11).
   await page.click('[data-fiche-envoyer]');
+  await page.waitForSelector('[data-confirme]');
+  if (!/Tu envoies ta fiche à M\. Morin \? Tu ne pourras plus la modifier\./.test(await page.textContent('[data-confirme]'))) throw new Error('confirmation de la fiche absente ou fausse');
+  await page.click('[data-confirme-oui]');
   await page.waitForSelector('[data-fiche-envoyee]');
   await page.waitForSelector('[data-vue="quai"]');
   // Le jalon 0, lu sur la base telle que l'écran la tient (même lecture que le suivi).
@@ -401,7 +413,15 @@ await v('Spartoo réception : retrouver REC-04127 par son BL, saisir en paires, 
     await page.selectOption(`[data-rec="decision"][data-sku="${sku}"]`, a.decision);
   }
   await page.waitForSelector('[data-valider-rec]:not([disabled])', { timeout: 6000 });
+  // La confirmation rappelle le n° de réception ET le n° de BL (dernière chance de voir le piège), avec le total
+  // qui entre en stock ; « Annuler » ne valide rien.
   await page.click('[data-valider-rec]');
+  await page.waitForSelector('[data-confirme]');
+  const conf = await page.textContent('[data-confirme]');
+  if (!/REC-04127/.test(conf) || !/BL-77421/.test(conf) || !/3 lignes, 66 paires/.test(conf)) throw new Error('confirmation : ' + conf);
+  await page.click('[data-confirme-non]');
+  if (/Réception validée/.test(await page.textContent('.ent-main'))) throw new Error('« Annuler » a validé la réception');
+  await cliquerEtConfirmer(page, '[data-valider-rec]');
   await page.waitForTimeout(500);
   if (!/Réception validée/.test(await page.textContent('.ent-main'))) throw new Error('réception non validée');
   await page.click('[data-vue="console"]');

@@ -524,7 +524,7 @@ export function creerPlanning(P, opts = {}) {
   const { E } = M;
   const C = P.cartes || {};
   const AF = P.affectation || null;
-  const ui = { sel: null, bulle: null, verif: null, confirmer: false, raz: false, refaire: false, focus: null, focusVue: null, prise: 0 };
+  const ui = { sel: null, bulle: null, verif: null, confirmer: false, confEnvoi: false, raz: false, refaire: false, focus: null, focusVue: null, prise: 0 };
 
   const tempsDe = (api) => (opts.copie ? 'evaluation' : P.temps || (api && api.temps) || 'guidage');
   const phaseDonnees = (e) => (e.phase === 1 || !P.alea ? 1 : 2);
@@ -783,6 +783,7 @@ export function creerPlanning(P, opts = {}) {
         ${ui.raz ? '<span class="pl-confirme">Tout effacer ? <button class="btn" data-pl="razOui">Oui, réinitialiser</button> <button class="btn" data-pl="razNon">Non</button></span>'
           : '<button class="btn" data-pl="raz">Réinitialiser le planning</button>'}
         ${ui.confirmer ? '<span class="pl-confirme">Il reste des problèmes. <button class="btn" data-pl="quandMeme">Envoyer quand même</button></span>' : ''}
+        ${ui.confEnvoi ? `<span class="pl-confirme" data-confirme>Tu envoies ton planning ? Tu ne pourras plus modifier cette version. <button class="btn btn-p" data-pl="envoiOui" data-confirme-oui>Oui, envoyer</button> <button class="btn" data-pl="envoiNon" data-confirme-non>Non</button></span>` : ''}
       </div></div>`;
   }
 
@@ -921,9 +922,14 @@ export function creerPlanning(P, opts = {}) {
       });
       on('envoyer', () => {
         if (R.g && M.lire(e.place, phaseDonnees(e)).P.length && !ui.confirmer) { ui.confirmer = true; redessiner(); return; }
-        envoyer(e, api);
+        // Envoi définitif : d'abord une confirmation dans la page (06/10/2026, Smoby C2). « Envoyer quand même »
+        // en est déjà une.
+        if (!ui.confEnvoi) { ui.confEnvoi = true; redessiner(); return; }
+        ui.confEnvoi = false; envoyer(e, api);
       });
-      on('quandMeme', () => envoyer(e, api));
+      on('envoiOui', () => { ui.confEnvoi = false; envoyer(e, api); });
+      on('envoiNon', () => { ui.confEnvoi = false; redessiner(); });
+      on('quandMeme', () => { ui.confEnvoi = false; envoyer(e, api); });
       on('raz', () => { ui.raz = true; redessiner(); });
       on('razNon', () => { ui.raz = false; redessiner(); });
       // Réinitialiser : vide le planning EN COURS, jamais la version déjà envoyée.

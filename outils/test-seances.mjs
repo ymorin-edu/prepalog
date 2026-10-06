@@ -21,6 +21,13 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
+// Envoi définitif : la confirmation dans la page (06/10/2026, Smoby C2 / ENT-1.1 §7.11) n'apparaît que s'il ne
+// manque rien ; on y répond « Oui ». Un envoi refusé (« Il manque… ») n'en montre pas : on continue.
+const cliquerEtConfirmer = async (p, sel) => {
+  await p.click(sel);
+  const b = await p.waitForSelector('[data-confirme-oui]', { timeout: 1500 }).catch(() => null);
+  if (b) await b.click();
+};
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.png': 'image/png', '.jpg': 'image/jpeg', '.woff2': 'font/woff2' };
 const PORT = Number(process.env.PORT_SEANCES || 8098);
@@ -332,7 +339,7 @@ await v('ENT-1.1 · étape 6 : saisir le bon de réception tel que le corrigé l
 });
 
 await v('ENT-1.1 · étape 7 : valider, puis vérifier dans la console (.movements, .getlot)', async () => {
-  await page.click('[data-valider-rec]');
+  await cliquerEtConfirmer(page, '[data-valider-rec]');
   await page.waitForTimeout(400);
   attendre('étape 7 : « Réception validée » absent', /Réception validée/.test(await lire('.ent-main')));
   const mouv = await cmd('.movements');
@@ -676,7 +683,7 @@ await v('hors ordre · après 1.3 : 1.2 puis 1.1 restent ouvrables et ne se cont
       await page.selectOption(`[data-rec="${champ}"][data-sku="${sku}"]`, o.find((y) => y.value && norm(y.text) === norm(texte)).value);
     }
   }
-  await page.click('[data-valider-rec]'); await page.waitForTimeout(300);
+  await cliquerEtConfirmer(page, '[data-valider-rec]'); await page.waitForTimeout(300);
   const lot = await cmd('.getlot LOT-PM-2609');
   noeSuite.lotApres = { entrees: (lot.match(/Entrées\s*(\d+)/) || [])[1], reste: (lot.match(/Reste en stock\s*(\d+)/) || [])[1], recs: [...new Set(lot.match(/REC-\d+/g) || [])] };
   const sc13 = (await scores())['spartoo-tracabilite'];

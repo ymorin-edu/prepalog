@@ -92,6 +92,21 @@ export const brancherDeconnexion = brancherEntete;
 
 export function confirmer(msg) { return window.confirm(msg); }
 
+// CONFIRMATION DANS LA PAGE avant un envoi définitif (06/10/2026 ; Spartoo ENT-1.1 §7.11 = Smoby C2, décisions de
+// Tristan) : une boîte sous le bouton, le texte, « Oui » / « Non ». Jamais `window.confirm` : il bloque les postes
+// et l'automatisation des tests. Une seule boîte à la fois. `faire` n'est appelé que sur « Oui ».
+export function confirmerDansLaPage(bouton, texte, faire, { oui = 'Oui, envoyer', non = 'Non' } = {}) {
+  if (!bouton) { faire(); return; }
+  document.querySelectorAll('[data-confirme]').forEach((x) => x.remove());
+  bouton.insertAdjacentHTML('afterend', `<div class="confirme-page" data-confirme role="alertdialog" aria-live="assertive">
+    <p>${ech(texte)}</p><div class="confirme-boutons"><button type="button" class="btn btn-p" data-confirme-oui>${ech(oui)}</button>
+    <button type="button" class="btn" data-confirme-non>${ech(non)}</button></div></div>`);
+  const boite = bouton.nextElementSibling;
+  boite.querySelector('[data-confirme-oui]').addEventListener('click', (ev) => { ev.preventDefault(); boite.remove(); faire(); });
+  boite.querySelector('[data-confirme-non]').addEventListener('click', (ev) => { ev.preventDefault(); boite.remove(); bouton.focus(); });
+  boite.querySelector('[data-confirme-oui]').focus();
+}
+
 // Formulaire générique à partir d'une description de champs.
 export function champsHTML(champs, valeurs = {}) {
   return champs.map((c) => {
