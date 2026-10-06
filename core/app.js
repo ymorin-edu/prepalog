@@ -7,7 +7,7 @@ import { activiteVisible, raisonCachee, courtNiveau, libelleNiveaux, demiDe } fr
 import { chargerActivites, activite, RUBRIQUES, ICONES, activitesDeRubrique, entreprisesDe, intentionDe } from '../activites/index.js';
 import { ouvrirJeu } from './store.js';
 import { rendreEspaceProf } from './prof.js';
-import { verrou, seancesDepuis, seancesDuParcours, versionDuParcours } from './parcours.js';
+import { verrou, seancesDepuis, seancesDuParcours, versionDuParcours, baseDe } from './parcours.js';
 import { amenagements } from './amenagements.js';
 
 const app = document.getElementById('app');
@@ -241,10 +241,23 @@ async function vueAccueil() {
 
     // Les séances d'un parcours qui ne sont pas encore ouvertes à cet élève : grisées, avec la raison.
     const metas = mods.map((x) => x.meta);
-    const verrous = {};
+    const verrous = {}, validees = {};
     await Promise.all(acts.map(async (x) => {
       try { verrous[x.meta.id] = await verrou(metas, x.meta, profil, groupeActif); } catch (e) { verrous[x.meta.id] = null; }
     }));
+    // « validée ✓ » sur la tuile d'une séance de parcours dont l'élève a la photo de fin (bandeau de fin de séance,
+    // 06/10/2026) — pas une photo d'une version périmée de la base (core/parcours.js).
+    if (profil.role === 'eleve') {
+      const bases = {};
+      await Promise.all(acts.filter((x) => x.meta.parcours).map(async (x) => {
+        try {
+          const j = x.meta.jeuId || x.meta.id;
+          const b = await (bases[j] || (bases[j] = baseDe(profil.uid, j)));
+          const V = versionDuParcours(metas, x.meta);
+          validees[x.meta.id] = !!(b.points && b.points[x.meta.id] && (!V || b.versionBase === V));
+        } catch (e) { /* rien à marquer */ }
+      }));
+    }
     const tete = ent
       ? `<button class="lien-accueil" id="btnSimulog">← ${ech(rub.label.toUpperCase())}</button>
         <div class="entreprise-tete" data-entreprise="${ech(ent.id)}">
@@ -264,6 +277,7 @@ async function vueAccueil() {
             <button class="module-tile${verrous[m.meta.id] ? ' verrouillee' : ''}" data-act="${ech(m.meta.id)}"
               ${verrous[m.meta.id] ? 'style="opacity:.55"' : ''}>
               <span class="code">${ech(m.meta.code || '')}${estProf ? ' · ' + ech(libelleNiveaux(m.meta.niveaux)) : ''}</span>
+              ${validees[m.meta.id] ? '<span class="tuile-validee" data-validee>validée ✓</span>' : ''}
               <span class="titre">${ech(m.meta.titre)}</span>
               <span class="desc">${ech(m.meta.desc || '')}</span>
               ${verrous[m.meta.id] ? `<span class="desc"><strong>${ech(verrous[m.meta.id])}</strong></span>` : ''}
@@ -470,6 +484,16 @@ async function vueActivite(aid, avant) {
     profil.tiersTemps = am.tiersTemps;
   }
 
+  // La séance qui suit celle-ci dans son parcours (bandeau de fin de séance : « ENT-1.2 … est ouverte »).
+  let suivante = null;
+  if (m.meta.parcours) {
+    try {
+      const L = seancesDuParcours((await chargerActivites()).map((x) => x.meta), m.meta);
+      const s = L[L.findIndex((x) => x.id === m.meta.id) + 1];
+      if (s) suivante = { code: s.code, titre: s.titre };
+    } catch (e) { /* pas de nom : le bandeau dit seulement « validée » */ }
+  }
+
   // La dernière note écrite en base depuis l'ouverture de l'activité (voir `enregistrer`).
   let derniereNote = null;
   const ctx = {
@@ -492,6 +516,7 @@ async function vueActivite(aid, avant) {
     // La fiche d'intention du scénario (`ENTREPRISES`, activites/index.js). Transmise telle
     // quelle : c'est la vue qui décide de ne la montrer qu'à l'enseignant.
     intention: intentionDe(m.meta.code),
+    suivante,
     // Sortie de l'environnement, pour une activité immersive qui dessine son propre bouton.
     // La rubrique et l'entreprise ouvertes sont gardées : on revient à la liste des séances
     // de l'entreprise, pas à l'accueil général.

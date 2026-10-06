@@ -421,6 +421,14 @@ await v('Spartoo réception : retrouver REC-04127 par son BL, saisir en paires, 
   await page.fill('#mTxt', 'Bonjour,\n\nRéserves sur la livraison BL-77421, lot LOT-PM-2609 :\n- PM-SUE-MA-41 : il manque 1 carton\n- PM-RSX-BL-42 : 1 carton endommagé\n\nCordialement');
   await page.click('[data-envoyer-fou]');
   await page.waitForTimeout(600);
+  // Bandeau de fin de séance (§7.6) : tout est jugé, seul le questionnaire est faux. Il le NOMME par son titre,
+  // sans le détail (« Questions fausses : 4 » donnerait la réponse).
+  await page.waitForSelector('[data-fin="ko"]');
+  const faux = await page.$$eval('[data-fin="ko"] [data-fin-jalon]', (L) => L.map((x) => x.dataset.finJalon));
+  if (JSON.stringify(faux) !== '["procedure"]') throw new Error('bandeau : jalons faux nommés ' + JSON.stringify(faux));
+  const tf = await page.textContent('[data-fin="ko"]');
+  if (!/Procédure lue/.test(tf) || /Questions fausses|\b4\b/.test(tf)) throw new Error('bandeau : titre absent ou détail montré : ' + tf);
+  if (!/réinitialise/.test(tf)) throw new Error('bandeau d’une séance X.1 : la réinitialisation n’est pas proposée');
 });
 
 // ---------- 33. l'avancement de la réception remonte : 7 justes sur 8 (la question 4 du questionnaire)
@@ -742,6 +750,39 @@ await v('Spartoo : base d’avant la refonte → 1.2 fermée, 1.1 repart de zér
   if (recs !== 10) throw new Error('la base a été refaite une seconde fois');
   await page.click('[data-quitter]');
   await page.waitForSelector('#btnDeco', { timeout: 6000 });
+});
+
+// ---------- 42. le bandeau de fin de séance, sur une entreprise d'essai : rien tant qu'un jalon est à faire ;
+// « Séance validée » avec le nom de la séance suivante quand tout est juste ; le TITRE des jalons faux sinon,
+// jamais leur détail ; jamais chez l'enseignant.
+await v('Bandeau de fin de séance : à faire → rien ; tout juste → validée et suivante ; faux → titres sans détail', async () => {
+  const essai = (statuts, role = 'eleve') => page.evaluate(async ({ statuts, role }) => {
+    const { creerEntreprise } = await import('/core/types/entreprise.js');
+    const E = await import('/outils/essai-animation.js');
+    document.querySelector('#essaiFin')?.remove();
+    const hote = document.createElement('div'); hote.id = 'essaiFin'; document.body.prepend(hote);
+    const U = E.univers({ animations: [] });
+    U.etapes = statuts.map((st, i) => ({ id: 'j' + i, titre: 'Étape ' + (i + 1), verifier: () => ({ status: st, detail: 'RÉPONSE SECRÈTE' }) }));
+    const db = U.baseDeDepart();
+    creerEntreprise(U).rendre(hote, {
+      meta: { id: 'essai-fin', code: 'ESSAI-1', titre: 'Essai', portee: 'eleve', immersif: true, parcours: true, reinitialisable: true, temps: 'guidage', bareme: statuts.length },
+      profil: { prenom: 'Lea', nom: 'Test', role, uid: 'u-fin' }, suivante: { code: 'ESSAI-2', titre: 'La suite' },
+      jeu: { etat: () => db, sauver: () => {} }, enregistrer: () => {}, quitter: () => {}, codeStock: 'ABC', lireScore: async () => null,
+    });
+    const b = hote.querySelector('[data-fin-seance]');
+    const r = { html: b ? b.textContent.replace(/\s+/g, ' ').trim() : '', etat: b && b.firstElementChild ? b.firstElementChild.dataset.fin : '' };
+    hote.remove();
+    return r;
+  }, { statuts, role });
+  const aFaire = await essai(['ok', 'attente']);
+  if (aFaire.etat) throw new Error('bandeau affiché alors qu’un jalon est à faire : ' + aFaire.html);
+  const juste = await essai(['ok', 'ok']);
+  if (juste.etat !== 'ok' || !/ESSAI-2 « La suite »/.test(juste.html)) throw new Error('séance validée : ' + JSON.stringify(juste));
+  const fausse = await essai(['ok', 'ko', 'ko']);
+  if (fausse.etat !== 'ko' || !/Étape 2/.test(fausse.html) || !/Étape 3/.test(fausse.html) || /Étape 1/.test(fausse.html)) throw new Error('jalons faux : ' + fausse.html);
+  if (/SECRÈTE/.test(fausse.html)) throw new Error('le bandeau montre le détail du jalon');
+  const prof = await essai(['ok', 'ko'], 'prof');
+  if (prof.etat) throw new Error('bandeau affiché à l’enseignant');
 });
 
 }

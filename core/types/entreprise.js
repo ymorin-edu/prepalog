@@ -619,6 +619,40 @@ export function creerEntreprise(U) {
         return prefixe + pad(mx + 1, largeur);
       }
 
+      // LE BANDEAU DE FIN DE SÉANCE (06/10/2026 ; Spartoo ENT-1.1 §7.6 = Smoby C1, décisions de Tristan ; maquette
+      // `docs/briefs/spartoo/maquette-retours-jalons-1.1.html`, écrans ② et ③). Pour l'ÉLÈVE d'une séance de parcours,
+      // hors évaluation, quand TOUS les jalons sont jugés (aucun « à faire ») : tous justes → « Séance validée ✓ »
+      // et la séance suivante ouverte ; sinon le TITRE des jalons faux, jamais leur détail (qui donne la réponse).
+      // Sur tous les écrans (au-dessus du menu), remis à jour à chaque sauvegarde.
+      function bandeauFin(res) {
+        if (estProf || COPIE || !ctx.meta.parcours || !etapes.length) return '';
+        const st = res || noterBase(db).detail;
+        if (etapes.some((e) => st[e.id] !== 'ok' && st[e.id] !== 'ko')) return '';
+        const faux = etapes.filter((e) => st[e.id] !== 'ok');
+        if (!faux.length) {
+          const S = ctx.suivante;
+          return `<div class="ent-fin ent-fin-ok" role="status" data-fin="ok"><span class="ent-fin-ico" aria-hidden="true">✓</span>
+            <div><b>Séance validée.</b> Toutes tes étapes sont justes${S ? ` : la séance suivante, ${ech(S.code)} « ${ech(S.titre)} », est ouverte.` : '.'}</div>
+            <button class="btn ent-fin-btn" data-fin-quitter>Retour aux séances</button></div>`;
+        }
+        return `<div class="ent-fin ent-fin-ko" role="status" data-fin="ko"><span class="ent-fin-ico" aria-hidden="true">⚠</span>
+          <div><b>Tu as tout fait, mais il reste quelque chose à corriger :</b>
+            <ul>${faux.map((e) => `<li data-fin-jalon="${ech(e.id)}">${ech(e.titre)}</li>`).join('')}</ul>
+            <span class="ent-fin-petit">Relis ta trame à ces étapes. Si tu ne trouves pas, appelle ton professeur${ctx.meta.reinitialisable ? ' ou réinitialise ta séance' : ''}.
+            La séance suivante s'ouvrira quand tout sera juste.</span></div></div>`;
+      }
+      function brancherBandeauFin() {
+        hote.querySelector('[data-fin-quitter]')?.addEventListener('click', () => sortir(ctx.quitter));
+      }
+      function majBandeauFin(res) {
+        const z = hote.querySelector('[data-fin-seance]');
+        if (!z) return;
+        const h = bandeauFin(res);
+        if (z.innerHTML.trim() === h.trim()) return;
+        z.innerHTML = h;
+        brancherBandeauFin();
+      }
+
       // Le score du suivi de classe : le nombre d'étapes réussies. Il n'est réécrit en base que s'il
       // a changé, temps passé mis à part (il avance tout seul) ; `forcer` (sortie de la séance)
       // l'écrit quoi qu'il arrive, pour que l'enseignant lise le temps à jour.
@@ -626,6 +660,7 @@ export function creerEntreprise(U) {
         if (estProf || !etapes.length) return;
         const { score: ok, max, detail: res } = noterBase(db);
         noterPremiers(res);
+        majBandeauFin(res);
         const cle = JSON.stringify({ ok, max, res }, (k, v) => (k === 'temps' && typeof v === 'number' ? undefined : v));
         // Évaluation : rien ne remonte pendant le travail, seule la remise compte.
         if (!COPIE) ctx.enregistrer({ score: ok, max, detail: res }, { siChange: !forcer, cle });
@@ -793,6 +828,7 @@ export function creerEntreprise(U) {
               <button class="ent-sortie" data-quitter>Quitter</button>
             </header>
             ${VTAB && VTAB.aide && E.aideTableur ? `<div class="ent-aide" data-aide-tableur-texte style="white-space:pre-line">${ech(VTAB.aide)}</div>` : ''}
+            <div data-fin-seance>${bandeauFin()}</div>
             <div class="ent-shell${replie ? ' ent-menu-replie' : ''}">
               <aside class="ent-side">
                 ${boutonMenu(replie)}
@@ -844,6 +880,7 @@ export function creerEntreprise(U) {
           toast('Mode hors connexion : les quartiers sont affichés sur le plan.');
         });
         hote.querySelector('[data-quitter]').addEventListener('click', () => sortir(ctx.quitter));
+        brancherBandeauFin();
         hote.querySelector('[data-copie-rendre]')?.addEventListener('click', () => {
           if (!copie.arme) { copie.arme = true; dessiner(); return; }
           rendreLaCopie();
