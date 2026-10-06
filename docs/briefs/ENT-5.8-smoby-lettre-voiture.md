@@ -10,7 +10,7 @@
 > Lis docs/briefs/COORDINATION-smoby.md puis implémente le brief docs/briefs/ENT-5.8-smoby-lettre-voiture.md (il faut que les lots 1, 2, 3 et 7 de MOTEUR-2de-S1 soient livrés). Annonce la durée avant de commencer et dis-moi si un point du brief contredit le code.
 > ```
 
-**Statut** : livré (05/10/2026, `pret: true, ouverture: 'prof'` : à essayer à l'écran, puis à ouvrir au groupe)
+**Statut** : livré (05/10/2026), validé à l'écran par Tristan le 06/10/2026 (`pret: true, ouverture: 'prof'`) ; trame à faire par Cowork (§9)
 **Date du brief** : 04/10/2026
 **Conversation d'origine** : Cowork (Opus) ; fiche projet `claude/prepalog-2de-s1-cadrage.md` (section « Séance B2 »).
 **Modèle** : Opus.
@@ -118,6 +118,13 @@ Bloc `smoby` : parcours juste 8/8 ; expéditeur / destinataire inversés → jal
 Trame courte (lexique, lettre de voiture vierge à remplir sur papier) : Cowork, après validation. Corrigé
 `contenus/corriges/ENT-5.8.js` (lettre attendue, heure, messages), calculé. « Contrôler une lettre remplie avec erreurs » :
 gardé pour **S2** (vue « Document à contrôler »).
+
+**Pour Cowork (décision de Tristan, 06/10/2026, après l'essai à l'écran)** : la trame doit **expliquer la règle du
+contrat de transport tripartite** : trois parties, chacune avec son rôle (celui qui remet la marchandise, celui qui la
+déplace, celui qui la reçoit), et le fait que la lettre de voiture les nomme toutes les trois. **Ne pas dire qui est qui
+dans cette commande** (Smoby, Kuehne+Nagel, Jouets du Rhône) : c'est à l'élève de l'en déduire, c'est le piège de
+l'écran. Tristan retouchera la trame si besoin. La lettre peut partir incomplète à l'écran (décision du 05/10, maintenue
+le 06/10).
 
 ## 10. Critères de validation par Tristan
 

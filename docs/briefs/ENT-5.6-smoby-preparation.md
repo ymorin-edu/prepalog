@@ -12,7 +12,7 @@
 > Lis docs/briefs/COORDINATION-smoby.md puis implémente le brief docs/briefs/ENT-5.6-smoby-preparation.md (il faut que la vue « Plan d'entrepôt » et son mode préparation soient livrés — MOTEUR-vue-plan-entrepot.md, lot 4 —, ainsi que le lot 7 de MOTEUR-2de-S1). Annonce la durée avant de commencer et dis-moi si un point du brief contredit le code.
 > ```
 
-**Statut** : **livré** (05/10/2026, `pret: true, ouverture: 'prof'` : fermée aux élèves, à essayer à l'écran). Avant : en attente du mode préparation de `MOTEUR-vue-plan-entrepot.md` (lot 4, livré le 04/10).
+**Statut** : **livré** (05/10/2026), validé à l'écran par Tristan le 06/10/2026 (tracé du parcours qui avance avec la préparation, ajouté ce jour) (`pret: true, ouverture: 'prof'`)
 **Date du brief** : 04/10/2026 (soir)
 **Conversation d'origine** : Cowork (Opus) ; décisions de Tristan du 04/10 au soir (questions posées une à une) ; maquette
 `docs/briefs/plan-entrepot/maquette-plan-entrepot-v2.html`, **cas ③ Préparation**, et ses données figées

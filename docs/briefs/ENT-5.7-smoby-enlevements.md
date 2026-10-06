@@ -10,7 +10,7 @@
 > Lis docs/briefs/COORDINATION-smoby.md puis implémente le brief docs/briefs/ENT-5.7-smoby-enlevements.md (il faut que la vue Planning et les lots 1, 3 et 7 de MOTEUR-2de-S1 soient livrés). Annonce la durée avant de commencer et dis-moi si un point du brief contredit le code.
 > ```
 
-**Statut** : **livré** (05/10/2026, `pret: true, ouverture: 'prof'` : fermée aux élèves, à essayer à l'écran)
+**Statut** : **livré** (05/10/2026), validé à l'écran par Tristan le 06/10/2026 (repos obligatoire quadrillé et légendé, distinct des pauses, ajouté ce jour) (`pret: true, ouverture: 'prof'`)
 **Date du brief** : 04/10/2026
 **Conversation d'origine** : Cowork (Opus) ; fiche projet `claude/prepalog-2de-s1-cadrage.md` (décisions 11, 12, 18) ;
 maquette `docs/briefs/planning/` (cas « chauffeurs et camions », v8 validée).
