@@ -1182,32 +1182,35 @@ export function creerQuai(Q, opts = {}) {
     if (u >= 1 && acc.length) s += `<text x="135" y="130" text-anchor="middle" font-size="13" fill="#cfe6f7" font-family="system-ui">${acc.length} palettes au froid ✓</text>`;
     return s;
   }
-  // Quai sans froid : la zone de réception, à gauche, sans afficheur de température.
+  // Quai sans froid : la zone de réception, à gauche, sans afficheur de température. La zone est un
+  // marquage AU SOL (le sol commence à y = 210), son nom sur un panneau au mur ; les palettes refusées
+  // attendent devant le camion, à l'écart des acceptées (aucune ne se cache derrière une autre).
   function sceneZone(e, u) {
     let s = `<defs>${DEFS_FILM}</defs>`;
     s += '<rect x="0" y="0" width="640" height="300" fill="#4a5258"/>';
     s += '<polygon points="0,210 640,210 640,300 0,300" fill="#6a737a"/>';
-    s += '<rect x="20" y="150" width="230" height="60" fill="none" stroke="#e3b21b" stroke-width="3" stroke-dasharray="10 6"/>';
-    s += `<text x="135" y="140" text-anchor="middle" font-size="13" font-weight="700" fill="#f2f4f5" font-family="system-ui">${ech(R.zone.nom)}</text>`;
+    s += '<polygon points="22,222 258,222 268,280 12,280" fill="none" stroke="#e3b21b" stroke-width="3" stroke-dasharray="10 6"/>';
+    s += '<rect x="65" y="150" width="140" height="26" rx="3" fill="#2b3237" stroke="#e3b21b" stroke-width="1.5"/>';
+    s += `<text x="135" y="168" text-anchor="middle" font-size="13" font-weight="700" fill="#f2f4f5" font-family="system-ui">${ech(R.zone.nom)}</text>`;
     s += '<rect x="540" y="60" width="100" height="150" fill="#cfd4d8"/><rect x="552" y="72" width="88" height="138" fill="#1d252b"/>';
-    s += '<text x="590" y="232" text-anchor="middle" font-size="12" fill="#e4e8eb" font-family="system-ui">Camion (refus)</text>';
-    s += `<text x="320" y="292" text-anchor="middle" font-size="12" fill="#e4e8eb" font-family="system-ui">${ech(R.lieu.nom)}</text>`;
+    s += '<text x="590" y="50" text-anchor="middle" font-size="12" fill="#e4e8eb" font-family="system-ui">Camion (refus)</text>';
+    s += `<text x="400" y="292" text-anchor="middle" font-size="12" fill="#e4e8eb" font-family="system-ui">${ech(R.lieu.nom)}</text>`;
     const P = PAL[ca(e)];
     const acc = P.filter((p) => accepte(st(e, p))), ref = P.filter((p) => !accepte(st(e, p)));
     const items = [];
-    const pasA = Math.min(48, 220 / Math.max(1, acc.length));
+    const pasA = Math.min(48, 150 / Math.max(1, acc.length));
     acc.forEach((p, k) => {
       const x0 = 300 + k * pasA, y0 = 262, uu = Math.max(0, Math.min(1, u * 1.4 - k * .1));
-      const xf = 50 + k * Math.min(44, 180 / Math.max(1, acc.length)), yf = 205;
-      items.push([y0, paletteFace(p, x0 + (xf - x0) * uu, y0 + (yf - y0) * uu, .55 - .1 * uu), 1]);
+      const xf = 60 + k * Math.min(60, 150 / Math.max(1, acc.length)), yf = 268;
+      items.push([y0 + (yf - y0) * uu, paletteFace(p, x0 + (xf - x0) * uu, y0 + (yf - y0) * uu, .55 - .07 * uu), 1]);
     });
-    const pasR = Math.min(48, 150 / Math.max(1, ref.length));
+    const pasR = Math.min(48, 70 / Math.max(1, ref.length));
     ref.forEach((p, k) => {
-      const x0 = 420 + k * pasR, y0 = 262;
+      const x0 = 530 + k * pasR, y0 = 262;
       items.push([y0, paletteFace(p, x0, y0, .55) + `<text x="${x0}" y="${y0 + 16}" text-anchor="middle" font-size="11" font-weight="700" fill="#ff9a8a" font-family="system-ui">refusée</text>`, 1]);
     });
     items.sort((a, b) => a[0] - b[0]).forEach(([, gg, o]) => { s += `<g opacity="${o.toFixed(2)}">${gg}</g>`; });
-    if (u >= 1 && acc.length) s += `<text x="135" y="235" text-anchor="middle" font-size="13" fill="#f2f4f5" font-family="system-ui">${acc.length} palette${acc.length > 1 ? 's' : ''} rangée${acc.length > 1 ? 's' : ''} ✓</text>`;
+    if (u >= 1 && acc.length) s += `<text x="135" y="138" text-anchor="middle" font-size="13" fill="#f2f4f5" font-family="system-ui">${acc.length} palette${acc.length > 1 ? 's' : ''} rangée${acc.length > 1 ? 's' : ''} ✓</text>`;
     return s;
   }
   function jouerCf(z, e) {
