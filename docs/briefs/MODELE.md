@@ -58,6 +58,11 @@ Fichier(s) à créer : `contenus/<entreprise>*.js`. Données de départ, valeurs
 Ce dont la séance a besoin et que `core/` ne fait pas encore. **Une séance n'écrit rien dans
 `core/` ni `styles/base.css` : elle liste ici sa demande**, et un chantier moteur dédié s'en charge.
 
+### 7 bis. Séance déjà jouée par des élèves ? (règle de Tristan du 06/10/2026)
+
+Si le brief **modifie une séance déjà ouverte** : les élèves qui l'ont **finie gardent leur note** et leur travail (score,
+photo de fin de séance, séance suivante ouverte). Dire ici ce qui arrive aux élèves **en cours**, et comment c'est testé.
+
 ## 8. Tests attendus
 
 Bloc concerné : `outils/test/<bloc>.mjs`. Cas à couvrir, y compris ceux qui doivent échouer
