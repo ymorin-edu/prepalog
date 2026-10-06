@@ -18,7 +18,7 @@ export const meta = {
   id: 'smoby-visite',
   code: 'ENT-5.3',
   titre: 'Smoby — la visite de la plateforme',
-  desc: 'Premier jour de Yanis : découvrir la plateforme vue du ciel, suivre le parcours de visite dans l’entrepôt, '
+  desc: 'Premier jour du cariste : découvrir la plateforme vue du ciel, suivre le parcours de visite dans l’entrepôt, '
     + 'apprendre les mots du rack, délimiter une travée, lire et retrouver une adresse d’emplacement.',
   rubrique: 'simulog',
   niveaux: ['2de'],
