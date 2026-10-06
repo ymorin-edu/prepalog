@@ -11,7 +11,7 @@ import path from 'node:path';
 import os from 'node:os';
 import { pathToFileURL } from 'node:url';
 
-export default async function bloc({ v, page, nav, ok, ROOT, baseXlsx }) {
+export default async function bloc({ v, page, nav, ok, ROOT, baseXlsx, BASE }) {
 
 // ---------- 1. connexion enseignant
 await v('connexion enseignant', async () => {
@@ -1515,8 +1515,8 @@ const erreursL = [];
 const horsSite = [];
 pl.on('pageerror', (e) => erreursL.push('PAGEERROR: ' + e.message));
 pl.on('dialog', (d) => d.accept());
-pl.on('request', (r) => { if (!r.url().startsWith('http://127.0.0.1:8099/') && !r.url().startsWith('data:')) horsSite.push(r.url()); });
-await pl.goto('http://127.0.0.1:8099/');
+pl.on('request', (r) => { if (!r.url().startsWith(BASE) && !r.url().startsWith('data:')) horsSite.push(r.url()); });
+await pl.goto(BASE);
 await pl.waitForSelector('#btnProf', { timeout: 8000 });
 
 const cartes = () => pl.$$eval('.entreprise', (els) => els.map((e) => ({
@@ -1685,7 +1685,7 @@ pi.setDefaultTimeout(6000);
 const erreursI = [];
 pi.on('pageerror', (e) => erreursI.push('PAGEERROR: ' + e.message));
 pi.on('dialog', (d) => d.accept());
-await pi.goto('http://127.0.0.1:8099/');
+await pi.goto(BASE);
 await pi.waitForSelector('#btnProf', { timeout: 8000 });
 const liensBandeau = () => pi.$$eval('.ent-bandeau [data-intention]', (l) => l.map((a) => a.getAttribute('href')));
 const ouvrirSeanceI = async (ent, id) => {
@@ -1768,7 +1768,7 @@ pn.setDefaultTimeout(6000);
 const erreursN = [];
 pn.on('pageerror', (e) => erreursN.push('PAGEERROR: ' + e.message));
 pn.on('dialog', (d) => d.accept());
-await pn.goto('http://127.0.0.1:8099/');
+await pn.goto(BASE);
 await pn.waitForSelector('#btnProf', { timeout: 8000 });
 // Ce que montre l'écran, en un mot : l'accueil, une rubrique, les logos, une entreprise, une activité…
 const ecranN = () => pn.evaluate(() => {

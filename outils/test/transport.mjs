@@ -9,7 +9,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-export default async function bloc({ v, nav, ko, ROOT }) {
+export default async function bloc({ v, nav, ko, ROOT, BASE }) {
 
 // ---------- 44 à 56. les deux vues de transport du noyau — plan et tournée
 //
@@ -29,7 +29,7 @@ pageTr.setDefaultTimeout(8000);
 const erreursTr = [];
 pageTr.on('pageerror', (e) => erreursTr.push('PAGEERROR: ' + e.message));
 pageTr.on('console', (m) => { if (m.type() === 'error' && !/\b404\b/.test(m.text())) erreursTr.push('CONSOLE: ' + m.text()); });
-await pageTr.goto('http://127.0.0.1:8099/');
+await pageTr.goto(BASE);
 await pageTr.waitForSelector('#btnProf', { timeout: 8000 });
 
 // Le montage. Tout le scénario vit ici, dans la page : les cases de report portent des

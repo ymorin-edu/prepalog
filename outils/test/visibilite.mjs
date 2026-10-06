@@ -17,7 +17,7 @@
 //     visible dès qu'elle est cochée, invisible de nouveau une fois décochée — sans commit ;
 //   - une séance fermée garde sa tuile chez l'enseignant (« fermée pour ce groupe »).
 
-export default async function bloc({ v, nav }) {
+export default async function bloc({ v, nav, BASE }) {
 
 const ctxV = await nav.newContext({ viewport: { width: 1280, height: 900 } });
 const pg = await ctxV.newPage();
@@ -44,7 +44,7 @@ await ctxV.route(`**/activites/${SANS_OUVERTURE}.js*`, async (route) => {
 });
 pg.on('pageerror', (e) => erreursV.push('PAGEERROR: ' + e.message));
 pg.on('dialog', (d) => d.accept());
-await pg.goto('http://127.0.0.1:8099/');
+await pg.goto(BASE);
 await pg.waitForSelector('#btnProf', { timeout: 8000 });
 
 const metas = await pg.evaluate(async () => (await (await import('/activites/index.js')).chargerActivites())

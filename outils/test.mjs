@@ -3,6 +3,11 @@
 //   node outils/test.mjs              toute la suite, dans l'ordre (comme avant le découpage)
 //   node outils/test.mjs boost        un seul bloc (plus rapide quand on travaille sur une entreprise)
 //   node outils/test.mjs boost carte  plusieurs blocs, toujours remis dans l'ordre de la suite
+//   node outils/test.mjs --groupe 2   un des trois groupes de `GROUPES` (c'est ce que lance GitHub)
+//
+// Sur GitHub, la suite entière frôlait la limite de 15 min : elle y tourne en trois groupes, en
+// même temps, sur trois machines (lot 1 de MOTEUR-tests-rapides, 06/10/2026). Le port du serveur
+// de test se règle par `PORT_TESTS` (8099 par défaut).
 //
 // Jusqu'au 02/10/2026, toute la suite tenait dans ce fichier (5 743 lignes). Plusieurs
 // conversations travaillent en même temps sur le dépôt et s'écrasaient dans ce fichier unique :
@@ -40,7 +45,46 @@ const PREREQUIS = { spartoo: ['socle'], groupes: ['socle'], smoby: ['socle'] };
   }
 }
 
-const demandes = process.argv.slice(2);
+// Les trois groupes que GitHub lance en même temps (`--groupe N`). Répartis pour durer à peu près
+// autant (mesures du 06/10/2026, voir docs/briefs/MOTEUR-tests-rapides.md). Un bloc et ses
+// prérequis restent dans le même groupe : sinon le prérequis tournerait deux fois.
+const GROUPES = {
+  1: ['quiz', 'carte', 'picard', 'demi-groupes'],
+  2: ['socle', 'spartoo', 'groupes', 'tableur-export', 'smoby', 'animation', 'visibilite'],
+  3: ['dependances', 'transport', 'boost', 'inventaire', 'cdiscount', 'planning', 'entrepot', 'copie', 'amenagements'],
+};
+// Même garde que pour les blocs oubliés : un bloc rangé dans aucun groupe (ou dans deux) ne
+// tournerait pas sur GitHub (ou deux fois), sans que rien ne le dise.
+{
+  const ranges = Object.values(GROUPES).flat();
+  const sansGroupe = BLOCS.filter((b) => !ranges.includes(b));
+  const enDouble = [...new Set(ranges.filter((b, i) => ranges.indexOf(b) !== i))];
+  const inconnusG = ranges.filter((b) => !BLOCS.includes(b));
+  const prerequisAilleurs = Object.values(GROUPES).flatMap((g) => g.flatMap((b) => (PREREQUIS[b] || [])
+    .filter((p) => !g.includes(p)).map((p) => `${b} (prérequis ${p})`)));
+  const fautes = [
+    sansGroupe.length && `dans aucun groupe : ${sansGroupe.join(', ')}`,
+    enDouble.length && `dans deux groupes : ${enDouble.join(', ')}`,
+    inconnusG.length && `absents de BLOCS : ${inconnusG.join(', ')}`,
+    prerequisAilleurs.length && `séparés de leur prérequis : ${prerequisAilleurs.join(', ')}`,
+  ].filter(Boolean);
+  if (fautes.length) {
+    console.error(`GROUPES (outils/test.mjs) mal rempli — blocs ${fautes.join(' ; ')}.`);
+    process.exit(2);
+  }
+}
+
+let demandes = process.argv.slice(2);
+const iGroupe = demandes.indexOf('--groupe');
+if (iGroupe >= 0) {
+  const n = demandes[iGroupe + 1];
+  if (!GROUPES[n] || demandes.length !== 2) {
+    console.error(`Usage : node outils/test.mjs --groupe N (N parmi ${Object.keys(GROUPES).join(', ')}), sans autre bloc.`);
+    process.exit(2);
+  }
+  console.log(`Groupe ${n}.`);
+  demandes = GROUPES[n];
+}
 const inconnus = demandes.filter((b) => !BLOCS.includes(b));
 if (inconnus.length) {
   console.error(`Bloc inconnu : ${inconnus.join(', ')}. Blocs : ${BLOCS.join(', ')}.`);
@@ -54,14 +98,19 @@ if (demandes.length) console.log(`Blocs lancés : ${aLancer.join(', ')}.`);
 const C = await import('./test/commun.mjs');
 const { ok, ko, erreurs, nav, srv } = C;
 
+// Durée de chaque bloc, affichée avant le bilan : c'est elle qui sert à répartir les GROUPES.
+const durees = [];
 for (const nom of aLancer) {
+  const t0 = Date.now();
   const { default: bloc } = await import(`./test/${nom}.mjs`);
   await bloc({
-    v: C.v, page: C.page, nav: C.nav, ok: C.ok, ko: C.ko, erreurs: C.erreurs, ROOT: C.ROOT,
+    v: C.v, page: C.page, nav: C.nav, ok: C.ok, ko: C.ko, erreurs: C.erreurs, ROOT: C.ROOT, BASE: C.BASE,
     baseXlsx: C.baseXlsx, hotesExternes: C.hotesExternes, introuvables: C.introuvables, SANS_CONFIG: C.SANS_CONFIG,
   });
+  durees.push(`${nom} ${Math.round((Date.now() - t0) / 1000)} s`);
 }
 
+console.log('\nDurée par bloc : ' + durees.join(' · '));
 console.log('\n=== RÉUSSIS ===');
 ok.forEach((o) => console.log('  ✓ ' + o));
 if (ko.length) { console.log('\n=== ÉCHECS ==='); ko.forEach((k) => console.log('  ✗ ' + k)); }

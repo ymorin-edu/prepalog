@@ -7,7 +7,7 @@
 // Lot 2 (04/10/2026) : la réponse par phrases à choisir (`core/phrases.js`). Les phrases justes sont
 // écrites À LA MAIN ici (jamais relues dans le contenu).
 
-export default async function bloc({ v, nav, page }) {
+export default async function bloc({ v, nav, page, BASE }) {
 
 const egal = (a, b, quoi) => { if (JSON.stringify(a) !== JSON.stringify(b)) throw new Error(`${quoi} : ${JSON.stringify(a)} au lieu de ${JSON.stringify(b)}`); };
 const vrai = (c, quoi) => { if (!c) throw new Error(quoi); };
@@ -18,7 +18,7 @@ const pg = await ctxS.newPage();
 pg.setDefaultTimeout(6000);
 pg.on('pageerror', (e) => erreursS.push('PAGEERROR: ' + e.message));
 pg.on('console', (m) => { if (m.type() === 'error' && !/\b404\b/.test(m.text())) erreursS.push('CONSOLE: ' + m.text()); });
-await pg.goto('http://127.0.0.1:8099/');
+await pg.goto(BASE);
 await pg.waitForSelector('#btnProf', { timeout: 8000 });
 
 // Monte l'environnement. `garder` : la base est rangée dans le stockage du navigateur à chaque
@@ -288,6 +288,9 @@ await v('Mots : sur un écran étroit, la bulle d’un mot proche du bord droit 
         const r = b.getBoundingClientRect();
         return r.left >= 0 && r.right <= document.documentElement.clientWidth;
       }));
+      // La bulle ouverte peut couvrir le mot suivant (polices de Linux, sur GitHub : le clic suivant
+      // restait bloqué 6 s) : un clic sur la bulle la ferme, comme le ferait l'élève.
+      await pg.click(`${Z} .lex-bulle:not([hidden])`);
     }
     egal(dedans, [true, true, true, true, true], 'bulles entières à l’écran');
   } finally { await pg.setViewportSize({ width: 1366, height: 1000 }); }

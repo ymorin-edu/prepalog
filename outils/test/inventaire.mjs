@@ -13,7 +13,7 @@
 //   CLE-USB-32 système 20, compté 23 (+3) : erreur de comptage          → recompter (redonne 20)
 // Taux d'écart attendu : 7 ÷ 191 × 100 = 3,7 %.
 
-export default async function bloc({ v, nav }) {
+export default async function bloc({ v, nav, BASE }) {
 
 const ctxInv = await nav.newContext();
 const pg = await ctxInv.newPage();
@@ -21,7 +21,7 @@ pg.setDefaultTimeout(6000);
 const erreursInv = [];
 pg.on('pageerror', (e) => erreursInv.push('PAGEERROR: ' + e.message));
 pg.on('console', (m) => { if (m.type() === 'error' && !/\b404\b/.test(m.text())) erreursInv.push('CONSOLE: ' + m.text()); });
-await pg.goto('http://127.0.0.1:8099/');
+await pg.goto(BASE);
 await pg.waitForSelector('#btnProf', { timeout: 8000 });
 
 const ID = 'INV-ESSAI-01';

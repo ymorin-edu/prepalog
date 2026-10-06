@@ -11,7 +11,7 @@
 //   P1 Maison (lourd, rotation A) : A1-T01-N1-E3 seule · P2 Cuisine (fragile, B) : B2-T02-N1-E2, B2-T02-N1-E3 ·
 //   P3 Établi (litige) : L1, L2 · P4 Porteur (C) : B1-T03-N3-E1, B1-T04-N1-E2, B1-T04-N3-E2.
 
-export default async function bloc({ v, nav }) {
+export default async function bloc({ v, nav, BASE }) {
 
 const egal = (a, b, quoi) => { if (JSON.stringify(a) !== JSON.stringify(b)) throw new Error(`${quoi} : ${JSON.stringify(a)} au lieu de ${JSON.stringify(b)}`); };
 const vrai = (c, quoi) => { if (!c) throw new Error(quoi); };
@@ -22,7 +22,7 @@ const pg = await ctxE.newPage();
 pg.setDefaultTimeout(6000);
 pg.on('pageerror', (e) => erreursE.push('PAGEERROR: ' + e.message));
 pg.on('console', (m) => { if (m.type() === 'error' && !/\b404\b/.test(m.text())) erreursE.push('CONSOLE: ' + m.text()); });
-await pg.goto('http://127.0.0.1:8099/');
+await pg.goto(BASE);
 await pg.waitForSelector('#btnProf', { timeout: 8000 });
 
 // Monte l'environnement sur le cas d'essai. `garder` : la base est rangée dans le stockage du navigateur
@@ -776,7 +776,7 @@ const pv = await ctxV.newPage();
 pv.setDefaultTimeout(6000);
 pv.on('pageerror', (e) => erreursV.push('PAGEERROR: ' + e.message));
 pv.on('console', (m) => { if (m.type() === 'error' && !/\b404\b/.test(m.text())) erreursV.push('CONSOLE: ' + m.text()); });
-await pv.goto('http://127.0.0.1:8099/');
+await pv.goto(BASE);
 await pv.waitForSelector('#btnProf', { timeout: 8000 });
 
 // Monte l'environnement sur la visite. `db` : base de départ (état injecté) ; `garder` : la base est rangée
@@ -1203,7 +1203,7 @@ await v('Visite : aucun défilement de page, chaque étape, à 1366 × 768 et 12
   pe.on('pageerror', (e) => err.push(e.message));
   for (const [w, h] of [[1366, 768], [1280, 720]]) {
     await pe.setViewportSize({ width: w, height: h });
-    await pe.goto('http://127.0.0.1:8099/outils/essai-entrepot.html');
+    await pe.goto(BASE + 'outils/essai-entrepot.html');
     await pe.waitForSelector('.pe');
     await pe.selectOption('#reglages select[name="role"]', 'prof');
     await pe.selectOption('#reglages select[name="cas"]', 'visite');

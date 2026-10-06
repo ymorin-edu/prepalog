@@ -15,7 +15,7 @@
 // Parcours juste : 18 jalons ; temps hors froid 20 min (30 s + 5 palettes, 5 sondes, 5 comptages,
 // deux tours de P2, l'étiquette de P5, 3 min pour rentrer le lot).
 
-export default async function bloc({ v, nav }) {
+export default async function bloc({ v, nav, BASE }) {
 
 const egal = (a, b, quoi) => { if (JSON.stringify(a) !== JSON.stringify(b)) throw new Error(`${quoi} : ${JSON.stringify(a)} au lieu de ${JSON.stringify(b)}`); };
 const vrai = (c, quoi) => { if (!c) throw new Error(quoi); };
@@ -27,7 +27,7 @@ async function contexte(options = {}) {
   const erreurs = [];
   pg.on('pageerror', (e) => erreurs.push('PAGEERROR: ' + e.message));
   pg.on('console', (m) => { if (m.type() === 'error' && !/\b404\b/.test(m.text())) erreurs.push('CONSOLE: ' + m.text()); });
-  await pg.goto('http://127.0.0.1:8099/');
+  await pg.goto(BASE);
   await pg.waitForSelector('#btnProf', { timeout: 8000 });
   return { ctx, pg, erreurs };
 }
@@ -37,7 +37,7 @@ async function nouvellePage() {
   p.setDefaultTimeout(6000);
   p.on('pageerror', (e) => erreursQ.push('PAGEERROR: ' + e.message));
   p.on('console', (m) => { if (m.type() === 'error' && !/\b404\b/.test(m.text())) erreursQ.push('CONSOLE: ' + m.text()); });
-  await p.goto('http://127.0.0.1:8099/');
+  await p.goto(BASE);
   await p.waitForSelector('#btnProf', { timeout: 8000 });
   return p;
 }

@@ -10,7 +10,7 @@
 // Les rangs attendus sont écrits À LA MAIN : q1 juste = 1 (« Le chariot entre par l'allée… »),
 // q2 juste = 2 (« En M03, au fond. »), dans l'ordre DÉCLARÉ.
 
-export default async function bloc({ v, nav }) {
+export default async function bloc({ v, nav, BASE }) {
 
 const egal = (a, b, quoi) => { if (JSON.stringify(a) !== JSON.stringify(b)) throw new Error(`${quoi} : ${JSON.stringify(a)} au lieu de ${JSON.stringify(b)}`); };
 const vrai = (c, quoi) => { if (!c) throw new Error(quoi); };
@@ -22,7 +22,7 @@ async function nouvellePage(c = ctxA) {
   p.setDefaultTimeout(8000);
   p.on('pageerror', (e) => erreursA.push('PAGEERROR: ' + e.message));
   p.on('console', (m) => { if (m.type() === 'error' && !/\b404\b/.test(m.text())) erreursA.push('CONSOLE: ' + m.text()); });
-  await p.goto('http://127.0.0.1:8099/');
+  await p.goto(BASE);
   await p.waitForSelector('#btnProf', { timeout: 8000 });
   return p;
 }

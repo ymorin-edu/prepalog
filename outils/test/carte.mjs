@@ -9,7 +9,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-export default async function bloc({ v, nav, ok, ROOT }) {
+export default async function bloc({ v, nav, ok, ROOT, BASE }) {
 
 /* ===================================================================================== */
 /* La vue « carte réelle » (core/types/carte.js) — ENT-3.2 et suivantes, étape 1          */
@@ -33,7 +33,7 @@ const hotesCt = new Set();
 pageCt.on('pageerror', (e) => erreursCt.push('PAGEERROR: ' + e.message));
 pageCt.on('console', (m) => { if (m.type() === 'error' && !/\b404\b/.test(m.text())) erreursCt.push('CONSOLE: ' + m.text()); });
 pageCt.on('request', (r) => { try { const h = new URL(r.url()).hostname; if (h && !['127.0.0.1', 'localhost'].includes(h)) hotesCt.add(h); } catch (e) {} });
-await pageCt.goto('http://127.0.0.1:8099/');
+await pageCt.goto(BASE);
 await pageCt.waitForSelector('#btnProf', { timeout: 8000 });
 
 // `css` : une feuille ajoutée AVANT le montage — c'est ainsi qu'on simule une police de poste

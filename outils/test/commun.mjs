@@ -41,7 +41,13 @@ const srv = http.createServer((req, res) => {
   res.writeHead(200, { 'Content-Type': TYPES[path.extname(f)] || 'application/octet-stream' });
   res.end(fs.readFileSync(f));
 });
-await new Promise((r) => srv.listen(8099, r));
+// Le port se règle par `PORT_TESTS` (8099 par défaut) : sur GitHub, trois groupes de blocs tournent
+// en même temps sur des machines séparées (lot 1 de MOTEUR-tests-rapides, 06/10/2026), et deux
+// suites lancées côte à côte sur un même poste ne se disputent pas le même port. Les blocs ne
+// connaissent que `BASE`, l'adresse du site de test.
+const PORT = Number(process.env.PORT_TESTS || 8099);
+const BASE = `http://127.0.0.1:${PORT}/`;
+await new Promise((r) => srv.listen(PORT, r));
 
 const nav = await chromium.launch();
 const ctx = await nav.newContext();
@@ -91,7 +97,7 @@ const v = async (nom, fn) => {
   try { await fn(); ok.push(nom); } catch (e) { ko.push(`${nom} → ${e.message.split('\n')[0]}`); }
 };
 
-await page.goto('http://127.0.0.1:8099/');
+await page.goto(BASE);
 await page.waitForSelector('#btnProf', { timeout: 8000 });
 
-export { ROOT, SANS_CONFIG, srv, nav, ctx, page, erreurs, introuvables, baseXlsx, hotesExternes, ok, ko, v };
+export { ROOT, BASE, SANS_CONFIG, srv, nav, ctx, page, erreurs, introuvables, baseXlsx, hotesExternes, ok, ko, v };

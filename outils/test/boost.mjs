@@ -6,7 +6,7 @@
 // réindenter aurait aussi décalé le contenu des chaînes sur plusieurs lignes.
 // Ce que le bloc reçoit du lanceur (`commun.mjs`) : le navigateur, la page partagée, `v()`, etc.
 
-export default async function bloc({ v, page, nav, ok, ko }) {
+export default async function bloc({ v, page, nav, ok, ko, BASE }) {
 
 /* ===================================================================================== */
 /* ENT-3.1 — Boost, la tournée du vélo-cargo (lot 2 : le CONTENU)                         */
@@ -28,7 +28,7 @@ pageBo.setDefaultTimeout(8000);
 const erreursBo = [];
 pageBo.on('pageerror', (e) => erreursBo.push('PAGEERROR: ' + e.message));
 pageBo.on('console', (m) => { if (m.type() === 'error' && !/\b404\b/.test(m.text())) erreursBo.push('CONSOLE: ' + m.text()); });
-await pageBo.goto('http://127.0.0.1:8099/');
+await pageBo.goto(BASE);
 await pageBo.waitForSelector('#btnProf', { timeout: 8000 });
 
 await pageBo.evaluate(async () => {
@@ -1529,7 +1529,7 @@ if (process.env.LENT) { const cdp = await ctx32.newCDPSession(page32); await cdp
 const erreurs32 = [];
 page32.on('pageerror', (e) => erreurs32.push('PAGEERROR: ' + e.message));
 page32.on('console', (m) => { if (m.type() === 'error' && !/\b404\b/.test(m.text())) erreurs32.push('CONSOLE: ' + m.text()); });
-await page32.goto('http://127.0.0.1:8099/');
+await page32.goto(BASE);
 await page32.waitForSelector('#btnProf', { timeout: 8000 });
 
 await page32.evaluate(async () => {
@@ -2392,7 +2392,7 @@ page33.setDefaultTimeout(8000);
 const erreurs33 = [];
 page33.on('pageerror', (e) => erreurs33.push('PAGEERROR: ' + e.message));
 page33.on('console', (m) => { if (m.type() === 'error' && !/\b404\b/.test(m.text())) erreurs33.push('CONSOLE: ' + m.text()); });
-await page33.goto('http://127.0.0.1:8099/');
+await page33.goto(BASE);
 await page33.waitForSelector('#btnProf', { timeout: 8000 });
 
 // Monte la séance ; `garder` reprend la base précédente relue en JSON : c'est la reconnexion.
@@ -2949,9 +2949,9 @@ pageF.on('pageerror', (e) => erreursF.push('PAGEERROR: ' + e.message));
 pageF.on('console', (m) => { if (m.type() === 'error' && !/\b404\b/.test(m.text())) erreursF.push('CONSOLE: ' + m.text()); });
 // Une base neuve à chaque fois : celle de l'essai vit dans l'onglet (sessionStorage).
 const ouvrirF = async (q = '') => {
-  await pageF.goto('http://127.0.0.1:8099/outils/essai-feuille.html');
+  await pageF.goto(BASE + 'outils/essai-feuille.html');
   await pageF.evaluate(() => sessionStorage.clear());
-  await pageF.goto('http://127.0.0.1:8099/outils/essai-feuille.html' + q);
+  await pageF.goto(BASE + 'outils/essai-feuille.html' + q);
   await pageF.waitForSelector('[data-gr-verifier]');
 };
 const tourF = () => pageF.evaluate(() => JSON.parse(JSON.stringify(window.__essai.db.transport['essai-feuille'].tournee || {})));

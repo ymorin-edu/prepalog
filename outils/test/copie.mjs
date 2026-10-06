@@ -14,7 +14,7 @@
 // La tournée chargée ici (huit clients, 230 kg, créneau raté) viole TOUTES les contraintes :
 // c'est elle qui prouve que l'écran ne dit plus rien.
 
-export default async function bloc({ v, nav }) {
+export default async function bloc({ v, nav, BASE }) {
 
 const ctxCp = await nav.newContext({ viewport: { width: 1440, height: 900 } });
 const pg = await ctxCp.newPage();
@@ -22,7 +22,7 @@ pg.setDefaultTimeout(6000);
 const erreursCp = [];
 pg.on('pageerror', (e) => erreursCp.push('PAGEERROR: ' + e.message));
 pg.on('console', (m) => { if (m.type() === 'error' && !/\b404\b/.test(m.text())) erreursCp.push('CONSOLE: ' + m.text()); });
-await pg.goto('http://127.0.0.1:8099/');
+await pg.goto(BASE);
 await pg.waitForSelector('#btnProf', { timeout: 8000 });
 
 const TOUS = ['c1', 'c2', 'c3', 'c4', 'c5', 'c6', 'c7', 'c8'];

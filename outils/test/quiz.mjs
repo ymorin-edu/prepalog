@@ -6,7 +6,7 @@
 // réindenter aurait aussi décalé le contenu des chaînes sur plusieurs lignes.
 // Ce que le bloc reçoit du lanceur (`commun.mjs`) : le navigateur, la page partagée, `v()`, etc.
 
-export default async function bloc({ v, page, hotesExternes }) {
+export default async function bloc({ v, page, hotesExternes, BASE }) {
 
 /* ============================================================
 /* ===== BLOC QUIZ — début (core/types/entrainement.js) ===== */
@@ -37,7 +37,7 @@ const MAT_QZ = '2901';
 const CODE_QZ = 'zzz9';
 
 async function deconnecter() {
-  await page.goto('http://127.0.0.1:8099/');
+  await page.goto(BASE);
   await page.waitForSelector('#mat, #btnDeco', { timeout: 8000 });
   if (await page.$('#btnDeco')) {
     await page.click('#btnDeco');

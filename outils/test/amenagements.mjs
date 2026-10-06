@@ -15,7 +15,7 @@
 // ligne de plus (une copie de `ctx.aisance` / `ctx.tiersTemps` dans `window`) ; rien n'est
 // modifié dans le dépôt.
 
-export default async function bloc({ v, nav, page }) {
+export default async function bloc({ v, nav, page, BASE }) {
 
 const ctxA = await nav.newContext({ viewport: { width: 1280, height: 900 }, acceptDownloads: true });
 let espion = false;
@@ -32,7 +32,7 @@ pg.setDefaultTimeout(6000);
 const erreursA = [];
 pg.on('pageerror', (e) => erreursA.push('PAGEERROR: ' + e.message));
 pg.on('dialog', (d) => d.accept());
-await pg.goto('http://127.0.0.1:8099/');
+await pg.goto(BASE);
 await pg.waitForSelector('#btnProf', { timeout: 8000 });
 
 const SEANCE = 'quiz-flux';   // prête, sans niveau, sans ouverture par l'enseignant
@@ -150,7 +150,7 @@ await v('aménagements : l’enseignant décoche pendant que l’élève est con
   // L'élève reste connecté dans un second onglet ; l'enseignant décoche dans le premier.
   const pe = await ctxA.newPage();
   pe.on('pageerror', (e) => erreursA.push('PAGEERROR (élève) : ' + e.message));
-  await pe.goto('http://127.0.0.1:8099/');
+  await pe.goto(BASE);
   await pe.waitForSelector('text=Bonjour');
   await commeProf();
   await comptes();

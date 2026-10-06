@@ -19,7 +19,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-export default async function bloc({ v, nav, ROOT, baseXlsx }) {
+export default async function bloc({ v, nav, ROOT, baseXlsx, BASE }) {
   const imp = (rel) => import(pathToFileURL(path.join(ROOT, rel)).href);
   const G = await imp('core/types/export-tableur.js');
   const E = await imp('outils/essai-tableur.js');
@@ -382,7 +382,7 @@ export default async function bloc({ v, nav, ROOT, baseXlsx }) {
   const erreurs = [];
   pg.on('pageerror', (e) => erreurs.push('PAGEERROR: ' + e.message));
   pg.on('console', (m) => { if (m.type() === 'error' && !/\b404\b/.test(m.text())) erreurs.push('CONSOLE: ' + m.text()); });
-  await pg.goto('http://127.0.0.1:8099/outils/essai-tableur.html');
+  await pg.goto(BASE + 'outils/essai-tableur.html');
   await pg.waitForSelector('.ent-nav[data-vue="fichiers"]');
   const Z = '#hote .ent-main';
   const choisir = async (retour) => { await pg.selectOption('select[name="retour"]', retour); await pg.waitForTimeout(150); };

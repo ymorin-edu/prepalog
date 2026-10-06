@@ -15,7 +15,7 @@
 // test seulement : `quiz-flux` avec `ouverture: 'prof'` (fermée tant qu'on ne la coche pas) et
 // `zones-entrepot` telle quelle (ouverte d'office : on la ferme pour la classe).
 
-export default async function bloc({ v, nav }) {
+export default async function bloc({ v, nav, BASE }) {
 
 const ctxD = await nav.newContext({ viewport: { width: 1280, height: 900 }, acceptDownloads: true });
 await ctxD.route('**/activites/quiz-flux.js*', async (route) => {
@@ -27,7 +27,7 @@ pg.setDefaultTimeout(6000);
 const erreursD = [];
 pg.on('pageerror', (e) => erreursD.push('PAGEERROR: ' + e.message));
 pg.on('dialog', (d) => d.accept());
-await pg.goto('http://127.0.0.1:8099/');
+await pg.goto(BASE);
 await pg.waitForSelector('#btnProf', { timeout: 8000 });
 
 const GID = 'demi-1l';

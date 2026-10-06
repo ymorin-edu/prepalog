@@ -9,7 +9,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-export default async function bloc({ v, page, nav, ROOT, hotesExternes, introuvables, SANS_CONFIG }) {
+export default async function bloc({ v, page, nav, ROOT, hotesExternes, introuvables, SANS_CONFIG, BASE }) {
 
 // ---------- 39. les polices sont bien celles du dépôt
 await v('polices servies par le dépôt', async () => {
@@ -100,7 +100,7 @@ await pageFb.route('**/*', async (route) => {
   bloquees.push(route.request().url());
   return route.abort();
 });
-await pageFb.goto('http://127.0.0.1:8099/');
+await pageFb.goto(BASE);
 await pageFb.waitForSelector('#btnProf', { timeout: 8000 });
 
 await v('backend Firebase : le SDK se charge depuis le dépôt', async () => {
