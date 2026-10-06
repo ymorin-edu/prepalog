@@ -941,9 +941,9 @@ const TRI51 = {
 const PHR51 = {
   salutation: 'Bonjour Sophie,',
   choix: 'Je retiens la candidature de Yanis Morel',
-  raison: 'car il a le CACES 3 valide, il est disponible le 9 décembre et il accepte un CDD.',
+  raison: 'car ce candidat a le CACES 3 valide, est disponible le 9 décembre et accepte un CDD.',
   contrat: 'Je propose un CDD saisonnier.',
-  fin: 'Pouvez-vous valider ? Cordialement,',
+  fin: 'Peux-tu valider ? Merci, bonne journée.',
 };
 // Remplit et envoie la fiche (`tri` : le tableau à cocher ; `candidat`, `contrat`).
 async function envoyerFiche51({ tri = TRI51, candidat = 'yanis', contrat = 'CDD' } = {}) {
@@ -1039,7 +1039,7 @@ await v('ENT-5.1 : chaque piège fait tomber son jalon, et lui seul (sabotage pa
     ['ligne-sabrina', { tri: flip('sabrina', 'cdd') }],
     ['candidat', { candidat: 'sabrina' }],
     ['contrat', { contrat: 'CDI' }],
-    ['raison', null, { raison: 'car il a le CACES.' }],
+    ['raison', null, { raison: 'car ce candidat a le CACES.' }],
     ['ton', null, { fin: 'Bisous' }],
   ];
   for (const [jalon, fiche, phrases] of cas) {
@@ -1152,7 +1152,7 @@ async function envoyerPlanning52(L) {
   await cliquerEtConfirmer(pg, `${Z52} [data-pl="envoyer"]`);
   if (await pg.$(`${Z52} [data-pl="quandMeme"]`)) await pg.click(`${Z52} [data-pl="quandMeme"]`);
 }
-const PHR52 = { salut: 'Bonjour Sophie,', constat: 'Chaque jour a assez de monde et au moins un cariste CACES.', fin: 'Pouvez-vous valider ? Cordialement,' };
+const PHR52 = { salut: 'Bonjour Sophie,', constat: 'Chaque jour a assez de monde et au moins un cariste CACES.', fin: 'Peux-tu valider ? Merci, bonne journée.' };
 async function repondre52(remplace = {}) {
   await ouvrirMail52('Le point sur le planning');
   await pg.click(`${Z52} [data-repondre]`);
@@ -1231,7 +1231,7 @@ await v('ENT-5.2 : parcours juste à l’écran → fiche, planning, imprévu, p
   egal(await dernierScore52(), [14, 14], 'score remonté au suivi');
   egal((await sujets52()).slice(-1), ['RE : Le point sur le planning'], 'la suite de l’histoire');
   const E = await pg.evaluate(() => window.__52.db.mails.filter((m) => m.folder === 'out').map((m) => m.text));
-  egal(E, ['Bonjour Sophie,\nJ’ai repris le planning après l’arrêt d’Inès.\nChaque jour a assez de monde et au moins un cariste CACES.\nPouvez-vous valider ? Cordialement,'], 'message envoyé');
+  egal(E, ['Bonjour Sophie,\nJ’ai repris le planning après l’arrêt d’Inès.\nChaque jour a assez de monde et au moins un cariste CACES.\nPeux-tu valider ? Merci, bonne journée.'], 'message envoyé');
 });
 
 await v('ENT-5.2 : pièges de la fiche — aucune case (1 et 2 faux), casier judiciaire en trop (2 seul), autorisation avant la visite (3 seul)', async () => {

@@ -143,7 +143,7 @@ export const PLANNING = {
       `${c.impose ? 'Date' : 'Dates souhaitées'} : <b>${o.plage(c._dem, c._dem + c._L)}</b>`,
       c.motif,
     ],
-    nonPosees: (L) => `Absences pas encore posées : ${L.map((a) => `${a.lib.toLowerCase()} ${de(a.qui)}`).join(', ')}.`,
+    nonPosees: (L) => `Absences pas encore posées : ${L.map((a) => `${a.lib.charAt(0).toLowerCase()}${a.lib.slice(1)} ${de(a.qui)}`).join(', ')}.`,
     legende: 'Violet : absence imposée · jaune : congé demandé. Glissez une carte sur le planning (elle se pose sur la ligne de la personne, au jour visé), '
       + 'ou cliquez-la puis cliquez le jour. Clavier : Entrée pour la prendre, flèches gauche/droite, Suppr pour la retirer.',
   },
@@ -170,7 +170,7 @@ export const PLANNING = {
     { id: 'imposees', lib: 'Les absences imposées (formation, visite, arrêt) sont à leur date', regles: [...SANS_CHEVAUCHER, 'imposee'] },
     { id: 'effectif', lib: 'Chaque jour a assez de monde présent', regles: [...SANS_CHEVAUCHER, 'effectif'] },
     { id: 'caces', lib: 'Chaque jour a au moins un cariste CACES présent', regles: [...SANS_CHEVAUCHER, 'caces'] },
-    { id: 'conges', lib: 'Critère métier : aucun congé décalé sans nécessité', regles: [...SANS_CHEVAUCHER, 'sansNecessite', 'imposee', 'effectif', 'caces'] },
+    { id: 'conges', lib: 'Critère métier : congés accordés si possible, décalés seulement si l’équipe manque', regles: [...SANS_CHEVAUCHER, 'sansNecessite', 'imposee', 'effectif', 'caces'] },
   ],
   aides: {
     consignes: {
@@ -212,7 +212,7 @@ export const PHRASES = {
       'Chaque jour a assez de monde et au moins un cariste CACES.',
       'Il manque du monde mardi 15.',
       'J’ai annulé tous les congés.'], juste: 0 },
-    { id: 'fin', choix: ['Pouvez-vous valider ? Cordialement,', 'Tu valides vite stp', 'Bisous'], juste: 0 },
+    { id: 'fin', choix: ['Peux-tu valider ? Merci, bonne journée.', 'Tu valides vite stp', 'Bisous'], juste: 0 },
   ],
   melanger: true,
 };

@@ -318,11 +318,11 @@ export const PHRASES = {
     { id: 'salutation', choix: ['Bonjour Sophie,', 'Salut !', 'Coucou Sophie'], juste: 0 },
     { id: 'choix', choix: CANDIDATS.map((c) => `Je retiens la candidature de ${c.nom}`), juste: CANDIDATS.indexOf(RETENU) },
     { id: 'raison', choix: [
-      'car il a le CACES 3 valide, il est disponible le 9 décembre et il accepte un CDD.',
-      'car il habite le plus près.',
-      'car il a le CACES.'], juste: 0 },
+      'car ce candidat a le CACES 3 valide, est disponible le 9 décembre et accepte un CDD.',
+      'car ce candidat habite le plus près.',
+      'car ce candidat a le CACES.'], juste: 0 },
     { id: 'contrat', choix: ['Je propose un CDD saisonnier.', 'Je propose un CDI.'], juste: 0 },
-    { id: 'fin', choix: ['Pouvez-vous valider ? Cordialement,', 'Merci de valider vite', 'Bisous'], juste: 0 },
+    { id: 'fin', choix: ['Peux-tu valider ? Merci, bonne journée.', 'Merci de valider vite', 'Bisous'], juste: 0 },
   ],
   melanger: true,
 };
