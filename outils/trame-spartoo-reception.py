@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-"""Trame élève Spartoo — séance « réception ».
+"""Trame élève Spartoo — séance « réception » (ENT-1.1). Refaite le 06/10/2026 avec la refonte de la séance
+(quai en 2D iso, questionnaire de la procédure, dix réceptions, saisie en paires) et les retours de classe E1-E3.
 
 Mêmes règles de mise en page que la trame de préparation (fiche `prepalog-trames-eleve`) :
 en-tête sur la première page seule, de la place pour écrire, un saut de page entre les
@@ -179,7 +180,7 @@ def questions(liste, lignes=2):
     vide.paragraph_format.line_spacing = Pt(3)
 
 
-def faits(liste, hauteur=Cm(0.9)):
+def faits(liste, hauteur=Cm(1.3)):
     """Questions de fait à une ligne : un tableau « question / ta réponse », une ligne par question
     (une question, une zone), bien plus compact que des blocs séparés — pour tenir une étape sur
     une seule page (Tristan, 02/10/2026)."""
@@ -198,9 +199,9 @@ def faits(liste, hauteur=Cm(0.9)):
         par = row.cells[0].paragraphs[0]; par.paragraph_format.space_after = Pt(0)
         par.add_run(q).font.size = Pt(10)
     for row in t.rows:
-        row.cells[0].width = Cm(10.4); row.cells[1].width = Cm(6.6)
+        row.cells[0].width = Cm(7.4); row.cells[1].width = Cm(9.6)
     t.autofit = False
-    t.columns[0].width = Cm(10.4); t.columns[1].width = Cm(6.6)
+    t.columns[0].width = Cm(7.4); t.columns[1].width = Cm(9.6)
     vide = d.add_paragraph(); vide.paragraph_format.space_after = Pt(0)
     vide.add_run('').font.size = Pt(5); vide.paragraph_format.line_spacing = Pt(3)
 
@@ -281,7 +282,13 @@ def tableau(entetes, nlignes, largeurs=None, hauteur=Cm(1.15), remplis=None):
             for i, w in enumerate(largeurs): row.cells[i].width = w
     d.add_paragraph().paragraph_format.space_after = Pt(2)
 
+
 # ==================================================================== en-tête
+# Refonte du 06/10/2026 (brief docs/briefs/ENT-1.1-spartoo-quai.md) : le quai en 2D iso, le questionnaire de la
+# procédure, dix réceptions dont un piège, la saisie en paires (cartons × 6), et les retours de classe de Tristan
+# (E1 : extrait des conditions de retour et de la loi imprimé ; E2 : document « le BL et les réserves » ; E3 :
+# passage Internet → Prepalog signalé ; console découverte ICI, la trame d'ENT-1.2 n'en fait plus qu'un rappel).
+# Tout ce qui est décrit de l'écran vient de la section « Pour Cowork » du brief, lue à l'écran par Claude Code.
 from docx.enum.text import WD_TAB_ALIGNMENT
 par = d.add_paragraph(); par.paragraph_format.space_after = Pt(2)
 par.paragraph_format.tab_stops.add_tab_stop(Cm(17.0), WD_TAB_ALIGNMENT.RIGHT)
@@ -306,80 +313,118 @@ for lib, li, co in [('Nom',0,0), ('Prénom',0,2), ('Classe',1,0), ('Date',1,2), 
     c = t.rows[li].cells[co]; ombre(c, 'E8E8E8')
     par = c.paragraphs[0]; par.paragraph_format.space_after = Pt(0)
     r = par.add_run(lib); r.bold = True; r.font.size = Pt(10); r.font.color.rgb = TITRE
-# Matricule : une seule case de réponse sur la largeur restante (02/10/2026). Avant, la ligne
-# gardait deux cases vides à droite. Lignes à 1,1 cm : de la place pour écrire à la main.
 t.rows[2].cells[1].merge(t.rows[2].cells[3])
 for row in t.rows: row.height = Cm(1.0)
 d.add_paragraph().paragraph_format.space_after = Pt(4)
 
-# Page 1 uniformisée avec les autres entreprises (reprise du 04/10/2026).
 encadre('Ce document est ta trame de travail :',
-        "tu peux le suivre seul, étape par étape. Aujourd'hui, tu es au quai de réception de Spartoo : une "
-        "livraison arrive, et c'est toi qui la contrôles. Le logiciel ne compte rien à ta place et ne corrige "
-        "aucune erreur : ce que tu saisis entre vraiment dans le stock.")
+        "tu peux le suivre seul, étape par étape. Aujourd'hui, tu es au quai de réception de Spartoo : un camion "
+        "arrive, et c'est toi qui contrôles la livraison, du quai jusqu'à l'entrée en stock. Le logiciel ne compte "
+        "rien à ta place : ce que tu saisis entre vraiment dans le stock.")
 encadre('Ce que ton enseignant voit dans son suivi :',
-        "trois points : ton contrôle à réception (numéro de lot, quantités, état et décision de chaque ligne), "
-        "l'entrée en stock avec le bon lot, et ton message de réserves à Puma. Tes réponses écrites ici servent à "
-        "réfléchir.")
+        "huit points : ton questionnaire sur la procédure, ton comptage de la palette, ta décision, tes réserves "
+        "écrites sur le bon de livraison, la signature du chauffeur, ton bon de réception, l'entrée en stock avec le "
+        "bon lot, et ton message de réserves à Puma. Tes réponses écrites ici servent à réfléchir.")
 encadre('Ce qui est vrai, ce qui est inventé :',
-        "Spartoo, son métier (la vente de chaussures en ligne) et la marque Puma sont réels. Le bon de livraison, "
-        "les quantités, les numéros, les coordonnées de Puma et M. Morin sont inventés pour l'exercice.")
+        "Spartoo, son entrepôt Toolog de Saint-Quentin-Fallavier (Isère), la marque Puma et le transporteur Geodis "
+        "sont réels. Le quai 7, l'horaire, le chauffeur, les numéros, les quantités, les défauts et M. Morin sont "
+        "inventés pour l'exercice.")
 
-# ==================================================================== étape 2
 soustitre("Le déroulé de ta séance")
 p("Chaque étape commence sur une nouvelle page. Passe à la suivante quand tu as répondu à toutes les questions "
   "de celle-ci.", taille=10, apres=4)
-tableau(['N°', 'Étape', 'Où travailles-tu ?'], 0, [Cm(1.4), Cm(11.0), Cm(4.6)], hauteur=Cm(0.9),
-        remplis=[['1', "Découvrir l'entreprise Spartoo", 'Sur Internet'],
-        ['2', 'Comprendre le contrôle à réception', 'Sur Internet'],
-        ['3', "Lire la procédure de l'entreprise", 'Dans Prepalog'],
-        ['4', 'Lire le bon de livraison', 'Dans Prepalog'],
-        ['5', 'Compter les colis sur le quai', 'Dans Prepalog'],
-        ['6', 'Remplir le bon de réception', 'Dans Prepalog'],
-        ['7', 'Valider et vérifier dans la base', 'Dans Prepalog'],
-        ['8', 'Signaler les réserves au fournisseur', 'Dans Prepalog']])
+tableau(['N°', 'Étape', 'Où travailles-tu ?'], 0, [Cm(1.4), Cm(11.0), Cm(4.6)], hauteur=Cm(0.85),
+        remplis=[['1', "Découvrir l'entreprise Spartoo", 'Internet et ce carnet'],
+        ['2', 'Comprendre le bon de livraison et les réserves', 'Dans ce carnet'],
+        ['3', 'Lire la procédure et répondre au questionnaire', 'Dans Prepalog'],
+        ['4', 'Recevoir le camion', 'Prepalog : Quai'],
+        ['5', 'Compter la palette et faire signer le chauffeur', 'Prepalog : Quai'],
+        ['6', 'Retrouver ta réception et la saisir en paires', 'Prepalog : Réceptions'],
+        ['7', 'Découvrir la console et vérifier ta réception', 'Prepalog : Console'],
+        ['8', 'Signaler les réserves à Puma', 'Prepalog : Messagerie']])
 
+# ==================================================================== étape 1
 etape(1, "Découvrir l'entreprise Spartoo")
-p("Avant d'ouvrir le logiciel, il faut savoir pour qui tu travailles. Spartoo existe réellement : c'est un vrai site "
-  "marchand français de vente de chaussures en ligne. Fais une recherche sur Internet pour découvrir qui elle est.")
+p("Avant d'ouvrir le logiciel, il faut savoir pour qui tu travailles. Spartoo existe réellement : c'est un site "
+  "français de vente de chaussures en ligne. Fais une courte recherche sur Internet pour la découvrir.")
 consignes([
  "Ouvre un moteur de recherche et tape « Spartoo entreprise ».",
- "Regarde sa fiche Wikipédia ou un article de presse économique, puis la page « Politique de confidentialité » ou « CGV » de son site.",
- "Réponds aux questions ci-dessous avec ce que tu trouves.",
+ "Regarde sa fiche Wikipédia ou un article de presse économique.",
+ "Réponds aux quatre questions ci-dessous.",
 ])
-faits(['En quelle année Spartoo a-t-elle été créée ?', 'Dans quelle ville se trouve son siège social ?', 'Que vend Spartoo ?', "Spartoo fabrique-t-elle elle-même les chaussures qu'elle vend ? (oui / non)"], hauteur=Cm(0.85))
+faits(['En quelle année Spartoo a-t-elle été créée ?', 'Dans quelle ville se trouve son siège social ?', 'Que vend Spartoo ?',
+       "Spartoo fabrique-t-elle elle-même les chaussures qu'elle vend ? (oui / non)"])
+p("Pas besoin de chercher la suite : lis les deux textes ci-dessous.", taille=10.5, gras=True, avant=6)
+encadre_liste("Ce que Spartoo annonce à ses clients (résumé de ses conditions de retour, octobre 2026)", [
+ "Tu as 30 jours après avoir reçu ta commande pour nous renvoyer un article.",
+ "Le retour est gratuit.",
+ "L'article doit être neuf, non porté à l'extérieur, dans sa boîte d'origine.",
+ "Tu es remboursé sur le moyen de paiement que tu as utilisé.",
+])
+encadre_liste("Ce que dit la loi (Code de la consommation, article L221-18, extrait simplifié)", [
+ "« Le consommateur dispose d'un délai de quatorze jours pour exercer son droit de rétractation d'un contrat "
+ "conclu à distance […] sans avoir à motiver sa décision. »",
+ "Se rétracter = changer d'avis et annuler son achat. Cette règle s'impose à TOUS les vendeurs en ligne.",
+])
+p("Compare les deux textes :", taille=10.5, gras=True, avant=4)
+tableau(['Question', 'Ce que la loi impose', "Ce que Spartoo choisit d'offrir"], 0, [Cm(5.0), Cm(6.0), Cm(6.0)],
+        hauteur=Cm(1.5), remplis=[['Combien de jours pour renvoyer un article ?', '', ''],
+                                  ['Est-ce obligatoire ou est-ce un choix ?', '', ''],
+                                  ['Qui doit le respecter ?', '', '']])
 qcm([
  ("Quand un client commande sur le site, quel contrat est conclu entre lui et Spartoo ?",
   ['un contrat de travail', 'un contrat de vente', 'un contrat de location'], 1),
  ("Quel organisme protège les données personnelles des clients ?",
   ['la CNIL', 'la Banque de France', 'La Poste'], 0),
- ("Après un achat sur Internet, combien de jours le client a-t-il pour changer d'avis ?",
-  ['2 jours', '14 jours', '60 jours'], 1),
+ ("D'après la loi, combien de jours un client a-t-il pour changer d'avis après un achat sur Internet ?",
+  ['2 jours', '14 jours', '30 jours'], 1),
+ ("Les 30 jours de Spartoo, c'est…",
+  ['une obligation de la loi', 'un service pour attirer et garder les clients', 'une erreur du site'], 1),
  ("Pourquoi la loi protège-t-elle davantage celui qui achète sur Internet ?",
   ["les produits y sont plus chers", "il ne peut pas toucher ni essayer le produit avant d'acheter", "les magasins n'ont pas le droit de vendre en ligne"], 1),
 ])
+questions([
+ ("Pourquoi Spartoo donne-t-il à ses clients plus de temps que la loi ne l'oblige ?", 3),
+])
 reflechir([
- "Pour une entreprise qui vend en ligne, pourquoi l'entrepôt et la logistique sont-ils aussi importants que le site Internet ?",
+ "30 jours pour renvoyer, et gratuitement : qu'est-ce que cela demande en plus à l'entrepôt de Spartoo ?",
 ])
 
 # ==================================================================== étape 2
-etape(2, "Comprendre le contrôle à réception")
-p("Avant d'ouvrir le logiciel, il faut savoir ce qu'on va faire. Quand un camion se présente à l'entrepôt, le "
-  "réceptionnaire ne se contente pas de signer : il contrôle. Fais une recherche sur Internet pour comprendre "
-  "pourquoi.")
-consignes([
- "Cherche « bon de livraison définition » puis « réserves à la livraison ».",
- "Regarde en particulier ce que dit le Code de commerce sur le délai pour émettre des réserves.",
- "Réponds aux questions ci-dessous avec ce que tu trouves.",
+etape(2, "Comprendre le bon de livraison et les réserves")
+p("Quand un camion se présente à l'entrepôt, le réceptionnaire ne se contente pas de signer : il contrôle. "
+  "Lis le document ci-dessous, puis réponds aux questions : toutes les réponses sont dedans.")
+encadre_liste("Document — Le bon de livraison et les réserves", [
+ "Le bon de livraison (BL) est rédigé par l'expéditeur, c'est-à-dire le fournisseur. Il accompagne la "
+ "marchandise et dit ce qui a été envoyé (références, quantités). Il ne prouve pas ce qui est arrivé.",
+ "À l'arrivée, le destinataire signe le BL que lui tend le chauffeur. Signer sans rien écrire, c'est dire : "
+ "« tout est arrivé, en bon état ».",
+ "Émettre des réserves, c'est écrire sur le BL, AVANT de signer, ce qui ne va pas : ce qui manque, ce qui est "
+ "abîmé. Les réserves gardent la preuve du problème.",
+ "Une réserve doit être précise : quoi, combien, quel dommage. Exemple : « manque 2 cartons réf. AB-12 ; "
+ "1 carton écrasé réf. CD-34 ».",
+ "« Sous réserve de déballage » ne veut rien dire de précis : les juges considèrent que cette formule n'a "
+ "aucune valeur.",
+ "Code de commerce, article L133-3 : « La réception des objets transportés éteint toute action contre le "
+ "voiturier pour avarie ou perte partielle si dans les trois jours, non compris les jours fériés, qui suivent "
+ "celui de cette réception, le destinataire n'a pas notifié au voiturier, par acte extrajudiciaire ou par "
+ "lettre recommandée, sa protestation motivée. »  (Le voiturier = le transporteur.)",
 ])
-faits(["Qu'est-ce qu'un bon de livraison ?", 'Qui rédige le bon de livraison ?'])
 questions([
- ("Que veut dire « émettre des réserves » à la réception d'une marchandise ?", 2),
+ ("Qu'est-ce qu'un bon de livraison ?", 3),
+ ('Qui rédige le bon de livraison ?', 1),
 ])
-faits(['De combien de jours dispose-t-on, en général, pour confirmer ses réserves au transporteur ?'])
-encadre('Deux destinataires :', "les réserves se confirment au transporteur, qui a apporté la marchandise. On "
-        "prévient aussi le fournisseur : c'est lui qui doit livrer ce qui a été commandé.")
+saut_avant()   # étape longue : deux pages équilibrées plutôt qu'une réflexion seule en haut de page
+questions([
+ ("Que veut dire « émettre des réserves » à la réception d'une marchandise ?", 3),
+])
+questions([('De combien de jours dispose-t-on pour confirmer ses réserves au transporteur ?', 1)])
+encadre('Deux destinataires :', "les réserves s'écrivent sur le BL du transporteur, qui a apporté la marchandise. "
+        "On prévient aussi le fournisseur : c'est lui qui doit livrer ce qui a été commandé. Tu feras les deux "
+        "aujourd'hui (étapes 5 et 8).")
 qcm([
+ ("Laquelle de ces réserves est valable ?",
+  ["« sous réserve de déballage »", "« manque 1 carton réf. AB-12 »", "« livraison abîmée »"], 1),
  ("Spartoo signe un bon de livraison sans réserve, alors qu'il manque des paires. Que se passe-t-il ?",
   ["le fournisseur rembourse les paires manquantes", "le fournisseur peut dire que la livraison était complète", "le bon de livraison n'a aucune valeur"], 1),
 ])
@@ -388,19 +433,29 @@ reflechir([
 ])
 
 # ==================================================================== étape 3
-etape(3, "Lire la procédure de l'entreprise")
-p("Connecte-toi à Prepalog, ouvre la rubrique Simulog puis l'activité « Spartoo — réception ». Tu arrives "
-  "dans le logiciel de l'entreprise. Va dans Messagerie : M. Morin, ton responsable, t'a écrit.")
+etape(3, "Lire la procédure et répondre au questionnaire")
+encadre("⚠  À partir d'ici, tu travailles dans Prepalog.",
+        "Ferme ta recherche Internet. Tout le reste de la séance se passe dans le logiciel de l'entreprise, "
+        "et tu continues de répondre dans ce carnet.")
 consignes([
- "Ouvre d'abord le message « Bienvenue chez Spartoo : votre mission » : c'est ton premier message dans l'entreprise, il présente ton travail.",
- "Ouvre ensuite le message « Procédure de réception : à lire avant de décharger ».",
- "Lis-le en entier : les cinq règles qu'il donne sont celles que tu vas appliquer aujourd'hui.",
+ "Ouvre Prepalog et saisis ton matricule et ton code (le matricule noté en première page), puis « Entrer ».",
+ "Clique sur la pastille « Simulog », puis ouvre l'activité « Spartoo — réception ». Le bandeau en haut "
+ "affiche « ENT-1.1 ».",
+ "Va dans Messagerie. Ouvre d'abord « Bienvenue chez Spartoo », puis « Procédure de réception : à lire avant le "
+ "quai » : M. Morin, ton responsable, y donne cinq règles.",
+ "Lis aussi l'« Avis d'expédition » de Puma : il annonce le camion qui arrive aujourd'hui.",
+ "Dans le message de M. Morin, clique sur « Répondre au questionnaire ». La procédure reste affichée à côté : "
+ "réponds aux 5 questions, puis clique sur « Envoyer à M. Morin ».",
 ])
-questions([
- ('Dans quels deux cas une ligne doit-elle être « acceptée sous réserve » ?', 2),
- ('Dans quel cas seulement peut-on refuser une ligne ?', 2),
- ("À quoi sert le numéro de lot, d'après M. Morin ?", 2),
+encadre_liste('Ce que tu dois voir :', [
+ "dans le menu de gauche, « Quai de réception » est grisé : « Réponds d'abord au questionnaire de la "
+ "procédure (Messagerie) » ;",
+ "après l'envoi : « Le quai est ouvert : va recevoir le camion ». Le quai s'ouvre même si tu t'es trompé, "
+ "mais ton enseignant voit tes réponses : relis bien la procédure avant d'envoyer.",
 ])
+p("D'après l'avis d'expédition de Puma :", taille=10.5, gras=True, avant=6)
+faits(['Quel transporteur apporte la livraison ?', 'Combien de palettes sont annoncées ?',
+       'Sous quel délai Puma veut-il recevoir les réserves ?'])
 qcm([
  ("Dans le contrat de vente entre Spartoo et son fournisseur, quelle est l'obligation du fournisseur ?",
   ['payer les factures de Spartoo', 'compter les colis à la place de Spartoo', 'livrer les marchandises commandées'], 2),
@@ -410,42 +465,82 @@ reflechir([
 ])
 
 # ==================================================================== étape 4
-etape(4, "Lire le bon de livraison")
-p("Toujours dans la Messagerie, ouvre le message de Puma France : « Bon de livraison BL-77421 ». Le document "
-  "est affiché sous le message. C'est ce que le fournisseur annonce avoir expédié — pas forcément ce qui est "
-  "arrivé.")
-p("Relève les informations du document :", taille=10.5, gras=True, avant=6)
-tableau(['Information', 'Ce que tu relèves'], 0, [Cm(6.4), Cm(10.6)], hauteur=Cm(1.0),
-        remplis=[['Numéro du bon de livraison', ''], ["Date d'expédition", ''], ['Transporteur', ''],
-                 ['Numéro de lot', ''], ['Nombre total de paires annoncées', '']])
-p("Recopie maintenant les lignes annoncées :", taille=10.5, gras=True, avant=6)
-tableau(['Référence article', 'Article', 'Quantité annoncée'], 3, [Cm(5.4), Cm(7.6), Cm(4.0)], hauteur=Cm(1.15))
+etape(4, "Recevoir le camion")
+p("Ouvre « Quai de réception ». Le camion de Geodis recule à la porte 7 de l'entrepôt Toolog. Le chauffeur te "
+  "parle et te remet le bon de livraison, affiché à droite. Ne signe rien pour l'instant.")
+encadre_liste('Ce que tu dois voir :', [
+ "le camion à quai, le chauffeur et sa bulle : « Voilà le bon de livraison : vous me signez quand c'est bon ? » ;",
+ "à droite, le bon de livraison de Puma France : une palette mixte, trois références, en cartons.",
+])
+p("Relève les informations du bon de livraison :", taille=10.5, gras=True, avant=6)
+tableau(['Information', 'Ce que tu relèves'], 0, [Cm(6.4), Cm(10.6)], hauteur=Cm(0.95),
+        remplis=[['Numéro du bon de livraison', ''], ['Numéro de commande', ''], ["Date d'expédition", ''],
+                 ['Transporteur', ''], ['Numéro de lot', ''], ['Nombre de cartons annoncés', '']])
+encadre_liste('Le PCB, « par combien » :', [
+ "le PCB est le nombre d'unités que contient un colis : ici, le nombre de paires dans un carton ;",
+ "il est écrit sur le BL et sur l'étiquette de chaque carton (« 6 paires par carton ») ;",
+ "le fournisseur annonce des cartons, le stock se compte en paires : paires = cartons × PCB.",
+])
+p("Recopie les lignes du BL, puis calcule les paires :", taille=10.5, gras=True, avant=6)
+tableau(['Référence article', 'Cartons annoncés par le fournisseur', 'Paires par carton (PCB)',
+         'Paires annoncées (cartons × PCB)'], 3,
+        [Cm(4.4), Cm(4.2), Cm(4.0), Cm(4.4)], hauteur=Cm(1.15))
+saut_avant()
 encadre('Le numéro de lot :', "note-le très soigneusement, avec ses tirets et sans espace. Tu devras le "
         "recopier à l'identique dans le logiciel, puis dans ton message au fournisseur.")
+consignes([
+ "Clique sur « Oui, vous pouvez décharger ».",
+ "Regarde le déchargement jusqu'au bout : la palette sort du camion et arrive dans la zone de réception.",
+])
+faits(['Qui sort la palette du camion ?'])
+# Règle des 3 tonnes : contrat type général, art. 7.1 et 7.2 (décret 2017-461), vérifiée le 06/10/2026.
+encadre_liste('La règle des 3 tonnes (contrat type général du transport routier, article 7) :', [
+ "envoi de moins de 3 tonnes : le transporteur charge, cale, arrime et décharge, sous sa responsabilité ;",
+ "envoi de 3 tonnes ou plus : l'expéditeur charge, et le destinataire décharge, chacun sous sa responsabilité.",
+])
+questions([
+ ("Ta palette de chaussures pèse une centaine de kilos. Qui doit la décharger, d'après cette règle ? Explique.", 2),
+])
+qcm([
+ ("Un camion livre à Spartoo 8 tonnes de cartons en une seule fois. Qui doit les décharger ?",
+  ['le chauffeur du transporteur', 'Spartoo, le destinataire', 'Puma, l\'expéditeur'], 1),
+])
 reflechir([
- "Qu'est-ce qui pourrait arriver si tu te trompais d'un seul caractère dans le numéro de lot ?",
+ "Le chauffeur te dit : « Signez vite, j'ai six livraisons après vous. » Que lui réponds-tu, et pourquoi ?",
 ])
 
 # ==================================================================== étape 5
-etape(5, "Compter les colis sur le quai")
-p("Le camion est déchargé. Va dans le menu Réceptions, ouvre la réception REC-04127 : tu vois la liste des "
-  "colis réellement déposés, avec leur contenu et l'état du carton. Plusieurs colis peuvent contenir la même "
-  "référence : c'est à toi de les additionner.")
+etape(5, "Compter la palette et faire signer le chauffeur")
+p("La palette est devant toi, en grand. Le BL annonce ce que Puma a voulu envoyer ; toi, tu comptes ce qui est "
+  "vraiment là. Un carton peut manquer au fond, un autre être abîmé sur une face que tu ne vois pas : fais le tour.")
 consignes([
- "Repère, pour chaque référence, tous les colis qui la contiennent.",
- "Additionne les quantités pour obtenir la quantité réellement reçue.",
- "Note si l'un des cartons est endommagé.",
- "Compare avec la quantité annoncée sur le bon de livraison (étape 4).",
+ "Utilise « ⟲ Tourner » et « Tourner ⟳ » pour voir les quatre faces de la palette.",
+ "Clique sur un carton pour lire son étiquette : référence, taille, paires par carton, numéro du carton (« 5 / 12 »).",
+ "Compte les cartons référence par référence (une couche = une référence), et repère ceux qui sont abîmés.",
+ "Note ton comptage ci-dessous AVANT de remplir la fiche de contrôle à l'écran.",
 ])
-p("Fais ton comptage ici, avant de saisir quoi que ce soit dans le logiciel :", taille=10.5, gras=True, avant=6)
-tableau(['Référence article', 'Colis concernés', 'Quantité comptée', 'Quantité annoncée', 'Écart'], 3,
-        [Cm(4.4), Cm(3.4), Cm(3.0), Cm(3.0), Cm(3.2)], hauteur=Cm(1.2))
+tableau(['Référence article', 'Cartons au BL', 'Cartons comptés', 'Écart', 'N° du carton abîmé'], 3,
+        [Cm(4.6), Cm(2.8), Cm(3.0), Cm(2.6), Cm(4.0)], hauteur=Cm(1.05))
+faits(['Quel numéro de carton manque ? (aide-toi des numéros « x / 12 »)', 'Sur quelle face as-tu vu le carton abîmé ?'])
+encadre('Et ce qu\'il y a dans le carton abîmé ?', "quand tu repères un carton abîmé, le chef de quai l'ouvre "
+        "devant le chauffeur : ici, les boîtes et les chaussures sont intactes, elles peuvent être vendues. "
+        "Applique la procédure de M. Morin pour choisir ta décision.")
+saut_avant()
+p("À l'écran, maintenant : la fiche de contrôle, les réserves, la signature.", taille=10.5, gras=True)
+consignes([
+ "Remplis la fiche de contrôle à l'écran (référence lue, endommagés, manquants), puis choisis la décision et "
+ "le ou les motifs.",
+ "Écris les réserves sur le BL : nombre de cartons endommagés, nombre de cartons manquants. Ne coche "
+ "pas « Sous réserve de déballage ».",
+ "Fais signer le chauffeur.",
+])
 encadre_liste('Ce que tu dois voir :', [
- "en haut, le fournisseur, le transporteur et le bon de livraison de la réception ;",
- "le tableau « Colis reçus sur le quai » : une ligne par colis, avec son contenu et l'état du carton ;",
- "plus bas, le « Bon de réception », encore vide : tu le rempliras à l'étape 6.",
+ "sur le BL, ta ligne de réserves ajoutée avant les signatures ;",
+ "la signature du chauffeur, et la palette posée en zone de réception.",
 ])
-faits(['Sur quelle référence y a-t-il un écart ?', 'De combien de paires est cet écart ?', 'Quelle référence est arrivée dans un carton endommagé ?'])
+p("L'écran écrit le nombre de cartons, pas les références. Écris ici la réserve complète, comme sur un vrai BL :",
+  taille=10.5, gras=True, avant=4)
+questions([("Ta réserve, avec la référence de chaque carton :", 2)])
 qcm([
  ("Le fournisseur livre moins de paires que prévu. Qu'est-ce qui n'est pas respecté ?",
   ["la quantité commandée", "le prix des chaussures", "la couleur des cartons"], 0),
@@ -455,66 +550,92 @@ reflechir([
 ])
 
 # ==================================================================== étape 6
-etape(6, "Remplir le bon de réception")
-p("Tu vas maintenant saisir ton contrôle dans le logiciel, sur le bon de réception. Attention : le logiciel "
-  "enregistre ce que tu écris, sans le corriger. Une quantité mal recopiée, et c'est ton stock qui sera faux.")
+etape(6, "Retrouver ta réception et la saisir en paires")
+p("La palette est contrôlée : il faut maintenant la faire entrer dans le stock. Ouvre « Réceptions » : la liste "
+  "montre toutes les réceptions de l'entrepôt, pas seulement la tienne. Tu retrouves la tienne par son numéro de BL.")
 consignes([
- "Recopie le numéro de lot du bon de livraison dans le champ prévu, à l'identique.",
- "Pour chaque référence : la quantité annoncée (bon de livraison), la quantité comptée (ton comptage de "
- "l'étape 5), l'état des colis, puis ta décision.",
- "Applique la règle de M. Morin : écart de quantité ou carton endommagé → accepté sous réserve.",
- "Vérifie ta saisie ligne par ligne avant de valider : après validation, tu ne peux plus la modifier.",
+ "Cherche ton numéro de BL dans la liste. Plusieurs réceptions se ressemblent : compare le numéro chiffre par chiffre.",
+ "Ouvre ta réception.",
+])
+faits(['Quel est le numéro de ta réception (REC-…) ?'])
+questions([("Pourquoi la réception de Reebok n'a-t-elle pas de bouton pour l'ouvrir ?", 2)])
+encadre('Cartons ou paires ?', "au quai, tu as compté des cartons. Sur le bon de réception, on écrit des paires : "
+        "nombre de cartons × PCB (6 paires par carton).")
+p("Prépare ta saisie : convertis ton comptage de l'étape 5 en paires.", taille=10.5, gras=True, avant=6)
+tableau(['Référence article', 'Paires annoncées', 'Paires comptées', 'État des colis', 'Décision'], 3,
+        [Cm(4.4), Cm(2.6), Cm(2.6), Cm(3.6), Cm(3.8)], hauteur=Cm(1.1))
+saut_avant()
+p("Saisis maintenant ton bon de réception à l'écran :", taille=10.5, gras=True)
+consignes([
+ "Recopie le numéro de lot du BL dans le champ prévu, à l'identique.",
+ "Pour chaque référence : paires annoncées, paires comptées, état des colis, décision.",
+ "Applique la règle de M. Morin : il manque quelque chose ou un carton est endommagé → accepté sous réserve.",
+ "Clique sur « Valider la réception (entrée en stock) ». Une fenêtre rappelle le numéro de réception et le "
+ "numéro de BL : vérifie-les avant de confirmer. Après, tu ne peux plus rien modifier.",
 ])
 encadre_liste('Ce que tu dois voir :', [
- "le bouton « Valider la réception (entrée en stock) » reste gris tant que le numéro de lot et toutes les lignes ne sont pas remplis ;",
- "quand tout est rempli, il devient cliquable. Ne clique pas encore : recopie d'abord ta saisie ci-dessous.",
+ "plus de liste des colis : « Les cartons ont été comptés au quai : reprends ta fiche de contrôle » ;",
+ "le bouton de validation reste gris tant que le lot et toutes les lignes ne sont pas remplis ;",
+ "après confirmation : « Réception validée », et le bon ne se modifie plus.",
 ])
-p("Recopie ici ce que tu as saisi :", taille=10.5, gras=True, avant=6)
-tableau(['Référence article', 'Annoncé', 'Compté', 'État des colis', 'Décision'], 3,
-        [Cm(4.4), Cm(2.2), Cm(2.2), Cm(4.0), Cm(4.2)], hauteur=Cm(1.2))
+faits(['Combien de paires, au total, vont entrer en stock ?'])
 reflechir([
- "Pour la ligne où il manque des paires, pourquoi as-tu choisi ta décision plutôt qu'une autre ?",
+ "Pour la ligne où il manque un carton, pourquoi as-tu choisi ta décision plutôt qu'une autre ?",
 ])
 
 # ==================================================================== étape 7
-etape(7, "Valider et vérifier dans la base")
-p("Clique sur « Valider la réception (entrée en stock) ». Les quantités acceptées entrent en stock, avec leur numéro de lot. "
-  "Un professionnel ne s'arrête pas là : il vérifie que sa saisie a bien produit ce qu'il attendait.")
+etape(7, "Découvrir la console et vérifier ta réception")
+p("Un professionnel ne s'arrête pas à « Réception validée » : il vérifie que sa saisie a produit ce qu'il "
+  "attendait. Pour cela, Spartoo a une console. Tu t'en serviras dans toutes les séances Spartoo.")
+# Explication de la console reprise à l'identique de l'ancienne étape 3 d'ENT-1.2 (demande de Tristan, 06/10/2026 :
+# « l'explication console d'origine était plus complète »). ENT-1.2 n'en garde qu'un rappel.
+p("La console permet d'interroger et de modifier la base avec des commandes qui commencent toujours par un "
+  "point. Tu peux écrire les références en majuscules ou en minuscules : la console comprend les deux.")
 consignes([
- "Va dans la Console.",
- "Tape .movements pour voir les derniers mouvements de stock.",
- "Tape .getstock suivi d'une des références réceptionnées.",
- "Tape .getlot suivi du numéro de lot : tu vois tout ce qui concerne ce lot.",
+ "Va dans Console.",
+ "Tape .help et appuie sur Entrée : la liste complète des commandes disponibles s'affiche.",
+ "Observe bien la colonne de gauche (le nom exact de chaque commande) et la colonne de droite "
+ "(ce qu'elle fait).",
 ])
-encadre_liste('Ce que tu dois voir :', [
- "après le clic, le message « Réception validée : … entrées en stock » ;",
- "le bon de réception ne se modifie plus ;",
- "dans la Console, tes entrées, avec le numéro de lot que tu as saisi.",
+encadre('Rassure-toi :', "si tu tapes une commande qui n'existe pas, ou si tu oublies le point, la console "
+        "t'explique l'erreur et te propose de taper .help. N'hésite pas à essayer, tu ne peux rien casser !")
+faits(['Par quel caractère commence toujours une commande ?'])
+p("Cite 3 commandes de la liste (par exemple .getstock) et explique en une phrase ce que fait chacune :",
+  taille=10.5, gras=True, avant=6)
+tableau(['Commande', "Ce qu'elle fait"], 3, [Cm(4.6), Cm(12.4)], hauteur=Cm(1.2))
+saut_avant()
+p("Vérifie maintenant ta réception avec trois commandes :", taille=10.5, gras=True)
+consignes([
+ "Tape .movements : les derniers mouvements de stock.",
+ "Tape .getstock PM-SUE-MA-41 : le stock de cette référence.",
+ "Tape .getlot suivi de ton numéro de lot : tout ce qui concerne ce lot.",
 ])
-faits(['Combien de paires, au total, sont entrées en stock avec ce lot ?', 'Quel type de mouvement apparaît dans .movements pour ces entrées ?', 'Quel fournisseur .getlot associe-t-il à ce lot ?'])
+encadre_liste('Ce que tu dois voir dans .getlot :', [
+ "les entrées du lot, une ligne par référence, avec ton numéro de réception ;",
+ "« Aucune sortie : tout le lot est encore en stock. »",
+])
+faits(['Combien de paires, au total, sont entrées avec ce lot ?', 'Quel type de mouvement apparaît dans .movements pour ces entrées ?',
+       'Avec .getstock PM-SUE-MA-41, combien de paires sont en stock ?'])
 questions([
- ("Pourquoi la ligne « Sorties » de .getlot est-elle vide pour l'instant ?", 2),
+ ("Pourquoi n'y a-t-il encore aucune sortie dans .getlot ?", 2),
 ])
 reflechir([
  'En quoi le numéro de lot sera-t-il utile si, dans un mois, le fournisseur signale un défaut de fabrication ?',
 ])
-encadre('Ce que tu viens de faire :', "tu as créé toi-même les entrées de stock de ton entrepôt. Lors des "
-        "prochaines séances, tu prépareras des commandes avec ces paires, puis tu devras retrouver d'où elles "
-        "viennent. Tout part de la saisie que tu viens de faire.")
 
 # ==================================================================== étape 8
-etape(8, "Signaler les réserves au fournisseur")
-p("Il reste le plus important : prévenir Puma. Sans message écrit, les paires manquantes sont perdues pour "
-  "l'entreprise, et le carton endommagé ne sera jamais remboursé.")
+etape(8, "Signaler les réserves à Puma")
+p("Au quai, tu as écrit tes réserves pour le transporteur. Il reste à prévenir le fournisseur, le jour même : "
+  "sans message écrit, Puma ne remplacera pas le carton manquant et ne remboursera pas le carton abîmé.")
 consignes([
  "Va dans Messagerie, puis clique sur « Nouveau message ».",
  "Choisis Puma comme destinataire.",
- "Écris un message qui rappelle le numéro de lot, indique ce qui manque et signale le carton endommagé.",
+ "Écris un message qui rappelle le numéro de lot, dit ce qui manque et signale le carton endommagé.",
  "Envoie-le.",
 ])
 encadre('Attention, à lire avant de rédiger :', "ton message doit contenir le numéro de lot écrit en entier "
-        "(tirets compris), les deux références concernées, et la quantité manquante écrite en chiffres "
-        "(par exemple « il manque 2 paires »). C'est ce que ton enseignant retrouvera dans son suivi.")
+        "(tirets compris), les deux références concernées, et ce qui manque écrit en chiffres : en paires "
+        "(« il manque 6 paires ») ou en cartons (« il manque 1 carton »).")
 p("Rédige d'abord ton brouillon ici, puis recopie-le dans la messagerie :", taille=10.5, gras=True, avant=6)
 questions([
  ('Brouillon de ton message à Puma :', 7),
@@ -529,10 +650,12 @@ qcm([
 ])
 encadre_liste('Tu as terminé la séance quand :', [
  "ton message à Puma est envoyé ;",
+ "un bandeau s'affiche en haut de l'écran : « Séance validée ✓ », ou bien le titre de ce qui reste à corriger "
+ "(dans ce cas, appelle ton professeur) ;",
  "toutes les questions de ce carnet ont une réponse.",
 ])
 reflechir([
- "Qu'aurait-il fallu faire, en plus, si la marchandise du carton endommagé avait été inutilisable ?",
+ "Qu'aurait-il fallu faire, en plus, si les chaussures du carton endommagé avaient été inutilisables ?",
 ])
 
 # Feuille à détacher (cours + activité à la maison), décision de Tristan du 04/10/2026. Ce générateur n'utilise
@@ -546,11 +669,20 @@ ITEMS.extend(TC.ITEMS)
 SORTIE = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                       '..', 'contenus', 'trames', 'ENT-1.1-spartoo-reception-trame-eleve.docx')
 # ------------------------------------------------------------------ corrigé pour l'espace enseignant
-# Le corrigé des QCM est écrit à côté de la trame, jamais dedans : l'espace enseignant du site
-# l'affiche (onglet « Corrigés », champ `corrige` du `meta` de l'activité).
-NOTIONS = [["Quand un client commande", "Module 1 et 2 — contrat de vente", "Le client et Spartoo concluent un contrat de vente : Spartoo s'engage à livrer, le client à payer."], ["Quel organisme protège", "Module 2 — protection des données personnelles, CNIL", "La CNIL (Commission nationale de l'informatique et des libertés) veille à la protection des données personnelles."], ["Après un achat sur Internet", "Module 2 — protection du consommateur", "Délai légal de rétractation de 14 jours pour un achat à distance (Code de la consommation)."], ["Pourquoi la loi protège", "Module 2 — asymétrie d'information", "À distance, le consommateur ne voit ni ne touche le produit : il est moins bien informé que le vendeur, la loi compense."], ["Spartoo signe un bon", "Module 1 — contrat, responsabilité contractuelle", "Un bon de livraison signé sans réserve est en général considéré comme la preuve d'une livraison conforme : se plaindre ensuite devient difficile."], ["Dans le contrat de vente entre", "Module 1 — droits et obligations", "L'obligation principale du vendeur est de livrer ce qui a été commandé ; celle de l'acheteur est de payer."], ["Le fournisseur livre moins", "Module 1 — inexécution du contrat", "Livrer moins que la quantité commandée est une inexécution du contrat (point de départ de la responsabilité contractuelle)."], ["Si le fournisseur ne répond pas", "Module 1 — responsabilité civile contractuelle, dommages-intérêts", "Les dommages-intérêts sont une somme d'argent qui répare le dommage causé par l'inexécution du contrat."]]
+NOTIONS = [
+ ["Quand un client commande", "Module 1 et 2 — contrat de vente", "Le client et Spartoo concluent un contrat de vente : Spartoo s'engage à livrer, le client à payer."],
+ ["Quel organisme protège", "Module 2 — protection des données personnelles, CNIL", "La CNIL (Commission nationale de l'informatique et des libertés) veille à la protection des données personnelles."],
+ ["D'après la loi, combien de jours", "Module 2 — protection du consommateur", "Délai légal de rétractation de 14 jours pour un achat à distance (Code de la consommation, art. L221-18). Les 30 jours de Spartoo vont au-delà."],
+ ["Les 30 jours de Spartoo", "Module 2 — relation client, protection du consommateur", "La loi fixe un minimum (14 jours) pour tous ; Spartoo offre plus par choix commercial : rassurer, fidéliser, se démarquer des concurrents."],
+ ["Pourquoi la loi protège", "Module 2 — asymétrie d'information", "À distance, le consommateur ne voit ni ne touche le produit : il est moins bien informé que le vendeur, la loi compense."],
+ ["Laquelle de ces réserves", "Module 1 — contrat, preuve, responsabilité contractuelle", "Une réserve doit être précise (quoi, combien, quel dommage) ; « sous réserve de déballage » ou « livraison abîmée » ne prouvent rien."],
+ ["Spartoo signe un bon", "Module 1 — contrat, responsabilité contractuelle", "Un bon de livraison signé sans réserve est en général considéré comme la preuve d'une livraison conforme : se plaindre ensuite devient difficile."],
+ ["Dans le contrat de vente entre", "Module 1 — droits et obligations", "L'obligation principale du vendeur est de livrer ce qui a été commandé ; celle de l'acheteur est de payer."],
+ ["Un camion livre à Spartoo 8 tonnes", "Module 1 — contrat (contrat de transport, obligations des parties)", "Contrat type général du transport routier, art. 7.2 : pour un envoi de 3 tonnes ou plus, le déchargement est fait par le destinataire, sous sa responsabilité (art. 7.1 : moins de 3 tonnes, c'est le transporteur)."],
+ ["Le fournisseur livre moins", "Module 1 — inexécution du contrat", "Livrer moins que la quantité commandée est une inexécution du contrat (point de départ de la responsabilité contractuelle)."],
+ ["Si le fournisseur ne répond pas", "Module 1 — responsabilité civile contractuelle, dommages-intérêts", "Les dommages-intérêts sont une somme d'argent qui répare le dommage causé par l'inexécution du contrat."],
+]
 CODE_SEANCE, TITRE_SEANCE, FICHIER_TRAME = 'ENT-1.1', 'Spartoo — réceptionner une livraison', 'ENT-1.1-spartoo-reception-trame-eleve'
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from corriges_data import ecrire_corrige
 ecrire_corrige(CODE_SEANCE, TITRE_SEANCE, FICHIER_TRAME, ITEMS, CLES, NOTIONS,
                os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'contenus', 'corriges'), os.path.basename(__file__))

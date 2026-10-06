@@ -179,7 +179,7 @@ def questions(liste, lignes=2):
     vide.paragraph_format.line_spacing = Pt(3)
 
 
-def faits(liste, hauteur=Cm(0.9)):
+def faits(liste, hauteur=Cm(1.3)):
     """Questions de fait à une ligne : un tableau « question / ta réponse », une ligne par question
     (une question, une zone), bien plus compact que des blocs séparés — pour tenir une étape sur
     une seule page (Tristan, 02/10/2026)."""
@@ -198,9 +198,9 @@ def faits(liste, hauteur=Cm(0.9)):
         par = row.cells[0].paragraphs[0]; par.paragraph_format.space_after = Pt(0)
         par.add_run(q).font.size = Pt(10)
     for row in t.rows:
-        row.cells[0].width = Cm(10.4); row.cells[1].width = Cm(6.6)
+        row.cells[0].width = Cm(7.4); row.cells[1].width = Cm(9.6)
     t.autofit = False
-    t.columns[0].width = Cm(10.4); t.columns[1].width = Cm(6.6)
+    t.columns[0].width = Cm(7.4); t.columns[1].width = Cm(9.6)
     vide = d.add_paragraph(); vide.paragraph_format.space_after = Pt(0)
     vide.add_run('').font.size = Pt(5); vide.paragraph_format.line_spacing = Pt(3)
 
@@ -333,7 +333,7 @@ p("Chaque étape commence sur une nouvelle page. Passe à la suivante quand tu a
 tableau(['N°', 'Étape', 'Où travailles-tu ?'], 0, [Cm(1.4), Cm(11.0), Cm(4.6)], hauteur=Cm(0.9),
         remplis=[['1', 'Ouvrir ton environnement de travail', 'Dans Prepalog'],
         ['2', 'Repérer les fournisseurs et les clients', 'Dans Prepalog'],
-        ['3', 'Comprendre la console et la commande .help', 'Dans Prepalog'],
+        ['3', 'Retrouver la console : prix et fournisseurs', 'Dans Prepalog'],
         ['4', 'Répondre à une question client sur le stock', 'Dans Prepalog'],
         ['5', 'Traiter la commande CMD-048213', 'Dans Prepalog'],
         ['6', 'Réapprovisionner un fournisseur', 'Dans Prepalog']])
@@ -365,11 +365,12 @@ reflechir([
 etape(2, "Repérer les fournisseurs et les clients")
 p("Dans le menu de gauche, ouvre l'écran Fournisseurs : ce sont les marques de chaussures qui livrent Spartoo.")
 faits(['Combien de fournisseurs sont référencés ?'])
-tableau(['Code (par exemple F001)', 'Trois marques fournisseurs'], 3, [Cm(4.0), Cm(13.0)], hauteur=Cm(0.8))
+tableau(['Code (par exemple F001)', 'Trois marques fournisseurs'], 3, [Cm(4.0), Cm(13.0)], hauteur=Cm(1.1))
 faits(['Choisis un de ces fournisseurs : quel est son délai de livraison ?', 'Quel est son minimum de commande ?'])
+saut_avant()   # étape longue : deux pages équilibrées
 p("Ouvre maintenant l'écran Clients.", avant=6, apres=4)
 faits(['Les clients de Spartoo sont-ils des entreprises ou des particuliers ?'])
-tableau(['Code', 'Deux clients : nom', 'Ville'], 2, [Cm(3.0), Cm(8.0), Cm(6.0)], hauteur=Cm(0.8))
+tableau(['Code', 'Deux clients : nom', 'Ville'], 2, [Cm(3.0), Cm(8.0), Cm(6.0)], hauteur=Cm(1.1))
 qcm([
  ("Entre un fournisseur et Spartoo, qu'est-ce qui circule ?",
   ["de l'argent seulement", "des marchandises seulement", "des marchandises dans un sens, de l'argent dans l'autre"], 2),
@@ -379,22 +380,13 @@ reflechir([
 ])
 
 # ==================================================================== étape 3
-etape(3, "Comprendre la console et la commande .help")
-p("La console permet d'interroger et de modifier la base avec des commandes qui commencent toujours par un "
-  "point. Tu peux écrire les références en majuscules ou en minuscules : la console comprend les deux.")
-consignes([
- "Va dans Console.",
- "Tape .help et appuie sur Entrée : la liste complète des commandes disponibles s'affiche.",
- "Observe bien la colonne de gauche (le nom exact de chaque commande) et la colonne de droite "
- "(ce qu'elle fait).",
-])
-encadre('Rassure-toi :', "si tu tapes une commande qui n'existe pas, ou si tu oublies le point, la console "
-        "t'explique l'erreur et te propose de taper .help. N'hésite pas à essayer, tu ne peux rien casser !")
-faits(['Par quel caractère commence toujours une commande ?'])
-p("Cite 3 commandes de la liste (par exemple .getstock) et explique en une phrase ce que fait chacune :",
-  taille=10.5, gras=True, avant=6)
-tableau(['Commande', "Ce qu'elle fait"], 3, [Cm(4.6), Cm(12.4)], hauteur=Cm(1.2))
-p("Teste maintenant deux commandes sur la référence PM-SUE (le modèle Puma Suede Classic XXI) :",
+etape(3, "Retrouver la console : prix et fournisseurs")
+# La console est découverte en ENT-1.1 (étape 7 de sa trame, refonte du 06/10/2026). Ici, un simple rappel :
+# Tristan, 06/10 : « on évite la répétition de l'explication console entre 1.1 et 1.2 ».
+encadre('Rappel :', "tu as découvert la console en ENT-1.1 (.help, .movements, .getstock, .getlot). Si tu as "
+        "oublié une commande, tape .help.")
+p("Aujourd'hui, deux nouvelles commandes : .getprice (les prix d'un article) et .getsupplier (la fiche d'un "
+  "fournisseur). Va dans Console et essaie-les sur le modèle PM-SUE (Puma Suede Classic XXI) :",
   taille=10.5, gras=True, avant=6)
 faits(['Avec .getprice PM-SUE, quel est le prix de vente TTC ?', "Avec .getprice PM-SUE, quel est le prix d'achat HT ?", 'Avec .getsupplier Puma, quel est le délai de livraison de ce fournisseur ?'])
 reflechir([

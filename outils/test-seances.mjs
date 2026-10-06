@@ -266,65 +266,101 @@ seanceCourante = 'ENT-1.1';
 const C11 = 'ENT-1.1';
 let dateEntree = '';
 
-await v('ENT-1.1 · étape 3 : le message de M. Morin dit la procédure du corrigé', async () => {
+await v('ENT-1.1 · étape 3 : l\'avis d\'expédition et la procédure disent ce que relève le corrigé ; le questionnaire ouvre le quai', async () => {
   await ouvrirSeance('spartoo-reception');
-  const t = await ouvrirMail('Procédure de réception');
-  attendre('étape 3 : la règle « écart de quantité OU carton endommagé » n\'est pas dans le message', /écart de quantité OU un carton endommagé/.test(t));
-  attendre('étape 3 : le corrigé ne cite pas les deux cas', /écart de quantité/.test(rep(C11, 'Dans quels deux cas').rep) && /carton (est )?endommagé/.test(rep(C11, 'Dans quels deux cas').rep));
-  attendre('étape 3 : « inutilisable » absent du message', /inutilisable/.test(t) && /inutilisable/.test(rep(C11, 'Dans quel cas seulement').rep));
-  attendre('étape 3 : « Sans lot, pas de traçabilité » absent du message', /pas de traçabilité/.test(t) && /traçabilité/.test(rep(C11, 'À quoi sert le numéro de lot').rep));
+  attendre('étape 3 : le quai est ouvert avant le questionnaire', !(await page.$('[data-vue="quai"]')) && !!(await page.$('[data-vue-fermee="quai"]')));
+  const avis = await ouvrirMail('Avis d\'expédition');
+  comparer('transporteur de l\'avis', (avis.match(/avec (Geodis) \(tournée (\d+)\)/) || []).slice(1).join(' tournée '), rep(C11, 'Quel transporteur apporte la livraison').rep);
+  comparer('palettes annoncées', (avis.match(/(\d+ palette)/) || [])[1], rep(C11, 'Combien de palettes sont annoncées').rep);
+  comparer('délai des réserves', (avis.match(/sous (\d+ heures)/) || [])[1], rep(C11, 'Sous quel délai Puma veut-il recevoir les réserves').rep);
+  const proc = await ouvrirMail('Procédure de réception');
+  attendre('étape 3 : la procédure ne dit pas « en paires »', /en paires/.test(proc));
+  // Le questionnaire, répondu juste (les réponses sont dans le contenu de la séance, comme pour un élève qui a lu).
+  await page.click('.ent-lecteur [data-vue2="fiche"]');
+  await page.waitForSelector('[data-fiche-envoyer]');
+  const J = await page.evaluate(async () => (await import('/contenus/spartoo-reception.js')).JUSTES);
+  for (const [q, val] of Object.entries(J)) await page.check(`input[name="fi-${q}"][value="${val}"]`);
+  await cliquerEtConfirmer(page, '[data-fiche-envoyer]');
+  await page.waitForSelector('[data-vue="quai"]');
 });
 
-await v('ENT-1.1 · étape 4 : le bon de livraison donne ce que relève le corrigé', async () => {
-  const t = await ouvrirMail('Bon de livraison');
-  const tab = tableau(C11, 4, 0);   // Information | Ce que tu relèves
-  const val = (i) => tab.reponses[i][1];
-  comparer('n° du bon de livraison', (t.match(/Bon de livraison (BL-\d+)/) || [])[1], val(0));
-  const dateExp = (t.match(/Date d'expédition\s*(\d{2}\/\d{2}\/\d{4})/) || [])[1];
-  attendre('étape 4 : la date d\'expédition n\'est pas lisible sur le bon', !!dateExp);
-  comparer('transporteur', (t.match(/Transporteur\s*(.+?)\s*Réf\./) || [])[1], val(2));
-  comparer('numéro de lot', (t.match(/Numéro de lot\s*(LOT-[A-Z0-9-]+)/) || [])[1], val(3));
-  comparer('total de paires annoncées', (t.match(/(\d+) paires annoncées/) || [])[1], val(4));
-  const lignes = tableau(C11, 4, 1);
-  const bl = await page.$$eval('.ent-lecteur table tbody tr', (rows) => rows.map((r) => [...r.cells].map((c) => c.textContent.replace(/\s+/g, ' ').trim())));
-  for (const [sku, , q] of lignes.reponses) {
-    const l = bl.find((x) => x[0] === sku);
-    attendre(`étape 4 : ${sku} absent du bon de livraison à l'écran`, !!l);
-    if (l) comparer(`quantité annoncée ${sku}`, l[l.length - 1], q);
+await v('ENT-1.1 · étape 4 : le BL remis au quai donne ce que relève le corrigé', async () => {
+  await vue('quai');
+  await page.click('[data-q="passer1"]');
+  await page.waitForSelector('[data-q-apres-arrivee]:not([hidden])');
+  const ent = await page.$$eval('[data-q-bl-entete] span', (L) => Object.fromEntries(L.map((s) => [s.textContent.trim(), s.nextElementSibling.textContent.trim()])));
+  const tab = tableau(C11, 4, 0), val = (debut) => (tab.reponses.find((r) => r[0].startsWith(debut)) || [])[1];
+  const bl = (await lire('[data-q-apres-arrivee] .quai-doc-titre')).match(/BL-\d+/);
+  comparer('n° du bon de livraison', bl && bl[0], val('Numéro du bon'));
+  comparer('n° de commande', ent.Commande, val('Numéro de commande'));
+  comparer('transporteur', ent.Transporteur, val('Transporteur'));
+  comparer('numéro de lot', ent['N° de lot'], val('Numéro de lot'));
+  attendre('étape 4 : la date d\'expédition n\'est pas lisible sur le BL', /^\d{2}\/\d{2}\/\d{4}$/.test(ent['Expédié le'] || ''));
+  const lignes = await page.$$eval('[data-q-apres-arrivee] table.quai-bl tbody tr:not(.quai-bl-total)', (R) => R.map((r) => [...r.cells].map((c) => c.textContent.trim())));
+  for (const [sku, cartons, pcb, paires] of tableau(C11, 4, 1).reponses) {
+    const l = lignes.find((x) => x[1] === sku);
+    attendre(`étape 4 : ${sku} absent du BL remis`, !!l);
+    if (!l) continue;
+    comparer(`cartons annoncés ${sku}`, l[3], cartons);
+    comparer(`paires par carton ${sku}`, (l[4].match(/\d+/) || [])[0], pcb);
+    comparer(`paires annoncées ${sku} (cartons × PCB)`, String(Number(l[3]) * Number((l[4].match(/\d+/) || [])[0])), paires);
   }
+  await page.click('[data-q="decharger"]');
+  await page.waitForSelector('[data-q-scene2]');
+  const sort = await page.waitForFunction(() => /Le chauffeur sort la palette/.test(document.querySelector('[data-q-leg]')?.textContent || ''), null, { timeout: 6000 }).then(() => true, () => false);
+  attendre('étape 4 : la légende ne dit pas que c\'est le chauffeur qui sort la palette', sort && /chauffeur/i.test(rep(C11, 'Qui sort la palette du camion').rep));
+  await page.click('[data-q="passer"]');
+  await page.waitForSelector('[data-q="vers3"]:not([disabled])');
 });
 
-await v('ENT-1.1 · étape 5 : le comptage des colis donne le tableau du corrigé', async () => {
+await v('ENT-1.1 · étape 5 : compter la palette comme le corrigé (carton manquant, carton abîmé, réserves, signature)', async () => {
+  await page.click('[data-q="vers3"]');
+  await page.waitForSelector('[data-q-palette] [data-q-carton]');
+  const cartons = await page.$$eval('[data-q-palette] [data-q-carton]', (L) => L.map((g) => ({ no: +g.dataset.qCarton, ref: g.dataset.k })));
+  const manque = [...Array(12).keys()].map((k) => k + 1).find((n) => !cartons.some((c) => c.no === n));
+  contient('carton manquant', rep(C11, 'Quel numéro de carton manque').rep, `n° ${manque}`);
+  // Faire le tour : la face où l'enfoncement apparaît.
+  const vues = ['avant', 'côté droit', 'arrière', 'côté gauche'];
+  let vu = null;
+  for (let k = 0; k < 4 && !vu; k++) {
+    if (await page.$('[data-q-palette] [data-iso-avarie]')) vu = vues[k];
+    else await page.click('[data-q="tourner"]:not([data-sens])');
+  }
+  attendre('étape 5 : aucun carton enfoncé visible en faisant le tour', !!vu);
+  // La face où il « se voit » le mieux : celle de la vue où il est devant (l'arrière, au demi-tour).
+  while (!/arrière/.test(await lire('[data-q-vues]'))) await page.click('[data-q="tourner"]:not([data-sens])');
+  await page.$eval('[data-q-carton="6"]', (g) => g.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+  await page.waitForSelector('[data-q-carton-vu="6"]');
+  attendre('étape 5 : de l\'arrière, le carton 6 n\'est pas dit enfoncé', /enfoncé/.test(await lire('[data-q-etat-carton]')));
+  contient('face du carton abîmé', rep(C11, 'Sur quelle face as-tu vu le carton abîmé').rep, 'arrière');
+  for (const [sku, bl, compte, , abime] of tableau(C11, 5, 0).reponses) {
+    const n = cartons.filter((c) => c.ref === sku).length;
+    comparer(`cartons comptés ${sku}`, String(n), compte);
+    if (/n°/.test(abime)) comparer(`carton abîmé de ${sku}`, `n° ${cartons.find((c) => c.no === 6).ref === sku ? 6 : '?'}`, abime);
+    await page.fill(`[data-q-compte-ref="${sku}"]`, String(n)); await page.press(`[data-q-compte-ref="${sku}"]`, 'Enter');
+    void bl;
+  }
+  await page.click('#qDec-reserves'); await page.click('#qMot-avarie'); await page.click('#qMot-manquant');
+  await page.click('[data-q="valider"]');
+  await page.click('[data-q="vers4"]'); await page.click('[data-q="vers4"]');
+  await page.waitForSelector('#qRes-P1');
+  await page.fill('#qRes-P1', '1'); await page.fill('#qRes2-P1', '1');
+  await page.click('[data-q="ecrire"]');
+  await page.click('[data-q="signer"]');
+  attendre('étape 5 : le chauffeur ne repart pas après la signature', /reparti/.test(await lire('[data-q-etatcf]')));
+});
+
+await v('ENT-1.1 · étape 6 : retrouver sa réception par le BL, saisir en paires tel que le corrigé le donne', async () => {
   await vue('receptions');
-  await page.click('[data-ouvrir-rec]');
+  const lignes = await page.$$eval('.ent-main tbody tr', (R) => R.map((r) => r.textContent.replace(/\s+/g, ' ').trim()));
+  const cellules = await page.$$eval('.ent-main tbody tr', (R) => R.map((r) => [...r.cells].map((c) => c.textContent.trim())));
+  const mienne = cellules.find((c) => c.includes('BL-77421'));
+  comparer('numéro de ma réception', mienne && mienne[0], rep(C11, 'Quel est le numéro de ta réception').rep);
+  attendre('étape 6 : la réception Reebok annoncée a un bouton', !(await page.$('[data-ouvrir-rec="REC-04131"]')) && /Reebok.*Annoncée/.test(lignes.find((l) => /REC-04131/.test(l)) || ''));
+  await page.click('[data-ouvrir-rec="REC-04127"]');
   await page.waitForSelector('#recLot');
-  const colis = await page.$$eval('.ent-main table tbody tr', (rows) => rows.map((r) => [...r.cells].map((c) => c.textContent.replace(/\s+/g, ' ').trim())));
-  const parRef = {};
-  colis.filter((c) => /^\d+$/.test(c[0]) && /^[A-Z]{2}-/.test(c[1])).forEach((c) => {
-    const e = parRef[c[1]] || (parRef[c[1]] = { qte: 0, n: [], abime: false });
-    e.qte += parseInt(c[3], 10); e.n.push(c[0]); e.abime = e.abime || /endommag/i.test(c[4]);
-  });
-  const tab = tableau(C11, 5, 0);
-  for (const [sku, colisTxt, compte, annonce, ecart] of tab.reponses) {
-    const e = parRef[sku];
-    attendre(`étape 5 : ${sku} absent des colis à l'écran`, !!e);
-    if (!e) continue;
-    comparer(`quantité comptée ${sku}`, e.qte, compte);
-    comparer(`numéros de colis ${sku}`, e.n.join(' et '), colisTxt.replace(/colis/g, '').replace(/ +/g, ' '));
-    if (e.abime) comparer(`carton endommagé ${sku}`, 'endommagé', ecart);
-  }
-  comparer('référence en carton endommagé', Object.keys(parRef).find((k) => parRef[k].abime), rep(C11, 'Quelle référence est arrivée dans un carton endommagé').rep);
-  const ecartRef = Object.keys(parRef).find((k) => {
-    const a = tableau(C11, 4, 1).reponses.find((r) => r[0] === k);
-    return a && parseInt(a[2], 10) !== parRef[k].qte;
-  });
-  comparer('référence avec écart', ecartRef, rep(C11, 'Sur quelle référence y a-t-il un écart').rep);
-});
-
-await v('ENT-1.1 · étape 6 : saisir le bon de réception tel que le corrigé le donne', async () => {
-  const tab = tableau(C11, 6, 0);   // Référence | Annoncé | Compté | État | Décision
-  const lot = (tab.note.match(/LOT-[A-Z0-9-]+/) || [''])[0];
-  await page.fill('#recLot', lot);
+  const tab = tableau(C11, 6, 0);
+  await page.fill('#recLot', (tab.note.match(/LOT-[A-Z0-9-]+/) || [''])[0]);
   for (const [sku, annonce, compte, etat, decision] of tab.reponses) {
     await page.fill(`[data-rec="annonce"][data-sku="${sku}"]`, annonce);
     await page.fill(`[data-rec="compte"][data-sku="${sku}"]`, compte);
@@ -336,41 +372,46 @@ await v('ENT-1.1 · étape 6 : saisir le bon de réception tel que le corrigé l
     }
   }
   await page.waitForSelector('[data-valider-rec]:not([disabled])');
+  await page.click('[data-valider-rec]');
+  await page.waitForSelector('[data-confirme]');
+  comparer('total entrant (confirmation)', ((await lire('[data-confirme]')).match(/(\d+) paires/) || [])[1], rep(C11, 'Combien de paires, au total, vont entrer en stock').rep);
+  await page.click('[data-confirme-oui]');
+  await page.waitForTimeout(300);
+  attendre('étape 6 : « Réception validée » absent', /Réception validée/.test(await lire('.ent-main')));
 });
 
-await v('ENT-1.1 · étape 7 : valider, puis vérifier dans la console (.movements, .getlot)', async () => {
-  await cliquerEtConfirmer(page, '[data-valider-rec]');
-  await page.waitForTimeout(400);
-  attendre('étape 7 : « Réception validée » absent', /Réception validée/.test(await lire('.ent-main')));
+await v('ENT-1.1 · étape 7 : découvrir la console et vérifier (.help, .movements, .getlot, .getstock)', async () => {
+  const sansPoint = await cmd('help');
+  attendre('étape 7 : la console ne dit pas qu\'une commande commence par un point', /commence par un point/i.test(sansPoint) && /point/.test(rep(C11, 'Par quel caractère commence').rep));
+  const aide = await cmd('.help');
+  // La ligne « .help » est donnée en exemple dans la trame : .help ne se cite pas lui-même.
+  for (const [c] of tableau(C11, 7, 0).reponses.filter(([c]) => c !== '.help')) attendre(`étape 7 : « ${c} » n'est pas dans .help`, norm(aide).includes(norm(c.split(' ')[0])));
   const mouv = await cmd('.movements');
   comparer('type de mouvement de .movements', (mouv.match(/Entrée : réception/) || [])[0], rep(C11, 'Quel type de mouvement apparaît').rep);
-  await cmd('.getstock PM-SUE-RG-39');
   const lot = await cmd('.getlot LOT-PM-2609');
-  comparer('total entré avec le lot', (lot.match(/Entrées\s*(\d+)/) || [])[1], rep(C11, 'Combien de paires, au total').rep);
-  attendre('étape 7 : .getlot ne nomme pas Puma', /Puma/.test(lot));
-  comparer('fournisseur de .getlot', (lot.match(/F\d{3}/) || [])[0], rep(C11, 'Quel fournisseur .getlot').rep);
+  comparer('total entré avec le lot', (lot.match(/Entrées\s*(\d+)/) || [])[1], rep(C11, 'Combien de paires, au total, sont entrées').rep);
   attendre('étape 7 : le message « tout le lot est encore en stock » n\'est pas à l\'écran', /Aucune sortie : tout le lot est encore en stock/.test(lot));
-  attendre('étape 7 : le corrigé ne cite pas ce message', /Aucune sortie : tout le lot est encore en stock/.test(rep(C11, 'Pourquoi la ligne « Sorties »').note));
+  attendre('étape 7 : le corrigé ne cite pas ce message', /Aucune sortie : tout le lot est encore en stock/.test(rep(C11, 'Pourquoi n\'y a-t-il encore aucune sortie').note));
+  const st = await cmd('.getstock PM-SUE-MA-41');
+  comparer('stock PM-SUE-MA-41', (st.match(/Stock\s*(\d+)/) || [])[1], rep(C11, 'Avec .getstock PM-SUE-MA-41').rep);
   dateEntree = (lot.match(/Entré le\s*(\d{2}\/\d{2}\/\d{4})/) || [])[1] || '';
 });
 
-await v('ENT-1.1 · étape 8 : envoyer les réserves à Puma (message modèle du corrigé)', async () => {
+await v('ENT-1.1 · étape 8 : envoyer les réserves à Puma (message modèle du corrigé) ; 8/8 et bandeau « validée »', async () => {
   const b = brouillon(C11, 8);
-  const modele = sansBalises(b.modele);
-  await ecrireAuFournisseur('F003', 'Réserves sur le lot LOT-PM-2609', modele);
+  await ecrireAuFournisseur('F003', 'Réserves sur le lot LOT-PM-2609', sansBalises(b.modele));
   const recus = await listeMails('in');
   const reponse = recus.find((m) => /RE : Réserves/.test(m.t));
   attendre('étape 8 : Puma ne répond pas du tout au message de réserves', !!reponse);
   if (reponse) {
     const t = await ouvrirMail('RE : Réserves');
-    // La réponse automatique du fournisseur a été écrite pour une COMMANDE (minimum de commande).
-    // Sur un message de réserves, elle ne doit pas parler de commande.
     attendre('étape 8 : la réponse de Puma à des RÉSERVES parle de commande / de minimum de commande : ' + t.replace(/^.*Bonjour,/, 'Bonjour,').slice(0, 140),
       !/minimum de commande|commande bien reçue|demande, pour un total/i.test(t));
     attendre('étape 8 : la réponse de Puma ne nomme ni les réserves ni le lot', /réserves/.test(t) && /LOT-PM-2609/.test(t));
   }
   const s = (await scores())['spartoo-reception'];
-  attendre(`étape 8 : le suivi n'affiche pas 3/3 pour ENT-1.1 (lu : ${s ? s.score + '/' + s.max : 'rien'})`, s && s.score === 3 && s.max === 3);
+  attendre(`étape 8 : le suivi n'affiche pas 8/8 pour ENT-1.1 (lu : ${s ? s.score + '/' + s.max : 'rien'})`, s && s.score === 8 && s.max === 8);
+  attendre('étape 8 : le bandeau « Séance validée » n\'apparaît pas', !!(await page.$('[data-fin="ok"]')));
 });
 
 /* ================================================================ ENT-1.2 ====== */
@@ -421,12 +462,10 @@ await v('ENT-1.2 · étape 2 : fournisseurs et clients (deux écrans)', async ()
   }
 });
 
-await v('ENT-1.2 · étape 3 : console, .help et .getprice / .getsupplier', async () => {
+await v('ENT-1.2 · étape 3 : rappel de la console, .getprice / .getsupplier', async () => {
+  // .help et le tableau des commandes sont passés en ENT-1.1, étape 7 (trame refondue le 06/10/2026).
   const aide = await cmd('.help');
-  const t = tableau(C12, 3, 0);
-  for (const [c] of t.reponses) attendre(`étape 3 : « ${c} » n'est pas dans .help`, norm(aide).includes(norm(c.split(' ')[0])));
-  const note = tableau(C12, 3, 0).note;
-  for (const c of (note.match(/\.[a-z]+/g) || []).filter((x) => x !== '.help')) attendre(`étape 3 : le corrigé accepte ${c} qui n'est pas dans .help`, norm(aide).includes(norm(c)));
+  for (const c of ['.getprice', '.getsupplier']) attendre(`étape 3 : « ${c} » n'est pas dans .help`, norm(aide).includes(norm(c)));
   const prix = await cmd('.getprice PM-SUE');
   comparer('prix de vente TTC', (prix.match(/Prix TTC\s*([\d,]+)/) || [])[1], rep(C12, 'Avec .getprice PM-SUE, quel est le prix de vente TTC').rep);
   comparer('prix d\'achat HT', (prix.match(/Prix d'achat HT\s*([\d,]+)/) || [])[1], rep(C12, 'Avec .getprice PM-SUE, quel est le prix d\'achat HT').rep);
@@ -645,7 +684,7 @@ await v('hors ordre · ENT-1.3 ouverte sans 1.1 ni 1.2 : jouable, 3/3 avec les v
   noe13.reste = (lot.match(/Reste en stock\s*(\d+)/) || [])[1];
   noe13.date = (lot.match(/Entré le\s*(\d{2}\/\d{2}\/\d{4})/) || [])[1];
   contient('1.3 seule : numéro de réception', noe13.reception, 'REC-04118');
-  attendre(`1.3 seule : le corrigé annonce 24 / 6 / 18 (lu ${noe13.entrees} / ${noe13.sorties} / ${noe13.reste})`, noe13.entrees === '24' && noe13.sorties === '6' && noe13.reste === '18');
+  attendre(`1.3 seule : le corrigé annonce 66 / 6 / 60 (lu ${noe13.entrees} / ${noe13.sorties} / ${noe13.reste})`, noe13.entrees === '66' && noe13.sorties === '6' && noe13.reste === '60');
   await vue('blocage');
   for (const [sku, , , reste] of tableau(C13, 5, 0).reponses) {
     await page.fill('#blLot', 'LOT-PM-2609'); await page.fill('#blRef', sku); await page.fill('#blQte', reste);
@@ -779,20 +818,20 @@ await v('porte de sortie : l\'enseignant remet Léa au début de ENT-1.2 ; 1.1 e
   await page.waitForTimeout(500);
   // Ce que le suivi montre maintenant : la ligne de Léa, colonne par colonne.
   const ligne = await page.$$eval('tbody tr', (r) => r.map((x) => x.textContent.replace(/\s+/g, ' ').trim()).find((t) => /DUPONT/i.test(t)));
-  attendre(`le suivi de Léa après la porte : 1.1 gardé, 1.2 et 1.3 vides (lu « ${ligne} »)`, /3\/3/.test(ligne) && (ligne.match(/—/g) || []).length >= 2);
+  attendre(`le suivi de Léa après la porte : 1.1 gardé, 1.2 et 1.3 vides (lu « ${ligne} »)`, /8\/8/.test(ligne) && (ligne.match(/—/g) || []).length >= 2);
   await page.click('#btnRetour'); await page.click('#btnDeco');
   await connecterEleve('2601', 'aaa1');
 });
 await v('porte de sortie : à la réouverture, Léa retrouve la photo de fin de 1.1, une seule fois', async () => {
   await ouvrirSeance('spartoo');
   const acc = await accueil();
-  attendre(`la base est celle de la fin de 1.1 : 4 593 paires (lu ${acc.stock})`, acc.stock === '4593');
+  attendre(`la base est celle de la fin de 1.1 : 4 635 paires (lu ${acc.stock})`, acc.stock === '4635');
   attendre(`les 3 messages neufs de 1.2 sont non lus, plus au plus la réponse de Puma (lu ${acc.nonLus})`, acc.nonLus === '3' || acc.nonLus === '4');
   // ENT-1.2 n'a plus l'écran Réceptions (05/10/2026 : chaque séance n'affiche que ses écrans). La
   // réception faite en 1.1 se lit dans la console : le lot qu'elle a fait entrer est en stock, entier.
   const lot = await cmd('.getlot LOT-PM-2609');
-  attendre(`la réception REC-04127 faite en 1.1 est là, ses 24 paires en stock (lu « ${lot.slice(0, 160)} »)`,
-    /REC-04127/.test(lot) && /Entrées\s*24\b/.test(lot));
+  attendre(`la réception REC-04127 faite en 1.1 est là, ses 66 paires en stock (lu « ${lot.slice(0, 160)} »)`,
+    /REC-04127/.test(lot) && /Entrées\s*66\b/.test(lot));
   // Elle fait un geste, quitte, rouvre : le drapeau ne doit pas revenir effacer son travail.
   await ouvrirMail('Bienvenue chez Spartoo');
   const avant = (await accueil()).nonLus;

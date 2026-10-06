@@ -7,7 +7,7 @@ export const CORRIGE = {
     {
       "etape": 1,
       "etapeTitre": "Comprendre la traçabilité",
-      "genre": "fait",
+      "genre": "question",
       "texte": "Qu'est-ce qu'un numéro de lot ?",
       "rep": "Un code qui identifie un groupe d'articles fabriqués ou expédiés ensemble, dans les mêmes conditions (même date, même production).",
       "note": "Ex. du cours : LOT-PM-2609."
@@ -15,7 +15,7 @@ export const CORRIGE = {
     {
       "etape": 1,
       "etapeTitre": "Comprendre la traçabilité",
-      "genre": "fait",
+      "genre": "question",
       "texte": "Qui attribue le numéro de lot ?",
       "rep": "Le fabricant (ou le fournisseur : ici Puma), qui l'indique sur ses produits et sur le bon de livraison. Le destinataire le recopie, il ne l'invente pas."
     },
@@ -130,10 +130,10 @@ export const CORRIGE = {
         ],
         [
           "Nombre total de paires entrées",
-          "24 paires"
+          "66 paires"
         ]
       ],
-      "note": "Les cinq lignes que demande la trame. .getlot affiche aussi « Sorties : 6 paires » et « Reste en stock : 18 paires » : ces deux nombres servent à l'étape 4 (entrées moins sorties = reste en stock)."
+      "note": "Les cinq lignes que demande la trame. .getlot affiche aussi « Sorties : 6 paires » et « Reste en stock : 60 paires » : ces deux nombres servent à l'étape 4 (entrées moins sorties = reste en stock)."
     },
     {
       "etape": 3,
@@ -150,20 +150,20 @@ export const CORRIGE = {
         [
           "PM-SUE-RG-39",
           "Puma Suede Classic XXI, rouge, 39",
-          "12"
+          "24"
         ],
         [
           "PM-SUE-MA-41",
           "Puma Suede Classic XXI, bleu marine, 41",
-          "6"
+          "18"
         ],
         [
           "PM-RSX-BL-42",
           "Puma RS-X, blanc, 42",
-          "6"
+          "24"
         ]
       ],
-      "note": "Pour un élève qui a validé la réception d'ENT-1.1 comme attendu. Total 24. Un élève sans séance 1 reçoit la réception d'un collègue (REC-04118, Sonia Ferret) avec les mêmes quantités."
+      "note": "Pour un élève qui a validé la réception d'ENT-1.1 comme attendu (refonte du 06/10 : cartons de 6 paires). Total 66. Un élève sans séance 1 reçoit la réception d'un collègue (REC-04118, Sonia Ferret) avec les mêmes quantités."
     },
     {
       "etape": 3,
@@ -266,39 +266,39 @@ export const CORRIGE = {
       "reponses": [
         [
           "PM-SUE-RG-39",
-          "12",
+          "24",
           "3",
-          "9"
+          "21"
         ],
         [
           "PM-SUE-MA-41",
-          "6",
+          "18",
           "1",
-          "5"
+          "17"
         ],
         [
           "PM-RSX-BL-42",
-          "6",
+          "24",
           "2",
-          "4"
+          "22"
         ]
       ],
-      "note": "Total à bloquer : 18, égal au « Reste en stock » de .getlot. Le suivi vérifie les blocages référence par référence."
+      "note": "Total à bloquer : 60, égal au « Reste en stock » de .getlot. Le suivi vérifie les blocages référence par référence."
     },
     {
       "etape": 5,
       "etapeTitre": "Compter ce qui reste, référence par référence",
       "genre": "fait",
       "texte": "Avec .getstock suivi d'une de ces références, quel est le stock total de cette référence ?",
-      "rep": "PM-SUE-RG-39 : 26 paires ; PM-SUE-MA-41 : 17 ; PM-RSX-BL-42 : 21.",
-      "note": "Départ catalogue 17 / 12 / 17, + entrées du lot (12 / 6 / 6), − sorties (3 / 1 / 2). Valable pour un élève dont la base a suivi ENT-1.1 sans autre mouvement ; sinon lire l'écran."
+      "rep": "PM-SUE-RG-39 : 38 paires ; PM-SUE-MA-41 : 29 ; PM-RSX-BL-42 : 39.",
+      "note": "Départ catalogue 17 / 12 / 17, + entrées du lot (24 / 18 / 24), − sorties (3 / 1 / 2). Recalculé le 06/10/2026 (refonte d'ENT-1.1), à constater à l'écran. Valable pour un élève dont la base a suivi ENT-1.1 sans autre mouvement ; sinon lire l'écran."
     },
     {
       "etape": 5,
       "etapeTitre": "Compter ce qui reste, référence par référence",
       "genre": "fait",
       "texte": "Combien reste-t-il de paires de ce lot pour cette même référence ?",
-      "rep": "PM-SUE-RG-39 : 9 ; PM-SUE-MA-41 : 5 ; PM-RSX-BL-42 : 4 (total 18)."
+      "rep": "PM-SUE-RG-39 : 21 ; PM-SUE-MA-41 : 17 ; PM-RSX-BL-42 : 22 (total 60)."
     },
     {
       "etape": 5,
@@ -307,7 +307,7 @@ export const CORRIGE = {
       "texte": "Pourquoi ces deux nombres sont-ils différents ?",
       "pistes": [
         "Le stock total d'une référence regroupe plusieurs lots (paires arrivées avant, de livraisons sans défaut) ; le « reste du lot » ne compte que les paires de LOT-PM-2609 encore en stock.",
-        "Exemples : PM-SUE-RG-39 stock 26, reste du lot 9 ; PM-SUE-MA-41 stock 17, reste 5 ; PM-RSX-BL-42 stock 21, reste 4."
+        "Exemples : PM-SUE-RG-39 stock 38, reste du lot 21 ; PM-SUE-MA-41 stock 29, reste 17 ; PM-RSX-BL-42 stock 39, reste 22."
       ]
     },
     {
@@ -326,7 +326,7 @@ export const CORRIGE = {
       "genre": "fait",
       "texte": "Quel type de mouvement apparaît dans le tableau des sorties, à côté des ventes ?",
       "rep": "« Blocage qualité ».",
-      "note": "Dans .getlot, les sorties comptent les ventes (6 paires) puis les blocages (18 paires)."
+      "note": "Dans .getlot, les sorties comptent les ventes (6 paires) puis les blocages (60 paires)."
     },
     {
       "etape": 6,
@@ -343,13 +343,13 @@ export const CORRIGE = {
       "etapeTitre": "Rendre compte à M. Morin",
       "genre": "brouillon",
       "texte": "Brouillon de ton compte rendu à M. Morin :",
-      "modele": "Bonjour M. Morin,\n\nCompte rendu sur le lot LOT-PM-2609 (fournisseur : Puma).\n\n- Entré en stock le [jj/mm/aaaa : date lue dans .getlot], réception REC-04127.\n- Commandes parties avec des paires de ce lot : CMD-048301, CMD-048307 et CMD-048312.\n- Stock restant bloqué : 9 paires PM-SUE-RG-39, 5 paires PM-SUE-MA-41, 4 paires PM-RSX-BL-42 (total 18), motif : blocage qualité, défaut fabricant.\n\nCordialement,\n[prénom]",
+      "modele": "Bonjour M. Morin,\n\nCompte rendu sur le lot LOT-PM-2609 (fournisseur : Puma).\n\n- Entré en stock le [jj/mm/aaaa : date lue dans .getlot], réception REC-04127.\n- Commandes parties avec des paires de ce lot : CMD-048301, CMD-048307 et CMD-048312.\n- Stock restant bloqué : 21 paires PM-SUE-RG-39, 17 paires PM-SUE-MA-41, 22 paires PM-RSX-BL-42 (total 60), motif : blocage qualité, défaut fabricant.\n\nCordialement,\n[prénom]",
       "criteres": [
         "Numéro du lot LOT-PM-2609.",
         "Date d'entrée au format jj/mm/aaaa (date de la réception de l'élève, lue dans .getlot).",
         "Nom du fournisseur : Puma.",
         "Les trois numéros de commande au format CMD-000000 : CMD-048301, CMD-048307, CMD-048312.",
-        "Ce qui a été bloqué, référence par référence (9 / 5 / 4)."
+        "Ce qui a été bloqué, référence par référence (21 / 17 / 22)."
       ],
       "note": "Date et numéro de réception propres à chaque élève. Un élève sans séance 1 a REC-04118 (réception d'un collègue) : lire la base."
     },

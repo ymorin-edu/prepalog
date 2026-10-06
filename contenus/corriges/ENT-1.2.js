@@ -17,8 +17,8 @@ export const CORRIGE = {
       "etapeTitre": "Ouvrir ton environnement de travail",
       "genre": "fait",
       "texte": "Combien de paires y a-t-il en stock au total ?",
-      "rep": "4 593 paires (4 569 au départ + les 24 paires réceptionnées en ENT-1.1).",
-      "note": "Vérifié le 02/10/2026 en jouant ENT-1.1 puis ENT-1.2. Les séances se font dans l'ordre : le total suppose la réception d'ENT-1.1 validée comme attendu (24 paires). Un élève qui n'a pas fait ENT-1.1 lit 4 569."
+      "rep": "4 635 paires (4 569 au départ + les 66 paires réceptionnées en ENT-1.1).",
+      "note": "Recalculé le 06/10/2026 avec la refonte d'ENT-1.1 (66 paires au lot au lieu de 24) ; à constater à l'écran. Le total suppose la réception d'ENT-1.1 validée comme attendu, sans la réception piège. Un élève qui n'a pas fait ENT-1.1 lit 4 569."
     },
     {
       "etape": 1,
@@ -146,41 +146,7 @@ export const CORRIGE = {
     },
     {
       "etape": 3,
-      "etapeTitre": "Comprendre la console et la commande .help",
-      "genre": "fait",
-      "texte": "Par quel caractère commence toujours une commande ?",
-      "rep": "Par un point (« . »).",
-      "note": "Message de la console : « Une commande commence par un point. »"
-    },
-    {
-      "etape": 3,
-      "etapeTitre": "Comprendre la console et la commande .help",
-      "genre": "tableau",
-      "texte": "Commande | Ce qu'elle fait",
-      "entetes": [
-        "Commande",
-        "Ce qu'elle fait"
-      ],
-      "contexte": "Cite 3 commandes de la liste (par exemple .getstock) et explique en une phrase ce que fait chacune :",
-      "reponses": [
-        [
-          ".getstock <réf>",
-          "Donne le stock d'une référence article ou d'un modèle."
-        ],
-        [
-          ".getprice <réf>",
-          "Donne le prix de vente et le prix d'achat."
-        ],
-        [
-          ".getsupplier <code ou marque>",
-          "Affiche la fiche d'un fournisseur."
-        ]
-      ],
-      "note": "Toute commande de la liste de .help est acceptée : .find, .getproduct, .getlocation, .lowstock, .stockvalue, .getclient, .getorder, .movements, .getlot, .setstock, .addstock, .removestock, .addclient, .addsupplier, .clear."
-    },
-    {
-      "etape": 3,
-      "etapeTitre": "Comprendre la console et la commande .help",
+      "etapeTitre": "Retrouver la console : prix et fournisseurs",
       "genre": "fait",
       "texte": "Avec .getprice PM-SUE, quel est le prix de vente TTC ?",
       "rep": "89,99 € TTC.",
@@ -188,7 +154,7 @@ export const CORRIGE = {
     },
     {
       "etape": 3,
-      "etapeTitre": "Comprendre la console et la commande .help",
+      "etapeTitre": "Retrouver la console : prix et fournisseurs",
       "genre": "fait",
       "texte": "Avec .getprice PM-SUE, quel est le prix d'achat HT ?",
       "rep": "41,00 € HT.",
@@ -196,7 +162,7 @@ export const CORRIGE = {
     },
     {
       "etape": 3,
-      "etapeTitre": "Comprendre la console et la commande .help",
+      "etapeTitre": "Retrouver la console : prix et fournisseurs",
       "genre": "fait",
       "texte": "Avec .getsupplier Puma, quel est le délai de livraison de ce fournisseur ?",
       "rep": "4 jours.",
@@ -204,7 +170,7 @@ export const CORRIGE = {
     },
     {
       "etape": 3,
-      "etapeTitre": "Comprendre la console et la commande .help",
+      "etapeTitre": "Retrouver la console : prix et fournisseurs",
       "genre": "reflexion",
       "texte": "Parmi les commandes que tu viens d'essayer, laquelle serait la plus utile à un responsable de stock au quotidien ?",
       "pistes": [

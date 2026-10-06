@@ -18,14 +18,14 @@ export const CORRIGE = {
       "genre": "fait",
       "texte": "Dans quelle ville se trouve son siège social ?",
       "rep": "Grenoble.",
-      "note": "Source : Wikipédia (« Spartoo »), dossier de presse Spartoo et annuaire d'entreprises. Relevé le 02/10/2026."
+      "note": "Source : Wikipédia (« Spartoo »), dossier de presse Spartoo et annuaire d'entreprises. L'entrepôt, lui, est à Saint-Quentin-Fallavier (filiale Toolog) : accepter si l'élève les distingue."
     },
     {
       "etape": 1,
       "etapeTitre": "Découvrir l'entreprise Spartoo",
       "genre": "fait",
       "texte": "Que vend Spartoo ?",
-      "rep": "Des chaussures, et aussi des sacs, du prêt-à-porter et des objets de décoration (le site se présente en quatre univers : chaussures, sacs, prêt-à-porter, maison et décoration). Accepter « des chaussures en ligne ».",
+      "rep": "Des chaussures, et aussi des sacs, du prêt-à-porter et des objets de décoration. Accepter « des chaussures en ligne ».",
       "note": "Source : Wikipédia, dossier de presse Spartoo."
     },
     {
@@ -33,8 +33,37 @@ export const CORRIGE = {
       "etapeTitre": "Découvrir l'entreprise Spartoo",
       "genre": "fait",
       "texte": "Spartoo fabrique-t-elle elle-même les chaussures qu'elle vend ? (oui / non)",
-      "rep": "Non. Spartoo est un distributeur : elle achète les chaussures à des marques (ses fournisseurs : Nike, adidas, Puma…) et les revend.",
-      "note": "Dossier de presse : plus de 10 000 marques au catalogue. Dans l'outil, les fournisseurs sont des marques (F001 Nike, F002 adidas, F003 Puma…)."
+      "rep": "Non. Spartoo est un distributeur : elle achète les chaussures à des marques (ses fournisseurs : Nike, adidas, Puma…) et les revend."
+    },
+    {
+      "etape": 1,
+      "etapeTitre": "Découvrir l'entreprise Spartoo",
+      "genre": "tableau",
+      "texte": "Question | Ce que la loi impose | Ce que Spartoo choisit d'offrir",
+      "entetes": [
+        "Question",
+        "Ce que la loi impose",
+        "Ce que Spartoo choisit d'offrir"
+      ],
+      "contexte": "Compare les deux textes :",
+      "reponses": [
+        [
+          "Combien de jours pour renvoyer un article ?",
+          "14 jours",
+          "30 jours (retour gratuit)"
+        ],
+        [
+          "Est-ce obligatoire ou est-ce un choix ?",
+          "Obligatoire",
+          "Un choix de Spartoo"
+        ],
+        [
+          "Qui doit le respecter ?",
+          "Tous les vendeurs à distance (en ligne)",
+          "Spartoo seulement (pour ses clients)"
+        ]
+      ],
+      "note": "Loi : Code de la consommation, art. L221-18 (economie.gouv.fr). Spartoo : 30 jours, retour gratuit, d'après medicys-consommation.fr (29/06/2026) et anniechausseur.fr, relevé le 06/10/2026 ; à revérifier sur spartoo.com, une politique commerciale peut changer."
     },
     {
       "etape": 1,
@@ -68,15 +97,29 @@ export const CORRIGE = {
       "etape": 1,
       "etapeTitre": "Découvrir l'entreprise Spartoo",
       "genre": "qcm",
-      "texte": "Après un achat sur Internet, combien de jours le client a-t-il pour changer d'avis ?",
+      "texte": "D'après la loi, combien de jours un client a-t-il pour changer d'avis après un achat sur Internet ?",
       "choix": [
         "2 jours",
         "14 jours",
-        "60 jours"
+        "30 jours"
       ],
       "bonne": 1,
-      "explication": "Délai légal de rétractation de 14 jours pour un achat à distance (Code de la consommation).",
+      "explication": "Délai légal de rétractation de 14 jours pour un achat à distance (Code de la consommation, art. L221-18). Les 30 jours de Spartoo vont au-delà.",
       "notion": "Module 2 — protection du consommateur"
+    },
+    {
+      "etape": 1,
+      "etapeTitre": "Découvrir l'entreprise Spartoo",
+      "genre": "qcm",
+      "texte": "Les 30 jours de Spartoo, c'est…",
+      "choix": [
+        "une obligation de la loi",
+        "un service pour attirer et garder les clients",
+        "une erreur du site"
+      ],
+      "bonne": 1,
+      "explication": "La loi fixe un minimum (14 jours) pour tous ; Spartoo offre plus par choix commercial : rassurer, fidéliser, se démarquer des concurrents.",
+      "notion": "Module 2 — relation client, protection du consommateur"
     },
     {
       "etape": 1,
@@ -95,49 +138,71 @@ export const CORRIGE = {
     {
       "etape": 1,
       "etapeTitre": "Découvrir l'entreprise Spartoo",
+      "genre": "question",
+      "texte": "Pourquoi Spartoo donne-t-il à ses clients plus de temps que la loi ne l'oblige ?",
+      "rep": "Pour rassurer et attirer les clients (on achète plus facilement quand on peut renvoyer), les fidéliser, et se démarquer des concurrents : c'est un service commercial, pas une obligation.",
+      "note": "Objectif de Tristan (06/10) : distinguer ce que la loi impose (minimum pour tous) de ce que l'entreprise choisit d'offrir (approche client)."
+    },
+    {
+      "etape": 1,
+      "etapeTitre": "Découvrir l'entreprise Spartoo",
       "genre": "reflexion",
-      "texte": "Pour une entreprise qui vend en ligne, pourquoi l'entrepôt et la logistique sont-ils aussi importants que le site Internet ?",
+      "texte": "30 jours pour renvoyer, et gratuitement : qu'est-ce que cela demande en plus à l'entrepôt de Spartoo ?",
       "pistes": [
-        "Le client ne voit jamais l'entrepôt : ce qu'il juge, c'est de recevoir la bonne chaussure, au bon moment, en bon état. Si la logistique échoue, le beau site ne sert à rien.",
-        "Le stock, la préparation et l'expédition sont l'essentiel du service : une erreur de référence, une rupture non vue ou un retard coûte une vente, un retour et parfois un client.",
-        "Accepter toute idée liée à la livraison, à la disponibilité des produits ou à la satisfaction du client."
+        "Plus de colis qui reviennent : il faut les réceptionner, les contrôler (neuf ? porté ?), les remettre en stock ou les écarter.",
+        "Plus de travail, de place et de personnel au retour ; le stock doit rester juste (une paire retournée redevient vendable).",
+        "Le retour gratuit coûte de l'argent à Spartoo : la logistique des retours doit être efficace pour que le service reste rentable."
       ]
     },
     {
       "etape": 2,
-      "etapeTitre": "Comprendre le contrôle à réception",
-      "genre": "fait",
+      "etapeTitre": "Comprendre le bon de livraison et les réserves",
+      "genre": "question",
       "texte": "Qu'est-ce qu'un bon de livraison ?",
-      "rep": "Le document qui accompagne une marchandise expédiée : il liste ce que le fournisseur annonce avoir envoyé (références, quantités), avec la date, le transporteur et le destinataire.",
-      "note": "Il annonce l'envoi, il ne prouve pas ce qui est réellement arrivé : c'est tout l'objet du contrôle à réception."
+      "rep": "Le document qui accompagne la marchandise et dit ce que le fournisseur a envoyé (références, quantités). Il ne prouve pas ce qui est arrivé.",
+      "note": "Réponse dans le document de l'étape 2."
     },
     {
       "etape": 2,
-      "etapeTitre": "Comprendre le contrôle à réception",
-      "genre": "fait",
+      "etapeTitre": "Comprendre le bon de livraison et les réserves",
+      "genre": "question",
       "texte": "Qui rédige le bon de livraison ?",
-      "rep": "L'expéditeur, c'est-à-dire le fournisseur (ici Puma). Le destinataire le signe à la réception et y porte ses éventuelles réserves.",
+      "rep": "L'expéditeur, c'est-à-dire le fournisseur (ici Puma).",
       "note": "Accepter « le fournisseur / le vendeur / l'expéditeur »."
     },
     {
       "etape": 2,
-      "etapeTitre": "Comprendre le contrôle à réception",
+      "etapeTitre": "Comprendre le bon de livraison et les réserves",
       "genre": "question",
       "texte": "Que veut dire « émettre des réserves » à la réception d'une marchandise ?",
-      "rep": "Écrire sur le bon de livraison, au moment de la réception, ce qui ne va pas (colis manquant, quantité différente, carton abîmé), avant de signer. Cela garde la preuve du problème et protège le droit de se plaindre.",
-      "note": "Les réserves doivent être précises (quels articles, combien, quel dommage). Écrire « sous réserve de déballage » seul ne suffit pas."
+      "rep": "Écrire sur le BL, avant de signer, ce qui ne va pas (ce qui manque, ce qui est abîmé), de façon précise. Cela garde la preuve du problème.",
+      "note": "« Sous réserve de déballage » seul ne suffit pas (document de l'étape 2)."
     },
     {
       "etape": 2,
-      "etapeTitre": "Comprendre le contrôle à réception",
-      "genre": "fait",
-      "texte": "De combien de jours dispose-t-on, en général, pour confirmer ses réserves au transporteur ?",
-      "rep": "3 jours (hors jours fériés) pour confirmer ses réserves au transporteur, par écrit (lettre recommandée ou équivalent).",
-      "note": "Source : article L133-3 du Code de commerce (transport). Attention : dans l'exercice, Puma demande ses propres réserves « sous 48 heures » : c'est le délai du fournisseur, pas le délai légal vis-à-vis du transporteur."
+      "etapeTitre": "Comprendre le bon de livraison et les réserves",
+      "genre": "question",
+      "texte": "De combien de jours dispose-t-on pour confirmer ses réserves au transporteur ?",
+      "rep": "3 jours, sans compter les jours fériés, par lettre recommandée (ou acte d'huissier).",
+      "note": "Code de commerce, art. L133-3, cité dans la trame (texte repris de CMS Francis Lefebvre ; version Légifrance non consultée depuis le conteneur). Ne pas confondre avec les 48 h que Puma demande pour ses propres réserves."
     },
     {
       "etape": 2,
-      "etapeTitre": "Comprendre le contrôle à réception",
+      "etapeTitre": "Comprendre le bon de livraison et les réserves",
+      "genre": "qcm",
+      "texte": "Laquelle de ces réserves est valable ?",
+      "choix": [
+        "« sous réserve de déballage »",
+        "« manque 1 carton réf. AB-12 »",
+        "« livraison abîmée »"
+      ],
+      "bonne": 1,
+      "explication": "Une réserve doit être précise (quoi, combien, quel dommage) ; « sous réserve de déballage » ou « livraison abîmée » ne prouvent rien.",
+      "notion": "Module 1 — contrat, preuve, responsabilité contractuelle"
+    },
+    {
+      "etape": 2,
+      "etapeTitre": "Comprendre le bon de livraison et les réserves",
       "genre": "qcm",
       "texte": "Spartoo signe un bon de livraison sans réserve, alors qu'il manque des paires. Que se passe-t-il ?",
       "choix": [
@@ -151,42 +216,39 @@ export const CORRIGE = {
     },
     {
       "etape": 2,
-      "etapeTitre": "Comprendre le contrôle à réception",
+      "etapeTitre": "Comprendre le bon de livraison et les réserves",
       "genre": "reflexion",
       "texte": "À ton avis, que risque une entreprise qui signe un bon de livraison sans avoir compté ?",
       "pistes": [
         "Elle ne pourra plus prouver qu'il manquait des paires : le bon signé dit que tout est arrivé.",
         "Elle paiera peut-être des paires qu'elle n'a jamais reçues, ou perdra l'argent de la marchandise abîmée.",
-        "Son stock informatique sera faux (il y aura des paires en théorie, pas en vrai), donc des commandes clients impossibles à préparer."
+        "Son stock informatique sera faux, donc des commandes clients impossibles à préparer."
       ]
     },
     {
       "etape": 3,
-      "etapeTitre": "Lire la procédure de l'entreprise",
-      "genre": "question",
-      "texte": "Dans quels deux cas une ligne doit-elle être « acceptée sous réserve » ?",
-      "rep": "(1) Quand il y a un écart de quantité (compté différent d'annoncé). (2) Quand le carton est endommagé.",
-      "note": "Message de M. Morin, règle n° 4 : « écart de quantité OU carton endommagé »."
+      "etapeTitre": "Lire la procédure et répondre au questionnaire",
+      "genre": "fait",
+      "texte": "Quel transporteur apporte la livraison ?",
+      "rep": "Geodis (tournée 14)."
     },
     {
       "etape": 3,
-      "etapeTitre": "Lire la procédure de l'entreprise",
-      "genre": "question",
-      "texte": "Dans quel cas seulement peut-on refuser une ligne ?",
-      "rep": "Seulement si la marchandise est inutilisable.",
-      "note": "Règle n° 4 de M. Morin."
+      "etapeTitre": "Lire la procédure et répondre au questionnaire",
+      "genre": "fait",
+      "texte": "Combien de palettes sont annoncées ?",
+      "rep": "1 palette."
     },
     {
       "etape": 3,
-      "etapeTitre": "Lire la procédure de l'entreprise",
-      "genre": "question",
-      "texte": "À quoi sert le numéro de lot, d'après M. Morin ?",
-      "rep": "À retrouver plus tard d'où vient une paire et chez qui elle est partie (traçabilité). Sans lot, pas de traçabilité.",
-      "note": "Règle n° 5 de M. Morin."
+      "etapeTitre": "Lire la procédure et répondre au questionnaire",
+      "genre": "fait",
+      "texte": "Sous quel délai Puma veut-il recevoir les réserves ?",
+      "rep": "Sous 48 heures, en rappelant le numéro de lot."
     },
     {
       "etape": 3,
-      "etapeTitre": "Lire la procédure de l'entreprise",
+      "etapeTitre": "Lire la procédure et répondre au questionnaire",
       "genre": "qcm",
       "texte": "Dans le contrat de vente entre Spartoo et son fournisseur, quelle est l'obligation du fournisseur ?",
       "choix": [
@@ -200,151 +262,192 @@ export const CORRIGE = {
     },
     {
       "etape": 3,
-      "etapeTitre": "Lire la procédure de l'entreprise",
+      "etapeTitre": "Lire la procédure et répondre au questionnaire",
       "genre": "reflexion",
       "texte": "Quelle règle de M. Morin te paraît la plus difficile à appliquer sur un quai ?",
       "pistes": [
-        "Aucune règle n'est « la bonne » : l'élève doit choisir et expliquer pourquoi.",
-        "Réponses fréquentes : compter colis par colis quand le quai est encombré ou que le transporteur est pressé ; refuser de signer tout de suite sous la pression du livreur ; recopier le lot sans erreur.",
+        "Aucune règle n'est « la bonne » : l'élève choisit et explique pourquoi.",
+        "Réponses fréquentes : ne pas signer tout de suite quand le chauffeur est pressé ; compter en faisant le tour de la palette ; écrire des réserves précises ; recopier le lot sans erreur.",
         "Valoriser une justification liée à une situation réelle de quai (temps, pression, fatigue)."
       ]
     },
     {
       "etape": 4,
-      "etapeTitre": "Lire le bon de livraison",
+      "etapeTitre": "Recevoir le camion",
       "genre": "tableau",
       "texte": "Information | Ce que tu relèves",
       "entetes": [
         "Information",
         "Ce que tu relèves"
       ],
-      "contexte": "Relève les informations du document :",
+      "contexte": "Relève les informations du bon de livraison :",
       "reponses": [
         [
           "Numéro du bon de livraison",
           "BL-77421"
         ],
         [
+          "Numéro de commande",
+          "CF-20261003"
+        ],
+        [
           "Date d'expédition",
-          "La date affichée sur le bon : 2 jours avant l'ouverture de la séance (elle change selon le jour où l'élève travaille)."
+          "La veille du jour de la séance (calculée par le logiciel)."
         ],
         [
           "Transporteur",
-          "Geodis (tournée 14)"
+          "Geodis, tournée 14"
         ],
         [
           "Numéro de lot",
           "LOT-PM-2609"
         ],
         [
-          "Nombre total de paires annoncées",
-          "26 (12 + 8 + 6)"
+          "Nombre de cartons annoncés",
+          "12 cartons (1 palette mixte)"
         ]
       ],
       "note": "Le numéro de lot doit être recopié avec ses tirets et sans espace : c'est ce que le suivi contrôle."
     },
     {
       "etape": 4,
-      "etapeTitre": "Lire le bon de livraison",
+      "etapeTitre": "Recevoir le camion",
       "genre": "tableau",
-      "texte": "Référence article | Article | Quantité annoncée",
+      "texte": "Référence article | Cartons annoncés par le fournisseur | Paires par carton (PCB) | Paires annoncées (cartons × PCB)",
       "entetes": [
         "Référence article",
-        "Article",
-        "Quantité annoncée"
+        "Cartons annoncés par le fournisseur",
+        "Paires par carton (PCB)",
+        "Paires annoncées (cartons × PCB)"
       ],
-      "contexte": "Recopie maintenant les lignes annoncées :",
+      "contexte": "Recopie les lignes du BL, puis calcule les paires :",
       "reponses": [
         [
           "PM-SUE-RG-39",
-          "Puma Suede Classic XXI, rouge, pointure 39",
-          "12"
-        ],
-        [
-          "PM-SUE-MA-41",
-          "Puma Suede Classic XXI, bleu marine, pointure 41",
-          "8"
+          "4",
+          "6",
+          "24"
         ],
         [
           "PM-RSX-BL-42",
-          "Puma RS-X, blanc, pointure 42",
-          "6"
+          "4",
+          "6",
+          "24"
+        ],
+        [
+          "PM-SUE-MA-41",
+          "4",
+          "6",
+          "24"
         ]
-      ]
+      ],
+      "note": "Total 72 paires annoncées (12 cartons × 6). PCB = « par combien » : 6 paires par carton. L'ordre des lignes peut varier."
     },
     {
       "etape": 4,
-      "etapeTitre": "Lire le bon de livraison",
+      "etapeTitre": "Recevoir le camion",
+      "genre": "fait",
+      "texte": "Qui sort la palette du camion ?",
+      "rep": "Le chauffeur de Geodis (au transpalette manuel).",
+      "note": "C'est la règle des 3 tonnes : envoi de moins de 3 tonnes, le transporteur décharge (contrat type général, art. 7.1)."
+    },
+    {
+      "etape": 4,
+      "etapeTitre": "Recevoir le camion",
+      "genre": "question",
+      "texte": "Ta palette de chaussures pèse une centaine de kilos. Qui doit la décharger, d'après cette règle ? Explique.",
+      "rep": "Le transporteur (son chauffeur) : l'envoi pèse moins de 3 tonnes, donc c'est au transporteur de décharger, sous sa responsabilité.",
+      "note": "Contrat type général du transport routier de marchandises (annexe du décret n° 2017-461 du 31 mars 2017), art. 7.1 ; à partir de 3 tonnes (art. 7.2), l'expéditeur charge et le destinataire décharge. Vérifié le 06/10/2026 (sudroute.com, altersecurite.org, citant le texte). La « centaine de kilos » est une estimation (11 cartons de 6 paires + la palette), non affichée à l'écran."
+    },
+    {
+      "etape": 4,
+      "etapeTitre": "Recevoir le camion",
+      "genre": "qcm",
+      "texte": "Un camion livre à Spartoo 8 tonnes de cartons en une seule fois. Qui doit les décharger ?",
+      "choix": [
+        "le chauffeur du transporteur",
+        "Spartoo, le destinataire",
+        "Puma, l'expéditeur"
+      ],
+      "bonne": 1,
+      "explication": "Contrat type général du transport routier, art. 7.2 : pour un envoi de 3 tonnes ou plus, le déchargement est fait par le destinataire, sous sa responsabilité (art. 7.1 : moins de 3 tonnes, c'est le transporteur).",
+      "notion": "Module 1 — contrat (contrat de transport, obligations des parties)"
+    },
+    {
+      "etape": 4,
+      "etapeTitre": "Recevoir le camion",
       "genre": "reflexion",
-      "texte": "Qu'est-ce qui pourrait arriver si tu te trompais d'un seul caractère dans le numéro de lot ?",
+      "texte": "Le chauffeur te dit : « Signez vite, j'ai six livraisons après vous. » Que lui réponds-tu, et pourquoi ?",
       "pistes": [
-        "Le lot ne serait plus retrouvé dans la base : en cas de rappel qualité, impossible de dire quelles paires et quels clients sont concernés.",
-        "Le fournisseur ne saurait pas de quelle livraison on parle dans ton message de réserves.",
-        "Un seul caractère faux suffit : le logiciel traite « LOT-PM-2609 » et « LOT-PM-2690 » comme deux lots différents."
+        "Rester poli mais ne pas signer tout de suite : « Je compte la palette d'abord, ce sera rapide. » Règle n° 1 de M. Morin : on ne signe jamais sans avoir compté.",
+        "Signer, c'est dire que tout est arrivé en bon état : après, Spartoo ne pourrait plus prouver le carton manquant ni le carton abîmé (document de l'étape 2).",
+        "Le retard du chauffeur est le problème du transporteur ; une erreur de réception reste celui de Spartoo. Valoriser toute réponse qui garde le contrôle sans agressivité.",
+        "Bonus : compter vite et bien (couche par couche, faire le tour) est justement ce qui permet de ne pas retenir le chauffeur."
       ]
     },
     {
       "etape": 5,
-      "etapeTitre": "Compter les colis sur le quai",
+      "etapeTitre": "Compter la palette et faire signer le chauffeur",
       "genre": "tableau",
-      "texte": "Référence article | Colis concernés | Quantité comptée | Quantité annoncée | Écart",
+      "texte": "Référence article | Cartons au BL | Cartons comptés | Écart | N° du carton abîmé",
       "entetes": [
         "Référence article",
-        "Colis concernés",
-        "Quantité comptée",
-        "Quantité annoncée",
-        "Écart"
+        "Cartons au BL",
+        "Cartons comptés",
+        "Écart",
+        "N° du carton abîmé"
       ],
-      "contexte": "Fais ton comptage ici, avant de saisir quoi que ce soit dans le logiciel :",
+      "contexte": "La palette est devant toi, en grand. Le BL annonce ce que Puma a voulu envoyer ; toi, tu comptes ce qui est vraiment là. Un carton peut manquer au fond, un autre être abîmé sur une face que tu ne vois pas : fais le tour.",
       "reponses": [
         [
           "PM-SUE-RG-39",
-          "colis 1 et 2",
-          "12",
-          "12",
-          "0"
-        ],
-        [
-          "PM-SUE-MA-41",
-          "colis 3 et 4",
-          "6",
-          "8",
-          "−2 (il manque 2 paires)"
+          "4",
+          "4",
+          "0",
+          "—"
         ],
         [
           "PM-RSX-BL-42",
-          "colis 5",
-          "6",
-          "6",
-          "0 (mais carton endommagé)"
+          "4",
+          "4",
+          "0",
+          "n° 6"
+        ],
+        [
+          "PM-SUE-MA-41",
+          "4",
+          "3",
+          "−1",
+          "—"
         ]
       ],
-      "note": "Colis : n° 1 = 6 paires RG-39, n° 2 = 6 RG-39, n° 3 = 4 MA-41, n° 4 = 2 MA-41, n° 5 = 6 BL-42 (carton enfoncé)."
+      "note": "Une couche par référence : RG-39 en bas, RSX-BL-42 au milieu, MA-41 en haut. Le carton n° 9 manque (haut, au fond : invisible de face). Le n° 6 est enfoncé sur la face arrière."
     },
     {
       "etape": 5,
-      "etapeTitre": "Compter les colis sur le quai",
+      "etapeTitre": "Compter la palette et faire signer le chauffeur",
       "genre": "fait",
-      "texte": "Sur quelle référence y a-t-il un écart ?",
-      "rep": "PM-SUE-MA-41."
+      "texte": "Quel numéro de carton manque ? (aide-toi des numéros « x / 12 »)",
+      "rep": "Le carton n° 9 (PM-SUE-MA-41, couche du haut, au fond)."
     },
     {
       "etape": 5,
-      "etapeTitre": "Compter les colis sur le quai",
+      "etapeTitre": "Compter la palette et faire signer le chauffeur",
       "genre": "fait",
-      "texte": "De combien de paires est cet écart ?",
-      "rep": "2 paires (8 annoncées, 6 comptées)."
+      "texte": "Sur quelle face as-tu vu le carton abîmé ?",
+      "rep": "La face arrière (on ne la voit qu'en faisant tourner la palette)."
     },
     {
       "etape": 5,
-      "etapeTitre": "Compter les colis sur le quai",
-      "genre": "fait",
-      "texte": "Quelle référence est arrivée dans un carton endommagé ?",
-      "rep": "PM-RSX-BL-42 (colis n° 5)."
+      "etapeTitre": "Compter la palette et faire signer le chauffeur",
+      "genre": "question",
+      "texte": "Ta réserve, avec la référence de chaque carton :",
+      "rep": "« Palette P1 acceptée sous réserve : 1 carton PM-RSX-BL-42 endommagé (écrasé) ; manque 1 carton PM-SUE-MA-41 (12 cartons au BL, 11 reçus). »",
+      "note": "L'écran écrit « 1 carton endommagé (écrasé) ; manque 1 carton (BL 12, reçu 11) » sans les références : ce complément n'est pas noté par le suivi."
     },
     {
       "etape": 5,
-      "etapeTitre": "Compter les colis sur le quai",
+      "etapeTitre": "Compter la palette et faire signer le chauffeur",
       "genre": "qcm",
       "texte": "Le fournisseur livre moins de paires que prévu. Qu'est-ce qui n'est pas respecté ?",
       "choix": [
@@ -358,129 +461,188 @@ export const CORRIGE = {
     },
     {
       "etape": 5,
-      "etapeTitre": "Compter les colis sur le quai",
+      "etapeTitre": "Compter la palette et faire signer le chauffeur",
       "genre": "reflexion",
       "texte": "Un carton endommagé veut-il forcément dire que la marchandise est abîmée ?",
       "pistes": [
-        "Non : un carton enfoncé peut protéger une marchandise intacte, ou au contraire l'avoir laissée se casser. Il faut ouvrir et vérifier.",
-        "Mais on ne peut pas le savoir sur le quai : c'est pour cela qu'on accepte « sous réserve » et qu'on prévient le fournisseur."
+        "Non : un carton enfoncé peut protéger une marchandise intacte, ou l'avoir abîmée. Il faut ouvrir et vérifier.",
+        "On ne peut pas le savoir sans l'ouvrir : c'est pour cela qu'on accepte « sous réserve » et qu'on prévient le fournisseur.",
+        "Ici, la trame dit que le chef de quai a ouvert le carton : chaussures intactes, donc vendables (décision de Tristan, 06/10/2026 : l'écran ne montre pas l'intérieur du carton)."
       ]
     },
     {
       "etape": 6,
-      "etapeTitre": "Remplir le bon de réception",
+      "etapeTitre": "Retrouver ta réception et la saisir en paires",
+      "genre": "fait",
+      "texte": "Quel est le numéro de ta réception (REC-…) ?",
+      "rep": "REC-04127 (BL-77421).",
+      "note": "Piège : REC-04129, Puma aussi, BL-77412 (chiffres inversés). La valider fait tomber les jalons « Contrôle à réception » et « Entrée en stock » (Réinitialiser)."
+    },
+    {
+      "etape": 6,
+      "etapeTitre": "Retrouver ta réception et la saisir en paires",
+      "genre": "question",
+      "texte": "Pourquoi la réception de Reebok n'a-t-elle pas de bouton pour l'ouvrir ?",
+      "rep": "Elle est « Annoncée » : le camion n'est pas encore arrivé, on ne peut rien contrôler.",
+      "note": "REC-04131, BL-RB-2266."
+    },
+    {
+      "etape": 6,
+      "etapeTitre": "Retrouver ta réception et la saisir en paires",
       "genre": "tableau",
-      "texte": "Référence article | Annoncé | Compté | État des colis | Décision",
+      "texte": "Référence article | Paires annoncées | Paires comptées | État des colis | Décision",
       "entetes": [
         "Référence article",
-        "Annoncé",
-        "Compté",
+        "Paires annoncées",
+        "Paires comptées",
         "État des colis",
         "Décision"
       ],
-      "contexte": "Recopie ici ce que tu as saisi :",
+      "contexte": "Prépare ta saisie : convertis ton comptage de l'étape 5 en paires.",
       "reponses": [
         [
           "PM-SUE-RG-39",
-          "12",
-          "12",
+          "24",
+          "24",
           "conforme",
           "accepté"
         ],
         [
-          "PM-SUE-MA-41",
-          "8",
-          "6",
-          "conforme",
+          "PM-RSX-BL-42",
+          "24",
+          "24",
+          "colis endommagé",
           "accepté sous réserve"
         ],
         [
-          "PM-RSX-BL-42",
-          "6",
-          "6",
-          "colis endommagé",
+          "PM-SUE-MA-41",
+          "24",
+          "18",
+          "conforme",
           "accepté sous réserve"
         ]
       ],
-      "note": "Numéro de lot saisi : LOT-PM-2609. Attendu par le suivi (jalon « contrôle »)."
+      "note": "Lot saisi : LOT-PM-2609. Attendu par le jalon « Contrôle à réception du bon BL-77421 » (calculé : cartons × 6)."
     },
     {
       "etape": 6,
-      "etapeTitre": "Remplir le bon de réception",
+      "etapeTitre": "Retrouver ta réception et la saisir en paires",
+      "genre": "fait",
+      "texte": "Combien de paires, au total, vont entrer en stock ?",
+      "rep": "66 paires (24 + 24 + 18) : tout est accepté, deux lignes sous réserve."
+    },
+    {
+      "etape": 6,
+      "etapeTitre": "Retrouver ta réception et la saisir en paires",
       "genre": "reflexion",
-      "texte": "Pour la ligne où il manque des paires, pourquoi as-tu choisi ta décision plutôt qu'une autre ?",
+      "texte": "Pour la ligne où il manque un carton, pourquoi as-tu choisi ta décision plutôt qu'une autre ?",
       "pistes": [
-        "Attendu : « accepté sous réserve ». Les paires reçues sont utilisables : les refuser bloquerait la vente de marchandise bonne.",
-        "On ne refuse que si la marchandise est inutilisable (règle de M. Morin) ; on entre ce qui est là, et on signale l'écart au fournisseur le jour même.",
-        "Si l'élève a mis une autre décision, l'amener à relire la procédure de M. Morin."
+        "Attendu : « accepté sous réserve ». Les paires reçues sont bonnes : les refuser bloquerait de la marchandise vendable.",
+        "On ne refuse que si la marchandise est inutilisable (règle de M. Morin) ; on entre ce qui est là et on signale l'écart au fournisseur.",
+        "Si l'élève a mis une autre décision, l'amener à relire la procédure."
       ]
     },
     {
       "etape": 7,
-      "etapeTitre": "Valider et vérifier dans la base",
+      "etapeTitre": "Découvrir la console et vérifier ta réception",
       "genre": "fait",
-      "texte": "Combien de paires, au total, sont entrées en stock avec ce lot ?",
-      "rep": "24 paires (12 + 6 + 6). Les trois lignes sont acceptées, deux sous réserve."
+      "texte": "Par quel caractère commence toujours une commande ?",
+      "rep": "Par un point (« . »).",
+      "note": "Message de la console : « Une commande commence par un point. »"
     },
     {
       "etape": 7,
-      "etapeTitre": "Valider et vérifier dans la base",
+      "etapeTitre": "Découvrir la console et vérifier ta réception",
+      "genre": "tableau",
+      "texte": "Commande | Ce qu'elle fait",
+      "entetes": [
+        "Commande",
+        "Ce qu'elle fait"
+      ],
+      "contexte": "Cite 3 commandes de la liste (par exemple .getstock) et explique en une phrase ce que fait chacune :",
+      "reponses": [
+        [
+          ".getstock <réf>",
+          "Donne le stock d'une référence article ou d'un modèle."
+        ],
+        [
+          ".movements",
+          "Affiche les derniers mouvements de stock (entrées, sorties)."
+        ],
+        [
+          ".getlot <lot>",
+          "Montre tout ce qui concerne un lot : entrées, sorties, ce qui reste."
+        ]
+      ],
+      "note": "Toute commande de la liste de .help est acceptée : .find, .getproduct, .getprice, .getsupplier, .getlocation, .lowstock, .stockvalue, .getclient, .getorder, .movements, .getlot, .setstock, .addstock, .removestock, .addclient, .addsupplier, .clear."
+    },
+    {
+      "etape": 7,
+      "etapeTitre": "Découvrir la console et vérifier ta réception",
+      "genre": "fait",
+      "texte": "Combien de paires, au total, sont entrées avec ce lot ?",
+      "rep": "66 paires (24 + 24 + 18), réception REC-04127.",
+      "note": ".getlot LOT-PM-2609 : Entrées 66, Sorties 0, Reste 66."
+    },
+    {
+      "etape": 7,
+      "etapeTitre": "Découvrir la console et vérifier ta réception",
       "genre": "fait",
       "texte": "Quel type de mouvement apparaît dans .movements pour ces entrées ?",
-      "rep": "« Entrée : réception ».",
-      "note": "Type tel qu'écrit dans .movements pour les entrées de la réception."
+      "rep": "« Entrée : réception »."
     },
     {
       "etape": 7,
-      "etapeTitre": "Valider et vérifier dans la base",
+      "etapeTitre": "Découvrir la console et vérifier ta réception",
       "genre": "fait",
-      "texte": "Quel fournisseur .getlot associe-t-il à ce lot ?",
-      "rep": "Puma (F003)."
+      "texte": "Avec .getstock PM-SUE-MA-41, combien de paires sont en stock ?",
+      "rep": "30 paires (12 au départ + 18 entrées).",
+      "note": "Stock de départ du catalogue : 12. Valable pour une base neuve (toutes les bases d'avant la refonte repartent de zéro) ; sinon lire l'écran."
     },
     {
       "etape": 7,
-      "etapeTitre": "Valider et vérifier dans la base",
+      "etapeTitre": "Découvrir la console et vérifier ta réception",
       "genre": "question",
-      "texte": "Pourquoi la ligne « Sorties » de .getlot est-elle vide pour l'instant ?",
-      "rep": "Parce qu'aucune commande n'a encore été préparée avec des paires de ce lot : tout ce qui est entré est encore en stock.",
-      "note": "Le logiciel affiche « Aucune sortie : tout le lot est encore en stock »."
+      "texte": "Pourquoi n'y a-t-il encore aucune sortie dans .getlot ?",
+      "rep": "Parce qu'aucune commande n'a encore été préparée avec des paires de ce lot : tout est encore en stock.",
+      "note": "Le logiciel affiche « Aucune sortie : tout le lot est encore en stock. »"
     },
     {
       "etape": 7,
-      "etapeTitre": "Valider et vérifier dans la base",
+      "etapeTitre": "Découvrir la console et vérifier ta réception",
       "genre": "reflexion",
       "texte": "En quoi le numéro de lot sera-t-il utile si, dans un mois, le fournisseur signale un défaut de fabrication ?",
       "pistes": [
-        "Il permet de retrouver tout ce qui est venu avec cette livraison : où sont les paires en stock, et chez quels clients elles sont déjà parties.",
-        "Sans lot, il faudrait contrôler toutes les paires de la référence, y compris celles qui viennent d'autres livraisons, sans défaut.",
-        "Rappel : c'est le sujet de la séance de traçabilité (ENT-1.3)."
+        "Il permet de retrouver tout ce qui est venu avec cette livraison : où sont les paires en stock, et chez quels clients elles sont parties.",
+        "Sans lot, il faudrait contrôler toutes les paires de la référence, même celles d'autres livraisons sans défaut.",
+        "C'est le sujet de la séance de traçabilité (ENT-1.3)."
       ]
     },
     {
       "etape": 8,
-      "etapeTitre": "Signaler les réserves au fournisseur",
+      "etapeTitre": "Signaler les réserves à Puma",
       "genre": "brouillon",
       "texte": "Brouillon de ton message à Puma :",
-      "modele": "Bonjour,\n\nNous avons réceptionné ce jour la livraison correspondant au bon de livraison BL-77421, lot LOT-PM-2609, réception REC-04127. Nous émettons les réserves suivantes :\n\n- PM-SUE-MA-41 : 8 paires annoncées, 6 reçues, il manque 2 paires ;\n- PM-RSX-BL-42 : 6 paires reçues dans un carton endommagé (carton enfoncé), l'état des paires reste à vérifier.\n\nMerci de nous indiquer la suite que vous donnez à ces réserves (envoi complémentaire ou avoir).\n\nCordialement,\n[prénom], service logistique, Spartoo",
+      "modele": "Bonjour,\n\nNous avons réceptionné ce jour la livraison du bon de livraison BL-77421 (commande CF-20261003), lot LOT-PM-2609. Nous émettons les réserves suivantes :\n\n- PM-SUE-MA-41 : 4 cartons annoncés, 3 reçus : il manque 1 carton, soit 6 paires ;\n- PM-RSX-BL-42 : 1 carton reçu endommagé (écrasé), l'état des paires reste à vérifier.\n\nMerci de nous indiquer la suite que vous donnez à ces réserves (envoi complémentaire ou avoir).\n\nCordialement,\n[prénom], service logistique, Spartoo",
       "criteres": [
-        "Numéro de lot LOT-PM-2609 présent (c'est ce que contrôle le jalon).",
-        "Quantité manquante écrite en chiffres (2) avec la référence PM-SUE-MA-41.",
-        "Colis endommagé signalé avec sa référence PM-RSX-BL-42.",
+        "Numéro de lot LOT-PM-2609 en entier.",
+        "PM-SUE-MA-41 et le manquant en chiffres : « 6 » (paires) ou « 1 carton » — les deux sont acceptés par le suivi.",
+        "PM-RSX-BL-42 signalée (carton endommagé).",
         "Formules de politesse, signature, ton professionnel.",
-        "Bonus : n° de bon de livraison (BL-77421) et de réception (REC-04127), demande d'une suite (envoi complémentaire ou avoir)."
+        "Bonus : BL-77421, REC-04127, demande d'une suite (envoi complémentaire ou avoir)."
       ]
     },
     {
       "etape": 8,
-      "etapeTitre": "Signaler les réserves au fournisseur",
+      "etapeTitre": "Signaler les réserves à Puma",
       "genre": "question",
       "texte": "Quelles informations un fournisseur a-t-il besoin de recevoir pour traiter une réserve ?",
-      "rep": "Le numéro de lot (et du bon de livraison), les références concernées, la nature du problème (manquant ou abîmé), les quantités exactes, et la date de réception.",
+      "rep": "Le numéro de lot (et du BL), les références concernées, la nature du problème (manquant ou abîmé), les quantités exactes, la date de réception.",
       "note": "Toute réponse qui permet au fournisseur d'identifier la livraison et le défaut est acceptée."
     },
     {
       "etape": 8,
-      "etapeTitre": "Signaler les réserves au fournisseur",
+      "etapeTitre": "Signaler les réserves à Puma",
       "genre": "qcm",
       "texte": "Si le fournisseur ne répond pas, Spartoo peut demander des dommages-intérêts. Que sont des dommages-intérêts ?",
       "choix": [
@@ -494,12 +656,12 @@ export const CORRIGE = {
     },
     {
       "etape": 8,
-      "etapeTitre": "Signaler les réserves au fournisseur",
+      "etapeTitre": "Signaler les réserves à Puma",
       "genre": "reflexion",
-      "texte": "Qu'aurait-il fallu faire, en plus, si la marchandise du carton endommagé avait été inutilisable ?",
+      "texte": "Qu'aurait-il fallu faire, en plus, si les chaussures du carton endommagé avaient été inutilisables ?",
       "pistes": [
         "Refuser la ligne (marchandise inutilisable) : ne pas l'entrer en stock.",
-        "Prévenir le fournisseur et demander un remplacement ou un avoir ; garder les paires en zone séparée en attendant sa réponse."
+        "Le noter dans les réserves, prévenir le fournisseur et demander un remplacement ou un avoir ; garder les paires à part en attendant."
       ]
     },
     {

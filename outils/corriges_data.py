@@ -19,92 +19,116 @@ Les nombres du logiciel (stocks, lots, commandes) sont calculés à partir des d
 
 # --------------------------------------------------------------------------------- ENT-1.1
 ENT_1_1 = {
+ # Réécrit le 06/10/2026 avec la refonte d'ENT-1.1 (quai en 2D iso, saisie en paires). Valeurs de l'écran : section
+ # « Pour Cowork » de docs/briefs/ENT-1.1-spartoo-quai.md ; calculs depuis contenus/spartoo-reception.js (PALETTE).
+ # ---- étape 1
  "En quelle année Spartoo": {"rep": "2006.", "note": "Source : Wikipédia (« Spartoo ») et dossier de presse Spartoo. Relevé le 02/10/2026 : à revérifier, une page Internet peut changer."},
- "Dans quelle ville se trouve son siège": {"rep": "Grenoble.", "note": "Source : Wikipédia (« Spartoo »), dossier de presse Spartoo et annuaire d'entreprises. Relevé le 02/10/2026."},
- "Que vend Spartoo": {"rep": "Des chaussures, et aussi des sacs, du prêt-à-porter et des objets de décoration (le site se présente en quatre univers : chaussures, sacs, prêt-à-porter, maison et décoration). Accepter « des chaussures en ligne ».", "note": "Source : Wikipédia, dossier de presse Spartoo."},
- "Spartoo fabrique-t-elle": {"rep": "Non. Spartoo est un distributeur : elle achète les chaussures à des marques (ses fournisseurs : Nike, adidas, Puma…) et les revend.", "note": "Dossier de presse : plus de 10 000 marques au catalogue. Dans l'outil, les fournisseurs sont des marques (F001 Nike, F002 adidas, F003 Puma…)."},
- "Pour une entreprise qui vend en ligne": {"pistes": [
-   "Le client ne voit jamais l'entrepôt : ce qu'il juge, c'est de recevoir la bonne chaussure, au bon moment, en bon état. Si la logistique échoue, le beau site ne sert à rien.",
-   "Le stock, la préparation et l'expédition sont l'essentiel du service : une erreur de référence, une rupture non vue ou un retard coûte une vente, un retour et parfois un client.",
-   "Accepter toute idée liée à la livraison, à la disponibilité des produits ou à la satisfaction du client."]},
- "Qu'est-ce qu'un bon de livraison": {"rep": "Le document qui accompagne une marchandise expédiée : il liste ce que le fournisseur annonce avoir envoyé (références, quantités), avec la date, le transporteur et le destinataire.", "note": "Il annonce l'envoi, il ne prouve pas ce qui est réellement arrivé : c'est tout l'objet du contrôle à réception."},
- "Qui rédige le bon de livraison": {"rep": "L'expéditeur, c'est-à-dire le fournisseur (ici Puma). Le destinataire le signe à la réception et y porte ses éventuelles réserves.", "note": "Accepter « le fournisseur / le vendeur / l'expéditeur »."},
- "Que veut dire « émettre des réserves »": {"rep": "Écrire sur le bon de livraison, au moment de la réception, ce qui ne va pas (colis manquant, quantité différente, carton abîmé), avant de signer. Cela garde la preuve du problème et protège le droit de se plaindre.", "note": "Les réserves doivent être précises (quels articles, combien, quel dommage). Écrire « sous réserve de déballage » seul ne suffit pas."},
- "De combien de jours dispose-t-on": {"rep": "3 jours (hors jours fériés) pour confirmer ses réserves au transporteur, par écrit (lettre recommandée ou équivalent).", "note": "Source : article L133-3 du Code de commerce (transport). Attention : dans l'exercice, Puma demande ses propres réserves « sous 48 heures » : c'est le délai du fournisseur, pas le délai légal vis-à-vis du transporteur."},
+ "Dans quelle ville se trouve son siège": {"rep": "Grenoble.", "note": "Source : Wikipédia (« Spartoo »), dossier de presse Spartoo et annuaire d'entreprises. L'entrepôt, lui, est à Saint-Quentin-Fallavier (filiale Toolog) : accepter si l'élève les distingue."},
+ "Que vend Spartoo": {"rep": "Des chaussures, et aussi des sacs, du prêt-à-porter et des objets de décoration. Accepter « des chaussures en ligne ».", "note": "Source : Wikipédia, dossier de presse Spartoo."},
+ "Spartoo fabrique-t-elle": {"rep": "Non. Spartoo est un distributeur : elle achète les chaussures à des marques (ses fournisseurs : Nike, adidas, Puma…) et les revend."},
+ "T: Question | Ce que la loi impose | Ce que Spartoo choisit d'offrir": {"lignes": [
+   ["Combien de jours pour renvoyer un article ?", "14 jours", "30 jours (retour gratuit)"],
+   ["Est-ce obligatoire ou est-ce un choix ?", "Obligatoire", "Un choix de Spartoo"],
+   ["Qui doit le respecter ?", "Tous les vendeurs à distance (en ligne)", "Spartoo seulement (pour ses clients)"],
+ ], "note": "Loi : Code de la consommation, art. L221-18 (economie.gouv.fr). Spartoo : 30 jours, retour gratuit, d'après medicys-consommation.fr (29/06/2026) et anniechausseur.fr, relevé le 06/10/2026 ; à revérifier sur spartoo.com, une politique commerciale peut changer."},
+ "Pourquoi Spartoo donne-t-il": {"rep": "Pour rassurer et attirer les clients (on achète plus facilement quand on peut renvoyer), les fidéliser, et se démarquer des concurrents : c'est un service commercial, pas une obligation.", "note": "Objectif de Tristan (06/10) : distinguer ce que la loi impose (minimum pour tous) de ce que l'entreprise choisit d'offrir (approche client)."},
+ "30 jours pour renvoyer": {"pistes": [
+   "Plus de colis qui reviennent : il faut les réceptionner, les contrôler (neuf ? porté ?), les remettre en stock ou les écarter.",
+   "Plus de travail, de place et de personnel au retour ; le stock doit rester juste (une paire retournée redevient vendable).",
+   "Le retour gratuit coûte de l'argent à Spartoo : la logistique des retours doit être efficace pour que le service reste rentable."]},
+ # ---- étape 2
+ "Qu'est-ce qu'un bon de livraison": {"rep": "Le document qui accompagne la marchandise et dit ce que le fournisseur a envoyé (références, quantités). Il ne prouve pas ce qui est arrivé.", "note": "Réponse dans le document de l'étape 2."},
+ "Qui rédige le bon de livraison": {"rep": "L'expéditeur, c'est-à-dire le fournisseur (ici Puma).", "note": "Accepter « le fournisseur / le vendeur / l'expéditeur »."},
+ "Que veut dire « émettre des réserves »": {"rep": "Écrire sur le BL, avant de signer, ce qui ne va pas (ce qui manque, ce qui est abîmé), de façon précise. Cela garde la preuve du problème.", "note": "« Sous réserve de déballage » seul ne suffit pas (document de l'étape 2)."},
+ "De combien de jours dispose-t-on": {"rep": "3 jours, sans compter les jours fériés, par lettre recommandée (ou acte d'huissier).", "note": "Code de commerce, art. L133-3, cité dans la trame (texte repris de CMS Francis Lefebvre ; version Légifrance non consultée depuis le conteneur). Ne pas confondre avec les 48 h que Puma demande pour ses propres réserves."},
  "À ton avis, que risque une entreprise": {"pistes": [
    "Elle ne pourra plus prouver qu'il manquait des paires : le bon signé dit que tout est arrivé.",
    "Elle paiera peut-être des paires qu'elle n'a jamais reçues, ou perdra l'argent de la marchandise abîmée.",
-   "Son stock informatique sera faux (il y aura des paires en théorie, pas en vrai), donc des commandes clients impossibles à préparer.",
- ]},
- "Dans quels deux cas une ligne": {"rep": "(1) Quand il y a un écart de quantité (compté différent d'annoncé). (2) Quand le carton est endommagé.", "note": "Message de M. Morin, règle n° 4 : « écart de quantité OU carton endommagé »."},
- "Dans quel cas seulement peut-on refuser": {"rep": "Seulement si la marchandise est inutilisable.", "note": "Règle n° 4 de M. Morin."},
- "À quoi sert le numéro de lot": {"rep": "À retrouver plus tard d'où vient une paire et chez qui elle est partie (traçabilité). Sans lot, pas de traçabilité.", "note": "Règle n° 5 de M. Morin."},
+   "Son stock informatique sera faux, donc des commandes clients impossibles à préparer."]},
+ # ---- étape 3
+ "Quel transporteur apporte": {"rep": "Geodis (tournée 14)."},
+ "Combien de palettes sont annoncées": {"rep": "1 palette."},
+ "Sous quel délai Puma": {"rep": "Sous 48 heures, en rappelant le numéro de lot."},
  "Quelle règle de M. Morin te paraît": {"pistes": [
-   "Aucune règle n'est « la bonne » : l'élève doit choisir et expliquer pourquoi.",
-   "Réponses fréquentes : compter colis par colis quand le quai est encombré ou que le transporteur est pressé ; refuser de signer tout de suite sous la pression du livreur ; recopier le lot sans erreur.",
-   "Valoriser une justification liée à une situation réelle de quai (temps, pression, fatigue).",
- ]},
+   "Aucune règle n'est « la bonne » : l'élève choisit et explique pourquoi.",
+   "Réponses fréquentes : ne pas signer tout de suite quand le chauffeur est pressé ; compter en faisant le tour de la palette ; écrire des réserves précises ; recopier le lot sans erreur.",
+   "Valoriser une justification liée à une situation réelle de quai (temps, pression, fatigue)."]},
+ # ---- étape 4
  "T: Information | Ce que tu relèves": {"lignes": [
    ["Numéro du bon de livraison", "BL-77421"],
-   ["Date d'expédition", "La date affichée sur le bon : 2 jours avant l'ouverture de la séance (elle change selon le jour où l'élève travaille)."],
-   ["Transporteur", "Geodis (tournée 14)"],
+   ["Numéro de commande", "CF-20261003"],
+   ["Date d'expédition", "La veille du jour de la séance (calculée par le logiciel)."],
+   ["Transporteur", "Geodis, tournée 14"],
    ["Numéro de lot", "LOT-PM-2609"],
-   ["Nombre total de paires annoncées", "26 (12 + 8 + 6)"],
+   ["Nombre de cartons annoncés", "12 cartons (1 palette mixte)"],
  ], "note": "Le numéro de lot doit être recopié avec ses tirets et sans espace : c'est ce que le suivi contrôle."},
- "T: Référence article | Article | Quantité annoncée": {"lignes": [
-   ["PM-SUE-RG-39", "Puma Suede Classic XXI, rouge, pointure 39", "12"],
-   ["PM-SUE-MA-41", "Puma Suede Classic XXI, bleu marine, pointure 41", "8"],
-   ["PM-RSX-BL-42", "Puma RS-X, blanc, pointure 42", "6"],
- ]},
- "Qu'est-ce qui pourrait arriver si tu te trompais": {"pistes": [
-   "Le lot ne serait plus retrouvé dans la base : en cas de rappel qualité, impossible de dire quelles paires et quels clients sont concernés.",
-   "Le fournisseur ne saurait pas de quelle livraison on parle dans ton message de réserves.",
-   "Un seul caractère faux suffit : le logiciel traite « LOT-PM-2609 » et « LOT-PM-2690 » comme deux lots différents.",
- ]},
- "T: Référence article | Colis concernés | Quantité comptée | Quantité annoncée | Écart": {"lignes": [
-   ["PM-SUE-RG-39", "colis 1 et 2", "12", "12", "0"],
-   ["PM-SUE-MA-41", "colis 3 et 4", "6", "8", "−2 (il manque 2 paires)"],
-   ["PM-RSX-BL-42", "colis 5", "6", "6", "0 (mais carton endommagé)"],
- ], "note": "Colis : n° 1 = 6 paires RG-39, n° 2 = 6 RG-39, n° 3 = 4 MA-41, n° 4 = 2 MA-41, n° 5 = 6 BL-42 (carton enfoncé)."},
- "Sur quelle référence y a-t-il un écart": {"rep": "PM-SUE-MA-41."},
- "De combien de paires est cet écart": {"rep": "2 paires (8 annoncées, 6 comptées)."},
- "Quelle référence est arrivée dans un carton": {"rep": "PM-RSX-BL-42 (colis n° 5)."},
- "Un carton endommagé veut-il forcément": {"pistes": [
-   "Non : un carton enfoncé peut protéger une marchandise intacte, ou au contraire l'avoir laissée se casser. Il faut ouvrir et vérifier.",
-   "Mais on ne peut pas le savoir sur le quai : c'est pour cela qu'on accepte « sous réserve » et qu'on prévient le fournisseur.",
- ]},
- "T: Référence article | Annoncé | Compté | État des colis | Décision": {"lignes": [
-   ["PM-SUE-RG-39", "12", "12", "conforme", "accepté"],
-   ["PM-SUE-MA-41", "8", "6", "conforme", "accepté sous réserve"],
-   ["PM-RSX-BL-42", "6", "6", "colis endommagé", "accepté sous réserve"],
- ], "note": "Numéro de lot saisi : LOT-PM-2609. Attendu par le suivi (jalon « contrôle »)."},
- "Pour la ligne où il manque des paires, pourquoi as-tu choisi": {"pistes": [
-   "Attendu : « accepté sous réserve ». Les paires reçues sont utilisables : les refuser bloquerait la vente de marchandise bonne.",
-   "On ne refuse que si la marchandise est inutilisable (règle de M. Morin) ; on entre ce qui est là, et on signale l'écart au fournisseur le jour même.",
-   "Si l'élève a mis une autre décision, l'amener à relire la procédure de M. Morin.",
- ]},
- "Combien de paires, au total, sont entrées": {"rep": "24 paires (12 + 6 + 6). Les trois lignes sont acceptées, deux sous réserve."},
- "Quel type de mouvement apparaît": {"rep": "« Entrée : réception ».", "note": "Type tel qu'écrit dans .movements pour les entrées de la réception."},
- "Quel fournisseur .getlot associe": {"rep": "Puma (F003)."},
- "Pourquoi la ligne « Sorties »": {"rep": "Parce qu'aucune commande n'a encore été préparée avec des paires de ce lot : tout ce qui est entré est encore en stock.", "note": "Le logiciel affiche « Aucune sortie : tout le lot est encore en stock »."},
+ "T: Référence article | Cartons annoncés par le fournisseur | Paires par carton (PCB) | Paires annoncées (cartons × PCB)": {"lignes": [
+   ["PM-SUE-RG-39", "4", "6", "24"],
+   ["PM-RSX-BL-42", "4", "6", "24"],
+   ["PM-SUE-MA-41", "4", "6", "24"],
+ ], "note": "Total 72 paires annoncées (12 cartons × 6). PCB = « par combien » : 6 paires par carton. L'ordre des lignes peut varier."},
+ "Qui sort la palette": {"rep": "Le chauffeur de Geodis (au transpalette manuel).", "note": "C'est la règle des 3 tonnes : envoi de moins de 3 tonnes, le transporteur décharge (contrat type général, art. 7.1)."},
+ "Ta palette de chaussures pèse": {"rep": "Le transporteur (son chauffeur) : l'envoi pèse moins de 3 tonnes, donc c'est au transporteur de décharger, sous sa responsabilité.", "note": "Contrat type général du transport routier de marchandises (annexe du décret n° 2017-461 du 31 mars 2017), art. 7.1 ; à partir de 3 tonnes (art. 7.2), l'expéditeur charge et le destinataire décharge. Vérifié le 06/10/2026 (sudroute.com, altersecurite.org, citant le texte). La « centaine de kilos » est une estimation (11 cartons de 6 paires + la palette), non affichée à l'écran."},
+ "Le chauffeur te dit": {"pistes": [
+   "Rester poli mais ne pas signer tout de suite : « Je compte la palette d'abord, ce sera rapide. » Règle n° 1 de M. Morin : on ne signe jamais sans avoir compté.",
+   "Signer, c'est dire que tout est arrivé en bon état : après, Spartoo ne pourrait plus prouver le carton manquant ni le carton abîmé (document de l'étape 2).",
+   "Le retard du chauffeur est le problème du transporteur ; une erreur de réception reste celui de Spartoo. Valoriser toute réponse qui garde le contrôle sans agressivité.",
+   "Bonus : compter vite et bien (couche par couche, faire le tour) est justement ce qui permet de ne pas retenir le chauffeur."]},
+ # ---- étape 5
+ "T: Référence article | Cartons au BL | Cartons comptés | Écart | N° du carton abîmé": {"lignes": [
+   ["PM-SUE-RG-39", "4", "4", "0", "—"],
+   ["PM-RSX-BL-42", "4", "4", "0", "n° 6"],
+   ["PM-SUE-MA-41", "4", "3", "−1", "—"],
+ ], "note": "Une couche par référence : RG-39 en bas, RSX-BL-42 au milieu, MA-41 en haut. Le carton n° 9 manque (haut, au fond : invisible de face). Le n° 6 est enfoncé sur la face arrière."},
+ "Quel numéro de carton manque": {"rep": "Le carton n° 9 (PM-SUE-MA-41, couche du haut, au fond)."},
+ "Sur quelle face": {"rep": "La face arrière (on ne la voit qu'en faisant tourner la palette)."},
+ "Ta réserve, avec la référence": {"rep": "« Palette P1 acceptée sous réserve : 1 carton PM-RSX-BL-42 endommagé (écrasé) ; manque 1 carton PM-SUE-MA-41 (12 cartons au BL, 11 reçus). »", "note": "L'écran écrit « 1 carton endommagé (écrasé) ; manque 1 carton (BL 12, reçu 11) » sans les références : ce complément n'est pas noté par le suivi."},
+ "Un carton endommagé veut-il": {"pistes": [
+   "Non : un carton enfoncé peut protéger une marchandise intacte, ou l'avoir abîmée. Il faut ouvrir et vérifier.",
+   "On ne peut pas le savoir sans l'ouvrir : c'est pour cela qu'on accepte « sous réserve » et qu'on prévient le fournisseur.",
+   "Ici, la trame dit que le chef de quai a ouvert le carton : chaussures intactes, donc vendables (décision de Tristan, 06/10/2026 : l'écran ne montre pas l'intérieur du carton)."]},
+ # ---- étape 6
+ "Quel est le numéro de ta réception": {"rep": "REC-04127 (BL-77421).", "note": "Piège : REC-04129, Puma aussi, BL-77412 (chiffres inversés). La valider fait tomber les jalons « Contrôle à réception » et « Entrée en stock » (Réinitialiser)."},
+ "Pourquoi la réception de Reebok": {"rep": "Elle est « Annoncée » : le camion n'est pas encore arrivé, on ne peut rien contrôler.", "note": "REC-04131, BL-RB-2266."},
+ "T: Référence article | Paires annoncées | Paires comptées | État des colis | Décision": {"lignes": [
+   ["PM-SUE-RG-39", "24", "24", "conforme", "accepté"],
+   ["PM-RSX-BL-42", "24", "24", "colis endommagé", "accepté sous réserve"],
+   ["PM-SUE-MA-41", "24", "18", "conforme", "accepté sous réserve"],
+ ], "note": "Lot saisi : LOT-PM-2609. Attendu par le jalon « Contrôle à réception du bon BL-77421 » (calculé : cartons × 6)."},
+ "Combien de paires, au total, vont entrer": {"rep": "66 paires (24 + 24 + 18) : tout est accepté, deux lignes sous réserve."},
+ "Pour la ligne où il manque un carton": {"pistes": [
+   "Attendu : « accepté sous réserve ». Les paires reçues sont bonnes : les refuser bloquerait de la marchandise vendable.",
+   "On ne refuse que si la marchandise est inutilisable (règle de M. Morin) ; on entre ce qui est là et on signale l'écart au fournisseur.",
+   "Si l'élève a mis une autre décision, l'amener à relire la procédure."]},
+ # ---- étape 7 (la console est découverte ici depuis la refonte ; ENT-1.2 n'en fait plus qu'un rappel)
+ "Par quel caractère commence toujours": {"rep": "Par un point (« . »).", "note": "Message de la console : « Une commande commence par un point. »"},
+ "T: Commande | Ce qu'elle fait": {"lignes": [
+   [".getstock <réf>", "Donne le stock d'une référence article ou d'un modèle."],
+   [".movements", "Affiche les derniers mouvements de stock (entrées, sorties)."],
+   [".getlot <lot>", "Montre tout ce qui concerne un lot : entrées, sorties, ce qui reste."],
+ ], "note": "Toute commande de la liste de .help est acceptée : .find, .getproduct, .getprice, .getsupplier, .getlocation, .lowstock, .stockvalue, .getclient, .getorder, .movements, .getlot, .setstock, .addstock, .removestock, .addclient, .addsupplier, .clear."},
+ "Combien de paires, au total, sont entrées": {"rep": "66 paires (24 + 24 + 18), réception REC-04127.", "note": ".getlot LOT-PM-2609 : Entrées 66, Sorties 0, Reste 66."},
+ "Quel type de mouvement apparaît": {"rep": "« Entrée : réception »."},
+ "Avec .getstock PM-SUE-MA-41": {"rep": "30 paires (12 au départ + 18 entrées).", "note": "Stock de départ du catalogue : 12. Valable pour une base neuve (toutes les bases d'avant la refonte repartent de zéro) ; sinon lire l'écran."},
+ "Pourquoi n'y a-t-il encore aucune sortie": {"rep": "Parce qu'aucune commande n'a encore été préparée avec des paires de ce lot : tout est encore en stock.", "note": "Le logiciel affiche « Aucune sortie : tout le lot est encore en stock. »"},
  "En quoi le numéro de lot sera-t-il utile": {"pistes": [
-   "Il permet de retrouver tout ce qui est venu avec cette livraison : où sont les paires en stock, et chez quels clients elles sont déjà parties.",
-   "Sans lot, il faudrait contrôler toutes les paires de la référence, y compris celles qui viennent d'autres livraisons, sans défaut.",
-   "Rappel : c'est le sujet de la séance de traçabilité (ENT-1.3).",
- ]},
- "Brouillon de ton message à Puma": {"modele": "Bonjour,\n\nNous avons réceptionné ce jour la livraison correspondant au bon de livraison BL-77421, lot LOT-PM-2609, réception REC-04127. Nous émettons les réserves suivantes :\n\n- PM-SUE-MA-41 : 8 paires annoncées, 6 reçues, il manque 2 paires ;\n- PM-RSX-BL-42 : 6 paires reçues dans un carton endommagé (carton enfoncé), l'état des paires reste à vérifier.\n\nMerci de nous indiquer la suite que vous donnez à ces réserves (envoi complémentaire ou avoir).\n\nCordialement,\n[prénom], service logistique, Spartoo",
-   "criteres": ["Numéro de lot LOT-PM-2609 présent (c'est ce que contrôle le jalon).", "Quantité manquante écrite en chiffres (2) avec la référence PM-SUE-MA-41.", "Colis endommagé signalé avec sa référence PM-RSX-BL-42.", "Formules de politesse, signature, ton professionnel.", "Bonus : n° de bon de livraison (BL-77421) et de réception (REC-04127), demande d'une suite (envoi complémentaire ou avoir)."]},
- "Quelles informations un fournisseur": {"rep": "Le numéro de lot (et du bon de livraison), les références concernées, la nature du problème (manquant ou abîmé), les quantités exactes, et la date de réception.", "note": "Toute réponse qui permet au fournisseur d'identifier la livraison et le défaut est acceptée."},
+   "Il permet de retrouver tout ce qui est venu avec cette livraison : où sont les paires en stock, et chez quels clients elles sont parties.",
+   "Sans lot, il faudrait contrôler toutes les paires de la référence, même celles d'autres livraisons sans défaut.",
+   "C'est le sujet de la séance de traçabilité (ENT-1.3)."]},
+ # ---- étape 8
+ "Brouillon de ton message à Puma": {"modele": "Bonjour,\n\nNous avons réceptionné ce jour la livraison du bon de livraison BL-77421 (commande CF-20261003), lot LOT-PM-2609. Nous émettons les réserves suivantes :\n\n- PM-SUE-MA-41 : 4 cartons annoncés, 3 reçus : il manque 1 carton, soit 6 paires ;\n- PM-RSX-BL-42 : 1 carton reçu endommagé (écrasé), l'état des paires reste à vérifier.\n\nMerci de nous indiquer la suite que vous donnez à ces réserves (envoi complémentaire ou avoir).\n\nCordialement,\n[prénom], service logistique, Spartoo",
+   "criteres": ["Numéro de lot LOT-PM-2609 en entier.", "PM-SUE-MA-41 et le manquant en chiffres : « 6 » (paires) ou « 1 carton » — les deux sont acceptés par le suivi.", "PM-RSX-BL-42 signalée (carton endommagé).", "Formules de politesse, signature, ton professionnel.", "Bonus : BL-77421, REC-04127, demande d'une suite (envoi complémentaire ou avoir)."]},
+ "Quelles informations un fournisseur": {"rep": "Le numéro de lot (et du BL), les références concernées, la nature du problème (manquant ou abîmé), les quantités exactes, la date de réception.", "note": "Toute réponse qui permet au fournisseur d'identifier la livraison et le défaut est acceptée."},
  "Qu'aurait-il fallu faire, en plus": {"pistes": [
    "Refuser la ligne (marchandise inutilisable) : ne pas l'entrer en stock.",
-   "Prévenir le fournisseur et demander un remplacement ou un avoir ; garder les paires en zone séparée en attendant sa réponse.",
- ]},
+   "Le noter dans les réserves, prévenir le fournisseur et demander un remplacement ou un avoir ; garder les paires à part en attendant."]},
 }
+
 
 # --------------------------------------------------------------------------------- ENT-1.2
 ENT_1_2 = {
  "Combien de messages non lus": {"rep": "3 ou 4 : « Bienvenue chez Spartoo » (reçu en ENT-1.1) si elle n'a pas été ouverte, « Question sur les Stan Smith blanches », « Nouvelle commande web n° CMD-048213 », et la réponse de Puma aux réserves d'ENT-1.1 si l'élève ne l'a pas encore ouverte.", "note": "Vérifié le 02/10/2026 en jouant ENT-1.1 puis ENT-1.2 : 3 non lus si la réponse de Puma a été ouverte, 4 sinon. Un élève qui a déjà ouvert « Bienvenue » en a moins. Contrôler sur son écran. Sur une base neuve sans ENT-1.1 : 2 (la bienvenue arrive en ENT-1.1)."},
- "Combien de paires y a-t-il en stock": {"rep": "4 593 paires (4 569 au départ + les 24 paires réceptionnées en ENT-1.1).", "note": "Vérifié le 02/10/2026 en jouant ENT-1.1 puis ENT-1.2. Les séances se font dans l'ordre : le total suppose la réception d'ENT-1.1 validée comme attendu (24 paires). Un élève qui n'a pas fait ENT-1.1 lit 4 569."},
+ "Combien de paires y a-t-il en stock": {"rep": "4 635 paires (4 569 au départ + les 66 paires réceptionnées en ENT-1.1).", "note": "Recalculé le 06/10/2026 avec la refonte d'ENT-1.1 (66 paires au lot au lieu de 24) ; à constater à l'écran. Le total suppose la réception d'ENT-1.1 validée comme attendu, sans la réception piège. Un élève qui n'a pas fait ENT-1.1 lit 4 569."},
  "Combien de références sont en rupture": {"rep": "47 références en rupture (stock à 0).", "note": "Valeur de la tuile « références en rupture » de l'accueil. La réception d'ENT-1.1 ne change pas ce nombre (elle n'entre aucune référence en rupture)."},
  "Parmi ces trois chiffres": {"pistes": [
    "Les ruptures : elles empêchent de servir un client, donc elles sont à traiter en premier.",
@@ -121,12 +145,6 @@ ENT_1_2 = {
    "Les clients ont un prénom et un nom (pas un nom de société), une adresse de particulier (rue, ville), un e-mail personnel.",
    "On ne trouve ni raison sociale, ni SIRET, ni numéro de TVA : indices d'un client particulier (B2C).",
  ]},
- "Par quel caractère commence toujours": {"rep": "Par un point (« . »).", "note": "Message de la console : « Une commande commence par un point. »"},
- "T: Commande | Ce qu'elle fait": {"lignes": [
-   [".getstock <réf>", "Donne le stock d'une référence article ou d'un modèle."],
-   [".getprice <réf>", "Donne le prix de vente et le prix d'achat."],
-   [".getsupplier <code ou marque>", "Affiche la fiche d'un fournisseur."],
- ], "note": "Toute commande de la liste de .help est acceptée : .find, .getproduct, .getlocation, .lowstock, .stockvalue, .getclient, .getorder, .movements, .getlot, .setstock, .addstock, .removestock, .addclient, .addsupplier, .clear."},
  "Avec .getprice PM-SUE, quel est le prix de vente": {"rep": "89,99 € TTC.", "note": "Puma Suede Classic XXI."},
  "Avec .getprice PM-SUE, quel est le prix d'achat": {"rep": "41,00 € HT.", "note": "Prix de vente HT : 74,99 €, marge brute 33,99 € (45 %)."},
  "Avec .getsupplier Puma": {"rep": "4 jours.", "note": "Minimum de commande Puma : 20 paires ; franco 1 000 €."},
@@ -200,10 +218,10 @@ ENT_1_3 = {
    "Elle permet de relier le lot au bon de livraison et au contrat avec le fournisseur (responsabilité).",
  ]},
  "T: Référence article | Article | Quantité entrée": {"lignes": [
-   ["PM-SUE-RG-39", "Puma Suede Classic XXI, rouge, 39", "12"],
-   ["PM-SUE-MA-41", "Puma Suede Classic XXI, bleu marine, 41", "6"],
-   ["PM-RSX-BL-42", "Puma RS-X, blanc, 42", "6"],
- ], "note": "Pour un élève qui a validé la réception d'ENT-1.1 comme attendu. Total 24. Un élève sans séance 1 reçoit la réception d'un collègue (REC-04118, Sonia Ferret) avec les mêmes quantités."},
+   ["PM-SUE-RG-39", "Puma Suede Classic XXI, rouge, 39", "24"],
+   ["PM-SUE-MA-41", "Puma Suede Classic XXI, bleu marine, 41", "18"],
+   ["PM-RSX-BL-42", "Puma RS-X, blanc, 42", "24"],
+ ], "note": "Pour un élève qui a validé la réception d'ENT-1.1 comme attendu (refonte du 06/10 : cartons de 6 paires). Total 66. Un élève sans séance 1 reçoit la réception d'un collègue (REC-04118, Sonia Ferret) avec les mêmes quantités."},
  "Combien de clients différents ont reçu": {"rep": "3 clients : Inès Simon (C0011), Clara Bernard (C0019), Noah Fournier (C0026)."},
  "Sans le numéro de lot, qu'aurait-on été obligé": {"pistes": [
    "Contrôler toutes les commandes contenant ces références, y compris celles qui viennent d'autres lots, pour deviner qui est concerné.",
@@ -211,21 +229,21 @@ ENT_1_3 = {
  ]},
  "Pourquoi ces deux nombres sont-ils différents": {"pistes": [
    "Le stock total d'une référence regroupe plusieurs lots (paires arrivées avant, de livraisons sans défaut) ; le « reste du lot » ne compte que les paires de LOT-PM-2609 encore en stock.",
-   "Exemples : PM-SUE-RG-39 stock 26, reste du lot 9 ; PM-SUE-MA-41 stock 17, reste 5 ; PM-RSX-BL-42 stock 21, reste 4.",
+   "Exemples : PM-SUE-RG-39 stock 38, reste du lot 21 ; PM-SUE-MA-41 stock 29, reste 17 ; PM-RSX-BL-42 stock 39, reste 22.",
  ]},
- "Avec .getstock suivi d'une de ces références": {"rep": "PM-SUE-RG-39 : 26 paires ; PM-SUE-MA-41 : 17 ; PM-RSX-BL-42 : 21.", "note": "Départ catalogue 17 / 12 / 17, + entrées du lot (12 / 6 / 6), − sorties (3 / 1 / 2). Valable pour un élève dont la base a suivi ENT-1.1 sans autre mouvement ; sinon lire l'écran."},
- "Combien reste-t-il de paires de ce lot": {"rep": "PM-SUE-RG-39 : 9 ; PM-SUE-MA-41 : 5 ; PM-RSX-BL-42 : 4 (total 18)."},
+ "Avec .getstock suivi d'une de ces références": {"rep": "PM-SUE-RG-39 : 38 paires ; PM-SUE-MA-41 : 29 ; PM-RSX-BL-42 : 39.", "note": "Départ catalogue 17 / 12 / 17, + entrées du lot (24 / 18 / 24), − sorties (3 / 1 / 2). Recalculé le 06/10/2026 (refonte d'ENT-1.1), à constater à l'écran. Valable pour un élève dont la base a suivi ENT-1.1 sans autre mouvement ; sinon lire l'écran."},
+ "Combien reste-t-il de paires de ce lot": {"rep": "PM-SUE-RG-39 : 21 ; PM-SUE-MA-41 : 17 ; PM-RSX-BL-42 : 22 (total 60)."},
  "Que se passerait-il si tu bloquais le stock total": {"pistes": [
    "On bloquerait aussi des paires saines venant d'autres lots : elles ne pourraient plus être vendues, donc perte de ventes inutile.",
    "Le logiciel refuse d'ailleurs un blocage supérieur au reste du lot (« Le lot ne contient pas autant de paires de cette référence en stock »).",
  ]},
- "Quel type de mouvement apparaît dans le tableau": {"rep": "« Blocage qualité ».", "note": "Dans .getlot, les sorties comptent les ventes (6 paires) puis les blocages (18 paires)."},
+ "Quel type de mouvement apparaît dans le tableau": {"rep": "« Blocage qualité ».", "note": "Dans .getlot, les sorties comptent les ventes (6 paires) puis les blocages (60 paires)."},
  "À quoi sert le motif": {"pistes": [
    "À comprendre plus tard pourquoi ces paires ont quitté le stock : défaut fabricant, et non vente ou casse.",
    "À justifier le mouvement auprès du fournisseur, de l'inventaire et d'un contrôle.",
  ]},
- "Brouillon de ton compte rendu": {"modele": "Bonjour M. Morin,\n\nCompte rendu sur le lot LOT-PM-2609 (fournisseur : Puma).\n\n- Entré en stock le [jj/mm/aaaa : date lue dans .getlot], réception REC-04127.\n- Commandes parties avec des paires de ce lot : CMD-048301, CMD-048307 et CMD-048312.\n- Stock restant bloqué : 9 paires PM-SUE-RG-39, 5 paires PM-SUE-MA-41, 4 paires PM-RSX-BL-42 (total 18), motif : blocage qualité, défaut fabricant.\n\nCordialement,\n[prénom]",
-   "criteres": ["Numéro du lot LOT-PM-2609.", "Date d'entrée au format jj/mm/aaaa (date de la réception de l'élève, lue dans .getlot).", "Nom du fournisseur : Puma.", "Les trois numéros de commande au format CMD-000000 : CMD-048301, CMD-048307, CMD-048312.", "Ce qui a été bloqué, référence par référence (9 / 5 / 4)."], "note": "Date et numéro de réception propres à chaque élève. Un élève sans séance 1 a REC-04118 (réception d'un collègue) : lire la base."},
+ "Brouillon de ton compte rendu": {"modele": "Bonjour M. Morin,\n\nCompte rendu sur le lot LOT-PM-2609 (fournisseur : Puma).\n\n- Entré en stock le [jj/mm/aaaa : date lue dans .getlot], réception REC-04127.\n- Commandes parties avec des paires de ce lot : CMD-048301, CMD-048307 et CMD-048312.\n- Stock restant bloqué : 21 paires PM-SUE-RG-39, 17 paires PM-SUE-MA-41, 22 paires PM-RSX-BL-42 (total 60), motif : blocage qualité, défaut fabricant.\n\nCordialement,\n[prénom]",
+   "criteres": ["Numéro du lot LOT-PM-2609.", "Date d'entrée au format jj/mm/aaaa (date de la réception de l'élève, lue dans .getlot).", "Nom du fournisseur : Puma.", "Les trois numéros de commande au format CMD-000000 : CMD-048301, CMD-048307, CMD-048312.", "Ce qui a été bloqué, référence par référence (21 / 17 / 22)."], "note": "Date et numéro de réception propres à chaque élève. Un élève sans séance 1 a REC-04118 (réception d'un collègue) : lire la base."},
  "Quelle première action Spartoo devra-t-elle mener": {"pistes": [
    "Retrouver la commande du client et vérifier que sa paire vient bien du lot LOT-PM-2609.",
    "Remplacer ou rembourser le client, et ne pas remettre la paire en stock ; informer Puma.",
@@ -244,8 +262,8 @@ TABLEAUX_PAR_ETAPE_1_3 = {
    ["Fournisseur", "Puma (F003)"],
    ["Date d'entrée en stock", "La date de la réception de l'élève, au format jj/mm/aaaa (lue dans .getlot, ligne « Entré le »)"],
    ["Numéro de réception", "REC-04127 (REC-04118 pour un élève sans séance 1)"],
-   ["Nombre total de paires entrées", "24 paires"],
- ], "note": "Les cinq lignes que demande la trame. .getlot affiche aussi « Sorties : 6 paires » et « Reste en stock : 18 paires » : ces deux nombres servent à l'étape 4 (entrées moins sorties = reste en stock)."},
+   ["Nombre total de paires entrées", "66 paires"],
+ ], "note": "Les cinq lignes que demande la trame. .getlot affiche aussi « Sorties : 6 paires » et « Reste en stock : 60 paires » : ces deux nombres servent à l'étape 4 (entrées moins sorties = reste en stock)."},
 }
 T_1_3_CLIENTS = {"lignes": [
    ["PM-SUE-RG-39", "2", "BP-048301", "CMD-048301", "Inès Simon (C0011)"],
@@ -254,10 +272,10 @@ T_1_3_CLIENTS = {"lignes": [
    ["PM-SUE-RG-39", "1", "BP-048312", "CMD-048312", "Noah Fournier (C0026)"],
  ], "note": "Total sorti : 6 paires. Tableau rendu par .getlot (colonnes Document, Commande, Client)."}
 T_1_3_RESTE = {"lignes": [
-   ["PM-SUE-RG-39", "12", "3", "9"],
-   ["PM-SUE-MA-41", "6", "1", "5"],
-   ["PM-RSX-BL-42", "6", "2", "4"],
- ], "note": "Total à bloquer : 18, égal au « Reste en stock » de .getlot. Le suivi vérifie les blocages référence par référence."}
+   ["PM-SUE-RG-39", "24", "3", "21"],
+   ["PM-SUE-MA-41", "18", "1", "17"],
+   ["PM-RSX-BL-42", "24", "2", "22"],
+ ], "note": "Total à bloquer : 60, égal au « Reste en stock » de .getlot. Le suivi vérifie les blocages référence par référence."}
 
 # --------------------------------------------------------------------------------- ENT-3.1
 ENT_3_1 = {
