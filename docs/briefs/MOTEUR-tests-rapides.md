@@ -3,7 +3,7 @@
 > Écrit par Cowork (diagnostic), lu et complété par Claude Code (construction).
 > **Ne rien inventer** : ce qui n'est pas décidé va dans « Questions ouvertes ».
 
-**Statut** : à implémenter
+**Statut** : lots 1-3 livrés ; lot 4 diagnostiqué (en attente de Tristan) ; lot 5 non commencé
 **Date du brief** : 06/10/2026
 **Origine** : audit Cowork du 06/10 (`claude/prepalog-audit-tests-06-10.md` dans le projet)
 **Périmètre** : `outils/test.mjs`, `outils/test/*.mjs`, `.github/workflows/tests.yml`. **Aucun fichier de `core/`,
@@ -88,10 +88,61 @@ une séance**. Puis ajouter un 4e job au workflow (port 8098, déjà prévu par 
 
 ## Compte rendu *(rempli par Claude Code à la livraison)*
 
-- **Fichiers créés / modifiés** :
+*06/10/2026 — lots 1, 2, 3 livrés ; lot 4 diagnostiqué, en attente de Tristan ; lot 5 non commencé.*
+
+- **Fichiers créés / modifiés** : `outils/test.mjs` (GROUPES, `--groupe N`, garde des groupes, durée par
+  bloc), `outils/test/commun.mjs` (`PORT_TESTS`, `BASE`), les 17 blocs qui écrivaient `127.0.0.1:8099`
+  (reçoivent `BASE`), `outils/test/picard.mjs`, `smoby.mjs`, `socle.mjs` (horloge simulée),
+  `.github/workflows/tests.yml` (trois jobs). Rien dans `core/`, `contenus/`, `styles/`.
 - **Écarts par rapport au brief** (et pourquoi) :
-- **Durées mesurées** (avant / après, par groupe, sur GitHub) :
-- **Sabotages éprouvés** (lot 2) :
-- **Tests** : nombre de cas avant / après
-- **Commits** :
-- **Reste ouvert** :
+  - `demi-groupes` (17 s) est rangé dans le **groupe 1**, le plus court une fois le lot 2 fait.
+  - La garde des groupes refuse aussi un bloc **séparé de son prérequis** (`spartoo`, `groupes`, `smoby`
+    sans `socle`) : sinon le prérequis tournerait deux fois. Éprouvée dans les trois sens (bloc oublié,
+    bloc en double, prérequis ailleurs).
+  - Le lanceur affiche une ligne **« Durée par bloc »** avant le bilan (le bilan et le code de retour
+    ne changent pas) : c'est elle qui sert à rééquilibrer les groupes.
+  - **Cas existant réécrit** (smoby, « la bulle d'un mot proche du bord droit reste entière à l'écran ») :
+    la bulle est refermée (clic dessus) avant de cliquer le mot suivant. C'était **le seul cas rouge sur
+    GitHub depuis le 05/10** (au moins 12 passages de suite) : avec les polices de Linux, la bulle
+    couvrait le mot suivant et le clic restait bloqué. Ce que le cas vérifie n'a pas changé.
+  - **Lot 3 : aucune modification.** L'instabilité de l'audit n'a pas été reproduite : 4 lancers
+    simultanés, 3 lancers avec le processeur de la page ralenti ×4 (mouchard qui note chaque
+    navigation : seulement les deux rechargements voulus par les cas « état retrouvé après
+    rechargement »), puis les **5 lancers de suite demandés, verts (56/56)**. Sur GitHub, le bloc
+    n'apparaît dans aucun des 12 derniers passages rouges. Rien dans le site ne recharge la page
+    pendant ces cas (cherché : `location`, formulaires, liens, `history.back`). Je n'ai pas ajouté de
+    correctif « au cas où » : une attente sans cause démontrée masquerait un vrai défaut. Si le
+    message revient sur GitHub, le relever avec le nom du cas.
+- **Durées mesurées** :
+  - GitHub, avant : **12 à 13,5 min**, suite **rouge** (passage du 05/10 22:52, da2d10c : 13 min 20).
+  - GitHub, lot 1 (351573f) : trois coches vertes, jobs **4 min 27 / 4 min 48 / 4 min 27** (groupes 1/2/3).
+  - GitHub, lot 2 (338594c) : jobs **4 min 13 / 4 min 14 / 4 min 38**, dont la suite seule 201 s / 220 s /
+    246 s ; le reste est l'installation de Playwright et Chromium (~30 s, cible du lot 5).
+  - Local (Windows), suite entière dans l'ordre : **12 min 21 → 10 min 41** ; les trois groupes en
+    parallèle sur un poste : 4 min 23. Blocs : picard 213 → 147 s, smoby 161 → 144 s, socle 28 → 22 s.
+- **Sabotages éprouvés** (lot 2, moteur modifié le temps d'un lancer puis restauré, vérifié par `git status`) :
+  - chrono du quai qui continue hors de la séance (plus de `clearInterval` à la sortie, plus de garde
+    « hôte détaché ») → picard « Précédent par erreur » tombe : « chrono qui tourne hors de la séance : 60 au lieu de 3 » ;
+  - temps de repérage compté onglet caché → smoby tombe : « 10 au lieu de 5 » ;
+  - temps de repérage compté chez l'enseignant → smoby tombe : « {"temps":5} au lieu de null » ;
+  - temps de repérage jamais compté → socle « Précédent dans une séance = Quitter » tombe : « temps passé dans la base : 0 ».
+- **Tests** : 784 cas avant, 784 après (157 + 229 + 398 dans les trois groupes). Aucun cas supprimé.
+- **Commits** : 2fa34ca (brief, inscription), 351573f (lot 1), 338594c (lot 2), celui de ce compte rendu.
+- **Diagnostic du lot 4** (`node outils/test-seances.mjs` : 28/31) — dans les trois cas, c'est **le test
+  qui est en retard** ; l'écran et le corrigé disent la même chose :
+  1. « étape 6 : bloquer le stock restant » : la question « Que vaut maintenant le « Reste en stock »
+     du lot ? » (réponse 0) a été **retirée du corrigé ENT-1.3** par la reprise des trames du 04/10
+     (b658247). Le test la cherche encore.
+  2. Les deux « écarts » de l'étape 2 (expéditeur, nature du défaut) : le même commit a **réordonné
+     le tableau** de l'étape 2 (lot, nature, ce que Puma demande, expéditeur — avant : lot, expéditeur,
+     nature). Le test lit les lignes par leur rang : il compare l'expéditeur à la ligne « nature » et la
+     nature à « ce que Puma demande ». Le mail à l'écran contient bien « Marc Oberlé » et « collage »,
+     comme le corrigé.
+  3. « porte de sortie : Léa retrouve la photo de fin de 1.1 » : le test clique « Réceptions » dans
+     ENT-1.2, qui n'a plus ce menu depuis le 05/10 (1dff0f8 : chaque séance n'affiche que ses écrans).
+  Correction proposée, **dans le test seulement** : lire les lignes du tableau par leur intitulé ;
+  remplacer la question disparue par le nombre écrit dans la note du corrigé (ou ne plus comparer ce
+  point) ; vérifier REC-04127 par la console (`.getlot`) au lieu du menu Réceptions. Puis 4e job sur
+  GitHub (port 8098). **En attente de l'accord de Tristan.**
+- **Reste ouvert** : lot 4 (accord de Tristan) ; lot 5 (accord de Tristan) ; question `test-regles.mjs`
+  sur GitHub.
