@@ -5,7 +5,9 @@
 #
 # Depuis le 06/10/2026 (lot 1 de MOTEUR-tests-rapides), la suite est coupée en trois groupes
 # (`GROUPES` dans outils/test.mjs) qui tournent EN MÊME TEMPS sur trois machines : trois coches
-# « Tests 1, 2, 3 » par push. Un groupe rouge n'arrête pas les deux autres (fail-fast: false).
+# « Tests 1, 2, 3 » par push. Un groupe rouge n'arrête pas les autres (fail-fast: false).
+# Une 4e coche, « Tests séances », déroule ENT-1.1 → 1.2 → 1.3 dans l'ordre d'un élève et compare
+# les écrans aux corrigés (outils/test-seances.mjs, port 8098 ; lot 4, 06/10/2026).
 
 name: Tests
 
@@ -21,7 +23,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        groupe: [1, 2, 3]
+        groupe: [1, 2, 3, séances]
     steps:
       - uses: actions/checkout@v4
 
@@ -55,14 +57,19 @@ jobs:
         if: steps.cache-pw.outputs.cache-hit == 'true'
         run: npx playwright install-deps chromium
 
-      - name: Suite de tests (groupe ${{ matrix.groupe }})
-        run: node outils/test.mjs --groupe ${{ matrix.groupe }} 2>&1 | tee sortie-tests.txt; exit "${PIPESTATUS[0]}"
+      - name: Suite de tests (${{ matrix.groupe }})
+        env:
+          GROUPE: ${{ matrix.groupe }}
+        run: |
+          if [ "$GROUPE" = "séances" ]; then commande="node outils/test-seances.mjs"; else commande="node outils/test.mjs --groupe $GROUPE"; fi
+          $commande 2>&1 | tee sortie-tests.txt; exit "${PIPESTATUS[0]}"
 
       # En cas d'échec, remonte les cas fautifs dans le résumé du passage (lisible sans
       # ouvrir le journal complet).
       - name: Résumé des échecs
         if: failure()
         run: |
-          sed -n '/=== ÉCHECS ===/,$p' sortie-tests.txt | while IFS= read -r l; do
+          # Suite : tout ce qui suit « === ÉCHECS === ». Séances : les cas « ✗ » et les écarts listés.
+          { sed -n '/=== ÉCHECS ===/,$p' sortie-tests.txt; grep -E '^  (✗|- )' sortie-tests.txt; } | sort -u | while IFS= read -r l; do
             [ -n "$l" ] && echo "::error::$l"
           done

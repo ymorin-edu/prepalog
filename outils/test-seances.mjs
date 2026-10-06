@@ -13,6 +13,7 @@
 //
 // Lancer : node outils/test-seances.mjs        (mode démonstration, aucun réseau, ~30 s)
 // Ajouter à la suite complète : non — fichier séparé, volontairement, pour ne pas toucher test.mjs.
+// Sur GitHub, il tourne à chaque push comme 4e coche, « Tests séances » (depuis le 06/10/2026).
 
 import { chromium } from 'playwright';
 import http from 'node:http';
@@ -510,9 +511,16 @@ await v('ENT-1.3 · étape 2 : l\'alerte de Puma et la consigne de M. Morin', as
   attendre(`étape 2 : la trame dit « deux messages t'attendent » : ${nouveaux.length} message(s) neuf(s) non lu(s) (${mails.filter((m) => m.nonlu).length} non lus en tout)`, nouveaux.length === 2);
   const t = await ouvrirMail('URGENT');
   const tab = tableau(C13, 2, 0);
-  comparer('lot concerné', (t.match(/LOT-[A-Z0-9-]+/) || [])[0], tab.reponses[0][1]);
-  attendre('étape 2 : l\'expéditeur de l\'alerte n\'est pas celui du corrigé', /Marc Oberlé/.test(t) && /Oberlé/.test(tab.reponses[1][1]));
-  attendre('étape 2 : la nature du défaut ne correspond pas', /collage/i.test(t) && /collage/i.test(tab.reponses[2][1]));
+  // Les lignes du tableau se lisent par leur intitulé, pas par leur rang : la reprise des trames du
+  // 04/10/2026 les a remises dans un autre ordre, et le test comparait l'expéditeur à la nature du défaut.
+  const ligne = (re) => {
+    const l = tab.reponses.find((r) => re.test(r[0]));
+    if (!l) throw new Error(`étape 2 : aucune ligne ${re} dans le tableau du corrigé (${tab.reponses.map((r) => r[0]).join(' / ')})`);
+    return l[1];
+  };
+  comparer('lot concerné', (t.match(/LOT-[A-Z0-9-]+/) || [])[0], ligne(/lot/i));
+  attendre('étape 2 : l\'expéditeur de l\'alerte n\'est pas celui du corrigé', /Marc Oberlé/.test(t) && /Oberlé/.test(ligne(/envoyé|expéditeur/i)));
+  attendre('étape 2 : la nature du défaut ne correspond pas', /collage/i.test(t) && /collage/i.test(ligne(/nature/i)));
   attendre('étape 2 : « pas visible à l\'œil nu » absent', /visible à l.œil nu/.test(t) && /Non/.test(rep(C13, 'Le défaut est-il visible').rep));
 });
 
@@ -586,7 +594,10 @@ await v('ENT-1.3 · étape 6 : bloquer le stock restant, comme le corrigé', asy
     attendre(`étape 6 : le blocage de ${reste} × ${sku} est refusé : ${(await lire('.avis-err').catch(() => '')).slice(0, 120)}`, !(await page.$('.avis-err')));
   }
   const lot = await cmd('.getlot LOT-PM-2609');
-  comparer('reste en stock après blocage', (lot.match(/Reste en stock\s*(\d+)/) || [])[1], rep(C13, 'Que vaut maintenant').rep);
+  // La question « Que vaut maintenant le Reste en stock du lot ? » a quitté le corrigé le 04/10/2026 :
+  // la valeur attendue est écrite ici à la main (tout le reste du lot est bloqué : il ne reste rien).
+  attendre(`étape 6 : après le blocage, le lot n'est pas vide (lu « Reste en stock ${(lot.match(/Reste en stock\s*(\d+)/) || [])[1]} »)`,
+    (lot.match(/Reste en stock\s*(\d+)/) || [])[1] === '0');
   comparer('type de mouvement de blocage', (lot.match(/Blocage qualité/) || [])[0], rep(C13, 'Quel type de mouvement apparaît').rep);
 });
 
@@ -770,8 +781,11 @@ await v('porte de sortie : à la réouverture, Léa retrouve la photo de fin de 
   const acc = await accueil();
   attendre(`la base est celle de la fin de 1.1 : 4 593 paires (lu ${acc.stock})`, acc.stock === '4593');
   attendre(`les 3 messages neufs de 1.2 sont non lus, plus au plus la réponse de Puma (lu ${acc.nonLus})`, acc.nonLus === '3' || acc.nonLus === '4');
-  await vue('receptions');
-  attendre('la réception REC-04127 faite en 1.1 est là, validée', /REC-04127/.test(await lire('.ent-main')) && /Réceptionnée/.test(await lire('.ent-main')));
+  // ENT-1.2 n'a plus l'écran Réceptions (05/10/2026 : chaque séance n'affiche que ses écrans). La
+  // réception faite en 1.1 se lit dans la console : le lot qu'elle a fait entrer est en stock, entier.
+  const lot = await cmd('.getlot LOT-PM-2609');
+  attendre(`la réception REC-04127 faite en 1.1 est là, ses 24 paires en stock (lu « ${lot.slice(0, 160)} »)`,
+    /REC-04127/.test(lot) && /Entrées\s*24\b/.test(lot));
   // Elle fait un geste, quitte, rouvre : le drapeau ne doit pas revenir effacer son travail.
   await ouvrirMail('Bienvenue chez Spartoo');
   const avant = (await accueil()).nonLus;
