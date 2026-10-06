@@ -95,10 +95,25 @@
 // les points faux signalés AVANT la première tentative de décharger) et `securiteConstat` (chaque point
 // jugé, aucun « OK » sur un point faux, aucun « Pas OK » sur un point juste). La liste `points` ne dépend
 // pas de l'affichage : la même étape pourra se jouer sur une image à inspecter.
+//
+// RENDU 2D ISO (06/10/2026, brief `docs/briefs/ENT-1.1-spartoo-quai.md` §7.8, maquette validée par Tristan :
+// `docs/briefs/spartoo/maquette-quai-spartoo-iso.html`). `rendu: 'iso'` remplace les photos et la palette 3D
+// par le kit iso (`core/iso.js`) : ① la façade, le camion porteur qui recule à la porte, le chauffeur et sa
+// bulle, puis le BL ; ② la porte sectionnelle qui se lève, le chauffeur qui sort la palette au transpalette
+// manuel jusqu'à la zone de réception (ce qui est dans la remorque ne se voit que par l'ouverture) ; ③ la
+// palette en grand, « ⟲ Tourner / Tourner ⟳ », chaque carton cliquable (son étiquette : n° « x / 12 », réf.,
+// lot) ; ④ la palette en zone de réception. Les outils (comptage, fiche, décision, réserves) et les jalons ne
+// changent pas (choix de Tristan, 06/10). Le chauffeur pose la palette EN zone de réception : à l'étape ④ il
+// n'y a donc rien à « rentrer », la palette y reste quand le chauffeur a signé (comme la maquette). Quai sans
+// froid, un seul camion. Le BL peut porter un en-tête (`commande`, `lot`, `expedie` : une date, ou un nombre
+// de jours par rapport à aujourd'hui, −1 = la veille) et une colonne « par carton » (`parCarton` des `refs`).
 
 // Pas d'import de `ui.js` : le corrigé d'une séance (`contenus/corriges/`) importe ce module, et la
 // suite de tests charge les corrigés hors du navigateur.
 import { evaluerGrille, afficher, estFormule } from '../formules.js';
+import { projection, facadeQuai, X_PORTE_FACADE, camionPorteur, personne, HAUT_PERSONNE, bulle, horlogeQuai,
+  solQuai, niveleur, remorqueInterieur, murQuai, ouvertureQuai, transpaletteManuel, paletteCartons, dimsPalette,
+  faceVisible, facesExterieures } from '../iso.js';
 
 const ech = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -124,6 +139,7 @@ const CONSTATS = [
 const ficheNeuve = () => ({ temp: '', ref: '', endo: '', manq: '' });
 const CHOIX_DEC = ['accepter', 'reserves', 'refuser'];
 const ETAPES = ['① Le camion arrive', '② Déchargement', '③ Contrôle des palettes', '④ Réserves et chambre froide'];
+const ETAPES_ISO = ['① Le camion arrive', '② Déchargement', '③ Compter la palette', '④ Réserves et signature'];
 const ETAPE_SECU = '⓪ Avant de décharger';
 const COUTS_DEFAUT = { ticket: 2, sonder: 1, tourner: 0.5, etiquette: 0.5, compter: 1, rentrer: 3, ligne: 1, signer: 1 };
 
@@ -183,7 +199,7 @@ function reglages(Q) {
   const motifs = Object.keys(MOTIFS).filter((m) => m === 'aucun' || ((!Q.motifs || Q.motifs.includes(m)) && (froid || m !== 'temperature')));
   const S = Q.securite && Array.isArray(Q.securite.points) && Q.securite.points.length ? Q.securite : null;
   return {
-    froid, motifs, securite: S,
+    froid, motifs, securite: S, iso: Q.rendu === 'iso',
     zone: Object.assign({ nom: 'Zone de réception' }, Q.zone || {}),
     lieu: Object.assign({ nom: 'Quai', temp: 4, refrigere: true, chambre: { nom: 'Chambre froide', temp: -23 } }, Q.lieu || {}),
     seuil: Q.seuilHorsFroid || 30,
@@ -681,6 +697,9 @@ export function creerQuai(Q, opts = {}) {
   const fictif = (nom, f) => `${ech(nom)}${f ? ' (fictif)' : ''}`;
   const lieuMin = R.lieu.nom.charAt(0).toLowerCase() + R.lieu.nom.slice(1);
   const F = R.froid, SEC = R.securite;
+  const ISO = R.iso;
+  // Le rendu iso ne sait (pour l'instant) qu'un quai sans froid à un camion : on le dit au chargement.
+  if (ISO && (F || M || R.controle)) throw new Error(`quai ${Q.id} : \`rendu: 'iso'\` demande un quai sans froid (\`froid: false\`), à un seul camion`);
   const zoneMin = minuscule(R.zone.nom);
   // Qui sort les palettes : le chauffeur au transpalette, ou un cariste au chariot élévateur.
   const CARISTE = R.D.par === 'cariste';
@@ -696,7 +715,7 @@ export function creerQuai(Q, opts = {}) {
   // `tente` : la palette dont « Valider » a été cliqué avec un manque (le message s'écrit sous la case) ;
   // `sonde` : la palette qui vient d'être sondée (l'afficheur se stabilise une fois, pas à chaque redessin).
   const ui = { chef4: false, arme: false, arme4: false, armeRaz: false, anim: null, lancer: false, jouerCf: false, focus: null,
-    tente: null, tropMotifs: false, sonde: null, arretSecu: false };
+    tente: null, tropMotifs: false, sonde: null, arretSecu: false, arrivee: false, rejeu1: false, anim1: null, t0a: null };
 
   // Chaque geste avance l'horloge du quai, et le temps hors froid de CHAQUE lot sorti du camion et
   // pas encore rentré en chambre froide.
@@ -722,7 +741,8 @@ export function creerQuai(Q, opts = {}) {
   // Places au sol, de part et d'autre de l'allée centrale : les 5 de la maquette d'abord, puis
   // un rang de plus à droite, puis un second rang en retrait (ENT-4.2 en aura 8).
   const PLACES = PH.places || [[150, 800], [320, 768], [466, 738], [808, 738], [985, 768], [1150, 805], [245, 700], [1060, 700], [80, 712], [1225, 722]];
-  const T_OUVRE = 900, T_PORTE = 2000, T_DEB = 2700, T_PAL = 2100, T_TRAJET = 1850;
+  // Rendu iso (maquette) : la porte se lève en 1,8 s, puis le chauffeur tire chaque palette en 6 s.
+  const [T_OUVRE, T_PORTE, T_DEB, T_PAL, T_TRAJET] = ISO ? [1800, 1800, 1800, 6800, 6000] : [900, 2000, 2700, 2100, 1850];
   const fin = (n) => T_DEB + n * T_PAL + 200;
   const ease = (x) => (x < 0 ? 0 : x > 1 ? 1 : x < .5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2);
   const echelle = (y) => .42 + (y - SOL_Y0) / (SOL_Y1 - SOL_Y0) * .58;
@@ -851,8 +871,127 @@ export function creerQuai(Q, opts = {}) {
     }
     return s;
   }
+  /* ------------------------------------------------------------ rendu iso */
+  // Les numéros des portes de la façade : celle du quai (« Quai 7 ») et ses voisines.
+  const numPorte = (String(R.lieu.nom).match(/\d+/) || [null])[0];
+  const PORTES = numPorte ? [String(+numPorte - 1), numPorte, String(+numPorte + 1)] : ['', '', ''];
+  // La parole du chauffeur coupée en lignes de bulle (~44 caractères).
+  const couper = (t, n = 44) => {
+    const L = []; let l = '';
+    String(t).split(/\s+/).forEach((m) => { if (l && `${l} ${m}`.length > n) { L.push(l); l = m; } else l = l ? `${l} ${m}` : m; });
+    if (l) L.push(l);
+    return L;
+  };
+  const paroleArrivee = () => cam.parole || `Bonjour, livraison ${cam.fournisseur || ''}. Voilà mon bon de livraison.`;
+  // ① le camion recule à la porte en D_ARRIVEE ms ; au bout, le chauffeur descend et parle.
+  const D_ARRIVEE = 5200;
+  function sceneArrivee(t) {
+    const I = projection({ unite: 54, origine: [330, 150] });
+    const f = Math.min(1, t / D_ARRIVEE), ee = 1 - Math.pow(1 - f, 2.2);
+    let s = facadeQuai(I, PORTES) + camionPorteur(I, X_PORTE_FACADE[1], 0.35 + (8.5 - 0.35) * (1 - ee)) + horlogeQuai(I, 0.2, 0.01, 2.35, cam.arrivee || '');
+    if (f >= 1) {
+      s += personne(I, 5.05, 3.2);
+      const [bx, by] = I.P(5.05, 3.2, HAUT_PERSONNE);
+      s += bulle(bx + 6, by - 4, couper(paroleArrivee()));
+    }
+    return s;
+  }
+  const legArrivee = (fini) => (fini ? `${cam.arrivee || ''} — Le chauffeur te remet le bon de livraison.`
+    : `${cam.arrivee || ''} — Le camion recule à la porte${numPorte ? ` ${numPorte}` : ''}…`);
+  // La palette pour le kit : chaque carton numéroté (couche par couche, du fond vers l'avant, de gauche à
+  // droite : « 9 / 12 »), sa référence (celle de sa couche), sa face enfoncée, l'étiquette de sa face.
+  const DIR_FACE = (d) => (d[1] === 1 ? 'S' : d[1] === -1 ? 'N' : d[0] === 1 ? 'E' : 'W');
+  const refDeCouche = (p, k) => (p.refs ? p.refs.find((x) => x.couches.includes(k)) || null : null);
+  const marque = (et) => (et && et.marque) || String(cam.fournisseur || '').split(/[\s,]/)[0].toUpperCase();
+  function palIso(p) {
+    const total = p.W * p.D * p.L, manque = new Set(p.manque), cartons = [];
+    for (let k = 0; k < p.L; k++) for (let j = 0; j < p.D; j++) for (let i = 0; i < p.W; i++) {
+      const no = 1 + k * p.W * p.D + j * p.W + i, rf = refDeCouche(p, k), et = (rf ? rf.etiq : p.etiq) || {};
+      const av = p.avarie[`${i},${j},${k}`];
+      cartons.push({ i, j, k, no, ref: rf ? rf.ref : p.ref, absent: manque.has(`${i},${j},${k}`), abime: av ? DIR_FACE(av) : null,
+        etiq: { haut: marque(et), no: `${no}/${total}`, ref: et.ref || (rf ? rf.ref : p.ref), bas: et.court || '' } });
+    }
+    return { nW: p.W, nD: p.D, nL: p.L, total, cartons };
+  }
+  // ② et ④ : l'intérieur du quai. Les palettes du camion : dans la remorque, en route (le chauffeur la tire,
+  // de dos, la main sur le timon), ou posées en zone de réception. `parti` (④, BL signé) : le chauffeur et
+  // les palettes refusées sont repartis, la porte est refermée.
+  const I2 = ISO ? projection({ unite: 60, origine: [470, 235] }) : null;
+  const ISO_X = 2.6, ISO_YDEP = -2.9, ISO_YARR = 2.1;
+  function imageIso(t, e, attente, o = {}) {
+    const P = PAL[ca(e)], N = P.length, depart = (n) => T_DEB + n * T_PAL;
+    const ouv = attente || o.parti ? 0 : Math.min(1, t / T_PORTE);
+    const pos = [];
+    let enCours = null, nb = 0;
+    P.forEach((p, n) => {
+      if (attente || t < depart(n)) { pos.push([p, ISO_X, ISO_YDEP - n * 1.3]); return; }
+      if (t >= depart(n) + T_TRAJET) { nb++; pos.push([p, ISO_X + n * 1.0, ISO_YARR]); return; }
+      const f = (t - depart(n)) / T_TRAJET, u = f < 0.5 ? 2 * f * f : 1 - Math.pow(-2 * f + 2, 2) / 2;
+      enCours = n; pos.push([p, ISO_X, ISO_YDEP + (ISO_YARR - ISO_YDEP) * u]);
+    });
+    const garder = o.parti ? pos.filter(([p]) => accepte(st(e, p))) : pos;
+    // Le chauffeur : invisible tant que la porte n'est pas presque levée ; il tire la palette en cours, ou
+    // attend à côté de la dernière posée.
+    let tp = '', ch = '', yt = 0, yc = 0;
+    if (!attente && !o.parti && t >= T_OUVRE - 200) {
+      const k = enCours != null ? enCours : Math.max(0, nb - 1);
+      const [, xk, yp] = pos[k] || [null, ISO_X, ISO_YARR];
+      const tire = enCours != null || nb === 0;
+      yt = yp + 1.2; yc = yt + 0.62 + (tire ? 0 : 0.5);
+      const T = transpaletteManuel(I2, xk, yt);
+      tp = T.svg;
+      const marche = enCours != null ? ((t - depart(enCours)) / 600) % 1 : null;
+      ch = personne(I2, xk + .62, yc + 0.05, { dos: tire, main: tire ? T.poignee : null, pas: marche });
+    }
+    const dedans = (y) => y < 0.02;
+    const pal = (p, x, y, yMin, yMax) => paletteCartons(I2, palIso(p), x, y, 3, { yMin, yMax, lisible: false });
+    let s = solQuai(I2, R.zone.nom);
+    s += `<g clip-path="url(#quaiIsoOuv)">${remorqueInterieur(I2)}${niveleur(I2, 'dedans')}${garder.slice().sort((a, b) => a[2] - b[2]).map(([p, x, y]) => pal(p, x, y, -99, 0)).join('')}${tp && dedans(yt) ? tp : ''}${ch && dedans(yc) ? ch : ''}</g>`;
+    s += murQuai(I2, ouv, R.lieu.nom) + niveleur(I2, 'dehors');
+    s += garder.slice().sort((a, b) => (a[1] + a[2]) - (b[1] + b[2])).map(([p, x, y]) => pal(p, x, y, 0, 99)).join('');
+    s += (tp && !dedans(yt) ? tp : '') + (ch && !dedans(yc) ? ch : '');
+    s += horlogeQuai(I2, 6.6, 0.01, 2.25, hhmm(e.minute).slice(0, 5));
+    let leg;
+    if (attente) leg = `${hhmm(e.minute)} — Le camion est à quai, porte fermée.`;
+    else if (t < T_DEB) leg = `${hhmm(e.minute)} — La porte du ${lieuMin} se lève.`;
+    else if (nb < N) leg = `${hhmm(e.minute)} — ${quiSort} sort la palette ${P[enCours ?? nb].id} au transpalette (${Math.min(nb + 1, N)} sur ${N}).`;
+    else leg = N > 1 ? `${hhmm(e.minute)} — Les ${N} palettes sont en ${zoneMin}. Le chauffeur attend ta signature.` : `${hhmm(e.minute)} — La palette est en ${zoneMin}. Le chauffeur attend ta signature.`;
+    const sur = new Set(pos.filter(([, , y]) => y === ISO_YARR).map(([p]) => p.id));
+    return { iso: s, leg, nb, pastilles: P.map((p) => `<i class="${sur.has(p.id) ? 'sur' : ''}">${ech(p.id)}</i>`).join('') };
+  }
+  const defsIso = () => `<defs><clipPath id="quaiIsoOuv"><polygon points="${ouvertureQuai(I2)}"/></clipPath></defs>`;
+  // ③ la palette en grand, tournée de `s.vue` quarts de tour ; chaque carton présent est cliquable.
+  const NOMS_FACES = ['avant', 'côté droit', 'arrière', 'côté gauche'];
+  function paletteIso(p, s) {
+    const r = s.vue, [W, D] = dimsPalette(r), I = projection({ unite: 150, origine: [470, 190] });
+    const ox = -W / 2 + 0.85, oy = -D / 2 + 0.2;
+    let o = I.face([[ox - 1.2, oy - 1.0, 0], [ox + W + 1.0, oy - 1.0, 0], [ox + W + 1.0, oy + D + 1.0, 0], [ox - 1.2, oy + D + 1.0, 0]], '#e4dfd3', 'none');
+    o += `<polygon points="${I.pts([[ox - .25, oy - .25, 0], [ox + W + .25, oy - .25, 0], [ox + W + .25, oy + D + .25, 0], [ox - .25, oy + D + .25, 0]])}" fill="none" stroke="#d1a90f" stroke-width="3" stroke-dasharray="10 6"/>`;
+    o += paletteCartons(I, palIso(p), ox, oy, r, { lisible: true, sel: s.carton,
+      attrs: (c) => `class="quai-etiq-clic" data-q-etiq data-k="${ech(p.refs ? c.ref : 'avant')}" data-q-carton="${c.no}"` });
+    const [fx, fy] = I.P(ox + W / 2, oy + D + 0.55, 0);
+    o += `<text x="${fx.toFixed(1)}" y="${fy.toFixed(1)}" text-anchor="middle" font-size="14" font-weight="700" fill="#555047" transform="rotate(30 ${fx.toFixed(1)} ${fy.toFixed(1)})">face ${NOMS_FACES[r]} de la palette</text>`;
+    return o;
+  }
+  // L'étiquette du carton cliqué, lisible, et ce qu'on voit de son état DEPUIS LA VUE ACTUELLE.
+  function zoomCarton(p, s, cm) {
+    const P = palIso(p), c = s.carton ? P.cartons.find((x) => x.no === s.carton && !x.absent) : null;
+    if (!c) return `<span class="note">🔍 Clique sur un carton de la palette : son étiquette s’affiche ici (${fmtMin(C.etiquette)} la première fois pour chaque référence).</span>`;
+    const rf = refDeCouche(p, c.k), et = (rf ? rf.etiq : p.etiq) || {};
+    const vu = c.abime && facesExterieures(c, p.W, p.D).includes(c.abime) && faceVisible(s.vue, c.abime);
+    return `<div class="quai-etiq quai-etiq-carton" data-q-etiquette data-q-carton-vu="${c.no}">
+        <div class="quai-etiq-l1"><b>${ech(cm.fournisseur)}</b><span>Carton <b>${c.no}</b> / ${P.total}</span></div>
+        ${Q.destinataire ? `<div class="quai-etiq-dest">→ ${ech(Q.destinataire)}</div>` : ''}
+        <div class="quai-etiq-ref">${ech(et.ref)}</div><div>${ech(et.nom)}</div><div>${ech(et.poids)}</div>
+        <div>${et.commande ? `Cde ${ech(et.commande)} · ` : ''}Lot ${ech(et.lot)}</div>
+        <div class="quai-code">||| |||| || ||||| | ||| ${ech(String(et.ref).replace(/-/g, ''))}</div></div>
+      <div class="quai-etat-carton" data-q-etat-carton>${vu ? '<b class="quai-depasse">⚠ Ce carton est enfoncé</b> sur cette face.' : 'Ce que tu vois de ce carton depuis ici : <b>intact</b>.'}<br><span class="note">Couche ${c.k + 1} en partant du bas.</span></div>
+      <div class="quai-reconst">Étiquette reconstituée, non contractuelle.</div>`;
+  }
+
   // L'image à l'instant t : les morceaux dynamiques de la scène, et la légende.
   function image(t, e, attente) {
+    if (ISO) return imageIso(t, e, attente);
     const P = PAL[ca(e)];
     const depart = (n) => T_DEB + n * T_PAL;
     const montee = attente || FIXE ? 0 : ease((t - T_OUVRE) / T_PORTE);
@@ -900,6 +1039,25 @@ export function creerQuai(Q, opts = {}) {
     const ax = PORTE.x1 + 14;
     const [hx, hy] = PH.horloge || [ax, PORTE.y0 + 78];
     const tempQuai = `${R.lieu.temp > 0 ? '+' : ''}${virgule(Number(R.lieu.temp).toFixed(1))} °C`;
+    const barre = `<div class="quai-barre2">
+      <div><div class="quai-compteur2">Palettes sur le quai : <b data-q-nb>${im.nb} / ${N}</b><span class="quai-pastilles2" data-q-past>${im.pastilles}</span></div>
+        <div class="note">${M ? `Camion ${ech(cm.nom)}, ${fictif(cm.transporteur, cm.fictif)} · ` : ''}Durée du déchargement : <b>${formule(ci)}</b> de temps du quai</div></div>
+      <div class="quai-ligne">
+        <button class="btn" data-q="passer" ${fini || attente ? 'hidden' : ''}>⏩ Passer l'animation</button>
+        <button class="btn" data-q="revoir" data-libre ${fini ? '' : 'hidden'}>↺ Revoir le déchargement</button>
+        <button class="btn btn-p" data-q="vers3" data-libre ${fini ? '' : 'disabled'}>${ISO ? 'Compter la palette' : 'Contrôler les palettes'} →</button>
+      </div>
+    </div>`;
+    if (ISO) {
+      return `<div class="quai-scene2 quai-iso">
+        <svg data-q-scene2 viewBox="290 0 640 480" role="img" aria-label="${ech(R.lieu.nom)} : la porte se lève, ${ech(minuscule(quiSort))} sort ${N > 1 ? 'les palettes' : 'la palette'} au transpalette jusqu’en ${ech(zoneMin)}">
+          ${defsIso()}<g data-g="iso">${im.iso}</g>
+        </svg>
+        <div class="quai-legende" data-q-leg>${ech(im.leg)}</div>
+      </div>
+      ${barre}
+      ${A.consignes ? `<p class="quai-aide">Chez un transporteur de messagerie, c’est souvent <b>le chauffeur</b> qui décharge, au transpalette. Toi, tu ne signes rien tant que tu n’as pas compté.</p>` : ''}`;
+    }
     return `<div class="quai-scene2">
       <svg data-q-scene2 viewBox="${cx} ${cy} ${cw} ${chh}" preserveAspectRatio="xMidYMid slice" role="img" aria-label="${ech(R.lieu.nom)} : ${FIXE ? 'la remorque est ouverte' : 'la porte s’ouvre'}, ${ech(minuscule(quiSort))} sort les palettes une à une ${CARISTE ? 'au chariot élévateur' : 'au transpalette'}">
         <defs>
@@ -929,15 +1087,7 @@ export function creerQuai(Q, opts = {}) {
       </svg>
       <div class="quai-legende" data-q-leg>${ech(im.leg)}</div>
     </div>
-    <div class="quai-barre2">
-      <div><div class="quai-compteur2">Palettes sur le quai : <b data-q-nb>${im.nb} / ${N}</b><span class="quai-pastilles2" data-q-past>${im.pastilles}</span></div>
-        <div class="note">${M ? `Camion ${ech(cm.nom)}, ${fictif(cm.transporteur, cm.fictif)} · ` : ''}Durée du déchargement : <b>${formule(ci)}</b> de temps du quai</div></div>
-      <div class="quai-ligne">
-        <button class="btn" data-q="passer" ${fini || attente ? 'hidden' : ''}>⏩ Passer l'animation</button>
-        <button class="btn" data-q="revoir" data-libre ${fini ? '' : 'hidden'}>↺ Revoir le déchargement</button>
-        <button class="btn btn-p" data-q="vers3" data-libre ${fini ? '' : 'disabled'}>Contrôler les palettes →</button>
-      </div>
-    </div>
+    ${barre}
     ${A.consignes && F ? `<p class="quai-aide">Le quai est réfrigéré (<b>${tempQuai}</b>, voir l'afficheur à droite de la porte), mais c'est bien plus chaud que la remorque à ${fmtT((cm.ticket && cm.ticket.consigne) || -20)}. Dès que la porte s'ouvre, <b>tout le lot sort du froid</b> : regarde la jauge en haut, elle a démarré. Le chauffeur pose les palettes ; à toi ensuite de les contrôler <b>vite et bien</b>, chaque geste coûte du temps.</p>` : ''}
     ${A.consignes && !F ? `<p class="quai-aide">${ech(quiSort)} pose les palettes sur le quai. À toi ensuite de les contrôler <b>une par une</b> : faire le tour, compter, lire l'étiquette, décider.</p>` : ''}`;
   }
@@ -971,11 +1121,14 @@ export function creerQuai(Q, opts = {}) {
     };
     const dessinerT = () => {
       const im = image(t, e, false);
-      g('porte').setAttribute('transform', im.porte);
-      g('remorque').innerHTML = im.remorque;
-      g('brume').innerHTML = im.brume;
-      g('posees').innerHTML = im.posees;
-      g('mobile').innerHTML = im.mobile;
+      if (ISO) g('iso').innerHTML = im.iso;
+      else {
+        g('porte').setAttribute('transform', im.porte);
+        g('remorque').innerHTML = im.remorque;
+        g('brume').innerHTML = im.brume;
+        g('posees').innerHTML = im.posees;
+        g('mobile').innerHTML = im.mobile;
+      }
       const q = (s) => z.querySelector(s);
       if (q('[data-q-leg]')) q('[data-q-leg]').textContent = im.leg;
       if (q('[data-q-nb]')) q('[data-q-nb]').textContent = `${im.nb} / ${N}`;
@@ -1113,8 +1266,20 @@ export function creerQuai(Q, opts = {}) {
 
   /* ---------------------------------------------------------------- écrans */
   // Le BL d'un camion : une ligne par palette, une par référence pour une palette multi-références.
-  const blHtml = (ci = 0) => `<table class="quai-bl"><thead><tr><th>Palette</th><th>Réf.</th><th>Désignation</th><th class="num">Cartons</th></tr></thead>
-    <tbody>${PAL[ci].map((p) => (p.refs || [p]).map((r) => `<tr><td>${ech(p.id)}</td><td class="mono">${ech(r.ref)}</td><td>${ech(r.nom)}</td><td class="num">${r.bl}</td></tr>`).join('')).join('')}</tbody></table>`;
+  // En-tête (commande, date d'expédition, lot) et colonne « par carton » : seulement si le contenu les déclare
+  // (ENT-1.1). `expedie` : une date, ou un nombre de jours par rapport à aujourd'hui (−1 = la veille).
+  const dateExpedition = (v) => (typeof v === 'number' ? new Date(Date.now() + v * 864e5).toLocaleDateString('fr-FR') : v);
+  const blEntete = (ci) => {
+    const c = R.camions[ci], L = [['Commande', c.commande], ['Expédié le', c.expedie != null ? dateExpedition(c.expedie) : null], ['Transporteur', c.commande || c.lot ? c.transporteur : null], ['N° de lot', c.lot]].filter(([, v]) => v);
+    return L.length ? `<div class="quai-bl-entete" data-q-bl-entete>${L.map(([l, v]) => `<span>${l}</span><b${l === 'N° de lot' ? ' data-q-bl-lot' : ''}>${ech(v)}</b>`).join('')}</div>` : '';
+  };
+  const blHtml = (ci = 0) => {
+    const parC = PAL[ci].some((p) => (p.refs || []).some((r) => r.parCarton));
+    const lignes = PAL[ci].map((p) => (p.refs || [p]).map((r) => `<tr><td>${ech(p.id)}</td><td class="mono">${ech(r.ref)}</td><td>${ech(r.nom)}</td><td class="num">${r.bl}</td>${parC ? `<td class="num">${ech(r.parCarton || '')}</td>` : ''}</tr>`).join('')).join('');
+    const total = parC ? `<tr class="quai-bl-total"><td colspan="3">${PAL[ci].length} palette${PAL[ci].length > 1 ? 's' : ''}${PAL[ci].some((p) => p.refs) ? ' mixte' + (PAL[ci].length > 1 ? 's' : '') : ''}</td><td class="num"><b>${PAL[ci].reduce((t, p) => t + p.bl, 0)}</b></td><td></td></tr>` : '';
+    return `${blEntete(ci)}<table class="quai-bl"><thead><tr><th>Palette</th><th>Réf.</th><th>Désignation</th><th class="num">Cartons</th>${parC ? '<th class="num">Par carton</th>' : ''}</tr></thead>
+    <tbody>${lignes}${total}</tbody></table>`;
+  };
   function ticketTexte(ci = 0) {
     const cm = R.camions[ci], T = cm.ticket || {};
     const lignes = ['  ENREGISTREUR TEMP.  ', ` Remorque ${T.remorque || ''}  ${T.societe || ''}`, ` Consigne : ${Number(T.consigne ?? -20).toFixed(1)} C`,
@@ -1186,8 +1351,55 @@ export function creerQuai(Q, opts = {}) {
     </section>`;
   }
 
+  // Rendu iso : le camion recule à la porte (une fois par ouverture de page, sauf « Revoir »), puis le chauffeur
+  // parle et remet le BL ; alors seulement viennent le BL et « Oui, vous pouvez décharger ».
+  const arriveeVue = (e) => !ui.rejeu1 && (ui.arrivee || e.decharge || reduit());
+  function ecran1Iso(e) {
+    const vu = arriveeVue(e);
+    return `<section class="quai-carte">
+      <div class="quai-scene2 quai-iso">
+        <svg data-q-arrivee viewBox="70 -30 800 520" role="img" aria-label="${ech(R.lieu.nom)} : un camion porteur recule à la porte. Le chauffeur : « ${ech(paroleArrivee())} »">${sceneArrivee(vu ? D_ARRIVEE : 0)}</svg>
+        <div class="quai-legende" data-q-leg>${ech(legArrivee(vu))}</div>
+      </div>
+      <p class="quai-ligne" data-q-passer1 ${vu ? 'hidden' : ''}><button class="btn" data-q="passer1" data-libre>⏩ Passer l'animation</button></p>
+      <div class="quai-apres-arrivee" data-q-apres-arrivee ${vu ? '' : 'hidden'}>
+        <div class="quai-doc quai-papier">
+          <div class="quai-doc-titre">📄 Bon de livraison n° ${ech(cam.bl)}${cam.fournisseur ? ` — ${ech(cam.fournisseur)}` : ''}</div>
+          ${blHtml()}
+          <div class="quai-reconst">Document pédagogique, reconstitution, non contractuel.</div>
+        </div>
+        ${Q.noteBL ? `<p class="note">${ech(Q.noteBL)}</p>` : ''}
+        <p class="quai-ligne"><button class="btn btn-p" data-q="decharger" ${e.decharge || e.fini || !secuFaite(e) ? 'disabled' : ''}>« Oui, vous pouvez décharger »</button>
+          <button class="btn" data-q="revoir1" data-libre>↺ Revoir l’arrivée</button>
+          <span class="quai-cout">${ech(quiSort)} pose ${PAL[0].length > 1 ? 'les palettes' : 'la palette'} en ${ech(zoneMin)} · durée : ${formule()}</span></p>
+      </div>
+    </section>`;
+  }
+  // Un redessin en pleine manœuvre (autre geste, autre écran) : la manœuvre reprend où elle en était (`ui.t0a`).
+  function animerArrivee(z, api) {
+    const svg = z.querySelector('[data-q-arrivee]');
+    if (!svg) return;
+    let fini = false;
+    const finir = () => {
+      if (fini) return; fini = true;
+      ui.arrivee = true; ui.rejeu1 = false; ui.anim1 = null; ui.t0a = null;
+      if (svg.isConnected) api.redessiner();
+    };
+    const pas = (now) => {
+      if (fini || !svg.isConnected) return;
+      if (ui.t0a == null) ui.t0a = now;
+      const t = now - ui.t0a;
+      svg.innerHTML = sceneArrivee(t);
+      if (t >= D_ARRIVEE) { finir(); return; }
+      requestAnimationFrame(pas);
+    };
+    ui.anim1 = { finir };
+    requestAnimationFrame(pas);
+  }
+
   // Quai sans froid : le BL seul (pas de ticket), puis l'ordre de décharger.
   function ecran1SansFroid(e) {
+    if (ISO) return ecran1Iso(e);
     return `<section class="quai-carte">
       <div class="quai-photo">
         <img src="${ech(PH.arrivee)}" alt="${ech(PH.altArrivee || 'Camion à quai devant un entrepôt')}">
@@ -1481,11 +1693,18 @@ export function creerQuai(Q, opts = {}) {
       <details class="quai-rappel-bl" data-libre><summary data-libre>📄 Revoir le bon de livraison${M ? ` du camion ${ech(cm.nom)}` : ''}</summary>${blHtml(ci)}</details>
       <div class="quai-poste quai-poste-egal">
         <div class="quai-gauche quai-collee">
-          <div class="quai-scene">
+          ${ISO ? `<div class="quai-scene quai-scene-iso">
+            <div class="quai-ligne quai-tourner">
+              <button class="btn" data-q="tourner" data-sens="-1" ${dis}>⟲ Tourner</button><button class="btn" data-q="tourner" ${dis}>Tourner ⟳</button>
+              <span class="quai-vue-lib" data-q-vues>vue de ${NOMS_FACES[s.vue] === 'avant' || NOMS_FACES[s.vue] === 'arrière' ? 'l’' : 'du '}${NOMS_FACES[s.vue]} · faces vues : ${[0, 1, 2, 3].map((k) => `<span class="quai-face-vue${s.vues.includes(k) ? ' vu' : ''}" aria-hidden="true"></span>`).join('')} <span class="quai-sr">${s.vues.length} sur 4</span></span>
+              <span class="quai-cout">· ${fmtMin(C.tourner)} par quart de tour</span>
+            </div>
+            <svg data-q-palette viewBox="250 0 520 420" role="img" aria-label="Palette ${ech(p.id)} : clique sur un carton pour lire son étiquette">${paletteIso(p, s)}</svg>
+          </div>` : `<div class="quai-scene">
             <svg data-q-palette viewBox="40 40 380 340" role="img" aria-label="Palette ${ech(p.id)} vue en trois dimensions">${palette3d(p, s, A.repere)}</svg>
             <div class="quai-vue-lib">Côtés déjà vus : ${s.vues.length} sur 4</div>
             <button class="btn" data-q="tourner" ${dis}>↻ Faire le tour de la palette <span class="quai-cout">· ${fmtMin(C.tourner)}</span></button>
-          </div>
+          </div>`}
         </div>
         <div class="quai-outils">
           ${blocCompter(p, s, dis, m, vu)}
@@ -1493,7 +1712,7 @@ export function creerQuai(Q, opts = {}) {
             <div class="quai-doc-titre"><span class="quai-num">2</span> ${F ? 'Sonder et lire l’étiquette' : 'Lire l’étiquette'}</div>
             ${F ? `<div class="quai-ligne"><button class="btn" data-q="sonder" ${dis}>Sonder à cœur <span class="quai-cout">· ${fmtMin(C.sonder)}</span></button></div>
             ${s.sonde !== null ? sonde(p, s, ui.sonde === p.id) : ''}` : ''}
-            <div class="quai-zoom">${zoomEtiquette(p, s, R.camions[p.camion])}</div>
+            <div class="quai-zoom">${ISO ? zoomCarton(p, s, R.camions[p.camion]) : zoomEtiquette(p, s, R.camions[p.camion])}</div>
           </div>
           ${ficheBloc(p, s, dis)}
           ${blocValidation(p, s, dis, vers4, m, vu)}
@@ -1540,9 +1759,11 @@ export function creerQuai(Q, opts = {}) {
     const suivant = M && k.signe && reste.length && !e.fini
       ? `<div class="quai-doc" data-q-suivant><p>Le camion ${ech(cm.nom)} repart, le quai est libre. ${reste.map((cj) => `Le camion ${ech(R.camions[cj].nom)}`).join(', ')} attend porte fermée.</p>${reste.map((cj) => boutonDecharger(e, cj)).join('')}</div>` : '';
     return `<section class="quai-carte">
-      <h2 class="quai-h2"><span class="quai-pastille-etape">4</span>${F ? 'Rentrer le lot en chambre froide' : `Rentrer les palettes en ${ech(zoneMin)}`}, écrire les réserves, faire signer${M ? ` — camion ${ech(cm.nom)}` : ''}</h2>
+      <h2 class="quai-h2"><span class="quai-pastille-etape">4</span>${ISO ? 'Écrire les réserves sur le BL, faire signer le chauffeur' : `${F ? 'Rentrer le lot en chambre froide' : `Rentrer les palettes en ${ech(zoneMin)}`}, écrire les réserves, faire signer`}${M ? ` — camion ${ech(cm.nom)}` : ''}</h2>
       ${choixCamion(e)}
-      ${A.consignes && !F ? `<p class="quai-aide">Règle du quai : <b>rentre les palettes acceptées</b> en ${ech(zoneMin)}, puis <b>écris tes réserves sur le BL</b> et fais-les signer par le chauffeur.<br>
+      ${A.consignes && ISO ? `<p class="quai-aide">Écris tes réserves <b>sur le BL</b>, puis fais-les signer par le chauffeur. La palette reste en ${ech(zoneMin)}.<br>
+        Une réserve doit être <b>précise</b> : quelle palette, quoi, combien. « Sous réserve de déballage » ne vaut rien : ce n'est pas une réserve.</p>` : ''}
+      ${A.consignes && !F && !ISO ? `<p class="quai-aide">Règle du quai : <b>rentre les palettes acceptées</b> en ${ech(zoneMin)}, puis <b>écris tes réserves sur le BL</b> et fais-les signer par le chauffeur.<br>
         Une réserve doit être <b>précise</b> : quelle palette, quoi, combien. « Sous réserve de déballage » ne vaut rien : ce n'est pas une réserve.</p>` : ''}
       ${A.consignes && F ? `<p class="quai-aide">Règle du quai : <b>le froid d'abord, les papiers ensuite</b>. 1) <b>Rentre le lot</b> accepté en chambre froide (le temps hors froid s'arrête). 2) <b>Écris tes réserves sur le BL</b> et fais-les signer par le chauffeur. Le chauffeur peut attendre ; les surgelés, non.<br>
         Une réserve doit être <b>précise</b> : quelle palette, quoi, combien. « Sous réserve de déballage » ne vaut rien : ce n'est pas une réserve.</p>` : ''}
@@ -1553,14 +1774,18 @@ export function creerQuai(Q, opts = {}) {
       </div>` : ''}
       ${A.chefDeQuai && k.mentionEcrite ? '<div class="quai-alerte" role="alert" data-q-chef-deballage><b>Le chef de quai :</b> « « Sous réserve de déballage », ça ne te protège de rien : ça ne dit ni quoi, ni combien, ni sur quelle palette. Ce sont tes réserves précises qui comptent. »</div>' : ''}
       <div class="quai-grille2">
-        <div class="quai-gauche"><div class="quai-doc">
+        <div class="quai-gauche">${ISO ? `<div class="quai-doc">
+          <div class="quai-doc-titre">📦 ${ech(R.zone.nom)}</div>
+          <svg class="quai-cf quai-iso" data-q-cf viewBox="200 60 640 470" role="img" aria-label="La palette en ${ech(zoneMin)}${k.signe ? ', le chauffeur est reparti' : ', le chauffeur attend'}">${defsIso()}${imageIso(fin(N), e, false, { parti: k.signe }).iso}</svg>
+          <p class="note" data-q-etatcf>${k.signe ? `Le chauffeur est reparti. ${nAcc > 1 ? `Les ${nAcc} palettes restent` : 'La palette reste'} en ${ech(zoneMin)}.` : `${toutDecide ? `${nAcc} palette${nAcc > 1 ? 's' : ''} en ${ech(zoneMin)}. ` : ''}Le chauffeur attend ta signature.`}</p>
+        </div>` : `<div class="quai-doc">
           <div class="quai-doc-titre">${F ? `🧊 ${ech(R.lieu.chambre.nom)}` : `📦 ${ech(R.zone.nom)}`}</div>
           <svg class="quai-cf" data-q-cf viewBox="0 0 640 300" role="img" aria-label="${F ? 'Le quai et l\'entrée de la chambre froide' : `Le quai et la ${ech(zoneMin)}`}">${sceneCf(e, k.rentre ? 1 : 0)}</svg>
           <p class="note" data-q-etatcf>${k.rentre ? `Lot rentré à ${hhmm(k.heureRentre ?? e.minute)} : ${nAcc} palettes en ${F ? 'chambre froide' : ech(zoneMin)}, ${N - nAcc} refusée(s) au quai.`
             : (toutDecide ? `${nAcc} palettes à rentrer${F ? ` · temps hors froid : ${fmtMin(k.froid)}` : ''}.` : 'Décide d’abord pour chaque palette.')}</p>
           <button class="btn btn-p" data-q="rentrer" ${!k.decharge || !toutDecide || k.rentre || e.fini ? 'disabled' : ''}>${F ? 'Rentrer le lot accepté en chambre froide' : `Rentrer les palettes acceptées en ${ech(zoneMin)}`} <span class="quai-cout">· ${fmtMin(C.rentrer)} de manutention</span></button>
           <p class="note">Les palettes refusées restent au quai et repartent dans le camion.</p>
-        </div>
+        </div>`}
         ${ficheTableau(e, ci)}</div>
         <div class="quai-doc">
           <div class="quai-doc-titre">✍️ Tes réserves</div>
@@ -1917,7 +2142,7 @@ export function creerQuai(Q, opts = {}) {
       // Étape ⓪ (sécurité) : tant que l'élève n'a pas commencé à décharger, ou s'il y revient pour relire.
       const etape = ouvert ? (e.etape ?? 1) || 1 : (SEC && (!secuFaite(e) || e.etape === 0) ? 0 : 1);
       const corps = etape === 0 ? ecran0(e) : etape === 1 ? ecran1(e) : etape === 2 ? `<section class="quai-carte">${scene2(e)}</section>` : etape === 3 ? ecran3(e) : ecran4(e, api);
-      const libs4 = (M ? ['① Les camions arrivent'].concat(ETAPES.slice(1)) : ETAPES.slice()).map((l, i) => (i === 3 && !F ? `④ Réserves et ${zoneMin}` : l));
+      const libs4 = ISO ? ETAPES_ISO.slice() : (M ? ['① Les camions arrivent'].concat(ETAPES.slice(1)) : ETAPES.slice()).map((l, i) => (i === 3 && !F ? `④ Réserves et ${zoneMin}` : l));
       const libs = SEC ? [ETAPE_SECU].concat(libs4) : libs4;
       const n0 = SEC ? 0 : 1;   // numéro de la première étape affichée
       const tete = M
@@ -1997,6 +2222,9 @@ export function creerQuai(Q, opts = {}) {
         api.sauver(); api.redessiner();
       }));
       on('decharger', geste((ev, b) => decharger(e, ciDe(b), api)));
+      if (ISO && z.querySelector('[data-q-arrivee]') && !arriveeVue(e)) animerArrivee(z, api);
+      on('passer1', () => { if (ui.anim1) ui.anim1.finir(); else { ui.arrivee = true; ui.rejeu1 = false; ui.t0a = null; api.redessiner(); } });
+      on('revoir1', () => { ui.rejeu1 = true; ui.t0a = null; api.redessiner(); });
       on('camion', (ev, b) => {
         const ci = ciDe(b);
         if (!K(e, ci).decharge || ci === ca(e)) return;
@@ -2075,8 +2303,8 @@ export function creerQuai(Q, opts = {}) {
         else ui.tropMotifs = true;
         api.sauver(); api.redessiner();
       }));
-      on('tourner', geste(() => {
-        const ss = s(); ss.vue = (ss.vue + 1) % 4; if (!ss.vues.includes(ss.vue)) ss.vues.push(ss.vue);
+      on('tourner', geste((ev, b) => {
+        const ss = s(); ss.vue = (ss.vue + (b && b.dataset.sens === '-1' ? 3 : 1)) % 4; if (!ss.vues.includes(ss.vue)) ss.vues.push(ss.vue);
         avancer(e, C.tourner, `${p().id} : ${VUES[ss.vue]}`); api.sauver(); api.redessiner();
       }));
       // La sonde lit la température RÉELLE (un camion qui a attendu s'est réchauffé) ; le thermomètre se
@@ -2183,6 +2411,8 @@ export function creerQuai(Q, opts = {}) {
         const cle = g.dataset.k || 'avant', ss = s();
         if (!Array.isArray(ss.etiqLues)) ss.etiqLues = ss.etiqVue ? ['avant'] : [];
         ss.etiqMontre = cle;
+        // Rendu iso : le carton cliqué (son étiquette, son état vu d'ici).
+        if (g.dataset.qCarton) ss.carton = +g.dataset.qCarton;
         if (!ss.etiqLues.includes(cle)) {
           ss.etiqLues.push(cle); ss.etiqVue = true;
           const quoi = cle === 'avant' ? '' : cle === 'arriere' ? ' (face arrière)' : ` (${cle})`;
@@ -2212,6 +2442,7 @@ export function creerQuai(Q, opts = {}) {
           api.sauver(); api.redessiner(); return;
         }
         k.signe = true; k.paroleChauffeur = '';
+        if (ISO && !k.rentre) { k.rentre = true; k.heureRentre = e.minute; }
         avancer(e, C.signer, `BL${M ? ` du ${nomCam(ca(e))}` : ''} signé par le chauffeur, réserves comprises`);
         api.sauver(); api.redessiner();
       }));

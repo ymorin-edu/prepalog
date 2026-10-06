@@ -232,3 +232,32 @@
 .quai-main{ font-family:"Segoe Print","Bradley Hand","Comic Sans MS",cursive; color:#1d3a7a }
 p.quai-main{ margin:8px 0 0; font-size:15px }
 .quai-controle .quai-tete{ align-items:center }
+
+/* Rendu 2D iso (ENT-1.1, 06/10/2026, maquette docs/briefs/spartoo/maquette-quai-spartoo-iso.html).
+   La scène est une image (sol, béton, camion gardent leurs teintes dans les deux thèmes). */
+.quai-iso{ background:#e4dfd3 }
+.quai-scene2.quai-iso svg{ max-height:470px }
+.quai-scene2.quai-iso .quai-legende{ position:static; background:rgba(20,24,30,.78) }
+.quai-cf.quai-iso{ background:#e4dfd3 }
+.quai-apres-arrivee:not([hidden]){ display:grid; gap:10px }
+.quai-scene-iso{ padding:6px 8px; background:#e4dfd3; color:#1a1915 }
+.quai-scene-iso .quai-vue-lib{ color:#3d3a33 }
+.quai-scene-iso .quai-face-vue{ border-color:#3d3a33 }
+.quai-scene-iso .quai-face-vue.vu{ background:#3d3a33 }
+.quai-scene-iso .quai-cout{ color:#555047 }
+.quai-scene-iso svg{ max-width:none }
+.quai-poste-egal .quai-scene-iso svg{ max-height:400px }
+.quai-tourner{ justify-content:center; align-items:center; flex-wrap:wrap }
+.quai-tourner .quai-vue-lib{ margin:0 }
+.quai-face-vue{ display:inline-block; width:10px; height:10px; border-radius:50%; border:1.5px solid var(--encre-douce); margin-left:3px; vertical-align:-1px }
+.quai-face-vue.vu{ background:var(--encre-douce) }
+.quai-sr{ position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap }
+.quai-bl-entete{ display:grid; grid-template-columns:auto 1fr auto 1fr; gap:2px 10px; font-size:13px; margin:2px 0 8px }
+.quai-bl-entete span{ color:var(--encre-douce) }
+.quai-papier .quai-bl-entete span{ color:#555 }
+.quai-bl-total td{ border-top:1px solid #cfc6b4 }
+.quai-etiq-carton{ font-family:Arial,sans-serif; max-width:300px }
+.quai-etiq-l1{ display:flex; justify-content:space-between; gap:10px; font-size:12px }
+.quai-etiq-dest{ font-size:12px }
+.quai-etiq-ref{ font-size:18px; font-weight:800; letter-spacing:.5px; margin:2px 0 }
+.quai-etat-carton{ font-size:13px; margin-top:6px }

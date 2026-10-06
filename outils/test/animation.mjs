@@ -86,6 +86,43 @@ await v('Animation : kit iso — couleurs de lot et textes au sol lisibles (cont
   vrai(r.nLots >= 4, 'au moins quatre couleurs de lot');
 });
 
+// Roues rondes (ENT-1.1 §7.9, 06/10/2026) : une roue = des cercles projetés par la matrice du flanc. Le chariot
+// frontal en a 4, de 7 cercles chacune (5 pour la bande de roulement, le moyeu, l'axe) : 28, écrit à la main.
+await v('Kit iso : roues rondes — le chariot frontal n’a plus de roue en boîte', async () => {
+  const r = await pg.evaluate(async () => {
+    const K = await import('/core/iso.js');
+    const I = K.projection();
+    const ch = K.dessinerChariotFrontal(I, { x: 0, y: 0, lev: 0, charge: null }, { lots: {} });
+    const roue = K.roue(I, 0, 0, .15, .15, .12);
+    return { cercles: (ch.match(/<circle r="[^"]+" transform="matrix\(/g) || []).length, polyRoue: (roue.match(/<polygon/g) || []).length,
+      cerclesRoue: (roue.match(/<circle/g) || []).length };
+  });
+  egal(r.cercles, 28, 'cercles des roues du chariot frontal');
+  egal(r.cerclesRoue, 7, 'cercles d’une roue');
+  egal(r.polyRoue, 0, 'une roue ne contient aucune face plate');
+});
+
+// La palette de cartons du quai iso (ENT-1.1) : un carton absent n'est pas dessiné ; un carton enfoncé sur sa
+// face ARRIÈRE (N) ne le montre jamais de l'avant : seulement palette tournée (la face arrière passe à droite
+// au premier quart de tour, devant au demi-tour).
+await v('Kit iso : palette de cartons — l’absent n’est pas dessiné, l’enfoncement n’apparaît que de son côté', async () => {
+  const r = await pg.evaluate(async () => {
+    const K = await import('/core/iso.js');
+    const I = K.projection({ unite: 150, origine: [470, 190] });
+    const pal = { nW: 2, nD: 2, nL: 1, cartons: [
+      { i: 0, j: 0, k: 0, no: 1, absent: true, etiq: {} }, { i: 1, j: 0, k: 0, no: 2, abime: 'N', etiq: {} },
+      { i: 0, j: 1, k: 0, no: 3, etiq: {} }, { i: 1, j: 1, k: 0, no: 4, etiq: {} }] };
+    const attrs = (c) => `data-c="${c.no}"`;
+    const vue = (rot) => K.paletteCartons(I, pal, 0, 0, rot, { attrs });
+    const n = (s, motif) => (s.match(motif) || []).length;
+    return { cartons: n(vue(0), /data-c="/g), absent: n(vue(0), /data-c="1"/g),
+      enfonce: [0, 1, 2, 3].map((rot) => n(vue(rot), /data-iso-avarie/g)) };
+  });
+  egal(r.cartons, 3, 'cartons dessinés');
+  egal(r.absent, 0, 'le carton absent n’est pas dessiné');
+  egal(r.enfonce, [0, 1, 1, 0], 'enfoncement visible selon la vue (avant, côté droit, arrière, côté gauche)');
+});
+
 await v('Animation : contenu fautif refusé au chargement (pas, place, objet, juste, type de décor)', async () => {
   const r = await pg.evaluate(async () => {
     const { creerEntreprise } = await import('/core/types/entreprise.js');
