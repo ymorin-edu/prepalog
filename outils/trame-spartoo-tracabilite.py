@@ -179,7 +179,7 @@ def questions(liste, lignes=2):
     vide.paragraph_format.line_spacing = Pt(3)
 
 
-def faits(liste, hauteur=Cm(0.9)):
+def faits(liste, hauteur=Cm(1.3)):
     """Questions de fait à une ligne : un tableau « question / ta réponse », une ligne par question
     (une question, une zone), bien plus compact que des blocs séparés — pour tenir une étape sur
     une seule page (Tristan, 02/10/2026)."""
@@ -198,9 +198,9 @@ def faits(liste, hauteur=Cm(0.9)):
         par = row.cells[0].paragraphs[0]; par.paragraph_format.space_after = Pt(0)
         par.add_run(q).font.size = Pt(10)
     for row in t.rows:
-        row.cells[0].width = Cm(10.4); row.cells[1].width = Cm(6.6)
+        row.cells[0].width = Cm(7.4); row.cells[1].width = Cm(9.6)
     t.autofit = False
-    t.columns[0].width = Cm(10.4); t.columns[1].width = Cm(6.6)
+    t.columns[0].width = Cm(7.4); t.columns[1].width = Cm(9.6)
     vide = d.add_paragraph(); vide.paragraph_format.space_after = Pt(0)
     vide.add_run('').font.size = Pt(5); vide.paragraph_format.line_spacing = Pt(3)
 
@@ -348,7 +348,7 @@ consignes([
  "Cherche ensuite un exemple réel de rappel de produit (le site RappelConso en présente beaucoup).",
  "Réponds aux questions ci-dessous avec ce que tu trouves.",
 ])
-faits(["Qu'est-ce qu'un numéro de lot ?", 'Qui attribue le numéro de lot ?'])
+questions([("Qu'est-ce qu'un numéro de lot ?", 2), ('Qui attribue le numéro de lot ?', 1)])
 questions([
  ('Que veut dire « tracer » un produit en logistique ?', 2),
 ])
@@ -490,6 +490,8 @@ questions([
 ])
 encadre_liste('Tu as terminé la séance quand :', [
  "ton compte rendu est envoyé, en réponse au message de M. Morin ;",
+ "un bandeau s'affiche en haut de l'écran : « Séance validée ✓ », ou bien le titre de ce qui reste à corriger "
+ "(dans ce cas, appelle ton professeur) ;",
  "toutes les questions de ce carnet ont une réponse.",
 ])
 reflechir([

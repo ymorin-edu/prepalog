@@ -6,7 +6,7 @@
 > **Trame d'ENT-1.1 RELUE ET VALIDÉE par Tristan le 06/10/2026 (soir)** (règle 6 : elle peut rester déclarée).
 > **Trame d'ENT-1.2 validée par Tristan le 06/10 (soir)** : rappel console à l'étape 3, cases de réponse agrandies, étape 2
 > sur deux pages (13 pages). **Trame d'ENT-1.3** : cases agrandies, définitions de l'étape 1 en blocs de réponse, bandeau de
-> fin de séance cité à l'étape 7 (10 pages) — **en relecture** par Tristan ; son `.docx/.pdf` et `ENT-1.3.js` sont donc à commiter aussi,
+> fin de séance cité à l'étape 7 (10 pages) — **validée par Tristan le 06/10 (soir)** ; son `.docx/.pdf` et `ENT-1.3.js` sont donc à commiter aussi,
 > avec `outils/trame-spartoo-tracabilite.py`.
 
 ## Fichiers écrits dans le dépôt (garde sur la date de modification)
@@ -74,5 +74,5 @@ Cowork a vu le fichier en cours de modification (06/10, ~19 h) : à recaler **ap
 
 ## Phrase pour Claude Code
 
-« Lis `docs/briefs/COWORK-trames-spartoo-refonte-1.1.md` : la trame d'ENT-1.1 est validée. Recale `outils/test-seances.mjs`
+« Lis `docs/briefs/COWORK-trames-spartoo-refonte-1.1.md` : les trames d'ENT-1.1, 1.2 et 1.3 sont validées. Recale `outils/test-seances.mjs`
 sur les nouveaux corrigés, lance les tests, puis commite et pousse les fichiers listés avec la refonte d'ENT-1.1. »
