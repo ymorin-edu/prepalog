@@ -990,11 +990,16 @@ await v('ENT-5.1 : déclaration (code, 2de, AGO-3.1, 9 jalons, livrée fermée a
 await v('ENT-5.1 : les attendus calculés sont ceux du brief (tableau, Yanis, CDD) et un seul candidat coche tout', async () => {
   const r = await pg.evaluate(async () => {
     const S = await import('/contenus/smoby-ent51.js');
+    const C = await import('/contenus/corriges/ENT-5.1.js');
     return { tri: S.TRI_ATTENDU, retenu: S.RETENU.id, contrat: S.POSTE.contrat,
-      complets: Object.entries(S.TRI_ATTENDU).filter(([, l]) => l.caces && l.dispo && l.cdd).map(([id]) => id) };
+      complets: Object.entries(S.TRI_ATTENDU).filter(([, l]) => l.caces && l.dispo && l.cdd).map(([id]) => id),
+      items: C.CORRIGE.items.filter((it) => !/\(trame\)$/.test(String(it.etape))).length,
+      trame: C.CORRIGE.items.filter((it) => /\(trame\)$/.test(String(it.etape))).length };
   });
   egal(r.tri, TRI51, 'tableau attendu');
   egal([r.retenu, r.contrat, r.complets], ['yanis', 'CDD', ['yanis']], 'choix attendu');
+  // Le corrigé de la trame (41 questions, déclarée le 06/10/2026) s'ajoute après les 3 calculés.
+  egal([r.items, r.trame], [3, 41], 'corrigé (écran, trame)');
 });
 
 await v('ENT-5.1 : à l’ouverture, un seul message (6 pièces jointes, la fiche), aucun jalon vrai : l’inaction vaut 0', async () => {

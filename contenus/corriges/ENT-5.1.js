@@ -4,6 +4,12 @@
 // attendu, le candidat retenu, le contrat et le message juste. Rien n'est recopié.
 
 import { CANDIDATS, COLONNES, TRI_ATTENDU, RETENU, POSTE, PHRASES } from '../smoby-ent51.js';
+import { CORRIGE as TRAME } from './ENT-5.1-trame.js';
+
+// Le corrigé de la trame élève (généré, relue par Tristan le 06/10/2026), après celui calculé
+// depuis la séance. Ses étapes sont celles de la trame : marquées « (trame) », sinon l'onglet
+// Corrigés, qui regroupe par numéro d'étape, les mêlerait aux étapes de l'écran (mêmes numéros).
+const DE_LA_TRAME = TRAME.items.map((it) => ({ ...it, etape: `${it.etape} (trame)` }));
 
 const ouiNon = (b) => (b ? 'oui' : 'non');
 const pourquoi = {
@@ -18,6 +24,7 @@ const juste = (l) => { const c = typeof l.choix === 'function' ? l.choix({}) : l
 export const CORRIGE = {
   code: 'ENT-5.1',
   titre: 'Smoby — recruter le cariste de Noël',
+  trame: TRAME.trame,
   items: [
     { etape: 1, etapeTitre: 'Fiche de sélection', genre: 'tableau', texte: 'Le tableau de tri',
       contexte: `Prise de poste le 9/12/2026 ; CACES ${POSTE.caces} exigé, valable ${POSTE.validiteAns} ans ; contrat ${POSTE.contrat} saisonnier.`,
@@ -30,5 +37,6 @@ export const CORRIGE = {
       rep: PHRASES.lignes.map(juste).join(' '),
       note: 'Jalon 8 : la ligne « raison » ; jalon 9 : la salutation et la formule de fin. Les lignes « choix » et « contrat » '
         + 'ne sont pas notées (déjà jugées dans la fiche). Le dernier envoi compte.' },
+    ...DE_LA_TRAME,
   ],
 };

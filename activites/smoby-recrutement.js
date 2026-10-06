@@ -6,7 +6,8 @@
 // choisir. Données dans `contenus/smoby-ent51.js`, univers commun dans `contenus/smoby.js`.
 //
 // Pas de `notation` : neuf jalons ramenés sur 20. Une base par séance (pas de `jeuId`).
-// Pas encore de trame élève : Cowork l'écrit après la validation à l'écran (brief §9).
+// Trame élève (format long, 6 étapes, brief `docs/briefs/COWORK-trame-smoby-5.1.md`, relue par Tristan le 06/10/2026) ;
+// son corrigé s'ajoute au corrigé calculé (`meta.corrige`).
 
 import { creerEntreprise } from '../core/types/entreprise.js';
 import * as SMOBY from '../contenus/smoby.js';
@@ -58,7 +59,10 @@ const moteur = creerEntreprise({
   documents: SEANCE.DOCUMENTS,
   documentsStyle: SEANCE.STYLE_DOCUMENTS,
   fiche: SEANCE.FICHE,
-  sansTrame: "Tout à l'écran",
+  trame: {
+    pdf: './contenus/trames/ENT-5.1-smoby-recrutement-trame-eleve.pdf',
+    docx: './contenus/trames/ENT-5.1-smoby-recrutement-trame-eleve.docx',
+  },
 });
 
 export function rendre(hote, ctx) { moteur.rendre(hote, ctx); }
