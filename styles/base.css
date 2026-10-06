@@ -917,6 +917,10 @@ table.ent-tri tbody th{ text-align:left; font-weight:400; text-transform:none; l
 fieldset[disabled] .ent-ouinon button{ cursor:default }
 .ent-radios{ display:flex; flex-wrap:wrap; gap:6px 18px }
 .ent-radios label{ display:inline-flex; align-items:center; gap:6px; cursor:pointer; font-weight:400 }
+/* Réponses longues (QCM d'ENT-1.1) : l'une sous l'autre, le texte sur toute la largeur. */
+.ent-radios.ent-radios-colonne{ flex-direction:column; gap:6px }
+.ent-radios-colonne label{ display:flex; align-items:flex-start; width:auto }
+.ent-radios-colonne input{ width:auto; margin-top:3px; flex:none }
 /* Charte rouge ou verte (Smoby, Spartoo, Boost) : sa couleur reste au bandeau et au menu ; dans la zone de
    travail, l'accent devient l'encre du texte (décision de Tristan, 05/10/2026 ; classes posées par entreprise.js).
    Texte et aplats jugés à part : les aplats bleus de Boost (« le client ») restent. */

@@ -23,6 +23,13 @@ export function seancesDepuis(metas, m) {
   return seancesDuParcours(metas, m).filter((x) => comparer(x, m) >= 0);
 }
 
+// La VERSION DE BASE d'un parcours (refonte d'ENT-1.1, 06/10/2026) : la plus haute `versionBase` déclarée par
+// ses séances, ou 0. Une base d'une version antérieure repart de zéro à sa prochaine ouverture (core/app.js) ;
+// d'ici là, les séances suivantes sont fermées (sa photo de fin de séance est périmée).
+export function versionDuParcours(metas, m) {
+  return Math.max(0, ...seancesDuParcours(metas, m).map((x) => Number(x.versionBase) || 0));
+}
+
 // La base privée de l'élève, ou {} : Firestore et la démonstration la rendent différemment.
 export async function baseDe(uid, jeuId) {
   const s = await B.lireJeuPrive(uid, jeuId);
@@ -36,6 +43,11 @@ export async function verrou(metas, m, profil, gid) {
   if (!m.parcours || !m.precedente || profil.role !== 'eleve' || !gid) return null;
   const prec = metas.find((x) => x.id === m.precedente);
   const base = await baseDe(profil.uid, m.jeuId || m.id);
+  const V = versionDuParcours(metas, m);
+  if (V && base.v && base.versionBase !== V) {
+    const premiere = seancesDuParcours(metas, m)[0];
+    return `Cette entreprise a changé : recommence par ${premiere ? premiere.code : 'la première séance'}.`;
+  }
   if (base.points && base.points[m.precedente]) return null;
   try {
     const f = await B.lireScore(gid, profil.uid, '_debloque-' + m.id);

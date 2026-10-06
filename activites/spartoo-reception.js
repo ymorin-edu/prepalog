@@ -19,7 +19,7 @@ export const meta = {
   id: 'spartoo-reception',
   code: 'ENT-1.1',
   titre: 'Spartoo — réception',
-  desc: "Contrôle d'une livraison fournisseur, réserves et entrée en stock avec numéro de lot.",
+  desc: "Contrôle d'une livraison fournisseur, réserves et entrée en stock avec numéro de lot, du quai à l'entrée en stock.",
   rubrique: 'simulog',
   // Compétences et temps pédagogique : voir core/competences.js (validé par Tristan, 02/10/2026).
   competences: ['C1.4'],
@@ -34,8 +34,11 @@ export const meta = {
   // La base est celle de Spartoo, partagée avec les autres séances de l'entreprise. Le score,
   // lui, reste enregistré sur cette activité : le suivi de classe garde une ligne par séance.
   jeuId: 'spartoo',
-  // Début du parcours : jamais verrouillée ; sa validation (3/3) ouvre ENT-1.2 (voir core/parcours.js).
+  // Début du parcours : jamais verrouillée ; sa validation (8/8) ouvre ENT-1.2 (voir core/parcours.js).
   parcours: true,
+  // Refonte du 06/10/2026 (brief ENT-1.1-spartoo-quai §7.4, décision de Tristan) : toute base Spartoo d'une
+  // version antérieure repart de zéro à sa prochaine ouverture, scores 1.1 à 1.3 effacés (core/app.js).
+  versionBase: 2,
   tables: {},
   pret: true,
   // Corrigé des QCM d'éco-droit de la trame : affiché dans l'onglet « Corrigés » de l'espace
@@ -44,8 +47,9 @@ export const meta = {
 };
 
 const moteur = creerEntreprise({
-  // Les écrans de données du menu (05/10/2026) : ceux dont la séance se sert, et au moindre doute on les garde.
-  menu: ['receptions', 'stock', 'fournisseurs', 'console'],
+  // Les écrans de données du menu (05/10/2026) : ceux dont la séance se sert. Plus de Stock (décision de
+  // Tristan, 06/10 : il demandait un code, impasse pour l'élève) : on vérifie à la console.
+  menu: ['receptions', 'fournisseurs', 'console'],
   ENTREPRISE: SPARTOO.ENTREPRISE,
   VOCAB: SPARTOO.VOCAB,
   CATALOGUE: SPARTOO.CATALOGUE,
@@ -60,6 +64,10 @@ const moteur = creerEntreprise({
   volet: SEANCE.VOLET,
   etapes: SEANCE.ETAPES,
   THEME: SPARTOO.THEME,
+  quai: SEANCE.QUAI,
+  documents: SEANCE.DOCUMENTS,
+  fiche: SEANCE.FICHE,
+  fermetures: SEANCE.FERMETURES,
   trame: {
     pdf: './contenus/trames/ENT-1.1-spartoo-reception-trame-eleve.pdf',
     docx: './contenus/trames/ENT-1.1-spartoo-reception-trame-eleve.docx',

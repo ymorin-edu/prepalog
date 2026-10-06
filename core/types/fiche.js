@@ -43,6 +43,7 @@
 //
 // Blocs : `ouinon`, `liste`, `choix`, `encadre` (lot 2, ENT-5.1) ; `cases` et `ordre` (lot 4, 05/10/2026,
 // ENT-5.2) ; `texte`, `nombre`, `date`, `heure` et `cadre` (lot 4, 05/10/2026, ENT-5.8).
+//   - `choix` avec `colonne: true` (ENT-1.1, 06/10/2026) : les réponses l'une sous l'autre (réponses longues d'un QCM).
 //   - `cases` : une case à cocher par choix. Aucune case cochée est une réponse (rien ne « manque ») : c'est
 //     à la séance de ne pas récompenser l'inaction (un jalon « rien de trop » exige au moins une case).
 //   - `ordre` : les choix s'affichent dans l'ordre DÉCLARÉ, qui est l'ordre de départ ; le contenu le
@@ -153,7 +154,7 @@ export function creerFiche(F, VDOC) {
     }
     if (b.type === 'choix') {
       return `${titre}${consigne}<div class="champ"><span class="ent-fiche-lib" id="fl-${ech(b.id)}">${ech(b.lib || '')}</span>
-        <div class="ent-radios" role="radiogroup" aria-labelledby="fl-${ech(b.id)}">
+        <div class="ent-radios${b.colonne ? ' ent-radios-colonne' : ''}" role="radiogroup" aria-labelledby="fl-${ech(b.id)}">
           ${options(b.choix).map((o) => `<label><input type="radio" name="fi-${ech(b.id)}" value="${ech(o.v)}" data-fiche-champ="${ech(b.id)}"${
             v[b.id] === o.v ? ' checked' : ''}> ${ech(o.lib)}</label>`).join('')}
         </div></div>`;

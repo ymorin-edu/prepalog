@@ -994,7 +994,7 @@ export function creerEntreprise(U) {
         // Ce qui survit à la remise à zéro : les photos de fin de séance (la validation reste
         // acquise) et la reprise demandée par l'enseignant (voir core/app.js), qui sans cela
         // serait rejouée à la prochaine ouverture et effacerait le travail refait depuis.
-        const reprise = db.reprise, points = db.points, indicateurs = db.indicateurs, menuReplie = db.menuReplie;
+        const reprise = db.reprise, points = db.points, indicateurs = db.indicateurs, menuReplie = db.menuReplie, versionBase = db.versionBase;
         const photo = ctx.meta.precedente && points && points[ctx.meta.precedente];
         Object.keys(db).forEach((k) => delete db[k]);
         if (photo) {
@@ -1011,6 +1011,8 @@ export function creerEntreprise(U) {
         }
         if (reprise) db.reprise = reprise;
         if (points) db.points = points;
+        // La version de la base (core/parcours.js) : la perdre ferait tout effacer à la prochaine ouverture.
+        if (versionBase) db.versionBase = versionBase;
         // Le repérage n'est pas du travail : repartir de zéro n'efface ni le temps ni les aides ouvertes.
         if (indicateurs) db.indicateurs = indicateurs;
         // Le menu replié est un réglage d'écran, pas du travail.

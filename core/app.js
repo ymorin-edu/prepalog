@@ -7,7 +7,7 @@ import { activiteVisible, raisonCachee, courtNiveau, libelleNiveaux, demiDe } fr
 import { chargerActivites, activite, RUBRIQUES, ICONES, activitesDeRubrique, entreprisesDe, intentionDe } from '../activites/index.js';
 import { ouvrirJeu } from './store.js';
 import { rendreEspaceProf } from './prof.js';
-import { verrou, seancesDepuis, seancesDuParcours } from './parcours.js';
+import { verrou, seancesDepuis, seancesDuParcours, versionDuParcours } from './parcours.js';
 import { amenagements } from './amenagements.js';
 
 const app = document.getElementById('app');
@@ -393,6 +393,33 @@ async function vueActivite(aid, avant) {
     demi: demiDe(objGroupe, profil.uid),
   });
 
+  // VERSION DE BASE (refonte d'ENT-1.1, 06/10/2026, brief ENT-1.1-spartoo-quai §7.4, décision de Tristan :
+  // « quelle que soit l'avancée, on repart à 0 »). Une base d'une version antérieure du parcours (`versionBase`
+  // des séances, voir core/parcours.js) est remise À NEUF à son ouverture, une seule fois : tout part, photos
+  // de fin de séance comprises ; les scores du parcours et les déblocages manuels des séances suivantes sont
+  // effacés du suivi (l'élève en a le droit sur ses propres résultats). Aucun geste de l'enseignant. Une base
+  // neuve reçoit simplement le numéro.
+  if (m.meta.portee === 'eleve' && (m.meta.parcours || m.meta.immersif)) {
+    try {
+      const metas = (await chargerActivites()).map((x) => x.meta);
+      const V = versionDuParcours(metas, m.meta);
+      const base = jeuOuvert.etat();
+      if (V && base.versionBase !== V) {
+        const ancienne = !!base.v;
+        if (ancienne) Object.keys(base).forEach((k) => delete base[k]);
+        base.versionBase = V;
+        jeuOuvert.sauver();
+        if (ancienne && profil.role === 'eleve' && groupeActif) {
+          for (const x of seancesDuParcours(metas, m.meta)) {
+            await B.poserNote(groupeActif, profil.uid, x.id, null).catch(() => {});
+            if (x.precedente) await B.poserNote(groupeActif, profil.uid, '_debloque-' + x.id, null).catch(() => {});
+          }
+        }
+        if (ancienne) toast('Cette séance a été refaite : ton travail repart de zéro.');
+      }
+    } catch (e) { /* une version illisible ne doit jamais empêcher d'ouvrir la séance */ }
+  }
+
   // Reprise demandée par l'enseignant pour un élève bloqué (espace enseignant > Suivi).
   //
   // L'enseignant n'a pas le droit d'écrire dans la base privée d'un élève (règles Firestore :
@@ -418,12 +445,14 @@ async function vueActivite(aid, avant) {
         const { x, rep } = derniere;
         const photo = x.precedente && base.points && base.points[x.precedente];
         const aDefaire = new Set(seancesDepuis(metas, x).map((y) => y.id));
+        const versionBase = base.versionBase;
         const gardees = {};
         Object.keys(base.points || {}).forEach((k) => { if (!aDefaire.has(k)) gardees[k] = base.points[k]; });
         Object.keys(base).forEach((k) => delete base[k]);
         if (photo) Object.assign(base, JSON.parse(JSON.stringify(photo)));
         else Object.keys(m.meta.tables || {}).forEach((t) => { base[t] = []; });
         if (Object.keys(gardees).length) base.points = gardees;
+        if (versionBase) base.versionBase = versionBase;
         base.reprise = rep.dateMaj;
         jeuOuvert.sauver();
         toast('Ton enseignant a remis ton travail au début de la séance.');

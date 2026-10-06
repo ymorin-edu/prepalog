@@ -299,22 +299,100 @@ await v('Spartoo réception : la séance s\'ajoute à la base de l\'élève', as
   if (!/Stock\s*7\b/.test(await page.textContent('.ent-cout'))) throw new Error('la préparation de la séance précédente a été perdue');
 });
 
-// ---------- 32. la réception de bout en bout : contrôle, écart, entrée en stock
-await v('Spartoo réception : trois jalons au vert', async () => {
-  // Le bon de livraison est dans la messagerie ; la réception s'ouvre depuis le message.
-  await ouvrirMail('Bon de livraison');
-  await page.waitForSelector('[data-ouvrir-rec]');
-  if (!/LOT-PM-2609/.test(await page.textContent('.ent-lecteur'))) throw new Error('le numéro de lot n\'est pas sur le bon de livraison');
-  await page.click('[data-ouvrir-rec]');
-  await page.waitForSelector('#recLot');
-  if (!/Le bon de livraison est dans votre messagerie/.test(await page.textContent('.ent-main .avis'))) throw new Error("l'encadré ne renvoie plus à la messagerie");
+// ---------- 31 bis. le quai en 2D iso (ENT-1.1, brief §7.8, 06/10/2026)
+// Le camion recule, puis seulement le chauffeur remet le BL (lot dessus) ; la palette mixte : 11 cartons sur 12
+// (le n° 9 manque, au fond de la couche du haut) ; le carton n° 6 est enfoncé sur la face ARRIÈRE (invisible de
+// l'avant) ; à ④ rien à « rentrer », la palette reste en zone de réception une fois le BL signé. Les nombres
+// attendus sont écrits à la main.
+// Le questionnaire de la procédure (§6.3 bis) : le quai est fermé à l'élève tant qu'il n'est pas envoyé, et
+// s'ouvre à l'envoi même avec des réponses fausses (le jalon 0 le dira). Ici : une réponse fausse (q4).
+await v('Spartoo réception : quai fermé jusqu’à l’envoi du questionnaire, même faux', async () => {
+  if (await page.$('[data-vue="quai"]')) throw new Error('le quai est ouvert avant le questionnaire');
+  if (!/questionnaire/.test(await page.textContent('[data-vue-fermee="quai"]'))) throw new Error('l’entrée du quai ne dit pas pourquoi elle est fermée');
+  await ouvrirMail('Procédure de réception');
+  await page.click('.ent-lecteur [data-vue2="fiche"]');
+  await page.waitForSelector('[data-fiche-envoyer]');
+  const R = { q1: 'après avoir compté', q2: 'acceptée sous réserve', q3: 'accepté sous réserve', q4: 'le carton est sale',
+    q5: 'retrouver d’où vient une paire et chez qui elle est partie' };
+  for (const [q, val] of Object.entries(R)) await page.check(`input[name="fi-${q}"][value="${val}"]`);
+  await page.click('[data-fiche-envoyer]');
+  await page.waitForSelector('[data-fiche-envoyee]');
+  await page.waitForSelector('[data-vue="quai"]');
+  // Le jalon 0, lu sur la base telle que l'écran la tient (même lecture que le suivi).
+  await page.waitForTimeout(800);
+  const st = await page.evaluate(async () => {
+    const S = await import('/contenus/spartoo-reception.js');
+    const { baseDe } = await import('/core/parcours.js');
+    let uid = localStorage.getItem('prepalog:session'); try { uid = JSON.parse(uid); } catch (e) { /* chaîne */ }
+    return S.ETAPES[0].verifier(await baseDe(uid, 'spartoo'));
+  });
+  if (st.status !== 'ko' || !/4/.test(st.detail || '')) throw new Error('jalon 0 attendu faux sur la question 4 : ' + JSON.stringify(st));
+});
 
-  // Ce que l'élève doit trouver : 12 conformes, 6 au lieu de 8, 6 dans un carton abîmé.
+await v('Spartoo réception : quai en 2D iso — BL remis, palette qu’on fait tourner, réserves, signature', async () => {
+  await page.click('[data-vue="quai"]');
+  await page.waitForSelector('[data-q-arrivee]');
+  if (!(await page.$('[data-q-apres-arrivee][hidden]'))) throw new Error('le BL est donné avant que le camion soit à quai');
+  await page.click('[data-q="passer1"]');
+  await page.waitForSelector('[data-q-apres-arrivee]:not([hidden])');
+  if (!(await page.$('[data-iso-bulle]'))) throw new Error('le chauffeur ne parle pas');
+  if ((await page.textContent('[data-q-bl-lot]')).trim() !== 'LOT-PM-2609') throw new Error('le lot n’est pas sur le BL remis');
+  await page.click('[data-q="decharger"]');
+  await page.click('[data-q="passer"]');
+  await page.waitForSelector('[data-q="vers3"]:not([disabled])');
+  await page.click('[data-q="vers3"]');
+  await page.waitForSelector('[data-q-palette] [data-q-carton]');
+  const cartons = await page.$$eval('[data-q-palette] [data-q-carton]', (L) => L.map((g) => +g.dataset.qCarton).sort((a, b) => a - b));
+  if (JSON.stringify(cartons) !== JSON.stringify([1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12])) throw new Error('cartons dessinés : ' + cartons);
+  const enfonce = () => page.$$eval('[data-q-palette] [data-iso-avarie]', (L) => L.length);
+  if (await enfonce()) throw new Error('l’enfoncement se voit de l’avant');
+  const clicCarton = async (n) => { await page.$eval(`[data-q-carton="${n}"]`, (g) => g.dispatchEvent(new MouseEvent('click', { bubbles: true }))); await page.waitForSelector(`[data-q-carton-vu="${n}"]`); };
+  await clicCarton(6);
+  if (!/intact/.test(await page.textContent('[data-q-etat-carton]'))) throw new Error('de l’avant, le carton 6 devrait paraître intact');
+  await page.click('[data-q="tourner"]:not([data-sens])'); await page.click('[data-q="tourner"]:not([data-sens])');
+  if ((await enfonce()) !== 1) throw new Error('l’enfoncement ne se voit pas de l’arrière');
+  if (!/enfoncé/.test(await page.textContent('[data-q-etat-carton]'))) throw new Error('de l’arrière, le carton 6 devrait paraître enfoncé');
+  if (!/Carton 6 \/ 12/.test(await page.textContent('[data-q-etiquette]'))) throw new Error('le n° du carton n’est pas sur son étiquette');
+  await page.click('[data-q="tourner"][data-sens="-1"]'); await page.click('[data-q="tourner"][data-sens="-1"]');
+  if (await enfonce()) throw new Error('« ⟲ Tourner » ne ramène pas à l’avant');
+  for (const [ref, n] of [['PM-SUE-RG-39', 4], ['PM-RSX-BL-42', 4], ['PM-SUE-MA-41', 3]]) {
+    await page.fill(`[data-q-compte-ref="${ref}"]`, String(n)); await page.press(`[data-q-compte-ref="${ref}"]`, 'Enter');
+  }
+  await page.click('#qDec-reserves'); await page.click('#qMot-avarie'); await page.click('#qMot-manquant');
+  await page.click('[data-q="valider"]');
+  await page.click('[data-q="vers4"]'); await page.click('[data-q="vers4"]');
+  await page.waitForSelector('#qRes-P1');
+  if (await page.$('[data-q="rentrer"]')) throw new Error('rendu iso : la palette est déjà en zone de réception, rien à rentrer');
+  await page.fill('#qRes-P1', '1'); await page.fill('#qRes2-P1', '1');
+  await page.click('[data-q="ecrire"]');
+  await page.click('[data-q="signer"]');
+  await page.waitForSelector('[data-q="clore"]:not([disabled])');
+  await page.click('[data-q="clore"]');
+  await page.waitForSelector('[data-q-bilan]');
+  const faux = await page.$$eval('[data-q-bilan] tr[data-jalon]', (L) => L.filter((t) => !/✓/.test(t.lastElementChild.textContent)).map((t) => t.dataset.jalon));
+  if (faux.length) throw new Error('jalons du quai faux : ' + faux.join(', '));
+  if (!/reparti/.test(await page.textContent('[data-q-etatcf]'))) throw new Error('le chauffeur ne repart pas une fois le BL signé');
+});
+
+// ---------- 32. la réception dans le logiciel : retrouver la sienne par son BL, saisir en paires
+// La liste a 10 réceptions (REC-04118 réservée à ENT-1.3 n'y est pas) ; plus de tableau des colis ; le bon en
+// paires (cartons × 6), valeurs écrites à la main : 24/24 conforme, 24/24 endommagé, 24/18 ; 66 au lot.
+await v('Spartoo réception : retrouver REC-04127 par son BL, saisir en paires, 66 au lot', async () => {
+  await page.click('[data-vue="receptions"]');
+  await page.waitForSelector('.ent-main tbody tr');
+  const nos = await page.$$eval('.ent-main tbody tr td:first-child', (L) => L.map((t) => t.textContent.trim()));
+  if (nos.length !== 10) throw new Error(`${nos.length} réceptions au lieu de 10 : ${nos.join(', ')}`);
+  if (nos.includes('REC-04118')) throw new Error('REC-04118 (réception du collègue, ENT-1.3) est dans la liste');
+  if (await page.$('[data-ouvrir-rec="REC-04131"]')) throw new Error('la réception annoncée s’ouvre');
+  await page.click('[data-ouvrir-rec="REC-04127"]');
+  await page.waitForSelector('#recLot');
+  if (/Colis reçus sur le quai/.test(await page.textContent('.ent-main'))) throw new Error('le tableau des colis est encore là');
+  if (!(await page.$('[data-rec-sans-colis]'))) throw new Error('l’encadré « comptés au quai » manque');
   await page.fill('#recLot', 'LOT-PM-2609');
   const attendu = {
-    'PM-SUE-RG-39': { annonce: 12, compte: 12, etat: 'ok', decision: 'accepte' },
-    'PM-SUE-MA-41': { annonce: 8, compte: 6, etat: 'ok', decision: 'reserve' },
-    'PM-RSX-BL-42': { annonce: 6, compte: 6, etat: 'abime', decision: 'reserve' },
+    'PM-SUE-RG-39': { annonce: 24, compte: 24, etat: 'ok', decision: 'accepte' },
+    'PM-RSX-BL-42': { annonce: 24, compte: 24, etat: 'abime', decision: 'reserve' },
+    'PM-SUE-MA-41': { annonce: 24, compte: 18, etat: 'ok', decision: 'reserve' },
   };
   for (const [sku, a] of Object.entries(attendu)) {
     await page.fill(`[data-rec="annonce"][data-sku="${sku}"]`, String(a.annonce));
@@ -326,29 +404,26 @@ await v('Spartoo réception : trois jalons au vert', async () => {
   await page.click('[data-valider-rec]');
   await page.waitForTimeout(500);
   if (!/Réception validée/.test(await page.textContent('.ent-main'))) throw new Error('réception non validée');
-
-  // Le lot est entré en stock, et il se remonte d'un bout à l'autre.
   await page.click('[data-vue="console"]');
   await page.fill('#champCmd', '.getlot LOT-PM-2609');
   await page.press('#champCmd', 'Enter');
   await page.waitForTimeout(400);
   const t = await page.textContent('.ent-cout');
-  if (!/Entrées\s*24\b/.test(t)) throw new Error('24 paires attendues au lot, lu : ' + (t.match(/Entrées\s*\d+/) || ['?'])[0]);
+  if (!/Entrées\s*66\b/.test(t)) throw new Error('66 paires attendues au lot, lu : ' + (t.match(/Entrées\s*\d+/) || ['?'])[0]);
   if (!/Puma/.test(t)) throw new Error('le fournisseur du lot n\'est pas retrouvé');
-
-  // Les réserves partent chez le fournisseur.
+  // Les réserves au fournisseur : le manquant écrit en CARTONS (« 1 carton ») est accepté comme « 6 » paires.
   await page.click('[data-vue="mail"]');
   await page.waitForSelector('[data-nouveau]');
   await page.click('[data-nouveau]');
   await page.waitForSelector('#mTo');
   await page.selectOption('#mTo', 'F003');
   await page.fill('#mObj', 'Réserves sur le lot LOT-PM-2609');
-  await page.fill('#mTxt', 'Bonjour,\n\nRéserves sur la livraison BL-77421, lot LOT-PM-2609 :\n- PM-SUE-MA-41 : il manque 2 paires sur les 8 annoncées\n- PM-RSX-BL-42 : carton endommagé à la livraison\n\nCordialement');
+  await page.fill('#mTxt', 'Bonjour,\n\nRéserves sur la livraison BL-77421, lot LOT-PM-2609 :\n- PM-SUE-MA-41 : il manque 1 carton\n- PM-RSX-BL-42 : 1 carton endommagé\n\nCordialement');
   await page.click('[data-envoyer-fou]');
   await page.waitForTimeout(600);
 });
 
-// ---------- 33. l'avancement de la réception remonte, à côté de celui de la préparation
+// ---------- 33. l'avancement de la réception remonte : 7 justes sur 8 (la question 4 du questionnaire)
 await v('Spartoo réception : avancement remonté au suivi', async () => {
   await page.click('[data-quitter]');
   await page.waitForSelector('#btnDeco', { timeout: 6000 });
@@ -360,9 +435,8 @@ await v('Spartoo réception : avancement remonté au suivi', async () => {
   await page.click('[data-ong="suivi"]');
   await page.waitForSelector('text=ENT-1.2', { timeout: 6000 });
   const t = await page.textContent('#contenuProf');
-  // Deux séances, deux avancements distincts : c'est tout l'intérêt d'une activité par séance.
-  const av = (t.match(/3\/3/g) || []).length;
-  if (av < 2) throw new Error('deux avancements 3/3 attendus (réception et préparation), lu : ' + av);
+  if (!/7\/8/.test(t)) throw new Error('avancement 7/8 attendu pour ENT-1.1 (questionnaire faux sur la question 4), lu : ' + (t.match(/\d\/8/g) || ['rien']).join(' '));
+  if (!/3\/3/.test(t)) throw new Error('l’avancement 3/3 de la préparation a disparu');
 });
 
 // ---------- 34. la traçabilité : l'aval est semé, le lot se remonte dans les deux sens
@@ -397,9 +471,9 @@ await v('Spartoo traçabilité : l\'aval est semé et le lot se remonte', async 
   await page.press('#champCmd', 'Enter');
   await page.waitForTimeout(400);
   const t = await page.textContent('.ent-cout');
-  if (!/Entrées\s*24\b/.test(t)) throw new Error('24 paires attendues au lot, lu : ' + (t.match(/Entrées\s*\d+/) || ['?'])[0]);
+  if (!/Entrées\s*66\b/.test(t)) throw new Error('66 paires attendues au lot, lu : ' + (t.match(/Entrées\s*\d+/) || ['?'])[0]);
   if (!/Sorties\s*6\b/.test(t)) throw new Error('6 paires sorties attendues, lu : ' + (t.match(/Sorties\s*\d+/) || ['?'])[0]);
-  if (!/Reste en stock\s*18\b/.test(t)) throw new Error('18 paires attendues en reste, lu : ' + (t.match(/Reste en stock\s*\d+/) || ['?'])[0]);
+  if (!/Reste en stock\s*60\b/.test(t)) throw new Error('60 paires attendues en reste, lu : ' + (t.match(/Reste en stock\s*\d+/) || ['?'])[0]);
   for (const no of ['CMD-048301', 'CMD-048307', 'CMD-048312']) {
     if (!t.includes(no)) throw new Error('commande absente de la remontée du lot : ' + no);
   }
@@ -420,7 +494,7 @@ await v('Blocage qualité : le lot seul est touché, sans réponse soufflée', a
   await page.press('#champCmd', 'Enter');
   await page.waitForTimeout(300);
   const avant = Number((await page.textContent('.ent-cout')).match(/Stock\s*(\d+)/g).pop().match(/\d+/)[0]);
-  if (avant !== 26) throw new Error('stock de départ attendu 26 (17 + 12 reçues − 3 vendues), lu : ' + avant);
+  if (avant !== 38) throw new Error('stock de départ attendu 38 (17 + 24 reçues − 3 vendues), lu : ' + avant);
 
   // Une quantité trop grande est refusée, et le message ne dit pas combien il en reste.
   await page.click('[data-vue="blocage"]');
@@ -433,12 +507,12 @@ await v('Blocage qualité : le lot seul est touché, sans réponse soufflée', a
   await page.waitForTimeout(300);
   const err = await page.textContent('.ent-main');
   if (!/ne contient pas autant/.test(err)) throw new Error('une quantité supérieure au lot a été acceptée');
-  if (/\b9\b/.test(err.split('Blocages enregistrés')[0].replace(/LOT-PM-2609|PM-SUE-RG-39|99/g, ''))) {
+  if (/\b21\b/.test(err.split('Blocages enregistrés')[0].replace(/LOT-PM-2609|PM-SUE-RG-39|99/g, ''))) {
     throw new Error('le message d\'erreur souffle la quantité restante');
   }
 
-  // Le bon compte : 9 paires de ce lot, et pas une de plus.
-  await page.fill('#blQte', '9');
+  // Le bon compte : 21 paires de ce lot (24 reçues − 3 vendues), et pas une de plus.
+  await page.fill('#blQte', '21');
   await page.click('#formBloc button[type=submit]');
   await page.waitForTimeout(400);
   await page.click('[data-vue="console"]');
@@ -446,19 +520,19 @@ await v('Blocage qualité : le lot seul est touché, sans réponse soufflée', a
   await page.press('#champCmd', 'Enter');
   await page.waitForTimeout(300);
   const apres = Number((await page.textContent('.ent-cout')).match(/Stock\s*(\d+)/g).pop().match(/\d+/)[0]);
-  if (apres !== 17) throw new Error('stock attendu 17 après blocage des 9 paires du lot, lu : ' + apres);
+  if (apres !== 17) throw new Error('stock attendu 17 après blocage des 21 paires du lot, lu : ' + apres);
   await page.fill('#champCmd', '.getlot LOT-PM-2609');
   await page.press('#champCmd', 'Enter');
   await page.waitForTimeout(400);
-  if (!/Reste en stock\s*9\b/.test(await page.textContent('.ent-cout'))) throw new Error('le reste du lot n\'est pas tombé à 9');
+  if (!/Reste en stock\s*39\b/.test(await page.textContent('.ent-cout'))) throw new Error('le reste du lot n\'est pas tombé à 39');
 });
 
 // ---------- 36. la traçabilité de bout en bout : les trois jalons
 await v('Spartoo traçabilité : trois jalons au vert', async () => {
-  // Les deux références qui restent : 5 et 4 paires du lot.
+  // Les deux références qui restent : 17 et 22 paires du lot.
   await page.click('[data-vue="blocage"]');
   await page.waitForSelector('#blLot');
-  for (const [ref, q] of [['PM-SUE-MA-41', '5'], ['PM-RSX-BL-42', '4']]) {
+  for (const [ref, q] of [['PM-SUE-MA-41', '17'], ['PM-RSX-BL-42', '22']]) {
     await page.fill('#blLot', 'LOT-PM-2609');
     await page.fill('#blRef', ref);
     await page.fill('#blQte', q);
@@ -483,7 +557,7 @@ await v('Spartoo traçabilité : trois jalons au vert', async () => {
   await page.fill('#repT', `Bonjour,\n\nLot LOT-PM-2609, entré en stock le ${dateEntreeLot}, fournisseur Puma.\n\n`
     + 'Commandes déjà livrées avec des paires de ce lot :\n'
     + '- CMD-048301\n- CMD-048307\n- CMD-048312\n\n'
-    + 'Stock restant bloqué : 9 PM-SUE-RG-39, 5 PM-SUE-MA-41, 4 PM-RSX-BL-42.\n\nCordialement');
+    + 'Stock restant bloqué : 21 PM-SUE-RG-39, 17 PM-SUE-MA-41, 22 PM-RSX-BL-42.\n\nCordialement');
   await page.click('#formRep button[type=submit]');
   await page.waitForTimeout(600);
 });
@@ -500,9 +574,10 @@ await v('Spartoo traçabilité : avancement remonté au suivi', async () => {
   await page.click('[data-ong="suivi"]');
   await page.waitForSelector('text=ENT-1.3', { timeout: 6000 });
   const t = await page.textContent('#contenuProf');
-  // Trois séances, trois avancements distincts, sur une seule et même base.
+  // Trois séances, trois avancements distincts, sur une seule et même base (1.1 a huit jalons).
   const av = (t.match(/3\/3/g) || []).length;
-  if (av < 3) throw new Error('trois avancements 3/3 attendus, lu : ' + av);
+  // 1.1 : 7/8, la question 4 du questionnaire a été répondue fausse exprès (cas 31 bis).
+  if (av < 2 || !/7\/8/.test(t)) throw new Error('avancements attendus 7/8, 3/3, 3/3 ; lu : ' + av + ' fois 3/3');
 });
 
 // ---------- 38. la traçabilité sans les séances précédentes : l'amont est posé
@@ -532,7 +607,7 @@ await v('Spartoo traçabilité : jouable sans les deux séances précédentes', 
   await page.press('#champCmd', 'Enter');
   await page.waitForTimeout(400);
   const t = await page.textContent('.ent-cout');
-  if (!/Entrées\s*24\b/.test(t)) throw new Error('le lot n\'a pas été posé : ' + (t.match(/Entrées\s*\d+/) || ['rien'])[0]);
+  if (!/Entrées\s*66\b/.test(t)) throw new Error('le lot n\'a pas été posé : ' + (t.match(/Entrées\s*\d+/) || ['rien'])[0]);
   if (!/Sorties\s*6\b/.test(t)) throw new Error('les sorties du lot manquent');
   if (!/CMD-048301/.test(t)) throw new Error('les commandes livrées ne remontent pas');
   // Et la réception posée porte son propre numéro : celle de la séance 1 reste disponible.
@@ -589,6 +664,84 @@ await v('Moteur ENT-1.1 : réception « Annoncée », réception sans colis, éc
   await monterEssai('prof');
   if (!(await page.$(`${Z} [data-vue="console"]`))) throw new Error('l’enseignant trouve la console fermée');
   await page.evaluate(() => document.querySelector('#essaiRefonte')?.remove());
+});
+
+// ---------- 40. le piège : valider la réception REC-04129 (BL-77412) fait tomber les jalons 5 et 6
+// Jugé sur une base fabriquée (les jalons sont des fonctions de la base) : la bonne réception juste, PLUS le piège.
+await v('Spartoo réception : piège REC-04129 validé → contrôle et entrée en stock faux, avec le détail', async () => {
+  const r = await page.evaluate(async () => {
+    const S = await import('/contenus/spartoo-reception.js');
+    const SP = await import('/contenus/spartoo.js');
+    const ctrl = (rows, lot) => ({ lot, rows, validated: true, at: Date.now() });
+    const bonnes = Object.fromEntries(S.attendu().map((a) => [a.sku, { annonce: a.annonce, compte: a.compte, etat: a.etat, decision: a.decision }]));
+    const juste = () => ({ receptions: [{ no: 'REC-04127', ctrl: ctrl(bonnes, 'LOT-PM-2609') }],
+      moves: S.attendu().map((a) => ({ sku: a.sku, delta: a.entre, ref: 'REC-04127', lot: 'LOT-PM-2609' })) });
+    const etat = (db) => S.ETAPES.filter((e) => ['controle', 'entree'].includes(e.id)).map((e) => e.verifier(db, SP));
+    const sans = etat(juste());
+    const avec = juste();
+    avec.receptions.push({ no: 'REC-04129', ctrl: ctrl({ 'PM-SUE-NR-40': { annonce: 12, compte: 12, etat: 'ok', decision: 'accepte' } }, 'LOT-PM-2614') });
+    avec.moves.push({ sku: 'PM-SUE-NR-40', delta: 12, ref: 'REC-04129', lot: 'LOT-PM-2614' });
+    // Le piège validé AVANT la bonne réception : faux tout de suite, pas « à faire ».
+    const seul = { receptions: [{ no: 'REC-04127', ctrl: null }, avec.receptions[1]], moves: [avec.moves[avec.moves.length - 1]] };
+    return { sans: sans.map((x) => x.status), avec: etat(avec), seul: etat(seul).map((x) => x.status) };
+  });
+  if (JSON.stringify(r.sans) !== '["ok","ok"]') throw new Error('sans le piège, contrôle et entrée devraient être justes : ' + r.sans);
+  if (r.avec.map((x) => x.status).join() !== 'ko,ko') throw new Error('piège validé : contrôle et entrée devraient être faux : ' + r.avec.map((x) => x.status));
+  if (!/REC-04129 saisie : ce n'est pas votre BL/.test(r.avec[0].detail)) throw new Error('le détail du contrôle ne nomme pas le piège : ' + r.avec[0].detail);
+  if (!/REC-04129/.test(r.avec[1].detail)) throw new Error('le détail de l’entrée ne nomme pas le piège');
+  if (r.seul.join() !== 'ko,ko') throw new Error('piège validé seul : faux attendu, lu ' + r.seul);
+});
+
+// ---------- 41. les bases d'avant la refonte repartent de zéro (brief §7.4, décision de Tristan, 06/10/2026)
+// Noé a une base Spartoo d'avant (sans numéro de version, une photo de 1.1, un score 3/3, 1.2 débloquée) : 1.2 lui
+// est fermée avec un message ; à l'ouverture de 1.1, base remise à neuf, photo partie, scores et déblocage effacés.
+await v('Spartoo : base d’avant la refonte → 1.2 fermée, 1.1 repart de zéro, scores effacés du suivi', async () => {
+  if (await page.$('[data-quitter]')) await page.click('[data-quitter]');
+  await page.waitForSelector('#btnDeco'); await page.click('#btnDeco');
+  await page.waitForSelector('#mat');
+  await page.fill('#mat', '2602'); await page.fill('#code', 'bbb2');
+  await page.press('#code', 'Enter');
+  await page.waitForSelector('[data-rub="simulog"]', { timeout: 6000 });
+  const uid = await page.evaluate(() => {
+    let u = localStorage.getItem('prepalog:session'); try { u = JSON.parse(u); } catch (e) { /* chaîne */ }
+    const ancienne = { v: 1, created: Date.now() - 864e5, stock: {}, moves: [], orders: [], mails: [], receptions: [{ no: 'REC-04127', colis: [] }],
+      volets: { 'reception-1': 1 }, points: { 'spartoo-reception': { v: 1 } } };
+    localStorage.setItem(`prepalog:prive/${u}/spartoo`, JSON.stringify({ data: ancienne, ts: Date.now() }));
+    const score = (aid, sc) => localStorage.setItem(`prepalog:travaux/1-log-a/${u}/${aid}`, JSON.stringify({ uid: u, aid, gid: '1-log-a', score: sc, max: 3, meilleur: sc, tentatives: 1 }));
+    score('spartoo-reception', 3); score('_debloque-spartoo', 0);
+    return u;
+  });
+  await page.click('[data-rub="simulog"]');
+  await page.click('[data-ent="1"]');
+  await page.waitForSelector('[data-act="spartoo"]');
+  await page.click('[data-act="spartoo"]');
+  await page.waitForTimeout(600);
+  if (await page.$('.ent-shell')) throw new Error('1.2 s’ouvre sur une base d’avant la refonte');
+  await page.click('[data-act="spartoo-reception"]');
+  await page.waitForSelector('.ent-shell', { timeout: 6000 });
+  await page.waitForTimeout(600);
+  const r = await page.evaluate(async (u) => {
+    const { baseDe } = await import('/core/parcours.js');
+    const b = await baseDe(u, 'spartoo');
+    return { version: b.versionBase, points: !!b.points, volet: !!(b.volets && b.volets['reception-2']), recs: (b.receptions || []).length,
+      score: localStorage.getItem(`prepalog:travaux/1-log-a/${u}/spartoo-reception`), deb: localStorage.getItem(`prepalog:travaux/1-log-a/${u}/_debloque-spartoo`) };
+  }, uid);
+  if (r.version !== 2) throw new Error('la base n’a pas reçu sa version : ' + JSON.stringify(r));
+  if (r.points) throw new Error('la photo de fin de 1.1 d’avant la refonte est restée');
+  if (!r.volet || r.recs !== 10) throw new Error('la nouvelle séance n’est pas semée : ' + JSON.stringify(r));
+  // L'ouverture réenregistre aussitôt l'avancement de la nouvelle séance (0 sur 8) : l'ancien 3 / 3 doit avoir disparu.
+  const sc = r.score ? JSON.parse(r.score) : null;
+  if (sc && (sc.max !== 8 || sc.meilleur !== 0)) throw new Error('le score 1.1 d’avant la refonte est resté au suivi : ' + r.score);
+  if (r.deb && JSON.parse(r.deb)) throw new Error('le déblocage manuel de 1.2 est resté');
+  // Une seule fois : rouverte, la base garde le travail fait depuis.
+  await page.click('[data-quitter]');
+  await page.waitForSelector('[data-act="spartoo-reception"]');
+  await page.click('[data-act="spartoo-reception"]');
+  await page.waitForSelector('.ent-shell', { timeout: 6000 });
+  const recs = await page.evaluate(async (u) => { const { baseDe } = await import('/core/parcours.js'); return ((await baseDe(u, 'spartoo')).receptions || []).length; }, uid);
+  if (recs !== 10) throw new Error('la base a été refaite une seconde fois');
+  await page.click('[data-quitter]');
+  await page.waitForSelector('#btnDeco', { timeout: 6000 });
 });
 
 }
