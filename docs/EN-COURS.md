@@ -7,6 +7,7 @@ est déjà modifié ou inscrit ci-dessous, **elle s'arrête et le dit à Tristan
 
 | Chantier | Fichiers qu'il touche | Depuis |
 |---|---|---|
+| ENT-1.1 Spartoo quai iso (brief `ENT-1.1-spartoo-quai.md`, 5 lots) | `core/iso.js`, `core/types/quai.js`, `core/types/entreprise.js`, `core/prof.js`, `activites/spartoo-*.js`, `contenus/spartoo*.js`, `outils/test/spartoo.mjs`, `outils/test/animation.mjs` | 06/10/2026 |
 
 Rappel : un seul chantier à la fois dans `core/types/tournee.js`, `core/types/grille.js`,
 `core/types/entreprise.js`, `styles/base.css` et `outils/test/boost.mjs` (voir `docs/briefs/COORDINATION-boost.md`).

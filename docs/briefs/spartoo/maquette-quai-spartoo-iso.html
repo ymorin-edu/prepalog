@@ -1,0 +1,500 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Maquette — ENT-1.1 quai Spartoo en 2D iso</title>
+<style>
+  :root{--fond:#151211;--carte:#1d1918;--trait:#332e2c;--texte:#eeeae6;--doux:#a9a29c;--rose:#e2445c;--vert:#3fae6a;--rouge:#e0685c}
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--fond);color:var(--texte);font-family:Inter,system-ui,Segoe UI,Arial,sans-serif}
+  .app{height:100vh;min-height:600px;display:flex;flex-direction:column}
+  .tete{display:flex;align-items:center;gap:12px;padding:8px 18px;border-bottom:1px solid var(--trait);background:#1c1817}
+  .logo{width:30px;height:30px;background:#fff;border-radius:4px;display:grid;place-items:center;color:#c8102e;font-size:8px;font-weight:800}
+  .marque{color:var(--rose);font-weight:700;font-size:18px}
+  .badge{background:#3a3533;border:1px solid #555;border-radius:20px;padding:3px 11px;font-size:13px;font-family:ui-monospace,monospace}
+  .tete .lieu{font-size:13px;color:var(--doux)}
+  .tete .maq{margin-left:auto;font-size:11px;color:#999;border:1px dashed #666;border-radius:4px;padding:2px 7px}
+  .etapes{display:flex;gap:6px;padding:7px 18px;border-bottom:1px solid var(--trait)}
+  .etapes button{flex:1;background:#221e1d;border:1px solid var(--trait);color:var(--doux);border-radius:6px;padding:6px 8px;font-size:13.5px;text-align:left;cursor:pointer}
+  .etapes button.on{border-color:var(--rose);color:#fff;background:#2b1418}
+  .etapes button.fait{color:#cfe9d8}
+  .etapes button:disabled{opacity:.4;cursor:not-allowed}
+  .corps{flex:1;display:flex;min-height:0}
+  .scene{flex:1;position:relative;min-width:0;display:flex;flex-direction:column}
+  .scene svg{flex:1;width:100%;min-height:0;display:block}
+  .legende{padding:6px 16px 8px;font-size:14px;color:#ddd;min-height:34px;border-top:1px solid var(--trait)}
+  .legende b{color:#fff}
+  .panneau{width:470px;flex-shrink:0;border-left:1px solid var(--trait);padding:10px 14px;overflow:auto;background:#191514}
+  h3{margin:0 0 8px;font-size:15px}
+  .note{font-size:12.5px;color:var(--doux);line-height:1.4}
+  .btn{background:#2a2524;border:1px solid #5a524f;color:#fff;border-radius:6px;padding:7px 12px;font-size:14px;cursor:pointer}
+  .btn.prim{background:var(--rose);border-color:var(--rose)}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+  .ctrl{position:absolute;left:14px;top:10px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;max-width:70%}
+  .ctrl .vues{font-size:12.5px;color:#333;background:rgba(255,255,255,.85);border-radius:5px;padding:5px 8px}
+  .ctrl .btn{background:rgba(32,28,27,.92)}
+  .pastille{display:inline-block;width:10px;height:10px;border-radius:50%;border:1.5px solid #555;margin-left:3px;vertical-align:-1px}
+  .pastille.vu{background:#2f8a52;border-color:#2f8a52}
+  /* documents */
+  .doc{background:#fbfaf6;color:#1d1d1b;border-radius:6px;padding:10px 12px;font-size:12.5px}
+  .doc .dt{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:1px solid #ddd;padding-bottom:6px;margin-bottom:6px}
+  .doc .dt b{font-size:14px}
+  .doc .grille{display:grid;grid-template-columns:auto 1fr auto 1fr;gap:2px 8px;margin:4px 0 6px}
+  .doc .grille span:nth-child(odd){color:#6b675f}
+  .doc table{width:100%;border-collapse:collapse}
+  .doc th{font-size:11px;text-align:left;color:#6b675f;border-bottom:1px solid #ddd;padding:3px 4px}
+  .doc td{padding:3px 4px;border-bottom:1px solid #eee}
+  .doc .mono{font-family:ui-monospace,monospace;font-size:11.5px}
+  .doc .num{text-align:right}
+  .doc .pied{font-size:10px;color:#8a857c;margin-top:6px}
+  .manus{font-family:"Segoe Print","Comic Sans MS",cursive;color:#1b3f8f;font-size:13px;line-height:1.5}
+  .zone-res{border-top:1px dashed #bbb;margin-top:6px;padding-top:5px;min-height:44px}
+  .signs{display:flex;justify-content:space-between;margin-top:8px;font-size:11px;color:#6b675f}
+  .signs div{width:46%;border-top:1px solid #ccc;padding-top:3px;min-height:34px}
+  /* étiquette zoom */
+  .zoom{display:flex;gap:10px;align-items:flex-start;min-height:110px}
+  .etq{width:232px;background:#fff;color:#111;border:1px solid #bbb;border-radius:3px;padding:7px 9px;font-size:11.5px;line-height:1.35;font-family:Arial,sans-serif}
+  .etq .l1{font-size:10px;color:#444;display:flex;justify-content:space-between}
+  .etq .ref{font-size:17px;font-weight:800;letter-spacing:.5px;margin:2px 0}
+  .etq .cb{height:18px;margin-top:4px;background:repeating-linear-gradient(90deg,#111 0 2px,#fff 2px 3px,#111 3px 4px,#fff 4px 7px,#111 7px 8px,#fff 8px 9px)}
+  .etat{font-size:13px;line-height:1.4}
+  .etat .ko{color:var(--rouge);font-weight:700}
+  /* fiche */
+  table.fiche{width:100%;border-collapse:collapse;font-size:13px;margin-top:4px}
+  .fiche th{font-size:11px;color:var(--doux);text-align:left;padding:4px;border-bottom:1px solid var(--trait)}
+  .fiche td{padding:2px 4px;border-bottom:1px solid var(--trait)}
+  .fiche input{width:52px;padding:3px 5px!important;background:#0f0d0c;border:1px solid #555;color:#fff;border-radius:4px;padding:4px 6px;font-size:14px;text-align:center}
+  .dec{display:flex;gap:6px;margin:8px 0 4px;flex-wrap:wrap}
+  .dec button{flex:1;background:#221e1d;border:1px solid #555;color:#ddd;border-radius:6px;padding:5px 4px;font-size:13px;cursor:pointer}
+  .dec button.on{border-color:var(--rose);background:#2b1418;color:#fff}
+  .motifs{display:flex;gap:14px;font-size:13px;margin:4px 0 8px}
+  .bloc{border:1px solid var(--trait);border-radius:8px;padding:7px 10px;margin-bottom:7px;background:var(--carte)}
+  .aide{border-left:3px solid #6d8cc2;padding:5px 8px;background:#1b2130;font-size:12.5px;color:#d6def0;margin-bottom:9px;line-height:1.4}
+  .verdict{font-size:12.5px;line-height:1.5}
+  .verdict .ok{color:#7ad39a}.verdict .ko{color:#ff8a80}
+  details.sol{margin-top:8px;font-size:12px;color:#999}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style></head><body>
+<div class="app">
+  <div class="tete"><div class="logo">spartoo</div><span class="marque">Spartoo</span><span class="badge">ENT-1.1 · Réception</span>
+    <span class="lieu">Toolog — Saint-Quentin-Fallavier (38) · Quai 7</span><span class="maq">Maquette jetable — 2D iso</span></div>
+  <div class="etapes" id="etapes"></div>
+  <div class="corps">
+    <div class="scene"><div class="ctrl" id="ctrl"></div><svg id="svg" role="img" aria-label="Scène du quai"></svg><div class="legende" id="legende"></div></div>
+    <div class="panneau" id="panneau"></div>
+  </div>
+</div>
+<script>
+/* ================== kit iso (mêmes constantes que core/iso.js) ================== */
+const C30=0.866,S30=0.5;
+function projection(unite,ox,oy){
+  const P=(x,y,z)=>[ox+(x-y)*C30*unite, oy+(x+y)*S30*unite-z*unite];
+  const pts=a=>a.map(p=>P(...p).map(v=>v.toFixed(1)).join(',')).join(' ');
+  const face=(a,fill,stroke='rgba(0,0,0,.25)',extra='')=>`<polygon points="${pts(a)}" fill="${fill}" stroke="${stroke}" stroke-width="1" ${extra}/>`;
+  const boite=(x,y,z,w,d,h,c,st)=>face([[x,y+d,z],[x+w,y+d,z],[x+w,y+d,z+h],[x,y+d,z+h]],c[1],st)
+    +face([[x+w,y,z],[x+w,y+d,z],[x+w,y+d,z+h],[x+w,y,z+h]],c[2],st)
+    +face([[x,y,z+h],[x+w,y,z+h],[x+w,y+d,z+h],[x,y+d,z+h]],c[0],st);
+  return {unite,P,pts,face,boite};
+}
+const ech=t=>String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+const KRAFT=['#d9b27a','#c99c5f','#b48549'];
+
+/* ================== données de la séance (brief §6.1) ================== */
+const BL={no:'BL-77421',cde:'CF-20261003',lot:'LOT-PM-2609',exp:'05/10/2026',transp:'Geodis, tournée 14',
+  lignes:[
+    {ref:'PM-SUE-RG-39',art:'Puma Suede Classic XXI',coul:'Rouge',t:39,cartons:4},
+    {ref:'PM-RSX-BL-42',art:'Puma RS-X',coul:'Blanc',t:42,cartons:4},
+    {ref:'PM-SUE-MA-41',art:'Puma Suede Classic XXI',coul:'Bleu marine',t:41,cartons:4}]};
+const PPC=6; // paires par carton
+// Palette (repère local : X = 1,2 m, Y = 0,8 m ; j = 0 au fond, 1 devant). Couche k = une référence.
+const CARTONS=[];
+(function(){let n=1;[0,1,2].forEach(k=>{const L=BL.lignes[k];[[0,0],[1,0],[0,1],[1,1]].forEach(([i,j])=>{
+  const c={id:'c'+n,no:n,i,j,k,ref:L.ref,ligne:L,absent:false,abime:null};n++;CARTONS.push(c);});});
+ CARTONS.find(c=>c.k===2&&c.i===0&&c.j===0).absent=true;                     // carton n° 9 : manquant, au fond
+ CARTONS.find(c=>c.k===1&&c.i===1&&c.j===0).abime='N';                      // carton n° 6 : enfoncé, face arrière
+})();
+const CW=0.6,CD=0.4,CH=0.35,PH=0.144;
+
+/* ================== état ================== */
+const E={etape:0,fait:[false,false,false,false],vue:0,vues:new Set([0]),sel:null,fiche:{},dec:'',motifs:{avarie:false,manquant:false},ecrit:false,signe:false,anim:null};
+BL.lignes.forEach(l=>E.fiche[l.ref]={compte:'',endo:''});
+
+const svg=document.getElementById('svg'),pan=document.getElementById('panneau'),leg=document.getElementById('legende'),ctrl=document.getElementById('ctrl');
+const ETAPES=['① Le camion arrive','② Déchargement','③ Compter la palette','④ Réserves et signature'];
+function barre(){
+  document.getElementById('etapes').innerHTML=ETAPES.map((t,k)=>`<button class="${k===E.etape?'on':''} ${E.fait[k]?'fait':''}" data-e="${k}" ${k>0&&!E.fait[k-1]&&k!==E.etape?'disabled':''}>${E.fait[k]?'✓ ':''}${t}</button>`).join('');
+  document.querySelectorAll('[data-e]').forEach(b=>b.onclick=()=>aller(+b.dataset.e));
+}
+function aller(k){if(E.anim){cancelAnimationFrame(E.anim);E.anim=null;}E.etape=k;barre();[etape1,etape2,etape3,etape4][k]();}
+
+/* ================== objets dessinés ================== */
+// Une personne debout (1,75 m), vue de trois quarts : SANS VISAGE (règle du projet), mais avec un corps humain :
+// chaussures, deux jambes, pantalon de travail, gilet haute visibilité à bandes, bras et mains, cou, cheveux.
+// opts.main : point écran [x, y] que la main droite tient (le timon) ; opts.pas : phase de marche (0-1), opts.dos : vue de dos.
+function personne(I,x,y,opts={}){
+  const [fx,fy]=I.P(x,y,0),u=I.unite,k=u*1.75/100;   // k : 1 « unité de dessin » = 1/100 de la taille
+  const X=v=>fx+v*k,Y=v=>fy-v*k;                     // repère local : v vers le haut, depuis le sol
+  const peau='#c99a76',peauOmbre='#b3876a',pant='#2e3b4c',pantOmbre='#253140',gil='#f0c419',gilOmbre='#d6ad10',band='#e6e8e8',t='#30363b';
+  const ph=opts.pas==null?0:Math.sin(opts.pas*Math.PI*2),ec=ph*4;   // écart des pieds en marchant
+  let g=`<ellipse cx="${fx}" cy="${fy}" rx="${13*k}" ry="${5*k}" fill="rgba(0,0,0,.2)"/>`;
+  // jambes (gauche en retrait, plus sombre) et chaussures
+  g+=`<path d="M${X(-6.5-ec)},${Y(1)} L${X(-7)},${Y(47)} L${X(-0.5)},${Y(47)} L${X(-1.5-ec)},${Y(1)} Z" fill="${pantOmbre}"/>`;
+  g+=`<path d="M${X(1.5+ec)},${Y(1)} L${X(0.5)},${Y(47)} L${X(7)},${Y(47)} L${X(6.5+ec)},${Y(1)} Z" fill="${pant}"/>`;
+  g+=`<path d="M${X(-8.5-ec)},${Y(0)} q${0},${-4*k} ${3*k},${-4*k} h${4*k} v${4*k} Z" fill="${t}"/>`;
+  g+=`<path d="M${X(0.5+ec)},${Y(0)} q0,${-4*k} ${3*k},${-4*k} h${4.5*k} q${2*k},0 ${2*k},${4*k} Z" fill="${t}"/>`;
+  // bras gauche (le long du corps)
+  g+=`<path d="M${X(-9)},${Y(78)} q${-3*k},${12*k} ${-2.5*k},${30*k}" stroke="${gilOmbre}" stroke-width="${5.5*k}" stroke-linecap="round" fill="none"/>`;
+  g+=`<circle cx="${X(-11)}" cy="${Y(46)}" r="${2.6*k}" fill="${peauOmbre}"/>`;
+  // buste : t-shirt sous le gilet, gilet à deux bandes réfléchissantes
+  g+=`<path d="M${X(-9.5)},${Y(48)} L${X(-10.5)},${Y(79)} Q${X(-9)},${Y(84)} ${X(-3)},${Y(85)} L${X(3)},${Y(85)} Q${X(9)},${Y(84)} ${X(10.5)},${Y(79)} L${X(9.5)},${Y(48)} Z" fill="${gil}"/>`;
+  g+=`<path d="M${X(1)},${Y(48)} L${X(1)},${Y(85)} L${X(3)},${Y(85)} Q${X(9)},${Y(84)} ${X(10.5)},${Y(79)} L${X(9.5)},${Y(48)} Z" fill="${gilOmbre}" opacity=".55"/>`;
+  [57,66].forEach(v=>{g+=`<rect x="${X(-10.2)}" y="${Y(v+2.6)}" width="${20.4*k}" height="${2.6*k}" fill="${band}"/>`;});
+  if(!opts.dos) g+=`<path d="M${X(-3)},${Y(85)} L${X(0)},${Y(77)} L${X(3)},${Y(85)} Z" fill="#3b4652"/>`;   // encolure (t-shirt)
+  // bras droit : le long du corps, ou tendu vers la main tenue
+  if(opts.main){const [mx,my]=opts.main;
+    g+=`<path d="M${X(9)},${Y(79)} L${mx},${my}" stroke="${gil}" stroke-width="${5.5*k}" stroke-linecap="round"/>`;
+    g+=`<circle cx="${mx}" cy="${my}" r="${2.8*k}" fill="${peau}"/>`;}
+  else{g+=`<path d="M${X(9)},${Y(78)} q${3*k},${12*k} ${2.5*k},${30*k}" stroke="${gil}" stroke-width="${5.5*k}" stroke-linecap="round" fill="none"/>`;
+    g+=`<circle cx="${X(11.5)}" cy="${Y(46)}" r="${2.6*k}" fill="${peau}"/>`;}
+  // cou et tête : ovale de peau SANS traits, cheveux courts (sur le dessus, ou tout l'arrière vu de dos)
+  g+=`<rect x="${X(-2.2)}" y="${Y(89)}" width="${4.4*k}" height="${5*k}" fill="${peauOmbre}"/>`;
+  g+=`<ellipse cx="${X(0)}" cy="${Y(93.5)}" rx="${5.3*k}" ry="${6.4*k}" fill="${peau}"/>`;
+  g+=opts.dos?`<ellipse cx="${X(0)}" cy="${Y(94.5)}" rx="${5.5*k}" ry="${6*k}" fill="#3a2a1f"/>`
+    :`<path d="M${X(-5.4)},${Y(94)} Q${X(-5.8)},${Y(101)} ${X(0)},${Y(100.6)} Q${X(5.8)},${Y(101)} ${X(5.4)},${Y(94)} Q${X(3)},${Y(97.5)} ${X(-5.4)},${Y(94)} Z" fill="#3a2a1f"/>`;
+  return g;
+}
+// Une boîte coupée par un intervalle de y (pour la palette qui passe la porte).
+function boiteY(I,x,y,z,w,d,h,c,yMin,yMax){const y0=Math.max(y,yMin),y1=Math.min(y+d,yMax);if(y1<=y0+1e-6)return'';return I.boite(x,y0,z,w,y1-y0,h,c);}
+// Rotation de la palette : r quarts de tour. Renvoie la position monde d'un carton et les faces locales visibles.
+function rot(r,u,v){for(let k=0;k<r;k++){[u,v]=[-v,u];}return [u,v];}
+const DIRS={S:[0,1],N:[0,-1],E:[1,0],W:[-1,0]};
+function faceVisible(r,nom){const [a,b]=rot(r,...DIRS[nom]);if(Math.abs(a)<1e-9&&b===1)return'front';if(a===1&&Math.abs(b)<1e-9)return'droite';return null;}
+function dimsPalette(r){return r%2?[0.8,1.2]:[1.2,0.8];}
+// Dessine la palette : origine (ox,oy) = coin monde min ; r = rotation ; options : labels, dents, clic, yMin/yMax.
+function palette(I,ox,oy,r,o={}){
+  const [W,D]=dimsPalette(r),yMin=o.yMin??-99,yMax=o.yMax??99;
+  const loc2monde=(lx,ly)=>{const [a,b]=rot(r,lx-0.6,ly-0.4);return [ox+W/2+a,oy+D/2+b];};
+  let g='';
+  // palette bois (3 semelles + plancher)
+  const pc=['#c9a273','#b48a5b','#9c7549'];
+  if(r%2===0){[0,0.56,1.1].forEach(dx=>g+=boiteY(I,ox+dx,oy,0,0.1,D,0.1,pc,yMin,yMax));}
+  else{[0,0.35,0.7].forEach(dx=>g+=boiteY(I,ox+dx,oy,0,0.1,D,0.1,pc,yMin,yMax));}
+  g+=boiteY(I,ox,oy,0.1,W,D,PH-0.1,pc,yMin,yMax);
+  // cartons, du fond vers l'avant, de bas en haut
+  const L=CARTONS.filter(c=>!c.absent).map(c=>{
+    const [x0,y0]=loc2monde(c.i*CW,c.j*CD),[x1,y1]=loc2monde((c.i+1)*CW,(c.j+1)*CD);
+    return {c,x:Math.min(x0,x1),y:Math.min(y0,y1),w:Math.abs(x1-x0),d:Math.abs(y1-y0),z:PH+c.k*CH};
+  }).sort((a,b)=>(a.z-b.z)||((a.x+a.y)-(b.x+b.y)));
+  for(const b of L){
+    const sel=E.sel===b.c.id&&o.clic;
+    const coul=sel?['#f0cf98','#e2bb7c','#cfa565']:KRAFT;
+    let s=boiteY(I,b.x,b.y,b.z,b.w,b.d,CH-0.004,coul,yMin,yMax);
+    if(s && b.y+b.d>yMin-1e-6){
+      // bande adhésive sur le dessus
+      if(b.y+b.d<=yMax+1e-6&&b.y>=yMin-1e-6){
+        const lg=b.w>b.d;s+=I.face(lg?[[b.x,b.y+b.d/2-0.03,b.z+CH],[b.x+b.w,b.y+b.d/2-0.03,b.z+CH],[b.x+b.w,b.y+b.d/2+0.03,b.z+CH],[b.x,b.y+b.d/2+0.03,b.z+CH]]:[[b.x+b.w/2-0.03,b.y,b.z+CH],[b.x+b.w/2+0.03,b.y,b.z+CH],[b.x+b.w/2+0.03,b.y+b.d,b.z+CH],[b.x+b.w/2-0.03,b.y+b.d,b.z+CH]],'#c79b62','none');
+      }
+      // faces extérieures : étiquette (faces longues N/S) et enfoncement
+      ['S','N','E','W'].forEach(nf=>{
+        const ext=(nf==='S'&&b.c.j===1)||(nf==='N'&&b.c.j===0)||(nf==='E'&&b.c.i===1)||(nf==='W'&&b.c.i===0);
+        if(!ext)return;const v=faceVisible(r,nf);if(!v)return;
+        if(v==='front'&&b.y+b.d>yMax+1e-6)return;
+        if(b.c.abime===nf&&o.dents!==false) s+=dent(I,b,v);
+        if((nf==='S'||nf==='N')&&o.labels!==false) s+=etiquetteFace(I,b,v,o.lisible);
+      });
+    }
+    g+=o.clic?`<g data-carton="${b.c.id}" style="cursor:pointer">${s}</g>`:s;
+  }
+  return g;
+}
+function surFace(I,b,v,u0,u1,z0,z1){ // rectangle sur une face visible (fractions horizontales u, hauteurs z absolues dans le carton)
+  if(v==='front'){const y=b.y+b.d;return [[b.x+b.w*u0,y,b.z+z0],[b.x+b.w*u1,y,b.z+z0],[b.x+b.w*u1,y,b.z+z1],[b.x+b.w*u0,y,b.z+z1]];}
+  const x=b.x+b.w;return [[x,b.y+b.d*(1-u0),b.z+z0],[x,b.y+b.d*(1-u1),b.z+z0],[x,b.y+b.d*(1-u1),b.z+z1],[x,b.y+b.d*(1-u0),b.z+z1]];
+}
+function etiquetteFace(I,b,v,lisible){
+  const p=surFace(I,b,v,0.18,0.72,0.07,0.29);
+  let s=I.face(p,'#fbfbf8','rgba(0,0,0,.35)');
+  if(!lisible)return s;
+  // texte posé sur la face (matrice iso)
+  const [ox,oy]=I.P(...p[3]),u=I.unite,m=v==='front'?[C30,S30]:[C30,-S30];
+  const sc=u/240;
+  s+=`<g transform="matrix(${m[0]*sc},${m[1]*sc},0,${sc},${ox},${oy})" font-family="Arial" fill="#111">
+    <text x="4" y="11" font-size="8.5" font-weight="700">PUMA</text><text x="62" y="11" font-size="7">${b.c.no}/12</text>
+    <text x="4" y="24" font-size="9.5" font-weight="800">${ech(b.c.ref)}</text>
+    <text x="4" y="34" font-size="7">T.${b.c.ligne.t} · ${PPC} paires</text>
+    ${[0,3,5,8,10,13,16,18,21,24,26,29,32,34,37,40,43,45,48,51].map(xx=>`<rect x="${4+xx}" y="38" width="${xx%3?1:2}" height="9"/>`).join('')}</g>`;
+  return s;
+}
+function dent(I,b,v){
+  const p=surFace(I,b,v,0.12,0.88,0.02,0.33);
+  const c=surFace(I,b,v,0.55,0.95,0.04,0.3);
+  return I.face([c[0],[ (c[0][0]+c[1][0])/2,(c[0][1]+c[1][1])/2,c[0][2]+0.06],c[1],c[2],[(c[2][0]+c[3][0])/2,(c[2][1]+c[3][1])/2,c[2][2]-0.05],c[3]],'#8a6534','#5b4020')
+   +`<polyline points="${I.pts([c[0],[(c[0][0]+c[2][0])/2,(c[0][1]+c[2][1])/2,(c[0][2]+c[2][2])/2],c[2]])}" fill="none" stroke="#4a3418" stroke-width="2"/>`
+   +`<polyline points="${I.pts([c[1],[(c[0][0]+c[2][0])/2,(c[0][1]+c[2][1])/2,(c[0][2]+c[2][2])/2],c[3]])}" fill="none" stroke="#4a3418" stroke-width="1.5"/>`;
+}
+
+/* ================== ① le camion arrive ================== */
+function camion(I,x,yr){
+  const n=['#1e2123','#16191a','#101213'];let g='';
+  g+=`<ellipse cx="${I.P(x+.5,yr+1.8,0)[0]}" cy="${I.P(x+.5,yr+1.8,0)[1]}" rx="${I.unite*1.9}" ry="${I.unite*.75}" fill="rgba(0,0,0,.15)"/>`;
+  // roues RONDES : un cercle dans le plan du flanc (x constant) devient une ellipse en iso
+  [0.56,1.06,3.06].forEach(dy=>{g+=roue(I,x+.04,yr+dy,.2,.19,.14)+roue(I,x+.82,yr+dy,.2,.19,.14);});
+  g+=I.boite(x+.1,yr,.33,.8,3.5,.13,['#3b3f42','#2f3336','#26292b']);
+  g+=I.boite(x,yr,.46,1,2.55,1.5,['#f4f4f1','#e4e5e1','#d3d5d0']);
+  // bande et feux arrière (côté droit visible)
+  g+=I.face([[x+1,yr,.5],[x+1,yr+2.55,.5],[x+1,yr+2.55,.6],[x+1,yr,.6]],'#2f5f8e','none');
+  g+=I.boite(x+.03,yr+2.6,.36,.94,.92,1.2,['#3d6e9e','#2f5f8e','#284f78']);
+  g+=I.face([[x+.1,yr+3.52,1.02],[x+.9,yr+3.52,1.02],[x+.9,yr+3.52,1.46],[x+.1,yr+3.52,1.46]],'#1d2a35','none');
+  g+=I.face([[x+.97,yr+2.68,1.05],[x+.97,yr+3.25,1.05],[x+.97,yr+3.25,1.45],[x+.97,yr+2.68,1.45]],'#1d2a35','none');
+  g+=I.face([[x+.15,yr+3.53,.5],[x+.3,yr+3.53,.5],[x+.3,yr+3.53,.6],[x+.15,yr+3.53,.6]],'#ffe8a3','none')+I.face([[x+.7,yr+3.53,.5],[x+.85,yr+3.53,.5],[x+.85,yr+3.53,.6],[x+.7,yr+3.53,.6]],'#ffe8a3','none');
+  return g;
+}
+// Une roue d'axe x : centre (y, z) dans le plan x, rayon r, largeur l. Le cercle est projeté par la matrice
+// du flanc (y → (−cos30, sin30), z → (0, −1)) : une ellipse, jamais une boîte.
+function roue(I,x,y,z,r,l){
+  const u=I.unite,M=(xx)=>{const [ex,ey]=I.P(xx,y,z);return `matrix(${-C30*u},${S30*u},0,${-u},${ex},${ey})`;};
+  let g='';
+  // bande de roulement : cercles intermédiaires pour donner l'épaisseur
+  for(let k=0;k<=4;k++) g+=`<circle r="${r}" transform="${M(x+l*k/4)}" fill="#141617" stroke="#0b0c0d" stroke-width="${0.6/u}"/>`;
+  g+=`<circle r="${r*.55}" transform="${M(x+l)}" fill="#8d9397" stroke="#5c6266" stroke-width="${1/u}"/>`;
+  g+=`<circle r="${r*.18}" transform="${M(x+l+0.001)}" fill="#3a3e41"/>`;
+  return g;
+}
+function facade(I){
+  let g=I.face([[-1.5,-0.4,0],[10,-0.4,0],[10,8.5,0],[-1.5,8.5,0]],'#bdb8ae','none');
+  // marquage au sol devant les portes
+  [1.0,3.6,6.2].forEach(dx=>{g+=I.face([[dx-.05,0,0],[dx,0,0],[dx,5,0],[dx-.05,5,0]],'#e7c628','none')+I.face([[dx+1.2,0,0],[dx+1.25,0,0],[dx+1.25,5,0],[dx+1.2,5,0]],'#e7c628','none');});
+  g+=I.boite(-1,-0.5,0,10.5,0.5,2.75,['#8d969b','#aab2b7','#949ca1']);
+  for(let x=-0.8;x<9.5;x+=0.35) g+=`<polyline points="${I.pts([[x,0,0],[x,0,2.75]])}" stroke="rgba(0,0,0,.08)"/>`;
+  [[1.0,'6'],[3.6,'7'],[6.2,'8']].forEach(([dx,num])=>{
+    g+=I.face([[dx-.12,0.001,0],[dx+1.32,0.001,0],[dx+1.32,0.001,2.2],[dx-.12,0.001,2.2]],'#2a2d30','none');
+    g+=I.face([[dx,0.002,0.95],[dx+1.2,0.002,0.95],[dx+1.2,0.002,2.08],[dx,0.002,2.08]],'#c4cacd','#8d969b');
+    for(let z=1.12;z<2.08;z+=0.2) g+=`<polyline points="${I.pts([[dx,0.003,z],[dx+1.2,0.003,z]])}" stroke="#98a1a6"/>`;
+    g+=I.boite(dx+.05,0,0.75,.16,.12,.2,['#111','#1a1a1a','#0c0c0c'])+I.boite(dx+.99,0,0.75,.16,.12,.2,['#111','#1a1a1a','#0c0c0c']);
+    g+=I.face([[dx+.35,0.004,2.32],[dx+.85,0.004,2.32],[dx+.85,0.004,2.62],[dx+.35,0.004,2.62]],'#1f5f3a','#0f3d24');
+    const [lx,ly]=I.P(dx+.6,0.004,2.47);g+=`<text x="${lx}" y="${ly+6}" text-anchor="middle" font-size="16" font-weight="800" fill="#fff" transform="rotate(30 ${lx} ${ly})">${num}</text>`;
+  });
+  // quai : bord béton sous les portes
+  g+=I.boite(-1,0,0,10.5,0.35,0.75,['#a7a39b','#b9b5ad','#9a968e']);
+  [1.0,3.6,6.2].forEach(dx=>{g+=I.boite(dx+.05,0.35,0.3,.16,.12,.3,['#111','#1a1a1a','#0c0c0c'])+I.boite(dx+.99,0.35,0.3,.16,.12,.3,['#111','#1a1a1a','#0c0c0c']);});
+  // porte accueil chauffeurs
+  g+=I.face([[8.3,0.001,0],[8.95,0.001,0],[8.95,0.001,1.5],[8.3,0.001,1.5]],'#3b4a55','none');
+  const [ax,ay]=I.P(8.62,0.002,1.75);g+=`<text x="${ax}" y="${ay}" text-anchor="middle" font-size="11" font-weight="700" fill="#1d1d1b" transform="rotate(30 ${ax} ${ay})">Accueil chauffeurs</text>`;
+  return g;
+}
+function horloge(I,x,y,z,t){const [cx,cy]=I.P(x,y,z);return `<rect x="${cx-34}" y="${cy-15}" width="68" height="26" rx="4" fill="#111" stroke="#444"/><text x="${cx}" y="${cy+4}" text-anchor="middle" font-size="15" font-family="ui-monospace,monospace" fill="#7CFC9A">${t}</text>`;}
+const mesure=(()=>{const c=document.createElement('canvas').getContext('2d');c.font='14px Inter, system-ui, Segoe UI, Arial, sans-serif';return t=>c.measureText(t).width;})();
+// Bulle de parole : (x, y) = pointe, posée au-dessus de la tête ; la boîte s'ouvre vers la droite.
+function bulle(x,y,lignes){
+  const pad=14,lh=20,W=Math.ceil(Math.max(...lignes.map(mesure)))+pad*2,H=lignes.length*lh+pad*2-6,r=12;
+  const bx=x-34,by=y-14-H,q=12;
+  const d=`M${bx+r},${by} H${bx+W-r} A${r},${r} 0 0 1 ${bx+W},${by+r} V${by+H-r} A${r},${r} 0 0 1 ${bx+W-r},${by+H} H${x+q} L${x},${y} L${x-q*0.2},${by+H} H${bx+r} A${r},${r} 0 0 1 ${bx},${by+H-r} V${by+r} A${r},${r} 0 0 1 ${bx+r},${by} Z`;
+  return `<g><path d="${d}" fill="rgba(0,0,0,.18)" transform="translate(2,3)"/><path d="${d}" fill="#fff" stroke="#2c2c2c" stroke-width="1.5"/>
+    ${lignes.map((l,k)=>`<text x="${bx+pad}" y="${by+pad+11+k*lh}" font-size="14" font-family="Inter, system-ui, Segoe UI, Arial, sans-serif" fill="#1a1a1a">${ech(l)}</text>`).join('')}</g>`;
+}
+
+function etape1(){
+  ctrl.innerHTML='';
+  const I=projection(54,330,150);
+  svg.setAttribute('viewBox','0 0 1000 600');
+  pan.innerHTML=`<h3>Le camion arrive au quai 7</h3><p class="note">10 h 30. Un camion de messagerie recule à la porte 7. Regarde, puis lis le bon de livraison que le chauffeur te remet.</p><div id="blZone"></div>`;
+  const t0=performance.now(),D=5200,reduit=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const dessiner=(t)=>{
+    const f=reduit?1:Math.min(1,t/D),e=1-Math.pow(1-f,2.2);
+    const yr=0.35+ (8.5-0.35)*(1-e);
+    let s=facade(I)+camion(I,3.7,yr)+horloge(I,0.2,0.01,2.35,'10:30');
+    if(f>=1){s+=personne(I,5.05,3.2);const [bx,by]=I.P(5.05,3.2,1.85);s+=bulle(bx+6,by-4,['Bonjour ! Geodis, une palette de chez Puma','pour Spartoo. Voilà le bon de livraison :','vous me signez quand c’est bon ?']);}
+    svg.innerHTML=s;
+    leg.innerHTML=f<1?'<b>10:30</b> — Le camion recule à la porte 7…':'<b>10:31</b> — Le chauffeur te remet le bon de livraison.';
+    if(f<1)E.anim=requestAnimationFrame(()=>dessiner(performance.now()-t0));
+    else{E.anim=null;montrerBL();}
+  };
+  dessiner(0);
+}
+function docBL(avecRes){
+  return `<div class="doc"><div class="dt"><div><span style="font-size:10.5px;color:#6b675f;letter-spacing:.06em">PUMA FRANCE, B2B</span><br><b>Bon de livraison ${BL.no}</b></div><div style="text-align:right;font-size:11px">Destinataire : Spartoo<br>Toolog, Saint-Quentin-Fallavier</div></div>
+  <div class="grille"><span>Commande</span><span class="mono">${BL.cde}</span><span>Expédié le</span><span>${BL.exp}</span><span>Transporteur</span><span>${BL.transp}</span><span>N° de lot</span><span class="mono"><b>${BL.lot}</b></span></div>
+  <table><tr><th>Réf.</th><th>Article</th><th>Taille</th><th class="num">Cartons</th><th class="num">Paires / carton</th></tr>
+  ${BL.lignes.map(l=>`<tr><td class="mono">${l.ref}</td><td>${l.art} · ${l.coul}</td><td>${l.t}</td><td class="num"><b>${l.cartons}</b></td><td class="num">${PPC}</td></tr>`).join('')}
+  <tr><td colspan="3" style="color:#6b675f">1 palette mixte</td><td class="num"><b>${BL.lignes.reduce((n,l)=>n+l.cartons,0)}</b></td><td></td></tr></table>
+  ${avecRes?`<div class="zone-res"><span style="font-size:11px;color:#6b675f">Réserves du destinataire :</span><div class="manus" id="resLignes">${E.ecrit?lignesReserves().map(l=>'• '+l).join('<br>'):''}</div></div>
+  <div class="signs"><div>Destinataire<br><span class="manus">${E.signe?'Sami — 10:44':''}</span></div><div>Chauffeur<br><span class="manus">${E.signe?'≈ M. R.':''}</span></div></div>`:''}
+  <div class="pied">Document pédagogique — reconstitution, non contractuel.</div></div>`;
+}
+function montrerBL(){
+  document.getElementById('blZone').innerHTML=docBL(false)+`<p class="note" style="margin:8px 0">Note sur ta trame : le n° du BL, le lot, et le nombre de cartons annoncés.</p>
+  <button class="btn prim" id="go1">Oui, vous pouvez décharger</button> <button class="btn" id="rev1">Revoir</button>`;
+  document.getElementById('go1').onclick=()=>{E.fait[0]=true;aller(1);};
+  document.getElementById('rev1').onclick=()=>etape1();
+}
+
+/* ================== ② déchargement ================== */
+function interieur(I,ouv){
+  let g=I.face([[-1.2,0,0],[7.5,0,0],[7.5,6,0],[-1.2,6,0]],'#e4dfd3','#c9c3b6');
+  // zone de réception au sol
+  const z=[[2.35,1.9,0],[3.85,1.9,0],[3.85,3.6,0],[2.35,3.6,0]];
+  g+=`<polygon points="${I.pts(z)}" fill="rgba(231,198,40,.12)" stroke="#d1a90f" stroke-width="3" stroke-dasharray="10 6"/>`;
+  const [tx,ty]=I.P(4.0,2.75,0);g+=`<text x="${tx+4}" y="${ty+4}" font-size="13" font-weight="800" fill="#555047" transform="rotate(-30 ${tx} ${ty})">ZONE DE RÉCEPTION</text>`;
+  // bande jaune et noire au seuil
+  for(let k=0;k<8;k++){const x=2.4+k*0.15;g+=I.face([[x,0,0],[x+0.15,0,0],[x+0.15,0.18,0],[x,0.18,0]],k%2?'#1b1b1b':'#e7c628','none');}
+  return g;
+}
+function niveleur(I){ // plaque de quai : dessinée AVEC LE SOL, avant tout ce qui passe dessus
+  let g=I.face([[2.45,-0.6,0.004],[3.55,-0.6,0.004],[3.55,0.2,0.004],[2.45,0.2,0.004]],'#8b9094','#6d7276');
+  for(let k=0;k<7;k++){const x=2.45+k*1.1/7;g+=I.face([[x,-0.6,0.005],[x+1.1/7,-0.6,0.005],[x+1.1/7,-0.5,0.005],[x,-0.5,0.005]],k%2?'#1b1b1b':'#e7c628','none');}
+  for(let y=-0.35;y<0.2;y+=0.12) g+=`<polyline points="${I.pts([[2.5,y,0.005],[3.5,y,0.005]])}" stroke="#7a7f83" stroke-width="1"/>`;
+  return g;
+}
+function remorque(I){ // l'intérieur de la remorque, vu par l'ouverture seulement (clip)
+  let g=I.face([[2.4,-3.6,2.05],[3.6,-3.6,2.05],[3.6,-3.6,0],[2.4,-3.6,0]],'#24282b','none');
+  g+=I.face([[2.4,-3.6,0],[3.6,-3.6,0],[3.6,-0.3,0],[2.4,-0.3,0]],'#5d6266','none');
+  g+=I.face([[2.4,-3.6,0],[2.4,-0.3,0],[2.4,-0.3,2.05],[2.4,-3.6,2.05]],'#3a3f43','none');
+  g+=I.face([[2.4,-3.6,2.05],[3.6,-3.6,2.05],[3.6,-0.3,2.05],[2.4,-0.3,2.05]],'#1c1f21','none');
+  return g;
+}
+function murInterieur(I,ouv){
+  const m=['#b9b3a6','#c9c3b6','#a9a397'];
+  let g=I.boite(-1.2,-0.3,0,3.6,0.3,2.7,m)+I.boite(3.6,-0.3,0,3.9,0.3,2.7,m)+I.boite(2.4,-0.3,2.05,1.2,0.3,0.65,m);
+  // porte sectionnelle qui monte
+  const zb=Math.min(2.05,ouv*2.05);
+  if(zb<2.04){g+=I.face([[2.4,0.001,zb],[3.6,0.001,zb],[3.6,0.001,2.05],[2.4,0.001,2.05]],'#d4d8da','#8d969b');
+    for(let z=zb+0.2;z<2.05;z+=0.25) g+=`<polyline points="${I.pts([[2.4,0.002,z],[3.6,0.002,z]])}" stroke="#a3abb0"/>`;}
+  g+=I.face([[2.7,0.003,2.25],[3.3,0.003,2.25],[3.3,0.003,2.55],[2.7,0.003,2.55]],'#1f5f3a','#0f3d24');
+  const [lx,ly]=I.P(3.0,0.004,2.4);g+=`<text x="${lx}" y="${ly+6}" text-anchor="middle" font-size="11" font-weight="800" fill="#fff" transform="rotate(30 ${lx} ${ly})">QUAI 7</text>`;
+  return g;
+}
+function transpalette(I,x,y){ // timon devant la palette (y = avant de la palette)
+  let g=I.boite(x+.33,y,0.02,.14,.16,.16,['#d93a2b','#c23224','#a8291d']);
+  const [ax,ay]=I.P(x+.4,y+.12,0.2),[bx,by]=I.P(x+.4,y+.62,0.95);
+  g+=roue(I,x+.3,y+.09,.055,.055,.06)+roue(I,x+.44,y+.09,.055,.055,.06);
+  g+=`<line x1="${ax}" y1="${ay}" x2="${bx}" y2="${by}" stroke="#a8291d" stroke-width="5" stroke-linecap="round"/>`;
+  g+=`<rect x="${bx-9}" y="${by-5}" width="18" height="9" rx="4" fill="none" stroke="#1d1d1d" stroke-width="3"/>`;
+  return g;
+}
+function etape2(){
+  ctrl.innerHTML='';
+  const I=projection(60,470,235);
+  svg.setAttribute('viewBox','0 0 1000 600');
+  pan.innerHTML=`<h3>Déchargement</h3><p class="note">Le chauffeur ouvre la porte et sort la palette au transpalette. Il la pose dans la zone de réception.</p>
+  <div class="aide">Chez un transporteur de messagerie, c’est souvent <b>le chauffeur</b> qui décharge, au transpalette. Toi, tu ne signes rien tant que tu n’as pas compté.</div>
+  <div id="fin2"></div>`;
+  const t0=performance.now(),reduit=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const T1=1800,T2=7800,T3=8600;
+  const yDep=-2.9,yArr=2.1,x=2.6; // palette 0,8 × 1,2 (r = 3)
+  const dessiner=t=>{
+    if(reduit)t=T3;
+    const ouv=Math.min(1,t/T1);
+    const f=Math.max(0,Math.min(1,(t-T1)/(T2-T1))),e=f<.5?2*f*f:1-Math.pow(-2*f+2,2)/2;
+    const yp=yDep+(yArr-yDep)*e;
+    let s=interieur(I,ouv);
+    const r=3;
+    s+=`<defs><clipPath id="ouv"><polygon points="${I.pts([[2.4,0,0],[3.6,0,0],[3.6,0,2.05],[2.4,0,2.05]])}"/></clipPath></defs>`;
+    // Le chauffeur et le transpalette suivent la même règle que la palette : tant qu'ils sont dans la remorque
+    // (derrière le plan du mur), on ne les voit que par l'ouverture.
+    const yt=yp+1.2,yc=yt+0.62+(t>=T3?0.5:0),montre=t>=T1-200;
+    const [hx,hy]=I.P(x+.4,yt+.62,0.95);
+    const marche=t>T1&&t<T2;
+    const tp=montre?transpalette(I,x,yt):'',ch=montre?personne(I,x+.62,yc+0.05,{dos:t<T3,main:t<T3?[hx,hy]:null,pas:marche?((t-T1)/600)%1:null}):'';
+    const dedans=(y)=>y<0.02;
+    s+=`<g clip-path="url(#ouv)">${remorque(I)}${niveleur(I)}${palette(I,x,yp,r,{yMax:0,labels:true,lisible:false})}${dedans(yt)?tp:''}${dedans(yc)?ch:''}</g>`;
+    s+=murInterieur(I,ouv);
+    s+=I.face([[2.45,0,0.004],[3.55,0,0.004],[3.55,0.2,0.004],[2.45,0.2,0.004]],'#8b9094','#6d7276');   // la partie du niveleur devant le mur
+    s+=palette(I,x,yp,r,{yMin:0,labels:true,lisible:false});
+    s+=(dedans(yt)?'':tp)+(dedans(yc)?'':ch);
+    s+=horloge(I,6.6,0.01,2.25,t<T2?'10:32':'10:34');
+    svg.innerHTML=s;
+    leg.innerHTML=t<T1?'<b>10:32</b> — La porte du quai 7 se lève.':t<T2?'<b>10:32</b> — Le chauffeur sort la palette au transpalette…':'<b>10:34</b> — La palette est dans la zone de réception. Le chauffeur attend ta signature.';
+    if(t<T3)E.anim=requestAnimationFrame(()=>dessiner(performance.now()-t0));
+    else{E.anim=null;document.getElementById('fin2').innerHTML=`<button class="btn prim" id="go2">Compter la palette</button> <button class="btn" id="rev2">Revoir</button>`;
+      document.getElementById('go2').onclick=()=>{E.fait[1]=true;aller(2);};document.getElementById('rev2').onclick=()=>etape2();}
+  };
+  dessiner(0);
+}
+
+/* ================== ③ compter la palette ================== */
+const NOMS_VUES=['vue de l’avant','vue du côté droit','vue de l’arrière','vue du côté gauche'];
+function dessinPalette(){
+  const r=E.vue,[W,D]=dimsPalette(r);
+  const I=projection(150,470,190);
+  const ox=-W/2+0.85,oy=-D/2+0.2;
+  let s=I.face([[ox-1.2,oy-1.0,0],[ox+W+1.0,oy-1.0,0],[ox+W+1.0,oy+D+1.0,0],[ox-1.2,oy+D+1.0,0]],'#e4dfd3','none');
+  s+=`<polygon points="${I.pts([[ox-.25,oy-.25,0],[ox+W+.25,oy-.25,0],[ox+W+.25,oy+D+.25,0],[ox-.25,oy+D+.25,0]])}" fill="none" stroke="#d1a90f" stroke-width="3" stroke-dasharray="10 6"/>`;
+  s+=palette(I,ox,oy,r,{clic:true,lisible:true});
+  // repère de face : une flèche au sol « avant de la palette » pour s'orienter
+  const nomFaceAvant=['avant','côté droit','arrière','côté gauche'][r];
+  const [fx,fy]=I.P(ox+W/2,oy+D+0.55,0);
+  s+=`<text x="${fx}" y="${fy}" text-anchor="middle" font-size="14" font-weight="700" fill="#555047" transform="rotate(30 ${fx} ${fy})">face ${nomFaceAvant} de la palette</text>`;
+  svg.setAttribute('viewBox','0 0 1000 600');
+  svg.innerHTML=s;
+  svg.querySelectorAll('[data-carton]').forEach(g=>g.onclick=()=>{E.sel=g.dataset.carton;dessinPalette();zoom();});
+  ctrl.innerHTML=`<button class="btn" id="tg">⟲ Tourner</button><button class="btn" id="td">Tourner ⟳</button>
+    <span class="vues">${NOMS_VUES[r]} · faces vues : ${[0,1,2,3].map(k=>`<span class="pastille ${E.vues.has(k)?'vu':''}"></span>`).join('')}</span>`;
+  document.getElementById('tg').onclick=()=>{E.vue=(E.vue+3)%4;E.vues.add(E.vue);dessinPalette();zoom();};
+  document.getElementById('td').onclick=()=>{E.vue=(E.vue+1)%4;E.vues.add(E.vue);dessinPalette();zoom();};
+  leg.innerHTML='<b>10:35</b> — Clique sur un carton pour lire son étiquette. Fais le tour de la palette.';
+}
+function zoom(){
+  const z=document.getElementById('zoom');if(!z)return;
+  const c=CARTONS.find(k=>k.id===E.sel);
+  if(!c){z.innerHTML='<p class="note">Clique sur un carton de la palette : son étiquette s’affiche ici.</p>';return;}
+  // ce qu'on voit de l'état depuis la vue actuelle
+  const visibles=['S','N','E','W'].filter(nf=>{const ext=(nf==='S'&&c.j===1)||(nf==='N'&&c.j===0)||(nf==='E'&&c.i===1)||(nf==='W'&&c.i===0);return ext&&faceVisible(E.vue,nf);});
+  const abimeVu=c.abime&&visibles.includes(c.abime);
+  z.innerHTML=`<div class="etq"><div class="l1"><b>PUMA FRANCE B2B</b><span>Carton <b>${c.no}</b> / 12</span></div>
+    <div style="font-size:10px">→ SPARTOO · Toolog, Saint-Quentin-Fallavier</div>
+    <div class="ref">${c.ref}</div><div>${c.ligne.art} · ${c.ligne.coul}</div>
+    <div>Taille <b>${c.ligne.t}</b> · <b>${PPC} paires</b></div><div>Cde ${BL.cde} · Lot ${BL.lot}</div><div class="cb"></div></div>
+    <div class="etat">${abimeVu?'<span class="ko">⚠ Ce carton est enfoncé</span> sur cette face.':'Ce que tu vois de ce carton depuis ici : <b>intact</b>.'}<br><span class="note">Couche ${c.k+1} en partant du bas.</span></div>`;
+}
+function etape3(){
+  pan.innerHTML=`<div class="aide"><b>Une couche = une référence.</b> Clique un carton pour lire son étiquette, compte chaque couche, <b>fais le tour</b>.</div>
+  <div class="bloc"><div id="zoom" class="zoom"></div></div>
+  <div class="bloc"><h3>Fiche de comptage</h3>
+   <table class="fiche"><tr><th>Réf. (du BL)</th><th>Cartons au BL</th><th>Cartons comptés</th><th>Cartons endommagés</th></tr>
+   ${BL.lignes.map(l=>`<tr><td style="font-family:ui-monospace,monospace;font-size:12px">${l.ref}</td><td style="text-align:center">${l.cartons}</td>
+     <td><input inputmode="numeric" data-f="compte" data-r="${l.ref}" value="${E.fiche[l.ref].compte}"></td><td><input inputmode="numeric" data-f="endo" data-r="${l.ref}" value="${E.fiche[l.ref].endo}"></td></tr>`).join('')}</table>
+   <p class="note" style="margin:6px 0 2px">Décision pour la palette :</p>
+   <div class="dec">${[['accepter','Accepter'],['reserves','Accepter avec réserves'],['refuser','Refuser']].map(([v,t])=>`<button data-d="${v}" class="${E.dec===v?'on':''}">${t}</button>`).join('')}</div>
+   <div class="motifs"><label><input type="checkbox" data-m="avarie" ${E.motifs.avarie?'checked':''}> Cartons endommagés</label><label><input type="checkbox" data-m="manquant" ${E.motifs.manquant?'checked':''}> Manquant</label></div>
+   <button class="btn prim" id="go3">Valider le contrôle</button> <button class="btn" id="voirBL">Revoir le BL</button><div id="msg3" class="note" style="margin-top:6px"></div></div>
+  <div id="blPop"></div>`;
+  pan.querySelectorAll('[data-f]').forEach(i=>i.oninput=()=>{E.fiche[i.dataset.r][i.dataset.f]=i.value.trim();});
+  pan.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{E.dec=b.dataset.d;pan.querySelectorAll('[data-d]').forEach(x=>x.classList.toggle('on',x===b));});
+  pan.querySelectorAll('[data-m]').forEach(c=>c.onchange=()=>{E.motifs[c.dataset.m]=c.checked;});
+  document.getElementById('voirBL').onclick=()=>{const z=document.getElementById('blPop');z.innerHTML=z.innerHTML?'':docBL(false);};
+  document.getElementById('go3').onclick=()=>{
+    const manque=BL.lignes.filter(l=>E.fiche[l.ref].compte==='');
+    if(manque.length||!E.dec){document.getElementById('msg3').innerHTML='Il manque : '+[manque.length?'un comptage':'',!E.dec?'la décision':''].filter(Boolean).join(' et ')+'.';return;}
+    E.fait[2]=true;aller(3);
+  };
+  dessinPalette();zoom();
+}
+
+/* ================== ④ réserves et signature ================== */
+function lignesReserves(){
+  const L=[];
+  BL.lignes.forEach(l=>{const f=E.fiche[l.ref],c=+f.compte,en=+f.endo||0;
+    if(E.motifs.manquant&&f.compte!==''&&c<l.cartons)L.push(`${l.ref} : manque ${l.cartons-c} carton${l.cartons-c>1?'s':''} (BL ${l.cartons}, reçu ${c})`);
+    if(E.motifs.avarie&&en>0)L.push(`${l.ref} : ${en} carton${en>1?'s':''} endommagé${en>1?'s':''}`);});
+  return L;
+}
+function etape4(){
+  ctrl.innerHTML='';
+  E.vue=E.vue; dessinPalette(); ctrl.innerHTML='';
+  leg.innerHTML='<b>10:41</b> — Écris tes réserves sur le BL, puis fais signer le chauffeur.';
+  const sol=[['Palette comptée juste',BL.lignes.every(l=>+E.fiche[l.ref].compte===CARTONS.filter(c=>c.ref===l.ref&&!c.absent).length)],
+    ['Endommagés justes (1 carton PM-RSX-BL-42)',BL.lignes.every(l=>(+E.fiche[l.ref].endo||0)===CARTONS.filter(c=>c.ref===l.ref&&c.abime).length)],
+    ['Décision : accepter avec réserves, motifs avarie + manquant',E.dec==='reserves'&&E.motifs.avarie&&E.motifs.manquant],
+    ['Toutes les faces vues (4/4)',E.vues.size===4]];
+  pan.innerHTML=`${docBL(true)}
+   <div style="margin:9px 0;display:flex;gap:6px;flex-wrap:wrap"><button class="btn ${E.ecrit?'':'prim'}" id="ecr" ${E.ecrit||E.dec==='accepter'?'disabled':''}>Écrire les réserves sur le BL</button>
+   <button class="btn ${E.ecrit&&!E.signe?'prim':''}" id="sig" ${(E.ecrit||E.dec==='accepter')&&!E.signe?'':'disabled'}>Faire signer le chauffeur</button>
+   <button class="btn" id="ret3">Retour au comptage</button></div>
+   <div id="fin4" class="note">${E.signe?'<b style="color:#7ad39a">Le chauffeur est reparti.</b> La palette reste en zone de réception. Suite (étape 6 de la trame) : <b>Données &gt; Réceptions</b>, retrouve ta réception par le n° de BL et saisis-la <b>en paires</b>.':''}</div>
+   <details class="sol"><summary>(maquette) vérifier mon contrôle</summary><div class="verdict">${sol.map(([t,ok])=>`<div class="${ok?'ok':'ko'}">${ok?'✓':'✗'} ${t}</div>`).join('')}</div></details>`;
+  document.getElementById('ecr').onclick=()=>{E.ecrit=true;etape4();};
+  document.getElementById('sig').onclick=()=>{E.signe=true;E.fait[3]=true;barre();etape4();};
+  document.getElementById('ret3').onclick=()=>{if(!E.signe)aller(2);};
+  if(E.signe)document.getElementById('ret3').disabled=true;
+}
+barre();etape1();
+</script>
+</body></html>

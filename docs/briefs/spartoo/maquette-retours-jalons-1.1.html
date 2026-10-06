@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Maquette — retours sur les jalons (ENT-1.1)</title>
+<style>
+  :root{--vert:#0f7a40;--fond:#f4f1ea;--carte:#fbfaf6;--trait:#e3ded3;--texte:#1d1d1b;--doux:#6b675f;--rouge:#b3261e;--rougef:#fbe9e7;--vertf:#e6f3ea}
+  *{box-sizing:border-box} body{margin:0;font-family:Inter,system-ui,Segoe UI,Arial,sans-serif;background:#d9d5cc;color:var(--texte)}
+  .titre-maq{max-width:1366px;margin:0 auto;padding:14px 16px 6px;font-size:13px;color:#444}
+  .titre-maq b{font-size:15px;color:#111}
+  .ecran{max-width:1366px;margin:8px auto 22px;height:657px;overflow:hidden;position:relative;box-shadow:0 2px 12px rgba(0,0,0,.25)}
+  .lbl{position:absolute;right:10px;top:8px;background:#111;color:#fff;font-size:11px;padding:3px 8px;border-radius:4px;z-index:9;opacity:.8}
+  /* ---------- prof ---------- */
+  .prof{background:var(--fond);height:100%}
+  .bandeau{background:var(--vert);color:#fff;height:72px;max-width:1080px;margin:0 auto;display:flex;align-items:center;padding:0 16px;gap:14px}
+  .bandeau b{font-size:24px}.bandeau b span{color:#9ee2b3}.bandeau .sep{opacity:.6;font-size:13px;letter-spacing:.08em;border-left:1px solid rgba(255,255,255,.4);padding-left:14px}
+  .wrap{max-width:1080px;margin:0 auto;padding:18px 16px}
+  h1{font-size:24px;margin:6px 0 14px}
+  .onglets{display:flex;gap:8px;margin-bottom:16px}.onglets span{border:1px solid var(--trait);background:#fff;border-radius:6px;padding:7px 11px;font-size:14px}
+  .onglets .on{background:var(--vert);color:#fff;border-color:var(--vert)}
+  .carte{background:var(--carte);border:1px solid var(--trait);border-radius:8px;padding:16px 18px}
+  table.suivi{border-collapse:collapse;width:100%;font-size:14px}
+  .suivi th{font-size:12px;letter-spacing:.04em;color:#444;text-align:left;padding:8px 10px;border-bottom:1px solid var(--trait);font-family:ui-monospace,monospace}
+  .suivi td{padding:10px;border-bottom:1px solid var(--trait)}
+  .num{text-align:center;font-variant-numeric:tabular-nums}
+  .cell{position:relative;display:inline-block;padding:3px 9px;border-radius:5px;font-weight:600;cursor:help}
+  .ok{background:var(--vertf);color:var(--vert)} .faux{background:var(--rougef);color:var(--rouge)} .vide{color:#aaa}
+  .bulle{display:none;position:absolute;left:50%;top:calc(100% + 8px);transform:translateX(-50%);width:520px;background:#1f1f1d;color:#f3f1ec;
+    border-radius:8px;padding:12px 14px;font-weight:400;font-size:13px;line-height:1.45;text-align:left;z-index:5;box-shadow:0 6px 18px rgba(0,0,0,.3)}
+  .bulle::before{content:"";position:absolute;top:-6px;left:50%;margin-left:-6px;border:6px solid transparent;border-top:0;border-bottom-color:#1f1f1d}
+  .cell:hover .bulle,.cell.ouverte .bulle{display:block}
+  .bulle h4{margin:0 0 8px;font-size:13px;color:#fff}
+  .bulle ol{margin:0;padding-left:0;list-style:none}
+  .bulle li{padding:3px 0 3px 22px;position:relative}
+  .bulle li::before{position:absolute;left:0;font-weight:700}
+  .bulle li.j-ok::before{content:"✓";color:#7ad39a} .bulle li.j-ko::before{content:"✗";color:#ff8a80} .bulle li.j-at::before{content:"…";color:#bbb}
+  .bulle li.j-ko{color:#fff}.bulle .det{display:block;color:#ffc9c3;font-size:12.5px;margin-top:1px}
+  .bulle .pied{margin-top:8px;color:#aaa;font-size:12px;border-top:1px solid #444;padding-top:6px}
+  .note{font-size:12.5px;color:var(--doux);margin-top:10px}
+  /* ---------- élève ---------- */
+  .eleve{background:#151211;height:100%;color:#eee}
+  .ent-head{margin:14px 24px 0;border:1px solid #333;border-radius:8px;display:flex;align-items:center;gap:14px;padding:12px 18px;background:#1c1817}
+  .logo{width:38px;height:38px;background:#fff;border-radius:4px;display:grid;place-items:center;color:#c8102e;font-size:10px;font-weight:700}
+  .marque{color:#e2445c;font-weight:700;font-size:20px}.badge{background:#3a3533;border:1px solid #555;border-radius:20px;padding:4px 12px;font-size:14px;font-family:ui-monospace,monospace}
+  .droite{margin-left:auto;display:flex;gap:26px;font-size:14px;color:#ccc;align-items:center}.droite .q{border:1px solid #ddd;color:#fff;border-radius:5px;padding:6px 12px}
+  .fin{margin:10px 24px 0;border-radius:8px;padding:12px 16px;display:flex;gap:14px;align-items:flex-start;font-size:15px;line-height:1.45}
+  .fin.ko{background:#3b1d1a;border:1px solid #e0685c}
+  .fin.okk{background:#163223;border:1px solid #3fae6a}
+  .fin .ico{font-size:22px;line-height:1}
+  .fin ul{margin:6px 0 4px;padding-left:18px}.fin .petit{font-size:13px;color:#d9c9c6}
+  .fin .btns{margin-left:auto;display:flex;gap:8px;flex-shrink:0}.fin .btn{border:1px solid #bbb;border-radius:5px;padding:6px 10px;font-size:13px;color:#fff;white-space:nowrap}
+  .corps{display:flex;margin-top:10px}
+  .menu{width:236px;padding:6px 24px;font-size:16px;color:#ddd}.menu div{padding:11px 12px}.menu .act{border:1px solid #e2445c;border-radius:6px;background:#2b1418}
+  .menu small{display:block;font-size:11px;letter-spacing:.1em;color:#888;padding:10px 12px 0}
+  .main{flex:1;padding:4px 24px;border-left:1px solid #2c2827}
+  .main h2{margin:4px 0 2px;font-size:19px}.main .sous{color:#aaa;font-size:14px;margin-bottom:12px}
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.kpis div{border:1px solid #333;border-radius:6px;padding:14px;background:#1d1918}
+  .kpis b{font-size:26px;display:block}.kpis span{font-size:13px;color:#aaa}
+  .tuiles{display:flex;gap:16px;padding:20px 16px;max-width:1080px;margin:0 auto}
+  .tuile{width:250px;background:#fbfaf6;border:1px solid #e3ded3;border-radius:6px;padding:18px;font-size:13px;color:#444;position:relative}
+  .tuile code{color:#a0651a;font-size:11px}.tuile h3{font-size:16px;margin:8px 0;color:#111}
+  .tuile .v{position:absolute;top:12px;right:12px;background:var(--vertf);color:var(--vert);border-radius:12px;padding:2px 8px;font-size:11.5px;font-weight:700}
+</style></head><body>
+
+<div class="titre-maq"><b>① Suivi de classe — l'infobulle de détail</b> (survole les cases rouges ; celle de Sami est ouverte pour la capture). Écran 1366 × 657.</div>
+<div class="ecran"><div class="lbl">Espace enseignant</div><div class="prof">
+  <div class="bandeau"><b>Prepa<span>log</span></b><span class="sep">FAMILLE DES MÉTIERS GATL</span></div>
+  <div class="wrap">
+    <h1>Espace enseignant</h1>
+    <div class="onglets"><span>Groupes</span><span>Comptes élèves</span><span class="on">Suivi de classe</span><span>Compétences</span><span>Conduite de séance</span><span>Corrigés</span></div>
+    <div class="carte">
+      <table class="suivi">
+        <tr><th>ÉLÈVE</th><th class="num">ENT-1.1</th><th class="num">ENT-1.2</th><th class="num">ENT-1.3</th><th class="num">ENT-3.1 /20</th></tr>
+        <tr><td>DUPONT Léa</td><td class="num"><span class="cell ok">7/7<span class="bulle"><h4>ENT-1.1 — Spartoo réception · Léa DUPONT</h4><ol>
+          <li class="j-ok">Palette comptée juste (3 références)</li><li class="j-ok">Palette décidée juste : accepter avec réserves</li><li class="j-ok">Réserves précises sur le BL</li><li class="j-ok">BL signé par le chauffeur</li><li class="j-ok">Contrôle à réception du bon BL-77421</li><li class="j-ok">Entrée en stock avec le lot</li><li class="j-ok">Réserves signalées à Puma</li></ol></span></span></td>
+          <td class="num"><span class="cell faux">1/3</span></td><td class="num vide">—</td><td class="num">14,5</td></tr>
+        <tr><td>ELEVE Sami</td><td class="num"><span class="cell faux ouverte">5/7<span class="bulle"><h4>ENT-1.1 — Spartoo réception · Sami ELEVE</h4><ol>
+          <li class="j-ok">Palette comptée juste (3 références)</li>
+          <li class="j-ok">Palette décidée juste : accepter avec réserves</li>
+          <li class="j-ok">Réserves précises sur le BL</li>
+          <li class="j-ok">BL signé par le chauffeur</li>
+          <li class="j-ko">Contrôle à réception du bon BL-77421<span class="det">Réception REC-04129 (BL-77412) saisie et validée : ce n'est pas le BL de la palette. REC-04127 : pas encore validée.</span></li>
+          <li class="j-ko">Entrée en stock avec le lot<span class="det">Entrées inattendues : PM-SUE-NR-40, PM-RSX-GR-44. PM-SUE-RG-39 : 0 entrée (attendu 24) · PM-RSX-BL-42 : 0 (attendu 24) · PM-SUE-MA-41 : 0 (attendu 18).</span></li>
+          <li class="j-ok">Réserves signalées à Puma</li></ol>
+          <div class="pied">Premier coup : 4 / 7 · Temps passé : 52 min</div></span></span></td>
+          <td class="num vide">—</td><td class="num vide">—</td><td class="num">11</td></tr>
+        <tr><td>MARTIN Noé</td><td class="num"><span class="cell faux">2/7<span class="bulle"><h4>ENT-1.1 — Spartoo réception · Noé MARTIN</h4><ol>
+          <li class="j-ko">Palette comptée juste (3 références)<span class="det">PM-SUE-MA-41 : 4 cartons notés, attendu 3 (BL : 4). Les deux autres justes.</span></li>
+          <li class="j-ko">Palette décidée juste : accepter avec réserves<span class="det">Décidé : accepter avec réserves — motif « avarie » seul (manque le « manquant »).</span></li>
+          <li class="j-ok">Réserves précises sur le BL</li><li class="j-ok">BL signé par le chauffeur</li>
+          <li class="j-at">Contrôle à réception du bon BL-77421 — pas encore fait</li><li class="j-at">Entrée en stock avec le lot — pas encore fait</li><li class="j-at">Réserves signalées à Puma — pas encore fait</li></ol></span></span></td>
+          <td class="num vide">—</td><td class="num vide">—</td><td class="num">9</td></tr>
+      </table>
+      <div class="note">Les environnements d'entreprise affichent des jalons franchis : <b>survolez une case pour le détail</b> (✓ juste, ✗ à corriger, … pas encore fait).</div>
+    </div>
+  </div>
+</div></div>
+
+<div class="titre-maq"><b>② Côté élève — le bandeau de fin de séance</b> : il s'affiche quand tous les jalons sont jugés, sur tous les écrans de l'environnement. Il nomme l'étape fausse, jamais la réponse.</div>
+<div class="ecran"><div class="lbl">Élève — séance pas encore juste</div><div class="eleve">
+  <div class="ent-head"><div class="logo">spartoo</div><span class="marque">Spartoo</span><span style="font-size:14px;color:#ccc">Vente de chaussures en ligne</span><span class="badge">ENT-1.1 · Réception</span>
+    <div class="droite"><span>Sami</span><span style="color:#888">Réinitialiser</span><span>Trame PDF</span><span>Trame Word</span><span class="q">Quitter</span></div></div>
+  <div class="fin ko"><span class="ico">⚠</span><div><b>Tu as tout fait, mais il reste quelque chose à corriger :</b>
+    <ul><li>Contrôle à réception du bon BL-77421</li><li>Entrée en stock avec le lot</li></ul>
+    <span class="petit">Relis ta trame à ces étapes. Si tu ne trouves pas, appelle ton professeur. La séance suivante s'ouvrira quand tout sera juste.</span></div>
+    </div>
+  <div class="corps"><div class="menu"><div>Accueil</div><div>Messagerie</div><div>Quai de réception</div><small>DONNÉES</small><div class="act">Réceptions</div><div>Stock</div><small>OUTILS</small><div>Console</div></div>
+    <div class="main"><h2>Bonjour Sami</h2><div class="sous">Spartoo · Exercice 1 : réception d'une livraison fournisseur</div>
+      <div class="kpis"><div><b>1</b><span>message non lu</span></div><div><b>1</b><span>livraison à contrôler</span></div><div><b>4593</b><span>paires en stock</span></div><div><b>47</b><span>références en rupture</span></div></div></div></div>
+</div></div>
+
+<div class="titre-maq"><b>③ Côté élève — séance juste</b> : le bandeau vert, puis la marque sur la tuile.</div>
+<div class="ecran" style="height:auto"><div class="lbl">Élève — séance validée</div><div class="eleve" style="padding-bottom:14px">
+  <div class="fin okk" style="margin-top:14px"><span class="ico">✓</span><div><b>Séance validée.</b> Toutes tes étapes sont justes : la séance suivante, ENT-1.2 « Spartoo — préparation », est ouverte.</div><div class="btns"><span class="btn">Retour aux séances</span></div></div>
+  <div style="background:#f4f1ea;margin:14px 24px 0;border-radius:8px"><div class="tuiles">
+    <div class="tuile"><span class="v">validée ✓</span><code>ENT-1.1</code><h3>Spartoo — réception</h3>Contrôle d'une livraison fournisseur, du quai à l'entrée en stock avec numéro de lot.</div>
+    <div class="tuile"><code>ENT-1.2</code><h3>Spartoo — préparation</h3>Traiter une commande client : contrôle du stock, bon de préparation et réapprovisionnement.</div>
+    <div class="tuile" style="opacity:.55"><code>ENT-1.3</code><h3>Spartoo — traçabilité</h3>Remonter un lot défectueux… <b>Termine d'abord ENT-1.2.</b></div>
+  </div></div>
+</div></div>
+<div class="titre-maq" style="padding-bottom:30px">Maquette jetable, non reliée au site. Les phrases de détail sont celles que les jalons calculent déjà (§5 du brief).</div>
+</body></html>
