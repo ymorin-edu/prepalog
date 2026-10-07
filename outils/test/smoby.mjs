@@ -2084,6 +2084,10 @@ await v('ENT-5.3 : déclaration (code, 2de, C1.2 et C1.5, 17 jalons, livrée fer
 await v('ENT-5.3 : à l’ouverture, le message de Bruno, aucun jalon (0 / 17) ; menu « Visite de la plateforme » seul, les 8 mots du rack cliquables', async () => {
   await monter53();
   egal(await pg.evaluate(() => window.__53.db.mails.filter((m) => m.folder === 'in').map((m) => m.subject)), ['Ton premier jour : la visite'], 'messages au départ');
+  // Retours 5.3, A6 : le message est daté du jour de la visite, mercredi 9 décembre à 7 h 55, de l'année scolaire en cours.
+  const quand = await pg.evaluate(() => { const d = new Date(window.__53.db.mails[0].ts), n = new Date();
+    return [d.getDate(), d.getMonth() + 1, d.getHours(), d.getMinutes(), d.getFullYear() === (n.getMonth() >= 8 ? n.getFullYear() : n.getFullYear() - 1)]; });
+  egal(quand, [9, 12, 7, 55, true], 'date du message de Bruno');
   egal(await etapes53(), Array(17).fill('attente'), 'étapes à l’ouverture');
   const s = await dernierScore53();
   vrai(!s || s[0] === 0, `score sans rien faire : ${JSON.stringify(s)}`);
@@ -2118,7 +2122,7 @@ await v('ENT-5.3 : la visite juste de bout en bout à l’écran → 17 / 17 rem
   await suivant53();
   for (const n of [1, 2, 3, 4, 5, 6, 7, 8]) await pg.click(`${Z53} button[data-pv-point="${n}"]`);
   await suivant53();
-  await clic53(300, 500); await clic53(800, 400); await clic53(450, 600); await clic53(800, 1700);
+  await clic53(300, 500); await clic53(700, 120); await clic53(450, 600); await clic53(800, 1700);
   await suivant53();
   for (const [x, y] of [[287, 45], [847, 47], [258, 1175], [876, 1173]]) await clic53(x, y);
   await pg.click(`${Z53} [data-pv="verifierCoins"]`);

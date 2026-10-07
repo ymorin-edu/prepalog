@@ -54,7 +54,7 @@ export const PLANNING = {
     liste: CAMIONS,
     nonAffectees: (L) => `Enlèvements sans camion : ${ids(L)}.`,
     lecture: { titre: 'Utilisation des camions', bloc: (c, l) => `${c.id} ${l.nom}`,
-      legende: "Ce planning se remplit tout seul quand vous choisissez un camion. Hachures : camion à l'atelier." },
+      legende: "Ce planning se remplit tout seul quand tu choisis un camion. Hachures : camion à l'atelier." },
   },
   cartes: {
     titre: 'Enlèvements du jour',
@@ -66,8 +66,8 @@ export const PLANNING = {
     ],
     pauses: { nombre: 4, duree: 45, libelle: 'Pause 45 min', aPoser: 'À poser si besoin' },
     nonPosees: (L) => `Enlèvements sans chauffeur : ${ids(L)}.`,
-    legende: "Glissez un enlèvement sur la ligne d'un chauffeur, à l'heure du départ : une bulle s'ouvre pour choisir son camion. Même geste pour une pause. "
-      + 'Ou cliquez la carte, puis la case. Sur le planning, cliquez un enlèvement pour rouvrir sa bulle ; pour le déplacer, glissez-le ou choisissez '
+    legende: "Glisse un enlèvement sur la ligne d'un chauffeur, à l'heure du départ : une bulle s'ouvre pour choisir son camion. Même geste pour une pause. "
+      + 'Ou clique la carte, puis la case. Sur le planning, clique un enlèvement pour rouvrir sa bulle ; pour le déplacer, glisse-le ou choisis '
       + '« Déplacer ». Clavier : Entrée pour prendre une carte (ou ouvrir la bulle sur le planning), Espace pour déplacer un bloc, flèches, Suppr '
       + 'pour retirer, Échap pour fermer.',
   },
@@ -100,11 +100,11 @@ export const PLANNING = {
   aides: {
     consignes: {
       regles: "Chaque enlèvement se pose sur la ligne d'<b>un chauffeur</b>, à l'heure du départ, et reçoit <b>un camion</b> (bulle qui s'ouvre sur le planning). Un chauffeur et un camion ne font qu'un trajet à la fois. Une semi-remorque demande le permis <b>CE</b> ; un porteur se conduit avec le permis <b>C</b> (le permis CE le permet aussi).",
-      conduite: 'Temps de conduite : <b>4 h 30</b> au plus sans pause ; la pause dure <b>45 min</b> (posez une carte Pause sur la ligne du chauffeur, entre deux trajets). <b>9 h</b> de conduite au plus dans la journée.',
+      conduite: 'Temps de conduite : <b>4 h 30</b> au plus sans pause ; la pause dure <b>45 min</b> (pose une carte Pause sur la ligne du chauffeur, entre deux trajets). <b>9 h</b> de conduite au plus dans la journée.',
       repos: "Entre la fin de service d'hier et le premier départ d'aujourd'hui : <b>11 h de repos</b> au moins.",
     },
     fenetre: {
-      invite: 'Cliquez un enlèvement : une bande ambrée montre quand il peut rouler. Quadrillé : le chauffeur est encore en repos.',
+      invite: 'Clique un enlèvement : une bande ambrée montre quand il peut rouler. Quadrillé : le chauffeur est encore en repos.',
       carte: (c) => `${c.id} : prêt dès <b>${c.des}</b>, livré avant <b>${c.avant}</b>. Le trajet doit tenir dans la bande ambrée.`,
     },
     reprise: true,
@@ -112,7 +112,7 @@ export const PLANNING = {
   },
   alea: {
     de: 'Atelier Kuehne+Nagel Besançon',
-    texte: "Le <b>Semi n° 2</b> a un problème de freins : il reste à l'atelier jusqu'à <b>12:00</b>. Il ne peut faire aucun trajet avant cette heure. Reprenez le planning des chauffeurs et renvoyez-le-moi.",
+    texte: "Le <b>Semi n° 2</b> a un problème de freins : il reste à l'atelier jusqu'à <b>12:00</b>. Il ne peut faire aucun trajet avant cette heure. Reprends le planning des chauffeurs et renvoie-le-moi.",
     ressources: { s2: { dispo: '12:00' } },
   },
   // Pas de `note` : en guidage, la note de la séance est celle de ses 10 étapes.

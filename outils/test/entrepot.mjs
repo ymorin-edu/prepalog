@@ -874,7 +874,7 @@ async function parcoursJuste(p) {
 const ASSOCIER = [4, 1, 6, 2, 5, 3];
 async function associerJuste(p) { for (const n of ASSOCIER) await p.click(`${ZV} [data-pv-num="${n}"]`); }
 async function quizJuste(p) {
-  await clicPhoto(p, 300, 500); await clicPhoto(p, 800, 400); await clicPhoto(p, 450, 600); await clicPhoto(p, 800, 1700);
+  await clicPhoto(p, 300, 500); await clicPhoto(p, 700, 120); await clicPhoto(p, 450, 600); await clicPhoto(p, 800, 1700);
 }
 async function coins(p, L) { for (const [x, y] of L) await clicPhoto(p, x, y); }
 const COINS_JUSTES = [[287, 45], [847, 47], [258, 1175], [876, 1173]];
@@ -944,7 +944,7 @@ await v('Visite : vue du ciel — les 6 points ne lancent pas les questions ; le
   await pv.click(`${ZV} [data-pv="questions"]`);
   vrai(!(await pv.$(`${ZV} g[data-pv-point]`)), 'points encore sur la photo pendant les questions');
   await clicPhoto(pv, 100, 100);
-  egal(await msgV(pv), 'Pas ici. Relisez le point n° 3.', 'message faux');
+  egal(await msgV(pv), 'Pas ici. Relis le point « Parking poids lourds », dans la liste à gauche.', 'message faux (le nom du point, pas son numéro)');
   egal((await jalonsV(pv))[0], 'ko', 'jalon après le clic faux');
   await clicPhoto(pv, 1000, 560);
   egal(await msgV(pv), 'Oui, c’est bien ici.', 'message juste');
@@ -963,12 +963,52 @@ await v('Visite : quiz — une lisse cliquée sur la lisse juste, sur l’allée
   await clicPhoto(pv, 300, 500);
   egal(await msgV(pv), 'Oui : c’est une échelle.', 'échelle');
   await clicPhoto(pv, 800, 1600);
-  egal(await msgV(pv), 'Non, pas ici. Revoyez le mot à l’étape précédente si besoin.', 'lisse sur l’allée');
+  egal(await msgV(pv), 'Non, pas ici. Une lisse est la barre horizontale sous la palette : la palette pose dessus.', 'lisse sur l’allée');
   egal((await jalonsV(pv)).slice(9, 11), ['ok', 'ko'], 'jalons échelle, lisse');
-  await clicPhoto(pv, 800, 400);
-  egal(await msgV(pv), 'Oui : c’est une lisse.', 'lisse');
+  await clicPhoto(pv, 700, 120);
+  egal(await msgV(pv), 'Oui : c’est une lisse qui porte une palette filmée.', 'lisse');
   vrai((await texteV(pv, '[data-pv-q="lisse"]')).includes('(2 essais)'), 'essais de la lisse');
   egal((await jalonsV(pv)).slice(9, 11), ['ok', 'ok'], 'jalons après la lisse');
+});
+
+// Retours 5.3, A1 (docs/briefs/SMOBY-retours-5.3.md) : des bonnes réponses étaient refusées (une seule zone par
+// élément). Clics relevés au parcours élève : échelle du fond (760, 900), lisse de gauche (100, 560), palette filmée
+// en haut à gauche (100, 300). La lisse des fûts bleus (800, 400), sans palette filmée, ne compte pas ; le mur du
+// fond (1000, 900) n'est rien.
+await v('Visite : quiz — les bonnes réponses relevées au parcours élève sont justes ; fûts bleus et mur du fond faux, avec l’aide', async () => {
+  await monterV(pv, { db: rendu(5) });
+  vrai((await texteV(pv, '[data-pv-consigne]')).endsWith('Sur cette photo d’un autre entrepôt, clique sur une échelle.'), 'consigne au tu');
+  await clicPhoto(pv, 1000, 900);
+  egal(await msgV(pv), 'Non, pas ici. Une échelle est un montant vertical percé de trous, relié à un autre par des barres en diagonale.', 'mur du fond, échelle');
+  await clicPhoto(pv, 760, 900);
+  egal(await msgV(pv), 'Oui : c’est une échelle.', 'échelle du fond');
+  await clicPhoto(pv, 800, 400);
+  egal(await msgV(pv), 'Non, pas ici. Une lisse est la barre horizontale sous la palette : la palette pose dessus.', 'lisse des fûts bleus');
+  await clicPhoto(pv, 1000, 900);
+  egal((await jalonsV(pv)).slice(9, 13), ['ok', 'ko', 'attente', 'attente'], 'jalons après les faux (échelle trouvée, lisse pas encore)');
+  await clicPhoto(pv, 100, 560);
+  egal(await msgV(pv), 'Oui : c’est une lisse qui porte une palette filmée.', 'lisse de gauche');
+  await clicPhoto(pv, 1000, 900);
+  egal(await msgV(pv), 'Non, pas ici. Cherche des cartons ou des seaux entourés de film plastique.', 'mur du fond, palette');
+  await clicPhoto(pv, 100, 300);
+  egal(await msgV(pv), 'Oui : c’est une palette filmée.', 'palette en haut à gauche');
+  await clicPhoto(pv, 1000, 900);
+  egal(await msgV(pv), 'Non, pas ici. L’allée est le couloir au sol, entre les racks.', 'mur du fond, allée');
+  await clicPhoto(pv, 300, 1450);
+  egal((await jalonsV(pv)).slice(9, 13), ['ok', 'ok', 'ok', 'ok'], 'les 4 éléments');
+});
+
+// Retours 5.3, A2 et A3 : « Travée » entre deux échelles, « Croisillons » sur une diagonale ; échelle et lisse
+// définies sans couleur (la couleur change d'une photo à l'autre), dans l'étape et dans le lexique.
+await v('Visite : mots du rack — points 7 et 8 à leur place, définitions d’échelle et de lisse sans couleur', async () => {
+  await monterV(pv, { db: rendu(4) });
+  const pos = await pv.$$eval(`${ZV} g[data-pv-point] circle`, (L) => L.map((c) => [c.closest('g').dataset.pvPoint, +c.getAttribute('cx'), +c.getAttribute('cy')]));
+  const de = (n) => pos.filter((p) => p[0] === String(n)).map((p) => [p[1], p[2]])[0];
+  egal([de(7), de(8)], [[330, 330], [1100, 420]], 'points 7 (Travée) et 8 (Croisillons)');
+  await pv.click(`${ZV} button[data-pv-point="1"]`);
+  egal(await texteV(pv, '.pv-def'), 'Le montant vertical, percé de trous, qui porte les lisses. Deux échelles délimitent une travée.', 'échelle');
+  await pv.click(`${ZV} button[data-pv-point="2"]`);
+  egal(await texteV(pv, '.pv-def'), 'La barre horizontale sur laquelle on pose les palettes. Sa charge maximale est écrite sur une plaque.', 'lisse');
 });
 
 await v('Visite : travée — 4 coins dans le désordre ; coins du bas trop hauts ; enlever un point ; 5e clic sans effet', async () => {
@@ -983,7 +1023,7 @@ await v('Visite : travée — 4 coins dans le désordre ; coins du bas trop haut
   await clicPhoto(pv, 550, 600);
   egal(await pv.$$eval(`${ZV} [data-pv-pose]`, (L) => L.length), 4, '5e clic');
   await pv.click(`${ZV} [data-pv="verifierCoins"]`);
-  egal(await msgV(pv), 'Pas encore : coins en bas à gauche, en bas à droite. Un coin se place là où une échelle touche le sol ou s’arrête en haut. Cliquez le point rouge pour l’enlever.', 'message');
+  egal(await msgV(pv), 'Pas encore : coins en bas à gauche, en bas à droite. Un coin se place là où une échelle touche le sol ou s’arrête en haut. Clique le point rouge pour l’enlever.', 'message');
   egal(await pv.$$eval(`${ZV} [data-pv-coin]`, (L) => L.map((e) => e.dataset.ok)), ['true', 'true', 'false', 'false'], 'coins jugés');
   egal(await pv.$$eval(`${ZV} [data-pv-pose]`, (L) => L.map((g) => g.dataset.faux)), ['false', 'false', 'true', 'true'], 'seuls les coins du bas en rouge');
   egal((await jalonsV(pv))[13], 'ko', 'jalon après un Vérifier faux');
@@ -1008,9 +1048,9 @@ await v('Visite : lisses — fond, travée d’à côté, pas une lisse, déjà 
   await clicPhoto(pv, 570, 80);
   egal(await msgV(pv), 'Oui : c’est la lisse du haut.', 'lisse du haut');
   await clicPhoto(pv, 570, 160);
-  egal(await msgV(pv), 'Cette barre est au fond, sur le rack de derrière. Cherchez les lisses accrochées aux échelles de devant.', 'fond');
+  egal(await msgV(pv), 'Cette barre est au fond, sur le rack de derrière. Cherche les lisses accrochées aux échelles de devant.', 'fond');
   await clicPhoto(pv, 950, 450);
-  egal(await msgV(pv), 'C’est bien une lisse, mais celle de la travée d’à côté. Restez entre les deux échelles de votre travée.', 'travée d’à côté');
+  egal(await msgV(pv), 'C’est bien une lisse, mais celle de la travée d’à côté. Reste entre les deux échelles de ta travée.', 'travée d’à côté');
   await clicPhoto(pv, 570, 600);
   egal(await msgV(pv), 'Ici, ce n’est pas une lisse. Une lisse est une barre horizontale orange, entre les deux échelles.', 'pas une lisse');
   await clicPhoto(pv, 570, 80);
@@ -1096,7 +1136,7 @@ await v('Visite : « Où est-ce ? » — plan à gauche (numéros seuls), une ph
   egal(await pv.$eval(`${ZV} [data-pv-photo] img`, (i) => i.dataset.pvImg), 'allee', 'première photo');
   egal(await jalonsV(pv).then((J) => J.slice(3, 9)), Array(6).fill('attente'), 'jalons avant tout clic');
   await pv.click(`${ZV} [data-pv-num="2"]`);
-  egal(await msgV(pv), 'Non, pas depuis le n° 2. Regardez bien la photo, ou revoyez le parcours.', 'faux');
+  egal(await msgV(pv), 'Non, pas depuis le n° 2. Regarde bien la photo, ou revois le parcours.', 'faux');
   egal(await pv.$eval(`${ZV} [data-pv-photo] img`, (i) => i.dataset.pvImg), 'allee', 'la photo reste après un faux');
   egal((await jalonsV(pv))[3], 'ko', 'jalon après le faux');
   await pv.click(`${ZV} [data-pv-num="4"]`);

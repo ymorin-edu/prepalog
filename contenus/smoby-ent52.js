@@ -144,8 +144,8 @@ export const PLANNING = {
       c.motif,
     ],
     nonPosees: (L) => `Absences pas encore posées : ${L.map((a) => `${a.lib.charAt(0).toLowerCase()}${a.lib.slice(1)} ${de(a.qui)}`).join(', ')}.`,
-    legende: 'Violet : absence imposée · jaune : congé demandé. Glissez une carte sur le planning (elle se pose sur la ligne de la personne, au jour visé), '
-      + 'ou cliquez-la puis cliquez le jour. Clavier : Entrée pour la prendre, flèches gauche/droite, Suppr pour la retirer.',
+    legende: 'Violet : absence imposée · jaune : congé demandé. Glisse une carte sur le planning (elle se pose sur la ligne de la personne, au jour visé), '
+      + 'ou clique-la puis clique le jour. Clavier : Entrée pour la prendre, flèches gauche/droite, Suppr pour la retirer.',
   },
   familles: { impose: { couleur: '#8b5cf6', nom: 'violet', legende: 'absence imposée' }, conge: { couleur: '#f0be00', nom: 'jaune', legende: 'congé demandé' } },
   compteurs: [
@@ -174,18 +174,18 @@ export const PLANNING = {
   ],
   aides: {
     consignes: {
-      regles: 'Posez chaque absence sur la ligne de la personne. Les absences <b>imposées</b> (formation, visite, arrêt) se posent à leur date. Les <b>congés</b> se posent à la date demandée… sauf s\'il manque alors du monde : il faut les décaler. Un jour sans absence, la personne est présente.',
+      regles: 'Pose chaque absence sur la ligne de la personne. Les absences <b>imposées</b> (formation, visite, arrêt) se posent à leur date. Les <b>congés</b> se posent à la date demandée… sauf s\'il manque alors du monde : il faut les décaler. Un jour sans absence, la personne est présente.',
       caces: 'Le chargement des camions se fait au chariot : il faut au moins un cariste qui a le CACES présent chaque jour.',
       conge: "Un congé se refuse ou se décale seulement s'il met l'équipe en difficulté. Quand c'est possible, on l'accorde à la date demandée.",
     },
     fenetre: {
-      invite: "Cliquez une demande : ses dates (imposées ou souhaitées) s'affichent en ambré sur la ligne de la personne.",
+      invite: "Clique une demande : ses dates (imposées ou souhaitées) s'affichent en ambré sur la ligne de la personne.",
       carte: (c) => `${c.titre} : ${c.impose ? 'date imposée' : 'dates souhaitées'} en ambré.`,
     },
   },
   alea: {
     de: 'Responsable de la plateforme',
-    texte: "Inès est en <b>arrêt maladie du lundi 14 au mercredi 16</b> (une nouvelle carte est arrivée dans les demandes). L'agence d'intérim nous envoie <b>Noa</b> (intérimaire, <b>sans CACES</b>) à partir du <b>mardi 15</b>. Reprenez le planning des absences et renvoyez-le-moi.",
+    texte: "Inès est en <b>arrêt maladie du lundi 14 au mercredi 16</b> (une nouvelle carte est arrivée dans les demandes). L'agence d'intérim nous envoie <b>Noa</b> (intérimaire, <b>sans CACES</b>) à partir du <b>mardi 15</b>. Reprends le planning des absences et renvoie-le-moi.",
     ajoutCartes: [absence('am-ines', 'ines', 'Arrêt maladie', 3, 'lun 14', true, 'Certificat reçu ce matin.')],
     ajoutLignes: [NOA],
   },

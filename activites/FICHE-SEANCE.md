@@ -679,6 +679,17 @@ d'entrepôt (ENT-6.5 §7.1).
 `core/iso.js` (type dans `TYPES_DECOR`, `TYPES_CHARGE` ou `TYPES_ACTEUR`, gestes dans `GESTES`), avec ses textes
 contrôlés (contraste ≥ 4,5, test du bloc `animation`).
 
+## Écrire les textes : tu ou vous (règle de Tristan, 06/10/2026)
+
+- **La voix du site** (consignes, aides, légendes, invites, messages juste / faux, détails des jalons, accueil) :
+  **tu**. Impératif sans *s* aux verbes en -er : « clique », « glisse », « pose », « reprends », « renvoie-le-moi ».
+- **Les collègues de l'élève** le tutoient ; l'élève leur répond au **tu poli**.
+- **Les personnes extérieures** (chauffeur d'un autre transporteur, client, l'entreprise vue par son
+  transporteur) : **vous**, dans les deux sens. Un message adressé à **un service** reste au vous (pluriel).
+- Les **phrases pièges** gardent leur registre familier (fausses par le ton).
+- Lexique et glossaire : tournure **neutre** ; `meta.desc` : à l'**infinitif**.
+- L'**espace enseignant** reste au vous ; les trames élève suivent les mêmes règles que l'écran.
+
 ## Pièges
 
 - Une séance en cours d'écriture reste en `pret: false` et peut être commitée à tout moment.

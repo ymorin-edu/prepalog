@@ -58,14 +58,14 @@ export const VISITE = {
     {
       id: 'accueil', type: 'accueil', titre: 'Accueil', heure: '8:00', image: 'ciel',
       texte: 'Bienvenue Yanis ! Avant de toucher un chariot, on fait le tour de la plateforme. D’abord vue du ciel, puis on entre dans l’entrepôt.',
-      consigne: 'Lisez le message de Bruno, puis cliquez <b>Suivant</b>.',
+      consigne: 'Lis le message de Bruno, puis clique <b>Suivant</b>.',
       surTitre: 'Smoby · plateforme de Moirans-en-Montagne (Jura)',
       grandTitre: 'Premier jour de Yanis :<br>la visite de la plateforme',
       intro: 'Mercredi 9 décembre, 8 h. Yanis commence au poste de cariste. Avant de toucher un chariot, Bruno, le chef de quai, lui fait faire le tour.',
       programme: [
         'Découvrir la plateforme vue du ciel', 'Suivre le parcours de visite dans l’entrepôt',
         'Reconnaître chaque endroit sur une photo', 'Apprendre les mots du rack',
-        'Les retrouver sur une autre photo', 'Délimiter vous-même une travée',
+        'Les retrouver sur une autre photo', 'Délimiter toi-même une travée',
         `Lire une adresse d’emplacement (<b class="pe-mono">${ADRESSE}</b>) et la retrouver dans l’entrepôt`,
       ],
       encadre: 'Les photos viennent <b>d’autres entrepôts</b> : ce ne sont pas celles de Smoby.',
@@ -73,11 +73,11 @@ export const VISITE = {
     {
       id: 'ciel', type: 'photoPoints', titre: 'Vue du ciel', heure: '8:05', image: 'ciel', effet: 'zoom', rayon: 31,
       texte: 'Voilà la plateforme vue d’en haut. Repère bien où passent les camions… et où passent les piétons.',
-      aide: 'Ouvrez les 6 points, puis répondez aux 3 questions.',
+      aide: 'Ouvre les 6 points, puis réponds aux 3 questions.',
       liste: 'Les 6 points',
-      consigne: 'Ouvrez les <b>6 points</b> de la photo : un clic fait descendre le drone.',
-      consigneTous: 'Les 6 points sont ouverts. Relisez-les si besoin, puis cliquez <b>Passer aux 3 questions</b> (à gauche).',
-      consigneFini: 'Les 3 questions sont réussies. Cliquez <b>Suivant</b>.',
+      consigne: 'Ouvre les <b>6 points</b> de la photo : un clic fait descendre le drone.',
+      consigneTous: 'Les 6 points sont ouverts. Relis-les si besoin, puis clique <b>Passer aux 3 questions</b> (à gauche).',
+      consigneFini: 'Les 3 questions sont réussies. Clique <b>Suivant</b>.',
       points: [
         { n: 1, x: 1080, y: 120, mot: 'L’entrepôt', def: 'Le bâtiment de stockage : sous ce toit, les racks et les allées où travaille Yanis.', zoom: { cx: 1090, cy: 155, s: 1.62 } },
         { n: 2, x: 470, y: 420, mot: 'Les quais', def: 'Les portes où les camions se mettent à cul pour être chargés ou déchargés. Ici, deux semi-remorques sont à quai.', zoom: { cx: 495, cy: 400, s: 3 } },
@@ -88,22 +88,22 @@ export const VISITE = {
       ],
       puis: {
         type: 'photoQuestions', bouton: 'Passer aux 3 questions →', liste: 'Les 3 questions',
-        consigne: '{q} <b>&nbsp;Cliquez sur la photo.</b>',
-        juste: 'Oui, c’est bien ici.', faux: 'Pas ici. Relisez le {aide}.',
+        consigne: '{q} <b>&nbsp;Clique sur la photo.</b>',
+        juste: 'Oui, c’est bien ici.', faux: 'Pas ici. Relis le point « {aide} », dans la liste à gauche.',
         questions: [
-          { id: 'camions', q: 'Où attendent les camions avant d’aller à quai ?', zones: [[720, 470, 1360, 650]], aide: 'point n° 3' },
-          { id: 'pietons', q: 'Par où un piéton traverse-t-il la cour ?', zones: [[180, 545, 700, 605], [30, 420, 200, 560]], aide: 'point n° 5' },
-          { id: 'quais', q: 'Où les camions sont-ils chargés et déchargés ?', zones: [[390, 300, 600, 510]], aide: 'point n° 2' },
+          { id: 'camions', q: 'Où attendent les camions avant d’aller à quai ?', zones: [[720, 470, 1360, 650]], aide: 'Parking poids lourds' },
+          { id: 'pietons', q: 'Par où un piéton traverse-t-il la cour ?', zones: [[180, 545, 700, 605], [30, 420, 200, 560]], aide: 'Passage piétons' },
+          { id: 'quais', q: 'Où les camions sont-ils chargés et déchargés ?', zones: [[390, 300, 600, 510]], aide: 'Les quais' },
         ],
       },
     },
     {
       id: 'parcours', type: 'parcours', titre: 'Le parcours', heure: '8:15',
       texte: 'On entre. Suis-moi : je te montre le chemin d’une palette, du quai jusqu’au rack.',
-      aide: 'Suivez les 6 étapes du parcours.',
-      consigne: 'Cliquez les étapes du parcours <b>dans l’ordre</b>, sur le plan : chacune montre ce qu’on voit depuis ce point.',
-      consigneFini: 'Le tour est fini. Cliquez <b>Suivant</b>.',
-      debut: 'Commencez par l’étape <b>n° 1</b>, devant le quai.',
+      aide: 'Suis les 6 étapes du parcours.',
+      consigne: 'Clique les étapes du parcours <b>dans l’ordre</b>, sur le plan : chacune montre ce qu’on voit depuis ce point.',
+      consigneFini: 'Le tour est fini. Clique <b>Suivant</b>.',
+      debut: 'Commence par l’étape <b>n° 1</b>, devant le quai.',
       ordreMsg: 'Dans l’ordre : l’étape suivante est la n° {n}.',
       etapes: [
         { n: 1, ancre: 'quai:QUAI 2', titre: 'Le quai', images: ['quaiInt'], dir: 90, cone: 34,
@@ -125,12 +125,12 @@ export const VISITE = {
       // Photos dans le désordre ; litiges : la vraie photo (pas le dessin). Textes de Claude Code, à valider.
       id: 'reperer', type: 'associer', titre: 'Où est-ce ?', heure: '8:25', parcours: 'parcours',
       texte: 'À toi. Je te montre une photo : tu me dis de quel endroit du parcours elle a été prise.',
-      aide: 'Associez les 6 photos à leur endroit.',
+      aide: 'Associe les 6 photos à leur endroit.',
       liste: 'Les photos',
-      consigne: 'D’où a été prise cette photo ? <b>Cliquez son numéro sur le plan.</b>',
-      consigneFini: 'Les 6 photos sont associées. Cliquez <b>Suivant</b>.',
+      consigne: 'D’où a été prise cette photo ? <b>Clique son numéro sur le plan.</b>',
+      consigneFini: 'Les 6 photos sont associées. Clique <b>Suivant</b>.',
       juste: 'Oui : n° {n}, {titre}.',
-      faux: 'Non, pas depuis le n° {n}. Regardez bien la photo, ou revoyez le parcours.',
+      faux: 'Non, pas depuis le n° {n}. Regarde bien la photo, ou revois le parcours.',
       photos: [
         { id: 'allee', image: 'allee', n: 4 }, { id: 'quai', image: 'quaiInt', n: 1 }, { id: 'bureau', image: 'bureau', n: 6 },
         { id: 'reception', image: 'reception', n: 2 }, { id: 'litiges', image: 'litiges', n: 5 }, { id: 'principale', image: 'principale', n: 3 },
@@ -139,35 +139,41 @@ export const VISITE = {
     {
       id: 'mots', type: 'photoPoints', titre: 'Les mots du rack', heure: '8:30', image: 'allee', effet: 'bulle', rayon: 24,
       texte: 'Un rack à palettes a son vocabulaire. Si tu dis « l’étagère orange », personne ne te comprend.',
-      aide: 'Ouvrez les 8 mots.',
+      aide: 'Ouvre les 8 mots.',
       liste: 'Les mots du rack',
-      consigne: 'Ouvrez les <b>8 mots</b> du rack : cliquez un numéro sur la photo, ou un mot dans la liste.',
-      consigneFini: 'Les 8 mots sont ouverts. Cliquez <b>Suivant</b>.',
+      consigne: 'Ouvre les <b>8 mots</b> du rack : clique un numéro sur la photo, ou un mot dans la liste.',
+      consigneFini: 'Les 8 mots sont ouverts. Clique <b>Suivant</b>.',
       points: [
-        { n: 1, x: 215, y: 430, mot: 'Échelle', def: 'Le montant vertical (bleu), percé de trous, qui porte les lisses. Deux échelles délimitent une travée.' },
-        { n: 2, x: 430, y: 247, mot: 'Lisse', def: 'La barre horizontale (orange) sur laquelle on pose les palettes. Sa charge maximale est écrite sur une plaque.' },
+        { n: 1, x: 215, y: 430, mot: 'Échelle', def: 'Le montant vertical, percé de trous, qui porte les lisses. Deux échelles délimitent une travée.' },
+        { n: 2, x: 430, y: 247, mot: 'Lisse', def: 'La barre horizontale sur laquelle on pose les palettes. Sa charge maximale est écrite sur une plaque.' },
         { n: 3, x: 150, y: 118, cx: 155, cy: 182, mot: 'Étiquette d’adresse', def: 'L’adresse de l’emplacement, collée sur la lisse. On la lit avant de poser la palette.' },
         { n: 4, x: 385, y: 470, mot: 'Palette filmée', def: 'Les cartons sont tenus par un film plastique étirable enroulé autour de la palette.' },
         { n: 5, x: 740, y: 620, mot: 'Allée', def: 'Le couloir entre deux racks, où roulent les chariots.' },
         { n: 6, x: 1300, y: 290, mot: 'Niveau', def: 'Chaque étage de lisses est un niveau. Le sol est le niveau 1.' },
-        { n: 7, x: 1100, y: 420, mot: 'Travée', def: 'L’espace entre deux échelles, sur toute la hauteur du rack.' },
-        { n: 8, x: 930, y: 470, mot: 'Croisillons', def: 'Les barres en diagonale qui rigidifient l’échelle. Un croisillon tordu : rack à signaler.' },
+        { n: 7, x: 330, y: 330, mot: 'Travée', def: 'L’espace entre deux échelles, sur toute la hauteur du rack.' },
+        { n: 8, x: 1100, y: 420, mot: 'Croisillons', def: 'Les barres en diagonale qui rigidifient l’échelle. Un croisillon tordu : rack à signaler.' },
       ],
     },
     {
       id: 'quiz', type: 'photoQuestions', titre: 'Quiz', heure: '8:40', image: 'quiz',
       texte: 'Même vocabulaire, autre entrepôt. Montre-moi que tu as retenu.',
-      aide: 'Trouvez les 4 éléments sur la photo.',
-      liste: 'Vos réponses',
-      consigne: 'Sur cette photo d’un autre entrepôt, <b>cliquez sur {mot}</b>.',
-      consigneFini: 'Les 4 éléments sont trouvés. Cliquez <b>Suivant</b>.',
-      juste: 'Oui : c’est {mot}.', faux: 'Non, pas ici. Revoyez le mot à l’étape précédente si besoin.',
-      encadre: 'Pas de légende ici : c’est à vous de reconnaître chaque élément.',
+      aide: 'Trouve les 4 éléments sur la photo.',
+      liste: 'Tes réponses',
+      consigne: 'Sur cette photo d’un autre entrepôt, <b>clique sur {mot}</b>.',
+      consigneFini: 'Les 4 éléments sont trouvés. Clique <b>Suivant</b>.',
+      juste: 'Oui : c’est {mot}.', faux: 'Non, pas ici. {aide}',
+      encadre: 'Pas de légende ici : c’est à toi de reconnaître chaque élément.',
       questions: [
-        { id: 'echelle', mot: 'une échelle', zones: [[171, 43, 416, 1408], [544, 427, 661, 1280], [1150, 0, 1280, 1600]] },
-        { id: 'lisse', mot: 'une lisse', zones: [[309, 85, 1184, 160], [405, 367, 1173, 427], [0, 998, 192, 1066]] },
-        { id: 'palette', mot: 'une palette filmée', zones: [[0, 683, 171, 1003], [352, 501, 555, 693]] },
-        { id: 'allee', mot: 'l’allée', zones: [[427, 1323, 1152, 1920]] },
+        // Toutes les cibles visibles (retours 5.3, A1) : toutes les échelles des racks ; les lisses qui portent une
+        // palette filmée (pas celle des fûts bleus) ; toutes les palettes filmées.
+        { id: 'echelle', mot: 'une échelle', zones: [[165, 0, 335, 1560], [300, 150, 425, 1500], [545, 380, 660, 1340], [705, 530, 770, 1240], [800, 650, 860, 1190], [865, 720, 955, 1140], [1135, 0, 1280, 1700]],
+          aide: 'Une échelle est un montant vertical percé de trous, relié à un autre par des barres en diagonale.' },
+        { id: 'lisse', mot: 'une lisse qui porte une palette filmée', zones: [[305, 80, 1190, 165], [0, 495, 190, 558], [0, 555, 330, 650], [330, 690, 565, 728], [0, 998, 560, 1068]],
+          aide: 'Une lisse est la barre horizontale sous la palette : la palette pose dessus.' },
+        { id: 'palette', mot: 'une palette filmée', zones: [[0, 150, 265, 500], [350, 490, 560, 700], [0, 680, 250, 960], [340, 0, 640, 85], [630, 0, 905, 75], [365, 820, 560, 960]],
+          aide: 'Cherche des cartons ou des seaux entourés de film plastique.' },
+        { id: 'allee', mot: 'l’allée', zones: [[0, 1560, 1180, 1920], [230, 1350, 1150, 1560], [780, 1100, 1140, 1350]],
+          aide: 'L’allée est le couloir au sol, entre les racks.' },
       ],
     },
     {
@@ -175,16 +181,16 @@ export const VISITE = {
       // travée — à dire en classe (décision 11 de Tristan).
       id: 'travee', type: 'delimiter', titre: 'La travée', heure: '8:45', image: 'travee',
       texte: 'La travée, c’est le mot qu’on emploie le plus ici. Montre-moi où commence et où finit une travée.',
-      aide: 'Placez les 4 coins de la travée, puis trouvez ses 3 lisses.',
+      aide: 'Place les 4 coins de la travée, puis trouve ses 3 lisses.',
       liste: 'La travée',
-      consigne: 'Une travée, c’est l’espace <b>entre deux échelles</b>, <b>du sol jusqu’en haut</b> du rack. Cliquez <b>les 4 coins</b> d’une travée complète sur la photo.',
-      consigneFini: 'Travée délimitée et ses 3 lisses trouvées. Cliquez <b>Suivant</b>.',
-      rappel: 'Rappel : une <b>échelle</b> est le montant vertical percé de trous ; une travée va d’une échelle à la suivante, sur <b>toute la hauteur</b>. Cliquez un point déjà posé pour l’enlever.',
+      consigne: 'Une travée, c’est l’espace <b>entre deux échelles</b>, <b>du sol jusqu’en haut</b> du rack. Clique <b>les 4 coins</b> d’une travée complète sur la photo.',
+      consigneFini: 'Travée délimitée et ses 3 lisses trouvées. Clique <b>Suivant</b>.',
+      rappel: 'Rappel : une <b>échelle</b> est le montant vertical percé de trous ; une travée va d’une échelle à la suivante, sur <b>toute la hauteur</b>. Clique un point déjà posé pour l’enlever.',
       coins: { hg: [287, 45], hd: [847, 47], bg: [258, 1175], bd: [876, 1173] },
       tolerance: 80,
       messages: {
         juste: 'Oui : cette travée va de l’échelle de gauche à l’échelle de droite, du sol jusqu’en haut.',
-        faux: 'Pas encore : {coins}. Un coin se place là où une <b>échelle</b> touche le <b>sol</b> ou s’arrête <b>en haut</b>. Cliquez le point rouge pour l’enlever.',
+        faux: 'Pas encore : {coins}. Un coin se place là où une <b>échelle</b> touche le <b>sol</b> ou s’arrête <b>en haut</b>. Clique le point rouge pour l’enlever.',
       },
       correction: { legendes: [
         { texte: 'échelle', x: 268, y: 780, rot: -90 }, { texte: 'échelle', x: 866, y: 780, rot: 90 },
@@ -193,15 +199,15 @@ export const VISITE = {
       jalon: 'Travée délimitée (4 coins justes)',
       puis: {
         type: 'zones', liste: 'Les lisses', jalon: 'Les 3 lisses de la travée trouvées',
-        consigne: 'Maintenant, cliquez <b>chaque lisse de cette travée</b> : les barres horizontales accrochées à ses deux échelles, qui portent les palettes.',
-        rappel: 'Rappel : une <b>lisse</b> est la barre horizontale (orange) posée entre deux échelles ; les palettes reposent dessus. Attention aux barres <b>du fond</b>, qu’on voit à travers la travée.',
+        consigne: 'Maintenant, clique <b>chaque lisse de cette travée</b> : les barres horizontales accrochées à ses deux échelles, qui portent les palettes.',
+        rappel: 'Rappel : une <b>lisse</b> est la barre horizontale posée entre deux échelles ; les palettes reposent dessus. Attention aux barres <b>du fond</b>, qu’on voit à travers la travée.',
         x: [270, 870], marge: 8,
         // La lisse du haut compte même vide (décision 11).
         cibles: [{ nom: 'lisse du haut', y0: 60, y1: 96 }, { nom: 'lisse du milieu', y0: 436, y1: 472 }, { nom: 'lisse du bas', y0: 670, y1: 704 }],
         pieges: [[145, 178], [208, 242], [288, 312], [368, 394]].map(([y0, y1]) => ({ y0, y1,
-          message: 'Cette barre est <b>au fond</b>, sur le rack de derrière. Cherchez les lisses accrochées aux échelles <b>de devant</b>.' })),
+          message: 'Cette barre est <b>au fond</b>, sur le rack de derrière. Cherche les lisses accrochées aux échelles <b>de devant</b>.' })),
         juste: 'Oui : c’est la {nom}.',
-        horsEtendue: 'C’est bien une lisse, mais celle de la <b>travée d’à côté</b>. Restez entre les deux échelles de votre travée.',
+        horsEtendue: 'C’est bien une lisse, mais celle de la <b>travée d’à côté</b>. Reste entre les deux échelles de ta travée.',
         horsCible: 'Ici, ce n’est pas une lisse. Une lisse est une barre horizontale orange, entre les deux échelles.',
         dejaTrouve: 'Celle-ci est déjà trouvée.',
       },
@@ -209,16 +215,16 @@ export const VISITE = {
     {
       id: 'adresse', type: 'adresse', titre: 'L’adresse', heure: '8:50', code: ADRESSE,
       texte: 'Chaque emplacement a une adresse. Avec elle, tu retrouves n’importe quelle palette sans chercher.',
-      aide: 'Décomposez l’adresse, puis retrouvez l’emplacement.',
+      aide: 'Décompose l’adresse, puis retrouve l’emplacement.',
       sens: ['allée et côté', 'travée', 'niveau', 'emplacement'],
       choix: ['allée et côté', 'emplacement', 'niveau', 'travée'],
-      consigne: 'Bruno vous montre une étiquette collée sur une lisse. <b>Que veut dire chaque partie ?</b> Choisissez, puis validez.',
+      consigne: 'Bruno te montre une étiquette collée sur une lisse. <b>Que veut dire chaque partie ?</b> Choisis, puis valide.',
       rappel: 'Une adresse se lit <b>de la plus grande zone à la plus petite</b> : on trouve l’allée, puis la travée, puis le niveau, puis l’emplacement.',
       encadre: '<b>A1</b> : allée A, côté 1. Une allée a deux côtés : <b>A1</b> et <b>A2</b> sont les racks de part et d’autre de l’allée A. '
         + '<b>T</b> = travée, <b>N</b> = niveau (le sol est N1), <b>E</b> = emplacement (3 palettes par niveau).',
-      consigneTravee: 'Retrouvez <b>{code}</b> : cliquez la bonne <b>travée</b> sur le plan.',
-      consigneEmplacement: 'Cliquez l’<b>emplacement</b> {code} dans la travée vue de face.',
-      consigneFini: 'Emplacement trouvé. Cliquez <b>Suivant</b>.',
+      consigneTravee: 'Retrouve <b>{code}</b> : clique la bonne <b>travée</b> sur le plan.',
+      consigneEmplacement: 'Clique l’<b>emplacement</b> {code} dans la travée vue de face.',
+      consigneFini: 'Emplacement trouvé. Clique <b>Suivant</b>.',
       // La désignation et le poids sont lus dans le stock par le moteur, jamais recopiés ici.
       trouve: '✓ Trouvé : <b>{adresse}</b> — une {produit} de {kg}.',
       jalons: { decomposer: `Adresse ${ADRESSE} décomposée (4 parties justes)`, retrouver: `Emplacement ${ADRESSE} retrouvé dans la travée` },
@@ -248,11 +254,19 @@ export const LEXIQUE = Object.assign({}, LEXIQUE_SMOBY,
 
 // Un seul message, qui envoie vers la visite (le brief ne prévoit pas de messagerie ; écrit par Claude Code,
 // à valider à l'écran). Tout le reste se dit dans la visite, étape par étape.
+// Le message est daté dans l'histoire (retours 5.3, A6) : mercredi 9 décembre, 7 h 55, heure locale, de l'année
+// scolaire en cours (de septembre à décembre : cette année ; de janvier à août : l'année d'avant).
+function tsVisite() {
+  const d = new Date();
+  const an = d.getMonth() >= 8 ? d.getFullYear() : d.getFullYear() - 1;
+  return new Date(an, 11, 9, 7, 55).getTime();
+}
+
 export const VOLET = {
   id: 'smoby-visite',
   semer: () => ({
     mails: [{
-      folder: 'in', ts: Date.now() - 60000, from: BRUNO.nom, fromMail: BRUNO.mail, to: 'Yanis',
+      folder: 'in', ts: tsVisite(), from: BRUNO.nom, fromMail: BRUNO.mail, to: 'Yanis',
       subject: 'Ton premier jour : la visite', kind: 'text',
       text: 'Bienvenue Yanis !\n\nAvant de toucher un chariot, on fait le tour de la plateforme. '
         + 'Menu « Visite de la plateforme » : je t’attends à la première étape.\n\nBruno',
