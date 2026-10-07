@@ -90,13 +90,22 @@ export const PLANNING = {
     { id: 'pause', type: 'cumulSansPause', max: 4 * 60 + 30, message: (l) => `${l.nom} conduit plus de 4 h 30 sans pause.` },
     { id: 'jour', type: 'plafond', max: 9 * 60, message: (l) => `${l.nom} conduit plus de 9 h dans la journée.` },
   ],
+  // Une règle = un jalon (brief SMOBY-notation-5.3-5.8, lot 1, 07/10/2026). Chacun n'est vrai que si tous les
+  // enlèvements sont posés ET affectés (moteur). L'atelier n'est jugé qu'après la panne : avant, il serait gratuit.
   jalons: [
-    { id: 'tous', lib: 'Chaque enlèvement a un chauffeur et un camion', regles: [] },
-    { id: 'chauffeurs', lib: 'Chauffeurs : un trajet à la fois, avec le bon permis', regles: ['chauffeurUnique', 'permis'] },
-    { id: 'camions', lib: 'Camions : un trajet à la fois, du bon type, disponibles', regles: ['camionUnique', 'typeCamion', 'atelier'] },
+    { id: 'chauffeurUnique', lib: 'Un chauffeur ne fait qu’un trajet à la fois', regles: ['chauffeurUnique'] },
+    { id: 'permis', lib: 'Une semi-remorque est conduite avec le permis CE', regles: ['permis'] },
+    { id: 'camionUnique', lib: 'Un camion ne fait qu’un trajet à la fois', regles: ['camionUnique'] },
+    { id: 'typeCamion', lib: 'Chaque enlèvement a le bon type de camion', regles: ['typeCamion'] },
+    { id: 'atelier', lib: 'Le Semi n° 2 ne roule pas avant sa sortie d’atelier', regles: ['atelier'], versions: [2] },
     { id: 'fenetre', lib: "Chaque trajet part quand la marchandise est prête et livre avant l'heure limite", regles: ['fenetre'] },
-    { id: 'conduite', lib: 'Temps de conduite et repos respectés (4 h 30, 9 h, 11 h)', regles: ['repos', 'pause', 'jour'] },
+    { id: 'repos', lib: '11 h de repos depuis hier soir', regles: ['repos'] },
+    { id: 'pause', lib: 'Pas plus de 4 h 30 de conduite sans pause', regles: ['pause'] },
+    { id: 'jour', lib: 'Pas plus de 9 h de conduite dans la journée', regles: ['jour'] },
   ],
+  // Le planning d'après la panne renvoyé sans changement : toutes ses cases fausses, sauf s'il respectait déjà la
+  // panne (décision de Tristan, 07/10/2026, Q4 et sa précision).
+  repriseIdentique: 'faux',
   aides: {
     consignes: {
       regles: "Chaque enlèvement se pose sur la ligne d'<b>un chauffeur</b>, à l'heure du départ, et reçoit <b>un camion</b> (bulle qui s'ouvre sur le planning). Un chauffeur et un camion ne font qu'un trajet à la fois. Une semi-remorque demande le permis <b>CE</b> ; un porteur se conduit avec le permis <b>C</b> (le permis CE le permet aussi).",
@@ -115,11 +124,11 @@ export const PLANNING = {
     texte: "Le <b>Semi n° 2</b> a un problème de freins : il reste à l'atelier jusqu'à <b>12:00</b>. Il ne peut faire aucun trajet avant cette heure. Reprends le planning des chauffeurs et renvoie-le-moi.",
     ressources: { s2: { dispo: '12:00' } },
   },
-  // Pas de `note` : en guidage, la note de la séance est celle de ses 10 étapes.
+  // Pas de `note` : en guidage, la note de la séance est celle de ses 17 étapes pondérées.
 };
 
 // Une solution juste avant et après la panne (`s` = quart d'heure depuis 05:00 : 07:00 → 8). Elle n'est pas
-// recopiée d'ailleurs : la suite de tests la fait juger par le moteur (10 / 10), le corrigé l'affiche.
+// recopiée d'ailleurs : la suite de tests la fait juger par le moteur (20 / 20), le corrigé l'affiche.
 // Avant : Sofiane E1 puis E4 sur le Semi n° 1, Julie E2 (Semi n° 2) puis E5 (Porteur n° 3), Marc E3.
 // Après : le Semi n° 2 ne roule qu'à partir de 12:00 → E4 passe dessus avec Julie, E2 part avec Sofiane.
 export const SOLUTION = {
@@ -138,6 +147,14 @@ export const SUJET_PLANNING = 'Planning de jeudi';
 
 export const VOLET = {
   id: 'smoby-ent57',
+  // Chaque planning renvoyé après correction (séance `correction`) reçoit un accusé : il ne rejoue pas la panne
+  // et ne dit jamais si la correction est juste.
+  corrections: {
+    [PLANNING.id]: (prenom) => ({ mails: [{
+      folder: 'in', ts: Date.now() + 5000, from: RESPONSABLE.nom, fromMail: RESPONSABLE.mail, to: prenom,
+      subject: 'Planning corrigé', kind: 'text', text: `Merci ${prenom}, j’ai bien reçu ton planning corrigé.`,
+    }] }),
+  },
   semer: (prenom) => ({
     mails: [{
       // Le passage de relais d'ENT-5.6 : Bruno, chef de quai Smoby, prévient l'exploitation K+N.
@@ -178,9 +195,23 @@ export const VOLET = {
   }],
 };
 
-// ─────────────────────────────────────────────────────────────── les jalons (10, brief §5)
+// ─────────────────────────────────────────────────────────────── les jalons (17, barème sur 20)
 
-export const ETAPES = etapesPlanning(PLANNING);
+// Lot 1 du brief SMOBY-notation-5.3-5.8, barème validé par Tristan le 07/10/2026 : une règle = une case, dans chaque
+// version. Avant la panne 9 points (8 règles), après la panne 11 points (les mêmes 9 + l'atelier 2). Total : 20.
+// `groupe` = la ligne du bandeau de fin (4 par version) ; `ecran` = où l'élève corrige.
+export const POIDS = { chauffeurUnique: 1, permis: 1.5, camionUnique: 1, typeCamion: 1.5, atelier: 2, fenetre: 1, repos: 1, pause: 1, jour: 1 };
+const GROUPE = { chauffeurUnique: 'les chauffeurs', permis: 'les chauffeurs', camionUnique: 'les camions', typeCamion: 'les camions',
+  atelier: 'les camions', fenetre: 'les horaires d’enlèvement', repos: 'la conduite et le repos', pause: 'la conduite et le repos',
+  jour: 'la conduite et le repos' };
+export const ETAPES = etapesPlanning(PLANNING).map((e) => {
+  const avant = e.id.startsWith('v1-'), regle = e.id.slice(3);
+  return Object.assign(e, {
+    groupe: `${avant ? 'Avant la panne' : 'Après la panne'} : ${GROUPE[regle]}`,
+    ecran: `planning:${PLANNING.id}`,
+    poids: POIDS[regle],
+  });
+});
 
 // ─────────────────────────────────────────────────────────────── l'accueil
 

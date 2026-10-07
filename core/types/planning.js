@@ -28,7 +28,10 @@
 //     familles: { semi: { teinte: 'a', legende: 'semi-remorque' }, … },
 //     compteurs: [{ lib, valeur: 'presents' | 'besoin' | 'filtre', regle }],          // lignes sous la grille
 //     regles: [{ id, type, …, message }],    // types : voir TYPES plus bas
-//     jalons: [{ id, lib, regles: [ids] }],  // vrai si tout est posé (et affecté) ET aucune de ses règles n'a de problème
+//     jalons: [{ id, lib, regles: [ids], versions?: [2] }],  // vrai si tout est posé (et affecté) ET aucune de ses règles
+//                                         // n'a de problème ; `versions` : jugé seulement dans ces versions (1, 2), absent = toutes
+//     repriseIdentique: 'faux',              // la version d'après l'aléa renvoyée SANS CHANGEMENT : tous ses jalons faux, sauf
+//                                         // si elle respecte déjà l'aléa (ENT-5.7, garde d'inaction, Tristan 07/10/2026)
 //     aides: { consignes: { regles, … }, fenetre, detailDuree, reprise, compteurConduite },
 //     alea: { de, texte, cartes: { D: { des: '09:00' } }, ajoutCartes, ajoutLignes, ressources: { s2: { dispo: '12:00' } } },
 //     note: { sur: 20 },                     // évaluation : jalons réussis / jalons × sur
@@ -416,6 +419,11 @@ function compiler(P) {
 export function etatNeuf() {
   return { phase: 1, place: {}, v1: null, v2: null, aleaVu: false, verifs: 0, premierGeste: null, envois: [] };
 }
+// Deux placements identiques (mêmes cartes, mêmes lignes, mêmes créneaux, mêmes affectations).
+function memePlace(a, b) {
+  const cle = (p) => JSON.stringify(Object.keys(p || {}).sort().map((k) => [k, p[k].r, p[k].s, p[k].k == null ? null : p[k].k]));
+  return cle(a) === cle(b);
+}
 const VERSIONS = [{ v: 'v1', n: 1, lib: '1er envoi' }, { v: 'v2', n: 2, lib: "Après l'aléa" }];
 const versionsDe = (P) => (P.alea ? VERSIONS : VERSIONS.slice(0, 1));
 
@@ -427,8 +435,14 @@ export function jalonsPlanning(db, P) {
   const L = [];
   versionsDe(P).forEach((V) => {
     const env = e[V.v];
-    const J = env ? M.jalons(env.place || {}, V.n) : (P.jalons || []).map((j) => ({ id: j.id, lib: j.lib, ok: false }));
-    J.forEach((j) => L.push({ id: `${V.v}-${j.id}`, version: V.lib, jalon: j.id, lib: j.lib, ok: j.ok, envoye: !!env }));
+    let J = env ? M.jalons(env.place || {}, V.n) : (P.jalons || []).map((j) => ({ id: j.id, lib: j.lib, ok: false }));
+    // Garde d'inaction : la reprise renvoyée telle quelle ne rapporte rien, sauf si elle tient déjà compte de l'aléa.
+    if (env && V.n === 2 && P.repriseIdentique === 'faux' && e.v1 && memePlace(e.v1.place, env.place) && !J.every((j) => j.ok)) {
+      J = J.map((j) => Object.assign({}, j, { ok: false }));
+    }
+    const garde = new Set((P.jalons || []).filter((j) => !j.versions || j.versions.includes(V.n)).map((j) => j.id));
+    J.filter((j) => garde.has(j.id))
+      .forEach((j) => L.push({ id: `${V.v}-${j.id}`, version: V.lib, jalon: j.id, lib: j.lib, ok: j.ok, envoye: !!env }));
   });
   return { L, ok: L.filter((l) => l.ok).length, total: L.length };
 }

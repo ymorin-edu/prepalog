@@ -34,17 +34,17 @@ export const CORRIGE = {
         ['5. Livraison', `${lib(LIEUX, ATTENDU.livLieu)}, le ${jour(ATTENDU.livDate)}`, 'fiche client'],
         ['6. Marchandise', `${lib(NATURES, ATTENDU.nature)} · ${ATTENDU.palettes} palettes · ${kg(ATTENDU.poids)} kg`, 'ordre d’enlèvement'],
       ],
-      note: `Jalons 1 à 5 (la date de la lettre est jugée avec les lieux et dates, jalon 3). Poids : ${E1.pal - 1} palettes complètes × `
+      note: `Une case = un jalon (15 cases, 11 points sur 20 ; la date de la lettre compte avec les lieux et dates). Poids : ${E1.pal - 1} palettes complètes × `
         + `${KG_PALETTE_COMPLETE} kg + la palette mixte d’ENT-5.6 (${KG_MIXTE} kg) = ${kg(POIDS)} kg, écrit tel quel sur l’ordre d’enlèvement. `
-        + 'La lettre peut partir incomplète : une case vide fait tomber le jalon 5.' },
+        + 'La lettre peut partir incomplète : une case vide est fausse.' },
     { etape: 2, etapeTitre: 'Le retard', genre: 'question', texte: 'La nouvelle heure d’arrivée',
       rep: `${hm(DEPART)} + ${E1.conduite / 60} h de conduite = ${hm(ARRIVEE_PREVUE)} prévu ; + ${RETARD / 60} h de retard = ${hm(ARRIVEE)}. `
         + `${ARRIVEE < LIMITE ? 'Oui' : 'Non'}, ${ARRIVEE < LIMITE ? 'avant' : 'après'} l’heure limite (${hm(LIMITE)}).`,
-      note: `Jalon 6 (l’heure et le oui / non). Simplification de la séance : à ${ACCIDENT}, Julie est arrêtée moteur coupé ; ce temps ne compte pas `
+      note: `Deux jalons : l’heure (1,5 point) et le oui / non (0,5 point). Simplification de la séance : à ${ACCIDENT}, Julie est arrêtée moteur coupé ; ce temps ne compte pas `
         + 'comme de la conduite (elle reste à 4 h de conduite, sans pause obligatoire).' },
     { etape: 3, etapeTitre: 'Prévenir', genre: 'question', texte: 'Le message au client (phrases à choisir)',
-      rep: juste(PHRASES_CLIENT), note: 'Jalon 7 : toutes les lignes (pièges : 10 h 00, l’heure prévue sans le retard ; 12 h 30 ; le quai 1, celui de Smoby).' },
+      rep: juste(PHRASES_CLIENT), note: 'Une ligne = un jalon (4 points : cause, heure et quai à 1, salutation et fin à 0,5). Pièges : 10 h 00, l’heure prévue sans le retard ; 12 h 30 ; le quai 1, celui de Smoby.' },
     { etape: 3, etapeTitre: 'Prévenir', genre: 'question', texte: 'Le message à Smoby, l’expéditeur (phrases à choisir)',
-      rep: juste(PHRASES_SMOBY), note: 'Jalon 8 : toutes les lignes. Le message à Smoby n’arrive qu’une fois le client prévenu. Le dernier envoi compte.' },
+      rep: juste(PHRASES_SMOBY), note: 'Une ligne = un jalon (3 points : retard et client à 1, salutation et fin à 0,5). Le message à Smoby n’arrive qu’une fois le client prévenu. Le dernier envoi compte.' },
   ],
 };

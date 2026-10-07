@@ -38,13 +38,13 @@ export const CORRIGE = {
         + 'Deux trajets qui dépassent 4 h 30 de conduite à la suite demandent une pause de 45 min entre les deux.',
       entetes: ['Chauffeur', 'Enlèvement', 'Camion', 'Heures', 'Fenêtre'],
       reponses: lignes('v1'),
-      note: `Jalons 1 à 5. Conduite de la journée : ${conduite('v1')} (9 h au plus). D’autres solutions sont justes : le moteur juge les règles, pas une solution unique.` },
+      note: `Une règle = un jalon, 9 points sur 20 (permis et type de camion 1,5 ; les autres règles 1). Conduite de la journée : ${conduite('v1')} (9 h au plus). D’autres solutions sont justes : le moteur juge les règles, pas une solution unique.` },
     { etape: 2, etapeTitre: 'Après la panne', genre: 'tableau', texte: 'Une solution, Semi n° 2 à l’atelier jusqu’à 12:00',
       contexte: 'Au 1er envoi, E2 roulait sur le Semi n° 2 dès 08:00 : ce n’est plus possible. Le Semi n° 1 fait E1 tôt puis E2 ; '
         + 'le Semi n° 2 prend E4 à partir de 12:00.',
       entetes: ['Chauffeur', 'Enlèvement', 'Camion', 'Heures', 'Fenêtre'],
       reponses: lignes('v2'),
-      note: `Jalons 6 à 10. Conduite de la journée : ${conduite('v2')}. Simplifications de la séance : la pause ne compte que si une carte Pause est posée ; `
+      note: `Les mêmes règles plus l’atelier (2 points), 11 points sur 20. Renvoyé sans changement, ce planning n’a aucun point, sauf s’il respectait déjà la panne. Conduite de la journée : ${conduite('v2')}. Simplifications de la séance : la pause ne compte que si une carte Pause est posée ; `
         + 'tout le trajet compte comme de la conduite.' },
   ],
 };

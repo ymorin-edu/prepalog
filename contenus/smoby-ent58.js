@@ -247,7 +247,8 @@ export const SUIVI = {
   sousTitre: `Message de Julie à ${ACCIDENT.replace(':', ' h ')} : accident sur l’A40, 1 h de retard.`,
   documents: ['planning', 'client'],
   bouton: 'Ouvrir le suivi de l’enlèvement E1',
-  quand: apresFiche(LETTRE.id),
+  // Une fois la lettre envoyée, le Suivi reste au menu, même quand « Corriger » la rouvre (Q6, Tristan 07/10/2026).
+  quand: (db) => apresFiche(LETTRE.id)(db) || !!(db.fiches && db.fiches[LETTRE.id] && db.fiches[LETTRE.id].envois),
   blocs: [
     { type: 'encadre', titre: 'Pour calculer', texte: 'Pars de l’heure d’arrivée prévue au planning et ajoute le retard. '
       + 'Le temps où Julie est arrêtée, moteur coupé, ne compte pas comme de la conduite.' },
@@ -305,8 +306,21 @@ export const SUJET_CLIENT = 'Livraison E1 de ce matin';
 export const SUJET_SMOBY = 'E1 bien parti ?';
 const repondu = (id) => (db) => phrasesJustes(db, id).envoye;
 
+// Les accusés des envois corrigés (séance `correction`) : ils ne rejouent pas l'histoire (le message de Julie n'est
+// pas renvoyé) et ne disent jamais si la correction est juste.
+const accuse = (de, sujet, texte) => (prenom) => ({ mails: [{
+  folder: 'in', ts: Date.now() + 5000, from: de.nom, fromMail: de.mail, to: prenom, subject: sujet, kind: 'text', text: texte(prenom),
+}] });
+
 export const VOLET = {
   id: 'smoby-ent58',
+  corrections: {
+    [LETTRE.id]: accuse(RESPONSABLE, 'Lettre de voiture corrigée', (p) => `Merci ${p}, j’ai bien reçu ta lettre corrigée.`),
+    [SUIVI.id]: accuse(RESPONSABLE, 'Suivi corrigé', (p) => `Merci ${p}, j’ai bien reçu ton suivi corrigé.`),
+    [PHRASES_CLIENT.id]: accuse(RECEPTION_CLIENT, 'Votre message corrigé', () => 'Bien reçu, merci.\n\nLe service réception — Jouets du Rhône'),
+    [PHRASES_SMOBY.id]: accuse({ nom: `${BRUNO.nom} (Smoby Moirans)`, mail: BRUNO.mail }, 'Ton message corrigé',
+      () => 'Bien reçu, merci.\n\nBruno — Smoby Moirans'),
+  },
   semer: (prenom) => ({
     mails: [{
       folder: 'in', ts: Date.now() - 60000, from: RESPONSABLE.nom, fromMail: RESPONSABLE.mail, to: prenom,
@@ -365,9 +379,25 @@ export const VOLET = {
   }],
 };
 
-// ─────────────────────────────────────────────────────────────── les jalons (8, brief §5)
+// ─────────────────────────────────────────────────────────────── les jalons (26, barème sur 20)
 
-// Un jalon de la lettre : les champs comparés à `ATTENDU` ; rien n'est vrai avant l'envoi.
+// Lot 1 du brief SMOBY-notation-5.3-5.8, barème validé par Tristan le 07/10/2026 : une case = un jalon, chaque bloc
+// a une part FIXE de la note sur 20.
+//   Lettre : les parties 3 (4 champs à 0,75) · le transport 2,25 (3 à 0,75) · lieux et dates 2,5 (5 à 0,5 : les trois
+//   dates sont la même) · la marchandise 3,25 (nature 0,75, palettes 1, poids 1,5) · Suivi 2 (heure 1,5, « Oui » 0,5) ·
+//   Message au client 4 (cause, heure, quai à 1 ; salutation, fin à 0,5) · Message à Smoby 3 (retard, client à 1 ;
+//   salutation, fin à 0,5). Total : 20. Le jalon « lettre complète » a disparu : une case vide est déjà fausse.
+// `groupe` = la ligne du bandeau de fin (9 lignes) ; `ecran` = où l'élève corrige. Rien n'est vrai avant l'envoi ;
+// une case vide est fausse (les listes démarrent sur « Choisir… », les dates et nombres sont vides).
+export const BAREME = {
+  expNom: 0.75, expLieu: 0.75, destNom: 0.75, destLieu: 0.75,
+  transporteur: 0.75, chauffeur: 0.75, vehicule: 0.75,
+  date: 0.5, chargLieu: 0.5, chargDate: 0.5, livLieu: 0.5, livDate: 0.5,
+  nature: 0.75, palettes: 1, poids: 1.5,
+  arrivee: 1.5, avant: 0.5,
+  'client-cause': 1, 'client-heure': 1, 'client-quai': 1, 'client-salut': 0.5, 'client-fin': 0.5,
+  'smoby-retard': 1, 'smoby-client': 1, 'smoby-salut': 0.5, 'smoby-fin': 0.5,
+};
 const LIBS = {
   date: 'date de la lettre', expNom: 'nom de l’expéditeur', expLieu: 'adresse de l’expéditeur', destNom: 'nom du destinataire',
   destLieu: 'adresse du destinataire', transporteur: 'transporteur', chauffeur: 'chauffeur', vehicule: 'véhicule',
@@ -376,74 +406,91 @@ const LIBS = {
 };
 const juste = (k, x) => (typeof ATTENDU[k] === 'number' ? lireNombre(x) === ATTENDU[k] : x === ATTENDU[k]);
 export const CHAMPS = Object.keys(LIBS);
-const jalonLettre = (id, titre, champs, aide) => ({
-  id, titre,
+const vide = (x) => x == null || String(x).trim() === '';
+
+// Un champ de la lettre. L'aide ne donne jamais la réponse : elle dit où chercher, ou nomme une confusion.
+const INVERSES = 'Expéditeur et destinataire sont inversés : qui envoie, qui reçoit ?';
+const PLANNING_E1 = 'Relis la ligne d’E1 du planning.';
+const ORDRE = 'Tout est sur l’ordre d’enlèvement.';
+const AIDES = {
+  expNom: (v) => (v.expNom === ATTENDU.destNom ? INVERSES : ''),
+  destNom: (v) => (v.destNom === ATTENDU.expNom ? INVERSES : ''),
+  transporteur: (v) => (v.transporteur === 'smoby' ? 'Smoby envoie la marchandise : ce n’est pas lui qui la transporte.' : ''),
+  chauffeur: () => PLANNING_E1,
+  vehicule: () => PLANNING_E1,
+  chargLieu: (v) => (v.chargLieu === ATTENDU.livLieu ? 'Le camion charge chez l’expéditeur, il livre chez le client.' : ''),
+  nature: () => ORDRE,
+  palettes: () => ORDRE,
+  poids: () => ORDRE,
+};
+const PARTIES = 'Lettre : les parties', TRANSPORT = 'Lettre : le transport', LIEUX_DATES = 'Lettre : lieux et dates',
+  MARCHANDISE = 'Lettre : la marchandise';
+const GROUPE_LETTRE = {
+  expNom: PARTIES, expLieu: PARTIES, destNom: PARTIES, destLieu: PARTIES,
+  transporteur: TRANSPORT, chauffeur: TRANSPORT, vehicule: TRANSPORT,
+  date: LIEUX_DATES, chargLieu: LIEUX_DATES, chargDate: LIEUX_DATES, livLieu: LIEUX_DATES, livDate: LIEUX_DATES,
+  nature: MARCHANDISE, palettes: MARCHANDISE, poids: MARCHANDISE,
+};
+const jalonsLettre = Object.keys(GROUPE_LETTRE).map((k) => ({
+  id: `lettre-${k}`, titre: `Lettre de voiture : ${LIBS[k]}`,
+  groupe: GROUPE_LETTRE[k], ecran: `fiche:${LETTRE.id}`, poids: BAREME[k],
   verifier(db) {
     const f = ficheEnvoyee(db, LETTRE.id);
     if (!f.envoye) return { status: 'attente' };
-    const faux = champs.filter((k) => !juste(k, f.valeurs[k]));
-    if (!faux.length) return { status: 'ok' };
-    const d = typeof aide === 'function' ? aide(f.valeurs, faux) : '';
-    return { status: 'ko', detail: `Faux ou vide : ${faux.map((k) => LIBS[k]).join(', ')}.${d ? ' ' + d : ''}` };
+    if (juste(k, f.valeurs[k])) return { status: 'ok' };
+    if (vide(f.valeurs[k])) return { status: 'ko', detail: 'Case vide.' };
+    const d = AIDES[k] ? AIDES[k](f.valeurs) : '';
+    return { status: 'ko', detail: `Faux.${d ? ' ' + d : ''}` };
+  },
+}));
+
+// Le suivi : l'heure, puis « avant l'heure limite ? », jugés chacun seul.
+const AVANT = ARRIVEE < LIMITE ? 'Oui' : 'Non';
+const SUIVI_E1 = 'Le suivi de l’enlèvement';
+const jalonsSuivi = [{
+  id: 'suivi-heure', titre: 'Nouvelle heure d’arrivée juste',
+  groupe: SUIVI_E1, ecran: `fiche:${SUIVI.id}`, poids: BAREME.arrivee,
+  verifier(db) {
+    const f = ficheEnvoyee(db, SUIVI.id);
+    if (!f.envoye) return { status: 'attente' };
+    const h = lireHeure(f.valeurs.arrivee);
+    if (h === ARRIVEE) return { status: 'ok' };
+    if (h === ARRIVEE_PREVUE) return { status: 'ko', detail: 'C’est l’heure prévue au planning : il manque le retard.' };
+    return { status: 'ko', detail: 'Heure prévue au planning + le retard annoncé par Julie.' };
+  },
+}, {
+  id: 'suivi-avant', titre: 'Avant l’heure limite : la bonne réponse',
+  groupe: SUIVI_E1, ecran: `fiche:${SUIVI.id}`, poids: BAREME.avant,
+  verifier(db) {
+    const f = ficheEnvoyee(db, SUIVI.id);
+    if (!f.envoye) return { status: 'attente' };
+    return f.valeurs.avant === AVANT ? { status: 'ok' } : { status: 'ko', detail: 'Compare la nouvelle heure à l’heure limite de la fiche client.' };
+  },
+}];
+
+// Une ligne choisie d'un message = un jalon.
+const jalonLigne = (P, ligne, id, titre, groupe, detail) => ({
+  id, titre, groupe, ecran: `phrases:${P.id}`, poids: BAREME[id],
+  verifier(db) {
+    const r = phrasesJustes(db, P.id);
+    if (!r.envoye) return { status: 'attente' };
+    return r.justes.includes(ligne) ? { status: 'ok' } : { status: 'ko', detail };
   },
 });
-
-export const ETAPES = [
-  jalonLettre('parties', 'Expéditeur et destinataire justes', ['expNom', 'expLieu', 'destNom', 'destLieu'],
-    (v) => (v.expNom === ATTENDU.destNom && v.destNom === ATTENDU.expNom ? 'Expéditeur et destinataire sont inversés : qui envoie, qui reçoit ?' : '')),
-  jalonLettre('transport', 'Transporteur, chauffeur et véhicule justes', ['transporteur', 'chauffeur', 'vehicule'],
-    (v, faux) => [v.transporteur === 'smoby' ? 'Smoby envoie la marchandise : ce n’est pas lui qui la transporte.' : '',
-      faux.some((k) => k !== 'transporteur') ? 'Relis la ligne d’E1 du planning.' : ''].filter(Boolean).join(' ')),
-  jalonLettre('lieux', 'Lieux et dates justes (lettre, chargement, livraison)', ['date', 'chargLieu', 'chargDate', 'livLieu', 'livDate'],
-    (v) => (v.chargLieu === ATTENDU.livLieu ? 'Le camion charge chez l’expéditeur, il livre chez le client.' : '')),
-  jalonLettre('marchandise', 'Marchandise juste (nature, nombre de palettes, poids)', ['nature', 'palettes', 'poids'],
-    () => 'Tout est sur l’ordre d’enlèvement.'),
-  {
-    id: 'complete',
-    titre: 'Lettre envoyée complète (aucune case vide)',
-    verifier(db) {
-      const f = ficheEnvoyee(db, LETTRE.id);
-      if (!f.envoye) return { status: 'attente' };
-      const vides = CHAMPS.filter((k) => f.valeurs[k] == null || String(f.valeurs[k]).trim() === '');
-      return vides.length ? { status: 'ko', detail: `Case${vides.length > 1 ? 's' : ''} vide${vides.length > 1 ? 's' : ''} : ${vides.map((k) => LIBS[k]).join(', ')}.` }
-        : { status: 'ok' };
-    },
-  },
-  {
-    id: 'heure',
-    titre: 'Nouvelle heure d’arrivée juste, avant l’heure limite',
-    verifier(db) {
-      const f = ficheEnvoyee(db, SUIVI.id);
-      if (!f.envoye) return { status: 'attente' };
-      const h = lireHeure(f.valeurs.arrivee);
-      const avant = (ARRIVEE < LIMITE ? 'Oui' : 'Non');
-      if (h === ARRIVEE && f.valeurs.avant === avant) return { status: 'ok' };
-      if (h === ARRIVEE_PREVUE) return { status: 'ko', detail: 'C’est l’heure prévue au planning : il manque le retard.' };
-      if (h !== ARRIVEE) return { status: 'ko', detail: 'Heure prévue au planning + le retard annoncé par Julie.' };
-      return { status: 'ko', detail: 'Compare la nouvelle heure à l’heure limite de la fiche client.' };
-    },
-  },
-  {
-    id: 'client',
-    titre: 'Message au client juste',
-    verifier(db) {
-      const r = phrasesJustes(db, PHRASES_CLIENT.id);
-      if (!r.envoye) return { status: 'attente' };
-      return r.faux.length ? { status: 'ko', detail: `${r.faux.length} ligne${r.faux.length > 1 ? 's' : ''} à revoir : la cause, l’heure, le quai, le ton.` }
-        : { status: 'ok' };
-    },
-  },
-  {
-    id: 'smoby',
-    titre: 'Message à Smoby juste',
-    verifier(db) {
-      const r = phrasesJustes(db, PHRASES_SMOBY.id);
-      if (!r.envoye) return { status: 'attente' };
-      return r.faux.length ? { status: 'ko', detail: `${r.faux.length} ligne${r.faux.length > 1 ? 's' : ''} à revoir : quelle livraison, ce qui est fait, le ton.` }
-        : { status: 'ok' };
-    },
-  },
+const C = 'Message au client', S = 'Message à Smoby';
+const jalonsMessages = [
+  jalonLigne(PHRASES_CLIENT, 'cause', 'client-cause', `${C} : la cause du retard`, `${C} : les informations`, 'Relis le message de Julie.'),
+  jalonLigne(PHRASES_CLIENT, 'heure', 'client-heure', `${C} : la nouvelle heure`, `${C} : les informations`, 'La nouvelle heure est celle de ton suivi.'),
+  jalonLigne(PHRASES_CLIENT, 'quai', 'client-quai', `${C} : le quai`, `${C} : les informations`, 'Le quai est sur la fiche client.'),
+  jalonLigne(PHRASES_CLIENT, 'salut', 'client-salut', `${C} : la salutation`, `${C} : le ton`, 'On écrit à un client.'),
+  jalonLigne(PHRASES_CLIENT, 'fin', 'client-fin', `${C} : la formule de fin`, `${C} : le ton`, 'On écrit à un client.'),
+  jalonLigne(PHRASES_SMOBY, 'retard', 'smoby-retard', `${S} : la livraison en retard`, `${S} : les informations`, 'Quelle livraison, pour quel client ?'),
+  jalonLigne(PHRASES_SMOBY, 'client', 'smoby-client', `${S} : ce qui est fait pour le client`, `${S} : les informations`, 'Qui a déjà prévenu le client ?'),
+  jalonLigne(PHRASES_SMOBY, 'salut', 'smoby-salut', `${S} : la salutation`, `${S} : le ton`, 'On écrit à un partenaire.'),
+  jalonLigne(PHRASES_SMOBY, 'fin', 'smoby-fin', `${S} : la formule de fin`, `${S} : le ton`, 'On écrit à un partenaire.'),
 ];
+
+export const ETAPES = [...jalonsLettre, ...jalonsSuivi, ...jalonsMessages];
 
 // ─────────────────────────────────────────────────────────────── l'accueil
 

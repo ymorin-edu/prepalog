@@ -482,3 +482,31 @@ Un seul chantier moteur à la fois : le lot 3 attend que le chantier « Suivi de
 - **Blocages encore possibles** : en 5.5, une palette jamais posée reste « à faire » (l'élève peut toujours la
   poser, le plan est corrigeable sans limite). En 5.6, l'élève doit cliquer « Vérifier ma préparation ». Aucun
   autre geste irréversible ne retient la suite.
+
+### Lot 1 — livré le 07/10/2026 (Claude Code)
+
+- **ENT-5.8** (`contenus/smoby-ent58.js`) : 26 jalons, barème du §2 tel quel, 9 lignes au bandeau, `correction: true`,
+  `bareme: 20`. « Corriger » rouvre la lettre, le suivi et les messages. Chaque renvoi corrigé reçoit un accusé (lettre et
+  suivi : le responsable ; messages : le client, Bruno). Le message de Julie n'est pas rejoué. **Q6** : le Suivi reste au menu
+  dès que la lettre a été envoyée une fois (réglé dans le contenu : la condition d'apparition du Suivi, sans toucher à
+  `core/declencheurs.js`).
+- **ENT-5.7** (`contenus/smoby-ent57.js`) : 17 jalons, barème du §3 tel quel, 8 lignes au bandeau, `correction: true`,
+  `bareme: 20`. Accusé « Planning corrigé » du responsable K+N, et la panne n'est pas rejouée.
+- **Petite retouche de la vue planning** (`core/types/planning.js`, non prévue au brief, sans effet sur les autres séances) :
+  deux réglages déclaratifs, `versions: [2]` sur un jalon (l'atelier n'est jugé qu'après la panne) et
+  `repriseIdentique: 'faux'`. Ils sont lus par le moteur pour que le bilan affiché dans le planning dise la même chose que la
+  note.
+- **Q4, précisée par Tristan pendant le lot** : un planning d'après la panne renvoyé sans changement donne toutes ses cases
+  fausses, **sauf s'il respectait déjà la panne**. J'ai vérifié qu'un planning juste avant la panne peut l'être encore après
+  (la solution du corrigé d'après la panne vaut 17/17 si elle est envoyée dès le 1er envoi).
+- **Q4 en 5.2 : vérifié, pas de défaut.** L'arrêt d'Inès ajoute une carte à poser : un renvoi tel quel laisse les 5 cases
+  d'après l'imprévu fausses. Un test le fige ; rien n'a changé en 5.2.
+- **Notes gardées** : `meilleur` converti en proportion (10/10 en 5.7 et 8/8 en 5.8 deviennent 20/20), un test par séance.
+- **Corrigés** : les notes de `contenus/corriges/ENT-5.7.js` et `ENT-5.8.js` ne citent plus les anciens numéros de jalons.
+  **Cowork** : relire les trames de 5.7 et 5.8 si elles citent « 10 jalons » ou « 8 jalons ».
+- **Tests** (`outils/test/smoby.mjs`) : les cas « déclaration », « parcours juste », « pièges » et « inaction » de 5.7 et 5.8
+  sont **réécrits** pour le nouveau barème (alerte 7). Sont ajoutés : le barème, la garde d'inaction (stricte et fine), «
+  Corriger » de bout en bout dans les deux séances, `meilleur`, la 5.2 renvoyée telle quelle. Sabotages éprouvés : poids
+  ignorés, bandeau case par case, garde retirée, garde stricte au lieu de fine, Suivi qui disparaît du menu. Chacun fait
+  tomber ses cas.
+- **Blocage** : aucun cas connu en 5.7 et 5.8 (le premier bilan ouvre la suite, tout faux compris).

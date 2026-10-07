@@ -10,7 +10,8 @@
 //
 // L'environnement reste celui de Smoby (logo, charte : pas de logo K+N, brief §2) ; sous-titre et adresse
 // de messagerie de l'agence K+N, comme ENT-5.7.
-// Pas de `notation` : huit jalons ramenés sur 20. Une base par séance (pas de `jeuId`).
+// Pas de `notation` : 26 jalons pondérés, somme des poids = 20 (lot 1 du brief SMOBY-notation-5.3-5.8). Une base par
+// séance (pas de `jeuId`).
 // Pas encore de trame élève : Cowork l'écrit après la validation à l'écran (brief §9).
 
 import { creerEntreprise } from '../core/types/entreprise.js';
@@ -29,12 +30,13 @@ export const meta = {
   domaines: ['D3', 'D1'],
   coeur: true,
   temps: 'guidage',
-  bareme: SEANCE.ETAPES.length,
+  bareme: 20,           // 26 jalons pondérés, somme des poids = 20
   immersif: true,
   // Parcours strict : ne s'ouvre qu'à l'élève qui a validé ENT-5.7 (voir core/parcours.js).
   parcours: true,
-  // Elle ouvre la suivante dès qu'elle est finie, justes ou faux (lot 0 de SMOBY-notation-5.3-5.8 : aucun élève bloqué).
-  suiteAuBilan: true,
+  // Règle du premier bilan et correction (lot 1 de SMOBY-notation-5.3-5.8) : « Corriger » rouvre la lettre, le suivi
+  // et les deux messages, la note est celle du premier bilan (voir core/types/entreprise.js).
+  correction: true,
   precedente: 'smoby-enlevements',
   portee: 'eleve',
   tables: {},

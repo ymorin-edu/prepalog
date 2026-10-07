@@ -261,6 +261,10 @@ Jalons du planning (`etapesPlanning`, 07/10/2026) : « à faire » tant que leur
 (avant, un jalon raté restait « à faire » pour toujours). Ils se pondèrent et se groupent comme les autres :
 `etapesPlanning(P).map((e) => Object.assign(e, { poids, groupe, ecran: 'planning:<id>' }))`.
 
+Planning (ENT-5.7, 07/10/2026) : un jalon de la déclaration du planning peut porter `versions: [2]` (jugé seulement
+après l'aléa : une règle toujours vraie avant serait un point gratuit), et la déclaration `repriseIdentique: 'faux'`
+rend fausse la version d'après l'aléa renvoyée **sans changement**, sauf si elle respecte déjà l'aléa.
+
 Compteur de corrections lisible par le Suivi : `detail.indicateurs[<id de la séance>].corrections`, avec `bilan1` (état des
 jalons au premier bilan) et `bilan2` (état à la 1re correction).
 
@@ -281,6 +285,7 @@ l'élève à chaque envoi **corrigé** (deuxième envoi et suivants), sans rejou
 | `precedente` | `'<id>'` | Avec `parcours` : la séance qui doit être validée avant. Absent sur la première. Sa validation range une **photo** du travail, qui sert de point de reprise. |
 | `versionBase` | `2` | Avec `parcours` (06/10/2026, refonte d'ENT-1.1) : numéro de version de la base partagée. Une base d'une version antérieure **repart de zéro** à sa prochaine ouverture, une seule fois (photos, scores du parcours et déblocages effacés, `core/app.js`) ; d'ici là, les séances suivantes sont fermées. Le monter = remettre à zéro tous les élèves du parcours : le dire à Tristan. Une séance de parcours affiche aussi le **bandeau de fin de séance** à l'élève (étapes fausses nommées par leur titre). |
 | `correction` | `true` | Avec `parcours` (07/10/2026, lots A et A bis de SMOBY-retours-classe-5.1 ; ENT-5.1 d'abord) : règle du **premier bilan**. La séance suivante s'ouvre dès que tous les jalons sont jugés (photo de fin rangée au premier bilan complet, remplacée à chaque nouveau bilan complet qui change), l'élève peut **corriger** (bouton « Corriger » du bandeau : une fiche est rouverte, une réponse par phrases se renvoie), la note du suivi est la **moyenne** du premier bilan et de l'état actuel `(points du premier bilan + points actuels) / 2` (premier bilan rangé une fois dans `db.indicateurs[séance].bilan1`), le bandeau de fin liste **tous les groupes en ✓ / ✗**. Suppose que les jalons restent « à faire » jusqu'à l'envoi : **ne pas l'activer sur une séance qui juge en continu** (Spartoo, Boost : un jalon y passe « ko » en cours de route, le premier bilan serait faussé). Sans le drapeau, tout reste comme avant. Jamais en évaluation (`copie`). |
+| `suiteAuBilan` | `true` | Avec `parcours` (07/10/2026, lot 0 de SMOBY-notation-5.3-5.8 : aucun élève bloqué en fin de séance) : la séance suivante s'ouvre dès que **tous les jalons sont jugés**, justes ou faux (photo de fin rangée comme pour `correction`), sans bouton « Corriger » ni note moyennée. Le bandeau de fin reste l'ancien, sa dernière phrase dit que la suite est ouverte. `correction: true` l'implique. Une séance dont les jalons ne sont jamais « faux » déclare en plus `seanceFinie: (db) => bool` dans `creerEntreprise` (ENT-5.6 : préparation terminée et vérifiée). |
 | `immersif` | `true` | Prend toute la page, sans bandeau Prepalog : la séance dessine son propre en-tête et sa sortie (`ctx.quitter()`). Compte aussi pour le parcours et la reprise par l'enseignant. |
 | `corrige` | `'./contenus/corriges/ENT-3.1.js'` | Fichier de corrigé montré dans l'onglet « Corrigés » de l'enseignant. L'élève ne le voit pas, mais le fichier est public (voir CLAUDE.md). |
 | `volume` | `VOLUME` | Volume déclaré de la séance (séances Cdiscount). **Aucun code du site ne le lit aujourd'hui** : c'est une information portée pour la suite. |
