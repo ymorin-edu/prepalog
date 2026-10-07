@@ -209,8 +209,10 @@ export function creerEntreprise(U) {
   // Une étape qui plante sur une base incomplète compte comme non faite, sans tout arrêter.
   // POIDS (lot A bis, 07/10/2026) : un jalon peut déclarer `poids`, sa part de la note ; la somme des poids d'une
   // séance vaut 20 (le moteur le vérifie à l'ouverture). Sans `poids`, chaque jalon vaut 1 (le score est le
-  // nombre de jalons réussis, comme avant).
-  const poidsDe = (e) => (typeof e.poids === 'number' ? e.poids : 1);
+  // nombre de jalons réussis, comme avant). `compte: false` (lot 2 de SMOBY-notation, 07/10/2026) : un jalon de
+  // passage (la signature du BL en ENT-5.4) qui ne pèse rien et n'a pas de ligne au bandeau de fin ; il doit
+  // quand même être jugé pour que la séance soit finie.
+  const poidsDe = (e) => (e.compte === false ? 0 : typeof e.poids === 'number' ? e.poids : 1);
   const AVEC_POIDS = etapes.some((e) => typeof e.poids === 'number');
   const MAX_POIDS = Math.round(etapes.reduce((t, e) => t + poidsDe(e), 0) * 1e6) / 1e6;
   const ERREUR_POIDS = AVEC_POIDS && Math.abs(MAX_POIDS - 20) > 1e-6
@@ -664,6 +666,7 @@ export function creerEntreprise(U) {
       function groupesDuBilan(st) {
         const L = [];
         etapes.forEach((e) => {
+          if (e.compte === false) return;
           const nom = e.groupe || e.titre;
           let g = L.find((x) => x.nom === nom);
           if (!g) { g = { nom, ok: true, ids: [] }; L.push(g); }
@@ -715,9 +718,15 @@ export function creerEntreprise(U) {
             ${liste}<div class="ent-fin-btns"><button class="btn" data-fin-quitter>Retour aux séances</button></div></div></div>`;
         }
         const peutCorriger = ecransAFaire(st).length > 0;
+        // Une case fausse sans `ecran` ne se rouvre pas (ENT-5.4 : le BL est signé, le camion est reparti). La séance
+        // le dit avec `finFige` (une phrase, dans `creerEntreprise`), et le bandeau ne promet pas une correction
+        // qu'aucun bouton n'offre.
+        const fige = U.finFige && etapes.some((e) => e.compte !== false && st[e.id] === 'ko' && !e.ecran)
+          ? `<p data-fin-fige>${ech(U.finFige)}</p>` : '';
         return `<div class="ent-fin ent-fin-v2 ent-fin-ko" role="status" data-fin="ko"><div class="ent-fin-corps">
           <h2 class="ent-fin-t">Tu as fini : voici ce qui est juste et ce qui est à corriger.</h2>
-          <p>Tu peux corriger pour améliorer ta note, ou passer à la séance suivante${S ? ` (${ech(S.code)}, déjà ouverte)` : ''}.</p>
+          ${fige}<p>${peutCorriger ? 'Tu peux corriger pour améliorer ta note, ou passer à la séance suivante'
+            : 'Tu peux passer à la séance suivante'}${S ? ` (${ech(S.code)}, déjà ouverte)` : ''}.</p>
           ${liste}<div class="ent-fin-btns">${peutCorriger ? `<button class="btn btn-p ent-fin-corriger" data-fin-corriger>Corriger</button>
             <span class="ent-fin-gain">Corriger améliore ta note.</span>` : ''}
             <button class="btn" data-fin-quitter>Retour aux séances</button></div></div></div>`;

@@ -71,6 +71,9 @@ export const QUAI_ENT54 = {
   avertissement: 'Réels : Smoby, l’usine d’Arinthod, la plateforme de Moirans-en-Montagne et les gammes de jouets. '
     + 'Le quai 2, l’horaire, le transporteur, Bruno, les références, quantités et défauts sont <b>construits pour l’exercice</b>.',
   froid: false,
+  // Le BL signé, le camion est reparti : pas de « Recommencer la réception » (choix de Tristan, 07/10/2026). La note
+  // est le premier bilan, refaire le quai ne doit pas le changer.
+  recommencer: false,
   motifs: ['avarie', 'manquant'],
   lieu: { nom: 'Quai 2', temp: 15, refrigere: false },
   zone: { nom: 'Zone de réception' },
@@ -119,6 +122,15 @@ const signe = (db) => !!(etat(db) && etat(db).signe);
 
 export const VOLET = {
   id: 'smoby-ent54',
+  // « Corriger » ne rouvre que le compte rendu : à chaque renvoi, Bruno accuse réception, sans dire si c'est juste.
+  corrections: {
+    [PHRASES.id]: (prenom) => ({ mails: [{
+      folder: 'in', ts: Date.now() + 5000, from: BRUNO.nom, fromMail: BRUNO.mail, to: prenom,
+      subject: 'Ton compte rendu corrigé', kind: 'text', text: `Bien reçu, merci ${prenom}.
+
+Bruno`,
+    }] }),
+  },
   semer: () => ({
     mails: [{
       folder: 'in', ts: Date.now() - 60000, from: BRUNO.nom, fromMail: BRUNO.mail, to: 'Yanis',
@@ -158,38 +170,68 @@ export const LEXIQUE = Object.assign({}, LEXIQUE_SMOBY, {
   'chariot frontal': 'Chariot élévateur qui porte la charge à l’avant ; il faut le CACES 3 pour le conduire.',
 });
 
-// ─────────────────────────────────────────────────────────────── les jalons (10, brief §5)
+// ─────────────────────────────────────────────────────────────── les jalons (16, barème sur 20)
+
+// Lot 2 du brief SMOBY-notation-5.3-5.8, barème validé par Tristan le 07/10/2026 : une case = un jalon, chaque bloc a
+// une part FIXE de la note sur 20.
+//   Sécurité 4 (cale signalée avant de décharger 3, constat sans erreur 1 : gardé en UNE case, « tout OK » en
+//   donnerait 5 sur 6 sans rien regarder) · Contrôle des palettes 8 (4 décisions avec motif à 1,25 ; 4 comptages
+//   à 0,75 : recopier le BL donne P1, P2 et P3) · Réserves sur le BL 4 (P3 2, P4 2) · Compte rendu à Bruno 4
+//   (réserves 3, salutation 0,5, fin 0,5). Total : 20.
+// La signature du BL sort de la note (Q3) : juste dès qu'elle est obtenue, même avec un BL vide. Elle reste un
+// jalon `compte: false` (sans poids ni ligne au bandeau).
+// `groupe` = la ligne du bandeau de fin (10 lignes). Seul le compte rendu a un `ecran` : le BL signé ne se rouvre
+// pas (Q2), la vue quai n'offre plus « Recommencer la réception » (`recommencer: false`).
+export const BAREME = {
+  'securite-signalee': 3, 'securite-constat': 1,
+  decision: 1.25, comptage: 0.75,
+  reserve: 2,
+  'message-reserves': 3, 'message-salutation': 0.5, 'message-fin': 0.5,
+};
 
 // Les lignes de la vue quai, lues une fois par jalon. `essaye` : l'élève a déjà agi sur ce que juge le
 // jalon (sinon l'étape reste « attente », convention du repérage « premier coup »).
 const ligne = (db, id) => jalonsQuai(db, QUAI_ENT54).L.find((l) => l.id === id) || {};
 const statut = (ok, essaye, detail) => (ok ? { status: 'ok' } : essaye ? { status: 'ko', detail } : { status: 'attente' });
+const decidee = (db, p) => { const s = etat(db) && etat(db).palettes && etat(db).palettes[p.id]; return !!(s && s.decision); };
 
-const jalonsPalettes = PALETTES_ENT54.map((p) => ({
-  id: `${p.id}-palette`,
-  titre: `${p.id} (${p.nom}) : comptée et décidée juste`,
-  verifier(db) {
-    const c = ligne(db, `${p.id}-comptage`), d = ligne(db, `${p.id}-decision`);
-    const s = etat(db) && etat(db).palettes && etat(db).palettes[p.id];
-    const essaye = !!(s && s.decision);
-    const faux = [!c.ok && `comptage : ${c.fait}`, !d.ok && `décision : ${d.fait}`].filter(Boolean).join(' · ');
-    return statut(c.ok && d.ok, essaye, faux);
-  },
-}));
+// Une palette = deux cases, une ligne au bandeau. Les deux sont jugées quand la palette est décidée.
+const jalonsPalettes = PALETTES_ENT54.flatMap((p) => [{
+  id: `${p.id}-decision`, titre: `${p.id} (${p.nom}) : décision et motif justes`,
+  groupe: `Palette ${p.id}`, poids: BAREME.decision,
+  verifier(db) { const d = ligne(db, `${p.id}-decision`); return statut(d.ok, decidee(db, p), `décision : ${d.fait}`); },
+}, {
+  id: `${p.id}-comptage`, titre: `${p.id} (${p.nom}) : comptage juste`,
+  groupe: `Palette ${p.id}`, poids: BAREME.comptage,
+  verifier(db) { const c = ligne(db, `${p.id}-comptage`); return statut(c.ok, decidee(db, p), `comptage : ${c.fait}`); },
+}]);
 
 const jalonsReserves = PALETTES_ENT54.filter((p) => p.attendu !== 'accepter').map((p) => ({
   id: `${p.id}-reserve`,
   titre: `Réserve précise pour ${p.id} (${MOTIFS[p.motifAttendu].toLowerCase()})`,
+  groupe: `Réserve de la palette ${p.id}`, poids: BAREME.reserve,
   verifier(db) {
     const l = ligne(db, `${p.id}-reserve`);
     return statut(l.ok, !!(etat(db) && etat(db).ecrit), `écrit : ${l.fait} — attendu : ${l.attendu}`);
   },
 }));
 
+// Une ligne choisie du compte rendu = un jalon (la ligne « J'ai reçu les 4 palettes » est imposée : rien à juger).
+const ECRAN_MESSAGE = `phrases:${PHRASES.id}`;
+const jalonLigne = (lig, id, titre, groupe, detail) => ({
+  id, titre, groupe, ecran: ECRAN_MESSAGE, poids: BAREME[id],
+  verifier(db) {
+    const r = phrasesJustes(db, PHRASES.id);
+    if (!r.envoye) return { status: 'attente' };
+    return r.justes.includes(lig) ? { status: 'ok' } : { status: 'ko', detail };
+  },
+});
+
 export const ETAPES = [
   {
     id: 'securite-signalee',
     titre: 'La cale signalée avant de décharger',
+    groupe: 'Sécurité : la cale signalée', poids: BAREME['securite-signalee'],
     verifier(db) {
       const l = ligne(db, 'securiteSignalee'), e = etat(db);
       return statut(l.ok, !!(e && e.securite && (e.securite.fait || e.securite.arrete || e.securite.signaux.length)), l.fait);
@@ -198,6 +240,7 @@ export const ETAPES = [
   {
     id: 'securite-constat',
     titre: 'Aucune erreur de constat',
+    groupe: 'Sécurité : le constat', poids: BAREME['securite-constat'],
     verifier(db) {
       const l = ligne(db, 'securiteConstat'), e = etat(db);
       return statut(l.ok, !!(e && e.securite && e.securite.fait), l.fait);
@@ -208,19 +251,20 @@ export const ETAPES = [
   {
     id: 'signature',
     titre: 'BL signé par le chauffeur',
+    compte: false,
     verifier(db) { return signe(db) ? { status: 'ok' } : { status: 'attente' }; },
   },
-  {
-    id: 'message',
-    titre: 'Compte rendu à Bruno : les réserves sont justes',
-    verifier(db) {
-      const r = phrasesJustes(db, PHRASES.id);
-      if (!r.envoye) return { status: 'attente' };
-      return r.justes.includes('reserves') ? { status: 'ok' }
-        : { status: 'ko', detail: 'La ligne des réserves doit dire ce que tu as écrit sur le BL.' };
-    },
-  },
+  jalonLigne('reserves', 'message-reserves', 'Compte rendu à Bruno : les réserves sont justes', 'Compte rendu : les réserves',
+    'La ligne des réserves doit dire ce que tu as écrit sur le BL.'),
+  jalonLigne('salutation', 'message-salutation', 'Compte rendu à Bruno : la salutation', 'Compte rendu : le ton',
+    'On écrit à son chef de quai.'),
+  jalonLigne('fin', 'message-fin', 'Compte rendu à Bruno : la formule de fin', 'Compte rendu : le ton',
+    'On écrit à son chef de quai.'),
 ];
+
+// Ce que le bandeau de fin dit quand une case du quai est fausse (elle ne se rouvre pas). La suite (« Tu peux
+// corriger… ») vient du moteur, seulement si le compte rendu a une case fausse.
+export const FIN_FIGE = 'Le camion est reparti : le BL ne se corrige plus.';
 
 // ─────────────────────────────────────────────────────────────── l'accueil
 

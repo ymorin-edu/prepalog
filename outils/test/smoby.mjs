@@ -1950,8 +1950,16 @@ const monter54 = (o = {}) => pg.evaluate(async (o) => {
     lireScore: async () => null,
   });
 }, o);
-const DIX = ['securite-signalee', 'securite-constat', 'P1-palette', 'P2-palette', 'P3-palette', 'P4-palette', 'P3-reserve', 'P4-reserve',
-  'signature', 'message'];
+// Lot 2 de SMOBY-notation-5.3-5.8 (07/10/2026) : 16 jalons, barème sur 20 ; la signature ne compte pas.
+const DIX = ['securite-signalee', 'securite-constat', 'P1-decision', 'P1-comptage', 'P2-decision', 'P2-comptage', 'P3-decision',
+  'P3-comptage', 'P4-decision', 'P4-comptage', 'P3-reserve', 'P4-reserve', 'signature', 'message-reserves', 'message-salutation', 'message-fin'];
+const POIDS54 = { 'securite-signalee': 3, 'securite-constat': 1, 'P1-decision': 1.25, 'P1-comptage': 0.75, 'P2-decision': 1.25,
+  'P2-comptage': 0.75, 'P3-decision': 1.25, 'P3-comptage': 0.75, 'P4-decision': 1.25, 'P4-comptage': 0.75, 'P3-reserve': 2, 'P4-reserve': 2,
+  signature: 0, 'message-reserves': 3, 'message-salutation': 0.5, 'message-fin': 0.5 };
+const note54 = (ko = []) => 20 - ko.reduce((t, id) => t + POIDS54[id], 0);
+const proche54 = (a, b, quoi) => { if (!Array.isArray(a) || Math.abs(a[0] - b) > 0.01 || a[1] !== 20) throw new Error(`${quoi} : ${JSON.stringify(a)} au lieu de [${b}, 20]`); };
+const bandeau54 = () => pg.$$eval(`${T54} [data-fin-seance] [data-fin-jalon]`, (L) => L.map((x) => [x.dataset.finEtat, x.textContent.replace(/\s+/g, ' ').trim().replace(/^([✓✗])\s*/, '$1 ').replace(/ (juste|à corriger)$/, '')]));
+const texteFin54 = () => pg.$eval(`${T54} [data-fin-seance] [data-fin]`, (b) => b.textContent.replace(/\s+/g, ' '));
 const etapes54 = () => pg.evaluate(async () => {
   const S = await import('/contenus/smoby-ent54.js');
   return Object.fromEntries(S.ETAPES.map((e) => [e.id, e.verifier(window.__54.db).status]));
@@ -2023,7 +2031,7 @@ async function parcours54({ uid, secu = {}, decisions, reserves, phrases } = {})
 }
 const statuts54 = (ko = []) => Object.fromEntries(DIX.map((id) => [id, ko.includes(id) ? 'ko' : 'ok']));
 
-await v('ENT-5.4 : déclaration (code, 2de, C1.2 et C1.4, 10 jalons, livrée fermée aux élèves), photos du quai de Smoby servies', async () => {
+await v('ENT-5.4 : déclaration (code, 2de, C1.2 et C1.4, sur 20, correction, livrée fermée aux élèves), photos du quai de Smoby servies', async () => {
   const r = await pg.evaluate(async () => {
     const A = await import('/activites/smoby-reception.js');
     const I = await import('/activites/index.js');
@@ -2031,13 +2039,35 @@ await v('ENT-5.4 : déclaration (code, 2de, C1.2 et C1.4, 10 jalons, livrée fer
     const m = A.meta, Q = S.QUAI_ENT54;
     const urls = [Q.photos.arrivee, Q.photos.quai, Q.securite.photo];
     const st = await Promise.all(urls.map((u) => fetch(u).then((x) => [u, x.status, x.headers.get('content-type')])));
-    return { m: [m.id, m.code, m.rubrique, m.niveaux, m.competences, m.domaines, m.temps, m.bareme, m.pret, m.ouverture, m.portee],
+    return { m: [m.id, m.code, m.rubrique, m.niveaux, m.competences, m.domaines, m.temps, m.bareme, m.correction, m.pret, m.ouverture, m.portee],
       st, inscrite: (await Promise.all(I.ACTIVITES.map((f) => f()))).some((x) => x.meta.id === 'smoby-reception') };
   });
-  egal(r.m, ['smoby-reception', 'ENT-5.4', 'simulog', ['2de'], ['C1.2', 'C1.4'], ['D4', 'D5'], 'guidage', 10, true, 'prof', 'eleve'], 'meta');
+  egal(r.m, ['smoby-reception', 'ENT-5.4', 'simulog', ['2de'], ['C1.2', 'C1.4'], ['D4', 'D5'], 'guidage', 20, true, true, 'prof', 'eleve'], 'meta');
   egal(r.st, [['./contenus/smoby/quai-remorques.jpg', 200, 'image/jpeg'], ['./contenus/smoby/quai-interieur.jpg', 200, 'image/jpeg'],
     ['./contenus/smoby/quai-exterieur.jpg', 200, 'image/jpeg']], 'photos');
   vrai(r.inscrite, 'séance absente du registre');
+});
+
+await v('ENT-5.4 : le barème — 16 jalons dont la signature non notée, parts 3 / 1 / 2 × 4 / 2 / 2 / 3 / 1, total 20, 10 lignes au bandeau', async () => {
+  const r = await pg.evaluate(async () => {
+    const S = await import('/contenus/smoby-ent54.js');
+    const notes = S.ETAPES.filter((e) => e.compte !== false);
+    const somme = (L) => Math.round(L.reduce((t, e) => t + e.poids, 0) * 1e6) / 1e6;
+    const groupes = [...new Set(notes.map((e) => e.groupe))];
+    return { ids: S.ETAPES.map((e) => e.id), horsNote: S.ETAPES.filter((e) => e.compte === false).map((e) => e.id), total: somme(notes), groupes,
+      parts: groupes.map((g) => somme(notes.filter((e) => e.groupe === g))),
+      poids: Object.fromEntries(notes.map((e) => [e.id, e.poids])),
+      ecrans: [...new Set(S.ETAPES.map((e) => e.ecran).filter(Boolean))], avecEcran: S.ETAPES.filter((e) => e.ecran).map((e) => e.id) };
+  });
+  egal(r.ids, DIX, 'les 16 jalons, dans l’ordre');
+  egal(r.horsNote, ['signature'], 'la signature sort de la note (Q3)');
+  egal(r.total, 20, 'total');
+  egal(r.groupes, ['Sécurité : la cale signalée', 'Sécurité : le constat', 'Palette P1', 'Palette P2', 'Palette P3', 'Palette P4',
+    'Réserve de la palette P3', 'Réserve de la palette P4', 'Compte rendu : les réserves', 'Compte rendu : le ton'], 'les 10 lignes du bandeau');
+  egal(r.parts, [3, 1, 2, 2, 2, 2, 2, 2, 3, 1], 'parts par ligne');
+  egal(r.poids, Object.fromEntries(Object.entries(POIDS54).filter(([k]) => k !== 'signature')), 'poids de chaque case');
+  egal(r.ecrans, ['phrases:compte-rendu-bruno'], 'seul le compte rendu se rouvre (Q2)');
+  egal(r.avecEcran, ['message-reserves', 'message-salutation', 'message-fin'], 'jalons qui se corrigent');
 });
 
 await v('ENT-5.4 : les attendus calculés sont ceux du brief (réels, réserves, phrase juste) et le corrigé les reprend', async () => {
@@ -2068,7 +2098,7 @@ await v('ENT-5.4 : à l’ouverture, le message de Bruno seul, aucun jalon vrai 
   vrai(!s || s[0] === 0, `score sans rien faire : ${JSON.stringify(s)}`);
 });
 
-await v('ENT-5.4 : parcours juste à l’écran → 10 / 10, réponse de Bruno ; rien de froid ; déchargement sur le décor fixe de Smoby', async () => {
+await v('ENT-5.4 : parcours juste à l’écran → 20 / 20, bandeau tout juste, réponse de Bruno ; rien de froid ; déchargement sur le décor fixe de Smoby', async () => {
   await monter54();
   await auQuai54();
   egal(await pg.$eval(`${Z54} [data-q-securite] img`, (i) => i.getAttribute('src')), './contenus/smoby/quai-exterieur.jpg', 'photo de l’étape ⓪');
@@ -2091,8 +2121,11 @@ await v('ENT-5.4 : parcours juste à l’écran → 10 / 10, réponse de Bruno ;
   egal(await sujets54(), ['Ton premier camion à 14 h 00', 'La navette d’Arinthod'], 'Bruno demande le compte rendu après la signature');
   await repondre54();
   egal(await etapes54(), statuts54(), 'étapes');
-  egal(await dernierScore54(), [10, 10], 'score remonté au suivi');
+  proche54(await dernierScore54(), 20, 'score remonté au suivi');
   vrai((await sujets54()).includes('RE : La navette d’Arinthod'), 'la réponse de Bruno n’arrive pas');
+  const b = await bandeau54();
+  vrai(b.length === 10 && b.every((x) => x[0] === 'ok'), 'bandeau tout juste : ' + JSON.stringify(b));
+  vrai(!(await pg.$(`${T54} [data-fin-corriger]`)), 'bouton « Corriger » alors que tout est juste');
 });
 
 await v('ENT-5.4 : décor fixe — légende sans porte qui se lève, étiquette sans date de consommation, aucun mot du froid au quai', async () => {
@@ -2111,7 +2144,7 @@ await v('ENT-5.4 : décor fixe — légende sans porte qui se lève, étiquette 
   vrai(!/froid|°C/i.test(await pg.textContent(`${Z54} .quai`)), 'un mot du froid au quai');
 });
 
-await v('ENT-5.4 : décharger sans signaler → arrêt du chef de quai, jalon 1 faux même après avoir signalé (9 / 10)', async () => {
+await v('ENT-5.4 : décharger sans signaler → arrêt du chef de quai, la cale fausse même après avoir signalé (17 / 20) ; rien à rouvrir : pas de « Corriger »', async () => {
   await monter54({ uid: 'u-54-arret' });
   await auQuai54();
   await securite54({ signalerAvant: false });
@@ -2120,7 +2153,12 @@ await v('ENT-5.4 : décharger sans signaler → arrêt du chef de quai, jalon 1 
   await pg.click(`${Z54} .quai-stepper button[data-n="1"]`);
   await decharger54(); await controler54(); await papiers54(); await repondre54();
   egal(await etapes54(), statuts54(['securite-signalee']), 'étapes');
-  egal(await dernierScore54(), [9, 10], 'score');
+  proche54(await dernierScore54(), 17, 'score');
+  egal((await bandeau54()).filter((x) => x[0] === 'ko').map((x) => x[1]), ['✗ Sécurité : la cale signalée'], 'bandeau');
+  const t = await texteFin54();
+  vrai(!(await pg.$(`${T54} [data-fin-corriger]`)), 'bouton « Corriger » alors que seul le quai est faux (il ne se rouvre pas)');
+  vrai(/Le camion est reparti : le BL ne se corrige plus\./.test(t) && /Tu peux passer à la séance suivante/.test(t)
+    && !/Tu peux corriger/.test(t), 'texte du bandeau : ' + t);
 });
 
 await v('ENT-5.4 : le texte de l’arrêt du chef de quai est celui du brief', async () => {
@@ -2132,22 +2170,69 @@ await v('ENT-5.4 : le texte de l’arrêt du chef de quai est celui du brief', a
   egal((await etapes54())['securite-signalee'], 'ko', 'jalon 1 après l’arrêt');
 });
 
-await v('ENT-5.4 : chaque piège fait tomber son jalon (constat, P2 refusée, P3 acceptée sans le tour, P4 comptée 36, réserves, message)', async () => {
+await v('ENT-5.4 : chaque piège fait tomber sa case seule (constat, P2 refusée, P3 acceptée sans le tour, P4 comptée 36 mais bien décidée, réserves, message)', async () => {
   const cas = [
     [['securite-constat'], { secu: { constat: { ...SECU54, epi: 'ko' } } }],
-    // Une palette refusée demande sa ligne de réserve (le chauffeur ne signe pas une réserve vide).
-    [['P2-palette'], { decisions: { ...JUSTE54, P2: [45, 'refuser', 'manquant'] }, reserves: { P2: 3, P3: 1, P4: 2 } }],
-    [['P3-palette', 'P3-reserve'], { decisions: { ...JUSTE54, P3: [36, 'accepter'] } }],
-    [['P4-palette'], { decisions: { ...JUSTE54, P4: [36, 'reserves', 'manquant'] } }],
+    // Une palette refusée demande sa ligne de réserve (le chauffeur ne signe pas une réserve vide). Le comptage reste juste.
+    [['P2-decision'], { decisions: { ...JUSTE54, P2: [45, 'refuser', 'manquant'] }, reserves: { P2: 3, P3: 1, P4: 2 } }],
+    [['P3-decision', 'P3-reserve'], { decisions: { ...JUSTE54, P3: [36, 'accepter'] } }],
+    // Comptage et décision séparés : la décision juste garde ses points malgré le comptage faux.
+    [['P4-comptage'], { decisions: { ...JUSTE54, P4: [36, 'reserves', 'manquant'] } }],
     [['P4-reserve'], { reserves: { P3: 1, P4: 1 } }],
-    [['message'], { phrases: { reserves: 'Tout est conforme.' } }],
-    [['message'], { phrases: { reserves: 'Réserves : 2 cartons écrasés.' } }],
+    [['message-reserves'], { phrases: { reserves: 'Tout est conforme.' } }],
+    [['message-reserves'], { phrases: { reserves: 'Réserves : 2 cartons écrasés.' } }],
+    [['message-salutation', 'message-fin'], { phrases: { salutation: 'Salut !', fin: 'Bisous' } }],
   ];
   for (const [n, [ko, o]] of cas.entries()) {
     await parcours54({ uid: `u-54-piege-${n}`, ...o });
     egal(await etapes54(), statuts54(ko), `sabotage ${ko.join(', ')}`);
-    egal(await dernierScore54(), [10 - ko.length, 10], `score avec ${ko.join(', ')} faux`);
+    proche54(await dernierScore54(), note54(ko), `score avec ${ko.join(', ')} faux`);
   }
+});
+
+await v('ENT-5.4 : « Corriger » ne rouvre que le compte rendu — premier bilan, moyenne à la 1re correction, accusé de Bruno ; le BL signé ne se refait pas', async () => {
+  await parcours54({ uid: 'u-54-corr', decisions: { ...JUSTE54, P4: [36, 'reserves', 'manquant'] }, phrases: { reserves: 'Tout est conforme.' } });
+  const bilan1 = note54(['P4-comptage', 'message-reserves']);
+  proche54(await dernierScore54(), bilan1, 'premier bilan');
+  egal((await bandeau54()).filter((x) => x[0] === 'ko').map((x) => x[1]), ['✗ Palette P4', '✗ Compte rendu : les réserves'], 'bandeau');
+  egal(await pg.evaluate(() => Object.keys(window.__54.db.points || {})), ['smoby-reception'], 'photo du premier bilan (la 5.5 s’ouvre)');
+  const t = await texteFin54();
+  vrai(/Le camion est reparti : le BL ne se corrige plus\./.test(t) && /Tu peux corriger pour améliorer ta note/.test(t), 'texte du bandeau : ' + t);
+  // Le quai clos : plus de « Recommencer la réception » (choix de Tristan, 07/10/2026), la phrase à la place.
+  await pg.click(`${T54} .ent-nav[data-vue="quai"]`);
+  await pg.click(`${Z54} [data-q="clore"]`);
+  await pg.waitForSelector(`${Z54} [data-q-bilan]`);
+  vrai(!(await pg.$(`${Z54} [data-q="recommencer"]`)), '« Recommencer la réception » après la signature');
+  egal(await pg.textContent(`${Z54} [data-q-fige]`), 'Le camion est reparti : le BL ne se corrige plus.', 'phrase du bilan du quai');
+  await pg.click(`${T54} [data-fin-corriger]`);
+  await pg.waitForSelector(`${Z54} #formPhr:not([hidden])`);
+  egal(await pg.$eval(`${Z54} [data-phrase="reserves"]`, (s) => s.selectedOptions[0].textContent), 'Tout est conforme.', 'le brouillon reprend le choix de l’élève');
+  await pg.selectOption(`${Z54} [data-phrase="reserves"]`, { label: PHR54.reserves });
+  await cliquerEtConfirmer(pg, `${Z54} #formPhr button[type="submit"]`);
+  egal(await etapes54(), statuts54(['P4-comptage']), 'après la correction : le quai garde son erreur');
+  proche54(await dernierScore54(), (bilan1 + note54(['P4-comptage'])) / 2, 'moyenne du premier bilan et de l’état à la 1re correction');
+  vrai(!(await pg.$(`${T54} [data-fin-corriger]`)), 'plus rien à rouvrir : pas de « Corriger »');
+  const r = await pg.evaluate(() => {
+    const M = window.__54.db.mails.filter((m) => m.folder === 'in');
+    return { c: window.__54.db.indicateurs['smoby-reception'].corrections, re: M.filter((m) => m.subject === 'RE : La navette d’Arinthod').length,
+      accuses: M.filter((m) => /corrigé/.test(m.subject)).map((m) => [m.subject, m.text]) };
+  });
+  egal([r.c, r.re], [1, 1], 'une correction, la réponse de Bruno n’est pas rejouée');
+  egal(r.accuses, [['Ton compte rendu corrigé', 'Bien reçu, merci Lea.\n\nBruno']], 'l’accusé de Bruno, sans dire juste ou faux');
+});
+
+await v('ENT-5.4 : « meilleur » — un élève qui a fini avec l’ancien barème (10 / 10) garde sa note quand le barème passe à 20 (démonstration)', async () => {
+  const r = await pg.evaluate(async () => {
+    const { B } = await import('/core/backend.js');
+    const g = 'g-54-meilleur', u = 'u-54-meilleur', a = 'smoby-reception';
+    await B.poserNote(g, u, a, null);
+    await B.ecrireScore(g, u, a, { score: 10, max: 10 });
+    await B.ecrireScore(g, u, a, { score: 12, max: 20 });
+    const m = (await B.lireScore(g, u, a)).meilleur;
+    await B.poserNote(g, u, a, null);
+    return m;
+  });
+  vrai(Math.abs(r - 20) < 0.01, '10/10 devenu ' + r + ' sur 20');
 });
 
 // ── ENT-5.5 « ranger et saisir l'entrée » (brief `docs/briefs/ENT-5.5-smoby-rangement.md`) ──────────────
@@ -3236,7 +3321,8 @@ await v('Lot 0 : ENT-5.4 — rien signalé, constat faux, tout accepté sans ré
     phrases: { reserves: 'Tout est conforme.' } });
   const st = await etapes54();
   egal(Object.values(st).filter((x) => x !== 'ok' && x !== 'ko'), [], 'tout est jugé');
-  egal(Object.entries(st).filter(([, x]) => x === 'ok').map(([k]) => k).sort(), ['P1-palette', 'P2-palette', 'signature'], 'seuls justes');
+  egal(Object.entries(st).filter(([, x]) => x === 'ok').map(([k]) => k).sort(),
+    ['P1-comptage', 'P1-decision', 'P2-comptage', 'P2-decision', 'P3-comptage', 'message-fin', 'message-salutation', 'signature'], 'seuls justes');
   await pasBloque(T54, '__54', 'smoby-reception', 'ENT-5.4');
 });
 

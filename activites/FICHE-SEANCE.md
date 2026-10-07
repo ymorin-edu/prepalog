@@ -256,6 +256,10 @@ Un jalon (`etapes`) peut déclarer, en plus de `id`, `titre` et `verifier(db)` :
   planning>'`. Le bouton « Corriger » n'apparaît que s'il y a un `ecran` à rouvrir parmi les jalons faux. Un planning se rouvre
   à la première version fausse, avec le planning envoyé : si c'est la 1re, la version d'après l'aléa est mise de côté et revient
   au renvoi (deux envois = **une** correction, compteur `finis` de l'état du planning).
+  Un jalon faux **sans** `ecran` ne se rouvre pas (ENT-5.4 : BL signé, camion reparti). La séance peut le dire au bandeau
+  par `finFige: '<une phrase>'` dans `creerEntreprise` ; s'il n'y a rien à rouvrir, le bandeau ne parle plus de corriger.
+- `compte: false` : un jalon de passage (ENT-5.4 : la signature du BL), sans poids ni ligne au bandeau. Il doit quand même
+  être jugé pour que la séance soit finie.
 
 Jalons du planning (`etapesPlanning`, 07/10/2026) : « à faire » tant que leur version n'est pas envoyée, puis justes **ou faux**
 (avant, un jalon raté restait « à faire » pour toujours). Ils se pondèrent et se groupent comme les autres :

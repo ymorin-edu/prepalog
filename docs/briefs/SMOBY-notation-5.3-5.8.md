@@ -510,3 +510,29 @@ Un seul chantier moteur à la fois : le lot 3 attend que le chantier « Suivi de
   ignorés, bandeau case par case, garde retirée, garde stricte au lieu de fine, Suivi qui disparaît du menu. Chacun fait
   tomber ses cas.
 - **Blocage** : aucun cas connu en 5.7 et 5.8 (le premier bilan ouvre la suite, tout faux compris).
+
+### Lot 2 — livré le 07/10/2026 (Claude Code)
+
+- **ENT-5.4** (`contenus/smoby-ent54.js`) : 16 jalons, barème du §4 tel quel (15 cases notées, total 20), 10 lignes au
+  bandeau, `correction: true`, `bareme: 20`. « Corriger » ne rouvre que le compte rendu (Q2) ; Bruno accuse réception
+  (« Bien reçu, merci »), sa réponse « on range » n'est pas rejouée.
+- **Le brief se trompait sur un point** : la vue quai jugeait déjà comptage et décision sur deux lignes séparées ; c'est le
+  contenu qui les regroupait. La séparation s'est faite dans le contenu, sans toucher au jugement du quai.
+- **Signature (Q3)** : jalon `compte: false`. Nouveau dans le moteur (`core/types/entreprise.js`) : un tel jalon ne pèse
+  rien et n'a pas de ligne au bandeau, mais il doit être jugé pour que la séance soit finie.
+- **« Recommencer la réception »** (question posée à Tristan pendant le lot, il a choisi : **caché après la signature**).
+  Avant, le bouton restait au bilan du quai : un élève pouvait signer n'importe quoi, recommencer, refaire juste, puis
+  écrire à Bruno, et son « premier bilan » aurait été le bon. Nouveau réglage de la vue quai `recommencer: false` (seule la
+  5.4 le déclare) : le bilan du quai dit à la place « Le camion est reparti : le BL ne se corrige plus. »
+- **Bandeau de fin** : nouveau réglage `finFige` (une phrase, dans `creerEntreprise`), affiché quand une case fausse n'a pas
+  d'écran à rouvrir. Si rien ne se rouvre (seul le quai est faux), le bandeau dit « Tu peux passer à la séance suivante »
+  au lieu de promettre une correction. Les séances 5.1, 5.2, 5.7, 5.8 ne changent pas (toutes leurs cases ont un écran).
+- **Notes gardées** : `meilleur` converti en proportion (10/10 devient 20/20), un test le fige.
+- **Corrigé** : `contenus/corriges/ENT-5.4.js` ne cite plus les numéros de jalons. **Cowork** : la 5.4 n'a pas de trame
+  (« Tout à l'écran ») ; rien à relire de ce côté.
+- **Tests** (`outils/test/smoby.mjs`) : les cas « déclaration », « parcours juste », « arrêt du chef de quai », « pièges » et
+  le pire cas du lot 0 de la 5.4 sont **réécrits** (alerte 7). Sont ajoutés : le barème, « Corriger » de bout en bout
+  (premier bilan, moyenne, accusé, quai clos sans « Recommencer »), `meilleur`. Sabotages éprouvés : comptage et décision
+  rejugés ensemble, poids ignorés, la signature au bandeau, « Recommencer » de nouveau offert, bandeau qui promet une
+  correction impossible. Chacun fait tomber ses cas.
+- **Blocage** : aucun cas connu (le premier bilan, tout faux compris, ouvre la 5.5).

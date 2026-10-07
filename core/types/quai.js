@@ -96,6 +96,10 @@
 // jugé, aucun « OK » sur un point faux, aucun « Pas OK » sur un point juste). La liste `points` ne dépend
 // pas de l'affichage : la même étape pourra se jouer sur une image à inspecter.
 //
+// `recommencer: false` (07/10/2026, lot 2 de SMOBY-notation, choix de Tristan) : pas de « Recommencer la réception »
+// au bilan (il n'apparaît qu'après la signature) ; le bilan dit à la place que le BL ne se corrige plus. Pour une
+// séance notée au premier bilan : refaire le quai après la signature ne doit pas changer ce bilan.
+//
 // RENDU 2D ISO (06/10/2026, brief `docs/briefs/ENT-1.1-spartoo-quai.md` §7.8, maquette validée par Tristan :
 // `docs/briefs/spartoo/maquette-quai-spartoo-iso.html`). `rendu: 'iso'` remplace les photos et la palette 3D
 // par le kit iso (`core/iso.js`) : ① la façade, le camion porteur qui recule à la porte, le chauffeur et sa
@@ -1872,7 +1876,8 @@ export function creerQuai(Q, opts = {}) {
       ${temps}
       <p class="note" data-q-reel-bilan>Temps réel passé : ${mmss(e.reel)} (mesuré pour caler les seuils de l'évaluation, non noté).</p>
       ${Q.bonASavoir ? `<p class="note">${Q.bonASavoir}</p>` : ''}
-      ${EVAL ? '' : `<p><button class="btn${ui.armeRaz ? ' quai-arme' : ''}" data-q="recommencer">${ui.armeRaz ? 'Tout effacer et recommencer ? Cliquez pour confirmer' : 'Recommencer la réception'}</button></p>`}
+      ${EVAL ? '' : Q.recommencer === false ? '<p class="note" data-q-fige>Le camion est reparti : le BL ne se corrige plus.</p>'
+        : `<p><button class="btn${ui.armeRaz ? ' quai-arme' : ''}" data-q="recommencer">${ui.armeRaz ? 'Tout effacer et recommencer ? Cliquez pour confirmer' : 'Recommencer la réception'}</button></p>`}
     </div>`;
   }
   function tableauNote(n) {
@@ -2489,6 +2494,7 @@ export function creerQuai(Q, opts = {}) {
       }));
       on('desarmer', () => { ui.arme = false; api.redessiner(); });
       on('recommencer', () => {
+        if (Q.recommencer === false) return;
         if (!ui.armeRaz) { ui.armeRaz = true; api.redessiner(); return; }
         ui.armeRaz = false; api.recommencer();
       });

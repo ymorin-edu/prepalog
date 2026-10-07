@@ -6,7 +6,8 @@
 // 4 palettes de jouets, réserves sur le BL, signature ; puis compte rendu à Bruno par phrases à choisir.
 // Données dans `contenus/smoby-ent54.js`, univers commun dans `contenus/smoby.js`.
 //
-// Pas de `notation` : dix jalons ramenés sur 20. Une base par séance (pas de `jeuId`).
+// Notation (lot 2 de SMOBY-notation-5.3-5.8, 07/10/2026) : 16 jalons pondérés sur 20, premier bilan et « Corriger »
+// (seul le compte rendu à Bruno se rouvre). Une base par séance (pas de `jeuId`).
 // Pas encore de trame élève : Cowork l'écrit après la validation à l'écran (brief §9).
 
 import { creerEntreprise } from '../core/types/entreprise.js';
@@ -25,12 +26,12 @@ export const meta = {
   domaines: ['D4', 'D5'],
   coeur: true,
   temps: 'guidage',
-  bareme: SEANCE.ETAPES.length,
+  bareme: 20,           // 15 jalons pondérés (somme = 20) + la signature, non notée
   immersif: true,
   // Parcours strict : ne s'ouvre qu'à l'élève qui a validé ENT-5.3 (voir core/parcours.js).
   parcours: true,
-  // Elle ouvre la suivante dès qu'elle est finie, justes ou faux (lot 0 de SMOBY-notation-5.3-5.8 : aucun élève bloqué).
-  suiteAuBilan: true,
+  // Premier bilan : la suivante s'ouvre dès que tout est jugé, justes ou faux ; l'élève peut corriger son compte rendu.
+  correction: true,
   precedente: 'smoby-visite',
   portee: 'eleve',
   tables: {},
@@ -58,6 +59,7 @@ const moteur = creerEntreprise({
   volet: SEANCE.VOLET,
   lexique: SEANCE.LEXIQUE,
   quai: SEANCE.QUAI_ENT54,
+  finFige: SEANCE.FIN_FIGE,
   sansTrame: "Tout à l'écran",
 });
 
