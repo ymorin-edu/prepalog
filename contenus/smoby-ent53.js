@@ -49,6 +49,9 @@ export const VISITE = {
   id: 'smoby-visite',
   libelle: 'Visite de la plateforme',
   mode: 'visite',
+  // Chaque case notée à son PREMIER essai (lot 3 du brief SMOBY-notation-5.3-5.8, Q1 de Tristan du 07/10/2026) :
+  // l'élève recommence toujours jusqu'à trouver, mais la note garde le premier essai.
+  premierEssai: true,
   plan: PLAN, gammes: GAMMES, produits: PRODUITS, stock: STOCK,
   // À 8 h, aucune palette n'est encore arrivée ; on traverse l'allée principale devant la zone de réception.
   zones: { reception: { note: 'vide à 8 h' }, passagePietons: { devant: 'reception' } },
@@ -227,7 +230,9 @@ export const VISITE = {
       consigneFini: 'Emplacement trouvé. Clique <b>Suivant</b>.',
       // La désignation et le poids sont lus dans le stock par le moteur, jamais recopiés ici.
       trouve: '✓ Trouvé : <b>{adresse}</b> — une {produit} de {kg}.',
-      jalons: { decomposer: `Adresse ${ADRESSE} décomposée (4 parties justes)`, retrouver: `Emplacement ${ADRESSE} retrouvé dans la travée` },
+      jalons: { decomposer: `Adresse ${ADRESSE} décomposée (4 parties justes)`, retrouver: `Emplacement ${ADRESSE} retrouvé en 3 clics au plus` },
+      // Au premier clic, c'est une chance sur 144 : trop dur en guidage (brief SMOBY-notation §5.1, validé).
+      clicsMax: 3,
     },
   ],
   fin: {
@@ -240,9 +245,25 @@ export const VISITE = {
 
 // ─────────────────────────────────────────────────────────────── la séance (activites/smoby-visite.js)
 
-// Les jalons, dans l'ordre du suivi : un jalon de la visite = une étape (17 : 3 du ciel, 6 photos à placer,
-// 4 du quiz, 2 de la travée, 2 de l'adresse). 'ko' = un essai faux, pour le repérage « du premier coup ».
-export const ETAPES = etapesEntrepot(VISITE);
+// Les jalons, dans l'ordre du suivi, notés au premier essai (brief SMOBY-notation-5.3-5.8 §5.1, barème validé par
+// Tristan le 07/10/2026) : 23 cases, 20 points, 6 lignes au bandeau de fin. Les 6 points du ciel, le parcours et
+// les 8 mots restent des passages obligés, non notés (on ne peut pas s'y tromper).
+const BAREME = [
+  ['Vue du ciel', /^ciel-/, 1],                         // 3 questions à 1
+  ['Où est-ce ?', /^reperer-/, 2 / 3],                  // 6 photos à 2/3
+  ['Les éléments du rack', /^quiz-/, 0.75],            // 4 éléments (l'échelle se trouve au hasard une fois sur trois)
+  ['La travée', /^travee-(hg|hd|bg|bd)$/, 0.5],         // 4 coins à 0,5
+  ['La travée', /^travee-cibles$/, 2],                  // les 3 lisses sans clic faux
+  ['L’adresse : la décomposer', /^adresse-partie/, 1],  // 4 parties à 1 (une seule validation)
+  ['L’adresse : la retrouver', /^adresse-retrouver$/, 2],
+];
+export const ETAPES = etapesEntrepot(VISITE).map((e) => {
+  // Un jalon sans place au barème ne fait pas tomber le site (une séance qui lève une erreur vide l'accueil) : il ne
+  // pèse rien, et le moteur prévient que la somme ne fait plus 20 (un test le voit).
+  const b = BAREME.find(([, re]) => re.test(e.id)) || [e.titre, null, 0];
+  if (!b[1]) console.warn(`[ENT-5.3] le jalon ${e.id} n'a pas de place au barème`);
+  return Object.assign(e, { groupe: b[0], poids: b[2] });
+});
 
 export const VOCAB = Object.assign({}, VOCAB_SMOBY, { unit: 'palette', unitPl: 'palettes' });
 

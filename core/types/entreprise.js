@@ -629,7 +629,11 @@ export function creerEntreprise(U) {
       // `correction`, mais sans bouton « Corriger » ni note moyennée (le bandeau d'origine, dont la dernière phrase
       // change). `correction` l'implique. « Fini » = tous les jalons jugés ; une séance dont les jalons ne sont jamais
       // « faux » déclare `seanceFinie(db)` dans `creerEntreprise` (ENT-5.6 : la préparation terminée et vérifiée).
-      const SUITE_AU_BILAN = CORRECTION || !!(ctx.meta && ctx.meta.suiteAuBilan);
+      // PREMIER ESSAI (lot 3 du même brief) : le plan d'entrepôt déclare `premierEssai: true` (ENT-5.3, la visite) ; ses
+      // cases sont jugées au premier essai, l'élève recommence quand même jusqu'à trouver. Il l'implique aussi, et
+      // prend le bandeau par blocs ✓ / ✗ : ✓ « du premier coup », ✗ « après une erreur » (sans `correction`).
+      const PREMIER_ESSAI = !!(U.entrepot && U.entrepot.premierEssai);
+      const SUITE_AU_BILAN = CORRECTION || PREMIER_ESSAI || !!(ctx.meta && ctx.meta.suiteAuBilan);
       const fini = (st) => bilanComplet(st) || (SUITE_AU_BILAN && typeof U.seanceFinie === 'function' && !!U.seanceFinie(db));
       // Copie rendue : plus rien ne s'écrit dans la base, même si un geste passait le verrou.
       const sauver = () => { if (rendue()) return; declencher(); ctx.jeu.sauver(); remonterEtapes(); };
@@ -704,13 +708,21 @@ export function creerEntreprise(U) {
         if (estProf || COPIE || !ctx.meta.parcours || !etapes.length) return '';
         const st = res || noterBase(db).detail;
         if (!fini(st)) return '';
-        if (!CORRECTION) return bandeauAncien(st);
+        if (!CORRECTION && !PREMIER_ESSAI) return bandeauAncien(st);
         const G = groupesDuBilan(st);
         const tout = G.every((g) => g.ok);
         const S = ctx.suivante;
+        const [motOk, motKo] = CORRECTION ? ['juste', 'à corriger'] : ['du premier coup', 'après une erreur'];
         const liste = `<ul class="ent-fin-liste" aria-label="Résultat par étape">${G.map((g) => `<li class="${g.ok ? 'ent-fin-juste' : 'ent-fin-faux'}" data-fin-jalon="${ech(g.ids[0])}"
           data-fin-etat="${g.ok ? 'ok' : 'ko'}"><span class="ent-fin-m" aria-hidden="true">${g.ok ? '✓' : '✗'}</span><span>${ech(g.nom)}</span>
-          <span class="ent-fin-a">${g.ok ? 'juste' : 'à corriger'}</span></li>`).join('')}</ul>`;
+          <span class="ent-fin-a">${g.ok ? motOk : motKo}</span></li>`).join('')}</ul>`;
+        // Sans « Corriger » : rien ne se rouvre, la note est celle du premier essai.
+        if (!CORRECTION) {
+          return `<div class="ent-fin ent-fin-v2 ${tout ? 'ent-fin-ok' : 'ent-fin-ko'}" role="status" data-fin="${tout ? 'ok' : 'ko'}"><div class="ent-fin-corps">
+            <h2 class="ent-fin-t">${tout ? 'Tout est juste du premier coup ✓' : 'Tu as fini : voici ce que tu as réussi du premier coup.'}</h2>
+            <p>${tout ? 'Bravo.' : 'Ta note compte ton premier essai à chaque étape.'}${S ? ` La séance suivante, ${ech(S.code)} « ${ech(S.titre)} », est ouverte.` : ''}</p>
+            ${liste}<div class="ent-fin-btns"><button class="btn" data-fin-quitter>Retour aux séances</button></div></div></div>`;
+        }
         if (tout) {
           return `<div class="ent-fin ent-fin-v2 ent-fin-ok" role="status" data-fin="ok"><div class="ent-fin-corps">
             <h2 class="ent-fin-t">Tout est juste ✓</h2>

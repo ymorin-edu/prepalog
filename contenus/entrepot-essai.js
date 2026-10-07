@@ -5,7 +5,9 @@
 // aucun générateur). Il sert à la page `outils/essai-entrepot.html` et au bloc de tests
 // `outils/test/entrepot.mjs`. Le cas « préparation » (lot 4) suit la maquette (cas ③), sauf l'heure de
 // l'enlèvement : jeudi 6 h 00 (décision de Tristan, brief ENT-5.6). Le cas « visite » (second chantier, 05/10)
-// est la déclaration de la séance ENT-5.3 elle-même. Le cas « comptage » viendra avec son lot.
+// est la déclaration de la séance ENT-5.3, SANS la note au premier essai (`premierEssai: false`, lot 3 du brief
+// SMOBY-notation-5.3-5.8) : la page et `outils/test/entrepot.mjs` gardent le mode d'origine du moteur, la séance
+// elle-même (et `outils/test/smoby.mjs`) celui du premier essai. Le cas « comptage » viendra avec son lot.
 //
 // La plateforme (plan, produits, stock, règles) est celle de `contenus/smoby-entrepot.js`, partagée avec
 // les séances ENT-5.5 et ENT-5.6.
@@ -76,7 +78,7 @@ export const PREPARATION = {
 };
 
 // La visite de la plateforme (ENT-5.3), mode `visite` (brief MOTEUR-modes-visite).
-export { VISITE } from './smoby-ent53.js';
-import { VISITE } from './smoby-ent53.js';
+import { VISITE as VISITE_53 } from './smoby-ent53.js';
+export const VISITE = Object.assign({}, VISITE_53, { premierEssai: false });
 
 export const CAS = { rangement: RANGEMENT, preparation: PREPARATION, visite: VISITE };

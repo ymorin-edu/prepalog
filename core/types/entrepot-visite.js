@@ -17,6 +17,17 @@
 //   - l'adresse se décompose en UNE validation (recommencer reviendrait à deviner) ;
 //   - rien de ce qui est attendu (zones, coins, cibles, emplacement) n'est montré avant la réponse.
 //
+// NOTÉ AU PREMIER ESSAI (`premierEssai: true` dans la déclaration ; lot 3 du brief SMOBY-notation-5.3-5.8,
+// décision Q1 de Tristan du 07/10/2026). L'élève recommence toujours jusqu'à trouver (« Suivant » l'exige), mais
+// chaque case est jugée sur son PREMIER essai, et ce jugement est figé. Une case reste « à faire » tant que l'élève
+// ne l'a pas finie, puis rend 'ok' (du premier coup) ou 'ko' (après une erreur) ; la séance est donc finie à la fin
+// de la visite. Les cases deviennent plus fines :
+//   - question, photo à associer : juste si trouvée au premier clic ;
+//   - la travée : un jalon par COIN, jugé à la première vérification (`faux1`, rangé à ce moment-là) ;
+//   - les cibles (lisses) : juste si toutes trouvées sans aucun clic faux ;
+//   - l'adresse : un jalon par PARTIE décomposée ; l'emplacement retrouvé en `clicsMax` clics au plus (1 par défaut).
+// Sans le réglage, rien ne change (jalons d'origine, un clic faux ne fait pas perdre le jalon).
+//
 // La déclaration (exemple complet : `contenus/smoby-ent53.js`) :
 //
 //   entrepot: {
@@ -49,7 +60,7 @@
 //                  x? }], pieges: [{ y0, y1, x?, message }], horsEtendue, horsCible, dejaTrouve, juste ({nom}), jalon? }
 //   adresse        code, sens: [4], choix: [ordre des listes], consigne, rappel, encadre, consigneTravee,
 //                  consigneEmplacement ({code}), consigneFini, trouve ({adresse} {produit} {kg}), jalons?: {
-//                  decomposer, retrouver }
+//                  decomposer, retrouver }, clicsMax? (premier essai : clics d'emplacement permis, 1 par défaut)
 //   fin            image?, grandTitre?, texte, consigne
 //
 // Les ancres du parcours (pas de pixels : la géométrie est celle du plan déclaré) : `quai:<nom du quai>`,
@@ -158,7 +169,9 @@ export function compilerVisite(M, err) {
       if (!et.image) err(`${ou} : il manque l'image`);
       COINS.forEach((k) => { const c = (et.coins || {})[k]; if (!Array.isArray(c) || c.length !== 2) err(`${ou} : coin ${k} manquant`); });
       if (!(et.tolerance > 0)) err(`${ou} : il manque la tolérance`);
-      jalons.push({ id: `${et.id}-coins`, etape: et.id, type: 'coins', lib: et.jalon || `${et.titre} : les 4 coins justes` });
+      const noms = Object.assign({}, NOMS_COINS, et.noms || {});
+      if (P.premierEssai) COINS.forEach((k) => jalons.push({ id: `${et.id}-${k}`, etape: et.id, type: 'coin', coin: k, lib: `${et.titre} : le coin ${noms[k]}` }));
+      else jalons.push({ id: `${et.id}-coins`, etape: et.id, type: 'coins', lib: et.jalon || `${et.titre} : les 4 coins justes` });
       if (et.puis) {
         const Z = et.puis;
         if (Z.type !== 'zones') err(`${ou} : après la délimitation, seules des zones sont prévues`);
@@ -176,7 +189,11 @@ export function compilerVisite(M, err) {
       if (!Array.isArray(et.sens) || et.sens.length !== 4) err(`${ou} : il faut le sens des 4 parties`);
       if (!Array.isArray(et.choix) || et.sens.some((s) => !et.choix.includes(s))) err(`${ou} : chaque sens doit être dans les choix`);
       const J = et.jalons || {};
-      jalons.push({ id: `${et.id}-decomposer`, etape: et.id, type: 'decomposer', lib: J.decomposer || `Adresse ${et.code} décomposée (4 parties justes)` });
+      if (P.premierEssai) {
+        et.code.split('-').forEach((p, i) => jalons.push({ id: `${et.id}-partie${i + 1}`, etape: et.id, type: 'partie', partie: i,
+          lib: `Adresse ${et.code} : la partie ${p} (${et.sens[i]})` }));
+        if (et.clicsMax != null && !(et.clicsMax >= 1)) err(`${ou} : clicsMax doit valoir 1 ou plus`);
+      } else jalons.push({ id: `${et.id}-decomposer`, etape: et.id, type: 'decomposer', lib: J.decomposer || `Adresse ${et.code} décomposée (4 parties justes)` });
       jalons.push({ id: `${et.id}-retrouver`, etape: et.id, type: 'retrouver', lib: J.retrouver || `Emplacement ${et.code} retrouvé` });
     }
   });
@@ -212,9 +229,20 @@ const coinsFaux = (et, pts) => {
 export function jalonsVisite(M, e) {
   const X = (id) => ((e && e.x) || {})[id] || {};
   const et = (id) => M.visite.etapes.find((t) => t.id === id);
+  const premier = !!M.P.premierEssai;
   return M.jalons.map((j) => {
     const x = X(j.etape), T = et(j.etape);
     let etat = 'attente';
+    if (premier) {
+      if (j.type === 'question') etat = !(x.rep || {})[j.question] ? 'attente' : ((x.essais || {})[j.question] || 0) <= 1 ? 'ok' : 'ko';
+      // Une base d'avant ce réglage n'a pas `faux1` : une seule vérification = tout juste, sinon on ne sait pas
+      // quels coins étaient faux la première fois, et ils comptent tous comme ratés.
+      if (j.type === 'coin') etat = !x.ok ? 'attente' : x.faux1 ? (x.faux1.includes(j.coin) ? 'ko' : 'ok') : (x.verifs || 0) <= 1 ? 'ok' : 'ko';
+      if (j.type === 'cibles') etat = (x.cibles || []).length !== T.puis.cibles.length ? 'attente' : x.fauxCibles ? 'ko' : 'ok';
+      if (j.type === 'partie') etat = !x.valide ? 'attente' : (x.choix || [])[j.partie] === T.sens[j.partie] ? 'ok' : 'ko';
+      if (j.type === 'retrouver') etat = !x.trouve ? 'attente' : (x.clics || []).length <= (T.clicsMax || 1) ? 'ok' : 'ko';
+      return { id: j.id, lib: j.lib, etape: j.etape, type: j.type, etat, ok: etat === 'ok' };
+    }
     if (j.type === 'question') etat = (x.rep || {})[j.question] ? 'ok' : (x.essais || {})[j.question] ? 'ko' : 'attente';
     if (j.type === 'coins') etat = x.ok ? 'ok' : x.verifs ? 'ko' : 'attente';
     if (j.type === 'cibles') etat = (x.cibles || []).length === T.puis.cibles.length ? 'ok' : x.fauxCibles ? 'ko' : 'attente';
@@ -544,6 +572,8 @@ export function creerVisite(P, M, O) {
     const pts = x.pts || [];
     if (pts.length !== 4) return;
     x.verifs = (x.verifs || 0) + 1; x.faux = coinsFaux(et, pts); x.verifie = true;
+    // Les coins faux de la PREMIÈRE vérification, pour la note au premier essai (rangés une fois pour toutes).
+    if (x.verifs === 1) x.faux1 = x.faux.slice();
     const noms = Object.assign({}, NOMS_COINS, et.noms || {});
     const M2 = et.messages || {};
     if (!x.faux.length) { x.ok = true; dire(et, M2.juste || 'Oui.', 'oui'); }

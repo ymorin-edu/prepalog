@@ -357,7 +357,7 @@ export const CORRIGE = {
           "emplacement 1"
         ]
       ],
-      "note": "Jalon « adresse décomposée » : une seule validation à l'écran."
+      "note": "Une seule validation à l'écran ; chacune des 4 parties est notée à part."
     },
     {
       "etape": 5,

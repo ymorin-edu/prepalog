@@ -6,7 +6,8 @@
 // retrouver. Mode `visite` de la vue Plan d'entrepôt (`core/types/entrepot-visite.js`).
 // Données dans `contenus/smoby-ent53.js`, plateforme dans `contenus/smoby-entrepot.js`.
 //
-// Pas de `notation` : dix-sept jalons ramenés sur 20. Une base par séance (pas de `jeuId`).
+// Pas de `notation` : 23 cases notées au premier essai, pondérées sur 20 (lot 3 du brief SMOBY-notation-5.3-5.8 ;
+// la note au premier essai est déclarée par la visite, `premierEssai: true`). Une base par séance (pas de `jeuId`).
 // Pas encore de trame élève : Cowork l'écrit après la validation à l'écran (brief §9).
 
 import { creerEntreprise } from '../core/types/entreprise.js';
@@ -26,11 +27,12 @@ export const meta = {
   domaines: ['D4'],
   coeur: true,
   temps: 'guidage',
-  bareme: SEANCE.ETAPES.length,
+  bareme: 20,
   immersif: true,
   // Parcours strict : ne s'ouvre qu'à l'élève qui a validé ENT-5.2 (voir core/parcours.js).
   parcours: true,
   // Elle ouvre la suivante dès qu'elle est finie, justes ou faux (lot 0 de SMOBY-notation-5.3-5.8 : aucun élève bloqué).
+  // La note au premier essai (lot 3) l'implique aussi.
   suiteAuBilan: true,
   precedente: 'smoby-arrivee',
   portee: 'eleve',

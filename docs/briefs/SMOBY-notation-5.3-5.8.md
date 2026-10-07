@@ -536,3 +536,35 @@ Un seul chantier moteur à la fois : le lot 3 attend que le chantier « Suivi de
   rejugés ensemble, poids ignorés, la signature au bandeau, « Recommencer » de nouveau offert, bandeau qui promet une
   correction impossible. Chacun fait tomber ses cas.
 - **Blocage** : aucun cas connu (le premier bilan, tout faux compris, ouvre la 5.5).
+
+### Lot 3, 1re moitié (moteur « premier essai » et ENT-5.3) — livré le 08/10/2026 (Claude Code)
+
+- **Moteur, vue visite** (`core/types/entrepot-visite.js`) : nouveau réglage `premierEssai: true` dans la déclaration de la
+  visite. L'élève recommence toujours jusqu'à trouver (« Suivant » l'exige toujours), mais chaque case est notée à son
+  **premier essai**, figé. Une case reste « à faire » tant que l'élève ne l'a pas finie : la séance est finie à la fin de la
+  visite. Pour cela, le moteur range une seule information de plus : les coins faux à la **première** vérification de la
+  travée (`faux1`). Tout le reste se lisait déjà dans la base (essais par question, clics faux sur les lisses, clics
+  d'emplacement). Sans le réglage, rien ne change.
+- **Moteur des entreprises** (`core/types/entreprise.js`) : une visite `premierEssai` ouvre la suite à la fin (comme
+  `suiteAuBilan`) et prend le bandeau par blocs : ✓ « du premier coup », ✗ « après une erreur », **sans** « Corriger ».
+  Titre : « Tu as fini : voici ce que tu as réussi du premier coup. » (ou « Tout est juste du premier coup ✓ »), puis
+  « Ta note compte ton premier essai à chaque étape. » et la séance suivante annoncée ouverte.
+- **ENT-5.3** : barème du §5.1 tel quel, 23 cases, 20 points, 6 lignes au bandeau, `bareme: 20`. Emplacement juste en
+  **3 clics au plus** (`clicsMax: 3`). Les textes de la visite (validés au mot près) ne changent pas.
+- **La page d'essai du plan d'entrepôt** garde le mode d'origine (`premierEssai: false`) : le bloc de tests `entrepot`
+  continue d'éprouver le moteur sans le réglage.
+- **Élève en cours au moment du push** : rien n'est effacé, ses cases se recalculent. Seul cas sans réponse exacte : une
+  travée vérifiée **plusieurs fois avant le push** (on ne sait plus quels coins étaient faux la 1re fois) → les 4 coins
+  comptent comme ratés (2 points sur 20 au plus). Un élève qui a fini garde sa note (`meilleur` : 17/17 devient 20/20).
+- **Garde-fou** : un jalon sans place au barème ne fait plus planter la séance (le sabotage l'a montré : une erreur levée
+  dans une séance vidait la page d'accueil entière). Il ne pèse rien et le moteur prévient que la somme ne fait plus 20.
+- **Tests** (`outils/test/smoby.mjs`) : les cas « déclaration », « ouverture », « parcours juste » et le pire cas du lot 0
+  de la 5.3 sont **réécrits** (alerte 7) ; le cas « adresse décomposée fausse : 16 / 17 » est remplacé. Ajoutés : le barème,
+  une erreur rattrapée dans chaque bloc (11,833 / 20, bandeau, repérage, 1 / 3 / 4 clics), la base d'avant le réglage,
+  `meilleur`. Sabotages éprouvés, chacun fait tomber ses cas : note sur l'état final, poids ignorés, bandeau case par case,
+  coins rejugés à chaque vérification, `clicsMax` oublié, ancien bandeau.
+- **Corrigé** : une note de `contenus/corriges/ENT-5.3-trame.js` ne cite plus l'ancien jalon. **Cowork** : la trame de la
+  5.3 cite peut-être « 17 jalons » ; à relire.
+- **Blocage** : aucun cas connu (la suite s'ouvre à la fin de la visite, quelles que soient les erreurs).
+- **Reste à faire (2e moitié, conversation neuve)** : ENT-5.5 et ENT-5.6 (§5.2 et §5.3), avec le premier essai dans les
+  modes rangement et préparation du plan d'entrepôt.

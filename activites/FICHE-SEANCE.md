@@ -250,7 +250,7 @@ Un jalon (`etapes`) peut déclarer, en plus de `id`, `titre` et `verifier(db)` :
   refuse de la monter sinon (« La somme des poids des jalons vaut … au lieu de 20 »). Sans `poids`, chaque jalon vaut 1
   (le score est le nombre de jalons réussis, `bareme` = leur nombre). Avec des poids : `bareme: 20`. Un bloc a une part
   **fixe** de la note, partagée entre ses cases : ajouter une case ne change pas l'équilibre.
-- `groupe` : la ligne du bandeau de fin (séance `correction`). Un groupe est juste quand toutes ses cases le sont. Le
+- `groupe` : la ligne du bandeau de fin (séance `correction`, ou visite notée au premier essai). Un groupe est juste quand toutes ses cases le sont. Le
   bandeau ne descend jamais à la case (une case oui/non nommée fausse donnerait la réponse) et n'affiche jamais de points.
 - `ecran` : où l'élève corrige, `'fiche:<id de la fiche>'`, `'phrases:<id du message par phrases>'` ou `'planning:<id du
   planning>'`. Le bouton « Corriger » n'apparaît que s'il y a un `ecran` à rouvrir parmi les jalons faux. Un planning se rouvre
@@ -606,6 +606,7 @@ entrepot: {
   images: { ciel: { src: './contenus/…jpg', repere: [1600, 1066], alt, mention: 'Photo d’un autre entrepôt : …' }, … },
   etapes: [{ id, type, titre, heure: '8:05', texte (message du personnage), aide, consigne, … }, …],
   fin?: { heure, texte, consigne, image?, grandTitre? },
+  premierEssai?: true,                                // la note au premier essai (voir plus bas)
 }
 ```
 
@@ -629,10 +630,20 @@ l'affichage). Les photos sont **dans le dépôt** (`contenus/<entreprise>/…`),
   suivi : le repérage en tire « du premier coup »). **Un clic faux ne fait pas perdre le jalon** : l'élève recommence.
   L'adresse se décompose en **une seule** validation (la correction reste affichée). Un re-clic sur une cible déjà trouvée
   n'est pas compté faux. La découverte (points, parcours) ne donne pas de jalon : l'inaction fait 0.
+- **`premierEssai: true`** (07/10/2026, lot 3 de SMOBY-notation-5.3-5.8 ; ENT-5.3) : l'élève recommence toujours jusqu'à
+  trouver, mais chaque case est notée à son **premier essai**, figé. Une case reste « à faire » tant que l'élève ne l'a pas
+  finie, puis rend juste (du premier coup) ou faux (après une erreur) : la séance est finie à la fin de la visite. Les cases
+  s'affinent : la travée a **un jalon par coin** (`<id>-hg`, `-hd`, `-bg`, `-bd`, jugés à la 1re vérification), les cibles sont
+  justes si toutes trouvées **sans clic faux**, l'adresse a **un jalon par partie** (`<id>-partie1` à `4`) et l'emplacement
+  est juste s'il est trouvé en `clicsMax` clics au plus (sur l'étape `adresse`, 1 par défaut). Le moteur des entreprises
+  en tire tout seul : la suite s'ouvre à la fin (comme `suiteAuBilan`), bandeau de fin par blocs (`groupe` des jalons) en
+  ✓ « du premier coup » / ✗ « après une erreur », **sans** « Corriger ». Poids et `groupe` se posent sur les jalons rendus
+  par `etapesEntrepot` (exemple : `contenus/smoby-ent53.js`).
 - **Rien d'attendu n'est montré** avant la réponse : zones, coins, bandes, emplacement cherché (marqué en vert une fois trouvé).
 - **Couleurs** : `--pe-visite` (violet, trace, étapes, cônes) ; sur les photos, repères fixes quel que soit le thème (`--pv-*`).
 - L'état : `db.entrepots[<id>]` = `{ courante, atteinte, x: { <id d'étape>: … } }`. Exemple complet : `contenus/smoby-ent53.js`
-  (aussi le cas « visite » de la page d'essai) ; tests : bloc `entrepot` (fin du fichier).
+  (aussi le cas « visite » de la page d'essai, **sans** `premierEssai` : la page et le bloc `entrepot` gardent le mode
+  d'origine) ; tests : bloc `entrepot` (fin du fichier), et bloc `smoby` pour le premier essai.
 
 ## Vue « animation à questions » (scène isométrique, arrêt, question) — `core/types/animation.js`
 

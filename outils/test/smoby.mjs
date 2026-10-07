@@ -2582,7 +2582,7 @@ const monter53 = (o = {}) => pg.evaluate(async (o) => {
     profil: { prenom: 'Lea', nom: 'Test', role: 'eleve', uid: o.uid || 'u-53' },
     jeu: { etat: () => db, sauver: () => {} },
     enregistrer: (r) => { window.__53.suivi.push(JSON.parse(JSON.stringify(r))); }, quitter: () => {}, codeStock: 'ABC',
-    lireScore: async () => null,
+    lireScore: async () => null, suivante: { code: 'ENT-5.4', titre: 'La réception au quai' },
   });
 }, o);
 const etapes53 = () => pg.evaluate(async () => {
@@ -2601,28 +2601,97 @@ async function clic53(x, y) {
 }
 const suivant53 = () => pg.click(`${Z53} [data-pv="suivant"]`);
 
-await v('ENT-5.3 : déclaration (code, 2de, C1.2 et C1.5, 17 jalons, livrée fermée aux élèves), inscrite au registre, rangée avant ENT-5.4', async () => {
+// Toute la visite à l'écran. Par défaut, tout juste du premier coup ; `o.fautes` ajoute des erreurs AVANT le bon geste
+// (l'élève recommence toujours jusqu'à trouver) : ciel, photo, quiz, coin, lisse, adresse (décomposition et clics faux).
+// Index des 23 cases : ciel 0-2, photos 3-8, quiz 9-12, coins 13-16 (hg hd bg bd), lisses 17, parties 18-21, retrouver 22.
+async function parcours53(o = {}) {
+  const F = o.fautes || {};
+  await monter53({ uid: o.uid || 'u-53-parcours' });
+  await pg.click(`${T53} .ent-nav[data-vue="entrepot"]`);
+  await suivant53();
+  for (const n of [1, 2, 3, 4, 5, 6]) await pg.click(`${Z53} button[data-pv-point="${n}"]`);
+  await pg.click(`${Z53} [data-pv="questions"]`);
+  if (F.ciel) await clic53(400, 575);                       // le passage piétons, à la question des camions
+  await clic53(1000, 560); await clic53(400, 575); await clic53(500, 400);
+  await suivant53();
+  for (const n of [1, 2, 3, 4, 5, 6]) {
+    if (await pg.$(`${Z53} [data-pv="retour"]`)) await pg.click(`${Z53} [data-pv="retour"]`);
+    await pg.click(`${Z53} g[data-pv-etape="${n}"]`);
+  }
+  await suivant53();
+  if (F.photo) await pg.click(`${Z53} [data-pv-num="1"]`);   // la 1re photo (l'allée, n° 4) placée au quai
+  for (const n of [4, 1, 6, 2, 5, 3]) await pg.click(`${Z53} [data-pv-num="${n}"]`);
+  await suivant53();
+  for (const n of [1, 2, 3, 4, 5, 6, 7, 8]) await pg.click(`${Z53} button[data-pv-point="${n}"]`);
+  await suivant53();
+  await clic53(300, 500);
+  if (F.quiz) await clic53(800, 1700);                       // l'allée, à la question de la lisse
+  await clic53(700, 120); await clic53(450, 600); await clic53(800, 1700);
+  await suivant53();
+  if (F.coin) {                                              // le coin en haut à gauche 200 trop à droite, puis tout effacé
+    for (const [x, y] of [[487, 45], [847, 47], [258, 1175], [876, 1173]]) await clic53(x, y);
+    await pg.click(`${Z53} [data-pv="verifierCoins"]`);
+    await pg.click(`${Z53} [data-pv="effacerCoins"]`);
+  }
+  for (const [x, y] of [[287, 45], [847, 47], [258, 1175], [876, 1173]]) await clic53(x, y);
+  await pg.click(`${Z53} [data-pv="verifierCoins"]`);
+  if (F.lisse) await clic53(570, 160);                       // une barre du fond
+  await clic53(570, 80); await clic53(570, 454); await clic53(570, 687);
+  await suivant53();
+  const sens = F.adresse ? ['allée et côté', 'niveau', 'travée', 'emplacement'] : ['allée et côté', 'travée', 'niveau', 'emplacement'];
+  for (let i = 0; i < 4; i++) await pg.selectOption(`${Z53} [data-pv-choix="${i}"]`, sens[i]);
+  await pg.click(`${Z53} [data-pv="valider"]`);
+  await pg.click(`${Z53} [data-pe-trav="A1-T03"]`);
+  for (const a of ['A1-T03-N1-E1', 'A1-T03-N1-E2', 'A1-T03-N1-E3'].slice(0, F.clics || 0)) await pg.click(`${Z53} [data-pe-emp="${a}"]`);
+  await pg.click(`${Z53} [data-pe-emp="A1-T03-N2-E1"]`);
+  await suivant53();
+  egal(await pg.$eval(Z53, (e) => e.dataset.pvEtape), 'fin', 'dernière étape');
+}
+const bandeau53 = () => pg.evaluate(() => {
+  const b = document.querySelector('#s53 [data-fin-seance] [data-fin]');
+  return b ? { fin: b.dataset.fin, titre: b.querySelector('h2')?.textContent.trim() || '', texte: b.textContent.replace(/\s+/g, ' '),
+    lignes: [...b.querySelectorAll('[data-fin-etat]')].map((l) => [l.children[1].textContent.trim(), l.dataset.finEtat, l.querySelector('.ent-fin-a').textContent.trim()]),
+    corriger: !!b.querySelector('[data-fin-corriger]'), photo: !!(window.__53.db.points && window.__53.db.points['smoby-visite']) } : null;
+});
+const BLOCS53 = ['Vue du ciel', 'Où est-ce ?', 'Les éléments du rack', 'La travée', 'L’adresse : la décomposer', 'L’adresse : la retrouver'];
+
+await v('ENT-5.3 : déclaration (code, 2de, C1.2 et C1.5, 23 cases sur 20, notée au premier essai, livrée fermée aux élèves), inscrite au registre, rangée avant ENT-5.4', async () => {
   const r = await pg.evaluate(async () => {
     const A = await import('/activites/smoby-visite.js');
     const I = await import('/activites/index.js');
+    const S = await import('/contenus/smoby-ent53.js');
     const m = A.meta;
     const codes = (await Promise.all(I.ACTIVITES.map((f) => f()))).map((x) => x.meta.code).filter((c) => /^ENT-5\./.test(c));
     return { m: [m.id, m.code, m.rubrique, m.niveaux, m.competences, m.domaines, m.temps, m.bareme, m.pret, m.ouverture, m.portee, m.coeur],
-      codes };
+      codes, premier: S.VISITE.premierEssai, n: S.ETAPES.length };
   });
-  egal(r.m, ['smoby-visite', 'ENT-5.3', 'simulog', ['2de'], ['C1.2', 'C1.5'], ['D4'], 'guidage', 17, true, 'prof', 'eleve', true], 'meta');
+  egal(r.m, ['smoby-visite', 'ENT-5.3', 'simulog', ['2de'], ['C1.2', 'C1.5'], ['D4'], 'guidage', 20, true, 'prof', 'eleve', true], 'meta');
+  egal([r.premier, r.n], [true, 23], 'premier essai, 23 cases');
   vrai(r.codes.includes('ENT-5.3'), 'séance absente du registre');
   vrai(r.codes.indexOf('ENT-5.3') === r.codes.indexOf('ENT-5.4') - 1, `ordre du registre : ${r.codes.join(', ')}`);
 });
 
-await v('ENT-5.3 : à l’ouverture, le message de Bruno, aucun jalon (0 / 17) ; menu « Visite de la plateforme » seul, les 8 mots du rack cliquables', async () => {
+await v('ENT-5.3 : le barème (brief SMOBY-notation §5.1, écrit à la main) : 6 blocs, 20 points, chaque case à sa place', async () => {
+  const r = await pg.evaluate(async () => {
+    const S = await import('/contenus/smoby-ent53.js');
+    const G = {};
+    S.ETAPES.forEach((e) => { G[e.groupe] = G[e.groupe] || [0, 0]; G[e.groupe][0] += 1; G[e.groupe][1] += e.poids; });
+    return { ids: S.ETAPES.map((e) => e.id), G: Object.entries(G).map(([k, [n, p]]) => [k, n, Math.round(p * 1000) / 1000]) };
+  });
+  egal(r.G, [['Vue du ciel', 3, 3], ['Où est-ce ?', 6, 4], ['Les éléments du rack', 4, 3], ['La travée', 5, 4],
+    ['L’adresse : la décomposer', 4, 4], ['L’adresse : la retrouver', 1, 2]], 'blocs : cases et points');
+  egal(r.ids.slice(13), ['travee-hg', 'travee-hd', 'travee-bg', 'travee-bd', 'travee-cibles',
+    'adresse-partie1', 'adresse-partie2', 'adresse-partie3', 'adresse-partie4', 'adresse-retrouver'], 'cases de la travée et de l’adresse');
+});
+
+await v('ENT-5.3 : à l’ouverture, le message de Bruno, aucun jalon (0 / 20) ; menu « Visite de la plateforme » seul, les 8 mots du rack cliquables', async () => {
   await monter53();
   egal(await pg.evaluate(() => window.__53.db.mails.filter((m) => m.folder === 'in').map((m) => m.subject)), ['Ton premier jour : la visite'], 'messages au départ');
   // Retours 5.3, A6 : le message est daté du jour de la visite, mercredi 9 décembre à 7 h 55, de l'année scolaire en cours.
   const quand = await pg.evaluate(() => { const d = new Date(window.__53.db.mails[0].ts), n = new Date();
     return [d.getDate(), d.getMonth() + 1, d.getHours(), d.getMinutes(), d.getFullYear() === (n.getMonth() >= 8 ? n.getFullYear() : n.getFullYear() - 1)]; });
   egal(quand, [9, 12, 7, 55, true], 'date du message de Bruno');
-  egal(await etapes53(), Array(17).fill('attente'), 'étapes à l’ouverture');
+  egal(await etapes53(), Array(23).fill('attente'), 'étapes à l’ouverture');
   const s = await dernierScore53();
   vrai(!s || s[0] === 0, `score sans rien faire : ${JSON.stringify(s)}`);
   egal(await pg.$$eval(`${T53} .ent-side-liste > *`, (L) => L.map((e) => e.dataset.vue || `[${e.textContent.trim()}]`)),
@@ -2639,47 +2708,69 @@ await v('ENT-5.3 : à l’ouverture, le message de Bruno, aucun jalon (0 / 17) ;
   egal(await pg.$eval(Z53, (e) => e.dataset.pvEtape), 'accueil', 'la visite s’ouvre sur l’accueil');
 });
 
-await v('ENT-5.3 : la visite juste de bout en bout à l’écran → 17 / 17 remonté au suivi', async () => {
-  await monter53({ uid: 'u-53-juste' });
-  await pg.click(`${T53} .ent-nav[data-vue="entrepot"]`);
-  await suivant53();
-  for (const n of [1, 2, 3, 4, 5, 6]) await pg.click(`${Z53} button[data-pv-point="${n}"]`);
-  await pg.click(`${Z53} [data-pv="questions"]`);
-  await clic53(1000, 560); await clic53(400, 575); await clic53(500, 400);
-  await suivant53();
-  for (const n of [1, 2, 3, 4, 5, 6]) {
-    if (await pg.$(`${Z53} [data-pv="retour"]`)) await pg.click(`${Z53} [data-pv="retour"]`);
-    await pg.click(`${Z53} g[data-pv-etape="${n}"]`);
-  }
-  await suivant53();
-  for (const n of [4, 1, 6, 2, 5, 3]) await pg.click(`${Z53} [data-pv-num="${n}"]`);
-  await suivant53();
-  for (const n of [1, 2, 3, 4, 5, 6, 7, 8]) await pg.click(`${Z53} button[data-pv-point="${n}"]`);
-  await suivant53();
-  await clic53(300, 500); await clic53(700, 120); await clic53(450, 600); await clic53(800, 1700);
-  await suivant53();
-  for (const [x, y] of [[287, 45], [847, 47], [258, 1175], [876, 1173]]) await clic53(x, y);
-  await pg.click(`${Z53} [data-pv="verifierCoins"]`);
-  await clic53(570, 80); await clic53(570, 454); await clic53(570, 687);
-  await suivant53();
-  const sens = ['allée et côté', 'travée', 'niveau', 'emplacement'];
-  for (let i = 0; i < 4; i++) await pg.selectOption(`${Z53} [data-pv-choix="${i}"]`, sens[i]);
-  await pg.click(`${Z53} [data-pv="valider"]`);
-  await pg.click(`${Z53} [data-pe-trav="A1-T03"]`);
-  await pg.click(`${Z53} [data-pe-emp="A1-T03-N2-E1"]`);
-  await suivant53();
-  egal(await pg.$eval(Z53, (e) => e.dataset.pvEtape), 'fin', 'dernière étape');
-  egal(await etapes53(), Array(17).fill('ok'), 'étapes');
-  egal(await dernierScore53(), [17, 17], 'score remonté au suivi');
+await v('ENT-5.3 : la visite juste du premier coup de bout en bout à l’écran → 20 / 20, bandeau « Tout est juste du premier coup », pas de « Corriger »', async () => {
+  await parcours53({ uid: 'u-53-juste' });
+  egal(await etapes53(), Array(23).fill('ok'), 'étapes');
+  egal(await dernierScore53(), [20, 20], 'score remonté au suivi');
+  const b = await bandeau53();
+  egal([b.fin, b.titre, b.corriger, b.photo], ['ok', 'Tout est juste du premier coup ✓', false, true], 'bandeau, photo de fin');
+  egal(b.lignes, BLOCS53.map((n) => [n, 'ok', 'du premier coup']), 'les 6 lignes');
 });
 
-await v('ENT-5.3 : une adresse décomposée fausse (travée et niveau inversés) fait tomber ce seul jalon : 16 / 17', async () => {
-  await pg.evaluate(() => {
-    const x = window.__53.db.entrepots['smoby-visite'].x.adresse;
-    x.choix = ['allée et côté', 'niveau', 'travée', 'emplacement'];
-  });
+await v('ENT-5.3 : au premier essai — une erreur dans chaque bloc sauf le rack, toutes rattrapées : la note garde les erreurs (11,833 / 20), le bandeau aussi, la 5.4 s’ouvre', async () => {
+  await parcours53({ uid: 'u-53-premier', fautes: { ciel: true, photo: true, coin: true, lisse: true, adresse: true, clics: 3 } });
   const st = await etapes53();
-  egal(st.map((s, i) => s === 'ok' ? null : i).filter((i) => i !== null), [15], 'seul le jalon 16 (décomposer) tombe');
+  const ko = st.map((x, i) => (x === 'ko' ? i : null)).filter((i) => i !== null);
+  egal(ko, [0, 3, 13, 17, 19, 20, 22], 'cases ratées au premier essai : camions, photo de l’allée, coin en haut à gauche, lisses, travée et niveau, emplacement');
+  vrai(st.every((x) => x === 'ok' || x === 'ko'), `tout jugé : ${st.join(' ')}`);
+  // 20 − 1 (ciel) − 2/3 (photo) − 0,5 (coin) − 2 (lisses) − 2 (deux parties) − 2 (4 clics) = 11,833
+  egal(await dernierScore53(), [11.833, 20], 'score remonté au suivi');
+  const b = await bandeau53();
+  egal([b.fin, b.titre, b.corriger, b.photo], ['ko', 'Tu as fini : voici ce que tu as réussi du premier coup.', false, true], 'bandeau sans « Corriger », photo de fin');
+  egal(b.lignes, BLOCS53.map((n) => (n === 'Les éléments du rack' ? [n, 'ok', 'du premier coup'] : [n, 'ko', 'après une erreur'])), 'les 6 lignes');
+  vrai(/ENT-5\.4/.test(b.texte) && /est ouverte/.test(b.texte), `la suite annoncée : ${b.texte}`);
+  vrai(!/corrig/i.test(b.texte), `le bandeau ne promet aucune correction : ${b.texte}`);
+  // L'emplacement : 3 clics au plus. Le repérage (premier jugement) dit la même chose que la note.
+  const r = await pg.evaluate(async () => {
+    const S = await import('/contenus/smoby-ent53.js');
+    const x = window.__53.db.entrepots['smoby-visite'].x.adresse, J = S.ETAPES[22];
+    const d = (n) => { x.clics = Array(n).fill('A1-T03-N1-E1'); return J.verifier(window.__53.db).status; };
+    return { out: [d(1), d(3), d(4)], premier: window.__53.db.indicateurs['smoby-visite'].premier };
+  });
+  egal(r.out, ['ok', 'ok', 'ko'], 'emplacement trouvé en 1, 3, 4 clics');
+  egal(['ciel-camions', 'travee-hg', 'travee-hd', 'adresse-partie1', 'adresse-partie2'].map((k) => r.premier[k]), ['ko', 'ko', 'ok', 'ok', 'ko'], 'repérage « du premier coup »');
+});
+
+await v('ENT-5.3 : une base d’avant le premier essai (sans les coins de la 1re vérification) — une vérification = coins justes, plusieurs = coins ratés ; rien n’est effacé', async () => {
+  await monter53({ uid: 'u-53-ancienne' });
+  const r = await pg.evaluate(async () => {
+    const S = await import('/contenus/smoby-ent53.js');
+    const db = window.__53.db;
+    db.entrepots = db.entrepots || {};
+    const x = { pts: [[287, 45], [847, 47], [258, 1175], [876, 1173]], ok: true, verifs: 1, faux: [], cibles: [0, 1, 2] };
+    db.entrepots['smoby-visite'] = { courante: 6, atteinte: 6, x: { travee: x } };
+    const coins = () => S.ETAPES.slice(13, 18).map((e) => e.verifier(db).status);
+    const a = coins();
+    x.verifs = 3;
+    return [a, coins(), JSON.stringify(db.entrepots['smoby-visite'].x.travee.pts)];
+  });
+  egal(r[0], ['ok', 'ok', 'ok', 'ok', 'ok'], 'une vérification');
+  egal(r[1], ['ko', 'ko', 'ko', 'ko', 'ok'], 'trois vérifications');
+  egal(r[2], '[[287,45],[847,47],[258,1175],[876,1173]]', 'les coins posés restent');
+});
+
+await v('ENT-5.3 : « meilleur » — un élève qui a fini avec l’ancien barème (17 / 17) garde sa note quand le barème passe à 20 (démonstration)', async () => {
+  const r = await pg.evaluate(async () => {
+    const { B } = await import('/core/backend.js');
+    const g = 'g-53-meilleur', u = 'u-53-meilleur', a = 'smoby-visite';
+    await B.poserNote(g, u, a, null);
+    await B.ecrireScore(g, u, a, { score: 17, max: 17 });
+    await B.ecrireScore(g, u, a, { score: 9, max: 20 });
+    const m = (await B.lireScore(g, u, a)).meilleur;
+    await B.poserNote(g, u, a, null);
+    return m;
+  });
+  vrai(Math.abs(r - 20) < 0.01, '17/17 devenu ' + r + ' sur 20');
 });
 
 // ── ENT-5.7 « les enlèvements de Noël » (brief `docs/briefs/ENT-5.7-smoby-enlevements.md`) ─────────────
@@ -3281,37 +3372,9 @@ await v('Lot 0 : 5.3 à 5.8 déclarent toutes `suiteAuBilan` ou `correction` (la
 });
 
 await v('Lot 0 : ENT-5.3 — l’adresse décomposée fausse (une seule validation, irréversible) : la 5.4 s’ouvre', async () => {
-  await monter53({ uid: 'u-53-pire' });
-  await pg.click(`${T53} .ent-nav[data-vue="entrepot"]`);
-  await suivant53();
-  for (const n of [1, 2, 3, 4, 5, 6]) await pg.click(`${Z53} button[data-pv-point="${n}"]`);
-  await pg.click(`${Z53} [data-pv="questions"]`);
-  await clic53(400, 575); await clic53(1000, 560); await clic53(400, 575); await clic53(500, 400);
-  await suivant53();
-  for (const n of [1, 2, 3, 4, 5, 6]) {
-    if (await pg.$(`${Z53} [data-pv="retour"]`)) await pg.click(`${Z53} [data-pv="retour"]`);
-    await pg.click(`${Z53} g[data-pv-etape="${n}"]`);
-  }
-  await suivant53();
-  for (const n of [4, 1, 6, 2, 5, 3]) await pg.click(`${Z53} [data-pv-num="${n}"]`);
-  await suivant53();
-  for (const n of [1, 2, 3, 4, 5, 6, 7, 8]) await pg.click(`${Z53} button[data-pv-point="${n}"]`);
-  await suivant53();
-  await clic53(300, 500); await clic53(700, 120); await clic53(450, 600); await clic53(800, 1700);
-  await suivant53();
-  for (const [x, y] of [[287, 45], [847, 47], [258, 1175], [876, 1173]]) await clic53(x, y);
-  await pg.click(`${Z53} [data-pv="verifierCoins"]`);
-  await clic53(570, 80); await clic53(570, 454); await clic53(570, 687);
-  await suivant53();
-  const sens = ['allée et côté', 'niveau', 'travée', 'emplacement'];
-  for (let i = 0; i < 4; i++) await pg.selectOption(`${Z53} [data-pv-choix="${i}"]`, sens[i]);
-  await pg.click(`${Z53} [data-pv="valider"]`);
-  await pg.click(`${Z53} [data-pe-trav="A1-T03"]`);
-  await pg.click(`${Z53} [data-pe-emp="A1-T03-N1-E1"]`);
-  await pg.click(`${Z53} [data-pe-emp="A1-T03-N2-E1"]`);
-  await suivant53();
+  await parcours53({ uid: 'u-53-pire', fautes: { ciel: true, adresse: true, clics: 1 } });
   const st = await etapes53();
-  vrai(st.every((x) => x === 'ok' || x === 'ko') && st[15] === 'ko', `étapes : ${st.join(' ')}`);
+  vrai(st.every((x) => x === 'ok' || x === 'ko') && st[19] === 'ko' && st[20] === 'ko', `étapes : ${st.join(' ')}`);
   await pasBloque(T53, '__53', 'smoby-visite', 'ENT-5.3');
 });
 
