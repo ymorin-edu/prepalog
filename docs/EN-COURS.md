@@ -7,6 +7,7 @@ est déjà modifié ou inscrit ci-dessous, **elle s'arrête et le dit à Tristan
 
 | Chantier | Fichiers qu'il touche | Depuis |
 |---|---|---|
+| Smoby notation, lots 0 et 1 (aucun élève bloqué 5.3 à 5.8 ; ENT-5.7 et 5.8 sur 20) | activites/smoby-*.js, contenus/smoby-ent5*.js, contenus/corriges/ENT-5.*, outils/test/smoby.mjs, éventuellement core/parcours.js / core/types/entreprise.js | 07/10/2026 |
 
 Rappel : un seul chantier à la fois dans `core/types/tournee.js`, `core/types/grille.js`,
 `core/types/entreprise.js`, `styles/base.css` et `outils/test/boost.mjs` (voir `docs/briefs/COORDINATION-boost.md`).
