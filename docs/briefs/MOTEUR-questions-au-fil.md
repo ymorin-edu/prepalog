@@ -1,6 +1,6 @@
 # Brief de chantier — MOTEUR : questions au fil et notification de message
 
-> **📋 Phrase à copier-coller dans Claude Code** (une fois les questions du §11 tranchées) :
+> **📋 Phrase à copier-coller dans Claude Code :**
 >
 > ```
 > Lis docs/EN-COURS.md puis docs/briefs/MOTEUR-questions-au-fil.md en entier (les décisions du §4.0 et du §11 d'abord). Fais le lot 1 (notification qui reste), puis le lot 2 (point d'étape et questions au fil). Annonce la durée avant de commencer, et dis-moi si un point du brief contredit le code.
@@ -8,7 +8,7 @@
 >
 > Puis, dans une autre conversation : `… fais le lot 3 (signaux de geste)`, puis `… fais le lot 4 (réponses de la classe)`.
 
-**Statut** : à valider par Tristan (questions encore ouvertes du §11), puis à implémenter. Révisé le 07/10 à 21 h 45 (deux sortes de questions, plus de « Plus tard », travail gelé, souplesse).
+**Statut** : à implémenter (toutes les questions du §11 tranchées le 07/10 au soir). Révisé le 07/10 à 21 h 45 (deux sortes de questions, plus de « Plus tard », travail gelé, souplesse).
 **Date du brief** : 07/10/2026 (soir).
 **Auteur** : Claude (conversation Cowork, Opus), d'après la lecture du code de `main` au commit `d024f17`, du brief
 `FRANCE-BOISSONS-refonte.md` (décisions du 07/10, 21 h) et du lot C de `SMOBY-retours-classe-5.1.md`.
@@ -97,8 +97,7 @@ en haut font basculer les choix encore ouverts du §11.
 2. **Ce qui est affiché vient de la base** : une carte = un mail déclenché (`m.declenche`) **non lu** et non fermé.
    La fermeture est un choix d'affichage (comme `E`, hors de la base) : à la réouverture de la séance, les messages
    non lus réapparaissent en cartes réduites. Rien de plus n'est écrit en base (quota).
-3. **La tournée** : son bandeau « Nouveau message » fait doublon avec la carte. Proposition : le retirer et garder la
-   carte partout (un seul mécanisme). **Q2.**
+3. **La tournée** : son bandeau « Nouveau message » est **retiré**, la carte le remplace (un seul mécanisme, Q2).
 4. Charte : bord gauche **ambre** (`--terre`), jamais vert (le vert plein ne dit que « juste ») ; fond `--panneau` ;
    ombre ; les trois thèmes ; mouvement réduit = pas d'animation d'entrée. Charte d'entreprise rouge ou verte :
    la carte est dans la zone de travail, elle prend l'encre (`ent-travail-neutre`).
@@ -108,7 +107,7 @@ en haut font basculer les choix encore ouverts du §11.
 
 - ENT-2.1 : envoi « Stock actuel : 5 » → **deux cartes** (service retours, quai), toujours là après 10 s (horloge
   simulée `page.clock`), réduites ; clic sur une carte → le message s'ouvre, la carte part ; l'autre reste.
-- ENT-3.2 : la carte remplace le bandeau de la tournée (si Q2 = oui) ; l'imprévu arrive une seule fois.
+- ENT-3.2 : la carte remplace le bandeau de la tournée ; l'imprévu arrive une seule fois.
 - Remontage de la séance : un message non lu revient en carte réduite ; un message lu ne revient pas.
 - **Cas réécrits (alerte 7)** : les 9 endroits des blocs `boost` et `cdiscount` qui lisent « Nouveau message » ou
   `tour-notif` (à relire un par un ; le dire à Tristan).
@@ -168,8 +167,8 @@ en haut font basculer les choix encore ouverts du §11.
   corriger d'avance** (sinon l'explication donne la réponse que l'élève va saisir). Le moteur ne peut pas le deviner :
   c'est le brief de séance qui le dit.
 - **Question pour réfléchir** (non notée) : « Pour réfléchir : il n'y a pas une seule bonne réponse, choisis la
-  tienne. », des raisons à choisir, puis « Ce qu'en pense Karim : … ». Jamais ✓ ni ✗. Texte libre possible (**Q5**).
-- **Évaluation (`copie`)** : B pour toutes (**Q6**).
+  tienne. », des raisons à choisir, puis « Ce qu'en pense Karim : … ». Jamais ✓ ni ✗. Texte libre possible question par question (`libre: true`, Q5), en exception.
+- **Évaluation (`copie`)** : « Merci, je note » pour toutes ; elles comptent dans la copie (Q6).
 - **« Corriger »** ne rouvre jamais une question ; le bandeau de fin le dit. **« Réinitialiser »** n'efface pas les
   réponses (sinon on effacerait une mauvaise première réponse).
 
@@ -256,7 +255,8 @@ vérifiée à chaque `sauver()` et à l'ouverture ; **une seule fois** (marque r
 
 - **Juste ou faux, peu importe** : jamais une condition qui lit le contenu d'une réponse.
 - **Pas avant le piège** : une question ne doit pas éclairer d'avance un geste à venir, ou alors `apres: 'bilan'`.
-- **Ouverture d'un document** : `apresDocument(id)`, réservé aux questions (exemple du CV, **Q4**).
+- **Jamais l'ouverture d'un écran ou d'un document** (règle du 03/10, confirmée pour les questions : Q4). Exemple du
+  CV : la question vient quand l'élève le classe dans le tableau de tri, pas quand il l'ouvre.
 - **Une à la fois** : si une question au fil arrive pendant qu'une autre attend, elle passe après.
 - **Rattrapage, pour qu'aucun élève ne reste bloqué** : si le geste d'une question au fil n'a jamais eu lieu (l'élève a
   envoyé son bon sans toucher au remplacement), la question arrive **au geste suivant qui clôt l'écran** (l'envoi), et
@@ -323,7 +323,6 @@ de la panne (planning, 6.8)… Aujourd'hui, une condition ne lit que la base. Pr
 - une fonction `signal('quai:decharger')` donnée aux vues (dans l'`api` qu'elles reçoivent déjà : `sauver`, `toast`,
   `db`…) : elle range `db.gestes[séance][nom] = heure` **une fois**, puis `sauver()` ;
 - une condition `apresGeste('quai:decharger')` dans `core/declencheurs.js` ;
-- `apresDocument(id)` (si Q4 = oui) : rangée à la première ouverture d'une pièce jointe ou d'un document de fiche ;
 - chaque vue **publie la liste de ses signaux** en tête de son fichier ; un nom inconnu dans une séance = la séance
   ne se charge pas ;
 - même chose pour le **gel** (`gele: true`) : chaque vue branchée sait désactiver ses gestes de travail ;
@@ -340,7 +339,7 @@ toujours sous la règle du 03/10 : un geste de travail, jamais un clic de menu.
 
 Pour lancer la discussion en classe (« 14 d'entre vous ont répondu A, 6 ont répondu B : pourquoi ? »), l'enseignant voit,
 **par question**, combien d'élèves ont choisi chaque réponse (questions notées et de réflexion), et la liste des réponses
-libres. Où : dans « Conduite de séance » (pendant la séance) ou dans « Corrigés ». **Q7.** Lecture seule, depuis ce qui
+libres. Où : dans **« Conduite de séance »** (Q7), pendant la séance. Lecture seule, depuis ce qui
 remonte déjà avec la note (aucune écriture nouvelle).
 
 ---
@@ -407,20 +406,24 @@ Sur la page d'essai du moteur (`outils/essai-questions.html`), avec un compte é
 - [x] **Deux sortes de questions**, transition (point d'étape) et au fil, que la séance choisit question par question
   (Tristan, 07/10, 21 h 34).
 - [x] **Souplesse** : ajouter, modifier, retirer une question = un seul fichier de données (Tristan, 07/10, 21 h 36).
-- [ ] **Q2. La notification d'un message** : **A. carte qui reste, réduite au bout de 8 s (proposé)**, qui remplace aussi
-  le bandeau de la tournée ; ou B. garder la bulle d'aujourd'hui.
-- [ ] **Q3. Le retour d'une question notée** : **A. ✓ / ✗ et explication tout de suite (proposé)**, et B (« Merci, je
-  note », correction au bilan) question par question, pour les questions posées avant un envoi.
-- [ ] **Q4. Ouvrir un document peut déclencher une question** sur ce document (exemple du CV), **jamais un message** :
-  oui (proposé) / non.
-- [ ] **Q5. Questions de réflexion** : **A. choisir une raison (proposé)** ; B. écrire sa réponse, permis question par
-  question, rare.
-- [ ] **Q6. En évaluation** : questions permises, sans correction avant la copie (proposé) / pas de questions.
-- [ ] **Q7. Réponses de la classe (lot 4)** : dans « Conduite de séance » (proposé) / dans « Corrigés » / pas maintenant.
-- [ ] **Q8. Séance pilote** : la page d'essai du moteur, puis **ENT-6.1** (proposé) ; ou 2 questions de réflexion
-  (non notées) ajoutées tout de suite à ENT-5.1.
-- [ ] **Q9. La part des questions dans la note** : proposition **3 à 5 points sur 20** par séance, fixée dans chaque brief
-  (une question notée vaut alors autour de 1 point, une case du tableau de tri de 5.1 en vaut 0,5).
+- [x] **Q2. Notification d'un message** : **carte qui reste**, réduite à une ligne au bout de 8 s, sur tous les écrans ;
+  elle **remplace aussi le bandeau de la tournée** (tests `boost` / `cdiscount` à réécrire, alerte 7).
+- [x] **Q3. Retour d'une question notée** : ✓ / ✗ et explication **tout de suite** par défaut ; le brief de séance peut,
+  question par question, choisir « Merci, je note » avec la correction au bilan (`apres: 'bilan'`).
+- [x] **Q4. Ouvrir un document ne déclenche rien** : la **règle du 03/10 vaut aussi pour les questions**. Seul un geste de
+  travail (saisir, choisir, envoyer, valider, poser) déclenche une question ; jamais un clic de menu, l'ouverture d'un
+  écran ou d'un document, ni une minuterie. Pour l'exemple du CV : la question vient quand l'élève le **classe** dans le
+  tableau de tri. Pas de condition `apresDocument`.
+- [x] **Q5. Réflexion** : **choisir une raison** par défaut ; écrire une ou deux phrases permis question par question
+  (`libre: true`), en exception.
+- [x] **Q6. Évaluation** : questions **permises**, le collègue répond seulement « Merci, je note » ; elles comptent dans la
+  copie ; aucune correction avant la remise.
+- [x] **Q7. Réponses de la classe (lot 4)** : dans **« Conduite de séance »**, pendant la séance.
+- [x] **Q8. Pilote** : la **page d'essai du moteur**, puis **ENT-6.1** ; aucune séance déjà jouée n'est touchée.
+- [x] **Q9. Part des questions** : **3 à 5 points sur 20**, fixée dans chaque brief de séance.
+
+Toutes les questions sont tranchées (Tristan, 07/10/2026, 21 h 44 à 21 h 55 ; reportées dans le fichier à 23 h 40, la
+première écriture n'étant pas arrivée sur le disque).
 
 ---
 
@@ -445,3 +448,6 @@ les durées, et le fait que les vues existantes acceptent un `signal` sans diffi
 ---
 
 ## Compte rendu *(rempli par Claude Code à la livraison de chaque lot)*
+
+À la livraison du lot 2 : recopier les décisions du §4.0 et du §11 dans `docs/decisions.md` (une ligne chacune, datée
+du 07/10/2026, « Tristan »).
