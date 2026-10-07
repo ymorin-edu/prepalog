@@ -914,10 +914,10 @@ const monter51 = (o = {}) => pg.evaluate(async (o) => {
     profil: { prenom: 'Lea', nom: 'Test', role: o.role || 'eleve', uid: o.uid || 'u-51' },
     jeu: { etat: () => db, sauver: () => {} },
     enregistrer: (r) => { window.__51.suivi.push(JSON.parse(JSON.stringify(r))); }, quitter: () => {}, codeStock: 'ABC',
-    lireScore: async () => null,
+    lireScore: async () => null, suivante: { code: 'ENT-5.2', titre: 'L’arrivée de Yanis' },
   });
 }, o);
-// L'état des neuf étapes, lu par les jalons de la séance sur la base de l'élève.
+// L'état des 22 jalons, lu par les jalons de la séance sur la base de l'élève.
 const etapes51 = () => pg.evaluate(async () => {
   const S = await import('/contenus/smoby-ent51.js');
   return Object.fromEntries(S.ETAPES.map((e) => [e.id, e.verifier(window.__51.db).status]));
@@ -966,10 +966,22 @@ async function repondre51(remplace = {}) {
   await cliquerEtConfirmer(pg, `${Z51} #formPhr button[type="submit"]`);
 }
 const sujets51 = () => pg.evaluate(() => window.__51.db.mails.filter((m) => m.folder === 'in').map((m) => m.subject));
-const NEUF = ['ligne-yanis', 'ligne-laura', 'ligne-mehdi', 'ligne-thomas', 'ligne-sabrina', 'candidat', 'contrat', 'raison', 'ton'];
-const statuts = (ok, ko = []) => Object.fromEntries(NEUF.map((id) => [id, ko.includes(id) ? 'ko' : ok]));
+// Lot A bis (07/10/2026) : une case = un jalon. 15 cases du tableau, candidat, contrat, 5 lignes du message.
+const CASES51 = ['yanis', 'laura', 'mehdi', 'thomas', 'sabrina'].flatMap((c) => ['caces', 'dispo', 'cdd'].map((k) => `case-${c}-${k}`));
+const MSG51 = ['msg-raison', 'msg-candidat', 'msg-contrat', 'msg-salutation', 'msg-fin'];
+const FICHE51 = [...CASES51, 'candidat', 'contrat'];
+const TOUS51 = [...FICHE51, ...MSG51];
+const statuts = (ok, ko = []) => Object.fromEntries(TOUS51.map((id) => [id, ko.includes(id) ? 'ko' : ok]));
+// Après la fiche, avant la réponse : le message n'est pas jugé.
+const apresFiche51 = (ko = []) => ({ ...statuts('ok', ko), ...Object.fromEntries(MSG51.map((id) => [id, 'attente'])) });
+// Le tableau juste avec UNE case retournée.
+const flip51 = (id, col) => ({ ...TRI51, [id]: { ...TRI51[id], [col]: !TRI51[id][col] } });
+// Le barème d'ENT-5.1, écrit à la main : tableau 8 (15 cases), candidat 5, contrat 2, raison 2, candidat du message 1,
+// contrat du message 1, salutation 0,5, fin 0,5. Total 20.
+const proche = (a, b, quoi) => { if (!Array.isArray(a) || Math.abs(a[0] - b) > 0.01 || a[1] !== 20) throw new Error(`${quoi} : ${JSON.stringify(a)} au lieu de [${b}, 20]`); };
+const bandeau51 = () => pg.$$eval(`${T51} [data-fin-seance] [data-fin-jalon]`, (L) => L.map((x) => [x.dataset.finEtat, x.textContent.replace(/\s+/g, ' ').trim().replace(/^([✓✗])\s*/, '$1 ')]));
 
-await v('ENT-5.1 : déclaration (code, 2de, AGO-3.1, 9 jalons, livrée fermée aux élèves) et entreprise n° 5 avec son logo', async () => {
+await v('ENT-5.1 : déclaration (code, 2de, AGO-3.1, barème sur 20, livrée fermée aux élèves) et entreprise n° 5 avec son logo', async () => {
   const r = await pg.evaluate(async () => {
     const A = await import('/activites/smoby-recrutement.js');
     const I = await import('/activites/index.js');
@@ -981,7 +993,7 @@ await v('ENT-5.1 : déclaration (code, 2de, AGO-3.1, 9 jalons, livrée fermée a
       compConnue: JSON.stringify(C).includes('AGO-3.1'), e: [e.nom, logo.status, (await logo.text()).includes('<svg')],
       inscrite: (await Promise.all(I.ACTIVITES.map((f) => f()))).some((x) => x.meta.id === 'smoby-recrutement') };
   });
-  egal(r.m, ['smoby-recrutement', 'ENT-5.1', 'simulog', ['2de'], ['AGO-3.1'], 'guidage', 9, true, 'prof', 'eleve', true], 'meta');
+  egal(r.m, ['smoby-recrutement', 'ENT-5.1', 'simulog', ['2de'], ['AGO-3.1'], 'guidage', 20, true, 'prof', 'eleve', true], 'meta');
   vrai(r.compConnue, 'AGO-3.1 absente de core/competences.js');
   egal(r.e, ['Smoby', 200, true], 'entreprise n° 5');
   vrai(r.inscrite, 'séance absente du registre');
@@ -1020,56 +1032,98 @@ await v('ENT-5.1 : à l’ouverture, un seul message (6 pièces jointes, la fich
   vrai(!s || s[0] === 0, `score sans rien faire : ${JSON.stringify(s)}`);
 });
 
-await v('ENT-5.1 : parcours juste à l’écran → fiche, message de Sophie par phrases, réponse, 9 / 9', async () => {
+await v('ENT-5.1 : parcours juste à l’écran → fiche, message de Sophie par phrases, réponse, 20 / 20', async () => {
   await monter51();
   await ouvrirMail51('Recrutement du cariste de Noël');
   await envoyerFiche51();
-  // Fiche envoyée : les lignes jugées, le message pas encore (pas de réponse envoyée).
-  egal(await etapes51(), { ...statuts('ok'), raison: 'attente', ton: 'attente' }, 'après la fiche');
+  // Fiche envoyée : les 17 jalons de la fiche jugés, les 5 du message pas encore (pas de réponse envoyée).
+  egal(await etapes51(), apresFiche51(), 'après la fiche');
   egal(await sujets51(), ['Recrutement du cariste de Noël', 'Ton choix pour le poste de cariste'], 'Sophie demande la réponse');
   await repondre51();
   egal(await etapes51(), statuts('ok'), 'après la réponse');
-  egal(await dernierScore51(), [9, 9], 'score remonté au suivi');
+  proche(await dernierScore51(), 20, 'score remonté au suivi');
   vrai((await sujets51()).includes('RE : Ton choix pour le poste de cariste'), 'la réponse de Sophie (suite de l’histoire) n’arrive pas');
 });
 
-await v('ENT-5.1 : chaque piège fait tomber son jalon, et lui seul (sabotage par jalon, à l’écran)', async () => {
-  // Un tableau avec UNE case fausse sur la ligne d'un candidat → seul son jalon tombe.
-  const flip = (id, col) => ({ ...TRI51, [id]: { ...TRI51[id], [col]: !TRI51[id][col] } });
+await v('ENT-5.1 : chaque piège fait tomber son jalon, et lui seul — et coûte exactement son poids (sabotage par jalon, à l’écran)', async () => {
+  // [jalons faux, fiche, phrases, points perdus] : une case du tableau vaut 8/15 de point ; le mauvais candidat 5.
   const cas = [
-    ['ligne-yanis', { tri: flip('yanis', 'dispo') }],
-    ['ligne-laura', { tri: flip('laura', 'caces') }],   // Laura cochée « CACES valide » (piège du brief)
-    ['ligne-mehdi', { tri: flip('mehdi', 'caces') }],
-    ['ligne-thomas', { tri: flip('thomas', 'dispo') }],
-    ['ligne-sabrina', { tri: flip('sabrina', 'cdd') }],
-    ['candidat', { candidat: 'sabrina' }],
-    ['contrat', { contrat: 'CDI' }],
-    ['raison', null, { raison: 'car ce candidat a le CACES.' }],
-    ['ton', null, { fin: 'Bisous' }],
+    [['case-yanis-dispo'], { tri: flip51('yanis', 'dispo') }, null, 8 / 15],
+    [['case-laura-caces'], { tri: flip51('laura', 'caces') }, null, 8 / 15],   // Laura cochée « CACES valide » (piège du brief)
+    [['case-mehdi-caces'], { tri: flip51('mehdi', 'caces') }, null, 8 / 15],
+    [['case-thomas-dispo'], { tri: flip51('thomas', 'dispo') }, null, 8 / 15],
+    [['case-sabrina-cdd'], { tri: flip51('sabrina', 'cdd') }, null, 8 / 15],
+    [['candidat'], { candidat: 'sabrina' }, null, 5],
+    [['contrat'], { contrat: 'CDI' }, null, 2],
+    [['msg-raison'], null, { raison: 'car ce candidat a le CACES.' }, 2],
+    [['msg-candidat'], null, { choix: 'Je retiens la candidature de Laura Petit' }, 1],
+    [['msg-contrat'], null, { contrat: 'Je propose un CDI.' }, 1],
+    [['msg-salutation'], null, { salutation: 'Salut !' }, 0.5],
+    [['msg-fin'], null, { fin: 'Bisous' }, 0.5],
+    // Deux cases du même candidat : le jalon de chaque case tombe, le coût s'additionne.
+    [['case-yanis-dispo', 'case-yanis-cdd'], { tri: { ...flip51('yanis', 'dispo'), yanis: { caces: true, dispo: false, cdd: false } } }, null, 16 / 15],
   ];
-  for (const [jalon, fiche, phrases] of cas) {
-    await monter51({ uid: 'u-' + jalon });
+  for (const [ko, fiche, phrases, perdu] of cas) {
+    await monter51({ uid: 'u-' + ko.join('+') });
     await ouvrirMail51('Recrutement du cariste de Noël');
     await envoyerFiche51(fiche || {});
     await repondre51(phrases || {});
-    egal(await etapes51(), statuts('ok', [jalon]), `sabotage de « ${jalon} »`);
-    egal(await dernierScore51(), [8, 9], `score avec « ${jalon} » faux`);
+    egal(await etapes51(), statuts('ok', ko), `sabotage de « ${ko.join(', ')} »`);
+    proche(await dernierScore51(), 20 - perdu, `score avec « ${ko.join(', ')} » faux`);
   }
 });
 
-await v('ENT-5.1 : « Salut ! » fait aussi tomber le ton ; la réponse se corrige (le dernier envoi compte)', async () => {
+await v('ENT-5.1 : le barème — 22 jalons, 15 cases à 8/15, parts par bloc 8 / 7 / 5, total 20, groupes du bandeau', async () => {
+  const r = await pg.evaluate(async () => {
+    const S = await import('/contenus/smoby-ent51.js');
+    const somme = (L) => Math.round(L.reduce((t, e) => t + e.poids, 0) * 1e6) / 1e6;
+    const de = (re) => S.ETAPES.filter((e) => re.test(e.id));
+    return { n: S.ETAPES.length, total: somme(S.ETAPES), tri: [de(/^case-/).length, somme(de(/^case-/))],
+      decision: somme(de(/^(candidat|contrat)$/)), message: somme(de(/^msg-/)),
+      groupes: [...new Set(S.ETAPES.map((e) => e.groupe))], poidsCase: S.ETAPES[0].poids };
+  });
+  egal([r.n, r.total, r.tri, r.decision, r.message], [22, 20, [15, 8], 7, 5], 'parts du barème');
+  vrai(Math.abs(r.poidsCase - 8 / 15) < 1e-9, 'une case du tableau ne vaut pas 8/15');
+  egal(r.groupes, ['Tableau de tri : la ligne de Yanis Morel', 'Tableau de tri : la ligne de Laura Petit', 'Tableau de tri : la ligne de Mehdi Benali',
+    'Tableau de tri : la ligne de Thomas Girod', 'Tableau de tri : la ligne de Sabrina Lopez', 'Le candidat retenu', 'Le contrat choisi',
+    'Message à Sophie : la raison', 'Message à Sophie : le ton et les informations'], 'les 9 lignes du bandeau');
+});
+
+await v('ENT-5.1 : somme des poids ≠ 20 → le moteur le dit à l’ouverture ; = 20 → la séance s’ouvre', async () => {
+  const r = await pg.evaluate(async () => {
+    const { creerEntreprise } = await import('/core/types/entreprise.js');
+    const E = await import('/outils/essai-animation.js');
+    const essai = (poids) => {
+      document.querySelector('#essaiPoids')?.remove();
+      const hote = document.createElement('div'); hote.id = 'essaiPoids'; document.body.prepend(hote);
+      const U = E.univers({ animations: [] });
+      U.etapes = poids.map((p, i) => ({ id: 'p' + i, titre: 'P' + i, poids: p, verifier: () => ({ status: 'attente' }) }));
+      const db = U.baseDeDepart();
+      creerEntreprise(U).rendre(hote, { meta: { id: 'essai-poids', code: 'E-1', titre: 'E', portee: 'eleve', immersif: true, parcours: true, temps: 'guidage', bareme: 20 },
+        profil: { prenom: 'Lea', nom: 'T', role: 'eleve', uid: 'u-p' }, jeu: { etat: () => db, sauver: () => {} }, enregistrer: () => {}, quitter: () => {}, codeStock: 'ABC', lireScore: async () => null });
+      const t = hote.textContent.replace(/\s+/g, ' ');
+      hote.remove();
+      return t;
+    };
+    return { faux: essai([10, 9]), juste: essai([10, 6, 4]) };
+  });
+  vrai(/somme des poids/.test(r.faux) && /19/.test(r.faux), 'poids 10 + 9 : le moteur ne dit rien : ' + r.faux.slice(0, 120));
+  vrai(!/somme des poids/.test(r.juste), 'poids 10 + 6 + 4 : message à tort');
+});
+
+await v('ENT-5.1 : « Salut ! » fait aussi tomber la salutation ; la réponse se corrige (le dernier envoi compte)', async () => {
   await monter51({ uid: 'u-salut' });
   await ouvrirMail51('Recrutement du cariste de Noël');
   await envoyerFiche51();
   await repondre51({ salutation: 'Salut !' });
-  egal((await etapes51()).ton, 'ko', 'ton avec « Salut ! »');
+  egal((await etapes51())['msg-salutation'], 'ko', 'salutation avec « Salut ! »');
   await repondre51();
   egal(await etapes51(), statuts('ok'), 'après correction');
   // La suite de l'histoire n'arrive qu'une fois.
   egal((await sujets51()).filter((s) => s.startsWith('RE :')).length, 1, 'réponse de Sophie en double');
 });
 
-await v('ENT-5.1 : une réponse libre au premier message n’ouvre pas la suite ; message sans envoi = jalons 8 et 9 jamais vrais', async () => {
+await v('ENT-5.1 : une réponse libre au premier message n’ouvre pas la suite ; message sans envoi = ses 5 jalons jamais vrais', async () => {
   await monter51({ uid: 'u-libre' });
   await ouvrirMail51('Recrutement du cariste de Noël');
   await pg.click(`${Z51} [data-repondre]`);
@@ -1083,8 +1137,159 @@ await v('ENT-5.1 : une réponse libre au premier message n’ouvre pas la suite 
   await pg.click(`${Z51} [data-repondre]`);
   for (const [l, t] of Object.entries(PHR51)) await pg.selectOption(`${Z51} [data-phrase="${l}"]`, { label: t });
   const e = await etapes51();
-  egal([e.raison, e.ton], ['attente', 'attente'], 'message non envoyé');
-  egal(await dernierScore51(), [7, 9], 'score sans le message');
+  egal(MSG51.map((id) => e[id]), MSG51.map(() => 'attente'), 'message non envoyé');
+  proche(await dernierScore51(), 15, 'score sans le message');
+});
+
+// ── Lots A et A bis du brief SMOBY-retours-classe-5.1 (07/10/2026) : bandeau ✓ / ✗, correction après le bilan ──
+// Valeurs écrites à la main : tableau de tri 8 points (8/15 la case), candidat 5, contrat 2, message 5.
+await v('ENT-5.1 : bandeau de fin — rien avant la réponse ; ensuite 9 lignes, la fausse en ✗, les autres en ✓, sans points ni réponse, « Corriger » proposé', async () => {
+  await monter51({ uid: 'u-bandeau' });
+  await ouvrirMail51('Recrutement du cariste de Noël');
+  await envoyerFiche51({ tri: flip51('laura', 'caces') });
+  vrai(!(await pg.$(`${T51} [data-fin-seance] [data-fin]`)), 'bandeau affiché alors que le message n’est pas envoyé');
+  await repondre51();
+  const L = await bandeau51();
+  egal(L.map((x) => x[0]), ['ok', 'ko', 'ok', 'ok', 'ok', 'ok', 'ok', 'ok', 'ok'], 'états des 9 lignes');
+  egal(L.map((x) => x[1].replace(/ (juste|à corriger)$/, '')), ['✓ Tableau de tri : la ligne de Yanis Morel', '✗ Tableau de tri : la ligne de Laura Petit',
+    '✓ Tableau de tri : la ligne de Mehdi Benali', '✓ Tableau de tri : la ligne de Thomas Girod', '✓ Tableau de tri : la ligne de Sabrina Lopez',
+    '✓ Le candidat retenu', '✓ Le contrat choisi', '✓ Message à Sophie : la raison', '✓ Message à Sophie : le ton et les informations'], 'coche ou croix, puis la ligne');
+  const t = await pg.textContent(`${T51} [data-fin-seance]`);
+  vrai(!/point|8\/15|0,5|19|CACES|caces/.test(t), 'le bandeau donne des points ou la réponse : ' + t.replace(/\s+/g, ' '));
+  vrai(/Tu as fini : voici ce qui est juste et ce qui est à corriger/.test(t) && /Corriger améliore ta note/.test(t), 'texte du bandeau : ' + t.replace(/\s+/g, ' '));
+  vrai(await pg.$(`${T51} [data-fin-corriger]`), 'pas de bouton « Corriger »');
+  // Tout juste : « Tout est juste », 9 lignes en ✓, et PAS de bouton « Corriger ».
+  await monter51({ uid: 'u-bandeau-ok' });
+  await ouvrirMail51('Recrutement du cariste de Noël');
+  await envoyerFiche51();
+  await repondre51();
+  const ok = await bandeau51();
+  vrai(ok.length === 9 && ok.every((x) => x[0] === 'ok' && /^✓/.test(x[1])), 'tout juste : ' + JSON.stringify(ok));
+  vrai(/Tout est juste/.test(await pg.textContent(`${T51} [data-fin-seance]`)), '« Tout est juste » absent');
+  vrai(!(await pg.$(`${T51} [data-fin-corriger]`)), 'bouton « Corriger » alors que tout est juste');
+});
+
+await v('ENT-5.1 : une case fausse n’enferme plus — la 5.2 s’ouvre au premier bilan, « Corriger » rouvre la fiche, le renvoi fait la moyenne et remplace la photo', async () => {
+  const uid = 'u-corriger', gid = 'g-corriger';
+  await monter51({ uid });
+  await ouvrirMail51('Recrutement du cariste de Noël');
+  await envoyerFiche51({ tri: flip51('laura', 'caces') });
+  vrai(!(await pg.evaluate(() => window.__51.db.points)), 'photo rangée avant le bilan complet');
+  await repondre51();
+  proche(await dernierScore51(), 20 - 8 / 15, 'premier bilan');
+  // La photo est rangée alors qu'une étape est fausse : c'est elle qui ouvre ENT-5.2 (verrou de core/parcours.js).
+  egal(await pg.evaluate(() => Object.keys(window.__51.db.points || {})), ['smoby-recrutement'], 'photo du premier bilan');
+  const verrou = await pg.evaluate(async ({ uid, gid }) => {
+    const { chargerActivites } = await import('/activites/index.js');
+    const P = await import('/core/parcours.js');
+    const metas = (await chargerActivites()).map((x) => x.meta);
+    const k = `prepalog:prive/${uid}/smoby-recrutement`;
+    localStorage.setItem(k, JSON.stringify({ data: window.__51.db, ts: 1 }));
+    try { return await P.verrou(metas, metas.find((x) => x.id === 'smoby-arrivee'), { role: 'eleve', uid }, gid); } finally { localStorage.removeItem(k); }
+  }, { uid, gid });
+  egal(verrou, null, '5.2 ouverte malgré la case fausse');
+  // « Corriger » : la fiche se rouvre (ses 17 jalons repassent « à faire », le message garde les siens), le bandeau s'efface.
+  await pg.click(`${T51} [data-fin-corriger]`);
+  await pg.waitForSelector(`${F51} [data-fiche-envoyer]`);
+  vrai(!(await pg.$(`${F51} [data-fiche-envoyee]`)), 'la fiche reste figée');
+  vrai(await pg.$eval(`${F51} fieldset`, (f) => !f.disabled), 'la fiche reste désactivée');
+  egal(await etapes51(), { ...Object.fromEntries(FICHE51.map((id) => [id, 'attente'])), ...Object.fromEntries(MSG51.map((id) => [id, 'ok'])) }, 'jalons pendant la correction');
+  vrai(!(await pg.$(`${T51} [data-fin-seance] [data-fin]`)), 'le bandeau reste pendant la correction');
+  // Ce que l'élève avait coché est gardé (il corrige, il ne recommence pas).
+  vrai(await pg.$eval(`${F51} [data-ouinon="tri|yanis|caces|1"]`, (b) => b.getAttribute('aria-pressed') === 'true'), 'les cases cochées ont disparu');
+  await pg.click(`${F51} [data-ouinon="tri|laura|caces|0"]`);
+  await pg.click(`${F51} [data-fiche-envoyer]`);
+  const oui = await pg.waitForSelector('[data-confirme-oui]');
+  vrai(/renvoies ta fiche corrigée/.test(await oui.evaluate((b) => b.closest('[data-confirme]').textContent)), 'la confirmation ne parle pas de correction');
+  await oui.click();
+  await pg.waitForSelector(`${F51} [data-fiche-envoyee]`);
+  egal(await etapes51(), statuts('ok'), 'après le renvoi');
+  // Moyenne du premier bilan et de l'état actuel : (20 − 8/15 + 20) / 2.
+  proche(await dernierScore51(), (20 - 8 / 15 + 20) / 2, 'note après correction');
+  // Sophie accuse réception de la correction, sans rejouer son message ni dire si c'est juste.
+  const sujets = await sujets51();
+  vrai(sujets.includes('Fiche de sélection corrigée'), 'pas d’accusé de Sophie : ' + sujets.join(' | '));
+  egal(sujets.filter((x) => x === 'Ton choix pour le poste de cariste').length, 1, 'Sophie redemande la réponse');
+  const accuse = await pg.evaluate(() => window.__51.db.mails.find((m) => m.subject === 'Fiche de sélection corrigée').text);
+  vrai(/j’ai bien reçu ta fiche corrigée/.test(accuse) && !/juste|faux|bravo/i.test(accuse), 'texte de l’accusé : ' + accuse);
+  // La photo est REMPLACÉE : la suite part du travail corrigé.
+  egal(await pg.evaluate(() => window.__51.db.points['smoby-recrutement'].fiches.selection.valeurs.tri.laura.caces), false, 'photo non remplacée');
+  vrai(/Tout est juste/.test(await pg.textContent(`${T51} [data-fin-seance]`)), 'bandeau « Tout est juste » absent après la correction');
+});
+
+await v('ENT-5.1 : corriger le message — « Corriger » ouvre la réponse avec les choix de l’élève, le renvoi fait la moyenne, Sophie accuse réception', async () => {
+  await monter51({ uid: 'u-corriger-msg' });
+  await ouvrirMail51('Recrutement du cariste de Noël');
+  await envoyerFiche51();
+  await repondre51({ fin: 'Bisous' });
+  egal((await bandeau51()).map((x) => x[0]), ['ok', 'ok', 'ok', 'ok', 'ok', 'ok', 'ok', 'ok', 'ko'], 'seule la ligne du message est fausse');
+  proche(await dernierScore51(), 19.5, 'premier bilan');
+  await pg.click(`${T51} [data-fin-corriger]`);
+  await pg.waitForSelector(`${Z51} #formPhr:not([hidden])`);
+  // Les choix de l'élève sont là (jamais la bonne réponse) ; la fiche, elle, n'a pas bougé.
+  egal(await pg.$eval(`${Z51} [data-phrase="fin"]`, (s) => s.selectedOptions[0].textContent.trim()), 'Bisous', 'brouillon prérempli');
+  await pg.selectOption(`${Z51} [data-phrase="fin"]`, { label: PHR51.fin });
+  await pg.click(`${Z51} #formPhr button[type="submit"]`);
+  const oui = await pg.waitForSelector('[data-confirme-oui]');
+  vrai(/renvoies ta réponse corrigée/.test(await oui.evaluate((b) => b.closest('[data-confirme]').textContent)), 'la confirmation ne parle pas de correction');
+  await oui.click();
+  egal(await etapes51(), statuts('ok'), 'après le renvoi');
+  proche(await dernierScore51(), (19.5 + 20) / 2, 'note après correction');
+  const sujets = await sujets51();
+  vrai(sujets.includes('Ta réponse corrigée'), 'pas d’accusé de Sophie : ' + sujets.join(' | '));
+  egal(sujets.filter((x) => x.startsWith('RE :')).length, 1, 'la suite de l’histoire est rejouée');
+  egal(await pg.evaluate(() => window.__51.db.fiches.selection.envoye !== undefined), true, 'la fiche a été rouverte à tort');
+});
+
+await v('ENT-5.1 : règle de note — premier bilan avant toute correction ; la 1re correction fait la moyenne avec l’état de ce moment ; les suivantes sont comptées, la note ne bouge plus', async () => {
+  await monter51({ uid: 'u-regle' });
+  await ouvrirMail51('Recrutement du cariste de Noël');
+  await envoyerFiche51({ tri: flip51('laura', 'caces') });
+  await repondre51({ fin: 'Bisous' });
+  const bilan1 = 20 - 8 / 15 - 0.5;
+  proche(await dernierScore51(), bilan1, 'avant toute correction = premier bilan');
+  // 1re correction : la fiche. Le message est encore faux à ce moment-là : l'état vaut 20 − 0,5.
+  await pg.click(`${T51} [data-fin-corriger]`);
+  await pg.waitForSelector(`${F51} [data-fiche-envoyer]`);
+  await pg.click(`${F51} [data-ouinon="tri|laura|caces|0"]`);
+  await cliquerEtConfirmer(pg, `${F51} [data-fiche-envoyer]`);
+  await pg.waitForSelector(`${F51} [data-fiche-envoyee]`);
+  proche(await dernierScore51(), (bilan1 + 19.5) / 2, 'après la 1re correction = moyenne du premier bilan et de l’état de ce moment');
+  // 2e correction : le message. Elle est comptée, la note ne bouge plus.
+  await pg.click(`${T51} [data-fin-corriger]`);
+  await pg.waitForSelector(`${Z51} #formPhr:not([hidden])`);
+  await pg.selectOption(`${Z51} [data-phrase="fin"]`, { label: PHR51.fin });
+  await cliquerEtConfirmer(pg, `${Z51} #formPhr button[type="submit"]`);
+  egal(await etapes51(), statuts('ok'), 'tout est juste après la 2e correction');
+  proche(await dernierScore51(), (bilan1 + 19.5) / 2, 'la note a bougé à la 2e correction');
+  const r = await pg.evaluate(() => { const i = window.__51.db.indicateurs['smoby-recrutement']; return [i.corrections, Object.keys(i.bilan1).length, i.bilan2['msg-fin']]; });
+  egal(r, [2, 22, 'ko'], 'corrections comptées, premier bilan et état de la 1re correction rangés');
+});
+
+await v('ENT-5.1 : « meilleur » — un élève du 07/10 (9/9) garde sa note quand le barème passe à 20 ; une note plus basse n’écrase rien (démonstration)', async () => {
+  const r = await pg.evaluate(async () => {
+    const { B } = await import('/core/backend.js');
+    const g = 'g-meilleur', u = 'u-meilleur', a = 'act-meilleur';
+    const lire = async () => (await B.lireScore(g, u, a)).meilleur;
+    const o = {};
+    await B.poserNote(g, u, a, null);
+    await B.ecrireScore(g, u, a, { score: 9, max: 9 });                 // ancienne règle : 9 jalons
+    await B.ecrireScore(g, u, a, { score: 5, max: 20 });                // il rouvre : la fiche rouverte repasse « à faire »
+    o.complet = await lire();
+    await B.poserNote(g, u, a, null);
+    await B.ecrireScore(g, u, a, { score: 6, max: 9 });
+    await B.ecrireScore(g, u, a, { score: 10, max: 20 });               // 6/9 = 13,33 sur 20 : plus haut que 10
+    o.partiel = await lire();
+    await B.ecrireScore(g, u, a, { score: 17, max: 20 });
+    o.monte = await lire();
+    await B.ecrireScore(g, u, a, { score: 12, max: 20 });               // même barème : le plus haut reste
+    o.garde = await lire();
+    await B.poserNote(g, u, a, null);
+    return o;
+  });
+  vrai(Math.abs(r.complet - 20) < 0.01, '9/9 devenu ' + r.complet + ' sur 20');
+  vrai(Math.abs(r.partiel - 13.333) < 0.01, '6/9 devenu ' + r.partiel + ' sur 20');
+  egal([r.monte, r.garde], [17, 17], 'meilleur à barème constant');
 });
 
 // ── ENT-5.2 « l'arrivée de Yanis » (brief `docs/briefs/ENT-5.2-smoby-arrivee.md`) ─────────────────

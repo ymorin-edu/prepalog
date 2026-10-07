@@ -1,6 +1,6 @@
 # Brief — retours du test en classe d'ENT-5.1 (Smoby), 07/10/2026
 
-**Statut** : à faire. **Auteur** : Claude (conversation Cowork, 07/10/2026 après-midi). Décisions de Tristan prises le
+**Statut** : livré pour les lots A et A bis sur ENT-5.1 (07/10/2026) ; lot B et lot C non faits ; ENT-5.2 en attente du barème (voir le compte rendu). **Auteur** : Claude (conversation Cowork, 07/10/2026 après-midi). Décisions de Tristan prises le
 même jour, point par point. Le diagnostic a été fait en lisant le code (`core/types/entreprise.js`, `core/types/fiche.js`,
 `core/parcours.js`, `contenus/smoby-ent51.js`) : **rien n'a encore été essayé à l'écran**.
 
@@ -242,5 +242,84 @@ pas dans un questionnaire à part. La trame est réduite à : connexion, prise d
 
 ---
 
-## Compte rendu *(rempli par Claude Code)*
+## Compte rendu *(rempli par Claude Code, 07/10/2026)*
 
+### Ce qui est fait (lots A et A bis, ENT-5.1)
+
+- **Une case = un jalon** : 22 jalons (15 cases du tableau, candidat, contrat, 5 lignes du message). Barème écrit à la main
+  dans le test : tableau de tri 8 (8/15 la case), candidat 5, contrat 2, raison 2, candidat du message 1, contrat du message 1,
+  salutation 0,5, fin 0,5. Somme = 20, **vérifiée par le moteur** : sinon l'écran dit « La somme des poids des jalons vaut … au
+  lieu de 20 » et la séance ne s'ouvre pas.
+- **Bandeau ✓ / ✗** (d'après la page d'essai validée) : 9 lignes toujours toutes affichées, ✓ vert / ✗ rouge en texte, sans aplat,
+  sans points ni réponse ; bouton « Corriger » + « Corriger améliore ta note. » seulement s'il y a une erreur.
+- **Premier bilan** : la photo de fin (qui ouvre ENT-5.2) est rangée dès que les 22 jalons sont jugés, justes ou faux, et
+  **remplacée** à chaque nouveau bilan complet qui change (la suite part du travail corrigé).
+- **Corriger** : la fiche est rouverte (cases gardées, ses 17 jalons repassent « à faire », le bandeau s'efface jusqu'au renvoi) ;
+  la réponse à Sophie se renvoie (choix de l'élève préremplis, jamais la bonne réponse). Chaque renvoi corrigé reçoit un message
+  de Sophie : « j'ai bien reçu ta fiche corrigée / ta réponse corrigée » (jamais « juste » ni « faux » ; le premier message n'est pas rejoué).
+- **Règle de note (corrigée par Tristan en cours de route, 07/10)** : avant toute correction = le premier bilan ; après la
+  **1re correction** = moyenne du premier bilan et de l'état à ce moment-là, figée ; corrections suivantes comptées, note inchangée.
+- **Compteur de corrections lisible par le Suivi** : `detail.indicateurs['smoby-recrutement'].corrections` (nombre entier de renvois
+  après le premier envoi : fiche + message). À côté : `bilan1` (état des 22 jalons au premier bilan) et `bilan2` (état à la 1re
+  correction). Ils sont dans le détail de la note, donc déjà transmis au Suivi ; rien n'est encore affiché côté enseignant.
+- **Champ `meilleur`** : quand le `max` change, l'ancien meilleur est converti **en proportion** (`meilleurScore`, `core/notes.js`,
+  démonstration et Firebase). Un 9/9 du 07/10 reste 20/20, un 6/9 reste 13,3/20. Cela vaut pour **toute séance** dont le `max`
+  changerait un jour (avant : l'ancien meilleur brut était gardé tel quel). Testé en démonstration ; **non testé contre Firebase**
+  (même formule, code identique).
+- **Note du Suivi au demi-point** : la règle existait déjà (`noteSur20`, `core/notes.js`), rien à changer.
+
+### Écart avec le brief, à trancher (décision A10)
+
+La règle n'est **pas** appliquée « partout, Spartoo compris » : elle s'active par `meta.correction: true`, donné à ENT-5.1 seule.
+Raison, constatée par essai : Spartoo et Boost jugent leurs jalons **en continu** (un jalon y passe « ko » en cours de route puis
+redevient « ok »), donc « le premier bilan » n'y existe pas ; la note de Spartoo 1.1 tombait de 7/8 à 5/8. Sans le drapeau, tout
+est comme avant (ancien bandeau, séance suivante ouverte quand tout est juste). Le brief dit lui-même, à la fin de l'intro du lot A bis,
+qu'on étend « séance par séance après validation à l'écran » : le drapeau le permet. Les séances Smoby 5.3 à 5.8 : à étendre une à une.
+
+### Vérifié, et ce qui ne l'est pas
+
+- Suite entière : **815 / 816**. Le seul échec, ENT-2.4 (cdiscount : « date de la réception absente du message : 1 octobre »), ne touche pas ce chantier : le test écrit la date avec `toLocaleDateString` (« 1 octobre ») alors que le message dit sans doute « 1er octobre » ; il tombe depuis le 1er octobre, à reprendre à part. Chaque nouveau test a été **éprouvé par sabotage** : note = état actuel seul, bandeau
+  case par case, somme des poids non vérifiée, poids ignorés, fiche non rouvrable → chacun fait tomber au moins un cas. Le sabotage
+  « verrou qui exige tout juste » n'a pas été rejoué séparément : le test de la photo du premier bilan est le garde (la 5.2 s'ouvre
+  malgré une case fausse).
+- **Non vérifié à l'écran par Tristan** : le parcours « Corriger » n'a été essayé que par les tests (Playwright), pas à la main.
+- **Rien d'essayé contre Firebase** (le mode réel n'est pas couvert). Règles Firebase : aucun changement, **rien à publier**.
+- **Élèves du 07/10** : leurs anciens identifiants de jalons (`ligne-laura`…) ne correspondent plus ; à la réouverture, leur premier
+  bilan est reconstitué d'après l'état du moment. Leur note n'est pas recalculée à la baisse (`meilleur` converti en proportion).
+- **Séance modifiée le jour même** : ENT-5.1 a changé aujourd'hui (07/10), après un passage en classe. À essayer avant la prochaine séance.
+- **Quota Spark** : les jalons ne se jugent jamais à la frappe (22 jalons basculent à l'envoi, une seule écriture). Chaque correction
+  coûte environ 2 lectures et 3 écritures. La photo n'est réécrite que si l'état des jalons change.
+
+### Tests touchés (alerte 7)
+
+`outils/test/smoby.mjs` : les cas de 5.1 ont été **réécrits** (9 jalons → 22 : déclaration, ouverture, parcours juste, sabotage par
+jalon, « Salut ! », réponse libre) et 7 cas **ajoutés** (barème, somme des poids, bandeau, correction de la fiche, correction du message,
+règle de note, `meilleur`). `outils/test/spartoo.mjs` : **un seul cas ajouté** (bandeau « correction » + ancien bandeau sans le drapeau) ;
+les cas existants sont intacts. `outils/test.mjs` et `commun.mjs` : non touchés.
+
+### Demandes au moteur restantes (ENT-5.2)
+
+1. **Le planning ne juge jamais « ko »** (`etapesPlanning`, `core/types/planning.js` : un jalon est « ok » ou « à faire »). Une règle ratée
+   reste « à faire » pour toujours : le premier bilan de 5.2 ne serait **jamais complet**, donc ni photo ni séance suivante. À corriger
+   avant d'activer `correction` sur 5.2 : un planning envoyé doit juger ses jalons ok ou ko.
+2. **Rouvrir un planning envoyé** : mécanisme à écrire (comme la fiche) ; non fait.
+
+### Proposition pour ENT-5.2 (à valider par Tristan, rien n'est écrit)
+
+Aujourd'hui 14 jalons : 3 pour la fiche, 10 pour le planning (5 règles × 2 temps), 1 pour le message. Liste de cases proposée :
+
+| Bloc | Cases (un jalon chacune) | Points |
+|---|---|---|
+| Pièces à demander | 8 : une par pièce, juste si « cochée » = « à demander » | 4 (0,5 la case) |
+| Premier jour | 4 liens « X avant Y » (accueil→EPI, EPI→visite, visite→autorisation, autorisation→déchargement) : une étape déplacée n'en coûte que 1 ou 2, pas 5 | 3 (0,75 le lien) |
+| Planning avant l'imprévu | 5 règles (déjà un jalon chacune) | 3,5 (0,7) |
+| Planning après l'imprévu | 5 règles | 5,5 (1,1) |
+| Message au point | constat 2, salutation 1, fin 1 (la ligne « reprise » est imposée) | 4 |
+| **Total** | 22 jalons | **20** |
+
+Bandeau (6 lignes) : « Les pièces à demander », « Le premier jour », « Planning : première version », « Planning : après l'imprévu »,
+« Message : le constat », « Message : le ton ». Variante du premier jour : 5 positions (une case = une place) au lieu de 4 liens.
+
+### Lots non faits
+
+Lot B (étape de connexion de la trame, générateur Cowork) et lot C (questions au fil, Opus) : non commencés.

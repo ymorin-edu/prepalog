@@ -9,6 +9,7 @@
 
 import { CONFIG, matEmail, matMdp } from './config.js';
 import { filtrerAmenagements, amenagements } from './amenagements.js';
+import { meilleurScore } from './notes.js';
 
 // Le SDK est servi par le dépôt, pas par gstatic.com : voir vendor/LISEZMOI.md.
 // Un CDN bloqué par le filtrage académique empêcherait le mode réel de démarrer du tout.
@@ -353,7 +354,7 @@ export async function creerBackendFirebase() {
         ...res, uid, aid, gid,
         nom: courant?.nom || '', prenom: courant?.prenom || '',
         tentatives: (a?.tentatives || 0) + 1,
-        meilleur: Math.max(a?.meilleur ?? -1, res.score),
+        meilleur: meilleurScore(a, res),
         dateMaj: Date.now(),
       };
       await FS.setDoc(ref, nouv);

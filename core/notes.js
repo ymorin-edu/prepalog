@@ -42,6 +42,22 @@ export function noteSur20(score, max) {
 }
 
 /**
+ * Le « meilleur » score à ranger quand un nouveau résultat arrive : le plus haut jamais écrit.
+ * Quand le `max` a changé depuis (une séance dont on a refait le barème : ENT-5.1 est passée de 9 à 20 points,
+ * 07/10/2026), l'ancien meilleur est converti en PROPORTION du nouveau max, sinon un élève à 9/9 s'afficherait
+ * 9/20. L'élève garde sa note : jamais recalculée à la baisse.
+ */
+export function meilleurScore(anc, res) {
+  const ancien = anc && typeof anc.meilleur === 'number' ? anc.meilleur : null;
+  if (ancien === null) return res.score;
+  let garde = ancien;
+  if (typeof anc.max === 'number' && anc.max > 0 && typeof res.max === 'number' && res.max > 0 && anc.max !== res.max) {
+    garde = Math.round((ancien / anc.max) * res.max * 1000) / 1000;
+  }
+  return Math.max(garde, res.score);
+}
+
+/**
  * Ce module remonte-t-il une note sur 20 ? Seuls ceux que le noyau corrige tout seul,
  * c'est-à-dire ceux qui ne déclarent pas de `notation`.
  */

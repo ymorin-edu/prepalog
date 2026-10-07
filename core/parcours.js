@@ -3,6 +3,10 @@
 // Règle de Tristan (02/10/2026) : chaque élève avance à son rythme, quelle que soit la place de la
 // classe. La séance N+1 ne s'ouvre qu'une fois la séance N validée — tous les jalons au vert. À ce
 // moment le moteur range dans la base de l'élève une PHOTO de son travail (`db.points[id]`).
+// EXCEPTION (07/10/2026, lots A et A bis de SMOBY-retours-classe-5.1) : une séance qui déclare `correction: true`
+// (ENT-5.1 d'abord) range la photo dès que TOUS les jalons sont jugés, justes ou faux (le premier bilan), et la
+// remplace à chaque nouveau bilan complet qui change : la séance suivante s'ouvre sans attendre que tout soit juste,
+// et part du travail corrigé. Ce fichier n'a pas changé : le verrou lit toujours la photo.
 // La photo sert deux fois :
 //   - elle est la preuve de validation qui ouvre la séance suivante ;
 //   - elle est le point de reprise : « remettre au début de la séance N+1 » restaure la photo de

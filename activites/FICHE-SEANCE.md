@@ -242,6 +242,25 @@ séance 2), `TAB` tableur, `REF` exercices par compétence, `SCE` scénario anci
 | `notation` | `'prof'` / `'avancement'` | Absent = score calculé par le moteur, ramené sur 20. `'prof'` : saisie à la main. `'avancement'` : jalons (ramenés sur 20 seulement dans le tableau par compétence). |
 | `copie` | `true` | Évaluation en « copie rendue » : rien ne remonte pendant le travail, une seule remise, note figée. Demande aussi `copie: meta.copie` dans `creerEntreprise` et l'export `noter`. |
 
+### Jalons pondérés et groupés (07/10/2026)
+
+Un jalon (`etapes`) peut déclarer, en plus de `id`, `titre` et `verifier(db)` :
+
+- `poids` : sa part de la note sur 20. La somme des poids d'une séance **vaut 20** : le moteur le vérifie à l'ouverture et
+  refuse de la monter sinon (« La somme des poids des jalons vaut … au lieu de 20 »). Sans `poids`, chaque jalon vaut 1
+  (le score est le nombre de jalons réussis, `bareme` = leur nombre). Avec des poids : `bareme: 20`. Un bloc a une part
+  **fixe** de la note, partagée entre ses cases : ajouter une case ne change pas l'équilibre.
+- `groupe` : la ligne du bandeau de fin (séance `correction`). Un groupe est juste quand toutes ses cases le sont. Le
+  bandeau ne descend jamais à la case (une case oui/non nommée fausse donnerait la réponse) et n'affiche jamais de points.
+- `ecran` : où l'élève corrige, `'fiche:<id de la fiche>'` ou `'phrases:<id du message par phrases>'`. Le bouton « Corriger »
+  n'apparaît que s'il y a un `ecran` à rouvrir parmi les jalons faux.
+
+Un jalon ne se juge jamais **pendant la frappe** : chaque réécriture de la note coûte une lecture et une écriture
+(quota Spark). Les jalons d'une fiche ou d'un message basculent à l'envoi, d'un seul coup.
+
+`volet.corrections: { '<id de la fiche ou du message>': (prenom, n) => ({ mails: [...] }) }` : le message que reçoit
+l'élève à chaque envoi **corrigé** (deuxième envoi et suivants), sans rejouer le premier message ni dire si c'est juste.
+
 ### Base de l'élève, parcours, affichage
 
 | Champ | Contenu | À savoir |
@@ -252,6 +271,7 @@ séance 2), `TAB` tableur, `REF` exercices par compétence, `SCE` scénario anci
 | `parcours` | `true` | La séance fait partie d'un parcours strict. |
 | `precedente` | `'<id>'` | Avec `parcours` : la séance qui doit être validée avant. Absent sur la première. Sa validation range une **photo** du travail, qui sert de point de reprise. |
 | `versionBase` | `2` | Avec `parcours` (06/10/2026, refonte d'ENT-1.1) : numéro de version de la base partagée. Une base d'une version antérieure **repart de zéro** à sa prochaine ouverture, une seule fois (photos, scores du parcours et déblocages effacés, `core/app.js`) ; d'ici là, les séances suivantes sont fermées. Le monter = remettre à zéro tous les élèves du parcours : le dire à Tristan. Une séance de parcours affiche aussi le **bandeau de fin de séance** à l'élève (étapes fausses nommées par leur titre). |
+| `correction` | `true` | Avec `parcours` (07/10/2026, lots A et A bis de SMOBY-retours-classe-5.1 ; ENT-5.1 d'abord) : règle du **premier bilan**. La séance suivante s'ouvre dès que tous les jalons sont jugés (photo de fin rangée au premier bilan complet, remplacée à chaque nouveau bilan complet qui change), l'élève peut **corriger** (bouton « Corriger » du bandeau : une fiche est rouverte, une réponse par phrases se renvoie), la note du suivi est la **moyenne** du premier bilan et de l'état actuel `(points du premier bilan + points actuels) / 2` (premier bilan rangé une fois dans `db.indicateurs[séance].bilan1`), le bandeau de fin liste **tous les groupes en ✓ / ✗**. Suppose que les jalons restent « à faire » jusqu'à l'envoi : **ne pas l'activer sur une séance qui juge en continu** (Spartoo, Boost : un jalon y passe « ko » en cours de route, le premier bilan serait faussé). Sans le drapeau, tout reste comme avant. Jamais en évaluation (`copie`). |
 | `immersif` | `true` | Prend toute la page, sans bandeau Prepalog : la séance dessine son propre en-tête et sa sortie (`ctx.quitter()`). Compte aussi pour le parcours et la reprise par l'enseignant. |
 | `corrige` | `'./contenus/corriges/ENT-3.1.js'` | Fichier de corrigé montré dans l'onglet « Corrigés » de l'enseignant. L'élève ne le voit pas, mais le fichier est public (voir CLAUDE.md). |
 | `volume` | `VOLUME` | Volume déclaré de la séance (séances Cdiscount). **Aucun code du site ne le lit aujourd'hui** : c'est une information portée pour la suite. |

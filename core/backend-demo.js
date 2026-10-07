@@ -2,6 +2,7 @@
 // Sert au développement, aux tests automatisés et au repli si Firebase est absent.
 
 import { filtrerAmenagements, amenagements } from './amenagements.js';
+import { meilleurScore } from './notes.js';
 
 const P = 'prepalog:';
 const lire = (k, d) => { try { const v = localStorage.getItem(P + k); return v ? JSON.parse(v) : d; } catch (e) { return d; } };
@@ -211,7 +212,7 @@ export function creerBackendDemo() {
         ...res, uid, aid, gid,
         nom: courant?.nom || '', prenom: courant?.prenom || '',
         tentatives: (anc?.tentatives || 0) + 1,
-        meilleur: Math.max(anc?.meilleur ?? -1, res.score),
+        meilleur: meilleurScore(anc, res),
         dateMaj: Date.now(),
       };
       ecrire(cle, nouv);

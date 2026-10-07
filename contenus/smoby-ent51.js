@@ -346,6 +346,24 @@ export const VOLET = {
       ouvreFiche: FICHE.id,
     }],
   }),
+  // Chaque envoi CORRIGÉ (lot A, 07/10/2026) reçoit un accusé de Sophie : il ne rejoue pas son premier message
+  // et ne dit jamais si la correction est juste. Clé = id de la fiche ou du message par phrases.
+  corrections: {
+    [FICHE.id]: (prenom) => ({ mails: [{
+      folder: 'in', ts: Date.now() + 3000, from: SOPHIE.nom, fromMail: SOPHIE.mail, to: prenom,
+      subject: 'Fiche de sélection corrigée', kind: 'text',
+      text: `Merci ${prenom}, j’ai bien reçu ta fiche corrigée.
+
+Sophie`,
+    }] }),
+    [PHRASES.id]: (prenom) => ({ mails: [{
+      folder: 'in', ts: Date.now() + 3000, from: SOPHIE.nom, fromMail: SOPHIE.mail, to: prenom,
+      subject: 'Ta réponse corrigée', kind: 'text',
+      text: `Merci ${prenom}, j’ai bien reçu ta réponse corrigée.
+
+Sophie`,
+    }] }),
+  },
   declencheurs: [{
     // La fiche envoyée (juste ou fausse) : Sophie demande la réponse, par phrases.
     id: 'fiche-recue',
@@ -370,30 +388,52 @@ export const VOLET = {
   }],
 };
 
-// ─────────────────────────────────────────────────────────────── les jalons (9, brief §5)
+// ─────────────────────────────────────────────────────────────── les jalons (22, barème sur 20)
 
+// Lot A bis du brief SMOBY-retours-classe-5.1 (07/10/2026) : une case = un jalon, et chaque bloc a une part
+// FIXE de la note sur 20, partagée entre ses cases (ajouter ou retirer une case ne change pas l'équilibre).
+//   Tableau de tri 8 (15 cases, 8/15 chacune) · Décision 7 (candidat 5, contrat 2) · Message à Sophie 5
+//   (raison 2, candidat 1, contrat 1, salutation 0,5, fin 0,5). Total : 20 (le moteur le vérifie).
+// `groupe` = la ligne du bandeau de fin : il ne descend jamais à la case (une case oui/non nommée fausse
+// donnerait la réponse). `ecran` = où l'élève corrige : la fiche (rouverte) ou la réponse par phrases.
 const nomDe = (id) => (CANDIDATS.find((c) => c.id === id) || {}).nom || id;
+const ECRAN_FICHE = `fiche:${FICHE.id}`;
+const ECRAN_MESSAGE = `phrases:${PHRASES.id}`;
+export const POIDS = { tri: 8, candidat: 5, contrat: 2, raison: 2, msgCandidat: 1, msgContrat: 1, salutation: 0.5, fin: 0.5 };
 
-// 1 à 5 : la ligne de chaque candidat (ses trois cases). Rien n'est vrai avant l'envoi de la fiche.
-const jalonsLignes = CANDIDATS.map((c) => ({
-  id: `ligne-${c.id}`,
-  titre: `Tableau de tri : la ligne de ${c.nom} est juste`,
+// Une case du tableau de tri. Rien n'est vrai avant l'envoi de la fiche.
+const jalonsCases = CANDIDATS.flatMap((c) => COLONNES.map((k) => ({
+  id: `case-${c.id}-${k.id}`,
+  titre: `Tableau de tri : ${c.nom}, « ${k.lib} »`,
+  groupe: `Tableau de tri : la ligne de ${c.nom}`,
+  ecran: ECRAN_FICHE,
+  poids: POIDS.tri / (CANDIDATS.length * COLONNES.length),
   verifier(db) {
     const f = ficheEnvoyee(db, FICHE.id);
     if (!f.envoye) return { status: 'attente' };
     const l = (f.valeurs.tri || {})[c.id] || {};
-    const fausses = COLONNES.filter((k) => l[k.id] !== TRI_ATTENDU[c.id][k.id]);
-    if (!fausses.length) return { status: 'ok' };
-    const s = fausses.length > 1 ? 's' : '';
-    return { status: 'ko', detail: `Case${s} fausse${s} : ${fausses.map((k) => `« ${k.lib} »`).join(', ')}.` };
+    return l[k.id] === TRI_ATTENDU[c.id][k.id] ? { status: 'ok' } : { status: 'ko', detail: `Case fausse : « ${k.lib} ».` };
   },
-}));
+})));
+
+// Une ligne du message à Sophie (la dernière réponse envoyée fait foi : un élève qui se corrige est lu sur sa correction).
+const jalonMessage = (ligne, id, titre, groupe, poids, detail) => ({
+  id, titre, groupe, ecran: ECRAN_MESSAGE, poids,
+  verifier(db) {
+    const r = phrasesJustes(db, PHRASES.id);
+    if (!r.envoye) return { status: 'attente' };
+    return r.justes.includes(ligne) ? { status: 'ok' } : { status: 'ko', detail };
+  },
+});
+const G_RAISON = 'Message à Sophie : la raison';
+const G_TON = 'Message à Sophie : le ton et les informations';
 
 export const ETAPES = [
-  ...jalonsLignes,
+  ...jalonsCases,
   {
     id: 'candidat',
     titre: 'Le bon candidat est retenu',
+    groupe: 'Le candidat retenu', ecran: ECRAN_FICHE, poids: POIDS.candidat,
     verifier(db) {
       const f = ficheEnvoyee(db, FICHE.id);
       if (!f.envoye) return { status: 'attente' };
@@ -404,6 +444,7 @@ export const ETAPES = [
   {
     id: 'contrat',
     titre: 'Le bon contrat est choisi',
+    groupe: 'Le contrat choisi', ecran: ECRAN_FICHE, poids: POIDS.contrat,
     verifier(db) {
       const f = ficheEnvoyee(db, FICHE.id);
       if (!f.envoye) return { status: 'attente' };
@@ -411,26 +452,16 @@ export const ETAPES = [
         : { status: 'ko', detail: 'Relis la fiche de poste : le besoin est limité au pic de Noël.' };
     },
   },
-  {
-    id: 'raison',
-    titre: 'Message à Sophie : la raison est complète',
-    verifier(db) {
-      const r = phrasesJustes(db, PHRASES.id);
-      if (!r.envoye) return { status: 'attente' };
-      return r.justes.includes('raison') ? { status: 'ok' }
-        : { status: 'ko', detail: 'La raison doit reprendre les trois critères du tableau.' };
-    },
-  },
-  {
-    id: 'ton',
-    titre: 'Message à Sophie : le ton est professionnel',
-    verifier(db) {
-      const r = phrasesJustes(db, PHRASES.id);
-      if (!r.envoye) return { status: 'attente' };
-      return r.justes.includes('salutation') && r.justes.includes('fin') ? { status: 'ok' }
-        : { status: 'ko', detail: 'Salutation et formule de fin : on écrit à une collègue, au travail.' };
-    },
-  },
+  jalonMessage('raison', 'msg-raison', 'Message à Sophie : la raison est complète', G_RAISON, POIDS.raison,
+    'La raison doit reprendre les trois critères du tableau.'),
+  jalonMessage('choix', 'msg-candidat', 'Message à Sophie : le candidat est le bon', G_TON, POIDS.msgCandidat,
+    'Le candidat du message ne correspond pas à celui du tableau.'),
+  jalonMessage('contrat', 'msg-contrat', 'Message à Sophie : le contrat est le bon', G_TON, POIDS.msgContrat,
+    'Le contrat du message ne correspond pas au besoin.'),
+  jalonMessage('salutation', 'msg-salutation', 'Message à Sophie : la salutation est professionnelle', G_TON, POIDS.salutation,
+    'La salutation : on écrit à une collègue, au travail.'),
+  jalonMessage('fin', 'msg-fin', 'Message à Sophie : la formule de fin est professionnelle', G_TON, POIDS.fin,
+    'La formule de fin : on écrit à une collègue, au travail.'),
 ];
 
 // ─────────────────────────────────────────────────────────────── l'accueil

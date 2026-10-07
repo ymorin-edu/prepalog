@@ -295,7 +295,9 @@ export function creerFiche(F, VDOC) {
       ui.manque = '';
       // Envoi définitif : d'abord une confirmation dans la page (06/10/2026, Smoby C2).
       if (!ui.confirme) {
-        confirmerDansLaPage(z.querySelector('[data-fiche-envoyer]'), `Tu envoies ta fiche${envoi.a ? ` à ${envoi.a}` : ''} ? Tu ne pourras plus la modifier.`,
+        confirmerDansLaPage(z.querySelector('[data-fiche-envoyer]'), e.envois
+          ? `Tu renvoies ta fiche corrigée${envoi.a ? ` à ${envoi.a}` : ''} ?`
+          : `Tu envoies ta fiche${envoi.a ? ` à ${envoi.a}` : ''} ? Tu ne pourras plus la modifier.`,
           () => { ui.confirme = true; z.querySelector('[data-fiche]').requestSubmit(); });
         return;
       }
@@ -309,7 +311,9 @@ export function creerFiche(F, VDOC) {
         e.valeurs[b.id] = b.fige ? (b.valeur == null ? null : String(b.valeur)) : (x == null || String(x).trim() === '' ? null : x);
       });
       e.envoye = { at: Date.now() };
-      api.envoyee();
+      // Le nombre d'envois (une fiche rouverte pour correction se renvoie : lot A, 07/10/2026).
+      e.envois = (e.envois || 0) + 1;
+      api.envoyee({ id: F.id, envois: e.envois });
       z.querySelector('[data-fiche-envoyee]')?.focus({ preventScroll: true });
     });
     // Les onglets : seul le document change (la fiche ne bouge pas) ; flèches gauche / droite au clavier.

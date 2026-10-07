@@ -817,4 +817,58 @@ await v('Bandeau de fin de séance : à faire → rien ; tout juste → validée
   if (prof.etat) throw new Error('bandeau affiché à l’enseignant');
 });
 
+// ---------- 42 bis. le bandeau des séances à correction (`meta.correction`, lots A et A bis du brief SMOBY-retours-classe-5.1,
+// 07/10/2026) : TOUS les groupes listés en ✓ / ✗, « Corriger » seulement s'il y a un envoi à rouvrir ; la photo de fin (qui ouvre
+// la séance suivante) est rangée dès que tout est jugé, juste ou faux ; sans le drapeau, rien de tout cela (l'ancien bandeau).
+await v('Bandeau « correction » : à faire → rien ; tout juste → « Tout est juste », sans « Corriger » ; faux → TOUS les groupes en ✓ / ✗ sans détail, photo rangée ; jamais chez l’enseignant ni en évaluation ; sans drapeau → ancien bandeau', async () => {
+  const essai = (statuts, role = 'eleve', plus = {}) => page.evaluate(async ({ statuts, role, plus }) => {
+    const { creerEntreprise } = await import('/core/types/entreprise.js');
+    const E = await import('/outils/essai-animation.js');
+    document.querySelector('#essaiFin')?.remove();
+    const hote = document.createElement('div'); hote.id = 'essaiFin'; document.body.prepend(hote);
+    const U = E.univers({ animations: [] });
+    U.etapes = statuts.map((st, i) => ({ id: 'j' + i, titre: 'Étape ' + (i + 1), ...(plus.groupes ? { groupe: 'Groupe ' + (1 + (i >> 1)) } : {}),
+      ...(plus.ecran ? { ecran: 'fiche:inconnue' } : {}), verifier: () => ({ status: st, detail: 'RÉPONSE SECRÈTE' }) }));
+    if (plus.copie) U.copie = true;
+    const db = U.baseDeDepart();
+    creerEntreprise(U).rendre(hote, {
+      meta: { id: 'essai-fin', code: 'ESSAI-1', titre: 'Essai', portee: 'eleve', immersif: true, parcours: true, reinitialisable: true, temps: 'guidage', bareme: statuts.length,
+        ...(plus.sans ? {} : { correction: true }), ...(plus.copie ? { copie: true } : {}) },
+      profil: { prenom: 'Lea', nom: 'Test', role, uid: 'u-fin' }, suivante: { code: 'ESSAI-2', titre: 'La suite' },
+      jeu: { etat: () => db, sauver: () => {} }, enregistrer: () => {}, quitter: () => {}, codeStock: 'ABC', lireScore: async () => null,
+      rendreCopie: async () => ({ rendu: Date.now() }),
+    });
+    const b = hote.querySelector('[data-fin-seance]');
+    const r = { html: b ? b.textContent.replace(/\s+/g, ' ').trim() : '', etat: b && b.firstElementChild ? b.firstElementChild.dataset.fin : '',
+      lignes: b ? [...b.querySelectorAll('[data-fin-jalon]')].map((x) => [x.dataset.finEtat || '', x.textContent.replace(/\s+/g, ' ').trim()]) : [],
+      corriger: !!(b && b.querySelector('[data-fin-corriger]')), photo: !!(db.points && db.points['essai-fin']) };
+    hote.remove();
+    return r;
+  }, { statuts, role, plus });
+  const aFaire = await essai(['ok', 'attente']);
+  if (aFaire.etat || aFaire.photo) throw new Error('bandeau ou photo alors qu’un jalon est à faire : ' + JSON.stringify(aFaire));
+  const juste = await essai(['ok', 'ok']);
+  if (juste.etat !== 'ok' || !/Tout est juste/.test(juste.html) || !/ESSAI-2 « La suite »/.test(juste.html)) throw new Error('tout juste : ' + JSON.stringify(juste));
+  if (juste.corriger) throw new Error('bouton « Corriger » alors que tout est juste');
+  if (juste.lignes.length !== 2 || juste.lignes.some((l) => l[0] !== 'ok' || !/^✓\s*Étape/.test(l[1]))) throw new Error('lignes du bandeau tout juste : ' + JSON.stringify(juste.lignes));
+  const fausse = await essai(['ok', 'ko', 'ko']);
+  if (fausse.etat !== 'ko' || fausse.lignes.length !== 3) throw new Error('jalons faux : ' + JSON.stringify(fausse));
+  if (JSON.stringify(fausse.lignes.map((l) => l[0])) !== '["ok","ko","ko"]') throw new Error('états des lignes : ' + JSON.stringify(fausse.lignes));
+  if (!/^✓\s*Étape 1/.test(fausse.lignes[0][1]) || !/^✗\s*Étape 2/.test(fausse.lignes[1][1])) throw new Error('coche et croix : ' + JSON.stringify(fausse.lignes));
+  if (/SECRÈTE/.test(fausse.html)) throw new Error('le bandeau montre le détail du jalon');
+  if (!fausse.photo) throw new Error('la photo de fin n’est pas rangée au premier bilan (la séance suivante resterait fermée)');
+  if (fausse.corriger) throw new Error('« Corriger » proposé sans écran à rouvrir');
+  const avecEcran = await essai(['ok', 'ko'], 'eleve', { ecran: true });
+  if (!avecEcran.corriger) throw new Error('pas de « Corriger » alors qu’un envoi fautif peut être rouvert');
+  const groupes = await essai(['ok', 'ok', 'ok', 'ko'], 'eleve', { groupes: true });
+  if (JSON.stringify(groupes.lignes.map((l) => l[0])) !== '["ok","ko"]' || !/Groupe 2/.test(groupes.lignes[1][1])) throw new Error('groupes : ' + JSON.stringify(groupes.lignes));
+  const prof = await essai(['ok', 'ko'], 'prof');
+  if (prof.etat) throw new Error('bandeau affiché à l’enseignant');
+  const copie = await essai(['ok', 'ko'], 'eleve', { copie: true });
+  if (copie.etat) throw new Error('bandeau affiché dans une évaluation');
+  // Sans le drapeau : l'ancien bandeau (le titre des jalons faux, pas de photo tant que tout n'est pas juste).
+  const ancien = await essai(['ok', 'ko'], 'eleve', { sans: true });
+  if (ancien.etat !== 'ko' || !/Tu as tout fait, mais il reste quelque chose à corriger/.test(ancien.html) || ancien.lignes.length !== 1 || ancien.photo) throw new Error('ancien bandeau : ' + JSON.stringify(ancien));
+});
+
 }

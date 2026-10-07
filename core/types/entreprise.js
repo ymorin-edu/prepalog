@@ -207,6 +207,17 @@ export function creerEntreprise(U) {
   // La note d'une base : le nombre d'étapes réussies. Sert au suivi en direct, à la remise de la
   // copie, et à l'enseignant qui ramasse une copie (il lit la base de l'élève sans l'ouvrir).
   // Une étape qui plante sur une base incomplète compte comme non faite, sans tout arrêter.
+  // POIDS (lot A bis, 07/10/2026) : un jalon peut déclarer `poids`, sa part de la note ; la somme des poids d'une
+  // séance vaut 20 (le moteur le vérifie à l'ouverture). Sans `poids`, chaque jalon vaut 1 (le score est le
+  // nombre de jalons réussis, comme avant).
+  const poidsDe = (e) => (typeof e.poids === 'number' ? e.poids : 1);
+  const AVEC_POIDS = etapes.some((e) => typeof e.poids === 'number');
+  const MAX_POIDS = Math.round(etapes.reduce((t, e) => t + poidsDe(e), 0) * 1e6) / 1e6;
+  const ERREUR_POIDS = AVEC_POIDS && Math.abs(MAX_POIDS - 20) > 1e-6
+    ? `La somme des poids des jalons vaut ${MAX_POIDS} au lieu de 20 : la note sur 20 serait faussée.` : '';
+  if (ERREUR_POIDS) console.warn('[entreprise] ' + ERREUR_POIDS);
+  const arrondi = (x) => Math.round(x * 1000) / 1000;
+
   function noterBase(db) {
     const detail = {};
     let ok = 0;
@@ -214,7 +225,7 @@ export function creerEntreprise(U) {
       let st = 'ko';
       try { st = e.verifier(db, U).status; } catch (x) { st = 'ko'; }
       detail[e.id] = st;
-      if (st === 'ok') ok++;
+      if (st === 'ok') ok += poidsDe(e);
     });
     // Le niveau figé dans la séance, pour l'enseignant qui relit le détail d'une note.
     if (db && db.aisance === 'confirme') detail.niveau = 'confirmé';
@@ -259,7 +270,7 @@ export function creerEntreprise(U) {
         return { score: n.score, max: n.max, detail };
       }
     }
-    return { score: ok, max: etapes.length, detail };
+    return { score: arrondi(ok), max: arrondi(MAX_POIDS), detail };
   }
 
   return {
@@ -270,6 +281,10 @@ export function creerEntreprise(U) {
       if (!!(ctx.meta && ctx.meta.copie) !== COPIE) {
         hote.innerHTML = `<div class="avis avis-err">Évaluation mal déclarée : « copie » doit figurer
           dans le meta de l'activité ET dans ce qu'elle passe à creerEntreprise.</div>`;
+        return;
+      }
+      if (ERREUR_POIDS) {
+        hote.innerHTML = `<div class="avis avis-err">${ech(ERREUR_POIDS)}</div>`;
         return;
       }
       if (ctx.meta.portee !== 'eleve') {
@@ -595,6 +610,14 @@ export function creerEntreprise(U) {
       // ne le sait pas, le bouton « Rendre » n'est pas offert. Côté enseignant, rien à rendre.
       const copie = { rendue: null, ramassee: false, arme: false, envoi: false, charge: !COPIE || estProf };
       const rendue = () => !!(COPIE && copie.rendue);
+      // CORRECTION (lots A et A bis du brief SMOBY-retours-classe-5.1, 07/10/2026) : la séance déclare
+      // `meta.correction: true`. Elle suit alors la règle « premier bilan » : la séance suivante s'ouvre dès que
+      // tous les jalons sont jugés, l'élève peut corriger les envois fautifs, la note est la moyenne du premier
+      // bilan et de l'état actuel, le bandeau de fin liste tous les groupes en ✓ / ✗. Sans le drapeau, tout reste
+      // comme avant (séance suivante ouverte quand tout est juste, ancien bandeau). Cela suppose que les jalons de
+      // la séance restent « à faire » jusqu'à l'envoi (la photo de fin et la note moyennée en dépendent) :
+      // Spartoo et Boost jugent leurs jalons en continu, ils n'ont pas le drapeau.
+      const CORRECTION = !!(ctx.meta && ctx.meta.correction);
       // Copie rendue : plus rien ne s'écrit dans la base, même si un geste passait le verrou.
       const sauver = () => { if (rendue()) return; declencher(); ctx.jeu.sauver(); remonterEtapes(); };
       const stockDe = (sku) => { const q = db.stock[sku]; return q == null ? 0 : q; };
@@ -619,15 +642,35 @@ export function creerEntreprise(U) {
         return prefixe + pad(mx + 1, largeur);
       }
 
-      // LE BANDEAU DE FIN DE SÉANCE (06/10/2026 ; Spartoo ENT-1.1 §7.6 = Smoby C1, décisions de Tristan ; maquette
-      // `docs/briefs/spartoo/maquette-retours-jalons-1.1.html`, écrans ② et ③). Pour l'ÉLÈVE d'une séance de parcours,
-      // hors évaluation, quand TOUS les jalons sont jugés (aucun « à faire ») : tous justes → « Séance validée ✓ »
-      // et la séance suivante ouverte ; sinon le TITRE des jalons faux, jamais leur détail (qui donne la réponse).
+      // LE BANDEAU DE FIN DE SÉANCE (06/10/2026 ; Spartoo ENT-1.1 §7.6 = Smoby C1, décisions de Tristan). Refait le
+      // 07/10/2026 (lot A bis du brief SMOBY-retours-classe-5.1 ; page d'essai validée par Tristan). Pour l'ÉLÈVE d'une
+      // séance de parcours, hors évaluation, quand TOUS les jalons sont jugés (aucun « à faire ») : TOUS les groupes
+      // sont listés, ✓ en vert (juste) ou ✗ en rouge (à corriger), jamais la réponse ni les points perdus.
+      // Un jalon déclare `groupe` (la ligne du bandeau : il ne descend pas à la case, une case oui/non nommée fausse
+      // donnerait la réponse) ; sans `groupe`, la ligne est son `titre`. Un groupe est juste quand toutes ses cases le sont.
+      // « Corriger » (pas si tout est juste) rouvre l'envoi fautif : voir `corriger()` plus bas.
       // Sur tous les écrans (au-dessus du menu), remis à jour à chaque sauvegarde.
-      function bandeauFin(res) {
-        if (estProf || COPIE || !ctx.meta.parcours || !etapes.length) return '';
-        const st = res || noterBase(db).detail;
-        if (etapes.some((e) => st[e.id] !== 'ok' && st[e.id] !== 'ko')) return '';
+      function groupesDuBilan(st) {
+        const L = [];
+        etapes.forEach((e) => {
+          const nom = e.groupe || e.titre;
+          let g = L.find((x) => x.nom === nom);
+          if (!g) { g = { nom, ok: true, ids: [] }; L.push(g); }
+          g.ids.push(e.id);
+          if (st[e.id] !== 'ok') g.ok = false;
+        });
+        return L;
+      }
+      const bilanComplet = (st) => etapes.length > 0 && etapes.every((e) => st[e.id] === 'ok' || st[e.id] === 'ko');
+      // Les écrans à rouvrir : ceux des jalons faux qui déclarent un `ecran` ('fiche:<id>' ou 'phrases:<id>').
+      function ecransAFaire(st) {
+        const L = [];
+        etapes.forEach((e) => { if (st[e.id] === 'ko' && e.ecran && !L.includes(e.ecran)) L.push(e.ecran); });
+        return L;
+      }
+      // Sans le drapeau `correction` : le bandeau d'origine (06/10/2026). Tous justes → « Séance validée » et la
+      // séance suivante ouverte ; sinon le TITRE des jalons faux, jamais leur détail.
+      function bandeauAncien(st) {
         const faux = etapes.filter((e) => st[e.id] !== 'ok');
         if (!faux.length) {
           const S = ctx.suivante;
@@ -641,8 +684,34 @@ export function creerEntreprise(U) {
             <span class="ent-fin-petit">Relis ta trame à ces étapes. Si tu ne trouves pas, appelle ton professeur${ctx.meta.reinitialisable ? ' ou réinitialise ta séance' : ''}.
             La séance suivante s'ouvrira quand tout sera juste.</span></div></div>`;
       }
+      function bandeauFin(res) {
+        if (estProf || COPIE || !ctx.meta.parcours || !etapes.length) return '';
+        const st = res || noterBase(db).detail;
+        if (!bilanComplet(st)) return '';
+        if (!CORRECTION) return bandeauAncien(st);
+        const G = groupesDuBilan(st);
+        const tout = G.every((g) => g.ok);
+        const S = ctx.suivante;
+        const liste = `<ul class="ent-fin-liste" aria-label="Résultat par étape">${G.map((g) => `<li class="${g.ok ? 'ent-fin-juste' : 'ent-fin-faux'}" data-fin-jalon="${ech(g.ids[0])}"
+          data-fin-etat="${g.ok ? 'ok' : 'ko'}"><span class="ent-fin-m" aria-hidden="true">${g.ok ? '✓' : '✗'}</span><span>${ech(g.nom)}</span>
+          <span class="ent-fin-a">${g.ok ? 'juste' : 'à corriger'}</span></li>`).join('')}</ul>`;
+        if (tout) {
+          return `<div class="ent-fin ent-fin-v2 ent-fin-ok" role="status" data-fin="ok"><div class="ent-fin-corps">
+            <h2 class="ent-fin-t">Tout est juste ✓</h2>
+            <p>Bravo, toutes tes étapes sont justes.${S ? ` La séance suivante, ${ech(S.code)} « ${ech(S.titre)} », est ouverte.` : ''}</p>
+            ${liste}<div class="ent-fin-btns"><button class="btn" data-fin-quitter>Retour aux séances</button></div></div></div>`;
+        }
+        const peutCorriger = ecransAFaire(st).length > 0;
+        return `<div class="ent-fin ent-fin-v2 ent-fin-ko" role="status" data-fin="ko"><div class="ent-fin-corps">
+          <h2 class="ent-fin-t">Tu as fini : voici ce qui est juste et ce qui est à corriger.</h2>
+          <p>Tu peux corriger pour améliorer ta note, ou passer à la séance suivante${S ? ` (${ech(S.code)}, déjà ouverte)` : ''}.</p>
+          ${liste}<div class="ent-fin-btns">${peutCorriger ? `<button class="btn btn-p ent-fin-corriger" data-fin-corriger>Corriger</button>
+            <span class="ent-fin-gain">Corriger améliore ta note.</span>` : ''}
+            <button class="btn" data-fin-quitter>Retour aux séances</button></div></div></div>`;
+      }
       function brancherBandeauFin() {
         hote.querySelector('[data-fin-quitter]')?.addEventListener('click', () => sortir(ctx.quitter));
+        hote.querySelector('[data-fin-corriger]')?.addEventListener('click', corriger);
       }
       function majBandeauFin(res) {
         const z = hote.querySelector('[data-fin-seance]');
@@ -653,26 +722,109 @@ export function creerEntreprise(U) {
         brancherBandeauFin();
       }
 
-      // Le score du suivi de classe : le nombre d'étapes réussies. Il n'est réécrit en base que s'il
+      // CORRIGER (lot A, 07/10/2026). Après le premier bilan, l'élève peut reprendre les envois qui portent une
+      // étape fausse. Une fiche est ROUVERTE (`envoye` retiré, ses cases gardées : ses jalons repassent « à faire »,
+      // « rien n'est vrai avant l'envoi », et le bandeau s'efface jusqu'au renvoi). Une réponse par phrases se
+      // renvoie telle quelle (c'est déjà possible : le dernier envoi fait foi) ; son brouillon est prérempli
+      // avec les choix de l'élève, jamais avec la bonne réponse. Le premier écran concerné s'ouvre.
+      function corriger() {
+        if (estProf || COPIE || rendue() || !CORRECTION) return;
+        const st = noterBase(db).detail;
+        const ecrans = ecransAFaire(st);
+        if (!ecrans.length) return;
+        let vers = null;
+        ecrans.forEach((x) => {
+          const genre = x.slice(0, x.indexOf(':')), id = x.slice(x.indexOf(':') + 1);
+          if (genre === 'fiche') {
+            const VF = VFICHES.find((v) => v.id === id);
+            const e = VF && db.fiches && db.fiches[id];
+            if (e && e.envoye) { delete e.envoye; if (!vers) vers = { vue: vueDeFiche(VF) }; }
+          } else if (genre === 'phrases') {
+            const m = db.mails.find((y) => y.folder === 'in' && y.phrases && y.phrases.id === id);
+            if (m && !vers) {
+              const envois = db.mails.filter((y) => y.folder === 'out' && y.phrases && y.phrases.id === id);
+              const dernier = envois[envois.length - 1];
+              if (dernier) E.brouillon[m.id] = Object.assign({}, dernier.phrases.choix);
+              vers = { vue: 'mail', mail: m.id };
+            }
+          }
+        });
+        if (!vers) return;
+        sauver();
+        E.vue = vers.vue;
+        if (vers.mail) { E.dossier = 'in'; E.mailSel = vers.mail; E.piece = null; }
+        dessiner();
+        hote.querySelector('[data-fiche-envoyer], #formPhr')?.scrollIntoView({ block: 'nearest' });
+      }
+
+      // La note du suivi de classe : les points des jalons réussis (le nombre de jalons réussis quand ils n'ont pas
+      // de poids). Pour une séance `correction` (règle de Tristan, 07/10/2026) :
+      //   - avant toute correction : la note est le PREMIER BILAN (le premier moment où tous les jalons sont jugés) ;
+      //   - après la PREMIÈRE correction : la moyenne du premier bilan et de l'état à ce moment-là, figée ;
+      //   - corrections suivantes : comptées (`corrections`), la note ne bouge plus.
+      // Une correction = un renvoi après le premier envoi (fiche rouverte, réponse par phrases renvoyée). Le premier
+      // bilan, l'état de la première correction et le nombre de corrections sont rangés dans
+      // `db.indicateurs[séance]` (`bilan1`, `bilan2`, `corrections`) : ils survivent à « Réinitialiser ». Ce n'est pas
+      // `premier` (le premier jugement de CHAQUE jalon, qui peut tomber en cours de route). Une séance qui note
+      // autrement (planning, quai, plan d'entrepôt : le score n'est pas la somme des jalons) n'est pas moyennée.
+      function nombreDeCorrections() {
+        let n = 0;
+        const vus = new Set();
+        etapes.forEach((e) => {
+          if (!e.ecran || vus.has(e.ecran)) return;
+          vus.add(e.ecran);
+          const i = e.ecran.indexOf(':'), genre = e.ecran.slice(0, i), id = e.ecran.slice(i + 1);
+          if (genre === 'fiche') n += Math.max(0, ((db.fiches && db.fiches[id] && db.fiches[id].envois) || 0) - 1);
+          else if (genre === 'phrases') n += Math.max(0, db.mails.filter((m) => m.folder === 'out' && m.phrases && m.phrases.id === id).length - 1);
+        });
+        return n;
+      }
+      function noteDuSuivi(res, score) {
+        if (COPIE || !CORRECTION) return score;
+        const points = (st) => etapes.reduce((t, e) => t + (st[e.id] === 'ok' ? poidsDe(e) : 0), 0);
+        const complet = bilanComplet(res);
+        const actuels = points(res);
+        if (complet && Math.abs(actuels - score) > 0.01) return score;      // le score brut est arrondi au millième
+        const r = reperageSeance();
+        if (!r.bilan1) {
+          if (!complet) return score;
+          r.bilan1 = Object.fromEntries(etapes.map((e) => [e.id, res[e.id]]));
+        }
+        const n = nombreDeCorrections();
+        if (n !== (r.corrections || 0)) r.corrections = n;
+        if (!r.bilan2 && n >= 1 && complet) r.bilan2 = Object.fromEntries(etapes.map((e) => [e.id, res[e.id]]));
+        if (r.bilan2) return arrondi((points(r.bilan1) + points(r.bilan2)) / 2);
+        return complet ? actuels : score;
+      }
+
+      // Le score du suivi de classe : l'avancement (voir `noteDuSuivi`). Il n'est réécrit en base que s'il
       // a changé, temps passé mis à part (il avance tout seul) ; `forcer` (sortie de la séance)
       // l'écrit quoi qu'il arrive, pour que l'enseignant lise le temps à jour.
+      // Un jalon ne se juge jamais PENDANT LA FRAPPE : chaque réécriture de la note coûte une lecture et une
+      // écriture (quota Spark). Les jalons de fiche et de message basculent à l'envoi, d'un seul coup.
+      let clePhoto = null;
       function remonterEtapes(forcer) {
         if (estProf || !etapes.length) return;
-        const { score: ok, max, detail: res } = noterBase(db);
+        const { score: brut, max, detail: res } = noterBase(db);
         noterPremiers(res);
         majBandeauFin(res);
+        const ok = noteDuSuivi(res, brut);
         const cle = JSON.stringify({ ok, max, res }, (k, v) => (k === 'temps' && typeof v === 'number' ? undefined : v));
         // Évaluation : rien ne remonte pendant le travail, seule la remise compte.
         if (!COPIE) ctx.enregistrer({ score: ok, max, detail: res }, { siChange: !forcer, cle });
-        // Séance validée : on range une photo du travail, une fois pour toutes. Elle ouvre la
-        // séance suivante et sert de point de reprise (voir core/parcours.js).
-        if (ctx.meta.parcours && ok === max) {
+        // Premier bilan complet (tous les jalons jugés, justes ou faux — lot A, 07/10/2026) : on range une photo du
+        // travail. Elle ouvre la séance suivante et sert de point de reprise (voir core/parcours.js). Elle est
+        // REMPLACÉE à chaque nouveau bilan complet qui change, pour que la suite parte du travail corrigé.
+        // En évaluation, la règle d'avant : tout juste.
+        if (ctx.meta.parcours && (CORRECTION && !COPIE ? bilanComplet(res) : brut === max)) {
           if (!db.points) db.points = {};
-          if (!db.points[ctx.meta.id]) {
+          const cleBilan = etapes.map((e) => res[e.id]).join();
+          if (!db.points[ctx.meta.id] || (clePhoto !== null && clePhoto !== cleBilan)) {
             const { points, reprise, ...reste } = db;
             db.points[ctx.meta.id] = JSON.parse(JSON.stringify(reste));
             ctx.jeu.sauver();
           }
+          clePhoto = cleBilan;
         }
       }
 
@@ -1216,8 +1368,11 @@ export function creerEntreprise(U) {
         const manque = m.phrases.lignes.some((l) => l.texte == null && !Number.isInteger(b[l.id]));
         if (manque) return toast('Choisissez une phrase à chaque ligne.');
         // Envoi définitif : d'abord une confirmation dans la page (06/10/2026, Smoby C2).
+        const dejaEnvoyees = db.mails.filter((x) => x.folder === 'out' && x.phrases && x.phrases.id === m.phrases.id).length;
         if (!confirmeEnvoi) {
-          confirmerDansLaPage(hote.querySelector('#formPhr button[type="submit"]'), `Tu envoies ta réponse à ${m.from} ? Tu ne pourras plus la modifier.`,
+          confirmerDansLaPage(hote.querySelector('#formPhr button[type="submit"]'), dejaEnvoyees
+            ? `Tu renvoies ta réponse corrigée à ${m.from} ?`
+            : `Tu envoies ta réponse à ${m.from} ? Tu ne pourras plus la modifier.`,
             () => { confirmeEnvoi = true; envoyerPhrases(); });
           return;
         }
@@ -1228,7 +1383,8 @@ export function creerEntreprise(U) {
           subject: 'RE : ' + m.subject.replace(/^RE : /, ''), kind: 'text', text: texteCompose(m.phrases, choix),
           phrases: { id: m.phrases.id, choix }, read: true });
         delete E.brouillon[m.id];
-        const arrive = !rendue() && declencher('Réponse envoyée. ');
+        let arrive = !rendue() && declencher('Réponse envoyée. ');
+        if (!arrive && !rendue() && dejaEnvoyees) arrive = accuseCorrection(m.phrases.id, dejaEnvoyees + 1);
         sauver(); E.dossier = 'out'; E.mailSel = null; dessiner();
         if (!arrive) toast('Réponse envoyée.');
       }
@@ -2004,13 +2160,25 @@ export function creerEntreprise(U) {
       const apiFiche = () => ({
         sauver, docVu, compterDoc, figee: rendue(),
         // L'envoi : un geste métier comme un mail (les déclencheurs `apresFiche` le lisent), puis la fiche figée.
-        envoyee() {
-          const arrive = !rendue() && declencher('Fiche envoyée. ');
+        envoyee(e) {
+          let arrive = !rendue() && declencher('Fiche envoyée. ');
+          // Un envoi CORRIGÉ (le deuxième, le troisième…) reçoit l'accusé du volet, sans rejouer le premier message.
+          if (!arrive && !rendue() && e && e.envois > 1) arrive = accuseCorrection(e.id, e.envois);
           sauver(); dessiner();
           if (!arrive) toast('Fiche envoyée.');
         },
       });
       function vueFiche(VF) { return VF.html(etatFiche(VF), uiFiche(VF), apiFiche()); }
+      // L'accusé d'un envoi corrigé (lot A, 07/10/2026) : `volet.corrections[<id de la fiche ou du message>](prenom, n)`.
+      // Il ne dit jamais si la correction est juste. Rend vrai si un message est arrivé.
+      function accuseCorrection(id, n) {
+        const f = volet && volet.corrections && volet.corrections[id];
+        const g = f && f(prenom, n, db);
+        if (!g || !(g.mails || []).length) return false;
+        g.mails.forEach((m) => ajouterMail(m));
+        toast('Nouveau message : ' + (g.mails[0].from || 'Messagerie'));
+        return true;
+      }
 
       /* ---------------------------------------------------------- animation à questions */
       // Cloisonnée par séance : `db.animations[<id de l'animation de cette séance>]`. L'enseignant n'y
