@@ -235,6 +235,22 @@ export const VOLET = {
       ouvreFiche: FICHE.id,
     }],
   }),
+  // Chaque envoi CORRIGÉ (séance `correction`, 07/10/2026) reçoit un accusé : il ne rejoue pas la suite de l'histoire
+  // et ne dit jamais si la correction est juste. Clé = id de la fiche, du planning ou du message par phrases.
+  corrections: {
+    [FICHE.id]: (prenom) => ({ mails: [{
+      folder: 'in', ts: Date.now() + 5000, from: SOPHIE.nom, fromMail: SOPHIE.mail, to: prenom,
+      subject: 'Fiche d’arrivée corrigée', kind: 'text', text: `Merci ${prenom}, j’ai bien reçu ta fiche corrigée.\n\nSophie`,
+    }] }),
+    [PLANNING.id]: (prenom) => ({ mails: [{
+      folder: 'in', ts: Date.now() + 5000, from: RESPONSABLE.nom, fromMail: RESPONSABLE.mail, to: prenom,
+      subject: 'Planning corrigé', kind: 'text', text: `Merci ${prenom}, j’ai bien reçu ton planning corrigé.`,
+    }] }),
+    [PHRASES.id]: (prenom) => ({ mails: [{
+      folder: 'in', ts: Date.now() + 5000, from: SOPHIE.nom, fromMail: SOPHIE.mail, to: prenom,
+      subject: 'Ton point corrigé', kind: 'text', text: `Merci ${prenom}, j’ai bien reçu ton point corrigé.\n\nSophie`,
+    }] }),
+  },
   declencheurs: [{
     // La fiche envoyée (juste ou fausse) : Sophie passe au planning, sans dire si la fiche était juste.
     id: 'fiche-recue',
@@ -280,63 +296,87 @@ export const VOLET = {
   }],
 };
 
-// ─────────────────────────────────────────────────────────────── les jalons (14, brief §5)
+// ─────────────────────────────────────────────────────────────── les jalons (22, barème sur 20)
 
-const libDe = (v) => (PIECES.find((p) => p.v === v) || {}).lib || v;
+// Lot A bis du brief SMOBY-retours-classe-5.1, barème validé par Tristan le 07/10/2026 : une case = un jalon, chaque bloc
+// a une part FIXE de la note sur 20, partagée entre ses cases.
+//   Pièces 4 (8 cases à 0,5) · Premier jour 3 (4 liens à 0,75) · Planning avant l'imprévu 3,5 (5 règles à 0,7) ·
+//   Planning après l'imprévu 5,5 (5 règles à 1,1) · Message 4 (constat 2, salutation 1, fin 1). Total : 20.
+// `groupe` = la ligne du bandeau de fin (6 lignes) ; `ecran` = où l'élève corrige.
+export const POIDS = { piece: 0.5, lien: 0.75, planning1: 0.7, planning2: 1.1, constat: 2, salut: 1, fin: 1 };
+const ECRAN_FICHE = `fiche:${FICHE.id}`;
 const coches = (f) => (Array.isArray(f.valeurs.pieces) ? f.valeurs.pieces : []);
 
-export const ETAPES = [
-  {
-    id: 'pieces',
-    titre: 'Les 4 pièces à demander sont cochées',
-    verifier(db) {
-      const f = ficheEnvoyee(db, FICHE.id);
-      if (!f.envoye) return { status: 'attente' };
-      const manquent = PIECES.filter((p) => p.demander && !coches(f).includes(p.v));
-      if (!manquent.length) return { status: 'ok' };
-      return { status: 'ko', detail: `À demander aussi : ${manquent.map((p) => `${p.lib} (${p.pourquoi.charAt(0).toLowerCase()}${p.pourquoi.slice(1, -1)})`).join(' ; ')}.` };
-    },
+// Une pièce : juste si « cochée » = « à demander ». Aucune case cochée : toutes fausses (sinon les 4 pièces à ne pas
+// demander seraient justes sans rien faire).
+const jalonsPieces = PIECES.map((p) => ({
+  id: `piece-${p.v}`,
+  titre: `Pièce : ${p.lib}`,
+  groupe: 'Les pièces à demander à Yanis', ecran: ECRAN_FICHE, poids: POIDS.piece,
+  verifier(db) {
+    const f = ficheEnvoyee(db, FICHE.id);
+    if (!f.envoye) return { status: 'attente' };
+    if (!coches(f).length) return { status: 'ko', detail: 'Aucune pièce cochée.' };
+    if (coches(f).includes(p.v) === p.demander) return { status: 'ok' };
+    const pourquoi = `${p.pourquoi.charAt(0).toLowerCase()}${p.pourquoi.slice(1, -1)}`;
+    return { status: 'ko', detail: p.demander ? `À demander aussi : ${p.lib} (${pourquoi}).` : `À ne pas demander : ${p.lib} (${pourquoi}).` };
   },
-  {
-    // Vrai seulement si au moins une pièce est cochée : sinon « rien de trop » serait vrai par inaction.
-    id: 'pas-de-trop',
-    titre: 'Aucune pièce de trop',
-    verifier(db) {
-      const f = ficheEnvoyee(db, FICHE.id);
-      if (!f.envoye) return { status: 'attente' };
-      if (!coches(f).length) return { status: 'ko', detail: 'Aucune pièce cochée.' };
-      const trop = PIECES.filter((p) => !p.demander && coches(f).includes(p.v));
-      if (!trop.length) return { status: 'ok' };
-      return { status: 'ko', detail: `À ne pas demander : ${trop.map((p) => `${p.lib} (${p.pourquoi.charAt(0).toLowerCase()}${p.pourquoi.slice(1, -1)})`).join(' ; ')}.` };
-    },
-  },
-  {
-    id: 'premier-jour',
-    titre: 'Le premier jour de Yanis est dans l’ordre',
+}));
+
+// Le premier jour : 4 liens « X juste avant Y » de l'ordre attendu. Une étape déplacée ne coûte qu'un ou deux liens.
+// L'ordre de départ, jamais touché, ne vaut rien (un de ses liens est par hasard un lien juste).
+const libJour = (v) => (PREMIER_JOUR.find((e) => e.v === v) || {}).lib || v;
+const jalonsLiens = ORDRE_ATTENDU.slice(0, -1).map((x, k) => {
+  const y = ORDRE_ATTENDU[k + 1];
+  return {
+    id: `lien-${x}-${y}`,
+    titre: `Premier jour : « ${libJour(x)} » juste avant « ${libJour(y)} »`,
+    groupe: 'Le premier jour de Yanis', ecran: ECRAN_FICHE, poids: POIDS.lien,
     verifier(db) {
       const f = ficheEnvoyee(db, FICHE.id);
       if (!f.envoye) return { status: 'attente' };
       const o = f.valeurs.jour || [];
-      if (o.join('|') === ORDRE_ATTENDU.join('|')) return { status: 'ok' };
+      if (o.join('|') === DEPART.join('|')) return { status: 'ko', detail: 'L’ordre n’a pas été changé.' };
+      const i = o.indexOf(x);
+      if (i >= 0 && o[i + 1] === y) return { status: 'ok' };
       const ia = o.indexOf('autorisation'), iv = o.indexOf('visite');
       return { status: 'ko', detail: ia >= 0 && iv >= 0 && ia < iv
         ? 'L’autorisation de conduite se donne après la visite des lieux.'
         : 'D’abord on accueille et on signe le contrat, puis on équipe, on fait visiter, on autorise à conduire, et seulement ensuite on travaille.' };
     },
+  };
+});
+
+// Le planning : les 10 jalons du moteur (5 règles × 2 envois), « à faire » avant l'envoi, puis justes ou faux.
+const jalonsPlanning52 = etapesPlanning(PLANNING).map((e) => {
+  const avant = e.id.startsWith('v1-');
+  return Object.assign(e, {
+    groupe: avant ? 'Le planning : première version' : 'Le planning : après l’imprévu',
+    ecran: `planning:${PLANNING.id}`,
+    poids: avant ? POIDS.planning1 : POIDS.planning2,
+  });
+});
+
+// Le point à Sophie : une ligne choisie = un jalon (la ligne « reprise » est imposée).
+const jalonMessage = (ligne, id, titre, groupe, poids, detail) => ({
+  id, titre, groupe, ecran: `phrases:${PHRASES.id}`, poids,
+  verifier(db) {
+    const r = phrasesJustes(db, PHRASES.id);
+    if (!r.envoye) return { status: 'attente' };
+    return r.justes.includes(ligne) ? { status: 'ok' } : { status: 'ko', detail };
   },
-  ...etapesPlanning(PLANNING),
-  {
-    id: 'message',
-    titre: 'Le point à Sophie est juste (constat et ton)',
-    verifier(db) {
-      const r = phrasesJustes(db, PHRASES.id);
-      if (!r.envoye) return { status: 'attente' };
-      if (['salut', 'constat', 'fin'].every((l) => r.justes.includes(l))) return { status: 'ok' };
-      return { status: 'ko', detail: !r.justes.includes('constat')
-        ? 'Le constat doit dire ce que ton planning respecte : assez de monde et un cariste CACES chaque jour.'
-        : 'Salutation et formule de fin : on écrit à une collègue, au travail.' };
-    },
-  },
+});
+
+export const ETAPES = [
+  ...jalonsPieces,
+  ...jalonsLiens,
+  ...jalonsPlanning52,
+  jalonMessage('constat', 'msg-constat', 'Point à Sophie : le constat est juste', 'Message à Sophie : le constat', POIDS.constat,
+    'Le constat doit dire ce que ton planning respecte : assez de monde et un cariste CACES chaque jour.'),
+  jalonMessage('salut', 'msg-salut', 'Point à Sophie : la salutation est professionnelle', 'Message à Sophie : le ton', POIDS.salut,
+    'La salutation : on écrit à une collègue, au travail.'),
+  jalonMessage('fin', 'msg-fin', 'Point à Sophie : la formule de fin est professionnelle', 'Message à Sophie : le ton', POIDS.fin,
+    'La formule de fin : on écrit à une collègue, au travail.'),
 ];
 
 // ─────────────────────────────────────────────────────────────── l'accueil

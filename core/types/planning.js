@@ -38,7 +38,8 @@
 // moteur les convertit en créneaux, durée ARRONDIE AU CRÉNEAU SUPÉRIEUR.
 //
 // L'état vit dans la base de l'élève, sous `db.plannings[<planning.id>]` (cloisonné par séance) :
-//   { phase: 1 | 2 | 'fini', place: { <carte>: { r, s, k } }, v1, v2, aleaVu, verifs, premierGeste, envois }
+//   { phase: 1 | 2 | 'fini', place: { <carte>: { r, s, k } }, v1, v2, aleaVu, verifs, premierGeste, envois, finis, v2Avant? }
+// (`v2Avant` : la version d'après l'aléa, mise de côté pendant qu'on corrige la 1re, voir `rouvrir`.)
 // `v1` / `v2` : les versions ENVOYÉES, figées (`{ place, at }`). Les jalons se lisent sur elles, jamais
 // sur le planning en cours : rien n'est vrai avant l'envoi.
 //
@@ -419,7 +420,7 @@ const VERSIONS = [{ v: 'v1', n: 1, lib: '1er envoi' }, { v: 'v2', n: 2, lib: "Ap
 const versionsDe = (P) => (P.alea ? VERSIONS : VERSIONS.slice(0, 1));
 
 // Les jalons d'une base, lus sur les versions ENVOYÉES : `v1` sur les données d'avant l'aléa, `v2` sur
-// celles d'après. Une version pas encore envoyée : tous ses jalons faux.
+// celles d'après. Une version pas encore envoyée : tous ses jalons faux (`envoye: false`).
 export function jalonsPlanning(db, P) {
   const M = compiler(P);
   const e = (db && db.plannings && db.plannings[P.id]) || etatNeuf();
@@ -427,18 +428,21 @@ export function jalonsPlanning(db, P) {
   versionsDe(P).forEach((V) => {
     const env = e[V.v];
     const J = env ? M.jalons(env.place || {}, V.n) : (P.jalons || []).map((j) => ({ id: j.id, lib: j.lib, ok: false }));
-    J.forEach((j) => L.push({ id: `${V.v}-${j.id}`, version: V.lib, jalon: j.id, lib: j.lib, ok: j.ok }));
+    J.forEach((j) => L.push({ id: `${V.v}-${j.id}`, version: V.lib, jalon: j.id, lib: j.lib, ok: j.ok, envoye: !!env }));
   });
   return { L, ok: L.filter((l) => l.ok).length, total: L.length };
 }
 
-// Les étapes à donner à `creerEntreprise` : un jalon = une étape du suivi.
+// Les étapes à donner à `creerEntreprise` : un jalon = une étape du suivi. « À faire » tant que sa version
+// n'est pas envoyée, puis juste ou FAUX (07/10/2026, brief SMOBY-retours-classe-5.1 : avant, un jalon raté
+// restait « à faire » pour toujours, et le bilan de la séance n'était jamais complet).
 export function etapesPlanning(P) {
   return jalonsPlanning({}, P).L.map(({ id, version, lib }) => ({
     id, titre: `${version} — ${lib}`,
     verifier(db) {
       const l = jalonsPlanning(db, P).L.find((x) => x.id === id);
-      return { status: l && l.ok ? 'ok' : 'attente' };
+      if (!l || !l.envoye) return { status: 'attente' };
+      return { status: l.ok ? 'ok' : 'ko' };
     },
   }));
 }
@@ -589,9 +593,16 @@ export function creerPlanning(P, opts = {}) {
         // la phase 2. Sans déclencheur déclaré (ou déjà passé, après « Recommencer »), on y passe ici.
         api.sauver();
         if (e.phase === 1 && (e.aleaVu || !api.aleaParMessage)) { e.phase = 2; e.aleaVu = true; }
+        // Correction de la 1re version (`rouvrir`) : le planning d'après l'aléa revient tel que l'élève l'avait envoyé.
+        if (e.phase === 2 && e.v2Avant) { e.place = cp(e.v2Avant.place || {}); delete e.v2Avant; }
       } else e.phase = 'fini';
     } else {
       e.v2 = v; e.phase = 'fini';
+    }
+    // Le planning terminé une fois de plus = une correction (`finis`) : l'environnement fait accuser réception (`api.corrige`).
+    if (e.phase === 'fini') {
+      e.finis = (e.finis || 0) + 1;
+      if (e.finis > 1 && api.corrige) api.corrige(e.finis - 1);
     }
     api.sauver();
     if (final && tempsDe(api) === 'evaluation' && api.rendreCopie) api.rendreCopie();
@@ -832,6 +843,27 @@ export function creerPlanning(P, opts = {}) {
       if (n >= 2 && e.phase === 1 && e.v1) e.phase = 2;
       if (n >= 2) e.aleaVu = true;
     },
+    // CORRIGER (07/10/2026, séance `correction`, brief SMOBY-retours-classe-5.1) : rouvre la PREMIÈRE version
+    // envoyée qui a un jalon faux, avec le planning que l'élève avait envoyé (il corrige, il ne recommence pas).
+    //   - 1re version fausse : retour au temps 1 ; la version d'après l'aléa est mise de côté (`v2Avant`) et revient
+    //     au renvoi de la 1re (l'aléa est déjà reçu : on repasse directement au temps 2), puis elle se renvoie ;
+    //   - seule la version d'après l'aléa est fausse : retour au temps 2.
+    // Les jalons de la version rouverte repassent « à faire » jusqu'au renvoi. Rend vrai si quelque chose a été rouvert.
+    rouvrir(e) {
+      const faux = (V) => !!(e[V.v] && M.jalons(e[V.v].place || {}, V.n).some((j) => !j.ok));
+      const [V1, V2] = versionsDe(P);
+      if (faux(V1)) {
+        if (e.v2) e.v2Avant = e.v2;
+        e.place = cp(e.v1.place || {}); e.v1 = null; e.v2 = null; e.phase = 1;
+      } else if (V2 && faux(V2)) {
+        e.place = cp(e.v2.place || {}); e.v2 = null; e.phase = 2;
+      } else return false;
+      ui.sel = null; ui.bulle = null; ui.verif = null; ui.confirmer = false; ui.confEnvoi = false; ui.raz = false; ui.refaire = false;
+      return true;
+    },
+    // Le nombre de corrections : le planning terminé (dernière version envoyée) une fois de plus. Corriger la 1re
+    // version demande deux envois (elle, puis celle d'après l'aléa) : c'est UNE correction.
+    corrections: (e) => Math.max(0, ((e && e.finis) || 0) - 1),
     // Ce que l'environnement lit pour des tests et la page d'essai : le planning en cours, lu.
     lire(e) { const a = M.lire(e.place, phaseDonnees(e)); return { problemes: a.P, tous: a.tous }; },
     html(e, api) {
@@ -890,7 +922,7 @@ export function creerPlanning(P, opts = {}) {
       on('refaireNon', () => { ui.refaire = false; redessiner(); });
       on('refaireOui', () => {
         ui.refaire = false; ui.sel = null; ui.bulle = null;
-        const garde = { aleaVu: e.aleaVu || !!e.v1, verifs: e.verifs || 0, envois: e.envois || [], premierGeste: e.premierGeste, agrandi: !!e.agrandi };
+        const garde = { aleaVu: e.aleaVu || !!e.v1, verifs: e.verifs || 0, envois: e.envois || [], finis: e.finis || 0, premierGeste: e.premierGeste, agrandi: !!e.agrandi };
         Object.keys(e).forEach((k) => delete e[k]);
         Object.assign(e, etatNeuf(), garde);
         api.sauver(); redessiner();

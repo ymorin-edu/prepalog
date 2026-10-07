@@ -1,6 +1,6 @@
 # Brief — retours du test en classe d'ENT-5.1 (Smoby), 07/10/2026
 
-**Statut** : livré pour les lots A et A bis sur ENT-5.1 (07/10/2026) ; lot B et lot C non faits ; ENT-5.2 en attente du barème (voir le compte rendu). **Auteur** : Claude (conversation Cowork, 07/10/2026 après-midi). Décisions de Tristan prises le
+**Statut** : livré pour les lots A et A bis sur ENT-5.1 et ENT-5.2 (07/10/2026) ; lot B et lot C non faits. **Auteur** : Claude (conversation Cowork, 07/10/2026 après-midi). Décisions de Tristan prises le
 même jour, point par point. Le diagnostic a été fait en lisant le code (`core/types/entreprise.js`, `core/types/fiche.js`,
 `core/parcours.js`, `contenus/smoby-ent51.js`) : **rien n'a encore été essayé à l'écran**.
 
@@ -297,28 +297,29 @@ jalon, « Salut ! », réponse libre) et 7 cas **ajoutés** (barème, somme des 
 règle de note, `meilleur`). `outils/test/spartoo.mjs` : **un seul cas ajouté** (bandeau « correction » + ancien bandeau sans le drapeau) ;
 les cas existants sont intacts. `outils/test.mjs` et `commun.mjs` : non touchés.
 
-### Demandes au moteur restantes (ENT-5.2)
+### ENT-5.2 (deuxième passage, 07/10/2026, Opus)
 
-1. **Le planning ne juge jamais « ko »** (`etapesPlanning`, `core/types/planning.js` : un jalon est « ok » ou « à faire »). Une règle ratée
-   reste « à faire » pour toujours : le premier bilan de 5.2 ne serait **jamais complet**, donc ni photo ni séance suivante. À corriger
-   avant d'activer `correction` sur 5.2 : un planning envoyé doit juger ses jalons ok ou ko.
-2. **Rouvrir un planning envoyé** : mécanisme à écrire (comme la fiche) ; non fait.
+Tristan a validé les **4 liens** et le barème, et lancé les deux chantiers moteur.
 
-### Proposition pour ENT-5.2 (à valider par Tristan, rien n'est écrit)
-
-Aujourd'hui 14 jalons : 3 pour la fiche, 10 pour le planning (5 règles × 2 temps), 1 pour le message. Liste de cases proposée :
-
-| Bloc | Cases (un jalon chacune) | Points |
-|---|---|---|
-| Pièces à demander | 8 : une par pièce, juste si « cochée » = « à demander » | 4 (0,5 la case) |
-| Premier jour | 4 liens « X avant Y » (accueil→EPI, EPI→visite, visite→autorisation, autorisation→déchargement) : une étape déplacée n'en coûte que 1 ou 2, pas 5 | 3 (0,75 le lien) |
-| Planning avant l'imprévu | 5 règles (déjà un jalon chacune) | 3,5 (0,7) |
-| Planning après l'imprévu | 5 règles | 5,5 (1,1) |
-| Message au point | constat 2, salutation 1, fin 1 (la ligne « reprise » est imposée) | 4 |
-| **Total** | 22 jalons | **20** |
-
-Bandeau (6 lignes) : « Les pièces à demander », « Le premier jour », « Planning : première version », « Planning : après l'imprévu »,
-« Message : le constat », « Message : le ton ». Variante du premier jour : 5 positions (une case = une place) au lieu de 4 liens.
+- **Planning, chantier 1** : un jalon du planning est « à faire » jusqu'à l'envoi de sa version, puis juste **ou faux**
+  (`etapesPlanning`, `core/types/planning.js`). Effet sur ENT-5.7 (pas de `correction`) : l'ancien bandeau s'y affiche
+  désormais quand un planning envoyé a une règle fausse ; rien d'autre ne change pour elle.
+- **Planning, chantier 2** : « Corriger » rouvre la **première version fausse** avec le planning envoyé. Si c'est la 1re, la
+  version d'après l'aléa est mise de côté et revient telle quelle au renvoi (l'imprévu n'est pas rejoué) ; il faut renvoyer les
+  deux. Corriger la 1re version = **une** correction (compteur `finis` de l'état du planning). Le responsable de la plateforme
+  accuse réception (« j'ai bien reçu ton planning corrigé »).
+- **ENT-5.2** : `correction: true`, `bareme: 20`. **25 jalons, pas 22** : ma proposition avait une erreur de compte
+  (8 + 4 + 5 + 5 + 3 = 25) ; les points sont exactement ceux validés (4 / 3 / 3,5 / 5,5 / 4). Bandeau de 6 lignes.
+  Deux garde-fous contre l'inaction : aucune pièce cochée → les 8 pièces fausses ; ordre du premier jour laissé tel quel →
+  les 4 liens faux (un lien de l'ordre de départ est juste par hasard). Accusés de Sophie pour la fiche et le point.
+- **Corrigés à l'écran** (`contenus/corriges/ENT-5.1.js`, `ENT-5.2.js`) : seules les notes qui citaient les anciens numéros de
+  jalons ont été réécrites (domaine de Cowork, changement causé par ce chantier). Les **trames** citent peut-être encore
+  « 9 jalons » ou « 14 étapes » : non vérifié, à relire par Cowork.
+- **Tests** (`outils/test/smoby.mjs`) : cas de 5.2 réécrits (déclaration, ouverture, parcours juste, pièges de la fiche,
+  inaction) et 4 ajoutés (barème, planning « faux » après l'envoi, `rouvrir` sur des états écrits à la main, correction du
+  planning à l'écran). Sabotages éprouvés : planning resté « à faire », garde de l'ordre de départ, garde « aucune case »,
+  version d'après l'aléa non rendue, corrections comptées par envoi → chacun fait tomber au moins un cas.
+- Suite entière : **819 / 820**, le seul échec est toujours ENT-2.4 (date du 1er octobre, sans lien).
 
 ### Lots non faits
 

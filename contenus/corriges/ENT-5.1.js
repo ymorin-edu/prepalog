@@ -32,11 +32,11 @@ export const CORRIGE = {
       reponses: CANDIDATS.map((c) => [c.nom, ...COLONNES.map((k) => ouiNon(TRI_ATTENDU[c.id][k.id])), pourquoi[c.id] || '']) },
     { etape: 1, etapeTitre: 'Fiche de sélection', genre: 'question', texte: 'Le choix',
       rep: `Je retiens ${RETENU.nom} · Contrat : ${POSTE.contrat}`,
-      note: 'Les cinq lignes du tableau, le candidat et le contrat sont jugés à l’envoi de la fiche (jalons 1 à 7).' },
+      note: 'Jugés à l’envoi de la fiche, case par case : les 15 cases du tableau (8 points, 8/15 la case), le candidat (5) et le contrat (2).' },
     { etape: 2, etapeTitre: 'Réponse à Sophie', genre: 'question', texte: 'Le message juste (phrases à choisir)',
       rep: PHRASES.lignes.map(juste).join(' '),
-      note: 'Jalon 8 : la ligne « raison » ; jalon 9 : la salutation et la formule de fin. Les lignes « choix » et « contrat » '
-        + 'ne sont pas notées (déjà jugées dans la fiche). Le dernier envoi compte.' },
+      note: 'Une ligne = un jalon : la raison (2 points), le candidat (1), le contrat (1), la salutation (0,5), la formule de fin (0,5). '
+        + 'Le dernier envoi compte.' },
     ...DE_LA_TRAME,
   ],
 };

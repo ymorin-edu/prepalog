@@ -252,8 +252,17 @@ Un jalon (`etapes`) peut déclarer, en plus de `id`, `titre` et `verifier(db)` :
   **fixe** de la note, partagée entre ses cases : ajouter une case ne change pas l'équilibre.
 - `groupe` : la ligne du bandeau de fin (séance `correction`). Un groupe est juste quand toutes ses cases le sont. Le
   bandeau ne descend jamais à la case (une case oui/non nommée fausse donnerait la réponse) et n'affiche jamais de points.
-- `ecran` : où l'élève corrige, `'fiche:<id de la fiche>'` ou `'phrases:<id du message par phrases>'`. Le bouton « Corriger »
-  n'apparaît que s'il y a un `ecran` à rouvrir parmi les jalons faux.
+- `ecran` : où l'élève corrige, `'fiche:<id de la fiche>'`, `'phrases:<id du message par phrases>'` ou `'planning:<id du
+  planning>'`. Le bouton « Corriger » n'apparaît que s'il y a un `ecran` à rouvrir parmi les jalons faux. Un planning se rouvre
+  à la première version fausse, avec le planning envoyé : si c'est la 1re, la version d'après l'aléa est mise de côté et revient
+  au renvoi (deux envois = **une** correction, compteur `finis` de l'état du planning).
+
+Jalons du planning (`etapesPlanning`, 07/10/2026) : « à faire » tant que leur version n'est pas envoyée, puis justes **ou faux**
+(avant, un jalon raté restait « à faire » pour toujours). Ils se pondèrent et se groupent comme les autres :
+`etapesPlanning(P).map((e) => Object.assign(e, { poids, groupe, ecran: 'planning:<id>' }))`.
+
+Compteur de corrections lisible par le Suivi : `detail.indicateurs[<id de la séance>].corrections`, avec `bilan1` (état des
+jalons au premier bilan) et `bilan2` (état à la 1re correction).
 
 Un jalon ne se juge jamais **pendant la frappe** : chaque réécriture de la note coûte une lecture et une écriture
 (quota Spark). Les jalons d'une fiche ou d'un message basculent à l'envoi, d'un seul coup.

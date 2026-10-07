@@ -32,26 +32,26 @@ export const CORRIGE = {
       contexte: 'L’employeur ne demande que ce qui a un lien direct et nécessaire avec le poste (Code du travail, art. L1221-6).',
       entetes: ['Pièce', 'À demander ?', 'Pourquoi'],
       reponses: PIECES.map((p) => [p.lib, p.demander ? 'oui' : 'non', p.pourquoi]),
-      note: 'Jalon 1 : les 4 pièces à demander cochées. Jalon 2 : aucune pièce de trop (faux si aucune case n’est cochée).' },
+      note: 'Une pièce = un jalon (0,5 point) : juste si cochée quand elle est à demander, laissée sinon. Aucune case cochée : toutes fausses.' },
     { etape: 1, etapeTitre: 'Fiche d’arrivée', genre: 'question', texte: 'Le premier jour, dans l’ordre',
       rep: PREMIER_JOUR.map((e, k) => `${k + 1}. ${e.lib}`).join(' · '),
-      note: 'Jalon 3. Le CACES ne suffit pas : l’autorisation de conduite est signée par l’employeur après le CACES, l’avis du médecin '
+      note: '4 liens « juste avant » (0,75 point chacun) ; l’ordre de départ laissé tel quel ne vaut rien. Le CACES ne suffit pas : l’autorisation de conduite est signée par l’employeur après le CACES, l’avis du médecin '
         + 'du travail et la visite des lieux (art. R4323-56) ; elle vient donc après la visite de sécurité.' },
     { etape: 2, etapeTitre: 'Planning des présences', genre: 'tableau', texte: 'Une solution, au 1er envoi',
       contexte: `Besoin ${BESOIN.slice(0, 5).join('-')} / ${BESOIN.slice(5).join('-')}, au moins un cariste CACES par jour, Yanis présent à partir du mer 9. `
         + 'Le mer 16, Karim et Léa ne peuvent pas être en congé tous les deux : l’un des deux congés est décalé (ici celui de Karim).',
       entetes: ['Absence', 'Posée', 'Pourquoi'],
       reponses: ligneDe('v1'),
-      note: 'Jalons 4 à 8. D’autres solutions sont justes : le moteur juge les règles, pas une solution unique.' },
+      note: '5 règles à 0,7 point. D’autres solutions sont justes : le moteur juge les règles, pas une solution unique.' },
     { etape: 3, etapeTitre: 'Après l’imprévu', genre: 'tableau', texte: 'Une solution, après l’arrêt d’Inès',
       contexte: 'Inès en arrêt du lun 14 au mer 16 ; Noa, intérimaire sans CACES, arrive le mar 15. Le lun 14, il manque du monde : '
         + 'le congé de Chloé est décalé.',
       entetes: ['Absence', 'Posée', 'Pourquoi'],
       reponses: ligneDe('v2'),
-      note: 'Jalons 9 à 13.' },
+      note: '5 règles à 1,1 point.' },
     { etape: 4, etapeTitre: 'Le point à Sophie', genre: 'question', texte: 'Le message juste (phrases à choisir)',
       rep: PHRASES.lignes.map(juste).join(' '),
-      note: 'Jalon 14 : la salutation, le constat et la formule de fin. Le dernier envoi compte.' },
+      note: 'Une ligne = un jalon : le constat (2 points), la salutation (1), la formule de fin (1). Le dernier envoi compte.' },
     ...DE_LA_TRAME,
   ],
 };

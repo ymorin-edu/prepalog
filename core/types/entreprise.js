@@ -662,7 +662,7 @@ export function creerEntreprise(U) {
         return L;
       }
       const bilanComplet = (st) => etapes.length > 0 && etapes.every((e) => st[e.id] === 'ok' || st[e.id] === 'ko');
-      // Les écrans à rouvrir : ceux des jalons faux qui déclarent un `ecran` ('fiche:<id>' ou 'phrases:<id>').
+      // Les écrans à rouvrir : ceux des jalons faux qui déclarent un `ecran` ('fiche:<id>', 'phrases:<id>' ou 'planning:<id>').
       function ecransAFaire(st) {
         const L = [];
         etapes.forEach((e) => { if (st[e.id] === 'ko' && e.ecran && !L.includes(e.ecran)) L.push(e.ecran); });
@@ -739,6 +739,8 @@ export function creerEntreprise(U) {
             const VF = VFICHES.find((v) => v.id === id);
             const e = VF && db.fiches && db.fiches[id];
             if (e && e.envoye) { delete e.envoye; if (!vers) vers = { vue: vueDeFiche(VF) }; }
+          } else if (genre === 'planning') {
+            if (VPL && VPL.id === id && VPL.rouvrir(etatPlanning()) && !vers) vers = { vue: 'planning' };
           } else if (genre === 'phrases') {
             const m = db.mails.find((y) => y.folder === 'in' && y.phrases && y.phrases.id === id);
             if (m && !vers) {
@@ -762,7 +764,8 @@ export function creerEntreprise(U) {
       //   - avant toute correction : la note est le PREMIER BILAN (le premier moment où tous les jalons sont jugés) ;
       //   - après la PREMIÈRE correction : la moyenne du premier bilan et de l'état à ce moment-là, figée ;
       //   - corrections suivantes : comptées (`corrections`), la note ne bouge plus.
-      // Une correction = un renvoi après le premier envoi (fiche rouverte, réponse par phrases renvoyée). Le premier
+      // Une correction = un renvoi après le premier envoi (fiche rouverte, réponse par phrases renvoyée, planning
+      // renvoyé). Le premier
       // bilan, l'état de la première correction et le nombre de corrections sont rangés dans
       // `db.indicateurs[séance]` (`bilan1`, `bilan2`, `corrections`) : ils survivent à « Réinitialiser ». Ce n'est pas
       // `premier` (le premier jugement de CHAQUE jalon, qui peut tomber en cours de route). Une séance qui note
@@ -776,6 +779,7 @@ export function creerEntreprise(U) {
           const i = e.ecran.indexOf(':'), genre = e.ecran.slice(0, i), id = e.ecran.slice(i + 1);
           if (genre === 'fiche') n += Math.max(0, ((db.fiches && db.fiches[id] && db.fiches[id].envois) || 0) - 1);
           else if (genre === 'phrases') n += Math.max(0, db.mails.filter((m) => m.folder === 'out' && m.phrases && m.phrases.id === id).length - 1);
+          else if (genre === 'planning' && VPL && VPL.id === id) n += VPL.corrections(db.plannings && db.plannings[id]);
         });
         return n;
       }
@@ -2129,6 +2133,8 @@ export function creerEntreprise(U) {
         aleaParMessage: !!(volet && (volet.declencheurs || []).some((d) => d.phasePlanning)),
         copieRendue: rendue,
         rendreCopie: () => { if (COPIE && !estProf) rendreLaCopie(); },
+        // Un planning renvoyé après correction (séance `correction`) : l'accusé du volet.
+        corrige: (n) => { if (CORRECTION && !rendue()) accuseCorrection(VPL.id, n); },
       });
       function vuePlanning() { return VPL.html(etatPlanning(), apiPlanning()); }
 
