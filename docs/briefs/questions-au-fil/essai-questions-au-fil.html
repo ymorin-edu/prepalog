@@ -1,0 +1,670 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Essai — questions au fil</title>
+<style>
+/* Page d'essai jetable (07/10/2026). Aucune requête réseau : polices du système.
+   Couleurs = celles de styles/base.css, déclarées trois fois comme dans le site. */
+:root{
+  --fond:#f4f1ea; --panneau:#fdfbf7; --survol:#f9f6ef; --filet:#e3ded3;
+  --encre:#1a1915; --encre-douce:#555047;
+  --ardoise:#107c41; --ardoise-fond:#107c41; --sur-ardoise:#fff; --ardoise-clair:#e3f1e8;
+  --terre:#9c620a; --vert:#0b7a41; --vert-pale:#e4f1e5; --rouge:#9d2727;
+  --toast-fond:#1a1915; --toast-texte:#fff; --ombre-forte:0 6px 24px rgba(40,34,24,.18);
+  --voile:rgba(26,25,21,.35); --r:4px;
+}
+:root[data-theme="sombre"]{
+  --fond:#10161c; --panneau:#1a222b; --survol:#212b35; --filet:#2c3743;
+  --encre:#e4eaf0; --encre-douce:#9aabbb;
+  --ardoise:#6fd196; --ardoise-fond:#18724a; --sur-ardoise:#fff; --ardoise-clair:#1b3328;
+  --terre:#e0ac4d; --vert:#5fd79a; --vert-pale:#163122; --rouge:#e2726f;
+  --toast-fond:#e4eaf0; --toast-texte:#10161c; --ombre-forte:0 6px 24px rgba(0,0,0,.5);
+  --voile:rgba(0,0,0,.55);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="clair"]){
+    --fond:#10161c; --panneau:#1a222b; --survol:#212b35; --filet:#2c3743;
+    --encre:#e4eaf0; --encre-douce:#9aabbb;
+    --ardoise:#6fd196; --ardoise-fond:#18724a; --sur-ardoise:#fff; --ardoise-clair:#1b3328;
+    --terre:#e0ac4d; --vert:#5fd79a; --vert-pale:#163122; --rouge:#e2726f;
+    --toast-fond:#e4eaf0; --toast-texte:#10161c; --ombre-forte:0 6px 24px rgba(0,0,0,.5);
+    --voile:rgba(0,0,0,.55);
+  }
+}
+*{box-sizing:border-box}
+body{margin:0; background:var(--fond); color:var(--encre);
+  font:15px/1.45 Inter,system-ui,-apple-system,"Segoe UI",sans-serif}
+button{font:inherit; cursor:pointer}
+.btn{border:1px solid var(--filet); background:var(--panneau); color:var(--encre);
+  padding:6px 12px; border-radius:var(--r)}
+.btn:hover{background:var(--survol)}
+.btn-p{background:var(--ardoise-fond); border-color:var(--ardoise-fond); color:var(--sur-ardoise)}
+.btn-p:hover{filter:brightness(1.08); background:var(--ardoise-fond)}
+.btn-s{padding:3px 9px; font-size:.86rem}
+.btn:disabled{opacity:.45; cursor:not-allowed}
+:focus-visible{outline:2px solid var(--ardoise); outline-offset:2px}
+.note{color:var(--encre-douce); font-size:.88rem}
+.mono{font-family:"IBM Plex Mono",ui-monospace,monospace}
+
+/* ---------------- réglages de l'essai (ce n'est pas le site) */
+.essai{position:relative; z-index:60; background:var(--panneau); border-bottom:2px dashed var(--terre); padding:10px 16px;
+  display:flex; flex-wrap:wrap; gap:10px 22px; align-items:flex-start; font-size:.88rem}
+.essai h1{font-size:1rem; margin:0 0 2px; width:100%}
+.essai fieldset{border:0; padding:0; margin:0}
+.essai legend{font-weight:600; padding:0; margin-bottom:3px}
+.essai label{display:block; white-space:nowrap}
+.essai .reco{color:var(--terre); font-weight:600}
+.essai .actions{margin-left:auto; display:flex; gap:8px; align-items:flex-start}
+
+/* ---------------- l'écran de la séance */
+.appli{display:grid; grid-template-columns:200px 1fr; grid-template-rows:auto 1fr; min-height:calc(100vh - 120px); position:relative}
+.bandeau{grid-column:1/-1; display:flex; align-items:center; gap:12px; padding:8px 16px;
+  background:var(--panneau); border-bottom:1px solid var(--filet)}
+.bandeau .ent{font-weight:700; letter-spacing:.01em}
+.bandeau .seance{color:var(--encre-douce)}
+.bandeau .moi{margin-left:auto; font-size:.86rem; color:var(--encre-douce)}
+nav{background:var(--panneau); border-right:1px solid var(--filet); padding:10px 0}
+nav .grp{font-size:.72rem; text-transform:uppercase; letter-spacing:.06em; color:var(--encre-douce);
+  padding:8px 14px 3px}
+nav button{display:flex; width:100%; text-align:left; border:0; background:none; color:var(--encre);
+  padding:6px 14px; align-items:center; gap:8px}
+nav button:hover{background:var(--survol)}
+nav button[aria-current="page"]{font-weight:600; box-shadow:inset 3px 0 0 var(--ardoise)}
+.compteur{margin-left:auto; min-width:20px; height:20px; border-radius:10px; padding:0 6px;
+  font-size:.75rem; line-height:20px; text-align:center; border:1.5px solid var(--terre); color:var(--terre); font-weight:700}
+main{padding:18px 22px 60px; max-width:980px}
+h2{font-size:1.15rem; margin:0 0 10px}
+.carte{background:var(--panneau); border:1px solid var(--filet); border-radius:var(--r); padding:14px 16px; margin-bottom:14px}
+.doc-pied{font-size:.75rem; color:var(--encre-douce); margin-top:8px}
+table{border-collapse:collapse; width:100%}
+td,th{border-bottom:1px solid var(--filet); padding:6px 8px; text-align:left}
+th{font-size:.82rem; color:var(--encre-douce); font-weight:600}
+input[type=number], select{font:inherit; color:var(--encre); background:var(--panneau);
+  border:1px solid var(--filet); border-radius:var(--r); padding:4px 6px}
+input[type=number]{width:72px}
+.ligne-fiche{display:grid; grid-template-columns:1fr auto; gap:8px; align-items:center; padding:6px 0;
+  border-bottom:1px solid var(--filet)}
+.encadre{border-left:3px solid var(--terre); padding:6px 10px; background:var(--survol); font-size:.9rem; margin:10px 0}
+.confirme{border:1px solid var(--terre); border-radius:var(--r); padding:10px 12px; margin-top:10px; background:var(--survol)}
+.mail{border-bottom:1px solid var(--filet); padding:8px 4px; cursor:pointer; display:flex; gap:10px}
+.mail.nonlu .sujet{font-weight:700}
+.mail .de{width:150px; flex:none}
+.mail .heure{margin-left:auto; color:var(--encre-douce); font-size:.82rem}
+.lecture{white-space:pre-line}
+.phrase{display:grid; grid-template-columns:110px 1fr; gap:8px; align-items:center; margin:6px 0}
+.phrase select{width:100%}
+
+/* ---------------- NOTIFICATION (option A : carte qui reste) */
+.pile-notifs{position:fixed; top:calc(var(--haut, 0px) + 10px); right:16px; width:330px; display:flex; flex-direction:column; gap:8px; z-index:40}
+.notif{background:var(--panneau); border:1px solid var(--filet); border-left:4px solid var(--terre);
+  border-radius:var(--r); box-shadow:var(--ombre-forte); padding:10px 12px}
+.notif.neuve{animation:entree .25s ease-out}
+/* Au bout de 8 s, la carte se réduit à une ligne (elle ne disparaît pas) : elle cache moins l'écran. */
+.notif.reduite{padding:5px 10px; margin-left:auto; max-width:100%; cursor:pointer; display:flex; gap:8px; align-items:center}
+.notif.reduite .quoi{margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.notif .qui{font-size:.78rem; color:var(--encre-douce); display:flex; gap:6px; align-items:center}
+.notif .qui b{color:var(--encre)}
+.notif .quoi{margin:3px 0 8px}
+.notif .rangee{display:flex; gap:8px; align-items:center}
+.notif .fermer{margin-left:auto; border:0; background:none; color:var(--encre-douce); font-size:1.1rem; line-height:1; padding:2px 6px}
+.icone{display:inline-flex; width:20px; height:20px; border-radius:50%; align-items:center; justify-content:center;
+  border:1.5px solid var(--terre); color:var(--terre); font-size:.72rem; font-weight:700}
+@keyframes entree{from{transform:translateX(20px); opacity:0} to{transform:none; opacity:1}}
+@media (prefers-reduced-motion: reduce){ .notif.neuve{animation:none} }
+/* option B : la bulle du site aujourd'hui */
+#toast{position:fixed; left:50%; bottom:24px; transform:translateX(-50%); background:var(--toast-fond);
+  color:var(--toast-texte); padding:10px 16px; border-radius:var(--r); font-size:.9rem; z-index:50; display:none; max-width:90vw}
+
+/* ---------------- LA QUESTION */
+.q-panneau{position:fixed; top:var(--haut, 0px); right:0; bottom:0; width:380px; background:var(--panneau);
+  border-left:1px solid var(--filet); box-shadow:var(--ombre-forte); z-index:45; display:flex; flex-direction:column}
+.q-voile{position:fixed; inset:0; background:var(--voile); z-index:44}
+.q-fenetre{position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); width:min(560px,94vw);
+  max-height:86vh; overflow:auto; background:var(--panneau); border:1px solid var(--filet);
+  border-radius:var(--r); box-shadow:var(--ombre-forte); z-index:45; display:flex; flex-direction:column}
+.q-tete{padding:12px 16px; border-bottom:1px solid var(--filet); display:flex; gap:10px; align-items:center}
+.q-tete .titre{font-weight:600}
+.q-tete .sous{font-size:.8rem; color:var(--encre-douce)}
+.q-corps{padding:14px 16px; overflow:auto; flex:1}
+.q-pied button{white-space:nowrap}
+.q-pied{padding:10px 16px; border-top:1px solid var(--filet); display:flex; gap:8px; align-items:center}
+.enonce{margin:0 0 12px}
+.choix{display:flex; gap:9px; align-items:flex-start; padding:8px 10px; border:1px solid var(--filet);
+  border-radius:var(--r); margin-bottom:7px; cursor:pointer; background:var(--panneau)}
+.choix:hover{background:var(--survol)}
+.choix input{margin-top:3px}
+.choix.prise{border-color:var(--encre); border-width:1.5px}
+.choix.juste-prof{border-style:dashed; border-color:var(--vert)}
+.reflexion{font-size:.82rem; color:var(--terre); font-weight:600; margin:0 0 6px}
+.verdict-ok{color:var(--vert); font-weight:700}
+.verdict-ko{color:var(--rouge); font-weight:700}
+.explication{border-left:3px solid var(--filet); padding:6px 10px; margin-top:10px}
+.parole{font-style:italic}
+textarea{width:100%; font:inherit; color:var(--encre); background:var(--panneau); border:1px solid var(--filet);
+  border-radius:var(--r); padding:6px}
+
+/* ---------------- bandeau de fin */
+.fin{border:1px solid var(--filet); border-left:4px solid var(--encre); padding:12px 16px; background:var(--panneau);
+  border-radius:var(--r); margin-bottom:14px}
+.fin ul{list-style:none; padding:0; margin:8px 0}
+.fin li{padding:2px 0}
+.fin .ok{color:var(--vert)} .fin .ko{color:var(--rouge)}
+.fin .attente{color:var(--terre); font-weight:600}
+
+/* ---------------- vue enseignant */
+.prof-tag{font-size:.75rem; border:1px solid var(--terre); color:var(--terre); border-radius:10px; padding:0 8px}
+.journal td{font-size:.86rem}
+.cache{display:none !important}
+@media (max-width:900px){ .appli{grid-template-columns:1fr} nav{display:flex; flex-wrap:wrap} nav .grp{display:none}
+  nav button{width:auto} .q-panneau{width:100%; top:auto; height:60vh} .pile-notifs{width:calc(100% - 32px); top:auto; bottom:12px} }
+</style>
+</head>
+<body>
+
+<!-- ======================= RÉGLAGES DE L'ESSAI ======================= -->
+<section class="essai" aria-label="Réglages de l'essai">
+  <h1>Page d'essai — « questions au fil » et notification de message <span class="note">(maquette jetable, rien n'est enregistré · <span class="reco">orange = ma proposition</span>)</span></h1>
+  <fieldset><legend>1. Un message ou une question arrive</legend>
+    <label><input type="radio" name="notif" value="carte" checked> <span class="reco">A. Carte qui reste</span>, en haut à droite</label>
+    <label><input type="radio" name="notif" value="bulle"> B. Bulle d'aujourd'hui (2,6 s, en bas)</label>
+  </fieldset>
+  <fieldset><legend>2. La question s'ouvre</legend>
+    <label><input type="radio" name="ouvre" value="panneau" checked> <span class="reco">A. Panneau à droite</span>, l'écran reste visible</label>
+    <label><input type="radio" name="ouvre" value="fenetre"> B. Fenêtre au centre, qui bloque</label>
+    <label><input type="radio" name="ouvre" value="messagerie"> C. Dans la messagerie, comme un mail</label>
+  </fieldset>
+  <fieldset><legend>3. Après la réponse (question notée)</legend>
+    <label><input type="radio" name="retour" value="explication" checked> <span class="reco">A. ✓/✗ et explication tout de suite</span></label>
+    <label><input type="radio" name="retour" value="accuse"> B. « Merci, je note » ; ✓/✗ au bilan</label>
+  </fieldset>
+  <fieldset><legend>4. Question de réflexion (non notée)</legend>
+    <label><input type="radio" name="reflex" value="choix" checked> <span class="reco">A. Choisir une raison</span></label>
+    <label><input type="radio" name="reflex" value="libre"> B. Écrire sa réponse</label>
+  </fieldset>
+  <fieldset><legend>Voir comme</legend>
+    <label><input type="radio" name="qui" value="eleve" checked> l'élève</label>
+    <label><input type="radio" name="qui" value="prof"> l'enseignant</label>
+  </fieldset>
+  <div class="actions">
+    <button class="btn btn-s" id="raccourci" title="Remplit le bon et l'envoie, pour voir tout de suite la question">Aller à la 1re question</button>
+    <button class="btn btn-s" id="theme">Thème sombre</button>
+    <button class="btn btn-s" id="recommencer">Recommencer</button>
+  </div>
+</section>
+
+<!-- ======================= L'ÉCRAN DE LA SÉANCE ======================= -->
+<div class="appli">
+  <header class="bandeau">
+    <span class="ent">France Boissons</span><span class="seance">· plateforme de Buchelay · ENT-6.2 La commande de La Cabane à Malo</span>
+    <span class="moi">Léa · administration des ventes <span class="prof-tag cache" id="tagProf">enseignant</span></span>
+  </header>
+  <nav aria-label="Menu de la séance">
+    <div class="grp">Mon poste</div>
+    <button data-vue="accueil">Accueil</button>
+    <button data-vue="messagerie">Messagerie <span class="compteur" id="cptMails"></span></button>
+    <button data-vue="fiche">Bon de commande</button>
+    <button data-vue="questions" id="menuQuestions" class="cache">Questions <span class="compteur" id="cptQuestions"></span></button>
+    <div class="grp">Données</div>
+    <button data-vue="stock">Stock</button>
+    <div class="grp cache" id="grpProf">Enseignant</div>
+    <button data-vue="journal" id="menuJournal" class="cache">Réponses au fil</button>
+  </nav>
+  <main id="vue" tabindex="-1"></main>
+</div>
+
+<div class="pile-notifs" id="pile" aria-live="polite" role="status"></div>
+<div id="toast" role="status" aria-live="polite"></div>
+<div id="question"></div>
+
+<script>
+'use strict';
+// ------------------------------------------------------------------ données de la maquette
+// Reprises du brief ENT-6.2 (05/10/2026), simplifiées pour l'essai. Rien n'est enregistré.
+const QUESTIONS = {
+  q1: {
+    id: 'q1', de: 'Karim', role: 'chef de la plateforme', notee: true, groupe: 'Question de Karim : ton bon de commande',
+    enonce: 'Je vois passer ton bon de commande. À ton avis, qui va travailler à partir de ce bon, cette semaine ?',
+    choix: [
+      'Le préparateur de commandes, puis le chauffeur de la tournée de la côte',
+      'Malo, qui le signe à la livraison et c\'est tout',
+      'Personne : il sert seulement à facturer Malo',
+      'La brasserie Heineken, qui fabrique la bière pour Malo'
+    ],
+    juste: 0,
+    explication: 'Ton bon part à l\'entrepôt : un préparateur rassemble les fûts et les casiers, puis le chauffeur de la tournée de la côte les livre vendredi et reprend les vides. Une erreur sur ton bon, c\'est une erreur sur la palette et dans le camion.',
+    quand: 'à l\'envoi du bon de commande (juste ou faux)'
+  },
+  q2: {
+    id: 'q2', de: 'Karim', role: 'chef de la plateforme', notee: false, groupe: null,
+    enonce: 'Malo dit qu\'il a 9 fûts vides. Vendredi, le chauffeur n\'en trouve que 7. Qu\'est-ce qui te semble le plus important à faire ?',
+    choix: [
+      'Le chauffeur note 7 sur son document, et Malo signe ce chiffre',
+      'Le chauffeur reprend 7 fûts et on rembourse quand même 9 consignes',
+      'Le chauffeur attend que Malo retrouve les 2 fûts',
+      'On annule la livraison'
+    ],
+    avis: 'Ce qu\'en pense Karim : on ne rembourse que les vides vraiment repris. Le chauffeur compte devant le client, écrit le vrai chiffre, et le client signe. C\'est ce qu\'on verra à l\'ENT-6.10, au retour des vides.',
+    quand: 'à l\'envoi de la réponse à Malo (juste ou faux)'
+  }
+};
+const LIGNES_BON = [
+  { id: 'heineken', lib: 'Heineken, fût 30 L', type: 'n' },
+  { id: 'affligem', lib: 'Affligem Blonde, fût 20 L', type: 'n' },
+  { id: 'remplace', lib: 'Remplacement', type: 'liste', choix: ['Choisir…', 'Aucun', 'Pelforth Blonde 20 L', 'Edelweiss 20 L', 'Heineken 20 L'] },
+  { id: 'remplaceN', lib: 'Quantité du remplacement', type: 'n' },
+  { id: 'jour', lib: 'Jour de livraison', type: 'liste', choix: ['Choisir…', 'vendredi 18 juin', 'samedi 19 juin', 'lundi 21 juin'] },
+  { id: 'vides', lib: 'Fûts vides à reprendre', type: 'n' }
+];
+const PHRASES = [
+  { id: 'salut', lib: 'Salutation', choix: ['Choisir…', 'Bonjour Malo,', 'Salut Malo !'] },
+  { id: 'rupture', lib: 'Rupture', choix: ['Choisir…', 'Il ne nous reste que 2 fûts d\'Affligem : je vous propose 2 fûts de Pelforth Blonde 20 L à la place.', 'L\'Affligem est en rupture, je retire la ligne.'] },
+  { id: 'fin', lib: 'Fin', choix: ['Choisir…', 'Cordialement, Léa, administration des ventes', 'À plus !'] }
+];
+
+// ------------------------------------------------------------------ état (en mémoire seulement)
+let S;
+function neuf() {
+  S = {
+    vue: 'accueil', mailSel: null, redige: false, confirmeBon: false, confirmeMail: false,
+    bon: {}, bonEnvoye: false, reponse: {}, reponseEnvoyee: false,
+    mails: [
+      { id: 'm1', de: 'Inès (administration des ventes)', sujet: 'Bienvenue', heure: '09:40', lu: false,
+        texte: 'Bonjour Léa, bienvenue à l\'administration des ventes !\nMalo, le gérant de La Cabane à Malo, vient de nous écrire.\nPrends sa commande : remplis le bon de commande, puis réponds-lui.\nInès' },
+      { id: 'm2', de: 'Malo (La Cabane à Malo)', sujet: 'Commande Fête de la musique', heure: '09:32', lu: false, malo: true,
+        texte: 'Salut ! Pour la Fête de la musique il me faut 6 fûts de Heineken 30 L et 4 fûts d\'Affligem 20 L. Si jamais il manque quelque chose, mets-moi une autre blonde en 20 L. Livre-moi samedi. Et reprends mes vides : 9 fûts.\nMalo' }
+    ],
+    notifs: [],           // cartes affichées
+    questions: {},        // id -> { arrivee, premiere, reponse, quand, libre, ouverte, plusTard }
+    ouverte: null         // question affichée
+  };
+}
+neuf();
+const R = () => ({
+  notif: document.querySelector('input[name=notif]:checked').value,
+  ouvre: document.querySelector('input[name=ouvre]:checked').value,
+  retour: document.querySelector('input[name=retour]:checked').value,
+  reflex: document.querySelector('input[name=reflex]:checked').value,
+  prof: document.querySelector('input[name=qui]:checked').value === 'prof'
+});
+const ech = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const maintenant = () => { const d = new Date(); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
+
+// ------------------------------------------------------------------ arrivées (le « déclencheur »)
+function arriveMail(m) {
+  S.mails.unshift(Object.assign({ lu: false, heure: maintenant() }, m));
+  annoncer({ type: 'mail', id: m.id, qui: m.de, quoi: m.sujet });
+}
+function arriveQuestion(id) {
+  if (S.questions[id]) return;                       // une seule fois
+  const Q = QUESTIONS[id];
+  S.questions[id] = { arrivee: Date.now(), premiere: null, reponse: null, libre: '', duree: null };
+  if (R().ouvre === 'messagerie') {
+    S.mails.unshift({ id: 'mq-' + id, de: Q.de + ' (' + Q.role + ')', sujet: 'Une question', heure: maintenant(), lu: false, question: id, texte: Q.enonce });
+  }
+  annoncer({ type: 'question', id, qui: Q.de, quoi: Q.notee ? 'Une question pour toi' : 'Une question pour réfléchir' });
+}
+function annoncer(n) {
+  if (R().notif === 'bulle') {
+    toast((n.type === 'question' ? 'Nouvelle question : ' : 'Nouveau message : ') + n.qui);
+  } else {
+    n.t0 = Date.now();
+    S.notifs.push(n);
+  }
+  dessiner();
+}
+function toast(t) {
+  const el = document.getElementById('toast');
+  el.textContent = t; el.style.display = 'block';
+  clearTimeout(toast._t); toast._t = setTimeout(() => { el.style.display = 'none'; }, 2600);
+}
+
+// ------------------------------------------------------------------ dessin
+function dessiner() {
+  const r = R();
+  document.getElementById('tagProf').classList.toggle('cache', !r.prof);
+  document.getElementById('grpProf').classList.toggle('cache', !r.prof);
+  document.getElementById('menuJournal').classList.toggle('cache', !r.prof);
+  // compteurs du menu
+  const nonlus = S.mails.filter((m) => !m.lu).length;
+  const cm = document.getElementById('cptMails'); cm.textContent = nonlus || ''; cm.classList.toggle('cache', !nonlus);
+  const enAttente = Object.keys(S.questions).filter((id) => S.questions[id].reponse === null);
+  const ids = Object.keys(S.questions);
+  document.getElementById('menuQuestions').classList.toggle('cache', !ids.length || r.ouvre === 'messagerie');
+  const cq = document.getElementById('cptQuestions'); cq.textContent = enAttente.length || ''; cq.classList.toggle('cache', !enAttente.length);
+  document.querySelectorAll('nav [data-vue]').forEach((b) => { if (b.dataset.vue !== S.vue) b.removeAttribute('aria-current'); else b.setAttribute('aria-current', 'page'); });
+  document.getElementById('vue').innerHTML = VUES[S.vue]();
+  dessinerNotifs();
+  dessinerQuestion();
+}
+
+function dessinerNotifs() {
+  const pile = document.getElementById('pile');
+  if (R().notif !== 'carte') { pile.innerHTML = ''; return; }
+  // Trois cartes au plus : les plus anciennes se résument en une ligne (elles restent dans le menu).
+  const debut = Math.max(0, S.notifs.length - 3);
+  const resume = debut ? `<div class="notif note">… et ${debut} autre${debut > 1 ? 's' : ''} : voir Messagerie / Questions</div>` : '';
+  pile.innerHTML = resume + S.notifs.map((n, i) => i < debut ? '' : n.reduite ? `
+    <button class="notif reduite" data-notif-ouvrir="${i}" title="${n.type === 'question' ? 'Répondre' : 'Lire le message'}">
+      <span class="icone" aria-hidden="true">${n.type === 'question' ? '?' : '✉'}</span>
+      <span class="quoi"><b>${ech(n.qui.replace(/ \(.*\)$/, ''))}</b> · ${ech(n.quoi)}</span></button>` : `
+    <div class="notif${n.vu ? '' : ' neuve'}" data-i="${i}">
+      <div class="qui"><span class="icone" aria-hidden="true">${n.type === 'question' ? '?' : '✉'}</span>
+        ${n.type === 'question' ? 'Question' : 'Nouveau message'}
+        <button class="fermer" data-notif-fermer="${i}" aria-label="Fermer cette notification">×</button></div>
+      <div class="quoi"><b>${ech(n.qui.replace(/ \(.*\)$/, ''))}</b> · ${ech(n.quoi)}</div>
+      <div class="rangee">
+        <button class="btn btn-s btn-p" data-notif-ouvrir="${i}">${n.type === 'question' ? 'Répondre' : 'Lire le message'}</button>
+      </div>
+    </div>`).join('');
+  S.notifs.forEach((n) => { n.vu = true; });
+}
+
+const VUES = {
+  accueil() {
+    const fin = blocFin();
+    return `${fin}<h2>Accueil</h2>
+      <div class="carte"><b>Ta mission</b><ol style="margin:6px 0 0 18px; padding:0">
+        <li>Lire la commande de Malo (Messagerie).</li><li>Remplir le bon de commande et l'envoyer à Inès.</li>
+        <li>Répondre à Malo.</li></ol>
+        <p class="note">Pendant ton travail, un collègue peut te poser une question. Elle apparaît en haut à droite :
+        réponds-y quand elle arrive.</p></div>
+      <div class="carte note">Dans cette maquette, les questions arrivent : <b>q1</b> ${ech(QUESTIONS.q1.quand)} ;
+      <b>q2</b> ${ech(QUESTIONS.q2.quand)}. Le bouton « Aller à la 1re question » saute le remplissage.</div>`;
+  },
+  stock() {
+    return `<h2>Stock de Buchelay</h2><div class="carte"><table>
+      <tr><th>Article</th><th>Format</th><th>Disponible</th></tr>
+      <tr><td>Heineken</td><td>fût 30 L</td><td class="mono">16</td></tr>
+      <tr><td>Affligem Blonde</td><td>fût 20 L</td><td class="mono">2</td></tr>
+      <tr><td>Pelforth Blonde</td><td>fût 20 L</td><td class="mono">24</td></tr>
+      <tr><td>Edelweiss (blanche)</td><td>fût 20 L</td><td class="mono">24</td></tr>
+      <tr><td>Heineken</td><td>fût 20 L</td><td class="mono">0</td></tr></table>
+      <p class="note">Minimum : 10 fûts par livraison. Tournée de la côte : le vendredi.</p>
+      <div class="doc-pied">Document pédagogique — reconstitution, non contractuel</div></div>`;
+  },
+  fiche() {
+    const e = S.bonEnvoye;
+    return `${blocFin()}<h2>Bon de commande — La Cabane à Malo</h2><div class="carte">
+      ${LIGNES_BON.map((l) => `<div class="ligne-fiche"><span>${ech(l.lib)}</span>
+        ${l.type === 'n'
+          ? `<input type="number" min="0" data-bon="${l.id}" value="${ech(S.bon[l.id] ?? '')}" ${e ? 'disabled' : ''} aria-label="${ech(l.lib)}">`
+          : `<select data-bon="${l.id}" ${e ? 'disabled' : ''} aria-label="${ech(l.lib)}">${l.choix.map((c) => `<option ${S.bon[l.id] === c ? 'selected' : ''}>${ech(c)}</option>`).join('')}</select>`}
+      </div>`).join('')}
+      <div class="encadre">1. Ce que le client demande. 2. Ce qu'on peut livrer : stock, minimum, jour de tournée. 3. Ce qu'on lui propose quand ça ne colle pas.</div>
+      ${e ? '<p class="note">Bon envoyé à Inès.</p>'
+        : S.confirmeBon
+          ? `<div class="confirme">Envoyer le bon à Inès ? Tu ne pourras plus le modifier.
+              <div style="margin-top:8px; display:flex; gap:8px"><button class="btn btn-p" data-envoyer-bon>Oui, envoyer</button>
+              <button class="btn" data-annuler-bon>Non, je relis</button></div></div>`
+          : '<button class="btn btn-p" data-confirmer-bon>Envoyer le bon de commande à Inès</button>'}
+    </div>`;
+  },
+  messagerie() {
+    const m = S.mails.find((x) => x.id === S.mailSel);
+    const liste = S.mails.map((x) => `<div class="mail ${x.lu ? '' : 'nonlu'}" data-mail="${x.id}" tabindex="0" role="button">
+      <span class="de">${ech(x.de)}</span><span class="sujet">${ech(x.sujet)}</span><span class="heure">${x.heure}</span></div>`).join('');
+    let lecture = '<p class="note">Clique un message pour le lire.</p>';
+    if (m) {
+      lecture = `<h3 style="margin:0 0 4px">${ech(m.sujet)}</h3><p class="note">De : ${ech(m.de)}</p>
+        <div class="lecture">${ech(m.texte)}</div>`;
+      if (m.question) lecture += `<div style="margin-top:12px">${corpsQuestion(m.question, true)}</div>`;
+      if (m.malo && !S.reponseEnvoyee) {
+        if (!S.bonEnvoye) lecture += '<p class="note" style="margin-top:10px">Envoie d\'abord ton bon de commande à Inès.</p>';
+        else lecture += S.redige ? formReponse() : '<div style="margin-top:10px"><button class="btn btn-p" data-repondre>Répondre</button></div>';
+      }
+    }
+    return `<h2>Messagerie</h2><div class="carte">${liste}</div><div class="carte">${lecture}</div>`;
+  },
+  questions() {
+    const ids = Object.keys(S.questions);
+    return `<h2>Questions de tes collègues</h2>${ids.map((id) => {
+      const q = S.questions[id], Q = QUESTIONS[id];
+      return `<div class="carte"><div class="note">${ech(Q.de)}, ${ech(Q.role)}${Q.notee ? '' : ' · pour réfléchir'}</div>
+        <p style="margin:4px 0 8px">${ech(Q.enonce)}</p>
+        ${q.reponse === null ? `<button class="btn btn-p btn-s" data-ouvrir-q="${id}">Répondre</button>`
+          : `<p class="note">Répondu${Q.notee && R().retour === 'explication' ? (q.premiere === Q.juste ? ' — <span class="verdict-ok">✓ juste</span>' : ' — <span class="verdict-ko">✗ pas tout à fait</span>') : ''}.
+             <button class="btn btn-s" data-ouvrir-q="${id}">Revoir</button></p>`}</div>`;
+    }).join('')}`;
+  },
+  journal() {
+    const ids = Object.keys(QUESTIONS);
+    return `<h2>Réponses au fil — Léa <span class="prof-tag">vue enseignant</span></h2>
+      <div class="carte"><table class="journal"><tr><th>Question</th><th>Arrivée</th><th>Première réponse</th><th>Temps</th><th>Note</th></tr>
+      ${ids.map((id) => {
+        const Q = QUESTIONS[id], q = S.questions[id];
+        const rep = !q ? '—' : q.reponse === null ? '<span style="color:var(--terre)">en attente</span>'
+          : Q.notee ? ech(Q.choix[q.premiere]) : (R().reflex === 'libre' ? '« ' + ech(q.libre || '…') + ' »' : ech(Q.choix[q.premiere]));
+        const note = !Q.notee ? 'non notée' : !q || q.reponse === null ? 'à faire'
+          : q.premiere === Q.juste ? '<span class="ok" style="color:var(--vert)">✓ juste</span>' : '<span style="color:var(--rouge)">✗ faux</span>';
+        return `<tr><td>${ech(Q.enonce.slice(0, 70))}…</td><td>${q ? new Date(q.arrivee).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '—'}</td>
+          <td>${rep}</td><td>${q && q.duree != null ? q.duree + ' s' : '—'}</td><td>${note}</td></tr>`;
+      }).join('')}</table>
+      <p class="note">Rangé dans la base de l'élève avec la note (comme le Repérage). Les réponses de réflexion
+      ne comptent pas dans la note : elles servent à lancer la discussion en classe.</p></div>`;
+  }
+};
+
+function formReponse() {
+  return `<div class="carte" style="margin-top:10px"><b>Réponse à Malo</b>
+    ${PHRASES.map((p) => `<div class="phrase"><span class="note">${ech(p.lib)}</span>
+      <select data-phrase="${p.id}" aria-label="${ech(p.lib)}">${p.choix.map((c) => `<option ${S.reponse[p.id] === c ? 'selected' : ''}>${ech(c)}</option>`).join('')}</select></div>`).join('')}
+    ${S.confirmeMail ? `<div class="confirme">Envoyer ta réponse à Malo ?
+        <div style="margin-top:8px; display:flex; gap:8px"><button class="btn btn-p" data-envoyer-mail>Oui, envoyer</button>
+        <button class="btn" data-annuler-mail>Non, je relis</button></div></div>`
+      : '<button class="btn btn-p" data-confirmer-mail>Envoyer</button>'}</div>`;
+}
+
+// ------------------------------------------------------------------ la question
+function corpsQuestion(id, dansMail) {
+  const r = R(), Q = QUESTIONS[id], q = S.questions[id];
+  const repondu = q.reponse !== null;
+  let h = '';
+  if (!Q.notee) h += '<p class="reflexion">Pour réfléchir : il n\'y a pas une seule bonne réponse, choisis la tienne.</p>';
+  if (!dansMail) h += `<p class="enonce parole">« ${ech(Q.enonce)} »</p>`;
+  if (!Q.notee && r.reflex === 'libre') {
+    h += repondu ? `<p>Ta réponse : « ${ech(q.libre)} »</p>`
+      : `<label class="note" for="libre">Ta réponse (une ou deux phrases)</label><textarea id="libre" rows="3" data-libre>${ech(q.libre || '')}</textarea>`;
+  } else {
+    h += Q.choix.map((c, i) => {
+      const prise = repondu && q.premiere === i;
+      const marqueProf = r.prof && Q.notee && i === Q.juste;
+      return `<label class="choix ${prise ? 'prise' : ''} ${marqueProf ? 'juste-prof' : ''}">
+        <input type="radio" name="rep-${id}" value="${i}" ${repondu ? 'disabled' : ''} ${prise ? 'checked' : ''}>
+        <span>${ech(c)}${marqueProf ? ' <span class="note">(bonne réponse, vue enseignant)</span>' : ''}</span></label>`;
+    }).join('');
+  }
+  if (repondu) {
+    if (Q.notee) {
+      if (r.retour === 'explication') {
+        h += q.premiere === Q.juste ? '<p class="verdict-ok">✓ C\'est ça.</p>' : '<p class="verdict-ko">✗ Pas tout à fait.</p>';
+        h += `<div class="explication"><b>${ech(Q.de)} :</b> ${ech(Q.explication)}</div>`;
+      } else {
+        h += `<div class="explication"><b>${ech(Q.de)} :</b> Merci, je note. On en reparle à la fin de la séance.</div>`;
+      }
+    } else {
+      h += `<div class="explication">${ech(Q.avis)}</div>`;
+    }
+  }
+  if (dansMail) {
+    h += repondu ? '' : `<div style="margin-top:8px"><button class="btn btn-p" data-valider-q="${id}">Envoyer ma réponse</button></div>`;
+  }
+  return h;
+}
+
+function dessinerQuestion() {
+  const hote = document.getElementById('question');
+  const id = S.ouverte;
+  const r = R();
+  if (!id || r.ouvre === 'messagerie') { hote.innerHTML = ''; return; }
+  const Q = QUESTIONS[id], q = S.questions[id];
+  const repondu = q.reponse !== null;
+  const tete = `<div class="q-tete"><span class="icone" aria-hidden="true">?</span>
+      <div><div class="titre">${ech(Q.de)} te pose une question</div><div class="sous">${ech(Q.role)}${Q.notee ? '' : ' · pour réfléchir'}</div></div></div>`;
+  const pied = repondu
+    ? `<div class="q-pied"><button class="btn btn-p" data-fermer-q>Reprendre mon travail</button></div>`
+    : `<div class="q-pied"><button class="btn btn-p" data-valider-q="${id}">Répondre</button>
+       ${r.ouvre === 'panneau' ? '<button class="btn" data-plus-tard>Plus tard</button>' : ''}
+       <span class="note" style="margin-left:auto">${Q.notee ? 'Une seule réponse compte : la première.' : ''}</span></div>`;
+  const corps = `${tete}<div class="q-corps">${corpsQuestion(id, false)}</div>${pied}`;
+  if (r.ouvre === 'panneau') {
+    hote.innerHTML = `<aside class="q-panneau" role="dialog" aria-modal="false" aria-label="Question de ${ech(Q.de)}">${corps}</aside>`;
+  } else {
+    hote.innerHTML = `<div class="q-voile"></div><div class="q-fenetre" role="dialog" aria-modal="true" aria-label="Question de ${ech(Q.de)}">${corps}</div>`;
+  }
+}
+
+function ouvrirQuestion(id) {
+  if (R().ouvre === 'messagerie') { S.vue = 'messagerie'; S.mailSel = 'mq-' + id; const m = S.mails.find((x) => x.id === S.mailSel); if (m) m.lu = true; }
+  else S.ouverte = id;
+  S.questions[id].plusTard = false;
+  dessiner();
+  const premier = document.querySelector('.q-panneau input, .q-fenetre input, .q-panneau textarea, .q-fenetre textarea');
+  if (premier && document.activeElement && document.activeElement.matches(':focus-visible')) premier.focus();
+}
+
+function validerQuestion(id) {
+  const Q = QUESTIONS[id], q = S.questions[id];
+  if (!Q.notee && R().reflex === 'libre') {
+    const t = (document.querySelector('[data-libre]') || {}).value || '';
+    if (!t.trim()) return toast('Écris ta réponse, même courte.');
+    q.libre = t.trim(); q.premiere = -1;
+  } else {
+    const c = document.querySelector(`input[name="rep-${id}"]:checked`);
+    if (!c) return toast('Choisis une réponse.');
+    q.premiere = Number(c.value);          // écrit une fois : la première réponse
+  }
+  q.reponse = q.premiere; q.duree = Math.round((Date.now() - q.arrivee) / 1000);
+  S.notifs = S.notifs.filter((n) => !(n.type === 'question' && n.id === id));
+  dessiner();
+}
+
+// ------------------------------------------------------------------ bandeau de fin
+function blocFin() {
+  if (!S.reponseEnvoyee) return '';
+  const r = R();
+  const enAttente = Object.keys(S.questions).filter((id) => QUESTIONS[id].notee && S.questions[id].reponse === null);
+  if (enAttente.length) {
+    return `<div class="fin"><b>Presque fini.</b> <span class="attente">Il te reste ${enAttente.length} question de ton chef à répondre.</span>
+      <div style="margin-top:8px"><button class="btn btn-p btn-s" data-ouvrir-q="${enAttente[0]}">Répondre maintenant</button></div>
+      <p class="note">Le bilan s'affiche dès que tu as répondu. Rien n'est bloqué : la question est toujours là.</p></div>`;
+  }
+  const b = S.bon, p = S.reponse;
+  const lignes = [
+    ['Le bon : ce qu\'on peut livrer', b.heineken == 6 && b.affligem == 2],
+    ['Le bon : le remplacement', b.remplace === 'Pelforth Blonde 20 L' && b.remplaceN == 2],
+    ['Le bon : le jour et les vides', b.jour === 'vendredi 18 juin' && b.vides == 9],
+    ['Message à Malo : la rupture', p.rupture === PHRASES[1].choix[1]],
+    ['Message à Malo : le ton', p.salut === PHRASES[0].choix[1] && p.fin === PHRASES[2].choix[1]],
+    [QUESTIONS.q1.groupe, S.questions.q1 && S.questions.q1.premiere === QUESTIONS.q1.juste]
+  ];
+  return `<div class="fin"><b>Tu as fini : voici ce qui est juste et ce qui est à corriger.</b>
+    <ul>${lignes.map(([t, ok]) => `<li class="${ok ? 'ok' : 'ko'}">${ok ? '✓' : '✗'} ${ech(t)}</li>`).join('')}</ul>
+    <p class="note">La question de Karim compte à la première réponse : « Corriger » ne la rouvre pas
+    ${r.retour === 'explication' ? '(tu as déjà vu l\'explication)' : ''}. La question pour réfléchir n'est pas notée.</p>
+    <button class="btn btn-s">Corriger</button> <span class="note">(inactif dans la maquette)</span></div>`;
+}
+
+// ------------------------------------------------------------------ gestes
+document.addEventListener('click', (ev) => {
+  const t = ev.target.closest('button, [data-mail], [data-vue]');
+  if (!t) return;
+  if (t.dataset.vue) { S.vue = t.dataset.vue; S.ouverte = S.ouverte; dessiner(); return; }
+  if (t.dataset.mail) { S.mailSel = t.dataset.mail; const m = S.mails.find((x) => x.id === S.mailSel); m.lu = true;
+    S.notifs = S.notifs.filter((n) => !(n.type === 'mail' && n.id === m.id)); dessiner(); return; }
+  if (t.hasAttribute('data-notif-fermer')) { S.notifs.splice(Number(t.dataset.notifFermer), 1); dessiner(); return; }
+  if (t.hasAttribute('data-notif-ouvrir')) {
+    const n = S.notifs[Number(t.dataset.notifOuvrir)];
+    if (n.type === 'mail') { S.vue = 'messagerie'; S.mailSel = n.id; const m = S.mails.find((x) => x.id === n.id); if (m) m.lu = true;
+      S.notifs.splice(Number(t.dataset.notifOuvrir), 1); dessiner(); }
+    else ouvrirQuestion(n.id);
+    return;
+  }
+  if (t.hasAttribute('data-ouvrir-q')) { ouvrirQuestion(t.dataset.ouvrirQ); return; }
+  if (t.hasAttribute('data-valider-q')) { validerQuestion(t.dataset.validerQ); return; }
+  if (t.hasAttribute('data-fermer-q')) { S.ouverte = null; dessiner(); return; }
+  if (t.hasAttribute('data-plus-tard')) {
+    const id = S.ouverte; S.ouverte = null; S.questions[id].plusTard = true;
+    S.notifs = S.notifs.filter((n) => !(n.type === 'question' && n.id === id));
+    toast('La question t\'attend dans « Questions », dans le menu.'); dessiner(); return; }
+  if (t.hasAttribute('data-confirmer-bon')) { S.confirmeBon = true; dessiner(); return; }
+  if (t.hasAttribute('data-annuler-bon')) { S.confirmeBon = false; dessiner(); return; }
+  if (t.hasAttribute('data-envoyer-bon')) { envoyerBon(); return; }
+  if (t.hasAttribute('data-repondre')) { S.redige = true; dessiner(); return; }
+  if (t.hasAttribute('data-confirmer-mail')) {
+    if (PHRASES.some((p) => !S.reponse[p.id] || S.reponse[p.id] === 'Choisir…')) return toast('Choisis une phrase à chaque ligne.');
+    S.confirmeMail = true; dessiner(); return; }
+  if (t.hasAttribute('data-annuler-mail')) { S.confirmeMail = false; dessiner(); return; }
+  if (t.hasAttribute('data-envoyer-mail')) { envoyerMail(); return; }
+});
+document.addEventListener('keydown', (ev) => {
+  if (ev.key === 'Enter' && ev.target.dataset && ev.target.dataset.mail) ev.target.click();
+  if (ev.key === 'Escape' && S.ouverte && R().ouvre === 'panneau') {
+    const q = S.questions[S.ouverte]; if (q.reponse === null) q.plusTard = true;
+    S.ouverte = null; dessiner(); }
+});
+document.addEventListener('change', (ev) => {
+  const t = ev.target;
+  if (t.dataset.bon) S.bon[t.dataset.bon] = t.value;
+  if (t.dataset.phrase) S.reponse[t.dataset.phrase] = t.value;
+  if (t.closest('.essai')) {
+    if (t.name === 'ouvre' || t.name === 'notif') { neuf(); }
+    if (t.name === 'qui' && R().prof === false && S.vue === 'journal') S.vue = 'accueil';
+    dessiner();
+  }
+});
+document.addEventListener('input', (ev) => {
+  const t = ev.target;
+  if (t.dataset.bon) S.bon[t.dataset.bon] = t.value;
+  if (t.hasAttribute && t.hasAttribute('data-libre') && S.ouverte) S.questions[S.ouverte].libre = t.value;
+});
+
+function envoyerBon() {
+  S.bonEnvoye = true; S.confirmeBon = false;
+  // Le déclencheur : à l'envoi, juste ou faux. Le message d'Inès et la question de Karim arrivent.
+  arriveMail({ id: 'm3', de: 'Inès (administration des ventes)', sujet: 'Bon de commande reçu',
+    texte: 'Bon de commande reçu. Réponds maintenant à Malo : il attend de savoir ce qu\'il aura, et quand.\nInès' });
+  setTimeout(() => arriveQuestion('q1'), 900);
+  dessiner();
+}
+function envoyerMail() {
+  S.reponseEnvoyee = true; S.redige = false; S.confirmeMail = false;
+  S.mails.unshift({ id: 'm-out', de: 'Moi → Malo', sujet: 'RE : Commande Fête de la musique', heure: maintenant(), lu: true,
+    texte: PHRASES.map((p) => S.reponse[p.id]).join('\n') });
+  // Réponse neutre de Malo : elle ne dit pas si c'était juste (remarque du brief FRANCE-BOISSONS-refonte, 6.2).
+  setTimeout(() => arriveMail({ id: 'm4', de: 'Malo (La Cabane à Malo)', sujet: 'RE : Commande', texte: 'Bien reçu, merci. À vendredi.\nMalo' }), 700);
+  setTimeout(() => arriveQuestion('q2'), 1500);
+  dessiner();
+}
+
+document.getElementById('recommencer').addEventListener('click', () => { neuf(); dessiner(); });
+document.getElementById('raccourci').addEventListener('click', () => {
+  neuf();
+  S.bon = { heineken: '6', affligem: '4', remplace: 'Aucun', remplaceN: '0', jour: 'samedi 19 juin', vides: '9' };
+  S.vue = 'fiche'; S.mails.forEach((m) => { m.lu = true; });
+  envoyerBon();
+});
+document.getElementById('theme').addEventListener('click', (ev) => {
+  const sombre = document.documentElement.dataset.theme !== 'sombre';
+  document.documentElement.dataset.theme = sombre ? 'sombre' : 'clair';
+  ev.target.textContent = sombre ? 'Thème clair' : 'Thème sombre';
+});
+// Réduction des cartes au bout de 8 s.
+setInterval(() => {
+  let change = false;
+  S.notifs.forEach((n) => { if (!n.reduite && n.t0 && Date.now() - n.t0 > 8000) { n.reduite = true; change = true; } });
+  if (change) dessinerNotifs();
+}, 1000);
+// Le haut du panneau et des notifications suit le bas des réglages de l'essai (ils défilent).
+function caler() {
+  const bas = document.querySelector('.essai').getBoundingClientRect().bottom;
+  document.documentElement.style.setProperty('--haut', Math.max(0, Math.round(bas)) + 'px');
+}
+window.addEventListener('scroll', caler, { passive: true });
+window.addEventListener('resize', caler);
+caler();
+dessiner();
+</script>
+</body>
+</html>
