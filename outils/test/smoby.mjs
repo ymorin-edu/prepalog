@@ -2989,6 +2989,120 @@ await v('ENT-5.8 : pièges — expéditeur et destinataire inversés (jalon 1 se
   egal(await etapes58(), huit('ok', [2, 7, 8]), 'Smoby transporteur, 10 h 00 au client, demander à Smoby de prévenir le client');
 });
 
+// ── Lot 0 de SMOBY-notation-5.3-5.8 (07/10/2026, règle absolue de Tristan) : aucun élève bloqué en fin de séance ──
+// Pour chaque séance de 5.3 à 5.8, le PIRE CAS à l'écran (tout faux, ou le geste irréversible raté) : à la fin, la
+// photo de fin de séance est rangée (c'est elle qui ouvre la suivante, core/parcours.js) et le bandeau ne dit plus
+// « La séance suivante s'ouvrira quand tout sera juste ». Sabotage : retirer `suiteAuBilan` d'une séance fait tomber son cas.
+const finLot0 = (hote, win, id) => pg.evaluate(([hote, win, id]) => {
+  const b = document.querySelector(`${hote} [data-fin-seance] [data-fin]`);
+  return { photo: !!(window[win].db.points && window[win].db.points[id]), bandeau: b ? b.dataset.fin : null,
+    texte: b ? b.textContent.replace(/\s+/g, ' ') : '' };
+}, [hote, win, id]);
+const pasBloque = async (hote, win, id, quoi) => {
+  const f = await finLot0(hote, win, id);
+  vrai(f.photo, `${quoi} : pas de photo de fin, la séance suivante resterait fermée`);
+  egal(f.bandeau, 'ko', `${quoi} : bandeau de fin`);
+  vrai(!/quand tout sera juste/.test(f.texte), `${quoi} : le bandeau dit encore « quand tout sera juste »`);
+};
+
+await v('Lot 0 : 5.3 à 5.8 déclarent toutes `suiteAuBilan` (la suite s’ouvre à la fin, justes ou faux)', async () => {
+  const r = await pg.evaluate(async () => {
+    const L = ['visite', 'reception', 'rangement', 'preparation', 'enlevements', 'lettre-voiture'];
+    return Promise.all(L.map(async (n) => (await import(`/activites/smoby-${n}.js`)).meta.suiteAuBilan === true));
+  });
+  egal(r, Array(6).fill(true), '5.3, 5.4, 5.5, 5.6, 5.7, 5.8');
+});
+
+await v('Lot 0 : ENT-5.3 — l’adresse décomposée fausse (une seule validation, irréversible) : la 5.4 s’ouvre', async () => {
+  await monter53({ uid: 'u-53-pire' });
+  await pg.click(`${T53} .ent-nav[data-vue="entrepot"]`);
+  await suivant53();
+  for (const n of [1, 2, 3, 4, 5, 6]) await pg.click(`${Z53} button[data-pv-point="${n}"]`);
+  await pg.click(`${Z53} [data-pv="questions"]`);
+  await clic53(400, 575); await clic53(1000, 560); await clic53(400, 575); await clic53(500, 400);
+  await suivant53();
+  for (const n of [1, 2, 3, 4, 5, 6]) {
+    if (await pg.$(`${Z53} [data-pv="retour"]`)) await pg.click(`${Z53} [data-pv="retour"]`);
+    await pg.click(`${Z53} g[data-pv-etape="${n}"]`);
+  }
+  await suivant53();
+  for (const n of [4, 1, 6, 2, 5, 3]) await pg.click(`${Z53} [data-pv-num="${n}"]`);
+  await suivant53();
+  for (const n of [1, 2, 3, 4, 5, 6, 7, 8]) await pg.click(`${Z53} button[data-pv-point="${n}"]`);
+  await suivant53();
+  await clic53(300, 500); await clic53(700, 120); await clic53(450, 600); await clic53(800, 1700);
+  await suivant53();
+  for (const [x, y] of [[287, 45], [847, 47], [258, 1175], [876, 1173]]) await clic53(x, y);
+  await pg.click(`${Z53} [data-pv="verifierCoins"]`);
+  await clic53(570, 80); await clic53(570, 454); await clic53(570, 687);
+  await suivant53();
+  const sens = ['allée et côté', 'niveau', 'travée', 'emplacement'];
+  for (let i = 0; i < 4; i++) await pg.selectOption(`${Z53} [data-pv-choix="${i}"]`, sens[i]);
+  await pg.click(`${Z53} [data-pv="valider"]`);
+  await pg.click(`${Z53} [data-pe-trav="A1-T03"]`);
+  await pg.click(`${Z53} [data-pe-emp="A1-T03-N1-E1"]`);
+  await pg.click(`${Z53} [data-pe-emp="A1-T03-N2-E1"]`);
+  await suivant53();
+  const st = await etapes53();
+  vrai(st.every((x) => x === 'ok' || x === 'ko') && st[15] === 'ko', `étapes : ${st.join(' ')}`);
+  await pasBloque(T53, '__53', 'smoby-visite', 'ENT-5.3');
+});
+
+await v('Lot 0 : ENT-5.4 — rien signalé, constat faux, tout accepté sans réserve, BL signé, compte rendu faux : la 5.5 s’ouvre', async () => {
+  await parcours54({ uid: 'u-54-pire', secu: { constat: { ...SECU54, epi: 'ko' }, signalerAvant: false },
+    decisions: { P1: [8, 'accepter'], P2: [45, 'accepter'], P3: [36, 'accepter'], P4: [36, 'accepter'] }, reserves: {},
+    phrases: { reserves: 'Tout est conforme.' } });
+  const st = await etapes54();
+  egal(Object.values(st).filter((x) => x !== 'ok' && x !== 'ko'), [], 'tout est jugé');
+  egal(Object.entries(st).filter(([, x]) => x === 'ok').map(([k]) => k).sort(), ['P1-palette', 'P2-palette', 'signature'], 'seuls justes');
+  await pasBloque(T54, '__54', 'smoby-reception', 'ENT-5.4');
+});
+
+await v('Lot 0 : ENT-5.5 — palettes mal rangées, saisie fausse (validée : irréversible), stock et message faux : la 5.6 s’ouvre', async () => {
+  await parcours55({ uid: 'u-55-pire', place: { P1: 'L1', P2: 'L2', P3: 'A1-T01-N1-E3', P4: 'B2-T02-N1-E2' },
+    saisie: { ...SAISIE55, 'SMB-NJL': [8, 6, 'ok', 'accepte'], 'SMB-EBD': [36, 36, 'ok', 'accepte'], 'SMB-PLS': [36, 36, 'ok', 'accepte'] },
+    stock: { stock: 'Il y a maintenant 396 cartons de porteurs Little Smoby en stock.' },
+    kn: { depart: 'La commande de Noël pourra partir vendredi 11 décembre.' } });
+  const st = await etapes55();
+  egal(Object.values(st).filter((x) => x !== 'ko'), [], `tout faux : ${JSON.stringify(st)}`);
+  await pasBloque(T55, '__55', 'smoby-rangement', 'ENT-5.5');
+});
+
+await v('Lot 0 : ENT-5.6 — une seule ligne, mauvais film, une étiquette, terminée et vérifiée : la 5.7 s’ouvre ; rien avant « Vérifier »', async () => {
+  await monter56({ uid: 'u-56-pire' });
+  await pg.click(`${T56} .ent-nav[data-vue="entrepot"]`);
+  await prelever56(...L56[0]);
+  for (let i = 0; i < 4 && await pg.$(`${P56} [data-pe="retour"]`); i++) await pg.click(`${P56} [data-pe="retour"]`);
+  await pg.click(`${P56} [data-pe="terminer"]`);
+  await pg.selectOption(`${P56} [data-pe-film]`, '2');
+  await pg.check(`${P56} [data-pe-etiq="avant"]`);
+  egal((await finLot0(T56, '__56', 'smoby-preparation')).photo, false, 'photo avant « Vérifier ma préparation »');
+  await pg.click(`${P56} [data-pe="verifierPrep"]`);
+  egal(Object.values(await etapes56()).filter((x) => x === 'ok'), [], 'aucun jalon juste');
+  await pasBloque(T56, '__56', 'smoby-preparation', 'ENT-5.6');
+  // « Reprendre la préparation » ne referme pas la suite.
+  await pg.click(`${P56} [data-pe="reprendre"]`);
+  egal((await finLot0(T56, '__56', 'smoby-preparation')).photo, true, 'photo gardée après « Reprendre »');
+});
+
+await v('Lot 0 : ENT-5.7 — rien posé, envoyé avant et après la panne : la 5.8 s’ouvre', async () => {
+  await monter57({ uid: 'u-57-pire' });
+  await pg.click(`${T57} .ent-nav[data-vue="planning"]`);
+  await envoyer57();
+  await envoyer57();
+  egal(await etapes57(), tous57('ko'), 'tout faux');
+  await pasBloque(T57, '__57', 'smoby-enlevements', 'ENT-5.7');
+});
+
+await v('Lot 0 : ENT-5.8 — lettre vide, suivi faux, messages faux : la séance est finie (photo rangée)', async () => {
+  await monter58({ uid: 'u-58-pire' });
+  await parcours58({ lettre: Object.fromEntries(Object.keys(LETTRE58).map((k) => [k, null])), suivi: { heure: '10:00', avant: 'Non' },
+    client: { salut: 'Coucou', fin: 'Bisous' }, smoby: { salut: 'Salut !', fin: 'Bisous' } });
+  const st = await etapes58();
+  egal(st.filter((x) => x !== 'ko'), [], `tout faux : ${st.join(' ')}`);
+  await pasBloque(T58, '__58', 'smoby-lettre-voiture', 'ENT-5.8');
+});
+
 await v('Smoby : aucune erreur JavaScript dans le bloc', async () => {
   if (erreursS.length) throw new Error([...new Set(erreursS)].slice(0, 5).join(' | '));
 });

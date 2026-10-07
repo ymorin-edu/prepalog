@@ -76,6 +76,9 @@ const etatPrep = (db) => (db && db.entrepots && db.entrepots[ENTREPOT.id]) || nu
 // La préparation terminée, vérifiée, et juste sur les lignes et toute la palette (jalons 1 à 8). Le
 // parcours n'y entre pas : un détour ne se rattrape pas en reprenant la préparation, et Bruno doit
 // pouvoir conclure.
+// La préparation terminée et vérifiée, juste ou non : la séance est finie, la suivante s'ouvre (lot 0 de
+// SMOBY-notation-5.3-5.8). « Reprendre la préparation » ne la referme pas : la photo est déjà rangée.
+export const preparationFinie = (db) => { const e = etatPrep(db); return !!(e && e.fin && e.verifie); };
 export const preparationConforme = (db) => {
   const e = etatPrep(db);
   if (!e || !e.fin || !e.verifie) return false;

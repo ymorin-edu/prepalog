@@ -30,6 +30,8 @@ export const meta = {
   immersif: true,
   // Parcours strict : ne s'ouvre qu'à l'élève qui a validé ENT-5.5 (voir core/parcours.js).
   parcours: true,
+  // Elle ouvre la suivante dès qu'elle est finie, justes ou faux (lot 0 de SMOBY-notation-5.3-5.8 : aucun élève bloqué).
+  suiteAuBilan: true,
   precedente: 'smoby-rangement',
   portee: 'eleve',
   tables: {},
@@ -57,6 +59,8 @@ const moteur = creerEntreprise({
   volet: SEANCE.VOLET,
   lexique: SEANCE.LEXIQUE,
   entrepot: SEANCE.ENTREPOT,
+  // Ses jalons ne sont jamais « faux » : elle est finie quand la préparation est terminée et vérifiée.
+  seanceFinie: SEANCE.preparationFinie,
   sansTrame: "Tout à l'écran",
 });
 

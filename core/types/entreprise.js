@@ -622,6 +622,13 @@ export function creerEntreprise(U) {
       // la séance restent « à faire » jusqu'à l'envoi (la photo de fin et la note moyennée en dépendent) :
       // Spartoo et Boost jugent leurs jalons en continu, ils n'ont pas le drapeau.
       const CORRECTION = !!(ctx.meta && ctx.meta.correction);
+      // SUITE AU BILAN (lot 0 du brief SMOBY-notation-5.3-5.8, 07/10/2026 ; règle absolue de Tristan : « aucun élève
+      // bloqué à la fin »). `meta.suiteAuBilan: true` : la séance suivante s'ouvre au premier bilan, comme pour
+      // `correction`, mais sans bouton « Corriger » ni note moyennée (le bandeau d'origine, dont la dernière phrase
+      // change). `correction` l'implique. « Fini » = tous les jalons jugés ; une séance dont les jalons ne sont jamais
+      // « faux » déclare `seanceFinie(db)` dans `creerEntreprise` (ENT-5.6 : la préparation terminée et vérifiée).
+      const SUITE_AU_BILAN = CORRECTION || !!(ctx.meta && ctx.meta.suiteAuBilan);
+      const fini = (st) => bilanComplet(st) || (SUITE_AU_BILAN && typeof U.seanceFinie === 'function' && !!U.seanceFinie(db));
       // Copie rendue : plus rien ne s'écrit dans la base, même si un geste passait le verrou.
       const sauver = () => { if (rendue()) return; declencher(); ctx.jeu.sauver(); remonterEtapes(); };
       const stockDe = (sku) => { const q = db.stock[sku]; return q == null ? 0 : q; };
@@ -685,13 +692,15 @@ export function creerEntreprise(U) {
         return `<div class="ent-fin ent-fin-ko" role="status" data-fin="ko"><span class="ent-fin-ico" aria-hidden="true">⚠</span>
           <div><b>Tu as tout fait, mais il reste quelque chose à corriger :</b>
             <ul>${faux.map((e) => `<li data-fin-jalon="${ech(e.id)}">${ech(e.titre)}</li>`).join('')}</ul>
-            <span class="ent-fin-petit">Relis ta trame à ces étapes. Si tu ne trouves pas, appelle ton professeur${ctx.meta.reinitialisable ? ' ou réinitialise ta séance' : ''}.
-            La séance suivante s'ouvrira quand tout sera juste.</span></div></div>`;
+            <span class="ent-fin-petit">${SUITE_AU_BILAN
+              ? `Relis ta trame à ces étapes.${ctx.suivante ? ` La séance suivante, ${ech(ctx.suivante.code)} « ${ech(ctx.suivante.titre)} », est ouverte.` : ''}`
+              : `Relis ta trame à ces étapes. Si tu ne trouves pas, appelle ton professeur${ctx.meta.reinitialisable ? ' ou réinitialise ta séance' : ''}.
+            La séance suivante s'ouvrira quand tout sera juste.`}</span></div></div>`;
       }
       function bandeauFin(res) {
         if (estProf || COPIE || !ctx.meta.parcours || !etapes.length) return '';
         const st = res || noterBase(db).detail;
-        if (!bilanComplet(st)) return '';
+        if (!fini(st)) return '';
         if (!CORRECTION) return bandeauAncien(st);
         const G = groupesDuBilan(st);
         const tout = G.every((g) => g.ok);
@@ -824,7 +833,7 @@ export function creerEntreprise(U) {
         // travail. Elle ouvre la séance suivante et sert de point de reprise (voir core/parcours.js). Elle est
         // REMPLACÉE à chaque nouveau bilan complet qui change, pour que la suite parte du travail corrigé.
         // En évaluation, la règle d'avant : tout juste.
-        if (ctx.meta.parcours && (CORRECTION && !COPIE ? bilanComplet(res) : brut === max)) {
+        if (ctx.meta.parcours && (SUITE_AU_BILAN && !COPIE ? fini(res) : brut === max)) {
           if (!db.points) db.points = {};
           const cleBilan = etapes.map((e) => res[e.id]).join();
           if (!db.points[ctx.meta.id] || (clePhoto !== null && clePhoto !== cleBilan)) {
