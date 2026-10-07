@@ -407,7 +407,7 @@ export const CORRIGE = {
       "genre": "fait",
       "texte": "Comment termines-tu ton message ?",
       "rep": "« Peux-tu valider ? Merci, bonne journée. »",
-      "note": "Phrase du lot A du brief SMOBY-retours-5.1-5.2 (décision 4a de Tristan). Tant que le lot A n'est pas en ligne, l'écran propose « Pouvez-vous valider ? Cordialement, »."
+      "note": "Phrase du lot A du brief SMOBY-retours-5.1-5.2 (décision 4a de Tristan), en ligne depuis le 06/10/2026."
     },
     {
       "etape": 6,
@@ -427,7 +427,7 @@ export const CORRIGE = {
       "etape": 6,
       "etapeTitre": "Répondre à Sophie",
       "genre": "reflexion",
-      "texte": "« Car il a le CACES. » : pourquoi cette raison ne suffit-elle pas pour convaincre Sophie ?",
+      "texte": "La raison « car ce candidat a le CACES. » ne suffit pas pour convaincre Sophie : pourquoi ?",
       "pistes": [
         "Elle est incomplète : Laura, Thomas et Sabrina ont aussi un CACES.",
         "Sophie doit pouvoir vérifier les trois critères : CACES 3 valide, disponible le 9/12, accepte un CDD.",

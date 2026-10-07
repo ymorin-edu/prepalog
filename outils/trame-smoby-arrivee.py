@@ -15,6 +15,7 @@ Construit (comme dans la séance) : Sophie, l'équipe, les besoins par jour, les
 Données du planning relues dans `contenus/smoby-ent52.js` le 06/10/2026 et recopiées ci-dessous (DONNEES) : le
 tableau des présents et les réponses du corrigé sont CALCULÉS depuis elles, et la solution `SOLUTION` du contenu est
 rejugée ici (le script s'arrête si elle ne respecte pas les règles).
+Revue le 07/10/2026 : encadré « À la fin de la séance » (bandeau de fin et parcours strict de Claude Code).
 
 Lancer : python3 outils/trame-smoby-arrivee.py
 puis    soffice --headless --convert-to pdf --outdir contenus/trames contenus/trames/ENT-5.2-smoby-arrivee-trame-eleve.docx
@@ -234,6 +235,21 @@ T.faits(['Par quelle formule commences-tu ton message ?', 'Quel constat choisis-
 T.qcm([("Ton planning a assez de monde chaque jour. La phrase « J'ai annulé tous les congés. » est…",
         ['juste', 'fausse : les congés sont accordés quand c’est possible', 'plus polie'], 1)])
 T.reflechir(["Pourquoi ton constat doit-il parler du cariste CACES, et pas seulement du nombre de personnes ?"])
+# Le bandeau de fin de séance et le parcours strict (Claude Code, 06/10/2026 : commits 0812cab et 49b9605). Les titres
+# des jalons sont cités sans leur nombre (« Les 4 pièces… » donnerait la réponse de l'étape 2). Pas de
+# « Réinitialiser » en 5.2 : seul l'enseignant peut remettre la séance au début.
+T.encadre_liste('À la fin de la séance :', [
+    "« Séance validée » : tout est juste. La séance ENT-5.3 s'ouvre pour toi.",
+    "Sinon, le bandeau donne le titre de ce qui est à corriger (jamais la réponse). Cherche ce titre ci-dessous, "
+    "puis relis ta trame à cette étape.",
+    "« Les … pièces à demander sont cochées » ou « Aucune pièce de trop » : étape 2.",
+    "« Le premier jour de Yanis est dans l'ordre » : étape 3.",
+    "« 1er envoi — … » : étapes 4 et 5.",
+    "« Après l'aléa — … » : étape 6.",
+    "« Le point à Sophie est juste (constat et ton) » : étape 7.",
+    "Ce que tu as envoyé ne se modifie plus : appelle ton professeur. Lui seul peut te faire recommencer la séance.",
+    "La séance ENT-5.3 ne s'ouvre que quand tout est juste."],
+    intro="quand tu as tout envoyé, un bandeau s'affiche en haut de l'écran.")
 
 # ==================================================================== feuille à détacher (cours)
 ESSENTIEL = [("L'employeur ne demande au salarié que les pièces qui ont un {} avec le poste.", 'lien direct'),

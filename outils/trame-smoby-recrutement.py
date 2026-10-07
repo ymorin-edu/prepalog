@@ -11,7 +11,8 @@ usine d'Arinthod, deux sites à Moirans-en-Montagne dont un entrepôt de 30 000 
 ventes à l'international ; la logistique de Moirans emploie 25 à 60 personnes selon la saison. L'année de création
 (1924 ou 1926 selon les sources) et l'année du rachat ne sont PAS demandées (sources en désaccord).
 Construit (comme dans la séance) : Sophie, les cinq candidats, leurs CV, les dates.
-Valeurs des CV relues dans `contenus/smoby-ent51.js` le 06/10/2026.
+Valeurs des CV relues dans `contenus/smoby-ent51.js` le 06/10/2026 ; trame revue le 07/10/2026 (phrase de
+l'écran « car ce candidat… », encadré « À la fin de la séance » pour le bandeau de fin et le parcours strict).
 
 Lancer : python3 outils/trame-smoby-recrutement.py
 puis    soffice --headless --convert-to pdf --outdir contenus/trames contenus/trames/ENT-5.1-smoby-recrutement-trame-eleve.docx
@@ -131,7 +132,21 @@ T.faits(['Par quelle formule commences-tu ton message ?', 'Quelles sont les troi
          'Comment termines-tu ton message ?'], hauteur=Cm(1.1))
 T.qcm([("Pour finir un message à une collègue, la meilleure formule est…",
         ['« Bisous »', '« Merci de valider vite »', '« Peux-tu valider ? Merci, bonne journée. »'], 2)])
-T.reflechir(["« Car il a le CACES. » : pourquoi cette raison ne suffit-elle pas pour convaincre Sophie ?"])
+T.reflechir(["La raison « car ce candidat a le CACES. » ne suffit pas pour convaincre Sophie : pourquoi ?"])
+# Le bandeau de fin de séance et le parcours strict (Claude Code, 06/10/2026 : commits 0812cab et 49b9605) : l'élève
+# doit pouvoir relier les titres du bandeau aux étapes de la trame (le bandeau dit « Relis ta trame à ces étapes »).
+T.encadre_liste('À la fin de la séance :', [
+    "« Séance validée » : tout est juste. La séance ENT-5.2 s'ouvre pour toi.",
+    "Sinon, le bandeau donne le titre de ce qui est à corriger (jamais la réponse). Cherche ce titre ci-dessous, "
+    "puis relis ta trame à cette étape.",
+    "« Tableau de tri : la ligne de … est juste » : étapes 3 et 4.",
+    "« Le bon candidat est retenu » : étape 4.",
+    "« Le bon contrat est choisi » : étape 5.",
+    "« Message à Sophie : … » : étape 6.",
+    "Pour corriger, tu réinitialises la séance : ton travail à l'écran est effacé et tu recommences. Garde ce carnet, "
+    "il te fera aller plus vite. Si tu ne trouves pas, appelle ton professeur.",
+    "La séance ENT-5.2 ne s'ouvre que quand tout est juste."],
+    intro="quand tu as tout envoyé, un bandeau s'affiche en haut de l'écran.")
 
 # ==================================================================== feuille à détacher (cours)
 ESSENTIEL = [('Pour conduire un chariot, il faut un {} de la bonne catégorie.', 'CACES'),
@@ -202,8 +217,8 @@ ENT_5_1 = {
    "Accepter toute réponse qui oppose un avantage et un inconvénient."]},
  "Par quelle formule commences-tu": {"rep": "« Bonjour Sophie, »"},
  "Quelles sont les trois raisons de ton choix": {"rep": "Il a le CACES 3 valide, il est disponible le 9 décembre et il accepte un CDD."},
- "Comment termines-tu ton message": {"rep": "« Peux-tu valider ? Merci, bonne journée. »", "note": "Phrase du lot A du brief SMOBY-retours-5.1-5.2 (décision 4a de Tristan). Tant que le lot A n'est pas en ligne, l'écran propose « Pouvez-vous valider ? Cordialement, »."},
- "« Car il a le CACES. »": {"pistes": [
+ "Comment termines-tu ton message": {"rep": "« Peux-tu valider ? Merci, bonne journée. »", "note": "Phrase du lot A du brief SMOBY-retours-5.1-5.2 (décision 4a de Tristan), en ligne depuis le 06/10/2026."},
+ "La raison « car ce candidat a le CACES. »": {"pistes": [
    "Elle est incomplète : Laura, Thomas et Sabrina ont aussi un CACES.",
    "Sophie doit pouvoir vérifier les trois critères : CACES 3 valide, disponible le 9/12, accepte un CDD.",
    "Une bonne raison permet à la direction de valider sans relire les cinq CV."]},
