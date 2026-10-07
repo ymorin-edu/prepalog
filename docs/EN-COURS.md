@@ -7,7 +7,6 @@ est déjà modifié ou inscrit ci-dessous, **elle s'arrête et le dit à Tristan
 
 | Chantier | Fichiers qu'il touche | Depuis |
 |---|---|---|
-| Planning : jalons faux après l'envoi, réouverture pour correction ; ENT-5.2 en 22 jalons sur 20 | core/types/planning.js, core/types/entreprise.js, contenus/smoby-ent52.js, activites/smoby-arrivee.js, outils/test/planning.mjs, outils/test/smoby.mjs, activites/FICHE-SEANCE.md | 07/10/2026 |
 
 Rappel : un seul chantier à la fois dans `core/types/tournee.js`, `core/types/grille.js`,
 `core/types/entreprise.js`, `styles/base.css` et `outils/test/boost.mjs` (voir `docs/briefs/COORDINATION-boost.md`).
