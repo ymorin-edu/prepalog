@@ -7,7 +7,6 @@ est déjà modifié ou inscrit ci-dessous, **elle s'arrête et le dit à Tristan
 
 | Chantier | Fichiers qu'il touche | Depuis |
 |---|---|---|
-| Smoby retours 5.3, lot A | contenus/smoby-ent53.js, smoby-ent52.js, smoby-ent57.js, outils/test/entrepot.mjs, smoby.mjs, planning.mjs, docs/decisions.md, activites/FICHE-SEANCE.md, docs/briefs/SMOBY-retours-5.3.md | 06/10/2026 |
 
 Rappel : un seul chantier à la fois dans `core/types/tournee.js`, `core/types/grille.js`,
 `core/types/entreprise.js`, `styles/base.css` et `outils/test/boost.mjs` (voir `docs/briefs/COORDINATION-boost.md`).
