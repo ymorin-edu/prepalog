@@ -7,6 +7,7 @@ est déjà modifié ou inscrit ci-dessous, **elle s'arrête et le dit à Tristan
 
 | Chantier | Fichiers qu'il touche | Depuis |
 |---|---|---|
+| Smoby notation, lot 3 (moteur « premier essai » + ENT-5.3) | `core/types/entrepot-visite.js`, `core/types/entreprise.js`, `contenus/smoby-ent53.js`, `activites/smoby-visite.js`, `outils/test/smoby.mjs`, `activites/FICHE-SEANCE.md` | 07/10 soir |
 
 Rappel : un seul chantier à la fois dans `core/types/tournee.js`, `core/types/grille.js`,
 `core/types/entreprise.js`, `styles/base.css` et `outils/test/boost.mjs` (voir `docs/briefs/COORDINATION-boost.md`).
