@@ -445,7 +445,8 @@ await v('Repérage : l’enseignant voit, par séance d’entreprise, temps, mot
     egal(lu.temps, '25 min (quai : 5 min)', 'temps');
     egal(lu.mots, ['3', 'CACES (2), CDD (1)'], 'mots');
     egal(lu.aides, '1', 'aides');
-    egal(lu.premier, ['2 / 3', 'Justes du premier coup : a, c. Ratés au premier jugement : b.'], 'premier coup');
+    // Note écrite sans titres (avant le 07/10/2026) : l'identifiant du jalon raté, une ligne par jalon.
+    egal(lu.premier, ['2 / 3', 'Ratés au premier jugement :\n– b\nJustes du premier coup : 2 sur 3.'], 'premier coup');
     // Une séance sans documents joints : pas de colonne « Documents ouverts ».
     vrai(!(await page.$(`#reperage [data-reperage="${ids.aid}"] [data-rep="docs"]`)), 'colonne des documents sans documents');
     // Un élève sans repérage dans le même groupe : un tiret, pas des zéros.
@@ -510,6 +511,59 @@ await v('Repérage : « Documents ouverts » = documents différents ouverts sur
         case: c && [c.textContent, c.title] };
     }, ids.uid);
     egal(lu, { entete: true, case: ['2 / 6', 'Yanis Morel (3), Laura Petit (1)'] }, 'colonne des documents');
+  } finally {
+    await page.evaluate(async ({ gid, uid, aid }) => {
+      const { B } = await import('/core/backend.js');
+      await B.poserNote(gid, uid, aid, null);
+      await B.supprimerEleve(uid);
+    }, ids);
+  }
+});
+
+await v('Repérage : les jalons ratés au premier jugement sont nommés par leur titre (rangé par le moteur avec la note)', async () => {
+  // Le moteur range les titres avec la note quand il y a du repérage, et seulement alors.
+  const moteur = await page.evaluate(async () => {
+    const { creerEntreprise } = await import('/core/types/entreprise.js');
+    const E = await import('/outils/essai-2de.js');
+    const M = creerEntreprise(E.univers({}));
+    return { avec: M.noter({ v: 1, mails: [], indicateurs: { 'essai-2de': {} } }).detail.titres || null,
+      sans: M.noter({ v: 1, mails: [] }).detail.titres || null };
+  });
+  const [[id1, t1] = []] = Object.entries(moteur.avec || {});
+  vrai(t1 && t1 !== id1, `titres rangés avec la note (lu : ${JSON.stringify(moteur.avec)})`);
+  egal(moteur.sans, null, 'pas de titres sans repérage');
+  await page.reload();
+  await page.waitForSelector('#btnProfEspace, #btnProf, #btnDeco', { timeout: 8000 });
+  if (!(await page.$('#btnProfEspace'))) {
+    if (!(await page.$('#btnProf'))) { await page.click('#btnDeco'); await page.waitForSelector('#btnProf', { timeout: 8000 }); }
+    await page.click('#btnProf');
+  }
+  await page.waitForSelector('#btnProfEspace', { timeout: 8000 });
+  await page.click('#btnProfEspace');
+  await page.click('[data-ong="suivi"]');
+  await page.waitForSelector('#btnCsvSuivi', { timeout: 6000 });
+  const nomGroupe = (await page.textContent('#btnCsvSuivi >> xpath=ancestor::div[1]//strong')).replace(/^Suivi de /, '').trim();
+  const ids = await page.evaluate(async ({ nomGroupe, titres, id1 }) => {
+    const k = Object.keys(localStorage).find((x) => /groupes$/.test(x));
+    const gs = JSON.parse(localStorage.getItem(k));
+    const gid = Object.keys(gs).find((id) => gs[id].nom === nomGroupe);
+    const { B } = await import('/core/backend.js');
+    await B.creerEleves(gid, [{ nom: 'TITRES', prenom: 'Test', matricule: 'titres-test', code: 'x' }]);
+    const el = (await B.elevesDuGroupe(gid)).find((x) => x.nom === 'TITRES');
+    const { chargerActivites } = await import('/activites/index.js');
+    const m = (await chargerActivites()).map((x) => x.meta).find((x) => x.portee === 'eleve' && x.immersif && x.bareme && !x.copie);
+    await B.ecrireScore(gid, el.uid, m.id, { score: 1, max: 2, detail: { titres,
+      indicateurs: { [m.id]: { temps: 60, premier: { [id1]: 'ko', 'juste-du-premier-coup': 'ok' } } } } });
+    return { gid, uid: el.uid, aid: m.id };
+  }, { nomGroupe, titres: moteur.avec, id1 });
+  try {
+    await page.reload();
+    await page.waitForSelector('#btnProfEspace', { timeout: 8000 });
+    await page.click('#btnProfEspace');
+    await page.click('[data-ong="suivi"]');
+    await page.waitForSelector(`#reperage [data-reperage="${ids.aid}"]`, { timeout: 6000 });
+    const bulle = await page.$eval(`#reperage [data-reperage="${ids.aid}"] tr[data-rep-eleve="${ids.uid}"] [data-rep="premier"]`, (c) => c.title);
+    egal(bulle, `Ratés au premier jugement :\n– ${t1}\nJustes du premier coup : 1 sur 2.`, 'jalon raté nommé par son titre');
   } finally {
     await page.evaluate(async ({ gid, uid, aid }) => {
       const { B } = await import('/core/backend.js');

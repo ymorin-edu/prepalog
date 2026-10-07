@@ -546,7 +546,8 @@ await v('ENT-3.1 : la bonne commande à quai, le bon ordre, le train attrapé, 5
   // sixième. Ne rien y avoir fait ne coûte qu'un jalon, et ne fait rien tomber d'autre.
   if (s.score !== 5 || s.max !== 6) throw new Error('suivi : ' + s.score + '/' + s.max + ' — ' + JSON.stringify(s.detail));
   // `indicateurs` (04/10/2026, lot 6 de MOTEUR-2de-S1) : le repérage pour l'enseignant, pas un jalon.
-  const pas = Object.keys(s.detail).filter((k) => k !== 'indicateurs' && s.detail[k] !== 'ok');
+  // `titres` (07/10/2026) : les titres des jalons pour le Repérage, pas un jalon non plus.
+  const pas = Object.keys(s.detail).filter((k) => k !== 'indicateurs' && k !== 'titres' && s.detail[k] !== 'ok');
   if (pas.join(',') !== 'formules') throw new Error('jalon(s) pas au vert : ' + pas.join(', '));
   // Les formules justes, vérifiées : le sixième tombe, et la séance vaut 20/20.
   await remplirFeuilleBo();

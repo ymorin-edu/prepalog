@@ -234,6 +234,10 @@ export function creerEntreprise(U) {
     // Le repérage de l'élève (2de, lot 6) : temps, aides ouvertes, jalons réussis du premier coup,
     // par séance. Lu par l'enseignant seul, dans le suivi de classe ; jamais montré à l'élève.
     if (db && db.indicateurs) detail.indicateurs = db.indicateurs;
+    // Les titres des jalons (07/10/2026), pour que le Repérage nomme les jalons ratés au lieu de leurs identifiants
+    // (`ligne-laura`) : le suivi ne charge pas la séance, il lit tout ici. Aucune écriture de plus : la première
+    // remontée de la note après l'ouverture écrit de toute façon. Pas de titres sans repérage.
+    if (db && db.indicateurs) detail.titres = Object.fromEntries(etapes.map((e) => [e.id, e.titre || e.id]));
     // Les documents de la séance (nombre et noms courts), pour la colonne « Documents ouverts » du repérage :
     // le suivi ne charge pas la séance, il lit tout ici.
     if (VDOC) detail.documents = { total: VDOC.ids().length,

@@ -843,12 +843,18 @@ export async function rendreEspaceProf(hote, ctx) {
           if (!r) return `<tr><td>${ech(e.nom)} ${ech(e.prenom)}</td><td class="num note" colspan="${avecDocs ? 5 : 4}">—</td></tr>`;
           const reel = par[e.uid][m.id].detail.quai && par[e.uid][m.id].detail.quai.reel;
           const p = Object.entries(r.premier || {});
-          const ok = p.filter(([, st]) => st === 'ok').map(([k]) => k), ko = p.filter(([, st]) => st !== 'ok').map(([k]) => k);
+          // Les jalons ratés sont nommés par leur TITRE (rangé par le moteur avec la note, `detail.titres`, 07/10/2026),
+          // un par ligne ; l'identifiant ne sert plus que pour une note écrite avant. Les justes sont seulement comptés.
+          const titres = par[e.uid][m.id].detail.titres || {};
+          const ok = p.filter(([, st]) => st === 'ok').map(([k]) => k);
+          const ko = p.filter(([, st]) => st !== 'ok').map(([k]) => titres[k] || k);
+          const bulle = (ko.length ? `Ratés au premier jugement :\n${ko.map((x) => `– ${x}`).join('\n')}` : 'Aucun jalon raté au premier jugement.')
+            + `\nJustes du premier coup : ${ok.length} sur ${p.length}.`;
           return `<tr data-rep-eleve="${ech(e.uid)}"><td>${ech(e.nom)} ${ech(e.prenom)}</td>
             <td class="num" data-rep="temps">${minutes(r.temps || 0)}${reel ? `<span class="note"> (quai : ${minutes(reel)})</span>` : ''}</td>
             <td class="num" data-rep="mots" title="${ech(liste(r.mots))}">${somme(r.mots)}</td>
             <td class="num" data-rep="aides" title="${ech(liste(r.aides))}">${somme(r.aides)}</td>${caseDocs(e, r)}
-            <td class="num" data-rep="premier" title="${ech(`Justes du premier coup : ${ok.join(', ') || '—'}. Ratés au premier jugement : ${ko.join(', ') || '—'}.`)}">${p.length ? `${ok.length} / ${p.length}` : '—'}</td></tr>`;
+            <td class="num" data-rep="premier" title="${ech(bulle)}">${p.length ? `${ok.length} / ${p.length}` : '—'}</td></tr>`;
         }).join('');
         return `<details class="reperage" data-reperage="${ech(m.id)}"><summary>${ech(m.code)} — ${ech(m.titre)}</summary>
           <div style="overflow:auto"><table>

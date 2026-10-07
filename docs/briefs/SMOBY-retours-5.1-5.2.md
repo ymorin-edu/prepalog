@@ -152,9 +152,12 @@ Pas de trame 5.1 / 5.2 (« Tout à l'écran ») : Cowork les écrit après la va
   - séance d'entreprise notée sur 20 : plus de « (N) tentatives » ; « corrigé n× » sous la note s'il y a eu des
     corrections (`indicateurs[séance].corrections`, rangé par le lot A de SMOBY-retours-classe-5.1) ; l'infobulle dit
     que seule la 1re correction compte dans la note.
-- **Pas fait** : les **titres** des jalons ratés dans le Repérage (au lieu de `ligne-laura`…). Le Suivi ne charge pas
-  les séances ; il faudrait que le moteur range les titres avec la note (`core/types/entreprise.js`) : chantier moteur
-  à part.
+- **Titres des jalons au Repérage** (fait ensuite, même jour, chantier moteur à part) : le moteur range les titres
+  avec la note (`detail.titres`, seulement s'il y a du repérage, sans écriture de plus) ; l'infobulle « premier coup »
+  liste les ratés par leur titre, un par ligne, puis le nombre de justes. Une note écrite avant garde les identifiants
+  jusqu'à la prochaine ouverture de la séance par l'élève. Tests retouchés (dit à Tristan) : l'attendu de l'infobulle
+  du cas « Repérage : l'enseignant voit… » (`smoby.mjs`) et le filtre des jalons d'un cas Boost (`boost.mjs`, la clé
+  `titres` n'est pas un jalon).
 - **Test** (bloc `smoby`) : ordre entreprises d'abord, bandeau des 5 entreprises, « 17,5/20 corrigé 2× », note seule
   sans correction, tentatives gardées hors entreprise, en-têtes et noms figés, repli de Smoby (Spartoo reste) puis
   dépli. Sabotages éprouvés : familles avant les entreprises, tentatives remises, repli sans effet → le cas tombe.
