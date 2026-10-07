@@ -13,6 +13,21 @@ import { BAREME_AFFICHE, noteSur20, noteConvertie, formaterNote } from './notes.
 import { estCopie, estRendue, libelleRendu, ramasser, rouvrir, baseDeLEleve } from './copie.js';
 import { TEMPS, COEFS_DEFAUT, coefsDuGroupe, seancesParCompetence, seancesParSpecialite, moyenneCompetence } from './competences.js';
 
+// Le nom de famille d'une activité, d'après le préfixe de son code (voir CLAUDE.md) : bandeau du Suivi.
+const FAMILLES = { DEC: 'Découverte', ACT: 'Outils métier', TAB: 'Tableur', REF: 'Exercices', SCE: 'Scénarios',
+  QUI: 'Quiz', MES: 'Messagerie' };
+// Les activités hors entreprise, regroupées par préfixe consécutif (l'ordre des activités est gardé).
+function famillesDe(metas) {
+  const out = [];
+  metas.forEach((m) => {
+    const p = String(m.code || '').split('-')[0];
+    const der = out[out.length - 1];
+    if (der && der.prefixe === p) der.cols.push(m);
+    else out.push({ id: 'fam-' + p + '-' + out.length, prefixe: p, nom: FAMILLES[p] || p, ent: false, cols: [m] });
+  });
+  return out;
+}
+
 export async function rendreEspaceProf(hote, ctx) {
   let onglet = ctx.onglet || 'groupes';
   let corrigeActif = null; // id de la séance dont le corrigé est ouvert (onglet Corrigés)
@@ -24,6 +39,8 @@ export async function rendreEspaceProf(hote, ctx) {
   // Demi-groupe choisi (brief MOTEUR-demi-groupes) : '' = toute la classe. Un seul choix pour
   // Suivi, Compétences et Conduite de séance : l'enseignant qui a 1L1 devant lui le règle une fois.
   let demiActif = '';
+  // Entreprises repliées dans le Suivi (07/10/2026) : le choix tient le temps de la visite de l'espace enseignant.
+  const suiviPlies = new Set();
 
   // Le groupe actif est partagé avec l'accueil : l'y remonter à chaque changement.
   function activer(gid) { if (gid !== gidActif) demiActif = ''; gidActif = gid; if (ctx.setGroupe) ctx.setGroupe(gid); }
@@ -694,7 +711,17 @@ export async function rendreEspaceProf(hote, ctx) {
     const eleves = tous.filter((e) => dansDemi(g, e));
     const deDemi = demiActif ? ` — ${nomDemi(g, demiActif)}` : '';
     // Seules les activités notées apparaissent : c'est le barème qui les y fait entrer.
-    const notees = mods.map((m) => m.meta).filter((m) => m.bareme);
+    // Ordre des colonnes (07/10/2026, maquette validée par Tristan) : les séances d'entreprise D'ABORD, sous un
+    // bandeau par entreprise (logo, nom, repli d'un clic), puis les autres activités sous le nom de leur famille.
+    // Le CSV suit le même ordre.
+    const toutesNotees = mods.map((m) => m.meta).filter((m) => m.bareme);
+    const estEnt = (m) => /^ENT-/.test(String(m.code || ''));
+    const bandes = [
+      ...entreprisesDe(toutesNotees.filter(estEnt).map((meta) => ({ meta }))).map((e) => ({
+        id: 'ent-' + e.id, nom: e.nom, logo: e.logo, ent: true, cols: e.acts.map((a) => a.meta) })),
+      ...famillesDe(toutesNotees.filter((m) => !estEnt(m))),
+    ];
+    const notees = bandes.flatMap((b) => b.cols);
     // Celles que le noyau ne sait pas corriger (scénario sur Padlet, oral, dossier
     // papier…) déclarent `notation: 'prof'` : leur colonne devient un champ de saisie.
     const aLaMain = (m) => m.notation === 'prof';
@@ -768,6 +795,18 @@ export async function rendreEspaceProf(hote, ctx) {
         return `<td class="num ${classe}">${t.meilleur}/${max}</td>`;
       }
 
+      // Séance d'entreprise notée sur 20 (07/10/2026) : plus de « (N) tentatives » — chaque sauvegarde en
+      // ajoutait une, le nombre ne disait rien. À la place, le nombre de corrections après le premier bilan
+      // (`indicateurs[séance].corrections`, lot A du brief SMOBY-retours-classe-5.1), seulement s'il y en a.
+      if (estEnt(m)) {
+        const ind = t.detail && t.detail.indicateurs && t.detail.indicateurs[m.id];
+        const n = (ind && ind.corrections) || 0;
+        const corr = n ? `corrigé ${n} fois${n > 1 ? ' (seule la 1re correction compte dans la note)' : ''}` : 'jamais corrigé';
+        return `<td class="num ${classe}" title="${ech(`${formaterNote(t.meilleur)} sur ${max} — ${corr}`)}"
+          >${formaterNote(noteSur20(t.meilleur, max))}<span class="note">/${BAREME_AFFICHE}</span>${
+          n ? `<span class="suivi-corrige" data-corrections="${n}">corrigé ${n}×</span>` : ''}</td>`;
+      }
+
       // Note sur 20. Le score brut reste accessible en infobulle : l'enseignant veut
       // souvent savoir combien d'exercices ont été réussis, pas seulement la note.
       return `<td class="num ${classe}"
@@ -828,6 +867,45 @@ export async function rendreEspaceProf(hote, ctx) {
         ${blocs}</section>`;
     }
 
+    // Le tableau du suivi : deux rangées d'en-tête (bandeau entreprise ou famille, puis code), figées en haut,
+    // et la colonne des noms figée à gauche (CSS `.suivi-cadre`). Une entreprise repliée tient en une colonne.
+    const titreCol = (m) => `${m.titre}${aLaMain(m) ? ' — note saisie à la main'
+      : noteConvertie(m) ? ` — note sur ${BAREME_AFFICHE}, calculée` : ' — jalons franchis, ce n\'est pas une note'}`;
+    const debut = (html) => html.replace('<td class="', '<td class="suivi-debut ');
+    function tableauSuivi() {
+      let r1 = '<th class="suivi-nom" scope="col">Élève</th>';
+      let r2 = `<th class="suivi-nom" scope="col"><span class="note">${eleves.length} élève${eleves.length > 1 ? 's' : ''}</span></th>`;
+      bandes.forEach((b) => {
+        const plie = b.ent && suiviPlies.has(b.id);
+        const n = plie ? 1 : b.cols.length;
+        r1 += `<th class="suivi-bande suivi-debut" colspan="${n}" scope="colgroup" data-bande="${ech(b.id)}">${b.ent
+          ? `<button type="button" class="suivi-ent" data-replier="${ech(b.id)}" aria-expanded="${!plie}" aria-label="${ech(b.nom)}"
+              title="${plie ? 'Déplier' : 'Replier'} les séances ${ech(b.nom)}">${b.logo
+              ? `<span class="suivi-logo"><img src="${ech(b.logo)}" alt=""></span>` : ''}${plie ? '' : `<span>${ech(b.nom)}</span>`}<span
+              class="suivi-pli" aria-hidden="true">${plie ? '▸' : '▾'}</span></button>`
+          : ech(b.nom)}</th>`;
+        if (plie) {
+          r2 += `<th class="suivi-debut suivi-plie" scope="col" title="${ech(b.nom)} : ${b.cols.length} séance${b.cols.length > 1 ? 's' : ''} repliée${b.cols.length > 1 ? 's' : ''}">…</th>`;
+        } else {
+          b.cols.forEach((m, i) => {
+            r2 += `<th class="${aLaMain(m) ? 'col-saisie ' : ''}${i === 0 ? 'suivi-debut' : ''}" scope="col" title="${ech(titreCol(m))}">
+              ${ech(m.code)}${aLaMain(m) ? `<span class="note"> /${m.bareme}</span>`
+                : noteConvertie(m) ? `<span class="note"> /${BAREME_AFFICHE}</span>` : ''}</th>`;
+          });
+        }
+      });
+      const lignes = eleves.map((e) => `<tr><td class="suivi-nom" title="${ech(e.nom)} ${ech(e.prenom)}">${ech(e.nom)} ${ech(e.prenom)}</td>${
+        bandes.map((b) => {
+          if (b.ent && suiviPlies.has(b.id)) {
+            const faites = b.cols.filter((m) => par[e.uid]?.[m.id]).length;
+            return `<td class="num suivi-debut suivi-plie" data-plie="${ech(b.id)}"
+              title="${ech(b.nom)} : ${faites} séance${faites > 1 ? 's' : ''} sur ${b.cols.length}">${faites}/${b.cols.length}</td>`;
+          }
+          return b.cols.map((m, i) => (i === 0 ? debut(cellule(e, m)) : cellule(e, m))).join('');
+        }).join('')}</tr>`).join('');
+      return `<table><thead><tr class="suivi-r1">${r1}</tr><tr class="suivi-r2">${r2}</tr></thead><tbody>${lignes}</tbody></table>`;
+    }
+
     z.innerHTML = `
       <section class="panneau">
         <div class="rangee" style="margin-bottom:12px">
@@ -836,24 +914,15 @@ export async function rendreEspaceProf(hote, ctx) {
           <span class="pousse"><button class="btn btn-s" id="btnCsvSuivi">Exporter en CSV</button></span>
         </div>
         ${notees.length === 0 ? `<div class="vide">Aucune activité notée pour l'instant.</div>` : `
-        <div style="overflow:auto"><table>
-          <thead><tr><th>Élève</th>${notees.map((m) => `
-            <th class="${aLaMain(m) ? 'col-saisie' : ''}" title="${ech(m.titre)}${
-              aLaMain(m) ? ' — note saisie à la main'
-              : noteConvertie(m) ? ` — note sur ${BAREME_AFFICHE}, calculée`
-              : ' — jalons franchis, ce n\'est pas une note'}">
-              ${ech(m.code)}${aLaMain(m) ? `<span class="note"> /${m.bareme}</span>`
-                : noteConvertie(m) ? `<span class="note"> /${BAREME_AFFICHE}</span>` : ''}
-            </th>`).join('')}</tr></thead>
-          <tbody>${eleves.map((e) => `<tr>
-            <td>${ech(e.nom)} ${ech(e.prenom)}</td>
-            ${notees.map((m) => cellule(e, m)).join('')}
-          </tr>`).join('')}</tbody>
-        </table></div>
-        <p class="note">Les activités corrigées automatiquement sont ramenées à une
+        <div class="suivi-cadre" id="suiviCadre">${tableauSuivi()}</div>
+        <p class="note">Les séances d'entreprise viennent en premier ; un clic sur le nom d'une
+          entreprise replie ses séances (le nombre de séances faites reste affiché).
+          Les activités corrigées automatiquement sont ramenées à une
           <strong>note sur ${BAREME_AFFICHE}</strong>, quel que soit leur nombre d'exercices ;
           survolez une note pour voir le détail. Entre parenthèses : le nombre de tentatives
-          (pas pour les environnements d'entreprise). Le score retenu est le meilleur.
+          (pas pour les séances d'entreprise). Le score retenu est le meilleur.
+          Sous une note de séance d'entreprise, « corrigé 2× » : l'élève a corrigé deux fois après
+          son premier bilan ; seule la première correction compte dans la note.
           ${notees.some((m) => !noteConvertie(m) && !aLaMain(m)) ? `Les environnements
             d'entreprise affichent des jalons franchis, pas une note.` : ''}
           Un élève présent qui n'a rien fait : cliquez sur son tiret « — » pour lui mettre 0 ;
@@ -896,101 +965,119 @@ export async function rendreEspaceProf(hote, ctx) {
 
     brancherChoixDemi(z);
 
-    z.querySelectorAll('.note-saisie').forEach((inp) => {
-      // Dernière valeur acceptée : c'est elle qu'on restaure si la saisie est refusée,
-      // pas la valeur d'ouverture de l'écran.
-      let dernier = inp.value;
-      inp.addEventListener('change', async () => {
-        const { uid, aid } = inp.dataset;
-        const max = Number(inp.dataset.max);
-        const brut = inp.value.trim().replace(',', '.');
-        try {
-          if (brut === '') {
-            await B.poserNote(g.id, uid, aid, null);
-            if (par[uid]) delete par[uid][aid];
-            toast('Note effacée.');
-          } else {
-            const note = Number(brut);
-            if (!isFinite(note) || note < 0 || note > max) {
-              inp.value = dernier;
-              return toast(`La note doit être comprise entre 0 et ${max}.`);
-            }
-            const t = await B.poserNote(g.id, uid, aid, { score: note, max });
-            (par[uid] = par[uid] || {})[aid] = t;
-            inp.value = note;
-            toast('Note enregistrée.');
-          }
-          dernier = inp.value;
-          inp.classList.add('enregistre');
-          setTimeout(() => inp.classList.remove('enregistre'), 900);
-        } catch (e) {
-          inp.value = dernier;
-          toast("La note n'a pas pu être enregistrée.");
-        }
-      });
+    // Replier / déplier une entreprise : seul le tableau se redessine (aucune lecture de plus en base) ; ses
+    // boutons sont rebranchés, la position de défilement est gardée, et le focus revient au bandeau au clavier.
+    const cadre = z.querySelector('#suiviCadre');
+    cadre?.addEventListener('click', (ev) => {
+      const b = ev.target.closest('[data-replier]');
+      if (!b) return;
+      const id = b.dataset.replier;
+      if (suiviPlies.has(id)) suiviPlies.delete(id); else suiviPlies.add(id);
+      const { scrollLeft, scrollTop } = cadre;
+      cadre.innerHTML = tableauSuivi();
+      cadre.scrollLeft = scrollLeft; cadre.scrollTop = scrollTop;
+      brancherCellules(cadre);
+      if (ev.detail === 0) cadre.querySelector(`[data-replier="${CSS.escape(id)}"]`)?.focus();
     });
 
-    // Mettre 0 / effacer le 0. Le barème enregistré est celui du module, pour que le 0 se
-    // convertisse comme n'importe quel score (0 sur 20, ou 0 jalon sur 3).
-    z.querySelectorAll('.btn-zero').forEach((b) => b.addEventListener('click', async () => {
-      const m = notees.find((x) => x.id === b.dataset.aid);
-      if (!m) return;
-      try {
-        await B.poserNote(g.id, b.dataset.uid, m.id, { score: 0, max: m.bareme });
-        toast(`0 mis en ${m.code}.`);
-        await vueSuivi(z, g);
-      } catch (e) { toast("Le 0 n'a pas pu être enregistré."); }
-    }));
-    z.querySelectorAll('.btn-zero-eff').forEach((b) => b.addEventListener('click', async () => {
-      try {
-        await B.poserNote(g.id, b.dataset.uid, b.dataset.aid, null);
-        toast('0 effacé.');
-        await vueSuivi(z, g);
-      } catch (e) { toast("Le 0 n'a pas pu être effacé."); }
-    }));
+    function brancherCellules(racine) {
+      racine.querySelectorAll('.note-saisie').forEach((inp) => {
+        // Dernière valeur acceptée : c'est elle qu'on restaure si la saisie est refusée,
+        // pas la valeur d'ouverture de l'écran.
+        let dernier = inp.value;
+        inp.addEventListener('change', async () => {
+          const { uid, aid } = inp.dataset;
+          const max = Number(inp.dataset.max);
+          const brut = inp.value.trim().replace(',', '.');
+          try {
+            if (brut === '') {
+              await B.poserNote(g.id, uid, aid, null);
+              if (par[uid]) delete par[uid][aid];
+              toast('Note effacée.');
+            } else {
+              const note = Number(brut);
+              if (!isFinite(note) || note < 0 || note > max) {
+                inp.value = dernier;
+                return toast(`La note doit être comprise entre 0 et ${max}.`);
+              }
+              const t = await B.poserNote(g.id, uid, aid, { score: note, max });
+              (par[uid] = par[uid] || {})[aid] = t;
+              inp.value = note;
+              toast('Note enregistrée.');
+            }
+            dernier = inp.value;
+            inp.classList.add('enregistre');
+            setTimeout(() => inp.classList.remove('enregistre'), 900);
+          } catch (e) {
+            inp.value = dernier;
+            toast("La note n'a pas pu être enregistrée.");
+          }
+        });
+      });
 
-    // Les copies (core/copie.js). Le module de l'activité sait noter une base : c'est lui qui
-    // ramasse, avec les mêmes jalons que la remise par l'élève.
-    const moduleDe = (aid) => mods.find((x) => x.meta.id === aid);
-    const MOTIF = { rendue: 'déjà rendue', vide: "l'élève n'a pas ouvert la séance", module: "cette activité ne sait pas se noter" };
-    z.querySelectorAll('[data-copie-ramasser]').forEach((b) => b.addEventListener('click', async () => {
-      const module = moduleDe(b.dataset.aid);
-      const eleve = eleves.find((x) => x.uid === b.dataset.uid);
-      if (!module || !eleve) return;
-      b.disabled = true;
-      try {
-        const r = await ramasser(B, { gid: g.id, eleve, module });
-        toast(r.ok ? `Copie de ${eleve.prenom} ramassée.` : `Rien à ramasser : ${MOTIF[r.raison] || r.raison}.`);
-        await vueSuivi(z, g);
-      } catch (e) { b.disabled = false; toast("La copie n'a pas pu être ramassée."); }
-    }));
-    z.querySelectorAll('[data-copie-tout]').forEach((b) => b.addEventListener('click', async () => {
-      const module = moduleDe(b.dataset.copieTout);
-      if (!module) return;
-      b.disabled = true;
-      const n = { ok: 0, rendue: 0, vide: 0, erreur: 0 };
-      for (const eleve of eleves) {
+      // Mettre 0 / effacer le 0. Le barème enregistré est celui du module, pour que le 0 se
+      // convertisse comme n'importe quel score (0 sur 20, ou 0 jalon sur 3).
+      racine.querySelectorAll('.btn-zero').forEach((b) => b.addEventListener('click', async () => {
+        const m = notees.find((x) => x.id === b.dataset.aid);
+        if (!m) return;
+        try {
+          await B.poserNote(g.id, b.dataset.uid, m.id, { score: 0, max: m.bareme });
+          toast(`0 mis en ${m.code}.`);
+          await vueSuivi(z, g);
+        } catch (e) { toast("Le 0 n'a pas pu être enregistré."); }
+      }));
+      racine.querySelectorAll('.btn-zero-eff').forEach((b) => b.addEventListener('click', async () => {
+        try {
+          await B.poserNote(g.id, b.dataset.uid, b.dataset.aid, null);
+          toast('0 effacé.');
+          await vueSuivi(z, g);
+        } catch (e) { toast("Le 0 n'a pas pu être effacé."); }
+      }));
+
+      // Les copies (core/copie.js). Le module de l'activité sait noter une base : c'est lui qui
+      // ramasse, avec les mêmes jalons que la remise par l'élève.
+      const moduleDe = (aid) => mods.find((x) => x.meta.id === aid);
+      const MOTIF = { rendue: 'déjà rendue', vide: "l'élève n'a pas ouvert la séance", module: "cette activité ne sait pas se noter" };
+      racine.querySelectorAll('[data-copie-ramasser]').forEach((b) => b.addEventListener('click', async () => {
+        const module = moduleDe(b.dataset.aid);
+        const eleve = eleves.find((x) => x.uid === b.dataset.uid);
+        if (!module || !eleve) return;
+        b.disabled = true;
         try {
           const r = await ramasser(B, { gid: g.id, eleve, module });
-          if (r.ok) n.ok++; else n[r.raison] = (n[r.raison] || 0) + 1;
-        } catch (e) { n.erreur++; }
-      }
-      toast(`${module.meta.code} : ${n.ok} copie(s) ramassée(s), ${n.rendue} déjà rendue(s), `
-        + `${n.vide} élève(s) sans travail${n.erreur ? `, ${n.erreur} en erreur` : ''}.`, 6000);
-      await vueSuivi(z, g);
-    }));
-    z.querySelectorAll('[data-copie-rouvrir]').forEach((b) => b.addEventListener('click', async () => {
-      const m = notees.find((x) => x.id === b.dataset.aid);
-      const el = eleves.find((x) => x.uid === b.dataset.uid);
-      if (!m || !el) return;
-      if (!confirmer(`Rouvrir la copie de ${el.prenom} ${el.nom} en ${m.code} ?\n\n`
-        + `Sa note est effacée. Il reprend son travail là où il l'a laissé, et devra rendre de nouveau.`)) return;
-      try {
-        await rouvrir(B, { gid: g.id, uid: el.uid, aid: m.id });
-        toast(`Copie de ${el.prenom} rouverte.`);
+          toast(r.ok ? `Copie de ${eleve.prenom} ramassée.` : `Rien à ramasser : ${MOTIF[r.raison] || r.raison}.`);
+          await vueSuivi(z, g);
+        } catch (e) { b.disabled = false; toast("La copie n'a pas pu être ramassée."); }
+      }));
+      racine.querySelectorAll('[data-copie-tout]').forEach((b) => b.addEventListener('click', async () => {
+        const module = moduleDe(b.dataset.copieTout);
+        if (!module) return;
+        b.disabled = true;
+        const n = { ok: 0, rendue: 0, vide: 0, erreur: 0 };
+        for (const eleve of eleves) {
+          try {
+            const r = await ramasser(B, { gid: g.id, eleve, module });
+            if (r.ok) n.ok++; else n[r.raison] = (n[r.raison] || 0) + 1;
+          } catch (e) { n.erreur++; }
+        }
+        toast(`${module.meta.code} : ${n.ok} copie(s) ramassée(s), ${n.rendue} déjà rendue(s), `
+          + `${n.vide} élève(s) sans travail${n.erreur ? `, ${n.erreur} en erreur` : ''}.`, 6000);
         await vueSuivi(z, g);
-      } catch (e) { toast("La copie n'a pas pu être rouverte."); }
-    }));
+      }));
+      racine.querySelectorAll('[data-copie-rouvrir]').forEach((b) => b.addEventListener('click', async () => {
+        const m = notees.find((x) => x.id === b.dataset.aid);
+        const el = eleves.find((x) => x.uid === b.dataset.uid);
+        if (!m || !el) return;
+        if (!confirmer(`Rouvrir la copie de ${el.prenom} ${el.nom} en ${m.code} ?\n\n`
+          + `Sa note est effacée. Il reprend son travail là où il l'a laissé, et devra rendre de nouveau.`)) return;
+        try {
+          await rouvrir(B, { gid: g.id, uid: el.uid, aid: m.id });
+          toast(`Copie de ${el.prenom} rouverte.`);
+          await vueSuivi(z, g);
+        } catch (e) { toast("La copie n'a pas pu être rouverte."); }
+      }));
+    }
+    brancherCellules(z);
 
     z.querySelector('#btnRaz')?.addEventListener('click', async () => {
       const uid = z.querySelector('#razEleve').value;

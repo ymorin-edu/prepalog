@@ -519,6 +519,89 @@ await v('Repérage : « Documents ouverts » = documents différents ouverts sur
   }
 });
 
+// ── Suivi de classe (07/10/2026, maquette validée par Tristan) : entreprises d'abord, repli, « corrigé n× » ──
+await v('Suivi : séances d’entreprise d’abord, « corrigé 2× » à la place des tentatives, repli d’une entreprise', async () => {
+  await page.reload();
+  await page.waitForSelector('#btnProfEspace, #btnProf, #btnDeco', { timeout: 8000 });
+  if (!(await page.$('#btnProfEspace'))) {
+    if (!(await page.$('#btnProf'))) { await page.click('#btnDeco'); await page.waitForSelector('#btnProf', { timeout: 8000 }); }
+    await page.click('#btnProf');
+  }
+  await page.waitForSelector('#btnProfEspace', { timeout: 8000 });
+  const ouvrir = async () => {
+    await page.reload();
+    await page.waitForSelector('#btnProfEspace', { timeout: 8000 });
+    await page.click('#btnProfEspace');
+    await page.click('[data-ong="suivi"]');
+    await page.waitForSelector('#suiviCadre table', { timeout: 6000 });
+  };
+  await ouvrir();
+  const nomGroupe = (await page.textContent('#btnCsvSuivi >> xpath=ancestor::div[1]//strong')).replace(/^Suivi de /, '').trim();
+  const ids = await page.evaluate(async (nomGroupe) => {
+    const k = Object.keys(localStorage).find((x) => /groupes$/.test(x));
+    const gs = JSON.parse(localStorage.getItem(k));
+    const gid = Object.keys(gs).find((id) => gs[id].nom === nomGroupe);
+    const { B } = await import('/core/backend.js');
+    await B.creerEleves(gid, [{ nom: 'SUIVI', prenom: 'Corrige', matricule: 'suivi-corr', code: 'x' },
+      { nom: 'SUIVI', prenom: 'Jamais', matricule: 'suivi-jamais', code: 'x' }]);
+    const els = (await B.elevesDuGroupe(gid)).filter((x) => x.nom === 'SUIVI');
+    const corr = els.find((x) => x.prenom === 'Corrige'), jamais = els.find((x) => x.prenom === 'Jamais');
+    const { chargerActivites } = await import('/activites/index.js');
+    const metas = (await chargerActivites()).map((x) => x.meta);
+    const tab = metas.find((m) => /^TAB-/.test(m.code) && m.bareme && !m.notation);
+    await B.ecrireScore(gid, corr.uid, 'smoby-recrutement', { score: 17.5, max: 20,
+      detail: { indicateurs: { 'smoby-recrutement': { corrections: 2 } } } });
+    await B.ecrireScore(gid, jamais.uid, 'smoby-recrutement', { score: 12, max: 20,
+      detail: { indicateurs: { 'smoby-recrutement': { corrections: 0 } } } });
+    await B.ecrireScore(gid, corr.uid, tab.id, { score: tab.bareme, max: tab.bareme });
+    const nbSmoby = metas.filter((m) => m.bareme && /^ENT-5\./.test(m.code)).length;
+    return { gid, corr: corr.uid, jamais: jamais.uid, tab: tab.id, tabCode: tab.code, nbSmoby };
+  }, nomGroupe);
+  const lire = () => page.evaluate(({ tabCode }) => {
+    const t = document.querySelector('#suiviCadre table');
+    const codes = [...t.rows[1].cells].slice(1).map((c) => c.textContent.trim().split(/\s/)[0]);
+    const col = (code) => codes.indexOf(code) + 1;
+    const ligne = (prenom) => [...t.tBodies[0].rows].find((r) => r.cells[0].textContent.includes(`SUIVI ${prenom}`));
+    const txt = (prenom, code) => { const i = col(code); return i ? ligne(prenom).cells[i].textContent.replace(/\s+/g, ' ').trim() : null; };
+    const premierAutre = codes.findIndex((c) => !/^ENT-/.test(c) && c !== '…');
+    return {
+      // Toutes les colonnes d'entreprise avant la première colonne d'une autre famille.
+      entD_abord: premierAutre > 0 && codes.slice(premierAutre).every((c) => !/^ENT-/.test(c)),
+      bandeau: [...t.rows[0].cells].map((c) => c.textContent.replace(/[▾▸]/g, '').trim()).filter(Boolean),
+      corr: txt('Corrige', 'ENT-5.1'), jamais: txt('Jamais', 'ENT-5.1'), tab: txt('Corrige', tabCode),
+      ent11: codes.includes('ENT-1.1'), ent51: codes.includes('ENT-5.1'),
+      plie: (() => { const c = ligne('Corrige').querySelector('td[data-plie="ent-5"]'); return c && c.textContent.trim(); })(),
+      fige: [getComputedStyle(t.rows[1].cells[2]).position, getComputedStyle(ligne('Corrige').cells[0]).position],
+    };
+  }, ids);
+  try {
+    await ouvrir();
+    const a = await lire();
+    vrai(a.entD_abord, 'les séances d’entreprise viennent avant les autres familles');
+    egal(a.bandeau.slice(1, 6), ['Spartoo', 'Cdiscount', 'Boost', 'Picard', 'Smoby'], 'bandeau des entreprises');
+    egal(a.corr, '17,5/20corrigé 2×', 'note sur 20 et « corrigé 2× », sans tentatives');
+    egal(a.jamais, '12/20', 'jamais corrigé : la note seule');
+    vrai(/\(1\)$/.test(a.tab || ''), `une activité hors entreprise garde ses tentatives (lu : ${a.tab})`);
+    egal(a.fige, ['sticky', 'sticky'], 'en-têtes et noms figés');
+    // Replier Smoby : ses colonnes partent, une seule colonne dit les séances faites ; Spartoo reste.
+    await page.click('[data-replier="ent-5"]');
+    const b = await lire();
+    egal([b.ent51, b.ent11, b.plie], [false, true, `1/${ids.nbSmoby}`], 'Smoby replié, Spartoo reste');
+    await page.click('[data-replier="ent-5"]');
+    const c = await lire();
+    egal([c.ent51, c.corr], [true, '17,5/20corrigé 2×'], 'Smoby déplié');
+  } finally {
+    await page.evaluate(async ({ gid, corr, jamais, tab }) => {
+      const { B } = await import('/core/backend.js');
+      await B.poserNote(gid, corr, 'smoby-recrutement', null);
+      await B.poserNote(gid, corr, tab, null);
+      await B.poserNote(gid, jamais, 'smoby-recrutement', null);
+      await B.supprimerEleve(corr);
+      await B.supprimerEleve(jamais);
+    }, ids);
+  }
+});
+
 // ── Documents joints (brief MOTEUR-documents-formulaire, lot 1, `core/types/documents.js`) ─────────
 const RECRUT = 'Recrutement du cariste de Noël';
 const ouvrirRecrut = async () => {

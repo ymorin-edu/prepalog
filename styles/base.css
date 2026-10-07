@@ -575,6 +575,34 @@ th.col-saisie, td.col-saisie{ background:var(--ardoise-clair) }
 .btn-zero:hover, .btn-zero:focus-visible{ font-size:0 }
 .btn-zero:hover::after, .btn-zero:focus-visible::after{ content:"0 ?"; font-size:.85rem }
 td.zero-pose{ white-space:nowrap }
+/* --- suivi de classe : grand tableau (07/10/2026, maquette validée par Tristan) ---
+   Le tableau défile dans sa boîte ; les deux rangées d'en-tête (entreprise ou famille, puis code)
+   et la colonne des noms restent en place. Une cellule figée a un fond opaque, sinon les notes
+   passeraient dessous en transparence. */
+.suivi-cadre{ overflow:auto; max-height:calc(100vh - 220px); min-height:280px; border:1px solid var(--filet); border-radius:var(--r) }
+.suivi-cadre table{ width:auto; border-collapse:separate; border-spacing:0 }
+.suivi-cadre th, .suivi-cadre td{ white-space:nowrap }
+.suivi-cadre thead th{ position:sticky; z-index:2; background:var(--panneau) }
+.suivi-cadre thead tr.suivi-r1 th{ top:0; height:42px }
+.suivi-cadre thead tr.suivi-r2 th{ top:42px; border-bottom:2px solid var(--filet) }
+.suivi-cadre .suivi-nom{ position:sticky; left:0; z-index:1; background:var(--panneau);
+  min-width:160px; max-width:200px; overflow:hidden; text-overflow:ellipsis; border-right:2px solid var(--filet) }
+.suivi-cadre thead .suivi-nom{ z-index:3 }
+.suivi-cadre tbody tr:hover .suivi-nom{ background:var(--survol) }
+.suivi-cadre .suivi-debut{ border-left:2px solid var(--filet) }
+.suivi-cadre th.suivi-bande{ text-align:center; text-transform:none; letter-spacing:0 }
+/* Bandeau d'une entreprise : logo et nom ; un clic replie ses séances en une colonne. Le logo
+   garde un fond clair fixe, comme dans l'onglet Corrigés (les logos sont faits pour le clair). */
+.suivi-ent{ font:inherit; font-size:.9rem; font-weight:600; color:var(--encre); background:none; border:1px solid transparent;
+  border-radius:var(--r); padding:2px 6px; cursor:pointer; display:inline-flex; align-items:center; gap:8px }
+.suivi-ent:hover, .suivi-ent:focus-visible{ border-color:var(--encre-douce) }
+.suivi-ent .suivi-logo{ background:#f7f4ee; border-radius:4px; padding:2px 5px; display:inline-flex }
+.suivi-ent img{ height:20px; max-width:64px; object-fit:contain; mix-blend-mode:multiply }
+.suivi-ent .suivi-pli{ color:var(--encre-douce); font-weight:400 }
+.suivi-cadre .suivi-plie{ min-width:44px; text-align:center; color:var(--encre-douce) }
+/* « corrigé 2× » sous la note d'une séance d'entreprise : discret, en ambre (ni juste ni faux). */
+.suivi-corrige{ display:block; font-size:.72rem; line-height:1.1; color:var(--terre); font-family:inherit }
+td.juste .suivi-corrige{ color:inherit; opacity:.85 }
 .btn-zero-eff{ color:var(--encre-douce); margin-left:2px }
 .btn-zero-eff:hover, .btn-zero-eff:focus-visible{ border-color:var(--encre-douce); color:inherit }
 

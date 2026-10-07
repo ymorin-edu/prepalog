@@ -139,3 +139,22 @@ Pas de trame 5.1 / 5.2 (« Tout à l'écran ») : Cowork les écrit après la va
   - le bandeau de fin dit « Relis ta trame à ces étapes » : 5.2 n'a pas encore de trame ;
   - `outils/intention-smoby.py` (Cowork) cite encore « car il habite le plus près » : à recaler par Cowork.
 
+
+## Compte rendu — C4, Suivi de classe *(Claude Code, 07/10/2026)*
+
+- **Maquette validée par Tristan** (page d'essai `essai-suivi-de-classe.html`, dossier « Claude outputs ») : entreprises
+  d'abord avec repli ; note sur 20 avec le nombre de corrections.
+- **Fait** (`core/prof.js`, `styles/base.css`) :
+  - colonnes : séances d'entreprise d'abord, sous un bandeau par entreprise (logo, nom) ; un clic sur le bandeau replie
+    l'entreprise en une colonne « séances faites / séances » (sans relire la base) ; puis les autres activités sous le
+    nom de leur famille (préfixe du code) ; le CSV suit le même ordre ;
+  - en-têtes (deux rangées) et colonne des noms figés quand le tableau défile ;
+  - séance d'entreprise notée sur 20 : plus de « (N) tentatives » ; « corrigé n× » sous la note s'il y a eu des
+    corrections (`indicateurs[séance].corrections`, rangé par le lot A de SMOBY-retours-classe-5.1) ; l'infobulle dit
+    que seule la 1re correction compte dans la note.
+- **Pas fait** : les **titres** des jalons ratés dans le Repérage (au lieu de `ligne-laura`…). Le Suivi ne charge pas
+  les séances ; il faudrait que le moteur range les titres avec la note (`core/types/entreprise.js`) : chantier moteur
+  à part.
+- **Test** (bloc `smoby`) : ordre entreprises d'abord, bandeau des 5 entreprises, « 17,5/20 corrigé 2× », note seule
+  sans correction, tentatives gardées hors entreprise, en-têtes et noms figés, repli de Smoby (Spartoo reste) puis
+  dépli. Sabotages éprouvés : familles avant les entreprises, tentatives remises, repli sans effet → le cas tombe.
