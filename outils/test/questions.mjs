@@ -496,6 +496,60 @@ await v('Gestes : chaque vue publie ses gestes (fiche, planning, quai, plan d’
   vrai(src('entrepot.js').includes('signaux: [`entrepot:${P.id}:poser`, `entrepot:${P.id}:verifier`]'), 'plan d’entrepôt');
 });
 
+// Lot 4 : les réponses de la classe, dans la Conduite de séance (sans les noms).
+await v('Conduite de séance : par question, le nombre d’élèves par réponse (la première) et les réponses écrites, sans les noms', async () => {
+  const ouvrirSeance = async () => {
+    await page.reload();
+    await page.waitForSelector('#btnProfEspace, #btnProf, #btnDeco', { timeout: 8000 });
+    if (!(await page.$('#btnProfEspace'))) {
+      if (!(await page.$('#btnProf'))) { await page.click('#btnDeco'); await page.waitForSelector('#btnProf', { timeout: 8000 }); }
+      await page.click('#btnProf');
+    }
+    await page.waitForSelector('#btnProfEspace', { timeout: 8000 });
+    await page.click('#btnProfEspace');
+    await page.click('[data-ong="seance"]');
+  };
+  await ouvrirSeance();
+  const nomGroupe = await page.evaluate(() => {
+    const t = document.querySelector('#codeStock')?.closest('section')?.querySelector('label')?.textContent || '';
+    return t.replace(/^Code du groupe /, '').trim();
+  });
+  const ids = await page.evaluate(async (nomGroupe) => {
+    const k = Object.keys(localStorage).find((x) => /groupes$/.test(x));
+    const gs = JSON.parse(localStorage.getItem(k));
+    const gid = Object.keys(gs).find((id) => gs[id].nom === nomGroupe);
+    const { B } = await import('/core/backend.js');
+    await B.creerEleves(gid, ['UN', 'DEUX', 'TROIS'].map((n) => ({ nom: `CLASSE${n}`, prenom: 'Test', matricule: `classe-${n}`, code: 'x' })));
+    const L = (await B.elevesDuGroupe(gid)).filter((x) => /^CLASSE/.test(x.nom));
+    const { chargerActivites } = await import('/activites/index.js');
+    const m = (await chargerActivites()).map((x) => x.meta).find((x) => x.portee === 'eleve' && x.immersif && x.bareme && !x.copie && /^ENT-/.test(x.code));
+    const Q = [{ choix: { premiere: 'stock' }, libre: { libre: 'Les compter d’abord.' } },
+      { choix: { premiere: 'mail' }, libre: { libre: 'Les trier.' } }, { choix: { premiere: 'stock' } }];
+    for (let i = 0; i < 3; i++) {
+      await B.ecrireScore(gid, L[i].uid, m.id, { score: 1, max: 5, detail: { indicateurs: { [m.id]: { questions: Q[i] } } } });
+    }
+    return { gid, uids: L.map((x) => x.uid), aid: m.id };
+  }, nomGroupe);
+  try {
+    await ouvrirSeance();
+    const S = `#reponsesClasse [data-reponses-seance="${ids.aid}"]`;
+    await page.waitForSelector(S, { timeout: 6000 });
+    const choix = await page.$$eval(`${S} [data-reponses-question="choix"] [data-reponses-choix]`,
+      (L) => L.map((li) => [li.dataset.reponsesChoix, li.querySelector('.reponses-n').textContent.trim()]));
+    egal(choix, [['stock', '2'], ['mail', '1']], 'nombre par réponse');
+    const compte = (await page.textContent(`${S} [data-reponses-question="choix"]`)).replace(/\s+/g, ' ');
+    vrai(/3 réponses sur 3 élèves/.test(compte), 'compte des réponses : ' + compte);
+    const t = await page.textContent('#reponsesClasse');
+    vrai(t.includes('Les compter d’abord.') && t.includes('Les trier.'), 'réponses écrites');
+    vrai(!/CLASSE/.test(t), 'un nom d’élève apparaît');
+  } finally {
+    await page.evaluate(async ({ gid, uids, aid }) => {
+      const { B } = await import('/core/backend.js');
+      for (const u of uids) { await B.poserNote(gid, u, aid, null); await B.supprimerEleve(u); }
+    }, ids);
+  }
+});
+
 await v('Questions : aucune erreur de page pendant le bloc', async () => {
   egal(erreursQ, [], 'erreurs');
 });

@@ -8,7 +8,7 @@
 >
 > Puis, dans une autre conversation : `… fais le lot 3 (signaux de geste)`, puis `… fais le lot 4 (réponses de la classe)`.
 
-**Statut** : lots 1, 2 et 3 livrés le 08/10/2026 (à valider par Tristan sur la page d'essai) ; lot 4 à implémenter. Questions du §11 tranchées le 07/10 au soir. Révisé le 07/10 à 21 h 45 (deux sortes de questions, plus de « Plus tard », travail gelé, souplesse). Révisé le 08/10 à 8 h (sorties de page, §4.8 bis ; trois règles d’écriture contre le copier-coller, dont les questions d’éco-droit, §7).
+**Statut** : lots 1 à 4 livrés le 08/10/2026, à valider par Tristan (page d'essai ; lot 4 : à voir avec une vraie séance à questions). Questions du §11 tranchées le 07/10 au soir. Révisé le 07/10 à 21 h 45 (deux sortes de questions, plus de « Plus tard », travail gelé, souplesse). Révisé le 08/10 à 8 h (sorties de page, §4.8 bis ; trois règles d’écriture contre le copier-coller, dont les questions d’éco-droit, §7).
 **Date du brief** : 07/10/2026 (soir).
 **Auteur** : Claude (conversation Cowork, Opus), d'après la lecture du code de `main` au commit `d024f17`, du brief
 `FRANCE-BOISSONS-refonte.md` (décisions du 07/10, 21 h) et du lot C de `SMOBY-retours-classe-5.1.md`.
@@ -582,3 +582,18 @@ les durées, et le fait que les vues existantes acceptent un `signal` sans diffi
 
 À la livraison du lot 2 : recopier les décisions du §4.0 et du §11 dans `docs/decisions.md` (une ligne chacune, datée
 du 07/10/2026, « Tristan »).
+
+### Lot 4 — réponses de la classe (livré le 08/10/2026, Claude Code, Opus)
+
+- **Fait** : dans « Conduite de séance » (`core/prof.js`, `remplirReponsesClasse`), une section « Réponses de la classe aux
+  questions », une partie par séance où des élèves ont répondu : par question, le **nombre d'élèves par réponse** (la
+  première, celle qui compte), la bonne réponse dite en texte, et les **réponses écrites, sans les noms** (la section se
+  projette). Bouton « Actualiser ». Sous un demi-groupe, ses élèves seuls. Lecture seule depuis ce qui remonte déjà avec
+  la note : aucune écriture, aucune règle Firebase.
+- **Ajouté au format** : `meta.questions: 'ENT-6.2'` (nom du fichier de questions) donne les textes ; sans lui, les
+  identifiants des questions et des choix.
+- **Test** (bloc `questions`) : trois élèves, deux réponses « stock » et une « mail », deux réponses écrites → 2 / 1, les
+  deux textes, aucun nom. Sabotages : un mauvais compte, un nom affiché → le cas tombe.
+- **Non vérifié à l'écran** : il faudra une séance qui déclare des questions et des élèves qui y ont répondu (ENT-6.1,
+  pilote prévu par Q8). Pas de barre ni de couleur par réponse (pas de classement, pas de vert « juste ») : à dire si
+  Tristan en veut.

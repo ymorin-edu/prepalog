@@ -1338,6 +1338,67 @@ ${so.phrase}` : ''}`)}"
   }
 
   // ------------------------------------------------------------------- séance
+  // LES RÉPONSES DE LA CLASSE aux questions au fil (lot 4 du brief MOTEUR-questions-au-fil, 08/10/2026 ; Q7 : dans la
+  // Conduite de séance, pendant la séance). Pour lancer la discussion (« 14 d'entre vous ont répondu A, 6 ont répondu B :
+  // pourquoi ? ») : par question, combien d'élèves ont choisi chaque réponse (la PREMIÈRE, celle qui compte), et les
+  // réponses libres, SANS LES NOMS (la section se projette). Lecture seule, depuis ce qui remonte déjà avec la note
+  // (`detail.indicateurs[séance].questions`) : aucune écriture, aucune règle Firebase. Les textes viennent du fichier de
+  // questions que la séance nomme dans son meta (`questions: 'ENT-6.2'` → `contenus/questions/ENT-6.2.js`) ; sans lui,
+  // les identifiants. Sous un demi-groupe, ses élèves seuls.
+  async function remplirReponsesClasse(zone, g, metas) {
+    if (!zone) return;
+    let tous, travaux;
+    try { [tous, travaux] = await Promise.all([B.elevesDuGroupe(g.id), B.suivi(g.id)]); } catch (e) { return; }
+    const uids = new Set(tous.filter((e) => dansDemi(g, e)).map((e) => e.uid));
+    const parSeance = {};
+    travaux.forEach((t) => {
+      if (!uids.has(t.uid)) return;
+      const ind = t.detail && t.detail.indicateurs && t.detail.indicateurs[t.aid];
+      if (ind && ind.questions) (parSeance[t.aid] || (parSeance[t.aid] = [])).push(ind.questions);
+    });
+    const ids = Object.keys(parSeance);
+    if (!zone.isConnected) return;
+    if (!ids.length) { zone.hidden = true; return; }
+    const blocs = await Promise.all(ids.map(async (aid) => {
+      const m = metas.find((x) => x.id === aid) || { id: aid, code: aid, titre: '' };
+      let liste = null;
+      if (m.questions) {
+        try { liste = (await import(`../contenus/questions/${m.questions}.js`)).QUESTIONS.liste.filter((q) => q.actif !== false); }
+        catch (e) { liste = null; }
+      }
+      const reps = parSeance[aid];
+      const qids = liste ? liste.map((q) => q.id) : [...new Set(reps.flatMap((Q) => Object.keys(Q).filter((k) => k[0] !== '@')))];
+      const questions = qids.map((qid) => {
+        const q = liste && liste.find((x) => x.id === qid);
+        const faites = reps.map((Q) => Q[qid]).filter((r) => r && (r.premiere != null || r.libre != null));
+        const entete = `<p class="qf-enonce">${ech(q ? q.enonce : qid)}</p>
+          <p class="note">${q ? (q.reflexion ? 'Pour réfléchir (non notée) · ' : 'Notée · ') : ''}${faites.length} réponse${faites.length > 1 ? 's' : ''}
+            sur ${reps.length} élève${reps.length > 1 ? 's' : ''} qui ont la séance</p>`;
+        if (q ? q.libre : faites.some((r) => r.libre != null)) {
+          const textes = faites.map((r) => r.libre).filter(Boolean);
+          return `<div class="qf-q" data-reponses-question="${ech(qid)}">${entete}
+            ${textes.length ? `<ul class="reponses-libres">${textes.map((x) => `<li>${ech(x)}</li>`).join('')}</ul>` : ''}</div>`;
+        }
+        const n = {};
+        faites.forEach((r) => { if (r.premiere != null) n[r.premiere] = (n[r.premiere] || 0) + 1; });
+        const choix = q && q.choix ? q.choix.map((c) => ({ v: c.v, lib: c.lib })) : Object.keys(n).map((v) => ({ v, lib: v }));
+        return `<div class="qf-q" data-reponses-question="${ech(qid)}">${entete}
+          <ul class="reponses-choix">${choix.map((c) => `<li data-reponses-choix="${ech(c.v)}"><span class="reponses-n">${n[c.v] || 0}</span>
+            ${ech(c.lib)}${q && !q.reflexion && q.juste === c.v ? ' <span class="note">(bonne réponse)</span>' : ''}</li>`).join('')}</ul></div>`;
+      }).join('');
+      return `<details class="reponses-seance" data-reponses-seance="${ech(aid)}" open>
+        <summary>${ech(m.code || aid)}${m.titre ? ` — ${ech(m.titre)}` : ''}</summary>${questions}</details>`;
+    }));
+    if (!zone.isConnected) return;
+    zone.hidden = false;
+    zone.innerHTML = `<h2>Réponses de la classe aux questions</h2>
+      <p class="note">Par question, combien d’élèves ont choisi chaque réponse (leur première réponse, celle qui compte),
+        et les réponses écrites, <strong>sans les noms</strong> : à projeter pour lancer la discussion.
+        <button type="button" class="btn btn-s" data-reponses-actualiser>Actualiser</button></p>
+      ${blocs.join('')}`;
+    zone.querySelector('[data-reponses-actualiser]').addEventListener('click', () => remplirReponsesClasse(zone, g, metas));
+  }
+
   async function vueSeance(z, g) {
     const mods = await chargerActivites();
     const metas = mods.map((m) => m.meta);
@@ -1433,7 +1494,9 @@ ${so.phrase}` : ''}`)}"
           </div>`).join('')}
         <p class="note" style="margin-top:12px">Geler met la base en lecture seule pour les élèves, sans rien effacer :
           pratique en fin de séance pour figer le travail avant correction.</p>
-      </section>`;
+      </section>
+      <section class="panneau" id="reponsesClasse" hidden></section>`;
+    remplirReponsesClasse(z.querySelector('#reponsesClasse'), g, metas);
 
     z.querySelector('#btnCodeStock').addEventListener('click', async () => {
       const codeStock = z.querySelector('#codeStock').value.trim();

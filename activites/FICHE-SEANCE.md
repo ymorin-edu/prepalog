@@ -776,6 +776,9 @@ poids de ses jalons + `part` doit valoir 20 (contrôlé à l'ouverture).
 - Tout est contrôlé au chargement (id ou clé en double, `juste` inconnu, `de` inconnu, question de transition non
   citée, 2 à 4 choix, `part` manquante…) : la séance ne s'ouvre pas et le message nomme la question. Le bloc de
   tests `questions` charge **tous** les fichiers `contenus/questions/*.js`.
+- **Dans le `meta` de la séance : `questions: 'ENT-6.2'`** (le nom du fichier dans `contenus/questions/`, sans `.js`) :
+  c'est ce qui donne les textes des questions aux **réponses de la classe** (« Conduite de séance », lot 4) ; sans lui,
+  l'enseignant n'y voit que les identifiants.
 - Essai : `outils/essai-questions.html` (élève, enseignant, évaluation).
 
 ### Modifier les questions d'une séance (une demande de Tristan = ce fichier seul, en Sonnet)

@@ -65,3 +65,11 @@
 
 /* Le travail gelé pendant une question au fil : il reste lisible, il ne répond plus. */
 .ent-main.qf-gele [data-qf-gel]{ cursor:not-allowed }
+
+/* Les réponses de la classe (Conduite de séance, lot 4) : un nombre en tête de chaque choix, sans barre ni couleur
+   (pas de classement, pas de vert « juste » : la bonne réponse est dite en texte). */
+.reponses-seance > summary{ font-weight:600; cursor:pointer; margin:8px 0 }
+.reponses-choix, .reponses-libres{ margin:4px 0 0; padding-left:0; list-style:none; display:flex; flex-direction:column; gap:4px }
+.reponses-choix li{ display:flex; gap:10px; align-items:baseline }
+.reponses-n{ min-width:2.2em; text-align:right; font-weight:700; font-variant-numeric:tabular-nums }
+.reponses-libres li{ border-left:3px solid var(--filet); padding:2px 0 2px 10px }
