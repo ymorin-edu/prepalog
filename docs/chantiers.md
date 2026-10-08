@@ -24,10 +24,10 @@
 | 3 | Tests de règles sur GitHub, hôtes externes partout, port pris lisible | C10a | petit | Sonnet | non (tests) | — | **livré** (08/10, 917ffb6) |
 | 4 | Fiabiliser le mode réel (écoutes, échecs remontés, geler, suivi) | C2 | moyen | Sonnet | oui | 3 | **livré** (08/10, b85c141, autre session : écoutes fermées, échecs signalés, démo alignée, tests de règles sur GitHub) |
 | 5 | Un bug de contenu n'est plus noté « faux » | C3 | petit | Sonnet | oui | 4 fini | **livré** (08/10, b0776d1) |
-| 6 | Suppressions sans traces invisibles, miroir reconstruisible | C4 | moyen | Sonnet | oui | 1, 4 | **livré** (08/10, 9ba74a9 puis d96f6c7) ; reste à **publier la console RTDB** (Tristan) |
+| 6 | Suppressions sans traces invisibles, miroir reconstruisible | C4 | moyen | Sonnet | oui | 1, 4 | **livré** (08/10, 9ba74a9 puis d96f6c7) ; console RTDB publiée le 08/10 |
 | 7 | Quota Spark : mesurer, puis supprimer les écritures inutiles | C9 | moyen | Sonnet | oui | 4 | à faire |
 | **Lot B — rendre la croissance possible** | | | | | | | |
-| 8 | Fabrique de séance d'entreprise (24 fichiers recopiés) | C6 | moyen | Sonnet | oui (petit) | — | à faire, **avant France Boissons** |
+| 8 | Fabrique de séance d'entreprise (24 fichiers recopiés) | C6 | moyen | Sonnet | oui (petit) | — | **livré** (08/10, db5ed50 à ee13996) |
 | 9 | `entreprise.js` : options figées, `COLORS`/`SHIP` sortis, modules extraits | C5 | gros | Opus puis Sonnet | oui | 8 | à faire, par lots |
 | 10 | Un seul drapeau « Simulog » dans tout le code | C13 | petit | Sonnet | oui | — | à faire |
 | 11 | Plusieurs enseignants : co-prof, groupes par prof, orphelins filtrés | C7 | moyen à gros | Opus (décision) puis Sonnet | oui + règles | 1, 6 | à faire |
@@ -199,6 +199,26 @@ s'aligner.
   (les anciens restent valides) ; `metier` d'`ENTREPRISES` lu du contenu ou déclaré une seule fois.
 - **Fini quand.** Un fichier de séance fait ~20 lignes ; les 24 migrés ; suite verte ; la fiche séance
   décrit la fabrique en premier.
+- **Fait (08/10/2026, db5ed50 puis 0403eff, 24edc0c, 6a39a8e, 4bd2068, ee13996).** `core/types/seance-entreprise.js` :
+  `seanceEntreprise(univers, contenu, meta, options)` rend `{ meta, rendre, noter }` ; `composerSeance` fait le même
+  calcul sans créer le moteur (c'est ce que les tests appellent). Déduit : `rubrique`, `immersif`, `portee`, `tables`,
+  `bareme` (nombre de jalons), `corrige` (`./contenus/corriges/<code>.js`) dans le `meta` ; les neuf clés d'univers,
+  `etapes`/`accueil`/`volet` (lus du contenu), `copie` et `trame` pour le moteur. Ordre : univers < contenu de la séance <
+  options ; une valeur écrite dans `meta` l'emporte. Refus en français avec l'`id` (pas d'`ETAPES`, `meta` sans `id`/`code`,
+  clé d'univers introuvable). Les **24 séances** sont migrées, entreprise par entreprise (Smoby 8, Picard 4, Cdiscount 6,
+  Boost 3, Spartoo 3) : un fichier passe de 44-61 lignes à 23-39 hors en-tête (code seul : 41-52 → 21-35). Preuve : une
+  capture du `meta` complet et des options passées à `creerEntreprise` (hash clé par clé) faite avant, refaite après chaque
+  entreprise : **24/24 identiques**. **Choix.** Le nom de la trame (`meta.trame: 'picard-deux-camions'`) est déclaré une fois,
+  il ne se déduit pas de l'`id`, et il ne reste pas dans le `meta` rendu (le bandeau lit la trame dans le moteur, un test
+  l'impose) ; `corrige: false` pour la seule séance sans corrigé (ENT-5.3) ; `menu` n'a aucun défaut (sans lui, tous les
+  écrans restent). **`metier` d'`ENTREPRISES` reste déclaré à la main** : il ne peut pas être lu du `sousTitre` sans changer
+  le texte de l'accueil (Picard : « Entrepôt de surgelés — Sainghin-en-Mélantois » contre « Entrepôt de Sainghin-en-Mélantois
+  (59) — réception » ; Smoby : « Jouets — plateforme de Moirans-en-Montagne (Jura) » contre « Plateforme logistique de
+  Moirans-en-Montagne (39) ») ; c'est à Tristan de trancher le libellé. **Test existant modifié** : le cas « tout corrigé de
+  trame déclaré existe… » (`outils/test/spartoo.mjs`) cherchait `corrige: '…'` dans le texte des fichiers, il lit aussi le
+  corrigé déduit par la fabrique. **Restes** : `stockOuvert`, `sansTrame` et `menu: []` sont encore recopiés dans plusieurs
+  fichiers Smoby (options, pas déduites) ; la fabrique ne contrôle pas les options (c'est le lot 9a). Tests : cinq cas dans le
+  bloc `dependances` (composition, refus, registre, trames), sabotés dans les deux sens. Suite complète : 878/878 (12 min 52).
 
 ### 9. `entreprise.js` : arrêter l'empilement (C5) — par lots, un à la fois
 - **Lot 9a (Sonnet).** Table unique des options acceptées par `creerEntreprise`, contrôle au
