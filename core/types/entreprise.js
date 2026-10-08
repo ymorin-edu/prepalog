@@ -24,6 +24,8 @@ import { creerEntrepot } from './entrepot.js';
 import { monterCalculette, demonterCalculette } from '../calculette.js';
 import { creerDocuments } from './documents.js';
 import { creerFiche } from './fiche.js';
+import { compilerQuestions, etapesQuestions, reponse, repondu, etapeArrivee, etapeFaite, htmlQuestion, htmlPanneau, htmlEtape,
+  appel, CLE_ETAPES } from './questions.js';
 import { creerGesteTableur, retourDeTemps } from './export-tableur.js';
 import { graineDeBase, poserGraine } from '../tirage.js';
 import { preparerPhrases, texteCompose } from '../phrases.js';
@@ -40,8 +42,13 @@ const pastille = (texte, ton) => `<span class="pastille ${ton}">${ech(texte)}</s
 
 export function creerEntreprise(U) {
   const { ENTREPRISE, VOCAB, CATALOGUE, SUPPLIERS, SUP_BY_ID, CUSTOMERS, CM,
-    baseDeDepart, etapes = [], THEME = {} } = U;
+    baseDeDepart, etapes: etapesSeance = [], THEME = {} } = U;
   const { MODELS, MM, VARIANTS, VM } = CATALOGUE;
+  // Les QUESTIONS AU FIL et les POINTS D'ÉTAPE (08/10/2026, brief MOTEUR-questions-au-fil, lot 2) : seulement si la séance
+  // déclare `questions` (format en tête de `core/types/questions.js`). Contrôlées ici : une question mal déclarée empêche
+  // la séance de se charger. Le moteur ajoute lui-même un jalon par question notée (poids pris dans la `part`).
+  const MQ = U.questions ? compilerQuestions(U.questions, U.equipe) : null;
+  const etapes = MQ ? etapesSeance.concat(etapesQuestions(MQ)) : etapesSeance;
 
   // Une entreprise porte plusieurs séances, qui partagent son univers mais pas leur consigne.
   // `exercice` (la ligne sous « Bonjour {prénom} ») et `accueil` (la marche à suivre) sont
@@ -216,7 +223,7 @@ export function creerEntreprise(U) {
   const AVEC_POIDS = etapes.some((e) => typeof e.poids === 'number');
   const MAX_POIDS = Math.round(etapes.reduce((t, e) => t + poidsDe(e), 0) * 1e6) / 1e6;
   const ERREUR_POIDS = AVEC_POIDS && Math.abs(MAX_POIDS - 20) > 1e-6
-    ? `La somme des poids des jalons vaut ${MAX_POIDS} au lieu de 20 : la note sur 20 serait faussée.` : '';
+    ? `La somme des poids des jalons${MQ && MQ.part ? ` (avec la part des questions, ${MQ.part})` : ''} vaut ${MAX_POIDS} au lieu de 20 : la note sur 20 serait faussée.` : '';
   if (ERREUR_POIDS) console.warn('[entreprise] ' + ERREUR_POIDS);
   const arrondi = (x) => Math.round(x * 1000) / 1000;
 
@@ -236,6 +243,13 @@ export function creerEntreprise(U) {
     // Le repérage de l'élève (2de, lot 6) : temps, aides ouvertes, jalons réussis du premier coup,
     // par séance. Lu par l'enseignant seul, dans le suivi de classe ; jamais montré à l'élève.
     if (db && db.indicateurs) detail.indicateurs = db.indicateurs;
+    // Les réponses aux questions (et les sorties de page) remontent avec le repérage de la séance : rien de neuf côté
+    // Firebase, aucune règle à publier. Copie, pour ne pas les ranger deux fois dans la base de l'élève.
+    if (MQ && db && db.questions && db.questions[MQ.id]) {
+      const ind = Object.assign({}, detail.indicateurs || {});
+      ind[MQ.id] = Object.assign({}, ind[MQ.id] || {}, { questions: db.questions[MQ.id] });
+      detail.indicateurs = ind;
+    }
     // Les titres des jalons (07/10/2026), pour que le Repérage nomme les jalons ratés au lieu de leurs identifiants
     // (`ligne-laura`) : le suivi ne charge pas la séance, il lit tout ici. Aucune écriture de plus : la première
     // remontée de la note après l'ouverture écrit de toute façon. Pas de titres sans repérage.
@@ -293,6 +307,10 @@ export function creerEntreprise(U) {
         hote.innerHTML = `<div class="avis avis-err">${ech(ERREUR_POIDS)}</div>`;
         return;
       }
+      if (MQ && MQ.id !== ctx.meta.id) {
+        hote.innerHTML = `<div class="avis avis-err">Les questions déclarent la séance « ${ech(MQ.id)} », mais cette séance est « ${ech(ctx.meta.id)} ».</div>`;
+        return;
+      }
       if (ctx.meta.portee !== 'eleve') {
         hote.innerHTML = `<div class="avis avis-err">Un environnement d'entreprise doit être de portée « eleve ».</div>`;
         return;
@@ -304,6 +322,8 @@ export function creerEntreprise(U) {
       // Le message d'un écran fermé par sa condition (voir FERMETURES), ou '' s'il est ouvert. Une condition
       // qui plante sur une base incomplète n'enferme personne.
       const fermeture = (v) => {
+        const fe = etapeQuiFerme(`ecran:${v}`);
+        if (fe) return `Fais d’abord le point d’étape avec ${appel(MQ.personnes[fe.de])}.`;
         const F = FERMETURES[v];
         if (!F || estProf) return '';
         try { return F.ouvertSi(db) ? '' : (F.message || 'Pas encore ouvert.'); } catch (x) { return ''; }
@@ -468,20 +488,39 @@ export function creerEntreprise(U) {
       // questions du lot 2.
       const CARTES = { reduites: new Set(), fermees: new Set(), minuteurs: {} };
       db.mails.forEach((m) => { if (m.declenche && !m.read) CARTES.reduites.add(m.id); });
+      if (MQ) MQ.etapes.forEach((e) => { if (etapeArrivee(db, MQ, e.id) && !etapeFaite(db, MQ, e)) CARTES.reduites.add(`e:${e.id}`); });
       const PILE = document.createElement('div');
       PILE.className = 'ent-cartes';
       PILE.setAttribute('role', 'status');
       PILE.dataset.cartes = '';
       const CARTES_MAX = 3, CARTE_REDUITE_APRES = 8000;
       function majCartes() {
-        const L = rendue() ? [] : db.mails
+        // Les points d'étape qui attendent (lot 2) d'abord, puis les messages, du plus récent au plus ancien.
+        const etapesEnAttente = !MQ || estProf || rendue() ? [] : MQ.etapes
+          .filter((e) => etapeArrivee(db, MQ, e.id) && !etapeFaite(db, MQ, e) && !CARTES.fermees.has(`e:${e.id}`))
+          .map((e) => ({ etape: e, id: `e:${e.id}` }));
+        const L = etapesEnAttente.concat(rendue() ? [] : db.mails
           .filter((m) => m.declenche && m.folder === 'in' && !m.read && !CARTES.fermees.has(m.id))
-          .sort((a, b) => b.id - a.id);
+          .sort((a, b) => b.id - a.id));
         const vues = L.slice(0, CARTES_MAX), reste = L.length - vues.length;
         // Le focus, au clavier, reste sur le même bouton quand la carte se réduit.
         const av = document.activeElement;
         const cle = av && PILE.contains(av) ? av.dataset.cle : null;
         PILE.innerHTML = vues.map((m) => {
+          if (m.etape) {
+            const e = m.etape, qui = `<strong>${ech(appel(MQ.personnes[e.de]))}</strong> · ${ech(e.titre || 'Point d’étape')}`;
+            const x = `<button type="button" class="ent-carte-x" data-carte-fermer="${m.id}" data-cle="x${m.id}"
+              aria-label="Fermer la notification" title="Fermer">×</button>`;
+            if (CARTES.reduites.has(m.id)) {
+              return `<div class="ent-carte ent-carte-reduite" data-carte-etape="${ech(e.id)}">
+                <button type="button" class="ent-carte-ligne" data-carte-aller="${ech(e.id)}" data-cle="l${m.id}"
+                  title="Aller au point d’étape"><span aria-hidden="true">?</span> ${qui}</button>${x}</div>`;
+            }
+            return `<div class="ent-carte" data-carte-etape="${ech(e.id)}">
+              <span class="ent-carte-icone" aria-hidden="true">?</span>
+              <div class="ent-carte-texte"><span class="ent-carte-titre">Point d’étape</span> — ${qui}</div>
+              <button type="button" class="btn btn-s btn-p" data-carte-aller="${ech(e.id)}" data-cle="l${m.id}">Y aller</button>${x}</div>`;
+          }
           const qui = `<strong>${ech(m.from || 'Messagerie')}</strong> · ${ech(m.subject || '')}`;
           const x = `<button type="button" class="ent-carte-x" data-carte-fermer="${m.id}" data-cle="x${m.id}"
             aria-label="Fermer la notification" title="Fermer">×</button>`;
@@ -506,10 +545,234 @@ export function creerEntreprise(U) {
         });
         if (cle) PILE.querySelector(`[data-cle="${cle}"]`)?.focus();
       }
+      // ── Les QUESTIONS AU FIL et les POINTS D'ÉTAPE (brief MOTEUR-questions-au-fil, lot 2, 08/10/2026) ───────────
+      // Format et état : en tête de `core/types/questions.js`. Ici, le branchement : l'arrivée (avec les messages
+      // déclenchés, à chaque sauvegarde et à l'ouverture), le panneau à droite, le GEL du travail pendant une question au
+      // fil, l'écran du point d'étape, ce qu'il garde fermé, les sorties de page. Rien de tout cela pour l'enseignant :
+      // il voit les points d'étape et les questions au fil (écran à lui), la bonne réponse marquée, et n'écrit rien.
+      // `QF` = l'état d'écran (hors de la base, comme `E`) : le choix en cours, le panneau affiché, les sorties de page.
+      const QF = { choisi: {}, brouillon: {}, panneau: null, sorties: {} };
+      const etatQ = () => { if (!db.questions) db.questions = {}; return db.questions[MQ.id] || (db.questions[MQ.id] = {}); };
+      const graineQ = ctx.profil.uid || prenom;
+      // La question au fil ARRIVÉE et sans réponse (une seule à la fois).
+      const filOuverte = () => (!MQ || estProf || rendue() ? null
+        : MQ.fil.find((q) => { const r = reponse(db, MQ, q.id); return !!(r && r.arrivee) && !repondu(r); }) || null);
+      // La question du panneau : celle qu'on vient de répondre (jusqu'à « Reprendre mon travail »), sinon l'ouverte.
+      const questionDuPanneau = () => (QF.panneau && MQ.parId.get(QF.panneau)) || filOuverte();
+      // Le travail est gelé tant que le panneau est là (élève seulement, copie non rendue).
+      const gelActif = () => !!(MQ && !estProf && !rendue() && questionDuPanneau());
+      // Le point d'étape (arrivé, pas fini) qui garde fermé cet écran ou ce geste.
+      function etapeQuiFerme(cle) {
+        if (!MQ || estProf) return null;
+        return MQ.etapes.find((e) => e.ferme === cle && etapeArrivee(db, MQ, e.id) && !etapeFaite(db, MQ, e)) || null;
+      }
+      const jalonJuge = (j) => { try { const st = j.verifier(db, U).status; return st === 'ok' || st === 'ko'; } catch (x) { return false; } };
+      const essai = (f) => { try { return !!f(db); } catch (x) { return false; } };
+      // L'ARRIVÉE. Un point d'étape arrive quand son envoi a eu lieu (juste ou faux) ; ses questions sont « arrivées » avec
+      // lui. Une question au fil arrive à son geste, une à la fois, jamais pendant qu'on lit le retour de la précédente.
+      // RATTRAPAGE (jamais un élève bloqué) : une question au fil dont le geste n'a pas eu lieu arrive par sa condition
+      // `rattrapage`, ou au plus tard quand tous les autres jalons de la séance sont jugés. Rend vrai si quelque chose
+      // est arrivé (la base a changé).
+      function arriverQuestions() {
+        if (!MQ || estProf || rendue()) return false;
+        const S = etatQ();
+        let fait = false;
+        MQ.etapes.forEach((e) => {
+          if (etapeArrivee(db, MQ, e.id) || !essai(e.apres)) return;
+          (S[CLE_ETAPES] || (S[CLE_ETAPES] = {}))[e.id] = Date.now();
+          e.questions.forEach((id) => { if (!S[id]) S[id] = { arrivee: Date.now() }; });
+          fait = true;
+        });
+        const enLecture = QF.panneau && repondu(reponse(db, MQ, QF.panneau));
+        if (!filOuverte() && !enLecture) {
+          // D'abord une question dont le geste (ou le rattrapage déclaré) a eu lieu ; sinon, le rattrapage du moteur.
+          const enAttente = MQ.fil.filter((x) => !(S[x.id] && S[x.id].arrivee));
+          let q = enAttente.find((x) => essai(x.quand) || (x.rattrapage && essai(x.rattrapage)));
+          if (!q && enAttente.length && etapesSeance.length && etapesSeance.every(jalonJuge)) q = enAttente[0];
+          if (q) { S[q.id] = { arrivee: Date.now() }; QF.panneau = q.id; fait = true; }
+        }
+        if (fait) { majCartes(); majQuestions(); }
+        return fait;
+      }
+      // Ce que montre une question : le choix en cours, « Merci, je note » (évaluation ; `apres: 'bilan'` jusqu'au bilan),
+      // la ligne des sorties de page.
+      function optionsQuestion(id) {
+        const q = MQ.parId.get(id);
+        const auBilan = !COPIE && q.apres === 'bilan' && fini(noterBase(db).detail);
+        return { graine: graineQ, estProf, choisi: QF.choisi[id], brouillon: QF.brouillon[id], copie: COPIE,
+          merci: COPIE || (q.apres === 'bilan' && !auBilan), sortie: !!(QF.sorties[id] && QF.sorties[id].n) };
+      }
+      // Le panneau et le bandeau du haut, sans redessiner l'écran de travail (une question qui arrive au milieu d'une
+      // fiche ne doit pas effacer ce qui est en cours). Le focus, au clavier, reste sur le même bouton.
+      function majQuestions() {
+        if (!MQ) return;
+        const shell = hote.querySelector('.ent-shell'), ancre = hote.querySelector('[data-qf-ancre]'), bandeau = hote.querySelector('[data-qf-bandeau]');
+        if (!shell || !ancre || !bandeau) return;
+        const av = document.activeElement;
+        const cle = av && (ancre.contains(av) || bandeau.contains(av)) ? av.dataset.cle : null;
+        const q = !estProf && !rendue() ? questionDuPanneau() : null;
+        ancre.innerHTML = q ? htmlPanneau(MQ, q, reponse(db, MQ, q.id), optionsQuestion(q.id)) : '';
+        shell.classList.toggle('ent-avec-panneau', !!q);
+        let b = '';
+        if (q && !repondu(reponse(db, MQ, q.id))) {
+          b = `<div class="avis" role="status" data-qf-gel-avis><span><b>${ech(appel(MQ.personnes[q.de]))} te pose une question</b> (à droite).
+            Tu peux regarder le stock, les messages et ton travail ; tu reprends ton travail dès que tu as répondu.</span></div>`;
+        } else if (!q && !estProf && !rendue()) {
+          const e = MQ.etapes.find((x) => etapeArrivee(db, MQ, x.id) && !etapeFaite(db, MQ, x) && E.vue !== `etape:${x.id}`);
+          if (e) {
+            const qui = ech(appel(MQ.personnes[e.de]));
+            b = `<div class="avis" data-qf-attend="${ech(e.id)}"><span><b>${qui} t’attend pour un point d’étape.</b></span>
+              <button type="button" class="btn btn-s btn-p" data-q-aller-etape="${ech(e.id)}" data-cle="attend">Continuer : point d’étape avec ${qui} →</button></div>`;
+          }
+        }
+        bandeau.innerHTML = b;
+        appliquerGel();
+        if (cle) (ancre.querySelector(`[data-cle="${cle}"]`) || bandeau.querySelector(`[data-cle="${cle}"]`))?.focus();
+      }
+      // Répondre : la PREMIÈRE réponse est rangée (la clé du choix), avec sa durée et les sorties de page. Jamais réécrite.
+      function repondreQuestion(id) {
+        const q = MQ.parId.get(id);
+        if (!q || estProf || rendue()) return;
+        const S = etatQ();
+        const r = S[id] || (S[id] = { arrivee: Date.now() });
+        if (repondu(r)) return;
+        if (q.libre) {
+          const t = String(QF.brouillon[id] || '').trim();
+          if (!t) { toast('Écris ta réponse.'); return; }
+          r.libre = t;
+        } else {
+          if (!QF.choisi[id]) return;
+          r.premiere = QF.choisi[id];
+        }
+        r.duree = Math.round((Date.now() - (r.arrivee || Date.now())) / 1000);
+        const so = QF.sorties[id];
+        if (so && so.n) { r.sorties = so.n; r.horsPage = Math.round(so.s); }
+        if (q.type === 'fil') QF.panneau = id;
+        sauver();
+        if (E.vue.startsWith('etape:')) dessinerVue();
+        majQuestions();
+        majCartes();
+      }
+      // « Reprendre mon travail » : le panneau se ferme, le travail dégèle ; une question en attente peut arriver.
+      function reprendre() {
+        QF.panneau = null;
+        if (arriverQuestions()) ctx.jeu.sauver();
+        majQuestions();
+        majCartes();
+      }
+      // « Continuer » du point d'étape : vers ce qu'il gardait fermé.
+      function continuerEtape(eid) {
+        const e = MQ.etapes.find((x) => x.id === eid);
+        if (!e || !etapeFaite(db, MQ, e)) return;
+        const [genre, cle] = e.ferme ? [e.ferme.slice(0, e.ferme.indexOf(':')), e.ferme.slice(e.ferme.indexOf(':') + 1)] : [null, null];
+        if (genre === 'ecran') { aller(cle); return; }
+        if (genre === 'repondre') {
+          const m = db.mails.find((x) => x.folder === 'in' && (x.cle === cle || (x.phrases && x.phrases.id === cle)));
+          if (m) { E.vue = 'mail'; E.dossier = 'in'; ouvrirMail(m.id); hote.scrollIntoView({ block: 'start' }); return; }
+        }
+        aller('accueil');
+      }
+      // Les écrans des points d'étape (élève : ceux qui sont arrivés ; enseignant : tous, et ses questions au fil).
+      const vueEtape = (e) => htmlEtape(MQ, e, db, { estProf, parQuestion: optionsQuestion });
+      function vueQuestionsProf() {
+        return `<div class="ent-tete"><h2>Questions au fil</h2><p class="note">Ce que voit l’élève au moment du geste,
+          bonne réponse marquée (vous seul voyez cet écran).</p></div>
+          <section class="panneau">${MQ.fil.map((q) => `<p class="note qf-num">${ech(appel(MQ.personnes[q.de]))}${q.reflexion ? ' · pour réfléchir, non notée'
+            : q.apres === 'bilan' ? ' · corrigée au bilan' : ''}</p>${htmlQuestion(MQ, q, null, optionsQuestion(q.id))}`).join('')
+          || '<p class="note">Aucune question au fil dans cette séance.</p>'}</section>`;
+      }
+      const itemsQuestions = (item) => (!MQ ? [] : [
+        ...MQ.etapes.filter((e) => estProf || etapeArrivee(db, MQ, e.id))
+          .map((e) => item(`etape:${e.id}`, `Point d’étape avec ${appel(MQ.personnes[e.de])}`)),
+        estProf && MQ.fil.length && item('questions-fil', 'Questions au fil'),
+      ]);
+      // Les clics des questions (panneau, écran du point d'étape, bandeau) : un seul écouteur, posé une fois.
+      if (MQ) {
+        hote.addEventListener('click', (ev) => {
+          const b = ev.target.closest && ev.target.closest('[data-q-choix], [data-q-repondre], [data-q-reprendre], [data-q-continuer], [data-q-aller-etape]');
+          if (!b || !hote.contains(b) || b.disabled) return;
+          if (b.dataset.qChoix) {
+            const id = b.dataset.q;
+            if (estProf || repondu(reponse(db, MQ, id))) return;
+            QF.choisi[id] = b.dataset.qChoix;
+            if (b.closest('[data-qf-ancre]')) majQuestions();
+            else {
+              // Sur l'écran du point d'étape : sans redessiner l'écran (le focus reste sur le choix).
+              const bloc = b.closest('[data-question]');
+              bloc.querySelectorAll('[data-q-choix]').forEach((x) => {
+                const pris = x.dataset.qChoix === QF.choisi[id];
+                x.classList.toggle('qf-pris', pris); x.setAttribute('aria-pressed', pris ? 'true' : 'false');
+              });
+              const r = bloc.querySelector('[data-q-repondre]');
+              if (r) r.disabled = false;
+            }
+          } else if (b.dataset.qRepondre) repondreQuestion(b.dataset.qRepondre);
+          else if (b.hasAttribute('data-q-reprendre')) reprendre();
+          else if (b.dataset.qContinuer) continuerEtape(b.dataset.qContinuer);
+          else if (b.dataset.qAllerEtape) aller(`etape:${b.dataset.qAllerEtape}`);
+        });
+        hote.addEventListener('input', (ev) => {
+          const t = ev.target;
+          if (t && t.dataset && t.dataset.qLibre) QF.brouillon[t.dataset.qLibre] = t.value;
+        });
+      }
+      // LES SORTIES DE PAGE pendant une question (§4.8 bis, décision de Tristan du 08/10/2026) : tant qu'une question est
+      // ouverte et sans réponse (panneau, ou écran du point d'étape affiché), l'onglet caché ou la fenêtre quittée plus de
+      // 3 s compte une sortie (un aller-retour). Gardé à l'écran, rangé AVEC la réponse (aucune écriture de plus) ;
+      // l'élève voit une ligne dans la question ; aucun effet sur la note. Rien chez l'enseignant.
+      if (MQ && !estProf) {
+        const ouvertes = () => {
+          const L = [];
+          const f = filOuverte();
+          if (f && questionDuPanneau() === f) L.push(f.id);
+          const e = E.vue.startsWith('etape:') && MQ.etapes.find((x) => `etape:${x.id}` === E.vue);
+          if (e) e.questions.forEach((id) => { if (!repondu(reponse(db, MQ, id))) L.push(id); });
+          return L;
+        };
+        let depart = null, cache = false, pendant = [];
+        const partir = (h) => {
+          if (!hote.isConnected) { nettoyer(); return; }
+          if (h) cache = true;
+          if (depart !== null || rendue()) return;
+          pendant = ouvertes();
+          if (pendant.length) depart = Date.now();
+        };
+        const revenir = () => {
+          if (!hote.isConnected) { nettoyer(); return; }
+          if (depart === null) { cache = false; return; }
+          const dt = (Date.now() - depart) / 1000, compte = cache || dt > 3;
+          depart = null; cache = false;
+          if (!compte) return;
+          let vu = false;
+          pendant.forEach((id) => {
+            if (repondu(reponse(db, MQ, id))) return;
+            const so = QF.sorties[id] || (QF.sorties[id] = { n: 0, s: 0 });
+            so.n += 1; so.s += dt; vu = true;
+          });
+          if (!vu) return;
+          if (E.vue.startsWith('etape:')) dessinerVue();
+          majQuestions();
+        };
+        const vis = () => (document.visibilityState === 'hidden' ? partir(true) : revenir());
+        const flou = () => partir(false);
+        const nettoyer = () => {
+          document.removeEventListener('visibilitychange', vis);
+          window.removeEventListener('blur', flou);
+          window.removeEventListener('focus', revenir);
+        };
+        document.addEventListener('visibilitychange', vis);
+        window.addEventListener('blur', flou);
+        window.addEventListener('focus', revenir);
+      }
+
       PILE.addEventListener('click', (ev) => {
         const b = ev.target.closest && ev.target.closest('button');
         if (!b) return;
-        if (b.dataset.carteFermer) { CARTES.fermees.add(Number(b.dataset.carteFermer)); majCartes(); return; }
+        if (b.dataset.carteFermer) {
+          const f = b.dataset.carteFermer;
+          CARTES.fermees.add(f.startsWith('e:') ? f : Number(f)); majCartes(); return;
+        }
+        if (b.dataset.carteAller) { aller(`etape:${b.dataset.carteAller}`); return; }
         E.vue = 'mail'; E.dossier = 'in';
         if (b.dataset.carteLire) ouvrirMail(Number(b.dataset.carteLire));
         else { E.mailSel = null; dessiner(); }
@@ -696,7 +959,7 @@ export function creerEntreprise(U) {
       const SUITE_AU_BILAN = CORRECTION || PREMIER_ESSAI || !!(ctx.meta && ctx.meta.suiteAuBilan);
       const fini = (st) => bilanComplet(st) || (SUITE_AU_BILAN && typeof U.seanceFinie === 'function' && !!U.seanceFinie(db));
       // Copie rendue : plus rien ne s'écrit dans la base, même si un geste passait le verrou.
-      const sauver = () => { if (rendue()) return; declencher(); ctx.jeu.sauver(); remonterEtapes(); };
+      const sauver = () => { if (rendue()) return; declencher(); arriverQuestions(); ctx.jeu.sauver(); remonterEtapes(); };
       const stockDe = (sku) => { const q = db.stock[sku]; return q == null ? 0 : q; };
 
       function ajouterMail(m) {
@@ -748,12 +1011,20 @@ export function creerEntreprise(U) {
       }
       // Sans le drapeau `correction` : le bandeau d'origine (06/10/2026). Tous justes → « Séance validée » et la
       // séance suivante ouverte ; sinon le TITRE des jalons faux, jamais leur détail.
+      // Les questions corrigées AU BILAN (`apres: 'bilan'`, questions au fil) : leur explication vient avec le bandeau de fin.
+      function retoursAuBilan() {
+        if (!MQ) return '';
+        const L = MQ.notees.filter((q) => q.apres === 'bilan' && repondu(reponse(db, MQ, q.id)));
+        if (!L.length) return '';
+        return `<div class="ent-fin-retours" data-fin-retours>${L.map((q) => `<p data-fin-retour="${ech(q.id)}"><b>${ech(appel(MQ.personnes[q.de]))}</b>
+          (${ech(q.groupe)}) : « ${ech(q.retour)} »</p>`).join('')}</div>`;
+      }
       function bandeauAncien(st) {
         const faux = etapes.filter((e) => st[e.id] !== 'ok');
         if (!faux.length) {
           const S = ctx.suivante;
           return `<div class="ent-fin ent-fin-ok" role="status" data-fin="ok"><span class="ent-fin-ico" aria-hidden="true">✓</span>
-            <div><b>Séance validée.</b> Toutes tes étapes sont justes${S ? ` : la séance suivante, ${ech(S.code)} « ${ech(S.titre)} », est ouverte.` : '.'}</div>
+            <div><b>Séance validée.</b> Toutes tes étapes sont justes${S ? ` : la séance suivante, ${ech(S.code)} « ${ech(S.titre)} », est ouverte.` : '.'}${retoursAuBilan()}</div>
             <button class="btn ent-fin-btn" data-fin-quitter>Retour aux séances</button></div>`;
         }
         return `<div class="ent-fin ent-fin-ko" role="status" data-fin="ko"><span class="ent-fin-ico" aria-hidden="true">⚠</span>
@@ -762,7 +1033,7 @@ export function creerEntreprise(U) {
             <span class="ent-fin-petit">${SUITE_AU_BILAN
               ? `Relis ta trame à ces étapes.${ctx.suivante ? ` La séance suivante, ${ech(ctx.suivante.code)} « ${ech(ctx.suivante.titre)} », est ouverte.` : ''}`
               : `Relis ta trame à ces étapes. Si tu ne trouves pas, appelle ton professeur${ctx.meta.reinitialisable ? ' ou réinitialise ta séance' : ''}.
-            La séance suivante s'ouvrira quand tout sera juste.`}</span></div></div>`;
+            La séance suivante s'ouvrira quand tout sera juste.`}</span>${retoursAuBilan()}</div></div>`;
       }
       function bandeauFin(res) {
         if (estProf || COPIE || !ctx.meta.parcours || !etapes.length) return '';
@@ -781,15 +1052,18 @@ export function creerEntreprise(U) {
           return `<div class="ent-fin ent-fin-v2 ${tout ? 'ent-fin-ok' : 'ent-fin-ko'}" role="status" data-fin="${tout ? 'ok' : 'ko'}"><div class="ent-fin-corps">
             <h2 class="ent-fin-t">${tout ? 'Tout est juste du premier coup ✓' : 'Tu as fini : voici ce que tu as réussi du premier coup.'}</h2>
             <p>${tout ? 'Bravo.' : 'Ta note compte ton premier essai à chaque étape.'}${S ? ` La séance suivante, ${ech(S.code)} « ${ech(S.titre)} », est ouverte.` : ''}</p>
-            ${liste}<div class="ent-fin-btns"><button class="btn" data-fin-quitter>Retour aux séances</button></div></div></div>`;
+            ${liste}${retoursAuBilan()}<div class="ent-fin-btns"><button class="btn" data-fin-quitter>Retour aux séances</button></div></div></div>`;
         }
         if (tout) {
           return `<div class="ent-fin ent-fin-v2 ent-fin-ok" role="status" data-fin="ok"><div class="ent-fin-corps">
             <h2 class="ent-fin-t">Tout est juste ✓</h2>
             <p>Bravo, toutes tes étapes sont justes.${S ? ` La séance suivante, ${ech(S.code)} « ${ech(S.titre)} », est ouverte.` : ''}</p>
-            ${liste}<div class="ent-fin-btns"><button class="btn" data-fin-quitter>Retour aux séances</button></div></div></div>`;
+            ${liste}${retoursAuBilan()}<div class="ent-fin-btns"><button class="btn" data-fin-quitter>Retour aux séances</button></div></div></div>`;
         }
         const peutCorriger = ecransAFaire(st).length > 0;
+        // Une question ne se rouvre jamais (seule la première réponse compte) : le bandeau le dit quand l'une est fausse.
+        const questionsFausses = MQ && etapes.some((e) => e.question && st[e.id] === 'ko')
+          ? '<p data-fin-questions>Les réponses aux questions ne se corrigent pas : seule la première compte.</p>' : '';
         // Une case fausse sans `ecran` ne se rouvre pas (ENT-5.4 : le BL est signé, le camion est reparti). La séance
         // le dit avec `finFige` (une phrase, dans `creerEntreprise`), et le bandeau ne promet pas une correction
         // qu'aucun bouton n'offre.
@@ -797,9 +1071,9 @@ export function creerEntreprise(U) {
           ? `<p data-fin-fige>${ech(U.finFige)}</p>` : '';
         return `<div class="ent-fin ent-fin-v2 ent-fin-ko" role="status" data-fin="ko"><div class="ent-fin-corps">
           <h2 class="ent-fin-t">Tu as fini : voici ce qui est juste et ce qui est à corriger.</h2>
-          ${fige}<p>${peutCorriger ? 'Tu peux corriger pour améliorer ta note, ou passer à la séance suivante'
+          ${fige}${questionsFausses}<p>${peutCorriger ? 'Tu peux corriger pour améliorer ta note, ou passer à la séance suivante'
             : 'Tu peux passer à la séance suivante'}${S ? ` (${ech(S.code)}, déjà ouverte)` : ''}.</p>
-          ${liste}<div class="ent-fin-btns">${peutCorriger ? `<button class="btn btn-p ent-fin-corriger" data-fin-corriger>Corriger</button>
+          ${liste}${retoursAuBilan()}<div class="ent-fin-btns">${peutCorriger ? `<button class="btn btn-p ent-fin-corriger" data-fin-corriger>Corriger</button>
             <span class="ent-fin-gain">Corriger améliore ta note.</span>` : ''}
             <button class="btn" data-fin-quitter>Retour aux séances</button></div></div></div>`;
       }
@@ -1079,6 +1353,7 @@ export function creerEntreprise(U) {
             </header>
             ${VTAB && VTAB.aide && E.aideTableur ? `<div class="ent-aide" data-aide-tableur-texte style="white-space:pre-line">${ech(VTAB.aide)}</div>` : ''}
             <div data-fin-seance>${bandeauFin()}</div>
+            ${MQ ? '<div class="qf-bandeau" data-qf-bandeau></div>' : ''}
             <div class="ent-cartes-ancre" data-cartes-ancre></div>
             <div class="ent-shell${replie ? ' ent-menu-replie' : ''}">
               <aside class="ent-side">
@@ -1092,7 +1367,7 @@ export function creerEntreprise(U) {
                   VQUAI && item('quai', VQUAI.nav.libelle),
                   VPL && item('planning', VPL.nav.libelle), VENT && item('entrepot', VENT.nav.libelle),
                   VPLAN && item('plan', VPLAN.nav.libelle), VTOUR && item('tournee', VTOUR.nav.libelle),
-                  VINV && item('inventaire', VINV.nav.libelle)])}
+                  VINV && item('inventaire', VINV.nav.libelle), ...itemsQuestions(item)])}
                 ${groupe('Données', [
                   montre('commandes') && item('commandes', 'Commandes', aFaire, ['commandes', 'commande']),
                   montre('receptions') && item('receptions', 'Réceptions', aRecevoir, ['receptions', 'reception']),
@@ -1105,12 +1380,14 @@ export function creerEntreprise(U) {
                 </div>
               </aside>
               <div class="ent-main" id="entMain"></div>
+              ${MQ ? '<div class="qf-ancre" data-qf-ancre></div>' : ''}
             </div>
           </div>`;
 
         // La pile des cartes, reposée telle quelle (même élément) : voir « Les cartes des messages ».
         hote.querySelector('[data-cartes-ancre]').appendChild(PILE);
         majCartes();
+        majQuestions();
         hote.querySelectorAll('[data-vue]').forEach((b) => b.addEventListener('click', () => aller(b.dataset.vue)));
         // Replier / déplier sur place, sans redessin : le focus reste sur le bouton.
         hote.querySelector('[data-menu-replier]').addEventListener('click', (ev) => {
@@ -1215,6 +1492,36 @@ export function creerEntreprise(U) {
         ['click', 'dblclick', 'mousedown', 'input', 'change', 'keydown', 'submit', 'dragstart', 'drop', 'paste']
           .forEach((type) => hote.addEventListener(type, verrou, true));
       }
+      // LE GEL pendant une question au fil (lot 2 de MOTEUR-questions-au-fil) : l'élève regarde, il ne touche pas. Même
+      // principe que le verrou de la copie rendue : UN écouteur en phase de capture sur l'hôte, donc une vue écrite demain
+      // est gelée sans rien savoir des questions. Restent libres : le menu, la sortie, les cartes, le panneau, et ce qui
+      // sert à CONSULTER (messages, pièces jointes, documents, onglets, filtres du stock). Les champs et boutons de
+      // travail de l'écran sont aussi désactivés (marqués `data-qf-gel`, rendus à la réponse).
+      const GEL_LIBRE = `${LIBRE}, [data-mail], [data-dossier], [data-mail-retour], [data-pj], [data-pj-retour], [data-doc],
+        [data-fiche-doc], [data-onglet], [data-filtre], [data-deverrouiller], #codeStock, a[download]`;
+      const libreAuGel = (t) => !!(t && t.closest && (t.closest(GEL_LIBRE) || t.closest('[data-qf-ancre], [data-qf-bandeau], [data-cartes]')));
+      if (MQ && !estProf) {
+        const gel = (ev) => {
+          if (!gelActif() || libreAuGel(ev.target)) return;
+          ev.stopPropagation(); ev.preventDefault();
+        };
+        ['click', 'dblclick', 'input', 'change', 'submit', 'dragstart', 'drop', 'paste']
+          .forEach((type) => hote.addEventListener(type, gel, true));
+      }
+      function appliquerGel() {
+        const z = hote.querySelector('#entMain');
+        if (!z || !MQ) return;
+        const g = gelActif();
+        z.classList.toggle('qf-gele', g);
+        if (g) {
+          z.querySelectorAll('input, select, textarea, button').forEach((el) => {
+            if (el.disabled || el.matches(GEL_LIBRE)) return;
+            el.disabled = true; el.dataset.qfGel = '';
+          });
+        } else {
+          z.querySelectorAll('[data-qf-gel]').forEach((el) => { el.disabled = false; delete el.dataset.qfGel; });
+        }
+      }
       function figerVue(z) {
         if (!rendue()) return;
         z.querySelectorAll('input, select, textarea').forEach((el) => { el.disabled = true; });
@@ -1268,12 +1575,18 @@ export function creerEntreprise(U) {
           fichiers: VTAB ? vueFichiers : vueAccueil,
           extractions: VTAB && VTAB.navExtractions ? vueExtractions : vueAccueil,
           clients: vueClients, fournisseurs: vueFournisseurs, console: vueConsole,
+          ...(MQ ? Object.fromEntries(MQ.etapes.filter((e) => estProf || etapeArrivee(db, MQ, e.id))
+            .map((e) => [`etape:${e.id}`, () => vueEtape(e)])) : {}),
+          ...(MQ && estProf ? { 'questions-fil': vueQuestionsProf } : {}),
         };
         // Un écran fermé par sa condition (accès direct, base rouverte dessus) : on reste à l'accueil.
         if (fermeture(E.vue)) E.vue = 'accueil';
         z.innerHTML = (vues[E.vue] || vueAccueil)();
         brancher(z);
         figerVue(z);
+        appliquerGel();
+        // Le bandeau « … t'attend pour un point d'étape » disparaît sur l'écran du point d'étape.
+        if (MQ) majQuestions();
         if (E.vue === 'catalogue') majCatalogue();
         if (E.vue === 'stock' && E.stockOuvert) majStock();
         if (E.vue === 'clients' || E.vue === 'fournisseurs') majTiers();
@@ -1286,6 +1599,8 @@ export function creerEntreprise(U) {
         // acquise) et la reprise demandée par l'enseignant (voir core/app.js), qui sans cela
         // serait rejouée à la prochaine ouverture et effacerait le travail refait depuis.
         const reprise = db.reprise, points = db.points, indicateurs = db.indicateurs, menuReplie = db.menuReplie, versionBase = db.versionBase;
+        // Les réponses aux questions survivent aussi (sinon on effacerait une mauvaise première réponse).
+        const questions = db.questions;
         const photo = ctx.meta.precedente && points && points[ctx.meta.precedente];
         Object.keys(db).forEach((k) => delete db[k]);
         if (photo) {
@@ -1306,6 +1621,7 @@ export function creerEntreprise(U) {
         if (versionBase) db.versionBase = versionBase;
         // Le repérage n'est pas du travail : repartir de zéro n'efface ni le temps ni les aides ouvertes.
         if (indicateurs) db.indicateurs = indicateurs;
+        if (questions) db.questions = questions;
         // Le menu replié est un réglage d'écran, pas du travail.
         if (menuReplie) db.menuReplie = true;
         normaliserBase();
@@ -1409,7 +1725,13 @@ export function creerEntreprise(U) {
             if (sel.kind === 'bl' && recDuMail) {
               actions += `<button class="btn btn-p" data-ouvrir-rec="${ech(recDuMail.no)}">Ouvrir la réception</button>`;
             }
-            actions += '<button class="btn" data-repondre>Répondre</button>';
+            // Un point d'étape qui garde la réponse fermée (`ferme: 'repondre:<clé>'`) : le bouton laisse la place au cadenas.
+            const fe = etapeQuiFerme(`repondre:${sel.cle || (sel.phrases && sel.phrases.id) || ''}`);
+            if (fe) {
+              const qui = ech(appel(MQ.personnes[fe.de]));
+              actions += `<div class="qf-ferme" data-qf-ferme><span>🔒 Fais d’abord le point d’étape avec ${qui}.</span>
+                <button class="btn btn-s btn-p" data-q-aller-etape="${ech(fe.id)}" data-libre>Y aller</button></div>`;
+            } else actions += '<button class="btn" data-repondre>Répondre</button>';
           }
           // Une pièce jointe ouverte prend la place du texte, dans le même lecteur.
           const piece = VDOC && E.piece && VDOC.pieces(sel.pieces).includes(E.piece) ? E.piece : null;
@@ -1421,7 +1743,7 @@ export function creerEntreprise(U) {
             ${corps}
             ${VDOC ? VDOC.rangee(sel.pieces, docVu) : ''}
             ${actions ? `<div class="rangee" style="margin-top:14px">${actions}</div>` : ''}
-            ${E.dossier === 'in' && sel.phrases ? formPhrases(sel) : `<form id="formRep" hidden style="margin-top:14px">
+            ${E.dossier === 'in' && sel.phrases ? (etapeQuiFerme(`repondre:${sel.cle || sel.phrases.id}`) ? '' : formPhrases(sel)) : `<form id="formRep" hidden style="margin-top:14px">
               <div class="champ"><label for="repT">Votre réponse</label><textarea id="repT" rows="${sel.amorce ? 8 : 6}">${ech(sel.amorce || '')}</textarea></div>
               <button class="btn btn-p" type="submit">Envoyer</button></form>`}</div>`;
         }
@@ -2919,7 +3241,7 @@ export function creerEntreprise(U) {
       // Un message déclenché dont la condition est déjà vraie à l'ouverture (travail fait sur un
       // autre poste, coupure entre la sauvegarde et l'envoi) arrive maintenant. Ici et pas plus
       // haut : la tournée de la séance doit exister pour passer de phase.
-      if (!rendue() && declencher()) ctx.jeu.sauver();
+      if (!rendue() && (declencher() | arriverQuestions())) ctx.jeu.sauver();
       remonterEtapes();
       dessiner();
       // Évaluation : la copie est-elle déjà rendue ? Ce qui fait foi est le résultat enregistré

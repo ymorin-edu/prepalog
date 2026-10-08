@@ -1,0 +1,67 @@
+/* ============================================================
+   Questions au fil et points d'étape (core/types/questions.js, brief
+   docs/briefs/MOTEUR-questions-au-fil.md, lot 2) — 08/10/2026.
+   Ne prend que les variables de base.css : thème clair et sombre, accent de
+   l'entreprise (--ardoise, remplacé par l'encre sous une charte rouge ou verte,
+   classes posées par entreprise.js). Le vert plein ne dit que « juste » :
+   aucun aplat sur un choix ; choix pris = bordure à l'encre ; ✓ vert et ✗ rouge
+   en TEXTE ; bonne réponse (enseignant) = trait vert pointillé.
+   ============================================================ */
+
+/* Le panneau d'une question au fil : une troisième colonne de la page, collée sous le bandeau quand on
+   fait défiler. Le travail se pousse à gauche, il n'est jamais caché. */
+.ent-shell.ent-avec-panneau{ grid-template-columns:230px minmax(0,1fr) 380px }
+.ent-shell.ent-menu-replie.ent-avec-panneau{ grid-template-columns:56px minmax(0,1fr) 380px }
+.qf-ancre{ align-self:start; position:sticky; top:8px; margin-left:16px; max-height:calc(100vh - 16px); overflow:auto }
+.qf-ancre:empty{ display:none }
+.qf-panneau{
+  background:var(--panneau); color:var(--encre); border:1px solid var(--filet); border-left:4px solid var(--terre);
+  border-radius:var(--r); padding:14px 16px; box-shadow:0 4px 14px rgba(20,16,8,.14);
+}
+.qf-titre{ font-size:1.05rem; margin:0 0 2px }
+.qf-titre > span{ color:var(--terre); font-weight:700; margin-right:4px }
+.qf-role{ margin:0 0 10px }
+@media (max-width:900px){
+  .ent-shell.ent-avec-panneau, .ent-shell.ent-menu-replie.ent-avec-panneau{ grid-template-columns:56px minmax(0,1fr) }
+  .ent-shell.ent-avec-panneau:not(.ent-menu-replie){ grid-template-columns:minmax(0,1fr) }
+  .qf-ancre{ position:fixed; left:0; right:0; bottom:0; top:auto; margin:0; max-height:55vh; z-index:45 }
+}
+
+/* Le bandeau du haut : ce que l'élève peut faire pendant la question, ou le point d'étape qui l'attend. */
+.qf-bandeau:empty{ display:none }
+.qf-bandeau .avis{ display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; border-left-color:var(--terre); margin:8px 0 0 }
+
+/* Une question. */
+.qf-q{ padding:10px 0; border-top:1px solid var(--filet) }
+.qf-q:first-of-type{ border-top:0 }
+.qf-num{ font-size:.8rem; color:var(--encre-douce); margin:0 0 2px; text-transform:uppercase; letter-spacing:.04em }
+.qf-enonce{ font-weight:600; margin:0 0 8px }
+.qf-reflexion{ margin:-4px 0 8px }
+.qf-choix{ display:flex; flex-direction:column; gap:6px }
+.qf-c{
+  text-align:left; font:inherit; font-size:.95rem; color:var(--encre); background:var(--panneau);
+  border:2px solid var(--filet); border-radius:var(--r); padding:7px 10px; cursor:pointer;
+}
+.qf-c:hover:not(:disabled){ border-color:var(--ardoise) }
+.qf-c:disabled{ cursor:default; opacity:1 }
+.qf-c.qf-pris{ border-color:var(--encre); font-weight:700 }
+.qf-c.qf-bonne{ border-style:dashed; border-color:var(--vert) }
+.qf-bonne-mot{ color:var(--vert); font-size:.8rem; font-weight:600; margin-left:6px }
+.qf-libre{ width:100%; font:inherit }
+.qf-rep{ display:flex; flex-wrap:wrap; align-items:center; gap:6px 12px; margin-top:10px }
+.qf-verdict{ font-weight:700; margin:10px 0 2px }
+.qf-ok{ color:var(--vert) }
+.qf-ko{ color:var(--rouge) }
+.qf-retour{ margin:8px 0 0 }
+.qf-sortie{ margin:8px 0 0 }
+.qf-reprendre{ margin-top:12px }
+
+/* L'écran du point d'étape. */
+.qf-situation{ margin:0 0 6px }
+.qf-continuer{ display:flex; flex-wrap:wrap; align-items:center; gap:6px 12px; margin-top:14px; padding-top:12px; border-top:1px solid var(--filet) }
+
+/* Un geste fermé par un point d'étape (le bouton « Répondre » d'un mail). */
+.qf-ferme{ display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; margin-top:14px }
+
+/* Le travail gelé pendant une question au fil : il reste lisible, il ne répond plus. */
+.ent-main.qf-gele [data-qf-gel]{ cursor:not-allowed }

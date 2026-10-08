@@ -30,8 +30,9 @@ const BLOCS = ['socle', 'spartoo', 'groupes', 'dependances', 'transport', 'boost
   'visibilite',
   'amenagements',
   'demi-groupes',
-  'temps'];
-const PREREQUIS = { spartoo: ['socle'], groupes: ['socle'], smoby: ['socle'] };
+  'temps',
+  'questions'];
+const PREREQUIS = { spartoo: ['socle'], groupes: ['socle'], smoby: ['socle'], questions: ['socle'] };
 
 // Un fichier de bloc posé dans `outils/test/` mais oublié dans `BLOCS` ne tournerait jamais,
 // sans que rien ne le dise : la suite resterait verte avec des cas en moins. On refuse de partir.
@@ -51,7 +52,7 @@ const PREREQUIS = { spartoo: ['socle'], groupes: ['socle'], smoby: ['socle'] };
 // prérequis restent dans le même groupe : sinon le prérequis tournerait deux fois.
 const GROUPES = {
   1: ['quiz', 'carte', 'picard', 'demi-groupes', 'temps'],
-  2: ['socle', 'spartoo', 'groupes', 'tableur-export', 'smoby', 'animation', 'visibilite'],
+  2: ['socle', 'spartoo', 'groupes', 'tableur-export', 'smoby', 'animation', 'visibilite', 'questions'],
   3: ['dependances', 'transport', 'boost', 'inventaire', 'cdiscount', 'planning', 'entrepot', 'copie', 'amenagements'],
 };
 // Même garde que pour les blocs oubliés : un bloc rangé dans aucun groupe (ou dans deux) ne

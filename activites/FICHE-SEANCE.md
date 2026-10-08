@@ -732,6 +732,66 @@ d'entrepôt (ENT-6.5 §7.1).
 `core/iso.js` (type dans `TYPES_DECOR`, `TYPES_CHARGE` ou `TYPES_ACTEUR`, gestes dans `GESTES`), avec ses textes
 contrôlés (contraste ≥ 4,5, test du bloc `animation`).
 
+## Questions au fil et points d'étape — `core/types/questions.js` (08/10/2026)
+
+Les questions de la trame passent **à l'écran, au moment du geste**, posées par un collègue (décisions de Tristan du
+07/10/2026, brief `docs/briefs/MOTEUR-questions-au-fil.md`). La séance les déclare dans **un fichier à part**,
+`contenus/questions/<séance>.js` (format en tête de `core/types/questions.js` ; modèle : `contenus/questions/ESSAI.js`),
+et les branche en une ligne : `creerEntreprise({ …, questions: QUESTIONS })` (avec `equipe: EQUIPE` si les personnes
+viennent de l'univers). Le moteur ajoute **lui-même** un jalon par question notée (`question:<id>`, groupe = son
+`groupe`, poids = `part × poids / somme des poids`) : la séance ne les recopie pas dans `etapes`, mais la somme des
+poids de ses jalons + `part` doit valoir 20 (contrôlé à l'ouverture).
+
+- **Au fil** (`type: 'fil'`, `quand(db)`) : un panneau s'ouvre à droite au geste ; l'élève peut regarder (menu, stock,
+  messages, documents), pas toucher à son travail tant qu'il n'a pas répondu (gel, par le moteur, toutes vues
+  comprises). Une seule à la fois. **Rattrapage** : si le geste n'a jamais lieu, elle arrive par `rattrapage(db)` ou,
+  au plus tard, quand tous les autres jalons sont jugés.
+- **Transition** (`type: 'transition'`) : citée par un **point d'étape** (`etapes: [{ id, de, apres(db), ferme,
+  titre, situation, continuer, questions: [1 à 3 ids] }]`), un écran qui arrive après un envoi et garde fermé
+  `ferme` (`'ecran:<écran>'`, ou `'repondre:<clé>'` : le bouton « Répondre » du mail qui porte `cle: '<clé>'`) jusqu'aux
+  réponses, justes ou fausses.
+- **Retour** : notée → ✓ / ✗ et le `retour` du collègue tout de suite ; `apres: 'bilan'` → « Merci, je note », le ✓ / ✗
+  au bandeau de fin et le `retour` avec lui (pour une question posée avant un envoi qu'elle corrigerait d'avance) ;
+  `reflexion: true` → non notée, « Ce qu'en pense … » ; en évaluation (`copie`) → « Merci, je note » pour toutes.
+- La **première réponse** compte, rangée en **clé** (`v`) dans `db.questions[<séance>]`. « Corriger » ne rouvre jamais
+  une question ; « Réinitialiser » n'efface pas les réponses. Les sorties de page pendant une question sont comptées
+  et montrées à l'enseignant (Repérage), sans effet sur la note.
+- Déclencheurs : **un geste de travail** (envoyer, choisir, saisir, poser), juste ou faux ; jamais l'ouverture d'un
+  écran ou d'un document, jamais un clic de menu, jamais une minuterie (règle du 03/10, Q4).
+- Tout est contrôlé au chargement (id ou clé en double, `juste` inconnu, `de` inconnu, question de transition non
+  citée, 2 à 4 choix, `part` manquante…) : la séance ne s'ouvre pas et le message nomme la question. Le bloc de
+  tests `questions` charge **tous** les fichiers `contenus/questions/*.js`.
+- Essai : `outils/essai-questions.html` (élève, enseignant, évaluation).
+
+### Modifier les questions d'une séance (une demande de Tristan = ce fichier seul, en Sonnet)
+
+| Ce que Tristan veut faire | Ce qu'il faut changer dans `contenus/questions/<séance>.js` | Ce qui arrive aux élèves |
+|---|---|---|
+| Reformuler une question ou un choix | le texte (`enonce`, `lib`, `retour`) | rien : la réponse rangée est la clé `v` |
+| Changer l'ordre des choix | l'ordre dans `choix` | rien (l'ordre affiché est de toute façon tiré par élève, sauf `melanger: false`) |
+| Ajouter un choix | une ligne `{ v, lib }` (2 à 4 choix) | rien |
+| Changer la bonne réponse | `juste` (une clé) | ceux qui ont fini gardent leur note ; ceux en cours sont jugés sur la nouvelle |
+| Ajouter une question notée | un bloc dans `liste` (citée par un point d'étape si c'est une transition), un `id` NEUF | la `part` se partage : la note reste sur 20 ; un élève en cours la reçoit (geste à venir, ou rattrapage) |
+| Retirer une question | supprimer son bloc (et sa citation) | sa réponse reste rangée, plus lue ; la `part` se répartit sur les autres |
+| Mettre de côté sans effacer | `actif: false` | comme retirer, le texte reste pour plus tard |
+| Changer le poids des questions | `part` (et les `poids` des jalons de la séance : total 20) | contrôlé à l'ouverture |
+| Une question compte double | `poids: 2` sur elle | dans la `part` |
+| Passer de « au fil » à « transition » | `type` (+ la citer dans un point d'étape, retirer `quand`) | sa réponse rangée est gardée |
+
+**L'`id` d'une question ne change jamais** (c'est sa clé dans la base). **Pas de numéro** dans les textes (« Question 1
+sur 2 » est calculé). Après toute modification : `node outils/test.mjs questions`.
+
+### Écrire les questions (règles du brief, §7)
+
+- **2 à 4 questions par séance** ; une question porte sur ce que l'élève **vient de faire** ; une seule à la fois ;
+  2 à 4 choix, **au moins 3** pour une question notée (pas réussie au hasard une fois sur deux) ; le retour **montre la
+  conséquence** dans l'entreprise (« une erreur sur ton bon, c'est une erreur dans le camion »), sans faire la leçon.
+- **Contre le copier-coller vers un autre onglet** (Tristan, 08/10/2026) : (1) une question **ancrée sur le travail de
+  l'élève** (« pourquoi as-tu refusé **ta** palette P3 ? »), de préférence sur une pièce tirée ; (2) répondre **en
+  montrant** plutôt qu'en tapant (le texte libre seulement pour la réflexion non notée) ; (3) une question d'éco-droit
+  **s'applique au cas de l'élève**, le texte de référence fourni dans la séance (source vérifiée, Légifrance), les choix
+  tous exacts en général, un seul s'appliquant au cas. Une question de culture pure reste non notée.
+
 ## Écrire les textes : tu ou vous (règle de Tristan, 06/10/2026)
 
 - **La voix du site** (consignes, aides, légendes, invites, messages juste / faux, détails des jalons, accueil) :

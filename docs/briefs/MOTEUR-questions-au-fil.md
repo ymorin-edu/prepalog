@@ -8,7 +8,7 @@
 >
 > Puis, dans une autre conversation : `… fais le lot 3 (signaux de geste)`, puis `… fais le lot 4 (réponses de la classe)`.
 
-**Statut** : à implémenter (toutes les questions du §11 tranchées le 07/10 au soir). Révisé le 07/10 à 21 h 45 (deux sortes de questions, plus de « Plus tard », travail gelé, souplesse). Révisé le 08/10 à 8 h (sorties de page, §4.8 bis ; trois règles d’écriture contre le copier-coller, dont les questions d’éco-droit, §7).
+**Statut** : lots 1 et 2 livrés le 08/10/2026 (à valider par Tristan sur la page d'essai) ; lots 3 et 4 à implémenter. Questions du §11 tranchées le 07/10 au soir. Révisé le 07/10 à 21 h 45 (deux sortes de questions, plus de « Plus tard », travail gelé, souplesse). Révisé le 08/10 à 8 h (sorties de page, §4.8 bis ; trois règles d’écriture contre le copier-coller, dont les questions d’éco-droit, §7).
 **Date du brief** : 07/10/2026 (soir).
 **Auteur** : Claude (conversation Cowork, Opus), d'après la lecture du code de `main` au commit `d024f17`, du brief
 `FRANCE-BOISSONS-refonte.md` (décisions du 07/10, 21 h) et du lot C de `SMOBY-retours-classe-5.1.md`.
@@ -516,6 +516,47 @@ les durées, et le fait que les vues existantes acceptent un `signal` sans diffi
   (3 dans `boost`, 1 dans `cdiscount`).
 - **Sabotages** (chacun fait tomber le cas nouveau) : carte qui part au bout de 2,6 s ; carte pour un message lu ;
   carte qui prend le focus.
+- **Corrigé après la suite entière** : les cartes posées par-dessus le travail cachaient « Agrandir le planning »
+  (4 cas `planning` / `smoby` tombés). Elles **prennent maintenant leur place** au-dessus du travail (qui descend
+  d'autant) et restent collées en haut de l'écran quand on fait défiler. Suite : 844 / 844.
+
+### Lot 2 — points d'étape et questions au fil (livré le 08/10/2026, Claude Code, Opus)
+
+- **Fichiers** : `core/types/questions.js` (format, contrôle au chargement, jalons, rendu), branché dans
+  `core/types/entreprise.js` (arrivée avec les messages déclenchés, panneau, gel, écran du point d'étape, fermeture,
+  sorties de page) ; `styles/questions.css` (chargé par `index.html`) ; `core/prof.js` (Repérage : colonne « Sorties de
+  page pendant une question », infobulle du Suivi) ; séance d'essai `contenus/questions-essai.js` +
+  `contenus/questions/ESSAI.js` ; page `outils/essai-questions.html` (élève / enseignant / évaluation ; la base est
+  gardée au rechargement, pour le critère 6) ; bloc de tests `questions` (alerte 7 : **`outils/test.mjs` touché** pour
+  l'inscrire, prérequis `socle`, groupe 2 de GitHub).
+- **Écarts au brief, décidés en route** (lignes dans `docs/decisions.md`) :
+  - le **gel est générique** (un écouteur du moteur en phase de capture, comme le verrou de la copie rendue, plus les
+    champs et boutons de l'écran désactivés) au lieu de `gele: true` passé vue par vue : toutes les vues, d'aujourd'hui
+    et de demain, sont gelées sans rien savoir. Restent libres : menu, sortie, cartes, panneau, et ce qui sert à
+    consulter (messages, pièces jointes, documents, onglets, filtres du stock) ;
+  - « **Continuer : point d'étape avec Inès →** » est un **bandeau du moteur** sur tous les écrans (tant que le point
+    d'étape attend), pas le bouton propre à chaque vue (§4.1.2) ;
+  - l'**ordre des choix** est tiré par élève mais **pas rangé** en base (recalculé de la graine : aucune écriture) ;
+  - l'**explication d'une question `apres: 'bilan'`** vient avec le bandeau de fin (le brief ne disait pas où) ;
+  - deux questions au fil prêtes au même moment : celle **dont le geste a eu lieu passe d'abord**, le rattrapage
+    du moteur ensuite ;
+  - la fermeture (`ferme`) vaut **de l'arrivée du point d'étape à ses réponses**, pas avant ; `'repondre:<clé>'` vise le
+    mail qui porte `cle: '<clé>'` (ou l'id de ses phrases) ; `groupe` est **obligatoire** pour une question notée ;
+  - les sorties de page sont gardées à l'écran jusqu'à la réponse : un rechargement avant la réponse les perd.
+- **Pas fait dans ce lot** : les signaux de geste (`apresGeste`, lot 3) — la question au fil de l'essai lit la base
+  (« un remplacement est choisi », jamais lequel) ; la vue par classe (lot 4).
+- **Tests** (`node outils/test.mjs questions`, 13 cas, valeurs écrites à la main) : rien à l'ouverture ; au fil (choix
+  faux → panneau une fois, gel, envoi forcé refusé, Stock et Messagerie avec le panneau, « Merci, je note » avant le
+  bilan, dégel) ; point d'étape (carte, menu, bandeau, « Répondre » fermé, ✗ ✗, pas de seconde réponse, « Continuer »
+  → Malo) ; « Réinitialiser » ; la note (4/3) ; souplesse (reformulé et réordonné, ajoutée, retirée, de côté) ; pire
+  cas avec rattrapage (la suite s'ouvre, explication au bilan) ; contrôle au chargement + tous les fichiers ;
+  enseignant ; évaluation ; sorties de page ; Repérage enseignant.
+- **Sabotages** (chacun fait tomber au moins un cas) : réponse rangée en rang au lieu de clé ; dernière réponse au
+  lieu de la première ; gel retiré ; rattrapage retiré ; point d'étape conditionné à un bon juste. **Non éprouvé** :
+  « Corriger » qui rouvrirait une question (le moteur n'a aucun chemin pour le faire : les jalons des questions n'ont
+  pas d'`ecran`).
+- **Vérifié à l'écran** (page d'essai, 1366 × 768, thèmes clair et sombre) : parcours élève complet, vue enseignant.
+  **Non vérifié** : l'affichage sous 900 px (panneau en bas de l'écran).
 
 À la livraison du lot 2 : recopier les décisions du §4.0 et du §11 dans `docs/decisions.md` (une ligne chacune, datée
 du 07/10/2026, « Tristan »).

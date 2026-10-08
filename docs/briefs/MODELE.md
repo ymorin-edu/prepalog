@@ -42,6 +42,17 @@ Ce que l'élève sait faire à la fin, en une ou deux phrases. Pourquoi ce temps
 Écran par écran, dans l'ordre : ce que l'élève voit, ce qu'il fait, ce qui est corrigé et quand.
 Vues du moteur utilisées (plan, tournée, feuille de calcul, inventaire, messagerie, documents…).
 
+## 4 bis. Questions au fil (à partir de France Boissons, règle du 07/10/2026)
+
+Les questions de la trame passent à l'écran (`activites/FICHE-SEANCE.md`, « Questions au fil et points d'étape »).
+Pour chaque question : le **geste** qui la déclenche (un geste de travail, juste ou faux, jamais l'ouverture d'un écran),
+au fil ou en point d'étape (et ce que le point d'étape garde fermé), **qui la pose**, l'énoncé, les choix (2 à 4, au
+moins 3 si notée) et la bonne réponse, notée ou pour réfléchir, `groupe` et poids, corrigée tout de suite ou **au
+bilan** (si elle éclairerait d'avance un envoi à venir), le **retour** du collègue (la conséquence, pas la leçon).
+La part des questions : **3 à 5 points sur 20**. Deux règles : une question **ancrée sur le travail de l'élève** (sa
+palette, ses dates, de préférence une pièce tirée) ; une question d'éco-droit **appliquée à son cas**, texte de
+référence fourni dans la séance.
+
 ## 5. Jalons / notation
 
 | # | Jalon | Ce qu'il lit dans la base de l'élève | Piège à éviter |

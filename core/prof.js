@@ -792,7 +792,9 @@ export async function rendreEspaceProf(hote, ctx) {
       // Les jalons d'un environnement d'entreprise ne sont pas une note : « 3 / 3 » est
       // l'information juste, et c'est elle qu'on affiche. Voir `core/notes.js`.
       if (!noteConvertie(m)) {
-        return `<td class="num ${classe}">${t.meilleur}/${max}</td>`;
+        // Les sorties de page pendant une question (questions au fil) : en infobulle, s'il y en a eu.
+        const so = sortiesDe(t.detail && t.detail.indicateurs && t.detail.indicateurs[m.id]);
+        return `<td class="num ${classe}"${so ? ` title="${ech(so.phrase)}"` : ''}>${t.meilleur}/${max}</td>`;
       }
 
       // Séance d'entreprise notée sur 20 (07/10/2026) : plus de « (N) tentatives » — chaque sauvegarde en
@@ -802,7 +804,9 @@ export async function rendreEspaceProf(hote, ctx) {
         const ind = t.detail && t.detail.indicateurs && t.detail.indicateurs[m.id];
         const n = (ind && ind.corrections) || 0;
         const corr = n ? `corrigé ${n} fois${n > 1 ? ' (seule la 1re correction compte dans la note)' : ''}` : 'jamais corrigé';
-        return `<td class="num ${classe}" title="${ech(`${formaterNote(t.meilleur)} sur ${max} — ${corr}`)}"
+        const so = sortiesDe(ind);
+        return `<td class="num ${classe}" title="${ech(`${formaterNote(t.meilleur)} sur ${max} — ${corr}${so ? `
+${so.phrase}` : ''}`)}"
           >${formaterNote(noteSur20(t.meilleur, max))}<span class="note">/${BAREME_AFFICHE}</span>${
           n ? `<span class="suivi-corrige" data-corrections="${n}">corrigé ${n}×</span>` : ''}</td>`;
       }
@@ -820,6 +824,19 @@ export async function rendreEspaceProf(hote, ctx) {
     // jugement. Rangé par le moteur dans le détail du score (`detail.indicateurs[idSeance]`) ; lecture
     // seule, sans export, sans recommandation : l'enseignant règle lui-même standard / confirmé.
     const minutes = (s) => (s >= 60 ? `${Math.round(s / 60)} min` : s > 0 ? '< 1 min' : '—');
+    // Les SORTIES DE PAGE pendant une question (questions au fil, §4.8 bis du brief MOTEUR-questions-au-fil, 08/10/2026) :
+    // rangées par le moteur avec chaque réponse (`indicateurs[séance].questions[q] = { sorties, horsPage }`). Une ligne
+    // seulement s'il y en a eu ; jamais un classement.
+    function sortiesDe(ind) {
+      const Q = ind && ind.questions;
+      if (!Q) return null;
+      const L = Object.entries(Q).filter(([k, x]) => k[0] !== '@' && x && x.sorties > 0);
+      if (!L.length) return null;
+      const fois = L.reduce((a, [, x]) => a + x.sorties, 0), s = L.reduce((a, [, x]) => a + (x.horsPage || 0), 0);
+      const duree = s >= 60 ? `${Math.floor(s / 60)} min${s % 60 ? ` ${String(s % 60).padStart(2, '0')}` : ''}` : `${s} s`;
+      const court = `${L.length} question${L.length > 1 ? 's' : ''} (${fois} fois, ${duree})`;
+      return { court, phrase: `a quitté la page pendant ${court}`, questions: L.map(([k]) => k) };
+    }
     const somme = (o) => Object.values(o || {}).reduce((a, n) => a + n, 0);
     const liste = (o) => Object.entries(o || {}).sort((a, b) => b[1] - a[1]).map(([k, n]) => `${k} (${n})`).join(', ');
     function sectionReperage() {
@@ -830,6 +847,14 @@ export async function rendreEspaceProf(hote, ctx) {
         // 4 documents différents ouverts sur 6 ; le survol dit lesquels et combien de fois.
         const docsDe = (e) => { const t = par[e.uid]?.[m.id]; return t && t.detail && t.detail.documents; };
         const avecDocs = eleves.some(docsDe);
+        // La colonne des sorties de page : seulement pour une séance qui pose des questions au fil.
+        const avecQuestions = eleves.some((e) => { const r = rep(e); return !!(r && r.questions); });
+        const caseSorties = (r) => {
+          if (!avecQuestions) return '';
+          const so = sortiesDe(r);
+          return so ? `<td class="num" data-rep="sorties" title="${ech(`Questions concernées : ${so.questions.join(', ')}`)}">${ech(so.court)}</td>`
+            : '<td class="num" data-rep="sorties">—</td>';
+        };
         const caseDocs = (e, r) => {
           if (!avecDocs) return '';
           const D = docsDe(e);
@@ -840,7 +865,7 @@ export async function rendreEspaceProf(hote, ctx) {
         };
         const lignes = eleves.map((e) => {
           const r = rep(e);
-          if (!r) return `<tr><td>${ech(e.nom)} ${ech(e.prenom)}</td><td class="num note" colspan="${avecDocs ? 5 : 4}">—</td></tr>`;
+          if (!r) return `<tr><td>${ech(e.nom)} ${ech(e.prenom)}</td><td class="num note" colspan="${4 + (avecDocs ? 1 : 0) + (avecQuestions ? 1 : 0)}">—</td></tr>`;
           const reel = par[e.uid][m.id].detail.quai && par[e.uid][m.id].detail.quai.reel;
           const p = Object.entries(r.premier || {});
           // Les jalons ratés sont nommés par leur TITRE (rangé par le moteur avec la note, `detail.titres`, 07/10/2026),
@@ -854,12 +879,13 @@ export async function rendreEspaceProf(hote, ctx) {
             <td class="num" data-rep="temps">${minutes(r.temps || 0)}${reel ? `<span class="note"> (quai : ${minutes(reel)})</span>` : ''}</td>
             <td class="num" data-rep="mots" title="${ech(liste(r.mots))}">${somme(r.mots)}</td>
             <td class="num" data-rep="aides" title="${ech(liste(r.aides))}">${somme(r.aides)}</td>${caseDocs(e, r)}
-            <td class="num" data-rep="premier" title="${ech(bulle)}">${p.length ? `${ok.length} / ${p.length}` : '—'}</td></tr>`;
+            <td class="num" data-rep="premier" title="${ech(bulle)}">${p.length ? `${ok.length} / ${p.length}` : '—'}</td>${caseSorties(r)}</tr>`;
         }).join('');
         return `<details class="reperage" data-reperage="${ech(m.id)}"><summary>${ech(m.code)} — ${ech(m.titre)}</summary>
           <div style="overflow:auto"><table>
             <thead><tr><th>Élève</th><th class="num">Temps passé</th><th class="num">Mots ouverts</th>
-              <th class="num">Autres aides</th>${avecDocs ? '<th class="num">Documents ouverts</th>' : ''}<th class="num">Jalons justes du premier coup</th></tr></thead>
+              <th class="num">Autres aides</th>${avecDocs ? '<th class="num">Documents ouverts</th>' : ''}<th class="num">Jalons justes du premier coup</th>${
+                avecQuestions ? '<th class="num">Sorties de page pendant une question</th>' : ''}</tr></thead>
             <tbody>${lignes}</tbody></table></div></details>`;
       }).join('');
       if (!blocs) return '';
@@ -868,7 +894,8 @@ export async function rendreEspaceProf(hote, ctx) {
         <p class="note">Par séance : le temps passé l'écran ouvert, les mots cliquables et les autres aides ouverts,
           les documents ouverts (s'il y en a : ouverts, pas forcément lus),
           et les jalons justes au premier jugement (premier envoi, premier dépôt, première validation) sur les
-          jalons déjà jugés. Survolez une case pour le détail. Rien n'est calculé à votre place : vous réglez
+          jalons déjà jugés ; pour une séance à questions, les sorties de page pendant une question (onglet quitté,
+          fenêtre quittée plus de 3 s : sans effet sur la note). Survolez une case pour le détail. Rien n'est calculé à votre place : vous réglez
           vous-même le niveau standard / confirmé de chaque élève.</p>
         ${blocs}</section>`;
     }
