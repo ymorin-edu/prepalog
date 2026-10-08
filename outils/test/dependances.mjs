@@ -298,4 +298,72 @@ await v('séances d\'entreprise : toute trame (écrite ou déduite par la fabriq
   if (problemes.length) throw new Error(problemes.join(' ; '));
 });
 
+// ---------- 45. la table unique des options de `creerEntreprise` (chantier 9, lot 9a, 08/10/2026)
+// `OPTIONS` (en tête de `core/types/entreprise.js`) liste toutes les clés que le moteur lit. Une clé inconnue, ou
+// d'un type que le moteur ne sait pas lire, fait refuser la séance ; deux vues de même famille ne partagent pas un `id`.
+// Les cas appellent `creerEntreprise` avec un univers FICTIF minimal (jamais une vraie entreprise) : seuls les refus
+// comptent ici, le moteur ne dessine rien.
+const moteurEssai = (corps) => page.evaluate(async (src) => {
+  const E = await import('/core/types/entreprise.js');
+  const F = await import('/core/types/seance-entreprise.js');
+  const univers = { ENTREPRISE: { nom: 'E', sousTitre: 's' }, VOCAB: { unit: 'p', unitPl: 'ps', sizeLabel: 'T' },
+    CATALOGUE: { MODELS: [], MM: {}, VARIANTS: [], VM: {} }, SUPPLIERS: [], SUP_BY_ID: {}, CUSTOMERS: [], CM: {},
+    baseDeDepart: () => ({}), THEME: {}, etapes: [] };
+  const fiche = (id) => ({ id, libelle: 'Fiche ' + id, titre: 'T', blocs: [{ type: 'choix', id: 'c', lib: 'C', manque: 'c', choix: ['A', 'B'] }],
+    envoi: { bouton: 'Envoyer', a: 'X' } });
+  const essai = (extra) => { try { E.creerEntreprise({ ...univers, ...extra }); return 'CHARGÉE'; } catch (e) { return e.message; } };
+  return await new Function('E', 'F', 'univers', 'fiche', 'essai', `return (async () => { ${src} })()`)(E, F, univers, fiche, essai);
+}, corps);
+
+await v('creerEntreprise : une option inconnue refuse la séance, en français, en nommant la clé et en listant les clés connues', async () => {
+  const r = await moteurEssai(`return { ok: essai({}), faute: essai({ quay: {} }), casse: essai({ Menu: [] }), heritee: essai({ constructor: 1 }),
+    cles: Object.keys(E.OPTIONS) };`);
+  if (r.ok !== 'CHARGÉE') throw new Error('l\'univers fictif nu doit se charger : ' + r.ok);
+  if (!r.faute.includes('« quay »') || !/n'existe pas/.test(r.faute)) throw new Error('le refus ne nomme pas la clé : ' + r.faute);
+  if (!r.faute.includes('quai') || !r.faute.includes('finFige') || !r.faute.includes('baseDeDepart')) throw new Error('le refus ne liste pas les clés connues : ' + r.faute);
+  if (!r.casse.includes('« Menu »') || !r.casse.includes('« menu » ?')) throw new Error('la bonne orthographe n\'est pas proposée : ' + r.casse);
+  if (!r.heritee.includes('« constructor »')) throw new Error('un nom hérité de Object ne doit pas passer pour une option : ' + r.heritee);
+  if (r.cles.length < 40) throw new Error(`la table ne compte que ${r.cles.length} options`);
+});
+
+await v('creerEntreprise : une option du mauvais type refuse la séance ; null et undefined valent « absent »', async () => {
+  const r = await moteurEssai(`return { menu: essai({ menu: 'stock' }), etapes: essai({ etapes: {} }), nul: essai({ quai: null }),
+    absents: essai({ menu: undefined, quai: null, fiche: null, copie: undefined }) };`);
+  if (!r.menu.includes('« menu »') || !r.menu.includes('array')) throw new Error('menu en texte accepté ou mal expliqué : ' + r.menu);
+  if (!r.etapes.includes('« etapes »')) throw new Error('etapes en objet accepté : ' + r.etapes);
+  if (r.nul !== 'CHARGÉE' || r.absents !== 'CHARGÉE') throw new Error('null/undefined doivent valoir « absent » : ' + r.nul + ' / ' + r.absents);
+});
+
+await v('creerEntreprise : la table OPTIONS est exactement l\'ensemble des clés que le code du moteur lit (U.xxx et déstructuration), dans les deux sens', async () => {
+  const src = fs.readFileSync(path.join(ROOT, 'core', 'types', 'entreprise.js'), 'utf8');
+  const lues = new Set([...src.matchAll(/\bU\.([A-Za-z_]\w*)/g)].map((m) => m[1]));
+  const destructure = /const \{([\s\S]*?)\} = U;/.exec(src);
+  if (!destructure) throw new Error('la déstructuration « const { … } = U; » n\'est plus là : adapter ce cas');
+  destructure[1].split(',').map((x) => /^\s*(\w+)/.exec(x)?.[1]).filter(Boolean).forEach((k) => lues.add(k));
+  const table = new Set(await page.evaluate(async () => Object.keys((await import('/core/types/entreprise.js')).OPTIONS)));
+  const manque = [...lues].filter((k) => !table.has(k));
+  const morte = [...table].filter((k) => !lues.has(k));
+  if (lues.size < 40) throw new Error(`seulement ${lues.size} clés relevées dans le code (le cas ne doit pas passer à vide)`);
+  if (manque.length) throw new Error('lue par le moteur, absente de OPTIONS : ' + manque.join(', '));
+  if (morte.length) throw new Error('dans OPTIONS, lue nulle part dans le moteur : ' + morte.join(', '));
+});
+
+await v('seanceEntreprise : le refus d\'une option inconnue nomme la séance', async () => {
+  const r = await moteurEssai(`
+    const contenu = { ETAPES: [{ id: 'a' }] };
+    const essaiF = (opts) => { try { F.seanceEntreprise(univers, contenu, { id: 'x-essai', code: 'ENT-9.1' }, opts); return 'CHARGÉE'; } catch (e) { return e.message; } };
+    return { faute: essaiF({ finFigé: 'x' }), bon: essaiF({ finFige: 'x' }) };`);
+  if (!r.faute.includes('x-essai') || !r.faute.includes('« finFigé »')) throw new Error('le refus ne nomme pas la séance et la clé : ' + r.faute);
+  if (r.bon !== 'CHARGÉE') throw new Error('une option connue doit passer par la fabrique : ' + r.bon);
+});
+
+await v('séances d\'entreprise : les 24 séances du registre se chargent sans refus des options', async () => {
+  const r = await page.evaluate(async () => {
+    try { return { metas: (await (await import('/activites/index.js')).chargerActivites()).map((a) => a.meta.code) }; } catch (e) { return { refus: e.message }; }
+  });
+  if (r.refus) throw new Error('une séance est refusée au chargement : ' + r.refus);
+  const ent = r.metas.filter((c) => /^ENT-\d+\.\d+$/.test(c));
+  if (ent.length < 24) throw new Error(`seulement ${ent.length} séances d'entreprise chargées`);
+});
+
 }

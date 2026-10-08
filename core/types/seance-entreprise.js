@@ -99,7 +99,10 @@ export function composerSeance(UNIVERS, SEANCE, meta, options = {}) {
 // pour une évaluation (`copie: true`).
 export function seanceEntreprise(UNIVERS, SEANCE, meta, options = {}) {
   const { meta: complet, options: opts } = composerSeance(UNIVERS, SEANCE, meta, options);
-  const moteur = creerEntreprise(opts);
+  // Un refus du moteur (option inconnue, `id` de vue en double…) nomme la séance : sur vingt-quatre séances chargées d'un coup,
+  // « l'option « quay » n'existe pas » ne dirait pas laquelle.
+  let moteur;
+  try { moteur = creerEntreprise(opts); } catch (e) { e.message = `Séance « ${complet.id} » : ${e.message}`; throw e; }
   return {
     meta: complet,
     rendre: (hote, ctx) => moteur.rendre(hote, ctx),
