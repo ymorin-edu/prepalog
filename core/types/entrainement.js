@@ -27,7 +27,7 @@
 
 import { ech, toast } from '../ui.js';
 import { B } from '../backend.js';
-import { melangerQuestionsFixes } from '../questions.js';
+import { melangerQuestionsFixes } from '../quiz.js';
 import { monterCalculette, demonterCalculette } from '../calculette.js';
 
 // Nom affiché dans un classement lu par toutes les classes : prénom et initiale.

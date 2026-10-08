@@ -27,7 +27,7 @@ au classement, et un bouton bascule en thème sombre.
 
 | Fichier | Rôle |
 |---|---|
-| `core/questions.js` | fabrique de questions tirées au sort (outils repris de la Suite) |
+| `core/quiz.js` | fabrique de questions tirées au sort (outils repris de la Suite) |
 | `core/calculette.js` | la calculette flottante, générique |
 | `core/types/entrainement.js` | le moteur : rappel, jeu, bilan, classement |
 

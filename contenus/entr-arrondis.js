@@ -12,7 +12,7 @@
 //    réponse affichée était fausse. Le résultat est maintenant calculé en entiers.
 //  - cinq autres générateurs (n° 9, 10, 12, 17, 20) perdaient un distracteur ; remplacé.
 
-import { tirer as randPick, entier as randInt, nombreFR as fmtFR, question as buildQuestion } from '../core/questions.js';
+import { tirer as randPick, entier as randInt, nombreFR as fmtFR, question as buildQuestion } from '../core/quiz.js';
 
 // Outil local de la Suite, repris à l'identique.
 function roundToDecimals(n, dec) {

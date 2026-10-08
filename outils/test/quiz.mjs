@@ -131,7 +131,7 @@ await v('QUI-8 : les 20 générateurs donnent des questions à quatre choix dist
 // élève sanctionné pour avoir choisi la seconde.
 await v('questions : un distracteur qui tombe sur la bonne réponse est écarté', async () => {
   const r = await page.evaluate(async () => {
-    const { question } = await import('/core/questions.js');
+    const { question } = await import('/core/quiz.js');
     const q = question('Combien ?', '2,5 h', ['3,5 h', '2,5 h', '2,5 h'], 'parce que');
     return { choix: q.choix, juste: q.choix[q.juste], distincts: new Set(q.choix).size };
   });
@@ -445,7 +445,7 @@ await v('entraînement : un parcours sans faute remonte le score complet et le t
 // donc rien dans le site n'exerce encore ce chemin — d'où ce test.
 await v('entraînement : des questions figées sont mélangées, énoncés ET réponses', async () => {
   const r = await page.evaluate(async () => {
-    const { melangerQuestionsFixes } = await import('/core/questions.js');
+    const { melangerQuestionsFixes } = await import('/core/quiz.js');
     const QS = [1, 2, 3, 4, 5, 6].map((n) => ({
       enonce: 'Q' + n, choix: ['bon' + n, 'a' + n, 'b' + n, 'c' + n], juste: 0, explication: 'x',
     }));

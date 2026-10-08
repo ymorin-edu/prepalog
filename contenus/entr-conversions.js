@@ -8,7 +8,7 @@
 // Les trois outils sont importés sous leur nom d'origine pour que le corps des
 // générateurs n'ait eu besoin d'aucune retouche.
 
-import { tirer as randPick, nombreFR as fmtFR, question as buildQuestion } from '../core/questions.js';
+import { tirer as randPick, nombreFR as fmtFR, question as buildQuestion } from '../core/quiz.js';
 
 export const TITRE = "Conversions d'unités";
 

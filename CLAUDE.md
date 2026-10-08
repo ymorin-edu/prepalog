@@ -83,7 +83,7 @@ réel ; sans `prepalog-config.json` valide, le site tourne en **mode démonstrat
 ```
 index.html  lancer.bat  README.md  firebase.json  firestore.rules  database.rules.json
 core/        app.js backend*.js store.js niveaux.js notes.js competences.js copie.js prof.js ui.js
-             theme.js formules.js calculette.js parcours.js questions.js config.js
+             theme.js formules.js calculette.js parcours.js quiz.js config.js
              declencheurs.js tirage.js lexique.js phrases.js iso.js amenagements.js
 core/types/  qcm ordre assoc numerique tableur tableau lien entreprise inventaire tournee grille …
 activites/   index.js (registre + rubriques + icônes) et un fichier par activité

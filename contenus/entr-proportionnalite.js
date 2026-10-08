@@ -10,7 +10,7 @@
 // générateur) : six générateurs (n° 2, 11, 12, 16, 17, 18) perdaient un distracteur au profit
 // d'un « Aucune de ces réponses » ; leur dernier distracteur a été remplacé.
 
-import { tirer as randPick, entier as randInt, nombreFR as fmtFR, question as buildQuestion } from '../core/questions.js';
+import { tirer as randPick, entier as randInt, nombreFR as fmtFR, question as buildQuestion } from '../core/quiz.js';
 
 
 export const TITRE = "Proportionnalité";
