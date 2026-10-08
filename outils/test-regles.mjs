@@ -615,6 +615,98 @@ await v("nul ne s'inscrit dans profsGlobaux", () =>
   assertFails(dbDe('prof1').ref('profsGlobaux/prof1').set(true)));
 
 // =====================================================================================
+//  PLUSIEURS ENSEIGNANTS (chantier 11, lot 11a, 09/10/2026)
+// =====================================================================================
+// Le lot 11a ne publie aucune règle : il construit, côté site, ce que les règles ACTUELLES permettent déjà
+// (ajouter un collègue à un groupe depuis le site, par son adresse). Ces cas le prouvent : l'attente est
+// « autorisé » partout où le site écrit, « refusé » là où il s'appuie sur un refus (le signal « nom pris »).
+// S'ils tombaient, le site ferait au collègue un refus inattendu ; le lot 11b (restrictions) viendra les
+// compléter sans rien relâcher.
+//
+// Acteurs : profA = responsable du groupe `gd1` (premier de `profs`) et seul inscrit à son miroir
+// `acces/gd1/profs`, SANS être dans `profsGlobaux` (un enseignant ordinaire) ; profB = le collègue ajouté
+// ensuite, sans adresse dans son profil au départ (un profil créé à la console ou avant le chantier 11).
+await env.clearFirestore();
+await env.clearDatabase();
+await env.withSecurityRulesDisabled(async (ctx) => {
+  const d = ctx.firestore();
+  await d.doc('users/profA').set({ role: 'prof', nom: 'Responsable', prenom: 'Ada', email: 'ada@prepalog.local', groupes: [] });
+  await d.doc('users/profB').set({ role: 'prof', nom: 'Collègue', prenom: 'Bob', groupes: [] });
+  await d.doc('users/eleveD1').set({ role: 'eleve', nom: 'Dupuis', matricule: '3001', code: 'zz', groupes: ['gd1'], creePar: 'profA' });
+  await d.doc('groupes/1l1').set({ nom: '1L1', annee: 2026, profs: ['profA'], ouverts: {} });
+  await d.doc('groupes/gd1').set({ nom: 'GD1', annee: 2026, profs: ['profA'], ouverts: {} });
+  await d.doc('travaux/gd1/eleves/eleveD1/activites/qcm').set({ score: 10, max: 20 });
+  const r = ctx.database().ref();
+  await r.set({
+    profsGlobaux: { profGlobal: true },
+    acces: { gd1: { profs: { profA: true }, eleves: { eleveD1: true } } },
+    jeux: { gd1: { act: { produits: { L1: { nom: 'Vis', _par: 'profA', _ts: 1 } } } } },
+  });
+});
+
+await v("lot 11a : le groupe `1l1` d'un collègue ne se lit pas (c'est le signal « nom pris »)", () =>
+  assertFails(fsDe('profB').doc('groupes/1l1').get()));
+await v("lot 11a : le responsable lit son propre groupe (le signal est donc « à moi »)", () =>
+  assertSucceeds(fsDe('profA').doc('groupes/1l1').get()));
+await v("lot 11a : l'enseignant dont le nom est pris crée `1l1-<suffixe>`", () =>
+  assertSucceeds(fsDe('profB').doc('groupes/1l1-profb1').set({ nom: '1L1', annee: 2026, profs: ['profB'], ouverts: {} })));
+await v("lot 11a : l'enseignant du groupe suffixé le relit (nom pris par soi-même)", () =>
+  assertSucceeds(fsDe('profB').doc('groupes/1l1-profb1').get()));
+
+await v("lot 11a : un enseignant écrit son adresse dans son propre profil", () =>
+  assertSucceeds(fsDe('profB').doc('users/profB').update({ email: 'bob@prepalog.local' })));
+await v("lot 11a : un enseignant cherche un profil par adresse", async () => {
+  const s = await assertSucceeds(fsDe('profA').collection('users').where('email', '==', 'bob@prepalog.local').get());
+  if (s.docs.length !== 1 || s.docs[0].id !== 'profB') throw new Error('profil attendu : profB, reçu ' + s.docs.map((d) => d.id));
+});
+await v("lot 11a : un enseignant n'écrit pas l'adresse d'un collègue", () =>
+  assertFails(fsDe('profA').doc('users/profB').update({ email: 'detourne@prepalog.local' })));
+
+await v("lot 11a : avant d'être ajouté, le collègue ne lit ni le groupe ni les travaux", async () => {
+  await assertFails(fsDe('profB').doc('groupes/gd1').get());
+  await assertFails(fsDe('profB').doc('travaux/gd1/eleves/eleveD1/activites/qcm').get());
+});
+await v("lot 11a : le responsable ajoute un collègue à `profs` de son groupe", () =>
+  assertSucceeds(fsDe('profA').doc('groupes/gd1').update({ profs: ['profA', 'profB'] })));
+await v("lot 11a : le collègue ajouté liste le groupe (`array-contains`) et le lit", async () => {
+  const s = await assertSucceeds(fsDe('profB').collection('groupes').where('profs', 'array-contains', 'profB').get());
+  if (!s.docs.some((d) => d.id === 'gd1')) throw new Error('gd1 absent de la liste de profB : ' + s.docs.map((d) => d.id));
+  await assertSucceeds(fsDe('profB').doc('groupes/gd1').get());
+});
+await v("lot 11a : le collègue ajouté lit les travaux du groupe", () =>
+  assertSucceeds(fsDe('profB').doc('travaux/gd1/eleves/eleveD1/activites/qcm').get()));
+await v("lot 11a : un champ pointé n'écrase pas celui du collègue (ouvertures en champ par champ)", async () => {
+  // Deux enseignants ouvrent chacun une séance (identifiant à tiret) : `ouverts.<id>` ne touche que son champ.
+  await assertSucceeds(fsDe('profA').doc('groupes/gd1').update({ 'ouverts.quiz-flux': true }));
+  await assertSucceeds(fsDe('profB').doc('groupes/gd1').update({ 'ouverts.ent-1-2': true }));
+  const g = (await fsDe('profA').doc('groupes/gd1').get()).data();
+  if (g.ouverts['quiz-flux'] !== true || g.ouverts['ent-1-2'] !== true) throw new Error('ouvertures : ' + JSON.stringify(g.ouverts));
+});
+
+await v("lot 11a : le responsable non global inscrit le collègue au miroir `acces/gd1/profs`", () =>
+  assertSucceeds(dbDe('profA').ref('acces/gd1/profs/profB').set(true)));
+await v("lot 11a : le collègue inscrit lit la base partagée du groupe", () =>
+  assertSucceeds(dbDe('profB').ref('jeux/gd1/act').once('value')));
+await v("lot 11a : le collègue inscrit n'est pas pour autant global (il ne crée pas de groupe)", () =>
+  assertFails(dbDe('profB').ref('acces/gneuf/profs/profB').set(true)));
+
+await v("lot 11a : le collègue quitte le groupe (il efface sa propre entrée du miroir, puis sa place dans `profs`)", async () => {
+  await assertSucceeds(dbDe('profB').ref('acces/gd1/profs/profB').remove());
+  await assertSucceeds(fsDe('profB').doc('groupes/gd1').update({ profs: ['profA'] }));
+});
+await v("lot 11a : le collègue retiré ne lit plus le groupe, ses travaux ni la base partagée", async () => {
+  await assertFails(fsDe('profB').doc('groupes/gd1').get());
+  await assertFails(fsDe('profB').doc('travaux/gd1/eleves/eleveD1/activites/qcm').get());
+  await assertFails(dbDe('profB').ref('jeux/gd1/act').once('value'));
+});
+await v("lot 11a : le responsable retire un collègue du miroir (effacement explicite)", async () => {
+  await assertSucceeds(fsDe('profA').doc('groupes/gd1').update({ profs: ['profA', 'profB'] }));
+  await assertSucceeds(dbDe('profA').ref('acces/gd1/profs/profB').set(true));
+  await assertSucceeds(dbDe('profA').ref('acces/gd1/profs/profB').remove());
+  await assertFails(dbDe('profB').ref('jeux/gd1/act').once('value'));
+});
+
+// =====================================================================================
 //  Verdict
 // =====================================================================================
 

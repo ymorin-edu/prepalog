@@ -389,4 +389,444 @@ await v('groupes : le bouton « Reconstruire l\'accès » répond « Accès reco
   await page.waitForFunction(() => /Accès reconstruit/.test(document.getElementById('toast')?.textContent || ''), null, { timeout: 4000 });
 });
 
+
+// =====================================================================================================
+// ---------- 39. Plusieurs enseignants (chantier 11, lot 11a, 09/10/2026)
+// Deux enseignants en démonstration : l'écran de connexion de démo a un champ « adresse » (#mail) et
+// `connexionProf(email)` crée un second enseignant. A = prof.demo@prepalog.local, B = collegue@prepalog.local.
+// La démonstration imite le mode réel (même garde dans core/collegues.js, même message, mêmes suffixes) : ces
+// cas éprouvent donc, côté mode réel, ce qui est écrit une fois dans ce fichier partagé.
+// Chaque cas se termine en se reconnectant en A : le bloc suivant ne doit pas hériter de B. Les données de ces
+// cas portent le préfixe « ZZ DUO » (groupes) et « zd » (matricules) ; `menageDuo` les efface toutes.
+// =====================================================================================================
+const MAIL_A = 'prof.demo@prepalog.local', MAIL_B = 'collegue@prepalog.local';
+const seConnecter = async (mail) => {
+  if (await page.$('#btnDeco')) await page.click('#btnDeco');
+  await page.waitForSelector('#btnProf', { timeout: 6000 });
+  await page.fill('#mail', mail);
+  await page.click('#btnProf');
+  await page.waitForSelector('#btnProfEspace', { timeout: 6000 });
+};
+const ongletEspace = async (ong) => {
+  if (!(await page.$('[data-ong]'))) {
+    if (await page.$('#btnRetour')) await page.click('#btnRetour');
+    await page.waitForSelector('#btnProfEspace', { timeout: 6000 });
+    await page.click('#btnProfEspace');
+  }
+  await page.waitForSelector(`[data-ong="${ong}"]`, { timeout: 6000 });
+  await page.click(`[data-ong="${ong}"]`);
+  await page.waitForTimeout(250);
+};
+const viderToast = () => page.evaluate(() => { const t = document.getElementById('toast'); if (t) t.textContent = ''; });
+// Rouvre l'espace enseignant depuis l'accueil : la liste des élèves sans groupe n'est relue qu'à son ouverture.
+const rouvrirEspace = async (ong) => {
+  if (await page.$('#btnRetour')) await page.click('#btnRetour');
+  await page.waitForSelector('#btnProfEspace', { timeout: 6000 });
+  await page.click('#btnProfEspace');
+  await page.waitForSelector(`[data-ong="${ong}"]`, { timeout: 6000 });
+  await page.click(`[data-ong="${ong}"]`);
+  await page.waitForTimeout(250);
+};
+const leToast = () => page.evaluate(() => document.getElementById('toast')?.textContent || '');
+const attendreToast = async (re) => {
+  await page.waitForFunction((src) => new RegExp(src).test(document.getElementById('toast')?.textContent || ''), re.source, { timeout: 5000 })
+    .catch(async () => { throw new Error(`message attendu ${re} — affiché : « ${await leToast()} »`); });
+};
+const lireDemo = (cle) => page.evaluate((k) => JSON.parse(localStorage.getItem('prepalog:' + k) || 'null'), cle);
+const uidDe = async (mail) => (await page.evaluate((m) => {
+  const u = JSON.parse(localStorage.getItem('prepalog:users') || '{}');
+  return Object.keys(u).find((k) => u[k].email === m) || null;
+}, mail));
+// Crée un groupe depuis l'écran (onglet Groupes).
+const creerGroupeEcran = async (nom) => {
+  await ongletEspace('groupes');
+  await page.fill('#gNom', nom);
+  await viderToast();
+  await page.click('#btnCreerG');
+};
+// Active un groupe (s'il ne l'est pas déjà) depuis l'onglet Groupes.
+const activerGroupe = async (gid) => {
+  await ongletEspace('groupes');
+  if (await page.$(`[data-actif="${gid}"]`)) await page.click(`[data-actif="${gid}"]`);
+  await page.waitForSelector('#panProfs', { timeout: 6000 });
+};
+const lignesGroupes = () => page.$$eval('#contenuProf tbody tr', (l) => l.map((r) => r.textContent));
+// Crée des élèves avec le backend de la page (celui du compte connecté : `creePar` = ce compte).
+const creerElevesDuo = (gid, liste) => page.evaluate(async ([g, l]) => {
+  const { creerBackendDemo } = await import('/core/backend-demo.js');
+  return creerBackendDemo().creerEleves(g, l);
+}, [gid, liste]);
+const essaiBackend = (corps, arg) => page.evaluate(async ([c, a]) => {
+  const { creerBackendDemo } = await import('/core/backend-demo.js');
+  const B = creerBackendDemo();
+  try { return { ok: true, r: await (new Function('B', 'a', `return (async () => { ${c} })()`))(B, a) }; }
+  catch (e) { return { ok: false, message: e.message }; }
+}, [corps, arg]);
+const estConnecte = (mail) => page.evaluate((m) => {
+  const u = JSON.parse(localStorage.getItem('prepalog:users') || '{}');
+  const s = JSON.parse(localStorage.getItem('prepalog:session') || 'null');
+  return !!s && !!u[s] && u[s].email === m && !!document.getElementById('btnDeco');
+}, mail);
+const menageDuo = () => page.evaluate(() => {
+  const j = (k) => JSON.parse(localStorage.getItem(k) || 'null');
+  const g = j('prepalog:groupes') || {};
+  const u = j('prepalog:users') || {};
+  Object.keys(g).filter((k) => /^ZZ DUO/.test(g[k].nom)).forEach((k) => {
+    delete g[k];
+    Object.keys(localStorage).filter((x) => x.startsWith(`prepalog:travaux/${k}/`) || x === `prepalog:travauxIdx/${k}`).forEach((x) => localStorage.removeItem(x));
+  });
+  Object.keys(u).filter((k) => /^zd/.test(u[k].matricule || '')).forEach((k) => {
+    Object.keys(localStorage).filter((x) => x.startsWith(`prepalog:prive/${k}/`)).forEach((x) => localStorage.removeItem(x));
+    delete u[k];
+  });
+  localStorage.setItem('prepalog:groupes', JSON.stringify(g));
+  localStorage.setItem('prepalog:users', JSON.stringify(u));
+});
+// Un cas à deux enseignants : on repart toujours de A, et on y revient, qu'il réussisse ou non.
+const casDuo = (nom, corps) => v(nom, async () => {
+  try {
+    if (!(await estConnecte(MAIL_A))) await seConnecter(MAIL_A);
+    await corps();
+  } finally {
+    if (!(await estConnecte(MAIL_A))) await seConnecter(MAIL_A).catch(() => {});
+  }
+});
+await menageDuo();
+
+// ---------- 39 a. D1 : un nom pris par un collègue reçoit un suffixe ; le sien est refusé
+await casDuo('plusieurs enseignants : un nom de groupe déjà pris par un collègue reçoit un suffixe, un nom déjà pris par soi est refusé', async () => {
+  await creerGroupeEcran('ZZ DUO');
+  await attendreToast(/Groupe créé/);
+  const uidA = await page.evaluate(() => JSON.parse(localStorage.getItem('prepalog:session')));
+  await seConnecter(MAIL_B);
+  const uidB = await page.evaluate(() => JSON.parse(localStorage.getItem('prepalog:session')));
+  if (uidA === uidB) throw new Error('le second enseignant est le même compte que le premier');
+  await ongletEspace('groupes');
+  if ((await lignesGroupes()).some((t) => /ZZ DUO/.test(t))) throw new Error('B voit le groupe de A dans sa liste');
+  await creerGroupeEcran('ZZ DUO');
+  await attendreToast(/Groupe créé/);
+  const g = await lireDemo('groupes');
+  const duo = Object.keys(g).filter((k) => g[k].nom === 'ZZ DUO').sort();
+  if (duo.length !== 2) throw new Error('deux groupes « ZZ DUO » attendus : ' + duo.join(', '));
+  const suffixe = duo.find((k) => k !== 'zz-duo');
+  if (!/^zz-duo-[a-z0-9]{1,6}$/.test(suffixe)) throw new Error('identifiant suffixé inattendu : ' + suffixe);
+  if (g['zz-duo'].profs.join() !== uidA) throw new Error('le groupe de A a changé de mains : ' + g['zz-duo'].profs);
+  if (g[suffixe].profs.join() !== uidB) throw new Error('le groupe suffixé doit être à B seul : ' + g[suffixe].profs);
+  // B ne voit que le sien, sous le même nom.
+  const lignes = await lignesGroupes();
+  if (lignes.filter((t) => /ZZ DUO/.test(t)).length !== 1) throw new Error('B doit voir un seul « ZZ DUO » : ' + lignes.join(' | '));
+  // Le sien une seconde fois : refusé, et rien n'est créé.
+  await creerGroupeEcran('ZZ DUO');
+  await attendreToast(/Vous avez déjà un groupe de ce nom/);
+  await seConnecter(MAIL_A);
+  await creerGroupeEcran('ZZ DUO');
+  await attendreToast(/Vous avez déjà un groupe de ce nom/);
+  const apres = await lireDemo('groupes');
+  const encore = Object.keys(apres).filter((k) => apres[k].nom === 'ZZ DUO');
+  if (encore.length !== 2) throw new Error('un groupe en trop a été créé : ' + encore.join(', '));
+});
+
+// ---------- 39 b. D3 : chacun ne voit que ses élèves sans groupe, plus ceux qui n'ont aucun auteur
+await casDuo('plusieurs enseignants : les élèves sans groupe se répartissent par auteur, celui sans auteur est visible de tous', async () => {
+  const uidB = await uidDe(MAIL_B);
+  await page.evaluate(() => {
+    const u = JSON.parse(localStorage.getItem('prepalog:users'));
+    u['zd-a'] = { role: 'eleve', nom: 'DUOA', prenom: 'Alix', matricule: 'zd01', code: 'a1', groupes: [], creePar: JSON.parse(localStorage.getItem('prepalog:session')) };
+    u['zd-sans'] = { role: 'eleve', nom: 'DUOS', prenom: 'Sam', matricule: 'zd03', code: 's1', groupes: [] };
+    localStorage.setItem('prepalog:users', JSON.stringify(u));
+  });
+  await page.evaluate((b) => {
+    const u = JSON.parse(localStorage.getItem('prepalog:users'));
+    u['zd-b'] = { role: 'eleve', nom: 'DUOB', prenom: 'Bao', matricule: 'zd02', code: 'b1', groupes: [], creePar: b };
+    localStorage.setItem('prepalog:users', JSON.stringify(u));
+  }, uidB);
+  // A : ses élèves et celui sans auteur, jamais ceux de B.
+  await rouvrirEspace('groupes');
+  if (!/\(2\)/.test(await page.textContent('[data-ong="orphelins"]'))) throw new Error('A doit en compter 2 : ' + await page.textContent('[data-ong="orphelins"]'));
+  await page.click('[data-ong="orphelins"]');
+  let t = await page.textContent('#contenuProf');
+  if (!/DUOA/.test(t) || !/DUOS/.test(t)) throw new Error('A doit voir DUOA et DUOS : ' + t.slice(0, 300));
+  if (/DUOB/.test(t)) throw new Error('A voit l\'élève sans groupe de B');
+  const ligneSans = await page.$$eval('#contenuProf tbody tr', (l) => l.filter((r) => /DUOS/.test(r.textContent)).map((r) => r.textContent));
+  if (!/créé hors du site/.test(ligneSans[0] || '')) throw new Error('l\'élève sans auteur n\'est pas étiqueté « créé hors du site »');
+  if (/créé hors du site/.test((await page.$$eval('#contenuProf tbody tr', (l) => l.filter((r) => /DUOA/.test(r.textContent)).map((r) => r.textContent)))[0])) {
+    throw new Error('l\'élève de A est étiqueté « créé hors du site » à tort');
+  }
+  // B : l'inverse.
+  await seConnecter(MAIL_B);
+  await ongletEspace('orphelins');
+  t = await page.textContent('#contenuProf');
+  if (!/DUOB/.test(t) || !/DUOS/.test(t)) throw new Error('B doit voir DUOB et DUOS : ' + t.slice(0, 300));
+  if (/DUOA/.test(t)) throw new Error('B voit l\'élève sans groupe de A');
+  // Ce qui reste : les trois profils sont intacts, personne n'a été supprimé ni rattaché.
+  const u = await lireDemo('users');
+  for (const k of ['zd-a', 'zd-b', 'zd-sans']) {
+    if (!u[k] || (u[k].groupes || []).length) throw new Error(`${k} devait rester tel quel, sans groupe : ${JSON.stringify(u[k])}`);
+  }
+  await menageDuo();
+});
+
+// ---------- 39 c. D2 : le responsable ajoute un collègue par son adresse
+await casDuo('plusieurs enseignants : le responsable ajoute un collègue par son adresse (adresse inconnue : message lisible)', async () => {
+  await creerGroupeEcran('ZZ DUO C');
+  await attendreToast(/Groupe créé/);
+  const uidA = await page.evaluate(() => JSON.parse(localStorage.getItem('prepalog:session')));
+  const uidB = await uidDe(MAIL_B);
+  await page.waitForSelector('#collegueMail');
+  // Le panneau montre le responsable seul, avec la case d'ajout.
+  let panneau = await page.textContent('#panProfs');
+  if (!/responsable/.test(panneau) || /Quitter/.test(panneau)) throw new Error('panneau du responsable inattendu : ' + panneau);
+  await page.fill('#collegueMail', 'inconnu@prepalog.local');
+  await viderToast();
+  await page.click('#btnAjoutCollegue');
+  await attendreToast(/Aucun enseignant avec cette adresse/);
+  if ((await lireDemo('groupes'))['zz-duo-c'].profs.length !== 1) throw new Error('un inconnu a été ajouté');
+  await page.fill('#collegueMail', ' ' + MAIL_B.toUpperCase() + ' ');
+  await viderToast();
+  await page.click('#btnAjoutCollegue');
+  await attendreToast(/peut maintenant travailler/);
+  const g = (await lireDemo('groupes'))['zz-duo-c'];
+  if (g.profs.join() !== [uidA, uidB].join()) throw new Error('profs attendus [A, B] : ' + g.profs);
+  panneau = await page.textContent('#panProfs');
+  if ((await page.$$('[data-retirer-prof]')).length !== 1) throw new Error('un bouton « Retirer » attendu pour le collègue');
+  // Une seconde fois : déjà dedans, et la liste ne change pas.
+  await page.fill('#collegueMail', MAIL_B);
+  await viderToast();
+  await page.click('#btnAjoutCollegue');
+  await attendreToast(/déjà dans le groupe/);
+  if ((await lireDemo('groupes'))['zz-duo-c'].profs.length !== 2) throw new Error('doublon dans profs');
+});
+
+// ---------- 39 d. D2/principe 4 : ce que voit le collègue, et ce qu'il n'a pas le droit de supprimer
+await casDuo('plusieurs enseignants : le collègue voit le groupe, ses élèves et le suivi, « Retirer du groupe » remplace « Supprimer » sur l\'élève d\'un autre', async () => {
+  const uidA = await page.evaluate(() => JSON.parse(localStorage.getItem('prepalog:session')));
+  await creerElevesDuo('zz-duo-c', [{ nom: 'DUOA', prenom: 'Alix', matricule: 'zd11', code: 'c1' }]);
+  const uidEleveA = Object.entries(await lireDemo('users')).find(([, u]) => u.matricule === 'zd11')[0];
+  if ((await lireDemo('users'))[uidEleveA].creePar !== uidA) throw new Error('creePar n\'est pas écrit à la création d\'un élève');
+  // Du travail, une base privée et un classement à conserver : on les retrouvera intacts.
+  await page.evaluate(async (uid) => {
+    const { creerBackendDemo } = await import('/core/backend-demo.js');
+    const B = creerBackendDemo();
+    await B.ecrireScore('zz-duo-c', uid, 'zz-act', { score: 1, max: 2 });
+    await B.ecrireJeuPrive(uid, 'zz-act', { a: 1 });
+  }, uidEleveA);
+
+  await seConnecter(MAIL_B);
+  await ongletEspace('groupes');
+  const ligne = await page.$$eval('#contenuProf tbody tr', (l) => l.filter((r) => /ZZ DUO C/.test(r.textContent)).map((r) => r.textContent));
+  if (ligne.length !== 1) throw new Error('B doit voir le groupe de A, une fois : ' + ligne.length);
+  if (!/groupe de/.test(ligne[0])) throw new Error('l\'étiquette « groupe de <responsable> » manque : ' + ligne[0]);
+  if (await page.$('[data-suppr="zz-duo-c"]')) throw new Error('B a « Supprimer » sur un groupe dont il n\'est pas responsable');
+  if (!(await page.$('[data-quitter="zz-duo-c"]'))) throw new Error('B n\'a pas « Quitter » sur ce groupe');
+  await activerGroupe('zz-duo-c');
+  const panneau = await page.textContent('#panProfs');
+  if (await page.$('#collegueMail') || !/Quitter ce groupe/.test(panneau)) throw new Error('le panneau du collègue est inattendu : ' + panneau);
+
+  // Liste de classe : l'élève d'A est là, avec « Retirer du groupe », sans « Supprimer ».
+  await page.click('[data-ong="comptes"]');
+  await page.waitForSelector(`[data-retirere="${uidEleveA}"]`, { timeout: 6000 });
+  if (await page.$(`[data-suppre="${uidEleveA}"]`)) throw new Error('« Supprimer » offert sur un élève créé par un collègue');
+  if (!/DUOA/.test(await page.textContent('#contenuProf'))) throw new Error('l\'élève du groupe n\'est pas listé chez B');
+  // Le suivi s'ouvre.
+  await page.click('[data-ong="suivi"]');
+  await page.waitForFunction(() => !/Chargement du suivi/.test(document.getElementById('contenuProf')?.textContent || ''), null, { timeout: 8000 });
+  if (!/DUOA/.test(await page.textContent('#contenuProf'))) throw new Error('le suivi de B ne montre pas l\'élève d\'A');
+
+  // Un élève créé par B dans ce groupe est à lui : il le supprime.
+  await creerElevesDuo('zz-duo-c', [{ nom: 'DUOB', prenom: 'Bao', matricule: 'zd12', code: 'c2' }]);
+  await page.click('[data-ong="comptes"]');
+  const uidEleveB = Object.entries(await lireDemo('users')).find(([, u]) => u.matricule === 'zd12')[0];
+  await page.waitForSelector(`[data-suppre="${uidEleveB}"]`, { timeout: 6000 });
+  if (await page.$(`[data-retirere="${uidEleveB}"]`)) throw new Error('« Retirer du groupe » offert sur son propre élève');
+
+  // Retirer l'élève d'A du groupe : il n'est pas supprimé, et ce qui reste est nommé.
+  page.once('dialog', (d) => d.accept());
+  await viderToast();
+  await page.click(`[data-retirere="${uidEleveA}"]`);
+  await attendreToast(/retiré du groupe/);
+  if (!/Il reste : ses travaux/.test(await leToast())) throw new Error('le message ne nomme pas ce qui reste : ' + await leToast());
+  const u = await lireDemo('users');
+  if (!u[uidEleveA]) throw new Error('le profil de l\'élève d\'A a disparu');
+  if (u[uidEleveA].groupes.length) throw new Error('l\'élève devait être détaché : ' + u[uidEleveA].groupes);
+  if (!(await lireDemo(`travaux/zz-duo-c/${uidEleveA}/zz-act`))) throw new Error('ses travaux ont été effacés');
+  if (!(await lireDemo(`prive/${uidEleveA}/zz-act`))) throw new Error('sa base privée a été effacée');
+  if (u[uidEleveB].groupes.join() !== 'zz-duo-c') throw new Error('l\'élève de B a bougé');
+  // Il n'apparaît pas chez B (créé par A), il réapparaît chez A.
+  await ongletEspace('orphelins');
+  if (/DUOA/.test(await page.textContent('#contenuProf'))) throw new Error('l\'élève détaché apparaît chez le collègue, pas chez son auteur');
+  await seConnecter(MAIL_A);
+  await ongletEspace('orphelins');
+  if (!/DUOA/.test(await page.textContent('#contenuProf'))) throw new Error('l\'élève détaché ne réapparaît pas chez son auteur');
+});
+
+// ---------- 39 e. la garde du backend refuse AVANT d'écrire, et nomme ce qui reste
+await casDuo('plusieurs enseignants : la garde du backend refuse la suppression d\'un élève ou d\'un groupe qui n\'est pas à soi, sans rien effacer', async () => {
+  await creerGroupeEcran('ZZ DUO E');
+  await attendreToast(/Groupe créé/);
+  await creerElevesDuo('zz-duo-e', [{ nom: 'DUOE', prenom: 'Eva', matricule: 'zd21', code: 'e1' }]);
+  const uidEleve = Object.entries(await lireDemo('users')).find(([, u]) => u.matricule === 'zd21')[0];
+  await page.evaluate(async (uid) => {
+    const { creerBackendDemo } = await import('/core/backend-demo.js');
+    const B = creerBackendDemo();
+    await B.ecrireScore('zz-duo-e', uid, 'zz-act', { score: 1, max: 2 });
+    await B.ecrireJeuPrive(uid, 'zz-act', { a: 1 });
+    await B.ajouterCollegue('zz-duo-e', 'collegue@prepalog.local');
+  }, uidEleve);
+
+  await seConnecter(MAIL_B);
+  const r1 = await essaiBackend('return B.supprimerEleve(a)', uidEleve);
+  if (r1.ok || !/créé par un collègue/.test(r1.message)) throw new Error('la suppression de l\'élève d\'un autre devait être refusée : ' + JSON.stringify(r1));
+  const r2 = await essaiBackend('return B.supprimerGroupe(a)', 'zz-duo-e');
+  if (r2.ok || !/responsable/.test(r2.message)) throw new Error('la suppression du groupe par un collègue devait être refusée : ' + JSON.stringify(r2));
+  // Tout est resté : profil, travaux, base privée, groupe avec ses deux enseignants.
+  const u = await lireDemo('users');
+  const g = await lireDemo('groupes');
+  if (!u[uidEleve] || u[uidEleve].groupes.join() !== 'zz-duo-e') throw new Error('l\'élève a été touché par un refus');
+  if (!(await lireDemo(`travaux/zz-duo-e/${uidEleve}/zz-act`)) || !(await lireDemo(`prive/${uidEleve}/zz-act`))) throw new Error('un refus a laissé l\'élève sans travaux ou sans base privée');
+  if (!g['zz-duo-e'] || g['zz-duo-e'].profs.length !== 2) throw new Error('le groupe a été touché par un refus');
+  // Un élève aussi présent dans le groupe d'un collègue : jamais supprimé, même par son auteur.
+  await seConnecter(MAIL_A);
+  await creerGroupeEcran('ZZ DUO E2');
+  await attendreToast(/Groupe créé/);
+  await page.evaluate((uid) => {
+    const u = JSON.parse(localStorage.getItem('prepalog:users'));
+    u[uid].groupes = ['zz-duo-e', 'zz-duo-e2'];
+    localStorage.setItem('prepalog:users', JSON.stringify(u));
+    const g = JSON.parse(localStorage.getItem('prepalog:groupes'));
+    g['zz-duo-e2'].profs = [JSON.parse(localStorage.getItem('prepalog:session'))];
+    localStorage.setItem('prepalog:groupes', JSON.stringify(g));
+  }, uidEleve);
+  await seConnecter(MAIL_B);
+  const r3 = await essaiBackend('return B.supprimerEleve(a)', uidEleve);
+  if (r3.ok || !/pas le vôtre|créé par un collègue/.test(r3.message)) throw new Error('l\'élève de deux groupes devait être refusé à B : ' + JSON.stringify(r3));
+  if (!(await lireDemo('users'))[uidEleve]) throw new Error('l\'élève de deux groupes a été supprimé');
+});
+
+// ---------- 39 f. le responsable supprime ce que son collègue a créé, puis le retire : ce qui reste est nommé
+await casDuo('plusieurs enseignants : le responsable supprime l\'élève créé par son collègue, retire le collègue, et la liste de B se vide', async () => {
+  const uidB = await uidDe(MAIL_B);
+  await seConnecter(MAIL_B);
+  await creerElevesDuo('zz-duo-e', [{ nom: 'DUOF', prenom: 'Fred', matricule: 'zd31', code: 'f1' }]);
+  const uidEleveB = Object.entries(await lireDemo('users')).find(([, u]) => u.matricule === 'zd31')[0];
+  if ((await lireDemo('users'))[uidEleveB].creePar !== uidB) throw new Error('creePar de B attendu');
+  await seConnecter(MAIL_A);
+  // L'élève du collègue figure dans une liste de classe dont A est responsable : « Supprimer » est offert à A.
+  await activerGroupe('zz-duo-e');
+  await page.click('[data-ong="comptes"]');
+  await page.waitForSelector(`[data-suppre="${uidEleveB}"]`, { timeout: 6000 });
+  // Retirer le collègue : confirmation, puis message qui nomme l'élève qu'il a créé.
+  await page.click('[data-ong="groupes"]');
+  await page.waitForSelector('[data-retirer-prof]');
+  page.once('dialog', (d) => d.accept());
+  await viderToast();
+  await page.click('[data-retirer-prof]');
+  await attendreToast(/n'est plus dans le groupe/);
+  if (!/1 élève qu'il a créé/.test(await leToast())) throw new Error('le message ne nomme pas l\'élève resté : ' + await leToast());
+  const g = (await lireDemo('groupes'))['zz-duo-e'];
+  if (g.profs.length !== 1) throw new Error('profs après retrait : ' + g.profs);
+  const u = await lireDemo('users');
+  if (!u[uidEleveB] || u[uidEleveB].groupes.join() !== 'zz-duo-e') throw new Error('l\'élève créé par le collègue devait rester dans la classe');
+  // Chez B, le groupe a disparu.
+  await seConnecter(MAIL_B);
+  await ongletEspace('groupes');
+  if ((await lignesGroupes()).some((t) => /ZZ DUO E\b/.test(t))) throw new Error('le groupe retiré figure encore chez B');
+  // Retour chez A : l'élève du collègue, il est responsable, se supprime.
+  await seConnecter(MAIL_A);
+  const rr = await essaiBackend('return B.supprimerEleve(a)', uidEleveB);
+  if (!rr.ok) throw new Error('le responsable devait pouvoir supprimer l\'élève créé par son collègue : ' + rr.message);
+  if ((await lireDemo('users'))[uidEleveB]) throw new Error('l\'élève est encore là');
+});
+
+// ---------- 39 g. le collègue quitte le groupe de lui-même
+await casDuo('plusieurs enseignants : le collègue quitte le groupe, qui reste entier chez son responsable', async () => {
+  await page.evaluate(async () => {
+    const { creerBackendDemo } = await import('/core/backend-demo.js');
+    await creerBackendDemo().ajouterCollegue('zz-duo-e', 'collegue@prepalog.local');
+  });
+  await creerElevesDuo('zz-duo-e', [{ nom: 'DUOG', prenom: 'Gus', matricule: 'zd41', code: 'g1' }]);
+  await seConnecter(MAIL_B);
+  await ongletEspace('groupes');
+  await page.waitForSelector('[data-quitter="zz-duo-e"]');
+  page.once('dialog', (d) => d.accept());
+  await viderToast();
+  await page.click('tbody [data-quitter="zz-duo-e"]');
+  await attendreToast(/Vous avez quitté le groupe/);
+  const g = (await lireDemo('groupes'))['zz-duo-e'];
+  if (!g || g.profs.length !== 1) throw new Error('le groupe doit rester, au responsable seul : ' + JSON.stringify(g && g.profs));
+  if (await page.$('[data-quitter="zz-duo-e"]')) throw new Error('le groupe quitté figure encore chez B');
+  const u = Object.values(await lireDemo('users')).filter((x) => x.matricule === 'zd41');
+  if (u.length !== 1 || u[0].groupes.join() !== 'zz-duo-e') throw new Error('l\'élève du groupe a bougé');
+  // Le responsable, lui, ne peut pas être retiré, ni quitter par ce chemin.
+  await seConnecter(MAIL_A);
+  const uidA = await page.evaluate(() => JSON.parse(localStorage.getItem('prepalog:session')));
+  const r = await essaiBackend('return B.retirerCollegue("zz-duo-e", a)', uidA);
+  if (r.ok || !/responsable/.test(r.message)) throw new Error('le responsable ne doit pas pouvoir être retiré : ' + JSON.stringify(r));
+});
+
+// ---------- 39 h. Conduite de séance : deux enseignants qui ouvrent chacun une séance ne s'écrasent pas
+await casDuo('plusieurs enseignants : ouvrir une séance ne réécrit que sa case (la réécriture de la table entière écraserait le collègue)', async () => {
+  await creerGroupeEcran('ZZ DUO H');
+  await attendreToast(/Groupe créé/);
+  await ongletEspace('seance');
+  await page.waitForSelector('[data-ouvre]', { timeout: 6000 });
+  const ids = await page.$$eval('[data-ouvre]:not(:checked):not(:disabled)', (l) => l.slice(0, 2).map((c) => c.dataset.ouvre));
+  if (ids.length < 2) throw new Error('il faut deux séances fermées et ouvrables : ' + ids);
+  const [X, Y] = ids;
+  // La page d'A a chargé le groupe avant que B n'ouvre X (simulé par une écriture directe dans le stockage).
+  await page.evaluate((x) => {
+    const g = JSON.parse(localStorage.getItem('prepalog:groupes'));
+    g['zz-duo-h'].ouverts = { ...(g['zz-duo-h'].ouverts || {}), [x]: true };
+    localStorage.setItem('prepalog:groupes', JSON.stringify(g));
+  }, X);
+  await viderToast();
+  await page.click(`[data-ouvre="${Y}"]`);
+  await attendreToast(/Activité ouverte/);
+  const ouv = (await lireDemo('groupes'))['zz-duo-h'].ouverts;
+  if (ouv[Y] !== true) throw new Error('la séance cochée n\'est pas ouverte : ' + JSON.stringify(ouv));
+  if (ouv[X] !== true) throw new Error('la séance ouverte par le collègue a été écrasée : ' + JSON.stringify(ouv));
+  // Demi-groupe : même garantie, sous `ouvertsDemi`.
+  await page.evaluate(() => {
+    const g = JSON.parse(localStorage.getItem('prepalog:groupes'));
+    g['zz-duo-h'].demis = [{ id: 'dh1', nom: 'DH1' }];
+    localStorage.setItem('prepalog:groupes', JSON.stringify(g));
+  });
+  const nouvelle = await page.evaluate(async () => {
+    const { creerBackendDemo } = await import('/core/backend-demo.js');
+    const B = creerBackendDemo();
+    await B.majGroupe('zz-duo-h', { 'ouvertsDemi.dh1.a-b': true });
+    await B.majGroupe('zz-duo-h', { 'ouvertsDemi.dh1.c-d': false });
+    return (await B.groupe('zz-duo-h')).ouvertsDemi;
+  });
+  if (JSON.stringify(nouvelle) !== JSON.stringify({ dh1: { 'a-b': true, 'c-d': false } })) throw new Error('champ pointé sous un demi-groupe : ' + JSON.stringify(nouvelle));
+});
+
+// ---------- 39 i. les refus se lisent en français
+await v('plusieurs enseignants : un refus des règles et un matricule déjà pris se lisent en français', async () => {
+  const r = await page.evaluate(async () => {
+    const { lisible } = await import('/core/collegues.js');
+    return {
+      refus: lisible({ code: 'permission-denied', message: 'Missing or insufficient permissions.' }),
+      mat: lisible({ code: 'auth/email-already-in-use', message: 'Firebase: Error (auth/email-already-in-use).' }),
+      autre: lisible({ message: 'Autre chose.' }), vide: lisible({}, 'Défaut.'),
+    };
+  });
+  if (!/Refusé par les règles de sécurité/.test(r.refus) || /Missing|insufficient/.test(r.refus)) throw new Error('refus : ' + r.refus);
+  if (!/matricule est déjà utilisé/.test(r.mat) || /auth\//.test(r.mat)) throw new Error('matricule : ' + r.mat);
+  if (r.autre !== 'Autre chose.' || r.vide !== 'Défaut.') throw new Error('messages ordinaires altérés : ' + JSON.stringify(r));
+});
+
+// ---------- 39 j. ménage : plus aucune trace de ces cas, et le bloc suivant repart de A
+await v('plusieurs enseignants : le ménage ne laisse rien, la session est celle de prof.demo', async () => {
+  await seConnecter(MAIL_A);
+  await menageDuo();
+  const r = await page.evaluate(() => {
+    const g = JSON.parse(localStorage.getItem('prepalog:groupes') || '{}');
+    const u = JSON.parse(localStorage.getItem('prepalog:users') || '{}');
+    const s = JSON.parse(localStorage.getItem('prepalog:session'));
+    return { groupes: Object.keys(g).filter((k) => /duo/i.test(k)), eleves: Object.values(u).filter((x) => /^zd/.test(x.matricule || '')).length, email: u[s] && u[s].email };
+  });
+  if (r.groupes.length || r.eleves) throw new Error('reste : ' + JSON.stringify(r));
+  if (r.email !== MAIL_A) throw new Error('session inattendue : ' + r.email);
+});
+
 }
