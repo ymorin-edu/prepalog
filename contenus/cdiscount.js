@@ -48,8 +48,12 @@
 // blanc sur le site ; recoloré dans le bleu de la charte pour se lire sur fond blanc. Il va sur
 // le bandeau et sur les trames, **jamais** en en-tête d'un document commercial fabriqué.
 
-import { catalogueSimple, pad, rng } from './entreprise-commun.js';
+import { catalogueSimple, pad, rng, SHIP } from './entreprise-commun.js';
 import { hasard } from '../core/tirage.js';
+
+// Les modes de livraison des commandes (libellé, prix du port), fournis au moteur sous le nom d'option `livraisons`
+// (chantier 9, lot 9b). Cdiscount n'a pas de couleurs : ses articles n'en ont pas.
+export const livraisons = SHIP;
 
 /* ====================================================== identité et vocabulaire ====== */
 

@@ -20,7 +20,8 @@
 //   - dans `meta` : `rubrique: 'simulog'`, `immersif: true`, `portee: 'eleve'`, `tables: {}`,
 //     `bareme` = nombre de jalons (`SEANCE.ETAPES.length`), `corrige` = `./contenus/corriges/<code>.js`
 //     (`corrige: false` = cette séance n'a pas de corrigé : la clé disparaît du `meta`) ;
-//   - pour `creerEntreprise` : les neuf clés de l'univers (ci-dessous), `etapes` ← `SEANCE.ETAPES`,
+//   - pour `creerEntreprise` : les neuf clés de l'univers (ci-dessous) et deux clés d'univers FACULTATIVES (`couleurs`,
+//     `livraisons` : ce que le moteur n'importe plus des contenus, lot 9b ; absentes, elles ne font rien refuser), `etapes` ← `SEANCE.ETAPES`,
 //     `accueil` ← `SEANCE.ACCUEIL`, `volet` ← `SEANCE.VOLET`, `copie` ← `meta.copie`, et `trame`
 //     (liens du bandeau) ← `./contenus/trames/<code>-<slug>-trame-eleve.pdf|docx`, où le `<slug>` est
 //     déclaré UNE fois dans `meta.trame` (il ne se déduit pas de l'`id`). Pas de `meta.trame` = pas
@@ -43,6 +44,11 @@ import { creerEntreprise } from './entreprise.js';
 // Les neuf clés qui décrivent l'entreprise et que `creerEntreprise` exige.
 export const CLES_UNIVERS = ['ENTREPRISE', 'VOCAB', 'CATALOGUE', 'SUPPLIERS', 'SUP_BY_ID', 'CUSTOMERS', 'CM',
   'baseDeDepart', 'THEME'];
+
+// Deux clés d'univers FACULTATIVES (chantier 9, lot 9b, 08/10/2026) : les couleurs des variantes d'un catalogue et les
+// modes de livraison des commandes. Le moteur n'importe plus aucun fichier de `contenus/` : l'univers qui en a besoin
+// les exporte (Spartoo : couleurs et livraisons ; Cdiscount : livraisons), les autres n'ont rien à déclarer.
+export const CLES_FACULTATIVES = ['couleurs', 'livraisons'];
 
 // Compose le `meta` complet et les options de `creerEntreprise`, sans créer le moteur
 // (pour que les tests puissent l'appeler avec de fausses données).
@@ -90,6 +96,10 @@ export function composerSeance(UNIVERS, SEANCE, meta, options = {}) {
       refus(`la clé d'univers « ${cle} » n'est ni dans l'univers de l'entreprise, ni dans le contenu de la séance, ni dans les options.`);
     }
     opts[cle] = v;
+  }
+  for (const cle of CLES_FACULTATIVES) {
+    const v = [options[cle], SEANCE[cle], UNIVERS[cle]].find((x) => x !== undefined);
+    if (v !== undefined) opts[cle] = v;
   }
   opts.etapes = SEANCE.ETAPES;
   if (SEANCE.ACCUEIL !== undefined) opts.accueil = SEANCE.ACCUEIL;

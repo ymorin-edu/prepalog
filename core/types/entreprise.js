@@ -12,7 +12,6 @@
 // est le nombre d'étapes réussies.
 
 import { ech, toast, confirmer, confirmerDansLaPage } from '../ui.js';
-import { COLORS, SHIP, pad } from '../../contenus/entreprise-commun.js';
 import { creerPlan } from './plan.js';
 import { creerCarte } from './carte.js';
 import { creerTournee } from './tournee.js';
@@ -38,6 +37,7 @@ export const fdate = (t) => new Date(t).toLocaleDateString('fr-FR');
 export const fdt = (t) => new Date(t).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
 export const norm = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
 export const normLoc = (s) => String(s || '').trim().toUpperCase().replace(/\s+/g, '');
+const pad = (n, l) => String(n).padStart(l, '0');   // 7, 2 → « 07 » (numéro de commande, allée)
 
 const pastille = (texte, ton) => `<span class="pastille ${ton}">${ech(texte)}</span>`;
 
@@ -95,6 +95,10 @@ export const OPTIONS = {
   animations: { type: 'array', role: 'plusieurs animations à questions (rare)' },
   questions: { type: 'object', role: "questions au fil et points d'étape" },
   equipe: { type: 'object', role: 'personnes citées par les questions (en plus de `questions.personnes`)' },
+  // — Ce que le contenu fournit au moteur (chantier 9, lot 9b : le moteur n'importe plus aucun fichier de `contenus/`) —
+  // Facultatives : la fabrique `seanceEntreprise` les prend dans l'univers (sinon dans la séance, sinon dans les options).
+  couleurs: { type: 'object', role: 'noms et teintes des couleurs des variantes : { code: [nom, teinte] } (sans elle, pas de pastille)' },
+  livraisons: { type: 'object', role: 'modes de livraison des commandes : { code: [libellé, prix du port] } (code inconnu : le code lui-même, port 0)' },
   // — Fin de séance, réponses —
   tirage: { role: 'vrai = jeu tiré par élève même sans quai ni inventaire tiré (la graine est posée et notée)' },
   seanceFinie: { type: 'function', role: '(db) → vrai quand la séance est finie sans jalon faux (ENT-5.6)' },
@@ -300,6 +304,12 @@ export function creerEntreprise(U) {
   // Pour un tel catalogue (`catalogueSimple`, contenus/entreprise-commun.js), les colonnes
   // Couleur et Taille disparaissent partout ; rien ne change pour Spartoo.
   const SIMPLE = !!CATALOGUE.simple;
+  // Couleurs des variantes et modes de livraison : fournis par le contenu (univers de l'entreprise), jamais importés
+  // par le moteur. Sans table, une couleur inconnue n'a ni nom ni pastille ; un code de livraison inconnu s'affiche
+  // tel quel, avec un port de 0.
+  const COLORS = U.couleurs || {};
+  const LIVRAISONS = U.livraisons || {};
+  const livraisonDe = (o) => LIVRAISONS[o.ship] || [o.ship == null ? '' : String(o.ship), 0];
   // Le menu de la séance (05/10/2026, demande de Tristan : « il est mélangé, parfois on a des données parfois
   // non »). Les écrans propres à la séance (fiche, quai, planning, plan d'entrepôt, plan, tournée, inventaire,
   // extractions, fichiers) n'apparaissent que si elle les déclare, comme avant. Les écrans de DONNÉES,
@@ -1421,7 +1431,7 @@ export function creerEntreprise(U) {
       const totaux = (o) => {
         let sub = 0, n = 0;
         o.lines.forEach((l) => { sub += VM[l.sku].model.price * l.qty; n += l.qty; });
-        const port = SHIP[o.ship][1];
+        const port = livraisonDe(o)[1];
         return { sub, port, total: sub + port, n };
       };
       // Une commande semée annulée (`annulee: { motif, at }`, brief MOTEUR-statut-annulee) :
@@ -1470,7 +1480,7 @@ export function creerEntreprise(U) {
             <div><div class="ent-lbl">Client</div><strong>${ech(c.prenom + ' ' + c.nom)}</strong><br>${ech(c.adr)}<br>
               ${ech(c.cp)} ${ech(c.ville)}<br><span class="mono note">${ech(c.email)} · ${ech(c.tel)}</span></div>
             <div><div class="ent-lbl">Commande</div><strong class="mono">${ech(o.no)}</strong><br>Date : ${fdt(o.date)}<br>
-              Livraison : ${ech(SHIP[o.ship][0])}<br>Code client : <span class="mono">${ech(c.id)}</span></div>
+              Livraison : ${ech(livraisonDe(o)[0])}<br>Code client : <span class="mono">${ech(c.id)}</span></div>
           </div>${tableauCommande(o, true)}
           <p class="ent-droite">Sous-total ${eur(t.sub)} · Port ${eur(t.port)} · <strong>Total TTC ${eur(t.total)}</strong></p>`;
       }
@@ -2152,7 +2162,7 @@ export function creerEntreprise(U) {
           <section class="panneau"><dl class="ent-dl">
             <dt>Client</dt><dd>${ech(c.prenom + ' ' + c.nom)} <span class="mono note">${ech(c.id)}</span></dd>
             <dt>Adresse</dt><dd>${ech(c.adr)}, ${ech(c.cp)} ${ech(c.ville)}</dd>
-            <dt>Livraison</dt><dd>${ech(SHIP[o.ship][0])}</dd>
+            <dt>Livraison</dt><dd>${ech(livraisonDe(o)[0])}</dd>
             <dt>Date</dt><dd>${fdt(o.date)}</dd>
             <dt>Montant</dt><dd>${eur(t.total)} TTC, ${t.n} ${ech(unite(t.n))}</dd></dl></section>
           <section class="panneau"><h3>Contrôle du stock</h3>
@@ -2179,7 +2189,7 @@ export function creerEntreprise(U) {
           <section class="panneau"><dl class="ent-dl">
             <dt>Client</dt><dd>${ech(c.prenom + ' ' + c.nom)} <span class="mono note">${ech(c.id)}</span></dd>
             <dt>Adresse</dt><dd>${ech(c.adr)}, ${ech(c.cp)} ${ech(c.ville)}</dd>
-            <dt>Livraison</dt><dd>${ech(SHIP[o.ship][0])}</dd>
+            <dt>Livraison</dt><dd>${ech(livraisonDe(o)[0])}</dd>
             <dt>Date</dt><dd>${fdt(o.date)}</dd>
             <dt>Montant</dt><dd>${eur(t.total)} TTC, ${t.n} ${ech(unite(t.n))}</dd></dl></section>
           <section class="panneau"><h3>Articles commandés</h3>${tableauCommande(o, true)}</section>`;
@@ -2237,7 +2247,7 @@ export function creerEntreprise(U) {
             <div class="ent-cols">
               <div><div class="ent-lbl">Commande</div><strong>${ech(o.no)}</strong> du ${fdate(o.date)}</div>
               <div><div class="ent-lbl">Destinataire</div>${ech(c.prenom + ' ' + c.nom)}<br>${ech(c.adr)}<br>${ech(c.cp)} ${ech(c.ville)}</div>
-              <div><div class="ent-lbl">Transport</div>${ech(SHIP[o.ship][0])}</div></div>
+              <div><div class="ent-lbl">Transport</div>${ech(livraisonDe(o)[0])}</div></div>
             ${aPrendre.length ? `<div class="ent-scroll"><table><thead><tr><th>N°</th><th>Emplacement</th><th>Réf.</th>
                 <th>Article</th>${thVariante()}<th class="num">Qté</th>
                 <th class="num">Prélevé</th></tr></thead><tbody>${lignes}</tbody></table></div>
@@ -2273,7 +2283,7 @@ export function creerEntreprise(U) {
 
       function copierBon() {
         const o = commandeDe(E.no), p = o.prep, c = clientDe(o.customerId);
-        let t = `BON DE PRÉPARATION BP-${o.no.replace('CMD-', '')}\nCommande ${o.no} | Client : ${c.prenom} ${c.nom} | ${SHIP[o.ship][0]}\n\n`;
+        let t = `BON DE PRÉPARATION BP-${o.no.replace('CMD-', '')}\nCommande ${o.no} | Client : ${c.prenom} ${c.nom} | ${livraisonDe(o)[0]}\n\n`;
         o.lines.filter((l) => p.rows[l.sku].qty > 0)
           .sort((a, b) => (VM[a.sku].loc < VM[b.sku].loc ? -1 : 1))
           .forEach((l) => { t += `${VM[l.sku].loc}\t${l.sku}\t${label(VM[l.sku])}${SIMPLE ? '' : `\t${VOCAB.sizeShort}${VM[l.sku].size}`}\tQté ${p.rows[l.sku].qty}\n`; });
@@ -3242,7 +3252,7 @@ export function creerEntreprise(U) {
           if (!o) throw new Error('Commande non enregistrée. Ouvrez le mail de commande et cliquez sur « Enregistrer la commande ».');
           const c = clientDe(o.customerId), t = totaux(o), s = statutCommande(o);
           return kv([['Commande', ech(o.no)], ['Client', `${ech(c.prenom + ' ' + c.nom)} (${ech(c.id)})`],
-            ['Livraison', ech(SHIP[o.ship][0])], ['Total TTC', eur(t.total)], ['Statut', ech(s[0])]])
+            ['Livraison', ech(livraisonDe(o)[0])], ['Total TTC', eur(t.total)], ['Statut', ech(s[0])]])
             + tbl(['Référence', 'Article', 'Qté'], o.lines.map((l) => [`<span class="mono">${ech(l.sku)}</span>`,
               ech(label(VM[l.sku]) + precisionTexte(VM[l.sku])), l.qty]), [2]);
         }],

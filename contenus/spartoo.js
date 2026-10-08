@@ -4,7 +4,13 @@
 // stocks fixés et messages de départ. Extraites par script depuis logisim/index.html plutôt
 // que recopiées, pour qu'aucune valeur ne dérive.
 
-import { buildCatalog, pad, rng } from './entreprise-commun.js';
+import { buildCatalog, pad, rng, COLORS, SHIP } from './entreprise-commun.js';
+
+// Ce que le moteur ne connaît plus (chantier 9, lot 9b) : les couleurs des chaussures (nom et teinte de la pastille du
+// catalogue) et les trois modes de livraison des commandes (libellé, prix du port). La fabrique `seanceEntreprise` les
+// prend dans l'univers sous les noms d'options `couleurs` et `livraisons`.
+export const couleurs = COLORS;
+export const livraisons = SHIP;
 
 export const VOCAB = {
   unit: 'paire', unitPl: 'paires',

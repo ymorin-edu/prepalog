@@ -401,6 +401,183 @@ await v('séances d\'entreprise : les 24 séances du registre se chargent sans r
   if (ent.length < 24) throw new Error(`seulement ${ent.length} séances d'entreprise chargées`);
 });
 
+// ---------- 46. le moteur n'importe plus rien de `contenus/` : couleurs et livraisons viennent de l'univers (chantier 9, lot 9b, 08/10/2026)
+// Avant, `core/types/entreprise.js` importait `COLORS`, `SHIP` et `pad` de `contenus/entreprise-commun.js` : un reliquat de Spartoo
+// (chaussures en neuf couleurs, trois modes de livraison à prix fixes) dans le moteur de TOUTES les entreprises. Désormais le contenu
+// les fournit (options `couleurs` et `livraisons`) et le premier cas ci-dessous empêche le reliquat de revenir.
+await v('core/ n\'importe plus aucun fichier de contenus/ (relecture de tous les fichiers de core/ et core/types/)', async () => {
+  const fautifs = [];
+  let lus = 0;
+  for (const dossier of ['core', path.join('core', 'types')]) {
+    for (const e of fs.readdirSync(path.join(ROOT, dossier))) {
+      if (!/\.js$/.test(e)) continue;
+      lus++;
+      fs.readFileSync(path.join(ROOT, dossier, e), 'utf8').split('\n').forEach((l, i) => {
+        if (/^\s*\/\//.test(l)) return;   // un commentaire qui cite un import (l'en-tête de la fabrique) n'en est pas un
+        // `import … from '…/contenus/…'` (y compris la fin d'un import sur plusieurs lignes) et `import '…/contenus/…'`.
+        if (/\bfrom\s*['"][^'"]*\/contenus\//.test(l) || /^\s*import\s*['"][^'"]*\/contenus\//.test(l)) fautifs.push(`${dossier}/${e}:${i + 1}`);
+      });
+    }
+  }
+  if (lus < 30) throw new Error(`seulement ${lus} fichiers relus dans core/ (le cas ne doit pas passer à vide)`);
+  if (fautifs.length) throw new Error('import d\'un fichier de contenus/ dans le moteur : ' + fautifs.join(', '));
+});
+
+await v('couleurs et livraisons : options connues (type objet), clés d\'univers facultatives que la fabrique prend univers < séance < options', async () => {
+  const r = await moteurEssai(`
+    const sans = F.composerSeance(univers, { ETAPES: [{ id: 'a' }] }, { id: 'x-sans', code: 'ENT-9.1' });
+    const u = { ...univers, couleurs: { U: ['Univers', '#111'] }, livraisons: { U: ['Univers', 1] } };
+    const avecU = F.composerSeance(u, { ETAPES: [{ id: 'a' }] }, { id: 'x-u', code: 'ENT-9.2' });
+    const avecS = F.composerSeance(u, { ETAPES: [{ id: 'a' }], livraisons: { S: ['Séance', 2] } }, { id: 'x-s', code: 'ENT-9.3' });
+    const avecO = F.composerSeance(u, { ETAPES: [{ id: 'a' }], livraisons: { S: ['Séance', 2] } }, { id: 'x-o', code: 'ENT-9.4' },
+      { livraisons: { O: ['Options', 3] } });
+    return { sansCles: Object.keys(sans.options).filter((k) => k === 'couleurs' || k === 'livraisons'),
+      u: [avecU.options.couleurs, avecU.options.livraisons], s: avecS.options.livraisons, o: avecO.options.livraisons,
+      uSeul: avecS.options.couleurs,
+      chargee: essai({ couleurs: { U: ['Univers', '#111'] }, livraisons: { U: ['Univers', 1] } }),
+      couleursTableau: essai({ couleurs: [] }), livraisonsTexte: essai({ livraisons: 'COL' }),
+      cles: Object.keys(E.OPTIONS) };`);
+  if (r.sansCles.length) throw new Error('un univers sans couleurs ni livraisons ne doit rien ajouter aux options : ' + r.sansCles.join(', '));
+  if (JSON.stringify(r.u) !== '[{"U":["Univers","#111"]},{"U":["Univers",1]}]') throw new Error('l\'univers ne fournit pas les tables : ' + JSON.stringify(r.u));
+  if (JSON.stringify(r.s) !== '{"S":["Séance",2]}') throw new Error('le contenu de la séance ne remplace pas l\'univers : ' + JSON.stringify(r.s));
+  if (JSON.stringify(r.uSeul) !== '{"U":["Univers","#111"]}') throw new Error('les couleurs de l\'univers se perdent quand la séance ne parle que des livraisons');
+  if (JSON.stringify(r.o) !== '{"O":["Options",3]}') throw new Error('les options ne l\'emportent pas : ' + JSON.stringify(r.o));
+  if (r.chargee !== 'CHARGÉE') throw new Error('les deux options doivent être acceptées : ' + r.chargee);
+  if (!r.couleursTableau.includes('« couleurs »') || !r.livraisonsTexte.includes('« livraisons »')) {
+    throw new Error('un mauvais type doit être refusé : ' + r.couleursTableau + ' / ' + r.livraisonsTexte);
+  }
+  if (!r.cles.includes('couleurs') || !r.cles.includes('livraisons')) throw new Error('OPTIONS ne contient pas les deux nouvelles clés');
+});
+
+// Un moteur monté sur de FAUSSES données (un seul article, un seul client, une commande dont le code de livraison est `ZZZ`),
+// dans son propre contexte pour ne pas toucher à la page des autres cas.
+const ctxL = await nav.newContext({ viewport: { width: 1280, height: 900 } });
+const pgL = await ctxL.newPage();
+const erreursL = [];
+pgL.on('pageerror', (e) => erreursL.push('PAGEERROR: ' + e.message));
+pgL.on('console', (m) => { if (m.type() === 'error' && !/\b404\b/.test(m.text())) erreursL.push('CONSOLE: ' + m.text()); });
+await pgL.goto(BASE);
+await pgL.waitForSelector('#btnProf');
+const texteL = () => pgL.$eval('#hoteL', (e) => e.innerText.replace(/\s+/g, ' '));
+const montrerCommande = (extra) => pgL.evaluate(async (extra) => {
+  const { creerEntreprise } = await import('/core/types/entreprise.js');
+  const { catalogueSimple } = await import('/contenus/entreprise-commun.js');
+  const client = { id: 'C1', prenom: 'Ada', nom: 'Lovelace', adr: '1 rue du Test', cp: '75001', ville: 'Paris', email: 'a@l.example', tel: '01' };
+  document.querySelector('#hoteL')?.remove();
+  const hote = document.createElement('div'); hote.id = 'hoteL'; document.body.prepend(hote);
+  const db = {};
+  const U = { ENTREPRISE: { nom: 'Essai', sousTitre: 's' }, VOCAB: { unit: 'pièce', unitPl: 'pièces', sizeLabel: '', sizeShort: '', mailDomain: 'e.example' },
+    CATALOGUE: catalogueSimple([{ ref: 'ART1', designation: 'Article un', marque: 'M', categorie: 'C', prix: 10, cout: 5, emplacement: 'A-01-1', stock: 5 }]),
+    SUPPLIERS: [], SUP_BY_ID: {}, CUSTOMERS: [client], CM: { C1: client }, THEME: {}, etapes: [], sansTrame: 'x',
+    baseDeDepart: () => ({ v: 1, created: Date.now(), stock: {}, moves: [], mails: [], receptions: [], customers: [], suppliers: [], seq: 1, _depart: [],
+      orders: [{ no: 'CMD-000001', date: Date.now(), customerId: 'C1', ship: 'ZZZ', lines: [{ sku: 'ART1', qty: 2 }] }] }),
+    ...extra };
+  const ctx = { meta: { id: 'essai-livraison', code: 'ESSAI', titre: 'Essai', portee: 'eleve', immersif: true, bareme: 1 },
+    profil: { prenom: 'Lea', nom: 'Test', role: 'eleve', uid: 'u-essai' }, jeu: { etat: () => db, sauver: () => {} },
+    enregistrer: () => {}, quitter: () => {}, codeStock: 'ABC', lireScore: async () => null };
+  creerEntreprise(U).rendre(hote, ctx);
+}, extra);
+const parcourirCommande = async () => {
+  await pgL.click('[data-vue="commandes"]');
+  const liste = await texteL();
+  await pgL.click('[data-ouvrir-cmd]');
+  const fiche = await texteL();
+  await pgL.click('[data-vue="console"]');
+  await pgL.fill('#champCmd', '.getorder CMD-000001'); await pgL.press('#champCmd', 'Enter');
+  return { liste, fiche, console: await texteL() };
+};
+
+await v('commande dont le code de livraison est inconnu : elle s\'affiche avec le code en libellé et un port de 0, sans erreur (avec ou sans table)', async () => {
+  const avant = erreursL.length;
+  for (const [nom, extra] of [['sans table', {}], ['table qui ne connaît pas le code', { livraisons: { COL: ['Colissimo', 4.9] } }]]) {
+    await montrerCommande(extra);
+    const r = await parcourirCommande();
+    if (!r.liste.includes('CMD-000001') || !r.liste.includes('20,00 €')) throw new Error(`${nom} : liste des commandes sans la commande ou sans son total (port 0) : ${r.liste.slice(-200)}`);
+    if (!/Livraison ZZZ/.test(r.fiche) || !r.fiche.includes('20,00 € TTC')) throw new Error(`${nom} : fiche de commande sans « Livraison ZZZ » ou sans le total de 20,00 € : ${r.fiche.slice(-400)}`);
+    if (!/Livraison\s*ZZZ/.test(r.console) || !r.console.includes('20,00 €')) throw new Error(`${nom} : .getorder sans le code de livraison ou sans le total : ${r.console.slice(-300)}`);
+  }
+  if (erreursL.length > avant) throw new Error('erreur de page : ' + erreursL.slice(avant).join(' ; '));
+});
+
+await v('commande dont le code de livraison est dans la table de l\'univers : libellé et port de la table, dans la liste, la fiche et la console', async () => {
+  const avant = erreursL.length;
+  await montrerCommande({ livraisons: { ZZZ: ['Camion maison', 5] } });
+  const r = await parcourirCommande();
+  if (!r.liste.includes('25,00 €')) throw new Error('le port de la table (5 €) n\'est pas dans le total de la liste : ' + r.liste.slice(-200));
+  if (!/Livraison Camion maison/.test(r.fiche) || !r.fiche.includes('25,00 € TTC')) throw new Error('la fiche ne montre pas le libellé ou le total de la table : ' + r.fiche.slice(-300));
+  if (!/Livraison\s*Camion maison/.test(r.console)) throw new Error('.getorder ne montre pas le libellé de la table : ' + r.console.slice(-300));
+  if (erreursL.length > avant) throw new Error('erreur de page : ' + erreursL.slice(avant).join(' ; '));
+});
+await ctxL.close();
+
+// Les vraies séances : ce que le moteur affichait avant (noms et teintes des couleurs, libellé et port des trois modes de livraison)
+// vient maintenant de `contenus/spartoo.js` et de `contenus/cdiscount.js`. Valeurs écrites à la main (le port de Colissimo Domicile
+// est de 4,90 €, la commande CMD-048213 de Spartoo vaut 149,99 + 2 × 109,99 + 89,99 = 459,96 € avant port).
+const ctxR = await nav.newContext({ viewport: { width: 1280, height: 900 } });
+const pgR = await ctxR.newPage();
+const erreursR = [];
+pgR.on('pageerror', (e) => erreursR.push('PAGEERROR: ' + e.message));
+await pgR.goto(BASE);
+await pgR.waitForSelector('#btnProf');
+const monterReelle = (aid) => pgR.evaluate(async (aid) => {
+  const mod = await import('/activites/' + aid + '.js');
+  document.querySelector('#hoteR')?.remove();
+  const hote = document.createElement('div'); hote.id = 'hoteR'; document.body.prepend(hote);
+  const db = {};
+  mod.rendre(hote, { meta: mod.meta, profil: { prenom: 'Lea', nom: 'Test', role: 'eleve', uid: 'u-reel' }, jeu: { etat: () => db, sauver: () => {} },
+    enregistrer: () => {}, quitter: () => {}, codeStock: 'ABC', lireScore: async () => null });
+}, aid);
+const texteR = () => pgR.$eval('#hoteR', (e) => e.innerText.replace(/\s+/g, ' '));
+
+await v('Spartoo ENT-1.2 : le mail de commande donne le mode de livraison et le port, le catalogue les pastilles de couleur', async () => {
+  const mods = await pgR.evaluate(async () => {
+    const S = await import('/contenus/spartoo.js'), C = await import('/contenus/cdiscount.js');
+    return { couleur: S.couleurs && S.couleurs.NR, nbCouleurs: Object.keys(S.couleurs || {}).length, spartoo: S.livraisons, cdiscount: C.livraisons, couleursCdiscount: C.couleurs };
+  });
+  if (JSON.stringify(mods.couleur) !== '["Noir","#1f2124"]' || mods.nbCouleurs !== 9) throw new Error('contenus/spartoo.js n\'exporte pas les neuf couleurs : ' + JSON.stringify(mods.couleur) + ' / ' + mods.nbCouleurs);
+  const attendu = '{"COL":["Colissimo Domicile",4.9],"CHR":["Chronopost Express",9.9],"REL":["Point Relais",3.9]}';
+  if (JSON.stringify(mods.spartoo) !== attendu) throw new Error('livraisons de contenus/spartoo.js : ' + JSON.stringify(mods.spartoo));
+  if (JSON.stringify(mods.cdiscount) !== attendu) throw new Error('livraisons de contenus/cdiscount.js : ' + JSON.stringify(mods.cdiscount));
+  if (mods.couleursCdiscount !== undefined) throw new Error('Cdiscount n\'a pas de couleurs : rien à exporter');
+  await monterReelle('spartoo');
+  await pgR.click('[data-vue="mail"]');
+  await pgR.locator('.ent-mitem').first().click();
+  const mail = await texteR();
+  if (!mail.includes('Livraison : Colissimo Domicile') || !mail.includes('Port 4,90 €') || !mail.includes('Total TTC 464,86 €')) {
+    throw new Error('le mail de commande ne montre pas le mode de livraison, le port ou le total : ' + mail.slice(-420));
+  }
+  await pgR.click('button:has-text("Enregistrer la commande")');
+  if (!/Livraison Colissimo Domicile/.test(await texteR())) throw new Error('la fiche de commande ne montre pas le mode de livraison');
+  await pgR.click('[data-vue="catalogue"]');
+  const pastilles = await pgR.$$eval('#hoteR [data-produit]:first-child .teinte', (e) => e.map((x) => `${x.title}|${x.style.background}`));
+  // Premier modèle du catalogue : Nike Air Max 270 en Noir, Blanc, Gris (`MODELS_RAW_P42`).
+  if (pastilles.length !== 3 || !pastilles[0].startsWith('Noir|') || !pastilles[1].startsWith('Blanc|') || !pastilles[2].startsWith('Gris|')) {
+    throw new Error('pastilles du premier modèle : ' + JSON.stringify(pastilles));
+  }
+  await pgR.locator('#hoteR [data-produit]').first().click();
+  if (!/Noir/.test(await texteR())) throw new Error('la fiche produit ne nomme pas la couleur');
+});
+
+await v('Spartoo ENT-1.3 et Cdiscount : les trois modes de livraison (Colissimo, Point Relais, Chronopost) s\'affichent sur les fiches de commande', async () => {
+  const vus = new Set();
+  for (const aid of ['spartoo-tracabilite', 'cdiscount-chiffres']) {
+    await monterReelle(aid);
+    await pgR.click('[data-vue="commandes"]');
+    const n = await pgR.locator('[data-ouvrir-cmd]').count();
+    if (n < 3) throw new Error(`${aid} : ${n} commandes seulement dans la liste`);
+    for (let i = 0; i < Math.min(n, 12); i++) {
+      await pgR.click('[data-vue="commandes"]');
+      await pgR.locator('[data-ouvrir-cmd]').nth(i).click();
+      const m = /Livraison (Colissimo Domicile|Chronopost Express|Point Relais)/.exec(await texteR());
+      if (!m) throw new Error(`${aid} : la commande n° ${i + 1} ne montre pas un mode de livraison connu`);
+      vus.add(m[1]);
+    }
+  }
+  if (vus.size !== 3) throw new Error('modes de livraison vus : ' + [...vus].join(', '));
+  if (erreursR.length) throw new Error('erreur de page : ' + erreursR.join(' ; '));
+});
+await ctxR.close();
+
 // ---------- 45. une séance qui refuse de se charger n'empêche pas le site de s'afficher (chantier 9a bis, 08/10/2026)
 // Avant, `Promise.all` dans `chargerActivites()` : UN fichier fautif et plus aucun accueil pour personne. On casse ici une
 // séance SANS toucher au dépôt (le serveur de test sert son fichier réécrit : `menu:` devient `menuu:`, une option que
