@@ -12,6 +12,11 @@
     "profsGlobaux, nœud en .write false, donc alimenté à la main depuis la console.",
     "Avant le 01/10/2026 la condition était !data.exists(), ce qui laissait tout compte",
     "authentifié se fabriquer un groupe de toutes pièces et consommer la bande passante.",
+    "Réécriture d'un miroir qui existe (chantier 11, lot 11b, 09/10/2026) : réservée à ses inscrits",
+    "(acces/{gid}/profs/{uid}). Un enseignant de profsGlobaux CRÉE un miroir neuf (!data.exists()),",
+    "mais ne réécrit plus celui d'un groupe qui n'est pas le sien, donc ne peut plus s'y inscrire.",
+    "Conséquence : « Reconstruire l'accès » réussit pour un global sur un miroir absent ou qui le cite ;",
+    "pour un collègue ajouté dont l'inscription au miroir a échoué, c'est le responsable qui reconstruit.",
     "",
     "Écriture d'une ligne autorisée si :",
     "  - l'auteur est enseignant du groupe, OU",
@@ -55,7 +60,7 @@
     "acces": {
       "$gid": {
         ".read": "auth != null && (data.child('profs').child(auth.uid).exists() || data.child('eleves').child(auth.uid).exists())",
-        ".write": "auth != null && (root.child('profsGlobaux').child(auth.uid).exists() || data.child('profs').child(auth.uid).exists())",
+        ".write": "auth != null && ((root.child('profsGlobaux').child(auth.uid).exists() && !data.exists()) || data.child('profs').child(auth.uid).exists())",
         "profs":  { "$uid": { ".validate": "newData.isBoolean()" } },
         "eleves": { "$uid": { ".validate": "newData.isBoolean()" } }
       }
