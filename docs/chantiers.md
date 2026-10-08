@@ -28,7 +28,7 @@
 | 7 | Quota Spark : mesurer, puis supprimer les écritures inutiles | C9 | moyen | Sonnet | oui | 4 | à faire |
 | **Lot B — rendre la croissance possible** | | | | | | | |
 | 8 | Fabrique de séance d'entreprise (24 fichiers recopiés) | C6 | moyen | Sonnet | oui (petit) | — | **livré** (08/10, db5ed50 à ee13996) |
-| 9 | `entreprise.js` : options figées, `COLORS`/`SHIP` sortis, modules extraits | C5 | gros | Opus puis Sonnet | oui | 8 | 9a **livré** (08/10, 7a79945 à 6c516c6) ; 9b, 9c à faire |
+| 9 | `entreprise.js` : options figées, `COLORS`/`SHIP` sortis, modules extraits | C5 | gros | Opus puis Sonnet | oui | 8 | 9a **livré** (08/10, 7a79945 à 6c516c6) ; 9a bis **livré** (08/10, 5e53938) ; 9b, 9c à faire |
 | 10 | Un seul drapeau « Simulog » dans tout le code | C13 | petit | Sonnet | oui | — | à faire |
 | 11 | Plusieurs enseignants : co-prof, groupes par prof, orphelins filtrés | C7 | moyen à gros | Opus (décision) puis Sonnet | oui + règles | 1, 6 | à faire |
 | 12 | CAP OL et niveaux : référentiel, défauts, TAB-4 | C8 | moyen | Sonnet (Cowork d'abord) | oui | référentiel CAP relevé | à faire |
@@ -250,6 +250,18 @@ s'aligner.
   contrôle à l'ouverture sur la base de départ (aucun jalon à l'état `na` : Smoby et Picard rendent tous `attente`, Spartoo et
   Boost rendent `na`), à ne faire qu'avec un cas par séance parce que `na` n'est pas un contrat. Tests : six cas dans le bloc
   `dependances`, sabotés dans les deux sens. Suite complète : voir `decisions.md`.
+- **Fait, lot 9a bis (08/10/2026, 5e53938 ; décidé par Tristan le jour même).** Une séance qui refuse de se charger ne
+  fait plus tomber l'accueil de tout le monde. `chargerActivites()` (`activites/index.js`) charge chaque fichier à part
+  (`Promise.allSettled`) : la séance fautive est écartée du registre, son erreur est retenue (`activitesEnEchec()` →
+  `{ fichier, id, erreur }`, message du moteur tel quel) et répétée en `console.error`. Les élèves ne voient rien ; **l'enseignant
+  lit un avis rouge en haut de l'accueil** (`core/app.js`, `cartouche`, une ligne par échec, sur tous les niveaux de l'accueil).
+  Un fichier qui s'importe sans `meta.id` compte comme un refus. Suivi, compétences, conduite de séance : ils parcourent les
+  séances chargées et lisent les scores par `par[uid][aid]`, donc un score enregistré sur une séance écartée est simplement
+  ignoré (aucun `null` à tolérer, **aucun garde ajouté**, vérifié par un test avec un score semé). **Seul ajout dans
+  `core/prof.js`** : la liste des identifiants donnée à la suppression d'un élève ou d'un groupe garde les séances écartées
+  (l'`id` = le nom du fichier, vrai pour les 43), sinon leurs classements restaient derrière, invisibles. Le filet ne rend pas
+  la suite aveugle : le cas « les 24 séances se chargent » exige une liste d'échecs vide. Quatre cas dans `dependances.mjs`
+  (élève, enseignant, onglets de l'espace enseignant, suppression), sabotés dans les deux sens. Suite : 889/889.
 
 ### 10. Un seul drapeau Simulog (C13)
 - **Ce qu'on fait.** `estSimulog(meta)` (rubrique `simulog`) utilisé à la place de `/^ENT-/` et

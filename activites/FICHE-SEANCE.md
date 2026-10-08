@@ -947,6 +947,14 @@ sur 2 » est calculé). Après toute modification : `node outils/test.mjs questi
   modèle est Boost (`ENT-3.x`).
 - Ce que le jalon dit doit être vérifié **avant** que l'élève commence, et ne doit pas
   récompenser l'inaction. Un chiffre caché à l'élève ne doit pas être déductible ailleurs.
+- **Une séance qui refuse de se charger** (erreur de syntaxe, option inconnue, `id` de vue en double…) est **écartée du registre** :
+  les élèves ne voient rien (ni carte ni message), l'enseignant lit un avis rouge en haut de l'accueil (fichier + message du
+  moteur), et `console.error` le répète. Le reste du site marche (chantier 9a bis, 08/10/2026).
+- **La suite de tests tombe** dans ce cas (`activitesEnEchec()` doit être vide) : un brouillon `pret: false` commité avec une
+  faute n'abîme pas le site, mais il ne passe pas inaperçu. Les scores déjà enregistrés sur la séance écartée restent
+  en base, ignorés du suivi (rien à cliquer) ; supprimer un élève efface quand même ses classements dans cette séance.
+- Pour la voir : mettre une faute (`menuu:` pour `menu:`) dans un fichier de séance en local, sans commit, ouvrir le site
+  en enseignant, puis annuler la faute.
 - Avant d'ajouter la séance : `node outils/test.mjs`, et un bloc de test dans `outils/test/`
   pour une entreprise nouvelle (une ligne dans `BLOCS` de `outils/test.mjs`).
 
