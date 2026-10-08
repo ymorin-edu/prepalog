@@ -14,55 +14,30 @@
 //
 // Trame élève et corrigé : déposés par Cowork, branchés le 04/10/2026 (brief `docs/briefs/CDISCOUNT-trames-eleve.md`).
 
-import { creerEntreprise } from '../core/types/entreprise.js';
+import { seanceEntreprise } from '../core/types/seance-entreprise.js';
 import * as CDISCOUNT from '../contenus/cdiscount.js';
 import * as SEANCE from '../contenus/cdiscount-mouvements.js';
-
-export const meta = {
+const s = seanceEntreprise(CDISCOUNT, SEANCE, {
   id: 'cdiscount-mouvements',
   code: 'ENT-2.1',
   titre: 'Cdiscount — le stock raconte',
   desc: "Une cliente n'a pas reçu ses écouteurs : remonter les mouvements de stock jusqu'à l'erreur.",
-  rubrique: 'simulog',
   // Compétences et temps pédagogique : voir core/competences.js.
   competences: ['C1.6'],
   temps: 'guidage',
   // Volume déclaré (`claude/prepalog-montee-en-competences.md`) : guidage = peu d'opérations.
   volume: SEANCE.VOLUME,
-  bareme: SEANCE.ETAPES.length,
   notation: 'avancement',
-  immersif: true,
-  portee: 'eleve',
   // Chaque séance Cdiscount a sa propre base (une journée différente à l'entrepôt) : l'élève
   // peut donc repartir de zéro sans rien perdre d'une autre séance.
   reinitialisable: true,
-  tables: {},
-  // Corrigé de la trame (espace enseignant).
-  corrige: './contenus/corriges/ENT-2.1.js',
+  trame: 'cdiscount-mouvements',
   pret: true,
   ouverture: 'prof',
-};
-
-const moteur = creerEntreprise({
+}, {
   // Les écrans de données du menu (05/10/2026) : ceux dont la séance se sert, et au moindre doute on les garde.
   menu: ['commandes', 'receptions', 'stock', 'catalogue', 'console'],
-  ENTREPRISE: CDISCOUNT.ENTREPRISE,
-  VOCAB: CDISCOUNT.VOCAB,
-  CATALOGUE: SEANCE.CATALOGUE,
-  SUPPLIERS: CDISCOUNT.SUPPLIERS,
-  SUP_BY_ID: CDISCOUNT.SUP_BY_ID,
-  CUSTOMERS: CDISCOUNT.CUSTOMERS,
-  CM: CDISCOUNT.CM,
-  baseDeDepart: SEANCE.baseDeDepart,
   exercice: SEANCE.EXERCICE,
-  accueil: SEANCE.ACCUEIL,
-  volet: SEANCE.VOLET,
-  etapes: SEANCE.ETAPES,
-  THEME: CDISCOUNT.THEME,
-  trame: {
-    pdf: './contenus/trames/ENT-2.1-cdiscount-mouvements-trame-eleve.pdf',
-    docx: './contenus/trames/ENT-2.1-cdiscount-mouvements-trame-eleve.docx',
-  },
 });
-
-export function rendre(hote, ctx) { moteur.rendre(hote, ctx); }
+export const meta = s.meta;
+export const rendre = s.rendre;

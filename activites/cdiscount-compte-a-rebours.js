@@ -11,50 +11,28 @@
 //
 // Livrée fermée (`pret: true, ouverture: 'prof'`) : Tristan l'ouvre le jour de l'évaluation.
 
-import { creerEntreprise } from '../core/types/entreprise.js';
+import { seanceEntreprise } from '../core/types/seance-entreprise.js';
 import * as CDISCOUNT from '../contenus/cdiscount.js';
 import * as SEANCE from '../contenus/cdiscount-compte-a-rebours.js';
-
-export const meta = {
+const s = seanceEntreprise(CDISCOUNT, SEANCE, {
   id: 'cdiscount-compte-a-rebours',
   code: 'ENT-2.5',
   titre: 'Cdiscount — le compte à rebours',
   desc: 'Seul, sur une allée neuve : exporter, analyser, choisir quoi compter, compter, décider, rendre compte. Tu rends ta copie.',
-  rubrique: 'simulog',
   // Compétences et temps pédagogique : voir core/competences.js.
   competences: ['C1.6'],
   temps: 'evaluation',
-  bareme: SEANCE.ETAPES.length,
-  immersif: true,
-  portee: 'eleve',
   copie: true,
-  tables: {},
-  corrige: './contenus/corriges/ENT-2.5.js',
   pret: true,
   ouverture: 'prof',
-};
-
-const moteur = creerEntreprise({
+}, {
   // Les écrans de données du menu (05/10/2026) : ceux dont la séance se sert, et au moindre doute on les garde.
   menu: ['commandes', 'stock', 'catalogue', 'console'],
-  ENTREPRISE: CDISCOUNT.ENTREPRISE,
-  VOCAB: CDISCOUNT.VOCAB,
-  CATALOGUE: SEANCE.CATALOGUE,
-  SUPPLIERS: CDISCOUNT.SUPPLIERS,
-  SUP_BY_ID: CDISCOUNT.SUP_BY_ID,
-  CUSTOMERS: CDISCOUNT.CUSTOMERS,
-  CM: CDISCOUNT.CM,
-  baseDeDepart: SEANCE.baseDeDepart,
   exercice: SEANCE.EXERCICE,
-  accueil: SEANCE.ACCUEIL,
-  volet: SEANCE.VOLET,
-  etapes: SEANCE.ETAPES,
   // L'inventaire est TIRÉ : une fonction de la graine de l'élève (le moteur la pose à l'ouverture).
   inventaire: SEANCE.inventaireDe,
   tableur: SEANCE.TABLEUR,
-  copie: meta.copie,
-  THEME: CDISCOUNT.THEME,
 });
-
-export function rendre(hote, ctx) { moteur.rendre(hote, ctx); }
-export const noter = (db) => moteur.noter(db);
+export const meta = s.meta;
+export const rendre = s.rendre;
+export const noter = s.noter;

@@ -15,52 +15,28 @@
 // Livrée fermée (`pret: true, ouverture: 'prof'`) : Tristan l'essaie, puis l'ouvre lui-même.
 // Trame élève et corrigé : déposés par Cowork, branchés le 04/10/2026 (brief `docs/briefs/CDISCOUNT-trames-eleve.md`).
 
-import { creerEntreprise } from '../core/types/entreprise.js';
+import { seanceEntreprise } from '../core/types/seance-entreprise.js';
 import * as CDISCOUNT from '../contenus/cdiscount.js';
 import * as SEANCE from '../contenus/cdiscount-chiffres.js';
-
-export const meta = {
+const s = seanceEntreprise(CDISCOUNT, SEANCE, {
   id: 'cdiscount-chiffres',
   code: 'ENT-2.2',
   titre: 'Cdiscount — ce que disent les chiffres',
   desc: 'Exporter les constats des préparateurs, les analyser dans le tableur et choisir les références à recompter.',
-  rubrique: 'simulog',
   // Compétences et temps pédagogique : voir core/competences.js.
   competences: ['C1.6'],
   temps: 'guidage',
   volume: SEANCE.VOLUME,
-  bareme: SEANCE.ETAPES.length,
   notation: 'avancement',
-  immersif: true,
-  portee: 'eleve',
   // PAS de `reinitialisable` : la remise à zéro est réservée aux séances X.1 (décision du 02/10/2026).
-  tables: {},
-  corrige: './contenus/corriges/ENT-2.2.js',
+  trame: 'cdiscount-chiffres',
   pret: true,
   ouverture: 'prof',
-};
-
-const moteur = creerEntreprise({
+}, {
   // Les écrans de données du menu (05/10/2026) : ceux dont la séance se sert, et au moindre doute on les garde.
   menu: ['commandes', 'stock'],
-  ENTREPRISE: CDISCOUNT.ENTREPRISE,
-  VOCAB: CDISCOUNT.VOCAB,
-  CATALOGUE: SEANCE.CATALOGUE,
-  SUPPLIERS: CDISCOUNT.SUPPLIERS,
-  SUP_BY_ID: CDISCOUNT.SUP_BY_ID,
-  CUSTOMERS: CDISCOUNT.CUSTOMERS,
-  CM: CDISCOUNT.CM,
-  baseDeDepart: SEANCE.baseDeDepart,
   exercice: SEANCE.EXERCICE,
-  accueil: SEANCE.ACCUEIL,
-  volet: SEANCE.VOLET,
-  etapes: SEANCE.ETAPES,
   tableur: SEANCE.TABLEUR,
-  THEME: CDISCOUNT.THEME,
-  trame: {
-    pdf: './contenus/trames/ENT-2.2-cdiscount-chiffres-trame-eleve.pdf',
-    docx: './contenus/trames/ENT-2.2-cdiscount-chiffres-trame-eleve.docx',
-  },
 });
-
-export function rendre(hote, ctx) { moteur.rendre(hote, ctx); }
+export const meta = s.meta;
+export const rendre = s.rendre;
