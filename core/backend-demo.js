@@ -45,6 +45,43 @@ export function creerBackendDemo() {
   const groupes = () => lire('groupes', {});
   const setGroupes = (g) => ecrire('groupes', g);
 
+  // Tout ce que l'effacement d'un élève emporte (miroir de supprimerEleve du mode réel).
+  // Les travaux sont cherchés dans les groupes de l'enseignant connecté ET dans ceux du profil.
+  function effacerEleve(uid, { aids = [], nettoyerGroupes = true } = {}) {
+    const u = users();
+    const gidsProfil = (u[uid] && u[uid].groupes) || [];
+    delete u[uid]; setUsers(u);
+    const g = groupes();
+    const gidsProf = Object.keys(g).filter((k) => courant && (g[k].profs || []).includes(courant.uid));
+    new Set([...gidsProfil, ...gidsProf]).forEach((gid) => {
+      const idx = lire(`travauxIdx/${gid}`, []);
+      idx.filter((k) => k.startsWith(`${uid}|`)).forEach((k) => {
+        const [, aid] = k.split('|');
+        try { localStorage.removeItem(`${P}travaux/${gid}/${uid}/${aid}`); } catch (e) {}
+      });
+      if (idx.some((k) => k.startsWith(`${uid}|`))) ecrire(`travauxIdx/${gid}`, idx.filter((k) => !k.startsWith(`${uid}|`)));
+    });
+    try {
+      Object.keys(localStorage)
+        .filter((k) => k.startsWith(`${P}prive/${uid}/`))
+        .forEach((k) => localStorage.removeItem(k));
+    } catch (e) {}
+    aids.forEach((aid) => {
+      const k = `classements/${aid}`;
+      const t = lire(k, null);
+      if (t && uid in t) { delete t[uid]; ecrire(k, t); publier(k); }
+    });
+    if (nettoyerGroupes) {
+      let change = false;
+      gidsProf.forEach((gid) => {
+        ['demiDe', 'equipes'].forEach((champ) => {
+          if (g[gid][champ] && uid in g[gid][champ]) { delete g[gid][champ][uid]; change = true; }
+        });
+      });
+      if (change) setGroupes(g);
+    }
+  }
+
   return {
     mode: 'demo',
 
@@ -114,18 +151,20 @@ export function creerBackendDemo() {
     // Même règle qu'en mode réel, et pour la même raison : un élève qui n'appartient qu'à
     // ce groupe part avec lui, sans quoi son profil survit sans jamais plus remonter dans
     // aucun écran (voir le commentaire détaillé dans backend-firebase.js).
-    async supprimerGroupe(gid, { purger = true } = {}) {
-      const u = users();
-      let detaches = 0;
-      const aPurger = [];
-      Object.keys(u).forEach((k) => {
-        const gs = u[k].groupes || [];
+    // Chantier 6 (08/10/2026) : chaque élève qui part passe par `effacerEleve()`, le même effacement
+    // que `supprimerEleve()` (travaux, base privée, classements) ; avant, seuls le profil et les
+    // travaux du groupe partaient, la base privée et les classements restaient.
+    async supprimerGroupe(gid, { purger = true, aids = [] } = {}) {
+      const u0 = users();
+      const aPurger = [], aDetacher = [];
+      Object.keys(u0).forEach((k) => {
+        const gs = u0[k].groupes || [];
         if (!gs.includes(gid)) return;
-        if (purger && u[k].role === 'eleve' && gs.length <= 1) { aPurger.push(k); return; }
-        u[k].groupes = gs.filter((x) => x !== gid);
-        detaches++;
+        if (purger && u0[k].role === 'eleve' && gs.length <= 1) aPurger.push(k); else aDetacher.push(k);
       });
-      aPurger.forEach((k) => { delete u[k]; });
+      aPurger.forEach((k) => effacerEleve(k, { aids, nettoyerGroupes: false }));
+      const u = users();
+      aDetacher.forEach((k) => { if (u[k]) u[k].groupes = (u[k].groupes || []).filter((x) => x !== gid); });
       setUsers(u);
       const g = groupes(); delete g[gid]; setGroupes(g);
       lire(`travauxIdx/${gid}`, []).forEach((k) => {
@@ -133,16 +172,18 @@ export function creerBackendDemo() {
         try { localStorage.removeItem(`${P}travaux/${gid}/${uid}/${aid}`); } catch (e) {}
       });
       try { localStorage.removeItem(`${P}travauxIdx/${gid}`); } catch (e) {}
+      // Le « / » final : `jeux/1l` ne doit pas emporter `jeux/1l-b/…`, groupe au préfixe voisin.
       try {
         Object.keys(localStorage)
           .filter((k) => k.startsWith(`${P}jeux/${gid}/`))
           .forEach((k) => localStorage.removeItem(k));
       } catch (e) {}
       return {
-        eleves: detaches + aPurger.length,
+        eleves: aDetacher.length + aPurger.length,
         supprimes: aPurger.length,
-        detaches,
+        detaches: aDetacher.length,
         comptes: aPurger.length,   // en démonstration, profil et identifiant ne font qu'un
+        restes: [],
       };
     },
     async elevesDuGroupe(gid) {
@@ -184,23 +225,12 @@ export function creerBackendDemo() {
       setUsers(u);
       return { faits, erreurs };
     },
-    async supprimerEleve(uid) {
-      // Comme en réel : le profil, les travaux (dans tous les groupes) et le jeu privé partent.
-      const u = users(); delete u[uid]; setUsers(u);
-      Object.keys(groupes()).forEach((gid) => {
-        const idx = lire(`travauxIdx/${gid}`, []);
-        idx.filter((k) => k.startsWith(`${uid}|`)).forEach((k) => {
-          const [, aid] = k.split('|');
-          try { localStorage.removeItem(`${P}travaux/${gid}/${uid}/${aid}`); } catch (e) {}
-        });
-        ecrire(`travauxIdx/${gid}`, idx.filter((k) => !k.startsWith(`${uid}|`)));
-      });
-      try {
-        Object.keys(localStorage)
-          .filter((k) => k.startsWith(`${P}prive/${uid}/`))
-          .forEach((k) => localStorage.removeItem(k));
-      } catch (e) {}
-      return { compte: true };
+    async supprimerEleve(uid, { aids = [], nettoyerGroupes = true } = {}) {
+      // Comme en réel (voir backend-firebase.js) : le profil, les travaux de tous les groupes de
+      // l'enseignant et du profil, la base privée, les lignes de classement, et l'entrée
+      // demiDe / equipes de ses groupes.
+      effacerEleve(uid, { aids, nettoyerGroupes });
+      return { compte: true, restes: [] };
     },
 
     // Niveau et tiers-temps d'un élève (voir core/amenagements.js). Même garde qu'en mode

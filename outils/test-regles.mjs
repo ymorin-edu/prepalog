@@ -556,6 +556,43 @@ await v("un élève n'efface pas tout le classement", () =>
 await v("un enseignant global efface le classement", () =>
   assertSucceeds(dbDe('prof1').ref(CL).remove()));
 
+// ---------- 15 ter. effacer la ligne de classement d'un élève supprimé (chantier 6, 08/10/2026)
+// La suppression d'un élève (supprimerEleve) retire `classements/{aid}/{uid}`. Jusque-là seul un
+// enseignant de `profsGlobaux` le pouvait ; un enseignant du groupe qui n'y est pas (prof2, seul
+// inscrit dans acces/g2/profs) doit pouvoir EFFACER la ligne d'un élève de SON groupe, sans pouvoir
+// ni l'écrire ni toucher à celle d'un autre groupe. La règle ne suppose jamais que la ligne, ni
+// son champ `gid`, existe.
+const CL2 = 'classements/entr-arrondis';
+await env.withSecurityRulesDisabled(async (ctx) => {
+  const r = ctx.database().ref();
+  await r.child('acces/g2').set({ profs: { prof2: true }, eleves: { e3: true } });
+  await r.child(CL2).set({
+    e1: { gid: 'g1', groupe: '1L', score: 12, max: 20, temps: 100, ts: 1 },
+    e3: { gid: 'g2', groupe: 'TL', score: 15, max: 20, temps: 90, ts: 1 },
+    e5: { groupe: 'sans gid', score: 3, max: 20, temps: 80, ts: 1 },
+    e6: { gid: 'g2', groupe: 'TL', score: 9, max: 20, temps: 70, ts: 1 },
+  });
+});
+
+await v("un enseignant non global n'écrit pas la ligne d'un élève de son groupe (effacement seul)", () =>
+  assertFails(dbDe('prof2').ref(`${CL2}/e3`).set({ gid: 'g2', groupe: 'TL', score: 20, max: 20, temps: 1, ts: 2 })));
+await v("un enseignant non global ne modifie pas un champ de la ligne d'un élève de son groupe", () =>
+  assertFails(dbDe('prof2').ref(`${CL2}/e3/score`).set(20)));
+await v("un enseignant d'un autre groupe n'efface pas la ligne d'un élève du groupe g1", () =>
+  assertFails(dbDe('prof2').ref(`${CL2}/e1`).remove()));
+await v("une ligne sans champ gid ne peut pas être effacée par un enseignant non global", () =>
+  assertFails(dbDe('prof2').ref(`${CL2}/e5`).remove()));
+await v("un élève n'efface pas la ligne d'un autre, même d'un groupe où un enseignant le pourrait", () =>
+  assertFails(dbDe('e1').ref(`${CL2}/e3`).remove()));
+await v("un enseignant non global efface la ligne d'un élève de son groupe (gid dans acces/…/profs)", () =>
+  assertSucceeds(dbDe('prof2').ref(`${CL2}/e3`).remove()));
+await v("effacer une ligne de classement absente est permis (rien à effacer)", () =>
+  assertSucceeds(dbDe('prof2').ref(`${CL2}/e3`).remove()));
+await v("l'élève efface toujours sa propre ligne de classement", () =>
+  assertSucceeds(dbDe('e1').ref(`${CL2}/e1`).remove()));
+await v("un enseignant global efface toujours une ligne sans gid", () =>
+  assertSucceeds(dbDe('prof1').ref(`${CL2}/e5`).remove()));
+
 // Et `communs/` n'a pas bougé : toujours en lecture seule pour les élèves.
 await v("un élève n'écrit toujours pas dans les référentiels communs", () =>
   assertFails(dbDe('e1').ref('communs/ref1/table/L2').set({ a: 1 })));
@@ -605,6 +642,13 @@ process.exit(ko.length ? 1 : 0);
 //     Et en sens inverse, remplacer la condition par `auth != null` tout court
 //     → tombe : « un élève n'écrit pas la ligne de classement d'un autre ».
 //     Les deux sens sont couverts. (Ajouté le 02/10/2026 avec les classements de quiz.)
+//  5 ter. database.rules.json, `classements/$aid/$uid` : retirer la branche « enseignant du groupe »
+//     (`!newData.exists() && …`) → tombe : « un enseignant non global efface la ligne d'un élève de
+//       son groupe » et « effacer une ligne absente est permis ». Remplacer `!newData.exists()` par
+//       `true` → tombe : « n'écrit pas la ligne d'un élève de son groupe » (effacement seul).
+//       Retirer `data.child('gid').isString()` ne fait tomber rien tant que la règle ne plante pas
+//       sur la ligne sans gid : c'est la garde contre l'évaluation en erreur, non un droit.
+//       (Ajouté le 08/10/2026, chantier 6.)
 //
 // Hors de portée, et ce n'est pas un oubli : les gardes `monProfil().get('role', '')` et
 // `monProfil().get('groupes', [])`, ainsi que le `exists()` de `monProfil()`. Essai du

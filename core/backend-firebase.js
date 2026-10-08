@@ -191,17 +191,31 @@ export async function creerBackendFirebase() {
     // Les élèves rattachés à un autre groupe restent seulement détachés : c'est tout
     // l'intérêt d'un champ `groupes` multiple. `purger: false` rétablit l'ancien
     // comportement pour tous, et ne sert qu'aux tests.
-    async supprimerGroupe(gid, { purger = true } = {}) {
+    //
+    // `aids` : les identifiants d'activités connus (registre `activites/index.js`), transmis à
+    // `supprimerEleve()` pour effacer les lignes de classement des élèves qui partent.
+    // Chantier 6 (08/10/2026) — ce que la suppression d'un groupe laisse volontairement : les
+    // lignes de classement des élèves seulement DÉTACHÉS (ils existent encore, avec leur autre
+    // groupe) ; leur champ `gid` désigne alors un groupe disparu, sans autre effet qu'un
+    // libellé de groupe sur le classement commun.
+    async supprimerGroupe(gid, { purger = true, aids = [] } = {}) {
       const eleves = await this.elevesDuGroupe(gid);
+      // Les groupes de l'enseignant, lus UNE fois (et non pour chaque élève) : ils servent à
+      // retrouver les travaux d'un élève dans un groupe que son profil ne cite plus.
+      const groupesProf = courant ? await this.groupesDuProf(courant.uid) : [];
       let supprimes = 0, detaches = 0, comptes = 0;
+      const restes = [];
       for (const el of eleves) {
         if (purger && (el.groupes || []).length <= 1) {
-          // supprimerEleve() fait le reste : travaux, jeux privés, acces/{gid}/eleves/{uid},
-          // profil, puis le compte. Il tourne tant que `acces/{gid}` existe encore, donc
-          // avant la purge du miroir plus bas — dans l'autre ordre il se ferait refuser.
-          const r = await this.supprimerEleve(el.uid);
+          // supprimerEleve() fait le reste : travaux, jeux privés, classements,
+          // acces/{gid}/eleves/{uid}, profil, puis le compte. Il tourne tant que `acces/{gid}`
+          // existe encore, donc avant la purge du miroir plus bas — dans l'autre ordre il se
+          // ferait refuser. `nettoyerGroupes: false` : les entrées demiDe/equipes de CE groupe
+          // partent avec son document, inutile de le réécrire élève par élève.
+          const r = await this.supprimerEleve(el.uid, { aids, groupesProf, nettoyerGroupes: false });
           supprimes++;
           if (r && r.compte) comptes++;
+          if (r && r.restes) restes.push(...r.restes);
           continue;
         }
         const s = await FS.getDocs(cref('travaux', gid, 'eleves', el.uid, 'activites'));
@@ -209,11 +223,13 @@ export async function creerBackendFirebase() {
         await FS.updateDoc(dref('users', el.uid), { groupes: FS.arrayRemove(gid) });
         detaches++;
       }
+      // Ordre d'effacement INTANGIBLE : élèves (ci-dessus), puis jeux/{gid}, puis le miroir
+      // acces/{gid} — dont dépendent les droits des deux écritures d'avant —, puis le groupe.
       ouvrirRt();
       await DB.remove(DB.ref(rt, `jeux/${gid}`));
       await DB.remove(DB.ref(rt, `acces/${gid}`));
       await FS.deleteDoc(dref('groupes', gid));
-      return { eleves: eleves.length, supprimes, detaches, comptes };
+      return { eleves: eleves.length, supprimes, detaches, comptes, restes };
     },
 
     async elevesDuGroupe(gid) {
@@ -290,8 +306,9 @@ export async function creerBackendFirebase() {
       return { faits, erreurs };
     },
 
-    // Suppression complète d'un élève : travaux, jeux privés, miroirs de droits, profil,
-    // et le compte d'authentification lui-même.
+    // Suppression complète d'un élève : travaux, jeux privés, lignes de classement, miroirs de
+    // droits, entrées dans les documents de groupe, profil, et le compte d'authentification
+    // lui-même.
     //
     // Ce dernier point mérite une explication. Firebase n'autorise la suppression d'un
     // compte que par son propre titulaire — effacer celui d'un tiers passe par le SDK
@@ -303,21 +320,66 @@ export async function creerBackendFirebase() {
     //
     // Les comptes créés avant cette date n'ont pas de code enregistré : leur profil et
     // leurs données partent, mais l'identifiant survit et devra être retiré de la console.
-    async supprimerEleve(uid) {
+    //
+    // Chantier 6 (08/10/2026) — ce qui part en plus, et ce qui est NOMMÉ comme restant :
+    //  - `classements/{aid}/{uid}` pour chaque `aid` de la liste `aids` (le registre des
+    //    activités, fourni par l'appelant ; une ligne absente n'est pas une erreur). Un refus
+    //    n'arrête pas la suppression : il est rendu dans `restes`.
+    //  - les travaux `travaux/{gid}/eleves/{uid}/activites/*` de TOUS les groupes de
+    //    l'enseignant, et plus seulement ceux que le profil de l'élève cite (un profil retouché
+    //    à la console peut en avoir perdu). Firestore ne sait pas chercher les travaux d'un
+    //    élève sans connaître le `gid` (aucune règle ne donne accès à un groupe de collections) :
+    //    un groupe qui n'est ni cité par le profil ni à cet enseignant reste hors d'atteinte.
+    //    Un groupe cité par le profil mais refusé (collègue, groupe disparu) n'arrête plus la
+    //    suppression : il est nommé dans `restes`.
+    //  - son entrée `demiDe[uid]` et `equipes[uid]` dans tous les groupes de l'enseignant.
+    //  Reste volontairement : ses lignes dans les bases partagées de ses groupes
+    //  (`jeux/{gid}/…`), qui appartiennent à la classe. Les drapeaux `_reprise-*` partent avec
+    //  les travaux (l'élève, lui, ne peut pas les effacer : firestore.rules).
+    //
+    // `groupesProf` : les groupes de l'enseignant s'ils sont déjà connus (supprimerGroupe les
+    // lit une fois). `nettoyerGroupes: false` : ne pas toucher aux documents de groupe.
+    async supprimerEleve(uid, { aids = [], groupesProf = null, nettoyerGroupes = true } = {}) {
       const s = await FS.getDoc(dref('users', uid));
       const el = s.exists() ? s.data() : null;
-      const gids = (el && el.groupes) || [];
+      const gidsProfil = (el && el.groupes) || [];
+      const profs = groupesProf || (courant ? await this.groupesDuProf(courant.uid) : []);
+      const idsProf = new Set(profs.map((g) => g.id));
+      const restes = [];
 
-      for (const gid of gids) {
-        const t = await FS.getDocs(cref('travaux', gid, 'eleves', uid, 'activites'));
-        for (const d of t.docs) await FS.deleteDoc(d.ref);
+      for (const gid of new Set([...gidsProfil, ...idsProf])) {
+        try {
+          const t = await FS.getDocs(cref('travaux', gid, 'eleves', uid, 'activites'));
+          for (const d of t.docs) await FS.deleteDoc(d.ref);
+        } catch (e) {
+          // Dans un groupe de l'enseignant, un échec est un vrai échec : on s'arrête, l'élève
+          // existe encore et l'on peut recommencer. Ailleurs (groupe d'un collègue, groupe
+          // disparu), c'est un refus attendu : on le nomme et on continue.
+          if (idsProf.has(gid)) throw e;
+          restes.push(`travaux dans le groupe « ${gid} » (pas à vous, ou groupe disparu)`);
+        }
       }
       const pj = await FS.getDocs(cref('prives', uid, 'jeux'));
       for (const d of pj.docs) await FS.deleteDoc(d.ref);
 
-      if (gids.length) {
-        ouvrirRt();
-        for (const gid of gids) await DB.remove(DB.ref(rt, `acces/${gid}/eleves/${uid}`));
+      ouvrirRt();
+      if (aids.length) {
+        const refus = [];
+        await Promise.all(aids.map((aid) => DB.remove(DB.ref(rt, `classements/${aid}/${uid}`))
+          .catch(() => { refus.push(aid); })));
+        if (refus.length) {
+          restes.push(`lignes de classement refusées (${refus.length} activité${refus.length > 1 ? 's' : ''})`);
+        }
+      }
+      for (const gid of gidsProfil) await DB.remove(DB.ref(rt, `acces/${gid}/eleves/${uid}`));
+
+      if (nettoyerGroupes) {
+        for (const g of profs) {
+          const patch = {};
+          if (g.demiDe && uid in g.demiDe) patch[`demiDe.${uid}`] = FS.deleteField();
+          if (g.equipes && uid in g.equipes) patch[`equipes.${uid}`] = FS.deleteField();
+          if (Object.keys(patch).length) await FS.updateDoc(dref('groupes', g.id), patch);
+        }
       }
       await FS.deleteDoc(dref('users', uid));
 
@@ -335,7 +397,7 @@ export async function creerBackendFirebase() {
         }
         try { await AP.deleteApp(app2); } catch (e) {}
       }
-      return { compte };
+      return { compte, restes };
     },
 
     // ---- travaux ----

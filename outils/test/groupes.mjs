@@ -154,4 +154,221 @@ await v('élèves sans groupe : l\'orphelin est visible et se rattache', async (
   });
 });
 
+// ---------- 38 quinquies. suppression d'un élève : on liste ce qui RESTE (chantier 6, 08/10/2026)
+// Une suppression ne se juge pas à ce qu'elle dit emporter mais à ce qu'elle laisse. Avant le
+// chantier 6, un élève supprimé laissait sa ligne de classement, les travaux d'un groupe que son
+// profil ne citait plus, et son entrée demiDe / equipes. Ces tests inventorient le localStorage
+// de la démonstration pour CET élève (profil, travaux, index, base privée, classements, demiDe,
+// equipes) et exigent une liste vide pour celui qui part, complète pour celui qui reste.
+// `lister` est recopiée dans chaque test : `page.evaluate` n'emporte pas de fermeture.
+const LISTER = `(uid) => {
+  const L = [];
+  const K = Object.keys(localStorage).filter((k) => k.startsWith('prepalog:'));
+  const j = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
+  if ((j('prepalog:users') || {})[uid]) L.push('profil');
+  K.filter((k) => k.startsWith('prepalog:travaux/') && k.split('/')[2] === uid)
+    .forEach((k) => L.push('travaux:' + k.split('/')[1]));
+  K.filter((k) => k.startsWith('prepalog:travauxIdx/'))
+    .forEach((k) => (j(k) || []).filter((e) => e.startsWith(uid + '|')).forEach(() => L.push('index:' + k.split('/')[1])));
+  K.filter((k) => k.startsWith('prepalog:prive/' + uid + '/')).forEach(() => L.push('prive'));
+  K.filter((k) => k.startsWith('prepalog:classements/')).forEach((k) => { if ((j(k) || {})[uid]) L.push('classement:' + k.split('/')[1]); });
+  const g = j('prepalog:groupes') || {};
+  Object.keys(g).forEach((gid) => {
+    if (g[gid].demiDe && uid in g[gid].demiDe) L.push('demiDe:' + gid);
+    if (g[gid].equipes && uid in g[gid].equipes) L.push('equipes:' + gid);
+  });
+  return L.sort();
+}`;
+const CATEGORIES = ['classement', 'demiDe', 'equipes', 'index', 'prive', 'profil', 'travaux'];
+
+await v('suppression d\'un élève : rien de lui ne reste, l\'autre élève et le groupe voisin sont intacts', async () => {
+  const r = await page.evaluate(async (LISTER) => {
+    const lister = eval(LISTER);
+    const { creerBackendDemo } = await import('/core/backend-demo.js');
+    const B = creerBackendDemo();
+    const prof = B.profilCourant().uid;
+    const AID = 'zz-quiz', ACT = 'zz-act';
+    const gids = {};
+    for (const nom of ['ZZ SUP', 'ZZ SUP B', 'ZZ AUTRE']) gids[nom] = (await B.creerGroupe({ nom, annee: '', niveau: '', profUid: prof })).id;
+    const [gs, gsb, ga] = [gids['ZZ SUP'], gids['ZZ SUP B'], gids['ZZ AUTRE']];
+    await B.creerEleves(gs, [
+      { nom: 'PART', prenom: 'Xavier', matricule: 'zx01', code: 'c1' },
+      { nom: 'RESTE', prenom: 'Yann', matricule: 'zx02', code: 'c2' },
+    ]);
+    const els = await B.elevesDuGroupe(gs);
+    const X = els.find((e) => e.matricule === 'zx01').uid, Y = els.find((e) => e.matricule === 'zx02').uid;
+    const semer = async (uid, gid) => {
+      await B.ecrireScore(gid, uid, ACT, { score: 1, max: 2 });
+      await B.ecrireJeuPrive(uid, ACT, { a: 1 });
+      await B.poserLigne('classements', AID, uid, { gid, groupe: 'ZZ', score: 1, max: 2, temps: 3, ts: 1 });
+    };
+    await semer(X, gs); await semer(Y, gs);
+    // Les travaux de X dans un groupe de l'enseignant que son profil NE CITE PAS.
+    await B.ecrireScore(ga, X, ACT, { score: 1, max: 2 });
+    await B.majGroupe(gs, { demiDe: { [X]: 'd1', [Y]: 'd1' }, equipes: { [X]: 'e1', [Y]: 'e1' } });
+    await B.majGroupe(ga, { demiDe: { [X]: 'd1' } });
+    await B.majGroupe(gsb, { demiDe: { [X]: 'd2' } });
+    await B.ajouterLigne(`jeux/${gs}/${ACT}`, 'tab', { id: 'l1', nom: 'partagée' });
+    await B.ajouterLigne(`jeux/${gsb}/${ACT}`, 'tab', { id: 'l1', nom: 'voisine' });
+    const jeux = (gid) => Object.keys(localStorage).filter((k) => k.startsWith(`prepalog:jeux/${gid}/`)).length;
+
+    const avantX = lister(X), avantY = lister(Y);
+    const res = await B.supprimerEleve(X, { aids: [AID] });
+    const sortie = {
+      avantX, avantY, res, apresX: lister(X), apresY: lister(Y),
+      jeuxGs: jeux(gs), jeuxGsb: jeux(gsb),
+      groupeVoisin: !!(await B.groupe(gsb)),
+    };
+    // ménage
+    for (const gid of [gs, gsb, ga]) await B.supprimerGroupe(gid, { aids: [AID] });
+    localStorage.removeItem('prepalog:classements/' + AID);
+    return sortie;
+  }, LISTER);
+  const cat = (l) => [...new Set(l.map((x) => x.split(':')[0]))].sort().join(',');
+  // Le test n'est pas vide : avant, la liste de X porte bien les sept catégories, dont les travaux, le demiDe
+  // d'un groupe que le profil ne cite pas et celui du groupe au préfixe voisin.
+  if (cat(r.avantX) !== CATEGORIES.join(',')) throw new Error('semis incomplet pour l\'élève supprimé : ' + r.avantX.join(' '));
+  if (!r.avantX.includes('travaux:zz-autre') || !r.avantX.includes('demiDe:zz-autre') || !r.avantX.includes('demiDe:zz-sup-b')) {
+    throw new Error('semis : il manque les traces hors du groupe du profil : ' + r.avantX.join(' '));
+  }
+  if (r.apresX.length) throw new Error('il reste de l\'élève supprimé : ' + r.apresX.join(' '));
+  // Ce qui reste, nommé : tout ce qui appartient à l'autre élève (sept catégories) ; les bases partagées ; le groupe voisin.
+  if (cat(r.apresY) !== CATEGORIES.join(',')) throw new Error('l\'autre élève a perdu quelque chose : ' + r.apresY.join(' '));
+  if (r.apresY.join(' ') !== r.avantY.join(' ')) throw new Error('l\'autre élève a changé : ' + r.avantY.join(' ') + ' → ' + r.apresY.join(' '));
+  if (!r.jeuxGs || !r.jeuxGsb) throw new Error(`les bases partagées de la classe ont été touchées (${r.jeuxGs}, ${r.jeuxGsb})`);
+  if (!r.groupeVoisin) throw new Error('le groupe voisin a disparu');
+  if (!r.res || r.res.compte !== true || (r.res.restes || []).length) throw new Error('compte rendu inattendu : ' + JSON.stringify(r.res));
+});
+
+// ---------- 38 sexies. suppression d'un groupe : ni l'élève partagé, ni le groupe au préfixe voisin ne bougent
+// Le groupe `zz-grp` et `zz-grp-b` : l'un est le préfixe de l'autre. Q appartient aux deux (détaché, pas
+// supprimé), R seulement au voisin, P seulement au groupe supprimé. Ce qui RESTE est nommé : les bases
+// partagées et le document du groupe voisin, et pour Q son profil, ses travaux du voisin, sa base privée,
+// sa ligne de classement (volontairement : il existe encore) et son demiDe du voisin.
+await v('suppression de groupe : P part entièrement, Q n\'est que détaché, le groupe au préfixe voisin est intact', async () => {
+  const r = await page.evaluate(async (LISTER) => {
+    const lister = eval(LISTER);
+    const { creerBackendDemo } = await import('/core/backend-demo.js');
+    const B = creerBackendDemo();
+    const prof = B.profilCourant().uid;
+    const AID = 'zz-quiz', ACT = 'zz-act';
+    const g1 = (await B.creerGroupe({ nom: 'ZZ GRP', annee: '', niveau: '', profUid: prof })).id;
+    const g2 = (await B.creerGroupe({ nom: 'ZZ GRP B', annee: '', niveau: '', profUid: prof })).id;
+    await B.creerEleves(g1, [
+      { nom: 'PEU', prenom: 'Paul', matricule: 'zg01', code: 'c1' },
+      { nom: 'DOUBLE', prenom: 'Quentin', matricule: 'zg02', code: 'c2' },
+    ]);
+    await B.creerEleves(g2, [{ nom: 'VOISIN', prenom: 'Rémi', matricule: 'zg03', code: 'c3' }]);
+    const tous = [...await B.elevesDuGroupe(g1), ...await B.elevesDuGroupe(g2)];
+    const P = tous.find((e) => e.matricule === 'zg01').uid, Q = tous.find((e) => e.matricule === 'zg02').uid,
+      R = tous.find((e) => e.matricule === 'zg03').uid;
+    await B.rattacherEleve(Q, g2);
+    const semer = async (uid, gid) => {
+      await B.ecrireScore(gid, uid, ACT, { score: 1, max: 2 });
+      await B.poserLigne('classements', AID, uid, { gid, groupe: 'ZZ', score: 1, max: 2, temps: 3, ts: 1 });
+    };
+    await semer(P, g1); await semer(Q, g1); await semer(R, g2);
+    await B.ecrireScore(g2, Q, ACT, { score: 1, max: 2 });
+    for (const u of [P, Q, R]) await B.ecrireJeuPrive(u, ACT, { a: 1 });
+    await B.majGroupe(g1, { demiDe: { [P]: 'd1', [Q]: 'd1' }, equipes: { [P]: 'e1', [Q]: 'e1' } });
+    await B.majGroupe(g2, { demiDe: { [Q]: 'd1', [R]: 'd1' }, equipes: { [Q]: 'e2', [R]: 'e2' } });
+    await B.ajouterLigne(`jeux/${g1}/${ACT}`, 'tab', { id: 'l1', nom: 'a' });
+    await B.ajouterLigne(`jeux/${g2}/${ACT}`, 'tab', { id: 'l1', nom: 'b' });
+    const jeux = (gid) => Object.keys(localStorage).filter((k) => k.startsWith(`prepalog:jeux/${gid}/`)).length;
+
+    const avantR = lister(R);
+    const res = await B.supprimerGroupe(g1, { aids: [AID] });
+    const u = JSON.parse(localStorage.getItem('prepalog:users'));
+    const g = JSON.parse(localStorage.getItem('prepalog:groupes'));
+    const sortie = {
+      res, g1, g2, avantR,
+      apresP: lister(P), apresQ: lister(Q), apresR: lister(R),
+      groupesQ: u[Q] && u[Q].groupes,
+      jeuxG1: jeux(g1), jeuxG2: jeux(g2),
+      groupe1: !!g[g1], groupe2: !!g[g2], demiDe2: g[g2] && g[g2].demiDe, equipes2: g[g2] && g[g2].equipes,
+      idx1: localStorage.getItem('prepalog:travauxIdx/' + g1),
+    };
+    await B.supprimerGroupe(g2, { aids: [AID] });
+    localStorage.removeItem('prepalog:classements/' + AID);
+    return sortie;
+  }, LISTER);
+  if (r.res.supprimes !== 1 || r.res.detaches !== 1) throw new Error('compte rendu : ' + JSON.stringify(r.res));
+  if (r.apresP.length) throw new Error('il reste de l\'élève du groupe supprimé : ' + r.apresP.join(' '));
+  // Q : détaché, tout le reste est nommé.
+  const attenduQ = [`classement:zz-quiz`, `demiDe:${r.g2}`, `equipes:${r.g2}`, `index:${r.g2}`, 'prive', 'profil', `travaux:${r.g2}`].sort().join(' ');
+  if (r.apresQ.join(' ') !== attenduQ) throw new Error('Q devait garder exactement : ' + attenduQ + ' — liste : ' + r.apresQ.join(' '));
+  if (JSON.stringify(r.groupesQ) !== JSON.stringify([r.g2])) throw new Error('Q devait n\'appartenir plus qu\'au groupe voisin : ' + JSON.stringify(r.groupesQ));
+  if (r.apresR.join(' ') !== r.avantR.join(' ')) throw new Error('R (groupe voisin) a changé : ' + r.avantR.join(' ') + ' → ' + r.apresR.join(' '));
+  if (r.jeuxG1) throw new Error('les bases partagées du groupe supprimé restent (' + r.jeuxG1 + ')');
+  if (!r.jeuxG2) throw new Error('les bases partagées du groupe au préfixe voisin ont été emportées');
+  if (r.groupe1 || r.idx1) throw new Error('le groupe supprimé ou son index de travaux subsiste');
+  if (!r.groupe2) throw new Error('le groupe voisin a été supprimé');
+  if (Object.keys(r.demiDe2 || {}).length !== 2) throw new Error('demiDe du groupe voisin touché : ' + JSON.stringify(r.demiDe2));
+});
+
+// ---------- 38 septies. suppression depuis l'onglet « sans groupe » : l'affectation part de TOUS les groupes
+// Avant le chantier 6, ce chemin ne nettoyait aucun document de groupe (le nettoyage de demiDe n'existait
+// que dans la liste de classe). On pose un orphelin affecté à un demi-groupe et à une équipe dans « TLE LOG »,
+// avec une ligne de classement sur une vraie activité du registre, et on supprime depuis l'écran.
+await v('élèves sans groupe : la suppression retire demiDe, équipe, classement et travaux, et laisse les autres', async () => {
+  const prep = await page.evaluate(() => {
+    const j = (k) => JSON.parse(localStorage.getItem(k) || 'null');
+    const g = j('prepalog:groupes');
+    if (!g['tle-log']) return { erreur: 'le groupe tle-log (test 12) est absent' };
+    const u = j('prepalog:users');
+    u['zz-sg1'] = { role: 'eleve', nom: 'SANSGROUPE', prenom: 'Sacha', matricule: 'zz98', code: 'x8', groupes: [] };
+    u['zz-sg2'] = { role: 'eleve', nom: 'TEMOIN', prenom: 'Tess', matricule: 'zz97', code: 'x7', groupes: ['tle-log'] };
+    localStorage.setItem('prepalog:users', JSON.stringify(u));
+    g['tle-log'].demiDe = { ...(g['tle-log'].demiDe || {}), 'zz-sg1': 'd1', 'zz-sg2': 'd1' };
+    g['tle-log'].equipes = { ...(g['tle-log'].equipes || {}), 'zz-sg1': 'e1', 'zz-sg2': 'e1' };
+    localStorage.setItem('prepalog:groupes', JSON.stringify(g));
+    for (const uid of ['zz-sg1', 'zz-sg2']) {
+      localStorage.setItem(`prepalog:travaux/tle-log/${uid}/zz-act`, JSON.stringify({ uid, aid: 'zz-act', gid: 'tle-log', score: 1, max: 2 }));
+      localStorage.setItem(`prepalog:prive/${uid}/zz-act`, JSON.stringify({ data: { a: 1 }, ts: 1 }));
+    }
+    const idx = j('prepalog:travauxIdx/tle-log') || [];
+    localStorage.setItem('prepalog:travauxIdx/tle-log', JSON.stringify([...idx, 'zz-sg1|zz-act', 'zz-sg2|zz-act']));
+    const cl = j('prepalog:classements/entr-conversions') || {};
+    cl['zz-sg1'] = { id: 'zz-sg1', gid: 'tle-log', groupe: 'TLE LOG', score: 5, max: 20, temps: 9, ts: 1 };
+    cl['zz-sg2'] = { id: 'zz-sg2', gid: 'tle-log', groupe: 'TLE LOG', score: 6, max: 20, temps: 9, ts: 1 };
+    localStorage.setItem('prepalog:classements/entr-conversions', JSON.stringify(cl));
+    return {};
+  });
+  if (prep.erreur) throw new Error(prep.erreur);
+
+  await page.click('#btnRetour');
+  await page.waitForSelector('#btnProfEspace', { timeout: 6000 });
+  await page.click('#btnProfEspace');
+  await page.waitForSelector('[data-ong="orphelins"]', { timeout: 6000 });
+  await page.click('[data-ong="orphelins"]');
+  await page.waitForSelector('[data-suppro="zz-sg1"]', { timeout: 6000 });
+  page.once('dialog', (d) => d.accept());
+  await page.click('[data-suppro="zz-sg1"]');
+  await page.waitForFunction(() => !JSON.parse(localStorage.getItem('prepalog:users') || '{}')['zz-sg1'], null, { timeout: 6000 });
+  await page.waitForTimeout(500);
+
+  const r = await page.evaluate((LISTER) => {
+    const lister = eval(LISTER);
+    return { sg1: lister('zz-sg1'), sg2: lister('zz-sg2') };
+  }, LISTER);
+  if (r.sg1.length) throw new Error('il reste de l\'élève sans groupe supprimé : ' + r.sg1.join(' '));
+  const cat = [...new Set(r.sg2.map((x) => x.split(':')[0]))].sort().join(',');
+  if (cat !== CATEGORIES.join(',')) throw new Error('l\'élève témoin a perdu quelque chose : ' + r.sg2.join(' '));
+
+  // Ménage : le témoin et ses traces ne doivent pas fausser les blocs suivants.
+  await page.evaluate(() => {
+    const j = (k) => JSON.parse(localStorage.getItem(k) || 'null');
+    const u = j('prepalog:users'); delete u['zz-sg2']; localStorage.setItem('prepalog:users', JSON.stringify(u));
+    const g = j('prepalog:groupes');
+    delete g['tle-log'].demiDe['zz-sg2']; delete g['tle-log'].equipes['zz-sg2'];
+    localStorage.setItem('prepalog:groupes', JSON.stringify(g));
+    localStorage.removeItem('prepalog:travaux/tle-log/zz-sg2/zz-act');
+    localStorage.removeItem('prepalog:prive/zz-sg2/zz-act');
+    localStorage.setItem('prepalog:travauxIdx/tle-log', JSON.stringify((j('prepalog:travauxIdx/tle-log') || []).filter((e) => !e.startsWith('zz-sg2|'))));
+    const cl = j('prepalog:classements/entr-conversions') || {}; delete cl['zz-sg2'];
+    localStorage.setItem('prepalog:classements/entr-conversions', JSON.stringify(cl));
+  });
+});
+
+
 }

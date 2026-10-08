@@ -80,6 +80,20 @@ export async function rendreEspaceProf(hote, ctx) {
   }
   await majSansGroupe();
 
+  // Suppression d'un élève ou d'un groupe (chantier 6, 08/10/2026).
+  // Les identifiants d'activités du registre : le backend s'en sert pour effacer les lignes
+  // `classements/{aid}/{uid}` d'un élève supprimé, et ne connaît pas le registre lui-même.
+  const aidsConnus = async () => (await chargerActivites()).map((x) => x.meta.id);
+  // Le backend a retiré l'élève de `demiDe` et `equipes` dans tous les groupes de l'enseignant ;
+  // on aligne la copie en mémoire (sans réécrire quoi que ce soit).
+  const oublierEleve = (uid) => groupes.forEach((gr) => {
+    ['demiDe', 'equipes'].forEach((k) => {
+      if (gr[k] && uid in gr[k]) { const c = { ...gr[k] }; delete c[uid]; gr[k] = c; }
+    });
+  });
+  // Ce qu'une suppression n'a pas pu emporter, dit à l'enseignant : jamais de reste invisible.
+  const resteDit = (r) => (r && r.restes && r.restes.length ? ` Il reste : ${r.restes.join(' ; ')}.` : '');
+
   async function dessiner() {
     const g = groupes.find((x) => x.id === gidActif) || null;
     if (demiActif && !demisDe(g).some((d) => d.id === demiActif)) demiActif = '';
@@ -440,7 +454,7 @@ export async function rendreEspaceProf(hote, ctx) {
         + `et tous les résultats de ses élèves.`
         + detail)) return;
       try {
-        const r = await B.supprimerGroupe(gid);
+        const r = await B.supprimerGroupe(gid, { aids: await aidsConnus() });
         groupes = await B.groupesDuProf(ctx.profil.uid);
         await majSansGroupe();
         if (gidActif === gid) activer(groupes[0]?.id || null);
@@ -456,7 +470,7 @@ export async function rendreEspaceProf(hote, ctx) {
           + (orphelins > 0
             ? ` ${orphelins} identifiant${orphelins > 1 ? 's' : ''} de connexion subsiste${orphelins > 1 ? 'nt' : ''} :`
               + ` à retirer depuis la console Firebase.`
-            : ''), orphelins > 0 ? 7000 : 2600);
+            : '') + resteDit(r), orphelins > 0 || (r && r.restes && r.restes.length) ? 7000 : 2600);
         dessiner();
       } catch (e) { toast(e.message || 'Suppression impossible.'); }
     }));
@@ -598,16 +612,14 @@ export async function rendreEspaceProf(hote, ctx) {
         + `(colonne Code). S'il affiche « — », le compte devra être retiré depuis la `
         + `console Firebase.`)) return;
       try {
-        const r = await B.supprimerEleve(el.uid);
-        // Son affectation à un demi-groupe part avec lui : rien d'invisible dans le groupe.
-        if (g.demiDe && el.uid in g.demiDe) {
-          const demiDe = { ...g.demiDe };
-          delete demiDe[el.uid];
-          try { await B.majGroupe(g.id, { demiDe }); g.demiDe = demiDe; } catch (e) { /* une clé orpheline ne gêne rien */ }
-        }
-        toast(r && r.compte
+        // Le backend retire aussi son affectation (demi-groupe, équipe) de tous vos groupes : rien
+        // d'invisible ne reste dans un document de groupe.
+        const r = await B.supprimerEleve(el.uid, { aids: await aidsConnus() });
+        oublierEleve(el.uid);
+        toast((r && r.compte
           ? 'Élève et compte supprimés.'
-          : 'Données supprimées. Le compte de connexion subsiste : retirez-le depuis la console Firebase.');
+          : 'Données supprimées. Le compte de connexion subsiste : retirez-le depuis la console Firebase.')
+          + resteDit(r), r && r.restes && r.restes.length ? 7000 : 2600);
         await dessiner();
       } catch (e) { toast(e.message || 'Suppression impossible.'); }
     }));
@@ -691,10 +703,14 @@ export async function rendreEspaceProf(hote, ctx) {
         + `(colonne Code). S'il affiche « — », le compte devra être retiré depuis la `
         + `console Firebase.`)) return;
       try {
-        const r = await B.supprimerEleve(el.uid);
-        toast(r && r.compte
+        // Sans groupe : son affectation (demiDe, equipes) est tout de même cherchée dans tous
+        // vos groupes par le backend.
+        const r = await B.supprimerEleve(el.uid, { aids: await aidsConnus() });
+        oublierEleve(el.uid);
+        toast((r && r.compte
           ? 'Élève et compte supprimés.'
-          : 'Données supprimées. Le compte de connexion subsiste : retirez-le depuis la console Firebase.');
+          : 'Données supprimées. Le compte de connexion subsiste : retirez-le depuis la console Firebase.')
+          + resteDit(r), r && r.restes && r.restes.length ? 7000 : 2600);
         await majSansGroupe();
         await dessiner();
       } catch (e) { toast(e.message || 'Suppression impossible.'); }
@@ -1135,6 +1151,11 @@ ${so.phrase}` : ''}`)}"
       try {
         // Un drapeau que le poste de l'élève lira à sa prochaine ouverture : l'enseignant
         // n'écrit jamais dans la base privée de l'élève.
+        // Le drapeau périmé est inoffensif (chantier 6, 08/10/2026) : il porte une date, la base
+        // retient la plus récente appliquée (`base.reprise`, voir `appliquerReprise`) et n'applique
+        // jamais un drapeau plus ancien ; un nouveau drapeau pour la même séance REMPLACE le
+        // précédent (même clé). L'élève ne peut pas l'effacer (firestore.rules), et il n'a pas
+        // à le faire : il part avec les travaux de l'élève quand celui-ci est supprimé.
         await B.poserNote(g.id, uid, '_reprise-' + m.id, { score: 0, max: 0 });
         for (const x of touchees) {
           await B.poserNote(g.id, uid, x.id, null);
