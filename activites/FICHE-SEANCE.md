@@ -76,14 +76,14 @@ options, une `meta.trame` qui n'est pas un nom, `correction: true` sans aucun ja
 ### Les options de `creerEntreprise` — la table qui fait foi (chantier 9, lot 9a, 08/10/2026)
 
 Tout ce qu'une séance peut passer à `creerEntreprise` (directement, ou dans le quatrième argument de
-`seanceEntreprise`) est dans **`OPTIONS`**, en tête de `core/types/entreprise.js` : 44 options, une ligne chacune. Le tableau
+`seanceEntreprise`) est dans **`OPTIONS`**, dans `core/types/entreprise-options.js` : 44 options, une ligne chacune. Le tableau
 ci-dessous la reprend ; si les deux se contredisent, c'est `OPTIONS` qui a raison. **Une option absente de `OPTIONS` fait
 refuser la séance** : le message (en français) nomme la clé, propose la bonne casse s'il s'agit d'une faute de majuscule, et
 liste les clés connues ; avec la fabrique il nomme aussi la séance. Un type qui n'est pas celui du tableau est refusé de la même
 façon (`null` et `undefined` valent « absent »). Deux fiches (ou deux animations) de même `id`, ou une vue (quai, planning,
 plan d'entrepôt, fiche, animation) sans `id` texte non vide, sont refusées aussi : l'état de l'élève est rangé sous cet `id`
 (`db.fiches[id]`…). Un test relit le code du moteur : une option lue et absente de `OPTIONS` (ou l'inverse) fait échouer la suite.
-**Ajouter une option au moteur = une ligne dans `OPTIONS` + une ligne ici.**
+**Ajouter une option au moteur = une ligne dans `OPTIONS` (`core/types/entreprise-options.js`) + une ligne ici.**
 
 | Option | Type | Rôle | Séance modèle |
 |---|---|---|---|
@@ -948,6 +948,10 @@ sur 2 » est calculé). Après toute modification : `node outils/test.mjs questi
 
 ## Pièges
 
+- **Un module `core/types/entreprise-*.js` n'importe jamais `entreprise.js`** (import circulaire : `entreprise.js` les importe). Il
+  reçoit ce dont il a besoin par son nom (jamais `ctx`, `U` ni `db` en bloc) ; `entreprise.js` ré-exporte ce que d'autres fichiers
+  lui importaient (`OPTIONS`, `eur`, `fdate`, `fdt`, `norm`, `normLoc`). Chantier 9, lot 9c, 08/10/2026 : le plan et les
+  modules à venir sont dans `docs/briefs/MOTEUR-entreprise-decoupage.md`.
 - Une séance en cours d'écriture reste en `pret: false` et peut être commitée à tout moment.
   Elle compte quand même dans le tableau des compétences.
 - Une séance X.2 qui partage la base d'une X.1 met `reinitialisable: false` et **cloisonne**

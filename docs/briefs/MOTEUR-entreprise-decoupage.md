@@ -1,6 +1,6 @@
 # Brief de chantier moteur — MOTEUR-entreprise-decoupage : découper `entreprise.js` en modules (lot 9c)
 
-**Statut** : à valider par Tristan *(à valider → en cours → livré)*
+**Statut** : en cours *(à valider → en cours → livré)* — validé par Tristan le 08/10/2026 ; **passe 1 (modules 1 à 4) livrée** ; décision : 9c s'arrête à ≈ 1 850 lignes (chaque écran de données dans son fichier), le « 9c bis » viendra plus tard
 **Date** : 08/10/2026 — cadrage Opus (lecture seule), d'après `core/types/entreprise.js` à 3 461 lignes (commit `2ba3243`).
 **Modèle** : **Sonnet** pour chaque module, un module par conversation ou presque (voir §8).
 **Fichiers** : `core/types/entreprise.js` + un fichier nouveau par module dans `core/types/`. **Rien dans `styles/`, `contenus/`,
@@ -247,4 +247,43 @@ qui touche aussi les questions au fil et la copie rendue ?
 
 ## Compte rendu *(rempli à la livraison de chaque module)*
 
-- **Modules livrés** (commit, taille après) : — **Captures** : — **Écarts au plan** : — **Reste ouvert** :
+**Passe 1 (modules 1 à 4), 08/10/2026.** Suite complète à chaque module : 895/895 (≈ 13 min). « Avant » = `git archive` du commit
+précédent (fins de ligne LF, comme le dépôt) servi à côté ; « après » = l'arbre de travail copié en LF.
+
+| # | Commit | `entreprise.js` après | Capture avant / après | Blocs ciblés |
+|---|---|---|---|---|
+| 1 options | d342503 | 3 461 -> 3 360 | options des 24 séances (`capture.mjs`) et messages de refus (clé inconnue, 44 options × 6 mauvais types, null / undefined, identifiants de vue, fabrique) : identiques | `dependances socle` : 94/94 |
+| 2 thème | ba22f0c | -> 3 281 | `style` de `body` et de `.ent-page`, classes `ent-travail-neutre*`, 24 séances, élève et enseignant (72 relevés) : identiques | `boost smoby picard cdiscount` : 512/512 |
+| 3 outils | bc347e8 | -> 3 257 | texte et HTML de la messagerie, des commandes, du bon, du catalogue, du stock, de la console : ENT-1.1 à 1.3 et six Cdiscount (54 pastilles de couleur, 11 « Rupture ») ; options des 24 séances ; formats (`eur`, `fdate`, `fdt`, `norm`, `normLoc`) : identiques | `spartoo cdiscount inventaire dependances` : 250/250 |
+| 4 fin | 001c788 | -> 3 168 | bandeau `[data-fin-seance]` : 24 séances, états de jalons scriptés (tout juste, tout faux, un faux, un « à vérifier », faux + « à vérifier » ; tous les jalons un par un pour ENT-1.1, 5.1, 5.3, 5.4), 314 relevés dont 14 avec la phrase `finFige` ; séance d'essai des questions : `data-fin-questions` et `data-fin-retour` dans trois réglages : identiques | `spartoo smoby questions` : 247/248 (voir ci-dessous) |
+
+**Sabotage (module 1).** `finFige` retiré de `OPTIONS` dans `entreprise-options.js` : 7 cas tombent (`dependances` : « option inconnue refuse
+la séance… liste les clés connues », « la table OPTIONS est exactement l'ensemble des clés que le code du moteur lit », « le refus
+d'une option inconnue nomme la séance », « les 24 séances du registre se chargent » et le meta complet, « séance refusée » ×2 ; 24/31).
+Remis, relancé : vert.
+
+**Écarts au plan.**
+- Module 2 : `TRAVAIL_NEUTRE` et `TRAVAIL_NEUTRE_FOND` (3 lignes, lues par `dessiner`) restent dans `entreprise.js` ; seuls les calculs
+  (`styleTheme(THEME)`, `accentRougeOuVert`, et en privé `enRgb`, `surCouleur`) partent.
+- Module 3 : `pad` et `pastille` sont exportés d'`entreprise-outils.js` (le plan ne les nommait pas dans « rend ») parce que
+  `entreprise.js` s'en sert encore ; `creerArticles` dérive `VARIANTS` de `CATALOGUE` ; `COLORS` reste lu dans `entreprise.js`
+  (`U.couleurs || {}`, il sert au catalogue) et est passé par son nom `couleurs`.
+- Module 4 : `bandeauFin(st, options)` du module est la partie **après** les gardes (élève, parcours, tout jugé), qui restent dans
+  `entreprise.js` ; `groupesDuBilan`, `jalonsAVerifier`, `aVerifierHtml`, `bandeauAncien` partent aussi (ils ne servent qu'au bandeau) ;
+  `peutCorriger` est une valeur calculée au cœur (`ecransAFaire(st).length > 0`), `avecQuestions` un booléen (`!!MQ`).
+  **L'indentation des corps de fonction et des gabarits est gardée** (8 espaces) : l'espace entre deux balises fait partie du HTML
+  rendu, un redentage aurait changé les octets du bandeau (relevé qui l'a montré avant de commiter).
+- Le décompte du plan (3 360 / 3 270 / 3 250 / 3 150) est tenu à ± 20 lignes près (3 360 / 3 281 / 3 257 / 3 168).
+
+**Le cas qui relit le texte d'`entreprise.js`** (piège 1) : rien à adapter. `entreprise.js` ré-exporte `OPTIONS`, garde la ligne
+`const { … } = U;` et toutes les lectures `U.xxx` (`finFige: U.finFige` est passé par son nom au module 4).
+
+**Un rouge hors suite entière, pas à moi.** `node outils/test.mjs spartoo smoby questions` (sous-ensemble) échoue sur
+« Repérage : l'enseignant voit… → colonne des documents sans documents » ; **le même sous-ensemble échoue de la même façon sur le
+commit d'avant toute modification** (vérifié en servant `git archive` du commit 60b276b), et ce cas passe dans la suite entière
+(895/895). Cause probable : il prend la première séance immersive (ENT-1.1, qui a des documents) et suppose qu'aucun élève du groupe
+n'y a joué ; selon les blocs qui ont tourné avant, un élève y a joué. Non réparé (cas existant, hors périmètre).
+
+**Fait / à faire.** Passe 1 faite (modules 1 à 4). **Reste ouvert** : passes 2 à 4 (modules 5 à 13). Rien n'a été fait dans `styles/`,
+`contenus/`, `activites/*.js`, `outils/test.mjs`, `outils/test/*`. Les captures (scripts et relevés) sont dans le dossier temporaire de
+la session, pas dans le dépôt ; la méthode est décrite au §6.

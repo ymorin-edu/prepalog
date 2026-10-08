@@ -7,7 +7,6 @@ est déjà modifié ou inscrit ci-dessous, **elle s'arrête et le dit à Tristan
 
 | Chantier | Fichiers qu'il touche | Depuis |
 |---|---|---|
-| Chantier 9c, passe 1 (modules 1 à 4) | `core/types/entreprise.js`, `core/types/entreprise-{options,theme,outils,fin}.js`, `activites/FICHE-SEANCE.md`, `docs/briefs/MOTEUR-entreprise-decoupage.md` | 08/10/2026 |
 
 Rappel : un seul chantier à la fois dans `core/types/tournee.js`, `core/types/grille.js`,
 `core/types/entreprise.js`, `styles/base.css` et `outils/test/boost.mjs` (voir `docs/briefs/COORDINATION-boost.md`).

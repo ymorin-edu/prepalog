@@ -28,7 +28,7 @@
 | 7 | Quota Spark : mesurer, puis supprimer les écritures inutiles | C9 | moyen | Sonnet | oui | 4 | à faire |
 | **Lot B — rendre la croissance possible** | | | | | | | |
 | 8 | Fabrique de séance d'entreprise (24 fichiers recopiés) | C6 | moyen | Sonnet | oui (petit) | — | **livré** (08/10, db5ed50 à ee13996) |
-| 9 | `entreprise.js` : options figées, `COLORS`/`SHIP` sortis, modules extraits | C5 | gros | Opus puis Sonnet | oui | 8 | 9a, 9a bis, 9b **livrés** (08/10, 7a79945 à 3d63525) ; 9c à faire |
+| 9 | `entreprise.js` : options figées, `COLORS`/`SHIP` sortis, modules extraits | C5 | gros | Opus puis Sonnet | oui | 8 | 9a, 9a bis, 9b **livrés** (08/10, 7a79945 à 3d63525) ; 9c passe 1 livrée (modules 1 à 4), passes 2 à 4 à faire |
 | 10 | Un seul drapeau « Simulog » dans tout le code | C13 | petit | Sonnet | oui | — | à faire |
 | 11 | Plusieurs enseignants : co-prof, groupes par prof, orphelins filtrés | C7 | moyen à gros | Opus (décision) puis Sonnet | oui + règles | 1, 6 | à faire |
 | 12 | CAP OL et niveaux : référentiel, défauts, TAB-4 | C8 | moyen | Sonnet (Cowork d'abord) | oui | référentiel CAP relevé | à faire |
@@ -228,8 +228,11 @@ s'aligner.
 - **Lot 9c (Opus pour le découpage, Sonnet pour chaque module).** Extraire, un module par commit :
   console, messagerie, écrans de données (commandes, réceptions, stock, catalogue, tiers), bandeau de
   fin. Suite verte entre chaque.
-- **Fini quand.** `entreprise.js` sous 1 500 lignes ; `FICHE-SEANCE.md` liste les options en une
-  table, sans paragraphes datés.
+- **Fini quand (décision de Tristan, 08/10/2026).** Chaque écran de données est dans son fichier (`entreprise.js` ≈ 1 850
+  lignes) ; `FICHE-SEANCE.md` liste les options en une table. Le plan est `docs/briefs/MOTEUR-entreprise-decoupage.md`
+  (13 modules, 4 passes : 1 à 4, 5 à 9, 10 et 11, 12 et 13).
+- **9c bis (plus tard).** Sortir aussi les cartes des messages, les questions au fil, l'accueil et la copie rendue :
+  `entreprise.js` ≈ 1 460 lignes. À reprendre quand les questions au fil seront stabilisées ; la copie rendue porte les évaluations.
 - **Fait, lot 9a (08/10/2026, 7a79945, 14cf3b7, 6c516c6).** `OPTIONS` en tête de `core/types/entreprise.js` : **42 options**, une
   ligne chacune (rôle, type quand c'est sans risque). `creerEntreprise` la contrôle en première ligne : une clé inconnue, ou
   d'un mauvais type, refuse la séance (message en français : la clé, la bonne casse si c'est une faute de majuscule, les clés
@@ -281,6 +284,7 @@ s'aligner.
   modes de livraison sur ENT-1.3 et Cdiscount), sabotés dans les deux sens. Reste de `contenus/` dans `core/` : un `import()`
   dynamique dans `core/prof.js` (les questions d'une séance, `contenus/questions/<nom>.js`), qui n'est pas une dépendance figée ;
   le test ne regarde que les imports statiques. Suite complète : 895/895.
+- **Fait, 9c passe 1 (08/10/2026, d342503, ba22f0c, bc347e8, 001c788).** Quatre modules purs sortis d'`entreprise.js` (3 461 -> 3 168 lignes), un commit chacun, suite complète 895/895 à chaque fois : `entreprise-options.js` (3 461 -> 3 360 ; la table `OPTIONS` et ses deux contrôles ; `entreprise.js` la ré-exporte et garde les lectures `U.xxx`, car un cas de `dependances.mjs` relit son texte), `entreprise-theme.js` (-> 3 281 ; `styleTheme(THEME)`, `accentRougeOuVert`), `entreprise-outils.js` (-> 3 257 ; formats et `creerArticles`), `entreprise-fin.js` (-> 3 168 ; HTML du bandeau de fin, `retours` et `peutCorriger` calculés au cœur). **Preuve que l'écran ne change pas**, relevée avant (`git archive` du commit précédent) et après : options des 24 séances et messages de refus (plus de 100 cas) ; attribut `style` de `body` et de `.ent-page` et classes `ent-travail-neutre*` des 24 séances, élève et enseignant ; texte et HTML des écrans d'ENT-1.1 à 1.3 et des six Cdiscount ; bandeau `[data-fin-seance]` des 24 séances sous 7 à 49 états de jalons (dont ENT-5.4 avec `finFige`, que aucun test ne jouait, et les questions fausses / retours au bilan sur la séance d'essai) : tout identique octet pour octet. **Sabotage** : retirer `finFige` de `OPTIONS` fait tomber 7 cas de `dependances`. **Écarts au plan** : voir le compte rendu du brief. Reste : passes 2 à 4 (base, tiers, catalogue, stock, blocage, commandes, réceptions, console, messagerie).
 
 ### 10. Un seul drapeau Simulog (C13)
 - **Ce qu'on fait.** `estSimulog(meta)` (rubrique `simulog`) utilisé à la place de `/^ENT-/` et
