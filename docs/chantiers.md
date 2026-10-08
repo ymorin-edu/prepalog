@@ -23,7 +23,7 @@
 | 2 | Remettre `CLAUDE.md` et `FICHE-SEANCE.md` d'aplomb | C18 | petit | Sonnet | non | — | **livré** (08/10, Fable, doc seule : les fiches de `docs/fiches/` restent à Cowork, voir l'annexe de l'audit) |
 | 3 | Tests de règles sur GitHub, hôtes externes partout, port pris lisible | C10a | petit | Sonnet | non (tests) | — | **livré** (08/10, 917ffb6) |
 | 4 | Fiabiliser le mode réel (écoutes, échecs remontés, geler, suivi) | C2 | moyen | Sonnet | oui | 3 | **en cours** (autre session, 08/10) |
-| 5 | Un bug de contenu n'est plus noté « faux » | C3 | petit | Sonnet | oui | 4 fini | à faire |
+| 5 | Un bug de contenu n'est plus noté « faux » | C3 | petit | Sonnet | oui | 4 fini | **livré** (08/10, dbf4012) |
 | 6 | Suppressions sans traces invisibles, miroir reconstruisible | C4 | moyen | Sonnet | oui | 1, 4 | à faire |
 | 7 | Quota Spark : mesurer, puis supprimer les écritures inutiles | C9 | moyen | Sonnet | oui | 4 | à faire |
 | **Lot B — rendre la croissance possible** | | | | | | | |
@@ -149,6 +149,13 @@ s'aligner.
   « ko », qui ne compte ni juste ni faux et qui s'affiche à l'enseignant dans le Repérage.
 - **Fini quand.** Un jalon volontairement cassé dans un contenu d'essai apparaît « indéterminé »
   au Suivi et la note de l'élève n'en souffre pas ; test dans le bloc de la vue.
+- **Fait (08/10/2026, dbf4012).** État `'erreur'` : 0 point (comme `'ko'`, la note ne monte pas), pas
+  compté faux au bandeau de fin (ligne « à vérifier », jamais ✗), absent de `premier`, `console.error` et
+  `indicateurs[séance].erreurs`, mention « ⚠ jalon en erreur » au Repérage. **Choix** : l'état `'erreur'`
+  compte comme *jugé* (`bilanComplet`, photo de fin qui ouvre la séance suivante, rattrapage des questions) :
+  un bug de contenu ne bloque aucun élève ; sans rien de faux à côté, il ne retient pas non plus la séance
+  suivante des séances sans `correction`. Les quatre autres `catch` journalisent, comportement inchangé
+  (sauf le rattrapage des questions, qui n'attend plus un jalon planté). Tests : bloc `smoby`.
 
 ### 6. Suppressions sans traces (C4)
 - **Ce qu'on fait.** Effacer `classements/{aid}/{uid}` et les `travaux` orphelins à la suppression

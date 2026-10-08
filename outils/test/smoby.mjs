@@ -3558,5 +3558,164 @@ await v('Reprise Smoby : « remettre au début de 5.2 » remet 5.2 et 5.3 à leu
   egal([r.as, r.bs], [true, { v: 1, travail: '1.1', points: { 'spartoo-reception': { v: 1, travail: '1.1' } }, versionBase: 2, reprise: 50 }], 'Spartoo');
 });
 
+// ── Un jalon qui plante n'est pas un jalon faux (chantier 5 de docs/chantiers.md, 08/10/2026) ───────────────────────
+// Le moteur monte l'univers d'essai de la 2de avec DEUX jalons déclarés ici : `bon` (toujours juste) et `casse`, dont la
+// vérification lève une exception (cas 'plante') ou rend 'ko' (cas 'faux', le sens inverse). Contexte de navigateur à
+// part : le `console.error` du moteur est ATTENDU ici, il ne doit pas compter dans les erreurs du bloc.
+// Valeurs attendues écrites à la main : 2 jalons de 1 point ; le jalon qui plante rapporte 0 et n'est pas « faux ».
+const ctxE = await nav.newContext({ viewport: { width: 1366, height: 1000 } });
+const pe = await ctxE.newPage();
+pe.setDefaultTimeout(6000);
+const journalE = [];
+pe.on('console', (m) => { if (m.type() === 'error' && !/\b404\b/.test(m.text())) journalE.push(m.text()); });
+await pe.goto(BASE);
+await pe.waitForSelector('#btnProf', { timeout: 8000 });
+const monterE = async (o) => {
+  journalE.length = 0;
+  await pe.evaluate(async (o) => {
+    const { creerEntreprise } = await import('/core/types/entreprise.js');
+    const E = await import('/outils/essai-2de.js');
+    document.querySelector('#erTest')?.remove();
+    const hote = document.createElement('div'); hote.id = 'erTest'; document.body.appendChild(hote);
+    const db = {};
+    const U = E.univers({});
+    window.__e = { db, mode: o.casse, enreg: [] };
+    U.etapes = [
+      { id: 'bon', titre: 'Jalon qui marche', verifier: () => ({ status: 'ok' }) },
+      { id: 'casse', titre: 'Jalon cassé', verifier: () => {
+        if (window.__e.mode === 'plante') throw new Error('clé renommée');
+        return { status: window.__e.mode === 'faux' ? 'ko' : 'ok' };
+      } },
+    ];
+    window.__e.moteur = creerEntreprise(U);
+    window.__e.moteur.rendre(hote, {
+      meta: { id: 'essai-2de', code: 'ESSAI', titre: 'Essai', portee: 'eleve', immersif: true, temps: 'guidage', parcours: true, ...(o.correction ? { correction: true } : {}) },
+      profil: { prenom: 'Lea', nom: 'Test', role: 'eleve', uid: 'u-erreur' },
+      suivante: { code: 'ESSAI-2', titre: 'La suivante' },
+      jeu: { etat: () => db, sauver: () => {} },
+      enregistrer: (res) => { window.__e.enreg.push(JSON.parse(JSON.stringify(res))); }, quitter: () => {}, codeStock: 'ABC',
+      lireScore: async () => null, rendreCopie: async () => ({ rendu: Date.now() }),
+    });
+  }, o);
+  await pe.waitForSelector('#erTest [data-fin-seance]');
+};
+const dernierE = () => pe.evaluate(() => JSON.parse(JSON.stringify({ res: window.__e.enreg[window.__e.enreg.length - 1], db: window.__e.db })));
+const finE = () => pe.$eval('#erTest [data-fin-seance]', (z) => ({ texte: z.textContent.replace(/\s+/g, ' ').trim(),
+  fin: z.querySelector('[data-fin]') && z.querySelector('[data-fin]').dataset.fin,
+  averifier: !!z.querySelector('[data-fin-averifier]'),
+  casse: (() => { const li = z.querySelector('li[data-fin-jalon="casse"]'); return li ? { etat: li.dataset.finEtat, classe: li.className, texte: li.textContent.replace(/\s+/g, ' ').trim() } : null; })() }));
+
+await v('Jalon qui plante : état « erreur », 0 point, pas compté faux ni « premier coup », journalisé, rangé pour l’enseignant', async () => {
+  await monterE({ casse: 'plante' });
+  const { res, db } = await dernierE();
+  egal([res.detail.bon, res.detail.casse], ['ok', 'erreur'], 'états des jalons');
+  egal([res.score, res.max], [1, 2], 'note : le jalon qui plante rapporte 0');
+  egal(db.indicateurs['essai-2de'].erreurs, { casse: 'clé renommée' }, 'erreurs rangées chez l’élève');
+  egal(db.indicateurs['essai-2de'].premier, { bon: 'ok' }, 'premier coup : le bug n’y est pas');
+  egal(res.detail.indicateurs['essai-2de'].erreurs, { casse: 'clé renommée' }, 'erreurs remontées avec la note');
+  const nous = journalE.filter((t) => t.includes('essai-2de') && t.includes('casse') && t.includes('clé renommée'));
+  egal(nous.length, 1, `console.error (séance, jalon, message), une fois : ${journalE.join(' | ')}`);
+  vrai(db.points && db.points['essai-2de'], 'la photo de fin (qui ouvre la séance suivante) manque : l’élève serait bloqué');
+  const f = await finE();
+  egal([f.fin, f.averifier], ['averifier', true], 'bandeau de fin (ancien)');
+  vrai(f.texte.includes('Jalon cassé') && !f.texte.includes('✗') && !f.texte.includes('à corriger') && f.texte.includes('La suivante'), `bandeau : ${f.texte}`);
+  vrai(!(await pe.$('#erTest [data-fin="ko"]')), 'le bandeau dit « à corriger »');
+});
+
+await v('Jalon qui plante, séance à bilan par blocs : ligne « à vérifier » (?), jamais ✗ ni faux', async () => {
+  await monterE({ casse: 'plante', correction: true });
+  const f = await finE();
+  egal([f.fin, f.averifier], ['averifier', true], 'bandeau de fin (par blocs)');
+  egal(f.casse.etat, 'erreur', 'état de la ligne');
+  vrai(!/ent-fin-faux|ent-fin-juste/.test(f.casse.classe) && !f.casse.texte.includes('✗') && f.casse.texte.includes('à vérifier'), `ligne : ${JSON.stringify(f.casse)}`);
+  vrai(!(await pe.$('#erTest [data-fin-corriger]')), 'un bouton « Corriger » est offert pour un bug');
+  egal(await pe.$eval('#erTest li[data-fin-jalon="bon"]', (li) => li.dataset.finEtat), 'ok', 'la ligne juste reste juste');
+});
+
+await v('Jalon qui rend « faux » (sens inverse) : état « ko », ✗ au bandeau, premier coup raté, rien en erreur ni dans le journal', async () => {
+  await monterE({ casse: 'faux' });
+  const { res, db } = await dernierE();
+  egal([res.detail.bon, res.detail.casse], ['ok', 'ko'], 'états des jalons');
+  egal([res.score, res.max], [1, 2], 'note');
+  egal(db.indicateurs['essai-2de'].erreurs, undefined, 'erreurs rangées');
+  egal(db.indicateurs['essai-2de'].premier, { bon: 'ok', casse: 'ko' }, 'premier coup');
+  egal(journalE, [], 'console.error');
+  const f = await finE();
+  egal([f.fin, f.averifier], ['ko', false], 'bandeau de fin (ancien)');
+  vrai(f.texte.includes('Jalon cassé'), `bandeau : ${f.texte}`);
+  await monterE({ casse: 'faux', correction: true });
+  const g = await finE();
+  egal(g.casse.etat, 'ko', 'état de la ligne');
+  vrai(/ent-fin-faux/.test(g.casse.classe) && g.casse.texte.includes('✗') && !g.casse.texte.includes('à vérifier'), `ligne : ${JSON.stringify(g.casse)}`);
+  egal(g.averifier, false, 'mention « à vérifier »');
+});
+
+await v('Jalon qui plante : une fois la cause corrigée, la mention s’efface du repérage au prochain bilan', async () => {
+  await monterE({ casse: 'plante' });
+  egal((await dernierE()).db.indicateurs['essai-2de'].erreurs, { casse: 'clé renommée' }, 'avant');
+  await pe.evaluate(() => { window.__e.mode = 'ok'; });
+  // Ouvrir un message sauvegarde la base : le moteur recalcule la note et le repérage.
+  await pe.click('#erTest .ent-nav[data-vue="mail"]');
+  await pe.click('#erTest [data-dossier="in"]');
+  await pe.click('#erTest .ent-obj:text-is("Le cariste pour le pic de Noël")');
+  await pe.waitForTimeout(150);
+  const { res, db } = await dernierE();
+  egal(db.indicateurs['essai-2de'].erreurs, undefined, 'erreurs rangées après correction');
+  egal(res.detail.casse, 'ok', 'état du jalon');
+});
+
+await v('Suivi de classe : « ⚠ jalon en erreur : <id> » sous le nom de l’élève concerné, rien pour les autres', async () => {
+  const ouvrirSuivi = async () => {
+    await page.reload();
+    await page.waitForSelector('#btnProfEspace, #btnProf, #btnDeco', { timeout: 8000 });
+    if (!(await page.$('#btnProfEspace'))) {
+      if (!(await page.$('#btnProf'))) { await page.click('#btnDeco'); await page.waitForSelector('#btnProf', { timeout: 8000 }); }
+      await page.click('#btnProf');
+    }
+    await page.waitForSelector('#btnProfEspace', { timeout: 8000 });
+    await page.click('#btnProfEspace');
+    await page.click('[data-ong="suivi"]');
+    await page.waitForSelector('#btnCsvSuivi', { timeout: 6000 });
+  };
+  await ouvrirSuivi();
+  const nomGroupe = (await page.textContent('#btnCsvSuivi >> xpath=ancestor::div[1]//strong')).replace(/^Suivi de /, '').trim();
+  const ids = await page.evaluate(async (nomGroupe) => {
+    const k = Object.keys(localStorage).find((x) => /groupes$/.test(x));
+    const gs = JSON.parse(localStorage.getItem(k));
+    const gid = Object.keys(gs).find((id) => gs[id].nom === nomGroupe);
+    const { B } = await import('/core/backend.js');
+    await B.creerEleves(gid, [{ nom: 'ERREURUN', prenom: 'Test', matricule: 'erreur-un', code: 'x' }, { nom: 'ERREURDEUX', prenom: 'Test', matricule: 'erreur-deux', code: 'x' }]);
+    const L = await B.elevesDuGroupe(gid);
+    const un = L.find((x) => x.nom === 'ERREURUN'), deux = L.find((x) => x.nom === 'ERREURDEUX');
+    const { chargerActivites } = await import('/activites/index.js');
+    const m = (await chargerActivites()).map((x) => x.meta).find((x) => x.portee === 'eleve' && x.immersif && x.bareme && !x.copie);
+    await B.ecrireScore(gid, un.uid, m.id, { score: 1, max: 5, detail: { casse: 'erreur', indicateurs: { [m.id]: {
+      temps: 600, premier: { bon: 'ok' }, erreurs: { casse: 'clé renommée' } } } } });
+    await B.ecrireScore(gid, deux.uid, m.id, { score: 1, max: 5, detail: { casse: 'ko', indicateurs: { [m.id]: {
+      temps: 600, premier: { bon: 'ok', casse: 'ko' } } } } });
+    return { gid, un: un.uid, deux: deux.uid, aid: m.id };
+  }, nomGroupe);
+  try {
+    await ouvrirSuivi();
+    await page.waitForSelector(`#reperage [data-reperage="${ids.aid}"]`, { timeout: 6000 });
+    const T = `#reperage [data-reperage="${ids.aid}"] tr[data-rep-eleve=`;
+    const mention = await page.$eval(`${T}"${ids.un}"] [data-rep-erreur]`, (s) => ({ texte: s.textContent.trim(), bulle: s.title, couleur: getComputedStyle(s).backgroundColor }));
+    egal(mention.texte, '⚠ jalon en erreur : casse', 'mention');
+    vrai(mention.bulle.includes('clé renommée'), 'le message est dans la bulle : ' + mention.bulle);
+    vrai(mention.couleur === 'rgba(0, 0, 0, 0)', 'aplat de couleur sur la mention : ' + mention.couleur);
+    vrai(!(await page.$(`${T}"${ids.deux}"] [data-rep-erreur]`)), 'la mention apparaît pour un jalon simplement faux');
+    // Le jalon faux compte toujours comme raté au premier coup, le jalon en erreur n'y figure pas.
+    egal(await page.$eval(`${T}"${ids.un}"] [data-rep="premier"]`, (c) => c.textContent), '1 / 1', 'premier coup de l’élève dont un jalon plante');
+    egal(await page.$eval(`${T}"${ids.deux}"] [data-rep="premier"]`, (c) => c.textContent), '1 / 2', 'premier coup de l’élève dont un jalon est faux');
+  } finally {
+    await page.evaluate(async ({ gid, un, deux, aid }) => {
+      const { B } = await import('/core/backend.js');
+      for (const u of [un, deux]) { await B.poserNote(gid, u, aid, null); await B.supprimerEleve(u); }
+    }, ids);
+  }
+});
+
+await ctxE.close();
+
 await ctxS.close();
 }

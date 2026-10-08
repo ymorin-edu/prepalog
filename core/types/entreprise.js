@@ -243,15 +243,47 @@ export function creerEntreprise(U) {
   if (ERREUR_POIDS) console.warn('[entreprise] ' + ERREUR_POIDS);
   const arrondi = (x) => Math.round(x * 1000) / 1000;
 
+  // UN JALON QUI PLANTE (chantier 5 de docs/chantiers.md, 08/10/2026). Un `verifier(db)` qui lève une exception est un bug
+  // du CONTENU (clé renommée, donnée absente, coquille), pas une faute de l'élève : il prend l'état 'erreur', distinct
+  // de 'ok', 'ko' et 'attente'. Il ne rapporte aucun point (comme 'ko'), mais il n'est pas compté « faux » (bandeau de
+  // fin : « à vérifier », jamais ✗), il n'entre pas dans `premier` du repérage, et il compte comme JUGÉ pour la fin de
+  // séance (`bilanComplet`, photo de fin, rattrapage des questions) : aucun élève n'est bloqué par un bug de contenu.
+  // L'erreur est journalisée (`console.error`, une fois par séance + jalon + message) et rangée chez l'élève,
+  // `db.indicateurs[séance].erreurs = { [jalon]: message }`, d'où elle remonte au Suivi de classe (encadré Repérage).
+  let seanceMontee = '';                        // posé par `rendre` : l'id de la séance, pour le journal et le rangement
+  let ecritureErreurs = () => false;            // posé par `rendre` : vrai chez l'élève dont la copie n'est pas rendue
+  const dejaSignale = new Set();
+  function signaler(quoi, x) {
+    const message = x && x.message ? x.message : String(x);
+    const cle = `${seanceMontee}|${quoi}|${message}`;
+    if (!dejaSignale.has(cle)) {
+      dejaSignale.add(cle);
+      console.error(`[entreprise] séance ${seanceMontee || ENTREPRISE.id || ENTREPRISE.nom || '?'} : ${quoi} : ${message}`);
+    }
+    return message;
+  }
+  // Les messages du moment, tels que `noterBase` vient de les relever : ce qui ne plante plus s'efface du repérage.
+  function rangerErreurs(db, erreurs) {
+    if (!db || !seanceMontee || !ecritureErreurs()) return;
+    const r = db.indicateurs && db.indicateurs[seanceMontee];
+    const aucune = !Object.keys(erreurs).length;
+    if (aucune && !(r && r.erreurs)) return;
+    if (!db.indicateurs) db.indicateurs = {};
+    const R = r || (db.indicateurs[seanceMontee] = {});
+    if (aucune) delete R.erreurs; else R.erreurs = erreurs;
+  }
+
   function noterBase(db) {
     const detail = {};
+    const erreurs = {};
     let ok = 0;
     etapes.forEach((e) => {
       let st = 'ko';
-      try { st = e.verifier(db, U).status; } catch (x) { st = 'ko'; }
+      try { st = e.verifier(db, U).status; } catch (x) { st = 'erreur'; erreurs[e.id] = signaler(`le jalon « ${e.id} » plante`, x); }
       detail[e.id] = st;
       if (st === 'ok') ok += poidsDe(e);
     });
+    rangerErreurs(db, erreurs);
     // Le niveau figé dans la séance, pour l'enseignant qui relit le détail d'une note.
     if (db && db.aisance === 'confirme') detail.niveau = 'confirmé';
     // Un jeu tiré par élève (inventaire tiré, ou `tirage: true`) : la graine, pour retrouver son jeu.
@@ -335,6 +367,7 @@ export function creerEntreprise(U) {
       const db = ctx.jeu.etat();
       const prenom = ctx.profil.prenom || ctx.profil.nom || 'Élève';
       const estProf = ctx.profil.role === 'prof';
+      seanceMontee = ctx.meta.id;
       // Le message d'un écran fermé par sa condition (voir FERMETURES), ou '' s'il est ouvert. Une condition
       // qui plante sur une base incomplète n'enferme personne.
       const fermeture = (v) => {
@@ -342,7 +375,7 @@ export function creerEntreprise(U) {
         if (fe) return `Fais d’abord le point d’étape avec ${appel(MQ.personnes[fe.de])}.`;
         const F = FERMETURES[v];
         if (!F || estProf) return '';
-        try { return F.ouvertSi(db) ? '' : (F.message || 'Pas encore ouvert.'); } catch (x) { return ''; }
+        try { return F.ouvertSi(db) ? '' : (F.message || 'Pas encore ouvert.'); } catch (x) { signaler(`la condition d'ouverture de l'écran « ${v} » plante`, x); return ''; }
       };
 
       // Le niveau de l'élève DANS CETTE SÉANCE (brief MOTEUR-statut-annulee, 03/10/2026) :
@@ -454,7 +487,7 @@ export function creerEntreprise(U) {
           const cle = `${volet.id}#${d.id}`;
           if (db.volets[cle]) return;
           let vrai = false;
-          try { vrai = !!d.quand(db, ctx.meta.id); } catch (x) { vrai = false; }
+          try { vrai = !!d.quand(db, ctx.meta.id); } catch (x) { signaler(`le déclencheur « ${cle} » plante`, x); vrai = false; }
           if (!vrai) return;
           const g = (d.semer ? d.semer(prenom, db) : null) || {};
           (g.mails || []).forEach((m) => ajouterMail(Object.assign(m, { declenche: d.id })));
@@ -582,8 +615,9 @@ export function creerEntreprise(U) {
         if (!MQ || estProf) return null;
         return MQ.etapes.find((e) => e.ferme === cle && etapeArrivee(db, MQ, e.id) && !etapeFaite(db, MQ, e)) || null;
       }
-      const jalonJuge = (j) => { try { const st = j.verifier(db, U).status; return st === 'ok' || st === 'ko'; } catch (x) { return false; } };
-      const essai = (f) => { try { return !!f(db, ctx.meta.id); } catch (x) { return false; } };
+      // Un jalon qui plante (état 'erreur') est jugé : le rattrapage ne doit pas attendre un bug de contenu.
+      const jalonJuge = (j) => { try { const st = j.verifier(db, U).status; return st === 'ok' || st === 'ko'; } catch (x) { signaler(`le jalon « ${j.id} » plante`, x); return true; } };
+      const essai = (f, quoi) => { try { return !!f(db, ctx.meta.id); } catch (x) { signaler(`la condition ${quoi || 'd’une question'} plante`, x); return false; } };
       // L'ARRIVÉE. Un point d'étape arrive quand son envoi a eu lieu (juste ou faux) ; ses questions sont « arrivées » avec
       // lui. Une question au fil arrive à son geste, une à la fois, jamais pendant qu'on lit le retour de la précédente.
       // RATTRAPAGE (jamais un élève bloqué) : une question au fil dont le geste n'a pas eu lieu arrive par sa condition
@@ -594,7 +628,7 @@ export function creerEntreprise(U) {
         const S = etatQ();
         let fait = false;
         MQ.etapes.forEach((e) => {
-          if (etapeArrivee(db, MQ, e.id) || !essai(e.apres)) return;
+          if (etapeArrivee(db, MQ, e.id) || !essai(e.apres, `"apres" du point d'étape « ${e.id} »`)) return;
           (S[CLE_ETAPES] || (S[CLE_ETAPES] = {}))[e.id] = Date.now();
           e.questions.forEach((id) => { if (!S[id]) S[id] = { arrivee: Date.now() }; });
           fait = true;
@@ -603,7 +637,7 @@ export function creerEntreprise(U) {
         if (!filOuverte() && !enLecture) {
           // D'abord une question dont le geste (ou le rattrapage déclaré) a eu lieu ; sinon, le rattrapage du moteur.
           const enAttente = MQ.fil.filter((x) => !(S[x.id] && S[x.id].arrivee));
-          let q = enAttente.find((x) => essai(x.quand) || (x.rattrapage && essai(x.rattrapage)));
+          let q = enAttente.find((x) => essai(x.quand, `"quand" de la question « ${x.id} »`) || (x.rattrapage && essai(x.rattrapage, `"rattrapage" de la question « ${x.id} »`)));
           if (!q && enAttente.length && etapesSeance.length && etapesSeance.every(jalonJuge)) q = enAttente[0];
           if (q) { S[q.id] = { arrivee: Date.now() }; QF.panneau = q.id; fait = true; }
         }
@@ -955,6 +989,7 @@ export function creerEntreprise(U) {
       // ne le sait pas, le bouton « Rendre » n'est pas offert. Côté enseignant, rien à rendre.
       const copie = { rendue: null, ramassee: false, arme: false, envoi: false, charge: !COPIE || estProf };
       const rendue = () => !!(COPIE && copie.rendue);
+      ecritureErreurs = () => !estProf && !rendue();
       // CORRECTION (lots A et A bis du brief SMOBY-retours-classe-5.1, 07/10/2026) : la séance déclare
       // `meta.correction: true`. Elle suit alors la règle « premier bilan » : la séance suivante s'ouvre dès que
       // tous les jalons sont jugés, l'élève peut corriger les envois fautifs, la note est la moyenne du premier
@@ -1024,10 +1059,22 @@ export function creerEntreprise(U) {
           if (!g) { g = { nom, ok: true, ids: [] }; L.push(g); }
           g.ids.push(e.id);
           if (st[e.id] !== 'ok') g.ok = false;
+          if (st[e.id] === 'erreur') g.erreur = true; else if (st[e.id] !== 'ok') g.faux = true;
         });
+        // `etat` : 'ok', 'ko' (au moins une case fausse) ou 'erreur' (aucune fausse, mais une case que le site n'a pas pu juger).
+        L.forEach((g) => { g.etat = g.ok ? 'ok' : g.faux ? 'ko' : 'erreur'; });
         return L;
       }
-      const bilanComplet = (st) => etapes.length > 0 && etapes.every((e) => st[e.id] === 'ok' || st[e.id] === 'ko');
+      // Fini = tout est jugé. Un jalon qui plante (état 'erreur') est jugé : un bug de contenu ne bloque personne.
+      const bilanComplet = (st) => etapes.length > 0 && etapes.every((e) => st[e.id] === 'ok' || st[e.id] === 'ko' || st[e.id] === 'erreur');
+      const sansFaux = (st) => etapes.every((e) => st[e.id] === 'ok' || st[e.id] === 'erreur');
+      const jalonsAVerifier = (st) => etapes.filter((e) => st[e.id] === 'erreur' && e.compte !== false);
+      // Ce que dit le bandeau d'un jalon que le site n'a pas pu juger : jamais « faux », jamais la cause.
+      const aVerifierHtml = (st) => {
+        const L = jalonsAVerifier(st);
+        return L.length ? `<p class="ent-fin-petit" data-fin-averifier>${L.length > 1 ? 'Des étapes n’ont' : 'Une étape n’a'} pas pu être vérifiée${L.length > 1 ? 's' : ''} par le site :
+          ${L.map((e) => ech(e.groupe || e.titre)).join(', ')}. Signale-le à ton professeur : ce n’est pas une erreur de ta part.</p>` : '';
+      };
       // Les écrans à rouvrir : ceux des jalons faux qui déclarent un `ecran` ('fiche:<id>', 'phrases:<id>' ou 'planning:<id>').
       function ecransAFaire(st) {
         const L = [];
@@ -1045,7 +1092,16 @@ export function creerEntreprise(U) {
           (${ech(q.groupe)}) : « ${ech(q.retour)} »</p>`).join('')}</div>`;
       }
       function bandeauAncien(st) {
-        const faux = etapes.filter((e) => st[e.id] !== 'ok');
+        const faux = etapes.filter((e) => st[e.id] !== 'ok' && st[e.id] !== 'erreur');
+        const aVerifier = aVerifierHtml(st);
+        if (!faux.length && aVerifier) {
+          // Rien de faux, mais une étape que le site n'a pas pu juger : ni « validée » ni « à corriger ».
+          const S = ctx.suivante;
+          return `<div class="ent-fin" role="status" data-fin="averifier"><span class="ent-fin-ico" aria-hidden="true">?</span>
+            <div><b>Séance terminée.</b> Les étapes que le site a pu vérifier sont justes${S ? ` : la séance suivante, ${ech(S.code)} « ${ech(S.titre)} », est ouverte.` : '.'}
+              ${aVerifier}${retoursAuBilan()}</div>
+            <button class="btn ent-fin-btn" data-fin-quitter>Retour aux séances</button></div>`;
+        }
         if (!faux.length) {
           const S = ctx.suivante;
           return `<div class="ent-fin ent-fin-ok" role="status" data-fin="ok"><span class="ent-fin-ico" aria-hidden="true">✓</span>
@@ -1058,7 +1114,7 @@ export function creerEntreprise(U) {
             <span class="ent-fin-petit">${SUITE_AU_BILAN
               ? `Relis ta trame à ces étapes.${ctx.suivante ? ` La séance suivante, ${ech(ctx.suivante.code)} « ${ech(ctx.suivante.titre)} », est ouverte.` : ''}`
               : `Relis ta trame à ces étapes. Si tu ne trouves pas, appelle ton professeur${ctx.meta.reinitialisable ? ' ou réinitialise ta séance' : ''}.
-            La séance suivante s'ouvrira quand tout sera juste.`}</span>${retoursAuBilan()}</div></div>`;
+            La séance suivante s'ouvrira quand tout sera juste.`}</span>${aVerifier}${retoursAuBilan()}</div></div>`;
       }
       function bandeauFin(res) {
         if (estProf || COPIE || !ctx.meta.parcours || !etapes.length) return '';
@@ -1067,17 +1123,25 @@ export function creerEntreprise(U) {
         if (!CORRECTION && !PREMIER_ESSAI) return bandeauAncien(st);
         const G = groupesDuBilan(st);
         const tout = G.every((g) => g.ok);
+        // Rien de faux, mais une ligne que le site n'a pas pu juger ('erreur') : ni « tout juste » ni « à corriger ».
+        const incertain = !tout && G.every((g) => g.etat !== 'ko');
         const S = ctx.suivante;
         const [motOk, motKo] = CORRECTION ? ['juste', 'à corriger'] : ['du premier coup', 'après une erreur'];
-        const liste = `<ul class="ent-fin-liste" aria-label="Résultat par étape">${G.map((g) => `<li class="${g.ok ? 'ent-fin-juste' : 'ent-fin-faux'}" data-fin-jalon="${ech(g.ids[0])}"
-          data-fin-etat="${g.ok ? 'ok' : 'ko'}"><span class="ent-fin-m" aria-hidden="true">${g.ok ? '✓' : '✗'}</span><span>${ech(g.nom)}</span>
-          <span class="ent-fin-a">${g.ok ? motOk : motKo}</span></li>`).join('')}</ul>`;
+        const liste = `<ul class="ent-fin-liste" aria-label="Résultat par étape">${G.map((g) => `<li class="${g.etat === 'ok' ? 'ent-fin-juste' : g.etat === 'ko' ? 'ent-fin-faux' : ''}" data-fin-jalon="${ech(g.ids[0])}"
+          data-fin-etat="${g.etat}"><span class="ent-fin-m" aria-hidden="true">${g.etat === 'ok' ? '✓' : g.etat === 'ko' ? '✗' : '?'}</span><span>${ech(g.nom)}</span>
+          <span class="ent-fin-a">${g.etat === 'ok' ? motOk : g.etat === 'ko' ? motKo : 'à vérifier'}</span></li>`).join('')}</ul>`;
+        if (incertain) {
+          return `<div class="ent-fin ent-fin-v2" role="status" data-fin="averifier"><div class="ent-fin-corps">
+            <h2 class="ent-fin-t">Tu as fini.</h2>
+            <p>Les étapes que le site a pu vérifier sont justes.${S ? ` La séance suivante, ${ech(S.code)} « ${ech(S.titre)} », est ouverte.` : ''}</p>
+            ${liste}${aVerifierHtml(st)}${retoursAuBilan()}<div class="ent-fin-btns"><button class="btn" data-fin-quitter>Retour aux séances</button></div></div></div>`;
+        }
         // Sans « Corriger » : rien ne se rouvre, la note est celle du premier essai.
         if (!CORRECTION) {
           return `<div class="ent-fin ent-fin-v2 ${tout ? 'ent-fin-ok' : 'ent-fin-ko'}" role="status" data-fin="${tout ? 'ok' : 'ko'}"><div class="ent-fin-corps">
             <h2 class="ent-fin-t">${tout ? 'Tout est juste du premier coup ✓' : 'Tu as fini : voici ce que tu as réussi du premier coup.'}</h2>
             <p>${tout ? 'Bravo.' : 'Ta note compte ton premier essai à chaque étape.'}${S ? ` La séance suivante, ${ech(S.code)} « ${ech(S.titre)} », est ouverte.` : ''}</p>
-            ${liste}${retoursAuBilan()}<div class="ent-fin-btns"><button class="btn" data-fin-quitter>Retour aux séances</button></div></div></div>`;
+            ${liste}${aVerifierHtml(st)}${retoursAuBilan()}<div class="ent-fin-btns"><button class="btn" data-fin-quitter>Retour aux séances</button></div></div></div>`;
         }
         if (tout) {
           return `<div class="ent-fin ent-fin-v2 ent-fin-ok" role="status" data-fin="ok"><div class="ent-fin-corps">
@@ -1098,7 +1162,7 @@ export function creerEntreprise(U) {
           <h2 class="ent-fin-t">Tu as fini : voici ce qui est juste et ce qui est à corriger.</h2>
           ${fige}${questionsFausses}<p>${peutCorriger ? 'Tu peux corriger pour améliorer ta note, ou passer à la séance suivante'
             : 'Tu peux passer à la séance suivante'}${S ? ` (${ech(S.code)}, déjà ouverte)` : ''}.</p>
-          ${liste}${retoursAuBilan()}<div class="ent-fin-btns">${peutCorriger ? `<button class="btn btn-p ent-fin-corriger" data-fin-corriger>Corriger</button>
+          ${liste}${aVerifierHtml(st)}${retoursAuBilan()}<div class="ent-fin-btns">${peutCorriger ? `<button class="btn btn-p ent-fin-corriger" data-fin-corriger>Corriger</button>
             <span class="ent-fin-gain">Corriger améliore ta note.</span>` : ''}
             <button class="btn" data-fin-quitter>Retour aux séances</button></div></div></div>`;
       }
@@ -1213,7 +1277,8 @@ export function creerEntreprise(U) {
         // travail. Elle ouvre la séance suivante et sert de point de reprise (voir core/parcours.js). Elle est
         // REMPLACÉE à chaque nouveau bilan complet qui change, pour que la suite parte du travail corrigé.
         // En évaluation, la règle d'avant : tout juste.
-        if (ctx.meta.parcours && (SUITE_AU_BILAN && !COPIE ? fini(res) : brut === max)) {
+        // Un jalon qui plante ('erreur') ne retient pas la séance suivante : sans rien de faux, il vaut « tout juste ».
+        if (ctx.meta.parcours && (SUITE_AU_BILAN && !COPIE ? fini(res) : (brut === max || (sansFaux(res) && etapes.some((e) => res[e.id] === 'erreur'))))) {
           if (!db.points) db.points = {};
           const cleBilan = etapes.map((e) => res[e.id]).join();
           if (!db.points[ctx.meta.id] || (clePhoto !== null && clePhoto !== cleBilan)) {
@@ -1242,8 +1307,8 @@ export function creerEntreprise(U) {
         etapes.forEach((e) => {
           if (dejaVu[e.id]) return;
           let st = res && res[e.id];
-          if (st === undefined) { try { st = e.verifier(db, U).status; } catch (x) { st = 'attente'; } }
-          if (st !== 'ok' && st !== 'ko') return;
+          if (st === undefined) { try { st = e.verifier(db, U).status; } catch (x) { signaler(`le jalon « ${e.id} » plante (premier jugement)`, x); st = 'attente'; } }
+          if (st !== 'ok' && st !== 'ko') return;      // ni 'attente' ni 'erreur' (un bug de contenu n'est pas un premier coup raté)
           const r = reperageSeance();
           (r.premier || (r.premier = {}))[e.id] = st;
         });

@@ -875,7 +875,10 @@ ${so.phrase}` : ''}`)}"
           const ko = p.filter(([, st]) => st !== 'ok').map(([k]) => titres[k] || k);
           const bulle = (ko.length ? `Ratés au premier jugement :\n${ko.map((x) => `– ${x}`).join('\n')}` : 'Aucun jalon raté au premier jugement.')
             + `\nJustes du premier coup : ${ok.length} sur ${p.length}.`;
-          return `<tr data-rep-eleve="${ech(e.uid)}"><td>${ech(e.nom)} ${ech(e.prenom)}</td>
+          // Un jalon dont la vérification a planté (bug de contenu, pas faute de l'élève) : une mention, texte seul.
+          const err = Object.entries(r.erreurs || {});
+          const mention = err.length ? `<br><span class="note" data-rep-erreur title="${ech(err.map(([k, m]) => `${k} : ${m}`).join('\n'))}">⚠ jalon en erreur : ${ech(err.map(([k]) => k).join(', '))}</span>` : '';
+          return `<tr data-rep-eleve="${ech(e.uid)}"><td>${ech(e.nom)} ${ech(e.prenom)}${mention}</td>
             <td class="num" data-rep="temps">${minutes(r.temps || 0)}${reel ? `<span class="note"> (quai : ${minutes(reel)})</span>` : ''}</td>
             <td class="num" data-rep="mots" title="${ech(liste(r.mots))}">${somme(r.mots)}</td>
             <td class="num" data-rep="aides" title="${ech(liste(r.aides))}">${somme(r.aides)}</td>${caseDocs(e, r)}
@@ -895,7 +898,9 @@ ${so.phrase}` : ''}`)}"
           les documents ouverts (s'il y en a : ouverts, pas forcément lus),
           et les jalons justes au premier jugement (premier envoi, premier dépôt, première validation) sur les
           jalons déjà jugés ; pour une séance à questions, les sorties de page pendant une question (onglet quitté,
-          fenêtre quittée plus de 3 s : sans effet sur la note). Survolez une case pour le détail. Rien n'est calculé à votre place : vous réglez
+          fenêtre quittée plus de 3 s : sans effet sur la note). Survolez une case pour le détail.
+          « ⚠ jalon en erreur » sous un nom : la vérification de ce jalon a planté (bug du contenu de la séance, pas une faute de l'élève) ;
+          il ne rapporte aucun point, mais n'est pas compté faux : signalez-le pour qu'il soit corrigé. Rien n'est calculé à votre place : vous réglez
           vous-même le niveau standard / confirmé de chaque élève.</p>
         ${blocs}</section>`;
     }

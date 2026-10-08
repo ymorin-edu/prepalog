@@ -129,6 +129,10 @@ remonte dans le détail du score et s'affiche dans le **Suivi de classe**, encad
 une étape rend `'attente'` tant que l'élève n'a rien tenté (premier envoi, premier dépôt, première
 validation), sinon le « premier coup » la compte comme ratée. Les « ? » de la feuille (`grille.js`) et les
 amorces ne sont pas comptés (aucune séance de S1 ne s'en sert) : demande au moteur si besoin.
+Un `verifier(db)` qui **lève une exception** (clé renommée, donnée absente, coquille du contenu) prend l'état
+`'erreur'` (ni `'ok'`, ni `'ko'`, ni `'attente'`) : 0 point, jamais compté faux ni « premier coup », compté comme
+jugé pour la fin de séance, `console.error` (séance, jalon, message) et `db.indicateurs[idSeance].erreurs =
+{ [idJalon]: message }`, que le Suivi de classe montre en « ⚠ jalon en erreur : <id> » (chantier 5, 08/10/2026).
 
 **Commande annulée** (03/10/2026, brief `MOTEUR-statut-annulee`) : une commande semée peut porter
 `annulee: { motif: 'Rupture : emplacement vide à la préparation', at: <timestamp> }`. Elle s'affiche
