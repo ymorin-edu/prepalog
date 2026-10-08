@@ -131,7 +131,7 @@ export function creerBackendDemo() {
       try { localStorage.removeItem(`${P}travauxIdx/${gid}`); } catch (e) {}
       try {
         Object.keys(localStorage)
-          .filter((k) => k.startsWith(`${P}jeux/${gid}`))
+          .filter((k) => k.startsWith(`${P}jeux/${gid}/`))
           .forEach((k) => localStorage.removeItem(k));
       } catch (e) {}
       return {
@@ -181,7 +181,21 @@ export function creerBackendDemo() {
       return { faits, erreurs };
     },
     async supprimerEleve(uid) {
+      // Comme en réel : le profil, les travaux (dans tous les groupes) et le jeu privé partent.
       const u = users(); delete u[uid]; setUsers(u);
+      Object.keys(groupes()).forEach((gid) => {
+        const idx = lire(`travauxIdx/${gid}`, []);
+        idx.filter((k) => k.startsWith(`${uid}|`)).forEach((k) => {
+          const [, aid] = k.split('|');
+          try { localStorage.removeItem(`${P}travaux/${gid}/${uid}/${aid}`); } catch (e) {}
+        });
+        ecrire(`travauxIdx/${gid}`, idx.filter((k) => !k.startsWith(`${uid}|`)));
+      });
+      try {
+        Object.keys(localStorage)
+          .filter((k) => k.startsWith(`${P}prive/${uid}/`))
+          .forEach((k) => localStorage.removeItem(k));
+      } catch (e) {}
       return { compte: true };
     },
 
@@ -323,8 +337,8 @@ export function creerBackendDemo() {
     async majLigne(chemin, table, id, patch) {
       const k = `${chemin}/${table}`;
       const t = lire(k, {});
-      if (!t[id]) throw new Error('Ligne introuvable.');
-      t[id] = { ...t[id], ...patch };
+      // Comme `update` de la Realtime Database : une ligne absente est créée.
+      t[id] = { ...(t[id] || { id }), ...patch };
       ecrire(k, t); publier(k);
     },
     async supprimerLigne(chemin, table, id) {
@@ -336,7 +350,8 @@ export function creerBackendDemo() {
     async incrementer(chemin, table, id, champ, delta) {
       const k = `${chemin}/${table}`;
       const t = lire(k, {});
-      if (!t[id]) throw new Error('Ligne introuvable.');
+      // Comme la transaction du mode réel : une ligne absente est créée.
+      if (!t[id]) t[id] = { id };
       t[id][champ] = (Number(t[id][champ]) || 0) + delta;
       ecrire(k, t); publier(k);
       return t[id][champ];

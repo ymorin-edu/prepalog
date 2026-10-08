@@ -5,10 +5,15 @@ import { CONFIG, DEMO } from './config.js';
 import { ech, toast, entete, brancherEntete, messageErreur } from './ui.js';
 import { activiteVisible, raisonCachee, courtNiveau, libelleNiveaux, demiDe } from './niveaux.js';
 import { chargerActivites, activite, RUBRIQUES, ICONES, activitesDeRubrique, entreprisesDe, intentionDe } from '../activites/index.js';
-import { ouvrirJeu } from './store.js';
+import { ouvrirJeu, surEchec } from './store.js';
 import { rendreEspaceProf } from './prof.js';
 import { verrou, seancesDuParcours, versionDuParcours, baseDe, appliquerReprise } from './parcours.js';
 import { amenagements } from './amenagements.js';
+
+// Une sauvegarde ou une lecture qui échoue doit se voir (voir core/store.js).
+surEchec((genre) => toast(genre === 'sauvegarde'
+  ? "Ton travail n'a pas pu être enregistré (connexion ou accès). Reste sur la page et préviens ton professeur."
+  : "Des données de la séance ne peuvent pas être lues (connexion ou accès). Préviens ton professeur.", 7000));
 
 const app = document.getElementById('app');
 let profil = null;

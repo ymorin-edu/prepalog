@@ -417,7 +417,8 @@ export async function creerBackendFirebase() {
         const s = await FS.getDocs(q);
         return s.docs.map((d) => d.data());
       } catch (e) {
-        // Repli si l'index de groupe de collections n'est pas encore créé.
+        // Repli : les règles ne couvrent pas la requête « toutes activités » (il faudrait un chemin
+        // `{path=**}`), elle est refusée ; on interroge alors élève par élève (N lectures de plus).
         const eleves = await this.elevesDuGroupe(gid);
         const out = [];
         for (const el of eleves) {
@@ -438,14 +439,17 @@ export async function creerBackendFirebase() {
     },
 
     // ---- jeux partagés (Realtime Database) ----
-    ecouterJeu(chemin, table, cb) {
+    // `onValue` rend LA FONCTION qui retire l'écoute (pas le rappel d'origine) : c'est elle qu'il faut
+    // appeler. Avant le 08/10/2026 on la passait à `off`, qui compare des rappels et ne retirait rien.
+    // `erreur` est appelé si les règles refusent la lecture (sans lui, écran vide sans un mot).
+    ecouterJeu(chemin, table, cb, erreur) {
       ouvrirRt();
       const r = DB.ref(rt, `${chemin}/${table}`);
-      const h = DB.onValue(r, (s) => {
+      const retirer = DB.onValue(r, (s) => {
         const v = s.val() || {};
         cb(Object.keys(v).map((id) => ({ id, ...v[id] })));
-      });
-      const stop = () => { DB.off(r, 'value', h); ecouteurs.delete(stop); };
+      }, (e) => { console.error('Écoute refusée :', `${chemin}/${table}`, e); if (erreur) erreur(e); });
+      const stop = () => { try { retirer(); } catch (e) {} ecouteurs.delete(stop); };
       ecouteurs.add(stop);
       return stop;
     },
@@ -469,10 +473,13 @@ export async function creerBackendFirebase() {
     // droit d'écrire que la ligne dont la clé est son propre uid.
     async poserLigne(chemin, table, id, ligne) {
       ouvrirRt();
+      // Les classements promettent l'anonymat (entrainement.js) : le nom complet n'y est jamais
+      // écrit, seul `nom` (nom court, si l'élève l'a voulu) l'est.
+      const anonyme = chemin.startsWith('classements/');
       await DB.set(DB.ref(rt, `${chemin}/${table}/${id}`), {
         ...ligne,
         _par: courant?.uid || null,
-        _parNom: `${courant?.prenom || ''} ${courant?.nom || ''}`.trim(),
+        ...(anonyme ? {} : { _parNom: `${courant?.prenom || ''} ${courant?.nom || ''}`.trim() }),
         _ts: Date.now(),
       });
       return id;
@@ -495,11 +502,12 @@ export async function creerBackendFirebase() {
       ouvrirRt();
       await DB.remove(DB.ref(rt, `${chemin}/${table}`));
     },
-    ecouterMeta(chemin, cb) {
+    ecouterMeta(chemin, cb, erreur) {
       ouvrirRt();
       const r = DB.ref(rt, `${chemin}/meta`);
-      const h = DB.onValue(r, (s) => cb(s.val() || {}));
-      const stop = () => { DB.off(r, 'value', h); ecouteurs.delete(stop); };
+      const retirer = DB.onValue(r, (s) => cb(s.val() || {}),
+        (e) => { console.error('Écoute refusée :', `${chemin}/meta`, e); if (erreur) erreur(e); });
+      const stop = () => { try { retirer(); } catch (e) {} ecouteurs.delete(stop); };
       ecouteurs.add(stop);
       return stop;
     },

@@ -13,6 +13,19 @@ import { B } from './backend.js';
 
 export const PORTEES = ['eleve', 'equipe', 'groupe', 'commun'];
 
+// Un échec de sauvegarde ou d'écoute ne doit jamais rester muet (hors-ligne, document trop gros,
+// règle qui refuse = travail perdu). L'application branche ici un message à l'écran ; le moteur
+// d'une séance, lui, n'a rien à savoir. Un même message n'est répété qu'après 15 secondes.
+let alerte = null;
+let derniere = 0;
+export function surEchec(f) { alerte = f; }
+export function signalerEchec(genre, e) {
+  console.error(`Prepalog : échec (${genre})`, e);
+  if (!alerte || Date.now() - derniere < 15000) return;
+  derniere = Date.now();
+  try { alerte(genre, e); } catch (x) {}
+}
+
 // `demi` : le demi-groupe de l'élève (brief MOTEUR-demi-groupes). Une base de classe y est
 // propre à chaque demi-groupe : `jeux/{gid}/{aid}~{demi}`. Le séparateur `~` ne se confond pas
 // avec `__` des équipes. Sans demi-groupe, la base de classe de toujours.
@@ -40,7 +53,7 @@ function jeuPrive(aid, uid, tables) {
 
   function sauverPlusTard() {
     clearTimeout(minuteur);
-    minuteur = setTimeout(() => B.ecrireJeuPrive(uid, aid, data).catch(() => {}), 500);
+    minuteur = setTimeout(() => B.ecrireJeuPrive(uid, aid, data).catch((e) => signalerEchec('sauvegarde', e)), 500);
   }
 
   return {
@@ -84,7 +97,7 @@ function jeuPrive(aid, uid, tables) {
     ecouterMeta(cb) { cb({ gele: false }); return () => {}; },
     async majMeta() {},
     async vidange() { clearTimeout(minuteur); await B.ecrireJeuPrive(uid, aid, data); },
-    fermer() { clearTimeout(minuteur); if (data) B.ecrireJeuPrive(uid, aid, data).catch(() => {}); },
+    fermer() { clearTimeout(minuteur); if (data) B.ecrireJeuPrive(uid, aid, data).catch((e) => signalerEchec('sauvegarde', e)); },
   };
 }
 
@@ -96,13 +109,19 @@ function jeuPartage(portee, chemin, tables) {
   return {
     portee, partage: true, chemin,
     async ouvrir() {
-      arrets.push(B.ecouterMeta(chemin, (m) => { meta = m || {}; this.meta = meta; }));
+      // En réel la première valeur de `meta` arrive après un aller-retour : on l'attend (3 s au
+      // plus), sinon « Geler / dégeler » lirait un `meta` encore vide et gèlerait toujours.
+      let prete; const premiere = new Promise((r) => { prete = r; });
+      arrets.push(B.ecouterMeta(chemin, (m) => { meta = m || {}; this.meta = meta; prete(); },
+        (e) => { signalerEchec('lecture', e); prete(); }));
+      await Promise.race([premiere, new Promise((r) => setTimeout(r, 3000))]);
       return this;
     },
     lignes(table) { return this._cache?.[table] || []; },
     ecouter(table, cb) {
       this._cache = this._cache || {};
-      const stop = B.ecouterJeu(chemin, table, (lignes) => { this._cache[table] = lignes; cb(lignes); });
+      const stop = B.ecouterJeu(chemin, table, (lignes) => { this._cache[table] = lignes; cb(lignes); },
+        (e) => signalerEchec('lecture', e));
       arrets.push(stop);
       return stop;
     },
@@ -124,7 +143,7 @@ function jeuPartage(portee, chemin, tables) {
       await B.majMeta(chemin, { semeLe: Date.now() });
     },
     meta,
-    ecouterMeta(cb) { const stop = B.ecouterMeta(chemin, cb); arrets.push(stop); return stop; },
+    ecouterMeta(cb) { const stop = B.ecouterMeta(chemin, cb, (e) => signalerEchec('lecture', e)); arrets.push(stop); return stop; },
     async majMeta(patch) { return B.majMeta(chemin, patch); },
     async vidange() {},
     fermer() { arrets.forEach((s) => { try { s(); } catch (e) {} }); arrets.length = 0; },
