@@ -492,5 +492,30 @@ les durées, et le fait que les vues existantes acceptent un `signal` sans diffi
 
 ## Compte rendu *(rempli par Claude Code à la livraison de chaque lot)*
 
+### Lot 1 — notification qui reste (livré le 08/10/2026, Claude Code, Opus)
+
+- **Fait** : pile de cartes dans `core/types/entreprise.js` (« Les cartes des messages »), un seul élément
+  `role="status"` créé à l'ouverture et reposé à chaque dessin ; carte = message `declenche`, non lu, non fermé ;
+  réduite à une ligne au bout de 8 s ; trois au plus puis « … et n autres : voir Messagerie » ; fermeture et
+  réduction hors de la base (rien de plus n'est écrit). À la réouverture, un non-lu revient en carte réduite.
+  Le focus n'est jamais pris ; au clavier, il reste sur le même bouton quand la carte se réduit.
+- **Place** : sous le bandeau de l'entreprise, puis collée au haut de l'écran quand on fait défiler (ancre
+  `position: sticky` de hauteur nulle) : en `position: fixed` tout en haut, elle aurait caché « Quitter ».
+- **Bulle** : elle ne dit plus que la confirmation (« Réponse envoyée. », « Fiche envoyée. », « Message
+  envoyé. ») ; `declencher()` ne prend plus d'argument. L'accusé d'un envoi corrigé (`volet.corrections`) passe
+  aussi en carte : ses messages portent `declenche: 'correction:<id>'`.
+- **Tournée** : bandeau `tour-notif` retiré (`core/types/tournee.js` et sa règle CSS), la carte le remplace.
+- **Charte** : bord ambre, fond `--panneau`, ombre ; charte rouge ou verte → bouton à l'encre (vérifié sur
+  Smoby) ; mouvement réduit = pas d'animation. Aucune variable de couleur nouvelle.
+- **Tests (alerte 7, cas réécrits)** : `cdiscount` — le cas ENT-2.1 « cliquer partout… » (la bulle dit
+  « Réponse envoyée. », deux cartes pleines à l'envoi, réduites au remontage, aucune pour une base ancienne) ; cas
+  nouveau à horloge simulée (toujours là après 10 s et réduites, jamais le focus, `role="status"`, ouverte par la
+  carte → lue et partie, l'autre reste, × → partie mais non lue, revient au remontage). `boost` — trois endroits
+  qui lisaient `tour-notif` (le cas « Nouveau message en tête de la tournée » est réécrit : carte sur la tournée,
+  plus de bandeau, ouverte par la carte, un seul imprévu). Le brief annonçait 9 endroits : il n'y en avait que 4
+  (3 dans `boost`, 1 dans `cdiscount`).
+- **Sabotages** (chacun fait tomber le cas nouveau) : carte qui part au bout de 2,6 s ; carte pour un message lu ;
+  carte qui prend le focus.
+
 À la livraison du lot 2 : recopier les décisions du §4.0 et du §11 dans `docs/decisions.md` (une ligne chacune, datée
 du 07/10/2026, « Tristan »).

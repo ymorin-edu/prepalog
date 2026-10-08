@@ -1750,7 +1750,7 @@ await v('ENT-3.2 : la bonne tournée se construit à la carte — jalons sur les
 await v('ENT-3.2 : une tournée qui tient tout ne suffit pas — sans la feuille vérifiée juste, pas d’imprévu', async () => {
   const r = await imprevu32();
   if (r.mails.length || r.marque || r.phase !== 1) throw new Error('l’imprévu est arrivé avant la feuille : ' + JSON.stringify(r));
-  if (await page32.$(`${z32} [data-tour-notif]`)) throw new Error('la notification est affichée');
+  if (await page32.$('#boost32 [data-carte-mail]')) throw new Error('une carte de message est affichée');
 });
 
 await v('ENT-3.2 : les jauges sont muettes — la limite, jamais le total ni l’heure d’arrivée', async () => {
@@ -1924,15 +1924,20 @@ await v('ENT-3.2 : le message dit ce qui change en texte courant — annulation,
   if (/ne tient plus|\b196\b|\b144\b|\b6 kg\b|Torréfaction/.test(t)) throw new Error('le message donne la réponse : ' + t);
 });
 
-await v('ENT-3.2 : « Nouveau message » en tête de la tournée ; « Lire le message » l’ouvre et éteint la notification', async () => {
-  const n = await texte32(`${z32} [data-tour-notif]`);
-  if (!/Nouveau message/.test(n) || !/Changement pour la tournée/.test(n)) throw new Error('notification : ' + n);
-  await page32.click(`${z32} [data-tour-notif-ouvrir]`);
+// RÉÉCRIT le 08/10/2026 (MOTEUR-questions-au-fil, lot 1) : le bandeau de la tournée est remplacé par la carte du
+// moteur, la même sur tous les écrans. Le temps réel écoulé depuis l'imprévu peut l'avoir réduite : on ne lit que l'objet.
+await v('ENT-3.2 : l’imprévu s’annonce par une carte sur la tournée, plus de bandeau ; la carte ouvre le message et part', async () => {
+  await ouvrir32('tournee');
+  if (await page32.$('#boost32 [data-tour-notif]')) throw new Error('le bandeau de la tournée est encore là');
+  const cartes = await page32.$$eval('#boost32 [data-carte-mail]', (l) => l.map((c) => c.textContent.replace(/\s+/g, ' ').trim()));
+  if (cartes.length !== 1 || !/Changement pour la tournée/.test(cartes[0])) throw new Error('cartes : ' + JSON.stringify(cartes));
+  await page32.click('#boost32 [data-carte-lire]');
   await page32.waitForTimeout(150);
   if (!/Il est 14 h 00/.test(await texte32())) throw new Error('le message ne s’est pas ouvert');
   if (!(await imprevu32()).mails[0].read) throw new Error('le message n’est pas marqué lu');
   await ouvrir32('tournee');
-  if (await page32.$(`${z32} [data-tour-notif]`)) throw new Error('la notification reste après lecture');
+  if (await page32.$('#boost32 [data-carte-mail]')) throw new Error('la carte reste après lecture');
+  if ((await imprevu32()).mails.length !== 1) throw new Error('l’imprévu est arrivé plus d’une fois');
 });
 
 await v('ENT-3.2 : après l’imprévu — Atelier Ribot barré et non chargeable ; créneau de l’Épicerie repéré, Pâtisserie sans créneau', async () => {
@@ -2622,8 +2627,8 @@ await v('ENT-3.3 : un message à quelqu’un d’autre ne débloque rien ; un me
   if (!/déverrouillées/.test(r[0]) || !/J’ai terminé/.test(r[0])) throw new Error('texte : ' + r[0]);
   if (/corrig|erreur|faux|fausse|juste/i.test(r[0])) throw new Error('la réponse d’Inès révèle quelque chose : ' + r[0]);
   await ouvrir33('tournee');
-  const notif = await page33.$('#boost33 [data-tour-notif]');
-  if (!notif) throw new Error('pas de « Nouveau message » en tête de la tournée');
+  const notif = await page33.$('#boost33 [data-carte-mail]');
+  if (!notif) throw new Error('pas de carte « Nouveau message » sur la tournée');
   const e = await etapes33();
   if (!e[0].fait || e[1].fait || e[2].fait) throw new Error('pastilles : ' + JSON.stringify(e.map((x) => x.pastille)));
   // Une seule fois : un second message ne refait rien, et le temps 2 survit à la reconnexion.

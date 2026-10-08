@@ -989,6 +989,35 @@ fieldset[disabled] .ent-ouinon button{ cursor:default }
    Texte et aplats jugés à part : les aplats bleus de Boost (« le client ») restent. */
 .ent-travail-neutre .ent-main{ --ardoise:var(--encre); --ardoise-clair:color-mix(in srgb, var(--encre) 9%, transparent) }
 .ent-travail-neutre-fond .ent-main{ --ardoise-fond:var(--encre); --sur-ardoise:var(--panneau) }
+.ent-travail-neutre .ent-cartes{ --ardoise:var(--encre); --ardoise-clair:color-mix(in srgb, var(--encre) 9%, transparent) }
+.ent-travail-neutre-fond .ent-cartes{ --ardoise-fond:var(--encre); --sur-ardoise:var(--panneau) }
+/* Les cartes des messages (brief MOTEUR-questions-au-fil, lot 1) : à droite, sous le bandeau, puis collées au
+   haut de l'écran quand on fait défiler. Elles PRENNENT LEUR PLACE au-dessus du travail (le travail descend d'autant)
+   au lieu de le recouvrir : posées par-dessus, elles cachaient les boutons du haut d'un écran (« Agrandir le
+   planning »). Bord ambre (jamais vert : le vert plein ne dit que « juste »), fond du panneau, une ombre. */
+.ent-cartes-ancre{ position:sticky; top:0; z-index:40; display:flex; justify-content:flex-end; pointer-events:none }
+.ent-cartes{ width:min(380px, calc(100vw - 32px)); margin-top:8px;
+  display:flex; flex-direction:column; align-items:stretch; gap:8px; pointer-events:none }
+.ent-cartes:empty{ display:none }
+.ent-cartes > *{ pointer-events:auto }
+.ent-carte{ display:flex; align-items:center; flex-wrap:wrap; gap:8px 10px; padding:10px 8px 10px 12px;
+  background:var(--panneau); color:var(--encre); border:1px solid var(--filet); border-left:4px solid var(--terre);
+  border-radius:var(--r); box-shadow:0 4px 14px rgba(20,16,8,.18); animation:ent-carte-entree .18s ease-out }
+.ent-carte-icone{ color:var(--terre); font-size:1.1rem }
+.ent-carte-texte{ flex:1 1 200px; min-width:0; font-size:.92rem }
+.ent-carte-titre{ font-weight:600 }
+.ent-carte-reduite{ padding:4px 4px 4px 8px; flex-wrap:nowrap }
+.ent-carte-ligne{ flex:1; min-width:0; text-align:left; background:none; border:0; color:inherit; font:inherit;
+  font-size:.88rem; padding:4px; cursor:pointer; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+.ent-carte-ligne:hover{ text-decoration:underline }
+.ent-carte-ligne > span{ color:var(--terre) }
+.ent-carte-x{ background:none; border:0; color:var(--encre-douce); font-size:1.2rem; line-height:1; padding:4px 8px;
+  cursor:pointer; border-radius:var(--r) }
+.ent-carte-x:hover{ color:var(--encre) }
+.ent-carte-reste{ align-self:flex-end; background:var(--panneau); color:var(--encre); border:1px solid var(--filet);
+  border-radius:var(--r); padding:4px 10px; font:inherit; font-size:.85rem; cursor:pointer; box-shadow:0 2px 8px rgba(20,16,8,.14) }
+@keyframes ent-carte-entree{ from{ opacity:0; transform:translateY(-6px) } to{ opacity:1; transform:none } }
+@media (prefers-reduced-motion: reduce){ .ent-carte{ animation:none } }
 .ent-cases{ display:flex; flex-direction:column; gap:4px }
 .ent-cases label{ display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:400;
   border:1px solid var(--filet); border-radius:var(--r); padding:6px 10px }
@@ -1207,13 +1236,12 @@ fieldset[disabled] .ent-cases label{ cursor:default }
 .tour-puce .tour-texte{ flex:0 1 auto }
 .tour-puce .note{ font-size:12px }
 /* La phase d'imprévu (ENT-3.2) : la commande annulée est barrée, sans bouton ; le créneau qui a
-   changé est repéré par la forme (souligné pointillé, en ambre), jamais par un aplat ; le
-   « Nouveau message » se signale par une bordure ambre, comme un avis. */
+   changé est repéré par la forme (souligné pointillé, en ambre), jamais par un aplat. Le
+   « Nouveau message » est une carte du moteur (.ent-carte), plus un bandeau de la tournée. */
 .tour-annules{ margin-top:12px }
 .tour-puce-annule{ border-style:dashed }
 .tour-puce-annule s{ text-decoration-thickness:2px }
 .tour-creneau-change{ color:var(--terre); font-weight:600; border-bottom:1px dashed var(--terre) }
-.tour-notif{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px; border-left-color:var(--terre) }
 
 .tour-jauges{ display:flex; flex-direction:column; gap:14px; position:sticky; top:12px }
 .tour-jauge{

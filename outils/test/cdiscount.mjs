@@ -607,13 +607,14 @@ Ce qui cloche : DEM-26-0027 : 2 - 1 = 1`;
   });
 
   // Option B (03/10/2026) : dans le vrai moteur, rien n'arrive en cliquant partout ; le premier compte
-  // rendu à Nadia, même faux, fait arriver le retour et la casse, une seule fois, avec une bulle qui
-  // dit les deux (envoi + nouveau message).
+  // rendu à Nadia, même faux, fait arriver le retour et la casse, une seule fois. RÉÉCRIT le 08/10/2026
+  // (MOTEUR-questions-au-fil, lot 1) : la bulle ne dit plus que l'envoi, l'arrivée va dans deux cartes.
   await v('ENT-2.1 : cliquer partout ne fait rien arriver ; « Stock actuel : 5 » fait arriver le retour et la casse, une fois, sans doublon au remontage ni pour une base ancienne', async () => {
     const res = await page.evaluate(async ({ CHEFFE }) => {
       const mod = await import('/activites/cdiscount-mouvements.js');
       const attendre = () => new Promise((r) => setTimeout(r, 60));
       const bulle = () => document.getElementById('toast')?.textContent || '';
+      const cartes = (hote) => [...hote.querySelectorAll('[data-carte-mail]')].map((c) => (c.classList.contains('ent-carte-reduite') ? 'réduite' : 'pleine'));
       const monter = (db) => {
         const hote = document.createElement('div');
         hote.id = 'essaiCdiscount';
@@ -663,6 +664,7 @@ Ce qui cloche : DEM-26-0027 : 2 - 1 = 1`;
       // Le premier compte rendu, FAUX.
       await e.envoyer('Stock actuel : 5');
       out.bulle = bulle();
+      out.cartes = cartes(e.hote);
       out.pastille = e.hote.querySelector('.ent-nav[data-vue="mail"] .ent-n')?.textContent || '';
       out.apresEnvoi = compte(db);
       out.marques = Object.keys(db.volets || {});
@@ -673,6 +675,7 @@ Ce qui cloche : DEM-26-0027 : 2 - 1 = 1`;
       // Remontage (reconnexion) : rien de plus.
       e = monter(db);
       out.apresRemontage = compte(db);
+      out.cartesRemontage = cartes(e.hote);
       e.demonter();
       // Base d'un élève qui a commencé avant le 03/10/2026 : il a déjà les deux mails, sans la marque.
       const ancienne = {};
@@ -684,6 +687,7 @@ Ce qui cloche : DEM-26-0027 : 2 - 1 = 1`;
       await e.envoyer('Stock actuel : 5');
       out.ancienne = compte(ancienne);
       out.bulleAncienne = bulle();
+      out.cartesAncienne = cartes(e.hote);
       e.demonter();
       return out;
     }, { CHEFFE: CD.EQUIPE.cheffe.mail }).catch(async (e) => {
@@ -696,7 +700,10 @@ Ce qui cloche : DEM-26-0027 : 2 - 1 = 1`;
     if (dit(res.apresClics) !== dit(res.ouverture)) throw new Error('un clic a fait arriver un message : ' + dit(res.apresClics));
     if (dit(res.apresAmorce) !== dit(res.ouverture)) throw new Error('l\'amorce vide a fait arriver un message : ' + dit(res.apresAmorce));
     if (res.apresEnvoi.recus !== 4 || res.apresEnvoi.retour !== 1 || res.apresEnvoi.casse !== 1) throw new Error('après « Stock actuel : 5 » : ' + dit(res.apresEnvoi));
-    if (!/^Réponse envoyée\. Nouveau message : /.test(res.bulle)) throw new Error('bulle à l\'envoi : ' + JSON.stringify(res.bulle));
+    if (res.bulle !== 'Réponse envoyée.') throw new Error('bulle à l\'envoi : ' + JSON.stringify(res.bulle));
+    if (dit(res.cartes) !== dit(['pleine', 'pleine'])) throw new Error('cartes à l\'envoi : ' + dit(res.cartes));
+    // Remontage : les deux messages non lus reviennent, en cartes réduites.
+    if (dit(res.cartesRemontage) !== dit(['réduite', 'réduite'])) throw new Error('cartes au remontage : ' + dit(res.cartesRemontage));
     if (res.pastille !== '2') throw new Error('pastille de la messagerie : ' + JSON.stringify(res.pastille));
     if (!res.marques.includes('mouvements-1#documents')) throw new Error('marque absente : ' + res.marques.join(', '));
     if (dit(res.apresSecond) !== dit(res.apresEnvoi)) throw new Error('le second envoi a reposé des mails : ' + dit(res.apresSecond));
@@ -704,6 +711,86 @@ Ce qui cloche : DEM-26-0027 : 2 - 1 = 1`;
     if (dit(res.apresRemontage) !== dit(res.apresEnvoi)) throw new Error('doublon au remontage : ' + dit(res.apresRemontage));
     if (res.ancienne.retour !== 1 || res.ancienne.casse !== 1 || res.ancienne.recus !== 4) throw new Error('base ancienne : ' + dit(res.ancienne));
     if (res.bulleAncienne !== 'Réponse envoyée.') throw new Error('base ancienne, bulle : ' + JSON.stringify(res.bulleAncienne));
+    if (res.cartesAncienne.length) throw new Error('base ancienne, cartes pour des messages déjà lus : ' + dit(res.cartesAncienne));
+  });
+
+  // La carte qui reste (MOTEUR-questions-au-fil, lot 1, 08/10/2026), sur une page à horloge simulée : toujours là
+  // après 10 s (réduite à une ligne), jamais le focus ; ouverte par la carte, elle part et l'autre reste ; fermée (×),
+  // elle part sans que le message soit lu, et revient au remontage ; un message lu ne revient pas.
+  await v('ENT-2.1 : les deux messages arrivent en cartes qui restent, se réduisent, partent à la lecture ou au ×', async () => {
+    const ctxC = await nav.newContext();
+    const pc = await ctxC.newPage();
+    try {
+      await pc.goto(new URL('/', page.url()).toString());
+      await pc.waitForSelector('#btnProf', { timeout: 8000 });
+      await pc.clock.install();
+      await pc.evaluate(async ({ CHEFFE }) => {
+        const mod = await import('/activites/cdiscount-mouvements.js');
+        const db = {};
+        const monter = () => {
+          document.getElementById('essaiCartes')?.remove();
+          const hote = document.createElement('div');
+          hote.id = 'essaiCartes';
+          document.body.appendChild(hote);
+          mod.rendre(hote, { meta: mod.meta, profil: { prenom: 'Léa', role: 'eleve' }, codeStock: 'STOCK24',
+            jeu: { etat: () => db, sauver() {} }, enregistrer() {}, quitter() {} });
+          return hote;
+        };
+        const hote = monter();
+        hote.querySelector('[data-vue="mail"]').click();
+        const mission = db.mails.find((m) => m.fromMail === CHEFFE && /racontez/.test(m.subject));
+        hote.querySelector(`[data-mail="${mission.id}"]`).click();
+        hote.querySelector('[data-repondre]').click();
+        hote.querySelector('#repT').value = 'Stock actuel : 5';
+        hote.querySelector('#formRep').dispatchEvent(new Event('submit', { cancelable: true }));
+        // Un autre écran : la carte est sur tous les écrans.
+        hote.querySelector('.ent-nav[data-vue="stock"]').click();
+        window.__c = { db, monter };
+      }, { CHEFFE: CD.EQUIPE.cheffe.mail });
+      const lire = () => pc.evaluate(() => ({
+        cartes: [...document.querySelectorAll('#essaiCartes [data-carte-mail]')].map((c) => ({
+          id: Number(c.dataset.carteMail), reduite: c.classList.contains('ent-carte-reduite'),
+          texte: c.textContent.replace(/\s+/g, ' ').trim() })),
+        focusDansPile: !!document.activeElement?.closest('[data-cartes]'),
+        role: document.querySelector('#essaiCartes [data-cartes]')?.getAttribute('role'),
+        vue: document.querySelector('#essaiCartes .ent-nav.on')?.dataset.vue,
+        sujet: document.querySelector('#essaiCartes .ent-main')?.textContent || '',
+        lus: window.__c.db.mails.filter((m) => m.declenche).map((m) => [m.id, m.read, m.subject]),
+      }));
+      const dit = (x) => JSON.stringify(x);
+      let r = await lire();
+      if (r.cartes.length !== 2 || r.cartes.some((c) => c.reduite)) throw new Error('à l\'arrivée : ' + dit(r));
+      if (!r.cartes.every((c) => /^✉ Nouveau message — /.test(c.texte) && /Lire le message/.test(c.texte))) throw new Error('texte des cartes : ' + dit(r.cartes));
+      if (!r.cartes.some((c) => /Retour client RET-/.test(c.texte)) || !r.cartes.some((c) => /Constat de casse DEM-/.test(c.texte))) throw new Error('objets : ' + dit(r.cartes));
+      if (r.role !== 'status') throw new Error('pile sans role="status" : ' + r.role);
+      if (r.focusDansPile) throw new Error('une carte a pris le focus');
+      // 10 s plus tard (la bulle serait partie depuis longtemps) : toujours là, réduites à une ligne.
+      await pc.clock.runFor(10000);
+      r = await lire();
+      if (r.cartes.length !== 2 || r.cartes.some((c) => !c.reduite)) throw new Error('après 10 s : ' + dit(r.cartes));
+      if (r.cartes.some((c) => /Nouveau message|Lire le message/.test(c.texte))) throw new Error('carte réduite trop longue : ' + dit(r.cartes));
+      if (r.focusDansPile) throw new Error('une carte a pris le focus en se réduisant');
+      // Ouvrir la première par sa carte : le message s'ouvre, il est lu, sa carte part, l'autre reste.
+      const [a, b] = r.cartes;
+      const sujetA = r.lus.find(([id]) => id === a.id)[2];
+      await pc.click(`#essaiCartes [data-carte-lire="${a.id}"]`);
+      r = await lire();
+      if (r.vue !== 'mail') throw new Error('la carte n\'ouvre pas la messagerie : ' + r.vue);
+      if (!r.sujet.includes(sujetA)) throw new Error('le message ouvert n\'est pas « ' + sujetA + ' »');
+      if (dit(r.cartes.map((c) => c.id)) !== dit([b.id])) throw new Error('après lecture : ' + dit(r.cartes));
+      if (!r.lus.find(([id]) => id === a.id)[1]) throw new Error('le message ouvert par la carte n\'est pas lu');
+      // Fermer l'autre (×) : elle part, le message reste non lu.
+      await pc.click(`#essaiCartes [data-carte-fermer="${b.id}"]`);
+      r = await lire();
+      if (r.cartes.length) throw new Error('la carte fermée reste : ' + dit(r.cartes));
+      if (r.lus.find(([id]) => id === b.id)[1]) throw new Error('fermer la carte a marqué le message lu');
+      // Remontage : le non-lu revient, réduit ; le lu ne revient pas.
+      await pc.evaluate(() => window.__c.monter());
+      r = await lire();
+      if (dit(r.cartes.map((c) => [c.id, c.reduite])) !== dit([[b.id, true]])) throw new Error('au remontage : ' + dit(r.cartes));
+    } finally {
+      await ctxC.close();
+    }
   });
 
   /* ================================================================================

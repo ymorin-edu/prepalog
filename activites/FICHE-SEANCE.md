@@ -34,6 +34,10 @@ faux** — modèle : ENT-2.1), `quand: apresJalon(ETAPES, 'id')` (réservé à u
 lui-même qu'elle est finie), `tous(…)` pour combiner. Jamais de clic de menu, d'écran ouvert ni de
 minuterie. Si l'élève a pu recevoir ces messages autrement (séance déjà ouverte), `semer` vérifie
 par l'objet qu'ils ne sont pas déjà là.
+Un message déclenché (ou l'accusé d'un envoi corrigé, `volet.corrections`) s'annonce par une **carte qui
+reste** en haut à droite, sur tous les écrans, jusqu'à ce que l'élève l'ouvre ou la ferme (×) ; réduite à une
+ligne au bout de 8 s, trois au plus. La séance n'a rien à déclarer : c'est le moteur (lot 1 de
+`MOTEUR-questions-au-fil`, 08/10/2026). La bulle ne dit plus que la confirmation d'un envoi.
 
 **Réponse par phrases à choisir** (2de, 04/10/2026, `core/phrases.js`, lot 2 de `MOTEUR-2de-S1`) : un
 mail semé (volet ou déclencheur) peut porter `phrases: { id: 'reponse-sophie', lignes: [{ id: 'salut',

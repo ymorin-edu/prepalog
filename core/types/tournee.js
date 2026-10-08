@@ -833,14 +833,8 @@ export function creerTournee(T) {
 
       // La consigne de la phase en cours : après l'imprévu, celle d'avant serait fausse.
       const consigne = (cfgPhase(etat) || {}).consigne || T.consigne;
-      // « Nouveau message » en tête de l'écran : l'hôte passe les messages DÉCLENCHÉS non lus
-      // (`opts.notifications`, voir `volet.declencheurs` dans entreprise.js). Le bouton ouvre le
-      // message ; c'est l'hôte qui le branche, la messagerie est à lui.
-      const notifs = opts.notifications || [];
-      const notif = notifs.map((m) => `<div class="avis tour-notif" data-tour-notif role="status">
-          <span><strong>Nouveau message</strong> · ${ech(m.from || '')} : « ${ech(m.subject || '')} »</span>
-          <button class="btn btn-s btn-p" data-tour-notif-ouvrir="${ech(String(m.id))}">Lire le message</button>
-        </div>`).join('');
+      // Le « Nouveau message » n'est plus affiché ici : l'hôte l'annonce par une carte qui reste, sur tous
+      // les écrans (brief MOTEUR-questions-au-fil, lot 1, 08/10/2026).
       const blocCarte = `
         <div class="tour-grille${DANS_GRILLE && recap ? ' tour-grille-deux' : ''}${fige ? ' tour-fige' : ''}">
           <div class="tour-col">
@@ -881,7 +875,6 @@ export function creerTournee(T) {
         </div>`;
       const tete = `
         <div class="ent-tete"><h2>${ech(T.titre || 'Tournée')}</h2></div>
-        ${notif}
         ${consigne ? `<p class="note">${ech(consigne)}</p>` : ''}`;
 
       // ── Les onglets (voir l'en-tête) : un seul à l'écran, dans l'ordre du parcours ─────────

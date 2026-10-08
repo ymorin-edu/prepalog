@@ -405,13 +405,12 @@ export function creerEntreprise(U) {
       // dans `db.volets` (`<volet>#<id>`), comme celle du volet, donc rien ne se rejoue au
       // remontage ni à la reconnexion. `phaseTournee` fait passer la tournée de la séance à cette
       // phase (`passerPhase` dans tournee.js) au même instant que le message arrive. Les messages
-      // portent `declenche` : la tournée les signale en tête (« Nouveau message ») tant qu'ils
-      // ne sont pas lus. Une condition qui plante compte comme fausse, sans rien arrêter.
-      // Les conditions toutes faites (après un jalon, après un mail envoyé) sont dans
-      // `core/declencheurs.js`. `avant` précède l'annonce dans la bulle : le site n'en a qu'une, et
-      // un envoi de mail qui fait arriver un message doit dire les deux (« Réponse envoyée.
-      // Nouveau message : … »), sinon la confirmation de l'envoi efface l'annonce (03/10/2026).
-      function declencher(avant = '') {
+      // portent `declenche` : ils s'annoncent par une CARTE qui reste tant qu'ils ne sont pas lus
+      // (voir « Les cartes des messages » plus bas). Une condition qui plante compte comme fausse,
+      // sans rien arrêter. Les conditions toutes faites (après un jalon, après un mail envoyé) sont
+      // dans `core/declencheurs.js`. La bulle ne sert plus qu'à la confirmation d'un envoi (« Réponse
+      // envoyée. ») : l'arrivée d'un message va dans une carte (brief MOTEUR-questions-au-fil, lot 1).
+      function declencher() {
         if (!volet || !(volet.declencheurs || []).length) return false;
         if (!db.volets) db.volets = {};
         let fait = false;
@@ -430,11 +429,10 @@ export function creerEntreprise(U) {
           if (d.phasePlanning && VPL) VPL.passerPhase(etatPlanning(), d.phasePlanning);
           db.volets[cle] = Date.now();
           fait = true;
-          if ((g.mails || []).length) toast(avant + 'Nouveau message : ' + (g.mails[0].from || 'Messagerie'));
         });
+        if (fait) majCartes();
         return fait;
       }
-      const notificationsTournee = () => db.mails.filter((m) => m.declenche && m.folder === 'in' && !m.read);
 
       // ----------------------------------------------------------- état d'écran
       // Volontairement hors de la base : ce sont des choix d'affichage, pas du travail.
@@ -455,6 +453,68 @@ export function creerEntreprise(U) {
         stockOuvert: estProf || !!U.stockOuvert, erreurCode: '',
         blocage: { lot: '', ref: '', qte: '', motif: '' }, erreurBlocage: '', okBlocage: '',
       };
+
+      // ── Les cartes des messages (brief MOTEUR-questions-au-fil, lot 1, 08/10/2026) ──────────────
+      // Un message déclenché (`m.declenche`) s'annonce par une CARTE en haut à droite, sur tous les écrans,
+      // qui RESTE tant qu'il n'est pas lu : une bulle qui part seule au bout de 2,6 s est un défaut connu
+      // (WCAG 2.2.1), et l'élève qui regardait ailleurs ne voyait rien. Au bout de 8 s, la carte se réduit à
+      // une ligne pour moins cacher le travail. Elle part quand le message est ouvert (par elle ou par la
+      // messagerie) ou fermée (×). Trois au plus, puis « … et n autres ».
+      //
+      // Ce qui s'affiche vient de la base (message déclenché, non lu) ; la fermeture et la réduction sont des
+      // choix d'affichage, hors de la base comme `E` : rien de plus ne s'écrit (quota). À la réouverture de
+      // la séance, un message non lu revient en carte réduite. La pile est UN élément `role="status"` créé
+      // une fois et reposé à chaque dessin : il ne prend jamais le focus de lui-même. Elle sert aussi aux
+      // questions du lot 2.
+      const CARTES = { reduites: new Set(), fermees: new Set(), minuteurs: {} };
+      db.mails.forEach((m) => { if (m.declenche && !m.read) CARTES.reduites.add(m.id); });
+      const PILE = document.createElement('div');
+      PILE.className = 'ent-cartes';
+      PILE.setAttribute('role', 'status');
+      PILE.dataset.cartes = '';
+      const CARTES_MAX = 3, CARTE_REDUITE_APRES = 8000;
+      function majCartes() {
+        const L = rendue() ? [] : db.mails
+          .filter((m) => m.declenche && m.folder === 'in' && !m.read && !CARTES.fermees.has(m.id))
+          .sort((a, b) => b.id - a.id);
+        const vues = L.slice(0, CARTES_MAX), reste = L.length - vues.length;
+        // Le focus, au clavier, reste sur le même bouton quand la carte se réduit.
+        const av = document.activeElement;
+        const cle = av && PILE.contains(av) ? av.dataset.cle : null;
+        PILE.innerHTML = vues.map((m) => {
+          const qui = `<strong>${ech(m.from || 'Messagerie')}</strong> · ${ech(m.subject || '')}`;
+          const x = `<button type="button" class="ent-carte-x" data-carte-fermer="${m.id}" data-cle="x${m.id}"
+            aria-label="Fermer la notification" title="Fermer">×</button>`;
+          if (CARTES.reduites.has(m.id)) {
+            return `<div class="ent-carte ent-carte-reduite" data-carte-mail="${m.id}">
+              <button type="button" class="ent-carte-ligne" data-carte-lire="${m.id}" data-cle="l${m.id}"
+                title="Lire le message"><span aria-hidden="true">✉</span> ${qui}</button>${x}</div>`;
+          }
+          return `<div class="ent-carte" data-carte-mail="${m.id}">
+            <span class="ent-carte-icone" aria-hidden="true">✉</span>
+            <div class="ent-carte-texte"><span class="ent-carte-titre">Nouveau message</span> — ${qui}</div>
+            <button type="button" class="btn btn-s btn-p" data-carte-lire="${m.id}" data-cle="l${m.id}">Lire le message</button>${x}</div>`;
+        }).join('') + (reste ? `<button type="button" class="ent-carte-reste" data-cartes-reste data-cle="reste">… et ${reste}
+          autre${reste > 1 ? 's' : ''} : voir Messagerie</button>` : '');
+        vues.forEach((m) => {
+          if (CARTES.reduites.has(m.id) || CARTES.minuteurs[m.id]) return;
+          CARTES.minuteurs[m.id] = setTimeout(() => {
+            delete CARTES.minuteurs[m.id];
+            CARTES.reduites.add(m.id);
+            if (hote.isConnected) majCartes();
+          }, CARTE_REDUITE_APRES);
+        });
+        if (cle) PILE.querySelector(`[data-cle="${cle}"]`)?.focus();
+      }
+      PILE.addEventListener('click', (ev) => {
+        const b = ev.target.closest && ev.target.closest('button');
+        if (!b) return;
+        if (b.dataset.carteFermer) { CARTES.fermees.add(Number(b.dataset.carteFermer)); majCartes(); return; }
+        E.vue = 'mail'; E.dossier = 'in';
+        if (b.dataset.carteLire) ouvrirMail(Number(b.dataset.carteLire));
+        else { E.mailSel = null; dessiner(); }
+        hote.scrollIntoView({ block: 'start' });
+      });
 
       // Les couleurs de l'entreprise remplacent celles de Prepalog, mais seulement pendant
       // que le module est ouvert : dès qu'on en sort, le site retrouve sa charte et son
@@ -1019,6 +1079,7 @@ export function creerEntreprise(U) {
             </header>
             ${VTAB && VTAB.aide && E.aideTableur ? `<div class="ent-aide" data-aide-tableur-texte style="white-space:pre-line">${ech(VTAB.aide)}</div>` : ''}
             <div data-fin-seance>${bandeauFin()}</div>
+            <div class="ent-cartes-ancre" data-cartes-ancre></div>
             <div class="ent-shell${replie ? ' ent-menu-replie' : ''}">
               <aside class="ent-side">
                 ${boutonMenu(replie)}
@@ -1047,6 +1108,9 @@ export function creerEntreprise(U) {
             </div>
           </div>`;
 
+        // La pile des cartes, reposée telle quelle (même élément) : voir « Les cartes des messages ».
+        hote.querySelector('[data-cartes-ancre]').appendChild(PILE);
+        majCartes();
         hote.querySelectorAll('[data-vue]').forEach((b) => b.addEventListener('click', () => aller(b.dataset.vue)));
         // Replier / déplier sur place, sans redessin : le focus reste sur le bouton.
         hote.querySelector('[data-menu-replier]').addEventListener('click', (ev) => {
@@ -1421,10 +1485,10 @@ export function creerEntreprise(U) {
           subject: 'RE : ' + m.subject.replace(/^RE : /, ''), kind: 'text', text: texteCompose(m.phrases, choix),
           phrases: { id: m.phrases.id, choix }, read: true });
         delete E.brouillon[m.id];
-        let arrive = !rendue() && declencher('Réponse envoyée. ');
-        if (!arrive && !rendue() && dejaEnvoyees) arrive = accuseCorrection(m.phrases.id, dejaEnvoyees + 1);
+        const arrive = !rendue() && declencher();
+        if (!arrive && !rendue() && dejaEnvoyees) accuseCorrection(m.phrases.id, dejaEnvoyees + 1);
         sauver(); E.dossier = 'out'; E.mailSel = null; dessiner();
-        if (!arrive) toast('Réponse envoyée.');
+        toast('Réponse envoyée.');
       }
 
       // Une pièce jointe ouverte (lot 1) : comptée à chaque ouverture, onglet ou précédent / suivant compris.
@@ -1463,9 +1527,9 @@ export function creerEntreprise(U) {
         if (!m) return;
         ajouterMail({ folder: 'out', ts: Date.now(), from: prenom, fromMail: '', to: m.from, toMail: m.fromMail,
           subject: 'RE : ' + m.subject.replace(/^RE : /, ''), kind: 'text', text: t, read: true });
-        const arrive = !rendue() && declencher('Réponse envoyée. ');
+        if (!rendue()) declencher();
         sauver(); E.dossier = 'out'; E.mailSel = null; dessiner();
-        if (!arrive) toast('Réponse envoyée.');
+        toast('Réponse envoyée.');
       }
 
       // Le fournisseur répond tout seul : l'outil retrouve dans le message les références et
@@ -1514,9 +1578,9 @@ export function creerEntreprise(U) {
         ajouterMail({ folder: 'in', ts: Date.now() + 1000, from: sup.contact, fromMail: sup.email, to: prenom,
           subject: 'RE : ' + objet, kind: 'text', text: reponse, read: false });
 
-        const arrive = !rendue() && declencher('Message envoyé. ');
+        if (!rendue()) declencher();
         sauver(); E.redige = false; E.dossier = 'in'; E.mailSel = null; dessiner();
-        if (!arrive) toast('Message envoyé.');
+        toast('Message envoyé.');
       }
 
       /* ---------------------------------------------------------- commandes */
@@ -2201,22 +2265,23 @@ export function creerEntreprise(U) {
         sauver, docVu, compterDoc, figee: rendue(),
         // L'envoi : un geste métier comme un mail (les déclencheurs `apresFiche` le lisent), puis la fiche figée.
         envoyee(e) {
-          let arrive = !rendue() && declencher('Fiche envoyée. ');
+          const arrive = !rendue() && declencher();
           // Un envoi CORRIGÉ (le deuxième, le troisième…) reçoit l'accusé du volet, sans rejouer le premier message.
-          if (!arrive && !rendue() && e && e.envois > 1) arrive = accuseCorrection(e.id, e.envois);
+          if (!arrive && !rendue() && e && e.envois > 1) accuseCorrection(e.id, e.envois);
           sauver(); dessiner();
-          if (!arrive) toast('Fiche envoyée.');
+          toast('Fiche envoyée.');
         },
       });
       function vueFiche(VF) { return VF.html(etatFiche(VF), uiFiche(VF), apiFiche()); }
       // L'accusé d'un envoi corrigé (lot A, 07/10/2026) : `volet.corrections[<id de la fiche ou du message>](prenom, n)`.
-      // Il ne dit jamais si la correction est juste. Rend vrai si un message est arrivé.
+      // Il ne dit jamais si la correction est juste. Rend vrai si un message est arrivé. Il s'annonce par une
+      // carte, comme un message déclenché (`declenche` : « correction:<id> »).
       function accuseCorrection(id, n) {
         const f = volet && volet.corrections && volet.corrections[id];
         const g = f && f(prenom, n, db);
         if (!g || !(g.mails || []).length) return false;
-        g.mails.forEach((m) => ajouterMail(m));
-        toast('Nouveau message : ' + (g.mails[0].from || 'Messagerie'));
+        g.mails.forEach((m) => ajouterMail(Object.assign(m, { declenche: 'correction:' + id })));
+        majCartes();
         return true;
       }
 
@@ -2233,9 +2298,8 @@ export function creerEntreprise(U) {
         estProf, figee: rendue(), graine: ctx.profil.uid || prenom,
         sauver() {
           if (rendue()) return;
-          const arrive = declencher();
+          declencher();
           ctx.jeu.sauver(); remonterEtapes();
-          if (arrive) toast('Nouveau message dans la messagerie.');
         },
       });
 
@@ -2287,7 +2351,7 @@ export function creerEntreprise(U) {
         // Séance « à corriger » : la tournée du collègue est posée à la première ouverture, une
         // seule fois (voir `amorcer` dans tournee.js). Sans `etatInitial`, rien ne se passe.
         if (!verrou && VTOUR.amorcer && VTOUR.amorcer(etatTransport('tournee'))) sauver();
-        return VTOUR.html(etatTransport('tournee'), { verrou, db, notifications: notificationsTournee() });
+        return VTOUR.html(etatTransport('tournee'), { verrou, db });
       }
 
       function vueCatalogue() {
@@ -2831,11 +2895,6 @@ export function creerEntreprise(U) {
         });
         if (E.vue === 'plan' && VPLAN) VPLAN.brancher(z, apiTransport('plan'));
         if (E.vue === 'tournee' && VTOUR) VTOUR.brancher(z, apiTransport('tournee'));
-        // « Lire le message » du bandeau de la tournée : la messagerie est ici, pas dans la vue.
-        z.querySelectorAll('[data-tour-notif-ouvrir]').forEach((b) => b.addEventListener('click', () => {
-          E.vue = 'mail'; E.dossier = 'in';
-          ouvrirMail(Number(b.dataset.tourNotifOuvrir));
-        }));
         if (E.vue === 'fichiers' && VTAB) VTAB.brancher(z, apiTableur());
         if (E.vue === 'extractions' && VTAB && VTAB.navExtractions) VTAB.brancherExtractions(z, apiTableur());
         if (E.vue === 'inventaire' && VINV && !VINV.attente(db)) VINV.brancher(z, etatInventaire(), apiInventaire());
