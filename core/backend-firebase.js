@@ -350,6 +350,11 @@ export async function creerBackendFirebase() {
       // Copie rendue : figée. Les règles refuseraient de toute façon l'écriture de l'élève
       // (firestore.rules) ; on ne la tente pas, pour ne pas afficher une erreur à chaque geste.
       if (a && a.rendu) return a;
+      // Note posée par l'enseignant : figée pour l'élève (firestore.rules, 08/10/2026). On le dit
+      // avant d'écrire, pour que l'élève lise la cause et non un « n'a pas pu être enregistré ».
+      if (a && a.parProf && courant?.role === 'eleve') {
+        throw Object.assign(new Error('note posée par l’enseignant'), { code: 'note-prof' });
+      }
       const nouv = {
         ...res, uid, aid, gid,
         nom: courant?.nom || '', prenom: courant?.prenom || '',
@@ -382,6 +387,9 @@ export async function creerBackendFirebase() {
       const ref = dref('travaux', gid, 'eleves', uid, 'activites', aid);
       const anc = await FS.getDoc(ref);
       if (anc.exists() && anc.data().rendu) throw new Error('copie déjà rendue');
+      if (anc.exists() && anc.data().parProf && courant?.role === 'eleve') {
+        throw Object.assign(new Error('note posée par l’enseignant'), { code: 'note-prof' });
+      }
       const nouv = {
         uid, aid, gid,
         nom: res.nom ?? (courant?.nom || ''), prenom: res.prenom ?? (courant?.prenom || ''),

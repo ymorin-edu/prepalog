@@ -107,8 +107,7 @@ service cloud.firestore {
       // l'élève — il ne peut ni le réécrire ni l'effacer. Seul l'enseignant du groupe le
       // modifie (ramasser, rouvrir). `resource == null` : création, toujours permise.
       //
-      // Audit du 08/10/2026 (C1) : l'élève ne supprime plus rien (aucun écran ne le lui
-      // demande), ne pose pas la marque `parProf` d'une note d'enseignant, ne touche pas
+      // Audit du 08/10/2026 (C1) : l'élève ne pose pas la marque `parProf` d'une note d'enseignant, ne touche pas
       // à un document que l'enseignant a noté, n'écrit pas les drapeaux `_debloque-*`
       // (déblocage de parcours, réservé à l'enseignant) et ne met pas un autre uid/gid
       // dans le document. Le score lui-même reste calculé par le navigateur : l'outil est
@@ -122,7 +121,19 @@ service cloud.firestore {
                                 && request.resource.data.get('gid', gid) == gid
                                 && request.resource.data.get('score', 0) is number)
                             || profDuGroupe(gid);
-      allow delete: if profDuGroupe(gid);
+      // Suppression (décision de Tristan, 08/10/2026) : la remise à neuf d'un parcours
+      // (`versionBase`, core/app.js) est faite par l'élève lui-même : il efface ses scores du
+      // parcours et les déblocages de séance. Il peut donc supprimer ses propres travaux, SAUF
+      // une copie rendue et une note posée par l'enseignant (`parProf`), qui restent figées, et
+      // les drapeaux `_reprise-*`. Le drapeau `_debloque-*` est posé par l'enseignant (donc
+      // marqué `parProf`) mais l'élève peut le retirer : il ne peut toujours pas le créer
+      // (voir `allow create, update` ci-dessus). Supprimer un document absent est permis.
+      allow delete: if (uid == moi() && membreDuGroupe(gid)
+                        && !aid.matches('_reprise-.*')
+                        && (resource == null
+                            || (!('rendu' in resource.data)
+                                && (aid.matches('_debloque-.*') || resource.data.get('parProf', false) != true))))
+                    || profDuGroupe(gid);
     }
 
     // ------------------------------------------------- jeux privés (portée élève)

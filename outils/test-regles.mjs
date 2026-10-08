@@ -278,8 +278,28 @@ await v("l'enseignant saisit une note à la main", () =>
 await env.withSecurityRulesDisabled(async (ctx) => {
   await ctx.firestore().doc('travaux/g1/eleves/e1/activites/noteprof').set({ score: 12, max: 20, parProf: true });
 });
-await v("un élève ne supprime pas un travail non rendu", () =>
-  assertFails(fsDe('e1').doc('travaux/g1/eleves/e1/activites/qcm2').delete()));
+// Décision du 08/10/2026 : l'élève supprime ses travaux en cours (remise à neuf d'un parcours,
+// core/app.js), mais ni une copie rendue ni une note posée par l'enseignant.
+await env.withSecurityRulesDisabled(async (ctx) => {
+  await ctx.firestore().doc('travaux/g1/eleves/e1/activites/_debloque-m2').set({ score: 0, max: 0, parProf: true });
+  await ctx.firestore().doc('travaux/g1/eleves/e1/activites/_reprise-m2').set({ score: 0, max: 0, parProf: true });
+  await ctx.firestore().doc('travaux/g1/eleves/e1/activites/aSupprimer').set({ score: 4, max: 20 });
+  await ctx.firestore().doc('travaux/g1/eleves/e1/activites/copieRendue').set({ score: 3, max: 6, rendu: 1790000000000 });
+});
+await v("un élève supprime son travail non rendu", () =>
+  assertSucceeds(fsDe('e1').doc('travaux/g1/eleves/e1/activites/aSupprimer').delete()));
+await v("un élève ne supprime pas une note posée par l'enseignant", () =>
+  assertFails(fsDe('e1').doc('travaux/g1/eleves/e1/activites/noteprof').delete()));
+await v("un élève ne supprime pas une copie rendue", () =>
+  assertFails(fsDe('e1').doc('travaux/g1/eleves/e1/activites/copieRendue').delete()));
+await v("un élève retire son drapeau de déblocage", () =>
+  assertSucceeds(fsDe('e1').doc('travaux/g1/eleves/e1/activites/_debloque-m2').delete()));
+await v("un élève ne retire pas un drapeau de reprise", () =>
+  assertFails(fsDe('e1').doc('travaux/g1/eleves/e1/activites/_reprise-m2').delete()));
+await v("un élève ne supprime pas le travail d'un autre", () =>
+  assertFails(fsDe('e1').doc('travaux/g1/eleves/e2/activites/qcm2').delete()));
+await v("un élève étranger au groupe ne supprime rien dans ce groupe", () =>
+  assertFails(fsDe('e3').doc('travaux/g1/eleves/e3/activites/qcm2').delete()));
 await v("un élève ne pose pas la marque d'une note d'enseignant", () =>
   assertFails(fsDe('e1').doc('travaux/g1/eleves/e1/activites/qcm3').set({ score: 20, max: 20, parProf: true })));
 await v("un élève ne réécrit pas une note posée par l'enseignant", () =>
@@ -523,6 +543,13 @@ await v("un score qui n'est pas un nombre est refusé", () =>
 // plus haut, sur `$aid` : sans lui, la suppression ne passe que ligne par ligne et
 // s'arrête en chemin — c'est exactement ce qui était arrivé sur `jeux/$gid` le 30/09.
 // Le 02/10, ce cas a échoué au premier passage et c'est la règle qui a été corrigée.
+// Champs fermés (08/10/2026) : ce que le backend écrit réellement passe, le reste non.
+await v("le backend écrit sa ligne de classement avec _par et _ts", () =>
+  assertSucceeds(dbDe('e1').ref(`${CL}/e1`).set({ ...resultat(15), _par: 'e1', _ts: 1700000000001 })));
+await v("un champ inconnu est refusé au classement", () =>
+  assertFails(dbDe('e1').ref(`${CL}/e1`).set({ ...resultat(12), bourrage: 'x' })));
+await v("le nom complet (_parNom) n'est pas accepté au classement", () =>
+  assertFails(dbDe('e1').ref(`${CL}/e1`).set({ ...resultat(12), _parNom: 'Emma Durand' })));
 await v("un élève n'efface pas tout le classement", () =>
   assertFails(dbDe('e1').ref(CL).remove()));
 

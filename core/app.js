@@ -485,6 +485,8 @@ async function vueActivite(aid, avant) {
 
   // La dernière note écrite en base depuis l'ouverture de l'activité (voir `enregistrer`).
   let derniereNote = null;
+  // Vrai dès que l'enseignant a posé sa note sur cette séance (voir `enregistrer`).
+  let noteFigee = false;
   const ctx = {
     profil, groupe: groupeActif, meta: m.meta, jeu: jeuOuvert,
     // Réglés élève par élève par l'enseignant (onglet « Comptes élèves »). `aisance` :
@@ -539,8 +541,15 @@ async function vueActivite(aid, avant) {
       const note = { score: res.score, max: res.max, detail: res.detail || null };
       const cle = opts.cle ?? JSON.stringify(note);
       if (opts.siChange && cle === derniereNote) return;
+      if (noteFigee) return;
       try { await B.ecrireScore(groupeActif, profil.uid, aid, note); derniereNote = cle; }
-      catch (e) { toast("Le score n'a pas pu être enregistré."); }
+      catch (e) {
+        if (e && e.code === 'note-prof') {
+          // Une seule fois : la vue renvoie sa note à chaque geste.
+          noteFigee = true;
+          toast('Ton enseignant a posé une note sur cette séance, elle ne bouge plus.', 6000);
+        } else toast("Le score n'a pas pu être enregistré.");
+      }
     },
     // Le temps passé seul (repérage, brief MOTEUR-temps-passe) : une écriture légère, envoyée toutes les
     // 2 minutes par la vue, qui ne touche ni au score ni aux tentatives. Mêmes gardes qu'`enregistrer`.

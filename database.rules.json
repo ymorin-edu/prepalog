@@ -34,6 +34,9 @@
     "Les .validate ne protègent aucun secret : ils empêchent de",
     "se servir du classement comme d'un espace de stockage libre, la Realtime Database étant",
     "facturée à la bande passante.",
+    "Les champs sont fermés (08/10/2026) : gid, groupe, score, max, temps, ts, nom (facultatif)",
+    "et _par, _ts que le backend ajoute ; tout autre champ est refusé. Aucun nom complet n'est",
+    "écrit ici (poserLigne omet _parNom pour les classements).",
     "Conséquence à connaître : ce qu'un élève écrit là est lu par les élèves des autres",
     "groupes. Le site n'y met donc AUCUN nom par défaut, et le prénom suivi de l'initiale",
     "du nom si l'élève demande à s'attribuer son score."
@@ -98,7 +101,10 @@
           "score":  { ".validate": "newData.isNumber()" },
           "max":    { ".validate": "newData.isNumber()" },
           "temps":  { ".validate": "newData.isNumber()" },
-          "ts":     { ".validate": "newData.isNumber()" }
+          "ts":     { ".validate": "newData.isNumber()" },
+          "_par":   { ".validate": "newData.isString() && newData.val().length < 60" },
+          "_ts":    { ".validate": "newData.isNumber()" },
+          "$autre": { ".validate": false }
         }
       }
     },

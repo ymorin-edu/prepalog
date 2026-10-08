@@ -308,7 +308,10 @@ await v('copie : la règle Firestore fige un résultat rendu pour l’élève (t
   const fs = await import('node:fs');
   const t = fs.readFileSync(new URL('../../firestore.rules', import.meta.url), 'utf8');
   const bloc = t.slice(t.indexOf('match /travaux/'), t.indexOf('match /prives/'));
-  if (!/uid == moi\(\) && membreDuGroupe\(gid\)\s*&& \(resource == null \|\| !\('rendu' in resource\.data\)\)/.test(bloc)) throw new Error('règle absente : ' + bloc);
+  // Écriture (création/mise à jour) puis suppression : les deux refusent un résultat qui porte `rendu`.
+  if (!/uid == moi\(\) && membreDuGroupe\(gid\)[\s\S]*?resource == null\s*\|\|\s*\(!\('rendu' in resource\.data\)/.test(bloc)) throw new Error('règle d’écriture absente : ' + bloc);
+  const suppr = bloc.slice(bloc.indexOf('allow delete'));
+  if (!/resource == null\s*\|\|\s*\(!\('rendu' in resource\.data\)/.test(suppr)) throw new Error('règle de suppression absente : ' + suppr);
 });
 
 await v('copie : aucune erreur JavaScript', async () => {

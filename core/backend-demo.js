@@ -24,6 +24,10 @@ function abonner(chemin, cb) {
   };
 }
 
+// Erreur rendue quand un élève tente d'écrire sur une séance que l'enseignant a notée : le vrai
+// service la refuse (PERMISSION_DENIED), ici on la lève à la main pour que la suite la voie.
+const erreurNoteFigee = () => Object.assign(new Error('note posée par l’enseignant'), { code: 'note-prof' });
+
 let courant = null;          // { uid, role, nom, prenom, matricule, groupes }
 const auditeursAuth = [];
 
@@ -222,6 +226,9 @@ export function creerBackendDemo() {
       // `rendreCopie` ci-dessous et `core/copie.js`. Le vrai service le garantit aussi par ses
       // règles (firestore.rules) ; ici, c'est la seule garde.
       if (anc && anc.rendu) return anc;
+      // Une note posée par l'enseignant (« mettre 0 », `parProf`) est figée pour l'élève, comme
+      // dans firestore.rules (08/10/2026). L'enseignant, lui, la remplace (poserNote).
+      if (anc && anc.parProf && courant?.role === 'eleve') throw erreurNoteFigee();
       const nouv = {
         ...res, uid, aid, gid,
         nom: courant?.nom || '', prenom: courant?.prenom || '',
@@ -241,7 +248,7 @@ export function creerBackendDemo() {
       const cle = `travaux/${gid}/${uid}/${aid}`;
       const anc = lire(cle, null);
       if (!anc) return false;
-      if (anc.rendu) return true;
+      if (anc.rendu || (anc.parProf && courant?.role === 'eleve')) return true;
       const detail = { ...(anc.detail || {}) };
       const ind = { ...(detail.indicateurs || {}) };
       const r = { ...(ind[idSeance] || {}) };
@@ -277,11 +284,12 @@ export function creerBackendDemo() {
     // Copie rendue (évaluation, `meta.copie`) : une seule remise, note figée. L'élève la rend
     // lui-même, ou l'enseignant la ramasse (`ramasse: true`, avec le nom de l'élève). Refusée
     // si une copie est déjà rendue : la première remise fait foi. Le score remplace un 0 posé
-    // par l'enseignant (élève absent puis rattrapage).
+    // par l'enseignant quand c'est l'enseignant qui ramasse ; l'élève, lui, ne la remplace plus.
     async rendreCopie(gid, uid, aid, res) {
       const cle = `travaux/${gid}/${uid}/${aid}`;
       const anc = lire(cle, null);
       if (anc && anc.rendu) throw new Error('copie déjà rendue');
+      if (anc && anc.parProf && courant?.role === 'eleve') throw erreurNoteFigee();
       const nouv = {
         uid, aid, gid,
         nom: res.nom ?? (courant?.nom || ''), prenom: res.prenom ?? (courant?.prenom || ''),

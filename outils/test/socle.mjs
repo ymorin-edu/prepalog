@@ -656,6 +656,40 @@ await v('suivi : mettre 0 à un élève présent qui n\'a rien fait, l\'effacer,
   }, ids);
 });
 
+// Décision du 08/10/2026 : une note posée par l'enseignant (« mettre 0 ») reste figée pour l'élève,
+// comme dans firestore.rules. Le test change de compte dans la même page, puis rend la main à
+// l'enseignant. Il ne touche qu'au dossier de Léa DUPONT sur QUI-7, remis comme trouvé.
+await v("suivi : le 0 posé par l'enseignant tient quand l'élève refait la séance", async () => {
+  const BTN = '.btn-zero[aria-label="Mettre 0 — QUI-7 — DUPONT Léa"]';
+  await page.click('[data-ong="suivi"]');
+  await page.waitForSelector(BTN, { timeout: 6000 });
+  await page.click(BTN);
+  await page.waitForSelector('.btn-zero-eff[aria-label="Effacer le 0 — QUI-7 — DUPONT Léa"]');
+  const r = await page.evaluate(async () => {
+    const k = Object.keys(localStorage).find((x) => /travaux\/[^/]+\/[^/]+\/calculs-stock$/.test(x));
+    const [, gid, uid] = k.match(/travaux\/([^/]+)\/([^/]+)\/calculs-stock$/);
+    const { B } = await import('/core/backend.js');
+    const sortie = { gid, uid };
+    await B.connexionEleve('2601', 'aaa1');
+    try { await B.ecrireScore(gid, uid, 'calculs-stock', { score: 8, max: 8 }); sortie.ecrit = true; }
+    catch (e) { sortie.code = e.code; }
+    sortie.temps = await B.majTemps(gid, uid, 'calculs-stock', 'calculs-stock', 99);
+    sortie.apres = await B.lireScore(gid, uid, 'calculs-stock');
+    await B.connexionProf();
+    return sortie;
+  });
+  try {
+    if (r.ecrit || r.code !== 'note-prof') throw new Error("l'élève a pu réécrire le 0 : " + JSON.stringify(r));
+    if (r.apres.score !== 0 || r.apres.meilleur !== 0 || !r.apres.parProf) throw new Error('le 0 a bougé : ' + JSON.stringify(r.apres));
+    if (r.apres.detail) throw new Error('le temps passé a été écrit sur une séance notée : ' + JSON.stringify(r.apres));
+  } finally {
+    await page.evaluate(async ({ gid, uid }) => {
+      const { B } = await import('/core/backend.js');
+      await B.poserNote(gid, uid, 'calculs-stock', null);
+    }, { gid: r.gid, uid: r.uid });
+  }
+});
+
 // ---------- 13. bascule clair / sombre
 await v('bascule du thème et persistance', async () => {
   const fondDe = () => page.evaluate(() => getComputedStyle(document.body).backgroundColor);

@@ -19,7 +19,7 @@
 | # | Chantier | Audit | Taille | Modèle | `core/` | Dépend de | État |
 |---|---|---|---|---|---|---|---|
 | **Lot A — protéger la note et les données** | | | | | | | |
-| 1 | Règles Firestore : élève, groupes, score ; droits des enseignants | C1 | moyen | Sonnet | non (règles) | — | **livré en partie** (commit 7a86d42, 08/10) ; restent `classements` RTDB, et deux effets à trancher (remise à neuf `versionBase`, « mise à 0 » de l'enseignant), voir inspection du 08/10 |
+| 1 | Règles Firestore : élève, groupes, score ; droits des enseignants | C1 | moyen | Sonnet | non (règles) | — | **livré** (7a86d42 puis 1 bis, 08/10) ; reste à **publier les deux consoles** (Tristan) |
 | 2 | Remettre `CLAUDE.md` et `FICHE-SEANCE.md` d'aplomb | C18 | petit | Sonnet | non | — | à faire |
 | 3 | Tests de règles sur GitHub, hôtes externes partout, port pris lisible | C10a | petit | Sonnet | non (tests) | — | à faire |
 | 4 | Fiabiliser le mode réel (écoutes, échecs remontés, geler, suivi) | C2 | moyen | Sonnet | oui | 3 | **en cours** (autre session, 08/10) |
