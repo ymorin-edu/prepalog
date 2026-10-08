@@ -370,5 +370,23 @@ await v('élèves sans groupe : la suppression retire demiDe, équipe, classemen
   });
 });
 
+// ---------- 38 octies. « Reconstruire l'accès » : le bouton existe et répond (6b, chantier 6)
+// En démonstration la fonction est un non-évènement qui réussit ; le refus (enseignant hors
+// profsGlobaux) se tient dans les règles (`outils/test-regles.mjs`, 15 quater), pas ici.
+await v('groupes : le bouton « Reconstruire l\'accès » répond « Accès reconstruit » en démonstration', async () => {
+  await page.click('#btnRetour');
+  await page.waitForSelector('#btnProfEspace', { timeout: 6000 });
+  await page.click('#btnProfEspace');
+  await page.waitForSelector('[data-ong="groupes"]', { timeout: 6000 });
+  await page.click('[data-ong="groupes"]');
+  await page.waitForSelector('[data-acces]', { timeout: 6000 });
+  const n = await page.$$eval('[data-acces]', (l) => l.length);
+  const g = await page.$$eval('[data-suppr]', (l) => l.length);
+  if (n !== g) throw new Error(`un bouton « Reconstruire l'accès » par groupe : ${n} pour ${g} groupes`);
+  const txt = await page.textContent('[data-acces]');
+  if (!/Reconstruire l'accès/.test(txt)) throw new Error('libellé inattendu : ' + txt);
+  await page.click('[data-acces]');
+  await page.waitForFunction(() => /Accès reconstruit/.test(document.getElementById('toast')?.textContent || ''), null, { timeout: 4000 });
+});
 
 }

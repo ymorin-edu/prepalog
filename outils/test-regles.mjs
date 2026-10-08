@@ -593,6 +593,20 @@ await v("l'élève efface toujours sa propre ligne de classement", () =>
 await v("un enseignant global efface toujours une ligne sans gid", () =>
   assertSucceeds(dbDe('prof1').ref(`${CL2}/e5`).remove()));
 
+// ---------- 15 quater. reconstruire le miroir d'accès d'un groupe orphelin (chantier 6)
+// `reconstruireAcces()` écrit en un seul `update` sur `acces/{gid}` : les profs du groupe et chaque
+// élève. Le groupe orphelin (Firestore créé, miroir jamais écrit) n'a pas de nœud : seule la
+// branche `profsGlobaux` de `acces/$gid` .write l'autorise.
+const miroir = { 'profs/prof2': true, 'eleves/e3': true };
+await v("un enseignant hors profsGlobaux ne reconstruit pas un miroir absent", () =>
+  assertFails(dbDe('prof2').ref('acces/gorphelin').update(miroir)));
+await v("un enseignant de profsGlobaux reconstruit un miroir absent", () =>
+  assertSucceeds(dbDe('prof1').ref('acces/gorphelin').update({ 'profs/prof1': true, 'eleves/e3': true })));
+await v("l'enseignant inscrit au miroir le réécrit sans être global", () =>
+  assertSucceeds(dbDe('prof2').ref('acces/g2').update({ 'eleves/e6': true })));
+await v("un élève ne reconstruit pas le miroir d'un groupe", () =>
+  assertFails(dbDe('e3').ref('acces/gorphelin').update({ 'eleves/e3': true, 'profs/e3': true })));
+
 // Et `communs/` n'a pas bougé : toujours en lecture seule pour les élèves.
 await v("un élève n'écrit toujours pas dans les référentiels communs", () =>
   assertFails(dbDe('e1').ref('communs/ref1/table/L2').set({ a: 1 })));

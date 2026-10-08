@@ -233,6 +233,14 @@ export function creerBackendDemo() {
       return { compte: true, restes: [] };
     },
 
+    // Réécrit le miroir d'accès côté Realtime Database : en démonstration il n'y en a pas, la
+    // fonction réussit sans rien faire (le mode réel la refuse à un enseignant hors profsGlobaux).
+    async reconstruireAcces(gid) {
+      const g = groupes()[gid];
+      if (!g) throw new Error('Groupe introuvable.');
+      return { profs: (g.profs || []).length, eleves: (await this.elevesDuGroupe(gid)).length };
+    },
+
     // Niveau et tiers-temps d'un élève (voir core/amenagements.js). Même garde qu'en mode
     // réel, où ce sont les règles Firestore qui la tiennent : seul un enseignant écrit.
     async majAmenagements(uid, patch) {

@@ -307,6 +307,8 @@ export async function rendreEspaceProf(hote, ctx) {
               <td><span class="etiq">${ech(g.code || '')}</span></td>
               <td class="rangee">
                 ${g.id === gidActif ? '<span class="note">actif</span>' : `<button class="btn btn-s" data-actif="${ech(g.id)}">Activer</button>`}
+                <button class="btn btn-s" data-acces="${ech(g.id)}"
+                  title="À utiliser si les élèves de ce groupe n'arrivent pas à ouvrir les bases partagées : réécrit les droits d'accès côté Realtime Database">Reconstruire l'accès</button>
                 <button class="btn btn-s" data-suppr="${ech(g.id)}" style="color:var(--rouge)"
                   title="Supprimer définitivement ce groupe">Supprimer</button>
               </td>
@@ -421,6 +423,19 @@ export async function rendreEspaceProf(hote, ctx) {
       } catch (e) { toast(e.message); }
     });
     z.querySelectorAll('[data-actif]').forEach((b) => b.addEventListener('click', () => { activer(b.dataset.actif); dessiner(); }));
+
+    // Reconstruire le miroir d'accès d'un groupe (chantier 6, 08/10/2026) : si l'écriture de
+    // `acces/{gid}` a échoué à la création du groupe, il existe côté Firestore sans droits côté
+    // Realtime Database. Texte seul, aucune confirmation : l'opération ne supprime rien.
+    z.querySelectorAll('[data-acces]').forEach((b) => b.addEventListener('click', async () => {
+      const gid = b.dataset.acces;
+      b.disabled = true;
+      try {
+        await B.reconstruireAcces(gid);
+        toast('Accès reconstruit.');
+      } catch (e) { toast(e.message || "L'accès n'a pas pu être reconstruit.", 6000); }
+      b.disabled = false;
+    }));
 
     z.querySelectorAll('[data-suppr]').forEach((b) => b.addEventListener('click', async () => {
       const gid = b.dataset.suppr;

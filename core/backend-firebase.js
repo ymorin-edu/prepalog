@@ -163,6 +163,34 @@ export async function creerBackendFirebase() {
     },
     async majGroupe(gid, patch) { await FS.updateDoc(dref('groupes', gid), patch); },
 
+    // Réécrit le miroir d'accès d'un groupe côté Realtime Database (chantier 6, 08/10/2026).
+    // `creerGroupe()` écrit Firestore puis `acces/{gid}` ; si la seconde écriture échoue
+    // (enseignant absent de `profsGlobaux`), le groupe existe sans droits côté base temps réel
+    // et rien ne le répare. Source de vérité : le document Firestore du groupe (ses `profs`) et
+    // les profils de ses élèves. Écriture seule, rien n'est supprimé. Refusée par les règles si
+    // l'enseignant n'est pas dans `profsGlobaux` ET que le miroir n'existe pas (ou ne le cite pas).
+    async reconstruireAcces(gid) {
+      if (!courant) throw new Error('Connexion requise.');
+      const g = await this.groupe(gid);
+      if (!g) throw new Error('Groupe introuvable.');
+      if (!(g.profs || []).includes(courant.uid)) throw new Error("Ce groupe n'est pas le vôtre.");
+      const profs = new Set(g.profs);
+      const eleves = await this.elevesDuGroupe(gid);
+      const maj = {};
+      profs.forEach((p) => { maj[`profs/${p}`] = true; });
+      eleves.forEach((e) => { maj[`eleves/${e.uid}`] = true; });
+      ouvrirRt();
+      try {
+        await DB.update(DB.ref(rt, `acces/${gid}`), maj);
+      } catch (e) {
+        if (/permission/i.test((e && (e.code || e.message)) || '')) {
+          throw new Error("Ton compte n'est pas encore autorisé côté Realtime Database : voir la procédure d'amorçage (profsGlobaux).");
+        }
+        throw e;
+      }
+      return { profs: profs.size, eleves: eleves.length };
+    },
+
     // Niveau et tiers-temps d'un élève (voir core/amenagements.js). Les règles Firestore
     // refusent qu'un élève écrive ces deux champs sur son propre profil.
     async majAmenagements(uid, patch) { await FS.updateDoc(dref('users', uid), filtrerAmenagements(patch)); },
