@@ -37,6 +37,21 @@ service cloud.firestore {
         && moi() in get(/databases/$(database)/documents/groupes/$(gid)).data.get('profs', []);
     }
 
+    // « Responsable » d'un groupe = le premier de sa liste `profs` (le créateur ; un collègue ajouté
+    // se place à la fin). Chantier 11, lot 11b (09/10/2026). Jamais d'hypothèse sur le groupe :
+    // `exists()` d'abord (un `get()` sur un document absent rend null), `.get('profs', [])` ensuite
+    // (champ absent), et `[0]` seulement sur une liste non vide (un `[0]` sur une liste vide fait
+    // échouer l'évaluation, donc refuse : acceptable ici, mais on ne s'y fie pas).
+    function responsableDe(gid) {
+      return exists(/databases/$(database)/documents/groupes/$(gid))
+        && get(/databases/$(database)/documents/groupes/$(gid)).data.get('profs', []).size() > 0
+        && get(/databases/$(database)/documents/groupes/$(gid)).data.get('profs', [])[0] == moi();
+    }
+    // Le profil d'un élève cite ses groupes ; le premier est celui où il travaille (core/app.js).
+    function responsableDuPremierGroupe(gs) {
+      return gs is list && gs.size() > 0 && gs[0] is string && responsableDe(gs[0]);
+    }
+
     // ---------------------------------------------------------------- profils
     match /users/{uid} {
       // Chacun lit son profil ; un enseignant lit les profils de ses élèves.
@@ -76,8 +91,19 @@ service cloud.firestore {
       );
 
       // Suppression : l'enseignant efface un profil d'élève (supprimerEleve), jamais celui
-      // d'un collègue.
-      allow delete: if estProf() && resource.data.get('role', '') == 'eleve';
+      // d'un collègue. Chantier 11, lot 11b (09/10/2026) : on ne supprime que ce qu'on a créé, ou
+      // ce dont on est responsable. Un profil d'élève peut donc être supprimé par
+      //  - son auteur (`creePar` == moi) ;
+      //  - n'importe quel enseignant s'il n'a pas d'auteur (élève créé à la console, ou avant le
+      //    champ `creePar`) : c'est le comportement d'avant, qu'on ne retire à personne ;
+      //  - le responsable du premier groupe de l'élève (il efface ce que son co-enseignant a créé).
+      // Jamais par un simple co-enseignant, ni par un enseignant étranger : celui-là DÉTACHE
+      // l'élève de son groupe (`groupes` : mise à jour permise plus haut), ce qui est réversible.
+      // `get('creePar', '')` : le champ n'est jamais supposé exister.
+      allow delete: if estProf() && resource.data.get('role', '') == 'eleve' && (
+        resource.data.get('creePar', '') in ['', null, moi()]
+        || responsableDuPremierGroupe(resource.data.get('groupes', []))
+      );
     }
 
     // ---------------------------------------------------------------- groupes
@@ -95,7 +121,12 @@ service cloud.firestore {
       );
       allow create: if estProf() && moi() in request.resource.data.get('profs', []);
       allow update: if profDuGroupe(gid);
-      allow delete: if profDuGroupe(gid);
+      // Suppression réservée au responsable (premier de `profs`) : un co-enseignant QUITTE le groupe
+      // (il se retire de `profs`, ce que `update` permet), il ne le supprime pas (chantier 11, lot 11b).
+      // `resource` est déjà en main : aucune lecture de plus. Absent ou sans `profs` = refus.
+      allow delete: if connecte() && resource != null
+        && resource.data.get('profs', []).size() > 0
+        && resource.data.get('profs', [])[0] == moi();
     }
 
     // ---------------------------------------------------------------- travaux
