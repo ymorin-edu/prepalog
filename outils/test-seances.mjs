@@ -42,7 +42,16 @@ const srv = http.createServer((req, res) => {
   res.writeHead(200, { 'Content-Type': TYPES[path.extname(f)] || 'application/octet-stream' });
   res.end(fs.readFileSync(f));
 });
-await new Promise((r) => srv.listen(PORT, r));
+// Port déjà pris : un message lisible plutôt qu'une pile `EADDRINUSE`.
+await new Promise((r) => {
+  srv.once('error', (e) => {
+    console.error(e.code === 'EADDRINUSE'
+      ? `Le port ${PORT} est déjà pris (une autre suite tourne ?). Relancer avec : PORT_SEANCES=${PORT + 100} node outils/test-seances.mjs`
+      : `Le serveur de test ne démarre pas sur le port ${PORT} : ${e.message}`);
+    process.exit(2);
+  });
+  srv.listen(PORT, r);
+});
 const URL_SITE = `http://127.0.0.1:${PORT}/`;
 
 const nav = await chromium.launch();

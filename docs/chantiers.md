@@ -21,7 +21,7 @@
 | **Lot A — protéger la note et les données** | | | | | | | |
 | 1 | Règles Firestore : élève, groupes, score ; droits des enseignants | C1 | moyen | Sonnet | non (règles) | — | **livré** (7a86d42 puis 1 bis, 08/10) ; reste à **publier les deux consoles** (Tristan) |
 | 2 | Remettre `CLAUDE.md` et `FICHE-SEANCE.md` d'aplomb | C18 | petit | Sonnet | non | — | **livré** (08/10, Fable, doc seule : les fiches de `docs/fiches/` restent à Cowork, voir l'annexe de l'audit) |
-| 3 | Tests de règles sur GitHub, hôtes externes partout, port pris lisible | C10a | petit | Sonnet | non (tests) | — | à faire |
+| 3 | Tests de règles sur GitHub, hôtes externes partout, port pris lisible | C10a | petit | Sonnet | non (tests) | — | **livré** (08/10, HASH) |
 | 4 | Fiabiliser le mode réel (écoutes, échecs remontés, geler, suivi) | C2 | moyen | Sonnet | oui | 3 | **en cours** (autre session, 08/10) |
 | 5 | Un bug de contenu n'est plus noté « faux » | C3 | petit | Sonnet | oui | 4 fini | à faire |
 | 6 | Suppressions sans traces invisibles, miroir reconstruisible | C4 | moyen | Sonnet | oui | 1, 4 | à faire |
@@ -124,6 +124,15 @@ s'aligner.
   variable `PORT_TESTS`. **Touche `commun.mjs` : à dire à Tristan.**
 - **Fini quand.** Un sabotage (ajouter une `<img src="https://…">` dans une vue d'entreprise) fait
   tomber la suite dans le groupe 3 aussi ; le workflow montre le job des règles.
+- **Fait (08/10/2026).** `commun.mjs` enveloppe `nav.newContext` : toute page de tout contexte alimente
+  `hotesExternes` et `introuvables` (les erreurs JS restent celles de la page partagée) ; `test.mjs` ajoute,
+  après la boucle des blocs, un dernier cas « aucune requête externe, aucun fichier introuvable hors
+  `prepalog-config.json` », valable pour tout groupe ou bloc lancé ; un port pris (`EADDRINUSE`) affiche
+  un message en français avec `PORT_TESTS=…` (aussi dans `test-seances.mjs`, `PORT_SEANCES`). Sabotage
+  éprouvé : une `<img>` externe dans `planning.js` (contexte propre du bloc) fait tomber le nouveau cas.
+  Les tests de règles sur GitHub existaient déjà (chantier 2, job `regles` de `.github/workflows/tests.yml`,
+  émulateurs Firestore et RTDB, `outils/test-regles.mjs`) : ils couvrent les règles dans les deux sens,
+  pas le mode réel du site lui-même.
 
 ### 4. Fiabiliser le mode réel (C2) — en cours par une autre session
 - **Ce qu'on fait.** Appeler la fonction de désabonnement renvoyée par `onValue` au lieu de `off` ;

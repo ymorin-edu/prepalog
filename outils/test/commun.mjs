@@ -47,9 +47,44 @@ const srv = http.createServer((req, res) => {
 // connaissent que `BASE`, l'adresse du site de test.
 const PORT = Number(process.env.PORT_TESTS || 8099);
 const BASE = `http://127.0.0.1:${PORT}/`;
-await new Promise((r) => srv.listen(PORT, r));
+// Port déjà pris (deux suites lancées en même temps : arrivé le 08/10/2026) : sans écouteur
+// d'erreur, Node affichait une pile brute `EADDRINUSE`. On dit ce qui se passe, en français.
+await new Promise((r) => {
+  srv.once('error', (e) => {
+    if (e.code === 'EADDRINUSE') {
+      console.error(`Le port ${PORT} est déjà pris (une autre suite tourne ?). Relancer avec : PORT_TESTS=${PORT + 100} node outils/test.mjs`);
+    } else {
+      console.error(`Le serveur de test ne démarre pas sur le port ${PORT} : ${e.message}`);
+    }
+    process.exit(2);
+  });
+  srv.listen(PORT, r);
+});
 
 const nav = await chromium.launch();
+// Relevés faits sur TOUS les onglets de TOUS les contextes (et pas seulement la page partagée) :
+// dix-neuf blocs ouvrent leurs propres contextes par `nav.newContext()`, et une image venue d'un
+// CDN chargée dans l'un d'eux serait passée inaperçue. `nav.newContext` est donc enveloppé : chaque
+// page de chaque contexte alimente `introuvables` (réponses 404) et `hotesExternes` (requêtes hors
+// du site de test). Les erreurs JavaScript (`erreurs`), elles, restent celles de la page partagée :
+// les blocs ont leurs propres écouteurs et leurs cas « aucune erreur ».
+const introuvables = new Set();
+const hotesExternes = new Set();
+const surveiller = (p) => {
+  p.on('response', (r) => { if (r.status() === 404) introuvables.add(new URL(r.url()).pathname); });
+  p.on('request', (r) => {
+    try {
+      const h = new URL(r.url()).hostname;
+      if (h && !['127.0.0.1', 'localhost'].includes(h)) hotesExternes.add(h);
+    } catch (e) {}
+  });
+};
+const newContextOrigine = nav.newContext.bind(nav);
+nav.newContext = async (...args) => {
+  const c = await newContextOrigine(...args);
+  c.on('page', surveiller);
+  return c;
+};
 const ctx = await nav.newContext();
 const page = await ctx.newPage();
 page.setDefaultTimeout(5000);
@@ -60,8 +95,6 @@ const erreurs = [];
 // chargement ; le compter ferait échouer la suite en permanence, et masquerait les vraies.
 // On l'écarte donc du relevé, mais on note toutes les URL introuvables : un test dédié
 // vérifie qu'il n'y en a pas d'autre, si bien que rien n'est perdu.
-const introuvables = new Set();
-page.on('response', (r) => { if (r.status() === 404) introuvables.add(new URL(r.url()).pathname); });
 page.on('pageerror', (e) => erreurs.push('PAGEERROR: ' + e.message));
 page.on('console', (m) => {
   if (m.type() !== 'error') return;
@@ -83,13 +116,6 @@ for (const base of [process.env.NODE_PATH, `${process.env.HOME}/.npm-global/lib/
 }
 
 // Toute requête sortante est notée : le dépôt ne doit dépendre d'aucun hébergeur extérieur.
-const hotesExternes = new Set();
-page.on('request', (r) => {
-  try {
-    const h = new URL(r.url()).hostname;
-    if (h && !['127.0.0.1', 'localhost'].includes(h)) hotesExternes.add(h);
-  } catch (e) {}
-});
 
 const ok = [];
 const ko = [];

@@ -16,8 +16,9 @@
 // son entreprise ou de sa vue.
 //
 // Ce qui ne change pas : la commande, le bilan affiché, le code de retour (1 si un cas échoue ou
-// si une erreur JavaScript est relevée), et l'ORDRE des cas. Un seul navigateur, une seule page
-// partagée (`outils/test/commun.mjs`) : certains blocs s'appuient sur ce qu'a fait le bloc
+// si une erreur JavaScript est relevée), et l'ORDRE des cas (s'ajoute seulement, après
+// la boucle des blocs, un dernier cas « aucune requête externe » sur tous les onglets). Un seul navigateur,
+// une seule page partagée (`outils/test/commun.mjs`) : certains blocs s'appuient sur ce qu'a fait le bloc
 // précédent dans cette page — Spartoo et « groupes » sur l'élève et les groupes créés par le
 // socle. Lancés seuls, ils sont donc précédés de leur prérequis (`PREREQUIS`).
 //
@@ -111,6 +112,15 @@ for (const nom of aLancer) {
   });
   durees.push(`${nom} ${Math.round((Date.now() - t0) / 1000)} s`);
 }
+
+// Vérification finale, quel que soit le groupe ou le bloc lancé : `hotesExternes` et `introuvables`
+// sont alimentés par TOUS les onglets de TOUS les contextes (voir `commun.mjs`). Les cas de
+// `dependances` et de `quiz` qui les lisent plus tôt ne voient que ce qui s'est passé avant eux.
+await C.v('aucune requête externe, et aucun fichier introuvable hors prepalog-config.json, dans toute la suite', async () => {
+  if (C.hotesExternes.size) throw new Error('requête externe : ' + [...C.hotesExternes].join(', '));
+  const autres = [...C.introuvables].filter((p) => p !== C.SANS_CONFIG);
+  if (autres.length) throw new Error('fichier introuvable : ' + autres.join(', '));
+});
 
 console.log('\nDurée par bloc : ' + durees.join(' · '));
 console.log('\n=== RÉUSSIS ===');
