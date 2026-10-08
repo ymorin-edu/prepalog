@@ -306,7 +306,8 @@ export async function creerBackendFirebase() {
     // (enseignant absent de `profsGlobaux`), le groupe existe sans droits côté base temps réel
     // et rien ne le répare. Source de vérité : le document Firestore du groupe (ses `profs`) et
     // les profils de ses élèves. Écriture seule, rien n'est supprimé. Refusée par les règles si
-    // l'enseignant n'est pas dans `profsGlobaux` ET que le miroir n'existe pas (ou ne le cite pas).
+    // l'enseignant n'est pas dans `profsGlobaux` ET que le miroir n'existe pas (ou ne le cite pas). Depuis le
+    // lot 11b du chantier 11 : un miroir qui existe ne se réécrit que par un enseignant qu'il cite, même global.
     async reconstruireAcces(gid) {
       if (!courant) throw new Error('Connexion requise.');
       const g = await this.groupe(gid);
@@ -322,7 +323,7 @@ export async function creerBackendFirebase() {
         await DB.update(DB.ref(rt, `acces/${gid}`), maj);
       } catch (e) {
         if (/permission/i.test((e && (e.code || e.message)) || '')) {
-          throw new Error("Ton compte n'est pas encore autorisé côté Realtime Database : voir la procédure d'amorçage (profsGlobaux).");
+          throw new Error("Ton compte ne peut pas écrire cet accès côté Realtime Database. Si le groupe est celui d'un collègue qui t'a ajouté, c'est lui (le responsable) qui doit cliquer sur « Reconstruire l'accès » ; sinon, voir la procédure d'amorçage (profsGlobaux).");
         }
         throw e;
       }
