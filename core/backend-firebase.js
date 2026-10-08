@@ -163,6 +163,20 @@ export async function creerBackendFirebase() {
         throw e;
       }
     },
+    // Où en est ce groupe pour l'enseignant connecté : 'mien' (il y figure), 'autre' (il existe chez un collègue :
+    // lecture refusée par les règles, ou lisible sans lui dans `profs`) ou 'absent' (supprimé). `groupe()` rend
+    // `null` pour les deux derniers ; la garde de suppression d'un élève a besoin de les distinguer (un
+    // groupe disparu n'empêche plus de supprimer, un groupe de collègue oui).
+    async etatGroupe(gid) {
+      try {
+        const s = await FS.getDoc(dref('groupes', gid));
+        if (!s.exists()) return 'absent';
+        return courant && (s.data().profs || []).includes(courant.uid) ? 'mien' : 'autre';
+      } catch (e) {
+        if (e && e.code === 'permission-denied') return 'autre';
+        throw e;
+      }
+    },
     // Chantier 11 (09/10/2026) : le nom d'abord. Si un collègue a déjà un groupe de ce nom, la lecture du
     // document est REFUSÉE par les règles (firestore.rules : on ne lit que ses groupes, ou un groupe
     // inexistant) ; c'est le signal « nom pris par un autre » : le groupe prend alors le suffixe de
@@ -524,7 +538,14 @@ export async function creerBackendFirebase() {
       const gidsProfil = (el && el.groupes) || [];
       const profs = groupesProf || (courant ? await this.groupesDuProf(courant.uid) : []);
       if (!sansGarde && courant) {
-        const refus = gardeSuppressionEleve(el, { moi: courant.uid, groupes: profs });
+        // Les groupes cités par le profil et qui ne sont pas à moi : seuls ceux qui existent chez un collègue
+        // arrêtent la suppression (un groupe disparu est seulement nommé dans `restes`).
+        const idsMiens = new Set(profs.map((g) => g.id));
+        const etrangers = [];
+        for (const gid of gidsProfil) {
+          if (!idsMiens.has(gid) && (await this.etatGroupe(gid)) !== 'absent') etrangers.push(gid);
+        }
+        const refus = gardeSuppressionEleve(el, { moi: courant.uid, groupes: profs, etrangers });
         if (refus) throw new Error(refus);
       }
       const idsProf = new Set(profs.map((g) => g.id));

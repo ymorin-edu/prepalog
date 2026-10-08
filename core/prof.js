@@ -583,6 +583,17 @@ export async function rendreEspaceProf(hote, ctx) {
   // ------------------------------------------------------------------ comptes
   async function vueComptes(z, g) {
     const eleves = await B.elevesDuGroupe(g.id);
+    // Parmi les groupes cités par les profils et qui ne sont pas à moi, ceux qui existent chez un collègue
+    // (un groupe disparu n'empêche pas de supprimer un élève : voir core/collegues.js).
+    const etrangers = [];
+    {
+      const miens = new Set(groupes.map((x) => x.id));
+      const aVoir = [...new Set(eleves.flatMap((e) => e.groupes || []))].filter((id) => !miens.has(id));
+      await Promise.all(aVoir.map(async (id) => {
+        try { if ((await B.etatGroupe(id)) !== 'absent') etrangers.push(id); } catch (e) { etrangers.push(id); }
+      }));
+    }
+    const refusSuppr = (e) => gardeSuppressionEleve(e, { moi: ctx.profil.uid, groupes, etrangers });
     // Demi-groupes : la colonne n'apparaît que si la classe en a.
     const demis = demisDe(g);
     const demiEleve = (uid) => { const d = (g.demiDe || {})[uid]; return demis.some((x) => x.id === d) ? d : ''; };
@@ -629,9 +640,9 @@ export async function rendreEspaceProf(hote, ctx) {
               </select></td>
               <td><label class="rangee" style="gap:6px"><input type="checkbox" data-tiers="${ech(e.uid)}"${a.tiersTemps ? ' checked' : ''}
                 aria-label="Tiers-temps de ${ech(e.prenom)} ${ech(e.nom)}"></label></td>
-              <td>${gardeSuppressionEleve(e, { moi: ctx.profil.uid, groupes })
+              <td>${refusSuppr(e)
                 ? `<button class="btn btn-s" data-retirere="${ech(e.uid)}"
-                    title="${ech(gardeSuppressionEleve(e, { moi: ctx.profil.uid, groupes }))}">Retirer du groupe</button>`
+                    title="${ech(refusSuppr(e))}">Retirer du groupe</button>`
                 : `<button class="btn btn-s" data-suppre="${ech(e.uid)}" style="color:var(--rouge)"
                     title="Supprimer définitivement cet élève">Supprimer</button>`}</td></tr>`; }).join('')}
           </tbody></table>

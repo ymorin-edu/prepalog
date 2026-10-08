@@ -32,17 +32,24 @@ export const libelleProf = (p) => {
 
 // Pourquoi un enseignant ne peut pas SUPPRIMER cet élève ; null s'il le peut.
 //  - `groupes` : les groupes de cet enseignant (documents complets, avec leur liste `profs`).
-//  - un élève qui figure dans un groupe qui n'est pas à moi : jamais supprimé (un collègue le suit
-//    aussi) ;
-//  - un élève créé par un collègue : supprimé seulement par le responsable de son groupe ;
+//  - `etrangers` : parmi les groupes cités par le profil de l'élève et qui ne sont pas à moi, ceux qui
+//    EXISTENT chez un autre enseignant (le backend les distingue avec `etatGroupe`). Un groupe cité
+//    mais disparu ne compte pas : il n'arrête plus la suppression (chantier 6, 08/10/2026) et est
+//    seulement nommé dans ce qui reste. Si `etrangers` n'est pas fourni, tout groupe qui n'est pas
+//    à moi est tenu pour étranger (le choix prudent).
+//  - un élève qui figure dans un groupe d'un collègue : jamais supprimé (un collègue le suit aussi) ;
+//  - un élève créé par un collègue : supprimé seulement par le responsable de son groupe (le premier
+//    de ses groupes, comme la règle Firestore) ;
 //  - un élève sans auteur (créé à la console) est supprimable par tout enseignant, comme avant.
 // La garde du backend est la vraie protection ; l'écran s'en sert pour n'offrir « Supprimer »
 // que lorsqu'elle laisserait passer.
-export function gardeSuppressionEleve(el, { moi, groupes }) {
+export function gardeSuppressionEleve(el, { moi, groupes, etrangers }) {
   if (!el) return null;
   const gs = el.groupes || [];
   const miens = new Map((groupes || []).map((g) => [g.id, g]));
-  if (gs.some((id) => !miens.has(id))) {
+  const etrangersVus = etrangers ? gs.filter((id) => !miens.has(id) && etrangers.includes(id))
+    : gs.filter((id) => !miens.has(id));
+  if (etrangersVus.length) {
     return "Cet élève est aussi dans un groupe qui n'est pas le vôtre : vous pouvez seulement le retirer de votre groupe, pas le supprimer.";
   }
   if (el.creePar && el.creePar !== moi) {

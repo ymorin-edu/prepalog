@@ -158,6 +158,12 @@ export function creerBackendDemo() {
       return Object.keys(g).filter((k) => (g[k].profs || []).includes(uid)).map((k) => ({ id: k, ...g[k] }));
     },
     async groupe(gid) { const g = groupes()[gid]; return g ? { id: gid, ...g } : null; },
+    // Comme en mode réel : 'mien' | 'autre' (existe, sans moi dans `profs`) | 'absent' (supprimé).
+    async etatGroupe(gid) {
+      const g = groupes()[gid];
+      if (!g) return 'absent';
+      return courant && (g.profs || []).includes(courant.uid) ? 'mien' : 'autre';
+    },
     // Comme en mode réel (chantier 11) : un nom pris par un COLLÈGUE donne un identifiant suffixé de l'uid court
     // de l'enseignant ; un nom déjà pris par soi-même est refusé.
     async creerGroupe({ nom, annee, niveau, profUid }) {
@@ -319,14 +325,24 @@ export function creerBackendDemo() {
       if (courant) {
         const g = groupes();
         const miens = Object.keys(g).filter((k) => (g[k].profs || []).includes(courant.uid)).map((k) => ({ id: k, ...g[k] }));
-        const refus = gardeSuppressionEleve(users()[uid], { moi: courant.uid, groupes: miens });
+        const idsMiens = new Set(miens.map((x) => x.id));
+        const etrangers = ((users()[uid] && users()[uid].groupes) || []).filter((id) => !idsMiens.has(id) && g[id]);
+        const refus = gardeSuppressionEleve(users()[uid], { moi: courant.uid, groupes: miens, etrangers });
         if (refus) throw new Error(refus);
       }
       // Comme en réel (voir backend-firebase.js) : le profil, les travaux de tous les groupes de
       // l'enseignant et du profil, la base privée, les lignes de classement, et l'entrée
       // demiDe / equipes de ses groupes.
+      // Comme en mode réel : un groupe cité par le profil mais qui n'est pas à moi (la garde ci-dessus a établi
+      // qu'il a disparu) est nommé dans ce qui reste.
+      const restes = [];
+      if (courant) {
+        const g = groupes();
+        ((users()[uid] && users()[uid].groupes) || []).filter((id) => !(g[id] && (g[id].profs || []).includes(courant.uid)))
+          .forEach((id) => restes.push(`travaux dans le groupe « ${id} » (pas à vous, ou groupe disparu)`));
+      }
       effacerEleve(uid, { aids, nettoyerGroupes });
-      return { compte: true, restes: [] };
+      return { compte: true, restes };
     },
 
     // Réécrit le miroir d'accès côté Realtime Database : en démonstration il n'y en a pas, la
