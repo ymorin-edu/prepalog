@@ -20,6 +20,7 @@
 //     la photo de la séance N reste dans la base de N, et chaque séance repart de SA base de départ.
 // Les séances d'un parcours sont donc celles qui partagent la base OU que relie la chaîne des `precedente`.
 import { B } from './backend.js';
+import { estSimulog } from '../activites/index.js';
 
 const comparer = (a, b) => String(a.code).localeCompare(String(b.code), 'fr', { numeric: true });
 
@@ -29,7 +30,7 @@ export const memeBase = (a, b) => baseDeSeance(a) === baseDeSeance(b);
 
 // Les séances d'un même parcours, dans l'ordre de leur code.
 export function seancesDuParcours(metas, m) {
-  const L = metas.filter((x) => (x.parcours || x.immersif) && x.portee === 'eleve');
+  const L = metas.filter((x) => estSimulog(x) && x.portee === 'eleve');
   const dedans = new Set(L.filter((x) => memeBase(x, m)).map((x) => x.id));
   for (let n = -1; n !== dedans.size;) {
     n = dedans.size;

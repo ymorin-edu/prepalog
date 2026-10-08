@@ -111,6 +111,13 @@ export const RUBRIQUES = [
     desc: 'La base du magasin pédagogique : produits, emplacements et état du stock.' },
 ];
 
+// LE drapeau « séance d'entreprise Simulog » (chantier 10, 09/10/2026) : une seule définition, celle de la
+// rubrique. `seanceEntreprise()` (core/types/seance-entreprise.js) pose `rubrique: 'simulog'` sur toute séance
+// qu'il fabrique ; le code `ENT-` et `immersif` vont avec (le bloc « dependances » des tests le garantit).
+// Le Suivi de classe, le repérage, la remise à zéro, la version de base, la reprise et les parcours demandent
+// ce drapeau, jamais `/^ENT-/` ni `immersif` (qui n'est plus qu'une option d'affichage plein écran).
+export const estSimulog = (meta) => !!meta && meta.rubrique === 'simulog';
+
 // Les entreprises de Simulog (02/10/2026, décision de Tristan) : la pastille Simulog montre
 // d'abord leurs logos, puis les séances de l'entreprise choisie. Une séance appartient à
 // l'entreprise du PREMIER NOMBRE de son code : ENT-3.2 → 3. Une entreprise nouvelle = une ligne.

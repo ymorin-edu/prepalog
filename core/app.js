@@ -4,7 +4,7 @@ import { demarrerBackend, B } from './backend.js';
 import { CONFIG, DEMO } from './config.js';
 import { ech, toast, entete, brancherEntete, messageErreur } from './ui.js';
 import { activiteVisible, raisonCachee, courtNiveau, libelleNiveaux, demiDe } from './niveaux.js';
-import { chargerActivites, activitesEnEchec, activite, RUBRIQUES, ICONES, activitesDeRubrique, entreprisesDe, intentionDe } from '../activites/index.js';
+import { chargerActivites, activitesEnEchec, activite, RUBRIQUES, ICONES, activitesDeRubrique, entreprisesDe, intentionDe, estSimulog } from '../activites/index.js';
 import { ouvrirJeu, surEchec } from './store.js';
 import { rendreEspaceProf } from './prof.js';
 import { verrou, seancesDuParcours, versionDuParcours, baseDe, appliquerReprise } from './parcours.js';
@@ -419,7 +419,7 @@ async function vueActivite(aid, avant) {
   // de fin de séance comprises ; les scores du parcours et les déblocages manuels des séances suivantes sont
   // effacés du suivi (l'élève en a le droit sur ses propres résultats). Aucun geste de l'enseignant. Une base
   // neuve reçoit simplement le numéro.
-  if (m.meta.portee === 'eleve' && (m.meta.parcours || m.meta.immersif)) {
+  if (m.meta.portee === 'eleve' && estSimulog(m.meta)) {
     try {
       const metas = (await chargerActivites()).map((x) => x.meta);
       const V = versionDuParcours(metas, m.meta);
@@ -453,7 +453,7 @@ async function vueActivite(aid, avant) {
   // que l'élève a réellement fait. Sans photo (séance débloquée à la main, ou base par séance comme
   // Smoby), la base de départ. Les photos de S et des suivantes sont retirées : ces séances sont à
   // refaire. Le détail est dans `appliquerReprise` (core/parcours.js).
-  if (m.meta.portee === 'eleve' && profil.role === 'eleve' && groupeActif && (m.meta.parcours || m.meta.immersif)) {
+  if (m.meta.portee === 'eleve' && profil.role === 'eleve' && groupeActif && estSimulog(m.meta)) {
     try {
       const metas = (await chargerActivites()).map((x) => x.meta);
       const lireDrapeau = (id) => B.lireScore(groupeActif, profil.uid, '_reprise-' + id);

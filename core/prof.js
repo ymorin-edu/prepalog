@@ -5,7 +5,7 @@ import { B } from './backend.js';
 import { ech, toast, confirmer } from './ui.js';
 import { AISANCES, amenagements } from './amenagements.js';
 import { seancesDepuis, memeBase } from './parcours.js';
-import { chargerActivites, activitesEnEchec, activite, entreprisesDe } from '../activites/index.js';
+import { chargerActivites, activitesEnEchec, activite, entreprisesDe, estSimulog } from '../activites/index.js';
 import { versCSV, telecharger, ouvrirJeu, cheminDe } from './store.js';
 import { NIVEAUX, libelleNiveau, courtNiveau, libelleNiveaux, activiteVisible, horsNiveau, ouvertureParProf,
   demisDe, nomDemi, forcage } from './niveaux.js';
@@ -748,11 +748,10 @@ export async function rendreEspaceProf(hote, ctx) {
     // bandeau par entreprise (logo, nom, repli d'un clic), puis les autres activités sous le nom de leur famille.
     // Le CSV suit le même ordre.
     const toutesNotees = mods.map((m) => m.meta).filter((m) => m.bareme);
-    const estEnt = (m) => /^ENT-/.test(String(m.code || ''));
     const bandes = [
-      ...entreprisesDe(toutesNotees.filter(estEnt).map((meta) => ({ meta }))).map((e) => ({
+      ...entreprisesDe(toutesNotees.filter(estSimulog).map((meta) => ({ meta }))).map((e) => ({
         id: 'ent-' + e.id, nom: e.nom, logo: e.logo, ent: true, cols: e.acts.map((a) => a.meta) })),
-      ...famillesDe(toutesNotees.filter((m) => !estEnt(m))),
+      ...famillesDe(toutesNotees.filter((m) => !estSimulog(m))),
     ];
     const notees = bandes.flatMap((b) => b.cols);
     // Celles que le noyau ne sait pas corriger (scénario sur Padlet, oral, dossier
@@ -762,7 +761,7 @@ export async function rendreEspaceProf(hote, ctx) {
     travaux.forEach((t) => { (par[t.uid] = par[t.uid] || {})[t.aid] = t; });
     // Séances à base privée d'élève : celles où l'on peut se retrouver bloqué.
     const seancesBase = mods.map((m) => m.meta)
-      .filter((m) => m.portee === 'eleve' && m.immersif)
+      .filter((m) => m.portee === 'eleve' && estSimulog(m))
       .sort((a, b) => String(a.code).localeCompare(String(b.code), 'fr', { numeric: true }));
     const metasTous = mods.map((m) => m.meta);
     const verrouillables = seancesBase.filter((m) => m.precedente);
@@ -833,7 +832,7 @@ export async function rendreEspaceProf(hote, ctx) {
       // Séance d'entreprise notée sur 20 (07/10/2026) : plus de « (N) tentatives » — chaque sauvegarde en
       // ajoutait une, le nombre ne disait rien. À la place, le nombre de corrections après le premier bilan
       // (`indicateurs[séance].corrections`, lot A du brief SMOBY-retours-classe-5.1), seulement s'il y en a.
-      if (estEnt(m)) {
+      if (estSimulog(m)) {
         const ind = t.detail && t.detail.indicateurs && t.detail.indicateurs[m.id];
         const n = (ind && ind.corrections) || 0;
         const corr = n ? `corrigé ${n} fois${n > 1 ? ' (seule la 1re correction compte dans la note)' : ''}` : 'jamais corrigé';
@@ -873,7 +872,7 @@ ${so.phrase}` : ''}`)}"
     const somme = (o) => Object.values(o || {}).reduce((a, n) => a + n, 0);
     const liste = (o) => Object.entries(o || {}).sort((a, b) => b[1] - a[1]).map(([k, n]) => `${k} (${n})`).join(', ');
     function sectionReperage() {
-      const blocs = notees.filter((m) => m.portee === 'eleve' && m.immersif).map((m) => {
+      const blocs = notees.filter((m) => m.portee === 'eleve' && estSimulog(m)).map((m) => {
         const rep = (e) => { const t = par[e.uid]?.[m.id]; return t && t.detail && t.detail.indicateurs && t.detail.indicateurs[m.id]; };
         if (!eleves.some(rep)) return '';
         // « Documents ouverts » : seulement pour une séance qui joint des documents (04/10/2026). « 4 / 6 » =
