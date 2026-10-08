@@ -1,6 +1,6 @@
 # Brief de chantier moteur — MOTEUR-entreprise-decoupage : découper `entreprise.js` en modules (lot 9c)
 
-**Statut** : en cours *(à valider → en cours → livré)* — validé par Tristan le 08/10/2026 ; **passes 1 et 2 (modules 1 à 9) livrées** ; décision : 9c s'arrête à ≈ 1 850 lignes (chaque écran de données dans son fichier), le « 9c bis » viendra plus tard
+**Statut** : en cours *(à valider → en cours → livré)* — validé par Tristan le 08/10/2026 ; **passes 1 à 3 (modules 1 à 11) livrées** ; décision : 9c s'arrête à ≈ 1 850 lignes (chaque écran de données dans son fichier), le « 9c bis » viendra plus tard
 **Date** : 08/10/2026 — cadrage Opus (lecture seule), d'après `core/types/entreprise.js` à 3 461 lignes (commit `2ba3243`).
 **Modèle** : **Sonnet** pour chaque module, un module par conversation ou presque (voir §8).
 **Fichiers** : `core/types/entreprise.js` + un fichier nouveau par module dans `core/types/`. **Rien dans `styles/`, `contenus/`,
@@ -342,8 +342,29 @@ réceptions semées déjà préparées / validées (Cdiscount) sont relevées te
 | # | Commit | `entreprise.js` après | Capture avant / après | Blocs ciblés |
 |---|---|---|---|---|
 | 10 commandes | 489bede | 2 861 -> 2 606 | `ecran3` 3 170 674 car., `ecran2` 4 348 559, `ecran` 174 379 : identiques | `spartoo cdiscount dependances amenagements` : 224/224 |
-| 11 réceptions | (voir le commit) | -> 2 379 | idem : identiques (liste, saisie, confirmation Annuler / Valider, validée, litige ENT-5.5, sans colis, annoncée) | `spartoo smoby cdiscount picard` : 416/417 (le rouge connu, voir ci-dessous) |
+| 11 réceptions | 9e3b1de | -> 2 379 | idem : identiques (liste, saisie, confirmation Annuler / Valider, validée, litige ENT-5.5, sans colis, annoncée) | `spartoo smoby cdiscount picard` : 416/417 (le rouge connu, voir ci-dessous) |
 
-**Fait / à faire.** Passes 1 et 2 faites (modules 1 à 9). **Reste ouvert** : passes 3 et 4 (modules 10 à 13 : commandes, réceptions,
-console, messagerie). Rien n'a été fait dans `styles/`, `contenus/`, `activites/*.js`, `outils/test.mjs`, `outils/test/*` (aucun cas
+**Sabotage (module 10).** Dans `entreprise-commandes.js`, « BON DE PRÉPARATION » devenu « BON DE PREPARATION » dans le texte du bon copié :
+le relevé le voit (DIFFÉRENT sur `c0:copie` pour les 4 relevés Spartoo ; le bon copié en texte n'était joué par aucun test). Remis, relevé identique.
+
+**Écarts au plan (passe 3).**
+- Les clics `[data-ouvrir-cmd]` et `[data-ouvrir-rec]` (qui appellent `aller`) **restent branchés par le cœur** : le plan ne les comptait pas, mais
+  les mails de commande et de bon de livraison (messagerie) portent les mêmes boutons « Ouvrir la commande » / « Ouvrir la réception ». Ils
+  rejoindront la messagerie à la passe 4. De même `[data-enreg-cmd]` (messagerie).
+- Module 10 : le plan comptait `preparer` parmi les services ; il l'est (`COM.preparer`, appelé par « Enregistrer la commande », donc par la
+  messagerie). `COM` rend aussi `aFaire()` ; le menu et l'accueil l'appellent à la place des deux lignes de calcul recopiées (`REC.aRecevoir()` de
+  même) : même résultat, deux lignes de moins au cœur, rien de plus (les quatre autres doublons restent, « Vu en passant »). `entreprise.js` garde les
+  mêmes noms par destructuration (`const { statutCommande, totaux, livraisonDe, preparer, corpsMailCommande } = COM;`), donc aucun appelant ne change.
+  `LIVRAISONS` et `livraisonDe` quittent le cœur (`U.livraisons || {}` y est lu une seule fois, à l'appel de `monterCommandes`).
+- Module 11 : `U.receptionLitige` est lu à l'appel (`litige: !!U.receptionLitige`) ; le module n'a plus de `U`. Le drapeau `confirmeRec` vit dans le montage.
+  `statutReception`, `refsReception`, `preparerReception`, etc. restent privés au module.
+- Ni module n'a de `apres(z)` : `dessinerVue` ne faisait rien après le dessin pour ces écrans.
+- Décompte du plan (2 590 / 2 365) : réel 2 606 / 2 379.
+- **L'indentation est gardée** (6 espaces) comme aux modules 6 à 9.
+- Le bloc `smoby` lancé avec `spartoo cdiscount picard` (module 11) donne le rouge connu « Repérage… colonne des documents » (416/417) ; la suite complète
+  est verte (895/895). Non réparé, hors périmètre.
+- **Non rejoué par un relevé** : rien de nouveau pour les commandes et les réceptions (la validation d'une réception, que la passe 2 laissait
+  aux blocs de tests, est maintenant relevée, stock et mouvements compris).
+
+**Fait / à faire.** Passes 1 à 3 faites (modules 1 à 11). **Reste ouvert** : la passe 4 (modules 12 et 13 : console, messagerie). Rien n'a été fait dans `styles/`, `contenus/`, `activites/*.js`, `outils/test.mjs`, `outils/test/*` (aucun cas
 touché). Les relevés (scripts et JSON) sont dans le dossier temporaire de la session, pas dans le dépôt.
