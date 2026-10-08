@@ -55,6 +55,59 @@ Pour chaque chantier : **ce qu'on fait**, et **fini quand** (ce que Tristan peut
 - **Fini quand.** `outils\tester-regles.bat` vert avec les nouveaux cas ; règles **publiées dans la
   console** ; une ligne dans `docs/decisions.md`.
 
+#### 1 bis. Reste du chantier 1 — consigne prête pour Sonnet (inspection du 08/10/2026)
+
+État : le commit 7a86d42 a fermé la faille des groupes, verrouillé le profil élève (nom et prénom
+seulement), protégé les profils des collègues et interdit à l'élève la suppression, la marque
+`parProf`, les drapeaux `_debloque-*`, un uid ou gid étranger et un score non numérique. Il a aussi
+introduit deux effets de bord et laissé un morceau de côté. **Décisions de Tristan (08/10/2026)** :
+
+1. **L'élève retrouve le droit de supprimer ses propres travaux non rendus et non notés par
+   l'enseignant.** Raison : la remise à neuf d'un parcours (`versionBase`, `core/app.js:428-429`)
+   est faite par l'élève lui-même, qui efface ses scores du parcours et ses déblocages ; depuis
+   7a86d42 ce nettoyage échoue en silence en réel (la démo, elle, réussit : la suite ne le voit pas).
+   Le risque de l'audit portait sur la falsification, pas sur la suppression : un élève n'a rien à
+   gagner à effacer son travail en cours.
+   - `firestore.rules`, bloc `travaux` : `allow delete` pour l'élève sur son propre document si
+     `membreDuGroupe(gid)`, pas de `rendu`, `parProf != true`, et `aid` qui ne commence pas par
+     `_debloque-` ni `_reprise-`. L'enseignant du groupe garde tout.
+   - Attention : `app.js:429` efface aussi `_debloque-<id>` au nom de l'élève. Ce drapeau est posé par
+     l'enseignant : soit la règle l'autorise à la suppression seulement (pas à la création), soit ce
+     seul effacement passe par l'enseignant. Préférer la première solution (une règle, pas d'écran).
+   - `outils/test-regles.mjs` : retourner « un élève ne supprime pas un travail non rendu » en
+     « un élève supprime son travail non rendu », ajouter « un élève ne supprime pas une note posée
+     par l'enseignant », « un élève ne supprime pas une copie rendue », « un élève retire son drapeau
+     de déblocage mais n'en crée pas ».
+2. **Une note posée par l'enseignant (« mettre 0 », `parProf: true`) reste figée pour l'élève** :
+   règle de 7a86d42 confirmée. Elle rejoint la copie rendue. Ce qui doit suivre :
+   - `core/backend-demo.js`, `ecrireScore`, `majTemps`, `rendreCopie` : refuser (même erreur que le
+     réel) quand le document existant porte `parProf: true`, pour que la suite voie le comportement
+     réel. Attendre que la session du chantier 2 ait commité `backend-demo.js` avant d'y écrire.
+   - `core/app.js`, `ctx.enregistrer` : à la place de « Le score n'a pas pu être enregistré », un
+     message qui dit la cause quand le document est noté par l'enseignant : « Ton enseignant a posé une
+     note sur cette séance, elle ne bouge plus. » Détecter par une lecture préalable (`lireScore`,
+     déjà faite dans `ecrireScore`) plutôt qu'en devinant d'après l'erreur.
+   - `enregistrerTemps` et `rendreCopie` côté élève : s'arrêter sans erreur sur une séance notée
+     (comme sur une copie rendue).
+   - Un cas de test Playwright dans `outils/test/socle.mjs` ou `copie.mjs` : le 0 posé par
+     l'enseignant tient quand l'élève refait la séance, et l'élève lit le message.
+   - `docs/decisions.md` : une ligne. `docs/fiches/prepalog-notes-competences.md` (Cowork) dit encore
+     que l'élève écrase le 0 : à signaler.
+3. **Fermer `classements` dans `database.rules.json`** : clé = uid du compte connecté ; `aid` limité
+   par une validation sur les champs (`$other: validate false`) et les types que `core/types/
+   entrainement.js:276-291` écrit réellement (`gid`, `groupe`, `score`, `max`, `temps`, `ts`, `nom`
+   facultatif) plus ce que le backend ajoute (`_par`, `_parNom`, `_ts`) ; relire le commentaire des
+   lignes 34-39, qui promet déjà ce que la règle ne fait pas. Au passage : `_parNom` écrit toujours le
+   nom complet, ce qui contredit l'anonymat promis par `entrainement.js:284-286` (écart relevé par
+   l'audit, C2) : le chantier 2 ou celui-ci doit le trancher, pas les deux. Cas de test dans
+   `outils/test-regles.mjs` dans les deux sens.
+
+Livraison : un seul commit pour les règles et leurs tests, suite Playwright verte si `core/` est
+touché, puis **Tristan publie les deux consoles le même jour** (Firestore : le fichier entier ;
+RTDB : sans le bloc `_commentaire`). Modèle : Sonnet. Taille : une demi-journée. Rappeler Fable
+seulement si un test de règles ne tombe pas quand il le devrait, ou si démo et réel refusent de
+s'aligner.
+
 ### 2. `CLAUDE.md` et `FICHE-SEANCE.md` d'aplomb (C18)
 - **Ce qu'on fait.** Corriger : « ~545 cas, ~5 min » → 862, ~13 min ; ENT-2.1 et 2.3 sont en
   `ouverture: 'prof'` ; TAB-4 n'est pas réservé au CAP ; Spartoo a été refondue le 06/10 (acter ou
