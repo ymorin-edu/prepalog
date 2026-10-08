@@ -1,6 +1,6 @@
 # Brief de chantier moteur — MOTEUR-plusieurs-enseignants : un collègue sans risque pour ta classe (chantier 11, audit C7)
 
-**Statut** : à valider *(à valider → en cours → livré)*
+**Statut** : en cours (11a livré le 09/10/2026) *(à valider → en cours → livré)*
 **Date** : 08/10/2026 — cadrage Opus (lecture seule), d'après le dépôt au commit `a3961c5`.
 **Modèle** : **Sonnet** pour les deux lots (11a puis 11b).
 **Fichiers** : `core/backend-firebase.js`, `core/backend-demo.js`, `core/prof.js` ; lot 11b : `firestore.rules`
@@ -210,3 +210,28 @@ suppression (même message que le réel), l'ajout par adresse, la mise à jour e
 
 Version courte si le temps manque : **11a sans l'ouverture en champ pointé ni l'étiquette** (≈ 3 h) ; c'est D3 et la garde
 de suppression qui protègent ta classe, à garder en priorité.
+
+## 8. Compte rendu
+
+### Lot 11a (09/10/2026, Claude Code sous Fable, sur délégation de Tristan)
+
+**Décisions retenues** : celles de la recommandation du §3, sans changement (D1 = C, D2 = A, D3 = A, D4 = rien, principe 4, garde en tête du code).
+
+**Commits** : `076ec30` (code), `8ad642a` (tests), puis le commit de documentation. Aucune règle touchée, rien à publier.
+
+**Ce qui est construit** : `core/collegues.js` (nouveau : gardes de suppression d'un élève et d'un groupe, suffixe `uidCourt`, `idGroupe` borné à 30 signes, `lisible`) ; les deux backends (`creerGroupe` avec suffixe, `majGroupe` en champ pointé, `nomsProfs`, `ajouterCollegue`, `retirerCollegue` qui sert aussi à quitter, `detacherEleve`, gardes en tête de `supprimerEleve` / `supprimerGroupe`, `creePar` et `email` écrits) ; `prof.js` (panneau « Enseignants de … », « Quitter », « groupe de … », « Retirer du groupe », orphelins filtrés avec l'étiquette « créé hors du site », ouverture en champ pointé, messages `lisible`) ; `app.js` (le groupe actif d'un enseignant retiré tombe).
+
+**Cas ajoutés** : 10 cas Playwright en fin de `outils/test/groupes.mjs` (39 a à j), 18 cas d'émulateur en fin de `outils/test-regles.mjs` (section « lot 11a »). Aucun cas existant réécrit, ni `test.mjs` ni `commun.mjs` touchés.
+
+**Écarts au cadrage** :
+- Un fichier nouveau, `core/collegues.js`, alors que le cadrage ne citait que `backend-*.js` et `prof.js` : la garde est écrite une fois, donc la suite (qui ne joue que la démonstration) éprouve le code du mode réel.
+- La démo n'arrête pas un enseignant **absent** de `profs` qui supprime un groupe (un cas existant, 38 bis, crée un groupe au nom d'un `profUid` fictif puis le supprime en tant que prof démo) ; le mode réel le refuse (garde, puis règles). Un co-enseignant, lui, est refusé dans les deux.
+- `groupe()` du backend réel rend `null` (au lieu de lever `permission-denied`) pour un groupe dont on a été retiré ; `supprimerGroupe` relit le groupe sans cette tolérance.
+- « Comme la classe » (retour au réglage de la classe d'un demi-groupe) réécrit encore `ouvertsDemi` entier : seule la case d'ouverture est en champ pointé.
+- `email` est écrit dès le chargement du profil d'un enseignant (pas seulement à la connexion) : Tristan devient trouvable sans se reconnecter.
+- Commits regroupés en trois (code, tests, documentation) : le code des trois sous-sujets s'entremêle dans `prof.js` et les deux backends.
+
+**Non vérifié** : le mode réel lui-même (pas de test du chemin Firebase dans le navigateur ; les règles qu'il rencontre le sont à l'émulateur, la logique de garde l'est en démonstration, car partagée). Le comportement du SDK servi par `vendor/` avec `FieldPath` à plusieurs segments n'est pas joué : `majTemps` l'utilise déjà, et l'émulateur a validé le champ pointé en chaîne (`ouverts.quiz-flux`) avec le SDK de test.
+
+**Pour le lot 11b** : écrire dans `firestore.rules` la suppression d'un profil d'élève réservée à son auteur (`creePar`) ou sans auteur, ou au responsable de son groupe (extrait du §3) ; la suppression d'un groupe réservée au responsable ; en option, `acces/{gid}` créé par `profsGlobaux` mais réécrit seulement par ses inscrits. Les cas du §4 marqués « lot 11b » sont à écrire avec leur régression volontaire. Le code de 11a ne tente déjà plus rien de ce que 11b interdit.
+

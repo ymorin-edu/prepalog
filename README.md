@@ -33,6 +33,9 @@ Dans la console Firebase :
 2. Activer **Cloud Firestore** et **Realtime Database**.
 3. Coller `firestore.rules` et `database.rules.json` dans leurs onglets de règles respectifs.
 
+Ajouter un collègue enseignant (co-enseignant d'un groupe, ou enseignant avec ses propres groupes) :
+voir `docs/amorcer-un-collegue.md`.
+
 ## Ajouter une activité
 
 1. Créer `activites/mon-activite.js` :

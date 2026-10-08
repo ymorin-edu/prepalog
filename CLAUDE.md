@@ -219,7 +219,8 @@ modifier une séance**, et la corriger si le code a changé.
   refus). Utiliser `exists()`, `.get(clé, défaut)`, `x != true` plutôt que `!x`.
 - `prepalog-config.json` est versionné (config web publique par construction) ; `superAdmins`
   y reste **vide** exprès. Nouveau collègue enseignant : **double amorçage** (profil Firestore
-  `users/{uid}` à la main **et** uid dans `profsGlobaux` côté RTDB). Bascule sur `prepalog.fr` :
+  `users/{uid}` à la main **et** uid dans `profsGlobaux` côté RTDB ; procédure en une page, avec le cas
+  du simple co-enseignant : `docs/amorcer-un-collegue.md`). Bascule sur `prepalog.fr` :
   ajouter le domaine dans Authentication → Domaines autorisés.
 - Suppression d'un élève/groupe : irréversible, sans corbeille. Toute fonction qui supprime ou
   détache des données doit vérifier qu'elle ne laisse rien d'**invisible** derrière elle.
