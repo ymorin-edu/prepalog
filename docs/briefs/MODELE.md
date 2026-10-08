@@ -53,6 +53,26 @@ Vues du moteur utilisées (plan, tournée, feuille de calcul, inventaire, messag
 Fichier(s) à créer : `contenus/<entreprise>*.js`. Données de départ, valeurs attendues
 (**recalculées par le code, jamais recopiées** ; dans un test, écrites à la main).
 
+## 6 bis. Tirage et niveaux (obligatoire à partir de France Boissons, règle du 08/10/2026)
+
+Voir `docs/briefs/MOTEUR-tirage-et-niveaux.md`. Pour chaque exercice de la séance :
+
+- **Pièce fixe** (fil conducteur, la même pour tous) et **banque** de pièces tirées : combien de pièces dans la banque,
+  la difficulté de chacune (facile / moyen / difficile), le **mélange du socle** (ex. 1 / 2 / 1).
+- **Valeurs tirées** (quantités, prix, stocks) : bornes, et ce qui doit rester vrai (contrôle d'équité).
+- **Confirmé** : les cas bonus (combien, quelles difficultés) ; ils ne changent rien au socle ni à ses jalons.
+- **Accompagné** : « contenu standard » tant que ce niveau n'est pas conçu.
+- **Consigne neutre** : elle ne doit pas révéler le nombre de pièces (le bonus est caché à l'élève).
+- Évaluation : socle tiré, ni bonus ni niveau.
+- **Questions à l'écran** (règle du 08/10, contre le copier-coller vers un autre onglet) : chaque question porte sur le
+  travail **de l'élève**, de préférence sur une pièce tirée (« pourquoi as-tu refusé **ta** palette P3 ? »), et se
+  répond **en montrant** (cliquer la ligne, le mot, la zone, choisir une phrase) plutôt qu'en tapant. Voir
+  `MOTEUR-questions-au-fil.md` §7.
+- **Questions d'éco-droit** : elles font **appliquer** une règle au cas de l'élève (dates, contrat, durées tirés), pas
+  réciter une définition. Le texte (Code du travail, contrat, règlement — source officielle vérifiée, date) est **fourni
+  en document joint** ; la justification peut se demander en cliquant la phrase du texte ; les choix sont des règles
+  toutes exactes en général, une seule s'appliquant au cas. Une question de culture pure reste non notée.
+
 ## 7. Demandes au moteur (si le moteur ne sait pas faire)
 
 Ce dont la séance a besoin et que `core/` ne fait pas encore. **Une séance n'écrit rien dans

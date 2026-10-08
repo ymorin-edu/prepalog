@@ -8,7 +8,7 @@
 >
 > Puis, dans une autre conversation : `… fais le lot 3 (signaux de geste)`, puis `… fais le lot 4 (réponses de la classe)`.
 
-**Statut** : à implémenter (toutes les questions du §11 tranchées le 07/10 au soir). Révisé le 07/10 à 21 h 45 (deux sortes de questions, plus de « Plus tard », travail gelé, souplesse).
+**Statut** : à implémenter (toutes les questions du §11 tranchées le 07/10 au soir). Révisé le 07/10 à 21 h 45 (deux sortes de questions, plus de « Plus tard », travail gelé, souplesse). Révisé le 08/10 à 8 h (sorties de page, §4.8 bis ; trois règles d’écriture contre le copier-coller, dont les questions d’éco-droit, §7).
 **Date du brief** : 07/10/2026 (soir).
 **Auteur** : Claude (conversation Cowork, Opus), d'après la lecture du code de `main` au commit `d024f17`, du brief
 `FRANCE-BOISSONS-refonte.md` (décisions du 07/10, 21 h) et du lot C de `SMOBY-retours-classe-5.1.md`.
@@ -275,6 +275,32 @@ vérifiée à chaque `sauver()` et à l'ouverture ; **une seule fois** (marque r
 - `detail.indicateurs[séance].questions` remonte avec la note : aucun champ Firebase nouveau, **aucune règle à
   publier**.
 
+### 4.8 bis Les sorties de page pendant une question (décision de Tristan, 08/10/2026)
+
+Constat de Tristan (08/10) : les élèves copient la question et la collent dans un nouvel onglet (moteur de recherche,
+IA). On ne peut pas l'empêcher tout à fait (le téléphone reste possible) : on le rend **visible à l'enseignant**.
+Les deux autres parades retenues sont des règles d'écriture (§7) ; le blocage du copier-coller n'est **pas** retenu.
+
+- **Ce qui compte comme une sortie** : tant qu'une question (de transition ou au fil) est ouverte et sans réponse,
+  l'onglet passe en arrière-plan (`visibilitychange` → `hidden`), ou la fenêtre perd le focus **plus de 3 secondes**
+  (`blur` puis `focus` : le seuil évite de compter un clic dans la barre d'adresse). Une sortie = un aller-retour.
+- **Rangé avec la question** : `sorties` (nombre) et `horsPage` (secondes cumulées) dans
+  `db.questions[<séance>][<question>]`, écrits **avec la réponse** : aucune écriture de plus. Une sortie après la réponse
+  ne compte pas.
+- **Ce que voit l'élève** : au retour, une ligne dans le panneau de la question, en texte (pas d'aplat, pas de rouge) :
+  « Tu as quitté la page pendant la question : ton enseignant le verra. » Rien d'autre : pas de blocage, pas de
+  minuteur, **aucun effet sur la note**.
+- **Ce que voit l'enseignant** : dans le Repérage et l'infobulle du Suivi, une ligne par séance quand il y a eu au moins
+  une sortie : « a quitté la page pendant 2 questions (3 fois, 1 min 40) », et, dans le détail, les questions concernées.
+  Remonte avec `detail.indicateurs[séance].questions` (rien de neuf côté Firebase, **aucune règle à publier**).
+  Rien pour l'enseignant connecté lui-même. Jamais dans une vue projetable sous forme de classement.
+- **À dire aux élèves** (Tristan, en classe) : le site note les sorties de page pendant une question. Donnée limitée
+  au strict nécessaire (un compteur et une durée, pas l'adresse visitée : le site ne peut pas la connaître).
+- **Tests** (dans le bloc `questions`) : question ouverte, onglet caché puis montré → `sorties: 1` rangé avec la réponse
+  et ligne visible pour l'élève ; perte de focus de 1 s → rien ; sortie après la réponse → rien ; note identique avec et
+  sans sortie ; la ligne apparaît côté enseignant et pas chez un camarade. Éprouvé dans les deux sens.
+- Durée : **≈ 1 h 30** de plus au lot 2, tests compris.
+
 ### 4.9 Le rendu, en bref
 
 - Panneau à droite, 380 px, sous le bandeau, **non modal** (`role="dialog"`, `aria-modal="false"`) puisque le menu
@@ -355,7 +381,22 @@ remonte déjà avec la note (aucune écriture nouvelle).
   porte sur ce que l'élève **vient de faire** ; une seule question à la fois ; 2 à 4 choix ; le retour **montre la
   conséquence** dans l'entreprise ; une question notée ne doit pas pouvoir se réussir au hasard une fois sur deux
   (au moins 3 choix).
-- `MODELE.md` : ajouter la section « Questions au fil » (§4 bis).
+- **Trois règles contre le copier-coller vers un autre onglet** (Tristan, 08/10) :
+  1. **Une question ancrée sur le travail de l'élève**, qu'aucun moteur de recherche ni IA ne peut résoudre sans son
+     écran : « pourquoi as-tu refusé **ta** palette P3 ? », pas « pourquoi refuse-t-on une palette abîmée ? ». Avec le
+     tirage (`MOTEUR-tirage-et-niveaux.md`), la question porte de préférence sur une **pièce tirée** de l'élève.
+  2. **Répondre en montrant plutôt qu'en tapant** : cliquer la ligne du document, le mot, la zone, choisir une phrase.
+     Réponse libre seulement pour la réflexion non notée.
+  3. **Les questions d'éco-droit s'appliquent au cas de l'élève** (Tristan, 08/10 : il tient aux QCM qui font le lien
+     avec l'éco-droit, mais une définition se trouve en dix secondes sur Internet). La question ne demande pas la règle,
+     elle demande de l'**appliquer** à la situation de l'élève (dates, durées, contrat, de préférence **tirés**) ;
+     **le texte est fourni dans la séance** (extrait du Code du travail, du contrat, du règlement, en document joint,
+     source et date en pied), et la justification peut se demander en **cliquant la phrase** du texte qui fonde la
+     réponse ; les choix sont des règles **toutes exactes en général**, une seule s'appliquant au cas. Une question de
+     culture pure (qui se cherche forcément en ligne) reste **non notée** et sert la discussion en classe (lot 4).
+     Exemples à prévoir dans FB : congés de Lucas (6.3), discrimination à l'embauche dans l'annonce (6.3), consigne des
+     emballages (6.2, 6.10). Les textes cités sont **vérifiés** (source officielle, Légifrance), jamais reconstitués.
+- `MODELE.md` : ajouter la section « Questions au fil » (§4 bis), avec ces deux règles.
 
 ---
 
@@ -371,7 +412,7 @@ change : brief à part, avec la règle « ceux qui ont fini gardent leur note »
 | Lot | Contenu | Modèle | Durée (tests compris) |
 |---|---|---|---|
 | 1 | notification qui reste | Opus | ≈ 2 h |
-| 2 | questions de transition et au fil, souplesse, page d'essai | Opus | ≈ 6 à 7 h |
+| 2 | questions de transition et au fil, souplesse, page d'essai, sorties de page (§4.8 bis) | Opus | ≈ 7 h 30 à 8 h 30 |
 | 3 | signaux de geste | Opus | ≈ 2 à 3 h |
 | 4 | réponses de la classe | Sonnet | ≈ 3 h |
 | **Total** | | | **≈ 2 jours** (un peu plus que le tableau de la refonte FB, à cause des deux sortes de questions et du gel) |
@@ -398,6 +439,8 @@ Sur la page d'essai du moteur (`outils/essai-questions.html`), avec un compte é
    réponse déjà donnée est gardée ;
 7. en enseignant : bonne réponse marquée, rien n'est enregistré ;
 8. ENT-2.1 : les deux messages arrivent en cartes qui restent.
+9. question ouverte, passer dans un autre onglet puis revenir : la ligne « Tu as quitté la page… » apparaît ; en
+   enseignant, le Repérage le montre ; la note ne change pas.
 
 ## 11. Questions à trancher par Tristan (la page d'essai v2 montre chaque choix)
 
