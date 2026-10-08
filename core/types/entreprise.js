@@ -35,6 +35,7 @@ import { styleTheme, accentRougeOuVert } from './entreprise-theme.js';
 import { eur, fdate, fdt, norm, pad, pastille, creerArticles } from './entreprise-outils.js';
 import { bandeauFin as bandeauFinHtml } from './entreprise-fin.js';
 import { monterBase } from './entreprise-base.js';
+import { monterTiers } from './entreprise-tiers.js';
 // Les formats ont changé d'adresse (lot 9c, module 3) : ils restent importables d'ici.
 export { eur, fdate, fdt, norm, normLoc } from './entreprise-outils.js';
 // La table des options a changé d'adresse (lot 9c, module 1) : `OPTIONS` reste importable d'ici (un test la lit).
@@ -1474,7 +1475,7 @@ export function creerEntreprise(U) {
           fiche: VFICHE ? () => vueFiche(VFICHE) : vueAccueil,
           fichiers: VTAB ? vueFichiers : vueAccueil,
           extractions: VTAB && VTAB.navExtractions ? vueExtractions : vueAccueil,
-          clients: vueClients, fournisseurs: vueFournisseurs, console: vueConsole,
+          ...TIERS.vues, console: vueConsole,
           ...(MQ ? Object.fromEntries(MQ.etapes.filter((e) => estProf || etapeArrivee(db, MQ, e.id))
             .map((e) => [`etape:${e.id}`, () => vueEtape(e)])) : {}),
           ...(MQ && estProf ? { 'questions-fil': vueQuestionsProf } : {}),
@@ -1489,7 +1490,7 @@ export function creerEntreprise(U) {
         if (MQ) majQuestions();
         if (E.vue === 'catalogue') majCatalogue();
         if (E.vue === 'stock' && E.stockOuvert) majStock();
-        if (E.vue === 'clients' || E.vue === 'fournisseurs') majTiers();
+        TIERS.apres(z);
         if (E.vue === 'console') { const o = z.querySelector('.ent-cout'); if (o) o.scrollTop = o.scrollHeight; }
       }
 
@@ -2677,49 +2678,8 @@ export function creerEntreprise(U) {
           <p class="note">${n > 150 ? `${n} résultats, les 150 premiers sont affichés.` : `${n} résultat${n > 1 ? 's' : ''}.`}</p></section>`;
       }
 
-      /* -------------------------------------------------------------- tiers */
-      function vueClients() {
-        return `<div class="ent-tete"><h2>Clients</h2>
-            <p class="note">${tousClients().length} clients référencés.</p></div>
-          <div class="ent-filtres"><div class="champ"><label for="tQ">Recherche</label>
-            <input id="tQ" data-filtre placeholder="Nom, ville, code…"></div></div>
-          <div id="entListe"></div>`;
-      }
-
-      function vueFournisseurs() {
-        return `<div class="ent-tete"><h2>Fournisseurs</h2>
-            <p class="note">${tousFournisseurs().length} fournisseurs référencés.</p></div>
-          <div class="ent-filtres"><div class="champ"><label for="tQ">Recherche</label>
-            <input id="tQ" data-filtre placeholder="Marque, société, ville, code…"></div></div>
-          <div id="entListe"></div>`;
-      }
-
-      function majTiers() {
-        const champ = hote.querySelector('#tQ');
-        if (!champ) return;
-        const q = norm(champ.value);
-        let h;
-        if (E.vue === 'clients') {
-          const r = tousClients().filter((c) => !q || norm(`${c.id} ${c.prenom} ${c.nom} ${c.ville} ${c.cp} ${c.email}`).includes(q));
-          h = `<table><thead><tr><th>Code</th><th>Nom</th><th>E-mail</th><th>Téléphone</th><th>Adresse</th>
-            <th>Client depuis</th><th class="num">Commandes</th></tr></thead><tbody>
-            ${r.map((c) => `<tr><td class="mono">${ech(c.id)}</td><td>${ech(c.prenom + ' ' + c.nom)}</td>
-              <td class="mono">${ech(c.email)}</td><td class="mono">${ech(c.tel)}</td>
-              <td>${ech(c.adr)}, ${ech(c.cp)} ${ech(c.ville)}</td><td>${fdate(c.since)}</td>
-              <td class="num">${c.nb}</td></tr>`).join('')}</tbody></table>`;
-        } else {
-          const f = tousFournisseurs().filter((s2) => !q || norm(`${s2.id} ${s2.brand} ${s2.name} ${s2.ville}`).includes(q));
-          h = `<table><thead><tr><th>Code</th><th>Marque</th><th>Société</th><th>Contact</th><th>Téléphone</th>
-            <th>E-mail</th><th>Adresse</th><th class="num">Délai</th><th class="num">Franco</th>
-            <th class="num">Mini. commande</th><th>Paiement</th></tr></thead><tbody>
-            ${f.map((s2) => `<tr><td class="mono">${ech(s2.id)}</td><td><b>${ech(s2.brand)}</b></td><td>${ech(s2.name)}</td>
-              <td>${ech(s2.contact)}</td><td class="mono">${ech(s2.tel)}</td><td class="mono">${ech(s2.email)}</td>
-              <td>${ech(s2.adr)}, ${ech(s2.cp)} ${ech(s2.ville)}</td><td class="num">${s2.delai} j</td>
-              <td class="num">${eur(s2.franco)}</td><td class="num">${s2.moq || '—'} ${ech(VOCAB.unitPl)}</td>
-              <td>${ech(s2.pay)}</td></tr>`).join('')}</tbody></table>`;
-        }
-        hote.querySelector('#entListe').innerHTML = `<section class="panneau"><div class="ent-scroll">${h}</div></section>`;
-      }
+      // Clients et fournisseurs : `entreprise-tiers.js` (lot 9c, module 6).
+      const TIERS = monterTiers({ E, hote, VOCAB, B });
 
       /* ------------------------------------------------------------ console */
       function vueConsole() {
@@ -3070,8 +3030,8 @@ export function creerEntreprise(U) {
         z.querySelectorAll('[data-filtre]').forEach((el) => el.addEventListener('input', () => {
           if (E.vue === 'catalogue') majCatalogue();
           else if (E.vue === 'stock') majStock();
-          else if (E.vue === 'clients' || E.vue === 'fournisseurs') majTiers();
         }));
+        TIERS.brancher(z);
         z.querySelector('#formCmd')?.addEventListener('submit', (e) => {
           e.preventDefault();
           const i = z.querySelector('#champCmd'), t = i.value; i.value = ''; executer(t);
