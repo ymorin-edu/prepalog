@@ -7,7 +7,6 @@ est déjà modifié ou inscrit ci-dessous, **elle s'arrête et le dit à Tristan
 
 | Chantier | Fichiers qu'il touche | Depuis |
 |---|---|---|
-| Questions au fil, lot 3 (signaux de geste) | `core/types/entreprise.js`, `core/declencheurs.js`, `core/types/fiche.js`, `planning.js`, `quai.js`, `entrepot.js`, `animation.js`, `questions.js`, `contenus/questions/ESSAI.js`, `outils/test/questions.mjs`, `docs/briefs/MOTEUR-questions-au-fil.md` | 08/10 |
 
 Rappel : un seul chantier à la fois dans `core/types/tournee.js`, `core/types/grille.js`,
 `core/types/entreprise.js`, `styles/base.css` et `outils/test/boost.mjs` (voir `docs/briefs/COORDINATION-boost.md`).
