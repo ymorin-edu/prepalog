@@ -10,23 +10,18 @@
 // retrouve le fichier à imprimer, et une séance sans photocopie reste faisable au clavier.
 // La déclarer ci-dessous vaut validation — voir core/types/entreprise.js.
 
-import { creerEntreprise } from '../core/types/entreprise.js';
+import { seanceEntreprise } from '../core/types/seance-entreprise.js';
 import * as SPARTOO from '../contenus/spartoo.js';
 import * as SEANCE from '../contenus/spartoo-tracabilite.js';
-
-export const meta = {
+const s = seanceEntreprise(SPARTOO, SEANCE, {
   id: 'spartoo-tracabilite',
   code: 'ENT-1.3',
   titre: 'Spartoo — traçabilité',
   desc: "Remonter un lot défectueux dans les deux sens, bloquer le stock restant et rendre compte.",
-  rubrique: 'simulog',
   // Compétences et temps pédagogique : voir core/competences.js (validé par Tristan, 02/10/2026).
   competences: ['C3.2'],
   temps: 'guidage',
-  bareme: SEANCE.ETAPES.length,
   notation: 'avancement',
-  immersif: true,
-  portee: 'eleve',
   // Remise à zéro de la base par l'élève : seulement en séance X.1, qui ouvre la chaîne. Une
   // séance X.2 ou X.3 reprend le travail de la précédente ; l'effacer ferait perdre les séances d'avant.
   reinitialisable: false,
@@ -36,34 +31,14 @@ export const meta = {
   // Parcours strict : ENT-1.3 ne s'ouvre qu'à l'élève qui a validé ENT-1.2 (voir core/parcours.js).
   parcours: true,
   precedente: 'spartoo',
-  tables: {},
+  // Trame élève : la déclarer, c'est la valider (relue par Tristan). Le corrigé se déduit du code.
+  trame: 'spartoo-tracabilite',
   pret: true,
-  // Corrigé des QCM d'éco-droit de la trame : affiché dans l'onglet « Corrigés » de l'espace
-  // enseignant, jamais côté élève. Fichier généré par le générateur de la trame.
-  corrige: './contenus/corriges/ENT-1.3.js',
-};
-
-const moteur = creerEntreprise({
+}, {
   // Les écrans de données du menu (05/10/2026) : ceux dont la séance se sert, et au moindre doute on les garde.
   menu: ['commandes', 'blocage', 'clients', 'console'],
-  ENTREPRISE: SPARTOO.ENTREPRISE,
-  VOCAB: SPARTOO.VOCAB,
-  CATALOGUE: SPARTOO.CATALOGUE,
-  SUPPLIERS: SPARTOO.SUPPLIERS,
-  SUP_BY_ID: SPARTOO.SUP_BY_ID,
-  CUSTOMERS: SPARTOO.CUSTOMERS,
-  CM: SPARTOO.CM,
-  baseDeDepart: SPARTOO.baseDeDepart,
   reponsesFournisseur: SPARTOO.REPONSES_FOURNISSEUR,
   exercice: SEANCE.EXERCICE,
-  accueil: SEANCE.ACCUEIL,
-  volet: SEANCE.VOLET,
-  etapes: SEANCE.ETAPES,
-  THEME: SPARTOO.THEME,
-  trame: {
-    pdf: './contenus/trames/ENT-1.3-spartoo-tracabilite-trame-eleve.pdf',
-    docx: './contenus/trames/ENT-1.3-spartoo-tracabilite-trame-eleve.docx',
-  },
 });
-
-export function rendre(hote, ctx) { moteur.rendre(hote, ctx); }
+export const meta = s.meta;
+export const rendre = s.rendre;

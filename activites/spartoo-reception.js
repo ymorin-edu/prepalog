@@ -11,23 +11,18 @@
 // retrouve le fichier à imprimer, et une séance sans photocopie reste faisable au clavier.
 // La déclarer ci-dessous vaut validation — voir core/types/entreprise.js.
 
-import { creerEntreprise } from '../core/types/entreprise.js';
+import { seanceEntreprise } from '../core/types/seance-entreprise.js';
 import * as SPARTOO from '../contenus/spartoo.js';
 import * as SEANCE from '../contenus/spartoo-reception.js';
-
-export const meta = {
+const s = seanceEntreprise(SPARTOO, SEANCE, {
   id: 'spartoo-reception',
   code: 'ENT-1.1',
   titre: 'Spartoo — réception',
   desc: "Contrôle d'une livraison fournisseur, réserves et entrée en stock avec numéro de lot, du quai à l'entrée en stock.",
-  rubrique: 'simulog',
   // Compétences et temps pédagogique : voir core/competences.js (validé par Tristan, 02/10/2026).
   competences: ['C1.4'],
   temps: 'guidage',
-  bareme: SEANCE.ETAPES.length,
   notation: 'avancement',
-  immersif: true,
-  portee: 'eleve',
   // Remise à zéro de la base par l'élève : seulement en séance X.1, qui ouvre la chaîne. Une
   // séance X.2 ou X.3 reprend le travail de la précédente ; l'effacer ferait perdre les séances d'avant.
   reinitialisable: true,
@@ -39,39 +34,19 @@ export const meta = {
   // Refonte du 06/10/2026 (brief ENT-1.1-spartoo-quai §7.4, décision de Tristan) : toute base Spartoo d'une
   // version antérieure repart de zéro à sa prochaine ouverture, scores 1.1 à 1.3 effacés (core/app.js).
   versionBase: 2,
-  tables: {},
+  // Trame élève : la déclarer, c'est la valider (relue par Tristan). Le corrigé se déduit du code.
+  trame: 'spartoo-reception',
   pret: true,
-  // Corrigé des QCM d'éco-droit de la trame : affiché dans l'onglet « Corrigés » de l'espace
-  // enseignant, jamais côté élève. Fichier généré par le générateur de la trame.
-  corrige: './contenus/corriges/ENT-1.1.js',
-};
-
-const moteur = creerEntreprise({
+}, {
   // Les écrans de données du menu (05/10/2026) : ceux dont la séance se sert. Plus de Stock (décision de
   // Tristan, 06/10 : il demandait un code, impasse pour l'élève) : on vérifie à la console.
   menu: ['receptions', 'fournisseurs', 'console'],
-  ENTREPRISE: SPARTOO.ENTREPRISE,
-  VOCAB: SPARTOO.VOCAB,
-  CATALOGUE: SPARTOO.CATALOGUE,
-  SUPPLIERS: SPARTOO.SUPPLIERS,
-  SUP_BY_ID: SPARTOO.SUP_BY_ID,
-  CUSTOMERS: SPARTOO.CUSTOMERS,
-  CM: SPARTOO.CM,
-  baseDeDepart: SPARTOO.baseDeDepart,
   reponsesFournisseur: SPARTOO.REPONSES_FOURNISSEUR,
   exercice: SEANCE.EXERCICE,
-  accueil: SEANCE.ACCUEIL,
-  volet: SEANCE.VOLET,
-  etapes: SEANCE.ETAPES,
-  THEME: SPARTOO.THEME,
   quai: SEANCE.QUAI,
   documents: SEANCE.DOCUMENTS,
   fiche: SEANCE.FICHE,
   fermetures: SEANCE.FERMETURES,
-  trame: {
-    pdf: './contenus/trames/ENT-1.1-spartoo-reception-trame-eleve.pdf',
-    docx: './contenus/trames/ENT-1.1-spartoo-reception-trame-eleve.docx',
-  },
 });
-
-export function rendre(hote, ctx) { moteur.rendre(hote, ctx); }
+export const meta = s.meta;
+export const rendre = s.rendre;

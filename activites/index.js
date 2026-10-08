@@ -114,8 +114,10 @@ export const RUBRIQUES = [
 // Les entreprises de Simulog (02/10/2026, décision de Tristan) : la pastille Simulog montre
 // d'abord leurs logos, puis les séances de l'entreprise choisie. Une séance appartient à
 // l'entreprise du PREMIER NOMBRE de son code : ENT-3.2 → 3. Une entreprise nouvelle = une ligne.
-// Le nom et le métier sont recopiés du `sousTitre` des contenus (contenus/<nom>.js) : ces
-// fichiers sont lourds, l'accueil ne les importe pas.
+// Le nom et le métier sont écrits ICI, une seule fois : `metier` est le libellé de la vignette d'accueil, le
+// `sousTitre` de `contenus/<nom>.js` est celui du bandeau de l'environnement. Les deux textes sont identiques
+// pour Spartoo, Cdiscount et Boost, DIFFÉRENTS pour Picard et Smoby (chantier 8, 08/10/2026 : on ne change pas ce que
+// l'élève lit à l'accueil, c'est à Tristan de trancher le libellé avant de les rapprocher). Garder les deux à jour.
 //
 // `intention: { pdf, docx }` (03/10/2026, décision 17 de Tristan) : la fiche d'intention
 // pédagogique du scénario, UNE pour toutes ses séances. Elle n'est montrée qu'à l'enseignant :

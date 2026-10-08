@@ -10,25 +10,17 @@
 // retrouve le fichier à imprimer, et une séance sans photocopie reste faisable au clavier.
 // La déclarer ci-dessous vaut validation — voir core/types/entreprise.js.
 
-import { creerEntreprise } from '../core/types/entreprise.js';
+import { seanceEntreprise } from '../core/types/seance-entreprise.js';
 import * as SPARTOO from '../contenus/spartoo.js';
-
-export const meta = {
+const s = seanceEntreprise(SPARTOO, SPARTOO, {
   id: 'spartoo',
   code: 'ENT-1.2',
   titre: 'Spartoo — préparation',
   desc: "Traiter une commande client : contrôle du stock, bon de préparation et réapprovisionnement.",
-  rubrique: 'simulog',
   // Compétences et temps pédagogique : voir core/competences.js (validé par Tristan, 02/10/2026).
   competences: ['C2.2'],
   temps: 'guidage',
-  // Le barème, c'est le nombre de jalons de l'exercice : le suivi de classe montre
-  // l'avancement réel, pas une note sur 20.
-  bareme: SPARTOO.ETAPES.length,
   notation: 'avancement',
-  // Prend toute la page : ni bandeau ni titre Prepalog autour. Voir core/app.js.
-  immersif: true,
-  portee: 'eleve',
   // Remise à zéro de la base par l'élève : seulement en séance X.1, qui ouvre la chaîne. Une
   // séance X.2 ou X.3 reprend le travail de la précédente ; l'effacer ferait perdre les séances d'avant.
   reinitialisable: false,
@@ -38,32 +30,13 @@ export const meta = {
   // Parcours strict : ENT-1.2 ne s'ouvre qu'à l'élève qui a validé ENT-1.1 (voir core/parcours.js).
   parcours: true,
   precedente: 'spartoo-reception',
-  tables: {},
+  // Trame élève : la déclarer, c'est la valider (relue par Tristan). Le corrigé se déduit du code.
+  trame: 'spartoo-preparation',
   pret: true,
-  // Corrigé des QCM d'éco-droit de la trame : affiché dans l'onglet « Corrigés » de l'espace
-  // enseignant, jamais côté élève. Fichier généré par le générateur de la trame.
-  corrige: './contenus/corriges/ENT-1.2.js',
-};
-
-const moteur = creerEntreprise({
+}, {
   // Les écrans de données du menu (05/10/2026) : ceux dont la séance se sert, et au moindre doute on les garde.
   menu: ['commandes', 'stock', 'catalogue', 'clients', 'fournisseurs', 'console'],
-  ENTREPRISE: SPARTOO.ENTREPRISE,
-  VOCAB: SPARTOO.VOCAB,
-  CATALOGUE: SPARTOO.CATALOGUE,
-  SUPPLIERS: SPARTOO.SUPPLIERS,
-  SUP_BY_ID: SPARTOO.SUP_BY_ID,
-  CUSTOMERS: SPARTOO.CUSTOMERS,
-  CM: SPARTOO.CM,
-  baseDeDepart: SPARTOO.baseDeDepart,
   reponsesFournisseur: SPARTOO.REPONSES_FOURNISSEUR,
-  volet: SPARTOO.VOLET,
-  etapes: SPARTOO.ETAPES,
-  THEME: SPARTOO.THEME,
-  trame: {
-    pdf: './contenus/trames/ENT-1.2-spartoo-preparation-trame-eleve.pdf',
-    docx: './contenus/trames/ENT-1.2-spartoo-preparation-trame-eleve.docx',
-  },
 });
-
-export function rendre(hote, ctx) { moteur.rendre(hote, ctx); }
+export const meta = s.meta;
+export const rendre = s.rendre;

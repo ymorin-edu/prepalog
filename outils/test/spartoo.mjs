@@ -138,14 +138,19 @@ await v('tout corrigé de trame déclaré existe, couvre toute la trame et est c
   for (const e of fs.readdirSync(path.join(ROOT, 'activites'))) {
     if (!/\.js$/.test(e)) continue;
     const src = fs.readFileSync(path.join(ROOT, 'activites', e), 'utf8');
-    for (const m of src.matchAll(/corrige:\s*'(\.\/contenus\/corriges\/[^']+)'/g)) {
-      const cible = path.join(ROOT, m[1].replace(/^\.\//, ''));
-      if (!fs.existsSync(cible)) { problemes.push(`${e} → ${m[1]} absent`); continue; }
+    // Corrigés écrits en clair dans le fichier (forme longue) ET corrigés que la fabrique `seanceEntreprise`
+    // déduit du code de la séance (chantier 8, 08/10/2026 : `./contenus/corriges/<code>.js`, sauf `corrige: false`).
+    const declares = [...src.matchAll(/corrige:\s*'(\.\/contenus\/corriges\/[^']+)'/g)].map((m) => m[1]);
+    const codeFabrique = /seanceEntreprise\(/.test(src) && !/corrige:\s*false/.test(src) ? /code:\s*'(ENT-\d+\.\d+)'/.exec(src)?.[1] : null;
+    if (codeFabrique) declares.push(`./contenus/corriges/${codeFabrique}.js`);
+    for (const chemin of declares) {
+      const cible = path.join(ROOT, chemin.replace(/^\.\//, ''));
+      if (!fs.existsSync(cible)) { problemes.push(`${e} → ${chemin} absent`); continue; }
       const { CORRIGE } = await import(pathToFileURL(cible).href);
-      if (!CORRIGE?.items?.length) problemes.push(`${m[1]} vide`);
+      if (!CORRIGE?.items?.length) problemes.push(`${chemin} vide`);
       for (const it of CORRIGE.items) {
         total++;
-        const nom = `${m[1]} : « ${String(it.texte).slice(0, 40)} »`;
+        const nom = `${chemin} : « ${String(it.texte).slice(0, 40)} »`;
         if (!it.texte || !it.genre) { problemes.push(`${nom} sans texte ni genre`); continue; }
         if (it.genre === 'qcm') {
           qcm++;
