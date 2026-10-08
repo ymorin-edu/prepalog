@@ -33,6 +33,7 @@ import { brancherLexique, compterAide } from '../lexique.js';
 import { controlerOptions, controlerIdentifiants } from './entreprise-options.js';
 import { styleTheme, accentRougeOuVert } from './entreprise-theme.js';
 import { eur, fdate, fdt, norm, pad, pastille, creerArticles } from './entreprise-outils.js';
+import { bandeauFin as bandeauFinHtml } from './entreprise-fin.js';
 // Les formats ont changé d'adresse (lot 9c, module 3) : ils restent importables d'ici.
 export { eur, fdate, fdt, norm, normLoc } from './entreprise-outils.js';
 // La table des options a changé d'adresse (lot 9c, module 1) : `OPTIONS` reste importable d'ici (un test la lit).
@@ -959,39 +960,15 @@ export function creerEntreprise(U) {
       // donnerait la réponse) ; sans `groupe`, la ligne est son `titre`. Un groupe est juste quand toutes ses cases le sont.
       // « Corriger » (pas si tout est juste) rouvre l'envoi fautif : voir `corriger()` plus bas.
       // Sur tous les écrans (au-dessus du menu), remis à jour à chaque sauvegarde.
-      function groupesDuBilan(st) {
-        const L = [];
-        etapes.forEach((e) => {
-          if (e.compte === false) return;
-          const nom = e.groupe || e.titre;
-          let g = L.find((x) => x.nom === nom);
-          if (!g) { g = { nom, ok: true, ids: [] }; L.push(g); }
-          g.ids.push(e.id);
-          if (st[e.id] !== 'ok') g.ok = false;
-          if (st[e.id] === 'erreur') g.erreur = true; else if (st[e.id] !== 'ok') g.faux = true;
-        });
-        // `etat` : 'ok', 'ko' (au moins une case fausse) ou 'erreur' (aucune fausse, mais une case que le site n'a pas pu juger).
-        L.forEach((g) => { g.etat = g.ok ? 'ok' : g.faux ? 'ko' : 'erreur'; });
-        return L;
-      }
       // Fini = tout est jugé. Un jalon qui plante (état 'erreur') est jugé : un bug de contenu ne bloque personne.
       const bilanComplet = (st) => etapes.length > 0 && etapes.every((e) => st[e.id] === 'ok' || st[e.id] === 'ko' || st[e.id] === 'erreur');
       const sansFaux = (st) => etapes.every((e) => st[e.id] === 'ok' || st[e.id] === 'erreur');
-      const jalonsAVerifier = (st) => etapes.filter((e) => st[e.id] === 'erreur' && e.compte !== false);
-      // Ce que dit le bandeau d'un jalon que le site n'a pas pu juger : jamais « faux », jamais la cause.
-      const aVerifierHtml = (st) => {
-        const L = jalonsAVerifier(st);
-        return L.length ? `<p class="ent-fin-petit" data-fin-averifier>${L.length > 1 ? 'Des étapes n’ont' : 'Une étape n’a'} pas pu être vérifiée${L.length > 1 ? 's' : ''} par le site :
-          ${L.map((e) => ech(e.groupe || e.titre)).join(', ')}. Signale-le à ton professeur : ce n’est pas une erreur de ta part.</p>` : '';
-      };
       // Les écrans à rouvrir : ceux des jalons faux qui déclarent un `ecran` ('fiche:<id>', 'phrases:<id>' ou 'planning:<id>').
       function ecransAFaire(st) {
         const L = [];
         etapes.forEach((e) => { if (st[e.id] === 'ko' && e.ecran && !L.includes(e.ecran)) L.push(e.ecran); });
         return L;
       }
-      // Sans le drapeau `correction` : le bandeau d'origine (06/10/2026). Tous justes → « Séance validée » et la
-      // séance suivante ouverte ; sinon le TITRE des jalons faux, jamais leur détail.
       // Les questions corrigées AU BILAN (`apres: 'bilan'`, questions au fil) : leur explication vient avec le bandeau de fin.
       function retoursAuBilan() {
         if (!MQ) return '';
@@ -1000,80 +977,14 @@ export function creerEntreprise(U) {
         return `<div class="ent-fin-retours" data-fin-retours>${L.map((q) => `<p data-fin-retour="${ech(q.id)}"><b>${ech(appel(MQ.personnes[q.de]))}</b>
           (${ech(q.groupe)}) : « ${ech(q.retour)} »</p>`).join('')}</div>`;
       }
-      function bandeauAncien(st) {
-        const faux = etapes.filter((e) => st[e.id] !== 'ok' && st[e.id] !== 'erreur');
-        const aVerifier = aVerifierHtml(st);
-        if (!faux.length && aVerifier) {
-          // Rien de faux, mais une étape que le site n'a pas pu juger : ni « validée » ni « à corriger ».
-          const S = ctx.suivante;
-          return `<div class="ent-fin" role="status" data-fin="averifier"><span class="ent-fin-ico" aria-hidden="true">?</span>
-            <div><b>Séance terminée.</b> Les étapes que le site a pu vérifier sont justes${S ? ` : la séance suivante, ${ech(S.code)} « ${ech(S.titre)} », est ouverte.` : '.'}
-              ${aVerifier}${retoursAuBilan()}</div>
-            <button class="btn ent-fin-btn" data-fin-quitter>Retour aux séances</button></div>`;
-        }
-        if (!faux.length) {
-          const S = ctx.suivante;
-          return `<div class="ent-fin ent-fin-ok" role="status" data-fin="ok"><span class="ent-fin-ico" aria-hidden="true">✓</span>
-            <div><b>Séance validée.</b> Toutes tes étapes sont justes${S ? ` : la séance suivante, ${ech(S.code)} « ${ech(S.titre)} », est ouverte.` : '.'}${retoursAuBilan()}</div>
-            <button class="btn ent-fin-btn" data-fin-quitter>Retour aux séances</button></div>`;
-        }
-        return `<div class="ent-fin ent-fin-ko" role="status" data-fin="ko"><span class="ent-fin-ico" aria-hidden="true">⚠</span>
-          <div><b>Tu as tout fait, mais il reste quelque chose à corriger :</b>
-            <ul>${faux.map((e) => `<li data-fin-jalon="${ech(e.id)}">${ech(e.titre)}</li>`).join('')}</ul>
-            <span class="ent-fin-petit">${SUITE_AU_BILAN
-              ? `Relis ta trame à ces étapes.${ctx.suivante ? ` La séance suivante, ${ech(ctx.suivante.code)} « ${ech(ctx.suivante.titre)} », est ouverte.` : ''}`
-              : `Relis ta trame à ces étapes. Si tu ne trouves pas, appelle ton professeur${ctx.meta.reinitialisable ? ' ou réinitialise ta séance' : ''}.
-            La séance suivante s'ouvrira quand tout sera juste.`}</span>${aVerifier}${retoursAuBilan()}</div></div>`;
-      }
       function bandeauFin(res) {
         if (estProf || COPIE || !ctx.meta.parcours || !etapes.length) return '';
         const st = res || noterBase(db).detail;
         if (!fini(st)) return '';
-        if (!CORRECTION && !PREMIER_ESSAI) return bandeauAncien(st);
-        const G = groupesDuBilan(st);
-        const tout = G.every((g) => g.ok);
-        // Rien de faux, mais une ligne que le site n'a pas pu juger ('erreur') : ni « tout juste » ni « à corriger ».
-        const incertain = !tout && G.every((g) => g.etat !== 'ko');
-        const S = ctx.suivante;
-        const [motOk, motKo] = CORRECTION ? ['juste', 'à corriger'] : ['du premier coup', 'après une erreur'];
-        const liste = `<ul class="ent-fin-liste" aria-label="Résultat par étape">${G.map((g) => `<li class="${g.etat === 'ok' ? 'ent-fin-juste' : g.etat === 'ko' ? 'ent-fin-faux' : ''}" data-fin-jalon="${ech(g.ids[0])}"
-          data-fin-etat="${g.etat}"><span class="ent-fin-m" aria-hidden="true">${g.etat === 'ok' ? '✓' : g.etat === 'ko' ? '✗' : '?'}</span><span>${ech(g.nom)}</span>
-          <span class="ent-fin-a">${g.etat === 'ok' ? motOk : g.etat === 'ko' ? motKo : 'à vérifier'}</span></li>`).join('')}</ul>`;
-        if (incertain) {
-          return `<div class="ent-fin ent-fin-v2" role="status" data-fin="averifier"><div class="ent-fin-corps">
-            <h2 class="ent-fin-t">Tu as fini.</h2>
-            <p>Les étapes que le site a pu vérifier sont justes.${S ? ` La séance suivante, ${ech(S.code)} « ${ech(S.titre)} », est ouverte.` : ''}</p>
-            ${liste}${aVerifierHtml(st)}${retoursAuBilan()}<div class="ent-fin-btns"><button class="btn" data-fin-quitter>Retour aux séances</button></div></div></div>`;
-        }
-        // Sans « Corriger » : rien ne se rouvre, la note est celle du premier essai.
-        if (!CORRECTION) {
-          return `<div class="ent-fin ent-fin-v2 ${tout ? 'ent-fin-ok' : 'ent-fin-ko'}" role="status" data-fin="${tout ? 'ok' : 'ko'}"><div class="ent-fin-corps">
-            <h2 class="ent-fin-t">${tout ? 'Tout est juste du premier coup ✓' : 'Tu as fini : voici ce que tu as réussi du premier coup.'}</h2>
-            <p>${tout ? 'Bravo.' : 'Ta note compte ton premier essai à chaque étape.'}${S ? ` La séance suivante, ${ech(S.code)} « ${ech(S.titre)} », est ouverte.` : ''}</p>
-            ${liste}${aVerifierHtml(st)}${retoursAuBilan()}<div class="ent-fin-btns"><button class="btn" data-fin-quitter>Retour aux séances</button></div></div></div>`;
-        }
-        if (tout) {
-          return `<div class="ent-fin ent-fin-v2 ent-fin-ok" role="status" data-fin="ok"><div class="ent-fin-corps">
-            <h2 class="ent-fin-t">Tout est juste ✓</h2>
-            <p>Bravo, toutes tes étapes sont justes.${S ? ` La séance suivante, ${ech(S.code)} « ${ech(S.titre)} », est ouverte.` : ''}</p>
-            ${liste}${retoursAuBilan()}<div class="ent-fin-btns"><button class="btn" data-fin-quitter>Retour aux séances</button></div></div></div>`;
-        }
-        const peutCorriger = ecransAFaire(st).length > 0;
-        // Une question ne se rouvre jamais (seule la première réponse compte) : le bandeau le dit quand l'une est fausse.
-        const questionsFausses = MQ && etapes.some((e) => e.question && st[e.id] === 'ko')
-          ? '<p data-fin-questions>Les réponses aux questions ne se corrigent pas : seule la première compte.</p>' : '';
-        // Une case fausse sans `ecran` ne se rouvre pas (ENT-5.4 : le BL est signé, le camion est reparti). La séance
-        // le dit avec `finFige` (une phrase, dans `creerEntreprise`), et le bandeau ne promet pas une correction
-        // qu'aucun bouton n'offre.
-        const fige = U.finFige && etapes.some((e) => e.compte !== false && st[e.id] === 'ko' && !e.ecran)
-          ? `<p data-fin-fige>${ech(U.finFige)}</p>` : '';
-        return `<div class="ent-fin ent-fin-v2 ent-fin-ko" role="status" data-fin="ko"><div class="ent-fin-corps">
-          <h2 class="ent-fin-t">Tu as fini : voici ce qui est juste et ce qui est à corriger.</h2>
-          ${fige}${questionsFausses}<p>${peutCorriger ? 'Tu peux corriger pour améliorer ta note, ou passer à la séance suivante'
-            : 'Tu peux passer à la séance suivante'}${S ? ` (${ech(S.code)}, déjà ouverte)` : ''}.</p>
-          ${liste}${aVerifierHtml(st)}${retoursAuBilan()}<div class="ent-fin-btns">${peutCorriger ? `<button class="btn btn-p ent-fin-corriger" data-fin-corriger>Corriger</button>
-            <span class="ent-fin-gain">Corriger améliore ta note.</span>` : ''}
-            <button class="btn" data-fin-quitter>Retour aux séances</button></div></div></div>`;
+        // Le HTML est fabriqué par `entreprise-fin.js` (lot 9c, module 4) ; ici, ce qui dépend de la séance en cours.
+        return bandeauFinHtml(st, { etapes, correction: CORRECTION, premierEssai: PREMIER_ESSAI, suiteAuBilan: SUITE_AU_BILAN,
+          suivante: ctx.suivante, reinitialisable: ctx.meta.reinitialisable, avecQuestions: !!MQ, finFige: U.finFige,
+          retours: retoursAuBilan, peutCorriger: ecransAFaire(st).length > 0 });
       }
       function brancherBandeauFin() {
         hote.querySelector('[data-fin-quitter]')?.addEventListener('click', () => sortir(ctx.quitter));
