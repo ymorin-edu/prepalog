@@ -9,19 +9,75 @@ suivent tout seuls.
 
 ## Ce que le fichier doit exporter
 
+### Une séance d'entreprise : la fabrique `seanceEntreprise` (chantier 8, 08/10/2026)
+
+C'est **la forme à utiliser** pour toute séance d'entreprise (Simulog). La fabrique est dans
+`core/types/seance-entreprise.js` ; elle déduit tout ce qui était recopié d'un fichier à l'autre, et le fichier
+de séance tient en une vingtaine de lignes. Modèle (`activites/picard-ent42.js`, sans son en-tête) :
+
+```js
+import { seanceEntreprise } from '../core/types/seance-entreprise.js';
+import * as PICARD from '../contenus/picard.js';            // l'univers de l'entreprise (commun à ses séances)
+import * as SEANCE from '../contenus/picard-ent42.js';      // le contenu de CETTE séance (ETAPES, ACCUEIL, VOLET…)
+const s = seanceEntreprise(PICARD, SEANCE, {
+  id: 'picard-ent42', code: 'ENT-4.2', titre: '…', desc: '…', niveaux: ['1re'],
+  competences: ['C1.4', 'C1.3'], temps: 'entrainement', trame: 'picard-deux-camions', pret: true, ouverture: 'prof',
+}, { menu: [], CATALOGUE: PICARD.catalogue(SEANCE.PRODUITS_ENT42), exercice: '…', quai: SEANCE.QUAI_ENT42 });
+export const meta = s.meta;
+export const rendre = s.rendre;
+// export const noter = s.noter;   // seulement pour une évaluation (`copie: true`)
+```
+
+Les trois arguments : l'**univers** (ce que toutes les séances de l'entreprise partagent), le **contenu de la
+séance**, le **`meta`** (la déclaration, voir plus bas) ; puis les **options** de `creerEntreprise` propres à la séance.
+
+**Ce qui est déduit** (une valeur écrite dans `meta` l'emporte toujours) :
+
+| Où | Déduit | De quoi |
+|---|---|---|
+| `meta` | `rubrique: 'simulog'`, `immersif: true`, `portee: 'eleve'`, `tables: {}` | valeurs fixes |
+| `meta` | `bareme` | nombre de jalons, `SEANCE.ETAPES.length` (écrire `bareme: 20` pour une séance à jalons pondérés) |
+| `meta` | `corrige` | `./contenus/corriges/<code>.js` ; `corrige: false` = pas de corrigé (ENT-5.3), la clé disparaît |
+| moteur | `ENTREPRISE`, `VOCAB`, `CATALOGUE`, `SUPPLIERS`, `SUP_BY_ID`, `CUSTOMERS`, `CM`, `baseDeDepart`, `THEME` | l'univers (les neuf sont exigées) |
+| moteur | `etapes`, `accueil`, `volet` | `SEANCE.ETAPES` (exigée), `SEANCE.ACCUEIL`, `SEANCE.VOLET` |
+| moteur | `copie` | `meta.copie` |
+| moteur | `trame: { pdf, docx }` (liens du bandeau) | `./contenus/trames/<code>-<nom>-trame-eleve.pdf` / `.docx`, où `<nom>` est écrit **une fois** dans `meta.trame` (`trame: 'picard-deux-camions'`) : il ne se déduit pas de l'`id`. Sans `meta.trame`, pas de trame. `meta.trame` n'est pas dans le `meta` rendu. |
+
+**Remplacer une valeur** — du plus faible au plus fort : **l'univers** < **le contenu de la séance** (une clé de même
+nom exportée par `contenus/<séance>.js`, par exemple un `CATALOGUE` ou une `baseDeDepart` propre à la séance :
+Cdiscount) < **les options** (Picard fabrique son `CATALOGUE` par `PICARD.catalogue(SEANCE.PRODUITS_ENT42)` ; Smoby
+ENT-5.7 réécrit `ENTREPRISE` et `VOCAB` pour l'agence Kuehne+Nagel). Tout le reste (`menu`, `quai`, `plan`, `tournee`,
+`planning`, `entrepot`, `fiche`, `lexique`, `finFige`, `stockOuvert`, `exercice`, `transportSection`, `transportId`,
+`sansTrame`, `receptionLitige`, `tableur`, `inventaire`…) se range dans les options et part tel quel au moteur ; la
+liste est plus bas (« Autres clés de `creerEntreprise` »). Une trame déjà au format `{ pdf, docx }` se passe aussi dans
+les options (elle remplace la trame déduite).
+
+**Ce que la fabrique refuse** (la séance ne se charge pas, le message est en français et nomme la séance) : un `meta`
+sans `id` ou sans `code`, un contenu de séance sans `ETAPES`, une clé d'univers absente de l'univers, du contenu et des
+options, une `meta.trame` qui n'est pas un nom. Le code de la fabrique est aussi décrit dans son en-tête.
+
+**Exports du fichier** (la forme migrée n'en a que deux ou trois) :
+
 | Export | Obligatoire | Rôle |
 |---|---|---|
-| `meta` | oui | La déclaration (voir plus bas). |
-| `rendre(hote, ctx)` | oui | Dessine la séance dans `hote` (un élément du DOM). |
-| `noter(db)` | pour une évaluation (`copie: true`) | Calcule le score à partir de la base de l'élève. |
+| `meta` | oui | La déclaration (voir plus bas). `s.meta`. |
+| `rendre(hote, ctx)` | oui | Dessine la séance dans `hote` (un élément du DOM). `s.rendre`. |
+| `noter(db)` | pour une évaluation (`copie: true`) | Calcule le score à partir de la base de l'élève. `s.noter`. |
 | `graines` | non | Contenu de départ que l'enseignant peut installer (bouton « semer »). |
 
-Pour une séance d'entreprise, `rendre` ne fait que passer la main au moteur :
+### Forme longue : `creerEntreprise` directe, toujours valide
+
+Les anciens fichiers (et ceux qui ne sont ni d'une entreprise Simulog, ni faits pour `creerEntreprise`) écrivent tout
+à la main : `meta` complet (`rubrique`, `immersif`, `portee`, `tables`, `bareme`, `corrige`…), puis les options.
+La fabrique n'impose rien au moteur, les deux formes se valent à l'exécution :
 
 ```js
 const moteur = creerEntreprise({ ENTREPRISE, VOCAB, CATALOGUE, …, etapes, accueil, volet });
 export function rendre(hote, ctx) { moteur.rendre(hote, ctx); }
+export const noter = (db) => moteur.noter(db);   // évaluation seulement
 ```
+
+Une séance qui n'est pas une séance d'entreprise (quiz, tableur, magasin…) exporte `meta` et `rendre` à la main.
 
 Un `volet` sème ses messages à l'ouverture (`semer`). Il peut aussi déclarer des messages qui
 arrivent **plus tard**, une seule fois, quand le travail de l'élève rend une condition vraie :
