@@ -389,8 +389,126 @@ await v('séances d\'entreprise : les 24 séances du registre se chargent sans r
     try { return { metas: (await (await import('/activites/index.js')).chargerActivites()).map((a) => a.meta.code) }; } catch (e) { return { refus: e.message }; }
   });
   if (r.refus) throw new Error('une séance est refusée au chargement : ' + r.refus);
+  // Chantier 9a bis : une séance refusée est ÉCARTÉE sans bruit (l'accueil s'affiche quand même). Le filet ne doit pas
+  // rendre la suite aveugle : la liste des échecs doit être vide, et le registre entier doit être là.
+  const f = await page.evaluate(async () => {
+    const I = await import('/activites/index.js');
+    return { echecs: I.activitesEnEchec(), charges: (await I.chargerActivites()).length, attendus: I.ACTIVITES.length };
+  });
+  if (f.echecs.length) throw new Error('séance(s) écartée(s) au chargement : ' + f.echecs.map((e) => `${e.fichier} — ${e.erreur}`).join(' ; '));
+  if (f.charges !== f.attendus) throw new Error(`${f.charges} séances chargées sur ${f.attendus} dans le registre`);
   const ent = r.metas.filter((c) => /^ENT-\d+\.\d+$/.test(c));
   if (ent.length < 24) throw new Error(`seulement ${ent.length} séances d'entreprise chargées`);
 });
+
+// ---------- 45. une séance qui refuse de se charger n'empêche pas le site de s'afficher (chantier 9a bis, 08/10/2026)
+// Avant, `Promise.all` dans `chargerActivites()` : UN fichier fautif et plus aucun accueil pour personne. On casse ici une
+// séance SANS toucher au dépôt (le serveur de test sert son fichier réécrit : `menu:` devient `menuu:`, une option que
+// `creerEntreprise` refuse depuis le lot 9a). Contexte à part, avec sa propre base de démonstration.
+const CASSEE = 'cdiscount-chiffres';
+const ctxC = await nav.newContext({ viewport: { width: 1280, height: 900 } });
+await ctxC.route(`**/activites/${CASSEE}.js*`, async (route) => {
+  const r = await route.fetch();
+  await route.fulfill({ response: r, body: (await r.text()).replace(/\n(\s*)menu:/, '\n$1menuu:') });
+});
+const pgC = await ctxC.newPage();
+pgC.setDefaultTimeout(6000);
+const horsAttendu = [];   // toute erreur de page autre que le message de la séance écartée
+const attendu = [];       // le message de la console propre à la séance écartée
+pgC.on('pageerror', (e) => horsAttendu.push('PAGEERROR: ' + e.message));
+pgC.on('console', (m) => {
+  if (m.type() !== 'error' || /Failed to load resource.*\b404\b/.test(m.text())) return;
+  if (m.text().startsWith(`Séance écartée (${CASSEE}.js)`)) { attendu.push(m.text()); return; }
+  horsAttendu.push('CONSOLE: ' + m.text());
+});
+pgC.on('dialog', (d) => d.accept());
+await pgC.goto(BASE);
+await pgC.waitForSelector('#btnProf');
+const graine = await pgC.evaluate(async (AID) => {
+  const { creerBackendDemo } = await import('/core/backend-demo.js');
+  const B = creerBackendDemo();
+  const prof = (await B.connexionProf()).uid;
+  const g = await B.creerGroupe({ nom: 'Essai écartée', annee: '', niveau: '1re', profUid: prof });
+  await B.creerEleves(g.id, [{ nom: 'ECART', prenom: 'Eva', matricule: 'ze01', code: 'c1' }]);
+  const uid = (await B.elevesDuGroupe(g.id))[0].uid;
+  await B.ecrireScore(g.id, uid, AID, { score: 2, max: 3 });
+  await B.poserLigne('classements', AID, uid, { gid: g.id, groupe: 'ZZ', score: 2, max: 3, temps: 3, ts: 1 });
+  await B.deconnexion();
+  return { gid: g.id, uid };
+}, CASSEE);
+const dehors = async () => {
+  await pgC.reload();
+  await pgC.waitForSelector('#btnProf, #btnDeco');
+  if (await pgC.$('#btnDeco')) { await pgC.click('#btnDeco'); await pgC.waitForSelector('#btnProf'); }
+};
+
+await v('séance refusée : l\'élève a son accueil, sans la séance, sans carte ni message', async () => {
+  await dehors();
+  await pgC.fill('#mat', 'ze01');
+  await pgC.fill('#code', 'c1');
+  await pgC.click('#btnEleve');
+  await pgC.waitForSelector('text=Bonjour Eva');
+  const r = await pgC.evaluate(async () => {
+    const I = await import('/activites/index.js');
+    const mods = await I.chargerActivites();
+    return { ids: mods.map((m) => m.meta.id), attendus: I.ACTIVITES.length, echecs: I.activitesEnEchec(),
+      pastilles: document.querySelectorAll('.rubrique').length, texte: document.body.innerText,
+      avis: document.querySelectorAll('[data-seance-ecartee]').length };
+  });
+  if (r.ids.includes(CASSEE)) throw new Error('la séance cassée est restée au registre');
+  if (r.ids.length !== r.attendus - 1) throw new Error(`${r.ids.length} séances chargées au lieu de ${r.attendus - 1}`);
+  if (r.echecs.length !== 1 || r.echecs[0].fichier !== `${CASSEE}.js`) throw new Error('échec mal retenu : ' + JSON.stringify(r.echecs));
+  if (!r.echecs[0].erreur.includes('menuu')) throw new Error('le message du moteur n\'est pas retenu tel quel : ' + r.echecs[0].erreur);
+  if (r.pastilles < 3) throw new Error('l\'accueil n\'a pas ses rubriques : ' + r.pastilles);
+  if (r.avis || /n'a pas pu se charger|cdiscount-chiffres/i.test(r.texte)) throw new Error('l\'élève voit l\'échec : ' + r.texte.slice(0, 200));
+  if (attendu.length !== 1) throw new Error(`${attendu.length} message(s) « Séance écartée » dans la console au lieu d'un`);
+  if (horsAttendu.length) throw new Error('erreur inattendue dans la page : ' + horsAttendu.join(' | '));
+});
+
+await v('séance refusée : l\'enseignant lit en haut de l\'accueil le fichier et le message du moteur', async () => {
+  await dehors();
+  await pgC.click('#btnProf');
+  await pgC.waitForSelector('#btnProfEspace');
+  const lignes = await pgC.$$eval('[data-seance-ecartee]', (els) => els.map((e) => ({ f: e.dataset.seanceEcartee, t: e.textContent.trim(),
+    cl: e.className, avantRubriques: !!(e.compareDocumentPosition(document.querySelector('.rubrique')) & Node.DOCUMENT_POSITION_FOLLOWING) })));
+  const erreur = await pgC.evaluate(async () => (await import('/activites/index.js')).activitesEnEchec()[0].erreur);
+  if (lignes.length !== 1) throw new Error(`${lignes.length} avis au lieu d'un : ` + JSON.stringify(lignes));
+  const [l] = lignes;
+  if (l.f !== `${CASSEE}.js`) throw new Error('fichier : ' + l.f);
+  if (!l.t.startsWith('Une séance n\'a pas pu se charger et n\'est pas proposée aux élèves : ' + CASSEE + '.js — ')) throw new Error('début du message : ' + l.t);
+  if (!l.t.endsWith(erreur)) throw new Error('le message du moteur n\'est pas repris tel quel : ' + l.t);
+  if (!erreur.includes('menuu')) throw new Error('le message du moteur ne nomme pas l\'option fautive : ' + erreur);
+  if (!l.avantRubriques) throw new Error('l\'avis n\'est pas au-dessus des rubriques');
+  if (!/avis-err/.test(l.cl)) throw new Error('classe : ' + l.cl);
+});
+
+await v('séance refusée : suivi, compétences et conduite de séance s\'ouvrent malgré un score enregistré sur elle, sans sa tuile', async () => {
+  // Le score de la séance cassée existe (semé plus haut) : l'espace enseignant ne doit ni planter ni afficher d'erreur.
+  const avant = horsAttendu.length;
+  await pgC.click('#btnProfEspace');
+  for (const ong of ['suivi', 'competences', 'seance']) {
+    await pgC.click(`[data-ong="${ong}"]`);
+    await pgC.waitForTimeout(600);
+    const r = await pgC.evaluate((AID) => {
+      const z = document.querySelector('#contenuProf');
+      return { chargement: /Chargement du suivi|Chargement des compétences/.test(z.innerText), taille: z.innerText.length,
+        tuile: !!z.querySelector(`[data-ouvre="${AID}"]`) || z.innerText.includes('ENT-2.2') };
+    }, CASSEE);
+    if (r.chargement || r.taille < 50) throw new Error(`l'onglet ${ong} ne s'est pas affiché`);
+    if (r.tuile) throw new Error(`l'onglet ${ong} propose encore la séance écartée`);
+  }
+  if (horsAttendu.length !== avant) throw new Error('erreur dans la page : ' + horsAttendu.slice(avant).join(' | '));
+});
+
+await v('séance refusée : supprimer un élève efface aussi son classement dans la séance écartée', async () => {
+  const dans = () => pgC.evaluate((AID) => Object.keys(JSON.parse(localStorage.getItem('prepalog:classements/' + AID) || '{}')), CASSEE);
+  if (!(await dans()).includes(graine.uid)) throw new Error('le classement semé n\'est pas là avant la suppression');
+  await pgC.click('[data-ong="comptes"]');
+  await pgC.waitForSelector(`[data-suppre="${graine.uid}"]`);
+  await pgC.click(`[data-suppre="${graine.uid}"]`);
+  await pgC.waitForFunction((uid) => !document.querySelector(`[data-suppre="${uid}"]`), graine.uid);
+  if ((await dans()).includes(graine.uid)) throw new Error('le classement de l\'élève supprimé reste dans la séance écartée (ligne invisible)');
+});
+await ctxC.close();
 
 }

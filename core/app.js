@@ -4,7 +4,7 @@ import { demarrerBackend, B } from './backend.js';
 import { CONFIG, DEMO } from './config.js';
 import { ech, toast, entete, brancherEntete, messageErreur } from './ui.js';
 import { activiteVisible, raisonCachee, courtNiveau, libelleNiveaux, demiDe } from './niveaux.js';
-import { chargerActivites, activite, RUBRIQUES, ICONES, activitesDeRubrique, entreprisesDe, intentionDe } from '../activites/index.js';
+import { chargerActivites, activitesEnEchec, activite, RUBRIQUES, ICONES, activitesDeRubrique, entreprisesDe, intentionDe } from '../activites/index.js';
 import { ouvrirJeu, surEchec } from './store.js';
 import { rendreEspaceProf } from './prof.js';
 import { verrou, seancesDuParcours, versionDuParcours, baseDe, appliquerReprise } from './parcours.js';
@@ -209,6 +209,7 @@ async function vueAccueil() {
   const rub = rubriqueActive ? RUBRIQUES.find((r) => r.id === rubriqueActive) : null;
   const cartouche = `
     ${entete({ marque: CONFIG.marque, institution: CONFIG.institution, profil, logo: rub?.id === 'simulog' ? 'simulog' : undefined })}
+    ${estProf ? activitesEnEchec().map((e) => `<div class="avis avis-err" data-seance-ecartee="${ech(e.fichier)}">Une séance n'a pas pu se charger et n'est pas proposée aux élèves : <strong>${ech(e.fichier)}</strong> — ${ech(e.erreur)}</div>`).join('') : ''}
     ${!estProf && !groupe ? `<div class="avis avis-err">Vous n'êtes rattaché à aucun groupe. Prévenez votre enseignant.</div>` : ''}
     ${estProf && !groupeActif ? `<div class="avis">Aucun groupe actif. Ouvrez l'espace enseignant pour en créer un.</div>` : ''}`;
 

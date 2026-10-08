@@ -197,9 +197,54 @@ function ordonner(mods) {
 
 const cache = new Map();
 
-export async function chargerActivites() {
-  if (cache.size) return Array.from(cache.values());
-  const mods = await Promise.all(ACTIVITES.map((f) => f()));
+// Les séances qui ont refusé de se charger (chantier 9a bis, 08/10/2026). Avant, UN fichier
+// en faute (syntaxe, option refusée par `creerEntreprise`, `id` de vue en double…) faisait
+// échouer `Promise.all` : plus aucun élève n'avait d'accueil. Maintenant la séance fautive est
+// ÉCARTÉE du registre (les élèves ne voient rien, ni carte ni message), son erreur est retenue
+// ici, et l'accueil de l'enseignant l'affiche. La suite de tests, elle, tombe (dependances.mjs).
+// `id` = nom du fichier sans `.js` : c'est la règle de tout le dépôt, et c'est le seul
+// identifiant qu'on connaisse d'une séance qui n'a pas pu se charger (utile pour effacer
+// les classements d'un élève supprimé, voir `core/prof.js`).
+const enEchec = [];
+
+// 'spartoo.js' ← () => import('./spartoo.js') (le nom tel qu'il est écrit dans ACTIVITES).
+const nomDuFichier = (f, i) => {
+  const m = /import\(\s*['"`]\.\/([^'"`]+)['"`]\s*\)/.exec(String(f));
+  return m ? m[1] : `(ligne ${i + 1} de ACTIVITES)`;
+};
+
+// Une séance chargée mais sans `meta.id` ne peut pas entrer au registre (ordonner et le cache
+// s'appuient dessus) : on la traite comme un refus plutôt que de faire tomber l'accueil.
+const verifier = (m) => {
+  if (!m || !m.meta || typeof m.meta !== 'object' || !m.meta.id) throw new Error("le fichier n'exporte pas de « meta » avec un « id ».");
+  return m;
+};
+
+export function activitesEnEchec() {
+  return enEchec.map((e) => ({ ...e }));
+}
+
+// Un seul chargement à la fois : deux appels simultanés (accueil + espace enseignant) ne
+// doublent ni les essais ni les messages de la console.
+let chargement = null;
+
+export function chargerActivites() {
+  if (cache.size) return Promise.resolve(Array.from(cache.values()));
+  if (!chargement) chargement = charger().finally(() => { chargement = null; });
+  return chargement;
+}
+
+async function charger() {
+  const resultats = await Promise.allSettled(ACTIVITES.map(async (f) => verifier(await f())));
+  enEchec.length = 0;
+  const mods = [];
+  resultats.forEach((r, i) => {
+    if (r.status === 'fulfilled') { mods.push(r.value); return; }
+    const fichier = nomDuFichier(ACTIVITES[i], i);
+    const erreur = (r.reason && r.reason.message) || String(r.reason);
+    enEchec.push({ fichier, id: fichier.replace(/\.js$/, ''), erreur });
+    console.error(`Séance écartée (${fichier}) : ${erreur}`);
+  });
   // On range AVANT de remplir le cache : tout ce qui consomme `chargerActivites()` —
   // l'accueil, le suivi de classe, la conduite de séance — hérite du même ordre.
   ordonner(mods).forEach((m) => cache.set(m.meta.id, m));

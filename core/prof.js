@@ -5,7 +5,7 @@ import { B } from './backend.js';
 import { ech, toast, confirmer } from './ui.js';
 import { AISANCES, amenagements } from './amenagements.js';
 import { seancesDepuis, memeBase } from './parcours.js';
-import { chargerActivites, activite, entreprisesDe } from '../activites/index.js';
+import { chargerActivites, activitesEnEchec, activite, entreprisesDe } from '../activites/index.js';
 import { versCSV, telecharger, ouvrirJeu, cheminDe } from './store.js';
 import { NIVEAUX, libelleNiveau, courtNiveau, libelleNiveaux, activiteVisible, horsNiveau, ouvertureParProf,
   demisDe, nomDemi, forcage } from './niveaux.js';
@@ -83,7 +83,9 @@ export async function rendreEspaceProf(hote, ctx) {
   // Suppression d'un élève ou d'un groupe (chantier 6, 08/10/2026).
   // Les identifiants d'activités du registre : le backend s'en sert pour effacer les lignes
   // `classements/{aid}/{uid}` d'un élève supprimé, et ne connaît pas le registre lui-même.
-  const aidsConnus = async () => (await chargerActivites()).map((x) => x.meta.id);
+  // Les séances écartées au chargement (activites/index.js) y restent : un élève supprimé ne doit pas laisser
+  // derrière lui, invisible, un classement dans une séance qui refuse de se charger aujourd'hui.
+  const aidsConnus = async () => [...(await chargerActivites()).map((x) => x.meta.id), ...activitesEnEchec().map((e) => e.id)];
   // Le backend a retiré l'élève de `demiDe` et `equipes` dans tous les groupes de l'enseignant ;
   // on aligne la copie en mémoire (sans réécrire quoi que ce soit).
   const oublierEleve = (uid) => groupes.forEach((gr) => {
