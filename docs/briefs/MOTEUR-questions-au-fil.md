@@ -8,7 +8,7 @@
 >
 > Puis, dans une autre conversation : `… fais le lot 3 (signaux de geste)`, puis `… fais le lot 4 (réponses de la classe)`.
 
-**Statut** : lots 1 et 2 livrés le 08/10/2026 (à valider par Tristan sur la page d'essai) ; lots 3 et 4 à implémenter. Questions du §11 tranchées le 07/10 au soir. Révisé le 07/10 à 21 h 45 (deux sortes de questions, plus de « Plus tard », travail gelé, souplesse). Révisé le 08/10 à 8 h (sorties de page, §4.8 bis ; trois règles d’écriture contre le copier-coller, dont les questions d’éco-droit, §7).
+**Statut** : lots 1, 2 et 3 livrés le 08/10/2026 (à valider par Tristan sur la page d'essai) ; lot 4 à implémenter. Questions du §11 tranchées le 07/10 au soir. Révisé le 07/10 à 21 h 45 (deux sortes de questions, plus de « Plus tard », travail gelé, souplesse). Révisé le 08/10 à 8 h (sorties de page, §4.8 bis ; trois règles d’écriture contre le copier-coller, dont les questions d’éco-droit, §7).
 **Date du brief** : 07/10/2026 (soir).
 **Auteur** : Claude (conversation Cowork, Opus), d'après la lecture du code de `main` au commit `d024f17`, du brief
 `FRANCE-BOISSONS-refonte.md` (décisions du 07/10, 21 h) et du lot C de `SMOBY-retours-classe-5.1.md`.
@@ -557,6 +557,28 @@ les durées, et le fait que les vues existantes acceptent un `signal` sans diffi
   pas d'`ecran`).
 - **Vérifié à l'écran** (page d'essai, 1366 × 768, thèmes clair et sombre) : parcours élève complet, vue enseignant.
   **Non vérifié** : l'affichage sous 900 px (panneau en bas de l'écran).
+
+### Lot 3 — signaux de geste (livré le 08/10/2026, Claude Code, Opus)
+
+- **Fait** : `apresGeste(nom)` dans `core/declencheurs.js` ; une condition reçoit maintenant `(db, séance)` (les gestes
+  sont cloisonnés par séance : `db.gestes[<séance>][<nom>]` = heure, écrit une fois, rien pour l'enseignant ni après la
+  remise). Chaque vue appelle `api.signal(…)` juste avant sa sauvegarde et publie `signaux` : fiche (bloc, ligne d'un
+  tableau oui / non, envoi ; une saisie à la sortie de la case), planning (poser, envoyer), quai (décharger, valider
+  une palette, clôturer), plan d'entrepôt (poser, vérifier), animation (première réponse à une question). Un
+  `apresGeste` inconnu des vues de la séance empêche la séance de s'ouvrir (questions, points d'étape **et messages
+  déclenchés**). La page d'essai passe sur `apresGeste('fiche:bon:remplacement')`. Table des gestes :
+  `activites/FICHE-SEANCE.md`.
+- **Pas fait, et pourquoi** : les **phrases à choisir** n'ont pas de geste (l'envoi est déjà un mail : `apresMail`
+  suffit ; un geste « choisir une phrase » viendra si une séance en a besoin) ; le **gel vue par vue** (`gele: true`)
+  n'est pas utile : le gel du lot 2 est générique. Les gestes du plan d'entrepôt en mode **préparation** et
+  **visite** ne sont pas branchés (aucune séance FB ne les demande) ; les vues nouvelles (terminal vocal, stockage de
+  masse, tournée en camion) naîtront avec les leurs.
+- **Tests** : bloc `questions` (geste rangé et cloisonné, geste d'une autre séance sans effet, geste rangé qui fait
+  arriver la question à l'ouverture, saisie : rien pendant la frappe, la question à la sortie de la case, rien chez
+  l'enseignant, la liste des gestes de chaque vue) ; bloc `planning` (poser une carte fait arriver un message une
+  fois, « envoyer » rangé, rien chez l'enseignant, un nom inconnu refuse la séance) ; bloc `animation` (le geste de la
+  question, rangé à la première réponse). **Non éprouvé par un test qui joue la vue** : les gestes du quai et du plan
+  d'entrepôt (leur liste est contrôlée, leur émission ne l'est pas).
 
 À la livraison du lot 2 : recopier les décisions du §4.0 et du §11 dans `docs/decisions.md` (une ligne chacune, datée
 du 07/10/2026, « Tristan »).

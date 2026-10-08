@@ -504,6 +504,8 @@ export function creerLecteur(A) {
         if (ecrire && !(e.reponses && e.reponses[Q.id] && e.reponses[Q.id].premiere != null)) {
           if (!e.reponses) e.reponses = {};
           e.reponses[Q.id] = { premiere: st.choisi, juste: st.choisi === Q.juste, quand: Date.now() };
+          // GESTE (questions au fil, lot 3) : `animation:<id>:<question>`, à la première réponse.
+          if (api.signal) api.signal(`animation:${M.id}:${Q.id}`);
           if (k + 1 > (e.partie || 0)) e.partie = Math.min(k + 1, M.parties.length - 1);
           api.sauver();
           majNav();
@@ -539,7 +541,8 @@ export function creerLecteur(A) {
     jouer(0);
   }
 
-  return { id: M.id, nav: { libelle: M.libelle }, etatNeuf, html, brancher, modele: M };
+  return { id: M.id, nav: { libelle: M.libelle }, etatNeuf, html, brancher, modele: M,
+    signaux: M.questions.map((Q) => `animation:${M.id}:${Q.id}`) };
 }
 
 /* ============================================================ hors Simulog (lot 3) */

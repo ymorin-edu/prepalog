@@ -2,12 +2,11 @@
 // Modifier ce fichier suffit : voir « Modifier les questions d'une séance » dans `activites/FICHE-SEANCE.md`.
 // Personnes et situation CONSTRUITES pour l'essai (une ENT-6.2 simplifiée : le bon de commande de Malo).
 
-import { apresFiche, apresMail } from '../../core/declencheurs.js';
+import { apresFiche, apresMail, apresGeste } from '../../core/declencheurs.js';
 
 const MALO = 'malo@cafe-essai.example';
-// Le choix d'un remplacement sur le bon (un geste : choisir, quel que soit le choix). Le lot 3 le remplacera par un
-// signal de la fiche (`apresGeste`).
-const remplacementChoisi = (db) => !!(db.fiches && db.fiches.bon && db.fiches.bon.valeurs && db.fiches.bon.valeurs.remplacement);
+// Le choix d'un remplacement sur le bon : un geste de la fiche (choisir, quel que soit le choix).
+const remplacementChoisi = apresGeste('fiche:bon:remplacement');
 
 export const QUESTIONS = {
   id: 'essai-questions',

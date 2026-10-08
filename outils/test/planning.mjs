@@ -56,6 +56,14 @@ const monter = (p, o = {}) => p.evaluate(async (o) => {
   const hote = document.createElement('div'); hote.id = 'plTest'; document.body.appendChild(hote);
   const temps = o.temps || 'guidage';
   const U = E.univers({ cas: o.cas, temps, planning: C.CAS[o.cas] });
+  // Un message qui arrive au GESTE « poser une carte » (questions au fil, lot 3) : `o.geste` = le nom du geste.
+  if (o.geste) {
+    const { apresGeste } = await import('/core/declencheurs.js');
+    const v = U.volet || { id: 'essai-geste', semer: () => ({}) };
+    U.volet = { ...v, declencheurs: [...(v.declencheurs || []), { id: 'au-geste', quand: apresGeste(o.geste),
+      semer: (prenom) => ({ mails: [{ folder: 'in', ts: Date.now(), from: 'Chef de quai', fromMail: 'chef@essai.example', to: prenom,
+        subject: 'Message du geste', kind: 'text', text: 'Arrivé au geste.' }] }) }] };
+  }
   const CLE = 'essai-planning-base';
   const db = o.garder ? JSON.parse(localStorage.getItem(CLE) || '{}') : {};
   const moteur = creerEntreprise(U);
@@ -661,6 +669,35 @@ await v('Planning : 56 colonnes (chauffeurs) — la grille défile dans sa zone,
     return { page: document.documentElement.scrollWidth <= window.innerWidth, zone: z.scrollWidth > z.clientWidth };
   });
   egal(r, { page: true, zone: true }, 'défilements');
+  egal(erreursP, [], 'erreurs JS');
+});
+
+await v('Planning : le geste « poser une carte » fait arriver un message (apresGeste), une fois ; rien chez l’enseignant ; un geste inconnu refuse la séance', async () => {
+  const sujets = () => pg.evaluate(() => window.__p.db.mails.filter((m) => m.subject === 'Message du geste').length);
+  await monter(pg, { cas: 'quai', geste: 'planning:essai-quais:poser' });
+  egal(await sujets(), 0, 'message avant le geste');
+  await poser(pg, 'A', 'Q1', 0, 'lea');
+  egal(await sujets(), 1, 'message au premier geste');
+  egal(typeof (await pg.evaluate(() => window.__p.db.gestes['essai-planning']['planning:essai-quais:poser'])), 'number', 'geste rangé');
+  await poser(pg, 'B', 'Q2', 2, 'mathis');
+  egal(await sujets(), 1, 'message au second geste');
+  await envoyer(pg);
+  egal(typeof (await pg.evaluate(() => window.__p.db.gestes['essai-planning']['planning:essai-quais:envoyer'])), 'number', 'geste « envoyer » rangé');
+  // Enseignant : ni geste rangé, ni message.
+  await monter(pg, { cas: 'quai', geste: 'planning:essai-quais:poser', role: 'prof' });
+  await poser(pg, 'A', 'Q1', 0, 'lea');
+  egal([await sujets(), await pg.evaluate(() => window.__p.db.gestes || null)], [0, null], 'enseignant');
+  // Un nom de geste qu'aucune vue de la séance ne connaît : la séance ne se charge pas.
+  const m = await pg.evaluate(async () => {
+    const { creerEntreprise } = await import('/core/types/entreprise.js');
+    const { apresGeste } = await import('/core/declencheurs.js');
+    const E = await import('/outils/essai-planning.js');
+    const C = await import('/contenus/planning-essai.js');
+    const U = E.univers({ cas: 'quai', planning: C.CAS.quai });
+    U.volet = { id: 'x', semer: () => ({}), declencheurs: [{ id: 'faute', quand: apresGeste('planning:essai-quais:posser'), semer: () => ({}) }] };
+    try { creerEntreprise(U); return 'chargée'; } catch (e) { return e.message; }
+  });
+  vrai(/message « faute » : geste inconnu « planning:essai-quais:posser »/.test(m) && /planning:essai-quais:poser/.test(m), 'geste inconnu : ' + m);
   egal(erreursP, [], 'erreurs JS');
 });
 

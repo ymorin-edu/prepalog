@@ -55,6 +55,9 @@ const monter = (o = {}) => pg.evaluate(async (o) => {
     q('ou-verifier').actif = false;
   } else if (o.variante === 'jamais') {
     q('ou-verifier').quand = () => false;
+  } else if (o.variante === 'quantite') {
+    const { apresGeste } = await import('/core/declencheurs.js');
+    q('ou-verifier').quand = apresGeste('fiche:bon:quantite');
   }
   const U = S.univers({ copie: !!o.copie });
   U.questions = Q;
@@ -444,6 +447,53 @@ await v('Repérage (enseignant) : « a quitté la page pendant 2 questions (3 fo
       for (const u of [uid, uid2]) { await B.poserNote(gid, u, aid, null); await B.supprimerEleve(u); }
     }, ids);
   }
+});
+
+// Lot 3 (signaux de geste) : la question de Karim arrive au GESTE de la fiche, rangé dans `db.gestes[<séance>]`.
+await v('Gestes : choisir dans la fiche range le geste (une fois, par séance) ; une saisie le dit à la sortie de la case, jamais pendant la frappe ; un geste d’une autre séance ne compte pas', async () => {
+  await monter();
+  await choisirRemplacement('LIM-1L');
+  const g = (await base()).gestes;
+  egal(Object.keys(g), ['essai-questions'], 'gestes cloisonnés par séance');
+  egal(typeof g['essai-questions']['fiche:bon:remplacement'], 'number', 'geste rangé');
+  // Le même geste rangé pour une AUTRE séance : rien n'arrive.
+  await monter({ db: { gestes: { 'autre-seance': { 'fiche:bon:remplacement': 1 } } } });
+  vrai(!(await panneau()), 'un geste d’une autre séance fait arriver la question');
+  // Rangé pour CETTE séance (base reprise d'un autre poste) : la question arrive à l'ouverture.
+  await monter({ db: { gestes: { 'essai-questions': { 'fiche:bon:remplacement': 1 } } } });
+  vrai(await panneau(), 'le geste rangé ne fait pas arriver la question à l’ouverture');
+  // Une saisie : pendant la frappe, rien ; à la sortie de la case, le geste.
+  await monter({ variante: 'quantite' });
+  await aller('fiche');
+  await pg.type(`${Z} [data-fiche-saisie="quantite"]`, '12');
+  vrai(!(await panneau()), 'la question est arrivée pendant la frappe');
+  await pg.press(`${Z} [data-fiche-saisie="quantite"]`, 'Tab');
+  await pause();
+  vrai(await panneau(), 'la question n’arrive pas à la sortie de la case');
+  // Enseignant : aucun geste rangé.
+  await monter({ role: 'prof' });
+  await choisirRemplacement('LIM-1L');
+  egal((await base()).gestes, undefined, 'gestes de l’enseignant');
+});
+
+await v('Gestes : chaque vue publie ses gestes (fiche, planning, quai, plan d’entrepôt, animation)', async () => {
+  const r = await pg.evaluate(async () => {
+    const { creerFiche } = await import('/core/types/fiche.js');
+    const { creerPlanning } = await import('/core/types/planning.js');
+    const { creerLecteur } = await import('/core/types/animation.js');
+    const { FICHE_BON } = await import('/contenus/questions-essai.js');
+    const C = await import('/contenus/planning-essai.js');
+    const { ANIMATION_ESSAI } = await import('/contenus/animation-essai.js');
+    return { fiche: creerFiche(FICHE_BON).signaux, planning: creerPlanning(C.CAS.quai).signaux,
+      animation: creerLecteur(ANIMATION_ESSAI).signaux };
+  });
+  egal(r.fiche, ['fiche:bon:envoyer', 'fiche:bon:remplacement', 'fiche:bon:quantite'], 'fiche');
+  egal(r.planning, ['planning:essai-quais:poser', 'planning:essai-quais:envoyer'], 'planning');
+  vrai(r.animation.length > 0 && r.animation.every((x) => x.startsWith('animation:essai-fifo:')), 'animation : ' + r.animation);
+  // Le quai et le plan d'entrepôt : la liste est écrite dans leur fichier (lue ici, sans les monter).
+  const src = (f) => fs.readFileSync(path.join(ROOT, 'core', 'types', f), 'utf8');
+  vrai(src('quai.js').includes('signaux: [`quai:${Q.id}:decharger`, `quai:${Q.id}:valider`, `quai:${Q.id}:cloturer`]'), 'quai');
+  vrai(src('entrepot.js').includes('signaux: [`entrepot:${P.id}:poser`, `entrepot:${P.id}:verifier`]'), 'plan d’entrepôt');
 });
 
 await v('Questions : aucune erreur de page pendant le bloc', async () => {

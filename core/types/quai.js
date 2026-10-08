@@ -2142,6 +2142,7 @@ export function creerQuai(Q, opts = {}) {
   }
 
   return {
+    signaux: [`quai:${Q.id}:decharger`, `quai:${Q.id}:valider`, `quai:${Q.id}:cloturer`],
     id: Q.id,
     nav: { libelle: Q.libelle || 'Quai de réception' },
     etatNeuf: () => etatNeuf(Q),
@@ -2251,7 +2252,9 @@ export function creerQuai(Q, opts = {}) {
         if (r.dataset.q === 'premier') e.ordre.premier = +r.value; else e.ordre.phrase = r.value;
         api.sauver(); api.redessiner();
       }));
-      on('decharger', geste((ev, b) => decharger(e, ciDe(b), api)));
+      // GESTES (questions au fil, lot 3) : `quai:<id>:decharger`, `quai:<id>:valider` (une palette), `quai:<id>:cloturer`.
+      const sig = (n) => { if (api.signal) api.signal(`quai:${Q.id}:${n}`); };
+      on('decharger', geste((ev, b) => { sig('decharger'); decharger(e, ciDe(b), api); }));
       if (ISO && z.querySelector('[data-q-arrivee]') && !arriveeVue(e)) animerArrivee(z, api);
       on('passer1', () => { if (ui.anim1) ui.anim1.finir(); else { ui.arrivee = true; ui.rejeu1 = false; ui.t0a = null; api.redessiner(); } });
       on('revoir1', () => { ui.rejeu1 = true; ui.t0a = null; api.redessiner(); });
@@ -2288,6 +2291,7 @@ export function creerQuai(Q, opts = {}) {
       // cliquable. S'il manque quelque chose, le message s'écrit sous la case concernée et le focus y va ;
       // sinon la palette passe en résumé, sur place (« Modifier » la rouvre).
       on('valider', geste(() => {
+        sig('valider');
         const pal = p(), ss = s(), m = manques(pal, ss);
         if (m.compte || m.decision || m.motif) {
           ui.tente = pal.id; api.redessiner();
@@ -2486,6 +2490,7 @@ export function creerQuai(Q, opts = {}) {
       }));
       on('clore', geste(() => {
         if (!toutFini(e)) return;
+        sig('cloturer');
         if (EVAL && !api.estProf) {
           if (!ui.arme) { ui.arme = true; api.redessiner(); return; }
           ui.arme = false; e.fini = true; api.sauver(); api.redessiner(); api.rendreCopie(); return;

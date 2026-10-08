@@ -56,6 +56,10 @@
 //     TAPÉES, sans redessin ; les jalons les lisent avec `lireNombre` (« 6 091 », « 6091 », « 2,5 ») et
 //     `lireHeure` (« 11:00 », « 11h00 », « 11 h ») ci-dessous. Une saisie vide « manque ». Entrée dans une case ne
 //     part jamais (seul le bouton envoie).
+// GESTES (questions au fil, lot 3, 08/10/2026) : `fiche:<id>:<bloc>` quand l'élève remplit un bloc (choisir, cocher,
+// remettre en ordre ; une saisie à la sortie de la case, jamais pendant la frappe), `fiche:<id>:<bloc>:<ligne>` quand il
+// classe une ligne d'un tableau oui / non (« il classe le CV de Yanis »), `fiche:<id>:envoyer` à l'envoi. Liste :
+// `signaux` de la vue. Condition : `apresGeste('fiche:bon:remplacement')` (core/declencheurs.js).
 //   - `cadre` : `{ type: 'cadre', titre: '1. Expéditeur', large: true, blocs: [...] }` encadre ses blocs, comme les
 //     cases numérotées d'un document. `grille: true` sur la fiche les pose sur deux colonnes (un cadre `large`
 //     prend toute la ligne). La fiche peut aussi porter `entete` (HTML du contenu : titre du document, numéro…)
@@ -231,6 +235,7 @@ export function creerFiche(F, VDOC) {
   // Aucun redessin pendant le remplissage : le focus et la place dans la page restent où ils sont.
   function brancher(z, e, ui, api) {
     if (!e.valeurs) e.valeurs = {};
+    const sig = (n) => { if (api.signal) api.signal(`fiche:${F.id}:${n}`); };
     const ecrit = () => { if (ui.manque) { ui.manque = ''; const m = z.querySelector('[data-fiche-manque]'); if (m) m.textContent = ''; } api.sauver(); };
     z.querySelectorAll('[data-ouinon]').forEach((btn) => btn.addEventListener('click', () => {
       if (e.envoye || api.figee) return;
@@ -238,12 +243,14 @@ export function creerFiche(F, VDOC) {
       const t = e.valeurs[b] || (e.valeurs[b] = {});
       (t[l] || (t[l] = {}))[c] = o === '1';
       btn.parentElement.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', String(x === btn)));
+      sig(b); sig(`${b}:${l}`);
       ecrit();
     }));
     z.querySelectorAll('[data-fiche-champ]').forEach((el) => el.addEventListener('change', () => {
       if (e.envoye || api.figee) return;
       if (el.type === 'radio' && !el.checked) return;
       e.valeurs[el.dataset.ficheChamp] = el.value === '' ? null : el.value;
+      sig(el.dataset.ficheChamp);
       ecrit();
     }));
     // Les saisies : rangées telles que tapées, à chaque touche (rien n'est perdu si l'élève change d'écran).
@@ -251,6 +258,11 @@ export function creerFiche(F, VDOC) {
       if (e.envoye || api.figee) return;
       e.valeurs[el.dataset.ficheSaisie] = el.value === '' ? null : el.value;
       ecrit();
+    }));
+    // Le geste d'une saisie : à la sortie de la case (une question ne tombe jamais au milieu d'un mot).
+    z.querySelectorAll('[data-fiche-saisie]').forEach((el) => el.addEventListener('change', () => {
+      if (e.envoye || api.figee || el.value === '') return;
+      sig(el.dataset.ficheSaisie); api.sauver();
     }));
     // Entrée dans une case ne fait pas partir la fiche (un envoi incomplet serait possible) : seul le bouton envoie.
     z.querySelector('[data-fiche]')?.addEventListener('keydown', (ev) => {
@@ -261,6 +273,7 @@ export function creerFiche(F, VDOC) {
       if (e.envoye || api.figee) return;
       const id = el.dataset.ficheCase;
       e.valeurs[id] = [...z.querySelectorAll('[data-fiche-case]')].filter((x) => x.dataset.ficheCase === id && x.checked).map((x) => x.value);
+      sig(id);
       ecrit();
     }));
     // Remise en ordre : la ligne change de place dans la page (pas de redessin), le focus la suit.
@@ -281,6 +294,7 @@ export function creerFiche(F, VDOC) {
       (btn.disabled ? li.querySelector(`[data-ordre-sens="${-sens}"]`) : btn).focus();
       const annonce = ol.nextElementSibling;
       if (annonce) annonce.textContent = `${li.querySelector('.ent-ordre-lib').textContent} : position ${k + 1} sur ${L.length}.`;
+      sig(ol.dataset.ficheOrdre);
       ecrit();
     }));
     z.querySelector('[data-fiche]')?.addEventListener('submit', (ev) => {
@@ -313,6 +327,7 @@ export function creerFiche(F, VDOC) {
       e.envoye = { at: Date.now() };
       // Le nombre d'envois (une fiche rouverte pour correction se renvoie : lot A, 07/10/2026).
       e.envois = (e.envois || 0) + 1;
+      sig('envoyer');
       api.envoyee({ id: F.id, envois: e.envois });
       z.querySelector('[data-fiche-envoyee]')?.focus({ preventScroll: true });
     });
@@ -343,5 +358,8 @@ export function creerFiche(F, VDOC) {
     bouton: F.bouton || `Ouvrir la ${minus(libelle)}`,
     etatNeuf: () => ({ valeurs: {} }),
     manque, html, brancher,
+    // Les gestes que la fiche sait dire (voir l'en-tête).
+    signaux: [`fiche:${F.id}:envoyer`, ...blocs.filter((b) => b.id && b.type !== 'encadre' && b.type !== 'cadre').flatMap((b) => [
+      `fiche:${F.id}:${b.id}`, ...(b.type === 'ouinon' ? (b.lignes || []).map((l) => `fiche:${F.id}:${b.id}:${l.id}`) : [])])],
   };
 }

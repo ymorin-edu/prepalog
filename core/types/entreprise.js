@@ -28,6 +28,7 @@ import { compilerQuestions, etapesQuestions, reponse, repondu, etapeArrivee, eta
   appel, CLE_ETAPES } from './questions.js';
 import { creerGesteTableur, retourDeTemps } from './export-tableur.js';
 import { graineDeBase, poserGraine } from '../tirage.js';
+import { gestesDe } from '../declencheurs.js';
 import { preparerPhrases, texteCompose } from '../phrases.js';
 import { brancherLexique, compterAide } from '../lexique.js';
 
@@ -170,9 +171,24 @@ export function creerEntreprise(U) {
   const VANIMS = [].concat(U.animation || [], U.animations || []).map((A) => creerLecteur(A));
   VANIMS.forEach((VA, i) => { if (VANIMS.findIndex((x) => x.id === VA.id) !== i) throw new Error(`animation ${VA.id} déclarée deux fois`); });
   const vueAnim = (VA) => `animation:${VA.id}`;
+  // LES GESTES connus de la séance (questions au fil, lot 3) : la liste que publie chaque vue déclarée. Un `apresGeste`
+  // qui en cite un autre (faute de frappe, vue absente) empêche la séance de se charger : on ne découvre pas en classe
+  // une question qui n'arrive jamais. Contrôlé plus bas, quand toutes les vues sont créées.
   const animDeVue = (v) => VANIMS.find((VA) => vueAnim(VA) === v) || null;
   const vueDeFiche = (VF) => (VF === VFICHE ? 'fiche' : `fiche:${VF.id}`);
   const ficheDeVue = (v) => VFICHES.find((VF) => vueDeFiche(VF) === v) || null;
+  {
+    const connus = new Set([...VFICHES, ...VANIMS, VPL, VENT, VQUAI].filter(Boolean).flatMap((V) => V.signaux || []));
+    const cites = [];
+    (U.volet && U.volet.declencheurs || []).forEach((d) => gestesDe(d.quand).forEach((g) => cites.push([g, `message « ${d.id} »`])));
+    if (MQ) {
+      MQ.fil.forEach((q) => [q.quand, q.rattrapage].forEach((f) => gestesDe(f).forEach((g) => cites.push([g, `question « ${q.id} »`]))));
+      MQ.etapes.forEach((e) => gestesDe(e.apres).forEach((g) => cites.push([g, `point d’étape « ${e.id} »`])));
+    }
+    cites.forEach(([g, ou]) => {
+      if (!connus.has(g)) throw new Error(`${ou} : geste inconnu « ${g} » (gestes des vues de cette séance : ${[...connus].join(', ') || 'aucun'})`);
+    });
+  }
 
   const unite = (n) => ((n > 1 || n === 0) ? VOCAB.unitPl : VOCAB.unit);
   // Catalogue « simple » (02/10/2026, chantier E) : des articles sans couleur ni taille — un
@@ -438,7 +454,7 @@ export function creerEntreprise(U) {
           const cle = `${volet.id}#${d.id}`;
           if (db.volets[cle]) return;
           let vrai = false;
-          try { vrai = !!d.quand(db); } catch (x) { vrai = false; }
+          try { vrai = !!d.quand(db, ctx.meta.id); } catch (x) { vrai = false; }
           if (!vrai) return;
           const g = (d.semer ? d.semer(prenom, db) : null) || {};
           (g.mails || []).forEach((m) => ajouterMail(Object.assign(m, { declenche: d.id })));
@@ -567,7 +583,7 @@ export function creerEntreprise(U) {
         return MQ.etapes.find((e) => e.ferme === cle && etapeArrivee(db, MQ, e.id) && !etapeFaite(db, MQ, e)) || null;
       }
       const jalonJuge = (j) => { try { const st = j.verifier(db, U).status; return st === 'ok' || st === 'ko'; } catch (x) { return false; } };
-      const essai = (f) => { try { return !!f(db); } catch (x) { return false; } };
+      const essai = (f) => { try { return !!f(db, ctx.meta.id); } catch (x) { return false; } };
       // L'ARRIVÉE. Un point d'étape arrive quand son envoi a eu lieu (juste ou faux) ; ses questions sont « arrivées » avec
       // lui. Une question au fil arrive à son geste, une à la fois, jamais pendant qu'on lit le retour de la précédente.
       // RATTRAPAGE (jamais un élève bloqué) : une question au fil dont le geste n'a pas eu lieu arrive par sa condition
@@ -960,6 +976,15 @@ export function creerEntreprise(U) {
       const fini = (st) => bilanComplet(st) || (SUITE_AU_BILAN && typeof U.seanceFinie === 'function' && !!U.seanceFinie(db));
       // Copie rendue : plus rien ne s'écrit dans la base, même si un geste passait le verrou.
       const sauver = () => { if (rendue()) return; declencher(); arriverQuestions(); ctx.jeu.sauver(); remonterEtapes(); };
+      // LES GESTES (questions au fil, lot 3, 08/10/2026) : une vue dit « l'élève vient de faire ce geste » (`api.signal`),
+      // juste avant sa sauvegarde. Le geste est rangé une fois, avec son heure, cloisonné par séance :
+      // `db.gestes[<séance>][<nom>]`. Les conditions `apresGeste(nom)` le lisent. Rien pour l'enseignant ni après la remise.
+      function signal(nom) {
+        if (estProf || rendue()) return;
+        if (!db.gestes) db.gestes = {};
+        const G = db.gestes[ctx.meta.id] || (db.gestes[ctx.meta.id] = {});
+        if (!G[nom]) G[nom] = Date.now();
+      }
       const stockDe = (sku) => { const q = db.stock[sku]; return q == null ? 0 : q; };
 
       function ajouterMail(m) {
@@ -2512,7 +2537,7 @@ export function creerEntreprise(U) {
         return db.quais[VQUAI.id];
       }
       const apiQuai = () => ({
-        sauver, toast, estProf,
+        sauver, toast, estProf, signal,
         redessiner: dessinerVue,
         zone: () => hote.querySelector('#entMain'),
         haut: () => hote.scrollIntoView({ block: 'start' }),
@@ -2545,7 +2570,7 @@ export function creerEntreprise(U) {
         return t === 'evaluation' || t === 'entrainement' || t === 'guidage' ? t : t === 'erreur' ? 'entrainement' : 'guidage';
       };
       const apiPlanning = () => ({
-        sauver, toast, estProf, temps: tempsPlanning(),
+        sauver, toast, estProf, signal, temps: tempsPlanning(),
         redessiner: dessinerVue,
         zone: () => hote.querySelector('#entMain'),
         haut: () => hote.scrollIntoView({ block: 'start' }),
@@ -2567,7 +2592,7 @@ export function creerEntreprise(U) {
         return db.entrepots[VENT.id];
       }
       const apiEntrepot = () => ({
-        sauver, estProf, temps: tempsPlanning(),
+        sauver, estProf, signal, temps: tempsPlanning(),
         redessiner: dessinerVue,
         copieRendue: rendue,
         rendreCopie: () => { if (COPIE && !estProf) rendreLaCopie(); },
@@ -2584,7 +2609,7 @@ export function creerEntreprise(U) {
       // Ce qui reste à l'écran d'une fiche (document choisi, raison d'un envoi refusé), fiche par fiche.
       const uiFiche = (VF) => E.fiche[VF.id] || (E.fiche[VF.id] = { doc: null, manque: '' });
       const apiFiche = () => ({
-        sauver, docVu, compterDoc, figee: rendue(),
+        sauver, docVu, compterDoc, signal, figee: rendue(),
         // L'envoi : un geste métier comme un mail (les déclencheurs `apresFiche` le lisent), puis la fiche figée.
         envoyee(e) {
           const arrive = !rendue() && declencher();
@@ -2617,10 +2642,10 @@ export function creerEntreprise(U) {
         return db.animations[VA.id];
       }
       const apiAnim = () => ({
-        estProf, figee: rendue(), graine: ctx.profil.uid || prenom,
+        estProf, signal, figee: rendue(), graine: ctx.profil.uid || prenom,
         sauver() {
           if (rendue()) return;
-          declencher();
+          declencher(); arriverQuestions();
           ctx.jeu.sauver(); remonterEtapes();
         },
       });

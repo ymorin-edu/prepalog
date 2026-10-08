@@ -1408,6 +1408,7 @@ export function creerEntrepot(P, opts = {}) {
   }
 
   return {
+    signaux: [`entrepot:${P.id}:poser`, `entrepot:${P.id}:verifier`],
     id: P.id,
     nav: { libelle: P.libelle || "Plan de l'entrepôt" },
     etatNeuf: () => etatNeuf(M.mode),
@@ -1444,6 +1445,8 @@ export function creerEntrepot(P, opts = {}) {
       const R = regime(api);
       const redessiner = () => api.redessiner();
       const sauver = () => api.sauver();
+      // GESTES (questions au fil, lot 3) : `entrepot:<id>:poser` (poser une palette), `entrepot:<id>:verifier` (« Vérifier »).
+      const sig = (n) => { if (api.signal) api.signal(`entrepot:${P.id}:${n}`); };
       // Un clic, ou Entrée / Espace sur un élément du plan (les groupes SVG n'ont pas de clic clavier).
       const activer = (el, fn) => {
         el.addEventListener('click', fn);
@@ -1491,14 +1494,14 @@ export function creerEntrepot(P, opts = {}) {
       // La zone litiges, sur le plan.
       racine.querySelectorAll('[data-pe-lit]').forEach((g) => activer(g, () => {
         if (!ui.main) { dire(`<b>${ech(g.dataset.peLit)}</b> : prenez d'abord une palette.`); redessiner(); return; }
-        poser(e, g.dataset.peLit); sauver(); redessiner();
+        poser(e, g.dataset.peLit); sig('poser'); sauver(); redessiner();
       }));
       // Un emplacement de la vue de face : poser la palette en main. Le survol remplit l'adresse.
       const barre = racine.querySelector('[data-pe-adresse]');
       racine.querySelectorAll('[data-pe-emp]').forEach((g) => {
         activer(g, () => {
           if (PREP) cliquerPrep(e, g.dataset.peEmp, R); else poser(e, g.dataset.peEmp);
-          sauver(); redessiner();
+          sig('poser'); sauver(); redessiner();
         });
         const sur = () => { barre.innerHTML = htmlAdresse(e, R, g.dataset.peEmp); };
         const hors = () => { barre.innerHTML = htmlAdresse(e, R, null); };
@@ -1506,7 +1509,7 @@ export function creerEntrepot(P, opts = {}) {
         g.addEventListener('mouseleave', hors); g.addEventListener('blur', hors);
       });
       on('aideCharge', () => { e.aideCharge = !(e.aideCharge !== false); ui.focus = 'b:aideCharge'; sauver(); redessiner(); });
-      on('verifier', () => { e.verifie = true; e.verifs = (e.verifs || 0) + 1; sauver(); redessiner(); });
+      on('verifier', () => { e.verifie = true; e.verifs = (e.verifs || 0) + 1; sig('verifier'); sauver(); redessiner(); });
       on('rendre', () => { ui.confirmer = true; ui.focus = 'b:rendreOui'; redessiner(); });
       on('rendreNon', () => { ui.confirmer = false; ui.focus = 'b:rendre'; redessiner(); });
       on('rendreOui', () => { ui.confirmer = false; ui.main = null; ui.trav = null; sauver(); if (api.rendreCopie) api.rendreCopie(); redessiner(); });

@@ -758,6 +758,21 @@ poids de ses jalons + `part` doit valoir 20 (contrôlé à l'ouverture).
   et montrées à l'enseignant (Repérage), sans effet sur la note.
 - Déclencheurs : **un geste de travail** (envoyer, choisir, saisir, poser), juste ou faux ; jamais l'ouverture d'un
   écran ou d'un document, jamais un clic de menu, jamais une minuterie (règle du 03/10, Q4).
+- **Les gestes des vues** (lot 3, 08/10/2026) : `quand: apresGeste('<nom>')` (`core/declencheurs.js`), pour une question
+  **comme pour un message déclenché**. Le geste est rangé une fois, avec son heure, dans `db.gestes[<séance>]` ; juste ou
+  faux, peu importe. Les noms, publiés par chaque vue (`signaux`) :
+
+  | Vue | Gestes |
+  |---|---|
+  | fiche `<id>` | `fiche:<id>:<bloc>` (choisir, cocher, remettre en ordre ; une saisie à la sortie de la case), `fiche:<id>:<bloc>:<ligne>` (classer une ligne d'un tableau oui / non), `fiche:<id>:envoyer` |
+  | planning `<id>` | `planning:<id>:poser` (poser, déplacer, retirer une carte), `planning:<id>:envoyer` |
+  | quai `<id>` | `quai:<id>:decharger`, `quai:<id>:valider` (une palette), `quai:<id>:cloturer` |
+  | plan d'entrepôt `<id>` | `entrepot:<id>:poser` (poser une palette), `entrepot:<id>:verifier` |
+  | animation `<id>` | `animation:<id>:<question>` (la première réponse) |
+
+  Un nom qu'aucune vue de la séance ne publie (faute de frappe, vue absente) **empêche la séance de s'ouvrir**, avec la
+  liste des gestes connus. `tous(…)` garde les gestes de ses conditions. Une vue nouvelle **naît avec ses gestes**
+  (`api.signal('<vue>:<id>:<geste>')` juste avant sa sauvegarde, et la liste `signaux` dans ce qu'elle rend).
 - Tout est contrôlé au chargement (id ou clé en double, `juste` inconnu, `de` inconnu, question de transition non
   citée, 2 à 4 choix, `part` manquante…) : la séance ne s'ouvre pas et le message nomme la question. Le bloc de
   tests `questions` charge **tous** les fichiers `contenus/questions/*.js`.

@@ -9,7 +9,10 @@
 //   quand: apresMail({ a: CHEFFE, ligne: 'Stock actuel :', nombre: true })   il a rendu compte
 //   quand: apresPlanning('smoby-quais')                      il a envoyé son planning
 //   quand: apresFiche('selection')                           il a envoyé sa fiche
+//   quand: apresGeste('quai:fb-quai:decharger')              il a fait ce geste dans une vue (lot 3, 08/10/2026)
 //   quand: tous(apresJalon(…), apresMail(…))                 les deux
+//
+// Une condition reçoit `(db, seance)` : `seance` est l'id de la séance (les gestes sont cloisonnés par séance).
 //
 // Décision de Tristan : **aucun clic de menu, aucune ouverture d'écran, aucune minuterie** ne
 // déclenche quoi que ce soit (un élève qui clique partout au début ferait arriver la suite).
@@ -76,7 +79,23 @@ export function apresFiche(id) {
   return (db) => !!(db.fiches && db.fiches[id] && db.fiches[id].envoye);
 }
 
+// Vrai dès que l'élève a fait le GESTE `nom` dans une vue de la séance (questions au fil, lot 3, 08/10/2026) : poser une
+// carte du planning, choisir dans une fiche, décharger au quai, valider un rangement… Chaque vue publie la liste de ses
+// gestes (`signaux`, voir l'en-tête de chaque vue et `activites/FICHE-SEANCE.md`) ; un nom qu'aucune vue de la séance ne
+// connaît empêche la séance de s'ouvrir (le moteur lit `.gestes` sur la condition). **Juste ou faux, peu importe** :
+// le geste est rangé (`db.gestes[<séance>][<nom>]` = heure, une fois), jamais ce qu'il a donné.
+export function apresGeste(nom) {
+  const f = (db, seance) => !!(db && db.gestes && db.gestes[seance] && db.gestes[seance][nom]);
+  f.gestes = [nom];
+  return f;
+}
+
+// Les gestes cités par une condition (pour le contrôle au chargement).
+export const gestesDe = (f) => (f && Array.isArray(f.gestes) ? f.gestes : []);
+
 // Vrai quand toutes les conditions le sont.
 export function tous(...conditions) {
-  return (db) => conditions.every((c) => c(db));
+  const f = (db, seance) => conditions.every((c) => c(db, seance));
+  f.gestes = conditions.flatMap(gestesDe);
+  return f;
 }

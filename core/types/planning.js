@@ -587,13 +587,17 @@ export function creerPlanning(P, opts = {}) {
     ui.bulle = c._affecter && !p.k ? id : null;
   }
   function retirer(e, id) { delete e.place[id]; if (ui.bulle === id) ui.bulle = null; }
+  // GESTES (questions au fil, lot 3) : `planning:<id>:poser` (poser, déplacer ou retirer une carte), `planning:<id>:envoyer`.
+  const sig = (api, n) => { if (api.signal) api.signal(`planning:${P.id}:${n}`); };
   function geste(e, api) {
+    sig(api, 'poser');
     ui.verif = null; ui.confirmer = false; ui.raz = false;
     if (!e.premierGeste) e.premierGeste = Date.now();
     api.sauver(); api.redessiner();
   }
 
   function envoyer(e, api) {
+    sig(api, 'envoyer');
     const v = { place: cp(e.place), at: Date.now() };
     if (!Array.isArray(e.envois)) e.envois = [];
     e.envois.push(v.at);
@@ -846,6 +850,7 @@ export function creerPlanning(P, opts = {}) {
   }
 
   return {
+    signaux: [`planning:${P.id}:poser`, `planning:${P.id}:envoyer`],
     id: P.id,
     nav: { libelle: P.libelle || 'Planning' },
     etatNeuf,

@@ -185,6 +185,8 @@ await v('Animation : première réponse gardée — juste puis faux = jalon fran
   await pg.click(`${Z} [data-anim-refaire]`);
   await repondre(pg, 3);
   egal((await etatAnim(pg)).reponses.q1.premiere, 1, 'première réponse rangée');
+  // Le geste de la question (questions au fil, lot 3) : rangé à la première réponse, cloisonné par séance.
+  egal(Object.keys((await base(pg)).gestes['essai-animation']), ['animation:essai-fifo:q1'], 'geste de la question');
   egal((await jalons(pg))[0], 'ok', 'jalon 1 après juste puis faux');
   await pg.click(`${Z} [data-anim-suite]`);
   await pg.waitForSelector(`${Z} [data-anim-q][hidden]`, { state: 'attached', timeout: 2000 });
