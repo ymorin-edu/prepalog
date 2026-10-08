@@ -24,7 +24,7 @@
 | 3 | Tests de règles sur GitHub, hôtes externes partout, port pris lisible | C10a | petit | Sonnet | non (tests) | — | **livré** (08/10, 917ffb6) |
 | 4 | Fiabiliser le mode réel (écoutes, échecs remontés, geler, suivi) | C2 | moyen | Sonnet | oui | 3 | **livré** (08/10, b85c141, autre session : écoutes fermées, échecs signalés, démo alignée, tests de règles sur GitHub) |
 | 5 | Un bug de contenu n'est plus noté « faux » | C3 | petit | Sonnet | oui | 4 fini | **livré** (08/10, b0776d1) |
-| 6 | Suppressions sans traces invisibles, miroir reconstruisible | C4 | moyen | Sonnet | oui | 1, 4 | à faire |
+| 6 | Suppressions sans traces invisibles, miroir reconstruisible | C4 | moyen | Sonnet | oui | 1, 4 | **livré** (08/10, 9ba74a9 puis d96f6c7) ; reste à **publier la console RTDB** (Tristan) |
 | 7 | Quota Spark : mesurer, puis supprimer les écritures inutiles | C9 | moyen | Sonnet | oui | 4 | à faire |
 | **Lot B — rendre la croissance possible** | | | | | | | |
 | 8 | Fabrique de séance d'entreprise (24 fichiers recopiés) | C6 | moyen | Sonnet | oui (petit) | — | à faire, **avant France Boissons** |
@@ -164,6 +164,27 @@ s'aligner.
   manque ; ordre inchangé (élève avant groupe, miroir en dernier).
 - **Fini quand.** Le test de suppression nomme **ce qui reste** après chaque opération et la liste est
   vide ; essai à l'émulateur sur un groupe à deux profs.
+- **Fait (08/10/2026, 9ba74a9 puis d96f6c7).** *Lot 6a* : `supprimerEleve(uid, { aids, groupesProf, nettoyerGroupes })`
+  efface en plus `classements/{aid}/{uid}` (pour chaque activité du registre, passé par `prof.js`), les
+  `travaux` de **tous les groupes de l'enseignant** (union avec ceux du profil), et `demiDe[uid]` /
+  `equipes[uid]` dans tous ses groupes (mise à jour en champ pointé, y compris depuis « sans groupe »). Ce qui ne
+  peut pas partir est **nommé** (`restes`, dit dans le message) : un groupe cité par le profil mais refusé ou
+  disparu n'arrête plus la suppression. `supprimerGroupe` garde l'ordre élèves → `jeux/{gid}` → `acces/{gid}` →
+  `groupes/{gid}` ; la démo passe par le même effacement que le réel. Règle RTDB : l'enseignant inscrit dans
+  `acces/{gid}/profs` efface (effacement seul) la ligne dont le `gid` est le sien ; effacer une ligne absente est
+  permis. *Lot 6b* : bouton « Reconstruire l'accès » par groupe (`reconstruireAcces(gid)`, réécrit les profs du
+  groupe et ses élèves ; refusé hors `profsGlobaux` avec le message d'amorçage ; no-op en démo).
+  **Choix.** Travaux orphelins : Firestore ne retrouve pas les travaux d'un élève sans connaître le `gid` (aucune
+  règle de groupe de collections) — on se borne aux groupes de l'enseignant + ceux du profil ; un groupe d'un
+  collègue ou disparu reste hors d'atteinte (nommé). `_reprise-*` : drapeau périmé **inoffensif** (la date est
+  retenue dans `base.reprise`, un drapeau plus ancien ne se rejoue pas, un nouveau remplace l'ancien) ; la règle
+  « l'élève ne l'efface pas » n'est pas touchée, le drapeau part avec les travaux de l'élève supprimé ; commentaire
+  dans `prof.js` (remise à zéro). **Restent volontairement** : lignes d'un élève dans les bases partagées de ses
+  groupes (`jeux/{gid}`, à la classe) ; ligne de classement d'un élève seulement détaché d'un groupe supprimé ;
+  comptes d'authentification sans code. **Cas limite connu** : si la base d'un parcours est remise à neuf par
+  `versionBase` (`app.js`), `base.reprise` est perdu et un vieux drapeau `_reprise-*` se rejoue une fois sur une
+  base déjà neuve (sans perte). Tests : bloc `groupes` (liste de ce qui reste, sabotages), `outils/test-regles.mjs`
+  (127/127).
 
 ### 7. Quota Spark (C9)
 - **Ce qu'on fait.** D'abord mesurer dans la console Firebase après une vraie séance d'une heure.
