@@ -63,7 +63,8 @@ Décisions pédagogiques arrêtées :
    scénarios d'entreprise, toujours en logique de scénario. Avant d'ajouter quelque chose, se
    demander de quel côté il va. Pas d'usine à gaz.
 5. Le module **SCE (SCE-1 à SCE-5) est ancien** et sera absorbé par Simulog : ne pas l'enrichir.
-   **Spartoo (ENT-1.x) reste tel quel** (point de comparaison) : ne pas le prendre pour modèle.
+   **Spartoo (ENT-1.x) ne se prend pas pour modèle** (point de comparaison). ENT-1.1 a été refondue le
+   06/10/2026 (parcours, `versionBase`) ; le reste ne bouge pas sans l'accord de Tristan.
    **Le modèle, c'est Boost** (ENT-3.x).
 6. Une séance nouvelle se fabrique **d'abord avec les vues existantes**, en déclarant du contenu.
    Mais si une compétence peut être abordée sous un **angle nouveau, ludique ou innovant** grâce à
@@ -83,10 +84,12 @@ réel ; sans `prepalog-config.json` valide, le site tourne en **mode démonstrat
 index.html  lancer.bat  README.md  firebase.json  firestore.rules  database.rules.json
 core/        app.js backend*.js store.js niveaux.js notes.js competences.js copie.js prof.js ui.js
              theme.js formules.js calculette.js parcours.js questions.js config.js
+             declencheurs.js tirage.js lexique.js phrases.js iso.js amenagements.js
 core/types/  qcm ordre assoc numerique tableur tableau lien entreprise inventaire tournee grille …
 activites/   index.js (registre + rubriques + icônes) et un fichier par activité
 contenus/    données des activités, trames Word/PDF, corrigés, logos
-styles/      base.css polices.css polices/ logo*.png
+styles/      base.css polices.css polices/ logo*.png + une feuille par vue (quai, planning, entrepot,
+             animation, questions), toutes chargées par index.html
 vendor/      xlsx + SDK Firebase servis par le dépôt (avec leurs licences, voir LISEZMOI.md)
 outils/      test.mjs (lanceur) test/<bloc>.mjs, générateurs de trames (Python), pages d'essai
 ```
@@ -138,19 +141,21 @@ modifier une séance**, et la corriger si le code a changé.
   d'entreprise (`ENT-1.2` : entreprise 1, séance 2), `TAB` tableur, `REF` exercices par
   compétence, `SCE` scénario ancien, `QUI` quiz, `MES` messagerie. Le tri se fait segment par
   segment (`ENT-1.10` après `ENT-1.9`). Pour déplacer une activité, changer son `code`.
-  `TAB-4` est réservé au CAP OL. Changer un `code` déplace les étiquettes partout (aucun score
+  `TAB-4` est destiné au CAP OL (sans `niveaux` dans le code pour l'instant, donc ouvert à tous :
+  chantier 12 de `docs/chantiers.md`). Changer un `code` déplace les étiquettes partout (aucun score
   perdu) : le dire.
 - **Séance en cours d'écriture : `pret: false`**, ce qui permet de commiter à tout moment
   (brouillon que personne ne peut ouvrir aux élèves).
 - **Séance livrée : `pret: true, ouverture: 'prof'`** (règle adoptée par Tristan le 03/10/2026).
   Elle reste fermée aux élèves ; Tristan l'essaie à l'écran, puis l'**ouvre lui-même** en la
   cochant pour son groupe dans « Conduite de séance » — plus de commit pour ouvrir. Les séances
-  déjà ouvertes avant cette règle (dont ENT-2.1, 2.3, 3.2) ne sont pas converties sans son accord.
+  ouvertes avant cette règle et non converties sont Spartoo (ENT-1.1 à 1.3) et Boost (ENT-3.1 à 3.3) ;
+  elles ne le seront pas sans son accord. Cdiscount, Picard et Smoby sont déjà en `'prof'`.
   Une séance `pret: false` compte quand même dans le tableau des compétences (décision de Tristan).
 - Évaluation : `meta.copie: true`, `copie: meta.copie` dans `creerEntreprise`, et
   `export const noter = (db) => moteur.noter(db);` dans le fichier d'activité.
 - Données d'une entreprise : `contenus/<nom>.js`, une base par séance (pas de `jeuId` partagé
-  sauf Spartoo). Inventaire : suivre `claude/prepalog-inventaire-format.md` (catalogue
+  sauf Spartoo et Boost ENT-3.x). Inventaire : suivre `docs/fiches/prepalog-inventaire-format.md` (catalogue
   d'articles simples) — un besoin qui n'y entre pas = demande au moteur, pas un format parallèle.
 - **Cloisonner par séance** tout état nouveau rangé dans la base d'un élève.
 - Une séance qui juge un travail sous contrainte : vérifier ce que le jalon dit **avant** que
@@ -183,7 +188,8 @@ modifier une séance**, et la corriger si le code a changé.
 
 ## Tests
 
-- Suite Playwright en mode démonstration : `node outils/test.mjs` (~5 min, ~545 cas).
+- Suite Playwright en mode démonstration : `node outils/test.mjs` (~13 min en local, ~860 cas ;
+  sur GitHub en trois groupes parallèles, voir l'en-tête de `outils/test.mjs`).
   Un bloc seul : `node outils/test.mjs boost` (plusieurs : `boost carte`). Un bloc par fichier
   dans `outils/test/` ; un fichier non inscrit dans `BLOCS` du lanceur fait refuser le départ.
 - Installation locale (pas globale) : `npm install --no-save --no-package-lock playwright
@@ -265,8 +271,10 @@ recopier du base64 à la main. 11. Générateur de fichiers binaires : le rendre
 14. Case autocorrigée dans une vue de transport : elle se corrige contre le bilan **de l'élève**
 (`exigeConforme`), donc ne juge jamais son travail d'organisation.
 15. Poser un point sur un plan quadrillé : le rond (rayon 12) doit tenir entièrement dans une
-cellule (≥ 12 unités de chaque ligne ; liste des points fautifs figée dans un test, ne doit
-jamais s'allonger).
+cellule (≥ 12 unités de chaque ligne ; le bloc `boost` des tests vérifie que chaque rond
+d'ENT-3.1 tient dans sa case, il doit rester vert).
+16. Les briefs citent des alertes au-delà de 15 (16, 18, 28…) : elles viennent des fiches du projet
+Cowork, pas de cette liste ; demander la fiche à Tristan avant d'agir dessus.
 
 ## Travail à deux : Cowork conçoit, Claude Code construit
 
@@ -311,6 +319,10 @@ dans le projet : si Tristan colle ou exporte l'une d'elles, la lire avant de tou
 
 Les pages d'essai jetables et maquettes vont dans
 `G:\Mon Drive\Travail\Logistique\1L\Claude outputs`.
+
+**Audit et feuille de route (08/10/2026)** : `docs/audit-architecture.md` dit ce qui est solide, fragile
+ou empilé ; `docs/chantiers.md` donne les chantiers dans l'ordre, avec leur état. **À relire avant tout
+chantier moteur**, et à tenir à jour (état, ligne dans `decisions.md`) quand un chantier est livré.
 
 ## Pièges connus de l'ancien circuit (utile à savoir, plus nécessaire en Claude Code)
 

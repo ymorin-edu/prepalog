@@ -1,7 +1,7 @@
 # Fiche d'une séance (activité)
 
 À lire avant d'écrire ou de modifier une activité. Tout ce qui suit est relevé dans le code
-au 02/10/2026 ; en cas d'écart, c'est le code qui a raison, et cette fiche est à corriger.
+au 08/10/2026 ; en cas d'écart, c'est le code qui a raison, et cette fiche est à corriger.
 
 Une séance, c'est **un fichier** `activites/<id>.js` et **une ligne** dans `activites/index.js`.
 L'accueil, les droits, la sauvegarde des scores, le suivi de classe et le tableau par compétence
@@ -62,7 +62,7 @@ les écrans propres à la séance (fiche, quai, planning, plan d'entrepôt, plan
 fichiers) apparaissent dès qu'elle les déclare. Le menu se range en groupes : **Mon poste** (« Transport », ou `transportSection`,
 quand il ne contient que le plan et la tournée), **Données**, **Tiers**, **Outils** ; un groupe vide disparaît. Un écran hors du menu
 ne s'ouvre pas non plus par une tuile de l'accueil. Sans `menu`, tous les écrans de données restent. Règle de
-Tristan : **au moindre doute, l'écran reste**. Les 20 séances d'entreprise le déclarent.
+Tristan : **au moindre doute, l'écran reste**. Les 24 séances d'entreprise le déclarent.
 
 **Stock sans code** : `stockOuvert: true` ouvre l'écran Stock à l'élève sans le code de l'enseignant (Smoby). Sans
 l'option, le Stock reste verrouillé (Spartoo : il pousse vers la console `.getstock`).
@@ -204,13 +204,20 @@ sur SON quai (`noter`, ramassage compris) ; `detail.quai.graine` et `detail.quai
 copie. Corrigé : le fichier de corrigé exporte `corrigeEleve(base, uid)` → `{ texte, items }` ; l'onglet Corrigés
 propose alors de choisir un élève du groupe actif. Test obligatoire : des centaines de graines, zéro secours.
 ⚠ Ne pas toucher à la réserve ni au tirage entre l'ouverture d'une évaluation et le ramassage (le camion des élèves
-changerait) : un test « jeu figé » le rappelle. Pour une autre vue (inventaire de Cdiscount ENT-2.5), il restera à
-faire accepter une fonction de la graine à cette vue dans `entreprise.js`, sur le modèle de `QUAI_TIRE`.
+changerait) : un test « jeu figé » le rappelle. L'inventaire (ENT-2.5) accepte lui aussi une fonction de la graine
+(voir « Inventaire tiré par élève » plus bas).
 
 **Second motif** (quai, ENT-4.4) : `deuxMotifs: true` dans la déclaration propose un second menu « motif » sur
 CHAQUE palette (pour ne pas désigner celle qui a deux problèmes) ; la palette déclare `motif2Attendu`. Décision juste
 = mêmes motifs (dans n'importe quel ordre) ; réserve juste = une valeur juste pour chacun (« deux constats, deux
 quantités »).
+
+**Autres clés de `creerEntreprise`** (relevées le 08/10/2026) : `exercice` (texte de la consigne, sinon
+`ENTREPRISE.exercice`) ; `trame` (liens trame et corrigé du bandeau) et `sansTrame` (phrase affichée à la
+place quand tout se fait à l'écran, ignorée si `trame` est là) ; `THEME` (charte : `papier`, `accent`,
+`surAccent`, `sombre`) ; `reponsesFournisseur` (fonctions `(corps, fournisseur, db, prenom) → réponse`,
+la première qui rend quelque chose remplace la réponse automatique du fournisseur) ; `transportId` (clé
+partagée de `db.transport` quand deux séances doivent partager leur repérage, sinon l'`id` de la séance).
 
 `creerEntreprise` est dans `core/types/entreprise.js`. Les autres moteurs sont dans
 `core/types/` (`qcm`, `ordre`, `assoc`, `numerique`, `tableur`, `tableau`, `tournee`, …).
@@ -238,7 +245,7 @@ séance 2), `TAB` tableur, `REF` exercices par compétence, `SCE` scénario anci
 | Champ | Contenu | À savoir |
 |---|---|---|
 | `niveaux` | `['2de','1re']` | Absent = tous les niveaux. L'enseignant peut forcer l'ouverture ou la fermeture par groupe. |
-| `competences` | `['C2.4']`, `['C1.4', 'OTM-C2.1']` | Codes de la liste de `core/competences.js` : Logistique 2025 sans préfixe (C1.1 à C3.4), transport `OTM-C1.1` à `OTM-C3.4`, gestion `AGO-1.1` à `AGO-3.3` (activités AGOrA). Un code absent de la liste fait tomber la suite. Toute séance Simulog les déclare. Le préfixe donne la **spécialité** : pour un groupe de 2de, l'onglet « Compétences » ajoute une moyenne par spécialité (une séance y compte une fois). |
+| `competences` | `['C2.4']`, `['C1.4', 'OTM-C2.1']` | Codes de la liste de `core/competences.js` : Logistique 2025 sans préfixe (C1.1 à C3.4), transport `OTM-C1.1` à `OTM-C3.4`, gestion `AGO-1.1` à `AGO-3.3` (activités AGOrA). Un code absent de la liste donne un libellé vide à l'écran ; c'est le test du socle qui le signale. Toute séance Simulog les déclare. Le préfixe donne la **spécialité** : pour un groupe de 2de, l'onglet « Compétences » ajoute une moyenne par spécialité (une séance y compte une fois). |
 | `domaines` | `['D2', 'D4']` | Domaines D1 à D5 de la 2de. **Lu nulle part pour l'instant** (déclaré pour plus tard, aucun écran). |
 | `coeur` | `true` / `false` | `true` : séance du **cœur** (parcours minimal qui couvre les compétences du niveau) ; `false` : **complément**. Absent = pas encore rangée. **Lu nulle part pour l'instant.** Le nom `parcours`, proposé dans les fiches, est déjà pris (parcours strict, plus bas). |
 | `temps` | `'guidage'` / `'entrainement'` / `'erreur'` / `'evaluation'` | Fixe le coefficient (1, 1, 1, 3 par défaut). |
@@ -292,7 +299,7 @@ l'élève à chaque envoi **corrigé** (deuxième envoi et suivants), sans rejou
 | `parcours` | `true` | La séance fait partie d'un parcours strict. |
 | `precedente` | `'<id>'` | Avec `parcours` : la séance qui doit être validée avant. Absent sur la première. Sa validation range une **photo** du travail, qui sert de point de reprise. |
 | `versionBase` | `2` | Avec `parcours` (06/10/2026, refonte d'ENT-1.1) : numéro de version de la base partagée. Une base d'une version antérieure **repart de zéro** à sa prochaine ouverture, une seule fois (photos, scores du parcours et déblocages effacés, `core/app.js`) ; d'ici là, les séances suivantes sont fermées. Le monter = remettre à zéro tous les élèves du parcours : le dire à Tristan. Une séance de parcours affiche aussi le **bandeau de fin de séance** à l'élève (étapes fausses nommées par leur titre). |
-| `correction` | `true` | Avec `parcours` (07/10/2026, lots A et A bis de SMOBY-retours-classe-5.1 ; ENT-5.1 d'abord) : règle du **premier bilan**. La séance suivante s'ouvre dès que tous les jalons sont jugés (photo de fin rangée au premier bilan complet, remplacée à chaque nouveau bilan complet qui change), l'élève peut **corriger** (bouton « Corriger » du bandeau : une fiche est rouverte, une réponse par phrases se renvoie), la note du suivi est la **moyenne** du premier bilan et de l'état actuel `(points du premier bilan + points actuels) / 2` (premier bilan rangé une fois dans `db.indicateurs[séance].bilan1`), le bandeau de fin liste **tous les groupes en ✓ / ✗**. Suppose que les jalons restent « à faire » jusqu'à l'envoi : **ne pas l'activer sur une séance qui juge en continu** (Spartoo, Boost : un jalon y passe « ko » en cours de route, le premier bilan serait faussé). Sans le drapeau, tout reste comme avant. Jamais en évaluation (`copie`). |
+| `correction` | `true` | Avec `parcours` (07/10/2026, lots A et A bis de SMOBY-retours-classe-5.1 ; ENT-5.1 d'abord) : règle du **premier bilan**. La séance suivante s'ouvre dès que tous les jalons sont jugés (photo de fin rangée au premier bilan complet, remplacée à chaque nouveau bilan complet qui change), l'élève peut **corriger** (bouton « Corriger » du bandeau : une fiche est rouverte, une réponse par phrases se renvoie), la note du suivi reste l'état actuel tant qu'il n'y a pas eu de correction ; dès la **première correction**, c'est la **moyenne** du premier bilan (`bilan1`) et de l'état à cette première correction (`bilan2`), puis elle ne bouge plus (les deux sont rangés dans `db.indicateurs[séance]`), le bandeau de fin liste **tous les groupes en ✓ / ✗**. Suppose que les jalons restent « à faire » jusqu'à l'envoi : **ne pas l'activer sur une séance qui juge en continu** (Spartoo, Boost : un jalon y passe « ko » en cours de route, le premier bilan serait faussé). Sans le drapeau, tout reste comme avant. Jamais en évaluation (`copie`). |
 | `suiteAuBilan` | `true` | Avec `parcours` (07/10/2026, lot 0 de SMOBY-notation-5.3-5.8 : aucun élève bloqué en fin de séance) : la séance suivante s'ouvre dès que **tous les jalons sont jugés**, justes ou faux (photo de fin rangée comme pour `correction`), sans bouton « Corriger » ni note moyennée. Le bandeau de fin reste l'ancien, sa dernière phrase dit que la suite est ouverte. `correction: true` l'implique. Une séance dont les jalons ne sont jamais « faux » déclare en plus `seanceFinie: (db) => bool` dans `creerEntreprise` (ENT-5.6 : préparation terminée et vérifiée). |
 | `immersif` | `true` | Prend toute la page, sans bandeau Prepalog : la séance dessine son propre en-tête et sa sortie (`ctx.quitter()`). Compte aussi pour le parcours et la reprise par l'enseignant. |
 | `corrige` | `'./contenus/corriges/ENT-3.1.js'` | Fichier de corrigé montré dans l'onglet « Corrigés » de l'enseignant. L'élève ne le voit pas, mais le fichier est public (voir CLAUDE.md). |
@@ -306,8 +313,9 @@ l'élève à chaque envoi **corrigé** (deuxième envoi et suivants), sans rejou
 | `aisance` | `'standard'` ou `'confirme'`, réglé élève par élève par l'enseignant (onglet « Comptes élèves »). **Le moteur ne grossit rien** : seule une séance qui le prévoit dans son contenu en tient compte (règle de Tristan : jeu de données +30 % en guidage/entraînement, +50 % en bonus). Le contenu en plus **s'ajoute** au jeu standard sans rien changer à ses exercices ni à ce qu'attendent ses jalons. Toujours `'standard'` pour l'enseignant. Ne pas confondre avec `niveauGroupe` (la classe). |
 | `tiersTemps` | Booléen, réglé par l'enseignant. Une épreuve chronométrée multiplie ses **seuils** de temps par 4/3 (le chrono mesure, il ne coupe pas) et l'affiche à l'élève. Donnée de santé indirecte : ne l'afficher qu'à l'élève lui-même, jamais dans une vue projetable, ne pas l'exporter. Première utilisatrice : la vue quai. |
 | `meta` | Le `meta` de la séance. |
+| `intention`, `suivante` | La fiche d'intention de l'entreprise (`{ pdf, docx }` ou null, montrée à l'enseignant seul) et la séance suivante du parcours (`{ code, titre }` ou null). |
 | `jeu` | La base ouverte : `etat()`, `sauver()`, `semer()`, `vider()`… |
-| `enregistrer({score, max, detail})` | Remonte le score au suivi. Sans effet pour l'enseignant, sans groupe, sans `bareme`, ou en `copie`. |
+| `enregistrer({score, max, detail}, { siChange, cle })` | Remonte le score au suivi. Sans effet pour l'enseignant, sans groupe, sans `bareme`, ou en `copie`. `siChange: true` : pas de réécriture si la note n'a pas changé depuis la dernière envoyée (quota Spark) ; `cle` : ce qui est comparé. Une note posée par l'enseignant (« mettre 0 ») n'est plus réécrite par l'élève, qui lit un message (08/10/2026). |
 | `enregistrerTemps(secondes)` | Le temps passé seul (`detail.indicateurs[id].temps`), sans score ni tentative ; utilisé par la vue entreprise toutes les 2 min. Mêmes gardes ; rend `false` si le résultat n'existe pas encore. |
 | `rendreCopie({score, max, detail})` | Remise d'une évaluation (`copie: true` seulement). Une seule fois. |
 | `lireScore()` | Le travail déjà enregistré, utile pour une séance notée à la main. |
