@@ -60,6 +60,15 @@ export function composerSeance(UNIVERS, SEANCE, meta, options = {}) {
     refus('« trame » du meta est le nom de la trame (ex. \'picard-deux-camions\') ; la forme { pdf, docx } se passe dans les options.');
   }
 
+  // `correction: true` rouvre l'écran des jalons faux (un jalon qui déclare `ecran` : fiche, phrases, planning) et moyenne
+  // le premier bilan avec l'état après correction. Sans aucun jalon à `ecran`, il n'y a rien à corriger et la note ne
+  // bouge jamais : c'est l'erreur qu'on fait en l'activant sur une séance qui juge en continu (Spartoo, Boost : aucun
+  // jalon à `ecran`). Ce contrôle ne PROUVE pas que la séance juge à l'envoi (voir docs/chantiers.md, lot 9a).
+  if (meta.correction === true && !SEANCE.ETAPES.some((e) => e && e.ecran)) {
+    refus('« correction: true » rouvre l\'écran des jalons faux, et aucun jalon de cette séance ne déclare d\'« ecran » '
+      + '(fiche, phrases ou planning) : il n\'y aurait rien à corriger. Une séance qui juge en continu n\'a pas ce drapeau.');
+  }
+
   // 1. Le meta : le déduit, puis ce que la séance écrit.
   const { trame: slug, ...ecrit } = meta;
   const complet = {

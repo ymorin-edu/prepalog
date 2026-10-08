@@ -370,6 +370,20 @@ await v('creerEntreprise : deux fiches de même id, une fiche sans id : la séan
   if (!r.sansId.includes('sans « id »')) throw new Error('une fiche sans id est acceptée : ' + r.sansId);
 });
 
+await v('fabrique de séance : « correction: true » est refusé sans aucun jalon à « ecran » (rien à corriger), accepté avec un', async () => {
+  const r = await fabrique(`
+    const essai = (f) => { try { f(); return 'PAS DE REFUS'; } catch (e) { return e.message; } };
+    const avec = [{ id: 'a', ecran: 'fiche:f' }, { id: 'b' }];
+    return {
+      sans: essai(() => composerSeance(univers, { ETAPES: etapes }, { id: 'x-continue', code: 'ENT-9.1', correction: true })),
+      avec: essai(() => composerSeance(univers, { ETAPES: avec }, { id: 'x-envoi', code: 'ENT-9.2', correction: true })),
+      pasDeDrapeau: essai(() => composerSeance(univers, { ETAPES: etapes }, { id: 'x-libre', code: 'ENT-9.3' })),
+      faux: essai(() => composerSeance(univers, { ETAPES: etapes }, { id: 'x-faux', code: 'ENT-9.4', correction: false })),
+    };`);
+  if (!r.sans.includes('x-continue') || !r.sans.includes('correction')) throw new Error('correction sans « ecran » acceptée ou mal expliquée : ' + r.sans);
+  for (const k of ['avec', 'pasDeDrapeau', 'faux']) if (r[k] !== 'PAS DE REFUS') throw new Error(`${k} refusée à tort : ${r[k]}`);
+});
+
 await v('séances d\'entreprise : les 24 séances du registre se chargent sans refus des options', async () => {
   const r = await page.evaluate(async () => {
     try { return { metas: (await (await import('/activites/index.js')).chargerActivites()).map((a) => a.meta.code) }; } catch (e) { return { refus: e.message }; }
