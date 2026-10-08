@@ -11,50 +11,27 @@
 // Trame élève Word/PDF déclarée le 03/10/2026, relue et validée par Tristan (générateur dans `outils/`,
 // brief `docs/briefs/PICARD-trames-eleve.md`) ; son corrigé s'ajoute au corrigé calculé (`meta.corrige`).
 
-import { creerEntreprise } from '../core/types/entreprise.js';
+import { seanceEntreprise } from '../core/types/seance-entreprise.js';
 import * as PICARD from '../contenus/picard.js';
 import * as SEANCE from '../contenus/picard-ent43.js';
-
-export const meta = {
+const s = seanceEntreprise(PICARD, SEANCE, {
   id: 'picard-ent43',
   code: 'ENT-4.3',
   titre: 'Picard — la réception de nuit',
   desc: 'Mathis a réceptionné un camion à 3 h : contrôler son travail à partir des documents et des palettes en chambre '
     + 'froide, puis bloquer ce qui doit l’être et protester auprès du transporteur dans le délai.',
-  rubrique: 'simulog',
   niveaux: ['1re'],
   competences: ['C1.4'],
   temps: 'erreur',
-  bareme: SEANCE.ETAPES.length,
-  immersif: true,
-  portee: 'eleve',
-  tables: {},
-  corrige: './contenus/corriges/ENT-4.3.js',
+  trame: 'picard-reception-de-nuit',
   pret: true,
   ouverture: 'prof',
-};
-
-const moteur = creerEntreprise({
+}, {
   // Les écrans de données du menu (05/10/2026) : ceux dont la séance se sert, et au moindre doute on les garde.
   menu: [],
-  ENTREPRISE: PICARD.ENTREPRISE,
-  VOCAB: PICARD.VOCAB,
   CATALOGUE: PICARD.catalogue(SEANCE.PRODUITS_ENT43),
-  SUPPLIERS: PICARD.SUPPLIERS,
-  SUP_BY_ID: PICARD.SUP_BY_ID,
-  CUSTOMERS: PICARD.CUSTOMERS,
-  CM: PICARD.CM,
-  baseDeDepart: PICARD.baseDeDepart,
-  THEME: PICARD.THEME,
-  etapes: SEANCE.ETAPES,
   exercice: 'Séance 3 : la réception de nuit',
-  accueil: SEANCE.ACCUEIL,
-  volet: SEANCE.VOLET,
   quai: SEANCE.QUAI_ENT43,
-  trame: {
-    pdf: './contenus/trames/ENT-4.3-picard-reception-de-nuit-trame-eleve.pdf',
-    docx: './contenus/trames/ENT-4.3-picard-reception-de-nuit-trame-eleve.docx',
-  },
 });
-
-export function rendre(hote, ctx) { moteur.rendre(hote, ctx); }
+export const meta = s.meta;
+export const rendre = s.rendre;

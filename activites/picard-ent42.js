@@ -14,50 +14,27 @@
 // Trame élève Word/PDF déclarée le 03/10/2026, relue et validée par Tristan (générateur dans `outils/`,
 // brief `docs/briefs/PICARD-trames-eleve.md`) ; son corrigé s'ajoute au corrigé calculé (`meta.corrige`).
 
-import { creerEntreprise } from '../core/types/entreprise.js';
+import { seanceEntreprise } from '../core/types/seance-entreprise.js';
 import * as PICARD from '../contenus/picard.js';
 import * as SEANCE from '../contenus/picard-ent42.js';
-
-export const meta = {
+const s = seanceEntreprise(PICARD, SEANCE, {
   id: 'picard-ent42',
   code: 'ENT-4.2',
   titre: 'Picard — deux camions, un seul quai',
   desc: 'Deux camions de surgelés attendent au quai 32 : lire les deux tickets, choisir et justifier l’ordre de '
     + 'déchargement, puis réceptionner les deux lots sans aide (huit palettes, quatre aléas).',
-  rubrique: 'simulog',
   niveaux: ['1re'],
   competences: ['C1.4', 'C1.3'],
   temps: 'entrainement',
-  bareme: SEANCE.ETAPES.length,
-  immersif: true,
-  portee: 'eleve',
-  tables: {},
-  corrige: './contenus/corriges/ENT-4.2.js',
+  trame: 'picard-deux-camions',
   pret: true,
   ouverture: 'prof',
-};
-
-const moteur = creerEntreprise({
+}, {
   // Les écrans de données du menu (05/10/2026) : ceux dont la séance se sert, et au moindre doute on les garde.
   menu: [],
-  ENTREPRISE: PICARD.ENTREPRISE,
-  VOCAB: PICARD.VOCAB,
   CATALOGUE: PICARD.catalogue(SEANCE.PRODUITS_ENT42),
-  SUPPLIERS: PICARD.SUPPLIERS,
-  SUP_BY_ID: PICARD.SUP_BY_ID,
-  CUSTOMERS: PICARD.CUSTOMERS,
-  CM: PICARD.CM,
-  baseDeDepart: PICARD.baseDeDepart,
-  THEME: PICARD.THEME,
-  etapes: SEANCE.ETAPES,
   exercice: 'Séance 2 : deux camions, un seul quai',
-  accueil: SEANCE.ACCUEIL,
-  volet: SEANCE.VOLET,
   quai: SEANCE.QUAI_ENT42,
-  trame: {
-    pdf: './contenus/trames/ENT-4.2-picard-deux-camions-trame-eleve.pdf',
-    docx: './contenus/trames/ENT-4.2-picard-deux-camions-trame-eleve.docx',
-  },
 });
-
-export function rendre(hote, ctx) { moteur.rendre(hote, ctx); }
+export const meta = s.meta;
+export const rendre = s.rendre;

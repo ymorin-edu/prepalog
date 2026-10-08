@@ -12,50 +12,29 @@
 // palettes justes. Les seuils se règlent dans `NOTE_ENT44` (contenu). Pas de `reinitialisable`.
 // Pas de trame (décision de Tristan : l'écran suffit). Corrigé : par élève (onglet Corrigés).
 
-import { creerEntreprise } from '../core/types/entreprise.js';
+import { seanceEntreprise } from '../core/types/seance-entreprise.js';
 import * as PICARD from '../contenus/picard.js';
 import * as SEANCE from '../contenus/picard-ent44.js';
-
-export const meta = {
+const s = seanceEntreprise(PICARD, SEANCE, {
   id: 'picard-ent44',
   code: 'ENT-4.4',
   titre: 'Picard — le rush du lundi',
   desc: 'Évaluation : réceptionner seul un camion de six palettes de surgelés au quai 32, sans aide, '
     + 'sur un camion tiré pour toi. La note tient compte de la réception et de la rapidité.',
-  rubrique: 'simulog',
   niveaux: ['1re'],
   competences: ['C1.4'],
   temps: 'evaluation',
-  bareme: SEANCE.ETAPES.length,
-  immersif: true,
-  portee: 'eleve',
   copie: true,
-  tables: {},
-  corrige: './contenus/corriges/ENT-4.4.js',
   pret: true,
   ouverture: 'prof',
-};
-
-const moteur = creerEntreprise({
+}, {
   // Les écrans de données du menu (05/10/2026) : ceux dont la séance se sert, et au moindre doute on les garde.
   menu: [],
-  ENTREPRISE: PICARD.ENTREPRISE,
-  VOCAB: PICARD.VOCAB,
   CATALOGUE: PICARD.catalogue(SEANCE.RESERVE, 'F-CDD'),
-  SUPPLIERS: PICARD.SUPPLIERS,
-  SUP_BY_ID: PICARD.SUP_BY_ID,
-  CUSTOMERS: PICARD.CUSTOMERS,
-  CM: PICARD.CM,
-  baseDeDepart: PICARD.baseDeDepart,
-  THEME: PICARD.THEME,
-  etapes: SEANCE.ETAPES,
   exercice: 'Séance 4 : le rush du lundi (évaluation)',
-  accueil: SEANCE.ACCUEIL,
-  volet: SEANCE.VOLET,
   // Une fonction de la graine : le quai de chaque élève (voir `core/types/entreprise.js`).
   quai: SEANCE.quaiDe,
-  copie: meta.copie,
 });
-
-export function rendre(hote, ctx) { moteur.rendre(hote, ctx); }
-export const noter = (db) => moteur.noter(db);
+export const meta = s.meta;
+export const rendre = s.rendre;
+export const noter = s.noter;
