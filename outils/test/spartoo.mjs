@@ -465,7 +465,12 @@ await v('Spartoo réception : retrouver REC-04127 par son BL, saisir en paires, 
   if (JSON.stringify(faux) !== '["procedure"]') throw new Error('bandeau : jalons faux nommés ' + JSON.stringify(faux));
   const tf = await page.textContent('[data-fin="ko"]');
   if (!/Procédure lue/.test(tf) || /Questions fausses|\b4\b/.test(tf)) throw new Error('bandeau : titre absent ou détail montré : ' + tf);
-  if (!/réinitialise/.test(tf)) throw new Error('bandeau d’une séance X.1 : la réinitialisation n’est pas proposée');
+  // `suiteAuBilan` (08/10/2026) : la suite s'ouvre au premier bilan, juste ou faux. Le bandeau le dit, et la
+  // photo de fin de séance est rangée (c'est elle qui lève le verrou d'ENT-1.2, voir core/parcours.js).
+  if (!/ENT-1\.2/.test(tf) || !/est ouverte/.test(tf)) throw new Error('bandeau : la séance suivante n’est pas annoncée ouverte : ' + tf);
+  const photo = await page.evaluate(() => Object.keys(localStorage).filter((k) => /prive\/[^/]+\/spartoo$/.test(k))
+    .some((k) => { try { const d = JSON.parse(localStorage.getItem(k)); const b = typeof d.data === 'string' ? JSON.parse(d.data) : (d.data || d); return !!(b.points && b.points['spartoo-reception']); } catch (e) { return false; } }));
+  if (!photo) throw new Error('photo de fin de séance absente : ENT-1.2 resterait fermée');
 });
 
 // ---------- 33. l'avancement de la réception remonte : 7 justes sur 8 (la question 4 du questionnaire)

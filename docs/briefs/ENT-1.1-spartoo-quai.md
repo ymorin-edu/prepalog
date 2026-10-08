@@ -420,3 +420,4 @@ mêmes commandes CMD-048301 / 048307 / 048312), Reste **60** : à bloquer **RG-3
 - **Commits** : dc0676a (quai iso, moteur), 5d286d2 (réceptions, fermetures), b5f15de (ENT-1.1), 0812cab (bandeau), 83f234e
   (confirmation), 5b6afa5 (fiche par référence), puis le commit des trames et corrigés.
 - **Reste ouvert** : §7.7 détail des jalons au Suivi (chantier commun avec Smoby C4) ; retours Smoby (lots A, B, puis C3, C5-C7).
+- **08/10/2026, retour de classe** : un élève bloqué en fin de séance (bon de réception faux, figé après validation, ENT-1.2 fermée). La séance passe en `suiteAuBilan` : ENT-1.2 s'ouvre dès que les 8 jalons sont jugés (voir `docs/decisions.md`). La trame n'a pas changé (« appelle ton professeur » reste juste). Un « Corriger » du bon de réception reste à décider (chantier moteur).
