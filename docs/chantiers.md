@@ -28,7 +28,7 @@
 | 7 | Quota Spark : mesurer, puis supprimer les écritures inutiles | C9 | moyen | Sonnet | oui | 4 | à faire |
 | **Lot B — rendre la croissance possible** | | | | | | | |
 | 8 | Fabrique de séance d'entreprise (24 fichiers recopiés) | C6 | moyen | Sonnet | oui (petit) | — | **livré** (08/10, db5ed50 à ee13996) |
-| 9 | `entreprise.js` : options figées, `COLORS`/`SHIP` sortis, modules extraits | C5 | gros | Opus puis Sonnet | oui | 8 | 9a **livré** (08/10, 7a79945 à 6c516c6) ; 9a bis **livré** (08/10, 5e53938) ; 9b, 9c à faire |
+| 9 | `entreprise.js` : options figées, `COLORS`/`SHIP` sortis, modules extraits | C5 | gros | Opus puis Sonnet | oui | 8 | 9a, 9a bis, 9b **livrés** (08/10, 7a79945 à 3d63525) ; 9c à faire |
 | 10 | Un seul drapeau « Simulog » dans tout le code | C13 | petit | Sonnet | oui | — | à faire |
 | 11 | Plusieurs enseignants : co-prof, groupes par prof, orphelins filtrés | C7 | moyen à gros | Opus (décision) puis Sonnet | oui + règles | 1, 6 | à faire |
 | 12 | CAP OL et niveaux : référentiel, défauts, TAB-4 | C8 | moyen | Sonnet (Cowork d'abord) | oui | référentiel CAP relevé | à faire |
@@ -224,7 +224,7 @@ s'aligner.
 - **Lot 9a (Sonnet).** Table unique des options acceptées par `creerEntreprise`, contrôle au
   chargement (clé inconnue = refus, comme `menu`), contrôle d'unicité des `id` de quai, planning,
   entrepôt, fiche, et refus de `correction: true` sur une séance qui juge en continu.
-- **Lot 9b (Sonnet).** Sortir `COLORS`, `SHIP`, `pad` de `core/` (le contenu les fournit).
+- **Lot 9b (Sonnet) — livré.** Sortir `COLORS`, `SHIP`, `pad` de `core/` (le contenu les fournit).
 - **Lot 9c (Opus pour le découpage, Sonnet pour chaque module).** Extraire, un module par commit :
   console, messagerie, écrans de données (commandes, réceptions, stock, catalogue, tiers), bandeau de
   fin. Suite verte entre chaque.
@@ -262,6 +262,25 @@ s'aligner.
   (l'`id` = le nom du fichier, vrai pour les 43), sinon leurs classements restaient derrière, invisibles. Le filet ne rend pas
   la suite aveugle : le cas « les 24 séances se chargent » exige une liste d'échecs vide. Quatre cas dans `dependances.mjs`
   (élève, enseignant, onglets de l'espace enseignant, suppression), sabotés dans les deux sens. Suite : 889/889.
+
+- **Fait, lot 9b (08/10/2026, 3d63525).** `core/types/entreprise.js` n'importe plus rien de `contenus/` (l'import de
+  `COLORS`, `SHIP` et `pad` est parti). **Relevé** : les commandes avec un code `ship` (`COL`, `CHR`, `REL`) n'existent que
+  chez **Spartoo** (`contenus/spartoo.js`, `spartoo-tracabilite.js`) et **Cdiscount** (six fichiers `cdiscount-*.js`) ; Picard, Smoby
+  et Boost sèment `orders: []`. Les modèles à `colors` ne sont que ceux de **Spartoo** (`buildCatalog`) ; `catalogueSimple`
+  met toujours `colors: []`. **Deux options nouvelles** dans `OPTIONS` (44 au total) : `couleurs` (`{ code: [nom, teinte] }`)
+  et `livraisons` (`{ code: [libellé, prix du port] }`), toutes deux de type objet, **facultatives** : la fabrique les prend dans
+  l'univers, puis le contenu de la séance, puis les options (`CLES_FACULTATIVES`, `seance-entreprise.js`), sans rien refuser si elles
+  manquent. `contenus/spartoo.js` exporte les deux (`couleurs = COLORS`, `livraisons = SHIP`, importés d'`entreprise-commun.js`
+  qui les garde), `contenus/cdiscount.js` exporte `livraisons`. **Les 24 fichiers de séance n'ont pas bougé.** Sans table : une
+  couleur inconnue n'a ni nom ni pastille (comme avant) ; un code de livraison inconnu s'affiche tel quel avec un port de 0 (avant :
+  la page plantait). `pad` : une ligne locale dans `entreprise.js` (`core/ui.js` n'en avait pas ; `entreprise-commun.js` garde la sienne
+  pour les contenus). **Preuve que l'écran ne change pas** : texte de la messagerie, de la fiche de commande, du bon de préparation,
+  de la console (`.getorder`), du catalogue (HTML des pastilles) et de la fiche produit relevé avant et après sur les neuf séances
+  qui ont des commandes (ENT-1.1 à 1.3, six Cdiscount) : octet pour octet identique. **Cinq cas** dans `dependances.mjs` (aucun
+  import de `contenus/` dans `core/`, options et fabrique, code de livraison inconnu avec et sans table, Spartoo ENT-1.2, trois
+  modes de livraison sur ENT-1.3 et Cdiscount), sabotés dans les deux sens. Reste de `contenus/` dans `core/` : un `import()`
+  dynamique dans `core/prof.js` (les questions d'une séance, `contenus/questions/<nom>.js`), qui n'est pas une dépendance figée ;
+  le test ne regarde que les imports statiques. Suite complète : 895/895.
 
 ### 10. Un seul drapeau Simulog (C13)
 - **Ce qu'on fait.** `estSimulog(meta)` (rubrique `simulog`) utilisé à la place de `/^ENT-/` et
@@ -328,7 +347,7 @@ s'aligner.
 
 ### 19. Reliquats SCE / Spartoo (C15)
 - **À décider par Tristan** : la règle « Spartoo tel quel » est-elle maintenue après la refonte du
-  06/10 ? Le reliquat qui gêne (`COLORS`/`SHIP`) part avec le lot 9b. SCE attend sa migration dans
+  06/10 ? Le reliquat qui gênait (`COLORS`/`SHIP`) est parti du moteur avec le lot 9b (08/10/2026). SCE attend sa migration dans
   Simulog, comme prévu par la finalité.
 
 ### 20. Stratelog (C19)

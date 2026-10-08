@@ -7,7 +7,6 @@ est déjà modifié ou inscrit ci-dessous, **elle s'arrête et le dit à Tristan
 
 | Chantier | Fichiers qu'il touche | Depuis |
 |---|---|---|
-| Chantier 9b — COLORS/SHIP hors du moteur | `core/types/entreprise.js`, `core/types/seance-entreprise.js`, `contenus/spartoo.js`, `contenus/cdiscount.js`, `activites/FICHE-SEANCE.md`, `outils/test/dependances.mjs` | 08/10/2026 |
 | ENT-1.1 : `suiteAuBilan` (plus d'élève bloqué en fin de séance) | `activites/spartoo-reception.js`, `outils/test/spartoo.mjs`, `docs/decisions.md` | 08/10/2026 |
 
 Rappel : un seul chantier à la fois dans `core/types/tournee.js`, `core/types/grille.js`,

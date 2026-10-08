@@ -39,6 +39,7 @@ séance**, le **`meta`** (la déclaration, voir plus bas) ; puis les **options**
 | `meta` | `bareme` | nombre de jalons, `SEANCE.ETAPES.length` (écrire `bareme: 20` pour une séance à jalons pondérés) |
 | `meta` | `corrige` | `./contenus/corriges/<code>.js` ; `corrige: false` = pas de corrigé (ENT-5.3), la clé disparaît |
 | moteur | `ENTREPRISE`, `VOCAB`, `CATALOGUE`, `SUPPLIERS`, `SUP_BY_ID`, `CUSTOMERS`, `CM`, `baseDeDepart`, `THEME` | l'univers (les neuf sont exigées) |
+| moteur | `couleurs`, `livraisons` (facultatives) | l'univers, puis le contenu de la séance, puis les options ; absentes, elles ne font rien refuser |
 | moteur | `etapes`, `accueil`, `volet` | `SEANCE.ETAPES` (exigée), `SEANCE.ACCUEIL`, `SEANCE.VOLET` |
 | moteur | `copie` | `meta.copie` |
 | moteur | `trame: { pdf, docx }` (liens du bandeau) | `./contenus/trames/<code>-<nom>-trame-eleve.pdf` / `.docx`, où `<nom>` est écrit **une fois** dans `meta.trame` (`trame: 'picard-deux-camions'`) : il ne se déduit pas de l'`id`. Sans `meta.trame`, pas de trame. `meta.trame` n'est pas dans le `meta` rendu. |
@@ -51,6 +52,13 @@ ENT-5.7 réécrit `ENTREPRISE` et `VOCAB` pour l'agence Kuehne+Nagel). Tout le r
 `sansTrame`, `receptionLitige`, `tableur`, `inventaire`…) se range dans les options et part tel quel au moteur ; la
 liste complète est la table « Les options de `creerEntreprise` » plus bas. Une trame déjà au format `{ pdf, docx }` se passe aussi dans
 les options (elle remplace la trame déduite).
+
+**Deux clés d'univers sont facultatives** (lot 9b, 08/10/2026) : `couleurs` (noms et teintes des couleurs des variantes d'un
+catalogue) et `livraisons` (modes de livraison des commandes et prix du port). Le moteur n'importe plus aucun fichier de
+`contenus/` : c'est l'univers qui les exporte (`contenus/spartoo.js` : les deux ; `contenus/cdiscount.js` : `livraisons`), la
+fabrique les prend dans l'ordre habituel (univers, contenu de la séance, options) et ne refuse rien si elles manquent. Un univers
+dont les commandes portent un code `ship` doit exporter `livraisons` ; sans la table, la commande s'affiche avec le code lui-même
+comme libellé et un port de 0.
 
 **Ce que la fabrique refuse** (la séance ne se charge pas, le message est en français et nomme la séance) : un `meta`
 sans `id` ou sans `code`, un contenu de séance sans `ETAPES`, une clé d'univers absente de l'univers, du contenu et des
@@ -68,7 +76,7 @@ options, une `meta.trame` qui n'est pas un nom, `correction: true` sans aucun ja
 ### Les options de `creerEntreprise` — la table qui fait foi (chantier 9, lot 9a, 08/10/2026)
 
 Tout ce qu'une séance peut passer à `creerEntreprise` (directement, ou dans le quatrième argument de
-`seanceEntreprise`) est dans **`OPTIONS`**, en tête de `core/types/entreprise.js` : 42 options, une ligne chacune. Le tableau
+`seanceEntreprise`) est dans **`OPTIONS`**, en tête de `core/types/entreprise.js` : 44 options, une ligne chacune. Le tableau
 ci-dessous la reprend ; si les deux se contredisent, c'est `OPTIONS` qui a raison. **Une option absente de `OPTIONS` fait
 refuser la séance** : le message (en français) nomme la clé, propose la bonne casse s'il s'agit d'une faute de majuscule, et
 liste les clés connues ; avec la fabrique il nomme aussi la séance. Un type qui n'est pas celui du tableau est refusé de la même
@@ -91,6 +99,8 @@ plan d'entrepôt, fiche, animation) sans `id` texte non vide, sont refusées aus
 | `fermetures` | objet | `{ écran: { ouvertSi(db), message } }` : l'entrée du menu reste visible, grisée avec le message, tant que `ouvertSi(db)` est faux (élève seulement). | `activites/spartoo-reception.js` |
 | `stockOuvert` | booléen | L'écran Stock s'ouvre sans le code de l'enseignant (Smoby). Sans l'option, il reste verrouillé (Spartoo : il pousse vers la console `.getstock`). | `activites/smoby-visite.js` |
 | `receptionLitige` | booléen | Ajoute « En litige (zone litiges) » aux décisions du bon de réception ; la ligne n'entre pas en stock. | `activites/smoby-rangement.js` |
+| `couleurs` | objet | `{ code: [nom, teinte] }` : noms et teintes des couleurs des variantes (pastilles du catalogue, colonne Couleur). Sans table, pas de pastille. **Facultative**, exportée par l'univers. | `contenus/spartoo.js` |
+| `livraisons` | objet | `{ code: [libellé, prix du port] }` : modes de livraison des commandes (`ship`). Code inconnu : le code tel quel, port de 0. **Facultative**, exportée par l'univers. | `contenus/spartoo.js`, `contenus/cdiscount.js` |
 | `lexique` | objet | Mots cliquables `{ MOT: définition }` : `[[MOT]]` ou `[[mot|affiché]]` dans les textes du contenu. | `activites/smoby-visite.js` |
 | `transportSection` | texte | Nom du groupe de menu qui porte plan et tournée (« Transport » par défaut). | `activites/boost-ent32.js` |
 | `transportId` | texte | Clé de `db.transport` partagée entre deux séances (sinon l'`id` de la séance). | `activites/boost-ent32.js` |
