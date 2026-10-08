@@ -7,7 +7,6 @@ est déjà modifié ou inscrit ci-dessous, **elle s'arrête et le dit à Tristan
 
 | Chantier | Fichiers qu'il touche | Depuis |
 |---|---|---|
-| Chantier 10 — un seul drapeau Simulog | `core/prof.js`, `core/app.js`, `core/parcours.js`, `activites/index.js`, `core/questions.js` → renommé, ses importeurs, `outils/test/dependances.mjs`, docs | 2026-10-09 |
 
 Rappel : un seul chantier à la fois dans `core/types/tournee.js`, `core/types/grille.js`,
 `core/types/entreprise.js`, `styles/base.css` et `outils/test/boost.mjs` (voir `docs/briefs/COORDINATION-boost.md`).

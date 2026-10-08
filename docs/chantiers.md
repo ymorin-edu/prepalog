@@ -29,7 +29,7 @@
 | **Lot B — rendre la croissance possible** | | | | | | | |
 | 8 | Fabrique de séance d'entreprise (24 fichiers recopiés) | C6 | moyen | Sonnet | oui (petit) | — | **livré** (08/10, db5ed50 à ee13996) |
 | 9 | `entreprise.js` : options figées, `COLORS`/`SHIP` sortis, modules extraits | C5 | gros | Opus puis Sonnet | oui | 8 | **livré** (9a, 9a bis, 9b, 9c ; 9c bis à faire plus tard) |
-| 10 | Un seul drapeau « Simulog » dans tout le code | C13 | petit | Sonnet | oui | — | à faire |
+| 10 | Un seul drapeau « Simulog » dans tout le code | C13 | petit | Sonnet | oui | — | livré (09/10/2026, 7cd4a21, 58fe9e7) |
 | 11 | Plusieurs enseignants : co-prof, groupes par prof, orphelins filtrés | C7 | moyen à gros | Opus (décision) puis Sonnet | oui + règles | 1, 6 | à faire |
 | 12 | CAP OL et niveaux : référentiel, défauts, TAB-4 | C8 | moyen | Sonnet (Cowork d'abord) | oui | référentiel CAP relevé | à faire |
 | **Lot C — hygiène** | | | | | | | |
@@ -295,6 +295,21 @@ s'aligner.
   déménagement de dossiers.
 - **Fini quand.** Un grep de `ENT-` et d'`immersif` dans `core/` ne trouve plus de filtre « c'est une
   séance d'entreprise ».
+- **Fait (09/10/2026, 7cd4a21 puis 58fe9e7).** `estSimulog(meta)` (rubrique `simulog`) est défini une fois, dans
+  `activites/index.js` à côté des rubriques (le fichier n'importe rien : aucun cycle), et remplace les six filtres :
+  Suivi de classe (colonnes d'entreprise et cellule « notée sur 20 »), repérage, remise à zéro, version de base et
+  reprise (`app.js`), et celui de `parcours.js` (`seancesDuParcours`), que le brief ne citait pas. Relevé avant/après
+  sur le registre : les mêmes 24 séances pour chaque filtre, et l'écran (colonnes du Suivi, liste de la remise à zéro
+  et du déblocage) identique. **Constaté** : les 11 séances qui déclarent `parcours` (Spartoo, Smoby) sont toutes
+  Simulog, donc `|| parcours` est retiré (un cas le garantit désormais) ; toutes les séances Simulog ont
+  `portee: 'eleve'`, mais la fabrique laisse la séance l'écraser, donc `portee === 'eleve'` est gardé à côté du
+  drapeau. `immersif` reste dans `app.js` comme **option d'affichage plein écran** (seule ligne autorisée par le
+  test), de même que `logo: 'simulog'` (déjà la rubrique). Deux cas dans `dependances.mjs` : rubrique, code `ENT-` et
+  `immersif` vont ensemble (calculé depuis le registre), et `core/` + `core/types/` ne contiennent plus de filtre
+  `ENT-`/`immersif` (éprouvés : un `/^ENT-/` remis dans `prof.js`, un `immersif` remis dans `parcours.js`, une séance
+  dont l'`immersif`, la rubrique ou le drapeau diverge : chacun fait tomber le cas). `core/questions.js` (fabrique de
+  quiz) devient `core/quiz.js` ; `core/types/questions.js` (questions au fil) garde son nom. Pas de déménagement de
+  dossiers (`core/simulog/` reste possible, le drapeau étant en place).
 
 ### 11. Plusieurs enseignants (C7)
 - **Décision à prendre (Opus, options à écrire à Tristan avant de coder)** : identifiant de groupe

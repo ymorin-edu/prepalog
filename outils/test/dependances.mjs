@@ -274,6 +274,60 @@ await v('séances d\'entreprise : un meta complet et cohérent avec le code, cal
   if (problemes.length) throw new Error(problemes.join(' ; '));
 });
 
+// ---------- chantier 10 (09/10/2026) : un seul drapeau « séance d'entreprise Simulog »
+// Trois critères disaient la même chose (rubrique `simulog`, code `ENT-`, `immersif`) sans que rien ne les lie. Le drapeau est
+// désormais `estSimulog(meta)` (activites/index.js) : la rubrique. Ces deux cas garantissent que les trois ne divergent pas
+// demain, et que le noyau ne retrouve pas ses propres filtres.
+await v('Simulog : rubrique « simulog », code ENT- et immersif vont ensemble, et estSimulog les suit (calculé depuis le registre)', async () => {
+  const r = await page.evaluate(async () => {
+    const I = await import('/activites/index.js');
+    const metas = (await I.chargerActivites()).map((a) => a.meta);
+    return { lignes: metas.map((m) => ({ id: m.id, code: m.code, rubrique: m.rubrique, immersif: m.immersif, parcours: m.parcours, drapeau: I.estSimulog(m) })),
+      vide: [I.estSimulog(undefined), I.estSimulog(null), I.estSimulog({})] };
+  });
+  const sim = r.lignes.filter((m) => m.rubrique === 'simulog');
+  // Plancher, pas liste : le cas ne doit pas passer à vide si le registre se met à ignorer des séances.
+  if (sim.length < 24) throw new Error(`seulement ${sim.length} séances de rubrique simulog dans le registre`);
+  const problemes = [];
+  for (const m of r.lignes) {
+    const estEnt = /^ENT-/.test(String(m.code || ''));
+    const estRub = m.rubrique === 'simulog';
+    if (estRub && !estEnt) problemes.push(`${m.id} : rubrique simulog mais code ${m.code}`);
+    if (estEnt && !estRub) problemes.push(`${m.id} : code ${m.code} mais rubrique ${m.rubrique}`);
+    if (estRub && m.immersif !== true) problemes.push(`${m.id} : rubrique simulog mais pas immersive`);
+    if (m.parcours && !estRub) problemes.push(`${m.id} : déclare un parcours sans être de rubrique simulog (core/parcours.js ne le verrait plus)`);
+    if (m.drapeau !== estRub) problemes.push(`${m.id} : estSimulog dit ${m.drapeau} pour la rubrique ${m.rubrique}`);
+  }
+  if (r.vide.some((x) => x !== false)) problemes.push('estSimulog doit rendre faux pour undefined, null et un meta sans rubrique : ' + r.vide);
+  if (problemes.length) throw new Error(problemes.join(' ; '));
+});
+
+await v('Simulog : le noyau (core/ et core/types/) ne filtre plus sur le code ENT- ni sur immersif, il demande estSimulog', async () => {
+  // Relecture statique. Sont exclus : les commentaires, et UNE seule ligne autorisée, `immersif` comme OPTION D'AFFICHAGE
+  // plein écran (core/app.js : « if (m.meta.immersif) { » ouvre la page sans le cadre de l'accueil). La définition d'estSimulog
+  // est dans activites/index.js, hors du périmètre relu.
+  const AFFICHAGE = /^\s*if \(m\.meta\.immersif\) \{\s*$/;
+  const FILTRE = /\/\^ENT|\^ENT-|startsWith\(\s*['"`]ENT|\.immersif\b|\[\s*['"]immersif['"]\s*\]/;
+  const fautifs = [];
+  let fichiers = 0, autorisees = 0;
+  for (const dossier of ['core', path.join('core', 'types')]) {
+    for (const e of fs.readdirSync(path.join(ROOT, dossier))) {
+      if (!/\.js$/.test(e)) continue;
+      fichiers++;
+      fs.readFileSync(path.join(ROOT, dossier, e), 'utf8').split('\n').forEach((l, i) => {
+        if (/^\s*(\/\/|\*|\/\*)/.test(l)) return;
+        const code = l.replace(/\s\/\/\s.*$/, '');
+        if (!FILTRE.test(code)) return;
+        if (e === 'app.js' && AFFICHAGE.test(code)) { autorisees++; return; }
+        fautifs.push(`${dossier}/${e}:${i + 1} : ${l.trim().slice(0, 90)}`);
+      });
+    }
+  }
+  if (fichiers < 30) throw new Error(`seulement ${fichiers} fichiers relus (le cas ne doit pas passer à vide)`);
+  if (autorisees !== 1) throw new Error(`l'option d'affichage « if (m.meta.immersif) { » est attendue une fois dans core/app.js, trouvée ${autorisees} fois (exception périmée ?)`);
+  if (fautifs.length) throw new Error('filtre « séance d\'entreprise » hors estSimulog : ' + fautifs.join(' ; '));
+});
+
 await v('séances d\'entreprise : toute trame (écrite ou déduite par la fabrique) commence par le code de la séance et existe dans le dépôt', async () => {
   const problemes = [];
   let nTrames = 0;
