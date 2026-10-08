@@ -949,9 +949,9 @@ sur 2 » est calculé). Après toute modification : `node outils/test.mjs questi
 ## Pièges
 
 - **Un module `core/types/entreprise-*.js` n'importe jamais `entreprise.js`** (import circulaire : `entreprise.js` les importe). Il
-  reçoit ce dont il a besoin par son nom (jamais `ctx`, `U` ni `db` en bloc) ; `entreprise.js` ré-exporte ce que d'autres fichiers
+  reçoit ce dont il a besoin par son nom (jamais `ctx` ni `U` ; un écran de données reçoit en plus la base `db` et l'état d'écran `E` de l'élève, et ne touche que ses clés) ; `entreprise.js` ré-exporte ce que d'autres fichiers
   lui importaient (`OPTIONS`, `eur`, `fdate`, `fdt`, `norm`, `normLoc`). Chantier 9, lot 9c, 08/10/2026 : le plan et les
-  modules à venir sont dans `docs/briefs/MOTEUR-entreprise-decoupage.md`.
+  autres modules sont dans `docs/briefs/MOTEUR-entreprise-decoupage.md`.
 - Une séance en cours d'écriture reste en `pret: false` et peut être commitée à tout moment.
   Elle compte quand même dans le tableau des compétences.
 - Une séance X.2 qui partage la base d'une X.1 met `reinitialisable: false` et **cloisonne**

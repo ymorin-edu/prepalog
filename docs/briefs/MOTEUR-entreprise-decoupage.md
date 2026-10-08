@@ -1,6 +1,6 @@
 # Brief de chantier moteur — MOTEUR-entreprise-decoupage : découper `entreprise.js` en modules (lot 9c)
 
-**Statut** : en cours *(à valider → en cours → livré)* — validé par Tristan le 08/10/2026 ; **passe 1 (modules 1 à 4) livrée** ; décision : 9c s'arrête à ≈ 1 850 lignes (chaque écran de données dans son fichier), le « 9c bis » viendra plus tard
+**Statut** : en cours *(à valider → en cours → livré)* — validé par Tristan le 08/10/2026 ; **passes 1 et 2 (modules 1 à 9) livrées** ; décision : 9c s'arrête à ≈ 1 850 lignes (chaque écran de données dans son fichier), le « 9c bis » viendra plus tard
 **Date** : 08/10/2026 — cadrage Opus (lecture seule), d'après `core/types/entreprise.js` à 3 461 lignes (commit `2ba3243`).
 **Modèle** : **Sonnet** pour chaque module, un module par conversation ou presque (voir §8).
 **Fichiers** : `core/types/entreprise.js` + un fichier nouveau par module dans `core/types/`. **Rien dans `styles/`, `contenus/`,
@@ -284,6 +284,50 @@ commit d'avant toute modification** (vérifié en servant `git archive` du commi
 (895/895). Cause probable : il prend la première séance immersive (ENT-1.1, qui a des documents) et suppose qu'aucun élève du groupe
 n'y a joué ; selon les blocs qui ont tourné avant, un élève y a joué. Non réparé (cas existant, hors périmètre).
 
-**Fait / à faire.** Passe 1 faite (modules 1 à 4). **Reste ouvert** : passes 2 à 4 (modules 5 à 13). Rien n'a été fait dans `styles/`,
-`contenus/`, `activites/*.js`, `outils/test.mjs`, `outils/test/*`. Les captures (scripts et relevés) sont dans le dossier temporaire de
-la session, pas dans le dépôt ; la méthode est décrite au §6.
+**Passe 2 (modules 5 à 9), 08/10/2026.** Suite complète à chaque module : 895/895 (≈ 13 min). Méthode de la passe 1 : « avant » =
+`git archive` du commit précédent (LF), « après » = l'arbre de travail copié en LF. **Deux relevés**, refaits à chaque module et
+comparés à une référence prise une fois sur le code d'avant la passe (relevée **deux fois, identique** : le relevé est déterministe) :
+`ecran.mjs` (messagerie, commandes, bon, catalogue, stock, console : 9 séances, 174 379 caractères) et un **nouveau `ecran2.mjs`**
+(24 séances × élève / enseignant / élève sans code du stock, **1 321 relevés, 4 348 559 caractères**, texte et HTML) : Clients et
+Fournisseurs avec 13 filtres tapés et la frappe touche par touche (focus relevé) ; catalogue avec recherche, marque, catégorie,
+combinaison et la fiche de chacun des 40 premiers produits ; stock verrouillé, code vide / faux / bon (espaces et minuscules),
+filtres `#sQ` `#sB` `#sS`, Mouvements, comptage à l'aveugle (étape 1 puis 2) ; blocage : 13 refus ou réussites (vide, lot seul,
+référence inconnue, quantité en lettres / zéro / décimale / négative, sans motif, lot vide, trop, deux succès, lot épuisé, clic
+réel) sur un lot posé exprès ; console (`.getlot`, `.removestock`, `.addstock`, `.setstock`, `.movements`, `.addclient` ×2,
+`.addsupplier` ×2, `.getclient`, `.getsupplier`) et préparation validée.
+
+| # | Commit | `entreprise.js` après | Capture avant / après | Blocs ciblés |
+|---|---|---|---|---|
+| 5 base | fa7e393 | 3 168 -> 3 119 | 1 321 relevés + 9 séances : identiques | `spartoo cdiscount inventaire` : 220/220 |
+| 6 tiers | abe7e47 | -> 3 079 | idem (Clients / Fournisseurs : aucun bloc ne les joue, relevé obligatoire) : identiques | `socle boost` : 183/183 |
+| 7 catalogue | 3d4dc61 | -> 3 026 | idem : identiques | `dependances inventaire` : 69/69 |
+| 8 stock | 40db919 | -> 2 938 | idem (le `colspan` de « Aucun résultat. » est retrouvé à l'identique, 45 fois) : identiques | `cdiscount inventaire entrepot` : 192/192 |
+| 9 blocage | f493e7c | -> 2 861 | idem : identiques | `spartoo` : 88/88 |
+
+**Sabotage (module 6).** Dans `entreprise-tiers.js`, « Client depuis » devenu « Client depuis le » : le relevé le voit (DIFFÉRENT sur
+les 4 relevés d'élève / enseignant de Spartoo et de Boost ENT-3.1 qui ouvrent Clients). Remis, relevé identique.
+
+**Écarts au plan.**
+- Module 5 : `entreprise.js` garde les mêmes noms (`const { stockDe, mouvement, … } = B`), donc aucun appelant ne change. Les fonctions
+  du plan étaient des déclarations (hissées) ; ce sont maintenant des constantes montées juste avant `ajouterMail`, après `sauver` :
+  aucun appel avant ce point (`semerVolet` écrit `db.stock` directement, comme avant). Le code est dédenté de deux niveaux (pas de gabarit).
+- Module 6 : reçoit `{ E, hote, VOCAB, B }` (le `A` du plan ne sert pas : les formats viennent d'`entreprise-outils.js`).
+- Modules 7 à 9 : `A` est maintenant gardé entier dans `entreprise.js` (`const A = creerArticles(…)`, la destructuration suit,
+  inchangée) pour être passé aux modules.
+- **L'indentation est gardée** (6 espaces) dans les modules 6 à 9, comme au module 4 : l'espace entre deux balises fait partie du HTML.
+- Le clic sur un onglet (`[data-onglet]`, branché pour `E.onglet`) reste au cœur : générique, le plan ne le comptait pas dans le stock.
+  `[data-deverrouiller]` est branché par le stock (`ctx.codeStock` passé en fonction `codeStock()`) ; `[data-filtre]` n'est branché que
+  sur son écran par chacun des trois modules (le bloc partagé du cœur a disparu).
+- `brancher(z)` des écrans qui filtrent gardent leur test d'écran (`E.vue`) au moment du branchement ; le comportement est le même
+  qu'avant (le champ n'existe que sur l'écran, la vue ne change qu'avec un redessin).
+- Décompte du plan (3 100 / 3 060 / 3 000 / 2 920 / 2 845) : réel 3 119 / 3 079 / 3 026 / 2 938 / 2 861 (+ 16 à 26 lignes : chaque
+  montage, ses imports et ses en-têtes de fichier).
+- **Non rejoué par le relevé** : la validation d'une réception (écrit stock et mouvements par le socle), couverte par les blocs
+  `spartoo`, `smoby`, `cdiscount`, `picard` de la suite complète seulement.
+
+**Le « rouge hors suite entière »** de la passe 1 (« Repérage… colonne des documents » avec `spartoo smoby questions` lancés seuls)
+n'a pas été rencontré dans cette passe (les blocs lancés étaient ceux de la colonne du §6) ; il reste connu et non réparé.
+
+**Fait / à faire.** Passes 1 et 2 faites (modules 1 à 9). **Reste ouvert** : passes 3 et 4 (modules 10 à 13 : commandes, réceptions,
+console, messagerie). Rien n'a été fait dans `styles/`, `contenus/`, `activites/*.js`, `outils/test.mjs`, `outils/test/*` (aucun cas
+touché). Les relevés (scripts et JSON) sont dans le dossier temporaire de la session, pas dans le dépôt.
