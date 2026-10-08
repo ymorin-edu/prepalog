@@ -1,6 +1,6 @@
 # Brief de chantier moteur — MOTEUR-entreprise-decoupage : découper `entreprise.js` en modules (lot 9c)
 
-**Statut** : en cours *(à valider → en cours → livré)* — validé par Tristan le 08/10/2026 ; **passes 1 à 3 (modules 1 à 11) livrées** ; décision : 9c s'arrête à ≈ 1 850 lignes (chaque écran de données dans son fichier), le « 9c bis » viendra plus tard
+**Statut** : livré *(à valider → en cours → livré)* — validé par Tristan le 08/10/2026 ; **passes 1 à 4 (modules 1 à 13) livrées le 09/10/2026** ; 9c s'arrête à 1 851 lignes (chaque écran de données dans son fichier), le « 9c bis » viendra plus tard
 **Date** : 08/10/2026 — cadrage Opus (lecture seule), d'après `core/types/entreprise.js` à 3 461 lignes (commit `2ba3243`).
 **Modèle** : **Sonnet** pour chaque module, un module par conversation ou presque (voir §8).
 **Fichiers** : `core/types/entreprise.js` + un fichier nouveau par module dans `core/types/`. **Rien dans `styles/`, `contenus/`,
@@ -366,5 +366,64 @@ le relevé le voit (DIFFÉRENT sur `c0:copie` pour les 4 relevés Spartoo ; le b
 - **Non rejoué par un relevé** : rien de nouveau pour les commandes et les réceptions (la validation d'une réception, que la passe 2 laissait
   aux blocs de tests, est maintenant relevée, stock et mouvements compris).
 
-**Fait / à faire.** Passes 1 à 3 faites (modules 1 à 11). **Reste ouvert** : la passe 4 (modules 12 et 13 : console, messagerie). Rien n'a été fait dans `styles/`, `contenus/`, `activites/*.js`, `outils/test.mjs`, `outils/test/*` (aucun cas
-touché). Les relevés (scripts et JSON) sont dans le dossier temporaire de la session, pas dans le dépôt.
+**Passe 4 (modules 12 et 13), 09/10/2026.** Même méthode : « avant » = `git archive` du commit précédent (LF), « après » = l'arbre de
+travail en LF. Relevés refaits à chaque module : les trois des passes précédentes (`ecran.mjs`, `ecran2.mjs`, `ecran3.mjs`, mêmes
+références, 174 379 + 4 348 559 + 3 170 674 caractères) et un **nouveau `ecran4.mjs`** (**146 relevés séance × profil, 15 028 489
+caractères** : texte et HTML de l'écran, focus, position du curseur, base après chaque geste ; relevé deux fois sur l'ancien code : identique ;
+les délais de 2,6 s du « toast » et de 8 s de la carte réduite sont figés, l'heure et le hasard aussi ; le quai n'est relevé qu'en texte, son
+dessin bouge avec l'horloge). **Console** (8 séances qui en ont une, élève et enseignant) : les **19 commandes**, chacune sans argument, avec
+un argument faux et avec un argument juste (référence, modèle, préfixe, marque en trois graphies, client, fournisseur, commande, lot ;
+`.addclient` et `.addsupplier` avec sept erreurs de saisie et deux créations), une commande inconnue, une ligne sans point, une ligne vide,
+`.HELP`, l'envoi par le bouton, `.clear` (deux fois de suite), 45 commandes d'affilée (seules les 40 dernières s'affichent), le refus des
+commandes de stock pendant un comptage à l'aveugle (Cdiscount ENT-2.3 et ENT-2.5, élève), le focus de `#champCmd` et le défilement après
+chaque commande. **Messagerie** (24 séances, élève et enseignant, deux fois : base neuve, puis avec toutes les fiches « envoyées » pour faire
+arriver les messages à réponse par phrases) : chaque mail ouvert, retour à la liste, pièces jointes (ouverture, passage de l'une à l'autre,
+retour et focus sur le bouton de la pièce, compteur du repérage), bouton d'une fiche, « Enregistrer la commande » puis « Ouvrir la commande »,
+« Ouvrir la réception », « Répondre » (ouverture, fermeture, réponse amorcée et position du curseur, réponse vide, réponse envoyée), réponse par
+phrases (envoi incomplet, un choix après l'autre avec l'aperçu et le focus, choix retiré, brouillon gardé quand on change de dossier,
+confirmation, Annuler, Valider, renvoi corrigé avec sa phrase propre, accusé du volet), dossier Envoyés, nouveau message (annuler, sans
+fournisseur, message vide, sans référence, sous le minimum, au-dessus, réserves sur un lot, référence en minuscules et message avec balises)
+chez les fournisseurs de chaque entreprise, retour au quai (Picard ENT-4.3) avec le lien « Revenir au quai », cartes des messages
+déclenchés. **Séance d'essai des questions** : le cadenas de « Répondre » à Malo, « Y aller », les deux questions du point d'étape, « Continuer »,
+la réponse enfin possible, les cartes.
+
+| # | Commit | `entreprise.js` après | Capture avant / après | Blocs ciblés |
+|---|---|---|---|---|
+| 12 console | be855c4 | 2 379 -> 2 116 | `ecran4` (15 027 793 car. à l'époque), `ecran3`, `ecran2`, `ecran` : identiques | `spartoo cdiscount inventaire dependances` : 250/250 |
+| 13 messagerie | 8e39667 | -> 1 851 | `ecran4` 15 028 489 car., `ecran3`, `ecran2`, `ecran` : identiques | `spartoo cdiscount smoby questions picard boost amenagements` : 564/565 (le rouge connu, voir ci-dessous) |
+
+Suite complète à chaque module : 895/895 (≈ 13 min).
+
+**Sabotages (une fois chacun).** Module 12 : dans `entreprise-console.js`, le libellé « Valeur achat HT » de `.stockvalue` devenu « Valeur achat
+HT TTC » (commande que **aucun test ne joue**) : le relevé le voit (10 écarts sur Spartoo ENT-1.1, élève et enseignant). Remis. Module 13 : dans
+`entreprise-messagerie.js`, « Tu renvoies ta réponse corrigée » devenu « Tu renvoies ta reponse corrigée » : le relevé voit la confirmation du
+renvoi (élève et enseignant, Smoby ENT-5.1). Remis, relevé identique.
+
+**Écarts au plan (passe 4).**
+- **Les clics `[data-ouvrir-cmd]`, `[data-ouvrir-rec]` et `[data-enreg-cmd]` sont branchés par la messagerie**, comme le plan l'annonçait ;
+  mais `[data-ouvrir-cmd]` et `[data-ouvrir-rec]` sont aussi les boutons « Ouvrir » des listes des commandes et des réceptions (mêmes
+  sélecteurs). Ces deux listes comptent donc sur `MSG.brancher(z)`, appelé à chaque dessin de chaque écran (le relevé `ecran3` joue ces
+  clics : identique). À défaire si un jour la messagerie devient optionnelle dans une séance.
+- Console : `inventaireBloque` est passé tel quel (fonction du cœur, lue par le stock aussi) ; `E.console` reste initialisé dans `E` ; le
+  module n'écrit que `E.console` (`.clear` le remplace) et lit `E.vue`.
+- Messagerie : `U.reponsesFournisseur || []` est lu à l'appel (`reponsesFournisseur`) ; `VINV` et `VQUAI` sont passés **par valeur**
+  (`rendre` les pose avant le montage), comme au module 8 ; `rendue`, `etapeQuiFerme`, `declencher`, `accuseCorrection`, `ajouterMail`,
+  `sauver`, `dessiner`, `dessinerVue`, `aller` sont des fonctions du cœur. `appel`, `texteCompose`, `compterAide` sont importés de leurs
+  fichiers (jamais d'`entreprise.js`). `corriger()` et le bouton « Messagerie » du quai écrivent toujours `E.brouillon`, `E.mailSel`, `E.dossier`,
+  `E.retourQuai` : l'état reste dans `E`. Les cartes des messages et les questions au fil restent au cœur (9c bis) et appellent `ouvrirMail`.
+- **Nettoyage de ce qui est devenu mort** : dans `entreprise.js`, les destructurations de `A`, `B`, `COM` et `REC` ne gardent que ce que le cœur
+  lit encore (`unite`, `stockDe`, `mouvement`, `sortirFifo`), et les imports `eur`, `fdate`, `fdt`, `norm`, `pad`, `pastille`, `texteCompose`,
+  `confirmerDansLaPage` partent (les ré-exports publics `eur`, `fdate`, `fdt`, `norm`, `normLoc` restent).
+- Décompte du plan (2 105 / ≈ 1 850) : réel 2 116 / 1 851. L'indentation est gardée (6 espaces) ; seul `brancher(z)` de la messagerie est
+  dédenté de quatre espaces (pas de gabarit).
+- Une retouche de forme faite après la suite du module 12 : la dernière accolade du fichier remise à la ligne (`};}` devenu `};` puis `}`) et
+  la date de l'en-tête ; le relevé du module 13 (qui recharge ce fichier) est identique.
+- Le rouge connu « Repérage… colonne des documents » est revenu avec `spartoo cdiscount smoby questions picard boost amenagements` lancés
+  seuls (564/565) ; la suite entière est verte (895/895). Non réparé, hors périmètre.
+- **Non rejoué par un relevé** : `corriger()` (la réponse par phrases préremplie avec les choix de l'élève) et l'évaluation à copie rendue
+  (le verrou bloque les pièces jointes) : couverts par la suite complète (blocs `smoby`, `questions`) seulement.
+
+**Fait / à faire.** Passes 1 à 4 faites (modules 1 à 13) : **le lot 9c est livré**, `entreprise.js` fait 1 851 lignes (3 461 au départ) et
+treize fichiers `core/types/entreprise-*.js` portent le reste. **Reste ouvert** : rien dans 9c ; le « 9c bis » (cartes des messages, questions
+au fil, accueil, copie rendue : ≈ 1 460 lignes) viendra plus tard. Rien n'a été fait dans `styles/`, `contenus/`, `activites/*.js`,
+`outils/test.mjs`, `outils/test/*` (aucun cas touché). Les relevés (scripts et JSON) sont dans le dossier temporaire de la session, pas dans le dépôt.

@@ -952,6 +952,13 @@ sur 2 » est calculé). Après toute modification : `node outils/test.mjs questi
   reçoit ce dont il a besoin par son nom (jamais `ctx` ni `U` ; un écran de données reçoit en plus la base `db` et l'état d'écran `E` de l'élève, et ne touche que ses clés) ; `entreprise.js` ré-exporte ce que d'autres fichiers
   lui importaient (`OPTIONS`, `eur`, `fdate`, `fdt`, `norm`, `normLoc`). Chantier 9, lot 9c, 08/10/2026 : le plan et les
   autres modules sont dans `docs/briefs/MOTEUR-entreprise-decoupage.md`.
+- **Où est quoi dans `core/types/entreprise-*.js`** (lot 9c livré le 09/10/2026 ; `entreprise.js` garde les options lues, la note, le menu et
+  le bandeau, `aller` / `dessinerVue`, les cartes des messages, les questions au fil, la copie rendue et l'accueil). Écrans de données, un
+  fichier chacun : `-messagerie` (boîte, mail ouvert, pièces jointes, nouveau message, réponses libre et par phrases), `-console` (les 19
+  commandes), `-commandes` (liste, fiche, bon de préparation), `-receptions` (liste, fiche, bon de livraison), `-stock`, `-catalogue`
+  (avec la fiche produit), `-tiers` (clients, fournisseurs), `-blocage`. Le reste : `-base` (stock, mouvements, lots), `-options` (la table
+  `OPTIONS`), `-theme` (charte), `-outils` (formats, aides « articles »), `-fin` (bandeau de fin). Un besoin de la France Boissons sur un de
+  ces écrans (par exemple « Transférer à… » dans la messagerie) se fait dans son fichier, en chantier moteur à part.
 - Une séance en cours d'écriture reste en `pret: false` et peut être commitée à tout moment.
   Elle compte quand même dans le tableau des compétences.
 - Une séance X.2 qui partage la base d'une X.1 met `reinitialisable: false` et **cloisonne**
