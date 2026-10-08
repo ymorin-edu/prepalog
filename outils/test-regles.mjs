@@ -707,6 +707,114 @@ await v("lot 11a : le responsable retire un collègue du miroir (effacement expl
 });
 
 // =====================================================================================
+//  PLUSIEURS ENSEIGNANTS : LES RÈGLES QUI FONT CEINTURE (chantier 11, lot 11b, 09/10/2026)
+// =====================================================================================
+// Le code du lot 11a ne tente déjà plus ce que ces règles interdisent (core/collegues.js) ; elles sont la
+// ceinture, au cas où un écran ou une console contournerait la garde. Principe : on ne supprime que ce
+// qu'on a créé, ou ce dont on est responsable (premier de `profs`) ; sinon on détache.
+//
+// Acteurs : profA = responsable de `gx1` ; profB = co-enseignant de `gx1` (donc dans `profs`, en second) ;
+// profC = étranger, seul enseignant de `gx2` ; profGlobal = dans `profsGlobaux`, inscrit à aucun miroir.
+// Élèves : eAr créé par profA, eBc* créés par profB, eNa sans `creePar` (créé à la console), presque tous dans `gx1`.
+await env.clearFirestore();
+await env.clearDatabase();
+await env.withSecurityRulesDisabled(async (ctx) => {
+  const d = ctx.firestore();
+  for (const [u, n] of [['profA', 'Responsable'], ['profB', 'Collègue'], ['profC', 'Étranger'], ['profGlobal', 'Global']]) {
+    await d.doc(`users/${u}`).set({ role: 'prof', nom: n, groupes: [] });
+  }
+  await d.doc('groupes/gx1').set({ nom: 'GX1', annee: 2026, profs: ['profA', 'profB'], ouverts: {} });
+  await d.doc('groupes/gx2').set({ nom: 'GX2', annee: 2026, profs: ['profC'], ouverts: {} });
+  await d.doc('groupes/gx3').set({ nom: 'GX3', annee: 2026, profs: ['profA', 'profB'], ouverts: {} });
+  await d.doc('groupes/gx4').set({ nom: 'GX4', annee: 2026, profs: ['profA'], ouverts: {} });
+  const eleve = (id, extra) => d.doc(`users/${id}`).set({ role: 'eleve', nom: id, matricule: id, code: 'zz', ...extra });
+  await eleve('eAr', { groupes: ['gx1'], creePar: 'profA' });
+  await eleve('eBc', { groupes: ['gx1'], creePar: 'profB' });
+  await eleve('eBc2', { groupes: ['gx1'], creePar: 'profB' });
+  await eleve('eBcOrphelin', { groupes: [], creePar: 'profB' });
+  await eleve('eNa', { groupes: ['gx1'] });
+  await eleve('eDisparu', { groupes: ['gx-disparu', 'gx1'], creePar: 'profB' });
+  await eleve('eSansGroupe', { groupes: [], creePar: 'profA' });
+  const r = ctx.database().ref();
+  await r.set({
+    profsGlobaux: { profGlobal: true },
+    acces: {
+      gx1: { profs: { profA: true, profB: true }, eleves: { eAr: true } },
+      gx2: { profs: { profC: true }, eleves: {} },
+      gxg: { profs: { profGlobal: true }, eleves: {} },
+    },
+  });
+});
+
+// --- suppression d'un profil d'élève
+await v("lot 11b : le co-enseignant ne supprime pas l'élève créé par le responsable", async () => {
+  await assertFails(fsDe('profB').doc('users/eAr').delete());
+  const s = await fsDe('profA').doc('users/eAr').get();
+  if (!s.exists) throw new Error('le profil a disparu malgré le refus');
+});
+await v("lot 11b : un enseignant étranger ne supprime pas l'élève d'un autre (ni créé par un autre, ni dans son groupe)", async () => {
+  await assertFails(fsDe('profC').doc('users/eAr').delete());
+  await assertFails(fsDe('profC').doc('users/eBc').delete());
+});
+await v("lot 11b : l'auteur supprime l'élève qu'il a créé, même sans être responsable (co-enseignant)", () =>
+  assertSucceeds(fsDe('profB').doc('users/eBc').delete()));
+await v("lot 11b : l'auteur supprime son élève resté sans groupe, un autre non", async () => {
+  await assertFails(fsDe('profA').doc('users/eBcOrphelin').delete());   // pas le sien, aucun groupe : pas responsable
+  await assertSucceeds(fsDe('profB').doc('users/eBcOrphelin').delete());
+});
+await v("lot 11b : le responsable supprime l'élève créé par son co-enseignant (ce que fait supprimerGroupe)", () =>
+  assertSucceeds(fsDe('profA').doc('users/eBc2').delete()));
+await v("lot 11b : si le premier groupe de l'élève a disparu, seul son auteur le supprime", async () => {
+  // eDisparu (créé par profB) cite `gx-disparu` en premier : aucun responsable à trouver, profA est refusé.
+  await assertFails(fsDe('profA').doc('users/eDisparu').delete());
+  // Son auteur, lui, le supprime encore (le groupe disparu n'arrête rien).
+  await assertSucceeds(fsDe('profB').doc('users/eDisparu').delete());
+});
+await v("lot 11b : un élève sans `creePar` (créé à la console) reste supprimable par un enseignant de son groupe", () =>
+  assertSucceeds(fsDe('profB').doc('users/eNa').delete()));
+await v("lot 11b : l'élève de l'auteur sans groupe se supprime par son auteur, pas par un collègue", async () => {
+  await assertFails(fsDe('profB').doc('users/eSansGroupe').delete());
+  await assertSucceeds(fsDe('profA').doc('users/eSansGroupe').delete());
+});
+await v("lot 11b : un enseignant détache toujours un élève de son groupe (mise à jour de `groupes`)", () =>
+  assertSucceeds(fsDe('profB').doc('users/eAr').update({ groupes: [] })));
+await v("lot 11b : un élève ne supprime aucun profil, pas même le sien", () =>
+  assertFails(fsDe('eAr').doc('users/eAr').delete()));
+
+// --- suppression d'un groupe
+await v("lot 11b : le co-enseignant ne supprime pas le groupe", async () => {
+  await assertFails(fsDe('profB').doc('groupes/gx3').delete());
+  const s = await fsDe('profA').doc('groupes/gx3').get();
+  if (!s.exists) throw new Error('le groupe a disparu malgré le refus');
+});
+await v("lot 11b : le co-enseignant quitte le groupe (mise à jour de `profs`)", () =>
+  assertSucceeds(fsDe('profB').doc('groupes/gx3').update({ profs: ['profA'] })));
+await v("lot 11b : un enseignant étranger ne supprime pas le groupe d'un autre", () =>
+  assertFails(fsDe('profC').doc('groupes/gx1').delete()));
+await v("lot 11b : le responsable supprime son groupe", async () => {
+  await assertSucceeds(fsDe('profA').doc('groupes/gx3').delete());
+  await assertSucceeds(fsDe('profA').doc('groupes/gx4').delete());
+});
+await v("lot 11b : supprimer un groupe absent est refusé sans erreur d'évaluation", () =>
+  assertFails(fsDe('profA').doc('groupes/gx-jamais').delete()));
+
+// --- Realtime Database : le miroir d'accès (option du lot 11b)
+await v("lot 11b : un enseignant global ne réécrit pas le miroir d'un groupe qui n'est pas le sien", async () => {
+  await assertFails(dbDe('profGlobal').ref('acces/gx2/profs/profGlobal').set(true));
+  await assertFails(dbDe('profGlobal').ref('acces/gx2').update({ 'profs/profGlobal': true }));
+  await assertFails(dbDe('profGlobal').ref('acces/gx1').update({ 'eleves/zz': true }));
+});
+await v("lot 11b : le même enseignant global crée toujours un miroir neuf, puis le réécrit en étant inscrit", async () => {
+  await assertSucceeds(dbDe('profGlobal').ref('acces/gneuf11b/profs/profGlobal').set(true));
+  await assertSucceeds(dbDe('profGlobal').ref('acces/gneuf11b').update({ 'eleves/e1': true }));
+  await assertSucceeds(dbDe('profGlobal').ref('acces/gxg').update({ 'profs/profGlobal': true, 'eleves/e2': true }));
+});
+await v("lot 11b : l'enseignant inscrit à un miroir le réécrit sans être global", () =>
+  assertSucceeds(dbDe('profC').ref('acces/gx2').update({ 'eleves/e3': true })));
+await v("lot 11b : un enseignant non global ne crée toujours pas de miroir", () =>
+  assertFails(dbDe('profC').ref('acces/gneuf11b2/profs/profC').set(true)));
+
+// =====================================================================================
 //  Verdict
 // =====================================================================================
 
@@ -768,3 +876,24 @@ process.exit(ko.length ? 1 : 0);
 // `moi() in resource.data.profs`. Aucun `assertSucceeds` ne peut les voir. Le profil
 // incomplet du harnais, `users/prof3`, porte d'ailleurs `role` et pas `groupes` : le test
 // « un enseignant au profil incomplet reste enseignant » ne surveille donc pas `monRole()`.
+//
+// Régressions volontaires du lot 11b (09/10/2026), jouées une à une puis annulées (résultats constatés) :
+//  6. firestore.rules, `match /users/{uid}` `allow delete` : retirer la branche `responsableDuPremierGroupe(...)`
+//     → tombe : « le responsable supprime l'élève créé par son co-enseignant » (163/164).
+//     Remplacer la branche `creePar` par `true` (la règle d'avant le lot)
+//     → tombent « le co-enseignant ne supprime pas l'élève créé par le responsable », « un enseignant étranger ne
+//       supprime pas… » et les cas qui attendent un refus d'un élève sans groupe ou au groupe disparu (157/164).
+//     Retirer la branche `creePar` seule
+//     → tombent « un enseignant supprime le profil d'un élève » (e9, cas existant), « l'auteur supprime… »,
+//       « un élève sans creePar… » et les cas de l'auteur (158/164).
+//  7. firestore.rules, `match /groupes/{gid}` `allow delete` : remettre `profDuGroupe(gid)`
+//     → tombe : « le co-enseignant ne supprime pas le groupe » (161/164, avec ricochets sur les cas suivants).
+//     Remplacer par `false` → tombent « un enseignant supprime son groupe » (cas existant) et « le responsable
+//     supprime son groupe » (162/164).
+//  8. database.rules.json, `acces/$gid` `.write` : remettre l'ancienne condition (`profsGlobaux || inscrit`)
+//     → tombe : « un enseignant global ne réécrit pas le miroir d'un groupe qui n'est pas le sien » (163/164).
+//     Retirer la branche `profsGlobaux && !data.exists()` (inscrits seuls)
+//     → tombent « un enseignant global crée un groupe » (13), « …reconstruit un miroir absent » (15 quater) et
+//       « le même enseignant global crée toujours un miroir neuf » (161/164).
+//  Hors de portée : le `size() > 0` de `responsableDe` et de la règle de groupe. Il ne change que la nature du
+//  refus sur une liste vide (erreur d'évaluation ou `false`, les deux refusent).
