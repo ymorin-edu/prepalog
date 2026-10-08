@@ -172,6 +172,32 @@ await v("un élève ne retire pas non plus son tiers-temps ni ne change son nive
 await v("un élève dont le tiers-temps est posé modifie toujours le reste de son profil", () =>
   assertSucceeds(fsDe('e1').doc('users/e1').update({ nom: 'Emma' })));
 
+// Audit du 08/10/2026 (C1) : l'élève ne choisit ni ses groupes, ni son matricule, ni son code.
+await v("un élève ne s'ajoute pas à un autre groupe", () =>
+  assertFails(fsDe('e1').doc('users/e1').update({ groupes: ['g1', 'g2'] })));
+await v("un élève ne vide ni ne remplace sa liste de groupes", () =>
+  assertFails(fsDe('e1').doc('users/e1').update({ groupes: ['g2'] })));
+await v("un élève ne change ni son matricule ni son code", async () => {
+  await assertFails(fsDe('e1').doc('users/e1').update({ matricule: '9999' }));
+  await assertFails(fsDe('e1').doc('users/e1').update({ code: 'zz99' }));
+});
+await v("un élève ne glisse pas un champ inconnu dans son profil", () =>
+  assertFails(fsDe('e1').doc('users/e1').update({ creePar: 'e1' })));
+await v("un élève change son prénom", () =>
+  assertSucceeds(fsDe('e1').doc('users/e1').update({ prenom: 'Emma-Rose' })));
+await v("l'enseignant ajoute puis retire un groupe au profil d'un élève", async () => {
+  await assertSucceeds(fsDe('prof1').doc('users/e3').update({ groupes: ['g2', 'g1'] }));
+  await assertSucceeds(fsDe('prof1').doc('users/e3').update({ groupes: ['g2'] }));
+});
+await v("un enseignant ne modifie pas le profil d'un collègue", () =>
+  assertFails(fsDe('prof1').doc('users/prof2').update({ nom: 'Détourné' })));
+await v("un enseignant ne supprime pas le profil d'un collègue", () =>
+  assertFails(fsDe('prof1').doc('users/prof2').delete()));
+await v("un enseignant modifie son propre profil", () =>
+  assertSucceeds(fsDe('prof1').doc('users/prof1').update({ nom: 'Morin T.' })));
+await v("un enseignant supprime le profil d'un élève", () =>
+  assertSucceeds(fsDe('prof1').doc('users/e9').delete()));
+
 // ---------- 3. lecture des profils
 await v("chacun lit son profil", () => assertSucceeds(fsDe('e1').doc('users/e1').get()));
 
@@ -247,6 +273,33 @@ await v("un enseignant étranger ne lit pas ces résultats", () =>
 
 await v("l'enseignant saisit une note à la main", () =>
   assertSucceeds(fsDe('prof1').doc('travaux/g1/eleves/e1/activites/scenario').set({ score: 14, max: 20 })));
+
+// Audit du 08/10/2026 (C1) : ce qu'un élève ne peut pas écrire dans son propre dossier.
+await env.withSecurityRulesDisabled(async (ctx) => {
+  await ctx.firestore().doc('travaux/g1/eleves/e1/activites/noteprof').set({ score: 12, max: 20, parProf: true });
+});
+await v("un élève ne supprime pas un travail non rendu", () =>
+  assertFails(fsDe('e1').doc('travaux/g1/eleves/e1/activites/qcm2').delete()));
+await v("un élève ne pose pas la marque d'une note d'enseignant", () =>
+  assertFails(fsDe('e1').doc('travaux/g1/eleves/e1/activites/qcm3').set({ score: 20, max: 20, parProf: true })));
+await v("un élève ne réécrit pas une note posée par l'enseignant", () =>
+  assertFails(fsDe('e1').doc('travaux/g1/eleves/e1/activites/noteprof').set({ score: 20, max: 20 })));
+await v("un élève ne pose pas de drapeau de déblocage de parcours", () =>
+  assertFails(fsDe('e1').doc('travaux/g1/eleves/e1/activites/_debloque-m1').set({ score: 0, max: 0 })));
+await v("l'enseignant pose et retire un drapeau de déblocage", async () => {
+  await assertSucceeds(fsDe('prof1').doc('travaux/g1/eleves/e1/activites/_debloque-m1').set({ score: 0, max: 0 }));
+  await assertSucceeds(fsDe('prof1').doc('travaux/g1/eleves/e1/activites/_debloque-m1').delete());
+});
+await v("un élève n'écrit pas un uid ou un groupe étranger dans son résultat", async () => {
+  await assertFails(fsDe('e1').doc('travaux/g1/eleves/e1/activites/qcm4').set({ score: 5, max: 20, uid: 'e2' }));
+  await assertFails(fsDe('e1').doc('travaux/g1/eleves/e1/activites/qcm4').set({ score: 5, max: 20, gid: 'g2' }));
+});
+await v("un élève n'écrit pas un score qui n'est pas un nombre", () =>
+  assertFails(fsDe('e1').doc('travaux/g1/eleves/e1/activites/qcm4').set({ score: 'vingt', max: 20 })));
+await v("un élève met à jour son résultat (temps passé, tentative)", () =>
+  assertSucceeds(fsDe('e1').doc('travaux/g1/eleves/e1/activites/qcm2').update({ score: 16, max: 20, tentatives: 2 })));
+await v("un élève qui s'est ajouté un groupe n'y écrit rien (profil verrouillé)", () =>
+  assertFails(fsDe('e1').doc('travaux/g2/eleves/e1/activites/qcm2').set({ score: 20, max: 20 })));
 
 // ---------- 6 bis. la copie rendue (évaluations, 02/10/2026) : figée pour l'élève
 // Un résultat qui porte `rendu` ne se réécrit plus par l'élève — ni à la main dans la console

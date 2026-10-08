@@ -58,19 +58,26 @@ service cloud.firestore {
       // déjà le cas : la branche ne servait donc à rien qu'à ouvrir la porte.
       allow create: if request.resource.data.role == 'eleve' && estProf();
 
-      // Mise à jour : l'intéressé ne peut jamais changer son propre rôle.
+      // Mise à jour.
       //
-      // Ni son niveau (`aisance`) ni son tiers-temps (`tiersTemps`) : c'est l'enseignant qui
-      // les règle (brief MOTEUR-tiers-temps, 03/10/2026), sinon un élève pourrait s'accorder
-      // lui-même un tiers-temps. `diff().affectedKeys()` ne suppose pas que le champ existe :
-      // un champ ajouté, modifié ou retiré compte de la même façon.
-      allow update: if connecte() && (
-        (uid == moi() && request.resource.data.role == resource.data.role
-          && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['aisance', 'tiersTemps'])) ||
-        (estProf() && request.resource.data.role == resource.data.role)
+      // L'élève ne peut changer que son nom et son prénom (audit du 08/10/2026, C1). Avant,
+      // seuls `role`, `aisance` et `tiersTemps` lui étaient interdits : il pouvait donc
+      // s'ajouter un identifiant de groupe (le slug du nom, devinable) dans `groupes`, lire
+      // ce groupe et y écrire des travaux, ou toucher à `matricule` et `code`. Liste
+      // blanche plutôt que liste noire : un champ ajouté demain lui reste fermé par défaut.
+      // `diff().affectedKeys()` ne suppose pas que le champ existe.
+      //
+      // L'enseignant met à jour le profil d'un ÉLÈVE (groupes, aménagements, nom), jamais
+      // celui d'un collègue, et ne change jamais un rôle. Le sien reste modifiable.
+      allow update: if connecte() && request.resource.data.role == resource.data.role && (
+        (uid == moi() && !estProf()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nom', 'prenom'])) ||
+        (estProf() && (uid == moi() || resource.data.get('role', '') == 'eleve'))
       );
 
-      allow delete: if estProf();
+      // Suppression : l'enseignant efface un profil d'élève (supprimerEleve), jamais celui
+      // d'un collègue.
+      allow delete: if estProf() && resource.data.get('role', '') == 'eleve';
     }
 
     // ---------------------------------------------------------------- groupes
@@ -99,9 +106,23 @@ service cloud.firestore {
       // Copie rendue (évaluation, 02/10/2026) : un résultat qui porte `rendu` est FIGÉ pour
       // l'élève — il ne peut ni le réécrire ni l'effacer. Seul l'enseignant du groupe le
       // modifie (ramasser, rouvrir). `resource == null` : création, toujours permise.
-      allow write: if (uid == moi() && membreDuGroupe(gid)
-                       && (resource == null || !('rendu' in resource.data)))
-                    || profDuGroupe(gid);
+      //
+      // Audit du 08/10/2026 (C1) : l'élève ne supprime plus rien (aucun écran ne le lui
+      // demande), ne pose pas la marque `parProf` d'une note d'enseignant, ne touche pas
+      // à un document que l'enseignant a noté, n'écrit pas les drapeaux `_debloque-*`
+      // (déblocage de parcours, réservé à l'enseignant) et ne met pas un autre uid/gid
+      // dans le document. Le score lui-même reste calculé par le navigateur : l'outil est
+      // formatif, une évaluation notée se passe en classe.
+      allow create, update: if (uid == moi() && membreDuGroupe(gid)
+                                && !aid.matches('_debloque-.*')
+                                && (resource == null
+                                    || (!('rendu' in resource.data) && resource.data.get('parProf', false) != true))
+                                && !('parProf' in request.resource.data)
+                                && request.resource.data.get('uid', uid) == uid
+                                && request.resource.data.get('gid', gid) == gid
+                                && request.resource.data.get('score', 0) is number)
+                            || profDuGroupe(gid);
+      allow delete: if profDuGroupe(gid);
     }
 
     // ------------------------------------------------- jeux privés (portée élève)
