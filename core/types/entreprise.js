@@ -32,18 +32,12 @@ import { preparerPhrases, texteCompose } from '../phrases.js';
 import { brancherLexique, compterAide } from '../lexique.js';
 import { controlerOptions, controlerIdentifiants } from './entreprise-options.js';
 import { styleTheme, accentRougeOuVert } from './entreprise-theme.js';
+import { eur, fdate, fdt, norm, pad, pastille, creerArticles } from './entreprise-outils.js';
+// Les formats ont changé d'adresse (lot 9c, module 3) : ils restent importables d'ici.
+export { eur, fdate, fdt, norm, normLoc } from './entreprise-outils.js';
 // La table des options a changé d'adresse (lot 9c, module 1) : `OPTIONS` reste importable d'ici (un test la lit).
 export { OPTIONS } from './entreprise-options.js';
 
-/* ------------------------------------------------------------------ formats */
-export const eur = (n) => Number(n).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' });
-export const fdate = (t) => new Date(t).toLocaleDateString('fr-FR');
-export const fdt = (t) => new Date(t).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
-export const norm = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
-export const normLoc = (s) => String(s || '').trim().toUpperCase().replace(/\s+/g, '');
-const pad = (n, l) => String(n).padStart(l, '0');   // 7, 2 → « 07 » (numéro de commande, allée)
-
-const pastille = (texte, ton) => `<span class="pastille ${ton}">${ech(texte)}</span>`;
 
 export function creerEntreprise(U) {
   controlerOptions(U);
@@ -197,13 +191,6 @@ export function creerEntreprise(U) {
     });
   }
 
-  const unite = (n) => ((n > 1 || n === 0) ? VOCAB.unitPl : VOCAB.unit);
-  // Catalogue « simple » (02/10/2026, chantier E) : des articles sans couleur ni taille — un
-  // câble, une batterie, un carton de vin. Jusque-là l'environnement ne connaissait que la
-  // chaussure de Spartoo (« modèle-couleur-taille ») et plantait sur un article sans couleur.
-  // Pour un tel catalogue (`catalogueSimple`, contenus/entreprise-commun.js), les colonnes
-  // Couleur et Taille disparaissent partout ; rien ne change pour Spartoo.
-  const SIMPLE = !!CATALOGUE.simple;
   // Couleurs des variantes et modes de livraison : fournis par le contenu (univers de l'entreprise), jamais importés
   // par le moteur. Sans table, une couleur inconnue n'a ni nom ni pastille ; un code de livraison inconnu s'affiche
   // tel quel, avec un port de 0.
@@ -225,20 +212,9 @@ export function creerEntreprise(U) {
   const FERMETURES = U.fermetures || {};
   const montre = (v) => !MENU || !ECRANS_DONNEES.includes(v) || MENU.has(v)
     || (v === 'commande' && MENU.has('commandes')) || (v === 'reception' && MENU.has('receptions')) || (v === 'produit' && MENU.has('catalogue'));
-  // Les exemples des champs et de l'aide de la console : une vraie référence du catalogue de la séance
-  // (05/10/2026 : une référence Spartoo écrite en dur s'affichait dans toutes les entreprises).
-  const REF_EX = VARIANTS.length ? VARIANTS[0].sku : '';
-  const MODELE_EX = VARIANTS.length ? VARIANTS[0].model.ref : '';
-  const label = (v) => [v.model.brand, v.model.name].filter(Boolean).join(' ');
-  const nomCouleur = (c) => (COLORS[c] ? COLORS[c][0] : '');
-  const swatch = (c) => (COLORS[c] ? `<span class="teinte" style="background:${COLORS[c][1]}"></span>${ech(COLORS[c][0])}` : '');
-  // La précision « Noir · T.42 » sous une désignation, et les deux colonnes Couleur / Taille.
-  const precision = (v) => (SIMPLE || !v ? '' : `<div class="note">${ech(nomCouleur(v.color))} · ${ech(VOCAB.sizeShort)}${v.size}</div>`);
-  const precisionTexte = (v) => (SIMPLE ? '' : ` ${nomCouleur(v.color)} ${VOCAB.sizeShort}${v.size}`);
-  const thVariante = (couleur = 'Couleur') => (SIMPLE ? '' : `<th>${couleur}</th><th class="num">${ech(VOCAB.sizeLabel)}</th>`);
-  const tdVariante = (v, teinte) => (SIMPLE ? '' : (v ? `<td>${teinte ? swatch(v.color) : ech(nomCouleur(v.color))}</td><td class="num">${v.size}</td>` : '<td>—</td><td class="num">—</td>'));
-  const etatStock = (q, min) => (q <= 0 ? ['Rupture', 'crit'] : (q <= min ? ['Faible', 'warn'] : ['OK', 'ok']));
-  const pastilleStock = (q, min) => { const s = etatStock(q, min); return pastille(s[0], s[1]); };
+  // Les aides « articles » (désignation, couleur, taille, état du stock) : `entreprise-outils.js` (lot 9c, module 3).
+  const { SIMPLE, unite, label, nomCouleur, swatch, precision, precisionTexte, thVariante, tdVariante,
+    etatStock, pastilleStock, REF_EX, MODELE_EX } = creerArticles({ CATALOGUE, VOCAB, couleurs: COLORS });
 
   // La note d'une base : le nombre d'étapes réussies. Sert au suivi en direct, à la remise de la
   // copie, et à l'enseignant qui ramasse une copie (il lit la base de l'élève sans l'ouvrir).
