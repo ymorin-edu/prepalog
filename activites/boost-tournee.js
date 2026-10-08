@@ -19,66 +19,37 @@
 // dans la trame (Word / PDF, générée par `outils/trame-boost-tournee.py`), pas dans le site :
 // le bandeau n'affiche que les deux liens de téléchargement.
 
-import { creerEntreprise } from '../core/types/entreprise.js';
+import { seanceEntreprise } from '../core/types/seance-entreprise.js';
 import * as BOOST from '../contenus/boost.js';
 import * as SEANCE from '../contenus/boost-tournee.js';
-
-export const meta = {
+const s = seanceEntreprise(BOOST, SEANCE, {
   id: 'boost-tournee',
   code: 'ENT-3.1',
   titre: 'Boost — la tournée du vélo-cargo',
   desc: 'Situer sept clients sur un plan de Nîmes, choisir ce que le vélo-cargo peut emporter, '
     + 'puis ordonner les arrêts pour attraper le train de 16 h 10.',
-  rubrique: 'simulog',
   // Compétences et temps pédagogique : voir core/competences.js (validé par Tristan, 02/10/2026).
   competences: ['C2.4'],
   temps: 'guidage',
-  // Le barème, c'est le nombre de jalons. Pas de `notation` : le suivi ramène le score sur
-  // 20 (voir l'en-tête de ce fichier) tout en gardant les jalons lisibles.
-  bareme: SEANCE.ETAPES.length,
-  immersif: true,
-  portee: 'eleve',
   // Remise à zéro de la base par l'élève : seulement en séance X.1, qui ouvre la chaîne. Une
   // séance X.2 ou X.3 reprend le travail de la précédente ; l'effacer ferait perdre les séances d'avant.
   reinitialisable: true,
   // Base commune à toutes les séances ENT-3.x de Boost. L'état des deux vues de transport
   // est cloisonné par séance via `transportId`, donc deux séances Boost ne s'écrasent pas.
   jeuId: 'boost',
-  tables: {},
+  // Trame élève : la déclarer, c'est la valider (relue par Tristan). Le corrigé se déduit du code.
+  trame: 'boost-tournee',
   pret: true,
-  // Trame élève : déclarer, c'est valider (relue le 03/10/2026). Un test vérifie que les deux
-  // fichiers existent dans le dépôt.
-  // Corrigé des QCM d'éco-droit de la trame : affiché dans l'onglet « Corrigés » de l'espace
-  // enseignant, jamais côté élève. Fichier généré par le générateur de la trame.
-  corrige: './contenus/corriges/ENT-3.1.js',
-};
-
-const moteur = creerEntreprise({
+}, {
   // Les écrans de données du menu (05/10/2026) : ceux dont la séance se sert, et au moindre doute on les garde.
   menu: ['clients'],
-  ENTREPRISE: BOOST.ENTREPRISE,
-  VOCAB: BOOST.VOCAB,
-  CATALOGUE: BOOST.CATALOGUE,
-  SUPPLIERS: BOOST.SUPPLIERS,
-  SUP_BY_ID: BOOST.SUP_BY_ID,
-  CUSTOMERS: BOOST.CUSTOMERS,
-  CM: BOOST.CM,
-  baseDeDepart: BOOST.baseDeDepart,
-  THEME: BOOST.THEME,
-  etapes: SEANCE.ETAPES,
   exercice: 'Séance 1 : organiser la tournée du vélo-cargo',
-  accueil: SEANCE.ACCUEIL,
-  volet: SEANCE.VOLET,
   // Les deux vues de transport. Déclarées ici, donc présentes ; une séance qui ne les
   // déclare pas n'a aucune entrée de menu en plus.
   transportSection: 'Tournées',
   transportId: SEANCE.TRANSPORT_ID,
   plan: SEANCE.PLAN,
   tournee: SEANCE.TOURNEE,
-  trame: {
-    pdf: './contenus/trames/ENT-3.1-boost-tournee-trame-eleve.pdf',
-    docx: './contenus/trames/ENT-3.1-boost-tournee-trame-eleve.docx',
-  },
 });
-
-export function rendre(hote, ctx) { moteur.rendre(hote, ctx); }
+export const meta = s.meta;
+export const rendre = s.rendre;

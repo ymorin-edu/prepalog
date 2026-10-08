@@ -17,60 +17,33 @@
 // ── Pas de `notation` ───────────────────────────────────────────────────────────────────
 // Comme ENT-3.1 et ENT-3.2 : jalons ET note sur 20.
 
-import { creerEntreprise } from '../core/types/entreprise.js';
+import { seanceEntreprise } from '../core/types/seance-entreprise.js';
 import * as BOOST from '../contenus/boost.js';
 import * as SEANCE from '../contenus/boost-ent33.js';
-
-export const meta = {
+// Pas de `plan` : tous les clients sont déjà sur la carte, il n'y a rien à situer. La tournée
+// porte le plan elle-même.
+const s = seanceEntreprise(BOOST, SEANCE, {
   id: 'boost-ent33',
   code: 'ENT-3.3',
   titre: 'Boost — la tournée à corriger',
   desc: 'La tournée d’une collègue ne tient pas : dire quelles contraintes elle viole, le prouver '
     + 'par le calcul, puis la réparer.',
-  rubrique: 'simulog',
   competences: ['C2.4'],
   temps: 'erreur',
-  bareme: SEANCE.ETAPES.length,
-  immersif: true,
-  portee: 'eleve',
   // Séance X.3 : elle ne remet pas à zéro la base commune de Boost, qui porte aussi ENT-3.1 et
   // ENT-3.2. L'état de sa tournée est cloisonné par `transportId`, son message par son volet.
   reinitialisable: false,
   jeuId: 'boost',
-  tables: {},
+  // Trame élève : la déclarer, c'est la valider (relue par Tristan). Le corrigé se déduit du code.
+  trame: 'boost-a-corriger',
   pret: true,
-  // Trame élève : déclarer, c'est valider (trames validées par Tristan le 04/10/2026). Un test
-  // vérifie que les deux fichiers existent dans le dépôt.
-  // Corrigé de la trame : affiché dans l'onglet « Corrigés » de l'espace enseignant, jamais côté
-  // élève. Fichier généré par le générateur de la trame.
-  corrige: './contenus/corriges/ENT-3.3.js',
-};
-
-// Pas de `plan` : tous les clients sont déjà sur la carte, il n'y a rien à situer. La tournée
-// porte le plan elle-même.
-const moteur = creerEntreprise({
+}, {
   // Les écrans de données du menu (05/10/2026) : ceux dont la séance se sert, et au moindre doute on les garde.
   menu: ['clients'],
-  ENTREPRISE: BOOST.ENTREPRISE,
-  VOCAB: BOOST.VOCAB,
-  CATALOGUE: BOOST.CATALOGUE,
-  SUPPLIERS: BOOST.SUPPLIERS,
-  SUP_BY_ID: BOOST.SUP_BY_ID,
-  CUSTOMERS: BOOST.CUSTOMERS,
-  CM: BOOST.CM,
-  baseDeDepart: BOOST.baseDeDepart,
-  THEME: BOOST.THEME,
-  etapes: SEANCE.ETAPES,
   exercice: 'Séance 3 : la tournée à corriger',
-  accueil: SEANCE.ACCUEIL,
-  volet: SEANCE.VOLET,
   transportSection: 'Tournées',
   transportId: SEANCE.TRANSPORT_ID,
   tournee: SEANCE.TOURNEE,
-  trame: {
-    pdf: './contenus/trames/ENT-3.3-boost-a-corriger-trame-eleve.pdf',
-    docx: './contenus/trames/ENT-3.3-boost-a-corriger-trame-eleve.docx',
-  },
 });
-
-export function rendre(hote, ctx) { moteur.rendre(hote, ctx); }
+export const meta = s.meta;
+export const rendre = s.rendre;
