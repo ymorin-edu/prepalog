@@ -28,7 +28,7 @@
 | 7 | Quota Spark : mesurer, puis supprimer les écritures inutiles | C9 | moyen | Sonnet | oui | 4 | à faire |
 | **Lot B — rendre la croissance possible** | | | | | | | |
 | 8 | Fabrique de séance d'entreprise (24 fichiers recopiés) | C6 | moyen | Sonnet | oui (petit) | — | **livré** (08/10, db5ed50 à ee13996) |
-| 9 | `entreprise.js` : options figées, `COLORS`/`SHIP` sortis, modules extraits | C5 | gros | Opus puis Sonnet | oui | 8 | à faire, par lots |
+| 9 | `entreprise.js` : options figées, `COLORS`/`SHIP` sortis, modules extraits | C5 | gros | Opus puis Sonnet | oui | 8 | 9a **livré** (08/10, 7a79945 à 6c516c6) ; 9b, 9c à faire |
 | 10 | Un seul drapeau « Simulog » dans tout le code | C13 | petit | Sonnet | oui | — | à faire |
 | 11 | Plusieurs enseignants : co-prof, groupes par prof, orphelins filtrés | C7 | moyen à gros | Opus (décision) puis Sonnet | oui + règles | 1, 6 | à faire |
 | 12 | CAP OL et niveaux : référentiel, défauts, TAB-4 | C8 | moyen | Sonnet (Cowork d'abord) | oui | référentiel CAP relevé | à faire |
@@ -230,6 +230,26 @@ s'aligner.
   fin. Suite verte entre chaque.
 - **Fini quand.** `entreprise.js` sous 1 500 lignes ; `FICHE-SEANCE.md` liste les options en une
   table, sans paragraphes datés.
+- **Fait, lot 9a (08/10/2026, 7a79945, 14cf3b7, 6c516c6).** `OPTIONS` en tête de `core/types/entreprise.js` : **42 options**, une
+  ligne chacune (rôle, type quand c'est sans risque). `creerEntreprise` la contrôle en première ligne : une clé inconnue, ou
+  d'un mauvais type, refuse la séance (message en français : la clé, la bonne casse si c'est une faute de majuscule, les clés
+  connues ; la fabrique y ajoute le nom de la séance, seul changement de `seance-entreprise.js` côté message). **Choix** : pas de
+  type sur `tirage` (le moteur ne lit que sa présence) ; `quai` et `inventaire` acceptent objet ou fonction (tirage par
+  élève) ; `null` et `undefined` valent « absent » ; les champs du `meta` (`correction`, `suiteAuBilan`, `parcours`…) ne sont pas
+  des options. Relevé : 37 options passées par au moins une des 24 séances ; `animation`, `animations`, `questions` ne le sont que par des essais et des tests ; **lues mais passées nulle part** : `equipe` et `tirage` ; **aucune option
+  morte** (rien n'est passé sans être lu). Unicité : chaque vue a un `id` texte non vide, deux fiches de même `id` sont refusées
+  (`fiche` et `fiches` ensemble comptent) ; quai, planning et plan d'entrepôt sont uniques par séance, l'animation l'était déjà.
+  Un `id` de vue peut encore être commun à **deux séances qui partagent une base** (Spartoo, Boost) : le contrôle ne les voit
+  pas (il ne connaît qu'une séance à la fois). **Partie 3 (`correction: true`) : livrée en version limitée.** Aucun marqueur du code
+  ne distingue « juge à l'envoi » de « juge en continu » ; la seule propriété de jalon que la correction elle-même exige est
+  `ecran` (ce que « Corriger » rouvre). Mesure sur les 24 séances : les cinq qui ont `correction` ont de 3 à 26 jalons à `ecran`,
+  les dix-neuf autres zéro. La fabrique refuse donc `correction: true` sans aucun jalon à `ecran` (Spartoo, Boost, Picard,
+  Cdiscount seraient refusées) ; elle **laisse passer** une séance qui mêle quelques jalons à `ecran` et un jugement continu.
+  Si Tristan veut davantage, deux pistes : **(A)** déclarer le mode de jugement dans le `meta` (`jugement: 'envoi' | 'continu'`)
+  et refuser `correction` hors `'envoi'` (franc, mais c'est un second drapeau que la même erreur peut fausser) ; **(B)** un
+  contrôle à l'ouverture sur la base de départ (aucun jalon à l'état `na` : Smoby et Picard rendent tous `attente`, Spartoo et
+  Boost rendent `na`), à ne faire qu'avec un cas par séance parce que `na` n'est pas un contrat. Tests : six cas dans le bloc
+  `dependances`, sabotés dans les deux sens. Suite complète : voir `decisions.md`.
 
 ### 10. Un seul drapeau Simulog (C13)
 - **Ce qu'on fait.** `estSimulog(meta)` (rubrique `simulog`) utilisé à la place de `/^ENT-/` et

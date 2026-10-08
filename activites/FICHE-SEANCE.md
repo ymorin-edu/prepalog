@@ -49,12 +49,12 @@ Cdiscount) < **les options** (Picard fabrique son `CATALOGUE` par `PICARD.catalo
 ENT-5.7 réécrit `ENTREPRISE` et `VOCAB` pour l'agence Kuehne+Nagel). Tout le reste (`menu`, `quai`, `plan`, `tournee`,
 `planning`, `entrepot`, `fiche`, `lexique`, `finFige`, `stockOuvert`, `exercice`, `transportSection`, `transportId`,
 `sansTrame`, `receptionLitige`, `tableur`, `inventaire`…) se range dans les options et part tel quel au moteur ; la
-liste est plus bas (« Autres clés de `creerEntreprise` »). Une trame déjà au format `{ pdf, docx }` se passe aussi dans
+liste complète est la table « Les options de `creerEntreprise` » plus bas. Une trame déjà au format `{ pdf, docx }` se passe aussi dans
 les options (elle remplace la trame déduite).
 
 **Ce que la fabrique refuse** (la séance ne se charge pas, le message est en français et nomme la séance) : un `meta`
 sans `id` ou sans `code`, un contenu de séance sans `ETAPES`, une clé d'univers absente de l'univers, du contenu et des
-options, une `meta.trame` qui n'est pas un nom. Le code de la fabrique est aussi décrit dans son en-tête.
+options, une `meta.trame` qui n'est pas un nom, `correction: true` sans aucun jalon à `ecran`. Le moteur ajoute les siens (clé d'option inconnue, mauvais type, `id` de vue manquant ou en double : voir la table des options ci-dessous), et la fabrique y met le nom de la séance. Le code de la fabrique est aussi décrit dans son en-tête.
 
 **Exports du fichier** (la forme migrée n'en a que deux ou trois) :
 
@@ -64,6 +64,58 @@ options, une `meta.trame` qui n'est pas un nom. Le code de la fabrique est aussi
 | `rendre(hote, ctx)` | oui | Dessine la séance dans `hote` (un élément du DOM). `s.rendre`. |
 | `noter(db)` | pour une évaluation (`copie: true`) | Calcule le score à partir de la base de l'élève. `s.noter`. |
 | `graines` | non | Contenu de départ que l'enseignant peut installer (bouton « semer »). |
+
+### Les options de `creerEntreprise` — la table qui fait foi (chantier 9, lot 9a, 08/10/2026)
+
+Tout ce qu'une séance peut passer à `creerEntreprise` (directement, ou dans le quatrième argument de
+`seanceEntreprise`) est dans **`OPTIONS`**, en tête de `core/types/entreprise.js` : 42 options, une ligne chacune. Le tableau
+ci-dessous la reprend ; si les deux se contredisent, c'est `OPTIONS` qui a raison. **Une option absente de `OPTIONS` fait
+refuser la séance** : le message (en français) nomme la clé, propose la bonne casse s'il s'agit d'une faute de majuscule, et
+liste les clés connues ; avec la fabrique il nomme aussi la séance. Un type qui n'est pas celui du tableau est refusé de la même
+façon (`null` et `undefined` valent « absent »). Deux fiches (ou deux animations) de même `id`, ou une vue (quai, planning,
+plan d'entrepôt, fiche, animation) sans `id` texte non vide, sont refusées aussi : l'état de l'élève est rangé sous cet `id`
+(`db.fiches[id]`…). Un test relit le code du moteur : une option lue et absente de `OPTIONS` (ou l'inverse) fait échouer la suite.
+**Ajouter une option au moteur = une ligne dans `OPTIONS` + une ligne ici.**
+
+| Option | Type | Rôle | Séance modèle |
+|---|---|---|---|
+| `ENTREPRISE`, `VOCAB`, `CATALOGUE`, `SUPPLIERS`, `SUP_BY_ID`, `CUSTOMERS`, `CM`, `baseDeDepart`, `THEME` | objets (`SUPPLIERS`, `CUSTOMERS` : tableaux ; `baseDeDepart` : fonction) | L'univers de l'entreprise : identité, mots, articles, tiers, base de l'élève, charte. Tirées de l'univers par la fabrique (les neuf sont exigées) ; une séance peut en remplacer une (ci-dessus). | `activites/picard-ent42.js` (`CATALOGUE`) |
+| `etapes` | tableau | Les jalons ; le score est le nombre de jalons réussis. Lu de `SEANCE.ETAPES` par la fabrique. | toutes |
+| `accueil` | objet | La marche à suivre de l'écran d'accueil. Lue de `SEANCE.ACCUEIL`. | toutes |
+| `volet` | objet | Messages et livraisons semés dans la base de l'élève, déclencheurs (voir plus bas). Lu de `SEANCE.VOLET`. | `activites/cdiscount-chiffres.js` |
+| `exercice` | texte | La ligne de consigne sous « Bonjour {prénom} » (sinon `ENTREPRISE.exercice`). | `activites/picard-ent42.js` |
+| `trame` | objet `{ pdf, docx }` | Liens de trame et de corrigé du bandeau. Déduite par la fabrique de `meta.trame` ; une trame passée ici la remplace. | `activites/picard-ent42.js` |
+| `sansTrame` | texte | Phrase du bandeau quand tout se fait à l'écran ; sans effet si `trame` est là. | `activites/smoby-visite.js` |
+| `copie` | booléen | Évaluation : copie rendue une seule fois, note figée (voir `noter`). Déduite de `meta.copie`. | `activites/picard-ent44.js` |
+| `menu` | tableau | Les écrans de **données** gardés au menu, parmi `commandes`, `receptions`, `stock`, `catalogue`, `blocage`, `clients`, `fournisseurs`, `console` (un nom inconnu refuse la séance). Sans `menu`, tous restent. | `activites/picard-ent42.js` (`menu: []`) |
+| `fermetures` | objet | `{ écran: { ouvertSi(db), message } }` : l'entrée du menu reste visible, grisée avec le message, tant que `ouvertSi(db)` est faux (élève seulement). | `activites/spartoo-reception.js` |
+| `stockOuvert` | booléen | L'écran Stock s'ouvre sans le code de l'enseignant (Smoby). Sans l'option, il reste verrouillé (Spartoo : il pousse vers la console `.getstock`). | `activites/smoby-visite.js` |
+| `receptionLitige` | booléen | Ajoute « En litige (zone litiges) » aux décisions du bon de réception ; la ligne n'entre pas en stock. | `activites/smoby-rangement.js` |
+| `lexique` | objet | Mots cliquables `{ MOT: définition }` : `[[MOT]]` ou `[[mot|affiché]]` dans les textes du contenu. | `activites/smoby-visite.js` |
+| `transportSection` | texte | Nom du groupe de menu qui porte plan et tournée (« Transport » par défaut). | `activites/boost-ent32.js` |
+| `transportId` | texte | Clé de `db.transport` partagée entre deux séances (sinon l'`id` de la séance). | `activites/boost-ent32.js` |
+| `plan` | objet | Plan schématique, ou carte réelle avec `plan.carte`. | `activites/boost-ent32.js` |
+| `tournee` | objet | La tournée à construire sur le plan. | `activites/boost-ent32.js` |
+| `quai` | objet ou fonction | Quai de réception (voir « Vue quai ») ; une **fonction de la graine** = un quai tiré par élève. | `activites/picard-ent42.js` ; tiré : `activites/picard-ent44.js` |
+| `planning` | objet | Planning : cartes sur une grille (voir « Vue Planning »). | `activites/smoby-arrivee.js` |
+| `entrepot` | objet | Plan d'entrepôt : rangement, préparation, visite (voir « Vue Plan d'entrepôt »). | `activites/smoby-rangement.js` |
+| `inventaire` | objet ou fonction | Inventaire ; une **fonction de la graine** = un inventaire tiré par élève. | `activites/cdiscount-inventaire.js` ; tiré : `activites/cdiscount-compte-a-rebours.js` |
+| `tableur` | objet | Geste tableur : extractions, exporter, déposer (voir « Geste tableur »). | `activites/cdiscount-chiffres.js` |
+| `documents` | tableau | Documents joints lus sans saisie `[{ id, titre, court, html }]` ; un mail les joint par `pieces`. | `activites/smoby-recrutement.js` |
+| `documentsStyle` | texte | Mise en page CSS des documents joints (règles imbriquées sous `.ent-doc`). | `activites/smoby-recrutement.js` |
+| `fiche` | objet | Une fiche à remplir. | `activites/smoby-arrivee.js` |
+| `fiches` | tableau | Plusieurs fiches à remplir (la première garde l'écran `fiche`, les autres `fiche:<id>`). | `activites/smoby-lettre-voiture.js` |
+| `animation` | objet | Une animation à questions. | essais seulement (aucune séance ne la passe encore) |
+| `animations` | tableau | Plusieurs animations (rare). | essais seulement |
+| `questions` | objet | Questions au fil et points d'étape (voir « Questions au fil »). | essais seulement (aucune séance ne la passe encore) |
+| `equipe` | objet | Personnes citées par les questions, en plus de `questions.personnes`. | aucune séance, aucun essai |
+| `tirage` | (sans contrôle de type) | Vrai = jeu tiré par élève même sans quai ni inventaire tiré : la graine est posée et inscrite dans le détail de la note. | aucune séance, aucun essai |
+| `seanceFinie` | fonction | `(db) → booléen` : la séance est finie sans jalon faux (ENT-5.6 : préparation terminée et vérifiée). | `activites/smoby-preparation.js` |
+| `finFige` | texte | Phrase du bandeau de fin quand une case fausse ne se rouvre plus (ENT-5.4 : le BL est signé). | `activites/smoby-reception.js` |
+| `reponsesFournisseur` | tableau de fonctions | `(corps, fournisseur, db, prénom) → réponse` ; la première qui rend quelque chose remplace la réponse automatique du fournisseur. | `activites/spartoo.js` |
+
+La table ne contient pas `correction`, `suiteAuBilan`, `parcours`… : ce sont des champs du **`meta`** (tableau « Base de
+l'élève, parcours, affichage » plus bas), lus par le moteur à l'ouverture dans `ctx.meta`, pas des options.
 
 ### Forme longue : `creerEntreprise` directe, toujours valide
 
@@ -272,12 +324,7 @@ CHAQUE palette (pour ne pas désigner celle qui a deux problèmes) ; la palette 
 = mêmes motifs (dans n'importe quel ordre) ; réserve juste = une valeur juste pour chacun (« deux constats, deux
 quantités »).
 
-**Autres clés de `creerEntreprise`** (relevées le 08/10/2026) : `exercice` (texte de la consigne, sinon
-`ENTREPRISE.exercice`) ; `trame` (liens trame et corrigé du bandeau) et `sansTrame` (phrase affichée à la
-place quand tout se fait à l'écran, ignorée si `trame` est là) ; `THEME` (charte : `papier`, `accent`,
-`surAccent`, `sombre`) ; `reponsesFournisseur` (fonctions `(corps, fournisseur, db, prenom) → réponse`,
-la première qui rend quelque chose remplace la réponse automatique du fournisseur) ; `transportId` (clé
-partagée de `db.transport` quand deux séances doivent partager leur repérage, sinon l'`id` de la séance).
+**Les autres clés de `creerEntreprise`** (`exercice`, `trame`, `sansTrame`, `THEME`, `reponsesFournisseur`, `transportId`…) sont dans la table « Les options de `creerEntreprise` » plus haut.
 
 `creerEntreprise` est dans `core/types/entreprise.js`. Les autres moteurs sont dans
 `core/types/` (`qcm`, `ordre`, `assoc`, `numerique`, `tableur`, `tableau`, `tournee`, …).
@@ -359,7 +406,7 @@ l'élève à chaque envoi **corrigé** (deuxième envoi et suivants), sans rejou
 | `parcours` | `true` | La séance fait partie d'un parcours strict. |
 | `precedente` | `'<id>'` | Avec `parcours` : la séance qui doit être validée avant. Absent sur la première. Sa validation range une **photo** du travail, qui sert de point de reprise. |
 | `versionBase` | `2` | Avec `parcours` (06/10/2026, refonte d'ENT-1.1) : numéro de version de la base partagée. Une base d'une version antérieure **repart de zéro** à sa prochaine ouverture, une seule fois (photos, scores du parcours et déblocages effacés, `core/app.js`) ; d'ici là, les séances suivantes sont fermées. Le monter = remettre à zéro tous les élèves du parcours : le dire à Tristan. Une séance de parcours affiche aussi le **bandeau de fin de séance** à l'élève (étapes fausses nommées par leur titre). |
-| `correction` | `true` | Avec `parcours` (07/10/2026, lots A et A bis de SMOBY-retours-classe-5.1 ; ENT-5.1 d'abord) : règle du **premier bilan**. La séance suivante s'ouvre dès que tous les jalons sont jugés (photo de fin rangée au premier bilan complet, remplacée à chaque nouveau bilan complet qui change), l'élève peut **corriger** (bouton « Corriger » du bandeau : une fiche est rouverte, une réponse par phrases se renvoie), la note du suivi reste l'état actuel tant qu'il n'y a pas eu de correction ; dès la **première correction**, c'est la **moyenne** du premier bilan (`bilan1`) et de l'état à cette première correction (`bilan2`), puis elle ne bouge plus (les deux sont rangés dans `db.indicateurs[séance]`), le bandeau de fin liste **tous les groupes en ✓ / ✗**. Suppose que les jalons restent « à faire » jusqu'à l'envoi : **ne pas l'activer sur une séance qui juge en continu** (Spartoo, Boost : un jalon y passe « ko » en cours de route, le premier bilan serait faussé). Sans le drapeau, tout reste comme avant. Jamais en évaluation (`copie`). |
+| `correction` | `true` | Avec `parcours` (07/10/2026, lots A et A bis de SMOBY-retours-classe-5.1 ; ENT-5.1 d'abord) : règle du **premier bilan**. La séance suivante s'ouvre dès que tous les jalons sont jugés (photo de fin rangée au premier bilan complet, remplacée à chaque nouveau bilan complet qui change), l'élève peut **corriger** (bouton « Corriger » du bandeau : une fiche est rouverte, une réponse par phrases se renvoie), la note du suivi reste l'état actuel tant qu'il n'y a pas eu de correction ; dès la **première correction**, c'est la **moyenne** du premier bilan (`bilan1`) et de l'état à cette première correction (`bilan2`), puis elle ne bouge plus (les deux sont rangés dans `db.indicateurs[séance]`), le bandeau de fin liste **tous les groupes en ✓ / ✗**. Suppose que les jalons restent « à faire » jusqu'à l'envoi : **ne pas l'activer sur une séance qui juge en continu** (Spartoo, Boost : un jalon y passe « ko » en cours de route, le premier bilan serait faussé) ; **le code ne sait pas le vérifier** (aucun marqueur ne distingue les deux sortes de séance). La fabrique refuse seulement `correction: true` quand **aucun jalon ne déclare d'`ecran`** (fiche, phrases, planning : ce que « Corriger » rouvre) : c'est le cas de Spartoo et de Boost, pas des cinq séances Smoby qui ont le drapeau ; une séance qui mêle jalons à `ecran` et jugement continu passerait (voir le lot 9a de `docs/chantiers.md`). Sans le drapeau, tout reste comme avant. Jamais en évaluation (`copie`). |
 | `suiteAuBilan` | `true` | Avec `parcours` (07/10/2026, lot 0 de SMOBY-notation-5.3-5.8 : aucun élève bloqué en fin de séance) : la séance suivante s'ouvre dès que **tous les jalons sont jugés**, justes ou faux (photo de fin rangée comme pour `correction`), sans bouton « Corriger » ni note moyennée. Le bandeau de fin reste l'ancien, sa dernière phrase dit que la suite est ouverte. `correction: true` l'implique. Une séance dont les jalons ne sont jamais « faux » déclare en plus `seanceFinie: (db) => bool` dans `creerEntreprise` (ENT-5.6 : préparation terminée et vérifiée). |
 | `immersif` | `true` | Prend toute la page, sans bandeau Prepalog : la séance dessine son propre en-tête et sa sortie (`ctx.quitter()`). Compte aussi pour le parcours et la reprise par l'enseignant. |
 | `corrige` | `'./contenus/corriges/ENT-3.1.js'` | Fichier de corrigé montré dans l'onglet « Corrigés » de l'enseignant. L'élève ne le voit pas, mais le fichier est public (voir CLAUDE.md). |
