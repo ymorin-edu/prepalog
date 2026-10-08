@@ -10,57 +10,42 @@
 // la note au premier essai est déclarée par la visite, `premierEssai: true`). Une base par séance (pas de `jeuId`).
 // Pas encore de trame élève : Cowork l'écrit après la validation à l'écran (brief §9).
 
-import { creerEntreprise } from '../core/types/entreprise.js';
+import { seanceEntreprise } from '../core/types/seance-entreprise.js';
 import { catalogueSimple } from '../contenus/entreprise-commun.js';
 import * as SMOBY from '../contenus/smoby.js';
 import * as SEANCE from '../contenus/smoby-ent53.js';
-
-export const meta = {
+const s = seanceEntreprise(SMOBY, SEANCE, {
   id: 'smoby-visite',
   code: 'ENT-5.3',
   titre: 'Smoby — la visite de la plateforme',
   desc: 'Premier jour du cariste : découvrir la plateforme vue du ciel, suivre le parcours de visite dans l’entrepôt, '
     + 'apprendre les mots du rack, délimiter une travée, lire et retrouver une adresse d’emplacement.',
-  rubrique: 'simulog',
   niveaux: ['2de'],
   competences: ['C1.2', 'C1.5'],
   domaines: ['D4'],
   coeur: true,
   temps: 'guidage',
   bareme: 20,
-  immersif: true,
   // Parcours strict : ne s'ouvre qu'à l'élève qui a validé ENT-5.2 (voir core/parcours.js).
   parcours: true,
   // Elle ouvre la suivante dès qu'elle est finie, justes ou faux (lot 0 de SMOBY-notation-5.3-5.8 : aucun élève bloqué).
   // La note au premier essai (lot 3) l'implique aussi.
   suiteAuBilan: true,
   precedente: 'smoby-arrivee',
-  portee: 'eleve',
-  tables: {},
   pret: true,
   ouverture: 'prof',
-};
-
-const moteur = creerEntreprise({
+  corrige: false,
+}, {
   // Les écrans de données du menu (05/10/2026) : la visite n'en utilise aucun.
   menu: [],
   stockOuvert: true,            // pas de code pour le Stock chez Smoby (décision de Tristan, 05/10/2026)
-  ENTREPRISE: SMOBY.ENTREPRISE,
-  VOCAB: SEANCE.VOCAB,
   CATALOGUE: catalogueSimple([]),
   SUPPLIERS: [],
   SUP_BY_ID: {},
-  CUSTOMERS: SMOBY.CUSTOMERS,
-  CM: SMOBY.CM,
-  baseDeDepart: SMOBY.baseDeDepart,
-  THEME: SMOBY.THEME,
-  etapes: SEANCE.ETAPES,
   exercice: 'Séance 3 : la visite de la plateforme',
-  accueil: SEANCE.ACCUEIL,
-  volet: SEANCE.VOLET,
   lexique: SEANCE.LEXIQUE,
   entrepot: SEANCE.VISITE,
   sansTrame: "Tout à l'écran",
 });
-
-export function rendre(hote, ctx) { moteur.rendre(hote, ctx); }
+export const meta = s.meta;
+export const rendre = s.rendre;

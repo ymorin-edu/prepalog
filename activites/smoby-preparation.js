@@ -9,59 +9,41 @@
 // Pas de `notation` : neuf jalons ramenés sur 20. Une base par séance (pas de `jeuId`).
 // Pas encore de trame élève : Cowork l'écrit après la validation à l'écran (brief §9).
 
-import { creerEntreprise } from '../core/types/entreprise.js';
+import { seanceEntreprise } from '../core/types/seance-entreprise.js';
 import { catalogueSimple } from '../contenus/entreprise-commun.js';
 import * as SMOBY from '../contenus/smoby.js';
 import * as SEANCE from '../contenus/smoby-ent56.js';
-
-export const meta = {
+const s = seanceEntreprise(SMOBY, SEANCE, {
   id: 'smoby-preparation',
   code: 'ENT-5.6',
   titre: 'Smoby — la palette de la commande de Noël',
   desc: 'Cariste à la plateforme Smoby : préparer la palette mixte qui complète l’enlèvement E1 de la commande de Noël — '
     + 'prélever au picking, réapprovisionner depuis la réserve, monter une palette stable, filmer et étiqueter.',
-  rubrique: 'simulog',
   niveaux: ['2de'],
   competences: ['C2.1'],
   domaines: ['D4'],
   coeur: true,
   temps: 'guidage',
-  bareme: SEANCE.ETAPES.length,
-  immersif: true,
   // Parcours strict : ne s'ouvre qu'à l'élève qui a validé ENT-5.5 (voir core/parcours.js).
   parcours: true,
   // Elle ouvre la suivante dès qu'elle est finie, justes ou faux (lot 0 de SMOBY-notation-5.3-5.8 : aucun élève bloqué).
   suiteAuBilan: true,
   precedente: 'smoby-rangement',
-  portee: 'eleve',
-  tables: {},
-  corrige: './contenus/corriges/ENT-5.6.js',
   pret: true,
   ouverture: 'prof',
-};
-
-const moteur = creerEntreprise({
+}, {
   // Les écrans de données du menu (05/10/2026) : ceux dont la séance se sert, et au moindre doute on les garde.
   menu: [],
   stockOuvert: true,            // pas de code pour le Stock chez Smoby (décision de Tristan, 05/10/2026)
-  ENTREPRISE: SMOBY.ENTREPRISE,
-  VOCAB: SEANCE.VOCAB,
   CATALOGUE: catalogueSimple([]),
   SUPPLIERS: [],
   SUP_BY_ID: {},
-  CUSTOMERS: SMOBY.CUSTOMERS,
-  CM: SMOBY.CM,
-  baseDeDepart: SMOBY.baseDeDepart,
-  THEME: SMOBY.THEME,
-  etapes: SEANCE.ETAPES,
   exercice: 'Séance 6 : la palette de la commande de Noël',
-  accueil: SEANCE.ACCUEIL,
-  volet: SEANCE.VOLET,
   lexique: SEANCE.LEXIQUE,
   entrepot: SEANCE.ENTREPOT,
   // Ses jalons ne sont jamais « faux » : elle est finie quand la préparation est terminée et vérifiée.
   seanceFinie: SEANCE.preparationFinie,
   sansTrame: "Tout à l'écran",
 });
-
-export function rendre(hote, ctx) { moteur.rendre(hote, ctx); }
+export const meta = s.meta;
+export const rendre = s.rendre;

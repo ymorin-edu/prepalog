@@ -10,57 +10,37 @@
 // (seul le compte rendu à Bruno se rouvre). Une base par séance (pas de `jeuId`).
 // Pas encore de trame élève : Cowork l'écrit après la validation à l'écran (brief §9).
 
-import { creerEntreprise } from '../core/types/entreprise.js';
+import { seanceEntreprise } from '../core/types/seance-entreprise.js';
 import * as SMOBY from '../contenus/smoby.js';
 import * as SEANCE from '../contenus/smoby-ent54.js';
-
-export const meta = {
+const s = seanceEntreprise(SMOBY, SEANCE, {
   id: 'smoby-reception',
   code: 'ENT-5.4',
   titre: 'Smoby — premier déchargement',
   desc: 'Cariste au quai de réception de la plateforme de Moirans : vérifier la sécurité avant de décharger, '
     + 'décharger au chariot un camion de l’usine d’Arinthod, contrôler 4 palettes de jouets et porter des réserves précises.',
-  rubrique: 'simulog',
   niveaux: ['2de'],
   competences: ['C1.2', 'C1.4'],
   domaines: ['D4', 'D5'],
   coeur: true,
   temps: 'guidage',
   bareme: 20,           // 15 jalons pondérés (somme = 20) + la signature, non notée
-  immersif: true,
   // Parcours strict : ne s'ouvre qu'à l'élève qui a validé ENT-5.3 (voir core/parcours.js).
   parcours: true,
   // Premier bilan : la suivante s'ouvre dès que tout est jugé, justes ou faux ; l'élève peut corriger son compte rendu.
   correction: true,
   precedente: 'smoby-visite',
-  portee: 'eleve',
-  tables: {},
-  corrige: './contenus/corriges/ENT-5.4.js',
   pret: true,
   ouverture: 'prof',
-};
-
-const moteur = creerEntreprise({
+}, {
   // Les écrans de données du menu (05/10/2026) : ceux dont la séance se sert, et au moindre doute on les garde.
   menu: [],
   stockOuvert: true,            // pas de code pour le Stock chez Smoby (décision de Tristan, 05/10/2026)
-  ENTREPRISE: SMOBY.ENTREPRISE,
-  VOCAB: SMOBY.VOCAB,
-  CATALOGUE: SMOBY.CATALOGUE,
-  SUPPLIERS: SMOBY.SUPPLIERS,
-  SUP_BY_ID: SMOBY.SUP_BY_ID,
-  CUSTOMERS: SMOBY.CUSTOMERS,
-  CM: SMOBY.CM,
-  baseDeDepart: SMOBY.baseDeDepart,
-  THEME: SMOBY.THEME,
-  etapes: SEANCE.ETAPES,
   exercice: 'Séance 4 : premier déchargement',
-  accueil: SEANCE.ACCUEIL,
-  volet: SEANCE.VOLET,
   lexique: SEANCE.LEXIQUE,
   quai: SEANCE.QUAI_ENT54,
   finFige: SEANCE.FIN_FIGE,
   sansTrame: "Tout à l'écran",
 });
-
-export function rendre(hote, ctx) { moteur.rendre(hote, ctx); }
+export const meta = s.meta;
+export const rendre = s.rendre;

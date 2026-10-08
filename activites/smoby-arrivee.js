@@ -11,60 +11,37 @@
 // Trame élève (format long, 7 étapes, brief `docs/briefs/COWORK-trame-smoby-5.2.md`, relue par Tristan le 06/10/2026) ;
 // son corrigé s'ajoute au corrigé calculé (`meta.corrige`).
 
-import { creerEntreprise } from '../core/types/entreprise.js';
+import { seanceEntreprise } from '../core/types/seance-entreprise.js';
 import * as SMOBY from '../contenus/smoby.js';
 import * as SEANCE from '../contenus/smoby-ent52.js';
-
-export const meta = {
+const s = seanceEntreprise(SMOBY, SEANCE, {
   id: 'smoby-arrivee',
   code: 'ENT-5.2',
   titre: 'Smoby — l’arrivée du cariste',
   desc: 'Assistant RH : préparer l’arrivée du cariste recruté (pièces à demander, programme du premier jour), puis planifier '
     + 'les présences et les congés de l’équipe avant le pic, et replanifier après un imprévu.',
-  rubrique: 'simulog',
   niveaux: ['2de'],
   competences: ['AGO-3.1', 'AGO-3.2'],
   domaines: ['D2', 'D3'],
   coeur: true,
   temps: 'guidage',
   bareme: 20,           // 22 jalons pondérés, somme des poids = 20
-  immersif: true,
   // Parcours strict : ne s'ouvre qu'à l'élève qui a validé ENT-5.1 (voir core/parcours.js).
   parcours: true,
   // Règle du premier bilan et correction (brief SMOBY-retours-classe-5.1, 07/10/2026) : voir core/types/entreprise.js.
   correction: true,
   precedente: 'smoby-recrutement',
-  portee: 'eleve',
-  tables: {},
-  corrige: './contenus/corriges/ENT-5.2.js',
+  trame: 'smoby-arrivee',
   pret: true,
   ouverture: 'prof',
-};
-
-const moteur = creerEntreprise({
+}, {
   // Les écrans de données du menu (05/10/2026) : aucun ; la fiche et le planning ajoutent leurs entrées.
   menu: [],
   stockOuvert: true,            // pas de code pour le Stock chez Smoby (décision de Tristan, 05/10/2026)
-  ENTREPRISE: SMOBY.ENTREPRISE,
-  VOCAB: SMOBY.VOCAB,
-  CATALOGUE: SMOBY.CATALOGUE,
-  SUPPLIERS: SMOBY.SUPPLIERS,
-  SUP_BY_ID: SMOBY.SUP_BY_ID,
-  CUSTOMERS: SMOBY.CUSTOMERS,
-  CM: SMOBY.CM,
-  baseDeDepart: SMOBY.baseDeDepart,
-  THEME: SMOBY.THEME,
-  etapes: SEANCE.ETAPES,
   exercice: 'Séance 2 : l’arrivée de Yanis',
-  accueil: SEANCE.ACCUEIL,
-  volet: SEANCE.VOLET,
   lexique: SEANCE.LEXIQUE,
   fiche: SEANCE.FICHE,
   planning: SEANCE.PLANNING,
-  trame: {
-    pdf: './contenus/trames/ENT-5.2-smoby-arrivee-trame-eleve.pdf',
-    docx: './contenus/trames/ENT-5.2-smoby-arrivee-trame-eleve.docx',
-  },
 });
-
-export function rendre(hote, ctx) { moteur.rendre(hote, ctx); }
+export const meta = s.meta;
+export const rendre = s.rendre;

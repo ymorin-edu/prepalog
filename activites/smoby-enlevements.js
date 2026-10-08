@@ -12,57 +12,39 @@
 // séance (pas de `jeuId`).
 // Pas encore de trame élève : Cowork l'écrit après la validation à l'écran (brief §9).
 
-import { creerEntreprise } from '../core/types/entreprise.js';
+import { seanceEntreprise } from '../core/types/seance-entreprise.js';
 import * as SMOBY from '../contenus/smoby.js';
 import * as SEANCE from '../contenus/smoby-ent57.js';
-
-export const meta = {
+const s = seanceEntreprise(SMOBY, SEANCE, {
   id: 'smoby-enlevements',
   code: 'ENT-5.7',
   titre: 'Kuehne+Nagel — les enlèvements de Noël',
   desc: 'Agent d’exploitation à l’agence Kuehne+Nagel de Besançon : affecter un chauffeur et un camion à chacun des 5 enlèvements '
     + 'de la commande de Noël chez Smoby, en respectant permis, pauses, temps de conduite et repos, puis replanifier après une panne.',
-  rubrique: 'simulog',
   niveaux: ['2de'],
   competences: ['OTM-C2.2', 'OTM-C3.2'],
   domaines: ['D2'],
   coeur: true,
   temps: 'guidage',
   bareme: 20,           // 17 jalons pondérés, somme des poids = 20
-  immersif: true,
   // Parcours strict : ne s'ouvre qu'à l'élève qui a validé ENT-5.6 (voir core/parcours.js).
   parcours: true,
   // Règle du premier bilan et correction (lot 1 de SMOBY-notation-5.3-5.8) : la suite s'ouvre dès que la séance est
   // finie, « Corriger » rouvre le planning, la note est celle du premier bilan (voir core/types/entreprise.js).
   correction: true,
   precedente: 'smoby-preparation',
-  portee: 'eleve',
-  tables: {},
-  corrige: './contenus/corriges/ENT-5.7.js',
   pret: true,
   ouverture: 'prof',
-};
-
-const moteur = creerEntreprise({
+}, {
   // Les écrans de données du menu : aucun ; le planning ajoute son entrée.
   menu: [],
   stockOuvert: true,
   ENTREPRISE: { ...SMOBY.ENTREPRISE, sousTitre: 'Côté transport : Kuehne+Nagel, agence Route de Besançon' },
   VOCAB: { ...SMOBY.VOCAB, mailDomain: SMOBY.KN_AGENCE.mailDomain },
-  CATALOGUE: SMOBY.CATALOGUE,
-  SUPPLIERS: SMOBY.SUPPLIERS,
-  SUP_BY_ID: SMOBY.SUP_BY_ID,
-  CUSTOMERS: SMOBY.CUSTOMERS,
-  CM: SMOBY.CM,
-  baseDeDepart: SMOBY.baseDeDepart,
-  THEME: SMOBY.THEME,
-  etapes: SEANCE.ETAPES,
   exercice: 'Séance 7 : les enlèvements de Noël',
-  accueil: SEANCE.ACCUEIL,
-  volet: SEANCE.VOLET,
   lexique: SEANCE.LEXIQUE,
   planning: SEANCE.PLANNING,
   sansTrame: "Tout à l'écran",
 });
-
-export function rendre(hote, ctx) { moteur.rendre(hote, ctx); }
+export const meta = s.meta;
+export const rendre = s.rendre;
