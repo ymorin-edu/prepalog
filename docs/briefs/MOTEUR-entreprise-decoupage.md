@@ -328,6 +328,21 @@ les 4 relevés d'élève / enseignant de Spartoo et de Boost ENT-3.1 qui ouvrent
 **Le « rouge hors suite entière »** de la passe 1 (« Repérage… colonne des documents » avec `spartoo smoby questions` lancés seuls)
 n'a pas été rencontré dans cette passe (les blocs lancés étaient ceux de la colonne du §6) ; il reste connu et non réparé.
 
+**Passe 3 (modules 10 et 11), 08/10/2026.** Même méthode : « avant » = `git archive` du commit précédent (LF), « après » = l'arbre de
+travail en LF. Relevés refaits à chaque module : les deux de la passe 2 (`ecran.mjs`, `ecran2.mjs`, mêmes références) et un
+**nouveau `ecran3.mjs`** : 24 séances × élève / enseignant (48 séances×variantes, **3 170 674 caractères**, texte et HTML, relevé deux fois
+sur le code d'avant : identique ; l'heure, le hasard et le délai du « toast » sont figés). Commandes : chaque mail de commande et de bon
+de livraison, liste, fiche, saisie touche par touche (focus relevé), valeurs refusées, bon édité / régénéré / effacé par une
+modification / « rien à préparer », **Copier le bon en texte** (texte écrit dans le presse-papiers, puis copie refusée de deux façons),
+stock changé (refus), validation complète et avec reliquat, annulée (jamais ouverte, sans date ni motif, en cours de préparation, avec bon),
+livraison inconnue ou absente, `.getorder`. Réceptions : liste, fiche, saisie, confirmation (Annuler puis Valider), validée, tout refusé,
+tout accepté, référence inconnue, litige (ENT-5.5), sans tableau des colis (avec et sans consigne), annoncée, liste vide. Les commandes et
+réceptions semées déjà préparées / validées (Cdiscount) sont relevées telles quelles, puis remises à zéro pour jouer la saisie.
+
+| # | Commit | `entreprise.js` après | Capture avant / après | Blocs ciblés |
+|---|---|---|---|---|
+| 10 commandes | (voir le commit) | 2 861 -> 2 606 | `ecran3` 3 170 674 car., `ecran2` 4 348 559, `ecran` 174 379 : identiques | `spartoo cdiscount dependances amenagements` : 224/224 |
+
 **Fait / à faire.** Passes 1 et 2 faites (modules 1 à 9). **Reste ouvert** : passes 3 et 4 (modules 10 à 13 : commandes, réceptions,
 console, messagerie). Rien n'a été fait dans `styles/`, `contenus/`, `activites/*.js`, `outils/test.mjs`, `outils/test/*` (aucun cas
 touché). Les relevés (scripts et JSON) sont dans le dossier temporaire de la session, pas dans le dépôt.
