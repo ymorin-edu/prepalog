@@ -829,4 +829,78 @@ await v('plusieurs enseignants : le ménage ne laisse rien, la session est celle
   if (r.email !== MAIL_A) throw new Error('session inattendue : ' + r.email);
 });
 
+// ---------- 39 k. (lot 11b) un groupe cité par le profil mais disparu n'arrête plus la suppression d'un élève, et est nommé
+await casDuo('plusieurs enseignants : un élève dont le profil cite un groupe disparu se supprime encore, et le groupe disparu est nommé dans ce qui reste', async () => {
+  await creerGroupeEcran('ZZ DUO K');
+  await attendreToast(/Groupe créé/);
+  await creerElevesDuo('zz-duo-k', [{ nom: 'DUOK', prenom: 'Kim', matricule: 'zd41', code: 'k1' }]);
+  const uidEleve = Object.entries(await lireDemo('users')).find(([, u]) => u.matricule === 'zd41')[0];
+  // Le profil cite aussi un groupe qui n'existe plus (supprimé avant le chantier 6, ou à la console).
+  await page.evaluate((uid) => {
+    const u = JSON.parse(localStorage.getItem('prepalog:users'));
+    u[uid].groupes = ['zz-duo-k', 'zz-duo-k-disparu'];
+    localStorage.setItem('prepalog:users', JSON.stringify(u));
+  }, uidEleve);
+  const etat = await essaiBackend('return [await B.etatGroupe("zz-duo-k"), await B.etatGroupe("zz-duo-k-disparu")]');
+  if (!etat.ok || etat.r.join() !== 'mien,absent') throw new Error('etatGroupe attendu mien,absent : ' + JSON.stringify(etat));
+  await activerGroupe('zz-duo-k');
+  await page.click('[data-ong="comptes"]');
+  // L'écran offre « Supprimer » (et non « Retirer du groupe ») : le groupe disparu ne compte pas.
+  await page.waitForSelector(`[data-suppre="${uidEleve}"]`, { timeout: 6000 });
+  if (await page.$(`[data-retirere="${uidEleve}"]`)) throw new Error('« Retirer du groupe » offert à cause d’un groupe disparu');
+  page.once('dialog', (d) => d.accept());
+  await viderToast();
+  await page.click(`[data-suppre="${uidEleve}"]`);
+  await attendreToast(/supprim/i);
+  const t = await leToast();
+  if (!/zz-duo-k-disparu/.test(t)) throw new Error('le groupe disparu doit être nommé dans ce qui reste : ' + t);
+  if ((await lireDemo('users'))[uidEleve]) throw new Error('l’élève n’a pas été supprimé');
+});
+
+// ---------- 39 l. (lot 11b) un élève dans un groupe EXISTANT d'un collègue ne se supprime pas : il se retire
+await casDuo('plusieurs enseignants : un élève aussi présent dans un groupe existant d’un collègue ne se supprime pas, il se retire', async () => {
+  await creerGroupeEcran('ZZ DUO L');
+  await attendreToast(/Groupe créé/);
+  await creerElevesDuo('zz-duo-l', [{ nom: 'DUOL', prenom: 'Lou', matricule: 'zd51', code: 'l1' }]);
+  const uidEleve = Object.entries(await lireDemo('users')).find(([, u]) => u.matricule === 'zd51')[0];
+  // Un groupe de B (créé par B), où l'élève figure aussi.
+  await seConnecter(MAIL_B);
+  await creerGroupeEcran('ZZ DUO L B');
+  await attendreToast(/Groupe créé/);
+  await seConnecter(MAIL_A);
+  await page.evaluate((uid) => {
+    const u = JSON.parse(localStorage.getItem('prepalog:users'));
+    u[uid].groupes = ['zz-duo-l', 'zz-duo-l-b'];
+    localStorage.setItem('prepalog:users', JSON.stringify(u));
+  }, uidEleve);
+  const etat = await essaiBackend('return B.etatGroupe("zz-duo-l-b")');
+  if (!etat.ok || etat.r !== 'autre') throw new Error('etatGroupe attendu autre : ' + JSON.stringify(etat));
+  await activerGroupe('zz-duo-l');
+  await page.click('[data-ong="comptes"]');
+  await page.waitForSelector(`[data-retirere="${uidEleve}"]`, { timeout: 6000 });
+  if (await page.$(`[data-suppre="${uidEleve}"]`)) throw new Error('« Supprimer » offert sur un élève présent dans un groupe de collègue');
+  // Même sans l'écran, le backend refuse et ne touche à rien.
+  const r = await essaiBackend('return B.supprimerEleve(a)', uidEleve);
+  if (r.ok || !/pas le vôtre/.test(r.message)) throw new Error('suppression attendue refusée : ' + JSON.stringify(r));
+  if (!(await lireDemo('users'))[uidEleve]) throw new Error('l’élève a été supprimé malgré le refus');
+  page.once('dialog', (d) => d.accept());
+  await viderToast();
+  await page.click(`[data-retirere="${uidEleve}"]`);
+  await attendreToast(/retiré du groupe/);
+  const u = (await lireDemo('users'))[uidEleve];
+  if (!u || u.groupes.join() !== 'zz-duo-l-b') throw new Error('l’élève doit rester dans le groupe du collègue seulement : ' + (u && u.groupes));
+});
+
+// ---------- 39 m. ménage du lot 11b
+await v('plusieurs enseignants : le ménage du lot 11b ne laisse rien, la session est celle de prof.demo', async () => {
+  await seConnecter(MAIL_A);
+  await menageDuo();
+  const r = await page.evaluate(() => {
+    const g = JSON.parse(localStorage.getItem('prepalog:groupes') || '{}');
+    const u = JSON.parse(localStorage.getItem('prepalog:users') || '{}');
+    return { groupes: Object.keys(g).filter((k) => /duo/i.test(k)), eleves: Object.values(u).filter((x) => /^zd/.test(x.matricule || '')).length };
+  });
+  if (r.groupes.length || r.eleves) throw new Error('reste : ' + JSON.stringify(r));
+});
+
 }
