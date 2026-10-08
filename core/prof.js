@@ -3,6 +3,7 @@
 
 import { B } from './backend.js';
 import { ech, toast, confirmer } from './ui.js';
+import { responsable, gardeSuppressionEleve, lisible } from './collegues.js';
 import { AISANCES, amenagements } from './amenagements.js';
 import { seancesDepuis, memeBase } from './parcours.js';
 import { chargerActivites, activitesEnEchec, activite, entreprisesDe, estSimulog } from '../activites/index.js';
@@ -75,7 +76,11 @@ export async function rendreEspaceProf(hote, ctx) {
   // que de casser tout l'espace enseignant.
   async function majSansGroupe() {
     try {
-      sansGroupe = typeof B.elevesSansGroupe === 'function' ? await B.elevesSansGroupe() : [];
+      const tous = typeof B.elevesSansGroupe === 'function' ? await B.elevesSansGroupe() : [];
+      // Chantier 11 : chaque enseignant ne voit que les orphelins qu'il a créés (`creePar`) et ceux qui n'ont
+      // aucun auteur (créés à la console Firebase : ils restent visibles de tous, comme avant). Un élève
+      // créé par un collègue et détaché de son groupe réapparaît chez ce collègue, pas chez vous.
+      sansGroupe = tous.filter((e) => !e.creePar || e.creePar === ctx.profil.uid);
     } catch (e) { sansGroupe = []; }
   }
   await majSansGroupe();
@@ -276,6 +281,17 @@ export async function rendreEspaceProf(hote, ctx) {
   // ------------------------------------------------------------------ groupes
   async function vueGroupes(z) {
     const gActif = groupes.find((x) => x.id === gidActif) || null;
+    // Plusieurs enseignants (chantier 11) : le responsable d'un groupe est le premier de sa liste `profs`.
+    // « Groupe de <responsable> » s'affiche quand le groupe n'est pas à vous ; le panneau « Enseignants du
+    // groupe » liste ceux du groupe actif.
+    const moi = ctx.profil.uid;
+    const estChef = (gr) => !responsable(gr) || responsable(gr) === moi;
+    let noms = {};
+    try {
+      noms = typeof B.nomsProfs === 'function'
+        ? await B.nomsProfs([...groupes.map(responsable), ...((gActif && gActif.profs) || [])].filter(Boolean)) : {};
+    } catch (e) { noms = {}; }
+    const nomDe = (uid) => noms[uid] || 'un collègue';
     z.innerHTML = `
       ${sansGroupe.length ? `<div class="avis avis-err" style="margin-bottom:14px">
         <strong>${sansGroupe.length} élève${sansGroupe.length > 1 ? 's ne sont rattachés' : ' n\'est rattaché'} à aucun groupe.</strong>
@@ -303,7 +319,7 @@ export async function rendreEspaceProf(hote, ctx) {
           ${groupes.length === 0 ? `<div class="vide">Aucun groupe pour l'instant.</div>` : `
           <table><thead><tr><th>Groupe</th><th>Niveau</th><th>Année</th><th>Code</th><th></th></tr></thead><tbody>
             ${groupes.map((g) => `<tr>
-              <td><strong>${ech(g.nom)}</strong></td>
+              <td><strong>${ech(g.nom)}</strong>${estChef(g) ? '' : `<div class="note">groupe de ${ech(nomDe(responsable(g)))}</div>`}</td>
               <td><span class="etiq">${ech(courtNiveau(g.niveau))}</span></td>
               <td>${ech(g.annee || '')}</td>
               <td><span class="etiq">${ech(g.code || '')}</span></td>
@@ -311,8 +327,10 @@ export async function rendreEspaceProf(hote, ctx) {
                 ${g.id === gidActif ? '<span class="note">actif</span>' : `<button class="btn btn-s" data-actif="${ech(g.id)}">Activer</button>`}
                 <button class="btn btn-s" data-acces="${ech(g.id)}"
                   title="À utiliser si les élèves de ce groupe n'arrivent pas à ouvrir les bases partagées : réécrit les droits d'accès côté Realtime Database">Reconstruire l'accès</button>
-                <button class="btn btn-s" data-suppr="${ech(g.id)}" style="color:var(--rouge)"
-                  title="Supprimer définitivement ce groupe">Supprimer</button>
+                ${estChef(g) ? `<button class="btn btn-s" data-suppr="${ech(g.id)}" style="color:var(--rouge)"
+                  title="Supprimer définitivement ce groupe">Supprimer</button>`
+                : `<button class="btn btn-s" data-quitter="${ech(g.id)}"
+                  title="Seul le responsable supprime un groupe : vous pouvez le quitter, sans rien effacer">Quitter</button>`}
               </td>
             </tr>`).join('')}
           </tbody></table>`}
@@ -333,6 +351,20 @@ export async function rendreEspaceProf(hote, ctx) {
           <input id="demiNouveau" placeholder="ex : 1L1" style="width:12em" aria-label="Nom du nouveau demi-groupe">
           <button class="btn btn-s" id="btnAjoutDemi">Ajouter un demi-groupe</button>
         </div>
+      </section>
+      <section class="panneau" id="panProfs" style="margin-top:16px">
+        <h2>Enseignants de ${ech(gActif.nom)}</h2>
+        <p class="note">Les enseignants d'un groupe voient les mêmes élèves, les mêmes résultats et les mêmes séances ouvertes.
+          ${estChef(gActif) ? 'Vous en êtes le responsable : vous ajoutez et retirez les collègues, et vous seul pouvez supprimer le groupe. Le collègue doit s\'être connecté au moins une fois.'
+            : 'Vous pouvez quitter le groupe : il disparaît de votre liste, sans rien effacer. Seul le responsable le supprime.'}</p>
+        ${(gActif.profs || []).map((uid, i) => `<div class="rangee" style="margin-bottom:8px" data-prof="${ech(uid)}">
+          <span>${ech(uid === moi ? 'Vous' : nomDe(uid))}</span>${i === 0 ? ' <span class="etiq">responsable</span>' : ''}
+          ${estChef(gActif) && i > 0 && uid !== moi ? `<button class="btn btn-s" data-retirer-prof="${ech(uid)}" style="color:var(--rouge)">Retirer</button>` : ''}
+        </div>`).join('')}
+        ${estChef(gActif) ? `<div class="rangee">
+          <input id="collegueMail" type="email" placeholder="adresse de votre collègue" style="width:18em" aria-label="Adresse de votre collègue">
+          <button class="btn btn-s" id="btnAjoutCollegue">Ajouter un collègue</button>
+        </div>` : `<button class="btn btn-s" data-quitter="${ech(gActif.id)}">Quitter ce groupe</button>`}
       </section>` : ''}`;
 
     // ---- demi-groupes (brief MOTEUR-demi-groupes). L'id est technique et ne change jamais :
@@ -408,6 +440,60 @@ export async function rendreEspaceProf(hote, ctx) {
 
     z.querySelector('#btnVoirOrphelins')?.addEventListener('click', () => { onglet = 'orphelins'; dessiner(); });
 
+    // ---- enseignants du groupe (chantier 11). Ajouter / retirer = deux écritures dans le mode réel (le groupe,
+    // puis le miroir des droits) : si la seconde échoue, le message le dit. On relit les groupes dans tous les
+    // cas, la première a pu réussir.
+    const ajouterCollegue = async () => {
+      const inp = z.querySelector('#collegueMail');
+      const mail = inp.value.trim();
+      if (!mail) return toast("Tapez l'adresse de votre collègue.");
+      try {
+        const r = await B.ajouterCollegue(gActif.id, mail);
+        groupes = await B.groupesDuProf(ctx.profil.uid);
+        toast(`${r.nom} peut maintenant travailler avec ${gActif.nom}.`);
+      } catch (e) {
+        groupes = await B.groupesDuProf(ctx.profil.uid);
+        toast(lisible(e, "Le collègue n'a pas pu être ajouté."), 7000);
+      }
+      await dessiner();
+    };
+    z.querySelector('#btnAjoutCollegue')?.addEventListener('click', ajouterCollegue);
+    z.querySelector('#collegueMail')?.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') ajouterCollegue(); });
+
+    z.querySelectorAll('[data-retirer-prof]').forEach((b) => b.addEventListener('click', async () => {
+      const uid = b.dataset.retirerProf;
+      const nom = nomDe(uid);
+      if (!confirmer(`Retirer ${nom} du groupe « ${gActif.nom} » ?\n\nIl ne verra plus ce groupe. Rien n'est effacé : `
+        + `restent dans le groupe les élèves qu'il y a créés et ses écritures dans les bases partagées.`)) return;
+      try {
+        const r = await B.retirerCollegue(gActif.id, uid);
+        groupes = await B.groupesDuProf(ctx.profil.uid);
+        toast(`${nom} n'est plus dans le groupe. Il reste : ${(r.restes || []).join(' ; ')}.`, 7000);
+      } catch (e) {
+        groupes = await B.groupesDuProf(ctx.profil.uid);
+        toast(lisible(e, 'Retrait impossible.'), 7000);
+      }
+      await dessiner();
+    }));
+
+    z.querySelectorAll('[data-quitter]').forEach((b) => b.addEventListener('click', async () => {
+      const gid = b.dataset.quitter;
+      const gr = groupes.find((x) => x.id === gid);
+      if (!confirmer(`Quitter le groupe « ${gr?.nom || gid} » ?\n\nIl disparaît de votre liste. Rien n'est effacé : `
+        + `les élèves, leurs résultats et les bases partagées restent au groupe, et le responsable pourra vous y rajouter.`)) return;
+      try {
+        await B.retirerCollegue(gid, moi);
+        groupes = await B.groupesDuProf(ctx.profil.uid);
+        await majSansGroupe();
+        if (gidActif === gid) activer(groupes[0]?.id || null);
+        toast('Vous avez quitté le groupe.');
+      } catch (e) {
+        groupes = await B.groupesDuProf(ctx.profil.uid);
+        toast(lisible(e, 'Impossible de quitter le groupe.'), 7000);
+      }
+      await dessiner();
+    }));
+
     z.querySelector('#btnCreerG').addEventListener('click', async () => {
       const nom = z.querySelector('#gNom').value.trim();
       if (!nom) return toast('Donnez un nom au groupe.');
@@ -422,7 +508,7 @@ export async function rendreEspaceProf(hote, ctx) {
         activer(g.id);
         toast('Groupe créé.');
         dessiner();
-      } catch (e) { toast(e.message); }
+      } catch (e) { toast(lisible(e, 'Le groupe n\'a pas pu être créé.')); }
     });
     z.querySelectorAll('[data-actif]').forEach((b) => b.addEventListener('click', () => { activer(b.dataset.actif); dessiner(); }));
 
@@ -435,13 +521,14 @@ export async function rendreEspaceProf(hote, ctx) {
       try {
         await B.reconstruireAcces(gid);
         toast('Accès reconstruit.');
-      } catch (e) { toast(e.message || "L'accès n'a pas pu être reconstruit.", 6000); }
+      } catch (e) { toast(lisible(e, "L'accès n'a pas pu être reconstruit."), 6000); }
       b.disabled = false;
     }));
 
     z.querySelectorAll('[data-suppr]').forEach((b) => b.addEventListener('click', async () => {
       const gid = b.dataset.suppr;
       const gr = groupes.find((x) => x.id === gid);
+      if (gr && !estChef(gr)) return toast('Seul le responsable du groupe peut le supprimer : vous pouvez le quitter.', 6000);
 
       // Une seule confirmation, mais qui énumère ce qui part : un « Êtes-vous sûr ? » ne
       // dit rien de ce qu'on perd, et c'est justement là que se jouent les accidents.
@@ -489,7 +576,7 @@ export async function rendreEspaceProf(hote, ctx) {
               + ` à retirer depuis la console Firebase.`
             : '') + resteDit(r), orphelins > 0 || (r && r.restes && r.restes.length) ? 7000 : 2600);
         dessiner();
-      } catch (e) { toast(e.message || 'Suppression impossible.'); }
+      } catch (e) { toast(lisible(e, 'Suppression impossible.'), 7000); }
     }));
   }
 
@@ -542,8 +629,11 @@ export async function rendreEspaceProf(hote, ctx) {
               </select></td>
               <td><label class="rangee" style="gap:6px"><input type="checkbox" data-tiers="${ech(e.uid)}"${a.tiersTemps ? ' checked' : ''}
                 aria-label="Tiers-temps de ${ech(e.prenom)} ${ech(e.nom)}"></label></td>
-              <td><button class="btn btn-s" data-suppre="${ech(e.uid)}" style="color:var(--rouge)"
-                title="Supprimer définitivement cet élève">Supprimer</button></td></tr>`; }).join('')}
+              <td>${gardeSuppressionEleve(e, { moi: ctx.profil.uid, groupes })
+                ? `<button class="btn btn-s" data-retirere="${ech(e.uid)}"
+                    title="${ech(gardeSuppressionEleve(e, { moi: ctx.profil.uid, groupes }))}">Retirer du groupe</button>`
+                : `<button class="btn btn-s" data-suppre="${ech(e.uid)}" style="color:var(--rouge)"
+                    title="Supprimer définitivement cet élève">Supprimer</button>`}</td></tr>`; }).join('')}
           </tbody></table>
           <p class="note">Les codes sont enregistrés avec le compte : un élève qui a perdu le sien
              le retrouve ici. Les comptes créés avant le 30/09/2026 affichent « — », leur code
@@ -638,7 +728,23 @@ export async function rendreEspaceProf(hote, ctx) {
           : 'Données supprimées. Le compte de connexion subsiste : retirez-le depuis la console Firebase.')
           + resteDit(r), r && r.restes && r.restes.length ? 7000 : 2600);
         await dessiner();
-      } catch (e) { toast(e.message || 'Suppression impossible.'); }
+      } catch (e) { toast(lisible(e, 'Suppression impossible.'), 7000); }
+    }));
+
+    // Un élève qu'on n'a pas le droit de supprimer (créé par un collègue, ou aussi dans son groupe) : on le retire
+    // de CE groupe. Son compte, son code et ses travaux restent ; s'il n'a plus de groupe, il réapparaît dans
+    // « Élèves sans groupe » chez l'enseignant qui l'a créé.
+    z.querySelectorAll('[data-retirere]').forEach((b) => b.addEventListener('click', async () => {
+      const el = eleves.find((x) => x.uid === b.dataset.retirere);
+      if (!el) return;
+      if (!confirmer(`Retirer ${el.prenom} ${el.nom} du groupe « ${g.nom} » ?\n\n`
+        + `Il n'est pas supprimé : son compte, son code et ses travaux restent. Il disparaît seulement de la liste de ce groupe`
+        + `${(el.groupes || []).length > 1 ? ' (il reste dans ses autres groupes)' : ' ; n\'ayant plus de groupe, il apparaîtra dans « Élèves sans groupe » chez l\'enseignant qui l\'a créé'}.`)) return;
+      try {
+        const r = await B.detacherEleve(el.uid, g.id);
+        toast(`${el.prenom} ${el.nom} est retiré du groupe. Il reste : ${(r.restes || []).join(' ; ')}.`, 7000);
+        await dessiner();
+      } catch (e) { toast(lisible(e, 'Retrait impossible.'), 7000); }
     }));
 
     z.querySelector('#btnCsvEleves').addEventListener('click', () => telecharger(`eleves-${g.id}.csv`,
@@ -682,7 +788,7 @@ export async function rendreEspaceProf(hote, ctx) {
         <table><thead><tr><th>Nom</th><th>Prénom</th><th>Matricule</th><th>Code</th>
           <th>Rattacher à</th><th></th></tr></thead><tbody>
           ${sansGroupe.map((e) => `<tr>
-            <td>${ech(e.nom)}</td><td>${ech(e.prenom)}</td>
+            <td>${ech(e.nom)}${e.creePar ? '' : ' <span class="etiq" title="Aucun auteur enregistré : visible de tous les enseignants">créé hors du site</span>'}</td><td>${ech(e.prenom)}</td>
             <td class="mono">${ech(e.matricule)}</td><td class="mono">${ech(e.code || '—')}</td>
             <td>${groupes.length ? `<div class="rangee">
               <select data-grp="${ech(e.uid)}" aria-label="Groupe pour ${ech(e.prenom)} ${ech(e.nom)}">${options}</select>
@@ -708,7 +814,7 @@ export async function rendreEspaceProf(hote, ctx) {
         toast(`${el.prenom} ${el.nom} rattaché à ${gr?.nom || gid}.`);
         await majSansGroupe();
         await dessiner();
-      } catch (e) { toast(e.message || 'Rattachement impossible.'); }
+      } catch (e) { toast(lisible(e, 'Rattachement impossible.')); }
     }));
 
     z.querySelectorAll('[data-suppro]').forEach((b) => b.addEventListener('click', async () => {
@@ -730,7 +836,7 @@ export async function rendreEspaceProf(hote, ctx) {
           + resteDit(r), r && r.restes && r.restes.length ? 7000 : 2600);
         await majSansGroupe();
         await dessiner();
-      } catch (e) { toast(e.message || 'Suppression impossible.'); }
+      } catch (e) { toast(lisible(e, 'Suppression impossible.'), 7000); }
     }));
   }
 
@@ -1555,13 +1661,22 @@ ${so.phrase}` : ''}`)}"
     // Sous un demi-groupe, la case écrit dans `ouvertsDemi[demi]` ; sinon dans `ouverts` (la classe).
     z.querySelectorAll('[data-ouvre]').forEach((c) => c.addEventListener('change', async () => {
       try {
+        // Champ par champ (chantier 11) : deux enseignants du même groupe qui cochent chacun une séance ne
+        // s'écrasent plus. Un identifiant à point (aucun aujourd'hui) retomberait sur la table entière.
+        const id = c.dataset.ouvre;
+        const pointe = !id.includes('.');
         if (demi) {
-          const ouvertsDemi = { ...(g.ouvertsDemi || {}) };
-          ouvertsDemi[demi] = { ...(ouvertsDemi[demi] || {}), [c.dataset.ouvre]: c.checked };
-          await B.majGroupe(g.id, { ouvertsDemi });
+          if (pointe) await B.majGroupe(g.id, { [`ouvertsDemi.${demi}.${id}`]: c.checked });
+          else {
+            const ouvertsDemi = { ...(g.ouvertsDemi || {}) };
+            ouvertsDemi[demi] = { ...(ouvertsDemi[demi] || {}), [id]: c.checked };
+            await B.majGroupe(g.id, { ouvertsDemi });
+          }
+        } else if (pointe) {
+          await B.majGroupe(g.id, { [`ouverts.${id}`]: c.checked });
         } else {
           const ouverts = { ...(g.ouverts || {}) };
-          ouverts[c.dataset.ouvre] = c.checked;
+          ouverts[id] = c.checked;
           await B.majGroupe(g.id, { ouverts });
         }
         groupes = await B.groupesDuProf(ctx.profil.uid);

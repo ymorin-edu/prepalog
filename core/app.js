@@ -197,6 +197,8 @@ async function vueAccueil() {
     groupeActif = (profil.groupes || [])[0] || null;
   }
   const groupe = groupeActif ? await B.groupe(groupeActif) : null;
+  // Un enseignant retiré d'un groupe par son responsable (chantier 11) ne le voit plus : le groupe actif tombe.
+  if (estProf && groupeActif && !groupe) groupeActif = null;
 
   // Le niveau du groupe décide, sauf forçage explicite par l'enseignant.
   // L'ENSEIGNANT voit tout (02/10/2026) : les séances en préparation, fermées ou d'un autre

@@ -3,6 +3,7 @@
 
 import { filtrerAmenagements, amenagements } from './amenagements.js';
 import { meilleurScore } from './notes.js';
+import { uidCourt, idGroupe, responsable, libelleProf, gardeSuppressionEleve, gardeSuppressionGroupe, lisible } from './collegues.js';
 
 const P = 'prepalog:';
 const lire = (k, d) => { try { const v = localStorage.getItem(P + k); return v ? JSON.parse(v) : d; } catch (e) { return d; } };
@@ -27,6 +28,24 @@ function abonner(chemin, cb) {
 // Erreur rendue quand un élève tente d'écrire sur une séance que l'enseignant a notée : le vrai
 // service la refuse (PERMISSION_DENIED), ici on la lève à la main pour que la suite la voie.
 const erreurNoteFigee = () => Object.assign(new Error('note posée par l’enseignant'), { code: 'note-prof' });
+
+// Applique un patch dont les clés peuvent être pointées (`ouverts.quiz-flux`), comme le fait `updateDoc` du mode
+// réel : seul le champ visé change, le reste de l'objet est conservé (deux enseignants qui ouvrent chacun une
+// séance ne s'écrasent pas). Une clé sans point remplace le champ entier.
+function appliquerPatch(doc, patch) {
+  const sortie = { ...doc };
+  Object.keys(patch).forEach((cle) => {
+    const seg = cle.split('.');
+    if (seg.length === 1) { sortie[cle] = patch[cle]; return; }
+    let cur = sortie;
+    seg.slice(0, -1).forEach((k) => {
+      cur[k] = (cur[k] && typeof cur[k] === 'object') ? { ...cur[k] } : {};
+      cur = cur[k];
+    });
+    cur[seg[seg.length - 1]] = patch[cle];
+  });
+  return sortie;
+}
 
 let courant = null;          // { uid, role, nom, prenom, matricule, groupes }
 const auditeursAuth = [];
@@ -99,7 +118,12 @@ export function creerBackendDemo() {
       let uid = Object.keys(u).find((k) => u[k].email === mail);
       if (!uid) {
         uid = uid16();
-        u[uid] = { role: 'prof', email: mail, nom: 'Enseignant', prenom: 'Démo', groupes: [] };
+        // Le premier enseignant de démonstration garde son nom d'origine ; un autre (chantier 11) prend le début de
+        // son adresse, pour qu'on les distingue dans « groupe de … ».
+        const defaut = mail === 'prof.demo@prepalog.local';
+        const debut = mail.split('@')[0];
+        u[uid] = defaut ? { role: 'prof', email: mail, nom: 'Enseignant', prenom: 'Démo', groupes: [] }
+          : { role: 'prof', email: mail, nom: debut.charAt(0).toUpperCase() + debut.slice(1), prenom: 'Prof', groupes: [] };
         setUsers(u);
       }
       courant = { uid, ...u[uid] };
@@ -134,10 +158,17 @@ export function creerBackendDemo() {
       return Object.keys(g).filter((k) => (g[k].profs || []).includes(uid)).map((k) => ({ id: k, ...g[k] }));
     },
     async groupe(gid) { const g = groupes()[gid]; return g ? { id: gid, ...g } : null; },
+    // Comme en mode réel (chantier 11) : un nom pris par un COLLÈGUE donne un identifiant suffixé de l'uid court
+    // de l'enseignant ; un nom déjà pris par soi-même est refusé.
     async creerGroupe({ nom, annee, niveau, profUid }) {
       const g = groupes();
-      const gid = nom.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || uid16();
-      if (g[gid]) throw new Error('Un groupe porte déjà ce nom.');
+      const base = idGroupe(nom) || uid16();
+      let gid = base;
+      if (g[gid]) {
+        if ((g[gid].profs || []).includes(profUid)) throw new Error('Vous avez déjà un groupe de ce nom.');
+        gid = `${base}-${uidCourt(profUid)}`;
+        if (g[gid]) throw new Error('Vous avez déjà un groupe de ce nom.');
+      }
       g[gid] = { nom, annee, niveau, profs: [profUid], code: Math.random().toString(36).slice(2, 6).toUpperCase(), ouverts: {}, equipes: {} };
       setGroupes(g);
       return { id: gid, ...g[gid] };
@@ -145,8 +176,56 @@ export function creerBackendDemo() {
     async majGroupe(gid, patch) {
       const g = groupes();
       if (!g[gid]) throw new Error('Groupe introuvable.');
-      g[gid] = { ...g[gid], ...patch };
+      g[gid] = appliquerPatch(g[gid], patch);
       setGroupes(g);
+    },
+
+    // ---- plusieurs enseignants (chantier 11) : les mêmes gardes et les mêmes messages qu'en mode réel ----
+    async nomsProfs(uids) {
+      const u = users();
+      return Object.fromEntries([...new Set(uids)].map((x) => [x, u[x] ? libelleProf(u[x]) : '']));
+    },
+    async ajouterCollegue(gid, email) {
+      if (!courant) throw new Error('Connexion requise.');
+      const mail = String(email || '').trim().toLowerCase();
+      if (!mail) throw new Error("Tapez l'adresse du collègue.");
+      const g = groupes();
+      if (!g[gid]) throw new Error('Groupe introuvable.');
+      if (responsable(g[gid]) !== courant.uid) throw new Error('Seul le responsable du groupe peut y ajouter un collègue.');
+      const u = users();
+      const uid = Object.keys(u).find((k) => u[k].role === 'prof' && String(u[k].email || '').toLowerCase() === mail);
+      if (!uid) throw new Error("Aucun enseignant avec cette adresse : il doit s'être connecté une fois après avoir été autorisé.");
+      if ((g[gid].profs || []).includes(uid)) throw new Error('Cet enseignant est déjà dans le groupe.');
+      g[gid].profs = [...(g[gid].profs || []), uid];
+      setGroupes(g);
+      return { uid, nom: libelleProf(u[uid]) || mail };
+    },
+    async retirerCollegue(gid, uid) {
+      if (!courant) throw new Error('Connexion requise.');
+      const g = groupes();
+      if (!g[gid]) throw new Error('Groupe introuvable.');
+      const moi = courant.uid;
+      if (responsable(g[gid]) === uid) throw new Error('Le responsable du groupe ne peut pas être retiré.');
+      if (uid !== moi && responsable(g[gid]) !== moi) throw new Error('Seul le responsable du groupe peut retirer un collègue.');
+      if (!(g[gid].profs || []).includes(uid)) throw new Error("Cet enseignant n'est pas dans le groupe.");
+      const u = users();
+      const crees = Object.keys(u).filter((k) => u[k].role === 'eleve' && (u[k].groupes || []).includes(gid) && u[k].creePar === uid).length;
+      g[gid].profs = g[gid].profs.filter((x) => x !== uid);
+      setGroupes(g);
+      return { restes: [
+        ...(crees ? [`${crees} élève${crees > 1 ? 's' : ''} qu'il a créé${crees > 1 ? 's' : ''} dans le groupe`] : []),
+        'ses écritures dans les bases partagées',
+      ] };
+    },
+    async detacherEleve(uid, gid) {
+      if (!courant) throw new Error('Connexion requise.');
+      const g = groupes()[gid];
+      if (!g || !(g.profs || []).includes(courant.uid)) throw new Error("Ce groupe n'est pas le vôtre.");
+      const u = users();
+      if (!u[uid]) throw new Error('Élève introuvable.');
+      u[uid].groupes = (u[uid].groupes || []).filter((x) => x !== gid);
+      setUsers(u);
+      return { restes: ['ses travaux dans ce groupe', 'sa ligne dans les bases partagées'] };
     },
     // Même règle qu'en mode réel, et pour la même raison : un élève qui n'appartient qu'à
     // ce groupe part avec lui, sans quoi son profil survit sans jamais plus remonter dans
@@ -154,7 +233,15 @@ export function creerBackendDemo() {
     // Chantier 6 (08/10/2026) : chaque élève qui part passe par `effacerEleve()`, le même effacement
     // que `supprimerEleve()` (travaux, base privée, classements) ; avant, seuls le profil et les
     // travaux du groupe partaient, la base privée et les classements restaient.
+    // Chantier 11 : seul le responsable (premier de `profs`) supprime ; un collègue du groupe le quitte. La garde passe
+    // AVANT toute suppression d'élève. (Un enseignant absent de `profs`, que seuls des tests fabriquent avec un
+    // `profUid` à eux, n'est pas arrêté ici : le mode réel, lui, le refuse par les règles.)
     async supprimerGroupe(gid, { purger = true, aids = [] } = {}) {
+      const g0 = groupes()[gid];
+      if (g0 && courant && (g0.profs || []).includes(courant.uid)) {
+        const refus = gardeSuppressionGroupe(g0, courant.uid);
+        if (refus) throw new Error(refus);
+      }
       const u0 = users();
       const aPurger = [], aDetacher = [];
       Object.keys(u0).forEach((k) => {
@@ -162,7 +249,7 @@ export function creerBackendDemo() {
         if (!gs.includes(gid)) return;
         if (purger && u0[k].role === 'eleve' && gs.length <= 1) aPurger.push(k); else aDetacher.push(k);
       });
-      aPurger.forEach((k) => effacerEleve(k, { aids, nettoyerGroupes: false }));
+      aPurger.forEach((k) => effacerEleve(k, { aids, nettoyerGroupes: false }));   // garde de groupe déjà passée
       const u = users();
       aDetacher.forEach((k) => { if (u[k]) u[k].groupes = (u[k].groupes || []).filter((x) => x !== gid); });
       setUsers(u);
@@ -217,7 +304,9 @@ export function creerBackendDemo() {
         if (Object.values(u).some((x) => x.matricule === m)) {
           erreurs.push(`${e.prenom} ${e.nom} : matricule ${m} déjà utilisé`);
         } else {
-          u[uid16()] = { role: 'eleve', nom: e.nom, prenom: e.prenom, matricule: m, code: e.code, groupes: [gid] };
+          // `creePar` comme en mode réel : c'est lui qui répartit les élèves sans groupe entre enseignants.
+          u[uid16()] = { role: 'eleve', nom: e.nom, prenom: e.prenom, matricule: m, code: e.code, groupes: [gid],
+            creePar: courant?.uid || null };
           faits.push(e);
         }
         if (progres) progres(i + 1, liste.length);
@@ -226,6 +315,13 @@ export function creerBackendDemo() {
       return { faits, erreurs };
     },
     async supprimerEleve(uid, { aids = [], nettoyerGroupes = true } = {}) {
+      // Chantier 11 : la même garde qu'en mode réel, avant toute suppression (core/collegues.js).
+      if (courant) {
+        const g = groupes();
+        const miens = Object.keys(g).filter((k) => (g[k].profs || []).includes(courant.uid)).map((k) => ({ id: k, ...g[k] }));
+        const refus = gardeSuppressionEleve(users()[uid], { moi: courant.uid, groupes: miens });
+        if (refus) throw new Error(refus);
+      }
       // Comme en réel (voir backend-firebase.js) : le profil, les travaux de tous les groupes de
       // l'enseignant et du profil, la base privée, les lignes de classement, et l'entrée
       // demiDe / equipes de ses groupes.

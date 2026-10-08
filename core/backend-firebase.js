@@ -10,6 +10,7 @@
 import { CONFIG, matEmail, matMdp } from './config.js';
 import { filtrerAmenagements, amenagements } from './amenagements.js';
 import { meilleurScore } from './notes.js';
+import { uidCourt, idGroupe, responsable, libelleProf, gardeSuppressionEleve, gardeSuppressionGroupe, lisible } from './collegues.js';
 
 // Le SDK est servi par le dépôt, pas par gstatic.com : voir vendor/LISEZMOI.md.
 // Un CDN bloqué par le filtrage académique empêcherait le mode réel de démarrer du tout.
@@ -53,7 +54,16 @@ export async function creerBackendFirebase() {
     if (!user) return null;
     const s = await FS.getDoc(dref('users', user.uid));
     if (!s.exists()) return null;
-    return { uid: user.uid, ...s.data() };
+    const profil = { uid: user.uid, ...s.data() };
+    // Chantier 11 : un enseignant écrit son adresse dans son propre profil (les règles le permettent),
+    // pour qu'un collègue puisse l'ajouter à un groupe en la tapant. Un échec ne gêne en rien.
+    if (profil.role === 'prof' && user.email) {
+      const mail = user.email.toLowerCase();
+      if (String(profil.email || '').toLowerCase() !== mail) {
+        try { await FS.updateDoc(dref('users', user.uid), { email: mail }); profil.email = mail; } catch (e) { /* sans gravité */ }
+      }
+    }
+    return profil;
   }
 
   return {
@@ -142,14 +152,33 @@ export async function creerBackendFirebase() {
       const s = await FS.getDocs(q);
       return s.docs.map((d) => ({ id: d.id, ...d.data() }));
     },
+    // Un groupe dont on a été retiré (un collègue vous a enlevé de ses enseignants) est refusé en lecture par
+    // les règles : pour l'écran c'est un groupe qui n'existe plus pour vous, pas une panne (chantier 11).
     async groupe(gid) {
-      const s = await FS.getDoc(dref('groupes', gid));
-      return s.exists() ? { id: gid, ...s.data() } : null;
+      try {
+        const s = await FS.getDoc(dref('groupes', gid));
+        return s.exists() ? { id: gid, ...s.data() } : null;
+      } catch (e) {
+        if (e && e.code === 'permission-denied') return null;
+        throw e;
+      }
     },
+    // Chantier 11 (09/10/2026) : le nom d'abord. Si un collègue a déjà un groupe de ce nom, la lecture du
+    // document est REFUSÉE par les règles (firestore.rules : on ne lit que ses groupes, ou un groupe
+    // inexistant) ; c'est le signal « nom pris par un autre » : le groupe prend alors le suffixe de
+    // l'enseignant (« 1l1-ab12cd ») et s'affiche « 1L1 » comme l'autre. Lisible = le groupe est à moi.
     async creerGroupe({ nom, annee, niveau, profUid }) {
-      const gid = nom.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+      const base = idGroupe(nom) || ('g' + Math.random().toString(36).slice(2, 8));
+      const dejaMoi = () => new Error('Vous avez déjà un groupe de ce nom.');
+      let gid = base;
+      try {
+        if ((await FS.getDoc(dref('groupes', gid))).exists()) throw dejaMoi();
+      } catch (e) {
+        if (!e || e.code !== 'permission-denied') throw e;
+        gid = `${base}-${uidCourt(profUid)}`;
+        if ((await FS.getDoc(dref('groupes', gid))).exists()) throw dejaMoi();
+      }
       const ref = dref('groupes', gid);
-      if ((await FS.getDoc(ref)).exists()) throw new Error('Un groupe porte déjà ce nom.');
       const data = {
         nom, annee, niveau, profs: [profUid],
         code: Math.random().toString(36).slice(2, 6).toUpperCase(),
@@ -161,7 +190,102 @@ export async function creerBackendFirebase() {
       await DB.update(DB.ref(rt, `acces/${gid}/profs`), { [profUid]: true });
       return { id: gid, ...data };
     },
-    async majGroupe(gid, patch) { await FS.updateDoc(dref('groupes', gid), patch); },
+    // Une clé pointée (`ouverts.quiz-flux`) ne change QUE ce champ : deux enseignants du même groupe
+    // qui ouvrent chacun une séance ne s'écrasent plus (chantier 11). Les segments passent par
+    // `FieldPath` (les identifiants de séance portent des tirets), comme `majTemps`.
+    async majGroupe(gid, patch) {
+      const cles = Object.keys(patch);
+      if (!cles.some((k) => k.includes('.'))) { await FS.updateDoc(dref('groupes', gid), patch); return; }
+      const [premier, ...suite] = cles;
+      const chemin = (k) => new FS.FieldPath(...k.split('.'));
+      await FS.updateDoc(dref('groupes', gid), chemin(premier), patch[premier],
+        ...suite.flatMap((k) => [chemin(k), patch[k]]));
+    },
+
+    // ---- plusieurs enseignants (chantier 11) ----
+    // « Prénom Nom » d'enseignants à partir de leurs identifiants (étiquette « groupe de … »).
+    async nomsProfs(uids) {
+      const sortie = {};
+      await Promise.all([...new Set(uids)].map(async (u) => {
+        try {
+          const s = await FS.getDoc(dref('users', u));
+          sortie[u] = s.exists() ? libelleProf(s.data()) : '';
+        } catch (e) { sortie[u] = ''; }
+      }));
+      return sortie;
+    },
+
+    // Le responsable (premier de `profs`) ajoute un collègue à son groupe, par son adresse. Deux
+    // écritures non atomiques : le groupe (Firestore), puis le miroir des droits (Realtime Database).
+    // Si la seconde échoue, le collègue est bien dans le groupe : le message le dit et renvoie au
+    // bouton « Reconstruire l'accès », qui recopie `profs` dans le miroir.
+    async ajouterCollegue(gid, email) {
+      if (!courant) throw new Error('Connexion requise.');
+      const mail = String(email || '').trim().toLowerCase();
+      if (!mail) throw new Error("Tapez l'adresse du collègue.");
+      const g = await this.groupe(gid);
+      if (!g) throw new Error('Groupe introuvable.');
+      if (responsable(g) !== courant.uid) throw new Error('Seul le responsable du groupe peut y ajouter un collègue.');
+      let trouves;
+      try {
+        trouves = (await FS.getDocs(FS.query(cref('users'), FS.where('email', '==', mail))))
+          .docs.filter((d) => d.data().role === 'prof');
+      } catch (e) { throw new Error(lisible(e, "La recherche n'a pas abouti.")); }
+      if (!trouves.length) {
+        throw new Error("Aucun enseignant avec cette adresse : il doit s'être connecté une fois après avoir été autorisé.");
+      }
+      const uid = trouves[0].id;
+      if ((g.profs || []).includes(uid)) throw new Error('Cet enseignant est déjà dans le groupe.');
+      await FS.updateDoc(dref('groupes', gid), { profs: FS.arrayUnion(uid) });
+      try {
+        ouvrirRt();
+        await DB.update(DB.ref(rt, `acces/${gid}/profs`), { [uid]: true });
+      } catch (e) {
+        throw new Error(`${libelleProf(trouves[0].data()) || mail} est dans le groupe, mais ses droits sur les bases partagées `
+          + `n'ont pas pu être écrits : cliquez sur « Reconstruire l'accès ».`);
+      }
+      return { uid, nom: libelleProf(trouves[0].data()) || mail };
+    },
+
+    // Retirer un collègue (le responsable) ou quitter un groupe (le collègue lui-même). Le miroir des
+    // droits d'abord, puis le groupe : si la seconde écriture échoue, le collègue a perdu ses droits
+    // sur les bases partagées mais figure encore dans la liste, et « Reconstruire l'accès » le
+    // rétablit ; dans l'autre ordre il garderait un accès que rien ne sait effacer.
+    // Rend ce qui RESTE dans le groupe, que l'écran dit.
+    async retirerCollegue(gid, uid) {
+      if (!courant) throw new Error('Connexion requise.');
+      const g = await this.groupe(gid);
+      if (!g) throw new Error('Groupe introuvable.');
+      const moi = courant.uid;
+      if (responsable(g) === uid) throw new Error('Le responsable du groupe ne peut pas être retiré.');
+      if (uid !== moi && responsable(g) !== moi) throw new Error('Seul le responsable du groupe peut retirer un collègue.');
+      if (!(g.profs || []).includes(uid)) throw new Error("Cet enseignant n'est pas dans le groupe.");
+      const crees = (await this.elevesDuGroupe(gid)).filter((e) => e.creePar === uid).length;
+      ouvrirRt();
+      await DB.remove(DB.ref(rt, `acces/${gid}/profs/${uid}`));
+      try {
+        await FS.updateDoc(dref('groupes', gid), { profs: FS.arrayRemove(uid) });
+      } catch (e) {
+        throw new Error("Ses droits sur les bases partagées sont retirés, mais il figure encore dans la liste du groupe : recommencez.");
+      }
+      return { restes: [
+        ...(crees ? [`${crees} élève${crees > 1 ? 's' : ''} qu'il a créé${crees > 1 ? 's' : ''} dans le groupe`] : []),
+        'ses écritures dans les bases partagées',
+      ] };
+    },
+
+    // Retire un élève d'UN groupe sans rien supprimer : ni son profil, ni son code, ni ses travaux.
+    // C'est ce que fait un enseignant pour un élève qu'il n'a pas le droit de supprimer. S'il n'a plus
+    // de groupe, il réapparaît dans « Élèves sans groupe » chez celui qui l'a créé.
+    async detacherEleve(uid, gid) {
+      if (!courant) throw new Error('Connexion requise.');
+      const g = await this.groupe(gid);
+      if (!g || !(g.profs || []).includes(courant.uid)) throw new Error("Ce groupe n'est pas le vôtre.");
+      ouvrirRt();
+      await DB.remove(DB.ref(rt, `acces/${gid}/eleves/${uid}`));
+      await FS.updateDoc(dref('users', uid), { groupes: FS.arrayRemove(gid) });
+      return { restes: ['ses travaux dans ce groupe', 'sa ligne dans les bases partagées'] };
+    },
 
     // Réécrit le miroir d'accès d'un groupe côté Realtime Database (chantier 6, 08/10/2026).
     // `creerGroupe()` écrit Firestore puis `acces/{gid}` ; si la seconde écriture échoue
@@ -226,7 +350,26 @@ export async function creerBackendFirebase() {
     // lignes de classement des élèves seulement DÉTACHÉS (ils existent encore, avec leur autre
     // groupe) ; leur champ `gid` désigne alors un groupe disparu, sans autre effet qu'un
     // libellé de groupe sur le classement commun.
+    //
+    // Chantier 11 (09/10/2026) : GARDE EN TÊTE, avant la première écriture. Seul le responsable (premier de
+    // `profs`) supprime un groupe ; un collègue le QUITTE (`retirerCollegue`). Un refus au milieu
+    // laisserait un groupe à moitié vidé.
     async supprimerGroupe(gid, { purger = true, aids = [] } = {}) {
+      if (!courant) throw new Error('Connexion requise.');
+      let g0 = null;
+      try {
+        const sg = await FS.getDoc(dref('groupes', gid));
+        g0 = sg.exists() ? { id: gid, ...sg.data() } : null;
+      } catch (e) {
+        // Lecture refusée = le groupe est à un autre enseignant : rien n'est tenté.
+        if (e && e.code === 'permission-denied') throw new Error("Ce groupe n'est pas le vôtre.");
+        throw e;
+      }
+      if (g0) {
+        const refus = (g0.profs || []).includes(courant.uid) ? gardeSuppressionGroupe(g0, courant.uid)
+          : "Ce groupe n'est pas le vôtre.";
+        if (refus) throw new Error(refus);
+      }
       const eleves = await this.elevesDuGroupe(gid);
       // Les groupes de l'enseignant, lus UNE fois (et non pour chaque élève) : ils servent à
       // retrouver les travaux d'un élève dans un groupe que son profil ne cite plus.
@@ -240,7 +383,9 @@ export async function creerBackendFirebase() {
           // existe encore, donc avant la purge du miroir plus bas — dans l'autre ordre il se
           // ferait refuser. `nettoyerGroupes: false` : les entrées demiDe/equipes de CE groupe
           // partent avec son document, inutile de le réécrire élève par élève.
-          const r = await this.supprimerEleve(el.uid, { aids, groupesProf, nettoyerGroupes: false });
+          // `sansGarde` : la garde de groupe ci-dessus a déjà établi que vous en êtes le responsable, et cet
+          // élève n'a pas d'autre groupe (il part avec lui).
+          const r = await this.supprimerEleve(el.uid, { aids, groupesProf, nettoyerGroupes: false, sansGarde: true });
           supprimes++;
           if (r && r.compte) comptes++;
           if (r && r.restes) restes.push(...r.restes);
@@ -322,7 +467,7 @@ export async function creerBackendFirebase() {
           await AU.signOut(auth2);
           faits.push(e);
         } catch (err) {
-          erreurs.push(`${e.prenom} ${e.nom} : ${(err && err.code) || (err && err.message) || 'échec'}`);
+          erreurs.push(`${e.prenom} ${e.nom} : ${lisible(err, 'échec')}`);
         }
         if (progres) progres(i + 1, liste.length);
       }
@@ -367,11 +512,21 @@ export async function creerBackendFirebase() {
     //
     // `groupesProf` : les groupes de l'enseignant s'ils sont déjà connus (supprimerGroupe les
     // lit une fois). `nettoyerGroupes: false` : ne pas toucher aux documents de groupe.
-    async supprimerEleve(uid, { aids = [], groupesProf = null, nettoyerGroupes = true } = {}) {
+    //
+    // Chantier 11 (09/10/2026) — GARDE EN TÊTE, avant la première écriture (la suppression est en six
+    // étapes non atomiques : un refus à la dernière laisserait un élève sans travaux ni base privée).
+    // On ne supprime que ce qu'on a créé ou dont on est responsable ; un élève qui est aussi dans le
+    // groupe d'un collègue, ou créé par un collègue dans un groupe dont on n'est pas responsable, ne se
+    // supprime pas : on le détache (`detacherEleve`). Voir core/collegues.js.
+    async supprimerEleve(uid, { aids = [], groupesProf = null, nettoyerGroupes = true, sansGarde = false } = {}) {
       const s = await FS.getDoc(dref('users', uid));
       const el = s.exists() ? s.data() : null;
       const gidsProfil = (el && el.groupes) || [];
       const profs = groupesProf || (courant ? await this.groupesDuProf(courant.uid) : []);
+      if (!sansGarde && courant) {
+        const refus = gardeSuppressionEleve(el, { moi: courant.uid, groupes: profs });
+        if (refus) throw new Error(refus);
+      }
       const idsProf = new Set(profs.map((g) => g.id));
       const restes = [];
 
