@@ -341,7 +341,8 @@ réceptions semées déjà préparées / validées (Cdiscount) sont relevées te
 
 | # | Commit | `entreprise.js` après | Capture avant / après | Blocs ciblés |
 |---|---|---|---|---|
-| 10 commandes | (voir le commit) | 2 861 -> 2 606 | `ecran3` 3 170 674 car., `ecran2` 4 348 559, `ecran` 174 379 : identiques | `spartoo cdiscount dependances amenagements` : 224/224 |
+| 10 commandes | 489bede | 2 861 -> 2 606 | `ecran3` 3 170 674 car., `ecran2` 4 348 559, `ecran` 174 379 : identiques | `spartoo cdiscount dependances amenagements` : 224/224 |
+| 11 réceptions | (voir le commit) | -> 2 379 | idem : identiques (liste, saisie, confirmation Annuler / Valider, validée, litige ENT-5.5, sans colis, annoncée) | `spartoo smoby cdiscount picard` : 416/417 (le rouge connu, voir ci-dessous) |
 
 **Fait / à faire.** Passes 1 et 2 faites (modules 1 à 9). **Reste ouvert** : passes 3 et 4 (modules 10 à 13 : commandes, réceptions,
 console, messagerie). Rien n'a été fait dans `styles/`, `contenus/`, `activites/*.js`, `outils/test.mjs`, `outils/test/*` (aucun cas
