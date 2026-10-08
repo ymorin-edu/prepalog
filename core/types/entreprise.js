@@ -123,6 +123,24 @@ function controlerOptions(U) {
   }
 }
 
+// Les `id` des vues d'une séance : chacune en a un (texte non vide), car l'état de l'élève est rangé dessous
+// (`db.quais[id]`, `db.plannings[id]`, `db.entrepots[id]`, `db.fiches[id]`, `db.animations[id]`), et deux vues de la
+// même famille et de même `id` écriraient dans la même case. Appelé dès que les vues sont créées.
+// `familles` : [[nom au singulier, nom au pluriel, liste de vues]].
+function controlerIdentifiants(familles) {
+  for (const [nom, pluriel, liste] of familles) {
+    const vus = new Set();
+    liste.forEach((V, i) => {
+      if (typeof V.id !== 'string' || !V.id.trim()) {
+        throw new Error(`creerEntreprise : ${liste.length > 1 ? `${nom} n° ${i + 1}` : nom} sans « id » `
+          + "(texte non vide exigé : l'état de l'élève est rangé sous cet identifiant).");
+      }
+      if (vus.has(V.id)) throw new Error(`creerEntreprise : deux ${pluriel} portent le même « id » « ${V.id} » : l'état de l'élève serait partagé.`);
+      vus.add(V.id);
+    });
+  }
+}
+
 export function creerEntreprise(U) {
   controlerOptions(U);
   const { ENTREPRISE, VOCAB, CATALOGUE, SUPPLIERS, SUP_BY_ID, CUSTOMERS, CM,
@@ -253,6 +271,8 @@ export function creerEntreprise(U) {
   // ici : un pas, une place ou un objet inconnu empêche la séance de se charger.
   const VANIMS = [].concat(U.animation || [], U.animations || []).map((A) => creerLecteur(A));
   VANIMS.forEach((VA, i) => { if (VANIMS.findIndex((x) => x.id === VA.id) !== i) throw new Error(`animation ${VA.id} déclarée deux fois`); });
+  controlerIdentifiants([['quai', 'quais', [VQUAI].filter(Boolean)], ['planning', 'plannings', [VPL].filter(Boolean)],
+    ["plan d'entrepôt", "plans d'entrepôt", [VENT].filter(Boolean)], ['fiche', 'fiches', VFICHES], ['animation', 'animations', VANIMS]]);
   const vueAnim = (VA) => `animation:${VA.id}`;
   // LES GESTES connus de la séance (questions au fil, lot 3) : la liste que publie chaque vue déclarée. Un `apresGeste`
   // qui en cite un autre (faute de frappe, vue absente) empêche la séance de se charger : on ne découvre pas en classe

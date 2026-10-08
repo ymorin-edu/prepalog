@@ -357,6 +357,19 @@ await v('seanceEntreprise : le refus d\'une option inconnue nomme la séance', a
   if (r.bon !== 'CHARGÉE') throw new Error('une option connue doit passer par la fabrique : ' + r.bon);
 });
 
+await v('creerEntreprise : deux fiches de même id, une fiche sans id : la séance ne se charge pas ; deux ids différents passent', async () => {
+  const r = await moteurEssai(`return {
+    deux: essai({ fiches: [fiche('a'), fiche('b')] }),
+    doublon: essai({ fiches: [fiche('a'), fiche('a')] }),
+    unEtMultiples: essai({ fiche: fiche('a'), fiches: [fiche('a')] }),
+    sansId: essai({ fiches: [fiche('')] }),
+  };`);
+  if (r.deux !== 'CHARGÉE') throw new Error('deux fiches d\'id différents doivent passer : ' + r.deux);
+  if (!r.doublon.includes('même « id » « a »')) throw new Error('doublon accepté ou mal expliqué : ' + r.doublon);
+  if (!r.unEtMultiples.includes('même « id »')) throw new Error('`fiche` et `fiches` de même id acceptés : ' + r.unEtMultiples);
+  if (!r.sansId.includes('sans « id »')) throw new Error('une fiche sans id est acceptée : ' + r.sansId);
+});
+
 await v('séances d\'entreprise : les 24 séances du registre se chargent sans refus des options', async () => {
   const r = await page.evaluate(async () => {
     try { return { metas: (await (await import('/activites/index.js')).chargerActivites()).map((a) => a.meta.code) }; } catch (e) { return { refus: e.message }; }
