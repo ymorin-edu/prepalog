@@ -410,7 +410,6 @@ async function vueActivite(aid, avant) {
   jeuOuvert = await ouvrirJeu({
     aid: m.meta.jeuId || aid, portee: m.meta.portee, tables: m.meta.tables || {},
     uid: profil.uid, gid: groupeActif,
-    eqId: objGroupe?.equipes?.[profil.uid],
     // Base de classe : une par demi-groupe ; l'élève sans demi-groupe (et l'enseignant) ont celle de la classe.
     demi: demiDe(objGroupe, profil.uid),
   });

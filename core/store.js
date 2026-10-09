@@ -5,13 +5,14 @@
 // Passer une activité de « chacun sa base » à « base de classe » = changer un mot.
 //
 //   portee: 'eleve'   → Firestore, blob JSON privé. 1 écriture par sauvegarde.
-//   portee: 'equipe'  → Realtime Database, partagé entre les membres de l'équipe.
-//   portee: 'groupe'  → Realtime Database, partagé avec toute la classe.
-//   portee: 'commun'  → Realtime Database, partagé entre tous les groupes de l'enseignant.
+//   portee: 'groupe'  → Realtime Database, partagé avec toute la classe (ou son demi-groupe).
+//
+// Les portées 'equipe' et 'commun' ont été retirées le 09/10/2026 (chantier 16) : aucune séance ni
+// aucun écran ne s'en servait, et les règles `communs/` n'avaient aucun consommateur.
 
 import { B } from './backend.js';
 
-export const PORTEES = ['eleve', 'equipe', 'groupe', 'commun'];
+export const PORTEES = ['eleve', 'groupe'];
 
 // Un échec de sauvegarde ou d'écoute ne doit jamais rester muet (hors-ligne, document trop gros,
 // règle qui refuse = travail perdu). L'application branche ici un message à l'écran ; le moteur
@@ -27,11 +28,8 @@ export function signalerEchec(genre, e) {
 }
 
 // `demi` : le demi-groupe de l'élève (brief MOTEUR-demi-groupes). Une base de classe y est
-// propre à chaque demi-groupe : `jeux/{gid}/{aid}~{demi}`. Le séparateur `~` ne se confond pas
-// avec `__` des équipes. Sans demi-groupe, la base de classe de toujours.
-export function cheminDe(portee, aid, gid, eqId, demi) {
-  if (portee === 'commun') return `communs/${aid}`;
-  if (portee === 'equipe') return `jeux/${gid}/${aid}__${eqId || 'eq0'}`;
+// propre à chaque demi-groupe : `jeux/{gid}/{aid}~{demi}`. Sans demi-groupe, la base de classe de toujours.
+export function cheminDe(aid, gid, demi) {
   return demi ? `jeux/${gid}/${aid}~${demi}` : `jeux/${gid}/${aid}`;
 }
 
@@ -151,11 +149,11 @@ function jeuPartage(portee, chemin, tables) {
 }
 
 // ----------------------------------------------------------------- fabrique
-export async function ouvrirJeu({ aid, portee, tables = {}, uid, gid, eqId, demi }) {
+export async function ouvrirJeu({ aid, portee, tables = {}, uid, gid, demi }) {
   if (!PORTEES.includes(portee)) throw new Error(`Portée inconnue : ${portee}`);
   const jeu = portee === 'eleve'
     ? jeuPrive(aid, uid, tables)
-    : jeuPartage(portee, cheminDe(portee, aid, gid, eqId, demi), tables);
+    : jeuPartage(portee, cheminDe(aid, gid, demi), tables);
   jeu.tables = tables;
   return jeu.ouvrir();
 }

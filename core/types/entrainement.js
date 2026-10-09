@@ -91,12 +91,10 @@ export function creerEntrainement({
     nbQuestions,
 
     rendre(hote, ctx) {
-      // Les classements vivent dans leur propre branche, et pas dans `communs/`.
-      // `communs/` est le référentiel partagé entre toutes les classes, en LECTURE seule
-      // pour les élèves : y ouvrir l'écriture pour les classements en aurait fait une
-      // branche à deux régimes, et aurait imposé aux futurs référentiels les contraintes
-      // de format écrites pour les quiz. Une branche, une règle, une phrase :
+      // Les classements vivent dans leur propre branche : une branche, une règle, une phrase :
       // sous `classements/{activité}/`, chacun écrit la ligne qui porte son identifiant.
+      // (La branche `communs/`, référentiel partagé en lecture seule, a été retirée le 09/10/2026 :
+      // personne ne s'en servait.)
       const CLASSEMENTS = 'classements';
       const estEleve = ctx.profil?.role === 'eleve';
       let jeu = null;          // { qs, i, score, repondu, choisi, depart }

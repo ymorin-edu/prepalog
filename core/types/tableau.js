@@ -1,6 +1,6 @@
 // Type « tableau de données » — le moteur de Magasin, généralisé.
 //
-// Marche à l'identique quelle que soit la portée du jeu (privée, équipe, groupe, commune) :
+// Marche à l'identique quelle que soit la portée du jeu (privée ou de groupe) :
 // c'est le jeu de données qui décide où les lignes sont stockées, pas ce fichier.
 // Fournit sans code supplémentaire : saisie, modification, suppression avec droits,
 // traçabilité de l'auteur, liens entre tables, export CSV, gel et réinitialisation.

@@ -426,7 +426,7 @@ export async function rendreEspaceProf(hote, ctx) {
           + `et ses réglages d'ouverture.` : `Ses réglages d'ouverture seront effacés.`)
         + `\n\nLes résultats des élèves ne bougent pas.`)) return;
       try {
-        for (const m of bases) await B.effacerJeu(cheminDe('groupe', m.jeuId || m.id, gActif.id, null, id));
+        for (const m of bases) await B.effacerJeu(cheminDe(m.jeuId || m.id, gActif.id, id));
         const demis = demisDe(gActif).filter((d) => d.id !== id);
         const demiDe = Object.fromEntries(Object.entries(gActif.demiDe || {}).filter(([, d]) => d !== id));
         const ouvertsDemi = { ...(gActif.ouvertsDemi || {}) };

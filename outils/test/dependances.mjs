@@ -274,6 +274,28 @@ await v('séances d\'entreprise : un meta complet et cohérent avec le code, cal
   if (problemes.length) throw new Error(problemes.join(' ; '));
 });
 
+// ---------- chantier 16 (09/10/2026) : deux portées seulement, « eleve » et « groupe »
+// `equipe` et `commun` ont été retirées (aucune séance, aucun écran, aucune règle ne s'en servait). Deux gardes : le registre
+// ne déclare que les deux portées vivantes (toutes les activités, pas seulement celles d'entreprise), et le moteur refuse
+// les deux autres à l'ouverture d'une base.
+await v('portées : toute activité déclare « eleve » ou « groupe », et le moteur refuse « equipe » et « commun » (calculé depuis le registre)', async () => {
+  const r = await page.evaluate(async () => {
+    const metas = (await (await import('/activites/index.js')).chargerActivites()).map((a) => a.meta);
+    const S = await import('/core/store.js');
+    const refus = {};
+    for (const p of ['equipe', 'commun']) {
+      try { await S.ouvrirJeu({ aid: 'x', portee: p, uid: 'u', gid: 'g' }); refus[p] = 'PAS DE REFUS'; } catch (e) { refus[p] = e.message; }
+    }
+    return { portees: metas.map((m) => [m.id, m.portee]), liste: S.PORTEES, refus };
+  });
+  if (r.portees.length < 30) throw new Error(`seulement ${r.portees.length} activités dans le registre : cas à vide`);
+  const hors = r.portees.filter(([, p]) => p !== 'eleve' && p !== 'groupe').map(([id, p]) => `${id} : ${p}`);
+  if (hors.length) throw new Error('portée inconnue : ' + hors.join(', '));
+  if (!r.portees.some(([, p]) => p === 'groupe') || !r.portees.some(([, p]) => p === 'eleve')) throw new Error('une des deux portées n’est plus déclarée nulle part');
+  if (JSON.stringify(r.liste) !== JSON.stringify(['eleve', 'groupe'])) throw new Error('PORTEES : ' + JSON.stringify(r.liste));
+  for (const p of ['equipe', 'commun']) if (!/Portée inconnue/.test(r.refus[p])) throw new Error(`« ${p} » acceptée : ${r.refus[p]}`);
+});
+
 // ---------- chantier 10 (09/10/2026) : un seul drapeau « séance d'entreprise Simulog »
 // Trois critères disaient la même chose (rubrique `simulog`, code `ENT-`, `immersif`) sans que rien ne les lie. Le drapeau est
 // désormais `estSimulog(meta)` (activites/index.js) : la rubrique. Ces deux cas garantissent que les trois ne divergent pas

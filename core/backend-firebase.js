@@ -743,7 +743,7 @@ export async function creerBackendFirebase() {
     // `ajouterLigne` ci-dessus laisse la Realtime Database fabriquer la clé (`push`) :
     // un élève qui refait un quiz s'ajouterait une ligne de classement à chaque tentative.
     // Ici la clé est son uid, donc une seule ligne par élève, écrasée quand il fait mieux.
-    // C'est aussi ce que la règle de sécurité exige : sous `communs/`, un élève n'a le
+    // C'est aussi ce que la règle de sécurité exige : sous `classements/`, un élève n'a le
     // droit d'écrire que la ligne dont la clé est son propre uid.
     async poserLigne(chemin, table, id, ligne) {
       ouvrirRt();
