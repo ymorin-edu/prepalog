@@ -219,7 +219,7 @@
 .quai-signatures{ display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:10px }
 .quai-sig{ height:54px; border-bottom:1px solid #999 }
 .quai-sig svg{ height:54px; width:auto }
-.btn.quai-arme{ background:var(--terre); border-color:var(--terre); color:#fff }
+.btn.quai-arme{ background:var(--terre); border-color:var(--terre); color:var(--sur-terre) }
 .quai-bilan-bloc h3{ margin:8px 0 }
 .quai-bilan{ font-size:13px }
 .quai-bilan td{ vertical-align:top }

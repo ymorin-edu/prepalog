@@ -27,6 +27,7 @@
   --ardoise-clair:#e3f1e8;
 
   --terre:#9c620a;
+  --sur-terre:#ffffff;   /* texte posé sur un aplat --terre (boutons « armés », pastille) */
   /* Le vert de validation. --vert pour le texte et les traits, --vert-fond pour
      les aplats : voir le commentaire de la règle .juste plus bas. */
   --vert:#0b7a41;
@@ -60,6 +61,7 @@
   --ardoise-clair:#1b3328;
 
   --terre:#e0ac4d;
+  --sur-terre:#ffffff;
   --vert:#5fd79a;
   --vert-fond:#2bb86d;
   --sur-vert:#0c1f14;
@@ -87,6 +89,7 @@
     --sur-ardoise:#f2f7fb;
     --ardoise-clair:#1b3328;
     --terre:#e0ac4d;
+    --sur-terre:#ffffff;
     --vert:#5fd79a;
     --vert-fond:#2bb86d;
     --sur-vert:#0c1f14;
@@ -195,7 +198,7 @@ code,kbd,.mono{font-family:var(--mono); font-size:.92em}
 /* Onglet qui signale quelque chose à régler. Terre cuite et non rouge : l'alerte doit se
    voir sans se confondre avec un bouton de suppression. */
 .btn-alerte{border-color:var(--terre); color:var(--terre)}
-.btn-alerte.btn-p{background:var(--terre); border-color:var(--terre); color:#fff}
+.btn-alerte.btn-p{background:var(--terre); border-color:var(--terre); color:var(--sur-terre)}
 .btn[disabled]{opacity:.5; cursor:not-allowed}
 
 /* ----------------------------------------------------------- champs */
@@ -686,7 +689,7 @@ body.immersion .app{ max-width:1720px; padding:14px 24px 0 }
 }
 .ent-copie-rendue{ border-style:solid; background:rgba(255,255,255,.16) }
 .ent-act-copie{ border-color:currentColor; opacity:1; font-weight:600 }
-.ent-act-copie.ent-act-arme{ background:var(--terre); border-color:var(--terre); color:#fff }
+.ent-act-copie.ent-act-arme{ background:var(--terre); border-color:var(--terre); color:var(--sur-terre) }
 .ent-act-copie:disabled{ opacity:.6; cursor:wait }
 .ent-copie-avis{ margin-top:0 }
 /* --- Le geste tableur (04/10/2026, chantier C5, core/types/export-tableur.js) ---------
@@ -805,7 +808,7 @@ a.ent-nav{ text-decoration:none }
 }
 .ent-n{
   margin-left:auto; font-family:var(--mono); font-size:11px; font-weight:600;
-  background:var(--ent-badge, var(--terre)); color:#fff; border-radius:999px; padding:1px 7px;
+  background:var(--ent-badge, var(--terre)); color:var(--sur-terre); border-radius:999px; padding:1px 7px;
 }
 .ent-sep{
   margin:12px 0 4px; padding-left:12px; font-family:var(--mono); font-size:10.5px;
