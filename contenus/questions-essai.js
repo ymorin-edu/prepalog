@@ -7,10 +7,16 @@
 //
 // Montée par la page `outils/essai-questions.html` et par le bloc de tests `outils/test/questions.mjs`. Ce n'est pas
 // une activité : elle n'apparaît nulle part dans le site. Entreprise, personnes, produits et stocks CONSTRUITS.
+//
+// Le TRANSFERT d'un message (chantier D-1, 09/10/2026, `core/types/transfert.js`) : un message de la brasserie, à
+// transférer à la bonne personne (« Transférer à… » sous le message). Il n'est pas noté ici (aucun jalon : la note de
+// l'essai ne bouge pas) ; le destinataire choisi accuse réception (`apresTransfert`), et après « Corriger »
+// (`volet.corrections`). Le bloc de tests en fait une variante notée (`ETAPE_TRANSFERT`, `meta.correction`).
 
 import { catalogueSimple } from './entreprise-commun.js';
-import { apresMail } from '../core/declencheurs.js';
+import { apresMail, apresTransfert } from '../core/declencheurs.js';
 import { ficheEnvoyee, lireNombre } from '../core/types/fiche.js';
+import { transfertDe } from '../core/types/transfert.js';
 import { QUESTIONS } from './questions/ESSAI.js';
 
 export const MENTION = 'Page d’essai des questions au fil. <b>Construit</b> : l’entrepôt, Malo, Inès, Karim, les produits et le stock.';
@@ -57,11 +63,44 @@ export const ETAPES = [
     } },
 ];
 
+// Le transfert : l'équipe (ids, nom, fonction), la clé du message, son destinataire attendu (variante notée des tests).
+const SEANCE = 'essai-questions';
+export const EQUIPE = {
+  ines: { nom: 'Inès Moreau', appel: 'Inès', role: 'assistante commerciale' },
+  karim: { nom: 'Karim Benali', role: 'chef d’équipe préparation' },
+  nadia: { nom: 'Nadia Ferrand', role: 'cheffe de quai' },
+  thomas: { nom: 'Thomas Leroy', role: 'responsable de l’entrepôt' },
+};
+export const CLE_BRASSERIE = 'brasserie-quai';
+const BRASSERIE = 'accueil@brasserie-essai.example';
+function mailBrasserie(prenom) {
+  return { folder: 'in', ts: Date.now() - 30000, from: 'Brasserie d’essai', fromMail: BRASSERIE, to: prenom, cle: CLE_BRASSERIE,
+    subject: 'Livraison de mercredi', kind: 'text', transfert: { a: ['ines', 'karim', 'nadia', 'thomas'] },
+    text: 'Bonjour,\n\nNotre camion arrivera mercredi à 14 h : à quel quai doit-il se présenter ?\n\nLa Brasserie d’essai' };
+}
+// L'accusé de réception du destinataire choisi (juste ou faux) : « Bien reçu, merci. », signé de lui.
+function accuse(prenom, db) {
+  const t = transfertDe(db, CLE_BRASSERIE, SEANCE);
+  const P = EQUIPE[t.a];
+  if (!P) return null;
+  return { mails: [{ folder: 'in', ts: Date.now() + 1000, from: P.nom, fromMail: '', to: prenom,
+    subject: 'TR : Livraison de mercredi', kind: 'text', text: `Bien reçu, merci.\n\n${P.appel || P.nom.split(' ')[0]}` }] };
+}
+// Le jalon de la variante notée (bloc de tests) : le DERNIER destinataire (`a`) ; le premier bilan est figé par le moteur.
+// Poids 2, pris au remplacement (8 → 6) par la variante.
+export const ETAPE_TRANSFERT = { id: 'transfert-brasserie', titre: 'Message de la brasserie transmis', groupe: 'Le courrier', poids: 2,
+  ecran: `transfert:${CLE_BRASSERIE}`,
+  verifier(db) {
+    const t = transfertDe(db, CLE_BRASSERIE, SEANCE);
+    if (!t.fait) return { status: 'attente' };
+    return { status: t.a === 'nadia' ? 'ok' : 'ko' };
+  } };
+
 function volet() {
   return {
     id: 'essai-questions',
     semer: (prenom) => ({
-      mails: [{
+      mails: [mailBrasserie(prenom), {
         folder: 'in', ts: Date.now() - 120000, from: 'Malo, Café de Malo', fromMail: MALO, to: prenom, cle: 'malo',
         subject: 'Ma commande de jus d’orange', kind: 'text',
         text: 'Bonjour,\n\nJe voudrais 10 cartons de jus d’orange pour vendredi.\n\nMalo',
@@ -75,7 +114,12 @@ function volet() {
       id: 'merci-malo', quand: apresMail({ a: MALO }),
       semer: (prenom) => ({ mails: [{ folder: 'in', ts: Date.now() + 1000, from: 'Malo, Café de Malo', fromMail: MALO, to: prenom,
         subject: 'RE : Ma commande de jus d’orange', kind: 'text', text: 'Merci, c’est noté pour vendredi.\n\nMalo' }] }),
+    }, {
+      // Juste ou faux, peu importe : le destinataire choisi accuse réception.
+      id: 'accuse-brasserie', quand: apresTransfert(CLE_BRASSERIE), semer: accuse,
     }],
+    // Après « Corriger » (variante notée) : le nouveau destinataire accuse réception, sans dire si c'est juste.
+    corrections: { [CLE_BRASSERIE]: (prenom, n, db) => accuse(prenom, db) },
   };
 }
 
@@ -95,7 +139,7 @@ export function univers({ copie = false } = {}) {
     ] },
     volet: volet(),
     fiche: FICHE_BON,
-    questions: QUESTIONS,
+    questions: QUESTIONS, equipe: EQUIPE,
     copie, sansTrame: 'Tout à l’écran',
   };
 }

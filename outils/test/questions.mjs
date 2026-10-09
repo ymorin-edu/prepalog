@@ -57,12 +57,34 @@ const monter = (o = {}) => pg.evaluate(async (o) => {
     const { apresGeste } = await import('/core/declencheurs.js');
     q('ou-verifier').quand = apresGeste('fiche:bon:quantite');
   }
+  // Le transfert d'un message (chantier D-1) : `qTransfert` ajoute une question de réflexion au premier transfert ;
+  // `transfert` fait de l'essai une séance `correction` où le transfert est noté (2 points pris au remplacement) ;
+  // `transfertFaux` déclare un destinataire inconnu ou oublie la clé (le moteur le signale, pas de bouton).
+  if (o.qTransfert) {
+    const { apresGeste } = await import('/core/declencheurs.js');
+    Q.liste.push({ id: 'au-transfert', type: 'fil', de: 'Karim', quand: apresGeste('messagerie:transfert'), reflexion: true,
+      enonce: 'Pourquoi ne pas tout envoyer au responsable ?', choix: [{ v: 'deborde', lib: 'Il serait débordé' },
+        { v: 'pas-pense', lib: 'Je n’y avais pas pensé' }], retour: 'Chacun traite ce qui le concerne.' });
+  }
   const U = S.univers({ copie: !!o.copie });
   U.questions = Q;
+  if (o.transfert) {
+    U.etapes = U.etapes.map((e) => (e.id === 'remplacement' ? { ...e, poids: 6, ecran: 'fiche:bon' } : e.id === 'quantite' ? { ...e, ecran: 'fiche:bon' } : e))
+      .concat(S.ETAPE_TRANSFERT);
+  }
+  if (o.transfertFaux) {
+    const semer = U.volet.semer;
+    U.volet = { ...U.volet, semer: (p, d) => {
+      const g = semer(p, d);
+      g.mails.push({ folder: 'in', ts: Date.now(), from: 'X', to: p, cle: 'faux', subject: 'Faux', kind: 'text', text: '.', transfert: { a: ['ines', 'inconnu'] } });
+      g.mails.push({ folder: 'in', ts: Date.now(), from: 'Y', to: p, subject: 'Sans clé', kind: 'text', text: '.', transfert: { a: ['ines'] } });
+      return g;
+    } };
+  }
   const db = o.db ? JSON.parse(JSON.stringify(o.db)) : {};
   window.__q = { db, enregistres: [], Q, moteur: null };
   const ctx = {
-    meta: { ...S.META, ...(o.copie ? { copie: true, temps: 'evaluation' } : {}) },
+    meta: { ...S.META, ...(o.copie ? { copie: true, temps: 'evaluation' } : {}), ...(o.transfert ? { correction: true } : {}) },
     profil: { prenom: 'Lea', nom: 'Test', role: o.role || 'eleve', uid: o.uid || 'u-test' },
     jeu: { etat: () => db, sauver: () => {} },
     enregistrer: (r) => { window.__q.enregistres.push(JSON.parse(JSON.stringify(r))); }, quitter: () => {}, codeStock: 'ESSAI',
@@ -545,6 +567,184 @@ await v('Conduite de séance : par question, le nombre d’élèves par réponse
       const { B } = await import('/core/backend.js');
       for (const u of uids) { await B.poserNote(gid, u, aid, null); await B.supprimerEleve(u); }
     }, ids);
+  }
+});
+
+// ── LE TRANSFERT D'UN MESSAGE (chantier D-1, 09/10/2026, `core/types/transfert.js`) ─────────────────────────────
+// Le message de la brasserie (clé 'brasserie-quai'), destinataires dans l'ordre déclaré : ines, karim, nadia, thomas ;
+// attendu (variante notée) : nadia. Valeurs écrites à la main.
+const transferts = async () => (((await base()).transferts || {})['essai-questions']) || {};
+async function ouvrirBrasserie() {
+  await aller('mail');
+  await pg.click(`${Z} [data-dossier="in"]`);
+  const id = await pg.evaluate(() => window.__q.db.mails.find((m) => m.cle === 'brasserie-quai').id);
+  await pg.click(`${Z} [data-mail="${id}"]`);
+  await pause();
+}
+async function transferer(qui, { confirmer = true } = {}) {
+  await ouvrirBrasserie();
+  await pg.click(`${Z} [data-transfert-ouvrir]`);
+  await pause();
+  await pg.click(`${Z} [data-transferer="${qui}"]`);
+  if (confirmer) { await pg.click(`${Z} [data-confirme-oui]`); await pause(); }
+}
+const accuses = () => pg.evaluate(() => window.__q.db.mails.filter((m) => m.subject === 'TR : Livraison de mercredi').map((m) => m.from));
+const noteSuivi = () => pg.evaluate(() => { const L = window.__q.enregistres; return L.length ? L[L.length - 1].score : null; });
+
+await v('Transfert : « Transférer à… », la liste (ordre déclaré, nom et fonction, sans aplat), la confirmation dans la page, « Transféré à Karim » ; rangé une fois, le bouton ne revient pas ; l’accusé arrive (apresTransfert, destinataire faux), le geste est rangé', async () => {
+  await monter({ qTransfert: true });
+  await ouvrirBrasserie();
+  vrai(!(await present('[data-transfert-liste]')), 'la liste est ouverte d’avance');
+  egal(await pg.textContent(`${Z} [data-transfert-marque="brasserie-quai"]`), '↪ À transférer', 'marque dans la liste');
+  await pg.click(`${Z} [data-transfert-ouvrir]`);
+  await pause();
+  egal(await pg.$$eval(`${Z} [data-transferer]`, (L) => L.map((b) => b.dataset.transferer)), ['ines', 'karim', 'nadia', 'thomas'], 'ordre des destinataires');
+  egal(await pg.$$eval(`${Z} [data-transferer]`, (L) => L.map((b) => b.textContent.replace(/\s+/g, ' ').trim())),
+    ['Inès Moreau · assistante commerciale', 'Karim Benali · chef d’équipe préparation', 'Nadia Ferrand · cheffe de quai', 'Thomas Leroy · responsable de l’entrepôt'], 'nom et fonction');
+  vrai(await pg.$$eval(`${Z} [data-transferer], [data-transfert-ouvrir]`, (L) => L.every((b) => !b.classList.contains('btn-p'))), 'un bouton en aplat');
+  // « Non » : rien n'est rangé.
+  await pg.click(`${Z} [data-transferer="karim"]`);
+  egal(await pg.textContent(`${Z} [data-confirme] p`), 'Transférer le message de Brasserie d’essai à Karim ?', 'texte de la confirmation');
+  await pg.click(`${Z} [data-confirme-non]`);
+  await pause();
+  egal(await transferts(), {}, 'rangé après « Non »');
+  // « Oui » : rangé, une fois ; destinataire FAUX (Karim), l'accusé arrive quand même.
+  await pg.click(`${Z} [data-transferer="karim"]`);
+  await pg.click(`${Z} [data-confirme-oui]`);
+  await pause();
+  // La question du premier transfert arrive par le GESTE (ici, rien d'autre ne la ferait venir : le bon n'est pas envoyé).
+  vrai(await present('[data-q="au-transfert"]'), 'pas de question au premier transfert');
+  await repondreQ('au-transfert', 'pas-pense');
+  await reprendre();
+  const t = (await transferts())['brasserie-quai'];
+  egal([t.a, t.premier, t.n, typeof t.at], ['karim', 'karim', 1, 'number'], 'transfert rangé');
+  vrai(/^Transféré à Karim, \d{1,2} h \d{2}$/.test((await pg.textContent(`${Z} [data-transfert-fait="brasserie-quai"]`)).trim()), 'mention « Transféré à Karim, … »');
+  vrai(!(await present('[data-transfert-ouvrir]')), 'le bouton revient après le transfert');
+  egal(await pg.textContent(`${Z} [data-transfert-marque="brasserie-quai"]`), '↪ Transféré', 'marque après le transfert');
+  egal(await accuses(), ['Karim Benali'], 'accusé (apresTransfert)');
+  vrai(typeof ((await base()).gestes || {})['essai-questions']['messagerie:transfert'] === 'number', 'geste messagerie:transfert');
+  // L'heure, au format « 8 h 42 » (rangée à la main : 9 octobre 2026, 8 h 42, heure locale).
+  await pg.evaluate(() => { window.__q.db.transferts['essai-questions']['brasserie-quai'].at = new Date(2026, 9, 9, 8, 42).getTime(); });
+  await aller('accueil');
+  await ouvrirBrasserie();
+  egal((await pg.textContent(`${Z} [data-transfert-fait="brasserie-quai"]`)).trim(), 'Transféré à Karim, 8 h 42', 'mention');
+  // La condition seule : vraie au transfert de CE message, ou de n'importe lequel sans clé ; fausse pour une autre séance.
+  egal(await pg.evaluate(async () => {
+    const { apresTransfert } = await import('/core/declencheurs.js');
+    const db = window.__q.db;
+    return [apresTransfert('brasserie-quai')(db, 'essai-questions'), apresTransfert()(db, 'essai-questions'),
+      apresTransfert('autre')(db, 'essai-questions'), apresTransfert('brasserie-quai')(db, 'autre-seance'), apresTransfert()({}, 'essai-questions')];
+  }), [true, true, false, false, false], 'apresTransfert');
+});
+
+await v('Transfert : « Corriger » rouvre le message mal transféré (le premier reste rangé), accusé du volet ; note = moyenne du premier bilan (18) et du nouvel état (20) ; la question au premier transfert arrive une fois', async () => {
+  await monter({ transfert: true, qTransfert: true });
+  await choisirRemplacement('JUS-POM');
+  await repondreQ('ou-verifier', 'stock');
+  await reprendre();
+  await envoyerBon('10');
+  await aller('etape:avant-malo');
+  await repondreQ('qui-utilise-le-bon', 'prepa');
+  await repondreQ('ce-que-malo-attend', 'remplacement');
+  await repondreMalo('Bonjour Malo, nous vous livrons du jus de pomme à la place.');
+  await repondreQ('vides', 'compter');
+  await reprendre();
+  vrai(!(await present('[data-fin]')), 'bandeau de fin avant le transfert');
+  await transferer('karim');
+  // La question au fil du premier transfert (réflexion) : arrivée, l'écran gelé.
+  vrai(await present('[data-q="au-transfert"]'), 'pas de question au premier transfert');
+  await repondreQ('au-transfert', 'deborde');
+  await reprendre();
+  const arrivee = (await reps())['au-transfert'].arrivee;
+  const geste = (await base()).gestes['essai-questions']['messagerie:transfert'];
+  // Premier bilan : tout juste sauf le transfert (2 points) → 18.
+  egal((await note()).detail['transfert-brasserie'], 'ko', 'jalon du transfert');
+  proche(await noteSuivi(), 18, 'note au premier bilan');
+  vrai(await present('[data-fin-corriger]'), 'pas de « Corriger »');
+  vrai(!(await present('[data-transfert-ouvrir]')), 'le bouton revient avant « Corriger »');
+  await pg.click(`${Z} [data-fin-corriger]`);
+  await pause();
+  vrai(await present('[data-transfert-ouvrir]'), '« Corriger » ne rouvre pas le transfert');
+  egal(await pg.textContent(`${Z} .ent-lecteur h3`), 'Livraison de mercredi', '« Corriger » n’ouvre pas le message à transférer');
+  egal((await transferts())['brasserie-quai'].rouvert, true, 'rouvert');
+  // Le nouveau transfert : juste. Le premier reste rangé ; l'accusé vient du volet (Nadia) ; la question ne revient pas.
+  await transferer('nadia');
+  const t = (await transferts())['brasserie-quai'];
+  egal([t.a, t.premier, t.n, t.rouvert], ['nadia', 'karim', 2, undefined], 'transferts');
+  egal(await accuses(), ['Karim Benali', 'Nadia Ferrand'], 'accusés');
+  egal(await pg.evaluate(() => window.__q.db.mails.filter((m) => m.declenche === 'correction:brasserie-quai').length), 1, 'accusé du volet');
+  vrai(!(await panneau()), 'la question du premier transfert revient');
+  egal((await reps())['au-transfert'].arrivee, arrivee, 'question réécrite');
+  egal((await base()).gestes['essai-questions']['messagerie:transfert'], geste, 'geste réécrit');
+  vrai(!(await present('[data-transfert-ouvrir]')), 'le bouton reste après le nouveau transfert');
+  const r = (await base()).indicateurs['essai-questions'];
+  egal([r.bilan1['transfert-brasserie'], r.bilan2['transfert-brasserie'], r.corrections], ['ko', 'ok', 1], 'premier bilan et correction');
+  proche(await noteSuivi(), 19, 'note après la correction (moyenne de 18 et 20)');
+});
+
+await v('Transfert : un message bien transféré ne se rouvre pas (« Corriger » rouvre la fiche fausse seule)', async () => {
+  await monter({ transfert: true });
+  await choisirRemplacement('JUS-POM');
+  await repondreQ('ou-verifier', 'stock');
+  await reprendre();
+  await envoyerBon('8');
+  await aller('etape:avant-malo');
+  await repondreQ('qui-utilise-le-bon', 'prepa');
+  await repondreQ('ce-que-malo-attend', 'remplacement');
+  await repondreMalo('Du jus de pomme.');
+  await repondreQ('vides', 'compter');
+  await reprendre();
+  await transferer('nadia');
+  egal((await note()).detail['transfert-brasserie'], 'ok', 'jalon du transfert');
+  await pg.click(`${Z} [data-fin-corriger]`);
+  await pause();
+  vrai(await present('[data-fiche-envoyer]'), 'la fiche fausse n’est pas rouverte');
+  egal((await transferts())['brasserie-quai'], { a: 'nadia', at: (await transferts())['brasserie-quai'].at, premier: 'nadia', n: 1 }, 'transfert juste touché');
+  await ouvrirBrasserie();
+  vrai(!(await present('[data-transfert-ouvrir]')), 'le message juste est rouvert');
+});
+
+await v('Transfert : gelé pendant une question au fil (bouton grisé, clic forcé sans effet, message lisible), rendu à la réponse', async () => {
+  await monter();
+  await choisirRemplacement('LIM-1L');
+  vrai(await panneau(), 'pas de question');
+  await ouvrirBrasserie();
+  vrai(/quai doit-il se présenter/.test(await pg.textContent(`${Z} .ent-lecteur`)), 'le message ne se lit pas pendant le gel');
+  vrai(await pg.$eval(`${Z} [data-transfert-ouvrir]`, (b) => b.disabled), 'le bouton n’est pas grisé');
+  await pg.evaluate((Z) => { const b = document.querySelector(`${Z} [data-transfert-ouvrir]`); b.disabled = false; b.click(); }, Z);
+  await pause();
+  vrai(!(await present('[data-transfert-liste]')), 'la liste s’ouvre pendant le gel');
+  egal(await transferts(), {}, 'rangé pendant le gel');
+  await repondreQ('ou-verifier', 'mail');
+  await reprendre();
+  await ouvrirBrasserie();
+  vrai(!(await pg.$eval(`${Z} [data-transfert-ouvrir]`, (b) => b.disabled)), 'le bouton reste grisé après la réponse');
+  await transferer('thomas');
+  egal((await transferts())['brasserie-quai'].a, 'thomas', 'transfert après le gel');
+});
+
+await v('Transfert : l’enseignant voit le bouton, la liste, la confirmation et la mention ; rien n’est écrit, aucun accusé', async () => {
+  await monter({ role: 'prof', transfert: true });
+  await transferer('ines');
+  vrai(/^Transféré à Inès, \d{1,2} h \d{2}$/.test((await pg.textContent(`${Z} [data-transfert-fait="brasserie-quai"]`)).trim()), 'mention chez l’enseignant');
+  vrai(await present('[data-transfert-ouvrir]'), 'l’enseignant ne peut plus essayer');
+  const b = await base();
+  egal([b.transferts, b.gestes], [undefined, undefined], 'base de l’enseignant');
+  vrai(!(await pg.$$eval(`${Z} .ent-mitem`, (L) => L.some((x) => /TR : Livraison/.test(x.textContent)))), 'un accusé chez l’enseignant');
+});
+
+await v('Transfert : un destinataire inconnu ou une clé oubliée → signalé (console), le message arrive sans bouton', async () => {
+  const n0 = erreursQ.length;
+  await monter({ transfertFaux: true });
+  const L = erreursQ.splice(n0);
+  vrai(L.some((x) => /destinataire inconnu « inconnu »/.test(x)), `destinataire inconnu non signalé : ${L.join(' | ')}`);
+  vrai(L.some((x) => /« Sans clé » porte « transfert » sans « cle »/.test(x)), `clé oubliée non signalée : ${L.join(' | ')}`);
+  await aller('mail');
+  for (const sujet of ['Faux', 'Sans clé']) {
+    const id = await pg.evaluate((s) => window.__q.db.mails.find((m) => m.subject === s).id, sujet);
+    await pg.click(`${Z} [data-mail="${id}"]`);
+    await pause();
+    vrai(!(await present('[data-transfert-ouvrir]')), `bouton sous « ${sujet} »`);
   }
 });
 

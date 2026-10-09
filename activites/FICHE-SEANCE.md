@@ -118,7 +118,7 @@ plan d'entrepôt, fiche, animation) sans `id` texte non vide, sont refusées aus
 | `animation` | objet | Une animation à questions. | essais seulement (aucune séance ne la passe encore) |
 | `animations` | tableau | Plusieurs animations (rare). | essais seulement |
 | `questions` | objet | Questions au fil et points d'étape (voir « Questions au fil »). | essais seulement (aucune séance ne la passe encore) |
-| `equipe` | objet | Personnes citées par les questions, en plus de `questions.personnes`. | aucune séance, aucun essai |
+| `equipe` | objet | Personnes citées par les questions, en plus de `questions.personnes` ; destinataires d'un message à transférer (`transfert.a`). | essai des questions (`contenus/questions-essai.js`) |
 | `tirage` | (sans contrôle de type) | **Tirage mémorisé** : la déclaration `declarerTirage({ banques, … })`, que la fabrique prend dans `SEANCE.TIRAGE` (voir « Tirage mémorisé et banques »). Ou vrai (forme d'avant) = jeu tiré par élève même sans quai ni inventaire tiré : la graine est posée et inscrite dans le détail de la note. | `contenus/tirage-essai.js` (essai seulement) |
 | `seanceFinie` | fonction | `(db) → booléen` : la séance est finie sans jalon faux (ENT-5.6 : préparation terminée et vérifiée). | `activites/smoby-preparation.js` |
 | `finFige` | texte | Phrase du bandeau de fin quand une case fausse ne se rouvre plus (ENT-5.4 : le BL est signé). | `activites/smoby-reception.js` |
@@ -168,6 +168,36 @@ correction avant l'envoi. Jalon : `phrasesJustes(db, 'reponse-sophie')` → `{ e
 envois, premierCoup }`, lu sur le **dernier** envoi ; rien d'envoyé = toutes les lignes fausses. Une
 ligne `texte` n'est jamais jugée. Seulement en **réponse** à un mail reçu (pas de « Nouveau message »
 par phrases : faire écrire d'abord le destinataire). Essai : `outils/essai-2de.html`.
+
+**Transférer un message** (chantier D-1, 09/10/2026, `core/types/transfert.js` ; première séance : ENT-6.1 France
+Boissons) : l'élève tient un accueil ou une boîte partagée et transmet chaque message à la bonne personne. Un mail
+semé ou déclenché porte une **`cle`** et `transfert: { a: ['helene', 'ines', 'karim', …] }` (ids de l'équipe, dans
+l'ordre où la liste s'affiche) ; la séance passe `equipe: EQUIPE` à `creerEntreprise` (`{ ines: { nom: 'Inès Moreau',
+role: 'assistante RH', appel?: 'Inès' } }` ; les personnes des questions comptent aussi). Sous le message : « Transférer
+à… » → la liste (nom et fonction, sans aplat) → confirmation dans la page (« Transférer le message de <expéditeur> à
+<Prénom> ? ») → le message porte « Transféré à Nadia, 8 h 42 », et « ↪ À transférer » / « ↪ Transféré » dans la liste des
+messages. **Une fois** : le bouton disparaît au transfert, sauf « Corriger ». Un destinataire inconnu ou une `cle` oubliée
+est signalé (console, donc la suite de tests) et le message arrive sans bouton.
+- État, cloisonné par séance : `db.transferts[<séance>][<clé>] = { a, at, premier, n, rouvert? }` — `a` / `at` : le
+  **dernier** destinataire et son heure ; `premier` : le destinataire du premier transfert, écrit une fois ; `n` : le
+  nombre de transferts ; `rouvert` : posé par « Corriger », retiré au transfert suivant. Rien pour l'enseignant (il voit
+  le bouton, la liste, la confirmation et la mention, rien n'est rangé), rien après la remise d'une copie.
+- Jalon : `import { transfertDe } from '../core/types/transfert.js'` ; `transfertDe(db, 'msg-malo', '<id de la séance>')`
+  → `{ fait, a, at, premier, n, rouvert }` (**l'id de la séance est obligatoire** : sans lui, le jalon plante). « À faire »
+  tant que `!fait` ; le jalon juge **`a`** (le dernier) : le premier bilan est figé par le moteur (`bilan1`), et avant lui
+  chaque message n'a qu'un transfert. Un jalon qui jugerait `premier` ne verrait jamais la correction.
+- Condition : `quand: apresTransfert('msg-malo')` (`core/declencheurs.js`), vraie au transfert, **juste ou faux** ;
+  `apresTransfert()` sans clé : au premier message transféré, quel qu'il soit. Geste `messagerie:transfert` (table des
+  gestes ci-dessous), pour une question au fil « au premier transfert ».
+- Accusé de réception du destinataire choisi (« Bien reçu, merci. ») : un déclencheur `apresTransfert(<clé>)` dont
+  `semer(prenom, db)` lit `transfertDe(db, <clé>, <séance>).a`, et pour un transfert corrigé `volet.corrections[<clé>]
+  (prenom, n, db)` (n = 2 au premier transfert corrigé). Jamais « ce n'est pas pour moi ».
+- Corriger : le jalon déclare `ecran: 'transfert:<clé>'`. « Corriger » rouvre les messages dont le jalon est faux (le
+  premier transfert reste rangé, le jalon reste faux jusqu'au nouveau transfert) et ouvre le premier ; un message juste ne
+  se rouvre pas. Un nouveau transfert compte une correction (`n − 1`).
+- Gel d'une question au fil : le bouton est grisé, le message se lit.
+- Modèle : le message de la brasserie de `contenus/questions-essai.js` (`ETAPE_TRANSFERT`, accusé, `corrections`) ;
+  essai : `outils/essai-questions.html`, tests : bloc `questions`.
 
 **Décision « En litige » à la réception** (04/10/2026, ENT-5.5) : `creerEntreprise({ …, receptionLitige: true })`
 ajoute « En litige (zone litiges) » aux décisions du bon de réception (écran Réceptions) ; la ligne n'entre pas en
@@ -385,8 +415,8 @@ Un jalon (`etapes`) peut déclarer, en plus de `id`, `titre` et `verifier(db)` :
   **fixe** de la note, partagée entre ses cases : ajouter une case ne change pas l'équilibre.
 - `groupe` : la ligne du bandeau de fin (séance `correction`, ou visite notée au premier essai). Un groupe est juste quand toutes ses cases le sont. Le
   bandeau ne descend jamais à la case (une case oui/non nommée fausse donnerait la réponse) et n'affiche jamais de points.
-- `ecran` : où l'élève corrige, `'fiche:<id de la fiche>'`, `'phrases:<id du message par phrases>'` ou `'planning:<id du
-  planning>'`. Le bouton « Corriger » n'apparaît que s'il y a un `ecran` à rouvrir parmi les jalons faux. Un planning se rouvre
+- `ecran` : où l'élève corrige, `'fiche:<id de la fiche>'`, `'phrases:<id du message par phrases>'`, `'planning:<id du
+  planning>'` ou `'transfert:<clé du message>'` (un message à transférer, voir plus haut). Le bouton « Corriger » n'apparaît que s'il y a un `ecran` à rouvrir parmi les jalons faux. Un planning se rouvre
   à la première version fausse, avec le planning envoyé : si c'est la 1re, la version d'après l'aléa est mise de côté et revient
   au renvoi (deux envois = **une** correction, compteur `finis` de l'état du planning).
   Un jalon faux **sans** `ecran` ne se rouvre pas (ENT-5.4 : BL signé, camion reparti). La séance peut le dire au bandeau
@@ -418,7 +448,7 @@ jalons au premier bilan) et `bilan2` (état à la 1re correction).
 Un jalon ne se juge jamais **pendant la frappe** : chaque réécriture de la note coûte une lecture et une écriture
 (quota Spark). Les jalons d'une fiche ou d'un message basculent à l'envoi, d'un seul coup.
 
-`volet.corrections: { '<id de la fiche ou du message>': (prenom, n) => ({ mails: [...] }) }` : le message que reçoit
+`volet.corrections: { '<id de la fiche, du message par phrases ou clé du message transféré>': (prenom, n, db) => ({ mails: [...] }) }` : le message que reçoit
 l'élève à chaque envoi **corrigé** (deuxième envoi et suivants), sans rejouer le premier message ni dire si c'est juste.
 
 ### Base de l'élève, parcours, affichage
@@ -968,6 +998,7 @@ poids de ses jalons + `part` doit valoir 20 (contrôlé à l'ouverture).
   | quai `<id>` | `quai:<id>:decharger`, `quai:<id>:valider` (une palette), `quai:<id>:cloturer` |
   | plan d'entrepôt `<id>` | `entrepot:<id>:poser` (poser une palette), `entrepot:<id>:verifier` |
   | animation `<id>` | `animation:<id>:<question>` (la première réponse) |
+  | messagerie (toutes les séances) | `messagerie:transfert` (transférer un message, n'importe lequel ; chantier D-1) |
 
   Un nom qu'aucune vue de la séance ne publie (faute de frappe, vue absente) **empêche la séance de s'ouvrir**, avec la
   liste des gestes connus. `tous(…)` garde les gestes de ses conditions. Une vue nouvelle **naît avec ses gestes**

@@ -29,6 +29,7 @@ import { creerGesteTableur, retourDeTemps } from './export-tableur.js';
 import { graineDeBase, poserGraine, declarerTirage, estTirage, fautesTirage } from '../tirage.js';
 import { BAREME_AFFICHE, pointsBonus } from '../notes.js';
 import { gestesDe } from '../declencheurs.js';
+import { GESTE_TRANSFERT, rouvrirTransfert, transfertsDe, fauteTransfert } from './transfert.js';
 import { preparerPhrases } from '../phrases.js';
 import { brancherLexique, compterAide } from '../lexique.js';
 import { controlerOptions, controlerIdentifiants } from './entreprise-options.js';
@@ -59,6 +60,8 @@ export function creerEntreprise(U) {
   // déclare `questions` (format en tête de `core/types/questions.js`). Contrôlées ici : une question mal déclarée empêche
   // la séance de se charger. Le moteur ajoute lui-même un jalon par question notée (poids pris dans la `part`).
   const MQ = U.questions ? compilerQuestions(U.questions, U.equipe) : null;
+  // Les personnes de la séance (`equipe`, plus celles des questions) : les destinataires d'un message à transférer.
+  const PERSONNES = MQ ? MQ.personnes : Object.assign({}, U.equipe || {});
   // LES JALONS BONUS du confirmé (chantier D-C, lot 3) : un jalon qui déclare `bonus: true` n'est pas un jalon du socle.
   // Sans poids ni groupe, il ne compte ni dans la somme des poids (20), ni au bandeau de fin, ni dans « fini » : il n'est
   // jugé que chez un élève confirmé (`db.aisance`), hors évaluation, et son `verifier` rend null quand l'élève n'a pas
@@ -211,7 +214,8 @@ export function creerEntreprise(U) {
   const vueDeFiche = (VF) => (VF === VFICHE ? 'fiche' : `fiche:${VF.id}`);
   const ficheDeVue = (v) => VFICHES.find((VF) => vueDeFiche(VF) === v) || null;
   {
-    const connus = new Set([...VFICHES, ...VANIMS, VPL, VENT, VQUAI].filter(Boolean).flatMap((V) => V.signaux || []));
+    // La messagerie est de toutes les séances : son geste (le transfert d'un message, chantier D-1) est toujours connu.
+    const connus = new Set([...VFICHES, ...VANIMS, VPL, VENT, VQUAI].filter(Boolean).flatMap((V) => V.signaux || []).concat(GESTE_TRANSFERT));
     const cites = [];
     (U.volet && U.volet.declencheurs || []).forEach((d) => gestesDe(d.quand).forEach((g) => cites.push([g, `message « ${d.id} »`])));
     if (MQ) {
@@ -989,6 +993,9 @@ export function creerEntreprise(U) {
 
       function ajouterMail(m) {
         m.id = db.seq++; if (m.read === undefined) m.read = false;
+        // Un message à transférer (chantier D-1) mal déclaré : signalé (la suite de tests le voit), le message arrive
+        // quand même, sans bouton. Un mail semé à l'ouverture l'est à chaque montage : la faute ne passe pas inaperçue.
+        if (m.transfert) { const f = fauteTransfert(m, PERSONNES); if (f) { signaler('transfert', f); delete m.transfert; } }
         // Réponse par phrases à choisir (2de) : choix calculés et ordre tiré une fois pour toutes.
         if (m.phrases) preparerPhrases(m, db, graineDeBase(db) || ctx.profil.uid || prenom);
         db.mails.push(m); return m;
@@ -1008,7 +1015,8 @@ export function creerEntreprise(U) {
       // Fini = tout est jugé. Un jalon qui plante (état 'erreur') est jugé : un bug de contenu ne bloque personne.
       const bilanComplet = (st) => etapes.length > 0 && etapes.every((e) => st[e.id] === 'ok' || st[e.id] === 'ko' || st[e.id] === 'erreur');
       const sansFaux = (st) => etapes.every((e) => st[e.id] === 'ok' || st[e.id] === 'erreur');
-      // Les écrans à rouvrir : ceux des jalons faux qui déclarent un `ecran` ('fiche:<id>', 'phrases:<id>' ou 'planning:<id>').
+      // Les écrans à rouvrir : ceux des jalons faux qui déclarent un `ecran` ('fiche:<id>', 'phrases:<id>', 'planning:<id>'
+      // ou 'transfert:<clé du mail>').
       function ecransAFaire(st) {
         const L = [];
         etapes.forEach((e) => { if (st[e.id] === 'ko' && e.ecran && !L.includes(e.ecran)) L.push(e.ecran); });
@@ -1071,6 +1079,15 @@ export function creerEntreprise(U) {
               if (dernier) E.brouillon[m.id] = Object.assign({}, dernier.phrases.choix);
               vers = { vue: 'mail', mail: m.id };
             }
+          } else if (genre === 'transfert') {
+            // Un message mal transféré (chantier D-1) : « Transférer à… » revient sous le message ; le premier transfert
+            // reste rangé (`premier`), le jalon reste faux jusqu'au nouveau transfert. Un message juste ne se rouvre pas
+            // (seuls les jalons faux ont leur écran ici).
+            const m = db.mails.find((y) => y.folder === 'in' && y.transfert && y.cle === id);
+            if (m && transfertsDe(db, SEANCE)[id]) {
+              rouvrirTransfert(db, SEANCE, id);
+              if (!vers) vers = { vue: 'mail', mail: m.id };
+            }
           }
         });
         if (!vers) return;
@@ -1078,7 +1095,7 @@ export function creerEntreprise(U) {
         E.vue = vers.vue;
         if (vers.mail) { E.dossier = 'in'; E.mailSel = vers.mail; E.piece = null; }
         dessiner();
-        hote.querySelector('[data-fiche-envoyer], #formPhr')?.scrollIntoView({ block: 'nearest' });
+        hote.querySelector('[data-fiche-envoyer], #formPhr, [data-transfert-ouvrir]')?.scrollIntoView({ block: 'nearest' });
       }
 
       // La note du suivi de classe : les points des jalons réussis (le nombre de jalons réussis quand ils n'ont pas
@@ -1102,6 +1119,7 @@ export function creerEntreprise(U) {
           if (genre === 'fiche') n += Math.max(0, ((db.fiches && db.fiches[id] && db.fiches[id].envois) || 0) - 1);
           else if (genre === 'phrases') n += Math.max(0, db.mails.filter((m) => m.folder === 'out' && m.phrases && m.phrases.id === id).length - 1);
           else if (genre === 'planning' && VPL && VPL.id === id) n += VPL.corrections(db.plannings && db.plannings[id]);
+          else if (genre === 'transfert') n += Math.max(0, ((transfertsDe(db, SEANCE)[id] || {}).n || 0) - 1);
         });
         return n;
       }
@@ -1612,7 +1630,7 @@ export function creerEntreprise(U) {
       // La messagerie : `entreprise-messagerie.js` (lot 9c, module 13). Après `COM` et `REC`, qu'elle utilise.
       const MSG = monterMessagerie({ db, E, hote, prenom, estProf, rendue, A, VOCAB, VARIANTS, SUP_BY_ID, B, COM, REC, VDOC, VFICHES, vueDeFiche,
         VINV, VQUAI, MQ, SEANCE, reponsesFournisseur: U.reponsesFournisseur || [], ajouterMail, declencher, accuseCorrection, etapeQuiFerme,
-        sauver, dessiner, dessinerVue, aller });
+        sauver, dessiner, dessinerVue, aller, PERSONNES, signal });
       const { ouvrirMail, docVu, compterDoc } = MSG;
 
 

@@ -5,9 +5,16 @@
 // Extrait de `core/types/entreprise.js` le 09/10/2026 (chantier 9, lot 9c, module 13) : le code est celui d'avant, mot pour mot.
 // Monté à chaque ouverture : `monterMessagerie({ db, E, hote, prenom, estProf, rendue, A, VOCAB, VARIANTS, SUP_BY_ID, B, COM, REC, VDOC,
 // VFICHES, vueDeFiche, VINV, VQUAI, MQ, SEANCE, reponsesFournisseur, ajouterMail, declencher, accuseCorrection, etapeQuiFerme, sauver,
-// dessiner, dessinerVue, aller })`. `reponsesFournisseur` est `U.reponsesFournisseur || []` (lu dans `entreprise.js`) ; `ajouterMail`,
-// `declencher`, `accuseCorrection`, `etapeQuiFerme` sont des services du cœur. L'état d'écran reste dans `E` (clés `mailSel`, `dossier`,
-// `redige`, `piece`, `vus`, `brouillon`, `retourQuai`) : le cœur l'écrit aussi (`corriger()`, le bouton « Messagerie » du quai, les cartes).
+// dessiner, dessinerVue, aller, PERSONNES, signal })`. `reponsesFournisseur` est `U.reponsesFournisseur || []` (lu dans `entreprise.js`) ;
+// `ajouterMail`, `declencher`, `accuseCorrection`, `etapeQuiFerme`, `signal` sont des services du cœur ; `PERSONNES` = `equipe` + personnes
+// des questions. L'état d'écran reste dans `E` (clés `mailSel`, `dossier`, `redige`, `piece`, `vus`, `brouillon`, `retourQuai`, et pour le
+// transfert `transfertListe`, `transfertsProf`) : le cœur l'écrit aussi (`corriger()`, le bouton « Messagerie » du quai, les cartes).
+//
+// LE TRANSFERT (chantier D-1, 09/10/2026, état et format dans `transfert.js`) : sous un mail reçu qui porte `transfert: { a: [ids] }` et
+// une `cle`, le bouton « Transférer à… » ouvre la liste des destinataires (nom et fonction, sans aplat), puis une confirmation dans la page ;
+// le mail porte ensuite « Transféré à Nadia, 8 h 42 ». Un geste de travail : rangé dans `db.transferts[<séance>]`, signal
+// `messagerie:transfert`, messages déclenchés (`apresTransfert`), accusé d'un transfert corrigé (`volet.corrections[<clé>]`). Gelé par le
+// gel générique du cœur (le bouton n'est pas `data-libre`). L'enseignant voit tout et ne range rien (`E.transfertsProf`, écran seulement).
 // Le drapeau de confirmation d'un envoi par phrases (`confirmeEnvoi`) vit DANS le montage (une ouverture), jamais en haut du fichier.
 // Rend `{ vues: { mail }, brancher(z), ouvrirMail, docVu, compterDoc }` : `ouvrirMail` sert aux cartes des messages et au retour du quai ;
 // `docVu` et `compterDoc` aux fiches (pièces jointes ouvertes). Les clics `[data-ouvrir-cmd]`, `[data-ouvrir-rec]` et `[data-enreg-cmd]`
@@ -19,19 +26,75 @@
 // (l'espace entre deux balises fait partie du HTML rendu : la preuve du lot 9c compare ce HTML octet pour octet).
 // Un module `entreprise-*.js` n'importe JAMAIS `entreprise.js` (import circulaire).
 
-import { ech, toast, confirmerDansLaPage } from '../ui.js';
+import { ech, toast, confirmerDansLaPage, auClavier } from '../ui.js';
 import { appel } from './questions.js';
 import { texteCompose } from '../phrases.js';
 import { compterAide } from '../lexique.js';
 import { fdate, fdt, norm } from './entreprise-outils.js';
+import { GESTE_TRANSFERT, transfertsDe, peutTransferer, rangerTransfert, heureTransfert } from './transfert.js';
 
 export function monterMessagerie({ db, E, hote, prenom, estProf, rendue, A, VOCAB, VARIANTS, SUP_BY_ID, B, COM, REC, VDOC, VFICHES, vueDeFiche,
   VINV, VQUAI, MQ, SEANCE, reponsesFournisseur, ajouterMail, declencher, accuseCorrection, etapeQuiFerme, sauver, dessiner, dessinerVue,
-  aller }) {
+  aller, PERSONNES = {}, signal = () => {} }) {
   const { unite } = A;
   const { tousFournisseurs } = B;
   const { corpsMailCommande, preparer } = COM;
   const { receptionDe, bonDeLivraison } = REC;
+
+  // ── Le transfert d'un message (chantier D-1) ────────────────────────────────────────────────────────────────
+  // L'état vu à l'écran : celui de la base chez l'élève ; chez l'enseignant, celui de l'écran seul (rien n'est rangé).
+  const transfertsProf = E.transfertsProf || (E.transfertsProf = {});
+  const etatTransfert = (m) => (estProf ? transfertsProf[m.cle] : transfertsDe(db, SEANCE)[m.cle]) || null;
+  const aTransferer = (m) => !!(m && m.folder === 'in' && m.transfert && m.cle);
+  // Le bouton est offert : jamais transféré, ou rouvert par « Corriger ». L'enseignant peut toujours essayer.
+  const transfertOuvert = (m) => estProf || peutTransferer(db, SEANCE, m.cle);
+  const appelDe = (id) => appel(PERSONNES[id]) || id;
+  // La ligne de la liste des messages : « À transférer » / « Transféré », en texte (jamais de couleur).
+  function marqueTransfert(m) {
+    if (!aTransferer(m)) return '';
+    const t = etatTransfert(m);
+    return `<span class="note" data-transfert-marque="${ech(m.cle)}">${t && !(t.rouvert && !estProf) ? '↪ Transféré' : '↪ À transférer'}</span>`;
+  }
+  // Sous le mail ouvert : la mention du dernier transfert, le bouton, et la liste des destinataires quand elle est ouverte.
+  function blocTransfert(sel) {
+    if (!aTransferer(sel)) return '';
+    const t = etatTransfert(sel);
+    const mention = t && t.a ? `<p class="note" data-transfert-fait="${ech(sel.cle)}">Transféré à ${ech(appelDe(t.a))}, ${ech(heureTransfert(t.at))}</p>` : '';
+    if (!transfertOuvert(sel)) return `<div class="ent-transfert" data-transfert="${ech(sel.cle)}" style="margin-top:14px">${mention}</div>`;
+    const ouverte = E.transfertListe === sel.id;
+    const liste = ouverte ? `<ul class="ent-transfert-liste" data-transfert-liste aria-label="Destinataires"
+        style="list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:6px;align-items:flex-start">
+        ${sel.transfert.a.filter((id) => PERSONNES[id]).map((id) => `<li><button type="button" class="btn" data-transferer="${ech(id)}"
+          style="text-align:left"><b>${ech(PERSONNES[id].nom || id)}</b>${PERSONNES[id].role ? ` <span class="note">· ${ech(PERSONNES[id].role)}</span>` : ''}</button></li>`).join('')}
+      </ul>` : '';
+    return `<div class="ent-transfert" data-transfert="${ech(sel.cle)}" style="margin-top:14px">${mention}
+        <button type="button" class="btn" data-transfert-ouvrir aria-expanded="${ouverte ? 'true' : 'false'}">Transférer à…</button>${liste}</div>`;
+  }
+  // Au clavier, après le transfert (la liste et la confirmation sont parties) : le focus revient au message dans la liste.
+  const refocaliser = (m) => { if (auClavier()) hote.querySelector(`[data-mail="${m.id}"]`)?.focus(); };
+  function transferer(id, bouton) {
+    const m = db.mails.find((x) => x.id === E.mailSel);
+    if (!aTransferer(m) || !PERSONNES[id] || !m.transfert.a.includes(id)) return;
+    if (!estProf && (rendue() || !peutTransferer(db, SEANCE, m.cle))) return;
+    confirmerDansLaPage(bouton, `Transférer le message de ${m.from} à ${appelDe(id)} ?`, () => {
+      E.transfertListe = null;
+      if (estProf) {
+        // L'enseignant voit le geste à l'écran ; rien n'est rangé dans la base.
+        transfertsProf[m.cle] = { a: id, at: Date.now() };
+        dessiner(); refocaliser(m);
+        toast('Vue enseignant : le transfert n’est pas enregistré.');
+        return;
+      }
+      if (rendue() || !peutTransferer(db, SEANCE, m.cle)) return;
+      const t = rangerTransfert(db, SEANCE, m.cle, id, Date.now());
+      signal(GESTE_TRANSFERT);
+      // Comme l'envoi d'une fiche : les messages déclenchés d'abord ; un transfert CORRIGÉ (le deuxième…) reçoit l'accusé du volet.
+      const arrive = declencher();
+      if (!arrive && t.n > 1) accuseCorrection(m.cle, t.n);
+      sauver(); dessiner(); refocaliser(m);
+      toast(`Message transféré à ${appelDe(id)}.`);
+    }, { oui: 'Oui, transférer' });
+  }
 
       function vueMail() {
         const adresse = `${norm(prenom).replace(/ /g, '')}@${VOCAB.mailDomain}`;
@@ -57,7 +120,7 @@ export function monterMessagerie({ db, E, hote, prenom, estProf, rendue, A, VOCA
         const items = liste.map((m) => `
           <button class="ent-mitem ${m.read || E.dossier === 'out' ? '' : 'nonlu'} ${sel && sel.id === m.id ? 'on' : ''}" data-mail="${m.id}">
             <span class="ent-de"><span>${ech(E.dossier === 'in' ? m.from : 'À : ' + m.to)}</span><span class="note">${fdate(m.ts)}</span></span>
-            <span class="ent-obj">${ech(m.subject)}</span></button>`).join('')
+            <span class="ent-obj">${ech(m.subject)}</span>${marqueTransfert(m)}</button>`).join('')
           || '<div class="vide">Aucun message.</div>';
 
         let lecteur = '<div class="ent-vide-lect note">Sélectionnez un message pour le lire.</div>';
@@ -98,7 +161,7 @@ export function monterMessagerie({ db, E, hote, prenom, estProf, rendue, A, VOCA
             <p class="note">${E.dossier === 'in' ? 'De : ' + ech(sel.from + ' <' + sel.fromMail + '>') : 'À : ' + ech(sel.to + ' <' + (sel.toMail || '') + '>')} · ${fdt(sel.ts)}</p>
             ${corps}
             ${VDOC ? VDOC.rangee(sel.pieces, docVu) : ''}
-            ${actions ? `<div class="rangee" style="margin-top:14px">${actions}</div>` : ''}
+            ${actions ? `<div class="rangee" style="margin-top:14px">${actions}</div>` : ''}${E.dossier === 'in' ? blocTransfert(sel) : ''}
             ${E.dossier === 'in' && sel.phrases ? (etapeQuiFerme(`repondre:${sel.cle || sel.phrases.id}`) ? '' : formPhrases(sel)) : `<form id="formRep" hidden style="margin-top:14px">
               <div class="champ"><label for="repT">Votre réponse</label><textarea id="repT" rows="${sel.amorce ? 8 : 6}">${ech(sel.amorce || '')}</textarea></div>
               <button class="btn btn-p" type="submit">Envoyer</button></form>`}</div>`;
@@ -299,6 +362,14 @@ export function monterMessagerie({ db, E, hote, prenom, estProf, rendue, A, VOCA
       if (el.value === '') delete b[el.dataset.phrase]; else b[el.dataset.phrase] = +el.value;
       const ap = z.querySelector('[data-phr-apercu]'); if (ap) ap.innerHTML = apercuPhrases(sel);
     }));
+    // Le transfert : le bouton ouvre (ou referme) la liste ; au clavier, le focus va au premier destinataire.
+    z.querySelector('[data-transfert-ouvrir]')?.addEventListener('click', () => {
+      E.transfertListe = E.transfertListe === E.mailSel ? null : E.mailSel;
+      const clavier = auClavier();
+      dessiner();
+      if (clavier && E.transfertListe != null) hote.querySelector('[data-transferer]')?.focus();
+    });
+    z.querySelectorAll('[data-transferer]').forEach((b) => b.addEventListener('click', () => transferer(b.dataset.transferer, b)));
     z.querySelectorAll('[data-enreg-cmd]').forEach((b) => b.addEventListener('click', () => enregistrerCommande(+b.dataset.enregCmd)));
     z.querySelectorAll('[data-ouvrir-cmd]').forEach((b) => b.addEventListener('click', () => aller('commande', { no: b.dataset.ouvrirCmd })));
     z.querySelectorAll('[data-ouvrir-rec]').forEach((b) => b.addEventListener('click', () => aller('reception', { no: b.dataset.ouvrirRec })));

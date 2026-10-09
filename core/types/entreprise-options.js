@@ -58,7 +58,7 @@ export const OPTIONS = {
   animation: { type: 'object', role: 'animation à questions (une seule)' },
   animations: { type: 'array', role: 'plusieurs animations à questions (rare)' },
   questions: { type: 'object', role: "questions au fil et points d'étape" },
-  equipe: { type: 'object', role: 'personnes citées par les questions (en plus de `questions.personnes`)' },
+  equipe: { type: 'object', role: 'personnes citées par les questions (en plus de `questions.personnes`) et destinataires d’un message à transférer' },
   // — Ce que le contenu fournit au moteur (chantier 9, lot 9b : le moteur n'importe plus aucun fichier de `contenus/`) —
   // Facultatives : la fabrique `seanceEntreprise` les prend dans l'univers (sinon dans la séance, sinon dans les options).
   couleurs: { type: 'object', role: 'noms et teintes des couleurs des variantes : { code: [nom, teinte] } (sans elle, pas de pastille)' },

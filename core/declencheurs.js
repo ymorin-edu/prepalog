@@ -10,6 +10,7 @@
 //   quand: apresPlanning('smoby-quais')                      il a envoyé son planning
 //   quand: apresFiche('selection')                           il a envoyé sa fiche
 //   quand: apresGeste('quai:fb-quai:decharger')              il a fait ce geste dans une vue (lot 3, 08/10/2026)
+//   quand: apresTransfert('msg-malo')                         il a transféré ce message (chantier D-1, 09/10/2026)
 //   quand: tous(apresJalon(…), apresMail(…))                 les deux
 //
 // Une condition reçoit `(db, seance)` : `seance` est l'id de la séance (les gestes sont cloisonnés par séance).
@@ -88,6 +89,18 @@ export function apresGeste(nom) {
   const f = (db, seance) => !!(db && db.gestes && db.gestes[seance] && db.gestes[seance][nom]);
   f.gestes = [nom];
   return f;
+}
+
+// Vrai dès que l'élève a TRANSFÉRÉ le message de clé `idMail` (bouton « Transférer à… » de la messagerie, chantier D-1,
+// 09/10/2026, `core/types/transfert.js`) ; sans `idMail`, dès qu'un message quelconque de la séance est transféré.
+// **Juste ou faux, peu importe** : le destinataire n'est jamais regardé (sinon l'arrivée du message suivant dirait
+// « c'est juste », et l'élève qui se trompe resterait bloqué). Cloisonné par séance : `db.transferts[<séance>]`.
+export function apresTransfert(idMail) {
+  return (db, seance) => {
+    const S = db && db.transferts && db.transferts[seance];
+    if (!S) return false;
+    return idMail == null ? Object.keys(S).length > 0 : !!S[idMail];
+  };
 }
 
 // Les gestes cités par une condition (pour le contrôle au chargement).
