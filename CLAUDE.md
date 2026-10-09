@@ -126,7 +126,7 @@ export const meta = {
   competences: [], temps,   // pour les notes par compétence (séance Simulog : toujours déclarés)
   bareme: 6,                // présence = apparaît dans le suivi de classe
   notation: 'prof' | 'avancement',  // absent = score auto ramené sur 20
-  portee: 'eleve' | 'equipe' | 'groupe' | 'commun',
+  portee: 'eleve' | 'groupe',
   pret: true,               // false = cachée aux élèves (l'enseignant la voit, étiquetée)
   ouverture: 'prof',        // fermée aux élèves tant que l'enseignant ne l'a pas cochée (Conduite de séance)
 };
