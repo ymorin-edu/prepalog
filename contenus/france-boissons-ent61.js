@@ -20,11 +20,11 @@
 // Valeurs attendues CALCULÉES depuis les banques (le poste de la case, l'attendu du lien, le destinataire du message),
 // jamais recopiées ; dans les tests, écrites à la main.
 //
-// Le JEU DE L'ÉLÈVE dans les écrans (organigramme à cases vides, lignes de la fiche, ordre des choix) : le moteur ne sait
-// pas encore déclarer une fiche ou un document « fonction de la base de l'élève » (demande au moteur, §7.3 du brief).
-// En attendant, l'activité fabrique le moteur de la séance À L'OUVERTURE, pour l'élève qui l'ouvre : `jeuAOuverture(ctx)`
-// range le tirage (comme le moteur le ferait, par `TIRAGE.assurer`), puis `optionsPour(jeu)` rend sa fiche, ses documents
-// et ses jalons. Voir l'en-tête de `activites/france-boissons-organigramme.js`.
+// Le JEU DE L'ÉLÈVE dans les écrans (organigramme à cases vides, lignes de la fiche, ordre des choix, écran de « Corriger »
+// de chaque message) : déclaré « fonction de la base » (chantier D-1 bis, brief §7.3) — `blocs: (db) => …` des fiches,
+// `html: (db) => …` de l'organigramme, `ecran: (db) => …` des jalons du courrier. Le moteur range le tirage à l'ouverture,
+// avant le premier dessin, et réévalue ces fonctions à chaque dessin : après « Réinitialiser », les écrans suivent le
+// nouveau tirage. Ces fonctions ne font que LIRE la base.
 
 import { apresFiche, apresTransfert } from '../core/declencheurs.js';
 import { transfertDe } from '../core/types/transfert.js';
@@ -152,35 +152,10 @@ export function courrierDe(db) {
   return [malo, a, x, b, y, c].filter(Boolean);
 }
 
-// Le jeu de l'élève pour les écrans (organigramme, fiche, jalons). `null` : le jeu « modèle » (contrôle au chargement).
+// Le jeu de l'élève pour les écrans, lu dans SA base à chaque dessin (base vide : aucune case, aucune ligne).
 export function jeuDe(db) {
   const rec = TIRAGE.tirage(db);
-  return {
-    graine: (rec && rec.graine) || 'modele',
-    lettres: lettresDe(db),
-    liens: liensDe(db),
-    courrierSocle: courrierSocleDe(db).map((p) => p.id),
-    courrierBonus: courrierBonusDe(db).map((p) => p.id),
-  };
-}
-export function jeuModele() {
-  const db = { tirages: { [ID]: TIRAGE.tirer(`modele|${ID}`) } };
-  return jeuDe(db);
-}
-
-// À l'ouverture, AVANT que le moteur soit fabriqué : le tirage de l'élève est rangé dans sa base exactement comme le
-// moteur le ferait (`TIRAGE.assurer`, même graine : identifiant + id de la séance ; même niveau : celui que le moteur
-// fige dans `db.aisance`, règle recopiée de `core/types/entreprise.js`, `figerAisance`). Le moteur trouve ensuite le
-// tirage déjà là et n'y touche pas. Rend le jeu de l'élève.
-const NIVEAUX = ['standard', 'confirme', 'accompagne'];
-export function jeuAOuverture(ctx) {
-  const db = ctx.jeu.etat();
-  const estProf = ctx.profil.role === 'prof';
-  const prenom = ctx.profil.prenom || ctx.profil.nom || 'Élève';
-  const aisance = db.aisancePour === ID && NIVEAUX.includes(db.aisance) ? db.aisance
-    : (!estProf && NIVEAUX.includes(ctx.aisance) ? ctx.aisance : 'standard');
-  if (TIRAGE.assurer(db, { uid: ctx.profil.uid || prenom, aisance, copie: false })) ctx.jeu.sauver();
-  return jeuDe(db);
+  return { graine: (rec && rec.graine) || 'modele', lettres: lettresDe(db), liens: liensDe(db) };
 }
 
 // ─────────────────────────────────────────────────────────────── les fiches
@@ -198,43 +173,43 @@ export const QUESTIONS_VIDEO = [
     choix: [['zero-accident', 'Zéro accident'], ['2-heures', 'Livrer en moins de 2 heures'], ['zero-carton', 'Zéro carton perdu']], juste: 'zero-accident' },
   { id: 'electriques', lib: 'Combien de camions électriques la vidéo annonce-t-elle ?', choix: [['2', '2'], ['10', '10'], ['35', '35']], juste: '10' },
 ];
-export function ficheVu(graine) {
-  return {
-    id: VU, libelle: 'Ce que j’ai vu', titre: 'Ce que j’ai vu — la plateforme en vidéo',
-    sousTitre: 'Ton professeur projette une vidéo d’1 min 30 sur la plateforme de Buchelay. Regarde-la, puis réponds. '
-      + 'Si la vidéo ne passe pas, envoie la fiche vide : ce n’est pas noté.',
-    bouton: 'Ouvrir la fiche « Ce que j’ai vu »',
-    blocs: QUESTIONS_VIDEO.map((q) => ({ type: 'liste', id: q.id, lib: q.lib, vide: 'Choisir…',
-      choix: melange(graine, `vu-${q.id}`, q.choix).map(([v, lib]) => ({ v, lib })) })),
-    envoi: { bouton: 'Envoyer la fiche à Inès', a: 'Inès', suite: 'Inès va te répondre.', incomplet: true },
-  };
-}
+export const FICHE_VU = {
+  id: VU, libelle: 'Ce que j’ai vu', titre: 'Ce que j’ai vu — la plateforme en vidéo',
+  sousTitre: 'Ton professeur projette une vidéo d’1 min 30 sur la plateforme de Buchelay. Regarde-la, puis réponds. '
+    + 'Si la vidéo ne passe pas, envoie la fiche vide : ce n’est pas noté.',
+  bouton: 'Ouvrir la fiche « Ce que j’ai vu »',
+  blocs: (db) => QUESTIONS_VIDEO.map((q) => ({ type: 'liste', id: q.id, lib: q.lib, vide: 'Choisir…',
+    choix: melange(jeuDe(db).graine, `vu-${q.id}`, q.choix).map(([v, lib]) => ({ v, lib })) })),
+  envoi: { bouton: 'Envoyer la fiche à Inès', a: 'Inès', suite: 'Inès va te répondre.', incomplet: true },
+};
 
 // Étape 2 — « Qui fait quoi ? » : les cases vides (une liste par lettre), le chef de Lucas, les liens (oui = hiérarchique).
 export const ENCADRE = 'Lien hiérarchique : ton chef. Il te donne ton travail, décide et valide tes demandes.\n'
   + 'Lien fonctionnel : un collègue d’un autre service qui t’aide, t’informe ou te donne une règle à suivre, sans être ton chef.';
 export const CHOIX_CHEF = ['karim', 'nadia', 'ines', 'helene'];
-export function ficheQui(jeu) {
+// Les blocs de la fiche pour un jeu : une liste par lettre de SES cases vides, SES situations dans son ordre.
+export function blocsQui(jeu) {
   const lettres = Object.values(jeu.lettres).sort();
-  return {
-    id: QFQ, libelle: 'Qui fait quoi ?', titre: 'Qui fait quoi ? — la plateforme de Buchelay',
-    sousTitre: 'L’organigramme et les fiches de chacun sont à gauche. Complète la fiche, puis envoie-la à Inès.',
-    documents: ['organigramme', 'annuaire'],
-    bouton: 'Ouvrir la fiche « Qui fait quoi ? »',
-    blocs: [
-      { type: 'encadre', titre: 'Hiérarchique ou fonctionnel ?', texte: `\n${ENCADRE}` },
-      { type: 'cadre', titre: '1. Les cases vides de l’organigramme', consigne: 'Complète chaque case vide de l’organigramme.',
-        blocs: lettres.map((l) => ({ type: 'liste', id: champCase(l), lib: `Case ${l}`, vide: 'Choisir…', manque: `la case ${l}`, choix: NOMS })) },
-      { type: 'cadre', titre: '2. Le chef de Lucas', blocs: [
-        { type: 'liste', id: 'chefLucas', lib: 'Lucas dépend hiérarchiquement de', vide: 'Choisir…', manque: 'le chef de Lucas',
-          choix: melange(jeu.graine, 'chef', CHOIX_CHEF).map((id) => ({ v: id, lib: EQUIPE[id].nom })) }] },
-      { type: 'cadre', titre: '3. Le lien est-il hiérarchique ?', consigne: 'Pour chaque situation : oui si le lien est hiérarchique, non s’il est fonctionnel.',
-        blocs: [{ type: 'ouinon', id: 'liens', entete: 'Situation', manque: '{n} situation(s) sans réponse',
-          colonnes: [{ id: H, lib: 'Lien hiérarchique ?' }], lignes: jeu.liens.map((p) => ({ id: p.id, lib: p.texte })) }] },
-    ],
-    envoi: { bouton: 'Envoyer la fiche à Inès', a: 'Inès', suite: 'Inès va te répondre.' },
-  };
+  return [
+    { type: 'encadre', titre: 'Hiérarchique ou fonctionnel ?', texte: `\n${ENCADRE}` },
+    { type: 'cadre', titre: '1. Les cases vides de l’organigramme', consigne: 'Complète chaque case vide de l’organigramme.',
+      blocs: lettres.map((l) => ({ type: 'liste', id: champCase(l), lib: `Case ${l}`, vide: 'Choisir…', manque: `la case ${l}`, choix: NOMS })) },
+    { type: 'cadre', titre: '2. Le chef de Lucas', blocs: [
+      { type: 'liste', id: 'chefLucas', lib: 'Lucas dépend hiérarchiquement de', vide: 'Choisir…', manque: 'le chef de Lucas',
+        choix: melange(jeu.graine, 'chef', CHOIX_CHEF).map((id) => ({ v: id, lib: EQUIPE[id].nom })) }] },
+    { type: 'cadre', titre: '3. Le lien est-il hiérarchique ?', consigne: 'Pour chaque situation : oui si le lien est hiérarchique, non s’il est fonctionnel.',
+      blocs: [{ type: 'ouinon', id: 'liens', entete: 'Situation', manque: '{n} situation(s) sans réponse',
+        colonnes: [{ id: H, lib: 'Lien hiérarchique ?' }], lignes: jeu.liens.map((p) => ({ id: p.id, lib: p.texte })) }] },
+  ];
 }
+export const FICHE_QUI = {
+  id: QFQ, libelle: 'Qui fait quoi ?', titre: 'Qui fait quoi ? — la plateforme de Buchelay',
+  sousTitre: 'L’organigramme et les fiches de chacun sont à gauche. Complète la fiche, puis envoie-la à Inès.',
+  documents: ['organigramme', 'annuaire'],
+  bouton: 'Ouvrir la fiche « Qui fait quoi ? »',
+  blocs: (db) => blocsQui(jeuDe(db)),
+  envoi: { bouton: 'Envoyer la fiche à Inès', a: 'Inès', suite: 'Inès va te répondre.' },
+};
 
 // ─────────────────────────────────────────────────────────────── les jalons (14 : 13 ici + la question du point d'étape)
 // Poids validés par défaut (brief §5 et §11) : organigramme 5 (Karim 2, deux cases à 1,5), chef de Lucas 2, liens 5
@@ -267,40 +242,36 @@ function jugerMessage(db, p) {
   return t.a === p.a ? { status: 'ok' } : { status: 'ko', detail: `Transféré à ${EQUIPE[t.a] ? EQUIPE[t.a].nom : t.a}.` };
 }
 
-// Les jalons pour CE jeu : seuls les écrans de « Corriger » des messages (`transfert:<clé>`) dépendent de l'élève.
-export function etapesPour(jeu) {
-  const J = jeu || jeuModele();
-  const casesSocle = (db) => TIRAGE.piecesTirees(db, 'cases');
-  return [
-    { id: 'case-karim', titre: 'Organigramme : la case de Karim', groupe: GROUPES.orga, ecran: ECRAN_FICHE, poids: 2,
-      verifier: (db) => jugerCase(db, casesSocle(db)[0]) },
-    { id: 'case-2', titre: 'Organigramme : la première case tirée', groupe: GROUPES.orga, ecran: ECRAN_FICHE, poids: 1.5,
-      verifier: (db) => jugerCase(db, casesSocle(db)[1]) },
-    { id: 'case-3', titre: 'Organigramme : la seconde case tirée', groupe: GROUPES.orga, ecran: ECRAN_FICHE, poids: 1.5,
-      verifier: (db) => jugerCase(db, casesSocle(db)[2]) },
-    { id: 'chef-lucas', titre: 'Le chef de Lucas', groupe: GROUPES.chef, ecran: ECRAN_FICHE, poids: 2,
-      verifier(db) {
-        const f = ficheEnvoyee(db, QFQ);
-        if (!f.envoye) return attente;
-        return f.valeurs.chefLucas === 'karim' ? { status: 'ok' } : { status: 'ko' };
-      } },
-    ...[0, 1, 2, 3, 4].map((i) => ({ id: `lien-${i + 1}`, titre: `Lien n° ${i + 1} : hiérarchique ou fonctionnel`, groupe: GROUPES.liens,
-      ecran: ECRAN_FICHE, poids: 1, verifier: (db) => jugerLien(db, TIRAGE.piecesTirees(db, 'liens')[i]) })),
-    ...[0, 1, 2, 3].map((i) => ({ id: i ? `courrier-${i + 1}` : 'courrier-malo',
-      titre: i ? `Courrier : le message tiré n° ${i}` : 'Courrier : le message de Malo', groupe: GROUPES.courrier,
-      ecran: `transfert:${J.courrierSocle[i]}`, poids: 1.5, verifier: (db) => jugerMessage(db, courrierSocleDe(db)[i]) })),
-    // Les cas bonus du confirmé : sans poids ni groupe, `null` quand l'élève ne les a pas reçus (caché à l'élève).
-    { id: 'case-bonus', bonus: true, ecran: ECRAN_FICHE, titre: 'Organigramme : case en plus',
-      verifier: (db) => { const p = TIRAGE.piecesBonus(db, 'cases')[0]; return p ? jugerCase(db, p) : null; } },
-    ...[0, 1].map((i) => ({ id: `lien-bonus-${i + 1}`, bonus: true, ecran: ECRAN_FICHE, titre: `Lien en plus n° ${i + 1}`,
-      verifier: (db) => { const p = TIRAGE.piecesBonus(db, 'liens')[i]; return p ? jugerLien(db, p) : null; } })),
-    ...[0, 1].map((i) => ({ id: `courrier-bonus-${i + 1}`, bonus: true, titre: `Courrier : message en plus n° ${i + 1}`,
-      ...(J.courrierBonus[i] ? { ecran: `transfert:${J.courrierBonus[i]}` } : {}),
-      verifier: (db) => { const p = courrierBonusDe(db)[i]; return p ? jugerMessage(db, p) : null; } })),
-  ];
-}
-// Les jalons « modèle » (exigés par la fabrique au chargement ; l'ouverture les remplace par ceux de l'élève).
-export const ETAPES = etapesPour(null);
+// L'écran de « Corriger » d'un message : celui que l'élève a tiré à ce rang (fonction de la base, chantier D-1 bis).
+const ecranMessage = (p) => (p ? `transfert:${p.id}` : null);
+const casesSocle = (db) => TIRAGE.piecesTirees(db, 'cases');
+export const ETAPES = [
+  { id: 'case-karim', titre: 'Organigramme : la case de Karim', groupe: GROUPES.orga, ecran: ECRAN_FICHE, poids: 2,
+    verifier: (db) => jugerCase(db, casesSocle(db)[0]) },
+  { id: 'case-2', titre: 'Organigramme : la première case tirée', groupe: GROUPES.orga, ecran: ECRAN_FICHE, poids: 1.5,
+    verifier: (db) => jugerCase(db, casesSocle(db)[1]) },
+  { id: 'case-3', titre: 'Organigramme : la seconde case tirée', groupe: GROUPES.orga, ecran: ECRAN_FICHE, poids: 1.5,
+    verifier: (db) => jugerCase(db, casesSocle(db)[2]) },
+  { id: 'chef-lucas', titre: 'Le chef de Lucas', groupe: GROUPES.chef, ecran: ECRAN_FICHE, poids: 2,
+    verifier(db) {
+      const f = ficheEnvoyee(db, QFQ);
+      if (!f.envoye) return attente;
+      return f.valeurs.chefLucas === 'karim' ? { status: 'ok' } : { status: 'ko' };
+    } },
+  ...[0, 1, 2, 3, 4].map((i) => ({ id: `lien-${i + 1}`, titre: `Lien n° ${i + 1} : hiérarchique ou fonctionnel`, groupe: GROUPES.liens,
+    ecran: ECRAN_FICHE, poids: 1, verifier: (db) => jugerLien(db, TIRAGE.piecesTirees(db, 'liens')[i]) })),
+  ...[0, 1, 2, 3].map((i) => ({ id: i ? `courrier-${i + 1}` : 'courrier-malo',
+    titre: i ? `Courrier : le message tiré n° ${i}` : 'Courrier : le message de Malo', groupe: GROUPES.courrier,
+    ecran: (db) => ecranMessage(courrierSocleDe(db)[i]), poids: 1.5, verifier: (db) => jugerMessage(db, courrierSocleDe(db)[i]) })),
+  // Les cas bonus du confirmé : sans poids ni groupe, `null` quand l'élève ne les a pas reçus (caché à l'élève).
+  { id: 'case-bonus', bonus: true, ecran: ECRAN_FICHE, titre: 'Organigramme : case en plus',
+    verifier: (db) => { const p = TIRAGE.piecesBonus(db, 'cases')[0]; return p ? jugerCase(db, p) : null; } },
+  ...[0, 1].map((i) => ({ id: `lien-bonus-${i + 1}`, bonus: true, ecran: ECRAN_FICHE, titre: `Lien en plus n° ${i + 1}`,
+    verifier: (db) => { const p = TIRAGE.piecesBonus(db, 'liens')[i]; return p ? jugerLien(db, p) : null; } })),
+  ...[0, 1].map((i) => ({ id: `courrier-bonus-${i + 1}`, bonus: true, titre: `Courrier : message en plus n° ${i + 1}`,
+    ecran: (db) => ecranMessage(courrierBonusDe(db)[i]),
+    verifier: (db) => { const p = courrierBonusDe(db)[i]; return p ? jugerMessage(db, p) : null; } })),
+];
 
 // ─────────────────────────────────────────────────────────────── les messages
 
@@ -377,24 +348,20 @@ export const ACCUEIL = {
   ],
 };
 
-// ─────────────────────────────────────────────────────────────── les options de la séance, pour un jeu
+// ─────────────────────────────────────────────────────────────── les options de la séance
 
-// Le document « organigramme » de l'élève : l'organigramme commun, avec SES cases vides.
-export const organigrammeEleve = (jeu) => ({ id: 'organigramme', titre: 'Organigramme simplifié de la plateforme', court: 'Organigramme',
-  html: organigrammeHtml({ vides: jeu.lettres }) });
+// Le document « organigramme » de l'élève : l'organigramme commun, avec SES cases vides (fonction de la base).
+export const DOC_ORGANIGRAMME_ELEVE = { id: 'organigramme', titre: 'Organigramme simplifié de la plateforme', court: 'Organigramme',
+  html: (db) => organigrammeHtml({ vides: lettresDe(db) }) };
 
-export function optionsPour(jeu) {
-  const J = jeu || jeuModele();
-  return {
-    menu: [],
-    exercice: 'Séance 1 : bienvenue à Buchelay',
-    sansTrame: 'Tout se fait à l’écran',
-    lexique: LEXIQUE,
-    equipe: EQUIPE,
-    questions: QUESTIONS,
-    documents: [organigrammeEleve(J), DOC_ANNUAIRE],
-    documentsStyle: STYLE_DOCUMENTS,
-    fiches: [ficheVu(J.graine), ficheQui(J)],
-    etapes: etapesPour(J),
-  };
-}
+export const OPTIONS = {
+  menu: [],
+  exercice: 'Séance 1 : bienvenue à Buchelay',
+  sansTrame: 'Tout se fait à l’écran',
+  lexique: LEXIQUE,
+  equipe: EQUIPE,
+  questions: QUESTIONS,
+  documents: [DOC_ORGANIGRAMME_ELEVE, DOC_ANNUAIRE],
+  documentsStyle: STYLE_DOCUMENTS,
+  fiches: [FICHE_VU, FICHE_QUI],
+};

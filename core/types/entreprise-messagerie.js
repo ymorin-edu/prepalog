@@ -154,7 +154,7 @@ export function monterMessagerie({ db, E, hote, prenom, estProf, rendue, A, VOCA
           }
           // Une pièce jointe ouverte prend la place du texte, dans le même lecteur.
           const piece = VDOC && E.piece && VDOC.pieces(sel.pieces).includes(E.piece) ? E.piece : null;
-          if (piece) lecteur = `<div class="ent-lecteur">${VDOC.visionneuse(piece, sel.pieces)}</div>`;
+          if (piece) lecteur = `<div class="ent-lecteur">${VDOC.visionneuse(piece, sel.pieces, db)}</div>`;
           else lecteur = `<div class="ent-lecteur">
             <button class="lien-accueil" data-mail-retour>← Retour</button>
             <h3>${ech(sel.subject)}</h3>

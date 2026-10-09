@@ -254,6 +254,24 @@ await v('ENT-6.1 : tirage stable — mêmes cases, situations et messages après
   vrai(JSON.stringify(d.tirages[ID].pieces.courrier) !== JSON.stringify(a.tirages[ID].pieces.courrier), 'mêmes messages que le voisin');
 });
 
+await v('ENT-6.1 : niveau changé par l’enseignant après la première ouverture, puis « Réinitialiser » → nouveau tirage (confirmé) et les écrans le suivent sans rouvrir la séance', async () => {
+  const a = await monter({ uid: 'fb-niveau', aisance: 'standard' });
+  egal(a.aisance, 'standard', 'niveau figé à la première ouverture');
+  // L'enseignant passe l'élève en confirmé : la séance commencée garde son niveau…
+  await monter({ uid: 'fb-niveau', aisance: 'confirme', db: a });
+  await aller('fiche:qui-fait-quoi');
+  egal(await pg.$$eval(`${Z} [data-og-case]`, (L) => L.length), 3, 'cases vides avant « Réinitialiser »');
+  // … jusqu'à « Réinitialiser », qui relit le niveau et refait le tirage, dans la même page.
+  await pg.click(`${Z} [data-raz]`);
+  await pause();
+  const b = await base();
+  egal([b.aisance, (b.tirages[ID].bonus || {}).cases && b.tirages[ID].bonus.cases.length], ['confirme', 1], 'niveau et tirage après « Réinitialiser »');
+  await aller('fiche:qui-fait-quoi');
+  egal(await pg.$$eval(`${Z} [data-og-case]`, (L) => L.length), 4, 'cases vides de l’organigramme');
+  egal(await pg.$$eval(`${Z} [data-fiche-champ^="case-"]`, (L) => L.length), 4, 'listes de la fiche');
+  egal(await pg.$$eval(`${Z} [data-ouinon$="|hierarchique|1"]`, (L) => L.length), 7, 'situations');
+});
+
 await v('ENT-6.1 : équité sur 300 graines — Karim, Karim-tournée et Malo toujours là (Malo arrive en premier), mélanges 1+1 / 1+2+1 / 1+1+1, ≥ 2 H et ≥ 2 F, ≥ 3 destinataires, zéro secours ; confirmé = même socle + 1 / 2 / 2 bonus ; la règle n’est pas décorative', async () => {
   const r = await pg.evaluate(async (ID) => {
     const S = await import('/contenus/france-boissons-ent61.js');
@@ -346,6 +364,71 @@ await v('ENT-6.1 : enseignant — la séance s’ouvre (organigramme, fiche, poi
   egal(await pg.$$eval(`${Z} [data-og-case]`, (L) => L.length), 3, 'cases vides');
   vrai(await present('.ent-nav[data-vue="etape:avant-courrier"]'), 'point d’étape au menu de l’enseignant');
   egal(await pg.evaluate(() => window.__f.enregistres.length), 0, 'scores remontés');
+});
+
+// ── Fiche, documents et `ecran` « fonction de la base » (chantier D-1 bis, brief ENT-6.1 §7.3) ─────────────────
+// Variantes de la VRAIE séance (univers et contenu d'ENT-6.1), fabriquées ici dans la page : une fonction qui plante.
+await v('Fonction de la base : au chargement, une fonction qui plante (ou rend autre chose) sur une base vide refuse la séance, avec un message qui nomme la fiche, le document ou le jalon', async () => {
+  const r = await pg.evaluate(async () => {
+    const { composerSeance } = await import('/core/types/seance-entreprise.js');
+    const { creerEntreprise } = await import('/core/types/entreprise.js');
+    const FB = await import('/contenus/france-boissons.js');
+    const S = await import('/contenus/france-boissons-ent61.js');
+    const A = await import('/activites/france-boissons-organigramme.js');
+    const essai = (opts, seance = S) => {
+      try { creerEntreprise(composerSeance(FB, seance, { ...A.meta }, { ...S.OPTIONS, ...opts }).options); return 'chargée'; } catch (e) { return e.message; }
+    };
+    const boum = () => { throw new Error('boum'); };
+    return {
+      telle: essai({}),
+      blocs: essai({ fiches: [S.FICHE_VU, { ...S.FICHE_QUI, blocs: boum }] }),
+      blocsType: essai({ fiches: [S.FICHE_VU, { ...S.FICHE_QUI, blocs: () => 'texte' }] }),
+      docs: essai({ fiches: [S.FICHE_VU, { ...S.FICHE_QUI, documents: boum }] }),
+      html: essai({ documents: [{ ...S.DOC_ORGANIGRAMME_ELEVE, html: () => 42 }, FB.DOC_ANNUAIRE] }),
+      ecran: essai({}, { ...S, ETAPES: S.ETAPES.map((e) => (e.id === 'courrier-malo' ? { ...e, ecran: () => 7 } : e)) }),
+    };
+  });
+  egal(r.telle, 'chargée', 'la séance telle quelle');
+  vrai(/fiche « qui-fait-quoi » : « blocs\(db\) » ne marche pas sur une base vide : boum/.test(r.blocs), 'blocs qui plante : ' + r.blocs);
+  vrai(/fiche « qui-fait-quoi » : « blocs\(db\) ».*rend string au lieu d’un tableau/.test(r.blocsType), 'blocs d’un mauvais type : ' + r.blocsType);
+  vrai(/fiche « qui-fait-quoi » : « documents\(db\) ».*boum/.test(r.docs), 'documents qui plante : ' + r.docs);
+  vrai(/document « organigramme » : « html\(db\) ».*rend number au lieu d’un texte/.test(r.html), 'html d’un mauvais type : ' + r.html);
+  vrai(/jalon « courrier-malo » : « ecran\(db\) » rend number/.test(r.ecran), 'ecran d’un mauvais type : ' + r.ecran);
+});
+
+await v('Fonction de la base : au dessin, une fonction qui plante (base de l’élève) est signalée et laisse un avis d’erreur, sans casser l’écran ni laisser partir la fiche', async () => {
+  const avant = erreursF.length;
+  await pg.evaluate(async () => {
+    const { composerSeance } = await import('/core/types/seance-entreprise.js');
+    const { creerEntreprise } = await import('/core/types/entreprise.js');
+    const FB = await import('/contenus/france-boissons.js');
+    const S = await import('/contenus/france-boissons-ent61.js');
+    const A = await import('/activites/france-boissons-organigramme.js');
+    // Ne plante qu'avec un tirage (jamais sur la base vide du contrôle au chargement).
+    const piege = (rendu) => (db) => { if (db.tirages) throw new Error('boum au dessin'); return rendu; };
+    const opts = { ...S.OPTIONS, fiches: [S.FICHE_VU, { ...S.FICHE_QUI, blocs: piege([]) }],
+      documents: [{ ...S.DOC_ORGANIGRAMME_ELEVE, html: piege('<p>vide</p>') }, FB.DOC_ANNUAIRE] };
+    const M = creerEntreprise(composerSeance(FB, S, { ...A.meta }, opts).options);
+    document.querySelector('#fTest')?.remove();
+    const hote = document.createElement('div'); hote.id = 'fTest'; document.body.prepend(hote);
+    const db = {};
+    window.__f = { db, enregistres: [] };
+    M.rendre(hote, { meta: A.meta, aisance: 'standard', profil: { prenom: 'Lea', nom: 'Test', role: 'eleve', uid: 'fb-piege' },
+      jeu: { etat: () => db, sauver: () => {} }, enregistrer: (x) => window.__f.enregistres.push(x), quitter: () => {}, codeStock: 'FB',
+      lireScore: async () => null });
+  });
+  await aller('fiche:qui-fait-quoi');
+  vrai(await present('[data-fiche-erreur]'), 'avis d’erreur de la fiche');
+  vrai(await present('[data-doc-erreur]'), 'avis d’erreur du document');
+  await pg.click(`${Z} [data-fiche-envoyer]`);
+  await pause();
+  vrai(!(await present('[data-confirme-oui]')), 'la fiche qui ne se dessine pas part quand même');
+  egal(((await base()).fiches || {})['qui-fait-quoi'] && (await base()).fiches['qui-fait-quoi'].envoye, undefined, 'fiche envoyée');
+  const nouvelles = erreursF.slice(avant);
+  vrai(nouvelles.some((x) => /la fiche « qui-fait-quoi » ne se dessine pas : boum au dessin/.test(x)), 'fiche non signalée : ' + nouvelles.join(' | '));
+  vrai(nouvelles.some((x) => /le document « organigramme » ne se dessine pas : boum au dessin/.test(x)), 'document non signalé : ' + nouvelles.join(' | '));
+  vrai(nouvelles.every((x) => /ne se dessine pas : boum au dessin/.test(x)), 'autre erreur : ' + nouvelles.join(' | '));
+  erreursF.splice(avant);   // attendues : elles ne comptent pas dans « aucune erreur JavaScript »
 });
 
 await v('ENT-6.1 : aucune erreur JavaScript', async () => {

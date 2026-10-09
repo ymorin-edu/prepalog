@@ -72,6 +72,14 @@
 // Plusieurs fiches dans une séance (ENT-5.8) : `creerEntreprise({ …, fiches: [F1, F2] })` (ou `fiche` + `fiches`).
 // Une entrée de menu par fiche ; la première garde l'écran `fiche`, les autres `fiche:<id>`. Une fiche qui porte
 // `quand(db)` n'apparaît (menu, bouton du mail) qu'une fois la condition vraie : un écran qui attend un message.
+//
+// FONCTION DE LA BASE (chantier D-1 bis, 09/10/2026, brief ENT-6.1 §7.3) : `blocs` et `documents` peuvent être des
+// fonctions `(db) => …` de la base de l'élève, pour une fiche TIRÉE par élève (ses cases, ses lignes : `TIRAGE.piecesTirees`).
+// La fonction est appelée À CHAQUE DESSIN (et à l'envoi), jamais rangée dans la base : elle ne doit rien écrire. Contrôle
+// au chargement : elle est appelée une fois sur une base VIDE (`{}`) ; si elle plante ou ne rend pas un tableau, la séance
+// ne se charge pas (message qui nomme la fiche). Les gestes publiés par blocs (`fiche:<id>:<bloc>`) sont ceux de ce dessin
+// sur base vide, plus `fiche:<id>:envoyer`. Au dessin, une fonction qui plante est signalée (console, comme un jalon) et
+// la fiche affiche un avis d'erreur à la place, sans casser l'écran. Valeurs fixes : rien ne change.
 
 import { ech, confirmerDansLaPage } from '../ui.js';
 
@@ -109,14 +117,45 @@ const ordreDe = (b, v) => {
   return complet ? x.map((id) => O.find((o) => o.v === id)) : O;
 };
 
-export function creerFiche(F, VDOC) {
-  const blocs = aPlat(F.blocs);
-  const docs = VDOC ? VDOC.pieces(F.documents) : [];
+// Un champ « fonction de la base » d'une fiche, évalué et contrôlé : il rend un tableau (sinon une erreur qui le dit).
+function evaluerChamp(F, champ, db) {
+  const x = F[champ];
+  if (typeof x !== 'function') return x;
+  const r = x(db);
+  if (r != null && !Array.isArray(r)) throw new Error(`« ${champ}(db) » rend ${typeof r} au lieu d’un tableau`);
+  return r || [];
+}
+
+export function creerFiche(F, VDOC, { signaler } = {}) {
+  // Contrôle au chargement : une fonction de la base est essayée sur une base vide.
+  ['blocs', 'documents'].forEach((champ) => {
+    if (typeof F[champ] !== 'function') return;
+    try { evaluerChamp(F, champ, {}); } catch (x) {
+      throw new Error(`fiche « ${F.id} » : « ${champ}(db) » ne marche pas sur une base vide : ${x && x.message ? x.message : x}`);
+    }
+  });
+  const blocsFixes = typeof F.blocs === 'function' ? null : aPlat(F.blocs);
+  const docsFixes = typeof F.documents === 'function' ? null : (VDOC ? VDOC.pieces(F.documents) : []);
+  // Les blocs (tels que déclarés, et à plat) et les documents de CETTE base ; `null` si la fonction plante au dessin.
+  function blocsBrutsDe(db) {
+    if (blocsFixes) return F.blocs;
+    try { return evaluerChamp(F, 'blocs', db || {}); } catch (x) { if (signaler) signaler(`la fiche « ${F.id} » ne se dessine pas`, x); return null; }
+  }
+  const blocsDe = (db) => (blocsFixes || aPlat(blocsBrutsDe(db) || []));
+  function docsDe(db) {
+    if (docsFixes) return docsFixes;
+    try { return VDOC ? VDOC.pieces(evaluerChamp(F, 'documents', db || {})) : []; } catch (x) {
+      if (signaler) signaler(`les documents de la fiche « ${F.id} » ne se dessinent pas`, x);
+      return [];
+    }
+  }
+  const blocs = blocsDe({});
   const envoi = F.envoi || {};
   const libelle = F.libelle || F.titre || 'Fiche';
 
-  // Ce qui manque avant l'envoi, dans l'ordre de la fiche.
-  function manque(e) {
+  // Ce qui manque avant l'envoi, dans l'ordre de la fiche (`db` : la base, pour une fiche fonction de la base).
+  function manque(e, db) {
+    const blocs = blocsDe(db);
     const v = e.valeurs || {}, L = [];
     blocs.forEach((b) => {
       if (b.type === 'ouinon') {
@@ -202,21 +241,25 @@ export function creerFiche(F, VDOC) {
   }
 
   // Les onglets des documents (à gauche) et le document choisi.
-  function onglets(ui, docVu) {
+  function onglets(ui, docVu, docs, db) {
     const sel = docs.includes(ui.doc) ? ui.doc : docs[0];
     return `<div class="ent-onglets" role="tablist" aria-label="Documents">${docs.map((id) => {
       const d = VDOC.doc(id), on = id === sel;
       return `<button type="button" role="tab" id="fdo-${ech(id)}" data-fiche-doc="${ech(id)}" data-libre aria-selected="${on}"
         aria-controls="fichePanneauDoc" tabindex="${on ? 0 : -1}"${docVu(id) ? ' class="vu"' : ''}>${ech(d.court || d.titre)}</button>`;
     }).join('')}</div>
-    <div class="ent-feuille" role="tabpanel" id="fichePanneauDoc" aria-labelledby="fdo-${ech(sel)}" data-fiche-panneau>${VDOC.feuille(sel)}</div>`;
+    <div class="ent-feuille" role="tabpanel" id="fichePanneauDoc" aria-labelledby="fdo-${ech(sel)}" data-fiche-panneau>${VDOC.feuille(sel, db)}</div>`;
   }
 
+  // `api.db` : la base de l'élève (une fiche ou des documents fonction de la base la lisent à chaque dessin).
   function html(e, ui, api) {
     const fige = !!e.envoye || api.figee;
+    const brut = blocsBrutsDe(api.db);
+    const docs = docsDe(api.db);
     const formulaire = `<form class="panneau ent-fiche-form${F.grille ? ' ent-fiche-grille' : ''}" data-fiche="${ech(F.id)}" novalidate>
         <fieldset${fige ? ' disabled' : ''}>${F.entete ? `<div class="ent-fiche-entete">${F.entete}</div>` : ''}<div class="ent-fiche-blocs">${
-          (F.blocs || []).map((b) => `<div class="ent-fiche-bloc${b.type === 'cadre' && b.large ? ' large' : ''}">${bloc(b, e)}</div>`).join('')}</div>${
+          brut ? (brut || []).map((b) => `<div class="ent-fiche-bloc${b.type === 'cadre' && b.large ? ' large' : ''}">${bloc(b, e)}</div>`).join('')
+            : '<div class="avis avis-err" data-fiche-erreur>Cette fiche ne s’affiche pas (erreur de la séance) : signale-le à ton professeur.</div>'}</div>${
           F.pied ? `<p class="ent-fiche-pied">${ech(F.pied)}</p>` : ''}</fieldset>
         ${e.envoye
           ? `<div class="ent-fiche-envoyee" data-fiche-envoyee tabindex="-1">Fiche envoyée${envoi.a ? ` à ${ech(envoi.a)}` : ''} le ${
@@ -227,7 +270,7 @@ export function creerFiche(F, VDOC) {
       </form>`;
     return `<div class="ent-tete"><h2>${ech(F.titre || libelle)}</h2>${F.sousTitre ? `<p class="note">${ech(F.sousTitre)}</p>` : ''}</div>
       <div class="ent-fiche${docs.length ? ' ent-fiche-cote' : ''}">
-        ${docs.length ? `<div class="ent-fiche-docs">${onglets(ui, api.docVu)}</div>` : ''}
+        ${docs.length ? `<div class="ent-fiche-docs">${onglets(ui, api.docVu, docs, api.db)}</div>` : ''}
         <div class="ent-fiche-droite">${formulaire}</div>
       </div>`;
   }
@@ -300,7 +343,10 @@ export function creerFiche(F, VDOC) {
     z.querySelector('[data-fiche]')?.addEventListener('submit', (ev) => {
       ev.preventDefault();
       if (e.envoye || api.figee) return;
-      const m = envoi.incomplet ? [] : manque(e);
+      // Une fiche fonction de la base qui ne se dessine pas ne part pas (l'élève a l'avis d'erreur à l'écran).
+      if (!blocsFixes && !blocsBrutsDe(api.db)) return;
+      const blocs = blocsDe(api.db);
+      const m = envoi.incomplet ? [] : manque(e, api.db);
       if (m.length) {
         ui.manque = `Il manque : ${m.join(', ')}.`;
         z.querySelector('[data-fiche-manque]').textContent = ui.manque;
@@ -339,7 +385,7 @@ export function creerFiche(F, VDOC) {
       ui.doc = id;
       tabs.forEach((t) => { const on = t === btn; t.setAttribute('aria-selected', String(on)); t.tabIndex = on ? 0 : -1; if (api.docVu(t.dataset.ficheDoc)) t.classList.add('vu'); });
       const p = z.querySelector('[data-fiche-panneau]');
-      p.innerHTML = VDOC.feuille(id); p.setAttribute('aria-labelledby', btn.id);
+      p.innerHTML = VDOC.feuille(id, api.db); p.setAttribute('aria-labelledby', btn.id);
       if (clavier) btn.focus();
     };
     tabs.forEach((btn, k) => {
@@ -354,7 +400,7 @@ export function creerFiche(F, VDOC) {
   }
 
   return {
-    id: F.id, docs, nav: { libelle }, quand: F.quand || null,
+    id: F.id, docs: docsFixes || docsDe({}), nav: { libelle }, quand: F.quand || null,
     bouton: F.bouton || `Ouvrir la ${minus(libelle)}`,
     etatNeuf: () => ({ valeurs: {} }),
     manque, html, brancher,

@@ -22,17 +22,49 @@
 // Mots cliquables : dans le texte du mail, comme partout ; dans un document, seulement là où le contenu
 // les marque (`[[CACES]]`). Chaque ouverture est comptée dans `db.indicateurs[idSeance].docs[id]`
 // (repérage, côté entreprise.js) — jamais un jalon.
+//
+// FONCTION DE LA BASE (chantier D-1 bis, 09/10/2026, brief ENT-6.1 §7.3) : `html` peut être une fonction `(db) => '<…>'`
+// de la base de l'élève (un organigramme avec SES cases vides, tirées). Appelée à chaque dessin, jamais rangée : elle ne
+// doit rien écrire. Contrôle au chargement : essayée sur une base vide (`{}`), elle doit rendre un texte, sinon la séance
+// ne se charge pas (message qui nomme le document). Au dessin, une fonction qui plante est signalée (console) et la
+// feuille affiche un avis d'erreur. Un texte fixe : rien ne change.
 
 import { ech } from '../ui.js';
 
 const TROMBONE = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
   aria-hidden="true"><path d="M21 11l-8.5 8.5a5 5 0 0 1-7-7L14 4a3.5 3.5 0 0 1 5 5l-8.5 8.5a2 2 0 0 1-3-3L15 7"/></svg>`;
 
-export function creerDocuments(liste, style) {
+// Le HTML d'un document pour une base : texte fixe, ou fonction de la base (contrôlée : un texte).
+function htmlDe(d, db) {
+  if (typeof d.html !== 'function') return d.html;
+  const h = d.html(db || {});
+  if (typeof h !== 'string') throw new Error(`« html(db) » rend ${h === null ? 'null' : typeof h} au lieu d’un texte`);
+  return h;
+}
+
+export function creerDocuments(liste, style, { signaler } = {}) {
   const DOC = {};
-  (liste || []).forEach((d) => { DOC[d.id] = d; });
+  (liste || []).forEach((d) => {
+    DOC[d.id] = d;
+    // Contrôle au chargement : une fonction de la base est essayée sur une base vide.
+    if (typeof d.html === 'function') {
+      try { htmlDe(d, {}); } catch (x) {
+        throw new Error(`document « ${d.id} » : « html(db) » ne marche pas sur une base vide : ${x && x.message ? x.message : x}`);
+      }
+    }
+  });
   // Les pièces d'un mail qui existent vraiment (une faute de frappe dans le contenu ne casse rien).
   const pieces = (ids) => (ids || []).filter((id) => DOC[id]);
+  // `db` : la base de l'élève (lue par un document fonction de la base, à chaque dessin).
+  function feuille(id, db) {
+    if (!DOC[id]) return '';
+    let h;
+    try { h = htmlDe(DOC[id], db); } catch (x) {
+      if (signaler) signaler(`le document « ${id} » ne se dessine pas`, x);
+      h = '<div class="avis avis-err" data-doc-erreur>Ce document ne s’affiche pas (erreur de la séance) : signale-le à ton professeur.</div>';
+    }
+    return `<div class="ent-doc" data-doc="${ech(id)}">${h}</div>`;
+  }
 
   return {
     doc: (id) => DOC[id] || null,
@@ -40,7 +72,7 @@ export function creerDocuments(liste, style) {
     pieces,
 
     // La feuille elle-même.
-    feuille: (id) => (DOC[id] ? `<div class="ent-doc" data-doc="${ech(id)}">${DOC[id].html}</div>` : ''),
+    feuille,
 
     // La rangée sous le texte du mail. `vu(id)` : déjà ouvert ?
     rangee(ids, vu) {
@@ -54,7 +86,7 @@ export function creerDocuments(liste, style) {
     },
 
     // Le document ouvert dans le lecteur du mail, entre les pièces `ids` du même mail.
-    visionneuse(id, ids) {
+    visionneuse(id, ids, db) {
       const L = pieces(ids), k = L.indexOf(id), d = DOC[id];
       if (!d) return '';
       const prec = L[k - 1], suiv = L[k + 1];
@@ -67,7 +99,7 @@ export function creerDocuments(liste, style) {
             <button type="button" class="btn btn-s" ${suiv ? `data-pj="${ech(suiv)}"` : 'disabled'} data-libre>Suivant ›</button>
           </span>
         </div>
-        <div class="ent-feuille">${this.feuille(id)}</div>
+        <div class="ent-feuille">${feuille(id, db)}</div>
       </div>`;
     },
 

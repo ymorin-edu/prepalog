@@ -8,21 +8,13 @@
 //
 // Jalons pondérés, somme des poids = 20 (13 jalons de la séance + la question du point d'étape, `part: 2`). Une base par
 // séance (pas de `jeuId`). Pas de trame pour l'instant (Cowork, après validation à l'écran).
-//
-// LE MOTEUR FABRIQUÉ À L'OUVERTURE (manque du moteur, §7.3 du brief) : une fiche et ses documents sont des objets fixes,
-// déclarés une fois pour toutes ; or ici chaque élève a SES cases vides (l'organigramme et les listes « Case A, B… »), SES
-// situations (les lignes du tableau) et SON courrier (l'écran de « Corriger » de chaque message). En attendant que le
-// moteur accepte une fiche et des documents « fonction de la base », `rendre` range d'abord le tirage de l'élève (comme le
-// moteur l'aurait fait, voir `jeuAOuverture`), puis fabrique le moteur de la séance avec la fiche, les documents et les
-// jalons de CE tirage. Le `meta` et le contrôle au chargement viennent d'un jeu « modèle ». Limite connue : après
-// « Réinitialiser » avec un niveau changé entre-temps par l'enseignant, les écrans restent ceux de l'ancien tirage
-// jusqu'à la réouverture de la séance (le tirage refait est le bon).
+// Les écrans tirés par élève (organigramme, fiche, écran de « Corriger » de chaque message) sont déclarés « fonction de la
+// base » dans le contenu (chantier D-1 bis, brief §7.3) : la séance se déclare comme les autres.
 
 import { seanceEntreprise } from '../core/types/seance-entreprise.js';
 import * as FB from '../contenus/france-boissons.js';
 import * as SEANCE from '../contenus/france-boissons-ent61.js';
-
-const META = {
+const s = seanceEntreprise(FB, SEANCE, {
   id: 'france-boissons-organigramme',
   code: 'ENT-6.1',
   titre: 'France Boissons — bienvenue à Buchelay',
@@ -42,11 +34,6 @@ const META = {
   questions: 'ENT-6.1',
   pret: true,
   ouverture: 'prof',
-};
-
-const fabriquer = (jeu) => seanceEntreprise(FB, SEANCE, META, SEANCE.optionsPour(jeu));
-const s = fabriquer(null);
+}, SEANCE.OPTIONS);
 export const meta = s.meta;
-export function rendre(hote, ctx) {
-  fabriquer(SEANCE.jeuAOuverture(ctx)).rendre(hote, ctx);
-}
+export const rendre = s.rendre;

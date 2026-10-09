@@ -75,6 +75,14 @@ export function creerEntreprise(U) {
     if (ETAPES_BONUS.length && !etapes.some((e) => typeof e.poids === 'number')) {
       throw new Error('des jalons bonus demandent des jalons du socle pondérés (« poids », somme 20) : le bonus est en points sur 20.');
     }
+    // `ecran` d'un jalon peut être une fonction de la base (chantier D-1 bis : le message à rouvrir est celui que l'élève a
+    // tiré). Essayée ici sur une base vide : elle rend un texte (`'transfert:<clé>'`…) ou rien, sans planter.
+    etapesSeance.forEach((e) => {
+      if (!e || typeof e.ecran !== 'function') return;
+      let x;
+      try { x = e.ecran({}); } catch (err) { throw new Error(`le jalon « ${e.id} » : « ecran(db) » ne marche pas sur une base vide : ${err && err.message ? err.message : err}`); }
+      if (x != null && typeof x !== 'string') throw new Error(`le jalon « ${e.id} » : « ecran(db) » rend ${typeof x} au lieu d’un texte (« fiche:<id> », « transfert:<clé> »…)`);
+    });
   }
   // Le TIRAGE MÉMORISÉ et ses banques (chantier D-C, lot 2, `core/tirage.js`) : `tirage` déclaré par `declarerTirage`
   // (ou un objet `{ banques, … }`). `tirage: true` garde son sens d'avant (graine posée, sans banques). Une déclaration
@@ -191,12 +199,14 @@ export function creerEntreprise(U) {
   // Les DOCUMENTS JOINTS (04/10/2026, brief `docs/briefs/MOTEUR-documents-formulaire.md`, lot 1) : une
   // fiche de poste, des CV… que l'élève lit sans les saisir. Ils n'existent que si la séance les déclare
   // (format en tête de `core/types/documents.js`) ; un mail semé les joint par `pieces: [ids]`.
-  const VDOC = U.documents ? creerDocuments(U.documents, U.documentsStyle) : null;
+  // `html` peut être une fonction de la base (chantier D-1 bis) : essayée ici sur une base vide, signalée au dessin.
+  const VDOC = U.documents ? creerDocuments(U.documents, U.documentsStyle, { signaler }) : null;
   // La FICHE À REMPLIR (même brief, lot 2) : un écran de plus, seulement si la séance déclare `fiche`
   // (format en tête de `core/types/fiche.js`). Son état vit dans `db.fiches[<fiche.id>]`.
   // Plusieurs fiches (05/10/2026, ENT-5.8) : `fiches: [F1, F2]` ; la première garde l'écran `fiche`, les
   // autres ont `fiche:<id>`. Une fiche qui déclare `quand(db)` reste hors du menu tant que c'est faux.
-  const VFICHES = [].concat(U.fiche || [], U.fiches || []).map((F) => creerFiche(F, VDOC));
+  // `blocs` et `documents` d'une fiche peuvent être des fonctions de la base (chantier D-1 bis, voir `fiche.js`).
+  const VFICHES = [].concat(U.fiche || [], U.fiches || []).map((F) => creerFiche(F, VDOC, { signaler }));
   const VFICHE = VFICHES[0] || null;
   // L'ANIMATION À QUESTIONS (05/10/2026, brief `docs/briefs/MOTEUR-vue-animation.md`) : un écran de plus,
   // seulement si la séance déclare `animation` (ou `animations: [A, B]`, rare) — format en tête de
@@ -1017,9 +1027,19 @@ export function creerEntreprise(U) {
       const sansFaux = (st) => etapes.every((e) => st[e.id] === 'ok' || st[e.id] === 'erreur');
       // Les écrans à rouvrir : ceux des jalons faux qui déclarent un `ecran` ('fiche:<id>', 'phrases:<id>', 'planning:<id>'
       // ou 'transfert:<clé du mail>').
+      // `ecran` peut être une fonction de la base (chantier D-1 bis) : évaluée ici, à chaque fois, jamais rangée. Une
+      // fonction qui plante ou rend autre chose qu'un texte est signalée et vaut « pas d'écran » (rien à rouvrir).
+      function ecranDe(e) {
+        if (typeof e.ecran !== 'function') return e.ecran || null;
+        try {
+          const x = e.ecran(db);
+          if (x != null && typeof x !== 'string') throw new Error(`rend ${typeof x} au lieu d’un texte`);
+          return x || null;
+        } catch (x) { signaler(`l’écran du jalon « ${e.id} » plante`, x); return null; }
+      }
       function ecransAFaire(st) {
         const L = [];
-        etapes.forEach((e) => { if (st[e.id] === 'ko' && e.ecran && !L.includes(e.ecran)) L.push(e.ecran); });
+        etapes.forEach((e) => { const ec = ecranDe(e); if (st[e.id] === 'ko' && ec && !L.includes(ec)) L.push(ec); });
         return L;
       }
       // Les questions corrigées AU BILAN (`apres: 'bilan'`, questions au fil) : leur explication vient avec le bandeau de fin.
@@ -1035,7 +1055,10 @@ export function creerEntreprise(U) {
         const st = res || noterBase(db).detail;
         if (!fini(st)) return '';
         // Le HTML est fabriqué par `entreprise-fin.js` (lot 9c, module 4) ; ici, ce qui dépend de la séance en cours.
-        return bandeauFinHtml(st, { etapes, correction: CORRECTION, premierEssai: PREMIER_ESSAI, suiteAuBilan: SUITE_AU_BILAN,
+        // Un `ecran` fonction de la base y arrive évalué (le module ne lit que des valeurs).
+        const etapesVues = etapes.some((e) => typeof e.ecran === 'function')
+          ? etapes.map((e) => (typeof e.ecran === 'function' ? Object.assign({}, e, { ecran: ecranDe(e) }) : e)) : etapes;
+        return bandeauFinHtml(st, { etapes: etapesVues, correction: CORRECTION, premierEssai: PREMIER_ESSAI, suiteAuBilan: SUITE_AU_BILAN,
           suivante: ctx.suivante, reinitialisable: ctx.meta.reinitialisable, avecQuestions: !!MQ, finFige: U.finFige,
           retours: retoursAuBilan, peutCorriger: ecransAFaire(st).length > 0 });
       }
@@ -1113,9 +1136,10 @@ export function creerEntreprise(U) {
         let n = 0;
         const vus = new Set();
         etapes.forEach((e) => {
-          if (!e.ecran || vus.has(e.ecran)) return;
-          vus.add(e.ecran);
-          const i = e.ecran.indexOf(':'), genre = e.ecran.slice(0, i), id = e.ecran.slice(i + 1);
+          const ec = ecranDe(e);
+          if (!ec || vus.has(ec)) return;
+          vus.add(ec);
+          const i = ec.indexOf(':'), genre = ec.slice(0, i), id = ec.slice(i + 1);
           if (genre === 'fiche') n += Math.max(0, ((db.fiches && db.fiches[id] && db.fiches[id].envois) || 0) - 1);
           else if (genre === 'phrases') n += Math.max(0, db.mails.filter((m) => m.folder === 'out' && m.phrases && m.phrases.id === id).length - 1);
           else if (genre === 'planning' && VPL && VPL.id === id) n += VPL.corrections(db.plannings && db.plannings[id]);
@@ -1783,8 +1807,9 @@ export function creerEntreprise(U) {
       }
       // Ce qui reste à l'écran d'une fiche (document choisi, raison d'un envoi refusé), fiche par fiche.
       const uiFiche = (VF) => E.fiche[VF.id] || (E.fiche[VF.id] = { doc: null, manque: '' });
+      // `db` : lue par une fiche dont les blocs ou les documents sont fonction de la base (chantier D-1 bis).
       const apiFiche = () => ({
-        sauver, docVu, compterDoc, signal, figee: rendue(),
+        db, sauver, docVu, compterDoc, signal, figee: rendue(),
         // L'envoi : un geste métier comme un mail (les déclencheurs `apresFiche` le lisent), puis la fiche figée.
         envoyee(e) {
           const arrive = !rendue() && declencher();

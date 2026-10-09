@@ -264,6 +264,20 @@ entrée de menu chacune (la 1re garde l'écran `fiche`, les autres `fiche:<id>`)
 `apresFiche('lettre')`) n'apparaît, au menu comme au bouton de son mail (`ouvreFiche`), qu'une fois la condition vraie.
 Exemple : `contenus/smoby-ent58.js` (lettre de voiture, suivi du retard).
 
+**Fonction de la base de l'élève** (chantier D-1 bis, 09/10/2026, brief ENT-6.1 §7.3) : pour une séance TIRÉE par élève (ses
+cases, ses lignes, son courrier : `TIRAGE.piecesTirees`), quatre champs acceptent une fonction `(db) => …` au lieu d'une valeur
+fixe — `fiche.blocs` (rend le tableau des blocs), `fiche.documents` (rend le tableau des ids), `documents[].html` (rend le texte
+HTML) et `ecran` d'un jalon (rend `'fiche:<id>'`, `'transfert:<clé>'`… ou `null`). Le moteur range le tirage à l'ouverture,
+**avant** le premier dessin, et appelle ces fonctions **à chaque dessin** (et à l'envoi d'une fiche, au bilan pour `ecran`) : après
+« Réinitialiser », les écrans suivent le nouveau tirage sans rouvrir la séance. **Piège** : la fonction est réévaluée à chaque
+dessin, jamais mémorisée : elle ne doit **rien écrire** (ni dans la base, ni ailleurs) et doit rester rapide. Contrôle au
+chargement : chacune est appelée une fois sur une base **vide** (`{}`) ; si elle plante ou rend un mauvais type, la séance ne se
+charge pas (le message nomme la fiche, le document ou le jalon) — une fonction doit donc marcher sans tirage (rendre une fiche
+vide, par exemple). Au dessin, une fonction qui plante est signalée (console, comme un jalon) et la fiche ou le document affiche
+un avis d'erreur ; une fiche qui ne se dessine pas ne part pas. Les gestes publiés par une fiche à `blocs(db)` sont ceux du dessin
+sur base vide, plus `fiche:<id>:envoyer`. Valeurs fixes : rien ne change. Exemple : `contenus/france-boissons-ent61.js`
+(`FICHE_QUI`, `DOC_ORGANIGRAMME_ELEVE`, jalons du courrier) ; tests : bloc `france-boissons`.
+
 **Menu de gauche rétractable** (04/10/2026, même brief, lot 3) : dans toutes les entreprises, sans rien
 déclarer. Un bouton en tête du menu le replie en une bande étroite (« » » pour le rouvrir) ; le choix est
 rangé dans la base de l'élève (`db.menuReplie`), gardé d'un écran à l'autre, à la séance suivante et à
@@ -416,7 +430,8 @@ Un jalon (`etapes`) peut déclarer, en plus de `id`, `titre` et `verifier(db)` :
 - `groupe` : la ligne du bandeau de fin (séance `correction`, ou visite notée au premier essai). Un groupe est juste quand toutes ses cases le sont. Le
   bandeau ne descend jamais à la case (une case oui/non nommée fausse donnerait la réponse) et n'affiche jamais de points.
 - `ecran` : où l'élève corrige, `'fiche:<id de la fiche>'`, `'phrases:<id du message par phrases>'`, `'planning:<id du
-  planning>'` ou `'transfert:<clé du message>'` (un message à transférer, voir plus haut). Le bouton « Corriger » n'apparaît que s'il y a un `ecran` à rouvrir parmi les jalons faux. Un planning se rouvre
+  planning>'` ou `'transfert:<clé du message>'` (un message à transférer, voir plus haut) ; ou une fonction `(db) => …` qui rend
+  l'un de ces textes pour l'élève (son message tiré : « Fonction de la base de l'élève », plus haut). Le bouton « Corriger » n'apparaît que s'il y a un `ecran` à rouvrir parmi les jalons faux. Un planning se rouvre
   à la première version fausse, avec le planning envoyé : si c'est la 1re, la version d'après l'aléa est mise de côté et revient
   au renvoi (deux envois = **une** correction, compteur `finis` de l'état du planning).
   Un jalon faux **sans** `ecran` ne se rouvre pas (ENT-5.4 : BL signé, camion reparti). La séance peut le dire au bandeau
