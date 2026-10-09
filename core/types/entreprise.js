@@ -27,6 +27,7 @@ import { compilerQuestions, etapesQuestions, reponse, repondu, etapeArrivee, eta
   appel, CLE_ETAPES } from './questions.js';
 import { creerGesteTableur, retourDeTemps } from './export-tableur.js';
 import { graineDeBase, poserGraine, declarerTirage, estTirage, fautesTirage } from '../tirage.js';
+import { BAREME_AFFICHE, pointsBonus } from '../notes.js';
 import { gestesDe } from '../declencheurs.js';
 import { preparerPhrases } from '../phrases.js';
 import { brancherLexique, compterAide } from '../lexique.js';
@@ -58,7 +59,20 @@ export function creerEntreprise(U) {
   // déclare `questions` (format en tête de `core/types/questions.js`). Contrôlées ici : une question mal déclarée empêche
   // la séance de se charger. Le moteur ajoute lui-même un jalon par question notée (poids pris dans la `part`).
   const MQ = U.questions ? compilerQuestions(U.questions, U.equipe) : null;
-  const etapes = MQ ? etapesSeance.concat(etapesQuestions(MQ)) : etapesSeance;
+  // LES JALONS BONUS du confirmé (chantier D-C, lot 3) : un jalon qui déclare `bonus: true` n'est pas un jalon du socle.
+  // Sans poids ni groupe, il ne compte ni dans la somme des poids (20), ni au bandeau de fin, ni dans « fini » : il n'est
+  // jugé que chez un élève confirmé (`db.aisance`), hors évaluation, et son `verifier` rend null quand l'élève n'a pas
+  // reçu le cas. Les points (`BONUS`, core/notes.js) s'ajoutent à la note du socle, sans jamais la faire baisser.
+  const ETAPES_BONUS = etapesSeance.filter((e) => e && e.bonus === true);
+  const etapesSocle = ETAPES_BONUS.length ? etapesSeance.filter((e) => !(e && e.bonus === true)) : etapesSeance;
+  const etapes = MQ ? etapesSocle.concat(etapesQuestions(MQ)) : etapesSocle;
+  {
+    const faute = ETAPES_BONUS.find((e) => typeof e.poids === 'number' || e.groupe !== undefined || typeof e.verifier !== 'function');
+    if (faute) throw new Error(`le jalon bonus « ${faute.id} » ne déclare ni « poids » ni « groupe » (il est caché à l'élève), mais un « verifier ».`);
+    if (ETAPES_BONUS.length && !etapes.some((e) => typeof e.poids === 'number')) {
+      throw new Error('des jalons bonus demandent des jalons du socle pondérés (« poids », somme 20) : le bonus est en points sur 20.');
+    }
+  }
   // Le TIRAGE MÉMORISÉ et ses banques (chantier D-C, lot 2, `core/tirage.js`) : `tirage` déclaré par `declarerTirage`
   // (ou un objet `{ banques, … }`). `tirage: true` garde son sens d'avant (graine posée, sans banques). Une déclaration
   // fautive empêche la séance de se charger, comme une option inconnue.
@@ -288,6 +302,21 @@ export function creerEntreprise(U) {
       detail[e.id] = st;
       if (st === 'ok') ok += poidsDe(e);
     });
+    // Les cas bonus (lot 3 de D-C) : confirmé seulement, jamais en évaluation. `detail.bonus = { justes, total, etats }` ;
+    // les points sont posés par `remonterEtapes` (règle du premier bilan). Un jalon bonus qui plante ne rapporte rien.
+    if (ETAPES_BONUS.length && !COPIE && db && db.aisance === 'confirme') {
+      const etats = {};
+      let justes = 0, total = 0;
+      ETAPES_BONUS.forEach((e) => {
+        let r = null;
+        try { r = e.verifier(db, U); } catch (x) { r = { status: 'erreur' }; erreurs[e.id] = signaler(`le jalon bonus « ${e.id} » plante`, x); }
+        if (!r) return;
+        total += 1;
+        etats[e.id] = r.status;
+        if (r.status === 'ok') justes += 1;
+      });
+      if (total) detail.bonus = { justes, total, etats };
+    }
     rangerErreurs(db, erreurs);
     // Le niveau figé dans la séance, pour l'enseignant qui relit le détail d'une note.
     if (db && db.aisance === 'confirme') detail.niveau = 'confirmé';
@@ -1097,6 +1126,22 @@ export function creerEntreprise(U) {
         return complet ? actuels : score;
       }
 
+      // LE BONUS RETENU (lot 3 de D-C, brief §5.3) : min(plafond, parCas × cas bonus justes) (`pointsBonus`, core/notes.js).
+      // Séance `correction` : le bonus du premier bilan (`bonus1`, rangé avec `bilan1`) ; à la 1re correction, le plus haut
+      // de `bonus1` et de la moyenne de `bonus1` et du bonus de ce moment (`bonus2`, rangé avec `bilan2`), puis figé : il
+      // ne peut que monter. Ailleurs, le bonus du moment (le meilleur score rangé ne descend jamais, `meilleurScore`).
+      function bonusRetenu(res) {
+        if (!res.bonus) return 0;
+        const maintenant = pointsBonus(res.bonus.justes);
+        if (!CORRECTION) return maintenant;
+        const r = reperageSeance();
+        if (!r.bilan1) return maintenant;
+        if (typeof r.bonus1 !== 'number') r.bonus1 = maintenant;
+        if (!r.bilan2) return r.bonus1;
+        if (typeof r.bonus2 !== 'number') r.bonus2 = maintenant;
+        return Math.max(r.bonus1, arrondi((r.bonus1 + r.bonus2) / 2));
+      }
+
       // Le score du suivi de classe : l'avancement (voir `noteDuSuivi`). Il n'est réécrit en base que s'il
       // a changé, temps passé mis à part (il avance tout seul) ; `forcer` (sortie de la séance)
       // l'écrit quoi qu'il arrive, pour que l'enseignant lise le temps à jour.
@@ -1108,7 +1153,10 @@ export function creerEntreprise(U) {
         const { score: brut, max, detail: res } = noterBase(db);
         noterPremiers(res);
         majBandeauFin(res);
-        const ok = noteDuSuivi(res, brut);
+        const socle = noteDuSuivi(res, brut);
+        const pts = bonusRetenu(res);
+        if (res.bonus) res.bonus.points = pts;
+        const ok = pts ? Math.min(BAREME_AFFICHE, arrondi(socle + pts)) : socle;
         const cle = JSON.stringify({ ok, max, res }, (k, v) => (k === 'temps' && typeof v === 'number' ? undefined : v));
         // Évaluation : rien ne remonte pendant le travail, seule la remise compte.
         if (!COPIE) ctx.enregistrer({ score: ok, max, detail: res }, { siChange: !forcer, cle });

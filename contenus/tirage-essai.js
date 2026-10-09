@@ -5,7 +5,7 @@
 //
 // Un tri de CV : le CV de Yanis (pièce FIXE, le fil conducteur) et quatre CV tirés dans une banque de 15 (1 facile,
 // 2 moyens, 1 difficile) ; un élève CONFIRMÉ en reçoit deux de plus (1 moyen, 1 difficile), comptés en bonus. Une fiche
-// « Tri des CV » : pour chaque rang, « retenir » ou « écarter ». Socle : 5 jalons × 4 points = 20 ; bonus : 2 jalons.
+// « Tri des CV » : pour chaque rang, « retenir » ou « écarter ». Socle : 5 jalons × 4 points = 20 ; bonus : un jalon par cas reçu.
 // `essai(o)` fabrique des VARIANTES (banque enrichie, mélange changé, pièce supprimée, quatre cas bonus) pour les tests.
 
 import { catalogueSimple } from './entreprise-commun.js';
@@ -30,7 +30,7 @@ export const CV = [
   { id: 'cv-d3', difficulte: 'difficile', titre: 'CV 13 — surqualifié, mobile', attendu: 'retenir' },
   { id: 'cv-d4', difficulte: 'difficile', titre: 'CV 14 — contre-indication au port de charges', attendu: 'ecarter' },
 ];
-export const RANGS_SOCLE = 5, RANGS_BONUS = 4;   // jusqu’à quatre cas bonus (variante des tests)
+export const RANGS_SOCLE = 5, RANGS_BONUS = 5;   // jusqu’à cinq cas bonus (variante des tests : le plafond de 2 points)
 
 const FICHE_TRI = {
   id: 'tri', libelle: 'Tri des CV', titre: 'Tri des CV — poste de préparateur', bouton: 'Ouvrir la fiche de tri',
@@ -61,6 +61,9 @@ export function essai(o = {}) {
     ...Array.from({ length: RANGS_SOCLE }, (_, i) => ({ id: `cv${i + 1}`, titre: `CV n° ${i + 1}`, poids: 4, ecran: 'fiche:tri',
       groupe: i < 3 ? 'Premiers CV' : 'Derniers CV',
       verifier: (db) => juge(db, TIRAGE.piecesTirees(db, 'cv')[i], `r${i + 1}`) })),
+    // Les cas bonus : seulement chez un élève qui en a reçu (sinon le jalon n'existe pas pour lui : `null`).
+    ...Array.from({ length: RANGS_BONUS }, (_, i) => ({ id: `bonus${i + 1}`, bonus: true, ecran: 'fiche:tri',
+      verifier: (db) => { const p = TIRAGE.piecesBonus(db, 'cv')[i]; return p ? juge(db, p, `r${RANGS_SOCLE + i + 1}`) : null; } })),
   ];
   const UNIVERS = {
     ENTREPRISE: { id: 'essai-tirage', nom: 'Entrepôt d’essai', sousTitre: 'Recrutement — page d’essai', exercice: 'Le tri des CV' },

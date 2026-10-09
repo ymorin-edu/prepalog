@@ -391,6 +391,16 @@ Un jalon (`etapes`) peut déclarer, en plus de `id`, `titre` et `verifier(db)` :
   au renvoi (deux envois = **une** correction, compteur `finis` de l'état du planning).
   Un jalon faux **sans** `ecran` ne se rouvre pas (ENT-5.4 : BL signé, camion reparti). La séance peut le dire au bandeau
   par `finFige: '<une phrase>'` dans `creerEntreprise` ; s'il n'y a rien à rouvrir, le bandeau ne parle plus de corriger.
+- `bonus: true` (chantier D-C, lot 3, 09/10/2026) : un **cas bonus du confirmé**, **sans `poids` ni `groupe`** (la
+  fabrique et le moteur le refusent sinon) ; la séance doit avoir des jalons du socle pondérés (somme 20). Il ne compte ni
+  dans la somme des poids, ni au bandeau, ni dans « fini » ; il n'est jugé que chez un élève dont `db.aisance === 'confirme'`,
+  jamais en évaluation, et son `verifier` rend **`null`** quand l'élève n'a pas reçu le cas (la séance les fabrique d'après
+  `TIRAGE.piecesBonus(db, …)`, un jalon par rang). Chaque cas juste ajoute `BONUS.parCas` (0,5) point à la note du socle, au
+  plus `BONUS.plafond` (2) par séance, note plafonnée à 20 (`core/notes.js`, le seul réglage) ; un cas faux ne retire rien.
+  Séance `correction` : bonus du premier bilan (`indicateurs[séance].bonus1`), à la 1re correction le plus haut de `bonus1` et
+  de la moyenne avec le bonus de ce moment (`bonus2`), puis figé. Le détail porte `bonus: { justes, total, points, etats }`.
+  **Caché à l'élève** : rien au bandeau, aucune ligne, aucun mot « bonus » ; l'enseignant le lit dans l'infobulle du Suivi
+  (« dont bonus +1 (2 cas sur 2) ») et dans l'onglet Corrigés. Le `bareme` déduit par la fabrique ne compte pas ces jalons.
 - `compte: false` : un jalon de passage (ENT-5.4 : la signature du BL), sans poids ni ligne au bandeau. Il doit quand même
   être jugé pour que la séance soit finie.
 

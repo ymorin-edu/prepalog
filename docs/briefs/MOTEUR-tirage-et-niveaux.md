@@ -6,7 +6,7 @@
 > Lis docs/EN-COURS.md puis docs/briefs/MOTEUR-tirage-et-niveaux.md en entier (les décisions du §1 d'abord). Fais le lot 1, puis le lot 2, puis le lot 3, un commit par lot. Annonce la durée avant de commencer, et dis-moi si un point du brief contredit le code.
 > ```
 
-**Statut** : à implémenter
+**Statut** : livré (lots 1 à 3, 09/10/2026)
 **Date du brief** : 08/10/2026
 **Auteur** : Claude (conversation Cowork, Opus), d'après la fiche projet `prepalog-randomisation-et-niveaux.md` (08/10) et
 la lecture du code de `main` : `core/tirage.js`, `core/amenagements.js`, `core/notes.js`, `core/prof.js` (onglet
@@ -345,4 +345,26 @@ Aucune à ce jour (toutes tranchées le 08/10). Si un point contredit le code : 
   mélange ignoré, graine sans la séance, marque « bonus » du corrigé, contrôle `niveauxPrevus`, « Réinitialiser » sans
   tirage). Suite entière **946/946** (936 + 10).
 - **Reste ouvert** : aucune vraie séance ne déclare encore de tirage (ENT-6.x à venir).
+- **Commit** : bd61630.
+
+### Lot 3 — bonus dans la note (09/10/2026, Claude Code, chantier D-C)
+
+- **Fichiers** : `core/notes.js` (`BONUS = { parCas: 0.5, plafond: 2 }`, `pointsBonus`) ; `core/types/entreprise.js`
+  (jalons `bonus: true` séparés du socle, jugés chez le confirmé hors évaluation, `detail.bonus`, `bonusRetenu` avec la règle
+  du premier bilan, note = min(20, socle + bonus)) ; `core/types/seance-entreprise.js` (`bareme` déduit sans les jalons
+  bonus) ; `core/prof.js` (infobulle du Suivi « dont bonus +1 (2 cas sur 2) ») ; `contenus/tirage-essai.js` (jalons bonus,
+  jusqu'à 5 rangs) ; `outils/test/tirage-niveaux.mjs` (+6 cas) ; `activites/FICHE-SEANCE.md` (jalon `bonus: true`).
+- **Décisions techniques** : un jalon bonus dont le `verifier` rend `null` n'existe pas pour cet élève (cas non reçu) ; le
+  moteur refuse un jalon bonus qui déclare `poids` ou `groupe`, et des jalons bonus sans socle pondéré (le bonus est en points
+  sur 20). Hors séance `correction`, le bonus est celui du moment (le meilleur score rangé ne descend jamais). `bonus1` posé
+  au premier calcul après le premier bilan (pour une base d'avant ce lot qui aurait déjà un `bilan1`, il prend le bonus de
+  ce moment-là). Export des notes : la note avec bonus, pas de colonne à part (brief).
+- **Tests** : bloc 26/26 (+1 / plafond +2 avec 5 cas / 20 + bonus → 20 / bonus faux → socle / standard sans jalon bonus ;
+  premier bilan 16,5 puis 18,75 après correction, et bonus qui ne baisse pas ; même bandeau confirmé / standard, « bonus »
+  absent de l'écran élève ; séance commencée en standard sans bonus, la suivante en a ; évaluation sans bonus ; infobulle
+  du Suivi). Six sabotages, chacun fait tomber au moins un cas (plafond, note ≤ 20, jalons bonus dans le socle, max de la
+  correction, bonus du premier bilan, infobulle). Suite entière **952/952** (946 + 6).
+- **À voir par Tristan à l'écran** (rien n'est encore branché sur une vraie séance) : onglet « Niveaux » de l'espace
+  enseignant (colonne Cdiscount ; proposition et « Tout le demi-groupe → » à juger) ; la règle de proposition lue séance par
+  séance (lot 1) ; les seuils `BONUS` et `PROPOSITION` après les premiers essais en classe.
 

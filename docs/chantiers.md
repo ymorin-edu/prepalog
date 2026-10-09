@@ -45,7 +45,7 @@
 | **Lot D — France Boissons (scénario S2, ENT-6.1 → 6.10)** : relevé du 09/10/2026, ordre de la refonte du 07/10 (Q2) | | | | | | | |
 | D-A | Questions au fil (lots 1 à 4) | brief `MOTEUR-questions-au-fil` | gros | Opus | oui | — | **livré le 08/10, vue validée par Tristan le 09/10** (page d'essai ; lot 4 à revoir avec ENT-6.1) |
 | D-B | « Jugé au premier essai » | SMOBY-notation lot 3 | — | — | oui | — | **livré** (visite ENT-5.3 ; l'animation garde la première réponse) |
-| D-C | Tirage mémorisé, niveaux par scénario, bonus du confirmé (lots 1 à 3) | brief `MOTEUR-tirage-et-niveaux` | 1 à 1,5 j | Opus | oui + règles | D-A | à faire — **règles Firestore à publier** à la livraison |
+| D-C | Tirage mémorisé, niveaux par scénario, bonus du confirmé (lots 1 à 3) | brief `MOTEUR-tirage-et-niveaux` | 1 à 1,5 j | Opus | oui + règles | D-A | **livré** (09/10 : lot 1 d63d9e0, lot 2 bd61630, lot 3 dans le commit « D-C lot 3 ») ; **aucune règle Firestore modifiée** (la liste blanche de l'élève ferme déjà `niveaux`), rien à publier ; à juger à l'écran : onglet « Niveaux », lecture de la règle de proposition |
 | D-D | Images libres FB (11 photos, crédits, script reproductible) | brief `IMAGES-france-boissons` | petit | Sonnet | non | — | à faire |
 | D-E | Logo France Boissons (`contenus/trames/logos/`) et relevé de la charte | ENT-6.2 §11 | petit | Sonnet | non | — | livré (09/10), à valider par Tristan à l'écran |
 | D-1 | Messagerie : bouton « Transférer à… » | ENT-6.1 §7.1 | ≈ 3 h | Opus | oui | D-A, D-C | à faire → **ENT-6.1** (crée l'univers `contenus/france-boissons.js`) |

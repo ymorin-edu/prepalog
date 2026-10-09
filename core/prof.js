@@ -1094,7 +1094,10 @@ export async function rendreEspaceProf(hote, ctx) {
         const n = (ind && ind.corrections) || 0;
         const corr = n ? `corrigé ${n} fois${n > 1 ? ' (seule la 1re correction compte dans la note)' : ''}` : 'jamais corrigé';
         const so = sortiesDe(ind);
-        return `<td class="num ${classe}" title="${ech(`${formaterNote(t.meilleur)} sur ${max} — ${corr}${so ? `
+        // Le bonus du confirmé (D-C, lot 3) : dans l'infobulle de l'enseignant seulement (la note le comprend déjà).
+        const bo = t.detail && t.detail.bonus;
+        const dontBonus = bo && bo.total ? ` — dont bonus +${formaterNote(bo.points || 0)} (${bo.justes} cas sur ${bo.total})` : '';
+        return `<td class="num ${classe}"${dontBonus ? ' data-bonus' : ''} title="${ech(`${formaterNote(t.meilleur)} sur ${max}${dontBonus} — ${corr}${so ? `
 ${so.phrase}` : ''}`)}"
           >${formaterNote(noteSur20(t.meilleur, max))}<span class="note">/${BAREME_AFFICHE}</span>${
           n ? `<span class="suivi-corrige" data-corrections="${n}">corrigé ${n}×</span>` : ''}</td>`;

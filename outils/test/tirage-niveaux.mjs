@@ -1,6 +1,9 @@
 // Suite de tests de Prepalog — bloc « tirage-niveaux » : chantier D-C (brief `docs/briefs/MOTEUR-tirage-et-niveaux.md`,
 // 09/10/2026). `node outils/test.mjs tirage-niveaux` ne lance que ce bloc.
 //
+// Lot 2 — tirage mémorisé (banques, pièce fixe, mélange, cas bonus du confirmé), séance d'essai `contenus/tirage-essai.js`.
+// Lot 3 — bonus dans la note (+0,5 par cas juste, plafond +2, note ≤ 20, règle du premier bilan), caché à l'élève.
+//
 // Lot 1 — niveau par scénario : le profil range `niveaux: { '<n° entreprise>': 'confirme' | 'accompagne' }` ; l'onglet
 // « Niveaux » de l'enseignant (élèves × entreprises), la migration sans écriture de l'ancien `aisance`, le réglage d'un
 // demi-groupe d'un coup, la proposition « Confirmé » ; `ctx.aisance` = le niveau du scénario de la séance ouverte, figé
@@ -601,6 +604,109 @@ await v('Tirage : Corrigés — pour un élève choisi, ses pièces (avec ce qu�
   vrai(c2.slice(1).every((x) => /✓ (Retenir|Écarter)/.test(x.t)), 'attendu : ' + JSON.stringify(c2));
   vrai(c2.some((x) => /CV de Yanis/.test(x.t)), 'la pièce fixe manque');
   egal(await pt.$$eval('#contenuProf .avis-err', (L) => L.length), 0, 'avis d’erreur');
+});
+
+
+await v('Bonus : l’enseignant le lit dans l’infobulle du Suivi (« dont bonus +1 (2 cas sur 2) »), la note le comprend', async () => {
+  const gid = await pt.evaluate(() => Object.entries(JSON.parse(localStorage.getItem('prepalog:groupes') || '{}')).find(([, g]) => g.nom === 'TIR 1')[0]);
+  const u1 = await uidT('T1');
+  await pt.evaluate(({ gid, uid }) => {
+    const aid = 'essai-tirage';
+    localStorage.setItem(`prepalog:travaux/${gid}/${uid}/${aid}`, JSON.stringify({ uid, aid, gid, score: 17, max: 20, meilleur: 17, tentatives: 1,
+      detail: { cv1: 'ko', cv2: 'ok', cv3: 'ok', cv4: 'ok', cv5: 'ok', bonus: { justes: 2, total: 2, points: 1, etats: { bonus1: 'ok', bonus2: 'ok' } } }, dateMaj: Date.now() }));
+    const idx = JSON.parse(localStorage.getItem(`prepalog:travauxIdx/${gid}`) || '[]');
+    if (!idx.includes(`${uid}|${aid}`)) idx.push(`${uid}|${aid}`);
+    localStorage.setItem(`prepalog:travauxIdx/${gid}`, JSON.stringify(idx));
+  }, { gid, uid: u1 });
+  await pt.click('[data-ong="suivi"]');
+  await pt.waitForSelector('#contenuProf td[data-bonus]');
+  const cases = await pt.$$eval('#contenuProf td[data-bonus]', (L) => L.map((x) => ({ t: x.getAttribute('title'), lu: x.textContent.replace(/\s+/g, ' ').trim() })));
+  egal(cases.length, 1, 'cases avec bonus');
+  vrai(/17 sur 20 — dont bonus \+1 \(2 cas sur 2\)/.test(cases[0].t), 'infobulle : ' + cases[0].t);
+  vrai(/^17\/20/.test(cases[0].lu), 'note lue : ' + cases[0].lu);
+  vrai(!/bonus/i.test(await pt.textContent('#contenuProf')), 'le mot « bonus » est écrit dans le tableau (projetable)');
+});
+
+// ════════════════════════════════════════════════════════════════════════════════════ lot 3 : bonus dans la note
+// La fiche « Tri des CV » remplie dans la base (comme un envoi) : socle 5 × 4 points, un cas bonus juste = +0,5, au plus +2.
+const repondre = (db, o = {}) => pt.evaluate(async ({ db, o }) => {
+  const { essai } = await import('/contenus/tirage-essai.js');
+  const T = essai(o.variante || {}).TIRAGE;
+  const S = T.piecesTirees(db, 'cv'), Bn = T.piecesBonus(db, 'cv');
+  const inv = (a) => (a === 'retenir' ? 'ecarter' : 'retenir');
+  const valeurs = {};
+  S.forEach((p, i) => { valeurs[`r${i + 1}`] = (o.socleFaux || []).includes(i) ? inv(p.attendu) : p.attendu; });
+  Bn.forEach((p, i) => { valeurs[`r${S.length + i + 1}`] = i < (o.bonusJustes === undefined ? Bn.length : o.bonusJustes) ? p.attendu : inv(p.attendu); });
+  db.fiches = { ...(db.fiches || {}), tri: { envoye: { at: Date.now() }, envois: o.envois || 1, valeurs } };
+  return db;
+}, { db, o });
+const dernier = () => pt.evaluate(() => JSON.parse(JSON.stringify(window.__t.enregistres.slice(-1)[0] || null)));
+// Ouvre, répond, rouvre : rend le dernier score remonté et la base.
+const noter = async ({ uid, aisance = 'confirme', variante, ...rep }) => {
+  const a = await monter({ uid, aisance, variante });
+  const db = await repondre(a.db, { variante, ...rep });
+  const b = await monter({ uid, aisance, variante, db });
+  return { s: await dernier(), db: b.db, bonus: b.bonus };
+};
+
+await v('Bonus : confirmé — 2 cas justes → +1 ; 5 justes → plafond +2 ; socle à 20 + bonus → 20 ; cas bonus faux → la note du socle, pas moins ; standard → aucun jalon bonus', async () => {
+  const deux = await noter({ uid: 'u-b1', socleFaux: [0] });
+  egal([deux.s.score, deux.s.max, deux.s.detail.bonus.justes, deux.s.detail.bonus.total, deux.s.detail.bonus.points], [17, 20, 2, 2, 1], '2 justes');
+  const cinq = await noter({ uid: 'u-b2', socleFaux: [0], variante: { bonus: { facile: 2, moyen: 2, difficile: 1 } } });
+  egal([cinq.bonus.length, cinq.s.score, cinq.s.detail.bonus.points], [5, 18, 2], '5 justes, plafond');
+  const plein = await noter({ uid: 'u-b3' });
+  egal([plein.s.score, plein.s.max], [20, 20], 'socle 20 + 1');
+  const faux = await noter({ uid: 'u-b4', socleFaux: [0, 1], bonusJustes: 0 });
+  egal([faux.s.score, faux.s.detail.bonus.justes, faux.s.detail.bonus.points], [12, 0, 0], 'bonus faux');
+  const std = await noter({ uid: 'u-b4', aisance: 'standard', socleFaux: [0, 1] });
+  egal([std.s.score, 'bonus' in std.s.detail, std.bonus.length], [12, false, 0], 'standard');
+  vrai(!Object.keys(std.s.detail).some((k) => /^bonus\d/.test(k)), 'jalon bonus dans le détail d’un standard');
+});
+
+await v('Bonus : règle du premier bilan — bonus1 rangé au premier bilan, à la 1re correction max(bonus1, moyenne), il ne peut que monter', async () => {
+  // Premier bilan : socle 16, 1 bonus juste sur 2 (+0,5) → 16,5. Correction : socle 20, 2 justes (+1) → (16+20)/2 + max(0,5 ; 0,75) = 18,75.
+  const a = await noter({ uid: 'u-c1', socleFaux: [0], bonusJustes: 1 });
+  egal([a.s.score, a.db.indicateurs['essai-tirage'].bonus1], [16.5, 0.5], 'premier bilan');
+  const db2 = await repondre(a.db, { envois: 2 });
+  await monter({ uid: 'u-c1', aisance: 'confirme', db: db2 });
+  const b = await dernier();
+  egal([b.score, b.detail.bonus.points], [18.75, 0.75], '1re correction');
+  // Dans l'autre sens : 2 justes au premier bilan (+1), plus aucun à la correction → le bonus reste 1, jamais moins.
+  const c = await noter({ uid: 'u-c2', socleFaux: [0] });
+  egal(c.s.score, 17, 'premier bilan (2 justes)');
+  const db3 = await repondre(c.db, { envois: 2, socleFaux: [0], bonusJustes: 0 });
+  await monter({ uid: 'u-c2', aisance: 'confirme', db: db3 });
+  const d = await dernier();
+  egal([d.score, d.detail.bonus.points], [17, 1], 'bonus jamais à la baisse');
+});
+
+await v('Bonus : caché à l’élève — même bandeau de fin pour un confirmé et un standard, le mot « bonus » nulle part à l’écran', async () => {
+  const lignes = async () => pt.$$eval('#tTest [data-fin-seance] [data-fin-jalon]', (L) => L.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));
+  const c = await noter({ uid: 'u-h1', socleFaux: [3], bonusJustes: 1 });
+  const lc = await lignes();
+  const texteC = await pt.textContent('#tTest');
+  const s = await noter({ uid: 'u-h1', aisance: 'standard', socleFaux: [3] });
+  const ls = await lignes();
+  vrai(lc.length === 2, 'bandeau absent ou incomplet : ' + JSON.stringify(lc));
+  egal(lc, ls, 'lignes du bandeau');
+  vrai(c.s.detail.bonus && !s.s.detail.bonus, 'le témoin ne prouve rien');
+  vrai(!/bonus/i.test(texteC), 'le mot « bonus » à l’écran de l’élève');
+});
+
+await v('Bonus : un changement de niveau vaut à la séance suivante — séance ouverte en standard, passée en confirmé : pas de bonus ; la suivante en a', async () => {
+  const a = await monter({ uid: 'u-suite', aisance: 'standard' });
+  const b = await monter({ uid: 'u-suite', aisance: 'confirme', db: a.db });
+  egal([b.db.aisance, b.bonus.length, 'bonus' in b.rec], ['standard', 0, false], 'séance commencée');
+  vrai(!(await dernier()).detail.bonus, 'jalons bonus dans la séance commencée');
+  const c = await monter({ uid: 'u-suite', aisance: 'confirme', variante: { id: 'essai-tirage-2' } });
+  egal([c.db.aisance, c.bonus.length], ['confirme', 2], 'séance suivante');
+});
+
+await v('Bonus : évaluation — aucun jalon bonus, même chez un confirmé', async () => {
+  const r = await noter({ uid: 'u-ev', variante: { copie: true }, socleFaux: [0] });
+  const n = await pt.evaluate(() => window.__t.M.noter(window.__t.db));
+  egal(['bonus' in n.detail, n.score, n.max], [false, 16, 20], 'copie');
+  vrai(!r.s || !r.s.detail || !r.s.detail.bonus, 'bonus remonté en évaluation');
 });
 
 await v('Tirage : aucune erreur JavaScript', async () => {

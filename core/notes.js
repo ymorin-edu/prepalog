@@ -28,6 +28,17 @@
 
 export const BAREME_AFFICHE = 20;
 
+// LE BONUS DU CONFIRMÉ (chantier D-C, lot 3, décision de Tristan du 08/10/2026) : un élève confirmé est noté sur le socle,
+// exactement comme un standard ; chaque cas bonus juste ajoute `parCas` point, au plus `plafond` par séance, et la note
+// reste plafonnée à 20. Un cas bonus raté ne retire rien. Le SEUL endroit à toucher pour affiner après les essais en classe.
+export const BONUS = { parCas: 0.5, plafond: 2 };
+
+/** Les points de bonus de `justes` cas bonus justes : min(plafond, parCas × justes). */
+export function pointsBonus(justes, B = BONUS) {
+  const n = typeof justes === 'number' && justes > 0 ? justes : 0;
+  return Math.min(B.plafond, B.parCas * n);
+}
+
 /**
  * Note sur 20 à partir d'un score brut. Rend `null` si le calcul n'a pas de sens —
  * un max nul ou absent, un score non numérique — pour que l'appelant affiche « — »

@@ -83,7 +83,7 @@ export function composerSeance(UNIVERS, SEANCE, meta, options = {}) {
     immersif: true,
     portee: 'eleve',
     tables: {},
-    bareme: SEANCE.ETAPES.length,
+    bareme: SEANCE.ETAPES.filter((e) => !(e && e.bonus === true)).length,   // les jalons bonus du confirmé ne comptent pas (D-C, lot 3)
     corrige: `./contenus/corriges/${meta.code}.js`,
     ...ecrit,
   };
