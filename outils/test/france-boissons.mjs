@@ -435,5 +435,277 @@ await v('ENT-6.1 : aucune erreur JavaScript', async () => {
   if (erreursF.length) throw new Error(erreursF.slice(0, 4).join(' | '));
 });
 
+// ── ENT-6.2 : la commande de La Cabane à Malo (brief `docs/briefs/ENT-6.2-france-boissons-commande.md`, §8) ──────────────
+// Même montage (la vraie séance, `activites/france-boissons-commande.js`), de vrais clics. Les valeurs attendues sont ÉCRITES
+// À LA MAIN ci-dessous (brief §4 et §5), jamais relues dans `contenus/france-boissons-ent62.js` :
+//   bon : Heineken 30 L = 6, Affligem = 2, remplacement Pelforth Blonde 20 L × 2 (total 10 = le minimum), eau = 3 casiers,
+//   livraison le vendredi 18 juin 2027, vides 9 fûts et 5 casiers ; message : une phrase juste par ligne (au vous).
+// Jalons : heineken30, affligem, remplacement, jour, eau-vides (le bon), msg-rupture, msg-livraison, msg-ton (la réponse).
+// Ce qui vaut son prix : le parcours juste, l'inaction à 0, chaque piège du brief qui ne fait tomber que son jalon, la réponse
+// non envoyée, « Corriger », la case nombre refusée à l'envoi, et le sabotage jalon par jalon (chaque jalon lit bien sa case).
+
+const ID62 = 'france-boissons-commande';
+const monter62 = (o = {}) => pg.evaluate(async (o) => {
+  const A = await import('/activites/france-boissons-commande.js');
+  document.querySelector('#fTest')?.remove();
+  const hote = document.createElement('div'); hote.id = 'fTest'; document.body.prepend(hote);
+  const db = o.db ? JSON.parse(JSON.stringify(o.db)) : {};
+  window.__f = { db, enregistres: [] };
+  A.rendre(hote, {
+    meta: A.meta, aisance: 'standard',
+    profil: { prenom: 'Lea', nom: 'Test', role: o.role || 'eleve', uid: o.uid || 'fb62' },
+    jeu: { etat: () => db, sauver: () => {} },
+    enregistrer: (r) => { window.__f.enregistres.push(JSON.parse(JSON.stringify(r))); }, quitter: () => {}, codeStock: 'FB',
+    lireScore: async () => null, rendreCopie: async () => ({ rendu: Date.now() }),
+  });
+  return JSON.parse(JSON.stringify(db));
+}, o);
+
+const BON_JUSTE = { heineken30: '6', affligem20: '2', remplacement: 'pelforth20', remplacementQte: '2', eau: '3',
+  jour: '2027-06-18', videsFuts: '9', videsCasiers: '5' };
+const MSG_JUSTE = {
+  salutation: 'Bonjour Malo,',
+  commande: 'Votre commande pour la Fête de la musique est bien enregistrée.',
+  rupture: 'Il ne nous reste que 2 fûts d’Affligem : je vous propose 2 fûts de Pelforth Blonde 20 L à la place.',
+  livraison: 'Vous serez livré vendredi 18 juin, par notre tournée de la côte.',
+  vides: 'Le chauffeur reprendra vos 9 fûts et 5 casiers vides.',
+  fin: 'Cordialement, Lea, administration des ventes France Boissons',
+};
+const JALONS62 = ['heineken30', 'affligem', 'remplacement', 'jour', 'eau-vides', 'msg-rupture', 'msg-livraison', 'msg-ton'];
+const LIGNES62 = ['heineken30', 'jour', 'eau-vides', 'msg-rupture', 'msg-livraison', 'msg-ton'];   // 1er jalon de chaque ligne du bandeau
+const etats62 = (n) => JALONS62.map((j) => [j, n.detail[j]]);
+const sauf = (faux, etat = 'ko') => JALONS62.map((j) => [j, faux.includes(j) ? etat : 'ok']);
+
+// Remplit le bon (les clés absentes restent vides) et clique « Envoyer » ; `confirmer: false` = s'arrête avant la confirmation.
+async function remplirBon(r, { confirmer = true } = {}) {
+  await aller('fiche');
+  for (const k of ['heineken30', 'affligem20', 'remplacementQte', 'eau', 'videsFuts', 'videsCasiers']) {
+    if (r[k] != null) await pg.fill(`${Z} [data-fiche-saisie="${k}"]`, r[k]);
+  }
+  if (r.remplacement) await pg.selectOption(`${Z} [data-fiche-champ="remplacement"]`, r.remplacement);
+  if (r.jour) await pg.check(`${Z} [data-fiche-champ="jour"][value="${r.jour}"]`);
+  await pg.click(`${Z} [data-fiche-envoyer]`);
+  await pause();
+  if (confirmer) { await pg.click(`${Z} [data-confirme-oui]`); await pause(); }
+}
+async function ouvrirMalo() {
+  await aller('mail');
+  await pg.click(`${Z} [data-dossier="in"]`);
+  const id = await pg.evaluate(() => window.__f.db.mails.find((m) => m.folder === 'in' && m.subject === 'Commande pour la Fête de la musique').id);
+  await pg.click(`${Z} [data-mail="${id}"]`);
+  await pause();
+}
+// Répond à Malo par phrases : `m` = { ligne: texte de la phrase choisie }.
+async function repondreMalo(m) {
+  await ouvrirMalo();
+  await pg.click(`${Z} [data-repondre]`);
+  await pause();
+  for (const [l, t] of Object.entries(m)) await pg.selectOption(`${Z} select[data-phrase="${l}"]`, { label: t });
+  await pg.click(`${Z} #formPhr button[type="submit"]`);
+  await pause();
+  await pg.click(`${Z} [data-confirme-oui]`);
+  await pause();
+}
+const sujets = async () => (await entrants()).map((m) => m.subject);
+
+await v('ENT-6.2 : valeurs attendues calculées = celles du brief (écrites à la main) ; un seul remplacement possible ; la copie de lireNombre lit comme l’original', async () => {
+  const r = await pg.evaluate(async () => {
+    const S = await import('/contenus/france-boissons-ent62.js');
+    const F = await import('/core/types/fiche.js');
+    const essais = ['6', ' 6 ', '6 091', '2,5', '2.0', '-3', '0', '', null, undefined, 'six', '1e3', '6\u00a0091', '12,', ',5', '--2', '4 fûts'];
+    return { A: S.ATTENDU, jours: S.JOURS_PROPOSES, remp: S.CHOIX_REMPLACEMENT.map((c) => c.v),
+      ecarts: essais.filter((x) => !Object.is(S.lireNombre(x), F.lireNombre(x))).map(String) };
+  });
+  egal([r.A.futs.heineken30, r.A.futs.affligem20, r.A.totalSansRemplacement], [6, 2, 8], 'fûts livrables');
+  egal([r.A.remplacement, r.A.candidats], [{ article: 'pelforth20', q: 2 }, ['pelforth20']], 'remplacement');
+  egal([r.A.eau, r.A.jour, r.A.vides], [3, '2027-06-18', { futs: 9, casiers: 5 }], 'eau, jour, vides');
+  egal(r.jours, ['2027-06-18', '2027-06-19', '2027-06-21'], 'jours proposés');
+  egal(r.remp, ['aucun', 'pelforth20', 'edelweiss20', 'heineken20'], 'choix de remplacement');
+  egal(r.ecarts, [], 'lireNombre : la copie ne lit pas comme l’original');
+});
+
+await v('ENT-6.2 : ouverture — messages d’Inès et de Malo, pièces jointes ; menu = Accueil, Messagerie, Bon de commande ; les documents se lisent (pied de reconstitution), mots cliquables', async () => {
+  await monter62();
+  const E = await entrants();
+  egal(E.map((m) => [m.subject, m.pieces]), [['Bienvenue à l’administration des ventes', ['organigramme', 'annuaire']],
+    ['Commande pour la Fête de la musique', ['fiche-client', 'stock', 'conditions']]], 'messages à l’ouverture');
+  vrai(/^Salut !/.test(E[1].text) && /mets-moi une autre blonde en 20 L/.test(E[1].text), 'le message de Malo (tutoiement)');
+  egal(await pg.$$eval(`${Z} .ent-nav[data-vue]`, (L) => L.map((x) => x.dataset.vue).filter((x) => x !== 'accueil')), ['mail', 'fiche'], 'menu');
+  await ouvrirMalo();
+  const docs = [];
+  for (const id of ['fiche-client', 'stock', 'conditions']) {
+    await pg.click(`${Z} [data-pj="${id}"]`);
+    await pause();
+    docs.push(await pg.evaluate((Z) => document.querySelector(`${Z} .ent-doc`).innerText, Z));
+  }
+  vrai(/C-14-2047/.test(docs[0]) && /Tournée de la côte : le vendredi/i.test(docs[0]) && /9 fûts, 5 casiers/.test(docs[0]), 'fiche client : ' + docs[0].slice(0, 300));
+  vrai(/Affligem Blonde\s+fût 20 L\s+2/.test(docs[1]) && /Heineken\s+fût 20 L\s+0/.test(docs[1]) && /Edelweiss \(bière blanche\)/.test(docs[1]), 'stock : ' + docs[1].slice(0, 400));
+  vrai(/10 fûts par livraison/.test(docs[2]) && /40 € par fût/.test(docs[2]) && /4 € par casier/.test(docs[2]) && /avant 12 h la veille/.test(docs[2]), 'conditions : ' + docs[2].slice(0, 400));
+  vrai(docs.every((d) => /Document pédagogique — reconstitution, non contractuel/.test(d)), 'mention de reconstitution');
+  // Le bon : les documents à gauche (le message de Malo en premier), l'encadré, des mots cliquables.
+  await aller('fiche');
+  egal(await pg.$$eval(`${Z} [data-fiche-doc]`, (L) => L.map((x) => x.dataset.ficheDoc)), ['commande-malo', 'fiche-client', 'stock', 'conditions'], 'documents à gauche');
+  vrai(/Prendre une commande/.test(await texte()), 'encadré « Prendre une commande »');
+  const mots = await pg.$$eval(`${Z} [data-lex]`, (L) => [...new Set(L.map((x) => x.dataset.lex))]);
+  vrai(mots.length >= 3, 'mots cliquables sur le bon : ' + mots);
+});
+
+await v('ENT-6.2 : inaction — rien fait → 0/8, aucun jalon juste, pas de bandeau de fin', async () => {
+  await monter62({ uid: 'fb62-rien' });
+  const n = await note();
+  egal([n.score, n.max], [0, 8], 'note');
+  vrai(!Object.values(n.detail).includes('ok'), 'un jalon juste sans rien faire : ' + JSON.stringify(n.detail));
+  vrai(!(await present('[data-fin]')), 'bandeau de fin');
+});
+
+await v('ENT-6.2 : parcours juste — 8/8, Inès demande la réponse après le bon, Malo répond « Ok pour la Pelforth, à vendredi ! », bandeau 6 lignes ✓, séance finie (photo)', async () => {
+  await monter62();
+  await remplirBon(BON_JUSTE);
+  vrai((await entrants()).some((m) => m.subject === 'Bon de commande reçu' && /Réponds maintenant à Malo/.test(m.text)), 'second message d’Inès');
+  egal((await note()).score, 5, 'note après le bon seul');
+  vrai(!(await sujets()).includes('RE : Commande pour la Fête de la musique'), 'Malo répond avant la réponse de l’élève');
+  await repondreMalo(MSG_JUSTE);
+  const n = await note();
+  egal([n.score, n.max], [8, 8], 'note');
+  egal(etats62(n), sauf([]), 'jalons');
+  egal(await bandeau(), LIGNES62.map((l) => [l, 'ok']), 'bandeau');
+  const R = (await entrants()).filter((m) => m.subject === 'RE : Commande pour la Fête de la musique');
+  egal(R.map((m) => [m.from, m.text]), [['Malo (La Cabane à Malo)', 'Ok pour la Pelforth, à vendredi !\n\nMalo']], 'réponse de Malo');
+  const out = (await base()).mails.filter((m) => m.folder === 'out');
+  egal(out.map((m) => [m.toMail, m.text.split('\n')]), [['contact@cabane-a-malo.example', Object.values(MSG_JUSTE)]], 'message envoyé');
+  vrai(!!(await base()).points[ID62], 'photo de fin (séance suivante ouverte)');
+});
+
+// Chaque piège du brief (§8) ne fait tomber que son jalon.
+const PIEGES_BON = [
+  ['Affligem 4', { affligem20: '4' }, ['affligem']],
+  ['remplacement « aucun » (0)', { remplacement: 'aucun', remplacementQte: '0' }, ['remplacement']],
+  ['Edelweiss × 2', { remplacement: 'edelweiss20' }, ['remplacement']],
+  ['Heineken 20 L × 2', { remplacement: 'heineken20' }, ['remplacement']],
+  ['Pelforth × 4', { remplacementQte: '4' }, ['remplacement']],
+  ['samedi', { jour: '2027-06-19' }, ['jour']],
+  ['vides inversés', { videsFuts: '5', videsCasiers: '9' }, ['eau-vides']],
+  ['eau 4 casiers', { eau: '4' }, ['eau-vides']],
+];
+for (const [nom, r, faux] of PIEGES_BON) {
+  await v(`ENT-6.2 : piège « ${nom} » → seul le jalon ${faux.join(', ')} est faux (7/8)`, async () => {
+    await monter62({ uid: 'fb62-piege' });
+    await remplirBon({ ...BON_JUSTE, ...r });
+    await repondreMalo(MSG_JUSTE);
+    const n = await note();
+    egal(etats62(n), sauf(faux), 'jalons');
+    egal(n.score, 8 - faux.length, 'note');
+  });
+}
+await v('ENT-6.2 : « Salut Malo ! » → seul le jalon du ton est faux ; « Bisous » et « C’est bon, j’ai noté ta commande. » aussi ; la ligne « vides » fausse ne coûte rien', async () => {
+  for (const [ligne, t, faux] of [['salutation', 'Salut Malo !', ['msg-ton']], ['fin', 'Bisous', ['msg-ton']],
+    ['commande', 'C’est bon, j’ai noté ta commande.', ['msg-ton']], ['vides', 'Gardez vos vides jusqu’à la prochaine fois.', []],
+    ['rupture', 'Il ne nous reste que 2 fûts d’Affligem : je vous propose 2 fûts d’Edelweiss à la place.', ['msg-rupture']],
+    ['livraison', 'Vous serez livré samedi 19 juin, comme vous le souhaitez.', ['msg-livraison']]]) {
+    await monter62({ uid: 'fb62-ton' });
+    await remplirBon(BON_JUSTE);
+    await repondreMalo({ ...MSG_JUSTE, [ligne]: t });
+    egal(etats62(await note()), sauf(faux), `jalons (${ligne} : ${t})`);
+  }
+});
+
+await v('ENT-6.2 : réponse à Malo jamais envoyée → jalons 6 à 8 jamais justes (5/8), pas de réponse de Malo, pas de bandeau', async () => {
+  await monter62({ uid: 'fb62-muet' });
+  await remplirBon(BON_JUSTE);
+  const n = await note();
+  egal(n.score, 5, 'note');
+  vrai(['msg-rupture', 'msg-livraison', 'msg-ton'].every((j) => n.detail[j] !== 'ok'), 'un jalon du message juste sans envoi : ' + JSON.stringify(n.detail));
+  vrai(!(await sujets()).includes('RE : Commande pour la Fête de la musique'), 'réponse de Malo');
+  vrai(!(await present('[data-fin]')), 'bandeau de fin');
+});
+
+await v('ENT-6.2 : réponse envoyée avant le bon → Malo n’écrit qu’après le bon ; Inès remercie au lieu de redemander', async () => {
+  await monter62({ uid: 'fb62-ordre' });
+  await repondreMalo(MSG_JUSTE);
+  vrai(!(await sujets()).includes('RE : Commande pour la Fête de la musique'), 'Malo répond avant le bon (il dirait la solution)');
+  await remplirBon(BON_JUSTE);
+  const E = await entrants();
+  egal(E.filter((m) => m.subject === 'Bon de commande reçu').map((m) => m.text), ['Bon de commande reçu, merci Lea.\n\nInès'], 'message d’Inès');
+  egal(E.filter((m) => m.subject === 'RE : Commande pour la Fête de la musique').length, 1, 'réponse de Malo');
+  egal((await note()).score, 8, 'note');
+});
+
+await v('ENT-6.2 : « Corriger » après le piège Affligem → rouvre le bon (pas la réponse), renvoi juste → accusé d’Inès, note = moyenne 7,5/8', async () => {
+  await monter62({ uid: 'fb62-corr' });
+  await remplirBon({ ...BON_JUSTE, affligem20: '4' });
+  await repondreMalo(MSG_JUSTE);
+  egal(await bandeau(), LIGNES62.map((l) => [l, l === 'heineken30' ? 'ko' : 'ok']), 'bandeau (bloc « les fûts » ✗)');
+  await pg.click(`${Z} [data-fin-corriger]`);
+  await pause();
+  vrai(await present('[data-fiche="bon-de-commande"] [data-fiche-envoyer]'), 'le bon n’est pas rouvert');
+  egal(await pg.inputValue(`${Z} [data-fiche-saisie="affligem20"]`), '4', 'la saisie de l’élève est gardée');
+  const avant = (await entrants()).length;
+  await pg.fill(`${Z} [data-fiche-saisie="affligem20"]`, '2');
+  await pg.click(`${Z} [data-fiche-envoyer]`);
+  await pause();
+  await pg.click(`${Z} [data-confirme-oui]`);
+  await pause();
+  egal((await entrants()).slice(avant).map((m) => [m.from, m.text]), [['Inès', 'Merci Lea, j’ai bien reçu ton bon de commande corrigé.\n\nInès']], 'accusé');
+  proche((await note()).score, 7.5, 'note moyennée');
+});
+
+await v('ENT-6.2 : case nombre — vide « manque », négatif et non entier refusés à l’envoi avec la raison ; rien n’est envoyé, la saisie reste', async () => {
+  await monter62({ uid: 'fb62-nombre' });
+  await remplirBon({ ...BON_JUSTE, heineken30: null, affligem20: '-2', eau: '2,5' }, { confirmer: false });
+  const msg = await pg.textContent(`${Z} [data-fiche-manque]`);
+  vrai(/Il manque : la ligne « Heineken fût 30 L »/.test(msg), 'case vide : ' + msg);
+  vrai(/À corriger : .*Affligem Blonde fût 20 L : un nombre positif ou nul est attendu/.test(msg), 'négatif : ' + msg);
+  vrai(/Eau plate 1 L \(casier de 12\) : un nombre entier est attendu/.test(msg), 'non entier : ' + msg);
+  vrai(!(await present('[data-confirme-oui]')), 'confirmation proposée');
+  vrai(!((await base()).fiches[`bon-de-commande`] || {}).envoye, 'bon envoyé');
+  egal(await pg.inputValue(`${Z} [data-fiche-saisie="affligem20"]`), '-2', 'saisie gardée');
+});
+
+await v('ENT-6.2 : sabotage jalon par jalon — sur la base d’un parcours juste, changer ce qu’un jalon lit ne fait tomber que lui', async () => {
+  await monter62({ uid: 'fb62-sabo' });
+  await remplirBon(BON_JUSTE);
+  await repondreMalo(MSG_JUSTE);
+  const db = await base();
+  const r = await pg.evaluate(async (db) => {
+    const S = await import('/contenus/france-boissons-ent62.js');
+    const juger = (d) => S.ETAPES.map((e) => [e.id, e.verifier(d).status]);
+    const bon = (k, x) => { const d = structuredClone(db); d.fiches['bon-de-commande'].valeurs[k] = x; return juger(d); };
+    // Une ligne du message : le DERNIER envoi porte un autre choix (rang dans l'ordre déclaré : 1 = le premier piège).
+    const msg = (l) => { const d = structuredClone(db); const o = d.mails.filter((m) => m.folder === 'out').pop(); o.phrases.choix[l] = 1; return juger(d); };
+    return { juste: juger(db),
+      heineken30: bon('heineken30', '5'), affligem: bon('affligem20', '3'), remplacement: bon('remplacement', 'aucun'),
+      qte: bon('remplacementQte', '3'), jour: bon('jour', '2027-06-21'), eau: bon('eau', '0'), vf: bon('videsFuts', '8'), vc: bon('videsCasiers', '4'),
+      rupture: msg('rupture'), livraison: msg('livraison'), salutation: msg('salutation'), commande: msg('commande'), fin: msg('fin'), vides: msg('vides') };
+  }, db);
+  egal(r.juste, sauf([]), 'base juste');
+  for (const [cas, faux] of [['heineken30', 'heineken30'], ['affligem', 'affligem'], ['remplacement', 'remplacement'], ['qte', 'remplacement'],
+    ['jour', 'jour'], ['eau', 'eau-vides'], ['vf', 'eau-vides'], ['vc', 'eau-vides'], ['rupture', 'msg-rupture'], ['livraison', 'msg-livraison'],
+    ['salutation', 'msg-ton'], ['commande', 'msg-ton'], ['fin', 'msg-ton']]) egal(r[cas], sauf([faux]), `sabotage « ${cas} »`);
+  egal(r.vides, sauf([]), 'la ligne « vides » du message n’est pas notée');
+});
+
+await v('ENT-6.2 : Corrigés — bon de commande et message attendus, calculés', async () => {
+  const r = await pg.evaluate(async () => {
+    const C = await import('/contenus/corriges/ENT-6.2.js');
+    return C.CORRIGE.items.map((it) => [it.texte, it.rep || it.reponses.map((l) => l.slice(0, 2).join(' = '))]);
+  });
+  egal(r[0], ['Le bon de commande attendu', ['Heineken fût 30 L = 6 fûts', 'Affligem Blonde fût 20 L = 2 fûts', 'Remplacement = Pelforth Blonde fût 20 L × 2',
+    'Eau plate 1 L (casier de 12) = 3 casiers', 'Jour de livraison = vendredi 18 juin', 'Vides à reprendre = 9 fûts, 5 casiers']], 'bon attendu');
+  egal(r[2][1], 'Bonjour Malo, Votre commande pour la Fête de la musique est bien enregistrée. Il ne nous reste que 2 fûts d’Affligem : '
+    + 'je vous propose 2 fûts de Pelforth Blonde 20 L à la place. Vous serez livré vendredi 18 juin, par notre tournée de la côte. '
+    + 'Le chauffeur reprendra vos 9 fûts et 5 casiers vides. Cordialement, {prénom}, administration des ventes France Boissons', 'message attendu');
+});
+
+await v('ENT-6.2 : enseignant — la séance s’ouvre (bon de commande, documents), rien ne remonte au suivi', async () => {
+  await monter62({ uid: 'fb62-prof', role: 'prof' });
+  await aller('fiche');
+  egal(await pg.$$eval(`${Z} [data-fiche-doc]`, (L) => L.length), 4, 'documents du bon');
+  egal(await pg.evaluate(() => window.__f.enregistres.length), 0, 'scores remontés');
+});
+
+await v('ENT-6.2 : aucune erreur JavaScript', async () => {
+  if (erreursF.length) throw new Error(erreursF.slice(0, 4).join(' | '));
+});
+
 await ctxF.close();
 }

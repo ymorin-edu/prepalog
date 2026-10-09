@@ -277,7 +277,12 @@ vide) dans `ficheEnvoyee(db, '<fiche.id>').valeurs['<bloc.id>']` (`db.fiches[<fi
 `lireNombre` est exporté par `core/types/fiche.js`, mais ce module tire `core/ui.js` : un fichier de `contenus/` qui veut
 rester sans cette dépendance recopie les 4 lignes de `lireNombre` (comme `contenus/smoby-ent58.js`) et un test vérifie que les
 deux lisent pareil. **Pas de bloc `lignes`** (libellé + case + liste sur une ligne) : une suite de blocs `nombre` et `liste`,
-éventuellement dans un `cadre`, suffit pour un bon de commande (décision D-2).
+éventuellement dans un `cadre`, suffit pour un bon de commande (décision D-2). Exemple : le bon de commande d'ENT-6.2
+(`FICHE` dans `contenus/france-boissons-ent62.js` : six cases `nombre` entières et positives, une `liste`, un `choix`, dans des
+`cadre`) ; tests : bloc `france-boissons`.
+**Limite connue** (ENT-6.2, 10/10/2026) : le bouton « Répondre » d'un mail par phrases est là dès l'arrivée du mail ; rien ne le
+ferme tant qu'une condition est fausse (sauf un point d'étape, `ferme: 'repondre:<clé>'`). Une séance qui veut « le bon d'abord,
+la réponse ensuite » fait attendre la **suite** (la réponse du client : `tous(apresFiche(…), …)`), pas le bouton.
 
 **Fonction de la base de l'élève** (chantier D-1 bis, 09/10/2026, brief ENT-6.1 §7.3) : pour une séance TIRÉE par élève (ses
 cases, ses lignes, son courrier : `TIRAGE.piecesTirees`), quatre champs acceptent une fonction `(db) => …` au lieu d'une valeur
