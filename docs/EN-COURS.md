@@ -7,6 +7,7 @@ est déjà modifié ou inscrit ci-dessous, **elle s'arrête et le dit à Tristan
 
 | Chantier | Fichiers qu'il touche | Depuis |
 |---|---|---|
+| 18 · Deux sessions à la fois (C17) | outils/test/commun.mjs, outils/test/dependances.mjs (ajout), CLAUDE.md (consignes git grep), docs/LISEZMOI.md si besoin, docs/chantiers.md, docs/decisions.md | 09/10/2026 |
 
 Rappel : un seul chantier à la fois dans `core/types/tournee.js`, `core/types/grille.js`,
 `core/types/entreprise.js`, `styles/base.css` et `outils/test/boost.mjs` (voir `docs/briefs/COORDINATION-boost.md`).
