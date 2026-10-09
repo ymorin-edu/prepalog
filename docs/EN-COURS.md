@@ -7,6 +7,7 @@ est déjà modifié ou inscrit ci-dessous, **elle s'arrête et le dit à Tristan
 
 | Chantier | Fichiers qu'il touche | Depuis |
 |---|---|---|
+| 14 · Doublons des vues (C11) | core/ui.js, core/tirage.js, core/notes.js, core/parcours.js, core/types/{quai,entrepot,entrepot-visite,planning,inventaire,export-tableur,animation,questions,qcm,assoc,numerique,entreprise}.js, core/iso.js, outils/test/*.mjs (ajouts), docs/chantiers.md, docs/decisions.md | 09/10/2026 |
 
 Rappel : un seul chantier à la fois dans `core/types/tournee.js`, `core/types/grille.js`,
 `core/types/entreprise.js`, `styles/base.css` et `outils/test/boost.mjs` (voir `docs/briefs/COORDINATION-boost.md`).
