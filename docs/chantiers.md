@@ -38,6 +38,7 @@
 | 15 | Couleurs en dur et `base.css` fourre-tout | C12 | petit à moyen | Sonnet | `styles/` + vues | — | **livré** (09/10, 6e52000 à fe50e77) |
 | 16 | Champs `meta`, portées et options morts | C14 | petit | Sonnet | oui | décision 14 (cœur) | **livré** (09/10, 77fc170 à 4003e49) ; **console RTDB publiée le 09/10** |
 | 17 | Contenus orphelins, trames Smoby à déclarer, commentaires périmés | C16 | petit | Sonnet | non | — | **livré** (09/10, e0bb05e à 2cda9cb) ; Smoby déclaré le 09/10 (17 bis, 9dbfa00, 9d5c144) ; `tab2-stocks.js` livré (générateur, 2f35e24, 09/10) ; reste : la mention TechPro de `core/types/entreprise.js:103` (suivi moteur) ; ENT-5.3 : corrigé de trame laissé non branché (décision de Tristan, 09/10) |
+| 21 | Tests lot A : un échec dit sa ligne et son sélecteur, capture d'écran, erreurs JS par cas, `egal`/`vrai` communs, Playwright épinglé | C10c | petit | Sonnet | non (tests) | — | **livré** (09/10, 793c16a) |
 | 18 | Deux sessions à la fois : port, `git grep`, `EN-COURS` | C17 | petit | Sonnet | non (`commun.mjs`) | — | **livré** (09/10, 9310e5e à 197c9ba) |
 | 19 | Reliquats SCE / Spartoo : acter la règle | C15 | petit | Sonnet | non | 9 | **livré** (09/10, cd622f5) |
 | 20 | Stratelog | C19 | ? | Opus | ? | 10 | à cadrer |
@@ -429,3 +430,21 @@ s'aligner.
 ### 20. Stratelog (C19)
 - **À cadrer en Cowork** : un troisième côté (ni Prepalog ni Simulog) ou une entreprise Simulog de
   plus ? Dans le premier cas, le chantier 10 passe avant.
+
+### 21. Tests lot A : diagnostic des échecs (C10c)
+- **Ce qu'on fait.** Après le chantier 13 (le fond), la forme de ce que la suite DIT quand elle tombe. Un cas rouge ne
+  donnait que la première ligne du message Playwright (« page.click: Timeout 5000ms exceeded. »), sans sélecteur, sans
+  ligne, sans image ; les erreurs JavaScript étaient comptées en bloc, jamais reliées à un cas ; / recopiés
+  dans sept blocs,  cinq fois dans smoby ; Playwright installé sans numéro de version sur GitHub.
+- **Livré le 09/10/2026** (793c16a, tests et workflow seulement, rien dans , , ) :
+  le bilan d'un échec porte la ligne du bloc (« dependances.mjs:971 »), le journal Playwright (sélecteur attendu, état
+  de l'élément) et une capture de chaque page ouverte dans  (ignoré par git, purgé après
+  sept jours, joint au passage GitHub quand un groupe est rouge) ; chaque erreur JavaScript, sur toute page de tout
+  contexte, est notée avec son bloc et son cas, celles des pages des blocs affichées à part et seulement si la suite est
+  rouge ; / viennent de  ; playwright@1.63.0 épinglé (workflow et CLAUDE.md). Éprouvé par
+  sabotage (clic sur un bouton absent,  faux, erreur JS pendant un cas, sur la page partagée et sur une page de
+  bloc, erreur hors cas) : ligne, sélecteur, cas et captures ressortent. Suite : 927/927 ; le seul rouge du premier
+  lancer était la ligne EN-COURS de ce chantier (accolades non comprises par le cas « chemins cités existants »).
+- **Non fait, à part** : les aides plus grosses recopiées (connexion enseignant x6 dans smoby, création de page avec
+  écouteurs x6, / par séance dans boost), les cas « aucune erreur » des blocs (gardés tels quels, ils jugent
+  toujours), et le point 2 des propositions du 09/10 (chaînes de cas sans remise à zéro dans boost : lot B).
