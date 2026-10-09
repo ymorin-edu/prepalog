@@ -37,7 +37,7 @@
 | 14 | Doublons des vues (`ech`, étapes, note, palette, confirmation, mélange, focus) | C11 | moyen | Sonnet | oui | 9 avancé | **livré** (09/10, f3cec57 à d637118) |
 | 15 | Couleurs en dur et `base.css` fourre-tout | C12 | petit à moyen | Sonnet | `styles/` + vues | — | **livré** (09/10, 6e52000 à fe50e77) |
 | 16 | Champs `meta`, portées et options morts | C14 | petit | Sonnet | oui | décision 14 (cœur) | **livré** (09/10, 77fc170 à 4003e49) ; **console RTDB publiée le 09/10** |
-| 17 | Contenus orphelins, trames Smoby à déclarer, commentaires périmés | C16 | petit | Sonnet | non | — | **livré** (09/10, e0bb05e à 2cda9cb) ; Smoby déclaré le 09/10 (17 bis, 9dbfa00, 9d5c144) ; reste : `tab2-stocks.js` (décision de Tristan), la mention TechPro de `core/types/entreprise.js:103` (suivi moteur) ; ENT-5.3 : corrigé de trame laissé non branché (décision de Tristan, 09/10) |
+| 17 | Contenus orphelins, trames Smoby à déclarer, commentaires périmés | C16 | petit | Sonnet | non | — | **livré** (09/10, e0bb05e à 2cda9cb) ; Smoby déclaré le 09/10 (17 bis, 9dbfa00, 9d5c144) ; `tab2-stocks.js` livré (générateur, 2f35e24, 09/10) ; reste : la mention TechPro de `core/types/entreprise.js:103` (suivi moteur) ; ENT-5.3 : corrigé de trame laissé non branché (décision de Tristan, 09/10) |
 | 18 | Deux sessions à la fois : port, `git grep`, `EN-COURS` | C17 | petit | Sonnet | non (`commun.mjs`) | — | **livré** (09/10, 9310e5e à 197c9ba) |
 | 19 | Reliquats SCE / Spartoo : acter la règle | C15 | petit | Sonnet | non | 9 | à décider |
 | 20 | Stratelog | C19 | ? | Opus | ? | 10 | à cadrer |
@@ -404,7 +404,7 @@ s'aligner.
   des palettes et de la fiche, même texte à l'écran. `tab2-stocks.js` : les 151 valeurs attendues sont des **littéraux** (aucun
   générateur dans le dépôt, contrairement à TAB-1, TAB-3, TAB-4) : laissé tel quel, décision de Tristan (voir `decisions.md`).
   Nouveau cas de `dependances.mjs` : chaque image, classeur et fichier de données de `contenus/` est cité au moins une fois.
-  **Smoby déclaré le 09/10/2026 (17 bis, 9dbfa00 et 9d5c144, suite 925/925)** : `meta.trame` des séances 5.3 à 5.8, corrigés de trame `ENT-5.4-trame.js` à `ENT-5.8-trame.js` ajoutés aux corrigés calculés, fiche d'intention Smoby dans `ENTREPRISES`. **Reste** : `tab2-stocks.js` (décision de Tristan, voir ci-dessus), la mention TechPro de `core/types/entreprise.js:103` (suivi moteur), **ENT-5.3** : Tristan a tranché le 09/10/2026 (option B) : le corrigé de trame reste non branché, la trame est servie, l'onglet Corrigés ne montre pas ses 39 questions ; rien à faire.
+  **Smoby déclaré le 09/10/2026 (17 bis, 9dbfa00 et 9d5c144, suite 925/925)** : `meta.trame` des séances 5.3 à 5.8, corrigés de trame `ENT-5.4-trame.js` à `ENT-5.8-trame.js` ajoutés aux corrigés calculés, fiche d'intention Smoby dans `ENTREPRISES`. **`tab2-stocks.js` livré le 09/10/2026 (2f35e24, suite verte)** : générateur `outils/tab2-exercices.mjs`, fichier régénéré à l'identique (151 contrôles comparés champ par champ), un cas de `socle.mjs` ajouté ; plus aucun corrigé de TAB-1 à TAB-4 n'est recopié. **Reste** : la mention TechPro de `core/types/entreprise.js:103` (suivi moteur), **ENT-5.3** : Tristan a tranché le 09/10/2026 (option B) : le corrigé de trame reste non branché, la trame est servie, l'onglet Corrigés ne montre pas ses 39 questions ; rien à faire.
 
 ### 18. Deux sessions à la fois (C17)
 - **Ce qu'on fait.** Port de test tiré au hasard si 8099 est pris, ou message clair ; `git grep` dans

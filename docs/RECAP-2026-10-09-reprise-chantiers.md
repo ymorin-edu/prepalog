@@ -34,7 +34,7 @@
 
 - `contenus/tab2-stocks.js` : 151 valeurs attendues **recopiées** de la Suite Logistique, sans générateur
   (TAB-1, 3 et 4 en ont un). Règle du projet : recalculé, pas recopié. **Décision de Tristan** : générateur
-  (petit chantier à part, Sonnet) ou statu quo. Rien n'a été touché (alerte 5).
+  (petit chantier à part, Sonnet) ou statu quo. Rien n'a été touché (alerte 5). **Livré le 09/10/2026 (2f35e24)** : générateur `outils/tab2-exercices.mjs`, fichier identique, point clos.
 - ENT-5.3 : corrigé de trame **non branché**, décision de Tristan du 09/10 (option B). Clos.
 - Contrastes vus pendant le chantier 15, non corrigés : boutons principaux de Boost en thème sombre (3,7 au
   lieu de 4,5), pastille blanche sur ambre en sombre (2,1), étiquettes « A · RAPIDE / B · MOYENNE / C · LENTE »
@@ -87,6 +87,6 @@ Même façon de travailler que pour les lots B et C : tu coordonnes sans coder, 
 « livré », VÉRIFIÉ et SUPPOSÉ distingués, une seule question à la fois. Interdis aux sous-agents
 d'arrêter un processus par son nom et de commiter les fichiers de Cowork.
 Aujourd'hui : [7 — voici ma mesure en console : …] / [12 — Cowork a posé le relevé CAP OL dans … ] /
-[19 — ma décision sur Spartoo : …] / [20 — cadrage Stratelog] / [tab2-stocks : générateur oui/non].
+[19 — ma décision sur Spartoo : …] / [20 — cadrage Stratelog] / [tab2-stocks : générateur, livré le 09/10, rien à décider].
 Annonce-moi la durée prévue et ce qui la prend, puis lance.
 ```
