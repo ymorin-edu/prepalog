@@ -347,7 +347,14 @@ pour servir à plusieurs séances (toute la S2, et toute séance où l'élève t
 - Organigramme en HTML (pas de dessin interactif, décision de Tristan du 05/10). Contraste et lisibilité des pointillés
   à vérifier au vidéoprojecteur.
 
-### 7.3 Fiche et documents « fonction de la base de l'élève » (demande ajoutée par Claude Code, 09/10/2026)
+### 7.3 Fiche et documents « fonction de la base de l'élève » (demande ajoutée par Claude Code, 09/10/2026) — **LIVRÉ** (chantier D-1 bis, 7900170)
+
+**Livré le 09/10/2026 (option B choisie par Tristan)** : `fiche.blocs`, `fiche.documents`, `documents[].html` et `ecran` d'un
+jalon acceptent une fonction `(db) => …`, évaluée à chaque dessin, jamais rangée ; contrôle au chargement sur une base vide ;
+au dessin, une fonction qui plante est signalée et laisse un avis d'erreur (`core/types/fiche.js`, `core/types/documents.js`,
+`core/types/entreprise.js`, une ligne dans `core/types/entreprise-messagerie.js` ; doc dans `activites/FICHE-SEANCE.md`,
+« Fonction de la base de l'élève »). Le contournement ci-dessous est **retiré** : ENT-6.1 déclare ses écrans comme les autres
+séances, et la limite après « Réinitialiser » a disparu (cas de test dédié, qui tombait avec le contournement). Historique :
 
 Relevé à la construction : dans le moteur, une **fiche** (`fiche`, `fiches`) et les **documents joints** (`documents`) sont
 des objets **fixes**, déclarés une fois pour toute la séance (`core/types/fiche.js` : `creerFiche(F)` ; `core/types/documents.js` :
@@ -355,7 +362,7 @@ des objets **fixes**, déclarés une fois pour toute la séance (`core/types/fic
 **ses** situations (les lignes du tableau oui / non) et **son** courrier (l'écran de « Corriger » de chaque message, `ecran` d'un
 jalon, fixe lui aussi). Le tirage mémorisé (D-C) range bien les pièces dans la base, mais aucun écran ne sait s'en servir.
 
-- **Contournement livré (rien dans `core/`)** : l'activité fabrique le moteur **à l'ouverture**, pour l'élève qui l'ouvre
+- **Contournement livré d'abord (rien dans `core/`), RETIRÉ par D-1 bis** : l'activité fabrique le moteur **à l'ouverture**, pour l'élève qui l'ouvre
   (`activites/france-boissons-organigramme.js`, `rendre`) : `jeuAOuverture(ctx)` range d'abord le tirage par `TIRAGE.assurer`
   (même graine, même niveau que le moteur), puis `optionsPour(jeu)` rend sa fiche, ses documents et ses jalons. Limite : la
   règle qui fige le niveau est recopiée de `core/types/entreprise.js` (`figerAisance`) ; après « Réinitialiser » avec un niveau
@@ -444,8 +451,9 @@ Tristan**). Graines choisies dans le test, valeurs attendues écrites à la main
     « Niveaux » a désormais trois colonnes, Cdiscount, Picard **et France Boissons**, puisque ENT-6.1 déclare
     `niveauxPrevus: ['confirme']`).
 - **Écarts par rapport au brief** (et pourquoi) :
-  - **Fiche et documents de l'élève** : le moteur ne sait pas les déclarer « fonction de la base » ; contournement dans l'activité
-    (moteur fabriqué à l'ouverture), demande au moteur écrite au **§7.3**. *DÉCISION À VALIDER.*
+  - **Fiche et documents de l'élève** : le moteur ne savait pas les déclarer « fonction de la base » ; d'abord un contournement dans
+    l'activité (moteur fabriqué à l'ouverture). **Tranché par Tristan : option B** — chantier moteur D-1 bis livré (§7.3, 7900170),
+    contournement retiré : la séance déclare `blocs: (db) => …`, `html: (db) => …` et `ecran: (db) => …`.
   - « Le lien est-il hiérarchique ? » : un `ouinon` donne oui / non **par colonne** ; deux colonnes « Hiérarchique » /
     « Fonctionnel » feraient cliquer deux fois par ligne (et permettraient oui / oui). Livré : **une colonne « Lien hiérarchique ? »**,
     oui = hiérarchique, non = fonctionnel (consigne dans la fiche). Autre option : une ligne `choix` (« Hiérarchique » /
@@ -471,10 +479,15 @@ Tristan**). Graines choisies dans le test, valeurs attendues écrites à la main
   Lucas inversé, des liens inversé, du courrier inversé, `juste` de la question changé → 6 cas tombent à chaque fois (parcours
   juste, pire cas, Nadia / quai, case de Karim, Malo → Karim, confirmé) ; garde « 2 + 2 » retirée de `ecartsEquite` → le cas des
   300 graines tombe. Le cas des 300 graines se contrôle aussi lui-même (la même banque sans règle doit y être prise en faute).
+  **D-1 bis** : bloc `france-boissons` 17/17 (3 cas de plus : niveau changé puis « Réinitialiser » → les écrans suivent le nouveau
+  tirage, cas qui **tombait** avec le contournement — 3 cases au lieu de 4 ; contrôle au chargement ; fonction qui plante au
+  dessin) ; `france-boissons questions dependances` 146/146 ; suite entière : **974/974**. Sabotages D-1 bis : contrôle au chargement de
+  la fiche retiré → le cas « au chargement » tombe ; `ecran` fonction ignoré → « Malo → Karim » tombe (pas de « Corriger ») ;
+  rattrapage du document au dessin retiré → le cas « au dessin » et « aucune erreur JavaScript » tombent.
 - **Commits** : 8713104 « ENT-6.1 : univers France Boissons, organigramme et annuaire, fiches, tirage et jalons (brouillon) » ;
-  fddd1f6 « ENT-6.1 : bloc de tests france-boissons » ; le commit de livraison (`pret: true`, ce compte rendu, décisions, chantiers).
-- **Reste ouvert** : les deux *DÉCISIONS À VALIDER* ci-dessus ; le chantier moteur du §7.3 ; le minutage de la vidéo au corrigé ;
+  fddd1f6 « ENT-6.1 : bloc de tests france-boissons » ; 5f01757 (livraison, `pret: true`, ce compte rendu) ; 7900170 (D-1 bis :
+  moteur « fonction de la base », contournement retiré).
+- **Reste ouvert** : la *DÉCISION À VALIDER* sur « Le lien est-il hiérarchique ? » (une colonne ou deux boutons) ; le minutage de la vidéo au corrigé ;
   la trame (Cowork, après validation à l'écran) ; la ligne ENT-6.1 du cas « compétences : chaque séance déclare ce que Tristan a
-  validé » (`outils/test/socle.mjs`) n'est pas ajoutée (liste écrite à la main par Tristan) ; **fiche à corriger** :
-  `activites/FICHE-SEANCE.md` dit qu'un confirmé a « le même socle qu'un standard » : vrai avec une seule banque, faux avec
-  plusieurs (les cas bonus d'une banque sont tirés avant le socle de la suivante) — sans effet sur la note, à signaler au moteur.
+  validé » (`outils/test/socle.mjs`) n'est pas ajoutée (liste écrite à la main par Tristan) ; `activites/FICHE-SEANCE.md` sur le
+  socle d'un confirmé : corrigé par la session mère (99f88cc).
