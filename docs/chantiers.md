@@ -445,6 +445,9 @@ s'aligner.
   sabotage (clic sur un bouton absent, `egal` faux, erreur JS pendant un cas, sur la page partagée et sur une page de
   bloc, erreur hors cas) : ligne, sélecteur, cas et captures ressortent. Suite : 927/927 ; le seul rouge du premier
   lancer était la ligne EN-COURS de ce chantier (accolades non comprises par le cas « chemins cités existants »).
+  En vérifiant la coche GitHub : « Tests séances » rouge depuis le chantier 19 (Spartoo fermée aux élèves, le test de
+  bout en bout ne la cochait pas) ; `outils/test-seances.mjs` corrigé dans la foulée (amorçage : l'enseignant coche les
+  trois séances), 31/31.
 - **Non fait, à part** : les aides plus grosses recopiées (connexion enseignant x6 dans smoby, création de page avec
   écouteurs x6, `ouvrir`/`jalons` par séance dans boost), les cas « aucune erreur » des blocs (gardés tels quels, ils jugent
   toujours), et le point 2 des propositions du 09/10 (chaînes de cas sans remise à zéro dans boost : lot B).

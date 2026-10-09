@@ -259,6 +259,19 @@ await v('amorçage : l\'enseignant crée un groupe et un élève', async () => {
   await page.fill('#lot', 'DUPONT ; Léa ; 2601 ; aaa1\nMARTIN ; Noé ; 2602 ; bbb2\nPETIT ; Zoé ; 2603 ; ccc3');
   await page.click('#btnLot');
   await page.waitForSelector('text=3 comptes');
+  // Depuis le chantier 19 (09/10/2026), les trois séances Spartoo sont livrées fermées aux élèves
+  // (`ouverture: 'prof'`) : l'enseignant les coche pour son groupe dans « Conduite de séance », comme en
+  // classe. Sans cela, Léa ne voit aucune tuile et tout le parcours tombe (coche GitHub rouge du 09/10).
+  const aActiver = await page.$('[data-actif="1-log-a"]');
+  if (aActiver) { await aActiver.click(); await page.waitForTimeout(300); }
+  await page.click('[data-ong="seance"]');
+  await page.waitForSelector('#codeStock');
+  for (const id of ['spartoo-reception', 'spartoo', 'spartoo-tracabilite']) {
+    if (!(await page.isChecked(`[data-ouvre="${id}"]`))) {
+      await page.check(`[data-ouvre="${id}"]`);
+      await page.waitForFunction((x) => document.querySelector(`[data-ouvre="${x}"]`).checked, id);
+    }
+  }
   await page.click('#btnRetour'); await page.click('#btnDeco');
   await connecterEleve();
 });
