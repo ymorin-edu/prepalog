@@ -179,11 +179,19 @@ await v('rubriques : les activités sont rangées par numéro de module', async 
     if (r.codes.join(' ') !== attendu) throw new Error(`rubrique ${label} : ${r.codes.join(' ')}`);
   };
   repere('Tableur', 'TAB-1 TAB-2 TAB-3 TAB-4 TAB-5');
-  // Quatre entreprises, et le rang se lit sur le premier chiffre : les trois séances Spartoo
-  // (ENT-1.x), puis Cdiscount (ENT-2.x, depuis le 02/10/2026), puis Boost (ENT-3.x), puis Picard
-  // (ENT-4.x, 03/10/2026). Une séance nouvelle s'insère à son rang : on ne touche à cette liste
-  // qu'en l'allongeant.
-  repere('Simulog', 'ENT-1.1 ENT-1.2 ENT-1.3 ENT-2.1 ENT-2.2 ENT-2.3 ENT-2.4 ENT-2.5 ENT-2.6 ENT-3.1 ENT-3.2 ENT-3.3 ENT-4.1 ENT-4.2 ENT-4.3 ENT-4.4 ENT-5.1 ENT-5.2 ENT-5.3 ENT-5.4 ENT-5.5 ENT-5.6 ENT-5.7 ENT-5.8');
+  // Simulog : la liste attendue n'est plus écrite à la main (chantier 13, 09/10/2026). On demande au
+  // registre quelles séances sont des séances d'entreprise (`estSimulog`, la définition unique), on range
+  // leurs codes avec le comparateur du test (segment par segment, écrit plus haut à part du noyau), et
+  // l'ordre affiché dans la rubrique doit être exactement celui-là : chaque séance Simulog y figure, et
+  // ENT-1.10 vient après ENT-1.9. Une séance ajoutée au registre entre dans les deux listes d'un coup ; un
+  // tri cassé dans `activites/index.js` fait diverger l'affichage de la liste rangée ici.
+  const codesSimulog = await page.evaluate(async () => {
+    const m = await import('/activites/index.js');
+    return (await m.chargerActivites()).filter((a) => m.estSimulog(a.meta)).map((a) => a.meta.code);
+  });
+  if (codesSimulog.length < 3) throw new Error(`${codesSimulog.length} séance(s) Simulog lue(s) dans le registre, test invalide`);
+  const rangees = [...codesSimulog].sort((x, y) => (avant(x, y) ? -1 : avant(y, x) ? 1 : 0));
+  repere('Simulog', rangees.join(' '));
 });
 
 // ---------- 7. l'élève voit la base commune de la classe
