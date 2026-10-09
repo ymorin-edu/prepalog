@@ -1403,30 +1403,36 @@ await v('ENT-5.1 : règle de note — premier bilan avant toute correction ; la 
   egal(r, [2, 22, 'ko'], 'corrections comptées, premier bilan et état de la 1re correction rangés');
 });
 
-await v('ENT-5.1 : « meilleur » — un élève du 07/10 (9/9) garde sa note quand le barème passe à 20 ; une note plus basse n’écrase rien (démonstration)', async () => {
+await v('ENT-5.1 : « meilleur » — un élève du 07/10 (9/9) garde sa note quand le barème passe à celui de la séance ; une note plus basse n’écrase rien (démonstration)', async () => {
+  // L'identifiant et le barème viennent de `meta` (chantier 13, 09/10/2026) : le cas suit la séance, il ne
+  // garde en dur que l'ANCIEN barème (9 jalons), qui est de l'histoire. Les scores « nouveau barème » sont
+  // écrits en proportion du barème courant (x / 20 de `bareme`), donc valables si `bareme` bouge.
   const r = await pg.evaluate(async () => {
     const { B } = await import('/core/backend.js');
-    const g = 'g-meilleur', u = 'u-meilleur', a = 'act-meilleur';
+    const { meta } = await import('/activites/smoby-recrutement.js');
+    const g = 'g-meilleur', u = 'u-meilleur', a = meta.id, N = meta.bareme;
+    const sur = (x) => x * N / 20;
     const lire = async () => (await B.lireScore(g, u, a)).meilleur;
-    const o = {};
+    const o = { id: a, N };
     await B.poserNote(g, u, a, null);
     await B.ecrireScore(g, u, a, { score: 9, max: 9 });                 // ancienne règle : 9 jalons
-    await B.ecrireScore(g, u, a, { score: 5, max: 20 });                // il rouvre : la fiche rouverte repasse « à faire »
+    await B.ecrireScore(g, u, a, { score: sur(5), max: N });            // il rouvre : la fiche rouverte repasse « à faire »
     o.complet = await lire();
     await B.poserNote(g, u, a, null);
     await B.ecrireScore(g, u, a, { score: 6, max: 9 });
-    await B.ecrireScore(g, u, a, { score: 10, max: 20 });               // 6/9 = 13,33 sur 20 : plus haut que 10
+    await B.ecrireScore(g, u, a, { score: sur(10), max: N });           // 6/9 = 13,33 sur 20 : plus haut que 10
     o.partiel = await lire();
-    await B.ecrireScore(g, u, a, { score: 17, max: 20 });
+    await B.ecrireScore(g, u, a, { score: sur(17), max: N });
     o.monte = await lire();
-    await B.ecrireScore(g, u, a, { score: 12, max: 20 });               // même barème : le plus haut reste
+    await B.ecrireScore(g, u, a, { score: sur(12), max: N });           // même barème : le plus haut reste
     o.garde = await lire();
     await B.poserNote(g, u, a, null);
     return o;
   });
-  vrai(Math.abs(r.complet - 20) < 0.01, '9/9 devenu ' + r.complet + ' sur 20');
-  vrai(Math.abs(r.partiel - 13.333) < 0.01, '6/9 devenu ' + r.partiel + ' sur 20');
-  egal([r.monte, r.garde], [17, 17], 'meilleur à barème constant');
+  vrai(r.N > 0, 'barème de la séance mal lu : ' + JSON.stringify(r.N));
+  vrai(Math.abs(r.complet - r.N) < 0.01, `9/9 devenu ${r.complet} sur ${r.N}`);
+  vrai(Math.abs(r.partiel - r.N * 6 / 9) < 0.01, `6/9 devenu ${r.partiel} sur ${r.N}`);
+  egal([r.monte, r.garde], [r.N * 17 / 20, r.N * 17 / 20], 'meilleur à barème constant');
 });
 
 // ── ENT-5.2 « l'arrivée de Yanis » (brief `docs/briefs/ENT-5.2-smoby-arrivee.md`) ─────────────────
@@ -2221,18 +2227,21 @@ await v('ENT-5.4 : « Corriger » ne rouvre que le compte rendu — premier bila
   egal(r.accuses, [['Ton compte rendu corrigé', 'Bien reçu, merci Lea.\n\nBruno']], 'l’accusé de Bruno, sans dire juste ou faux');
 });
 
-await v('ENT-5.4 : « meilleur » — un élève qui a fini avec l’ancien barème (10 / 10) garde sa note quand le barème passe à 20 (démonstration)', async () => {
+await v('ENT-5.4 : « meilleur » — un élève qui a fini avec l’ancien barème (10 / 10) garde sa note quand le barème passe à celui de la séance (démonstration)', async () => {
+  // Identifiant et barème lus dans `meta` (chantier 13, 09/10/2026) ; seul l'ancien barème (10) est écrit en dur.
   const r = await pg.evaluate(async () => {
     const { B } = await import('/core/backend.js');
-    const g = 'g-54-meilleur', u = 'u-54-meilleur', a = 'smoby-reception';
+    const { meta } = await import('/activites/smoby-reception.js');
+    const g = 'g-54-meilleur', u = 'u-54-meilleur', a = meta.id, N = meta.bareme;
     await B.poserNote(g, u, a, null);
     await B.ecrireScore(g, u, a, { score: 10, max: 10 });
-    await B.ecrireScore(g, u, a, { score: 12, max: 20 });
+    await B.ecrireScore(g, u, a, { score: N * 0.6, max: N });         // il rouvre : 60 % du barème courant, plus bas
     const m = (await B.lireScore(g, u, a)).meilleur;
     await B.poserNote(g, u, a, null);
-    return m;
+    return { id: a, N, m };
   });
-  vrai(Math.abs(r - 20) < 0.01, '10/10 devenu ' + r + ' sur 20');
+  vrai(r.N > 0 && r.N !== 10, 'meta de la séance : ' + JSON.stringify([r.id, r.N]) + ' (le barème courant doit différer de l’ancien, sinon le cas ne prouve rien)');
+  vrai(Math.abs(r.m - r.N) < 0.01, `10/10 devenu ${r.m} sur ${r.N}`);
 });
 
 // ── ENT-5.5 « ranger et saisir l'entrée » (brief `docs/briefs/ENT-5.5-smoby-rangement.md`) ──────────────
@@ -2759,18 +2768,21 @@ await v('ENT-5.3 : une base d’avant le premier essai (sans les coins de la 1re
   egal(r[2], '[[287,45],[847,47],[258,1175],[876,1173]]', 'les coins posés restent');
 });
 
-await v('ENT-5.3 : « meilleur » — un élève qui a fini avec l’ancien barème (17 / 17) garde sa note quand le barème passe à 20 (démonstration)', async () => {
+await v('ENT-5.3 : « meilleur » — un élève qui a fini avec l’ancien barème (17 / 17) garde sa note quand le barème passe à celui de la séance (démonstration)', async () => {
+  // Identifiant et barème lus dans `meta` (chantier 13, 09/10/2026) ; seul l'ancien barème (17) est écrit en dur.
   const r = await pg.evaluate(async () => {
     const { B } = await import('/core/backend.js');
-    const g = 'g-53-meilleur', u = 'u-53-meilleur', a = 'smoby-visite';
+    const { meta } = await import('/activites/smoby-visite.js');
+    const g = 'g-53-meilleur', u = 'u-53-meilleur', a = meta.id, N = meta.bareme;
     await B.poserNote(g, u, a, null);
     await B.ecrireScore(g, u, a, { score: 17, max: 17 });
-    await B.ecrireScore(g, u, a, { score: 9, max: 20 });
+    await B.ecrireScore(g, u, a, { score: N * 0.6, max: N });         // il rouvre : 60 % du barème courant, plus bas
     const m = (await B.lireScore(g, u, a)).meilleur;
     await B.poserNote(g, u, a, null);
-    return m;
+    return { id: a, N, m };
   });
-  vrai(Math.abs(r - 20) < 0.01, '17/17 devenu ' + r + ' sur 20');
+  vrai(r.N > 0 && r.N !== 17, 'meta de la séance : ' + JSON.stringify([r.id, r.N]) + ' (le barème courant doit différer de l’ancien, sinon le cas ne prouve rien)');
+  vrai(Math.abs(r.m - r.N) < 0.01, `17/17 devenu ${r.m} sur ${r.N}`);
 });
 
 // ── ENT-5.7 « les enlèvements de Noël » (brief `docs/briefs/ENT-5.7-smoby-enlevements.md`) ─────────────
@@ -2972,18 +2984,21 @@ await v('ENT-5.7 : « Corriger » — renvoyé tel quel après la panne (0 sur 1
   vrai(r.accuse.length === 1 && /bien reçu ton planning corrigé/.test(r.accuse[0]) && !/juste|faux/i.test(r.accuse[0]), 'accusé : ' + JSON.stringify(r.accuse));
 });
 
-await v('ENT-5.7 : « meilleur » — un élève qui a fini avec l’ancien barème (10 / 10) garde sa note quand le barème passe à 20 (démonstration)', async () => {
+await v('ENT-5.7 : « meilleur » — un élève qui a fini avec l’ancien barème (10 / 10) garde sa note quand le barème passe à celui de la séance (démonstration)', async () => {
+  // Identifiant et barème lus dans `meta` (chantier 13, 09/10/2026) ; seul l'ancien barème (10) est écrit en dur.
   const r = await pg.evaluate(async () => {
     const { B } = await import('/core/backend.js');
-    const g = 'g-57-meilleur', u = 'u-57-meilleur', a = 'smoby-enlevements';
+    const { meta } = await import('/activites/smoby-enlevements.js');
+    const g = 'g-57-meilleur', u = 'u-57-meilleur', a = meta.id, N = meta.bareme;
     await B.poserNote(g, u, a, null);
-    await B.ecrireScore(g, u, a, { score: 10, max: 10 });               // ancienne règle : 10 jalons
-    await B.ecrireScore(g, u, a, { score: 9, max: 20 });                // il rouvre la séance : plus bas
+    await B.ecrireScore(g, u, a, { score: 10, max: 10 });
+    await B.ecrireScore(g, u, a, { score: N * 0.6, max: N });         // il rouvre : 60 % du barème courant, plus bas
     const m = (await B.lireScore(g, u, a)).meilleur;
     await B.poserNote(g, u, a, null);
-    return m;
+    return { id: a, N, m };
   });
-  vrai(Math.abs(r - 20) < 0.01, '10/10 devenu ' + r + ' sur 20');
+  vrai(r.N > 0 && r.N !== 10, 'meta de la séance : ' + JSON.stringify([r.id, r.N]) + ' (le barème courant doit différer de l’ancien, sinon le cas ne prouve rien)');
+  vrai(Math.abs(r.m - r.N) < 0.01, `10/10 devenu ${r.m} sur ${r.N}`);
 });
 
 // ── Fiche à remplir, lot 4 suite (05/10/2026, ENT-5.8) : saisies, cadres, envoi incomplet, plusieurs fiches ──
@@ -3333,18 +3348,21 @@ await v('ENT-5.8 : « Corriger » — la séance est finie au premier bilan, la 
   vrai(r.accuses.every((x) => !/juste|faux/i.test(x[1])), 'un accusé ne dit jamais juste ou faux');
 });
 
-await v('ENT-5.8 : « meilleur » — un élève qui a fini avec l’ancien barème (8 / 8) garde sa note quand le barème passe à 20 (démonstration)', async () => {
+await v('ENT-5.8 : « meilleur » — un élève qui a fini avec l’ancien barème (8 / 8) garde sa note quand le barème passe à celui de la séance (démonstration)', async () => {
+  // Identifiant et barème lus dans `meta` (chantier 13, 09/10/2026) ; seul l'ancien barème (8) est écrit en dur.
   const r = await pg.evaluate(async () => {
     const { B } = await import('/core/backend.js');
-    const g = 'g-58-meilleur', u = 'u-58-meilleur', a = 'smoby-lettre-voiture';
+    const { meta } = await import('/activites/smoby-lettre-voiture.js');
+    const g = 'g-58-meilleur', u = 'u-58-meilleur', a = meta.id, N = meta.bareme;
     await B.poserNote(g, u, a, null);
     await B.ecrireScore(g, u, a, { score: 8, max: 8 });
-    await B.ecrireScore(g, u, a, { score: 12, max: 20 });
+    await B.ecrireScore(g, u, a, { score: N * 0.6, max: N });         // il rouvre : 60 % du barème courant, plus bas
     const m = (await B.lireScore(g, u, a)).meilleur;
     await B.poserNote(g, u, a, null);
-    return m;
+    return { id: a, N, m };
   });
-  vrai(Math.abs(r - 20) < 0.01, '8/8 devenu ' + r + ' sur 20');
+  vrai(r.N > 0 && r.N !== 8, 'meta de la séance : ' + JSON.stringify([r.id, r.N]) + ' (le barème courant doit différer de l’ancien, sinon le cas ne prouve rien)');
+  vrai(Math.abs(r.m - r.N) < 0.01, `8/8 devenu ${r.m} sur ${r.N}`);
 });
 
 // ── Lot 0 de SMOBY-notation-5.3-5.8 (07/10/2026, règle absolue de Tristan) : aucun élève bloqué en fin de séance ──
