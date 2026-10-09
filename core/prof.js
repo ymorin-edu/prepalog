@@ -4,9 +4,10 @@
 import { B } from './backend.js';
 import { ech, toast, confirmer } from './ui.js';
 import { responsable, gardeSuppressionEleve, lisible } from './collegues.js';
-import { AISANCES, amenagements } from './amenagements.js';
+import { NIVEAUX as NIVEAUX_ELEVE, amenagements, niveauScenario, niveauxApres, scenarioDe, proposition, PROPOSITION,
+  libelleNiveauEleve } from './amenagements.js';
 import { seancesDepuis, memeBase } from './parcours.js';
-import { chargerActivites, activitesEnEchec, activite, entreprisesDe, estSimulog } from '../activites/index.js';
+import { chargerActivites, activitesEnEchec, activite, entreprisesDe, estSimulog, ENTREPRISES } from '../activites/index.js';
 import { versCSV, telecharger, ouvrirJeu, cheminDe } from './store.js';
 import { NIVEAUX, libelleNiveau, courtNiveau, libelleNiveaux, activiteVisible, horsNiveau, ouvertureParProf,
   demisDe, nomDemi, forcage } from './niveaux.js';
@@ -108,7 +109,7 @@ export async function rendreEspaceProf(hote, ctx) {
       <button class="lien-accueil" id="btnRetour">← ACCUEIL</button>
       <h1>Espace enseignant</h1>
       <nav class="rangee" style="margin-bottom:16px">
-        ${[['groupes', 'Groupes'], ['comptes', 'Comptes élèves'], ['suivi', 'Suivi de classe'],
+        ${[['groupes', 'Groupes'], ['comptes', 'Comptes élèves'], ['niveaux', 'Niveaux'], ['suivi', 'Suivi de classe'],
            ['competences', 'Compétences'], ['seance', 'Conduite de séance'], ['corriges', 'Corrigés'],
            ['orphelins', `Élèves sans groupe${sansGroupe.length ? ` (${sansGroupe.length})` : ''}`]]
           .map(([k, l]) => `<button class="btn btn-s ${onglet === k ? 'btn-p' : ''}${k === 'orphelins' && sansGroupe.length ? ' btn-alerte' : ''}" data-ong="${k}">${l}</button>`).join('')}
@@ -129,6 +130,7 @@ export async function rendreEspaceProf(hote, ctx) {
     else if (onglet === 'corriges') await vueCorriges(z);
     else if (!gidActif) z.innerHTML = `<div class="avis">Créez d'abord un groupe dans l'onglet « Groupes ».</div>`;
     else if (onglet === 'comptes') await vueComptes(z, g);
+    else if (onglet === 'niveaux') await vueNiveaux(z, g);
     else if (onglet === 'suivi') await vueSuivi(z, g);
     else if (onglet === 'competences') await vueCompetences(z, g);
     else await vueSeance(z, g);
@@ -628,16 +630,13 @@ export async function rendreEspaceProf(hote, ctx) {
           ${demis.length && eleves.length ? `<p class="note" id="avisSansDemi"${sansDemi() ? '' : ' hidden'}>${ech(avisSansDemi())}</p>` : ''}
           ${eleves.length === 0 ? `<div class="vide">Aucun élève.</div>` : `
           <table><thead><tr><th>Nom</th><th>Prénom</th><th>Matricule</th><th>Code</th>
-            ${demis.length ? '<th>Demi-groupe</th>' : ''}<th>Niveau</th><th>Tiers-temps</th><th></th></tr></thead><tbody>
+            ${demis.length ? '<th>Demi-groupe</th>' : ''}<th>Tiers-temps</th><th></th></tr></thead><tbody>
             ${eleves.map((e) => { const a = amenagements(e); return `<tr><td>${ech(e.nom)}</td><td>${ech(e.prenom)}</td>
               <td class="mono">${ech(e.matricule)}</td><td class="mono">${ech(e.code || '—')}</td>
               ${demis.length ? `<td><select data-demi-eleve="${ech(e.uid)}" style="width:auto;min-width:6em" aria-label="Demi-groupe de ${ech(e.prenom)} ${ech(e.nom)}">
                 <option value="">—</option>
                 ${demis.map((d) => `<option value="${ech(d.id)}"${demiEleve(e.uid) === d.id ? ' selected' : ''}>${ech(d.nom)}</option>`).join('')}
               </select></td>` : ''}
-              <td><select data-aisance="${ech(e.uid)}" style="width:auto;min-width:8.5em" aria-label="Niveau de ${ech(e.prenom)} ${ech(e.nom)}">
-                ${AISANCES.map((x) => `<option value="${x.id}"${a.aisance === x.id ? ' selected' : ''}>${x.label}</option>`).join('')}
-              </select></td>
               <td><label class="rangee" style="gap:6px"><input type="checkbox" data-tiers="${ech(e.uid)}"${a.tiersTemps ? ' checked' : ''}
                 aria-label="Tiers-temps de ${ech(e.prenom)} ${ech(e.nom)}"></label></td>
               <td>${refusSuppr(e)
@@ -649,11 +648,10 @@ export async function rendreEspaceProf(hote, ctx) {
           <p class="note">Les codes sont enregistrés avec le compte : un élève qui a perdu le sien
              le retrouve ici. Les comptes créés avant le 30/09/2026 affichent « — », leur code
              n'ayant pas été conservé.</p>
-          <p class="note"><strong>Niveau</strong> : « Confirmé » donne des jeux de données plus
-             complets dans les séances qui le prévoient ; les autres restent identiques.
-             <strong>Tiers-temps</strong> : seuils de temps × 4/3 dans les épreuves chronométrées.
+          <p class="note"><strong>Tiers-temps</strong> : seuils de temps × 4/3 dans les épreuves chronométrées.
              Le tiers-temps ne s'affiche qu'ici et chez l'élève concerné ; il n'est ni exporté
-             ni visible dans le suivi de classe. Pris en compte à la prochaine séance ouverte.</p>
+             ni visible dans le suivi de classe. Pris en compte à la prochaine séance ouverte.
+             Le niveau de chaque élève, entreprise par entreprise, se règle dans l'onglet « Niveaux ».</p>
           ${demis.length ? `<p class="note"><strong>Demi-groupe</strong> : décide des séances ouvertes à l'élève
              (« Conduite de séance ») et de la base partagée où il travaille. Changer un élève de demi-groupe
              ne touche pas à ses résultats ; il passe sur la base partagée de son nouveau demi-groupe à la
@@ -678,23 +676,18 @@ export async function rendreEspaceProf(hote, ctx) {
       versCSV(dernierLot.faits, [{ cle: 'nom', label: 'Nom' }, { cle: 'prenom', label: 'Prénom' },
         { cle: 'matricule', label: 'Matricule' }, { cle: 'code', label: 'Code' }])));
 
-    // Niveau et tiers-temps : enregistrés au changement, sans redessiner (le focus reste en place).
+    // Tiers-temps : enregistré au changement, sans redessiner (le focus reste en place).
     // Un refus remet la case comme elle était : jamais d'écran qui ment sur ce qui est enregistré.
+    // (Le niveau est passé dans l'onglet « Niveaux », un par scénario : brief MOTEUR-tirage-et-niveaux, lot 1.)
     const regler = async (champ, uid, valeur, annuler) => {
       const el = eleves.find((x) => x.uid === uid);
       if (!el) return;
       try {
         await B.majAmenagements(uid, { [champ]: valeur });
         el[champ] = valeur;
-        toast(champ === 'tiersTemps'
-          ? `Tiers-temps ${valeur ? 'accordé à' : 'retiré à'} ${el.prenom} ${el.nom}.`
-          : `${el.prenom} ${el.nom} : niveau ${valeur === 'confirme' ? 'confirmé' : 'standard'}.`);
+        toast(`Tiers-temps ${valeur ? 'accordé à' : 'retiré à'} ${el.prenom} ${el.nom}.`);
       } catch (e) { annuler(); toast(e.message || 'Réglage non enregistré.'); }
     };
-    z.querySelectorAll('[data-aisance]').forEach((s) => s.addEventListener('change', () => {
-      const avant = amenagements(eleves.find((x) => x.uid === s.dataset.aisance)).aisance;
-      regler('aisance', s.dataset.aisance, s.value, () => { s.value = avant; });
-    }));
     z.querySelectorAll('[data-tiers]').forEach((c) => c.addEventListener('change', () => {
       regler('tiersTemps', c.dataset.tiers, c.checked, () => { c.checked = !c.checked; });
     }));
@@ -763,6 +756,153 @@ export async function rendreEspaceProf(hote, ctx) {
         [{ cle: 'nom', label: 'Nom' }, { cle: 'prenom', label: 'Prénom' },
           { cle: 'matricule', label: 'Matricule' }, { cle: 'code', label: 'Code' },
           ...(demis.length ? [{ cle: 'demi', label: 'Demi-groupe' }] : [])])));
+  }
+
+  // ------------------------------------------------------------------ niveaux
+  // Le niveau de chaque élève PAR SCÉNARIO (brief MOTEUR-tirage-et-niveaux, lot 1, 09/10/2026) : lignes = élèves du
+  // groupe actif (du demi-groupe choisi), colonnes = les entreprises dont au moins une séance déclare
+  // `meta.niveauxPrevus`, plus Cdiscount (son contenu confirmé lit `db.aisance` depuis le 03/10/2026). Une liste par
+  // case, enregistrée au changement sans redessiner (un refus remet la valeur). Le site PROPOSE « Confirmé »
+  // (`proposition`, règle `PROPOSITION` de core/amenagements.js) ; rien ne change sans un clic. Pas dans le Suivi de
+  // classe (projetable), pas dans l'export de la liste d'élèves. L'élève ne voit jamais son niveau.
+  async function vueNiveaux(z, g) {
+    z.innerHTML = `<div class="panneau"><div class="vide">Chargement des niveaux…</div></div>`;
+    const [tous, mods, travaux] = await Promise.all([B.elevesDuGroupe(g.id), chargerActivites(),
+      B.suivi(g.id).catch(() => [])]);
+    const eleves = tous.filter((e) => dansDemi(g, e))
+      .sort((a, b) => `${a.nom} ${a.prenom}`.localeCompare(`${b.nom} ${b.prenom}`, 'fr'));
+    const metas = mods.map((x) => x.meta).filter(estSimulog);
+    const nums = new Set(metas.filter((m) => Array.isArray(m.niveauxPrevus) && m.niveauxPrevus.length).map((m) => scenarioDe(m.code)));
+    nums.add('2');
+    const cols = [...nums].filter(Boolean).sort((a, b) => Number(a) - Number(b)).map((n) => {
+      const e = ENTREPRISES.find((x) => String(x.n) === n);
+      return { n, nom: e ? e.nom : `Entreprise ${n}`, logo: e ? e.logo : null,
+        seances: metas.filter((m) => scenarioDe(m.code) === n && m.bareme && !m.copie) };
+    });
+    const par = {};
+    travaux.forEach((t) => { (par[t.uid] = par[t.uid] || {})[t.aid] = t; });
+    const lireTravail = (uid, aid) => (par[uid] && par[uid][aid]) || null;
+    const uidsGroupe = tous.map((e) => e.uid);
+    const nomEleve = (e) => `${e.prenom || ''} ${e.nom || ''}`.trim();
+    const minutes = (s) => (typeof s === 'number' ? `${Math.max(1, Math.round(s / 60))} min` : '—');
+    const propDe = (e, c) => proposition({ profil: e, uid: e.uid, n: c.n, seances: c.seances, travaux: lireTravail, uids: uidsGroupe });
+    const marque = (e, c) => {
+      const p = propDe(e, c);
+      if (!p) return '';
+      const lignes = p.lignes.map((l) => `<li>${ech(l.code)} : premier bilan ${ech(formaterNote(l.note))}/20, temps ${ech(minutes(l.temps))}
+        (médiane du groupe ${ech(minutes(l.mediane))})${l.retenue ? ' — retenue' : ''}</li>`).join('');
+      return `<details class="niv-prop" data-proposition="${ech(e.uid)}|${ech(c.n)}" style="margin-top:4px">
+        <summary class="note" style="cursor:pointer;margin:0">proposé : ${ech(libelleNiveauEleve(p.niveau))}</summary>
+        <div class="note" style="margin:4px 0">Au moins ${PROPOSITION.seances} séances avec un premier bilan d'au moins
+          ${PROPOSITION.noteMin}/20 et un temps sous la médiane du groupe :<ul style="margin:4px 0 4px 18px">${lignes}</ul></div>
+        <button type="button" class="btn btn-s" data-appliquer="${ech(e.uid)}" data-scenario="${ech(c.n)}" data-niveau="${ech(p.niveau)}">Appliquer</button>
+      </details>`;
+    };
+    const demis = demisDe(g);
+    const choixLot = (c) => `<div class="rangee" style="gap:4px;margin-top:6px;font-weight:normal;flex-wrap:wrap">
+        <span class="note" style="margin:0">Tout le demi-groupe →</span>
+        <select data-lot-demi="${ech(c.n)}" style="width:auto" aria-label="Demi-groupe à régler chez ${ech(c.nom)}">
+          ${demis.map((d) => `<option value="${ech(d.id)}">${ech(d.nom)}</option>`).join('')}
+          <option value="">Toute la classe</option>
+        </select>
+        <select data-lot-niveau="${ech(c.n)}" style="width:auto" aria-label="Niveau à donner chez ${ech(c.nom)}">
+          ${NIVEAUX_ELEVE.map((x) => `<option value="${x.id}"${x.id === 'confirme' ? ' selected' : ''}>${ech(x.label)}</option>`).join('')}
+        </select>
+        <button type="button" class="btn btn-s" data-lot="${ech(c.n)}">Appliquer…</button>
+      </div>
+      <div class="avis" data-lot-confirmation="${ech(c.n)}" hidden style="margin-top:6px;font-weight:normal"></div>`;
+    z.innerHTML = `<section class="panneau">
+      <h2>Niveau de chaque élève, par entreprise${demiActif ? ` — ${ech(nomDemi(g, demiActif))}` : ''}</h2>
+      <div class="rangee" style="margin-bottom:10px">${choixDemi(g, 'Afficher')}</div>
+      ${eleves.length === 0 ? `<div class="vide">Aucun élève.</div>` : `
+      <div style="overflow-x:auto"><table data-niveaux><thead><tr><th>Élève</th>
+        ${cols.map((c) => `<th data-col-scenario="${ech(c.n)}" style="vertical-align:top;min-width:15em">
+          <div class="rangee" style="gap:8px">${c.logo ? `<span style="background:#f7f4ee;border:1px solid var(--filet);border-radius:var(--r);padding:3px 6px;display:inline-flex">
+            <img src="${ech(c.logo)}" alt="" style="height:20px;max-width:80px;object-fit:contain;mix-blend-mode:multiply"></span>` : ''}
+            <strong>${ech(c.nom)}</strong></div>${choixLot(c)}</th>`).join('')}</tr></thead><tbody>
+        ${eleves.map((e) => `<tr><td>${ech(e.nom)} ${ech(e.prenom)}</td>${cols.map((c) => { const niv = niveauScenario(e, c.n); return `
+          <td data-case-niveau="${ech(e.uid)}|${ech(c.n)}">
+            <select data-niveau-eleve="${ech(e.uid)}" data-scenario="${ech(c.n)}" style="width:auto;min-width:8.5em"
+              aria-label="Niveau de ${ech(nomEleve(e))} chez ${ech(c.nom)}">
+              ${NIVEAUX_ELEVE.map((x) => `<option value="${x.id}"${niv === x.id ? ' selected' : ''}>${ech(x.label)}</option>`).join('')}
+            </select>${marque(e, c)}</td>`; }).join('')}</tr>`).join('')}
+      </tbody></table></div>`}
+      <p class="note">Un changement vaut à partir de la prochaine séance ouverte par l'élève.</p>
+      <p class="note">« Confirmé » donne, dans les séances qui le prévoient, des cas en plus (comptés en bonus, sans rien
+        retirer) ; « Accompagné » reçoit pour l'instant le contenu standard. L'élève ne voit jamais son niveau, et
+        l'évaluation est la même pour tous. Une proposition « proposé : Confirmé » ne change rien tant que vous ne
+        cliquez pas sur « Appliquer ».</p>
+    </section>`;
+    brancherChoixDemi(z);
+
+    // Les écritures passent l'une après l'autre (file) : deux réglages coup sur coup ne s'écrasent pas.
+    let file = Promise.resolve();
+    const libelleCol = (n) => (cols.find((c) => c.n === n) || { nom: n }).nom;
+    const enregistrer = (uid, n, niveau) => (file = file.then(async () => {
+      const el = eleves.find((x) => x.uid === uid);
+      if (!el) return false;
+      const niveaux = niveauxApres(el, n, niveau);
+      try {
+        await B.majAmenagements(uid, { niveaux });
+        el.niveaux = niveaux;
+        delete el.aisance;
+        return true;
+      } catch (e) { toast(e.message || 'Niveau non enregistré.'); return false; }
+    }));
+    // Après un enregistrement : la proposition s'efface si l'élève n'est plus standard dans ce scénario.
+    const majCase = (uid, n) => {
+      const el = eleves.find((x) => x.uid === uid);
+      const s = z.querySelector(`[data-niveau-eleve="${CSS.escape(uid)}"][data-scenario="${CSS.escape(n)}"]`);
+      if (s && el) s.value = niveauScenario(el, n);
+      const p = z.querySelector(`[data-proposition="${CSS.escape(uid + '|' + n)}"]`);
+      if (p && el && niveauScenario(el, n) !== 'standard') p.remove();
+    };
+    z.querySelectorAll('[data-niveau-eleve]').forEach((s) => s.addEventListener('change', async () => {
+      const uid = s.dataset.niveauEleve, n = s.dataset.scenario, valeur = s.value;
+      const el = eleves.find((x) => x.uid === uid);
+      if (await enregistrer(uid, n, valeur)) toast(`${nomEleve(el)} : ${libelleNiveauEleve(valeur)} chez ${libelleCol(n)}, à sa prochaine séance.`);
+      majCase(uid, n);
+    }));
+    z.querySelectorAll('[data-appliquer]').forEach((b) => b.addEventListener('click', async () => {
+      const uid = b.dataset.appliquer, n = b.dataset.scenario, valeur = b.dataset.niveau;
+      const el = eleves.find((x) => x.uid === uid);
+      if (await enregistrer(uid, n, valeur)) toast(`${nomEleve(el)} : ${libelleNiveauEleve(valeur)} chez ${libelleCol(n)}, à sa prochaine séance.`);
+      majCase(uid, n);
+    }));
+    // « Tout le demi-groupe → … » : choix du demi-groupe et du niveau, puis confirmation DANS la page.
+    const concernes = (n, demi, niveau) => tous.filter((e) => (!demi || (g.demiDe || {})[e.uid] === demi)
+      && niveauScenario(e, n) !== niveau);
+    z.querySelectorAll('[data-lot]').forEach((b) => b.addEventListener('click', () => {
+      const n = b.dataset.lot;
+      const demi = z.querySelector(`[data-lot-demi="${CSS.escape(n)}"]`).value;
+      const niveau = z.querySelector(`[data-lot-niveau="${CSS.escape(n)}"]`).value;
+      const L = concernes(n, demi, niveau);
+      const qui = demi ? nomDemi(g, demi) : g.nom;
+      const boite = z.querySelector(`[data-lot-confirmation="${CSS.escape(n)}"]`);
+      boite.hidden = false;
+      if (!L.length) {
+        boite.innerHTML = `Aucun élève de ${ech(qui)} ne change : tous sont déjà en ${ech(libelleNiveauEleve(niveau))} chez ${ech(libelleCol(n))}.
+          <button type="button" class="btn btn-s" data-lot-annuler>Fermer</button>`;
+      } else {
+        boite.innerHTML = `<span data-lot-phrase>${L.length} élève${L.length > 1 ? 's' : ''} de ${ech(qui)} passe${L.length > 1 ? 'nt' : ''}
+          en ${ech(libelleNiveauEleve(niveau))} chez ${ech(libelleCol(n))} à ${L.length > 1 ? 'leur' : 'sa'} prochaine séance.</span>
+          <span class="rangee" style="gap:6px;margin-top:6px"><button type="button" class="btn btn-s btn-p" data-lot-oui>Confirmer</button>
+          <button type="button" class="btn btn-s" data-lot-annuler>Annuler</button></span>`;
+        boite.querySelector('[data-lot-oui]').addEventListener('click', async () => {
+          boite.querySelectorAll('button').forEach((x) => { x.disabled = true; });
+          let faits = 0;
+          for (const e of L) {
+            const el = eleves.find((x) => x.uid === e.uid) || e;
+            if (!eleves.includes(el)) eleves.push(el);
+            if (await enregistrer(e.uid, n, niveau)) faits += 1;
+          }
+          toast(`${faits} élève${faits > 1 ? 's' : ''} de ${qui} en ${libelleNiveauEleve(niveau)} chez ${libelleCol(n)}.`);
+          await vueNiveaux(z, g);
+          z.querySelector(`[data-lot="${CSS.escape(n)}"]`)?.focus();
+        });
+      }
+      boite.querySelector('[data-lot-annuler]').addEventListener('click', () => { boite.hidden = true; boite.innerHTML = ''; b.focus(); });
+    }));
   }
 
   // -------------------------------------------------------- élèves sans groupe

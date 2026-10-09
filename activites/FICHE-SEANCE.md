@@ -260,13 +260,17 @@ dit « Annulée le JJ/MM à HH:MM — motif ». Si elle porte un `prep` (une lig
 commandée), le contrôle et le bon restent lisibles en lecture seule. Le moteur ne fait aucun mouvement de
 stock à l'annulation : c'est le volet qui sème ceux qu'il veut.
 
-**Niveau de l'élève dans la séance** (03/10/2026) : `db.aisance` vaut `'standard'` ou `'confirme'`,
-recopié de `ctx.aisance` à la création de la base puis **figé** (un réglage changé ensuite vaut pour les
-séances suivantes ; la remise à zéro le relit ; l'enseignant a toujours `'standard'`). `baseDeDepart(prenom,
-{ aisance })` le reçoit en second argument ; `semer(prenom, db)`, les déclencheurs et `verifier(db)` le
-lisent dans la base. Une séance qui prévoit un volume confirmé **ajoute** ses opérations quand
-`db.aisance === 'confirme'`, sans changer celles du jeu standard ni ce qu'attendent ses jalons (une
-évaluation ne le lit pas). **Jamais affiché à l'élève** ; le détail de la note porte `niveau: 'confirmé'`.
+**Niveau de l'élève dans la séance** (03/10/2026 ; **par scénario** depuis le 09/10/2026, chantier D-C lot 1) :
+`db.aisance` vaut `'standard'`, `'confirme'` ou `'accompagne'`, recopié de `ctx.aisance` (le niveau de l'élève **dans
+l'entreprise de la séance**, réglé par l'enseignant dans l'onglet « Niveaux » : `profil.niveaux['6']` pour ENT-6.x) à la
+création de la base puis **figé** (un réglage changé ensuite vaut pour les séances suivantes ; la remise à zéro le relit ;
+l'enseignant a toujours `'standard'`). `baseDeDepart(prenom, { aisance })` le reçoit en second argument ; `semer(prenom,
+db)`, les déclencheurs et `verifier(db)` le lisent dans la base. Une séance qui prévoit un volume confirmé **ajoute** ses
+opérations quand `db.aisance === 'confirme'`, sans changer celles du jeu standard ni ce qu'attendent ses jalons (une
+évaluation ne le lit pas). « Accompagné » : contenu à concevoir ; en testant `=== 'confirme'`, la séance lui donne le
+contenu standard. **Jamais affiché à l'élève** ; le détail de la note porte `niveau: 'confirmé'` (ou `'accompagné'`).
+Une séance qui prévoit un contenu par niveau le déclare : `meta.niveauxPrevus: ['confirme']` (colonne de son entreprise
+dans l'onglet « Niveaux » ; voir « Tirage mémorisé et banques » plus bas).
 
 **Vue « quai de réception »** (03/10/2026, pilote Picard ENT-4.x) : la séance déclare `quai: { id, lieu,
 seuilHorsFroid, dechargement, couts, aides, photos, camions: [{ …, palettes }] }` (exemple complet :
@@ -362,6 +366,7 @@ séance 2), `TAB` tableur, `REF` exercices par compétence, `SCE` scénario anci
 | Champ | Contenu | À savoir |
 |---|---|---|
 | `niveaux` | `['2de','1re']` | Absent = tous les niveaux. L'enseignant peut forcer l'ouverture ou la fermeture par groupe. |
+| `niveauxPrevus` | `['confirme']` (plus tard `['confirme', 'accompagne']`) | Niveaux **d'élève** (pas de classe) pour lesquels la séance prévoit un contenu (chantier D-C, 09/10/2026). Fait apparaître son entreprise en colonne dans l'onglet « Niveaux » de l'enseignant (Cdiscount y est toujours). Une séance qui déclare des cas bonus (`tirage.banques.*.bonus.confirme`) doit déclarer `'confirme'` : la fabrique la refuse sinon. Guidage et entraînement seulement : l'évaluation est la même pour tous. |
 | `competences` | `['C2.4']`, `['C1.4', 'OTM-C2.1']` | Codes de la liste de `core/competences.js` : Logistique 2025 sans préfixe (C1.1 à C3.4), transport `OTM-C1.1` à `OTM-C3.4`, gestion `AGO-1.1` à `AGO-3.3` (activités AGOrA). Un code absent de la liste donne un libellé vide à l'écran ; c'est le test du socle qui le signale. Toute séance Simulog les déclare. Le préfixe donne la **spécialité** : pour un groupe de 2de, l'onglet « Compétences » ajoute une moyenne par spécialité (une séance y compte une fois). |
 | `domaines` | `['D2', 'D4']` | Domaines D1 à D5 de la 2de. **Déclaré, pas encore lu** : en attente de l'écran cœur / complément (décision 14 de la finalité). Gardé exprès (décision de Tristan, 09/10/2026). |
 | `coeur` | `true` / `false` | `true` : séance du **cœur** (parcours minimal qui couvre les compétences du niveau) ; `false` : **complément**. Absent = pas encore rangée. **Déclaré, pas encore lu** : en attente de l'écran cœur / complément (décision 14 de la finalité) ; gardé exprès sur les huit séances qui le portent (décision de Tristan, option A, 09/10/2026). Le nom `parcours`, proposé dans les fiches, est déjà pris (parcours strict, plus bas). |
@@ -427,7 +432,7 @@ l'élève à chaque envoi **corrigé** (deuxième envoi et suivants), sans rejou
 | `ctx.` | Rôle |
 |---|---|
 | `profil`, `groupe`, `groupeNom`, `niveauGroupe`, `codeStock` | Qui travaille, dans quelle classe. |
-| `aisance` | `'standard'` ou `'confirme'`, réglé élève par élève par l'enseignant (onglet « Comptes élèves »). **Le moteur ne grossit rien** : seule une séance qui le prévoit dans son contenu en tient compte (règle de Tristan : jeu de données +30 % en guidage/entraînement, +50 % en bonus). Le contenu en plus **s'ajoute** au jeu standard sans rien changer à ses exercices ni à ce qu'attendent ses jalons. Toujours `'standard'` pour l'enseignant. Ne pas confondre avec `niveauGroupe` (la classe). |
+| `aisance` | `'standard'`, `'confirme'` ou `'accompagne'` : le niveau de l'élève **dans le scénario de la séance** (premier nombre du `code`), réglé élève par élève et entreprise par entreprise par l'enseignant (onglet « Niveaux », 09/10/2026). Hors séance d'entreprise : `'standard'`. **Le moteur ne grossit rien** : seule une séance qui le prévoit dans son contenu en tient compte (règle de Tristan : jeu de données +30 % en guidage/entraînement, +50 % en bonus). Le contenu en plus **s'ajoute** au jeu standard sans rien changer à ses exercices ni à ce qu'attendent ses jalons. Toujours `'standard'` pour l'enseignant. Ne pas confondre avec `niveauGroupe` (la classe). |
 | `tiersTemps` | Booléen, réglé par l'enseignant. Une épreuve chronométrée multiplie ses **seuils** de temps par 4/3 (le chrono mesure, il ne coupe pas) et l'affiche à l'élève. Donnée de santé indirecte : ne l'afficher qu'à l'élève lui-même, jamais dans une vue projetable, ne pas l'exporter. Première utilisatrice : la vue quai. |
 | `meta` | Le `meta` de la séance. |
 | `intention`, `suivante` | La fiche d'intention de l'entreprise (`{ pdf, docx }` ou null, montrée à l'enseignant seul) et la séance suivante du parcours (`{ code, titre }` ou null). |

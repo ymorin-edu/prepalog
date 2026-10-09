@@ -78,7 +78,10 @@ const ouvrirSeance = async (p = pg) => {
   return p.evaluate(() => window.__ctxSeance);
 };
 
-await v('aménagements : l’onglet « Comptes élèves » montre le niveau (Standard) et le tiers-temps (décoché) par défaut', async () => {
+// D-C, lot 1 (09/10/2026) : le niveau a quitté « Comptes élèves » pour l'onglet « Niveaux » (un par scénario), et une
+// séance hors entreprise (le quiz témoin) reçoit toujours 'standard'. Les cas ci-dessous qui lisaient la colonne
+// « Niveau » ou attendaient « confirme » dans le quiz ont été adaptés ; le reste est gardé par le bloc `tirage-niveaux`.
+await v('aménagements : l’onglet « Comptes élèves » montre le tiers-temps (décoché) par défaut, sans colonne « Niveau »', async () => {
   if (!espion) throw new Error('core/app.js n’a plus la ligne qui ouvre la séance : le relevé du contexte est à revoir');
   await pg.click('#btnProf');
   await pg.waitForSelector('#btnProfEspace');
@@ -93,8 +96,8 @@ await v('aménagements : l’onglet « Comptes élèves » montre le niveau (Sta
   await pg.click('#btnLot');
   await pg.waitForSelector('[data-tiers]');
   const r = await pg.$$eval('[data-tiers]', (els) => els.map((c) => ({
-    tt: c.checked, niv: document.querySelector(`[data-aisance="${c.dataset.tiers}"]`).value })));
-  if (r.length !== 2 || r.some((x) => x.tt || x.niv !== 'standard')) throw new Error(JSON.stringify(r));
+    tt: c.checked, niv: document.querySelectorAll('[data-aisance], [data-niveau-eleve]').length })));
+  if (r.length !== 2 || r.some((x) => x.tt || x.niv)) throw new Error(JSON.stringify(r));
 });
 
 await v('aménagements : sans réglage, la séance reçoit niveau standard et pas de tiers-temps', async () => {
@@ -103,28 +106,31 @@ await v('aménagements : sans réglage, la séance reçoit niveau standard et pa
   if (c.id !== SEANCE || c.aisance !== 'standard' || c.tiersTemps !== false) throw new Error(JSON.stringify(c));
 });
 
-await v('aménagements : l’enseignant coche le tiers-temps et passe l’élève en confirmé — enregistré, case en place', async () => {
+await v('aménagements : l’enseignant coche le tiers-temps et passe l’élève en confirmé chez Cdiscount — enregistré, case en place', async () => {
   await commeProf();
   await comptes();
   const uid = await uidDe(MAT);
   await pg.check(`[data-tiers="${uid}"]`);
-  await pg.selectOption(`[data-aisance="${uid}"]`, 'confirme');
-  await pg.waitForFunction((u) => {
-    const x = JSON.parse(localStorage.getItem('prepalog:users') || '{}')[u];
-    return x && x.tiersTemps === true && x.aisance === 'confirme';
-  }, uid);
+  await pg.waitForFunction((u) => JSON.parse(localStorage.getItem('prepalog:users') || '{}')[u].tiersTemps === true, uid);
   // Rien n'a redessiné l'onglet : la case cochée est toujours la même et toujours cochée.
   if (!(await pg.isChecked(`[data-tiers="${uid}"]`))) throw new Error('case décochée après enregistrement');
-  // Relu depuis le stockage, l'onglet redit la même chose.
+  await pg.click('[data-ong="niveaux"]');
+  await pg.selectOption(`[data-niveau-eleve="${uid}"][data-scenario="2"]`, 'confirme');
+  await pg.waitForFunction((u) => {
+    const x = JSON.parse(localStorage.getItem('prepalog:users') || '{}')[u];
+    return x && x.tiersTemps === true && x.niveaux && x.niveaux['2'] === 'confirme';
+  }, uid);
+  // Relu depuis le stockage, les deux onglets redisent la même chose.
   await comptes();
   if (!(await pg.isChecked(`[data-tiers="${uid}"]`))) throw new Error('case décochée à la relecture');
-  if ((await pg.$eval(`[data-aisance="${uid}"]`, (s) => s.value)) !== 'confirme') throw new Error('niveau perdu à la relecture');
+  await pg.click('[data-ong="niveaux"]');
+  if ((await pg.$eval(`[data-niveau-eleve="${uid}"][data-scenario="2"]`, (s) => s.value)) !== 'confirme') throw new Error('niveau perdu à la relecture');
 });
 
-await v('aménagements : case cochée → la séance reçoit tiersTemps === true et aisance « confirme »', async () => {
+await v('aménagements : case cochée → la séance reçoit tiersTemps === true ; hors entreprise, le niveau reste « standard »', async () => {
   await commeEleve(MAT, 'am01');
   const c = await ouvrirSeance();
-  if (c.tiersTemps !== true || c.aisance !== 'confirme' || c.profilTT !== true) throw new Error(JSON.stringify(c));
+  if (c.tiersTemps !== true || c.aisance !== 'standard' || c.profilTT !== true) throw new Error(JSON.stringify(c));
 });
 
 await v('aménagements : le camarade non réglé reçoit toujours standard et false', async () => {
@@ -140,8 +146,9 @@ await v('aménagements : un élève ne peut pas changer ses propres réglages', 
     const uid = B.profilCourant().uid;
     let refus = null;
     try { await B.majAmenagements(uid, { tiersTemps: false, aisance: 'standard' }); } catch (e) { refus = e.message; }
+    try { await B.majAmenagements(uid, { niveaux: {} }); } catch (e) { refus = refus && e.message; }
     const x = JSON.parse(localStorage.getItem('prepalog:users') || '{}')[uid];
-    return { refus, tt: x.tiersTemps, niv: x.aisance, cases: document.querySelectorAll('[data-tiers], [data-aisance]').length };
+    return { refus, tt: x.tiersTemps, niv: x.niveaux && x.niveaux['2'], cases: document.querySelectorAll('[data-tiers], [data-aisance], [data-niveau-eleve]').length };
   });
   if (!r.refus || r.tt !== true || r.niv !== 'confirme' || r.cases) throw new Error(JSON.stringify(r));
 });
@@ -159,7 +166,7 @@ await v('aménagements : l’enseignant décoche pendant que l’élève est con
   await pg.waitForFunction((u) => JSON.parse(localStorage.getItem('prepalog:users') || '{}')[u].tiersTemps === false, uid);
   const c = await ouvrirSeance(pe);
   await pe.close();
-  if (c.tiersTemps !== false || c.profilTT !== false || c.aisance !== 'confirme') throw new Error(JSON.stringify(c));
+  if (c.tiersTemps !== false || c.profilTT !== false || c.aisance !== 'standard') throw new Error(JSON.stringify(c));
 });
 
 await v('aménagements : le tiers-temps ne sort pas de l’onglet — ni dans l’export de la liste, ni dans le suivi de classe', async () => {

@@ -331,8 +331,13 @@ export async function creerBackendFirebase() {
     },
 
     // Niveau et tiers-temps d'un élève (voir core/amenagements.js). Les règles Firestore
-    // refusent qu'un élève écrive ces deux champs sur son propre profil.
-    async majAmenagements(uid, patch) { await FS.updateDoc(dref('users', uid), filtrerAmenagements(patch)); },
+    // refusent qu'un élève écrive ces champs sur son propre profil. Le premier réglage des niveaux par scénario
+    // retire l'ancien niveau unique `aisance` (migration, core/amenagements.js).
+    async majAmenagements(uid, patch) {
+      const p = filtrerAmenagements(patch);
+      if ('niveaux' in p) p.aisance = FS.deleteField();
+      await FS.updateDoc(dref('users', uid), p);
+    },
     // Relus à l'ouverture d'une séance (une lecture) : l'enseignant a pu cocher pendant que
     // l'élève travaillait, et le profil n'est chargé qu'à la connexion.
     async relireAmenagements() {

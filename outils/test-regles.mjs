@@ -172,6 +172,33 @@ await v("un élève ne retire pas non plus son tiers-temps ni ne change son nive
 await v("un élève dont le tiers-temps est posé modifie toujours le reste de son profil", () =>
   assertSucceeds(fsDe('e1').doc('users/e1').update({ nom: 'Emma' })));
 
+// Niveaux par scénario (brief MOTEUR-tirage-et-niveaux, lot 1, 09/10/2026) : `niveaux: { '6': 'confirme' }` remplace
+// le niveau unique `aisance`, que le premier réglage retire. Seul l'enseignant les écrit. e2 ne porte au départ ni
+// `niveaux` ni `aisance` : la règle ne doit pas supposer que le champ existe. La liste blanche de l'élève
+// (`nom`, `prenom`) suffit : aucune règle n'a changé pour ce lot.
+// `FieldValue.delete()` du SDK compat, celui que rend `authenticatedContext().firestore()` (même paquet).
+const firebaseCompat = req('firebase/compat/app').default;
+req('firebase/compat/firestore');
+const effacer = () => firebaseCompat.firestore.FieldValue.delete();
+await v("un élève ne s'ajoute pas de niveau par scénario (champ absent au départ)", () =>
+  assertFails(fsDe('e2').doc('users/e2').update({ niveaux: { 6: 'confirme' } })));
+await v("un élève ne glisse pas un niveau par scénario dans une modification permise", () =>
+  assertFails(fsDe('e2').doc('users/e2').update({ nom: 'Léo', 'niveaux.6': 'confirme' })));
+await v("l'enseignant règle les niveaux par scénario et retire l'ancien niveau unique", async () => {
+  await assertSucceeds(fsDe('prof1').doc('users/e1').update({ niveaux: { 2: 'confirme', 6: 'accompagne' }, aisance: effacer() }));
+  await assertSucceeds(fsDe('prof1').doc('users/e2').update({ niveaux: { 6: 'confirme' } }));
+});
+await v("un élève ne change pas, n'efface pas et ne vide pas ses niveaux par scénario", async () => {
+  await assertFails(fsDe('e1').doc('users/e1').update({ 'niveaux.6': 'confirme' }));
+  await assertFails(fsDe('e1').doc('users/e1').update({ niveaux: {} }));
+  await assertFails(fsDe('e1').doc('users/e1').update({ niveaux: effacer() }));
+  await assertFails(fsDe('e1').doc('users/e1').update({ aisance: 'confirme' }));
+});
+await v("ce qui reste : l'élève dont les niveaux sont posés change toujours son nom, l'enseignant les retire", async () => {
+  await assertSucceeds(fsDe('e1').doc('users/e1').update({ nom: 'Emma' }));
+  await assertSucceeds(fsDe('prof1').doc('users/e2').update({ niveaux: effacer() }));
+});
+
 // Audit du 08/10/2026 (C1) : l'élève ne choisit ni ses groupes, ni son matricule, ni son code.
 await v("un élève ne s'ajoute pas à un autre groupe", () =>
   assertFails(fsDe('e1').doc('users/e1').update({ groupes: ['g1', 'g2'] })));

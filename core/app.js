@@ -8,7 +8,7 @@ import { chargerActivites, activitesEnEchec, activite, RUBRIQUES, ICONES, activi
 import { ouvrirJeu, surEchec } from './store.js';
 import { rendreEspaceProf } from './prof.js';
 import { verrou, seancesDuParcours, versionDuParcours, baseDe, appliquerReprise } from './parcours.js';
-import { amenagements } from './amenagements.js';
+import { amenagements, niveauScenario, scenarioDe } from './amenagements.js';
 
 // Une sauvegarde ou une lecture qui échoue doit se voir (voir core/store.js).
 surEchec((genre) => toast(genre === 'sauvegarde'
@@ -471,9 +471,14 @@ async function vueActivite(aid, avant) {
   let am = amenagements(profil);
   if (profil.role === 'eleve') {
     try { am = await B.relireAmenagements(); } catch (e) { /* relecture impossible : valeurs de la connexion */ }
-    profil.aisance = am.aisance;
+    // `niveaux` relu porte déjà la migration de l'ancien `aisance` : la copie en mémoire n'en garde pas de trace périmée.
+    profil.niveaux = am.niveaux;
+    delete profil.aisance;
     profil.tiersTemps = am.tiersTemps;
   }
+  // Le niveau de l'élève DANS LE SCÉNARIO de cette séance (brief MOTEUR-tirage-et-niveaux, lot 1) : le premier nombre
+  // du code d'une séance d'entreprise (`ENT-6.4` → '6'). Hors entreprise, et pour l'enseignant : 'standard'.
+  const aisance = profil.role === 'eleve' && estSimulog(m.meta) ? niveauScenario(am, scenarioDe(m.meta.code)) : 'standard';
 
   // La séance qui suit celle-ci dans son parcours (bandeau de fin de séance : « ENT-1.2 … est ouverte »).
   let suivante = null;
@@ -491,10 +496,10 @@ async function vueActivite(aid, avant) {
   let noteFigee = false;
   const ctx = {
     profil, groupe: groupeActif, meta: m.meta, jeu: jeuOuvert,
-    // Réglés élève par élève par l'enseignant (onglet « Comptes élèves »). `aisance` :
-    // 'standard' ou 'confirme' — une séance qui ne le lit pas reste la même pour tous.
-    // `tiersTemps` : seuils de temps × 4/3 dans une épreuve chronométrée.
-    aisance: am.aisance,
+    // Réglés élève par élève par l'enseignant. `aisance` (onglet « Niveaux ») : 'standard', 'confirme' ou
+    // 'accompagne', le niveau du scénario de la séance — une séance qui ne le lit pas reste la même pour tous.
+    // `tiersTemps` (onglet « Comptes élèves ») : seuils de temps × 4/3 dans une épreuve chronométrée.
+    aisance,
     tiersTemps: am.tiersTemps,
     // Le niveau de la classe, pour les activités qui portent une série d'exercices de
     // difficulté inégale et n'en montrent que la part qui convient au groupe.

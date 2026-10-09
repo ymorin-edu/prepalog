@@ -359,7 +359,10 @@ export function creerBackendDemo() {
       if (!courant || courant.role !== 'prof') throw new Error('Réservé à l’enseignant.');
       const u = users();
       if (!u[uid] || u[uid].role !== 'eleve') throw new Error('Élève introuvable.');
-      u[uid] = { ...u[uid], ...filtrerAmenagements(patch) };
+      const p = filtrerAmenagements(patch);
+      u[uid] = { ...u[uid], ...p };
+      // Le premier réglage des niveaux par scénario retire l'ancien niveau unique (migration, core/amenagements.js).
+      if ('niveaux' in p) delete u[uid].aisance;
       setUsers(u);
     },
     // Relus à l'ouverture d'une séance : l'enseignant a pu cocher pendant que l'élève travaillait.

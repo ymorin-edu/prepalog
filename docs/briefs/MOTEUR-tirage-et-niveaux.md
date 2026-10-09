@@ -282,3 +282,40 @@ Aucune à ce jour (toutes tranchées le 08/10). Si un point contredit le code : 
 
 ## Compte rendu *(rempli par Claude Code à la livraison de chaque lot)*
 
+### Lot 1 — niveau par scénario (09/10/2026, Claude Code, chantier D-C)
+
+- **Fichiers modifiés** : `core/amenagements.js` (réécrit : `NIVEAUX`, `scenarioDe`, `niveauxDe` avec la migration,
+  `niveauScenario`, `niveauxApres`, `PROPOSITION`, `proposition`, `mediane`) ; `core/app.js` (`ctx.aisance` = niveau du
+  scénario de la séance) ; `core/backend-demo.js` et `core/backend-firebase.js` (`majAmenagements` : écrire `niveaux`
+  retire `aisance`) ; `core/prof.js` (colonne « Niveau » retirée de Comptes élèves, onglet **« Niveaux »**) ;
+  `core/types/entreprise.js` (`db.aisance` accepte `'accompagne'`, `detail.niveau: 'accompagné'`, `note1` rangé au premier
+  bilan) ; `outils/test-regles.mjs` (5 cas) ; `outils/test/tirage-niveaux.mjs` (bloc nouveau) ; `outils/test.mjs` (le bloc
+  dans `BLOCS` **et dans le groupe 1 de `GROUPES`**, sans quoi le lanceur refuse de partir) ; `outils/test/amenagements.mjs`
+  (cas adaptés, voir Tests) ; `activites/FICHE-SEANCE.md`.
+- **Écart avec le brief (le code le contredisait)** : §3.2 demandait d'ajouter `niveaux` à la liste interdite des règles
+  Firestore. Depuis l'audit du 08/10 (C1), la règle de l'élève est une **liste blanche** (`nom`, `prenom` seulement) :
+  `niveaux` lui est déjà fermé. **`firestore.rules` n'a pas changé : rien à publier dans la console pour ce lot.** Les cas
+  à l'émulateur le prouvent (et tombent si on ajoute `niveaux` à la liste blanche).
+- **Décisions techniques (§8)** : l'écran est un **onglet « Niveaux »** entre « Comptes élèves » et « Suivi de classe » ;
+  `PROPOSITION` est en tête de `core/amenagements.js` ; la marque est un texte discret « proposé : Confirmé » qui se déplie
+  au clic (séances comptées, premier bilan, temps de l'élève, médiane du groupe) avec un bouton « Appliquer ». Le choix
+  « Tout le demi-groupe → » propose aussi « Toute la classe ». Une écriture de niveaux réécrit la carte entière de l'élève
+  (`niveaux`), migration comprise.
+- **Lecture de la règle de proposition (SUPPOSÉ, à confirmer par Tristan à l'écran)** : « temps sous la médiane » est jugé
+  **séance par séance** (temps de l'élève < médiane des temps du groupe sur cette séance) ; une séance compte si son
+  premier bilan ≥ 16 **et** son temps est sous la médiane ; il en faut 2. « Premier bilan » = `note1` (rangée désormais par
+  le moteur au premier bilan d'une séance `correction`), sinon la note de la séance (meilleur score sur 20) pour les
+  séances sans premier bilan et les résultats d'avant le 09/10. Les évaluations (`copie`) ne comptent pas.
+- **Tests** : bloc `tirage-niveaux` 10/10 (colonnes, scénario 2 confirmé / 4 standard, effet à la séance suivante,
+  accompagné = contenu standard, migration avec ce qui reste, demi-groupe 1L1 sans 1L2, proposition et « Appliquer »,
+  rien dans le Suivi ni chez l'élève). Sabotages faits, chacun fait tomber au moins un cas : scénario ignoré, migration
+  retirée, `aisance` non retirée, accompagné non figé, demi-groupe ignoré, seuil de note, médiane, « 2 séances » ramené à 1,
+  niveau relu à chaque ouverture. Règles : **179/179** à l'émulateur (174 avant, +5 cas) ; sabotage `hasOnly([...,
+  'niveaux'])` → 3 cas tombent. Suite entière **936/936** (926 + 10). **Cas existants modifiés** (le comportement change) dans
+  `outils/test/amenagements.mjs` : « l'onglet Comptes élèves montre le niveau… » (devient « …sans colonne Niveau »),
+  « l'enseignant coche le tiers-temps et passe l'élève en confirmé » (le niveau se règle dans l'onglet Niveaux, chez
+  Cdiscount), « case cochée → … aisance confirme » (le quiz témoin, hors entreprise, reçoit désormais « standard »),
+  « un élève ne peut pas changer ses propres réglages » (lit `niveaux['2']`), « l'enseignant décoche… » (attend
+  « standard » dans le quiz).
+- **Reste ouvert** : « proposer Accompagné » (porte ouverte, pas de code) ; la lecture de la règle ci-dessus.
+

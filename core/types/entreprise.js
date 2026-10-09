@@ -283,6 +283,7 @@ export function creerEntreprise(U) {
     rangerErreurs(db, erreurs);
     // Le niveau figé dans la séance, pour l'enseignant qui relit le détail d'une note.
     if (db && db.aisance === 'confirme') detail.niveau = 'confirmé';
+    else if (db && db.aisance === 'accompagne') detail.niveau = 'accompagné';
     // Un jeu tiré par élève (inventaire tiré, ou `tirage: true`) : la graine, pour retrouver son jeu.
     if (INV_TIRE || U.tirage) detail.graine = graineDeBase(db);
     // Le repérage de l'élève (2de, lot 6) : temps, aides ouvertes, jalons réussis du premier coup,
@@ -376,16 +377,19 @@ export function creerEntreprise(U) {
       };
 
       // Le niveau de l'élève DANS CETTE SÉANCE (brief MOTEUR-statut-annulee, 03/10/2026) :
-      // `db.aisance`, 'standard' ou 'confirme', recopié du réglage de l'enseignant (`ctx.aisance`,
+      // `db.aisance`, 'standard', 'confirme' ou 'accompagne' (niveau du scénario, brief MOTEUR-tirage-et-niveaux),
+      // recopié du réglage de l'enseignant (`ctx.aisance`,
       // core/amenagements.js) à la création de la base, puis FIGÉ : un changement de réglage vaut
       // pour les séances suivantes, jamais pour une séance commencée. `db.aisancePour` dit quelle
       // séance l'a figé : une base reprise d'une autre séance (photo `precedente`, parcours à base
       // partagée) le refige pour la sienne. L'enseignant qui ouvre une séance : toujours standard.
       // Le moteur n'en fait rien lui-même ; `baseDeDepart`, `semer`, les déclencheurs et les jalons
-      // le lisent dans la base. Jamais affiché à l'élève.
-      const aisanceReglee = () => (!estProf && ctx.aisance === 'confirme' ? 'confirme' : 'standard');
+      // le lisent dans la base. Jamais affiché à l'élève. « Accompagné » reçoit le contenu standard (les contenus
+      // testent `db.aisance === 'confirme'`) tant que son contenu n'est pas conçu.
+      const NIVEAUX_SEANCE = ['standard', 'confirme', 'accompagne'];
+      const aisanceReglee = () => (!estProf && NIVEAUX_SEANCE.includes(ctx.aisance) ? ctx.aisance : 'standard');
       function figerAisance() {
-        if (db.aisancePour === ctx.meta.id && (db.aisance === 'standard' || db.aisance === 'confirme')) return false;
+        if (db.aisancePour === ctx.meta.id && NIVEAUX_SEANCE.includes(db.aisance)) return false;
         db.aisance = aisanceReglee();
         db.aisancePour = ctx.meta.id;
         return true;
@@ -1066,6 +1070,9 @@ export function creerEntreprise(U) {
           if (!complet) return score;
           r.bilan1 = Object.fromEntries(etapes.map((e) => [e.id, res[e.id]]));
         }
+        // La note du premier bilan sur 20 (socle seul) : la proposition de niveau de l'enseignant la lit (onglet
+        // « Niveaux », core/amenagements.js), sans connaître les poids des jalons.
+        if (typeof r.note1 !== 'number' && MAX_POIDS > 0) r.note1 = Math.round(points(r.bilan1) / MAX_POIDS * 20 * 100) / 100;
         const n = nombreDeCorrections();
         if (n !== (r.corrections || 0)) r.corrections = n;
         if (!r.bilan2 && n >= 1 && complet) r.bilan2 = Object.fromEntries(etapes.map((e) => [e.id, res[e.id]]));
