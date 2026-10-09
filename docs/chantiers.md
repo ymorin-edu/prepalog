@@ -35,7 +35,7 @@
 | **Lot C — hygiène** | | | | | | | |
 | 13 | Tests : compteurs en dur, cas vides, `ATTENDU` complété, doublons | C10b | moyen | Sonnet | non (tests) | — | **livré** (09/10, 06f57c6 à 03eb63e) |
 | 14 | Doublons des vues (`ech`, étapes, note, palette, confirmation, mélange, focus) | C11 | moyen | Sonnet | oui | 9 avancé | **livré** (09/10, f3cec57 à d637118) |
-| 15 | Couleurs en dur et `base.css` fourre-tout | C12 | petit à moyen | Sonnet | `styles/` + vues | — | à faire |
+| 15 | Couleurs en dur et `base.css` fourre-tout | C12 | petit à moyen | Sonnet | `styles/` + vues | — | **livré** (09/10, 6e52000 à fe50e77) |
 | 16 | Champs `meta`, portées et options morts | C14 | petit | Sonnet | oui | décision 14 (cœur) | à faire |
 | 17 | Contenus orphelins, trames Smoby à déclarer, commentaires périmés | C16 | petit | Sonnet | non | — | à faire |
 | 18 | Deux sessions à la fois : port, `git grep`, `EN-COURS` | C17 | petit | Sonnet | non (`commun.mjs`) | — | à faire |
@@ -368,6 +368,7 @@ s'aligner.
   grille et de l'inventaire vers des feuilles de vue ; vérifier le thème sombre sur plan et visite.
 - **Fini quand.** Une entreprise à charte sombre s'affiche sans retouche de vue ; `base.css` ne porte
   plus que la charte et le site.
+- **Livré le 09/10/2026** (6e52000 à fe50e77, suite 919/919) : `carte.js` sans aucune couleur (légende sur `--vert`, `--terre`, `--ardoise-fond`) ; le thème papier devient la classe `theme-papier` (blocs clairs de `base.css`, `quai.css`, `planning.css`, `entrepot.css`), `styleTheme` ne recopie plus rien ; `quiz.css`, `carte.css`, `plan.css`, `grille.css`, `inventaire.css` sortis de `base.css` (1 734 -> 1 239 lignes ; déplacement pur, sauf un `@media` de `plan-svg` qui suit sa règle) ; `--sur-terre` remplace quatre `#fff` ; thème sombre du plan d'entrepôt et de la visite vérifié, rien de cassé. Rendu identique (empreintes de ~70 propriétés par élément, 27 écrans x 3 thèmes à 1366 px, 11 à 800 px). **Ce qui reste, et pourquoi** : `base.css` porte encore le CSS de la **tournée** (`tour-*`, 68 règles, imbriqué avec la grille : feuille `tournee.css` à tirer d'un prochain passage), de la messagerie, des documents, de la fiche, du suivi de classe, de la copie rendue (tout ce qui est `ent-*` et `suivi-*`), et deux règles mixtes (`.avis-ok`, qui a encore la menthe de Boost en `rgba`) ; `carte.css` garde les teintes de dessin de la carte (30 couleurs : rues, bâti, eau, nuances sombres des marqueurs) ; `iso.js` 198, `quai.js` 154, `entrepot.js` 58, `entrepot-visite.js` 20 couleurs de dessin (cartons, papier, sol), à ne pas convertir en masse ; `.ent-doc` (`base.css`) et `planning.js:484` recopient encore des valeurs du thème clair. **Défauts de contraste vus, non corrigés** : voir la ligne de `decisions.md` du 09/10 (Boost, boutons principaux 3,71 : `--sur-ardoise` prend `surAccent` alors que les aplats sont bleus ; pastille `.ent-n` 2,06 en sombre ; trois étiquettes d'ambre du plan de rangement 3,2 à 3,8 en clair).
 
 ### 16. Champs, portées et options morts (C14)
 - **Ce qu'on fait.** Décider `coeur` (décision 14 : écran ou retrait), `domaines`, `volume` ; retirer
