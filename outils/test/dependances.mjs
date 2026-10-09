@@ -938,4 +938,37 @@ await v('contenus/ : chaque image, classeur et fichier de données est cité au 
   if (orphelins.length) throw new Error('fichier de contenus/ cité nulle part (le renommer A-SUPPRIMER-… ou le déclarer) : ' + orphelins.join(', '));
 });
 
+// ---------- 41. docs/EN-COURS.md : le tableau « qui travaille sur quoi » est lisible et ne ment pas (chantier 18, 09/10/2026)
+// Deux sessions Claude Code s'inscrivent dans ce tableau avant d'écrire. Un tableau mal formé (colonne vide,
+// date ambiguë) ou un chemin inventé ne protège plus personne. Le tableau vide est valide. Un chemin cité
+// sans joker doit exister dans le dépôt, OU être un fichier nouveau signalé par `git status` (sur GitHub il
+// n'y a pas de fichier non suivi : un chemin inscrit mais jamais créé y est donc refusé).
+await v('docs/EN-COURS.md : trois colonnes remplies, date jj/mm/aaaa, chemins cités existants', async () => {
+  const lignes = fs.readFileSync(path.join(ROOT, 'docs/EN-COURS.md'), 'utf8').split(/\r?\n/);
+  const iSep = lignes.findIndex((l) => /^\|\s*-{3,}\s*\|/.test(l));
+  if (iSep < 1) throw new Error("tableau introuvable : il faut une ligne d'en-tête puis une ligne `|---|---|---|`");
+  const suivis = new Set();
+  try {
+    const { execSync } = await import('node:child_process');
+    const sortie = execSync('git status --porcelain --untracked-files=all', { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+    for (const l of sortie.split(/\r?\n/).filter(Boolean)) suivis.add(l.slice(3).split(' -> ').pop().replace(/^"|"$/g, ''));
+  } catch (e) { /* pas de git : seuls les fichiers existants sont acceptés */ }
+  const problemes = [];
+  for (const l of lignes.slice(iSep + 1)) {
+    if (!/^\|/.test(l)) continue;
+    const c = l.replace(/^\||\|\s*$/g, '').split('|').map((x) => x.trim());
+    if (c.length !== 3 || c.some((x) => !x)) { problemes.push(`ligne à trois colonnes remplies attendue : ${l}`); continue; }
+    if (!/^\d{2}\/\d{2}\/\d{4}$/.test(c[2])) problemes.push(`date « ${c[2]} » : format jj/mm/aaaa attendu (ligne « ${c[0]} »)`);
+    for (const morceau of c[1].replace(/`/g, '').split(/[,;]| et | \+ /)) {
+      const mot = morceau.trim().split(/\s+/)[0];
+      if (!mot || /[*{]/.test(mot) || !(/\//.test(mot) || /\.\w{1,5}$/.test(mot))) continue;
+      const rel = mot.replace(/\/$/, '');
+      const existe = fs.existsSync(path.join(ROOT, rel));
+      const nouveau = [...suivis].some((s) => s === rel || s.startsWith(rel + '/'));
+      if (!existe && !nouveau) problemes.push(`chemin inscrit mais absent du dépôt et de git status : ${rel} (ligne « ${c[0]} »)`);
+    }
+  }
+  if (problemes.length) throw new Error(problemes.join(' | '));
+});
+
 }
