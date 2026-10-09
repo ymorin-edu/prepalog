@@ -36,7 +36,7 @@
 | 13 | Tests : compteurs en dur, cas vides, `ATTENDU` complété, doublons | C10b | moyen | Sonnet | non (tests) | — | **livré** (09/10, 06f57c6 à 03eb63e) |
 | 14 | Doublons des vues (`ech`, étapes, note, palette, confirmation, mélange, focus) | C11 | moyen | Sonnet | oui | 9 avancé | **livré** (09/10, f3cec57 à d637118) |
 | 15 | Couleurs en dur et `base.css` fourre-tout | C12 | petit à moyen | Sonnet | `styles/` + vues | — | **livré** (09/10, 6e52000 à fe50e77) |
-| 16 | Champs `meta`, portées et options morts | C14 | petit | Sonnet | oui | décision 14 (cœur) | **livré** (09/10, 77fc170 à 4003e49) ; règles à publier dans la console |
+| 16 | Champs `meta`, portées et options morts | C14 | petit | Sonnet | oui | décision 14 (cœur) | **livré** (09/10, 77fc170 à 4003e49) ; **console RTDB publiée le 09/10** |
 | 17 | Contenus orphelins, trames Smoby à déclarer, commentaires périmés | C16 | petit | Sonnet | non | — | **livré** (09/10, e0bb05e à 2cda9cb) ; Smoby déclaré le 09/10 (17 bis, 9dbfa00, 9d5c144) ; reste : `tab2-stocks.js` (décision de Tristan), la mention TechPro de `core/types/entreprise.js:103` (suivi moteur) ; ENT-5.3 : corrigé de trame laissé non branché (décision de Tristan, 09/10) |
 | 18 | Deux sessions à la fois : port, `git grep`, `EN-COURS` | C17 | petit | Sonnet | non (`commun.mjs`) | — | **livré** (09/10, 9310e5e à 197c9ba) |
 | 19 | Reliquats SCE / Spartoo : acter la règle | C15 | petit | Sonnet | non | 9 | à décider |
@@ -375,7 +375,7 @@ s'aligner.
   `equipe`/`commun` et leurs règles si personne n'en veut ; `purger`, `brancherDeconnexion` ;
   `ecriture: 'tous'` du magasin : l'écrire ou le retirer.
 - **Fini quand.** Chaque champ de `FICHE-SEANCE.md` est lu quelque part.
-- **Livré le 09/10/2026** (77fc170 à 4003e49, suite 920/920, règles 174/174 ; **règles à publier dans la console**) :
+- **Livré le 09/10/2026** (77fc170 à 4003e49, suite 920/920, règles 174/174 ; **console RTDB publiée par Tristan le 09/10/2026**) :
   **décisions de Tristan** : `coeur` gardé (option A, sur les 8 séances) et `domaines` gardé, tous deux documentés « déclaré,
   pas encore lu » dans la fiche, en attente de l'écran cœur / complément (décision 14) ; `volume` gardé parce que
   `outils/test/cdiscount.mjs` le relit. **Retiré** : l'option `purger` de `supprimerGroupe` (les deux backends) et l'alias

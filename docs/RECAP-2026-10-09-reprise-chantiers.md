@@ -15,12 +15,10 @@
   (`docs/briefs/ENT-6.*`, `docs/briefs/france-boissons/`, `docs/briefs/MOTEUR-vue-tournee-camion.md`,
   `.claude/`) : ne pas y toucher, ne pas les commiter.
 
-## Action de Tristan en attente (pas urgente)
+## Console Firebase
 
-- **Publier `database.rules.json` dans la console Firebase** (Realtime Database, coller **sans** le bloc
-  `_commentaire`). Le chantier 16 a retiré la branche `communs/` et le `.read` de `acces/{gid}` : rien ne
-  les utilise, mais tant que ce n'est pas publié, l'ancienne branche reste ouverte en ligne.
-  `firestore.rules` n'a pas changé depuis la publication du 09/10.
+- `database.rules.json` du chantier 16 **publié par Tristan le 09/10/2026** (après 16 h). `firestore.rules` inchangé
+  depuis la publication du matin. Rien n'attend dans la console.
 
 ## Ce qui reste, dans l'ordre de la feuille de route
 
