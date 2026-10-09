@@ -37,7 +37,7 @@
 | 14 | Doublons des vues (`ech`, étapes, note, palette, confirmation, mélange, focus) | C11 | moyen | Sonnet | oui | 9 avancé | **livré** (09/10, f3cec57 à d637118) |
 | 15 | Couleurs en dur et `base.css` fourre-tout | C12 | petit à moyen | Sonnet | `styles/` + vues | — | **livré** (09/10, 6e52000 à fe50e77) |
 | 16 | Champs `meta`, portées et options morts | C14 | petit | Sonnet | oui | décision 14 (cœur) | **livré** (09/10, 77fc170 à 4003e49) ; règles à publier dans la console |
-| 17 | Contenus orphelins, trames Smoby à déclarer, commentaires périmés | C16 | petit | Sonnet | non | — | **livré** (09/10, e0bb05e à 2cda9cb) ; reste : déclaration Smoby 5.3-5.8 et intention (attend Tristan) |
+| 17 | Contenus orphelins, trames Smoby à déclarer, commentaires périmés | C16 | petit | Sonnet | non | — | **livré** (09/10, e0bb05e à 2cda9cb) ; Smoby déclaré le 09/10 (17 bis, 9dbfa00, 9d5c144) ; reste : `tab2-stocks.js` (décision de Tristan), la mention TechPro de `core/types/entreprise.js:103` (suivi moteur) et le corrigé de trame d'ENT-5.3 (non branché, décision de Tristan) |
 | 18 | Deux sessions à la fois : port, `git grep`, `EN-COURS` | C17 | petit | Sonnet | non (`commun.mjs`) | — | à faire |
 | 19 | Reliquats SCE / Spartoo : acter la règle | C15 | petit | Sonnet | non | 9 | à décider |
 | 20 | Stratelog | C19 | ? | Opus | ? | 10 | à cadrer |
@@ -404,10 +404,7 @@ s'aligner.
   des palettes et de la fiche, même texte à l'écran. `tab2-stocks.js` : les 151 valeurs attendues sont des **littéraux** (aucun
   générateur dans le dépôt, contrairement à TAB-1, TAB-3, TAB-4) : laissé tel quel, décision de Tristan (voir `decisions.md`).
   Nouveau cas de `dependances.mjs` : chaque image, classeur et fichier de données de `contenus/` est cité au moins une fois.
-  **Reste, en attente de Tristan** : la déclaration (`meta.trame`) des trames et corrigés Smoby ENT-5.3 à 5.8
-  (`contenus/trames/ENT-5.3` à `5.8-smoby-*-trame-eleve.docx/.pdf`, `contenus/corriges/ENT-5.3-trame.js` à `5.8-trame.js`) et la
-  ligne `intention: { pdf, docx }` de Smoby dans `ENTREPRISES` (`activites/index.js`, ligne `n: 5`) pour
-  `contenus/intentions/smoby-intention-pedagogique.docx/.pdf`.
+  **Smoby déclaré le 09/10/2026 (17 bis, 9dbfa00 et 9d5c144, suite 925/925)** : `meta.trame` des séances 5.3 à 5.8, corrigés de trame `ENT-5.4-trame.js` à `ENT-5.8-trame.js` ajoutés aux corrigés calculés, fiche d'intention Smoby dans `ENTREPRISES`. **Reste** : `tab2-stocks.js` (décision de Tristan, voir ci-dessus), la mention TechPro de `core/types/entreprise.js:103` (suivi moteur), et le corrigé de trame d'**ENT-5.3**, non branché (la séance n'a pas de corrigé calculé et la suite n'accepte que `corrige: false` ou `./contenus/corriges/<code>.js` : décision de Tristan, voir `decisions.md`).
 
 ### 18. Deux sessions à la fois (C17)
 - **Ce qu'on fait.** Port de test tiré au hasard si 8099 est pris, ou message clair ; `git grep` dans
