@@ -356,8 +356,7 @@ export async function creerBackendFirebase() {
     // console.
     //
     // Les élèves rattachés à un autre groupe restent seulement détachés : c'est tout
-    // l'intérêt d'un champ `groupes` multiple. `purger: false` rétablit l'ancien
-    // comportement pour tous, et ne sert qu'aux tests.
+    // l'intérêt d'un champ `groupes` multiple.
     //
     // `aids` : les identifiants d'activités connus (registre `activites/index.js`), transmis à
     // `supprimerEleve()` pour effacer les lignes de classement des élèves qui partent.
@@ -369,7 +368,7 @@ export async function creerBackendFirebase() {
     // Chantier 11 (09/10/2026) : GARDE EN TÊTE, avant la première écriture. Seul le responsable (premier de
     // `profs`) supprime un groupe ; un collègue le QUITTE (`retirerCollegue`). Un refus au milieu
     // laisserait un groupe à moitié vidé.
-    async supprimerGroupe(gid, { purger = true, aids = [] } = {}) {
+    async supprimerGroupe(gid, { aids = [] } = {}) {
       if (!courant) throw new Error('Connexion requise.');
       let g0 = null;
       try {
@@ -392,7 +391,7 @@ export async function creerBackendFirebase() {
       let supprimes = 0, detaches = 0, comptes = 0;
       const restes = [];
       for (const el of eleves) {
-        if (purger && (el.groupes || []).length <= 1) {
+        if ((el.groupes || []).length <= 1) {
           // supprimerEleve() fait le reste : travaux, jeux privés, classements,
           // acces/{gid}/eleves/{uid}, profil, puis le compte. Il tourne tant que `acces/{gid}`
           // existe encore, donc avant la purge du miroir plus bas — dans l'autre ordre il se

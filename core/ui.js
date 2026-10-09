@@ -89,9 +89,6 @@ export function brancherEntete(onDeconnexion) {
   majLogos();
 }
 
-// Ancien nom, conservé : l'en-tête se branche entièrement ici.
-export const brancherDeconnexion = brancherEntete;
-
 export function confirmer(msg) { return window.confirm(msg); }
 
 // CONFIRMATION DANS LA PAGE avant un envoi définitif (06/10/2026 ; Spartoo ENT-1.1 §7.11 = Smoby C2, décisions de
