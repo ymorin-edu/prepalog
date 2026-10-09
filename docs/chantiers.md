@@ -19,7 +19,7 @@
 | # | Chantier | Audit | Taille | Modèle | `core/` | Dépend de | État |
 |---|---|---|---|---|---|---|---|
 | **Lot A — protéger la note et les données** | | | | | | | |
-| 1 | Règles Firestore : élève, groupes, score ; droits des enseignants | C1 | moyen | Sonnet | non (règles) | — | **livré** (7a86d42 puis 1 bis, 08/10) ; reste à **publier les deux consoles** (Tristan) |
+| 1 | Règles Firestore : élève, groupes, score ; droits des enseignants | C1 | moyen | Sonnet | non (règles) | — | **livré** (7a86d42 puis 1 bis, 08/10) ; consoles publiées le 09/10 (avec les règles du chantier 11) |
 | 2 | Remettre `CLAUDE.md` et `FICHE-SEANCE.md` d'aplomb | C18 | petit | Sonnet | non | — | **livré** (08/10, Fable, doc seule : les fiches de `docs/fiches/` restent à Cowork, voir l'annexe de l'audit) |
 | 3 | Tests de règles sur GitHub, hôtes externes partout, port pris lisible | C10a | petit | Sonnet | non (tests) | — | **livré** (08/10, 917ffb6) |
 | 4 | Fiabiliser le mode réel (écoutes, échecs remontés, geler, suivi) | C2 | moyen | Sonnet | oui | 3 | **livré** (08/10, b85c141, autre session : écoutes fermées, échecs signalés, démo alignée, tests de règles sur GitHub) |
@@ -30,7 +30,7 @@
 | 8 | Fabrique de séance d'entreprise (24 fichiers recopiés) | C6 | moyen | Sonnet | oui (petit) | — | **livré** (08/10, db5ed50 à ee13996) |
 | 9 | `entreprise.js` : options figées, `COLORS`/`SHIP` sortis, modules extraits | C5 | gros | Opus puis Sonnet | oui | 8 | **livré** (9a, 9a bis, 9b, 9c ; 9c bis à faire plus tard) |
 | 10 | Un seul drapeau « Simulog » dans tout le code | C13 | petit | Sonnet | oui | — | livré (09/10/2026, 7cd4a21, 58fe9e7) |
-| 11 | Plusieurs enseignants : co-prof, groupes par prof, orphelins filtrés | C7 | moyen à gros | Opus (décision) puis Sonnet | oui + règles | 1, 6 | **livré** (11a 09/10, 076ec30, 8ad642a ; 11b 09/10, 8ba2042, af1d707, 6191913) ; **reste à publier la console Firestore et la console RTDB** (Tristan) |
+| 11 | Plusieurs enseignants : co-prof, groupes par prof, orphelins filtrés | C7 | moyen à gros | Opus (décision) puis Sonnet | oui + règles | 1, 6 | **livré** (11a 09/10, 076ec30, 8ad642a ; 11b 09/10, 8ba2042, af1d707, 6191913) ; **consoles Firestore et RTDB publiées le 09/10** |
 | 12 | CAP OL et niveaux : référentiel, défauts, TAB-4 | C8 | moyen | Sonnet (Cowork d'abord) | oui | référentiel CAP relevé | à faire |
 | **Lot C — hygiène** | | | | | | | |
 | 13 | Tests : compteurs en dur, cas vides, `ATTENDU` complété, doublons | C10b | moyen | Sonnet | non (tests) | — | à faire |
