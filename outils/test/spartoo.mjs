@@ -45,6 +45,14 @@ await v('Spartoo : ouverture de l\'environnement', async () => {
   // L'enseignant pose ensuite le code qui déverrouille la vue d'ensemble du stock.
   await page.click('[data-ong="seance"]');
   await page.waitForSelector('#codeStock');
+  // Depuis le 09/10/2026, les trois séances Spartoo sont livrées fermées aux élèves (`ouverture: 'prof'`) :
+  // l'enseignant les coche pour ce groupe dans « Conduite de séance », comme Tristan le fait en classe.
+  for (const id of ['spartoo-reception', 'spartoo', 'spartoo-tracabilite']) {
+    if (!(await page.isChecked(`[data-ouvre="${id}"]`))) {
+      await page.check(`[data-ouvre="${id}"]`);
+      await page.waitForFunction((x) => document.querySelector(`[data-ouvre="${x}"]`).checked, id);
+    }
+  }
   await page.fill('#codeStock', 'STOCK24');
   await page.click('#btnCodeStock');
   await attendreTexte('#toast', /Code enregistré/);

@@ -33,6 +33,9 @@ const s = seanceEntreprise(SPARTOO, SPARTOO, {
   // Trame élève : la déclarer, c'est la valider (relue par Tristan). Le corrigé se déduit du code.
   trame: 'spartoo-preparation',
   pret: true,
+  // Fermée aux élèves tant que l'enseignant ne la coche pas (Conduite de séance), depuis le 09/10/2026.
+  // Gelée jusqu'à sa refonte comme ENT-1.1 (décision du 09/10/2026) : bugs seulement.
+  ouverture: 'prof',
 }, {
   // Les écrans de données du menu (05/10/2026) : ceux dont la séance se sert, et au moindre doute on les garde.
   menu: ['commandes', 'stock', 'catalogue', 'clients', 'fournisseurs', 'console'],

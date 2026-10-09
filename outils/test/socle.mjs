@@ -1792,7 +1792,8 @@ await v('Simulog : l’élève ne voit pas la carte d’une entreprise sans séa
   await pl.click('[data-rub="simulog"]');
   await pl.waitForSelector('.entreprise');
   const ids = (await cartes()).map((x) => x.id).join();
-  if (ids !== '1,3') throw new Error('cartes chez l’élève : ' + ids);
+  // Spartoo (1) est lui aussi livré fermé depuis le 09/10/2026 (`ouverture: 'prof'`) : il ne reste que Boost (3).
+  if (ids !== '3') throw new Error('cartes chez l’élève : ' + ids);
 });
 
 await v('Simulog : une entreprise dont seules certaines séances sont ouvertes montre la liste, sans la séance en préparation', async () => {

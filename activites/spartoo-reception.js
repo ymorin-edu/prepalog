@@ -42,6 +42,8 @@ const s = seanceEntreprise(SPARTOO, SEANCE, {
   // Trame élève : la déclarer, c'est la valider (relue par Tristan). Le corrigé se déduit du code.
   trame: 'spartoo-reception',
   pret: true,
+  // Fermée aux élèves tant que l'enseignant ne la coche pas (Conduite de séance), depuis le 09/10/2026.
+  ouverture: 'prof',
 }, {
   // Les écrans de données du menu (05/10/2026) : ceux dont la séance se sert. Plus de Stock (décision de
   // Tristan, 06/10 : il demandait un code, impasse pour l'élève) : on vérifie à la console.
