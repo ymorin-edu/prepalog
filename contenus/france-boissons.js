@@ -6,6 +6,8 @@
 // l'ANNUAIRE (les six fiches « qui suis-je »), que les séances 6.2 à 6.10 joignent à leur premier message
 // (idée de Tristan du 07/10/2026). ENT-6.1 dessine le même organigramme avec les cases vides de l'élève
 // (`organigrammeHtml({ vides })`). Chaque séance apporte ses messages, ses fiches et ses jalons.
+// ENT-6.2 ajoute la vente aux CHR, commune à la S2 : le stock de Buchelay, les conditions de vente, les montants de consigne,
+// le client La Cabane à Malo, et les mots de la commande au lexique.
 //
 // ────────────────────────────────────────────────────────────────────────────────────────
 // CE QUI EST VÉRIFIÉ, CE QUI EST CONSTRUIT (brief ENT-6.1 §2, recopié tel quel)
@@ -85,6 +87,46 @@ export const LEXIQUE = {
   transférer: 'Envoyer à une autre personne un message qu’on a reçu, pour qu’elle s’en occupe.',
   fût: 'Tonneau en métal qui contient la bière livrée aux bars et aux restaurants.',
   consigne: 'Somme payée pour un emballage (fût, casier) et rendue quand on le rapporte vide.',
+  // ENT-6.2 (la commande de La Cabane à Malo).
+  vides: 'Emballages consignés que le client rend vides (fûts, casiers) : le chauffeur les reprend à la livraison.',
+  casier: 'Caisse en plastique qui range les bouteilles (ici, 12 bouteilles d’eau d’1 litre). Il est consigné, comme le fût.',
+  CHR: 'Cafés, hôtels, restaurants : les clients professionnels qui servent des boissons (bars, restaurants, hôtels…).',
+  rupture: 'Rupture de stock : il n’y a pas assez d’un article en stock pour livrer la quantité demandée.',
+  'minimum de commande': 'Quantité la plus petite qu’un client doit commander pour être livré.',
+  tournée: 'Trajet d’un camion qui livre à la suite plusieurs clients d’un même secteur, un jour fixé.',
+  'bon de commande': 'Document qui dit ce qu’on va livrer au client : les articles, les quantités, le jour de livraison.',
+};
+
+// ─────────────────────────────────────────── la vente aux CHR (ENT-6.2, repris par les séances suivantes de S2)
+// VÉRIFIÉ (brief ENT-6.2 §2) : les marques (Heineken, Affligem, Pelforth, Edelweiss : marques de Heineken France ; Affligem
+// Blonde et Pelforth Blonde existent en fût de 20 L) et les montants de consigne de l'arrêté du 6 février 2026, en vigueur
+// le 1er janvier 2027 (40 € par fût de 20 à 50 L, 4 € par casier), valables pour toute la S2.
+// CONSTRUIT : les stocks, le minimum de commande, l'heure limite, le jour de tournée, le client et son numéro.
+
+// Les montants de consigne, en euros (arrêté du 6 février 2026).
+export const CONSIGNES = { fut: 40, casier: 4 };
+
+// L'extrait du stock de Buchelay, le mardi 15 juin 2027 à 9 h (brief ENT-6.2 §4, recalé sur le plan de stockage de masse
+// d'ENT-6.5 : le stock reste le même d'une séance à l'autre). Dans l'ordre du document. `biere` : 'blonde' ou 'blanche'
+// (absent = pas une bière) ; `de` : le complément « de … » d'une phrase (« 2 fûts de Pelforth Blonde 20 L »).
+export const STOCK_BUCHELAY = [
+  { id: 'heineken30', nom: 'Heineken', marque: 'Heineken', format: 'fût 30 L', litres: 30, biere: 'blonde', dispo: 16, court: 'Heineken fût 30 L', de: 'de Heineken 30 L' },
+  { id: 'affligem20', nom: 'Affligem Blonde', marque: 'Affligem', format: 'fût 20 L', litres: 20, biere: 'blonde', dispo: 2, court: 'Affligem Blonde fût 20 L', de: 'd’Affligem' },
+  { id: 'pelforth20', nom: 'Pelforth Blonde', marque: 'Pelforth', format: 'fût 20 L', litres: 20, biere: 'blonde', dispo: 24, court: 'Pelforth Blonde fût 20 L', de: 'de Pelforth Blonde 20 L' },
+  { id: 'edelweiss20', nom: 'Edelweiss (bière blanche)', marque: 'Edelweiss', format: 'fût 20 L', litres: 20, biere: 'blanche', dispo: 24, court: 'Edelweiss fût 20 L', de: 'd’Edelweiss' },
+  { id: 'heineken20', nom: 'Heineken', marque: 'Heineken', format: 'fût 20 L', litres: 20, biere: 'blonde', dispo: 0, court: 'Heineken fût 20 L', de: 'de Heineken 20 L' },
+  { id: 'eau', nom: 'Eau minérale plate 1 L, verre consigné', marque: 'eau', format: 'casier de 12', dispo: 60, court: 'Eau plate 1 L (casier de 12)', de: 'd’eau plate' },
+];
+export const article = (id) => STOCK_BUCHELAY.find((a) => a.id === id);
+
+// Les conditions de vente aux CHR (extrait, construit).
+export const CONDITIONS_CHR = { minimumFuts: 10, heureLimite: 12 };
+
+// Le client de S2 : le bar de Malo (construit, nom vérifié libre par Cowork). `tournee` : jour de la semaine (5 = vendredi).
+export const CABANE = {
+  nom: 'La Cabane à Malo', type: 'bar de plage', ville: 'Villers-sur-Mer (14)', numero: 'C-14-2047',
+  tournee: { nom: 'tournée de la côte', jour: 5 }, ouverture: '10 h',
+  consignes: { futs: 9, casiers: 5 },   // emballages consignés chez le client (ses vides)
 };
 
 // Pas d'article en jeu dans la séance d'ouverture : un catalogue vide, une base neuve. Les séances qui manipulent des
