@@ -1,0 +1,170 @@
+/* ============================================================
+   Vue « Grille » : la feuille de calcul intégrée (core/types/grille.js).
+   Sorti de base.css le 09/10/2026 (chantier 15) : mêmes règles, même ordre, rien de retouché.
+   Chargée après base.css (index.html), comme les autres feuilles de vue.
+   Les deux surbrillances (variables --gr-*, sans thème : translucides) y sont déclarées.
+   ============================================================ */
+
+/* Les deux surbrillances de la feuille de calcul (05/10/2026) : jaune = une ÉTAPE du calcul,
+   violet = un RÉSULTAT à comparer à une contrainte. Ni le vert (l'ordre), ni le bleu (le client),
+   ni le rouge (la limite franchie).
+   TRANSLUCIDES, et c'est voulu : posées sur le fond du panneau, elles s'adaptent à la charte de
+   l'entreprise, claire ou sombre. Un aplat clair fixe rendait le texte illisible sur la charte
+   sombre de Boost — vu en pilotant l'écran, pas par un test. */
+:root{
+  --gr-etape-fond:rgba(240,190,0,.30); --gr-etape-trait:#d9a800;
+  --gr-res-fond:rgba(139,92,246,.30); --gr-res-trait:#8b5cf6;
+}
+
+/* ---- la feuille de calcul intégrée -------------------------------------------------------
+   Elle doit RESSEMBLER à un tableur : en-têtes de colonnes en lettres, numéros de lignes,
+   quadrillage serré, chiffres à droite en chasse fixe. C'est la moitié de l'apprentissage —
+   l'élève doit reconnaître l'objet quand il ouvrira Excel. */
+.gr-bloc{ margin-top:22px; padding-top:16px; border-top:1px solid var(--filet) }
+/* Largeur bornée : étirée sur toute la page, la feuille cesse de ressembler à un tableur et
+   devient une mise en page. Une colonne de libellés, une colonne de valeurs, et on s'arrête. */
+.gr-table{ border-collapse:collapse; margin-top:10px; font-size:14px; min-width:460px; max-width:720px }
+.gr-table td:first-of-type{ width:50% }
+.gr-table th, .gr-table td{ border:1px solid var(--filet); padding:5px 9px; text-align:left }
+.gr-table thead th{ background:var(--survol); color:var(--encre-douce); font-size:12px;
+  font-weight:600; text-align:center }
+.gr-num{ background:var(--survol); color:var(--encre-douce); font-size:12px; font-weight:600;
+  text-align:center !important; width:30px }
+.gr-coin{ width:30px }
+.gr-ligne-entete td{ background:var(--survol); font-weight:600 }
+.gr-nb{ text-align:right !important; white-space:nowrap }
+/* Les cellules à remplir se voient du premier coup d'œil : c'est ce qu'on demande à l'élève. */
+.gr-saisie{ background:var(--ardoise-clair) }
+.gr-champ{ display:flex; align-items:center; gap:8px }
+.gr-champ input{ flex:1; min-width:9.5em; font-family:var(--mono); font-size:13px; padding:4px 7px }
+.gr-res{ flex:0 0 auto; min-width:4.5em; text-align:right; color:var(--encre-douce); font-size:13px }
+.gr-res-err{ color:var(--rouge) }
+.gr-verdict{ display:block; margin-top:5px }
+/* Désigner une cellule à la souris pendant qu'on écrit une formule (04/10/2026). Le curseur
+   « cellule » n'apparaît QUE pendant l'écriture d'une formule : hors de là, rien ne doit laisser
+   croire que le tableau se clique. `user-select:none` pendant le glissement, sinon le navigateur
+   sélectionne le texte du tableau au lieu de suivre le geste. */
+.gr-table.gr-pointe{ user-select:none; cursor:cell }
+.gr-table [data-ref].gr-vise{
+  outline:2px dashed var(--ardoise); outline-offset:-2px; background:var(--ardoise-clair);
+}
+.gr-aides{ margin:10px 0 0; padding-left:18px; font-size:13px; color:var(--encre-douce) }
+.gr-aides li{ margin:3px 0 }
+.gr-aides b{ margin-right:5px }
+
+/* ---- feuille de calcul : deux surbrillances, et les contraintes à droite (05/10/2026) --------
+   Tristan : *« il doit pouvoir distinguer rapidement que les formules sont justes mais que les
+   contraintes ne sont pas respectées à droite. Pour ça on mettra une surbrillance différente
+   pour distinguer les étapes et les résultats (poids total chargé) et heure d'arrivée. »*
+   JAUNE = une étape du calcul · VIOLET = un résultat qu'on compare à la contrainte, et la carte
+   de la contrainte, à droite, prend le même violet pour dire « c'est avec celui-là qu'on compare ».
+   Le vert « juste » et le rouge « franchie » gardent leur sens : le verdict de la formule est
+   sur la cellule, celui de la contrainte est sur la carte, et les deux ne se mélangent pas. */
+.gr-deux{ display:grid; grid-template-columns:minmax(0,1fr) 290px; gap:22px; align-items:start }
+.gr-gauche{ min-width:0 }
+.gr-droite{ position:sticky; top:12px }
+.gr-droite .tour-jauges{ position:static }
+.gr-droite::before{
+  content:"Contraintes"; display:block; margin:0 0 8px; font-size:12px; font-weight:700;
+  letter-spacing:.04em; text-transform:uppercase; color:var(--encre-douce);
+}
+.gr-expl{ display:block; margin-top:2px; font-size:12px; font-weight:400; color:var(--encre-douce); line-height:1.35 }
+.gr-t-etape td{ background:var(--gr-etape-fond) }
+.gr-t-etape td:first-of-type{ box-shadow:inset 4px 0 0 var(--gr-etape-trait) }
+.gr-t-resultat td{ background:var(--gr-res-fond); font-weight:600 }
+.gr-t-resultat td:first-of-type{ box-shadow:inset 5px 0 0 var(--gr-res-trait) }
+.gr-t-contrainte td{ box-shadow:inset 0 0 0 1px var(--gr-res-trait); font-weight:600 }
+.gr-t-contrainte td:first-of-type{ font-style:italic }
+.gr-legende{ list-style:none; margin:8px 0 0; padding:0; display:flex; flex-wrap:wrap; gap:6px 16px; font-size:12px; color:var(--encre-douce) }
+.gr-legende li{ display:flex; align-items:center; gap:6px }
+.gr-puce{ width:14px; height:14px; border-radius:3px; display:inline-block }
+.gr-puce-etape{ background:var(--gr-etape-fond); box-shadow:inset 3px 0 0 var(--gr-etape-trait) }
+.gr-puce-resultat{ background:var(--gr-res-fond); box-shadow:inset 3px 0 0 var(--gr-res-trait) }
+.gr-puce-contrainte{ box-shadow:inset 0 0 0 1px var(--gr-res-trait) }
+.gr-contraintes .tour-jauge-repere{ border-left:5px solid var(--gr-res-trait) }
+.gr-contraintes .tour-jauge-repere.trop{ border-color:var(--rouge); border-left-color:var(--rouge); border-style:solid; border-width:2px 2px 2px 5px }
+
+/* ---- feuille de calcul moins guidée (chantier D du plan Boost, 03/10/2026) -------------------
+   La feuille et son brouillon côte à côte ; sous la feuille si la place manque. */
+.gr-feuilles{ display:flex; flex-wrap:wrap; gap:6px 22px; align-items:flex-start }
+.gr-feuilles > .ent-scroll{ min-width:0; max-width:100% }
+/* Une cellule recopiée (tableau « Tournée ») : on la lit, on ne l'écrit pas. */
+.gr-copie{ color:var(--encre-douce) }
+/* Le « ? » d'une ligne : un vrai bouton, petit, qui ne vole pas la vedette au libellé. */
+.gr-aide-btn{
+  margin-left:6px; width:20px; height:20px; padding:0; border-radius:50%; vertical-align:middle;
+  border:1px solid var(--filet); background:var(--panneau); color:var(--encre-douce);
+  font-family:inherit; font-size:12px; font-weight:700; line-height:1; cursor:pointer;
+}
+.gr-aide-btn:hover{ border-color:var(--ardoise); color:var(--ardoise) }
+.gr-aide-btn[aria-expanded="true"]{ border-color:var(--ardoise); color:var(--ardoise) }
+.gr-aide-btn.gr-aide-barre{ width:auto; height:auto; padding:2px 9px; margin-left:0; border-radius:999px }
+.gr-aide-btn:focus-visible{ outline:2px solid var(--ardoise); outline-offset:2px }
+.gr-aide-txt[hidden]{ display:none }
+/* Le « ↺ » d'une case pré-remplie modifiée : remettre la formule d'origine. */
+.gr-origine{ flex:0 0 auto; width:24px; height:24px; padding:0; border-radius:4px; border:1px solid var(--filet);
+  background:var(--panneau); color:var(--encre-douce); font-size:14px; line-height:1; cursor:pointer }
+.gr-origine:hover{ border-color:var(--ardoise); color:var(--ardoise) }
+.gr-origine:focus-visible{ outline:2px solid var(--ardoise); outline-offset:2px }
+.gr-origine[hidden]{ display:none }
+/* Sans couleurs : plus de jaune ni de violet, ni sur la feuille ni sur les contraintes. Les
+   cellules à remplir gardent un repère, une BORDURE (jamais d'aplat : le vert plein dit « juste »). */
+.gr-sobre .gr-saisie{ background:transparent; box-shadow:inset 0 0 0 2px var(--ardoise) }
+.gr-sobre .gr-contraintes .tour-jauge-repere{ border-left-width:1px; border-left-color:var(--filet) }
+.gr-sobre .gr-contraintes .tour-jauge-repere.trop{ border-color:var(--rouge); border-width:2px }
+.gr-sobre .tour-compare{ background:none; box-shadow:none; padding:0; font-weight:400; color:var(--encre-douce) }
+/* Le brouillon : un petit tableur à bords pointillés, plus étroit, jamais coloré. */
+.gr-brouillon .ent-lbl{ margin-top:10px }
+.gr-brouillon .note{ margin:2px 0 0; font-size:12px }
+.gr-table-brouillon{ min-width:0 }
+.gr-table-brouillon td:first-of-type{ width:auto }
+.gr-table-brouillon td.gr-br{ border-style:dashed }
+.gr-table-brouillon .gr-champ{ flex-direction:column; align-items:stretch; gap:1px }
+.gr-table-brouillon .gr-champ input{ min-width:0; width:7em }
+.gr-table-brouillon .gr-res{ min-width:0; font-size:12px }
+/* Avec un brouillon, la feuille se resserre pour lui laisser la droite (un écran de 1366 px
+   avec la colonne des contraintes), et le brouillon reste en vue quand on descend la feuille. */
+.gr-avec-brouillon{ display:grid; grid-template-columns:minmax(0,1fr) auto; gap:6px 18px }
+.gr-avec-brouillon .gr-table{ min-width:0 }
+.gr-avec-brouillon .gr-table:not(.gr-table-brouillon) .gr-champ input{ min-width:7.5em }
+.gr-avec-brouillon .gr-brouillon{ position:sticky; top:12px }
+@media (max-width:1100px){
+  .gr-avec-brouillon{ grid-template-columns:1fr }
+  .gr-avec-brouillon .gr-brouillon{ position:static }
+}
+
+@media (max-width:860px){
+  .gr-deux, .tour-grille-deux{ grid-template-columns:1fr }
+  .gr-droite{ position:static }
+}
+
+.gr-lecture-seule .gr-saisie,
+.gr-sobre.gr-lecture-seule .gr-saisie{ background:transparent; box-shadow:none }
+.gr-lecture-seule .champ[readonly]{ background:transparent; border-style:dashed; border-color:var(--filet);
+  color:var(--encre); cursor:default }
+.gr-tableur .gr-table{ max-width:none; min-width:0; font-size:13.5px }
+.gr-tableur .gr-table td:first-of-type{ width:auto }
+.gr-tableur .gr-table th, .gr-tableur .gr-table td{ padding:3px 8px; height:26px; white-space:nowrap }
+.gr-tableur .gr-table td.gr-vide{ min-width:1.5em }
+.gr-tableur td[data-gr-cel]{ cursor:cell }
+.gr-tableur td[data-gr-cel]:focus{ outline:none }
+.gr-tableur td.gr-sel{ outline:3px solid var(--ardoise); outline-offset:-1px }
+/* Teinte d'une CELLULE (en colonnes, une ligne porte deux blocs) : mêmes repères que les lignes. */
+.gr-c-etape{ background:var(--gr-etape-fond) }
+.gr-c-resultat{ background:var(--gr-res-fond); font-weight:600 }
+.gr-c-contrainte{ box-shadow:inset 0 0 0 1px var(--gr-res-trait); font-weight:600 }
+.gr-tableur td.faux .gr-res{ color:var(--rouge) }
+.gr-tableur td.juste .gr-res{ color:inherit }
+.gr-marque{ font-weight:700; margin-right:6px }
+.gr-tableur td.faux .gr-marque{ color:var(--rouge) }
+.gr-barre-info{ min-height:1.4em; margin:4px 0 0; max-width:820px; font-size:13px; line-height:1.4; color:var(--encre-douce);
+  display:flex; flex-wrap:wrap; gap:4px 14px }
+.gr-info-verdict.juste{ color:var(--vert) }
+.gr-info-verdict.faux{ color:var(--rouge); font-weight:600 }
+.gr-tableur .gr-saisie .gr-res{ display:inline-block; min-width:3.5em; color:var(--encre) }
+.gr-tableur .gr-res.gr-faux{ color:var(--rouge) }
+.gr-barre{ display:flex; align-items:center; gap:8px; margin-top:10px; max-width:820px }
+.gr-barre-ref{ min-width:3.5em; text-align:center; border:1px solid var(--filet); padding:4px 6px; border-radius:4px; font-size:13px }
+.gr-fx{ font-style:italic; font-weight:600; color:var(--encre-douce) }
+.gr-barre input{ flex:1; min-width:0; font-family:var(--mono); font-size:13px; padding:4px 7px }
+.gr-barre input[readonly]{ border-style:dashed; cursor:default }

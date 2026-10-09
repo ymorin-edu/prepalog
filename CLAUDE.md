@@ -89,7 +89,7 @@ core/types/  qcm ordre assoc numerique tableur tableau lien entreprise inventair
 activites/   index.js (registre + rubriques + icônes) et un fichier par activité
 contenus/    données des activités, trames Word/PDF, corrigés, logos
 styles/      base.css polices.css polices/ logo*.png + une feuille par vue (quai, planning, entrepot,
-             animation, questions), toutes chargées par index.html
+             animation, questions, quiz, carte, plan, grille, inventaire), toutes chargées par index.html
 vendor/      xlsx + SDK Firebase servis par le dépôt (avec leurs licences, voir LISEZMOI.md)
 outils/      test.mjs (lanceur) test/<bloc>.mjs, générateurs de trames (Python), pages d'essai
 ```

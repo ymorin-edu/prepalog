@@ -1,0 +1,133 @@
+/* ============================================================
+   Quiz : entraînement question par question et calculette (core/types/entrainement.js, core/calculette.js).
+   Sorti de base.css le 09/10/2026 (chantier 15) : mêmes règles, même ordre, rien de retouché.
+   Chargée après base.css (index.html), comme les autres feuilles de vue.
+   ============================================================ */
+
+/* ===== BLOC QUIZ — début ===== */
+/* ============================================================
+   Entraînement — quiz question par question (core/types/entrainement.js)
+   ============================================================ */
+/* Repris des quiz de la Suite Logistique. Trois choix d'habillage :
+
+   — la bonne réponse porte l'APLAT vert, comme partout ailleurs dans le site.
+     C'est une règle jumelle de .juste, .etiquette.juste, .ordre-item.juste,
+     .num-saisie input.juste, .pastille.ok, .module-tile.fini et .avis-ok :
+     ne pas en changer une sans les autres. .qz-opt.juste en fait désormais partie.
+   — la mauvaise réponse, elle, ne prend PAS d'aplat rouge : fond pâle et trait
+     plein. Un aplat rouge pleine largeur sous les yeux d'un élève qui se trompe
+     dit beaucoup plus fort que ce qu'on veut dire, et le site n'a aucun autre
+     aplat rouge auquel il se comparerait.
+   — le numéro de touche est affiché sur chaque choix. Les élèves répondent au
+     clavier dès qu'ils ont compris que 1 à 4 marchent, et c'est beaucoup plus
+     rapide que la souris sur vingt questions. */
+.qz-rappel h2{ font-size:1rem; margin:0 0 8px }
+.qz-rappel ul{ margin:0 0 4px; padding-left:20px }
+.qz-rappel li{ padding:3px 0; font-size:.92rem }
+
+.qz-tete{ display:flex; justify-content:space-between; align-items:baseline; gap:12px; font-size:.9rem }
+.qz-barre{ height:7px; border-radius:4px; background:var(--survol); overflow:hidden; margin:8px 0 2px }
+.qz-barre i{ display:block; height:100%; background:var(--ardoise-fond); transition:width .2s }
+
+.qz-enonce{ font-size:1.12rem; font-weight:500; margin:18px 0 14px; line-height:1.45 }
+
+.qz-choix{ display:grid; gap:8px }
+@media(min-width:620px){ .qz-choix{ grid-template-columns:1fr 1fr } }
+.qz-opt{
+  display:flex; align-items:center; gap:10px; width:100%;
+  text-align:left; font:inherit; font-size:1rem; cursor:pointer;
+  background:var(--panneau); color:var(--encre);
+  border:1px solid var(--filet); border-radius:var(--r); padding:12px 14px;
+}
+.qz-opt:hover:not(:disabled){ border-color:var(--ardoise); background:var(--survol) }
+.qz-opt:disabled{ cursor:default }
+.qz-touche{
+  flex:0 0 auto; font-family:var(--mono); font-size:.78rem;
+  color:var(--encre-douce); border:1px solid var(--filet); border-radius:2px;
+  padding:0 5px; line-height:1.5
+}
+.qz-opt.juste{ background:var(--vert-fond); color:var(--sur-vert); border-color:var(--vert-fond); font-weight:600 }
+.qz-opt.juste .qz-touche{ color:var(--sur-vert); border-color:var(--sur-vert) }
+.qz-opt.faux{ background:var(--panneau); border-color:var(--rouge); color:var(--rouge); font-weight:600 }
+
+.qz-retour{ margin:14px 0 0; font-size:.92rem }
+.qz-retour.juste{
+  background:var(--vert-pale); border-left:3px solid var(--vert-fond);
+  padding:9px 12px; border-radius:0 2px 2px 0; font-weight:500; color:var(--encre)
+}
+.qz-retour.faux{
+  background:var(--panneau); border-left:3px solid var(--rouge);
+  padding:9px 12px; border-radius:0 2px 2px 0; font-weight:500; color:var(--encre)
+}
+
+.qz-bilan{ text-align:center }
+.qz-bilan .rangee{ justify-content:center }
+.qz-note{ font-family:var(--mono); font-size:2.6rem; font-weight:600; color:var(--ardoise); line-height:1.1 }
+
+/* Onglets du classement : même forme que les onglets de l'espace enseignant. */
+.qz-onglets{ display:flex; gap:4px; flex-wrap:wrap; margin-bottom:-1px }
+.qz-onglet{
+  font:inherit; font-size:.88rem; cursor:pointer; padding:8px 14px;
+  background:var(--fond); color:var(--encre-douce);
+  border:1px solid var(--filet); border-bottom:0;
+  border-radius:var(--r) var(--r) 0 0;
+}
+.qz-onglet.actif{ background:var(--panneau); color:var(--encre); font-weight:600 }
+.qz-table th.num{ text-align:right }
+/* Une ligne sans nom n'est pas une ligne incomplète : c'est le réglage par défaut. Elle
+   se lit donc comme une mention, en gris, pas comme un trou. */
+.qz-anon{ color:var(--encre-douce); font-style:italic }
+.qz-anonymat{ display:flex; gap:12px; align-items:center; flex-wrap:wrap; font-size:.88rem }
+.qz-anonymat .btn{ margin-left:auto; flex:0 0 auto }
+.qz-table tr.qz-moi{ background:var(--ardoise-clair); font-weight:600 }
+.qz-table tr.qz-moi:hover{ background:var(--ardoise-clair) }
+
+/* ============================================================
+   Calculette flottante (core/calculette.js)
+   ============================================================ */
+/* Posée en bas à droite, repliée par défaut. Elle ne s'ouvre que si l'élève la
+   demande : ouverte d'office, elle masquerait les derniers choix de la question
+   sur un écran de portable. */
+.calc-fab{
+  position:fixed; right:18px; bottom:18px; z-index:40;
+  width:48px; height:48px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center; cursor:pointer;
+  background:var(--ardoise-fond); color:var(--sur-ardoise);
+  border:0; box-shadow:0 2px 6px rgba(40,34,24,.22);
+}
+.calc-fab svg{ width:24px; height:24px }
+.calc-panneau{
+  position:fixed; right:18px; bottom:76px; z-index:41; display:none;
+  width:236px; padding:12px;
+  background:var(--panneau); border:1px solid var(--filet);
+  border-radius:var(--r); box-shadow:0 4px 16px rgba(40,34,24,.18);
+}
+.calc-panneau.ouvert{ display:block }
+/* Tant que la calculette est ouverte, la page lui cède la place. Sans ça, elle recouvre
+   purement et simplement les deux choix de droite de la question en cours — constaté à
+   l'écran sur 1280 × 620, la taille d'un portable de salle. Deux réponses selon la place :
+   sur un écran large, la colonne de contenu se rétrécit et la calculette se pose à côté ;
+   sur un écran étroit, où il n'y a pas de côté, la page se réserve de la hauteur pour que
+   la question puisse remonter au-dessus. */
+@media(min-width:900px){ body.calc-ouverte .app{ padding-right:286px } }
+@media(max-width:899px){ body.calc-ouverte{ padding-bottom:360px } }
+.calc-tete{ display:flex; justify-content:space-between; align-items:center; font-size:.82rem; color:var(--encre-douce); margin-bottom:8px }
+.calc-fermer{ background:none; border:0; font:inherit; cursor:pointer; color:var(--encre-douce); padding:0 2px }
+.calc-ecran{
+  font-family:var(--mono); font-size:1.4rem; text-align:right;
+  background:var(--survol); border:1px solid var(--filet); border-radius:2px;
+  padding:8px 10px; margin-bottom:8px; overflow:hidden; white-space:nowrap
+}
+.calc-touches{ display:grid; grid-template-columns:repeat(4,1fr); gap:6px }
+.calc-t{
+  font:inherit; font-size:1rem; cursor:pointer; padding:9px 0;
+  background:var(--fond); color:var(--encre);
+  border:1px solid var(--filet); border-radius:2px;
+}
+.calc-t:hover{ background:var(--survol) }
+.calc-t-fn{ color:var(--encre-douce) }
+.calc-t-op{ color:var(--ardoise); font-weight:600 }
+.calc-t-zero{ grid-column:span 2 }
+.calc-t-egal{ background:var(--ardoise-fond); color:var(--sur-ardoise); border-color:var(--ardoise-fond); font-weight:600 }
+.calc-t-egal:hover{ background:var(--ardoise-fond); filter:brightness(1.08) }
+/* ===== BLOC QUIZ — fin ===== */

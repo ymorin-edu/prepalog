@@ -1,0 +1,72 @@
+/* ============================================================
+   Vue « Plan » (core/types/plan.js) : le plan schématique, le repérage par cases, la légende.
+   Sorti de base.css le 09/10/2026 (chantier 15) : mêmes règles, même ordre, rien de retouché.
+   Chargée après base.css (index.html), comme les autres feuilles de vue.
+   Le @media (max-width:860px) du plan est ici, APRÈS `.plan-svg` : dans base.css il suivait la règle
+   qu'il corrige, et une règle de feuille chargée après lui l'aurait battu à spécificité égale.
+   ============================================================ */
+
+/* ------------------------------------------------------------------ transport : plan et tournée
+   Ajouté le 02/10/2026 avec les deux vues de noyau `plan.js` et `tournee.js`. Tout est écrit
+   en variables, donc le clair, le sombre et la charte d'une entreprise (qui réécrit ces mêmes
+   variables pendant qu'un module immersif est ouvert) suivent sans règle en double. */
+.plan-boite{ margin:0 0 16px }
+.plan-svg{
+  display:block; width:100%; height:auto; max-height:62vh;
+  background:var(--panneau); border:1px solid var(--filet); border-radius:var(--r);
+}
+.plan-legende{
+  display:flex; flex-wrap:wrap; gap:6px 20px; margin-top:8px;
+  font-size:13px; color:var(--encre-douce);
+}
+.plan-legende span{ display:inline-flex; align-items:center; gap:7px }
+.plan-legende i{ width:13px; height:13px; display:inline-block }
+.plan-l-rond{ border-radius:50% }
+.plan-l-carre{ border-radius:3px }
+.plan-l-losange{ border-radius:0; transform:rotate(45deg); width:11px; height:11px }
+/* Les deux encres de la carte cliquable (04/10/2026). La pastille d'ordre est plus petite que
+   le rond du client dans la légende comme sur le plan : c'est la même hiérarchie des deux
+   signes, et on la lit sans avoir à comparer. */
+.plan-l-ordre{ border-radius:50%; width:10px; height:10px }
+.plan-l-creux{
+  border-radius:50%; background:transparent;
+  border:2px dashed var(--ardoise-fond); opacity:.75;
+}
+
+/* ---- la carte cliquable : construire la tournée en cliquant les points -------------------
+   Les cibles de clic sont posées dans le SVG par `svgPlan` (r = 20, transparentes). Ici, ce
+   qui se voit : le curseur qui annonce qu'on peut cliquer, le survol, et un contour de focus
+   visible au clavier — chaque point est un bouton, il doit se voir quand on l'atteint par
+   tabulation. `touch-action` évite qu'un double-tap zoome la carte au lieu d'ajouter l'arrêt. */
+.plan-boite-clic .plan-svg{ touch-action:manipulation }
+.plan-pt-clic{ cursor:pointer }
+.plan-pt-cible:focus{ outline:none }
+.plan-pt-cible:focus-visible{
+  outline:3px solid var(--ardoise); outline-offset:2px; border-radius:50%;
+}
+.plan-pt-clic:hover .plan-pt-ordre circle{ stroke-width:2.4 }
+.plan-pt-clic:hover circle:first-of-type{ stroke-width:3.5 }
+
+.plan-barre{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:12px }
+/* Le filet de sécurité doit être visible, pas confortable : il n'a ni l'aplat ni le poids
+   d'un bouton d'action, pour qu'on le prenne quand on en a besoin et pas par habitude. */
+.plan-secours{ color:var(--encre-douce); border-style:dashed }
+.plan-table th{ white-space:nowrap }
+.plan-table .plan-case{ width:5.5em; text-align:center; font-family:var(--mono); text-transform:uppercase }
+.plan-table .plan-zone{ color:var(--encre-douce) }
+.plan-table tr.plan-ok td:first-child{ box-shadow:inset 3px 0 0 var(--vert-fond) }
+.plan-table tr.plan-ko td:first-child{ box-shadow:inset 3px 0 0 var(--rouge) }
+.plan-case.plan-ok, .plan-quartier.plan-ok{ border-color:var(--vert-fond); box-shadow:inset 0 0 0 1px var(--vert-fond) }
+.plan-case.plan-ko, .plan-quartier.plan-ko{ border-color:var(--rouge); box-shadow:inset 0 0 0 1px var(--rouge) }
+.plan-table .plan-quartier{ min-width:12em; max-width:100% }
+.plan-verdict{ white-space:nowrap }
+
+@media (max-width:860px){
+  .plan-svg{max-height:none }
+}
+
+/* La porte de sortie du repérage : visible, mais clairement moins engageante que la
+   validation — elle débloque, elle ne remplace pas le travail. */
+.plan-issue{ color:var(--encre-douce); border-style:dashed }
+
+.plan-table tr.plan-choisi td{ background:rgba(240,189,60,.10) }

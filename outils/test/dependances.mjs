@@ -857,4 +857,35 @@ await v('papier : styleTheme ne recopie plus le thème clair, la classe theme-pa
   }
 });
 
+// ---------- chantier 15 : base.css ne porte que la charte et le site ; une feuille par vue
+// Le quiz, la carte, le plan, la grille et l'inventaire ont leur feuille (styles/quiz.css, carte.css, plan.css, grille.css,
+// inventaire.css), chargée après base.css comme quai, planning, entrepot, animation et questions. Les sentinelles sont les
+// préfixes de classes propres à chaque vue : `ct-` (carte), `qz-` et `calc-` (quiz, calculette), `inv-` (inventaire), `plan-`
+// et `gr-`. Il en reste deux, tolérées par leur nom : la règle `.avis-ok`, partagée entre grille, tournée et plan.
+await v('base.css : plus aucune classe propre au quiz, à la carte, au plan, à la grille ni à l’inventaire ; chaque feuille de styles/ est chargée une fois par index.html', async () => {
+  const lire = (f) => fs.readFileSync(path.join(ROOT, f), 'utf8');
+  const base = lire('styles/base.css').replace(/\/\*[\s\S]*?\*\//g, '');
+  const classes = (pref) => [...new Set([...base.matchAll(new RegExp(String.raw`\.(${pref}-[\w-]+)`, 'g'))].map((m) => m[1]))];
+  const intrus = [...classes('ct'), ...classes('qz'), ...classes('calc'), ...classes('inv')];
+  const toleres = new Set(['plan-reperage', 'gr-bloc']);
+  for (const c of [...classes('plan'), ...classes('gr')]) if (!toleres.has(c)) intrus.push(c);
+  if (intrus.length) throw new Error('base.css porte encore du CSS de vue : .' + intrus.join(', .') + ' (à mettre dans la feuille de la vue)');
+  // Chaque feuille de vue porte bien sa propre classe racine.
+  const attendu = { carte: '.ct-cadre-carte', quiz: '.qz-', plan: '.plan-svg', grille: '.gr-table', inventaire: '.inv-papier' };
+  for (const [f, sel] of Object.entries(attendu)) {
+    if (!lire(`styles/${f}.css`).includes(sel)) throw new Error(`styles/${f}.css ne contient plus ${sel}`);
+  }
+  // index.html charge chaque feuille du dossier exactement une fois, et les feuilles de vue APRÈS base.css.
+  const html = lire('index.html');
+  const liens = [...html.matchAll(/<link rel="stylesheet" href="\.\/styles\/([\w-]+\.css)">/g)].map((m) => m[1]);
+  const presentes = fs.readdirSync(path.join(ROOT, 'styles')).filter((f) => f.endsWith('.css'));
+  for (const f of presentes) {
+    const n = liens.filter((l) => l === f).length;
+    if (n !== 1) throw new Error(`index.html charge styles/${f} ${n} fois (une seule attendue)`);
+  }
+  for (const l of liens) if (!presentes.includes(l)) throw new Error(`index.html charge styles/${l}, qui n'existe pas`);
+  const rangBase = liens.indexOf('base.css');
+  for (const f of Object.keys(attendu)) if (liens.indexOf(f + '.css') < rangBase) throw new Error(`styles/${f}.css est chargée avant base.css`);
+});
+
 }

@@ -1,0 +1,36 @@
+/* ============================================================
+   Écran « Inventaire » (core/types/inventaire.js, chantier E, 02/10/2026).
+   Sorti de base.css le 09/10/2026 (chantier 15) : mêmes règles, même ordre, rien de retouché.
+   Chargée après base.css (index.html), comme les autres feuilles de vue.
+   ============================================================ */
+
+/* ---- Écran « Inventaire » (core/types/inventaire.js, chantier E, 02/10/2026) ----------------
+   Les quatre étapes en pastilles (faites, en cours, à venir), les écarts signés, le panneau des
+   mouvements d'une ligne, le relevé « papier » de la messagerie. Couleurs du thème uniquement :
+   l'accent de l'entreprise (--ardoise), le vert de validation, le rouge des manques. */
+.inv-etapes{ display:flex; flex-wrap:wrap; gap:6px; list-style:none; margin:4px 0 14px; padding:0 }
+.inv-etapes li{ padding:5px 12px; border-radius:999px; border:1px solid var(--filet);
+  background:var(--panneau); color:var(--encre-douce); font-size:13px }
+.inv-etapes li.fait{ background:var(--ardoise-clair); color:var(--ardoise); border-color:transparent }
+.inv-etapes li.cours{ background:var(--ardoise-fond); color:var(--sur-ardoise, #fff); border-color:var(--ardoise-fond); font-weight:700 }
+.inv-champ{ width:84px; text-align:right }
+.inv-moins{ color:var(--rouge) }
+.inv-plus{ color:var(--ardoise) }
+.inv-nul{ color:var(--vert) }
+.inv-cache{ font-style:italic }
+.inv-lien{ white-space:nowrap; background:none; border:0; padding:0; font:inherit; color:var(--ardoise); text-decoration:underline; cursor:pointer }
+.inv-sous > td{ background:var(--fond) }
+.inv-mvt{ padding:6px 4px }
+.inv-mvt table{ font-size:13px }
+.inv-recompte{ margin-top:6px; font-size:13px }
+.inv-prevus{ margin:6px 0 12px; padding-left:20px; line-height:1.6 }
+.inv-papier{ background:#fffef6; color:#2b2b2b; border:1px solid #e6e0c4; border-radius:6px; padding:10px 12px;
+  margin-top:10px; max-width:420px; transform:rotate(-.4deg) }
+.inv-papier table{ width:100% }
+.inv-papier td{ border-bottom:1px dashed #e6e0c4; padding:3px 6px }
+/* Le relevé est une feuille de papier : ses couleurs ne suivent pas le thème. Le survol des
+   lignes de tableau du site (--survol, presque noir en thème sombre) y rendait la ligne
+   illisible — remarqué par Tristan le 02/10. On garde un survol, couleur papier. */
+.inv-papier tbody tr:hover{ background:#f3ecd0 }
+.inv-papier .note{ color:#6b6455 }
+.inv-remarque{ margin-top:8px; font-style:italic }
