@@ -93,7 +93,7 @@ export function creerEntrainement({
     rendre(hote, ctx) {
       // Les classements vivent dans leur propre branche : une branche, une règle, une phrase :
       // sous `classements/{activité}/`, chacun écrit la ligne qui porte son identifiant.
-      // (La branche `communs/`, référentiel partagé en lecture seule, a été retirée le 09/10/2026 :
+      // (Une ancienne branche de référentiel partagé, en lecture seule, a été retirée le 09/10/2026 :
       // personne ne s'en servait.)
       const CLASSEMENTS = 'classements';
       const estEleve = ctx.profil?.role === 'eleve';

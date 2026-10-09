@@ -7,8 +7,8 @@
 //   portee: 'eleve'   → Firestore, blob JSON privé. 1 écriture par sauvegarde.
 //   portee: 'groupe'  → Realtime Database, partagé avec toute la classe (ou son demi-groupe).
 //
-// Les portées 'equipe' et 'commun' ont été retirées le 09/10/2026 (chantier 16) : aucune séance ni
-// aucun écran ne s'en servait, et les règles `communs/` n'avaient aucun consommateur.
+// Les portées équipe et commune ont été retirées le 09/10/2026 (chantier 16) : aucune séance ni
+// aucun écran ne s'en servait, et la branche de règles qui leur répondait n'avait aucun consommateur.
 
 import { B } from './backend.js';
 
