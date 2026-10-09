@@ -47,7 +47,7 @@
 | D-B | « Jugé au premier essai » | SMOBY-notation lot 3 | — | — | oui | — | **livré** (visite ENT-5.3 ; l'animation garde la première réponse) |
 | D-C | Tirage mémorisé, niveaux par scénario, bonus du confirmé (lots 1 à 3) | brief `MOTEUR-tirage-et-niveaux` | 1 à 1,5 j | Opus | oui + règles | D-A | à faire — **règles Firestore à publier** à la livraison |
 | D-D | Images libres FB (11 photos, crédits, script reproductible) | brief `IMAGES-france-boissons` | petit | Sonnet | non | — | à faire |
-| D-E | Logo France Boissons (`contenus/trames/logos/`) et relevé de la charte | ENT-6.2 §11 | petit | Sonnet | non | — | à faire (accord de Tristan du 05/10) |
+| D-E | Logo France Boissons (`contenus/trames/logos/`) et relevé de la charte | ENT-6.2 §11 | petit | Sonnet | non | — | livré (09/10), à valider par Tristan à l'écran |
 | D-1 | Messagerie : bouton « Transférer à… » | ENT-6.1 §7.1 | ≈ 3 h | Opus | oui | D-A, D-C | à faire → **ENT-6.1** (crée l'univers `contenus/france-boissons.js`) |
 | D-2 | Fiche : case « nombre » (entier, refus, unité), bloc « lignes » si utile | ENT-6.2 §7 | petit | Sonnet | oui | — | à faire (le type existe dans `fiche.js`, contrôles à vérifier) → **ENT-6.2** |
 | D-3 | Planning : état des lieux (semaines, ligne retirée par l'aléa, critère « plus ancienne »), calage par script | ENT-6.3 §7 | petit | Sonnet | lecture | — | à faire → **ENT-6.3** |

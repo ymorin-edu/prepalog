@@ -196,6 +196,9 @@ saute aux yeux.
 - [x] Logo France Boissons : **accord de Tristan le 05/10/2026**. Claude Code le récupère par script dans
   `contenus/trames/logos/` (lire, encoder, écrire, relire, vérifier par empreinte : alerte 10), relève la charte
   (accent, police) et vérifie que l'accent ne se confond pas avec le vert « juste ». Logo seul : aucune autre image.
+  **Fait le 09/10/2026 (D-E)** : `contenus/trames/logos/france-boissons.svg` (copie exacte du logo de l'en-tête de france-boissons.fr)
+  et `france-boissons.png` (645 × 90, fond transparent), refaisables par `node outils/logo-france-boissons.mjs`. Relevé de la charte,
+  sources, empreintes, contrastes et bloc `THEME` proposé (accent orange foncé `#b34700`) : `docs/briefs/france-boissons/charte-france-boissons.md`.
 
 ---
 
