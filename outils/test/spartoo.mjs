@@ -12,6 +12,16 @@ import { pathToFileURL } from 'node:url';
 
 export default async function bloc({ v, page, ROOT }) {
 
+// Attente sur l'ÉCRAN plutôt que sur une durée (chantier 13, 09/10/2026) : le texte `re` apparaît dans `sel`.
+// Le délai de 4 s est un plafond ; s'il est atteint on n'échoue pas ici : l'assertion qui suit lit l'écran
+// et donne le vrai message (« stock attendu 7… »), pas un « timeout » muet.
+const attendreTexte = (sel, re) => page.waitForFunction(([s, r]) => new RegExp(r).test((document.querySelector(s) || {}).textContent || ''),
+  [sel, re.source], { timeout: 4000 }).catch(() => {});
+const attendreCout = (re) => attendreTexte('.ent-cout', re);
+// Une ligne de plus dans « Blocages enregistrés » : la quantité bloquée y est écrite en négatif (-21).
+const attendreBlocage = (q) => page.waitForFunction((n) => [...document.querySelectorAll('.ent-main .num.faux b')].some((b) => b.textContent.trim() === '-' + n),
+  String(q), { timeout: 4000 }).catch(() => {});
+
 // Envoi définitif : la confirmation dans la page (06/10/2026, Smoby C2 / ENT-1.1 §7.11) n'apparaît que s'il ne
 // manque rien ; on y répond « Oui ». Un envoi refusé (« Il manque… ») n'en montre pas : on continue.
 const cliquerEtConfirmer = async (p, sel) => {
@@ -37,7 +47,7 @@ await v('Spartoo : ouverture de l\'environnement', async () => {
   await page.waitForSelector('#codeStock');
   await page.fill('#codeStock', 'STOCK24');
   await page.click('#btnCodeStock');
-  await page.waitForTimeout(400);
+  await attendreTexte('#toast', /Code enregistré/);
   await page.click('#btnRetour');
   await page.click('#btnDeco');
   await page.waitForSelector('#mat');
@@ -187,13 +197,13 @@ await v('Spartoo : la console répond', async () => {
   await page.waitForSelector('#champCmd');
   await page.fill('#champCmd', '.getstock AD-STS-BL-44');
   await page.press('#champCmd', 'Enter');
-  await page.waitForTimeout(400);
+  await attendreCout(/Stan Smith/);
   const t = await page.textContent('.ent-cout');
   if (!/Stan Smith/.test(t)) throw new Error('article non trouvé');
   if (!/Stock\s*3\b/.test(t)) throw new Error('stock attendu 3 : ' + (t.match(/Stock\s*\d+/) || ['?'])[0]);
   await page.fill('#champCmd', '.nimportequoi');
   await page.press('#champCmd', 'Enter');
-  await page.waitForTimeout(300);
+  await attendreCout(/Commande inconnue/);
   if (!/Commande inconnue/.test(await page.textContent('.ent-cout'))) throw new Error('commande inconnue non signalée');
 });
 
@@ -203,7 +213,7 @@ await v('Spartoo : le stock est verrouillé par un code', async () => {
   await page.waitForSelector('#codeStock');
   await page.fill('#codeStock', 'FAUX');
   await page.click('[data-deverrouiller]');
-  await page.waitForTimeout(250);
+  await attendreTexte('.ent-main', /Code incorrect/);
   if (!/Code incorrect/.test(await page.textContent('.ent-main'))) throw new Error('un code faux a été accepté');
   await page.fill('#codeStock', 'stock24');          // la casse ne doit pas compter
   await page.click('[data-deverrouiller]');
@@ -240,7 +250,7 @@ await v('Spartoo : exercice complet, trois jalons au vert', async () => {
   await page.click('[data-bon]');
   await page.waitForSelector('[data-valider]');
   await page.click('[data-valider]');
-  await page.waitForTimeout(500);
+  await attendreTexte('.ent-main', /Préparation validée/);
   const t = await page.textContent('.ent-main');
   if (!/Préparation validée/.test(t)) throw new Error('préparation non validée');
   if (!/reliquat/i.test(t)) throw new Error('le reliquat n\'est pas signalé');
@@ -249,11 +259,11 @@ await v('Spartoo : exercice complet, trois jalons au vert', async () => {
   await page.click('[data-vue="console"]');
   await page.fill('#champCmd', '.getstock NK-AM270-NR-42');
   await page.press('#champCmd', 'Enter');
-  await page.waitForTimeout(300);
+  await attendreCout(/Stock\s*7\b/);
   if (!/Stock\s*7\b/.test(await page.textContent('.ent-cout'))) throw new Error('le stock n\'est pas descendu à 7');
   await page.fill('#champCmd', '.movements');
   await page.press('#champCmd', 'Enter');
-  await page.waitForTimeout(300);
+  await attendreCout(/Sortie : préparation/);
   if (!/Sortie : préparation/.test(await page.textContent('.ent-cout'))) throw new Error('mouvement non journalisé');
 
   // Étape 6 — réapprovisionner Puma : quantités exactes et minimum de commande atteint.
@@ -308,7 +318,7 @@ await v('Spartoo réception : la séance s\'ajoute à la base de l\'élève', as
   await page.click('[data-vue="console"]');
   await page.fill('#champCmd', '.getstock NK-AM270-NR-42');
   await page.press('#champCmd', 'Enter');
-  await page.waitForTimeout(300);
+  await attendreCout(/Stock\s*7\b/);
   if (!/Stock\s*7\b/.test(await page.textContent('.ent-cout'))) throw new Error('la préparation de la séance précédente a été perdue');
 });
 
@@ -439,12 +449,12 @@ await v('Spartoo réception : retrouver REC-04127 par son BL, saisir en paires, 
   await page.click('[data-confirme-non]');
   if (/Réception validée/.test(await page.textContent('.ent-main'))) throw new Error('« Annuler » a validé la réception');
   await cliquerEtConfirmer(page, '[data-valider-rec]');
-  await page.waitForTimeout(500);
+  await attendreTexte('.ent-main', /Réception validée/);
   if (!/Réception validée/.test(await page.textContent('.ent-main'))) throw new Error('réception non validée');
   await page.click('[data-vue="console"]');
   await page.fill('#champCmd', '.getlot LOT-PM-2609');
   await page.press('#champCmd', 'Enter');
-  await page.waitForTimeout(400);
+  await attendreCout(/Entrées\s*66\b/);
   const t = await page.textContent('.ent-cout');
   if (!/Entrées\s*66\b/.test(t)) throw new Error('66 paires attendues au lot, lu : ' + (t.match(/Entrées\s*\d+/) || ['?'])[0]);
   if (!/Puma/.test(t)) throw new Error('le fournisseur du lot n\'est pas retrouvé');
@@ -457,7 +467,6 @@ await v('Spartoo réception : retrouver REC-04127 par son BL, saisir en paires, 
   await page.fill('#mObj', 'Réserves sur le lot LOT-PM-2609');
   await page.fill('#mTxt', 'Bonjour,\n\nRéserves sur la livraison BL-77421, lot LOT-PM-2609 :\n- PM-SUE-MA-41 : il manque 1 carton\n- PM-RSX-BL-42 : 1 carton endommagé\n\nCordialement');
   await page.click('[data-envoyer-fou]');
-  await page.waitForTimeout(600);
   // Bandeau de fin de séance (§7.6) : tout est jugé, seul le questionnaire est faux. Il le NOMME par son titre,
   // sans le détail (« Questions fausses : 4 » donnerait la réponse).
   await page.waitForSelector('[data-fin="ko"]');
@@ -519,7 +528,7 @@ await v('Spartoo traçabilité : l\'aval est semé et le lot se remonte', async 
   await page.click('[data-vue="console"]');
   await page.fill('#champCmd', '.getlot LOT-PM-2609');
   await page.press('#champCmd', 'Enter');
-  await page.waitForTimeout(400);
+  await attendreCout(/Entrées\s*66\b/);
   const t = await page.textContent('.ent-cout');
   if (!/Entrées\s*66\b/.test(t)) throw new Error('66 paires attendues au lot, lu : ' + (t.match(/Entrées\s*\d+/) || ['?'])[0]);
   if (!/Sorties\s*6\b/.test(t)) throw new Error('6 paires sorties attendues, lu : ' + (t.match(/Sorties\s*\d+/) || ['?'])[0]);
@@ -542,7 +551,7 @@ await v('Blocage qualité : le lot seul est touché, sans réponse soufflée', a
   await page.click('[data-vue="console"]');
   await page.fill('#champCmd', '.getstock PM-SUE-RG-39');
   await page.press('#champCmd', 'Enter');
-  await page.waitForTimeout(300);
+  await attendreCout(/Stock\s*38\b/);
   const avant = Number((await page.textContent('.ent-cout')).match(/Stock\s*(\d+)/g).pop().match(/\d+/)[0]);
   if (avant !== 38) throw new Error('stock de départ attendu 38 (17 + 24 reçues − 3 vendues), lu : ' + avant);
 
@@ -554,7 +563,7 @@ await v('Blocage qualité : le lot seul est touché, sans réponse soufflée', a
   await page.fill('#blQte', '99');
   await page.fill('#blMotif', 'blocage qualité, défaut fabricant');
   await page.click('#formBloc button[type=submit]');
-  await page.waitForTimeout(300);
+  await attendreTexte('.ent-main', /ne contient pas autant/);
   const err = await page.textContent('.ent-main');
   if (!/ne contient pas autant/.test(err)) throw new Error('une quantité supérieure au lot a été acceptée');
   if (/\b21\b/.test(err.split('Blocages enregistrés')[0].replace(/LOT-PM-2609|PM-SUE-RG-39|99/g, ''))) {
@@ -564,16 +573,16 @@ await v('Blocage qualité : le lot seul est touché, sans réponse soufflée', a
   // Le bon compte : 21 paires de ce lot (24 reçues − 3 vendues), et pas une de plus.
   await page.fill('#blQte', '21');
   await page.click('#formBloc button[type=submit]');
-  await page.waitForTimeout(400);
+  await attendreBlocage(21);
   await page.click('[data-vue="console"]');
   await page.fill('#champCmd', '.getstock PM-SUE-RG-39');
   await page.press('#champCmd', 'Enter');
-  await page.waitForTimeout(300);
+  await attendreCout(/Stock\s*17\b/);
   const apres = Number((await page.textContent('.ent-cout')).match(/Stock\s*(\d+)/g).pop().match(/\d+/)[0]);
   if (apres !== 17) throw new Error('stock attendu 17 après blocage des 21 paires du lot, lu : ' + apres);
   await page.fill('#champCmd', '.getlot LOT-PM-2609');
   await page.press('#champCmd', 'Enter');
-  await page.waitForTimeout(400);
+  await attendreCout(/Reste en stock\s*39\b/);
   if (!/Reste en stock\s*39\b/.test(await page.textContent('.ent-cout'))) throw new Error('le reste du lot n\'est pas tombé à 39');
 });
 
@@ -588,12 +597,12 @@ await v('Spartoo traçabilité : trois jalons au vert', async () => {
     await page.fill('#blQte', q);
     await page.fill('#blMotif', 'blocage qualité, défaut fabricant');
     await page.click('#formBloc button[type=submit]');
-    await page.waitForTimeout(350);
+    await attendreBlocage(q);
   }
   await page.click('[data-vue="console"]');
   await page.fill('#champCmd', '.getlot LOT-PM-2609');
   await page.press('#champCmd', 'Enter');
-  await page.waitForTimeout(400);
+  await attendreCout(/Reste en stock\s*0\b/);
   const t = await page.textContent('.ent-cout');
   if (!/Reste en stock\s*0\b/.test(t)) throw new Error('le lot n\'est pas entièrement bloqué');
   if (!/Blocage qualité/.test(t)) throw new Error('le mouvement de blocage n\'apparaît pas dans la remontée du lot');
@@ -655,7 +664,7 @@ await v('Spartoo traçabilité : jouable sans les deux séances précédentes', 
   await page.click('[data-vue="console"]');
   await page.fill('#champCmd', '.getlot LOT-PM-2609');
   await page.press('#champCmd', 'Enter');
-  await page.waitForTimeout(400);
+  await attendreCout(/Entrées\s*66\b/);
   const t = await page.textContent('.ent-cout');
   if (!/Entrées\s*66\b/.test(t)) throw new Error('le lot n\'a pas été posé : ' + (t.match(/Entrées\s*\d+/) || ['rien'])[0]);
   if (!/Sorties\s*6\b/.test(t)) throw new Error('les sorties du lot manquent');
