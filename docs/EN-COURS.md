@@ -7,6 +7,7 @@ est déjà modifié ou inscrit ci-dessous, **elle s'arrête et le dit à Tristan
 
 | Chantier | Fichiers qu'il touche | Depuis |
 |---|---|---|
+| Tests lot A (diagnostic des échecs, erreurs JS par cas, aides communes, Playwright épinglé) | `outils/test.mjs`, `outils/test/commun.mjs`, `outils/test/{animation,entrepot,inventaire,picard,planning,questions,smoby}.mjs`, `.github/workflows/tests.yml`, `.gitignore`, `CLAUDE.md`, `docs/chantiers.md`, `docs/decisions.md` | 09/10/2026 |
 
 Rappel : un seul chantier à la fois dans `core/types/tournee.js`, `core/types/grille.js`,
 `core/types/entreprise.js`, `styles/base.css` et `outils/test/boost.mjs` (voir `docs/briefs/COORDINATION-boost.md`).
