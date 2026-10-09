@@ -479,12 +479,32 @@ await v("un élève n'efface pas la branche du groupe", () =>
 await v("l'enseignant efface la branche du groupe", () =>
   assertSucceeds(dbDe('prof1').ref('jeux/g1').remove()));
 
-// ---------- 15. référentiels communs
-await v("un élève lit les référentiels communs", () =>
-  assertSucceeds(dbDe('e1').ref('communs/ref1').once('value')));
+// ---------- 15. la branche `communs/` et le `.read` de `acces/{gid}` sont retirés (chantier 16, 09/10/2026)
+// `communs/{aid}` (référentiel partagé, portée « commun ») n'avait aucun consommateur : ni séance, ni écran, ni
+// donnée existante. `acces/{gid}` n'est jamais lu par l'application (elle y écrit ; ce sont les règles de `jeux/{gid}`
+// qui le lisent, côté serveur). Les cas d'avant (« un élève lit les référentiels communs »…) deviennent des refus.
+await v("chantier 16 : un élève ne lit plus `communs/` (branche retirée)", () =>
+  assertFails(dbDe('e1').ref('communs/ref1').once('value')));
 
-await v("un élève n'écrit pas dans les référentiels communs", () =>
+await v("chantier 16 : un élève n'écrit pas dans `communs/`", () =>
   assertFails(dbDe('e1').ref('communs/ref1/table/L1').set({ a: 1 })));
+
+await v("chantier 16 : un enseignant global n'écrit plus dans `communs/` non plus (c'était le seul droit de la branche)", () =>
+  assertFails(dbDe('prof1').ref('communs/ref1/table/L1').set({ a: 1 })));
+
+await v("chantier 16 : personne ne lit le miroir `acces/g1`, ni l'enseignant inscrit ni l'élève inscrit", async () => {
+  await assertFails(dbDe('prof1').ref('acces/g1').once('value'));
+  await assertFails(dbDe('e1').ref('acces/g1').once('value'));
+});
+
+// Ce qui RESTE accessible : la lecture de la base du groupe par un élève inscrit (toujours refusée à un autre groupe),
+// l'écriture du miroir par l'enseignant inscrit, et le classement commun. Sans ce cas, retirer tout `jeux/` passerait.
+await v("chantier 16 : ce qui reste — l'élève inscrit lit la base de son groupe, un intrus non ; l'enseignant inscrit écrit le miroir", async () => {
+  await assertSucceeds(dbDe('e1').ref('jeux/g1/act1').once('value'));
+  await assertFails(dbDe('e3').ref('jeux/g1/act1').once('value'));
+  await assertSucceeds(dbDe('prof1').ref('acces/g1/eleves/e10').set(true));
+  await assertSucceeds(dbDe('e3').ref('classements/entr-conversions').once('value'));
+});
 
 // ---------- 15 bis. les classements de quiz (02/10/2026)
 // Les quiz d'entraînement (QUI-8 et suivants) rangent leur classement sous
@@ -607,8 +627,8 @@ await v("l'enseignant inscrit au miroir le réécrit sans être global", () =>
 await v("un élève ne reconstruit pas le miroir d'un groupe", () =>
   assertFails(dbDe('e3').ref('acces/gorphelin').update({ 'eleves/e3': true, 'profs/e3': true })));
 
-// Et `communs/` n'a pas bougé : toujours en lecture seule pour les élèves.
-await v("un élève n'écrit toujours pas dans les référentiels communs", () =>
+// Et `communs/` n'existe plus (chantier 16) : fermé à tous, élèves compris.
+await v("un élève n'écrit toujours pas dans `communs/` (branche retirée)", () =>
   assertFails(dbDe('e1').ref('communs/ref1/table/L2').set({ a: 1 })));
 
 await v("nul ne s'inscrit dans profsGlobaux", () =>
@@ -895,5 +915,9 @@ process.exit(ko.length ? 1 : 0);
 //     Retirer la branche `profsGlobaux && !data.exists()` (inscrits seuls)
 //     → tombent « un enseignant global crée un groupe » (13), « …reconstruit un miroir absent » (15 quater) et
 //       « le même enseignant global crée toujours un miroir neuf » (161/164).
+//  9. database.rules.json (chantier 16, 09/10/2026), remettre la branche `communs` et le `.read` de `acces/$gid` (règles d'avant)
+//     → tombent « un élève ne lit plus `communs/` », « un enseignant global n'écrit plus dans `communs/` » et « personne ne
+//       lit le miroir `acces/g1` » (164/167). « un élève n'écrit pas dans `communs/` » ne tombe pas : il était déjà vrai.
+//     Le cas « ce qui reste » tient les deux moitiés : il tomberait si on retirait `jeux/` avec le reste.
 //  Hors de portée : le `size() > 0` de `responsableDe` et de la règle de groupe. Il ne change que la nature du
 //  refus sur une liste vide (erreur d'évaluation ou `false`, les deux refusent).

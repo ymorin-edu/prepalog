@@ -23,10 +23,10 @@
     "  - l'auteur est élève du groupe, ET le jeu n'est pas gelé (gele != true, car ! refuse un null), ET",
     "    (la ligne est la sienne OU la table est déclarée à écriture partagée dans meta/ouvert).",
     "",
-    "communs/{aid} : le référentiel partagé entre toutes les classes. Lisible par tout compte",
-    "authentifié, écrit par les seuls enseignants globaux. N'y ouvrez pas l'écriture aux",
-    "élèves : les classements de quiz ont leur propre branche, pour que celle-ci garde une",
-    "règle unique.",
+    "Retraits du chantier 16 (09/10/2026) : la branche communs/{aid} (référentiel partagé, aucune séance",
+    "ni aucun écran ne s'en servait : la portée « commun » n'existe plus) et le .read de acces/{gid}",
+    "(l'application n'y lit jamais : elle y écrit seulement, et les règles de jeux/{gid} lisent acces/{gid}",
+    "côté serveur, sans passer par ce droit de lecture). Les classements de quiz ont leur propre branche.",
     "",
     "classements/{aid}/{uid} : le classement d'un quiz d'entraînement, commun à toutes les",
     "classes. Chacun écrit LA SEULE ligne dont la clé est son propre uid, et personne ne",
@@ -59,7 +59,6 @@
 
     "acces": {
       "$gid": {
-        ".read": "auth != null && (data.child('profs').child(auth.uid).exists() || data.child('eleves').child(auth.uid).exists())",
         ".write": "auth != null && ((root.child('profsGlobaux').child(auth.uid).exists() && !data.exists()) || data.child('profs').child(auth.uid).exists())",
         "profs":  { "$uid": { ".validate": "newData.isBoolean()" } },
         "eleves": { "$uid": { ".validate": "newData.isBoolean()" } }
@@ -84,17 +83,6 @@
               "_ts":     { ".validate": "newData.isNumber()" },
               "_parNom": { ".validate": "newData.isString() && newData.val().length < 80" }
             }
-          }
-        }
-      }
-    },
-
-    "communs": {
-      "$aid": {
-        ".read": "auth != null",
-        "$table": {
-          "$ligne": {
-            ".write": "auth != null && root.child('profsGlobaux').child(auth.uid).exists()"
           }
         }
       }
