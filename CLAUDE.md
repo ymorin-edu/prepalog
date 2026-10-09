@@ -64,7 +64,9 @@ Décisions pédagogiques arrêtées :
    demander de quel côté il va. Pas d'usine à gaz.
 5. Le module **SCE (SCE-1 à SCE-5) est ancien** et sera absorbé par Simulog : ne pas l'enrichir.
    **Spartoo (ENT-1.x) ne se prend pas pour modèle** (point de comparaison). ENT-1.1 a été refondue le
-   06/10/2026 (parcours, `versionBase`) ; le reste ne bouge pas sans l'accord de Tristan.
+   06/10/2026 (parcours, `versionBase`) ; ENT-1.2 et ENT-1.3 seront refondues comme elle (deux briefs
+   Cowork à venir) et sont **gelées d'ici là : bugs seulement**, aucune règle commune (tutoiement,
+   correction après bilan, confirmation…) ne s'y applique avant leur refonte (décision du 09/10/2026).
    **Le modèle, c'est Boost** (ENT-3.x).
 6. Une séance nouvelle se fabrique **d'abord avec les vues existantes**, en déclarant du contenu.
    Mais si une compétence peut être abordée sous un **angle nouveau, ludique ou innovant** grâce à
@@ -148,9 +150,10 @@ modifier une séance**, et la corriger si le code a changé.
   (brouillon que personne ne peut ouvrir aux élèves).
 - **Séance livrée : `pret: true, ouverture: 'prof'`** (règle adoptée par Tristan le 03/10/2026).
   Elle reste fermée aux élèves ; Tristan l'essaie à l'écran, puis l'**ouvre lui-même** en la
-  cochant pour son groupe dans « Conduite de séance » — plus de commit pour ouvrir. Les séances
-  ouvertes avant cette règle et non converties sont Spartoo (ENT-1.1 à 1.3) et Boost (ENT-3.1 à 3.3) ;
-  elles ne le seront pas sans son accord. Cdiscount, Picard et Smoby sont déjà en `'prof'`.
+  cochant pour son groupe dans « Conduite de séance » — plus de commit pour ouvrir. Les seules séances
+  ouvertes avant cette règle et non converties sont Boost (ENT-3.1 à 3.3) ; elles ne le seront pas sans
+  son accord. Spartoo (ENT-1.1 à 1.3) a été converti le 09/10/2026 ; Cdiscount, Picard et Smoby sont déjà
+  en `'prof'`.
   Une séance `pret: false` compte quand même dans le tableau des compétences (décision de Tristan).
 - Évaluation : `meta.copie: true`, `copie: meta.copie` dans `creerEntreprise`, et
   `export const noter = (db) => moteur.noter(db);` dans le fichier d'activité.

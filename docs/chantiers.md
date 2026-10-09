@@ -39,7 +39,7 @@
 | 16 | Champs `meta`, portées et options morts | C14 | petit | Sonnet | oui | décision 14 (cœur) | **livré** (09/10, 77fc170 à 4003e49) ; **console RTDB publiée le 09/10** |
 | 17 | Contenus orphelins, trames Smoby à déclarer, commentaires périmés | C16 | petit | Sonnet | non | — | **livré** (09/10, e0bb05e à 2cda9cb) ; Smoby déclaré le 09/10 (17 bis, 9dbfa00, 9d5c144) ; `tab2-stocks.js` livré (générateur, 2f35e24, 09/10) ; reste : la mention TechPro de `core/types/entreprise.js:103` (suivi moteur) ; ENT-5.3 : corrigé de trame laissé non branché (décision de Tristan, 09/10) |
 | 18 | Deux sessions à la fois : port, `git grep`, `EN-COURS` | C17 | petit | Sonnet | non (`commun.mjs`) | — | **livré** (09/10, 9310e5e à 197c9ba) |
-| 19 | Reliquats SCE / Spartoo : acter la règle | C15 | petit | Sonnet | non | 9 | à décider |
+| 19 | Reliquats SCE / Spartoo : acter la règle | C15 | petit | Sonnet | non | 9 | **livré** (09/10, cd622f5) |
 | 20 | Stratelog | C19 | ? | Opus | ? | 10 | à cadrer |
 
 ## Le détail, dans l'ordre
@@ -414,9 +414,17 @@ s'aligner.
 - **Livré le 09/10/2026** (suite 926/926) : port libre trouvé et annoncé quand 8099 est pris ; dossier temporaire propre à chaque suite (les classeurs de `socle.mjs` ne s'écrasent plus) ; cas « EN-COURS.md » dans `dependances.mjs` ; consigne `git grep` dans `CLAUDE.md`. Deux suites en parallèle (`dependances socle` x2, puis `boost` et `cdiscount`) passent. **Ce qui reste** : `.claude/worktrees/` n'est ignoré que par `.git/info/exclude` (local ; un `.gitignore` partagé serait plus sûr, hors de ce chantier) ; `test-seances.mjs` (`PORT_SEANCES`) garde son port fixe ; le test EN-COURS ne vérifie pas que la ligne d'une session est effacée une fois son travail poussé.
 
 ### 19. Reliquats SCE / Spartoo (C15)
-- **À décider par Tristan** : la règle « Spartoo tel quel » est-elle maintenue après la refonte du
-  06/10 ? Le reliquat qui gênait (`COLORS`/`SHIP`) est parti du moteur avec le lot 9b (08/10/2026). SCE attend sa migration dans
-  Simulog, comme prévu par la finalité.
+- **Décidé par Tristan le 09/10/2026, livré le même jour (cd622f5, suite 927/927).** Le reliquat qui gênait
+  (`COLORS`/`SHIP`) était déjà parti du moteur avec le lot 9b (08/10/2026).
+  1. **Spartoo ENT-1.2 et ENT-1.3 seront refondues comme ENT-1.1** (refonte du 06/10, brief
+     `docs/briefs/ENT-1.1-spartoo-quai.md`), sur **deux briefs Cowork à écrire sur ce modèle** (ENT-1.2 et ENT-1.3).
+     D'ici là elles sont **gelées : bugs seulement**, aucune règle commune (tutoiement, correction après
+     bilan, confirmation…) ne s'y applique. La règle « Spartoo tel quel » de `CLAUDE.md` est remplacée par cette formulation.
+  2. **Spartoo ENT-1.1, 1.2 et 1.3 passent en `ouverture: 'prof'`** : fermées aux élèves tant que l'enseignant ne les
+     coche pas dans Conduite de séance, comme Cdiscount, Picard et Smoby. Boost (ENT-3.1 à 3.3) ne change pas.
+  3. **SCE-1 à SCE-5 : rien ne change.** Elles ne s'enrichissent plus et partiront avec leur reprise dans Simulog.
+  **Tests** : `spartoo.mjs` coche les trois séances pour le groupe dans « Conduite de séance » avant de les jouer ;
+  `socle.mjs` attend désormais la seule carte Boost chez l'élève (Spartoo n'en montre plus).
 
 ### 20. Stratelog (C19)
 - **À cadrer en Cowork** : un troisième côté (ni Prepalog ni Simulog) ou une entreprise Simulog de

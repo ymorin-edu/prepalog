@@ -27,7 +27,7 @@
 | 7 | Quota Spark (C9) : mesurer, puis supprimer les écritures inutiles | **La mesure de Tristan en console** après une vraie séance d'une heure. Ne pas lancer avant. | Sonnet |
 | 12 | CAP OL et niveaux (C8) : référentiel, défaut de niveau d'un groupe, `TAB-4` en `niveaux: ['cap']` | **Le relevé du référentiel CAP OL par Cowork** (fiche). | Sonnet |
 | 9c bis | `entreprise.js` : sortir cartes de messages, questions au fil, accueil, copie rendue (≈ 1 851 → ≈ 1 460 lignes) | « Plus tard » : quand les questions au fil seront stabilisées. Un seul chantier moteur à la fois. | Sonnet |
-| 19 | Reliquats SCE / Spartoo (C15) : acter ou annuler la règle « Spartoo tel quel » | **Décision de Tristan** (ENT-1.1 refondue le 06/10 ; `COLORS`/`SHIP` déjà sortis du moteur par 9b). | — |
+| 19 | Reliquats SCE / Spartoo (C15) | **Livré le 09/10/2026** (cd622f5) : Spartoo en `ouverture: 'prof'`, ENT-1.2 et 1.3 gelées jusqu'à leur refonte (deux briefs Cowork à écrire), SCE inchangé. | — |
 | 20 | Stratelog (C19) : troisième côté ou entreprise Simulog de plus ? | **Cadrage en Cowork.** Si troisième côté, s'appuyer sur `estSimulog(meta)` (chantier 10, livré). | Opus (cadrage) |
 
 ## Points ouverts relevés pendant le lot C (aucun ne bloque)
