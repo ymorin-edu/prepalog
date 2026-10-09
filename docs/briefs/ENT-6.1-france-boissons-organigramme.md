@@ -6,7 +6,8 @@
 > Lis docs/EN-COURS.md puis docs/briefs/ENT-6.1-france-boissons-organigramme.md en entier. Vérifie d'abord que les chantiers « questions au fil » (lots 1 à 3), « jugé au premier essai », « tirage et niveaux » sont livrés ; puis fais la demande au moteur du §7 (transférer un message), puis la séance. ENT-6.1 crée l'univers commun `contenus/france-boissons.js`. Annonce la durée avant de commencer et dis-moi si un point du brief contredit le code.
 > ```
 
-**Statut** : à implémenter — **réécrit le 08/10/2026** d'après `FRANCE-BOISSONS-refonte.md` (Q1 à Q10 du 07/10) et les règles
+**Statut** : **livré** le 09/10/2026 (Claude Code, `pret: true, ouverture: 'prof'` : à essayer à l'écran par Tristan, voir le
+compte rendu en fin de brief) — **réécrit le 08/10/2026** d'après `FRANCE-BOISSONS-refonte.md` (Q1 à Q10 du 07/10) et les règles
 du 08/10 (tirage et niveaux, questions contre le copier-coller). Remplace la version du 05/10.
 **Date du brief** : 05/10/2026, réécrit le 08/10/2026
 **Conversation d'origine** : Cowork (Opus). Demande de Tristan (05/10) : aborder l'organisation de l'entreprise
@@ -346,6 +347,24 @@ pour servir à plusieurs séances (toute la S2, et toute séance où l'élève t
 - Organigramme en HTML (pas de dessin interactif, décision de Tristan du 05/10). Contraste et lisibilité des pointillés
   à vérifier au vidéoprojecteur.
 
+### 7.3 Fiche et documents « fonction de la base de l'élève » (demande ajoutée par Claude Code, 09/10/2026)
+
+Relevé à la construction : dans le moteur, une **fiche** (`fiche`, `fiches`) et les **documents joints** (`documents`) sont
+des objets **fixes**, déclarés une fois pour toute la séance (`core/types/fiche.js` : `creerFiche(F)` ; `core/types/documents.js` :
+`html` est un texte). Or le §6 bis donne à chaque élève **ses** cases vides (l'organigramme et les listes « Case A, B… »),
+**ses** situations (les lignes du tableau oui / non) et **son** courrier (l'écran de « Corriger » de chaque message, `ecran` d'un
+jalon, fixe lui aussi). Le tirage mémorisé (D-C) range bien les pièces dans la base, mais aucun écran ne sait s'en servir.
+
+- **Contournement livré (rien dans `core/`)** : l'activité fabrique le moteur **à l'ouverture**, pour l'élève qui l'ouvre
+  (`activites/france-boissons-organigramme.js`, `rendre`) : `jeuAOuverture(ctx)` range d'abord le tirage par `TIRAGE.assurer`
+  (même graine, même niveau que le moteur), puis `optionsPour(jeu)` rend sa fiche, ses documents et ses jalons. Limite : la
+  règle qui fige le niveau est recopiée de `core/types/entreprise.js` (`figerAisance`) ; après « Réinitialiser » avec un niveau
+  changé entre-temps par l'enseignant, les écrans restent ceux de l'ancien tirage jusqu'à la réouverture.
+- **Demande au moteur** (chantier à part, petit) : accepter `fiche.blocs`, `fiche.documents` et `documents[].html` **en
+  fonction de la base** (`(db) => …`), et `ecran` d'un jalon en fonction de la base ; la séance déclarerait alors ses écrans comme
+  les autres, et le contournement disparaîtrait (`optionsPour` resservirait tel quel). Toute la S2 en aura besoin (6.2 à 6.10
+  tirent aussi leurs pièces).
+
 ### 7 bis. Séance déjà jouée par des élèves ?
 
 Non : séance nouvelle.
@@ -410,9 +429,52 @@ Tristan**). Graines choisies dans le test, valeurs attendues écrites à la main
 
 ## Compte rendu *(rempli par Claude Code à la livraison)*
 
+*Rempli le 09/10/2026 (Claude Code, Opus).*
+
 - **Fichiers créés / modifiés** :
+  - créés : `contenus/france-boissons.js` (univers commun : identité, `THEME` `{ accent: '#b34700', papier: true }` du relevé D-E,
+    lieux, `EQUIPE` des six personnes dans l'ordre de l'annuaire, `EXTERIEURS` (Malo), lexique, organigramme en SVG
+    `organigrammeHtml({ vides })`, annuaire, documents communs `DOC_ORGANIGRAMME` et `DOC_ANNUAIRE` complets, `STYLE_DOCUMENTS`) ;
+    `contenus/france-boissons-ent61.js` (banques `cases`, `liens`, `courrier`, `TIRAGE` et `ecartsEquite`, fiches « Ce que j'ai vu »
+    et « Qui fait quoi ? », jalons, messages, accusés, accueil, `optionsPour(jeu)`) ; `contenus/questions/ENT-6.1.js` ;
+    `activites/france-boissons-organigramme.js` ; `contenus/corriges/ENT-6.1.js` ; `outils/test/france-boissons.mjs` (14 cas).
+  - modifiés : `activites/index.js` (une ligne au registre ; entreprise n° 6 dans `ENTREPRISES`, logo SVG du dépôt) ;
+    `outils/test.mjs` (**alerte 7** : `'france-boissons'` dans `BLOCS` et dans le groupe 1 de `GROUPES`, rien d'autre) ;
+    `outils/test/tirage-niveaux.mjs` (les trois banques dans `BANQUES_FIGEES`, règle de D-C ; **cas existant réécrit** : l'onglet
+    « Niveaux » a désormais trois colonnes, Cdiscount, Picard **et France Boissons**, puisque ENT-6.1 déclare
+    `niveauxPrevus: ['confirme']`).
 - **Écarts par rapport au brief** (et pourquoi) :
-- **Décisions prises en route** :
-- **Tests** : bloc / suite entière, nombre de cas, sabotages éprouvés
-- **Commits** : *(hash + message)*
-- **Reste ouvert** :
+  - **Fiche et documents de l'élève** : le moteur ne sait pas les déclarer « fonction de la base » ; contournement dans l'activité
+    (moteur fabriqué à l'ouverture), demande au moteur écrite au **§7.3**. *DÉCISION À VALIDER.*
+  - « Le lien est-il hiérarchique ? » : un `ouinon` donne oui / non **par colonne** ; deux colonnes « Hiérarchique » /
+    « Fonctionnel » feraient cliquer deux fois par ligne (et permettraient oui / oui). Livré : **une colonne « Lien hiérarchique ? »**,
+    oui = hiérarchique, non = fonctionnel (consigne dans la fiche). Autre option : une ligne `choix` (« Hiérarchique » /
+    « Fonctionnel ») par situation. *DÉCISION À VALIDER.*
+  - Cases vides rangées **par lettre** (`valeurs['case-a']`), pas par id de poste : l'id du poste dans la page (`data-fiche-champ`)
+    aurait donné la réponse. Le jalon lit la lettre de la case du poste dans le tirage de l'élève (jamais une lettre fixe).
+  - Courrier d'un confirmé : les deux cas bonus arrivent en **3e et 5e** position (pas à la fin), pour que le dernier message soit
+    toujours du socle : le premier bilan (et le bandeau de fin) tombe au dernier transfert, cas bonus compris.
+  - Réponse d'Inès à la fiche (« Merci, j'ai ta fiche. Avant de te confier le courrier, une question. ») : c'est la phrase du
+    **point d'étape** (pas un message de plus). Le point d'étape porte `ferme: 'repondre:msg-malo'` : « Continuer » ouvre le message de
+    Malo, arrivé avec le message d'Inès « Je pars en réunion… ».
+  - Équipe : **prénoms seuls** (aucun nom de famille dans les briefs) ; Malo est dans `EXTERIEURS`, pas dans `EQUIPE` (la liste
+    « Transférer à… » = les six de l'annuaire).
+  - Corrigé enseignant : lien YouTube en texte ; **le minutage n'y est pas** (relevé de Cowork `prepalog-fb-video-buchelay`, absent du
+    dépôt) : à recopier par Cowork.
+- **Décisions prises en route** : celles ci-dessus, une ligne chacune dans `docs/decisions.md` (09/10/2026). Valeurs par défaut du
+  §11 appliquées (barème 5 / 2 / 5 / 6 / 2 ; annuaire complet joint de 6.2 à 6.10 ; textes, prénoms et intitulé de Nadia tels que
+  le brief les donne ; message « échange de congés » gardé).
+- **Vérifié §7.2** : la fiche « Ce que j'ai vu » sans jalon, `envoi: { incomplet: true }`, s'envoie vide et ne compte pas comme étape
+  (la séance se finit sans elle : cas « pire cas »).
+- **Tests** : bloc `france-boissons` **14/14** ; `france-boissons tirage-niveaux questions dependances` 167/167 ; **suite entière
+  971/971** (avec `pret: true`). Sabotages éprouvés (saboter, voir tomber, remettre) : jalon des cases inversé, du chef de
+  Lucas inversé, des liens inversé, du courrier inversé, `juste` de la question changé → 6 cas tombent à chaque fois (parcours
+  juste, pire cas, Nadia / quai, case de Karim, Malo → Karim, confirmé) ; garde « 2 + 2 » retirée de `ecartsEquite` → le cas des
+  300 graines tombe. Le cas des 300 graines se contrôle aussi lui-même (la même banque sans règle doit y être prise en faute).
+- **Commits** : 8713104 « ENT-6.1 : univers France Boissons, organigramme et annuaire, fiches, tirage et jalons (brouillon) » ;
+  fddd1f6 « ENT-6.1 : bloc de tests france-boissons » ; le commit de livraison (`pret: true`, ce compte rendu, décisions, chantiers).
+- **Reste ouvert** : les deux *DÉCISIONS À VALIDER* ci-dessus ; le chantier moteur du §7.3 ; le minutage de la vidéo au corrigé ;
+  la trame (Cowork, après validation à l'écran) ; la ligne ENT-6.1 du cas « compétences : chaque séance déclare ce que Tristan a
+  validé » (`outils/test/socle.mjs`) n'est pas ajoutée (liste écrite à la main par Tristan) ; **fiche à corriger** :
+  `activites/FICHE-SEANCE.md` dit qu'un confirmé a « le même socle qu'un standard » : vrai avec une seule banque, faux avec
+  plusieurs (les cas bonus d'une banque sont tirés avant le socle de la suivante) — sans effet sur la note, à signaler au moteur.

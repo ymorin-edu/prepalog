@@ -40,7 +40,7 @@ const META = {
   reinitialisable: true,
   niveauxPrevus: ['confirme'],   // cas bonus du confirmé : une case, deux liens, deux messages
   questions: 'ENT-6.1',
-  pret: false,
+  pret: true,
   ouverture: 'prof',
 };
 
