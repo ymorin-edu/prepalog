@@ -264,6 +264,21 @@ entrée de menu chacune (la 1re garde l'écran `fiche`, les autres `fiche:<id>`)
 `apresFiche('lettre')`) n'apparaît, au menu comme au bouton de son mail (`ouvreFiche`), qu'une fois la condition vraie.
 Exemple : `contenus/smoby-ent58.js` (lettre de voiture, suivi du retard).
 
+**Case « nombre » bornée** (chantier D-2, 09/10/2026, brief ENT-6.2 §7) : `{ type: 'nombre', id, lib, unite: 'fûts', min: 0,
+entier: true, manque: 'les fûts' }`. `unite` s'affiche **après** la case ; la case n'a aucun aplat. `entier: true` refuse une
+virgule, `min` refuse tout nombre plus petit, et un texte qui n'est pas un nombre est refusé dès que l'un des deux est déclaré
+(**sans `min` ni `entier`, rien n'est vérifié** : c'est le cas d'ENT-5.8, où un jalon juge « 6 091 kg »). Le refus a lieu **à
+l'envoi**, jamais pendant la frappe (rien n'est jugé à l'écran), et dit pourquoi sous le bouton, après les « Il manque » : «
+À corriger : Heineken fût 30 L : un nombre entier est attendu (sans virgule). » ; la fiche reste ouverte, le travail gardé.
+Une case vide n'est pas un refus : elle « manque » (ou part vide avec `envoi.incomplet`). `refus: '…'` (facultatif) remplace
+le texte du moteur. **Lecture par un jalon** : la valeur est rangée **telle que tapée, en texte** (`'6'`, `'2,0'`, `null` si
+vide) dans `ficheEnvoyee(db, '<fiche.id>').valeurs['<bloc.id>']` (`db.fiches[<fiche.id>].valeurs[<bloc.id>]`) ; la convertir par
+`lireNombre` (`'6'` → `6`, `'6 091'` → `6091`, `'2,5'` → `2.5`, rien d'exploitable → `NaN`) : `lireNombre(f.valeurs.heineken30) === 6`.
+`lireNombre` est exporté par `core/types/fiche.js`, mais ce module tire `core/ui.js` : un fichier de `contenus/` qui veut
+rester sans cette dépendance recopie les 4 lignes de `lireNombre` (comme `contenus/smoby-ent58.js`) et un test vérifie que les
+deux lisent pareil. **Pas de bloc `lignes`** (libellé + case + liste sur une ligne) : une suite de blocs `nombre` et `liste`,
+éventuellement dans un `cadre`, suffit pour un bon de commande (décision D-2).
+
 **Fonction de la base de l'élève** (chantier D-1 bis, 09/10/2026, brief ENT-6.1 §7.3) : pour une séance TIRÉE par élève (ses
 cases, ses lignes, son courrier : `TIRAGE.piecesTirees`), quatre champs acceptent une fonction `(db) => …` au lieu d'une valeur
 fixe — `fiche.blocs` (rend le tableau des blocs), `fiche.documents` (rend le tableau des ids), `documents[].html` (rend le texte

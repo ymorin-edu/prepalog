@@ -3101,6 +3101,93 @@ await v('Fiche, saisies : lecture des nombres et des heures (lireNombre, lireHeu
   vrai(r.memeN && r.memeH, 'la séance et le moteur ne lisent pas pareil');
 });
 
+// ── Fiche, case « nombre » bornée (chantier D-2, 09/10/2026, brief ENT-6.2 §7) : `min`, `entier`, unité, refus à l'envoi ──
+// Une fiche d'essai : deux nombres bornés (entier, ≥ 0), un nombre libre (sans borne : comportement d'ENT-5.8) et une liste.
+const monterNombres = () => pg.evaluate(async () => {
+  const { creerEntreprise } = await import('/core/types/entreprise.js');
+  const E = await import('/outils/essai-2de.js');
+  const U = E.univers({});
+  delete U.fiche;
+  U.fiches = [{ id: 'essai-nombres', libelle: 'Nombres', titre: 'Nombres',
+    blocs: [
+      { type: 'nombre', id: 'futs', lib: 'Heineken fût 30 L', unite: 'fûts', min: 0, entier: true, manque: 'les fûts' },
+      { type: 'nombre', id: 'casiers', lib: 'Eau plate', unite: 'casiers', min: 0, entier: true, manque: 'les casiers' },
+      { type: 'nombre', id: 'libre', lib: 'Poids', unite: 'kg', manque: 'le poids' },
+      { type: 'nombre', id: 'min5', lib: 'Au moins cinq', min: 5, manque: 'le minimum' },
+    ],
+    envoi: { bouton: 'Envoyer' } }];
+  document.querySelector('#smTest')?.remove();
+  const hote = document.createElement('div'); hote.id = 'smTest'; document.body.appendChild(hote);
+  const db = {};
+  window.__s = { db };
+  creerEntreprise(U).rendre(hote, {
+    meta: { id: 'essai-2de', code: 'ESSAI', titre: 'Essai', portee: 'eleve', immersif: true, temps: 'guidage' },
+    profil: { prenom: 'Lea', nom: 'T', role: 'eleve', uid: 'u-s' },
+    jeu: { etat: () => db, sauver: () => {} },
+    enregistrer: () => {}, quitter: () => {}, lireScore: async () => null, rendreCopie: async () => ({}),
+  });
+  hote.querySelector('.ent-nav[data-vue="fiche"]').click();
+});
+const nombresOk = { futs: '6', casiers: '0', libre: 'abc', min5: '5' };
+async function remplirNombres(x) {
+  for (const [k, t] of Object.entries(x)) await pg.fill(`${FB} #fi-${k}`, t);
+}
+const messageFiche = () => pg.textContent(`${FB} [data-fiche-manque]`);
+
+await v('Fiche, nombre : l’unité s’affiche après la case, sans aplat ; la frappe garde la page (pas de redessin, focus conservé, valeur rangée telle que tapée)', async () => {
+  await monterNombres();
+  await pg.waitForSelector(FB);
+  egal(await pg.$$eval(`${FB} .ent-saisie-case`, (L) => L.map((s) => {
+    const u = s.querySelector('.ent-saisie-unite');
+    return u ? [u.previousElementSibling === s.querySelector('input'), u.textContent] : null;
+  })), [[true, 'fûts'], [true, 'casiers'], [true, 'kg'], null], 'unité après la case (aucune quand elle n’est pas déclarée)');
+  const fond = await pg.$eval(`${FB} #fi-futs`, (i) => getComputedStyle(i).backgroundColor);
+  const fondLibre = await pg.$eval(`${FB} #fi-libre`, (i) => getComputedStyle(i).backgroundColor);
+  egal(fond, fondLibre, 'même fond que les autres champs');
+  await pg.$eval(`${FB} form[data-fiche]`, (f) => { f.__marque = true; });
+  await pg.click(`${FB} #fi-futs`);
+  await pg.keyboard.type('12');
+  egal(await pg.evaluate(() => document.activeElement.id), 'fi-futs', 'focus après la frappe');
+  vrai(await pg.$eval(`${FB} form[data-fiche]`, (f) => f.__marque === true), 'la fiche a été redessinée pendant la frappe');
+  egal(await pg.evaluate(() => window.__s.db.fiches['essai-nombres'].valeurs.futs), '12', 'valeur rangée telle que tapée (texte)');
+  egal(await pg.inputValue(`${FB} #fi-futs`), '12', 'valeur toujours dans la case');
+});
+
+await v('Fiche, nombre : une case vide manque ; négatif, non entier et non-nombre sont refusés à l’envoi avec la raison, la fiche reste ouverte et le travail gardé', async () => {
+  await monterNombres();
+  await pg.waitForSelector(FB);
+  await cliquerEtConfirmer(pg, `${FB} [data-fiche-envoyer]`);
+  egal(await messageFiche(), 'Il manque : les fûts, les casiers, le poids, le minimum.', 'tout vide');
+  await remplirNombres({ futs: '-3', casiers: '2,5', libre: 'abc', min5: '4' });
+  await cliquerEtConfirmer(pg, `${FB} [data-fiche-envoyer]`);
+  egal(await messageFiche(),
+    'À corriger : Heineken fût 30 L : un nombre positif ou nul est attendu ; Eau plate : un nombre entier est attendu (sans virgule) ; Au moins cinq : un nombre d’au moins 5 est attendu.',
+    'trois refus, la case libre (« abc ») n’en a pas');
+  vrai(!(await pg.$(`${FB} [data-fiche-envoyee]`)), 'la fiche est partie');
+  egal(await pg.inputValue(`${FB} #fi-futs`), '-3', 'travail gardé');
+  await remplirNombres({ futs: 'douze', casiers: '', libre: '' });
+  await cliquerEtConfirmer(pg, `${FB} [data-fiche-envoyer]`);
+  egal(await messageFiche(), 'Il manque : les casiers, le poids. À corriger : Heineken fût 30 L : un nombre entier est attendu ; Au moins cinq : un nombre d’au moins 5 est attendu.',
+    'manque et refus ensemble, dans cet ordre');
+  await pg.fill(`${FB} #fi-futs`, '3');
+  egal(await messageFiche(), '', 'le message s’efface dès qu’on retape');
+});
+
+await v('Fiche, nombre : zéro, un entier, « 6 », « 2,0 » passent ; la fiche part, les valeurs sont rangées telles que tapées (texte) et se relisent avec lireNombre', async () => {
+  await monterNombres();
+  await pg.waitForSelector(FB);
+  await remplirNombres({ futs: '0', casiers: '2,0', libre: '6 091 kg', min5: '5' });
+  await cliquerEtConfirmer(pg, `${FB} [data-fiche-envoyer]`);
+  await pg.waitForSelector(`${FB} [data-fiche-envoyee]`);
+  const r = await pg.evaluate(async () => {
+    const F = await import('/core/types/fiche.js');
+    const f = F.ficheEnvoyee(window.__s.db, 'essai-nombres');
+    return { v: f.valeurs, envoye: f.envoye, n: [F.lireNombre(f.valeurs.futs), F.lireNombre(f.valeurs.casiers), F.lireNombre(f.valeurs.min5)] };
+  });
+  egal(r.v, { futs: '0', casiers: '2,0', libre: '6 091 kg', min5: '5' }, 'valeurs envoyées');
+  egal([r.envoye, r.n], [true, [0, 2, 5]], 'envoyée, relue par lireNombre');
+});
+
 // ── ENT-5.8 « la lettre de voiture et le retard » (brief `docs/briefs/ENT-5.8-smoby-lettre-voiture.md`) ─────────
 // La séance réelle, montée par son activité. Les attendus sont écrits à la main d'après le brief.
 const T58 = '#s58';

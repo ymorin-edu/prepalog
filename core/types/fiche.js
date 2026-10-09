@@ -56,6 +56,13 @@
 //     TAPÉES, sans redessin ; les jalons les lisent avec `lireNombre` (« 6 091 », « 6091 », « 2,5 ») et
 //     `lireHeure` (« 11:00 », « 11h00 », « 11 h ») ci-dessous. Une saisie vide « manque ». Entrée dans une case ne
 //     part jamais (seul le bouton envoie).
+//   - `nombre` borné (chantier D-2, 09/10/2026, brief ENT-6.2 §7) : `{ type: 'nombre', id, lib, unite: 'fûts', min: 0, entier: true }`.
+//     `entier: true` refuse une virgule ou un point décimal, `min` refuse tout nombre plus petit, et un texte qui n'est pas
+//     un nombre est refusé dès que l'un des deux est déclaré. Le refus a lieu À L'ENVOI (jamais pendant la frappe, rien n'est
+//     jugé à l'écran) et DIT POURQUOI, sous le bouton, après les « Il manque » : « À corriger : Heineken fût 30 L : un nombre
+//     entier est attendu. » Une case vide n'est pas refusée (elle « manque », ou part vide avec `envoi.incomplet`). Sans `min`
+//     ni `entier`, rien n'est vérifié (ENT-5.8 : c'est un jalon de la séance qui juge « 6 091 kg »). `refus` (facultatif) :
+//     le texte à la place de celui du moteur. L'unité s'affiche après la case.
 // GESTES (questions au fil, lot 3, 08/10/2026) : `fiche:<id>:<bloc>` quand l'élève remplit un bloc (choisir, cocher,
 // remettre en ordre ; une saisie à la sortie de la case, jamais pendant la frappe), `fiche:<id>:<bloc>:<ligne>` quand il
 // classe une ligne d'un tableau oui / non (« il classe le CV de Yanis »), `fiche:<id>:envoyer` à l'envoi. Liste :
@@ -94,6 +101,19 @@ export function lireHeure(s) {
   if (!m) return NaN;
   const h = Number(m[1]), mn = m[2] ? Number(m[2]) : 0;
   return h < 24 && mn < 60 ? h * 60 + mn : NaN;
+}
+
+// Pourquoi une saisie de nombre est refusée (texte lisible par un élève), ou null si elle passe ou ne déclare aucune borne.
+// Une case vide n'est pas refusée ici : c'est `manque` qui s'en charge.
+export function refusNombre(b, saisie) {
+  if (b.type !== 'nombre' || b.fige || (!b.entier && b.min == null)) return null;
+  if (saisie == null || String(saisie).trim() === '') return null;
+  const n = lireNombre(saisie);
+  let r = null;
+  if (Number.isNaN(n)) r = b.entier ? 'un nombre entier est attendu' : 'un nombre est attendu';
+  else if (b.entier && !Number.isInteger(n)) r = 'un nombre entier est attendu (sans virgule)';
+  else if (b.min != null && n < b.min) r = b.min === 0 ? 'un nombre positif ou nul est attendu' : `un nombre d’au moins ${b.min} est attendu`;
+  return r && (b.refus || r);
 }
 
 export function ficheEnvoyee(db, id) {
@@ -172,6 +192,15 @@ export function creerFiche(F, VDOC, { signaler } = {}) {
     return L;
   }
 
+  // Les saisies de nombre refusées (avec leur raison), dans l'ordre de la fiche : « Poids : un nombre entier est attendu ».
+  function refus(e, db) {
+    const v = e.valeurs || {};
+    return blocsDe(db).map((b) => {
+      const r = refusNombre(b, v[b.id]);
+      return r ? `${b.lib || b.titre || b.id} : ${r}` : null;
+    }).filter(Boolean);
+  }
+
   function bloc(b, e) {
     const v = e.valeurs || {};
     const titre = b.titre && b.type !== 'encadre' ? `<h3 class="ent-fiche-h">${ech(b.titre)}</h3>` : '';
@@ -222,7 +251,7 @@ export function creerFiche(F, VDOC, { signaler } = {}) {
       const val = b.fige ? (b.valeur == null ? '' : b.valeur) : (v[b.id] == null ? '' : v[b.id]);
       const attrs = {
         texte: 'type="text"',
-        nombre: 'type="text" inputmode="decimal" autocomplete="off"',
+        nombre: `type="text" inputmode="${b.entier ? 'numeric' : 'decimal'}" autocomplete="off"`,
         heure: 'type="text" inputmode="numeric" autocomplete="off" placeholder="HH:MM" maxlength="5"',
         date: 'type="date"',
       }[b.type];
@@ -347,8 +376,9 @@ export function creerFiche(F, VDOC, { signaler } = {}) {
       if (!blocsFixes && !blocsBrutsDe(api.db)) return;
       const blocs = blocsDe(api.db);
       const m = envoi.incomplet ? [] : manque(e, api.db);
-      if (m.length) {
-        ui.manque = `Il manque : ${m.join(', ')}.`;
+      const r = refus(e, api.db);
+      if (m.length || r.length) {
+        ui.manque = [m.length ? `Il manque : ${m.join(', ')}.` : '', r.length ? `À corriger : ${r.join(' ; ')}.` : ''].filter(Boolean).join(' ');
         z.querySelector('[data-fiche-manque]').textContent = ui.manque;
         return;
       }
@@ -403,7 +433,7 @@ export function creerFiche(F, VDOC, { signaler } = {}) {
     id: F.id, docs: docsFixes || docsDe({}), nav: { libelle }, quand: F.quand || null,
     bouton: F.bouton || `Ouvrir la ${minus(libelle)}`,
     etatNeuf: () => ({ valeurs: {} }),
-    manque, html, brancher,
+    manque, refus, html, brancher,
     // Les gestes que la fiche sait dire (voir l'en-tête).
     signaux: [`fiche:${F.id}:envoyer`, ...blocs.filter((b) => b.id && b.type !== 'encadre' && b.type !== 'cadre').flatMap((b) => [
       `fiche:${F.id}:${b.id}`, ...(b.type === 'ouinon' ? (b.lignes || []).map((l) => `fiche:${F.id}:${b.id}:${l.id}`) : [])])],
