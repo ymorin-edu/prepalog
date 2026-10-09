@@ -27,7 +27,10 @@
   --ardoise-clair:#e3f1e8;
 
   --terre:#9c620a;
-  --sur-terre:#ffffff;   /* texte posé sur un aplat --terre (boutons « armés », pastille) */
+  --sur-terre:#ffffff;   /* texte posé sur un aplat --terre (boutons « armés », pastille `.ent-n`). Blanc dans les trois blocs,
+                             comme avant le chantier 15 : en sombre, le blanc sur l'ambre clair ne tient pas 4,5 (2,06 mesuré le
+                             09/10/2026, pastille de la messagerie d'une entreprise sans thème sombre). Changer la valeur sombre
+                             changerait aussi la pastille bleue de Boost (`--ent-badge`) : à traiter avec elle. */
   /* Le vert de validation. --vert pour le texte et les traits, --vert-fond pour
      les aplats : voir le commentaire de la règle .juste plus bas. */
   --vert:#0b7a41;
