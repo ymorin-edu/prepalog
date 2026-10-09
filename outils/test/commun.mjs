@@ -72,6 +72,14 @@ if (PORT !== PORT_DEMANDE) console.log(`Port ${PORT_DEMANDE} occupé : la suite 
 const BASE = `http://127.0.0.1:${PORT}/`;
 
 const nav = await chromium.launch();
+
+// Dossier temporaire PROPRE à cette suite : `socle.mjs` fabrique des classeurs remplis sous des noms
+// fixes dans `os.tmpdir()` (`prepalog-exs1-rempli.xlsx`…), et deux suites lancées en même temps
+// (chantier 18, 09/10/2026) s'écraseraient ces fichiers l'une à l'autre. `os.tmpdir` est donc
+// redirigé, après le lancement du navigateur, vers un dossier propre au processus, effacé à la sortie.
+const TMP = fs.mkdtempSync(path.join(os.tmpdir(), `prepalog-suite-${process.pid}-`));
+os.tmpdir = () => TMP;
+process.on('exit', () => { try { fs.rmSync(TMP, { recursive: true, force: true }); } catch (e) {} });
 // Relevés faits sur TOUS les onglets de TOUS les contextes (et pas seulement la page partagée) :
 // dix-neuf blocs ouvrent leurs propres contextes par `nav.newContext()`, et une image venue d'un
 // CDN chargée dans l'un d'eux serait passée inaperçue. `nav.newContext` est donc enveloppé : chaque
