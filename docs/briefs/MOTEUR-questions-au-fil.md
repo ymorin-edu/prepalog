@@ -8,7 +8,7 @@
 >
 > Puis, dans une autre conversation : `… fais le lot 3 (signaux de geste)`, puis `… fais le lot 4 (réponses de la classe)`.
 
-**Statut** : lots 1 à 4 livrés le 08/10/2026, à valider par Tristan (page d'essai ; lot 4 : à voir avec une vraie séance à questions). Questions du §11 tranchées le 07/10 au soir. Révisé le 07/10 à 21 h 45 (deux sortes de questions, plus de « Plus tard », travail gelé, souplesse). Révisé le 08/10 à 8 h (sorties de page, §4.8 bis ; trois règles d’écriture contre le copier-coller, dont les questions d’éco-droit, §7).
+**Statut** : **livré, vue validée par Tristan le 09/10/2026** (page d'essai `outils/essai-questions.html`) ; lots 1 à 4 livrés le 08/10/2026 (lot 4 : à revoir avec une vraie séance à questions, ENT-6.1). Questions du §11 tranchées le 07/10 au soir. Révisé le 07/10 à 21 h 45 (deux sortes de questions, plus de « Plus tard », travail gelé, souplesse). Révisé le 08/10 à 8 h (sorties de page, §4.8 bis ; trois règles d’écriture contre le copier-coller, dont les questions d’éco-droit, §7).
 **Date du brief** : 07/10/2026 (soir).
 **Auteur** : Claude (conversation Cowork, Opus), d'après la lecture du code de `main` au commit `d024f17`, du brief
 `FRANCE-BOISSONS-refonte.md` (décisions du 07/10, 21 h) et du lot C de `SMOBY-retours-classe-5.1.md`.

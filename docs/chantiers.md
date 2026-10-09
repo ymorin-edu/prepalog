@@ -43,7 +43,7 @@
 | 19 | Reliquats SCE / Spartoo : acter la règle | C15 | petit | Sonnet | non | 9 | **livré** (09/10, cd622f5) |
 | 20 | Stratelog | C19 | ? | Opus | ? | 10 | à cadrer |
 | **Lot D — France Boissons (scénario S2, ENT-6.1 → 6.10)** : relevé du 09/10/2026, ordre de la refonte du 07/10 (Q2) | | | | | | | |
-| D-A | Questions au fil (lots 1 à 4) | brief `MOTEUR-questions-au-fil` | gros | Opus | oui | — | **livré le 08/10**, à valider par Tristan (page d'essai) |
+| D-A | Questions au fil (lots 1 à 4) | brief `MOTEUR-questions-au-fil` | gros | Opus | oui | — | **livré le 08/10, vue validée par Tristan le 09/10** (page d'essai ; lot 4 à revoir avec ENT-6.1) |
 | D-B | « Jugé au premier essai » | SMOBY-notation lot 3 | — | — | oui | — | **livré** (visite ENT-5.3 ; l'animation garde la première réponse) |
 | D-C | Tirage mémorisé, niveaux par scénario, bonus du confirmé (lots 1 à 3) | brief `MOTEUR-tirage-et-niveaux` | 1 à 1,5 j | Opus | oui + règles | D-A | à faire — **règles Firestore à publier** à la livraison |
 | D-D | Images libres FB (11 photos, crédits, script reproductible) | brief `IMAGES-france-boissons` | petit | Sonnet | non | — | à faire |
