@@ -910,4 +910,32 @@ await v('base.css : plus aucune classe propre au quiz, à la carte, au plan, à 
   for (const f of Object.keys(attendu)) if (liens.indexOf(f + '.css') < rangBase) throw new Error(`styles/${f}.css est chargée avant base.css`);
 });
 
+// ---------- chantier 17. contenus/ : aucune image, classeur ni fichier de données sans référence
+// Un logo, une photo, un classeur ou un fichier de données que plus rien ne cite est un orphelin : il pèse dans le dépôt
+// et fait croire qu'il sert. Le test lit tout le texte du dépôt (code, HTML, CSS, générateurs, docs) et cherche le NOM de
+// chaque fichier. Hors champ, exprès : `A-SUPPRIMER-*` (déjà écarté, on ne le supprime jamais soi-même) ; les trames et
+// intentions (docx, pdf), dont la déclaration est une décision de Tristan ; les corrigés `contenus/corriges/`, dont le
+// chemin se déduit du `code` de la séance (`./contenus/corriges/${code}.js`), donc sans nom écrit nulle part.
+await v('contenus/ : chaque image, classeur et fichier de données est cité au moins une fois dans le dépôt', async () => {
+  const SAUTES = ['.git', 'node_modules', 'vendor', '.claude', 'paquets'];
+  const TEXTE = /\.(js|mjs|css|html|md|py|json|txt|svg|bat)$/;
+  const CONTENU = /\.(jpe?g|png|gif|webp|svg|xlsx|js)$/;
+  const lus = [];
+  const candidats = [];
+  const parcourir = (dir) => {
+    for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+      const f = path.join(dir, e.name);
+      const rel = path.relative(ROOT, f).split(path.sep).join('/');
+      if (e.isDirectory()) { if (!SAUTES.includes(e.name)) parcourir(f); continue; }
+      if (rel.startsWith('contenus/') && !rel.startsWith('contenus/corriges/') && CONTENU.test(e.name)
+        && !e.name.startsWith('A-SUPPRIMER-')) candidats.push({ rel, nom: e.name });
+      if (TEXTE.test(e.name)) lus.push({ rel, texte: fs.readFileSync(f, 'utf8') });
+    }
+  };
+  parcourir(ROOT);
+  if (candidats.length < 100) throw new Error(`seulement ${candidats.length} fichiers examinés dans contenus/ : le parcours est cassé`);
+  const orphelins = candidats.filter((c) => !lus.some((t) => t.rel !== c.rel && t.texte.includes(c.nom))).map((c) => c.rel);
+  if (orphelins.length) throw new Error('fichier de contenus/ cité nulle part (le renommer A-SUPPRIMER-… ou le déclarer) : ' + orphelins.join(', '));
+});
+
 }
