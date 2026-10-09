@@ -434,17 +434,17 @@ s'aligner.
 ### 21. Tests lot A : diagnostic des échecs (C10c)
 - **Ce qu'on fait.** Après le chantier 13 (le fond), la forme de ce que la suite DIT quand elle tombe. Un cas rouge ne
   donnait que la première ligne du message Playwright (« page.click: Timeout 5000ms exceeded. »), sans sélecteur, sans
-  ligne, sans image ; les erreurs JavaScript étaient comptées en bloc, jamais reliées à un cas ; / recopiés
-  dans sept blocs,  cinq fois dans smoby ; Playwright installé sans numéro de version sur GitHub.
-- **Livré le 09/10/2026** (793c16a, tests et workflow seulement, rien dans , , ) :
+  ligne, sans image ; les erreurs JavaScript étaient comptées en bloc, jamais reliées à un cas ; `egal`/`vrai` recopiés
+  dans sept blocs, `proche` cinq fois dans smoby ; Playwright installé sans numéro de version sur GitHub.
+- **Livré le 09/10/2026** (793c16a, tests et workflow seulement, rien dans `core/`, `activites/`, `styles/`) :
   le bilan d'un échec porte la ligne du bloc (« dependances.mjs:971 »), le journal Playwright (sélecteur attendu, état
-  de l'élément) et une capture de chaque page ouverte dans  (ignoré par git, purgé après
+  de l'élément) et une capture de chaque page ouverte dans `outils/captures/<date>-<pid>/` (ignoré par git, purgé après
   sept jours, joint au passage GitHub quand un groupe est rouge) ; chaque erreur JavaScript, sur toute page de tout
   contexte, est notée avec son bloc et son cas, celles des pages des blocs affichées à part et seulement si la suite est
-  rouge ; / viennent de  ; playwright@1.63.0 épinglé (workflow et CLAUDE.md). Éprouvé par
-  sabotage (clic sur un bouton absent,  faux, erreur JS pendant un cas, sur la page partagée et sur une page de
+  rouge ; `egal`/`vrai` viennent de `commun.mjs` ; playwright@1.63.0 épinglé (workflow et CLAUDE.md). Éprouvé par
+  sabotage (clic sur un bouton absent, `egal` faux, erreur JS pendant un cas, sur la page partagée et sur une page de
   bloc, erreur hors cas) : ligne, sélecteur, cas et captures ressortent. Suite : 927/927 ; le seul rouge du premier
   lancer était la ligne EN-COURS de ce chantier (accolades non comprises par le cas « chemins cités existants »).
 - **Non fait, à part** : les aides plus grosses recopiées (connexion enseignant x6 dans smoby, création de page avec
-  écouteurs x6, / par séance dans boost), les cas « aucune erreur » des blocs (gardés tels quels, ils jugent
+  écouteurs x6, `ouvrir`/`jalons` par séance dans boost), les cas « aucune erreur » des blocs (gardés tels quels, ils jugent
   toujours), et le point 2 des propositions du 09/10 (chaînes de cas sans remise à zéro dans boost : lot B).
