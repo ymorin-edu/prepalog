@@ -1215,6 +1215,76 @@ await v('série tableur : correction d\'un classeur déposé', async () => {
   fs.unlinkSync(rempli);
 });
 
+// ---------- 24 (suite). TAB-2 : des valeurs attendues écrites à la main
+// Les corrigés de TAB-2 sont calculés par `outils/tab2-exercices.mjs`, d'après les catalogues
+// des classeurs. Ce cas porte des valeurs recalculées ICI À LA MAIN (depuis les tableaux des
+// classeurs, pas depuis le générateur ni depuis le fichier commité) : si le générateur ou
+// une donnée dérive, c'est ici qu'on le voit. Il vérifie aussi que le modèle ne contient
+// aucune réponse dans les cellules contrôlées — pour les dix classeurs, pas pour un seul.
+await v('TAB-2 : valeurs attendues écrites à la main, et modèles sans réponse', async () => {
+  if (!baseXlsx) throw new Error('module xlsx introuvable — npm i -g xlsx@0.18.5');
+  const XLSX2 = await import(pathToFileURL(path.join(baseXlsx, 'xlsx.mjs')).href);
+  XLSX2.set_fs(fs);
+  const { EXERCICES: EX2 } = await import(pathToFileURL(path.join(ROOT, 'contenus/tab2-stocks.js')).href);
+
+  if (EX2.length !== 10) throw new Error(`${EX2.length} exercices au lieu de 10`);
+  const nombres = EX2.map((e) => e.controles.length).join(' ');
+  if (nombres !== '10 24 21 10 12 4 3 4 10 53') throw new Error('contrôles par exercice : ' + nombres);
+
+  const att = (id, cel, v) => {
+    const e = EX2.find((x) => x.id === id);
+    if (!e) throw new Error('exercice absent : ' + id);
+    const c = e.controles.find((x) => x.cellule === cel);
+    if (!c) throw new Error(`${id} : pas de contrôle en ${cel}`);
+    const ok = typeof v === 'number' ? Math.abs(c.attendu - v) < 1e-6 : c.attendu === v;
+    if (!ok) throw new Error(`${id} ${cel} : attendu ${v}, le générateur dit ${c.attendu}`);
+  };
+  // exs3 : prix lu dans le catalogue, puis quantité × prix, puis le total des dix lignes.
+  att('exs3', 'C4', 22.9);       // REF205
+  att('exs3', 'D4', 458);        // 20 × 22,90
+  att('exs3', 'D5', 510);        // 100 × 5,10 (509,99999999999994 en flottant : d'où la tolérance)
+  att('exs3', 'D6', 588);        // 60 × 9,80
+  att('exs3', 'D13', 5866);      // 750+480+458+510+588+690+680+510+600+600
+  // exs4 : trois références absentes du catalogue (REF399, REF320, REF350).
+  att('exs4', 'C3', 'Référence inconnue');
+  att('exs4', 'C4', 8);          // REF303
+  att('exs4', 'C6', 'Référence inconnue');
+  att('exs4', 'C10', 'Référence inconnue');
+  // exs5 : les seuils sont inclus (20 pour un critique de 20 = Urgent ; 40 pour 40 = À commander).
+  att('exs5', 'F2', 'Urgent');       // 5 pour 10
+  att('exs5', 'F4', 'OK');           // 30 pour 10 / 20
+  att('exs5', 'F8', 'Urgent');       // 20 pour 20 : la borne est incluse
+  att('exs5', 'F9', 'À commander');  // 40 pour 20 / 40 : la borne est incluse
+  att('exs5', 'F12', 'OK');          // 100 pour 50 / 80
+  att('exs5', 'F13', 'À commander'); // 80 pour 50 / 80
+  // exs6 à exs8 : l'agrégation du tableau croisé.
+  att('exs6', 'B25', 170); att('exs6', 'B26', 850); att('exs6', 'B27', 22); att('exs6', 'B28', 300);
+  att('exs7', 'B26', 3290); att('exs7', 'B27', 8100); att('exs7', 'B28', 1670);
+  att('exs8', 'B29', 5); att('exs8', 'B30', 7); att('exs8', 'B31', 4); att('exs8', 'B32', 8);
+  // exs2, exs9 : les textes lus dans le catalogue.
+  att('exs2', 'B2', 'Chaussures de sécurité');
+  att('exs2', 'D8', 'LogiMat');          // REF110, sangle d'arrimage
+  att('exs9', 'B2', 'B01-01');           // REF905
+  att('exs9', 'B6', 'D01-02');           // REF912
+  // exs10 : le cas combiné. Ici le test est « strictement inférieur » (qte < seuil).
+  att('exs10', 'H2', 'OK');              // 40 pour un seuil de 20
+  att('exs10', 'H3', 'À commander');     // 15 pour un seuil de 30
+  att('exs10', 'G6', 126.4);             // 8 × 15,80
+  att('exs10', 'B15', 1688);             // 500 + 63 + 1125
+  att('exs10', 'B16', 981.4);            // 360 + 126,4 + 495
+  att('exs10', 'B17', 4270);             // 1050 + 1068 + 912 + 1240
+
+  // Les dix modèles : onglet « Exercice » présent, et aucune réponse déjà posée.
+  for (const e of EX2) {
+    const cl = XLSX2.read(fs.readFileSync(path.join(ROOT, 'contenus/tab2/', e.fichier)));
+    const f = cl.Sheets['Exercice'];
+    if (!f) throw new Error(`${e.id} : le classeur n'a pas d'onglet « Exercice »`);
+    e.controles.forEach((c) => {
+      if (f[c.cellule]) throw new Error(`${e.id} : le modèle contient déjà une réponse en ${c.cellule}`);
+    });
+  }
+});
+
 // ---------- 24 bis. TAB-1 : les treize étapes, dont deux sans correction automatique
 // La migration du module C-1 de la Suite. Deux choses à prouver : les contrôles générés
 // tombent bien sur les cellules de réponse des classeurs repris (sinon toute la série est

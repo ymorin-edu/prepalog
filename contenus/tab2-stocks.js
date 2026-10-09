@@ -1,11 +1,20 @@
-// TAB-2 — Excel, gestion des stocks : les dix exercices et leurs corrigés.
+// TAB-2 — Excel, gestion des stocks : les 10 exercices et leurs corrigés.
 //
-// Généré depuis la Suite Logistique (module C-2) : les valeurs attendues sont calculées
-// à partir des mêmes catalogues et des mêmes tolérances que dans l'application d'origine.
-// 10 exercices, 151 contrôles. Les classeurs modèles sont dans contenus/tab2/.
+// ⚠️ FICHIER GÉNÉRÉ — ne pas modifier à la main.
+// Source : outils/tab2-exercices.mjs, à relancer après toute modification :
+//     node outils/tab2-exercices.mjs
 //
-// Le champ `niveaux` est propre à chaque exercice : un élève ne voit que ceux de son
-// niveau de classe. Modifier une ligne suffit à déplacer un exercice d'un niveau à l'autre.
+// Repris de la Suite Logistique (module C-2). 151 contrôles sur 10 exercices,
+// tous corrigés automatiquement. Les classeurs modèles sont dans contenus/tab2/, l'onglet
+// « Correction » de la Suite leur ayant été retiré (voir outils/modeles-sans-corrige.py).
+//
+// Les valeurs attendues portent toutes leurs décimales : la Suite comparait au produit
+// brut, sans arrondi intermédiaire, et les tolérances (0,02 sur un prix, 0,05 sur une valeur,
+// 0,1 sur un total, 0,5 sur un total de TCD) sont les siennes.
+//
+// Le champ `niveaux` est propre à chaque exercice : absent, l'exercice est ouvert à tous les
+// niveaux (c'est le cas des dix). Ajouter `niveaux` à l'exercice dans le générateur suffit à
+// le restreindre.
 
 export const EXERCICES = [
   {
