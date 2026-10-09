@@ -8,6 +8,14 @@
 
 export default async function bloc({ v, page, nav, ok, ko, BASE }) {
 
+// Attentes sur l'ÉCRAN plutôt que sur une durée (chantier 13, 09/10/2026). Le plafond de 4 s n'échoue pas ici :
+// l'assertion qui suit lit l'écran et donne le vrai message, pas un « timeout » muet. Restent en `waitForTimeout`
+// les pauses qui laissent finir un geste à la souris ou un redessin dont aucun signal n'est lisible, et les cas qui
+// vérifient qu'un texte NE vient PAS (on ne peut pas attendre une absence).
+const vuNav = (p, hote, vue) => p.waitForSelector(`${hote} .ent-nav.on[data-vue="${vue}"]`, { timeout: 4000 }).catch(() => {});
+const vuTexte = (p, sel, re) => p.waitForFunction(([s, r]) => new RegExp(r).test((document.querySelector(s) || {}).textContent || ''),
+  [sel, re.source], { timeout: 4000 }).catch(() => {});
+
 /* ===================================================================================== */
 /* ENT-3.1 — Boost, la tournée du vélo-cargo (lot 2 : le CONTENU)                         */
 /*                                                                                        */
@@ -51,7 +59,7 @@ await pageBo.evaluate(async () => {
 const zBo = '#boost31 .ent-main';
 const ouvrirBo = async (vue) => {
   await pageBo.click(`#boost31 .ent-nav[data-vue="${vue}"]`);
-  await pageBo.waitForTimeout(140);
+  await vuNav(pageBo, '#boost31', vue);
 };
 // L'état de la séance, lu dans la base de l'élève. La clé est `transportId`, pas l'identifiant
 // de l'activité : c'est elle que les jalons du contenu interrogent.
@@ -356,7 +364,7 @@ await v('ENT-3.1 : le mail du responsable porte la fiche des sept commandes', as
 
 await v('ENT-3.1 : l’écran Clients donne l’adresse mais jamais le quartier', async () => {
   await ouvrirBo('clients');
-  await pageBo.waitForTimeout(140);
+  await vuTexte(pageBo, zBo, /Comptoir des Halles/);
   const t = await pageBo.textContent(zBo);
   if (!/Comptoir des Halles/.test(t)) throw new Error('les sept commerces ne sont pas référencés');
   if (!/Mascard/.test(t)) throw new Error('l’adresse n’est pas donnée');
@@ -434,7 +442,7 @@ await v('ENT-3.1 : les sept cases justes ouvrent la tournée et valident le jalo
   }
   await choisirQuartiersBo(zBo);
   await pageBo.click(`${zBo} [data-plan-valider]`);
-  await pageBo.waitForTimeout(160);
+  await vuTexte(pageBo, zBo, /Les 7 points sont bien situés/);
   const t = await pageBo.textContent(zBo);
   if (!/Les 7 points sont bien situés/.test(t)) throw new Error('les cases du test ne tombent pas d’accord avec le noyau : ' + t.slice(0, 400));
   const e = await etatBo('plan');
@@ -609,7 +617,7 @@ await v('ENT-3.1 : une tournée qui ne tient pas refuse le report des résultats
     await pageBo.fill(`${zBo} [data-report="${id}"]`, val);
   }
   await pageBo.click(`${zBo} [data-tour-valider]`);
-  await pageBo.waitForTimeout(180);
+  await vuTexte(pageBo, zBo, /ne tient pas encore/);
   const t = await texteBo();
   if (!/ne tient pas encore/.test(t)) throw new Error('le report est accepté malgré le train manqué : ' + t.slice(-500));
   // Le refus dit ce qui ne va pas, sans dire de combien — même raison que la jauge : « manqué
@@ -765,7 +773,7 @@ await v('ENT-3.1 : les formules justes sont acceptées, et le résultat s’affi
   if (res !== '179|0,99|59,5|36|14 h 00|15 h 36') throw new Error('résultats affichés : ' + res);
 
   await pageBo.click(`${zBo} [data-gr-verifier]`);
-  await pageBo.waitForTimeout(200);
+  await vuTexte(pageBo, zBo, /Toutes les formules sont justes/);
   const t = await texteBo();
   if (!/Toutes les formules sont justes/.test(t)) throw new Error('les formules ne sont pas acceptées : ' + t.slice(-400));
   const justes = await pageBo.$$eval(`${zBo} td.gr-saisie.juste`, (e) => e.length);
@@ -802,7 +810,7 @@ await v('ENT-3.1 : un nombre tapé à la main est refusé, même quand il est ju
   // Et une formule mal écrite est signalée comme telle, pas comme un résultat faux.
   await taperBo('B8', '=SOMM(B2:B7)');
   await pageBo.click(`${zBo} [data-gr-verifier]`);
-  await pageBo.waitForTimeout(200);
+  await vuTexte(pageBo, zBo, /formule mal écrite/i);
   t = await texteBo();
   if (!/formule mal écrite/i.test(t)) throw new Error('une fonction inconnue n’est pas signalée : ' + t.slice(-400));
 
@@ -867,7 +875,7 @@ await v('feuille de calcul : désigner une cellule à la souris écrit sa réfé
   if (await val() !== '=SOMME(B2:B7') throw new Error('clic glissé : ' + await val());
   // Et la plage obtenue est la bonne : refermée, elle vaut les 179 kg des six commandes.
   await pageBo.keyboard.type(')');
-  await pageBo.waitForTimeout(140);
+  await pageBo.waitForFunction((z) => (document.querySelector(`${z} [data-gr-res="B8"]`) || {}).textContent?.trim() === '179', zBo, { timeout: 4000 }).catch(() => {});
   const res = await pageBo.textContent(`${zBo} [data-gr-res="B8"]`);
   if (res.trim() !== '179') throw new Error('la plage désignée ne vaut pas 179 : ' + res);
 
@@ -1021,7 +1029,7 @@ await v('ENT-3.1 : oublier la gare ne doit pas devenir une façon d’attraper l
     await pageBo.fill(`${zBo} [data-report="${id}"]`, val);
   }
   await pageBo.click(`${zBo} [data-tour-valider]`);
-  await pageBo.waitForTimeout(200);
+  await vuTexte(pageBo, zBo, /ne tient pas encore/);
   const t = await texteBo();
   if (!/ne tient pas encore/.test(t)) throw new Error('le report est accepté avec une chaîne incomplète : ' + t.slice(-400));
   if (!/arrivée n’est pas placée/.test(t)) throw new Error('le refus ne dit pas ce qui manque : ' + t.slice(-400));
@@ -1170,7 +1178,7 @@ await v('ENT-3.1 : des formules justes avec une tournée qui ne tient pas — le
   // tournée qui ne passe pas. Les adresses suivent : sept arrêts, donc le total tombe en B9.
   await poserGrille(SEPT, [], FORM7);
   await pageBo.click(`${zBo} [data-gr-verifier]`);
-  await pageBo.waitForTimeout(220);
+  await vuTexte(pageBo, zBo, /Toutes les formules sont justes/);
   const t = await texteBo();
   if (!/Toutes les formules sont justes/.test(t)) throw new Error('les formules sept arrêts ne sont pas acceptées : ' + t.slice(-500));
   const justes = await pageBo.$$eval(`${zBo} td.gr-saisie.juste`, (e) => e.length);
@@ -1208,7 +1216,7 @@ await v('ENT-3.1 : des formules justes avec une tournée qui ne tient pas — le
 await v('ENT-3.1 : une tournée qui tient et des formules justes — la contrainte est verte, sans message d’alerte', async () => {
   await poserGrille(SIX, ['c3'], FORM6);
   await pageBo.click(`${zBo} [data-gr-verifier]`);
-  await pageBo.waitForTimeout(220);
+  await vuTexte(pageBo, zBo, /Toutes les formules sont justes/);
   const t = await texteBo();
   if (!/Toutes les formules sont justes/.test(t)) throw new Error('formules six arrêts : ' + t.slice(-400));
   const trop = await pageBo.$$eval(`${zBo} .gr-droite .tour-jauge.trop`, (e) => e.length);
@@ -1227,7 +1235,7 @@ await v('ENT-3.1 : l’heure de départ se tape « 14h00 » ou « 14:00 », et �
   // SEULE — l'heure d'arrivée, calculée depuis un 14, est fausse elle aussi, ce qui est normal.
   if (!/E9/.test(faux)) throw new Error('« 14 » est accepté comme heure de départ : ' + faux);
   await taperBo('E9', '14h00');
-  await pageBo.waitForTimeout(60);
+  await pageBo.waitForFunction((z) => (document.querySelector(`${z} [data-gr-res="E10"]`) || {}).textContent?.trim() === '15 h 36', zBo, { timeout: 4000 }).catch(() => {});
   const res = await pageBo.textContent(`${zBo} [data-gr-res="E10"]`);
   if (res.trim() !== '15 h 36') throw new Error('« 14h00 » ne donne pas 15 h 36 : ' + res);
   await pageBo.click(`${zBo} [data-gr-verifier]`);
@@ -1345,7 +1353,7 @@ await v('ENT-3.1 : le mode hors connexion donne le quartier, et le suivi garde l
   });
   const z2 = '#boost31b .ent-main';
   await pageBo.click('#boost31b .ent-nav[data-vue="plan"]');
-  await pageBo.waitForTimeout(140);
+  await vuNav(pageBo, '#boost31b', 'plan');
   // Il n'est PAS proposé dans la vue, et il n'y est pas non plus annoncé : un élève bloqué
   // demande à son enseignant, qui sait si les postes de la salle laissent passer les plans
   // en ligne. C'est tout l'objet du déplacement du 03/10.
@@ -1355,7 +1363,7 @@ await v('ENT-3.1 : le mode hors connexion donne le quartier, et le suivi garde l
   const vu = await pageBo.textContent(z2);
   if (/hors connexion/i.test(vu)) throw new Error('la vue annonce le mode hors connexion : ' + vu.slice(0, 200));
   await pageBo.click('#boost31b [data-hors-connexion]');
-  await pageBo.waitForTimeout(140);
+  await pageBo.waitForSelector(`${z2} .plan-quartier:disabled`, { timeout: 4000 }).catch(() => {});
   // Les menus sont remplis ET verrouillés : le filet donne le quartier, pas la case.
   const zones = await pageBo.$$eval(`${z2} .plan-quartier`, (e) => e.map((x) => x.value + (x.disabled ? '' : '!')));
   if (zones.join('|') !== ['Écusson', 'Jardins de la Fontaine', 'Ville Active', 'Saint-Césaire', 'Croix de Fer', 'Gambetta', 'Costières'].join('|')) {
@@ -1394,7 +1402,7 @@ await v('ENT-3.1 : la porte de sortie débloque sans valider, et le jalon ne men
   if (!e.force) throw new Error('le recours à la porte de sortie n’est pas enregistré');
   // La suite s'ouvre quand même : personne ne reste coincé sur une case.
   await pageBo.click('#boost31b .ent-nav[data-vue="tournee"]');
-  await pageBo.waitForTimeout(160);
+  await vuNav(pageBo, '#boost31b', 'tournee');
   // La tournée s'ouvre — vide, puisque le vélo-cargo part à quai. C'est la liste des commandes
   // à charger qui prouve que l'écran est bien là.
   if (!(await pageBo.$$eval(`${z2} .tour-liste-quai .tour-item`, (e2) => e2.length))) {
@@ -1426,13 +1434,13 @@ await v('ENT-3.1 : une case tolérée laisse avancer, mais ne donne pas le point
   });
   const z3 = '#boost31c .ent-main';
   await pageBo.click('#boost31c .ent-nav[data-vue="plan"]');
-  await pageBo.waitForTimeout(140);
+  await vuNav(pageBo, '#boost31c', 'plan');
   for (const [id, c] of Object.entries(CASES31)) {
     await pageBo.fill(`${z3} .plan-case[data-case="${id}"]`, id === 'c5' ? 'A1' : c);
   }
   await choisirQuartiersBo(z3);
   await pageBo.click(`${z3} [data-plan-valider]`);
-  await pageBo.waitForTimeout(160);
+  await vuTexte(pageBo, z3, /vous pouvez continuer/);
   const t = await pageBo.textContent(z3);
   if (!/vous pouvez continuer/.test(t)) throw new Error('la tolérance ne joue pas : ' + t.slice(0, 300));
   if (!/Repérage validé/.test(t)) throw new Error('le repérage n’est pas validé malgré la tolérance');
@@ -1550,7 +1558,7 @@ await page32.evaluate(async () => {
   window.__b32 = { act, db, suivi, hote };
 });
 const z32 = '#boost32 .ent-main';
-const ouvrir32 = async (vue) => { await page32.click(`#boost32 .ent-nav[data-vue="${vue}"]`); await page32.waitForTimeout(140); };
+const ouvrir32 = async (vue) => { await page32.click(`#boost32 .ent-nav[data-vue="${vue}"]`); await vuNav(page32, '#boost32', vue); };
 const etat32 = (vue) => page32.evaluate((v) => {
   const t = window.__b32.db.transport && window.__b32.db.transport['boost-ent32'];
   return t ? JSON.parse(JSON.stringify(t[v] || {})) : null;
@@ -2041,7 +2049,7 @@ await v('ENT-3.2 : l’optimum de la phase 2 est recalculé par le contenu (720 
 await v('ENT-3.2 : « Recommencer » remet la tournée de l’arrivée du message, pas une tournée vide', async () => {
   await construire32p2(OPT2_32);
   const sel = `${z32} [data-tour-raz]`;
-  await page32.click(sel); await page32.waitForTimeout(80);
+  await page32.click(sel); await vuTexte(page32, sel, /arrivée du message/);
   if (!/arrivée du message/.test(await page32.textContent(sel))) throw new Error('le bouton armé ne dit pas ce qu’il remet');
   await page32.click(sel); await page32.waitForTimeout(120);
   const t = await etat32('tournee');
@@ -2421,7 +2429,7 @@ const monter33 = (garder) => page33.evaluate(async (garder) => {
 }, garder);
 await monter33(false);
 const z33 = '#boost33 .ent-main';
-const ouvrir33 = async (vue) => { await page33.click(`#boost33 .ent-nav[data-vue="${vue}"]`); await page33.waitForTimeout(140); };
+const ouvrir33 = async (vue) => { await page33.click(`#boost33 .ent-nav[data-vue="${vue}"]`); await vuNav(page33, '#boost33', vue); };
 const tournee33 = () => page33.evaluate(() => {
   const t = window.__b33.db.transport && window.__b33.db.transport['boost-ent33'];
   return t && t.tournee ? JSON.parse(JSON.stringify(t.tournee)) : null;
@@ -2684,7 +2692,7 @@ await v('ENT-3.3 : temps 2 — la plage se désigne à la souris depuis la barre
 await v('ENT-3.3 : temps 2 — la carte se clique ; « Retrouver la tournée d’Inès » la remet, pastille 2 au gris', async () => {
   await immobile33();
   await page33.click(`${z33} [data-clic-point="c6"]`, { force: true });   // retire la Pâtisserie
-  await page33.waitForTimeout(100);
+  await page33.waitForFunction(() => !window.__b33.db.transport['boost-ent33'].tournee.ordre.includes('c6'), null, { timeout: 4000 }).catch(() => {});
   if ((await tournee33()).ordre.includes('c6')) throw new Error('le clic n’a pas retiré la Pâtisserie');
   if (!(await etapes33())[1].fait) throw new Error('modifiée, la pastille 2 reste grise');
   const sel = '#boost33 [data-tour-raz]';
