@@ -5,6 +5,7 @@
 // d'un coup d'œil. Ce n'est pas de l'inviolabilité — l'usage reste formatif.
 
 import { ech, toast } from '../ui.js';
+import { melangerListe } from '../tirage.js';
 
 // Empreinte FNV-1a, suffisante pour masquer une réponse dans un contexte formatif.
 export function empreinte(s) {
@@ -30,7 +31,7 @@ export function sceller(questions) {
 export function creerQCM({ questions, melanger = true }) {
   return {
     rendre(hote, ctx) {
-      const ordre = melanger ? [...questions].sort(() => Math.random() - 0.5) : questions;
+      const ordre = melanger ? melangerListe(questions) : questions;
       hote.dataset.ordre = ordre.map((q) => q.id).join(',');
 
       hote.innerHTML = `

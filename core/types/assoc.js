@@ -4,6 +4,7 @@
 // les deux mènent au même résultat. Une étiquette mal placée se reprend.
 
 import { ech, toast } from '../ui.js';
+import { melangerListe } from '../tirage.js';
 
 export function creerAssoc({ consigne, categories, etiquettes, melanger = true }) {
   return {
@@ -16,7 +17,7 @@ export function creerAssoc({ consigne, categories, etiquettes, melanger = true }
 
       const enReserve = () => {
         const l = etiquettes.filter((e) => placement[e.id] === null);
-        return melanger && !corrige ? l.sort(() => Math.random() - 0.5) : l;
+        return melanger && !corrige ? melangerListe(l) : l;
       };
       const dansCategorie = (cid) => etiquettes.filter((e) => placement[e.id] === cid);
 

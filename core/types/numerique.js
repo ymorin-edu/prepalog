@@ -7,6 +7,7 @@
 // La saisie accepte la virgule française et les espaces des milliers.
 
 import { ech, toast } from '../ui.js';
+import { melangerListe } from '../tirage.js';
 
 // `normaliser` et `estJuste` vivent dans `classeur.js` (sans écran) depuis le 04/10/2026.
 import { normaliser, estJuste } from './classeur.js';
@@ -17,7 +18,7 @@ const fr = (n) => new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 4 }).f
 export function creerNumerique({ questions, consigne, melanger = false }) {
   return {
     rendre(hote, ctx) {
-      const liste = melanger ? [...questions].sort(() => Math.random() - 0.5) : questions;
+      const liste = melanger ? melangerListe(questions) : questions;
       let corrige = null;
 
       function dessiner() {

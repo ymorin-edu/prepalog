@@ -25,6 +25,17 @@ export function empreinte(texte) {
   return h >>> 0;
 }
 
+// Un mélange NON biaisé (Fisher-Yates) : rend une copie, ne touche pas à `liste`. Sans second argument, le
+// hasard est celui du navigateur (`Math.random`) : un ordre différent à chaque appel, pour les vues qui
+// mélangent sans graine (QCM, associer, numérique). Avec `reel` (le tirage d'une graine, voir `hasard`),
+// l'ordre est une fonction de la graine. Ne JAMAIS mélanger par un `sort` à comparateur aléatoire : cet ordre
+// est biaisé (les premiers éléments restent trop souvent en tête).
+export function melangerListe(liste, reel = Math.random) {
+  const L = liste.slice();
+  for (let i = L.length - 1; i > 0; i--) { const j = Math.floor(reel() * (i + 1)); [L[i], L[j]] = [L[j], L[i]]; }
+  return L;
+}
+
 // Un générateur pseudo-aléatoire (mulberry32) et ses outils, à partir d'une graine texte.
 export function hasard(graine) {
   let a = empreinte(graine) || 1;
@@ -36,11 +47,7 @@ export function hasard(graine) {
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
   const entier = (min, max) => min + Math.floor(reel() * (max - min + 1));
-  const melanger = (liste) => {
-    const L = liste.slice();
-    for (let i = L.length - 1; i > 0; i--) { const j = Math.floor(reel() * (i + 1)); [L[i], L[j]] = [L[j], L[i]]; }
-    return L;
-  };
+  const melanger = (liste) => melangerListe(liste, reel);
   return {
     reel, entier, melanger,
     choisir: (liste) => liste[Math.floor(reel() * liste.length)],

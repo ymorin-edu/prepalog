@@ -793,4 +793,36 @@ await v('charte : les trois blocs de variables de base.css (clair, sombre, sombr
   if (manques.length) throw new Error(manques.join(' ; '));
 });
 
+
+// ---------- 42. un seul mélange, non biaisé (chantier 14, 09/10/2026)
+// `sort(() => Math.random() - 0.5)` est biaisé sur quatre éléments (mesuré le 09/10/2026, 20 000 tirages) :
+// dans Node, A en tête 36 % et B 14 % ; dans Chromium, A 32 %, B 32 %, D 15 %. Le Fisher-Yates de
+// `core/tirage.js` donne ~25 % partout. Fourchette écrite à la main : 20 000 tirages, écart-type 0,3 point, donc
+// 22–28 % (dix écarts-types) ne tombe jamais par hasard, et le biais ancien en sort dans les deux moteurs
+// (avec 2 000 tirages et 20–30 %, le sabotage ne tombait que deux fois sur trois).
+await v('mélange : chaque élément arrive en tête entre 22 % et 28 % des fois (20 000 tirages de 4), la liste de départ reste intacte', async () => {
+  const r = await page.evaluate(async () => {
+    const { melangerListe } = await import('/core/tirage.js');
+    const dep = ['A', 'B', 'C', 'D'];
+    const tete = { A: 0, B: 0, C: 0, D: 0 };
+    for (let i = 0; i < 20000; i++) tete[melangerListe(dep)[0]]++;
+    return { tete, dep };
+  });
+  const hors = Object.entries(r.tete).filter(([, n]) => n < 4400 || n > 5600).map(([k, n]) => `${k} ${n / 200} %`);
+  if (hors.length) throw new Error('mélange biaisé : ' + hors.join(', ') + ' en tête sur 20000 tirages');
+  if (r.dep.join('') !== 'ABCD') throw new Error('la liste de départ a été modifiée : ' + r.dep.join(''));
+});
+
+await v('mélange : plus aucune vue ne mélange par `sort(() => Math.random() - 0.5)`', async () => {
+  const dossier = path.join(ROOT, 'core');
+  const fautifs = [];
+  const lire = (d) => fs.readdirSync(d, { withFileTypes: true }).forEach((f) => {
+    const c = path.join(d, f.name);
+    if (f.isDirectory()) lire(c);
+    else if (f.name.endsWith('.js') && /Math\.random\(\)\s*-\s*0\.5/.test(fs.readFileSync(c, 'utf8'))) fautifs.push(path.relative(ROOT, c));
+  });
+  lire(dossier);
+  if (fautifs.length) throw new Error('mélange biaisé dans : ' + fautifs.join(', ') + ' (utiliser melangerListe de core/tirage.js)');
+});
+
 }
