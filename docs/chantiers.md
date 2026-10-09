@@ -38,7 +38,7 @@
 | 15 | Couleurs en dur et `base.css` fourre-tout | C12 | petit à moyen | Sonnet | `styles/` + vues | — | **livré** (09/10, 6e52000 à fe50e77) |
 | 16 | Champs `meta`, portées et options morts | C14 | petit | Sonnet | oui | décision 14 (cœur) | **livré** (09/10, 77fc170 à 4003e49) ; règles à publier dans la console |
 | 17 | Contenus orphelins, trames Smoby à déclarer, commentaires périmés | C16 | petit | Sonnet | non | — | **livré** (09/10, e0bb05e à 2cda9cb) ; Smoby déclaré le 09/10 (17 bis, 9dbfa00, 9d5c144) ; reste : `tab2-stocks.js` (décision de Tristan), la mention TechPro de `core/types/entreprise.js:103` (suivi moteur) et le corrigé de trame d'ENT-5.3 (non branché, décision de Tristan) |
-| 18 | Deux sessions à la fois : port, `git grep`, `EN-COURS` | C17 | petit | Sonnet | non (`commun.mjs`) | — | à faire |
+| 18 | Deux sessions à la fois : port, `git grep`, `EN-COURS` | C17 | petit | Sonnet | non (`commun.mjs`) | — | **livré** (09/10, 9310e5e à 197c9ba) |
 | 19 | Reliquats SCE / Spartoo : acter la règle | C15 | petit | Sonnet | non | 9 | à décider |
 | 20 | Stratelog | C19 | ? | Opus | ? | 10 | à cadrer |
 
@@ -411,6 +411,7 @@ s'aligner.
   les consignes ; `EN-COURS.md` relu par un test léger (fichiers inscrits ↔ `git status`).
   **Touche `commun.mjs` : à dire.**
 - **Fini quand.** Deux suites lancées en même temps passent toutes les deux.
+- **Livré le 09/10/2026** (suite 926/926) : port libre trouvé et annoncé quand 8099 est pris ; dossier temporaire propre à chaque suite (les classeurs de `socle.mjs` ne s'écrasent plus) ; cas « EN-COURS.md » dans `dependances.mjs` ; consigne `git grep` dans `CLAUDE.md`. Deux suites en parallèle (`dependances socle` x2, puis `boost` et `cdiscount`) passent. **Ce qui reste** : `.claude/worktrees/` n'est ignoré que par `.git/info/exclude` (local ; un `.gitignore` partagé serait plus sûr, hors de ce chantier) ; `test-seances.mjs` (`PORT_SEANCES`) garde son port fixe ; le test EN-COURS ne vérifie pas que la ligne d'une session est effacée une fois son travail poussé.
 
 ### 19. Reliquats SCE / Spartoo (C15)
 - **À décider par Tristan** : la règle « Spartoo tel quel » est-elle maintenue après la refonte du
