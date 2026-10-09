@@ -64,6 +64,16 @@ export const FICHE = [
   { id: 'N5', compte: 30, temp: -19.2, decision: 'Acceptée', remarque: '' },
 ];
 
+// Les chiffres attendus dans les jalons et leurs libellés viennent des données ci-dessus (palettes et fiche), jamais
+// recopiés : changer une palette ou la fiche change le jalon ET le texte qui le décrit.
+const palette = (id) => PALETTES_ENT43.find((p) => p.id === id);
+const reelles = (p) => p.W * p.D * p.L - p.manque.length;          // cartons réellement présents
+const N1 = palette('N1'), N3 = palette('N3');
+const N3_MANQUANT = N3.bl - reelles(N3);                            // 3 : écart entre le BL et le comptage
+const TEMP_FICHE_N2 = FICHE.find((f) => f.id === 'N2').temp;        // −14 °C : ce que Mathis a écrit
+const SEUIL_CONFORME = -15;                                         // surgelé : à −15 °C ou plus froid à cœur
+const degres = (t) => `${t < 0 ? '−' : ''}${String(Math.abs(t)).replace('.', ',')} °C`;
+
 // Les lignes des deux messages (brief §11 : écrites par Claude Code, à relire par Tristan en jouant).
 export const LIGNES_DIAG = { palette: 'Palette acceptée à tort :', preuve: 'Preuve :', manquant: 'Manquant :', reserve: 'Réserve :', delai: 'Délai :' };
 export const LIGNES_PROT = { bl: 'BL :', date: 'Réceptionné le :', palette: 'Palette :', constat: 'Constat :', quantite: 'Quantité :' };
@@ -118,7 +128,7 @@ export const palettesCitees = (l) => [...new Set((String(l || '').match(/\bn\s?[
 const sansPalettes = (l) => String(l || '').replace(/\bn\s?[1-5]\b/gi, ' ');
 const seules = (l, ids) => JSON.stringify(palettesCitees(l)) === JSON.stringify([...ids].sort());
 // La quantité manquante : 3, ou « 37 au lieu de 40 ».
-const quantiteJuste = (l) => { const n = nombres(sansPalettes(l)); return n.includes(3) || (n.includes(37) && n.includes(40)); };
+const quantiteJuste = (l) => { const n = nombres(sansPalettes(l)); return n.includes(N3_MANQUANT) || (n.includes(reelles(N3)) && n.includes(N3.bl)); };
 const SANS_VALEUR = /\brien\b|aucun|sans valeur|ne vaut|vaut rien|ne sert|sert a rien|inutile|pas valable|invalide|\bnul|ne protege|protege de rien|pas une reserve|pas de valeur|pas de reserve/;
 const DANS_DELAI = /dans (le|les) delai|encore|a temps|possible|\breste|\boui\b|\bok\b/;
 const HORS_DELAI = /trop tard|depass|hors (du )?delai|plus possible|impossible|pas dans|plus le temps|\bnon\b/;
@@ -148,7 +158,7 @@ export function jalonsDiagnostic(db) {
   const M = envoyes(db || {}, CHEF), L = LIGNES_DIAG, rien = 'aucun diagnostic envoyé au chef de quai';
   const n2 = surMessages(M, (t) => {
     const pal = lire(t, L.palette), pr = lire(t, L.preuve);
-    const okPr = pr != null && (nombres(sansPalettes(pr)).includes(14) || /fiche/.test(pr));
+    const okPr = pr != null && (nombres(sansPalettes(pr)).includes(Math.abs(TEMP_FICHE_N2)) || /fiche/.test(pr));
     return { ok: seules(pal || '', ['N2']) && okPr, fait: `${montrer(lire(t, L.palette, true))} · preuve ${montrer(lire(t, L.preuve, true))}` };
   }, rien);
   const n3 = surMessages(M, (t) => {
@@ -169,13 +179,13 @@ export function jalonsDiagnostic(db) {
   const accuse = M.some((m) => [L.palette, L.manquant].some((i) => palettesCitees(lire(m.text, i)).includes('N1')));
   return [
     { id: 'diag-n2', lib: 'Diagnostic · N2 acceptée à tort, avec sa preuve', fait: n2.fait,
-      attendu: 'N2 (et elle seule), preuve : la fiche de Mathis dit −14 °C à cœur, au-dessus de −15 °C', ok: n2.ok },
-    { id: 'diag-n3', lib: 'Diagnostic · le manquant de N3 et sa quantité', fait: n3.fait, attendu: 'N3 : 3 cartons manquants (37 au lieu de 40)', ok: n3.ok },
+      attendu: `N2 (et elle seule), preuve : la fiche de Mathis dit ${degres(TEMP_FICHE_N2)} à cœur, au-dessus de ${degres(SEUIL_CONFORME)}`, ok: n2.ok },
+    { id: 'diag-n3', lib: 'Diagnostic · le manquant de N3 et sa quantité', fait: n3.fait, attendu: `N3 : ${N3_MANQUANT} cartons manquants (${reelles(N3)} au lieu de ${N3.bl})`, ok: n3.ok },
     { id: 'diag-deballage', lib: 'Diagnostic · la mention « sous réserve de déballage » ne vaut rien', fait: deb.fait,
       attendu: '« sous réserve de déballage » n’a aucune valeur : il faut une protestation motivée', ok: deb.ok },
     { id: 'diag-delai', lib: 'Diagnostic · le délai de protestation', fait: del.fait, attendu: 'encore dans le délai (3 jours après la réception de cette nuit)', ok: del.ok },
     { id: 'diag-n1', lib: 'Diagnostic · N1 n’est pas accusée (couche incomplète, mais conforme au BL)',
-      fait: !M.length ? rien : accuse ? 'N1 accusée' : 'N1 non accusée', attendu: 'N1 non accusée : 44 cartons, comme le BL', ok: M.length > 0 && !accuse },
+      fait: !M.length ? rien : accuse ? 'N1 accusée' : 'N1 non accusée', attendu: `N1 non accusée : ${reelles(N1)} cartons, comme le BL`, ok: M.length > 0 && !accuse },
   ];
 }
 
@@ -198,7 +208,7 @@ export function jalonsProtestation(db, e) {
     { id: 'prot-refs', lib: 'Protestation · le BL et la date de réception', fait: refs.fait, attendu: `BL ${BL}, réceptionné le ${jourLu}`, ok: refs.ok },
     { id: 'prot-palettes', lib: 'Protestation · les palettes en cause', fait: pal.fait, attendu: 'N2 et N3 (et elles seules)', ok: pal.ok },
     { id: 'prot-constat', lib: 'Protestation · le constat et la quantité', fait: cq.fait,
-      attendu: 'N2 : température non conforme à la réception (−14 °C à cœur) ; N3 : 3 cartons manquants', ok: cq.ok },
+      attendu: `N2 : température non conforme à la réception (${degres(TEMP_FICHE_N2)} à cœur) ; N3 : ${N3_MANQUANT} cartons manquants`, ok: cq.ok },
   ];
 }
 
