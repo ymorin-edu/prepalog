@@ -53,6 +53,7 @@
 
 // Pas d'import de `ui.js` : un corrigé de séance peut importer ce module hors du navigateur.
 import { ech, pad2 } from '../texte.js';
+import { noteProportionnelle } from '../notes.js';
 const cp = (o) => JSON.parse(JSON.stringify(o));
 const minutesDe = (hm) => { const [h, m] = String(hm || '00:00').split(':').map(Number); return h * 60 + (m || 0); };
 const hhmm = (m) => { m = ((Math.round(m) % 1440) + 1440) % 1440; return `${pad2(Math.floor(m / 60))}:${pad2(m % 60)}`; };
@@ -465,7 +466,7 @@ export function notePlanning(db, P) {
   const N = Object.assign({ sur: 20 }, P.note || {});
   const { L, ok, total } = jalonsPlanning(db, P);
   const e = (db && db.plannings && db.plannings[P.id]) || etatNeuf();
-  return { score: total ? Math.round(ok / total * N.sur * 100) / 100 : 0, max: N.sur, ok, total,
+  return { score: noteProportionnelle(ok, total, N.sur), max: N.sur, ok, total,
     detail: { jalons: L.map((l) => ({ version: l.version, jalon: l.lib, ok: l.ok })),
       verifs: e.verifs || 0, premierGeste: e.premierGeste || null, envois: e.envois || [] } };
 }

@@ -339,6 +339,20 @@ await v('note sur 20 : la conversion et ses cas de bord', async () => {
   }
 });
 
+// ---------- 11 bis bis. la note d'une séance de jalons : jalons réussis ÷ jalons × barème, au centième
+// (chantier 14, 09/10/2026 : une seule écriture pour le Planning et le Plan d'entrepôt ; avant, ni l'un ni
+// l'autre des tests ne portait de note à décimales, donc l'arrondi pouvait changer sans que rien ne tombe.)
+// Valeurs écrites à la main.
+await v('note de jalons : proportion × barème arrondie au centième, 0 sans jalon', async () => {
+  const { noteProportionnelle } = await import(pathToFileURL(path.join(ROOT, 'core/notes.js')).href);
+  const cas = [[[1, 3, 20], 6.67], [[2, 3, 20], 13.33], [[7, 10, 14], 9.8], [[1, 7, 20], 2.86], [[10, 10, 20], 20],
+    [[0, 10, 20], 0], [[3, 4, 10], 7.5], [[5, 6], 16.67], [[0, 0, 20], 0]];
+  cas.forEach(([args, attendu]) => {
+    const got = noteProportionnelle(...args);
+    if (got !== attendu) throw new Error(`noteProportionnelle(${args.join(', ')}) = ${got}, attendu ${attendu}`);
+  });
+});
+
 // ---------- 11 ter. notes par compétence (chantier du 02/10/2026)
 //
 // Trois blocs : la règle de calcul à l'unité (valeurs écrites à la main, pas recalculées par

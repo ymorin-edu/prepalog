@@ -85,6 +85,7 @@
 // Le mode VISITE (second chantier, 05/10/2026) vit dans son propre fichier : voir sa tête.
 import { compilerVisite, jalonsVisite, detailVisite, creerVisite, etatVisiteNeuf } from './entrepot-visite.js';
 import { ech, pad2 } from '../texte.js';
+import { noteProportionnelle } from '../notes.js';
 const nb = (n) => Number(n).toLocaleString('fr-FR');
 const kg = (n) => `${nb(n)} kg`;
 
@@ -533,7 +534,7 @@ export function noteEntrepot(db, P, temps = P.temps) {
   const N = Object.assign({ sur: 20 }, P.note || {});
   const { L, ok, total } = jalonsEntrepot(db, P, temps);
   const e = etatDe(db, P);
-  const score = total ? Math.round(ok / total * N.sur * 100) / 100 : 0;
+  const score = noteProportionnelle(ok, total, N.sur);
   if (compiler(P).mode === 'visite') {
     return { score, max: N.sur, ok, total, detail: { jalons: L.map((l) => ({ jalon: l.lib, ok: l.ok })), visite: detailVisite(compiler(P), e) } };
   }
