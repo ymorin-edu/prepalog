@@ -258,6 +258,8 @@ Tristan peut avoir deux conversations Claude Code ouvertes sur le dépôt. **Ava
 fait, ou inscrit là, **s'arrêter et le dire** (ne pas écraser, ne pas deviner). Sinon, s'inscrire (une
 ligne, commitée et poussée aussitôt), et **s'effacer** une fois le travail commité et poussé. Ne jamais
 commiter les fichiers d'une autre session : `git add` par nom, uniquement les siens.
+Chercher dans le dépôt avec `git grep`, jamais `grep -r` : `.claude/worktrees/` contient des copies du
+dépôt qui faussent tout balayage.
 
 ## Alertes — à signaler à Tristan quand elles se présentent
 
