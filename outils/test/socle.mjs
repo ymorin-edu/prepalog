@@ -227,15 +227,35 @@ await v('QCM autocorrigé et enregistrement du score', async () => {
   await page.waitForSelector('#bilan .avis', { timeout: 6000 });
 });
 
-// ---------- 10. le corrigé n'est pas en clair dans la page
-await v('corrigé non lisible en clair', async () => {
-  const src = await page.content();
-  if (src.includes('Une commande réelle du client') === false) throw new Error('énoncé absent, test invalide');
-  const mod = await page.evaluate(async () => {
-    const m = await import('/activites/quiz-flux.js');
-    return JSON.stringify(m);
-  });
-  if (/justes["']?\s*:\s*\[\s*["']Une commande/.test(mod)) throw new Error('réponse en clair dans le module');
+// ---------- 10. avant validation, l'écran n'indique aucune bonne réponse
+// Réécrit le 09/10/2026 (chantier 13). L'ancien cas « corrigé non lisible en clair » regardait le module
+// `quiz-flux.js` par `JSON.stringify` : un module n'a pas de propriétés énumérables à ce niveau, la chaîne
+// était toujours `{}` et l'assertion ne pouvait pas tomber. Et le corrigé n'a pas à être illisible
+// (outil formatif, les empreintes de `qcm.js` ne sont qu'un masque). Ce que le moteur promet, c'est que la
+// correction n'apparaît qu'APRÈS « Valider » : on rouvre le quiz et on regarde l'écran avant de valider.
+await v('QCM : avant « Valider », aucune bonne réponse ni explication à l’écran', async () => {
+  await page.click('#btnRetour');                 // de l'activité à la rubrique : sa tuile est là
+  await page.waitForSelector('[data-act="quiz-flux"]', { timeout: 6000 });
+  await page.click('[data-act="quiz-flux"]');
+  await page.waitForSelector('#btnValider', { timeout: 6000 });
+  const ecran = await page.evaluate(() => ({
+    questions: document.querySelectorAll('.question').length,
+    retours: [...document.querySelectorAll('[data-retour]')].map((z) => z.textContent.trim()).filter(Boolean),
+    marques: document.querySelectorAll('.question .juste, .question .faux, .question .choix.juste, .question .choix.faux').length,
+    cochees: document.querySelectorAll('.question input:checked').length,
+    bilan: (document.querySelector('#bilan') || { textContent: 'absent' }).textContent.trim(),
+    texte: document.body.textContent }));
+  if (ecran.questions < 3) throw new Error(`${ecran.questions} question(s) à l'écran, test invalide`);
+  if (ecran.retours.length) throw new Error('correction affichée avant validation : ' + ecran.retours[0]);
+  if (ecran.marques) throw new Error(`${ecran.marques} réponse(s) marquée(s) juste ou fausse avant validation`);
+  if (ecran.cochees) throw new Error('des réponses sont déjà cochées avant validation');
+  if (ecran.bilan) throw new Error('bilan affiché avant validation : ' + ecran.bilan);
+  // Une explication de la question q1 (`activites/quiz-flux.js`) : elle ne doit pas être dans la page.
+  if (ecran.texte.includes('Le flux tiré part de la demande réelle')) throw new Error('explication de q1 lisible avant validation');
+  // Et la validation fait bien apparaître la correction : sinon le cas ne prouverait que l'absence d'écran.
+  await page.click('#btnValider');
+  await page.waitForSelector('#bilan .avis', { timeout: 6000 });
+  if (!(await page.$$eval('[data-retour]', (z) => z.some((x) => x.textContent.trim())))) throw new Error('aucune correction après validation');
 });
 
 // ---------- 11. le suivi de classe remonte le score
