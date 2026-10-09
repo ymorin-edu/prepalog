@@ -20,7 +20,7 @@
 // Créneaux : quai = quarts d'heure depuis 06:00 (07:30 → 6) ; chauffeurs = depuis 05:00 (07:00 → 8) ;
 // personnel = jours (lun 7 → 0 … ven 18 → 9).
 
-export default async function bloc({ v, nav, BASE }) {
+export default async function bloc({ v, nav, BASE, egal, vrai }) {
 
 // Envoi définitif : la confirmation dans la page (06/10/2026, Smoby C2 / ENT-1.1 §7.11) n'apparaît que s'il ne
 // manque rien ; on y répond « Oui ». Un envoi refusé (« Il manque… ») n'en montre pas : on continue.
@@ -30,8 +30,6 @@ const cliquerEtConfirmer = async (p, sel) => {
   if (b) await b.click();
 };
 
-const egal = (a, b, quoi) => { if (JSON.stringify(a) !== JSON.stringify(b)) throw new Error(`${quoi} : ${JSON.stringify(a)} au lieu de ${JSON.stringify(b)}`); };
-const vrai = (c, quoi) => { if (!c) throw new Error(quoi); };
 
 const ctxP = await nav.newContext({ viewport: { width: 1366, height: 1000 } });
 const erreursP = [];

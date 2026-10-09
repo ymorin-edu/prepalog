@@ -15,10 +15,8 @@
 // Parcours juste : 18 jalons ; temps hors froid 20 min (30 s + 5 palettes, 5 sondes, 5 comptages,
 // deux tours de P2, l'étiquette de P5, 3 min pour rentrer le lot).
 
-export default async function bloc({ v, nav, BASE }) {
+export default async function bloc({ v, nav, BASE, egal, vrai }) {
 
-const egal = (a, b, quoi) => { if (JSON.stringify(a) !== JSON.stringify(b)) throw new Error(`${quoi} : ${JSON.stringify(a)} au lieu de ${JSON.stringify(b)}`); };
-const vrai = (c, quoi) => { if (!c) throw new Error(quoi); };
 
 async function contexte(options = {}) {
   const ctx = await nav.newContext(options);

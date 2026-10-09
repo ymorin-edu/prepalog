@@ -11,10 +11,8 @@
 //   P1 Maison (lourd, rotation A) : A1-T01-N1-E3 seule · P2 Cuisine (fragile, B) : B2-T02-N1-E2, B2-T02-N1-E3 ·
 //   P3 Établi (litige) : L1, L2 · P4 Porteur (C) : B1-T03-N3-E1, B1-T04-N1-E2, B1-T04-N3-E2.
 
-export default async function bloc({ v, nav, BASE }) {
+export default async function bloc({ v, nav, BASE, egal, vrai }) {
 
-const egal = (a, b, quoi) => { if (JSON.stringify(a) !== JSON.stringify(b)) throw new Error(`${quoi} : ${JSON.stringify(a)} au lieu de ${JSON.stringify(b)}`); };
-const vrai = (c, quoi) => { if (!c) throw new Error(quoi); };
 
 const ctxE = await nav.newContext({ viewport: { width: 1366, height: 768 } });
 const erreursE = [];

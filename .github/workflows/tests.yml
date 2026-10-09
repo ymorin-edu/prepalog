@@ -31,9 +31,11 @@ jobs:
         with:
           node-version: 22
 
-      # Même installation qu'en local (voir CLAUDE.md) : rien n'est ajouté au dépôt.
+      # Même installation qu'en local (voir CLAUDE.md) : rien n'est ajouté au dépôt. Playwright est ÉPINGLÉ
+      # (lot A des tests, 09/10/2026) : une version nouvelle, sortie un matin de séance, ne change plus le
+      # comportement d'un clic à notre insu. Pour le monter : changer le numéro ici et dans CLAUDE.md.
       - name: Installer Playwright et xlsx
-        run: npm install --no-save --no-package-lock playwright xlsx@0.18.5
+        run: npm install --no-save --no-package-lock playwright@1.63.0 xlsx@0.18.5
 
       # Le navigateur téléchargé est gardé d'un passage à l'autre (lot 5 de MOTEUR-tests-rapides,
       # 06/10/2026), sous une clé qui porte la version de Playwright : une nouvelle version de
@@ -63,6 +65,17 @@ jobs:
         run: |
           if [ "$GROUPE" = "séances" ]; then commande="node outils/test-seances.mjs"; else commande="node outils/test.mjs --groupe $GROUPE"; fi
           $commande 2>&1 | tee sortie-tests.txt; exit "${PIPESTATUS[0]}"
+
+      # En cas d'échec, les captures d'écran prises au moment où chaque cas est tombé (outils/captures/,
+      # lot A, 09/10/2026) sont jointes au passage : onglet « Artifacts », une archive par groupe rouge.
+      - name: Captures d'écran des cas tombés
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: captures-${{ matrix.groupe }}
+          path: outils/captures/
+          if-no-files-found: ignore
+          retention-days: 14
 
       # En cas d'échec, remonte les cas fautifs dans le résumé du passage (lisible sans
       # ouvrir le journal complet).

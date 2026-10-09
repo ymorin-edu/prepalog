@@ -7,7 +7,7 @@
 // Lot 2 (04/10/2026) : la réponse par phrases à choisir (`core/phrases.js`). Les phrases justes sont
 // écrites À LA MAIN ici (jamais relues dans le contenu).
 
-export default async function bloc({ v, nav, page, BASE }) {
+export default async function bloc({ v, nav, page, BASE, egal, vrai }) {
 
 // Envoi définitif : la confirmation dans la page (06/10/2026, Smoby C2 / ENT-1.1 §7.11) n'apparaît que s'il ne
 // manque rien ; on y répond « Oui ». Un envoi refusé (« Il manque… ») n'en montre pas : on continue.
@@ -17,8 +17,7 @@ const cliquerEtConfirmer = async (p, sel) => {
   if (b) await b.click();
 };
 
-const egal = (a, b, quoi) => { if (JSON.stringify(a) !== JSON.stringify(b)) throw new Error(`${quoi} : ${JSON.stringify(a)} au lieu de ${JSON.stringify(b)}`); };
-const vrai = (c, quoi) => { if (!c) throw new Error(quoi); };
+const proche = (a, b, quoi) => { if (!Array.isArray(a) || Math.abs(a[0] - b) > 0.01 || a[1] !== 20) throw new Error(`${quoi} : ${JSON.stringify(a)} au lieu de [${b}, 20]`); };
 
 const ctxS = await nav.newContext({ viewport: { width: 1366, height: 1000 } });
 const erreursS = [];
@@ -1130,7 +1129,6 @@ const apresFiche51 = (ko = []) => ({ ...statuts('ok', ko), ...Object.fromEntries
 const flip51 = (id, col) => ({ ...TRI51, [id]: { ...TRI51[id], [col]: !TRI51[id][col] } });
 // Le barème d'ENT-5.1, écrit à la main : tableau 8 (15 cases), candidat 5, contrat 2, raison 2, candidat du message 1,
 // contrat du message 1, salutation 0,5, fin 0,5. Total 20.
-const proche = (a, b, quoi) => { if (!Array.isArray(a) || Math.abs(a[0] - b) > 0.01 || a[1] !== 20) throw new Error(`${quoi} : ${JSON.stringify(a)} au lieu de [${b}, 20]`); };
 const bandeau51 = () => pg.$$eval(`${T51} [data-fin-seance] [data-fin-jalon]`, (L) => L.map((x) => [x.dataset.finEtat, x.textContent.replace(/\s+/g, ' ').trim().replace(/^([✓✗])\s*/, '$1 ')]));
 
 await v('ENT-5.1 : déclaration (code, 2de, AGO-3.1, barème sur 20, livrée fermée aux élèves) et entreprise n° 5 avec son logo', async () => {
@@ -1537,7 +1535,6 @@ const tranche = (L, [a, b]) => L.slice(a, b);
 // Les placements (jour = rang) d'une erreur au 1er envoi : Karim laissé à la date demandée (mer 16, rang 7), le même
 // jour que Léa → pas assez de monde ce jour-là. Écrit à la main d'après la maquette v8 (cas « personnel »).
 const PL1_FAUX = PL1.map((x) => (x[0] === 'cp-karim' ? ['cp-karim', 'karim', 7] : x));
-const proche52 = (a, b, quoi) => { if (!Array.isArray(a) || Math.abs(a[0] - b) > 0.01 || a[1] !== 20) throw new Error(`${quoi} : ${JSON.stringify(a)} au lieu de [${b}, 20]`); };
 const bandeau52 = () => pg.$$eval(`${T52} [data-fin-seance] [data-fin-jalon]`, (L) => L.map((x) => [x.dataset.finEtat, x.textContent.replace(/\s+/g, ' ').trim().replace(/^([✓✗])\s*/, '$1 ').replace(/ (juste|à corriger)$/, '')]));
 
 await v('ENT-5.2 : déclaration (code, 2de, AGO-3.1 et 3.2, barème sur 20, correction, livrée fermée aux élèves), inscrite au registre après ENT-5.1', async () => {
@@ -1610,7 +1607,7 @@ await v('ENT-5.2 : parcours juste à l’écran → fiche, planning, imprévu, p
   egal((await sujets52()).slice(-1), ['Le point sur le planning'], 'Sophie demande le point');
   await repondre52();
   egal(await etapes52(), tous52('ok'), 'après le point');
-  proche52(await dernierScore52(), 20, 'score remonté au suivi');
+  proche(await dernierScore52(), 20, 'score remonté au suivi');
   egal((await sujets52()).slice(-1), ['RE : Le point sur le planning'], 'la suite de l’histoire');
   const E = await pg.evaluate(() => window.__52.db.mails.filter((m) => m.folder === 'out').map((m) => m.text));
   egal(E, ['Bonjour Sophie,\nJ’ai repris le planning après l’arrêt d’Inès.\nChaque jour a assez de monde et au moins un cariste CACES.\nPeux-tu valider ? Merci, bonne journée.'], 'message envoyé');
@@ -1652,7 +1649,7 @@ await v('ENT-5.2 : rien touché, tout envoyé → 0 / 20 ; un constat faux fait 
   await repondre52({ constat: 'Il manque du monde mardi 15.' });
   const e = await etapes52();
   egal([e.filter((s) => s === 'ok').length - 2, e[22]], [0, 'ko'], 'message au constat faux (salutation et fin justes)');
-  proche52(await dernierScore52(), 2, 'score : la salutation et la formule de fin, rien d’autre');
+  proche(await dernierScore52(), 2, 'score : la salutation et la formule de fin, rien d’autre');
 });
 
 await v('ENT-5.2 : le barème — 25 jalons, parts 4 / 3 / 3,5 / 5,5 / 4, total 20, 6 lignes au bandeau', async () => {
@@ -1712,7 +1709,7 @@ await v('ENT-5.2 : « Corriger » le planning — la 5.3 s’ouvre au premier bi
   await envoyerPlanning52([['cp-karim', 'karim', 0], ...PL2]);
   await repondre52();
   const bilan1 = 20 - 2 * 0.7;
-  proche52(await dernierScore52(), bilan1, 'premier bilan');
+  proche(await dernierScore52(), bilan1, 'premier bilan');
   egal(await bandeau52(), [['ok', '✓ Les pièces à demander à Yanis'], ['ok', '✓ Le premier jour de Yanis'], ['ko', '✗ Le planning : première version'],
     ['ok', '✓ Le planning : après l’imprévu'], ['ok', '✓ Message à Sophie : le constat'], ['ok', '✓ Message à Sophie : le ton']], 'bandeau');
   egal(await pg.evaluate(() => Object.keys(window.__52.db.points || {})), ['smoby-arrivee'], 'photo du premier bilan (la 5.3 s’ouvre)');
@@ -1731,7 +1728,7 @@ await v('ENT-5.2 : « Corriger » le planning — la 5.3 s’ouvre au premier bi
   egal(await pg.evaluate(() => window.__52.db.mails.filter((m) => m.subject === 'Changement : planning à reprendre').length), 1, 'l’imprévu est rejoué');
   await cliquerEtConfirmer(pg, `${Z52} [data-pl="envoyer"]`);
   egal(await etapes52(), tous52('ok'), 'après la correction');
-  proche52(await dernierScore52(), (bilan1 + 20) / 2, 'moyenne du premier bilan et de l’état à la 1re correction');
+  proche(await dernierScore52(), (bilan1 + 20) / 2, 'moyenne du premier bilan et de l’état à la 1re correction');
   const r = await pg.evaluate(() => ({ c: window.__52.db.indicateurs['smoby-arrivee'].corrections,
     accuse: window.__52.db.mails.filter((m) => m.subject === 'Planning corrigé').map((m) => m.text) }));
   egal(r.c, 1, 'corriger la 1re version (deux envois) compte pour une correction');
@@ -1978,7 +1975,6 @@ const POIDS54 = { 'securite-signalee': 3, 'securite-constat': 1, 'P1-decision': 
   'P2-comptage': 0.75, 'P3-decision': 1.25, 'P3-comptage': 0.75, 'P4-decision': 1.25, 'P4-comptage': 0.75, 'P3-reserve': 2, 'P4-reserve': 2,
   signature: 0, 'message-reserves': 3, 'message-salutation': 0.5, 'message-fin': 0.5 };
 const note54 = (ko = []) => 20 - ko.reduce((t, id) => t + POIDS54[id], 0);
-const proche54 = (a, b, quoi) => { if (!Array.isArray(a) || Math.abs(a[0] - b) > 0.01 || a[1] !== 20) throw new Error(`${quoi} : ${JSON.stringify(a)} au lieu de [${b}, 20]`); };
 const bandeau54 = () => pg.$$eval(`${T54} [data-fin-seance] [data-fin-jalon]`, (L) => L.map((x) => [x.dataset.finEtat, x.textContent.replace(/\s+/g, ' ').trim().replace(/^([✓✗])\s*/, '$1 ').replace(/ (juste|à corriger)$/, '')]));
 const texteFin54 = () => pg.$eval(`${T54} [data-fin-seance] [data-fin]`, (b) => b.textContent.replace(/\s+/g, ' '));
 const etapes54 = () => pg.evaluate(async () => {
@@ -2142,7 +2138,7 @@ await v('ENT-5.4 : parcours juste à l’écran → 20 / 20, bandeau tout juste,
   egal(await sujets54(), ['Ton premier camion à 14 h 00', 'La navette d’Arinthod'], 'Bruno demande le compte rendu après la signature');
   await repondre54();
   egal(await etapes54(), statuts54(), 'étapes');
-  proche54(await dernierScore54(), 20, 'score remonté au suivi');
+  proche(await dernierScore54(), 20, 'score remonté au suivi');
   vrai((await sujets54()).includes('RE : La navette d’Arinthod'), 'la réponse de Bruno n’arrive pas');
   const b = await bandeau54();
   vrai(b.length === 10 && b.every((x) => x[0] === 'ok'), 'bandeau tout juste : ' + JSON.stringify(b));
@@ -2174,7 +2170,7 @@ await v('ENT-5.4 : décharger sans signaler → arrêt du chef de quai, la cale 
   await pg.click(`${Z54} .quai-stepper button[data-n="1"]`);
   await decharger54(); await controler54(); await papiers54(); await repondre54();
   egal(await etapes54(), statuts54(['securite-signalee']), 'étapes');
-  proche54(await dernierScore54(), 17, 'score');
+  proche(await dernierScore54(), 17, 'score');
   egal((await bandeau54()).filter((x) => x[0] === 'ko').map((x) => x[1]), ['✗ Sécurité : la cale signalée'], 'bandeau');
   const t = await texteFin54();
   vrai(!(await pg.$(`${T54} [data-fin-corriger]`)), 'bouton « Corriger » alors que seul le quai est faux (il ne se rouvre pas)');
@@ -2207,14 +2203,14 @@ await v('ENT-5.4 : chaque piège fait tomber sa case seule (constat, P2 refusée
   for (const [n, [ko, o]] of cas.entries()) {
     await parcours54({ uid: `u-54-piege-${n}`, ...o });
     egal(await etapes54(), statuts54(ko), `sabotage ${ko.join(', ')}`);
-    proche54(await dernierScore54(), note54(ko), `score avec ${ko.join(', ')} faux`);
+    proche(await dernierScore54(), note54(ko), `score avec ${ko.join(', ')} faux`);
   }
 });
 
 await v('ENT-5.4 : « Corriger » ne rouvre que le compte rendu — premier bilan, moyenne à la 1re correction, accusé de Bruno ; le BL signé ne se refait pas', async () => {
   await parcours54({ uid: 'u-54-corr', decisions: { ...JUSTE54, P4: [36, 'reserves', 'manquant'] }, phrases: { reserves: 'Tout est conforme.' } });
   const bilan1 = note54(['P4-comptage', 'message-reserves']);
-  proche54(await dernierScore54(), bilan1, 'premier bilan');
+  proche(await dernierScore54(), bilan1, 'premier bilan');
   egal((await bandeau54()).filter((x) => x[0] === 'ko').map((x) => x[1]), ['✗ Palette P4', '✗ Compte rendu : les réserves'], 'bandeau');
   egal(await pg.evaluate(() => Object.keys(window.__54.db.points || {})), ['smoby-reception'], 'photo du premier bilan (la 5.5 s’ouvre)');
   const t = await texteFin54();
@@ -2231,7 +2227,7 @@ await v('ENT-5.4 : « Corriger » ne rouvre que le compte rendu — premier bila
   await pg.selectOption(`${Z54} [data-phrase="reserves"]`, { label: PHR54.reserves });
   await cliquerEtConfirmer(pg, `${Z54} #formPhr button[type="submit"]`);
   egal(await etapes54(), statuts54(['P4-comptage']), 'après la correction : le quai garde son erreur');
-  proche54(await dernierScore54(), (bilan1 + note54(['P4-comptage'])) / 2, 'moyenne du premier bilan et de l’état à la 1re correction');
+  proche(await dernierScore54(), (bilan1 + note54(['P4-comptage'])) / 2, 'moyenne du premier bilan et de l’état à la 1re correction');
   vrai(!(await pg.$(`${T54} [data-fin-corriger]`)), 'plus rien à rouvrir : pas de « Corriger »');
   const r = await pg.evaluate(() => {
     const M = window.__54.db.mails.filter((m) => m.folder === 'in');
@@ -2861,7 +2857,6 @@ const tous57 = (s) => Array(17).fill(s);
 const juger57n = async (v1, v2) => Object.fromEntries((await juger57(v1, v2)).map((ok, i) => [IDS57[i], ok]));
 const faux57 = (o) => Object.keys(o).filter((k) => !o[k]);
 const bandeau57 = () => pg.$$eval(`${T57} [data-fin-seance] [data-fin-jalon]`, (L) => L.map((x) => [x.dataset.finEtat, x.textContent.replace(/\s+/g, ' ').trim().replace(/^([✓✗])\s*/, '$1 ').replace(/ (juste|à corriger)$/, '')]));
-const proche57 = (a, b, quoi) => { if (!Array.isArray(a) || Math.abs(a[0] - b) > 0.01 || a[1] !== 20) throw new Error(`${quoi} : ${JSON.stringify(a)} au lieu de [${b}, 20]`); };
 
 await v('ENT-5.7 : déclaration (code, 2de, OTM-C2.2 et C3.2, sur 20, correction, livrée fermée aux élèves), inscrite au registre après ENT-5.6', async () => {
   const r = await pg.evaluate(async () => {
@@ -2956,7 +2951,7 @@ await v('ENT-5.7 : parcours juste à l’écran → 1er envoi, panne de l’atel
   for (const [id, p] of Object.entries(CH2)) await poser57(id, p);
   await envoyer57();
   egal(await etapes57(), tous57('ok'), 'après la panne');
-  proche57(await dernierScore57(), 20, 'score remonté au suivi');
+  proche(await dernierScore57(), 20, 'score remonté au suivi');
   vrai((await sujets57()).includes('RE : Planning de jeudi'), 'la suite de l’histoire');
   const b = await bandeau57();
   vrai(b.length === 8 && b.every((x) => x[0] === 'ok'), 'bandeau tout juste : ' + JSON.stringify(b));
@@ -2970,7 +2965,7 @@ await v('ENT-5.7 : rien posé, envoyé deux fois → 0 / 20', async () => {
   await envoyer57();
   egal((await etapes57()).filter((s) => s === 'ok').length, 0, 'jalons vrais sans rien faire');
   vrai((await sujets57()).includes('RE : Planning de jeudi'), 'les deux envois ont bien eu lieu');
-  proche57(await dernierScore57(), 0, 'score');
+  proche(await dernierScore57(), 0, 'score');
 });
 
 await v('ENT-5.7 : « Corriger » — renvoyé tel quel après la panne (0 sur 11), la 5.8 s’ouvre, la 2e version se rouvre, la moyenne, l’accusé du responsable', async () => {
@@ -2980,7 +2975,7 @@ await v('ENT-5.7 : « Corriger » — renvoyé tel quel après la panne (0 sur 1
   await envoyer57();
   await pg.click(`${T57} .ent-nav[data-vue="planning"]`);
   await envoyer57();
-  proche57(await dernierScore57(), 9, 'premier bilan : avant la panne seulement');
+  proche(await dernierScore57(), 9, 'premier bilan : avant la panne seulement');
   egal(await bandeau57(), [['ok', '✓ Avant la panne : les chauffeurs'], ['ok', '✓ Avant la panne : les camions'], ['ok', '✓ Avant la panne : les horaires d’enlèvement'],
     ['ok', '✓ Avant la panne : la conduite et le repos'], ['ko', '✗ Après la panne : les chauffeurs'], ['ko', '✗ Après la panne : les camions'],
     ['ko', '✗ Après la panne : les horaires d’enlèvement'], ['ko', '✗ Après la panne : la conduite et le repos']], 'bandeau');
@@ -2992,7 +2987,7 @@ await v('ENT-5.7 : « Corriger » — renvoyé tel quel après la panne (0 sur 1
   for (const [id, p] of Object.entries(CH2)) await poser57(id, p);
   await envoyer57();
   egal(await etapes57(), tous57('ok'), 'après la correction');
-  proche57(await dernierScore57(), (9 + 20) / 2, 'moyenne du premier bilan et de l’état à la 1re correction');
+  proche(await dernierScore57(), (9 + 20) / 2, 'moyenne du premier bilan et de l’état à la 1re correction');
   const r = await pg.evaluate(() => ({ c: window.__57.db.indicateurs['smoby-enlevements'].corrections,
     panne: window.__57.db.mails.filter((m) => m.subject === 'Changement : planning à reprendre').length,
     accuse: window.__57.db.mails.filter((m) => m.subject === 'Planning corrigé').map((m) => m.text) }));
@@ -3203,7 +3198,6 @@ const detail58 = (id) => pg.evaluate(async (id) => {
   return S.ETAPES.find((e) => e.id === id).verifier(window.__58.db).detail || '';
 }, id);
 const bandeau58 = () => pg.$$eval(`${T58} [data-fin-seance] [data-fin-jalon]`, (L) => L.map((x) => [x.dataset.finEtat, x.textContent.replace(/\s+/g, ' ').trim().replace(/^([✓✗])\s*/, '$1 ').replace(/ (juste|à corriger)$/, '')]));
-const proche58 = (a, b, quoi) => { if (!Array.isArray(a) || Math.abs(a[0] - b) > 0.01 || a[1] !== 20) throw new Error(`${quoi} : ${JSON.stringify(a)} au lieu de [${b}, 20]`); };
 
 await v('ENT-5.8 : déclaration (code, 2de, OTM-C2.1 et C2.3, sur 20, correction, livrée fermée aux élèves), inscrite au registre après ENT-5.7', async () => {
   const r = await pg.evaluate(async () => {
@@ -3292,14 +3286,14 @@ await v('ENT-5.8 : le retard n’arrive qu’après l’envoi de la lettre (mess
   await repondre58('E1 bien parti ?', SMOBY58);
   vrai((await sujets58()).includes('RE : Lettre de voiture d’E1'), 'message de fin');
   egal(await etapes58(), cases58('ok', ['lettre-poids']), 'poids faux (32 × 180 kg, sans la palette mixte)');
-  proche58(await dernierScore58(), 18.5, 'le poids pèse 1,5');
+  proche(await dernierScore58(), 18.5, 'le poids pèse 1,5');
 });
 
 await v('ENT-5.8 : parcours juste à l’écran, 20 / 20, score remonté au suivi, bandeau tout juste', async () => {
   await monter58();
   await parcours58();
   egal(await etapes58(), cases58('ok'), 'jalons');
-  proche58(await dernierScore58(), 20, 'score');
+  proche(await dernierScore58(), 20, 'score');
   const b = await bandeau58();
   vrai(b.length === 9 && b.every((x) => x[0] === 'ok'), 'bandeau tout juste : ' + JSON.stringify(b));
 });
@@ -3324,7 +3318,7 @@ await v('ENT-5.8 : pièges — chaque case tombe seule (inversés, poids vide, 1
     smoby: { client: 'Pouvez-vous prévenir le client ?' } });
   egal(await etapes58(), cases58('ok', ['lettre-transporteur', 'client-heure', 'smoby-client']),
     'Smoby transporteur, 10 h 00 au client, demander à Smoby de prévenir le client');
-  proche58(await dernierScore58(), 20 - 0.75 - 1 - 1, 'chaque case coûte son poids');
+  proche(await dernierScore58(), 20 - 0.75 - 1 - 1, 'chaque case coûte son poids');
   await monter58();
   await parcours58({ client: { salut: 'Coucou', fin: 'Bisous' } });
   egal(await etapes58(), cases58('ok', ['client-salut', 'client-fin']), 'le ton au client');
@@ -3335,7 +3329,7 @@ await v('ENT-5.8 : « Corriger » — la séance est finie au premier bilan, la 
   await monter58({ uid: 'u-58-corr' });
   await parcours58({ lettre: { transporteur: 'smoby' }, client: { heure: 'Il arrivera vers 10 h 00, avant votre heure limite.' } });
   const bilan1 = 20 - 0.75 - 1;
-  proche58(await dernierScore58(), bilan1, 'premier bilan');
+  proche(await dernierScore58(), bilan1, 'premier bilan');
   egal((await bandeau58()).filter((x) => x[0] === 'ko').map((x) => x[1]), ['✗ Lettre : le transport', '✗ Message au client : les informations'], 'bandeau');
   egal(await pg.evaluate(() => Object.keys(window.__58.db.points || {})), ['smoby-lettre-voiture'], 'photo du premier bilan');
   await pg.click(`${T58} [data-fin-corriger]`);
@@ -3346,13 +3340,13 @@ await v('ENT-5.8 : « Corriger » — la séance est finie au premier bilan, la 
   await cliquerEtConfirmer(pg, `${F58} [data-fiche-envoyer]`);
   await pg.waitForSelector(`${F58} [data-fiche-envoyee]`);
   egal(await etapes58(), cases58('ok', ['client-heure']), 'la lettre corrigée');
-  proche58(await dernierScore58(), (bilan1 + 19) / 2, 'moyenne du premier bilan et de l’état à la 1re correction');
+  proche(await dernierScore58(), (bilan1 + 19) / 2, 'moyenne du premier bilan et de l’état à la 1re correction');
   await pg.click(`${T58} [data-fin-corriger]`);
   await pg.waitForSelector(`${Z58} #formPhr:not([hidden])`);
   await pg.selectOption(`${Z58} [data-phrase="heure"]`, { label: CLIENT58.heure });
   await cliquerEtConfirmer(pg, `${Z58} #formPhr button[type="submit"]`);
   egal(await etapes58(), cases58('ok'), 'après les deux corrections');
-  proche58(await dernierScore58(), (bilan1 + 19) / 2, 'la note ne bouge plus');
+  proche(await dernierScore58(), (bilan1 + 19) / 2, 'la note ne bouge plus');
   const r = await pg.evaluate(() => {
     const M = window.__58.db.mails.filter((m) => m.folder === 'in');
     return { c: window.__58.db.indicateurs['smoby-lettre-voiture'].corrections, julie: M.filter((m) => m.subject === 'E1 : accident sur l’A40').length,

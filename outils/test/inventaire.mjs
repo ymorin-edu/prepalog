@@ -13,7 +13,7 @@
 //   CLE-USB-32 système 20, compté 23 (+3) : erreur de comptage          → recompter (redonne 20)
 // Taux d'écart attendu : 7 ÷ 191 × 100 = 3,7 %.
 
-export default async function bloc({ v, nav, BASE }) {
+export default async function bloc({ v, nav, BASE, egal, vrai }) {
 
 const ctxInv = await nav.newContext();
 const pg = await ctxInv.newPage();
@@ -27,8 +27,6 @@ await pg.waitForSelector('#btnProf', { timeout: 8000 });
 const ID = 'INV-ESSAI-01';
 const RELEVE = { 'RAM-A4-80': 40, 'STY-BL-50': 25, 'AGR-24-6': 11, 'CLA-LEV-75': 30, 'CAL-SCI': 7, 'CLE-USB-32': 23, 'SUR-JAU-4': 36, 'POC-A4-100': 18 };
 const SYSTEME = { 'RAM-A4-80': 40, 'STY-BL-50': 25, 'AGR-24-6': 14, 'CLA-LEV-75': 30, 'CAL-SCI': 8, 'CLE-USB-32': 20, 'SUR-JAU-4': 36, 'POC-A4-100': 18 };
-const egal = (a, b, quoi) => { if (JSON.stringify(a) !== JSON.stringify(b)) throw new Error(`${quoi} : ${JSON.stringify(a)} au lieu de ${JSON.stringify(b)}`); };
-const vrai = (c, quoi) => { if (!c) throw new Error(quoi); };
 
 // Monte l'environnement LogiDémo dans une base neuve. `reglages` remplace ceux de l'inventaire ;
 // `inventaire: null` monte l'entreprise SANS écran d'inventaire ; `role: 'prof'` en enseignant.

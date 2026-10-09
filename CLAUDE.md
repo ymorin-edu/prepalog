@@ -195,7 +195,7 @@ modifier une séance**, et la corriger si le code a changé.
   sur GitHub en trois groupes parallèles, voir l'en-tête de `outils/test.mjs`).
   Un bloc seul : `node outils/test.mjs boost` (plusieurs : `boost carte`). Un bloc par fichier
   dans `outils/test/` ; un fichier non inscrit dans `BLOCS` du lanceur fait refuser le départ.
-- Installation locale (pas globale) : `npm install --no-save --no-package-lock playwright
+- Installation locale (pas globale) : `npm install --no-save --no-package-lock playwright@1.63.0
   xlsx@0.18.5` puis `npx playwright install chromium`.
 - **Lancer la suite entière avant tout push** qui touche `core/`, `styles/` ou `activites/`.
   Un échec massif et incompréhensible (`page.click: Timeout` dès `#btnProf`) = d'abord un

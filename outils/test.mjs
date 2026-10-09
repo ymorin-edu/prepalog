@@ -99,17 +99,20 @@ if (demandes.length) console.log(`Blocs lancés : ${aLancer.join(', ')}.`);
 
 // Le commun démarre le serveur de test, le navigateur et la page partagée, dès son import.
 const C = await import('./test/commun.mjs');
-const { ok, ko, erreurs, nav, srv } = C;
+const { ok, ko, erreurs, erreursParCas, nav, srv } = C;
 
 // Durée de chaque bloc, affichée avant le bilan : c'est elle qui sert à répartir les GROUPES.
 const durees = [];
 for (const nom of aLancer) {
   const t0 = Date.now();
   const { default: bloc } = await import(`./test/${nom}.mjs`);
+  C.setBloc(nom);
   await bloc({
     v: C.v, page: C.page, nav: C.nav, ok: C.ok, ko: C.ko, erreurs: C.erreurs, ROOT: C.ROOT, BASE: C.BASE,
     baseXlsx: C.baseXlsx, hotesExternes: C.hotesExternes, introuvables: C.introuvables, SANS_CONFIG: C.SANS_CONFIG,
+    egal: C.egal, vrai: C.vrai,
   });
+  C.setBloc('');
   durees.push(`${nom} ${Math.round((Date.now() - t0) / 1000)} s`);
 }
 
@@ -126,7 +129,17 @@ console.log('\nDurée par bloc : ' + durees.join(' · '));
 console.log('\n=== RÉUSSIS ===');
 ok.forEach((o) => console.log('  ✓ ' + o));
 if (ko.length) { console.log('\n=== ÉCHECS ==='); ko.forEach((k) => console.log('  ✗ ' + k)); }
-if (erreurs.length) { console.log('\n=== ERREURS JS ==='); [...new Set(erreurs)].slice(0, 12).forEach((e) => console.log('  ! ' + e)); }
+// Chaque erreur JavaScript dit pendant quel cas elle est survenue (lot A, 09/10/2026). Celles de la page
+// partagée font tomber la suite ; celles des pages ouvertes par les blocs sont jugées par leurs cas
+// « aucune erreur », on les montre à part, et seulement quand la suite est rouge (en vert, ce sont les
+// refus provoqués exprès par les cas « séance refusée », « jalon qui plante »…), pour savoir d'où elles
+// viennent sans relancer.
+const pendant = (x) => (x.cas ? ` [${x.bloc} · ${x.cas}]` : x.bloc ? ` [${x.bloc}, hors cas]` : '');
+const uniques = (liste) => [...new Map(liste.map((x) => [x.msg + pendant(x), x])).values()];
+if (erreurs.length) { console.log('\n=== ERREURS JS ==='); uniques(erreursParCas.filter((x) => x.partagee)).slice(0, 12).forEach((x) => console.log('  ! ' + x.msg + pendant(x))); }
+const desBlocs = uniques(erreursParCas.filter((x) => !x.partagee));
+if (desBlocs.length && (ko.length || erreurs.length)) { console.log('\n=== ERREURS JS SUR LES PAGES DES BLOCS (jugées par leurs cas « aucune erreur ») ==='); desBlocs.slice(0, 12).forEach((x) => console.log('  ! ' + x.msg + pendant(x))); }
+if (ko.length && C.dossierCaptures()) console.log(`\nCaptures d'écran des cas tombés : ${C.dossierCaptures()}`);
 console.log(`\n${ok.length}/${ok.length + ko.length} tests réussis.`);
 
 await nav.close();

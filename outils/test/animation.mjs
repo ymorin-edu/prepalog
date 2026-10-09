@@ -10,10 +10,8 @@
 // Les rangs attendus sont écrits À LA MAIN : q1 juste = 1 (« Le chariot entre par l'allée… »),
 // q2 juste = 2 (« En M03, au fond. »), dans l'ordre DÉCLARÉ.
 
-export default async function bloc({ v, nav, BASE }) {
+export default async function bloc({ v, nav, BASE, egal, vrai }) {
 
-const egal = (a, b, quoi) => { if (JSON.stringify(a) !== JSON.stringify(b)) throw new Error(`${quoi} : ${JSON.stringify(a)} au lieu de ${JSON.stringify(b)}`); };
-const vrai = (c, quoi) => { if (!c) throw new Error(quoi); };
 
 const ctxA = await nav.newContext({ viewport: { width: 1366, height: 768 } });
 const erreursA = [];

@@ -80,21 +80,63 @@ const nav = await chromium.launch();
 const TMP = fs.mkdtempSync(path.join(os.tmpdir(), `prepalog-suite-${process.pid}-`));
 os.tmpdir = () => TMP;
 process.on('exit', () => { try { fs.rmSync(TMP, { recursive: true, force: true }); } catch (e) {} });
+
+// Captures d'écran des cas qui tombent (lot A des tests, 09/10/2026) : `outils/captures/<date>-<pid>/`,
+// un dossier par lancer (deux suites côte à côte ne s'écrasent pas), ignoré par git, envoyé par
+// GitHub en pièce jointe du passage quand un groupe est rouge. Les dossiers de plus de sept jours
+// sont retirés au départ de la suite suivante : rien à nettoyer à la main.
+const CAPTURES_RACINE = path.join(ROOT, 'outils', 'captures');
+const CAPTURES = path.join(CAPTURES_RACINE, `${new Date().toISOString().slice(0, 16).replace(/[-:T]/g, '')}-${process.pid}`);
+try {
+  fs.mkdirSync(CAPTURES_RACINE, { recursive: true });
+  const limite = Date.now() - 7 * 24 * 3600 * 1000;
+  for (const d of fs.readdirSync(CAPTURES_RACINE)) {
+    const chemin = path.join(CAPTURES_RACINE, d);
+    if (fs.statSync(chemin).mtimeMs < limite) fs.rmSync(chemin, { recursive: true, force: true });
+  }
+} catch (e) {}
+
 // Relevés faits sur TOUS les onglets de TOUS les contextes (et pas seulement la page partagée) :
 // dix-neuf blocs ouvrent leurs propres contextes par `nav.newContext()`, et une image venue d'un
 // CDN chargée dans l'un d'eux serait passée inaperçue. `nav.newContext` est donc enveloppé : chaque
-// page de chaque contexte alimente `introuvables` (réponses 404) et `hotesExternes` (requêtes hors
-// du site de test). Les erreurs JavaScript (`erreurs`), elles, restent celles de la page partagée :
-// les blocs ont leurs propres écouteurs et leurs cas « aucune erreur ».
+// page de chaque contexte alimente `introuvables` (réponses 404), `hotesExternes` (requêtes hors
+// du site de test) et, depuis le lot A (09/10/2026), `erreursParCas` : chaque erreur JavaScript est
+// notée avec le bloc et le CAS pendant lequel elle est survenue, et la page d'où elle vient. Seules
+// celles de la page partagée comptent dans `erreurs` (code de retour de la suite) : les blocs jugent
+// eux-mêmes celles de leurs propres pages par leurs cas « aucune erreur ».
 const introuvables = new Set();
 const hotesExternes = new Set();
+const erreurs = [];
+const erreursParCas = []; // { bloc, cas, msg, partagee }
+const pagesOuvertes = new Set();
+let pagePartagee = null;
+let blocEnCours = '';
+let casEnCours = '';
+const noterErreur = (p, msg) => {
+  const partagee = p === pagePartagee;
+  erreursParCas.push({ bloc: blocEnCours, cas: casEnCours, msg, partagee });
+  if (partagee) erreurs.push(msg);
+};
 const surveiller = (p) => {
+  pagesOuvertes.add(p);
+  p.on('close', () => pagesOuvertes.delete(p));
   p.on('response', (r) => { if (r.status() === 404) introuvables.add(new URL(r.url()).pathname); });
   p.on('request', (r) => {
     try {
       const h = new URL(r.url()).hostname;
       if (h && !['127.0.0.1', 'localhost'].includes(h)) hotesExternes.add(h);
     } catch (e) {}
+  });
+  // Un 404 est attendu, et un seul : prepalog-config.json, refusé par le serveur de test
+  // ci-dessus, c'est lui qui déclenche le mode démonstration. Chromium le journalise en
+  // erreur de console à chaque chargement ; le compter ferait échouer la suite en permanence, et
+  // masquerait les vraies. On l'écarte donc du relevé, mais on note toutes les URL introuvables :
+  // un test dédié vérifie qu'il n'y en a pas d'autre, si bien que rien n'est perdu.
+  p.on('pageerror', (e) => noterErreur(p, 'PAGEERROR: ' + e.message));
+  p.on('console', (m) => {
+    if (m.type() !== 'error') return;
+    if (/Failed to load resource.*\b404\b/.test(m.text())) return;
+    noterErreur(p, 'CONSOLE: ' + m.text());
   });
 };
 const newContextOrigine = nav.newContext.bind(nav);
@@ -105,20 +147,8 @@ nav.newContext = async (...args) => {
 };
 const ctx = await nav.newContext();
 const page = await ctx.newPage();
+pagePartagee = page;
 page.setDefaultTimeout(5000);
-const erreurs = [];
-// Un 404 est attendu, et un seul : prepalog-config.json, refusé par le serveur de test
-// ci-dessus, c'est lui qui déclenche le mode démonstration. Chromium le journalise en
-// erreur de console à chaque
-// chargement ; le compter ferait échouer la suite en permanence, et masquerait les vraies.
-// On l'écarte donc du relevé, mais on note toutes les URL introuvables : un test dédié
-// vérifie qu'il n'y en a pas d'autre, si bien que rien n'est perdu.
-page.on('pageerror', (e) => erreurs.push('PAGEERROR: ' + e.message));
-page.on('console', (m) => {
-  if (m.type() !== 'error') return;
-  if (/Failed to load resource.*\b404\b/.test(m.text())) return;
-  erreurs.push('CONSOLE: ' + m.text());
-});
 // Aucune requête externe ne doit être nécessaire en mode démo.
 // Aucune route à intercepter : le site ne sort plus du dépôt. Toute requête externe
 // observée pendant la suite est une régression, et le dernier test la signale.
@@ -135,13 +165,64 @@ for (const base of [process.env.NODE_PATH, `${process.env.HOME}/.npm-global/lib/
 
 // Toute requête sortante est notée : le dépôt ne doit dépendre d'aucun hébergeur extérieur.
 
+// Les deux aides de comparaison, autrefois recopiées à l'identique dans sept blocs (lot A, 09/10/2026).
+// `egal` compare par JSON (tableaux et objets compris) et dit la valeur trouvée ET la valeur attendue.
+const egal = (a, b, quoi) => { if (JSON.stringify(a) !== JSON.stringify(b)) throw new Error(`${quoi} : ${JSON.stringify(a)} au lieu de ${JSON.stringify(b)}`); };
+const vrai = (c, quoi) => { if (!c) throw new Error(quoi); };
+
 const ok = [];
 const ko = [];
-const v = async (nom, fn) => {
-  try { await fn(); ok.push(nom); } catch (e) { ko.push(`${nom} → ${e.message.split('\n')[0]}`); }
+let nbEchecs = 0;
+// Où, dans les tests, l'exception a été levée : la première ligne de la pile qui pointe dans
+// `outils/test/` ou `outils/test.mjs`, rendue « boost.mjs:1234 ». Sans elle, « page.click: Timeout »
+// dans un cas de quarante lignes ne se localisait qu'en relançant.
+const localiser = (e) => {
+  const trouves = [...String(e && e.stack || '').matchAll(/outils[\\/](?:test[\\/])?([\w.-]+\.mjs):(\d+)/g)];
+  // `v()` et `egal` sont ici même : la première ligne hors de ce fichier est celle du bloc.
+  const m = trouves.find((t) => t[1] !== 'commun.mjs') || trouves[0];
+  return m ? `${m[1]}:${m[2]}` : '';
 };
+// Le détail que Playwright range SOUS la première ligne de son message (« Call log ») : le sélecteur
+// attendu et l'état où il en était (« element is not visible »…). On en garde la première et la
+// dernière ligne, qui disent presque toujours ce qui manquait.
+const detailPlaywright = (e) => {
+  // Playwright colore ce journal (codes ANSI « \u001b[2m… ») : on les retire avant de lire. Les lignes
+  // « retrying » et « waiting 500ms » ne disent rien ; « element is not visible » dit tout.
+  const texte = String(e && e.message || '').replace(/\u001b\[[\d;]*m/g, '');
+  const i = texte.indexOf('Call log:');
+  if (i < 0) return '';
+  const lignes = texte.slice(i + 9).split('\n').map((l) => l.trim().replace(/^-\s*/, '').replace(/^\d+ × /, ''))
+    .filter((l) => l && !/^(retrying|waiting \d+ms)/.test(l));
+  if (!lignes.length) return '';
+  return [...new Set([lignes[0], lignes[lignes.length - 1]])].join(' ; ').replace(/\s+/g, ' ').slice(0, 220);
+};
+const slug = (s) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\w]+/g, '-').replace(/^-|-$/g, '').slice(0, 70);
+// Capture d'écran de chaque page encore ouverte au moment où un cas tombe (six au plus : un bloc
+// peut garder plusieurs séances ouvertes à la fois). Une page en pleine navigation ou déjà morte
+// ne doit pas faire tomber la suite une seconde fois : chaque capture a son propre délai et se tait.
+const capturer = async (nom) => {
+  const pages = [...pagesOuvertes].filter((p) => !p.isClosed()).slice(0, 6);
+  if (!pages.length) return;
+  try { fs.mkdirSync(CAPTURES, { recursive: true }); } catch (e) { return; }
+  const base = `${String(nbEchecs).padStart(3, '0')}-${slug(blocEnCours || 'suite')}-${slug(nom)}`;
+  await Promise.all(pages.map((p, i) => p.screenshot({ path: path.join(CAPTURES, `${base}${i ? '-' + (i + 1) : ''}.png`), timeout: 3000 }).catch(() => {})));
+};
+const v = async (nom, fn) => {
+  casEnCours = nom;
+  try { await fn(); ok.push(nom); }
+  catch (e) {
+    nbEchecs++;
+    const ou = localiser(e);
+    const detail = detailPlaywright(e);
+    ko.push(`${nom} → ${String(e && e.message || e).split('\n')[0]}${detail ? ' · ' + detail : ''}${ou ? ` (${ou})` : ''}`);
+    await capturer(nom);
+  }
+  finally { casEnCours = ''; }
+};
+const setBloc = (nom) => { blocEnCours = nom; };
+const dossierCaptures = () => (fs.existsSync(CAPTURES) ? CAPTURES : '');
 
 await page.goto(BASE);
 await page.waitForSelector('#btnProf', { timeout: 8000 });
 
-export { ROOT, BASE, SANS_CONFIG, srv, nav, ctx, page, erreurs, introuvables, baseXlsx, hotesExternes, ok, ko, v };
+export { ROOT, BASE, SANS_CONFIG, srv, nav, ctx, page, erreurs, erreursParCas, introuvables, baseXlsx, hotesExternes, ok, ko, v, egal, vrai, setBloc, dossierCaptures };

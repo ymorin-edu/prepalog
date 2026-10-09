@@ -15,10 +15,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-export default async function bloc({ v, nav, page, BASE, ROOT }) {
+export default async function bloc({ v, nav, page, BASE, ROOT, egal, vrai }) {
 
-const egal = (a, b, quoi) => { if (JSON.stringify(a) !== JSON.stringify(b)) throw new Error(`${quoi} : ${JSON.stringify(a)} au lieu de ${JSON.stringify(b)}`); };
-const vrai = (c, quoi) => { if (!c) throw new Error(quoi); };
 // Le moteur arrondit la note au millième.
 const proche = (a, b, quoi) => { if (Math.abs(a - b) > 1e-3) throw new Error(`${quoi} : ${a} au lieu de ${b}`); };
 
