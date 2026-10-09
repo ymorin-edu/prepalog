@@ -54,16 +54,12 @@
 // Pas d'import de `ui.js` : un corrigé de séance peut importer ce module hors du navigateur.
 import { ech, pad2 } from '../texte.js';
 import { noteProportionnelle } from '../notes.js';
+import { auClavier, secondClic } from '../gestes.js';
 const cp = (o) => JSON.parse(JSON.stringify(o));
 const minutesDe = (hm) => { const [h, m] = String(hm || '00:00').split(':').map(Number); return h * 60 + (m || 0); };
 const hhmm = (m) => { m = ((Math.round(m) % 1440) + 1440) % 1440; return `${pad2(Math.floor(m / 60))}:${pad2(m % 60)}`; };
 
-// Au clavier seulement, on rend le focus après un redessin (charte : « conserver le focus »).
-let clavier = false;
-if (typeof document !== 'undefined') {
-  document.addEventListener('keydown', () => { clavier = true; }, true);
-  document.addEventListener('pointerdown', () => { clavier = false; }, true);
-}
+// Au clavier seulement, on rend le focus après un redessin (charte : « conserver le focus ») : `auClavier()`.
 
 /* ==================================================================== échelle */
 // Deux échelles, un seul modèle : la grille a `n` colonnes (créneaux), une carte en couvre `L`.
@@ -954,7 +950,7 @@ export function creerPlanning(P, opts = {}) {
         if (t) ui.focus = { id: t.dataset.plId, vue: t.dataset.plVue };
         else if (ev.target.dataset && ev.target.dataset.pl) ui.focus = { pl: ev.target.dataset.pl };
       });
-      if (clavier && ui.focus) {
+      if (auClavier() && ui.focus) {
         const f = ui.focus;
         const vue = ui.focusVue || f.vue; ui.focusVue = null;
         const el = f.pl ? racine.querySelector(`[data-pl="${f.pl}"]`)
@@ -963,7 +959,7 @@ export function creerPlanning(P, opts = {}) {
       }
       // La bulle ouverte reste dans la zone visible.
       const bu = racine.querySelector('.pl-bulle');
-      if (bu && ui.ouvrirBulle) { ui.ouvrirBulle = false; bu.scrollIntoView({ block: 'nearest', inline: 'nearest' }); if (clavier) bu.querySelector('.pl-choix')?.focus(); }
+      if (bu && ui.ouvrirBulle) { ui.ouvrirBulle = false; bu.scrollIntoView({ block: 'nearest', inline: 'nearest' }); if (auClavier()) bu.querySelector('.pl-choix')?.focus(); }
 
       const grille = racine.querySelector('[data-pl-grille]');
       const caseSous = (x, y) => (typeof document.elementsFromPoint === 'function' ? document.elementsFromPoint(x, y) : []).find((el) => el.dataset && el.dataset.plCase !== undefined && grille.contains(el));
@@ -979,8 +975,8 @@ export function creerPlanning(P, opts = {}) {
         if (R.g && M.lire(e.place, phaseDonnees(e)).P.length && !ui.confirmer) { ui.confirmer = true; redessiner(); return; }
         // Envoi définitif : d'abord une confirmation dans la page (06/10/2026, Smoby C2). « Envoyer quand même »
         // en est déjà une.
-        if (!ui.confEnvoi) { ui.confEnvoi = true; redessiner(); return; }
-        ui.confEnvoi = false; envoyer(e, api);
+        if (!secondClic(ui, 'confEnvoi')) { redessiner(); return; }
+        envoyer(e, api);
       });
       on('envoiOui', () => { ui.confEnvoi = false; envoyer(e, api); });
       on('envoiNon', () => { ui.confEnvoi = false; redessiner(); });

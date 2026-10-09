@@ -86,6 +86,7 @@
 import { compilerVisite, jalonsVisite, detailVisite, creerVisite, etatVisiteNeuf } from './entrepot-visite.js';
 import { ech, pad2 } from '../texte.js';
 import { noteProportionnelle } from '../notes.js';
+import { auClavier } from '../gestes.js';
 const nb = (n) => Number(n).toLocaleString('fr-FR');
 const kg = (n) => `${nb(n)} kg`;
 
@@ -95,14 +96,11 @@ export function decoupe(a) {
   return m ? { c: m[1], t: +m[2], n: +m[3], e: +m[4] } : null;
 }
 
-// Au clavier seulement, on rend le focus après un redessin (charte : « conserver le focus »).
-let clavier = false;
+// Au clavier seulement, on rend le focus après un redessin (charte : « conserver le focus ») : `auClavier()`.
 // Échap ramène de la vue ouverte au plan : une seule écoute pour toute la page, branchée sur la vue
 // affichée en dernier (elle se tait si la vue n'est plus à l'écran).
 let echap = null;
 if (typeof document !== 'undefined') {
-  document.addEventListener('keydown', () => { clavier = true; }, true);
-  document.addEventListener('pointerdown', () => { clavier = false; }, true);
   document.addEventListener('keydown', (ev) => {
     if (ev.key !== 'Escape' || !echap || !echap.racine.isConnected) return;
     if (/^(INPUT|SELECT|TEXTAREA)$/.test(ev.target.tagName || '')) return;
@@ -1404,7 +1402,7 @@ export function creerEntrepot(P, opts = {}) {
   // d'écran partagé, Échap, le clavier. Ici seulement : toutes les fonctions ci-dessus sont prêtes.
   if (M.mode === 'visite') {
     return creerVisite(P, M, { G, ui, Y0, TH, htmlPlan, htmlFace,
-      echap: (racine, fn) => { echap = { racine, fn }; }, clavier: () => clavier });
+      echap: (racine, fn) => { echap = { racine, fn }; }, clavier: auClavier });
   }
 
   return {
@@ -1476,7 +1474,7 @@ export function creerEntrepot(P, opts = {}) {
       const det = racine.querySelector('[data-pe-regles]');
       if (det) det.addEventListener('toggle', () => { ui.regles = det.open; });
       on('retour', fermer);
-      if (clavier && ui.focus) {
+      if (auClavier() && ui.focus) {
         const el = racine.querySelector(`[data-pe-cle="${CSS.escape(ui.focus)}"]`);
         if (el) el.focus({ preventScroll: true });
       }

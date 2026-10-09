@@ -2,6 +2,7 @@
 
 import { majLogos, basculerTheme, ICONE_THEME } from './theme.js';
 import { ech, pad2 } from './texte.js';
+import { auClavier, secondClic, memoriserFocus, retrouverFocus, garderFocus } from './gestes.js';
 
 export const $ = (s, r = document) => r.querySelector(s);
 export const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
@@ -9,6 +10,8 @@ export const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
 // `ech` et `pad2` vivent dans `texte.js` (sans accès au navigateur : les corrigés s'en servent hors
 // navigateur) ; on les ré-exporte ici pour que les imports existants ne bougent pas.
 export { ech, pad2 };
+// Les deux gestes partagés des vues (confirmation en deux clics, focus clavier conservé) : voir `gestes.js`.
+export { auClavier, secondClic, memoriserFocus, retrouverFocus, garderFocus };
 
 export function toast(msg, ms = 2600) {
   let t = document.getElementById('toast');

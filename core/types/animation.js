@@ -48,7 +48,7 @@
 //   - `partie` : la partie la plus loin qu'il peut ouvrir (0 = la première) ; pas de saut en avant.
 // L'enseignant navigue librement, voit la bonne réponse marquée, et rien n'est écrit pour lui.
 
-import { ech, toast } from '../ui.js';
+import { ech, toast, memoriserFocus, retrouverFocus } from '../ui.js';
 import { hasard } from '../tirage.js';
 import { projection, DEFS, compilerScene, dessinerDecor, bornesDecor, dessinerObjets, HAUT_RETENTION,
   TYPES_CHARGE, GESTES } from '../iso.js';
@@ -465,7 +465,7 @@ export function creerLecteur(A) {
       const dejaRepondu = !!(premiere && premiere.premiere != null);
       const st = { choisi: null, valide: dejaRepondu && !opts.refaire, montre: dejaRepondu ? premiere.premiere : null, refaire: !!opts.refaire };
       if (st.valide) st.choisi = st.montre;
-      const focusAvant = boite.contains(document.activeElement) && document.activeElement.matches(':focus-visible') ? document.activeElement.dataset.cle : null;
+      const focusAvant = memoriserFocus(boite);
       const lettre = (pos) => String.fromCharCode(65 + pos);
       const peindre = () => {
         const cls = (i) => {
@@ -520,7 +520,7 @@ export function creerLecteur(A) {
       boite.hidden = false;
       if (st.valide && k === M.parties.length - 1) aRetenir();
       // Le focus suit le clavier seulement (un clic de souris ne déplace rien).
-      if (focusAvant) boite.querySelector(`[data-cle="${focusAvant}"]`)?.focus();
+      retrouverFocus(boite, focusAvant, { defilement: true });
     }
 
     /* ------------------------------------------------------------ commandes */

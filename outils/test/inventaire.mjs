@@ -467,6 +467,27 @@ await v('Inventaire : périmètre agrandi après le début — la ligne nouvelle
   egal(await pg.$$eval(`${Z} [data-inv-saisie]`, (l) => l.map((x) => x.dataset.invSaisie)), ['RAM-A4-80', 'CLE-USB-32'], 'lignes');
 });
 
+// Chantier 14 (09/10/2026) : l'inventaire n'avait aucune conservation du focus, et les redessins du moteur
+// jetaient l'élève qui travaille au clavier en haut de la page. Le redessin garde maintenant le focus CLAVIER
+// (au clavier seulement : un clic de souris ne déplace rien).
+await v('Inventaire : le focus clavier reste sur le champ de recomptage après le redessin ; à la souris, rien ne bouge', async () => {
+  // Le champ « Recompté » n'existe qu'en comptage physique.
+  await monter({ reglages: { source: 'physique', ecarts: 'ecran' } }); await ouvrir('inventaire');
+  await saisirReleve(); await aller(2); await aller(3);
+  await decider('CLE-USB-32', 'recompter');
+  const champ = `${Z} [data-inv-recompte="CLE-USB-32"]`;
+  await pg.focus(champ);
+  await pg.keyboard.type('20');
+  await pg.keyboard.press('Enter');      // la saisie se valide (`change`) : la vue se redessine
+  await pg.waitForTimeout(150);
+  const lire = () => pg.evaluate(() => { const a = document.activeElement; return [a && a.tagName, a && a.dataset && a.dataset.invRecompte, a && a.value, a && a.selectionStart]; });
+  egal(await lire(), ['INPUT', 'CLE-USB-32', '20', 2], 'après un redessin au clavier : le champ garde le focus, sa valeur et son curseur');
+  // À la souris : même redessin, aucun focus rendu.
+  await pg.click(champ);
+  await pg.fill(champ, '19'); await pg.dispatchEvent(champ, 'change'); await pg.waitForTimeout(150);
+  egal((await lire())[0], 'BODY', 'après un redessin à la souris : le focus ne revient pas');
+});
+
 await v('Inventaire : aucune erreur de console sur tout le parcours', async () => {
   if (erreursInv.length) throw new Error(erreursInv.slice(0, 3).join(' | '));
 });

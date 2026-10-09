@@ -11,7 +11,7 @@
 // d'un élève et dire si le travail attendu est fait. Le score remonté au suivi de classe
 // est le nombre d'étapes réussies.
 
-import { ech, toast, confirmer } from '../ui.js';
+import { ech, toast, confirmer, secondClic, memoriserFocus, retrouverFocus, garderFocus } from '../ui.js';
 import { creerPlan } from './plan.js';
 import { creerCarte } from './carte.js';
 import { creerTournee } from './tournee.js';
@@ -550,8 +550,7 @@ export function creerEntreprise(U) {
           .sort((a, b) => b.id - a.id));
         const vues = L.slice(0, CARTES_MAX), reste = L.length - vues.length;
         // Le focus, au clavier, reste sur le même bouton quand la carte se réduit.
-        const av = document.activeElement;
-        const cle = av && PILE.contains(av) ? av.dataset.cle : null;
+        const cle = memoriserFocus(PILE);
         PILE.innerHTML = vues.map((m) => {
           if (m.etape) {
             const e = m.etape, qui = `<strong>${ech(appel(MQ.personnes[e.de]))}</strong> · ${ech(e.titre || 'Point d’étape')}`;
@@ -589,7 +588,7 @@ export function creerEntreprise(U) {
             if (hote.isConnected) majCartes();
           }, CARTE_REDUITE_APRES);
         });
-        if (cle) PILE.querySelector(`[data-cle="${cle}"]`)?.focus();
+        retrouverFocus(PILE, cle, { defilement: true });
       }
       // ── Les QUESTIONS AU FIL et les POINTS D'ÉTAPE (brief MOTEUR-questions-au-fil, lot 2, 08/10/2026) ───────────
       // Format et état : en tête de `core/types/questions.js`. Ici, le branchement : l'arrivée (avec les messages
@@ -655,8 +654,7 @@ export function creerEntreprise(U) {
         if (!MQ) return;
         const shell = hote.querySelector('.ent-shell'), ancre = hote.querySelector('[data-qf-ancre]'), bandeau = hote.querySelector('[data-qf-bandeau]');
         if (!shell || !ancre || !bandeau) return;
-        const av = document.activeElement;
-        const cle = av && (ancre.contains(av) || bandeau.contains(av)) ? av.dataset.cle : null;
+        const cle = memoriserFocus([ancre, bandeau]);
         const q = !estProf && !rendue() ? questionDuPanneau() : null;
         ancre.innerHTML = q ? htmlPanneau(MQ, q, reponse(db, MQ, q.id), optionsQuestion(q.id)) : '';
         shell.classList.toggle('ent-avec-panneau', !!q);
@@ -674,7 +672,7 @@ export function creerEntreprise(U) {
         }
         bandeau.innerHTML = b;
         appliquerGel();
-        if (cle) (ancre.querySelector(`[data-cle="${cle}"]`) || bandeau.querySelector(`[data-cle="${cle}"]`))?.focus();
+        retrouverFocus([ancre, bandeau], cle, { defilement: true });
       }
       // Répondre : la PREMIÈRE réponse est rangée (la clé du choix), avec sa durée et les sorties de page. Jamais réécrite.
       function repondreQuestion(id) {
@@ -1135,7 +1133,12 @@ export function creerEntreprise(U) {
       const COM = monterCommandes({ db, E, hote, prenom, ENTREPRISE, A, VM, VOCAB, livraisons: U.livraisons || {}, B, sauver, dessiner });
 
       /* ============================================================== rendu */
-      function dessiner() {
+      // Les deux redessins (l'écran entier, puis le seul écran de travail) gardent le focus CLAVIER : sans cela, un
+      // élève qui valide au clavier se retrouvait en haut de la page à chaque redessin (chantier 14, 09/10/2026).
+      // `siPerdu` : une vue qui place le focus elle-même, après coup, garde la main.
+      function dessiner() { garderFocus(hote, dessinerBrut, { siPerdu: true }); }
+      function dessinerVue() { garderFocus(hote, dessinerVueBrut, { siPerdu: true }); }
+      function dessinerBrut() {
         const nonLus = db.mails.filter((m) => m.folder === 'in' && !m.read).length;
         const aFaire = COM.aFaire();
         const aRecevoir = REC.aRecevoir();
@@ -1265,7 +1268,7 @@ export function creerEntreprise(U) {
         hote.querySelector('[data-quitter]').addEventListener('click', () => sortir(ctx.quitter));
         brancherBandeauFin();
         hote.querySelector('[data-copie-rendre]')?.addEventListener('click', () => {
-          if (!copie.arme) { copie.arme = true; dessiner(); return; }
+          if (!secondClic(copie, 'arme', { garder: true })) { dessiner(); return; }
           rendreLaCopie();
         });
         hote.querySelector('[data-copie-annuler]')?.addEventListener('click', () => { copie.arme = false; dessiner(); });
@@ -1410,7 +1413,7 @@ export function creerEntreprise(U) {
         hote.scrollIntoView({ block: 'start', behavior: 'smooth' });
       }
 
-      function dessinerVue() {
+      function dessinerVueBrut() {
         const z = hote.querySelector('#entMain');
         const vues = {
           accueil: vueAccueil, ...MSG.vues, ...COM.vues, ...REC.vues,

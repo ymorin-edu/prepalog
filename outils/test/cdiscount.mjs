@@ -2524,4 +2524,36 @@ Suite à donner : Réclamation auprès de Gardéo, livraison incomplète`;
     });
     if (errs.length) throw new Error(errs.join(' | '));
   });
+
+  // Chantier 14 (09/10/2026) : le redessin COMPLET de l'environnement (menu compris) ne rendait pas le focus : un
+  // élève qui choisit une entrée du menu au clavier se retrouvait sans focus. Il le garde maintenant ; à la souris,
+  // rien n'est replacé.
+  await v('ENT-2.1 : le menu redessiné entièrement rend le focus clavier à l’entrée choisie ; à la souris, aucun focus rendu', async () => {
+    const ctxF = await nav.newContext();
+    const pf = await ctxF.newPage();
+    try {
+      await pf.goto(new URL('/', page.url()).toString());
+      await pf.waitForSelector('#btnProf', { timeout: 8000 });
+      await pf.evaluate(async () => {
+        const mod = await import('/activites/cdiscount-mouvements.js');
+        const db = {};
+        const hote = document.createElement('div');
+        hote.id = 'essaiFocus';
+        document.body.appendChild(hote);
+        mod.rendre(hote, { meta: mod.meta, profil: { prenom: 'Léa', role: 'eleve' }, codeStock: 'STOCK24',
+          jeu: { etat: () => db, sauver() {} }, enregistrer() {}, quitter() {} });
+      });
+      const actif = () => pf.evaluate(() => { const a = document.activeElement; return [a && a.tagName, a && a.dataset && a.dataset.vue, a && a.classList.contains('on')]; });
+      await pf.focus('#essaiFocus .ent-nav[data-vue="stock"]');
+      await pf.keyboard.press('Enter');          // `aller('stock')` : tout l'environnement est redessiné
+      await pf.waitForSelector('#essaiFocus .ent-nav.on[data-vue="stock"]');
+      const apresClavier = await actif();
+      if (JSON.stringify(apresClavier) !== JSON.stringify(['BUTTON', 'stock', true])) throw new Error('au clavier, le focus devait rester sur « Stock » : ' + JSON.stringify(apresClavier));
+      await pf.click('#essaiFocus .ent-nav[data-vue="catalogue"]');
+      await pf.waitForSelector('#essaiFocus .ent-nav.on[data-vue="catalogue"]');
+      const apresSouris = await actif();
+      if (apresSouris[0] !== 'BODY') throw new Error('à la souris, aucun focus ne devait être replacé : ' + JSON.stringify(apresSouris));
+    } finally { await ctxF.close(); }
+  });
+
 }

@@ -119,6 +119,7 @@ import { projection, facadeQuai, X_PORTE_FACADE, camionPorteur, personne, HAUT_P
   solQuai, niveleur, remorqueInterieur, murQuai, ouvertureQuai, transpaletteManuel, paletteCartons, dimsPalette,
   faceVisible, facesExterieures } from '../iso.js';
 import { ech } from '../texte.js';
+import { retrouverFocus, secondClic } from '../gestes.js';
 
 
 /* ================================================================== libellés */
@@ -674,12 +675,6 @@ function signature(c, graine) {
   return `<svg viewBox="0 0 190 54"><path d="${d}" fill="none" stroke="${c}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 }
 
-// Au clavier seulement, on rend le focus après un redessin (charte : « conserver le focus »).
-let clavier = false;
-if (typeof document !== 'undefined') {
-  document.addEventListener('keydown', () => { clavier = true; }, true);
-  document.addEventListener('pointerdown', () => { clavier = false; }, true);
-}
 const reduit = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 // L'afficheur du thermomètre à sonde : « −19,6 ».
 const lcd = (v) => (v < 0 ? '−' : '') + Math.abs(v).toFixed(1).replace('.', ',');
@@ -2108,7 +2103,7 @@ export function creerQuai(Q, opts = {}) {
         z.querySelectorAll('[data-q], input').forEach((el) => el.addEventListener('focus', () => {
           ui2.focus = el.id ? `#${el.id}` : el.dataset.q ? `[data-q="${el.dataset.q}"]${el.dataset.n ? `[data-n="${el.dataset.n}"]` : ''}${el.dataset.v ? `[data-v="${el.dataset.v}"]` : ''}` : null;
         }));
-        if (clavier && ui2.focus) { const f = z.querySelector(ui2.focus); if (f && !f.disabled) f.focus(); }
+        retrouverFocus(z, ui2.focus, { defilement: true });
         on('messagerie', () => { if (api.messagerie) api.messagerie(); });
         on('onglet', (ev, b) => { e.onglet = b.dataset.v === 'chambre' ? 'chambre' : 'dossier'; ui2.msgCompte = ''; refaire(); });
         on('sel', (ev, b) => { e.sel = +b.dataset.n; ui2.msgCompte = ''; refaire(); });
@@ -2133,8 +2128,8 @@ export function creerQuai(Q, opts = {}) {
         on('debloquer', geste(() => { if (!phase2(e)) return; s().bloque = false; refaire(); }));
         on('terminer', geste(() => {
           if (!phase2(e)) return;
-          if (!ui2.armeFin) { ui2.armeFin = true; api.redessiner(); return; }
-          ui2.armeFin = false; e.fini = true; e.termine = Date.now(); refaire();
+          if (!secondClic(ui2, 'armeFin')) { api.redessiner(); return; }
+          e.fini = true; e.termine = Date.now(); refaire();
         }));
         on('desarmerFin', () => { ui2.armeFin = false; api.redessiner(); });
       },
@@ -2204,7 +2199,7 @@ export function creerQuai(Q, opts = {}) {
       z.querySelectorAll('[data-q], input, select').forEach((el) => el.addEventListener('focus', () => {
         ui.focus = el.id ? `#${el.id}` : el.dataset.q ? `[data-q="${el.dataset.q}"]${el.dataset.n ? `[data-n="${el.dataset.n}"]` : ''}${el.dataset.c ? `[data-c="${el.dataset.c}"]` : ''}` : null;
       }));
-      if (clavier && ui.focus) { const f = z.querySelector(ui.focus); if (f && !f.disabled) f.focus(); }
+      retrouverFocus(z, ui.focus, { defilement: true });
 
       on('etape', (ev, b) => {
         const n = +b.dataset.n;
@@ -2283,7 +2278,7 @@ export function creerQuai(Q, opts = {}) {
       });
       on('vers3', () => aller(e, 3, api));
       on('vers4', () => {
-        if (!ui.arme4) { ui.arme4 = true; api.redessiner(); return; }
+        if (!secondClic(ui, 'arme4')) { api.redessiner(); return; }
         aller(e, 4, api);
       });
       on('desarmer4', () => { ui.arme4 = false; api.redessiner(); });
@@ -2492,16 +2487,16 @@ export function creerQuai(Q, opts = {}) {
         if (!toutFini(e)) return;
         sig('cloturer');
         if (EVAL && !api.estProf) {
-          if (!ui.arme) { ui.arme = true; api.redessiner(); return; }
-          ui.arme = false; e.fini = true; api.sauver(); api.redessiner(); api.rendreCopie(); return;
+          if (!secondClic(ui, 'arme')) { api.redessiner(); return; }
+          e.fini = true; api.sauver(); api.redessiner(); api.rendreCopie(); return;
         }
         e.fini = true; api.sauver(); api.redessiner();
       }));
       on('desarmer', () => { ui.arme = false; api.redessiner(); });
       on('recommencer', () => {
         if (Q.recommencer === false) return;
-        if (!ui.armeRaz) { ui.armeRaz = true; api.redessiner(); return; }
-        ui.armeRaz = false; api.recommencer();
+        if (!secondClic(ui, 'armeRaz')) { api.redessiner(); return; }
+        api.recommencer();
       });
       if (ui.jouerCf) { ui.jouerCf = false; jouerCf(z, e); }
     },
