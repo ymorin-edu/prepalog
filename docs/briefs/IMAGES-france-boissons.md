@@ -6,7 +6,7 @@
 > Lis docs/briefs/IMAGES-france-boissons.md : récupère les 11 images dans le dépôt, fais les retouches demandées, vérifie chaque fichier par empreinte, et montre-moi le résultat avant de commiter.
 > ```
 
-**Statut** : à faire — choix de Tristan le 05/10/2026 (Cowork).
+**Statut** : **livré, les 11 images validées par Tristan le 09/10/2026** (choix des photos libres : Tristan, 05/10/2026, Cowork).
 **Pourquoi des photos libres** : les photos de France Boissons appartiennent à France Boissons. Le dépôt est public et
 GitHub Pages sert chaque fichier à n'importe qui, sans compte : mettre une image dans le dépôt, c'est la publier. Une
 demande d'autorisation part chez France Boissons (mail de Tristan). En attendant, ces photos libres. Si France Boissons
@@ -49,5 +49,26 @@ Y0HxVe7D23w (Japon, chauffeur visible), remplacés par les deux photos Pexels ; 
 
 ## Compte rendu *(rempli par Claude Code)*
 
-- Fichiers, empreintes, taille :
-- Retouches faites et validées par Tristan :
+- Fichiers, empreintes, taille : 11 JPEG dans `contenus/images/france-boissons/` (1200 px de large au plus, qualité 80),
+  2 371 559 octets au total (environ 2,3 Mo). Empreintes SHA-256, tailles, dimensions, auteurs, liens et mentions à afficher :
+  `contenus/images/france-boissons/CREDITS.md`. Générateur reproductible : `outils/images-france-boissons.py` (originaux
+  téléchargés dans `outils/images-france-boissons-sources/`, ignoré par git). Relancé deux fois, il redonne les mêmes
+  empreintes. Installé sur le poste pour le faire marcher : Pillow, NumPy et OpenCV (version « headless »), pour l'utilisateur.
+  **Rien n'est commité** : en attente du regard de Tristan.
+- Retouches faites (à valider par Tristan, image par image) :
+  - `futs-mur` : recadrée au-dessus du sol (bas retiré) ; quelques herbes restent entre les fûts du bas.
+  - `casier-vides` : recadrée sur le casier du bas ; « mini Super Bock » effacé sur les deux faces (on devine un très léger
+    fantôme sur la face de droite).
+  - `bar-plage` : « SHOP » effacé, propre.
+  - `chariot-boissons` : cariste flouté (tête et épaules) ; donne une tache sombre dans la cabine.
+  - `entrepot-cartons` : banderole IKEA du fond effacée, propre.
+  - `camion-port` : cinq plaques à caractères coréens du bras de la grue effacées, deux plaques d'immatriculation
+    floutées, bas de l'image retiré (bacs verts à inscription coréenne) ; le bord du bras est un peu lissé à cet endroit.
+  - Les 5 autres : réduites seulement.
+- Points à décider par Tristan : noms de brasseurs gravés dans les fûts de `futs-vrac` et `futs-mur` (« Thatchers Cider »,
+  « Molson Coors », « Close Bry Rental »…) restent lisibles de près ; le brief ne demandait aucune retouche, la règle
+  « aucune marque concurrente lisible » pourrait en demander une. Détail dans `CREDITS.md`.
+- Vérifié : empreintes relues sur les fichiers écrits (et recoupées par `sha256sum`), les 11 images regardées une à une,
+  script relancé deux fois avec le même résultat. Supposé : que l'adresse de téléchargement redonne les mêmes originaux
+  (Pexels sert une version recompressée ; l'empreinte de l'original est affichée par le script, colonne « source »).
+- Validées par Tristan : **les 11, telles quelles, le 09/10/2026** (noms gravés sur les fûts et cartons « NORMA » laissés : ce ne sont pas des marques de boissons lisibles à taille d'écran).

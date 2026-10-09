@@ -7,7 +7,6 @@ est déjà modifié ou inscrit ci-dessous, **elle s'arrête et le dit à Tristan
 
 | Chantier | Fichiers qu'il touche | Depuis |
 |---|---|---|
-| D-D photos libres France Boissons (brief `IMAGES-france-boissons`, en attente de la validation de Tristan) | `contenus/images/france-boissons/*`, `outils/images-france-boissons*`, `.gitignore`, `docs/briefs/IMAGES-france-boissons.md` | 09/10/2026 |
 
 Rappel : un seul chantier à la fois dans `core/types/tournee.js`, `core/types/grille.js`,
 `core/types/entreprise.js`, `styles/base.css` et `outils/test/boost.mjs` (voir `docs/briefs/COORDINATION-boost.md`).
