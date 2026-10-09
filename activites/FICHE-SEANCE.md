@@ -598,7 +598,9 @@ Les jalons lisent **`TIRAGE.piecesTirees(db, 'cv')`** (le socle, dans l'ordre de
 - tire à la première ouverture, **après** avoir figé `db.aisance` et **avant** le volet, re-tire si `verifier` rend des écarts
   (`#1`, `#2`…, 40 essais), sinon donne le **secours** (premières pièces de chaque difficulté, dans l'ordre de la banque) :
   jamais d'élève sans jeu. Rangé dans `db.tirages[<id séance>] = { graine, pieces, bonus?, difficultes, valeurs?, essai,
-  secours, at }` ; les valeurs sont tirées à part (un confirmé a les mêmes valeurs et le même socle qu'un standard) ;
+  secours, at }` ; les valeurs sont tirées à part (un confirmé a les mêmes valeurs qu'un standard ; son socle n'est le même
+  que pour la **première** banque : les cas bonus d'une banque consomment le générateur avant le socle de la suivante,
+  constaté sur ENT-6.1 le 09/10/2026 — sans effet sur la note, le socle d'un confirmé reste conforme et équitable) ;
 - une pièce rangée **introuvable** dans la banque : remplacée par une pièce de même difficulté (`remplacees`), la séance continue ;
 - **bonus** seulement si `db.aisance === 'confirme'`, jamais en évaluation (`copie`) ; « Réinitialiser » efface le tirage avec
   le reste et le refait aussitôt (même graine, donc mêmes pièces si la banque n'a pas changé).
