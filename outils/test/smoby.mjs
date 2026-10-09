@@ -427,8 +427,23 @@ await v('Repérage : l’enseignant voit, par séance d’entreprise, temps, mot
     const { B } = await import('/core/backend.js');
     await B.creerEleves(gid, [{ nom: 'REPERAGE', prenom: 'Test', matricule: 'reperage-test', code: 'x' }]);
     const el = (await B.elevesDuGroupe(gid)).find((x) => x.nom === 'REPERAGE');
-    const { chargerActivites } = await import('/activites/index.js');
-    const m = (await chargerActivites()).map((x) => x.meta).find((x) => x.portee === 'eleve' && x.immersif && x.bareme && !x.copie);
+    const { chargerActivites, estSimulog } = await import('/activites/index.js');
+    // Séance choisie pour ne dépendre d'aucun autre bloc (chantier 13, 09/10/2026) : la première séance
+    // d'entreprise à note automatique que personne du groupe n'a jouée — ni documents, ni repérage rangés.
+    // Les blocs lancés avant celui-ci (spartoo, socle…) ont pu faire jouer des élèves ; on les évite.
+    const eleves = await B.elevesDuGroupe(gid);
+    const libre = async (x) => {
+      for (const e of eleves) {
+        const t = await B.lireScore(gid, e.uid, x.id);
+        if (t && t.detail && (t.detail.documents || (t.detail.indicateurs && t.detail.indicateurs[x.id]))) return false;
+      }
+      return true;
+    };
+    let m = null;
+    for (const x of (await chargerActivites()).map((a) => a.meta)) {
+      if (x.portee === 'eleve' && estSimulog(x) && x.bareme && !x.copie && await libre(x)) { m = x; break; }
+    }
+    if (!m) throw new Error('aucune séance d’entreprise sans élève du groupe qui l’ait jouée : le cas ne prouve rien');
     await B.ecrireScore(gid, el.uid, m.id, { score: 2, max: 5, detail: { quai: { reel: 300 }, indicateurs: { [m.id]: {
       temps: 1500, mots: { CACES: 2, CDD: 1 }, aides: { 'Rappel tableur': 1 }, premier: { a: 'ok', b: 'ko', c: 'ok' } } } } });
     return { gid, uid: el.uid, aid: m.id };
