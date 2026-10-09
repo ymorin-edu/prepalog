@@ -742,4 +742,55 @@ await v('séance refusée : supprimer un élève efface aussi son classement dan
 });
 await ctxC.close();
 
+// ---------- chantier 13 (09/10/2026) : les trois blocs de variables de la charte déclarent les mêmes noms
+// `styles/base.css` déclare la charte TROIS fois (thème clair, thème sombre choisi, thème sombre du système) et la
+// consigne du projet est de toujours les modifier ensemble. Une variable oubliée dans un bloc n'est pas une erreur du
+// navigateur : elle retombe sur la valeur d'un autre thème, et l'écran devient illisible dans UN thème seulement. Le cas
+// compare les ENSEMBLES de noms (les valeurs diffèrent, c'est le but) et nomme la variable et le bloc fautifs.
+await v('charte : les trois blocs de variables de base.css (clair, sombre, sombre du système) déclarent les mêmes noms', async () => {
+  const css = fs.readFileSync(path.join(ROOT, 'styles', 'base.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  // Le corps d'un bloc : de l'accolade qui suit le sélecteur à son accolade fermante (accolades imbriquées comptées).
+  const corps = (selecteur) => {
+    const d = css.indexOf(selecteur);
+    if (d < 0) throw new Error(`bloc introuvable dans base.css : ${selecteur}`);
+    const ouvre = css.indexOf('{', d + selecteur.length);
+    let prof = 0;
+    for (let i = ouvre; i < css.length; i++) {
+      if (css[i] === '{') prof++;
+      else if (css[i] === '}' && --prof === 0) return css.slice(ouvre + 1, i);
+    }
+    throw new Error(`bloc non refermé : ${selecteur}`);
+  };
+  const noms = (texte) => new Set([...texte.matchAll(/(?:^|[;{\s])(--[A-Za-z0-9_-]+)\s*:/g)].map((m) => m[1]));
+  const blocs = {
+    'clair (:root, :root[data-theme="clair"])': noms(corps(':root, :root[data-theme="clair"]')),
+    'sombre (:root[data-theme="sombre"])': noms(corps(':root[data-theme="sombre"]')),
+    'système sombre (@media prefers-color-scheme: dark)': noms(corps(':root:not([data-theme="clair"])')),
+  };
+  // Le bloc du système est le premier `:root:not(...)` : on vérifie qu'il est bien dans l'@media de la charte.
+  const dMedia = css.indexOf('@media (prefers-color-scheme: dark){');
+  const dBloc = css.indexOf(':root:not([data-theme="clair"]){');
+  if (dMedia < 0 || dBloc < dMedia || css.slice(dMedia + '@media (prefers-color-scheme: dark){'.length, dBloc).trim()) {
+    throw new Error('le bloc « système sombre » n’est plus le premier contenu d’un @media (prefers-color-scheme: dark)');
+  }
+  const toutes = new Set(Object.values(blocs).flatMap((e) => [...e]));
+  if (toutes.size < 20) throw new Error(`seulement ${toutes.size} variables lues dans base.css : l'analyse ne lit plus la charte`);
+  // Deux variables ne dépendent pas du thème (le rayon des angles et la police à chasse fixe) : elles sont
+  // déclarées dans le seul bloc clair, dont le sélecteur `:root` s'applique aussi en sombre. Liste écrite ici
+  // exprès : une variable de COULEUR oubliée dans un bloc sombre ne s'y cache pas. Si l'une d'elles gagne une
+  // valeur par thème, elle doit rejoindre les trois blocs et sortir de cette liste.
+  const COMMUNES = ['--r', '--mono'];
+  const clair = blocs[Object.keys(blocs)[0]];
+  const manques = [];
+  for (const nom of COMMUNES) {
+    if (!clair.has(nom)) manques.push(`${nom} est dans la liste des variables communes mais le bloc clair ne la déclare plus`);
+    for (const [bloc, ens] of Object.entries(blocs).slice(1)) if (ens.has(nom)) manques.push(`${nom} est déclarée par thème dans le bloc ${bloc} : la sortir de la liste des variables communes et la mettre dans les trois blocs`);
+  }
+  for (const nom of [...toutes].sort()) {
+    if (COMMUNES.includes(nom)) continue;
+    for (const [bloc, ens] of Object.entries(blocs)) if (!ens.has(nom)) manques.push(`${nom} manque au bloc ${bloc}`);
+  }
+  if (manques.length) throw new Error(manques.join(' ; '));
+});
+
 }
