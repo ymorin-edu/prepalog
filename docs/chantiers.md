@@ -34,7 +34,7 @@
 | 12 | CAP OL et niveaux : référentiel, défauts, TAB-4 | C8 | moyen | Sonnet (Cowork d'abord) | oui | référentiel CAP relevé | à faire |
 | **Lot C — hygiène** | | | | | | | |
 | 13 | Tests : compteurs en dur, cas vides, `ATTENDU` complété, doublons | C10b | moyen | Sonnet | non (tests) | — | **livré** (09/10, 06f57c6 à 03eb63e) |
-| 14 | Doublons des vues (`ech`, étapes, note, palette, confirmation, mélange, focus) | C11 | moyen | Sonnet | oui | 9 avancé | à faire |
+| 14 | Doublons des vues (`ech`, étapes, note, palette, confirmation, mélange, focus) | C11 | moyen | Sonnet | oui | 9 avancé | **livré** (09/10, f3cec57 à d637118) |
 | 15 | Couleurs en dur et `base.css` fourre-tout | C12 | petit à moyen | Sonnet | `styles/` + vues | — | à faire |
 | 16 | Champs `meta`, portées et options morts | C14 | petit | Sonnet | oui | décision 14 (cœur) | à faire |
 | 17 | Contenus orphelins, trames Smoby à déclarer, commentaires périmés | C16 | petit | Sonnet | non | — | à faire |
@@ -352,6 +352,15 @@ s'aligner.
   « note = ok/total×sur » ; un seul mélange (celui de `tirage.js`) ; une seule confirmation en deux clics ;
   une seule conservation du focus, étendue à `inventaire.js` et au redessin d'`entreprise.js`.
 - **Fini quand.** Chaque fonction citée n'existe qu'à un endroit ; suite verte.
+- **Livré le 09/10/2026** (f3cec57 à d637118, suite 916/916) : `ech` et `pad2` dans `core/texte.js` (sans navigateur à l'import ;
+  `ui.js` les ré-exporte) ; `noteProportionnelle` dans `notes.js` ; `melangerListe` dans `tirage.js` ; `core/gestes.js`
+  (`secondClic`, `memoriserFocus`, `retrouverFocus`, `garderFocus`, `auClavier`) ; les redessins du moteur gardent le focus
+  clavier (inventaire compris). **Ce qui reste, et pourquoi** : les cinq « jalons → étapes » ne sont PAS fusionnées (sources,
+  états rendus et champs en plus diffèrent : le quai ne rend jamais `ko`, le planning attend l'envoi, l'animation lit les
+  réponses, les questions portent un poids) ; la palette de cartons n'est pas recopiée (une seule `KRAFT`) ; les
+  confirmations « Oui / Non » dans la page, l'étape à trois états de `planning.js` et les armements de `tournee.js` restent à
+  la main (tournee : une autre session) ; aucun délai d'annulation ajouté (à décider avec Tristan : ce serait un changement
+  visible).
 
 ### 15. Couleurs et `base.css` (C12)
 - **Ce qu'on fait.** Les couleurs Boost de `carte.js` en variables ; la copie du thème papier
