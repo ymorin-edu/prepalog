@@ -399,6 +399,16 @@ await v('compétences : chaque séance déclare ce que Tristan a validé le 02/1
     'ENT-3.1': ['C2.4', 'guidage'], 'ENT-3.2': ['C2.4', 'entrainement'], 'ENT-3.3': ['C2.4', 'erreur'],
     'SCE-1': ['C1.6', 'guidage'], 'SCE-2': ['C1.6', 'evaluation'], 'SCE-3': ['C1.6', 'evaluation'],
     'SCE-4': ['C1.5', 'guidage'], 'SCE-5': ['C1.3,C1.4', 'guidage'],
+    // Ajoutées le 09/10/2026 (chantier 13), relevées dans les `meta` des séances livrées : à valider par
+    // Tristan comme les lignes du 02/10. Cdiscount (ENT-2.x), Picard (ENT-4.x), Smoby (ENT-5.x).
+    'ENT-2.1': ['C1.6', 'guidage'], 'ENT-2.2': ['C1.6', 'guidage'], 'ENT-2.3': ['C1.6', 'entrainement'],
+    'ENT-2.4': ['C1.6', 'erreur'], 'ENT-2.5': ['C1.6', 'evaluation'], 'ENT-2.6': ['C1.6', 'entrainement'],
+    'ENT-4.1': ['C1.4', 'guidage'], 'ENT-4.2': ['C1.4,C1.3', 'entrainement'],
+    'ENT-4.3': ['C1.4', 'erreur'], 'ENT-4.4': ['C1.4', 'evaluation'],
+    'ENT-5.1': ['AGO-3.1', 'guidage'], 'ENT-5.2': ['AGO-3.1,AGO-3.2', 'guidage'],
+    'ENT-5.3': ['C1.2,C1.5', 'guidage'], 'ENT-5.4': ['C1.2,C1.4', 'guidage'],
+    'ENT-5.5': ['C1.5,C1.6', 'guidage'], 'ENT-5.6': ['C2.1', 'guidage'],
+    'ENT-5.7': ['OTM-C2.2,OTM-C3.2', 'guidage'], 'ENT-5.8': ['OTM-C2.1,OTM-C2.3', 'guidage'],
   };
   const HORS = ['TAB-1', 'TAB-3', 'QUI-8', 'QUI-9', 'QUI-10'];
   const metas = await page.evaluate(async () => {
