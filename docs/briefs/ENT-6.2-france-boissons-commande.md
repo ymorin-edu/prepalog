@@ -6,7 +6,7 @@
 > Lis docs/briefs/ENT-6.2-france-boissons-commande.md. Commence par la demande au moteur du §7 (case « nombre » et lignes de commande dans la fiche à remplir), puis implémente la séance. Annonce la durée avant de commencer et dis-moi si un point du brief contredit le code.
 > ```
 
-**Statut** : à implémenter *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
+**Statut** : à valider par Tristan *(à implémenter → en cours → à valider par Tristan → livré | abandonné)* — livrée le 10/10/2026 en `pret: true, ouverture: 'prof'`
 **Date du brief** : 05/10/2026
 **Conversation d'origine** : Cowork (Opus) ; fiche projet `claude/prepalog-2de-s2-cadrage.md` (décisions 1 à 20).
 Règles d'écriture 2de : `claude/prepalog-2de-eleve-debut-annee.md` (3 lignes par bloc, une consigne par écran).
@@ -204,9 +204,48 @@ saute aux yeux.
 
 ## Compte rendu *(rempli par Claude Code à la livraison)*
 
-- **Fichiers créés / modifiés** :
+*Rempli par Claude Code le 10/10/2026.*
+
+- **Fichiers créés / modifiés** : créés `activites/france-boissons-commande.js` (la séance, fabrique `seanceEntreprise`),
+  `contenus/france-boissons-ent62.js` (messages, documents, bon de commande, phrases, jalons, accueil), `contenus/corriges/ENT-6.2.js`
+  (corrigé calculé) ; modifiés `contenus/france-boissons.js` (univers : `STOCK_BUCHELAY`, `CONDITIONS_CHR`, `CONSIGNES`, `CABANE`,
+  sept mots au lexique ; rien de changé pour ENT-6.1), `activites/index.js` (une ligne : le code ENT-6.2 range la séance après
+  ENT-6.1 sous France Boissons), `outils/test/france-boissons.mjs` (21 cas ajoutés, aucun cas d'ENT-6.1 réécrit),
+  `activites/FICHE-SEANCE.md` (exemple du bon de commande, limite connue de « Répondre »). Rien dans `core/` ni `styles/`.
 - **Écarts par rapport au brief** (et pourquoi) :
-- **Décisions prises en route** :
-- **Tests** :
-- **Commits** :
+  - §1 « ligne `ENTREPRISES` nouvelle », §7 « case nombre », §8 « bloc nouveau, une ligne dans `BLOCS` » : déjà faits (ENT-6.1, D-E,
+    D-2) ; rien à refaire. Pas de bloc `lignes` (décision D-2).
+  - §4.6 : la réponse par phrases est portée par le **mail de Malo dès l'ouverture** (le moteur répond toujours à l'expéditeur du mail
+    qui porte les phrases, et ne sait pas fermer « Répondre » tant que le bon n'est pas envoyé). L'élève peut donc répondre avant
+    d'envoyer le bon ; la **réponse de Malo** n'arrive qu'une fois **le bon et la réponse** envoyés (sinon « Ok pour la Pelforth, à
+    vendredi ! » donnerait la solution avant le bon), et Inès, au bon reçu, remercie au lieu de redemander la réponse.
+  - §4.3 : en plus des trois documents, **le message de Malo est recopié en premier onglet à gauche du bon** (« Message de Malo ») :
+    l'élève a la demande sous les yeux en remplissant, sans repasser par la Messagerie. Non reconstitué : pied « Copie du message reçu ».
+  - Le message d'accueil d'Inès joint l'organigramme et l'annuaire de la plateforme (idée de Tristan du 07/10/2026, univers).
+- **Décisions prises en route** (une ligne chacune dans `docs/decisions.md`, 10/10/2026) : `parcours` + `precedente:
+  'france-boissons-organigramme'` + `correction: true` (règle du premier bilan, comme ENT-6.1 et les séances Smoby), sans
+  `reinitialisable` (réservé aux séances X.1) ; bandeau de fin
+  en **6 lignes** (les trois jalons des fûts en un bloc « Le bon de commande : les fûts », le piège en chaîne se raisonne en entier) ;
+  quantité de remplacement attendue = ce qui manque, au moins de quoi atteindre le minimum (2 ici ; « Pelforth × 4 » est faux) ;
+  construits en plus : n° client `C-14-2047`, heure du mail de Malo (9 h 32), libellé « Quantité de remplacement (0 si aucun) ».
+- **Tests** : bloc `france-boissons` 38/38 ; suite complète **998/998** le 10/10/2026 (un premier passage à 997 : le bloc
+  `transport` refuse `reinitialisable` hors séance X.1, retiré). Valeurs attendues écrites à la main.
+  Cas ajoutés : valeurs calculées = brief (et copie de `lireNombre` = original) ; ouverture (messages, pièces, menu = Messagerie et Bon
+  de commande, documents lisibles avec leur pied, mots cliquables) ; inaction 0/8 ; parcours juste 8/8 (bandeau 6 ✓, photo) ; huit
+  pièges du bon (Affligem 4, aucun, Edelweiss, Heineken 20 L, Pelforth × 4, samedi, vides inversés, eau 4) qui ne font tomber que
+  leur jalon ; lignes du message (« Salut Malo ! », « Bisous », « C'est bon… », Edelweiss, samedi ; ligne « vides » non notée) ;
+  réponse jamais envoyée (5/8) ; réponse avant le bon ; « Corriger » (7,5/8) ; case nombre (vide, négatif, non entier refusés à
+  l'envoi) ; sabotage jalon par jalon (13 sabotages de la base) ; corrigé ; enseignant ; aucune erreur JavaScript.
+  **Éprouvés dans les deux sens** (9 sabotages du code, chacun restauré et comparé octet par octet) : stock d'Affligem 2 → 3 (17 cas
+  tombent), jalon « jour » toujours juste (2), jalon « ton » sur la salutation seule (2), bon non envoyé jugé juste (1, l'inaction),
+  Malo qui répond sans attendre le bon (1), quantité de remplacement non lue (2), eau non lue (2), case nombre sans `min` (1),
+  copie de `lireNombre` sans la virgule décimale (1).
+- **Commits** : `cd289ad` (séance en brouillon), `c341f32` (tests), puis le commit de livraison (`pret: true, ouverture: 'prof'`,
+  brief, décisions, chantiers).
 - **Reste ouvert** :
+  - **À vérifier à l'écran par Tristan** : le piège en chaîne se comprend-il sans aide orale (stock, minimum, « une autre blonde en
+    20 L ») ; le contraste tutoiement de Malo / vouvoiement de la réponse saute-t-il aux yeux ; le rendu de la ligne « Il manque … À
+    corriger : … » sous le bouton (rouge, une seule ligne qui peut être longue) ; l'élève peut répondre à Malo avant le bon (acceptable ?).
+  - **Demande au moteur** (facultative) : fermer « Répondre » d'un mail par phrases tant qu'une condition est fausse (`phrases.quand(db)`,
+    ici `apresFiche('bon-de-commande')`), pour imposer « le bon d'abord ».
+  - Trame élève (Cowork, après validation à l'écran), questions « Pour réfléchir » du §9.
