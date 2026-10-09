@@ -60,6 +60,8 @@ export const ACTIVITES = [
   () => import('./smoby-preparation.js'),
   () => import('./smoby-enlevements.js'),
   () => import('./smoby-lettre-voiture.js'),
+  // France Boissons (Buchelay) — ENT-6.x. Scénario S2 de la 2de GATL.
+  () => import('./france-boissons-organigramme.js'),
 ];
 
 // Pictogrammes des rubriques. Une seule grille pour les dix : trait de 1,6 px, bouts et
@@ -137,6 +139,8 @@ export const ENTREPRISES = [
   { n: 4, nom: 'Picard', metier: 'Entrepôt de surgelés — Sainghin-en-Mélantois', logo: './contenus/trames/logos/picard.svg' },
   { n: 5, nom: 'Smoby', metier: 'Jouets — plateforme de Moirans-en-Montagne (Jura)', logo: './contenus/trames/logos/smoby.svg',
     intention: { pdf: './contenus/intentions/smoby-intention-pedagogique.pdf', docx: './contenus/intentions/smoby-intention-pedagogique.docx' } },  // relue par Tristan le 09/10/2026
+  // Logo officiel du site (chantier D-E, 09/10/2026, accord de Tristan du 05/10) ; charte : `contenus/france-boissons.js`.
+  { n: 6, nom: 'France Boissons', metier: 'Boissons — plateforme de Buchelay (Yvelines)', logo: './contenus/trames/logos/france-boissons.svg' },
 ];
 
 // ------------------------------------------------------------------- l'ordre
