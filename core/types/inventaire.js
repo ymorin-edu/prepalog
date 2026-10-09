@@ -37,7 +37,7 @@ const LIB_ACTION = Object.fromEntries(ACTIONS);
 const MOTIFS_DEFAUT = ['Casse', 'Erreur de prélèvement', 'Erreur de réception', 'Démarque inconnue', 'Autre'];
 const ETAPES = ['Saisir le comptage', 'Constater les écarts', 'Traiter les écarts', "Valider l'inventaire"];
 
-const ech = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+import { ech } from '../texte.js';
 const eur = (n) => Number(n).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' });
 const fdt = (t) => new Date(t).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
 // Un écart se lit avec son signe : « −3 » est un manque, « +3 » un surplus. Le vrai signe moins.

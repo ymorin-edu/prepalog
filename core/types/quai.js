@@ -118,8 +118,8 @@ import { evaluerGrille, afficher, estFormule } from '../formules.js';
 import { projection, facadeQuai, X_PORTE_FACADE, camionPorteur, personne, HAUT_PERSONNE, bulle, horlogeQuai,
   solQuai, niveleur, remorqueInterieur, murQuai, ouvertureQuai, transpaletteManuel, paletteCartons, dimsPalette,
   faceVisible, facesExterieures } from '../iso.js';
+import { ech } from '../texte.js';
 
-const ech = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 /* ================================================================== libellés */
 export const MOTIFS = {

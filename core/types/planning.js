@@ -52,9 +52,8 @@
 // respectée, jamais DE COMBIEN : les messages par défaut le respectent, ceux du contenu aussi.
 
 // Pas d'import de `ui.js` : un corrigé de séance peut importer ce module hors du navigateur.
-const ech = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+import { ech, pad2 } from '../texte.js';
 const cp = (o) => JSON.parse(JSON.stringify(o));
-const pad2 = (n) => String(n).padStart(2, '0');
 const minutesDe = (hm) => { const [h, m] = String(hm || '00:00').split(':').map(Number); return h * 60 + (m || 0); };
 const hhmm = (m) => { m = ((Math.round(m) % 1440) + 1440) % 1440; return `${pad2(Math.floor(m / 60))}:${pad2(m % 60)}`; };
 

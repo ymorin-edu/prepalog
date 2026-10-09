@@ -31,6 +31,7 @@
 import { etapesQuaiTire } from '../core/types/quai.js';
 import { tirerJeu, graineDeBase } from '../core/tirage.js';
 import { LIEU, PHOTOS, DECHARGEMENT, COUTS, SEUIL_HORS_FROID, AVERTISSEMENT, BON_A_SAVOIR, releves } from './picard.js';
+import { pad2 } from '../core/texte.js';
 
 /* ======================================================================== réglage de la note
    ┌───────────────────────────────────────────────────────────────────────────────────────┐
@@ -73,7 +74,6 @@ const ATTENDU = {
   avarie: ['reserves', 'avarie'], couche: ['accepter', 'aucun'], conforme: ['accepter', 'aucun'],
 };
 const FROID = [-22.4, -18.6], CHAUD = [-14.6, -12.4];
-const pad2 = (n) => String(n).padStart(2, '0');
 // Les cellules de la couche du dessus, et celles de la face arrière (j = 0) sous la couche du dessus :
 // les cartons écrasés y sont visibles seulement en faisant le tour (comme P2 d'ENT-4.1).
 const dessus = (W, D, L) => { const c = []; for (let i = 0; i < W; i++) for (let j = 0; j < D; j++) c.push(`${i},${j},${L - 1}`); return c; };

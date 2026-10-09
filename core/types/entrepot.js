@@ -84,8 +84,7 @@
 // Pas d'import de `ui.js` : un corrigé de séance peut importer ce module hors du navigateur.
 // Le mode VISITE (second chantier, 05/10/2026) vit dans son propre fichier : voir sa tête.
 import { compilerVisite, jalonsVisite, detailVisite, creerVisite, etatVisiteNeuf } from './entrepot-visite.js';
-const ech = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const pad2 = (n) => String(n).padStart(2, '0');
+import { ech, pad2 } from '../texte.js';
 const nb = (n) => Number(n).toLocaleString('fr-FR');
 const kg = (n) => `${nb(n)} kg`;
 

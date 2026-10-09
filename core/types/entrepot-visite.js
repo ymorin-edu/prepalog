@@ -71,8 +71,7 @@
 // cibles trouvées et clics faux, choix de l'adresse, clics d'emplacement. Ce qui est ouvert (point actif,
 // photo du parcours, travée de l'adresse) et le dernier message ne sont pas gardés.
 
-const ech = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const pad2 = (n) => String(n).padStart(2, '0');
+import { ech, pad2 } from '../texte.js';
 // Les textes déclarés sont du HTML de la séance ; `{clé}` y est remplacé par la valeur.
 const fmt = (t, v) => String(t == null ? '' : t).replace(/\{(\w+)\}/g, (m, k) => (v && k in v ? v[k] : m));
 const decoupe = (a) => {

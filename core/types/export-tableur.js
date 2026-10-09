@@ -72,8 +72,8 @@
 
 import { hasard } from '../tirage.js';
 import { chargerXLSX, ICONE_TELECHARGER, ICONE_DEPOSER, controler as controlerCellules, memeValeur, pliage } from './classeur.js';
+import { ech } from '../texte.js';
 
-const ech = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const pluriel = (n, s, p) => (n > 1 ? p || s + 's' : s);
 
 /* ===================================================================== les fonctions */

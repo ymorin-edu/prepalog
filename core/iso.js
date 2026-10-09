@@ -20,6 +20,8 @@
 // UNITÉ : une place de palette (1 × 1 au sol). x vers la droite-bas, y vers la gauche-bas (vers l'élève),
 // z vers le haut. Les couloirs de stockage de masse partent du mur (y petit = fond) vers l'allée.
 
+import { ech } from './texte.js';
+
 /* ================================================================ projection */
 const C30 = 0.866, S30 = 0.5, K1 = 1.2247, K2 = 0.7071;
 
@@ -570,6 +572,3 @@ export function paletteCartons(I, pal, ox, oy, r, o = {}) {
   return g;
 }
 
-function ech(t) {
-  return String(t == null ? '' : t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}

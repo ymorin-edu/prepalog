@@ -1,15 +1,14 @@
 // Briques d'interface partagées.
 
 import { majLogos, basculerTheme, ICONE_THEME } from './theme.js';
+import { ech, pad2 } from './texte.js';
 
 export const $ = (s, r = document) => r.querySelector(s);
 export const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
 
-export function ech(s) {
-  return String(s === undefined || s === null ? '' : s)
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-}
+// `ech` et `pad2` vivent dans `texte.js` (sans accès au navigateur : les corrigés s'en servent hors
+// navigateur) ; on les ré-exporte ici pour que les imports existants ne bougent pas.
+export { ech, pad2 };
 
 export function toast(msg, ms = 2600) {
   let t = document.getElementById('toast');
