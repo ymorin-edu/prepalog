@@ -6,6 +6,12 @@
 
 import { ENTREPOT, PALETTES, ATTENDU, PORTEURS_APRES, STOCK_DEPART, PHRASES_STOCK, PHRASES_KN, LOT } from '../smoby-ent55.js';
 import { bonnesReponses } from '../../core/types/entrepot.js';
+import { CORRIGE as TRAME } from './ENT-5.5-trame.js';
+
+// Le corrigé de la trame élève (généré, relue par Tristan le 09/10/2026), après celui calculé depuis la séance.
+// Ses étapes sont marquées « (trame) » : l'onglet Corrigés regroupe par numéro d'étape et les mêlerait sinon
+// aux étapes de l'écran (mêmes numéros).
+const DE_LA_TRAME = TRAME.items.map((it) => ({ ...it, etape: `${it.etape} (trame)` }));
 
 const B = bonnesReponses(ENTREPOT);
 const juste = (l) => (l.texte != null ? l.texte : l.choix[l.juste]);
@@ -15,6 +21,7 @@ const P4 = ATTENDU.find((a) => a.palette === 'P4');
 export const CORRIGE = {
   code: 'ENT-5.5',
   titre: 'Smoby — ranger et saisir l’entrée',
+  trame: TRAME.trame,
   items: [
     { etape: 1, etapeTitre: 'Ranger les palettes', genre: 'tableau', texte: 'Les bonnes adresses (calculées sur le stock de départ)',
       contexte: 'Jalons 1 à 4 : la palette est posée ET aucun critère n’est faux à son adresse. Toute adresse de la liste est juste.',
@@ -31,5 +38,6 @@ export const CORRIGE = {
     { etape: 4, etapeTitre: 'Répondre à Kuehne+Nagel', genre: 'question', texte: 'Le message juste (phrases à choisir)',
       rep: PHRASES_KN.lignes.map(juste).join(' '),
       note: 'Jalon 9 : toutes les lignes justes. Le dernier envoi compte. « Demain » : nous sommes mercredi 9 décembre.' },
+    ...DE_LA_TRAME,
   ],
 };

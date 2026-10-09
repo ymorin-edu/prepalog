@@ -10,7 +10,7 @@
 // et l'adresse de messagerie de l'élève sont ceux de l'agence K+N.
 // Pas de `notation` : 17 jalons pondérés, somme des poids = 20 (lot 1 du brief SMOBY-notation-5.3-5.8). Une base par
 // séance (pas de `jeuId`).
-// Pas encore de trame élève : Cowork l'écrit après la validation à l'écran (brief §9).
+// Trame élève (brief `docs/briefs/COWORK-trames-smoby-5.3-5.8.md`, relue par Tristan le 09/10/2026) ; son corrigé s'ajoute au corrigé calculé (`meta.corrige`).
 
 import { seanceEntreprise } from '../core/types/seance-entreprise.js';
 import * as SMOBY from '../contenus/smoby.js';
@@ -33,6 +33,7 @@ const s = seanceEntreprise(SMOBY, SEANCE, {
   // finie, « Corriger » rouvre le planning, la note est celle du premier bilan (voir core/types/entreprise.js).
   correction: true,
   precedente: 'smoby-preparation',
+  trame: 'smoby-enlevements',
   pret: true,
   ouverture: 'prof',
 }, {
@@ -44,7 +45,6 @@ const s = seanceEntreprise(SMOBY, SEANCE, {
   exercice: 'Séance 7 : les enlèvements de Noël',
   lexique: SEANCE.LEXIQUE,
   planning: SEANCE.PLANNING,
-  sansTrame: "Tout à l'écran",
 });
 export const meta = s.meta;
 export const rendre = s.rendre;

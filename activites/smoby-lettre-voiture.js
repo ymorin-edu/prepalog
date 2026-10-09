@@ -12,7 +12,7 @@
 // de messagerie de l'agence K+N, comme ENT-5.7.
 // Pas de `notation` : 26 jalons pondérés, somme des poids = 20 (lot 1 du brief SMOBY-notation-5.3-5.8). Une base par
 // séance (pas de `jeuId`).
-// Pas encore de trame élève : Cowork l'écrit après la validation à l'écran (brief §9).
+// Trame élève (brief `docs/briefs/COWORK-trames-smoby-5.3-5.8.md`, relue par Tristan le 09/10/2026) ; son corrigé s'ajoute au corrigé calculé (`meta.corrige`).
 
 import { seanceEntreprise } from '../core/types/seance-entreprise.js';
 import * as SMOBY from '../contenus/smoby.js';
@@ -35,6 +35,7 @@ const s = seanceEntreprise(SMOBY, SEANCE, {
   // et les deux messages, la note est celle du premier bilan (voir core/types/entreprise.js).
   correction: true,
   precedente: 'smoby-enlevements',
+  trame: 'smoby-lettre-voiture',
   pret: true,
   ouverture: 'prof',
 }, {
@@ -48,7 +49,6 @@ const s = seanceEntreprise(SMOBY, SEANCE, {
   documents: SEANCE.DOCUMENTS,
   documentsStyle: SEANCE.STYLE_DOCUMENTS,
   fiches: [SEANCE.LETTRE, SEANCE.SUIVI],
-  sansTrame: "Tout à l'écran",
 });
 export const meta = s.meta;
 export const rendre = s.rendre;

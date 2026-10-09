@@ -7,7 +7,7 @@
 // Données dans `contenus/smoby-ent55.js`, plateforme dans `contenus/smoby-entrepot.js`.
 //
 // Pas de `notation` : neuf jalons ramenés sur 20. Une base par séance (pas de `jeuId`).
-// Pas encore de trame élève : Cowork l'écrit après la validation à l'écran (brief §9).
+// Trame élève (brief `docs/briefs/COWORK-trames-smoby-5.3-5.8.md`, relue par Tristan le 09/10/2026) ; son corrigé s'ajoute au corrigé calculé (`meta.corrige`).
 
 import { seanceEntreprise } from '../core/types/seance-entreprise.js';
 import * as SMOBY from '../contenus/smoby.js';
@@ -29,6 +29,7 @@ const s = seanceEntreprise(SMOBY, SEANCE, {
   // Elle ouvre la suivante dès qu'elle est finie, justes ou faux (lot 0 de SMOBY-notation-5.3-5.8 : aucun élève bloqué).
   suiteAuBilan: true,
   precedente: 'smoby-reception',
+  trame: 'smoby-rangement',
   pret: true,
   ouverture: 'prof',
 }, {
@@ -41,7 +42,6 @@ const s = seanceEntreprise(SMOBY, SEANCE, {
   lexique: SEANCE.LEXIQUE,
   entrepot: SEANCE.ENTREPOT,
   receptionLitige: true,
-  sansTrame: "Tout à l'écran",
 });
 export const meta = s.meta;
 export const rendre = s.rendre;

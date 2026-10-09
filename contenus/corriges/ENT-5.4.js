@@ -6,6 +6,12 @@
 
 import { QUAI_ENT54, PALETTES_ENT54, SECURITE, PHRASES } from '../smoby-ent54.js';
 import { jalonsQuai, DECISIONS, MOTIFS } from '../../core/types/quai.js';
+import { CORRIGE as TRAME } from './ENT-5.4-trame.js';
+
+// Le corrigé de la trame élève (généré, relue par Tristan le 09/10/2026), après celui calculé depuis la séance.
+// Ses étapes sont marquées « (trame) » : l'onglet Corrigés regroupe par numéro d'étape et les mêlerait sinon
+// aux étapes de l'écran (mêmes numéros).
+const DE_LA_TRAME = TRAME.items.map((it) => ({ ...it, etape: `${it.etape} (trame)` }));
 
 // Les marques des mots cliquables (« [[cale|calé]] ») ne servent qu'à l'écran de la séance.
 const net = (t) => String(t).replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (_, m, a) => a || m);
@@ -23,6 +29,7 @@ const juste = (l) => (l.texte != null ? l.texte : l.choix[l.juste]);
 export const CORRIGE = {
   code: 'ENT-5.4',
   titre: 'Smoby — premier déchargement',
+  trame: TRAME.trame,
   items: [
     { etape: 0, etapeTitre: 'Avant de décharger', genre: 'tableau', texte: 'Le constat de sécurité',
       contexte: 'Sécurité (4 points sur 20) : signaler la cale au chef de quai AVANT « Commencer à décharger » (3) ; chaque point jugé juste (1, une seule case).',
@@ -41,5 +48,6 @@ export const CORRIGE = {
     { etape: 5, etapeTitre: 'Compte rendu à Bruno', genre: 'question', texte: 'Le message juste (phrases à choisir)',
       rep: PHRASES.lignes.map(juste).join(' '),
       note: 'Les réserves 3 points, la salutation et la fin 0,5 chacune. C’est le seul envoi que « Corriger » rouvre.' },
+    ...DE_LA_TRAME,
   ],
 };

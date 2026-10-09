@@ -8,7 +8,7 @@
 //
 // Notation (lot 2 de SMOBY-notation-5.3-5.8, 07/10/2026) : 16 jalons pondérés sur 20, premier bilan et « Corriger »
 // (seul le compte rendu à Bruno se rouvre). Une base par séance (pas de `jeuId`).
-// Pas encore de trame élève : Cowork l'écrit après la validation à l'écran (brief §9).
+// Trame élève (brief `docs/briefs/COWORK-trames-smoby-5.3-5.8.md`, relue par Tristan le 09/10/2026) ; son corrigé s'ajoute au corrigé calculé (`meta.corrige`).
 
 import { seanceEntreprise } from '../core/types/seance-entreprise.js';
 import * as SMOBY from '../contenus/smoby.js';
@@ -30,6 +30,7 @@ const s = seanceEntreprise(SMOBY, SEANCE, {
   // Premier bilan : la suivante s'ouvre dès que tout est jugé, justes ou faux ; l'élève peut corriger son compte rendu.
   correction: true,
   precedente: 'smoby-visite',
+  trame: 'smoby-reception',
   pret: true,
   ouverture: 'prof',
 }, {
@@ -40,7 +41,6 @@ const s = seanceEntreprise(SMOBY, SEANCE, {
   lexique: SEANCE.LEXIQUE,
   quai: SEANCE.QUAI_ENT54,
   finFige: SEANCE.FIN_FIGE,
-  sansTrame: "Tout à l'écran",
 });
 export const meta = s.meta;
 export const rendre = s.rendre;

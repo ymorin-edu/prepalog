@@ -5,6 +5,12 @@
 // heures d'arrivée et conduite de chaque chauffeur comprises. Rien n'est recopié.
 
 import { PLANNING, SOLUTION } from '../smoby-ent57.js';
+import { CORRIGE as TRAME } from './ENT-5.7-trame.js';
+
+// Le corrigé de la trame élève (généré, relue par Tristan le 09/10/2026), après celui calculé depuis la séance.
+// Ses étapes sont marquées « (trame) » : l'onglet Corrigés regroupe par numéro d'étape et les mêlerait sinon
+// aux étapes de l'écran (mêmes numéros).
+const DE_LA_TRAME = TRAME.items.map((it) => ({ ...it, etape: `${it.etape} (trame)` }));
 
 const DEBUT = 5 * 60;
 const PAS = PLANNING.echelle.pas;
@@ -32,6 +38,7 @@ const conduite = (v) => CHAUF.map((l) => {
 export const CORRIGE = {
   code: 'ENT-5.7',
   titre: 'Kuehne+Nagel — les enlèvements de Noël',
+  trame: TRAME.trame,
   items: [
     { etape: 1, etapeTitre: 'Planning des chauffeurs', genre: 'tableau', texte: 'Une solution, au 1er envoi',
       contexte: 'Marc n’a que le permis C : il prend un porteur. Nadia a fini à 23:00 hier : 11 h de repos, pas de départ avant 10:00. '
@@ -46,5 +53,6 @@ export const CORRIGE = {
       reponses: lignes('v2'),
       note: `Les mêmes règles plus l’atelier (2 points), 11 points sur 20. Renvoyé sans changement, ce planning n’a aucun point, sauf s’il respectait déjà la panne. Conduite de la journée : ${conduite('v2')}. Simplifications de la séance : la pause ne compte que si une carte Pause est posée ; `
         + 'tout le trajet compte comme de la conduite.' },
+    ...DE_LA_TRAME,
   ],
 };

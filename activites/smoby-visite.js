@@ -8,7 +8,7 @@
 //
 // Pas de `notation` : 23 cases notées au premier essai, pondérées sur 20 (lot 3 du brief SMOBY-notation-5.3-5.8 ;
 // la note au premier essai est déclarée par la visite, `premierEssai: true`). Une base par séance (pas de `jeuId`).
-// Pas encore de trame élève : Cowork l'écrit après la validation à l'écran (brief §9).
+// Trame élève (brief `docs/briefs/COWORK-trames-smoby-5.3-5.8.md`, relue par Tristan le 09/10/2026) ; son corrigé (`contenus/corriges/ENT-5.3-trame.js`) attend la décision de Tristan (voir `decisions.md`, 17 bis).
 
 import { seanceEntreprise } from '../core/types/seance-entreprise.js';
 import { catalogueSimple } from '../contenus/entreprise-commun.js';
@@ -32,9 +32,10 @@ const s = seanceEntreprise(SMOBY, SEANCE, {
   // La note au premier essai (lot 3) l'implique aussi.
   suiteAuBilan: true,
   precedente: 'smoby-arrivee',
+  trame: 'smoby-visite',
   pret: true,
   ouverture: 'prof',
-  corrige: false,
+  corrige: false,   // pas de corrigé calculé ; celui de la trame (`ENT-5.3-trame.js`) n'est pas branché : voir docs/decisions.md (17 bis)
 }, {
   // Les écrans de données du menu (05/10/2026) : la visite n'en utilise aucun.
   menu: [],
@@ -45,7 +46,6 @@ const s = seanceEntreprise(SMOBY, SEANCE, {
   exercice: 'Séance 3 : la visite de la plateforme',
   lexique: SEANCE.LEXIQUE,
   entrepot: SEANCE.VISITE,
-  sansTrame: "Tout à l'écran",
 });
 export const meta = s.meta;
 export const rendre = s.rendre;

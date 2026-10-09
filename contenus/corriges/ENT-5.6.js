@@ -6,6 +6,12 @@
 
 import { ENTREPOT, COMMANDE } from '../smoby-ent56.js';
 import { attendusPreparation } from '../../core/types/entrepot.js';
+import { CORRIGE as TRAME } from './ENT-5.6-trame.js';
+
+// Le corrigé de la trame élève (généré, relue par Tristan le 09/10/2026), après celui calculé depuis la séance.
+// Ses étapes sont marquées « (trame) » : l'onglet Corrigés regroupe par numéro d'étape et les mêlerait sinon
+// aux étapes de l'écran (mêmes numéros).
+const DE_LA_TRAME = TRAME.items.map((it) => ({ ...it, etape: `${it.etape} (trame)` }));
 
 const A = attendusPreparation(ENTREPOT);
 const P = ENTREPOT.produits;
@@ -18,6 +24,7 @@ const meme = (a) => Object.entries(ENTREPOT.stock).filter(([x, s]) => x.slice(0,
 export const CORRIGE = {
   code: 'ENT-5.6',
   titre: 'Smoby — la palette de la commande de Noël',
+  trame: TRAME.trame,
   items: [
     { etape: 1, etapeTitre: 'Prélever les lignes', genre: 'tableau', texte: `Le bon de préparation ${COMMANDE.num}, dans l’ordre du serpentin`,
       contexte: 'Jalon 1 : les six lignes en quantité juste, rien hors commande. Les jalons 3 à 9 ne comptent que si ce jalon est vrai.',
@@ -32,5 +39,6 @@ export const CORRIGE = {
     { etape: 4, etapeTitre: 'Le parcours', genre: 'question', texte: 'Mètres parcourus',
       rep: `${Math.round(A.serpentin)} m en serpentin, dans l’ordre du bon.`,
       note: `Jalon 9 : mètres ≤ ${Math.round(A.serpentin)} m, sans marge, seulement si les lignes sont justes. Le bon suivi dans le désordre : ${Math.round(A.desordre.metres)} m (${A.desordre.tours} tours).` },
+    ...DE_LA_TRAME,
   ],
 };

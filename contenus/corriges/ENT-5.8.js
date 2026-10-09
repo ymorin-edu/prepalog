@@ -9,6 +9,12 @@ import {
   DEPART, ARRIVEE_PREVUE, ARRIVEE, LIMITE, RETARD, ACCIDENT, PHRASES_CLIENT, PHRASES_SMOBY,
 } from '../smoby-ent58.js';
 import { CHAUFFEURS, CAMIONS } from '../smoby.js';
+import { CORRIGE as TRAME } from './ENT-5.8-trame.js';
+
+// Le corrigé de la trame élève (généré, relue par Tristan le 09/10/2026), après celui calculé depuis la séance.
+// Ses étapes sont marquées « (trame) » : l'onglet Corrigés regroupe par numéro d'étape et les mêlerait sinon
+// aux étapes de l'écran (mêmes numéros).
+const DE_LA_TRAME = TRAME.items.map((it) => ({ ...it, etape: `${it.etape} (trame)` }));
 
 const hm = (m) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
 const lib = (L, v) => (L.find((x) => x.v === v || x.id === v) || {}).lib || (L.find((x) => x.id === v) || {}).nom || v;
@@ -19,6 +25,7 @@ const juste = (P) => P.lignes.map((l) => (l.texte != null ? l.texte : l.choix[l.
 export const CORRIGE = {
   code: 'ENT-5.8',
   titre: 'Kuehne+Nagel — la lettre de voiture et le retard',
+  trame: TRAME.trame,
   items: [
     { etape: 1, etapeTitre: 'Lettre de voiture', genre: 'tableau', texte: `La lettre attendue (n° ${NUMERO_LV}, prérempli)`,
       contexte: 'Expéditeur : celui qui envoie (Smoby). Destinataire : celui qui reçoit (le client). Transporteur : Kuehne+Nagel. '
@@ -46,5 +53,6 @@ export const CORRIGE = {
       rep: juste(PHRASES_CLIENT), note: 'Une ligne = un jalon (4 points : cause, heure et quai à 1, salutation et fin à 0,5). Pièges : 10 h 00, l’heure prévue sans le retard ; 12 h 30 ; le quai 1, celui de Smoby.' },
     { etape: 3, etapeTitre: 'Prévenir', genre: 'question', texte: 'Le message à Smoby, l’expéditeur (phrases à choisir)',
       rep: juste(PHRASES_SMOBY), note: 'Une ligne = un jalon (3 points : retard et client à 1, salutation et fin à 0,5). Le message à Smoby n’arrive qu’une fois le client prévenu. Le dernier envoi compte.' },
+    ...DE_LA_TRAME,
   ],
 };
