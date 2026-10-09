@@ -2897,11 +2897,12 @@ await v('ENT-5.7 : le barème — 17 jalons (pas d’atelier avant la panne), 9 
   egal(r.ecrans, ['planning:kn-chauffeurs'], 'écran à rouvrir');
 });
 
+// Le corrigé de la trame s'ajoute (17 bis, 09/10/2026) à la suite du corrigé calculé, étapes « (trame) » : on compte ici le corrigé calculé seul.
 await v('ENT-5.7 : les deux solutions valent 17 / 17 ; le corrigé se charge', async () => {
   egal(await juger57(CH1, CH2), tous57(true), 'solutions avant / après la panne');
   const c = await pg.evaluate(async () => {
     const C = await import('/contenus/corriges/ENT-5.7.js');
-    return [C.CORRIGE.code, C.CORRIGE.items.length, C.CORRIGE.items[1].reponses.find((x) => x[1].startsWith('E1'))];
+    return [C.CORRIGE.code, C.CORRIGE.items.filter((i) => !/\(trame\)$/.test(String(i.etape))).length, C.CORRIGE.items[1].reponses.find((x) => x[1].startsWith('E1'))];
   });
   egal(c, ['ENT-5.7', 2, ['Julie', 'E1 — Moirans → Lyon — Jouets du Rhône (fictif)', 'Semi n° 1', '06:00 → 10:00', 'prêt dès 06:00, livré avant 12:00']],
     'corrigé (E1 après la panne : celui que reprend ENT-5.8)');
@@ -3246,7 +3247,7 @@ await v('ENT-5.8 : valeurs calculées — 6 091 kg (et la palette mixte pèse ce
     const EN = await import('/core/types/entrepot.js');
     const C = (await import('/contenus/corriges/ENT-5.8.js')).CORRIGE;
     return { v: [S.POIDS, S.KG_MIXTE, S.DEPART, S.ARRIVEE_PREVUE, S.ARRIVEE, S.LIMITE, S.ATTENDU.chauffeur, S.ATTENDU.vehicule],
-      moteur: EN.attendusPreparation(P.ENTREPOT).poids, c: [C.code, C.items.length, C.items[0].reponses[4][1], C.items[0].reponses[7][1], C.items[1].rep] };
+      moteur: EN.attendusPreparation(P.ENTREPOT).poids, c: [C.code, C.items.filter((i) => !/\(trame\)$/.test(String(i.etape))).length, C.items[0].reponses[4][1], C.items[0].reponses[7][1], C.items[1].rep] };
   });
   egal(r.v, [6091, 331, 360, 600, 660, 720, 'julie', 's1'], 'valeurs');
   egal(r.moteur, 331, 'poids de la palette mixte selon le moteur');
@@ -3467,6 +3468,90 @@ await v('Lot 0 : ENT-5.8 — lettre vide, suivi faux, messages faux : la séance
   const st = await etapes58();
   egal(st.filter((x) => x !== 'ko'), [], `tout faux : ${st.join(' ')}`);
   await pasBloque(T58, '__58', 'smoby-lettre-voiture', 'ENT-5.8');
+});
+
+// ── 17 bis (09/10/2026) : trames et fiche d'intention Smoby relues par Tristan, donc déclarées ──────────────────────
+// La séance réelle est montée par son activité. Tout est écrit À LA MAIN (noms de fichiers, nombres de questions des
+// corrigés de trame d'après le brief COWORK-trames-smoby-5.3-5.8) : rien n'est relu dans le code qu'on éprouve.
+// `n` = numéro de la séance, `nom` = nom de l'activité, `base` = nom de la trame, `q` = questions de la trame au corrigé.
+const TRAMES_SMOBY = [
+  { code: 'ENT-5.3', act: 'smoby-visite', base: 'ENT-5.3-smoby-visite-trame-eleve', q: 39, declare: undefined, fichier: './contenus/corriges/ENT-5.3-trame.js' },
+  { code: 'ENT-5.4', act: 'smoby-reception', base: 'ENT-5.4-smoby-reception-trame-eleve', q: 37, declare: './contenus/corriges/ENT-5.4.js', fichier: './contenus/corriges/ENT-5.4.js' },
+  { code: 'ENT-5.5', act: 'smoby-rangement', base: 'ENT-5.5-smoby-rangement-trame-eleve', q: 32, declare: './contenus/corriges/ENT-5.5.js', fichier: './contenus/corriges/ENT-5.5.js' },
+  { code: 'ENT-5.6', act: 'smoby-preparation', base: 'ENT-5.6-smoby-preparation-trame-eleve', q: 36, declare: './contenus/corriges/ENT-5.6.js', fichier: './contenus/corriges/ENT-5.6.js' },
+  { code: 'ENT-5.7', act: 'smoby-enlevements', base: 'ENT-5.7-smoby-enlevements-trame-eleve', q: 39, declare: './contenus/corriges/ENT-5.7.js', fichier: './contenus/corriges/ENT-5.7.js' },
+  { code: 'ENT-5.8', act: 'smoby-lettre-voiture', base: 'ENT-5.8-smoby-lettre-voiture-trame-eleve', q: 35, declare: './contenus/corriges/ENT-5.8.js', fichier: './contenus/corriges/ENT-5.8.js' },
+];
+const INTENTION_SMOBY = { pdf: './contenus/intentions/smoby-intention-pedagogique.pdf', docx: './contenus/intentions/smoby-intention-pedagogique.docx' };
+// Monte la séance (fichier d'activité `smoby-<fichier>.js`) en élève ou en enseignant ; rend les liens `download` du bandeau.
+const monterTrameSmoby = async (fichier, role, intention) => {
+  await pg.evaluate(async ([fichier, role, intention]) => {
+    const act = await import(`/activites/${fichier}.js`);
+    document.getElementById('sTrame')?.remove();
+    const hote = document.createElement('div'); hote.id = 'sTrame'; document.body.appendChild(hote);
+    const db = {};
+    act.rendre(hote, {
+      meta: act.meta, profil: { prenom: 'Lea', nom: 'Test', role, uid: 'u-trame' },
+      jeu: { etat: () => db, sauver: () => {} }, enregistrer: () => {}, quitter: () => {}, codeStock: 'ABC',
+      lireScore: async () => null, intention,
+    });
+  }, [fichier, role, intention]);
+  await pg.waitForSelector('#sTrame .ent-bandeau');
+  return pg.$$eval('#sTrame .ent-bandeau a[download]', (L) => L.map((a) => ({ href: a.getAttribute('href'), intention: a.hasAttribute('data-intention') })));
+};
+const statut = (url) => pg.evaluate(async (u) => (await fetch(u, { cache: 'no-store' })).status, url);
+
+await v('Trames Smoby (17 bis) : chaque séance de 5.3 à 5.8 montre ses deux liens de trame à l’élève (PDF puis Word), les fichiers sont servis', async () => {
+  for (const t of TRAMES_SMOBY) {
+    const liens = (await monterTrameSmoby(t.act, 'eleve', null)).filter((l) => !l.intention).map((l) => l.href);
+    egal(liens, [`./contenus/trames/${t.base}.pdf`, `./contenus/trames/${t.base}.docx`], `${t.code} : liens de trame du bandeau`);
+    for (const l of liens) egal(await statut(l.replace(/^\./, '')), 200, `${t.code} : ${l} servi`);
+    vrai(!/Tout à l.écran/.test(await pg.textContent('#sTrame .ent-bandeau')), `${t.code} : l’étiquette « Tout à l’écran » est encore là`);
+  }
+});
+
+await v('Trames Smoby (17 bis) : le corrigé de chaque séance porte la trame (5.4 à 5.8 : après le corrigé calculé, étapes « (trame) » ; 5.3 : pas de corrigé déclaré, le fichier de trame se charge)', async () => {
+  for (const t of TRAMES_SMOBY) {
+    const r = await pg.evaluate(async ([act, fichier]) => {
+      const { meta } = await import(`/activites/${act}.js`);
+      const C = (await import(fichier.replace(/^\./, ''))).CORRIGE;
+      return { declare: meta.corrige, trame: C.trame, code: C.code, nTrame: C.items.filter((i) => /\(trame\)$/.test(String(i.etape))).length, n: C.items.length };
+    }, [t.act, t.fichier]);
+    egal(r.declare, t.declare, `${t.code} : corrigé déclaré par la séance`);
+    egal([r.code, r.trame], [t.code, t.base], `${t.code} : code et trame du corrigé`);
+    if (t.code === 'ENT-5.3') egal(r.n, t.q, `${t.code} : questions du corrigé (celui de la trame)`);
+    else { egal(r.nTrame, t.q, `${t.code} : questions « (trame) » ajoutées au corrigé calculé`); vrai(r.n > r.nTrame, `${t.code} : plus de corrigé calculé`); }
+  }
+});
+
+await v('Fiche d’intention Smoby (17 bis) : déclarée pour 5.1 à 5.8, fichiers servis ; à l’enseignant dans le bandeau, jamais à l’élève', async () => {
+  const r = await pg.evaluate(async () => {
+    const { intentionDe } = await import('/activites/index.js');
+    return ['ENT-5.1', 'ENT-5.3', 'ENT-5.8'].map((c) => intentionDe(c));
+  });
+  egal(r, [INTENTION_SMOBY, INTENTION_SMOBY, INTENTION_SMOBY], 'intentionDe');
+  for (const f of [INTENTION_SMOBY.pdf, INTENTION_SMOBY.docx]) egal(await statut(f.replace(/^\./, '')), 200, `${f} servi`);
+  const prof = await monterTrameSmoby('smoby-visite', 'prof', INTENTION_SMOBY);
+  egal(prof.filter((l) => l.intention).map((l) => l.href), [INTENTION_SMOBY.pdf, INTENTION_SMOBY.docx], 'bandeau de l’enseignant');
+  const eleve = await monterTrameSmoby('smoby-visite', 'eleve', INTENTION_SMOBY);
+  egal(eleve.filter((l) => l.intention).length, 0, 'lien d’intention chez l’élève');
+});
+
+await v('Fiche d’intention Smoby (17 bis) : onglet Corrigés de l’enseignant, sous Smoby, PDF puis Word', async () => {
+  await page.reload();
+  await page.waitForSelector('#btnProfEspace, #btnProf, #btnDeco', { timeout: 8000 });
+  if (!(await page.$('#btnProfEspace'))) {
+    if (!(await page.$('#btnProf'))) { await page.click('#btnDeco'); await page.waitForSelector('#btnProf', { timeout: 8000 }); }
+    await page.click('#btnProf');
+  }
+  await page.waitForSelector('#btnProfEspace', { timeout: 8000 });
+  await page.click('#btnProfEspace');
+  await page.click('[data-ong="corriges"]');
+  await page.waitForSelector('#corrSommaire [data-entreprise="5"]', { timeout: 6000 });
+  const liens = await page.$$eval('#corrSommaire [data-entreprise="5"] [data-intention] a', (L) => L.map((a) => a.textContent.trim() + '=' + a.getAttribute('href')));
+  egal(liens, [`PDF=${INTENTION_SMOBY.pdf}`, `Word=${INTENTION_SMOBY.docx}`], 'fiche sous Smoby');
+  const seances = await page.$$eval('#corrSommaire [data-entreprise="5"] [data-corrige]', (L) => L.length);
+  vrai(seances >= 7, `Smoby n’a que ${seances} corrigés au sommaire (7 attendus : 5.1, 5.2 et 5.4 à 5.8 ; 5.3 n’en a pas)`);
 });
 
 await v('Smoby : aucune erreur JavaScript dans le bloc', async () => {

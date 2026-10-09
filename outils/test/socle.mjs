@@ -1768,7 +1768,7 @@ await ctxL.close();
 
 // ---------- Fiche d'intention (03/10/2026, brief MOTEUR-fiche-intention, décision 17)
 // Déclarée une fois par entreprise (`intention` dans `ENTREPRISES`), montrée à l'enseignant SEUL :
-// onglet Corrigés et bandeau de la séance. Aucune fiche n'est encore déclarée dans le dépôt : ce
+// onglet Corrigés et bandeau de la séance. Seule Smoby (n: 5) déclare sa fiche dans le dépôt : ce
 // contexte de test reçoit `activites/index.js` avec une `intention` sur la ligne Boost (n: 3), rien
 // de modifié dans le dépôt. Spartoo (n: 1) et Cdiscount (n: 2) restent sans fiche : témoins.
 {
@@ -1827,7 +1827,8 @@ await v('fiche d’intention : onglet Corrigés, sous l’entreprise qui la déc
   const boost = r.find((x) => x.id === '3');
   if (boost.liens.join() !== `PDF=${FICHE.pdf},Word=${FICHE.docx}`) throw new Error('Boost : ' + boost.liens.join());
   if (!boost.seances) throw new Error('aucune séance sous Boost');
-  const autres = r.filter((x) => x.id !== '3');
+  // Smoby (n: 5) déclare sa vraie fiche depuis le 09/10/2026 (17 bis) : elle n'est plus un témoin « sans fiche ».
+  const autres = r.filter((x) => x.id !== '3' && x.id !== '5');
   if (!autres.some((x) => x.id === '1')) throw new Error('Spartoo absent : le témoin ne prouve rien');
   if (autres.some((x) => x.liens.length)) throw new Error('fiche sous une entreprise qui n’en déclare pas : ' + JSON.stringify(autres));
 });

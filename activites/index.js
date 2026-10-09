@@ -129,13 +129,14 @@ export const estSimulog = (meta) => !!meta && meta.rubrique === 'simulog';
 // `intention: { pdf, docx }` (03/10/2026, décision 17 de Tristan) : la fiche d'intention
 // pédagogique du scénario, UNE pour toutes ses séances. Elle n'est montrée qu'à l'enseignant :
 // onglet « Corrigés » et bandeau de la séance. Déclarer, c'est valider (comme les trames) :
-// tant que Tristan n'a pas relu la fiche, la ligne n'a pas de champ `intention`.
+// tant que Tristan n'a pas relu la fiche, la ligne n'a pas de champ `intention` (Smoby : déclarée le 09/10/2026).
 export const ENTREPRISES = [
   { n: 1, nom: 'Spartoo', metier: 'Vente de chaussures en ligne', logo: './contenus/trames/logos/spartoo.jpg' },
   { n: 2, nom: 'Cdiscount', metier: 'Entrepôt de Cestas — suivi des stocks', logo: './contenus/trames/logos/cdiscount.png' },
   { n: 3, nom: 'Boost', metier: 'Logistique e-commerce — Nîmes', logo: './contenus/trames/logos/boost.png' },
   { n: 4, nom: 'Picard', metier: 'Entrepôt de surgelés — Sainghin-en-Mélantois', logo: './contenus/trames/logos/picard.svg' },
-  { n: 5, nom: 'Smoby', metier: 'Jouets — plateforme de Moirans-en-Montagne (Jura)', logo: './contenus/trames/logos/smoby.svg' },
+  { n: 5, nom: 'Smoby', metier: 'Jouets — plateforme de Moirans-en-Montagne (Jura)', logo: './contenus/trames/logos/smoby.svg',
+    intention: { pdf: './contenus/intentions/smoby-intention-pedagogique.pdf', docx: './contenus/intentions/smoby-intention-pedagogique.docx' } },  // relue par Tristan le 09/10/2026
 ];
 
 // ------------------------------------------------------------------- l'ordre
