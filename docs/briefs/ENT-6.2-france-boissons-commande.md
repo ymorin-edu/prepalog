@@ -61,7 +61,7 @@ reviendront en 6.10.
 
 ## 4. Déroulé (≈ 45 min de travail)
 
-**Date du scénario : mardi 15 juin 2027, 9 h 40** (livraison demandée pour la Fête de la musique, tournée de la côte du vendredi 18). Calendrier de S2 (décision de Tristan du 05/10/2026, « A : lundi → vendredi ») : 6.1 lun. 14 juin · 6.2 mar. 15 · 6.3 mar. 15 après-midi · 6.4 mer. 16, 14 h · 6.5 mer. 16, 16 h · 6.6 jeu. 17, 7 h · 6.7 jeu. 17 après-midi · 6.8 ven. 18, 6 h · 6.9 ven. 18, 6 h 30 · 6.10 ven. 18, 17 h.
+**Date du scénario : mardi 15 juin 2027, 9 h 40** (livraison demandée pour la Fête de la musique, tournée de la côte du vendredi 18). Calendrier de S2 (décision de Tristan du 05/10/2026, « A : lundi → vendredi ») : 6.1 lun. 14 juin · 6.2 mar. 15 · 6.3 mar. 15 après-midi · 6.4 mer. 16, 14 h · 6.5 mer. 16, 16 h · 6.6 jeu. 17, 7 h · 6.7 jeu. 17 après-midi · 6.8 ven. 18, 5 h · 6.9 ven. 18, 6 h 30 · 6.10 ven. 18, 17 h.
  La Fête de la musique tombe le **lundi 21 juin 2027** (vérifié au
 calendrier). L'élève joue **son propre rôle** : « Tu es en renfort à l'administration des ventes de France Boissons, à
 Buchelay. »
@@ -148,9 +148,9 @@ dans les tests, écrites à la main. Ligne « vides » du message non notée (d�
 
 ## 6. Contenu
 
-`contenus/france-boissons.js` (univers commun aux 9 séances : identité, `THEME` d'après la charte réelle — vérifier que
+`contenus/france-boissons.js` (univers commun aux 10 séances : identité, `THEME` d'après la charte réelle — vérifier que
 l'accent et le vert « juste » ne se confondent pas —, lieux, personnages : Inès, Nadia, Karim, Lucas, Malo ; lexique) et
-`contenus/france-boissons-ent61.js` (mails, documents, fiche, phrases, jalons, accueil). Une base par séance.
+`contenus/france-boissons-ent62.js` (mails, documents, fiche, phrases, jalons, accueil). Une base par séance.
 
 ## 7. Demandes au moteur
 

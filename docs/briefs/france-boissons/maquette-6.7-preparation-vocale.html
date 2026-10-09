@@ -1,0 +1,497 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maquette 6.7 — préparation vocale</title>
+<style>
+:root{--fond:#f4f1ea;--panneau:#fdfbf7;--encre:#1a1915;--doux:#555047;--filet:#e3ded3;--ardoise:#107c41;--rouge:#9d2727;--jaune:#e5b800;--bleu:#2f5f9e;--orange:#e07b22}
+*{box-sizing:border-box}
+body{margin:0;background:var(--fond);color:var(--encre);font:15px/1.4 Inter,system-ui,"Segoe UI",sans-serif}
+.note{margin:10px 14px 0;font-size:12.5px;color:var(--doux);border:1px dashed var(--filet);border-radius:6px;padding:6px 10px;background:var(--panneau);display:flex;gap:14px;align-items:center}
+.note .prof{margin-left:auto;white-space:nowrap;border:1px solid #c9b46a;background:#fff8dc;border-radius:6px;padding:3px 8px;color:#5a4a10}
+header{display:flex;align-items:center;gap:14px;padding:8px 14px}
+header h1{font-size:17px;margin:0}
+.onglet{border:2px solid var(--ardoise);color:var(--ardoise);border-radius:7px;padding:5px 12px;font-weight:600}
+.niv{margin-left:auto;font-size:13px;color:var(--doux)}
+.haut{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:start;margin:0 14px;background:var(--panneau);border:1px solid var(--filet);border-radius:8px;padding:8px 10px}
+.tuteur{border-left:4px solid var(--jaune);padding:4px 10px;font-size:13.5px;background:var(--fond);border-radius:4px}
+.tuteur b{display:block;font-size:12px;color:var(--doux)}
+.boutons{display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap;max-width:520px}
+.btn{border:2px solid var(--ardoise);background:transparent;color:var(--ardoise);border-radius:7px;padding:7px 12px;font:600 14px Inter,system-ui,sans-serif;cursor:pointer}
+.btn.plein{background:var(--ardoise);color:#fff}
+.btn:disabled{opacity:.4;cursor:default}
+.btn.gris{border-color:var(--filet);color:var(--doux)}
+.regles{font-size:12.5px;background:var(--fond);border-radius:6px;padding:6px 8px;display:none;flex-basis:100%}
+.regles.ouv{display:block}.regles ol{margin:4px 0 0;padding-left:18px}.regles li{margin-bottom:3px}
+.bas{display:grid;grid-template-columns:1fr 400px;gap:10px;margin:10px 14px 16px}
+.vue{background:var(--panneau);border:1px solid var(--filet);border-radius:8px;padding:8px 10px;min-width:0}
+.fil{font-size:13px;color:var(--doux);margin-bottom:4px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.fil button{border:1px solid var(--filet);background:var(--fond);border-radius:6px;padding:4px 10px;cursor:pointer;font:inherit}
+svg{display:block;width:100%;height:auto}
+#dessin svg{max-height:calc(100vh - 250px)}
+.travee{cursor:pointer}
+.travee .volT polygon{fill:rgba(16,124,65,0);stroke:none;transition:fill .12s}
+.travee:hover .volT polygon{fill:rgba(16,124,65,.16);stroke:#107c41;stroke-width:2}
+.travee:hover .adrT{fill:#107c41}
+.droite{display:flex;flex-direction:column;gap:10px}
+/* terminal */
+.term{background:#23272b;border-radius:14px;padding:10px;color:#e8ecef;box-shadow:inset 0 0 0 2px #3a4045}
+.term .tete{display:flex;align-items:center;gap:8px;font-size:11.5px;color:#9aa4ab;margin-bottom:6px}
+.term .tete .led{width:9px;height:9px;border-radius:50%;background:#e8ecef;box-shadow:0 0 5px rgba(232,236,239,.7)}
+.term .tete .son{margin-left:auto;border:1px solid #4a5258;border-radius:4px;padding:0 6px}
+.ecran{background:#14171a;border-radius:8px;padding:8px 10px;min-height:118px;font:14px/1.45 "Consolas","Menlo",monospace;color:#d5dbe0}
+.ecran .passe{color:#8a949b;font-size:12.5px}
+.ecran .moi{color:#ffe08a;font-size:12.5px}
+.ecran .actu{color:#f4f6f7;font-weight:700;font-size:15px}
+.ecran .ko{color:#ff8a8a}
+.ecran .passe.ko{color:#b87474}
+.ecran .actu.flash{animation:flash .5s}
+@keyframes flash{50%{background:#2a3036}}
+.saisie{display:flex;gap:6px;margin-top:8px}
+.saisie input{flex:1;font:700 20px "Consolas",monospace;padding:6px 8px;border-radius:6px;border:2px solid #4a5258;background:#e8ecef;color:#111;min-width:0}
+.saisie button{font:700 14px Inter,system-ui,sans-serif;border-radius:6px;border:2px solid #c9d0d5;background:#3a4248;color:#f4f6f7;padding:0 14px;cursor:pointer}
+.mots{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-top:6px}
+.mots button{font:600 12.5px Inter,system-ui,sans-serif;border-radius:6px;border:1px solid #59636a;background:#323a40;color:#e8ecef;padding:6px 2px;cursor:pointer}
+.mots button:hover{background:#3f4950}
+.mots button:disabled,.saisie button:disabled{opacity:.35;cursor:default}
+/* montage */
+.montage{background:var(--panneau);border:1px solid var(--filet);border-radius:8px;padding:8px 10px;font-size:13.5px}
+.montage h2{font-size:14px;margin:0 0 4px}
+.poser{display:flex;gap:6px;margin:6px 0}
+.poser button{flex:1;font:600 13px Inter,system-ui,sans-serif;border:2px solid var(--ardoise);color:var(--ardoise);background:#fff;border-radius:7px;padding:6px 4px;cursor:pointer}
+.poser button.cote{border-color:#8a8478;color:#555047}
+.consigne{border-left:4px solid var(--ardoise);background:var(--fond);padding:5px 8px;border-radius:4px;margin-bottom:6px}
+.finit{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px}
+.finit .pal{border:1px solid var(--filet);border-radius:7px;padding:6px}
+.finit b{font-size:13px}
+.tours{display:flex;align-items:center;gap:6px;margin:4px 0}
+.tours button{width:26px;height:26px;border-radius:6px;border:1px solid var(--filet);background:var(--fond);cursor:pointer;font-weight:700}
+.etq label{display:inline-block;margin-right:6px;font-size:12.5px}
+.verdict div{padding:3px 0;border-bottom:1px solid var(--filet)}
+.ok{color:var(--ardoise);font-weight:600}.ko{color:var(--rouge);font-weight:600}.nj{color:#8a8478}
+.sait{margin-top:8px;background:#eef3f7;border-radius:7px;padding:7px 9px;font-size:13px}
+.sait table{border-collapse:collapse;width:100%}.sait td{padding:1px 0}.sait td:last-child{text-align:right;font-weight:700}
+.reflex{margin-top:8px;border-left:4px solid var(--bleu);background:var(--fond);padding:6px 9px;border-radius:4px;font-size:13px}
+.reflex textarea{width:100%;margin-top:4px;font:inherit;min-height:46px}
+.cote-item{display:inline-flex;align-items:center;gap:4px;border:1px dashed #8a8478;border-radius:6px;padding:3px 7px;margin:2px;cursor:pointer;background:#fff;font-size:12.5px}
+.cote-item.main{border:2px solid var(--ardoise);background:#e8f4ec}
+</style>
+</head>
+<body>
+<div class="note"><span><b>Maquette Cowork, à jeter</b> — ENT-6.7 France Boissons, préparation vocale, niveau entraînement. Plan de picking, codes, stock et commande <b>construits</b> ; préparation vocale, code détrompeur, picking sous racks avec tiroirs coulissants, palette client 1,20 × 0,80 de 6 fûts au plus <b>vérifiés</b> (INRS ED 135 ; Travail et Sécurité n° 843, 2022). Le code n'est pas à reprendre.</span>
+<label class="prof"><input type="checkbox" id="son"> Réglage enseignant : son du terminal</label></div>
+<header><h1>Plan d'entrepôt</h1><span class="onglet">Préparation vocale</span><span class="niv">Entraînement · jeudi 17 juin 2027, 14 h</span></header>
+
+<div class="haut">
+ <div class="tuteur"><b>Nadia, cheffe de quai</b>Cet après-midi, la commande de Malo pour la tournée de la côte, demain 6 h. Le terminal te donne les lignes une par une, dans l'ordre du parcours. Tu montes deux palettes client dans la zone de préparation, devant le quai 14.</div>
+ <div class="boutons">
+  <button class="btn" id="btnRegles">Les règles ▾</button>
+  <button class="btn plein" id="verifier" disabled>Vérifier ma préparation</button>
+  <button class="btn gris" id="raz">Recommencer</button>
+  <div class="regles" id="regles"><ol>
+   <li>Palette client <b>1,20 × 0,80</b> : <b>6 fûts au plus</b>, une seule couche (sur une palette de stock, il y en a 8 : ce n'est pas la même palette).</li>
+   <li><b>Jamais un fût sur un casier.</b> Les casiers se posent sur les fûts ou à une place libre.</li>
+   <li>Un fût abîmé ne part jamais chez le client : <b>signale-le au terminal avec le bon mot</b>.</li>
+   <li>Film étirable : <b>3 à 5 tours</b>.</li>
+   <li>Étiquettes d'expédition : <b>deux côtés opposés + le dessus</b>.</li>
+  </ol></div>
+ </div>
+</div>
+
+<div class="bas">
+ <div class="vue"><div class="fil" id="fil"></div><div id="dessin"></div></div>
+ <div class="droite">
+  <div class="term" aria-label="Terminal vocal">
+   <div class="tete"><span class="led"></span>TERMINAL VOCAL · Malo, La Cabane à Malo<span class="son" id="etatSon">sans son</span></div>
+   <div class="ecran" id="ecran" aria-live="polite"></div>
+   <div class="saisie"><input id="champ" inputmode="numeric" autocomplete="off" placeholder="ta réponse" aria-label="Ta réponse au terminal"><button id="valider">Valider</button></div>
+   <div class="mots"><button data-m="repete">Répète</button><button data-m="manquant">Manquant</button><button data-m="abime">Abîmé</button><button data-m="vide">Emplacement vide</button></div>
+  </div>
+  <div class="montage" id="montage"></div>
+ </div>
+</div>
+
+<script>
+// ================= données (construites) =================
+const REFS={
+ EAU:{nom:'Eau minérale 1 L',voix:'Eau minérale, casier de douze bouteilles',type:'casier',coul:'#3a7bd5'},
+ LIM:{nom:'Limonade 1 L',voix:'Limonade',type:'casier',coul:'#d8b52a'},
+ PEL20:{nom:'Pelforth Blonde 20 L',voix:'Pelforth Blonde, vingt litres',type:'fut',h:.287,etq:'#b8862b'},
+ EDW20:{nom:'Edelweiss 20 L',voix:'Edelweiss, vingt litres',type:'fut',h:.287,etq:'#7aa7c7'},
+ AFF20:{nom:'Affligem Blonde 20 L',voix:'Affligem Blonde, vingt litres',type:'fut',h:.287,etq:'#c99a2e'},
+ HEI30:{nom:'Heineken 30 L',voix:'Heineken, trente litres',type:'fut',h:.365,etq:'#2e7d32'},
+ HEI20:{nom:'Heineken 20 L',voix:'Heineken, vingt litres',type:'fut',h:.287,etq:'#2e7d32'}
+};
+// emplacements de picking (niveau 1, tiroir coulissant) ; t = travée 1 (près du quai) à 4 (fond)
+const EMPL=[
+ {adr:'A-T01',cote:'A',t:1,ref:'EAU',nb:8,code:'36'},
+ {adr:'B-T01',cote:'B',t:1,ref:'LIM',nb:6,code:'58'},
+ {adr:'A-T02',cote:'A',t:2,ref:'PEL20',nb:5,code:'24'},
+ {adr:'B-T02',cote:'B',t:2,ref:'EDW20',nb:4,code:'71'},
+ {adr:'A-T03',cote:'A',t:3,ref:'AFF20',lot:'S18',nb:2,abime:1,code:'49'},
+ {adr:'B-T03',cote:'B',t:3,ref:'AFF20',lot:'S24',nb:5,code:'83'},
+ {adr:'A-T04',cote:'A',t:4,ref:'HEI30',nb:7,code:'17'},
+ {adr:'B-T04',cote:'B',t:4,ref:'HEI20',nb:0,code:'62'}
+];
+// la commande de Malo (ENT-6.2), dans l'ordre du parcours
+const COMMANDE=[
+ {n:1,adr:'A-T01',ref:'EAU',qte:3,unite:'casiers'},
+ {n:2,adr:'A-T02',ref:'PEL20',qte:2,unite:'fûts'},
+ {n:3,adr:'A-T03',ref:'AFF20',lot:'S18',qte:2,unite:'fûts'},
+ {n:5,adr:'A-T04',ref:'HEI30',qte:6,unite:'fûts'}
+];
+const REMPLACE={adr:'B-T03',ref:'AFF20',lot:'S24',unite:'fûts'}; // ligne ajoutée par le terminal (FIFO : S18 d'abord, puis S24)
+
+// ================= état =================
+const $=id=>document.getElementById(id);
+let S;
+function init(){
+ S={stock:JSON.parse(JSON.stringify(EMPL)),lignes:COMMANDE.map(l=>({...l})),i:0,phase:'code',excep:null,
+   journal:[],codesFaux:0,debut:null,fin:null,ouvert:null,ici:null,
+   pal:[[],[]],cote:[],enMain:null,aPoser:null,film:[0,0],etq:[[],[]],verdict:null,termine:false,reponseRefl:''};
+ $('champ').value='';
+ dire(phraseLigne(),true);
+ rendre();
+}
+const L=()=>S.lignes[S.i];
+function adrVoix(adr){const [c,t]=adr.split('-');return `Côté ${c}, travée ${t.slice(1)}`}
+function phraseLigne(){
+ const l=L();if(!l)return null;
+ if(S.phase==='code')return {dit:`${adrVoix(l.adr)}, niveau 1. Code de contrôle ?`,court:`${l.adr}-N1 · code ?`};
+ const r=REFS[l.ref];const lot=l.lot?`, lot ${l.lot}`:'';
+ const q=l.reste??l.qte;
+ return {dit:`${r.voix}${lot}. Prends ${q}.`,court:`${r.nom}${l.lot?' '+l.lot:''} · prends ${q}`};
+}
+// ================= le terminal parle =================
+function sonActif(){return $('son').checked}
+function parler(t){
+ if(!sonActif()||!('speechSynthesis' in window))return;
+ speechSynthesis.cancel();
+ const u=new SpeechSynthesisUtterance(t);u.lang='fr-FR';
+ const v=speechSynthesis.getVoices().find(v=>v.lang&&v.lang.startsWith('fr')&&v.localService);
+ if(v)u.voice=v;u.rate=1;speechSynthesis.speak(u);
+}
+function dire(p,nouveau){
+ if(!p)return;if(!S.debut)S.debut=Date.now();
+ S.journal.push({qui:'t',...p});S.dernier=p;parler(p.dit);
+}
+function moi(t){S.journal.push({qui:'moi',dit:t,court:t})}
+function ecran(){
+ const j=S.journal.slice(-6);const son=sonActif();
+ $('ecran').innerHTML=j.map((e,k)=>{const der=k===j.length-1&&e.qui==='t';
+  const txt=son&&e.qui==='t'?e.court:e.dit;
+  if(e.qui==='moi')return `<div class="moi">› ${txt}</div>`;
+  return `<div class="${der?'actu':'passe'}${e.ko?' ko':''}">${txt}</div>`}).join('');
+ $('etatSon').textContent=son?'avec son':'sans son';
+ const attente=S.aPoser||S.termine;
+ $('champ').disabled=$('valider').disabled=!!attente;
+ document.querySelectorAll('.mots button').forEach(b=>b.disabled=!!attente&&b.dataset.m!=='repete'||(b.dataset.m!=='repete'&&S.phase!=='qte'));
+ $('champ').placeholder=S.phase==='code'?'code (2 chiffres)':S.excep?'combien ?':'quantité prise';
+}
+function repondre(){
+ const v=$('champ').value.trim();if(v==='')return;$('champ').value='';
+ const l=L();if(!l)return;
+ if(!/^\d+$/.test(v)){moi(v);dire({dit:'Je n\'ai pas compris. Réponds avec des chiffres.',court:'chiffres seulement',ko:true});rendre();return}
+ const n=+v;
+ if(S.phase==='code'){
+  moi(v);
+  const e=S.stock.find(x=>x.adr===l.adr);
+  if(v===e.code){S.phase='qte';dire(phraseLigne())}
+  else{S.codesFaux++;dire({dit:'Code faux. Vérifie l\'emplacement.',court:'code faux · vérifie',ko:true})}
+  rendre();return;
+ }
+ // phase quantité
+ const q=l.reste??l.qte;
+ if(S.excep){ // on attend « combien » pour l'exception
+  moi(v);
+  if(n<1||n>q){dire({dit:`Entre 1 et ${q}.`,court:`1 à ${q}`,ko:true});rendre();return}
+  const mot=S.excep;S.excep=null;l.excep={mot,n};
+  const reste=q-n;
+  if(mot==='abime'||mot==='manquant'){
+   const lib=mot==='abime'?'abîmé':'manquant';
+   ajouterRemplacement(l,n);
+   if(reste>0){l.reste=reste;dire({dit:`Compris : ${n} ${lib}. Prends ${reste}.`,court:`${n} ${lib} · prends ${reste}`})}
+   else{l.pris=0;dire({dit:`Compris : ${n} ${lib}.`,court:`${n} ${lib}`});suivante();}
+  }
+  rendre();return;
+ }
+ moi(v);
+ if(n>q){dire({dit:`Trop. Prends ${q}.`,court:`trop · prends ${q}`,ko:true});rendre();return}
+ if(n<q){dire({dit:`Tu dois prendre ${q}. Si tu ne peux pas, dis Manquant, Abîmé ou Emplacement vide.`,court:`prends ${q} · sinon un mot`,ko:true});rendre();return}
+ // prélèvement confirmé
+ l.pris=n;const e=S.stock.find(x=>x.adr===l.adr);
+ // si un fût abîmé était là et n'a pas été signalé, il part dans les fûts pris
+ const abimesPris=(e.abime&&!l.excep)?Math.min(e.abime,n):0;
+ if(abimesPris){l.abimePris=abimesPris;e.abime=0}
+ e.nb-=n;
+ S.aPoser={ref:l.ref,n,lot:l.lot,abimes:abimesPris};
+ dire({dit:`Compris : ${n}. Pose ${REFS[l.ref].type==='casier'?'tes casiers':'tes fûts'}.`,court:`${n} · pose`});
+ rendre();
+}
+function ajouterRemplacement(l,n){
+ if(l.ref!=='AFF20'||l.lot!=='S18')return;
+ if(S.lignes.some(x=>x.remplace))return;
+ S.lignes.splice(S.i+1,0,{n:4,...REMPLACE,qte:n,remplace:true});
+}
+function mot(m){
+ const l=L();
+ if(m==='repete'){if(S.dernier){parler(S.dernier.dit);const a=document.querySelector('.ecran .actu');if(a){a.classList.remove('flash');void a.offsetWidth;a.classList.add('flash')}}return}
+ if(!l||S.phase!=='qte'||S.aPoser)return;
+ if(m==='vide'){
+  moi('Emplacement vide');l.excep={mot:'vide',n:l.reste??l.qte};l.pris=0;ajouterRemplacement(l,l.qte);
+  dire({dit:'Compris : emplacement vide.',court:'emplacement vide'});suivante();rendre();return;
+ }
+ S.excep=m;moi(m==='abime'?'Abîmé':'Manquant');
+ dire({dit:`${m==='abime'?'Abîmé':'Manquant'} : combien ?`,court:'combien ?'});rendre();
+}
+function suivante(){
+ S.i++;S.phase='code';
+ if(L())dire(phraseLigne());
+ else{S.fin=Date.now();S.termine=true;dire({dit:'Commande terminée : La Cabane à Malo. Filme et étiquette tes palettes.',court:'commande terminée · film, étiquettes'})}
+}
+// ================= montage des palettes =================
+// chaque palette : 6 cases (3 × 2) ; un objet va sur la case la plus basse (d'abord les cases vides)
+function poser(dest){
+ const a=S.aPoser;if(!a)return;
+ const objets=[];for(let k=0;k<a.n;k++)objets.push({ref:a.ref,abime:k<a.abimes});
+ if(dest==='cote')S.cote.push(...objets);else objets.forEach(o=>S.pal[dest].push(o));
+ S.aPoser=null;suivante();rendre();
+}
+function poserCote(k){S.enMain=S.enMain===k?null:k;rendre()}
+function cotePalette(p){if(S.enMain==null)return;const o=S.cote.splice(S.enMain,1)[0];S.pal[p].push(o);S.enMain=null;rendre()}
+function cases(liste){ // renvoie, pour chaque objet, sa case et son niveau
+ // règle de pose : une case vide d'abord ; sinon un fût va sur un casier s'il y en a un au sommet (c'est la faute à voir),
+ // un casier va sur un fût s'il y en a un au sommet ; sinon sur la pile la plus basse
+ const h=[0,0,0,0,0,0],niv=[[],[],[],[],[],[]],pos=[];
+ const typ=o=>REFS[o.ref].type;
+ liste.forEach(o=>{let c=niv.findIndex(n=>n.length===0);
+  if(c<0){const veut=typ(o)==='fut'?'casier':'fut';
+   const cand=[0,1,2,3,4,5].filter(k=>typ(niv[k][niv[k].length-1])===veut);
+   const parmi=cand.length?cand:[0,1,2,3,4,5];c=parmi.reduce((a,k)=>h[k]<h[a]?k:a,parmi[0]);}
+  const sous=niv[c][niv[c].length-1]||null;
+  pos.push({o,c,z:h[c],sous});niv[c].push(o);h[c]+=typ(o)==='casier'?.353:REFS[o.ref].h;});
+ return pos;
+}
+// ================= dessin isométrique =================
+const C30=0.866,S30=0.5,K1=1.2247,K2=0.7071;
+function iso(I,ox,oy){
+ const P=(x,y,z)=>[ox+(x-y)*C30*I,oy+(x+y)*S30*I-z*I];
+ const pts=a=>a.map(p=>P(...p).map(v=>v.toFixed(1)).join(',')).join(' ');
+ const face=(a,f,s='rgba(0,0,0,.25)',w=1)=>`<polygon points="${pts(a)}" fill="${f}" stroke="${s}" stroke-width="${w}"/>`;
+ const boite=(x,y,z,w,d,h,c,s)=>face([[x,y+d,z],[x+w,y+d,z],[x+w,y+d,z+h],[x,y+d,z+h]],c[1],s)+face([[x+w,y,z],[x+w,y+d,z],[x+w,y+d,z+h],[x+w,y,z+h]],c[2],s)+face([[x,y,z+h],[x+w,y,z+h],[x+w,y+d,z+h],[x,y+d,z+h]],c[0],s);
+ const fut=(cx,cy,z,r,h,o={})=>{
+  const [bx,by]=P(cx,cy,z),[tx,ty]=P(cx,cy,z+h),rx=r*I*K1,ry=r*I*K2;
+  let g=`<path d="M${(bx-rx).toFixed(1)},${by.toFixed(1)} L${(tx-rx).toFixed(1)},${ty.toFixed(1)} L${(tx+rx).toFixed(1)},${ty.toFixed(1)} L${(bx+rx).toFixed(1)},${by.toFixed(1)} A${rx.toFixed(1)},${ry.toFixed(1)} 0 0 1 ${(bx-rx).toFixed(1)},${by.toFixed(1)} Z" fill="url(#metal)" stroke="#6f777c" stroke-width=".8"/>`;
+  [0.2,0.8].forEach(f=>{const yy=by+(ty-by)*f;g+=`<path d="M${(bx-rx).toFixed(1)},${yy.toFixed(1)} A${rx.toFixed(1)},${ry.toFixed(1)} 0 0 0 ${(bx+rx).toFixed(1)},${yy.toFixed(1)}" fill="none" stroke="#7d858a" stroke-width="${Math.max(1,I/60).toFixed(1)}"/>`});
+  if(o.etq&&!o.abime){const yy=by+(ty-by)*.5;g+=`<rect x="${(bx-rx*.35).toFixed(1)}" y="${(yy-ry*.5).toFixed(1)}" width="${(rx*.7).toFixed(1)}" height="${(ry*1.1).toFixed(1)}" rx="2" fill="${o.etq}" opacity=".9"/>`}
+  if(o.abime){ // fût cabossé : gros enfoncement sombre sur la face avant, reflet, bord du haut écrasé
+   const yy=by+(ty-by)*.5,c0=bx+rx*.05,w=rx*.75,hh=(by-ty)*.42;
+   g+=`<path d="M${(c0-w).toFixed(1)},${(yy-hh*.2).toFixed(1)} C${(c0-w*.4).toFixed(1)},${(yy-hh).toFixed(1)} ${(c0+w*.5).toFixed(1)},${(yy-hh*.8).toFixed(1)} ${(c0+w).toFixed(1)},${(yy-hh*.1).toFixed(1)} C${(c0+w*.6).toFixed(1)},${(yy+hh*.9).toFixed(1)} ${(c0-w*.5).toFixed(1)},${(yy+hh).toFixed(1)} ${(c0-w).toFixed(1)},${(yy-hh*.2).toFixed(1)} Z" fill="#3e464b" opacity=".85"/>`;
+   g+=`<path d="M${(c0-w*.7).toFixed(1)},${(yy+hh*.35).toFixed(1)} C${(c0-w*.2).toFixed(1)},${(yy+hh*.75).toFixed(1)} ${(c0+w*.4).toFixed(1)},${(yy+hh*.6).toFixed(1)} ${(c0+w*.75).toFixed(1)},${(yy+hh*.15).toFixed(1)}" fill="none" stroke="#f4f6f7" stroke-width="${Math.max(1.2,I/50).toFixed(1)}" opacity=".9"/>`;
+   g+=`<path d="M${(c0-w*.5).toFixed(1)},${(yy-hh*.35).toFixed(1)} l${(w*.35).toFixed(1)},${(hh*.5).toFixed(1)} l${(w*.3).toFixed(1)},${(-hh*.3).toFixed(1)} l${(w*.35).toFixed(1)},${(hh*.35).toFixed(1)}" fill="none" stroke="#1f2427" stroke-width="${Math.max(1,I/55).toFixed(1)}"/>`;
+  }
+  g+=`<ellipse cx="${tx.toFixed(1)}" cy="${ty.toFixed(1)}" rx="${rx.toFixed(1)}" ry="${ry.toFixed(1)}" fill="#eef0f1" stroke="#7d858a"/><ellipse cx="${tx.toFixed(1)}" cy="${ty.toFixed(1)}" rx="${(rx*.3).toFixed(1)}" ry="${(ry*.3).toFixed(1)}" fill="#4a4f52"/>`;
+  return g;
+ };
+ const casier=(x,y,z,w,d,h,coul)=>{ // casier plastique avec 12 bouchons
+  let g=boite(x,y,z,w,d,h,[ '#e9edf2','#cfd6de','#b9c2cc']);
+  g+=boite(x,y,z+h*.55,w,d,h*.12,[coul,coul,coul],'rgba(0,0,0,.2)');
+  for(let i=0;i<4;i++)for(let j=0;j<3;j++){const [bx,by]=P(x+w*(i+.5)/4,y+d*(j+.5)/3,z+h);g+=`<ellipse cx="${bx.toFixed(1)}" cy="${by.toFixed(1)}" rx="${(I*.028).toFixed(1)}" ry="${(I*.017).toFixed(1)}" fill="${coul}" stroke="rgba(0,0,0,.35)" stroke-width=".6"/>`}
+  return g;
+ };
+ const texte=(x,y,z,t,o={})=>{const [a,b]=P(x,y,z);return `<text x="${a.toFixed(1)}" y="${b.toFixed(1)}" text-anchor="${o.ancre||'middle'}" font-size="${o.taille||12}" font-weight="${o.gras??800}" fill="${o.coul||'#1a1915'}" ${o.rot?`transform="rotate(${o.rot} ${a.toFixed(1)} ${b.toFixed(1)})"`:''}>${t}</text>`};
+ return {P,pts,face,boite,fut,casier,texte};
+}
+const DEFS=`<defs><linearGradient id="metal" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#8f979c"/><stop offset=".35" stop-color="#e6e9eb"/><stop offset=".7" stop-color="#b3bac0"/><stop offset="1" stop-color="#7f878c"/></linearGradient></defs>`;
+// ----- géométrie de l'allée : x = du fond (0) vers le quai ; côté A : y 0..1 ; allée : 1..2.6 ; côté B : 2.6..3.6
+const LT=1.45,DR=1.0;
+const xT=t=>(4-t)*LT; // travée 1 près du quai
+const yC=c=>c==='A'?0:3.0;
+function contenuTiroir(G,e,x,y,z,grand){
+ const r=REFS[e.ref];let g='';
+ if(r.type==='casier'){ // casiers sur 2 niveaux, 4 au sol
+  const cw=.36,cd=.27,ch=.28;let k=0;
+  for(let n=0;n<2;n++)for(let j=0;j<2;j++)for(let i=0;i<3;i++){if(k++>=e.nb)continue;g+=G.casier(x+.14+i*(cw+.04),y+.14+j*(cd+.11),z+n*ch,cw,cd,ch,r.coul)}
+  return g;
+ }
+ const rr=.17;const toutes=[];for(let j=0;j<2;j++)for(let i=0;i<4;i++)toutes.push([x+.27+i*.31,y+.3+j*.42]);
+ const n=Math.min(e.nb,8);
+ // les fûts du picking sont rangés côté allée (A : vers y grand ; B : vers y petit)
+ const versAllee=toutes.slice().sort((a,b)=>e.cote==='B'?(a[1]-b[1])||(b[0]-a[0]):(b[1]-a[1])||(b[0]-a[0]));
+ const choisies=versAllee.slice(0,n);
+ const posAbime=e.abime?choisies[0]:null; // le plus en avant, bien visible de près
+ choisies.slice().sort((a,b)=>(a[0]+a[1])-(b[0]+b[1])).forEach(p=>g+=G.fut(p[0],p[1],z,rr,r.h*1.15,{etq:r.etq,abime:grand&&p===posAbime}));
+ return g;
+}
+function travee(G,e,grand){
+ const x=xT(e.t),y=yC(e.cote);let g='';const voile=(!grand&&e.cote==='B');const voileHaut=voile||grand;
+ const poteau=(px,py)=>G.boite(px,py,0,.07,.07,2.3,['#4f7fc0','#2f5f9e','#244b80']);
+ const lisse=(z,py)=>G.boite(x,py,z,LT,.06,.09,['#f39a4a','#e07b22','#b85f12']);
+ const reserve=(z,ref,vide)=>{ // palette de réserve sur rétention noire, vue simplifiée
+  if(vide)return '';let s=G.boite(x+.18,y+.08,z,1.1,.84,.14,['#3d4245','#2f3336','#24282a']);
+  const r=REFS[ref];if(r.type==='casier'){for(let n=0;n<2;n++)for(let j=0;j<2;j++)for(let i=0;i<3;i++)s+=G.casier(x+.22+i*.36,y+.14+j*.38,z+.14+n*.28,.33,.27,.28,r.coul);}
+  else{const pl=[];for(let j=0;j<2;j++)for(let i=0;i<3;i++)pl.push([x+.38+i*.36,y+.3+j*.42]);pl.sort((a,b)=>(a[0]+a[1])-(b[0]+b[1])).forEach(p=>s+=G.fut(p[0],p[1],z+.14,.16,r.h*1.15,{etq:r.etq}))}
+  return s;
+ };
+ // poteaux arrière, sol de la travée
+ g+=G.face([[x,y,0],[x+LT,y,0],[x+LT,y+DR,0],[x,y+DR,0]],'rgba(255,255,255,.35)','#c9c3b6');
+ g+=voile?`<g opacity=".28">${poteau(x,y)+poteau(x+LT-.07,y)}</g>`:poteau(x,y)+poteau(x+LT-.07,y);
+ // N1 : tiroir coulissant (sorti vers l'allée en vue rapprochée)
+ const sortie=0;
+ g+=G.boite(x+.1,y+.06+sortie,.06,LT-.2,DR-.12,.05,['#d7dcdf','#aab2b7','#8f989e']);
+ g+=contenuTiroir(G,e,x,y+sortie,.11,grand);
+ // N2, N3 : réserve (côté B en transparence dans la vue d'ensemble, pour voir l'allée)
+ let h=lisse(.95,y)+reserve(1.04,e.ref,e.t===4&&e.cote==='B');
+ h+=lisse(1.75,y);
+ h+=lisse(.95,y+DR-.06)+lisse(1.75,y+DR-.06);
+ h+=poteau(x,y+DR-.07)+poteau(x+LT-.07,y+DR-.07);
+ h+=reserve(1.84,e.ref,e.t===4);
+ return g+(voileHaut?`<g opacity="${grand?.3:.28}">${h}</g>`:h);
+}
+let dejaVu=false;
+function planAllee(){
+ const G=iso(78,420,120);let s=`<svg viewBox="0 0 1000 640" role="img" aria-label="L'allée de picking en 3D">${DEFS}<rect width="1000" height="640" fill="#f6f2e9"/>`;
+ s+=G.face([[-0.5,-0.4,0],[8.6,-0.4,0],[8.6,4.4,0],[-0.5,4.4,0]],'#e4dfd3','#c9c3b6');
+ // mur du fond
+ s+=G.face([[-0.5,-0.4,0],[-0.5,4.4,0],[-0.5,4.4,2.6],[-0.5,-0.4,2.6]],'#d3cdc0','#a9a397');
+ s+=G.texte(-0.5,1.8,2.2,'FOND',{taille:13,coul:'#555047',rot:-30});
+ // allée
+ s+=G.face([[-0.5,1.05,0],[8.6,1.05,0],[8.6,2.95,0],[-0.5,2.95,0]],'#efeadf','none');
+ for(let k=0;k<9;k++)s+=G.face([[k*.95,1.96,0],[k*.95+.5,1.96,0],[k*.95+.5,2.04,0],[k*.95,2.04,0]],'#e5b800','none');
+ // zone de préparation + quai
+ s+=G.face([[6.2,.4,0],[8.4,.4,0],[8.4,3.8,0],[6.2,3.8,0]],'rgba(16,124,65,.10)','#107c41');
+ s+=G.texte(7.3,4.05,0,'ZONE DE PRÉPARATION',{taille:12,coul:'#107c41',rot:-30});
+ s+=G.face([[8.5,1.2,0],[8.85,1.2,0],[8.85,3.0,0],[8.5,3.0,0]],'#e5b800','#8a6d00');
+ s+=G.texte(8.68,2.1,0,'QUAI 14',{taille:11,rot:-30});
+ // palettes client posées dans la zone (petit format)
+ [0,1].forEach(p=>{const x=6.55,y=.9+p*1.5;s+=G.boite(x,y,0,1.2*.8,.8*.8,.11,['#d6ae78','#b88a55','#9c7243']);
+  s+=G.texte(x+.5,y+.35,.14,`P${p+1} · ${S.pal[p].length}`,{taille:11,coul:'#fff'});});
+ const parCote=c=>S.stock.filter(e=>e.cote===c).sort((a,b)=>xT(a.t)-xT(b.t));
+ let adresses='';
+ const groupe=e=>{const x=xT(e.t),y=yC(e.cote),ya=e.cote==='A'?1.1:2.55,H=2.35;
+  // volume de la travée : invisible au repos, surbrillance verte au survol, et c'est lui qu'on clique
+  const v=[[[x,y+DR,0],[x+LT,y+DR,0],[x+LT,y+DR,H],[x,y+DR,H]],[[x+LT,y,0],[x+LT,y+DR,0],[x+LT,y+DR,H],[x+LT,y,H]],[[x,y,H],[x+LT,y,H],[x+LT,y+DR,H],[x,y+DR,H]]];
+  const [ax,ay]=G.P(x+LT/2,ya+.17,0);
+  adresses+=`<g class="travee" data-adr="${e.adr}"><text class="adrT" x="${ax.toFixed(1)}" y="${(ay+5).toFixed(1)}" text-anchor="middle" font-size="15" font-weight="800" fill="#555047" stroke="#efeadf" stroke-width="4" paint-order="stroke">${e.adr}</text></g>`;
+  return `<g class="travee" data-adr="${e.adr}">${travee(G,e,false)}<g class="volT">${v.map(f=>`<polygon points="${G.pts(f)}"/>`).join('')}</g></g>`};
+ parCote('A').forEach(e=>s+=groupe(e));
+ // le préparateur
+ if(S.ici){const e=S.stock.find(x=>x.adr===S.ici);const x=xT(e.t)+LT/2,y=e.cote==='A'?1.5:2.1;const [a,b]=G.P(x,y,0);
+  s+=`<g><ellipse cx="${a}" cy="${b}" rx="14" ry="6" fill="rgba(0,0,0,.18)"/><rect x="${a-7}" y="${b-40}" width="14" height="30" rx="6" fill="#107c41"/><circle cx="${a}" cy="${b-48}" r="8" fill="#e8c9a8" stroke="#6b4f36"/><path d="M${a-9},${b-50} a9,9 0 0 1 18,0" fill="none" stroke="#23272b" stroke-width="3"/><rect x="${a+6}" y="${b-30}" width="6" height="9" rx="1.5" fill="#23272b"/></g>`;}
+ parCote('B').forEach(e=>s+=groupe(e));
+ s+=adresses;
+ s+=`</svg>`;return s;
+}
+function procheEmplacement(e){
+ const G=iso(150,330,40);let s=`<svg viewBox="0 0 1000 700" role="img" aria-label="Emplacement ${e.adr}, de près">${DEFS}<rect width="1000" height="700" fill="#f6f2e9"/>`;
+ const e2={...e,cote:'A',t:4}; // de près : toujours vu de face, depuis l'allée
+ const x=xT(4),y=0;
+ s+=G.face([[x-.4,-.3,0],[x+LT+.5,-.3,0],[x+LT+.5,2.1,0],[x-.4,2.1,0]],'#e4dfd3','#c9c3b6');
+ s+=G.face([[x-.4,1.05,0],[x+LT+.5,1.05,0],[x+LT+.5,2.1,0],[x-.4,2.1,0]],'#efeadf','none');
+ s+=travee(G,e2,true);
+ // étiquette d'emplacement sur la lisse basse avant (code détrompeur)
+ const [lx,ly]=G.P(x+LT*.5,y+DR+.47,.06);
+ s+=`<g><rect x="${lx-78}" y="${ly-4}" width="206" height="44" rx="5" fill="#fff8d0" stroke="#8a6d00" stroke-width="2"/><text x="${lx-68}" y="${ly+14}" font-size="13" font-weight="800">${e.adr}-N1</text><text x="${lx-68}" y="${ly+31}" font-size="11.5" fill="#555047">${REFS[e.ref].nom}${e.lot?' · '+e.lot:''}</text><rect x="${lx+80}" y="${ly+2}" width="42" height="32" rx="4" fill="#1a1915"/><text x="${lx+101}" y="${ly+26}" text-anchor="middle" font-size="20" font-weight="800" fill="#ffe08a">${e.code}</text></g>`;
+ s+=G.texte(x+LT+.45,1.5,0,'ALLÉE',{taille:15,rot:-30,coul:'#555047'});
+ if(e.nb===0)s+=G.texte(x+LT/2,.5,.6,'emplacement vide',{taille:18,coul:'#9d2727'});
+ s+=`</svg>`;return s;
+}
+function vuePalettes(){
+ const G=iso(150,300,70);let s=`<svg viewBox="0 0 760 330" role="img" aria-label="Les deux palettes client">${DEFS}<rect width="760" height="330" fill="#f6f2e9"/>`;
+ s+=G.face([[-.3,-.3,0],[3.3,-.3,0],[3.3,1.3,0],[-.3,1.3,0]],'#e8f2ec','#b9d5c3');
+ [0,1].forEach(p=>{
+  const x0=p*1.65,y0=0;let g=`<g data-pal="${p}" style="cursor:${S.enMain!=null?'pointer':'default'}">`;
+  g+=G.boite(x0,y0,0,1.2,.8,.14,['#d6ae78','#b88a55','#9c7243']);
+  const pos=cases(S.pal[p]).map(q=>({...q,cx:x0+.2+(q.c%3)*.4,cy:y0+.2+Math.floor(q.c/3)*.4}));
+  pos.sort((a,b)=>(a.cx+a.cy)-(b.cx+b.cy)||a.z-b.z);
+  pos.forEach(q=>{const r=REFS[q.o.ref];if(r.type==='casier')g+=G.casier(q.cx-.2,q.cy-.15,.14+q.z,.4,.3,.353,r.coul);else g+=G.fut(q.cx,q.cy,.14+q.z,.19,r.h,{etq:r.etq,abime:q.o.abime});});
+  // film : voile + traits
+  const t=S.film[p];if(t>0){const hMax=.14+Math.max(.3,...cases(S.pal[p]).map(q=>q.z+(REFS[q.o.ref].type==='casier'?.353:REFS[q.o.ref].h)));
+   g+=G.face([[x0,y0+.8,.14],[x0+1.2,y0+.8,.14],[x0+1.2,y0+.8,hMax],[x0,y0+.8,hMax]],`rgba(190,220,240,${(.12*t).toFixed(2)})`,'rgba(120,160,190,.6)');
+   g+=G.face([[x0+1.2,y0,.14],[x0+1.2,y0+.8,.14],[x0+1.2,y0+.8,hMax],[x0+1.2,y0,hMax]],`rgba(190,220,240,${(.12*t).toFixed(2)})`,'rgba(120,160,190,.6)');}
+  // étiquettes visibles (avant, droite, dessus)
+  const et=S.etq[p];const lab=(cx,cy,cz)=>{const [a,b]=G.P(cx,cy,cz);return `<rect x="${a-11}" y="${b-8}" width="22" height="15" fill="#fff" stroke="#1a1915"/><line x1="${a-7}" y1="${b-3}" x2="${a+7}" y2="${b-3}" stroke="#1a1915"/><line x1="${a-7}" y1="${b+1}" x2="${a+4}" y2="${b+1}" stroke="#1a1915"/>`};
+  if(et.includes('avant'))g+=lab(x0+.6,y0+.8,.35);if(et.includes('droite'))g+=lab(x0+1.2,y0+.4,.35);if(et.includes('dessus'))g+=lab(x0+.6,y0+.4,.75);
+  g+=G.texte(x0+.6,y0+1.15,0,`Palette ${p+1}`,{taille:13,rot:0,coul:'#107c41'});
+  g+=`</g>`;s+=g;
+ });
+ s+=`</svg>`;return s;
+}
+// ================= rendu =================
+function rendre(){
+ ecran();
+ if(S.ouvert){const e=S.stock.find(x=>x.adr===S.ouvert);
+  $('fil').innerHTML=`<span>Allée de picking › <b>${e.adr}</b>, de près — N1 picking (tiroir coulissant) · N2-N3 réserve</span><button id="retour">← Retour à l'allée</button>`;
+  $('dessin').innerHTML=procheEmplacement(e);cadrer();$('retour').onclick=()=>{S.ouvert=null;rendre()};
+ }else{
+  $('fil').innerHTML=`<span>Allée de picking, en 3D — clique une travée pour y aller et lire son emplacement. N1 = picking · N2-N3 = réserve</span>`;
+  $('dessin').innerHTML=planAllee();cadrer();
+  document.querySelectorAll('.travee').forEach(g=>g.onclick=()=>{S.ouvert=g.dataset.adr;S.ici=g.dataset.adr;rendre()});
+ }
+ montage();
+ $('verifier').disabled=!(S.termine&&S.cote.length===0);
+}
+function cadrer(){const sv=$('dessin').querySelector('svg');const fond=sv.querySelector(':scope > rect');fond.style.display='none';const bb=sv.getBBox();fond.style.display='';const m=10;sv.setAttribute('viewBox',`${bb.x-m} ${bb.y-m} ${bb.width+2*m} ${bb.height+2*m}`);fond.setAttribute('x',bb.x-m);fond.setAttribute('y',bb.y-m);fond.setAttribute('width',bb.width+2*m);fond.setAttribute('height',bb.height+2*m);}
+function montage(){
+ let h=`<h2>Tes palettes client · 1,20 × 0,80</h2>`;
+ if(S.aPoser){const a=S.aPoser,r=REFS[a.ref];
+  h+=`<div class="consigne">Où poses-tu ${a.n>1?'les':'le'} ${a.n} ${r.type==='casier'?'casier'+(a.n>1?'s':''):'fût'+(a.n>1?'s':'')} ${r.nom} ?</div><div class="poser"><button data-d="0">Palette 1</button><button data-d="1">Palette 2</button><button data-d="cote" class="cote">À côté, je le pose après</button></div>`;}
+ else if(!S.termine)h+=`<div class="consigne">Suis le terminal : va à l'emplacement, lis le code, prends, puis pose.</div>`;
+ h+=`<div id="vp">${vuePalettes()}</div>`;
+ if(S.cote.length)h+=`<div style="margin-top:4px"><b>À côté :</b> ${S.cote.map((o,k)=>`<span class="cote-item ${S.enMain===k?'main':''}" data-k="${k}">${REFS[o.ref].type==='casier'?'▦':'◯'} ${REFS[o.ref].nom}</span>`).join('')}${S.termine?'<div style="font-size:12.5px;color:var(--doux)">Clique un objet, puis une palette.</div>':''}</div>`;
+ if(S.termine){
+  h+=`<div class="finit">${[0,1].map(p=>`<div class="pal"><b>Palette ${p+1}</b><div class="tours">Film : <button data-f="${p}" data-v="-1">−</button><b>${S.film[p]}</b> tour${S.film[p]>1?'s':''}<button data-f="${p}" data-v="1">+</button></div><div class="etq">Étiquettes : ${['avant','arrière','gauche','droite','dessus'].map(c=>`<label><input type="checkbox" data-e="${p}" value="${c}" ${S.etq[p].includes(c)?'checked':''}> ${c}</label>`).join('')}</div></div>`).join('')}</div>`;
+ }
+ if(S.verdict)h+=S.verdict;
+ $('montage').innerHTML=h;
+ {const sv=document.querySelector('#vp svg');const fond=sv.querySelector(':scope > rect');fond.style.display='none';const bb=sv.getBBox();fond.style.display='';const m=8;sv.setAttribute('viewBox',`${bb.x-m} ${bb.y-m} ${bb.width+2*m} ${bb.height+2*m}`);fond.setAttribute('x',bb.x-m);fond.setAttribute('y',bb.y-m);fond.setAttribute('width',bb.width+2*m);fond.setAttribute('height',bb.height+2*m);}
+ document.querySelectorAll('.poser button').forEach(b=>b.onclick=()=>poser(b.dataset.d==='cote'?'cote':+b.dataset.d));
+ document.querySelectorAll('.cote-item').forEach(b=>b.onclick=()=>{if(S.termine)poserCote(+b.dataset.k)});
+ document.querySelectorAll('#vp [data-pal]').forEach(g=>g.onclick=()=>cotePalette(+g.dataset.pal));
+ document.querySelectorAll('[data-f]').forEach(b=>b.onclick=()=>{const p=+b.dataset.f;S.film[p]=Math.max(0,Math.min(6,S.film[p]+ +b.dataset.v));S.verdict=null;rendre()});
+ document.querySelectorAll('[data-e]').forEach(c=>c.onchange=()=>{const p=+c.dataset.e;S.etq[p]=[...document.querySelectorAll(`[data-e="${p}"]:checked`)].map(x=>x.value);S.verdict=null;rendre()});
+ const ta=document.getElementById('refl');if(ta){ta.value=S.reponseRefl;ta.oninput=()=>S.reponseRefl=ta.value}
+}
+// ================= bilan (entraînement : seul le critère est nommé) =================
+function bilan(){
+ const ligne=n=>S.lignes.find(l=>l.n===n);
+ const l1=ligne(1),l2=ligne(2),l3=ligne(3),l4=ligne(4),l5=ligne(5);
+ const j=[];
+ j.push(['Ligne 1 — eau, 3 casiers',l1&&l1.pris===3&&!l1.excep]);
+ j.push(['Ligne 2 — Pelforth, 2 fûts',l2&&l2.pris===2&&!l2.excep]);
+ j.push(['Ligne 3 — Affligem S18 : critère « le bon mot pour un fût abîmé »',l3&&l3.excep&&l3.excep.mot==='abime'&&l3.excep.n===1&&l3.pris===1&&!l3.abimePris]);
+ j.push(['Ligne 4 — Affligem S24, le fût de remplacement',!!(l4&&l4.pris===1)]);
+ j.push(['Ligne 5 — Heineken 30 L, 6 fûts',l5&&l5.pris===6&&!l5.excep]);
+ const lignesOk=j.every(x=>x[1]);
+ const casierSous=S.pal.some(pl=>cases(pl).some(q=>REFS[q.o.ref].type==='fut'&&q.sous&&REFS[q.sous.ref].type==='casier'));
+ const tropFuts=S.pal.some(pl=>pl.filter(o=>REFS[o.ref].type==='fut').length>6);
+ const film=S.film.every(t=>t>=3&&t<=5);
+ const opp=e=>e.includes('dessus')&&e.length===3&&((e.includes('avant')&&e.includes('arrière'))||(e.includes('gauche')&&e.includes('droite')));
+ const etq=S.etq.every(opp);
+ const deux=S.pal.every(pl=>pl.length>0)&&S.cote.length===0;
+ j.push(['Critère : aucun casier sous un fût',!casierSous],['Critère : 6 fûts au plus par palette client',!tropFuts],['Critère : film étirable',film],['Critère : étiquettes d\'expédition',etq],['Critère : deux palettes',deux]);
+ const ok=j.filter((x,k)=>k<5?x[1]:(lignesOk&&x[1])).length;
+ const duree=Math.max(1,Math.round((S.fin-S.debut)/1000));const mm=Math.floor(duree/60),ss=String(duree%60).padStart(2,'0');
+ const nbL=S.lignes.length;const parH=Math.round(nbL/(duree/3600));
+ S.verdict=`<div class="verdict" style="margin-top:8px">${j.map((x,k)=>`<div>${k>=5&&!lignesOk?`<span class="nj">— non jugé</span> `:x[1]?'<span class="ok">✓</span> ':'<span class="ko">✗</span> '}${x[0]}</div>`).join('')}
+  <div style="border:0;padding-top:5px"><b>${ok} / 10</b> <span style="color:var(--doux);font-size:12.5px">· Entraînement : seul le nom du critère est donné. Les critères 6 à 10 ne sont jugés que si les 5 lignes sont justes.</span></div></div>
+  <div class="sait"><b>Ce que le terminal sait de toi</b> <span style="color:var(--doux)">(non noté)</span><table>
+   <tr><td>Lignes préparées</td><td>${nbL}</td></tr><tr><td>Durée</td><td>${mm} min ${ss} s</td></tr><tr><td>Codes faux</td><td>${S.codesFaux}</td></tr><tr><td>Lignes par heure</td><td>${parH}</td></tr></table>
+   <div style="font-size:12px;color:var(--doux);margin-top:3px">Chaque réponse au terminal est enregistrée avec son heure. C'est ainsi que l'entreprise mesure la productivité des préparateurs.</div></div>
+  <div class="reflex"><b>Pour réfléchir</b> — Le terminal t'a donné les lignes une par une. Qu'est-ce que tu y as gagné, et qu'est-ce que tu y as perdu, pour faire ta palette ? (L'INRS signale que les préparateurs guidés à la voix ne peuvent plus anticiper leur palette.)<textarea id="refl" placeholder="ta réponse"></textarea></div>`;
+ rendre();
+}
+// ================= branchements =================
+$('valider').onclick=repondre;
+$('champ').addEventListener('keydown',e=>{if(e.key==='Enter')repondre()});
+document.querySelectorAll('.mots button').forEach(b=>b.onclick=()=>mot(b.dataset.m));
+$('son').onchange=()=>{if(!sonActif()&&'speechSynthesis' in window)speechSynthesis.cancel();else if(S.dernier)parler(S.dernier.dit);rendre()};
+$('verifier').onclick=bilan;
+$('raz').onclick=()=>{if('speechSynthesis' in window)speechSynthesis.cancel();init()};
+$('btnRegles').onclick=()=>{$('regles').classList.toggle('ouv');$('btnRegles').textContent=$('regles').classList.contains('ouv')?'Les règles ▴':'Les règles ▾'};
+if('speechSynthesis' in window)speechSynthesis.onvoiceschanged=()=>{};
+init();
+</script>
+</body>
+</html>

@@ -49,7 +49,7 @@ S'appuie sur ENT-6.1 : Karim **décide** (hiérarchique), Inès **enregistre et 
 ## 4. Déroulé (séance chargée, comme ENT-5.2 : un élève qui n'a pas fini reprend la fois suivante)
 
 **Date du scénario : mardi 15 juin 2027, après-midi**, le jour de la commande de Malo (ENT-6.2, le matin) : les dates
-suivent l'ordre de jeu. Calendrier de S2 (décision de Tristan du 05/10/2026, « A : lundi → vendredi ») : 6.1 lun. 14 juin · 6.2 mar. 15 · 6.3 mar. 15 après-midi · 6.4 mer. 16, 14 h · 6.5 mer. 16, 16 h · 6.6 jeu. 17, 7 h · 6.7 jeu. 17 après-midi · 6.8 ven. 18, 6 h · 6.9 ven. 18, 6 h 30 · 6.10 ven. 18, 17 h.
+suivent l'ordre de jeu. Calendrier de S2 (décision de Tristan du 05/10/2026, « A : lundi → vendredi ») : 6.1 lun. 14 juin · 6.2 mar. 15 · 6.3 mar. 15 après-midi · 6.4 mer. 16, 14 h · 6.5 mer. 16, 16 h · 6.6 jeu. 17, 7 h · 6.7 jeu. 17 après-midi · 6.8 ven. 18, 5 h · 6.9 ven. 18, 6 h 30 · 6.10 ven. 18, 17 h.
 
 1. **Message d'Inès** (3 blocs) : « Bonjour {prénom} ! / Les chauffeurs ont posé leurs congés d'été. Karim veut le
    planning **ce soir** : il doit rester assez de chauffeurs chaque semaine. / Place les congés, puis envoie-le.
@@ -57,7 +57,7 @@ suivent l'ordre de jeu. Calendrier de S2 (décision de Tristan du 05/10/2026, «
 2. **Planning** (vue Planning, cas « personnel », échelle en **semaines**) :
    - Colonnes : **8 semaines du pic** (S1 = semaine du 5 juillet … S8 = semaine du 23 août) **+ une 9e « semaine du
      30 août (après le pic) »**, où un congé peut être reporté.
-   - Lignes : 7 chauffeurs-livreurs de la tournée de la côte : **Lucas, Amandine, Julien** (connaissent la côte, repère
+   - Lignes : les 7 chauffeurs-livreurs de l'équipe de Karim : **Lucas, Amandine, Julien** (connaissent la côte, repère
      visible), Sébastien, Fatou, Yoann, Kevin.
    - **Besoin** (présents) : **6** par semaine en juillet (S1-S4), **5** en août (S5-S8), 0 après le pic.
    - **Au moins un chauffeur qui connaît la côte** chaque semaine (`auMoinsUn`).
@@ -129,7 +129,7 @@ Mots cliquables : congé, effectif, CDD saisonnier, VL, permis B, discrimination
 
 ## 6. Contenu
 
-`contenus/france-boissons-ent62.js` (planning, imprévu, phrases, fiche de poste, annonce, jalons, accueil). Les attendus
+`contenus/france-boissons-ent63.js` (planning, imprévu, phrases, fiche de poste, annonce, jalons, accueil). Les attendus
 du planning sont **calculés par le moteur** (règles), jamais recopiés ; le calage est vérifié par un script d'énumération
 (sur le modèle de `outils/carte/calibrer.mjs`) qui échoue si la solution n'est plus unique.
 

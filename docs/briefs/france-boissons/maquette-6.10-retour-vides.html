@@ -1,0 +1,540 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maquette 6.10 — le retour de Lucas</title>
+<style>
+:root{--fond:#f4f1ea;--panneau:#fdfbf7;--encre:#1a1915;--doux:#555047;--filet:#e3ded3;--ardoise:#107c41;--vert:#107c41;--rouge:#9d2727;--jaune:#e5b800;--bleu:#2f5f9e;--saisie:#fffdf8}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--fond);color:var(--encre);font:14.5px/1.4 Inter,system-ui,"Segoe UI",sans-serif;display:grid;grid-template-rows:auto auto auto minmax(0,1fr);overflow:hidden}
+.note{margin:6px 12px 0;font-size:12px;color:var(--doux);border:1px dashed var(--filet);border-radius:6px;padding:3px 10px;background:var(--panneau);display:flex;gap:12px;align-items:center;white-space:nowrap;overflow:hidden}
+.note span{overflow:hidden;text-overflow:ellipsis}
+.note label{margin-left:auto;border:1px solid #c9b46a;background:#fff8dc;border-radius:6px;padding:1px 8px;color:#5a4a10;cursor:pointer}
+header{display:flex;align-items:center;gap:10px;padding:6px 12px}
+header .marque{font-weight:800;font-size:15px}
+header .lieu{color:var(--doux);font-size:13px}
+nav{display:flex;gap:6px;margin-left:18px}
+nav button{border:1px solid var(--filet);background:var(--panneau);border-radius:7px;padding:5px 11px;font:600 13px Inter,system-ui,sans-serif;color:var(--encre);cursor:pointer}
+nav button.actif{border:2px solid var(--ardoise);color:var(--ardoise)}
+nav button:disabled{opacity:.4;cursor:default}
+nav .badge{display:inline-block;min-width:18px;border-radius:9px;background:var(--encre);color:var(--panneau);font-size:11px;padding:0 5px;margin-left:4px}
+header .date{margin-left:auto;font-size:13px;color:var(--doux)}
+.etapes{display:flex;gap:6px;margin:0 12px 6px}
+.etape{flex:1;display:flex;align-items:center;gap:8px;border:1px solid var(--filet);background:var(--panneau);border-radius:8px;padding:4px 10px;font-size:13px;color:var(--doux)}
+.etape .n{width:22px;height:22px;border-radius:50%;border:2px solid currentColor;display:grid;place-items:center;font-weight:800;font-size:12px;flex:none}
+.etape.cours{border:2px solid var(--ardoise);color:var(--encre);font-weight:700}
+.etape.cours .n{color:var(--ardoise)}
+.etape.fait .n::after{content:"✓"}
+.etape.fait .n span{display:none}
+.etape.hors{opacity:.45}
+main{display:grid;grid-template-columns:minmax(0,1fr) 600px;gap:10px;margin:0 12px 10px;min-height:0}
+.docs,.fiche{background:var(--panneau);border:1px solid var(--filet);border-radius:9px;min-height:0;display:flex;flex-direction:column}
+.onglets{display:flex;gap:4px;padding:6px 8px 0;border-bottom:1px solid var(--filet)}
+.onglets button{border:1px solid var(--filet);border-bottom:none;background:var(--fond);border-radius:7px 7px 0 0;padding:6px 12px;font:600 13px Inter,system-ui,sans-serif;color:var(--doux);cursor:pointer}
+.onglets button.actif{background:var(--panneau);color:var(--encre);box-shadow:inset 0 3px 0 var(--ardoise)}
+.doc{flex:1;min-height:0;padding:8px;position:relative;overflow:hidden;display:flex;flex-direction:column}
+.doc svg{width:100%;height:100%;min-height:0}
+.loupe{position:absolute;right:14px;top:12px;border:2px solid var(--ardoise);background:var(--panneau);color:var(--ardoise);border-radius:7px;padding:4px 10px;font:700 13px Inter,system-ui,sans-serif;cursor:pointer}
+.pied{font-size:11px;color:var(--doux);text-align:right;padding:0 4px}
+/* ticket */
+.ticket{margin:auto;background:#fffdf5;border:1px solid #d9d2c2;box-shadow:0 2px 6px rgba(0,0,0,.08);padding:12px 16px;font:12.5px/1.4 Consolas,Menlo,monospace;width:min(600px,100%)}
+.ticket th.c,.ticket td.c{width:70px}
+.ticket h3{font:800 13.5px Consolas,monospace;margin:0 0 2px;display:flex;justify-content:space-between}
+.ticket .p{color:#555047;font-size:12px}
+.ticket table{width:100%;border-collapse:collapse;margin:6px 0}
+.ticket th{text-align:left;font-weight:800;border-bottom:1px dashed #999;padding:2px 0;font-size:12px}
+.ticket td{padding:2px 0;vertical-align:top}
+.ticket td.c{text-align:center}
+.ticket .gris{color:#9a958a;font-size:11px}
+.ticket .sig{display:flex;justify-content:space-between;margin-top:8px;border-top:1px dashed #999;padding-top:6px}
+.ticket .sig i{font-family:"Segoe Script","Brush Script MT",cursive;font-size:18px;color:#2f3a66}
+.ticket .rec{margin-top:8px;font:10.5px Inter,sans-serif;color:#8a8478;text-align:center}
+.message{margin:auto;max-width:520px;border-left:4px solid var(--jaune);background:var(--fond);border-radius:6px;padding:12px 14px;font-size:15px}
+.message b{display:block;font-size:12.5px;color:var(--doux);margin-bottom:4px}
+.docpapier{margin:auto;width:min(520px,100%);background:#fffdf8;border:1px solid var(--filet);border-radius:6px;padding:14px 18px}
+.docpapier h3{margin:0 0 8px;font-size:15px}
+.docpapier table{width:100%;border-collapse:collapse}.docpapier td{padding:4px 0;border-bottom:1px solid var(--filet)}
+.docpapier td:last-child{text-align:right;font-weight:700}
+/* fiche */
+.tete{padding:10px 14px 6px;border-bottom:1px solid var(--filet)}
+.tete h2{margin:0 0 4px;font-size:16px}
+.tuteur{border-left:4px solid var(--jaune);background:var(--fond);border-radius:4px;padding:4px 9px;font-size:13.5px}
+.tuteur b{color:var(--doux);font-size:12px}
+.corps{flex:1;min-height:0;overflow:auto;padding:10px 14px}
+.ligne{display:grid;grid-template-columns:1fr 92px 70px;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--filet)}
+.ligne label{font-weight:600}
+input.nb{width:92px;height:40px;font:700 18px Inter,system-ui,sans-serif;text-align:center;border:2px solid #bdb5a4;border-radius:7px;background:var(--saisie);color:var(--encre)}
+input.nb:focus,select:focus,.cell input:focus{outline:3px solid rgba(47,95,158,.45);outline-offset:1px;border-color:var(--bleu)}
+.unite{color:var(--doux);font-size:13px}
+select{height:40px;font:600 14px Inter,system-ui,sans-serif;border:2px solid #bdb5a4;border-radius:7px;background:var(--saisie);padding:0 8px;color:var(--encre);width:100%}
+.encadre{margin-top:10px;border:1px solid var(--filet);border-left:4px solid var(--bleu);border-radius:6px;padding:6px 10px;font-size:13px;background:var(--fond)}
+.encadre .tt{display:block;font-weight:700;margin-bottom:2px}
+.basfiche{padding:8px 14px;border-top:1px solid var(--filet);display:flex;align-items:center;gap:12px}
+.basfiche .raison{font-size:13px;color:var(--rouge);flex:1}
+.basfiche .ok{font-size:13px;color:var(--doux);flex:1}
+.btn{border:2px solid var(--ardoise);background:var(--ardoise);color:#fff;border-radius:8px;padding:9px 16px;font:700 14px Inter,system-ui,sans-serif;cursor:pointer;margin-left:auto}
+.btn:disabled{opacity:.45;cursor:default}
+.fige input,.fige select{pointer-events:none;background:transparent;border-color:var(--filet)}
+.verdict{font-size:12px;font-weight:700}
+.verdict.v{color:var(--vert)}.verdict.f{color:var(--rouge)}
+/* grille */
+table.grille{border-collapse:collapse;width:100%;font-size:13.5px;table-layout:fixed}
+.grille th{background:var(--fond);border:1px solid var(--filet);font-weight:700;font-size:12px;color:var(--doux);padding:3px 4px}
+.grille td{border:1px solid var(--filet);padding:1px 5px;height:35px;vertical-align:middle}
+.grille td.num{width:26px;text-align:center;color:var(--doux);font-size:12px;background:var(--fond)}
+.grille td.lib{font-weight:600;line-height:1.15;font-size:13px}
+.grille td.aide{font-size:11.5px;color:var(--doux);line-height:1.15}
+.grille td.donne{background:rgba(85,80,71,.07);text-align:right;font-weight:700;color:var(--doux)}
+.cell{display:flex;align-items:center;gap:4px}
+.cell input{flex:1;min-width:0;height:30px;font:600 13px Consolas,Menlo,monospace;border:2px solid #bdb5a4;border-radius:5px;background:var(--saisie);padding:0 5px;color:var(--encre)}
+.cell .res{font-size:12px;font-weight:700;color:var(--doux);min-width:24px;text-align:right;white-space:nowrap}
+.cell .res.err{color:var(--rouge)}
+.grille tr.total td{border-top:2px solid var(--encre)}
+.grille.serree td{height:32px}.grille.serree .cell input{height:27px}
+.grille.formule td[data-r],.grille.formule .cell input:not(:focus){cursor:copy}
+.grille.formule td[data-r]:hover,.grille.formule .cell:hover input:not(:focus){outline:2px dashed var(--bleu);outline-offset:-2px}
+.ref-flash{animation:refflash .6s}
+@keyframes refflash{0%{box-shadow:0 0 0 3px rgba(47,95,158,.55)}100%{box-shadow:none}}
+.grille td.vide{background:rgba(85,80,71,.04)}
+/* toast + loupe plein écran */
+.toast{position:fixed;left:24px;bottom:22px;max-width:380px;background:var(--panneau);border:1px solid var(--filet);border-left:5px solid var(--jaune);border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.15);padding:10px 14px;font-size:14px;display:none}
+.toast.on{display:block}
+.toast .tt{display:block;font-size:12px;color:var(--doux);font-weight:700}
+.plein{position:fixed;inset:0;background:rgba(26,25,21,.82);display:none;padding:18px;z-index:5}
+.plein.on{display:flex;flex-direction:column}
+.plein .boite{flex:1;background:#f6f2e9;border-radius:10px;min-height:0;display:flex}
+.plein svg{width:100%;height:100%}
+.plein .fermer{align-self:flex-end;margin-bottom:8px;border:2px solid #fff;background:transparent;color:#fff;border-radius:7px;padding:5px 12px;font:700 14px Inter,sans-serif;cursor:pointer}
+.horsmaq{margin:auto;color:var(--doux);text-align:center;max-width:420px}
+</style>
+</head>
+<body>
+<div class="note"><span><b>Maquette Cowork, à jeter</b> — ENT-6.10, écrans ①, ② et ④ (③ = messages, non maquetté). Ticket, quantités, solde de Malo <b>construits</b> ; terminal qui imprime le ticket, consignes 40 € / 4 € <b>vérifiés</b>. À juger à 1366 × 768 : rien ne doit défiler.</span>
+<label><input type="checkbox" id="prof"> Enseignant : voir les verdicts</label></div>
+
+<header>
+ <span class="marque">France Boissons</span><span class="lieu">Plateforme de Buchelay · exploitation</span>
+ <nav>
+  <button id="navMsg">Messagerie <span class="badge" id="nbMsg">2</span></button>
+  <button id="nav1" class="actif">Contrôle du retour</button>
+  <button id="nav2" disabled>Compte de consignes</button>
+  <button id="nav4" title="Maquette : ouvert d'emblée ; dans la séance, après les messages ③">La boucle des vides</button>
+ </nav>
+ <span class="date">Vendredi 18 juin 2027, 17 h</span>
+</header>
+
+<div class="etapes" id="etapes"></div>
+
+<main>
+ <section class="docs"><div class="onglets" id="onglets"></div><div class="doc" id="doc"></div></section>
+ <section class="fiche" id="fiche"></section>
+</main>
+
+<div class="toast" id="toast"></div>
+<div class="plein" id="plein"><button class="fermer" id="fermer">Fermer ✕ (Échap)</button><div class="boite" id="pleinBoite"></div></div>
+
+<script>
+const $=id=>document.getElementById(id);
+// ================= données (construites, sauf taux 2027) =================
+const D={avant:{futs:9,casiers:5},livres:{futs:9,casiers:3},quai:{vides:8,casiers:5,refuse:1},taux:{fut:40,casier:4}};
+const S={etape:1,onglet:'quai',f1:{vides:'',casiers:'',refuse:'',ticket:''},f1Envoyee:false,gs:{c:{},r:{}},env:{c:false,r:false},vue:'fiche',luMsg:false};
+
+// ================= dessin isométrique (repris de la maquette 6.7) =================
+const C30=0.866,S30=0.5,K1=1.2247,K2=0.7071;
+function iso(I,ox,oy){
+ const P=(x,y,z)=>[ox+(x-y)*C30*I,oy+(x+y)*S30*I-z*I];
+ const pts=a=>a.map(p=>P(...p).map(v=>v.toFixed(1)).join(',')).join(' ');
+ const face=(a,f,s='rgba(0,0,0,.25)',w=1)=>`<polygon points="${pts(a)}" fill="${f}" stroke="${s}" stroke-width="${w}"/>`;
+ const boite=(x,y,z,w,d,h,c,s)=>face([[x,y+d,z],[x+w,y+d,z],[x+w,y+d,z+h],[x,y+d,z+h]],c[1],s)+face([[x+w,y,z],[x+w,y+d,z],[x+w,y+d,z+h],[x+w,y,z+h]],c[2],s)+face([[x,y,z+h],[x+w,y,z+h],[x+w,y+d,z+h],[x,y+d,z+h]],c[0],s);
+ const fut=(cx,cy,z,r,h,o={})=>{
+  const [bx,by]=P(cx,cy,z),[tx,ty]=P(cx,cy,z+h),rx=r*I*K1,ry=r*I*K2;
+  let g=`<path d="M${(bx-rx).toFixed(1)},${by.toFixed(1)} L${(tx-rx).toFixed(1)},${ty.toFixed(1)} L${(tx+rx).toFixed(1)},${ty.toFixed(1)} L${(bx+rx).toFixed(1)},${by.toFixed(1)} A${rx.toFixed(1)},${ry.toFixed(1)} 0 0 1 ${(bx-rx).toFixed(1)},${by.toFixed(1)} Z" fill="url(#metal)" stroke="#6f777c" stroke-width=".8" ${o.op?`opacity="${o.op}"`:''}/>`;
+  [0.2,0.8].forEach(f=>{const yy=by+(ty-by)*f;g+=`<path d="M${(bx-rx).toFixed(1)},${yy.toFixed(1)} A${rx.toFixed(1)},${ry.toFixed(1)} 0 0 0 ${(bx+rx).toFixed(1)},${yy.toFixed(1)}" fill="none" stroke="#7d858a" stroke-width="${Math.max(1,I/60).toFixed(1)}" ${o.op?`opacity="${o.op}"`:''}/>`});
+  if(o.abime){const yy=by+(ty-by)*.5,c0=bx+rx*.05,w=rx*.75,hh=(by-ty)*.42;
+   g+=`<path d="M${(c0-w).toFixed(1)},${(yy-hh*.2).toFixed(1)} C${(c0-w*.4).toFixed(1)},${(yy-hh).toFixed(1)} ${(c0+w*.5).toFixed(1)},${(yy-hh*.8).toFixed(1)} ${(c0+w).toFixed(1)},${(yy-hh*.1).toFixed(1)} C${(c0+w*.6).toFixed(1)},${(yy+hh*.9).toFixed(1)} ${(c0-w*.5).toFixed(1)},${(yy+hh).toFixed(1)} ${(c0-w).toFixed(1)},${(yy-hh*.2).toFixed(1)} Z" fill="#3e464b" opacity=".85"/>`;
+   g+=`<path d="M${(c0-w*.7).toFixed(1)},${(yy+hh*.35).toFixed(1)} C${(c0-w*.2).toFixed(1)},${(yy+hh*.75).toFixed(1)} ${(c0+w*.4).toFixed(1)},${(yy+hh*.6).toFixed(1)} ${(c0+w*.75).toFixed(1)},${(yy+hh*.15).toFixed(1)}" fill="none" stroke="#f4f6f7" stroke-width="${Math.max(1.2,I/50).toFixed(1)}" opacity=".9"/>`;}
+  // dessus : plein = capsule noire scellée ; vide = bouchon gris + anneau
+  g+=`<ellipse cx="${tx.toFixed(1)}" cy="${ty.toFixed(1)}" rx="${rx.toFixed(1)}" ry="${ry.toFixed(1)}" fill="#eef0f1" stroke="#7d858a" ${o.op?`opacity="${o.op}"`:''}/>`;
+  g+= o.vide
+   ? `<ellipse cx="${tx.toFixed(1)}" cy="${ty.toFixed(1)}" rx="${(rx*.42).toFixed(1)}" ry="${(ry*.42).toFixed(1)}" fill="#a7aeb3" stroke="#5f676c" ${o.op?`opacity="${o.op}"`:''}/>`
+   : `<ellipse cx="${tx.toFixed(1)}" cy="${ty.toFixed(1)}" rx="${(rx*.3).toFixed(1)}" ry="${(ry*.3).toFixed(1)}" fill="#1f2326"/>`;
+  return g;
+ };
+ const casier=(x,y,z,w,d,h,coul)=>{ // casier plastique ajouré, 12 bouteilles en verre VIDES (goulots ouverts), poignées
+  const sombre='#2c3236',bord='#c3cbd0';let g='';
+  const Q=(a)=>`<polygon points="${pts(a)}"`;
+  // intérieur : fond et parois du fond (vues par le haut ouvert)
+  g+=face([[x,y,z+.02],[x+w,y,z+.02],[x+w,y+d,z+.02],[x,y+d,z+.02]],sombre,'none');
+  g+=face([[x,y,z],[x+w,y,z],[x+w,y,z+h],[x,y,z+h]],'#3a4247','rgba(0,0,0,.4)');
+  g+=face([[x,y,z],[x,y+d,z],[x,y+d,z+h],[x,y,z+h]],'#30373b','rgba(0,0,0,.4)');
+  // bouteilles 4 × 3, de l'arrière vers l'avant
+  const bt=[];for(let i=0;i<4;i++)for(let j=0;j<3;j++)bt.push([x+w*(i+.5)/4,y+d*(j+.5)/3]);
+  bt.sort((p,q)=>(p[0]+p[1])-(q[0]+q[1])).forEach(([bx,by])=>{
+   const r1=Math.min(w/4,d/3)*.36,r2=r1*.45;
+   const cyl=(z0,z1,r,f,st)=>{const [ax,ay]=P(bx,by,z0),[tx,ty]=P(bx,by,z1),rx=r*I*K1,ry=r*I*K2;
+    return `<path d="M${(ax-rx).toFixed(1)},${ay.toFixed(1)} L${(tx-rx).toFixed(1)},${ty.toFixed(1)} L${(tx+rx).toFixed(1)},${ty.toFixed(1)} L${(ax+rx).toFixed(1)},${ay.toFixed(1)} A${rx.toFixed(1)},${ry.toFixed(1)} 0 0 1 ${(ax-rx).toFixed(1)},${ay.toFixed(1)} Z" fill="${f}" stroke="${st}" stroke-width=".8"/>`+`<ellipse cx="${tx.toFixed(1)}" cy="${ty.toFixed(1)}" rx="${rx.toFixed(1)}" ry="${ry.toFixed(1)}" fill="${f}" stroke="${st}" stroke-width=".8"/>`};
+   g+=cyl(z,z+h*.7,r1,'#cfe3ea','#7f9aa6');                 // corps (verre clair)
+   g+=cyl(z+h*.7,z+h*1.12,r2,'#d9ebf1','#7f9aa6');          // goulot qui dépasse
+   const [tx,ty]=P(bx,by,z+h*1.12);g+=`<ellipse cx="${tx.toFixed(1)}" cy="${ty.toFixed(1)}" rx="${(r2*I*K1*.6).toFixed(1)}" ry="${(r2*I*K2*.6).toFixed(1)}" fill="#1f2426"/>`; // ouvert = vide
+  });
+  // parois avant (avant-gauche y+d, avant-droite x+w), ajourées, avec poignée
+  const paroi=(A,B,teinte)=>{ // A,B : coins bas de la paroi
+   const L=(t,zz)=>[A[0]+(B[0]-A[0])*t,A[1]+(B[1]-A[1])*t,zz];
+   let p=face([L(0,z),L(1,z),L(1,z+h),L(0,z+h)],teinte,'rgba(0,0,0,.45)');
+   // jours (ouvertures) : on voit les bouteilles derrière
+   [[.08,.3],[.38,.62],[.7,.92]].forEach(([t0,t1])=>p+=face([L(t0,z+h*.12),L(t1,z+h*.12),L(t1,z+h*.5),L(t0,z+h*.5)],'rgba(207,227,234,.9)','rgba(0,0,0,.35)'));
+   // pied sombre : chaque casier se distingue de celui du dessous
+   p+=face([L(0,z),L(1,z),L(1,z+h*.07),L(0,z+h*.07)],'#1a1d20','none');
+   // poignée (fente) en haut
+   p+=face([L(.3,z+h*.66),L(.7,z+h*.66),L(.7,z+h*.84),L(.3,z+h*.84)],'#1a1d20','none');
+   // bourrelet du haut
+   p+=`<polyline points="${pts([L(0,z+h*.97),L(1,z+h*.97)])}" fill="none" stroke="${bord}" stroke-width="${Math.max(3,I/35).toFixed(1)}"/>`;
+   return p;
+  };
+  g+=paroi([x,y+d],[x+w,y+d],coul);
+  g+=paroi([x+w,y+d],[x+w,y],'#59636a');
+  g+=`<polyline points="${pts([[x,y,z+h],[x+w,y,z+h],[x+w,y+d,z+h],[x,y+d,z+h],[x,y,z+h]])}" fill="none" stroke="${bord}" stroke-width="${Math.max(1.5,I/60).toFixed(1)}"/>`;
+  return g;
+ };
+ const texte=(x,y,z,t,o={})=>{const [a,b]=P(x,y,z);return `<text x="${a.toFixed(1)}" y="${b.toFixed(1)}" text-anchor="${o.ancre||'middle'}" font-size="${o.taille||12}" font-weight="${o.gras??800}" fill="${o.coul||'#1a1915'}" ${o.op?`opacity="${o.op}"`:''}>${t}</text>`};
+ const etiquette=(x,y,z,t,fond,coul)=>{const [a,b]=P(x,y,z);const w=t.length*11+20;return `<g><rect x="${(a-w/2).toFixed(1)}" y="${(b-17).toFixed(1)}" width="${w.toFixed(1)}" height="30" rx="5" fill="${fond}" stroke="${coul}" stroke-width="2.5"/><text x="${a.toFixed(1)}" y="${(b+5).toFixed(1)}" text-anchor="middle" font-size="18" font-weight="800" fill="${coul}">${t}</text></g>`};
+ return {P,pts,face,boite,fut,casier,texte,etiquette};
+}
+const DEFS=`<defs><linearGradient id="metal" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#8f979c"/><stop offset=".35" stop-color="#e6e9eb"/><stop offset=".7" stop-color="#b3bac0"/><stop offset="1" stop-color="#7f878c"/></linearGradient></defs>`;
+
+function dessinQuai(){
+ const G=iso(150,500,40);
+ let s=`<svg viewBox="0 0 1100 700" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Le quai 14 : les emballages rapportés de chez Malo, à compter.">${DEFS}<rect class="fondq" x="-2000" y="-2000" width="5000" height="5000" fill="#f6f2e9"/>`;
+ // sol du quai + bord de quai au fond (bande jaune et noire)
+ s+=G.face([[-1.9,-1.2,0],[3.5,-1.2,0],[3.5,3.0,0],[-1.9,3.0,0]],'#dcd6ca','#c2bbad');
+ for(let i=0;i<14;i++){const x0=-1.9+i*5.4/14;s+=G.face([[x0,-1.2,0],[x0+5.4/14,-1.2,0],[x0+5.4/14,-1.05,0],[x0,-1.05,0]],i%2?'#1a1915':'#e5b800','none')}
+ s+=G.texte(1.5,-.7,0,'QUAI 14 — porteur T1',{taille:20,coul:'#555047'});
+ // zone « autres clients » : au fond, grisée, nettement à part
+ s+=G.face([[-1.75,1.25,0],[-.35,1.25,0],[-.35,2.25,0],[-1.75,2.25,0]],'rgba(255,255,255,.3)','#a39c8f',1.5);
+ [[-1.5,1.5],[-1.08,1.5],[-.66,1.5],[-1.29,1.92],[-.87,1.92]].forEach(p=>s+=G.fut(p[0],p[1],0,.19,.6,{vide:true,op:.3}));
+ // zone de Malo (bleu = le client)
+ s+=G.face([[.0,.3,0],[3.3,.3,0],[3.3,2.85,0],[.0,2.85,0]],'rgba(47,95,158,.06)','#2f5f9e',3);
+ // palette de rétention noire 1,30 × 1,30 : 8 fûts vides en quinconce 3 + 2 + 3
+ const px=.15,py=1.4;
+ s+=G.boite(px,py,0,1.3,1.3,.12,['#2b2f33','#1c1f22','#141618']);
+ [[.23,.23],[.65,.23],[1.07,.23],[.44,.65],[.86,.65],[.23,1.07],[.65,1.07],[1.07,1.07]].map(([a,b])=>[px+a,py+b])
+  .sort((a,b)=>(a[0]+a[1])-(b[0]+b[1])).forEach(p=>s+=G.fut(p[0],p[1],.12,.2,.6,{vide:true}));
+ // 5 casiers vides : une pile de 3 et une pile de 2, bien séparées
+ const cw=.42,cd=.32,ch=.31;
+ [[1.55,1.15,0],[1.55,1.15,1],[1.55,1.15,2],[2.25,1.15,0],[2.25,1.15,1]].forEach(([x,y,n])=>s+=G.casier(x,y,n*ch,cw,cd,ch,'#4a5157'));
+ // le fût plein refusé, à l'écart, à droite
+ s+=G.fut(2.85,.65,0,.2,.6,{abime:true});
+ // étiquettes (posées en dernier, jamais sur un objet)
+ s+=G.etiquette(px+.65,py+1.62,0,'VIDES','#eef0f1','#555047');
+ s+=G.etiquette(1.95,1.95,0,'CASIERS VIDES','#eef0f1','#555047');
+ s+=G.etiquette(3.25,1.3,0,'REFUSÉ — fût abîmé','#fbe9e9','#9d2727');
+ s+=G.etiquette(-1.05,2.75,0,'autres clients — ne pas compter','#f6f2e9','#7a7366');
+ s+=G.texte(1.65,3.15,0,'La Cabane à Malo',{taille:24,coul:'#2f5f9e'});
+ s+=`<text class="mentionq" font-size="13" fill="#7a7366">Dessin — reconstitution, non contractuel</text></svg>`;
+ return s;
+}
+function cadrer(sv){ // le cadre suit le dessin : plus de place perdue
+ const f=sv.querySelector('.fondq'),m=sv.querySelector('.mentionq');f.style.display='none';m.style.display='none';
+ const bb=sv.getBBox();f.style.display='';m.style.display='';const k=14;
+ sv.setAttribute('viewBox',`${bb.x-k} ${bb.y-k} ${bb.width+2*k} ${bb.height+2*k+16}`);
+ m.setAttribute('x',bb.x+bb.width);m.setAttribute('y',bb.y+bb.height+k+8);m.setAttribute('text-anchor','end');
+}
+// ================= documents =================
+const TICKET=`<div class="ticket">
+<h3><span>FRANCE BOISSONS — Buchelay</span><span>N° LR-27-0618-C04</span></h3>
+<div class="p">TICKET DE LIVRAISON ET DE REPRISE · Tournée de la côte · T1 · Lucas · ven. 18/06/2027</div>
+<div class="p">Client : La Cabane à Malo — Villers-sur-Mer</div>
+<table><tr><th>Livraison</th><th class="c">Commandé</th><th class="c">Livré</th><th>Non livré (motif)</th></tr>
+<tr><td>Heineken fût 30 L</td><td class="c">6</td><td class="c">5</td><td>1 — abîmé, refusé</td></tr>
+<tr><td>Affligem Blonde fût 20 L</td><td class="c">2</td><td class="c">2</td><td></td></tr>
+<tr><td>Pelforth Blonde fût 20 L</td><td class="c">2</td><td class="c">2</td><td></td></tr>
+<tr><td>Eau plate 1 L, casier de 12</td><td class="c">3</td><td class="c">3</td><td></td></tr></table>
+<table><tr><th>Emballages repris</th><th class="c">Nombre</th><th></th></tr>
+<tr><td>Fûts vides</td><td class="c">9</td><td class="gris">(repris de la commande)</td></tr>
+<tr><td>Casiers vides</td><td class="c">5</td><td class="gris">(repris de la commande)</td></tr></table>
+<div class="sig"><span>Client : <i>Malo</i></span><span>Chauffeur : <i>Lucas</i></span></div>
+<div class="rec">Document pédagogique — reconstitution, non contractuel</div></div>`;
+const LUCAS=`<div class="message"><b>Lucas, chauffeur-livreur · 16 h 52</b>Tout est livré chez Malo, sauf un Heineken 30 L : je l'ai cabossé en déchargeant, Malo l'a refusé. Il est revenu avec moi. Le ticket est signé.</div>`;
+const CLIENT=`<div class="docpapier"><h3>Fiche client — La Cabane à Malo</h3><table>
+<tr><td>Bar de plage, Villers-sur-Mer (14)</td><td></td></tr><tr><td>Tournée</td><td>côte, le vendredi</td></tr>
+<tr><td>Fûts en consigne chez le client <b>avant la tournée</b></td><td>9</td></tr>
+<tr><td>Casiers en consigne chez le client <b>avant la tournée</b></td><td>5</td></tr></table>
+<div class="rec" style="margin-top:8px;font-size:10.5px;color:#8a8478;text-align:center">Document pédagogique — reconstitution, non contractuel</div></div>`;
+const CONDITIONS=`<div class="docpapier"><h3>Conditions de vente CHR (extrait)</h3><table>
+<tr><td>Consigne d'un fût (20 à 50 L)</td><td>40 €</td></tr><tr><td>Consigne d'un casier</td><td>4 €</td></tr>
+<tr><td colspan="2" style="text-align:left;font-weight:400">Taux fixés par l'arrêté du 6 février 2026, en vigueur depuis le 1er janvier 2027. Les vides repris donnent un <b>avoir</b>.</td></tr></table></div>`;
+const ONGLETS={1:[['quai','Le quai'],['ticket','Le ticket'],['lucas','Message de Lucas']],2:[['ticket','Le ticket'],['client','Fiche client'],['conditions','Conditions de vente']],'4a':[['anim','La boucle des vides']],'4b':[['donnees','Un fût, une bouteille'],['anim','Revoir l\'animation']]};
+
+function rendreDocs(){
+ const o=ONGLETS[S.etape];if(!o.some(x=>x[0]===S.onglet))S.onglet=o[0][0];
+ $('onglets').innerHTML=o.map(([k,l])=>`<button data-o="${k}" class="${S.onglet===k?'actif':''}">${l}</button>`).join('');
+ let h='';
+ if(S.onglet==='quai')h=dessinQuai()+`<button class="loupe" id="btnLoupe">🔍 Agrandir</button>`;
+ else if(S.onglet==='anim')h=docAnim();else if(S.onglet==='donnees')h=DONNEES;else if(S.onglet==='ticket')h=TICKET;else if(S.onglet==='lucas')h=LUCAS;else if(S.onglet==='client')h=CLIENT;else h=CONDITIONS;
+ $('doc').innerHTML=h;
+ if($('animZone'))brancherAnim();
+ if($('btnLoupe')){$('btnLoupe').onclick=loupe;cadrer($('doc').querySelector('svg'))}
+ $('onglets').querySelectorAll('button').forEach(b=>b.onclick=()=>{S.onglet=b.dataset.o;rendreDocs()});
+}
+function loupe(){$('pleinBoite').innerHTML=dessinQuai();$('plein').classList.add('on');cadrer($('pleinBoite').querySelector('svg'));$('fermer').focus()}
+$('fermer').onclick=()=>$('plein').classList.remove('on');
+document.addEventListener('keydown',e=>{if(e.key==='Escape')$('plein').classList.remove('on')});
+
+// ================= étapes =================
+function rendreEtapes(){
+ const E=[['Contrôler les vides',1],['Compter les consignes',2],['Prévenir Malo et Inès',3],['La boucle des vides',4]];
+ const num=String(S.etape)[0];
+ $('etapes').innerHTML=E.map(([l,n])=>{const fait=(n===1&&S.f1Envoyee)||(n===2&&S.env.c)||(n===4&&S.env.r);const c=String(n)===num&&S.vue==='fiche'?'cours':'';return `<div class="etape ${c} ${fait?'fait':''} ${n===3?'hors':''}"><span class="n"><span>${n}</span></span>${l}${n===3?' <i style="font-weight:400">(hors maquette)</i>':''}</div>`}).join('');
+ $('nav1').classList.toggle('actif',S.etape===1&&S.vue==='fiche');$('nav2').classList.toggle('actif',S.etape===2&&S.vue==='fiche');$('nav4').classList.toggle('actif',num==='4'&&S.vue==='fiche');$('navMsg').classList.toggle('actif',S.vue==='msg');
+ $('nav2').disabled=!S.f1Envoyee;
+}
+$('nav1').onclick=()=>{S.vue='fiche';S.etape=1;S.onglet='quai';tout()};
+$('nav2').onclick=()=>{S.vue='fiche';S.etape=2;tout()};
+$('nav4').onclick=()=>{S.vue='fiche';S.etape=S.etape==='4b'||AN.rep[2]!=null?'4b':'4a';S.onglet=S.etape==='4b'?'donnees':'anim';tout()};
+$('navMsg').onclick=()=>{S.vue='msg';S.luMsg=true;tout()};
+$('prof').onchange=()=>tout();
+
+// ================= fiche 1 =================
+const juste1=()=>({vides:+S.f1.vides===D.quai.vides,casiers:+S.f1.casiers===D.quai.casiers,refuse:+S.f1.refuse===D.quai.refuse,ticket:S.f1.ticket==='futs'});
+function v(ok){return $('prof').checked&&S.f1Envoyee?`<span class="verdict ${ok?'v':'f'}">${ok?'✓ juste':'✗ faux'}</span>`:''}
+function fiche1(){
+ const fige=S.f1Envoyee,j=juste1();
+ const nb=(k,lib,u)=>`<div class="ligne"><label for="f_${k}">${lib}</label><input class="nb" id="f_${k}" inputmode="numeric" value="${S.f1[k]}" ${fige?'tabindex="-1"':''}><span class="unite">${u} ${fige?v(j[k]):''}</span></div>`;
+ return `<div class="tete"><h2>① Contrôle du retour — La Cabane à Malo</h2>
+ <div class="tuteur"><b>Karim :</b> Compte les vides <b>au quai</b> avant de croire le ticket, puis envoie-moi ton contrôle.</div></div>
+ <div class="corps ${fige?'fige':''}">
+ ${nb('vides','Fûts vides comptés','fûts')}
+ ${nb('casiers','Casiers vides comptés','casiers')}
+ ${nb('refuse','Fût plein revenu (refusé)','fût(s)')}
+ <div class="ligne" style="grid-template-columns:1fr 300px"><label for="f_ticket">Le ticket est-il juste ?</label><div><select id="f_ticket" ${fige?'tabindex="-1"':''}>
+  <option value="">— choisir —</option>
+  ${[['oui','Oui'],['futs','Non, écart sur les fûts vides'],['casiers','Non, écart sur les casiers'],['deux','Non, écart sur les deux']].map(([k,l])=>`<option value="${k}" ${S.f1.ticket===k?'selected':''}>${l}</option>`).join('')}
+ </select>${fige?' '+v(j.ticket):''}</div></div>
+ <div class="encadre"><span class="tt">Compter avant de croire</span>Un ticket signé peut être faux.<br>On compte ce qui est <b>au quai</b>.<br>Un fût <b>plein</b> refusé n'est <b>pas</b> un vide.</div>
+ </div>
+ <div class="basfiche"><span class="${fige?'ok':'raison'}" id="raison1">${fige?'Contrôle envoyé à Karim — fiche figée.':''}</span><button class="btn" id="envoi1" ${fige?'disabled':''}>Envoyer le contrôle à Karim</button></div>`;
+}
+function brancher1(){
+ if(S.f1Envoyee)return;
+ ['vides','casiers','refuse'].forEach(k=>$('f_'+k).oninput=e=>{S.f1[k]=e.target.value.trim()});
+ $('f_ticket').onchange=e=>{S.f1.ticket=e.target.value};
+ document.querySelectorAll('.fiche input').forEach(i=>i.addEventListener('keydown',e=>{if(e.key==='Enter')e.preventDefault()}));
+ $('envoi1').onclick=()=>{
+  const manque=[];if(S.f1.vides==='')manque.push('les fûts vides');if(S.f1.casiers==='')manque.push('les casiers');if(S.f1.refuse==='')manque.push('le fût refusé');if(!S.f1.ticket)manque.push('ta réponse sur le ticket');
+  const pasEntier=['vides','casiers','refuse'].filter(k=>S.f1[k]!==''&&!/^\d+$/.test(S.f1[k]));
+  if(manque.length){$('raison1').textContent='Il manque : '+manque.join(', ')+'.';return}
+  if(pasEntier.length){$('raison1').textContent='Un nombre entier, sans signe ni virgule.';return}
+  S.f1Envoyee=true;S.etape=2;S.onglet='ticket';CUR='c';
+  toast('Karim','Contrôle reçu. Fais maintenant le compte de consignes de Malo <b>avec tes chiffres</b> : Inès en a besoin pour sa facture.');
+  tout();
+ };
+}
+
+// ================= grilles de calcul (② consignes, ④ chiffrage RSE) =================
+// lignes : [n, libellé, [type par colonne], aide] ; type : 's' saisie, 'f' formule exigée, nombre = donné, null = vide
+const GRILLES={
+ c:{titre:'② Compte de consignes — La Cabane à Malo',
+    tuteur:'<b>Karim :</b> Prends <b>tes chiffres du quai</b>. Lignes 5, 6, 8, 9 : tape <b>=</b> puis clique sur les cases.',
+    cols:[['B','B — Fûts'],['C','C — Casiers']],total:9,envoi:'Envoyer le compte à Inès',fige:'Compte envoyé à Inès — fiche figée.',
+    lignes:[[2,'Chez le client avant la tournée',[9,5],'Donné (fiche client).'],[3,'+ Pleins livrés',['s','s'],'Colonne « Livré » du ticket.'],[4,'− Vides repris',['s','s'],'Ce que <b>tu</b> as compté au quai.'],[5,'= Chez le client après la tournée',['f','f'],'Avant + livré − repris.'],[6,'Écart (après − avant)',['f','f'],'Après − avant.'],[7,'Consigne (€)',['s','s'],'Conditions de vente.'],[8,'Montant (€)',['f','f'],'Écart × consigne. Négatif = avoir.'],[9,'Total de la tournée (€)',['f',null],'Fûts + casiers.']],
+    attendus(V){const a={B3:9,C3:3,B4:+S.f1.vides,C4:+S.f1.casiers,B7:40,C7:4};
+     a.B5=V('B2')+V('B3')-V('B4');a.C5=V('C2')+V('C3')-V('C4');a.B6=V('B5')-V('B2');a.C6=V('C5')-V('C2');a.B8=V('B6')*V('B7');a.C8=V('C6')*V('C7');a.B9=V('B8')+V('C8');return a}},
+ r:{titre:'④ Ce que rapporte un fût qui revient',
+    tuteur:'<b>Karim :</b> Lis la fiche à gauche. Lignes 7 à 10 : <b>=</b> puis clique sur les cases.',
+    cols:[['B','B']],total:10,envoi:'Envoyer à Karim',fige:'Envoyé à Karim — fiche figée.',
+    lignes:[[2,'Volume d\'un fût (L)',['s'],'Fiche, ligne 1.'],[3,'Volume d\'une bouteille (L)',['s'],'Fiche, ligne 2 — en litres.'],[4,'Poids d\'une bouteille vide (kg)',['s'],'Fiche, ligne 3 — en kg.'],[5,'Utilisations d\'un fût',['s'],'Fiche, ligne 4.'],[6,'Poids d\'un fût vide (kg)',['s'],'Fiche, ligne 5.'],[7,'Bouteilles pour remplacer 1 fût',['f'],'Volume du fût ÷ volume d\'une bouteille.'],[8,'Verre jeté pour 1 fût (kg)',['f'],'Bouteilles × poids d\'une bouteille.'],[9,'Verre jeté sur la vie du fût (kg)',['f'],'× le nombre d\'utilisations.'],[10,'Combien de fois le poids du fût ?',['f'],'Verre jeté ÷ poids du fût.']],
+    attendus(V){const a={B2:30,B3:.33,B4:.225,B5:53,B6:9.5};a.B7=V('B2')/V('B3');a.B8=V('B7')*V('B4');a.B9=V('B8')*V('B5');a.B10=V('B9')/V('B6');return a}},
+};
+let CUR='c';
+const GG=()=>GRILLES[CUR];
+function typeDe(ref){const G=GG(),ci=G.cols.findIndex(c=>c[0]===ref[0]),l=G.lignes.find(x=>x[0]===+ref.slice(1));return (ci<0||!l)?undefined:l[2][ci]}
+function valeur(ref,vu=new Set()){
+ if(vu.has(ref))return NaN;vu.add(ref);
+ const t=typeDe(ref);if(t===undefined||t===null)return NaN;if(typeof t==='number')return t;
+ const s=(S.gs[CUR][ref]||'').trim();if(s==='')return NaN;
+ if(s[0]!=='=')return nombre(s);
+ return calcul(s.slice(1),vu);
+}
+function nombre(s){const x=Number(s.replace(/\s/g,'').replace(',','.'));return s.trim()===''?NaN:x}
+function calcul(f,vu){
+ let e=f.toUpperCase().replace(/\s/g,'').replace(/,/g,'.');
+ e=e.replace(/SOMME\(([BC])(\d+):([BC])(\d+)\)/g,(m,c1,a,c2,b)=>{if(c1!==c2)return'NaN';const r=[];for(let i=+a;i<=+b;i++)r.push(c1+i);return '('+r.join('+')+')'});
+ e=e.replace(/[BC]\d+/g,r=>{const x=valeur(r,new Set(vu));return isNaN(x)?'NaN':'('+x+')'});
+ if(!/^[0-9.+\-*/()NaN]*$/.test(e))return NaN;
+ try{const x=Function('"use strict";return ('+e+')')();return typeof x==='number'&&isFinite(x)?x:NaN}catch(_){return NaN}
+}
+const fmt=x=>isNaN(x)?'':(Math.round(x*100)/100).toLocaleString('fr-FR');
+function verdictCase(ref,type){ // calculé sur les saisies de l'élève (une erreur ne se paie qu'une fois) ; 1 % de tolérance
+ const a=GG().attendus(r=>valeur(r))[ref],x=valeur(ref),s=(S.gs[CUR][ref]||'').trim();
+ if(isNaN(x)||isNaN(a))return false;if(type==='f'&&s[0]!=='=')return false;return Math.abs(x-a)<=Math.max(.01,Math.abs(a)*.01);
+}
+function ficheGrille(){
+ const G=GG(),fige=S.env[CUR],voir=$('prof').checked&&fige,st=S.gs[CUR];
+ const cell=(ref,t)=>{
+  if(t==null)return `<td class="vide"></td>`;if(typeof t==='number')return `<td class="donne" data-r="${ref}">${t}</td>`;
+  const v=st[ref]||'',x=valeur(ref),err=v.trim()!==''&&v.trim()!=='='&&isNaN(x);
+  const vd=voir?(verdictCase(ref,t)?'<span class="verdict v">✓</span> ':'<span class="verdict f">✗</span> '):'';
+  return `<td><div class="cell"><input id="g_${ref}" data-r="${ref}" value="${v.replace(/"/g,'&quot;')}" aria-label="Case ${ref}" ${fige?'tabindex="-1"':''} autocomplete="off" spellcheck="false" placeholder="${t==='f'?'= formule':''}"><span class="res ${err?'err':''}" id="r_${ref}">${vd}${err?'?':(v.trim()[0]==='='?fmt(x):'')}</span></div></td>`;
+ };
+ const larg=G.cols.length===2?'<col style="width:24px"><col style="width:150px"><col style="width:146px"><col style="width:146px"><col>':'<col style="width:24px"><col style="width:230px"><col style="width:160px"><col>';
+ return `<div class="tete"><h2>${G.titre}</h2><div class="tuteur">${G.tuteur}</div></div>
+ <div class="corps ${fige?'fige':''}" style="padding-top:6px">
+ <table class="grille ${G.cols.length===1?'serree':''}"><colgroup>${larg}</colgroup><tr><th></th><th style="text-align:left">A</th>${G.cols.map(c=>`<th>${c[1]}</th>`).join('')}<th style="text-align:left">Aide</th></tr>
+ ${G.lignes.map(([n,lib,ts,aide])=>`<tr class="${n===G.total?'total':''}"><td class="num">${n}</td><td class="lib">${lib}</td>${G.cols.map((c,i)=>cell(c[0]+n,ts[i])).join('')}<td class="aide">${aide}</td></tr>`).join('')}
+ </table></div>
+ <div class="basfiche"><span class="${fige?'ok':'raison'}" id="raisonG">${fige?G.fige:''}</span><button class="btn" id="envoiG" ${fige?'disabled':''}>${G.envoi}</button></div>`;
+}
+function majResultats(){
+ GG().lignes.forEach(([n,,ts])=>GG().cols.forEach((c,i)=>{const t=ts[i];if(t!=='s'&&t!=='f')return;const r=c[0]+n,el=$('r_'+r);if(!el)return;const v=(S.gs[CUR][r]||'').trim(),x=valeur(r),err=v!==''&&v!=='='&&isNaN(x);el.className='res'+(err?' err':'');el.textContent=err?'?':(v[0]==='='?fmt(x):'');el.title=err?'Formule à revoir':''}));
+}
+function modeFormule(){const t=document.querySelector('table.grille');if(!t)return;const a=document.activeElement;t.classList.toggle('formule',!!(a&&a.matches('.cell input')&&a.value.trim().startsWith('=')))}
+function brancherGrille(){
+ if(S.env[CUR])return;
+ document.querySelectorAll('.cell input').forEach(i=>{
+  i.oninput=e=>{S.gs[CUR][e.target.dataset.r]=e.target.value;majResultats();modeFormule()};   // pas de redessin : le focus reste
+  i.addEventListener('focus',modeFormule);i.addEventListener('blur',()=>setTimeout(modeFormule,0));
+  i.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();const t=[...document.querySelectorAll('.cell input')];const k=t.indexOf(e.target);if(t[k+1])t[k+1].focus()}});
+ });
+ // Comme dans un tableur : pendant qu'on écrit une formule, juste après =, +, −, ×, ÷ ou (, un clic sur une autre case
+ // ajoute sa référence (B4, C7…) à l'endroit du curseur, et on reste dans la formule. Sinon, le clic change de case.
+ document.querySelector('table.grille').addEventListener('mousedown',e=>{
+  const act=document.activeElement;if(!act||!act.matches('.cell input')||!act.value.trim().startsWith('='))return;
+  const cible=e.target.closest('[data-r]');if(!cible||cible===act)return;
+  const ref=cible.dataset.r;if(ref===act.dataset.r)return;
+  const d=act.selectionStart??act.value.length,f=act.selectionEnd??d;
+  if(!/[=+\-*/(;]\s*$/.test(act.value.slice(0,d)))return;
+  e.preventDefault();
+  act.value=act.value.slice(0,d)+ref+act.value.slice(f);act.setSelectionRange(d+ref.length,d+ref.length);
+  S.gs[CUR][act.dataset.r]=act.value;majResultats();
+  cible.classList.remove('ref-flash');void cible.offsetWidth;cible.classList.add('ref-flash');
+ });
+ $('envoiG').onclick=()=>{
+  const G=GG(),vides=[];G.lignes.forEach(([n,,ts])=>G.cols.forEach((c,i)=>{const t=ts[i];if((t==='s'||t==='f')&&!(S.gs[CUR][c[0]+n]||'').trim())vides.push(c[0]+n)}));
+  if(vides.length){$('raisonG').textContent='Il manque : '+vides.join(', ')+'.';return}
+  S.env[CUR]=true;
+  if(CUR==='c')toast('Inès','Merci, je reçois ton compte. (Les messages à Malo et à Inès, ③, ne sont pas dans la maquette.)');
+  else toast('Karim','Merci {prénom}. Une tonne de verre pour un seul fût… Bonne Fête de la musique à Malo !');
+  tout();
+ };
+}
+
+// ================= ④ la boucle des vides : animation à questions =================
+const ANIM={
+ 1:{duree:9.5,legendes:[[0,'À Buchelay, le camion part <b>plein</b> : la commande de Malo.'],[1.5,'Lucas roule vers la côte.'],[4.5,'Chez Malo : il pose les <b>pleins</b> et reprend les <b>vides</b>, <b>dans le même camion</b>.'],[6.5,'Retour à Buchelay avec les vides. <b>Arrête-toi et réfléchis.</b>']],
+    q:{enonce:'Pourquoi Lucas reprend-il les vides dans le même camion ?',choix:['Parce que les vides sont dangereux à laisser au bar.','Sinon, le camion rentrerait vide et il faudrait un autre trajet pour les vides.','Pour les revendre à un ferrailleur.','Parce que Malo n\'a pas de poubelle assez grande.'],juste:1}},
+ 2:{duree:8,legendes:[[0,'Les vides de toute la côte repartent vers la <b>brasserie</b> (Mons-en-Barœul).'],[3,'À la brasserie : <b>lavage</b>, contrôle, puis <b>remplissage</b>.'],[5,'Le fût revient <b>plein</b> à Buchelay. Un fût fait ce tour <b>environ 50 fois en 15 ans</b> (Conseil national de l\'emballage).']],
+    q:{enonce:'Un fût vide perdu, qu\'est-ce que ça coûte à France Boissons ?',choix:['Rien : le client paie toujours.','4 €.','40 € de consigne, et un fût de moins dans la boucle.','Seulement le prix de la bière.'],juste:2}},
+ retenir:'Un fût <b>revient</b> : il est lavé et rempli de nouveau. Chaque vide repris, c\'est <b>un emballage qui n\'est pas jeté</b>.'
+};
+const LIEUX={brass:[.4,1.9],buch:[3.6,1.9],malo:[6.6,1.4]};
+function posCamion(partie,t){ // [x, y, chargement]
+ const L=(a,b,u)=>[a[0]+(b[0]-a[0])*u,a[1]+(b[1]-a[1])*u];const k=(t0,t1)=>Math.min(1,Math.max(0,(t-t0)/(t1-t0)));
+ const B=[LIEUX.buch[0],LIEUX.buch[1]+.75],M=[LIEUX.malo[0]-.2,LIEUX.malo[1]+.8],R=[LIEUX.brass[0]+.6,LIEUX.brass[1]+.75];
+ if(partie===1){ if(t<1.5)return [...B,'plein']; if(t<4.5)return [...L(B,M,k(1.5,4.5)),'plein']; if(t<5.5)return [...M,'plein']; if(t<6.5)return [...M,'vide']; return [...L(M,B,k(6.5,9.5)),'vide']; }
+ if(t<3)return [...L(B,R,k(0,3)),'vide']; if(t<4)return [...R,'vide']; if(t<5)return [...R,'lavage']; return [...L(R,B,k(5,8)),'plein'];
+}
+function dessinBoucle(partie,t){
+ const G=iso(68,300,90);
+ let s=`<svg id="animSvg" viewBox="0 0 900 570" preserveAspectRatio="xMidYMid meet" role="img" aria-label="La boucle des vides : brasserie, plateforme de Buchelay, bar de Malo.">${DEFS}<rect x="-500" y="-500" width="2000" height="1600" fill="#f6f2e9"/>`;
+ // sol, plage et mer côté Malo
+ s+=G.face([[-.8,-.3,0],[8.2,-.3,0],[8.2,3.6,0],[-.8,3.6,0]],'#e3ddd0','#cfc7b6');
+ s+=G.face([[5.3,-.3,0],[8.2,-.3,0],[8.2,3.6,0],[5.3,3.6,0]],'#efe0b4','none');
+ s+=G.face([[7.4,-.3,0],[8.2,-.3,0],[8.2,3.6,0],[7.4,3.6,0]],'#a9cbd8','none');
+ // route
+ s+=`<polyline points="${G.pts([[LIEUX.brass[0]+.6,LIEUX.brass[1]+.95,0],[LIEUX.buch[0],LIEUX.buch[1]+.95,0],[LIEUX.malo[0]-.2,LIEUX.malo[1]+1.0,0]])}" fill="none" stroke="#9a9283" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>`;
+ // brasserie : bâtiment brique + deux cuves
+ s+=G.boite(-.3,1.1,0,1.3,1.0,1.0,['#c98a6b','#a9684b','#8c533a']);
+ [[1.25,1.2],[1.25,1.75]].forEach(([x,y])=>s+=G.fut(x,y,0,.22,1.15,{}));
+ s+=G.texte(.35,1.1,1.75,'Brasserie',{taille:16});s+=G.texte(.35,1.1,1.5,'lavage · remplissage',{taille:12,gras:600,coul:'#555047'});
+ // plateforme de Buchelay
+ s+=G.boite(2.9,.7,0,1.6,1.2,.8,['#d7dde2','#b9c2ca','#a1abb4']);
+ s+=G.texte(3.7,.7,1.55,'France Boissons',{taille:16});s+=G.texte(3.7,.7,1.3,'Buchelay',{taille:12,gras:600,coul:'#555047'});
+ // bar de plage
+ s+=G.boite(6.2,.4,0,.9,.7,.55,['#d8b07a','#b88c55','#9c7243']);
+ for(let i=0;i<5;i++)s+=G.face([[6.2+i*.18,1.1,.55],[6.38+i*.18,1.1,.55],[6.38+i*.18,1.35,.42],[6.2+i*.18,1.35,.42]],i%2?'#f4f1ea':'#c0392b','rgba(0,0,0,.2)');
+ s+=G.texte(6.65,.4,1.25,'La Cabane à Malo',{taille:16});
+ // ce qui est posé chez Malo (après la livraison) et à la brasserie (pendant le lavage)
+ const chezMalo=partie===2||t>=5.5;
+ if(chezMalo)[[7.25,.55],[7.25,.85],[7.25,1.15]].forEach(([x,y])=>s+=G.fut(x,y,0,.13,.35,{}));
+ const [cx,cy,charge]=posCamion(partie,t);
+ // camion porteur : cabine + plateau avec 4 fûts
+ s+=G.boite(cx-.55,cy-.3,0,.75,.6,.32,['#eceff1','#cfd5da','#b9c1c8']);
+ s+=G.boite(cx+.2,cy-.3,0,.35,.6,.55,['#f4f6f7','#dfe3e6','#c9cfd4']);
+ [[cx-.45,cy-.15],[cx-.45,cy+.15],[cx-.1,cy-.15],[cx-.1,cy+.15]].forEach(([x,y])=>s+=G.fut(x,y,.32,.12,.32,{vide:charge==='vide'||charge==='lavage'}));
+ if(charge==='lavage'){const [a,b]=G.P(cx-.3,cy,1.2);s+=`<g fill="#5fa3c7">${[[-14,0],[0,-10],[14,2],[-6,-22],[8,-26]].map(([dx,dy])=>`<circle cx="${a+dx}" cy="${b+dy}" r="4"/>`).join('')}</g>`}
+ const [ex,ey]=G.P(cx-.2,cy,1.05);
+ s+=`<g><rect x="${ex-34}" y="${ey-16}" width="68" height="22" rx="5" fill="${charge==='plein'?'#1a1915':'#eef0f1'}" stroke="#1a1915"/><text x="${ex}" y="${ey}" text-anchor="middle" font-size="13" font-weight="800" fill="${charge==='plein'?'#f4f1ea':'#1a1915'}">${charge==='plein'?'PLEINS':'VIDES'}</text></g>`;
+ return s+'</svg>';
+}
+const AN={partie:1,t:0,joue:false,fini:{1:false,2:false},rep:{1:null,2:null},raf:0,dernier:0,reduit:matchMedia('(prefers-reduced-motion: reduce)').matches};
+function legende(){const L=ANIM[AN.partie].legendes;let txt=L[0][1];L.forEach(([t0,x])=>{if(AN.t>=t0)txt=x});return txt}
+function majAnim(){const z=$('animZone');if(!z)return;z.innerHTML=dessinBoucle(AN.partie,AN.t);$('animLeg').innerHTML=legende();$('animJoue').textContent=AN.joue?'⏸ Pause':(AN.t>0&&!AN.fini[AN.partie]?'▶ Reprendre':'▶ Lecture')}
+function boucle(ts){
+ if(!AN.joue)return;const dt=AN.dernier?(ts-AN.dernier)/1000:0;AN.dernier=ts;AN.t=Math.min(ANIM[AN.partie].duree,AN.t+dt*.8);
+ if(AN.t>=ANIM[AN.partie].duree){AN.joue=false;AN.fini[AN.partie]=true;majAnim();tout();return}
+ majAnim();AN.raf=requestAnimationFrame(boucle);
+}
+function jouer(){if(AN.fini[AN.partie]&&AN.t>=ANIM[AN.partie].duree)AN.t=0;if(AN.reduit){AN.t=ANIM[AN.partie].duree;AN.fini[AN.partie]=true;majAnim();tout();return}AN.joue=!AN.joue;AN.dernier=0;if(AN.joue)AN.raf=requestAnimationFrame(boucle);majAnim()}
+function docAnim(){
+ return `<div style="display:flex;flex-direction:column;height:100%;min-height:0">
+ <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px"><b style="font-size:13px">Partie ${AN.partie} / 2</b>
+ <button class="loupe" style="position:static" id="animJoue">▶ Lecture</button><button class="loupe" style="position:static;border-color:var(--filet);color:var(--doux)" id="animRevoir">↺ Revoir la partie</button></div>
+ <div id="animZone" style="flex:1;min-height:0"></div>
+ <div id="animLeg" style="margin-top:6px;border-left:4px solid var(--jaune);background:var(--fond);border-radius:4px;padding:6px 10px;font-size:14.5px;min-height:46px"></div></div>`;
+}
+function brancherAnim(){$('animJoue').onclick=jouer;$('animRevoir').onclick=()=>{cancelAnimationFrame(AN.raf);AN.t=0;AN.joue=false;jouer()};majAnim()}
+function resume(n){const Q=ANIM[n].q,r=AN.rep[n];return `<div class="encadre" style="border-left-color:var(--ardoise);font-size:13px"><span class="tt">Question ${n} — faite</span>Ta réponse : ${Q.choix[r]} ${r===Q.juste?'<span class="verdict v">✓</span>':'<span class="verdict f">✗</span>'}</div>`}
+function ficheAnim(){
+ const q=n=>{const Q=ANIM[n].q,r=AN.rep[n];
+  return `<div class="encadre" style="border-left-color:var(--ardoise)"><span class="tt">Question ${n}</span>${Q.enonce}
+  <div style="margin-top:6px">${Q.choix.map((c,i)=>`<label style="display:flex;gap:8px;align-items:flex-start;padding:4px 0;cursor:${r==null?'pointer':'default'}"><input type="radio" name="q${n}" value="${i}" ${r==null?'':'disabled'} ${r===i?'checked':''}><span>${c}${r!=null&&i===Q.juste?' <span class="verdict v">← la bonne réponse</span>':''}${r===i&&i!==Q.juste?' <span class="verdict f">✗</span>':''}</span></label>`).join('')}</div>
+  ${r==null?`<button class="btn" style="margin:6px 0 0" id="val${n}">Valider ma réponse</button>`:''}</div>`};
+ let corps='';
+ if(!AN.fini[1])corps=`<p style="color:var(--doux)">Lance l'animation à gauche (▶ Lecture). Elle s'arrête d'elle-même pour te poser une question.</p>`;
+ else{corps=AN.partie===2?resume(1):q(1);
+  if(AN.rep[1]!=null&&AN.partie===1)corps+=`<button class="btn" style="margin:10px 0 0" id="partie2">Partie 2 ▶</button>`;
+  if(AN.partie===2&&!AN.fini[2])corps+=`<p style="color:var(--doux);margin-top:10px">Regarde la partie 2.</p>`;
+  if(AN.fini[2])corps+=q(2);
+  if(AN.rep[2]!=null)corps+=`<div class="encadre" style="border-left-color:var(--jaune)"><span class="tt">À retenir</span>${ANIM.retenir}</div>`;}
+ return `<div class="tete"><h2>④ La boucle des vides</h2><div class="tuteur"><b>Karim :</b> Regarde où vont les 8 vides de Malo, puis chiffre-le pour moi.</div></div>
+ <div class="corps">${corps}</div>
+ <div class="basfiche"><span class="ok">${AN.rep[2]!=null?'Les questions comptent sur ta <b>première</b> réponse.':''}</span><button class="btn" id="versRse" ${AN.rep[2]==null?'disabled':''}>Passer au chiffrage</button></div>`;
+}
+function brancherFicheAnim(){
+ [1,2].forEach(n=>{const b=$('val'+n);if(b)b.onclick=()=>{const c=document.querySelector(`input[name=q${n}]:checked`);if(!c)return;AN.rep[n]=+c.value;tout()}});
+ if($('partie2'))$('partie2').onclick=()=>{AN.partie=2;AN.t=0;AN.joue=false;tout();jouer()};
+ $('versRse').onclick=()=>{S.etape='4b';S.onglet='donnees';tout()};
+}
+const DONNEES=`<div class="docpapier"><h3>Un fût, une bouteille</h3><table>
+<tr><td>1. Volume d'un fût de Heineken</td><td>30 L</td></tr>
+<tr><td>2. Volume d'une bouteille de bière jetable</td><td>33 cl = 0,33 L</td></tr>
+<tr><td>3. Poids d'une bouteille vide</td><td>225 g = 0,225 kg</td></tr>
+<tr><td>4. Nombre d'utilisations d'un fût dans sa vie</td><td>53</td></tr>
+<tr><td>5. Poids d'un fût de 30 L vide</td><td>9,5 kg</td></tr></table>
+<p style="font-size:11.5px;color:#8a8478;margin:8px 0 0">Sources : Conseil national de l'emballage (2014) ; fiche d'un fabricant de fûts ; fiche d'un vendeur de bouteilles.</p></div>`;
+// ================= messagerie (simple) =================
+function messagerie(){
+ return `<div class="tete"><h2>Messagerie</h2></div><div class="corps">
+ <div class="tuteur" style="margin-bottom:8px"><b>Karim · 17 h 00</b><br>{prénom}, Lucas est au quai 14 avec les vides de la côte.<br>Il a mis à part ceux de La Cabane à Malo et il te donne le ticket que Malo a signé.<br><b>Compte les vides avant de croire le ticket</b>, puis envoie-moi ton contrôle.</div>
+ <div class="tuteur"><b>Lucas · 16 h 52</b><br>Tout est livré chez Malo, sauf un Heineken 30 L : je l'ai cabossé en déchargeant, Malo l'a refusé. Il est revenu avec moi. Le ticket est signé.</div>
+ </div><div class="basfiche"><span class="ok">Ouvre « Contrôle du retour » dans le menu.</span><button class="btn" id="aller1">Ouvrir le contrôle</button></div>`;
+}
+
+// ================= rendu =================
+function toast(qui,t){const el=$('toast');el.innerHTML=`<span class="tt">${qui} · nouveau message</span>${t}`;el.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.remove('on'),9000)}
+function tout(){
+ rendreEtapes();
+ $('nbMsg').style.display=S.luMsg?'none':'';
+ if(S.vue==='msg'){S.etape=1;rendreDocs();$('fiche').innerHTML=messagerie();$('aller1').onclick=()=>{S.vue='fiche';S.etape=1;tout()};return}
+ rendreDocs();
+ if(S.etape===1){$('fiche').innerHTML=fiche1();brancher1()}
+ else if(S.etape===2){CUR='c';$('fiche').innerHTML=ficheGrille();brancherGrille()}
+ else if(S.etape==='4a'){$('fiche').innerHTML=ficheAnim();brancherFicheAnim()}
+ else{CUR='r';$('fiche').innerHTML=ficheGrille();brancherGrille()}
+}
+S.vue='msg';tout();
+</script>
+</body>
+</html>

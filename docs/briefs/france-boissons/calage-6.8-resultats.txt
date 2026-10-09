@@ -1,0 +1,66 @@
+
+===== cartes Pause disponibles : 0
+Organisations justes AVANT l'imprévu : 16
+   Côte lucas/T1 06:00 · Rouen amandine/T2 06:30 · Versailles sebastien/E1 09:00 · Mantes–Vernon fatou/E2 06:00 · Évreux julien/VL 06:00
+   Côte lucas/T1 06:00 · Rouen amandine/T2 06:30 · Versailles sebastien/E2 09:00 · Mantes–Vernon fatou/E1 06:00 · Évreux julien/VL 06:00
+   Côte lucas/T1 06:00 · Rouen amandine/T2 06:30 · Versailles fatou/E1 06:30 · Mantes–Vernon sebastien/E2 09:00 · Évreux julien/VL 06:00
+   Côte lucas/T1 06:00 · Rouen amandine/T2 06:30 · Versailles fatou/E2 06:30 · Mantes–Vernon sebastien/E1 09:00 · Évreux julien/VL 06:00
+   Côte lucas/T1 06:00 · Rouen fatou/T2 06:00 · Versailles amandine/E1 06:30 · Mantes–Vernon sebastien/E2 09:00 · Évreux julien/VL 06:00
+   Côte lucas/T1 06:00 · Rouen fatou/T2 06:00 · Versailles amandine/E2 06:30 · Mantes–Vernon sebastien/E1 09:00 · Évreux julien/VL 06:00
+   Côte lucas/T1 06:00 · Rouen fatou/T2 06:00 · Versailles sebastien/E1 09:00 · Mantes–Vernon amandine/E2 06:30 · Évreux julien/VL 06:00
+   Côte lucas/T1 06:00 · Rouen fatou/T2 06:00 · Versailles sebastien/E2 09:00 · Mantes–Vernon amandine/E1 06:30 · Évreux julien/VL 06:00
+   Côte lucas/T2 06:00 · Rouen amandine/T1 06:30 · Versailles sebastien/E1 09:00 · Mantes–Vernon fatou/E2 06:00 · Évreux julien/VL 06:00
+   Côte lucas/T2 06:00 · Rouen amandine/T1 06:30 · Versailles sebastien/E2 09:00 · Mantes–Vernon fatou/E1 06:00 · Évreux julien/VL 06:00
+   Côte lucas/T2 06:00 · Rouen amandine/T1 06:30 · Versailles fatou/E1 06:30 · Mantes–Vernon sebastien/E2 09:00 · Évreux julien/VL 06:00
+   Côte lucas/T2 06:00 · Rouen amandine/T1 06:30 · Versailles fatou/E2 06:30 · Mantes–Vernon sebastien/E1 09:00 · Évreux julien/VL 06:00
+   Côte lucas/T2 06:00 · Rouen fatou/T1 06:00 · Versailles amandine/E1 06:30 · Mantes–Vernon sebastien/E2 09:00 · Évreux julien/VL 06:00
+   Côte lucas/T2 06:00 · Rouen fatou/T1 06:00 · Versailles amandine/E2 06:30 · Mantes–Vernon sebastien/E1 09:00 · Évreux julien/VL 06:00
+   Côte lucas/T2 06:00 · Rouen fatou/T1 06:00 · Versailles sebastien/E1 09:00 · Mantes–Vernon amandine/E2 06:30 · Évreux julien/VL 06:00
+   Côte lucas/T2 06:00 · Rouen fatou/T1 06:00 · Versailles sebastien/E2 09:00 · Mantes–Vernon amandine/E1 06:30 · Évreux julien/VL 06:00
+Organisations justes APRÈS l'imprévu : 12
+   Côte lucas/T1 06:00 · Rouen TR/— 07:00 · Versailles amandine/E1 06:30 · Mantes–Vernon sebastien/LOC 09:00 · Évreux julien/VL 06:00
+   Côte lucas/T1 06:00 · Rouen TR/— 07:00 · Versailles amandine/E1 06:30 · Mantes–Vernon sebastien/LOC 09:00 · Évreux fatou/VL 06:00
+   Côte lucas/T1 06:00 · Rouen TR/— 07:00 · Versailles amandine/E1 06:30 · Mantes–Vernon fatou/LOC 09:00 · Évreux julien/VL 06:00
+   Côte lucas/T1 06:00 · Rouen TR/— 07:00 · Versailles amandine/E1 06:30 · Mantes–Vernon fatou/LOC 09:00 · Évreux sebastien/VL 09:00
+   Côte lucas/T1 06:00 · Rouen TR/— 07:00 · Versailles sebastien/E1 09:00 · Mantes–Vernon amandine/LOC 09:00 · Évreux julien/VL 06:00
+   Côte lucas/T1 06:00 · Rouen TR/— 07:00 · Versailles sebastien/E1 09:00 · Mantes–Vernon amandine/LOC 09:00 · Évreux fatou/VL 06:00
+   Côte lucas/T1 06:00 · Rouen TR/— 07:00 · Versailles sebastien/E1 09:00 · Mantes–Vernon fatou/LOC 09:00 · Évreux amandine/VL 06:30
+   Côte lucas/T1 06:00 · Rouen TR/— 07:00 · Versailles sebastien/E1 09:00 · Mantes–Vernon fatou/LOC 09:00 · Évreux julien/VL 06:00
+   Côte lucas/T1 06:00 · Rouen TR/— 07:00 · Versailles fatou/E1 06:30 · Mantes–Vernon amandine/LOC 09:00 · Évreux julien/VL 06:00
+   Côte lucas/T1 06:00 · Rouen TR/— 07:00 · Versailles fatou/E1 06:30 · Mantes–Vernon amandine/LOC 09:00 · Évreux sebastien/VL 09:00
+   Côte lucas/T1 06:00 · Rouen TR/— 07:00 · Versailles fatou/E1 06:30 · Mantes–Vernon sebastien/LOC 09:00 · Évreux amandine/VL 06:30
+   Côte lucas/T1 06:00 · Rouen TR/— 07:00 · Versailles fatou/E1 06:30 · Mantes–Vernon sebastien/LOC 09:00 · Évreux julien/VL 06:00
+Plannings du 1er envoi encore justes après l'imprévu : 0
+
+===== Pièges
+=== Références
+1er envoi attendu (cadrage)                                    faux : —   []
+après l'imprévu attendu                                        faux : —   []
+1er envoi relu après l'imprévu                                 faux : ['camions']   ['dispoCamion', 'autonomie']
+=== Pièges du 1er envoi
+(carte côte posée sur Lucas à 06:00 : les pièges « X sur la côte », « côte partie à 07:15 » et « côte au transporteur » ne sont plus jouables, ni ceux qui mettent la côte sur un autre camion que T1/T2 avant l'imprévu ou que T1 après ; gardés pour mémoire)
+Julien (permis B) sur la côte, T1                              faux : ['chauffeurs']   ['permis']
+Sébastien sur la côte à 06:00                                  faux : ['conduite']   ['repos']
+Sébastien sur Rouen à 08:30                                    faux : ['conduite']   ['repos']
+Sébastien sur Rouen à 09:00 (repos ok)                         faux : ['fenetre']   ['tard']
+Amandine sur la côte à 06:00                                   faux : ['conduite']   ['repos']
+Côte sur électrique E2 (320 km)                                faux : ['camions']   ['autonomie']
+Versailles sur thermique T1                                    faux : ['camions']   ['autonomie', 'typeCamion']
+Rouen sur E2 (210 km)                                          faux : ['camions']   ['autonomie']
+Mantes sur le VL, Évreux sur E2                                faux : ['chauffeurs', 'camions']   ['permis', 'typeCamion']
+Côte partie à 07:15 (rentre trop tard)                         faux : ['fenetre']   ['tard']
+Fatou fait Versailles puis Évreux (2 tournées)                 faux : ['chauffeurs', 'conduite']   ['uneTourneeChauffeur', 'pause']
+=== Pièges après l'imprévu
+1er envoi gardé tel quel                                       faux : ['camions']   ['dispoCamion', 'autonomie']
+Rouen sur le camion loué à 09:00 (Amandine), Mantes au transporteur faux : ['fenetre', 'vides']   ['tard']
+Rouen sur le camion loué à 08:30                               faux : ['camions', 'vides']   ['dispoCamion']
+Côte au transporteur, Lucas libre                              faux : ['vides']   []
+Mantes au transporteur, Rouen sur T1 ? (côte sur LOC)          faux : ['fenetre', 'vides']   ['tard']
+Mantes sur E2 (80 km d'autonomie)                              faux : ['camions']   ['autonomie']
+Versailles sur le camion loué, Mantes sur E1                   faux : ['camions']   ['typeCamion']
+Rouen au transporteur à 06:30                                  faux : ['chauffeurs']   ['transporteurDispo']
+Mantes sur le loué à 08:30 (avant 09:00)                       faux : ['camions']   ['dispoCamion']
+Côte sur T2 (en panne)                                         faux : ['camions']   ['dispoCamion']
+Évreux au transporteur, Rouen sur le VL (Julien)               faux : ['camions', 'vides']   ['typeCamion']
+Mantes au transporteur, Rouen sur le loué à 09:00              faux : ['fenetre', 'vides']   ['tard']
+Amandine sur Mantes à 09:00 (au lieu de Sébastien)             faux : —   []

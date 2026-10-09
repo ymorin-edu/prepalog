@@ -22,7 +22,7 @@ Règles d'écriture 2de : `claude/prepalog-2de-eleve-debut-annee.md` (3 lignes p
 | Titre / desc | « France Boissons — le camion de la brasserie » / « Cariste au quai de la plateforme de Buchelay : repérer seul ce qui ne va pas avant de décharger, contrôler 4 palettes de fûts contre le bon de livraison, porter des réserves précises et mettre un fût qui fuit de côté. » |
 | Rubrique | simulog, entreprise n° 6 France Boissons |
 | Niveau(x) | 2de |
-| Compétence(s) | **C1.2** (sécurité), **C1.4** (réception ; C1.4.2 litige) ; domaines D4, D5 |
+| Compétence(s) | **C1.2** (sécurité), **C1.4** (réception ; C1.4.2 litige) ; domaines D4, D5 *(codes sans préfixe : à aligner sur le format du code — AGO- / OTM- / LOG- ailleurs dans S2 ; Claude Code vérifie)* |
 | Temps pédagogique | **entraînement** (scénario S2) ; `coeur: true` |
 | Notation | jalons + note sur 20 |
 | Barème | 10 |
@@ -46,7 +46,9 @@ Règles d'écriture 2de : `claude/prepalog-2de-eleve-debut-annee.md` (3 lignes p
   **Construit, à dire dans la trame** : 8 fûts de bière sur une palette de rétention (usage non vérifié chez France Boissons ; la
   source ne dit ni la matière de la palette mère ni la disposition des fûts) ; la disposition à plat en quinconce (calcul :
   1,19 × 1,08 m). La même règle vaut en ENT-6.5 et 6.6.
-- **Vérifié (05/10, INRS, [Travail et Sécurité n° 843, 13/12/2022](https://www.travail-et-securite.fr/ts/843/EI/une-logistique-qui-met-la-pression-sur-les-manutentions.html), plateforme France Boissons de Gennevilliers)** : les fûts arrivent des brasseurs « par lots de huit sur des palettes mères de 1,23 m par 1,12 m » ; ils sont repalettisés sur des palettes 1,20 × 0,80 de 6 fûts au plus pour les clients ; stockage de masse ; portique à fûts. Buchelay (site France Boissons) : 7 000 places palettes, 2 300 références, cales de roue et marquage au sol. Ces chiffres réels sont dits dans la trame ; la séance applique la règle de l'exercice (8 fûts par palette de rétention).
+- **Vérifié (05/10, INRS, [Travail et Sécurité n° 843, 13/12/2022](https://www.travail-et-securite.fr/ts/843/EI/une-logistique-qui-met-la-pression-sur-les-manutentions.html), plateforme France Boissons de Gennevilliers)** : les fûts arrivent des brasseurs « par lots de huit sur des palettes mères de 1,23 m par 1,12 m » ; ils sont repalettisés sur des palettes 1,20 × 0,80 de 6 fûts au plus pour les clients ; stockage de masse ; portique à fûts. Buchelay (site France Boissons) : 7 000 places palettes, 2 300 références, cales de roue et marquage au sol.
+- **Vérifié (07/10)** dans la [vidéo « Présentation de la Plateforme de France Boissons à Buchelay », Grand Paris Seine & Oise, YouTube, 20/06/2025](https://www.youtube.com/watch?v=LRa0qgI7Weo) : slogan **« Objectif prioritaire : 0 accident »** ; gros plan d'une **cale de roue** rouge à bras
+  devant la roue d'un camion à quai ; barrières de protection jaunes et allée piétonne marquée en jaune. Les élèves l'ont vue en 6.1. Ces chiffres réels sont dits dans la trame ; la séance applique la règle de l'exercice (8 fûts par palette de rétention).
 - **Image de la scène de sécurité : dessinée par Cowork** (aucune photo libre ne montre un vrai défaut de quai) —
   `docs/briefs/france-boissons/scene-quai-securite.svg`, validée par Tristan le 05/10 (v2). Légende à l'écran : « Dessin —
   scène construite, ce n'est pas la plateforme de Buchelay. » Aucun visage détaillé, aucune marque.
@@ -63,10 +65,10 @@ Fil rouge : ce camion apporte le **réassort d'Affligem** qui manquait à Malo e
 ## 4. Déroulé (≈ 45 min)
 
 **Date : mercredi 16 juin 2027, 14 h** (suit l'ordre de jeu). Le réassort d'Affligem arrive enfin… mais une palette n'est
-pas la bonne : il manquera encore de l'Affligem pour la tournée du vendredi. Calendrier de S2 (décision de Tristan du 05/10/2026, « A : lundi → vendredi ») : 6.1 lun. 14 juin · 6.2 mar. 15 · 6.3 mar. 15 après-midi · 6.4 mer. 16, 14 h · 6.5 mer. 16, 16 h · 6.6 jeu. 17, 7 h · 6.7 jeu. 17 après-midi · 6.8 ven. 18, 6 h · 6.9 ven. 18, 6 h 30 · 6.10 ven. 18, 17 h. L'élève joue **son propre rôle** : « Tu es en renfort au quai de réception. »
+pas la bonne : il manque une palette d'Affligem sur deux (P2 est de la Pelforth). La commande de Malo n'en dépend plus : elle a été confirmée mardi avec 2 Affligem et 2 Pelforth. Calendrier de S2 (décision de Tristan du 05/10/2026, « A : lundi → vendredi ») : 6.1 lun. 14 juin · 6.2 mar. 15 · 6.3 mar. 15 après-midi · 6.4 mer. 16, 14 h · 6.5 mer. 16, 16 h · 6.6 jeu. 17, 7 h · 6.7 jeu. 17 après-midi · 6.8 ven. 18, 5 h · 6.9 ven. 18, 6 h 30 · 6.10 ven. 18, 17 h. L'élève joue **son propre rôle** : « Tu es en renfort au quai de réception. »
 
-1. **Message de Nadia, cheffe de quai** (3 blocs) : « Bonjour {prénom}, bienvenue au quai ! / Le camion de la brasserie de
-   Mons arrive au quai 12 : 4 palettes de 8 fûts, dont l'Affligem qu'on attendait. / Avant de décharger, regarde bien la scène.
+1. **Message de Nadia, cheffe de quai** (3 blocs) : « Bonjour {prénom}, bienvenue au quai ! Ici, l'objectif, c'est **zéro accident**. / Le camion de la brasserie de
+   Mons arrive au quai 12 : 4 palettes de fûts, dont l'Affligem qu'on attendait. / Avant de décharger, regarde bien la scène.
    Nadia »
 2. **Avant de décharger — image à inspecter** (vue nouvelle, §7.3). La scène dessinée s'affiche avec une consigne d'une
    ligne : « Clique sur ce qui ne va pas, puis signale-le à Nadia. » **Aucune liste de points** (entraînement : l'élève y pense
@@ -84,7 +86,8 @@ pas la bonne : il manquera encore de l'Affligem pour la tournée du vendredi. Ca
    décharger ». **Entraînement** : décharger sans avoir signalé les deux défauts n'est **pas arrêté** (contrairement au
    guidage d'ENT-5.4) ; le bilan dit seulement « La scène n'était pas sûre : regarde la cabine et l'arrière du camion. »
    (le critère, jamais la réponse sur l'image). Signalement juste → Nadia : « Bien vu. Je fais couper le moteur et
-   descendre le chauffeur, et je pose le niveleur. Tu peux décharger. »
+   descendre le chauffeur, et je pose le niveleur. La cale, elle, était bien posée : chez nous, pas de camion à quai sans cale. Tu
+   peux décharger. »
 3. **Déchargement** : vue quai **sans froid**, l'élève décharge au chariot frontal (comme ENT-5.4). Pas de chrono.
 4. **Contrôle des palettes**, aides de guidage **éteintes** (zone de calcul `{ forme: 'feuille' }` sans rappel, pas de
    détail du comptage, pas de chef de quai qui explique) ; fiche de contrôle comme Picard / Smoby.
@@ -112,8 +115,8 @@ pas la bonne : il manquera encore de l'Affligem pour la tournée du vendredi. Ca
    | fût qui fuit | « J'ai mis le fût qui fuit en zone litiges. » | « J'ai rangé le fût qui fuit en stock avec les autres. » · « J'ai rendu le fût qui fuit au chauffeur. » |
    | fin | « Cordialement, {prénom} » | « À plus ! » · « Bisous » |
 
-7. **Réponse de Nadia** (`apresMail`, ne dit pas si c'était juste) : « Merci. Je préviens Inès que l'Affligem n'est toujours
-   pas là. Tout à l'heure, on range les fûts. » Transition vers ENT-6.5.
+7. **Réponse de Nadia** (`apresMail`, ne dit pas si c'était juste) : « Merci. Je préviens Inès : il manque une palette
+   d'Affligem sur deux. Tout à l'heure, on range les fûts. » Transition vers ENT-6.5.
 
 Mots cliquables : fût, niveleur, cale, réserve, BL, zone litiges, produit différent, chariot frontal.
 
@@ -204,6 +207,7 @@ de 2de finit en 45 min ; le bilan ne donne jamais la réponse sur l'image.
 - [x] P2 : réserve « produit différent », palette gardée (Tristan, 05/10).
 - [x] Date : **mercredi 16 juin 2027, 14 h** (calendrier « lundi → vendredi », Tristan, 05/10).
 - [ ] Image à inspecter : vue n° 6 ou mode des modes visite (à l'état des lieux).
+- [x] « Zéro accident » dans le message de Nadia et la cale rappelée dans sa réponse, d'après la vidéo de Buchelay (Tristan, 07/10). La scène dessinée ne change pas.
 - [x] **Palettes mères de 8 fûts (1,23 m × 1,12 m)** : vérifié (Tristan, 05/10), dit dans la trame.
 - [x] ~~4 fûts par palette de rétention (décision 37)~~ → **8 fûts à plat en quinconce sur palette de rétention noire de 1,30 × 1,30 m** (Tristan, 05/10, décision 52), en 6.4, 6.5 et 6.6.
 

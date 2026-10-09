@@ -26,7 +26,7 @@ rétention). Pas de maquette du terminal vocal à ce jour (question ouverte §11
 | Titre / desc | « France Boissons — inventaire tournant » / « Préparateur à la plateforme de Buchelay : compter les fûts à l'aveugle avec le terminal vocal, trouver les écarts et leur cause, décider, puis rendre compte à la cheffe de quai. » |
 | Rubrique | simulog, entreprise n° 6 France Boissons |
 | Niveau(x) | 2de |
-| Compétence(s) | **C1.6** (suivre les stocks, inventaire ; analyser et corriger les écarts) ; domaines D2 (préparer l'inventaire), D3 (supports consignés : suivre les retours), D5 (analyser et corriger les écarts de stock) |
+| Compétence(s) | **C1.6** (suivre les stocks, inventaire ; analyser et corriger les écarts) ; domaines D2 (préparer l'inventaire), D3 (supports consignés : suivre les retours), D5 (analyser et corriger les écarts de stock) *(codes sans préfixe : à aligner sur le format du code — AGO- / OTM- / LOG- ailleurs dans S2 ; Claude Code vérifie)* |
 | Temps pédagogique | **guidage** de C1.6 (premier et seul temps en 2de : « découvert », repris en 1re avec Cdiscount — règle 15 du cadrage) |
 | Notation | jalons + note sur 20 |
 | Barème | 10 |
@@ -82,7 +82,8 @@ Un écran, un dessin 3D iso, 3 blocs, « Suivant » (même brique qu'ENT-6.5, é
 « Le **terminal vocal** se porte à la ceinture, avec un **casque** et un **micro**. / Il te dit où aller et ce qu'il faut faire ; tu
 réponds à voix haute. Tes mains et tes yeux restent libres. / Ici, tu tapes tes réponses au clavier. Dans cet exercice, le terminal
 sert aussi à compter. »
-Dessin : **à fournir par Cowork** en SVG (`docs/briefs/france-boissons/materiel-terminal-vocal.svg`).
+Dessin : **fourni par Cowork le 06/10** (`docs/briefs/france-boissons/materiel-terminal-vocal.svg`, généré par
+`materiel_fb.py` dans le même dossier ; matériel générique, sans marque, mention en pied).
 
 ### Étape 1 — Compter avec le terminal vocal (≈ 20 min, 5 jalons)
 
@@ -248,11 +249,11 @@ M04 se résout en trouvant la palette en M02, pas en corrigeant le stock ; la s�
   périmètre = fûts de Malo + vides ; 3 écarts, 3 causes ; taux de fiabilité (Tristan, 05/10, décision 39).
 - [x] RSE : fil léger sur 6.6, 6.8, 6.10, questions d'éco-droit non notées (Tristan, 05/10, décision 40).
 - [x] Son : deux modes, réglé par l'enseignant seul, coupé par défaut (Tristan, 05/10, décision 41).
-- [ ] Maquette cliquable du terminal vocal avant le brief moteur (défaut : oui, Cowork la fabrique avec l'écran 6.7).
+- [x] Maquette cliquable du terminal vocal : **faite avec l'écran 6.7** (`docs/briefs/france-boissons/maquette-6.7-preparation-vocale.html`, validée le 05/10).
 - [x] Vides : pas de « recompter », une seule décision « régulariser, Vides manquants » en 2de (Tristan, 05/10).
 - [x] Codes de contrôle à 2 chiffres, valeurs construites ci-dessus (Tristan, 05/10).
 - [x] Question « Pour réfléchir » : celle du §9 (Tristan, 05/10).
-- [ ] Dessin du terminal vocal (défaut : Cowork le fournit avant l'implémentation de la séance).
+- [x] Dessin du terminal vocal : fourni par Cowork le 06/10 (`materiel-terminal-vocal.svg`).
 
 ---
 

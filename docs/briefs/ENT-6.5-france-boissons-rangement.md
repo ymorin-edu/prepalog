@@ -29,7 +29,7 @@ Règles d'écriture 2de : `claude/prepalog-2de-eleve-debut-annee.md` (3 lignes p
 | Titre / desc | « France Boissons — ranger les fûts » / « Cariste à la plateforme de Buchelay : comprendre le FIFO, ranger les palettes de fûts reçues en stockage de masse sans bloquer un lot plus ancien, puis saisir l'entrée en stock. » |
 | Rubrique | simulog, entreprise n° 6 France Boissons |
 | Niveau(x) | 2de |
-| Compétence(s) | **C1.5** (ranger, stocker) et **C1.6.1** (mettre à jour les stocks) ; domaines D4, D5 |
+| Compétence(s) | **C1.5** (ranger, stocker) et **C1.6.1** (mettre à jour les stocks) ; domaines D4, D5 *(codes sans préfixe : à aligner sur le format du code — AGO- / OTM- / LOG- ailleurs dans S2 ; Claude Code vérifie)* |
 | Temps pédagogique | **entraînement** (scénario S2) ; **découverte** du stockage de masse et du FIFO (étapes 0 et 1 guidées, étapes 2 et 3 en entraînement) |
 | Notation | jalons + note sur 20 |
 | Barème | 10 |
@@ -72,11 +72,11 @@ de la séance le disent ainsi.
 ## 4. Déroulé (≈ 50 min)
 
 **Date : mercredi 16 juin 2027, 16 h** (calendrier de S2, décision 31 : 6.1 lun. 14 juin · 6.2 mar. 15 · 6.3 mar. 15 après-midi ·
-6.4 mer. 16, 14 h · **6.5 mer. 16, 16 h** · 6.6 jeu. 17, 7 h · 6.7 jeu. 17 après-midi · 6.8 ven. 18, 6 h · 6.9 ven. 18, 6 h 30 ·
+6.4 mer. 16, 14 h · **6.5 mer. 16, 16 h** · 6.6 jeu. 17, 7 h · 6.7 jeu. 17 après-midi · 6.8 ven. 18, 5 h · 6.9 ven. 18, 6 h 30 ·
 6.10 ven. 18, 17 h). L'élève joue **son propre rôle** : « Tu es en renfort au quai, avec Nadia. »
 
 1. **Message de Nadia, cheffe de quai** (3 blocs) : « Re-bonjour {prénom} ! / Les palettes de Mons sont en zone de réception. Le fût
-   qui fuit reste en zone litiges. / Avant de ranger, regarde comment on travaille ici : on ne range pas les fûts dans des racks.
+   qui fuit reste en zone litiges. / Avant de ranger, regarde comment on travaille ici : la réserve n'est pas dans des racks, les palettes pleines sont posées au sol.
    Nadia »
 
 ### Étape 0 — Le matériel du poste (≈ 3 min, non notée)
@@ -253,7 +253,12 @@ et désignations d'ENT-6.4). Dessins : `contenus/images/france-boissons/` (SVG d
    - **Jalon** `palette(id)` lu dans l'état validé, et **position de chaque palette** exposée à la fiche (jalons 7 à 10).
    - Ergonomie : écran 1366 × 768 sans défilement (message de Nadia et boutons sur une ligne, cartes P1-P4 compactes à gauche, 3D
      cadrée automatiquement).
-2. **Vue « animation à questions »** — **brief à part : `docs/briefs/MOTEUR-vue-animation.md`** (décidé le 05/10 : vue du moteur, kit iso qui grandit, à construire **avant** le mode masse) : une animation **scénarisée par le
+2. **Vue « animation à questions »** — **LIVRÉE le 05/10 (vérifié dans le code par Cowork le 06/10) : ne pas la reconstruire, la
+   réutiliser.** Lecteur `core/types/animation.js` (format de ce que déclare la séance en tête du fichier : `animation` dans
+   `creerEntreprise`, jalons par `etapesAnimation(A)`), kit de dessin `core/iso.js`, écran du menu déjà branché dans
+   `core/types/entreprise.js`. Il reste à **écrire le script de l'animation dans le contenu** (`contenus/france-boissons-ent65.js`) ;
+   un objet qui manquerait au kit s'y ajoute (règle « kit qui grandit »), rien d'autre dans `core/`. Brief d'origine :
+   `docs/briefs/MOTEUR-vue-animation.md`. Rappel de ce qu'elle fait : une animation **scénarisée par le
    contenu** (étapes, positions, bulles, légende numérotée), **arrêt** à un point déclaré, **question à choix** (place des choix tirée
    par élève), « Revoir l'animation », **première réponse gardée** et lue par les jalons, explication après validation, enchaînement
    partie 2 → question 2 → « À retenir ». Vitesse réglable dans le contenu (0,8 par défaut). Sans son. Référence :
@@ -286,8 +291,9 @@ sabotage par jalon.
   mère réelle).
 - Corrigé `contenus/corriges/ENT-6.5.js` : réponses des deux questions, places justes (toutes), fiche attendue ; calculé.
 - **Question « Pour réfléchir » de la trame** (règle 32 ; **une seule gardée** par Tristan le 05/10) :
-  - « Jeudi, tu prépares les 2 Affligem de Malo : quel lot sortiras-tu en premier, et dans quel couloir ? »
-  (Lien FIFO → ENT-6.7 : le lot S18 de M05 sort avant le S24 rangé aujourd'hui.) Règles inchangées
+  - « Jeudi, tu prépares les 2 Affligem de Malo : quel lot doit sortir en premier, et pourquoi ? »
+  (Lien FIFO → ENT-6.7 : le lot S18 sort avant le S24 rangé aujourd'hui ; jeudi matin, il passe de M05 au tiroir de picking.
+  Question reformulée le 06/10/2026, Tristan : la réponse ne dépend plus du couloir.) Règles inchangées
   (`claude/prepalog-trames-eleve.md`) : une question à la fois, sur le travail de l'élève, sans réponse unique.
 
 ## 10. Critères de validation par Tristan
@@ -310,7 +316,7 @@ aide sur un écran de lycée ; un élève de 2de finit en 50 min ; le bilan ne d
 - [x] Stock de 6.2 aligné sur le plan (Tristan, 05/10).
 - [x] 10 jalons ; une seule question « Pour réfléchir » (Tristan, 05/10).
 - [ ] Mode masse dans la vue Plan d'entrepôt ou vue à part (défaut : mode de la vue existante).
-- [x] Animation à questions : **vue à part, réutilisable** (Tristan, 05/10) → brief moteur `docs/briefs/MOTEUR-vue-animation.md` (kit iso qui grandit ; à construire avant le mode masse, qui réutilisera le kit).
+- [x] Animation à questions : **vue à part, réutilisable** (Tristan, 05/10) → brief moteur `docs/briefs/MOTEUR-vue-animation.md` (kit iso qui grandit ; **livrée le 05/10**, à réutiliser par le mode masse et par cette séance).
 - [ ] Dessins des écrans matériel (défaut : Cowork les fournit avant l'implémentation de la séance).
 
 ---
