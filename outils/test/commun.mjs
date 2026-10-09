@@ -45,21 +45,31 @@ const srv = http.createServer((req, res) => {
 // en même temps sur des machines séparées (lot 1 de MOTEUR-tests-rapides, 06/10/2026), et deux
 // suites lancées côte à côte sur un même poste ne se disputent pas le même port. Les blocs ne
 // connaissent que `BASE`, l'adresse du site de test.
-const PORT = Number(process.env.PORT_TESTS || 8099);
-const BASE = `http://127.0.0.1:${PORT}/`;
-// Port déjà pris (deux suites lancées en même temps : arrivé le 08/10/2026) : sans écouteur
-// d'erreur, Node affichait une pile brute `EADDRINUSE`. On dit ce qui se passe, en français.
-await new Promise((r) => {
-  srv.once('error', (e) => {
-    if (e.code === 'EADDRINUSE') {
-      console.error(`Le port ${PORT} est déjà pris (une autre suite tourne ?). Relancer avec : PORT_TESTS=${PORT + 100} node outils/test.mjs`);
-    } else {
-      console.error(`Le serveur de test ne démarre pas sur le port ${PORT} : ${e.message}`);
-    }
-    process.exit(2);
-  });
-  srv.listen(PORT, r);
+const PORT_DEMANDE = Number(process.env.PORT_TESTS || 8099);
+// Port déjà pris (deux suites lancées en même temps, ou un serveur local : arrivé les 08 et
+// 09/10/2026) : on prend le suivant libre, 8100, 8101… (50 essais), au lieu de mourir sur une pile
+// `EADDRINUSE`. On écoute sur 127.0.0.1 exprès : c'est l'adresse de `BASE`, et sous Windows un
+// serveur « sur toutes les adresses » peut coexister avec un autre sur 127.0.0.1 en même port,
+// ce qui ferait parler la suite au serveur de quelqu'un d'autre. Les blocs ne lisent que `BASE`.
+const ecouter = (port) => new Promise((resolve, reject) => {
+  srv.once('error', reject);
+  srv.listen(port, '127.0.0.1', () => { srv.off('error', reject); resolve(port); });
 });
+let PORT = PORT_DEMANDE;
+try {
+  for (let essai = 0; ; essai++) {
+    PORT = PORT_DEMANDE + essai;
+    try { await ecouter(PORT); break; }
+    catch (e) {
+      if (e.code !== 'EADDRINUSE' || essai >= 50) throw e;
+    }
+  }
+} catch (e) {
+  console.error(`Le serveur de test ne démarre pas (port ${PORT}) : ${e.message}`);
+  process.exit(2);
+}
+if (PORT !== PORT_DEMANDE) console.log(`Port ${PORT_DEMANDE} occupé : la suite tourne sur ${PORT}`);
+const BASE = `http://127.0.0.1:${PORT}/`;
 
 const nav = await chromium.launch();
 // Relevés faits sur TOUS les onglets de TOUS les contextes (et pas seulement la page partagée) :
