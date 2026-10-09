@@ -42,7 +42,7 @@ export const ACTIVITES = [
   () => import('./cdiscount-compte-a-rebours.js'),
   () => import('./cdiscount-priorites.js'),
   // Boost (Nîmes) — ENT-3.x. C2.4 « Organiser une tournée de livraison » prend quatre
-  // séances : guidage, entraînement, erreur induite, évaluation. ENT-3.4 reste à écrire.
+  // séances : guidage, entraînement, erreur induite, évaluation. ENT-3.4 : pas encore écrite.
   () => import('./boost-tournee.js'),
   () => import('./boost-ent32.js'),
   () => import('./boost-ent33.js'),
@@ -154,7 +154,7 @@ export const ENTREPRISES = [
 // d'une famille est celui de sa première apparition dans ACTIVITES.
 //
 // Un numéro peut avoir PLUSIEURS NIVEAUX, séparés par des points : `ENT-1.1`, `ENT-1.2`,
-// `ENT-1.3` sont les trois séances de Spartoo, `ENT-2.1` sera la première de TechPro. Le
+// `ENT-1.3` sont les trois séances de Spartoo, `ENT-2.1` est la première de Cdiscount. Le
 // premier nombre dit l'entreprise, le second la séance — ce que la numérotation à plat
 // (`ENT-1`, `ENT-2`, `ENT-3`) n'exprimait pas, au point qu'ajouter une entreprise obligeait
 // à renuméroter. Rien n'empêche un troisième niveau si le besoin vient.
