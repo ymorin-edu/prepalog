@@ -42,6 +42,22 @@
 | 18 | Deux sessions à la fois : port, `git grep`, `EN-COURS` | C17 | petit | Sonnet | non (`commun.mjs`) | — | **livré** (09/10, 9310e5e à 197c9ba) |
 | 19 | Reliquats SCE / Spartoo : acter la règle | C15 | petit | Sonnet | non | 9 | **livré** (09/10, cd622f5) |
 | 20 | Stratelog | C19 | ? | Opus | ? | 10 | à cadrer |
+| **Lot D — France Boissons (scénario S2, ENT-6.1 → 6.10)** : relevé du 09/10/2026, ordre de la refonte du 07/10 (Q2) | | | | | | | |
+| D-A | Questions au fil (lots 1 à 4) | brief `MOTEUR-questions-au-fil` | gros | Opus | oui | — | **livré le 08/10**, à valider par Tristan (page d'essai) |
+| D-B | « Jugé au premier essai » | SMOBY-notation lot 3 | — | — | oui | — | **livré** (visite ENT-5.3 ; l'animation garde la première réponse) |
+| D-C | Tirage mémorisé, niveaux par scénario, bonus du confirmé (lots 1 à 3) | brief `MOTEUR-tirage-et-niveaux` | 1 à 1,5 j | Opus | oui + règles | D-A | à faire — **règles Firestore à publier** à la livraison |
+| D-D | Images libres FB (11 photos, crédits, script reproductible) | brief `IMAGES-france-boissons` | petit | Sonnet | non | — | à faire |
+| D-E | Logo France Boissons (`contenus/trames/logos/`) et relevé de la charte | ENT-6.2 §11 | petit | Sonnet | non | — | à faire (accord de Tristan du 05/10) |
+| D-1 | Messagerie : bouton « Transférer à… » | ENT-6.1 §7.1 | ≈ 3 h | Opus | oui | D-A, D-C | à faire → **ENT-6.1** (crée l'univers `contenus/france-boissons.js`) |
+| D-2 | Fiche : case « nombre » (entier, refus, unité), bloc « lignes » si utile | ENT-6.2 §7 | petit | Sonnet | oui | — | à faire (le type existe dans `fiche.js`, contrôles à vérifier) → **ENT-6.2** |
+| D-3 | Planning : état des lieux (semaines, ligne retirée par l'aléa, critère « plus ancienne »), calage par script | ENT-6.3 §7 | petit | Sonnet | lecture | — | à faire → **ENT-6.3** |
+| D-4 | Quai : motif « fût endommagé » chiffré, palette de fûts (`forme: 'fut'`), zones de sécurité à cliquer sur le quai iso (Q3 du 07/10 ; §7.3 du brief 6.4 à réécrire par Cowork) | ENT-6.4 §7 | 1,5 à 2 j | Opus | oui | — | à faire → **ENT-6.4** (sert aussi à ENT-5.4 et 1.1) |
+| D-5 | Plan d'entrepôt, **mode stockage de masse** en iso ; écran « matériel du poste » ; script de l'animation dans le contenu | ENT-6.5 §7 | 12 à 16 h | Opus | oui | D-2 | à faire → **ENT-6.5** |
+| D-6 | Sous-mode **comptage** ; **terminal vocal** (voix locales, son réglé par l'enseignant, coupé par défaut) ; comptages vers l'écran Inventaire | ENT-6.6 §7 | ≈ 16 h | Opus | oui | D-5 | à faire → **ENT-6.6** |
+| D-7 | Terminal vocal : ajouts préparation ; **allée de picking** en iso ; **montage par cases** sur plusieurs palettes ; film et étiquettes | ENT-6.7 §7 | ≈ 18 h | Opus | oui | D-6 | à faire → **ENT-6.7** |
+| D-8 | Planning : `conduite` par carte, ligne qui porte sa seconde ressource (`porteAffectation`) ; noms fictifs par Cowork | ENT-6.8 §7 | ½ j | Opus | oui | — | à faire (`versions` sur un jalon : déjà livré) → **ENT-6.8** |
+| D-9 | **Tournée « camion », lots 1 à 3** (fenêtres, approche, conduite et pause, sans quai, profil porteur, carte de la côte) + page d'essai validée ; calage et jeux de valeurs | brief `MOTEUR-vue-tournee-camion` | ≈ 3,5 j | Opus | oui | — | à faire → **ENT-6.9** (lots 4 et 5 plus tard) |
+| D-10 | Grille dans une fiche (lisant une autre fiche) ; image SVG en document avec loupe ; objets du kit iso (porteur, fût vide, casier, bâtiments, route) ; écran d'animation à `quand` ; **maquette Cowork à valider par Tristan** | ENT-6.10 §7 | ≈ 2 j | Opus | oui | D-5 | à faire (formule en cliquant : déjà dans `grille.js`, à vérifier) → **ENT-6.10** |
 
 ## Le détail, dans l'ordre
 
@@ -451,3 +467,19 @@ s'aligner.
 - **Non fait, à part** : les aides plus grosses recopiées (connexion enseignant x6 dans smoby, création de page avec
   écouteurs x6, `ouvrir`/`jalons` par séance dans boost), les cas « aucune erreur » des blocs (gardés tels quels, ils jugent
   toujours), et le point 2 des propositions du 09/10 (chaînes de cas sans remise à zéro dans boost : lot B).
+
+### Lot D. France Boissons : les chantiers avant chaque séance (relevé du 09/10/2026)
+- **D'où ça vient.** Lecture des dix briefs `docs/briefs/ENT-6.1` à `ENT-6.10`, du brief `MOTEUR-vue-tournee-camion`
+  et de `FRANCE-BOISSONS-refonte.md` (Q1 à Q10 tranchées le 07/10), vérifiée dans `core/` : ce qui est marqué « livré »
+  existe dans le code, le reste n'existe pas. **Rien de France Boissons n'est construit** (ni `contenus/france-boissons.js`,
+  ni activité ENT-6.x).
+- **Ordre (Tristan, 07/10, Q2).** Les chantiers communs (D-A à D-E) d'abord, puis les séances **dans l'ordre 6.1 → 6.10**,
+  chacune précédée de ses vues, un seul chantier moteur à la fois, chaque vue finie et testée (page d'essai) avant la séance.
+  Presque tout est en **Opus** (vues nouvelles) ; les séances elles-mêmes déclarent des données (Sonnet).
+- **Ce qui attend Tristan, hors code.** Valider les questions au fil à l'écran (D-A) ; relire les textes et barèmes marqués
+  `[ ]` aux §11 des briefs (6.1, 6.8, 6.9, 6.10) ; valider la maquette de 6.10 ; publier les règles Firestore après D-C.
+  **Cowork** : noms fictifs (loueur, transporteur, six clients de la côte), réécriture du §7.3 de 6.4 (zones sur le quai iso),
+  dessins restants du matériel.
+- **Ordre de grandeur.** 15 à 20 jours de chantiers moteur, l'un après l'autre (estimation de la refonte, non éprouvée).
+- **Fini quand.** Les dix séances livrées `pret: true, ouverture: 'prof'`, le lot D coché ligne par ligne ci-dessus, une
+  ligne dans `docs/decisions.md` par chantier livré.
