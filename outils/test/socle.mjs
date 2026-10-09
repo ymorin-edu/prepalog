@@ -1568,10 +1568,25 @@ const cartes = () => pl.$$eval('.entreprise', (els) => els.map((e) => ({
 const tuilesL = () => pl.$$eval('.module-tile', (els) => els.map((e) => ({
   id: e.dataset.act, code: e.querySelector('.code').textContent, cachee: e.querySelector('[data-cachee]')?.dataset.cachee || null })));
 
-// Quatre logos depuis Picard (ENT-4.1, 03/10/2026), cinq depuis Smoby (ENT-5.1, 04/10/2026). ENT-4.1 et
-// ENT-5.1 sont livrées fermées aux élèves (`ouverture: 'prof'`) : chez l'élève, ces cartes n'apparaissent
-// donc pas (cas plus bas).
-await v('Simulog : l’enseignant voit cinq logos, et rien d’autre sur la carte', async () => {
+// Un logo par entreprise qui a au moins une séance Simulog (chantier 13, 09/10/2026) : le nombre et les
+// numéros viennent du registre, plus d'une chaîne `'1,2,3,4,5'`. Les séances d'un numéro d'entreprise que
+// `ENTREPRISES` ne connaît pas vont sous une carte « autres », sans logo. ENT-4.1 et ENT-5.1 sont livrées
+// fermées aux élèves (`ouverture: 'prof'`) : chez l'élève, ces cartes n'apparaissent donc pas (cas plus bas).
+let logosAttendus = null;   // [{ id, nom }] dans l'ordre de la table `ENTREPRISES`, puis « autres »
+const lireLogosAttendus = async () => {
+  const r = await pl.evaluate(async () => {
+    const m = await import('/activites/index.js');
+    return { entreprises: m.ENTREPRISES.map((e) => ({ n: e.n, nom: e.nom })),
+      codes: (await m.chargerActivites()).filter((a) => m.estSimulog(a.meta)).map((a) => a.meta.code) };
+  });
+  const premier = (c) => Number(((/^[A-Z]+-(\d+)/.exec(c) || [])[1]));
+  const numeros = new Set(r.codes.map(premier));
+  const attendus = r.entreprises.filter((e) => numeros.has(e.n)).map((e) => ({ id: String(e.n), nom: e.nom }));
+  if (r.codes.some((c) => !r.entreprises.some((e) => e.n === premier(c)))) attendus.push({ id: 'autres', nom: 'Autres séances' });
+  if (attendus.length < 2) throw new Error(`${attendus.length} entreprise(s) lue(s) dans le registre, test invalide`);
+  return attendus;
+};
+await v('Simulog : l’enseignant voit un logo par entreprise, et rien d’autre sur la carte', async () => {
   await pl.click('#btnProf');
   await pl.waitForSelector('#btnProfEspace');
   await pl.click('#btnProfEspace');
@@ -1590,9 +1605,11 @@ await v('Simulog : l’enseignant voit cinq logos, et rien d’autre sur la cart
   // Les logos se chargent après l'affichage : on leur laisse le temps, sans en faire une condition.
   await pl.waitForFunction(() => [...document.querySelectorAll('.entreprise img')].every((i) => i.complete), null, { timeout: 4000 }).catch(() => {});
   const c = await cartes();
-  const attendu = { 1: 'Spartoo', 2: 'Cdiscount', 3: 'Boost', 4: 'Picard', 5: 'Smoby' };
-  if (c.map((x) => x.id).join() !== '1,2,3,4,5') throw new Error('cartes : ' + c.map((x) => x.id).join());
+  logosAttendus = await lireLogosAttendus();
+  const attendu = Object.fromEntries(logosAttendus.map((e) => [e.id, e.nom]));
+  if (c.map((x) => x.id).join() !== logosAttendus.map((e) => e.id).join()) throw new Error('cartes : ' + c.map((x) => x.id).join() + ' au lieu de ' + logosAttendus.map((e) => e.id).join());
   for (const x of c) {
+    if (x.id === 'autres') continue;              // la carte « Autres » n'a pas de logo (cas plus bas)
     if (x.texte) throw new Error(`carte ${x.id} : du texte visible « ${x.texte} »`);
     if (x.title !== attendu[x.id] || x.aria !== attendu[x.id] || !x.img || x.img.alt !== attendu[x.id]) throw new Error('nom d’accessibilité : ' + JSON.stringify(x));
     if (!/^\.\/contenus\/trames\/logos\//.test(x.img.src)) throw new Error('logo hors du dépôt : ' + x.img.src);
@@ -1619,7 +1636,7 @@ await v('Simulog : « ← SIMULOG » ramène aux logos, « ← ACCUEIL » à l�
   if (lib !== '← SIMULOG') throw new Error('libellé : ' + lib);
   await pl.click('#btnSimulog');
   await pl.waitForSelector('.entreprise');
-  if ((await cartes()).length !== 5) throw new Error('retour aux logos incomplet');
+  if ((await cartes()).length !== logosAttendus.length) throw new Error('retour aux logos incomplet');
   await pl.click('#btnAccueil');
   await pl.waitForSelector('[data-rub="simulog"]');
   if (await pl.$('.entreprise')) throw new Error('les logos restent affichés à l’accueil');
