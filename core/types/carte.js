@@ -561,9 +561,9 @@ function creerLecture(PLAN) {
     <circle class="ct-halo" r="17"/><circle class="ct-rond" r="11"/><text class="ct-mk-l">${p.numero}</text></g>`;
 
   const legende = `<div class="plan-legende">
-    <span><i class="plan-l-rond" style="background:#25c998"></i>${ech(C.depart.nom)}</span>
-    <span><i class="plan-l-rond" style="background:#f0bd3c"></i>${ech(C.arrivee.nom)}</span>
-    <span><i class="plan-l-rond" style="background:#345cfd"></i>Client : son numéro</span>
+    <span><i class="plan-l-rond" style="background:var(--vert)"></i>${ech(C.depart.nom)}</span>
+    <span><i class="plan-l-rond" style="background:var(--terre)"></i>${ech(C.arrivee.nom)}</span>
+    <span><i class="plan-l-rond" style="background:var(--ardoise-fond)"></i>Client : son numéro</span>
     <span>Quadrillage : une case = 1 km</span></div>`;
 
   return creerPlan(Object.assign({}, PLAN, { points: P.points }), {
@@ -627,9 +627,9 @@ export function planDeCarte(PLAN) {
     arrivee: Object.assign({ id: 'arrivee', lettre: 'G' }, C.arrivee),
     echelle: { libelle: 'une case = 1 km' },
     legende: [
-      { forme: 'rond', couleur: '#25c998', texte: C.depart.nom },
-      { forme: 'rond', couleur: '#f0bd3c', texte: C.arrivee.nom },
-      { forme: 'rond', couleur: '#345cfd', texte: 'Client : son numéro' },
+      { forme: 'rond', couleur: 'var(--vert)', texte: C.depart.nom },
+      { forme: 'rond', couleur: 'var(--terre)', texte: C.arrivee.nom },
+      { forme: 'rond', couleur: 'var(--ardoise-fond)', texte: 'Client : son numéro' },
     ],
   });
 }

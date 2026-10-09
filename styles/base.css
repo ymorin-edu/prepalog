@@ -1581,7 +1581,7 @@ fieldset[disabled] .ent-cases label{ cursor:default }
 .ct-rail{ fill:none; stroke:#7d7770 } .ct-railT{ fill:none; stroke:#fff }
 .ct-grille{ stroke:#5b544b; stroke-opacity:.55; fill:none }
 .ct-cadre{ stroke:#5b544b; fill:none }
-.ct-q{ fill:rgba(52,92,253,.10); stroke:#345cfd; cursor:pointer; transition:fill .15s }
+.ct-q{ fill:rgba(52,92,253,.10); stroke:var(--ardoise-fond); cursor:pointer; transition:fill .15s }
 .ct-q:hover{ fill:rgba(52,92,253,.22) }
 .ct-q:focus{ outline:none } .ct-q:focus-visible{ fill:rgba(52,92,253,.28) }
 .ct-zoom .ct-q{ fill:transparent } .ct-zoom .ct-q:hover{ fill:rgba(52,92,253,.08) }
@@ -1603,14 +1603,14 @@ fieldset[disabled] .ent-cases label{ cursor:default }
 .ct-mk .plan-pt-cible{ fill:transparent; stroke:none }
 .ct-mk text{ font-weight:800; text-anchor:middle; dominant-baseline:central; pointer-events:none; font-size:12px; font-family:system-ui,"Segoe UI",sans-serif }
 .ct-mk .ct-mk-nom{ text-anchor:start; dominant-baseline:auto; font-weight:700; font-size:12.5px; paint-order:stroke; stroke:#fff; stroke-width:3; fill:#2a2622 }
-.ct-mk-depart .ct-rond{ fill:#25c998 } .ct-mk-depart .ct-mk-l{ fill:#09073b }
-.ct-mk-arrivee .ct-rond{ fill:#f0bd3c } .ct-mk-arrivee .ct-mk-l{ fill:#09073b }
-.ct-mk-client .ct-rond{ fill:#345cfd } .ct-mk-client .ct-mk-l{ fill:#fff }
+.ct-mk-depart .ct-rond{ fill:var(--vert) } .ct-mk-depart .ct-mk-l{ fill:#09073b }
+.ct-mk-arrivee .ct-rond{ fill:var(--terre) } .ct-mk-arrivee .ct-mk-l{ fill:#09073b }
+.ct-mk-client .ct-rond{ fill:var(--ardoise-fond) } .ct-mk-client .ct-mk-l{ fill:#fff }
 /* Mode « lire la case » (ENT-3.1) : halo ambre du client choisi, sur la carte et dans le tableau. */
 .ct-mk-lecture{ cursor:pointer }
-.ct-mk-lecture .ct-halo{ fill:none; stroke:#f0bd3c; stroke-width:3; opacity:0 }
+.ct-mk-lecture .ct-halo{ fill:none; stroke:var(--terre); stroke-width:3; opacity:0 }
 .ct-mk-lecture.ct-mk-choisi .ct-halo{ opacity:1 }
-.ct-mk-lecture.ct-mk-choisi .ct-rond{ stroke:#f0bd3c; stroke-width:3.5 }
+.ct-mk-lecture.ct-mk-choisi .ct-rond{ stroke:var(--terre); stroke-width:3.5 }
 .ct-mk-lecture:focus{ outline:none } .ct-mk-lecture:focus-visible .ct-halo{ opacity:1 }
 .plan-table tr.plan-choisi td{ background:rgba(240,189,60,.10) }
 
@@ -1623,7 +1623,7 @@ fieldset[disabled] .ent-cases label{ cursor:default }
 .ct-client.arme{ border-color:var(--ardoise); box-shadow:0 0 0 1px var(--ardoise) }
 .ct-habituel{ padding:6px 10px }
 .ct-tete{ display:flex; gap:8px; align-items:baseline }
-.ct-num{ flex:none; width:22px; height:22px; border-radius:50%; background:#345cfd; color:#fff; font-weight:750; font-size:13px; display:grid; place-items:center }
+.ct-num{ flex:none; width:22px; height:22px; border-radius:50%; background:var(--ardoise-fond); color:#fff; font-weight:750; font-size:13px; display:grid; place-items:center }
 .ct-nom{ font-weight:650 }
 .ct-poids{ margin-left:auto; font-size:12.5px; color:var(--encre-douce); white-space:nowrap }
 .ct-adr{ font-size:13.5px; color:var(--encre-douce); margin:2px 0 6px 30px }
@@ -1643,21 +1643,21 @@ fieldset[disabled] .ent-cases label{ cursor:default }
    rond bleu = le client, pastille menthe = l'ordre de passage, rond creux pointillé = à quai.
    Le tracé suit les rues, en menthe comme tout ce qui appartient à la tournée. */
 .ct-cadre-tournee{ height:min(62vh,600px); min-height:420px }
-.ct-trace{ fill:none; stroke:#25c998; stroke-opacity:.9; stroke-linecap:round; stroke-linejoin:round; pointer-events:none }
+.ct-trace{ fill:none; stroke:var(--vert); stroke-opacity:.9; stroke-linecap:round; stroke-linejoin:round; pointer-events:none }
 .ct-mk-creux .ct-rond{ fill-opacity:.16; stroke-dasharray:3.5 2.5; stroke-width:2.5 }
-.ct-mk-client.ct-mk-creux .ct-rond{ stroke:#345cfd }
+.ct-mk-client.ct-mk-creux .ct-rond{ stroke:var(--ardoise-fond) }
 .ct-mk-depart.ct-mk-creux .ct-rond{ stroke:#159d74 }
 .ct-mk-arrivee.ct-mk-creux .ct-rond{ stroke:#c4931a }
-.ct-mk-client.ct-mk-creux .ct-mk-l{ fill:#345cfd }
+.ct-mk-client.ct-mk-creux .ct-mk-l{ fill:var(--ardoise-fond) }
 .ct-mk-depart.ct-mk-creux .ct-mk-l{ fill:#159d74 } .ct-mk-arrivee.ct-mk-creux .ct-mk-l{ fill:#c4931a }
 .ct-mk-annule{ opacity:.9 }
 .ct-mk-annule .ct-barre{ stroke:#2a2622; stroke-width:3.5; stroke-linecap:round }
 .ct-mk-annule .ct-mk-nom{ text-decoration:line-through; font-weight:600 }
-.ct-ordre circle{ fill:#25c998; stroke:#13163e; stroke-width:1.6 }
+.ct-ordre circle{ fill:var(--vert); stroke:#13163e; stroke-width:1.6 }
 .ct-ordre text{ fill:#07261c; font-size:10.5px }
 .ct-mk .plan-pt-cible{ cursor:pointer }
 .ct-mk .plan-pt-cible:focus{ outline:none }
-.ct-mk .plan-pt-cible:focus-visible{ stroke:#f0bd3c; stroke-width:3 }
+.ct-mk .plan-pt-cible:focus-visible{ stroke:var(--terre); stroke-width:3 }
 .ct-mk.plan-pt-clic:hover .ct-rond{ stroke-width:3.5 }
 
 /* Recommencer la tournée (02/10/2026) : en tête de la colonne des contraintes, discret tant

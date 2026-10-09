@@ -825,4 +825,18 @@ await v('mélange : plus aucune vue ne mélange par `sort(() => Math.random() - 
   if (fautifs.length) throw new Error('mélange biaisé dans : ' + fautifs.join(', ') + ' (utiliser melangerListe de core/tirage.js)');
 });
 
+// ---------- chantier 15 (09/10/2026) : une vue générique ne porte pas les couleurs d'une entreprise
+// `core/types/carte.js` écrivait la menthe, le jaune et le bleu de Boost dans sa légende. Elle les lit maintenant sur la
+// charte (`var(--vert)`, `var(--terre)`, `var(--ardoise-fond)`), comme `plan.js`. Sentinelles : les trois valeurs retirées, puis
+// toute couleur écrite en dur (hexadécimal ou `rgb(`) : une quatrième réapparaîtrait par le même chemin.
+await v('carte : aucune couleur de Boost (ni aucune couleur en dur) dans core/types/carte.js, la légende lit la charte', async () => {
+  const src = fs.readFileSync(path.join(ROOT, 'core', 'types', 'carte.js'), 'utf8');
+  const trouvees = src.match(/#[0-9a-fA-F]{3,8}|rgba?\(|hsla?\(/g) || [];
+  if (trouvees.length) throw new Error('couleur écrite en dur dans carte.js : ' + [...new Set(trouvees)].join(', '));
+  for (const h of ['#25c998', '#f0bd3c', '#345cfd']) if (src.toLowerCase().includes(h)) throw new Error('couleur de Boost dans carte.js : ' + h);
+  for (const v2 of ['var(--vert)', 'var(--terre)', 'var(--ardoise-fond)']) {
+    if (!src.includes(v2)) throw new Error('la légende de la carte ne lit plus ' + v2 + ' sur la charte');
+  }
+});
+
 }
