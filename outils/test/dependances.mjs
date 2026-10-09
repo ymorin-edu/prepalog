@@ -839,4 +839,22 @@ await v('carte : aucune couleur de Boost (ni aucune couleur en dur) dans core/ty
   }
 });
 
+// Le thème « papier » (Picard, Smoby) n'est plus recopié en JavaScript : `styleTheme` ne pose que l'accent, et la classe
+// `theme-papier` relit les blocs clairs du CSS. Le cas nomme les deux moitiés : la copie ne revient pas dans le JS, et la classe
+// reste bien déclarée dans CHACUN des quatre blocs clairs (base, quai, planning, plan d'entrepôt).
+await v('papier : styleTheme ne recopie plus le thème clair, la classe theme-papier est déclarée dans les quatre blocs clairs', async () => {
+  const r = await page.evaluate(async () => {
+    const m = await import('/core/types/entreprise-theme.js');
+    return { style: m.styleTheme({ accent: '#0011ac', papier: true }), classe: m.classeTheme({ papier: true }),
+      sombre: m.classeTheme({ papier: true, sombre: { fond: '#000' } }), sans: m.classeTheme({ accent: '#0011ac' }) };
+  });
+  if (/--fond|--panneau|--pe-|--pl-|--quai-/.test(r.style)) throw new Error('le thème clair est recopié dans styleTheme : ' + r.style.slice(0, 120));
+  if (!r.style.includes('--ardoise:#0011ac')) throw new Error('l’accent de l’entreprise a disparu de styleTheme : ' + r.style);
+  if (r.classe !== 'theme-papier' || r.sombre !== '' || r.sans !== '') throw new Error('classeTheme : ' + JSON.stringify(r));
+  for (const f of ['base', 'quai', 'planning', 'entrepot']) {
+    const css = fs.readFileSync(path.join(ROOT, 'styles', f + '.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+    if (!/:root[^{}]*\.theme-papier\s*\{/.test(css)) throw new Error(`styles/${f}.css : le bloc clair ne porte plus la classe .theme-papier`);
+  }
+});
+
 }

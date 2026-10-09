@@ -4,15 +4,15 @@
    Prepalog : l'accent est celui de l'entreprise (--ardoise, posé par son
    THEME). Le décor du rack a ses couleurs propres (montants bleus, lisses
    orange, plaques jaunes, cartons) : toutes déclarées trois fois (clair,
-   sombre choisi, sombre du système), comme dans base.css, et reposées par
-   entreprise.js quand l'entreprise impose le papier (THEME.papier).
+   sombre choisi, sombre du système), comme dans base.css ; la classe `.theme-papier`
+   (posée par entreprise.js quand l'entreprise impose le papier, THEME.papier) relit le bloc clair.
    Le vert plein ne dit que « juste » : la palette en main se distingue par
    une bordure épaisse, jamais par un aplat. Le texte posé sur un carton ou
    une plaque est toujours foncé (#1a1915) : ces fonds restent clairs dans
    les deux thèmes (contraste ≥ 4,5 mesuré : 4,8 sur le carton sombre).
    ============================================================ */
 
-:root{
+:root, .theme-papier{
   --pe-montant:#2f5f9e; --pe-lisse:#e07b1a; --pe-plaque:#f3d04a;
   --pe-sol:#e4dfd3; --pe-sol2:#d6d0c2; --pe-carton:#c89a63; --pe-carton-trait:#8f6532;
   --pe-gris:#bdb7aa; --pe-gris-trait:#8a8478; --pe-sur-gris:#1a1915; --pe-jaune-sol:#e5b800;

@@ -4,7 +4,11 @@
    règle ci-dessous n'a besoin de connaître le thème actif.
    ============================================================ */
 
-:root, :root[data-theme="clair"]{
+:root, :root[data-theme="clair"], .theme-papier{
+  /* `.theme-papier` : une entreprise qui impose le thème clair (THEME.papier : Picard, Smoby) pose cette classe sur
+     <body> et sur sa page ; elle relit ainsi CES valeurs, quel que soit le thème du poste, sans les recopier (la copie
+     de 43 valeurs qui vivait dans entreprise-theme.js est partie le 09/10/2026, chantier 15). Les blocs clairs de
+     entrepot.css, planning.css et quai.css portent la même classe. */
   /* Gris chauds, et pas de blanc pur : sous un néon de salle, le blanc franc
      se lit comme une lampe plutôt que comme une feuille, et c'est ce qui
      poussait vers le thème sombre. Les gris sont décalés vers le jaune, très

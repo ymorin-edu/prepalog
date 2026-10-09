@@ -31,7 +31,7 @@ import { gestesDe } from '../declencheurs.js';
 import { preparerPhrases } from '../phrases.js';
 import { brancherLexique, compterAide } from '../lexique.js';
 import { controlerOptions, controlerIdentifiants } from './entreprise-options.js';
-import { styleTheme, accentRougeOuVert } from './entreprise-theme.js';
+import { styleTheme, classeTheme, accentRougeOuVert } from './entreprise-theme.js';
 import { creerArticles } from './entreprise-outils.js';
 import { bandeauFin as bandeauFinHtml } from './entreprise-fin.js';
 import { monterBase } from './entreprise-base.js';
@@ -844,12 +844,13 @@ export function creerEntreprise(U) {
       // les variables sont posées sur <body>, et retirées à la sortie du module.
       function habiller() {
         document.body.classList.add('immersion');
+        if (classeTheme(THEME)) document.body.classList.add(classeTheme(THEME));
         document.body.setAttribute('style', styleTheme(THEME));
         // La mise en page des documents de la séance (`documentsStyle`), et rien de celle d'avant.
         if (VDOC) VDOC.poserStyle(); else document.head.querySelectorAll('style[data-ent-documents]').forEach((x) => x.remove());
       }
       function deshabiller() {
-        document.body.classList.remove('immersion');
+        document.body.classList.remove('immersion', 'theme-papier');
         document.body.removeAttribute('style');
         document.head.querySelectorAll('style[data-ent-documents]').forEach((x) => x.remove());
       }
@@ -1171,7 +1172,7 @@ export function creerEntreprise(U) {
         const replie = !!db.menuReplie;
 
         hote.innerHTML = `
-          <div class="ent-page${TRAVAIL_NEUTRE ? ' ent-travail-neutre' : ''}${TRAVAIL_NEUTRE_FOND ? ' ent-travail-neutre-fond' : ''}" style="${styleTheme(THEME)}${THEME.papier ? ';color:var(--encre);background:var(--fond)' : ''}">
+          <div class="ent-page${classeTheme(THEME) ? ' ' + classeTheme(THEME) : ''}${TRAVAIL_NEUTRE ? ' ent-travail-neutre' : ''}${TRAVAIL_NEUTRE_FOND ? ' ent-travail-neutre-fond' : ''}" style="${styleTheme(THEME)}${THEME.papier ? ';color:var(--encre);background:var(--fond)' : ''}">
             <header class="ent-bandeau">
               ${ENTREPRISE.logo ? `<img class="ent-logo" src="${ech(ENTREPRISE.logo)}" alt="${ech(ENTREPRISE.nom)}">` : ''}
               <span class="ent-marque">${ech(ENTREPRISE.nom)}</span>

@@ -2,8 +2,7 @@
 //
 // Extrait de `core/types/entreprise.js` le 08/10/2026 (chantier 9, lot 9c, module 2) : le code est celui d'avant, mot pour mot.
 // Module PUR : il ne reçoit que la charte (`THEME`, l'option du même nom de `creerEntreprise`) et rend du texte ou un booléen.
-// Les 43 valeurs du thème « papier » sont recopiées de `styles/base.css` et `styles/entrepot.css` (à garder ensemble ; leur
-// dédoublonnage est le chantier 12). Un module `entreprise-*.js` n'importe JAMAIS `entreprise.js` (import circulaire).
+// Le thème « papier » n'est plus recopié ici (chantier 15, 09/10/2026) : la classe `theme-papier` relit le CSS. Un module `entreprise-*.js` n'importe JAMAIS `entreprise.js` (import circulaire).
 
 const enRgb = (h) => h.replace('#', '').match(/../g).map((x) => parseInt(x, 16)).join(',');
 
@@ -35,28 +34,15 @@ export const accentRougeOuVert = (h) => {
   return teinte <= 20 || teinte >= 330 || (teinte >= 75 && teinte <= 170);
 };
 
+// La classe CSS à poser sur <body> et sur la page de l'entreprise : « papier » impose le thème clair de Prepalog, quel que
+// soit le réglage du poste (Picard, Smoby). Vide pour toutes les autres, y compris celles à charte sombre.
+export const classeTheme = (THEME) => (THEME.papier && !THEME.sombre ? 'theme-papier' : '');
+
 export function styleTheme(THEME) {
   const v = [];
-  // THEME.papier (03/10/2026, Picard) : l'entreprise impose le thème clair « papier » de
-  // Prepalog, quel que soit le réglage du poste. Sans lui, un poste réglé en sombre
-  // (Windows) affichait le bleu nuit de Picard sur fond sombre : illisible (Tristan).
-  // Mêmes valeurs que `:root` dans styles/base.css (à garder ensemble), puis l'accent de
-  // l'entreprise par-dessus. Les couleurs propres à la vue quai suivent aussi.
-  if (THEME.papier && !THEME.sombre) {
-    v.push('--fond:#f4f1ea', '--panneau:#fdfbf7', '--survol:#f9f6ef', '--filet:#e3ded3',
-      '--encre:#1a1915', '--encre-douce:#555047',
-      '--ardoise:#107c41', '--ardoise-fond:#107c41', '--sur-ardoise:#ffffff', '--ardoise-clair:#e3f1e8',
-      '--terre:#9c620a', '--vert:#0b7a41', '--vert-fond:#0a8449', '--sur-vert:#ffffff', '--vert-pale:#e4f1e5',
-      '--rouge:#9d2727', '--gele-fond:#fcf3e2', '--toast-fond:#1a1915', '--toast-texte:#ffffff',
-      '--ombre:0 1px 2px rgba(40,34,24,.06)', '--quai-froid:#2a6fb0', '--quai-chaud:#b8431b',
-      '--pl-alpha:.30', '--pl-fenetre:rgba(156,98,10,.13)', '--pl-hachure:rgba(85,80,71,.18)', '--pl-ambre:#7d4e07', '--pl-rouge:#9d2727',
-      // Le décor du plan d'entrepôt (mêmes valeurs que `:root` dans styles/entrepot.css).
-      '--pe-montant:#2f5f9e', '--pe-lisse:#e07b1a', '--pe-plaque:#f3d04a', '--pe-sol:#e4dfd3', '--pe-sol2:#d6d0c2',
-      '--pe-carton:#c89a63', '--pe-carton-trait:#8f6532', '--pe-gris:#bdb7aa', '--pe-gris-trait:#8a8478',
-      '--pe-sur-gris:#1a1915', '--pe-jaune-sol:#e5b800', '--pe-litige:rgba(157,39,39,.10)',
-      '--pe-hachure:rgba(157,39,39,.35)', '--pe-bande:201,120,10', '--pe-visite:#6b3fa0', '--pe-visite-voile:rgba(107,63,160,.16)',
-      'color-scheme:light');
-  }
+  // THEME.papier (03/10/2026, Picard) : le thème clair « papier » ne passe plus par ici. Les 43 valeurs qui y étaient
+  // recopiées de base.css, entrepot.css, planning.css et quai.css sont relues par la CLASSE `theme-papier` (voir
+  // `classeTheme`), posée par entreprise.js : une seule source, le CSS. L'accent de l'entreprise, lui, vient ensuite (en ligne).
   const a = THEME.accent;
   if (a) {
     v.push(`--ardoise:${a}`, `--ardoise-fond:${a}`,

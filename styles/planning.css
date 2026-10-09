@@ -11,7 +11,7 @@
    bleu (réservé au client sur les vues de transport).
    ============================================================ */
 
-:root{
+:root, .theme-papier{
   --pl-alpha:.30;
   --pl-fenetre:rgba(156,98,10,.13); --pl-hachure:rgba(85,80,71,.18);
   --pl-ambre:#7d4e07; --pl-rouge:#9d2727;

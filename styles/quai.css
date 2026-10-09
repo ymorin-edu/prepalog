@@ -9,7 +9,7 @@
    papier quel que soit le thème : ce sont des objets, pas l'interface.
    ============================================================ */
 
-:root{ --quai-froid:#2a6fb0; --quai-chaud:#b8431b }
+:root, .theme-papier{ --quai-froid:#2a6fb0; --quai-chaud:#b8431b }
 :root[data-theme="sombre"]{ --quai-froid:#7fb6ea; --quai-chaud:#ff8a65 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="clair"]){ --quai-froid:#7fb6ea; --quai-chaud:#ff8a65 }
