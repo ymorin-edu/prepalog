@@ -33,7 +33,7 @@
 | 11 | Plusieurs enseignants : co-prof, groupes par prof, orphelins filtrés | C7 | moyen à gros | Opus (décision) puis Sonnet | oui + règles | 1, 6 | **livré** (11a 09/10, 076ec30, 8ad642a ; 11b 09/10, 8ba2042, af1d707, 6191913) ; **consoles Firestore et RTDB publiées le 09/10** |
 | 12 | CAP OL et niveaux : référentiel, défauts, TAB-4 | C8 | moyen | Sonnet (Cowork d'abord) | oui | référentiel CAP relevé | à faire |
 | **Lot C — hygiène** | | | | | | | |
-| 13 | Tests : compteurs en dur, cas vides, `ATTENDU` complété, doublons | C10b | moyen | Sonnet | non (tests) | — | à faire |
+| 13 | Tests : compteurs en dur, cas vides, `ATTENDU` complété, doublons | C10b | moyen | Sonnet | non (tests) | — | **livré** (09/10, 06f57c6 à 03eb63e) |
 | 14 | Doublons des vues (`ech`, étapes, note, palette, confirmation, mélange, focus) | C11 | moyen | Sonnet | oui | 9 avancé | à faire |
 | 15 | Couleurs en dur et `base.css` fourre-tout | C12 | petit à moyen | Sonnet | `styles/` + vues | — | à faire |
 | 16 | Champs `meta`, portées et options morts | C14 | petit | Sonnet | oui | décision 14 (cœur) | à faire |
@@ -335,6 +335,15 @@ s'aligner.
   `base.css` sont identiques ; réduire les `waitForTimeout` des blocs boost, cdiscount, spartoo au
   profit d'attentes sur l'écran. **Réécrire un cas existant : à dire à Tristan.**
 - **Fini quand.** Ajouter une séance factice au registre ne fait tomber aucun test du socle.
+- **Livré le 09/10/2026** (06f57c6 à 03eb63e, tests seulement, rien dans `core/`, `activites/`, `styles/`) : la liste Simulog et
+  les logos du socle viennent du registre ; « corrigé non lisible » devenu « avant Valider, aucune correction à l'écran » ;
+  `ATTENDU` : 18 lignes de plus (ENT-2.x, 4.x, 5.x, à valider par Tristan) ; les cinq cas « meilleur » lisent `meta.id` et
+  `meta.bareme` ; le cas « Repérage » choisit une séance que personne n'a jouée (`spartoo smoby questions` passe sans
+  socle) ; un cas compare les trois blocs de variables de `base.css` (`--r` et `--mono`, sans valeur par thème, sont
+  déclarées dans le seul bloc clair, liste écrite dans le cas) ; `waitForTimeout` : spartoo 27 -> 7, cdiscount 38 -> 16,
+  boost 67 -> 48 (restent : gestes à la souris, redessins sans signal lisible, cas qui prouvent qu'un texte NE vient PAS).
+  Séance factice au registre : socle et dependances restent verts (elle doit seulement avoir `portee`). Les 260 attentes
+  des autres blocs (transport 29, etc.) ne sont pas traitées.
 - **Relevé le 08/10/2026 (pendant 9c).** Les blocs `spartoo smoby questions` lancés seuls font tomber « Repérage… colonne des documents », qui passe dans la suite entière (état partagé entre blocs : le cas prend la première séance immersive et suppose qu'aucun élève du groupe n'y a joué).
 
 ### 14. Doublons des vues (C11)
