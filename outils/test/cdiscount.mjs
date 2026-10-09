@@ -18,6 +18,14 @@ import { pathToFileURL } from 'node:url';
 
 export default async function bloc({ v, page, nav, ROOT, baseXlsx }) {
   const imp = (rel) => import(pathToFileURL(path.join(ROOT, rel)).href);
+
+  // Attentes sur l'ÉCRAN plutôt que sur une durée (chantier 13, 09/10/2026). Le plafond de 4 s n'échoue pas ici :
+  // l'assertion qui suit lit l'écran et donne le vrai message, pas un « timeout » muet.
+  const navOn = (p, hote, vue) => p.waitForSelector(`${hote} .ent-nav.on[data-vue="${vue}"]`, { timeout: 4000 }).catch(() => {});
+  const etapeInv = (p, Z, n) => p.waitForFunction(([s, k]) => { const li = document.querySelector(s + ' .inv-etapes li.cours'); return !!li && li.textContent.trim().startsWith(k + '.'); },
+    [Z, String(n)], { timeout: 4000 }).catch(() => {});
+  const texteVu = (p, sel, re) => p.waitForFunction(([s, r]) => new RegExp(r).test((document.querySelector(s) || {}).textContent || ''),
+    [sel, re.source], { timeout: 4000 }).catch(() => {});
   const CD = await imp('contenus/cdiscount.js');
   const S21 = await imp('contenus/cdiscount-mouvements.js');
   const S22 = await imp('contenus/cdiscount-inventaire.js');
@@ -1168,9 +1176,9 @@ Ce qui cloche : DEM-26-0027 : 2 - 1 = 1`;
     }, [role, aisance || null]);
   };
   const Z22 = '#hote22 .ent-main';
-  const ouvrir22 = async (vue) => { await pg.click(`#hote22 .ent-nav[data-vue="${vue}"]`); await pg.waitForTimeout(80); };
+  const ouvrir22 = async (vue) => { await pg.click(`#hote22 .ent-nav[data-vue="${vue}"]`); await navOn(pg, '#hote22', vue); };
   const texte22 = async (sel) => ((await pg.textContent(sel || Z22)) || '').replace(/\s+/g, ' ').trim();
-  const aller22 = async (n) => { await pg.click(`${Z22} [data-inv-aller="${n}"]`); await pg.waitForTimeout(80); };
+  const aller22 = async (n) => { await pg.click(`${Z22} [data-inv-aller="${n}"]`); await etapeInv(pg, Z22, n); };
   const decider22 = async (ref, action, motif) => {
     await pg.selectOption(`${Z22} [data-inv-action="${ref}"]`, action); await pg.waitForTimeout(80);
     if (motif) await pg.selectOption(`${Z22} [data-inv-motif="${ref}"]`, motif);
@@ -1179,7 +1187,7 @@ Ce qui cloche : DEM-26-0027 : 2 - 1 = 1`;
   // Répondre à Nadia par la vraie messagerie : le champ s'ouvre sur l'amorce, on écrit après.
   const repondre22 = async (suite) => {
     await ouvrir22('mail');
-    await pg.click(`${Z22} .ent-mitem >> text=Inventaire de l’allée A : votre liste`); await pg.waitForTimeout(80);
+    await pg.click(`${Z22} .ent-mitem >> text=Inventaire de l’allée A : votre liste`); await pg.waitForSelector(`${Z22} [data-repondre]`);
     await pg.click(`${Z22} [data-repondre]`);
     const amorce = await pg.inputValue(`${Z22} #repT`);
     await pg.fill(`${Z22} #repT`, amorce + suite);
@@ -1198,7 +1206,10 @@ Ce qui cloche : DEM-26-0027 : 2 - 1 = 1`;
   const valider22 = async (taux = '6,9') => {
     await aller22(4);
     await pg.fill(`${Z22} [data-inv-taux]`, taux);
-    await pg.click(`${Z22} [data-inv-valider]`); await pg.waitForTimeout(120);
+    await pg.click(`${Z22} [data-inv-valider]`);
+    // Validé (bilan) ou refusé (message) : dans les deux cas l'écran a répondu.
+    await pg.waitForFunction((s) => { const z = document.querySelector(s); return !!z && (/Inventaire INV-\S+ valid/.test(z.textContent) || !!z.querySelector('[data-inv-msg]')); },
+      Z22, { timeout: 4000 }).catch(() => {});
   };
 
   await v('ENT-2.3 : la séance s\'ouvre dans le vrai moteur — six messages, l\'écran attend la liste, stock caché à l\'aveugle', async () => {
@@ -1216,7 +1227,9 @@ Ce qui cloche : DEM-26-0027 : 2 - 1 = 1`;
     await ouvrir22('stock');
     if (!(await pg.$(`${Z22} [data-stock-bloque]`))) throw new Error('Stock doit être bloqué');
     await ouvrir22('console');
-    await pg.fill('#champCmd', '.getstock COQ-UNI-01'); await pg.press('#champCmd', 'Enter'); await pg.waitForTimeout(80);
+    await pg.fill('#champCmd', '.getstock COQ-UNI-01'); await pg.press('#champCmd', 'Enter');
+    await pg.waitForFunction((s) => { const b = [...document.querySelectorAll(s + ' .ent-cres')]; return b.length > 0 && /Inventaire en cours/.test(b[b.length - 1].textContent); },
+      Z22, { timeout: 4000 }).catch(() => {});
     const blocs = await pg.$$eval(`${Z22} .ent-cres`, (e) => e.map((x) => x.textContent));
     if (!/Inventaire en cours/.test(blocs[blocs.length - 1] || '')) throw new Error('.getstock devrait être refusée : ' + blocs[blocs.length - 1]);
     await ouvrir22('catalogue');
@@ -1230,8 +1243,9 @@ Ce qui cloche : DEM-26-0027 : 2 - 1 = 1`;
     await pg.click('#hote22 [data-nouveau]');
     await pg.selectOption('#hote22 #mTo', 'F01');
     await pg.fill('#hote22 #mTxt', 'Bonjour,\n\ncab-usbc-1m : 20\n\nCordialement');
+    const avantF = await pg.evaluate(() => window.__inv22.db.mails.filter((m) => m.folder === 'in').length);
     await pg.click('#hote22 [data-envoyer-fou]');
-    await pg.waitForTimeout(300);
+    await pg.waitForFunction((n) => window.__inv22.db.mails.filter((m) => m.folder === 'in').length > n, avantF, { timeout: 4000 }).catch(() => {});
     const rep = (await dbPage()).mails.filter((m) => m.folder === 'in').pop();
     if (!/Commande bien reçue, pour un total de 20/.test(rep.text || '')) throw new Error('réponse du fournisseur : ' + String(rep.text).slice(0, 160));
   });
@@ -1250,14 +1264,14 @@ Ce qui cloche : DEM-26-0027 : 2 - 1 = 1`;
     const sujets = await pg.$$eval('#hote22 .ent-mitem', (e) => e.map((x) => x.textContent));
     if (!sujets.some((s) => /Relevé de comptage/.test(s))) throw new Error('relevé non arrivé : ' + sujets.join(' | '));
     // Le relevé papier couvre toute l'allée : douze lignes.
-    await pg.click(`${Z22} .ent-mitem >> text=Relevé de comptage`); await pg.waitForTimeout(80);
+    await pg.click(`${Z22} .ent-mitem >> text=Relevé de comptage`); await pg.waitForSelector('#hote22 .inv-papier tbody tr');
     const lignes = await pg.$$eval('#hote22 .inv-papier tbody tr', (e) => e.map((x) => [...x.querySelectorAll('td')].map((t) => t.textContent.trim())));
     if (JSON.stringify(lignes.map((l) => [l[1], Number(l[2])])) !== JSON.stringify(ORDRE_23.map((r) => [r, COMPTE_23[r]]))) throw new Error('relevé affiché : ' + JSON.stringify(lignes));
     await ouvrir22('inventaire');
     const saisies = await pg.$$eval(`${Z22} [data-inv-saisie]`, (e) => e.map((x) => x.dataset.invSaisie));
     if (JSON.stringify(saisies) !== JSON.stringify(LISTE_4)) throw new Error('lignes à saisir : ' + saisies.join(', '));
     await jusquAuTraitement22();
-    await pg.click(`${Z22} [data-inv-ouvrir="BAT-10K"]`); await pg.waitForTimeout(80);
+    await pg.click(`${Z22} [data-inv-ouvrir="BAT-10K"]`); await pg.waitForSelector(`${Z22} [data-inv-mvts="BAT-10K"]`);
     const mv = await pg.$$eval(`${Z22} [data-inv-mvts="BAT-10K"] tbody tr`, (e) => e.length);
     if (mv !== 4) throw new Error(`${mv} mouvements de BAT-10K à l'écran au lieu de 4`);
     await decider22('CAB-USBC-1M', 'recompter');
@@ -1824,7 +1838,7 @@ Suite à donner : Réclamation auprès de Gardéo, livraison incomplète`;
           jeu: { etat: () => db, sauver() {} }, enregistrer(x) { window.__c22.scores.push(x); }, quitter() {} });
       });
       const Z = '#hote2 .ent-main';
-      const aller = async (vue) => { await p.click(`#hote2 .ent-nav[data-vue="${vue}"]`); await p.waitForTimeout(80); };
+      const aller = async (vue) => { await p.click(`#hote2 .ent-nav[data-vue="${vue}"]`); await navOn(p, '#hote2', vue); };
       if (await p.$(`#hote2 .ent-nav[data-vue="commandes"]`) && (await aller('commandes'), await p.$(`${Z} [data-exporter]`))) throw new Error('un bouton Exporter reste sur Commandes');
       await aller('extractions');
       // Niveau 1 : les critères de la demande sont déjà réglés.
@@ -1838,11 +1852,11 @@ Suite à donner : Réclamation auprès de Gardéo, livraison incomplète`;
       const db = await p.evaluate(() => JSON.parse(JSON.stringify(window.__c22.db)));
       await aller('fichiers');
       await p.setInputFiles('#fichierTableur', { name: 'analyse.xlsx', mimeType: 'application/octet-stream', buffer: classeurC(db, { tape: true }) });
-      await p.waitForTimeout(400);
+      await texteVu(p, Z, /38 résultats justes sur 68/);
       const t = (await p.textContent(Z)).replace(/\s+/g, ' ');
       if (!/38 résultats justes sur 68/.test(t) || !/la cellule contient un nombre tapé, pas une formule/.test(t)) throw new Error('retour guidé : ' + t.slice(0, 400));
       await p.setInputFiles('#fichierTableur', { name: 'analyse.xlsx', mimeType: 'application/octet-stream', buffer: classeurC(db) });
-      await p.waitForTimeout(400);
+      await texteVu(p, Z, /68 résultats justes sur 68/);
       if (!/68 résultats justes sur 68/.test((await p.textContent(Z)).replace(/\s+/g, ' '))) throw new Error('redépôt juste');
       if (!await p.$(`${Z} [data-depot-export="ok"]`)) throw new Error('retour sur l\'export absent');
       await p.click('#hote2 [data-aide-tableur]');
@@ -1979,7 +1993,7 @@ Suite à donner : Réclamation auprès de Gardéo, livraison incomplète`;
           jeu: { etat: () => db, sauver() {} }, enregistrer() {}, quitter() {} });
       });
       const Z = '#hote4 .ent-main';
-      const aller = async (vue) => { await p.click(`#hote4 .ent-nav[data-vue="${vue}"]`); await p.waitForTimeout(80); };
+      const aller = async (vue) => { await p.click(`#hote4 .ent-nav[data-vue="${vue}"]`); await navOn(p, '#hote4', vue); };
       await aller('extractions');
       const compte = async () => Number((await p.textContent(`${Z} [data-ext-compte]`)).match(/\d+/)[0]);
       // Niveau 2 : les critères du logiciel (tous les types, 7 derniers jours), pas ceux de la demande.
@@ -1991,7 +2005,7 @@ Suite à donner : Réclamation auprès de Gardéo, livraison incomplète`;
       const exF = GT.construireExport(S23.TABLEUR.exports[0], db, { criteres: db.tableur.criteres ? db.tableur.criteres.ajustements : GT.criteresDepart(S23.TABLEUR.exports[0], db) });
       if (!exF.propres.length) throw new Error('export faux vide');
       await p.setInputFiles('#fichierTableur', { name: 'faux.xlsx', mimeType: 'application/octet-stream', buffer: classeurA(db, {}) });
-      await p.waitForTimeout(400);
+      await texteVu(p, `${Z} [data-depot-export]`, /en trop/);
       const tf = (await p.textContent(`${Z} [data-depot-export]`)).replace(/\s+/g, ' ');
       if (!/lignes? en trop : leur « Type de mouvement » ne correspond pas à la demande/.test(tf) || !/Il manque \d+ lignes demandées : vérifiez « Période »\./.test(tf)) throw new Error('retour export niveau 2 : ' + tf);
       if (/choisissez/.test(tf)) throw new Error('le niveau 2 donne le critère à choisir');
@@ -2009,7 +2023,7 @@ Suite à donner : Réclamation auprès de Gardéo, livraison incomplète`;
       db = await p.evaluate(() => JSON.parse(JSON.stringify(window.__c24.db)));
       await aller('fichiers');
       await p.setInputFiles('#fichierTableur', { name: 'ajustements.xlsx', mimeType: 'application/octet-stream', buffer: classeurA(db, { tape: true }) });
-      await p.waitForTimeout(400);
+      await p.waitForSelector(`${Z} [data-depot-export="ok"]`, { timeout: 4000 }).catch(() => {});
       if (!await p.$(`${Z} [data-depot-export="ok"]`)) throw new Error('export juste non reconnu');
       const t = (await p.textContent(Z)).replace(/\s+/g, ' ');
       // « À VÉRIFIER » tapé, sans formule : la colonne est fausse partout (0 / 20), la synthèse juste (4 / 4).
@@ -2189,7 +2203,7 @@ Suite à donner : Réclamation auprès de Gardéo, livraison incomplète`;
           jeu: { etat: () => db, sauver() {} }, enregistrer(x) { window.__c26.scores.push(x); }, quitter() {} });
       });
       const Z = '#hote6 .ent-main';
-      const aller = async (vue) => { await p.click(`#hote6 .ent-nav[data-vue="${vue}"]`); await p.waitForTimeout(80); };
+      const aller = async (vue) => { await p.click(`#hote6 .ent-nav[data-vue="${vue}"]`); await navOn(p, '#hote6', vue); };
       await aller('extractions');
       // Niveau 3 : la demande métier seule — à l'élève de régler la période (le mois).
       await p.selectOption(`${Z} [data-filtre="periode"]`, '30j'); await p.waitForTimeout(80);
@@ -2203,7 +2217,7 @@ Suite à donner : Réclamation auprès de Gardéo, livraison incomplète`;
       const db = await p.evaluate(() => JSON.parse(JSON.stringify(window.__c26.db)));
       await aller('fichiers');
       await p.setInputFiles('#fichierTableur', { name: 'bonus.xlsx', mimeType: 'application/octet-stream', buffer: classeur6(db) });
-      await p.waitForTimeout(500);
+      await texteVu(p, Z, /37 résultats justes sur 37/);
       const t = (await p.textContent(Z)).replace(/\s+/g, ' ');
       if (!/37 résultats justes sur 37\./.test(t)) throw new Error('retour : ' + (await p.textContent('[data-depot-retour]')));
       if (!await p.$(`${Z} [data-depot-export="ok"]`)) throw new Error('export juste non reconnu');
@@ -2426,7 +2440,7 @@ Suite à donner : Réclamation auprès de Gardéo, livraison incomplète`;
           lireScore: async () => null, rendreCopie: async (res) => { window.__c25.remis = res; return { rendu: Date.now() }; } });
       });
       const Z = '#hote5 .ent-main';
-      const aller = async (vue) => { await p.click(`#hote5 .ent-nav[data-vue="${vue}"]`); await p.waitForTimeout(80); };
+      const aller = async (vue) => { await p.click(`#hote5 .ent-nav[data-vue="${vue}"]`); await navOn(p, '#hote5', vue); };
       if (await p.evaluate(() => window.__c25.db.tirage.graine) !== 'eleve-test') throw new Error('graine non posée');
       await aller('extractions');
       // Niveau 4 : critères du logiciel au départ ; l'élève règle l'allée C et le mois.
@@ -2437,7 +2451,7 @@ Suite à donner : Réclamation auprès de Gardéo, livraison incomplète`;
       const db0 = await p.evaluate(() => JSON.parse(JSON.stringify(window.__c25.db)));
       await aller('fichiers');
       await p.setInputFiles('#fichierTableur', { name: 'eval.xlsx', mimeType: 'application/octet-stream', buffer: classeur5(db0) });
-      await p.waitForTimeout(400);
+      await texteVu(p, Z, /Fichier reçu\./);
       const t = (await p.textContent(Z)).replace(/\s+/g, ' ');
       if (!/Fichier reçu\./.test(t) || /résultats? justes?/.test(t)) throw new Error('retour : ' + t.slice(0, 300));
       if (await p.$(`${Z} [data-depot-export]`)) throw new Error('évaluation : un retour sur l\'export');
@@ -2453,16 +2467,16 @@ Suite à donner : Réclamation auprès de Gardéo, livraison incomplète`;
       const saisies = await p.$$eval(`${Z} [data-inv-saisie]`, (e) => e.map((x) => x.dataset.invSaisie));
       if (saisies.join() !== 'COR-SAU,LAM-FRO,ELA-FIT-3') throw new Error('périmètre : ' + saisies.join());
       for (const r of saisies) await p.fill(`${Z} [data-inv-saisie="${r}"]`, String(REL5[r]));
-      await p.click(`${Z} [data-inv-aller="2"]`); await p.waitForTimeout(80);
+      await p.click(`${Z} [data-inv-aller="2"]`); await etapeInv(p, Z, 2);
       for (const r of saisies) await p.fill(`${Z} [data-inv-ecart="${r}"]`, String(REL5[r] - SYS5[r]));
-      await p.click(`${Z} [data-inv-aller="3"]`); await p.waitForTimeout(80);
+      await p.click(`${Z} [data-inv-aller="3"]`); await etapeInv(p, Z, 3);
       await p.selectOption(`${Z} [data-inv-action="LAM-FRO"]`, 'rayon'); await p.waitForTimeout(60);
       await p.selectOption(`${Z} [data-inv-action="COR-SAU"]`, 'regul'); await p.waitForTimeout(60);
       await p.selectOption(`${Z} [data-inv-motif="COR-SAU"]`, 'Démarque inconnue');
       await p.selectOption(`${Z} [data-inv-action="ELA-FIT-3"]`, 'recompter'); await p.waitForTimeout(60);
-      await p.click(`${Z} [data-inv-aller="4"]`); await p.waitForTimeout(80);
+      await p.click(`${Z} [data-inv-aller="4"]`); await etapeInv(p, Z, 4);
       await p.fill(`${Z} [data-inv-taux]`, '5');
-      await p.click(`${Z} [data-inv-valider]`); await p.waitForTimeout(120);
+      await p.click(`${Z} [data-inv-valider]`); await texteVu(p, Z, /Inventaire INV-2026-58 valid/);
       const bilan = (await p.textContent(Z)).replace(/\s+/g, ' ');
       if (!/Inventaire INV-2026-58 valid/.test(bilan)) throw new Error('inventaire non validé : ' + bilan.slice(0, 300));
       if (/d.cisions? justes?|\bjuste\b|. revoir|Ce qu.il fallait voir/.test(bilan)) throw new Error('une correction s’affiche : ' + bilan.slice(0, 300));
