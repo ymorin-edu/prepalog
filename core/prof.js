@@ -258,15 +258,15 @@ export async function rendreEspaceProf(hote, ctx) {
       if (corrEleve && corrEleve.erreur) corpsEleve = '<div class="avis">Le jeu de cet élève n\'a pas pu être lu.</div>';
       else if (corrEleve) {
         corpsEleve = `${corrEleve.texte ? `<p class="note">${ech(corrEleve.texte)}</p>` : ''}
-          ${corrEleve.items.map((it) => `<div class="corr-item" data-genre="${ech(it.genre)}" style="padding:10px 0;border-bottom:1px solid var(--filet)">
-            <div><strong>${ech(it.texte)}</strong></div>${corps(it)}</div>`).join('')}`;
+          ${corrEleve.items.map((it) => `<div class="corr-item" data-genre="${ech(it.genre)}"${it.bonus ? ' data-corr-bonus' : ''} style="padding:10px 0;border-bottom:1px solid var(--filet)">
+            <div>${it.bonus ? '<span class="etiq">bonus</span> ' : ''}<strong>${ech(it.texte)}</strong></div>${corps(it)}</div>`).join('')}`;
       }
       return `<section class="panneau" data-corr-eleve>${choix}${corpsEleve}</section>`;
     };
     z.innerHTML = `<p class="note">Corrigés complets des trames élèves (QCM, questions du logiciel, recherches Internet, tableaux, messages). Les réponses sont à relire
       avant usage ; celles issues d'Internet portent leur source et la date de relevé. Les nombres du logiciel dépendent de la base de données du site.</p>
       <section class="panneau" id="corrSommaire">${sommaire}</section>
-      ${lot ? blocEleve() + bloc(lot) : `<div class="vide">Choisissez une séance ci-dessus pour afficher son corrigé.</div>`}`;
+      ${lot ? blocEleve() + (!lot.c && lot.parEleve ? '' : bloc(lot)) : `<div class="vide">Choisissez une séance ci-dessus pour afficher son corrigé.</div>`}`;
     z.querySelector('#corrEleve')?.addEventListener('change', async (ev) => {
       corrigeEleve = ev.target.value;
       await vueCorriges(z);

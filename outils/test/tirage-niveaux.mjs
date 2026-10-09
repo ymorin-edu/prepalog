@@ -12,7 +12,7 @@
 //
 // Valeurs attendues écrites à la main.
 
-export default async function bloc({ v, nav, BASE, egal, vrai }) {
+export default async function bloc({ v, nav, BASE, ROOT, egal, vrai }) {
 
 const ctxN = await nav.newContext({ viewport: { width: 1366, height: 900 } });
 let espion = false, picardDeclare = false;
@@ -313,4 +313,299 @@ await v('Niveaux : aucune erreur JavaScript', async () => {
 });
 
 await ctxN.close();
+
+// ════════════════════════════════════════════════════════════════════════════════════ lot 2 : tirage mémorisé
+// La séance d'essai `contenus/tirage-essai.js` (tri de CV : la pièce fixe cv-yanis + 1 facile, 2 moyens, 1 difficile ;
+// bonus du confirmé : 1 moyen, 1 difficile) montée dans la page, avec la fabrique et le moteur réels.
+const ctxT = await nav.newContext({ viewport: { width: 1366, height: 900 } });
+// Pour l'onglet Corrigés et l'accueil : la séance d'essai servie comme ACTIVITÉ à ce navigateur seulement (le registre
+// reçoit une ligne de plus, le fichier d'activité est fabriqué ici). Rien n'est ajouté au dépôt.
+let registreTouche = false;
+await ctxT.route('**/activites/index.js*', async (route) => {
+  const r = await route.fetch();
+  const corps = await r.text();
+  const ancre = 'export const ACTIVITES = [';
+  registreTouche = corps.includes(ancre);
+  await route.fulfill({ response: r, body: corps.replace(ancre, `${ancre}\n  () => import('./essai-tirage-injecte.js'),`) });
+});
+await ctxT.route('**/activites/essai-tirage-injecte.js*', (route) => route.fulfill({ contentType: 'text/javascript', body: `
+import { seanceEntreprise } from '../core/types/seance-entreprise.js';
+import { ESSAI } from '../contenus/tirage-essai.js';
+const s = seanceEntreprise(ESSAI.UNIVERS, ESSAI.SEANCE, { ...ESSAI.META, corrige: './contenus/tirage-essai.js', pret: true }, ESSAI.OPTIONS);
+export const meta = s.meta;
+export const rendre = s.rendre;
+` }));
+const pt = await ctxT.newPage();
+pt.setDefaultTimeout(7000);
+const erreursT = [];
+const suivreErreurs = (p, nom) => {
+  p.on('pageerror', (e) => erreursT.push(`PAGEERROR ${nom}: ${e.message}`));
+  p.on('console', (m) => { if (m.type() === 'error' && !/\b404\b/.test(m.text())) erreursT.push(`CONSOLE ${nom}: ${m.text()}`); });
+  p.on('dialog', (d) => d.accept());
+};
+suivreErreurs(pt, 'essai');
+await pt.goto(BASE);
+await pt.waitForSelector('#btnProf', { timeout: 8000 });
+
+// Monte la séance d'essai (fabrique + moteur) avec une base donnée ; rend la base et les scores remontés.
+// `o.variante` : options de `essai()` (banque enrichie, pièce supprimée…) ; `o.aisance`, `o.uid`, `o.role`.
+const monter = (o = {}, p = pt) => p.evaluate(async (o) => {
+  const { creerEntreprise } = await import('/core/types/entreprise.js');
+  const { composerSeance } = await import('/core/types/seance-entreprise.js');
+  const { essai } = await import('/contenus/tirage-essai.js');
+  document.querySelector('#tTest')?.remove();
+  document.body.classList.remove('immersion');
+  const hote = document.createElement('div'); hote.id = 'tTest'; document.body.prepend(hote);
+  const E = essai(o.variante || {});
+  const { meta, options } = composerSeance(E.UNIVERS, E.SEANCE, E.META, E.OPTIONS);
+  const db = o.db ? JSON.parse(JSON.stringify(o.db)) : {};
+  window.__t = { db, enregistres: [], E };
+  const ctx = {
+    meta, aisance: o.aisance || 'standard',
+    profil: { prenom: 'Lea', nom: 'Test', role: o.role || 'eleve', uid: o.uid || 'u-test' },
+    jeu: { etat: () => db, sauver: () => {} },
+    enregistrer: (r) => { window.__t.enregistres.push(JSON.parse(JSON.stringify(r))); }, quitter: () => {}, codeStock: 'ESSAI',
+    lireScore: async () => null, rendreCopie: async () => ({ rendu: Date.now() }),
+  };
+  const M = creerEntreprise(options);
+  window.__t.M = M;
+  M.rendre(hote, ctx);
+  const rec = db.tirages && db.tirages[meta.id];
+  return { db: JSON.parse(JSON.stringify(db)), rec: rec ? JSON.parse(JSON.stringify(rec)) : null,
+    socle: E.TIRAGE.piecesTirees(db, 'cv').map((x) => x.id), bonus: E.TIRAGE.piecesBonus(db, 'cv').map((x) => x.id),
+    valeurs: E.TIRAGE.valeursTirees(db), avis: hote.querySelector('.avis-err')?.textContent || '' };
+}, o, p);
+const DIFF = (id) => (id === 'cv-yanis' ? 'fixe' : id.slice(3, 4) === 'f' ? 'facile' : id.slice(3, 4) === 'm' ? 'moyen' : 'difficile');
+
+await v('Tirage : équité sur 300 graines — la pièce fixe toujours là, 1 facile + 2 moyens + 1 difficile, zéro secours ; confirmé = même socle + 1 moyen + 1 difficile', async () => {
+  const r = await pt.evaluate(async () => {
+    const { essai } = await import('/contenus/tirage-essai.js');
+    const T = essai().TIRAGE;
+    const out = [];
+    for (let i = 0; i < 300; i++) {
+      const g = `eleve-${i}|essai-tirage`;
+      out.push({ s: T.tirer(g), c: T.tirer(g, { confirme: true }) });
+    }
+    return out;
+  });
+  const fautes = [];
+  const sets = new Set(), places = new Set();
+  r.forEach(({ s, c }, i) => {
+    const L = s.pieces.cv;
+    const compte = (l, d) => l.filter((x) => DIFF(x) === d).length;
+    if (s.secours || c.secours) fautes.push(`${i} : secours`);
+    if (L.length !== 5 || new Set(L).size !== 5) fautes.push(`${i} : ${L}`);
+    if (!L.includes('cv-yanis')) fautes.push(`${i} : sans la pièce fixe`);
+    if ([compte(L, 'facile'), compte(L, 'moyen'), compte(L, 'difficile')].join() !== '1,2,1') fautes.push(`${i} : mélange ${L}`);
+    if (s.bonus) fautes.push(`${i} : un standard a des bonus`);
+    if (JSON.stringify(c.pieces) !== JSON.stringify(s.pieces) || JSON.stringify(c.valeurs) !== JSON.stringify(s.valeurs)) fautes.push(`${i} : le confirmé n'a pas le même socle`);
+    const B = (c.bonus || {}).cv || [];
+    if (B.length !== 2 || compte(B, 'moyen') !== 1 || compte(B, 'difficile') !== 1 || B.some((x) => L.includes(x))) fautes.push(`${i} : bonus ${B}`);
+    if (!(s.valeurs.postes >= 2 && s.valeurs.postes <= 4)) fautes.push(`${i} : valeurs ${JSON.stringify(s.valeurs)}`);
+    sets.add(L.slice().sort().join());
+    places.add(L.indexOf('cv-yanis'));
+  });
+  if (fautes.length) throw new Error(fautes.slice(0, 5).join(' / '));
+  // 4 × 15 × 4 = 240 socles possibles : 300 tirages en donnent environ 170 distincts.
+  vrai(sets.size >= 120, `élèves différents, tirages trop semblables : ${sets.size} jeux distincts sur 300`);
+  egal([...places].sort(), [0, 1, 2, 3, 4], 'places de la pièce fixe (ordre « melange »)');
+});
+
+await v('Tirage : rangé à la première ouverture, jamais refait — banque enrichie de 10 pièces et mélange changé, rechargement, autre poste : mêmes pièces', async () => {
+  const a = await monter({ uid: 'u-memo' });
+  vrai(a.rec && a.rec.graine === 'u-memo|essai-tirage', 'graine : ' + JSON.stringify(a.rec && a.rec.graine));
+  egal(a.rec.pieces.cv, a.socle, 'ids rangés = pièces lues');
+  vrai(!('bonus' in a.rec), 'un standard a une clé bonus');
+  // La banque change : 10 pièces de plus, un mélange différent. L'élève garde son tirage.
+  const b = await monter({ uid: 'u-memo', db: a.db, variante: { plus: 10, melange: { facile: 2, moyen: 1, difficile: 1 } } });
+  egal([b.socle, b.valeurs, b.rec.at], [a.socle, a.valeurs, a.rec.at], 'après enrichissement');
+  // Pour preuve que la variante tire autre chose : une base neuve du même élève reçoit 2 faciles.
+  const neuve = await monter({ uid: 'u-memo', variante: { plus: 10, melange: { facile: 2, moyen: 1, difficile: 1 } } });
+  egal(neuve.socle.filter((x) => DIFF(x) === 'facile' || /^cv-n/.test(x)).length >= 2, true, 'la variante ne change rien : le cas ne prouve rien');
+  // Rechargement (module neuf, même base) et autre poste (autre page).
+  const c = await monter({ uid: 'u-memo', db: a.db });
+  egal(c.socle, a.socle, 'rechargement');
+  const poste = await ctxT.newPage();
+  suivreErreurs(poste, 'poste');
+  await poste.goto(BASE);
+  await poste.waitForSelector('#btnProf', { timeout: 8000 });
+  const d = await monter({ uid: 'u-memo', db: a.db }, poste);
+  await poste.close();
+  egal([d.socle, d.valeurs], [a.socle, a.valeurs], 'autre poste');
+  // Élèves différents : tirages différents (graine = élève + séance).
+  const autres = new Set();
+  for (let i = 0; i < 12; i++) autres.add((await monter({ uid: `u-autre-${i}` })).socle.join());
+  vrai(autres.size >= 9, `12 élèves, ${autres.size} tirages distincts`);
+});
+
+await v('Tirage : « Réinitialiser » efface le tirage avec le reste et le refait aussitôt, de la même graine', async () => {
+  const a = await monter({ uid: 'u-raz' });
+  await pt.click('#tTest [data-raz]');
+  await pt.waitForTimeout(150);
+  const apres = await pt.evaluate(() => JSON.parse(JSON.stringify(window.__t.db.tirages['essai-tirage'])));
+  vrai(apres.at >= a.rec.at, 'tirage pas refait');
+  egal([apres.pieces, apres.graine], [a.rec.pieces, a.rec.graine], 'même graine, même banque : mêmes pièces');
+});
+
+await v('Tirage : une pièce rangée devenue introuvable est remplacée par une de même difficulté, notée, la séance s’ouvre', async () => {
+  const a = await monter({ uid: 'u-perdu' });
+  const perdue = a.socle.find((x) => DIFF(x) === 'moyen');
+  const b = await monter({ uid: 'u-perdu', db: a.db, variante: { sans: [perdue] } });
+  egal(b.avis, '', 'refus');
+  const rempl = (b.rec.remplacees || {}).cv || {};
+  const par = rempl[perdue];
+  vrai(par && DIFF(par) === 'moyen' && !a.socle.includes(par), `remplacement : ${JSON.stringify(rempl)}`);
+  egal(b.socle, a.socle.map((x) => (x === perdue ? par : x)), 'pièces lues');
+  // Le remplacement est rangé : rouvrir avec la même banque ne le change plus.
+  const c = await monter({ uid: 'u-perdu', db: b.db, variante: { sans: [perdue] } });
+  egal(c.socle, b.socle, 'réouverture');
+});
+
+await v('Tirage : « Accompagné » reçoit exactement le contenu standard (mêmes pièces, mêmes valeurs, mêmes jalons, pas de bonus)', async () => {
+  const s = await monter({ uid: 'u-acc', aisance: 'standard' });
+  const ac = await monter({ uid: 'u-acc', aisance: 'accompagne' });
+  egal([ac.db.aisance, ac.socle, ac.valeurs, ac.bonus], ['accompagne', s.socle, s.valeurs, []], 'accompagné');
+  vrai(!('bonus' in ac.rec), 'clé bonus chez un accompagné');
+  // Le détail dit « accompagné » à l'enseignant (`niveau`) : les JALONS, eux, sont les mêmes.
+  const det = async () => Object.keys((await pt.evaluate(() => window.__t.enregistres.slice(-1)[0] || { detail: {} })).detail).filter((k) => k !== 'niveau').sort();
+  await monter({ uid: 'u-acc', aisance: 'standard' }); const ds = await det();
+  await monter({ uid: 'u-acc', aisance: 'accompagne' }); const da = await det();
+  egal(da, ds, 'jalons du détail');
+  const co = await monter({ uid: 'u-acc', aisance: 'confirme' });
+  egal([co.socle, co.bonus.length], [s.socle, 2], 'le témoin confirmé');
+});
+
+await v('Tirage : évaluation — un confirmé n’a ni bonus ni pièce en plus, le niveau est ignoré', async () => {
+  const s = await monter({ uid: 'u-eval', variante: { copie: true }, aisance: 'standard' });
+  const c = await monter({ uid: 'u-eval', variante: { copie: true }, aisance: 'confirme' });
+  egal(c.avis, '', 'refus');
+  vrai(c.rec && !('bonus' in c.rec), 'bonus en évaluation : ' + JSON.stringify(c.rec));
+  egal([c.socle, c.bonus], [s.socle, []], 'même socle');
+});
+
+await v('Tirage : la fabrique refuse une banque fautive et des cas bonus sans « niveauxPrevus: [\'confirme\'] »', async () => {
+  const r = await pt.evaluate(async () => {
+    const { composerSeance } = await import('/core/types/seance-entreprise.js');
+    const { essai } = await import('/contenus/tirage-essai.js');
+    const { declarerTirage } = await import('/core/tirage.js');
+    const essaye = (f) => { try { f(); return ''; } catch (e) { return e.message; } };
+    const E1 = essai();
+    const sansNiveau = essaye(() => composerSeance(E1.UNIVERS, E1.SEANCE, { ...E1.META, niveauxPrevus: undefined }, E1.OPTIONS));
+    const E2 = essai();
+    const pieces = E2.TIRAGE.decl.banques.cv.pieces;
+    const doublon = essaye(() => composerSeance(E2.UNIVERS, { ...E2.SEANCE, TIRAGE: declarerTirage({ banques: { cv: { ...E2.TIRAGE.decl.banques.cv,
+      pieces: [...pieces, { ...pieces[3] }] } } }) }, E2.META, E2.OPTIONS));
+    const trop = essaye(() => composerSeance(E2.UNIVERS, { ...E2.SEANCE, TIRAGE: declarerTirage({ banques: { cv: { ...E2.TIRAGE.decl.banques.cv,
+      melange: { difficile: 4 } } } }) }, E2.META, E2.OPTIONS));
+    const E3 = essai();
+    const bon = essaye(() => composerSeance(E3.UNIVERS, E3.SEANCE, E3.META, E3.OPTIONS));
+    return { sansNiveau, doublon, trop, bon };
+  });
+  vrai(/niveauxPrevus/.test(r.sansNiveau), 'sans niveauxPrevus : ' + r.sansNiveau);
+  vrai(/en double/.test(r.doublon), 'doublon : ' + r.doublon);
+  vrai(/difficile.*disponible/.test(r.trop), 'trop demandé : ' + r.trop);
+  egal(r.bon, '', 'séance conforme refusée');
+});
+
+// La liste FIGÉE des ids de chaque banque déclarée (règle du brief : une banque ne perd jamais un id, elle ne fait que
+// s'allonger). Une séance nouvelle qui déclare un tirage ajoute ici sa liste ; un id qui disparaît fait tomber le cas.
+const BANQUES_FIGEES = {
+  'contenus/tirage-essai.js': { cv: ['cv-yanis', 'cv-f1', 'cv-f2', 'cv-f3', 'cv-f4', 'cv-m1', 'cv-m2', 'cv-m3', 'cv-m4', 'cv-m5',
+    'cv-m6', 'cv-d1', 'cv-d2', 'cv-d3', 'cv-d4'] },
+};
+await v('Tirage : banques stables — aucun id d’une banque déclarée ne disparaît (liste figée), toute banque déclarée est inscrite', async () => {
+  const fs = await import('node:fs');
+  const path = await import('node:path');
+  const dir = path.join(ROOT, 'contenus');
+  const declarants = fs.readdirSync(dir).filter((f) => f.endsWith('.js') && !f.startsWith('A-SUPPRIMER-')
+    && /declarerTirage\s*\(/.test(fs.readFileSync(path.join(dir, f), 'utf8'))).map((f) => `contenus/${f}`);
+  vrai(declarants.includes('contenus/tirage-essai.js'), 'le relevé ne voit pas la séance d’essai : il est cassé');
+  const inconnus = declarants.filter((f) => !BANQUES_FIGEES[f]);
+  if (inconnus.length) throw new Error(`banques à inscrire dans BANQUES_FIGEES (outils/test/tirage-niveaux.mjs) : ${inconnus.join(', ')}`);
+  const lues = await pt.evaluate(async (fichiers) => {
+    const { estTirage } = await import('/core/tirage.js');
+    const out = {};
+    for (const f of fichiers) {
+      const m = await import('/' + f);
+      out[f] = {};
+      Object.values(m).filter(estTirage).forEach((T) => Object.entries(T.decl.banques).forEach(([n, b]) => {
+        out[f][n] = [...(out[f][n] || []), ...b.pieces.map((p) => p.id)];
+      }));
+    }
+    return out;
+  }, declarants);
+  const perdus = [];
+  for (const [f, B] of Object.entries(BANQUES_FIGEES)) {
+    for (const [n, ids] of Object.entries(B)) ids.forEach((id) => { if (!((lues[f] || {})[n] || []).includes(id)) perdus.push(`${f} · ${n} · ${id}`); });
+  }
+  if (perdus.length) throw new Error('id retiré d’une banque (marquer `retiree: true` au lieu de supprimer) : ' + perdus.join(', '));
+});
+
+// L'onglet Corrigés (enseignant) et l'accueil (élève), avec la séance d'essai servie comme activité.
+const EL2 = { T1: ['4931', 'tt01'], T2: ['4932', 'tt02'] };
+const uidT = (k) => pt.evaluate((m) => { const u = JSON.parse(localStorage.getItem('prepalog:users') || '{}'); return Object.keys(u).find((x) => u[x].matricule === m); }, EL2[k][0]);
+const entrerT = async (k) => {
+  await pt.goto(BASE);
+  await pt.waitForSelector('#btnProf, #btnDeco', { timeout: 8000 });
+  if (await pt.$('#btnDeco')) await pt.click('#btnDeco');
+  await pt.waitForSelector('#mat');
+  if (k === 'prof') { await pt.click('#btnProf'); await pt.waitForSelector('#btnProfEspace'); return; }
+  await pt.fill('#mat', EL2[k][0]); await pt.fill('#code', EL2[k][1]);
+  await pt.click('#btnEleve');
+  await pt.waitForSelector('text=Bonjour');
+};
+const ouvrirEssai = async () => {
+  await pt.click('[data-rub="simulog"]');
+  await pt.click('[data-ent="autres"]');
+  await pt.click('[data-act="essai-tirage"]');
+  await pt.waitForSelector('.ent-shell');
+};
+
+await v('Tirage : Corrigés — pour un élève choisi, ses pièces (avec ce qu’attend la fiche), ses valeurs, et ses cas bonus marqués « bonus »', async () => {
+  vrai(registreTouche, 'activites/index.js n’a plus « export const ACTIVITES = [ » : l’injection de la séance d’essai est à revoir');
+  await pt.click('#btnProf');
+  await pt.waitForSelector('#btnProfEspace');
+  await pt.click('#btnProfEspace');
+  await pt.waitForSelector('#gNom');
+  await pt.fill('#gNom', 'TIR 1');
+  await pt.click('#btnCreerG');
+  await pt.waitForSelector('text=TIR 1');
+  await pt.click('[data-ong="comptes"]');
+  await pt.fill('#lot', Object.entries(EL2).map(([k, [m, c]]) => `TIR${k} ; ${k} ; ${m} ; ${c}`).join('\n'));
+  await pt.click('#btnLot');
+  await pt.waitForSelector('[data-tiers]');
+  // La séance d'essai déclare `niveauxPrevus` : son entreprise (n° 99, hors table) a sa colonne.
+  await pt.click('[data-ong="niveaux"]');
+  await pt.waitForSelector('[data-col-scenario="99"]');
+  egal((await pt.textContent('[data-col-scenario="99"] strong')).trim(), 'Entreprise 99', 'colonne');
+  const u1 = await uidT('T1');
+  await pt.selectOption(`[data-niveau-eleve="${u1}"][data-scenario="99"]`, 'confirme');
+  await pt.waitForFunction((u) => { const x = JSON.parse(localStorage.getItem('prepalog:users'))[u]; return x.niveaux && x.niveaux['99'] === 'confirme'; }, u1);
+  for (const k of ['T1', 'T2']) { await entrerT(k); await ouvrirEssai(); }
+  await entrerT('prof');
+  await pt.click('#btnProfEspace');
+  await pt.click('[data-ong="corriges"]');
+  await pt.click('[data-corrige="essai-tirage"]');
+  await pt.waitForSelector('#corrEleve');
+  const lire = async (k) => {
+    await pt.selectOption('#corrEleve', await uidT(k));
+    await pt.waitForSelector('[data-corr-eleve] .corr-item');
+    return pt.$$eval('[data-corr-eleve] .corr-item', (L) => L.map((x) => ({ bonus: x.hasAttribute('data-corr-bonus'), t: x.textContent.replace(/\s+/g, ' ').trim() })));
+  };
+  const c1 = await lire('T1');
+  const c2 = await lire('T2');
+  egal([c1.filter((x) => x.bonus).length, c1.filter((x) => !x.bonus).length], [2, 6], 'confirmé : 2 bonus + valeurs + 5 pièces');
+  egal([c2.filter((x) => x.bonus).length, c2.length], [0, 6], 'standard : valeurs + 5 pièces, aucun bonus');
+  vrai(c1.filter((x) => x.bonus).every((x) => /^bonus /.test(x.t)), 'marque « bonus » : ' + JSON.stringify(c1));
+  vrai(/Valeurs tirées/.test(c1[0].t) && /postes : [234]/.test(c1[0].t), 'valeurs : ' + c1[0].t);
+  vrai(c2.slice(1).every((x) => /✓ (Retenir|Écarter)/.test(x.t)), 'attendu : ' + JSON.stringify(c2));
+  vrai(c2.some((x) => /CV de Yanis/.test(x.t)), 'la pièce fixe manque');
+  egal(await pt.$$eval('#contenuProf .avis-err', (L) => L.length), 0, 'avis d’erreur');
+});
+
+await v('Tirage : aucune erreur JavaScript', async () => {
+  if (erreursT.length) throw new Error(erreursT.slice(0, 3).join(' / '));
+});
+
+await ctxT.close();
 }

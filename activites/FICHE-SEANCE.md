@@ -40,7 +40,7 @@ séance**, le **`meta`** (la déclaration, voir plus bas) ; puis les **options**
 | `meta` | `corrige` | `./contenus/corriges/<code>.js` ; `corrige: false` = pas de corrigé (ENT-5.3), la clé disparaît |
 | moteur | `ENTREPRISE`, `VOCAB`, `CATALOGUE`, `SUPPLIERS`, `SUP_BY_ID`, `CUSTOMERS`, `CM`, `baseDeDepart`, `THEME` | l'univers (les neuf sont exigées) |
 | moteur | `couleurs`, `livraisons` (facultatives) | l'univers, puis le contenu de la séance, puis les options ; absentes, elles ne font rien refuser |
-| moteur | `etapes`, `accueil`, `volet` | `SEANCE.ETAPES` (exigée), `SEANCE.ACCUEIL`, `SEANCE.VOLET` |
+| moteur | `etapes`, `accueil`, `volet`, `tirage` | `SEANCE.ETAPES` (exigée), `SEANCE.ACCUEIL`, `SEANCE.VOLET`, `SEANCE.TIRAGE` (tirage mémorisé, 09/10/2026) |
 | moteur | `copie` | `meta.copie` |
 | moteur | `trame: { pdf, docx }` (liens du bandeau) | `./contenus/trames/<code>-<nom>-trame-eleve.pdf` / `.docx`, où `<nom>` est écrit **une fois** dans `meta.trame` (`trame: 'picard-deux-camions'`) : il ne se déduit pas de l'`id`. Sans `meta.trame`, pas de trame. `meta.trame` n'est pas dans le `meta` rendu. |
 
@@ -119,7 +119,7 @@ plan d'entrepôt, fiche, animation) sans `id` texte non vide, sont refusées aus
 | `animations` | tableau | Plusieurs animations (rare). | essais seulement |
 | `questions` | objet | Questions au fil et points d'étape (voir « Questions au fil »). | essais seulement (aucune séance ne la passe encore) |
 | `equipe` | objet | Personnes citées par les questions, en plus de `questions.personnes`. | aucune séance, aucun essai |
-| `tirage` | (sans contrôle de type) | Vrai = jeu tiré par élève même sans quai ni inventaire tiré : la graine est posée et inscrite dans le détail de la note. | aucune séance, aucun essai |
+| `tirage` | (sans contrôle de type) | **Tirage mémorisé** : la déclaration `declarerTirage({ banques, … })`, que la fabrique prend dans `SEANCE.TIRAGE` (voir « Tirage mémorisé et banques »). Ou vrai (forme d'avant) = jeu tiré par élève même sans quai ni inventaire tiré : la graine est posée et inscrite dans le détail de la note. | `contenus/tirage-essai.js` (essai seulement) |
 | `seanceFinie` | fonction | `(db) → booléen` : la séance est finie sans jalon faux (ENT-5.6 : préparation terminée et vérifiée). | `activites/smoby-preparation.js` |
 | `finFige` | texte | Phrase du bandeau de fin quand une case fausse ne se rouvre plus (ENT-5.4 : le BL est signé). | `activites/smoby-reception.js` |
 | `reponsesFournisseur` | tableau de fonctions | `(corps, fournisseur, db, prénom) → réponse` ; la première qui rend quelque chose remplace la réponse automatique du fournisseur. | `activites/spartoo.js` |
@@ -519,6 +519,65 @@ Pour les jalons : `resultatDepot(db, 'analyse')` → `{ depose, essais, at, cont
 
 Page d'essai : `outils/essai-tableur.html` ; tests : bloc `tableur-export` (fichiers témoins Excel et
 LibreOffice dans `outils/test/fichiers/`).
+
+## Tirage mémorisé et banques — `core/tirage.js` (chantier D-C, 09/10/2026)
+
+Pour qu'un élève ne recopie pas son voisin, une séance de guidage ou d'entraînement (ou une évaluation nouvelle) donne à
+chacun **une pièce fixe** (le fil conducteur, la même pour tous, même résultat attendu) et **des pièces tirées** dans une
+**banque**, selon un **mélange de difficultés fixe** (la note reste juste d'un élève à l'autre). Un élève **confirmé**
+reçoit en plus des **cas bonus**. Le tirage est **rangé** dans la base à la première ouverture et **n'est jamais refait** :
+recharger, changer de poste, enrichir la banque, changer le mélange ne change rien pour un élève qui a déjà ouvert la séance.
+Brief : `docs/briefs/MOTEUR-tirage-et-niveaux.md` ; séance d'essai : `contenus/tirage-essai.js` ; tests : bloc `tirage-niveaux`.
+
+Dans le **contenu** de la séance (la fabrique le passe au moteur, option `tirage`) :
+
+```js
+import { declarerTirage } from '../core/tirage.js';
+export const TIRAGE = declarerTirage({
+  banques: {
+    cv: {
+      pieces: [                                       // JAMAIS de pièce supprimée ni renumérotée (test « banque stable »)
+        { id: 'cv-yanis', titre: '…', attendu: 'retenir' },             // la pièce fixe (sans difficulté)
+        { id: 'cv-07', difficulte: 'facile', … },                       // 'facile' | 'moyen' | 'difficile'
+        { id: 'cv-12', difficulte: 'difficile', retiree: true, … },     // retirée : plus tirée, gardée pour qui l'a reçue
+      ],
+      fixes: ['cv-yanis'],                             // donnée(s) à tous
+      melange: { facile: 1, moyen: 2, difficile: 1 },  // le socle
+      bonus: { confirme: { moyen: 1, difficile: 1 } }, // cas en plus du confirmé (absent = pas de bonus)
+      ordre: 'melange',                                // 'melange' (ordre tiré, pièce fixe à une place tirée) ou 'fixe'
+    },
+  },
+  valeurs: (h) => ({ quantite: h.entier(6, 12), prix: h.dixieme(1.5, 3) }),   // facultatif, tiré puis rangé
+  verifier: (jeu) => [],     // écarts d'équité en clair sur { pieces: { cv: [pièces] }, bonus, valeurs } ; [] = conforme
+});
+```
+
+Les jalons lisent **`TIRAGE.piecesTirees(db, 'cv')`** (le socle, dans l'ordre de l'élève), **`TIRAGE.piecesBonus(db, 'cv')`**
+(vide chez un standard, un accompagné, et en évaluation) et **`TIRAGE.valeursTirees(db)`**. Le moteur :
+- graine = identifiant de l'élève + `|` + id de la séance (deux séances d'un même scénario ne tirent pas pareil) ;
+- tire à la première ouverture, **après** avoir figé `db.aisance` et **avant** le volet, re-tire si `verifier` rend des écarts
+  (`#1`, `#2`…, 40 essais), sinon donne le **secours** (premières pièces de chaque difficulté, dans l'ordre de la banque) :
+  jamais d'élève sans jeu. Rangé dans `db.tirages[<id séance>] = { graine, pieces, bonus?, difficultes, valeurs?, essai,
+  secours, at }` ; les valeurs sont tirées à part (un confirmé a les mêmes valeurs et le même socle qu'un standard) ;
+- une pièce rangée **introuvable** dans la banque : remplacée par une pièce de même difficulté (`remplacees`), la séance continue ;
+- **bonus** seulement si `db.aisance === 'confirme'`, jamais en évaluation (`copie`) ; « Réinitialiser » efface le tirage avec
+  le reste et le refait aussitôt (même graine, donc mêmes pièces si la banque n'a pas changé).
+
+La fabrique **refuse** une déclaration fautive (id en double, pièce fixe absente, difficulté inconnue, plus de pièces
+demandées que la banque n'en a, socle et bonus compris) et une séance qui tire des cas bonus sans
+`meta.niveauxPrevus: ['confirme']`. **Une banque nouvelle s'inscrit dans `BANQUES_FIGEES`** (`outils/test/tirage-niveaux.mjs`),
+sinon la suite tombe ; un id qui disparaît la fait tomber aussi (marquer `retiree: true`).
+
+**Consigne neutre** (le niveau est caché à l'élève) : la consigne ne compte pas les pièces (« trie les CV reçus », pas
+« trie les 5 CV ») et ne numérote rien qui trahirait 7 pièces au lieu de 5. C'est à la séance de l'écrire ainsi.
+
+**Corrigé** : le fichier de corrigé exporte `corrigeEleve(base)` et peut renvoyer
+`corrigeDuTirage(TIRAGE, base, { attendu: (piece, valeurs) => '…', titre, texte })` : l'onglet Corrigés propose de choisir
+un élève et montre ses valeurs, ses pièces avec ce qu'attend la fiche, et ses cas bonus marqués « bonus ». Un fichier qui
+n'exporte que `corrigeEleve` (sans `CORRIGE` fixe) est accepté.
+
+Les évaluations ENT-4.4 et ENT-2.5 (`quai` / `inventaire` fonctions de la graine, `tirerJeu`) gardent leur mécanisme : ne pas
+les migrer.
 
 ## Inventaire tiré par élève (évaluation)
 

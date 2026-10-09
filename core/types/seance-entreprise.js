@@ -40,6 +40,7 @@
 // n'est pas un nom (la forme `{ pdf, docx }` se passe en `options`).
 
 import { creerEntreprise } from './entreprise.js';
+import { estTirage, fautesTirage, aDesBonus } from '../tirage.js';
 
 // Les neuf clés qui décrivent l'entreprise et que `creerEntreprise` exige.
 export const CLES_UNIVERS = ['ENTREPRISE', 'VOCAB', 'CATALOGUE', 'SUPPLIERS', 'SUP_BY_ID', 'CUSTOMERS', 'CM',
@@ -104,12 +105,26 @@ export function composerSeance(UNIVERS, SEANCE, meta, options = {}) {
   opts.etapes = SEANCE.ETAPES;
   if (SEANCE.ACCUEIL !== undefined) opts.accueil = SEANCE.ACCUEIL;
   if (SEANCE.VOLET !== undefined) opts.volet = SEANCE.VOLET;
+  // Le tirage mémorisé (chantier D-C, lot 2) : `export const TIRAGE = declarerTirage({ … })` dans le contenu de la séance.
+  if (SEANCE.TIRAGE !== undefined) opts.tirage = SEANCE.TIRAGE;
   if (complet.copie !== undefined) opts.copie = complet.copie;
   if (slug) {
     const base = `./contenus/trames/${meta.code}-${slug}-trame-eleve`;
     opts.trame = { pdf: `${base}.pdf`, docx: `${base}.docx` };
   }
   Object.assign(opts, options);
+
+  // Un tirage déclaré : sans faute, lié à CETTE séance, et une séance qui tire des cas bonus déclare le niveau confirmé.
+  const T = opts.tirage;
+  if (T && typeof T === 'object' && (estTirage(T) || T.banques)) {
+    const decl = estTirage(T) ? T.decl : T;
+    const fautes = fautesTirage(decl);
+    if (fautes.length) refus(`le tirage : ${fautes.join(' ; ')}`);
+    if (aDesBonus(decl) && !(Array.isArray(complet.niveauxPrevus) && complet.niveauxPrevus.includes('confirme'))) {
+      refus('le tirage prévoit des cas bonus du confirmé : le meta doit déclarer « niveauxPrevus: [\'confirme\'] ».');
+    }
+    if (estTirage(T)) { try { T.lier(id); } catch (e) { refus(e.message); } }
+  }
 
   return { meta: complet, options: opts };
 }

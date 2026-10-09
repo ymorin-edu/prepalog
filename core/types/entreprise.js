@@ -26,7 +26,7 @@ import { creerFiche } from './fiche.js';
 import { compilerQuestions, etapesQuestions, reponse, repondu, etapeArrivee, etapeFaite, htmlQuestion, htmlPanneau, htmlEtape,
   appel, CLE_ETAPES } from './questions.js';
 import { creerGesteTableur, retourDeTemps } from './export-tableur.js';
-import { graineDeBase, poserGraine } from '../tirage.js';
+import { graineDeBase, poserGraine, declarerTirage, estTirage, fautesTirage } from '../tirage.js';
 import { gestesDe } from '../declencheurs.js';
 import { preparerPhrases } from '../phrases.js';
 import { brancherLexique, compterAide } from '../lexique.js';
@@ -59,6 +59,14 @@ export function creerEntreprise(U) {
   // la séance de se charger. Le moteur ajoute lui-même un jalon par question notée (poids pris dans la `part`).
   const MQ = U.questions ? compilerQuestions(U.questions, U.equipe) : null;
   const etapes = MQ ? etapesSeance.concat(etapesQuestions(MQ)) : etapesSeance;
+  // Le TIRAGE MÉMORISÉ et ses banques (chantier D-C, lot 2, `core/tirage.js`) : `tirage` déclaré par `declarerTirage`
+  // (ou un objet `{ banques, … }`). `tirage: true` garde son sens d'avant (graine posée, sans banques). Une déclaration
+  // fautive empêche la séance de se charger, comme une option inconnue.
+  const TIR = U.tirage && typeof U.tirage === 'object' && (estTirage(U.tirage) || U.tirage.banques) ? declarerTirage(U.tirage) : null;
+  if (TIR) {
+    const fautes = fautesTirage(TIR.decl);
+    if (fautes.length) throw new Error(`tirage : ${fautes.join(' ; ')}`);
+  }
 
   // Une entreprise porte plusieurs séances, qui partagent son univers mais pas leur consigne.
   // `exercice` (la ligne sous « Bonjour {prénom} ») et `accueil` (la marche à suivre) sont
@@ -285,7 +293,7 @@ export function creerEntreprise(U) {
     if (db && db.aisance === 'confirme') detail.niveau = 'confirmé';
     else if (db && db.aisance === 'accompagne') detail.niveau = 'accompagné';
     // Un jeu tiré par élève (inventaire tiré, ou `tirage: true`) : la graine, pour retrouver son jeu.
-    if (INV_TIRE || U.tirage) detail.graine = graineDeBase(db);
+    if (INV_TIRE || (U.tirage && !TIR)) detail.graine = graineDeBase(db);
     // Le repérage de l'élève (2de, lot 6) : temps, aides ouvertes, jalons réussis du premier coup,
     // par séance. Lu par l'enseignant seul, dans le suivi de classe ; jamais montré à l'élève.
     if (db && db.indicateurs) detail.indicateurs = db.indicateurs;
@@ -357,6 +365,9 @@ export function creerEntreprise(U) {
         hote.innerHTML = `<div class="avis avis-err">Les questions déclarent la séance « ${ech(MQ.id)} », mais cette séance est « ${ech(ctx.meta.id)} ».</div>`;
         return;
       }
+      if (TIR) {
+        try { TIR.lier(ctx.meta.id); } catch (x) { hote.innerHTML = `<div class="avis avis-err">Tirage : ${ech(x.message)}</div>`; return; }
+      }
       if (ctx.meta.portee !== 'eleve') {
         hote.innerHTML = `<div class="avis avis-err">Un environnement d'entreprise doit être de portée « eleve ».</div>`;
         return;
@@ -421,11 +432,17 @@ export function creerEntreprise(U) {
       // Jeu tiré par élève (quai, inventaire, ou `tirage: true` pour une séance qui ne tire que ses
       // données) : la graine (son identifiant) posée une fois pour toutes, AVANT le volet — qui peut
       // la lire — puis son quai et son inventaire.
-      if (QUAI_TIRE || INV_TIRE || U.tirage) {
+      if (QUAI_TIRE || INV_TIRE || (U.tirage && !TIR)) {
         if (poserGraine(db, ctx.profil.uid || prenom)) ctx.jeu.sauver();
         if (QUAI_TIRE) VQUAI = quaiDeBase(db);
         if (INV_TIRE) VINV = invDeGraine(graineDeBase(db));
       }
+      // TIRAGE MÉMORISÉ (chantier D-C, lot 2, `core/tirage.js`) : à la première ouverture, APRÈS avoir figé `db.aisance`
+      // et AVANT le volet (qui peut lire les pièces), le tirage de l'élève est fait puis RANGÉ dans
+      // `db.tirages[<séance>]` ; ensuite il n'est jamais refait (une pièce devenue introuvable est remplacée). Bonus
+      // seulement pour un confirmé, jamais en évaluation. La graine : l'identifiant de l'élève + l'id de la séance.
+      const assurerTirage = () => TIR && TIR.assurer(db, { uid: ctx.profil.uid || prenom, aisance: db.aisance, copie: COPIE });
+      if (assurerTirage()) ctx.jeu.sauver();
 
       // Le volet de la séance. Chaque activité sème le sien une seule fois, sans toucher au
       // reste : un élève qui a fait la réception la semaine dernière retrouve son stock, et
@@ -1487,6 +1504,8 @@ export function creerEntreprise(U) {
         // Le menu replié est un réglage d'écran, pas du travail.
         if (menuReplie) db.menuReplie = true;
         normaliserBase();
+        // Le tirage part avec le reste (comme avant) ; il est refait aussitôt, de la même graine.
+        assurerTirage();
         semerVolet();
         E.vue = 'accueil'; E.mailSel = null; E.no = null;
         sauver(); dessiner(); toast('Base réinitialisée.');

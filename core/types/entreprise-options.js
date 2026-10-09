@@ -64,7 +64,7 @@ export const OPTIONS = {
   couleurs: { type: 'object', role: 'noms et teintes des couleurs des variantes : { code: [nom, teinte] } (sans elle, pas de pastille)' },
   livraisons: { type: 'object', role: 'modes de livraison des commandes : { code: [libellé, prix du port] } (code inconnu : le code lui-même, port 0)' },
   // — Fin de séance, réponses —
-  tirage: { role: 'vrai = jeu tiré par élève même sans quai ni inventaire tiré (la graine est posée et notée)' },
+  tirage: { role: "tirage mémorisé : une déclaration `declarerTirage({ banques, valeurs, verifier })` (core/tirage.js, chantier D-C) ; ou vrai = jeu tiré par élève sans quai ni inventaire tiré (graine posée et notée)" },
   seanceFinie: { type: 'function', role: '(db) → vrai quand la séance est finie sans jalon faux (ENT-5.6)' },
   finFige: { type: 'string', role: 'phrase du bandeau de fin quand une case fausse ne se rouvre plus' },
   reponsesFournisseur: { type: 'array', role: 'fonctions (corps, fournisseur, db, prénom) → réponse qui remplace l\'automatique' },

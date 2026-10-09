@@ -318,4 +318,31 @@ Aucune à ce jour (toutes tranchées le 08/10). Si un point contredit le code : 
   « un élève ne peut pas changer ses propres réglages » (lit `niveaux['2']`), « l'enseignant décoche… » (attend
   « standard » dans le quiz).
 - **Reste ouvert** : « proposer Accompagné » (porte ouverte, pas de code) ; la lecture de la règle ci-dessus.
+- **Commit** : d63d9e0.
+
+### Lot 2 — tirage mémorisé et banques (09/10/2026, Claude Code, chantier D-C)
+
+- **Fichiers** : `core/tirage.js` (ajout : `declarerTirage`, `fautesTirage`, `aDesBonus`, `estTirage`, `corrigeDuTirage`,
+  `DIFFICULTES` ; `tirerJeu` et le reste inchangés) ; `core/types/entreprise.js` (option `tirage` = une déclaration : liée à
+  la séance, tirée et rangée à l'ouverture après `db.aisance`, avant le volet ; refaite après « Réinitialiser ») ;
+  `core/types/seance-entreprise.js` (prend `SEANCE.TIRAGE`, refuse une banque fautive et des bonus sans
+  `niveauxPrevus: ['confirme']`) ; `core/types/entreprise-options.js` (rôle de `tirage`) ; `core/prof.js` (Corrigés : cas
+  bonus marqués « bonus », un fichier de corrigé sans `CORRIGE` fixe accepté) ; `contenus/tirage-essai.js` (séance
+  d'essai, nouvelle : tri de CV, banque de 15) ; `outils/test/tirage-niveaux.mjs` (+10 cas) ; `activites/FICHE-SEANCE.md`
+  (section « Tirage mémorisé et banques », `niveauxPrevus`, option `tirage`, consigne neutre).
+- **Écarts / décisions techniques** : la séance déclare `export const TIRAGE = declarerTirage({ … })` (le brief écrivait
+  un objet `tirage: { … }` : un objet nu est aussi accepté par le moteur, mais les jalons ont besoin des outils, d'où la
+  déclaration). Les outils sont des méthodes : `TIRAGE.piecesTirees(db, 'cv')`, `TIRAGE.piecesBonus(db, 'cv')`,
+  `TIRAGE.valeursTirees(db)`. Le tirage rangé porte en plus `difficultes` (pour remplacer une pièce introuvable par une de
+  même difficulté) et `secours`. Les **valeurs** sont tirées par un générateur à part, et les bonus après le socle : un
+  confirmé a **le même socle et les mêmes valeurs** qu'un standard de même graine. Ordre `'fixe'` : pièce fixe en tête,
+  puis l'ordre de la banque. Le corrigé enseignant passe par le mécanisme d'ENT-4.4 (`corrigeEleve(base)` du fichier de
+  corrigé), aidé de `corrigeDuTirage`. ENT-4.4 et ENT-2.5 non migrées.
+- **Tests** : bloc 20/20 (équité sur 300 graines, mémorisation avec banque enrichie de 10 pièces + mélange changé +
+  rechargement + autre page + 12 élèves, « Réinitialiser », pièce introuvable, accompagné = standard, évaluation sans bonus,
+  refus de la fabrique, banques figées, onglet Corrigés de bout en bout). Dix sabotages, chacun fait tomber au moins un
+  cas (tirage refait à chaque ouverture, bonus en évaluation, bonus à l'accompagné, remplacement retiré, pièce fixe oubliée,
+  mélange ignoré, graine sans la séance, marque « bonus » du corrigé, contrôle `niveauxPrevus`, « Réinitialiser » sans
+  tirage). Suite entière **946/946** (936 + 10).
+- **Reste ouvert** : aucune vraie séance ne déclare encore de tirage (ENT-6.x à venir).
 
