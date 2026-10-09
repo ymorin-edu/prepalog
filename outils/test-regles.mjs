@@ -506,6 +506,28 @@ await v("chantier 16 : ce qui reste — l'élève inscrit lit la base de son gro
   await assertSucceeds(dbDe('e3').ref('classements/entr-conversions').once('value'));
 });
 
+// ---------- 15 ter. `meta/ouvert/{table}` : le semis de l'enseignant ouvre l'écriture partagée (chantier 16, 09/10/2026)
+// La table `stock` du magasin déclare `ecriture: 'tous'`. Le semis (`jeu.semer`, bouton « Semer » de l'enseignant) écrit
+// `meta: { semeLe, ouvert: { stock: 'tous' } }` en UNE mise à jour : ce cas rejoue exactement cette forme. Sans `ouvert`, la
+// ligne semée par l'enseignant (`_par` = lui) n'est pas modifiable par un élève ; avec, elle l'est. L'élève, lui, ne peut pas
+// écrire `meta` : sinon il s'ouvrirait lui-même les tables des autres.
+await v("chantier 16 : l'enseignant sème une ligne de stock (sa clé `_par`)", () =>
+  assertSucceeds(dbDe('prof1').ref('jeux/g1/magasin/stock/L1').set(ligne('prof1', 'Prof'))));
+await v("chantier 16 : sans `meta/ouvert`, un élève ne modifie pas la ligne semée par l'enseignant", () =>
+  assertFails(dbDe('e1').ref('jeux/g1/magasin/stock/L1').update({ nom: 'Autre' })));
+await v("chantier 16 : un élève n'écrit pas `meta/ouvert` (il ne s'ouvre pas la table lui-même)", () =>
+  assertFails(dbDe('e1').ref('jeux/g1/magasin/meta').update({ ouvert: { stock: 'tous' } })));
+await v("chantier 16 : l'enseignant du groupe écrit `meta` comme le semis le fait (semeLe + ouvert)", () =>
+  assertSucceeds(dbDe('prof1').ref('jeux/g1/magasin/meta').update({ semeLe: 1700000000000, ouvert: { stock: 'tous' } })));
+await v("chantier 16 : avec `ouvert.stock = 'tous'`, l'élève du groupe modifie la ligne semée", () =>
+  assertSucceeds(dbDe('e1').ref('jeux/g1/magasin/stock/L1').update({ nom: 'Ajusté' })));
+await v("chantier 16 : l'ouverture ne vaut que pour la table nommée — une ligne d'une autre table reste fermée", async () => {
+  await assertSucceeds(dbDe('prof1').ref('jeux/g1/magasin/produits/L1').set(ligne('prof1', 'Prof')));
+  await assertFails(dbDe('e1').ref('jeux/g1/magasin/produits/L1').update({ nom: 'Autre' }));
+});
+await v("chantier 16 : l'ouverture ne sort pas du groupe — un élève d'un autre groupe ne modifie rien", () =>
+  assertFails(dbDe('e3').ref('jeux/g1/magasin/stock/L1').update({ nom: 'Intrus' })));
+
 // ---------- 15 bis. les classements de quiz (02/10/2026)
 // Les quiz d'entraînement (QUI-8 et suivants) rangent leur classement sous
 // `classements/{activité}/{uid}`, commun à toutes les classes. C'est la SEULE écriture
@@ -919,5 +941,12 @@ process.exit(ko.length ? 1 : 0);
 //     → tombent « un élève ne lit plus `communs/` », « un enseignant global n'écrit plus dans `communs/` » et « personne ne
 //       lit le miroir `acces/g1` » (164/167). « un élève n'écrit pas dans `communs/` » ne tombe pas : il était déjà vrai.
 //     Le cas « ce qui reste » tient les deux moitiés : il tomberait si on retirait `jeux/` avec le reste.
+//  10. database.rules.json (chantier 16), `jeux/$gid/$cle/$table/$ligne` `.write` : retirer la branche `meta/ouvert/$table === 'tous'`
+//     → tombent « avec `ouvert.stock = 'tous'`, l'élève du groupe modifie la ligne semée » et le cas d'avant le chantier
+//       « un élève récrit la ligne d'un autre si la table est ouverte à tous » (172/174). Remplacer la branche par `true`
+//       → tombent « sans `meta/ouvert`… » et « l'ouverture ne vaut que pour la table nommée » (172/174). Remplacer le `.write`
+//       de `meta` par `auth != null` → tombent « un élève n'écrit pas `meta/ouvert` » et « un élève ne gèle pas la séance
+//       lui-même » (172/174). Hors de portée : retirer ce `.write` de `meta` ne fait rien tomber, l'enseignant écrit `meta`
+//       par le `.write` de `jeux/$gid` plus haut.
 //  Hors de portée : le `size() > 0` de `responsableDe` et de la règle de groupe. Il ne change que la nature du
 //  refus sur une liste vide (erreur d'évaluation ou `false`, les deux refusent).

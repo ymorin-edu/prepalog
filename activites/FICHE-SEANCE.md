@@ -411,7 +411,7 @@ l'élève à chaque envoi **corrigé** (deuxième envoi et suivants), sans rejou
 | Champ | Contenu | À savoir |
 |---|---|---|
 | `jeuId` | `'boost'` | Plusieurs séances travaillent dans **la même base**. Les scores restent par séance. Sans `jeuId`, la base porte l'`id`. |
-| `tables` | `{}` ou `{ resultats: {} }` | Tables de la base. Vides pour une séance d'entreprise, qui range tout dans sa base. |
+| `tables` | `{}` ou `{ resultats: {} }` | Tables de la base. Vides pour une séance d'entreprise, qui range tout dans sa base. Une table d'une base de **groupe** peut déclarer `ecriture: 'tous'` (le stock du magasin) : le bouton « Semer » de l'enseignant écrit alors `meta/ouvert/{table} = 'tous'` dans la base (`core/store.js`, `semer`), ce que la règle de la Realtime Database exige pour qu'un élève du groupe modifie la ligne d'un autre (chantier 16, 09/10/2026). **Limite connue** : l'écran `core/types/tableau.js` ne lit pas `ecriture` (`peutModifier` : l'élève ne voit « Modifier » que sur les lignes qui portent son `_par` : ses propres lignes en réel, aucune en démo, qui n'écrit pas `_par`), donc l'ouverture n'a d'effet visible que si cet écran la lit un jour. Une table jamais semée garde la règle par défaut (chacun modifie ses lignes). |
 | `reinitialisable` | `false` | Bouton « Réinitialiser » d'une séance d'entreprise. Mettre `false` quand la base est partagée avec d'autres séances (X.2, X.3…). |
 | `parcours` | `true` | La séance fait partie d'un parcours strict. |
 | `precedente` | `'<id>'` | Avec `parcours` : la séance qui doit être validée avant. Absent sur la première. Sa validation range une **photo** du travail, qui sert de point de reprise. |

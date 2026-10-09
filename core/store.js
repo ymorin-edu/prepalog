@@ -138,7 +138,13 @@ function jeuPartage(portee, chemin, tables) {
         await B.viderTable(chemin, t);
         for (const l of graines[t]) await B.ajouterLigne(chemin, t, l);
       }
-      await B.majMeta(chemin, { semeLe: Date.now() });
+      // Tables à écriture partagée (`ecriture: 'tous'` dans la déclaration de la table, ex. le stock du magasin) :
+      // la règle de la Realtime Database n'ouvre la ligne d'un autre qu'à `meta/ouvert/{table} = 'tous'`, que seul l'enseignant
+      // peut écrire (`jeux/{gid}/{cle}/meta`). Le semis est l'écriture qu'il fait, et la seule : ce moment-là est toujours celui
+      // d'un enseignant (le bouton « Semer » de son espace), jamais celui d'un élève. Une table non semée garde la règle par défaut.
+      const ouvert = {};
+      Object.keys(tables || {}).forEach((t) => { if (tables[t] && tables[t].ecriture === 'tous') ouvert[t] = 'tous'; });
+      await B.majMeta(chemin, { semeLe: Date.now(), ...(Object.keys(ouvert).length ? { ouvert } : {}) });
     },
     meta,
     ecouterMeta(cb) { const stop = B.ecouterMeta(chemin, cb, (e) => signalerEchec('lecture', e)); arrets.push(stop); return stop; },
