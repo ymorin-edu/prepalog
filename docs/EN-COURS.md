@@ -7,7 +7,6 @@ est déjà modifié ou inscrit ci-dessous, **elle s'arrête et le dit à Tristan
 
 | Chantier | Fichiers qu'il touche | Depuis |
 |---|---|---|
-| Chantier 11, lot 11b — règles | `firestore.rules`, `database.rules.json` (option), `outils/test-regles.mjs`, `core/collegues.js`, `core/backend-firebase.js`, `core/backend-demo.js`, `core/prof.js`, `outils/test/groupes.mjs`, docs | 09/10/2026 |
 
 Rappel : un seul chantier à la fois dans `core/types/tournee.js`, `core/types/grille.js`,
 `core/types/entreprise.js`, `styles/base.css` et `outils/test/boost.mjs` (voir `docs/briefs/COORDINATION-boost.md`).

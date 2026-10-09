@@ -1,6 +1,6 @@
 # Brief de chantier moteur — MOTEUR-plusieurs-enseignants : un collègue sans risque pour ta classe (chantier 11, audit C7)
 
-**Statut** : en cours (11a livré le 09/10/2026) *(à valider → en cours → livré)*
+**Statut** : livré (11a et 11b le 09/10/2026) ; **reste à publier les règles dans les consoles Firestore et Realtime Database** *(à valider → en cours → livré)*
 **Date** : 08/10/2026 — cadrage Opus (lecture seule), d'après le dépôt au commit `a3961c5`.
 **Modèle** : **Sonnet** pour les deux lots (11a puis 11b).
 **Fichiers** : `core/backend-firebase.js`, `core/backend-demo.js`, `core/prof.js` ; lot 11b : `firestore.rules`
@@ -235,3 +235,21 @@ de suppression qui protègent ta classe, à garder en priorité.
 
 **Pour le lot 11b** : écrire dans `firestore.rules` la suppression d'un profil d'élève réservée à son auteur (`creePar`) ou sans auteur, ou au responsable de son groupe (extrait du §3) ; la suppression d'un groupe réservée au responsable ; en option, `acces/{gid}` créé par `profsGlobaux` mais réécrit seulement par ses inscrits. Les cas du §4 marqués « lot 11b » sont à écrire avec leur régression volontaire. Le code de 11a ne tente déjà plus rien de ce que 11b interdit.
 
+### Lot 11b (09/10/2026, Claude Code sous Fable, sur délégation de Tristan)
+
+**Commits** : `8ba2042` (correction du 11a), `794682c` (ses deux cas Playwright), `af1d707` (`firestore.rules`), `6191913` (`database.rules.json`), `df28f48` (19 cas d'émulateur), `0e17ef3` (message de « Reconstruire l'accès »), puis le commit de documentation.
+
+**À PUBLIER (action de Tristan)** : la console **Firestore** (coller le fichier `firestore.rules` entier) et la console **Realtime Database** (coller `database.rules.json` **sans** le bloc `_commentaire`). Tant que ce n'est pas fait, rien ne casse : le code du lot 11a ne tente déjà plus rien de ce que les règles interdisent.
+
+**Construit** : (1) `firestore.rules` : `allow delete` d'un profil d'élève = auteur (`creePar`), ou sans auteur, ou responsable du premier groupe ; `allow delete` d'un groupe = `profs[0]` seul. (2) Option RTDB **prise** : `acces/$gid` `.write` = (global ET nœud absent) OU inscrit ; les cas 13 et 15 quater existants restent verts. (3) **Correction du 11a** : `etatGroupe(gid)` (`mien`, `autre`, `absent`) dans les deux backends ; `gardeSuppressionEleve` reçoit `etrangers` (les groupes cités par le profil qui existent chez un collègue) ; la démo nomme comme le réel un groupe disparu dans ce qui reste ; `prof.js` demande l'état des groupes étrangers avant d'afficher « Supprimer » ou « Retirer du groupe ». (4) Le message de « Reconstruire l'accès » dit désormais que, pour un co-enseignant, c'est le responsable qui reconstruit.
+
+**Suite Playwright entière : 910/910** (avant le push). **Cas** : 19 cas d'émulateur en fin de `outils/test-regles.mjs` (145 → 164, tous verts) ; 3 cas Playwright en fin de `outils/test/groupes.mjs` (39 k, 39 l, ménage 39 m). **Régressions volontaires jouées** (procédure 6 à 8 en fin de `test-regles.mjs`) : sans la branche « responsable » 163/164 ; `creePar` remplacé par `true` 157/164 ; sans la branche `creePar` 158/164 (tombe aussi le cas existant « un enseignant supprime le profil d'un élève », e9) ; suppression de groupe rendue à `profDuGroupe` 161/164 ; à `false` 162/164 (tombe aussi le cas existant « un enseignant supprime son groupe ») ; RTDB ancienne règle 163/164 ; RTDB sans la branche globale 161/164 (tombent aussi les cas 13 et 15 quater). Côté Playwright : l'ancienne garde fait tomber 39 k, une garde qui ne bloque jamais fait tomber 39 l, `etatGroupe` rendant toujours `absent` fait tomber les deux.
+
+**Écarts au cadrage** :
+- Le point 0 (correction du 11a) n'était pas dans le cadrage : la garde du 11a avait perdu la décision du chantier 6 (un groupe disparu n'arrête plus la suppression). Corrigée, avec deux cas.
+- Un élève **sans auteur** reste supprimable par **tout** enseignant, y compris un enseignant étranger (comportement d'avant, demandé par le cadrage pour `e9`) : c'est volontairement le seul trou, il concerne les élèves créés à la console. Le test joue un co-enseignant ; pour l'étranger c'est la règle qui le dit, non jouée à part.
+- Si le **premier groupe** d'un élève a disparu, seul son auteur le supprime (la règle n'a plus de responsable à trouver) ; la garde du code dit la même chose.
+- Un co-enseignant **global** dont l'inscription au miroir RTDB a échoué ne peut plus reconstruire l'accès lui-même (conséquence de l'option RTDB) : le responsable le fait ; le message de refus l'explique.
+- **Aucun ancien cas ne tombe** et aucun n'a été réécrit : les cas existants qui touchent aux règles nouvelles (e9, 13, 15 quater, « un enseignant supprime son groupe ») restent verts.
+
+**Non vérifié** : le mode réel dans le navigateur (le chemin Firebase n'est joué que par l'émulateur et les règles ; la logique de garde, partagée, l'est en démonstration). Le comportement des règles publiées dans la vraie console n'est évidemment pas joué avant publication.

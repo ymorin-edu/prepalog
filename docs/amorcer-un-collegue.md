@@ -1,6 +1,6 @@
 # Ajouter un collègue enseignant — la procédure en une page
 
-*Chantier 11, lot 11a (09/10/2026). Rien à publier dans les règles pour cette procédure : elle s'appuie sur les règles actuelles.*
+*Chantier 11, lots 11a et 11b (09/10/2026). La procédure elle-même ne change pas avec les règles du lot 11b.*
 
 Un collègue peut avoir deux rôles, et **ce n'est pas la même chose** :
 
@@ -39,4 +39,4 @@ Le responsable est le premier de la liste `profs` du groupe, et rien dans le sit
 - Deux enseignants qui créent chacun « 1L1 » ont chacun le leur : le second reçoit en interne un identifiant suffixé (`1l1-ab12cd`), mais les deux s'affichent « 1L1 ». Dans la liste, un groupe qui n'est pas le tien porte « groupe de *Prénom Nom* ».
 - Les élèves « sans groupe » sont rangés par auteur : chacun voit ceux qu'il a créés, et ceux qui n'ont pas d'auteur (créés à la console, étiquetés « créé hors du site »).
 - Deux comptes élèves ne peuvent pas avoir le même matricule sur tout le site : le second reçoit *« Ce matricule est déjà utilisé »*.
-- Les règles de sécurité ne sont pas encore resserrées entre enseignants (lot 11b) : l'équipe est de confiance, c'est le site qui protège de l'erreur.
+- Les règles de sécurité font ceinture entre enseignants (lot 11b, **une fois publiées dans la console**) : un élève ne se supprime que par son auteur ou par le responsable de son groupe, un groupe que par son responsable, et le miroir des bases partagées d'un groupe ("Reconstruire l'accès") n'est réécrit que par les enseignants qu'il cite. Un collègue ajouté qui est lui-même global et dont l'accès n'a pas pu être écrit ne peut pas se reconstruire l'accès seul : c'est le responsable qui clique. La lecture de tous les profils par tout enseignant reste ouverte : l'équipe est de confiance.

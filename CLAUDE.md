@@ -227,6 +227,7 @@ modifier une séance**, et la corriger si le code a changé.
   Supprimer l'élève **avant** le groupe. L'ordre d'effacement de `supprimerGroupe()` (le miroir
   `acces/{gid}` part en dernier) ne doit pas être cassé.
 - Ne jamais tester contre le vrai projet des élèves.
+- Entre enseignants (chantier 11, règles publiées) : un profil d'élève ne se supprime que par son auteur (`creePar`), un enseignant s'il n'a pas d'auteur, ou le responsable (`profs[0]`) de son premier groupe ; un groupe, que par son responsable ; le miroir `acces/{gid}` se crée par `profsGlobaux` mais ne se réécrit que par ses inscrits. La garde du code (`core/collegues.js`) passe avant les règles.
 
 ## Git — Claude s'en occupe
 
