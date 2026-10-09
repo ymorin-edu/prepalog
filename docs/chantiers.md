@@ -36,7 +36,7 @@
 | 13 | Tests : compteurs en dur, cas vides, `ATTENDU` complété, doublons | C10b | moyen | Sonnet | non (tests) | — | **livré** (09/10, 06f57c6 à 03eb63e) |
 | 14 | Doublons des vues (`ech`, étapes, note, palette, confirmation, mélange, focus) | C11 | moyen | Sonnet | oui | 9 avancé | **livré** (09/10, f3cec57 à d637118) |
 | 15 | Couleurs en dur et `base.css` fourre-tout | C12 | petit à moyen | Sonnet | `styles/` + vues | — | **livré** (09/10, 6e52000 à fe50e77) |
-| 16 | Champs `meta`, portées et options morts | C14 | petit | Sonnet | oui | décision 14 (cœur) | à faire |
+| 16 | Champs `meta`, portées et options morts | C14 | petit | Sonnet | oui | décision 14 (cœur) | **livré** (09/10, 77fc170 à 4003e49) ; règles à publier dans la console |
 | 17 | Contenus orphelins, trames Smoby à déclarer, commentaires périmés | C16 | petit | Sonnet | non | — | à faire |
 | 18 | Deux sessions à la fois : port, `git grep`, `EN-COURS` | C17 | petit | Sonnet | non (`commun.mjs`) | — | à faire |
 | 19 | Reliquats SCE / Spartoo : acter la règle | C15 | petit | Sonnet | non | 9 | à décider |
@@ -375,6 +375,19 @@ s'aligner.
   `equipe`/`commun` et leurs règles si personne n'en veut ; `purger`, `brancherDeconnexion` ;
   `ecriture: 'tous'` du magasin : l'écrire ou le retirer.
 - **Fini quand.** Chaque champ de `FICHE-SEANCE.md` est lu quelque part.
+- **Livré le 09/10/2026** (77fc170 à 4003e49, suite 920/920, règles 174/174 ; **règles à publier dans la console**) :
+  **décisions de Tristan** : `coeur` gardé (option A, sur les 8 séances) et `domaines` gardé, tous deux documentés « déclaré,
+  pas encore lu » dans la fiche, en attente de l'écran cœur / complément (décision 14) ; `volume` gardé parce que
+  `outils/test/cdiscount.mjs` le relit. **Retiré** : l'option `purger` de `supprimerGroupe` (les deux backends) et l'alias
+  `brancherDeconnexion` ; les portées `equipe` et `commun` (`PORTEES = ['eleve', 'groupe']`, `cheminDe(aid, gid, demi)`, plus
+  d'`eqId` ; un cas de `dependances.mjs` garde le registre et le refus du moteur) ; côté règles RTDB, la branche `communs/` et le
+  `.read` de `acces/{gid}` (aucune donnée existante n'y passait : l'application n'y lit jamais). `firestore.rules` : rien à retirer.
+  **Écrit** : `meta/ouvert/{table} = 'tous'` par le semis de l'enseignant (`semer`, `core/store.js`) pour les tables
+  `ecriture: 'tous'` ; sept cas de règles. **Limite constatée, non traitée** : `core/types/tableau.js` (`peutModifier`) ne lit pas
+  `ecriture` et ne montre « Modifier » que sur les lignes portant son `_par` ; la démo n'écrit pas `_par` (aucune ligne modifiable
+  par un élève) : l'écart démo/réel que l'audit décrivait n'existe donc pas à l'écran, et l'écriture de `meta/ouvert` n'aura d'effet
+  visible que si l'écran lit `ecriture` (changement de comportement des deux modes, à décider). « Fini quand » tenu pour tout champ
+  sauf `coeur` et `domaines`, déclarés pour l'écran de la décision 14.
 
 ### 17. Contenus orphelins (C16)
 - **Ce qu'on fait.** Déclarer les trames et corrigés Smoby 5.3 à 5.8 (ou les renommer
