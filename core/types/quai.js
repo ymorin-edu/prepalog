@@ -111,13 +111,21 @@
 // n'y a donc rien à « rentrer », la palette y reste quand le chauffeur a signé (comme la maquette). Quai sans
 // froid, un seul camion. Le BL peut porter un en-tête (`commande`, `lot`, `expedie` : une date, ou un nombre
 // de jours par rapport à aujourd'hui, −1 = la veille) et une colonne « par carton » (`parCarton` des `refs`).
+//
+// INSPECTION SUR LA SCÈNE (10/10/2026, chantier D-4 étape 2, brief `docs/briefs/MOTEUR-quai-inspection.md` §2). `rendu: 'iso'` +
+// `securite: { mode: 'scene', points: [{ id, objet, etat, ok, lib, repare }], arret, consigne, signaler: { qui, rien, fin, vide },
+// commencer, bilan }` : l'élève inspecte le quai où il va décharger (cabine, cale, butoirs, niveleur, lampe), à la souris : un clic
+// pose une marque numérotée, « Signaler à … » envoie les marques, le chef de quai répond et chaque défaut touché est réparé dans la
+// scène ; « C'est bon, on peut décharger » (deux clics) fige l'inspection. Le contenu est validé par `verifierQuai` (au chargement) ;
+// l'état de chaque objet (`etatsScene`), les zones (`zonesScene`) et le point touché (`pointTouche`) sont des fonctions pures ;
+// les jalons `securite-<id>` et `securite-aucun-faux` se calculent depuis les signaux. Sans `mode`, l'étape ⓪ en liste (lot 5).
 
 // Pas d'import de `ui.js` : le corrigé d'une séance (`contenus/corriges/`) importe ce module, et la
 // suite de tests charge les corrigés hors du navigateur.
 import { evaluerGrille, afficher, estFormule } from '../formules.js';
 import { projection, facadeQuai, X_PORTE_FACADE, camionPorteur, personne, HAUT_PERSONNE, bulle, horlogeQuai,
   solQuai, niveleur, remorqueInterieur, murQuai, ouvertureQuai, transpaletteManuel, paletteCartons, dimsPalette,
-  faceVisible, facesExterieures } from '../iso.js';
+  faceVisible, facesExterieures, lampeQuai, boitesCamion, boitesButoirs, boitesNiveleur, boitesLampe, boiteEcran } from '../iso.js';
 import { ech } from '../texte.js';
 import { retrouverFocus, secondClic } from '../gestes.js';
 
@@ -204,7 +212,7 @@ function reglages(Q) {
   const motifs = Object.keys(MOTIFS).filter((m) => m === 'aucun' || ((!Q.motifs || Q.motifs.includes(m)) && (froid || m !== 'temperature')));
   const S = Q.securite && Array.isArray(Q.securite.points) && Q.securite.points.length ? Q.securite : null;
   return {
-    froid, motifs, securite: S, iso: Q.rendu === 'iso',
+    froid, motifs, securite: S, scene: !!(S && S.mode === 'scene'), iso: Q.rendu === 'iso',
     zone: Object.assign({ nom: 'Zone de réception' }, Q.zone || {}),
     lieu: Object.assign({ nom: 'Quai', temp: 4, refrigere: true, chambre: { nom: 'Chambre froide', temp: -23 } }, Q.lieu || {}),
     seuil: Q.seuilHorsFroid || 30,
@@ -248,6 +256,107 @@ function effective(p, e, R) {
 }
 export const dureeDechargement = (n, D) => D.ouverture + n * D.parPalette;
 
+/* ============================================ inspection sur la scène (chantier D-4, étape 2) */
+// `securite.mode: 'scene'` : l'élève inspecte le quai iso où il va décharger (brief `docs/briefs/MOTEUR-quai-inspection.md`
+// §2). Ce bloc ne contient que des fonctions PURES (aucun accès au navigateur) : la validation du contenu, l'état de
+// chaque objet de la scène, les zones où l'on clique et le point touché par un clic. La vue (`creerQuai`) les assemble.
+
+// Les cinq objets que la scène sait inspecter : la vue où on le voit, ses états, l'état SÛR (celui qu'un signalement
+// ou « C'est bon » lui rend), et l'état dessiné quand la séance ne le déclare pas (`null` = pas dessiné : la cale et la
+// lampe n'existent que si une séance les demande, pour qu'ENT-1.1 ne change pas d'un pixel).
+export const OBJETS_SCENE = {
+  cabine: { vue: 'dehors', etats: ['conduite', 'vide'], sur: 'vide', defaut: 'vide' },
+  cale: { vue: 'dehors', etats: ['posee', 'absente'], sur: 'posee', defaut: null },
+  butoirs: { vue: 'dehors', etats: ['enPlace', 'absents'], sur: 'enPlace', defaut: 'enPlace' },
+  niveleur: { vue: 'dedans', etats: ['pose', 'releve'], sur: 'pose', defaut: 'pose' },
+  lampe: { vue: 'dedans', etats: ['allumee', 'eteinte'], sur: 'allumee', defaut: null },
+};
+// Les deux vues : les projections et les cadres de la scène d'arrivée (« dehors ») et de l'intérieur (« dedans »), ceux
+// d'ENT-1.1 ; le camion est à la porte du milieu de la façade, reculé jusqu'au bout.
+export const VUES_SCENE = {
+  dehors: { unite: 54, origine: [330, 150], viewBox: [70, -30, 800, 520] },
+  dedans: { unite: 60, origine: [470, 235], viewBox: [290, 0, 640, 480] },
+};
+const PORTE_CAMION = 1, YR_QUAI = 0.35, MARGE_ZONE = 12;
+const PAROLE_ARRET = 'Stop ! Avant d’entrer dans la remorque, tout doit être en sécurité. Regarde encore la scène et signale ce qui ne va pas.';
+
+// La liste des écarts d'un contenu de quai, en français courant (liste vide = rien à redire). Appelée par `creerQuai`
+// au chargement ; elle ne regarde que ce que ce chantier ajoute (une séance existante n'a rien à y changer).
+export function verifierQuai(Q) {
+  const E = [];
+  const S = Q && Q.securite;
+  if (!S || typeof S !== 'object') return E;
+  const scene = S.mode === 'scene';
+  if (S.mode !== undefined && S.mode !== 'scene') E.push(`securite.mode : « ${S.mode} » n’existe pas (la seule valeur est 'scene' ; sans mode, c’est la liste OK / Pas OK)`);
+  if (S.arret !== undefined && typeof S.arret !== 'boolean' && typeof S.arret !== 'string') E.push('securite.arret : false, true ou le texte de l’arrêt');
+  if (!scene) {
+    if (S.arret === false && Array.isArray(S.points) && S.points.length) E.push('securite.arret: false n’a de sens que pour l’inspection sur la scène (en liste, l’arrêt du chef de quai ne se règle pas) : retirer arret, ou déclarer mode: \'scene\'');
+    return E;
+  }
+  if (Q.rendu !== 'iso') E.push('l’inspection sur la scène demande `rendu: \'iso\'`');
+  if (S.photo !== undefined) E.push('securite.photo : en mode scène il n’y a rien à photographier (la scène est dessinée par le quai)');
+  const P = S.points;
+  if (!Array.isArray(P) || !P.length) { E.push('securite.points : la liste est vide (il faut au moins un point à inspecter)'); return E; }
+  const ids = new Set(), objets = new Set();
+  P.forEach((p, i) => {
+    const nom = `securite.points[${i}]${p && typeof p.id === 'string' && p.id ? ` (« ${p.id} »)` : ''}`;
+    if (!p || typeof p !== 'object') { E.push(`${nom} : ce n’est pas un point`); return; }
+    if (typeof p.id !== 'string' || !p.id.trim()) E.push(`${nom} : id vide`);
+    else {
+      if (ids.has(p.id)) E.push(`${nom} : id en double`);
+      if (p.id === 'aucun-faux') E.push(`${nom} : l’id « aucun-faux » est réservé (c’est celui du jalon « aucun faux signalement »)`);
+      ids.add(p.id);
+    }
+    const O = OBJETS_SCENE[p.objet];
+    if (!O) E.push(`${nom} : objet « ${p.objet} » inconnu (${Object.keys(OBJETS_SCENE).join(', ')})`);
+    else {
+      if (objets.has(p.objet)) E.push(`${nom} : deux points sur le même objet « ${p.objet} »`);
+      objets.add(p.objet);
+      if (!O.etats.includes(p.etat)) E.push(`${nom} : état « ${p.etat} » inconnu pour ${p.objet} (${O.etats.join(', ')})`);
+      if (p.vue !== undefined && p.vue !== O.vue) E.push(`${nom} : ${p.objet} se voit ${O.vue === 'dehors' ? 'dehors' : 'dedans'}, pas « ${p.vue} »`);
+      if (typeof p.ok !== 'boolean') E.push(`${nom} : ok manque (vrai si l’état est sûr, faux si c’est un défaut)`);
+      else if (O.etats.includes(p.etat) && p.ok && p.etat !== O.sur) E.push(`${nom} : ok: true sur un état dangereux (${p.objet} « ${p.etat} »)`);
+      else if (O.etats.includes(p.etat) && !p.ok && p.etat === O.sur) E.push(`${nom} : ok: false sur l’état sûr (${p.objet} « ${p.etat} »)`);
+    }
+    if (typeof p.lib !== 'string' || !p.lib.trim()) E.push(`${nom} : lib manque (il sert au bilan, il ne s’affiche jamais pendant l’inspection)`);
+  });
+  return E;
+}
+
+// L'état de chaque objet à un instant : l'état DÉCLARÉ, ou l'état SÛR si le point a été signalé ou si l'inspection est
+// figée (« C'est bon »). Calculé, jamais rangé. Un objet non déclaré garde son état d'aujourd'hui (cale et lampe : `null`).
+export function etatsScene(S, sec) {
+  const E = {};
+  Object.keys(OBJETS_SCENE).forEach((o) => { E[o] = OBJETS_SCENE[o].defaut; });
+  const vus = new Set();
+  ((sec && sec.signaux) || []).forEach((g) => ((g && g.points) || []).forEach((id) => vus.add(id)));
+  const fait = !!(sec && sec.fait);
+  ((S && S.points) || []).forEach((p) => { E[p.objet] = fait || vus.has(p.id) ? OBJETS_SCENE[p.objet].sur : p.etat; });
+  return E;
+}
+
+const projeterScene = (vue) => projection({ unite: VUES_SCENE[vue].unite, origine: VUES_SCENE[vue].origine });
+// Les zones où l'on clique pour chaque point déclaré, sur l'état dessiné `etats` : `[{ id, vue, rects: [{ x, y, w, h }] }]`
+// (unités du viewBox de la vue). L'objet « cabine » a deux rectangles, le pare-brise (où l'on voit le chauffeur) et, tant
+// que le moteur tourne, la fumée ; une cale ou des butoirs absents gardent leur zone à l'emplacement de l'objet.
+export function zonesScene(S, etats) {
+  const cam = boitesCamion(X_PORTE_FACADE[PORTE_CAMION], YR_QUAI, {});
+  return ((S && S.points) || []).map((p) => {
+    const vue = OBJETS_SCENE[p.objet].vue, I = projeterScene(vue);
+    const L = p.objet === 'cabine' ? [cam.cabine].concat(etats.cabine === 'conduite' ? [cam.fumee] : [])
+      : p.objet === 'cale' ? [cam.cale]
+        : p.objet === 'butoirs' ? [boitesButoirs(PORTE_CAMION)]
+          : p.objet === 'niveleur' ? [boitesNiveleur(etats.niveleur === 'releve' ? 'releve' : 'pose')] : [boitesLampe()];
+    return { id: p.id, vue, rects: L.map((b) => boiteEcran(I, b, MARGE_ZONE)) };
+  });
+}
+// Le point touché par un clic en (x, y) de la vue `vue` : le PREMIER point déclaré de cette vue dont une zone contient
+// le clic, sinon `null` (à côté).
+export function pointTouche(S, etats, vue, x, y) {
+  const z = zonesScene(S, etats).find((q) => q.vue === vue && q.rects.some((r) => x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h));
+  return z ? z.id : null;
+}
+
 /* ======================================================================= état */
 // Le jour de la séance (« aaaa-mm-jj », heure locale) : la date de la réception de nuit sur le BL.
 const aujourdhui = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
@@ -262,14 +371,19 @@ export function etatNeuf(Q) {
   }
   const palettes = {};
   R.palettes.forEach((p) => { palettes[p.id] = paletteNeuve(); });
-  const e = Object.assign({ v: 1, etape: R.securite ? 0 : 1, minute: 0, reel: 0, tiersTemps: false, sel: 0, journal: [], palettes, fini: false }, camionNeuf());
-  if (R.securite) e.securite = securiteNeuve();
+  const e = Object.assign({ v: 1, etape: R.securite && !R.scene ? 0 : 1, minute: 0, reel: 0, tiersTemps: false, sel: 0, journal: [], palettes, fini: false }, camionNeuf());
+  if (R.securite) e.securite = securiteNeuve(R.scene);
   if (R.multi) Object.assign(e, { suivants: R.camions.slice(1).map(camionNeuf), ordre: { premier: null, phrase: null }, actif: 0 });
   return e;
 }
 // L'étape ⓪ : la réponse à chaque point, les signalements (avec les points « pas OK » à ce moment-là, et
 // s'ils viennent après un arrêt du chef de quai), l'arrêt, et le départ du déchargement.
-const securiteNeuve = () => ({ rep: {}, signaux: [], arrete: false, fait: false, chef: '' });
+// Mode scène (D-4) : les marques posées sur la scène (`{ n, vue, x, y, point, envoi }`, `envoi` = numéro du signal ou `null`), le compteur
+// qui ne réutilise jamais un numéro, les signaux envoyés (`{ points, rien, marques, apresArret }`), la porte de quai ouverte, l'arrêt, le
+// figeage (`fait`) et la dernière réponse du chef de quai. Les états des objets se CALCULENT (`etatsScene`), ils ne se rangent pas.
+const securiteNeuve = (scene = false) => (scene
+  ? { mode: 'scene', marques: [], compteur: 0, signaux: [], ouverte: false, arrete: false, fait: false, chef: '' }
+  : { rep: {}, signaux: [], arrete: false, fait: false, chef: '' });
 const paletteNeuve = () => ({ vue: 0, vues: [0], sonde: null, compte: null, etiqVue: false, detail: {}, decision: '', motif: 'aucun', res: '', motif2: 'aucun', res2: '', fiche: ficheNeuve(), calcul: {} });
 
 // Une base écrite avec une autre version du contenu : on complète sans rien effacer.
@@ -287,7 +401,18 @@ function normaliser(e, R) {
   R.palettes.forEach((p) => { const s = e.palettes[p.id]; s.fiche = Object.assign(ficheNeuve(), s.fiche || {}); if (!s.calcul || typeof s.calcul !== 'object') s.calcul = {}; });
   if (!Array.isArray(e.journal)) e.journal = [];
   if (!Array.isArray(e.lignes)) e.lignes = [];
-  if (R.securite && !e.securite) e.securite = securiteNeuve();
+  if (R.securite && !e.securite) e.securite = securiteNeuve(R.scene);
+  if (R.scene) {
+    // Une base écrite avant le mode scène (ou par une autre version du contenu) : on complète sans rien effacer.
+    const sec = e.securite;
+    sec.mode = 'scene';
+    if (!Array.isArray(sec.marques)) sec.marques = [];
+    if (!Array.isArray(sec.signaux)) sec.signaux = [];
+    if (!(sec.compteur >= 0)) sec.compteur = sec.marques.reduce((m, x) => Math.max(m, +x.n || 0), 0);
+    ['ouverte', 'arrete', 'fait'].forEach((k) => { sec[k] = !!sec[k]; });
+    if (typeof sec.chef !== 'string') sec.chef = '';
+    if (e.etape === 0) e.etape = 1;
+  }
   if (typeof e.reel !== 'number') e.reel = 0;
   if (e.sel >= R.palettes.length) e.sel = 0;
   if (R.multi) {
@@ -373,7 +498,7 @@ export function jalonsQuai(db, Q) {
       !!e && unDecharge(E, R) && o.premier === O.premier && o.phrase === O.juste);
   }
   // L'étape ⓪ (sécurité) : ses deux jalons d'abord, dans l'ordre du jeu.
-  if (R.securite) jalonsSecurite(e, R).forEach((l) => j(l.id, l.lib, l.fait, l.attendu, l.ok));
+  if (R.securite) (R.scene ? jalonsScene(e, R) : jalonsSecurite(e, R)).forEach((l) => j(l.id, l.lib, l.fait, l.attendu, l.ok));
   if (R.froid) R.camions.forEach((c, ci) => {
     const k = K(E, ci);
     const lib = Object.fromEntries((c.qcmTicket && c.qcmTicket.choix || QCM_TICKET).map((x) => [x.v, x.court || x.lib]));
@@ -449,6 +574,33 @@ function jalonsSecurite(e, R) {
   L.push({ id: 'securiteConstat', lib: 'Constat de sécurité juste',
     fait: juges.length ? S.points.map((x) => `${x.lib} : ${rep[x.id] === 'ok' ? 'OK' : rep[x.id] === 'ko' ? 'pas OK' : '?'}`).join(' · ') : 'rien de coché',
     attendu: S.points.map((x) => `${x.lib} : ${x.ok ? 'OK' : 'pas OK'}`).join(' · '), ok: justes });
+  return L;
+}
+
+// Les jalons de l'inspection sur la scène (D-4) : un par défaut (`ok: false`), « signalé avant de décharger » (le point est dans un
+// signal envoyé avant l'arrêt du chef de quai), puis « aucun faux signalement » (au moins un signal, et aucun ne touche un point
+// conforme ni ne tombe à côté). Aucun n'est vrai par inaction. Les `lib` restent NEUTRES (ils peuvent se lire pendant la séance) :
+// le défaut est nommé dans `attendu`, qui ne se lit qu'au bilan.
+function jalonsScene(e, R) {
+  const S = R.securite, sec = (e && e.securite) || securiteNeuve(true);
+  const signaux = Array.isArray(sec.signaux) ? sec.signaux : [];
+  const point = (id) => S.points.find((x) => x.id === id) || null;
+  const qui = (S.signaler && S.signaler.qui) || 'le chef de quai';
+  const L = [];
+  S.points.filter((x) => !x.ok).forEach((x, i) => {
+    const avant = signaux.some((g) => !g.apresArret && (g.points || []).includes(x.id));
+    const apres = !avant && signaux.some((g) => (g.points || []).includes(x.id));
+    L.push({ id: `securite-${x.id}`, lib: `Danger n° ${i + 1} signalé avant de décharger`,
+      fait: avant ? 'signalé avant de décharger' : apres ? `signalé seulement après l’arrêt de ${qui}` : sec.fait ? 'jamais signalé' : 'pas signalé',
+      attendu: `signaler : ${x.lib}`, ok: avant });
+  });
+  const faux = signaux.filter((g) => (g.rien || 0) > 0 || (g.points || []).some((id) => point(id) && point(id).ok));
+  const aTort = [...new Set([].concat(...faux.map((g) => (g.points || []).filter((id) => point(id) && point(id).ok))))].map((id) => point(id).lib);
+  const cote = faux.reduce((t, g) => t + (g.rien || 0), 0);
+  L.push({ id: 'securite-aucun-faux', lib: 'Aucun faux signalement',
+    fait: !signaux.length ? 'rien signalé' : !faux.length ? 'aucun faux signalement'
+      : [aTort.length ? `signalé à tort : ${aTort.join(', ')}` : '', cote ? `${cote} marque${cote > 1 ? 's' : ''} à côté de tout danger` : ''].filter(Boolean).join(' · '),
+    attendu: 'au moins un signalement, et aucun sur un point conforme ni à côté', ok: signaux.length > 0 && !faux.length });
   return L;
 }
 
@@ -697,6 +849,11 @@ export function creerQuai(Q, opts = {}) {
   const lieuMin = R.lieu.nom.charAt(0).toLowerCase() + R.lieu.nom.slice(1);
   const F = R.froid, SEC = R.securite;
   const ISO = R.iso;
+  // Le mode scène (D-4) : l'inspection se joue sur le quai iso ; sinon la liste OK / Pas OK de l'étape ⓪ (inchangée).
+  const SCENE = R.scene, LISTE = !!SEC && !R.scene;
+  const SEUIL_SECU = SCENE ? 2 : 1;   // à partir de quelle étape il faut avoir figé l'inspection
+  const ecarts = verifierQuai(Q);
+  if (ecarts.length) throw new Error(`quai ${Q.id} : ${ecarts.join(' ; ')}`);
   // Le rendu iso ne sait (pour l'instant) qu'un quai sans froid à un camion : on le dit au chargement.
   if (ISO && (F || M || R.controle)) throw new Error(`quai ${Q.id} : \`rendu: 'iso'\` demande un quai sans froid (\`froid: false\`), à un seul camion`);
   const zoneMin = minuscule(R.zone.nom);
@@ -714,7 +871,8 @@ export function creerQuai(Q, opts = {}) {
   // `tente` : la palette dont « Valider » a été cliqué avec un manque (le message s'écrit sous la case) ;
   // `sonde` : la palette qui vient d'être sondée (l'afficheur se stabilise une fois, pas à chaque redessin).
   const ui = { chef4: false, arme: false, arme4: false, armeRaz: false, anim: null, lancer: false, jouerCf: false, focus: null,
-    tente: null, tropMotifs: false, sonde: null, arretSecu: false, arrivee: false, rejeu1: false, anim1: null, t0a: null };
+    tente: null, tropMotifs: false, sonde: null, arretSecu: false, arrivee: false, rejeu1: false, anim1: null, t0a: null,
+    vueScene: 'dehors', levee: null, armeScene: false };
 
   // Chaque geste avance l'horloge du quai, et le temps hors froid de CHAQUE lot sorti du camion et
   // pas encore rentré en chambre froide.
@@ -884,9 +1042,15 @@ export function creerQuai(Q, opts = {}) {
   const paroleArrivee = () => cam.parole || `Bonjour, livraison ${cam.fournisseur || ''}. Voilà mon bon de livraison.`;
   // ① le camion recule à la porte en D_ARRIVEE ms ; au bout, le chauffeur descend et parle.
   const D_ARRIVEE = 5200;
-  function sceneArrivee(t) {
+  function sceneArrivee(t, e) {
     const I = projection({ unite: 54, origine: [330, 150] });
     const f = Math.min(1, t / D_ARRIVEE), ee = 1 - Math.pow(1 - f, 2.2);
+    if (SCENE && e) {
+      // Mode scène : le camion arrive dans l'état de la scène (chauffeur au volant, fumée…) ; la cale n'est posée qu'à l'arrêt ;
+      // le chauffeur n'est descendu que si sa cabine est vide, et ne parle (bulle) qu'une fois l'inspection figée.
+      const et = etatsScene(SEC, e.securite);
+      return decorDehors(et, { yr: 0.35 + (8.5 - 0.35) * (1 - ee), cale: f >= 1, chauffeur: f >= 1 && et.cabine !== 'conduite', bulle: f >= 1 && !!e.securite.fait });
+    }
     let s = facadeQuai(I, PORTES) + camionPorteur(I, X_PORTE_FACADE[1], 0.35 + (8.5 - 0.35) * (1 - ee)) + horlogeQuai(I, 0.2, 0.01, 2.35, cam.arrivee || '');
     if (f >= 1) {
       s += personne(I, 5.05, 3.2);
@@ -919,7 +1083,10 @@ export function creerQuai(Q, opts = {}) {
   const ISO_X = 2.6, ISO_YDEP = -2.9, ISO_YARR = 2.1;
   function imageIso(t, e, attente, o = {}) {
     const P = PAL[ca(e)], N = P.length, depart = (n) => T_DEB + n * T_PAL;
-    const ouv = attente || o.parti ? 0 : Math.min(1, t / T_PORTE);
+    // Mode scène : si l'élève a déjà ouvert la porte de quai pendant l'inspection, l'étape ② démarre porte levée.
+    const ouv = attente || o.parti ? 0 : SCENE && e.securite && e.securite.ouverte ? 1 : Math.min(1, t / T_PORTE);
+    const et = SCENE ? etatsScene(SEC, e.securite) : null;
+    const lp = et && et.lampe ? lampeQuai(I2, et.lampe) : { cone: '', tete: '' };
     const pos = [];
     let enCours = null, nb = 0;
     P.forEach((p, n) => {
@@ -945,8 +1112,8 @@ export function creerQuai(Q, opts = {}) {
     const dedans = (y) => y < 0.02;
     const pal = (p, x, y, yMin, yMax) => paletteCartons(I2, palIso(p), x, y, 3, { yMin, yMax, lisible: false });
     let s = solQuai(I2, R.zone.nom);
-    s += `<g clip-path="url(#quaiIsoOuv)">${remorqueInterieur(I2)}${niveleur(I2, 'dedans')}${garder.slice().sort((a, b) => a[2] - b[2]).map(([p, x, y]) => pal(p, x, y, -99, 0)).join('')}${tp && dedans(yt) ? tp : ''}${ch && dedans(yc) ? ch : ''}</g>`;
-    s += murQuai(I2, ouv, R.lieu.nom) + niveleur(I2, 'dehors');
+    s += `<g clip-path="url(#quaiIsoOuv)">${remorqueInterieur(I2)}${niveleur(I2, 'dedans', et ? et.niveleur : 'pose')}${lp.cone}${garder.slice().sort((a, b) => a[2] - b[2]).map(([p, x, y]) => pal(p, x, y, -99, 0)).join('')}${tp && dedans(yt) ? tp : ''}${ch && dedans(yc) ? ch : ''}</g>`;
+    s += murQuai(I2, ouv, R.lieu.nom) + niveleur(I2, 'dehors', et ? et.niveleur : 'pose') + lp.tete;
     s += garder.slice().sort((a, b) => (a[1] + a[2]) - (b[1] + b[2])).map(([p, x, y]) => pal(p, x, y, 0, 99)).join('');
     s += (tp && !dedans(yt) ? tp : '') + (ch && !dedans(yc) ? ch : '');
     s += horlogeQuai(I2, 6.6, 0.01, 2.25, hhmm(e.minute).slice(0, 5));
@@ -1353,18 +1520,198 @@ export function creerQuai(Q, opts = {}) {
     </section>`;
   }
 
+  /* ------------------------------------------------ l'inspection sur la scène (mode scène, D-4) */
+  // Voir `verifierQuai` pour le contenu et le brief `docs/briefs/MOTEUR-quai-inspection.md` §2.2 pour le comportement. Les
+  // états des objets ne sont JAMAIS rangés : `etatsScene` les calcule depuis les signaux envoyés et le figeage. Rien dans le
+  // DOM de la scène ne nomme un objet (ni `title`, ni `tabindex`, ni `role`, ni attribut `data-*` : les zones se calculent).
+  const SG = SCENE ? Object.assign({ qui: 'le chef de quai', rien: 'Là, je ne vois rien qui cloche.', fin: 'Tu me dis quand on peut décharger.',
+    vide: 'Qu’est-ce qui ne va pas ? Clique d’abord sur ce que tu veux me signaler.' }, SEC.signaler || {}) : null;
+  // « à le chef de quai » se dit « au chef de quai ».
+  const aQui = (q) => (/^le /i.test(q) ? `au ${q.slice(3)}` : /^les /i.test(q) ? `aux ${q.slice(4)}` : /^la /i.test(q) ? `à la ${q.slice(3)}` : `à ${q}`);
+  const majuscule = (t) => String(t).charAt(0).toUpperCase() + String(t).slice(1);
+  // Le chauffeur descendu de sa cabine : près de l'accueil chauffeurs, assez à gauche pour que sa bulle tienne dans le cadre.
+  const X_CH = 6.4, Y_CH = 2.2;
+  // La vue « dehors » dans l'état `et` : façade, camion (cabine, fumée, cale), horloge, et le chauffeur s'il est descendu.
+  // `o.yr` : le recul du camion ; `o.cale` : poser la cale (faux pendant la manœuvre) ; `o.bulle` : le chauffeur parle.
+  function decorDehors(et, o = {}) {
+    const I = projeterScene('dehors');
+    const conduit = et.cabine === 'conduite';
+    const cote = Object.assign({}, conduit ? { cabine: 'conduite', fumee: true } : {}, et.cale && o.cale !== false ? { cale: et.cale } : {});
+    const facade = SEC.points.some((p) => p.objet === 'butoirs') ? { butoirs: { porte: PORTE_CAMION, etat: et.butoirs } } : {};
+    let s = facadeQuai(I, PORTES, facade) + camionPorteur(I, X_PORTE_FACADE[PORTE_CAMION], o.yr != null ? o.yr : YR_QUAI, cote)
+      + horlogeQuai(I, 0.2, 0.01, 2.35, cam.arrivee || '');
+    if (o.chauffeur) {
+      s += personne(I, X_CH, Y_CH);
+      if (o.bulle) { const [bx, by] = I.P(X_CH, Y_CH, HAUT_PERSONNE); s += bulle(bx + 6, by - 4, couper(paroleArrivee())); }
+    }
+    return s;
+  }
+  // La vue « dedans » : l'intérieur du quai, la porte levée de `ouv` (0 fermée, 1 ouverte), la remorque et ses palettes vues par
+  // l'ouverture, le niveleur et la lampe dans leur état, une personne sur le quai. Aucune palette n'est encore sortie.
+  function decorDedans(et, ouv, e) {
+    const I = I2;
+    const lp = et.lampe ? lampeQuai(I, et.lampe) : { cone: '', tete: '' };
+    const pal = PAL[0].map((p, n) => [p, ISO_X, ISO_YDEP - n * 1.3]).sort((a, b) => a[2] - b[2])
+      .map(([p, x, y]) => paletteCartons(I, palIso(p), x, y, 3, { yMin: -99, yMax: 0, lisible: false })).join('');
+    return solQuai(I, R.zone.nom)
+      + `<g clip-path="url(#quaiIsoOuv)">${remorqueInterieur(I)}${niveleur(I, 'dedans', et.niveleur)}${lp.cone}${pal}</g>`
+      + murQuai(I, ouv, R.lieu.nom) + niveleur(I, 'dehors', et.niveleur) + lp.tete
+      + personne(I, 6.0, 1.4) + horlogeQuai(I, 6.6, 0.01, 2.25, hhmm(e.minute).slice(0, 5));
+  }
+  // Les marques posées sur la vue `vue` : un rond d'encre à contour épais et son numéro (ni vert ni rouge : ce n'est pas un
+  // verdict). Une marque envoyée est grisée en tirets et n'est plus cliquable.
+  const marquesSvg = (sec, vue) => sec.marques.filter((m) => m.vue === vue).map((m) => {
+    const env = m.envoi != null;
+    return `<g data-q-marque="${m.n}"><circle cx="${m.x}" cy="${m.y}" r="12" fill="rgba(255,255,255,.88)" stroke="${env ? '#6b6b6b' : '#1a1915'}" stroke-width="${env ? 2 : 3.5}"${env ? ' stroke-dasharray="4 3" opacity=".55"' : ''}/>`
+      + `<text x="${m.x}" y="${(m.y + 4.6).toFixed(1)}" text-anchor="middle" font-size="13" font-weight="700" font-family="system-ui,sans-serif" fill="#1a1915">${m.n}</text></g>`;
+  }).join('');
+  const texteMarques = (sec) => { const n = sec.marques.filter((m) => m.envoi == null).length; return n ? `${n} marque${n > 1 ? 's' : ''} à envoyer` : ''; };
+  const ouvertureLevee = () => (ui.levee == null ? 1 : Math.min(1, (performance.now() - ui.levee) / T_PORTE));
+  // L'écran d'inspection : la consigne, la scène (l'une des deux vues), les boutons, la réponse du chef de quai.
+  function inspection(e) {
+    const sec = e.securite;
+    const vue = sec.ouverte && ui.vueScene === 'dedans' ? 'dedans' : 'dehors';
+    const et = etatsScene(SEC, sec);
+    const ouv = vue === 'dedans' ? ouvertureLevee() : 0;
+    if (ui.levee != null && ouv >= 1) ui.levee = null;
+    const [vx, vy, vw, vh] = VUES_SCENE[vue].viewBox;
+    const decor = vue === 'dehors' ? decorDehors(et, { chauffeur: et.cabine !== 'conduite' }) : decorDedans(et, ouv, e);
+    const dis = e.fini ? 'disabled' : '';
+    const versVue = !sec.ouverte ? `<button class="btn" data-q="sc-ouvrir" ${dis}>Ouvrir la porte de quai</button>`
+      : vue === 'dehors' ? `<button class="btn" data-q="sc-vue" data-v="dedans" ${dis}>Voir dedans →</button>` : `<button class="btn" data-q="sc-vue" data-v="dehors" ${dis}>← Revoir dehors</button>`;
+    return `<div data-q-securite-scene>
+      <p class="quai-secu-scene" data-q-consigne>${ech(SEC.consigne || 'Clique sur ce qui ne va pas, puis signale-le.')}</p>
+      <div class="quai-scene2 quai-iso quai-inspection">
+        <svg data-q-inspection data-vue="${vue}" viewBox="${vx} ${vy} ${vw} ${vh}" role="img" aria-label="${vue === 'dehors' ? 'Le quai vu de dehors' : 'Le quai vu de l’intérieur'}">${vue === 'dedans' ? defsIso() : ''}<g data-g="iso">${decor}</g><g data-q-marques>${marquesSvg(sec, vue)}</g></svg>
+      </div>
+      <p class="quai-ligne">${versVue}</p>
+      <div data-q-secu-chef role="status" ${sec.chef ? 'class="quai-alerte"' : ''}>${sec.chef ? `<b>${ech(majuscule(SG.qui))} :</b> « ${ech(sec.chef)} »` : ''}</div>
+      ${ui.arretSecu ? `<div class="quai-alerte" role="alert" data-q-secu-arret><b>${ech(majuscule(SG.qui))} :</b> « ${ech(typeof SEC.arret === 'string' ? SEC.arret : PAROLE_ARRET)} »</div>` : ''}
+      <p class="quai-ligne">
+        <button class="btn" data-q="sc-signaler" ${dis}>${ech(SG.bouton || `Signaler ${aQui(SG.qui)}`)}</button>
+        <span class="note" data-q-nb-marques>${texteMarques(sec)}</span>
+        <button class="btn btn-p${ui.armeScene ? ' quai-arme' : ''}" data-q="sc-decharger" ${dis}>${ui.armeScene ? 'On décharge, c’est définitif : cliquez pour confirmer' : `${ech(SEC.commencer || 'C’est bon, on peut décharger')} →`}</button>
+        ${ui.armeScene ? '<button class="btn" data-q="sc-desarmer">Annuler</button>' : ''}
+      </p>
+    </div>`;
+  }
+  // « Signaler » : les marques pas encore envoyées partent en un signal. La réponse se compose : la réparation de chaque défaut
+  // touché qui ne l'était pas encore (dans l'ordre de déclaration), « rien » une seule fois s'il y a une marque à côté, un
+  // point conforme ou un défaut déjà réparé, puis la fin. Les états réparés ne sont pas rangés : `etatsScene` les relit.
+  function signalerScene(e, api, signal) {
+    const sec = e.securite;
+    if (!sec || sec.fait) return;
+    ui.armeScene = false;
+    const envoyer = sec.marques.filter((m) => m.envoi == null);
+    if (!envoyer.length) { sec.chef = SG.vide; api.sauver(); api.redessiner(); return; }
+    const deja = new Set();
+    sec.signaux.forEach((g) => (g.points || []).forEach((id) => deja.add(id)));
+    const points = [...new Set(envoyer.map((m) => m.point).filter(Boolean))];
+    const rien = envoyer.filter((m) => !m.point).length;
+    sec.signaux.push({ points, rien, marques: envoyer.map((m) => m.n), apresArret: !!sec.arrete });
+    envoyer.forEach((m) => { m.envoi = sec.signaux.length; });
+    const textes = SEC.points.filter((x) => points.includes(x.id) && !x.ok && !deja.has(x.id)).map((x) => x.repare || 'Bien vu, je m’en occupe.');
+    if (rien > 0 || SEC.points.some((x) => points.includes(x.id) && (x.ok || deja.has(x.id)))) textes.push(SG.rien);
+    textes.push(SG.fin);
+    sec.chef = textes.join(' ');
+    ui.arretSecu = false;
+    signal('signaler');
+    api.sauver(); api.redessiner();
+  }
+  // « C'est bon, on peut décharger » (second clic) : un défaut jamais signalé arrête l'élève (sauf `arret: false` et en
+  // évaluation) ; sinon l'inspection est figée, les défauts restants passent à l'état sûr sans un mot, et la suite d'aujourd'hui
+  // commence (le chauffeur descendu parle, le BL, « Oui, vous pouvez décharger »).
+  function validerScene(e, api, signal) {
+    const sec = e.securite;
+    if (!sec || sec.fait) return;
+    const signales = new Set();
+    sec.signaux.forEach((g) => (g.points || []).forEach((id) => signales.add(id)));
+    const oublie = SEC.points.some((x) => !x.ok && !signales.has(x.id));
+    if (oublie && !EVAL && SEC.arret !== false) { sec.arrete = true; ui.arretSecu = true; api.sauver(); api.redessiner(); return; }
+    signal('decharger');
+    sec.fait = true; sec.marques = sec.marques.filter((m) => m.envoi != null);
+    ui.arretSecu = false; ui.armeScene = false; ui.vueScene = 'dehors'; ui.levee = null;
+    e.etape = 1;
+    api.sauver(); api.redessiner(); if (api.haut) api.haut();
+  }
+  // Le branchement de l'écran d'inspection : boutons, et un seul écouteur de clic sur le <svg> (le décor est réécrit par
+  // `innerHTML`, les nœuds changent ; le <svg> et la couche des marques, eux, restent).
+  function brancherScene(z, e, api, on, geste) {
+    const sec = e.securite;
+    const signal = (n) => { if (api.signal) api.signal(`scene:${Q.id}:${n}`); };
+    const actif = () => !e.fini && !sec.fait;
+    on('sc-ouvrir', geste(() => {
+      if (!actif() || sec.ouverte) return;
+      sec.ouverte = true; ui.vueScene = 'dedans'; ui.armeScene = false;
+      ui.levee = reduit() ? null : performance.now();   // moins d'animations : la porte est levée tout de suite
+      api.sauver(); api.redessiner();
+    }));
+    on('sc-vue', geste((ev, b) => {
+      if (!actif()) return;
+      ui.vueScene = b.dataset.v === 'dedans' && sec.ouverte ? 'dedans' : 'dehors';
+      if (ui.vueScene === 'dehors') ui.levee = null;
+      ui.armeScene = false;
+      api.redessiner();
+    }));
+    on('sc-signaler', geste(() => signalerScene(e, api, signal)));
+    on('sc-decharger', geste(() => {
+      if (!actif()) return;
+      if (!secondClic(ui, 'armeScene')) { api.redessiner(); return; }
+      validerScene(e, api, signal);
+    }));
+    on('sc-desarmer', () => { ui.armeScene = false; api.redessiner(); });
+    const svg = z.querySelector('[data-q-inspection]');
+    if (!svg) return;
+    const vue = svg.dataset.vue, decor = svg.querySelector('[data-g="iso"]'), couche = svg.querySelector('[data-q-marques]');
+    // La porte qui se lève (1,8 s) : seul le décor est réécrit, les marques et les écouteurs restent.
+    if (vue === 'dedans' && ui.levee != null) {
+      const pas = () => {
+        if (!svg.isConnected) return;
+        const u = ouvertureLevee();
+        decor.innerHTML = decorDedans(etatsScene(SEC, sec), u, e);
+        if (u >= 1) { ui.levee = null; return; }
+        requestAnimationFrame(pas);
+      };
+      requestAnimationFrame(pas);
+    }
+    svg.addEventListener('click', (ev) => {
+      if (!actif() || ui.levee != null) return;   // pendant la levée de la porte, la scène ne répond pas
+      const sur = ev.target.closest && ev.target.closest('[data-q-marque]');
+      if (sur) {
+        // Une marque pas encore envoyée se retire d'un clic ; une marque envoyée est inerte (ni retirée, ni nouvelle marque dessous).
+        const k = sec.marques.findIndex((m) => m.n === +sur.getAttribute('data-q-marque'));
+        if (k >= 0 && sec.marques[k].envoi == null) { sec.marques.splice(k, 1); changerMarques(); }
+        return;
+      }
+      const pt = svg.createSVGPoint(); pt.x = ev.clientX; pt.y = ev.clientY;
+      const M = svg.getScreenCTM();
+      if (!M) return;
+      const p = pt.matrixTransform(M.inverse());
+      const [vx, vy, vw, vh] = VUES_SCENE[vue].viewBox;
+      if (p.x < vx || p.x > vx + vw || p.y < vy || p.y > vy + vh) return;   // dans la marge autour du dessin
+      const x = Math.round(p.x * 10) / 10, y = Math.round(p.y * 10) / 10;
+      sec.compteur = (sec.compteur || 0) + 1;
+      sec.marques.push({ n: sec.compteur, vue, x, y, point: pointTouche(SEC, etatsScene(SEC, sec), vue, x, y), envoi: null });
+      changerMarques();
+    });
+    function changerMarques() {
+      api.sauver();
+      if (ui.armeScene) { ui.armeScene = false; api.redessiner(); return; }
+      couche.innerHTML = marquesSvg(sec, vue);
+      const t = z.querySelector('[data-q-nb-marques]');
+      if (t) t.textContent = texteMarques(sec);
+    }
+  }
+
   // Rendu iso : le camion recule à la porte (une fois par ouverture de page, sauf « Revoir »), puis le chauffeur
   // parle et remet le BL ; alors seulement viennent le BL et « Oui, vous pouvez décharger ».
   const arriveeVue = (e) => !ui.rejeu1 && (ui.arrivee || e.decharge || reduit());
   function ecran1Iso(e) {
     const vu = arriveeVue(e);
-    return `<section class="quai-carte">
-      <div class="quai-scene2 quai-iso">
-        <svg data-q-arrivee viewBox="70 -30 800 520" role="img" aria-label="${ech(R.lieu.nom)} : un camion porteur recule à la porte. Le chauffeur : « ${ech(paroleArrivee())} »">${sceneArrivee(vu ? D_ARRIVEE : 0)}</svg>
-        <div class="quai-legende" data-q-leg>${ech(legArrivee(vu))}</div>
-      </div>
-      <p class="quai-ligne" data-q-passer1 ${vu ? 'hidden' : ''}><button class="btn" data-q="passer1" data-libre>⏩ Passer l'animation</button></p>
-      <div class="quai-apres-arrivee" data-q-apres-arrivee ${vu ? '' : 'hidden'}>
+    // Mode scène, inspection pas encore figée : une fois l'arrivée jouée, la scène à inspecter remplace l'animation ; ni bulle ni BL.
+    const inspecte = SCENE && !e.securite.fait;
+    if (inspecte && vu) return `<section class="quai-carte">${inspection(e)}</section>`;
+    const apres = `<div class="quai-apres-arrivee" data-q-apres-arrivee ${vu ? '' : 'hidden'}>
         <div class="quai-doc quai-papier">
           <div class="quai-doc-titre">📄 Bon de livraison n° ${ech(cam.bl)}${cam.fournisseur ? ` — ${ech(cam.fournisseur)}` : ''}</div>
           ${blHtml()}
@@ -1374,11 +1721,18 @@ export function creerQuai(Q, opts = {}) {
         <p class="quai-ligne"><button class="btn btn-p" data-q="decharger" ${e.decharge || e.fini || !secuFaite(e) ? 'disabled' : ''}>« Oui, vous pouvez décharger »</button>
           <button class="btn" data-q="revoir1" data-libre>↺ Revoir l’arrivée</button>
           <span class="quai-cout">${ech(quiSort)} pose ${PAL[0].length > 1 ? 'les palettes' : 'la palette'} en ${ech(zoneMin)} · durée : ${formule()}</span></p>
+      </div>`;
+    return `<section class="quai-carte">
+      <div class="quai-scene2 quai-iso">
+        <svg data-q-arrivee viewBox="70 -30 800 520" role="img" aria-label="${ech(R.lieu.nom)} : un camion porteur recule à la porte. Le chauffeur : « ${ech(paroleArrivee())} »">${sceneArrivee(vu ? D_ARRIVEE : 0, e)}</svg>
+        <div class="quai-legende" data-q-leg>${ech(legArrivee(vu))}</div>
       </div>
+      ${SCENE && vu ? '' : `<p class="quai-ligne" data-q-passer1 ${vu ? 'hidden' : ''}><button class="btn" data-q="passer1" data-libre>⏩ Passer l'animation</button></p>`}
+      ${inspecte ? '' : apres}
     </section>`;
   }
   // Un redessin en pleine manœuvre (autre geste, autre écran) : la manœuvre reprend où elle en était (`ui.t0a`).
-  function animerArrivee(z, api) {
+  function animerArrivee(z, api, e) {
     const svg = z.querySelector('[data-q-arrivee]');
     if (!svg) return;
     let fini = false;
@@ -1391,7 +1745,7 @@ export function creerQuai(Q, opts = {}) {
       if (fini || !svg.isConnected) return;
       if (ui.t0a == null) ui.t0a = now;
       const t = now - ui.t0a;
-      svg.innerHTML = sceneArrivee(t);
+      svg.innerHTML = sceneArrivee(t, e);
       if (t >= D_ARRIVEE) { finir(); return; }
       requestAnimationFrame(pas);
     };
@@ -1844,6 +2198,8 @@ export function creerQuai(Q, opts = {}) {
     const db = { quais: { [Q.id]: e } };
     const { L } = jalonsQuai(db, Q);
     const tableau = `<table class="quai-bilan" data-q-bilan><thead><tr><th></th><th>Ce que tu as fait</th><th>Attendu</th><th></th></tr></thead><tbody>${L.map((l) => `<tr data-jalon="${ech(l.id)}"><td>${ech(l.lib)}</td><td>${ech(l.fait)}</td><td>${ech(l.attendu)}</td><td class="${l.ok ? 'quai-ok' : 'quai-ko'}">${l.ok ? '✓ juste' : '✗ à revoir'}${l.compte ? '' : ' <span class="note">(non compté)</span>'}</td></tr>`).join('')}</tbody></table>`;
+    // Mode scène : si un jalon de sécurité est faux, la phrase du contenu (`securite.bilan`) explique pourquoi.
+    const phraseSecu = SCENE && SEC.bilan && L.some((l) => /^securite-/.test(l.id) && !l.ok) ? `<p class="note" data-q-bilan-securite>${ech(SEC.bilan)}</p>` : '';
     let teteProf = '';
     if (EVAL) {
       const n = noteQuai(db, Q);
@@ -1868,6 +2224,7 @@ export function creerQuai(Q, opts = {}) {
     return `<div class="quai-bilan-bloc">
       <h3>Bilan de ta réception</h3>
       ${teteProf}${tableau}
+      ${phraseSecu}
       ${temps}
       <p class="note" data-q-reel-bilan>Temps réel passé : ${mmss(e.reel)} (mesuré pour caler les seuils de l'évaluation, non noté).</p>
       ${Q.bonASavoir ? `<p class="note">${Q.bonASavoir}</p>` : ''}
@@ -1913,7 +2270,7 @@ export function creerQuai(Q, opts = {}) {
     api.sauver(); api.redessiner();
   }
   function aller(e, n, api) {
-    if (n >= 1 && !secuFaite(e)) return;
+    if (n >= SEUIL_SECU && !secuFaite(e)) return;
     if (n > 1 && !unDecharge(e, R)) return;
     if (ui.anim) ui.anim.finir();
     e.etape = n; ui.chef4 = false; ui.tente = null; ui.tropMotifs = false; ui.arme4 = false;
@@ -2137,7 +2494,7 @@ export function creerQuai(Q, opts = {}) {
   }
 
   return {
-    signaux: [`quai:${Q.id}:decharger`, `quai:${Q.id}:valider`, `quai:${Q.id}:cloturer`],
+    signaux: [`quai:${Q.id}:decharger`, `quai:${Q.id}:valider`, `quai:${Q.id}:cloturer`].concat(SCENE ? [`scene:${Q.id}:signaler`, `scene:${Q.id}:decharger`] : []),
     id: Q.id,
     nav: { libelle: Q.libelle || 'Quai de réception' },
     etatNeuf: () => etatNeuf(Q),
@@ -2166,11 +2523,11 @@ export function creerQuai(Q, opts = {}) {
       if (M && R.palettes[e.sel] && R.palettes[e.sel].camion !== ca(e) && PAL[ca(e)].length) e.sel = R.palettes.indexOf(PAL[ca(e)][0]);
       const ouvert = unDecharge(e, R);
       // Étape ⓪ (sécurité) : tant que l'élève n'a pas commencé à décharger, ou s'il y revient pour relire.
-      const etape = ouvert ? (e.etape ?? 1) || 1 : (SEC && (!secuFaite(e) || e.etape === 0) ? 0 : 1);
+      const etape = ouvert ? (e.etape ?? 1) || 1 : (LISTE && (!secuFaite(e) || e.etape === 0) ? 0 : 1);
       const corps = etape === 0 ? ecran0(e) : etape === 1 ? ecran1(e) : etape === 2 ? `<section class="quai-carte">${scene2(e)}</section>` : etape === 3 ? ecran3(e) : ecran4(e, api);
       const libs4 = ISO ? ETAPES_ISO.slice() : (M ? ['① Les camions arrivent'].concat(ETAPES.slice(1)) : ETAPES.slice()).map((l, i) => (i === 3 && !F ? `④ Réserves et ${zoneMin}` : l));
-      const libs = SEC ? [ETAPE_SECU].concat(libs4) : libs4;
-      const n0 = SEC ? 0 : 1;   // numéro de la première étape affichée
+      const libs = LISTE ? [ETAPE_SECU].concat(libs4) : libs4;
+      const n0 = LISTE ? 0 : 1;   // numéro de la première étape affichée
       const tete = M
         ? R.camions.map((c) => `Camion « ${fictif(c.nom, c.fictif)} », transporteur ${fictif(c.transporteur, c.fictif)}`).join(' · ')
         : `Livraison « ${fictif(cam.fournisseur, cam.fictif)} » · camion ${F ? 'frigorifique ' : ''}${fictif(cam.transporteur, cam.fictif)}`;
@@ -2182,7 +2539,7 @@ export function creerQuai(Q, opts = {}) {
         ${Q.avertissement ? `<div class="quai-avert">${Q.avertissement}</div>` : ''}
         ${horloges(e)}
         <nav class="quai-stepper" aria-label="Étapes de la réception">
-          ${libs.map((l, i) => { const n = i + n0, ferme = (n >= 1 && !secuFaite(e)) || (n > 1 && !ouvert);
+          ${libs.map((l, i) => { const n = i + n0, ferme = (n >= SEUIL_SECU && !secuFaite(e)) || (n > 1 && !ouvert);
             return `<button data-q="etape" data-libre data-n="${n}" class="${etape === n ? 'on' : ''}" ${ferme ? 'disabled' : ''} ${etape === n ? 'aria-current="step"' : ''}>${l}</button>`; }).join('')}
         </nav>
         ${corps}
@@ -2203,7 +2560,7 @@ export function creerQuai(Q, opts = {}) {
 
       on('etape', (ev, b) => {
         const n = +b.dataset.n;
-        if (n === 0 && SEC) { if (ui.anim) ui.anim.finir(); e.etape = 0; api.sauver(); api.redessiner(); return; }
+        if (n === 0 && LISTE) { if (ui.anim) ui.anim.finir(); e.etape = 0; api.sauver(); api.redessiner(); return; }
         aller(e, n, api);
       });
       // L'étape ⓪ : chaque réponse est rangée tout de suite ; rien n'est corrigé avant la fin.
@@ -2250,7 +2607,8 @@ export function creerQuai(Q, opts = {}) {
       // GESTES (questions au fil, lot 3) : `quai:<id>:decharger`, `quai:<id>:valider` (une palette), `quai:<id>:cloturer`.
       const sig = (n) => { if (api.signal) api.signal(`quai:${Q.id}:${n}`); };
       on('decharger', geste((ev, b) => { sig('decharger'); decharger(e, ciDe(b), api); }));
-      if (ISO && z.querySelector('[data-q-arrivee]') && !arriveeVue(e)) animerArrivee(z, api);
+      if (SCENE) brancherScene(z, e, api, on, geste);
+      if (ISO && z.querySelector('[data-q-arrivee]') && !arriveeVue(e)) animerArrivee(z, api, e);
       on('passer1', () => { if (ui.anim1) ui.anim1.finir(); else { ui.arrivee = true; ui.rejeu1 = false; ui.t0a = null; api.redessiner(); } });
       on('revoir1', () => { ui.rejeu1 = true; ui.t0a = null; api.redessiner(); });
       on('camion', (ev, b) => {
@@ -2496,6 +2854,7 @@ export function creerQuai(Q, opts = {}) {
       on('recommencer', () => {
         if (Q.recommencer === false) return;
         if (!secondClic(ui, 'armeRaz')) { api.redessiner(); return; }
+        ui.vueScene = 'dehors'; ui.levee = null; ui.armeScene = false; ui.arretSecu = false;
         api.recommencer();
       });
       if (ui.jouerCf) { ui.jouerCf = false; jouerCf(z, e); }

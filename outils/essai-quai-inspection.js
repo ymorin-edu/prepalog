@@ -7,10 +7,15 @@
 // Il sert à deux choses : Tristan regarde chaque objet dans chaque état (est-il reconnaissable seul ?), et la suite
 // de tests (`outils/test/quai-iso.mjs`) vérifie que la zone cliquable de chaque objet le contient et le touche.
 //
+// ÉTAPE 2 : la partie 2 (en bas du fichier) monte la scène d'ENT-6.4 dans le vrai moteur d'entreprise.
+//
 // Page : outils/essai-quai-inspection.html (servie par `lancer.bat`, http://localhost:8000/outils/essai-quai-inspection.html).
 
 import { projection, facadeQuai, camionPorteur, X_PORTE_FACADE, horlogeQuai, solQuai, niveleur, remorqueInterieur,
   murQuai, ouvertureQuai, lampeQuai, boitesCamion, boitesButoirs, boitesNiveleur, boitesLampe, boiteEcran } from '../core/iso.js';
+import { creerEntreprise } from '../core/types/entreprise.js';
+import { etapesQuai, jalonsQuai } from '../core/types/quai.js';
+import { univers } from './essai-animation.js';
 
 // Les deux vues : projection et cadre (viewBox) du quai d'ENT-1.1.
 export const VUES = {
@@ -118,4 +123,99 @@ export function monter(hote) {
   hote.querySelector('[data-calme]').addEventListener('change', (ev) => hote.classList.toggle('eqi-calme', ev.target.checked));
   dessiner();
   return { etats, dessiner };
+}
+
+/* ==================================================================================================================
+   PARTIE 2 (étape 2 du chantier D-4) — la scène d'ENT-6.4 dans le VRAI moteur (`core/types/quai.js`, `securite.mode: 'scene'`).
+   Rien n'est dessiné ici : on déclare le quai d'ENT-6.4 (bloc `securite` du brief ENT-6.4 §6) et on monte `creerEntreprise`, comme
+   le fait une vraie séance. La palette de cartons n'est qu'un prétexte pour jouer la suite (les fûts viennent à l'étape 3).
+   ================================================================================================================== */
+
+// Le bloc `securite` d'ENT-6.4 : deux défauts (le chauffeur au volant moteur allumé ; le niveleur relevé) et trois pièges (la
+// cale, les butoirs et la lampe sont en ordre). Les `lib` ne s'affichent JAMAIS pendant l'inspection : ils servent au bilan.
+export const SECURITE_ENT64 = {
+  mode: 'scene',
+  arret: false,
+  consigne: 'Clique sur ce qui ne va pas, puis signale-le à Nadia.',
+  points: [
+    { id: 'cabine', objet: 'cabine', etat: 'conduite', vue: 'dehors', ok: false, lib: 'Chauffeur au volant, moteur allumé',
+      repare: 'Bien vu : je fais couper le moteur, le chauffeur me donne les clés et descend.' },
+    { id: 'niveleur', objet: 'niveleur', etat: 'releve', vue: 'dedans', ok: false, lib: 'Niveleur relevé',
+      repare: 'Bien vu : je pose le niveleur.' },
+    { id: 'cale', objet: 'cale', etat: 'posee', vue: 'dehors', ok: true, lib: 'Cale de roue' },
+    { id: 'butoirs', objet: 'butoirs', etat: 'enPlace', vue: 'dehors', ok: true, lib: 'Butoirs de quai' },
+    { id: 'lampe', objet: 'lampe', etat: 'allumee', vue: 'dedans', ok: true, lib: 'Lampe de quai' },
+  ],
+  signaler: { qui: 'Nadia', rien: 'Là, je ne vois rien qui cloche.', fin: 'Tu me dis quand on peut décharger.' },
+  bilan: 'La scène n’était pas sûre : avant d’entrer dans un camion, il doit être immobilisé et le passage vers la remorque doit être sûr.',
+};
+
+// Le quai d'essai : le quai iso d'ENT-6.4 (sans froid, un camion, une palette de cartons quelconque pour la suite).
+// `securite` : une autre déclaration (les tests y passent des variantes) ; `arret` : l'arrêt de Nadia (ENT-6.4 : non).
+export function quaiEssai({ arret = false, securite = null } = {}) {
+  const S = securite || Object.assign({}, SECURITE_ENT64, { arret });
+  return {
+    id: 'essai-inspection', rendu: 'iso', froid: false, motifs: ['avarie', 'manquant'],
+    titre: 'Plateforme de Buchelay — Quai 12 (page d’essai)',
+    avertissement: 'Page d’essai du chantier D-4 : le quai, le camion et la palette sont construits pour l’essai.',
+    lieu: { nom: 'Quai 12', temp: 15, refrigere: false }, zone: { nom: 'Zone de réception' },
+    dechargement: { ouverture: 0.5, parPalette: 1, par: 'chauffeur' }, aides: { consignes: true },
+    camions: [{ transporteur: 'Transporteur d’essai', fournisseur: 'Brasserie d’essai', bl: 'BL-ESSAI-01', arrivee: '07:30',
+      parole: 'Bonjour ! Livraison de la brasserie pour la plateforme. Voilà mon bon de livraison : on y va ?',
+      palettes: [{ id: 'P1', ref: 'ESS-CAR', nom: 'Cartons d’essai', bl: 8, W: 2, D: 2, L: 2, manque: [], avarie: {}, attendu: 'accepter', motifAttendu: 'aucun',
+        etiq: { ref: 'ESS-CAR', nom: 'CARTONS D’ESSAI', poids: '1 carton d’essai', lot: 'ESS-26-0001' } }] }],
+    securite: S,
+  };
+}
+
+// L'univers d'une séance d'essai : le moteur d'entreprise avec ce seul quai. `copie` : simule une évaluation (tests).
+export function universQuai(Q, { copie = false } = {}) {
+  return Object.assign(univers(), { quai: Q, animations: [], etapes: etapesQuai(Q), copie,
+    ENTREPRISE: { id: 'essai-inspection', nom: 'France Boissons — essai de l’inspection', sousTitre: 'Plateforme — quai de réception', exercice: 'Essai de l’inspection du quai' } });
+}
+
+// Monte la partie 2 dans `hote` : réglages, jalons de sécurité (ce que l'élève ne voit qu'au bilan), et l'inspection.
+export function monterScene(hote) {
+  hote.innerHTML = `
+    <form class="eqi-reglages" data-reglages-scene aria-label="Réglages de l'essai">
+      <fieldset><legend>Nadia et l'oubli d'un défaut</legend>
+        <label><input type="radio" name="arret" value="non" checked> ne l'arrête pas (ENT-6.4)</label>
+        <label><input type="radio" name="arret" value="oui"> l'arrête (guidage)</label></fieldset>
+      <fieldset><legend>Essai</legend>
+        <button type="button" data-recommencer-scene>Tout remettre à zéro</button></fieldset>
+    </form>
+    <details class="eqi-declare"><summary>Ce que la séance a déclaré (pour toi, jamais pour l'élève)</summary>
+      <ul>${SECURITE_ENT64.points.map((p) => `<li><b>${p.objet}</b>, ${p.vue === 'dehors' ? 'dehors' : 'dedans'}, ${p.etat} : ${p.ok ? 'en ordre (piège)' : '<b>défaut</b>'} — ${p.lib}</li>`).join('')}</ul></details>
+    <div data-seance-scene></div>
+    <details class="eqi-jalons" data-jalons-secu open><summary>Les jalons de sécurité, calculés maintenant (l'élève ne les voit qu'au bilan)</summary>
+      <div data-jalons-corps></div></details>`;
+  const corps = hote.querySelector('[data-jalons-corps]'), seance = hote.querySelector('[data-seance-scene]');
+  let db = {}, Q = null;
+  const majJalons = () => {
+    if (!Q) return;
+    const L = jalonsQuai(db, Q).L.filter((l) => /^securite-/.test(l.id));
+    corps.innerHTML = `<table class="quai-bilan"><thead><tr><th>Jalon</th><th>Ce que l'élève a fait</th><th>Attendu</th><th></th></tr></thead><tbody>${L.map((l) =>
+      `<tr><td>${l.lib}</td><td>${l.fait}</td><td>${l.attendu}</td><td class="${l.ok ? 'quai-ok' : 'quai-ko'}">${l.ok ? '✓ juste' : '✗ pas (encore) juste'}</td></tr>`).join('')}</tbody></table>
+      <p class="note">Phrase du bilan (affichée au bilan du quai si un de ces jalons est faux) : « ${Q.securite.bilan} »</p>`;
+  };
+  function lancer() {
+    db = {};
+    Q = quaiEssai({ arret: hote.querySelector('input[name="arret"]:checked').value === 'oui' });
+    const h = document.createElement('div');
+    h.setAttribute('data-hote-quai', '');
+    seance.replaceChildren(h);
+    const ctx = {
+      meta: { id: 'essai-inspection', code: 'ESSAI', titre: 'Essai de l’inspection', portee: 'eleve', immersif: true, temps: 'guidage', bareme: 2 },
+      profil: { prenom: 'Essai', nom: 'Inspection', role: 'eleve', uid: 'essai-eleve' },
+      jeu: { etat: () => db, sauver: majJalons },
+      enregistrer: () => {}, quitter: () => { lancer(); }, codeStock: 'ESSAI', lireScore: async () => null,
+    };
+    creerEntreprise(universQuai(Q)).rendre(h, ctx);
+    h.querySelector('.ent-nav[data-vue="quai"]')?.click();
+    majJalons();
+    window.__essaiScene = { db: () => db, quai: () => Q };
+  }
+  hote.querySelector('[data-reglages-scene]').addEventListener('change', lancer);
+  hote.querySelector('[data-recommencer-scene]').addEventListener('click', lancer);
+  lancer();
 }

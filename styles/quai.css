@@ -277,3 +277,10 @@ p.quai-main{ margin:8px 0 0; font-size:15px }
 .quai-fiche-refs th[scope="row"]{ text-align:left; font-weight:600 }
 .quai-fiche-refs input[type="checkbox"]{ width:18px; height:18px }
 .quai .quai-fiche-refs .quai-fr-nb{ width:64px; text-align:center }
+
+/* Inspection sur la scène (chantier D-4, étape 2) : la scène se clique à la souris. Un seul curseur (une croix) sur tout le
+   dessin, y compris sur les marques : aucun objet ne se trahit au survol. Pas de surbrillance, pas de zone visible. */
+[data-q-inspection], [data-q-inspection] *{ cursor:crosshair }
+.quai-inspection svg{ display:block; width:100%; height:auto; touch-action:manipulation }
+[data-q-secu-chef]:empty{ display:none }
+.quai-inspection{ margin-bottom:10px }
