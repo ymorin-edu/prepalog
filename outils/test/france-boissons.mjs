@@ -1910,6 +1910,16 @@ await v('ENT-6.4 : déclaration — meta, parcours après ENT-6.3, dix jalons au
   egal(r.reflexions, ['ce-qu-on-compare', 'fut-abime-stock'], 'questions pour réfléchir');
 });
 
+await v('ENT-6.4 : livraison — pret: true et ouverture: prof (fermée aux élèves tant que l’enseignant ne l’a pas cochée)', async () => {
+  const r = await pg.evaluate(async () => {
+    const I = await import('/activites/index.js');
+    await I.chargerActivites();
+    const A = await import('/activites/france-boissons-reception.js');
+    return { pret: A.meta.pret, ouverture: A.meta.ouverture, echecs: I.activitesEnEchec().length };
+  });
+  egal([r.pret, r.ouverture, r.echecs], [true, 'prof', 0], 'livraison');
+});
+
 await v('ENT-6.4 : ouverture — le message de Nadia (3 blocs, mercredi 16 juin 2027, 13 h 50), le menu, rien sur les défauts ; l’état est cloisonné par séance', async () => {
   await monter64({ uid: 'fb64-ouv' });
   egal(await pg.$$eval(`${Z} .ent-nav[data-vue]`, (L) => L.map((x) => x.dataset.vue)), ['ouverture', 'accueil', 'mail', 'quai'], 'menu');
