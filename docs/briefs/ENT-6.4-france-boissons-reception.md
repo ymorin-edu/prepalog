@@ -13,7 +13,7 @@
 > remis en ordre sans un mot au déchargement.
 
 **Statut** : à implémenter *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
-**Date du brief** : 05/10/2026 ; §7.3 réécrit le 10/10/2026
+**Date du brief** : 05/10/2026 ; §7.3 réécrit le 10/10/2026 ; §4 bis, 4 ter, 5 tranchés le 10/10/2026
 **Conversation d'origine** : Cowork (Opus) ; fiches projet `claude/prepalog-2de-s2-cadrage.md` (décisions 6, 12, 13) et
 `claude/prepalog-2de-s2-deroule.md` (décisions 26 et 27). Modèle : **ENT-5.4 Smoby** (`docs/briefs/ENT-5.4-smoby-reception.md`).
 Règles d'écriture 2de : `claude/prepalog-2de-eleve-debut-annee.md` (3 lignes par bloc, une consigne par écran).
@@ -146,35 +146,103 @@ pas la bonne : il manque une palette d'Affligem sur deux (P2 est de la Pelforth)
 
 Mots cliquables : fût, niveleur, cale, réserve, BL, zone litiges, produit différent, chariot frontal.
 
-## 4 bis. Questions au fil — À PROPOSER À TRISTAN AVANT DE CONSTRUIRE (règle du 10/10/2026)
+## 4 bis. Questions au fil — tranché par Tristan le 10/10/2026
 
-Ce brief a été écrit avant la règle. **Avant d'écrire la moindre ligne de la séance**, Claude Code (ou Cowork) propose à
-Tristan le tableau de `docs/briefs/MODELE.md` §4 bis : au moins 4 gestes de travail où une question peut arriver, dont une
-d'éco-droit appliquée au cas ; jamais une question qui donne d'avance la réponse d'un jalon (sinon corrigée au bilan).
-Tristan en garde 2 à 4 ; la part des questions notées (3 à 5 points sur 20) se prend sur les jalons, et le barème du §5
-est revu en conséquence (pondération sur 20 : `docs/briefs/NOTATION-ponderation.md`, lot 2). Les pistes « Pour réfléchir »
-du §9 sont une bonne source de questions.
+Choix de Tristan (10/10/2026, après-midi), d'après `docs/briefs/ENT-6.4-propositions-questions-poids.md` §1 (qui corrige
+les questions de Cowork, `france-boissons/PROPOSITIONS-questions-au-fil.md`, écrites avant la réécriture du §7.3).
+**Cinq questions**, toutes posées par Nadia, énoncé fixe (pas de valeur tirée). Les numéros se suivent dans l'ordre du
+travail ; entre parenthèses, le numéro de la proposition de Cowork. La ligne « Comment as-tu cherché » des propositions
+n'est **pas** retenue. Une seule question par geste ; aucune ne nomme la cabine, la cale, le niveleur, ni ne dit quelle
+palette est fausse.
 
-### 4 ter. Avant de commencer — À PROPOSER AUSSI
+| Geste (écran, case) | Qui pose | Question proposée | Type (fil / point d'étape) | Notée / réflexion | Corrigée tout de suite / au bilan | Pourquoi ici |
+|---|---|---|---|---|---|---|
+| **1.** Clic « C'est bon, on peut décharger » (⚙ `scene:<id>:decharger`, à publier par la scène, §7.3) | Nadia | « Tu me dis qu'on peut décharger. Avant d'entrer dans une remorque avec le chariot, qu'est-ce qui doit être vrai ? » — **Le camion ne peut plus bouger et le passage vers la remorque est sûr** · Le chauffeur nous dit que tout va bien · Le quai est propre et rangé · On a du retard, il faut aller vite | fil | **notée 1,5** (C1.2), groupe sécurité | **au bilan** | L'inspection est figée, mais un défaut oublié est réparé sans un mot : la question ne nomme ni cabine, ni cale, ni niveleur. Remplace la n° 1 de Cowork (« chauffeur au volant, moteur allumé » nommait le défaut). Sa phrase de bilan est celle du §6 / §11 |
+| **2.** Premier déchargement au chariot frontal (`quai:<id>:decharger`) *(n° 5 de Cowork)* | Nadia | « Tu conduis le chariot frontal. Qu'est-ce qui te donne le droit de le conduire ici ? » — **Une formation (comme le CACES) et l'autorisation de conduite donnée par France Boissons** · Le permis B · Rien : tout salarié peut le conduire · L'accord du chauffeur | fil | **notée 1** (C1.2), groupe sécurité | tout de suite | **Éco-droit appliqué** : Code du travail R4323-56, sur le geste que fait l'élève. Ne touche aucun jalon. Le texte utile (2 lignes) est cité dans l'énoncé (la vue quai n'a pas de volet « à gauche » pour une question au fil) ; **à relire sur Légifrance avant livraison**. Sortie de la banque d'ouverture (`autorisation-conduite`) pour ne pas la poser deux fois |
+| **3.** Première palette validée (`quai:<id>:valider`, sans dire laquelle) *(n° 4 de Cowork, corrigée)* | Nadia | « Tu viens de valider une palette. Pour l'accepter, tu compares ce que tu as compté à… » — **Ce qu'annonce le BL** · Une palette pleine, 8 fûts · Ce que dit le chauffeur · La palette d'à côté | fil | **réflexion** | **au bilan** | Le retour soufflerait le piège de P4 (7 sur le BL) avant qu'elle soit comptée ; la question reste générale. Remplace « qu'as-tu regardé ? » de Cowork, dont le retour (« tout le tour ») soufflait P3 |
+| **4.** BL signé (`quai:<id>:cloturer`) : point d'étape, il garde fermé « Répondre » à Nadia *(n° 2 de Cowork)* | Nadia | « Tu as signé le BL. Si on découvre demain, sous un film, un dommage que personne n'avait vu, combien de temps a-t-on pour protester auprès du transporteur ? » — **3 jours, jours fériés non compris, par lettre recommandée, en expliquant pourquoi** · 1 mois, par un simple mail · Le jour même seulement · Plus du tout | point d'étape | **notée 1,5** (C1.4.2), groupe réserves et BL | tout de suite | **Éco-droit appliqué** : Code de commerce L133-3 al. 1 (texte repris d'ENT-4.1 et 4.3, relu sur Légifrance le 03/10/2026, version en vigueur depuis le 10/12/2009), cité dans l'énoncé. Ne dit pas quelles réserves étaient justes (jalons 5, 6, 9). Sortie de la banque d'ouverture (`protestation`) |
+| **5.** Phrase « fût qui fuit » du message à Nadia (`messagerie:phrase:fut-fuit`, premier choix) *(n° 3 de Cowork)* | Nadia (pas Thomas, qui n'est pas encore là) | « Pourquoi ne met-on pas un fût abîmé en stock avec les autres ? » — Il est abîmé : on le met à part, le temps de régler avec la brasserie et le transporteur · Il prendrait trop de place · Il peut encore être livré à un client · Il faut le rendre au chauffeur tout de suite | fil | **réflexion** | **au bilan** | Le retour donnerait la phrase juste (jalon 10) avant l'envoi |
 
-Banque de questions de l'écran d'ouverture (`docs/briefs/MOTEUR-avant-de-commencer.md`, `MODELE.md` §4 ter) :
-préparation de l'exercice, 2 ou 3 d'économie-droit appliquées au cas, images si la séance fait découvrir un matériel ;
-au moins le double de ce qu'on tire ; validée par Tristan avant construction. Modèle : la banque d'ENT-6.2.
+**Retours de Nadia** (la conséquence, pas la leçon) :
+1. Au bilan, **une ligne** (elle ne répète pas la phrase de bilan du §6) : « Camion immobile, passage sûr : on vérifie les deux avant d'entrer, jamais pendant. »
+2. « Le CACES prouve la formation ; l'autorisation, c'est l'employeur qui la donne. »
+3. Au bilan : « Ce qu'on accepte, c'est ce que le BL annonce, pas ce qu'on suppose d'avance. »
+4. « Sans protestation dans les 3 jours, le transporteur n'a plus à répondre ; une réserve écrite sur le BL règle tout de suite. »
+5. Au bilan : « Un fût abîmé n'est pas du stock : on le met à part le temps de régler. »
 
-## 5. Jalons / notation (10 jalons, poids sur 20 à valider : `ENT-6.4-propositions-questions-poids.md`)
+**Questions notées : 4 points** (1 : 1,5 · 2 : 1 · 4 : 1,5) ; les questions 3 et 5 sont pour réfléchir (aucun point).
+Les poids sont au §5. Une question au fil corrigée « au bilan » ne dit rien tant que l'élève n'a pas fini ; les énoncés
+de 2 et de 4 citent le texte de loi dans l'énoncé ; **L133-3** est déjà relu, **R4323-56 est à relire sur Légifrance
+avant livraison** (comme pour toute la série).
 
-| # | Jalon | Ce qu'il lit | Piège à éviter |
-|---|---|---|---|
-| 1 | Chauffeur / moteur signalé **avant** de décharger | inspection sur le quai iso (§7.3) : `securite.signaux` | faux si l'élève décharge d'abord ; la silhouette et la fumée comptent pour le même point ; signalé dans n'importe quel envoi avant « on peut décharger » |
-| 2 | Niveleur signalé **avant** de décharger | idem | idem ; une marque enlevée avant l'envoi ne compte pas |
-| 3 | Aucun faux signalement (cale, butoirs, lampe, **clic à côté**) | idem | **ne récompense pas l'inaction** : faux si aucun signalement n'a été envoyé ; une marque fausse enlevée **avant** l'envoi ne compte pas, une marque fausse envoyée compte même si elle est enlevée ensuite |
-| 4 | P1 comptée 8 et acceptée | vue quai | — |
-| 5 | P2 : réserve « produit différent », référence lue = Pelforth | vue quai + fiche | P2 acceptée sans réserve = faux ; « Affligem » recopié du BL = faux |
-| 6 | P3 : réserve « fût endommagé », 1 fût | vue quai | sans faire le tour, la fuite ne se voit pas |
-| 7 | P4 comptée 7 et acceptée | vue quai | 8 (palette supposée pleine) = faux ; réserve « manquant » = faux |
-| 8 | BL signé | vue quai | — |
-| 9 | Phrase « réserves » juste | `phrasesJustes` | message non envoyé = faux |
-| 10 | Phrase « zone litiges » juste | `phrasesJustes` | idem |
+### 4 ter. Avant de commencer — tranché par Tristan le 10/10/2026
+
+Banque de l'écran d'ouverture (`docs/briefs/MOTEUR-avant-de-commencer.md`, `MODELE.md` §4 ter). Tutrice : Nadia. Banque de
+Cowork (`france-boissons/BANQUE-avant-de-commencer.md` §ENT-6.4) **gardée**, moins `protestation` et `autorisation-conduite`
+(posées au fil et notées : questions 4 et 2 ci-dessus), avec le retour de `protocole` réécrit, plus deux questions de droit
+nouvelles (`transporteur-garant`, `reserve-motivee`). **Pas** d'ajout en préparation (`huit-futs`, `zone-litiges`,
+`bl-signature` écartées : elles frôlent les pièges de P4, du jalon 10 et du BL signé).
+**Tirage** `{ preparation: 2, droit: 2, image: 1 }` = 5 questions par élève, `calculette: true`, **non notées** (l'élève ne
+le sait pas) ; chaque rubrique a au moins le double de ce qu'on tire (4 · 4 · 2). ★ = `cle: true`.
+**Documents à gauche** : le BL MON-27-0617, l'annuaire, « Photos et dessins », « Le droit ». Pas le dessin de la scène du
+quai (c'est l'exercice), pas d'onglet « Mots du quai » (plus aucune question ne le demande).
+
+| id | Rubrique | Question | Juste | Pièges | À gauche (document ou image) | ★ éval |
+|---|---|---|---|---|---|---|
+| `bl-cest-quoi` | préparation | Le BL que te donne le chauffeur, c'est… | Le bon de livraison : la liste de ce que le camion doit livrer | La facture à payer au chauffeur · Le bon de commande de Malo | BL | ★ |
+| `reserve-cest-quoi` | préparation | Écrire une **réserve** sur le BL, c'est… | Écrire précisément ce qui ne va pas, avant de signer | Refuser tout le camion · Signer sans rien dire et prévenir plus tard | BL | ★ |
+| `reassort` | préparation | Ce camion apporte du réassort d'Affligem. Pourquoi l'attendait-on ? | Mardi, il n'en restait que 2 fûts pour la commande de Malo | Malo a annulé sa commande · C'est pour un inventaire | BL | |
+| `qui-organise-quai` | préparation | Qui organise le quai et les réceptions des brasseries ? | Nadia, cheffe d'équipe quai et préparation | Karim · Thomas · Inès | annuaire | |
+| `transporteur-garant` | droit | Une palette de **casiers d'eau** tombe du camion pendant le trajet et des bouteilles se cassent. D'après l'article L133-1, qui est garant des dommages pendant le transport ? | Le transporteur (le « voiturier »), sauf force majeure ou vice propre de la marchandise | France Boissons, qui a signé le BL · La brasserie, qui a chargé le camion | Le droit : C. com. L133-1 *(à relire sur Légifrance avant livraison)* | ★ |
+| `reserve-motivee` | droit | Le chauffeur te dit : « Écris plutôt “sous réserve de déballage”, c'est plus rapide. » D'après l'article L133-3, est-ce que cela suffit pour garder un recours ? | Non : la loi demande une protestation **motivée**, qui dit ce qui ne va pas | Oui, toute réserve suffit · Oui, si le chauffeur est d'accord | Le droit : C. com. L133-3 | ★ |
+| `protocole` | droit | Un transporteur vient décharger à Buchelay. Quel document **écrit** encadre la sécurité de ce déchargement ? | Le protocole de sécurité | Le bon de livraison · Le permis du chauffeur | Le droit : C. trav. R4515-4 | ★ |
+| `droit-retrait` | droit | Une lisse de rack est pliée et une palette penche au-dessus de l'allée. Que peux-tu faire ? | Alerter tout de suite mon responsable et me retirer de ce danger | Continuer : ce n'est pas mon rôle · Redresser la lisse moi-même | Le droit : C. trav. L4131-1 | ★ |
+| `fut-cest-quoi` | image | Sur cette photo, que sont ces objets en métal ? | Des fûts : ils contiennent la bière pression et reviennent vides | Des bouteilles de gaz · Des poubelles | `futs-vrac.jpg` (déjà dans `contenus/images/france-boissons/`, crédit en place : « Photo : Belinda Fewings, Unsplash ») | |
+| `chariot-frontal` | image | Sur ce dessin, le **chariot frontal** sert à… | Soulever et déplacer les palettes, et les poser l'une sur l'autre (« gerber ») | Livrer les fûts chez les clients · Laver les fûts | `materiel-chariot-frontal.svg` (dessin de Cowork, **sans défaut** ; à copier dans `contenus/images/france-boissons/` avec sa ligne de crédit « Dessin — document pédagogique ») | |
+
+**Retours de Nadia** (affichés après la réponse ; la conséquence, pas la leçon) :
+- `bl-cest-quoi` : « On compare ce qui arrive au BL, avant de signer. »
+- `reserve-cest-quoi` : « Une réserve précise (quoi, combien) protège la plateforme. »
+- `reassort` : « Le fil de la semaine : ce que tu reçois aujourd'hui, d'autres le livreront. »
+- `qui-organise-quai` : reprise d'ENT-6.1.
+- `transporteur-garant` : « Le transporteur répond de la marchandise du départ à l'arrivée ; c'est à lui qu'on s'adresse en cas de casse. »
+- `reserve-motivee` : « Une réserve sans motif ne protège de rien : on écrit ce qui ne va pas, et combien. »
+- `protocole` (réécrit) : « Le protocole dit qui fait quoi quand un camion est déchargé : il est écrit à l'avance. »
+- `droit-retrait` : « Alerter, c'est un devoir ; se retirer d'un danger grave et imminent, c'est un droit. »
+- `fut-cest-quoi` : « Un fût plein de 30 L pèse environ 40 kg : on ne le porte pas, on le déplace au chariot. »
+- `chariot-frontal` : « Fourches baissées pour rouler, jamais personne sous une charge levée. »
+
+**À ne jamais utiliser** pour l'image : `materiel-palette-retention.svg` (il montre un fût qui fuit, donc le défaut de P3) et
+`chariot-boissons.jpg` (c'est un chariot à mât rétractable, pas un frontal). **Textes de loi** : L133-3 (relu sur Légifrance
+le 03/10/2026) ; R4515-4 et L4131-1 (relus par Cowork le 10/10 sur code.travail.gouv.fr) ; **L133-1 à relire sur Légifrance
+avant livraison**. Le moteur affiche « Texte de loi (réel) — source : Légifrance » en pied. Valeurs tirées : aucune. Écartées : tout ce qui décrit une scène de quai sûre ou dit où est un défaut,
+« faut-il faire le tour de la palette ? » (P3), « une palette incomplète est-elle fausse ? » (P4), « où va un fût qui
+fuit ? » (jalon 10).
+
+## 5. Jalons / notation (10 jalons, poids sur 20 : jalons 16 + questions 4, tranchés par Tristan le 10/10/2026)
+
+| # | Jalon | Poids | Groupe | Ce qu'il lit | Piège à éviter |
+|---|---|---|---|---|---|
+| 1 | Chauffeur / moteur signalé **avant** de décharger | **2** | sécurité | inspection sur le quai iso (§7.3) : `securite.signaux` | faux si l'élève décharge d'abord ; la silhouette et la fumée comptent pour le même point ; signalé dans n'importe quel envoi avant « on peut décharger » |
+| 2 | Niveleur signalé **avant** de décharger | **2** | sécurité | idem | idem ; une marque enlevée avant l'envoi ne compte pas |
+| 3 | Aucun faux signalement (cale, butoirs, lampe, **clic à côté**) | **1,5** | sécurité | idem | **ne récompense pas l'inaction** : faux si aucun signalement n'a été envoyé ; une marque fausse enlevée **avant** l'envoi ne compte pas, une marque fausse envoyée compte même si elle est enlevée ensuite |
+| 4 | P1 comptée 8 et acceptée | **1** | contrôle des palettes | vue quai | — |
+| 5 | P2 : réserve « produit différent », référence lue = Pelforth | **2,5** | réserves et BL | vue quai + fiche | P2 acceptée sans réserve = faux ; « Affligem » recopié du BL = faux |
+| 6 | P3 : réserve « fût endommagé », 1 fût | **2,5** | réserves et BL | vue quai | sans faire le tour, la fuite ne se voit pas |
+| 7 | P4 comptée 7 et acceptée | **1,5** | contrôle des palettes | vue quai | 8 (palette supposée pleine) = faux ; réserve « manquant » = faux |
+| 8 | BL signé | **1** | réserves et BL | vue quai | — |
+| 9 | Phrase « réserves » juste | **1** | message | `phrasesJustes` | message non envoyé = faux |
+| 10 | Phrase « zone litiges » juste | **1** | message | `phrasesJustes` | idem |
+| | **Total des jalons** | **16** | | | |
+| | Questions notées (§4 bis) : n° 1 (1,5, sécurité) · n° 2 (1, sécurité) · n° 4 (1,5, réserves et BL) ; les n° 3 et 5 sont pour réfléchir | **4** | une ligne au bilan chacune | | |
+| | **Total** | **20** | | | |
+
+**Sous-totaux par groupe** (jalons + questions) : sécurité 8 (5,5 + 2,5) · contrôle des palettes 2,5 · réserves et BL
+7,5 (6 + 1,5) · message 2 = **20**. **Par compétence** : **C1.2 = 8** (jalons 1 à 3 + questions 1 et 2) ; **C1.4 = 12**
+(jalons 4 à 10 = 10,5, plus la question 4 = 1,5). Vérification : jalons 2 + 2 + 1,5 + 1 + 2,5 + 2,5 + 1,5 + 1 + 1 + 1 =
+**16** ; 16 + 1,5 + 1 + 1,5 = **20**. La forme (salutation et fin du message, non notées) pèse 0 %. Le code : `bareme: 20`,
+un `poids` et un `groupe` par jalon, `part` = 4 dans le fichier de questions ; chaque question notée porte son `groupe`
+(une ligne au bilan) ; les valeurs de test sont écrites à la main (parcours juste 20/20, inaction 0/20).
 
 Comme ENT-5.4 : une palette = comptage **et** décision justes (un seul jalon). Valeurs attendues **calculées** depuis les
 palettes (`couches − absents`, `bl − réel`, nombre de fûts abîmés, référence de l'étiquette) ; dans les tests, écrites à la main.
@@ -279,6 +347,11 @@ et au corrigé.
      décharger » = présent dans au moins un signal envoyé avant `fait` ; « aucun faux signalement » = au moins un signal
      envoyé **et** aucun signal ne contient de point `ok: true` ni de marque à côté. Les jalons de la liste
      (`securiteSignalee`, `securiteConstat`) ne sont pas produits en mode scène.
+   - **Gestes publiés** *(demande ajoutée le 10/10/2026, questions au fil du §4 bis)* : la scène publie
+     `scene:<id>:signaler` (à chaque envoi de « Signaler à Nadia ») et `scene:<id>:decharger` (au clic « C'est bon, on
+     peut décharger »), et ils entrent dans la liste `signaux` de la vue ; la question n° 1 du §4 bis se pose sur
+     `scene:<id>:decharger` (après le figeage de l'inspection, elle ne change aucun jalon). Le geste ne dit rien des
+     marques ni des points touchés.
    - **Ce qui ne se rouvre jamais** : « Corriger » après le bilan ne rouvre pas l'inspection (le camion est reparti) ;
      `recommencer` remet l'inspection à zéro comme le reste du quai.
    - **Cloisonnement** : l'état de l'inspection vit dans l'état du quai de la séance (`db.quais[id].securite`), rien de
@@ -338,13 +411,15 @@ défaut pendant l'inspection.
 - [x] Deux vues, dehors puis dedans porte ouverte (Tristan, 10/10).
 - [x] Clic à côté de tout objet = faux signalement (Tristan, 10/10).
 - [x] Défaut oublié en entraînement : remis en ordre sans un mot au déchargement (Tristan, 10/10).
-- [ ] Phrase du bilan : « La scène n'était pas sûre : avant d'entrer dans un camion, il doit être immobilisé et le passage
+- [x] Phrase du bilan : « La scène n'était pas sûre : avant d'entrer dans un camion, il doit être immobilisé et le passage
   vers la remorque doit être sûr. » (remplace « regarde la cabine et l'arrière du camion », qui nommait presque les zones).
-- [ ] Au bilan de l'élève, les lignes des jalons 1 et 2 nomment-elles le défaut (« Chauffeur au volant, moteur allumé ») ?
-  (défaut : **oui**, l'inspection est figée et ne se refait pas ; ce qui ne se dit jamais, c'est l'endroit pendant
-  l'inspection).
-- [ ] Cale et lampe : dessinées sur tous les quais iso, ou seulement quand une séance les déclare ? (défaut : seulement
-  quand une séance les déclare, ENT-1.1 ne change pas).
+  Acceptée telle quelle ; elle sert au bilan quand un défaut manque ; le retour de la question n° 1 du §4 bis, au bilan
+  aussi, est plus court et ne la répète pas (Tristan, 10/10/2026, après-midi).
+- [x] Au bilan de l'élève, les lignes des jalons 1 et 2 nomment-elles le défaut (« Chauffeur au volant, moteur allumé ») ?
+  **Oui**, l'inspection est figée et ne se refait pas ; ce qui ne se dit jamais, c'est l'endroit pendant l'inspection
+  (Tristan, 10/10/2026, après-midi).
+- [x] Cale et lampe : dessinées sur tous les quais iso, ou seulement quand une séance les déclare ? **Seulement quand une
+  séance les déclare**, ENT-1.1 ne change pas (Tristan, 10/10/2026, après-midi).
 - [x] « Zéro accident » dans le message de Nadia et la cale rappelée dans sa réponse, d'après la vidéo de Buchelay (Tristan, 07/10). La scène dessinée ne change pas.
 - [x] **Palettes mères de 8 fûts (1,23 m × 1,12 m)** : vérifié (Tristan, 05/10), dit dans la trame.
 - [x] ~~4 fûts par palette de rétention (décision 37)~~ → **8 fûts à plat en quinconce sur palette de rétention noire de 1,30 × 1,30 m** (Tristan, 05/10, décision 52), en 6.4, 6.5 et 6.6.

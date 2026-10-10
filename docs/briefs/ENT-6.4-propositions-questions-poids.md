@@ -1,7 +1,16 @@
 # ENT-6.4 France Boissons, le camion de la brasserie — trois propositions à trancher (questions au fil, « Avant de commencer », poids sur 20)
 
-**Statut** : à trancher par Tristan **Date** : 10/10/2026 **Pour** : `docs/briefs/ENT-6.4-france-boissons-reception.md` (§4 bis, §4 ter, §5)
-**Rien n'est construit.** Une fois tes choix faits, ils sont recopiés dans le brief (§4 bis, §4 ter, §5) et la séance s'écrit (`pret: false`).
+**Statut** : tranché par Tristan le 10/10/2026, recopié dans le brief **Date** : 10/10/2026 **Pour** : `docs/briefs/ENT-6.4-france-boissons-reception.md` (§4 bis, §4 ter, §5)
+**Rien n'est construit.** Les choix de Tristan sont recopiés dans le brief (§4 bis, §4 ter, §5, §7.3, §11) ; la séance s'écrit ensuite (`pret: false`). Les tableaux ci-dessous restent tels qu'ils étaient proposés : **le brief fait foi**.
+
+## Décision (Tristan, 10/10/2026, après-midi)
+
+1. **Questions au fil** : les cinq de Cowork sont gardées, avec deux corrections de cette page : la n° 1 devient la ligne 1 du §1 (au clic « C'est bon, on peut décharger », notée 1,5, groupe sécurité, corrigée au bilan) et la n° 4 devient la ligne 4 (« ce qu'annonce le BL »), en réflexion, corrigée au bilan. Restent telles quelles : L133-3 au BL signé (point d'étape, notée 1,5), R4323-56 au premier déchargement (notée 1), fût qui fuit (réflexion, au bilan, posée par Nadia). La ligne 2 « Comment as-tu cherché » n'est **pas** retenue. Total des questions notées : **4 points**.
+2. **Poids sur 20** : jalons 16 (2 · 2 · 1,5 · 1 · 2,5 · 2,5 · 1,5 · 1 · 1 · 1) + questions 4. Groupes : sécurité (jalons 1 à 3), contrôle des palettes (4, 7), réserves et BL (5, 6, 8), message (9, 10). C1.2 = 8, C1.4 = 12. Ni la variante A ni la B du §3 : un barème nouveau (4 points de questions).
+3. **Banque « Avant de commencer »** : celle de Cowork, moins `protestation` et `autorisation-conduite` (doublons), `protocole` réécrit, plus `transporteur-garant` (L133-1, à relire sur Légifrance) et `reserve-motivee` (L133-3). Pas d'ajout en préparation (`huit-futs`, `zone-litiges`, `bl-signature` écartées). Images : `fut-cest-quoi` et `chariot-frontal` (jamais `materiel-palette-retention.svg` ni `chariot-boissons.jpg`). Tirage 2 + 2 + 1, non notées, `calculette: true`.
+4. **Phrase du bilan** (§11) acceptée telle quelle ; le retour de la question n° 1 au bilan est plus court et ne la répète pas.
+5. Les lignes des jalons 1 et 2 nomment le défaut au bilan : oui. Cale et lampe dessinées seulement quand une séance les déclare : oui.
+6. Demande au moteur ajoutée au §7.3 : la scène publie `scene:<id>:signaler` et `scene:<id>:decharger`.
 
 **Vérifié dans le code** (lu le 10/10) : une question « au fil » a un énoncé fixe (pas de « {ton choix} » : ENT-6.3 les a retirés), 2 à 4 choix, une bonne réponse ou « réflexion », `apres: 'bilan'` pour corriger au bilan, un `groupe` obligatoire si elle est notée ; elle n'a **pas** de texte « à gauche » (seules les questions d'« Avant de commencer » en ont) : un texte de loi se met donc dans l'énoncé (2 lignes) ou en pièce jointe d'un message de Nadia. Gestes que la vue quai publie aujourd'hui : `quai:<id>:decharger`, `:valider` (une palette, **sans dire laquelle**), `:cloturer` ; et `messagerie:phrase:<ligne>`. L'écran d'ouverture tire 2 + 2 (+ 1 image) par élève dans une banque d'au moins le double, `variante` pour les valeurs tirées, `cle: true`, `calculette`.
 **Supposé** : les deux gestes de la scène d'inspection (⚙ ci-dessous : à publier par la vue nouvelle, elle « naît avec ses gestes ») ; le texte exact de L133-1 et de R4323-56 (à relire sur Légifrance avant livraison, comme pour toute la série) ; le fait que le mail du message à Nadia porte une `cle` qui peut être fermée par un point d'étape.
