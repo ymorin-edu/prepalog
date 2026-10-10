@@ -193,3 +193,5 @@ NB.SI.ENS + RECHERCHEV ; 5 références, les plus coûteuses ; retour façon ent
 - **Commits** : « Geste tableur : salissures visées… », « ENT-2.6 bonus : cinq recomptages… (C9) ».
 - **Reste ouvert** : trame (encarts NB.SI.ENS, RECHERCHEV, « nettoyer un export ») et corrigé (Cowork) ; essai par
   Tristan sous Excel **et** LibreOffice (NB.SI.ENS avec un critère de date `">="&DATE(…)`).
+
+- **Notation pondérée sur 20 (10/10/2026, lot 4 de `docs/briefs/NOTATION-ponderation.md`)** : export 1,5, nettoyage 3, constats 4, valeur 4, cinq priorités 7,5 (le code a 5 jalons, le brief en annonçait 4). Poids validés par Tristan ; tableau `BAREME` du fichier de contenu, `bareme: 20` dans l'activité, plus de `notation: 'avancement'`. Les anciennes lignes du Suivi gardent leur proportion (`meilleurScore`).

@@ -26,7 +26,7 @@ const s = seanceEntreprise(CDISCOUNT, SEANCE, {
   // Volume déclaré (`claude/prepalog-montee-en-competences.md`) : toute l'allée A. Un élève
   // confirmé (`db.aisance`) recompte en plus A-05 et A-06 (voir le contenu).
   volume: SEANCE.VOLUME,
-  notation: 'avancement',
+  bareme: 20,           // jalons pondérés, somme des poids = 20 (règle du 10/10/2026)
   // PAS de `reinitialisable` : la remise à zéro est réservée aux séances X.1 (décision du
   // 02/10/2026, gardée par un test du bloc « transport »). L'inventaire validé est définitif :
   // l'élève voit sa correction détaillée, mais ne refait pas la séance de lui-même.

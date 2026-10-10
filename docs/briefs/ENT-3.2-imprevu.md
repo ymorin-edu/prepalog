@@ -163,3 +163,5 @@ Ribot (ou le client choisi) est barré et je ne peux plus le charger ; (4) ma to
   - corrigé à écrire après validation ;
   - à recaler si le chantier D (données qui changent) passe après : relancer `node outils/carte/calibrer.mjs` ;
   - `docs/briefs/COORDINATION-boost.md` (ligne C) est en cours de modification par une autre session : statut à mettre à jour.
+
+- **Notation pondérée sur 20 (10/10/2026, lot 4 de `docs/briefs/NOTATION-ponderation.md`)** : repérage 1,5, données 1,5, choix 3, charge 2, horaire 2, créneau 2, formules 2, trajet à 10 % 1,5, à 5 % 1, replanification 2, trajet après l'imprévu 1,5. ENT-3.2 n'avait aucun poids (la liste « déjà conformes » se trompait). Poids validés par Tristan ; tableau `BAREME` du fichier de contenu, `bareme: 20` dans l'activité, plus de `notation: 'avancement'`. Les anciennes lignes du Suivi gardent leur proportion (`meilleurScore`).

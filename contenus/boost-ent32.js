@@ -45,6 +45,7 @@ import { creerTournee } from '../core/types/tournee.js';
 import { creerCarte } from '../core/types/carte.js';
 import { CARTE } from './boost-ent32-carte.js';
 import { IMPREVU } from './boost-ent32-imprevu.js';
+import { ponderer } from './ponderation.js';
 
 export const TRANSPORT_ID = 'boost-ent32';
 
@@ -592,7 +593,7 @@ function tientPhase2(db) {
   return { status: 'ok', b };
 }
 
-export const ETAPES = [
+const JALONS = [
   {
     id: 'reperage',
     titre: `Les ${NOUVEAUX.length} nouveaux clients situés sur la carte`,
@@ -744,3 +745,19 @@ export const ETAPES = [
     },
   },
 ];
+
+// NOTE PONDÉRÉE SUR 20 (poids validés par Tristan le 10/10/2026, lot 4 de `docs/briefs/NOTATION-ponderation.md`). Le cœur : le poids à écarter et la bonne commande à quai (3), la charge, le train, le créneau et les formules (2 chacun), la replanification après l'imprévu (2), les trois tournées proches de la meilleure (3,5 en tout).
+export const BAREME = {
+  reperage: [1.5],
+  donnees: [1.5],
+  choix: [3],
+  charge: [2],
+  horaire: [2],
+  creneau: [2],
+  formules: [2],
+  trajet10: [1.5],
+  trajet5: [1],
+  replanif: [2],
+  trajet2: [1.5],
+};
+export const ETAPES = ponderer(JALONS, BAREME, 'ENT-3.2');

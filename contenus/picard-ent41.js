@@ -12,6 +12,7 @@
 //   P5  étiquette EPB-450 au lieu de EPH-450                 → refuser, produit différent
 
 import { etapesQuai } from '../core/types/quai.js';
+import { ponderer } from './ponderation.js';
 import { LIEU, PHOTOS, DECHARGEMENT, COUTS, SEUIL_HORS_FROID, AVERTISSEMENT, BON_A_SAVOIR, releves } from './picard.js';
 
 // Une palette : W cartons en largeur × D en profondeur × L couches. `manque` : cartons absents,
@@ -59,7 +60,22 @@ export const QUAI_ENT41 = {
 
 // Un jalon de la vue = une étape du suivi (18 : ticket, 5 comptages, 5 décisions, 4 réserves,
 // pas de mention de déballage, signature, lot rentré).
-export const ETAPES = etapesQuai(QUAI_ENT41);
+// NOTE PONDÉRÉE SUR 20 (poids validés par Tristan le 10/10/2026, lot 4 de `docs/briefs/NOTATION-ponderation.md`). Une palette par
+// aléa (P1 aucun, P2 avarie, P3 température, P4 manquant, P5 étiquette d'un autre produit) : une ligne du bandeau par palette,
+// comme ENT-4.2. Comptage 0,75 · décision 1,25 (P1) ou 1,75 · réserve écrite 0,75.
+const PALETTE = (p) => `Palette ${p}`;
+export const BAREME = {
+  ticket: [2, 'L’enregistreur'],
+  'P1-comptage': [0.75, PALETTE('P1')], 'P1-decision': [1.25, PALETTE('P1')],
+  'P2-comptage': [0.75, PALETTE('P2')], 'P2-decision': [1.75, PALETTE('P2')], 'P2-reserve': [0.75, PALETTE('P2')],
+  'P3-comptage': [0.75, PALETTE('P3')], 'P3-decision': [1.75, PALETTE('P3')], 'P3-reserve': [0.75, PALETTE('P3')],
+  'P4-comptage': [0.75, PALETTE('P4')], 'P4-decision': [1.75, PALETTE('P4')], 'P4-reserve': [0.75, PALETTE('P4')],
+  'P5-comptage': [0.75, PALETTE('P5')], 'P5-decision': [1.75, PALETTE('P5')], 'P5-reserve': [0.75, PALETTE('P5')],
+  deballage: [1, 'Pas de « sous réserve de déballage »'],
+  signature: [1, 'La signature du chauffeur'],
+  rentre: [1, 'Le lot rentré en chambre froide'],
+};
+export const ETAPES = ponderer(etapesQuai(QUAI_ENT41), BAREME, 'ENT-4.1');
 
 export const ACCUEIL = {
   titre: 'Réceptionner le premier camion, dans l’ordre',

@@ -178,3 +178,5 @@ quartiers et des numéros.
     189 ordres sur 720 tiennent le train). Le PDF est repris du .docx par Word ;
   - la fiche `docs/fiches/prepalog-vues-transport.md` (copie datée) ne connaît pas le mode « lire la case » ;
   - 3.4 : complication du repérage à décider avant de la construire.
+
+- **Notation pondérée sur 20 (10/10/2026, lot 4 de `docs/briefs/NOTATION-ponderation.md`)** : repérage 4, bonne commande à quai 4, charge utile 3, train 4, résultats reportés 2,5, formules 2,5 (avant : 3,33 par jalon). Poids validés par Tristan ; tableau `BAREME` du fichier de contenu, `bareme: 20` dans l'activité, plus de `notation: 'avancement'`. Les anciennes lignes du Suivi gardent leur proportion (`meilleurScore`).

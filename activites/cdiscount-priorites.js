@@ -22,7 +22,7 @@ const s = seanceEntreprise(CDISCOUNT, SEANCE, {
   // Compétences et temps pédagogique : voir core/competences.js.
   competences: ['C1.6'],
   temps: 'entrainement',
-  notation: 'avancement',
+  bareme: 20,           // jalons pondérés, somme des poids = 20 (règle du 10/10/2026)
   trame: 'cdiscount-priorites',
   pret: true,
   ouverture: 'prof',

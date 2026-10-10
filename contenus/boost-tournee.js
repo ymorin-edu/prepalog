@@ -27,7 +27,7 @@
 // ── La notation : jalons ET note sur 20 ─────────────────────────────────────────────────
 // Tristan, le 02/10 : « les élèves sont motivés par les notes, je peux l'utiliser avec un
 // petit coefficient pour récompenser leur implication ». Donc cette séance déclare
-// `bareme: ETAPES.length` et **PAS** `notation: 'avancement'` — c'est son seul écart avec les
+// `bareme: 20` (jalons pondérés, lot 4 du 10/10/2026) et **PAS** `notation: 'avancement'` — c'est son seul écart avec les
 // trois séances Spartoo. Vérifié dans le code : `noteConvertie` de `core/notes.js` rend vrai
 // dès qu'un module ne déclare pas de `notation`, le score est ramené sur 20, et le score brut
 // en jalons reste lisible en infobulle dans le suivi de classe. Aucun ajout au moteur.
@@ -48,6 +48,7 @@
 import { creerTournee } from '../core/types/tournee.js';
 import { DESTINATAIRES, VELO } from './boost.js';
 import { CARTE } from './boost-ent31-carte.js';
+import { ponderer } from './ponderation.js';
 
 export const TRANSPORT_ID = 'boost-ent31';
 
@@ -307,8 +308,8 @@ export const VOLET = {
 };
 
 /* ============================ Suivi de l'exercice ============================
- * Six jalons. Le barème de la séance, c'est leur nombre : chacun vaut 3,33 points sur 20
- * (il y en avait cinq, à 4 points, avant l'ajout du jalon « formules » le 05/10).
+ * Six jalons pondérés, total 20 (`BAREME` plus bas, poids validés par Tristan le 10/10/2026) ; avant, chacun valait 3,33
+ * point (il y en avait cinq, à 4 points, avant l'ajout du jalon « formules » le 05/10).
  *
  *   ok      le travail est fait et juste
  *   ko      il est fait mais à corriger
@@ -353,7 +354,7 @@ const A_QUAI = (() => {
   return seuls.length === 1 ? String(seuls[0].id) : null;
 })();
 
-export const ETAPES = [
+const JALONS = [
   {
     id: 'reperage',
     titre: 'Les sept clients situés sur le plan de Nîmes',
@@ -465,3 +466,14 @@ export const ETAPES = [
     },
   },
 ];
+
+// NOTE PONDÉRÉE SUR 20 (poids validés par Tristan le 10/10/2026, lot 4 de `docs/briefs/NOTATION-ponderation.md`). Le cœur : laisser à quai la bonne commande, respecter la charge utile, attraper le train (11 points) ; le repérage sur le plan 4, les deux jalons de tableur 2,5 chacun (avant : 3,33 par jalon).
+export const BAREME = {
+  reperage: [4],
+  choix: [4],
+  charge: [3],
+  horaire: [4],
+  report: [2.5],
+  formules: [2.5],
+};
+export const ETAPES = ponderer(JALONS, BAREME, 'ENT-3.1');

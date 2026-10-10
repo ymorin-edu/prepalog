@@ -245,3 +245,5 @@ Décisions de fond : les six de la fiche de cadrage (cause = casse 2 saisie −1
   - **ENT-2.1 est maintenant fermée aux élèves** (`ouverture: 'prof'`) : à rouvrir dans « Conduite de séance ».
   - Moteur, déjà là avant : le bon de préparation d'une commande semée affiche « Édité le <maintenant> par
     <l'élève> » au lieu de la date et du préparateur du bon. Pas propre à cette séance.
+
+- **Notation pondérée sur 20 (10/10/2026, lot 4 de `docs/briefs/NOTATION-ponderation.md`)** : actuel 2, réceptions 3, commandes 3,5, retour et casse 3, inventaire recalculé 3, erreur trouvée 5,5. Poids validés par Tristan ; tableau `BAREME` du fichier de contenu, `bareme: 20` dans l'activité, plus de `notation: 'avancement'`. Les anciennes lignes du Suivi gardent leur proportion (`meilleurScore`).

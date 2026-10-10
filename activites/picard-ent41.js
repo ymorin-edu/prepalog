@@ -9,7 +9,7 @@
 // univers commun dans `contenus/picard.js` (vérifié / construit en tête du fichier).
 //
 // ── Pas de `notation` ───────────────────────────────────────────────────────────────────
-// Comme Boost : jalons et note sur 20 (le suivi ramène les 18 jalons sur 20). Le temps réel passé
+// Jalons pondérés, somme des poids = 20 (`bareme: 20`, règle du 10/10/2026). Le temps réel passé
 // est mesuré et rangé dans la base (`db.quais['picard-ent41'].reel`, et `detail.quai.reel` du
 // score), sans note, pour caler les seuils de rapidité d'ENT-4.4.
 // Trame élève Word/PDF déclarée le 03/10/2026, relue et validée par Tristan (générateur dans `outils/`,
@@ -27,6 +27,7 @@ const s = seanceEntreprise(PICARD, SEANCE, {
   niveaux: ['1re'],
   competences: ['C1.4'],
   temps: 'guidage',
+  bareme: 20,           // jalons pondérés, somme des poids = 20 (règle du 10/10/2026)
   reinitialisable: true,
   trame: 'picard-premier-camion',
   pret: true,

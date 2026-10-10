@@ -134,3 +134,5 @@ La séance se joue comme la maquette v8 en guidage, sous le logo Picard, dans le
 - **Commits** : `2740b6a` (fond papier), `ea7b3ad` (séance).
 - **Reste ouvert** : le temps réel de guidage est enregistré (`detail.quai.reel`) mais pas encore affiché à l'enseignant ;
   trame élève (Cowork) ; essai en classe pour caler les seuils d'ENT-4.4.
+
+- **Notation pondérée sur 20 (10/10/2026, lot 4 de `docs/briefs/NOTATION-ponderation.md`)** : enregistreur 2 ; par palette comptage 0,75, décision 1,25 (P1) ou 1,75, réserve écrite 0,75 (P2 à P5) ; déballage 1, signature 1, lot rentré 1 ; une ligne de bandeau par palette. ENT-4.1 n'avait aucun poids (la liste « déjà conformes » se trompait). Poids validés par Tristan ; tableau `BAREME` du fichier de contenu, `bareme: 20` dans l'activité. Les anciennes lignes du Suivi gardent leur proportion (`meilleurScore`).

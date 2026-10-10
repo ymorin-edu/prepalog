@@ -56,6 +56,7 @@ import { CUSTOMERS, EQUIPE, mailBienvenue, sousCatalogue } from './cdiscount.js'
 import { TYPES as TYPES_21 } from './cdiscount-mouvements.js';
 import { bilanInventaire } from '../core/types/inventaire.js';
 import { ligne, nrm } from '../core/declencheurs.js';
+import { ponderer } from './ponderation.js';
 
 /* ------------------------------------------------------------------ périmètre */
 
@@ -506,7 +507,7 @@ function jugerDecisions(db, refs) {
       + (faux.length ? '\nÀ revoir : ' + faux.map((l) => l.ref).join(', ') : '') };
 }
 
-export const ETAPES = [
+const JALONS = [
   {
     id: 'comptage',
     titre: 'Comptage reporté sans erreur',
@@ -547,3 +548,13 @@ export const ETAPES = [
     },
   },
 ];
+
+// NOTE PONDÉRÉE SUR 20 (poids validés par Tristan le 10/10/2026, lot 4 de `docs/briefs/NOTATION-ponderation.md`). Le cœur : distinguer l'article mal rangé de l'écart réel (ne pas régulariser à tort), puis régulariser l'écart sans cause avec son motif.
+export const BAREME = {
+  comptage: [4],
+  ecarts: [3],
+  rangements: [6],
+  temoin: [4.5],
+  taux: [2.5],
+};
+export const ETAPES = ponderer(JALONS, BAREME, 'ENT-2.3');

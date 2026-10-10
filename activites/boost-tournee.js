@@ -31,6 +31,7 @@ const s = seanceEntreprise(BOOST, SEANCE, {
   // Compétences et temps pédagogique : voir core/competences.js (validé par Tristan, 02/10/2026).
   competences: ['C2.4'],
   temps: 'guidage',
+  bareme: 20,           // jalons pondérés, somme des poids = 20 (règle du 10/10/2026)
   // Remise à zéro de la base par l'élève : seulement en séance X.1, qui ouvre la chaîne. Une
   // séance X.2 ou X.3 reprend le travail de la précédente ; l'effacer ferait perdre les séances d'avant.
   reinitialisable: true,

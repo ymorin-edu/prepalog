@@ -27,7 +27,7 @@ const s = seanceEntreprise(CDISCOUNT, SEANCE, {
   competences: ['C1.6'],
   temps: 'guidage',
   volume: SEANCE.VOLUME,
-  notation: 'avancement',
+  bareme: 20,           // jalons pondérés, somme des poids = 20 (règle du 10/10/2026)
   // PAS de `reinitialisable` : la remise à zéro est réservée aux séances X.1 (décision du 02/10/2026).
   trame: 'cdiscount-chiffres',
   pret: true,

@@ -198,3 +198,5 @@ donne **aucun** jalon de réparation ; (4) accuser la mauvaise contrainte me co�
   - **Validation à l'écran par Tristan** (critères du §10), puis `pret: true`.
   - Trame élève et corrigé : après validation.
 
+
+- **Notation pondérée sur 20 (10/10/2026, lot 4 de `docs/briefs/NOTATION-ponderation.md`)** : contraintes 4, preuves 3, formule 3, charge 2,5, horaire 2,5, créneau 2,5, trajet 2,5. ENT-3.3 n'avait aucun poids (la liste « déjà conformes » se trompait). Poids validés par Tristan ; tableau `BAREME` du fichier de contenu, `bareme: 20` dans l'activité, plus de `notation: 'avancement'`. Les anciennes lignes du Suivi gardent leur proportion (`meilleurScore`).

@@ -16,7 +16,7 @@
 // Validée à l'écran par Tristan le 03/10/2026 (imprévu compris) : ouverte aux élèves.
 //
 // ── Pas de `notation` ───────────────────────────────────────────────────────────────────
-// Comme ENT-3.1 : jalons ET note sur 20 (le suivi ramène le score sur 20), voir l'en-tête de
+// Comme ENT-3.1 : jalons ET note sur 20 (jalons pondérés, total 20), voir l’en-tête de
 // `activites/boost-tournee.js`.
 
 import { seanceEntreprise } from '../core/types/seance-entreprise.js';
@@ -31,6 +31,7 @@ const s = seanceEntreprise(BOOST, SEANCE, {
     + 'Puis un imprévu change la journée : replanifier la tournée.',
   competences: ['C2.4'],
   temps: 'entrainement',
+  bareme: 20,           // jalons pondérés, somme des poids = 20 (règle du 10/10/2026)
   // Séance X.2 : elle ne remet pas à zéro la base commune de Boost, qui porte aussi ENT-3.1.
   // L'état de ses deux vues est cloisonné par `transportId`.
   reinitialisable: false,

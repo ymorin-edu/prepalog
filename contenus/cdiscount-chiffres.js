@@ -29,6 +29,7 @@ import { EQUIPE, mailBienvenue, lignesPreparation, sousCatalogue, preparationsAE
 import * as I from './cdiscount-inventaire.js';
 import { resultatDepot, statutExport } from '../core/types/export-tableur.js';
 import { ligne, nrm } from '../core/declencheurs.js';
+import { ponderer } from './ponderation.js';
 
 export const CATALOGUE = I.CATALOGUE;
 export const TYPES = I.TYPES;
@@ -249,7 +250,7 @@ const jalonControle = (id) => (db) => {
   return { status: c.ok ? 'ok' : 'ko', detail: `${c.justes} juste(s) sur ${c.total}.` };
 };
 
-export const ETAPES = [
+const JALONS = [
   {
     id: 'export',
     titre: 'Lignes de préparation exportées (bons critères)',
@@ -270,3 +271,13 @@ export const ETAPES = [
     },
   },
 ];
+
+// NOTE PONDÉRÉE SUR 20 (poids validés par Tristan le 10/10/2026, lot 4 de `docs/briefs/NOTATION-ponderation.md`). Le cœur : le tableur est la matière enseignée (export, écart, SI, NB.SI : 12 points) et la liste à recompter la décision qui en découle (8) ; en ENT-2.5 le rapport est inverse, voulu.
+export const BAREME = {
+  export: [2],
+  ecart: [3],
+  si: [3],
+  synthese: [4],
+  liste: [8],
+};
+export const ETAPES = ponderer(JALONS, BAREME, 'ENT-2.2');

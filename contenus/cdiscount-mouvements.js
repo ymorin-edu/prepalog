@@ -41,6 +41,7 @@
 
 import { CUSTOMERS, EQUIPE, mailBienvenue, sousCatalogue } from './cdiscount.js';
 import { apresMail, ligne, nombres, nrm } from '../core/declencheurs.js';
+import { ponderer } from './ponderation.js';
 
 // Lues aussi par ENT-2.4 (`cdiscount-regularise.js`), qui les importe d'ici.
 export { ligne, nombres };
@@ -363,7 +364,7 @@ function meilleur(mails, juger) {
 
 const envoye = (msg) => `Réponse envoyée le ${new Date(msg.ts).toLocaleString('fr-FR')}.\n`;
 
-export const ETAPES = [
+const JALONS = [
   {
     id: 'actuel',
     titre: 'Stock actuel des écouteurs relevé',
@@ -523,3 +524,14 @@ export const ETAPES = [
     },
   },
 ];
+
+// NOTE PONDÉRÉE SUR 20 (poids validés par Tristan le 10/10/2026, lot 4 de `docs/briefs/NOTATION-ponderation.md`). Le cœur : retrouver l'erreur (le document qui ne correspond pas à son mouvement) et ne citer que les commandes qui ont fait bouger le stock.
+export const BAREME = {
+  actuel: [2],
+  reception: [3],
+  commandes: [3.5],
+  'retour-casse': [3],
+  inventaire: [3],
+  erreur: [5.5],
+};
+export const ETAPES = ponderer(JALONS, BAREME, 'ENT-2.1');

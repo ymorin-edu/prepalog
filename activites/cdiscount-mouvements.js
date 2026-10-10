@@ -27,7 +27,7 @@ const s = seanceEntreprise(CDISCOUNT, SEANCE, {
   temps: 'guidage',
   // Volume déclaré (`claude/prepalog-montee-en-competences.md`) : guidage = peu d'opérations.
   volume: SEANCE.VOLUME,
-  notation: 'avancement',
+  bareme: 20,           // jalons pondérés, somme des poids = 20 (règle du 10/10/2026)
   // Chaque séance Cdiscount a sa propre base (une journée différente à l'entrepôt) : l'élève
   // peut donc repartir de zéro sans rien perdre d'une autre séance.
   reinitialisable: true,

@@ -236,3 +236,5 @@ données de l'ancienne ENT-2.2, pièges compris ; écarts et taux calculés par 
 - **Reste ouvert** : trame élève (Cowork, après validation à l'écran) ; ligne de la fiche du format d'inventaire
   (Cowork) ; validation par Tristan en jouant trois fois (liste exacte ; sans CAB ; « Absent » — c'est **lui** qui dit
   « Absent » à l'élève, à écrire dans la fiche d'intention).
+
+- **Notation pondérée sur 20 (10/10/2026, lot 4 de `docs/briefs/NOTATION-ponderation.md`)** : comptage 4, écarts 3, rangements 6, témoin 4,5, taux 2,5. Poids validés par Tristan ; tableau `BAREME` du fichier de contenu, `bareme: 20` dans l'activité, plus de `notation: 'avancement'`. Les anciennes lignes du Suivi gardent leur proportion (`meilleurScore`).

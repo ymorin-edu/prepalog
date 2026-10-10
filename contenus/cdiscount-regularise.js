@@ -48,6 +48,7 @@
 import { CATALOGUE as CATALOGUE_COMPLET, CUSTOMERS, EQUIPE, mailBienvenue, sousCatalogue } from './cdiscount.js';
 import { ligne, nombres } from './cdiscount-mouvements.js';
 import { resultatDepot, statutExport, TOUS } from '../core/types/export-tableur.js';
+import { ponderer } from './ponderation.js';
 
 /* ------------------------------------------------------------------ périmètre */
 
@@ -504,7 +505,7 @@ const jalonControle = (id) => (db) => {
   return { status: c.ok ? 'ok' : 'ko', detail: `${c.justes} juste(s) sur ${c.total}.` };
 };
 
-export const ETAPES = [
+const JALONS = [
   { id: 'export', titre: 'Les ajustements du mois exportés (bons critères)', verifier: (db) => statutExport(db, ID_EXPORT, ID_DEPOT) },
   { id: 'averifier', titre: 'Ajustements sans justificatif repérés avec SI', verifier: jalonControle('averifier') },
   { id: 'parmotif', titre: 'Ajustements comptés par motif avec NB.SI', verifier: jalonControle('synthese') },
@@ -594,6 +595,20 @@ export const ETAPES = [
     },
   },
 ];
+
+// NOTE PONDÉRÉE SUR 20 (poids validés par Tristan le 10/10/2026, lot 4 de `docs/briefs/NOTATION-ponderation.md`). Le cœur : trouver que l'écart est une erreur de réception et non une démarque, puis la suite à donner ; le tableur pèse 5 points, l'enquête 15.
+export const BAREME = {
+  export: [1.5],
+  averifier: [1.5],
+  parmotif: [2],
+  ajustements: [3],
+  reception: [2],
+  quantites: [2],
+  valeur: [2],
+  motif: [3.5],
+  suite: [2.5],
+};
+export const ETAPES = ponderer(JALONS, BAREME, 'ENT-2.4');
 
 // Pour les tests et le corrigé : ce que doit dire une réponse juste, relu dans la base.
 export function reponseAttendue(db) {

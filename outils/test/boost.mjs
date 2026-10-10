@@ -155,7 +155,7 @@ await v('ENT-3.1 : la séance déclare un barème de jalons et PAS de notation',
   if (d.jeuId !== 'boost') throw new Error('jeuId ' + d.jeuId);
   if (d.portee !== 'eleve' || !d.immersif) throw new Error('portée ou immersion');
   if (d.notation !== undefined) throw new Error('la séance déclare notation: ' + d.notation);
-  if (d.bareme !== 6) throw new Error('barème ' + d.bareme + ' au lieu de 6 jalons');
+  if (d.bareme !== 20) throw new Error('barème ' + d.bareme + ' au lieu de 20 (jalons pondérés)');
   // C'est l'omission de `notation` qui donne la note sur 20 — vérifié par le moteur lui-même,
   // pas supposé.
   if (!d.convertie) throw new Error('la séance ne serait pas ramenée sur 20');
@@ -336,7 +336,7 @@ await v('ENT-3.1 : le calibrage tient — une seule combinaison de clients possi
 await v('ENT-3.1 : les jalons ne reprochent rien avant que l’élève ait commencé', async () => {
   const s = await dernierSuivi();
   if (!s) throw new Error('aucun avancement remonté au suivi');
-  if (s.max !== 6) throw new Error('max ' + s.max + ' au lieu de 6');
+  if (s.max !== 20) throw new Error('max ' + s.max + ' au lieu de 20');
   if (s.score !== 0) throw new Error('score ' + s.score + ' avant tout travail');
   // Aucun jalon ne doit être « ko » : rien n'est fait, donc rien n'est faux. La charge est
   // pourtant à 237 kg pour 180 utiles — c'est l'état de départ, pas une erreur de l'élève.
@@ -457,7 +457,7 @@ await v('ENT-3.1 : les sept cases justes ouvrent la tournée et valident le jalo
   if (/Comptoir des Halles/.test(ecrit)) throw new Error('les noms sont écrits sur la carte');
   const s = await dernierSuivi();
   if (s.detail.reperage !== 'ok') throw new Error('jalon repérage : ' + s.detail.reperage);
-  if (s.score !== 1) throw new Error('score ' + s.score + ' au lieu de 1 après le repérage');
+  if (s.score !== 4) throw new Error('score ' + s.score + ' au lieu de 4 (le repérage pèse 4 points) après le repérage');
 });
 
 await v('ENT-3.1 : à l’ouverture de la tournée, rien n’est encore reproché', async () => {
@@ -502,7 +502,7 @@ await v('ENT-3.1 : à l’ouverture de la tournée, rien n’est encore reproch�
   if (j2.horaire === 'ok') throw new Error('le vélo-cargo vide fait gagner le jalon « horaire »');
 });
 
-await v('ENT-3.1 : la bonne commande à quai, le bon ordre, le train attrapé, 5 jalons sur 6 puis 6 sur 6', async () => {
+await v('ENT-3.1 : la bonne commande à quai, le bon ordre, le train attrapé, 17,5/20 (5 jalons sur 6) puis 20/20', async () => {
   await ouvrirBo('tournee');
   // On charge les six, et on laisse La Pointe Sud à quai : 58 kg, la seule commande qui libère
   // assez de charge à elle seule.
@@ -552,7 +552,7 @@ await v('ENT-3.1 : la bonne commande à quai, le bon ordre, le train attrapé, 5
   const s = await dernierSuivi();
   // Cinq jalons sur six : la feuille de calcul n'a pas été touchée, et c'est elle que note le
   // sixième. Ne rien y avoir fait ne coûte qu'un jalon, et ne fait rien tomber d'autre.
-  if (s.score !== 5 || s.max !== 6) throw new Error('suivi : ' + s.score + '/' + s.max + ' — ' + JSON.stringify(s.detail));
+  if (s.score !== 17.5 || s.max !== 20) throw new Error('suivi (20 − 2,5 pour la feuille de calcul) : ' + s.score + '/' + s.max + ' — ' + JSON.stringify(s.detail));
   // `indicateurs` (04/10/2026, lot 6 de MOTEUR-2de-S1) : le repérage pour l'enseignant, pas un jalon.
   // `titres` (07/10/2026) : les titres des jalons pour le Repérage, pas un jalon non plus.
   const pas = Object.keys(s.detail).filter((k) => k !== 'indicateurs' && k !== 'titres' && s.detail[k] !== 'ok');
@@ -560,7 +560,21 @@ await v('ENT-3.1 : la bonne commande à quai, le bon ordre, le train attrapé, 5
   // Les formules justes, vérifiées : le sixième tombe, et la séance vaut 20/20.
   await remplirFeuilleBo();
   const s6 = await dernierSuivi();
-  if (s6.score !== 6 || s6.max !== 6) throw new Error('suivi après la feuille : ' + s6.score + '/' + s6.max + ' — ' + JSON.stringify(s6.detail));
+  if (s6.score !== 20 || s6.max !== 20) throw new Error('suivi après la feuille : ' + s6.score + '/' + s6.max + ' — ' + JSON.stringify(s6.detail));
+});
+
+await v('ENT-3.1, 3.2 et 3.3 : poids (lot 4, validés par Tristan le 10/10/2026) — tables du contenu = tables écrites à la main, total 20', async () => {
+  const r = await pageBo.evaluate(async () => {
+    const lire = async (f) => (await import(f)).ETAPES.map((e) => [e.id, e.poids]);
+    return { a: await lire('/contenus/boost-tournee.js'), b: await lire('/contenus/boost-ent32.js'), c: await lire('/contenus/boost-ent33.js') };
+  });
+  const A = [['reperage', 4], ['choix', 4], ['charge', 3], ['horaire', 4], ['report', 2.5], ['formules', 2.5]];
+  const B = [['reperage', 1.5], ['donnees', 1.5], ['choix', 3], ['charge', 2], ['horaire', 2], ['creneau', 2], ['formules', 2], ['trajet10', 1.5], ['trajet5', 1], ['replanif', 2], ['trajet2', 1.5]];
+  const C = [['contraintes', 4], ['preuves', 3], ['formule', 3], ['charge', 2.5], ['horaire', 2.5], ['creneau', 2.5], ['trajet', 2.5]];
+  for (const [nom, lu, att] of [['3.1', r.a, A], ['3.2', r.b, B], ['3.3', r.c, C]]) {
+    if (JSON.stringify(lu) !== JSON.stringify(att)) throw new Error('poids d’ENT-' + nom + ' : ' + JSON.stringify(lu));
+    if (att.reduce((s, x) => s + x[1], 0) !== 20) throw new Error('ENT-' + nom + ' : somme ≠ 20');
+  }
 });
 
 await v('ENT-3.1 : un mauvais ordre fait manquer le train, et seul ce jalon tombe', async () => {
@@ -1660,7 +1674,7 @@ await v('ENT-3.2 : la séance est un entraînement de C2.4, ouverte aux élèves
   if (m.jeuId !== 'boost' || m.reinitialisable) throw new Error('la base de Boost est partagée avec ENT-3.1 : ni jeu à part, ni remise à zéro');
   // Onze jalons depuis le chantier D (lot 2, 03/10/2026) : les neuf de la phase 1 (dont « données »
   // recopiées justes), puis les deux de la phase 2.
-  if (r.nb !== 11 || m.bareme !== 11) throw new Error('barème : ' + m.bareme + ' pour ' + r.nb + ' jalons');
+  if (r.nb !== 11 || m.bareme !== 20) throw new Error('barème : ' + m.bareme + ' pour ' + r.nb + ' jalons');
   if (r.ids.join() !== 'reperage,donnees,choix,charge,horaire,creneau,formules,trajet10,trajet5,replanif,trajet2') throw new Error('jalons : ' + r.ids.join());
   if (r.registre > 0 && !r.inscrite) throw new Error('la séance n’est pas dans le registre');
 });
@@ -1692,7 +1706,7 @@ await v('ENT-3.2 : les jalons ne reprochent rien avant que l’élève ait comme
   if (faits.length) throw new Error('jalon(s) validé(s) sans rien avoir fait : ' + faits.join(', '));
   const s = await page32.evaluate(() => { const l = window.__b32.suivi; return l.length ? l[l.length - 1] : null; });
   if (!s) throw new Error('aucun avancement remonté au suivi');
-  if (s.max !== 11 || s.score !== 0) throw new Error('suivi : ' + s.score + '/' + s.max);
+  if (s.max !== 20 || s.score !== 0) throw new Error('suivi : ' + s.score + '/' + s.max);
 });
 
 await v('ENT-3.2 : le mail du responsable porte la fiche des huit commandes et le créneau, sans la réponse', async () => {
@@ -1886,7 +1900,7 @@ await v('ENT-3.2 : données et formules justes valident « données », « choix
   if (nonOk.length) throw new Error('jalon(s) non validé(s) : ' + nonOk.join(', ') + ' — ' + JSON.stringify(j));
   // La phase 1 est finie : l'imprévu vient d'arriver, et rien n'est encore replanifié.
   const s = await page32.evaluate(() => { const l = window.__b32.suivi; return l[l.length - 1]; });
-  if (s.score !== 9 || s.max !== 11) throw new Error('suivi : ' + s.score + '/' + s.max);
+  if (s.score !== 16.5 || s.max !== 20) throw new Error('suivi (20 − 2 − 1,5 : la replanification et la tournée d’après l’imprévu) : ' + s.score + '/' + s.max);
 });
 
 /* ---- ENT-3.2 : l'imprévu (phase 2). La phase 1 vient d'être finie au test précédent ---- */
@@ -2027,7 +2041,7 @@ await v('ENT-3.2 : la bonne replanification gagne les deux jalons de phase 2 ; u
   let j = await jalons32();
   if (j.replanif !== 'ok' || j.trajet2 !== 'ok') throw new Error('bonne replanification : ' + JSON.stringify(j));
   const s = await page32.evaluate(() => { const l = window.__b32.suivi; return l[l.length - 1]; });
-  if (s.score !== 11 || s.max !== 11) throw new Error('suivi : ' + s.score + '/' + s.max);
+  if (s.score !== 20 || s.max !== 20) throw new Error('suivi : ' + s.score + '/' + s.max);
   await construire32p2(LOIN2_32);
   j = await jalons32();
   if (j.replanif !== 'ok' || j.trajet2 !== 'ko') throw new Error('à +12 % : ' + JSON.stringify(j));
@@ -2488,7 +2502,7 @@ await v('ENT-3.3 : la séance est l’erreur induite de C2.4, validée par Trist
   if ('notation' in m || m.copie) throw new Error('jalons et note sur 20 : ni `notation`, ni `copie`');
   if (m.jeuId !== 'boost' || m.reinitialisable) throw new Error('base de Boost partagée : ni jeu à part, ni remise à zéro');
   // Sept jalons depuis le chantier D (lot 2) : « formule », la formule fausse de la feuille d'Inès corrigée.
-  if (m.bareme !== 7 || r.ids.join() !== 'contraintes,preuves,formule,charge,horaire,creneau,trajet') throw new Error('jalons : ' + m.bareme + ' ' + r.ids.join());
+  if (m.bareme !== 20 || r.ids.join() !== 'contraintes,preuves,formule,charge,horaire,creneau,trajet') throw new Error('jalons : ' + m.bareme + ' ' + r.ids.join());
   if (!r.inscrite) throw new Error('la séance n’est pas dans le registre');
 });
 

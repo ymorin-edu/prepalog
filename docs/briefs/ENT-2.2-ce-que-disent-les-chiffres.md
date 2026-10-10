@@ -213,3 +213,5 @@ bandeau d'aide ; NB.SI.ENS réservé au bonus.
   chiffres » : exporter, SI, NB.SI, choisir les références (C6) ».
 - **Reste ouvert** : trame élève avec l'encart SI / NB.SI et le cadre « Ma liste de références à recompter », corrigé
   (Cowork, après validation à l'écran) ; **essai par Tristan sous Excel ET sous LibreOffice** (§ 10).
+
+- **Notation pondérée sur 20 (10/10/2026, lot 4 de `docs/briefs/NOTATION-ponderation.md`)** : export 2, écart 3, SI 3, NB.SI 4, liste à recompter 8 (le tableur est la matière enseignée ; en ENT-2.5 le rapport est inverse). Poids validés par Tristan ; tableau `BAREME` du fichier de contenu, `bareme: 20` dans l'activité, plus de `notation: 'avancement'`. Les anciennes lignes du Suivi gardent leur proportion (`meilleurScore`).

@@ -490,8 +490,8 @@ await v('Spartoo réception : retrouver REC-04127 par son BL, saisir en paires, 
   if (!photo) throw new Error('photo de fin de séance absente : ENT-1.2 resterait fermée');
 });
 
-// ---------- 33. l'avancement de la réception remonte : 7 justes sur 8 (la question 4 du questionnaire)
-await v('Spartoo réception : avancement remonté au suivi', async () => {
+// ---------- 33. la note de la réception remonte, pondérée sur 20 : le questionnaire (question 4) faux coûte ses 2 points → 18/20
+await v('Spartoo réception : note pondérée remontée au suivi (18/20, questionnaire faux)', async () => {
   await page.click('[data-quitter]');
   await page.waitForSelector('#btnDeco', { timeout: 6000 });
   await page.click('#btnDeco');
@@ -502,7 +502,7 @@ await v('Spartoo réception : avancement remonté au suivi', async () => {
   await page.click('[data-ong="suivi"]');
   await page.waitForSelector('text=ENT-1.2', { timeout: 6000 });
   const t = await page.textContent('#contenuProf');
-  if (!/7\/8/.test(t)) throw new Error('avancement 7/8 attendu pour ENT-1.1 (questionnaire faux sur la question 4), lu : ' + (t.match(/\d\/8/g) || ['rien']).join(' '));
+  if (!t.includes('18/20')) throw new Error('note 18/20 attendue pour ENT-1.1 (questionnaire faux sur la question 4 : 20 − 2), lu : ' + t.slice(0, 300));
   if (!/3\/3/.test(t)) throw new Error('l’avancement 3/3 de la préparation a disparu');
 });
 
@@ -643,8 +643,8 @@ await v('Spartoo traçabilité : avancement remonté au suivi', async () => {
   const t = await page.textContent('#contenuProf');
   // Trois séances, trois avancements distincts, sur une seule et même base (1.1 a huit jalons).
   const av = (t.match(/3\/3/g) || []).length;
-  // 1.1 : 7/8, la question 4 du questionnaire a été répondue fausse exprès (cas 31 bis).
-  if (av < 2 || !/7\/8/.test(t)) throw new Error('avancements attendus 7/8, 3/3, 3/3 ; lu : ' + av + ' fois 3/3');
+  // 1.1 : 18/20 (note pondérée), la question 4 du questionnaire a été répondue fausse exprès (cas 31 bis) ; 1.2 et 1.3 restent en avancement.
+  if (av < 2 || !t.includes('18/20')) throw new Error('attendus 18/20, 3/3, 3/3 ; lu : ' + av + ' fois 3/3');
 });
 
 // ---------- 38. la traçabilité sans les séances précédentes : l'amont est posé
@@ -796,9 +796,9 @@ await v('Spartoo : base d’avant la refonte → 1.2 fermée, 1.1 repart de zér
   if (r.version !== 2) throw new Error('la base n’a pas reçu sa version : ' + JSON.stringify(r));
   if (r.points) throw new Error('la photo de fin de 1.1 d’avant la refonte est restée');
   if (!r.volet || r.recs !== 10) throw new Error('la nouvelle séance n’est pas semée : ' + JSON.stringify(r));
-  // L'ouverture réenregistre aussitôt l'avancement de la nouvelle séance (0 sur 8) : l'ancien 3 / 3 doit avoir disparu.
+  // L'ouverture réenregistre aussitôt la note de la nouvelle séance (0 sur 20) : l'ancien 3 / 3 doit avoir disparu.
   const sc = r.score ? JSON.parse(r.score) : null;
-  if (sc && (sc.max !== 8 || sc.meilleur !== 0)) throw new Error('le score 1.1 d’avant la refonte est resté au suivi : ' + r.score);
+  if (sc && (sc.max !== 20 || sc.meilleur !== 0)) throw new Error('le score 1.1 d’avant la refonte est resté au suivi : ' + r.score);
   if (r.deb && JSON.parse(r.deb)) throw new Error('le déblocage manuel de 1.2 est resté');
   // Une seule fois : rouverte, la base garde le travail fait depuis.
   await page.click('[data-quitter]');
@@ -809,6 +809,21 @@ await v('Spartoo : base d’avant la refonte → 1.2 fermée, 1.1 repart de zér
   if (recs !== 10) throw new Error('la base a été refaite une seconde fois');
   await page.click('[data-quitter]');
   await page.waitForSelector('#btnDeco', { timeout: 6000 });
+});
+
+// ---------- 41 bis. ENT-1.1 : note pondérée sur 20 (lot 4 de la notation, poids validés par Tristan le 10/10/2026). Table écrite
+// à la main ; ENT-1.1 n'est plus en « avancement » ; ses lignes de bandeau restent une par jalon (aucun regroupement).
+await v('Spartoo réception : poids (8 jalons, total 20), plus d’avancement, une ligne de bandeau par jalon', async () => {
+  const r = await page.evaluate(async () => {
+    const S = await import('/contenus/spartoo-reception.js');
+    const A = await import('/activites/spartoo-reception.js');
+    return { poids: S.ETAPES.map((e) => [e.id, e.poids]), groupes: S.ETAPES.map((e) => e.groupe === undefined ? null : e.groupe), bareme: A.meta.bareme, notation: A.meta.notation || null };
+  });
+  const attendu = [['procedure', 2], ['comptage', 2.5], ['decision', 3], ['reserves-bl', 3.5], ['signature', 1], ['controle', 3], ['entree', 2.5], ['reserve', 2.5]];
+  if (JSON.stringify(r.poids) !== JSON.stringify(attendu)) throw new Error('poids : ' + JSON.stringify(r.poids));
+  if (attendu.reduce((a, x) => a + x[1], 0) !== 20) throw new Error('somme ≠ 20');
+  if (r.bareme !== 20 || r.notation) throw new Error('bareme ' + r.bareme + ', notation ' + r.notation);
+  if (r.groupes.some((g) => g !== null)) throw new Error('un regroupement est apparu : ' + JSON.stringify(r.groupes));
 });
 
 // ---------- 42. le bandeau de fin de séance, sur une entreprise d'essai : rien tant qu'un jalon est à faire ;

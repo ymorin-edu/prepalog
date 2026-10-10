@@ -29,6 +29,7 @@ import { hasard } from '../core/tirage.js';
 import { resultatDepot, statutExport } from '../core/types/export-tableur.js';
 import { preparationsAEcarter, filtreAllee } from './cdiscount.js';
 import { ligne, nrm } from '../core/declencheurs.js';
+import { ponderer } from './ponderation.js';
 
 export const MODELES = ['CAB-USBC-1M', 'CHG-20W', 'ECO-BT-01', 'SOU-SF-02', 'BAT-10K', 'CLE-64G', 'AMP-LED-E27', 'COQ-UNI-01',
   'CAS-FIL-01', 'SUP-VOIT', 'CLA-SF-01', 'HUB-USB-4', 'MUL-4P', 'PIL-AA-8', 'VEI-LED', 'BOU-17L', 'GRP-2F', 'MIX-PLG'];
@@ -322,7 +323,7 @@ const jalonControle = (id) => (db) => {
   return { status: c.ok ? 'ok' : 'ko', detail: `${c.justes} juste(s) sur ${c.total}.` };
 };
 
-export const ETAPES = [
+const JALONS = [
   { id: 'export', titre: 'Les lignes du mois exportées (bons critères)', verifier: (db) => statutExport(db, ID_EXPORT, ID_DEPOT) },
   { id: 'nettoye', titre: 'Export nettoyé', verifier: jalonControle('nettoye') },
   { id: 'constats', titre: 'Constats comptés depuis le dernier inventaire (NB.SI.ENS)', verifier: jalonControle('constats') },
@@ -338,3 +339,13 @@ export const ETAPES = [
     },
   },
 ];
+
+// NOTE PONDÉRÉE SUR 20 (poids validés par Tristan le 10/10/2026, lot 4 de `docs/briefs/NOTATION-ponderation.md`). Le cœur : les cinq bonnes priorités (7,5) ; le nettoyage de l'export, NB.SI.ENS et RECHERCHEV sont les outils qui y mènent.
+export const BAREME = {
+  export: [1.5],
+  nettoye: [3],
+  constats: [4],
+  valeur: [4],
+  cinq: [7.5],
+};
+export const ETAPES = ponderer(JALONS, BAREME, 'ENT-2.6');

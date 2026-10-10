@@ -19,6 +19,7 @@
 
 import { mailBienvenue } from './spartoo.js';
 import { jalonsQuai } from '../core/types/quai.js';
+import { ponderer } from './ponderation.js';
 
 /* ------------------------------------------------------------------ constantes */
 
@@ -251,7 +252,7 @@ const palQuai = (db) => { const e = etatQuai(db); return (e && e.palettes && e.p
 const statut = (ok, essaye, detail) => (ok ? { status: 'ok' } : essaye ? { status: 'ko', detail } : { status: 'attente' });
 const piegeValide = (db) => { const r = (db.receptions || []).find((x) => x.no === REC_PIEGE); return !!(r && r.ctrl && r.ctrl.validated); };
 
-export const ETAPES = [
+const JALONS = [
   {
     id: 'procedure',
     titre: 'Procédure lue : questionnaire juste',
@@ -377,3 +378,16 @@ export const ETAPES = [
     },
   },
 ];
+
+// NOTE PONDÉRÉE SUR 20 (poids validés par Tristan le 10/10/2026, lot 4 de `docs/briefs/NOTATION-ponderation.md`). Le cœur : la décision sur la palette, les réserves précises et le contrôle du bon de réception (piège REC-04129). Une ligne de bandeau par jalon : leurs titres sont déjà validés.
+export const BAREME = {
+  procedure: [2],
+  comptage: [2.5],
+  decision: [3],
+  'reserves-bl': [3.5],
+  signature: [1],
+  controle: [3],
+  entree: [2.5],
+  reserve: [2.5],
+};
+export const ETAPES = ponderer(JALONS, BAREME, 'ENT-1.1');

@@ -29,7 +29,7 @@ const s = seanceEntreprise(CDISCOUNT, SEANCE, {
   temps: 'erreur',
   // Volume déclaré (`claude/prepalog-montee-en-competences.md`) : le volume STANDARD.
   volume: SEANCE.VOLUME,
-  notation: 'avancement',
+  bareme: 20,           // jalons pondérés, somme des poids = 20 (règle du 10/10/2026)
   // PAS de `reinitialisable` : la remise à zéro est réservée aux séances X.1 (décision du
   // 02/10/2026, gardée par un test du bloc « transport »). L'élève peut en revanche renvoyer sa
   // réponse : le meilleur essai est retenu.

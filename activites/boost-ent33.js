@@ -30,6 +30,7 @@ const s = seanceEntreprise(BOOST, SEANCE, {
     + 'par le calcul, puis la réparer.',
   competences: ['C2.4'],
   temps: 'erreur',
+  bareme: 20,           // jalons pondérés, somme des poids = 20 (règle du 10/10/2026)
   // Séance X.3 : elle ne remet pas à zéro la base commune de Boost, qui porte aussi ENT-3.1 et
   // ENT-3.2. L'état de sa tournée est cloisonné par `transportId`, son message par son volet.
   reinitialisable: false,

@@ -44,6 +44,7 @@ import { creerTournee } from '../core/types/tournee.js';
 import { creerGrille } from '../core/types/grille.js';
 import { apresMail } from '../core/declencheurs.js';
 import * as E32 from './boost-ent32.js';
+import { ponderer } from './ponderation.js';
 
 export const TRANSPORT_ID = 'boost-ent33';
 
@@ -517,7 +518,7 @@ function avantReparation(e) {
   return null;
 }
 
-export const ETAPES = [
+const JALONS = [
   {
     id: 'contraintes',
     titre: 'Diagnostic · chaque contrainte dite tenue ou non, sans en accuser une à tort',
@@ -639,3 +640,15 @@ export const ETAPES = [
     },
   },
 ];
+
+// NOTE PONDÉRÉE SUR 20 (poids validés par Tristan le 10/10/2026, lot 4 de `docs/briefs/NOTATION-ponderation.md`). Le cœur : le diagnostic (chaque contrainte dite tenue ou non sans en accuser une à tort : 4 ; les chiffres qui le prouvent : 3) puis la réparation (formule 3, charge, train, créneau et trajet 2,5 chacun).
+export const BAREME = {
+  contraintes: [4],
+  preuves: [3],
+  formule: [3],
+  charge: [2.5],
+  horaire: [2.5],
+  creneau: [2.5],
+  trajet: [2.5],
+};
+export const ETAPES = ponderer(JALONS, BAREME, 'ENT-3.3');

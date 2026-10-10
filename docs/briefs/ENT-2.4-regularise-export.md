@@ -192,3 +192,5 @@ RECHERCHEV au bonus ; vendeur de la place de marché, fictif, second plaignant q
 - **Commits** : « ENT-2.4 recadrée : export des ajustements, SI, NB.SI et le vendeur de la place de marché (C7) ».
 - **Reste ouvert** : trame (encart SI / NB.SI, encadré vérifié / construit, « que répondre au vendeur ? ») et corrigé
   (Cowork, après validation à l'écran).
+
+- **Notation pondérée sur 20 (10/10/2026, lot 4 de `docs/briefs/NOTATION-ponderation.md`)** : export 1,5, à vérifier 1,5, par motif 2, ajustements 3, réception 2, quantités 2, valeur 2, motif 3,5, suite 2,5. Poids validés par Tristan ; tableau `BAREME` du fichier de contenu, `bareme: 20` dans l'activité, plus de `notation: 'avancement'`. Les anciennes lignes du Suivi gardent leur proportion (`meilleurScore`).

@@ -403,7 +403,7 @@ Ce qui cloche : DEM-26-0027 : 2 - 1 = 1`;
     if (!src.includes("import('./cdiscount-mouvements.js')")) throw new Error('absente de activites/index.js');
     const meta = await page.evaluate(async () => (await import('/activites/cdiscount-mouvements.js')).meta);
     if (meta.code !== 'ENT-2.1' || meta.temps !== 'guidage' || !meta.competences.includes('C1.6')) throw new Error('meta incomplet');
-    if (meta.bareme !== S21.ETAPES.length) throw new Error('barème ≠ nombre de jalons');
+    if (meta.bareme !== 20) throw new Error('barème ≠ 20 (jalons pondérés) : ' + meta.bareme);
     const { activiteVisible } = await imp('core/niveaux.js');
     if (!meta.pret && activiteVisible(meta, { niveau: '1re' })) throw new Error('séance non prête visible des élèves');
   });
@@ -477,7 +477,7 @@ Ce qui cloche : DEM-26-0027 : 2 - 1 = 1`;
     if (res.receptions !== 2 || res.commandes !== 9) throw new Error(`${res.receptions} réceptions, ${res.commandes} commandes`);
     if (res.statut602 !== 'Annulée') throw new Error('CMD-731602 affichée : ' + res.statut602);
     if (!/Mme Moreau/.test(res.mission) || !/Black Friday/.test(res.mission) || !/ce n'est pas sérieux/i.test(res.mission)) throw new Error('mission sans la cliente : ' + res.mission.slice(0, 300));
-    if (!res.score || res.score.score !== 6 || res.score.max !== 6) throw new Error('score remonté : ' + JSON.stringify(res.score));
+    if (!res.score || res.score.score !== 20 || res.score.max !== 20) throw new Error('score remonté : ' + JSON.stringify(res.score));
     const reste = await page.evaluate(() => document.body.classList.contains('immersion'));
     if (reste) throw new Error('la page n\'a pas été rendue propre');
   });
@@ -1150,7 +1150,7 @@ Ce qui cloche : DEM-26-0027 : 2 - 1 = 1`;
     if (!src.includes("import('./cdiscount-inventaire.js')")) throw new Error('absente de activites/index.js');
     const meta = await page.evaluate(async () => (await import('/activites/cdiscount-inventaire.js')).meta);
     if (meta.code !== 'ENT-2.3' || meta.temps !== 'entrainement' || !meta.competences.includes('C1.6')) throw new Error('meta incomplet');
-    if (meta.bareme !== S22.ETAPES.length) throw new Error('barème ≠ nombre de jalons');
+    if (meta.bareme !== 20) throw new Error('barème ≠ 20 (jalons pondérés) : ' + meta.bareme);
     if (!meta.pret || meta.ouverture !== 'prof') throw new Error('livrée : pret: true, ouverture: \'prof\'');
   });
 
@@ -1257,7 +1257,7 @@ Ce qui cloche : DEM-26-0027 : 2 - 1 = 1`;
     if (!/CMD-732153[^]*?Annulée/.test(t)) throw new Error('commandes : ' + t.slice(0, 400));
   });
 
-  await v('ENT-2.3 : parcours juste de bout en bout — la liste par la messagerie, 4 lignes, une seule régularisation, score 5/5', async () => {
+  await v('ENT-2.3 : parcours juste de bout en bout — la liste par la messagerie, 4 lignes, une seule régularisation, score 20/20', async () => {
     await monter22();
     const amorce = await repondre22('CAB-USBC-1M, CHG-20W, BAT-10K, COQ-UNI-01');
     if (amorce !== 'À recompter : ') throw new Error('amorce : ' + JSON.stringify(amorce));
@@ -1288,10 +1288,10 @@ Ce qui cloche : DEM-26-0027 : 2 - 1 = 1`;
     if (JSON.stringify(db.stock) !== JSON.stringify({ ...SYSTEME_23, 'COQ-UNI-01': 25 })) throw new Error('stock final : ' + JSON.stringify(db.stock));
     if (statuts(S22, db).some((s) => s !== 'ok')) throw new Error('jalons : ' + statuts(S22, db).join(', '));
     const dernier = await pg.evaluate(() => window.__inv22.scores[window.__inv22.scores.length - 1]);
-    if (!dernier || dernier.score !== 5 || dernier.max !== 5) throw new Error('score remonté : ' + JSON.stringify(dernier));
+    if (!dernier || dernier.score !== 20 || dernier.max !== 20) throw new Error('score remonté : ' + JSON.stringify(dernier));
   });
 
-  await v('ENT-2.3 : liste sans CAB par la messagerie — l\'aléa arrive, la paire se résout, 5/5', async () => {
+  await v('ENT-2.3 : liste sans CAB par la messagerie — l\'aléa arrive, la paire se résout, 20/20', async () => {
     await monter22();
     await repondre22('CHG-20W, BAT-10K, COQ-UNI-01');
     const sujets = await pg.$$eval('#hote22 .ent-mitem', (e) => e.map((x) => x.textContent));
@@ -1303,7 +1303,7 @@ Ce qui cloche : DEM-26-0027 : 2 - 1 = 1`;
     await decider22('COQ-UNI-01', 'regul', 'Démarque inconnue');
     await valider22('6,9');
     const dernier = await pg.evaluate(() => window.__inv22.scores[window.__inv22.scores.length - 1]);
-    if (!dernier || dernier.score !== 5) throw new Error('score : ' + JSON.stringify(dernier));
+    if (!dernier || dernier.score !== 20) throw new Error('score : ' + JSON.stringify(dernier));
   });
 
   await v('ENT-2.3 : le réflexe « tout écart négatif se régularise » coûte cher — les chargeurs disparaissent, la correction dit pourquoi', async () => {
@@ -1532,7 +1532,7 @@ Suite à donner : Réclamation auprès de Gardéo, livraison incomplète`;
     if (!src.includes("import('./cdiscount-regularise.js')")) throw new Error('absente de activites/index.js');
     const meta = await page.evaluate(async () => (await import('/activites/cdiscount-regularise.js')).meta);
     if (meta.code !== 'ENT-2.4' || meta.temps !== 'erreur' || !meta.competences.includes('C1.6')) throw new Error('meta incomplet');
-    if (meta.bareme !== S23.ETAPES.length) throw new Error('barème ≠ nombre de jalons');
+    if (meta.bareme !== 20) throw new Error('barème ≠ 20 (jalons pondérés) : ' + meta.bareme);
     if (meta.reinitialisable) throw new Error('la remise à zéro est réservée aux séances X.1');
     const { activiteVisible } = await imp('core/niveaux.js');
     if (!meta.pret && activiteVisible(meta, { niveau: '1re' })) throw new Error('séance non prête visible des élèves');
@@ -1611,7 +1611,7 @@ Suite à donner : Réclamation auprès de Gardéo, livraison incomplète`;
     if (res.colisMixeurs !== 8) throw new Error('les colis de mixeurs à l\'écran ne font pas 8 : ' + res.colisMixeurs);
     if (/messagerie/.test(res.avisRec) || !/bon de livraison/.test(res.avisRec)) throw new Error('encadré de la réception : ' + res.avisRec);
     // Les six jalons de l'enquête ; les trois du tableur (export compris) attendent un dépôt.
-    if (!res.score || res.score.score !== 6 || res.score.max !== 9) throw new Error('score remonté : ' + JSON.stringify(res.score));
+    if (!res.score || res.score.score !== 15 || res.score.max !== 20) throw new Error('score remonté (enquête juste, tableur non fait : 20 − 1,5 − 1,5 − 2) : ' + JSON.stringify(res.score));
     const reste = await page.evaluate(() => document.body.classList.contains('immersion'));
     if (reste) throw new Error('la page n\'a pas été rendue propre');
   });
@@ -1819,7 +1819,7 @@ Suite à donner : Réclamation auprès de Gardéo, livraison incomplète`;
     if (stC(db2).si !== 'ok') throw new Error('redépôt juste non retenu');
   });
 
-  await v('ENT-2.2 : à l\'écran — Extractions, critères déjà réglés (niveau 1) : Exporter (30 lignes), déposer dans Fichiers (retour détaillé), écrire à Nadia, 5/5', async () => {
+  await v('ENT-2.2 : à l\'écran — Extractions, critères déjà réglés (niveau 1) : Exporter (30 lignes), déposer dans Fichiers (retour détaillé), écrire à Nadia, 20/20', async () => {
     const ctx2 = await nav.newContext({ acceptDownloads: true });
     const p = await ctx2.newPage();
     p.setDefaultTimeout(6000);
@@ -1873,7 +1873,7 @@ Suite à donner : Réclamation auprès de Gardéo, livraison incomplète`;
       const fin = await p.evaluate(() => JSON.parse(JSON.stringify(window.__c22.db)));
       if (Object.values(stC(fin)).some((x) => x !== 'ok')) throw new Error('jalons : ' + JSON.stringify(stC(fin)));
       const dernier = await p.evaluate(() => window.__c22.scores[window.__c22.scores.length - 1]);
-      if (!dernier || dernier.score !== 5 || dernier.max !== 5) throw new Error('score : ' + JSON.stringify(dernier));
+      if (!dernier || dernier.score !== 20 || dernier.max !== 20) throw new Error('score : ' + JSON.stringify(dernier));
       if (/confirm|standard|niveau/i.test(await p.textContent('#hote2'))) throw new Error('le niveau se lit à l\'écran');
       if (errs.length) throw new Error(errs.join(' | '));
     } finally { await ctx2.close(); }
@@ -2367,6 +2367,24 @@ Suite à donner : Réclamation auprès de Gardéo, livraison incomplète`;
       regul: [[J5.rayon, -3], [J5.regul, -1]] }, cr: 'Régularisé : LAM-FRO, COR-SAU\nValeur régularisée : 3 × 6,30 + 1 × 3,20 = 22,10 €' });
     const st = st5(faux);
     if (note5(faux) !== 18 || st.rayon !== 'ko') throw new Error('une décision fausse : ' + JSON.stringify(st));
+  });
+
+  await v('ENT-2.1, 2.2, 2.3, 2.4, 2.6 : poids (lot 4, validés par Tristan le 10/10/2026) — tables du contenu = tables écrites à la main, total 20, aucune notation « avancement »', async () => {
+    const TABLES = {
+      'cdiscount-mouvements': { actuel: 2, reception: 3, commandes: 3.5, 'retour-casse': 3, inventaire: 3, erreur: 5.5 },
+      'cdiscount-chiffres': { export: 2, ecart: 3, si: 3, synthese: 4, liste: 8 },
+      'cdiscount-inventaire': { comptage: 4, ecarts: 3, rangements: 6, temoin: 4.5, taux: 2.5 },
+      'cdiscount-regularise': { export: 1.5, averifier: 1.5, parmotif: 2, ajustements: 3, reception: 2, quantites: 2, valeur: 2, motif: 3.5, suite: 2.5 },
+      'cdiscount-priorites': { export: 1.5, nettoye: 3, constats: 4, valeur: 4, cinq: 7.5 },
+    };
+    for (const [nom, attendu] of Object.entries(TABLES)) {
+      const S = await imp(`contenus/${nom}.js`);
+      const lus = Object.fromEntries(S.ETAPES.map((e) => [e.id, e.poids]));
+      if (JSON.stringify(lus) !== JSON.stringify(attendu)) throw new Error(nom + ' : ' + JSON.stringify(lus));
+      if (Object.values(attendu).reduce((a, b) => a + b, 0) !== 20) throw new Error(nom + ' : somme ≠ 20');
+      const meta = await page.evaluate(async (n) => (await import('/activites/' + n + '.js')).meta, nom);
+      if (meta.bareme !== 20 || meta.notation) throw new Error(nom + ' : bareme ' + meta.bareme + ', notation ' + meta.notation);
+    }
   });
 
   await v('ENT-2.5 : poids (12 jalons, total 20) — table du contenu = table écrite à la main ; le coût d’une erreur suit son poids', async () => {

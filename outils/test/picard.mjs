@@ -51,16 +51,18 @@ const monter = (p, opts = {}) => p.evaluate(async (o) => {
   const hote = document.createElement('div'); hote.id = 'quaiTest'; document.body.appendChild(hote);
   const U = E.univers({ evaluation: !!o.evaluation, huit: !!o.huit });
   if (o.sansQuai) delete U.quai;
+  // `ponderee` : les jalons de la vraie séance ENT-4.1 (poids, lot 4 de la notation, 10/10/2026) à la place de ceux du quai d'essai.
+  if (o.ponderee) { const S41 = await import('/contenus/picard-ent41.js'); U.quai = S41.QUAI_ENT41; U.etapes = S41.ETAPES; }
   const CLE = 'essai-quai-base';
   const db = o.garder ? JSON.parse(localStorage.getItem(CLE) || '{}') : {};
   const moteur = creerEntreprise(U);
-  window.__q = { db, U, E, moteur, remis: null };
+  window.__q = { db, U, E, moteur, remis: null, enregistres: [] };
   moteur.rendre(hote, {
     meta: { id: 'essai-quai', code: 'ESSAI', titre: 'Picard — essai', portee: 'eleve', immersif: true, copie: !!o.evaluation },
     profil: { prenom: 'Lea', nom: 'Test', role: o.role || 'eleve' },
     tiersTemps: !!o.tiers,
     jeu: { etat: () => db, sauver: () => { if (o.garder) localStorage.setItem(CLE, JSON.stringify(db)); } },
-    enregistrer: () => {}, quitter: () => {}, codeStock: 'ABC',
+    enregistrer: (r) => { window.__q.enregistres.push(JSON.parse(JSON.stringify(r))); }, quitter: () => {}, codeStock: 'ABC',
     lireScore: async () => null,
     rendreCopie: async (res) => { window.__q.remis = res; return { rendu: Date.now() }; },
   });
@@ -189,6 +191,29 @@ await v('quai : parcours juste en guidage → 18 jalons sur 18, 20 min hors froi
   vrai(b.includes('Temps réel passé'), 'bilan : le temps réel mesuré manque');
   vrai(b.includes('art. L133-3'), 'bilan : le « Bon à savoir » manque');
   egal(await pg.$$eval(`${Z} [data-jalon] .quai-ok`, (x) => x.length), 18, 'lignes justes au bilan (le détail du comptage n’est pas rempli ici)');
+});
+
+// NOTE PONDÉRÉE d'ENT-4.1 (lot 4 de la notation, poids validés par Tristan le 10/10/2026), valeurs écrites à la main : ticket 2 ;
+// par palette comptage 0,75, décision 1,25 (P1) ou 1,75, réserve 0,75 (P2 à P5) ; déballage 1 ; signature 1 ; lot rentré 1.
+await v('ENT-4.1 : note pondérée — parcours juste 20/20 au Suivi ; P3 acceptée (le piège de la température) et P1 mal comptée coûtent leurs points', async () => {
+  const POIDS = { ticket: 2, 'P1-comptage': 0.75, 'P1-decision': 1.25, 'P2-comptage': 0.75, 'P2-decision': 1.75, 'P2-reserve': 0.75,
+    'P3-comptage': 0.75, 'P3-decision': 1.75, 'P3-reserve': 0.75, 'P4-comptage': 0.75, 'P4-decision': 1.75, 'P4-reserve': 0.75,
+    'P5-comptage': 0.75, 'P5-decision': 1.75, 'P5-reserve': 0.75, deballage: 1, signature: 1, rentre: 1 };
+  const lus = await pg.evaluate(async () => Object.fromEntries((await import('/contenus/picard-ent41.js')).ETAPES.map((e) => [e.id, e.poids])));
+  const triee = (o) => Object.fromEntries(Object.entries(o).sort());
+  egal(triee(lus), triee(POIDS), 'poids du contenu = poids écrits à la main');
+  egal(Object.values(POIDS).reduce((a, b) => a + b, 0), 20, 'somme');
+  const note = () => pg.evaluate(() => { const L = window.__q.enregistres; return L.length ? L[L.length - 1] : null; });
+  await monter(pg, { ponderee: true });
+  await jouer(pg);
+  const n1 = await note();
+  egal([n1.score, n1.max], [20, 20], 'parcours juste');
+  await monter(pg, { ponderee: true });
+  await jouer(pg, { P3: { decision: 'accepter', motif: 'aucun', res: null }, P1: { compte: 60 } });
+  const j = await jalons(pg);
+  const n2 = await note();
+  vrai(j.ko.includes('P3-decision') && j.ko.includes('P1-comptage'), 'jalons faux : ' + j.ko);
+  egal([n2.score, n2.max], [20 - j.ko.reduce((s, id) => s + POIDS[id], 0), 20], 'note remontée (jalons faux : ' + j.ko + ')');
 });
 
 await v('quai : la phrase « 18 jalons » se lit au bilan, détail du comptage non compté', async () => {
@@ -753,10 +778,10 @@ await v('quai : guidage — « Recommencer la réception » repart d’un quai n
 
 /* ===================================================== ENT-4.1, la séance */
 
-await v('ENT-4.1 : déclaration (C1.4, guidage, 1re, 18 jalons, livrée fermée aux élèves)', async () => {
+await v('ENT-4.1 : déclaration (C1.4, guidage, 1re, 18 jalons pondérés sur 20, livrée fermée aux élèves)', async () => {
   const m = await pg2.evaluate(async () => (await import('/activites/picard-ent41.js')).meta);
   egal([m.id, m.code, m.rubrique, m.competences, m.temps, m.niveaux, m.bareme, m.pret, m.ouverture, m.immersif, m.portee, !!m.copie],
-    ['picard-ent41', 'ENT-4.1', 'simulog', ['C1.4'], 'guidage', ['1re'], 18, true, 'prof', true, 'eleve', false], 'meta');
+    ['picard-ent41', 'ENT-4.1', 'simulog', ['C1.4'], 'guidage', ['1re'], 20, true, 'prof', true, 'eleve', false], 'meta');
 });
 
 await v('ENT-4.1 : sous le logo Picard dans Simulog, elle s’ouvre sur l’accueil et le mail du chef de quai', async () => {

@@ -1,6 +1,6 @@
 # Lot 4 de la notation pondérée — propositions de poids (à valider par Tristan)
 
-**Statut** : propositions du 10/10/2026, **rien n'est codé**. Suite de `docs/briefs/NOTATION-ponderation.md` (règle 0.1 :
+**Statut** : propositions du 10/10/2026, **validées par Tristan et codées le même jour** (lot 4 livré, voir le compte rendu de `NOTATION-ponderation.md`). Suite de `docs/briefs/NOTATION-ponderation.md` (règle 0.1 :
 total 20, le poids va au cœur de la compétence, la forme ≤ ~15 %, aucun jalon à 0) et du lot 3 livré.
 Séances du lot : Spartoo ENT-1.1 ; Cdiscount ENT-2.1, 2.2, 2.3, 2.4, 2.6 ; Boost ENT-3.1.
 Spartoo ENT-1.2 et 1.3 restent gelées (leur pondération viendra avec leur refonte).
