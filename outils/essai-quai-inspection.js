@@ -128,7 +128,7 @@ export function monter(hote) {
 /* ==================================================================================================================
    PARTIE 2 (étape 2 du chantier D-4) — la scène d'ENT-6.4 dans le VRAI moteur (`core/types/quai.js`, `securite.mode: 'scene'`).
    Rien n'est dessiné ici : on déclare le quai d'ENT-6.4 (bloc `securite` du brief ENT-6.4 §6) et on monte `creerEntreprise`, comme
-   le fait une vraie séance. La palette de cartons n'est qu'un prétexte pour jouer la suite (les fûts viennent à l'étape 3).
+   le fait une vraie séance. ÉTAPE 3 : la page joue les quatre palettes de fûts d'ENT-6.4 (brief ENT-6.4 §4.4) à la place de la palette de cartons.
    ================================================================================================================== */
 
 // Le bloc `securite` d'ENT-6.4 : deux défauts (le chauffeur au volant moteur allumé ; le niveleur relevé) et trois pièges (la
@@ -150,20 +150,40 @@ export const SECURITE_ENT64 = {
   bilan: 'La scène n’était pas sûre : avant d’entrer dans un camion, il doit être immobilisé et le passage vers la remorque doit être sûr.',
 };
 
-// Le quai d'essai : le quai iso d'ENT-6.4 (sans froid, un camion, une palette de cartons quelconque pour la suite).
-// `securite` : une autre déclaration (les tests y passent des variantes) ; `arret` : l'arrêt de Nadia (ENT-6.4 : non).
-export function quaiEssai({ arret = false, securite = null } = {}) {
+// Les quatre palettes de fûts d'ENT-6.4 (brief ENT-6.4 §4.4), chacune un bac de rétention noir portant 8 places en quinconce 3-2-3.
+// P1 : conforme. P2 : l'étiquette dit Pelforth alors que le BL annonce de l'Affligem (huit fûts, tous conformes au BL pour le compte).
+// P3 : un fût d'Affligem fuit sur sa face arrière (la place 2, au fond au milieu) : coulure et flaque, visibles seulement quand on
+// fait tourner la palette. P4 : une place vide (la 7, au milieu de l'avant), conforme au BL qui n'annonce que 7 fûts. Références construites.
+export const PALETTES_ENT64 = [
+  { id: 'P1', forme: 'fut', ref: 'HEI-30', nom: 'Heineken fût 30 L', bl: 8, manque: [], avarie: {}, attendu: 'accepter', motifAttendu: 'aucun',
+    etiq: { ref: 'HEI-30', nom: 'HEINEKEN FÛT 30 L', poids: 'fût de 30 L', lot: 'HEI-26-0412' } },
+  { id: 'P2', forme: 'fut', ref: 'AFF-20', nom: 'Affligem Blonde fût 20 L', bl: 8, manque: [], avarie: {}, attendu: 'reserves', motifAttendu: 'produit',
+    etiq: { ref: 'PEL-20', nom: 'PELFORTH BLONDE FÛT 20 L', poids: 'fût de 20 L', lot: 'PEL-26-1107' } },
+  { id: 'P3', forme: 'fut', ref: 'AFF-20', nom: 'Affligem Blonde fût 20 L', bl: 8, manque: [], avarie: { 2: 'N' }, attendu: 'reserves', motifAttendu: 'avarie',
+    etiq: { ref: 'AFF-20', nom: 'AFFLIGEM BLONDE FÛT 20 L', poids: 'fût de 20 L', lot: 'AFF-26-0733' } },
+  { id: 'P4', forme: 'fut', ref: 'EDW-20', nom: 'Edelweiss fût 20 L', bl: 7, manque: [7], avarie: {}, attendu: 'accepter', motifAttendu: 'aucun',
+    etiq: { ref: 'EDW-20', nom: 'EDELWEISS FÛT 20 L', poids: 'fût de 20 L', lot: 'EDW-26-0268' } },
+];
+
+// La palette de cartons de départ de l'étape 2 : sans `palettes`, `quaiEssai` la garde (les cas de l'étape 2 du bloc de tests
+// `quai-iso` la jouent tels quels) ; c'est la PAGE (partie 2, `monterScene`) qui passe les quatre palettes de fûts ci-dessus.
+const PALETTE_CARTONS = { id: 'P1', ref: 'ESS-CAR', nom: 'Cartons d’essai', bl: 8, W: 2, D: 2, L: 2, manque: [], avarie: {}, attendu: 'accepter', motifAttendu: 'aucun',
+  etiq: { ref: 'ESS-CAR', nom: 'CARTONS D’ESSAI', poids: '1 carton d’essai', lot: 'ESS-26-0001' } };
+
+// Le quai d'essai : le quai iso d'ENT-6.4 (sans froid, un camion ; une palette de cartons, ou les palettes données).
+// `securite` : une autre déclaration (les tests y passent des variantes) ; `arret` : l'arrêt de Nadia (ENT-6.4 : non) ;
+// `palettes` : les palettes du camion (par exemple `PALETTES_ENT64`).
+export function quaiEssai({ arret = false, securite = null, palettes = null } = {}) {
   const S = securite || Object.assign({}, SECURITE_ENT64, { arret });
   return {
-    id: 'essai-inspection', rendu: 'iso', froid: false, motifs: ['avarie', 'manquant'],
+    id: 'essai-inspection', rendu: 'iso', froid: false, motifs: ['avarie', 'manquant', 'produit'],
     titre: 'Plateforme de Buchelay — Quai 12 (page d’essai)',
     avertissement: 'Page d’essai du chantier D-4 : le quai, le camion et la palette sont construits pour l’essai.',
     lieu: { nom: 'Quai 12', temp: 15, refrigere: false }, zone: { nom: 'Zone de réception' },
     dechargement: { ouverture: 0.5, parPalette: 1, par: 'chauffeur' }, aides: { consignes: true },
     camions: [{ transporteur: 'Transporteur d’essai', fournisseur: 'Brasserie d’essai', bl: 'BL-ESSAI-01', arrivee: '07:30',
       parole: 'Bonjour ! Livraison de la brasserie pour la plateforme. Voilà mon bon de livraison : on y va ?',
-      palettes: [{ id: 'P1', ref: 'ESS-CAR', nom: 'Cartons d’essai', bl: 8, W: 2, D: 2, L: 2, manque: [], avarie: {}, attendu: 'accepter', motifAttendu: 'aucun',
-        etiq: { ref: 'ESS-CAR', nom: 'CARTONS D’ESSAI', poids: '1 carton d’essai', lot: 'ESS-26-0001' } }] }],
+      palettes: JSON.parse(JSON.stringify(palettes || [PALETTE_CARTONS])) }],
     securite: S,
   };
 }
@@ -200,7 +220,7 @@ export function monterScene(hote) {
   };
   function lancer() {
     db = {};
-    Q = quaiEssai({ arret: hote.querySelector('input[name="arret"]:checked').value === 'oui' });
+    Q = quaiEssai({ arret: hote.querySelector('input[name="arret"]:checked').value === 'oui', palettes: PALETTES_ENT64 });
     const h = document.createElement('div');
     h.setAttribute('data-hote-quai', '');
     seance.replaceChildren(h);

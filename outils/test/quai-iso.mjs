@@ -14,6 +14,9 @@
 // ÉTAPE 2 — L'INSPECTION SUR LA SCÈNE (`securite.mode: 'scene'`) : la validation du contenu, l'état de chaque objet, les zones et
 // le point touché (fonctions pures), puis la scène d'ENT-6.4 jouée à la souris dans le vrai moteur d'entreprise.
 //
+// ÉTAPE 3 — LA PALETTE DE FÛTS (`forme: 'fut'`) : le kit (`paletteFuts`), la validation du contenu, le total / réel / avaries calculés, ② ③ ④ jouées
+// avec les quatre palettes d'ENT-6.4 de la page d'essai.
+//
 // Pour régénérer la référence (seulement si le dessin de Spartoo doit vraiment changer, avec l'accord de
 // Tristan) : QUAI_ISO_REGENERER=1 node outils/test.mjs quai-iso
 
@@ -1132,6 +1135,413 @@ await v('Quai scène : les séances existantes ne changent pas — aucune ne re�
   vrai(r.smoby, 'le quai de Smoby ENT-5.4 n’a pas pu être lu');
   egal(r.smoby, { etape: 0, cles: ['arrete', 'chef', 'fait', 'rep', 'signaux'], liste: ['securiteSignalee', 'securiteConstat'] }, 'Smoby : l’étape ⓪ en liste, son état et ses deux jalons d’avant');
   egal(r.spartoo, { etape: 1, securite: true }, 'Spartoo : étape ①, aucun état de sécurité');
+});
+
+/* ------------------------------------------------------------------ étape 3 : la palette de fûts */
+// `forme: 'fut'` : une palette de rétention noire portant 8 fûts debout en quinconce 3-2-3 (brief `docs/briefs/MOTEUR-quai-inspection.md`
+// §2.1 c et §2.3). Les valeurs attendues sont écrites à la main ; les quatre palettes d'ENT-6.4 sont celles de la page d'essai.
+
+const PALS = await pg.evaluate(async () => (await import('/outils/essai-quai-inspection.js')).PALETTES_ENT64);
+const PF = (o = {}) => Object.assign({ id: 'P1', forme: 'fut', ref: 'AFF-20', nom: 'Affligem Blonde fût 20 L', bl: 8, manque: [], avarie: {}, attendu: 'accepter', motifAttendu: 'aucun',
+  etiq: { ref: 'AFF-20', nom: 'AFFLIGEM BLONDE FÛT 20 L', poids: 'fût de 20 L', lot: 'L-1' } }, o);
+const QFUT = (ps, m = {}) => Object.assign({ id: 'tf', rendu: 'iso', froid: false, motifs: ['avarie', 'manquant', 'produit'],
+  camions: [{ transporteur: 'T', fournisseur: 'F', bl: 'BL', arrivee: '07:30', palettes: ps }] }, m);
+const jal = (Q, id) => quaiMod.jalonsQuai({}, Q).L.find((l) => l.id === id);
+// Les faces extérieures de chaque fût, écrites à la main (rangée du fond 1-2-3, milieu 4-5, avant 6-7-8).
+const EXT = { 1: 'NW', 2: 'N', 3: 'NE', 4: 'W', 5: 'E', 6: 'SW', 7: 'S', 8: 'SE' };
+
+await v('Quai fûts : le total est 8, le réel et les avaries se calculent (valeurs écrites à la main), jamais déclarés', async () => {
+  const compte = (p) => jal(QFUT([PF(p)]), 'P1-comptage').attendu.match(/^(\d+) \S+ \(BL : (\d+)\)$/).slice(1);
+  egal(compte({}), ['8', '8'], 'palette pleine : 8 fûts attendus');
+  egal(compte({ manque: [7], bl: 7 }), ['7', '7'], 'une place vide : 7 (P4)');
+  egal(compte({ manque: [3, 8] }), ['6', '8'], 'deux places vides : 6');
+  egal(compte({ manque: [1, 2, 3, 4, 5, 6, 7, 8] }), ['0', '8'], 'huit places vides : 0');
+  const avaries = (av) => jal(QFUT([PF({ attendu: 'reserves', motifAttendu: 'avarie', avarie: av })]), 'P1-reserve').attendu.match(/ — (\d+) /)[1];
+  egal(avaries({}), '0', 'aucune fuite');
+  egal(avaries({ 2: 'N' }), '1', 'une fuite (P3)');
+  egal(avaries({ 2: 'N', 3: 'E', 6: 'W' }), '3', 'trois fuites : autant que de clés');
+  const manquants = (p) => jal(QFUT([PF(Object.assign({ attendu: 'reserves', motifAttendu: 'manquant' }, p))]), 'P1-reserve').attendu.match(/manque (\d+) \S+ \(BL (\d+), reçu (\d+)\)/).slice(1);
+  egal(manquants({ manque: [3, 8] }), ['2', '8', '6'], 'manquants = BL − réel');
+  egal(manquants({ manque: [7], bl: 7 }), ['0', '7', '7'], 'une place vide que le BL annonce : 0 manquant');
+  // Les quatre palettes d'ENT-6.4 telles que la page les déclare.
+  const QP = QFUT(PALS);
+  egal(['P1', 'P2', 'P3', 'P4'].map((id) => jal(QP, `${id}-comptage`).attendu.match(/^(\d+)/)[1]), ['8', '8', '8', '7'], 'les quatre palettes : 8, 8, 8 et 7 fûts');
+  egal(jal(QP, 'P3-reserve').attendu.match(/ — (\d+) /)[1], '1', 'P3 : une fuite');
+  vrai(/PEL-20/.test(jal(QP, 'P2-reserve').attendu), 'P2 : la réserve nomme la référence lue (Pelforth)');
+  vrai(!jal(QP, 'P1-reserve') && !jal(QP, 'P4-reserve'), 'P1 et P4 sont acceptées : pas de ligne de réserve');
+  egal(PALS.map((p) => [p.manque, Object.keys(p.avarie).length]), [[[], 0], [[], 0], [[], 1], [[7], 0]], 'la déclaration de la page : P4 une place vide, P3 une fuite');
+});
+
+await v('Quai fûts : verifierQuai accepte les faces extérieures et refuse chaque déclaration fautive, avec un message clair', async () => {
+  egal(quaiMod.verifierQuai(QFUT(PALS)), [], 'les quatre palettes d’ENT-6.4');
+  egal(quaiMod.verifierQuai(QFUT([{ id: 'P1', ref: 'X', bl: 8, W: 2, D: 2, L: 2, manque: ['0,0,1'], avarie: { '1,0,0': [0, -1] }, etiq: {} }], { aides: { regleCouches: true, detailComptage: true } })), [], 'une palette de cartons n’est pas touchée par les règles des fûts');
+  const fautes = [];
+  for (const n of [1, 2, 3, 4, 5, 6, 7, 8]) for (const f of ['N', 'S', 'E', 'W']) {
+    const E = quaiMod.verifierQuai(QFUT([PF({ avarie: { [n]: f } })]));
+    if (EXT[n].includes(f)) { if (E.length) fautes.push(`fût ${n} face ${f} refusée : ${E[0]}`); }
+    else if (!(E.length === 1 && /cachée/.test(E[0]))) fautes.push(`fût ${n} face ${f} (intérieure) : ${E.length ? E[0] : 'pas refusée'}`);
+  }
+  const REFUS_FUT = [
+    ['largeur W', (Q) => { Q.camions[0].palettes[0].W = 2; }, /« W »/],
+    ['profondeur D', (Q) => { Q.camions[0].palettes[0].D = 2; }, /« D »/],
+    ['couches L', (Q) => { Q.camions[0].palettes[0].L = 1; }, /« L »/],
+    ['références multiples', (Q) => { Q.camions[0].palettes[0].refs = []; }, /« refs »/],
+    ['étiquette avant déchirée', (Q) => { Q.camions[0].palettes[0].etiqAvant = 'dechiree'; }, /« etiqAvant »/],
+    ['numéro 9 en manque', (Q) => { Q.camions[0].palettes[0].manque = [9]; }, /« 9 » n’existe pas/],
+    ['numéro 0 en manque', (Q) => { Q.camions[0].palettes[0].manque = [0]; }, /« 0 » n’existe pas/],
+    ['numéro décimal en manque', (Q) => { Q.camions[0].palettes[0].manque = [1.5]; }, /« 1\.5 »/],
+    ['numéro en double', (Q) => { Q.camions[0].palettes[0].manque = [3, 3]; }, /en double/],
+    ['manque pas une liste', (Q) => { Q.camions[0].palettes[0].manque = 'abc'; }, /liste des numéros/],
+    ['fuite sur le fût 9', (Q) => { Q.camions[0].palettes[0].avarie = { 9: 'N' }; }, /« 9 » n’existe pas/],
+    ['fuite sur « x »', (Q) => { Q.camions[0].palettes[0].avarie = { x: 'N' }; }, /« x » n’existe pas/],
+    ['face inconnue', (Q) => { Q.camions[0].palettes[0].avarie = { 2: 'Z' }; }, /« Z »/],
+    ['face en minuscule', (Q) => { Q.camions[0].palettes[0].avarie = { 2: 'n' }; }, /« n »/],
+    ['face intérieure', (Q) => { Q.camions[0].palettes[0].avarie = { 5: 'N' }; }, /cachée par les autres fûts/],
+    ['fût absent qui fuit', (Q) => { Q.camions[0].palettes[0].manque = [2]; Q.camions[0].palettes[0].avarie = { 2: 'N' }; }, /absent, il ne peut pas fuir/],
+    ['avarie en tableau', (Q) => { Q.camions[0].palettes[0].avarie = []; }, /avarie doit être/],
+    ['forme inconnue', (Q) => { Q.camions[0].palettes[0].forme = 'caisse'; }, /forme « caisse » inconnue/],
+    ['sans rendu iso', (Q) => { delete Q.rendu; }, /rendu: 'iso'/],
+    ['aides.regleCouches', (Q) => { Q.aides = { regleCouches: true }; }, /aides\.regleCouches/],
+    ['aides.detailComptage', (Q) => { Q.aides = { detailComptage: true }; }, /aides\.detailComptage/],
+  ];
+  for (const [nom, mute, motif] of REFUS_FUT) {
+    const Q = QFUT([PF()]); mute(Q);
+    const E = quaiMod.verifierQuai(Q);
+    if (!E.length) fautes.push(`« ${nom} » n’est pas refusé`);
+    else if (!E.some((m) => motif.test(m))) fautes.push(`« ${nom} » : message sans « ${motif} » (${E.join(' | ')})`);
+  }
+  if (fautes.length) throw new Error(fautes.join(' ; '));
+});
+
+await v('Quai fûts : un quai déclaré faux ne s’ouvre pas (creerQuai lève une erreur qui nomme le défaut)', async () => {
+  const msg = await pg.evaluate(async (ps) => {
+    const Q = await import('/core/types/quai.js'), E = await import('/outils/essai-quai-inspection.js');
+    const q = E.quaiEssai({ palettes: ps }); q.camions[0].palettes[0].W = 2; q.camions[0].palettes[2].avarie = { 5: 'N' };
+    try { Q.creerQuai(q); return 'pas d’erreur'; } catch (x) { return x.message; }
+  }, PALS);
+  vrai(/essai-inspection/.test(msg) && /« W »/.test(msg) && /cachée par les autres fûts/.test(msg), `message : ${msg}`);
+});
+
+await v('Quai fûts : facesExterieuresFut et les huit places — table écrite à la main, quinconce 3-2-3 de fûts de 39,5 cm qui se touchent', async () => {
+  const r = await pg.evaluate(async () => {
+    const K = await import('/core/iso.js');
+    return { faces: [1, 2, 3, 4, 5, 6, 7, 8].map((n) => K.facesExterieuresFut(n)), hors: [K.facesExterieuresFut(0), K.facesExterieuresFut(9)], places: K.PLACES_FUT, cote: K.COTE_BAC };
+  });
+  egal(r.faces, [['N', 'W'], ['N'], ['N', 'E'], ['W'], ['E'], ['S', 'W'], ['S'], ['S', 'E']], 'les faces extérieures de chaque fût');
+  egal(r.hors, [[], []], 'pas de fût 0 ni 9');
+  egal(r.cote, 1.3, 'le bac de 1,30 m');
+  const att = [[-.395, -.3421], [0, -.3421], [.395, -.3421], [-.1975, 0], [.1975, 0], [-.395, .3421], [0, .3421], [.395, .3421]];
+  const ecart = r.places.map(([x, y], i) => Math.max(Math.abs(x - att[i][0]), Math.abs(y - att[i][1])));
+  vrai(ecart.every((e) => e < 0.0006), `les places ne sont pas celles du quinconce 3-2-3 (écarts ${ecart.map((e) => e.toFixed(4))})`);
+  const d = (a, b) => Math.hypot(r.places[a][0] - r.places[b][0], r.places[a][1] - r.places[b][1]);
+  vrai([d(0, 1), d(1, 2), d(3, 4), d(5, 6), d(6, 7), d(0, 3), d(1, 3), d(1, 4), d(2, 4), d(3, 5), d(3, 6), d(4, 6), d(4, 7)].every((x) => Math.abs(x - 0.395) < 0.0006), 'les fûts voisins se touchent (centres à 39,5 cm)');
+});
+
+await v('Quai fûts : paletteFuts — bac noir (jamais de bois), huit fûts debout, place vide non dessinée, coupe au mur, échelle du décor', async () => {
+  const r = await pg.evaluate(async () => {
+    const K = await import('/core/iso.js');
+    const I = K.projection({ unite: 150, origine: [470, 190] });
+    const futs = (manque = [], av = {}) => Array.from({ length: 8 }, (_, k) => ({ no: k + 1, ref: 'AFF-20', absent: manque.includes(k + 1), fuite: av[k + 1] || null }));
+    const attrs = (f) => `data-f="${f.no}"`;
+    const dessin = (m, av, rot, o = {}, ox = 0.2, oy = -0.45) => K.paletteFuts(I, { futs: futs(m, av) }, ox, oy, rot, Object.assign({ attrs }, o));
+    const n = (s, re) => (s.match(re) || []).length;
+    const nos = (s) => [...s.matchAll(/data-f="(\d)"/g)].map((m) => +m[1]).sort();
+    const S = dessin([], {}, 0);
+    const bbox = (svgTexte) => {
+      const h = document.createElement('div'); h.innerHTML = `<svg viewBox="0 0 900 700" width="900" height="700">${K.DEFS}<g>${svgTexte}</g></svg>`;
+      document.body.append(h); const b = h.querySelector('g').getBBox(); h.remove(); return { x: b.x, y: b.y, w: b.width, h: b.height };
+    };
+    const R = {
+      groupes: n(S, /data-f="/g), sans7: nos(dessin([7], {}, 0)), hauts: n(S, /fill="#eef0f1"/g), hautsSans7: n(dessin([7], {}, 0), /fill="#eef0f1"/g),
+      bois: ['#c9a273', '#b48a5b', '#9c7549', '#d9b27a', '#c99c5f', '#b48549'].filter((c) => S.includes(c)), noir: ['#3d4245', '#2f3336', '#24282a', '#1e2123'].every((c) => S.includes(c)),
+      sansFut: n(K.paletteFuts(I, { futs: [] }, 0.2, -0.45, 0, {}), /fill="#eef0f1"/g),
+      reperes: n(dessin([], {}, 0, { lisible: true }), /AFF-20<\/text>/g), sansTexte: n(dessin([], {}, 0, { lisible: false }), /AFF-20<\/text>/g),
+      eclaire: n(dessin([], {}, 0, { sel: 3 }), /stroke="#d1a90f" stroke-width="3"/g), pasEclaire: n(S, /stroke="#d1a90f"/g),
+    };
+    // Une fuite ne se dessine que si sa face se voit : la coulure sur le fût et la flaque dans le bac, de ce côté-là.
+    const fuite = (face, no, o = {}) => [0, 1, 2, 3].map((rot) => { const s = dessin([], { [no]: face }, rot, o); return [n(s, /data-iso-avarie/g), n(s, /data-iso-flaque/g)]; });
+    R.fuiteN2 = fuite('N', 2); R.fuiteE3 = fuite('E', 3); R.fuiteS6 = fuite('S', 6); R.fuiteW1 = fuite('W', 1);
+    R.sansFuite = [0, 1, 2, 3].map((rot) => n(dessin([], {}, rot), /data-iso-(avarie|flaque)/g));
+    R.sansDents = fuite('N', 2, { dents: false });
+    R.fuiteAbsent = [0, 1, 2, 3].map((rot) => n(dessin([2], { 2: 'N' }, rot), /data-iso-(avarie|flaque)/g));
+    const s2 = dessin([], { 2: 'N' }, 2);
+    R.flaqueApres = s2.indexOf('data-iso-flaque') > s2.indexOf('data-iso-avarie');
+    // La flaque reste dans le bac.
+    const bac = bbox(K.paletteFuts(I, { futs: [] }, 0.2, -0.45, 2, {}));
+    const flaques = [[2, 'N', 2], [3, 'E', 0], [6, 'S', 0], [1, 'W', 2], [4, 'W', 3], [8, 'E', 1], [5, 'E', 0]].map(([no, face, rot]) => {
+      const h = document.createElement('div');
+      h.innerHTML = `<svg viewBox="0 0 900 700" width="900" height="700">${K.DEFS}<g>${dessin([], { [no]: face }, rot)}</g></svg>`;
+      document.body.append(h);
+      const f = h.querySelector('[data-iso-flaque]'), b = f ? f.getBBox() : null; h.remove();
+      return { no, face, rot, b: b ? { x: b.x, y: b.y, x2: b.x + b.width, y2: b.y + b.height } : null };
+    });
+    R.bac = { x: bac.x, y: bac.y, x2: bac.x + bac.w, y2: bac.y + bac.h };
+    R.flaques = flaques;
+    // Échelle du décor : un bac de 0,95 m est (0,95 / 1,30) fois plus petit, dans la même proportion.
+    const grand = bbox(dessin([], {}, 0)), petit = bbox(dessin([], {}, 0, { cote: 0.95 }));
+    R.echelle = petit.w / grand.w;
+    const rx = (svg) => +svg.match(/<ellipse[^>]*rx="([\d.]+)"[^>]*fill="#eef0f1"/)[1];
+    R.rayon = rx(dessin([], {}, 0, { cote: 0.95 })) / rx(dessin([], {}, 0));
+    // La coupe au mur : un fût est dessiné dans la tranche où est son centre (un bac de 0,95 m posé en y = −4,2 : ses rangées sont à y = −3,975 / −3,725 / −3,475).
+    const decor = K.projection({ unite: 60, origine: [470, 235] });
+    const coupe = (oy, o) => nos(K.paletteFuts(decor, { futs: futs() }, 2.5, oy, 0, Object.assign({ attrs, cote: 0.95 }, o)));
+    R.auFond = coupe(-4.2, { yMin: -3.6 }); R.sansCoupe = coupe(-4.2, {});
+    R.dedans = coupe(-0.5, { yMax: 0 }); R.dehors = coupe(-0.5, { yMin: 0 });
+    return R;
+  });
+  egal(r.groupes, 8, 'huit fûts, chacun cliquable');
+  egal(r.sans7, [1, 2, 3, 4, 5, 6, 8], 'la place 7 vide : le fût 7 n’est pas dessiné, les autres le sont');
+  egal([r.hauts, r.hautsSans7, r.sansFut], [8, 7, 0], 'huit dessus de fût (debout), sept sans le 7, aucun sans fût');
+  egal(r.bois, [], 'aucune teinte de bois ni de carton : le bac est en plastique');
+  vrai(r.noir, 'le bac est noir : pieds, bac, caillebotis');
+  egal([r.reperes, r.sansTexte], [8, 0], 'la référence est écrite sur la collerette quand le dessin est lisible, et seulement alors');
+  egal([r.eclaire, r.pasEclaire], [2, 0], 'le fût éclairé a son liseré doré, les autres non');
+  // Une fuite sur la face N du fût 2 se voit palette tournée d'un quart de tour (côté droit) ou d'un demi-tour (arrière), comme le
+  // carton enfoncé du kit ; jamais de l'avant ni du côté gauche. Chaque face se voit à DEUX rotations (devant, puis de côté).
+  egal(r.fuiteN2, [[0, 0], [1, 1], [1, 1], [0, 0]], 'fuite N du fût 2 : rotations 1 et 2');
+  egal(r.fuiteE3, [[1, 1], [1, 1], [0, 0], [0, 0]], 'fuite E du fût 3 : rotations 0 et 1');
+  egal(r.fuiteS6, [[1, 1], [0, 0], [0, 0], [1, 1]], 'fuite S du fût 6 : rotations 0 et 3');
+  egal(r.fuiteW1, [[0, 0], [0, 0], [1, 1], [1, 1]], 'fuite W du fût 1 : rotations 2 et 3');
+  egal(r.sansFuite, [0, 0, 0, 0], 'sans fuite, ni coulure ni flaque');
+  egal(r.sansDents, [[0, 0], [0, 0], [0, 0], [0, 0]], 'dents: false ne dessine aucune fuite');
+  egal(r.fuiteAbsent, [0, 0, 0, 0], 'un fût absent ne fuit pas');
+  vrai(r.flaqueApres, 'la flaque se dessine après le fût qui fuit (elle est devant lui)');
+  const dans = (b) => b && b.x >= r.bac.x - 0.5 && b.x2 <= r.bac.x2 + 0.5 && b.y >= r.bac.y - 0.5 && b.y2 <= r.bac.y2 + 0.5;
+  const dehors = r.flaques.filter((f) => !dans(f.b));
+  egal(dehors, [], 'chaque flaque tient dans le bac');
+  vrai(Math.abs(r.echelle - 0.95 / 1.3) < 0.01, `un bac de 0,95 m n’est pas à l’échelle (rapport ${r.echelle.toFixed(3)} au lieu de ${(0.95 / 1.3).toFixed(3)})`);
+  vrai(Math.abs(r.rayon - 0.95 / 1.3) < 0.01, `le fût d’un bac de 0,95 m n’est pas à l’échelle (rapport ${r.rayon.toFixed(3)})`);
+  egal(r.sansCoupe, [1, 2, 3, 4, 5, 6, 7, 8], 'sans coupe : tous les fûts');
+  egal(r.auFond, [6, 7, 8], 'une palette au fond de la remorque est coupée au mur du fond (yMin −3,6) : seule la rangée d’avant reste');
+  egal([...r.dedans, ...r.dehors].sort(), [1, 2, 3, 4, 5, 6, 7, 8], 'dedans et dehors se partagent les huit fûts, sans doublon ni oubli');
+  egal(r.dedans, [1, 2, 3, 4, 5], 'dedans : les fûts au fond du plan du mur');
+  egal(r.dehors, [6, 7, 8], 'dehors : les fûts devant le plan du mur');
+});
+
+// Monte la séance d'essai avec des palettes données (et d'autres réglages du quai).
+const monterAvec = (p, o) => p.evaluate(async (o) => {
+  const { creerEntreprise } = await import('/core/types/entreprise.js');
+  const E = await import('/outils/essai-quai-inspection.js');
+  document.querySelector('#qiScene')?.remove();
+  const hote = document.createElement('div'); hote.id = 'qiScene'; document.body.prepend(hote);
+  const Q = Object.assign(E.quaiEssai({ palettes: o.palettes }), o.extra || {});
+  const db = {};
+  window.__qs = { db, Q, enregistres: [] };
+  const ctx = {
+    meta: { id: 'essai-inspection', code: 'ESSAI', titre: 'Essai de l’inspection', portee: 'eleve', immersif: true, temps: 'guidage', bareme: 20 },
+    profil: { prenom: 'Lea', nom: 'Test', role: 'eleve', uid: 'u-test' },
+    jeu: { etat: () => db, sauver: () => {} },
+    enregistrer: (r) => { window.__qs.enregistres.push(JSON.parse(JSON.stringify(r))); }, quitter: () => {}, codeStock: 'ABC', lireScore: async () => null,
+  };
+  creerEntreprise(E.universQuai(Q)).rendre(hote, ctx);
+  document.querySelector('#qiScene .ent-nav[data-vue="quai"]').click();
+}, o);
+async function pageAvec(o) {
+  const p = await ctxS.newPage();
+  p.setDefaultTimeout(8000);
+  p.on('pageerror', (e) => erreurs.push('PAGEERROR: ' + e.message));
+  p.on('console', (m) => { if (m.type() === 'error' && !/\b404\b/.test(m.text())) erreurs.push('CONSOLE: ' + m.text()); });
+  await p.goto(BASE);
+  await p.waitForSelector('#btnProf', { timeout: 8000 });
+  await monterAvec(p, o);
+  await p.waitForSelector(`${HOTE} [data-q-inspection], ${HOTE} [data-q="passer1"]`);
+  if (await p.$(`${HOTE} [data-q="passer1"]`)) await p.click(`${HOTE} [data-q="passer1"]`);
+  await p.waitForSelector(`${HOTE} [data-q-inspection]`);
+  return p;
+}
+// De l'inspection (rien signalé : arret: false) à l'étape ② : les palettes déchargées, puis ③.
+async function jusquaEtape2(p) {
+  await decharger(p);
+  await p.click(`${HOTE} [data-q="decharger"]`);
+  await p.waitForSelector(`${HOTE} [data-q="vers3"]:not([disabled])`);
+}
+const jalonsPalettes = (p) => p.evaluate(async () => {
+  const Q = await import('/core/types/quai.js');
+  return Object.fromEntries(Q.jalonsQuai(window.__qs.db, window.__qs.Q).L.filter((l) => /^P\d-/.test(l.id)).map((l) => [l.id, l.ok]));
+});
+
+await v('Quai fûts : ② montre les quatre palettes dans la zone de réception (cadre agrandi, zone calculée), une seule palette garde la zone d’aujourd’hui', async () => {
+  const p = await pageAvec({ palettes: PALS });
+  await jusquaEtape2(p);
+  const r = await p.$eval(`${HOTE} [data-q-scene2]`, (s) => {
+    const zone = s.querySelector('[data-iso-zone]').getBBox();
+    const bacs = [...s.querySelectorAll('polygon[fill="#3d4245"]')].map((n) => n.getBBox());
+    return { vb: s.getAttribute('viewBox'), hauts: (s.innerHTML.match(/fill="#eef0f1"/g) || []).length, bacs: bacs.length, zone: { x: zone.x, y: zone.y, x2: zone.x + zone.width, y2: zone.y + zone.height },
+      hors: bacs.filter((b) => b.x < zone.x - 1 || b.x + b.width > zone.x + zone.width + 1 || b.y + b.height > zone.y + zone.height + 1).length };
+  });
+  egal(r.vb, '290 0 640 540', 'le cadre grandit pour quatre palettes');
+  egal(r.hauts, 31, '8 + 8 + 8 + 7 fûts dessinés (la place vide de P4 n’est pas dessinée)');
+  egal(r.bacs, 4, 'quatre bacs de rétention');
+  egal(r.hors, 0, 'chaque bac tient dans la zone de réception, calculée pour quatre palettes');
+  egal(await p.$$eval(`${HOTE} [data-q-past] i.sur`, (L) => L.length), 4, 'les quatre pastilles sont « sur le quai »');
+  // Les places (deux colonnes ; la rangée du fond, la plus près de l'élève, reçoit P1 et P2) : les écarts à l'écran de P1 sont écrits à la main
+  // (pas de 1,15 m : 59,8 en X et 34,5 en Y par mètre de x ; 59,8 en X et −34,5 en Y par mètre de y), P1 centrée sur la porte (X = 432).
+  const pl = await p.$eval(`${HOTE} [data-q-scene2]`, (s) => {
+    const C = Object.fromEntries([...s.querySelectorAll('[data-iso-pal]')].map((g) => { const b = g.getBBox(); return [g.dataset.isoPal, [b.x + b.width / 2, b.y + b.height / 2]]; }));
+    const ombre = s.querySelector('ellipse[fill="rgba(0,0,0,.2)"]');
+    return { C, chauffeur: ombre ? +ombre.getAttribute('cx') : null, droite: Math.max(...[...s.querySelectorAll('[data-iso-pal]')].map((g) => { const b = g.getBBox(); return b.x + b.width; })) };
+  });
+  const dif = (a, b) => [pl.C[a][0] - pl.C[b][0], pl.C[a][1] - pl.C[b][1]];
+  const proche = (v, w) => Math.abs(v[0] - w[0]) < 3 && Math.abs(v[1] - w[1]) < 3;
+  vrai(proche(dif('P2', 'P1'), [59.8, 34.5]), `P2 n’est pas à droite de P1 (écart ${dif('P2', 'P1').map((x) => x.toFixed(1))})`);
+  vrai(proche(dif('P3', 'P1'), [59.8, -34.5]), `P3 n’est pas derrière P1 (écart ${dif('P3', 'P1').map((x) => x.toFixed(1))})`);
+  vrai(proche(dif('P4', 'P1'), [119.6, 0]), `P4 n’est pas en diagonale de P1 (écart ${dif('P4', 'P1').map((x) => x.toFixed(1))})`);
+  vrai(Math.abs(pl.C.P1[0] - 432.3) < 2.5, `P1 n’est pas centrée sur la porte (X = ${pl.C.P1[0].toFixed(1)} au lieu de 432)`);
+  vrai(pl.chauffeur > pl.droite, `le chauffeur qui attend est devant les palettes (X = ${pl.chauffeur}), pas à leur droite (${pl.droite.toFixed(0)})`);
+  egal(await p.$eval(`${HOTE} [data-q-nb]`, (n) => n.textContent.trim()), '4 / 4', 'le compteur de palettes');
+  vrai(await p.$eval(`${HOTE} [data-q-scene2]`, (s) => !!s.querySelector('defs linearGradient#isoMetal')), 'le dégradé du métal des fûts est posé');
+  await p.close();
+  // Une seule palette de fûts : la zone d'aujourd'hui, le cadre d'aujourd'hui.
+  const q = await pageAvec({ palettes: [PALS[0]] });
+  await jusquaEtape2(q);
+  const un = await q.$eval(`${HOTE} [data-q-scene2]`, (s) => ({ vb: s.getAttribute('viewBox'), zone: s.querySelector('[data-iso-zone]').getAttribute('points'), hauts: (s.innerHTML.match(/fill="#eef0f1"/g) || []).length }));
+  const attendu = await q.evaluate(async () => {
+    const K = await import('/core/iso.js');
+    return K.solQuai(K.projection({ unite: 60, origine: [470, 235] }), 'x').match(/data-iso-zone points="([^"]+)"/)[1];
+  });
+  egal(un.vb, '290 0 640 480', 'une palette : le cadre d’aujourd’hui');
+  egal(un.zone, attendu, 'une palette : la zone de réception d’aujourd’hui, point pour point');
+  egal(un.hauts, 8, 'huit fûts');
+  await q.close();
+});
+
+await v('Quai fûts : ③ — huit fûts cliquables par leur étiquette, la fuite de P3 ne se voit qu’à deux rotations, le trou de P4, le zoom', async () => {
+  const p = await pageAvec({ palettes: PALS });
+  await jusquaEtape2(p);
+  await p.click(`${HOTE} [data-q="vers3"]`);
+  await p.waitForSelector(`${HOTE} [data-q-palette]`);
+  const PAL3 = `${HOTE} [data-q-palette]`;
+  const compte = (sel) => p.$$eval(`${PAL3} ${sel}`, (L) => L.length);
+  egal(await p.$eval(PAL3, (s) => s.getAttribute('aria-label')), 'Palette P1 : clique sur un fût pour lire son étiquette', 'l’étiquette lue par un lecteur d’écran');
+  const parPalette = [];
+  for (const n of [0, 1, 2, 3]) {
+    await p.click(`${HOTE} [data-q="sel"][data-n="${n}"]`);
+    parPalette.push([await compte('[data-q-carton]'), await compte('.quai-etiq-clic'), (await p.$eval(PAL3, (s) => (s.innerHTML.match(/fill="#eef0f1"/g) || []).length))]);
+  }
+  egal(parPalette, [[8, 8, 8], [8, 8, 8], [8, 8, 8], [7, 7, 7]], 'P1 à P3 : huit fûts ; P4 : sept (une place vide)');
+  egal(await compte('[data-q-carton="7"]'), 0, 'P4 : le fût 7 n’est pas là');
+  vrai(await p.$eval(`${HOTE} [data-q-palette] defs linearGradient#isoMetal, ${HOTE} [data-q-palette] linearGradient#isoMetal`, () => true).catch(() => false), 'le dégradé du métal est posé dans la scène ③');
+  // P3 : la fuite ne se voit pas de l'avant ; elle apparaît au quart de tour (côté droit), reste à l'arrière, disparaît au quart suivant.
+  await p.click(`${HOTE} [data-q="sel"][data-n="2"]`);
+  const vues = [];
+  for (let k = 0; k < 4; k++) { vues.push(await compte('[data-iso-avarie]')); await p.click(`${HOTE} [data-q="tourner"]:not([data-sens])`); }
+  egal(vues, [0, 1, 1, 0], 'la coulure de P3 : avant, côté droit, arrière, côté gauche');
+  // Le zoom : un fût cliqué lit son étiquette ; ce qu'on voit de lui dépend de la vue.
+  await p.click(`${HOTE} [data-q="tourner"]:not([data-sens])`); await p.click(`${HOTE} [data-q="tourner"]:not([data-sens])`);   // arrière
+  await p.click(`${PAL3} [data-q-carton="2"]`);
+  egal(await p.$eval(`${HOTE} [data-q-etiquette] .quai-etiq-ref`, (n) => n.textContent.trim()), 'AFF-20', 'l’étiquette du fût cliqué');
+  egal(await p.$eval(`${HOTE} [data-q-etiquette] .quai-etiq-l1 span`, (n) => n.textContent.replace(/\s+/g, ' ').trim()), 'Fût 2 / 8', 'le numéro du fût');
+  vrai(/Fuite sur cette face/.test(await p.$eval(`${HOTE} [data-q-etat-carton]`, (n) => n.textContent)), 'le fût 2 vu de l’arrière : fuite sur cette face');
+  await p.click(`${PAL3} [data-q-carton="1"]`);
+  vrai(/intact/.test(await p.$eval(`${HOTE} [data-q-etat-carton]`, (n) => n.textContent)), 'le fût 1 vu de l’arrière : intact');
+  egal(await p.$$eval(`${HOTE} [data-q-etiquette] .quai-etiq-ref`, (L) => L.length), 1, 'une seule étiquette à l’écran');
+  await p.click(`${PAL3} [data-q-carton="2"]`);
+  await p.click(`${HOTE} [data-q="tourner"][data-sens="-1"]`);   // côté droit : la fuite se voit encore
+  vrai(/Fuite sur cette face/.test(await p.$eval(`${HOTE} [data-q-etat-carton]`, (n) => n.textContent)), 'le fût 2 vu de côté (droit) : fuite visible');
+  await p.click(`${HOTE} [data-q="tourner"][data-sens="-1"]`);   // avant : cachée
+  vrai(/intact/.test(await p.$eval(`${HOTE} [data-q-etat-carton]`, (n) => n.textContent)), 'le fût 2 vu de l’avant : intact (il faut faire le tour)');
+  // P2 : l'étiquette dit Pelforth alors que le BL annonce de l'Affligem.
+  await p.click(`${HOTE} [data-q="sel"][data-n="1"]`);
+  await p.click(`${PAL3} [data-q-carton="3"]`);
+  egal(await p.$eval(`${HOTE} [data-q-etiquette] .quai-etiq-ref`, (n) => n.textContent.trim()), 'PEL-20', 'P2 : la référence lue sur le fût est PEL-20');
+  await p.close();
+});
+
+await v('Quai fûts : parcours ②③④ des quatre palettes jusqu’au bilan — comptage 8, 8, 8 et 7 ; réserves de P2 et P3', async () => {
+  const p = await pageAvec({ palettes: PALS });
+  await jusquaEtape2(p);
+  await p.click(`${HOTE} [data-q="vers3"]`);
+  const valide = async (n, compte, decision, motif) => {
+    await p.click(`${HOTE} [data-q="sel"][data-n="${n}"]`);
+    await p.fill(`${HOTE} #qCompte`, String(compte)); await p.press(`${HOTE} #qCompte`, 'Enter');
+    await p.click(`${HOTE} #qDec-${decision}`);
+    if (motif) await p.click(`${HOTE} #qMot-${motif}`);
+    await p.click(`${HOTE} [data-q="valider"]`);
+  };
+  await valide(0, 8, 'accepter');
+  await valide(1, 8, 'reserves', 'produit');
+  await valide(2, 8, 'reserves', 'avarie');
+  await valide(3, 7, 'accepter');
+  egal(await jalonsPalettes(p), { 'P1-comptage': true, 'P1-decision': true, 'P2-comptage': true, 'P2-decision': true, 'P3-comptage': true, 'P3-decision': true, 'P4-comptage': true, 'P4-decision': true,
+    'P2-reserve': false, 'P3-reserve': false }, 'comptage et décisions justes avant les réserves');
+  await p.click(`${HOTE} [data-q="vers4"]`); await p.click(`${HOTE} [data-q="vers4"]`);
+  await p.fill(`${HOTE} #qRes-P2`, 'PEL-20'); await p.fill(`${HOTE} #qRes-P3`, '1');
+  // ④ : les quatre palettes sont posées en zone de réception (cadre agrandi, zone calculée).
+  const cf = await p.$eval(`${HOTE} [data-q-cf]`, (s) => ({ vb: s.getAttribute('viewBox'), hauts: (s.innerHTML.match(/fill="#eef0f1"/g) || []).length }));
+  egal(cf, { vb: '200 60 640 520', hauts: 31 }, '④ : le cadre agrandi, 31 fûts dessinés');
+  await p.click(`${HOTE} [data-q="ecrire"]`);
+  await p.click(`${HOTE} [data-q="signer"]`);
+  await p.click(`${HOTE} [data-q="clore"]`);
+  await p.waitForSelector(`${HOTE} [data-q-bilan]`);
+  const J = await jalonsPalettes(p);
+  egal(Object.values(J).every(Boolean), true, `tous les jalons de palettes sont justes : ${JSON.stringify(J)}`);
+  await p.close();
+  // Le piège de P4 : compter 8 (palette supposée pleine) est faux ; 7 est juste. Un total écrit au clavier compte, pas un total deviné.
+  const q = await pageAvec({ palettes: PALS });
+  await jusquaEtape2(q);
+  await q.click(`${HOTE} [data-q="vers3"]`);
+  await q.click(`${HOTE} [data-q="sel"][data-n="3"]`);
+  await q.fill(`${HOTE} #qCompte`, '8'); await q.press(`${HOTE} #qCompte`, 'Enter');
+  egal((await jalonsPalettes(q))['P4-comptage'], false, 'P4 comptée 8 : faux');
+  await q.fill(`${HOTE} #qCompte`, '7'); await q.press(`${HOTE} #qCompte`, 'Enter');
+  egal((await jalonsPalettes(q))['P4-comptage'], true, 'P4 comptée 7 : juste');
+  await q.close();
+});
+
+// Le déchargement animé, sous horloge simulée : les palettes qui attendent dans la remorque avancent d'un cran quand celle d'avant a fait
+// la moitié du chemin ; celles du fond de la remorque sont coupées au mur du fond (une palette de 0,95 m par cran de 1,05 m).
+await v('Quai fûts : le déchargement animé — la file d’attente avance d’un cran, les palettes du fond sont coupées au mur', async () => {
+  const p = await ctxSM.newPage();
+  p.setDefaultTimeout(8000);
+  p.on('pageerror', (e) => erreurs.push('PAGEERROR: ' + e.message));
+  await p.clock.install({ time: 0 });
+  await p.goto(BASE);
+  await p.waitForSelector('#btnProf', { timeout: 8000 });
+  await monterAvec(p, { palettes: PALS });
+  await p.waitForSelector(`${HOTE} [data-q="passer1"], ${HOTE} [data-q-inspection]`);
+  if (await p.$(`${HOTE} [data-q="passer1"]`)) await p.click(`${HOTE} [data-q="passer1"]`);
+  await p.waitForSelector(`${HOTE} [data-q-inspection]`);
+  await decharger(p);
+  await p.click(`${HOTE} [data-q="decharger"]`);
+  const tops = () => p.$eval(`${HOTE} [data-q-scene2]`, (s) => ['P1', 'P2', 'P3', 'P4'].map((id) => [...s.querySelectorAll(`[data-iso-pal="${id}"]`)].reduce((t, g) => t + (g.innerHTML.match(/fill="#eef0f1"/g) || []).length, 0)));
+  await p.clock.runFor(2500);   // la porte est levée, P1 vient de partir
+  // P1 (y = −2,9) : ses 8 fûts ; P2 (cran 1, y = −3,95) : 5 fûts, les trois du fond passent derrière le mur ; P3 et P4 : rien.
+  egal(await tops(), [8, 5, 0, 0], 'au départ : 8, 5, 0 et 0 fûts visibles dans la remorque');
+  await p.clock.runFor(4000);   // P1 a fait plus de la moitié du chemin : la file a avancé
+  egal(await tops(), [8, 8, 5, 0], 'la file a avancé d’un cran : P2 en tête (8 fûts), P3 au cran 1 (5 fûts)');
+  // P2 sort à t = 8,6 s : à 11,76 s, son avant est à y = 0,5 m devant le mur. Elle a glissé de 43 % vers sa colonne (1,15 m) : son centre est
+  // à x = 3,49 m, y = 0,97 m, soit X = 470 + (3,49 − 0,97) × 52 = 601 à l'écran (elle serait en X = 635 si elle glissait dès la porte).
+  await p.clock.runFor(5262);
+  const X = await p.$eval(`${HOTE} [data-q-scene2]`, (s) => { const B = [...s.querySelectorAll('[data-iso-pal="P2"]')].map((g) => g.getBBox()).filter((b) => b.width); return (Math.min(...B.map((b) => b.x)) + Math.max(...B.map((b) => b.x + b.width))) / 2; });
+  vrai(Math.abs(X - 601) < 8, `P2 sortant de la porte n’est pas au bon endroit (X = ${X.toFixed(1)} au lieu de 601 : elle doit d’abord traverser la porte, puis glisser de côté)`);
+  await p.clock.runFor(30000);
+  egal(await tops(), [8, 8, 8, 7], 'à la fin : les quatre palettes sorties, 8, 8, 8 et 7 fûts');
+  await p.close();
+});
+
+await v('Quai fûts : brouillon de calcul imposé à une palette de fûts (même si la séance déclare la feuille), la feuille reste pour les cartons', async () => {
+  const carton = { id: 'P1', ref: 'ESS-CAR', nom: 'Cartons d’essai', bl: 8, W: 2, D: 2, L: 2, manque: [], avarie: {}, attendu: 'accepter', motifAttendu: 'aucun', etiq: { ref: 'ESS-CAR', nom: 'CARTONS', poids: '1 carton', lot: 'L1' } };
+  const fut = Object.assign({}, PALS[0], { id: 'P2' });
+  const p = await pageAvec({ palettes: [carton, fut], extra: { calcul: { forme: 'feuille', rappel: true } } });
+  await jusquaEtape2(p);
+  await p.click(`${HOTE} [data-q="vers3"]`);
+  await p.waitForSelector(`${HOTE} [data-q-calc]`);
+  const forme = () => p.$eval(`${HOTE} [data-q-calc]`, (n) => n.dataset.qCalc);
+  const rappel = () => p.$$eval(`${HOTE} [data-q-rappel]`, (L) => L.length);
+  await p.click(`${HOTE} [data-q="sel"][data-n="0"]`);
+  egal([await forme(), await rappel()], ['feuille', 1], 'la palette de cartons : la feuille et son rappel');
+  await p.click(`${HOTE} [data-q="sel"][data-n="1"]`);
+  egal([await forme(), await rappel()], ['brouillon', 0], 'la palette de fûts : le brouillon, sans rappel de couches');
+  await p.close();
+});
+
+await v('Quai fûts : dedans (inspection), les palettes au fond sont coupées au mur du fond de la remorque', async () => {
+  const p = await pageAvec({ palettes: PALS });
+  await p.click(`${HOTE} [data-q="sc-ouvrir"]`);
+  await p.waitForFunction(() => document.querySelector('#qiScene [data-q-inspection]').dataset.vue === 'dedans');
+  // P1 (y = −2,9) : ses huit fûts ; P2 (y = −3,95) : cinq fûts (les trois du fond passent derrière le mur) ; P3 et P4 : rien.
+  egal(await p.$eval(`${HOTE} [data-q-inspection]`, (s) => (s.innerHTML.match(/fill="#eef0f1"/g) || []).length), 13, 'dedans : 8 + 5 fûts, pas plus');
+  await p.close();
 });
 
 await v('Quai iso : la page d’essai ne demande rien hors du site et ne plante pas', async () => {

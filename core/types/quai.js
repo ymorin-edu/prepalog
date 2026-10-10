@@ -47,6 +47,10 @@
 // Une palette peut aussi porter plusieurs références (`refs`, une par groupe de couches : un
 // comptage et une étiquette par référence) et une étiquette avant déchirée (`etiqAvant:
 // 'dechiree'` : la vraie se lit sur la face arrière).
+// PALETTE DE FÛTS (chantier D-4, étape 3 ; `rendu: 'iso'` seulement) : `forme: 'fut'` sur la palette (absent = cartons) donne un bac de
+// rétention noir portant 8 fûts debout en quinconce 3-2-3, numérotés du fond (1-2-3) à l'avant (6-7-8), de gauche à droite. `manque: [numéros]`
+// (places vides), `avarie: { numéro: face }` (une fuite, sur une face extérieure) ; le total (8), le réel et les avaries se calculent. Ni `W`,
+// `D`, `L`, `refs`, `etiqAvant`, ni les aides de couches (`verifierQuai` les refuse) ; le brouillon de calcul est imposé.
 //
 // LA FICHE DE CONTRÔLE (04/10/2026, brief `docs/briefs/MOTEUR-quai-fiche-controle.md`, ergonomie arrêtée avec
 // Tristan sur `docs/briefs/picard/essai-fiche-controle.html`). À l'étape ③, sous la palette, l'élève note ses
@@ -125,7 +129,8 @@
 import { evaluerGrille, afficher, estFormule } from '../formules.js';
 import { projection, facadeQuai, X_PORTE_FACADE, camionPorteur, personne, HAUT_PERSONNE, bulle, horlogeQuai,
   solQuai, niveleur, remorqueInterieur, murQuai, ouvertureQuai, transpaletteManuel, paletteCartons, dimsPalette,
-  faceVisible, facesExterieures, lampeQuai, boitesCamion, boitesButoirs, boitesNiveleur, boitesLampe, boiteEcran } from '../iso.js';
+  faceVisible, facesExterieures, lampeQuai, boitesCamion, boitesButoirs, boitesNiveleur, boitesLampe, boiteEcran,
+  paletteFuts, facesExterieuresFut, COTE_BAC, DEFS as DEFS_ISO } from '../iso.js';
 import { ech } from '../texte.js';
 import { retrouverFocus, secondClic } from '../gestes.js';
 
@@ -154,6 +159,7 @@ const CHOIX_DEC = ['accepter', 'reserves', 'refuser'];
 const ETAPES = ['① Le camion arrive', '② Déchargement', '③ Contrôle des palettes', '④ Réserves et chambre froide'];
 const ETAPES_ISO = ['① Le camion arrive', '② Déchargement', '③ Compter la palette', '④ Réserves et signature'];
 const ETAPE_SECU = '⓪ Avant de décharger';
+const PLACES_FUTS = 8;   // une palette de fûts a toujours huit places (quinconce 3-2-3)
 const COUTS_DEFAUT = { ticket: 2, sonder: 1, tourner: 0.5, etiquette: 0.5, compter: 1, rentrer: 3, ligne: 1, signer: 1 };
 
 /* ==================================================================== formats */
@@ -190,7 +196,8 @@ function reglages(Q) {
   const palettes = [];
   camions.forEach((c, ci) => (c.palettes || []).forEach((p) => {
     const manque = p.manque || [], avarie = p.avarie || {};
-    const reel = p.W * p.D * p.L - manque.length;
+    // Palette de fûts (`forme: 'fut'`, D-4 étape 3) : huit places, toujours ; les manques sont des NUMÉROS de place.
+    const reel = p.forme === 'fut' ? PLACES_FUTS - manque.length : p.W * p.D * p.L - manque.length;
     const plus = {};
     // Palette multi-références : chaque référence occupe des couches entières ; ses cartons réels
     // sont CALCULÉS (couches × cartons par couche − ceux qui manquent dans ces couches).
@@ -280,10 +287,45 @@ export const VUES_SCENE = {
 const PORTE_CAMION = 1, YR_QUAI = 0.35, MARGE_ZONE = 12;
 const PAROLE_ARRET = 'Stop ! Avant d’entrer dans la remorque, tout doit être en sécurité. Regarde encore la scène et signale ce qui ne va pas.';
 
+// Les palettes de fûts (`forme: 'fut'`, D-4 étape 3) : huit places en quinconce 3-2-3 sur un bac de rétention. `manque` = les
+// NUMÉROS des places vides (1 à 8), `avarie` = { numéro: face qui fuit }, la face devant être EXTÉRIEURE (un fût qu'un autre cache
+// ne se voit pas fuir). Le total, le réel et les fuites se calculent (`reglages`) : une dimension déclarée ne servirait à rien.
+const FACES_FUITE = ['N', 'S', 'E', 'W'];
+function verifierPalettes(Q, E) {
+  const A = (Q && Q.aides) || {};
+  let futs = 0;
+  ((Q && Q.camions) || []).forEach((c, ci) => ((c && c.palettes) || []).forEach((p, pi) => {
+    if (!p || typeof p !== 'object' || p.forme === undefined) return;
+    const nom = `camions[${ci}].palettes[${pi}]${typeof p.id === 'string' && p.id ? ` (« ${p.id} »)` : ''}`;
+    if (p.forme !== 'fut') { E.push(`${nom} : forme « ${p.forme} » inconnue (la seule valeur est 'fut' ; sans forme, la palette est chargée de cartons)`); return; }
+    futs++;
+    if (Q.rendu !== 'iso') E.push(`${nom} : une palette de fûts se dessine sur le quai iso (\`rendu: 'iso'\`)`);
+    ['W', 'D', 'L', 'refs', 'etiqAvant'].forEach((k) => { if (p[k] !== undefined) E.push(`${nom} : « ${k} » n’a pas de sens pour une palette de fûts (huit places en quinconce 3-2-3 : le total se calcule)`); });
+    const ok = (n) => Number.isInteger(n) && n >= 1 && n <= PLACES_FUTS;
+    const manque = p.manque === undefined ? [] : p.manque;
+    if (!Array.isArray(manque)) E.push(`${nom} : manque doit être la liste des numéros de places vides (de 1 à ${PLACES_FUTS})`);
+    else {
+      manque.forEach((n) => { if (!ok(n)) E.push(`${nom} : manque : le numéro « ${n} » n’existe pas (les places vont de 1 à ${PLACES_FUTS})`); });
+      if (new Set(manque).size !== manque.length) E.push(`${nom} : manque : un numéro est en double`);
+    }
+    const av = p.avarie === undefined ? {} : p.avarie;
+    if (!av || typeof av !== 'object' || Array.isArray(av)) E.push(`${nom} : avarie doit être { numéro: face qui fuit }`);
+    else Object.keys(av).forEach((k) => {
+      const n = Number(k);
+      if (!ok(n) || String(n) !== k) { E.push(`${nom} : avarie : le numéro « ${k} » n’existe pas (les places vont de 1 à ${PLACES_FUTS})`); return; }
+      if (!FACES_FUITE.includes(av[k])) E.push(`${nom} : avarie : la face du fût ${n} est « ${av[k]} » (N, S, E ou W)`);
+      else if (!facesExterieuresFut(n).includes(av[k])) E.push(`${nom} : avarie : la face ${av[k]} du fût ${n} est cachée par les autres fûts (faces visibles : ${facesExterieuresFut(n).join(', ')})`);
+      if (Array.isArray(manque) && manque.includes(n)) E.push(`${nom} : avarie : le fût ${n} est absent, il ne peut pas fuir`);
+    });
+  }));
+  if (futs) ['regleCouches', 'detailComptage'].forEach((k) => { if (A[k]) E.push(`aides.${k} parle de couches de cartons : sans objet pour une palette de fûts`); });
+}
+
 // La liste des écarts d'un contenu de quai, en français courant (liste vide = rien à redire). Appelée par `creerQuai`
 // au chargement ; elle ne regarde que ce que ce chantier ajoute (une séance existante n'a rien à y changer).
 export function verifierQuai(Q) {
   const E = [];
+  verifierPalettes(Q, E);
   const S = Q && Q.securite;
   if (!S || typeof S !== 'object') return E;
   const scene = S.mode === 'scene';
@@ -1076,24 +1118,57 @@ export function creerQuai(Q, opts = {}) {
     }
     return { nW: p.W, nD: p.D, nL: p.L, total, cartons };
   }
+  // Une palette de fûts (D-4, étape 3) : huit places numérotées comme les cartons (rangée du fond 1-2-3, milieu 4-5, avant
+  // 6-7-8, de gauche à droite) ; l'étiquette lue est celle de la collerette (la référence réellement livrée).
+  const estFut = (p) => p.forme === 'fut';
+  const HAS_FUT = R.palettes.some(estFut);
+  function palFutsIso(p) {
+    const manque = new Set(p.manque);
+    return { total: PLACES_FUTS, futs: Array.from({ length: PLACES_FUTS }, (_, k) => ({ no: k + 1, ref: (p.etiq && p.etiq.ref) || p.ref, absent: manque.has(k + 1), fuite: p.avarie[k + 1] || null })) };
+  }
+  // Le côté du bac d'une palette de fûts à l'échelle du décor (ouverture de porte de 1,2 m, remorque de 3,3 m) : aux étapes ② et ④.
+  // À l'étape ③ la palette se voit en grand, avec le bac de 1,30 m.
+  const COTE_DECOR = 0.95;
+  // (Une palette de fûts est enveloppée d'un groupe `data-iso-pal` : les tests y lisent où elle est ; les cartons de Spartoo ne changent pas.)
+  const palSvg = (I, p, x, y, r, o) => (estFut(p) ? `<g data-iso-pal="${ech(p.id)}">${paletteFuts(I, palFutsIso(p), x, y, r, Object.assign({ cote: COTE_DECOR }, o))}</g>` : paletteCartons(I, palIso(p), x, y, r, o));
+  // L'emprise au sol d'une palette tournée d'un quart de tour dans la remorque : [largeur en x, profondeur en y].
+  const gabarit = (p) => (estFut(p) ? [COTE_DECOR, COTE_DECOR] : dimsPalette(3));
   // ② et ④ : l'intérieur du quai. Les palettes du camion : dans la remorque, en route (le chauffeur la tire,
   // de dos, la main sur le timon), ou posées en zone de réception. `parti` (④, BL signé) : le chauffeur et
   // les palettes refusées sont repartis, la porte est refermée.
   const I2 = ISO ? projection({ unite: 60, origine: [470, 235] }) : null;
   const ISO_X = 2.6, ISO_YDEP = -2.9, ISO_YARR = 2.1;
+  // Les places d'arrivée en zone de réception : une palette = la place d'aujourd'hui ; plusieurs = deux colonnes, la
+  // rangée du fond remplie la première (une palette qui glisse de côté ne rencontre ainsi aucune palette déjà posée).
+  function placesIso(P) {
+    const N = P.length, G = P.map(gabarit), gw = Math.max(...G.map((g) => g[0])), gd = Math.max(...G.map((g) => g[1]));
+    const nc = Math.min(N, 2), nr = Math.ceil(N / nc);
+    return P.map((_, n) => [ISO_X + (0.8 - gw) / 2 + (n % nc) * (gw + 0.2), ISO_YARR + (nr - 1 - Math.floor(n / nc)) * (gd + 0.2)]);
+  }
+  // Le cadre de la zone de réception autour de ces places (l'unique palette garde la zone d'aujourd'hui).
+  function zoneIso(L) {
+    const xs = L.map((q) => q[0]), ys = L.map((q) => q[1]);
+    return [Math.min(...xs) - 0.25, Math.max(...xs) + 0.95 + 0.45, 1.9, Math.max(...ys) + 0.95 + 0.3];
+  }
   function imageIso(t, e, attente, o = {}) {
     const P = PAL[ca(e)], N = P.length, depart = (n) => T_DEB + n * T_PAL;
+    const G = P.map(gabarit), L = placesIso(P), pasDep = P.every(estFut) ? 1.05 : 1.3;
+    const xc = (n) => ISO_X + (0.8 - G[n][0]) / 2;   // la palette centrée sur la porte (0,8 m de large : ISO_X, comme avant)
     // Mode scène : si l'élève a déjà ouvert la porte de quai pendant l'inspection, l'étape ② démarre porte levée.
     const ouv = attente || o.parti ? 0 : SCENE && e.securite && e.securite.ouverte ? 1 : Math.min(1, t / T_PORTE);
     const et = SCENE ? etatsScene(SEC, e.securite) : null;
     const lp = et && et.lampe ? lampeQuai(I2, et.lampe) : { cone: '', tete: '' };
-    const pos = [];
+    const pos = [], sur = new Set();
     let enCours = null, nb = 0;
+    // Les palettes qui attendent avancent d'un cran quand celle d'avant a fait la moitié du chemin (0,8 s de glissement).
+    const decale = (n) => { let d = 0; for (let k = 0; k < n; k++) d += Math.min(1, Math.max(0, (t - depart(k) - T_TRAJET / 2) / 800)); return d; };
     P.forEach((p, n) => {
-      if (attente || t < depart(n)) { pos.push([p, ISO_X, ISO_YDEP - n * 1.3]); return; }
-      if (t >= depart(n) + T_TRAJET) { nb++; pos.push([p, ISO_X + n * 1.0, ISO_YARR]); return; }
+      if (attente || t < depart(n)) { pos.push([p, xc(n), ISO_YDEP - (n - (attente ? 0 : decale(n))) * pasDep]); return; }
+      if (t >= depart(n) + T_TRAJET) { nb++; sur.add(p.id); pos.push([p, L[n][0], L[n][1]]); return; }
       const f = (t - depart(n)) / T_TRAJET, u = f < 0.5 ? 2 * f * f : 1 - Math.pow(-2 * f + 2, 2) / 2;
-      enCours = n; pos.push([p, ISO_X, ISO_YDEP + (ISO_YARR - ISO_YDEP) * u]);
+      // Sorties de la porte, les palettes qui vont à une autre colonne glissent de côté avant d'atteindre leur place.
+      const y = ISO_YDEP + (L[n][1] - ISO_YDEP) * u, gl = Math.min(1, Math.max(0, (y - 0.05) / 1.05));
+      enCours = n; pos.push([p, xc(n) + (L[n][0] - xc(n)) * gl, y]);
     });
     const garder = o.parti ? pos.filter(([p]) => accepte(st(e, p))) : pos;
     // Le chauffeur : invisible tant que la porte n'est pas presque levée ; il tire la palette en cours, ou
@@ -1101,17 +1176,22 @@ export function creerQuai(Q, opts = {}) {
     let tp = '', ch = '', yt = 0, yc = 0;
     if (!attente && !o.parti && t >= T_OUVRE - 200) {
       const k = enCours != null ? enCours : Math.max(0, nb - 1);
-      const [, xk, yp] = pos[k] || [null, ISO_X, ISO_YARR];
+      const [pk, xp, yp] = pos[k] || [null, ISO_X, ISO_YARR];
+      const gk = pk ? gabarit(pk) : [0.8, 1.2], xk = xp + (gk[0] - 0.8) / 2;   // la roue du transpalette au milieu du devant de la palette
       const tire = enCours != null || nb === 0;
-      yt = yp + 1.2; yc = yt + 0.62 + (tire ? 0 : 0.5);
+      yt = yp + gk[1]; yc = yt + 0.62 + (tire ? 0 : 0.5);
       const T = transpaletteManuel(I2, xk, yt);
       tp = T.svg;
       const marche = enCours != null ? ((t - depart(enCours)) / 600) % 1 : null;
-      ch = personne(I2, xk + .62, yc + 0.05, { dos: tire, main: tire ? T.poignee : null, pas: marche });
+      // Plusieurs palettes : le chauffeur qui attend se met à côté de la dernière posée (pas devant, hors du cadre).
+      const cote = !tire && N > 1;
+      if (cote) { yt = -99; yc = yp + 0.3; }
+      ch = personne(I2, cote ? xp + gk[0] + 0.45 : xk + .62, cote ? yc : yc + 0.05, { dos: tire, main: tire ? T.poignee : null, pas: marche });
+      if (cote) tp = '';
     }
     const dedans = (y) => y < 0.02;
-    const pal = (p, x, y, yMin, yMax) => paletteCartons(I2, palIso(p), x, y, 3, { yMin, yMax, lisible: false });
-    let s = solQuai(I2, R.zone.nom);
+    const pal = (p, x, y, yMin, yMax) => palSvg(I2, p, x, y, 3, { yMin: Math.max(yMin, -3.6), yMax, lisible: false });
+    let s = solQuai(I2, R.zone.nom, N > 1 ? { zone: zoneIso(L) } : {});
     s += `<g clip-path="url(#quaiIsoOuv)">${remorqueInterieur(I2)}${niveleur(I2, 'dedans', et ? et.niveleur : 'pose')}${lp.cone}${garder.slice().sort((a, b) => a[2] - b[2]).map(([p, x, y]) => pal(p, x, y, -99, 0)).join('')}${tp && dedans(yt) ? tp : ''}${ch && dedans(yc) ? ch : ''}</g>`;
     s += murQuai(I2, ouv, R.lieu.nom) + niveleur(I2, 'dehors', et ? et.niveleur : 'pose') + lp.tete;
     s += garder.slice().sort((a, b) => (a[1] + a[2]) - (b[1] + b[2])).map(([p, x, y]) => pal(p, x, y, 0, 99)).join('');
@@ -1122,25 +1202,43 @@ export function creerQuai(Q, opts = {}) {
     else if (t < T_DEB) leg = `${hhmm(e.minute)} — La porte du ${lieuMin} se lève.`;
     else if (nb < N) leg = `${hhmm(e.minute)} — ${quiSort} sort la palette ${P[enCours ?? nb].id} au transpalette (${Math.min(nb + 1, N)} sur ${N}).`;
     else leg = N > 1 ? `${hhmm(e.minute)} — Les ${N} palettes sont en ${zoneMin}. Le chauffeur attend ta signature.` : `${hhmm(e.minute)} — La palette est en ${zoneMin}. Le chauffeur attend ta signature.`;
-    const sur = new Set(pos.filter(([, , y]) => y === ISO_YARR).map(([p]) => p.id));
     return { iso: s, leg, nb, pastilles: P.map((p) => `<i class="${sur.has(p.id) ? 'sur' : ''}">${ech(p.id)}</i>`).join('') };
   }
-  const defsIso = () => `<defs><clipPath id="quaiIsoOuv"><polygon points="${ouvertureQuai(I2)}"/></clipPath></defs>`;
+  // Le dégradé métallique des fûts n'est posé que si le quai en a (le dessin des autres séances reste octet pour octet le même).
+  const defsIso = () => `<defs><clipPath id="quaiIsoOuv"><polygon points="${ouvertureQuai(I2)}"/></clipPath></defs>${HAS_FUT ? DEFS_ISO : ''}`;
   // ③ la palette en grand, tournée de `s.vue` quarts de tour ; chaque carton présent est cliquable.
   const NOMS_FACES = ['avant', 'côté droit', 'arrière', 'côté gauche'];
   function paletteIso(p, s) {
-    const r = s.vue, [W, D] = dimsPalette(r), I = projection({ unite: 150, origine: [470, 190] });
+    // Une palette de fûts : bac de 1,30 m, carré (la rotation ne change pas son emprise).
+    const r = s.vue, [W, D] = estFut(p) ? [COTE_BAC, COTE_BAC] : dimsPalette(r), I = projection({ unite: 150, origine: [470, 190] });
     const ox = -W / 2 + 0.85, oy = -D / 2 + 0.2;
     let o = I.face([[ox - 1.2, oy - 1.0, 0], [ox + W + 1.0, oy - 1.0, 0], [ox + W + 1.0, oy + D + 1.0, 0], [ox - 1.2, oy + D + 1.0, 0]], '#e4dfd3', 'none');
     o += `<polygon points="${I.pts([[ox - .25, oy - .25, 0], [ox + W + .25, oy - .25, 0], [ox + W + .25, oy + D + .25, 0], [ox - .25, oy + D + .25, 0]])}" fill="none" stroke="#d1a90f" stroke-width="3" stroke-dasharray="10 6"/>`;
-    o += paletteCartons(I, palIso(p), ox, oy, r, { lisible: true, sel: s.carton,
-      attrs: (c) => `class="quai-etiq-clic" data-q-etiq data-k="${ech(p.refs ? c.ref : 'avant')}" data-q-carton="${c.no}"` });
+    // Chaque carton (ou chaque fût) présent est cliquable : un clic lit son étiquette.
+    o += estFut(p)
+      ? paletteFuts(I, palFutsIso(p), ox, oy, r, { cote: COTE_BAC, lisible: true, sel: s.carton, attrs: (f) => `class="quai-etiq-clic" data-q-etiq data-k="avant" data-q-carton="${f.no}"` })
+      : paletteCartons(I, palIso(p), ox, oy, r, { lisible: true, sel: s.carton,
+        attrs: (c) => `class="quai-etiq-clic" data-q-etiq data-k="${ech(p.refs ? c.ref : 'avant')}" data-q-carton="${c.no}"` });
     const [fx, fy] = I.P(ox + W / 2, oy + D + 0.55, 0);
     o += `<text x="${fx.toFixed(1)}" y="${fy.toFixed(1)}" text-anchor="middle" font-size="14" font-weight="700" fill="#555047" transform="rotate(30 ${fx.toFixed(1)} ${fy.toFixed(1)})">face ${NOMS_FACES[r]} de la palette</text>`;
     return o;
   }
   // L'étiquette du carton cliqué, lisible, et ce qu'on voit de son état DEPUIS LA VUE ACTUELLE.
+  function zoomFut(p, s, cm) {
+    const P = palFutsIso(p), f = s.carton ? P.futs.find((x) => x.no === s.carton && !x.absent) : null;
+    if (!f) return `<span class="note">🔍 Clique sur un fût de la palette : son étiquette s’affiche ici (${fmtMin(C.etiquette)} la première fois).</span>`;
+    const et = p.etiq || {}, vu = f.fuite && faceVisible(s.vue, f.fuite);
+    return `<div class="quai-etiq quai-etiq-carton" data-q-etiquette data-q-carton-vu="${f.no}">
+        <div class="quai-etiq-l1"><b>${ech(cm.fournisseur)}</b><span>Fût <b>${f.no}</b> / ${P.total}</span></div>
+        ${Q.destinataire ? `<div class="quai-etiq-dest">→ ${ech(Q.destinataire)}</div>` : ''}
+        <div class="quai-etiq-ref">${ech(et.ref)}</div><div>${ech(et.nom)}</div><div>${ech(et.poids)}</div>
+        <div>${et.commande ? `Cde ${ech(et.commande)} · ` : ''}Lot ${ech(et.lot)}</div>
+        <div class="quai-code">||| |||| || ||||| | ||| ${ech(String(et.ref).replace(/-/g, ''))}</div></div>
+      <div class="quai-etat-carton" data-q-etat-carton>${vu ? '<b class="quai-depasse">⚠ Fuite</b> sur cette face.' : 'Ce que tu vois de ce fût depuis ici : <b>intact</b>.'}</div>
+      <div class="quai-reconst">Étiquette reconstituée, non contractuelle.</div>`;
+  }
   function zoomCarton(p, s, cm) {
+    if (estFut(p)) return zoomFut(p, s, cm);
     const P = palIso(p), c = s.carton ? P.cartons.find((x) => x.no === s.carton && !x.absent) : null;
     if (!c) return `<span class="note">🔍 Clique sur un carton de la palette : son étiquette s’affiche ici (${fmtMin(C.etiquette)} la première fois pour chaque référence).</span>`;
     const rf = refDeCouche(p, c.k), et = (rf ? rf.etiq : p.etiq) || {};
@@ -1216,7 +1314,7 @@ export function creerQuai(Q, opts = {}) {
     </div>`;
     if (ISO) {
       return `<div class="quai-scene2 quai-iso">
-        <svg data-q-scene2 viewBox="290 0 640 480" role="img" aria-label="${ech(R.lieu.nom)} : la porte se lève, ${ech(minuscule(quiSort))} sort ${N > 1 ? 'les palettes' : 'la palette'} au transpalette jusqu’en ${ech(zoneMin)}">
+        <svg data-q-scene2 viewBox="290 0 640 ${N > 2 ? 540 : 480}" role="img" aria-label="${ech(R.lieu.nom)} : la porte se lève, ${ech(minuscule(quiSort))} sort ${N > 1 ? 'les palettes' : 'la palette'} au transpalette jusqu’en ${ech(zoneMin)}">
           ${defsIso()}<g data-g="iso">${im.iso}</g>
         </svg>
         <div class="quai-legende" data-q-leg>${ech(im.leg)}</div>
@@ -1551,8 +1649,9 @@ export function creerQuai(Q, opts = {}) {
   function decorDedans(et, ouv, e) {
     const I = I2;
     const lp = et.lampe ? lampeQuai(I, et.lampe) : { cone: '', tete: '' };
-    const pal = PAL[0].map((p, n) => [p, ISO_X, ISO_YDEP - n * 1.3]).sort((a, b) => a[2] - b[2])
-      .map(([p, x, y]) => paletteCartons(I, palIso(p), x, y, 3, { yMin: -99, yMax: 0, lisible: false })).join('');
+    const pasDep = PAL[0].every(estFut) ? 1.05 : 1.3;
+    const pal = PAL[0].map((p, n) => [p, ISO_X + (0.8 - gabarit(p)[0]) / 2, ISO_YDEP - n * pasDep]).sort((a, b) => a[2] - b[2])
+      .map(([p, x, y]) => palSvg(I, p, x, y, 3, { yMin: -3.6, yMax: 0, lisible: false })).join('');
     return solQuai(I, R.zone.nom)
       + `<g clip-path="url(#quaiIsoOuv)">${remorqueInterieur(I)}${niveleur(I, 'dedans', et.niveleur)}${lp.cone}${pal}</g>`
       + murQuai(I, ouv, R.lieu.nom) + niveleur(I, 'dehors', et.niveleur) + lp.tete
@@ -1953,7 +2052,7 @@ export function creerQuai(Q, opts = {}) {
   // entraînement) ; `brouillon` : 2 colonnes × 5 lignes vides (évaluation, et palette multi-références).
   // Les cases se pointent au clic pendant qu'on écrit une formule (geste du tableur).
   const LIGNES_FEUILLE = ['Cartons dans une couche complète', 'Nombre de couches', 'Cartons manquants dans la couche du dessus', 'Total (formule)'];
-  const formeCalcul = (p) => (R.calcul ? (R.calcul.forme === 'brouillon' || p.refs ? 'brouillon' : 'feuille') : null);
+  const formeCalcul = (p) => (R.calcul ? (R.calcul.forme === 'brouillon' || p.refs || p.forme === 'fut' ? 'brouillon' : 'feuille') : null);
   const casesCalcul = (p) => (formeCalcul(p) === 'feuille' ? ['B1', 'B2', 'B3', 'B4'] : ['A1', 'B1', 'A2', 'B2', 'A3', 'B3', 'A4', 'B4', 'A5', 'B5']);
   // Le résultat affiché à côté d'une case qui porte une formule (« = 57 », « #VALEUR! »), et l'aide d'une
   // erreur fréquente : multiplier avec « x ».
@@ -2077,7 +2176,7 @@ export function creerQuai(Q, opts = {}) {
               <span class="quai-vue-lib" data-q-vues>vue de ${NOMS_FACES[s.vue] === 'avant' || NOMS_FACES[s.vue] === 'arrière' ? 'l’' : 'du '}${NOMS_FACES[s.vue]} · faces vues : ${[0, 1, 2, 3].map((k) => `<span class="quai-face-vue${s.vues.includes(k) ? ' vu' : ''}" aria-hidden="true"></span>`).join('')} <span class="quai-sr">${s.vues.length} sur 4</span></span>
               <span class="quai-cout">· ${fmtMin(C.tourner)} par quart de tour</span>
             </div>
-            <svg data-q-palette viewBox="250 0 520 420" role="img" aria-label="Palette ${ech(p.id)} : clique sur un carton pour lire son étiquette">${paletteIso(p, s)}</svg>
+            <svg data-q-palette viewBox="250 0 520 420" role="img" aria-label="Palette ${ech(p.id)} : clique sur ${estFut(p) ? 'un fût' : 'un carton'} pour lire son étiquette">${HAS_FUT ? DEFS_ISO : ''}${paletteIso(p, s)}</svg>
           </div>` : `<div class="quai-scene">
             <svg data-q-palette viewBox="40 40 380 340" role="img" aria-label="Palette ${ech(p.id)} vue en trois dimensions">${palette3d(p, s, A.repere)}</svg>
             <div class="quai-vue-lib">Côtés déjà vus : ${s.vues.length} sur 4</div>
@@ -2154,7 +2253,7 @@ export function creerQuai(Q, opts = {}) {
       <div class="quai-grille2">
         <div class="quai-gauche">${ISO ? `<div class="quai-doc">
           <div class="quai-doc-titre">📦 ${ech(R.zone.nom)}</div>
-          <svg class="quai-cf quai-iso" data-q-cf viewBox="200 60 640 470" role="img" aria-label="La palette en ${ech(zoneMin)}${k.signe ? ', le chauffeur est reparti' : ', le chauffeur attend'}">${defsIso()}${imageIso(fin(N), e, false, { parti: k.signe }).iso}</svg>
+          <svg class="quai-cf quai-iso" data-q-cf viewBox="200 60 640 ${N > 2 ? 520 : 470}" role="img" aria-label="La palette en ${ech(zoneMin)}${k.signe ? ', le chauffeur est reparti' : ', le chauffeur attend'}">${defsIso()}${imageIso(fin(N), e, false, { parti: k.signe }).iso}</svg>
           <p class="note" data-q-etatcf>${k.signe ? `Le chauffeur est reparti. ${nAcc > 1 ? `Les ${nAcc} palettes restent` : 'La palette reste'} en ${ech(zoneMin)}.` : `${toutDecide ? `${nAcc} palette${nAcc > 1 ? 's' : ''} en ${ech(zoneMin)}. ` : ''}Le chauffeur attend ta signature.`}</p>
         </div>` : `<div class="quai-doc">
           <div class="quai-doc-titre">${F ? `🧊 ${ech(R.lieu.chambre.nom)}` : `📦 ${ech(R.zone.nom)}`}</div>

@@ -200,9 +200,10 @@ export function bornesDecor(I, sc) {
 const ZB = 0.2, KH = 0.46, KR = 0.2;
 export const HAUT_RETENTION = ZB + KH;   // le dessus des fûts (pour viser une bulle au-dessus d'une charge)
 
-function fut(I, cx, cy, z) {
+// `r` et `h` : le rayon et la hauteur du fût (par défaut ceux du kit ; la palette de fûts du quai les met à l'échelle).
+function fut(I, cx, cy, z, r = KR, h = KH) {
   const { P, unite } = I;
-  const [bx, by] = P(cx, cy, z), [tx, ty] = P(cx, cy, z + KH), rx = KR * unite * K1, ry = KR * unite * K2;
+  const [bx, by] = P(cx, cy, z), [tx, ty] = P(cx, cy, z + h), rx = r * unite * K1, ry = r * unite * K2;
   let g = `<path d="M${bx - rx},${by} L${tx - rx},${ty} L${tx + rx},${ty} L${bx + rx},${by} A${rx},${ry} 0 0 1 ${bx - rx},${by} Z" fill="url(#isoMetal)" stroke="#6f777c" stroke-width=".8"/>`;
   [0.22, 0.78].forEach((f) => { const yy = by + (ty - by) * f; g += `<path d="M${bx - rx},${yy} A${rx},${ry} 0 0 0 ${bx + rx},${yy}" fill="none" stroke="#7d858a" stroke-width="1.8"/>`; });
   return g + `<ellipse cx="${tx}" cy="${ty}" rx="${rx}" ry="${ry}" fill="#eef0f1" stroke="#7d858a"/><ellipse cx="${tx}" cy="${ty}" rx="${rx * .32}" ry="${ry * .32}" fill="#4a4f52"/>`;
@@ -569,11 +570,14 @@ export const OUVERTURE_QUAI = { x0: 2.4, x1: 3.6, h: 2.05 };
 export const ouvertureQuai = (I) => I.pts([[2.4, 0, 0], [3.6, 0, 0], [3.6, 0, 2.05], [2.4, 0, 2.05]]);
 // Le sol du quai côté entrepôt, avec la zone de réception marquée (pointillés jaunes, `nomZone` écrit au sol)
 // et la bande jaune et noire du seuil.
-export function solQuai(I, nomZone = 'Zone de réception') {
+// `o.zone` (D-4, étape 3, ajouté en dernier) : [x0, x1, y0, y1], la zone de réception d'un quai qui reçoit plusieurs
+// palettes ; absent : la zone d'aujourd'hui (une palette), dessinée à l'identique.
+export function solQuai(I, nomZone = 'Zone de réception', o = {}) {
   const { face, pts, P } = I;
+  const [zx0, zx1, zy0, zy1] = o.zone || [2.35, 3.85, 1.9, 3.6];
   let g = face([[-1.2, 0, 0], [7.5, 0, 0], [7.5, 6, 0], [-1.2, 6, 0]], '#e4dfd3', '#c9c3b6');
-  g += `<polygon data-iso-zone points="${pts([[2.35, 1.9, 0], [3.85, 1.9, 0], [3.85, 3.6, 0], [2.35, 3.6, 0]])}" fill="rgba(231,198,40,.12)" stroke="#d1a90f" stroke-width="3" stroke-dasharray="10 6"/>`;
-  const [tx, ty] = P(4.0, 2.75, 0);
+  g += `<polygon data-iso-zone points="${pts([[zx0, zy0, 0], [zx1, zy0, 0], [zx1, zy1, 0], [zx0, zy1, 0]])}" fill="rgba(231,198,40,.12)" stroke="#d1a90f" stroke-width="3" stroke-dasharray="10 6"/>`;
+  const [tx, ty] = o.zone ? P(zx1 + 0.15, (zy0 + zy1) / 2, 0) : P(4.0, 2.75, 0);
   g += `<text x="${(tx + 4).toFixed(1)}" y="${(ty + 4).toFixed(1)}" font-size="13" font-weight="800" fill="#555047" transform="rotate(-30 ${tx.toFixed(1)} ${ty.toFixed(1)})">${ech(String(nomZone).toUpperCase())}</text>`;
   for (let k = 0; k < 8; k++) { const x = 2.4 + k * 0.15; g += face([[x, 0, 0], [x + 0.15, 0, 0], [x + 0.15, 0.18, 0], [x, 0.18, 0]], k % 2 ? '#1b1b1b' : '#e7c628', 'none'); }
   return g;
@@ -797,3 +801,105 @@ export function paletteCartons(I, pal, ox, oy, r, o = {}) {
   return g;
 }
 
+/* ============================ palette de rétention chargée de fûts (chantier D-4, étape 3) */
+// Une palette de rétention NOIRE en plastique (pieds, bac, caillebotis : jamais de bois) portant 8 fûts DEBOUT, en une
+// seule couche, en quinconce 3-2-3 (brief `docs/briefs/MOTEUR-quai-inspection.md` §2.3 ; modèle dessiné validé :
+// `docs/briefs/france-boissons/materiel-palette-retention.svg`). Unités : le MÈTRE, comme le reste du quai.
+export const COTE_BAC = 1.30;                    // côté du bac de rétention (m) ; un bac plus petit réduit tout dans la même proportion
+const R_FUT = 0.1975, H_FUT = 0.46;              // un fût de 39,5 cm de diamètre, à l'échelle d'un bac de 1,30 m
+const DY_FUT = 2 * R_FUT * 0.866;                // l'écart entre deux rangées d'un quinconce (fûts qui se touchent)
+// Les 8 places, numérotées du fond (rangée 1-2-3) à l'avant (6-7-8), de gauche à droite : [x, y] depuis le centre du bac
+// (y négatif = le fond, y positif = l'avant, la face S), à l'échelle d'un bac de 1,30 m.
+export const PLACES_FUT = [[-2 * R_FUT, -DY_FUT], [0, -DY_FUT], [2 * R_FUT, -DY_FUT], [-R_FUT, 0], [R_FUT, 0], [-2 * R_FUT, DY_FUT], [0, DY_FUT], [2 * R_FUT, DY_FUT]];
+// Les faces EXTÉRIEURES de chaque fût (celles qu'aucun autre fût ne cache) : une fuite ne se déclare que sur l'une d'elles.
+const FACES_FUT = ['NW', 'N', 'NE', 'W', 'E', 'SW', 'S', 'SE'];
+export const facesExterieuresFut = (no) => (FACES_FUT[no - 1] || '').split('');
+
+// Le bac de rétention de côté `c`, coin min en (x, y) : le `retention` du kit (pieds, bac, nervures du caillebotis) agrandi,
+// coupé aux plans `yMin` / `yMax` comme les cartons, et le caillebotis (ses trous) sur le dessus.
+function bacRetention(I, x, y, c, yMin, yMax) {
+  const { pts, P, unite } = I;
+  let g = '';
+  [[.06, .06], [.78, .06], [.06, .78], [.78, .78]].forEach(([a, b]) => { g += boiteY(I, x + a * c, y + b * c, 0, .16 * c, .16 * c, .05 * c, ['#2a2d2f', '#1e2123', '#16191a'], yMin, yMax); });
+  g += boiteY(I, x + .03 * c, y + .03 * c, .05 * c, .94 * c, .94 * c, (ZB - .05) * c, ['#3d4245', '#2f3336', '#24282a'], yMin, yMax);
+  for (let k = 1; k < 6; k++) {
+    const t = (.03 + k * .94 / 6) * c;
+    if (y + .97 * c <= yMax + 1e-6 && y + .97 * c >= yMin - 1e-6) g += `<polyline points="${pts([[x + t, y + .97 * c, .06 * c], [x + t, y + .97 * c, (ZB - .02) * c]])}" stroke="#1b1e20" stroke-width="2"/>`;
+    if (y + t <= yMax + 1e-6 && y + t >= yMin - 1e-6) g += `<polyline points="${pts([[x + .97 * c, y + t, .06 * c], [x + .97 * c, y + t, (ZB - .02) * c]])}" stroke="#1b1e20" stroke-width="2"/>`;
+  }
+  // Le caillebotis : une grille de petits trous sombres sur le dessus (ils passent sous les fûts).
+  const rx = .018 * c * unite * K1, ry = .018 * c * unite * K2;
+  for (let a = 0; a < 6; a++) for (let b = 0; b < 6; b++) {
+    const px = x + (.14 + a * .144) * c, py = y + (.14 + b * .144) * c;
+    if (py > yMax + 1e-6 || py < yMin - 1e-6) continue;
+    const [ex, ey] = P(px, py, ZB * c);
+    g += `<ellipse cx="${ex.toFixed(1)}" cy="${ey.toFixed(1)}" rx="${rx.toFixed(1)}" ry="${ry.toFixed(1)}" fill="#16191a"/>`;
+  }
+  return g;
+}
+
+// Un fût debout de la palette : le fût du kit à l'échelle, sa collerette étiquetée (la référence, lisible en grand), un
+// liseré doré s'il est « éclairé » (`o.sel`) et, si `fuite` (une face de la palette qu'on voit), la coulure sombre le
+// long de sa paroi.
+function futDePalette(I, cx, cy, z, rr, hh, f, o, fuite) {
+  const { P, unite } = I;
+  const [bx, by] = P(cx, cy, z), [tx, ty] = P(cx, cy, z + hh), rx = rr * unite * K1, ry = rr * unite * K2;
+  let g = fut(I, cx, cy, z, rr, hh);
+  if (o.sel) {
+    g += `<path d="M${bx - rx},${by} L${tx - rx},${ty} M${tx + rx},${ty} L${bx + rx},${by} A${rx},${ry} 0 0 1 ${bx - rx},${by}" fill="none" stroke="#d1a90f" stroke-width="3"/>`;
+    g += `<ellipse cx="${tx}" cy="${ty}" rx="${rx}" ry="${ry}" fill="none" stroke="#d1a90f" stroke-width="3"/>`;
+  }
+  // La collerette : une étiquette blanche entre les deux cercles du fût, sur la face tournée vers nous.
+  const bas = by + (ty - by) * .30, haut = by + (ty - by) * .70, a0 = Math.PI * .27, a1 = Math.PI * .73;
+  const arc = (yy, u0, u1) => Array.from({ length: 7 }, (_, k) => { const a = u0 + (u1 - u0) * k / 6; return `${(bx + rx * Math.cos(a)).toFixed(1)},${(yy + ry * Math.sin(a)).toFixed(1)}`; });
+  g += `<polygon points="${arc(bas, a0, a1).concat(arc(haut, a1, a0)).join(' ')}" fill="#fbfbf8" stroke="rgba(0,0,0,.35)" stroke-width="1"/>`;
+  if (o.lisible) {
+    const fs = Math.max(6, rx * .27);
+    g += `<text x="${bx.toFixed(1)}" y="${((bas + haut) / 2 + ry + fs * .35).toFixed(1)}" text-anchor="middle" font-size="${fs.toFixed(1)}" font-weight="800" font-family="Arial, sans-serif" fill="#111">${ech(f.ref || '')}</text>`;
+  }
+  if (fuite) {
+    // Une coulure sombre sur la face qui fuit (là où la paroi est tournée vers nous), du haut de la paroi jusqu'au pied.
+    const [ux, uy] = fuite, [hx, hy] = P(cx + ux * rr * .97, cy + uy * rr * .97, z + hh * .82), [pxx, pyy] = P(cx + ux * rr * .97, cy + uy * rr * .97, z + hh * .04);
+    const w = Math.max(3, rx * .2), dx = rx * .07;
+    const d = `M${hx.toFixed(1)},${hy.toFixed(1)} C${(hx + dx).toFixed(1)},${(hy + (pyy - hy) * .35).toFixed(1)} ${(hx - dx).toFixed(1)},${(hy + (pyy - hy) * .65).toFixed(1)} ${pxx.toFixed(1)},${pyy.toFixed(1)}`;
+    g += `<g data-iso-avarie><path d="${d}" fill="none" stroke="#5a3a08" stroke-width="${w.toFixed(1)}" stroke-linecap="round"/>`
+      + `<path d="${d}" fill="none" stroke="#a8761a" stroke-width="${(w * .4).toFixed(1)}" stroke-linecap="round"/>`
+      + `<circle cx="${pxx.toFixed(1)}" cy="${pyy.toFixed(1)}" r="${(w * .9).toFixed(1)}" fill="#5a3a08"/></g>`;
+  }
+  return g;
+}
+
+// La palette de fûts : `pal` = { futs: [{ no (1 à 8), ref, absent, fuite ('S' | 'N' | 'E' | 'W' : la face qui fuit, ou rien) }] } ;
+// (ox, oy) = coin monde min du bac ; r = rotation (quarts de tour ; le bac est carré). Options : `cote` (le côté du bac, 1,30 m
+// par défaut : le quai la dessine à 0,95 à l'échelle du décor aux étapes ② et ④), `yMin` / `yMax` (coupe au plan du mur : un fût
+// est dessiné dans la tranche où est son centre), `lisible` (la référence écrite sur la collerette), `dents` (false : pas de
+// fuite), `sel` (le fût éclairé), `attrs(f)` (attributs du groupe d'un fût : il devient cliquable). Une place vide n'est pas
+// dessinée. UNE FUITE n'est dessinée que si sa face se voit à cette rotation (`faceVisible`, comme l'enfoncement d'un carton) :
+// la coulure sur le fût et la flaque dans le bac, de ce côté-là.
+export function paletteFuts(I, pal, ox, oy, r, o = {}) {
+  const c = o.cote || COTE_BAC, e = c / COTE_BAC, yMin = o.yMin ?? -99, yMax = o.yMax ?? 99;
+  const rr = R_FUT * e, hh = H_FUT * e, zb = ZB * c, mx = ox + c / 2, my = oy + c / 2;
+  let g = bacRetention(I, ox, oy, c, yMin, yMax);
+  const L = [];
+  (pal.futs || []).forEach((f) => {
+    if (f.absent) return;
+    const [a, b] = rot(r, PLACES_FUT[f.no - 1][0] * e, PLACES_FUT[f.no - 1][1] * e), cx = mx + a, cy = my + b;
+    if (cy < yMin - 1e-6 || cy > yMax + 1e-6) return;
+    const v = f.fuite && o.dents !== false ? faceVisible(r, f.fuite) : null;
+    L.push({ f, cx, cy, k: cx + cy, fuite: v ? rot(r, ...DIRS[f.fuite]) : null, a, b });
+    // La flaque, dans le bac, du côté de la fuite : ni plus loin que la paroi du bac, ni dessinée si la face ne se voit pas.
+    if (v) {
+      const [ux, uy] = rot(r, ...DIRS[f.fuite]), pos = a * ux + b * uy, da = .05 * e;
+      const d = Math.max(rr * .7, Math.min(rr + .02 * e, .635 * e - pos - da)), qx = cx + ux * d, qy = cy + uy * d;
+      const ax = uy !== 0 ? .12 * e : da, ay = uy !== 0 ? da : .12 * e;     // le grand axe de la flaque longe la paroi
+      const pl = Array.from({ length: 14 }, (_, k) => { const t = k / 14 * Math.PI * 2; return [qx + ax * Math.cos(t), qy + ay * Math.sin(t), zb + .002]; });
+      L.push({ flaque: `<polygon data-iso-flaque points="${I.pts(pl)}" fill="#d9b84a" stroke="#8a6a10" stroke-width="1" opacity=".92"/>`, k: qx + qy + .0001 });
+    }
+  });
+  L.sort((p, q) => p.k - q.k).forEach((it) => {
+    if (it.flaque) { g += it.flaque; return; }
+    const s = futDePalette(I, it.cx, it.cy, zb, rr, hh, it.f, { sel: o.sel != null && o.sel === it.f.no, lisible: o.lisible }, it.fuite);
+    g += o.attrs ? `<g ${o.attrs(it.f)}>${s}</g>` : s;
+  });
+  return g;
+}
