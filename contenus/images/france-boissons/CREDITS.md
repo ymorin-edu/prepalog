@@ -39,3 +39,12 @@ Total : 2 371 559 octets (environ 2,3 Mo).
 - `entrepot-allee.jpg` : le fond ressemble à un entrepôt de grande surface de meubles ; aucun logo lisible repéré.
 - Le pays n'est pas la France sur plusieurs photos (Pékin, Corée du Sud, Lanzarote, Allemagne pour le chariot) : décor générique
   seulement, à ne jamais présenter comme un lieu de l'entreprise.
+
+## Dessins (document pédagogique, pas des photos)
+
+| Fichier | Auteur | Séance | Mention | Retouche faite | SHA-256 |
+|---|---|---|---|---|---|
+| `materiel-chariot-frontal.svg` | dessin de Cowork pour Prepalog (aucune marque, aucune personne) | ENT-6.4 (« Avant de commencer », question sur le chariot frontal) | Dessin — document pédagogique | aucune : copie octet pour octet de `docs/briefs/france-boissons/materiel-chariot-frontal.svg` | `1ce690faea3cafa449a0f781d1b6cf81a47da0fc09b8fb31f9c317c405476797` |
+
+Le dessin garde son bloc de métadonnées de provenance (`c2pa`) : il n'appelle aucune adresse. Le dessin `materiel-palette-retention.svg`
+n'est jamais utilisé (il montre le fût qui fuit de la séance).
