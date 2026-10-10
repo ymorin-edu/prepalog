@@ -6,7 +6,7 @@
 // l'écran Stock, répondre à l'exploitation Kuehne+Nagel par phrases à choisir.
 // Données dans `contenus/smoby-ent55.js`, plateforme dans `contenus/smoby-entrepot.js`.
 //
-// Pas de `notation` : neuf jalons ramenés sur 20. Une base par séance (pas de `jeuId`).
+// Pas de `notation` : neuf jalons pondérés, somme des poids = 20 (`bareme: 20`, règle du 10/10/2026). Une base par séance (pas de `jeuId`).
 // Trame élève (brief `docs/briefs/COWORK-trames-smoby-5.3-5.8.md`, relue par Tristan le 09/10/2026) ; son corrigé s'ajoute au corrigé calculé (`meta.corrige`).
 
 import { seanceEntreprise } from '../core/types/seance-entreprise.js';
@@ -24,6 +24,7 @@ const s = seanceEntreprise(SMOBY, SEANCE, {
   domaines: ['D4'],
   coeur: true,
   temps: 'guidage',
+  bareme: 20,           // jalons pondérés, somme des poids = 20
   // Parcours strict : ne s'ouvre qu'à l'élève qui a validé ENT-5.4 (voir core/parcours.js).
   parcours: true,
   // Elle ouvre la suivante dès qu'elle est finie, justes ou faux (lot 0 de SMOBY-notation-5.3-5.8 : aucun élève bloqué).

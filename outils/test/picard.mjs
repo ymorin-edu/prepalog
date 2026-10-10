@@ -812,14 +812,16 @@ const monter42 = (p) => p.evaluate(async () => {
     SUP_BY_ID: P.SUP_BY_ID, CUSTOMERS: P.CUSTOMERS, CM: P.CM, THEME: P.THEME, baseDeDepart: P.baseDeDepart,
     etapes: S.ETAPES, exercice: 'ENT-4.2', accueil: S.ACCUEIL, volet: S.VOLET, quai: S.QUAI_ENT42 };
   const db = {};
-  window.__q = { db, U, moteur: creerEntreprise(U), remis: null };
+  window.__q = { db, U, moteur: creerEntreprise(U), remis: null, enregistres: [] };
   window.__q.moteur.rendre(hote, {
     meta: { id: 'picard-ent42', code: 'ENT-4.2', titre: 'Picard', portee: 'eleve', immersif: true },
     profil: { prenom: 'Lea', nom: 'Test', role: 'eleve' },
-    jeu: { etat: () => db, sauver: () => {} }, enregistrer: () => {}, quitter: () => {}, codeStock: 'ABC', lireScore: async () => null,
+    jeu: { etat: () => db, sauver: () => {} }, enregistrer: (r) => { window.__q.enregistres.push(JSON.parse(JSON.stringify(r))); }, quitter: () => {}, codeStock: 'ABC', lireScore: async () => null,
   });
   document.querySelector('#quaiTest .ent-nav[data-vue="quai"]').click();
 });
+// La note remontée au Suivi par le moteur (pondérée sur 20, lot 3 de la notation, 10/10/2026).
+const noteSuivi = (p) => p.evaluate(() => { const L = window.__q.enregistres; return L.length ? L[L.length - 1] : null; });
 const etat42 = (p) => p.evaluate((id) => JSON.parse(JSON.stringify((window.__q.db.quais || {})[id] || null)), ID42);
 const JUSTE42 = {
   A1: { compte: 36, decision: 'reserves', motif: 'temperature', res: '-17,5' },
@@ -879,10 +881,10 @@ async function jouer42(p, ecarts = {}) {
   await clic(p, '[data-q="clore"]');
 }
 
-await v('ENT-4.2 : déclaration (C1.4 + C1.3, entraînement, 1re, 30 jalons, livrée fermée aux élèves)', async () => {
+await v('ENT-4.2 : déclaration (C1.4 + C1.3, entraînement, 1re, 30 jalons pondérés sur 20, livrée fermée aux élèves)', async () => {
   const m = await pg2.evaluate(async () => (await import('/activites/picard-ent42.js')).meta);
   egal([m.id, m.code, m.rubrique, m.competences, m.temps, m.niveaux, m.bareme, m.pret, m.ouverture, m.immersif, !!m.copie],
-    ['picard-ent42', 'ENT-4.2', 'simulog', ['C1.4', 'C1.3'], 'entrainement', ['1re'], 30, true, 'prof', true, false], 'meta');
+    ['picard-ent42', 'ENT-4.2', 'simulog', ['C1.4', 'C1.3'], 'entrainement', ['1re'], 20, true, 'prof', true, false], 'meta');
 });
 
 await v('ENT-4.2 : écran ① — deux camions, l’ordre ne se choisit qu’après les deux tickets, aucune aide', async () => {
@@ -906,6 +908,8 @@ await v('ENT-4.2 : parcours juste (A d’abord) → 30 jalons sur 30, glaces à 
   await jouer42(pg2);
   const j = await jalons(pg2);
   egal([j.pts, j.max, j.ko], [30, 30, []], 'jalons');
+  const n = await noteSuivi(pg2);
+  egal([n.score, n.max], [20, 20], 'note remontée au Suivi (pondérée)');
   const e = await etat42(pg2);
   egal([e.palettes.A1.sonde, e.palettes.A3.sonde, e.ouvertA], [-17.5, -17.5, 4], 'sonde des glaces / ouverture de A');
   // A : 3 min 30 de déchargement + 3 sondes + 3 comptages (A2 : 2 min) + rentrer 3 = 13 min 30, arrêté là.
@@ -926,6 +930,34 @@ await v('ENT-4.2 : parcours juste (A d’abord) → 30 jalons sur 30, glaces à 
   const b = await texte(pg2, `${Z} .quai-bilan-bloc`);
   vrai(b.includes('Camion Glaces Néviane : temps hors froid du lot 13 min 30') && b.includes('sorties à −17,5 °C à cœur, entre −18 °C et −15 °C : à accepter avec réserves'), 'bilan du camion A : ' + b.slice(0, 400));
   egal(await pg2.$$eval(`${Z} [data-jalon] .quai-ok`, (x) => x.length), 30, 'lignes justes au bilan');
+});
+
+// NOTE PONDÉRÉE (lot 3 de la notation, poids validés par Tristan le 10/10/2026). Valeurs écrites à la main : comptage 0,25 ·
+// décision 0,5 / 1 / 1,5 · réserve 0,5 par palette ; ordre 4 ; déballage 1 ; signatures 1 ; lots rentrés 1.
+await v('ENT-4.2 : B2 acceptée malgré sa température (le piège le plus lourd) → les jalons de B2 tombent, la note perd leurs points', async () => {
+  await monter42(pg2);
+  await jouer42(pg2, { B2: { decision: 'accepter', motif: 'aucun', res: null } });
+  const j = await jalons(pg2);
+  const n = await noteSuivi(pg2);
+  // Les jalons faux de la vue sont les seuls à coûter ; leurs points = la somme de leurs poids (écrits ici à la main).
+  const POIDS = { 'B2-decision': 1.5, 'B2-reserve': 0.5, 'B2-comptage': 0.25 };
+  const perdu = j.ko.reduce((s, id) => s + (POIDS[id] ?? 99), 0);
+  vrai(j.ko.includes('B2-decision') && j.ko.every((id) => id in POIDS), 'jalons faux : ' + j.ko);
+  egal([n.score, n.max], [20 - perdu, 20], 'note remontée (jalons faux : ' + j.ko + ')');
+  vrai(n.score <= 18.5, 'la décision de B2 pèse 1,5 point à elle seule : ' + n.score);
+});
+
+await v('ENT-4.2 : poids de l’ordre (4), d’un comptage (0,25) et de la décision de B3 (1,5) ; A1 mal comptée → seuls les jalons de A1 coûtent', async () => {
+  const ordre = await pg2.evaluate(async () => { const S = await import('/contenus/picard-ent42.js'); return [S.BAREME.ordre[0], S.BAREME['A1-comptage'][0], S.BAREME['B3-decision'][0]]; });
+  egal(ordre, [4, 0.25, 1.5], 'poids de l’ordre, d’un comptage, de la décision de B3');
+  await monter42(pg2);
+  await jouer42(pg2, { A1: { compte: 35 } });
+  const j = await jalons(pg2);
+  const n = await noteSuivi(pg2);
+  vrai(j.ko.includes('A1-comptage'), 'A1 comptée 35 au lieu de 36 : ' + j.ko);
+  const POIDS = { 'A1-comptage': 0.25, 'A1-decision': 0.5, 'A1-reserve': 0.5 };
+  vrai(j.ko.every((id) => id in POIDS), 'seuls les jalons de A1 tombent : ' + j.ko);
+  egal([n.score, n.max], [20 - j.ko.reduce((s, id) => s + POIDS[id], 0), 20], 'note remontée (jalons faux : ' + j.ko + ')');
 });
 
 await v('ENT-4.2 : B d’abord, au plus vite → les glaces de A à −14,9 °C, à refuser (température réelle)', async () => {
@@ -1233,11 +1265,11 @@ const monter43 = (p) => p.evaluate(async () => {
     SUP_BY_ID: P.SUP_BY_ID, CUSTOMERS: P.CUSTOMERS, CM: P.CM, THEME: P.THEME, baseDeDepart: P.baseDeDepart,
     etapes: S.ETAPES, exercice: 'ENT-4.3', accueil: S.ACCUEIL, volet: S.VOLET, quai: S.QUAI_ENT43 };
   const db = {};
-  window.__q = { db, U, S, moteur: creerEntreprise(U), remis: null };
+  window.__q = { db, U, S, moteur: creerEntreprise(U), remis: null, enregistres: [] };
   window.__q.moteur.rendre(hote, {
     meta: { id: 'picard-ent43', code: 'ENT-4.3', titre: 'Picard', portee: 'eleve', immersif: true },
     profil: { prenom: 'Lea', nom: 'Test', role: 'eleve' },
-    jeu: { etat: () => db, sauver: () => {} }, enregistrer: () => {}, quitter: () => {}, codeStock: 'ABC', lireScore: async () => null,
+    jeu: { etat: () => db, sauver: () => {} }, enregistrer: (r) => { window.__q.enregistres.push(JSON.parse(JSON.stringify(r))); }, quitter: () => {}, codeStock: 'ABC', lireScore: async () => null,
   });
   document.querySelector('#quaiTest .ent-nav[data-vue="quai"]').click();
 });
@@ -1270,10 +1302,10 @@ const bloquer43 = async (p, n) => {
 };
 const terminer43 = async (p) => { await clic(p, '[data-q="terminer"]'); await clic(p, '[data-q="terminer"]'); };
 
-await v('ENT-4.3 : meta (erreur induite C1.4, 1re, livrée fermée aux élèves, dix jalons)', async () => {
+await v('ENT-4.3 : meta (erreur induite C1.4, 1re, livrée fermée aux élèves, dix jalons pondérés sur 20)', async () => {
   const m = await pg2.evaluate(async () => (await import('/activites/picard-ent43.js')).meta);
   egal([m.id, m.code, m.rubrique, m.competences, m.temps, m.niveaux, m.bareme, m.pret, m.ouverture, m.immersif, m.portee, !!m.copie],
-    ['picard-ent43', 'ENT-4.3', 'simulog', ['C1.4'], 'erreur', ['1re'], 10, true, 'prof', true, 'eleve', false], 'meta');
+    ['picard-ent43', 'ENT-4.3', 'simulog', ['C1.4'], 'erreur', ['1re'], 20, true, 'prof', true, 'eleve', false], 'meta');
 });
 
 await v('ENT-4.3 : contenu — N2 acceptée à tort au-dessus de −15 °C, N3 37 pour 40, N1 conforme ; tout à −21 °C aujourd’hui', async () => {
@@ -1353,6 +1385,8 @@ await v('ENT-4.3 : parcours juste — diagnostic, N2 bloquée, protestation, « 
   await terminer43(pg2);
   const j = await jalons43(pg2);
   egal([j.pts, j.max], [10, 10], 'jalons : ' + j.ok);
+  const nt = await noteSuivi(pg2);
+  egal([nt.score, nt.max], [20, 20], 'note remontée au Suivi (pondérée)');
   egal(await pg2.$$eval(`${Z} [data-q-bilan] tr[data-jalon]`, (x) => x.length), 10, 'lignes du bilan');
   vrai((await texte(pg2, `${Z} [data-q-bilan] tr[data-jalon="diag-n2"]`)).includes('sa fiche dit -14 °C à cœur'), 'le bilan montre la ligne telle que tapée');
   const etapes = await pg2.evaluate(() => window.__q.S.ETAPES.map((x) => x.verifier(window.__q.db).status));
@@ -1379,6 +1413,9 @@ await v('ENT-4.3 : N1 accusée → faux ; N4 bloquée → faux ; protestation sa
   const j = await jalons43(pg2);
   egal(['diag-n1', 'diag-n3', 'bloque-autres', 'prot-constat'].filter((id) => !j.ok.includes(id)), ['diag-n1', 'diag-n3', 'bloque-autres', 'prot-constat'], 'jalons faux');
   egal(j.pts, 6, 'jalons justes : ' + j.ok);
+  // Poids écrits à la main : N1 accusée 2 + manquant de N3 3 + N4 bloquée 1 + protestation sans quantité 3 = 9 points perdus.
+  const nt = await noteSuivi(pg2);
+  egal([nt.score, nt.max], [11, 20], 'note pondérée remontée');
   // Débloquer N4 (permis tant que « J’ai terminé » n’est pas cliqué) répare le jalon du blocage.
   await auQuai(pg2);
   await clic(pg2, '[data-q="onglet"][data-v="chambre"]');
@@ -1396,6 +1433,9 @@ await v('ENT-4.3 : aucun jalon n’est vrai par inaction (même temps 2 ouvert p
   const j = await jalons43(pg2);
   // « N1 non accusée » est le seul jalon que donne un diagnostic envoyé sans rien accuser (brief §8).
   egal(j.ok, ['diag-n1'], 'jalons vrais');
+  // Le seul jalon vrai par un diagnostic vide pèse 2 points sur 20 (poids écrit à la main).
+  const nt = await noteSuivi(pg2);
+  egal([nt.score, nt.max], [2, 20], 'note pondérée remontée');
 });
 
 await v('ENT-4.3 : lecture des lignes — délai (« pas dépassé » juste, « trop tard » faux), date sous trois formes, palettes', async () => {

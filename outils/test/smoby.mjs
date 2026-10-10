@@ -2339,7 +2339,7 @@ await v('ENT-5.5 : déclaration (code, 2de, C1.5 et C1.6, 9 jalons, livrée ferm
     return { m: [m.id, m.code, m.rubrique, m.niveaux, m.competences, m.domaines, m.temps, m.bareme, m.pret, m.ouverture, m.portee, m.coeur],
       inscrite: (await Promise.all(I.ACTIVITES.map((f) => f()))).some((x) => x.meta.id === 'smoby-rangement') };
   });
-  egal(r.m, ['smoby-rangement', 'ENT-5.5', 'simulog', ['2de'], ['C1.5', 'C1.6'], ['D4'], 'guidage', 9, true, 'prof', 'eleve', true], 'meta');
+  egal(r.m, ['smoby-rangement', 'ENT-5.5', 'simulog', ['2de'], ['C1.5', 'C1.6'], ['D4'], 'guidage', 20, true, 'prof', 'eleve', true], 'meta');
   vrai(r.inscrite, 'séance absente du registre');
 });
 
@@ -2396,7 +2396,7 @@ await v('ENT-5.5 : sans `receptionLitige`, l’écran Réceptions garde ses troi
   egal(r, ['', 'accepte', 'reserve', 'refuse'], 'décisions sans l’option');
 });
 
-await v('ENT-5.5 : parcours juste à l’écran → 9 / 9 ; P3 n’entre pas en stock, porteurs 394 ; Kuehne+Nagel puis le relais de Bruno', async () => {
+await v('ENT-5.5 : parcours juste à l’écran → 20 / 20 ; P3 n’entre pas en stock, porteurs 394 ; Kuehne+Nagel puis le relais de Bruno', async () => {
   await monter55();
   await ranger55();
   egal(await pg.evaluate(() => window.__55.db.entrepots['smoby-ent55'].place), RANGE55, 'palettes posées');
@@ -2408,27 +2408,27 @@ await v('ENT-5.5 : parcours juste à l’écran → 9 / 9 ; P3 n’entre pas en 
   await repondre55('Commande de Noël : la marchandise d’Arinthod', KN55);
   egal((await sujets55()).slice(4), ['Merci, et la suite'], 'relais vers ENT-5.6');
   egal(await etapes55(), statuts55(), 'étapes');
-  egal(await dernierScore55(), [9, 9], 'score remonté au suivi');
+  egal(await dernierScore55(), [20, 20], 'score remonté au suivi');
 });
 
-await v('ENT-5.5 : chaque piège fait tomber son jalon (mal rangée, P4 saisie 36, P3 acceptée ou refusée, stock du BL, vendredi 11)', async () => {
+await v('ENT-5.5 : chaque piège fait tomber son jalon et coûte ses points (mal rangée, P4 saisie 36, P3 acceptée ou refusée, stock du BL, vendredi 11)', async () => {
   const cas = [
-    [['P1-rangee'], { place: { ...RANGE55, P1: 'A1-T02-N1-E2' } }],
-    [['P2-rangee'], { place: { ...RANGE55, P2: 'B2-T02-N3-E2' } }],
-    [['P3-rangee'], { place: { ...RANGE55, P3: 'A1-T03-N1-E1' } }],
-    [['P4-rangee'], { place: { ...RANGE55, P4: 'B1-T04-N2-E3' } }],
-    [['saisie-p4'], { saisie: { ...SAISIE55, 'SMB-PLS': [36, 36, 'ok', 'accepte'] } }],
-    [['saisie-p1-p2'], { saisie: { ...SAISIE55, 'SMB-CTF': [45, 48, 'ok', 'accepte'] } }],
-    [['p3-litige'], { saisie: { ...SAISIE55, 'SMB-EBD': [36, 36, 'abime', 'reserve'] } }],
-    [['p3-litige'], { saisie: { ...SAISIE55, 'SMB-EBD': [36, 36, 'abime', 'refuse'] } }],
-    [['stock-lu'], { stock: { stock: 'Il y a maintenant 396 cartons de porteurs Little Smoby en stock.' } }],
-    [['message-kn'], { kn: { depart: 'La commande de Noël pourra partir vendredi 11 décembre.' } }],
-    [['message-kn'], { kn: { stock: 'Tout est parti.' } }],
+    [['P1-rangee'], { place: { ...RANGE55, P1: 'A1-T02-N1-E2' } }, 17.5],
+    [['P2-rangee'], { place: { ...RANGE55, P2: 'B2-T02-N3-E2' } }, 17.5],
+    [['P3-rangee'], { place: { ...RANGE55, P3: 'A1-T03-N1-E1' } }, 17.5],
+    [['P4-rangee'], { place: { ...RANGE55, P4: 'B1-T04-N2-E3' } }, 17.5],
+    [['saisie-p4'], { saisie: { ...SAISIE55, 'SMB-PLS': [36, 36, 'ok', 'accepte'] } }, 17],
+    [['saisie-p1-p2'], { saisie: { ...SAISIE55, 'SMB-CTF': [45, 48, 'ok', 'accepte'] } }, 18],
+    [['p3-litige'], { saisie: { ...SAISIE55, 'SMB-EBD': [36, 36, 'abime', 'reserve'] } }, 18],
+    [['p3-litige'], { saisie: { ...SAISIE55, 'SMB-EBD': [36, 36, 'abime', 'refuse'] } }, 18],
+    [['stock-lu'], { stock: { stock: 'Il y a maintenant 396 cartons de porteurs Little Smoby en stock.' } }, 18.5],
+    [['message-kn'], { kn: { depart: 'La commande de Noël pourra partir vendredi 11 décembre.' } }, 18.5],
+    [['message-kn'], { kn: { stock: 'Tout est parti.' } }, 18.5],
   ];
-  for (const [n, [ko, o]] of cas.entries()) {
+  for (const [n, [ko, o, points]] of cas.entries()) {
     await parcours55({ uid: `u-55-piege-${n}`, ...o });
     egal(await etapes55(), statuts55(ko), `sabotage ${ko.join(', ')}`);
-    egal(await dernierScore55(), [9 - ko.length, 9], `score avec ${ko.join(', ')} faux`);
+    egal(await dernierScore55(), [points, 20], `score avec ${ko.join(', ')} faux`);
   }
 });
 
@@ -2511,7 +2511,7 @@ await v('ENT-5.6 : déclaration (code, 2de, C2.1, 9 jalons, livrée fermée aux 
     return { m: [m.id, m.code, m.rubrique, m.niveaux, m.competences, m.domaines, m.temps, m.bareme, m.pret, m.ouverture, m.portee, m.coeur],
       inscrite: (await Promise.all(I.ACTIVITES.map((f) => f()))).some((x) => x.meta.id === 'smoby-preparation') };
   });
-  egal(r.m, ['smoby-preparation', 'ENT-5.6', 'simulog', ['2de'], ['C2.1'], ['D4'], 'guidage', 9, true, 'prof', 'eleve', true], 'meta');
+  egal(r.m, ['smoby-preparation', 'ENT-5.6', 'simulog', ['2de'], ['C2.1'], ['D4'], 'guidage', 20, true, 'prof', 'eleve', true], 'meta');
   vrai(r.inscrite, 'séance absente du registre');
 });
 
@@ -2546,11 +2546,11 @@ await v('ENT-5.6 : à l’ouverture, le message de Bruno, aucun jalon (inaction 
   await pg.waitForSelector(`${P56} .lex`, { timeout: 3000 });
 });
 
-await v('ENT-5.6 : parcours juste à l’écran → 47 m, 9 / 9 remonté au suivi, puis le message de fin de Bruno', async () => {
+await v('ENT-5.6 : parcours juste à l’écran → 47 m, 20 / 20 remonté au suivi, puis le message de fin de Bruno', async () => {
   await parcours56();
   egal(await metres56(), 47, 'mètres');
   egal(await etapes56(), statuts56(), 'étapes');
-  egal(await dernierScore56(), [9, 9], 'score remonté au suivi');
+  egal(await dernierScore56(), [20, 20], 'score remonté au suivi');
   egal(await sujets56(), ['La palette de la commande de Noël', 'La palette est prête'], 'Bruno conclut');
 });
 
@@ -2569,19 +2569,32 @@ await v('ENT-5.6 : palette vide terminée → 0 / 9 ; une seule ligne puis Termi
   egal(await sujets56(), ['La palette de la commande de Noël'], 'pas de message de fin');
 });
 
-await v('ENT-5.6 : chaque piège fait tomber son jalon (Cuisine avant Porteur et Trotteur, film 2 tours, étiquettes voisines), sans message de fin', async () => {
+await v('ENT-5.6 : chaque piège fait tomber son jalon et coûte ses points (Cuisine avant Porteur et Trotteur, film 2 tours, étiquettes voisines), sans message de fin', async () => {
   const cas = [
-    [['fragiles'], { ordre: [0, 1, 2, 5, 3, 4] }],
-    [['film'], { film: '2' }],
-    [['etiquettes'], { etiq: ['avant', 'gauche', 'dessus'] }],
+    [['fragiles'], { ordre: [0, 1, 2, 5, 3, 4] }, 18],
+    [['film'], { film: '2' }, 19],
+    [['etiquettes'], { etiq: ['avant', 'gauche', 'dessus'] }, 18.5],
   ];
-  for (const [n, [ko, o]] of cas.entries()) {
+  for (const [n, [ko, o, points]] of cas.entries()) {
     await parcours56({ uid: `u-56-piege-${n}`, ...o });
     egal(await etapes56(), statuts56(ko), `sabotage ${ko.join(', ')}`);
-    egal(await dernierScore56(), [9 - ko.length, 9], `score avec ${ko.join(', ')} faux`);
+    egal(await dernierScore56(), [points, 20], `score avec ${ko.join(', ')} faux`);
     egal(await metres56(), 47, `mètres inchangés (${ko.join(', ')})`);
     egal((await sujets56()).length, 1, `pas de message de fin (${ko.join(', ')})`);
   }
+});
+
+await v('ENT-5.5 et 5.6 : poids (total 20, validés par Tristan le 10/10/2026) — table du contenu = table écrite à la main, un bloc de bandeau par ligne annoncée', async () => {
+  const r = await pg.evaluate(async () => {
+    const lire = async (f) => (await import(f)).ETAPES.map((e) => [e.id, e.poids, e.groupe]);
+    return { a: await lire('/contenus/smoby-ent55.js'), b: await lire('/contenus/smoby-ent56.js') };
+  });
+  egal(r.a.map(([id, p]) => [id, p]), [['P1-rangee', 2.5], ['P2-rangee', 2.5], ['P3-rangee', 2.5], ['P4-rangee', 2.5], ['saisie-p1-p2', 2], ['saisie-p4', 3],
+    ['p3-litige', 2], ['stock-lu', 1.5], ['message-kn', 1.5]], 'poids d’ENT-5.5');
+  egal(r.b.map(([id, p]) => [id, p]), [['lignesJustes', 4], ['reappro', 3], ['lourds', 2], ['fragiles', 2], ['poids', 2], ['hauteur', 1.5], ['film', 1],
+    ['etiquettes', 1.5], ['parcours', 3]], 'poids d’ENT-5.6');
+  egal([r.a.length, new Set(r.a.map((x) => x[2])).size, r.b.length, new Set(r.b.map((x) => x[2])).size], [9, 9, 9, 6], 'jalons et lignes du bandeau');
+  egal([r.b[2][2] === r.b[3][2], r.b[4][2] === r.b[5][2], r.b[6][2] === r.b[7][2]], [true, true, true], 'blocs « lourds / fragiles », « poids / hauteur », « film / étiquettes »');
 });
 
 // ── ENT-5.3 « la visite de la plateforme » (brief `docs/briefs/ENT-5.3-smoby-visite.md`) ──────────────

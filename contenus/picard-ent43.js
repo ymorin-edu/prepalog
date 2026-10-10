@@ -24,6 +24,7 @@
 // La date de la réception est le jour où l'élève ouvre la séance (rangée dans l'état du quai, `jour`).
 
 import { etapesQuai } from '../core/types/quai.js';
+import { ponderer } from './ponderation.js';
 import { nrm, nombres, apresMail } from '../core/declencheurs.js';
 import { LIEU, PHOTOS, AVERTISSEMENT, releves } from './picard.js';
 
@@ -212,8 +213,18 @@ export function jalonsProtestation(db, e) {
   ];
 }
 
-// Un jalon = une étape du suivi (10).
-export const ETAPES = etapesQuai(QUAI_ENT43);
+// Un jalon = une étape du suivi (10), pondérée sur 20 (poids validés par Tristan le 10/10/2026, lot 3 de
+// `docs/briefs/NOTATION-ponderation.md`). Le cœur : trouver ce que Mathis a laissé passer (N2 chaude, N3 manquant), ne pas
+// accuser N1 à tort, bloquer ce qu'il faut, puis protester dans le délai avec les bonnes références et la bonne quantité.
+export const BAREME = {
+  'diag-n2': [3, 'Diagnostic : N2 acceptée à tort, avec sa preuve'],
+  'diag-n3': [3, 'Diagnostic : le manquant de N3 et sa quantité'],
+  'diag-deballage': [1.5, 'Diagnostic : « sous réserve de déballage » et délai'], 'diag-delai': [1.5, 'Diagnostic : « sous réserve de déballage » et délai'],
+  'diag-n1': [2, 'Diagnostic : N1 n’est pas accusée'],
+  'N2-bloquee': [2, 'Le blocage'], 'bloque-autres': [1, 'Le blocage'],
+  'prot-refs': [1.5, 'La protestation'], 'prot-palettes': [1.5, 'La protestation'], 'prot-constat': [3, 'La protestation'],
+};
+export const ETAPES = ponderer(etapesQuai(QUAI_ENT43), BAREME, 'ENT-4.3');
 
 /* =========================================================================== accueil et volet */
 

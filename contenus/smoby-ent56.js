@@ -16,6 +16,7 @@
 // jamais recopiées ici.
 
 import { jalonsEntrepot } from '../core/types/entrepot.js';
+import { ponderer } from './ponderation.js';
 import { LEXIQUE as LEXIQUE_SMOBY, VOCAB as VOCAB_SMOBY } from './smoby.js';
 import { BRUNO } from './smoby-ent54.js';
 import { GAMMES, PRODUITS, PLAN, STOCK, COMMANDE, PICKING } from './smoby-entrepot.js';
@@ -62,13 +63,26 @@ export const ENTREPOT = {
 };
 
 // Les jalons, dans l'ordre du suivi : un jalon de la vue = une étape.
-export const ETAPES = jalonsEntrepot({}, ENTREPOT).L.map(({ id, lib }) => ({
+const JALONS = jalonsEntrepot({}, ENTREPOT).L.map(({ id, lib }) => ({
   id, titre: lib,
   verifier(db) {
     const l = jalonsEntrepot(db, ENTREPOT).L.find((x) => x.id === id);
     return { status: l && l.ok ? 'ok' : 'attente' };
   },
 }));
+
+// NOTE PONDÉRÉE SUR 20 (poids validés par Tristan le 10/10/2026, lot 3 de `docs/briefs/NOTATION-ponderation.md`). Le cœur :
+// les bonnes lignes et le réapprovisionnement de la rupture, puis la palette stable (lourds en bas, fragiles en haut, poids,
+// hauteur). Film et étiquettes sont des gestes courts (2,5 sur 20). Le parcours en serpentin, sans marge, vaut 3.
+export const BAREME = {
+  lignesJustes: [4, 'Les lignes prélevées'],
+  reappro: [3, 'Le réapprovisionnement'],
+  lourds: [2, 'Lourds en bas, fragiles en haut'], fragiles: [2, 'Lourds en bas, fragiles en haut'],
+  poids: [2, 'Poids et hauteur de la palette'], hauteur: [1.5, 'Poids et hauteur de la palette'],
+  film: [1, 'Film et étiquettes'], etiquettes: [1.5, 'Film et étiquettes'],
+  parcours: [3, 'Le parcours le plus court'],
+};
+export const ETAPES = ponderer(JALONS, BAREME, 'ENT-5.6');
 
 // ─────────────────────────────────────────────────────────────── les messages
 

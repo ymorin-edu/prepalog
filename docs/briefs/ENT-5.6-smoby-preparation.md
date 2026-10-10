@@ -181,3 +181,5 @@ descente de la réserve ; le bilan explique chaque ligne et chaque règle ; la c
 - **Commits** : voir `git log` (« ENT-5.6 : … »).
 - **Reste ouvert** : textes de Bruno (accueil, fin) à relire à l'écran ; quai n° 1 (construit) ; trame courte (Cowork,
   après validation à l'écran) ; fiche d'intention à recaler (ENT-5.6 n'y est plus provisoire).
+
+- **Notation pondérée sur 20 (10/10/2026, lot 3 de `NOTATION-ponderation.md`)** : `bareme: 20` (le barème « 9 » ci-dessus est remplacé), tableau `BAREME` de `contenus/smoby-ent56.js` : lignes prélevées 4, réapprovisionnement 3, lourds 2, fragiles 2, poids 2, hauteur 1,5, film 1, étiquettes 1,5, parcours 3. Poids validés par Tristan. Cas de test réécrits : déclaration, parcours juste 20/20, trois pièges avec leurs points perdus.

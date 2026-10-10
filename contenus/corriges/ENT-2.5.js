@@ -54,9 +54,11 @@ export function corrigeEleve(base, uid) {
   if (!ouvert) return { texte: 'Cet élève n’a pas encore ouvert la séance : voici l’allée qu’il recevra.', items };
   const st = ETAPES.map((e) => { let r = { status: 'ko' }; try { r = e.verifier(db); } catch (x) { /* compte faux */ } return [e.titre, r]; });
   const ok = st.filter(([, r]) => r.status === 'ok').length;
+  // Note pondérée (règle du 10/10/2026) : la somme des poids des jalons justes, sur 20.
+  const points = ETAPES.reduce((s, e, i) => s + (st[i][1].status === 'ok' ? e.poids : 0), 0);
   items.push({ genre: 'tableau', texte: 'Ce qu’il a fait, jalon par jalon', entetes: ['Jalon', 'Détail', ''],
     reponses: st.map(([t, r]) => [t, r.detail || '', r.status === 'ok' ? '✓ juste' : r.status === 'attente' ? '— pas fait' : '✗ faux']) });
-  items.push({ genre: 'question', texte: 'Sa note', rep: `${v1(Math.round(ok / ETAPES.length * 200) / 10)} / 20 (${ok} jalons sur ${ETAPES.length})`,
+  items.push({ genre: 'question', texte: 'Sa note', rep: `${v1(Math.round(points * 10) / 10)} / 20 (${ok} jalons sur ${ETAPES.length})`,
     note: 'La note de la copie est celle enregistrée à la remise ou au ramassage.' });
   return { texte: '', items };
 }

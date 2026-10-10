@@ -171,3 +171,5 @@ Trame élève Word/PDF (Cowork) ; corrigé `contenus/corriges/ENT-4.3.js` (diagn
 - **Commits** : « Vue quai : Valider cette palette… » puis « ENT-4.3 Picard la réception de nuit… ».
 - **Reste ouvert** : trame élève Word/PDF (Cowork) ; essai à l'écran par Tristan (lire les textes des trois messages et les
   intitulés des lignes) ; variante « livraison vieille de 4 jours » (en réserve).
+
+- **Notation pondérée sur 20 (10/10/2026, lot 3 de `NOTATION-ponderation.md`)** : `bareme: 20`, tableau `BAREME` de `contenus/picard-ent43.js` : N2 acceptée à tort 3, manquant de N3 3, déballage et délai 3, N1 non accusée 2, blocage 3, protestation 6. Poids validés par Tristan. Cas de test : déclaration réécrite (20), parcours juste 20/20, N1 accusée + N4 bloquée + protestation sans quantité 11/20, diagnostic vide 2/20.

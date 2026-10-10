@@ -195,3 +195,5 @@ réserves d'ENT-5.4.
 - **Modifié le 04/10/2026 après l'essai de Tristan** : en guidage, « Vérifier mon rangement » ne dit plus que le **nom**
   du critère faux (`✗ critère : rotation`), comme en entraînement. Les « erreurs expliquées critère par critère » du §2
   ne valent plus : voir `docs/briefs/MOTEUR-entrepot-verdict-guidage.md`.
+
+- **Notation pondérée sur 20 (10/10/2026, lot 3 de `NOTATION-ponderation.md`)** : `bareme: 20` (le barème « 9 » ci-dessus est remplacé), tableau `BAREME` de `contenus/smoby-ent55.js` : chaque palette rangée 2,5, saisie de P1 et P2 2, saisie de P4 3, P3 en litige 2, écran Stock 1,5, message à Kuehne+Nagel 1,5. Poids validés par Tristan. Cas de test réécrits : déclaration, parcours juste 20/20, onze pièges avec leurs points perdus (écrits à la main).

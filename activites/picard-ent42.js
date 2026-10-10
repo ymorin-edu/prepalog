@@ -10,7 +10,7 @@
 //
 // Pas de `reinitialisable` : réservé aux séances X.1 (décision du 02/10/2026) ; « Recommencer la
 // réception » du bilan (la vue) ne remet à zéro que le quai de cette séance.
-// Pas de `notation` : comme ENT-4.1, jalons et note sur 20 (le suivi ramène les 30 jalons sur 20).
+// Pas de `notation` : jalons pondérés, somme des poids = 20 (`bareme: 20`, règle du 10/10/2026).
 // Trame élève Word/PDF déclarée le 03/10/2026, relue et validée par Tristan (générateur dans `outils/`,
 // brief `docs/briefs/PICARD-trames-eleve.md`) ; son corrigé s'ajoute au corrigé calculé (`meta.corrige`).
 
@@ -26,6 +26,7 @@ const s = seanceEntreprise(PICARD, SEANCE, {
   niveaux: ['1re'],
   competences: ['C1.4', 'C1.3'],
   temps: 'entrainement',
+  bareme: 20,           // jalons pondérés, somme des poids = 20
   trame: 'picard-deux-camions',
   pret: true,
   ouverture: 'prof',

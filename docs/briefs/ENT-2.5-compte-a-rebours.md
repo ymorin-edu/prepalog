@@ -22,7 +22,7 @@
 | desc | « Seul, sur une allée neuve : exporter, analyser, choisir quoi compter, compter, décider, rendre compte. Tu rends ta copie. » |
 | Niveau / compétences | 1re / **C1.6** (et C3.2 si déclarée en ENT-2.2) |
 | Temps | **évaluation** (coefficient 3) |
-| Notation | **copie rendue** (`meta.copie: true`, `copie: meta.copie` dans `creerEntreprise`, `export const noter`) ; note = jalons réussis / 11 × 20, figée à la remise |
+| Notation | **copie rendue** (`meta.copie: true`, `copie: meta.copie` dans `creerEntreprise`, `export const noter`) ; note = somme des poids des jalons réussis, sur 20 (voir le compte rendu), figée à la remise |
 | Base | propre, **pas** de `reinitialisable`, **un jeu tiré par élève** (graine = identifiant) |
 | Durée | une séance d'environ **2 h** ; pas de chrono noté |
 | Livraison | `pret: true, ouverture: 'prof'` |
@@ -216,3 +216,5 @@ boucle complète ; une copie (dépôt + inventaire) ; un jeu par élève (graine
 - **Reste ouvert** : la fiche d'intention Cdiscount (Cowork) doit décrire l'épreuve et dire où lire le corrigé par élève ;
   **Tristan passe l'évaluation avec deux identifiants** (deux allées, même difficulté) avant de l'ouvrir ; ne plus toucher au
   tirage une fois l'évaluation ouverte.
+
+- **Notation pondérée sur 20 (10/10/2026, lot 3 de `NOTATION-ponderation.md`)** : la note n'est plus « réussis / 11 × 20 » mais la somme des poids des jalons justes, sur 20 (`bareme: 20`). Le code compte **12 jalons** (le jalon `export` est arrivé avec l'écran Extractions, commit d31cbc8) et non 11. Tableau `BAREME` de `contenus/cdiscount-compte-a-rebours.js` : tableur 4,5 (export 1, écart 1, SI 1, synthèse 1,5), liste 3, comptage 3 (comptage 2, écarts 1), décisions 7 (rayon 2, régularisation 2,5, recomptage 2,5), taux 1, compte rendu 1,5. Poids validés par Tristan. Le corrigé par élève affiche la note pondérée.

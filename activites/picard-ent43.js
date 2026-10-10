@@ -7,7 +7,7 @@
 // douteuse, protester auprès du transporteur, « J'ai terminé ». Pas d'aide : indices dans les documents seulement,
 // bilan à la fin. Données dans `contenus/picard-ent43.js`.
 //
-// Pas de `reinitialisable` (réservé aux séances X.1). Pas de `notation` : dix jalons ramenés sur 20.
+// Pas de `reinitialisable` (réservé aux séances X.1). Pas de `notation` : dix jalons pondérés, somme des poids = 20 (`bareme: 20`, règle du 10/10/2026).
 // Trame élève Word/PDF déclarée le 03/10/2026, relue et validée par Tristan (générateur dans `outils/`,
 // brief `docs/briefs/PICARD-trames-eleve.md`) ; son corrigé s'ajoute au corrigé calculé (`meta.corrige`).
 
@@ -23,6 +23,7 @@ const s = seanceEntreprise(PICARD, SEANCE, {
   niveaux: ['1re'],
   competences: ['C1.4'],
   temps: 'erreur',
+  bareme: 20,           // jalons pondérés, somme des poids = 20
   trame: 'picard-reception-de-nuit',
   pret: true,
   ouverture: 'prof',

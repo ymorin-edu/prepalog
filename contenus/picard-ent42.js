@@ -31,6 +31,7 @@
 //   B5  carottes en rondelles                        aucun aléa       → accepter
 
 import { etapesQuai } from '../core/types/quai.js';
+import { ponderer } from './ponderation.js';
 import { LIEU, PHOTOS, DECHARGEMENT, COUTS, SEUIL_HORS_FROID, AVERTISSEMENT, BON_A_SAVOIR, releves } from './picard.js';
 
 const ETIQ = (ref, nom, poids, lot, ddm) => ({ ref, nom, poids, lot, ddm });
@@ -133,7 +134,28 @@ export const QUAI_ENT42 = {
 // 6 réserves — les 3 palettes du camion A et B2, B3, B4 —, pas de mention de déballage, 2 signatures,
 // 2 lots rentrés). Les décisions et réserves du camion A se lisent sur la température réelle.
 // `attendu` des palettes de A = ce qu'elles seraient sans attente (la vue le recalcule).
-export const ETAPES = etapesQuai(QUAI_ENT42);
+//
+// NOTE PONDÉRÉE SUR 20 (poids validés par Tristan le 10/10/2026, `docs/briefs/NOTATION-ponderation.md`, lot 3). Le cœur :
+// organiser la réception selon l'aléa (l'ordre, C1.3.2) puis décider palette par palette, surtout sur les pièges (B2 chaude
+// malgré un ticket parfait, B3 étiquette déchirée, B4 carton manquant, A2 deux références). Une ligne du bandeau par palette.
+// Dans une palette : comptage 0,25 · décision 0,5 (sans piège) à 1,5 (B2, B3) · réserve écrite 0,5.
+const PALETTE = (p) => `Palette ${p}`;
+export const BAREME = {
+  ordre: [4, 'L’ordre des deux camions'],
+  'ticket-A': [0.5, 'Les deux enregistreurs'], 'ticket-B': [0.5, 'Les deux enregistreurs'],
+  'A1-comptage': [0.25, PALETTE('A1')], 'A1-decision': [0.5, PALETTE('A1')], 'A1-reserve': [0.5, PALETTE('A1')],
+  'A2-comptage': [0.25, PALETTE('A2')], 'A2-decision': [1, PALETTE('A2')], 'A2-reserve': [0.5, PALETTE('A2')],
+  'A3-comptage': [0.25, PALETTE('A3')], 'A3-decision': [0.5, PALETTE('A3')], 'A3-reserve': [0.5, PALETTE('A3')],
+  'B1-comptage': [0.25, PALETTE('B1')], 'B1-decision': [0.5, PALETTE('B1')],
+  'B2-comptage': [0.25, PALETTE('B2')], 'B2-decision': [1.5, PALETTE('B2')], 'B2-reserve': [0.5, PALETTE('B2')],
+  'B3-comptage': [0.25, PALETTE('B3')], 'B3-decision': [1.5, PALETTE('B3')], 'B3-reserve': [0.5, PALETTE('B3')],
+  'B4-comptage': [0.25, PALETTE('B4')], 'B4-decision': [1, PALETTE('B4')], 'B4-reserve': [0.5, PALETTE('B4')],
+  'B5-comptage': [0.25, PALETTE('B5')], 'B5-decision': [0.5, PALETTE('B5')],
+  deballage: [1, 'Pas de « sous réserve de déballage »'],
+  'signature-A': [0.5, 'Les signatures du chauffeur'], 'signature-B': [0.5, 'Les signatures du chauffeur'],
+  'rentre-A': [0.5, 'Les lots rentrés en chambre froide'], 'rentre-B': [0.5, 'Les lots rentrés en chambre froide'],
+};
+export const ETAPES = ponderer(etapesQuai(QUAI_ENT42), BAREME, 'ENT-4.2');
 
 export const ACCUEIL = {
   titre: 'Deux camions, un seul quai',

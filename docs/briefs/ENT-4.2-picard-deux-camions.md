@@ -167,3 +167,5 @@ Trame élève Word/PDF (Cowork, après validation à l'écran) ; corrigé `conte
   validées (vaut aussi pour ENT-4.1, même écran) ; « Revoir le bon de livraison » agrandi.
 - **Reste ouvert** : trame élève (Cowork, après validation à l'écran) ; la teinte des bandes (jaune / rose) et la petite
   taille des étiquettes déchirées sur la palette 3D sont à juger à l'écran.
+
+- **Notation pondérée sur 20 (10/10/2026, lot 3 de `NOTATION-ponderation.md`)** : `bareme: 20`, `poids` et `groupe` posés sur les 30 jalons de la vue par `ponderer` (`contenus/ponderation.js`), tableau dans `BAREME` de `contenus/picard-ent42.js` : ordre 4, enregistreurs 1, chaque palette 0,75 à 2,25 (une ligne du bandeau par palette), déballage 1, signatures 1, lots rentrés 1. Poids validés par Tristan. Cas de test : déclaration réécrite (20), note remontée au Suivi (20/20), B2 acceptée, A1 mal comptée.

@@ -2248,7 +2248,9 @@ Suite à donner : Réclamation auprès de Gardéo, livraison incomplète`;
     return db;
   };
   const st5 = (db) => Object.fromEntries(S5.ETAPES.map((e) => [e.id, e.verifier(db).status]));
-  const note5 = (db) => S5.ETAPES.filter((e) => e.verifier(db).status === 'ok').length;
+  // Note pondérée sur 20 (règle du 10/10/2026, poids validés par Tristan) : table écrite À LA MAIN, indépendante du contenu.
+  const POIDS5 = { export: 1, ecart: 1, si: 1, synthese: 1.5, liste: 3, comptage: 2, ecarts: 1, rayon: 2, regul: 2.5, recompter: 2.5, taux: 1, compteRendu: 1.5 };
+  const note5 = (db) => S5.ETAPES.filter((e) => e.verifier(db).status === 'ok').reduce((s, e) => s + POIDS5[e.id], 0);
   // Le jeu de « eleve-test », écrit à la main.
   const J5 = { rayon: 'LAM-FRO', regul: 'COR-SAU', recompter: 'ELA-FIT-3' };
   const SYS5 = { 'GOU-ISO-75': 23, 'COR-SAU': 53, 'TAP-YOG': 6, 'BAL-FOOT': 9, 'LAM-FRO': 49, 'ELA-FIT-3': 57 };
@@ -2355,16 +2357,27 @@ Suite à donner : Réclamation auprès de Gardéo, livraison incomplète`;
     if (/absent/i.test(s)) throw new Error('« absent » écrit');
   });
 
-  await v('ENT-2.5 : parcours juste → 12/12 ; une décision fausse → 11/12 ; sans travail, rien', async () => {
+  await v('ENT-2.5 : parcours juste → 20/20 ; une décision fausse (la remise en rayon) → 18/20 ; sans travail, rien', async () => {
     if (Object.values(st5(ouvrir25('eleve-test'))).some((x) => x !== 'attente')) throw new Error('avant travail : ' + JSON.stringify(st5(ouvrir25('eleve-test'))));
     const db = parcours5();
-    if (note5(db) !== 12) throw new Error('parcours juste : ' + JSON.stringify(st5(db)));
+    if (note5(db) !== 20) throw new Error('parcours juste : ' + JSON.stringify(st5(db)));
     const r = S5.corrige(S5.jeuDeBase(db));
     if (r.taux !== 5 || r.valeur !== 3.2 || r.regularise !== 'COR-SAU' || r.liste.join() !== LISTE5.join()) throw new Error('corrigé : ' + JSON.stringify(r));
     const faux = parcours5({ inv: { decisions: { [J5.rayon]: ['regul', 'Démarque inconnue'], [J5.regul]: ['regul', 'Démarque inconnue'], [J5.recompter]: ['recompter'] },
       regul: [[J5.rayon, -3], [J5.regul, -1]] }, cr: 'Régularisé : LAM-FRO, COR-SAU\nValeur régularisée : 3 × 6,30 + 1 × 3,20 = 22,10 €' });
     const st = st5(faux);
-    if (note5(faux) !== 11 || st.rayon !== 'ko') throw new Error('une décision fausse : ' + JSON.stringify(st));
+    if (note5(faux) !== 18 || st.rayon !== 'ko') throw new Error('une décision fausse : ' + JSON.stringify(st));
+  });
+
+  await v('ENT-2.5 : poids (12 jalons, total 20) — table du contenu = table écrite à la main ; le coût d’une erreur suit son poids', async () => {
+    const lus = Object.fromEntries(S5.ETAPES.map((e) => [e.id, e.poids]));
+    if (JSON.stringify(lus) !== JSON.stringify(POIDS5)) throw new Error('poids du contenu : ' + JSON.stringify(lus));
+    if (Object.values(POIDS5).reduce((a, b) => a + b, 0) !== 20) throw new Error('somme ≠ 20');
+    // Liste avec un oubli : seul le jalon de la liste (3 points) tombe → 17. Le compte rendu fautif (valeur fausse) : 1,5 point → 18,5.
+    const liste = parcours5({ liste: 'À recompter : COR-SAU, LAM-FRO' });
+    if (note5(liste) !== 17) throw new Error('liste avec oubli : ' + note5(liste) + ' ' + JSON.stringify(st5(liste)));
+    const cr = parcours5({ cr: 'Régularisé : COR-SAU\nValeur régularisée : 32 €' });
+    if (note5(cr) !== 18.5 || st5(cr).compteRendu !== 'ko') throw new Error('compte rendu faux : ' + note5(cr) + ' ' + JSON.stringify(st5(cr)));
   });
 
   await v('ENT-2.5 : liste avec un oubli → jalon 4 ko, l\'aléa arrive, l\'inventaire reste jouable ; le taux se lit sur le périmètre', async () => {
@@ -2491,7 +2504,7 @@ Suite à donner : Réclamation auprès de Gardéo, livraison incomplète`;
       await p.click('#hote5 [data-copie-rendre]');
       await p.waitForFunction(() => !!window.__c25.remis);
       const r = await p.evaluate(() => window.__c25.remis);
-      if (r.score !== 12 || r.max !== 12) throw new Error('copie : ' + JSON.stringify(r));
+      if (r.score !== 20 || r.max !== 20) throw new Error('copie : ' + JSON.stringify(r));
       const ramasse = await p.evaluate(() => window.__c25.A.noter(JSON.parse(JSON.stringify(window.__c25.db))));
       if (ramasse.score !== r.score || ramasse.max !== r.max) throw new Error('ramassage ≠ remise');
       if (errs.length) throw new Error(errs.join(' | '));

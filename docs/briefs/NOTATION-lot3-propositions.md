@@ -1,6 +1,6 @@
 # Lot 3 de la notation pondérée — propositions de poids (à valider par Tristan)
 
-**Statut** : propositions du 10/10/2026, **rien n'est codé**. Suite de `docs/briefs/NOTATION-ponderation.md` (règle 0.1 :
+**Statut** : propositions du 10/10/2026, **validées par Tristan et codées le même jour** (lot 3 livré, voir le compte rendu de `NOTATION-ponderation.md`). Suite de `docs/briefs/NOTATION-ponderation.md` (règle 0.1 :
 total 20, le poids va au cœur de la compétence, la forme ≤ ~15 %, aucun jalon à 0, regroupement par bloc).
 Séances : Picard ENT-4.2 et 4.3, Smoby ENT-5.5 et 5.6, Cdiscount ENT-2.5.
 

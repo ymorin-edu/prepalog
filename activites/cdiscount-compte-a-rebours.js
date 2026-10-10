@@ -4,7 +4,7 @@
 // dans le tableur (Écart, SI, NB.SI), déposer son fichier (un dépôt, aucun retour), envoyer sa liste
 // à Nadia, faire l'inventaire de cette liste (aucune correction à l'écran), rendre compte, rendre sa
 // copie. UN JEU TIRÉ PAR ÉLÈVE (graine = son identifiant) : même structure pour tous (trois écarts,
-// un de chaque sorte), chiffres différents. Onze jalons ; note = réussis / 11 × 20, figée à la
+// un de chaque sorte), chiffres différents. Douze jalons pondérés (somme des poids = 20, règle du 10/10/2026) ; note figée à la
 // remise. Écrite le 04/10/2026 (brief `docs/briefs/ENT-2.5-compte-a-rebours.md`). Données et
 // tirage : `contenus/cdiscount-compte-a-rebours.js` ; corrigé par élève :
 // `contenus/corriges/ENT-2.5.js`. Pas de trame (décision de la série).
@@ -22,6 +22,7 @@ const s = seanceEntreprise(CDISCOUNT, SEANCE, {
   // Compétences et temps pédagogique : voir core/competences.js.
   competences: ['C1.6'],
   temps: 'evaluation',
+  bareme: 20,           // jalons pondérés, somme des poids = 20
   copie: true,
   pret: true,
   ouverture: 'prof',

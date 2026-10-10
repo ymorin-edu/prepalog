@@ -39,6 +39,7 @@ import { bilanInventaire } from '../core/types/inventaire.js';
 import { resultatDepot, statutExport } from '../core/types/export-tableur.js';
 import { preparationsAEcarter, refsAllees, filtreAllee } from './cdiscount.js';
 import { ligne, nombres, nrm } from '../core/declencheurs.js';
+import { ponderer } from './ponderation.js';
 
 export const MODELES = ['GOU-ISO-75', 'COR-SAU', 'TAP-YOG', 'BAL-FOOT', 'LAM-FRO', 'ELA-FIT-3'];
 export const CATALOGUE = sousCatalogue(MODELES);
@@ -389,9 +390,9 @@ export const VOLET = {
   }],
 };
 
-/* ================================================================== les onze jalons
+/* ================================================================== les douze jalons
  * Calculés sur le jeu de l'élève, jamais écrits en dur. Aucun verdict avant la remise (copie) ;
- * rien n'est acquis sans action (`attente`). Note = jalons réussis / 12 × 20, figée à la remise.
+ * rien n'est acquis sans action (`attente`). Note = somme des poids des jalons réussis (total 20, voir BAREME plus bas), figée à la remise.
  */
 const bilan = (db) => bilanInventaire(db, inventaireDeBase(db), CATALOGUE);
 const jalonControle = (id) => (db) => {
@@ -441,7 +442,7 @@ function compteRendu(db) {
   return msgs.some(juste) ? { status: 'ok' } : { status: 'ko', detail: `Attendu : ${attenduRefs.join(', ') || 'aucune'} — ${String(attenduVal).replace('.', ',')} €.` };
 }
 
-export const ETAPES = [
+const JALONS = [
   { id: 'export', titre: 'Lignes de préparation de l’allée C exportées (bons critères)', verifier: (db) => statutExport(db, ID_EXPORT, ID_DEPOT) },
   { id: 'ecart', titre: 'Écart calculé en formule', verifier: jalonControle('ecart') },
   { id: 'si', titre: 'Références en écart isolées avec SI', verifier: jalonControle('si') },
@@ -472,6 +473,19 @@ export const ETAPES = [
   },
   { id: 'compteRendu', titre: 'Compte rendu juste', verifier: compteRendu },
 ];
+
+// NOTE PONDÉRÉE SUR 20 (poids validés par Tristan le 10/10/2026, lot 3 de `docs/briefs/NOTATION-ponderation.md`), figée à la
+// remise. Le cœur : choisir quoi recompter (la liste) et décider les trois écarts ; le tableur est l'outil (4,5 sur 20) ;
+// le compte rendu à Nadia porte aussi un calcul de valeur (1,5).
+export const BAREME = {
+  export: [1, 'Le tableur'], ecart: [1, 'Le tableur'], si: [1, 'Le tableur'], synthese: [1.5, 'Le tableur'],
+  liste: [3, 'La liste à recompter'],
+  comptage: [2, 'Le comptage'], ecarts: [1, 'Le comptage'],
+  rayon: [2, 'Les trois décisions'], regul: [2.5, 'Les trois décisions'], recompter: [2.5, 'Les trois décisions'],
+  taux: [1, 'Le taux d’écart'],
+  compteRendu: [1.5, 'Le compte rendu'],
+};
+export const ETAPES = ponderer(JALONS, BAREME, 'ENT-2.5');
 
 // Pour le corrigé de l'élève et les tests : la réponse juste d'un jeu.
 export function corrige(jeu) {

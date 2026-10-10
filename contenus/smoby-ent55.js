@@ -18,6 +18,7 @@ import { apresMail, tous } from '../core/declencheurs.js';
 import { phrasesJustes } from '../core/phrases.js';
 import { jalonsEntrepot } from '../core/types/entrepot.js';
 import { catalogueSimple } from './entreprise-commun.js';
+import { ponderer } from './ponderation.js';
 import { LEXIQUE as LEXIQUE_SMOBY, VOCAB as VOCAB_SMOBY } from './smoby.js';
 import { BRUNO, PALETTES_ENT54 } from './smoby-ent54.js';
 import { GAMMES, PRODUITS, PLAN, STOCK, CRITERES, parPalette } from './smoby-entrepot.js';
@@ -238,7 +239,7 @@ const jalonsRangement = PALETTES.map((p) => ({
   },
 }));
 
-export const ETAPES = [
+const JALONS = [
   ...jalonsRangement,
   {
     id: 'saisie-p1-p2',
@@ -285,6 +286,20 @@ export const ETAPES = [
     },
   },
 ];
+
+// NOTE PONDÉRÉE SUR 20 (poids validés par Tristan le 10/10/2026, lot 3 de `docs/briefs/NOTATION-ponderation.md`). Moitié
+// rangement (C1.5, les quatre palettes à égalité), moitié entrée en stock (C1.6 : les cartons manquants de P4 et le litige de P3
+// pèsent le plus). Le message à Kuehne+Nagel, la partie « forme », vaut 1,5.
+export const BAREME = {
+  'P1-rangee': [2.5, 'Palette P1 bien rangée'], 'P2-rangee': [2.5, 'Palette P2 bien rangée'],
+  'P3-rangee': [2.5, 'Palette P3 bien rangée'], 'P4-rangee': [2.5, 'Palette P4 bien rangée'],
+  'saisie-p1-p2': [2, 'Entrée en stock : P1 et P2'],
+  'saisie-p4': [3, 'Entrée en stock : P4 et ses cartons manquants'],
+  'p3-litige': [2, 'P3 en litige, pas en stock disponible'],
+  'stock-lu': [1.5, 'L’écran Stock lu juste'],
+  'message-kn': [1.5, 'Réponse à Kuehne+Nagel'],
+};
+export const ETAPES = ponderer(JALONS, BAREME, 'ENT-5.5');
 
 // ─────────────────────────────────────────────────────────────── l'accueil
 
