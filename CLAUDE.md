@@ -191,10 +191,15 @@ modifier une séance**, et la corriger si le code a changé.
 
 ## Tests
 
-- Suite Playwright en mode démonstration : `node outils/test.mjs` (~13 min en local, ~860 cas ;
-  sur GitHub en trois groupes parallèles, voir l'en-tête de `outils/test.mjs`).
+- Suite Playwright en mode démonstration, ~1 000 cas. **En local, la lancer en parallèle :
+  `node outils/test-parallele.mjs`** (tous les blocs, six navigateurs à la fois, ~4 min 30 ; le temps
+  est celui du bloc le plus long, Smoby). `node outils/test.mjs` joue la même suite dans un seul
+  navigateur (~14 min) ; sur GitHub, en trois groupes (`--groupe N`, voir l'en-tête de `outils/test.mjs`).
   Un bloc seul : `node outils/test.mjs boost` (plusieurs : `boost carte`). Un bloc par fichier
-  dans `outils/test/` ; un fichier non inscrit dans `BLOCS` du lanceur fait refuser le départ.
+  dans `outils/test/` ; un fichier non inscrit dans `BLOCS` du lanceur fait refuser le départ, et un
+  bloc absent de `GROUPES` aussi (une entreprise nouvelle = sa ligne dans les deux ; le lanceur
+  parallèle, lui, lit `BLOCS` et n'a rien à régler). Un cas qui ne tombe qu'en parallèle est d'abord un
+  cas trop pressé : le rejouer seul avant de chercher ailleurs.
 - Installation locale (pas globale) : `npm install --no-save --no-package-lock playwright@1.63.0
   xlsx@0.18.5` puis `npx playwright install chromium`.
 - **Lancer la suite entière avant tout push** qui touche `core/`, `styles/` ou `activites/`.

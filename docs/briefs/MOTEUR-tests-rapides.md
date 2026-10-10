@@ -158,3 +158,4 @@ une séance**. Puis ajouter un 4e job au workflow (port 8098, déjà prévu par 
   modeste, comme annoncé. Points 1 (`egal`/`vrai` dans `commun.mjs`) et 3 (`test-regles.mjs` sur
   GitHub) **non faits**, Tristan ne les a pas demandés.
 - **Reste ouvert** : lot 5 points 1 et 3, si Tristan le demande un jour.
+- **10/10/2026 — suite en parallèle sur un poste** (`outils/test-parallele.mjs`, hors brief, demande de Tristan) : tous les blocs en même temps, six navigateurs, ~4 min 30 en local au lieu de ~14 min ; rien de changé dans `test.mjs`, `commun.mjs`, les blocs ni le workflow GitHub. Détail dans `docs/decisions.md`.

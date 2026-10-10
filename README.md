@@ -176,6 +176,11 @@ le lanceur : même commande, même bilan. Pour ne lancer qu'un bloc, `node outil
 et les groupes créés par le socle : lancés seuls, ils sont précédés du socle. Un nouveau bloc
 s'inscrit dans la liste `BLOCS` du lanceur, qui refuse de partir s'il en trouve un oublié.
 
+Depuis le 10/10/2026, `node outils/test-parallele.mjs` joue **tous les blocs en même temps**, six
+navigateurs à la fois (`node outils/test-parallele.mjs 4` pour quatre) : chaque bloc a son serveur
+de test, son navigateur et son dossier temporaire, et le bilan d'ensemble compte chaque cas une
+fois. La suite entière passe d'environ 14 min à moins de 5 (le temps du bloc le plus long).
+
 Installation **locale** et non globale : un paquet posé par `npm i -g` n'est pas résolu par
 un `import 'playwright'` depuis le dossier du projet. `node_modules/` est ignoré par git.
 `xlsx` ne sert qu'à fabriquer le classeur rempli du test de correction.
