@@ -1928,7 +1928,13 @@ await v('ENT-6.4 : ouverture — le message de Nadia (3 blocs, mercredi 16 juin 
   egal(M[0].subject, 'Le camion de la brasserie de Mons', 'sujet');
   egal(M[0].text, 'Bonjour Lea, bienvenue au quai ! Ici, l’objectif, c’est zéro accident.\n\n'
     + 'Le camion de la brasserie de Mons arrive au quai 12 : 4 palettes de [[fût|fûts]], dont l’Affligem qu’on attendait.\n\n'
-    + 'Avant de décharger, regarde bien la scène.\n\nNadia', 'texte en trois blocs');
+    + 'Ma procédure de réception, pour chaque palette :\n'
+    + '1. je compte les fûts ;\n'
+    + '2. je lis l’étiquette et je la compare au [[BL]] : même produit, même quantité ;\n'
+    + '3. tout est conforme : j’accepte ;\n'
+    + '4. il manque des fûts ou un fût est abîmé : j’accepte avec [[reserve|réserves]], en écrivant quoi et combien ;\n'
+    + '5. c’est une référence que nous n’avons pas commandée : j’accepte avec réserves, motif « produit différent », et j’écris la référence lue sur l’étiquette, pas celle du BL. La palette est gardée à part, le temps que le transporteur et la brasserie règlent ça.\n\n'
+    + 'Avant de décharger, regarde bien la scène.\n\nNadia', 'texte en quatre blocs (avec la procédure de réception)');
   egal(horodate(M[0].ts), [2027, 6, 16, 13, 50], 'date du scénario');
   egal(M[0].pieces, ['droit', 'annuaire'], 'pièces jointes');
   const tout = JSON.stringify(M) + (await texte());

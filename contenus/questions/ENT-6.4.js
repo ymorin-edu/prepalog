@@ -47,7 +47,7 @@ export const QUESTIONS = {
         { src: './contenus/images/france-boissons/futs-vrac.jpg', alt: 'Des objets cylindriques en métal, empilés les uns sur les autres',
           credit: 'Photo : Belinda Fewings, Unsplash' },
         { src: './contenus/images/france-boissons/materiel-chariot-frontal.svg', alt: 'Un engin à fourches qui pose une palette sur une autre palette',
-          credit: 'Dessin — document pédagogique' }] },
+          credit: 'Dessin — document pédagogique', large: true }] },
       'droit'],
     tirage: { preparation: 2, droit: 2, image: 1 },
     questions: ['bl-cest-quoi', 'reserve-cest-quoi', 'reassort', 'qui-organise-quai',

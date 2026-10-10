@@ -445,8 +445,12 @@ export function facadeQuai(I, portes = ['6', '7', '8'], o = {}) {
     if (!sans(n)) g += boite(dx + .05, 0.35, 0.3, .16, .12, .3, noir) + droit(n, dx, true);
     else g += objetEssai(o, 'butoirs', 'absents', '');
   });
-  g += face([[8.3, 0.001, 0], [8.95, 0.001, 0], [8.95, 0.001, 1.5], [8.3, 0.001, 1.5]], '#3b4a55', 'none');
-  const [ax, ay] = P(8.62, 0.002, 1.75);
+  // `o.escalier` (10/10/2026) : la porte est posée sur la bande béton (z = 0,75) et on y monte par trois marches, la plus haute contre le quai.
+  // Sans l'option : le dessin d'avant (porte au ras du sol).
+  const ZP = o.escalier ? 0.75 : 0;
+  if (o.escalier) [[0.35, 0.6], [0.6, 0.4], [0.85, 0.2]].forEach(([y, h]) => { g += boite(8.2, y, 0, 0.9, 0.25, h, ['#a7a39b', '#b9b5ad', '#9a968e']); });
+  g += face([[8.3, 0.001, ZP], [8.95, 0.001, ZP], [8.95, 0.001, ZP + 1.5], [8.3, 0.001, ZP + 1.5]], '#3b4a55', 'none');
+  const [ax, ay] = P(8.62, 0.002, ZP + 1.75);
   g += `<text x="${ax.toFixed(1)}" y="${ay.toFixed(1)}" text-anchor="middle" font-size="11" font-weight="700" fill="#1d1d1b" transform="rotate(30 ${ax.toFixed(1)} ${ay.toFixed(1)})">Accueil chauffeurs</text>`;
   return g;
 }

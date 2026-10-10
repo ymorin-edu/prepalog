@@ -83,6 +83,7 @@ export const SECURITE = {
 export const QUAI_ENT64 = {
   id: QUAI_ID,
   rendu: 'iso',
+  escalierAccueil: true,   // la porte « Accueil chauffeurs » est sur le quai, avec trois marches
   titre: 'Plateforme France Boissons de Buchelay (78) — Quai 12, réception',
   destinataire: 'France Boissons, plateforme de Buchelay',
   avertissement: 'Réels : France Boissons (filiale de Heineken), sa plateforme de Buchelay, la brasserie Heineken de Mons-en-Barœul et les bières '
@@ -158,6 +159,12 @@ export const SUJET_ARRIVEE = 'Le camion de la brasserie de Mons';
 export const SUJET_COMPTE_RENDU = 'Ton compte rendu de réception';
 export const TEXTE_ARRIVEE = (prenom) => `Bonjour ${prenom}, bienvenue au quai ! Ici, l’objectif, c’est zéro accident.\n\n`
   + 'Le camion de la brasserie de Mons arrive au quai 12 : 4 palettes de [[fût|fûts]], dont l’Affligem qu’on attendait.\n\n'
+  + 'Ma procédure de réception, pour chaque palette :\n'
+  + '1. je compte les fûts ;\n'
+  + '2. je lis l’étiquette et je la compare au [[BL]] : même produit, même quantité ;\n'
+  + '3. tout est conforme : j’accepte ;\n'
+  + '4. il manque des fûts ou un fût est abîmé : j’accepte avec [[reserve|réserves]], en écrivant quoi et combien ;\n'
+  + '5. c’est une référence que nous n’avons pas commandée : j’accepte avec réserves, motif « produit différent », et j’écris la référence lue sur l’étiquette, pas celle du BL. La palette est gardée à part, le temps que le transporteur et la brasserie règlent ça.\n\n'
   + 'Avant de décharger, regarde bien la scène.\n\nNadia';
 
 // Le BL signé (le camion est reparti) : l'état du quai de la séance.

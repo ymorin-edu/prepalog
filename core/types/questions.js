@@ -31,7 +31,7 @@
 // toutes, le reste du menu est fermé ; une réponse fausse ne bloque jamais ; une séance déjà commencée n'est pas bloquée.
 //   ouverture: { id: 'avant-de-commencer', de: 'ines', titre: 'Avant de commencer', situation: 'Bonjour !…',
 //                documents: ['commande-malo', { id: 'photos', court: 'Photos', titre: '…', type: 'images',
-//                  images: [{ src: './contenus/images/…jpg', alt: '…', legende: '…', credit: 'Photo : …, Unsplash' }] }],
+//                  images: [{ src: './contenus/images/…jpg', alt: '…', legende: '…', credit: 'Photo : …, Unsplash', large: true /* pleine largeur */ }] }],
 //                continuer: 'lire mes messages', questions: ['qui-est-malo', …] },
 //   liste: [{ id: 'qui-est-malo', type: 'ouverture', de: 'ines', enonce, choix, juste, retour,
 //             doc: 'fiche-client',                  // ce que le bloc de gauche montre pour cette question (un id de `documents`)
@@ -408,7 +408,7 @@ export function questionTiree(db, M, q) {
 // Un visuel (images) : les photos, leur légende et leur crédit. Les images sont servies par le dépôt (jamais d'autre domaine).
 function htmlVisuel(d) {
   return `<div class="ent-doc qo-visuel" data-ouv-visuel="${ech(d.id)}"><h3 class="qo-titre-doc">${ech(d.titre || d.court)}</h3>
-    ${d.images.map((im) => `<figure class="qo-fig"><img src="${ech(im.src)}" alt="${ech(im.alt)}">
+    ${d.images.map((im) => `<figure class="qo-fig${im.large ? ' qo-fig-large' : ''}"><img src="${ech(im.src)}" alt="${ech(im.alt)}">
       <figcaption>${im.legende ? `${ech(im.legende)}<br>` : ''}<span class="note">${ech(im.credit)}</span></figcaption></figure>`).join('')}</div>`;
 }
 

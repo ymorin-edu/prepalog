@@ -246,7 +246,7 @@ function reglages(Q) {
   const motifs = Object.keys(MOTIFS).filter((m) => m === 'aucun' || ((!Q.motifs || Q.motifs.includes(m)) && (froid || m !== 'temperature')));
   const S = Q.securite && Array.isArray(Q.securite.points) && Q.securite.points.length ? Q.securite : null;
   return {
-    froid, motifs, securite: S, scene: !!(S && S.mode === 'scene'), iso: Q.rendu === 'iso',
+    froid, motifs, securite: S, scene: !!(S && S.mode === 'scene'), iso: Q.rendu === 'iso', escalier: Q.escalierAccueil === true,
     // L'unité (« carton(s) », « fût(s) »…), les noms des motifs et la précision de l'avarie (D-4, étape 4) : sans rien déclarer,
     // les textes d'aujourd'hui.
     u: uniteQuai(Q), lib: libellesMotifs(Q), precis: precisionAvarie(Q),
@@ -332,7 +332,7 @@ export const CHARIOT_QUAI = {
   K: 0.85,                 // le chariot de la scène animation (1 m de large, 2,15 m de long), à l'échelle d'un décor où l'ouverture fait 1,2 m
   LEV: 0.2,                // la hauteur des fourches en charge (m)
   DEMI: 0.45,              // demi-largeur du chariot pour les collisions (m)
-  V: { avance: 3.4, crabe: 2.4, recule: 2.5, crabeCharge: 1.9, leve: 400 },   // m/s ; durée de la levée ou de la descente des fourches (ms)
+  V: { avance: 4.42, crabe: 3.12, recule: 3.25, crabeCharge: 2.47, leve: 308 },   // m/s ; durée de la levée ou de la descente des fourches (ms) ; l'ancien rythme × 1,3 (10/10/2026)
 };
 const CHQ_FL = 1.02 * CHARIOT_QUAI.K, CHQ_BL = 2.15 * CHARIOT_QUAI.K;   // fourches, longueur totale
 export const CHARIOT_FL = CHQ_FL, CHARIOT_BL = CHQ_BL;
@@ -1271,7 +1271,7 @@ export function creerQuai(Q, opts = {}) {
       const et = etatsScene(SEC, e.securite);
       return decorDehors(et, { yr: 0.35 + (8.5 - 0.35) * (1 - ee), cale: f >= 1, chauffeur: f >= 1 && et.cabine !== 'conduite', bulle: f >= 1 && !!e.securite.fait });
     }
-    let s = facadeQuai(I, PORTES) + camionPorteur(I, X_PORTE_FACADE[1], 0.35 + (8.5 - 0.35) * (1 - ee)) + horlogeQuai(I, 0.2, 0.01, 2.35, cam.arrivee || '');
+    let s = facadeQuai(I, PORTES, R.escalier ? { escalier: true } : {}) + camionPorteur(I, X_PORTE_FACADE[1], 0.35 + (8.5 - 0.35) * (1 - ee)) + horlogeQuai(I, 0.2, 0.01, 2.35, cam.arrivee || '');
     if (f >= 1) {
       s += personne(I, 5.05, 3.2);
       const [bx, by] = I.P(5.05, 3.2, HAUT_PERSONNE);
@@ -1866,7 +1866,7 @@ export function creerQuai(Q, opts = {}) {
     const I = projeterScene('dehors');
     const conduit = et.cabine === 'conduite';
     const cote = Object.assign({}, conduit ? { cabine: 'conduite', fumee: true } : {}, et.cale && o.cale !== false ? { cale: et.cale } : {});
-    const facade = SEC.points.some((p) => p.objet === 'butoirs') ? { butoirs: { porte: PORTE_CAMION, etat: et.butoirs } } : {};
+    const facade = Object.assign(SEC.points.some((p) => p.objet === 'butoirs') ? { butoirs: { porte: PORTE_CAMION, etat: et.butoirs } } : {}, R.escalier ? { escalier: true } : {});
     let s = facadeQuai(I, PORTES, facade) + camionPorteur(I, X_PORTE_FACADE[PORTE_CAMION], o.yr != null ? o.yr : YR_QUAI, cote)
       + horlogeQuai(I, 0.2, 0.01, 2.35, cam.arrivee || '');
     if (o.chauffeur) {

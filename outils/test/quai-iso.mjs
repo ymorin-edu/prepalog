@@ -2002,7 +2002,7 @@ await v('Quai chariot : le chauffeur du camion reste debout près de l’accueil
   await c.clock.runFor(2500);
   const t1 = await chauffeur();
   const legs = [await legende(c)];
-  for (const dt of [4500, 5000, 6000, 6500]) { await c.clock.runFor(dt); legs.push(await legende(c)); }
+  for (const dt of [3460, 3850, 4620, 5000]) { await c.clock.runFor(dt); legs.push(await legende(c)); }
   const t2 = await chauffeur();
   egal(t1.length, 1, 'une seule personne dessinée (le chauffeur ; le cariste est dans le chariot)');
   egal(t2, t1, 'le chauffeur n’a pas bougé');
