@@ -1033,7 +1033,8 @@ poids de ses jalons + `part` doit valoir 20 (contrôlé à l'ouverture).
   réponses, justes ou fausses.
 - **Retour** : notée → ✓ / ✗ et le `retour` du collègue tout de suite ; `apres: 'bilan'` → « Merci, je note », le ✓ / ✗
   au bandeau de fin et le `retour` avec lui (pour une question posée avant un envoi qu'elle corrigerait d'avance) ;
-  `reflexion: true` → non notée, « Ce qu'en pense … » ; en évaluation (`copie`) → « Merci, je note » pour toutes.
+  `reflexion: true` → non notée, « Ce qu'en pense … » (avec `apres: 'bilan'` en plus, 10/10/2026 : « Merci, je note » à l'écran, et ce que
+  pense le collègue arrive avec le bandeau de fin, « pour réfléchir » ; pour une réflexion dont le retour soufflerait un jalon) ; en évaluation (`copie`) → « Merci, je note » pour toutes.
 - La **première réponse** compte, rangée en **clé** (`v`) dans `db.questions[<séance>]`. « Corriger » ne rouvre jamais
   une question ; « Réinitialiser » n'efface pas les réponses. Les sorties de page pendant une question sont comptées
   et montrées à l'enseignant (Repérage), sans effet sur la note.
@@ -1050,9 +1051,11 @@ poids de ses jalons + `part` doit valoir 20 (contrôlé à l'ouverture).
   | quai `<id>` | `quai:<id>:decharger`, `quai:<id>:valider` (une palette), `quai:<id>:cloturer` |
   | plan d'entrepôt `<id>` | `entrepot:<id>:poser` (poser une palette), `entrepot:<id>:verifier` |
   | animation `<id>` | `animation:<id>:<question>` (la première réponse) |
-  | messagerie (toutes les séances) | `messagerie:transfert` (transférer un message, n'importe lequel ; chantier D-1) |
+  | messagerie (toutes les séances) | `messagerie:transfert` (transférer un message, n'importe lequel ; chantier D-1) ; `messagerie:transfert:<clé du message>` (transférer CE message, 10/10/2026, publié **en plus** du précédent) |
   | messagerie, réponse par phrases | `messagerie:phrase:<ligne>` (le premier choix d'une phrase sur cette ligne, juste ou faux ; ENT-6.2, 10/10/2026) ; la ligne doit exister dans un mail semé par le volet, sinon la séance ne s'ouvre pas |
 
+  `messagerie:transfert:<clé>` : la clé est connue si le message est semé par le volet avec un `transfert`, ou si le volet la déclare dans
+  **`volet.transferables: ['msg-malo', …]`** (messages qui arrivent plus tard, par un déclencheur) ; une autre clé empêche la séance de s'ouvrir.
   Un nom qu'aucune vue de la séance ne publie (faute de frappe, vue absente) **empêche la séance de s'ouvrir**, avec la
   liste des gestes connus. `tous(…)` garde les gestes de ses conditions. Une vue nouvelle **naît avec ses gestes**
   (`api.signal('<vue>:<id>:<geste>')` juste avant sa sauvegarde, et la liste `signaux` dans ce qu'elle rend).
@@ -1077,6 +1080,9 @@ Dans le fichier de questions : un bloc `ouverture` et des questions `type: 'ouve
   Corrigée à l'écran (✓ / ✗ + retour), réponse rangée comme les autres (`db.questions[séance][id]`, plus `@ouverture` = heure d'arrivée).
 - Imposée à l'élève (menu fermé, cadenas) tant qu'il n'a pas répondu à tout ; **jamais** à l'enseignant, après la remise, ni à un
   élève dont la séance a déjà commencé (fiche envoyée ou message envoyé). « Continuer » mène à l'Accueil, qui reste tel quel.
+- **La calculette du site** (10/10/2026) : `ouverture.calculette: true` (booléen, refusé sinon) la monte sur l'écran quand il est affiché (élève et
+  enseignant), le bouton à l'encre (jamais l'accent de la charte) ; elle est démontée dès qu'on en sort. Absente tant que le contenu ne la déclare pas.
+  À déclarer quand une question à valeurs tirées demande un calcul (France Boissons ENT-6.1, 6.2…). En évaluation (`part`), même règle.
 - **Évaluation** (lot 2) : `ouverture.part: 4` (⇔ séance `copie: true`) rend l'écran noté ; aucune `aide` ni `[[mot]]` ; « Je ne sais pas »
   ajouté en dernier ; juste +1, NSP 0, fausse −1 ÷ mauvaises réponses, plancher 0 ; « Réponse enregistrée. » sans correction.
 - **Tirage par élève** (lot 3) : `ouverture.tirage: { preparation: 2, droit: 2 }` ; les questions citées sont la **banque**, chacune porte

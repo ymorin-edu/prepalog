@@ -31,7 +31,7 @@ import { appel } from './questions.js';
 import { texteCompose } from '../phrases.js';
 import { compterAide } from '../lexique.js';
 import { fdate, fdt, norm } from './entreprise-outils.js';
-import { GESTE_TRANSFERT, GESTE_PHRASE, transfertsDe, peutTransferer, rangerTransfert, heureTransfert } from './transfert.js';
+import { GESTE_TRANSFERT, gesteTransfertDe, GESTE_PHRASE, transfertsDe, peutTransferer, rangerTransfert, heureTransfert } from './transfert.js';
 
 export function monterMessagerie({ db, E, hote, prenom, estProf, rendue, A, VOCAB, VARIANTS, SUP_BY_ID, B, COM, REC, VDOC, VFICHES, vueDeFiche,
   VINV, VQUAI, MQ, SEANCE, reponsesFournisseur, ajouterMail, declencher, accuseCorrection, etapeQuiFerme, sauver, dessiner, dessinerVue,
@@ -88,6 +88,7 @@ export function monterMessagerie({ db, E, hote, prenom, estProf, rendue, A, VOCA
       if (rendue() || !peutTransferer(db, SEANCE, m.cle)) return;
       const t = rangerTransfert(db, SEANCE, m.cle, id, Date.now());
       signal(GESTE_TRANSFERT);
+      signal(gesteTransfertDe(m.cle));
       // Comme l'envoi d'une fiche : les messages déclenchés d'abord ; un transfert CORRIGÉ (le deuxième…) reçoit l'accusé du volet.
       const arrive = declencher();
       if (!arrive && t.n > 1) accuseCorrection(m.cle, t.n);

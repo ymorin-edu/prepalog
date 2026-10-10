@@ -29,6 +29,9 @@
 // d'une copie. « Réinitialiser » efface les transferts avec le reste du travail.
 
 export const GESTE_TRANSFERT = 'messagerie:transfert';
+// Le même geste, pour CE message : `messagerie:transfert:<clé du mail>` (10/10/2026, ENT-6.1 : une question au fil sur le seul message de Malo).
+// Publié EN PLUS du générique, qui reste. Une clé n'est connue (contrôle au chargement) que si le volet la déclare : voir `volet.transferables`.
+export const gesteTransfertDe = (cle) => `${GESTE_TRANSFERT}:${cle}`;
 // Choisir une phrase dans une réponse par phrases à choisir : `messagerie:phrase:<ligne>` (ENT-6.2, 10/10/2026).
 export const GESTE_PHRASE = 'messagerie:phrase:';
 

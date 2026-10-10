@@ -36,6 +36,9 @@
 //   liste: [{ id: 'qui-est-malo', type: 'ouverture', de: 'ines', enonce, choix, juste, retour,
 //             doc: 'fiche-client',                  // ce que le bloc de gauche montre pour cette question (un id de `documents`)
 //             aide: 'Regarde la [[fiche client]].' }],   // facultative ; l'aide se replie, avec « Voir le document »
+// LA CALCULETTE du site (10/10/2026) : `ouverture.calculette: true` la pose sur l'écran tant qu'il est affiché (booléen, refusé sinon ;
+// absente tant que le contenu ne la déclare pas). Une réflexion peut porter `apres: 'bilan'` : « Merci, je note » à l'écran, ce que pense
+// le collègue arrive avec le bandeau de fin.
 // EN ÉVALUATION (lot 2, décisions de Tristan du 10/10/2026) : `ouverture.part: 4` (points sur 20) rend l'écran NOTÉ. Alors :
 // aucune aide ni mot cliquable, un choix « Je ne sais pas » toujours en dernier, pas de correction avant le bilan
 // (« Réponse enregistrée. »), et l'élève est prévenu d'une phrase. Barème par question de poids 1 : juste = +1 ;
@@ -145,6 +148,7 @@ export function compilerQuestions(Q, equipe, documentsSeance) {
     if (!o.id || !ID_OK.test(o.id)) err(`${ici} : il manque l’\`id\` (minuscules, chiffres et tirets)`);
     if (!personnes[o.de]) err(`${ici} : \`de\` = « ${o.de} » n’est pas une personne de la séance`);
     if (o.part != null && !(typeof o.part === 'number' && o.part > 0)) err(`${ici} : \`part\` (les points sur 20 de l’évaluation) est un nombre positif`);
+    if (o.calculette != null && typeof o.calculette !== 'boolean') err(`${ici} : \`calculette\` vaut true ou false (la calculette du site sur l’écran)`);
     if (!Array.isArray(o.questions) || !o.questions.length) err(`${ici} ne cite aucune question`);
     if (!Array.isArray(o.documents) || !o.documents.length) err(`${ici} n’a aucun document à montrer à gauche`);
     const connus = new Set(documentsSeance || []);
@@ -312,7 +316,7 @@ export function htmlQuestion(M, q, r, o = {}) {
       ${pret ? '' : 'disabled'}>Répondre</button><span class="note">Une seule réponse compte : la première.</span></div>`;
   } else if (o.evalOuv) {
     suite = '<p class="qf-retour" data-q-enregistree>Réponse enregistrée.</p>';
-  } else if (q.reflexion) {
+  } else if (q.reflexion && !(o.merci && q.apres === 'bilan')) {
     suite = `<p class="qf-retour"><b>Ce qu’en pense ${qui} :</b> ${ech(q.retour)}</p>`;
   } else if (o.merci) {
     suite = `<p class="qf-retour" data-q-merci>${o.copie ? '« Merci, je note. »' : '« Merci, je note. On en reparle à la fin de la séance. »'}</p>`;

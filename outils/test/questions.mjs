@@ -117,6 +117,17 @@ const monter = (o = {}) => pg.evaluate(async (o) => {
       Q.liste = Q.liste.filter((x) => x.type === 'ouverture');
       Q.etapes = [];
     }
+  // ÉTAPE A (10/10/2026) : `calculette` (la calculette du site sur l'écran d'ouverture, valeur donnée telle quelle : un texte doit
+  // être refusé) ; `qCle` : une question de réflexion au transfert d'UN message (`messagerie:transfert:<clé>`) ; `transferables` : les
+  // clés que le volet déclare ; `reflexionBilan` : la question de réflexion « vides » corrigée au bilan.
+  if (o.calculette !== undefined && Q.ouverture) Q.ouverture.calculette = o.calculette;
+  if (o.qCle) {
+    const { apresGeste } = await import('/core/declencheurs.js');
+    Q.liste.push({ id: 'au-transfert-cle', type: 'fil', de: 'Karim', quand: apresGeste('messagerie:transfert:' + o.qCle), reflexion: true,
+      enonce: 'Pourquoi ce message-là ?', choix: [{ v: 'a', lib: 'A' }, { v: 'b', lib: 'B' }], retour: 'Retour de la clé.' });
+  }
+  if (o.transferables !== undefined) U.volet = { ...U.volet, transferables: o.transferables };
+  if (o.reflexionBilan) q('vides').apres = 'bilan';
   if (o.transfert) {
     U.etapes = U.etapes.map((e) => (e.id === 'remplacement' ? { ...e, poids: 6, ecran: 'fiche:bon' } : e.id === 'quantite' ? { ...e, ecran: 'fiche:bon' } : e))
       .concat(S.ETAPE_TRANSFERT);
@@ -1188,6 +1199,117 @@ await v('Avant de commencer (tirage) : contrôle au chargement — banque trop p
   vrai(/« a ».*un texte pour chaque clé/.test(r.libsManquants), 'variante incomplète : ' + r.libsManquants);
   vrai(/« a ».*deux choix identiques/.test(r.libsIdentiques), 'variante à choix identiques : ' + r.libsIdentiques);
   vrai(/« a ».*`variante` plante \(boum\)/.test(r.plante), 'variante qui plante : ' + r.plante);
+});
+
+// ─────────────────────────────────────────────────────────────── étape A (10/10/2026)
+const calcPresente = () => pg.evaluate(() => !!document.getElementById('calculetteFlottante'));
+const nettoyerCalc = () => pg.evaluate(() => document.getElementById('calculetteFlottante')?.remove());
+const erreurMonter = async (o) => { try { await monter(o); return ''; } catch (e) { return e.message; } };
+
+await v('Avant de commencer : la calculette du site s’affiche sur l’écran quand le fichier la déclare, pas sinon, et disparaît dès qu’on en sort', async () => {
+  await nettoyerCalc();
+  await monter({ ouverture: true });
+  vrai(!(await calcPresente()), 'calculette sans déclaration');
+  await nettoyerCalc();
+  await monter({ ouverture: true, calculette: true });
+  vrai(await calcPresente(), 'calculette déclarée mais absente de l’écran d’ouverture');
+  vrai(/encre/.test(await pg.$eval('#calculetteFlottante .calc-fab', (b) => b.style.background)), 'le bouton ne prend pas l’encre');
+  // Elle survit aux réponses (l'écran se redessine) et au changement de question.
+  await repondreO('ouv-a', 'x');
+  await pg.click(`${Z} [data-ouv-aller="1"]`); await pause();
+  vrai(await calcPresente(), 'calculette perdue en répondant');
+  await repondreO('ouv-b', 'y');
+  await pg.click(`${Z} [data-ouv-aller="2"]`); await pause();
+  await repondreO('ouv-c', 'z');
+  vrai(await calcPresente(), 'calculette perdue après la dernière réponse');
+  // En sortant de l'écran (Accueil, puis Messagerie) : démontée ; en y revenant : remontée.
+  await aller('accueil');
+  vrai(!(await calcPresente()), 'la calculette flotte encore sur l’accueil');
+  await aller('mail');
+  vrai(!(await calcPresente()), 'la calculette flotte encore sur la messagerie');
+  await aller('ouverture');
+  vrai(await calcPresente(), 'la calculette ne revient pas sur l’écran d’ouverture');
+  await aller('accueil');
+  vrai(!(await calcPresente()), 'démontée après le retour');
+  // L'enseignant voit l'écran comme l'élève, calculette comprise.
+  await nettoyerCalc();
+  await monter({ ouverture: true, calculette: true, role: 'prof' });
+  await aller('ouverture');
+  vrai(await calcPresente(), 'calculette absente de l’écran de l’enseignant');
+  await nettoyerCalc();
+});
+
+await v('Avant de commencer : `calculette` qui n’est pas un booléen → la séance refuse de s’ouvrir et le message nomme la faute', async () => {
+  for (const mauvais of ['oui', 1, 'true', {}]) {
+    const m = await erreurMonter({ ouverture: true, calculette: mauvais });
+    vrai(/l’écran d’ouverture : .calculette. vaut true ou false/.test(m), `calculette = ${JSON.stringify(mauvais)} accepté : ${m}`);
+  }
+  egal(await erreurMonter({ ouverture: true, calculette: false }), '', 'calculette: false refusé');
+  await nettoyerCalc();
+});
+
+await v('Transfert : le geste du message (`messagerie:transfert:<clé>`) est publié EN PLUS du générique ; une question sur CE message arrive, pas sur un autre ; une clé inconnue empêche la séance de s’ouvrir', async () => {
+  // Le message de la brasserie est semé avec un `transfert` : sa clé est connue sans rien déclarer.
+  await monter({ qTransfert: true, qCle: 'brasserie-quai' });
+  await ouvrirBrasserie();
+  await pg.click(`${Z} [data-transfert-ouvrir]`);
+  await pg.click(`${Z} [data-transferer="ines"]`);
+  await pg.click(`${Z} [data-confirme-oui]`);
+  await pause();
+  const G = (await base()).gestes['essai-questions'];
+  vrai(typeof G['messagerie:transfert'] === 'number', 'le geste générique n’est plus publié');
+  vrai(typeof G['messagerie:transfert:brasserie-quai'] === 'number', 'le geste du message n’est pas publié');
+  egal(Object.keys(G).filter((k) => /^messagerie:transfert/.test(k)).sort(), ['messagerie:transfert', 'messagerie:transfert:brasserie-quai'], 'gestes de transfert');
+  // Le générique est d'abord posé (`au-transfert`), puis la question du message, une à la fois.
+  vrai(await present('[data-q-panneau="au-transfert"]'), 'la question générique ne vient plus');
+  await repondreQ('au-transfert', 'pas-pense');
+  await reprendre();
+  vrai(await present('[data-q-panneau="au-transfert-cle"]'), 'la question du message n’arrive pas après son geste');
+  // Une clé déclarée par le volet (message qui arrive plus tard), mais un autre message que celui qu'on transfère : rien n'arrive.
+  await monter({ qCle: 'plus-tard', transferables: ['plus-tard'] });
+  await ouvrirBrasserie();
+  await pg.click(`${Z} [data-transfert-ouvrir]`);
+  await pg.click(`${Z} [data-transferer="ines"]`);
+  await pg.click(`${Z} [data-confirme-oui]`);
+  await pause();
+  vrai(!(await present('[data-q-panneau]')), 'une question sur un autre message est arrivée');
+  vrai(!(((await base()).gestes['essai-questions']) || {})['messagerie:transfert:plus-tard'], 'le geste d’un autre message est rangé');
+  // Faute de frappe : la séance ne s'ouvre pas, et le message dit ce qui est connu.
+  const m = await erreurMonter({ qCle: 'nimporte-quoi' });
+  vrai(/question « au-transfert-cle » : geste inconnu « messagerie:transfert:nimporte-quoi ».*messagerie:transfert:brasserie-quai/.test(m), 'clé inconnue acceptée : ' + m);
+  const t = await erreurMonter({ transferables: 'msg-malo' });
+  vrai(/volet\.transferables est la liste des clés/.test(t), 'transferables mal formé accepté : ' + t);
+});
+
+await v('Questions : une réflexion corrigée au bilan (`reflexion` + `apres: bilan`) dit « Merci, je note » sans rien souffler, et ce que pense le collègue arrive avec le bandeau de fin', async () => {
+  const jusquauBilan = async (o, bonnes) => {
+    await monter({ variante: 'jamais', ...o });
+    await choisirRemplacement('LIM-1L');
+    await envoyerBon('8');
+    await aller('etape:avant-malo');
+    await repondreQ('qui-utilise-le-bon', bonnes ? 'prepa' : 'chauffeur');
+    await repondreQ('ce-que-malo-attend', bonnes ? 'remplacement' : 'excuses');
+    await pg.click(`${Z} [data-q-continuer]`);
+    await pause();
+    await pg.click(`${Z} [data-repondre]`);
+    await pg.fill(`${Z} #repT`, 'Bonjour, ce sera de la limonade.');
+    await pg.click(`${Z} #formRep button[type="submit"]`);
+    await pause();
+    await repondreQ('vides', 'trier');
+  };
+  await jusquauBilan({ reflexionBilan: true }, false);
+  vrai(await present('[data-q-merci]'), 'pas de « Merci, je note »');
+  vrai(!/Ce qu’en pense/.test(await pg.textContent(`${Z} [data-q-panneau]`)), 'la réflexion différée donne déjà son retour');
+  vrai(!/Les trois comptent/.test(await pg.textContent(`${Z} [data-q-panneau]`)), 'le retour est déjà là');
+  await reprendre();
+  await repondreQ('ou-verifier', 'mail');
+  await reprendre();
+  vrai(await present('[data-fin-seance] [data-fin]'), 'pas de bandeau de fin');
+  vrai(/Les trois comptent/.test(await pg.textContent(`${Z} [data-fin-retour="vides"]`)), 'le retour de la réflexion manque au bilan');
+  vrai(/pour réfléchir/.test(await pg.textContent(`${Z} [data-fin-retour="vides"]`)), 'libellé du retour');
+  // Sans `apres`, une réflexion garde son retour tout de suite (rien ne change pour les séances existantes).
+  await jusquauBilan({}, true);
+  vrai(/Ce qu’en pense Karim/.test(await pg.textContent(`${Z} [data-q-panneau]`)), 'la réflexion ordinaire a perdu son retour');
 });
 
 await v('Questions : aucune erreur de page pendant le bloc', async () => {

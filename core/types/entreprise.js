@@ -29,7 +29,7 @@ import { creerGesteTableur, retourDeTemps } from './export-tableur.js';
 import { graineDeBase, poserGraine, declarerTirage, estTirage, fautesTirage } from '../tirage.js';
 import { BAREME_AFFICHE, pointsBonus } from '../notes.js';
 import { gestesDe } from '../declencheurs.js';
-import { GESTE_TRANSFERT, GESTE_PHRASE, rouvrirTransfert, transfertsDe, fauteTransfert } from './transfert.js';
+import { GESTE_TRANSFERT, gesteTransfertDe, GESTE_PHRASE, rouvrirTransfert, transfertsDe, fauteTransfert } from './transfert.js';
 import { preparerPhrases } from '../phrases.js';
 import { brancherLexique, compterAide } from '../lexique.js';
 import { controlerOptions, controlerIdentifiants } from './entreprise-options.js';
@@ -230,6 +230,19 @@ export function creerEntreprise(U) {
   {
     // La messagerie est de toutes les séances : son geste (le transfert d'un message, chantier D-1) est toujours connu.
     const connus = new Set([...VFICHES, ...VANIMS, VPL, VENT, VQUAI].filter(Boolean).flatMap((V) => V.signaux || []).concat(GESTE_TRANSFERT));
+    // Le geste de transfert d'UN message (`messagerie:transfert:<clé>`) : connu pour les messages que le volet sème avec un
+    // `transfert`, et pour ceux qu'il déclare dans `volet.transferables` (les messages qui arrivent plus tard, par un déclencheur).
+    // Une clé qu'il ne déclare pas (faute de frappe) empêche la séance de s'ouvrir.
+    try {
+      ((U.volet && typeof U.volet.semer === 'function' && U.volet.semer('Élève').mails) || [])
+        .forEach((m) => { if (m.transfert && m.cle) connus.add(gesteTransfertDe(m.cle)); });
+    } catch (e) { /* un volet qui ne se sème pas sans base : seuls les `transferables` sont connus */ }
+    if (U.volet && U.volet.transferables != null) {
+      if (!Array.isArray(U.volet.transferables) || U.volet.transferables.some((c) => typeof c !== 'string' || !c)) {
+        throw new Error('volet.transferables est la liste des clés (texte) des messages à transférer');
+      }
+      U.volet.transferables.forEach((c) => connus.add(gesteTransfertDe(c)));
+    }
     // Les gestes « choisir une phrase » : une ligne de chaque réponse par phrases à choisir semée par le volet.
     try {
       ((U.volet && typeof U.volet.semer === 'function' && U.volet.semer('Élève').mails) || []).forEach((m) => ((m.phrases && m.phrases.lignes) || [])
@@ -1099,10 +1112,12 @@ export function creerEntreprise(U) {
       // Les questions corrigées AU BILAN (`apres: 'bilan'`, questions au fil) : leur explication vient avec le bandeau de fin.
       function retoursAuBilan() {
         if (!MQ) return '';
-        const L = MQ.notees.filter((q) => q.apres === 'bilan' && repondu(reponse(db, MQ, q.id)));
+        // Les questions notées corrigées au bilan, et les réflexions différées (`reflexion` + `apres: 'bilan'` : « Merci, je note »
+        // à l'écran, ce que pense le collègue arrive ici).
+        const L = MQ.liste.filter((q) => q.type !== 'ouverture' && q.apres === 'bilan' && repondu(reponse(db, MQ, q.id)));
         if (!L.length) return '';
         return `<div class="ent-fin-retours" data-fin-retours>${L.map((q) => `<p data-fin-retour="${ech(q.id)}"><b>${ech(appel(MQ.personnes[q.de]))}</b>
-          (${ech(q.groupe)}) : « ${ech(q.retour)} »</p>`).join('')}</div>`;
+          (${ech(q.reflexion ? 'pour réfléchir' : q.groupe)}) : « ${ech(q.retour)} »</p>`).join('')}</div>`;
       }
       function bandeauFin(res) {
         if (estProf || COPIE || !ctx.meta.parcours || !etapes.length) return '';
@@ -1997,8 +2012,11 @@ export function creerEntreprise(U) {
         // La calculette du site, sur l'écran du plan seulement (entraînement, évaluation : voir entrepot.js).
         // Posée sur la page, hors de la zone de la séance : elle prendrait l'accent de la charte (le rouge de
         // Smoby dirait « faux », un vert « juste »). Son bouton est donc à l'encre, quelle que soit l'entreprise.
-        if (VENT) {
-          if (E.vue === 'entrepot' && VENT.calculette && VENT.calculette(apiEntrepot())) {
+        // Et sur l'écran « Avant de commencer » quand le fichier de questions la déclare (`ouverture.calculette: true`,
+        // 10/10/2026) : montée tant que cet écran est affiché, démontée dès qu'on en sort.
+        const calcOuverture = !!(MQ && MQ.ouverture && MQ.ouverture.calculette === true);
+        if (VENT || calcOuverture) {
+          if ((E.vue === 'entrepot' && VENT && VENT.calculette && VENT.calculette(apiEntrepot())) || (E.vue === 'ouverture' && calcOuverture)) {
             const b = monterCalculette().querySelector('.calc-fab');
             if (b) { b.style.background = 'var(--encre)'; b.style.color = 'var(--panneau)'; }
           } else demonterCalculette();
