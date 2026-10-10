@@ -243,28 +243,50 @@ export function dessinerCharge(I, p, sc) {
 /* ============================== chariot élévateur frontal (fourches vers le fond) */
 // `c` : { x, y (bout des fourches), lev (hauteur des fourches), charge (une charge portée ou null) }.
 // Le cariste est une silhouette SANS VISAGE (règle du projet).
+// Options ajoutées pour le quai iso (chantier D-4, étape 5 ; sans elles, le dessin est celui de la scène animation, au caractère près) :
+//   `c.chargeSvg` : un dessin déjà fait (la palette du quai, sur ses fourches), posé à la place de `charge` ;
+//   `c.coupe` : { yMin, yMax }, dans le repère du chariot : les boîtes sont coupées à cette tranche (le mur du quai) et un objet rond
+//     (roue, cariste) n'est dessiné que si son centre y est ;
+//   `c.gilet` : le cariste porte le gilet jaune du kit (comme `personne`), la tête de peau et de cheveux, vue de dos, sans visage.
+// Les éléments dessinés en pixels (tête, buste du cariste) suivent `I.unite` : à l'échelle de la scène animation (82), ils valent ce qu'ils valaient.
 export function dessinerChariotFrontal(I, c, sc) {
-  const { P, boite } = I;
+  const { P } = I;
+  const coupe = c.coupe || null;
+  const boite = coupe ? (bx, by, bz, bw, bd, bh, bc) => boiteY(I, bx, by, bz, bw, bd, bh, bc, coupe.yMin, coupe.yMax) : I.boite;
+  const ici = (yy) => !coupe || (yy >= coupe.yMin && yy < coupe.yMax);
+  const kp = I.unite / 82, kg = c.gilet ? kp * 1.3 : kp;   // le cariste au gilet est un peu agrandi : à l'échelle du quai, le jaune doit se voir
   const x = c.x, y = c.y, l = c.lev;
   let g = '';
   // fourches (au fond, dessinées d'abord)
   g += boite(x + .2, y, l, .12, 1.02, .05, ['#4a4f52', '#33373a', '#2a2e30']) + boite(x + .68, y, l, .12, 1.02, .05, ['#4a4f52', '#33373a', '#2a2e30']);
-  if (c.charge) g += dessinerCharge(I, Object.assign({}, c.charge, { x, y, z: l + .05 }), sc);
+  if (c.chargeSvg) g += c.chargeSvg;
+  else if (c.charge) g += dessinerCharge(I, Object.assign({}, c.charge, { x, y, z: l + .05 }), sc);
   // mât
   g += boite(x + .1, y + 1.02, 0, .1, .1, 2.1, ['#5a5f62', '#45494c', '#3a3e41']) + boite(x + .8, y + 1.02, 0, .1, .1, 2.1, ['#5a5f62', '#45494c', '#3a3e41']);
   g += boite(x + .1, y + 1.02, 2.0, .8, .1, .1, ['#5a5f62', '#45494c', '#3a3e41']);
   g += boite(x + .18, y + 1.0, l, .64, .06, .32, ['#4a4f52', '#3a3e41', '#33373a']); // tablier
   // roues côté gauche (cachées en partie par la caisse) : rondes (06/10/2026, ENT-1.1 §7.9)
-  g += roue(I, x + .04, y + 1.36, .15, .15, .12) + roue(I, x + .04, y + 1.9, .15, .15, .12);
+  if (ici(y + 1.36)) g += roue(I, x + .04, y + 1.36, .15, .15, .12);
+  if (ici(y + 1.9)) g += roue(I, x + .04, y + 1.9, .15, .15, .12);
   // caisse et contrepoids
   g += boite(x + .1, y + 1.12, .12, .8, .75, .55, ['#e58a2a', '#d97a1c', '#b5631a']);
   g += boite(x + .1, y + 1.85, .12, .8, .3, .75, ['#c86d18', '#b5631a', '#9a5415']);
   // siège + cariste (silhouette sans visage)
   g += boite(x + .32, y + 1.5, .67, .36, .3, .12, ['#2a2d2f', '#1d1f20', '#151718']);
-  const [hx, hy] = P(x + .5, y + 1.55, 1.25);
-  g += `<path d="M${hx - 14},${hy + 34} Q${hx},${hy + 4} ${hx + 14},${hy + 34} Z" fill="#33393d"/><circle cx="${hx}" cy="${hy}" r="10" fill="#33393d"/>`;
+  if (ici(y + 1.55)) {
+    const [hx, hy] = P(x + .5, y + 1.55, 1.25);
+    if (c.gilet) {
+      // vu de dos : gilet jaune à bandes, bras sur le volant, nuque et cheveux (aucun trait du visage)
+      g += `<path d="M${hx - 14 * kg},${hy + 34 * kg} Q${hx},${hy + 4 * kg} ${hx + 14 * kg},${hy + 34 * kg} Z" fill="#f0c419"/>`
+        + `<rect x="${hx - 11.5 * kg}" y="${hy + 17 * kg}" width="${23 * kg}" height="${3 * kg}" fill="#e6e8e8"/>`
+        + `<rect x="${hx - 13 * kg}" y="${hy + 25 * kg}" width="${26 * kg}" height="${3 * kg}" fill="#e6e8e8"/>`
+        + `<circle cx="${hx}" cy="${hy}" r="${10 * kg}" fill="#c99a76"/>`
+        + `<path d="M${hx - 10 * kg},${hy} A${10 * kg},${10 * kg} 0 0 1 ${hx + 10 * kg},${hy} Q${hx},${hy + 7 * kg} ${hx - 10 * kg},${hy} Z" fill="#3a2a1f"/>`;
+    } else g += `<path d="M${hx - 14 * kp},${hy + 34 * kp} Q${hx},${hy + 4 * kp} ${hx + 14 * kp},${hy + 34 * kp} Z" fill="#33393d"/><circle cx="${hx}" cy="${hy}" r="${10 * kp}" fill="#33393d"/>`;
+  }
   // roues côté droit (devant)
-  g += roue(I, x + .86, y + 1.36, .15, .15, .12) + roue(I, x + .86, y + 1.9, .15, .15, .12);
+  if (ici(y + 1.36)) g += roue(I, x + .86, y + 1.36, .15, .15, .12);
+  if (ici(y + 1.9)) g += roue(I, x + .86, y + 1.9, .15, .15, .12);
   // protège-conducteur
   [[.14, 1.2], [.82, 1.2], [.14, 1.95], [.82, 1.95]].forEach(([a, b]) => { g += boite(x + a, y + b, .67, .05, .05, 1.0, ['#3a3e41', '#2a2e30', '#222527']); });
   g += boite(x + .12, y + 1.18, 1.67, .78, .84, .05, ['#3a3e41', '#2a2e30', '#222527']);

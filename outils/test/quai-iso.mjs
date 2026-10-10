@@ -19,6 +19,9 @@
 //
 // ÉTAPE 4 — L'UNITÉ ET LES LIBELLÉS (`unite`, `libelles`, `motifs`) : sans eux, les textes d'aujourd'hui, caractère pour caractère ; avec `fûts`, plus un seul « carton » à l'écran.
 //
+// ÉTAPE 5 — LE DÉCHARGEMENT AU CHARIOT FRONTAL (`dechargement.par: 'cariste'` + `rendu: 'iso'`) : le plan du chariot (fonction pure : ordre de sortie, ouverture, aucune collision),
+// le dessin (gilet jaune, roues rondes, coupé au mur), les mêmes places qu'avec le chauffeur, le mouvement réduit. Sans `cariste`, rien ne change (référence de l'étape 0).
+//
 // Pour régénérer la référence (seulement si le dessin de Spartoo doit vraiment changer, avec l'accord de
 // Tristan) : QUAI_ISO_REGENERER=1 node outils/test.mjs quai-iso
 
@@ -1836,6 +1839,191 @@ await v('Quai unité : un quai en fûts — « Nombre de fûts endommagés », r
   const trouves = Object.entries(S).filter(([k, t]) => typeof t === 'string' && /carton/i.test(t)).map(([k, t]) => `${k} : …${t.match(/.{0,40}carton.{0,40}/i)[0].replace(/\s+/g, ' ')}…`);
   egal(trouves, [], 'le mot « carton » à l’écran d’un quai en fûts');
   await p.close();
+});
+
+/* ---- étape 5 : le déchargement au chariot frontal (`dechargement.par: 'cariste'`, `rendu: 'iso'`) */
+
+// Le déclarant de `dechargement` d'un quai d'essai : `par` absent, ou 'chauffeur', ou 'cariste'.
+const DECH = (par) => ({ dechargement: Object.assign({ ouverture: 0.5, parPalette: 1 }, par ? { par } : {}) });
+// Une page à horloge simulée, la séance d'ENT-6.4 (quatre palettes de fûts), le déchargement lancé : le temps ne passe que par `clock.runFor`.
+async function pageDecharge(par) {
+  const p = await ctxSM.newPage();
+  p.setDefaultTimeout(8000);
+  p.on('pageerror', (e) => erreurs.push('PAGEERROR: ' + e.message));
+  await p.clock.install({ time: 0 });
+  await p.goto(BASE);
+  await p.waitForSelector('#btnProf', { timeout: 8000 });
+  await monterAvec(p, { palettes: PALS, extra: DECH(par) });
+  await p.waitForSelector(`${HOTE} [data-q="passer1"], ${HOTE} [data-q-inspection]`);
+  if (await p.$(`${HOTE} [data-q="passer1"]`)) await p.click(`${HOTE} [data-q="passer1"]`);
+  await p.waitForSelector(`${HOTE} [data-q-inspection]`);
+  await decharger(p);
+  await p.click(`${HOTE} [data-q="decharger"]`);
+  return p;
+}
+const legende = (p) => p.$eval(`${HOTE} [data-q-leg]`, (n) => n.textContent.trim());
+// Les places d'arrivée des quatre palettes de fûts, calculées À LA MAIN (palette 0,95 m, pas de 1,15 m, porte à x = 2,6 + 0,4) : [x, y] du coin avant-gauche.
+const PLACES_4 = [[2.525, 3.25], [3.675, 3.25], [2.525, 2.1], [3.675, 2.1]];
+const GAB_4 = [[0.95, 0.95], [0.95, 0.95], [0.95, 0.95], [0.95, 0.95]];
+// Le plan du chariot de ces quatre palettes (dans le navigateur : le moteur est un module du site).
+const planDe = (p, gab, places) => p.evaluate(async ([gab, places]) => {
+  const Q = await import('/core/types/quai.js');
+  const plan = Q.planChariot({ gab, places, xPorte: 3.0, ySlot: -2.9, t0: 1800 });
+  const etats = [];
+  for (let t = 0; t <= plan.fin; t += 25) etats.push([t, Q.etatChariot(plan, t)]);
+  return { plan, etats, aPose: plan.tPose.map((t) => Q.etatChariot(plan, t)) };
+}, [gab, places]);
+
+await v('Quai chariot : avec « cariste », un chariot au gilet jaune décharge ; sans (chauffeur, ou rien de déclaré) : aucun chariot, le transpalette rouge', async () => {
+  const lire = (p) => p.$eval(`${HOTE} [data-q-scene2]`, (s) => {
+    const gs = [...s.querySelectorAll('[data-iso-chariot]')];
+    return { chariots: gs.length, gilet: gs.some((g) => g.innerHTML.includes('#f0c419')), transpalette: s.innerHTML.includes('#d93a2b'), aria: s.getAttribute('aria-label') };
+  });
+  const c = await pageDecharge('cariste');
+  await c.clock.runFor(2500);
+  const rc = await lire(c);
+  vrai(rc.chariots >= 1, 'aucun chariot dessiné alors que le cariste décharge');
+  vrai(rc.gilet, 'le cariste n’a pas son gilet jaune');
+  vrai(!rc.transpalette, 'le transpalette du chauffeur est encore dessiné');
+  vrai(/au chariot élévateur/.test(rc.aria), `l’aria-label ne dit pas « au chariot élévateur » : ${rc.aria}`);
+  vrai(/Le cariste sort la palette P4 au chariot \(1 sur 4\)/.test(await legende(c)), `légende : ${await legende(c)}`);
+  await c.close();
+  for (const par of ['chauffeur', null]) {
+    const p = await pageDecharge(par);
+    await p.clock.runFor(2500);
+    const r = await lire(p);
+    egal(r.chariots, 0, `un chariot est dessiné pour par = ${par}`);
+    vrai(r.transpalette, `le transpalette du chauffeur manque pour par = ${par}`);
+    vrai(/au transpalette/.test(r.aria) && /Le chauffeur sort la palette P1 au transpalette \(1 sur 4\)/.test(await legende(p)), `textes du chauffeur pour par = ${par} : ${r.aria} / ${await legende(p)}`);
+    await p.close();
+  }
+});
+
+await v('Quai chariot : le plan — les palettes sortent dans l’ordre inverse du chargement, le chariot entre par l’ouverture et ne rencontre jamais une palette posée', async () => {
+  const p = await pageEssai();
+  const K = 0.85, FL = 1.02 * K, BL = 2.15 * K, DEMI = 0.45;   // le chariot de la scène animation à l’échelle du quai, écrit à la main
+  const coupe = (a, b) => a.x0 < b.x1 - 1e-6 && b.x0 < a.x1 - 1e-6 && a.y0 < b.y1 - 1e-6 && b.y0 < a.y1 - 1e-6;
+  const jeux = {
+    'quatre palettes de fûts': [GAB_4, PLACES_4],
+    'une palette de cartons': [[[0.8, 1.2]], [[2.6, 2.1]]],
+    'deux palettes de cartons': [[[0.8, 1.2], [0.8, 1.2]], [[2.6, 2.1], [3.6, 2.1]]],
+    'trois palettes de fûts': [GAB_4.slice(0, 3), PLACES_4.slice(0, 3)],
+  };
+  for (const [nom, [gab, places]] of Object.entries(jeux)) {
+    const { plan, etats, aPose } = await planDe(p, gab, places);
+    const N = gab.length;
+    egal(plan.ordre, gab.map((_, n) => N - 1 - n), `${nom} : ordre de sortie (la dernière chargée sort la première)`);
+    vrai(plan.tPose.every((t, i) => t > plan.tLift[i] && (i === 0 || t > plan.tPose[i - 1])), `${nom} : levée puis pose, palette après palette`);
+    let enterDans = 0, dedansHorsPorte = 0, collisions = [];
+    for (const [t, s] of etats) {
+      const rang = plan.tLift.findIndex((tl, i) => t >= tl && t < plan.tPose[i]);
+      const n = rang < 0 ? null : plan.ordre[rang], charge = n == null ? null : gab[n];
+      let x0 = s.cx - DEMI, x1 = s.cx + DEMI, y0 = s.yc;
+      if (charge) { x0 = Math.min(x0, s.cx - charge[0] / 2); x1 = Math.max(x1, s.cx + charge[0] / 2); y0 = Math.min(y0, s.yc + FL - charge[1]); }
+      const emprise = { x0, x1, y0, y1: s.yc + BL };
+      if (y0 < -0.01) { enterDans++; if (x0 < 2.4 - 1e-6 || x1 > 3.6 + 1e-6) dedansHorsPorte++; }
+      const derniere = plan.tPose.reduce((d, tp, u) => (t >= tp ? u : d), -1);
+      plan.ordre.forEach((m, u) => {
+        // La palette qu'on vient de poser est encore sur les fourches tant que le chariot ne les a pas sorties : on ne compte alors que son corps.
+        const sousLesFourches = u === derniere && s.yc < places[m][1] + gab[m][1] - 1e-6;
+        const e = sousLesFourches ? { x0: emprise.x0, x1: emprise.x1, y0: s.yc + FL, y1: emprise.y1 } : emprise;
+        if (t >= plan.tPose[u] && coupe(e, { x0: places[m][0], y0: places[m][1], x1: places[m][0] + gab[m][0], y1: places[m][1] + gab[m][1] })) collisions.push(`${t} ms contre la place de la palette ${m + 1}`);
+      });
+    }
+    vrai(enterDans > 20, `${nom} : le chariot entre dans la remorque`);
+    egal(dedansHorsPorte, 0, `${nom} : dès qu’une partie du chariot (ou de sa charge) est derrière le mur, elle est dans la largeur de l’ouverture (2,4 à 3,6 m)`);
+    egal(collisions.slice(0, 3), [], `${nom} : le chariot (et sa charge) traverse une palette déjà posée`);
+    // La palette portée est posée exactement à sa place.
+    plan.ordre.forEach((n, u) => {
+      const s = aPose[u];
+      const [gw, gd] = gab[n];
+      vrai(Math.abs(s.cx - gw / 2 - places[n][0]) < 0.01 && Math.abs(s.yc + FL - gd - places[n][1]) < 0.01, `${nom} : la palette ${n + 1} est posée à sa place (chariot en ${s.cx.toFixed(2)} ; ${s.yc.toFixed(2)})`);
+    });
+  }
+  await p.close();
+});
+
+await v('Quai chariot : à l’écran, le chariot entre par l’ouverture et il est coupé au mur — la part dans la remorque est dans le clip de l’ouverture, la part devant le mur n’y est pas', async () => {
+  const c = await pageDecharge('cariste');
+  const quand = await c.evaluate(async () => {
+    const Q = await import('/core/types/quai.js'), K = Q.CHARIOT_QUAI.K;
+    const plan = Q.planChariot({ gab: [[.95, .95], [.95, .95], [.95, .95], [.95, .95]], places: [[2.525, 3.25], [3.675, 3.25], [2.525, 2.1], [3.675, 2.1]], xPorte: 3.0, ySlot: -2.9, t0: 1800 });
+    // `dedansSeul` : le chariot entier derrière le mur (bout des fourches + 2,15 m) ; `coupe` : ses deux roues avant (à 1,36 m du bout des fourches) derrière le mur, les deux arrière devant.
+    const dedansSeul = [], coupe = [];
+    for (let t = 0; t < plan.fin; t += 20) {
+      const s = Q.etatChariot(plan, t);
+      if (s.yc + 2.15 * K < -0.1) dedansSeul.push(t);
+      if (s.yc + 1.36 * K < -0.08 && s.yc + 1.9 * K > 0.08) coupe.push(t);
+    }
+    return { dedans: dedansSeul[0], coupe: coupe[0] };
+  });
+  vrai(quand.dedans != null && quand.coupe != null, 'le plan ne passe ni derrière le mur ni à cheval dessus');
+  const lire = () => c.$eval(`${HOTE} [data-q-scene2]`, (s) => {
+    const clip = s.querySelector('g[clip-path="url(#quaiIsoOuv)"]');
+    const d = [...s.querySelectorAll('[data-iso-chariot="dedans"]')], h = [...s.querySelectorAll('[data-iso-chariot="dehors"]')];
+    return { dedans: d.length, dehors: h.length, dedansDansClip: d.every((g) => clip && clip.contains(g)), dehorsHorsClip: h.every((g) => !(clip && clip.contains(g))),
+      rouesDedans: d.reduce((n, g) => n + g.querySelectorAll('circle[transform^="matrix("]').length, 0), rouesDehors: h.reduce((n, g) => n + g.querySelectorAll('circle[transform^="matrix("]').length, 0) };
+  });
+  // En entrant, à cheval sur le mur : deux parts, chacune avec ses deux roues, et le total des roues reste celui d'un seul chariot.
+  await c.clock.runFor(quand.coupe);
+  const B = await lire();
+  egal([B.dedans, B.dehors], [1, 1], 'à cheval sur le mur : une part de chaque côté');
+  vrai(B.dedansDansClip && B.dehorsHorsClip, 'la part dedans doit être dans le clip de l’ouverture, la part dehors hors du clip');
+  egal([B.rouesDedans, B.rouesDehors], [14, 14], 'à cheval sur le mur : deux roues derrière, deux devant (aucune roue dessinée deux fois)');
+  // Tout entier dans la remorque : seulement la part « dedans », dans le clip, avec ses quatre roues.
+  await c.clock.runFor(quand.dedans - quand.coupe);
+  const A = await lire();
+  egal([A.dedans, A.dehors], [1, 0], 'dans la remorque : la part dedans seule');
+  vrai(A.dedansDansClip, 'la part dedans n’est pas dans le clip de l’ouverture');
+  egal(A.rouesDedans, 28, 'dans la remorque : les quatre roues rondes (7 cercles chacune)');
+  await c.close();
+});
+
+await v('Quai chariot : le chauffeur du camion reste debout près de l’accueil, il ne décharge pas ; les quatre palettes sortent dans l’ordre P4, P3, P2, P1 (légende et journal)', async () => {
+  const c = await pageDecharge('cariste');
+  const chauffeur = () => c.$$eval(`${HOTE} [data-q-scene2] ellipse[fill="rgba(0,0,0,.2)"]`, (L) => L.map((e) => [+e.getAttribute('cx'), +e.getAttribute('cy')]));
+  await c.clock.runFor(2500);
+  const t1 = await chauffeur();
+  const legs = [await legende(c)];
+  for (const dt of [4500, 5000, 6000, 6500]) { await c.clock.runFor(dt); legs.push(await legende(c)); }
+  const t2 = await chauffeur();
+  egal(t1.length, 1, 'une seule personne dessinée (le chauffeur ; le cariste est dans le chariot)');
+  egal(t2, t1, 'le chauffeur n’a pas bougé');
+  egal(await c.$eval(`${HOTE} [data-q-scene2]`, (s) => s.innerHTML.includes('#d93a2b')), false, 'aucun transpalette');
+  const ids = legs.map((l) => (l.match(/palette (P\d)/) || [])[1]);
+  vrai(ids[0] === 'P4', `la première palette sortie n’est pas P4 : ${legs[0]}`);
+  vrai(ids.every((id, k) => k === 0 || ids[k - 1] >= id), `les palettes ne sortent pas dans l’ordre P4, P3, P2, P1 : ${ids}`);
+  await c.clock.runFor(40000);
+  const fin = await c.evaluate(() => ({ journal: window.__qs.db.quais['essai-inspection'].journal.slice(), leg: document.querySelector('#qiScene [data-q-leg]').textContent.trim(), vers3: !document.querySelector('#qiScene [data-q="vers3"]').disabled }));
+  const rang = (id) => fin.journal.findIndex((l) => l.includes(`${id} posée sur le quai`));
+  vrai([rang('P1'), rang('P2'), rang('P3'), rang('P4')].every((r) => r >= 0), `une palette n’est pas dans le journal : ${fin.journal.join(' | ')}`);
+  vrai(rang('P1') < rang('P2') && rang('P2') < rang('P3') && rang('P3') < rang('P4'), `le journal (le plus récent en premier) ne dit pas P4, P3, P2, P1 : ${fin.journal.join(' | ')}`);
+  vrai(/Les 4 palettes sont en zone de réception\. Le chauffeur attend ta signature\./.test(fin.leg), `légende de fin : ${fin.leg}`);
+  vrai(fin.vers3, 'le déchargement fini, « Compter la palette » doit s’ouvrir');
+  await c.close();
+});
+
+await v('Quai chariot : mouvement réduit — l’état final tout de suite : quatre palettes en place, le chariot garé devant le mur (quatre roues rondes), le chauffeur debout ; mêmes places qu’avec le chauffeur', async () => {
+  const lireFin = async (extra) => {
+    const p = await pageAvec({ palettes: PALS, extra });
+    await jusquaEtape2(p);
+    const r = await p.$eval(`${HOTE} [data-q-scene2]`, (s) => {
+      const C = Object.fromEntries([...s.querySelectorAll('[data-iso-pal]')].map((g) => { const b = g.getBBox(); return [g.dataset.isoPal, [+(b.x + b.width / 2).toFixed(1), +(b.y + b.height / 2).toFixed(1)]]; }));
+      const ch = [...s.querySelectorAll('[data-iso-chariot]')];
+      return { C, chariots: ch.map((g) => g.dataset.isoChariot), roues: ch.reduce((n, g) => n + g.querySelectorAll('circle[transform^="matrix("]').length, 0),
+        personnes: s.querySelectorAll('ellipse[fill="rgba(0,0,0,.2)"]').length, leg: s.parentElement.querySelector('[data-q-leg]').textContent.trim() };
+    });
+    await p.close();
+    return r;
+  };
+  const car = await lireFin(DECH('cariste')), chauf = await lireFin(DECH('chauffeur'));
+  egal(Object.keys(car.C).sort(), ['P1', 'P2', 'P3', 'P4'], 'les quatre palettes sont posées');
+  for (const id of ['P1', 'P2', 'P3', 'P4']) vrai(Math.abs(car.C[id][0] - chauf.C[id][0]) < 0.6 && Math.abs(car.C[id][1] - chauf.C[id][1]) < 0.6, `${id} : au chariot ${car.C[id]}, au transpalette ${chauf.C[id]} : pas la même place`);
+  egal(car.chariots, ['dehors'], 'le chariot est garé devant le mur, entier (une seule part)');
+  egal(car.roues, 28, 'quatre roues rondes de sept cercles');
+  egal(car.personnes, 1, 'le chauffeur est debout');
+  egal(chauf.chariots, [], 'avec le chauffeur : pas de chariot');
+  vrai(/Les 4 palettes sont en zone de réception\. Le chauffeur attend ta signature\./.test(car.leg), `légende : ${car.leg}`);
 });
 
 await v('Quai iso : la page d’essai ne demande rien hors du site et ne plante pas', async () => {

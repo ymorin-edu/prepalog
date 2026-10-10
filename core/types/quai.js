@@ -84,6 +84,9 @@
 // silhouette sans visage sort les palettes, au lieu du chauffeur au transpalette (légende « Yanis sort la
 // palette P2 au chariot »). Un seul camion dans ce mode (plusieurs camions : l'ordre se décide sur les
 // tickets, donc sur le froid).
+// Avec `rendu: 'iso'` (D-4, étape 5) le chariot est dessiné à l'échelle du quai (voir `planChariot`) : il entre par l'ouverture,
+// prend la palette de tête sur ses fourches et la pose à sa place ; les palettes sortent dans l'ordre inverse du chargement ;
+// le chauffeur du camion reste debout près de l'accueil. Sans `par: 'cariste'`, le chauffeur tire la palette au transpalette.
 //
 // DÉCOR FIXE (04/10/2026, ENT-5.4). `photos: { quai, decor: 'fixe', porte, cadre, places, horloge }` : la
 // photo du quai est prise porte ouverte, remorque visible. Rien ne s'anime dessus : le chariot sort de
@@ -130,7 +133,7 @@ import { evaluerGrille, afficher, estFormule } from '../formules.js';
 import { projection, facadeQuai, X_PORTE_FACADE, camionPorteur, personne, HAUT_PERSONNE, bulle, horlogeQuai,
   solQuai, niveleur, remorqueInterieur, murQuai, ouvertureQuai, transpaletteManuel, paletteCartons, dimsPalette,
   faceVisible, facesExterieures, lampeQuai, boitesCamion, boitesButoirs, boitesNiveleur, boitesLampe, boiteEcran,
-  paletteFuts, facesExterieuresFut, COTE_BAC, DEFS as DEFS_ISO } from '../iso.js';
+  paletteFuts, facesExterieuresFut, COTE_BAC, dessinerChariotFrontal, DEFS as DEFS_ISO } from '../iso.js';
 import { ech } from '../texte.js';
 import { retrouverFocus, secondClic } from '../gestes.js';
 
@@ -313,6 +316,101 @@ export const VUES_SCENE = {
 };
 const PORTE_CAMION = 1, YR_QUAI = 0.35, MARGE_ZONE = 12;
 const PAROLE_ARRET = 'Stop ! Avant d’entrer dans la remorque, tout doit être en sécurité. Regarde encore la scène et signale ce qui ne va pas.';
+
+/* ================================================== le chariot frontal du quai iso (D-4, étape 5) */
+// `dechargement.par: 'cariste'` + `rendu: 'iso'` : c'est un chariot frontal, conduit par un cariste sans visage, qui entre dans la
+// remorque par l'ouverture, prend la palette de tête sur ses fourches et la pose à sa place d'arrivée, à la place du chauffeur au
+// transpalette. Le dessin est celui de la scène animation (`dessinerChariotFrontal`), mis à l'échelle du quai : mètres, projection `I2`.
+//
+// LE TRAJET. Le chariot est de face au mur (fourches vers la remorque) et il ne se retourne pas : il recule pour sortir, glisse de côté,
+// recule encore jusqu'à la place, pose, puis revient À VIDE par le passage libre à gauche de la zone de réception (l'allée) avant de
+// se représenter à la porte. Pour que son corps (derrière sa charge) ne se retrouve jamais dans une palette déjà posée, les palettes
+// sortent dans l'ordre inverse du chargement : la dernière chargée est la plus près de la porte, donc la première sortie
+// (P4, P3, P2, P1 pour quatre palettes) ; la rangée près du mur est ainsi remplie avant la rangée du fond, et les places d'arrivée
+// sont exactement celles d'aujourd'hui. Fonction pure : testée sans navigateur.
+export const CHARIOT_QUAI = {
+  K: 0.85,                 // le chariot de la scène animation (1 m de large, 2,15 m de long), à l'échelle d'un décor où l'ouverture fait 1,2 m
+  LEV: 0.2,                // la hauteur des fourches en charge (m)
+  DEMI: 0.45,              // demi-largeur du chariot pour les collisions (m)
+  V: { avance: 3.4, crabe: 2.4, recule: 2.5, crabeCharge: 1.9, leve: 400 },   // m/s ; durée de la levée ou de la descente des fourches (ms)
+};
+const CHQ_FL = 1.02 * CHARIOT_QUAI.K, CHQ_BL = 2.15 * CHARIOT_QUAI.K;   // fourches, longueur totale
+export const CHARIOT_FL = CHQ_FL, CHARIOT_BL = CHQ_BL;
+const chqRect = (x0, y0, x1, y1) => ({ x0, y0, x1, y1 });
+const chqCoupe = (a, b) => a.x0 < b.x1 - 1e-6 && b.x0 < a.x1 - 1e-6 && a.y0 < b.y1 - 1e-6 && b.y0 < a.y1 - 1e-6;
+// Ce que le chariot (et sa palette s'il en porte une) occupe au sol, à la position (cx, yc) : cx = milieu, yc = bout des fourches.
+function chqEmprise(cx, yc, charge) {
+  const d = CHARIOT_QUAI.DEMI;
+  let x0 = cx - d, x1 = cx + d, y0 = yc;
+  if (charge) { x0 = Math.min(x0, cx - charge[0] / 2); x1 = Math.max(x1, cx + charge[0] / 2); y0 = Math.min(y0, yc + CHQ_FL - charge[1]); }
+  return chqRect(x0, y0, x1, yc + CHQ_BL);
+}
+// Le rectangle balayé par un déplacement en ligne droite (deux positions, mêmes bornes).
+const chqBalaye = (a, b, charge) => { const r = chqEmprise(a[0], a[1], charge), s = chqEmprise(b[0], b[1], charge); return chqRect(Math.min(r.x0, s.x0), Math.min(r.y0, s.y0), Math.max(r.x1, s.x1), Math.max(r.y1, s.y1)); };
+// `gab` : [[largeur, profondeur]] de chaque palette (dans l'ordre du camion) ; `places` : [[x, y]] de chaque place d'arrivée (coin avant-gauche) ;
+// `xPorte` : le milieu de l'ouverture ; `ySlot` : le y de la palette de tête dans la remorque ; `t0` : l'instant où le chariot part.
+// Rend { ordre, legs, tLift, tC, tPose, fin, cxGare, yGare, cxPorte } ; chaque `leg` = { t0, t1, a: [cx, yc, lev], b: [cx, yc, lev] }.
+export function planChariot({ gab, places, xPorte, ySlot, t0 = 0 }) {
+  const { K, LEV, V } = CHARIOT_QUAI, N = gab.length;
+  const ordre = gab.map((_, n) => N - 1 - n);
+  const gmax = Math.max(...gab.map((g) => g[0]), 2 * CHARIOT_QUAI.DEMI);
+  const cxGare = Math.min(...places.map((p) => p[0])) - 0.25 - 0.08 - gmax / 2;
+  // Où il attend, au bout de l'allée de gauche : le bout des fourches juste devant le mur, assez près pour que son corps ne touche pas la première rangée de places.
+  const Y_GARE = Math.max(0.1, Math.min(0.5, Math.min(...places.map((p) => p[1])) - CHQ_BL - 0.06));
+  const legs = [], tLift = [], tC = [], tPose = [];
+  let t = t0, pos = [cxGare, Y_GARE, 0];
+  legs.push({ t0: 0, t1: t0, a: pos.slice(), b: pos.slice() });
+  const aller = (cx, yc, lev, vitesse) => {
+    const b = [cx == null ? pos[0] : cx, yc == null ? pos[1] : yc, lev == null ? pos[2] : lev];
+    const d = lev != null && lev !== pos[2] ? V.leve : Math.max(250, 1000 * Math.hypot(b[0] - pos[0], b[1] - pos[1]) / vitesse);
+    legs.push({ t0: t, t1: t + d, a: pos.slice(), b }); t += d; pos = b;
+  };
+  const posees = [];
+  ordre.forEach((n, u) => {
+    const [gw, gd] = gab[n], [xL, yL] = places[n], charge = [gw, gd], cxL = xL + gw / 2;
+    // 1. à vide : de l'allée à la porte, puis dans la remorque jusqu'à la palette de tête
+    aller(xPorte, null, null, V.crabe);
+    aller(null, ySlot + gd - CHQ_FL, null, V.avance);
+    // 2. il la lève et la sort en reculant
+    tLift[u] = t; aller(null, null, LEV);
+    tC[u] = t;
+    const ycG = 0.12 + Math.max(0, gd - CHQ_FL), ycT = yL + gd - CHQ_FL;
+    aller(null, ycG, null, V.recule);
+    // 3. la voie vers la place : tout droit si rien ne gêne, sinon par l'allée de gauche
+    const libre = (cxT) => {
+      const trajets = [chqBalaye([xPorte, ycG], [cxT, ycG], charge), chqBalaye([cxT, ycG], [cxT, ycT], charge), chqBalaye([cxT, ycT], [cxL, ycT], charge)];
+      return trajets.every((r) => posees.every((p) => !chqCoupe(r, p)));
+    };
+    const cxT = [cxL, cxGare].find(libre);
+    const lane = cxT == null ? cxL : cxT;
+    if (Math.abs(lane - xPorte) > 1e-6) aller(lane, null, null, V.crabeCharge);
+    aller(null, ycT, null, V.recule);
+    if (Math.abs(lane - cxL) > 1e-6) aller(cxL, null, null, V.crabeCharge);
+    // 4. il pose, dégage ses fourches, puis rentre à vide par l'allée de gauche
+    aller(null, null, 0); tPose[u] = t;
+    posees.push(chqRect(xL, yL, xL + gw, yL + gd));
+    aller(null, yL + gd + 0.06, null, V.avance);
+    let yR = pos[1];
+    for (let k = 0; k < 60; k++) {
+      const r = chqBalaye([cxL, yR], [cxGare, yR], null);
+      if (posees.every((p) => !chqCoupe(r, p))) break;
+      yR += 0.1;
+    }
+    if (yR > pos[1]) aller(null, yR, null, V.avance);
+    aller(cxGare, null, null, V.crabe);
+    aller(null, Y_GARE, null, V.avance);
+  });
+  return { ordre, legs, tLift, tC, tPose, fin: t, cxGare, yGare: Y_GARE, cxPorte: xPorte };
+}
+// Où est le chariot à l'instant t, et quelle palette (rang dans l'ordre de sortie) porte-t-il.
+export function etatChariot(plan, t) {
+  let leg = plan.legs[plan.legs.length - 1];
+  for (const l of plan.legs) if (t < l.t1) { leg = l; break; }
+  const f = leg.t1 > leg.t0 ? Math.min(1, Math.max(0, (t - leg.t0) / (leg.t1 - leg.t0))) : 1;
+  const m = (a, b) => a + (b - a) * f;
+  const rang = plan.tLift.findIndex((tl, i) => t >= tl && t < plan.tPose[i]);
+  return { cx: m(leg.a[0], leg.b[0]), yc: m(leg.a[1], leg.b[1]), lev: m(leg.a[2], leg.b[2]), porte: rang < 0 ? null : rang };
+}
 
 // Les palettes de fûts (`forme: 'fut'`, D-4 étape 3) : huit places en quinconce 3-2-3 sur un bac de rétention. `manque` = les
 // NUMÉROS des places vides (1 à 8), `avarie` = { numéro: face qui fuit }, la face devant être EXTÉRIEURE (un fût qu'un autre cache
@@ -969,6 +1067,8 @@ export function creerQuai(Q, opts = {}) {
   const zoneMin = minuscule(R.zone.nom);
   // Qui sort les palettes : le chauffeur au transpalette, ou un cariste au chariot élévateur.
   const CARISTE = R.D.par === 'cariste';
+  // Sur le quai iso (D-4, étape 5) le cariste conduit un chariot frontal dessiné à l'échelle du décor (`planChariot`, `imageIsoChariot`).
+  const CARISTE_ISO = ISO && CARISTE;
   const quiSort = CARISTE ? (R.D.nom || 'Le cariste') : 'Le chauffeur';
   const secuFaite = (e) => !SEC || !!(e.securite && e.securite.fait);
   const accepte = (s) => s.decision === 'accepter' || s.decision === 'reserves';
@@ -1010,7 +1110,15 @@ export function creerQuai(Q, opts = {}) {
   const PLACES = PH.places || [[150, 800], [320, 768], [466, 738], [808, 738], [985, 768], [1150, 805], [245, 700], [1060, 700], [80, 712], [1225, 722]];
   // Rendu iso (maquette) : la porte se lève en 1,8 s, puis le chauffeur tire chaque palette en 6 s.
   const [T_OUVRE, T_PORTE, T_DEB, T_PAL, T_TRAJET] = ISO ? [1800, 1800, 1800, 6800, 6000] : [900, 2000, 2700, 2100, 1850];
-  const fin = (n) => T_DEB + n * T_PAL + 200;
+  // Au chariot (quai iso) le trajet est celui de `planChariot` : la fin et l'instant où chaque palette est posée en viennent, et les palettes sortent dans l'ordre inverse du chargement.
+  const fin = (n) => (CARISTE_ISO ? planC().fin + 200 : T_DEB + n * T_PAL + 200);
+  const tPoseN = (i) => (CARISTE_ISO ? planC().tPose[i] : T_DEB + i * T_PAL + T_TRAJET);
+  const fileP = (P) => (CARISTE_ISO ? P.slice().reverse() : P);
+  let planMemo = null;
+  function planC() {
+    if (!planMemo) { const P = PAL[0]; planMemo = planChariot({ gab: P.map(gabarit), places: placesIso(P), xPorte: ISO_X + 0.4, ySlot: ISO_YDEP, t0: T_DEB }); }
+    return planMemo;
+  }
   const ease = (x) => (x < 0 ? 0 : x > 1 ? 1 : x < .5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2);
   const echelle = (y) => .42 + (y - SOL_Y0) / (SOL_Y1 - SOL_Y0) * .58;
 
@@ -1219,6 +1327,7 @@ export function creerQuai(Q, opts = {}) {
     return [Math.min(...xs) - 0.25, Math.max(...xs) + 0.95 + 0.45, 1.9, Math.max(...ys) + 0.95 + 0.3];
   }
   function imageIso(t, e, attente, o = {}) {
+    if (CARISTE_ISO) return imageIsoChariot(t, e, attente, o);
     const P = PAL[ca(e)], N = P.length, depart = (n) => T_DEB + n * T_PAL;
     const G = P.map(gabarit), L = placesIso(P), pasDep = P.every(estFut) ? 1.05 : 1.3;
     const xc = (n) => ISO_X + (0.8 - G[n][0]) / 2;   // la palette centrée sur la porte (0,8 m de large : ISO_X, comme avant)
@@ -1269,6 +1378,58 @@ export function creerQuai(Q, opts = {}) {
     if (attente) leg = `${hhmm(e.minute)} — Le camion est à quai, porte fermée.`;
     else if (t < T_DEB) leg = `${hhmm(e.minute)} — La porte du ${lieuMin} se lève.`;
     else if (nb < N) leg = `${hhmm(e.minute)} — ${quiSort} sort la palette ${P[enCours ?? nb].id} au transpalette (${Math.min(nb + 1, N)} sur ${N}).`;
+    else leg = N > 1 ? `${hhmm(e.minute)} — Les ${N} palettes sont en ${zoneMin}. Le chauffeur attend ta signature.` : `${hhmm(e.minute)} — La palette est en ${zoneMin}. Le chauffeur attend ta signature.`;
+    return { iso: s, leg, nb, pastilles: P.map((p) => `<i class="${sur.has(p.id) ? 'sur' : ''}">${ech(p.id)}</i>`).join('') };
+  }
+  // ② et ④ au chariot frontal (D-4, étape 5) : le chariot de `planChariot` entre par l'ouverture, prend la palette de tête sur ses fourches,
+  // la sort et la pose à sa place d'arrivée (les mêmes places qu'avec le chauffeur). Le chauffeur du camion reste debout près de l'accueil.
+  // Le chariot est coupé au mur comme les palettes : la part qui est dans la remorque se dessine dans le clip de l'ouverture (`dedans`),
+  // la part qui est devant le mur après lui (`dehors`). `o.parti` (④, BL signé) : le chauffeur est reparti, le chariot reste garé.
+  function imageIsoChariot(t, e, attente, o = {}) {
+    const P = PAL[ca(e)], N = P.length, plan = planC(), K = CHARIOT_QUAI.K;
+    const G = P.map(gabarit), L = placesIso(P), pasDep = P.every(estFut) ? 1.05 : 1.3;
+    const rangDe = []; plan.ordre.forEach((n, u) => { rangDe[n] = u; });
+    const xc = (n) => ISO_X + (0.8 - G[n][0]) / 2;
+    const ouv = attente || o.parti ? 0 : SCENE && e.securite && e.securite.ouverte ? 1 : Math.min(1, t / T_PORTE);
+    const et = SCENE ? etatsScene(SEC, e.securite) : null;
+    const lp = et && et.lampe ? lampeQuai(I2, et.lampe) : { cone: '', tete: '' };
+    const ch = etatChariot(plan, attente ? 0 : t);
+    // La file dans la remorque avance d'un cran quand la palette d'avant est sortie.
+    const decale = (u) => { let d = 0; for (let j = 0; j < u; j++) d += Math.min(1, Math.max(0, (t - plan.tC[j] - 700) / 800)); return d; };
+    const pos = [], sur = new Set();
+    let nb = 0, enCours = null;
+    P.forEach((p, n) => {
+      const u = rangDe[n];
+      if (attente || t < plan.tLift[u]) pos.push([p, xc(n), ISO_YDEP - (u - (attente ? 0 : decale(u))) * pasDep]);
+      else if (t >= plan.tPose[u]) { nb++; sur.add(p.id); pos.push([p, L[n][0], L[n][1]]); }
+      else enCours = u;
+    });
+    const garder = o.parti ? pos.filter(([p]) => accepte(st(e, p))) : pos;
+    const pal = (p, x, y, yMin, yMax) => palSvg(I2, p, x, y, 3, { yMin: Math.max(yMin, -3.6), yMax, lisible: false });
+    const dedans = [], dehors = [];
+    garder.forEach(([p, x, y]) => { const [gw, gd] = gabarit(p), cle = x + gw / 2 + y + gd / 2; dedans.push([cle, pal(p, x, y, -99, 0)]); dehors.push([cle, pal(p, x, y, 0, 99)]); });
+    // Le chariot : sa projection est celle du quai, à l'échelle K, posée sur le bout de ses fourches ; la palette portée suit ses fourches.
+    const portee = enCours != null ? P[plan.ordre[enCours]] : null, [gwp, gdp] = portee ? gabarit(portee) : [0, 0];
+    const y0 = ch.yc, Ik = projection({ unite: I2.unite * K, origine: I2.P(ch.cx - 0.5 * K, y0, 0) });
+    const yPal = ch.yc + CHARIOT_FL - gdp, xPal = ch.cx - gwp / 2;
+    const dessin = (yMin, yMax) => {
+      const charge = portee ? `<g transform="translate(0 ${(-ch.lev * I2.unite).toFixed(2)})">${pal(portee, xPal, yPal, yMin, yMax)}</g>` : '';
+      return dessinerChariotFrontal(Ik, { x: 0, y: 0, lev: ch.lev / K, chargeSvg: charge, coupe: { yMin: (yMin - y0) / K, yMax: (yMax - y0) / K }, gilet: true }, {});
+    };
+    const cleCh = ch.cx + ch.yc + CHARIOT_BL / 2;
+    if (Math.min(ch.yc, portee ? yPal : ch.yc) < 0.02) dedans.push([cleCh, `<g data-iso-chariot="dedans">${dessin(-99, 0)}</g>`]);
+    if (ch.yc + CHARIOT_BL > 0) dehors.push([cleCh, `<g data-iso-chariot="dehors">${dessin(0, 99)}</g>`]);
+    const trier = (liste) => liste.sort((a, b) => a[0] - b[0]).map((x) => x[1]).join('');
+    let s = solQuai(I2, R.zone.nom, N > 1 ? { zone: zoneIso(L) } : {});
+    s += `<g clip-path="url(#quaiIsoOuv)">${remorqueInterieur(I2)}${niveleur(I2, 'dedans', et ? et.niveleur : 'pose')}${lp.cone}${trier(dedans)}</g>`;
+    s += murQuai(I2, ouv, R.lieu.nom) + niveleur(I2, 'dehors', et ? et.niveleur : 'pose') + lp.tete;
+    s += trier(dehors);
+    if (!o.parti) s += personne(I2, 6.5, 1.4);
+    s += horlogeQuai(I2, 6.6, 0.01, 2.25, hhmm(e.minute).slice(0, 5));
+    let leg;
+    if (attente) leg = `${hhmm(e.minute)} — Le camion est à quai, porte fermée.`;
+    else if (t < T_DEB) leg = `${hhmm(e.minute)} — La porte du ${lieuMin} se lève.`;
+    else if (nb < N) leg = `${hhmm(e.minute)} — ${quiSort} sort la palette ${P[plan.ordre[enCours != null ? enCours : nb]].id} au chariot (${Math.min(nb + 1, N)} sur ${N}).`;
     else leg = N > 1 ? `${hhmm(e.minute)} — Les ${N} palettes sont en ${zoneMin}. Le chauffeur attend ta signature.` : `${hhmm(e.minute)} — La palette est en ${zoneMin}. Le chauffeur attend ta signature.`;
     return { iso: s, leg, nb, pastilles: P.map((p) => `<i class="${sur.has(p.id) ? 'sur' : ''}">${ech(p.id)}</i>`).join('') };
   }
@@ -1382,13 +1543,13 @@ export function creerQuai(Q, opts = {}) {
     </div>`;
     if (ISO) {
       return `<div class="quai-scene2 quai-iso">
-        <svg data-q-scene2 viewBox="290 0 640 ${N > 2 ? 540 : 480}" role="img" aria-label="${ech(R.lieu.nom)} : la porte se lève, ${ech(minuscule(quiSort))} sort ${N > 1 ? 'les palettes' : 'la palette'} au transpalette jusqu’en ${ech(zoneMin)}">
+        <svg data-q-scene2 viewBox="290 0 640 ${N > 2 ? 540 : 480}" role="img" aria-label="${ech(R.lieu.nom)} : la porte se lève, ${ech(minuscule(quiSort))} sort ${N > 1 ? 'les palettes' : 'la palette'} ${CARISTE_ISO ? 'au chariot élévateur' : 'au transpalette'} jusqu’en ${ech(zoneMin)}">
           ${defsIso()}<g data-g="iso">${im.iso}</g>
         </svg>
         <div class="quai-legende" data-q-leg>${ech(im.leg)}</div>
       </div>
       ${barre}
-      ${A.consignes ? `<p class="quai-aide">Chez un transporteur de messagerie, c’est souvent <b>le chauffeur</b> qui décharge, au transpalette. Toi, tu ne signes rien tant que tu n’as pas compté.</p>` : ''}`;
+      ${A.consignes ? `<p class="quai-aide">${CARISTE_ISO ? 'Sur une plateforme, c’est <b>un cariste</b> qui décharge, au chariot élévateur.' : 'Chez un transporteur de messagerie, c’est souvent <b>le chauffeur</b> qui décharge, au transpalette.'} Toi, tu ne signes rien tant que tu n’as pas compté.</p>` : ''}`;
     }
     return `<div class="quai-scene2">
       <svg data-q-scene2 viewBox="${cx} ${cy} ${cw} ${chh}" preserveAspectRatio="xMidYMid slice" role="img" aria-label="${ech(R.lieu.nom)} : ${FIXE ? 'la remorque est ouverte' : 'la porte s’ouvre'}, ${ech(minuscule(quiSort))} sort les palettes une à une ${CARISTE ? 'au chariot élévateur' : 'au transpalette'}">
@@ -1432,8 +1593,8 @@ export function creerQuai(Q, opts = {}) {
     if (k.evts === 0 && t >= T_OUVRE) {
       k.evts = 1; avancer(e, R.D.ouverture, `${FIXE ? 'remorque ouverte' : 'porte du quai ouverte'}, début du déchargement${M ? ` du ${nomCam(ci)}` : ''}`); fait = true;
     }
-    while (k.evts >= 1 && k.evts <= P.length && t >= T_DEB + (k.evts - 1) * T_PAL + T_TRAJET) {
-      avancer(e, R.D.parPalette, `${P[k.evts - 1].id} posée sur le quai`); k.evts++; fait = true;
+    while (k.evts >= 1 && k.evts <= P.length && t >= tPoseN(k.evts - 1)) {
+      avancer(e, R.D.parPalette, `${fileP(P)[k.evts - 1].id} posée sur le quai`); k.evts++; fait = true;
     }
     return fait;
   }
@@ -1718,7 +1879,7 @@ export function creerQuai(Q, opts = {}) {
     const I = I2;
     const lp = et.lampe ? lampeQuai(I, et.lampe) : { cone: '', tete: '' };
     const pasDep = PAL[0].every(estFut) ? 1.05 : 1.3;
-    const pal = PAL[0].map((p, n) => [p, ISO_X + (0.8 - gabarit(p)[0]) / 2, ISO_YDEP - n * pasDep]).sort((a, b) => a[2] - b[2])
+    const pal = fileP(PAL[0]).map((p, n) => [p, ISO_X + (0.8 - gabarit(p)[0]) / 2, ISO_YDEP - n * pasDep]).sort((a, b) => a[2] - b[2])
       .map(([p, x, y]) => palSvg(I, p, x, y, 3, { yMin: -3.6, yMax: 0, lisible: false })).join('');
     return solQuai(I, R.zone.nom)
       + `<g clip-path="url(#quaiIsoOuv)">${remorqueInterieur(I)}${niveleur(I, 'dedans', et.niveleur)}${lp.cone}${pal}</g>`

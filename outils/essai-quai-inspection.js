@@ -8,6 +8,7 @@
 // de tests (`outils/test/quai-iso.mjs`) vérifie que la zone cliquable de chaque objet le contient et le touche.
 //
 // ÉTAPE 2 : la partie 2 (en bas du fichier) monte la scène d'ENT-6.4 dans le vrai moteur d'entreprise.
+// ÉTAPE 5 : la partie 2 décharge au chariot frontal (`dechargement.par: 'cariste'`) ; un réglage remet le chauffeur au transpalette.
 //
 // Page : outils/essai-quai-inspection.html (servie par `lancer.bat`, http://localhost:8000/outils/essai-quai-inspection.html).
 
@@ -177,8 +178,9 @@ export const LIBELLES_ENT64 = { avarie: { nom: 'Fût endommagé', precision: 'fu
 
 // Le quai d'essai : le quai iso d'ENT-6.4 (sans froid, un camion ; une palette de cartons, ou les palettes données).
 // `securite` : une autre déclaration (les tests y passent des variantes) ; `arret` : l'arrêt de Nadia (ENT-6.4 : non) ;
-// `palettes` : les palettes du camion (par exemple `PALETTES_ENT64`).
-export function quaiEssai({ arret = false, securite = null, palettes = null } = {}) {
+// `palettes` : les palettes du camion (par exemple `PALETTES_ENT64`) ; `par` : qui décharge, 'chauffeur' (au transpalette, le défaut des cas
+// de test) ou 'cariste' (au chariot frontal, chantier D-4 étape 5 ; c'est ce que joue la page).
+export function quaiEssai({ arret = false, securite = null, palettes = null, par = 'chauffeur' } = {}) {
   const S = securite || Object.assign({}, SECURITE_ENT64, { arret });
   return {
     id: 'essai-inspection', rendu: 'iso', froid: false, motifs: ['avarie', 'manquant', 'produit'],
@@ -186,7 +188,7 @@ export function quaiEssai({ arret = false, securite = null, palettes = null } = 
     titre: 'Plateforme de Buchelay — Quai 12 (page d’essai)',
     avertissement: 'Page d’essai du chantier D-4 : le quai, le camion et la palette sont construits pour l’essai.',
     lieu: { nom: 'Quai 12', temp: 15, refrigere: false }, zone: { nom: 'Zone de réception' },
-    dechargement: { ouverture: 0.5, parPalette: 1, par: 'chauffeur' }, aides: { consignes: true },
+    dechargement: { ouverture: 0.5, parPalette: 1, par }, aides: { consignes: true },
     camions: [{ transporteur: 'Transporteur d’essai', fournisseur: 'Brasserie d’essai', bl: 'BL-ESSAI-01', arrivee: '07:30',
       parole: 'Bonjour ! Livraison de la brasserie pour la plateforme. Voilà mon bon de livraison : on y va ?',
       palettes: JSON.parse(JSON.stringify(palettes || [PALETTE_CARTONS])) }],
@@ -207,6 +209,9 @@ export function monterScene(hote) {
       <fieldset><legend>Nadia et l'oubli d'un défaut</legend>
         <label><input type="radio" name="arret" value="non" checked> ne l'arrête pas (ENT-6.4)</label>
         <label><input type="radio" name="arret" value="oui"> l'arrête (guidage)</label></fieldset>
+      <fieldset><legend>Qui décharge</legend>
+        <label><input type="radio" name="par" value="cariste" checked> un cariste, au chariot frontal (ENT-6.4)</label>
+        <label><input type="radio" name="par" value="chauffeur"> le chauffeur, au transpalette</label></fieldset>
       <fieldset><legend>Essai</legend>
         <button type="button" data-recommencer-scene>Tout remettre à zéro</button></fieldset>
     </form>
@@ -231,7 +236,7 @@ export function monterScene(hote) {
   };
   function lancer() {
     db = {};
-    Q = quaiEssai({ arret: hote.querySelector('input[name="arret"]:checked').value === 'oui', palettes: PALETTES_ENT64 });
+    Q = quaiEssai({ arret: hote.querySelector('input[name="arret"]:checked').value === 'oui', palettes: PALETTES_ENT64, par: hote.querySelector('input[name="par"]:checked').value });
     const h = document.createElement('div');
     h.setAttribute('data-hote-quai', '');
     seance.replaceChildren(h);
