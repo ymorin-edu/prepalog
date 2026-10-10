@@ -102,7 +102,7 @@ export const QUAI_ENT64 = {
   aides: {},
   securite: SECURITE,
   camions: [{
-    transporteur: 'Transports du Nord', fictif: true, fournisseur: 'Heineken, Mons-en-Barœul', bl: 'MON-27-0617', arrivee: '14:00',
+    transporteur: 'Transports du Nord (fictif)', fournisseur: 'Heineken, Mons-en-Barœul', bl: 'MON-27-0617', arrivee: '14:00',
     parole: 'Bonjour. Livraison de la brasserie de Mons : voici le bon de livraison.',
     // Une copie : le moteur ne doit jamais modifier les palettes que lisent le corrigé et les tests.
     palettes: JSON.parse(JSON.stringify(PALETTES_ENT64)),
@@ -205,7 +205,7 @@ const PIED = (quoi) => `<p class="fb-pied">${quoi} — Document pédagogique —
 // Le BL de la séance : ce que le camion doit livrer (les quantités annoncées, jamais celles qui arrivent).
 const docBL = () => `<article class="fb4-doc" aria-label="Bon de livraison MON-27-0617">
     <p class="fb-t">Bon de livraison n° ${ech(QUAI_ENT64.camions[0].bl)}</p>
-    <p class="fb-st">De : ${ech(QUAI_ENT64.camions[0].fournisseur)} · à : France Boissons, plateforme de Buchelay (78), quai 12 · transporteur : ${ech(QUAI_ENT64.camions[0].transporteur)} (fictif)</p>
+    <p class="fb-st">De : ${ech(QUAI_ENT64.camions[0].fournisseur)} · à : France Boissons, plateforme de Buchelay (78), quai 12 · transporteur : ${ech(QUAI_ENT64.camions[0].transporteur)}</p>
     <table class="fb4-table">
       <thead><tr><th scope="col">Palette</th><th scope="col">Référence</th><th scope="col">Désignation</th><th scope="col">Fûts annoncés</th></tr></thead>
       <tbody>${PALETTES_ENT64.map((p) => `<tr><td>${p.id}</td><td>${ech(p.ref)}</td><td>${ech(p.nom)}</td><td>${p.bl}</td></tr>`).join('')}</tbody>
