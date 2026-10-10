@@ -53,6 +53,29 @@ La part des questions : **3 à 5 points sur 20**. Deux règles : une question **
 palette, ses dates, de préférence une pièce tirée) ; une question d'éco-droit **appliquée à son cas**, texte de
 référence fourni dans la séance.
 
+**Propositions d'implantation (règle de Tristan, 10/10/2026)** : ce paragraphe commence par un **tableau de propositions**
+que Tristan tranche avant toute construction — une ligne par geste de travail de la séance où une question pourrait
+arriver (saisir une case, choisir dans une liste, envoyer, poser, valider) :
+
+| Geste (écran, case) | Qui pose | Question proposée | Type (fil / point d'étape) | Notée / réflexion | Corrigée tout de suite / au bilan | Pourquoi ici |
+|---|---|---|---|---|---|---|
+
+Au moins **4 propositions** pour une séance de 45 min (Tristan en garde 2 à 4), dont une d'éco-droit appliquée au cas.
+Une proposition qui donnerait d'avance la réponse d'un jalon est soit écartée, soit corrigée **au bilan** : le dire dans
+« Pourquoi ici ». Si le brief arrive sans ce tableau, Claude Code le **propose à Tristan avant de construire**.
+
+## 4 ter. Avant de commencer (toute séance nouvelle, règle de Tristan du 10/10/2026)
+
+Écran d'ouverture (`docs/briefs/MOTEUR-avant-de-commencer.md`) : banque de questions tirées par élève, par rubrique —
+**préparation** de l'exercice (sans résoudre ses pièges), **2 ou 3 d'économie-droit** appliquées au cas (texte à gauche),
+**image** pour une séance qui fait découvrir un matériel. Au moins le double de ce qu'on tire dans chaque rubrique ;
+valeurs tirées quand c'est possible ; `cle: true` pour les questions à reprendre en évaluation. En séance de travail :
+non notées, sans que l'élève le sache. En évaluation : notées (4 / 20), sans aide, « Je ne sais pas », faux = − 1 ÷
+(nombre de mauvaises réponses), plancher à 0.
+
+| id | Rubrique | Question | Juste | Pièges | À gauche (document ou image) | ★ éval |
+|---|---|---|---|---|---|---|
+
 ## 5. Jalons / notation
 
 | # | Jalon | Ce qu'il lit dans la base de l'élève | Piège à éviter |

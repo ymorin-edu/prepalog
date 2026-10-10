@@ -120,6 +120,21 @@ pas la bonne : il manque une palette d'Affligem sur deux (P2 est de la Pelforth)
 
 Mots cliquables : fût, niveleur, cale, réserve, BL, zone litiges, produit différent, chariot frontal.
 
+## 4 bis. Questions au fil — À PROPOSER À TRISTAN AVANT DE CONSTRUIRE (règle du 10/10/2026)
+
+Ce brief a été écrit avant la règle. **Avant d'écrire la moindre ligne de la séance**, Claude Code (ou Cowork) propose à
+Tristan le tableau de `docs/briefs/MODELE.md` §4 bis : au moins 4 gestes de travail où une question peut arriver, dont une
+d'éco-droit appliquée au cas ; jamais une question qui donne d'avance la réponse d'un jalon (sinon corrigée au bilan).
+Tristan en garde 2 à 4 ; la part des questions notées (3 à 5 points sur 20) se prend sur les jalons, et le barème du §5
+est revu en conséquence (pondération sur 20 : `docs/briefs/NOTATION-ponderation.md`, lot 2). Les pistes « Pour réfléchir »
+du §9 sont une bonne source de questions.
+
+### 4 ter. Avant de commencer — À PROPOSER AUSSI
+
+Banque de questions de l'écran d'ouverture (`docs/briefs/MOTEUR-avant-de-commencer.md`, `MODELE.md` §4 ter) :
+préparation de l'exercice, 2 ou 3 d'économie-droit appliquées au cas, images si la séance fait découvrir un matériel ;
+au moins le double de ce qu'on tire ; validée par Tristan avant construction. Modèle : la banque d'ENT-6.2.
+
 ## 5. Jalons / notation (10)
 
 | # | Jalon | Ce qu'il lit | Piège à éviter |

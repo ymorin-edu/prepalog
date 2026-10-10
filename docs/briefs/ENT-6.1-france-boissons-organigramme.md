@@ -204,6 +204,14 @@ matin** (aucun message à transmettre n'arrive avant la réponse). Une question 
 
 Mots cliquables : organigramme, lien hiérarchique, lien fonctionnel, service, rendre compte, exploitation, transférer.
 
+## 4 bis. Questions au fil et « Avant de commencer » — À REPRENDRE (règle du 10/10/2026)
+
+Séance déjà construite avec deux questions (`contenus/questions/ENT-6.1.js` : un point d'étape noté, une question au fil
+de réflexion). Pour suivre la règle du 10/10/2026 comme les autres séances France Boissons : (1) proposer à Tristan le
+tableau de `docs/briefs/MODELE.md` §4 bis (au moins 4 gestes, dont une question d'éco-droit appliquée au cas) et garder
+ce qu'il choisit ; (2) ajouter l'écran « Avant de commencer » (`docs/briefs/MOTEUR-avant-de-commencer.md`) avec sa
+banque, validée par Tristan. Séance déjà jouée par des élèves ? Vérifier d'abord : ceux qui l'ont finie gardent leur note.
+
 ## 5. Jalons / notation (sur 20)
 
 | Bloc (ligne du bandeau) | Cases (un jalon chacune) | Poids | Ce qu'il lit | Piège à éviter |

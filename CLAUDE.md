@@ -313,6 +313,10 @@ cycle d'une séance et les règles d'écriture. En résumé :
 - **Une demande au moteur** (écran ou comportement qu'`core/` ne sait pas faire) s'écrit dans la
   section 7 du brief ; une séance n'écrit rien dans `core/` ni `styles/base.css`. Un chantier
   moteur à part s'en charge, un seul à la fois.
+- **Questions à l'écran (règle de Tristan, 10/10/2026)** : avant de construire une séance, vérifier que son brief contient
+  le tableau des **propositions d'implantation de questions au fil** (§4 bis du modèle) et la banque « Avant de commencer »
+  (§4 ter) ; s'il en manque un, **le proposer à Tristan** (au moins 4 gestes possibles, dont une question d'éco-droit
+  appliquée au cas) et attendre son choix avant d'écrire les questions.
 - Si un brief est incomplet, ambigu, ou contredit le code ou la finalité : **pose la question à
   Tristan avant d'écrire**, ne comble pas les trous toi-même (surtout sur l'entreprise : ne rien
   inventer de « réel » sans source).

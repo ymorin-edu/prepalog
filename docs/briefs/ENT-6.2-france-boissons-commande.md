@@ -25,7 +25,7 @@ Règles d'écriture 2de : `claude/prepalog-2de-eleve-debut-annee.md` (3 lignes p
 | Compétence(s) | **AGO-1.1** (identifier la demande, apporter une réponse adaptée) et **AGO-1.2** (appliquer les procédures internes, produire les documents de la relation client) ; domaine D1 (et D3) |
 | Temps pédagogique | entraînement (scénario S2). **Seul temps de travail d'AGO-1.1 / 1.2 avant l'évaluation de S3** (règle 15 du cadrage) : la séance garde des encadrés et des mots cliquables |
 | Notation | jalons pondérés + note sur 20 (pas de `notation`, comme ENT-5.1) |
-| Barème | 20 : poids validés par Tristan le 10/10/2026 — fûts 6 (`heineken30` 1, `affligem` 2, `remplacement` 3), jour 2, eau et vides 2, rupture 4, livraison 3, ton 3 |
+| Barème | 20 : poids validés par Tristan le 10/10/2026 — fûts 6 (`heineken30` 1, `affligem` 2, `remplacement` 3), jour 2, eau et vides 2, rupture 4, livraison 3, ton 3. **Revu le 10/10/2026, 11 h 20 (questions au fil, §4 bis)** : rupture 3, livraison 2, ton 2, questions au fil 3 (`part: 3`, deux questions notées à 1,5) ; le bon de commande garde 10 |
 | `pret` à la livraison | `pret: true, ouverture: 'prof'` |
 
 ## 2. L'entreprise : vérifié / construit
@@ -131,6 +131,26 @@ Mots cliquables : fût, consigne, vides, casier, CHR, rupture, minimum de comman
 **sous le minimum de 10** ; Malo a donné la solution (« une autre blonde en 20 L ») : 2 fûts de **Pelforth Blonde 20 L**.
 Distracteurs : Edelweiss (blanche, pas blonde), Heineken 20 L (à 0). Samedi n'est pas un jour de tournée ; la commande est
 reçue avant 12 h la veille du vendredi.
+
+## 4 bis. Questions au fil (choix de Tristan, 10/10/2026, 11 h 20)
+
+Propositions faites à Tristan (règle du 10/10/2026 : un tableau de propositions avant toute construction) ; la n° 1
+(« Tu as noté {x} fûts d'Affligem… », réflexion à la sortie de la case Affligem) est **retirée** : elle aidait trop sur le
+piège en chaîne. Fichier : `contenus/questions/ENT-6.2.js` (comme ENT-6.1), `part: 3`.
+
+| id | Geste qui la déclenche | Qui pose | Question | Type | Notée | Correction |
+|---|---|---|---|---|---|---|
+| `pourquoi-ce-remplacement` | choix dans la liste « Remplacement » du bon (une fois) | Karim | « Pourquoi as-tu choisi {son choix} ? » — c'est une blonde 20 L, comme Malo le demande · il y en a assez en stock · pour atteindre le minimum de commande · au hasard | fil | réflexion (non notée) | retour : « Ce qui compte : ce que Malo a demandé, ce qu'on a en stock, et le minimum de 10 fûts. » |
+| `jour-engage` | choix de la phrase « livraison » dans la réponse à Malo | Inès | « Le jour que tu écris à Malo engage France Boissons. Pourquoi ? » — juste : ta réponse accepte sa commande : la vente est conclue avec ce jour-là · pièges : parce que Malo l'a demandé · parce que c'est écrit dans le stock · ce n'est qu'une indication, on peut changer | fil, **au bilan** (`apres: 'bilan'` : ne pas dire quel jour est juste) | oui, 1,5 | texte à gauche : Code civil, art. 1113 (document « Le droit », commun avec « Avant de commencer ») |
+| `qui-utilise-le-bon` | envoi du bon de commande (point d'étape avant la réponse à Malo) | Inès | « Qui va travailler à partir de ton bon de commande d'ici vendredi ? » — juste : le préparateur jeudi, puis le chauffeur vendredi · pièges : personne, il est rangé · Malo, qui le signe · la brasserie | point d'étape (`apres: apresFiche('bon-de-commande')`, garde « Répondre » fermé jusqu'à la réponse) | oui, 1,5 | tout de suite |
+| `vides-faux` | choix de la phrase « vides » dans la réponse à Malo | Lucas (chauffeur) | « Vendredi soir, je rapporte les vides. Si le chiffre de ton bon est faux, qui le voit en premier ? » — moi, au déchargement · le magasinier qui compte les vides · Malo · personne | fil | réflexion (non notée) | retour : « On le voit au retour, quand le compte ne tombe pas juste : c'est pour ça qu'on recopie les vides avec soin. » |
+
+Écart à vérifier par Claude Code : le point d'étape `qui-utilise-le-bon` remplace le second message d'Inès (« Réponds
+maintenant à Malo ») ou s'y ajoute — proposer à Tristan, capture à l'appui.
+
+### 4 ter. Avant de commencer
+
+Banque de 14 questions validée : `docs/briefs/MOTEUR-avant-de-commencer.md` §4.
 
 ## 5. Jalons / notation (8)
 
