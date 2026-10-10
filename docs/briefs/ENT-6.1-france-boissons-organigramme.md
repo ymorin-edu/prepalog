@@ -204,24 +204,40 @@ matin** (aucun message à transmettre n'arrive avant la réponse). Une question 
 
 Mots cliquables : organigramme, lien hiérarchique, lien fonctionnel, service, rendre compte, exploitation, transférer.
 
-## 4 bis. Questions au fil et « Avant de commencer » — À REPRENDRE (règle du 10/10/2026)
+## 4 bis. Questions au fil et « Avant de commencer » — CONSTRUIT (étape A, 10/10/2026)
 
-Séance déjà construite avec deux questions (`contenus/questions/ENT-6.1.js` : un point d'étape noté, une question au fil
-de réflexion). Pour suivre la règle du 10/10/2026 comme les autres séances France Boissons : (1) proposer à Tristan le
-tableau de `docs/briefs/MODELE.md` §4 bis (au moins 4 gestes, dont une question d'éco-droit appliquée au cas) et garder
-ce qu'il choisit ; (2) ajouter l'écran « Avant de commencer » (`docs/briefs/MOTEUR-avant-de-commencer.md`) avec sa
-banque, validée par Tristan. Séance déjà jouée par des élèves ? Vérifier d'abord : ceux qui l'ont finie gardent leur note.
+Choix de Tristan du 10/10/2026 : tout est gardé (`docs/briefs/france-boissons/PROPOSITIONS-questions-au-fil.md` et `BANQUE-avant-de-commencer.md`).
+Fichier : `contenus/questions/ENT-6.1.js`, `part: 5`.
+
+**Questions au fil et point d'étape** (poids sur 20 ; tout est regroupé en une ligne du bandeau, « Les questions d'Inès ») :
+
+| id | Geste | Qui pose | Question | Type | Notée | Correction |
+|---|---|---|---|---|---|---|
+| `qui-decide-conges` | envoi de la fiche « Qui fait quoi ? » (point d'étape) | Inès | à qui transmettre la demande de congés de Lucas | transition | 2 | tout de suite |
+| `qui-sanctionne` | même point d'étape, 2e question | Inès | « Lucas refuse la tournée que Karim lui donne… Qui peut sanctionner Lucas ? » (L1331-1 rappelé dans l'énoncé) — juste : France Boissons, son employeur ; Karim le signale et propose | transition | 1,5 | tout de suite |
+| `appui-chef` | choix du chef de Lucas dans la fiche (`fiche:qui-fait-quoi:chefLucas`) | Karim | « Je vois que tu choisis le chef de Lucas. Sur quoi t'es-tu appuyé ? » (4 appuis, sans rappel du choix) | fil | réflexion (non notée) | **bilan** (« Merci, je note » ; le retour vient avec le bandeau de fin) |
+| `pourquoi-pas-helene` | premier transfert (`messagerie:transfert`) | Karim | pourquoi ne pas tout envoyer à Hélène | fil | réflexion | tout de suite |
+| `qui-traite-malo` | transfert du message de Malo (`messagerie:transfert:msg-malo`) | Inès | « Tu viens de transférer la commande de Malo. Qui va la traiter demain ? » — juste : Inès, à l'administration des ventes | fil | 1,5 | **bilan** |
+
+Le courrier du matin n'arrive qu'après les deux réponses du point d'étape. Les énoncés ne reprennent pas le choix de l'élève (le moteur ne met pas encore
+de variable dans un énoncé).
+
+**Avant de commencer** (Inès, 8 questions dont 4 tirées par élève : `tirage: { preparation: 2, droit: 2 }`, `calculette: true`) — documents à gauche :
+l'organigramme DE L'ÉLÈVE (ses cases vides), l'annuaire, « Le droit » (L1311-2 alinéa 1, L2311-2 alinéas 1 et 2, Cass. soc. 13/11/1996 n° 94-13.187,
+L4121-1, L1331-1). Préparation : `fb-plateforme` ★, `organigramme-sert`, `trait-plein`, `rendre-compte`. Droit : `ri-obligatoire` (n de 55 à 150, jamais 80),
+`cse-obligatoire` (n de 12 à 45), `malo-chef` ★ (retour : « c'est à France Boissons de décider », sans nommer Karim), `zero-accident` ★. Aucune question sur
+une case de l'organigramme, un destinataire ni le chef de Lucas (ce sont les jalons). Séance fermée aux élèves : aucun élève en cours.
 
 ## 5. Jalons / notation (sur 20)
 
 | Bloc (ligne du bandeau) | Cases (un jalon chacune) | Poids | Ce qu'il lit | Piège à éviter |
 |---|---|---|---|---|
-| **L'organigramme** | case de Karim (fixe) 2 ; chacune des 2 cases tirées 1,5 | **5** | `ficheEnvoyee(db,'qui-fait-quoi').valeurs.cases[<id du poste>]` contre le poste tiré | « à faire » jusqu'à l'envoi ; le jalon compare au **poste de la case de l'élève**, jamais à une lettre |
-| **Le chef de Lucas** | Lucas → Karim | **2** | `valeurs.chefLucas === 'karim'` | — |
+| **L'organigramme** | case de Karim (fixe) 2 ; chacune des 2 cases tirées 1 | **4** (avant l'étape A : 1,5 chacune, 5) | `ficheEnvoyee(db,'qui-fait-quoi').valeurs.cases[<id du poste>]` contre le poste tiré | « à faire » jusqu'à l'envoi ; le jalon compare au **poste de la case de l'élève**, jamais à une lettre |
+| **Le chef de Lucas** | Lucas → Karim | **1,5** (avant : 2) | `valeurs.chefLucas === 'karim'` | — |
 | **Hiérarchique ou fonctionnel** | 5 lignes tirées (§6 bis), 1 chacune | **5** | `valeurs.liens[<id de la situation>]` | la banque garantit au moins 2 « hiérarchique » et 2 « fonctionnel » (sinon une colonne cochée partout rapporte 3/5) |
-| **Le courrier du matin** | 4 messages (Malo fixe + 3 tirés), 1,5 chacun | **6** | transfert du message (§7) : destinataire **du premier transfert** contre l'attendu | non transféré = « à faire » ; la banque garantit 3 destinataires différents au moins (sinon « tout à Inès » rapporte des points) |
-| **Point d'étape : qui décide** | question `qui-decide-conges` | **2** (`part: 2` du fichier de questions) | moteur des questions | — |
-| **Total** | 14 jalons (13 déclarés par la séance + 1 ajouté par le moteur des questions) | **20** | | |
+| **Le courrier du matin** | 4 messages : Malo (fixe) 1,5, les 3 tirés 1 | **4,5** (avant : 1,5 chacun, 6) | transfert du message (§7) : destinataire **du premier transfert** contre l'attendu | non transféré = « à faire » ; la banque garantit 3 destinataires différents au moins (sinon « tout à Inès » rapporte des points) |
+| **Les questions d'Inès** | `qui-decide-conges` 2, `qui-sanctionne` 1,5, `qui-traite-malo` 1,5 | **5** (`part: 5` ; avant : `part: 2`) | moteur des questions | — |
+| **Total** | 16 jalons (13 déclarés par la séance + 3 ajoutés par le moteur des questions) : 15 + 5 | **20** | | |
 
 - **Corriger** : `ecran: 'fiche:qui-fait-quoi'` pour les trois premiers blocs ; pour le courrier, l'écran de transfert du
   §7 (`'transfert:<id du message>'` ou équivalent choisi par Claude Code) rouvre **seulement les messages mal
@@ -499,3 +515,10 @@ Tristan**). Graines choisies dans le test, valeurs attendues écrites à la main
   la trame (Cowork, après validation à l'écran) ; la ligne ENT-6.1 du cas « compétences : chaque séance déclare ce que Tristan a
   validé » (`outils/test/socle.mjs`) n'est pas ajoutée (liste écrite à la main par Tristan) ; `activites/FICHE-SEANCE.md` sur le
   socle d'un confirmé : corrigé par la session mère (99f88cc).
+
+- **Étape A (10/10/2026) — « Avant de commencer » et trois questions au fil** : voir §4 bis et §5 (poids). `part` 2 → 5, jalons du socle 18 → 15 (le moteur ne rééquilibre pas :
+  poids retouchés à la main, **à valider par Tristan**). Le point d'étape a deux questions ; le courrier arrive après les deux. Moteur : `messagerie:transfert:<clé>`,
+  `volet.transferables`, réflexion corrigée au bilan (`docs/decisions.md`). Tests (bloc `france-boissons`, +7 cas) : ouverture (4 questions tirées 2 + 2, organigramme de l'élève,
+  « Le droit », calculette), 20/20 quelles que soient les réponses d'ouverture, tirage et valeurs de `ri-obligatoire` / `cse-obligatoire` sur 300 graines, barème, questions
+  n° 2, 3 et 5. **Cas existants touchés** : l'aide `monter`, `pointDEtape`, `transferer`, `envoyerFiche` (les nouvelles questions se répondent) et deux cas « Fonction de la base »
+  (voir `docs/decisions.md`). Séance fermée aux élèves : personne n'est en cours.

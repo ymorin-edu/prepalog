@@ -148,9 +148,26 @@ piège en chaîne. Fichier : `contenus/questions/ENT-6.2.js` (comme ENT-6.1), `p
 Écart à vérifier par Claude Code : le point d'étape `qui-utilise-le-bon` remplace le second message d'Inès (« Réponds
 maintenant à Malo ») ou s'y ajoute — proposer à Tristan, capture à l'appui.
 
-### 4 ter. Avant de commencer
+### 4 ter. Avant de commencer — CONSTRUIT (étape A, 10/10/2026)
 
-Banque de 14 questions validée : `docs/briefs/MOTEUR-avant-de-commencer.md` §4.
+Le brief disait « banque de 14 questions » : il n'en existait que 5. Banque de 10 écrite par Cowork (`docs/briefs/france-boissons/BANQUE-avant-de-commencer.md`),
+**tout gardé par Tristan le 10/10/2026**. `tirage: { preparation: 2, droit: 2, image: 1 }` (5 questions par élève), `calculette: true`. Fichier :
+`contenus/questions/ENT-6.2.js`. ★ = `cle: true` (à reprendre en évaluation).
+
+| id | Rubrique | À gauche | Juste |
+|---|---|---|---|
+| `qui-est-malo` ★ | préparation | fiche client | un client (bar, CHR) |
+| `format-fut` | préparation | stock | un fût qui contient 30 litres |
+| `bon-sert` | préparation | fiche client | dire ce qu'on va livrer (retour sans « préparateur puis chauffeur » : il soufflerait `qui-utilise-le-bon`) |
+| `ou-regarder` | préparation | stock | le stock et les conditions de vente |
+| `les-vides` | image | photos (fûts, casier) | ses fûts et casiers consignés |
+| `tireuse` | image | « La tireuse » (`tireuse.jpg`, Travis Fish, Unsplash) | un fût |
+| `vente-conclue` ★ | droit | Le droit (C. civ. 1113) | non : France Boissons doit accepter |
+| `consigne-rendue` | droit | conditions de vente | **valeurs tirées** : f de 1 à 6 fûts × 40 € + c de 1 à 8 casiers × 4 € (jamais 9 et 5) ; clés `92`, `80`, `0` |
+| `offre-ines` | droit | Le droit (1113) | une offre |
+| `cgv-communiquer` | droit | Le droit (C. com. L441-1, ajouté) | oui, la loi oblige à les communiquer |
+
+Septième onglet « La tireuse » (le visuel « Photos » garde ses deux images). L441-1 : phrase de la BANQUE, **non relue sur Légifrance** (voir le compte rendu).
 
 ## 5. Jalons / notation (8)
 
@@ -280,3 +297,8 @@ saute aux yeux.
   - **Demande au moteur faite en route (accord de Tristan, 10/10)** : le geste `messagerie:phrase:<ligne>` (premier choix d'une phrase, juste ou faux) dans `core/types/entreprise-messagerie.js`, `entreprise.js` (liste des gestes connus, contrôlée à l'ouverture) et `transfert.js` (`GESTE_PHRASE`). Le choix redessine la fiche seulement la première fois pour chaque ligne.
   - **Écart tranché sans Tristan** : le point d'étape `qui-utilise-le-bon` **s'ajoute** au second message d'Inès (« Réponds maintenant à Malo ») et ferme « Répondre » jusqu'à sa réponse ; à voir à l'écran. La question 1 reste sans le choix de l'élève dans l'énoncé (« Pourquoi ce choix ? » : le moteur ne met pas de variable dans un énoncé).
   - **Tests** : bloc `france-boissons` 50/50 (3 cas ajoutés ; les cas existants réécrits : poids, notes attendues, bandeau à 8 lignes, helpers `remplirBon` / `repondreMalo` qui répondent aux questions). Sabotage du geste : 15 cas tombent.
+
+- **Étape A (10/10/2026) — « Avant de commencer » : banque de 10, 5 tirées par élève** : voir §4 ter. `consigne-rendue` à valeurs tirées, photo de la tireuse en 7e
+  onglet, L441-1 dans « Le droit », `calculette: true`. Tests (bloc `france-boissons`) : tirage 2 + 2 + 1, parcours juste 20/20 depuis l'écran d'ouverture, 300 graines
+  (toute la banque sort), `consigne-rendue` juste pour 50 graines (montants écrits à la main), « Le droit ». **Cas existants touchés** : le cas « Avant de commencer »
+  (7 onglets au lieu de 6) et l'aide `monter62` (voir `docs/decisions.md`).

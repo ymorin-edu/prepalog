@@ -6,7 +6,7 @@
 > Lis docs/briefs/MOTEUR-avant-de-commencer.md. Construis l'écran « Avant de commencer » dans le moteur des questions, puis branche-le sur ENT-6.2. Annonce la durée avant de commencer et dis-moi si un point du brief contredit le code.
 > ```
 
-**Statut** : en cours — lots 1, 2 et 3 livrés le 10/10/2026 (le tirage est dans le moteur ; la banque d'ENT-6.2 reste à écrire) *(à valider → à implémenter → en cours → livré | abandonné)*
+**Statut** : en cours — lots 1 à 4 livrés le 10/10/2026 (tirage, calculette ; banques d’ENT-6.1 et 6.2 écrites) *(à valider → à implémenter → en cours → livré | abandonné)*
 **Date du brief** : 10/10/2026
 **Conversation d'origine** : Claude (session cloud), décisions de Tristan du 10/10/2026, 10 h.
 **Modèle** : Sonnet (on prolonge l'écran de questions existant, `core/types/questions.js`, sans vue nouvelle).
@@ -252,3 +252,19 @@ disent déjà « stock, minimum, jour de tournée » et souffleraient la répons
   par Cowork ou Tristan ; ENT-6.2 garde ses 5 questions fixes en attendant. Reprise des questions `cle: true` en évaluation : à écrire
   dans le fichier de l'évaluation (aucune évaluation France Boissons n'existe encore). Équité : même poids partout (les questions
   d'ouverture n'ont pas de `poids`), difficulté comparable à la charge de l'auteur de la banque.
+
+### Lot 4 — livré le 10/10/2026 (étape A de France Boissons : calculette, banques d'ENT-6.1 et 6.2, `part` d'ENT-6.1)
+
+- **Moteur** : `ouverture.calculette: true` (booléen, refusé sinon) pose la calculette du site sur l'écran d'ouverture (élève et enseignant, bouton à
+  l'encre) et la démonte dès qu'on en sort ; sans déclaration, rien ne change. Le transfert publie `messagerie:transfert:<clé du message>` en plus du
+  générique ; une clé est connue si le message est semé avec un `transfert` ou si le volet la déclare (`volet.transferables`). Une **réflexion
+  corrigée au bilan** (`reflexion` + `apres: 'bilan'`) : « Merci, je note » à l'écran, le retour du collègue avec le bandeau de fin (écart non annoncé
+  au brief : sans lui la question n° 3 d'ENT-6.1 soufflait son jalon). Bloc `questions` : 110 cas (4 ajoutés), 10 sabotages.
+- **ENT-6.2** : banque de 10 questions (`contenus/questions/ENT-6.2.js`), 5 par élève (2 préparation + 2 droit + 1 image) ; `consigne-rendue` à
+  valeurs tirées (montants lus dans `CONSIGNES`) ; photo de la tireuse en 7e onglet ; L441-1 ajouté à « Le droit » ; `calculette: true`.
+- **ENT-6.1** : l'écran d'ouverture de la séance (banque de 8 questions, 4 par élève : 2 préparation + 2 droit ; l'organigramme à gauche est celui de
+  l'élève ; « Le droit » : L1311-2, L2311-2, Cass. soc. 13/11/1996, L4121-1, L1331-1) ; `ri-obligatoire` (n de 55 à 150, jamais 80) et
+  `cse-obligatoire` (n de 12 à 45) à valeurs tirées ; trois questions au fil (voir le brief ENT-6.1, §4 bis) ; `part` 2 → 5, jalons du socle 18 → 15.
+- **Reste** : relire les textes de loi sur Légifrance (accès refusé depuis le poste : relus sur code.travail.gouv.fr pour L1311-2 alinéa 1 et L2311-2
+  intégralement ; L4121-1, L1331-1 et la phrase de L441-1 reprises de mémoire ou de sources secondaires) ; valider les poids d'ENT-6.1 ; reprise des
+  questions `cle: true` en évaluation (aucune évaluation France Boissons n'existe encore).
