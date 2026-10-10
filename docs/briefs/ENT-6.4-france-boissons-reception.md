@@ -3,15 +3,22 @@
 > **📋 Phrase à copier-coller dans ccode :**
 >
 > ```
-> Lis docs/briefs/ENT-6.4-france-boissons-reception.md. Commence par l'état des lieux des trois demandes au moteur du §7 (lecture seule) et dis-moi lesquelles existent déjà. N'implémente la séance qu'une fois les demandes livrées. Annonce la durée avant de commencer et dis-moi si un point du brief contredit le code.
+> implémente le brief ENT-6.4 : lis docs/briefs/ENT-6.4-france-boissons-reception.md. Commence par l'état des lieux des trois demandes au moteur du §7 (lecture seule) et dis-moi lesquelles existent déjà. Puis le chantier quai (D-4), page d'essai d'abord ; la séance seulement une fois les demandes livrées. Annonce la durée avant de commencer et dis-moi si un point du brief contredit le code.
 > ```
+>
+> **Réécriture du 10/10/2026 (Cowork)** : la sécurité ne se joue plus sur une image dessinée à part mais **sur le quai iso
+> lui-même** (décision Q3 du 07/10, `FRANCE-BOISSONS-refonte.md`). Changent : §2 (image), §4 étape 2, §5 (colonne « ce
+> qu'il lit »), §6 (plus de rectangles en pixels), **§7.3 réécrit en entier**, §8, §10, §11. Choix de Tristan du 10/10 :
+> deux vues (dehors, puis dedans porte ouverte) ; un clic à côté de tout objet = faux signalement ; un défaut oublié est
+> remis en ordre sans un mot au déchargement.
 
 **Statut** : à implémenter *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
-**Date du brief** : 05/10/2026
+**Date du brief** : 05/10/2026 ; §7.3 réécrit le 10/10/2026
 **Conversation d'origine** : Cowork (Opus) ; fiches projet `claude/prepalog-2de-s2-cadrage.md` (décisions 6, 12, 13) et
 `claude/prepalog-2de-s2-deroule.md` (décisions 26 et 27). Modèle : **ENT-5.4 Smoby** (`docs/briefs/ENT-5.4-smoby-reception.md`).
 Règles d'écriture 2de : `claude/prepalog-2de-eleve-debut-annee.md` (3 lignes par bloc, une consigne par écran).
-**Modèle** : Opus pour la séance (pièges et jalons nouveaux) ; la vue « image à inspecter » est une vue nouvelle du moteur (Opus).
+**Modèle** : Opus pour le chantier quai (D-4 : fûts, motifs, **inspection sur le quai iso**, vue nouvelle du moteur) ;
+Sonnet suffit ensuite pour déclarer la séance si le chantier est livré et testé.
 
 ## 1. Identité
 
@@ -49,9 +56,10 @@ Règles d'écriture 2de : `claude/prepalog-2de-eleve-debut-annee.md` (3 lignes p
 - **Vérifié (05/10, INRS, [Travail et Sécurité n° 843, 13/12/2022](https://www.travail-et-securite.fr/ts/843/EI/une-logistique-qui-met-la-pression-sur-les-manutentions.html), plateforme France Boissons de Gennevilliers)** : les fûts arrivent des brasseurs « par lots de huit sur des palettes mères de 1,23 m par 1,12 m » ; ils sont repalettisés sur des palettes 1,20 × 0,80 de 6 fûts au plus pour les clients ; stockage de masse ; portique à fûts. Buchelay (site France Boissons) : 7 000 places palettes, 2 300 références, cales de roue et marquage au sol.
 - **Vérifié (07/10)** dans la [vidéo « Présentation de la Plateforme de France Boissons à Buchelay », Grand Paris Seine & Oise, YouTube, 20/06/2025](https://www.youtube.com/watch?v=LRa0qgI7Weo) : slogan **« Objectif prioritaire : 0 accident »** ; gros plan d'une **cale de roue** rouge à bras
   devant la roue d'un camion à quai ; barrières de protection jaunes et allée piétonne marquée en jaune. Les élèves l'ont vue en 6.1. Ces chiffres réels sont dits dans la trame ; la séance applique la règle de l'exercice (8 fûts par palette de rétention).
-- **Image de la scène de sécurité : dessinée par Cowork** (aucune photo libre ne montre un vrai défaut de quai) —
-  `docs/briefs/france-boissons/scene-quai-securite.svg`, validée par Tristan le 05/10 (v2). Légende à l'écran : « Dessin —
-  scène construite, ce n'est pas la plateforme de Buchelay. » Aucun visage détaillé, aucune marque.
+- **Scène de sécurité : le quai iso de la vue quai** (décision Q3 de Tristan, 07/10). Le dessin à part
+  `docs/briefs/france-boissons/scene-quai-securite.svg` et sa maquette sont **abandonnés** (ne pas les copier dans
+  `contenus/`). Légende à l'écran, inchangée dans l'esprit : « Dessin — scène construite, ce n'est pas la plateforme de
+  Buchelay. » Personnes sans visage (kit iso), aucune marque sur le camion.
 - **Photos** : `futs-vrac.jpg` (brief `IMAGES-france-boissons.md`) peut servir à l'arrivée du camion ; le décor du déchargement
   reste celui de la vue quai.
 
@@ -70,24 +78,42 @@ pas la bonne : il manque une palette d'Affligem sur deux (P2 est de la Pelforth)
 1. **Message de Nadia, cheffe de quai** (3 blocs) : « Bonjour {prénom}, bienvenue au quai ! Ici, l'objectif, c'est **zéro accident**. / Le camion de la brasserie de
    Mons arrive au quai 12 : 4 palettes de fûts, dont l'Affligem qu'on attendait. / Avant de décharger, regarde bien la scène.
    Nadia »
-2. **Avant de décharger — image à inspecter** (vue nouvelle, §7.3). La scène dessinée s'affiche avec une consigne d'une
-   ligne : « Clique sur ce qui ne va pas, puis signale-le à Nadia. » **Aucune liste de points** (entraînement : l'élève y pense
-   seul).
+2. **Le camion arrive, puis l'inspection sur le quai iso** (§7.3). Le camion recule à la porte 12 (animation de l'étape ①
+   du quai iso, comme Spartoo) ; **le chauffeur reste dans sa cabine** et le pot fume. La scène s'arrête, avec une consigne
+   d'une ligne : « Clique sur ce qui ne va pas, puis signale-le à Nadia. » **Aucune liste de points** (entraînement : l'élève
+   y pense seul). L'inspection a **deux vues**, le même quai, le même camion :
+   - **Dehors** (la cour) : cabine, cale, butoirs. Bouton « Ouvrir la porte de quai » (ouvrir n'est pas décharger).
+   - **Dedans** (porte levée, la remorque vue par l'ouverture) : niveleur, lampe. Bouton « ← Revoir dehors » ; on passe
+     librement d'une vue à l'autre, les marques de chaque vue restent.
 
-   | Zone | Situation | Attendu |
-   |---|---|---|
-   | Cabine (vitre ou fumée du pot) | **chauffeur au volant, moteur allumé** | défaut |
-   | Niveleur | **relevé, pas posé sur la remorque** (fosse visible) | défaut |
-   | Cale devant la roue | posée | conforme (piège) |
-   | Lampe de quai | allumée, éclaire la remorque | conforme (piège) |
-   | Butoir | en place | conforme (piège) |
+   | Point (`id`) | Vue | Situation | Attendu |
+   |---|---|---|---|
+   | `cabine` (silhouette au volant **ou** fumée du pot) | dehors | **chauffeur au volant, moteur allumé** | défaut |
+   | `niveleur` | dedans | **relevé, pas posé sur la remorque** (le vide entre quai et remorque se voit) | défaut |
+   | `cale` (devant la roue arrière) | dehors | posée | conforme (piège) |
+   | `butoirs` | dehors | en place | conforme (piège) |
+   | `lampe` (lampe de quai à bras) | dedans | allumée, éclaire la remorque | conforme (piège) |
 
-   Un clic pose une marque numérotée, un second clic l'enlève. Deux boutons : « Signaler à Nadia » / « Commencer à
-   décharger ». **Entraînement** : décharger sans avoir signalé les deux défauts n'est **pas arrêté** (contrairement au
-   guidage d'ENT-5.4) ; le bilan dit seulement « La scène n'était pas sûre : regarde la cabine et l'arrière du camion. »
-   (le critère, jamais la réponse sur l'image). Signalement juste → Nadia : « Bien vu. Je fais couper le moteur et
-   descendre le chauffeur, et je pose le niveleur. La cale, elle, était bien posée : chez nous, pas de camion à quai sans cale. Tu
-   peux décharger. »
+   Un clic pose une marque numérotée, un second clic sur la marque l'enlève. Un clic **à côté de tout objet** (mur, sol, ciel)
+   pose aussi une marque : elle vaut **faux signalement** (choix de Tristan, 10/10). Deux boutons, sous les deux vues :
+   « Signaler à Nadia » / « C'est bon, on peut décharger ». On peut signaler plusieurs fois avant de décharger.
+
+   **Réponses de Nadia**, composées point par point (jamais un mot sur ce qui n'a pas été signalé) :
+   - `cabine` signalée : « Bien vu : je fais couper le moteur, le chauffeur me donne les clés et descend. » → **la scène
+     change** : la fumée s'arrête, le chauffeur descend et se tient près de l'accueil chauffeurs.
+   - `niveleur` signalé : « Bien vu : je pose le niveleur. » → dans la vue dedans, le niveleur s'abaisse sur la remorque.
+   - une marque sur un point conforme ou à côté : « Là, je ne vois rien qui cloche. » (une seule fois par envoi).
+   - fin de chaque réponse : « Tu me dis quand on peut décharger. »
+   *(La phrase « chez nous, pas de camion à quai sans cale » du brief du 05/10 disparaît de la réponse : dans un signalement
+   partiel, elle disait que la cale était un piège. Elle peut devenir une question d'ouverture, §4 ter.)*
+
+   **« C'est bon, on peut décharger »** fige l'inspection (plus de marque, plus de signalement). **Entraînement** : rien
+   n'arrête l'élève, même s'il reste un défaut ; un défaut oublié est **remis en ordre sans un mot** (choix de Tristan,
+   10/10) : à l'étape suivante le moteur est coupé, le chauffeur est descendu, le niveleur est posé, aucune légende ne le
+   dit. Le chauffeur (au vous) remet alors le BL : « Bonjour. Livraison de la brasserie de Mons : voici le bon de
+   livraison. » Puis « Oui, vous pouvez décharger », comme le quai iso de Spartoo.
+   Au bilan, si un défaut manque : « La scène n'était pas sûre : avant d'entrer dans un camion, il doit être immobilisé et
+   le passage vers la remorque doit être sûr. » (le critère, jamais l'endroit sur la scène ; texte à valider, §11).
 3. **Déchargement** : vue quai **sans froid**, l'élève décharge au chariot frontal (comme ENT-5.4). Pas de chrono.
 4. **Contrôle des palettes**, aides de guidage **éteintes** (zone de calcul `{ forme: 'feuille' }` sans rappel, pas de
    détail du comptage, pas de chef de quai qui explique) ; fiche de contrôle comme Picard / Smoby.
@@ -139,9 +165,9 @@ au moins le double de ce qu'on tire ; validée par Tristan avant construction. M
 
 | # | Jalon | Ce qu'il lit | Piège à éviter |
 |---|---|---|---|
-| 1 | Chauffeur / moteur signalé **avant** de décharger | image à inspecter (§7.3) | faux si l'élève décharge d'abord ; la vitre et la fumée comptent pour le même défaut |
-| 2 | Niveleur signalé **avant** de décharger | idem | idem |
-| 3 | Aucun faux signalement (cale, lampe, butoir) | idem | **ne récompense pas l'inaction** : faux si aucun défaut n'est signalé |
+| 1 | Chauffeur / moteur signalé **avant** de décharger | inspection sur le quai iso (§7.3) : `securite.signaux` | faux si l'élève décharge d'abord ; la silhouette et la fumée comptent pour le même point ; signalé dans n'importe quel envoi avant « on peut décharger » |
+| 2 | Niveleur signalé **avant** de décharger | idem | idem ; une marque enlevée avant l'envoi ne compte pas |
+| 3 | Aucun faux signalement (cale, butoirs, lampe, **clic à côté**) | idem | **ne récompense pas l'inaction** : faux si aucun signalement n'a été envoyé ; une marque fausse enlevée **avant** l'envoi ne compte pas, une marque fausse envoyée compte même si elle est enlevée ensuite |
 | 4 | P1 comptée 8 et acceptée | vue quai | — |
 | 5 | P2 : réserve « produit différent », référence lue = Pelforth | vue quai + fiche | P2 acceptée sans réserve = faux ; « Affligem » recopié du BL = faux |
 | 6 | P3 : réserve « fût endommagé », 1 fût | vue quai | sans faire le tour, la fuite ne se voit pas |
@@ -156,20 +182,34 @@ Salutation et fin non notées. Le dernier envoi du message compte.
 
 ## 6. Contenu
 
-`contenus/france-boissons-ent64.js` (scène de sécurité et ses zones, quai, palettes, messages, phrases, étapes), univers dans
-`contenus/france-boissons.js` (Nadia y est déjà). L'image : copier `docs/briefs/france-boissons/scene-quai-securite.svg` dans
-`contenus/images/france-boissons/` (SVG en ligne ou fichier servi par le dépôt, au choix de Claude Code). Les zones cliquables
-sont déclarées par le contenu en coordonnées de l'image (viewBox 1400 × 700) :
+`contenus/france-boissons-ent64.js` (quai iso, inspection, palettes, messages, phrases, étapes), univers dans
+`contenus/france-boissons.js` (Nadia y est déjà). **Aucune image, aucune coordonnée en pixels** : la séance déclare les
+points à inspecter par objet du kit et par état (§7.3) ; le moteur dessine et sait où l'on clique. Forme indicative :
 
-| Zone | Rectangle(s) `x, y, l, h` | Défaut |
-|---|---|---|
-| `cabine` | 96, 296, 126, 92 (vitre) **et** 150, 96, 120, 146 (fumée) | oui |
-| `niveleur` | 1074, 466, 92, 96 | oui |
-| `cale` | 814, 558, 48, 48 | non |
-| `lampe` | 1098, 212, 90, 46 | non |
-| `butoir` | 1058, 534, 28, 56 | non |
+```js
+quai: {
+  rendu: 'iso', lieu: { nom: 'Quai 12', ... },
+  securite: {
+    mode: 'scene',                       // nouveau : l'inspection se joue sur le quai iso (sinon : la liste OK / Pas OK)
+    arret: false,                        // entraînement : rien n'arrête l'élève (guidage, plus tard : true)
+    consigne: 'Clique sur ce qui ne va pas, puis signale-le à Nadia.',
+    points: [
+      { id: 'cabine',   objet: 'cabine',   etat: 'conduite', vue: 'dehors', ok: false, lib: 'Chauffeur au volant, moteur allumé',
+        repare: 'Bien vu : je fais couper le moteur, le chauffeur me donne les clés et descend.' },
+      { id: 'niveleur', objet: 'niveleur', etat: 'releve',   vue: 'dedans', ok: false, lib: 'Niveleur relevé',
+        repare: 'Bien vu : je pose le niveleur.' },
+      { id: 'cale',     objet: 'cale',     etat: 'posee',    vue: 'dehors', ok: true,  lib: 'Cale de roue' },
+      { id: 'butoirs',  objet: 'butoirs',  etat: 'enPlace',  vue: 'dehors', ok: true,  lib: 'Butoirs de quai' },
+      { id: 'lampe',    objet: 'lampe',    etat: 'allumee',  vue: 'dedans', ok: true,  lib: 'Lampe de quai' },
+    ],
+    signaler: { qui: 'Nadia', rien: 'Là, je ne vois rien qui cloche.', fin: 'Tu me dis quand on peut décharger.' },
+    bilan: 'La scène n’était pas sûre : avant d’entrer dans un camion, il doit être immobilisé et le passage vers la remorque doit être sûr.',
+  },
+}
+```
 
-Maquette cliquable de référence (jetable, ne pas recopier le code) : `G:\Mon Drive\Travail\Logistique\1L\Claude outputs\maquette-6.4-securite-quai.html`.
+Les `lib` ne s'affichent **jamais pendant l'inspection** (ni au survol, ni en titre) : ils servent au bilan de l'enseignant
+et au corrigé.
 
 ## 7. Demandes au moteur
 
@@ -180,20 +220,90 @@ Maquette cliquable de référence (jetable, ne pas recopier le code) : `G:\Mon D
 2. **Palette de fûts dans la vue quai** : dessiner des **cylindres** (fûts) au lieu de cartons quand le contenu le déclare
    (`forme: 'fut'`), **8 fûts à plat en quinconce (rangées de 3, 2 et 3) posés sur une palette de rétention noire de 1,30 × 1,30 m** (plastique, caillebotis, pas de bois) ; la coulure du fût abîmé visible **seulement depuis l'arrière** (comme le carton écrasé de Smoby) ; l'unité
    devient « fûts » partout (comptage, réserves, BL). Si c'est trop cher : cartons gardés, unité « fûts » seule, et le dire.
-3. **Image à inspecter** (vue n° 6 de `prepalog-2de-hors-socle-et-vues.md`, ou mode « zones à trouver » du brief
-   `MOTEUR-modes-visite.md` — **à trancher par Tristan à l'état des lieux**) : une image + des zones déclarées (défaut ou
-   conforme, plusieurs rectangles possibles par zone) ; clic = marque numérotée, re-clic = l'enlève ; « Signaler » /
-   « Continuer sans signaler » ; résultat lu par les jalons (`defautsSignales`, `fauxSignalements`, `avantDechargement`) ;
-   en entraînement, pas d'arrêt et bilan qui nomme le critère ; en guidage (plus tard), possibilité d'arrêter comme ENT-5.4.
-   Elle servira aussi à ENT-5.4 (« l'étape sécurité passera sur une image à inspecter », décision de Tristan du 04/10).
+3. **Inspection de sécurité sur le quai iso** *(réécrit le 10/10/2026 ; remplace l'« image à inspecter », abandonnée le
+   07/10, Q3 de `FRANCE-BOISSONS-refonte.md`)*. L'élève inspecte **le quai où il va décharger** : même façade, même camion,
+   même dessin (kit `core/iso.js`). Une vue pensée pour servir aussi à ENT-5.4 et ENT-1.1 quand elles passeront sur le
+   quai iso (pas dans ce chantier : elles ne changent pas).
+
+   **3a. Ce que le moteur sait déjà faire (lu dans le code le 10/10, à confirmer à l'état des lieux).** L'étape ⓪
+   « Avant de décharger » existe (`securite: { points: [{ id, lib, ok }], signaler, arret, commencer, photo }`, lot 5 du
+   04/10) mais en **liste OK / Pas OK**, placée **avant** l'arrivée du camion ; le commentaire de `quai.js` prévoit déjà que
+   « la même étape pourra se jouer sur une image à inspecter ». Le rendu iso (`rendu: 'iso'`) dessine la façade (avec les
+   **butoirs**), le camion porteur qui recule, le chauffeur debout et sa bulle, la porte sectionnelle, le niveleur **posé**
+   et l'intérieur de la remorque par l'ouverture. Le kit n'a **ni cale de roue, ni lampe de quai, ni personne dans la
+   cabine, ni fumée, ni niveleur relevé**.
+
+   **3b. Ce qu'il faut ajouter.**
+   - **Un mode `securite.mode: 'scene'`**, accepté seulement avec `rendu: 'iso'` (sinon refus au chargement, message
+     clair). Sans `mode`, l'étape ⓪ en liste reste **exactement** comme aujourd'hui (Smoby ENT-5.4 ne bouge pas).
+   - **Place dans le déroulé** : en mode scène, l'inspection vient **après** l'animation d'arrivée et **avant** le BL. Le
+     stepper : ① Le camion arrive · ② Déchargement · ③ … (pas d'étape ⓪ séparée : l'inspection fait partie de ①). Les
+     étapes ② à ④ restent fermées tant que l'inspection n'est pas figée.
+   - **Deux vues** : `dehors` (la scène d'arrivée figée, projection de `sceneArrivee`) et `dedans` (la scène ② avant
+     déchargement : porte levée, remorque par l'ouverture, aucune palette sortie). Bouton « Ouvrir la porte de quai » (une
+     fois ; la porte se lève en 1,8 s comme aujourd'hui), puis bascule libre « Voir dedans » / « ← Revoir dehors ». Ouvrir
+     la porte ne fige rien et ne compte pas comme décharger.
+   - **Objets et états, dans le kit** (règle du « kit qui grandit » : rien n'est dessiné dans `contenus/`) :
+
+     | `objet` | Vue | États | Dessin attendu |
+     |---|---|---|---|
+     | `cabine` | dehors | `conduite` · `vide` | `conduite` : silhouette **sans visage** derrière le pare-brise, petites bouffées grises au pot d'échappement (animées, coupées si l'élève a demandé moins d'animations) ; `vide` : cabine vide, pas de fumée, chauffeur debout dehors (comme aujourd'hui) |
+     | `cale` | dehors | `posee` · `absente` | cale de roue **rouge à bras** devant une roue arrière, côté élève (d'après la vidéo de Buchelay vue en 6.1) |
+     | `butoirs` | dehors | `enPlace` · `absents` | les butoirs noirs de `facadeQuai` ; **vérifier qu'ils restent visibles** le camion à quai (sinon les décaler ou agrandir, sans déplacer le camion) |
+     | `niveleur` | dedans | `pose` · `releve` | `pose` : celui d'aujourd'hui ; `releve` : la plaque dressée contre le quai, **le vide** entre le seuil et le plancher de la remorque visible par l'ouverture |
+     | `lampe` | dedans | `allumee` · `eteinte` | lampe de quai à bras articulé fixée au mur à côté de l'ouverture, `allumee` : un cône de lumière pâle dans la remorque |
+
+     Les états non déclarés par la séance prennent la valeur sûre (`vide`, `posee`, `enPlace`, `pose`, `allumee`) : un
+     quai iso sans `securite` (Spartoo) se dessine **comme aujourd'hui**, cale et lampe en plus seulement si une
+     séance les déclare (à trancher à l'état des lieux : les ajouter partout ou seulement sur demande ; défaut : sur
+     demande, pour ne rien changer à ENT-1.1).
+   - **Où l'on clique** : le moteur calcule, pour chaque point déclaré, sa **zone de clic** depuis l'objet dessiné
+     (boîte englobante projetée + marge d'au moins 12 px) ; `cabine` = cabine **et** fumée. Le contenu ne donne jamais de
+     coordonnées. Les zones sont **invisibles** : pas de changement de curseur, pas de surbrillance, pas de `title`, pas de
+     `tabindex` sur les objets (sinon le survol ou la touche Tab donnent la réponse). Le curseur est une croix sur toute
+     la scène.
+   - **Marques** : un clic n'importe où dans la scène pose une marque numérotée (1, 2, 3… dans l'ordre des clics, toutes vues
+     confondues) ; un clic sur une marque l'enlève (les suivantes ne sont pas renumérotées). La marque retient sa vue, sa
+     position (coordonnées du `viewBox`) et le point touché (le premier dont la zone la contient, ou `null` = à côté). Teinte
+     de la marque : **ni vert ni rouge** (encre, contour épais, numéro dans un rond) : ce n'est pas un verdict.
+   - **Signaler** : « Signaler à Nadia » envoie les marques en place. Sans marque : « Qu'est-ce qui ne va pas ? Clique
+     d'abord sur ce que tu veux me signaler. » (rien n'est rangé). Sinon un signal est rangé
+     (`{ points: [ids touchés], rien: n marques à côté, apresArret }`), Nadia répond point par point (`repare` de chaque
+     défaut touché, puis `rien` une seule fois s'il y a au moins une marque fausse ou à côté, puis `fin`), et **chaque défaut
+     touché est réparé dans la scène** (son état passe à l'état sûr). Les marques envoyées restent affichées, grisées.
+   - **« C'est bon, on peut décharger »** fige l'inspection (`securite.fait`). Si `arret: true` (guidage, plus tard) et
+     qu'un défaut n'a pas été signalé : Nadia arrête l'élève sans dire lequel (comme le lot 5). Si `arret: false`
+     (ENT-6.4) ou en évaluation : rien ne l'arrête ; **les défauts restants passent à l'état sûr sans aucun texte**. Puis
+     le chauffeur (descendu) parle et remet le BL ; la suite du quai iso est inchangée.
+   - **Ce que lisent les jalons** (calculé, jamais rangé tout fait) : pour chaque point `ok: false`, « signalé avant de
+     décharger » = présent dans au moins un signal envoyé avant `fait` ; « aucun faux signalement » = au moins un signal
+     envoyé **et** aucun signal ne contient de point `ok: true` ni de marque à côté. Les jalons de la liste
+     (`securiteSignalee`, `securiteConstat`) ne sont pas produits en mode scène.
+   - **Ce qui ne se rouvre jamais** : « Corriger » après le bilan ne rouvre pas l'inspection (le camion est reparti) ;
+     `recommencer` remet l'inspection à zéro comme le reste du quai.
+   - **Cloisonnement** : l'état de l'inspection vit dans l'état du quai de la séance (`db.quais[id].securite`), rien de
+     partagé.
+   - **Page d'essai d'abord** (règle Q2 du 07/10 : chaque vue finie et testée avant la séance) : une page où Tristan
+     **clique** la scène de 6.4 (les deux vues, les marques, les réponses de Nadia, la scène qui se répare), avec un
+     sélecteur des états de chaque objet pour juger chaque dessin seul. Il la valide avant que la séance soit écrite.
+
+   **3c. Hors de ce chantier.** ENT-5.4 (photo, liste OK / Pas OK) et ENT-1.1 ne changent pas ; leur passage à
+   l'inspection sur le quai iso fera l'objet de leur propre brief. Le clavier : l'inspection se fait à la souris ou au
+   doigt (une navigation au clavier sur les objets donnerait la réponse) ; à signaler dans le compte rendu, à reprendre
+   si un élève en a besoin (aménagement).
 
 Ce que la séance réutilise tel quel : vue quai sans froid (lot 4 de MOTEUR-2de-S1), fiche de contrôle, zone de calcul, phrases à
 choisir, mots cliquables.
 
 ## 8. Tests attendus
 
-Bloc `france-boissons` : parcours juste 10/10 ; inaction 0/10 ; décharger sans signaler → jalons 1 et 2 faux ; cale signalée →
-jalon 3 faux ; aucun signalement → jalon 3 faux aussi ; vitre seule ou fumée seule → jalon 1 juste ; P2 acceptée → jalon 5 faux ;
+Bloc `france-boissons` : parcours juste 10/10 ; inaction 0/10 ; décharger sans signaler → jalons 1 et 2 faux **et** la scène
+de l'étape suivante montre moteur coupé et niveleur posé, sans texte ; cale signalée → jalon 3 faux ; **clic sur le mur signalé
+→ jalon 3 faux** ; marque fausse posée puis enlevée **avant** l'envoi → jalon 3 juste ; aucun signalement → jalon 3 faux aussi ;
+silhouette seule ou fumée seule → jalon 1 juste ; cabine puis niveleur en **deux envois** → jalons 1 et 2 justes ; niveleur
+cliquable seulement dans la vue dedans ; signalement juste → la scène se répare (fumée absente, chauffeur dehors) ;
+**rien ne trahit les zones** : aucun objet n'a de `title`, de `tabindex` ni de curseur propre ; chaque point se touche en
+cliquant au centre de sa zone à la souris (`boundingBox()`), deux vues ; Smoby ENT-5.4 (liste) inchangé ; P2 acceptée → jalon 5 faux ;
 P2 avec « Affligem » en référence → jalon 5 faux ; P3 sans faire le tour (pas de réserve) → jalon 6 faux ; P4 comptée 8 → jalon 7
 faux ; phrase « en stock avec les autres » → jalon 10 faux ; sabotage par jalon.
 
@@ -210,8 +320,10 @@ faux ; phrase « en stock avec les autres » → jalon 10 faux ; sabotage par ja
 
 ## 10. Critères de validation par Tristan
 
-La scène se lit sans aide (on voit le chauffeur et le niveleur relevé) ; on reconnaît le quai d'ENT-5.4, avec des fûts ; un élève
-de 2de finit en 45 min ; le bilan ne donne jamais la réponse sur l'image.
+Sur la page d'essai, puis dans la séance : la scène se lit sans aide (on voit le chauffeur au volant et la fumée dehors, le
+niveleur relevé dedans) ; on reconnaît le quai iso de Spartoo, avec des fûts ; la cale, les butoirs et la lampe se voient
+aussi (sinon le piège ne vaut rien) ; le survol ne trahit rien ; un élève de 2de finit en 45 min ; rien ne dit où était le
+défaut pendant l'inspection.
 
 ## 11. Questions ouvertes (valeur par défaut entre parenthèses)
 
@@ -221,7 +333,18 @@ de 2de finit en 45 min ; le bilan ne donne jamais la réponse sur l'image.
 - [x] Fût qui fuit : réserve + zone litiges (Tristan, 05/10).
 - [x] P2 : réserve « produit différent », palette gardée (Tristan, 05/10).
 - [x] Date : **mercredi 16 juin 2027, 14 h** (calendrier « lundi → vendredi », Tristan, 05/10).
-- [ ] Image à inspecter : vue n° 6 ou mode des modes visite (à l'état des lieux).
+- [x] ~~Image à inspecter : vue n° 6 ou mode des modes visite~~ → **inspection sur le quai iso** (Tristan, 07/10, Q3) ;
+  dessin `scene-quai-securite.svg` abandonné.
+- [x] Deux vues, dehors puis dedans porte ouverte (Tristan, 10/10).
+- [x] Clic à côté de tout objet = faux signalement (Tristan, 10/10).
+- [x] Défaut oublié en entraînement : remis en ordre sans un mot au déchargement (Tristan, 10/10).
+- [ ] Phrase du bilan : « La scène n'était pas sûre : avant d'entrer dans un camion, il doit être immobilisé et le passage
+  vers la remorque doit être sûr. » (remplace « regarde la cabine et l'arrière du camion », qui nommait presque les zones).
+- [ ] Au bilan de l'élève, les lignes des jalons 1 et 2 nomment-elles le défaut (« Chauffeur au volant, moteur allumé ») ?
+  (défaut : **oui**, l'inspection est figée et ne se refait pas ; ce qui ne se dit jamais, c'est l'endroit pendant
+  l'inspection).
+- [ ] Cale et lampe : dessinées sur tous les quais iso, ou seulement quand une séance les déclare ? (défaut : seulement
+  quand une séance les déclare, ENT-1.1 ne change pas).
 - [x] « Zéro accident » dans le message de Nadia et la cale rappelée dans sa réponse, d'après la vidéo de Buchelay (Tristan, 07/10). La scène dessinée ne change pas.
 - [x] **Palettes mères de 8 fûts (1,23 m × 1,12 m)** : vérifié (Tristan, 05/10), dit dans la trame.
 - [x] ~~4 fûts par palette de rétention (décision 37)~~ → **8 fûts à plat en quinconce sur palette de rétention noire de 1,30 × 1,30 m** (Tristan, 05/10, décision 52), en 6.4, 6.5 et 6.6.
