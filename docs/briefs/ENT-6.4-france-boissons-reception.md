@@ -31,8 +31,8 @@ Sonnet suffit ensuite pour déclarer la séance si le chantier est livré et tes
 | Niveau(x) | 2de |
 | Compétence(s) | **C1.2** (sécurité), **C1.4** (réception ; C1.4.2 litige) ; domaines D4, D5 *(codes sans préfixe : à aligner sur le format du code — AGO- / OTM- / LOG- ailleurs dans S2 ; Claude Code vérifie)* |
 | Temps pédagogique | **entraînement** (scénario S2) ; `coeur: true` |
-| Notation | jalons + note sur 20 |
-| Barème | 10 |
+| Notation | jalons pondérés, note sur 20 (`bareme: 20`, un `poids` par jalon, part des questions notées 3 à 5 points) |
+| Barème | **20** — tableau de poids validé par Tristan avant d'être codé (règle du 10/10/2026, `NOTATION-ponderation.md`) ; la règle « un point par jalon » du brief d'origine est **retirée** (Tristan, 10/10/2026) |
 | `pret` à la livraison | `pret: true, ouverture: 'prof'` |
 
 ## 2. L'entreprise : vérifié / construit
@@ -161,7 +161,7 @@ Banque de questions de l'écran d'ouverture (`docs/briefs/MOTEUR-avant-de-commen
 préparation de l'exercice, 2 ou 3 d'économie-droit appliquées au cas, images si la séance fait découvrir un matériel ;
 au moins le double de ce qu'on tire ; validée par Tristan avant construction. Modèle : la banque d'ENT-6.2.
 
-## 5. Jalons / notation (10)
+## 5. Jalons / notation (10 jalons, poids sur 20 à valider : `ENT-6.4-propositions-questions-poids.md`)
 
 | # | Jalon | Ce qu'il lit | Piège à éviter |
 |---|---|---|---|
