@@ -381,9 +381,28 @@ export function horlogeQuai(I, x, y, z, t) {
 
 // La façade de l'entrepôt vue de la cour : trois portes de quai numérotées (`portes`, la 2e est celle du
 // camion), leurs butoirs, la bande béton du quai, le marquage au sol et la porte « Accueil chauffeurs ».
-export function facadeQuai(I, portes = ['6', '7', '8']) {
+// Les butoirs de la paire droite : [décalage en x depuis le bord gauche de la porte, y, z, largeur, profondeur,
+// hauteur], le haut (sur le mur) puis le bas (sur la bande béton). `FINS` = le dessin d'avant ; `EPAIS` = la même
+// paire renforcée, utilisée seulement quand la séance règle les butoirs de cette porte.
+const BUTOIRS_FINS = [[.99, 0, .75, .16, .12, .2], [.99, .35, .3, .16, .12, .3]];
+const BUTOIRS_EPAIS = [[.99, 0, .7, .3, .16, .3], [.99, .35, .25, .3, .16, .6]];
+// Options (D-4, ajoutées en dernier, défaut = le dessin d'avant) : `butoirs: { porte, etat }` règle les butoirs d'UNE
+// porte (0, 1 ou 2) : 'absents' les retire tous les quatre ; 'enPlace' les dessine ; `essai` : voir `objetEssai`
+// (le groupe entoure la paire DROITE, la seule qui dépasse du camion à quai : c'est elle que `boitesButoirs` donne).
+export function facadeQuai(I, portes = ['6', '7', '8'], o = {}) {
   const { face, boite, pts, P } = I;
   const X = [1.0, 3.6, 6.2], noir = ['#111', '#1a1a1a', '#0c0c0c'];
+  const bu = o.butoirs || null;
+  const sans = (n) => !!bu && bu.porte === n && bu.etat === 'absents';
+  const etatBu = bu && bu.etat === 'absents' ? 'absents' : 'enPlace';
+  // La paire droite : plus épaisse (et débordant du côté de la caisse du camion) quand l'option règle cette porte,
+  // pour qu'on la repère camion à quai ; entourée du groupe d'essai.
+  const epais = (n) => !!bu && bu.porte === n && bu.etat !== 'absents';
+  const droit = (n, dx, bas) => {
+    const [a, y, z, w, d, h] = epais(n) ? BUTOIRS_EPAIS[bas ? 1 : 0] : BUTOIRS_FINS[bas ? 1 : 0];
+    const s = boite(dx + a, y, z, w, d, h, noir);
+    return bu && bu.porte === n ? objetEssai(o, 'butoirs', etatBu, s) : s;
+  };
   let g = face([[-1.5, -0.4, 0], [10, -0.4, 0], [10, 8.5, 0], [-1.5, 8.5, 0]], '#bdb8ae', 'none');
   X.forEach((dx) => { g += face([[dx - .05, 0, 0], [dx, 0, 0], [dx, 5, 0], [dx - .05, 5, 0]], '#e7c628', 'none') + face([[dx + 1.2, 0, 0], [dx + 1.25, 0, 0], [dx + 1.25, 5, 0], [dx + 1.2, 5, 0]], '#e7c628', 'none'); });
   g += boite(-1, -0.5, 0, 10.5, 0.5, 2.75, ['#8d969b', '#aab2b7', '#949ca1']);
@@ -392,13 +411,17 @@ export function facadeQuai(I, portes = ['6', '7', '8']) {
     g += face([[dx - .12, 0.001, 0], [dx + 1.32, 0.001, 0], [dx + 1.32, 0.001, 2.2], [dx - .12, 0.001, 2.2]], '#2a2d30', 'none');
     g += face([[dx, 0.002, 0.95], [dx + 1.2, 0.002, 0.95], [dx + 1.2, 0.002, 2.08], [dx, 0.002, 2.08]], '#c4cacd', '#8d969b');
     for (let z = 1.12; z < 2.08; z += 0.2) g += `<polyline points="${pts([[dx, 0.003, z], [dx + 1.2, 0.003, z]])}" stroke="#98a1a6"/>`;
-    g += boite(dx + .05, 0, 0.75, .16, .12, .2, noir) + boite(dx + .99, 0, 0.75, .16, .12, .2, noir);
+    if (!sans(n)) g += boite(dx + .05, 0, 0.75, .16, .12, .2, noir) + droit(n, dx, false);
+    else g += objetEssai(o, 'butoirs', 'absents', '');
     g += face([[dx + .35, 0.004, 2.32], [dx + .85, 0.004, 2.32], [dx + .85, 0.004, 2.62], [dx + .35, 0.004, 2.62]], '#1f5f3a', '#0f3d24');
     const [lx, ly] = P(dx + .6, 0.004, 2.47);
     g += `<text x="${lx.toFixed(1)}" y="${(ly + 6).toFixed(1)}" text-anchor="middle" font-size="16" font-weight="800" fill="#fff" transform="rotate(30 ${lx.toFixed(1)} ${ly.toFixed(1)})">${ech(portes[n] || '')}</text>`;
   });
   g += boite(-1, 0, 0, 10.5, 0.35, 0.75, ['#a7a39b', '#b9b5ad', '#9a968e']);
-  X.forEach((dx) => { g += boite(dx + .05, 0.35, 0.3, .16, .12, .3, noir) + boite(dx + .99, 0.35, 0.3, .16, .12, .3, noir); });
+  X.forEach((dx, n) => {
+    if (!sans(n)) g += boite(dx + .05, 0.35, 0.3, .16, .12, .3, noir) + droit(n, dx, true);
+    else g += objetEssai(o, 'butoirs', 'absents', '');
+  });
   g += face([[8.3, 0.001, 0], [8.95, 0.001, 0], [8.95, 0.001, 1.5], [8.3, 0.001, 1.5]], '#3b4a55', 'none');
   const [ax, ay] = P(8.62, 0.002, 1.75);
   g += `<text x="${ax.toFixed(1)}" y="${ay.toFixed(1)}" text-anchor="middle" font-size="11" font-weight="700" fill="#1d1d1b" transform="rotate(30 ${ax.toFixed(1)} ${ay.toFixed(1)})">Accueil chauffeurs</text>`;
@@ -406,10 +429,112 @@ export function facadeQuai(I, portes = ['6', '7', '8']) {
 }
 // Où se gare un camion à la porte n (0, 1, 2) de `facadeQuai` : son x.
 export const X_PORTE_FACADE = [1.1, 3.7, 6.3];
+// Les boîtes monde de la paire droite des butoirs de la porte n, en 'enPlace' (donc la paire renforcée : c'est
+// le dessin que `facadeQuai` fait quand on lui règle les butoirs de cette porte).
+export function boitesButoirs(porte) {
+  const dx = [1.0, 3.6, 6.2][porte];
+  return BUTOIRS_EPAIS.map(([a, y, z, w, d, h]) => [dx + a, y, z, dx + a + w, y + d, z + h]);
+}
+
+/* ------------------------------------------------ boîtes monde et zones à l'écran (chantier D-4) */
+// Chaque objet de sécurité du quai (cabine, fumée, cale, butoirs, niveleur, lampe) expose ses BOÎTES MONDE
+// `[x0, y0, z0, x1, y1, z1]` (mètres), calculées par les mêmes constantes que son dessin. `boiteEcran` les projette :
+// c'est la ZONE où l'élève peut cliquer (étape 2 du chantier), et la page d'essai la dessine pour vérifier qu'un
+// objet est bien là où sa zone le dit. Fonction pure : elle ne lit que la projection et les boîtes.
+
+// Le rectangle écran { x, y, w, h } (unités du viewBox, arrondies au dixième) qui contient les huit coins de
+// chaque boîte (une boîte seule `[x0, …, z1]` ou une liste de boîtes), agrandi de `marge` de chaque côté.
+export function boiteEcran(I, boites, marge = 12) {
+  const L = boites && typeof boites[0] === 'number' ? [boites] : (boites || []);
+  if (!L.length) return null;
+  const xs = [], ys = [];
+  for (const [x0, y0, z0, x1, y1, z1] of L) {
+    for (const x of [x0, x1]) for (const y of [y0, y1]) for (const z of [z0, z1]) { const [px, py] = I.P(x, y, z); xs.push(px); ys.push(py); }
+  }
+  const a = Math.min(...xs) - marge, b = Math.min(...ys) - marge, c = Math.max(...xs) + marge, d = Math.max(...ys) + marge;
+  const r = (n) => Math.round(n * 10) / 10;
+  return { x: r(a), y: r(b), w: r(c - a), h: r(d - b) };
+}
+// Option de MISE AU POINT `o.essai` : entoure chaque objet d'un <g data-essai-objet="…" data-etat="…">. Seules la
+// page d'essai et les tests la passent (le quai, jamais) : aucun contenu élève ne nomme un objet dans le DOM.
+const objetEssai = (o, nom, etat, s) => (o && o.essai ? `<g data-essai-objet="${nom}" data-etat="${etat}">${s}</g>` : s);
+
+// Les vitres de la cabine du camion porteur (le pare-brise et la vitre latérale droite) : le dessin et les boîtes
+// du chauffeur lisent les mêmes nombres. L'objet « cabine » de l'inspection est le pare-brise (et le chauffeur).
+const CAB = { x0: .03, x1: .97, y0: 2.6, y1: 3.54, z0: .36, z1: 1.56 };
+const PARE_BRISE = { x0: .1, x1: .9, y: 3.52, z0: 1.02, z1: 1.46 };
+const VITRE_LAT = { x: .97, y0: 2.68, y1: 3.25, z0: 1.05, z1: 1.45 };
+// La cale de roue (devant la roue arrière côté élève) et le pot d'échappement (arrière droit de la cabine).
+const CALE = { x0: .76, x1: 1.02, y0: 1.27, long: .38, haut: .2, bras: .3 };
+const POT = { x: 1.0, y: 2.68, z1: 1.9 };
+
+// Une ellipse posée dans un plan (vitre) : `plan(u, z)` donne le point monde, on la rend en polygone.
+function ellipsePlan(I, plan, cu, cz, ru, rz, a0 = 0, a1 = Math.PI * 2, n = 22) {
+  const L = [];
+  for (let k = 0; k <= n; k++) { const a = a0 + (a1 - a0) * k / n; L.push(plan(cu + ru * Math.cos(a), cz + rz * Math.sin(a))); }
+  return I.pts(L);
+}
+// Le chauffeur au volant : tête et épaules DERRIÈRE le pare-brise (collées dans le plan de la vitre), SANS TRAITS DU
+// VISAGE (règle du projet), gilet jaune comme `personne`. Il est à gauche du camion (côté conducteur), donc au tiers
+// gauche du pare-brise ; la vitre latérale reste sombre (deux silhouettes feraient deux chauffeurs).
+function chauffeurCabine(I, x, yr) {
+  const peau = '#c99a76', cheveux = '#3a2a1f', gil = '#f0c419', bande = '#e6e8e8';
+  const pb = (u, z) => [x + u, yr + PARE_BRISE.y - .01, z];
+  let g = '';
+  g += `<polygon points="${I.pts([pb(.12, 1.02), pb(.68, 1.02), pb(.66, 1.1), pb(.58, 1.18), pb(.22, 1.18), pb(.14, 1.1)])}" fill="${gil}"/>`;
+  g += `<polygon points="${I.pts([pb(.12, 1.055), pb(.675, 1.055), pb(.672, 1.09), pb(.124, 1.09)])}" fill="${bande}"/>`;
+  g += `<polygon points="${I.pts([pb(.37, 1.18), pb(.47, 1.18), pb(.46, 1.23), pb(.38, 1.23)])}" fill="#b3876a"/>`;
+  g += `<polygon points="${ellipsePlan(I, pb, .42, 1.305, .095, .115)}" fill="${peau}"/>`;
+  g += `<polygon points="${ellipsePlan(I, pb, .42, 1.32, .102, .115, 0, Math.PI, 14)}" fill="${cheveux}"/>`;
+  g += `<polygon points="${ellipsePlan(I, pb, .42, 1.075, .2, .05)}" fill="none" stroke="#1b1d1f" stroke-width="3"/>`;
+  return g;
+}
+// La fumée d'échappement : un pot vertical (acier sombre) et trois bouffées grises translucides de classe
+// `iso-fumee` (animées par `styles/quai.css`, immobiles et toujours dessinées en mouvement réduit). Les bouffées
+// sont posées à des hauteurs étagées : à l'arrêt elles forment déjà une colonne.
+function potEchappement(I, x, yr) {
+  return I.boite(x + POT.x - .03, yr + POT.y - .03, .42, .06, .06, POT.z1 - .42, ['#7d858a', '#4a4f52', '#33373a']);
+}
+function fumeeEchappement(I, x, yr) {
+  const [px, py] = I.P(x + POT.x, yr + POT.y, POT.z1 + .02), u = I.unite;
+  let g = '';
+  [0, 1, 2].forEach((k) => {
+    const cx = px + u * (.04 + .06 * k), cy = py - u * (.14 + .19 * k), r = u * (.09 + .04 * k);
+    g += `<circle class="iso-fumee" cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${r.toFixed(1)}" fill="rgba(74,78,82,${(.82 - .17 * k).toFixed(2)})" style="--iso-dx:${(u * .12).toFixed(1)}px;--iso-dy:${(-u * .3).toFixed(1)}px;animation-delay:${(-k * .9).toFixed(1)}s"/>`;
+  });
+  return g;
+}
+// La cale de roue rouge à bras : un coin posé devant la roue arrière, côté élève, et son bras (poignée) qui revient
+// vers l'élève. Rouge = signalisation (exception du kit), jamais un verdict.
+function caleDeRoue(I, x, yr) {
+  const { face, pts } = I;
+  const x0 = x + CALE.x0, x1 = x + CALE.x1, y0 = yr + CALE.y0, y1 = y0 + CALE.long, h = CALE.haut;
+  let g = face([[x1, y0, 0], [x1, y1, 0], [x1, y0, h]], '#a8291d', 'rgba(0,0,0,.35)');
+  g += face([[x0, y0, h], [x1, y0, h], [x1, y1, 0], [x0, y1, 0]], '#d93a2b', 'rgba(0,0,0,.35)');
+  const xb = (x0 + x1) / 2;
+  g += `<polyline points="${pts([[xb, y1, .02], [xb, y1 + .14, .2], [xb, y1 + CALE.bras, .3]])}" fill="none" stroke="#a8291d" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>`;
+  g += `<polyline points="${pts([[xb - .06, y1 + CALE.bras, .3], [xb + .06, y1 + CALE.bras, .3]])}" fill="none" stroke="#7d1d14" stroke-width="5" stroke-linecap="round"/>`;
+  return g;
+}
+// Les boîtes monde du camion (x, yr = comme `camionPorteur`) : `cabine` (le pare-brise, où l'on voit le chauffeur),
+// `fumee` (la colonne au-dessus du pot, jusqu'au bout de la dérive animée), `cale` (l'emplacement devant la roue
+// arrière, cale posée ou non : une cale absente laisse la zone là où elle devrait être).
+export function boitesCamion(x, yr, o = {}) {
+  return {
+    cabine: [[x + PARE_BRISE.x0, yr + PARE_BRISE.y - .02, PARE_BRISE.z0, x + PARE_BRISE.x1, yr + PARE_BRISE.y, PARE_BRISE.z1]],
+    fumee: [[x + POT.x - .1, yr + POT.y - .1, POT.z1 + .1, x + POT.x + .3, yr + POT.y + .1, POT.z1 + 1.1]],
+    cale: [[x + CALE.x0 - .03, yr + CALE.y0 - .02, 0, x + CALE.x1 + .03, yr + CALE.y0 + CALE.long + CALE.bras + .04, .36]],
+  };
+}
 
 // Un camion porteur (caisse blanche, cabine bleue) en marche arrière vers la façade : (x, yr) = coin de
 // l'arrière de la caisse. Roues rondes.
-export function camionPorteur(I, x, yr) {
+// Options (D-4, 10/10/2026 ; TOUJOURS ajoutées en dernier, le défaut est le dessin d'avant) :
+//   `cabine` : 'vide' (défaut) | 'conduite' (le chauffeur au volant, sans visage) ;
+//   `fumee`  : vrai = pot d'échappement et fumée ;
+//   `cale`   : 'posee' (cale rouge à bras devant la roue arrière) | 'absente' | absent (rien n'est dessiné) ;
+//   `essai`  : voir `objetEssai`.
+export function camionPorteur(I, x, yr, o = {}) {
   const { boite, face, P } = I;
   let g = '';
   const [ox, oy] = P(x + .5, yr + 1.8, 0);
@@ -419,10 +544,15 @@ export function camionPorteur(I, x, yr) {
   g += boite(x, yr, .46, 1, 2.55, 1.5, ['#f4f4f1', '#e4e5e1', '#d3d5d0']);
   g += face([[x + 1, yr, .5], [x + 1, yr + 2.55, .5], [x + 1, yr + 2.55, .6], [x + 1, yr, .6]], '#2f5f8e', 'none');
   g += boite(x + .03, yr + 2.6, .36, .94, .92, 1.2, ['#3d6e9e', '#2f5f8e', '#284f78']);
-  g += face([[x + .1, yr + 3.52, 1.02], [x + .9, yr + 3.52, 1.02], [x + .9, yr + 3.52, 1.46], [x + .1, yr + 3.52, 1.46]], '#1d2a35', 'none');
-  g += face([[x + .97, yr + 2.68, 1.05], [x + .97, yr + 3.25, 1.05], [x + .97, yr + 3.25, 1.45], [x + .97, yr + 2.68, 1.45]], '#1d2a35', 'none');
+  const cabine = o.cabine === 'conduite' ? 'conduite' : 'vide';
+  const pareBrise = face([[x + PARE_BRISE.x0, yr + PARE_BRISE.y, PARE_BRISE.z0], [x + PARE_BRISE.x1, yr + PARE_BRISE.y, PARE_BRISE.z0], [x + PARE_BRISE.x1, yr + PARE_BRISE.y, PARE_BRISE.z1], [x + PARE_BRISE.x0, yr + PARE_BRISE.y, PARE_BRISE.z1]], '#1d2a35', 'none');
+  const vitreLat = face([[x + VITRE_LAT.x, yr + VITRE_LAT.y0, VITRE_LAT.z0], [x + VITRE_LAT.x, yr + VITRE_LAT.y1, VITRE_LAT.z0], [x + VITRE_LAT.x, yr + VITRE_LAT.y1, VITRE_LAT.z1], [x + VITRE_LAT.x, yr + VITRE_LAT.y0, VITRE_LAT.z1]], '#1d2a35', 'none');
+  g += objetEssai(o, 'cabine', cabine, pareBrise + (cabine === 'conduite' ? chauffeurCabine(I, x, yr) : '')) + vitreLat;
   g += face([[x + .15, yr + 3.53, .5], [x + .3, yr + 3.53, .5], [x + .3, yr + 3.53, .6], [x + .15, yr + 3.53, .6]], '#ffe8a3', 'none')
     + face([[x + .7, yr + 3.53, .5], [x + .85, yr + 3.53, .5], [x + .85, yr + 3.53, .6], [x + .7, yr + 3.53, .6]], '#ffe8a3', 'none');
+  if (o.fumee) g += potEchappement(I, x, yr) + objetEssai(o, 'fumee', 'fumee', fumeeEchappement(I, x, yr));
+  if (o.cale === 'posee') g += objetEssai(o, 'cale', 'posee', caleDeRoue(I, x, yr));
+  else if (o.cale === 'absente') g += objetEssai(o, 'cale', 'absente', '');
   return g;
 }
 
@@ -443,13 +573,84 @@ export function solQuai(I, nomZone = 'Zone de réception') {
 }
 // Le niveleur de quai (plaque entre le quai et la remorque) : dessiné AVEC LE SOL, avant tout ce qui passe
 // dessus. `part` : 'dedans' (dans la remorque, à clipper) ou 'dehors' (la partie devant le mur).
-export function niveleur(I, part = 'dedans') {
+// `etat` (D-4, ajouté en dernier) : 'pose' (défaut : la plaque à plat, le dessin d'avant) | 'releve' (la plaque est
+// dressée contre le seuil, sa lèvre en l'air, et il reste entre le quai et la remorque un VIDE sombre : un
+// camion qui partirait ou un chariot qui passerait y tomberait). La partie 'dedans' (clippée à l'ouverture)
+// dessine alors le vide, la partie 'dehors' la plaque dressée. `o.essai` : voir `objetEssai`.
+export function niveleur(I, part = 'dedans', etat = 'pose', o = {}) {
+  if (etat === 'releve') return objetEssai(o, 'niveleur', 'releve', part === 'dehors' ? plaqueRelevee(I) : videNiveleur(I));
+  return objetEssai(o, 'niveleur', 'pose', niveleurPose(I, part));
+}
+// Les boîtes monde du niveleur : à plat, la plaque du quai à la remorque ; relevé, le vide et la plaque dressée.
+export function boitesNiveleur(etat = 'pose') {
+  return etat === 'releve' ? [[2.45, -0.3, -0.22, 3.55, 0.2, 0], [PLAQUE.x0, PLAQUE.yl, 0, PLAQUE.x1, PLAQUE.yb, PLAQUE.zl + 0.02]] : [[2.45, -0.6, 0, 3.55, 0.2, 0.03]];
+}
+// La plaque dressée : charnière côté quai (yb), sommet (yh, zh), lèvre en l'air (yl, zl).
+const PLAQUE = { x0: 2.58, x1: 3.42, yb: 0.13, yh: 0, zh: 0.48, yl: -0.18, zl: 0.6 };
+// Le vide laissé par le niveleur relevé : un trou sombre entre le plancher du quai et celui de la remorque.
+function videNiveleur(I) {
+  const { face } = I;
+  return face([[2.45, -0.3, 0.004], [3.55, -0.3, 0.004], [3.55, 0.2, 0.004], [2.45, 0.2, 0.004]], '#0b0c0d', 'none')
+    + face([[2.45, -0.3, 0.004], [3.55, -0.3, 0.004], [3.55, -0.3, -0.22], [2.45, -0.3, -0.22]], '#202427', 'none')
+    + face([[2.45, -0.3, 0.004], [2.45, 0.2, 0.004], [2.45, 0.2, -0.22], [2.45, -0.3, -0.22]], '#15181a', 'none');
+}
+// La plaque dressée contre le seuil (charnière côté quai, y = 0,2), sa lèvre jaune et noire en l'air.
+function plaqueRelevee(I) {
+  const { face, pts } = I;
+  const { x0, x1, yb, yh, zh, yl, zl } = PLAQUE;
+  // la part du vide qui est de ce côté du mur (le reste est dessiné « dedans », dans l'ouverture)
+  let g = face([[2.45, 0, 0.004], [3.55, 0, 0.004], [3.55, 0.2, 0.004], [2.45, 0.2, 0.004]], '#0b0c0d', 'none')
+    + face([[2.45, 0, 0.004], [2.45, 0.2, 0.004], [2.45, 0.2, -0.22], [2.45, 0, -0.22]], '#15181a', 'none');
+  g += face([[x1, yb, 0], [x1, yb, 0.05], [x1, yh, zh + 0.05], [x1, yh, zh]], '#6d7276', 'none');
+  g += face([[x0, yb, 0.004], [x1, yb, 0.004], [x1, yh, zh], [x0, yh, zh]], '#8b9094', '#6d7276');
+  for (let k = 1; k < 6; k++) { const t = k / 6; g += `<polyline points="${pts([[x0 + 0.05, yb + (yh - yb) * t, zh * t], [x1 - 0.05, yb + (yh - yb) * t, zh * t]])}" stroke="#7a7f83" stroke-width="1"/>`; }
+  g += face([[x0, yh, zh], [x1, yh, zh], [x1, yl, zl], [x0, yl, zl]], '#a3a8ab', '#6d7276');
+  for (let k = 0; k < 7; k++) {
+    const a = x0 + k * (x1 - x0) / 7, b = a + (x1 - x0) / 7;
+    g += face([[a, yh - 0.12, zh + 0.12 * (zl - zh) / (yh - yl)], [b, yh - 0.12, zh + 0.12 * (zl - zh) / (yh - yl)], [b, yl, zl], [a, yl, zl]], k % 2 ? '#1b1b1b' : '#e7c628', 'none');
+  }
+  return g;
+}
+function niveleurPose(I, part) {
   const { face, pts } = I;
   if (part === 'dehors') return face([[2.45, 0, 0.004], [3.55, 0, 0.004], [3.55, 0.2, 0.004], [2.45, 0.2, 0.004]], '#8b9094', '#6d7276');
   let g = face([[2.45, -0.6, 0.004], [3.55, -0.6, 0.004], [3.55, 0.2, 0.004], [2.45, 0.2, 0.004]], '#8b9094', '#6d7276');
   for (let k = 0; k < 7; k++) { const x = 2.45 + k * 1.1 / 7; g += face([[x, -0.6, 0.005], [x + 1.1 / 7, -0.6, 0.005], [x + 1.1 / 7, -0.5, 0.005], [x, -0.5, 0.005]], k % 2 ? '#1b1b1b' : '#e7c628', 'none'); }
   for (let y = -0.35; y < 0.2; y += 0.12) g += `<polyline points="${pts([[2.5, y, 0.005], [3.5, y, 0.005]])}" stroke="#7a7f83" stroke-width="1"/>`;
   return g;
+}
+// La lampe de quai, sur le mur à droite de l'ouverture, au-dessus de l'ouverture à la hauteur de l'enseigne (mètres) :
+// socle `[x, y, z, largeur, profondeur, hauteur]`, bras (points), tête, et le point d'où part la lumière.
+const LAMPE = { base: [4.28, 0, 2.42, 0.14, 0.05, 0.2], bras: [[4.35, 0.05, 2.52], [4.35, 0.28, 2.6], [4.17, 0.32, 2.54]], tete: [4.04, 0.22, 2.44, 0.26, 0.22, 0.16], foyer: [4.17, 0.22, 2.52] };
+// La lampe de quai (D-4) : une tête articulée sur un bras, fixée au mur à droite de l'ouverture, braquée vers
+// l'intérieur de la remorque. `etat` : 'allumee' (défaut) | 'eteinte'. Rend `{ cone, tete }` : `cone` (le
+// faisceau et sa flaque de lumière, vides si éteinte) se dessine DANS le clip de l'ouverture, avant les palettes ;
+// `tete` (le bras, la tête, le halo) après `murQuai`. Blanc pâle translucide : de la lumière, pas un verdict.
+// `o.essai` : voir `objetEssai` (il entoure la tête, pas le faisceau).
+export function lampeQuai(I, etat = 'allumee', o = {}) {
+  const { face, boite, pts, P } = I;
+  const allumee = etat !== 'eteinte';
+  const gris = ['#7d858a', '#5c6266', '#4a4f52'], noir = ['#4a4f52', '#33373a', '#2a2e30'];
+  let cone = '';
+  if (allumee) {
+    // Par l'ouverture on ne voit que le début de la remorque (y de 0 à -1,2 environ) : c'est là que la lumière se lit.
+    cone = face([LAMPE.foyer, [2.45, -1.3, 0], [3.55, -1.3, 0]], 'rgba(255,246,190,.28)', 'none')
+      + face([[2.45, -0.1, 0.006], [3.55, -0.1, 0.006], [3.55, -1.3, 0.006], [2.45, -1.3, 0.006]], 'rgba(255,246,190,.3)', 'none')
+      + face([[2.41, -0.1, 0.1], [2.41, -1.3, 0.1], [2.41, -1.3, 1.9], [2.41, -0.1, 1.9]], 'rgba(255,246,190,.24)', 'none');
+    cone = `<g pointer-events="none">${cone}</g>`;   // de la lumière : jamais ce qu'un clic atteint
+  }
+  let t = '';
+  if (allumee) { const [hx, hy] = P(...LAMPE.foyer); t += `<circle cx="${hx.toFixed(1)}" cy="${hy.toFixed(1)}" r="${(I.unite * 0.22).toFixed(1)}" fill="rgba(255,244,170,.5)" pointer-events="none"/>`; }
+  t += boite(...LAMPE.base, gris);
+  t += `<polyline points="${pts(LAMPE.bras)}" fill="none" stroke="#3a3f43" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>`;
+  t += boite(...LAMPE.tete, noir);
+  return { cone, tete: objetEssai(o, 'lampe', allumee ? 'allumee' : 'eteinte', t) };
+}
+// La zone de la lampe : le socle, le bras et la tête (le faisceau n'en fait pas partie : il recouvre la remorque).
+export function boitesLampe() {
+  const bte = ([x, y, z, w, d, h]) => [x, y, z, x + w, y + d, z + h];
+  const xs = LAMPE.bras.map((p) => p[0]), ys = LAMPE.bras.map((p) => p[1]), zs = LAMPE.bras.map((p) => p[2]);
+  return [bte(LAMPE.base), [Math.min(...xs) - .03, Math.min(...ys), Math.min(...zs) - .02, Math.max(...xs) + .03, Math.max(...ys) + .03, Math.max(...zs) + .02], bte(LAMPE.tete)];
 }
 // L'intérieur de la remorque, derrière le mur : à ne montrer que par l'ouverture (clip).
 export function remorqueInterieur(I) {

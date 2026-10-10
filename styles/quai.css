@@ -239,6 +239,16 @@ p.quai-main{ margin:8px 0 0; font-size:15px }
 .quai-scene2.quai-iso svg{ max-height:470px }
 .quai-scene2.quai-iso .quai-legende{ position:static; background:rgba(20,24,30,.78) }
 .quai-cf.quai-iso{ background:#e4dfd3 }
+/* La fumée d'échappement du camion (kit iso, chantier D-4) : trois bouffées qui montent, grossissent et s'effacent.
+   En mouvement réduit elle reste DESSINÉE et immobile (sinon l'indice disparaît pour ceux qui l'ont demandé). Des
+   teintes fixes, comme le reste de la scène (une photo) : aucune variable de thème. */
+@keyframes iso-fumee{
+  0%{ transform:translate(0,0) scale(.6); opacity:0 }
+  20%{ opacity:1 }
+  100%{ transform:translate(var(--iso-dx,6px),var(--iso-dy,-30px)) scale(1.7); opacity:0 }
+}
+.iso-fumee{ transform-box:fill-box; transform-origin:center; animation:iso-fumee 2.8s ease-out infinite }
+@media (prefers-reduced-motion: reduce){ .iso-fumee{ animation:none } }
 .quai-apres-arrivee:not([hidden]){ display:grid; gap:10px }
 .quai-scene-iso{ padding:6px 8px; background:#e4dfd3; color:#1a1915 }
 .quai-scene-iso .quai-vue-lib{ color:#3d3a33 }

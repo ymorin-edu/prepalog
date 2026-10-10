@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Essai — objets de sécurité du quai (Prepalog)</title>
+<!-- Page d'ESSAI du kit de sécurité du quai iso (chantier moteur D-4, étape 1, brief docs/briefs/MOTEUR-quai-inspection.md).
+     Elle n'est liée nulle part. Elle montre les deux vues du quai (dehors, dedans) et, pour chaque objet de sécurité,
+     ses états : on juge à l'écran si chaque objet se reconnaît seul. Aucune requête hors du site.
+     Ouvrir avec `lancer.bat`, puis http://localhost:8000/outils/essai-quai-inspection.html -->
+<base href="../">
+<link rel="icon" href="./styles/logo.png">
+<link rel="stylesheet" href="./styles/polices.css">
+<link rel="stylesheet" href="./styles/base.css">
+<link rel="stylesheet" href="./styles/quai.css">
+<style>
+  .eqi{ max-width:1180px; margin:0 auto; padding:14px 16px 40px }
+  .eqi h1{ font-size:20px; margin:0 0 4px }
+  .eqi > p{ margin:0 0 12px; color:var(--encre-2, var(--encre)); font-size:14px }
+  .eqi-reglages{ display:flex; flex-wrap:wrap; gap:10px; margin:0 0 10px }
+  .eqi-reglages fieldset{ border:1px solid var(--filet); border-radius:var(--r, 8px); background:var(--panneau); padding:6px 12px 8px; margin:0; min-width:150px }
+  .eqi-reglages legend{ font-weight:700; font-size:13px; padding:0 4px }
+  .eqi-reglages label, .eqi-options label{ display:block; font-size:14px; margin:3px 0; font-weight:400; white-space:nowrap }
+  .eqi-options{ margin:0 0 12px; display:flex; flex-wrap:wrap; gap:4px 24px }
+  .eqi-options label{ white-space:normal }
+  .eqi-reglages input, .eqi-options input{ width:auto; display:inline-block }
+  .eqi-vues{ display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 380px), 1fr)); gap:14px }
+  .eqi-vues figure{ margin:0; border:1px solid var(--filet); border-radius:var(--r, 8px); background:#e4dfd3; overflow:hidden }
+  .eqi-vues figcaption{ padding:6px 10px; font-size:13px; font-weight:700; background:var(--panneau); color:var(--encre); border-bottom:1px solid var(--filet) }
+  .eqi-vues svg{ display:block; width:100%; height:auto }
+  /* Les zones ne se montrent que si la case est cochée (elles sont toujours dessinées, pour les tests). */
+  [data-zones]{ display:none }
+  .eqi-zones [data-zones]{ display:inline }
+  /* « Mouvement réduit » simulé : le vrai réglage vient du système (Windows : Effets d'animation désactivés). */
+  .eqi-calme .iso-fumee{ animation:none }
+</style>
+</head>
+<body>
+<div class="eqi" id="hote">
+  <h1>Essai : les objets de sécurité du quai</h1>
+  <p>Pour chaque objet, choisis son état et regarde s'il se reconnaît seul, sans légende. Les deux vues sont celles du quai d'ENT-1.1.</p>
+</div>
+<script type="module">
+import { monter } from './outils/essai-quai-inspection.js';
+const zone = document.createElement('div');
+document.getElementById('hote').append(zone);
+monter(zone);
+</script>
+</body>
+</html>
