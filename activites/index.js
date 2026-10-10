@@ -63,6 +63,7 @@ export const ACTIVITES = [
   // France Boissons (Buchelay) — ENT-6.x. Scénario S2 de la 2de GATL.
   () => import('./france-boissons-organigramme.js'),
   () => import('./france-boissons-commande.js'),
+  () => import('./france-boissons-conges.js'),
 ];
 
 // Pictogrammes des rubriques. Une seule grille pour les dix : trait de 1,6 px, bouts et

@@ -1631,7 +1631,9 @@ export function creerEntreprise(U) {
         };
         // Un écran fermé par sa condition (accès direct, base rouverte dessus) : on reste à l'accueil (ou, tant que
         // « Avant de commencer » est imposé, sur lui).
-        if (fermeture(E.vue)) E.vue = ouvertureImposee() ? 'ouverture' : 'accueil';
+        // Un écran qui se ferme PENDANT qu'on y est (chantier D-3, ENT-6.3 : le point d'étape qui suit l'envoi du planning ferme le
+        // planning) : tout l'environnement se redessine, le menu compris (sinon il garderait l'entrée fermée et n'aurait pas le point d'étape).
+        if (fermeture(E.vue)) { E.vue = ouvertureImposee() ? 'ouverture' : 'accueil'; dessinerBrut(); return; }
         z.innerHTML = (vues[E.vue] || vueAccueil)();
         brancher(z);
         figerVue(z);
