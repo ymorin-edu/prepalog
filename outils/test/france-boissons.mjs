@@ -539,7 +539,7 @@ await v('ENT-6.2 : ouverture — messages d’Inès et de Malo, pièces jointes 
     docs.push(await pg.evaluate((Z) => document.querySelector(`${Z} .ent-doc`).innerText, Z));
   }
   vrai(/C-14-2047/.test(docs[0]) && /Tournée de la côte : le vendredi/i.test(docs[0]) && /9 fûts, 5 casiers/.test(docs[0]), 'fiche client : ' + docs[0].slice(0, 300));
-  vrai(/Affligem Blonde\s+fût 20 L\s+2/.test(docs[1]) && /Heineken\s+fût 20 L\s+0/.test(docs[1]) && /Edelweiss \(bière blanche\)/.test(docs[1]), 'stock : ' + docs[1].slice(0, 400));
+  vrai(/FUT-AFF-20\s+Affligem Blonde\s+fût 20 L\s+2/.test(docs[1]) && /FUT-HEI-20\s+Heineken\s+fût 20 L\s+0/.test(docs[1]) && /Référence\s+Article\s+Format\s+Disponible/i.test(docs[1]) && /Edelweiss \(bière blanche\)/.test(docs[1]), 'stock : ' + docs[1].slice(0, 400));
   vrai(/10 fûts par livraison/.test(docs[2]) && /40 € par fût/.test(docs[2]) && /4 € par casier/.test(docs[2]) && /avant 12 h la veille/.test(docs[2]), 'conditions : ' + docs[2].slice(0, 400));
   vrai(docs.every((d) => /Document pédagogique — reconstitution, non contractuel/.test(d)), 'mention de reconstitution');
   // Le bon : les documents à gauche (le message de Malo en premier), l'encadré, des mots cliquables.
@@ -654,8 +654,8 @@ await v('ENT-6.2 : case nombre — vide « manque », négatif et non entier ref
   await remplirBon({ ...BON_JUSTE, heineken30: null, affligem20: '-2', eau: '2,5' }, { confirmer: false });
   const msg = await pg.textContent(`${Z} [data-fiche-manque]`);
   vrai(/Il manque : la ligne « Heineken fût 30 L »/.test(msg), 'case vide : ' + msg);
-  vrai(/À corriger : .*Affligem Blonde fût 20 L : un nombre positif ou nul est attendu/.test(msg), 'négatif : ' + msg);
-  vrai(/Eau plate 1 L \(casier de 12\) : un nombre entier est attendu/.test(msg), 'non entier : ' + msg);
+  vrai(/À corriger : .*FUT-AFF-20 — Affligem Blonde fût 20 L : un nombre positif ou nul est attendu/.test(msg), 'négatif : ' + msg);
+  vrai(/CAS-EAU-12 — Eau plate 1 L \(casier de 12\) : un nombre entier est attendu/.test(msg), 'non entier : ' + msg);
   vrai(!(await present('[data-confirme-oui]')), 'confirmation proposée');
   vrai(!((await base()).fiches[`bon-de-commande`] || {}).envoye, 'bon envoyé');
   egal(await pg.inputValue(`${Z} [data-fiche-saisie="affligem20"]`), '-2', 'saisie gardée');
@@ -689,11 +689,41 @@ await v('ENT-6.2 : Corrigés — bon de commande et message attendus, calculés'
     const C = await import('/contenus/corriges/ENT-6.2.js');
     return C.CORRIGE.items.map((it) => [it.texte, it.rep || it.reponses.map((l) => l.slice(0, 2).join(' = '))]);
   });
-  egal(r[0], ['Le bon de commande attendu', ['Heineken fût 30 L = 6 fûts', 'Affligem Blonde fût 20 L = 2 fûts', 'Remplacement = Pelforth Blonde fût 20 L × 2',
-    'Eau plate 1 L (casier de 12) = 3 casiers', 'Jour de livraison = vendredi 18 juin', 'Vides à reprendre = 9 fûts, 5 casiers']], 'bon attendu');
+  egal(r[0], ['Le bon de commande attendu', ['FUT-HEI-30 — Heineken fût 30 L = 6 fûts', 'FUT-AFF-20 — Affligem Blonde fût 20 L = 2 fûts', 'Remplacement = FUT-PEL-20 — Pelforth Blonde fût 20 L × 2',
+    'CAS-EAU-12 — Eau plate 1 L (casier de 12) = 3 casiers', 'Jour de livraison = vendredi 18 juin', 'Vides à reprendre = 9 fûts, 5 casiers']], 'bon attendu');
   egal(r[2][1], 'Bonjour Malo, Votre commande pour la Fête de la musique est bien enregistrée. Il ne nous reste que 2 fûts d’Affligem : '
     + 'je vous propose 2 fûts de Pelforth Blonde 20 L à la place. Vous serez livré vendredi 18 juin, par notre tournée de la côte. '
     + 'Le chauffeur reprendra vos 9 fûts et 5 casiers vides. Cordialement, {prénom}, administration des ventes France Boissons', 'message attendu');
+});
+
+await v('ENT-6.2 : références article — uniques, au format du catalogue, lues sur le stock, le bon (cases et liste), le corrigé ; mot « référence » cliquable', async () => {
+  const r = await pg.evaluate(async () => {
+    const U = await import('/contenus/france-boissons.js');
+    return { refs: U.STOCK_BUCHELAY.map((a) => [a.id, a.ref]), lexique: U.LEXIQUE['référence'] || null };
+  });
+  const FORMAT = /^[A-Z]{3}-[A-Z]{3}-\d{2}$/;
+  egal(r.refs.length, 6, 'six articles');
+  vrai(r.refs.every(([, ref]) => typeof ref === 'string' && FORMAT.test(ref)), 'format des références : ' + JSON.stringify(r.refs));
+  egal(new Set(r.refs.map(([, ref]) => ref)).size, r.refs.length, 'références uniques');
+  egal(r.refs, [['heineken30', 'FUT-HEI-30'], ['affligem20', 'FUT-AFF-20'], ['pelforth20', 'FUT-PEL-20'], ['edelweiss20', 'FUT-EDE-20'], ['heineken20', 'FUT-HEI-20'], ['eau', 'CAS-EAU-12']], 'références choisies');
+  vrai(!!r.lexique && /Code unique/.test(r.lexique), 'entrée « référence » du lexique');
+  await monter62();
+  await ouvrirMalo();
+  await pg.click(`${Z} [data-pj="stock"]`);
+  await pause();
+  // (le premier titre est un mot cliquable : sa définition est dans le même élément, d'où le « startsWith »)
+  const th = await pg.$$eval(`${Z} .ent-doc th`, (L) => L.map((x) => x.textContent));
+  egal([th.length, th[0].startsWith('Référence'), th.slice(1)], [4, true, ['Article', 'Format', 'Disponible']], 'colonnes du stock (référence en premier)');
+  egal(await pg.$$eval(`${Z} .ent-doc [data-stock] td:first-child`, (L) => L.map((x) => x.innerText)),
+    ['FUT-HEI-30', 'FUT-AFF-20', 'FUT-PEL-20', 'FUT-EDE-20', 'FUT-HEI-20', 'CAS-EAU-12'], 'références du stock');
+  vrai(!!(await pg.$(`${Z} .ent-doc th [data-lex="référence"]`)), 'mot « référence » cliquable dans le stock');
+  await aller('fiche');
+  const txt = await texte();
+  for (const t of ['FUT-HEI-30 — Heineken fût 30 L', 'FUT-AFF-20 — Affligem Blonde fût 20 L', 'CAS-EAU-12 — Eau plate 1 L (casier de 12)']) vrai(txt.includes(t), 'libellé du bon : ' + t);
+  egal(await pg.$$eval(`${Z} [data-fiche-champ="remplacement"] option`, (L) => L.map((x) => x.textContent)),
+    ['Choisir…', 'Aucun', 'FUT-PEL-20 — Pelforth Blonde fût 20 L', 'FUT-EDE-20 — Edelweiss fût 20 L', 'FUT-HEI-20 — Heineken fût 20 L'], 'liste de remplacement');
+  const malo = (await entrants())[1].text;
+  vrai(!/[A-Z]{3}-[A-Z]{3}-\d{2}/.test(malo), 'le mail de Malo ne cite pas de référence');
 });
 
 await v('ENT-6.2 : enseignant — la séance s’ouvre (bon de commande, documents), rien ne remonte au suivi', async () => {

@@ -3,7 +3,7 @@
 // CALCULÉ à l'ouverture depuis les données de la séance (`contenus/france-boissons-ent62.js`) et l'univers
 // (`contenus/france-boissons.js`) : le bon de commande attendu et le message juste. Rien n'est recopié.
 
-import { article, CONDITIONS_CHR, CABANE, CONSIGNES } from '../france-boissons.js';
+import { article, libArticle, CONDITIONS_CHR, CABANE, CONSIGNES } from '../france-boissons.js';
 import { ATTENDU, COMMANDE, SCENARIO, libJour, phrasesMalo, CHOIX_REMPLACEMENT } from '../france-boissons-ent62.js';
 
 const fu = (k) => `${k} fût${k > 1 ? 's' : ''}`;
@@ -27,13 +27,13 @@ export const CORRIGE = {
         + `tournée de la côte le vendredi ; commande reçue avant ${CONDITIONS_CHR.heureLimite} h la veille = livrée le jour de la tournée.`,
       entetes: ['Ligne', 'Attendu', 'Pourquoi'],
       reponses: [
-        ...COMMANDE.futs.map((l) => [article(l.article).court, fu(ATTENDU.futs[l.article]),
+        ...COMMANDE.futs.map((l) => [libArticle(article(l.article)), fu(ATTENDU.futs[l.article]),
           ATTENDU.futs[l.article] < l.q ? `Malo en demande ${l.q}, il n’en reste que ${article(l.article).dispo} : on ne promet pas ce qu’on n’a pas.`
             : `Malo en demande ${l.q}, ${article(l.article).dispo} en stock.`]),
-        ['Remplacement', P ? `${P.court} × ${REMP.q}` : 'Aucun (0)',
+        ['Remplacement', P ? `${libArticle(P)} × ${REMP.q}` : 'Aucun (0)',
           P ? `Sans remplacement : ${fu(ATTENDU.totalSansRemplacement)}, sous le minimum de ${CONDITIONS_CHR.minimumFuts}. Malo accepte « une autre blonde en 20 L » : `
             + `${P.court} (${P.dispo} en stock), ${fu(total)} en tout. Pièges : ${pieges.join(' ; ')}.` : 'Rien ne manque.'],
-        [article(COMMANDE.eau.article).court, ca(ATTENDU.eau), 'Les casiers ne comptent pas dans le minimum.'],
+        [libArticle(article(COMMANDE.eau.article)), ca(ATTENDU.eau), 'Les casiers ne comptent pas dans le minimum.'],
         ['Jour de livraison', libJour(ATTENDU.jour), `Tournée de la côte le vendredi ; commande reçue le mardi, avant ${CONDITIONS_CHR.heureLimite} h la veille. `
           + `Malo voulait le ${libJour(COMMANDE.jourSouhaite)} : ce n’est pas un jour de tournée. La Fête de la musique est le ${libJour(SCENARIO.fete)}.`],
         ['Vides à reprendre', `${fu(ATTENDU.vides.futs)}, ${ca(ATTENDU.vides.casiers)}`,

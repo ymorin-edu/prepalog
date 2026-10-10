@@ -19,7 +19,7 @@
 
 import { apresFiche, tous } from '../core/declencheurs.js';
 import { phrasesJustes } from '../core/phrases.js';
-import { EQUIPE, EXTERIEURS, LEXIQUE as LEXIQUE_FB, mailDe, STOCK_BUCHELAY, article, CONDITIONS_CHR, CABANE, CONSIGNES,
+import { EQUIPE, EXTERIEURS, LEXIQUE as LEXIQUE_FB, mailDe, STOCK_BUCHELAY, article, CONDITIONS_CHR, CABANE, CONSIGNES, libArticle,
   DOC_ORGANIGRAMME, DOC_ANNUAIRE, STYLE_DOCUMENTS as STYLE_FB } from './france-boissons.js';
 
 export const ID = 'france-boissons-commande';
@@ -134,8 +134,8 @@ const docStock = () => `<article class="fb2-doc" aria-label="Extrait du stock de
     <p class="fb-t">Extrait du stock — plateforme de Buchelay</p>
     <p class="fb-st">Mardi 15 juin 2027, 9 h</p>
     <table class="fb2-table">
-      <thead><tr><th scope="col">Article</th><th scope="col">Format</th><th scope="col" class="fb2-n">Disponible</th></tr></thead>
-      <tbody>${STOCK_BUCHELAY.map((a) => `<tr data-stock="${a.id}"><td>${ech(a.nom)}</td><td>${ech(a.format)}</td><td class="fb2-n">${a.dispo}</td></tr>`).join('')}</tbody>
+      <thead><tr><th scope="col">[[référence|Référence]]</th><th scope="col">Article</th><th scope="col">Format</th><th scope="col" class="fb2-n">Disponible</th></tr></thead>
+      <tbody>${STOCK_BUCHELAY.map((a) => `<tr data-stock="${a.id}"><td>${ech(a.ref)}</td><td>${ech(a.nom)}</td><td>${ech(a.format)}</td><td class="fb2-n">${a.dispo}</td></tr>`).join('')}</tbody>
     </table>
     <p class="fb2-note">Le réassort d’Affligem attendu de la brasserie n’est pas encore reçu : on ne promet que le stock disponible.</p>
     ${PIED('Extrait du stock')}
@@ -184,7 +184,7 @@ export const STYLE_DOCUMENTS = `${STYLE_FB}
 const nombre = (id, lib, unite, manque, o = {}) => ({ type: 'nombre', id, lib, unite, min: 0, entier: true, manque, ...o });
 export const CHOIX_REMPLACEMENT = [{ v: 'aucun', lib: 'Aucun' },
   ...STOCK_BUCHELAY.filter((a) => a.litres === COMMANDE.remplacement.litres && !COMMANDE.futs.some((l) => l.article === a.id))
-    .map((a) => ({ v: a.id, lib: a.court }))];
+    .map((a) => ({ v: a.id, lib: libArticle(a) }))];
 export const JOURS_PROPOSES = [ATTENDU.jour, COMMANDE.jourSouhaite, SCENARIO.fete].sort();
 
 export const FICHE = {
@@ -197,11 +197,11 @@ export const FICHE = {
     { type: 'encadre', titre: 'Prendre une commande', texte: '\n1. Ce que le client demande.\n'
       + '2. Ce qu’on peut livrer : stock, minimum, jour de tournée.\n3. Ce qu’on lui propose quand ça ne colle pas.' },
     { type: 'cadre', titre: 'Les fûts', blocs: [
-      ...COMMANDE.futs.map((l) => nombre(l.article, article(l.article).court, 'fûts', `la ligne « ${article(l.article).court} »`)),
+      ...COMMANDE.futs.map((l) => nombre(l.article, libArticle(article(l.article)), 'fûts', `la ligne « ${article(l.article).court} »`)),
       { type: 'liste', id: 'remplacement', lib: 'Remplacement', vide: 'Choisir…', manque: 'le remplacement', choix: CHOIX_REMPLACEMENT },
       nombre('remplacementQte', 'Quantité de remplacement (0 si aucun)', 'fûts', 'la quantité de remplacement'),
     ] },
-    { type: 'cadre', titre: 'L’eau', blocs: [nombre('eau', EAU.court, 'casiers', 'l’eau')] },
+    { type: 'cadre', titre: 'L’eau', blocs: [nombre('eau', libArticle(EAU), 'casiers', 'l’eau')] },
     { type: 'cadre', titre: 'La livraison', blocs: [
       { type: 'choix', id: 'jour', lib: 'Jour de livraison', manque: 'le jour de livraison', colonne: true,
         choix: JOURS_PROPOSES.map((iso) => ({ v: iso, lib: libJour(iso) })) }] },
@@ -264,7 +264,7 @@ export const VOLET = {
     mail(prenom, INES, 'Bienvenue à l’administration des ventes',
       `Bonjour ${prenom}, bienvenue à l’administration des ventes !\n\n`
         + 'Les bars de la côte normande préparent la Fête de la musique. Malo, le gérant de La Cabane à Malo, vient de nous écrire.\n\n'
-        + 'Prends sa commande : vérifie le stock et les conditions de vente, remplis le [[bon de commande]], puis réponds-lui.\n\nInès',
+        + 'Prends sa commande : vérifie le stock et les conditions de vente, remplis le [[bon de commande]], puis réponds-lui. Chaque article a une [[référence]] : tu la retrouves dans le stock et sur le bon.\n\nInès',
       { decalage: -60000, extra: { pieces: ['organigramme', 'annuaire'], ouvreFiche: BON } }),
     mail(prenom, MALO, SUJET_MALO, TEXTE_MALO,
       { decalage: -30000, extra: { pieces: ['fiche-client', 'stock', 'conditions'], ouvreFiche: BON, phrases: phrasesMalo(prenom) } }),

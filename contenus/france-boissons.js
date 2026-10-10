@@ -94,6 +94,7 @@ export const LEXIQUE = {
   rupture: 'Rupture de stock : il n’y a pas assez d’un article en stock pour livrer la quantité demandée.',
   'minimum de commande': 'Quantité la plus petite qu’un client doit commander pour être livré.',
   tournée: 'Trajet d’un camion qui livre à la suite plusieurs clients d’un même secteur, un jour fixé.',
+  référence: 'Code unique d’un article dans le système de l’entreprise : on le lit sur le bon de commande et dans le stock, il évite de confondre deux formats.',
   'bon de commande': 'Document qui dit ce qu’on va livrer au client : les articles, les quantités, le jour de livraison.',
 };
 
@@ -108,16 +109,20 @@ export const CONSIGNES = { fut: 40, casier: 4 };
 
 // L'extrait du stock de Buchelay, le mardi 15 juin 2027 à 9 h (brief ENT-6.2 §4, recalé sur le plan de stockage de masse
 // d'ENT-6.5 : le stock reste le même d'une séance à l'autre). Dans l'ordre du document. `biere` : 'blonde' ou 'blanche'
-// (absent = pas une bière) ; `de` : le complément « de … » d'une phrase (« 2 fûts de Pelforth Blonde 20 L »).
+// (absent = pas une bière) ; `ref` : la référence de l'article, CONSTRUITE (les vraies références de France Boissons ne sont pas
+// connaissables), au format du catalogue d'inventaire du moteur (3 lettres, 3 lettres, 2 chiffres : type, marque, litres ou
+// bouteilles), posée ici une fois pour toute la S2 ; `de` : le complément « de … » d'une phrase (« 2 fûts de Pelforth Blonde 20 L »).
 export const STOCK_BUCHELAY = [
-  { id: 'heineken30', nom: 'Heineken', marque: 'Heineken', format: 'fût 30 L', litres: 30, biere: 'blonde', dispo: 16, court: 'Heineken fût 30 L', de: 'de Heineken 30 L' },
-  { id: 'affligem20', nom: 'Affligem Blonde', marque: 'Affligem', format: 'fût 20 L', litres: 20, biere: 'blonde', dispo: 2, court: 'Affligem Blonde fût 20 L', de: 'd’Affligem' },
-  { id: 'pelforth20', nom: 'Pelforth Blonde', marque: 'Pelforth', format: 'fût 20 L', litres: 20, biere: 'blonde', dispo: 24, court: 'Pelforth Blonde fût 20 L', de: 'de Pelforth Blonde 20 L' },
-  { id: 'edelweiss20', nom: 'Edelweiss (bière blanche)', marque: 'Edelweiss', format: 'fût 20 L', litres: 20, biere: 'blanche', dispo: 24, court: 'Edelweiss fût 20 L', de: 'd’Edelweiss' },
-  { id: 'heineken20', nom: 'Heineken', marque: 'Heineken', format: 'fût 20 L', litres: 20, biere: 'blonde', dispo: 0, court: 'Heineken fût 20 L', de: 'de Heineken 20 L' },
-  { id: 'eau', nom: 'Eau minérale plate 1 L, verre consigné', marque: 'eau', format: 'casier de 12', dispo: 60, court: 'Eau plate 1 L (casier de 12)', de: 'd’eau plate' },
+  { id: 'heineken30', ref: 'FUT-HEI-30', nom: 'Heineken', marque: 'Heineken', format: 'fût 30 L', litres: 30, biere: 'blonde', dispo: 16, court: 'Heineken fût 30 L', de: 'de Heineken 30 L' },
+  { id: 'affligem20', ref: 'FUT-AFF-20', nom: 'Affligem Blonde', marque: 'Affligem', format: 'fût 20 L', litres: 20, biere: 'blonde', dispo: 2, court: 'Affligem Blonde fût 20 L', de: 'd’Affligem' },
+  { id: 'pelforth20', ref: 'FUT-PEL-20', nom: 'Pelforth Blonde', marque: 'Pelforth', format: 'fût 20 L', litres: 20, biere: 'blonde', dispo: 24, court: 'Pelforth Blonde fût 20 L', de: 'de Pelforth Blonde 20 L' },
+  { id: 'edelweiss20', ref: 'FUT-EDE-20', nom: 'Edelweiss (bière blanche)', marque: 'Edelweiss', format: 'fût 20 L', litres: 20, biere: 'blanche', dispo: 24, court: 'Edelweiss fût 20 L', de: 'd’Edelweiss' },
+  { id: 'heineken20', ref: 'FUT-HEI-20', nom: 'Heineken', marque: 'Heineken', format: 'fût 20 L', litres: 20, biere: 'blonde', dispo: 0, court: 'Heineken fût 20 L', de: 'de Heineken 20 L' },
+  { id: 'eau', ref: 'CAS-EAU-12', nom: 'Eau minérale plate 1 L, verre consigné', marque: 'eau', format: 'casier de 12', dispo: 60, court: 'Eau plate 1 L (casier de 12)', de: 'd’eau plate' },
 ];
 export const article = (id) => STOCK_BUCHELAY.find((a) => a.id === id);
+// Le libellé d'un article quand la référence doit se lire (bon de commande, corrigé) : « FUT-HEI-30 — Heineken fût 30 L ».
+export const libArticle = (a) => `${a.ref} — ${a.court}`;
 
 // Les conditions de vente aux CHR (extrait, construit).
 export const CONDITIONS_CHR = { minimumFuts: 10, heureLimite: 12 };

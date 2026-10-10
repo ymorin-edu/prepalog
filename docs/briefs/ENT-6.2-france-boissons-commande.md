@@ -49,6 +49,9 @@ Règles d'écriture 2de : `claude/prepalog-2de-eleve-debut-annee.md` (3 lignes p
   Inès (administration des ventes, fictive, prénom seul) ; le fait que Malo écrive par mail plutôt que de passer par eazle
   (plausible pour une grosse commande d'événement) ; les formats, les stocks, le minimum de commande, l'heure limite, le
   jour de tournée, le numéro client.
+  **Références article** (10/10/2026, décision de Tristan) : `FUT-HEI-30` (Heineken fût 30 L), `FUT-AFF-20` (Affligem), `FUT-PEL-20` (Pelforth),
+  `FUT-EDE-20` (Edelweiss), `FUT-HEI-20` (Heineken fût 20 L), `CAS-EAU-12` (eau, casier de 12) : construites, les vraies références
+  de France Boissons ne sont pas connaissables ; posées dans l'univers (`contenus/france-boissons.js`) pour toute la S2.
 - **Documents reconstitués** : en pied « Document pédagogique — reconstitution, non contractuel ». Aucun visage.
 
 ## 3. Objectif pédagogique
@@ -249,3 +252,4 @@ saute aux yeux.
   - **Demande au moteur** (facultative) : fermer « Répondre » d'un mail par phrases tant qu'une condition est fausse (`phrases.quand(db)`,
     ici `apresFiche('bon-de-commande')`), pour imposer « le bon d'abord ».
   - Trame élève (Cowork, après validation à l'écran), questions « Pour réfléchir » du §9.
+- **Références article ajoutées le 10/10/2026 à la demande de Tristan** : champ `ref` sur les six articles de `STOCK_BUCHELAY` ; colonne « Référence » (première) dans l'extrait du stock ; référence dans chaque libellé du bon de commande (cases fûts et eau, liste de remplacement) et dans le corrigé ; mot « référence » au lexique et cliquable (titre de colonne du stock, message d'Inès) ; le mail de Malo ne change pas. Cas de test modifiés : libellés du message « Il manque / À corriger », corrigé attendu, tableau du stock ; cas ajouté : références (unicité, format, affichage).
