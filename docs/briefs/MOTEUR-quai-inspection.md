@@ -1,6 +1,6 @@
 # Chantier moteur D-4 — Vue quai : inspection de sécurité sur le quai iso, motifs déclarables, palette de fûts
 
-**Statut** : en cours *(état des lieux fait le 10/10/2026 ; cadrage à écrire par Opus ; construction par étapes Sonnet)*
+**Statut** : en cours *(état des lieux et cadrage faits le 10/10/2026 ; construction par étapes Sonnet, voir 2.4 et le compte rendu 3)*
 **Pour** : ENT-6.4 France Boissons (`docs/briefs/ENT-6.4-france-boissons-reception.md` §7) ; servira ensuite à ENT-5.4 et ENT-1.1
 quand elles passeront sur le quai iso (hors chantier).
 **Coordination** : Fable (conversation du 10/10/2026). Règles : `docs/chantiers.md` (ligne D-4), `docs/audit-architecture.md`,
@@ -160,9 +160,214 @@ Tout est VÉRIFIÉ (lu dans le code) sauf mention SUPPOSÉ. `q.js` = `core/types
 2. La scène est redessinée par `innerHTML` à chaque image : couche de clic et marques hors du `<g>` redessiné.
 3. `spartoo.mjs:367-422` clique avec `page.click` : un calque transparent posé sur la scène pourrait intercepter ses clics.
 
-## 2. Cadrage (Opus, à écrire)
+## 2. Cadrage (Opus, 10/10/2026)
 
-*(découpage en étapes, API de contenu définitive, ordre, « fini quand » de chaque étape, estimation)*
+Règle de tout le chantier : **sans les champs nouveaux, aucune séance existante ne change** (Picard, Smoby ENT-5.4 en liste,
+Spartoo ENT-1.1 en iso). Ce que ce cadrage décide seul est marqué « décidé » ; ce qui est SUPPOSÉ est rappelé au 2.6.
+
+### 2.1 API de contenu définitive
+
+**Validation.** Une fonction pure exportée `verifierQuai(Q)` (dans `quai.js`) rend la liste des écarts en clair ; `creerQuai`
+l'appelle à la garde de la l. 701 et lève une erreur qui les nomme (même chemin que le refus iso actuel). Pas dans `reglages`
+(appelée par chaque lecture de jalon). Les tests l'appellent directement.
+
+**a) `securite.mode: 'scene'`** (absent : la liste de l'étape ⓪, **sans aucun changement**).
+
+| Champ | Type | Défaut | Refusé au chargement si |
+|---|---|---|---|
+| `mode` | `'scene'` | absent = liste | autre valeur ; `'scene'` sans `rendu: 'iso'` (« l'inspection sur la scène demande `rendu: 'iso'` ») |
+| `points[]` | liste non vide | — | vide ; `id` vide ou en double ; `id` = `aucun-faux` |
+| `points[].objet` | `cabine` · `cale` · `butoirs` · `niveleur` · `lampe` | — | autre ; deux points sur le même objet |
+| `points[].etat` | cabine `conduite`/`vide` · cale `posee`/`absente` · butoirs `enPlace`/`absents` · niveleur `pose`/`releve` · lampe `allumee`/`eteinte` | — | état inconnu pour cet objet |
+| `points[].vue` | `dehors` · `dedans` | celle de l'objet (cabine, cale, butoirs : dehors ; niveleur, lampe : dedans) | différente de celle de l'objet (champ facultatif, gardé pour la lisibilité) |
+| `points[].ok` | booléen | — | absent ; **incohérent avec l'état** (`ok: true` sur un état dangereux, `ok: false` sur l'état sûr) |
+| `points[].lib` | texte | — | absent (sert au bilan et au corrigé, **jamais affiché pendant l'inspection**) |
+| `points[].repare` | texte | « Bien vu, je m'en occupe. » | — (lu seulement si `ok: false`) |
+| `signaler.qui` | texte | « le chef de quai » | — |
+| `signaler.bouton` | texte | `Signaler à ${qui}` | — |
+| `signaler.rien` / `fin` / `vide` | texte | « Là, je ne vois rien qui cloche. » / « Tu me dis quand on peut décharger. » / « Qu'est-ce qui ne va pas ? Clique d'abord sur ce que tu veux me signaler. » | — |
+| `consigne` | texte | « Clique sur ce qui ne va pas, puis signale-le. » | — |
+| `commencer` | texte | « C'est bon, on peut décharger » | — |
+| `arret` | `false` · `true` · texte | `true` (comme le lot 5 : arrêt hors évaluation, texte par défaut) | — ; **en mode liste, `arret: false` est refusé** (voir 2.6, contradiction 1) |
+| `bilan` | texte | absent = rien | — |
+| `photo`, `alt`, `scene`, `signaler.reponse` | — | ignorés en mode scène | `photo` déclarée en mode scène (rien à montrer) |
+
+Objet non déclaré : `cabine`, `butoirs`, `niveleur` se dessinent dans leur état d'aujourd'hui (`vide`, `enPlace`, `pose`) ;
+`cale` et `lampe` **ne se dessinent pas** (défaut du brief §11, retenu : ENT-1.1 ne change pas d'un pixel).
+
+**b) Unité et libellés des motifs** (demande §7.1, regroupée avec l'unité de §7.2 : c'est la même source de texte).
+
+| Champ | Type | Défaut | Refusé si |
+|---|---|---|---|
+| `unite` | `'fûts'` (pluriel en *-s*, singulier = sans le *s*) ou `{ un, des }` | `{ un: 'carton', des: 'cartons' }` | texte sans *s* final ; objet sans `un` ou `des` |
+| `motifs` | liste d'ids (filtre, **inchangé**) | tous | id inconnu (aujourd'hui ignoré : on le refuse désormais, décidé ; aucune séance n'en a) |
+| `libelles.avarie.nom` / `.manquant.nom` / `.produit.nom` | texte | `${Des} endommagés` (= « Cartons endommagés »), `Manquant`, `Produit différent de la commande` | clé hors `avarie`, `manquant`, `produit` |
+| `libelles.avarie.precision` | texte | `écrasé(s)` accordé (= la réserve d'aujourd'hui) | — |
+
+Tirés de l'unité, non déclarables (une seule source) : champ chiffré « Nombre de fûts endommagés / manquants », lignes de
+fiche « Fûts endommagés / manquants », colonne du BL, comptage, journal, jalon « N fûts », aides, zoom (« Fût 3 / 8 »).
+L'unité doit être **masculine** (accords « endommagés », « manquants ») : écrit dans la fiche, non vérifiable. `MOTIFS` reste
+exporté tel quel (corrigés existants) ; nouveaux exports `libellesMotifs(Q)` et `libMotifs(L, Q?)` (second paramètre facultatif).
+ENT-6.4 déclarera : `unite: 'fûts', motifs: ['avarie', 'manquant', 'produit'], libelles: { avarie: { nom: 'Fût endommagé',
+precision: 'fuite' } }` → réserve « P3 AFF-20 : acceptée sous réserve — 1 fût endommagé (fuite). ».
+
+**c) Palette de fûts** : `forme: 'fut'` **sur la palette** (absent = cartons). Huit places en quinconce 3-2-3, numérotées
+comme les cartons : rangée du fond 1-2-3, milieu 4-5, avant 6-7-8, de gauche à droite. `manque: [5]` (numéros),
+`avarie: { 2: 'N' }` (numéro → face qui fuit, `N` = arrière). Total 8 ; `reel = 8 − manque.length` ; `avaries` = nombre de clés
+(calculés dans `reglages`, jamais déclarés). Refusé : `W`, `D`, `L`, `refs` ou `etiqAvant` avec `forme: 'fut'` ; numéro hors 1-8
+ou en double ; face de fuite **intérieure** (cachée par les autres fûts) ; `aides.regleCouches` ou `aides.detailComptage` vrais.
+Une palette de fûts prend toujours le **brouillon** de calcul (les lignes de la feuille parlent de couches, comme pour une
+palette multi-références) : décidé, à dire au compte rendu d'ENT-6.4 (son brief §4.4 dit `feuille`).
+
+### 2.2 Le mode scène, comportement
+
+- **Déroulé.** `etape` démarre à 1, pas d'étape ⓪ ; le stepper reste ① à ④ ; ② à ④ fermés tant que `securite.fait` est faux
+  (seuil de `ferme` et d'`aller()` à n ≥ 2 au lieu de n ≥ 1 ; `decharger()` garde `secuFaite`). L'animation d'arrivée est celle
+  d'aujourd'hui (5,2 s, « Passer ») ; au bout, en mode scène, ni bulle ni BL : la consigne, la scène figée, l'inspection.
+- **Deux vues, deux systèmes de coordonnées** (ceux d'aujourd'hui, donc le même dessin) : `dehors` = `projection({ unite: 54,
+  origine: [330, 150] })`, `viewBox="70 -30 800 520"` ; `dedans` = `I2`, `viewBox="290 0 640 480"`, porte levée, remorque et
+  palettes par l'ouverture, personne dans la scène. Un seul `<svg data-q-inspection data-vue="…">` à la fois :
+  `<g data-g="iso">` (le décor, seul réécrit par une boucle d'animation) puis `<g data-q-marques>` (hors du décor).
+- **Porte (hypothèse de Fable confirmée).** « Ouvrir la porte de quai » bascule sur `dedans` et y joue la levée existante de
+  `murQuai` (1,8 s ; aucune avec `reduit()`). Argument : camion à quai (`yr = 0,35`), la caisse masque la porte de la façade ;
+  une porte qui se lèverait dehors ne se verrait pas. Deux précisions : l'ouverture est **rangée** (`securite.ouverte`, un
+  rechargement montre la porte levée, sans rejouer) ; l'étape ② démarre **porte déjà levée** (pas de seconde levée). Ensuite
+  « Voir dedans → » / « ← Revoir dehors ». Ouvrir ne coûte pas de minute et ne fige rien. Clics ignorés pendant la levée.
+- **Clic → viewBox** : `createSVGPoint` + `getScreenCTM().inverse()` (patron `core/types/carte.js:498`), écouteur posé sur le
+  `<svg>` à chaque `brancher`. Point touché = le **premier point déclaré** de cette vue dont la zone contient le clic, sinon
+  `null` (à côté). Zone = `boiteEcran(I, boites, 12)` (2.3) calculée sur l'**état dessiné à cet instant** (cabine réparée :
+  plus de fumée, donc plus de zone de fumée ; cale absente : la zone reste l'emplacement devant la roue).
+- **Marques** (état rangé) : `{ n, vue, x, y, point, envoi }`, `n` = compteur jamais réutilisé, `x`, `y` arrondis au dixième,
+  `envoi` = numéro du signal ou `null`. Clic sur une marque non envoyée : elle part. Marque envoyée : grisée, **inerte**
+  (décidé : pas retirable, un clic dessus ne pose rien). Dessin : rond r 12, fond `rgba(255,255,255,.88)`, contour d'encre
+  `#1a1915` épais, numéro en encre ; envoyée : contour `#6b6b6b` en tirets, opacité .55. Ni vert ni rouge ; teintes fixes
+  comme le reste de la scène (fond fixe `#e4dfd3` dans les deux thèmes, `styles/quai.css:238`), contraste ≥ 4,5 testé.
+- **Rien ne trahit les zones** : aucun `title`, `tabindex`, `role` ni attribut `data-*` nommant un objet dans la scène
+  d'inspection ; `cursor: crosshair` posé sur `[data-q-inspection]` et hérité partout ; aucune surbrillance. Les tests et la
+  page d'essai lisent les zones par la fonction exportée, jamais dans le DOM. Clavier : non (brief §7.3c, au compte rendu).
+- **« Signaler à {qui} »** : sans marque non envoyée → `vide`, rien n'est rangé. Sinon un signal `{ points: [ids touchés,
+  sans doublon], rien: n marques à côté, marques: [n], apresArret }` est rangé, les marques reçoivent `envoi`. Réponse
+  (`securite.chef`) : les `repare` des défauts touchés **pas encore réparés**, dans l'ordre de déclaration ; puis `rien` une
+  seule fois s'il y a une marque à côté, sur un point `ok: true`, ou sur un défaut déjà réparé (décidé : ce dernier cas n'est
+  **pas** un faux signalement au jalon) ; puis `fin`. Affichée sous la scène, `role="status"`, « Nadia : « … » ».
+- **Réparation calculée, jamais rangée** : `etatsScene(S, sec)` (pure, exportée) rend l'état de chaque objet = état déclaré,
+  ou état sûr si le point est dans un signal, ou si `fait`. `cabine` réparée : plus de silhouette ni de fumée, le chauffeur
+  debout près de l'accueil chauffeurs ; `niveleur` réparé : posé.
+- **« C'est bon, on peut décharger »** : confirmation en deux clics (`secondClic`, comme « Contrôles terminés »), décidé.
+  Un défaut jamais signalé, `arret` ≠ `false` et hors évaluation : arrêt (`arrete = true`, texte `arret` ou celui du lot 5,
+  sans nommer le point), on continue d'inspecter, les signaux suivants portent `apresArret: true`. Sinon : `fait = true`,
+  marques non envoyées abandonnées, toutes les marques cachées, défauts restants à l'état sûr **sans aucun texte** ; puis la
+  suite iso d'aujourd'hui : chauffeur debout + bulle (`paroleArrivee`, position telle que la bulle tienne dans le viewBox),
+  BL, « Oui, vous pouvez décharger ». Ensuite ② et ④ dessinent niveleur posé et lampe dans son état déclaré.
+- **Jalons en mode scène** (les jalons `securiteSignalee` / `securiteConstat` ne sont pas produits) : un jalon
+  `securite-<id>` par point `ok: false` (juste = l'id est dans un signal `apresArret: false`), puis `securite-aucun-faux`
+  (juste = au moins un signal **et** aucun signal avec un point `ok: true` ni `rien > 0`). `lib` **neutre** (« Danger n° 1
+  signalé avant de décharger », « Aucun faux signalement ») ; `attendu` nomme le défaut par son `lib` (vu seulement au
+  bilan, défaut du brief §11). `bilan` s'affiche au bilan du quai si un jalon `securite-<id>` est faux.
+- **État** : `securite = { mode: 'scene', marques: [], compteur: 0, signaux: [], ouverte: false, arrete: false, fait: false,
+  chef: '' }` (`securiteNeuve` selon le mode ; `normaliser` complète une base ancienne). `recommencer` repart de `etatNeuf` :
+  rien à coder. « Corriger » ne rouvre pas le quai (1.4) : rien à coder.
+- **Mouvement réduit** : pas de manœuvre ni de levée animées ; la fumée reste **dessinée, immobile** (sinon l'indice
+  disparaît) : animation CSS dans `styles/quai.css`, coupée par `@media (prefers-reduced-motion: reduce)`, sans boucle rAF.
+- **Spartoo `spartoo.mjs:367-422`** : rien à craindre, aucun calque ni écouteur n'existe sans `mode: 'scene'`, et
+  l'inspection est un autre `<svg>` que `data-q-arrivee` / `data-q-scene2`.
+
+### 2.3 Le kit (`core/iso.js`)
+
+Chaque objet expose ses **boîtes monde** (`[x0, y0, z0, x1, y1, z1]`, en mètres) **calculées par les mêmes constantes que
+son dessin**, et `boiteEcran(I, boites, marge)` (pure : projette les 8 coins de chaque boîte, rend `{ x, y, w, h }` en unités
+du viewBox, marge comprise) sert à toutes les zones. Paramètres **ajoutés en dernier, défaut = dessin d'aujourd'hui** :
+
+- `camionPorteur(I, x, yr, o = {})` : `o.cabine: 'vide'` (défaut, inchangé) | `'conduite'` (silhouette tête-épaules **sans
+  visage** derrière le pare-brise et la vitre latérale, gilet jaune comme `personne`) ; `o.fumee` (vrai avec `conduite`) :
+  pot vertical à l'arrière droit de la cabine, trois bouffées grises translucides de classe `iso-fumee` ; `o.cale:
+  'posee'` (cale **rouge à bras** devant la roue arrière côté élève, `x + .82`, signalisation et non verdict, exception
+  « signalisation » du kit) | `'absente'` | absent (rien). Exporte `boitesCamion(x, yr, o)` → `{ cabine, fumee, cale }`.
+- `facadeQuai(I, portes, o = {})` : `o.butoirs: { porte: 1, etat: 'absents' }` retire les 4 butoirs de cette porte (défaut :
+  tous présents). `boitesButoirs(porte)`. **Visibilité** (calcul du 10/10, SUPPOSÉ jusqu'à l'écran) : camion à quai, la paire
+  droite (x 4,59-4,75) dépasse de la caisse, la paire gauche est presque cachée (le butoir haut affleure au-dessus du toit).
+  Si Tristan ne les voit pas assez : épaissir la paire droite, **sans déplacer le camion**.
+- `niveleur(I, part, etat = 'pose')` : `'releve'` = plaque dressée contre le seuil, lèvre en l'air, **vide sombre** entre le
+  seuil et le plancher de la remorque (partie `dedans` = le vide, partie `dehors` = la plaque). `boitesNiveleur(etat)`.
+- `lampeQuai(I, etat)` (nouveau) → `{ cone, tete }` : tête et bras articulé fixés au mur à droite de l'ouverture, `cone`
+  (allumée seulement, blanc pâle translucide) à dessiner **dans** le clip de l'ouverture, `tete` après `murQuai`.
+  `boitesLampe()` = tête + bras (le cône n'est pas dans la zone : il recouvre la remorque, cliquer dedans = à côté).
+- **Option de mise au point** `o.essai` : entoure chaque objet d'un `<g data-essai-objet="…">` ; **seule la page d'essai et les
+  tests** la passent (le quai jamais) : c'est elle qui permet de vérifier qu'un objet est visible là où est sa zone.
+- **Fûts** : `paletteFuts(I, pal, ox, oy, r, o)` (mêmes options que `paletteCartons` : `yMin`/`yMax`, `attrs`, `sel`,
+  `lisible`, `dents`, plus `cote` = côté du bac en unités du monde, 1,30 par défaut). Bac de rétention noir (pieds, bac,
+  caillebotis : `retention` agrandi), 8 fûts **debout** (`fut` existant, mis à l'échelle), une seule couche, quinconce 3-2-3 ;
+  place vide = rien ; collerette étiquetée (réf.) ; fuite = coulure sombre sur la face déclarée + flaque dans le bac derrière
+  ce fût, dessinées seulement si `faceVisible(r, face)` (même règle que `enfoncement`). Modèle validé :
+  `docs/briefs/france-boissons/materiel-palette-retention.svg`. `dessinerCharge` (4 fûts, animation) n'est pas touché ;
+  ENT-6.5 (D-5) reprendra `paletteFuts`.
+- **Quai à plusieurs palettes** (jamais joué : Spartoo n'en a qu'une). Remorque de 3,3 m, ouverture de 1,2 m (décor stylisé) :
+  aux étapes ② et ④ la palette de fûts se dessine avec `cote: 0.95` (à l'échelle du décor), en grand à ③ avec 1,30 ; les
+  palettes au fond sont coupées au mur du fond (`yMin: -3.6`, sans effet sur la palette de Spartoo) ; zone de réception et
+  places d'arrivée calculées pour N palettes (N = 1 : valeurs d'aujourd'hui). Décidé, jugé sur la page d'essai.
+- **Unité « fûts partout » : coût.** 51 mentions de « carton » dans `quai.js` (≈ 70 textes avec la colonne du BL et les
+  pluriels) : une constante `R.u = { un, des }` posée par `reglages`, lue partout. ≈ 3 h, mécanique, protégée par les suites
+  Picard, Smoby et Spartoo (textes vérifiés) et un test « unité par défaut = textes d'aujourd'hui ». **Avis : le faire.** Le
+  repli du brief (cartons dessinés, unité seule) montrerait une palette en bois chargée de cartons appelés « fûts » :
+  contraire à la décision 52 (« jamais de palette en bois ») ; il n'économise que le dessin (≈ 4 h), pas l'unité.
+
+### 2.4 Étapes (Sonnet), dans l'ordre
+
+Pour toutes : suite complète `node outils/test-parallele.mjs` verte avant chaque push ; chaque test éprouvé dans les deux sens
+(un sabotage nommé le fait tomber) ; un commit par étape ; ligne d'état dans `docs/chantiers.md` (D-4) et compte rendu au §3.
+**Tests du moteur dans un nouveau bloc `outils/test/quai-iso.mjs`** (décidé) : un bloc d'entreprise ne doit pas porter un
+mode générique, Smoby est déjà le bloc le plus long (il fixe la durée en parallèle), et un bloc à part tourne en même temps
+que les autres. L'inscrire dans `BLOCS` et dans le groupe le plus court de `GROUPES` (`outils/test.mjs`) : **à signaler à
+Tristan**. Il monte la déclaration d'essai `outils/essai-quai-inspection.js` dans `creerEntreprise`, comme
+`outils/test/animation.mjs:31-51`. Les cas propres à la séance (jalons pondérés, parcours 10/10) restent dans
+`france-boissons.mjs`, avec la séance. Aucun cas existant réécrit ; `commun.mjs` non touché. L'inscription de `docs/EN-COURS.md`
+est à compléter avec `outils/test.mjs`, `outils/essai-quai-inspection.*`, `outils/test/fichiers/` et `activites/FICHE-SEANCE.md`.
+
+| # | Étape | Fichiers | Construit | Tests (sabotage qui doit faire tomber) | Fini quand (Tristan, à l'écran) | Durée |
+|---|---|---|---|---|---|---|
+| 0 | Référence Spartoo | `outils/test/quai-iso.mjs`, `outils/test/fichiers/quai-iso-reference.json`, `outils/test.mjs` | **Avant toute retouche du kit** : capture des sorties du kit (façade, camion à 3 reculs, niveleur, mur à 3 ouvertures, sol, palette à 4 rotations) et du SVG des écrans ①②③④ d'ENT-1.1, groupes `data-iso-bulle` retirés (leur largeur dépend de la police) | égalité octet pour octet (un 0,01 changé dans `camionPorteur` → tombe) | rien à voir : la référence est commitée | 1 h |
+| 1 | Kit sécurité + page d'essai | `core/iso.js`, `styles/quai.css`, `outils/essai-quai-inspection.html` et `.js` | objets et états du 2.3, boîtes, `boiteEcran`, fumée CSS ; page : les deux vues, un sélecteur d'état par objet, case « montrer les zones » (page seulement) | référence de l'étape 0 intacte ; `boiteEcran` sur valeurs écrites à la main ; chaque zone contient la `getBBox()` de son objet (`o.essai`) et le centre de la zone touche l'objet (`elementFromPoint`) ; zones d'une vue disjointes ; cale et lampe absentes par défaut ; fumée immobile en mouvement réduit mais présente | chaque objet se reconnaît seul dans chaque état ; on voit le chauffeur au volant et la fumée ; les butoirs se voient camion à quai ; le vide du niveleur relevé se voit | 4 à 5 h |
+| 2 | Mode scène sur la page d'essai | `core/types/quai.js`, `styles/quai.css`, page d'essai | 2.1 a et 2.2 entiers ; la page joue la scène d'ENT-6.4 (Nadia, défauts, pièges) dans le vrai moteur | `verifierQuai` (chaque refus) ; clic au centre de chaque zone à la souris (`boundingBox()`, deux vues) → bon point ; clic sur le mur → `null` ; niveleur seulement dedans ; marque retirée avant envoi ne compte pas, envoyée compte ; silhouette seule ou fumée seule ; deux envois ; réparation visible (plus de fumée) ; réparé re-signalé ≠ faux ; `arret` false / vrai / évaluation ; décharger sans signaler → ② montre niveleur posé, sans texte ; inaction → jalons faux ; aucun `title`/`tabindex`, curseur identique partout ; `recommencer` ; mouvement réduit ; Smoby (liste) et référence Spartoo inchangés | Tristan clique toute l'inspection : marques, réponses de Nadia, scène qui se répare, porte qui se lève, rien ne trahit au survol | 6 à 8 h |
+| 3 | Palette de fûts | `core/iso.js`, `core/types/quai.js`, page d'essai | `paletteFuts`, `forme: 'fut'` (2.1 c), ③ fût cliquable (étiquette), ② et ④ à N palettes | total, réel, avaries calculés (P4 = 7, P3 = 1 avarie : valeurs à la main) ; fuite visible à la rotation 2 seulement ; place vide ; refus de forme ; référence Spartoo intacte | 4 palettes de fûts reconnaissables à ②③④, la fuite ne se voit que de l'arrière, P4 a un trou | 4 à 5 h |
+| 4 | Unité et libellés | `core/types/quai.js`, page d'essai | 2.1 b ; `R.u` partout ; `libellesMotifs`, `libMotifs(L, Q)` | textes d'aujourd'hui inchangés sans `unite` (fiche, BL, réserves, jalons de Smoby relus) ; avec `fûts` : « Nombre de fûts endommagés », réserve « 1 fût endommagé (fuite) », BL « Fûts » ; aucun « carton » à l'écran d'un quai en fûts (balayage du texte de chaque étape) | le quai d'essai parle de fûts partout | 3 à 4 h |
+| 5 | Chariot frontal en iso *(si Tristan le veut, point 1 du 2.5)* | `core/iso.js`, `core/types/quai.js` | avec `dechargement.par: 'cariste'` et `rendu: 'iso'`, `dessinerChariotFrontal` (échelle du quai) sort les palettes à la place du chauffeur au transpalette | Spartoo (chauffeur) intact ; le chariot entre par l'ouverture, coupé au mur | le déchargement d'essai se fait au chariot | 3 à 4 h |
+| 6 | Fiche et livraison | `activites/FICHE-SEANCE.md`, `docs/chantiers.md`, `docs/decisions.md`, §3 ci-dessous | paragraphe « Inspection sur la scène », unité, libellés, fûts | — | D-4 livré : la séance peut s'écrire | 1 h |
+
+### 2.5 Points à trancher par Tristan
+
+1. **Déchargement au chariot frontal sur le quai iso** (brief ENT-6.4 §4.3, absent du §7 et du moteur : en iso, le chauffeur
+   tire la palette au transpalette, quel que soit `dechargement.par`). **(a, recommandé)** étape 5 (+3 à 4 h) : c'est le
+   chariot qui entre dans la remorque, et c'est pour lui qu'on cale le camion et qu'on pose le niveleur, la scène de sécurité
+   prend son sens. (b) garder le transpalette (0 h), retirer « chariot frontal » des mots cliquables de 6.4.
+2. **Unité « fûts » partout** (étape 4, ≈ 3 h). **(a, recommandé)** oui, avec la palette de fûts dessinée (2.3).
+   (b) repli du brief : cartons dessinés, unité seule (économise ≈ 4 h de dessin, contredit la décision 52).
+3. Aucun troisième : le reste est décidé ci-dessus avec le défaut « rien ne change aux séances existantes », et se juge sur la
+   page d'essai (taille des palettes à ②④, place du chauffeur près de l'accueil, teinte des marques).
+
+### 2.6 Estimation, contradictions, SUPPOSÉ
+
+**Estimation** : 19 à 24 h de sous-agent sans l'étape 5, 22 à 28 h avec (≈ 2,5 à 3,5 jours au rythme des validations) ; la
+suite complète (≈ 4 min 30) à chaque push. Version courte possible : étapes 0, 1, 2 (l'inspection seule, ≈ 12 h), fûts et
+unité ensuite.
+
+**Ce que ce cadrage contredit** :
+1. `arret` est **un texte** dans le lot 5 (q.js:1347, message de l'arrêt) et l'arrêt dépend de l'évaluation, pas de lui :
+   `arret: false` n'a de sens qu'en mode scène ; en liste il serait silencieusement ignoré, donc refusé.
+2. Brief §7.2 : « 8 fûts à plat » = **une seule couche, fûts debout** (le brief §2 le calcule : 1,19 × 1,08 m = trois cercles
+   de 39,5 cm en quinconce vus de dessus) ; pas de fût couché à dessiner.
+3. Brief §4.4 : `calcul: { forme: 'feuille' }` ne convient pas aux fûts (lignes « couches ») : brouillon imposé.
+4. Brief §7.3b : une palette de rétention de 1,30 m ne passe pas l'ouverture stylisée de 1,2 m, et le quai iso n'a jamais
+   déchargé plus d'une palette : à l'échelle du décor aux étapes ② et ④ (2.3).
+5. Brief §5 : un `lib` de jalon qui nomme le défaut pourrait se lire avant la fin si les titres d'étape sont visibles de
+   l'élève pendant la séance : `lib` neutre, défaut nommé dans `attendu` ; **la séance devra aussi garder des titres
+   d'étape neutres** (ENT-5.4 a « La cale signalée avant de décharger » : à vérifier à l'étape 2, hors chantier sinon).
+6. Hypothèse de Fable sur la porte : confirmée, avec l'ouverture rangée et l'étape ② qui démarre porte levée.
+
+**SUPPOSÉ** (à vérifier à l'écran ou en route) : visibilité des butoirs (calcul, pas d'écran) ; marge de 12 unités du viewBox
+= 12 px seulement à pleine largeur (plus petite sur un écran étroit : à regarder en 375 px) ; la police ne change que les
+bulles (exclues de la référence) ; un titre d'étape de séance est lisible par l'élève pendant la séance (point 5).
+VÉRIFIÉ : le refus nouveau d'un id inconnu dans `motifs` ne touche personne (seuls Smoby et Spartoo filtrent, avec
+`['avarie', 'manquant']`).
 
 ## 3. Compte rendu *(rempli étape par étape)*
 
