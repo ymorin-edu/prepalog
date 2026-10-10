@@ -12,7 +12,7 @@
 > deux vues (dehors, puis dedans porte ouverte) ; un clic à côté de tout objet = faux signalement ; un défaut oublié est
 > remis en ordre sans un mot au déchargement.
 
-**Statut** : à implémenter *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
+**Statut** : à valider par Tristan *(à implémenter → en cours → à valider par Tristan → livré | abandonné)* — séance livrée le 10/10/2026 (`pret: true, ouverture: 'prof'`), compte rendu en fin de fichier
 **Date du brief** : 05/10/2026 ; §7.3 réécrit le 10/10/2026 ; §4 bis, 4 ter, 5 tranchés le 10/10/2026
 **Conversation d'origine** : Cowork (Opus) ; fiches projet `claude/prepalog-2de-s2-cadrage.md` (décisions 6, 12, 13) et
 `claude/prepalog-2de-s2-deroule.md` (décisions 26 et 27). Modèle : **ENT-5.4 Smoby** (`docs/briefs/ENT-5.4-smoby-reception.md`).
@@ -250,29 +250,36 @@ Salutation et fin non notées. Le dernier envoi du message compte.
 
 ## 6. Contenu
 
-`contenus/france-boissons-ent64.js` (quai iso, inspection, palettes, messages, phrases, étapes), univers dans
-`contenus/france-boissons.js` (Nadia y est déjà). **Aucune image, aucune coordonnée en pixels** : la séance déclare les
-points à inspecter par objet du kit et par état (§7.3) ; le moteur dessine et sait où l'on clique. Forme indicative :
+`contenus/france-boissons-ent64.js` (quai iso, inspection, palettes, messages, phrases, jalons, documents), `contenus/questions/ENT-6.4.js`
+(questions au fil et banque d'ouverture), univers dans `contenus/france-boissons.js` (Nadia y est déjà). **Aucune image dessinée par la
+séance, aucune coordonnée en pixels** : la séance déclare les points à inspecter par objet du kit et par état (§7.3) ; le moteur dessine
+et sait où l'on clique. **Déclaration réelle** (livrée le 10/10/2026, d'après le brief de chantier D-4 ; ce qui change par rapport à la
+forme indicative d'origine est le champ `unite`, le champ `libelles`, `motifs`, `dechargement.par`, `calcul: brouillon`, `aides: {}`) :
 
 ```js
 quai: {
-  rendu: 'iso', lieu: { nom: 'Quai 12', ... },
+  id: 'fb-ent64', rendu: 'iso', froid: false, recommencer: false,
+  titre: 'Plateforme France Boissons de Buchelay (78) — Quai 12, réception',
+  unite: 'fûts',                                            // ajouté : obligatoire avec des palettes de fûts
+  motifs: ['avarie', 'manquant', 'produit'],
+  libelles: { avarie: { nom: 'Fût endommagé', precision: 'fuite' } },   // ajouté : « P3 AFF-20 : acceptée sous réserve — 1 fût endommagé (fuite). »
+  lieu: { nom: 'Quai 12', temp: 15, refrigere: false }, zone: { nom: 'Zone de réception' },
+  dechargement: { ouverture: 0.5, parPalette: 1, par: 'cariste' },      // chariot frontal dessiné ; palettes sorties P4, P3, P2, P1
+  calcul: { forme: 'brouillon' }, aides: {},                // le brief disait `feuille` : périmé, une palette de fûts impose le brouillon
   securite: {
-    mode: 'scene',                       // nouveau : l'inspection se joue sur le quai iso (sinon : la liste OK / Pas OK)
-    arret: false,                        // entraînement : rien n'arrête l'élève (guidage, plus tard : true)
+    mode: 'scene', arret: false,
     consigne: 'Clique sur ce qui ne va pas, puis signale-le à Nadia.',
     points: [
-      { id: 'cabine',   objet: 'cabine',   etat: 'conduite', vue: 'dehors', ok: false, lib: 'Chauffeur au volant, moteur allumé',
-        repare: 'Bien vu : je fais couper le moteur, le chauffeur me donne les clés et descend.' },
-      { id: 'niveleur', objet: 'niveleur', etat: 'releve',   vue: 'dedans', ok: false, lib: 'Niveleur relevé',
-        repare: 'Bien vu : je pose le niveleur.' },
-      { id: 'cale',     objet: 'cale',     etat: 'posee',    vue: 'dehors', ok: true,  lib: 'Cale de roue' },
-      { id: 'butoirs',  objet: 'butoirs',  etat: 'enPlace',  vue: 'dehors', ok: true,  lib: 'Butoirs de quai' },
-      { id: 'lampe',    objet: 'lampe',    etat: 'allumee',  vue: 'dedans', ok: true,  lib: 'Lampe de quai' },
+      { id: 'cabine', objet: 'cabine', etat: 'conduite', vue: 'dehors', ok: false, lib: 'Chauffeur au volant, moteur allumé', repare: '…' },
+      { id: 'niveleur', objet: 'niveleur', etat: 'releve', vue: 'dedans', ok: false, lib: 'Niveleur relevé, pas posé sur la remorque', repare: '…' },
+      { id: 'cale', objet: 'cale', etat: 'posee', ok: true, … }, { id: 'butoirs', objet: 'butoirs', etat: 'enPlace', ok: true, … },
+      { id: 'lampe', objet: 'lampe', etat: 'allumee', ok: true, … },
     ],
     signaler: { qui: 'Nadia', rien: 'Là, je ne vois rien qui cloche.', fin: 'Tu me dis quand on peut décharger.' },
     bilan: 'La scène n’était pas sûre : avant d’entrer dans un camion, il doit être immobilisé et le passage vers la remorque doit être sûr.',
   },
+  camions: [{ transporteur: 'Transports du Nord (fictif)', fournisseur: 'Heineken, Mons-en-Barœul', bl: 'MON-27-0617', arrivee: '14:00',
+    parole: 'Bonjour. Livraison de la brasserie de Mons : voici le bon de livraison.', palettes: [P1, P2, P3, P4 /* forme: 'fut' */] }],
 }
 ```
 
@@ -426,11 +433,31 @@ défaut pendant l'inspection.
 
 ---
 
-## Compte rendu *(rempli par Claude Code à la livraison)*
+## Compte rendu *(rempli par Claude Code, 10/10/2026)*
 
-- **Fichiers créés / modifiés** :
+- **Fichiers créés / modifiés** : `contenus/france-boissons-ent64.js` (quai, scène, palettes, phrases, messages, jalons, documents),
+  `contenus/questions/ENT-6.4.js` (5 questions au fil, point d'étape, banque d'ouverture de 10), `activites/france-boissons-reception.js`,
+  `contenus/corriges/ENT-6.4.js` (corrigé calculé), une ligne dans `activites/index.js` (le `code` ENT-6.4 vient après ENT-6.3),
+  `contenus/images/france-boissons/materiel-chariot-frontal.svg` (copie octet pour octet du dessin de Cowork, SHA-256 `1ce690fa…6797`) et
+  sa ligne de crédit dans `CREDITS.md`, 31 cas ajoutés au bloc `france-boissons` (aucun cas existant réécrit ; `outils/test.mjs` et
+  `commun.mjs` intacts). Rien dans `core/` ni `styles/`. Séance `pret: true, ouverture: 'prof'`, **à valider par Tristan à l'écran**.
 - **Écarts par rapport au brief** (et pourquoi) :
-- **Décisions prises en route** :
-- **Tests** :
-- **Commits** :
+  1. **Brouillon au lieu de la feuille** (§4.4) : une palette de fûts impose le brouillon de calcul ; la séance déclare `calcul: { forme: 'brouillon' }`, `aides: {}`.
+  2. **Ordre de sortie inverse des palettes** (P4, P3, P2, P1) : conséquence du chariot frontal dessiné (D-4, étape 5, validé par Tristan) ; les places d'arrivée sont celles du chauffeur.
+  3. **Fuite de P3 visible de côté et de l'arrière** (deux rotations consécutives), pas d'une seule vue (D-4, étape 3) : à valider à l'écran.
+  4. **`unite: 'fûts'` et `libelles.avarie = { nom: 'Fût endommagé', precision: 'fuite' }` ajoutés** au quai (§6 corrigé avec la déclaration réelle) ; sans `unite`, la séance ne se charge pas.
+  5. **Réponse de Nadia au compte rendu** (§4.7) : elle reprend ce que l'élève a écrit (« Noté : … »), sans dire « il manque une palette d'Affligem sur deux » (cela contredisait un élève qui avait écrit « Tout est conforme ») ; la palette manquante reste pour ENT-6.5.
+  6. **Jalons de palettes** : comptage + décision justes en un seul jalon (comme ENT-5.4), plus la réserve écrite pour P2 et P3 ; jalons de sécurité jugés au « C'est bon, on peut décharger » seulement ; « rentrer les palettes » et « sous réserve de déballage » non comptés.
+  7. **`recommencer: false`** (comme ENT-5.4), parcours strict après ENT-6.3, `correction: true` ; titres des jalons neutres (« Palette P2 : comptage, décision et réserve éventuelle »).
+  8. **Compétences** `C1.2` et `C1.4` (même format qu'ENT-5.4 ; AGO- n'est pas le bon préfixe pour de la logistique).
+  9. **Chauffeur et transporteur** : « Transports du Nord (fictif) » ; fournisseur « Heineken, Mons-en-Barœul » (réel, brief §2). Le pied « Texte de loi (réel) — source : Légifrance » est écrit par le document « Le droit ».
+  10. **Clavier non pris en charge** dans l'inspection (§7.3c) : à la souris ou au doigt seulement ; à 375 px de large les marques font ~9 px, jamais éprouvé au toucher (voir « Reste ouvert » de `MOTEUR-quai-inspection.md`).
+- **Décisions prises en route** : une ligne chacune dans `docs/decisions.md` (brouillon, ordre de sortie, réponse de Nadia, jalons, `recommencer`, textes de loi).
+- **Tests** : bloc `france-boissons`, 31 cas ajoutés (déclaration, livraison, ouverture et message de Nadia, inaction 0/20, parcours juste 20/20, oubli de tout signaler 14,5/20, cabine seule 18, cale 18,5, clic sur le mur 18,5, marque retirée avant l'envoi, 8 pièges de palettes, messages, 3 questions notées et 2 réflexions, point d'étape L133-3, pire cas 1/20, « Avant de commencer » 2 + 2 + 1, banque sur 300 graines, textes de loi, corrigé, titres neutres, enseignant). Valeurs écrites à la main. **24 sabotages**, tous attrapés (poids échangés, sécurité vraie par inaction, « aucun faux signalement » vrai sans signalement, réserve non exigée, comptage ignoré, écho de Nadia figé, phrase juste décalée, point d'étape jamais déclenché, Q1 et Q2 posées au mauvais geste, poids d'une question, tirage 3 + 2 + 1, R4323-56 absent, `arret: true`, chauffeur au lieu du cariste, libellé en cartons, mail de Nadia qui parle de la cale, titre qui nomme le chauffeur, phrase mal accordée, P4 à deux places vides, image interdite, phrase du bilan altérée, `correction: false`, « Tout à l'heure » supprimé). Suite complète `node outils/test-parallele.mjs` : **1167/1167 en 485 s** (le bloc `france-boissons` dure maintenant 363 s, c'est le plus long). Les cas passent en mouvement réduit (sinon 37 s d'animation par parcours).
+- **Commits** : `adc1f47` (séance en brouillon), `1623e33` (tests), `a198fc0` (livraison) ; le commit de ce compte rendu suit.
 - **Reste ouvert** :
+  1. **Textes de loi à relire sur Légifrance avant ouverture aux élèves** : L133-1 (repris d'une reprise du Code de commerce, trois phrases) et R4323-56 (extrait avec […]). L133-3, R4515-4 et L4131-1 sont ceux du brief (relus).
+  2. **Image** : le dessin du chariot frontal garde son bloc de métadonnées de provenance (`c2pa`), sans effet ; `futs-vrac.jpg` laisse lire des noms de brasseurs gravés dans le métal (voir `CREDITS.md`, à trancher par Tristan).
+  3. **À essayer à l'écran** : l'inspection (les deux vues, la cale dans le bon sens, la lampe, la fumée), les fûts à ② et ③ (fuite de P3 vue de côté et de l'arrière), le chariot frontal (32 s pour quatre palettes), le message à Nadia ; **Claude Code n'a regardé à l'œil que l'écran d'arrivée du quai (une capture)** : tout le reste est vérifié par test, pas à l'écran de classe.
+  4. **Le point d'étape (L133-3) apparaît au redessin qui suit le BL signé** (un passage par la Messagerie suffit) : même mécanique qu'ENT-6.2 et 6.3, aucun bandeau sur l'écran du quai.
+  5. Une trame courte et les « questions pour réfléchir » du §9 restent à faire par Cowork (non demandées ici).
