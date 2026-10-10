@@ -169,6 +169,21 @@ envois, premierCoup }`, lu sur le **dernier** envoi ; rien d'envoyé = toutes le
 ligne `texte` n'est jamais jugée. Seulement en **réponse** à un mail reçu (pas de « Nouveau message »
 par phrases : faire écrire d'abord le destinataire). Essai : `outils/essai-2de.html`.
 
+**Deux règles pour les messages d'une séance** (décision de Tristan, 10/10/2026, prise sur ENT-6.2 et valable pour toutes
+les séances France Boissons à venir, ENT-6.3 → 6.10) :
+- **Un personnage qui répond à l'élève reprend ce que l'élève lui a écrit, sans corriger.** Le message déclenché après une
+  réponse par phrases se construit sur les choix du **dernier** envoi (« Ok pour la Pelforth, à samedi ! » si l'élève a promis
+  samedi), jamais sur la réponse juste : sinon il contredit l'élève et lui souffle la solution. Il ne dit ni « juste » ni
+  « faux » ; c'est le bilan qui corrige, et la séance suivante repart sur les données justes. Modèle : `texteReponseMalo`
+  et les tableaux `CHOIX_RUPTURE` / `CHOIX_LIVRAISON` de `contenus/france-boissons-ent62.js` (chaque phrase porte ce que le
+  personnage en reprend).
+- **Les messages portent la date du scénario, jamais la date réelle** (`ts: Date.now()` affichait « 10/10/2026 » dans une
+  séance qui se passe le 15 juin 2027). Chez France Boissons : `heureScenario(iso, hhmm, { db, volet, decalage })` de
+  `contenus/france-boissons.js`, pour le semis (heures fixes) comme pour les messages déclenchés et les accusés (heure
+  d'ouverture + temps réellement passé depuis l'ouverture + quelques minutes). La Messagerie trie chaque dossier par `ts` :
+  garder les heures croissantes dans l'ordre d'arrivée. Limite connue : les messages **envoyés** par l'élève restent datés
+  par le moteur à la date réelle (une horloge de séance lue par la Messagerie serait une demande au moteur).
+
 **Transférer un message** (chantier D-1, 09/10/2026, `core/types/transfert.js` ; première séance : ENT-6.1 France
 Boissons) : l'élève tient un accueil ou une boîte partagée et transmet chaque message à la bonne personne. Un mail
 semé ou déclenché porte une **`cle`** et `transfert: { a: ['helene', 'ines', 'karim', …] }` (ids de l'équipe, dans

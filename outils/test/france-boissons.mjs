@@ -67,6 +67,8 @@ const LIGNES = ['case-karim', 'chef-lucas', 'lien-1', 'courrier-malo', 'question
 const tout = (etat) => LIGNES.map((l) => [l, etat]);
 const entrants = async () => (await base()).mails.filter((m) => m.folder === 'in');
 const cles = async () => (await entrants()).filter((m) => m.cle).map((m) => m.cle);
+// L'heure d'un message, en heure locale (ce que la Messagerie affiche) : [année, mois, jour, heure, minute].
+const horodate = (ts) => { const d = new Date(ts); return [d.getFullYear(), d.getMonth() + 1, d.getDate(), d.getHours(), d.getMinutes()]; };
 
 // La fiche « Qui fait quoi ? ». `r = { cases: { a: 'karim', … }, chef, liens: { id: true (hiérarchique) | false } }`.
 async function envoyerFiche(r) {
@@ -431,6 +433,19 @@ await v('Fonction de la base : au dessin, une fonction qui plante (base de l’�
   erreursF.splice(avant);   // attendues : elles ne comptent pas dans « aucune erreur JavaScript »
 });
 
+// Les messages portent la date du scénario (lundi 14 juin 2027), jamais la date du jour (décision de Tristan, 10/10/2026).
+await v('ENT-6.1 : les messages portent la date du scénario — Inès le 14/06/2027 à 8 h 05 (affiché tel quel), sa réponse à la fiche vidéo le même jour, au moins 2 min après', async () => {
+  await monter({ uid: 'fb-date' });
+  const E = await entrants();
+  egal(E.map((m) => [m.subject, horodate(m.ts)]), [['Bienvenue à Buchelay', [2027, 6, 14, 8, 5]]], 'accueil');
+  await aller('mail');
+  egal(await pg.$$eval(`${Z} .ent-mitem .ent-de`, (L) => L.map((x) => x.innerText.replace(/\s+/g, ' ').trim())), ['Inès 14/06/2027'], 'liste de la boîte');
+  await envoyerVu();
+  const R = (await entrants()).find((m) => m.subject === 'RE : Ce que j’ai vu');
+  egal(horodate(R.ts).slice(0, 3), [2027, 6, 14], 'jour de la réponse : ' + horodate(R.ts));
+  vrai(R.ts >= E[0].ts + 2 * 60000 && R.ts < E[0].ts + 60 * 60000, 'réponse après l’accueil (2 min à 1 h) : ' + horodate(R.ts));
+});
+
 await v('ENT-6.1 : aucune erreur JavaScript', async () => {
   if (erreursF.length) throw new Error(erreursF.slice(0, 4).join(' | '));
 });
@@ -574,6 +589,47 @@ await v('ENT-6.2 : parcours juste — 8/8, Inès demande la réponse après le b
   const out = (await base()).mails.filter((m) => m.folder === 'out');
   egal(out.map((m) => [m.toMail, m.text.split('\n')]), [['contact@cabane-a-malo.example', Object.values(MSG_JUSTE)]], 'message envoyé');
   vrai(!!(await base()).points[ID62], 'photo de fin (séance suivante ouverte)');
+});
+
+// Malo REPREND ce que l'élève lui a écrit (lignes « rupture » et « livraison »), sans corriger : une variante par phrase, le
+// jalon correspondant reste faux (c'est le bilan qui corrige). Le vendredi juste : le parcours juste ci-dessus.
+const REPRISES_MALO = [
+  ['samedi', { livraison: 'Vous serez livré samedi 19 juin, comme vous le souhaitez.' }, 'Ok pour la Pelforth, à samedi !', ['msg-livraison']],
+  ['lundi', { livraison: 'Vous serez livré lundi 21 juin.' }, 'Ok pour la Pelforth, à lundi !', ['msg-livraison']],
+  ['Edelweiss', { rupture: 'Il ne nous reste que 2 fûts d’Affligem : je vous propose 2 fûts d’Edelweiss à la place.' }, 'Ok pour l’Edelweiss, à vendredi !', ['msg-rupture']],
+  ['ligne retirée', { rupture: 'L’Affligem est en rupture, je retire la ligne.' }, 'Dommage pour l’Affligem, à vendredi !', ['msg-rupture']],
+  ['4 Affligem promis, samedi', { rupture: 'Je vous livre bien 4 fûts d’Affligem.', livraison: 'Vous serez livré samedi 19 juin, comme vous le souhaitez.' },
+    'Ok, à samedi !', ['msg-rupture', 'msg-livraison']],
+];
+for (const [nom, lignes, attendu, faux] of REPRISES_MALO) {
+  await v(`ENT-6.2 : réponse « ${nom} » → Malo répond « ${attendu} » (il reprend, ne corrige pas) ; le jalon ${faux.join(', ')} reste faux`, async () => {
+    await monter62({ uid: 'fb62-reprise' });
+    await remplirBon(BON_JUSTE);
+    await repondreMalo({ ...MSG_JUSTE, ...lignes });
+    const R = (await entrants()).filter((m) => m.subject === 'RE : Commande pour la Fête de la musique');
+    egal(R.map((m) => m.text), [`${attendu}\n\nMalo`], 'réponse de Malo');
+    egal(etats62(await note()), sauf(faux), 'jalons');
+  });
+}
+
+await v('ENT-6.2 : les messages portent la date du scénario — Malo le 15/06/2027 à 9 h 32, Inès à 9 h 35 en tête de la boîte ; les réponses d’Inès puis de Malo le même jour, dans l’ordre, après ; jamais la date du jour', async () => {
+  await monter62({ uid: 'fb62-date' });
+  const E = await entrants();
+  egal(E.map((m) => [m.from, horodate(m.ts)]), [['Inès', [2027, 6, 15, 9, 35]], ['Malo (La Cabane à Malo)', [2027, 6, 15, 9, 32]]], 'semis');
+  await aller('mail');
+  await pg.click(`${Z} [data-dossier="in"]`);
+  egal(await pg.$$eval(`${Z} .ent-mitem .ent-de`, (L) => L.map((x) => x.innerText.replace(/\s+/g, ' ').trim())),
+    ['Inès 15/06/2027', 'Malo (La Cabane à Malo) 15/06/2027'], 'liste de la boîte (Inès en tête)');
+  await remplirBon(BON_JUSTE);
+  await repondreMalo(MSG_JUSTE);
+  const R = (await entrants()).slice(2);
+  egal(R.map((m) => m.subject), ['Bon de commande reçu', 'RE : Commande pour la Fête de la musique'], 'réponses');
+  const h = R.map((m) => horodate(m.ts));
+  vrai(h.every((x) => x[0] === 2027 && x[1] === 6 && x[2] === 15), 'jour du scénario : ' + JSON.stringify(h));
+  vrai(R[0].ts >= E[0].ts + 2 * 60000 && R[1].ts >= R[0].ts + 60000 && R[1].ts < E[0].ts + 60 * 60000, 'ordre et écarts (Inès ≥ 2 min après 9 h 35, Malo ≥ 1 min après Inès) : ' + JSON.stringify(h));
+  await pg.click(`${Z} [data-dossier="in"]`);
+  egal(await pg.$$eval(`${Z} .ent-mitem .ent-obj`, (L) => L.map((x) => x.innerText.trim()).slice(0, 2)),
+    ['RE : Commande pour la Fête de la musique', 'Bon de commande reçu'], 'les réponses en tête de la boîte');
 });
 
 // Chaque piège du brief (§8) ne fait tomber que son jalon.

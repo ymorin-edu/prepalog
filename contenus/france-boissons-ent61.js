@@ -29,7 +29,7 @@
 import { apresFiche, apresTransfert } from '../core/declencheurs.js';
 import { transfertDe } from '../core/types/transfert.js';
 import { declarerTirage, hasard } from '../core/tirage.js';
-import { EQUIPE, ORDRE_ANNUAIRE, ORDRE_LECTURE, LEXIQUE as LEXIQUE_FB, MENTION, mailDe, EXTERIEURS,
+import { EQUIPE, ORDRE_ANNUAIRE, ORDRE_LECTURE, LEXIQUE as LEXIQUE_FB, MENTION, mailDe, heureScenario, EXTERIEURS,
   organigrammeHtml, DOC_ANNUAIRE, STYLE_DOCUMENTS } from './france-boissons.js';
 import { QUESTIONS } from './questions/ENT-6.1.js';
 
@@ -276,18 +276,24 @@ export const ETAPES = [
 // ─────────────────────────────────────────────────────────────── les messages
 
 const INES = { nom: EQUIPE.ines.nom, mail: mailDe('ines') };
-const mail = (prenom, de, deMail, subject, text, o = {}) => ({ folder: 'in', ts: Date.now() + (o.decalage || 0), from: de, fromMail: deMail,
-  to: prenom, subject, kind: 'text', text, ...(o.extra || {}) });
+export const ID_VOLET = 'fb-ent61';
+// Les messages portent la date du SCÉNARIO (lundi 14 juin 2027, 8 h 05 pour l'accueil d'Inès), jamais la date réelle (décision
+// de Tristan, 10/10/2026). Les messages déclenchés et les accusés : 8 h 05 + le temps réellement passé depuis l'ouverture
+// + `decalage` (en minutes), donc toujours après l'accueil, dans l'ordre d'arrivée (`heureScenario`, dans l'univers).
+export const SCENARIO = { date: '2027-06-14', heure: '08:05' };
+const mail = (prenom, de, deMail, subject, text, o = {}) => ({ folder: 'in',
+  ts: heureScenario(SCENARIO.date, SCENARIO.heure, { db: o.db, volet: ID_VOLET, decalage: (o.decalage || 0) * 60000 }),
+  from: de, fromMail: deMail, to: prenom, subject, kind: 'text', text, ...(o.extra || {}) });
 const parId = new Map(BANQUE_COURRIER.map((p) => [p.id, p]));
 
 // Un message du courrier, à transférer à l'une des six personnes de l'annuaire (dans l'ordre de l'annuaire).
-const messageCourrier = (prenom, p, decalage = 1) => mail(prenom, p.de, p.deMail, p.sujet, p.texte,
-  { decalage, extra: { cle: p.id, transfert: { a: ORDRE_ANNUAIRE } } });
+const messageCourrier = (prenom, p, db, decalage = 1) => mail(prenom, p.de, p.deMail, p.sujet, p.texte,
+  { db, decalage, extra: { cle: p.id, transfert: { a: ORDRE_ANNUAIRE } } });
 // L'accusé de réception du destinataire CHOISI, juste ou faux : neutre, signé de lui (jamais « ce n'est pas pour moi »).
 function accuse(cle, prenom, db) {
   const t = transfertDe(db, cle, ID), P = EQUIPE[t.a], p = parId.get(cle);
   if (!P || !p) return null;
-  return { mails: [mail(prenom, P.nom, mailDe(t.a), `TR : ${p.sujet}`, `Bien reçu, merci.\n\n${P.nom}`)] };
+  return { mails: [mail(prenom, P.nom, mailDe(t.a), `TR : ${p.sujet}`, `Bien reçu, merci.\n\n${P.nom}`, { db, decalage: 1 })] };
 }
 // Le point d'étape répondu (juste ou faux) : le courrier peut commencer.
 const pointDEtapeFait = (db) => {
@@ -302,32 +308,32 @@ export const VOLET = {
     `Bonjour ${prenom}, bienvenue à Buchelay !\n\n`
       + 'Ce matin, tu tiens l’accueil avec moi : avant tout, regarde l’[[organigramme]] de la plateforme et les fiches de chacun (en pièces jointes).\n\n'
       + 'Complète la fiche « Qui fait quoi ? » et renvoie-la-moi. Ensuite, je te confie le courrier du matin.\n\nInès',
-    { decalage: -60000, extra: { pieces: ['organigramme', 'annuaire'], ouvreFiche: QFQ } })] }),
+    { extra: { pieces: ['organigramme', 'annuaire'], ouvreFiche: QFQ } })] }),
   declencheurs: [
     // La fiche vidéo envoyée (même vide) : les bonnes réponses, sans note.
-    { id: 'vu', quand: apresFiche(VU), semer: (prenom) => ({ mails: [mail(prenom, INES.nom, INES.mail, 'RE : Ce que j’ai vu',
+    { id: 'vu', quand: apresFiche(VU), semer: (prenom, db) => ({ mails: [mail(prenom, INES.nom, INES.mail, 'RE : Ce que j’ai vu',
       'Merci ! Pour retenir : 30 tournées par jour en haute saison, 18 en basse saison, zéro accident comme objectif prioritaire, '
-        + '10 camions électriques. On en reparle cette semaine.\n\nInès')] }) },
+        + '10 camions électriques. On en reparle cette semaine.\n\nInès', { db, decalage: 2 })] }) },
     // Les accusés de réception, un par message de la banque (seuls ceux de l'élève arrivent : au transfert).
     ...BANQUE_COURRIER.map((p) => ({ id: `accuse-${p.id}`, quand: apresTransfert(p.id), semer: (prenom, db) => accuse(p.id, prenom, db) })),
     // Le courrier commence après le point d'étape (réponse juste ou fausse) : Inès part en réunion, Malo écrit.
     { id: 'courrier-1', quand: pointDEtapeFait, semer: (prenom, db) => ({ mails: [
       mail(prenom, INES.nom, INES.mail, 'Le courrier du matin',
         'Je pars en réunion avec Hélène. Le courrier du matin arrive dans ta messagerie : [[transférer|transfère]] chaque message '
-          + 'à la personne qui doit s’en occuper (« Transférer à… », sous le message).\n\nInès'),
-      messageCourrier(prenom, courrierDe(db)[0], 2)] }) },
+          + 'à la personne qui doit s’en occuper (« Transférer à… », sous le message).\n\nInès', { db, decalage: 1 }),
+      messageCourrier(prenom, courrierDe(db)[0], db, 3)] }) },
     // Chaque message suivant arrive après le transfert du précédent, quel que soit le destinataire.
     ...[2, 3, 4, 5, 6].map((k) => ({ id: `courrier-${k}`,
       quand: (db, s) => { const L = courrierDe(db); return !!L[k - 1] && apresTransfert(L[k - 2].id)(db, s); },
-      semer: (prenom, db) => ({ mails: [messageCourrier(prenom, courrierDe(db)[k - 1], 2)] }) })),
+      semer: (prenom, db) => ({ mails: [messageCourrier(prenom, courrierDe(db)[k - 1], db, 2)] }) })),
     // Tout le courrier transféré : la fin de la matinée, et la transition vers ENT-6.2.
     { id: 'fin', quand: (db, s) => { const L = courrierDe(db); return L.length > 0 && L.every((p) => apresTransfert(p.id)(db, s)); },
-      semer: (prenom) => ({ mails: [mail(prenom, INES.nom, INES.mail, 'Merci pour ce matin',
-        'Merci pour ce matin ! Demain, tu commences avec moi : un bar de la côte, La Cabane à Malo, va nous envoyer sa commande.\n\nInès', { decalage: 3 })] }) },
+      semer: (prenom, db) => ({ mails: [mail(prenom, INES.nom, INES.mail, 'Merci pour ce matin',
+        'Merci pour ce matin ! Demain, tu commences avec moi : un bar de la côte, La Cabane à Malo, va nous envoyer sa commande.\n\nInès', { db, decalage: 3 })] }) },
   ],
   // Les envois corrigés (séance `correction`) : un accusé, jamais « juste » ni « faux ».
   corrections: {
-    [QFQ]: (prenom) => ({ mails: [mail(prenom, INES.nom, INES.mail, 'RE : Qui fait quoi ?', `Merci ${prenom}, j’ai bien reçu ta fiche corrigée.\n\nInès`)] }),
+    [QFQ]: (prenom, n, db) => ({ mails: [mail(prenom, INES.nom, INES.mail, 'RE : Qui fait quoi ?', `Merci ${prenom}, j’ai bien reçu ta fiche corrigée.\n\nInès`, { db, decalage: 2 })] }),
     ...Object.fromEntries(BANQUE_COURRIER.map((p) => [p.id, (prenom, n, db) => accuse(p.id, prenom, db)])),
   },
 };

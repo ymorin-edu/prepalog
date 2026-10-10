@@ -8,7 +8,7 @@
 //      (fiche client, extrait du stock, conditions de vente CHR) ;
 //   2. remplit le bon de commande (cases « nombre » entières et positives, D-2) et l'envoie à Inès ;
 //   3. répond à Malo par phrases à choisir (6 lignes, ordre des choix tiré par élève), au VOUS : c'est un client ;
-//   4. Malo répond, juste ou faux (transition vers ENT-6.3).
+//   4. Malo répond en reprenant ce que l’élève lui a écrit, sans corriger (transition vers ENT-6.3 ; la S2 repart sur la commande juste).
 //
 // LE PIÈGE EN CHAÎNE (décision de Tristan, 05/10/2026) : l'Affligem manque (2 en stock pour 4 demandés), la commande tombe à
 // 8 fûts, sous le minimum de 10 ; Malo a donné la solution (« une autre blonde en 20 L ») : 2 fûts de Pelforth Blonde 20 L.
@@ -19,7 +19,7 @@
 
 import { apresFiche, tous } from '../core/declencheurs.js';
 import { phrasesJustes } from '../core/phrases.js';
-import { EQUIPE, EXTERIEURS, LEXIQUE as LEXIQUE_FB, mailDe, STOCK_BUCHELAY, article, CONDITIONS_CHR, CABANE, CONSIGNES, libArticle,
+import { EQUIPE, EXTERIEURS, LEXIQUE as LEXIQUE_FB, mailDe, heureScenario, STOCK_BUCHELAY, article, CONDITIONS_CHR, CABANE, CONSIGNES, libArticle,
   DOC_ORGANIGRAMME, DOC_ANNUAIRE, STYLE_DOCUMENTS as STYLE_FB } from './france-boissons.js';
 
 export const ID = 'france-boissons-commande';
@@ -220,25 +220,33 @@ const majuscule = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 // Le piège « blanche » : la bière de même format qui n'est pas de la couleur demandée (Edelweiss).
 const AUTRE_COULEUR = STOCK_BUCHELAY.find((a) => a.biere && a.biere !== COMMANDE.remplacement.biere && a.litres === COMMANDE.remplacement.litres);
 
+// Les deux lignes que Malo REPREND dans sa réponse (décision de Tristan, 10/10/2026) : chaque phrase porte ce qu'il en dit,
+// sans rien corriger (« Ok pour la Pelforth », « Dommage pour l'Affligem », « Ok »…) et le jour qu'il répète. C'est le bilan
+// qui corrige, jamais Malo. Le rang dans ces tableaux est le rang DÉCLARÉ (celui des choix rangés dans la base), la juste en tête.
+const R = ATTENDU.rupture, AR = article(R.article), P = article(ATTENDU.remplacement.article), Q = ATTENDU.remplacement.q;
+export const CHOIX_RUPTURE = [
+  { phrase: `Il ne nous reste que ${R.livre} fûts ${AR.de} : je vous propose ${Q} fûts ${P.de} à la place.`, echo: `Ok pour ${elide(P.marque)}` },
+  { phrase: `${majuscule(elide(AR.marque))} est en rupture, je retire la ligne.`, echo: `Dommage pour ${elide(AR.marque)}` },
+  { phrase: `Je vous livre bien ${R.q} fûts ${AR.de}.`, echo: 'Ok' },
+  { phrase: `Il ne nous reste que ${R.livre} fûts ${AR.de} : je vous propose ${Q} fûts ${AUTRE_COULEUR.de} à la place.`, echo: `Ok pour ${elide(AUTRE_COULEUR.marque)}` },
+];
+export const CHOIX_LIVRAISON = [
+  { phrase: `Vous serez livré ${libJour(ATTENDU.jour)}, par notre ${CABANE.tournee.nom}.`, jour: ATTENDU.jour },
+  { phrase: `Vous serez livré ${libJour(COMMANDE.jourSouhaite)}, comme vous le souhaitez.`, jour: COMMANDE.jourSouhaite },
+  { phrase: `Vous serez livré ${libJour(SCENARIO.fete)}.`, jour: SCENARIO.fete },
+];
+
 // Brief §4, étape 6. `juste` = rang dans l'ordre DÉCLARÉ (toujours le premier ici) ; l'ordre affiché est tiré par élève.
 // Construite à l'arrivée du message de Malo, avec le prénom de l'élève (ligne de fin).
 export function phrasesMalo(prenom) {
-  const R = ATTENDU.rupture, AR = article(R.article), P = article(ATTENDU.remplacement.article), q = ATTENDU.remplacement.q;
   const V = ATTENDU.vides;
   return {
     id: REPONSE,
     lignes: [
       { id: 'salutation', choix: ['Bonjour Malo,', 'Salut Malo !', 'Coucou,'], juste: 0 },
       { id: 'commande', choix: ['Votre commande pour la Fête de la musique est bien enregistrée.', 'C’est bon, j’ai noté ta commande.'], juste: 0 },
-      { id: 'rupture', choix: [
-        `Il ne nous reste que ${R.livre} fûts ${AR.de} : je vous propose ${q} fûts ${P.de} à la place.`,
-        `${majuscule(elide(AR.marque))} est en rupture, je retire la ligne.`,
-        `Je vous livre bien ${R.q} fûts ${AR.de}.`,
-        `Il ne nous reste que ${R.livre} fûts ${AR.de} : je vous propose ${q} fûts ${AUTRE_COULEUR.de} à la place.`], juste: 0 },
-      { id: 'livraison', choix: [
-        `Vous serez livré ${libJour(ATTENDU.jour)}, par notre ${CABANE.tournee.nom}.`,
-        `Vous serez livré ${libJour(COMMANDE.jourSouhaite)}, comme vous le souhaitez.`,
-        `Vous serez livré ${libJour(SCENARIO.fete)}.`], juste: 0 },
+      { id: 'rupture', choix: CHOIX_RUPTURE.map((c) => c.phrase), juste: 0 },
+      { id: 'livraison', choix: CHOIX_LIVRAISON.map((c) => c.phrase), juste: 0 },
       { id: 'vides', choix: [
         `Le chauffeur reprendra vos ${V.futs} fûts et ${V.casiers} casiers vides.`,
         `Le chauffeur reprendra vos ${V.casiers} fûts et ${V.futs} casiers vides.`,
@@ -253,36 +261,58 @@ export function phrasesMalo(prenom) {
 
 const INES = { nom: EQUIPE.ines.nom, mail: mailDe('ines') };
 const MALO = { nom: `Malo (${CABANE.nom})`, mail: EXTERIEURS.malo.mail };
-const mail = (prenom, de, subject, text, o = {}) => ({ folder: 'in', ts: Date.now() + (o.decalage || 0), from: de.nom, fromMail: de.mail,
-  to: prenom, subject, kind: 'text', text, ...(o.extra || {}) });
+export const ID_VOLET = 'fb-ent62';
+// Les messages portent la date du SCÉNARIO (mardi 15 juin 2027), jamais la date réelle (décision de Tristan, 10/10/2026).
+// Le semis : Malo à 9 h 32 (l'heure de la copie à gauche du bon), Inès à 9 h 35, en tête de la boîte. Les messages déclenchés
+// et les accusés : 9 h 35 + le temps réellement passé depuis l'ouverture + `decalage` (en minutes), donc « quelques minutes
+// après » l'envoi de l'élève, et toujours après le semis (`heureScenario`, dans l'univers).
+export const HEURES = { ines: '09:35', malo: '09:32' };
+const MIN = 60000;
+const mail = (prenom, de, subject, text, o = {}) => ({ folder: 'in',
+  ts: heureScenario(SCENARIO.date, o.heure || HEURES.ines, { db: o.db, volet: ID_VOLET, decalage: (o.decalage || 0) * MIN }),
+  from: de.nom, fromMail: de.mail, to: prenom, subject, kind: 'text', text, ...(o.extra || {}) });
 export const SUJET_MALO = 'Commande pour la Fête de la musique';
 const repondu = (db) => phrasesJustes(db, REPONSE).envoye;
 
+// Le DERNIER envoi de la réponse à Malo (même tri que `phrasesJustes`), ou null.
+const dernierEnvoi = (db) => ((db && db.mails) || []).filter((m) => m.folder === 'out' && m.phrases && m.phrases.id === REPONSE)
+  .sort((a, b) => (a.ts - b.ts) || (a.id - b.id)).pop() || null;
+
+// La réponse de Malo : il REPREND ce que l'élève lui a écrit (lignes « rupture » et « livraison » du dernier envoi), sans rien
+// corriger ni rien laisser deviner (« Ok pour la Pelforth, à samedi ! », « Dommage pour l'Affligem, à vendredi ! », « Ok, à
+// lundi ! »). Une ligne absente ou inconnue : « Ok », sans jour. Exportée pour les tests.
+export function texteReponseMalo(db) {
+  const e = dernierEnvoi(db), c = (e && e.phrases && e.phrases.choix) || {};
+  const r = CHOIX_RUPTURE[c.rupture], l = CHOIX_LIVRAISON[c.livraison];
+  return `${r ? r.echo : 'Ok'}${l ? `, à ${nomDuJour(l.jour)}` : ''} !\n\nMalo`;
+}
+
 export const VOLET = {
-  id: 'fb-ent62',
+  id: ID_VOLET,
   semer: (prenom) => ({ mails: [
     mail(prenom, INES, 'Bienvenue à l’administration des ventes',
       `Bonjour ${prenom}, bienvenue à l’administration des ventes !\n\n`
         + 'Les bars de la côte normande préparent la Fête de la musique. Malo, le gérant de La Cabane à Malo, vient de nous écrire.\n\n'
         + 'Prends sa commande : vérifie le stock et les conditions de vente, remplis le [[bon de commande]], puis réponds-lui. Chaque article a une [[référence]] : tu la retrouves dans le stock et sur le bon.\n\nInès',
-      { decalage: -60000, extra: { pieces: ['organigramme', 'annuaire'], ouvreFiche: BON } }),
+      { heure: HEURES.ines, extra: { pieces: ['organigramme', 'annuaire'], ouvreFiche: BON } }),
     mail(prenom, MALO, SUJET_MALO, TEXTE_MALO,
-      { decalage: -30000, extra: { pieces: ['fiche-client', 'stock', 'conditions'], ouvreFiche: BON, phrases: phrasesMalo(prenom) } }),
+      { heure: HEURES.malo, extra: { pieces: ['fiche-client', 'stock', 'conditions'], ouvreFiche: BON, phrases: phrasesMalo(prenom) } }),
   ] }),
   declencheurs: [
     // Le bon envoyé (juste ou faux) : Inès demande la réponse à Malo (ou remercie, si l'élève lui a déjà répondu).
     { id: 'bon-recu', quand: apresFiche(BON), semer: (prenom, db) => ({ mails: [mail(prenom, INES, 'Bon de commande reçu',
       repondu(db) ? `Bon de commande reçu, merci ${prenom}.\n\nInès`
         : 'Bon de commande reçu. Réponds maintenant à Malo : il attend de savoir ce qu’il aura, et quand.\n\n'
-          + 'Ouvre son message, clique sur « Répondre » et choisis une phrase par ligne.\n\nInès', { decalage: 1000 })] }) },
-    // Le bon envoyé ET la réponse envoyée (justes ou fausses) : Malo répond, toujours pareil (il ne dit pas si c'était juste).
-    { id: 'reponse-malo', quand: tous(apresFiche(BON), repondu), semer: (prenom) => ({ mails: [mail(prenom, MALO, `RE : ${SUJET_MALO}`,
-      `Ok pour ${elide(article(ATTENDU.remplacement.article).marque)}, à ${nomDuJour(ATTENDU.jour)} !\n\nMalo`, { decalage: 2000 })] }) },
+          + 'Ouvre son message, clique sur « Répondre » et choisis une phrase par ligne.\n\nInès', { db, decalage: 2 })] }) },
+    // Le bon envoyé ET la réponse envoyée (justes ou fausses) : Malo répond en reprenant ce que l'élève a écrit (jamais s'il
+    // avait juste : c'est le bilan qui corrige ; la suite de la S2 repart sur la commande juste).
+    { id: 'reponse-malo', quand: tous(apresFiche(BON), repondu), semer: (prenom, db) => ({ mails: [mail(prenom, MALO, `RE : ${SUJET_MALO}`,
+      texteReponseMalo(db), { db, decalage: 4 })] }) },
   ],
   // Les envois corrigés (séance `correction`) : un accusé, jamais « juste » ni « faux ».
   corrections: {
-    [BON]: (prenom) => ({ mails: [mail(prenom, INES, 'Bon de commande corrigé', `Merci ${prenom}, j’ai bien reçu ton bon de commande corrigé.\n\nInès`, { decalage: 3000 })] }),
-    [REPONSE]: (prenom) => ({ mails: [mail(prenom, MALO, `RE : ${SUJET_MALO}`, 'Bien reçu, merci !\n\nMalo', { decalage: 3000 })] }),
+    [BON]: (prenom, n, db) => ({ mails: [mail(prenom, INES, 'Bon de commande corrigé', `Merci ${prenom}, j’ai bien reçu ton bon de commande corrigé.\n\nInès`, { db, decalage: 3 })] }),
+    [REPONSE]: (prenom, n, db) => ({ mails: [mail(prenom, MALO, `RE : ${SUJET_MALO}`, 'Bien reçu, merci !\n\nMalo', { db, decalage: 3 })] }),
   },
 };
 

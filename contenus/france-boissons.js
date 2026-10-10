@@ -76,6 +76,19 @@ export const EXTERIEURS = {
 };
 export const mailDe = (id) => `${id}@${VOCAB.mailDomain}`;
 
+// L'heure d'un message : celle du SCÉNARIO (juin 2027), jamais la date réelle (décision de Tristan, 10/10/2026 : « 10/10/2026 08:43 »
+// dans la Messagerie cassait la fiction). `iso` et `hhmm` = la date et l'heure de la séance, en heure locale (affichées telles
+// quelles par la Messagerie, quel que soit le fuseau) ; `decalage` en millisecondes, positif ou négatif. Avec `db` et `volet`, on
+// ajoute le temps RÉELLEMENT passé depuis l'ouverture de la séance (`db.volets[<volet>]`, posé par le moteur au semis) : un
+// message déclenché arrive ainsi « quelques minutes après » l'envoi de l'élève, à son rythme, et toujours après les messages du
+// semis. La Messagerie trie chaque dossier par `ts` : les heures d'une séance doivent rester croissantes dans l'ordre d'arrivée.
+export function heureScenario(iso, hhmm, { db, volet, decalage = 0 } = {}) {
+  const [a, m, j] = iso.split('-').map(Number), [h, mn] = hhmm.split(':').map(Number);
+  const ouvert = db && db.volets && volet ? db.volets[volet] : 0;
+  const ecoule = ouvert ? Math.max(0, Date.now() - ouvert) : 0;
+  return new Date(a, m - 1, j, h, mn).getTime() + ecoule + decalage;
+}
+
 // ─────────────────────────────────────────── le lexique commun (mots cliquables, tournure neutre)
 export const LEXIQUE = {
   organigramme: 'Schéma qui montre comment une entreprise est organisée : les services, les postes et qui dirige qui.',
