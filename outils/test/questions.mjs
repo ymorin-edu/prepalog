@@ -71,7 +71,7 @@ const monter = (o = {}) => pg.evaluate(async (o) => {
   // L'écran « Avant de commencer » (10/10/2026) : trois questions d'ouverture sur deux documents et un visuel (une photo du
   // dépôt, avec son crédit), une aide à mot cliquable. Réponses justes écrites à la main dans le bloc : ouv-a = 'x',
   // ouv-b = 'y', ouv-c = 'z'.
-  if (o.ouverture) {
+  if (o.ouverture || o.evaluation) {
     U.documents = [{ id: 'doc-a', titre: 'Document A', court: 'Doc A', html: '<p>Contenu du document A</p>' },
       { id: 'doc-b', titre: 'Document B', court: 'Doc B', html: '<p>Contenu du document B</p>' }];
     U.lexique = { 'mot-test': 'Définition du mot de test.' };
@@ -88,6 +88,14 @@ const monter = (o = {}) => pg.evaluate(async (o) => {
       documents: ['doc-a', 'doc-b', { id: 'photos', court: 'Photos', titre: 'La photo', type: 'images', images: [
         { src: './contenus/images/france-boissons/futs-mur.jpg', alt: 'Des fûts alignés', legende: 'Des fûts.', credit: 'Photo : Marco Zuppone, Unsplash' }] }],
       questions: ['ouv-a', 'ouv-b', 'ouv-c'] };
+    // ÉVALUATION (lot 2) : l'écran est noté sur 4 points (`part`), sans aide ; les questions au fil de l'essai sont retirées
+    // pour que la somme des poids reste 20 (socle 16 + 4).
+    if (o.evaluation) {
+      Q.liste = Q.liste.filter((x) => x.type === 'ouverture');
+      Q.liste.forEach((x) => { delete x.aide; });
+      Q.etapes = [];
+      Q.ouverture.part = 4;
+    }
   }
   if (o.transfert) {
     U.etapes = U.etapes.map((e) => (e.id === 'remplacement' ? { ...e, poids: 6, ecran: 'fiche:bon' } : e.id === 'quantite' ? { ...e, ecran: 'fiche:bon' } : e))
@@ -932,6 +940,91 @@ await v('Avant de commencer : contrôle au chargement — document inconnu, ques
   vrai(/« ouv-a ».*`aide` est un texte/.test(r.h), 'aide vide : ' + r.h);
   vrai(/« ouv-a » n’a pas d’écran d’ouverture/.test(r.i), 'question sans écran : ' + r.i);
   egal(r.notees.filter((id) => /^ouv-/.test(id)), [], 'les questions d’ouverture ne sont jamais notées');
+});
+
+// ─────────────────────────────────────────────────────────────── « Avant de commencer » en évaluation (lot 2, 10/10/2026)
+// Valeurs attendues écrites à la main (3 questions à 3 choix : 1 juste, 2 fausses ; part = 4 points) : juste = +1,
+// « Je ne sais pas » = 0, fausse = −1/2, plancher 0 ; points = max(0, somme) / 3 × 4. Bonnes réponses : ouv-a 'x', ouv-b 'y', ouv-c 'z'.
+async function jouerEval(rep3) {
+  await monter({ evaluation: true, copie: true });
+  const ids = ['ouv-a', 'ouv-b', 'ouv-c'];
+  for (let k = 0; k < 3; k++) {
+    await pg.click(`${Z} [data-ouv-aller="${k}"]`); await pause();
+    await repondreO(ids[k], rep3[k]);
+  }
+  return note();
+}
+
+await v('Avant de commencer (évaluation) : aucune aide, aucun mot cliquable, « Je ne sais pas » toujours en dernier, l’élève est prévenu, pas de correction', async () => {
+  await monter({ evaluation: true, copie: true });
+  for (const k of [0, 1, 2]) {
+    await pg.click(`${Z} [data-ouv-aller="${k}"]`); await pause();
+    const choix = await pg.$$eval(`${Z} [data-q-choix]`, (L) => L.map((x) => x.dataset.qChoix));
+    egal(choix.length, 4, `question ${k + 1} : nombre de choix`);
+    egal(choix[3], '@nsp', `question ${k + 1} : « Je ne sais pas » doit être en dernier`);
+    vrai(!(await present('[data-ouv-aide]')) && !(await present('[data-ouv-voir]')) && !(await present('.lex-mot')), `question ${k + 1} : aide ou mot cliquable`);
+  }
+  vrai(/Une réponse fausse retire des points\. Si tu ne sais pas, choisis « Je ne sais pas » : tu ne perds rien\./.test(await pg.textContent(`${Z} [data-ouv-penalite]`)), 'la phrase de prévention manque');
+  await pg.click(`${Z} [data-ouv-aller="0"]`); await pause();
+  await repondreO('ouv-a', 'z');
+  egal(await present('[data-q-verdict]'), false, 'un verdict est montré avant le bilan');
+  const t = await pg.innerText(`${Z} [data-ouverture]`);
+  vrai(/Réponse enregistrée\./.test(t), 'pas de « Réponse enregistrée. »');
+  vrai(!/Retour de A|C’est ça|Pas tout à fait/.test(t), 'le retour ou le verdict fuit : ' + t);
+});
+
+await v('Avant de commencer (évaluation) : barème — juste +1, « Je ne sais pas » 0, fausse −1/2, jamais sous 0', async () => {
+  const cas = [
+    ['tout juste', ['x', 'y', 'z'], 4, [3, 0, 0]],
+    ['« Je ne sais pas » partout', ['@nsp', '@nsp', '@nsp'], 0, [0, 3, 0]],
+    ['tout faux (plancher)', ['y', 'x', 'x'], 0, [0, 0, 3]],
+    ['une fausse, une juste, un « Je ne sais pas »', ['y', 'y', '@nsp'], (1 - 0.5) / 3 * 4, [1, 1, 1]],
+    ['deux justes, une fausse', ['x', 'y', 'x'], (2 - 0.5) / 3 * 4, [2, 0, 1]],
+  ];
+  for (const [nom, rep3, attendu, [j, n, fx]] of cas) {
+    const r = await jouerEval(rep3);
+    proche(r.score, attendu, `${nom} : points`);
+    proche(r.detail.ouverture.points, attendu, `${nom} : points du détail`);
+    egal(r.max, 20, `${nom} : barème`);
+    egal([r.detail.ouverture.justes, r.detail.ouverture.nsp, r.detail.ouverture.faux], [j, n, fx], `${nom} : détail pour l’enseignant`);
+    egal([r.detail.ouverture.part, r.detail.ouverture.sur], [4, 3], `${nom} : part et nombre de questions`);
+  }
+});
+
+await v('Avant de commencer (évaluation) : sans réponse rien n’est compté ; l’enseignant voit la bonne réponse et ne peut pas répondre', async () => {
+  await monter({ evaluation: true, copie: true });
+  const r = await note();
+  egal(r.score, 0, 'score sans réponse');
+  egal(r.detail.ouverture.points, 0, 'points sans réponse');
+  await monter({ evaluation: true, copie: true, role: 'prof' });
+  await aller('ouverture');
+  vrai(await present('.qf-bonne'), 'la bonne réponse n’est pas marquée pour l’enseignant');
+  egal(await pg.$$eval(`${Z} [data-q-choix]`, (L) => L.every((x) => x.disabled)), true, 'l’enseignant peut cocher');
+});
+
+await v('Avant de commencer (évaluation) : contrôle au chargement — aide ou mot cliquable en évaluation, évaluation sans part, séance de travail avec part', async () => {
+  const r = await pg.evaluate(async () => {
+    const { compilerQuestions } = await import('/core/types/questions.js');
+    const { creerEntreprise } = await import('/core/types/entreprise.js');
+    const S = await import('/contenus/questions-essai.js');
+    const { QUESTIONS } = await import('/contenus/questions/ESSAI.js');
+    const essai = (f) => { try { f(); return 'ok'; } catch (e) { return e.message; } };
+    const ch = () => [{ v: 'x', lib: 'X' }, { v: 'y', lib: 'Y' }];
+    const mk = (part, plus = {}) => ({ ...QUESTIONS, etapes: [], liste: [{ id: 'ouv-a', type: 'ouverture', de: 'Ines', doc: 'doc-a', enonce: 'Q ?', choix: ch(), juste: 'x', retour: 'R', ...plus }],
+      ouverture: { id: 'avant', de: 'Ines', documents: ['doc-a'], questions: ['ouv-a'], ...(part == null ? {} : { part }) } });
+    const dans = (Q) => essai(() => compilerQuestions(Q, null, ['doc-a']));
+    const monte = (copie, part) => essai(() => { const U = S.univers({ copie }); U.documents = [{ id: 'doc-a', titre: 'A', court: 'A', html: '<p>A</p>' }]; U.questions = mk(part); creerEntreprise(U); });
+    return { ok: dans(mk(4)), aide: dans(mk(4, { aide: 'Regarde.' })), mot: dans(mk(4, { enonce: 'Le [[mot]] ?' })), zero: dans(mk(0)),
+      reserve: dans(mk(4, { choix: [{ v: 'x', lib: 'X' }, { v: '@nsp', lib: 'Y' }] })),
+      evalSansPart: monte(true, null), travailAvecPart: monte(false, 4) };
+  });
+  egal(r.ok, 'ok', 'une évaluation juste doit se charger');
+  vrai(/« ouv-a ».*aucune `aide`/.test(r.aide), 'aide en évaluation : ' + r.aide);
+  vrai(/« ouv-a ».*aucun mot cliquable/.test(r.mot), 'mot cliquable en évaluation : ' + r.mot);
+  vrai(/`part`.*positif/.test(r.zero), 'part nulle : ' + r.zero);
+  vrai(/« ouv-a ».*réservée/.test(r.reserve), 'clé réservée : ' + r.reserve);
+  vrai(/évaluation doit déclarer sa `part`/.test(r.evalSansPart), 'évaluation sans part : ' + r.evalSansPart);
+  vrai(/séance de travail ne déclare pas de `part`/.test(r.travailAvecPart), 'séance de travail avec part : ' + r.travailAvecPart);
 });
 
 await v('Questions : aucune erreur de page pendant le bloc', async () => {

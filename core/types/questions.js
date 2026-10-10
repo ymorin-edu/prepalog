@@ -36,6 +36,10 @@
 //   liste: [{ id: 'qui-est-malo', type: 'ouverture', de: 'ines', enonce, choix, juste, retour,
 //             doc: 'fiche-client',                  // ce que le bloc de gauche montre pour cette question (un id de `documents`)
 //             aide: 'Regarde la [[fiche client]].' }],   // facultative ; l'aide se replie, avec « Voir le document »
+// EN ÉVALUATION (lot 2, décisions de Tristan du 10/10/2026) : `ouverture.part: 4` (points sur 20) rend l'écran NOTÉ. Alors :
+// aucune aide ni mot cliquable, un choix « Je ne sais pas » toujours en dernier, pas de correction avant le bilan
+// (« Réponse enregistrée. »), et l'élève est prévenu d'une phrase. Barème par question de poids 1 : juste = +1 ;
+// « Je ne sais pas » = 0 ; fausse = − 1 ÷ (nombre de mauvaises réponses) ; la part ne descend jamais sous 0. Un seul jalon.
 // Champs facultatifs d'une question : `poids` (1 par défaut, dans la `part`), `actif: false` (mise de côté),
 // `melanger: false` (choix dans l'ordre déclaré), `libre: true` (réflexion seulement : une ou deux phrases),
 // `rattrapage(db)` (condition de secours, en plus de celle du moteur). La séance branche le tout en une ligne :
@@ -61,6 +65,8 @@ import { hasard } from '../tirage.js';
 const ID_OK = /^[a-z0-9][a-z0-9-]*$/;
 export const CLE_ETAPES = '@etapes';
 export const CLE_OUVERTURE = '@ouverture';
+export const NSP = '@nsp';                                   // la clé de « Je ne sais pas » (évaluation)
+export const PHRASE_PENALITE = 'Une réponse fausse retire des points. Si tu ne sais pas, choisis « Je ne sais pas » : tu ne perds rien.';
 // Comment l'élève appelle la personne : `appel`, sinon le premier mot de son nom.
 export const appel = (p) => (p && (p.appel || String(p.nom || '').split(' ')[0])) || '';
 
@@ -138,6 +144,7 @@ export function compilerQuestions(Q, equipe, documentsSeance) {
     if (!o || typeof o !== 'object') err(`${ici} doit être un objet`);
     if (!o.id || !ID_OK.test(o.id)) err(`${ici} : il manque l’\`id\` (minuscules, chiffres et tirets)`);
     if (!personnes[o.de]) err(`${ici} : \`de\` = « ${o.de} » n’est pas une personne de la séance`);
+    if (o.part != null && !(typeof o.part === 'number' && o.part > 0)) err(`${ici} : \`part\` (les points sur 20 de l’évaluation) est un nombre positif`);
     if (!Array.isArray(o.questions) || !o.questions.length) err(`${ici} ne cite aucune question`);
     if (!Array.isArray(o.documents) || !o.documents.length) err(`${ici} n’a aucun document à montrer à gauche`);
     const connus = new Set(documentsSeance || []);
@@ -166,6 +173,11 @@ export function compilerQuestions(Q, equipe, documentsSeance) {
       if (vus.has(id)) err(`${ici} cite « ${id} » deux fois`);
       vus.add(id);
       if (!docs.has(q.doc)) err(`question « ${id} » : \`doc\` = « ${q.doc} » n’est pas un document de l’écran d’ouverture (${[...docs.keys()].join(', ')})`);
+      if (o.part != null) {
+        if (q.aide != null) err(`question « ${id} » : en évaluation (\`part\`), une question n’a aucune \`aide\``);
+        if (/\[\[/.test(q.enonce + (q.choix || []).map((c) => c.lib).join(' '))) err(`question « ${id} » : en évaluation, aucun mot cliquable (\`[[mot]]\`) dans l’énoncé ni les choix`);
+        if ((q.choix || []).some((c) => c.v === NSP)) err(`question « ${id} » : la clé « ${NSP} » est réservée à « Je ne sais pas »`);
+      }
     });
     ouvQ.forEach((q) => { if (!vus.has(q.id)) err(`la question d’ouverture « ${q.id} » n’est citée par l’écran d’ouverture`); });
     const actives = o.questions.filter((id) => parIdTout.get(id).actif !== false);
@@ -195,7 +207,16 @@ export const etapeFaite = (db, M, e) => e.questions.every((id) => repondu(repons
 // Jamais d'`ecran` : « Corriger » ne rouvre pas une question. Poids = part × poids / somme des poids.
 export function etapesQuestions(M) {
   const somme = M.notees.reduce((t, q) => t + (q.poids || 1), 0);
-  return M.notees.map((q) => ({
+  const ouv = M.ouverture && M.ouverture.part != null ? [{
+    id: 'ouverture', titre: 'Les questions', groupe: 'Les questions', poids: M.ouverture.part,
+    fraction: (db) => noteOuverture(db, M).fraction,
+    verifier(db) {
+      const n = noteOuverture(db, M);
+      if (n.repondues < n.sur) return { status: 'attente' };
+      return { status: n.fraction > 0 ? 'ok' : 'ko' };
+    },
+  }] : [];
+  return ouv.concat(M.notees.map((q) => ({
     id: `question:${q.id}`, titre: q.groupe, groupe: q.groupe, question: q.id,
     poids: (M.part * (q.poids || 1)) / somme,
     verifier(db) {
@@ -203,13 +224,33 @@ export function etapesQuestions(M) {
       if (!r || r.premiere == null) return { status: 'attente' };
       return { status: r.premiere === q.juste ? 'ok' : 'ko' };
     },
-  }));
+  })));
 }
 
 // L'ordre d'affichage des choix : tiré par élève (même graine, même ordre, sur tous les postes), sauf `melanger: false`.
+// En évaluation, « Je ne sais pas » est ajouté en dernier, jamais mélangé.
+export const enEvaluation = (M, q) => !!(M.ouverture && M.ouverture.part != null && q.type === 'ouverture');
 export function ordreChoix(M, q, graine) {
-  if (q.melanger === false) return q.choix.slice();
-  return hasard(`${graine || ''}|${M.id}|${q.id}`).melanger(q.choix);
+  const L = q.melanger === false ? q.choix.slice() : hasard(`${graine || ''}|${M.id}|${q.id}`).melanger(q.choix);
+  return enEvaluation(M, q) ? L.concat([{ v: NSP, lib: 'Je ne sais pas' }]) : L;
+}
+
+// La part des questions d'ouverture en évaluation. Par question (poids 1) : juste +1, « Je ne sais pas » 0, fausse
+// −1 ÷ (mauvaises réponses) ; plancher à 0. `fraction` ∈ [0, 1] ; `points` = fraction × part.
+export function noteOuverture(db, M) {
+  const o = M.ouverture;
+  if (!o || o.part == null) return null;
+  let total = 0, justes = 0, nsp = 0, faux = 0, repondues = 0;
+  o.questions.forEach((id) => {
+    const q = M.parId.get(id), r = reponse(db, M, id);
+    if (!repondu(r)) return;
+    repondues += 1;
+    if (r.premiere === q.juste) { total += 1; justes += 1; }
+    else if (r.premiere === NSP) nsp += 1;
+    else { total -= 1 / (q.choix.length - 1); faux += 1; }
+  });
+  const fraction = Math.max(0, total) / o.questions.length;
+  return { part: o.part, fraction, points: fraction * o.part, justes, nsp, faux, repondues, sur: o.questions.length };
 }
 
 /* ================================================================ rendu */
@@ -239,6 +280,8 @@ export function htmlQuestion(M, q, r, o = {}) {
     const pret = q.libre ? true : !!o.choisi;
     suite = `<div class="qf-rep"><button type="button" class="btn btn-p" data-q-repondre="${ech(q.id)}" data-cle="r-${ech(q.id)}"
       ${pret ? '' : 'disabled'}>Répondre</button><span class="note">Une seule réponse compte : la première.</span></div>`;
+  } else if (o.evalOuv) {
+    suite = '<p class="qf-retour" data-q-enregistree>Réponse enregistrée.</p>';
   } else if (q.reflexion) {
     suite = `<p class="qf-retour"><b>Ce qu’en pense ${qui} :</b> ${ech(q.retour)}</p>`;
   } else if (o.merci) {
@@ -320,6 +363,7 @@ export function htmlOuverture(M, db, o = {}) {
   const dernier = k === n - 1;
   return `<div class="ent-tete"><h2>${ech(ov.titre || 'Avant de commencer')}, avec ${qui}</h2>${P.role ? `<p class="note">${ech(P.nom)}, ${ech(P.role)}</p>` : ''}</div>
     ${ov.situation ? `<p class="qf-situation"><b>${qui} :</b> « ${ech(ov.situation)} »</p>` : ''}
+    ${ov.part != null ? `<p class="qf-situation" data-ouv-penalite><b>${qui} :</b> « ${ech(PHRASE_PENALITE)} »</p>` : ''}
     <div class="qo-cols" data-ouverture="${ech(ov.id)}">
       <section class="panneau qo-docs" aria-label="Documents">
         <div class="qo-onglets" role="tablist">${docs.map((d) => `<button type="button" role="tab" class="qo-onglet" data-ouv-doc="${ech(d.id)}"

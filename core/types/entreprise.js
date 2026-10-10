@@ -24,7 +24,7 @@ import { monterCalculette, demonterCalculette } from '../calculette.js';
 import { creerDocuments } from './documents.js';
 import { creerFiche } from './fiche.js';
 import { compilerQuestions, etapesQuestions, reponse, repondu, etapeArrivee, etapeFaite, htmlQuestion, htmlPanneau, htmlEtape,
-  appel, CLE_ETAPES, CLE_OUVERTURE, htmlOuverture, ouvertureFaite } from './questions.js';
+  appel, CLE_ETAPES, CLE_OUVERTURE, htmlOuverture, ouvertureFaite, noteOuverture } from './questions.js';
 import { creerGesteTableur, retourDeTemps } from './export-tableur.js';
 import { graineDeBase, poserGraine, declarerTirage, estTirage, fautesTirage } from '../tirage.js';
 import { BAREME_AFFICHE, pointsBonus } from '../notes.js';
@@ -60,6 +60,10 @@ export function creerEntreprise(U) {
   // déclare `questions` (format en tête de `core/types/questions.js`). Contrôlées ici : une question mal déclarée empêche
   // la séance de se charger. Le moteur ajoute lui-même un jalon par question notée (poids pris dans la `part`).
   const MQ = U.questions ? compilerQuestions(U.questions, U.equipe, (U.documents || []).map((d) => d.id)) : null;
+  // « Avant de commencer » : noté (`part`) en évaluation seulement, jamais dans une séance de travail.
+  if (MQ && MQ.ouverture && (MQ.ouverture.part != null) !== !!U.copie) {
+    throw new Error(`questions de ${MQ.id} : l’écran d’ouverture ${U.copie ? 'd’une évaluation doit déclarer sa `part` (points sur 20)' : 'd’une séance de travail ne déclare pas de `part` (il ne compte pas dans la note)'}`);
+  }
   // Les personnes de la séance (`equipe`, plus celles des questions) : les destinataires d'un message à transférer.
   const PERSONNES = MQ ? MQ.personnes : Object.assign({}, U.equipe || {});
   // LES JALONS BONUS du confirmé (chantier D-C, lot 3) : un jalon qui déclare `bonus: true` n'est pas un jalon du socle.
@@ -319,8 +323,13 @@ export function creerEntreprise(U) {
       let st = 'ko';
       try { st = e.verifier(db, U).status; } catch (x) { st = 'erreur'; erreurs[e.id] = signaler(`le jalon « ${e.id} » plante`, x); }
       detail[e.id] = st;
-      if (st === 'ok') ok += poidsDe(e);
+      if (st === 'ok') ok += poidsDe(e) * (typeof e.fraction === 'function' ? e.fraction(db) : 1);
     });
+    // La part des questions d'« Avant de commencer » en évaluation : le détail juste / « Je ne sais pas » / faux, lu par l'enseignant.
+    if (MQ && MQ.ouverture && MQ.ouverture.part != null && db) {
+      const n = noteOuverture(db, MQ);
+      detail.ouverture = { points: arrondi(n.points), part: n.part, justes: n.justes, nsp: n.nsp, faux: n.faux, sur: n.sur };
+    }
     // Les cas bonus (lot 3 de D-C) : confirmé seulement, jamais en évaluation. `detail.bonus = { justes, total, etats }` ;
     // les points sont posés par `remonterEtapes` (règle du premier bilan). Un jalon bonus qui plante ne rapporte rien.
     if (ETAPES_BONUS.length && !COPIE && db && db.aisance === 'confirme') {
@@ -728,7 +737,7 @@ export function creerEntreprise(U) {
       function optionsQuestion(id) {
         const q = MQ.parId.get(id);
         const auBilan = !COPIE && q.apres === 'bilan' && fini(noterBase(db).detail);
-        return { graine: graineQ, estProf, choisi: QF.choisi[id], brouillon: QF.brouillon[id], copie: COPIE,
+        return { graine: graineQ, estProf, choisi: QF.choisi[id], brouillon: QF.brouillon[id], copie: COPIE, evalOuv: COPIE && q.type === 'ouverture',
           merci: COPIE || (q.apres === 'bilan' && !auBilan), sortie: !!(QF.sorties[id] && QF.sorties[id].n) };
       }
       // Le panneau et le bandeau du haut, sans redessiner l'écran de travail (une question qui arrive au milieu d'une

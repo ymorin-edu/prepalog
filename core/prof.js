@@ -1097,7 +1097,10 @@ export async function rendreEspaceProf(hote, ctx) {
         // Le bonus du confirmé (D-C, lot 3) : dans l'infobulle de l'enseignant seulement (la note le comprend déjà).
         const bo = t.detail && t.detail.bonus;
         const dontBonus = bo && bo.total ? ` — dont bonus +${formaterNote(bo.points || 0)} (${bo.justes} cas sur ${bo.total})` : '';
-        return `<td class="num ${classe}"${dontBonus ? ' data-bonus' : ''} title="${ech(`${formaterNote(t.meilleur)} sur ${max}${dontBonus} — ${corr}${so ? `
+        // Les questions d'« Avant de commencer » d'une évaluation : la part et le détail juste / « Je ne sais pas » / faux.
+        const qo = t.detail && t.detail.ouverture;
+        const dontQuestions = qo ? ` — Les questions : ${formaterNote(qo.points)} / ${formaterNote(qo.part)} (${qo.justes} juste${qo.justes > 1 ? 's' : ''}, ${qo.nsp} « Je ne sais pas », ${qo.faux} fausse${qo.faux > 1 ? 's' : ''})` : '';
+        return `<td class="num ${classe}"${dontBonus ? ' data-bonus' : ''} title="${ech(`${formaterNote(t.meilleur)} sur ${max}${dontBonus}${dontQuestions} — ${corr}${so ? `
 ${so.phrase}` : ''}`)}"
           >${formaterNote(noteSur20(t.meilleur, max))}<span class="note">/${BAREME_AFFICHE}</span>${
           n ? `<span class="suivi-corrige" data-corrections="${n}">corrigé ${n}×</span>` : ''}</td>`;

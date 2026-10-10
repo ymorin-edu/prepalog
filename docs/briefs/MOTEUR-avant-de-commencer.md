@@ -6,7 +6,7 @@
 > Lis docs/briefs/MOTEUR-avant-de-commencer.md. Construis l'écran « Avant de commencer » dans le moteur des questions, puis branche-le sur ENT-6.2. Annonce la durée avant de commencer et dis-moi si un point du brief contredit le code.
 > ```
 
-**Statut** : en cours — lot 1 livré le 10/10/2026, lots 2 et 3 à faire *(à valider → à implémenter → en cours → livré | abandonné)*
+**Statut** : en cours — lots 1 et 2 livrés le 10/10/2026, lot 3 à faire *(à valider → à implémenter → en cours → livré | abandonné)*
 **Date du brief** : 10/10/2026
 **Conversation d'origine** : Claude (session cloud), décisions de Tristan du 10/10/2026, 10 h.
 **Modèle** : Sonnet (on prolonge l'écran de questions existant, `core/types/questions.js`, sans vue nouvelle).
@@ -212,5 +212,22 @@ disent déjà « stock, minimum, jour de tournée » et souffleraient la répons
   voir `docs/decisions.md` (ligne du 10/10/2026, « Avant de commencer »).
 - **Vérifié** : page à 1366 × 768 (le bas du bloc ≤ 768 px, aide ouverte et retour affiché), aucune requête hors du domaine.
 - **Supposé / à faire** : la phrase de l'article 1113 n'a **pas** pu être relue sur Légifrance (accès refusé) ; elle est reprise de
-  l'écriture précédente (deux alinéas, conforme à ma connaissance du texte) : à relire par Tristan ou Cowork. Lots 2 (évaluation
-  notée sur 4) et 3 (tirage par élève, banque de 10 questions pour ENT-6.2 à écrire par Cowork) : **non faits**.
+  l'écriture précédente (deux alinéas, conforme à ma connaissance du texte) : à relire par Tristan ou Cowork. Lot 3 (tirage par
+  élève, banque de 10 questions pour ENT-6.2 à écrire par Cowork) : **non fait**.
+
+### Lot 2 — livré le 10/10/2026 (évaluation notée sur 4)
+
+- **Déclaration** : `ouverture.part: 4` dans le fichier de questions de l'évaluation. `part` ⇔ `copie: true` (le moteur refuse
+  l'une sans l'autre, avec un message qui nomme la faute). Pas d'`aide` ni de `[[mot]]` en évaluation (refus au chargement).
+- **Écran** : « Je ne sais pas » ajouté en dernier à chaque question (clé réservée `@nsp`), la phrase d'avertissement de la
+  tutrice écrite par le moteur, « Réponse enregistrée. » sans verdict ni retour (la correction vient avec le bilan).
+- **Note** : un jalon « Les questions » de poids `part`, avec le champ nouveau `fraction(db)` des jalons (multiplie le poids ;
+  absent = 1, donc rien ne change ailleurs). Juste +1, NSP 0, fausse −1 ÷ (mauvaises réponses), plancher 0. Détail juste / NSP /
+  faux dans `detail.ouverture`, montré dans l'infobulle de la note au Suivi (`core/prof.js`).
+- **Tests** (bloc `questions`, 4 cas ajoutés, 101/101, aucun cas existant réécrit ; le montage du bloc gagne l'option
+  `evaluation`) : barème écrit à la main sur cinq combinaisons, aucune aide / NSP en dernier / pas de verdict, enseignant,
+  contrôle au chargement. Quatre sabotages font tomber leur cas ; le plancher n'était d'abord couvert que par le statut du
+  jalon, d'où une vérification ajoutée sur les points du détail.
+- **Supposé / non fait** : aucune évaluation réelle ne l'utilise encore. Pas de ligne « Les questions : x / 4 » au bandeau de fin :
+  il n'y a pas de bandeau en évaluation, la part se lit au Suivi (infobulle). Reprise des questions `cle: true` des séances de
+  travail : lot 3 (avec le tirage par élève).
