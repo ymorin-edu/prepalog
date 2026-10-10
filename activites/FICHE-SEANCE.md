@@ -759,12 +759,19 @@ direct, blocs fautifs, toutes les `aides.consignes`, bande ambrée (`aides.fenet
 durée (`aides.detailDuree`), reprise et repos hachuré (`aides.reprise`), compteur de conduite
 (`aides.compteurConduite`), envoi avec problèmes à confirmer ; entraînement = « Vérifier mon planning » (liste effacée
 au geste suivant), aide `regles` seule ; évaluation = rien, aide `regles` seule. Les compteurs restent visibles à tous
-les temps (en rouge en guidage seulement).
+les temps (en rouge en guidage seulement). **`aides.verifier: false`** (chantier D-3, 10/10/2026, ENT-6.3 et 6.8) : en
+entraînement, ni le bouton « Vérifier mon planning » ni son invite (remplacée par « Relis les règles, puis envoie ton
+planning… ») ; un seul bouton, l'envoi, avec sa confirmation dans la page. Sans l'option, rien ne change.
 
 **Aléa** : `alea: { de, texte, cartes: { D: { des: '09:00' } }, ajoutCartes, ajoutLignes, ressources: { s2: { dispo:
 '12:00' } } }`. Il arrive par la messagerie : `volet.declencheurs: [{ id: 'alea', quand: apresPlanning('smoby-quais'),
 semer: (prenom) => ({ mails: [...] }), phasePlanning: 2 }]` (`apresPlanning` dans `core/declencheurs.js`, vrai dès le
 1er envoi, juste ou faux). Le message s'affiche aussi en tête du panneau ; le planning de l'élève est gardé tel quel.
+**`alea.retraits: { lignes: [ids], cartes: [ids] }`** (chantier D-3, 10/10/2026, ENT-6.3 : un chauffeur quitte l'entreprise) :
+après l'aléa, ces lignes et ces cartes disparaissent (bac, grille, compteurs, lecture). Une carte retirée que l'élève avait
+posée reste dans son planning mais la lecture l'ignore : elle ne compte ni comme posée ni comme « pas encore posée » (le
+planning d'après l'aléa est complet sans elle). Un id inconnu, ou une carte gardée dont la ligne imposée est retirée,
+arrête la séance au chargement (raison en clair). Ne pas déclarer de règle `disponible` pour simuler un départ.
 Sans aléa : un seul envoi, puis le bilan. « Réinitialiser le planning » vide le planning **en cours**, jamais une
 version envoyée.
 
@@ -1052,7 +1059,7 @@ poids de ses jalons + `part` doit valoir 20 (contrôlé à l'ouverture).
   | plan d'entrepôt `<id>` | `entrepot:<id>:poser` (poser une palette), `entrepot:<id>:verifier` |
   | animation `<id>` | `animation:<id>:<question>` (la première réponse) |
   | messagerie (toutes les séances) | `messagerie:transfert` (transférer un message, n'importe lequel ; chantier D-1) ; `messagerie:transfert:<clé du message>` (transférer CE message, 10/10/2026, publié **en plus** du précédent) |
-  | messagerie, réponse par phrases | `messagerie:phrase:<ligne>` (le premier choix d'une phrase sur cette ligne, juste ou faux ; ENT-6.2, 10/10/2026) ; la ligne doit exister dans un mail semé par le volet, sinon la séance ne s'ouvre pas |
+  | messagerie, réponse par phrases | `messagerie:phrase:<ligne>` (le premier choix d'une phrase sur cette ligne, juste ou faux ; ENT-6.2, 10/10/2026) ; la ligne doit exister dans un mail semé par le volet **ou par un déclencheur** (chantier D-3, 10/10/2026 : chaque `declencheurs[].semer` est essayé une fois sur une base vide au chargement ; un déclencheur qui ne se sème pas sans base ne publie rien), sinon la séance ne s'ouvre pas ; une ligne imposée (`texte`) n'est pas un geste |
 
   `messagerie:transfert:<clé>` : la clé est connue si le message est semé par le volet avec un `transfert`, ou si le volet la déclare dans
   **`volet.transferables: ['msg-malo', …]`** (messages qui arrivent plus tard, par un déclencheur) ; une autre clé empêche la séance de s'ouvrir.

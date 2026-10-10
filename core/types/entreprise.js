@@ -248,6 +248,16 @@ export function creerEntreprise(U) {
       ((U.volet && typeof U.volet.semer === 'function' && U.volet.semer('Élève').mails) || []).forEach((m) => ((m.phrases && m.phrases.lignes) || [])
         .forEach((l) => { if (l.texte == null) connus.add(GESTE_PHRASE + l.id); }));
     } catch (e) { /* un volet qui ne se sème pas sans base : ses gestes de phrase ne sont pas contrôlés */ }
+    // Et celles des messages par phrases qui arrivent PLUS TARD, par un déclencheur (chantier D-3, ENT-6.3 : le message à Lucas
+    // arrive après le 2e planning). Chaque `semer` est essayé une fois sur une base vide ; seules les lignes déclarées par un
+    // message à phrases deviennent des gestes connus (aucune clé libre). Un déclencheur qui ne se sème pas sans base : ses gestes
+    // restent inconnus, et une question qui en cite un empêche la séance de s'ouvrir.
+    ((U.volet && U.volet.declencheurs) || []).forEach((d) => {
+      try {
+        ((d && typeof d.semer === 'function' && (d.semer('Élève', { mails: [] }) || {}).mails) || []).forEach((m) => ((m && m.phrases && m.phrases.lignes) || [])
+          .forEach((l) => { if (l.texte == null) connus.add(GESTE_PHRASE + l.id); }));
+      } catch (e) { /* voir ci-dessus */ }
+    });
     const cites = [];
     (U.volet && U.volet.declencheurs || []).forEach((d) => gestesDe(d.quand).forEach((g) => cites.push([g, `message « ${d.id} »`])));
     if (MQ) {

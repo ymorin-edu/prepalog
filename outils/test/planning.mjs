@@ -699,5 +699,94 @@ await v('Planning : le geste « poser une carte » fait arriver un message (apre
   egal(erreursP, [], 'erreurs JS');
 });
 
+/* =========================================================== chantier D-3 (ENT-6.3, 10/10/2026) */
+// Le cas « personnel » de la maquette, retouché dans la page : `retraits` (la ligne de Chloé et son congé disparaissent à
+// l'aléa, comme Kevin en ENT-6.3) et `sansVerifier` (`aides.verifier: false`). Valeurs écrites à la main.
+const monterVariante = (p, o = {}) => p.evaluate(async (o) => {
+  const { creerEntreprise } = await import('/core/types/entreprise.js');
+  const E = await import('/outils/essai-planning.js');
+  const C = await import('/contenus/planning-essai.js');
+  document.querySelector('#plTest')?.remove();
+  const hote = document.createElement('div'); hote.id = 'plTest'; document.body.appendChild(hote);
+  const P0 = C.CAS[o.cas || 'perso'];
+  const P = { ...P0, alea: { ...P0.alea, ...(o.retraits ? { retraits: o.retraits } : {}) },
+    aides: { ...P0.aides, ...(o.sansVerifier ? { verifier: false } : {}) } };
+  const temps = o.temps || 'guidage';
+  const U = E.univers({ cas: o.cas || 'perso', temps, planning: P });
+  const db = {};
+  const moteur = creerEntreprise(U);
+  window.__p = { db, moteur, remis: null };
+  moteur.rendre(hote, {
+    meta: { id: 'essai-planning', code: 'ESSAI', titre: 'Essai du planning', portee: 'eleve', immersif: true, temps },
+    profil: { prenom: 'Lea', nom: 'Test', role: 'eleve', uid: 'u-test' },
+    jeu: { etat: () => db, sauver: () => {} }, enregistrer: () => {}, quitter: () => {}, codeStock: 'ABC', lireScore: async () => null,
+  });
+  document.querySelector('#plTest .ent-nav[data-vue="planning"]').click();
+}, o);
+const RETRAITS = { lignes: ['chloe'], cartes: ['cp-chloe'] };
+
+await v('Planning (D-3) : `alea.retraits` — la ligne et sa carte disparaissent après l’aléa (bac, grille, compteurs) ; la carte posée avant est ignorée, son absence ne rend pas le planning incomplet', async () => {
+  await monterVariante(pg, { retraits: RETRAITS });
+  egal((await pg.$$(`${Z} [data-pl-bac] [data-pl-id]`)).length, 5, 'cartes avant l’aléa');
+  vrai(await present(pg, '[data-pl-case][data-r="chloe"]'), 'ligne de Chloé absente avant l’aléa');
+  await poserTout(pg, PERSO1);
+  await envoyer(pg);
+  // Après l'aléa : plus de carte ni de ligne de Chloé ; la carte de l'arrêt d'Inès et la ligne de Noa arrivent comme avant.
+  egal(await pg.$$eval(`${Z} [data-pl-bac] [data-pl-id]`, (L) => L.map((x) => x.dataset.plId)), ['form-mathis', 'visite-ines', 'cp-karim', 'cp-lea', 'am-ines'], 'cartes après l’aléa');
+  vrai(!(await present(pg, '[data-pl-case][data-r="chloe"]')) && !(await present(pg, '[data-pl-id="cp-chloe"]')), 'ligne ou carte de Chloé encore là');
+  vrai(await present(pg, '[data-pl-case][data-r="noa"]'), 'ligne de Noa absente');
+  egal((await etat(pg, 'perso')).place['cp-chloe'], { r: 'chloe', s: 5 }, 'le planning de l’élève garde la carte posée');
+  await poser(pg, 'am-ines', 'ines', 5);
+  const P = await problemes(pg);
+  vrai(!P.some((x) => /pas encore posées|Chlo/.test(x)), `la carte retirée compte encore : ${P}`);
+  // Lun 14 : Karim, Léa, Mathis, Yanis présents (Inès en arrêt, Chloé partie, Noa pas encore là) = 4 présents.
+  egal(await pg.$eval(`${Z} [data-pl-compte="presents"][data-t="5"]`, (e) => e.textContent), '4', 'présents lun 14');
+  await envoyer(pg);
+  egal((await pastilles(pg))[5], true, 'jalon « toutes les absences posées » après l’aléa');
+  // Sans l'aléa reçu par cette carte (elle n'a jamais été posée) : le planning d'après l'aléa est complet quand même.
+  const r = await pg.evaluate(async (R) => {
+    const { jalonsPlanning } = await import('/core/types/planning.js');
+    const C = await import('/contenus/planning-essai.js');
+    const P = { ...C.PERSO, alea: { ...C.PERSO.alea, retraits: R } };
+    const pl = { 'form-mathis': { r: 'mathis', s: 1 }, 'visite-ines': { r: 'ines', s: 3 }, 'cp-karim': { r: 'karim', s: 0 }, 'cp-lea': { r: 'lea', s: 7 } };
+    const v2 = { ...pl, 'am-ines': { r: 'ines', s: 5 } };
+    const tous = (P2, place) => jalonsPlanning({ plannings: { 'essai-personnel': { v1: { place: { ...pl, 'cp-chloe': { r: 'chloe', s: 5 } } }, v2: { place } } } }, P2).L
+      .find((l) => l.id === 'v2-tous').ok;
+    return { sans: tous(P, v2), fantome: tous(P, { ...v2, 'cp-chloe': { r: 'chloe', s: 0 } }), sansRetrait: tous(C.PERSO, v2) };
+  }, RETRAITS);
+  egal(r, { sans: true, fantome: true, sansRetrait: false }, 'lecture des versions (sans la carte, avec la carte fantôme, sans retrait déclaré)');
+  egal(erreursP, [], 'erreurs JS');
+});
+
+await v('Planning (D-3) : `alea.retraits` mal déclaré (id inconnu, carte gardée sur une ligne retirée) → la séance ne se charge pas, la raison en clair', async () => {
+  const m = await pg.evaluate(async () => {
+    const { jalonsPlanning } = await import('/core/types/planning.js');
+    const C = await import('/contenus/planning-essai.js');
+    const essai = (R) => { try { jalonsPlanning({}, { ...C.PERSO, alea: { ...C.PERSO.alea, retraits: R } }); return ''; } catch (e) { return e.message; } };
+    return [essai({ lignes: ['kevin'] }), essai({ cartes: ['cp-kevin'] }), essai({ lignes: ['chloe'] }), essai({ lignes: ['chloe'], cartes: ['cp-chloe'] })];
+  });
+  vrai(/retire la ligne « kevin », qui n'existe pas/.test(m[0]), m[0]);
+  vrai(/retire la carte « cp-kevin », qui n'existe pas/.test(m[1]), m[1]);
+  vrai(/la carte « cp-chloe » va sur la ligne « chloe », retirée/.test(m[2]), m[2]);
+  egal(m[3], '', 'déclaration juste refusée');
+});
+
+await v('Planning (D-3) : `aides.verifier: false` en entraînement — ni « Vérifier mon planning » ni son invite, une seule action d’envoi avec la confirmation dans la page ; sans l’option, le bouton reste', async () => {
+  await monterVariante(pg, { temps: 'entrainement' });
+  vrai(await present(pg, '[data-pl="verifier"]'), 'sans l’option, le bouton « Vérifier » a disparu');
+  await monterVariante(pg, { temps: 'entrainement', sansVerifier: true });
+  vrai(!(await present(pg, '[data-pl="verifier"]')), 'bouton « Vérifier » présent');
+  const t = await texte(pg, `${Z} .pl-droite`);
+  vrai(!/Vérifier/.test(t), 'le mot « Vérifier » reste à l’écran');
+  vrai(await present(pg, '[data-pl-invite]') && /envoie ton planning/.test(t), 'invite d’envoi absente');
+  egal((await pg.$$(`${Z} .pl-aide`)).length, 1, 'aide « règles » seule');
+  await poserTout(pg, PERSO1);
+  vrai(!(await present(pg, '[data-pl-problemes]')), 'des problèmes s’affichent sans vérification');
+  await envoyer(pg);   // exige la confirmation « Tu envoies ton planning ? »
+  egal((await etat(pg, 'perso')).phase, 2, 'envoi');
+  egal((await etat(pg, 'perso')).verifs || 0, 0, 'vérifications comptées');
+  egal(erreursP, [], 'erreurs JS');
+});
+
 await ctxP.close();
 }

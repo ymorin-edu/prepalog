@@ -32,8 +32,10 @@
 //                                         // n'a de problème ; `versions` : jugé seulement dans ces versions (1, 2), absent = toutes
 //     repriseIdentique: 'faux',              // la version d'après l'aléa renvoyée SANS CHANGEMENT : tous ses jalons faux, sauf
 //                                         // si elle respecte déjà l'aléa (ENT-5.7, garde d'inaction, Tristan 07/10/2026)
-//     aides: { consignes: { regles, … }, fenetre, detailDuree, reprise, compteurConduite },
-//     alea: { de, texte, cartes: { D: { des: '09:00' } }, ajoutCartes, ajoutLignes, ressources: { s2: { dispo: '12:00' } } },
+//     aides: { consignes: { regles, … }, fenetre, detailDuree, reprise, compteurConduite,
+//              verifier: false },           // entraînement sans « Vérifier mon planning » (un seul bouton : envoyer, D-3)
+//     alea: { de, texte, cartes: { D: { des: '09:00' } }, ajoutCartes, ajoutLignes, ressources: { s2: { dispo: '12:00' } },
+//             retraits: { lignes: [ids], cartes: [ids] } },   // une ligne et sa carte qui disparaissent après l'aléa (D-3)
 //     note: { sur: 20 },                     // évaluation : jalons réussis / jalons × sur
 //   }
 //
@@ -140,11 +142,18 @@ function donnees(P, E, phase) {
   const A = phase >= 2 && P.alea ? P.alea : null;
   const C = P.cartes || {};
   const modif = (A && A.cartes) || {};
-  let liste = (C.liste || []).map((c) => (modif[c.id] ? Object.assign({}, c, modif[c.id], { modifie: Object.keys(modif[c.id]) }) : c));
+  // `retraits` (chantier D-3, ENT-6.3 : Kevin quitte l'entreprise) : la ligne et la carte disparaissent de la phase 2 (bac, grille,
+  // lecture). Une carte retirée que l'élève avait posée reste dans son planning, mais la lecture l'ignore (`posees` ne lit que
+  // les cartes de la phase) : elle ne compte ni comme posée, ni comme « pas encore posée ».
+  const R0 = (A && A.retraits) || {};
+  const sansL = new Set(R0.lignes || []), sansC = new Set(R0.cartes || []);
+  let liste = (C.liste || []).filter((c) => !sansC.has(c.id))
+    .map((c) => (modif[c.id] ? Object.assign({}, c, modif[c.id], { modifie: Object.keys(modif[c.id]) }) : c));
   if (A && A.ajoutCartes) liste = liste.concat(A.ajoutCartes.map((c) => Object.assign({ nouveau: true }, c)));
   const res = (A && A.ressources) || {};
   const maj = (x) => (res[x.id] ? Object.assign({}, x, res[x.id], { modifie: Object.keys(res[x.id]) }) : x);
-  const lignes = ((P.lignes && P.lignes.liste) || []).concat((A && A.ajoutLignes) || []).map(maj).map((x) => ressource(x, E));
+  const lignes = ((P.lignes && P.lignes.liste) || []).filter((x) => !sansL.has(x.id))
+    .concat((A && A.ajoutLignes) || []).map(maj).map((x) => ressource(x, E));
   const ressources = P.affectation ? (P.affectation.liste || []).concat((A && A.ajoutRessources) || []).map(maj).map((x) => ressource(x, E)) : [];
   const cartes = liste.map((c) => carteDe(c, P, E));
   const pauses = [];
@@ -402,6 +411,17 @@ function compiler(P) {
   if (pbCouleurs.length) throw new Error(`planning ${P.id} : ${pbCouleurs.join(' ')}`);
   const E = echelleDe(P);
   const M = { P, E, D: { 1: donnees(P, E, 1), 2: donnees(P, E, 2) } };
+  // `alea.retraits` : un id inconnu, ou une carte gardée dont la ligne imposée est retirée (elle ne pourrait plus se poser,
+  // et le planning ne serait jamais complet), s'arrêtent tout de suite.
+  const RT = (P.alea && P.alea.retraits) || null;
+  if (RT) {
+    const L1 = M.D[1].L, C1 = M.D[1].C;
+    (RT.lignes || []).forEach((id) => { if (!L1[id]) throw new Error(`planning ${P.id} : alea.retraits retire la ligne « ${id} », qui n'existe pas.`); });
+    (RT.cartes || []).forEach((id) => { if (!C1[id]) throw new Error(`planning ${P.id} : alea.retraits retire la carte « ${id} », qui n'existe pas.`); });
+    M.D[2].cartes.forEach((c) => {
+      if (c._ligne && !M.D[2].L[c._ligne]) throw new Error(`planning ${P.id} : la carte « ${c.id} » va sur la ligne « ${c._ligne} », retirée par l'aléa : retirer la carte aussi (alea.retraits.cartes).`);
+    });
+  }
   M.lire = (place, phase) => analyser(P, E, M.D[phase >= 2 && P.alea ? 2 : 1], place, null);
   M.jalons = (place, phase) => {
     const a = M.lire(place, phase);
@@ -560,7 +580,9 @@ export function creerPlanning(P, opts = {}) {
     const t = tempsDe(api);
     const g = t === 'guidage';
     const A = P.aides || {};
-    return { t, g, eval: t === 'evaluation', entr: t === 'entrainement',
+    // `aides.verifier: false` (chantier D-3, ENT-6.3 et 6.8) : en entraînement, pas de « Vérifier mon planning » ; un seul
+    // bouton, l'envoi, avec sa confirmation dans la page.
+    return { t, g, eval: t === 'evaluation', entr: t === 'entrainement', verif: t === 'entrainement' && A.verifier !== false,
       fenetre: g && !!A.fenetre, detailDuree: g && A.detailDuree !== false && !!C.detailDuree,
       reprise: g && !!A.reprise, conduite: g && !!A.compteurConduite };
   }
@@ -789,11 +811,13 @@ export function creerPlanning(P, opts = {}) {
     if (R.g) {
       h = an.P.length ? `<ul class="pl-problemes" data-pl-problemes>${an.P.map((p) => `<li>${ech(p)}</li>`).join('')}</ul>`
         : '<p class="pl-ok" data-pl-problemes>Aucun problème : le planning respecte toutes les règles.</p>';
-    } else if (R.entr && ui.verif) {
+    } else if (R.verif && ui.verif) {
       h = ui.verif.length ? `<ul class="pl-problemes" data-pl-problemes>${ui.verif.map((p) => `<li>${ech(p)}</li>`).join('')}</ul>`
         : '<p class="pl-ok" data-pl-problemes>Aucun problème trouvé.</p>';
-    } else if (R.entr) {
+    } else if (R.verif) {
       h = '<p class="pl-lbl">Cliquez sur « Vérifier mon planning » quand vous pensez avoir fini.</p>';
+    } else if (R.entr) {
+      h = '<p class="pl-lbl" data-pl-invite>Relis les règles, puis envoie ton planning quand tu penses avoir fini : le site ne vérifie rien avant l’envoi.</p>';
     } else {
       h = '<p class="pl-lbl">Évaluation : le site ne signale rien. Relisez les règles vous-même.</p>';
     }
@@ -803,7 +827,7 @@ export function creerPlanning(P, opts = {}) {
         : (P.alea ? 'Envoyer le planning corrigé' : 'Envoyer le planning au chef');
     return `<div class="pl-panneau"><h3>${e.phase === 2 ? 'Planning à reprendre' : 'Votre planning'}</h3>${h}
       <div class="pl-actions">
-        ${R.entr ? '<button class="btn" data-pl="verifier">Vérifier mon planning</button>' : ''}
+        ${R.verif ? '<button class="btn" data-pl="verifier">Vérifier mon planning</button>' : ''}
         <button class="btn btn-p" data-pl="envoyer">${lib}</button>
         ${ui.raz ? '<span class="pl-confirme">Tout effacer ? <button class="btn" data-pl="razOui">Oui, réinitialiser</button> <button class="btn" data-pl="razNon">Non</button></span>'
           : '<button class="btn" data-pl="raz">Réinitialiser le planning</button>'}
@@ -968,6 +992,7 @@ export function creerPlanning(P, opts = {}) {
 
       // Les actions du panneau « Votre planning ».
       on('verifier', () => {
+        if (!R.verif) return;
         ui.verif = M.lire(e.place, phaseDonnees(e)).P;
         e.verifs = (e.verifs || 0) + 1; api.sauver(); redessiner();
       });

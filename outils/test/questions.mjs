@@ -1315,6 +1315,52 @@ await v('Questions : une réflexion corrigée au bilan (`reflexion` + `apres: bi
   vrai(/Ce qu’en pense Karim/.test(await pg.textContent(`${Z} [data-q-panneau]`)), 'la réflexion ordinaire a perdu son retour');
 });
 
+// Chantier D-3 (ENT-6.3, 10/10/2026) : un message par phrases qui arrive PAR UN DÉCLENCHEUR (le message à Lucas, après le 2e
+// planning) ; ses lignes sont des gestes connus au chargement. `ligne` : la ligne que cite la question ajoutée.
+const monterDeclenche = (ligne) => pg.evaluate(async (ligne) => {
+  const { creerEntreprise } = await import('/core/types/entreprise.js');
+  const { apresGeste } = await import('/core/declencheurs.js');
+  const S = await import('/contenus/questions-essai.js');
+  const { QUESTIONS } = await import('/contenus/questions/ESSAI.js');
+  document.querySelector('#qTest')?.remove();
+  const hote = document.createElement('div'); hote.id = 'qTest'; document.body.prepend(hote);
+  const U = S.univers();
+  U.questions = { ...QUESTIONS, liste: [...QUESTIONS.liste, { id: 'au-raison', type: 'fil', de: 'Karim', quand: apresGeste('messagerie:phrase:' + ligne),
+    reflexion: true, enonce: 'Pourquoi donner la raison ?', choix: [{ v: 'a', lib: 'A' }, { v: 'b', lib: 'B' }], retour: 'Retour de la raison.' }] };
+  U.volet = { ...U.volet, declencheurs: [...U.volet.declencheurs, { id: 'msg-lucas', quand: () => true,
+    semer: (prenom) => ({ mails: [{ folder: 'in', ts: Date.now(), from: 'Lucas', fromMail: 'lucas@essai.example', to: prenom, cle: 'lucas',
+      subject: 'Mon congé', kind: 'text', text: 'Mon congé, c’est bon ?\n\nLucas',
+      phrases: { id: 'reponse-lucas', lignes: [{ id: 'salut', choix: ['Bonjour Lucas,', 'Salut !'], juste: 0 },
+        { id: 'imposee', texte: 'Ligne imposée.' }, { id: 'raison', choix: ['Raison A', 'Raison B'], juste: 0 }] } }] }) }] };
+  const db = {};
+  window.__q = { db, enregistres: [], Q: U.questions, moteur: null };
+  const M = creerEntreprise(U);
+  window.__q.moteur = M;
+  M.rendre(hote, { meta: S.META, profil: { prenom: 'Lea', nom: 'Test', role: 'eleve', uid: 'u-test' }, jeu: { etat: () => db, sauver: () => {} },
+    enregistrer: () => {}, quitter: () => {}, codeStock: 'ESSAI', lireScore: async () => null, rendreCopie: async () => ({ rendu: Date.now() }) });
+}, ligne);
+
+await v('Questions (D-3) : une ligne d’un message par phrases arrivé par un DÉCLENCHEUR est un geste connu (`messagerie:phrase:<ligne>`) ; la question arrive au choix de la phrase ; une ligne inconnue ou imposée refuse la séance', async () => {
+  const essai = async (l) => { try { await monterDeclenche(l); return ''; } catch (e) { return e.message; } };
+  const m = await essai('raisn');
+  vrai(/question « au-raison » : geste inconnu « messagerie:phrase:raisn »/.test(m) && /messagerie:phrase:raison/.test(m), 'ligne inconnue acceptée : ' + m);
+  vrai(/geste inconnu « messagerie:phrase:imposee »/.test(await essai('imposee')), 'ligne imposée acceptée');
+  egal(await essai('raison'), '', 'ligne du message déclenché refusée');
+  await aller('mail');
+  const id = await pg.evaluate(() => window.__q.db.mails.find((x) => x.folder === 'in' && x.cle === 'lucas').id);
+  await pg.click(`${Z} [data-mail="${id}"]`);
+  await pause();
+  await pg.click(`${Z} [data-repondre]`);
+  await pause();
+  await pg.selectOption(`${Z} select[data-phrase="salut"]`, { label: 'Bonjour Lucas,' });
+  await pause();
+  vrai(!(await panneau()), 'la question arrive au choix d’une autre ligne');
+  await pg.selectOption(`${Z} select[data-phrase="raison"]`, { label: 'Raison B' });
+  await pause();
+  vrai(await present('[data-q-panneau="au-raison"]'), 'la question n’arrive pas au choix de la phrase « raison »');
+  vrai(typeof (await base()).gestes['essai-questions']['messagerie:phrase:raison'] === 'number', 'geste non rangé');
+});
+
 await v('Questions : aucune erreur de page pendant le bloc', async () => {
   egal(erreursQ, [], 'erreurs');
 });
