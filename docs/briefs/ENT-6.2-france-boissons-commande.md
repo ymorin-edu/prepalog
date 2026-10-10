@@ -24,8 +24,8 @@ Règles d'écriture 2de : `claude/prepalog-2de-eleve-debut-annee.md` (3 lignes p
 | Niveau(x) | 2de (`niveaux: ['2de']`) |
 | Compétence(s) | **AGO-1.1** (identifier la demande, apporter une réponse adaptée) et **AGO-1.2** (appliquer les procédures internes, produire les documents de la relation client) ; domaine D1 (et D3) |
 | Temps pédagogique | entraînement (scénario S2). **Seul temps de travail d'AGO-1.1 / 1.2 avant l'évaluation de S3** (règle 15 du cadrage) : la séance garde des encadrés et des mots cliquables |
-| Notation | jalons + note sur 20 (pas de `notation`, comme ENT-5.1) |
-| Barème | 8 (nombre de jalons) |
+| Notation | jalons pondérés + note sur 20 (pas de `notation`, comme ENT-5.1) |
+| Barème | 20 : poids validés par Tristan le 10/10/2026 — fûts 6 (`heineken30` 1, `affligem` 2, `remplacement` 3), jour 2, eau et vides 2, rupture 4, livraison 3, ton 3 |
 | `pret` à la livraison | `pret: true, ouverture: 'prof'` |
 
 ## 2. L'entreprise : vérifié / construit
@@ -170,7 +170,7 @@ et Bon de commande).
 
 ## 8. Tests attendus
 
-Bloc `france-boissons` (nouveau, une ligne dans `BLOCS` : alerte 7) : parcours juste 8/8 ; inaction 0/8 ; chaque piège
+Bloc `france-boissons` (nouveau, une ligne dans `BLOCS` : alerte 7) : parcours juste 20/20 ; inaction 0/20 ; chaque piège
 (Affligem 4 → jalon 2 faux ; remplacement aucun → jalon 3 faux ; Edelweiss → jalon 3 faux ; samedi → jalon 4 faux ; vides
 inversés → jalon 5 faux ; « Salut Malo ! » → jalon 8 faux) ; message non envoyé → jalons 6 à 8 faux ; sabotage par jalon.
 Case nombre : vide refusée, négatif refusé, valeur gardée sans redessin.
@@ -234,10 +234,10 @@ saute aux yeux.
 - **Tests** : bloc `france-boissons` 38/38 ; suite complète **998/998** le 10/10/2026 (un premier passage à 997 : le bloc
   `transport` refuse `reinitialisable` hors séance X.1, retiré). Valeurs attendues écrites à la main.
   Cas ajoutés : valeurs calculées = brief (et copie de `lireNombre` = original) ; ouverture (messages, pièces, menu = Messagerie et Bon
-  de commande, documents lisibles avec leur pied, mots cliquables) ; inaction 0/8 ; parcours juste 8/8 (bandeau 6 ✓, photo) ; huit
+  de commande, documents lisibles avec leur pied, mots cliquables) ; inaction 0/20 ; parcours juste 20/20 (bandeau 6 ✓, photo) ; huit
   pièges du bon (Affligem 4, aucun, Edelweiss, Heineken 20 L, Pelforth × 4, samedi, vides inversés, eau 4) qui ne font tomber que
   leur jalon ; lignes du message (« Salut Malo ! », « Bisous », « C'est bon… », Edelweiss, samedi ; ligne « vides » non notée) ;
-  réponse jamais envoyée (5/8) ; réponse avant le bon ; « Corriger » (7,5/8) ; case nombre (vide, négatif, non entier refusés à
+  réponse jamais envoyée (10/20) ; réponse avant le bon ; « Corriger » (moyenne (18 + 20) / 2 = 19/20) ; case nombre (vide, négatif, non entier refusés à
   l'envoi) ; sabotage jalon par jalon (13 sabotages de la base) ; corrigé ; enseignant ; aucune erreur JavaScript.
   **Éprouvés dans les deux sens** (9 sabotages du code, chacun restauré et comparé octet par octet) : stock d'Affligem 2 → 3 (17 cas
   tombent), jalon « jour » toujours juste (2), jalon « ton » sur la salutation seule (2), bon non envoyé jugé juste (1, l'inaction),
@@ -254,3 +254,4 @@ saute aux yeux.
   - Trame élève (Cowork, après validation à l'écran), questions « Pour réfléchir » du §9.
 - **Références article ajoutées le 10/10/2026 à la demande de Tristan** : champ `ref` sur les six articles de `STOCK_BUCHELAY` ; colonne « Référence » (première) dans l'extrait du stock ; référence dans chaque libellé du bon de commande (cases fûts et eau, liste de remplacement) et dans le corrigé ; mot « référence » au lexique et cliquable (titre de colonne du stock, message d'Inès) ; le mail de Malo ne change pas. Cas de test modifiés : libellés du message « Il manque / À corriger », corrigé attendu, tableau du stock ; cas ajouté : références (unicité, format, affichage).
 - **Deux corrections décidées par Tristan le 10/10/2026 (après la livraison)** : (1) **Malo reprend ce que l'élève lui a écrit**, sans corriger : sa réponse est construite sur les lignes « rupture » et « livraison » du dernier envoi (« Ok pour la Pelforth, à samedi ! », « Ok pour l'Edelweiss, à vendredi ! », « Dommage pour l'Affligem, à vendredi ! », « Ok, à lundi ! ») ; il ne dit jamais si c'est juste, le bilan corrige, et la suite de la S2 repart sur la commande juste. (2) **Les messages portent la date du scénario** (mardi 15 juin 2027 : Malo 9 h 32, Inès 9 h 35 en tête de la boîte ; les réponses 9 h 35 + le temps réellement passé + 2 à 4 min), jamais la date réelle ; même correction pour ENT-6.1 (lundi 14 juin 2027, 8 h 05). Aide commune `heureScenario` dans l'univers. Vérifié dans le moteur : la Messagerie ne trie que par `ts` dans chaque dossier, « non lu » ne dépend pas de l'heure, les déclencheurs non plus. **Limite (moteur)** : les messages ENVOYÉS par l'élève restent datés par le moteur à la date réelle (dossier « Envoyés ») ; demande au moteur facultative : une horloge de séance que la Messagerie lirait. Tests : un cas par variante de la réponse de Malo (samedi, lundi, Edelweiss, ligne retirée, « 4 Affligem + samedi » ; vendredi = le parcours juste), un cas de dates par séance ; éprouvés par sabotage (7 cas tombent, rien d'autre). Bloc 46/46.
+- **Notation pondérée sur 20 (10/10/2026, `docs/briefs/NOTATION-ponderation.md`, lot 1)** : `bareme: 20`, un `poids` sur chaque jalon (fûts 1 + 2 + 3, jour 2, eau et vides 2, rupture 4, livraison 3, ton 3 ; validés par Tristan). Les cas de test qui lisaient « 8/8 », « 7/8 », « 5/8 » et « 7,5/8 » sont réécrits en points (valeurs écrites à la main : piège Affligem 18/20, réponse jamais envoyée 10/20, « Corriger » 19/20) et un cas est ajouté (Heineken 30 L, 19/20). Éprouvé dans les deux sens : un poids faussé fait refuser la séance (somme ≠ 20), deux poids permutés à somme égale font tomber trois cas.

@@ -49,7 +49,8 @@ export const CORRIGE = {
       note: 'Jalons : la ligne « rupture », la ligne « livraison », et le ton (salutation, commande et formule de fin justes ensemble). '
         + 'La ligne « vides » n’est pas notée (déjà jugée sur le bon). Le dernier envoi compte. Ordre des choix tiré par élève.' },
     { etape: 3, etapeTitre: 'La note', genre: 'question', texte: 'Comment la note est-elle calculée ?',
-      rep: '8 jalons à 1 point, ramenés sur 20 : 5 sur le bon de commande, 3 sur la réponse à Malo. Rien n’est vrai sans envoi.',
+      rep: '8 jalons pondérés, total 20 : le bon de commande 10 points (les fûts 6, le jour de livraison 2, '
+        + 'l’eau et les vides 2), la réponse à Malo 10 points (la rupture 4, la livraison 3, le ton 3). Rien n’est vrai sans envoi.',
       note: `Règle du premier bilan : « Corriger » rouvre le bon et la réponse ; la note devient la moyenne du premier bilan et de l’état à la première correction. Client : ${CABANE.nom}.` },
   ],
 };

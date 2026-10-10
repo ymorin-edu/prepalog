@@ -127,7 +127,7 @@ export const meta = {
   niveaux: ['2de','1re'],   // absent = tous niveaux
   competences: [], temps,   // pour les notes par compétence (séance Simulog : toujours déclarés)
   bareme: 6,                // présence = apparaît dans le suivi de classe
-  notation: 'prof' | 'avancement',  // absent = score auto ramené sur 20
+  notation: 'prof' | 'avancement',  // absent = score auto ramené sur 20 ; séance ENT-x.y : jalons pondérés, bareme: 20 (voir ci-dessous)
   portee: 'eleve' | 'groupe',
   pret: true,               // false = cachée aux élèves (l'enseignant la voit, étiquetée)
   ouverture: 'prof',        // fermée aux élèves tant que l'enseignant ne l'a pas cochée (Conduite de séance)
@@ -135,6 +135,8 @@ export const meta = {
 ```
 
 Ajouter une activité = un fichier + **une ligne** dans `activites/index.js`.
+
+- **Notation des séances d'entreprise** : **Toute séance d'entreprise (ENT-x.y) est notée par jalons pondérés, total 20** (`bareme: 20`, un `poids` par jalon du socle, jalons regroupés par `groupe`) : le poids va au cœur de la compétence, la forme (ton, politesse, présentation) ne dépasse pas ~15 %, aucun jalon à 0 ; les poids de chaque séance sont **validés par Tristan avant d'être codés** (règle du 10/10/2026, `docs/briefs/NOTATION-ponderation.md`). Hors règle : QUI, TAB, DEC-1, SCE, ACT-1.
 La liste complète des champs de `meta` (parcours, jeuId, corrige, immersif…), des exports et de
 ce que reçoit `rendre` est dans `activites/FICHE-SEANCE.md` : **la lire avant d'écrire ou
 modifier une séance**, et la corriger si le code a changé.

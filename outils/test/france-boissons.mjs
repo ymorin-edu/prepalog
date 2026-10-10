@@ -489,6 +489,8 @@ const MSG_JUSTE = {
 const JALONS62 = ['heineken30', 'affligem', 'remplacement', 'jour', 'eau-vides', 'msg-rupture', 'msg-livraison', 'msg-ton'];
 const LIGNES62 = ['heineken30', 'jour', 'eau-vides', 'msg-rupture', 'msg-livraison', 'msg-ton'];   // 1er jalon de chaque ligne du bandeau
 const etats62 = (n) => JALONS62.map((j) => [j, n.detail[j]]);
+// Poids écrits à la main (validés par Tristan le 10/10/2026, total 20) : fûts 1 + 2 + 3, jour 2, eau et vides 2, rupture 4, livraison 3, ton 3.
+const POIDS62 = { heineken30: 1, affligem: 2, remplacement: 3, jour: 2, 'eau-vides': 2, 'msg-rupture': 4, 'msg-livraison': 3, 'msg-ton': 3 };
 const sauf = (faux, etat = 'ko') => JALONS62.map((j) => [j, faux.includes(j) ? etat : 'ok']);
 
 // Remplit le bon (les clés absentes restent vides) et clique « Envoyer » ; `confirmer: false` = s'arrête avant la confirmation.
@@ -565,23 +567,23 @@ await v('ENT-6.2 : ouverture — messages d’Inès et de Malo, pièces jointes 
   vrai(mots.length >= 3, 'mots cliquables sur le bon : ' + mots);
 });
 
-await v('ENT-6.2 : inaction — rien fait → 0/8, aucun jalon juste, pas de bandeau de fin', async () => {
+await v('ENT-6.2 : inaction — rien fait → 0/20, aucun jalon juste, pas de bandeau de fin', async () => {
   await monter62({ uid: 'fb62-rien' });
   const n = await note();
-  egal([n.score, n.max], [0, 8], 'note');
+  egal([n.score, n.max], [0, 20], 'note');
   vrai(!Object.values(n.detail).includes('ok'), 'un jalon juste sans rien faire : ' + JSON.stringify(n.detail));
   vrai(!(await present('[data-fin]')), 'bandeau de fin');
 });
 
-await v('ENT-6.2 : parcours juste — 8/8, Inès demande la réponse après le bon, Malo répond « Ok pour la Pelforth, à vendredi ! », bandeau 6 lignes ✓, séance finie (photo)', async () => {
+await v('ENT-6.2 : parcours juste — 20/20, Inès demande la réponse après le bon, Malo répond « Ok pour la Pelforth, à vendredi ! », bandeau 6 lignes ✓, séance finie (photo)', async () => {
   await monter62();
   await remplirBon(BON_JUSTE);
   vrai((await entrants()).some((m) => m.subject === 'Bon de commande reçu' && /Réponds maintenant à Malo/.test(m.text)), 'second message d’Inès');
-  egal((await note()).score, 5, 'note après le bon seul');
+  egal((await note()).score, 10, 'note après le bon seul (fûts 6 + jour 2 + eau et vides 2)');
   vrai(!(await sujets()).includes('RE : Commande pour la Fête de la musique'), 'Malo répond avant la réponse de l’élève');
   await repondreMalo(MSG_JUSTE);
   const n = await note();
-  egal([n.score, n.max], [8, 8], 'note');
+  egal([n.score, n.max], [20, 20], 'note');
   egal(etats62(n), sauf([]), 'jalons');
   egal(await bandeau(), LIGNES62.map((l) => [l, 'ok']), 'bandeau');
   const R = (await entrants()).filter((m) => m.subject === 'RE : Commande pour la Fête de la musique');
@@ -634,42 +636,45 @@ await v('ENT-6.2 : les messages portent la date du scénario — Malo le 15/06/2
 
 // Chaque piège du brief (§8) ne fait tomber que son jalon.
 const PIEGES_BON = [
-  ['Affligem 4', { affligem20: '4' }, ['affligem']],
-  ['remplacement « aucun » (0)', { remplacement: 'aucun', remplacementQte: '0' }, ['remplacement']],
-  ['Edelweiss × 2', { remplacement: 'edelweiss20' }, ['remplacement']],
-  ['Heineken 20 L × 2', { remplacement: 'heineken20' }, ['remplacement']],
-  ['Pelforth × 4', { remplacementQte: '4' }, ['remplacement']],
-  ['samedi', { jour: '2027-06-19' }, ['jour']],
-  ['vides inversés', { videsFuts: '5', videsCasiers: '9' }, ['eau-vides']],
-  ['eau 4 casiers', { eau: '4' }, ['eau-vides']],
+  ['Heineken 30 L × 5', { heineken30: '5' }, ['heineken30'], 19],
+  ['Affligem 4', { affligem20: '4' }, ['affligem'], 18],
+  ['remplacement « aucun » (0)', { remplacement: 'aucun', remplacementQte: '0' }, ['remplacement'], 17],
+  ['Edelweiss × 2', { remplacement: 'edelweiss20' }, ['remplacement'], 17],
+  ['Heineken 20 L × 2', { remplacement: 'heineken20' }, ['remplacement'], 17],
+  ['Pelforth × 4', { remplacementQte: '4' }, ['remplacement'], 17],
+  ['samedi', { jour: '2027-06-19' }, ['jour'], 18],
+  ['vides inversés', { videsFuts: '5', videsCasiers: '9' }, ['eau-vides'], 18],
+  ['eau 4 casiers', { eau: '4' }, ['eau-vides'], 18],
 ];
-for (const [nom, r, faux] of PIEGES_BON) {
-  await v(`ENT-6.2 : piège « ${nom} » → seul le jalon ${faux.join(', ')} est faux (7/8)`, async () => {
+for (const [nom, r, faux, points] of PIEGES_BON) {
+  await v(`ENT-6.2 : piège « ${nom} » → seul le jalon ${faux.join(', ')} est faux (${points}/20)`, async () => {
     await monter62({ uid: 'fb62-piege' });
     await remplirBon({ ...BON_JUSTE, ...r });
     await repondreMalo(MSG_JUSTE);
     const n = await note();
     egal(etats62(n), sauf(faux), 'jalons');
-    egal(n.score, 8 - faux.length, 'note');
+    egal(n.score, points, 'note');
   });
 }
 await v('ENT-6.2 : « Salut Malo ! » → seul le jalon du ton est faux ; « Bisous » et « C’est bon, j’ai noté ta commande. » aussi ; la ligne « vides » fausse ne coûte rien', async () => {
-  for (const [ligne, t, faux] of [['salutation', 'Salut Malo !', ['msg-ton']], ['fin', 'Bisous', ['msg-ton']],
-    ['commande', 'C’est bon, j’ai noté ta commande.', ['msg-ton']], ['vides', 'Gardez vos vides jusqu’à la prochaine fois.', []],
-    ['rupture', 'Il ne nous reste que 2 fûts d’Affligem : je vous propose 2 fûts d’Edelweiss à la place.', ['msg-rupture']],
-    ['livraison', 'Vous serez livré samedi 19 juin, comme vous le souhaitez.', ['msg-livraison']]]) {
+  for (const [ligne, t, faux, points] of [['salutation', 'Salut Malo !', ['msg-ton'], 17], ['fin', 'Bisous', ['msg-ton'], 17],
+    ['commande', 'C’est bon, j’ai noté ta commande.', ['msg-ton'], 17], ['vides', 'Gardez vos vides jusqu’à la prochaine fois.', [], 20],
+    ['rupture', 'Il ne nous reste que 2 fûts d’Affligem : je vous propose 2 fûts d’Edelweiss à la place.', ['msg-rupture'], 16],
+    ['livraison', 'Vous serez livré samedi 19 juin, comme vous le souhaitez.', ['msg-livraison'], 17]]) {
     await monter62({ uid: 'fb62-ton' });
     await remplirBon(BON_JUSTE);
     await repondreMalo({ ...MSG_JUSTE, [ligne]: t });
-    egal(etats62(await note()), sauf(faux), `jalons (${ligne} : ${t})`);
+    const n = await note();
+    egal(etats62(n), sauf(faux), `jalons (${ligne} : ${t})`);
+    egal(n.score, points, `note (${ligne} : ${t})`);
   }
 });
 
-await v('ENT-6.2 : réponse à Malo jamais envoyée → jalons 6 à 8 jamais justes (5/8), pas de réponse de Malo, pas de bandeau', async () => {
+await v('ENT-6.2 : réponse à Malo jamais envoyée → jalons 6 à 8 jamais justes (10/20), pas de réponse de Malo, pas de bandeau', async () => {
   await monter62({ uid: 'fb62-muet' });
   await remplirBon(BON_JUSTE);
   const n = await note();
-  egal(n.score, 5, 'note');
+  egal(n.score, 10, 'note');
   vrai(['msg-rupture', 'msg-livraison', 'msg-ton'].every((j) => n.detail[j] !== 'ok'), 'un jalon du message juste sans envoi : ' + JSON.stringify(n.detail));
   vrai(!(await sujets()).includes('RE : Commande pour la Fête de la musique'), 'réponse de Malo');
   vrai(!(await present('[data-fin]')), 'bandeau de fin');
@@ -683,10 +688,10 @@ await v('ENT-6.2 : réponse envoyée avant le bon → Malo n’écrit qu’aprè
   const E = await entrants();
   egal(E.filter((m) => m.subject === 'Bon de commande reçu').map((m) => m.text), ['Bon de commande reçu, merci Lea.\n\nInès'], 'message d’Inès');
   egal(E.filter((m) => m.subject === 'RE : Commande pour la Fête de la musique').length, 1, 'réponse de Malo');
-  egal((await note()).score, 8, 'note');
+  egal((await note()).score, 20, 'note');
 });
 
-await v('ENT-6.2 : « Corriger » après le piège Affligem → rouvre le bon (pas la réponse), renvoi juste → accusé d’Inès, note = moyenne 7,5/8', async () => {
+await v('ENT-6.2 : « Corriger » après le piège Affligem → rouvre le bon (pas la réponse), renvoi juste → accusé d’Inès, note = moyenne (18 + 20) / 2 = 19/20', async () => {
   await monter62({ uid: 'fb62-corr' });
   await remplirBon({ ...BON_JUSTE, affligem20: '4' });
   await repondreMalo(MSG_JUSTE);
@@ -702,7 +707,7 @@ await v('ENT-6.2 : « Corriger » après le piège Affligem → rouvre le bon (p
   await pg.click(`${Z} [data-confirme-oui]`);
   await pause();
   egal((await entrants()).slice(avant).map((m) => [m.from, m.text]), [['Inès', 'Merci Lea, j’ai bien reçu ton bon de commande corrigé.\n\nInès']], 'accusé');
-  proche((await note()).score, 7.5, 'note moyennée');
+  proche((await note()).score, 19, 'note moyennée');
 });
 
 await v('ENT-6.2 : case nombre — vide « manque », négatif et non entier refusés à l’envoi avec la raison ; rien n’est envoyé, la saisie reste', async () => {

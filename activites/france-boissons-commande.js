@@ -6,7 +6,7 @@
 // commande (cases « nombre », chantier D-2), puis répondre au client par phrases à choisir, au vous. Données dans
 // `contenus/france-boissons-ent62.js`, univers commun dans `contenus/france-boissons.js`.
 //
-// 8 jalons à 1 point (pas de `poids`, pas de `notation`) : la note est ramenée sur 20. Une base par séance (pas de `jeuId`).
+// 8 jalons pondérés, somme des poids = 20 (`bareme: 20`, pas de `notation`). Une base par séance (pas de `jeuId`).
 // Pas de trame pour l'instant (Cowork, après validation à l'écran). Corrigé calculé : `contenus/corriges/ENT-6.2.js`.
 
 import { seanceEntreprise } from '../core/types/seance-entreprise.js';
@@ -22,6 +22,7 @@ const s = seanceEntreprise(FB, SEANCE, {
   competences: ['AGO-1.1', 'AGO-1.2'],
   domaines: ['D1', 'D3'],
   temps: 'entrainement',
+  bareme: 20,           // jalons pondérés, somme des poids = 20
   // Parcours strict : ne s'ouvre qu'à l'élève dont ENT-6.1 a son premier bilan (voir core/parcours.js).
   parcours: true,
   precedente: 'france-boissons-organigramme',

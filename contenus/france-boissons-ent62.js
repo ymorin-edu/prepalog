@@ -15,7 +15,8 @@
 // Distracteurs : Edelweiss (blanche), Heineken 20 L (à 0). Samedi n'est pas un jour de tournée.
 //
 // Valeurs attendues CALCULÉES ici (`ATTENDU`) depuis la commande de Malo, le stock, le minimum de commande, l'heure limite et
-// le jour de tournée, jamais recopiées ; dans les tests, écrites à la main. 8 jalons à 1 point (pas de `poids`).
+// le jour de tournée, jamais recopiées ; dans les tests, écrites à la main. 8 jalons pondérés, somme des poids = 20 (règle du
+// 10/10/2026, `docs/briefs/NOTATION-ponderation.md`).
 
 import { apresFiche, tous } from '../core/declencheurs.js';
 import { phrasesJustes } from '../core/phrases.js';
@@ -316,7 +317,9 @@ export const VOLET = {
   },
 };
 
-// ─────────────────────────────────────────────────────────────── les jalons (8, un point chacun)
+// ─────────────────────────────────────────────────────────────── les jalons (8, pondérés sur 20)
+// Poids validés par Tristan le 10/10/2026 : le cœur de la compétence (le piège en chaîne des fûts, la rupture) pèse le plus,
+// la forme (le ton) 3 points sur 20, aucun jalon à 0. Fûts 6 (1 + 2 + 3), jour 2, eau et vides 2, rupture 4, livraison 3, ton 3.
 // Rien n'est vrai avant l'envoi du bon (jalons 1 à 5) ou de la réponse (jalons 6 à 8) : « à faire », puis juste ou faux.
 // Le DERNIER envoi de la réponse compte (`phrasesJustes`). `groupe` = la ligne du bandeau de fin : les trois lignes de fûts
 // font un seul bloc (le piège en chaîne se raisonne en entier) ; le bandeau ne descend jamais à la case.
@@ -334,13 +337,13 @@ const attente = { status: 'attente' };
 const ok = { status: 'ok' }, ko = { status: 'ko' };
 const n = (v, k) => lireNombre(v[k]);
 
-const jalonBon = (id, titre, groupe, juste) => ({ id, titre, groupe, ecran: ECRAN_BON,
+const jalonBon = (id, titre, groupe, poids, juste) => ({ id, titre, groupe, poids, ecran: ECRAN_BON,
   verifier(db) {
     const f = ficheEnvoyee(db, BON);
     if (!f.envoye) return attente;
     return juste(f.valeurs) ? ok : ko;
   } });
-const jalonReponse = (id, titre, groupe, lignes) => ({ id, titre, groupe, ecran: ECRAN_REPONSE,
+const jalonReponse = (id, titre, groupe, poids, lignes) => ({ id, titre, groupe, poids, ecran: ECRAN_REPONSE,
   verifier(db) {
     const r = phrasesJustes(db, REPONSE);
     if (!r.envoye) return attente;
@@ -349,16 +352,16 @@ const jalonReponse = (id, titre, groupe, lignes) => ({ id, titre, groupe, ecran:
 
 const [L1, L2] = COMMANDE.futs.map((l) => l.article);
 export const ETAPES = [
-  jalonBon('heineken30', `Bon de commande : ${article(L1).court}`, GROUPES.futs, (v) => n(v, L1) === ATTENDU.futs[L1]),
-  jalonBon('affligem', `Bon de commande : ${article(L2).court}`, GROUPES.futs, (v) => n(v, L2) === ATTENDU.futs[L2]),
-  jalonBon('remplacement', 'Bon de commande : le remplacement', GROUPES.futs,
+  jalonBon('heineken30', `Bon de commande : ${article(L1).court}`, GROUPES.futs, 1, (v) => n(v, L1) === ATTENDU.futs[L1]),
+  jalonBon('affligem', `Bon de commande : ${article(L2).court}`, GROUPES.futs, 2, (v) => n(v, L2) === ATTENDU.futs[L2]),
+  jalonBon('remplacement', 'Bon de commande : le remplacement', GROUPES.futs, 3,
     (v) => !!ATTENDU.remplacement && v.remplacement === ATTENDU.remplacement.article && n(v, 'remplacementQte') === ATTENDU.remplacement.q),
-  jalonBon('jour', 'Bon de commande : le jour de livraison', GROUPES.jour, (v) => v.jour === ATTENDU.jour),
-  jalonBon('eau-vides', 'Bon de commande : l’eau et les vides', GROUPES.vides,
+  jalonBon('jour', 'Bon de commande : le jour de livraison', GROUPES.jour, 2, (v) => v.jour === ATTENDU.jour),
+  jalonBon('eau-vides', 'Bon de commande : l’eau et les vides', GROUPES.vides, 2,
     (v) => n(v, 'eau') === ATTENDU.eau && n(v, 'videsFuts') === ATTENDU.vides.futs && n(v, 'videsCasiers') === ATTENDU.vides.casiers),
-  jalonReponse('msg-rupture', 'Réponse à Malo : la rupture', GROUPES.rupture, ['rupture']),
-  jalonReponse('msg-livraison', 'Réponse à Malo : la livraison', GROUPES.livraison, ['livraison']),
-  jalonReponse('msg-ton', 'Réponse à Malo : le ton professionnel', GROUPES.ton, ['salutation', 'commande', 'fin']),
+  jalonReponse('msg-rupture', 'Réponse à Malo : la rupture', GROUPES.rupture, 4, ['rupture']),
+  jalonReponse('msg-livraison', 'Réponse à Malo : la livraison', GROUPES.livraison, 3, ['livraison']),
+  jalonReponse('msg-ton', 'Réponse à Malo : le ton professionnel', GROUPES.ton, 3, ['salutation', 'commande', 'fin']),
 ];
 
 // ─────────────────────────────────────────────────────────────── l'accueil
