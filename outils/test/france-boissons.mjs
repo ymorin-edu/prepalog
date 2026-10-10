@@ -1933,7 +1933,7 @@ await v('ENT-6.4 : ouverture — le message de Nadia (3 blocs, mercredi 16 juin 
     + '2. je lis l’étiquette et je la compare au [[BL]] : même produit, même quantité ;\n'
     + '3. tout est conforme : j’accepte ;\n'
     + '4. il manque des fûts ou un fût est abîmé : j’accepte avec [[reserve|réserves]], en écrivant quoi et combien ;\n'
-    + '5. c’est une référence que nous n’avons pas commandée : j’accepte avec réserves, motif « produit différent », et j’écris la référence lue sur l’étiquette, pas celle du BL. La palette est gardée à part, le temps que le transporteur et la brasserie règlent ça.\n\n'
+    + '5. c’est une référence que nous n’avons pas commandée : j’accepte avec réserves, motif « produit différent », et j’écris la référence lue sur l’étiquette, pas celle du BL. On la rangera sous la référence lue, pas sous celle du BL, et la réserve prévient le transporteur.\n\n'
     + 'Avant de décharger, regarde bien la scène.\n\nNadia', 'texte en quatre blocs (avec la procédure de réception)');
   egal(horodate(M[0].ts), [2027, 6, 16, 13, 50], 'date du scénario');
   egal(M[0].pieces, ['droit', 'annuaire'], 'pièces jointes');
