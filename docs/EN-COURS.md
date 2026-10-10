@@ -7,7 +7,7 @@ est déjà modifié ou inscrit ci-dessous, **elle s'arrête et le dit à Tristan
 
 | Chantier | Fichiers qu'il touche | Depuis |
 |---|---|---|
-| Coordination ENT-6.4 France Boissons (chantier moteur D-4 puis la séance) | `core/types/quai.js`, `core/iso.js`, `styles/quai.css`, `contenus/france-boissons-ent64.js`, `activites/france-boissons-reception.js`, `activites/index.js`, `outils/test/france-boissons.mjs`, `outils/test/quai-iso.mjs` (nouveau bloc), `outils/test/fichiers/quai-iso-*`, `outils/test.mjs` (BLOCS, GROUPES), `outils/essai-quai-inspection.*`, `activites/FICHE-SEANCE.md`, `docs/briefs/ENT-6.4-*.md`, `docs/briefs/MOTEUR-quai-inspection.md`, `docs/chantiers.md`, `docs/decisions.md` | 10/10/2026 |
+| Coordination ENT-6.4 France Boissons (chantier moteur D-4 puis la séance) | `core/types/quai.js`, `core/iso.js`, `styles/quai.css`, `contenus/france-boissons-ent64*.js` et `activites/france-boissons-reception*.js` (à créer), `activites/index.js`, `outils/test/france-boissons.mjs`, `outils/test/quai-iso.mjs` (nouveau bloc), `outils/test/fichiers/quai-iso-*`, `outils/test.mjs` (BLOCS, GROUPES), `outils/essai-quai-inspection.*`, `activites/FICHE-SEANCE.md`, `docs/briefs/ENT-6.4-*.md`, `docs/briefs/MOTEUR-quai-inspection.md`, `docs/chantiers.md`, `docs/decisions.md` | 10/10/2026 |
 
 Rappel : un seul chantier à la fois dans `core/types/tournee.js`, `core/types/grille.js`,
 `core/types/entreprise.js`, `styles/base.css` et `outils/test/boost.mjs` (voir `docs/briefs/COORDINATION-boost.md`).
