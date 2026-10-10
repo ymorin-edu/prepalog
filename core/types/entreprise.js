@@ -24,7 +24,7 @@ import { monterCalculette, demonterCalculette } from '../calculette.js';
 import { creerDocuments } from './documents.js';
 import { creerFiche } from './fiche.js';
 import { compilerQuestions, etapesQuestions, reponse, repondu, etapeArrivee, etapeFaite, htmlQuestion, htmlPanneau, htmlEtape,
-  appel, CLE_ETAPES, CLE_OUVERTURE, htmlOuverture, ouvertureFaite, noteOuverture } from './questions.js';
+  appel, CLE_ETAPES, CLE_OUVERTURE, htmlOuverture, ouvertureFaite, noteOuverture, idsOuverture, rangerTirageOuverture } from './questions.js';
 import { creerGesteTableur, retourDeTemps } from './export-tableur.js';
 import { graineDeBase, poserGraine, declarerTirage, estTirage, fautesTirage } from '../tirage.js';
 import { BAREME_AFFICHE, pointsBonus } from '../notes.js';
@@ -328,7 +328,7 @@ export function creerEntreprise(U) {
     // La part des questions d'« Avant de commencer » en évaluation : le détail juste / « Je ne sais pas » / faux, lu par l'enseignant.
     if (MQ && MQ.ouverture && MQ.ouverture.part != null && db) {
       const n = noteOuverture(db, MQ);
-      detail.ouverture = { points: arrondi(n.points), part: n.part, justes: n.justes, nsp: n.nsp, faux: n.faux, sur: n.sur };
+      detail.ouverture = { points: arrondi(n.points), part: n.part, justes: n.justes, nsp: n.nsp, faux: n.faux, sur: n.sur, tirees: n.tirees };
     }
     // Les cas bonus (lot 3 de D-C) : confirmé seulement, jamais en évaluation. `detail.bonus = { justes, total, etats }` ;
     // les points sont posés par `remonterEtapes` (règle du premier bilan). Un jalon bonus qui plante ne rapporte rien.
@@ -501,6 +501,8 @@ export function creerEntreprise(U) {
       // seulement pour un confirmé, jamais en évaluation. La graine : l'identifiant de l'élève + l'id de la séance.
       const assurerTirage = () => TIR && TIR.assurer(db, { uid: ctx.profil.uid || prenom, aisance: db.aisance, copie: COPIE });
       if (assurerTirage()) ctx.jeu.sauver();
+      // TIRAGE DES QUESTIONS d'« Avant de commencer » (lot 3) : rangé une fois, élève seulement (graine = son identifiant).
+      if (MQ && !estProf && rangerTirageOuverture(db, MQ, ctx.profil.uid || prenom)) ctx.jeu.sauver();
 
       // Le volet de la séance. Chaque activité sème le sien une seule fois, sans toucher au
       // reste : un élève qui a fait la réception la semaine dernière retrouve son stock, et
@@ -815,7 +817,7 @@ export function creerEntreprise(U) {
       // L'écran « Avant de commencer » : la question affichée prend son heure d'arrivée ; le bloc de gauche suit la question
       // (l'élève peut ouvrir un autre onglet, « Voir le document » le ramène).
       function vueOuverture() {
-        const ids = MQ.ouverture.questions;
+        const ids = idsOuverture(db, MQ);
         QF.ouv.k = Math.min(Math.max(QF.ouv.k, 0), ids.length - 1);
         arriveeOuverture(ids[QF.ouv.k]);
         return htmlOuverture(MQ, db, { estProf, k: QF.ouv.k, doc: QF.ouv.doc, parQuestion: optionsQuestion, aideOuverte: (id) => !!QF.ouv.aides[id],
@@ -823,7 +825,7 @@ export function creerEntreprise(U) {
       }
       // Aller à la question `i` : le bloc de gauche montre son document.
       function allerQuestionOuverture(i) {
-        const ids = MQ.ouverture.questions;
+        const ids = idsOuverture(db, MQ);
         if (!(i >= 0 && i < ids.length)) return;
         QF.ouv.k = i; QF.ouv.doc = MQ.parId.get(ids[i]).doc;
         if (E.vue === 'ouverture') dessinerVue();
@@ -887,7 +889,7 @@ export function creerEntreprise(U) {
           if (f && questionDuPanneau() === f) L.push(f.id);
           const e = E.vue.startsWith('etape:') && MQ.etapes.find((x) => `etape:${x.id}` === E.vue);
           if (e) e.questions.forEach((id) => { if (!repondu(reponse(db, MQ, id))) L.push(id); });
-          if (E.vue === 'ouverture' && MQ.ouverture) { const id = MQ.ouverture.questions[QF.ouv.k]; if (id && !repondu(reponse(db, MQ, id))) L.push(id); }
+          if (E.vue === 'ouverture' && MQ.ouverture) { const id = idsOuverture(db, MQ)[QF.ouv.k]; if (id && !repondu(reponse(db, MQ, id))) L.push(id); }
           return L;
         };
         let depart = null, cache = false, pendant = [];

@@ -6,7 +6,7 @@
 > Lis docs/briefs/MOTEUR-avant-de-commencer.md. Construis l'écran « Avant de commencer » dans le moteur des questions, puis branche-le sur ENT-6.2. Annonce la durée avant de commencer et dis-moi si un point du brief contredit le code.
 > ```
 
-**Statut** : en cours — lots 1 et 2 livrés le 10/10/2026, lot 3 à faire *(à valider → à implémenter → en cours → livré | abandonné)*
+**Statut** : en cours — lots 1, 2 et 3 livrés le 10/10/2026 (le tirage est dans le moteur ; la banque d'ENT-6.2 reste à écrire) *(à valider → à implémenter → en cours → livré | abandonné)*
 **Date du brief** : 10/10/2026
 **Conversation d'origine** : Claude (session cloud), décisions de Tristan du 10/10/2026, 10 h.
 **Modèle** : Sonnet (on prolonge l'écran de questions existant, `core/types/questions.js`, sans vue nouvelle).
@@ -231,3 +231,24 @@ disent déjà « stock, minimum, jour de tournée » et souffleraient la répons
 - **Supposé / non fait** : aucune évaluation réelle ne l'utilise encore. Pas de ligne « Les questions : x / 4 » au bandeau de fin :
   il n'y a pas de bandeau en évaluation, la part se lit au Suivi (infobulle). Reprise des questions `cle: true` des séances de
   travail : lot 3 (avec le tirage par élève).
+
+### Lot 3 — livré le 10/10/2026 (tirage des questions par élève)
+
+- **Déclaration** : `ouverture.tirage: { rubrique: n }` ; les questions citées forment la banque, chacune porte `rubrique` ; le moteur
+  refuse la séance si une rubrique compte moins du double de ce qu'elle tire, si une question a une rubrique inconnue, ou si
+  `rubrique`/`variante` apparaissent sans `tirage`.
+- **Tirage** : fonction pure de (identifiant de l'élève, séance, rubrique) avec `hasard()` de `core/tirage.js` (même mécanique que
+  le reste, pas de mécanisme parallèle) ; rangé à la première ouverture dans `db.questions[séance]['@tirage']` = `{ graine, ids (ordre
+  tiré), q (valeurs tirées), at }`, jamais refait. Banque enrichie ou question retirée : sans blocage (une question retirée disparaît).
+  L'ordre des choix reste tiré par élève, « Je ne sais pas » en dernier. Enseignant : toute la banque, rien d'écrit.
+- **Valeurs tirées** : `variante(hasard) → { enonce, libs, retour? }` ; clés de choix et `juste` identiques pour tous (la note ne
+  dépend pas des valeurs). Contrôle au chargement sur 30 graines d'essai : un texte par clé, choix distincts.
+- **Lisible par l'enseignant** : le tirage remonte avec les réponses (`indicateurs[séance].questions['@tirage']`) et `detail.ouverture.tirees`.
+- **Tests** (bloc `questions`, 106/106, 5 cas ajoutés, aucun cas existant réécrit) : nombre par rubrique, élèves différents, même
+  élève après rechargement, banque enrichie sans effet, bonne réponse juste pour 50 graines (calculée à la main dans le test) et
+  à l'écran, chargement refusé (6 fautes). Quatre sabotages (tirage refait, même tirage pour tous, textes non posés, double non
+  exigé) font tomber leur cas ; le troisième ne tombait d'abord pas, d'où la vérification à l'écran.
+- **Reste à faire (contenu)** : la banque d'ENT-6.2 (au moins 10 questions en rubriques, dont des questions à valeurs tirées), à écrire
+  par Cowork ou Tristan ; ENT-6.2 garde ses 5 questions fixes en attendant. Reprise des questions `cle: true` en évaluation : à écrire
+  dans le fichier de l'évaluation (aucune évaluation France Boissons n'existe encore). Équité : même poids partout (les questions
+  d'ouverture n'ont pas de `poids`), difficulté comparable à la charge de l'auteur de la banque.

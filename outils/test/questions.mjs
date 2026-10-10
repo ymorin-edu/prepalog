@@ -71,7 +71,7 @@ const monter = (o = {}) => pg.evaluate(async (o) => {
   // L'écran « Avant de commencer » (10/10/2026) : trois questions d'ouverture sur deux documents et un visuel (une photo du
   // dépôt, avec son crédit), une aide à mot cliquable. Réponses justes écrites à la main dans le bloc : ouv-a = 'x',
   // ouv-b = 'y', ouv-c = 'z'.
-  if (o.ouverture || o.evaluation) {
+  if (o.ouverture || o.evaluation || o.tirage) {
     U.documents = [{ id: 'doc-a', titre: 'Document A', court: 'Doc A', html: '<p>Contenu du document A</p>' },
       { id: 'doc-b', titre: 'Document B', court: 'Doc B', html: '<p>Contenu du document B</p>' }];
     U.lexique = { 'mot-test': 'Définition du mot de test.' };
@@ -97,6 +97,26 @@ const monter = (o = {}) => pg.evaluate(async (o) => {
       Q.ouverture.part = 4;
     }
   }
+    // TIRAGE PAR ÉLÈVE (lot 3) : une banque de 7 questions en deux rubriques (4 de préparation, 3 de droit dont une à valeurs
+    // tirées) ; l'élève en reçoit 2 de préparation et 1 de droit. Bonnes réponses : toujours la clé 'x'.
+    if (o.tirage) {
+      const ch = () => [{ v: 'x', lib: 'Choix X' }, { v: 'y', lib: 'Choix Y' }, { v: 'z', lib: 'Choix Z' }];
+      const ouv = (id, rubrique, doc, plus = {}) => ({ id, type: 'ouverture', de: 'Ines', doc, rubrique, enonce: `Énoncé ${id} ?`, choix: ch(), juste: 'x', retour: `Retour de ${id}.`, ...plus });
+      const variante = (h) => {
+        const n = h.entier(2, 9), m = h.entier(2, 8);
+        return { enonce: `Un bar rend ${n} fûts et ${m} casiers. Combien de consigne ?`, libs: { x: `${n * 40 + m * 4} €`, y: `${n * 40} €`, z: '0 €' } };
+      };
+      Q.liste = Q.liste.filter((x) => x.type !== 'ouverture').concat([
+        ouv('p1', 'prep', 'doc-a'), ouv('p2', 'prep', 'doc-a'), ouv('p3', 'prep', 'doc-b'), ouv('p4', 'prep', 'photos'),
+        ouv('d1', 'droit', 'doc-b'), ouv('d2', 'droit', 'doc-b'), ouv('dv', 'droit', 'doc-a', { variante }),
+        ...(o.tirageEnrichi ? [ouv('p5', 'prep', 'doc-a'), ouv('p6', 'prep', 'doc-b')] : []),
+      ]);
+      Q.ouverture.questions = Q.liste.filter((x) => x.type === 'ouverture').map((x) => x.id);
+      Q.ouverture.tirage = { prep: 2, droit: 1 };
+      Q.ouverture.part = 4;
+      Q.liste = Q.liste.filter((x) => x.type === 'ouverture');
+      Q.etapes = [];
+    }
   if (o.transfert) {
     U.etapes = U.etapes.map((e) => (e.id === 'remplacement' ? { ...e, poids: 6, ecran: 'fiche:bon' } : e.id === 'quantite' ? { ...e, ecran: 'fiche:bon' } : e))
       .concat(S.ETAPE_TRANSFERT);
@@ -1025,6 +1045,149 @@ await v('Avant de commencer (évaluation) : contrôle au chargement — aide ou 
   vrai(/« ouv-a ».*réservée/.test(r.reserve), 'clé réservée : ' + r.reserve);
   vrai(/évaluation doit déclarer sa `part`/.test(r.evalSansPart), 'évaluation sans part : ' + r.evalSansPart);
   vrai(/séance de travail ne déclare pas de `part`/.test(r.travailAvecPart), 'séance de travail avec part : ' + r.travailAvecPart);
+});
+
+// ─────────────────────────────────────────────────────────────── « Avant de commencer » : questions tirées par élève (lot 3, 10/10/2026)
+// Banque d'essai (`monter({ tirage: true, copie: true })`) : prep = p1..p4, droit = d1, d2, dv (dv à valeurs tirées) ; tirage = 2 prep + 1 droit.
+const tireesDe = async () => ((await reps())['@tirage'] || {}).ids || [];
+const affichees = async (uid) => {
+  await monter({ tirage: true, evaluation: false, copie: true, uid });
+  return tireesDe();
+};
+
+await v('Avant de commencer (tirage) : 2 de préparation + 1 de droit par élève, rangés ; deux élèves n’ont pas tous les mêmes ; le même élève retrouve les siennes après rechargement', async () => {
+  const jeux = new Map();
+  for (const uid of ['u-a', 'u-b', 'u-c', 'u-d', 'u-e', 'u-f', 'u-g', 'u-h']) {
+    const ids = await affichees(uid);
+    egal(ids.length, 3, `${uid} : nombre de questions tirées`);
+    egal(ids.filter((id) => /^p/.test(id)).length, 2, `${uid} : questions de préparation`);
+    egal(ids.filter((id) => /^d/.test(id)).length, 1, `${uid} : questions de droit`);
+    egal(new Set(ids).size, 3, `${uid} : doublon`);
+    jeux.set(uid, ids.join(','));
+  }
+  vrai(new Set(jeux.values()).size > 1, 'huit élèves, un seul tirage : ' + [...jeux.values()][0]);
+  // L'élève voit ses 3 questions, dans son ordre ; l'écran ne montre que celles-là.
+  await monter({ tirage: true, evaluation: false, copie: true, uid: 'u-a' });
+  const rang = await tireesDe();
+  egal(await pg.$$eval(`${Z} .qo-pas`, (L) => L.length), 3, 'pastilles');
+  egal(await questionVisible(), [rang[0]], 'première question affichée = première du tirage');
+  // Rechargement sur un autre poste : la base reprise donne les mêmes questions, dans le même ordre.
+  const bd = await base();
+  await monter({ tirage: true, evaluation: false, copie: true, uid: 'u-a', db: bd });
+  egal(await tireesDe(), rang, 'après rechargement');
+  // Même graine = même tirage, sans base (fonction pure de la graine).
+  egal(await affichees('u-a'), rang, 'même identifiant, base neuve');
+});
+
+await v('Avant de commencer (tirage) : une banque enrichie ne change rien pour un élève qui a déjà ouvert ; l’enseignant voit toute la banque et n’écrit rien', async () => {
+  await monter({ tirage: true, evaluation: false, copie: true, uid: 'u-b' });
+  const rang = await tireesDe();
+  const bd = await base();
+  await monter({ tirage: true, tirageEnrichi: true, evaluation: false, copie: true, uid: 'u-b', db: bd });
+  egal(await tireesDe(), rang, 'banque enrichie : le tirage rangé a bougé');
+  egal(await pg.$$eval(`${Z} .qo-pas`, (L) => L.length), 3, 'banque enrichie : nombre de pastilles');
+  await monter({ tirage: true, evaluation: false, copie: true, role: 'prof' });
+  await aller('ouverture');
+  egal(await pg.$$eval(`${Z} .qo-pas`, (L) => L.length), 7, 'l’enseignant voit la banque entière');
+  egal(Object.keys(await reps()), [], 'l’enseignant a écrit un tirage');
+});
+
+await v('Avant de commencer (tirage) : ordre des choix tiré par élève, « Je ne sais pas » toujours en dernier ; note sur les questions tirées seulement, tirage lisible dans le détail', async () => {
+  await monter({ tirage: true, evaluation: false, copie: true, uid: 'u-c' });
+  const rang = await tireesDe();
+  for (let k = 0; k < 3; k++) {
+    await pg.click(`${Z} [data-ouv-aller="${k}"]`); await pause();
+    const choix = await pg.$$eval(`${Z} [data-q-choix]`, (L) => L.map((x) => x.dataset.qChoix));
+    egal(choix.length, 4, 'choix + Je ne sais pas');
+    egal(choix[3], '@nsp', 'Je ne sais pas en dernier');
+    await repondreO(rang[k], 'x');
+  }
+  const r = await note();
+  proche(r.score, 4, 'trois justes = la part pleine');
+  egal([r.detail.ouverture.sur, r.detail.ouverture.justes], [3, 3], 'détail');
+  egal(r.detail.ouverture.tirees, rang, 'le tirage est lisible dans le détail de la note');
+  vrai(((r.detail.indicateurs || {})['essai-questions'] || {}).questions?.['@tirage'], 'le tirage remonte avec les réponses');
+  // Choix mélangés différemment selon les élèves, sur la même question (essai sur 12 identifiants).
+  const ordres = new Set();
+  for (const uid of ['o1', 'o2', 'o3', 'o4', 'o5', 'o6', 'o7', 'o8', 'o9', 'o10', 'o11', 'o12']) {
+    await monter({ tirage: true, evaluation: false, copie: true, uid });
+    ordres.add((await pg.$$eval(`${Z} [data-q-choix]`, (L) => L.map((x) => x.dataset.qChoix))).slice(0, 3).join(''));
+  }
+  vrai(ordres.size > 1, 'un seul ordre de choix pour douze élèves');
+});
+
+await v('Avant de commencer (tirage) : valeurs tirées — la bonne réponse est juste pour 50 graines (calculée ici à la main), les pièges sont distincts', async () => {
+  const r = await pg.evaluate(async () => {
+    const { compilerQuestions, tirerOuverture } = await import('/core/types/questions.js');
+    const { QUESTIONS } = await import('/contenus/questions/ESSAI.js');
+    const variante = (h) => {
+      const n = h.entier(2, 9), m = h.entier(2, 8);
+      return { enonce: `Un bar rend ${n} fûts et ${m} casiers. Combien de consigne ?`, libs: { x: `${n * 40 + m * 4} €`, y: `${n * 40} €`, z: '0 €' } };
+    };
+    const ch = () => [{ v: 'x', lib: 'X' }, { v: 'y', lib: 'Y' }, { v: 'z', lib: 'Z' }];
+    const ouv = (id, plus = {}) => ({ id, type: 'ouverture', de: 'Ines', doc: 'doc-a', rubrique: 'droit', enonce: 'Q ?', choix: ch(), juste: 'x', retour: 'R', ...plus });
+    const Q = { ...QUESTIONS, etapes: [], liste: [ouv('dv', { variante }), ouv('d2')], ouverture: { id: 'avant', de: 'Ines', documents: ['doc-a'], questions: ['dv', 'd2'], tirage: { droit: 1 }, part: 4 } };
+    const M = compilerQuestions(Q, null, ['doc-a']);
+    const sorties = [];
+    for (let s = 0; s < 300 && sorties.length < 50; s++) {
+      const t = tirerOuverture(M, `graine-${s}`);
+      if (t.ids[0] === 'dv') sorties.push(t.q.dv);
+    }
+    return sorties;
+  });
+  vrai(r.length >= 50, 'moins de 50 tirages à valeurs : ' + r.length);
+  // À l'écran : un élève qui a reçu la question à valeurs la voit avec SES nombres et SES choix, et sa bonne réponse est la bonne.
+  let vu = 0;
+  for (const uid of ['v1', 'v2', 'v3', 'v4', 'v5', 'v6', 'v7', 'v8', 'v9', 'v10', 'v11', 'v12']) {
+    await monter({ tirage: true, evaluation: false, copie: true, uid });
+    const rec = (await reps())['@tirage'];
+    const k = rec.ids.indexOf('dv');
+    if (k < 0) continue;
+    await pg.click(`${Z} [data-ouv-aller="${k}"]`); await pause();
+    const [, n, m] = /rend (\d+) fûts et (\d+) casiers/.exec(await pg.textContent(`${Z} .qf-enonce`));
+    egal(rec.q.dv.enonce.includes(`${n} fûts et ${m} casiers`), true, 'l’énoncé affiché n’est pas celui du tirage rangé');
+    egal((await pg.textContent(`${Z} [data-q-choix="x"]`)).trim(), `${Number(n) * 40 + Number(m) * 4} €`, 'la bonne réponse affichée (clé x)');
+    vu += 1;
+  }
+  vrai(vu >= 2, 'moins de deux élèves ont reçu la question à valeurs : ' + vu);
+
+  for (const t of r) {
+    const [, n, m] = /rend (\d+) fûts et (\d+) casiers/.exec(t.enonce);
+    egal(t.libs.x, `${Number(n) * 40 + Number(m) * 4} €`, `${t.enonce} : bonne réponse`);
+    egal(new Set(Object.values(t.libs)).size, 3, `${t.enonce} : choix distincts`);
+    vrai(Number(n) >= 2 && Number(n) <= 9 && Number(m) >= 2 && Number(m) <= 8, 'valeurs hors plage');
+  }
+  vrai(new Set(r.map((t) => t.enonce)).size > 5, 'les valeurs ne varient pas assez');
+});
+
+await v('Avant de commencer (tirage) : contrôle au chargement — banque trop petite, rubrique inconnue, variante fautive, rubrique sans tirage', async () => {
+  const r = await pg.evaluate(async () => {
+    const { compilerQuestions } = await import('/core/types/questions.js');
+    const { QUESTIONS } = await import('/contenus/questions/ESSAI.js');
+    const essai = (f) => { try { f(); return 'ok'; } catch (e) { return e.message; } };
+    const ch = () => [{ v: 'x', lib: 'X' }, { v: 'y', lib: 'Y' }];
+    const ouv = (id, plus = {}) => ({ id, type: 'ouverture', de: 'Ines', doc: 'doc-a', rubrique: 'droit', enonce: 'Q ?', choix: ch(), juste: 'x', retour: 'R', ...plus });
+    const mk = (liste, tirage) => ({ ...QUESTIONS, etapes: [], liste, ouverture: { id: 'avant', de: 'Ines', documents: ['doc-a'], questions: liste.map((q) => q.id), ...(tirage ? { tirage } : {}) } });
+    const dans = (Q) => essai(() => compilerQuestions(Q, null, ['doc-a']));
+    return {
+      ok: dans(mk([ouv('a'), ouv('b')], { droit: 1 })),
+      petite: dans(mk([ouv('a'), ouv('b'), ouv('c')], { droit: 2 })),
+      inconnue: dans(mk([ouv('a'), ouv('b'), ouv('c', { rubrique: 'autre' })], { droit: 1 })),
+      vide: dans(mk([ouv('a'), ouv('b')], { droit: 1, image: 1 })),
+      sansTirage: dans(mk([ouv('a'), ouv('b')], null)),
+      libsManquants: dans(mk([ouv('a', { variante: () => ({ enonce: 'E', libs: { x: 'un' } }) }), ouv('b')], { droit: 1 })),
+      libsIdentiques: dans(mk([ouv('a', { variante: () => ({ enonce: 'E', libs: { x: 'un', y: 'un' } }) }), ouv('b')], { droit: 1 })),
+      plante: dans(mk([ouv('a', { variante: () => { throw new Error('boum'); } }), ouv('b')], { droit: 1 })),
+    };
+  });
+  egal(r.ok, 'ok', 'une banque du double doit se charger');
+  vrai(/« droit » tire 2 questions.*n’en compte que 3.*au moins 4/.test(r.petite), 'banque trop petite : ' + r.petite);
+  vrai(/« c ».*« autre » n’est pas une rubrique/.test(r.inconnue), 'rubrique inconnue : ' + r.inconnue);
+  vrai(/« image ».*n’en compte que 0/.test(r.vide), 'rubrique sans question : ' + r.vide);
+  vrai(/« a ».*n’ont de sens qu’avec un `tirage`/.test(r.sansTirage), 'rubrique sans tirage : ' + r.sansTirage);
+  vrai(/« a ».*un texte pour chaque clé/.test(r.libsManquants), 'variante incomplète : ' + r.libsManquants);
+  vrai(/« a ».*deux choix identiques/.test(r.libsIdentiques), 'variante à choix identiques : ' + r.libsIdentiques);
+  vrai(/« a ».*`variante` plante \(boum\)/.test(r.plante), 'variante qui plante : ' + r.plante);
 });
 
 await v('Questions : aucune erreur de page pendant le bloc', async () => {

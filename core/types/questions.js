@@ -181,6 +181,35 @@ export function compilerQuestions(Q, equipe, documentsSeance) {
     });
     ouvQ.forEach((q) => { if (!vus.has(q.id)) err(`la question d’ouverture « ${q.id} » n’est citée par l’écran d’ouverture`); });
     const actives = o.questions.filter((id) => parIdTout.get(id).actif !== false);
+    // LE TIRAGE PAR ÉLÈVE (lot 3, 10/10/2026) : `tirage: { preparation: 2, droit: 2 }` = combien de questions de chaque
+    // rubrique l'élève reçoit. Les questions citées sont alors la BANQUE ; chaque rubrique en compte au moins le double.
+    if (o.tirage != null) {
+      const T = o.tirage;
+      if (!T || typeof T !== 'object' || Array.isArray(T) || !Object.keys(T).length) err(`${ici} : \`tirage\` est un objet { rubrique: nombre de questions tirées }`);
+      Object.entries(T).forEach(([r, n]) => {
+        if (!Number.isInteger(n) || n < 1) err(`${ici} : \`tirage.${r}\` est un entier positif`);
+        const dans = actives.filter((id) => parIdTout.get(id).rubrique === r).length;
+        if (dans < 2 * n) err(`${ici} : la rubrique « ${r} » tire ${n} question${n > 1 ? 's' : ''} mais la banque n’en compte que ${dans} (il en faut au moins ${2 * n}, le double)`);
+      });
+      actives.forEach((id) => { const q = parIdTout.get(id); if (!(q.rubrique in T)) err(`question « ${id} » : \`rubrique\` = « ${q.rubrique} » n’est pas une rubrique du \`tirage\` (${Object.keys(T).join(', ')})`); });
+      actives.forEach((id) => {
+        const q = parIdTout.get(id);
+        if (q.variante == null) return;
+        if (typeof q.variante !== 'function') err(`question « ${id} » : \`variante\` est une fonction (hasard) => { enonce, libs, retour? }`);
+        for (let s = 0; s < 30; s++) {
+          let v; try { v = q.variante(hasard(`essai${s}`)); } catch (x) { err(`question « ${id} » : \`variante\` plante (${x.message})`); }
+          if (!v || typeof v.enonce !== 'string' || !v.enonce) err(`question « ${id} » : \`variante\` doit rendre un \`enonce\``);
+          const libs = v.libs || {};
+          const lib = q.choix.map((c) => libs[c.v]);
+          if (lib.some((l) => typeof l !== 'string' || !l)) err(`question « ${id} » : \`variante\` doit rendre un texte pour chaque clé de choix (${q.choix.map((c) => c.v).join(', ')})`);
+          if (new Set(lib).size !== lib.length) err(`question « ${id} » : \`variante\` rend deux choix identiques (graine d’essai ${s})`);
+        }
+      });
+    } else {
+      toutes.filter((q) => q.type === 'ouverture').forEach((q) => {
+        if (q.rubrique != null || q.variante != null) err(`question « ${q.id} » : \`rubrique\` et \`variante\` n’ont de sens qu’avec un \`tirage\` de l’écran d’ouverture`);
+      });
+    }
     if (!actives.length) err(`${ici} n’a plus aucune question active`);
     ouverture = { ...o, questions: actives, docs };
   } else if (ouvQ.length) err(`la question d’ouverture « ${ouvQ[0].id} » n’a pas d’écran d’ouverture (\`ouverture\` manque)`);
@@ -241,7 +270,8 @@ export function noteOuverture(db, M) {
   const o = M.ouverture;
   if (!o || o.part == null) return null;
   let total = 0, justes = 0, nsp = 0, faux = 0, repondues = 0;
-  o.questions.forEach((id) => {
+  const ids = idsOuverture(db, M);
+  ids.forEach((id) => {
     const q = M.parId.get(id), r = reponse(db, M, id);
     if (!repondu(r)) return;
     repondues += 1;
@@ -249,8 +279,8 @@ export function noteOuverture(db, M) {
     else if (r.premiere === NSP) nsp += 1;
     else { total -= 1 / (q.choix.length - 1); faux += 1; }
   });
-  const fraction = Math.max(0, total) / o.questions.length;
-  return { part: o.part, fraction, points: fraction * o.part, justes, nsp, faux, repondues, sur: o.questions.length };
+  const fraction = Math.max(0, total) / ids.length;
+  return { part: o.part, fraction, points: fraction * o.part, justes, nsp, faux, repondues, sur: ids.length, tirees: ids };
 }
 
 /* ================================================================ rendu */
@@ -328,8 +358,48 @@ export function htmlEtape(M, e, db, o = {}) {
 }
 
 /* ================================================================ l'écran « Avant de commencer » */
-export const ouvertureRepondues = (db, M) => (M.ouverture ? M.ouverture.questions.filter((id) => repondu(reponse(db, M, id))).length : 0);
-export const ouvertureFaite = (db, M) => !M.ouverture || ouvertureRepondues(db, M) === M.ouverture.questions.length;
+export const ouvertureRepondues = (db, M) => (M.ouverture ? idsOuverture(db, M).filter((id) => repondu(reponse(db, M, id))).length : 0);
+export const ouvertureFaite = (db, M) => !M.ouverture || ouvertureRepondues(db, M) === idsOuverture(db, M).length;
+
+/* ---- le tirage par élève (lot 3) ----
+   `db.questions[<séance>]['@tirage'] = { graine, ids: [ordre], q: { <id>: { enonce, libs, retour? } }, at }` : rangé à la
+   première ouverture, JAMAIS refait (banque enrichie, mélange changé : sans effet pour un élève qui a déjà ouvert).
+   Sans enregistrement (enseignant, copie jamais ouverte), toute la banque est montrée. */
+export const CLE_TIRAGE = '@tirage';
+export const tirageRange = (db, M) => (M.ouverture && M.ouverture.tirage ? reponses(db, M)[CLE_TIRAGE] || null : null);
+export function idsOuverture(db, M) {
+  const o = M.ouverture, rec = tirageRange(db, M);
+  if (!rec) return o.questions;
+  const ok = new Set(o.questions);
+  return rec.ids.filter((id) => ok.has(id));        // une question retirée de la banque disparaît sans bloquer l'élève
+}
+// Le tirage d'une graine : par rubrique, `n` questions de la banque ; l'ordre d'ensemble est tiré aussi ; les questions à
+// `variante` reçoivent leurs valeurs (rangées avec le tirage). Fonction pure de (graine, séance).
+export function tirerOuverture(M, graine) {
+  const o = M.ouverture, base = `${graine}|${M.id}`;
+  let ids = [];
+  Object.entries(o.tirage).forEach(([rub, n]) => {
+    ids = ids.concat(hasard(`${base}|${rub}`).prendre(o.questions.filter((id) => M.parId.get(id).rubrique === rub), n));
+  });
+  ids = hasard(`${base}|ordre`).melanger(ids);
+  const q = {};
+  ids.forEach((id) => { const f = M.parId.get(id).variante; if (f) q[id] = f(hasard(`${base}|${id}`)); });
+  return { graine: String(graine), ids, q, at: Date.now() };
+}
+// À l'ouverture (élève seulement) : range le tirage s'il n'y en a pas. Rend vrai si la base a changé (à sauver).
+export function rangerTirageOuverture(db, M, graine) {
+  if (!M.ouverture || !M.ouverture.tirage || tirageRange(db, M)) return false;
+  if (!db.questions) db.questions = {};
+  if (!db.questions[M.id]) db.questions[M.id] = {};
+  db.questions[M.id][CLE_TIRAGE] = tirerOuverture(M, graine);
+  return true;
+}
+// La question telle que CET élève la voit (valeurs tirées posées sur l'énoncé et les choix).
+export function questionTiree(db, M, q) {
+  const rec = tirageRange(db, M), v = rec && rec.q && rec.q[q.id];
+  if (!v) return q;
+  return { ...q, enonce: v.enonce, retour: v.retour || q.retour, choix: q.choix.map((c) => ({ ...c, lib: (v.libs || {})[c.v] || c.lib })) };
+}
 
 // Un visuel (images) : les photos, leur légende et leur crédit. Les images sont servies par le dépôt (jamais d'autre domaine).
 function htmlVisuel(d) {
@@ -347,9 +417,9 @@ const htmlAide = (q, ouverte) => (q.aide ? `<details class="qo-aide" data-ouv-ai
 //   o = { estProf, k (rang de la question), doc (l'onglet ouvert), feuille(id) → html d'un document, parQuestion(id) → options }
 export function htmlOuverture(M, db, o = {}) {
   const ov = M.ouverture, P = M.personnes[ov.de], qui = ech(appel(P));
-  const ids = ov.questions, n = ids.length;
+  const ids = idsOuverture(db, M), n = ids.length;
   const k = Math.min(Math.max(o.k || 0, 0), n - 1);
-  const q = M.parId.get(ids[k]);
+  const q = questionTiree(db, M, M.parId.get(ids[k]));
   const toutes = ouvertureFaite(db, M);
   const sel = ov.docs.has(o.doc) ? o.doc : q.doc;
   const docs = [...ov.docs.values()];

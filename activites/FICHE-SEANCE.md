@@ -1077,7 +1077,15 @@ Dans le fichier de questions : un bloc `ouverture` et des questions `type: 'ouve
   Corrigée à l'écran (✓ / ✗ + retour), réponse rangée comme les autres (`db.questions[séance][id]`, plus `@ouverture` = heure d'arrivée).
 - Imposée à l'élève (menu fermé, cadenas) tant qu'il n'a pas répondu à tout ; **jamais** à l'enseignant, après la remise, ni à un
   élève dont la séance a déjà commencé (fiche envoyée ou message envoyé). « Continuer » mène à l'Accueil, qui reste tel quel.
-- Pas encore faits (lots 2 et 3 du brief) : évaluation notée sur 4 avec « Je ne sais pas », tirage des questions par élève.
+- **Évaluation** (lot 2) : `ouverture.part: 4` (⇔ séance `copie: true`) rend l'écran noté ; aucune `aide` ni `[[mot]]` ; « Je ne sais pas »
+  ajouté en dernier ; juste +1, NSP 0, fausse −1 ÷ mauvaises réponses, plancher 0 ; « Réponse enregistrée. » sans correction.
+- **Tirage par élève** (lot 3) : `ouverture.tirage: { preparation: 2, droit: 2 }` ; les questions citées sont la **banque**, chacune porte
+  `rubrique` ; chaque rubrique en compte **au moins le double** de ce qu'on tire (sinon la séance est refusée). Le tirage (ids dans
+  un ordre tiré) est rangé à la première ouverture dans `db.questions[séance]['@tirage']` et jamais refait ; l'enseignant le lit dans
+  `detail.ouverture.tirees` ; sans tirage rangé (enseignant), toute la banque est montrée. Une question peut porter
+  `variante: (hasard) => ({ enonce, libs: { <clé de choix>: texte }, retour? })` : mêmes clés et même `juste` pour tous, seuls
+  les textes changent (bonne réponse et pièges **calculés** dans la fonction, jamais ceux d'un jalon de la séance).
+  Reprise des questions `cle: true` des séances de travail en évaluation : pas faite (à écrire dans le fichier de l'évaluation).
 
 ### Modifier les questions d'une séance (une demande de Tristan = ce fichier seul, en Sonnet)
 
