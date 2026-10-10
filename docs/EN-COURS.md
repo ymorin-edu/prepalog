@@ -7,6 +7,7 @@ est déjà modifié ou inscrit ci-dessous, **elle s'arrête et le dit à Tristan
 
 | Chantier | Fichiers qu'il touche | Depuis |
 |---|---|---|
+| Notation pondérée, lot 4 (ENT-1.1, 2.1 à 2.4, 2.6, 3.1 à 3.3, 4.1) | contenus/spartoo-reception.js, contenus/cdiscount-mouvements.js, contenus/boost-tournee.js, contenus/picard-ent41.js, contenus/ponderation.js, outils/test/spartoo.mjs, outils/test/cdiscount.mjs, outils/test/boost.mjs, outils/test/picard.mjs | 10/10/2026 |
 
 Rappel : un seul chantier à la fois dans `core/types/tournee.js`, `core/types/grille.js`,
 `core/types/entreprise.js`, `styles/base.css` et `outils/test/boost.mjs` (voir `docs/briefs/COORDINATION-boost.md`).
