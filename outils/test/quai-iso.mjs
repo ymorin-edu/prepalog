@@ -17,6 +17,8 @@
 // ÉTAPE 3 — LA PALETTE DE FÛTS (`forme: 'fut'`) : le kit (`paletteFuts`), la validation du contenu, le total / réel / avaries calculés, ② ③ ④ jouées
 // avec les quatre palettes d'ENT-6.4 de la page d'essai.
 //
+// ÉTAPE 4 — L'UNITÉ ET LES LIBELLÉS (`unite`, `libelles`, `motifs`) : sans eux, les textes d'aujourd'hui, caractère pour caractère ; avec `fûts`, plus un seul « carton » à l'écran.
+//
 // Pour régénérer la référence (seulement si le dessin de Spartoo doit vraiment changer, avec l'accord de
 // Tristan) : QUAI_ISO_REGENERER=1 node outils/test.mjs quai-iso
 
@@ -1541,6 +1543,298 @@ await v('Quai fûts : dedans (inspection), les palettes au fond sont coupées au
   await p.waitForFunction(() => document.querySelector('#qiScene [data-q-inspection]').dataset.vue === 'dedans');
   // P1 (y = −2,9) : ses huit fûts ; P2 (y = −3,95) : cinq fûts (les trois du fond passent derrière le mur) ; P3 et P4 : rien.
   egal(await p.$eval(`${HOTE} [data-q-inspection]`, (s) => (s.innerHTML.match(/fill="#eef0f1"/g) || []).length), 13, 'dedans : 8 + 5 fûts, pas plus');
+  await p.close();
+});
+
+/* ------------------------------------------------------------------ étape 4 : l'unité déclarable et les libellés des motifs */
+// `unite: 'fûts'` (ou `{ un, des }`), `libelles: { avarie: { nom, precision }, … }` et `motifs` (brief `docs/briefs/MOTEUR-quai-inspection.md`
+// §2.1 b). Règle de l'étape : SANS ces champs, chaque texte de Picard, Smoby et Spartoo reste celui d'aujourd'hui, caractère pour caractère.
+// Toutes les phrases attendues ci-dessous sont écrites à la main (celles de Picard, de Smoby et de Spartoo sont déjà vérifiées par leurs blocs).
+
+const PC = (o = {}) => Object.assign({ id: 'P1', ref: 'REF-1', nom: 'Désignation', W: 2, D: 2, L: 2, bl: 8, manque: [], avarie: {}, temp: -20, attendu: 'accepter', motifAttendu: 'aucun',
+  etiq: { ref: 'REF-1', nom: 'DÉSIGNATION', poids: '1 carton', lot: 'L-1' } }, o);
+const QC = (ps, m = {}) => Object.assign({ id: 'qc', camions: [{ nom: 'Camion', arrivee: '06:00', fournisseur: 'F', palettes: ps }] }, m);
+const AV = (n) => Object.fromEntries(Array.from({ length: n }, (_, i) => [`${i},0,1`, [0, -1]]));   // n cartons enfoncés
+const attendu = (Q, id) => jal(Q, id).attendu;
+const PALS_C = [
+  PC({ id: 'P2', ref: 'CRB-070', W: 3, D: 3, L: 4, bl: 36, avarie: AV(2), attendu: 'reserves', motifAttendu: 'avarie' }),
+  PC({ id: 'P3', ref: 'GVA-1000', W: 4, D: 3, L: 4, bl: 48, temp: -14.2, attendu: 'refuser', motifAttendu: 'temperature' }),
+  PC({ id: 'P4', ref: 'CAB-400', W: 3, D: 2, L: 4, bl: 24, manque: ['0,0,0', '1,0,0'], attendu: 'reserves', motifAttendu: 'manquant' }),
+  PC({ id: 'P5', ref: 'EPH-450', W: 5, D: 3, L: 2, bl: 30, attendu: 'refuser', motifAttendu: 'produit', etiq: { ref: 'EPB-450', nom: 'X', poids: 'x', lot: 'l' } }),
+  PC({ id: 'P6', ref: 'PRO-12', W: 4, D: 2, L: 5, bl: 40, manque: ['0,0,0'], avarie: AV(3), attendu: 'reserves', motifAttendu: 'manquant', motif2Attendu: 'avarie' }),
+  PC({ id: 'P7', ref: 'REF-7', avarie: AV(1), attendu: 'refuser', motifAttendu: 'avarie' }),
+  PC({ id: 'P8', ref: 'REF-8', W: 3, D: 3, L: 3, bl: 27, manque: ['0,0,2'], attendu: 'reserves', motifAttendu: 'manquant' }),
+];
+
+await v('Quai unité : sans unite ni libelles, les phrases d’aujourd’hui — réserves, comptage, décisions et motifs (écrites à la main, comme celles de Picard et de Smoby)', async () => {
+  const Q = QC(PALS_C);
+  egal([
+    attendu(Q, 'P2-reserve'), attendu(Q, 'P3-reserve'), attendu(Q, 'P4-reserve'), attendu(Q, 'P5-reserve'), attendu(Q, 'P6-reserve'), attendu(Q, 'P7-reserve'), attendu(Q, 'P8-reserve'),
+  ], [
+    'P2 CRB-070 : acceptée sous réserve — 2 cartons endommagés (écrasés).',
+    'P3 GVA-1000 : palette REFUSÉE — température à cœur −14,2 °C (−18 °C exigé). 48 cartons repris par le chauffeur.',
+    'P4 CAB-400 : acceptée sous réserve — manque 2 cartons (BL 24, reçu 22).',
+    'P5 EPH-450 : palette REFUSÉE — produit livré EPB-450 au lieu de EPH-450 commandé. 30 cartons repris par le chauffeur.',
+    'P6 PRO-12 : acceptée sous réserve — manque 1 carton (BL 40, reçu 39) ; 3 cartons endommagés (écrasés).',
+    'P7 REF-7 : palette REFUSÉE — 1 carton endommagé. 8 cartons repris par le chauffeur.',
+    'P8 REF-8 : acceptée sous réserve — manque 1 carton (BL 27, reçu 26).',
+  ], 'les lignes de réserve attendues');
+  egal([attendu(Q, 'P2-comptage'), jal(Q, 'P2-comptage').fait, attendu(Q, 'P3-comptage')], ['36 cartons (BL : 36)', 'pas compté', '48 cartons (BL : 48)'], 'le comptage attendu');
+  egal([attendu(Q, 'P2-decision'), attendu(Q, 'P3-decision'), attendu(Q, 'P6-decision'), attendu(Q, 'P7-decision')],
+    ['Accepter avec réserves — Cartons endommagés', 'Refuser — Température non conforme', 'Accepter avec réserves — Manquant + Cartons endommagés', 'Refuser — Cartons endommagés'], 'la décision attendue');
+  // Le comptage écrit par l'élève (jalon « fait ») : « 36 cartons ».
+  const avecCompte = quaiMod.jalonsQuai({ quais: { qc: { palettes: { P2: { compte: 36, decision: 'reserves', motif: 'avarie' } } } } }, Q).L;
+  egal(avecCompte.find((l) => l.id === 'P2-comptage').fait, '36 cartons', 'le comptage de l’élève');
+  egal(avecCompte.find((l) => l.id === 'P2-decision').fait, 'Accepter avec réserves — Cartons endommagés', 'la décision de l’élève');
+  // Les motifs : les mêmes mots qu'avant, par l'ancien chemin (MOTIFS, libMotifs(L)) comme par le nouveau (libellesMotifs).
+  egal(quaiMod.MOTIFS, { aucun: 'aucun motif', temperature: 'Température non conforme', avarie: 'Cartons endommagés', manquant: 'Manquant', produit: 'Produit différent de la commande' }, 'MOTIFS exporté tel quel');
+  egal(quaiMod.libellesMotifs({}), quaiMod.MOTIFS, 'libellesMotifs sans rien déclarer = MOTIFS');
+  egal([quaiMod.libMotifs([]), quaiMod.libMotifs(['avarie']), quaiMod.libMotifs(['manquant', 'avarie']), quaiMod.libMotifs(['avarie'], {}), quaiMod.libMotifs([], QC([]))],
+    ['aucun motif', 'Cartons endommagés', 'Manquant + Cartons endommagés', 'Cartons endommagés', 'aucun motif'], 'libMotifs sans second paramètre, ou avec un quai qui ne déclare rien');
+  egal(quaiMod.uniteQuai({}), { un: 'carton', des: 'cartons' }, 'l’unité par défaut');
+});
+
+await v('Quai unité : avec une unité — le texte suit (singulier, pluriel, précision), les mots des motifs sont ceux de la séance, les réserves de P3 d’ENT-6.4 s’écrivent « 1 fût endommagé (fuite) »', async () => {
+  const U = { unite: 'fûts', libelles: { avarie: { nom: 'Fût endommagé', precision: 'fuite' } } };
+  const QU = (ps, m = {}) => QFUT(ps, Object.assign({}, U, m));
+  const P3 = PF({ id: 'P3', avarie: { 2: 'N' }, attendu: 'reserves', motifAttendu: 'avarie' });
+  egal(attendu(QU([P3]), 'P3-reserve'), 'P3 AFF-20 : acceptée sous réserve — 1 fût endommagé (fuite).', 'la réserve attendue de P3 (brief 2.1 b)');
+  egal([
+    attendu(QU([PF({ id: 'P3', avarie: { 2: 'N', 3: 'N' }, attendu: 'reserves', motifAttendu: 'avarie' })]), 'P3-reserve'),
+    attendu(QU([PF({ id: 'P4', manque: [5, 6], attendu: 'reserves', motifAttendu: 'manquant' })]), 'P4-reserve'),
+    attendu(QU([PF({ id: 'P4', manque: [5], attendu: 'reserves', motifAttendu: 'manquant' })]), 'P4-reserve'),
+    attendu(QU([PF({ id: 'P2', attendu: 'refuser', motifAttendu: 'produit', etiq: { ref: 'PEL-20', nom: 'X', poids: 'x', lot: 'l' } })]), 'P2-reserve'),
+    attendu(QU([PF({ id: 'P5', avarie: { 2: 'N' }, attendu: 'refuser', motifAttendu: 'avarie' })]), 'P5-reserve'),
+  ], [
+    'P3 AFF-20 : acceptée sous réserve — 2 fûts endommagés (fuite).',
+    'P4 AFF-20 : acceptée sous réserve — manque 2 fûts (BL 8, reçu 6).',
+    'P4 AFF-20 : acceptée sous réserve — manque 1 fût (BL 8, reçu 7).',
+    'P2 AFF-20 : palette REFUSÉE — produit livré PEL-20 au lieu de AFF-20 commandé. 8 fûts repris par le chauffeur.',
+    'P5 AFF-20 : palette REFUSÉE — 1 fût endommagé. 8 fûts repris par le chauffeur.',
+  ], 'pluriel, singulier, refus');
+  // Sans précision déclarée : « écrasé(s) » d'aujourd'hui, accordé.
+  egal(attendu(QFUT([P3], { unite: 'fûts' }), 'P3-reserve'), 'P3 AFF-20 : acceptée sous réserve — 1 fût endommagé (écrasé).', 'unité seule : la précision d’aujourd’hui');
+  // Comptage, jalon « N fûts », décision et motifs.
+  const P4 = PF({ id: 'P4', bl: 7, manque: [7] });
+  egal(attendu(QU([P4]), 'P4-comptage'), '7 fûts (BL : 7)', 'le comptage attendu de P4');
+  egal(quaiMod.jalonsQuai({ quais: { tf: { palettes: { P4: { compte: 7 } } } } }, QU([P4])).L.find((l) => l.id === 'P4-comptage').fait, '7 fûts', 'le comptage de l’élève : « 7 fûts »');
+  egal(attendu(QU([P3]), 'P3-decision'), 'Accepter avec réserves — Fût endommagé', 'la décision attendue porte le nom déclaré');
+  egal(quaiMod.libellesMotifs(QU([])), { aucun: 'aucun motif', temperature: 'Température non conforme', avarie: 'Fût endommagé', manquant: 'Manquant', produit: 'Produit différent de la commande' }, 'libellesMotifs');
+  egal(quaiMod.libellesMotifs({ unite: 'fûts' }).avarie, 'Fûts endommagés', 'unité seule : « Fûts endommagés »');
+  egal(quaiMod.libellesMotifs({ libelles: { manquant: { nom: 'Fût en moins' }, produit: { nom: 'Mauvaise bière' } } }), { aucun: 'aucun motif', temperature: 'Température non conforme', avarie: 'Cartons endommagés', manquant: 'Fût en moins', produit: 'Mauvaise bière' }, 'noms de manquant et de produit');
+  egal([quaiMod.libMotifs(['avarie', 'manquant'], QU([])), quaiMod.libMotifs(['avarie'])], ['Fût endommagé + Manquant', 'Cartons endommagés'], 'libMotifs(L, Q) suit le quai, libMotifs(L) reste celui d’aujourd’hui');
+  // Une unité invariable ou irrégulière : { un, des }.
+  const QCOLIS = QFUT([PF({ id: 'P3', avarie: { 2: 'N' }, attendu: 'reserves', motifAttendu: 'avarie' })], { unite: { un: 'colis', des: 'colis' } });
+  egal([attendu(QCOLIS, 'P3-reserve'), attendu(QCOLIS, 'P3-comptage'), quaiMod.libellesMotifs(QCOLIS).avarie], ['P3 AFF-20 : acceptée sous réserve — 1 colis endommagé (écrasé).', '8 colis (BL : 8)', 'Colis endommagés'], 'unité { un, des }');
+});
+
+await v('Quai unité : verifierQuai accepte les déclarations justes et refuse chaque faute, avec un message clair ; creerQuai ne s’ouvre pas sur une unité fautive', async () => {
+  const bon = (nom, m) => { const E = quaiMod.verifierQuai(QFUT([PF()], m)); if (E.length) throw new Error(`« ${nom} » devrait être accepté : ${E.join(' | ')}`); };
+  bon('unité en -s', { unite: 'fûts' });
+  bon('unité { un, des }', { unite: { un: 'fût', des: 'fûts' } });
+  bon('unité irrégulière', { unite: { un: 'cheval', des: 'chevaux' } });
+  bon('libellés complets', { libelles: { avarie: { nom: 'Fût endommagé', precision: 'fuite' }, manquant: { nom: 'Fût manquant' }, produit: { nom: 'Autre bière' } } });
+  bon('tous les motifs', { motifs: ['avarie', 'manquant', 'produit', 'temperature', 'aucun'] });
+  bon('rien déclaré', {});
+  const REFUS = [
+    ['unité sans « s »', { unite: 'fût' }, /unite : « fût » ne finit pas par « s »/],
+    ['unité vide', { unite: '  ' }, /unite : le texte est vide/],
+    ['unité d’une lettre', { unite: 's' }, /ne finit pas par/],
+    ['unité : nombre', { unite: 3 }, /unite : un texte au pluriel/],
+    ['unité : tableau', { unite: ['fûts'] }, /unite : un texte au pluriel/],
+    ['unité : objet sans « un »', { unite: { des: 'fûts' } }, /« un » manque/],
+    ['unité : objet sans « des »', { unite: { un: 'fût' } }, /« des » manque/],
+    ['unité : objet vide', { unite: {} }, /« un » manque/],
+    ['libellé : motif inconnu', { libelles: { temperature: { nom: 'Trop chaud' } } }, /libelles\.temperature : ce motif n’a pas de libellé/],
+    ['libellé : motif « aucun »', { libelles: { aucun: { nom: 'Rien' } } }, /libelles\.aucun/],
+    ['libellé : clé inconnue', { libelles: { avarie: { couleur: 'rouge' } } }, /libelles\.avarie\.couleur : inconnu/],
+    ['libellé : précision sur « manquant »', { libelles: { manquant: { precision: 'x' } } }, /libelles\.manquant\.precision : inconnu/],
+    ['libellé : nom vide', { libelles: { avarie: { nom: '' } } }, /libelles\.avarie\.nom : le texte est vide/],
+    ['libellé : précision vide', { libelles: { avarie: { precision: '' } } }, /libelles\.avarie\.precision : le texte est vide/],
+    ['libellé : texte à la place de l’objet', { libelles: { avarie: 'Fût endommagé' } }, /libelles\.avarie : un objet/],
+    ['libelles : tableau', { libelles: [] }, /libelles : un objet/],
+    ['motif inconnu', { motifs: ['avarie', 'bidon'] }, /motifs : l’id « bidon » n’existe pas/],
+    ['motifs : texte', { motifs: 'avarie' }, /motifs : la liste/],
+  ];
+  const fautes = [];
+  for (const [nom, m, motif] of REFUS) {
+    const E = quaiMod.verifierQuai(QFUT([PF()], m));
+    if (!E.length) fautes.push(`« ${nom} » n’est pas refusé`);
+    else if (!E.some((x) => motif.test(x))) fautes.push(`« ${nom} » : message sans ${motif} (${E.join(' | ')})`);
+  }
+  if (fautes.length) throw new Error(fautes.join(' ; '));
+  // Le refus a lieu au chargement : le quai ne s'ouvre pas.
+  const msg = await pg.evaluate(async () => {
+    const Q = await import('/core/types/quai.js'), E = await import('/outils/essai-quai-inspection.js');
+    const q = E.quaiEssai(); q.unite = 'fût'; q.motifs = ['avarie', 'bidon'];
+    try { Q.creerQuai(q); return 'pas d’erreur'; } catch (x) { return x.message; }
+  });
+  vrai(/essai-inspection/.test(msg) && /ne finit pas par « s »/.test(msg) && /« bidon » n’existe pas/.test(msg), `message : ${msg}`);
+});
+
+await v('Quai unité : les corrigés qui importent MOTIFS (ENT-4.1, 4.2, 4.4, 5.4) et libMotifs fonctionnent comme avant', async () => {
+  for (const code of ['ENT-4.1', 'ENT-4.2', 'ENT-4.4', 'ENT-5.4']) {
+    const { CORRIGE: c } = await import(pathToFileURL(path.join(ROOT, 'contenus', 'corriges', `${code}.js`)).href);
+    vrai(c && Array.isArray(c.items) && c.items.length, `le corrigé ${code} ne se charge pas`);
+  }
+  const { CORRIGE: c54 } = await import(pathToFileURL(path.join(ROOT, 'contenus', 'corriges', 'ENT-5.4.js')).href);
+  const tab = c54.items.find((x) => x.texte === 'Le contrôle de chaque palette');
+  egal(tab.reponses.filter((l) => /réserves/.test(l[5])).map((l) => l[5]), ['Accepter avec réserves — Cartons endommagés', 'Accepter avec réserves — Manquant'], 'ENT-5.4 : les décisions et motifs du corrigé');
+  // ENT-4.4 : le corrigé de l'élève écrit les décisions avec libMotifs(L) (sans second paramètre).
+  const { corrigeEleve } = await import(pathToFileURL(path.join(ROOT, 'contenus', 'corriges', 'ENT-4.4.js')).href);
+  const decisions = corrigeEleve({}, 'u-test').items[0].reponses.map((l) => l[6]);
+  for (const attendu of ['Accepter avec réserves — Manquant + Cartons endommagés', 'Accepter avec réserves — Cartons endommagés', 'Refuser — Température non conforme', 'Refuser — Produit différent de la commande']) {
+    vrai(decisions.includes(attendu), `ENT-4.4 : « ${attendu} » absent du corrigé (${decisions.join(' | ')})`);
+  }
+});
+
+// Un parcours ②③④ jusqu'au bilan, avec les textes lus à l'écran à chaque étape : `unite` décide si le quai parle de fûts ou de cartons.
+const instantane = (p) => p.$eval(HOTE, (h) => ({
+  texte: h.innerText,
+  aria: [...h.querySelectorAll('[aria-label],[title],[alt]')].map((n) => ['aria-label', 'title', 'alt'].map((a) => n.getAttribute(a)).filter(Boolean).join(' | ')).filter(Boolean).join('\n'),
+}));
+async function parcoursTextes(p, { nb, autres = [] }) {
+  const S = {};
+  const prendre = async (nom) => { const x = await instantane(p); S[nom] = x.texte + '\n' + x.aria; };
+  await prendre('1-inspection');
+  await decharger(p);
+  await prendre('1-apres-figeage');
+  await p.click(`${HOTE} [data-q="decharger"]`);
+  await p.waitForSelector(`${HOTE} [data-q="vers3"]:not([disabled])`);
+  await prendre('2-dechargement');
+  await p.click(`${HOTE} [data-q="vers3"]`);
+  await prendre('3-comptage');
+  S.bl = await p.$$eval(`${HOTE} table.quai-bl thead th`, (L) => L.map((n) => n.textContent.trim()));
+  await p.click(`${HOTE} [data-q="sel"][data-n="0"]`);
+  await p.dispatchEvent(`${HOTE} svg[data-q-palette] [data-q-carton="3"]`, 'click');
+  S.zoom = await p.$eval(`${HOTE} [data-q-etiquette] .quai-etiq-l1 span`, (n) => n.textContent.replace(/\s+/g, ' ').trim());
+  S.etat = await p.$eval(`${HOTE} [data-q-etat-carton]`, (n) => n.textContent.replace(/\s+/g, ' ').trim());
+  S.aria3 = await p.$eval(`${HOTE} svg[data-q-palette]`, (n) => n.getAttribute('aria-label'));
+  await prendre('3-zoom');
+  await p.fill(`${HOTE} #qCompte`, String(nb)); await p.press(`${HOTE} #qCompte`, 'Enter');
+  S.compte = await p.$eval(`${HOTE} [data-q-rcompte]`, (n) => n.textContent.trim());
+  await p.click(`${HOTE} #qDec-reserves`);
+  await prendre('3-decision');
+  S.boutonsMotifs = await p.$$eval(`${HOTE} .quai-choix-motif button`, (L) => L.map((b) => [b.id, b.textContent.trim()]));
+  await p.click(`${HOTE} #qMot-avarie`);
+  await p.click(`${HOTE} [data-q="valider"]`);
+  S.resume = await p.$eval(`${HOTE} [data-q-resume]`, (n) => n.textContent.replace(/\s+/g, ' ').trim());
+  for (const [n, compte] of autres) {
+    await p.click(`${HOTE} [data-q="sel"][data-n="${n}"]`);
+    await p.fill(`${HOTE} #qCompte`, String(compte)); await p.press(`${HOTE} #qCompte`, 'Enter');
+    await p.click(`${HOTE} #qDec-accepter`);
+    await p.click(`${HOTE} [data-q="valider"]`);
+  }
+  await prendre('3-valide');
+  await p.click(`${HOTE} [data-q="vers4"]`); await p.click(`${HOTE} [data-q="vers4"]`);
+  await prendre('4-reserves');
+  S.champRes = await p.$eval(`${HOTE} .quai-res-lib`, (n) => n.textContent.trim());
+  await p.fill(`${HOTE} #qRes-P1`, '1');
+  await p.click(`${HOTE} [data-q="ecrire"]`);
+  await prendre('4-ecrites');
+  S.lignes = await p.evaluate(() => window.__qs.db.quais['essai-inspection'].lignes.map((l) => l.texte));
+  S.journal = await p.evaluate(() => window.__qs.db.quais['essai-inspection'].journal.join(' | '));
+  S.jalons = await p.evaluate(async () => {
+    const Q = await import('/core/types/quai.js');
+    return Object.fromEntries(Q.jalonsQuai(window.__qs.db, window.__qs.Q).L.filter((l) => /^P1-/.test(l.id)).map((l) => [l.id, { fait: l.fait, attendu: l.attendu }]));
+  });
+  await p.click(`${HOTE} [data-q="signer"]`);
+  await p.click(`${HOTE} [data-q="clore"]`);
+  await p.waitForSelector(`${HOTE} [data-q-bilan]`);
+  await prendre('5-bilan');
+  return S;
+}
+
+await v('Quai unité : un quai sans unite — le parcours ①→bilan garde les mots d’aujourd’hui (« Cartons » au BL, « Nombre de cartons endommagés », « Carton 3 / 8 »…)', async () => {
+  const p = await pageAvec({});
+  const S = await parcoursTextes(p, { nb: 8 });
+  egal(S.bl.slice(0, 4), ['Palette', 'Réf.', 'Désignation', 'Cartons'], 'la colonne du BL');
+  egal(S.zoom, 'Carton 3 / 8', 'le zoom d’un carton');
+  vrai(/Ce que tu vois de ce carton depuis ici : intact/.test(S.etat), `ce qu’on voit du carton : ${S.etat}`);
+  vrai(/✓ P1 validée : Accepter avec réserves — Cartons endommagés/.test(S.resume), `le résumé de la palette validée : ${S.resume}`);
+  egal(S.aria3, 'Palette P1 : clique sur un carton pour lire son étiquette', 'l’étiquette lue par un lecteur d’écran');
+  egal(S.compte, 'Comptage noté : 8 cartons (BL : 8).', 'le comptage noté');
+  egal(S.boutonsMotifs, [['qMot-avarie', 'Cartons endommagés'], ['qMot-manquant', 'Manquant'], ['qMot-produit', 'Produit différent de la commande']], 'les boutons des motifs');
+  egal(S.champRes, 'Nombre de cartons endommagés', 'le champ chiffré de la réserve');
+  egal(S.jalons['P1-comptage'], { fait: '8 cartons', attendu: '8 cartons (BL : 8)' }, 'le jalon du comptage');
+  egal(S.lignes, ['P1 ESS-CAR : acceptée sous réserve — 1 carton endommagé (écrasé).'], 'la ligne écrite sur le BL');
+  egal(S.jalons['P1-decision'].fait, 'Accepter avec réserves — Cartons endommagés', 'la décision de l’élève');
+  vrai(/P1 : 8 cartons notés/.test(S.journal), `le journal : ${S.journal}`);
+  vrai(/Clique sur un carton de la palette/.test(S['3-comptage']), 'la consigne avant le premier clic sur un carton');
+  vrai(/Total : cartons comptés sur cette palette/.test(S['3-comptage']), 'le libellé du total');
+  vrai(/Cartons endommagés/.test(S['3-comptage']) && /Cartons manquants/.test(S['3-comptage']), 'les cases de la fiche de contrôle');
+  vrai(/Pour compter sans tout compter : combien de cartons dans une couche/.test(S['3-comptage']), 'la consigne de comptage (aides.consignes)');
+  await p.close();
+});
+
+await v('Quai unité : une palette mixte (plusieurs références) avec une unité déclarée — fiche par référence, colonnes du BL et comptage parlent de colis', async () => {
+  const MIXTE = await pg.evaluate(async () => (await import('/contenus/spartoo-reception.js')).PALETTE);
+  const p = await pageAvec({ palettes: [MIXTE], extra: { unite: { un: 'colis', des: 'colis' }, libelles: {} } });
+  await jusquaEtape2(p);
+  await p.click(`${HOTE} [data-q="vers3"]`);
+  await p.waitForSelector(`${HOTE} .quai-fiche-refs`);
+  egal(await p.$$eval(`${HOTE} .quai-fiche-refs thead th`, (L) => L.map((n) => n.textContent.trim())), ['Référence', 'RAS', 'Colis endommagés', 'Colis manquants'], 'la fiche par référence');
+  egal(await p.$eval(`${HOTE} [data-q-fr="endo"]`, (n) => n.getAttribute('aria-label')), 'Colis endommagés PM-SUE-RG-39', 'l’étiquette lue par un lecteur d’écran');
+  egal(await p.$$eval(`${HOTE} table.quai-bl thead th`, (L) => L.map((n) => n.textContent.trim())), ['Palette', 'Réf.', 'Désignation', 'Colis', 'Par colis'], 'le BL');
+  vrai(/Colis comptés, référence par référence/.test(await p.$eval(HOTE, (h) => h.innerText)), 'le libellé du comptage par référence');
+  vrai(/Clique sur un colis de la palette/.test(await p.$eval(HOTE, (h) => h.innerText)), 'la consigne avant le premier clic');
+  await p.dispatchEvent(`${HOTE} svg[data-q-palette] [data-q-carton="3"]`, 'click');
+  egal(await p.$eval(`${HOTE} [data-q-etiquette] .quai-etiq-l1 span`, (n) => n.textContent.replace(/\s+/g, ' ').trim()), 'Colis 3 / 12', 'le zoom d’un colis');
+  vrai(/Ce que tu vois de ce colis depuis ici : intact/.test(await p.$eval(`${HOTE} [data-q-etat-carton]`, (n) => n.textContent.replace(/\s+/g, ' '))), 'ce qu’on voit du colis');
+  await p.close();
+});
+
+await v('Quai unité : la zone de calcul, le rappel, les aides de comptage et le détail d’une palette de cartons parlent de l’unité déclarée (« colis »)', async () => {
+  const COLIS = { un: 'colis', des: 'colis' };
+  const p = await pageAvec({ extra: { unite: COLIS, calcul: { forme: 'feuille', rappel: true }, aides: { consignes: true, regleCouches: true, repere: true } } });
+  await jusquaEtape2(p);
+  await p.click(`${HOTE} [data-q="vers3"]`);
+  await p.waitForSelector(`${HOTE} [data-q-calc]`);
+  egal(await p.$$eval(`${HOTE} .quai-calc-lib`, (L) => L.map((n) => n.textContent.trim())), ['Colis dans une couche complète', 'Nombre de couches', 'Colis manquants dans la couche du dessus', 'Total (formule)'], 'les lignes de la feuille');
+  const T = await p.$eval(HOTE, (h) => h.innerText.replace(/\s+/g, ' '));
+  vrai(T.includes('Rappel : total = colis dans une couche × nombre de couches − manquants.'), `le rappel de la formule : ${(T.match(/.{0,30}Rappel.{0,100}/) || [T.slice(0, 200)])[0]}`);
+  vrai(T.includes('Pour compter sans tout compter : combien de colis dans une couche ? combien de couches ? Puis regarde bien la couche du dessus : combien de colis y manquent ?'), 'la consigne du comptage');
+  vrai(T.includes('Les colis que tu ne vois pas au cœur sont donc bien là. Le colis marqué P1 te sert de repère'), 'la règle des couches et le repère');
+  await p.close();
+  const q = await pageAvec({ extra: { unite: COLIS, aides: { detailComptage: true } } });
+  await jusquaEtape2(q);
+  await q.click(`${HOTE} [data-q="vers3"]`);
+  await q.waitForSelector(`${HOTE} .quai-detail`);
+  egal(await q.$$eval(`${HOTE} .quai-detail label`, (L) => L.map((n) => n.textContent.trim())), ['Colis dans une couche complète', 'Nombre de couches', 'Colis manquants dans la couche du dessus'], 'le détail du comptage');
+  await q.close();
+});
+
+await v('Quai unité : un quai en fûts — « Nombre de fûts endommagés », réserve « 1 fût endommagé (fuite) », colonne « Fûts » du BL, jalon « 7 fûts », zoom « Fût 3 / 8 » ; aucun mot « carton » à l’écran', async () => {
+  const p = await pageAvec({ palettes: [PALS[2], PALS[3]].map((x, i) => Object.assign({}, x, { id: `P${i + 1}`, avarie: i === 0 ? { 2: 'N' } : {} })) });
+  const S = await parcoursTextes(p, { nb: 8, autres: [[1, 7]] });
+  egal(S.bl.slice(0, 4), ['Palette', 'Réf.', 'Désignation', 'Fûts'], 'la colonne du BL');
+  egal(S.zoom, 'Fût 3 / 8', 'le zoom d’un fût');
+  vrai(/Ce que tu vois de ce fût depuis ici : intact/.test(S.etat), `ce qu’on voit du fût : ${S.etat}`);
+  vrai(/✓ P1 validée : Accepter avec réserves — Fût endommagé/.test(S.resume), `le résumé de la palette validée : ${S.resume}`);
+  egal(S.aria3, 'Palette P1 : clique sur un fût pour lire son étiquette', 'l’étiquette lue par un lecteur d’écran');
+  egal(S.compte, 'Comptage noté : 8 fûts (BL : 8).', 'le comptage noté');
+  egal(S.boutonsMotifs, [['qMot-avarie', 'Fût endommagé'], ['qMot-manquant', 'Manquant'], ['qMot-produit', 'Produit différent de la commande']], 'les boutons des motifs (le nom déclaré)');
+  egal(S.champRes, 'Nombre de fûts endommagés', 'le champ chiffré de la réserve');
+  egal(S.jalons['P1-comptage'], { fait: '8 fûts', attendu: '8 fûts (BL : 8)' }, 'le jalon du comptage');
+  egal(S.lignes, ['P1 AFF-20 : acceptée sous réserve — 1 fût endommagé (fuite).'], 'la ligne écrite sur le BL');
+  egal(S.jalons['P1-reserve'].attendu, 'P1 AFF-20 : acceptée sous réserve — 1 fût endommagé (fuite).', 'la réserve attendue (jalon)');
+  egal(S.jalons['P1-decision'].fait, 'Accepter avec réserves — Fût endommagé', 'la décision de l’élève');
+  vrai(/P1 : 8 fûts notés/.test(S.journal), `le journal : ${S.journal}`);
+  vrai(/Clique sur un fût de la palette/.test(S['3-comptage']), 'la consigne avant le premier clic sur un fût');
+  vrai(/Total : fûts comptés sur cette palette/.test(S['3-comptage']), 'le libellé du total');
+  vrai(/Fûts endommagés/.test(S['3-comptage']) && /Fûts manquants/.test(S['3-comptage']), 'les cases de la fiche de contrôle');
+  vrai(/Compte les fûts de la palette, place par place/.test(S['3-comptage']), 'la consigne de comptage d’une palette de fûts (pas de couches)');
+  // Le jalon « 7 fûts » : la palette P4 de la scène d'ENT-6.4, comptée 7.
+  const j = await p.evaluate(async () => {
+    const Q = await import('/core/types/quai.js');
+    window.__qs.db.quais['essai-inspection'].palettes.P2.compte = 7;
+    const l = Q.jalonsQuai(window.__qs.db, window.__qs.Q).L.find((x) => x.id === 'P2-comptage');
+    return [l.fait, l.attendu];
+  });
+  egal(j, ['7 fûts', '7 fûts (BL : 7)'], 'le jalon du comptage, 7 fûts comptés');
+  // Aucun mot « carton » (ni « Carton ») à l'écran, ni dans ce que lit un lecteur d'écran : texte et aria-label de chaque étape.
+  const trouves = Object.entries(S).filter(([k, t]) => typeof t === 'string' && /carton/i.test(t)).map(([k, t]) => `${k} : …${t.match(/.{0,40}carton.{0,40}/i)[0].replace(/\s+/g, ' ')}…`);
+  egal(trouves, [], 'le mot « carton » à l’écran d’un quai en fûts');
   await p.close();
 });
 

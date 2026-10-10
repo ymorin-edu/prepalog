@@ -170,6 +170,11 @@ export const PALETTES_ENT64 = [
 const PALETTE_CARTONS = { id: 'P1', ref: 'ESS-CAR', nom: 'Cartons d’essai', bl: 8, W: 2, D: 2, L: 2, manque: [], avarie: {}, attendu: 'accepter', motifAttendu: 'aucun',
   etiq: { ref: 'ESS-CAR', nom: 'CARTONS D’ESSAI', poids: '1 carton d’essai', lot: 'ESS-26-0001' } };
 
+// Ce que la scène d'ENT-6.4 déclare pour parler de fûts (chantier D-4, étape 4 ; brief MOTEUR-quai-inspection 2.1 b) : l'unité, et le nom du
+// motif « avarie » avec sa précision. Les cas de l'étape 2 (palette de cartons) restent sans unité : les textes d'aujourd'hui.
+export const UNITE_ENT64 = 'fûts';
+export const LIBELLES_ENT64 = { avarie: { nom: 'Fût endommagé', precision: 'fuite' } };
+
 // Le quai d'essai : le quai iso d'ENT-6.4 (sans froid, un camion ; une palette de cartons, ou les palettes données).
 // `securite` : une autre déclaration (les tests y passent des variantes) ; `arret` : l'arrêt de Nadia (ENT-6.4 : non) ;
 // `palettes` : les palettes du camion (par exemple `PALETTES_ENT64`).
@@ -177,6 +182,7 @@ export function quaiEssai({ arret = false, securite = null, palettes = null } = 
   const S = securite || Object.assign({}, SECURITE_ENT64, { arret });
   return {
     id: 'essai-inspection', rendu: 'iso', froid: false, motifs: ['avarie', 'manquant', 'produit'],
+    ...(palettes ? { unite: UNITE_ENT64, libelles: JSON.parse(JSON.stringify(LIBELLES_ENT64)) } : {}),
     titre: 'Plateforme de Buchelay — Quai 12 (page d’essai)',
     avertissement: 'Page d’essai du chantier D-4 : le quai, le camion et la palette sont construits pour l’essai.',
     lieu: { nom: 'Quai 12', temp: 15, refrigere: false }, zone: { nom: 'Zone de réception' },
@@ -207,13 +213,18 @@ export function monterScene(hote) {
     <details class="eqi-declare"><summary>Ce que la séance a déclaré (pour toi, jamais pour l'élève)</summary>
       <ul>${SECURITE_ENT64.points.map((p) => `<li><b>${p.objet}</b>, ${p.vue === 'dehors' ? 'dehors' : 'dedans'}, ${p.etat} : ${p.ok ? 'en ordre (piège)' : '<b>défaut</b>'} — ${p.lib}</li>`).join('')}</ul></details>
     <div data-seance-scene></div>
+    <details class="eqi-jalons" data-jalons-textes open><summary>Les comptages et les réserves attendus, calculés maintenant (l'élève ne les voit qu'au bilan)</summary>
+      <div data-textes-corps></div></details>
     <details class="eqi-jalons" data-jalons-secu open><summary>Les jalons de sécurité, calculés maintenant (l'élève ne les voit qu'au bilan)</summary>
       <div data-jalons-corps></div></details>`;
-  const corps = hote.querySelector('[data-jalons-corps]'), seance = hote.querySelector('[data-seance-scene]');
+  const corps = hote.querySelector('[data-jalons-corps]'), seance = hote.querySelector('[data-seance-scene]'), textes = hote.querySelector('[data-textes-corps]');
   let db = {}, Q = null;
   const majJalons = () => {
     if (!Q) return;
     const L = jalonsQuai(db, Q).L.filter((l) => /^securite-/.test(l.id));
+    const T = jalonsQuai(db, Q).L.filter((l) => /^P\d-(comptage|reserve)$/.test(l.id));
+    textes.innerHTML = `<table class="quai-bilan"><thead><tr><th>Jalon</th><th>Attendu</th></tr></thead><tbody>${T.map((l) =>
+      `<tr data-texte-jalon="${l.id}"><td>${l.lib}</td><td>${l.attendu}</td></tr>`).join('')}</tbody></table>`;
     corps.innerHTML = `<table class="quai-bilan"><thead><tr><th>Jalon</th><th>Ce que l'élève a fait</th><th>Attendu</th><th></th></tr></thead><tbody>${L.map((l) =>
       `<tr><td>${l.lib}</td><td>${l.fait}</td><td>${l.attendu}</td><td class="${l.ok ? 'quai-ok' : 'quai-ko'}">${l.ok ? '✓ juste' : '✗ pas (encore) juste'}</td></tr>`).join('')}</tbody></table>
       <p class="note">Phrase du bilan (affichée au bilan du quai si un de ces jalons est faux) : « ${Q.securite.bilan} »</p>`;
