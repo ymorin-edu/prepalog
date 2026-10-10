@@ -6,7 +6,9 @@
 // matin à la bonne personne (« Transférer à… », chantier D-1). Données dans `contenus/france-boissons-ent61.js`, univers
 // commun dans `contenus/france-boissons.js`, questions dans `contenus/questions/ENT-6.1.js`.
 //
-// Jalons pondérés, somme des poids = 20 (13 jalons de la séance + la question du point d'étape, `part: 2`). Une base par
+// Jalons pondérés, somme des poids = 20 (13 jalons de la séance = 15 + les trois questions notées, `part: 5` : deux au point
+// d'étape et une au transfert du message de Malo, étape A du 10/10/2026). L'écran « Avant de commencer » (quatre questions tirées
+// par élève, non notées) ouvre la séance. Une base par
 // séance (pas de `jeuId`). Pas de trame pour l'instant (Cowork, après validation à l'écran).
 // Les écrans tirés par élève (organigramme, fiche, écran de « Corriger » de chaque message) sont déclarés « fonction de la
 // base » dans le contenu (chantier D-1 bis, brief §7.3) : la séance se déclare comme les autres.

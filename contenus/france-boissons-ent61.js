@@ -212,8 +212,9 @@ export const FICHE_QUI = {
 };
 
 // ─────────────────────────────────────────────────────────────── les jalons (14 : 13 ici + la question du point d'étape)
-// Poids validés par défaut (brief §5 et §11) : organigramme 5 (Karim 2, deux cases à 1,5), chef de Lucas 2, liens 5
-// (cinq à 1), courrier 6 (quatre à 1,5), point d'étape 2 (`part` du fichier de questions). Total 20.
+// Poids (étape A, 10/10/2026 : les trois questions notées pèsent `part: 5`, les jalons du socle 15) : organigramme 4 (Karim 2, deux
+// cases à 1), chef de Lucas 1,5, liens 5 (cinq à 1), courrier 4,5 (Malo 1,5, les trois autres à 1). Total 15 + 5 = 20. Avant : 5 / 2 / 5 / 6
+// et `part: 2`. Les pièces fixes (case de Karim, message de Malo) gardent leur poids, les pièces tirées en perdent. À valider par Tristan.
 // Chaque jalon reste « à faire » jusqu'à l'envoi (fiche) ou au transfert (message) ; rien n'est vrai par inaction.
 // Le jalon d'une case compare la réponse au POSTE de la case de l'élève (sa lettre vient du tirage), jamais à une lettre.
 // Le courrier : le jalon juge le DERNIER destinataire (`a`) ; le premier bilan est figé par le moteur (`bilan1`).
@@ -248,11 +249,11 @@ const casesSocle = (db) => TIRAGE.piecesTirees(db, 'cases');
 export const ETAPES = [
   { id: 'case-karim', titre: 'Organigramme : la case de Karim', groupe: GROUPES.orga, ecran: ECRAN_FICHE, poids: 2,
     verifier: (db) => jugerCase(db, casesSocle(db)[0]) },
-  { id: 'case-2', titre: 'Organigramme : la première case tirée', groupe: GROUPES.orga, ecran: ECRAN_FICHE, poids: 1.5,
+  { id: 'case-2', titre: 'Organigramme : la première case tirée', groupe: GROUPES.orga, ecran: ECRAN_FICHE, poids: 1,
     verifier: (db) => jugerCase(db, casesSocle(db)[1]) },
-  { id: 'case-3', titre: 'Organigramme : la seconde case tirée', groupe: GROUPES.orga, ecran: ECRAN_FICHE, poids: 1.5,
+  { id: 'case-3', titre: 'Organigramme : la seconde case tirée', groupe: GROUPES.orga, ecran: ECRAN_FICHE, poids: 1,
     verifier: (db) => jugerCase(db, casesSocle(db)[2]) },
-  { id: 'chef-lucas', titre: 'Le chef de Lucas', groupe: GROUPES.chef, ecran: ECRAN_FICHE, poids: 2,
+  { id: 'chef-lucas', titre: 'Le chef de Lucas', groupe: GROUPES.chef, ecran: ECRAN_FICHE, poids: 1.5,
     verifier(db) {
       const f = ficheEnvoyee(db, QFQ);
       if (!f.envoye) return attente;
@@ -262,7 +263,7 @@ export const ETAPES = [
     ecran: ECRAN_FICHE, poids: 1, verifier: (db) => jugerLien(db, TIRAGE.piecesTirees(db, 'liens')[i]) })),
   ...[0, 1, 2, 3].map((i) => ({ id: i ? `courrier-${i + 1}` : 'courrier-malo',
     titre: i ? `Courrier : le message tiré n° ${i}` : 'Courrier : le message de Malo', groupe: GROUPES.courrier,
-    ecran: (db) => ecranMessage(courrierSocleDe(db)[i]), poids: 1.5, verifier: (db) => jugerMessage(db, courrierSocleDe(db)[i]) })),
+    ecran: (db) => ecranMessage(courrierSocleDe(db)[i]), poids: i ? 1 : 1.5, verifier: (db) => jugerMessage(db, courrierSocleDe(db)[i]) })),
   // Les cas bonus du confirmé : sans poids ni groupe, `null` quand l'élève ne les a pas reçus (caché à l'élève).
   { id: 'case-bonus', bonus: true, ecran: ECRAN_FICHE, titre: 'Organigramme : case en plus',
     verifier: (db) => { const p = TIRAGE.piecesBonus(db, 'cases')[0]; return p ? jugerCase(db, p) : null; } },
@@ -296,14 +297,17 @@ function accuse(cle, prenom, db) {
   return { mails: [mail(prenom, P.nom, mailDe(t.a), `TR : ${p.sujet}`, `Bien reçu, merci.\n\n${P.nom}`, { db, decalage: 1 })] };
 }
 // Le point d'étape répondu (juste ou faux) : le courrier peut commencer.
+// Les DEUX questions du point d'étape (`qui-decide-conges`, `qui-sanctionne`) : le courrier n'arrive qu'après la seconde.
 const pointDEtapeFait = (db) => {
-  const r = db && db.questions && db.questions[ID] && db.questions[ID]['qui-decide-conges'];
-  return !!(r && r.premiere != null);
+  const Q = db && db.questions && db.questions[ID];
+  return ['qui-decide-conges', 'qui-sanctionne'].every((id) => !!(Q && Q[id] && Q[id].premiere != null));
 };
 
 export const SUJET_ACCUEIL = 'Bienvenue à Buchelay';
 export const VOLET = {
   id: 'fb-ent61',
+  // Les messages du courrier arrivent plus tard (déclencheurs) : leurs clés, pour le geste `messagerie:transfert:<clé>` d'une question au fil.
+  transferables: BANQUE_COURRIER.map((p) => p.id),
   semer: (prenom) => ({ mails: [mail(prenom, INES.nom, INES.mail, SUJET_ACCUEIL,
     `Bonjour ${prenom}, bienvenue à Buchelay !\n\n`
       + 'Ce matin, tu tiens l’accueil avec moi : avant tout, regarde l’[[organigramme]] de la plateforme et les fiches de chacun (en pièces jointes).\n\n'
@@ -360,6 +364,23 @@ export const ACCUEIL = {
 export const DOC_ORGANIGRAMME_ELEVE = { id: 'organigramme', titre: 'Organigramme simplifié de la plateforme', court: 'Organigramme',
   html: (db) => organigrammeHtml({ vides: lettresDe(db) }) };
 
+// Le droit (étape A) : les cinq textes cités par les questions d'« Avant de commencer » et du point d'étape. Pied d'un texte RÉEL.
+const docDroit = () => `<article class="fb1-droit" aria-label="Le droit">
+    <p class="fb-t">Le droit : l’entreprise, ses salariés et leur employeur</p>
+    <p class="fb-st">Code du travail, article L1311-2 (alinéa 1)</p>
+    <p>« L’établissement d’un règlement intérieur est obligatoire dans les entreprises ou établissements employant au moins cinquante salariés. »</p>
+    <p class="fb-st">Code du travail, article L2311-2 (alinéas 1 et 2)</p>
+    <p>« Un comité social et économique est mis en place dans les entreprises d’au moins onze salariés. Sa mise en place n’est obligatoire que si l’effectif d’au moins onze salariés est atteint pendant douze mois consécutifs. »</p>
+    <p class="fb-st">Cour de cassation, chambre sociale, 13 novembre 1996, n° 94-13.187 (le lien de subordination)</p>
+    <p>« Le lien de subordination est caractérisé par l’exécution d’un travail sous l’autorité d’un employeur qui a le pouvoir de donner des ordres et des directives, d’en contrôler l’exécution et de sanctionner les manquements de son subordonné. »</p>
+    <p class="fb-st">Code du travail, article L4121-1 (alinéa 1)</p>
+    <p>« L’employeur prend les mesures nécessaires pour assurer la sécurité et protéger la santé physique et mentale des travailleurs. Ces mesures comprennent : 1° Des actions de prévention des risques professionnels, y compris ceux mentionnés à l’article L. 4161-1 ; 2° Des actions d’information et de formation ; 3° La mise en place d’une organisation et de moyens adaptés. »</p>
+    <p class="fb-st">Code du travail, article L1331-1 (la sanction)</p>
+    <p>« Constitue une sanction toute mesure, autre que les observations verbales, prise par l’employeur à la suite d’un agissement du salarié considéré par l’employeur comme fautif, que cette mesure soit de nature à affecter immédiatement ou non la présence du salarié dans l’entreprise, sa fonction, sa carrière ou sa rémunération. »</p>
+    <p class="fb-pied">Texte de loi (réel) — source : Légifrance</p>
+  </article>`;
+export const DOC_DROIT = { id: 'droit', titre: 'Le droit : l’entreprise, ses salariés et leur employeur', court: 'Le droit', html: docDroit() };
+
 export const OPTIONS = {
   menu: [],
   exercice: 'Séance 1 : bienvenue à Buchelay',
@@ -367,7 +388,10 @@ export const OPTIONS = {
   lexique: LEXIQUE,
   equipe: EQUIPE,
   questions: QUESTIONS,
-  documents: [DOC_ORGANIGRAMME_ELEVE, DOC_ANNUAIRE],
-  documentsStyle: STYLE_DOCUMENTS,
+  documents: [DOC_ORGANIGRAMME_ELEVE, DOC_ANNUAIRE, DOC_DROIT],
+  documentsStyle: `${STYLE_DOCUMENTS}
+.fb1-droit{padding:14px 18px 0}
+.fb1-droit p{margin:0 0 8px}
+.fb1-droit .fb-st{margin-top:14px}`,
   fiches: [FICHE_VU, FICHE_QUI],
 };

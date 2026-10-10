@@ -39,11 +39,22 @@ await pg.waitForSelector('#btnProf', { timeout: 8000 });
 
 // Monte la séance comme le site : `rendre(hote, ctx)` de l'activité. `o.db` : base de départ (copiée) ; `o.uid` (la graine) ;
 // `o.aisance` ; `o.role`. Rend la base. Les scores remontés sont rangés dans `window.__f.enregistres`.
+// Les réponses (écrites à la main) de la banque d’ouverture d’ENT-6.1 : toutes les clés sont des clés de choix.
+const REP61 = { 'fb-plateforme': 'distribue', 'organigramme-sert': 'qui', 'trait-plein': 'chef', 'rendre-compte': 'cheffe',
+  'ri-obligatoire': 'oui50', 'cse-obligatoire': 'oui11', 'malo-chef': 'non', 'zero-accident': 'employeur' };
+
 const monter = (o = {}) => pg.evaluate(async (o) => {
   const A = await import('/activites/france-boissons-organigramme.js');
   document.querySelector('#fTest')?.remove();
   const hote = document.createElement('div'); hote.id = 'fTest'; document.body.prepend(hote);
   const db = o.db ? JSON.parse(JSON.stringify(o.db)) : {};
+  // L'écran « Avant de commencer » (10/10/2026, étape A) ouvre la séance et ferme le reste du menu : les cas qui travaillent sur
+  // la séance partent d'un élève qui y a déjà répondu (une réponse par question de la banque, REP61 : n'importe quelle clé compte
+  // comme répondu). `sansOuverture: true` : on part de zéro.
+  if (!o.sansOuverture) {
+    const Q = ((db.questions = db.questions || {})['france-boissons-organigramme'] = db.questions['france-boissons-organigramme'] || {});
+    for (const [id, v] of Object.entries(o.rep61)) if (!Q[id]) Q[id] = { arrivee: 1, premiere: v, duree: 1 };
+  }
   window.__f = { db, enregistres: [] };
   A.rendre(hote, {
     meta: A.meta, aisance: o.aisance || 'standard',
@@ -53,7 +64,7 @@ const monter = (o = {}) => pg.evaluate(async (o) => {
     lireScore: async () => null, rendreCopie: async () => ({ rendu: Date.now() }),
   });
   return JSON.parse(JSON.stringify(db));
-}, o);
+}, { ...o, rep61: REP61 });
 
 const Z = '#fTest';
 const pause = (ms = 80) => pg.waitForTimeout(ms);
@@ -75,6 +86,8 @@ async function envoyerFiche(r) {
   await aller('fiche:qui-fait-quoi');
   for (const [l, qui] of Object.entries(r.cases)) await pg.selectOption(`${Z} [data-fiche-champ="case-${l}"]`, qui);
   await pg.selectOption(`${Z} [data-fiche-champ="chefLucas"]`, r.chef);
+  await pause();
+  await qFil61();                 // le choix du chef de Lucas ouvre la question de Karim (réflexion) : on la répond, on reprend
   for (const [id, h] of Object.entries(r.liens)) await pg.click(`${Z} [data-ouinon="liens|${id}|hierarchique|${h ? 1 : 0}"]`);
   await pg.click(`${Z} [data-fiche-envoyer]`);
   await pg.click(`${Z} [data-confirme-oui]`);
@@ -86,11 +99,29 @@ async function envoyerVu() {
   await pg.click(`${Z} [data-confirme-oui]`);
   await pause();
 }
+// Le point d'étape d'Inès : deux questions. `v` = la réponse à la première ; la seconde (« qui peut sanctionner Lucas ») est
+// juste (`employeur`) quand la première l'est (`karim`), fausse sinon.
 async function pointDEtape(v) {
   await aller('etape:avant-courrier');
-  await pg.click(`${Z} [data-q-choix="${v}"][data-q="qui-decide-conges"]`);
-  await pg.click(`${Z} [data-q-repondre="qui-decide-conges"]`);
+  for (const [id, c] of [['qui-decide-conges', v], ['qui-sanctionne', v === 'karim' ? 'employeur' : 'malo']]) {
+    await pg.click(`${Z} [data-q-choix="${c}"][data-q="${id}"]`);
+    await pg.click(`${Z} [data-q-repondre="${id}"]`);
+  }
   await pause();
+}
+// Les questions au fil d'ENT-6.1 (bonnes réponses écrites à la main) : répond au panneau ouvert, puis reprend, tant qu'il y en a une.
+// `faux` : la question de la commande de Malo (`qui-traite-malo`) reçoit une réponse fausse.
+const BONNES61 = { 'appui-chef': 'fiche', 'pourquoi-pas-helene': 'niveau', 'qui-traite-malo': 'ines' };
+async function qFil61(faux = false) {
+  for (let i = 0; i < 4; i++) {
+    const id = await pg.$eval(`${Z} [data-q-panneau]`, (e) => e.dataset.qPanneau).catch(() => null);
+    if (!id) return;
+    await pg.click(`${Z} [data-q-choix="${faux && id === 'qui-traite-malo' ? 'helene' : BONNES61[id]}"][data-q="${id}"]`);
+    await pg.click(`${Z} [data-q-repondre="${id}"]`);
+    await pause();
+    await pg.click(`${Z} [data-q-reprendre]`);
+    await pause();
+  }
 }
 async function ouvrirMessage(cle) {
   await aller('mail');
@@ -107,13 +138,9 @@ async function transferer(cle, qui) {
   await pg.click(`${Z} [data-transferer="${qui}"]`);
   await pg.click(`${Z} [data-confirme-oui]`);
   await pause();
-  if (await present('[data-q-panneau="pourquoi-pas-helene"] [data-q-repondre]')) {
-    await pg.click(`${Z} [data-q-choix="niveau"][data-q="pourquoi-pas-helene"]`);
-    await pg.click(`${Z} [data-q-repondre="pourquoi-pas-helene"]`);
-    await pause();
-    await pg.click(`${Z} [data-q-reprendre]`);
-    await pause();
-  }
+  // Au premier transfert (Malo, toujours le premier) : la question de Karim, puis celle d'Inès sur la commande de Malo (fausse
+  // seulement quand le message part chez Hélène : le « pire cas »).
+  await qFil61(cle === 'msg-malo' && qui === 'helene');
 }
 
 // Les réponses justes de fb-juste (écrites à la main, voir l'en-tête).
@@ -386,7 +413,7 @@ await v('Fonction de la base : au chargement, une fonction qui plante (ou rend a
       blocs: essai({ fiches: [S.FICHE_VU, { ...S.FICHE_QUI, blocs: boum }] }),
       blocsType: essai({ fiches: [S.FICHE_VU, { ...S.FICHE_QUI, blocs: () => 'texte' }] }),
       docs: essai({ fiches: [S.FICHE_VU, { ...S.FICHE_QUI, documents: boum }] }),
-      html: essai({ documents: [{ ...S.DOC_ORGANIGRAMME_ELEVE, html: () => 42 }, FB.DOC_ANNUAIRE] }),
+      html: essai({ documents: [{ ...S.DOC_ORGANIGRAMME_ELEVE, html: () => 42 }, FB.DOC_ANNUAIRE, S.DOC_DROIT] }),
       ecran: essai({}, { ...S, ETAPES: S.ETAPES.map((e) => (e.id === 'courrier-malo' ? { ...e, ecran: () => 7 } : e)) }),
     };
   });
@@ -400,7 +427,7 @@ await v('Fonction de la base : au chargement, une fonction qui plante (ou rend a
 
 await v('Fonction de la base : au dessin, une fonction qui plante (base de l’élève) est signalée et laisse un avis d’erreur, sans casser l’écran ni laisser partir la fiche', async () => {
   const avant = erreursF.length;
-  await pg.evaluate(async () => {
+  await pg.evaluate(async (REP61) => {
     const { composerSeance } = await import('/core/types/seance-entreprise.js');
     const { creerEntreprise } = await import('/core/types/entreprise.js');
     const FB = await import('/contenus/france-boissons.js');
@@ -408,17 +435,17 @@ await v('Fonction de la base : au dessin, une fonction qui plante (base de l’�
     const A = await import('/activites/france-boissons-organigramme.js');
     // Ne plante qu'avec un tirage (jamais sur la base vide du contrôle au chargement).
     const piege = (rendu) => (db) => { if (db.tirages) throw new Error('boum au dessin'); return rendu; };
-    const opts = { ...S.OPTIONS, fiches: [S.FICHE_VU, { ...S.FICHE_QUI, blocs: piege([]) }],
-      documents: [{ ...S.DOC_ORGANIGRAMME_ELEVE, html: piege('<p>vide</p>') }, FB.DOC_ANNUAIRE] };
+    const opts = { ...S.OPTIONS, fiches: [S.FICHE_VU, { ...S.FICHE_QUI, blocs: piege(S.FICHE_QUI.blocs({})) }],
+      documents: [{ ...S.DOC_ORGANIGRAMME_ELEVE, html: piege('<p>vide</p>') }, FB.DOC_ANNUAIRE, S.DOC_DROIT] };
     const M = creerEntreprise(composerSeance(FB, S, { ...A.meta }, opts).options);
     document.querySelector('#fTest')?.remove();
     const hote = document.createElement('div'); hote.id = 'fTest'; document.body.prepend(hote);
-    const db = {};
+    const db = { questions: { 'france-boissons-organigramme': Object.fromEntries(Object.entries(REP61).map(([id, v]) => [id, { arrivee: 1, premiere: v, duree: 1 }])) } };
     window.__f = { db, enregistres: [] };
     M.rendre(hote, { meta: A.meta, aisance: 'standard', profil: { prenom: 'Lea', nom: 'Test', role: 'eleve', uid: 'fb-piege' },
       jeu: { etat: () => db, sauver: () => {} }, enregistrer: (x) => window.__f.enregistres.push(x), quitter: () => {}, codeStock: 'FB',
       lireScore: async () => null });
-  });
+  }, REP61);
   await aller('fiche:qui-fait-quoi');
   vrai(await present('[data-fiche-erreur]'), 'avis d’erreur de la fiche');
   vrai(await present('[data-doc-erreur]'), 'avis d’erreur du document');
@@ -446,6 +473,223 @@ await v('ENT-6.1 : les messages portent la date du scénario — Inès le 14/06/
   vrai(R.ts >= E[0].ts + 2 * 60000 && R.ts < E[0].ts + 60 * 60000, 'réponse après l’accueil (2 min à 1 h) : ' + horodate(R.ts));
 });
 
+// ── Étape A (10/10/2026) : « Avant de commencer » d'ENT-6.1 et les trois questions au fil ─────────────────────────────────
+// Réponses (écrites à la main, une clé par question de la banque ; la banque compte 4 questions de préparation et 4 de droit,
+// l'élève en reçoit 2 + 2) : juste = fb-plateforme 'distribue', organigramme-sert 'qui', trait-plein 'chef', rendre-compte 'cheffe',
+// ri-obligatoire 'oui50' (n de 55 à 150, jamais 80), cse-obligatoire 'oui11' (n de 12 à 45), malo-chef 'non', zero-accident 'employeur'.
+// Questions au fil : n° 2 `qui-sanctionne` 'employeur' (1,5), n° 3 `appui-chef` (réflexion), n° 5 `qui-traite-malo` 'ines' (1,5), n° 1 2 points.
+const PREP61 = ['fb-plateforme', 'organigramme-sert', 'trait-plein', 'rendre-compte'];
+const DROIT61 = ['ri-obligatoire', 'cse-obligatoire', 'malo-chef', 'zero-accident'];
+const FAUX61 = { 'fb-plateforme': 'brasse', 'organigramme-sert': 'horaires', 'trait-plein': 'bureau', 'rendre-compte': 'comptes',
+  'ri-obligatoire': 'non200', 'cse-obligatoire': 'non50', 'malo-chef': 'oui-paie', 'zero-accident': 'salarie' };
+const tirage61 = async () => (await base()).questions[ID]['@tirage'];
+// Répond aux questions tirées de l'élève, dans l'ordre de l'écran, avec les réponses `rep`.
+async function repondreOuverture61(rep = REP61) {
+  const ids = (await tirage61()).ids;
+  for (let k = 0; k < ids.length; k++) {
+    await pg.click(`${Z} [data-ouv-aller="${k}"]`); await pause();
+    await pg.click(`${Z} [data-q-choix="${rep[ids[k]]}"][data-q="${ids[k]}"]`);
+    await pg.click(`${Z} [data-q-repondre="${ids[k]}"]`);
+    await pause();
+  }
+}
+const calcPresente = () => pg.evaluate(() => !!document.getElementById('calculetteFlottante'));
+const nettoyerCalc = () => pg.evaluate(() => document.getElementById('calculetteFlottante')?.remove());
+
+await v('ENT-6.1 : « Avant de commencer » — la séance s’ouvre sur 4 questions tirées (2 de préparation + 2 de droit), l’organigramme de l’élève, l’annuaire et le droit à gauche, la calculette ; menu fermé puis ouvert ; rien dans la note', async () => {
+  await nettoyerCalc();
+  await monter({ sansOuverture: true, uid: 'fb-juste' });
+  vrai(await present('[data-ouverture="avant-de-commencer"]'), 'la séance ne s’ouvre pas sur « Avant de commencer »');
+  egal(await pg.$$eval(`${Z} .ent-nav[data-vue]`, (L) => L.map((x) => x.dataset.vue)), ['ouverture'], 'entrées ouvertes au départ');
+  const ids = (await tirage61()).ids;
+  egal(ids.length, 4, 'questions tirées');
+  egal(ids.filter((i) => PREP61.includes(i)).length, 2, 'préparation');
+  egal(ids.filter((i) => DROIT61.includes(i)).length, 2, 'droit');
+  egal(await pg.$$eval(`${Z} .qo-pas`, (L) => L.length), 4, 'pastilles');
+  egal(await pg.$$eval(`${Z} .qo-onglet`, (L) => L.map((x) => x.textContent)), ['Organigramme', 'Annuaire (fiches de chacun)', 'Le droit'], 'onglets');
+  vrai(await calcPresente(), 'la calculette est absente de l’écran');
+  // L'organigramme montré est celui de l'élève : ses trois cases vides, lettrées, sans nom.
+  await pg.click(`${Z} [data-ouv-doc="organigramme"]`); await pause();
+  egal(await pg.$$eval(`${Z} .qo-feuille [data-og-case]`, (L) => L.map((x) => x.dataset.ogCase)), ['A', 'B', 'C'], 'cases vides de l’élève');
+  // Le droit : les cinq textes, avec leur source.
+  await pg.click(`${Z} [data-ouv-doc="droit"]`); await pause();
+  const droit = await pg.textContent(`${Z} .qo-feuille`);
+  for (const t of ['L1311-2', 'L2311-2', '94-13.187', 'L4121-1', 'L1331-1']) vrai(droit.includes(t), `« Le droit » ne cite pas ${t}`);
+  vrai(/Texte de loi \(réel\) — source : Légifrance/.test(droit), 'source de Légifrance');
+  await repondreOuverture61();
+  const menu = await pg.$$eval(`${Z} .ent-nav[data-vue]`, (L) => L.map((x) => x.dataset.vue));
+  vrai(['ouverture', 'accueil', 'mail', 'fiche:qui-fait-quoi'].every((m) => menu.includes(m)), 'menu après les quatre réponses : ' + menu);
+  const n = await note();
+  egal([n.score, n.max], [0, 20], 'note : les questions d’ouverture ne comptent pas');
+  egal(await bandeau(), [], 'bandeau de fin avant le travail');
+  vrai(await calcPresente(), 'calculette perdue après les réponses');
+  await aller('accueil');
+  vrai(!(await calcPresente()), 'la calculette flotte encore sur l’accueil');
+  await nettoyerCalc();
+});
+
+await v('ENT-6.1 : de l’écran « Avant de commencer » au bilan — 20/20 quelles que soient les réponses d’ouverture (justes ou fausses)', async () => {
+  for (const [uid, rep] of [['fb-juste', REP61], ['fb-quai', FAUX61]]) {
+    await monter({ sansOuverture: true, uid });
+    await repondreOuverture61(rep);
+    await envoyerFiche(uid === 'fb-juste' ? JUSTE : { cases: { a: 'karim', b: 'nadia', c: 'lucas' }, chef: 'karim',
+      liens: { 'lien-helene-objectif': true, 'lien-karim-tournee': true, 'lien-karim-preparateur': false, 'lien-lucas-attestation': false, 'lien-nadia-quai': false } });
+    await pointDEtape('karim');
+    for (const [cle, qui] of uid === 'fb-juste' ? COURRIER_JUSTE : [['msg-malo', 'ines'], ['msg-amandine-planning', 'karim'], ['msg-chauffeur-quai', 'nadia'], ['msg-partir-tot', 'nadia']]) await transferer(cle, qui);
+    const n = await note();
+    egal([n.score, n.max], [20, 20], `note de ${uid}`);
+    egal(await bandeau(), tout('ok'), `bandeau de ${uid}`);
+  }
+  await nettoyerCalc();
+});
+
+await v('ENT-6.1 : le tirage de l’ouverture — deux élèves n’ont pas les mêmes questions, toute la banque sort, toujours 2 + 2 ; ri-obligatoire (n de 55 à 150, jamais 80) et cse-obligatoire (n de 12 à 45) justes pour 50 graines', async () => {
+  const r = await pg.evaluate(async () => {
+    const { compilerQuestions, tirerOuverture } = await import('/core/types/questions.js');
+    const { QUESTIONS } = await import('/contenus/questions/ENT-6.1.js');
+    const M = compilerQuestions(QUESTIONS, null, ['organigramme', 'annuaire', 'droit']);
+    const T = [];
+    for (let s = 0; s < 300; s++) { const t = tirerOuverture(M, `graine-${s}`); T.push({ ids: t.ids, q: t.q }); }
+    return T;
+  });
+  for (const t of r) {
+    egal([t.ids.filter((i) => PREP61.includes(i)).length, t.ids.filter((i) => DROIT61.includes(i)).length], [2, 2], 'répartition 2 + 2 : ' + t.ids);
+  }
+  egal([...new Set(r.flatMap((t) => t.ids))].sort(), [...PREP61, ...DROIT61].sort(), 'toute la banque sort au moins une fois sur 300 graines');
+  vrai(new Set(r.map((t) => t.ids.slice().sort().join())).size > 5, 'les élèves reçoivent presque tous les mêmes questions');
+  vrai(r[0].ids.slice().sort().join() !== r.find((t) => t.ids.slice().sort().join() !== r[0].ids.slice().sort().join()).ids.slice().sort().join(), 'pas de différence trouvée');
+  // Valeurs tirées : la bonne réponse (clé commune) est juste pour chaque graine, les pièges faux.
+  const RI = r.filter((t) => t.q['ri-obligatoire']), CSE = r.filter((t) => t.q['cse-obligatoire']);
+  vrai(RI.length >= 50 && CSE.length >= 50, `moins de 50 tirages à valeurs : ${RI.length} / ${CSE.length}`);
+  for (const t of RI) {
+    const n = Number(/emploie (\d+) salariés/.exec(t.q['ri-obligatoire'].enonce)[1]);
+    vrai(n >= 55 && n <= 150 && n !== 80, `ri-obligatoire : n = ${n} hors plage`);
+    vrai(n >= 50, 'ri-obligatoire : « oui à partir de 50 » juste pour ' + n);   // le seuil est 50 (L1311-2) : oui
+    vrai(n < 200, 'ri-obligatoire : « seulement à partir de 200 » faux pour ' + n);
+    egal(new Set(Object.values(t.q['ri-obligatoire'].libs)).size, 3, 'choix distincts');
+  }
+  for (const t of CSE) {
+    const n = Number(/emploie (\d+) salariés/.exec(t.q['cse-obligatoire'].enonce)[1]);
+    vrai(n >= 12 && n <= 45, `cse-obligatoire : n = ${n} hors plage`);
+    vrai(n >= 11, 'cse-obligatoire : « oui à partir de 11 » juste pour ' + n);   // seuil 11 (L2311-2) : oui
+    vrai(n < 50, 'cse-obligatoire : « seulement à partir de 50 » faux pour ' + n);
+    egal(new Set(Object.values(t.q['cse-obligatoire'].libs)).size, 3, 'choix distincts');
+  }
+  vrai(new Set(RI.map((t) => t.q['ri-obligatoire'].enonce)).size > 10, 'les valeurs de ri-obligatoire ne varient pas assez');
+  // À l'écran : l'élève qui a reçu la question la voit avec SON nombre, et la bonne clé est la bonne.
+  let vu = 0;
+  for (const uid of ['t1', 't2', 't3', 't4', 't5', 't6', 't7', 't8']) {
+    await monter({ sansOuverture: true, uid });
+    const rec = await tirage61();
+    for (const id of ['ri-obligatoire', 'cse-obligatoire']) {
+      const k = rec.ids.indexOf(id);
+      if (k < 0) continue;
+      await pg.click(`${Z} [data-ouv-aller="${k}"]`); await pause();
+      const n = /emploie (\d+) salariés/.exec(await pg.textContent(`${Z} .qf-enonce`))[1];
+      vrai(rec.q[id].enonce.includes(`emploie ${n} salariés`), 'l’énoncé affiché n’est pas celui du tirage rangé');
+      await pg.click(`${Z} [data-q-choix="${REP61[id]}"][data-q="${id}"]`);
+      await pg.click(`${Z} [data-q-repondre="${id}"]`); await pause();
+      egal(await pg.getAttribute(`${Z} [data-q-verdict]`, 'data-q-verdict'), 'ok', `${id} avec n = ${n} : la bonne réponse n’est pas jugée juste`);
+      vu += 1;
+    }
+  }
+  vrai(vu >= 4, 'trop peu de questions à valeurs vues à l’écran : ' + vu);
+  await nettoyerCalc();
+});
+
+await v('ENT-6.1 : barème — les jalons du socle valent 15 (aucun à 0), les trois questions notées 5 (2 + 1,5 + 1,5)', async () => {
+  const r = await pg.evaluate(async () => {
+    const S = await import('/contenus/france-boissons-ent61.js');
+    const Q = await import('/contenus/questions/ENT-6.1.js');
+    return { poids: S.ETAPES.filter((e) => !e.bonus).map((e) => [e.id, e.poids]), part: Q.QUESTIONS.part,
+      q: Q.QUESTIONS.liste.filter((q) => q.type !== 'ouverture' && !q.reflexion).map((q) => [q.id, q.poids]) };
+  });
+  egal(r.poids, [['case-karim', 2], ['case-2', 1], ['case-3', 1], ['chef-lucas', 1.5], ['lien-1', 1], ['lien-2', 1], ['lien-3', 1], ['lien-4', 1],
+    ['lien-5', 1], ['courrier-malo', 1.5], ['courrier-2', 1], ['courrier-3', 1], ['courrier-4', 1]], 'poids des jalons du socle');
+  egal(r.part, 5, 'part des questions');
+  egal(r.q, [['qui-decide-conges', 2], ['qui-sanctionne', 1.5], ['qui-traite-malo', 1.5]], 'questions notées et leurs poids');
+  egal(r.poids.reduce((t, x) => t + x[1], 0) + r.part, 20, 'total');
+});
+
+await v('ENT-6.1 : question n° 2 d’Inès (qui peut sanctionner Lucas) — avec la n° 1 au point d’étape, le courrier attend les deux réponses ; fausse → ✗ et retour tout de suite, 18,5/20', async () => {
+  await monter({ uid: 'fb-juste' });
+  await envoyerFiche(JUSTE);
+  await aller('etape:avant-courrier');
+  egal(await pg.$$eval(`${Z} [data-q-etape] [data-question]`, (L) => L.map((x) => x.dataset.question)), ['qui-decide-conges', 'qui-sanctionne'], 'questions du point d’étape');
+  await pg.click(`${Z} [data-q-choix="karim"][data-q="qui-decide-conges"]`);
+  await pg.click(`${Z} [data-q-repondre="qui-decide-conges"]`);
+  await pause();
+  egal(await cles(), [], 'le courrier arrive avant la seconde réponse');
+  vrai(await pg.$eval(`${Z} [data-q-continuer]`, (b) => b.disabled), '« Continuer » ouvert avec une seule réponse');
+  await pg.click(`${Z} [data-q-choix="malo"][data-q="qui-sanctionne"]`);
+  await pg.click(`${Z} [data-q-repondre="qui-sanctionne"]`);
+  await pause();
+  egal(await pg.getAttribute(`${Z} [data-question="qui-sanctionne"] [data-q-verdict]`, 'data-q-verdict'), 'ko', 'verdict de la réponse fausse');
+  vrai(/l’entreprise qui décide|employeur/.test(await pg.textContent(`${Z} [data-question="qui-sanctionne"] .qf-retour`)), 'retour d’Inès');
+  egal(await cles(), ['msg-malo'], 'le courrier n’arrive pas après les deux réponses');
+  for (const [cle, qui] of COURRIER_JUSTE) await transferer(cle, qui);
+  proche((await note()).score, 18.5, 'note');
+  egal(await bandeau(), LIGNES.map((l) => [l, l === 'question:qui-decide-conges' ? 'ko' : 'ok']), 'bandeau : seule la ligne des questions d’Inès est fausse');
+});
+
+await v('ENT-6.1 : question n° 3 de Karim (sur quoi t’es-tu appuyé pour le chef de Lucas) — arrive au choix du chef, pas avant ; réflexion jamais notée ; « Merci, je note » sans retour ; le retour de Karim vient avec le bandeau de fin', async () => {
+  await monter({ uid: 'fb-juste' });
+  await aller('fiche:qui-fait-quoi');
+  await pg.selectOption(`${Z} [data-fiche-champ="case-a"]`, 'karim');
+  await pause();
+  vrai(!(await present('[data-q-panneau]')), 'la question arrive avant le choix du chef');
+  await pg.selectOption(`${Z} [data-fiche-champ="chefLucas"]`, 'karim');
+  await pause();
+  vrai(await present('[data-q-panneau="appui-chef"]'), 'la question n’arrive pas au choix du chef');
+  vrai(/Karim te pose une question/.test(await pg.textContent(`${Z} [data-q-panneau]`)), 'Karim ne pose pas la question');
+  await pg.click(`${Z} [data-q-choix="haut"][data-q="appui-chef"]`);
+  await pg.click(`${Z} [data-q-repondre="appui-chef"]`);
+  await pause();
+  vrai(await present('[data-q-merci]'), 'pas de « Merci, je note »');
+  vrai(!(await present('[data-q-verdict]')) && !(await present('[data-q-panneau] .qf-retour:not([data-q-merci])')) && !/Ce qu’en pense|Les deux premiers appuis/.test(await pg.textContent(`${Z} [data-q-panneau]`)), 'le retour de Karim est déjà là');
+  await pg.click(`${Z} [data-q-reprendre]`);
+  await pause();
+  egal((await base()).questions[ID]['appui-chef'].premiere, 'haut', 'réponse rangée');
+  await envoyerFiche(JUSTE);          // le chef est déjà choisi : la question ne revient pas
+  vrai(!(await present('[data-q-panneau]')), 'la question est revenue');
+  await pointDEtape('karim');
+  for (const [cle, qui] of COURRIER_JUSTE) await transferer(cle, qui);
+  const n = await note();
+  egal(n.score, 20, 'une réflexion ne compte pas (même répondue « le plus haut placé »)');
+  vrai(!Object.keys(n.detail).some((k) => /appui-chef/.test(k)), 'la réflexion est notée');
+  vrai(await present('[data-fin-retour="appui-chef"]'), 'le retour de Karim manque au bilan');
+  vrai(/Karim/.test(await pg.textContent(`${Z} [data-fin-retour="appui-chef"]`)), 'retour sans Karim');
+});
+
+await v('ENT-6.1 : question n° 5 d’Inès (qui va traiter la commande de Malo) — au transfert de CE message, après celle de Karim ; corrigée au bilan seulement ; fausse → 18,5/20', async () => {
+  await monter({ uid: 'fb-juste' });
+  await envoyerFiche(JUSTE);
+  await pointDEtape('karim');
+  await ouvrirMessage('msg-malo');
+  await pg.click(`${Z} [data-transfert-ouvrir]`);
+  await pg.click(`${Z} [data-transferer="ines"]`);
+  await pg.click(`${Z} [data-confirme-oui]`);
+  await pause();
+  const G = (await base()).gestes[ID];
+  vrai(typeof G['messagerie:transfert:msg-malo'] === 'number' && typeof G['messagerie:transfert'] === 'number', 'les deux gestes de transfert');
+  vrai(await present('[data-q-panneau="pourquoi-pas-helene"]'), 'la question générique de Karim vient d’abord');
+  await pg.click(`${Z} [data-q-choix="niveau"][data-q="pourquoi-pas-helene"]`);
+  await pg.click(`${Z} [data-q-repondre="pourquoi-pas-helene"]`);
+  await pg.click(`${Z} [data-q-reprendre]`);
+  await pause();
+  vrai(await present('[data-q-panneau="qui-traite-malo"]'), 'la question d’Inès n’arrive pas après celle de Karim');
+  await pg.click(`${Z} [data-q-choix="karim"][data-q="qui-traite-malo"]`);   // fausse
+  await pg.click(`${Z} [data-q-repondre="qui-traite-malo"]`);
+  await pause();
+  vrai(await present('[data-q-merci]') && !(await present('[data-q-verdict]')), 'corrigée tout de suite au lieu d’attendre le bilan');
+  await pg.click(`${Z} [data-q-reprendre]`);
+  await pause();
+  for (const [cle, qui] of COURRIER_JUSTE.slice(1)) await transferer(cle, qui);
+  proche((await note()).score, 18.5, 'note');
+  egal(await bandeau(), LIGNES.map((l) => [l, l === 'question:qui-decide-conges' ? 'ko' : 'ok']), 'bandeau');
+  vrai(await present('[data-fin-retour="qui-traite-malo"]'), 'le retour d’Inès manque au bilan');
+});
+
 await v('ENT-6.1 : aucune erreur JavaScript', async () => {
   if (erreursF.length) throw new Error(erreursF.slice(0, 4).join(' | '));
 });
@@ -471,6 +715,14 @@ const monter62 = (o = {}) => pg.evaluate(async (o) => {
     const Q = ((db.questions = db.questions || {})['france-boissons-commande'] = db.questions['france-boissons-commande'] || {});
     const REP = { 'qui-est-malo': 'client', 'les-vides': 'consignes', 'ou-regarder': 'stock-cond', 'vente-conclue': 'acceptation', 'consigne-rendue': '92' };
     for (const [id, v] of Object.entries(REP)) if (!Q[id]) Q[id] = { arrivee: 1, premiere: v, duree: 1 };
+    // Étape A (banque de 10 questions tirées) : les cinq nouvelles aussi, pour que tout tirage soit déjà répondu.
+    const PLUS = { 'format-fut': 'litres', 'bon-sert': 'livrer', 'tireuse': 'fut', 'offre-ines': 'offre', 'cgv-communiquer': 'communiquer' };
+    for (const [id, v] of Object.entries(PLUS)) if (!Q[id]) Q[id] = { arrivee: 1, premiere: v, duree: 1 };
+  } else if (!o.tirageReel) {
+    // « Avant de commencer » d'origine (5 questions fixes, ordre d'avant la banque) : le tirage rangé est celui de ces cinq,
+    // pour que le cas qui joue l'écran de bout en bout reste le même. `tirageReel: true` : le vrai tirage de l'élève.
+    const Q = ((db.questions = db.questions || {})['france-boissons-commande'] = db.questions['france-boissons-commande'] || {});
+    if (!Q['@tirage']) Q['@tirage'] = { graine: 'ancien', ids: ['qui-est-malo', 'les-vides', 'ou-regarder', 'vente-conclue', 'consigne-rendue'], q: {}, at: 1 };
   }
   window.__f = { db, enregistres: [] };
   A.rendre(hote, {
@@ -612,7 +864,7 @@ await v('ENT-6.2 : « Avant de commencer » — ouvre la séance (5 questions, d
   egal(await pg.$$eval(`${Z} .ent-nav[data-vue]`, (L) => L.map((x) => x.dataset.vue)), ['ouverture'], 'entrées ouvertes au départ');
   egal(await pg.$$eval(`${Z} .qo-pas`, (L) => L.length), 5, 'questions');
   egal(await pg.$$eval(`${Z} .qo-onglet`, (L) => L.map((x) => x.textContent)),
-    ['Message de Malo', 'Fiche client', 'Stock', 'Conditions de vente', 'Photos', 'Le droit'], 'onglets');
+    ['Message de Malo', 'Fiche client', 'Stock', 'Conditions de vente', 'Photos', 'La tireuse', 'Le droit'], 'onglets');   // étape A : 7e onglet, la photo de la tireuse
   vrai(/Bonjour ! Malo, le gérant de La Cabane à Malo/.test(await pg.textContent(`${Z} .qf-situation`)), 'situation d’Inès');
   // Question 1 : la fiche client à gauche ; réponse juste ; les questions suivantes montrent leur document.
   vrai(/C-14-2047/.test(await pg.textContent(`${Z} .qo-feuille`)), 'question 1 : la fiche client');
@@ -943,6 +1195,101 @@ await v('ENT-6.2 : enseignant — la séance s’ouvre (bon de commande, documen
   await aller('fiche');
   egal(await pg.$$eval(`${Z} [data-fiche-doc]`, (L) => L.length), 4, 'documents du bon');
   egal(await pg.evaluate(() => window.__f.enregistres.length), 0, 'scores remontés');
+});
+
+// ── Étape A (10/10/2026) : la banque d'« Avant de commencer » d'ENT-6.2 (10 questions, 5 tirées par élève) ────────────────
+// Réponses justes (écrites à la main) : qui-est-malo 'client', format-fut 'litres', bon-sert 'livrer', ou-regarder 'stock-cond' (préparation) ;
+// les-vides 'consignes', tireuse 'fut' (image) ; vente-conclue 'acceptation', consigne-rendue '92', offre-ines 'offre', cgv-communiquer
+// 'communiquer' (droit). Tirage : 2 + 2 + 1. Consigne rendue : 40 € par fût et 4 € par casier (arrêté du 6/02/2026), f de 1 à 6 fûts,
+// c de 1 à 8 casiers, jamais 9 fûts et 5 casiers (les vides de Malo).
+const PREP62 = ['qui-est-malo', 'format-fut', 'bon-sert', 'ou-regarder'], IMG62 = ['les-vides', 'tireuse'];
+const DROIT62 = ['vente-conclue', 'consigne-rendue', 'offre-ines', 'cgv-communiquer'];
+const REP62 = { 'qui-est-malo': 'client', 'format-fut': 'litres', 'bon-sert': 'livrer', 'ou-regarder': 'stock-cond', 'les-vides': 'consignes', tireuse: 'fut',
+  'vente-conclue': 'acceptation', 'consigne-rendue': '92', 'offre-ines': 'offre', 'cgv-communiquer': 'communiquer' };
+const tirage62 = async () => (await base()).questions[ID62]['@tirage'];
+async function repondreOuverture62(rep = REP62) {
+  const ids = (await tirage62()).ids;
+  for (let k = 0; k < ids.length; k++) {
+    await pg.click(`${Z} [data-ouv-aller="${k}"]`); await pause();
+    await pg.click(`${Z} [data-q-choix="${rep[ids[k]]}"][data-q="${ids[k]}"]`);
+    await pg.click(`${Z} [data-q-repondre="${ids[k]}"]`);
+    await pause();
+  }
+}
+
+await v('ENT-6.2 : « Avant de commencer » (banque) — 5 questions tirées par élève (2 préparation + 2 droit + 1 image), la calculette ; deux élèves n’ont pas tous les mêmes ; réponses justes → menu ouvert, rien dans la note ; puis parcours juste 20/20', async () => {
+  await nettoyerCalc();
+  await monter62({ sansOuverture: true, tirageReel: true, uid: 'fb62-banque' });
+  vrai(await present('[data-ouverture="avant-de-commencer"]'), 'la séance ne s’ouvre pas sur « Avant de commencer »');
+  const ids = (await tirage62()).ids;
+  egal([ids.filter((i) => PREP62.includes(i)).length, ids.filter((i) => IMG62.includes(i)).length, ids.filter((i) => DROIT62.includes(i)).length], [2, 1, 2], 'répartition 2 + 2 + 1 : ' + ids);
+  egal(await pg.$$eval(`${Z} .qo-pas`, (L) => L.length), 5, 'questions');
+  vrai(await calcPresente(), 'la calculette est absente de l’écran');
+  await repondreOuverture62();
+  vrai((await pg.$$eval(`${Z} .ent-nav[data-vue]`, (L) => L.map((x) => x.dataset.vue))).includes('fiche'), 'menu fermé après les cinq réponses justes');
+  egal([(await note()).score, (await note()).max], [0, 20], 'note : l’ouverture ne compte pas');
+  await aller('accueil');
+  vrai(!(await calcPresente()), 'la calculette flotte encore sur l’accueil');
+  await remplirBon(BON_JUSTE);
+  await repondreMalo(MSG_JUSTE);
+  egal((await note()).score, 20, 'note du parcours juste');
+  // Deux élèves : pas les mêmes questions (au moins une différente), et la photo de la tireuse se charge chez celui qui l'a reçue.
+  const R = [];
+  let photo = 0;
+  for (const uid of ['b1', 'b2', 'b3', 'b4', 'b5', 'b6']) {
+    await monter62({ sansOuverture: true, tirageReel: true, uid });
+    const t = await tirage62();
+    R.push(t.ids.slice().sort().join());
+    const k = t.ids.indexOf('tireuse');
+    if (k >= 0) {
+      await pg.click(`${Z} [data-ouv-aller="${k}"]`); await pause();
+      vrai(await pg.$$eval(`${Z} .qo-feuille img`, (L) => L.length === 1 && L.every((i) => i.complete && i.naturalWidth > 0)), 'la photo de la tireuse ne se charge pas');
+      vrai(/Photo : Travis Fish, Unsplash/.test(await pg.textContent(`${Z} .qo-feuille`)), 'crédit de la photo');
+      photo += 1;
+    }
+  }
+  vrai(new Set(R).size > 1, 'six élèves ont exactement les mêmes questions');
+  vrai(photo >= 1, 'personne n’a reçu la question de la tireuse sur six élèves');
+  await nettoyerCalc();
+});
+
+await v('ENT-6.2 : le tirage de l’ouverture — toute la banque sort sur 300 graines, toujours 2 + 2 + 1 ; consigne-rendue (f de 1 à 6 fûts, c de 1 à 8 casiers, jamais 9 et 5) juste pour 50 graines', async () => {
+  const r = await pg.evaluate(async () => {
+    const { compilerQuestions, tirerOuverture } = await import('/core/types/questions.js');
+    const { QUESTIONS } = await import('/contenus/questions/ENT-6.2.js');
+    const M = compilerQuestions(QUESTIONS, null, ['commande-malo', 'fiche-client', 'stock', 'conditions', 'droit']);
+    const T = [];
+    for (let s = 0; s < 300; s++) { const t = tirerOuverture(M, `graine-${s}`); T.push({ ids: t.ids, q: t.q }); }
+    return T;
+  });
+  for (const t of r) {
+    egal([t.ids.filter((i) => PREP62.includes(i)).length, t.ids.filter((i) => IMG62.includes(i)).length, t.ids.filter((i) => DROIT62.includes(i)).length], [2, 1, 2], 'répartition : ' + t.ids);
+  }
+  egal([...new Set(r.flatMap((t) => t.ids))].sort(), [...PREP62, ...IMG62, ...DROIT62].sort(), 'toute la banque sort');
+  const C = r.filter((t) => t.q['consigne-rendue']).slice(0, 50);
+  vrai(C.length === 50, 'moins de 50 tirages à valeurs : ' + C.length);
+  for (const t of C) {
+    const m = /rend au chauffeur (\d+) fûts? vides? et (\d+) casiers? vides?/.exec(t.q['consigne-rendue'].enonce);
+    vrai(!!m, 'énoncé illisible : ' + t.q['consigne-rendue'].enonce);
+    const f = Number(m[1]), c = Number(m[2]);
+    vrai(f >= 1 && f <= 6 && c >= 1 && c <= 8 && !(f === 9 && c === 5), `valeurs hors plage : ${f} fûts, ${c} casiers`);
+    const L = t.q['consigne-rendue'].libs;
+    egal(L['92'], `${f * 40 + c * 4} € (${f} × 40 € + ${c} × 4 €)`, 'bonne réponse (clé 92)');
+    vrai(L['80'].startsWith(`${f * 40} € :`), 'piège « fûts seuls » : ' + L['80']);
+    vrai(L['0'].startsWith('0 € :'), 'piège « 0 € »');
+    vrai(new Set(Object.values(L)).size === 3, 'choix identiques');
+    vrai(t.q['consigne-rendue'].retour.includes(`soit ${f * 40 + c * 4} €`), 'retour : ' + t.q['consigne-rendue'].retour);
+  }
+  vrai(new Set(C.map((t) => t.q['consigne-rendue'].enonce)).size > 10, 'les valeurs ne varient pas assez');
+});
+
+await v('ENT-6.2 : « Le droit » — l’article 1113 et l’article L441-1 (source Légifrance) ; les questions d’ouverture citent un texte qui y est', async () => {
+  await monter62({ sansOuverture: true, tirageReel: true, uid: 'fb62-droit' });
+  await pg.click(`${Z} [data-ouv-doc="droit"]`); await pause();
+  const t = await pg.textContent(`${Z} .qo-feuille`);
+  vrai(/article 1113/.test(t) && /L441-1/.test(t) && /tout acheteur qui en fait la demande pour une activité professionnelle/.test(t), 'textes de loi : ' + t.slice(0, 200));
+  vrai(/Texte de loi \(réel\) — source : Légifrance/.test(t), 'source');
+  await nettoyerCalc();
 });
 
 await v('ENT-6.2 : aucune erreur JavaScript', async () => {

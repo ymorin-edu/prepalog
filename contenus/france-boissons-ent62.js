@@ -157,10 +157,13 @@ const docConditions = () => `<article class="fb2-doc" aria-label="Conditions de 
   </article>`;
 
 const docDroit = () => `<article class="fb2-doc" aria-label="Le droit">
-    <p class="fb-t">Le droit : quand un contrat est formé</p>
+    <p class="fb-t">Le droit : le contrat de vente et les conditions de vente</p>
     <p class="fb-st">Code civil, article 1113</p>
     <p>« Le contrat est formé par la rencontre d’une offre et d’une acceptation par lesquelles les parties manifestent leur volonté de s’engager.
     Cette volonté peut résulter d’une déclaration ou d’un comportement non équivoque de son auteur. »</p>
+    <p class="fb-st" style="margin-top:16px">Code de commerce, article L441-1</p>
+    <p>« Toute personne exerçant des activités de production, de distribution ou de services qui établit des conditions générales de vente est tenue
+    de les communiquer à tout acheteur qui en fait la demande pour une activité professionnelle. »</p>
     <p class="fb-pied">Texte de loi (réel) — source : Légifrance</p>
   </article>`;
 
@@ -169,7 +172,7 @@ export const DOCUMENTS = [
   { id: 'fiche-client', titre: `Fiche client — ${CABANE.nom}`, court: 'Fiche client', html: docClient() },
   { id: 'stock', titre: 'Extrait du stock de Buchelay', court: 'Stock', html: docStock() },
   { id: 'conditions', titre: 'Conditions de vente CHR (extrait)', court: 'Conditions de vente', html: docConditions() },
-  { id: 'droit', titre: 'Le droit : quand un contrat est formé', court: 'Le droit', html: docDroit() },
+  { id: 'droit', titre: 'Le droit : le contrat de vente et les conditions de vente', court: 'Le droit', html: docDroit() },
   DOC_ORGANIGRAMME, DOC_ANNUAIRE,
 ];
 
