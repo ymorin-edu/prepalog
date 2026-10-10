@@ -50,7 +50,7 @@
 // PALETTE DE FÛTS (chantier D-4, étape 3 ; `rendu: 'iso'` seulement) : `forme: 'fut'` sur la palette (absent = cartons) donne un bac de
 // rétention noir portant 8 fûts debout en quinconce 3-2-3, numérotés du fond (1-2-3) à l'avant (6-7-8), de gauche à droite. `manque: [numéros]`
 // (places vides), `avarie: { numéro: face }` (une fuite, sur une face extérieure) ; le total (8), le réel et les avaries se calculent. Ni `W`,
-// `D`, `L`, `refs`, `etiqAvant`, ni les aides de couches (`verifierQuai` les refuse) ; le brouillon de calcul est imposé.
+// `D`, `L`, `refs`, `etiqAvant`, ni les aides de couches (`verifierQuai` les refuse), et le quai doit déclarer `unite` ; le brouillon de calcul est imposé.
 //
 // LA FICHE DE CONTRÔLE (04/10/2026, brief `docs/briefs/MOTEUR-quai-fiche-controle.md`, ergonomie arrêtée avec
 // Tristan sur `docs/briefs/picard/essai-fiche-controle.html`). À l'étape ③, sous la palette, l'élève note ses
@@ -443,6 +443,8 @@ function verifierPalettes(Q, E) {
       if (Array.isArray(manque) && manque.includes(n)) E.push(`${nom} : avarie : le fût ${n} est absent, il ne peut pas fuir`);
     });
   }));
+  // Sans unité déclarée, le quai parlerait de « cartons » devant des fûts (garde-fou du 10/10/2026, fin du chantier D-4).
+  if (futs && Q.unite === undefined) E.push('une palette de fûts demande `unite` (par exemple `\'fûts\'`) : sans elle, le quai parlerait de cartons');
   if (futs) ['regleCouches', 'detailComptage'].forEach((k) => { if (A[k]) E.push(`aides.${k} parle de couches de cartons : sans objet pour une palette de fûts`); });
 }
 

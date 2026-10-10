@@ -1178,11 +1178,13 @@ await v('Quai fûts : le total est 8, le réel et les avaries se calculent (vale
 });
 
 await v('Quai fûts : verifierQuai accepte les faces extérieures et refuse chaque déclaration fautive, avec un message clair', async () => {
-  egal(quaiMod.verifierQuai(QFUT(PALS)), [], 'les quatre palettes d’ENT-6.4');
+  // Depuis le garde-fou de l'unité (fin du chantier D-4), un quai de fûts déclare `unite: 'fûts'` : QFU = QFUT + cette unité.
+  const QFU = (ps, m = {}) => QFUT(ps, Object.assign({ unite: 'fûts' }, m));
+  egal(quaiMod.verifierQuai(QFU(PALS)), [], 'les quatre palettes d’ENT-6.4');
   egal(quaiMod.verifierQuai(QFUT([{ id: 'P1', ref: 'X', bl: 8, W: 2, D: 2, L: 2, manque: ['0,0,1'], avarie: { '1,0,0': [0, -1] }, etiq: {} }], { aides: { regleCouches: true, detailComptage: true } })), [], 'une palette de cartons n’est pas touchée par les règles des fûts');
   const fautes = [];
   for (const n of [1, 2, 3, 4, 5, 6, 7, 8]) for (const f of ['N', 'S', 'E', 'W']) {
-    const E = quaiMod.verifierQuai(QFUT([PF({ avarie: { [n]: f } })]));
+    const E = quaiMod.verifierQuai(QFU([PF({ avarie: { [n]: f } })]));
     if (EXT[n].includes(f)) { if (E.length) fautes.push(`fût ${n} face ${f} refusée : ${E[0]}`); }
     else if (!(E.length === 1 && /cachée/.test(E[0]))) fautes.push(`fût ${n} face ${f} (intérieure) : ${E.length ? E[0] : 'pas refusée'}`);
   }
@@ -1208,14 +1210,29 @@ await v('Quai fûts : verifierQuai accepte les faces extérieures et refuse chaq
     ['sans rendu iso', (Q) => { delete Q.rendu; }, /rendu: 'iso'/],
     ['aides.regleCouches', (Q) => { Q.aides = { regleCouches: true }; }, /aides\.regleCouches/],
     ['aides.detailComptage', (Q) => { Q.aides = { detailComptage: true }; }, /aides\.detailComptage/],
+    ['sans unité', (Q) => { delete Q.unite; }, /une palette de fûts demande `unite`/],
   ];
   for (const [nom, mute, motif] of REFUS_FUT) {
-    const Q = QFUT([PF()]); mute(Q);
+    const Q = QFU([PF()]); mute(Q);
     const E = quaiMod.verifierQuai(Q);
     if (!E.length) fautes.push(`« ${nom} » n’est pas refusé`);
     else if (!E.some((m) => motif.test(m))) fautes.push(`« ${nom} » : message sans « ${motif} » (${E.join(' | ')})`);
   }
   if (fautes.length) throw new Error(fautes.join(' ; '));
+});
+
+await v('Quai fûts : une palette de fûts sans unite est refusée (message clair, creerQuai ne s’ouvre pas) ; avec unite, ou avec des cartons sans unite, c’est accepté', async () => {
+  const sans = quaiMod.verifierQuai(QFUT([PF()]));
+  vrai(sans.length === 1 && /une palette de fûts demande `unite` \(par exemple `'fûts'`\)/.test(sans[0]), `sans unité : ${sans.join(' | ') || 'pas refusé'}`);
+  egal(quaiMod.verifierQuai(QFUT([PF()], { unite: 'fûts' })), [], 'avec unite: \'fûts\'');
+  egal(quaiMod.verifierQuai(QFUT([PF()], { unite: { un: 'fût', des: 'fûts' } })), [], 'avec { un, des }');
+  egal(quaiMod.verifierQuai(QFUT([{ id: 'P1', ref: 'X', bl: 8, W: 2, D: 2, L: 2, manque: [], avarie: {}, etiq: {} }])), [], 'des cartons sans unite : rien à redire');
+  const msg = await pg.evaluate(async (ps) => {
+    const Q = await import('/core/types/quai.js'), E = await import('/outils/essai-quai-inspection.js');
+    const q = E.quaiEssai({ palettes: ps }); delete q.unite;
+    try { Q.creerQuai(q); return 'pas d’erreur'; } catch (x) { return x.message; }
+  }, PALS);
+  vrai(/essai-inspection/.test(msg) && /demande `unite`/.test(msg), `message : ${msg}`);
 });
 
 await v('Quai fûts : un quai déclaré faux ne s’ouvre pas (creerQuai lève une erreur qui nomme le défaut)', async () => {
@@ -1632,7 +1649,7 @@ await v('Quai unité : avec une unité — le texte suit (singulier, pluriel, pr
 });
 
 await v('Quai unité : verifierQuai accepte les déclarations justes et refuse chaque faute, avec un message clair ; creerQuai ne s’ouvre pas sur une unité fautive', async () => {
-  const bon = (nom, m) => { const E = quaiMod.verifierQuai(QFUT([PF()], m)); if (E.length) throw new Error(`« ${nom} » devrait être accepté : ${E.join(' | ')}`); };
+  const bon = (nom, m) => { const E = quaiMod.verifierQuai(QFUT([PF()], Object.assign({ unite: 'fûts' }, m))); if (E.length) throw new Error(`« ${nom} » devrait être accepté : ${E.join(' | ')}`); };
   bon('unité en -s', { unite: 'fûts' });
   bon('unité { un, des }', { unite: { un: 'fût', des: 'fûts' } });
   bon('unité irrégulière', { unite: { un: 'cheval', des: 'chevaux' } });

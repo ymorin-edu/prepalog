@@ -388,10 +388,12 @@ et bilan. Palette à bloquer : `bloquer: true`. Jalons des messages : `jalonsDos
 `{ id, lib, fait, attendu, ok }`), placés avant et après ceux du blocage. Un bouton « Messagerie » mène aux messages, un lien y
 ramène au quai.
 **Quai sans froid** (04/10/2026, `MOTEUR-2de-S1` lots 4-5, exemple : `contenus/smoby-ent54.js`) : `froid: false` (ni
-ticket, ni sonde, ni temps hors froid, fiche de contrôle à trois cases), `motifs: ['avarie', 'manquant']` (motifs proposés),
-`zone: { nom }` (étape ④), `dechargement: { par: 'cariste', nom }` (chariot élévateur) et `securite: { scene, points: [{ id,
-lib, ok }], signaler: { bouton, reponse }, arret, photo, alt }` (étape ⓪ « Avant de décharger », jalons `securiteSignalee` et
-`securiteConstat` en tête). Un seul camion. **Décor fixe** (04/10/2026, ENT-5.4) : `photos.decor: 'fixe'` pour une photo
+ticket, ni sonde, ni temps hors froid, fiche de contrôle à trois cases), `motifs: ['avarie', 'manquant']` (motifs proposés ; un id inconnu est refusé depuis D-4),
+`zone: { nom }` (étape ④), `dechargement: { par: 'cariste', nom }` (chariot élévateur ; sur le quai iso, un chariot frontal dessiné : voir « Le quai iso »)
+et `securite: { scene, points: [{ id, lib, ok }], signaler: { bouton, reponse }, arret, commencer, photo, alt }` (la liste OK / Pas OK : étape ⓪
+« Avant de décharger », jalons `securiteSignalee` et `securiteConstat` en tête ; `arret` y est un texte, jamais `false`). Sur le quai
+iso, l'inspection peut se jouer sur la scène (`securite.mode: 'scene'`), les palettes peuvent être des fûts (`forme: 'fut'`) et
+l'unité se déclare (`unite`) : tout est dans « Le quai iso : inspection sur la scène, fûts, unité, cariste » plus bas. Un seul camion. **Décor fixe** (04/10/2026, ENT-5.4) : `photos.decor: 'fixe'` pour une photo
 prise porte ouverte : `porte` = l'ouverture de la remorque, `cadre` descend sous la photo (dalle dessinée), `places` dans
 cette dalle, `horloge: [x, y]`. Les jalons de la vue se regroupent au besoin dans les `etapes` de la séance (ENT-5.4 : comptage
 et décision d'une palette en un seul jalon, en lisant `jalonsQuai(db, QUAI).L`).
@@ -421,6 +423,198 @@ quantités »).
 
 `creerEntreprise` est dans `core/types/entreprise.js`. Les autres moteurs sont dans
 `core/types/` (`qcm`, `ordre`, `assoc`, `numerique`, `tableur`, `tableau`, `tournee`, …).
+
+### Le quai iso : inspection sur la scène, fûts, unité, cariste (chantier D-4, 10/10/2026)
+
+Cadrage et construction étape par étape : `docs/briefs/MOTEUR-quai-inspection.md` (§2 puis §3). Page d'essai où l'on clique
+tout : `outils/essai-quai-inspection.html` (la partie 2 joue le quai d'ENT-6.4 dans le vrai moteur). **Tout est facultatif** :
+sans les champs ci-dessous, Picard, Smoby et Spartoo ne changent pas (une référence octet pour octet de la séance Spartoo
+le garde, bloc de tests `quai-iso`). Sauf `unite`, `libelles` et `motifs` (tous les quais), tout demande `rendu: 'iso'`, donc
+un quai sans froid (`froid: false`) et un seul camion : sinon la séance refuse de s'ouvrir.
+
+**Le contenu est contrôlé au chargement** par `verifierQuai(Q)` (exportée, pure : la liste des écarts en clair, vide si tout
+va bien). `creerQuai` lève une erreur qui les nomme tous ; la séance est alors écartée du registre (voir « Pièges »). Chaque
+refus cité plus bas vient de là.
+
+#### Inspection sur la scène : `securite.mode: 'scene'`
+
+Sans `mode`, c'est l'étape ⓪ en liste OK / Pas OK, **inchangée** (photo, `points: [{ id, lib, ok }]`, `signaler: { bouton,
+reponse }`, `arret` en texte). Avec `mode: 'scene'`, l'élève inspecte le quai **sur le dessin** avant de décharger.
+
+| Champ de `securite` | Contenu | Défaut | Refusé si |
+|---|---|---|---|
+| `mode` | `'scene'` | absent = la liste | autre valeur ; `'scene'` sans `rendu: 'iso'` |
+| `points[]` | les objets à inspecter (voir plus bas) | — | liste vide ; `id` vide, en double, ou `aucun-faux` (réservé) ; deux points sur le même objet |
+| `points[].objet` | `cabine`, `cale`, `butoirs`, `niveleur`, `lampe` | — | autre |
+| `points[].etat` | l'état dessiné au départ (selon l'objet) | — | état inconnu pour cet objet |
+| `points[].ok` | `true` si cet état est sûr (un piège), `false` si c'est un défaut | — | absent ; **incohérent** (`ok: true` sur un état dangereux, `ok: false` sur l'état sûr) |
+| `points[].lib` | texte pour le bilan et le corrigé | — | absent. **Jamais affiché pendant l'inspection** |
+| `points[].repare` | ce que dit le collègue quand ce défaut est signalé | « Bien vu, je m’en occupe. » | — |
+| `points[].vue` | `'dehors'` ou `'dedans'` | celle de l'objet | différente de celle de l'objet (champ de lisibilité seulement) |
+| `consigne` | la phrase au-dessus de la scène | « Clique sur ce qui ne va pas, puis signale-le. » | — |
+| `signaler.qui` | qui reçoit le signalement | « le chef de quai » | — |
+| `signaler.bouton` | texte du bouton | `Signaler à ${qui}` (« Signaler à Nadia », « au chef de quai ») | — |
+| `signaler.rien` / `fin` / `vide` | réponses du collègue : marque à côté ou point en ordre / toujours en fin de réponse / rien à envoyer | « Là, je ne vois rien qui cloche. » / « Tu me dis quand on peut décharger. » / « Qu’est-ce qui ne va pas ? Clique d’abord sur ce que tu veux me signaler. » | — |
+| `commencer` | texte du bouton qui fige l'inspection (suivi de « → ») | « C’est bon, on peut décharger » | — |
+| `arret` | `true`, `false` ou le texte de l'arrêt | `true` | pas un booléen ni un texte ; **`false` en mode liste** (il n'y règle rien) |
+| `bilan` | phrase au bilan du quai si un jalon `securite-<id>` est faux | rien | — |
+| `photo`, `alt`, `scene`, `signaler.reponse` | — | ignorés | `photo` déclarée en mode scène |
+
+**Les cinq objets et leurs états.** Un objet non déclaré garde le dessin d'avant le chantier ; la cale et la lampe n'existent
+à l'écran que si un point les déclare.
+
+| Objet | Vue | États (le sûr en premier) | Non déclaré |
+|---|---|---|---|
+| `cabine` | dehors | `vide` / `conduite` (chauffeur au volant, silhouette sans visage derrière le pare-brise, moteur qui tourne : une fumée grise) | camion vide |
+| `cale` | dehors | `posee` (cale rouge devant la roue arrière, pente sous le pneu) / `absente` (rien de dessiné) | **pas dessinée** |
+| `butoirs` | dehors | `enPlace` / `absents` (retirés à cette porte) | présents. Déclarés, la paire côté droit est épaissie pour qu'on la voie camion à quai |
+| `niveleur` | dedans | `pose` / `releve` (plaque dressée, vide sombre entre le quai et la remorque) | posé |
+| `lampe` | dedans | `allumee` (tête, halo, faisceau dans la remorque) / `eteinte` | **pas dessinée** |
+
+**Ce que fait l'écran.**
+- **Déroulé.** Pas d'étape ⓪ : l'élève commence à ①. L'animation d'arrivée du camion (5,2 s, « Passer l'animation ») se
+  termine par la scène **figée**, la consigne, les boutons : ni bulle du chauffeur ni bon de livraison. ② à ④ restent
+  fermées tant que « C'est bon » n'a pas été validé. Le BL et « Oui, vous pouvez décharger » viennent **après**.
+- **Deux vues**, comme l'ancienne animation d'ENT-1.1 : « dehors » (façade, camion, cabine, cale, butoirs) et « dedans »
+  (quai, remorque, niveleur, lampe, une personne debout qui n'est pas un objet : la cliquer = tomber à côté). « Ouvrir la
+  porte de quai » bascule sur « dedans » et joue la levée de la porte (1,8 s ; la scène ne répond pas pendant ce temps) ;
+  l'ouverture est rangée (un rechargement montre la porte levée) ; ensuite « Voir dedans → » / « ← Revoir dehors ».
+  Ouvrir ne coûte pas de minute et ne fige rien.
+- **Marques.** Un clic pose un rond numéroté (encre, jamais vert ni rouge). Un clic sur une marque **pas encore envoyée**
+  la retire. Le moteur sait quel objet est touché (le premier point déclaré de cette vue dont la zone contient le clic ;
+  sinon « à côté »). **Rien dans le dessin ne nomme un objet** (ni `title`, ni `tabindex`, ni `role`, ni `data-*` : un test
+  le garde), curseur en croix partout, aucune surbrillance au survol : n'en ajouter aucun.
+- **Signaler.** Sans marque à envoyer : la réponse `vide`, rien n'est rangé. Sinon les marques partent en **un signal** et le
+  collègue répond : les `repare` des défauts touchés **pas encore réparés** (dans l'ordre de déclaration), puis `rien` une
+  seule fois s'il y a une marque à côté, un point en ordre ou un défaut déjà réparé, puis `fin`. La scène **se répare
+  sous les yeux de l'élève** (cabine : plus de silhouette ni de fumée et le chauffeur descend près de l'accueil ;
+  niveleur posé ; cale posée…). Une marque envoyée est grisée en tirets et **inerte** : elle masque ce qu'elle recouvre
+  (pour re-signaler le même objet, cliquer ailleurs dans sa zone).
+- **« C'est bon, on peut décharger »** : confirmation **en deux clics** (« On décharge, c'est définitif : cliquez pour
+  confirmer », avec « Annuler »). Si un défaut n'a jamais été signalé et que `arret` n'est pas `false`, **hors
+  évaluation** : le collègue arrête l'élève (texte `arret`, ou « Stop ! … Regarde encore la scène et signale ce qui ne va
+  pas. »), **sans nommer le point** ; l'élève continue d'inspecter et ses signaux suivants comptent « après l'arrêt »
+  (jalon faux). En évaluation (`copie`), rien n'arrête jamais. Sinon l'inspection est **figée** : marques non envoyées
+  abandonnées, marques cachées, défauts restants remis à l'état sûr **sans un mot** (l'inaction ne se voit qu'au jalon), puis
+  la suite habituelle (chauffeur debout et sa bulle, BL, « Oui, vous pouvez décharger »). ② et ④ dessinent le niveleur posé
+  et la lampe dans son état sûr.
+- **Jalons** (les deux jalons de la liste ne sont pas produits en mode scène). Un par défaut : `securite-<id>`, « Danger n° 1
+  signalé avant de décharger » (juste = le point est dans un signal envoyé **avant** l'arrêt) ; puis `securite-aucun-faux`
+  (juste = au moins un signal, aucun sur un point en ordre, aucune marque à côté). `lib` **neutres** (ils peuvent se lire
+  pendant la séance) ; le défaut est nommé dans `attendu`, lu au bilan. Re-signaler un défaut déjà réparé n'est **pas** un
+  faux signalement. Aucun n'est vrai par inaction. Les titres d'étape de la séance (`etapes[].titre`) ne s'affichent que dans le bilan du quai (après « Clore »)
+  et au bandeau de fin, mais **la séance les garde neutres** quand même (pas « La cale signalée avant de décharger »),
+  pour ne rien souffler si leur affichage change. La séance donne leurs poids à ces jalons comme aux autres (`etapes`).
+- **Gestes publiés** (pour les questions au fil et les messages déclenchés) : `scene:<id>:signaler` (à chaque envoi réel de
+  marques) et `scene:<id>:decharger` (au figeage réel : **pas** quand le collègue arrête l'élève). Absents en mode liste.
+- **Remise à zéro** : « Recommencer la réception » (guidage et entraînement ; absent en évaluation et avec `recommencer:
+  false`) repart d'une inspection vierge. « Corriger » après le bilan ne rouvre jamais le quai.
+- **État rangé** : `db.quais[<id>].securite = { mode: 'scene', marques, compteur, signaux, ouverte, arrete, fait, chef }`. L'état
+  des objets n'est **jamais** rangé : il se calcule (`etatsScene`) depuis les signaux et le figeage. Une base écrite avant le
+  mode scène est complétée sans rien effacer.
+- **Mouvement réduit** (réglage du système) : pas de levée de porte animée ni de recul du camion, l'arrivée s'affiche
+  d'emblée ; la fumée reste **dessinée, immobile** (sinon l'indice disparaîtrait).
+- **Clavier : non pris en charge.** L'inspection se joue à la souris ou au doigt (arbitrage du brief ENT-6.4 §7.3) : la
+  séance doit le dire dans son compte rendu. À 375 px de large le dessin est réduit (les marques font alors ~9 px) : à
+  regarder à l'écran avant d'ouvrir à des élèves sur téléphone.
+
+#### Palette de fûts : `forme: 'fut'`
+
+Sur une **palette** du camion (absent = cartons), avec `rendu: 'iso'`. Un bac de rétention **noir** (jamais de bois) porte
+**huit fûts debout** en quinconce 3-2-3, numérotés du fond vers l'avant, de gauche à droite : 1-2-3 (rangée du fond), 4-5,
+6-7-8 (devant).
+
+```js
+{ id: 'P3', forme: 'fut', ref: 'AFF-20', nom: 'Affligem Blonde fût 20 L', bl: 8, manque: [], avarie: { 2: 'N' },
+  attendu: 'reserves', motifAttendu: 'avarie', etiq: { ref: 'AFF-20', nom: 'AFFLIGEM BLONDE FÛT 20 L', poids: 'fût de 20 L', lot: '…' } },
+{ id: 'P4', forme: 'fut', ref: 'EDW-20', nom: 'Edelweiss fût 20 L', bl: 7, manque: [7], attendu: 'accepter', motifAttendu: 'aucun', etiq: { … } },
+```
+
+- `manque: [7]` : **numéros** des places vides (rien n'y est dessiné : le trou se voit). `avarie: { 2: 'N' }` : le fût n° 2
+  fuit sur sa face `N` (coulure sombre sur le fût et flaque ambre dans le bac devant lui, dessinées seulement quand la
+  palette est tournée du bon côté). Faces extérieures de chaque place : 1 `N` `W` · 2 `N` · 3 `N` `E` · 4 `W` · 5 `E` ·
+  6 `S` `W` · 7 `S` · 8 `S` `E`.
+- **Calculés, jamais déclarés** : le total (toujours 8), le réel (`8 − manque.length`), le nombre d'avaries (nombre de clés
+  d'`avarie`), les manquants (`bl − réel`). Une dimension déclarée n'aurait aucun sens.
+- **Refusé** : `W`, `D`, `L`, `refs` ou `etiqAvant` sur une palette de fûts ; un numéro de `manque` ou d'`avarie` hors 1-8,
+  non entier ou en double ; une face autre que `N`, `S`, `E`, `W` ; une face **intérieure** (cachée par les autres fûts) ; un fût absent
+  qui fuit ; une `forme` autre que `'fut'` ; `rendu` autre que `'iso'` ; `aides.regleCouches` ou `aides.detailComptage`
+  (parlent de couches) ; **un quai sans `unite`** (voir plus bas : « une palette de fûts demande `unite` (par exemple `'fûts'`) »).
+- **Brouillon de calcul imposé** : une palette de fûts prend toujours le brouillon (2 × 5 cases libres), même si la séance
+  déclare `calcul: { forme: 'feuille' }` (les lignes de la feuille parlent de couches).
+- **À l'écran.** ② et ④ : les palettes sont dessinées à l'échelle du décor. ③ : la palette en grand, quatre vues
+  (« ⟲ Tourner / Tourner ⟳ »), **chaque fût cliquable** (sa collerette porte l'étiquette de la référence, lisible en grand ; zoom « Fût 3 / 8 »).
+  **La fuite d'une face se voit à deux rotations consécutives** (la face de devant, puis le côté), jamais aux deux autres :
+  la fuite sur la face `N` se voit de l'arrière et du côté droit, pas de l'avant ni du côté gauche. « Visible d'une seule
+  vue » n'est pas réalisable avec cette règle de visibilité.
+- Consigne d'aide (`aides.consignes`) propre aux fûts : « Compte les fûts de la palette, place par place. Regarde bien s'il
+  manque une place dans le bac. Fais le tour de la palette si besoin. »
+
+#### Unité et libellés des motifs : `unite`, `libelles`, `motifs` (tous les quais)
+
+| Champ | Contenu | Défaut | Refusé si |
+|---|---|---|---|
+| `unite` | `'fûts'` (pluriel en -s, le singulier s'en déduit) ou `{ un: 'cheval', des: 'chevaux' }` | `{ un: 'carton', des: 'cartons' }` | texte vide ou sans « s » final ; objet sans `un` ou sans `des` |
+| `motifs` | liste d'ids proposés : `avarie`, `manquant`, `produit`, `temperature` (sans froid, jamais « température ») | tous | **id inconnu** (avant D-4, ignoré en silence) ; pas une liste |
+| `libelles.avarie.nom` | nom du motif | « Cartons endommagés » (l'unité y entre) | texte vide |
+| `libelles.avarie.precision` | ce qui suit « endommagé(s) » dans la réserve | « écrasé(s) » accordé | texte vide |
+| `libelles.manquant.nom`, `libelles.produit.nom` | noms de ces motifs | « Manquant », « Produit différent de la commande » | texte vide ; toute autre clé |
+
+L'unité est lue **partout** dans le texte du quai (champs chiffrés « Nombre de fûts endommagés / manquants », fiche de
+contrôle, colonne du BL « Fûts » et « Par fût », comptage, réserves, journal, jalon « 7 fûts », aides, zoom « Fût 3 / 8 »,
+aria-labels) : une seule source, **ne jamais l'écrire en dur dans un contenu**. Elle doit être **masculine** (« endommagés »,
+« manquants » : le moteur ne le vérifie pas). Sans `unite`, les textes sont ceux d'avant le chantier, caractère pour
+caractère. Exemple : `unite: 'fûts'` et `libelles: { avarie: { nom: 'Fût endommagé', precision: 'fuite' } }` donnent la
+réserve « P3 AFF-20 : acceptée sous réserve — 1 fût endommagé (fuite). ». `MOTIFS` reste exporté tel quel ; un corrigé qui
+écrit les motifs d'un quai à libellés déclarés appelle `libMotifs(L, Q)` (`libellesMotifs(Q)` rend la table).
+
+#### Déchargement au chariot frontal : `dechargement.par: 'cariste'` en iso
+
+Sur le quai iso, un **chariot frontal** conduit par un cariste sans visage (gilet jaune, de dos) décharge à la place du
+chauffeur au transpalette : il entre par l'ouverture, prend la palette de tête sur ses fourches, la pose à sa place d'arrivée,
+revient à vide. Il est dessiné à l'échelle du quai (0,85 de celui de la scène animation). Les palettes sortent dans l'**ordre
+inverse du chargement** (P4, P3, P2, P1 pour quatre) : le chariot ne se retourne pas et son corps est derrière sa charge, il
+faut remplir la rangée proche du mur avant celle du fond ; les places d'arrivée sont celles du chauffeur, et la légende, le
+journal et les pastilles suivent l'ordre de sortie. Légende « {nom} sort la palette P4 au chariot (1 sur 4) » (sans `nom`
+dans `dechargement` : « Le cariste »). Le chauffeur du camion reste debout près de l'accueil. Durée : 32 s pour quatre
+palettes (« Passer l'animation » existe) ; en mouvement réduit, l'état final tout de suite. Sans `par: 'cariste'` : le
+chauffeur au transpalette, comme Spartoo (inchangé). Au-delà de quatre palettes le plan n'a pas été éprouvé.
+
+#### Plusieurs palettes sur le quai iso
+
+Avant ce chantier, le quai iso déchargeait une palette (Spartoo). Il en décharge maintenant plusieurs (joué et testé avec les
+quatre palettes de fûts d'ENT-6.4). La remorque dessinée fait 3,3 m et l'ouverture 1,2 m (décor stylisé) : aux étapes ② et ④
+les palettes de fûts sont dessinées à l'échelle du décor, en grand à ③ ; celles du fond sont coupées au mur ; la zone de
+réception, les places d'arrivée et le cadre (agrandi à partir de trois palettes) sont calculés pour N palettes ; une file
+d'attente avance d'un cran dans la remorque. Avec **une** seule palette, les valeurs sont celles d'avant (Spartoo).
+
+#### Exemple (le quai d'ENT-6.4, forme réelle des champs)
+
+```js
+quai: {
+  id: 'ent64', rendu: 'iso', froid: false, lieu: { nom: 'Quai 12', temp: 15, refrigere: false },
+  unite: 'fûts', motifs: ['avarie', 'manquant', 'produit'],
+  libelles: { avarie: { nom: 'Fût endommagé', precision: 'fuite' } },
+  dechargement: { par: 'cariste' },
+  securite: {
+    mode: 'scene', arret: false,
+    consigne: 'Clique sur ce qui ne va pas, puis signale-le à Nadia.',
+    points: [
+      { id: 'cabine', objet: 'cabine', etat: 'conduite', ok: false, lib: 'Chauffeur au volant, moteur allumé',
+        repare: 'Bien vu : je fais couper le moteur, le chauffeur me donne les clés et descend.' },
+      { id: 'niveleur', objet: 'niveleur', etat: 'releve', ok: false, lib: 'Niveleur relevé', repare: 'Bien vu : je pose le niveleur.' },
+      { id: 'cale', objet: 'cale', etat: 'posee', ok: true, lib: 'Cale de roue' },       // un piège : en ordre
+      { id: 'butoirs', objet: 'butoirs', etat: 'enPlace', ok: true, lib: 'Butoirs de quai' },
+      { id: 'lampe', objet: 'lampe', etat: 'allumee', ok: true, lib: 'Lampe de quai' },
+    ],
+    signaler: { qui: 'Nadia' },
+    bilan: 'La scène n’était pas sûre : avant d’entrer dans un camion, il doit être immobilisé et le passage vers la remorque doit être sûr.',
+  },
+  camions: [{ transporteur: '…', fournisseur: '…', bl: '…', arrivee: '07:30', palettes: [ /* P1 à P4, forme: 'fut' */ ] }],
+}
+```
+
+Les jalons se lisent par `etapesQuai(QUAI)` comme pour tout quai : les poids se donnent dans les `etapes` de la séance.
 
 ## `meta` : les champs
 
@@ -1013,7 +1207,9 @@ palette), `face`, `boite`, cadrage automatique sur le décor ; décor (sol, mur,
 panneau, flèches et textes au sol, repères de profondeur) ; charge `retention` (palette de rétention noire, 0 à 4
 fûts, étiquette de lot, texte au sol, pastille « ! ») ; acteur `chariotFrontal` (gestes `poser`, `reprendre`,
 cariste en silhouette sans visage). Il est conçu pour servir aussi au futur mode « stockage de masse » du Plan
-d'entrepôt (ENT-6.5 §7.1).
+d'entrepôt (ENT-6.5 §7.1). `core/iso.js` porte aussi les objets du **quai iso** (façade, camion porteur, cabine, cale, butoirs,
+niveleur, lampe, bac de rétention à huit fûts, `boiteEcran` pour les zones de clic) : ils sont décrits dans « Le quai iso » ;
+`dessinerChariotFrontal` y sert aussi, à l'échelle du quai (options `chargeSvg`, `coupe`, `gilet`).
 
 **Un objet qui manque** (camion, transpalette, rack, quai…) : l'écrire dans la section 7 du brief de la séance
 (« objets à ajouter au kit » : ce qu'on doit voir, les gestes, une image de référence) ; un chantier moteur l'ajoute à
@@ -1055,7 +1251,7 @@ poids de ses jalons + `part` doit valoir 20 (contrôlé à l'ouverture).
   |---|---|
   | fiche `<id>` | `fiche:<id>:<bloc>` (choisir, cocher, remettre en ordre ; une saisie à la sortie de la case), `fiche:<id>:<bloc>:<ligne>` (classer une ligne d'un tableau oui / non), `fiche:<id>:envoyer` |
   | planning `<id>` | `planning:<id>:poser` (poser, déplacer, retirer une carte), `planning:<id>:envoyer` |
-  | quai `<id>` | `quai:<id>:decharger`, `quai:<id>:valider` (une palette), `quai:<id>:cloturer` |
+  | quai `<id>` | `quai:<id>:decharger`, `quai:<id>:valider` (une palette), `quai:<id>:cloturer` ; en inspection sur la scène (`securite.mode: 'scene'`, D-4) en plus `scene:<id>:signaler` (chaque envoi de marques), `scene:<id>:decharger` (le figeage « C'est bon », pas l'arrêt par le collègue) |
   | plan d'entrepôt `<id>` | `entrepot:<id>:poser` (poser une palette), `entrepot:<id>:verifier` |
   | animation `<id>` | `animation:<id>:<question>` (la première réponse) |
   | messagerie (toutes les séances) | `messagerie:transfert` (transférer un message, n'importe lequel ; chantier D-1) ; `messagerie:transfert:<clé du message>` (transférer CE message, 10/10/2026, publié **en plus** du précédent) |
@@ -1179,8 +1375,9 @@ sur 2 » est calculé). Après toute modification : `node outils/test.mjs questi
   condition est fausse, pour l'élève seulement (ENT-1.1 : le quai, tant que le questionnaire n'est pas envoyé).
 - Une réception semée peut porter `annoncee: true` (visible, non saisissable), `colisVisibles: false` (pas de tableau des colis),
   `colisLibelle` (colonne « Colis » de la liste) et `consigneQuai` (l'encadré qui remplace le tableau).
-- Quai : `rendu: 'iso'` (quai sans froid, un camion ; voir l'en-tête de `core/types/quai.js`), et sur le camion `commande`, `lot`,
-  `expedie` (date ou jours par rapport à aujourd'hui) pour l'en-tête du BL ; `parCarton` sur les `refs`.
+- Quai : `rendu: 'iso'` (quai sans froid, un camion ; voir l'en-tête de `core/types/quai.js` et « Le quai iso » plus haut : inspection sur
+  la scène, palettes de fûts, plusieurs palettes, cariste), et sur le camion `commande`, `lot`, `expedie` (date ou jours par rapport à
+  aujourd'hui) pour l'en-tête du BL ; `parCarton` sur les `refs` (la colonne s'intitule « Par » suivi de l'unité du quai).
 - Fiche : un bloc `choix` peut porter `colonne: true` (réponses longues l'une sous l'autre). Tout envoi définitif (fiche, phrases,
   planning, bon de réception) passe par une confirmation dans la page : un test qui clique « Envoyer » doit ensuite cliquer
   `[data-confirme-oui]`.
