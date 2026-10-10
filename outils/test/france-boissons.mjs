@@ -487,19 +487,31 @@ const MSG_JUSTE = {
   fin: 'Cordialement, Lea, administration des ventes France Boissons',
 };
 const JALONS62 = ['heineken30', 'affligem', 'remplacement', 'jour', 'eau-vides', 'msg-rupture', 'msg-livraison', 'msg-ton'];
-const LIGNES62 = ['heineken30', 'jour', 'eau-vides', 'msg-rupture', 'msg-livraison', 'msg-ton'];   // 1er jalon de chaque ligne du bandeau
+const LIGNES62 = ['heineken30', 'jour', 'eau-vides', 'msg-rupture', 'msg-livraison', 'msg-ton', 'question:jour-engage', 'question:qui-utilise-le-bon'];   // 1er jalon de chaque ligne du bandeau
 const etats62 = (n) => JALONS62.map((j) => [j, n.detail[j]]);
-// Poids écrits à la main (validés par Tristan le 10/10/2026, total 20) : fûts 1 + 2 + 3, jour 2, eau et vides 2, rupture 4, livraison 3, ton 3.
-const POIDS62 = { heineken30: 1, affligem: 2, remplacement: 3, jour: 2, 'eau-vides': 2, 'msg-rupture': 4, 'msg-livraison': 3, 'msg-ton': 3 };
+// Poids écrits à la main (validés par Tristan le 10/10/2026, revus à 11 h 20 avec les questions au fil, total 20) : fûts 1 + 2 + 3, jour 2, eau et vides 2, rupture 3, livraison 2, ton 2, plus 3 pour les deux questions notées (1,5 chacune).
+const POIDS62 = { heineken30: 1, affligem: 2, remplacement: 3, jour: 2, 'eau-vides': 2, 'msg-rupture': 3, 'msg-livraison': 2, 'msg-ton': 2 };
 const sauf = (faux, etat = 'ko') => JALONS62.map((j) => [j, faux.includes(j) ? etat : 'ok']);
 
+// Les questions au fil d'ENT-6.2 (écrites à la main : bonnes réponses). Un panneau ouvert est répondu puis refermé.
+const BONNES62 = { 'pourquoi-ce-remplacement': 'blonde', 'jour-engage': 'acceptation', 'qui-utilise-le-bon': 'prepa-chauffeur', 'vides-faux': 'chauffeur' };
+async function qrep(choix = BONNES62) {
+  for (let i = 0; i < 4; i++) {
+    const id = await pg.$eval(`${Z} [data-q-panneau]`, (e) => e.dataset.qPanneau).catch(() => null);
+    if (!id) return;
+    await pg.click(`${Z} [data-q-choix="${choix[id]}"][data-q="${id}"]`);
+    await pg.click(`${Z} [data-q-repondre="${id}"]`);
+    await pg.click(`${Z} [data-q-reprendre]`);
+    await pause();
+  }
+}
 // Remplit le bon (les clés absentes restent vides) et clique « Envoyer » ; `confirmer: false` = s'arrête avant la confirmation.
 async function remplirBon(r, { confirmer = true } = {}) {
   await aller('fiche');
   for (const k of ['heineken30', 'affligem20', 'remplacementQte', 'eau', 'videsFuts', 'videsCasiers']) {
     if (r[k] != null) await pg.fill(`${Z} [data-fiche-saisie="${k}"]`, r[k]);
   }
-  if (r.remplacement) await pg.selectOption(`${Z} [data-fiche-champ="remplacement"]`, r.remplacement);
+  if (r.remplacement) { await pg.selectOption(`${Z} [data-fiche-champ="remplacement"]`, r.remplacement); await pause(); await qrep(); }
   if (r.jour) await pg.check(`${Z} [data-fiche-champ="jour"][value="${r.jour}"]`);
   await pg.click(`${Z} [data-fiche-envoyer]`);
   await pause();
@@ -515,9 +527,18 @@ async function ouvrirMalo() {
 // Répond à Malo par phrases : `m` = { ligne: texte de la phrase choisie }.
 async function repondreMalo(m) {
   await ouvrirMalo();
+  if (!(await present('[data-repondre]')) && await present('[data-qf-ferme]')) {   // le point d'étape d'Inès garde « Répondre » fermé
+    await aller('etape:avant-reponse');
+    await pg.click(`${Z} [data-q-choix="${BONNES62['qui-utilise-le-bon']}"][data-q="qui-utilise-le-bon"]`);
+    await pg.click(`${Z} [data-q-repondre="qui-utilise-le-bon"]`);
+    await pause();
+    await pg.click(`${Z} [data-q-continuer]`);
+    await pause();
+    await ouvrirMalo();
+  }
   await pg.click(`${Z} [data-repondre]`);
   await pause();
-  for (const [l, t] of Object.entries(m)) await pg.selectOption(`${Z} select[data-phrase="${l}"]`, { label: t });
+  for (const [l, t] of Object.entries(m)) { await pg.selectOption(`${Z} select[data-phrase="${l}"]`, { label: t }); await pause(); await qrep(); }
   await pg.click(`${Z} #formPhr button[type="submit"]`);
   await pause();
   await pg.click(`${Z} [data-confirme-oui]`);
@@ -545,7 +566,7 @@ await v('ENT-6.2 : ouverture — messages d’Inès et de Malo, pièces jointes 
   await monter62();
   const E = await entrants();
   egal(E.map((m) => [m.subject, m.pieces]), [['Bienvenue à l’administration des ventes', ['organigramme', 'annuaire']],
-    ['Commande pour la Fête de la musique', ['fiche-client', 'stock', 'conditions']]], 'messages à l’ouverture');
+    ['Commande pour la Fête de la musique', ['fiche-client', 'stock', 'conditions', 'droit']]], 'messages à l’ouverture');
   vrai(/^Salut !/.test(E[1].text) && /mets-moi une autre blonde en 20 L/.test(E[1].text), 'le message de Malo (tutoiement)');
   egal(await pg.$$eval(`${Z} .ent-nav[data-vue]`, (L) => L.map((x) => x.dataset.vue).filter((x) => x !== 'accueil')), ['mail', 'fiche'], 'menu');
   await ouvrirMalo();
@@ -657,10 +678,10 @@ for (const [nom, r, faux, points] of PIEGES_BON) {
   });
 }
 await v('ENT-6.2 : « Salut Malo ! » → seul le jalon du ton est faux ; « Bisous » et « C’est bon, j’ai noté ta commande. » aussi ; la ligne « vides » fausse ne coûte rien', async () => {
-  for (const [ligne, t, faux, points] of [['salutation', 'Salut Malo !', ['msg-ton'], 17], ['fin', 'Bisous', ['msg-ton'], 17],
-    ['commande', 'C’est bon, j’ai noté ta commande.', ['msg-ton'], 17], ['vides', 'Gardez vos vides jusqu’à la prochaine fois.', [], 20],
-    ['rupture', 'Il ne nous reste que 2 fûts d’Affligem : je vous propose 2 fûts d’Edelweiss à la place.', ['msg-rupture'], 16],
-    ['livraison', 'Vous serez livré samedi 19 juin, comme vous le souhaitez.', ['msg-livraison'], 17]]) {
+  for (const [ligne, t, faux, points] of [['salutation', 'Salut Malo !', ['msg-ton'], 18], ['fin', 'Bisous', ['msg-ton'], 18],
+    ['commande', 'C’est bon, j’ai noté ta commande.', ['msg-ton'], 18], ['vides', 'Gardez vos vides jusqu’à la prochaine fois.', [], 20],
+    ['rupture', 'Il ne nous reste que 2 fûts d’Affligem : je vous propose 2 fûts d’Edelweiss à la place.', ['msg-rupture'], 17],
+    ['livraison', 'Vous serez livré samedi 19 juin, comme vous le souhaitez.', ['msg-livraison'], 18]]) {
     await monter62({ uid: 'fb62-ton' });
     await remplirBon(BON_JUSTE);
     await repondreMalo({ ...MSG_JUSTE, [ligne]: t });
@@ -688,6 +709,11 @@ await v('ENT-6.2 : réponse envoyée avant le bon → Malo n’écrit qu’aprè
   const E = await entrants();
   egal(E.filter((m) => m.subject === 'Bon de commande reçu').map((m) => m.text), ['Bon de commande reçu, merci Lea.\n\nInès'], 'message d’Inès');
   egal(E.filter((m) => m.subject === 'RE : Commande pour la Fête de la musique').length, 1, 'réponse de Malo');
+  egal((await note()).score, 18.5, 'note : le point d’étape d’Inès attend encore sa réponse (1,5 point)');
+  await aller('etape:avant-reponse');
+  await pg.click(`${Z} [data-q-choix="prepa-chauffeur"][data-q="qui-utilise-le-bon"]`);
+  await pg.click(`${Z} [data-q-repondre="qui-utilise-le-bon"]`);
+  await pause();
   egal((await note()).score, 20, 'note');
 });
 
@@ -743,6 +769,77 @@ await v('ENT-6.2 : sabotage jalon par jalon — sur la base d’un parcours just
     ['jour', 'jour'], ['eau', 'eau-vides'], ['vf', 'eau-vides'], ['vc', 'eau-vides'], ['rupture', 'msg-rupture'], ['livraison', 'msg-livraison'],
     ['salutation', 'msg-ton'], ['commande', 'msg-ton'], ['fin', 'msg-ton']]) egal(r[cas], sauf([faux]), `sabotage « ${cas} »`);
   egal(r.vides, sauf([]), 'la ligne « vides » du message n’est pas notée');
+});
+
+// Les questions au fil d'ENT-6.2 (brief §4 bis) : un cas par question, valeurs écrites à la main.
+const repQ = async (id, val) => { await pg.click(`${Z} [data-q-choix="${val}"][data-q="${id}"]`); await pg.click(`${Z} [data-q-repondre="${id}"]`); await pause(); };
+await v(`ENT-6.2 : question de Karim au choix du remplacement — le bon se fige jusqu'à la réponse, réflexion non notée (retour sans ✓ / ✗), une seule fois`, async () => {
+  await monter62({ uid: 'fb62-karim' });
+  await aller('fiche');
+  await pg.fill(`${Z} [data-fiche-saisie="heineken30"]`, '6');
+  vrai(!(await present('[data-q-panneau]')), 'question avant le geste');
+  await pg.selectOption(`${Z} [data-fiche-champ="remplacement"]`, 'edelweiss20');
+  await pause();
+  egal(await pg.$eval(`${Z} [data-q-panneau]`, (e) => e.dataset.qPanneau), 'pourquoi-ce-remplacement', 'question posée');
+  vrai(/Karim te pose une question/.test(await pg.textContent(`${Z} [data-q-panneau]`)), 'posée par Karim');
+  await repQ('pourquoi-ce-remplacement', 'hasard');
+  vrai(!(await present('[data-q-verdict]')) && await present('.qf-retour'), 'réflexion : retour sans ✓ / ✗');
+  await pg.click(`${Z} [data-q-reprendre]`);
+  await pause();
+  await pg.selectOption(`${Z} [data-fiche-champ="remplacement"]`, 'pelforth20');
+  await pause();
+  vrai(!(await present('[data-q-panneau]')), 'la question revient');
+  egal((await note()).score, 0, 'une réflexion ne rapporte rien');
+});
+await v(`ENT-6.2 : point d'étape d'Inès — arrive après l'envoi du bon, garde « Répondre » fermé ; faux = 1,5 point de moins`, async () => {
+  await monter62({ uid: 'fb62-etape' });
+  await remplirBon(BON_JUSTE);
+  await ouvrirMalo();
+  vrai(!(await present('[data-repondre]')) && await present('[data-qf-ferme]'), '« Répondre » fermé');
+  await aller('etape:avant-reponse');
+  await repQ('qui-utilise-le-bon', 'personne');
+  await pg.click(`${Z} [data-q-continuer]`);
+  await pause();
+  await ouvrirMalo();
+  vrai(await present('[data-repondre]'), '« Répondre » rouvert après la réponse (fausse)');
+  egal((await note()).score, 10, 'jalons du bon seuls (6 + 2 + 2), question fausse');
+  await repondreMalo(MSG_JUSTE);
+  egal((await note()).score, 18.5, 'tout juste sauf le point d’étape');
+});
+await v(`ENT-6.2 : question d'Inès au choix de la phrase « livraison » — correction au bilan seulement ; fausse = 18,5 ; question de Lucas au choix de « vides » non notée`, async () => {
+  await monter62({ uid: 'fb62-jour' });
+  await remplirBon(BON_JUSTE);
+  await ouvrirMalo();
+  await aller('etape:avant-reponse');
+  await repQ('qui-utilise-le-bon', 'prepa-chauffeur');
+  await pg.click(`${Z} [data-q-continuer]`);
+  await pause();
+  await ouvrirMalo();
+  await pg.click(`${Z} [data-repondre]`);
+  await pause();
+  await pg.selectOption(`${Z} select[data-phrase="salutation"]`, { label: MSG_JUSTE.salutation });
+  await pause();
+  vrai(!(await present('[data-q-panneau]')), 'question avant les lignes concernées');
+  await pg.selectOption(`${Z} select[data-phrase="livraison"]`, { label: MSG_JUSTE.livraison });
+  await pause();
+  egal(await pg.$eval(`${Z} [data-q-panneau]`, (e) => e.dataset.qPanneau), 'jour-engage', 'question d’Inès');
+  await repQ('jour-engage', 'malo');
+  vrai(await present('[data-q-merci]') && !(await present('[data-q-verdict]')), 'pas de ✓ / ✗ avant le bilan');
+  await pg.click(`${Z} [data-q-reprendre]`);
+  await pause();
+  await pg.selectOption(`${Z} select[data-phrase="vides"]`, { label: MSG_JUSTE.vides });
+  await pause();
+  egal(await pg.$eval(`${Z} [data-q-panneau]`, (e) => e.dataset.qPanneau), 'vides-faux', 'question de Lucas');
+  await repQ('vides-faux', 'malo');
+  await pg.click(`${Z} [data-q-reprendre]`);
+  await pause();
+  for (const l of ['commande', 'rupture', 'fin']) { await pg.selectOption(`${Z} select[data-phrase="${l}"]`, { label: MSG_JUSTE[l] }); await pause(); }
+  await pg.click(`${Z} #formPhr button[type="submit"]`);
+  await pause();
+  await pg.click(`${Z} [data-confirme-oui]`);
+  await pause();
+  egal((await note()).score, 18.5, 'jour-engage faux : 1,5 point de moins, la réflexion de Lucas ne compte pas');
+  egal(await bandeau(), LIGNES62.map((l) => [l, l === 'question:jour-engage' ? 'ko' : 'ok']), 'bandeau : la question d’Inès ✗ au bilan');
 });
 
 await v('ENT-6.2 : Corrigés — bon de commande et message attendus, calculés', async () => {

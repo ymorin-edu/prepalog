@@ -29,7 +29,7 @@ import { creerGesteTableur, retourDeTemps } from './export-tableur.js';
 import { graineDeBase, poserGraine, declarerTirage, estTirage, fautesTirage } from '../tirage.js';
 import { BAREME_AFFICHE, pointsBonus } from '../notes.js';
 import { gestesDe } from '../declencheurs.js';
-import { GESTE_TRANSFERT, rouvrirTransfert, transfertsDe, fauteTransfert } from './transfert.js';
+import { GESTE_TRANSFERT, GESTE_PHRASE, rouvrirTransfert, transfertsDe, fauteTransfert } from './transfert.js';
 import { preparerPhrases } from '../phrases.js';
 import { brancherLexique, compterAide } from '../lexique.js';
 import { controlerOptions, controlerIdentifiants } from './entreprise-options.js';
@@ -226,6 +226,11 @@ export function creerEntreprise(U) {
   {
     // La messagerie est de toutes les séances : son geste (le transfert d'un message, chantier D-1) est toujours connu.
     const connus = new Set([...VFICHES, ...VANIMS, VPL, VENT, VQUAI].filter(Boolean).flatMap((V) => V.signaux || []).concat(GESTE_TRANSFERT));
+    // Les gestes « choisir une phrase » : une ligne de chaque réponse par phrases à choisir semée par le volet.
+    try {
+      ((U.volet && typeof U.volet.semer === 'function' && U.volet.semer('Élève').mails) || []).forEach((m) => ((m.phrases && m.phrases.lignes) || [])
+        .forEach((l) => { if (l.texte == null) connus.add(GESTE_PHRASE + l.id); }));
+    } catch (e) { /* un volet qui ne se sème pas sans base : ses gestes de phrase ne sont pas contrôlés */ }
     const cites = [];
     (U.volet && U.volet.declencheurs || []).forEach((d) => gestesDe(d.quand).forEach((g) => cites.push([g, `message « ${d.id} »`])));
     if (MQ) {

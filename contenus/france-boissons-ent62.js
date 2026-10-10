@@ -20,6 +20,7 @@
 
 import { apresFiche, tous } from '../core/declencheurs.js';
 import { phrasesJustes } from '../core/phrases.js';
+import { QUESTIONS } from './questions/ENT-6.2.js';
 import { EQUIPE, EXTERIEURS, LEXIQUE as LEXIQUE_FB, mailDe, heureScenario, STOCK_BUCHELAY, article, CONDITIONS_CHR, CABANE, CONSIGNES, libArticle,
   DOC_ORGANIGRAMME, DOC_ANNUAIRE, STYLE_DOCUMENTS as STYLE_FB } from './france-boissons.js';
 
@@ -155,11 +156,20 @@ const docConditions = () => `<article class="fb2-doc" aria-label="Conditions de 
     ${PIED('Conditions de vente')}
   </article>`;
 
+const docDroit = () => `<article class="fb2-doc" aria-label="Le droit">
+    <p class="fb-t">Le droit : quand un contrat est formé</p>
+    <p class="fb-st">Code civil, article 1113</p>
+    <p>« Le contrat est formé par la rencontre d’une offre et d’une acceptation par lesquelles les parties manifestent leur volonté de s’engager.
+    Cette volonté peut résulter d’une déclaration ou d’un comportement non équivoque de son auteur. »</p>
+    ${PIED('Extrait du Code civil')}
+  </article>`;
+
 export const DOCUMENTS = [
   { id: 'commande-malo', titre: 'Le message de Malo', court: 'Message de Malo', html: docMalo() },
   { id: 'fiche-client', titre: `Fiche client — ${CABANE.nom}`, court: 'Fiche client', html: docClient() },
   { id: 'stock', titre: 'Extrait du stock de Buchelay', court: 'Stock', html: docStock() },
   { id: 'conditions', titre: 'Conditions de vente CHR (extrait)', court: 'Conditions de vente', html: docConditions() },
+  { id: 'droit', titre: 'Le droit : quand un contrat est formé', court: 'Le droit', html: docDroit() },
   DOC_ORGANIGRAMME, DOC_ANNUAIRE,
 ];
 
@@ -297,7 +307,7 @@ export const VOLET = {
         + 'Prends sa commande : vérifie le stock et les conditions de vente, remplis le [[bon de commande]], puis réponds-lui. Chaque article a une [[référence]] : tu la retrouves dans le stock et sur le bon.\n\nInès',
       { heure: HEURES.ines, extra: { pieces: ['organigramme', 'annuaire'], ouvreFiche: BON } }),
     mail(prenom, MALO, SUJET_MALO, TEXTE_MALO,
-      { heure: HEURES.malo, extra: { pieces: ['fiche-client', 'stock', 'conditions'], ouvreFiche: BON, phrases: phrasesMalo(prenom) } }),
+      { heure: HEURES.malo, extra: { pieces: ['fiche-client', 'stock', 'conditions', 'droit'], ouvreFiche: BON, phrases: phrasesMalo(prenom) } }),
   ] }),
   declencheurs: [
     // Le bon envoyé (juste ou faux) : Inès demande la réponse à Malo (ou remercie, si l'élève lui a déjà répondu).
@@ -319,7 +329,7 @@ export const VOLET = {
 
 // ─────────────────────────────────────────────────────────────── les jalons (8, pondérés sur 20)
 // Poids validés par Tristan le 10/10/2026 : le cœur de la compétence (le piège en chaîne des fûts, la rupture) pèse le plus,
-// la forme (le ton) 3 points sur 20, aucun jalon à 0. Fûts 6 (1 + 2 + 3), jour 2, eau et vides 2, rupture 4, livraison 3, ton 3.
+// la forme (le ton) 3 points sur 20, aucun jalon à 0. Fûts 6 (1 + 2 + 3), jour 2, eau et vides 2, rupture 3, livraison 2, ton 2, plus 3 pour les questions au fil (`part`).
 // Rien n'est vrai avant l'envoi du bon (jalons 1 à 5) ou de la réponse (jalons 6 à 8) : « à faire », puis juste ou faux.
 // Le DERNIER envoi de la réponse compte (`phrasesJustes`). `groupe` = la ligne du bandeau de fin : les trois lignes de fûts
 // font un seul bloc (le piège en chaîne se raisonne en entier) ; le bandeau ne descend jamais à la case.
@@ -359,9 +369,9 @@ export const ETAPES = [
   jalonBon('jour', 'Bon de commande : le jour de livraison', GROUPES.jour, 2, (v) => v.jour === ATTENDU.jour),
   jalonBon('eau-vides', 'Bon de commande : l’eau et les vides', GROUPES.vides, 2,
     (v) => n(v, 'eau') === ATTENDU.eau && n(v, 'videsFuts') === ATTENDU.vides.futs && n(v, 'videsCasiers') === ATTENDU.vides.casiers),
-  jalonReponse('msg-rupture', 'Réponse à Malo : la rupture', GROUPES.rupture, 4, ['rupture']),
-  jalonReponse('msg-livraison', 'Réponse à Malo : la livraison', GROUPES.livraison, 3, ['livraison']),
-  jalonReponse('msg-ton', 'Réponse à Malo : le ton professionnel', GROUPES.ton, 3, ['salutation', 'commande', 'fin']),
+  jalonReponse('msg-rupture', 'Réponse à Malo : la rupture', GROUPES.rupture, 3, ['rupture']),
+  jalonReponse('msg-livraison', 'Réponse à Malo : la livraison', GROUPES.livraison, 2, ['livraison']),
+  jalonReponse('msg-ton', 'Réponse à Malo : le ton professionnel', GROUPES.ton, 2, ['salutation', 'commande', 'fin']),
 ];
 
 // ─────────────────────────────────────────────────────────────── l'accueil
@@ -392,4 +402,6 @@ export const OPTIONS = {
   documents: DOCUMENTS,
   documentsStyle: STYLE_DOCUMENTS,
   fiche: FICHE,
+  equipe: EQUIPE,
+  questions: QUESTIONS,
 };

@@ -1051,6 +1051,7 @@ poids de ses jalons + `part` doit valoir 20 (contrôlé à l'ouverture).
   | plan d'entrepôt `<id>` | `entrepot:<id>:poser` (poser une palette), `entrepot:<id>:verifier` |
   | animation `<id>` | `animation:<id>:<question>` (la première réponse) |
   | messagerie (toutes les séances) | `messagerie:transfert` (transférer un message, n'importe lequel ; chantier D-1) |
+  | messagerie, réponse par phrases | `messagerie:phrase:<ligne>` (le premier choix d'une phrase sur cette ligne, juste ou faux ; ENT-6.2, 10/10/2026) ; la ligne doit exister dans un mail semé par le volet, sinon la séance ne s'ouvre pas |
 
   Un nom qu'aucune vue de la séance ne publie (faute de frappe, vue absente) **empêche la séance de s'ouvrir**, avec la
   liste des gestes connus. `tous(…)` garde les gestes de ses conditions. Une vue nouvelle **naît avec ses gestes**

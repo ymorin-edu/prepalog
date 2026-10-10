@@ -31,7 +31,7 @@ import { appel } from './questions.js';
 import { texteCompose } from '../phrases.js';
 import { compterAide } from '../lexique.js';
 import { fdate, fdt, norm } from './entreprise-outils.js';
-import { GESTE_TRANSFERT, transfertsDe, peutTransferer, rangerTransfert, heureTransfert } from './transfert.js';
+import { GESTE_TRANSFERT, GESTE_PHRASE, transfertsDe, peutTransferer, rangerTransfert, heureTransfert } from './transfert.js';
 
 export function monterMessagerie({ db, E, hote, prenom, estProf, rendue, A, VOCAB, VARIANTS, SUP_BY_ID, B, COM, REC, VDOC, VFICHES, vueDeFiche,
   VINV, VQUAI, MQ, SEANCE, reponsesFournisseur, ajouterMail, declencher, accuseCorrection, etapeQuiFerme, sauver, dessiner, dessinerVue,
@@ -361,6 +361,19 @@ export function monterMessagerie({ db, E, hote, prenom, estProf, rendue, A, VOCA
       const b = E.brouillon[sel.id] || (E.brouillon[sel.id] = {});
       if (el.value === '') delete b[el.dataset.phrase]; else b[el.dataset.phrase] = +el.value;
       const ap = z.querySelector('[data-phr-apercu]'); if (ap) ap.innerHTML = apercuPhrases(sel);
+      // Le geste « choisir une phrase » (ENT-6.2, 10/10/2026) : le premier choix d'une ligne, juste ou faux, est rangé une fois
+      // (`messagerie:phrase:<ligne>`) et peut ouvrir une question au fil. Redessin SEULEMENT si le geste a fait arriver un message
+      // ou une question (sinon la liste n'est pas redessinée et le focus y reste).
+      if (el.value !== '' && !estProf && !rendue()) {
+        const nom = GESTE_PHRASE + el.dataset.phrase;
+        const neuf = !(db.gestes && db.gestes[SEANCE] && db.gestes[SEANCE][nom]);
+        if (neuf) {
+          const etat = () => JSON.stringify([db.mails.length, db.questions || null]);
+          const avant = etat();
+          signal(nom); declencher(); sauver();
+          if (etat() !== avant) { const id = el.id; dessiner(); hote.querySelector('#' + id)?.focus(); }
+        }
+      }
     }));
     // Le transfert : le bouton ouvre (ou referme) la liste ; au clavier, le focus va au premier destinataire.
     z.querySelector('[data-transfert-ouvrir]')?.addEventListener('click', () => {

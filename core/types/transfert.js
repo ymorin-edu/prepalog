@@ -29,6 +29,8 @@
 // d'une copie. « Réinitialiser » efface les transferts avec le reste du travail.
 
 export const GESTE_TRANSFERT = 'messagerie:transfert';
+// Choisir une phrase dans une réponse par phrases à choisir : `messagerie:phrase:<ligne>` (ENT-6.2, 10/10/2026).
+export const GESTE_PHRASE = 'messagerie:phrase:';
 
 // Les transferts de la séance (lecture seule, sans rien créer).
 export const transfertsDe = (db, seance) => (db && db.transferts && db.transferts[seance]) || {};

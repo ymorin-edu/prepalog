@@ -29,6 +29,7 @@ const s = seanceEntreprise(FB, SEANCE, {
   // Règle du premier bilan : « Corriger » rouvre le bon de commande et la réponse à Malo, la note est la moyenne du premier
   // bilan et de l'état à la première correction ; ENT-6.3 s'ouvre au premier bilan (voir core/types/entreprise.js).
   correction: true,
+  questions: 'ENT-6.2',
   // Pas de `reinitialisable` : la remise à zéro est réservée aux séances X.1 (décision du 02/10/2026, test du bloc `transport`).
   pret: true,
   ouverture: 'prof',
