@@ -6,7 +6,7 @@
 > Lis docs/briefs/ENT-6.3-france-boissons-conges.md puis implémente-le (après ENT-6.2 et ENT-6.1). Commence par refaire le calage du §4 par script avant d'écrire. Annonce la durée avant de commencer et dis-moi si un point du brief contredit le code.
 > ```
 
-**Statut** : à implémenter
+**Statut** : livré (10/10/2026, `pret: true, ouverture: 'prof'` : à essayer à l'écran) — voir « Compte rendu » en fin de fichier
 **Date du brief** : 05/10/2026
 **Conversation d'origine** : Cowork (Opus) ; cadrage `claude/prepalog-2de-s2-cadrage.md` (décisions 5, 14) ; choix de
 Tristan du 05/10 : **chauffeurs-livreurs seuls**, besoin du saisonnier **né d'un imprévu**, annonce **avec pièges de
@@ -114,20 +114,24 @@ suivent l'ordre de jeu. Calendrier de S2 (décision de Tristan du 05/10/2026, «
 
 Mots cliquables : congé, effectif, CDD saisonnier, VL, permis B, discrimination, rattaché, priorité.
 
-## 4 bis. Questions au fil — À PROPOSER À TRISTAN AVANT DE CONSTRUIRE (règle du 10/10/2026)
+## 4 bis. Questions au fil — tranché par Tristan le 10/10/2026 (tout ce que Cowork propose est gardé)
 
-Ce brief a été écrit avant la règle. **Avant d'écrire la moindre ligne de la séance**, Claude Code (ou Cowork) propose à
-Tristan le tableau de `docs/briefs/MODELE.md` §4 bis : au moins 4 gestes de travail où une question peut arriver, dont une
-d'éco-droit appliquée au cas ; jamais une question qui donne d'avance la réponse d'un jalon (sinon corrigée au bilan).
-Tristan en garde 2 à 4 ; la part des questions notées (3 à 5 points sur 20) se prend sur les jalons, et le barème du §5
-est revu en conséquence (pondération sur 20 : `docs/briefs/NOTATION-ponderation.md`, lot 2). Les pistes « Pour réfléchir »
-du §9 sont une bonne source de questions.
+Détail : `docs/briefs/france-boissons/PROPOSITIONS-questions-au-fil.md` § ENT-6.3 ; code : `contenus/questions/ENT-6.3.js`.
 
-### 4 ter. Avant de commencer — À PROPOSER AUSSI
+| # | Geste | Qui | Question | Type | Notée | Correction |
+|---|---|---|---|---|---|---|
+| 1 | `planning:fb-conges:poser` (premier geste) | Karim | Que regardes-tu d'abord ? | fil | réflexion | bilan |
+| 2 | 1er envoi du planning (point d'étape, ferme le planning de la reprise) | Inès | Le départ de Kevin, comment s'appelle-t-il ? | étape | **réflexion** (aucun texte ne définit la démission) | — |
+| 3 | `messagerie:phrase:raison` (message à Lucas) | Inès | Pourquoi donner la raison, pas seulement la décision ? | fil | réflexion | — |
+| 4 | `fiche:annonce:envoyer` | Karim | Pourquoi la loi permet-elle un CDD saisonnier ? (L1242-2, 3°) | fil | 1,5 | bilan |
+| 5 | même geste, après la 4 | Karim | Un candidat de 52 ans : l'écarter pour son âge ? (L1132-1) | fil | 1,5 | bilan |
 
-Banque de questions de l'écran d'ouverture (`docs/briefs/MOTEUR-avant-de-commencer.md`, `MODELE.md` §4 ter) :
-préparation de l'exercice, 2 ou 3 d'économie-droit appliquées au cas, images si la séance fait découvrir un matériel ;
-au moins le double de ce qu'on tire ; validée par Tristan avant construction. Modèle : la banque d'ENT-6.2.
+### 4 ter. Avant de commencer — tranché par Tristan le 10/10/2026 (toute la banque est gardée)
+
+Détail : `docs/briefs/france-boissons/BANQUE-avant-de-commencer.md` § ENT-6.3. 8 questions non notées, 4 tirées par élève
+(`{ preparation: 2, droit: 2 }`), calculette du site. Préparation : `qui-decide-conges-2` ★, `besoin-semaine`, `demande-ancienne`
+(valeurs tirées), `annonce-sert`. Droit : `conges-acquis` ★ (tirée), `plafond-30` (tirée), `bloc-24-jours`, `essai-cdd` (tirée).
+Documents à gauche : demandes de congés, règle de la plateforme, annuaire, fiche de poste, « Le droit ».
 
 ## 5. Jalons (16)
 
@@ -181,3 +185,34 @@ Le planning en semaines se lit au vidéoprojecteur ; l'imprévu se comprend sans
 - [x] Date : **mardi 15 juin 2027, après-midi** (calendrier « lundi → vendredi », Tristan, 05/10).
 - [ ] Durée réelle : planning × 2 + message + annonce, c'est la séance la plus dense de S2. Si l'essai déborde, l'annonce
   peut passer en début d'ENT-6.4. (Garder tout.)
+
+## Compte rendu *(rempli par Claude Code à la livraison)*
+
+*Rempli par Claude Code le 10/10/2026 (agent constructeur, coordination Fable).*
+
+- **Fichiers créés** : `activites/france-boissons-conges.js`, `contenus/france-boissons-ent63.js` (planning, messages, annonce, documents,
+  jalons, accueil, lexique), `contenus/questions/ENT-6.3.js`, `contenus/corriges/ENT-6.3.js` (calculé : les deux plannings énumérés,
+  l'annonce, le message). **Modifiés** : `activites/index.js` (une ligne, après ENT-6.2), `core/types/planning.js` et
+  `core/types/entreprise.js` (chantier D-3, voir `docs/briefs/MOTEUR-vue-planning.md` et `docs/chantiers.md`), `activites/FICHE-SEANCE.md`,
+  `outils/test/planning.mjs` (3 cas), `outils/test/questions.mjs` (1 cas), `outils/test/france-boissons.mjs` (21 cas ajoutés, aucun
+  cas existant réécrit). Rien dans `styles/`.
+- **VÉRIFIÉ** : le calage, relancé (`calage-6.3.mjs`) puis recalculé par le contenu et écrit à la main dans le test : 331 776 / 16 206 /
+  minimum 1 / une solution (Lucas du 5 au 16 juillet) ; 36 864 / 1 818 / 1 / une solution (Lucas du 23 août au 3 septembre). Les
+  textes de loi du document « Le droit » (L3141-3, L3141-17, L1242-2 3°, L1242-10 al. 1-2, L1132-1 en extrait) relus le 10/10/2026 sur
+  **code.travail.gouv.fr** (reprise de Légifrance ; Légifrance lui-même non consulté). Suite entière verte (1075/1075).
+- **SUPPOSÉ / construit** : l'équipe, les demandes, les besoins, la règle, le départ de Kevin, les dates du CDD, tous les messages
+  (comme le brief) ; la fiche de poste (horaires « départ du quai à 6 h », « salaire selon la grille ») ; « jour » de L1242-10 lu
+  comme jour calendaire (la question ne compte que des jours, pas de calcul ouvré) ; le rendu de la grille de 9 semaines au
+  vidéoprojecteur (colonnes de 96 px, « S1 · 5 juil. »).
+- **Écarts par rapport au brief** (et pourquoi) : barème 20 et 27 jalons (refonte) ; pas de « Vérifier » (Q6) ; message au tu, lignes
+  datées ; Lucas écrit d'abord (le moteur répond à l'expéditeur), donc pas de copie à Karim ; Lucas répond, déçu, l'élève choisit sa
+  réponse (non notée) ; l'annonce attend la réponse à Lucas ; « décaler le moins » = nombre minimal de décalés (décision de Tristan) ;
+  pas de trame (refonte) ; D3141-6 laissé tel quel. Détail : `docs/decisions.md` (10/10/2026, ENT-6.3).
+- **Tests** : `planning` 26 → 29, `questions` 110 → 111, `france-boissons` 61 → 82 ; suite entière en parallèle 1075/1075. Sabotages
+  (dans les deux sens, chaque fois restauré) : priorité neutralisée, minimum neutralisé, `repriseIdentique` retiré, liens à l'effectif
+  retirés, `retraits` remplacé par le repli `dispo: 9`, `aides.verifier` retiré, `fermetures` retirée, `apres: 'bilan'` retiré, correctif
+  du menu retiré : chaque fois le ou les cas visés tombent.
+- **Commits** : `d3a2a69` (moteur D-3), `54cfd7b` (séance en brouillon + correctif du menu), `c833dd1` (tests), puis le commit de livraison.
+- **À vérifier à l'écran par Tristan** : grille de 9 semaines lisible (vidéoprojecteur, « Agrandir ») ; l'imprévu se comprend sans aide
+  (Kevin disparaît, saisonnier « pas là » en S1 et S9) ; le point d'étape après le 1er envoi ; le message de Lucas et sa réponse déçue ;
+  le contraste « ce qu'on écrit / ce qu'on n'écrit pas » de l'annonce ; les deux questions de Karim à l'envoi de l'annonce.

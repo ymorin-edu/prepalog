@@ -30,7 +30,8 @@ const s = seanceEntreprise(FB, SEANCE, {
   correction: true,
   questions: 'ENT-6.3',
   // Pas de `reinitialisable` : la remise à zéro est réservée aux séances X.1.
-  pret: false,
+  pret: true,
+  ouverture: 'prof',
 }, SEANCE.OPTIONS);
 export const meta = s.meta;
 export const rendre = s.rendre;

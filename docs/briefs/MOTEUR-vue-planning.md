@@ -427,3 +427,14 @@ dans la zone de la grille, jamais de la page) ; la bulle se trouve sans chercher
   - **Couleurs libres par séance** (choix de Tristan parmi trois) : `familles.x.couleur`, sans lien avec la charte.
     Le moteur refuse vert, bleu, rouge, deux familles trop proches, et toute couleur qui fait passer un texte sous 4,5
     (thèmes clair et sombre). Sélecteurs de couleur sur la page d'essai. Tests : 24 cas dans le bloc, suite 569 / 569.
+- **Ajouts du 10/10/2026 (chantier D-3, pour ENT-6.3 ; Claude Code)** :
+  - **`alea.retraits: { lignes: [ids], cartes: [ids] }`** : après l'aléa, la ligne et sa carte disparaissent (bac, grille,
+    compteurs, lecture) ; une carte retirée que l'élève avait posée reste dans son planning mais la lecture l'ignore (elle ne
+    rend pas le planning incomplet). Un id inconnu, ou une carte gardée dont la ligne imposée est retirée, arrête la séance au
+    chargement. Remplace le repli « `ressources: { kevin: { dispo: 9 } }` », qui laissait la carte dans le bac et faisait tomber
+    tous les jalons si l'élève la retirait (rapport du lot 0, §a).
+  - **`aides.verifier: false`** : en entraînement, ni « Vérifier mon planning » ni son invite (« Relis les règles, puis envoie
+    ton planning… ») ; un seul bouton, l'envoi, avec sa confirmation dans la page (Q6 de la refonte France Boissons ; servira à
+    ENT-6.8). Sans l'option, rien ne change.
+  - Tests : trois cas dans le bloc `planning` (cas « personnel », Chloé retirée à l'aléa ; déclarations fautives ; entraînement
+    sans « Vérifier »), éprouvés par sabotage dans les deux sens. Fiche de séance à jour (« Aléa », « Temps »).
