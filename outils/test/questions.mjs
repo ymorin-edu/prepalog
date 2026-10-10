@@ -1210,10 +1210,13 @@ await v('Avant de commencer : la calculette du site s’affiche sur l’écran q
   await nettoyerCalc();
   await monter({ ouverture: true });
   vrai(!(await calcPresente()), 'calculette sans déclaration');
+  vrai(!(await present('.qo-nav.qo-calc')), 'place réservée à la calculette sans déclaration');
   await nettoyerCalc();
   await monter({ ouverture: true, calculette: true });
   vrai(await calcPresente(), 'calculette déclarée mais absente de l’écran d’ouverture');
   vrai(/encre/.test(await pg.$eval('#calculetteFlottante .calc-fab', (b) => b.style.background)), 'le bouton ne prend pas l’encre');
+  vrai(await present('.qo-nav.qo-calc'), 'les boutons de navigation ne laissent pas la place à la calculette');
+  vrai((await pg.$eval(`${Z} .qo-nav`, (e) => parseFloat(getComputedStyle(e).paddingRight))) >= 60, 'la place laissée à la calculette est nulle');
   // Elle survit aux réponses (l'écran se redessine) et au changement de question.
   await repondreO('ouv-a', 'x');
   await pg.click(`${Z} [data-ouv-aller="1"]`); await pause();

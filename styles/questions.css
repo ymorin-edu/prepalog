@@ -102,6 +102,8 @@
 .qo-aide summary{ cursor:pointer; color:var(--encre-douce) }
 .qo-aide p{ margin:4px 0 0 }
 .qo-nav{ display:flex; justify-content:space-between; align-items:center; gap:8px; margin-top:10px; padding-top:10px; border-top:1px solid var(--filet) }
+/* La calculette flottante (ouverture.calculette) occupe le coin bas droit : les boutons de navigation lui laissent la place. */
+.qo-nav.qo-calc{ padding-right:64px }
 @media (max-width:860px){
   .qo-cols{ grid-template-columns:minmax(0,1fr) }
   .qo-docs{ max-height:none }

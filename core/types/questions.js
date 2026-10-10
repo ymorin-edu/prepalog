@@ -448,7 +448,7 @@ export function htmlOuverture(M, db, o = {}) {
         <div class="qo-pastilles" role="tablist" aria-label="Les questions">${pastilles}<span class="note" data-ouv-compte>${nb} sur ${n} répondues</span></div>
         ${htmlQuestion(M, q, reponse(db, M, q.id), { ...o.parQuestion(q.id), numero: `Question ${k + 1} sur ${n}`,
           aide: o.estProf ? '' : htmlAide(q, o.aideOuverte && o.aideOuverte(q.id)) })}
-        <div class="qo-nav">
+        <div class="qo-nav${ov.calculette === true ? ' qo-calc' : ''}">
           <button type="button" class="btn btn-s" data-ouv-aller="${k - 1}" data-cle="precedente" ${k === 0 ? 'disabled' : ''}>← Précédente</button>
           ${!dernier ? `<button type="button" class="btn btn-s" data-ouv-aller="${k + 1}" data-cle="suivante">Suivante →</button>`
             : o.estProf ? ''
