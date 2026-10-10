@@ -465,6 +465,13 @@ const monter62 = (o = {}) => pg.evaluate(async (o) => {
   document.querySelector('#fTest')?.remove();
   const hote = document.createElement('div'); hote.id = 'fTest'; document.body.prepend(hote);
   const db = o.db ? JSON.parse(JSON.stringify(o.db)) : {};
+  // L'écran « Avant de commencer » (10/10/2026) ouvre la séance et ferme le reste du menu : les cas qui travaillent sur la
+  // commande partent d'un élève qui y a déjà répondu (réponses écrites à la main). `sansOuverture: true` : on part de zéro.
+  if (!o.sansOuverture) {
+    const Q = ((db.questions = db.questions || {})['france-boissons-commande'] = db.questions['france-boissons-commande'] || {});
+    const REP = { 'qui-est-malo': 'client', 'les-vides': 'consignes', 'ou-regarder': 'stock-cond', 'vente-conclue': 'acceptation', 'consigne-rendue': '92' };
+    for (const [id, v] of Object.entries(REP)) if (!Q[id]) Q[id] = { arrivee: 1, premiere: v, duree: 1 };
+  }
   window.__f = { db, enregistres: [] };
   A.rendre(hote, {
     meta: A.meta, aisance: 'standard',
@@ -568,7 +575,7 @@ await v('ENT-6.2 : ouverture — messages d’Inès et de Malo, pièces jointes 
   egal(E.map((m) => [m.subject, m.pieces]), [['Bienvenue à l’administration des ventes', ['organigramme', 'annuaire']],
     ['Commande pour la Fête de la musique', ['fiche-client', 'stock', 'conditions', 'droit']]], 'messages à l’ouverture');
   vrai(/^Salut !/.test(E[1].text) && /mets-moi une autre blonde en 20 L/.test(E[1].text), 'le message de Malo (tutoiement)');
-  egal(await pg.$$eval(`${Z} .ent-nav[data-vue]`, (L) => L.map((x) => x.dataset.vue).filter((x) => x !== 'accueil')), ['mail', 'fiche'], 'menu');
+  egal(await pg.$$eval(`${Z} .ent-nav[data-vue]`, (L) => L.map((x) => x.dataset.vue).filter((x) => x !== 'accueil')), ['ouverture', 'mail', 'fiche'], 'menu');
   await ouvrirMalo();
   const docs = [];
   for (const id of ['fiche-client', 'stock', 'conditions']) {
@@ -594,6 +601,53 @@ await v('ENT-6.2 : inaction — rien fait → 0/20, aucun jalon juste, pas de ba
   egal([n.score, n.max], [0, 20], 'note');
   vrai(!Object.values(n.detail).includes('ok'), 'un jalon juste sans rien faire : ' + JSON.stringify(n.detail));
   vrai(!(await present('[data-fin]')), 'bandeau de fin');
+});
+
+await v('ENT-6.2 : « Avant de commencer » — ouvre la séance (5 questions, documents et photos à gauche), menu fermé puis ouvert ; ni la note ni le bandeau n’en savent rien, même avec une réponse fausse', async () => {
+  const hors = [];
+  const surRequete = (r) => { try { if (new URL(r.url()).origin !== new URL(BASE).origin && !/^(data|blob):/.test(r.url())) hors.push(r.url()); } catch (e) { /* ignoré */ } };
+  pg.on('request', surRequete);
+  await monter62({ sansOuverture: true, uid: 'fb62-ouv' });
+  vrai(await present('[data-ouverture="avant-de-commencer"]'), 'la séance ne s’ouvre pas sur « Avant de commencer »');
+  egal(await pg.$$eval(`${Z} .ent-nav[data-vue]`, (L) => L.map((x) => x.dataset.vue)), ['ouverture'], 'entrées ouvertes au départ');
+  egal(await pg.$$eval(`${Z} .qo-pas`, (L) => L.length), 5, 'questions');
+  egal(await pg.$$eval(`${Z} .qo-onglet`, (L) => L.map((x) => x.textContent)),
+    ['Message de Malo', 'Fiche client', 'Stock', 'Conditions de vente', 'Photos', 'Le droit'], 'onglets');
+  vrai(/Bonjour ! Malo, le gérant de La Cabane à Malo/.test(await pg.textContent(`${Z} .qf-situation`)), 'situation d’Inès');
+  // Question 1 : la fiche client à gauche ; réponse juste ; les questions suivantes montrent leur document.
+  vrai(/C-14-2047/.test(await pg.textContent(`${Z} .qo-feuille`)), 'question 1 : la fiche client');
+  const repondre = async (id, v) => { await pg.click(`${Z} [data-q-choix="${v}"][data-q="${id}"]`); await pg.click(`${Z} [data-q-repondre="${id}"]`); await pause(); };
+  await repondre('qui-est-malo', 'client');
+  await pg.click(`${Z} [data-ouv-aller="1"]`); await pause();
+  vrai((await pg.$$eval(`${Z} .qo-feuille img`, (L) => L.map((i) => i.getAttribute('src')))).join() === './contenus/images/france-boissons/futs-mur.jpg,./contenus/images/france-boissons/casier-vides.jpg', 'question 2 : les deux photos');
+  vrai(await pg.$$eval(`${Z} .qo-feuille img`, (L) => L.every((i) => i.complete && i.naturalWidth > 0)), 'une photo ne se charge pas');
+  const credits = await pg.textContent(`${Z} .qo-feuille`);
+  vrai(/Photo : Marco Zuppone, Unsplash/.test(credits) && /Photo : Jennifer Chen, Unsplash/.test(credits), 'crédits sous les photos');
+  await repondre('les-vides', 'consignes');
+  await pg.click(`${Z} [data-ouv-aller="2"]`); await pause();
+  vrai(/FUT-AFF-20/.test(await pg.textContent(`${Z} .qo-feuille`)), 'question 3 : le stock');
+  await repondre('ou-regarder', 'stock-cond');
+  await pg.click(`${Z} [data-ouv-aller="3"]`); await pause();
+  vrai(/article 1113/i.test(await pg.textContent(`${Z} .qo-feuille`)) && /Légifrance/.test(await pg.textContent(`${Z} .qo-feuille`)), 'question 4 : le texte de droit et sa source');
+  await repondre('vente-conclue', 'envoi');   // fausse
+  vrai((await pg.getAttribute(`${Z} [data-q-verdict]`, 'data-q-verdict')) === 'ko', 'une réponse fausse doit montrer ✗');
+  vrai(!(await present('[data-ouv-continuer]')), '« Continuer » avant la dernière réponse');
+  await pg.click(`${Z} [data-ouv-aller="4"]`); await pause();
+  vrai(/40 € par fût/.test(await pg.textContent(`${Z} .qo-feuille`)), 'question 5 : les conditions de vente');
+  await repondre('consigne-rendue', '92');
+  egal(await pg.$$eval(`${Z} .ent-nav[data-vue]`, (L) => L.map((x) => x.dataset.vue)), ['ouverture', 'accueil', 'mail', 'fiche'], 'menu après les cinq réponses');
+  const n = await note();
+  egal([n.score, n.max], [0, 20], 'note : les questions d’ouverture ne comptent pas');
+  egal(await bandeau(), [], 'bandeau de fin avant le travail');
+  for (const k of [0, 1, 2, 3, 4]) {
+    await pg.click(`${Z} [data-ouv-aller="${k}"]`); await pause();
+    vrai(!/ne compte|comptent|dans (la|ta|votre) note|Pour réfléchir|notée/i.test(await pg.innerText(`${Z} .qo-bloc`)), `un texte parle de la note (question ${k + 1})`);
+  }
+  const R = (await base()).questions['france-boissons-commande'];
+  egal(['qui-est-malo', 'les-vides', 'ou-regarder', 'vente-conclue', 'consigne-rendue'].map((id) => R[id].premiere),
+    ['client', 'consignes', 'stock-cond', 'envoi', '92'], 'premières réponses rangées (clés)');
+  pg.off('request', surRequete);
+  egal(hors, [], 'requêtes hors du domaine du site');
 });
 
 await v('ENT-6.2 : parcours juste — 20/20, Inès demande la réponse après le bon, Malo répond « Ok pour la Pelforth, à vendredi ! », bandeau 6 lignes ✓, séance finie (photo)', async () => {

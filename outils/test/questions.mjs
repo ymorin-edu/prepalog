@@ -68,6 +68,27 @@ const monter = (o = {}) => pg.evaluate(async (o) => {
   }
   const U = S.univers({ copie: !!o.copie });
   U.questions = Q;
+  // L'écran « Avant de commencer » (10/10/2026) : trois questions d'ouverture sur deux documents et un visuel (une photo du
+  // dépôt, avec son crédit), une aide à mot cliquable. Réponses justes écrites à la main dans le bloc : ouv-a = 'x',
+  // ouv-b = 'y', ouv-c = 'z'.
+  if (o.ouverture) {
+    U.documents = [{ id: 'doc-a', titre: 'Document A', court: 'Doc A', html: '<p>Contenu du document A</p>' },
+      { id: 'doc-b', titre: 'Document B', court: 'Doc B', html: '<p>Contenu du document B</p>' }];
+    U.lexique = { 'mot-test': 'Définition du mot de test.' };
+    const choix = () => [{ v: 'x', lib: 'Choix X' }, { v: 'y', lib: 'Choix Y' }, { v: 'z', lib: 'Choix Z' }];
+    Q.liste.push(
+      { id: 'ouv-a', type: 'ouverture', de: 'Ines', doc: 'doc-a', enonce: 'Question ouverte A ?', aide: 'Regarde le [[mot-test]] dans le document.',
+        choix: choix(), juste: 'x', retour: 'Retour de A.', melanger: false },
+      { id: 'ouv-b', type: 'ouverture', de: 'Ines', doc: 'photos', enonce: 'Question ouverte B ?', aide: 'Regarde la photo.',
+        choix: choix(), juste: 'y', retour: 'Retour de B.', melanger: false },
+      { id: 'ouv-c', type: 'ouverture', de: 'Ines', doc: 'doc-b', enonce: 'Question ouverte C ?',
+        choix: choix(), juste: 'z', retour: 'Retour de C.', melanger: false });
+    Q.ouverture = { id: 'avant', de: 'Ines', titre: 'Avant de commencer', continuer: 'voir l’accueil',
+      situation: 'Bonjour ! Lis les documents à gauche et réponds à mes questions.',
+      documents: ['doc-a', 'doc-b', { id: 'photos', court: 'Photos', titre: 'La photo', type: 'images', images: [
+        { src: './contenus/images/france-boissons/futs-mur.jpg', alt: 'Des fûts alignés', legende: 'Des fûts.', credit: 'Photo : Marco Zuppone, Unsplash' }] }],
+      questions: ['ouv-a', 'ouv-b', 'ouv-c'] };
+  }
   if (o.transfert) {
     U.etapes = U.etapes.map((e) => (e.id === 'remplacement' ? { ...e, poids: 6, ecran: 'fiche:bon' } : e.id === 'quantite' ? { ...e, ecran: 'fiche:bon' } : e))
       .concat(S.ETAPE_TRANSFERT);
@@ -336,7 +357,8 @@ await v('Contrôle au chargement : `juste` inconnu, clé en double, question non
     const tous = {};
     for (const f of fichiers) {
       const m = await import(`/contenus/questions/${f}`);
-      tous[f] = essai(() => compilerQuestions(m.QUESTIONS));
+      // Les documents de l'écran d'ouverture sont ceux de la séance (hors de ce fichier) : on cite ceux que le fichier nomme.
+      tous[f] = essai(() => compilerQuestions(m.QUESTIONS, null, ((m.QUESTIONS.ouverture || {}).documents || []).filter((d) => typeof d === 'string')));
     }
     return { a: essai(() => compilerQuestions(a)), b: essai(() => compilerQuestions(b)), c: essai(() => compilerQuestions(c)),
       d: essai(() => compilerQuestions(d)), tous };
@@ -746,6 +768,170 @@ await v('Transfert : un destinataire inconnu ou une clé oubliée → signalé (
     await pause();
     vrai(!(await present('[data-transfert-ouvrir]')), `bouton sous « ${sujet} »`);
   }
+});
+
+// ─────────────────────────────────────────────────────────────── l'écran « Avant de commencer » (10/10/2026)
+// Valeurs attendues écrites à la main : ouv-a juste = 'x', ouv-b = 'y', ouv-c = 'z' (séance d'essai, `monter({ ouverture: true })`).
+const donneesMenu = () => pg.$$eval(`${Z} .ent-nav[data-vue]`, (L) => L.map((x) => x.dataset.vue));
+const nbFermes = () => pg.$$eval(`${Z} .ent-nav-ferme`, (L) => L.length);
+async function repondreO(id, val) {
+  await pg.click(`${Z} [data-q-choix="${val}"][data-q="${id}"]`);
+  await pg.click(`${Z} [data-q-repondre="${id}"]`);
+  await pause();
+}
+const questionVisible = () => pg.$$eval(`${Z} [data-ouverture] [data-question]`, (L) => L.map((x) => x.dataset.question));
+
+await v('Avant de commencer : écran imposé à l’arrivée, une seule question visible, pastilles, le reste du menu fermé (cadenas)', async () => {
+  await monter({ ouverture: true });
+  vrai(await present('[data-ouverture="avant"]'), 'l’écran d’ouverture n’est pas là');
+  egal(await questionVisible(), ['ouv-a'], 'questions visibles');
+  egal(await donneesMenu(), ['ouverture'], 'entrées ouvertes du menu');
+  vrai((await nbFermes()) >= 3, 'le reste du menu n’est pas fermé : ' + (await nbFermes()));
+  egal(await pg.$$eval(`${Z} .qo-pas`, (L) => L.length), 3, 'pastilles');
+  vrai(/0 sur 3 répondues/.test(await pg.textContent(`${Z} [data-ouv-compte]`)), 'compte des réponses');
+  vrai(/Bonjour ! Lis les documents/.test(await pg.textContent(`${Z} .qf-situation`)), 'situation de la tutrice');
+  egal(await pg.$$eval(`${Z} .qo-onglet`, (L) => L.map((x) => x.textContent)), ['Doc A', 'Doc B', 'Photos'], 'onglets');
+  vrai(/Contenu du document A/.test(await pg.textContent(`${Z} .qo-feuille`)), 'le bloc de gauche suit la question 1');
+});
+
+await v('Avant de commencer : réponse fausse → ✗ et retour, sans bloquer ; navigation (pastilles, Précédente, Suivante) ; le menu s’ouvre aux dernières réponses ; « Continuer » mène à l’accueil', async () => {
+  await monter({ ouverture: true });
+  await repondreO('ouv-a', 'z');
+  vrai((await pg.getAttribute(`${Z} [data-q-verdict]`, 'data-q-verdict')) === 'ko', 'pas de ✗');
+  vrai(/Retour de A\./.test(await pg.textContent(`${Z} .qf-retour`)), 'retour de la tutrice');
+  egal((await reps())['ouv-a'].premiere, 'z', 'première réponse rangée');
+  vrai(/^1 sur 3 répondues/.test((await pg.textContent(`${Z} [data-ouv-compte]`)).trim()), 'compte après une réponse');
+  vrai((await nbFermes()) >= 3, 'le menu doit rester fermé');
+  vrai(await pg.$eval(`${Z} [data-q-choix="x"][data-q="ouv-a"]`, (b) => b.disabled), 'les choix restent actifs après la réponse');
+  await pg.click(`${Z} [data-ouv-aller="1"]`); await pause();
+  egal(await questionVisible(), ['ouv-b'], 'après Suivante');
+  vrai(await present('.qo-feuille img[src$="futs-mur.jpg"]'), 'la photo n’est pas affichée');
+  vrai(/Photo : Marco Zuppone, Unsplash/.test(await pg.textContent(`${Z} .qo-feuille`)), 'le crédit manque sous l’image');
+  await repondreO('ouv-b', 'y');
+  vrai((await pg.getAttribute(`${Z} [data-q-verdict]`, 'data-q-verdict')) === 'ok', 'pas de ✓');
+  await pg.click(`${Z} [data-ouv-aller="0"]`); await pause();
+  egal(await questionVisible(), ['ouv-a'], 'Précédente');
+  vrai(/Pas tout à fait/.test(await pg.textContent(`${Z} [data-q-verdict]`)), 'la réponse déjà donnée se relit');
+  await pg.click(`${Z} .qo-pas >> nth=2`); await pause();
+  egal(await questionVisible(), ['ouv-c'], 'pastille 3');
+  vrai(!(await present('[data-ouv-continuer]')), '« Continuer » avant la dernière réponse');
+  await repondreO('ouv-c', 'z');
+  egal(await donneesMenu(), ['ouverture', 'accueil', 'mail', 'fiche', 'stock'], 'menu ouvert après les trois réponses');
+  vrai(await present('[data-ouv-continuer]'), 'pas de « Continuer »');
+  await pg.click(`${Z} [data-ouv-continuer]`); await pause();
+  vrai(await present('.ent-nav.on[data-vue="accueil"]'), '« Continuer » ne mène pas à l’accueil');
+  await aller('ouverture');
+  vrai(await present('[data-ouverture]'), 'l’écran reste dans le menu (relire ses réponses)');
+});
+
+await v('Avant de commencer : rien dans la note, rien à l’écran qui le dise, réponses rangées comme les autres (base, durée)', async () => {
+  await monter({ ouverture: true });
+  const avant = await note();
+  await repondreO('ouv-a', 'x');
+  await pg.click(`${Z} [data-ouv-aller="1"]`); await pause();
+  await repondreO('ouv-b', 'z');
+  await pg.click(`${Z} [data-ouv-aller="2"]`); await pause();
+  await repondreO('ouv-c', 'z');
+  const apres = await note();
+  egal([apres.score, apres.max], [avant.score, avant.max], 'la note a bougé');
+  egal(Object.keys(apres.detail).filter((k) => /ouv/.test(k)), [], 'une question d’ouverture est jugée dans la note');
+  egal(Object.keys(apres.detail), Object.keys(avant.detail), 'les jalons de la séance ont changé');
+  egal(await pg.$$eval(`${Z} [data-fin-jalon]`, (L) => L.map((x) => x.dataset.finJalon).filter((x) => /ouv/.test(x))), [], 'ligne au bandeau de fin');
+  for (const k of [0, 1, 2]) {
+    await pg.click(`${Z} [data-ouv-aller="${k}"]`); await pause();
+    const t = await pg.innerText(Z);
+    vrai(!/ne compte|comptent|dans (la|ta|votre) note|Pour réfléchir|notée/i.test(t), `un texte parle de la note (question ${k + 1})`);
+  }
+  const R = await reps();
+  egal([R['ouv-a'].premiere, R['ouv-b'].premiere, R['ouv-c'].premiere], ['x', 'z', 'z'], 'premières réponses (clés)');
+  vrai(typeof R['ouv-a'].duree === 'number' && typeof R['ouv-a'].arrivee === 'number', 'durée et heure d’arrivée rangées');
+  vrai(typeof R['@ouverture'] === 'number', 'heure d’ouverture de l’écran');
+});
+
+await v('Avant de commencer : élève dont la séance a déjà commencé → jamais bloqué (accueil, pas de cadenas) ; l’écran reste dans le menu', async () => {
+  await monter({ ouverture: true, db: { fiches: { bon: { envoye: true, valeurs: { remplacement: 'JUS-POM', quantite: '10' } } } } });
+  vrai(await present('.ent-nav.on[data-vue="accueil"]'), 'doit s’ouvrir sur l’accueil');
+  egal(await nbFermes(), 0, 'cadenas');
+  vrai((await donneesMenu()).includes('ouverture') && (await donneesMenu()).includes('mail'), 'menu : ' + (await donneesMenu()));
+  await aller('ouverture');
+  vrai(await present('[data-ouverture]'), 'l’écran est consultable');
+});
+
+await v('Avant de commencer : l’enseignant ne subit rien (écran libre, bonne réponse marquée, retour visible) et n’écrit rien', async () => {
+  await monter({ ouverture: true, role: 'prof' });
+  vrai(await present('.ent-nav.on[data-vue="accueil"]'), 'l’enseignant arrive sur l’accueil');
+  egal(await nbFermes(), 0, 'cadenas chez l’enseignant');
+  await aller('ouverture');
+  vrai(await present('.qf-c.qf-bonne'), 'bonne réponse non marquée');
+  vrai(/Retour de A\./.test(await pg.textContent(`${Z} [data-ouverture]`)), 'retour non visible');
+  vrai(!(await present('[data-q-repondre]')), 'bouton Répondre chez l’enseignant');
+  await pg.click(`${Z} [data-ouv-aller="1"]`); await pause();
+  egal(await questionVisible(), ['ouv-b'], 'navigation de l’enseignant');
+  egal((await base()).questions, undefined, 'rien n’est écrit par l’enseignant');
+});
+
+await v('Avant de commencer : l’aide (mot cliquable, « Voir le document » ramène le bloc de gauche, reste ouverte après la réponse)', async () => {
+  await monter({ ouverture: true });
+  vrai(!(await pg.$eval(`${Z} [data-ouv-aide]`, (d) => d.open)), 'l’aide devrait être repliée');
+  await pg.click(`${Z} [data-ouv-aide] summary`);
+  vrai(await present('[data-ouv-aide] .lex-mot'), 'le mot cliquable de l’aide');
+  await pg.click(`${Z} [data-ouv-doc="doc-b"]`); await pause();
+  vrai(/document B/.test(await pg.textContent(`${Z} .qo-feuille`)), 'onglet B');
+  vrai(await pg.$eval(`${Z} [data-ouv-aide]`, (d) => d.open), 'l’aide s’est refermée en changeant d’onglet');
+  await pg.click(`${Z} [data-ouv-voir="doc-a"]`); await pause();
+  vrai(/document A/.test(await pg.textContent(`${Z} .qo-feuille`)), '« Voir le document » ne ramène pas à A');
+  await repondreO('ouv-a', 'x');
+  vrai(await pg.$eval(`${Z} [data-ouv-aide]`, (d) => d.open), 'l’aide s’est refermée à la réponse');
+});
+
+await v('Avant de commencer : tient sans défiler à 1366 × 768, aide ouverte et retour affiché (question à photo comprise)', async () => {
+  await monter({ ouverture: true });
+  for (const k of [0, 1, 2]) {
+    await pg.click(`${Z} [data-ouv-aller="${k}"]`); await pause();
+    if (await present('[data-ouv-aide]')) await pg.evaluate((Z) => { document.querySelector(`${Z} [data-ouv-aide]`).open = true; }, Z);
+    await repondreO(['ouv-a', 'ouv-b', 'ouv-c'][k], 'z');
+    const bas = await pg.evaluate((Z) => document.querySelector(`${Z} .qo-cols`).getBoundingClientRect().bottom, Z);
+    vrai(bas <= 768, `question ${k + 1} : le bas de l’écran est à ${Math.round(bas)} px (> 768)`);
+  }
+});
+
+await v('Avant de commencer : contrôle au chargement — document inconnu, question non citée, ouverture sans question, question d’ouverture notée, image d’un autre domaine, document hors écran, réflexion → message qui nomme la faute', async () => {
+  const r = await pg.evaluate(async () => {
+    const { compilerQuestions } = await import('/core/types/questions.js');
+    const { QUESTIONS } = await import('/contenus/questions/ESSAI.js');
+    const essai = (f) => { try { f(); return 'ok'; } catch (e) { return e.message; } };
+    const ch = () => [{ v: 'x', lib: 'X' }, { v: 'y', lib: 'Y' }];
+    const base = () => ({ ...QUESTIONS, liste: QUESTIONS.liste.map((q) => ({ ...q })),
+      ouverture: { id: 'avant', de: 'Ines', documents: ['doc-a', { id: 'photos', court: 'Photos', type: 'images', images: [{ src: './x.jpg', alt: 'a', credit: 'c' }] }],
+        questions: ['ouv-a'] } });
+    const ajout = (Q, ...L) => { Q.liste.push(...L); return Q; };
+    const oa = (plus = {}) => ({ id: 'ouv-a', type: 'ouverture', de: 'Ines', doc: 'doc-a', enonce: 'Q ?', choix: ch(), juste: 'x', retour: 'R', ...plus });
+    const docs = ['doc-a'];
+    const dans = (Q) => essai(() => compilerQuestions(Q, null, docs));
+    const ok = ajout(base(), oa());
+    const a = ajout(base(), oa()); a.ouverture.documents = ['zzz', a.ouverture.documents[1]];
+    const b = ajout(base(), oa(), oa({ id: 'ouv-b' }));
+    const c = ajout(base(), oa()); c.ouverture.questions = [];
+    const d = ajout(base(), oa({ groupe: 'Une ligne au bilan' }));
+    const e = ajout(base(), oa()); e.ouverture.documents[1].images[0].src = 'https://exemple.org/x.jpg';
+    const f = ajout(base(), oa({ doc: 'doc-zz' }));
+    const g = ajout(base(), oa({ reflexion: true, juste: undefined }));
+    const h = ajout(base(), oa({ aide: '' }));
+    const i = base(); delete i.ouverture; i.liste.push(oa());
+    return { ok: dans(ok), a: dans(a), b: dans(b), c: dans(c), d: dans(d), e: dans(e), f: dans(f), g: dans(g), h: dans(h), i: dans(i),
+      notees: compilerQuestions(ok, null, docs).notees.map((q) => q.id) };
+  });
+  egal(r.ok, 'ok', 'une ouverture juste doit se charger');
+  vrai(/document « zzz » n’existe pas/.test(r.a), 'document inconnu : ' + r.a);
+  vrai(/« ouv-b » n’est citée/.test(r.b), 'question non citée : ' + r.b);
+  vrai(/ne cite aucune question/.test(r.c), 'ouverture sans question : ' + r.c);
+  vrai(/« ouv-a ».*ne compte pas dans la note/.test(r.d), 'question d’ouverture notée : ' + r.d);
+  vrai(/autre domaine/.test(r.e), 'image d’un autre domaine : ' + r.e);
+  vrai(/« ouv-a ».*« doc-zz » n’est pas un document de l’écran/.test(r.f), 'document hors écran : ' + r.f);
+  vrai(/« ouv-a ».*bonne réponse/.test(r.g), 'réflexion : ' + r.g);
+  vrai(/« ouv-a ».*`aide` est un texte/.test(r.h), 'aide vide : ' + r.h);
+  vrai(/« ouv-a » n’a pas d’écran d’ouverture/.test(r.i), 'question sans écran : ' + r.i);
+  egal(r.notees.filter((id) => /^ouv-/.test(id)), [], 'les questions d’ouverture ne sont jamais notées');
 });
 
 await v('Questions : aucune erreur de page pendant le bloc', async () => {

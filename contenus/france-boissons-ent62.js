@@ -161,7 +161,7 @@ const docDroit = () => `<article class="fb2-doc" aria-label="Le droit">
     <p class="fb-st">Code civil, article 1113</p>
     <p>« Le contrat est formé par la rencontre d’une offre et d’une acceptation par lesquelles les parties manifestent leur volonté de s’engager.
     Cette volonté peut résulter d’une déclaration ou d’un comportement non équivoque de son auteur. »</p>
-    ${PIED('Extrait du Code civil')}
+    <p class="fb-pied">Texte de loi (réel) — source : Légifrance</p>
   </article>`;
 
 export const DOCUMENTS = [
@@ -303,8 +303,7 @@ export const VOLET = {
   semer: (prenom) => ({ mails: [
     mail(prenom, INES, 'Bienvenue à l’administration des ventes',
       `Bonjour ${prenom}, bienvenue à l’administration des ventes !\n\n`
-        + 'Les bars de la côte normande préparent la Fête de la musique. Malo, le gérant de La Cabane à Malo, vient de nous écrire.\n\n'
-        + 'Prends sa commande : vérifie le stock et les conditions de vente, remplis le [[bon de commande]], puis réponds-lui. Chaque article a une [[référence]] : tu la retrouves dans le stock et sur le bon.\n\nInès',
+        + 'Prends la commande de Malo : vérifie le stock et les conditions de vente, remplis le [[bon de commande]], puis réponds-lui. Chaque article a une [[référence]] : tu la retrouves dans le stock et sur le bon.\n\nInès',
       { heure: HEURES.ines, extra: { pieces: ['organigramme', 'annuaire'], ouvreFiche: BON } }),
     mail(prenom, MALO, SUJET_MALO, TEXTE_MALO,
       { heure: HEURES.malo, extra: { pieces: ['fiche-client', 'stock', 'conditions', 'droit'], ouvreFiche: BON, phrases: phrasesMalo(prenom) } }),

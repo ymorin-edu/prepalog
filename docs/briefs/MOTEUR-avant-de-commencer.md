@@ -6,7 +6,7 @@
 > Lis docs/briefs/MOTEUR-avant-de-commencer.md. Construis l'écran « Avant de commencer » dans le moteur des questions, puis branche-le sur ENT-6.2. Annonce la durée avant de commencer et dis-moi si un point du brief contredit le code.
 > ```
 
-**Statut** : à valider par Tristan (page d'essai) *(à valider → à implémenter → en cours → livré | abandonné)*
+**Statut** : en cours — lot 1 livré le 10/10/2026, lots 2 et 3 à faire *(à valider → à implémenter → en cours → livré | abandonné)*
 **Date du brief** : 10/10/2026
 **Conversation d'origine** : Claude (session cloud), décisions de Tristan du 10/10/2026, 10 h.
 **Modèle** : Sonnet (on prolonge l'écran de questions existant, `core/types/questions.js`, sans vue nouvelle).
@@ -192,4 +192,25 @@ scénario nouveau. ENT-6.1 : à décider avec Tristan (elle a déjà sa propre o
 
 ## Compte rendu *(rempli par Claude Code à la livraison)*
 
--
+### Lot 1 — livré le 10/10/2026 (écran d'ouverture + ENT-6.2)
+
+**Décision de Tristan (10/10/2026) : accueil actuel et « Avant de commencer » restent séparés, les questions d'abord, puis
+l'Accueil** (variante A de la page d'essai `essai-avant-de-commencer-et-accueil-ENT-6.2.html`). Raison : les étapes de l'accueil
+disent déjà « stock, minimum, jour de tournée » et souffleraient la réponse à « Où regardes-tu ? ».
+
+- **Moteur** (`core/types/questions.js`, `core/types/entreprise.js`, `styles/questions.css`) : `ouverture` + questions
+  `type: 'ouverture'` ; contrôle au chargement (document inconnu, question non citée, ouverture sans question, question
+  d'ouverture notée ou à `reflexion`, image d'un autre domaine, crédit manquant, document hors écran) ; entrée « Avant de
+  commencer » en tête du menu ; menu fermé tant que tout n'est pas répondu ; « Continuer » → Accueil ; élève déjà en cours,
+  enseignant, copie rendue : jamais bloqués ; aide repliée qui reste ouverte ; sorties de page comptées comme pour les autres questions.
+- **Pas de jalon, pas de ligne au bandeau** : `notees` exclut les questions d'ouverture.
+- **ENT-6.2** : 5 questions (`qui-est-malo`, `les-vides`, `ou-regarder`, `vente-conclue`, `consigne-rendue`), 6 onglets dont
+  « Photos » (`futs-mur.jpg`, `casier-vides.jpg`, crédits déjà en place) ; pied de « Le droit » = « Texte de loi (réel) — source :
+  Légifrance » (il disait « reconstitution », faux pour un texte réel) ; mail d'accueil d'Inès raccourci (« Prends la commande de Malo : … »).
+- **Tests** : `questions` (+8 cas, 97/97), `france-boissons` (+1 cas, 51/51). Sabotés dans les deux sens (menu non fermé, séance
+  commencée ignorée, enseignant bloqué, question d'ouverture notée) : chaque sabotage fait tomber son cas. Cas existants modifiés :
+  voir `docs/decisions.md` (ligne du 10/10/2026, « Avant de commencer »).
+- **Vérifié** : page à 1366 × 768 (le bas du bloc ≤ 768 px, aide ouverte et retour affiché), aucune requête hors du domaine.
+- **Supposé / à faire** : la phrase de l'article 1113 n'a **pas** pu être relue sur Légifrance (accès refusé) ; elle est reprise de
+  l'écriture précédente (deux alinéas, conforme à ma connaissance du texte) : à relire par Tristan ou Cowork. Lots 2 (évaluation
+  notée sur 4) et 3 (tirage par élève, banque de 10 questions pour ENT-6.2 à écrire par Cowork) : **non faits**.

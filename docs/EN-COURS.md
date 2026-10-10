@@ -7,7 +7,6 @@ est déjà modifié ou inscrit ci-dessous, **elle s'arrête et le dit à Tristan
 
 | Chantier | Fichiers qu'il touche | Depuis |
 |---|---|---|
-| Écran « Avant de commencer » (moteur + ENT-6.2) | core/types/questions.js, core/types/entreprise.js, contenus/questions/ENT-6.2.js, outils/test/questions.mjs, outils/test/france-boissons.mjs, docs/briefs/MOTEUR-avant-de-commencer.md | 10/10/2026 |
 
 Rappel : un seul chantier à la fois dans `core/types/tournee.js`, `core/types/grille.js`,
 `core/types/entreprise.js`, `styles/base.css` et `outils/test/boost.mjs` (voir `docs/briefs/COORDINATION-boost.md`).

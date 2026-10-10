@@ -24,7 +24,7 @@ import { monterCalculette, demonterCalculette } from '../calculette.js';
 import { creerDocuments } from './documents.js';
 import { creerFiche } from './fiche.js';
 import { compilerQuestions, etapesQuestions, reponse, repondu, etapeArrivee, etapeFaite, htmlQuestion, htmlPanneau, htmlEtape,
-  appel, CLE_ETAPES } from './questions.js';
+  appel, CLE_ETAPES, CLE_OUVERTURE, htmlOuverture, ouvertureFaite } from './questions.js';
 import { creerGesteTableur, retourDeTemps } from './export-tableur.js';
 import { graineDeBase, poserGraine, declarerTirage, estTirage, fautesTirage } from '../tirage.js';
 import { BAREME_AFFICHE, pointsBonus } from '../notes.js';
@@ -59,7 +59,7 @@ export function creerEntreprise(U) {
   // Les QUESTIONS AU FIL et les POINTS D'ÉTAPE (08/10/2026, brief MOTEUR-questions-au-fil, lot 2) : seulement si la séance
   // déclare `questions` (format en tête de `core/types/questions.js`). Contrôlées ici : une question mal déclarée empêche
   // la séance de se charger. Le moteur ajoute lui-même un jalon par question notée (poids pris dans la `part`).
-  const MQ = U.questions ? compilerQuestions(U.questions, U.equipe) : null;
+  const MQ = U.questions ? compilerQuestions(U.questions, U.equipe, (U.documents || []).map((d) => d.id)) : null;
   // Les personnes de la séance (`equipe`, plus celles des questions) : les destinataires d'un message à transférer.
   const PERSONNES = MQ ? MQ.personnes : Object.assign({}, U.equipe || {});
   // LES JALONS BONUS du confirmé (chantier D-C, lot 3) : un jalon qui déclare `bonus: true` n'est pas un jalon du socle.
@@ -428,6 +428,7 @@ export function creerEntreprise(U) {
       // Le message d'un écran fermé par sa condition (voir FERMETURES), ou '' s'il est ouvert. Une condition
       // qui plante sur une base incomplète n'enferme personne.
       const fermeture = (v) => {
+        if (v !== 'ouverture' && MQ && MQ.ouverture && ouvertureImposee()) return 'Après « Avant de commencer »';
         const fe = etapeQuiFerme(`ecran:${v}`);
         if (fe) return `Fais d’abord le point d’étape avec ${appel(MQ.personnes[fe.de])}.`;
         const F = FERMETURES[v];
@@ -665,7 +666,20 @@ export function creerEntreprise(U) {
       // fil, l'écran du point d'étape, ce qu'il garde fermé, les sorties de page. Rien de tout cela pour l'enseignant :
       // il voit les points d'étape et les questions au fil (écran à lui), la bonne réponse marquée, et n'écrit rien.
       // `QF` = l'état d'écran (hors de la base, comme `E`) : le choix en cours, le panneau affiché, les sorties de page.
-      const QF = { choisi: {}, brouillon: {}, panneau: null, sorties: {} };
+      const QF = { choisi: {}, brouillon: {}, panneau: null, sorties: {}, ouv: { k: 0, doc: null, aides: {} } };
+      // L'ÉCRAN « AVANT DE COMMENCER » (brief MOTEUR-avant-de-commencer, 10/10/2026). Imposé tant que l'élève n'a pas répondu
+      // à toutes ses questions ; jamais à l'enseignant, ni après la remise, ni à un élève dont la séance a déjà commencé
+      // (un message envoyé, une fiche envoyée) : priorité absolue, jamais un élève bloqué.
+      const seanceCommencee = () => !!((db.fiches && Object.values(db.fiches).some((f) => f && f.envoye)) || db.mails.some((m) => m.folder === 'out'));
+      const ouvertureImposee = () => !!(MQ && MQ.ouverture && !estProf && !rendue() && !ouvertureFaite(db, MQ) && !seanceCommencee());
+      // La question affichée a une heure d'arrivée dès qu'on la montre (sa durée se compte depuis). Rien pour l'enseignant.
+      function arriveeOuverture(id) {
+        if (estProf || rendue()) return;
+        const S = etatQ();
+        if (!S[id]) S[id] = { arrivee: Date.now() };
+        else if (!S[id].arrivee && !repondu(S[id])) S[id].arrivee = Date.now();
+        if (!S[CLE_OUVERTURE]) S[CLE_OUVERTURE] = Date.now();
+      }
       const etatQ = () => { if (!db.questions) db.questions = {}; return db.questions[MQ.id] || (db.questions[MQ.id] = {}); };
       const graineQ = ctx.profil.uid || prenom;
       // La question au fil ARRIVÉE et sans réponse (une seule à la fois).
@@ -763,6 +777,7 @@ export function creerEntreprise(U) {
         if (so && so.n) { r.sorties = so.n; r.horsPage = Math.round(so.s); }
         if (q.type === 'fil') QF.panneau = id;
         sauver();
+        if (q.type === 'ouverture') { if (ouvertureFaite(db, MQ)) dessiner(); else dessinerVue(); return; }
         if (E.vue.startsWith('etape:')) dessinerVue();
         majQuestions();
         majCartes();
@@ -788,6 +803,23 @@ export function creerEntreprise(U) {
       }
       // Les écrans des points d'étape (élève : ceux qui sont arrivés ; enseignant : tous, et ses questions au fil).
       const vueEtape = (e) => htmlEtape(MQ, e, db, { estProf, parQuestion: optionsQuestion });
+      // L'écran « Avant de commencer » : la question affichée prend son heure d'arrivée ; le bloc de gauche suit la question
+      // (l'élève peut ouvrir un autre onglet, « Voir le document » le ramène).
+      function vueOuverture() {
+        const ids = MQ.ouverture.questions;
+        QF.ouv.k = Math.min(Math.max(QF.ouv.k, 0), ids.length - 1);
+        arriveeOuverture(ids[QF.ouv.k]);
+        return htmlOuverture(MQ, db, { estProf, k: QF.ouv.k, doc: QF.ouv.doc, parQuestion: optionsQuestion, aideOuverte: (id) => !!QF.ouv.aides[id],
+          feuille: (id) => (VDOC ? VDOC.feuille(id, db) : ''), court: (id) => { const d = VDOC && VDOC.doc(id); return d ? (d.court || d.titre || id) : id; } });
+      }
+      // Aller à la question `i` : le bloc de gauche montre son document.
+      function allerQuestionOuverture(i) {
+        const ids = MQ.ouverture.questions;
+        if (!(i >= 0 && i < ids.length)) return;
+        QF.ouv.k = i; QF.ouv.doc = MQ.parId.get(ids[i]).doc;
+        if (E.vue === 'ouverture') dessinerVue();
+        if (!estProf && !rendue()) ctx.jeu.sauver();
+      }
       function vueQuestionsProf() {
         return `<div class="ent-tete"><h2>Questions au fil</h2><p class="note">Ce que voit l’élève au moment du geste,
           bonne réponse marquée (vous seul voyez cet écran).</p></div>
@@ -803,7 +835,7 @@ export function creerEntreprise(U) {
       // Les clics des questions (panneau, écran du point d'étape, bandeau) : un seul écouteur, posé une fois.
       if (MQ) {
         hote.addEventListener('click', (ev) => {
-          const b = ev.target.closest && ev.target.closest('[data-q-choix], [data-q-repondre], [data-q-reprendre], [data-q-continuer], [data-q-aller-etape]');
+          const b = ev.target.closest && ev.target.closest('[data-q-choix], [data-q-repondre], [data-q-reprendre], [data-q-continuer], [data-q-aller-etape], [data-ouv-aller], [data-ouv-doc], [data-ouv-voir], [data-ouv-continuer]');
           if (!b || !hote.contains(b) || b.disabled) return;
           if (b.dataset.qChoix) {
             const id = b.dataset.q;
@@ -824,7 +856,12 @@ export function creerEntreprise(U) {
           else if (b.hasAttribute('data-q-reprendre')) reprendre();
           else if (b.dataset.qContinuer) continuerEtape(b.dataset.qContinuer);
           else if (b.dataset.qAllerEtape) aller(`etape:${b.dataset.qAllerEtape}`);
+          else if (b.dataset.ouvAller != null) allerQuestionOuverture(Number(b.dataset.ouvAller));
+          else if (b.dataset.ouvDoc || b.dataset.ouvVoir) { QF.ouv.doc = b.dataset.ouvDoc || b.dataset.ouvVoir; dessinerVue(); }
+          else if (b.hasAttribute('data-ouv-continuer')) { if (ouvertureFaite(db, MQ)) aller('accueil'); }
         });
+        // L'aide repliée (« Avant de commencer ») reste ouverte quand l'écran se redessine.
+        hote.addEventListener('toggle', (ev) => { const d = ev.target; if (d && d.dataset && d.dataset.ouvAide) QF.ouv.aides[d.dataset.ouvAide] = !!d.open; }, true);
         hote.addEventListener('input', (ev) => {
           const t = ev.target;
           if (t && t.dataset && t.dataset.qLibre) QF.brouillon[t.dataset.qLibre] = t.value;
@@ -841,6 +878,7 @@ export function creerEntreprise(U) {
           if (f && questionDuPanneau() === f) L.push(f.id);
           const e = E.vue.startsWith('etape:') && MQ.etapes.find((x) => `etape:${x.id}` === E.vue);
           if (e) e.questions.forEach((id) => { if (!repondu(reponse(db, MQ, id))) L.push(id); });
+          if (E.vue === 'ouverture' && MQ.ouverture) { const id = MQ.ouverture.questions[QF.ouv.k]; if (id && !repondu(reponse(db, MQ, id))) L.push(id); }
           return L;
         };
         let depart = null, cache = false, pendant = [];
@@ -864,7 +902,7 @@ export function creerEntreprise(U) {
             so.n += 1; so.s += dt; vu = true;
           });
           if (!vu) return;
-          if (E.vue.startsWith('etape:')) dessinerVue();
+          if (E.vue.startsWith('etape:') || E.vue === 'ouverture') dessinerVue();
           majQuestions();
         };
         const vis = () => (document.visibilityState === 'hidden' ? partir(true) : revenir());
@@ -1334,6 +1372,7 @@ export function creerEntreprise(U) {
               <aside class="ent-side">
                 ${boutonMenu(replie)}
                 <div class="ent-side-liste" id="entMenuListe"${replie ? ' hidden' : ''}>
+                ${MQ && MQ.ouverture ? item('ouverture', MQ.ouverture.titre || 'Avant de commencer') : ''}
                 ${item('accueil', 'Accueil')}
                 ${item('mail', 'Messagerie', nonLus)}
                 ${groupe((VPLAN || VTOUR) && !VFICHE && !VQUAI && !VPL && !VENT && !VINV && !VANIMS.length ? U.transportSection || 'Transport' : 'Mon poste', [
@@ -1552,9 +1591,11 @@ export function creerEntreprise(U) {
           ...(MQ ? Object.fromEntries(MQ.etapes.filter((e) => estProf || etapeArrivee(db, MQ, e.id))
             .map((e) => [`etape:${e.id}`, () => vueEtape(e)])) : {}),
           ...(MQ && estProf ? { 'questions-fil': vueQuestionsProf } : {}),
+          ...(MQ && MQ.ouverture ? { ouverture: vueOuverture } : {}),
         };
-        // Un écran fermé par sa condition (accès direct, base rouverte dessus) : on reste à l'accueil.
-        if (fermeture(E.vue)) E.vue = 'accueil';
+        // Un écran fermé par sa condition (accès direct, base rouverte dessus) : on reste à l'accueil (ou, tant que
+        // « Avant de commencer » est imposé, sur lui).
+        if (fermeture(E.vue)) E.vue = ouvertureImposee() ? 'ouverture' : 'accueil';
         z.innerHTML = (vues[E.vue] || vueAccueil)();
         brancher(z);
         figerVue(z);
@@ -1962,6 +2003,7 @@ export function creerEntreprise(U) {
       // haut : la tournée de la séance doit exister pour passer de phase.
       if (!rendue() && (declencher() | arriverQuestions())) ctx.jeu.sauver();
       remonterEtapes();
+      if (ouvertureImposee()) E.vue = 'ouverture';
       dessiner();
       // Évaluation : la copie est-elle déjà rendue ? Ce qui fait foi est le résultat enregistré
       // (que l'enseignant peut ramasser ou rouvrir), pas la base de l'élève.

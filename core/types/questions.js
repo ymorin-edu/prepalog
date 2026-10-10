@@ -25,6 +25,17 @@
 //       { id: 'vides', type: 'fil', de: 'Karim', quand, reflexion: true, enonce, choix, retour },   // non notée
 //     ],
 //   };
+// L'ÉCRAN « AVANT DE COMMENCER » (10/10/2026, brief `docs/briefs/MOTEUR-avant-de-commencer.md`) : un écran d'ouverture, SANS
+// condition, en tête du menu. Les questions s'y suivent une à une, les documents (ou images) à gauche. Elles ne comptent PAS
+// dans la note et rien ne le dit à l'élève : corrigées à l'écran (✓ / ✗ + retour), sans jalon. Tant qu'il n'a pas répondu à
+// toutes, le reste du menu est fermé ; une réponse fausse ne bloque jamais ; une séance déjà commencée n'est pas bloquée.
+//   ouverture: { id: 'avant-de-commencer', de: 'ines', titre: 'Avant de commencer', situation: 'Bonjour !…',
+//                documents: ['commande-malo', { id: 'photos', court: 'Photos', titre: '…', type: 'images',
+//                  images: [{ src: './contenus/images/…jpg', alt: '…', legende: '…', credit: 'Photo : …, Unsplash' }] }],
+//                continuer: 'lire mes messages', questions: ['qui-est-malo', …] },
+//   liste: [{ id: 'qui-est-malo', type: 'ouverture', de: 'ines', enonce, choix, juste, retour,
+//             doc: 'fiche-client',                  // ce que le bloc de gauche montre pour cette question (un id de `documents`)
+//             aide: 'Regarde la [[fiche client]].' }],   // facultative ; l'aide se replie, avec « Voir le document »
 // Champs facultatifs d'une question : `poids` (1 par défaut, dans la `part`), `actif: false` (mise de côté),
 // `melanger: false` (choix dans l'ordre déclaré), `libre: true` (réflexion seulement : une ou deux phrases),
 // `rattrapage(db)` (condition de secours, en plus de celle du moteur). La séance branche le tout en une ligne :
@@ -49,11 +60,12 @@ import { hasard } from '../tirage.js';
 
 const ID_OK = /^[a-z0-9][a-z0-9-]*$/;
 export const CLE_ETAPES = '@etapes';
+export const CLE_OUVERTURE = '@ouverture';
 // Comment l'élève appelle la personne : `appel`, sinon le premier mot de son nom.
 export const appel = (p) => (p && (p.appel || String(p.nom || '').split(' ')[0])) || '';
 
 /* ================================================================ contrôle au chargement */
-export function compilerQuestions(Q, equipe) {
+export function compilerQuestions(Q, equipe, documentsSeance) {
   const err = (m) => { throw new Error(`questions${Q && Q.id ? ` de ${Q.id}` : ''} : ${m}`); };
   if (!Q || typeof Q !== 'object') err('le bloc est vide');
   if (!Q.id || typeof Q.id !== 'string') err('il manque l’`id` (celui de la séance : clé de l’état dans la base de l’élève)');
@@ -67,7 +79,7 @@ export function compilerQuestions(Q, equipe) {
     if (!ID_OK.test(q.id)) err(`${ici} : l’id ne prend que des minuscules sans accent, des chiffres et des tirets`);
     if (ids.has(q.id)) err(`${ici} : id en double`);
     ids.add(q.id);
-    if (!['fil', 'transition'].includes(q.type)) err(`${ici} : \`type\` doit valoir 'fil' ou 'transition'`);
+    if (!['fil', 'transition', 'ouverture'].includes(q.type)) err(`${ici} : \`type\` doit valoir 'fil', 'transition' ou 'ouverture'`);
     if (!personnes[q.de]) err(`${ici} : \`de\` = « ${q.de} » n’est pas une personne de la séance (${Object.keys(personnes).join(', ') || 'aucune déclarée'})`);
     if (!q.enonce) err(`${ici} : il manque l’\`enonce\``);
     if (!q.retour) err(`${ici} : il manque le \`retour\` (ce que dit ${q.de} après la réponse)`);
@@ -84,7 +96,12 @@ export function compilerQuestions(Q, equipe) {
       if (q.reflexion) { if (q.juste != null) err(`${ici} : une question de réflexion n’a pas de \`juste\``); }
       else if (!vs.has(q.juste)) err(`${ici} : \`juste\` = « ${q.juste} » n’est pas une clé des choix (${[...vs].join(', ')})`);
     }
-    if (!q.reflexion && !q.groupe) err(`${ici} : une question notée nomme son \`groupe\` (sa ligne au bilan de fin)`);
+    if (q.type === 'ouverture') {
+      if (q.reflexion || q.libre) err(`${ici} : une question d’ouverture a une bonne réponse (ni \`reflexion\` ni \`libre\`)`);
+      if (q.groupe != null || q.poids != null || q.apres != null || q.quand != null) err(`${ici} : une question d’ouverture ne compte pas dans la note (ni \`groupe\`, ni \`poids\`, ni \`apres\`, ni \`quand\`)`);
+      if (typeof q.doc !== 'string' || !q.doc) err(`${ici} : il manque \`doc\` (l’id du document que le bloc de gauche montre)`);
+      if (q.aide != null && (typeof q.aide !== 'string' || !q.aide)) err(`${ici} : \`aide\` est un texte`);
+    } else if (!q.reflexion && !q.groupe) err(`${ici} : une question notée nomme son \`groupe\` (sa ligne au bilan de fin)`);
     if (q.type === 'fil' && typeof q.quand !== 'function') err(`${ici} : une question au fil a une condition \`quand(db)\``);
     if (q.rattrapage != null && typeof q.rattrapage !== 'function') err(`${ici} : \`rattrapage\` est une condition (db) => vrai ou faux`);
     if (q.poids != null && !(typeof q.poids === 'number' && q.poids > 0)) err(`${ici} : \`poids\` est un nombre positif`);
@@ -113,13 +130,56 @@ export function compilerQuestions(Q, equipe) {
   });
   toutes.filter((q) => q.type === 'transition' && !citees.has(q.id))
     .forEach((q) => err(`la question de transition « ${q.id} » n’est citée par aucun point d’étape`));
+  // L'écran d'ouverture (au plus un par séance).
+  const ouvQ = toutes.filter((q) => q.type === 'ouverture');
+  let ouverture = null;
+  if (Q.ouverture != null) {
+    const o = Q.ouverture, ici = 'l’écran d’ouverture';
+    if (!o || typeof o !== 'object') err(`${ici} doit être un objet`);
+    if (!o.id || !ID_OK.test(o.id)) err(`${ici} : il manque l’\`id\` (minuscules, chiffres et tirets)`);
+    if (!personnes[o.de]) err(`${ici} : \`de\` = « ${o.de} » n’est pas une personne de la séance`);
+    if (!Array.isArray(o.questions) || !o.questions.length) err(`${ici} ne cite aucune question`);
+    if (!Array.isArray(o.documents) || !o.documents.length) err(`${ici} n’a aucun document à montrer à gauche`);
+    const connus = new Set(documentsSeance || []);
+    const docs = new Map();
+    o.documents.forEach((d, k) => {
+      if (typeof d === 'string') {
+        if (!connus.has(d)) err(`${ici} : le document « ${d} » n’existe pas dans les \`documents\` de la séance (${[...connus].join(', ') || 'aucun'})`);
+        docs.set(d, { id: d });
+      } else {
+        if (!d || d.type !== 'images' || !d.id || !ID_OK.test(d.id)) err(`${ici} : le visuel n° ${k + 1} doit porter un \`id\` et \`type: 'images'\``);
+        if (!d.court) err(`${ici} : le visuel « ${d.id} » n’a pas de nom court (\`court\`)`);
+        if (!Array.isArray(d.images) || !d.images.length) err(`${ici} : le visuel « ${d.id} » n’a aucune image`);
+        d.images.forEach((im, j) => {
+          if (!im || !im.src || !im.alt) err(`${ici} : image n° ${j + 1} de « ${d.id} » : il faut \`src\` et \`alt\``);
+          if (/^(https?:)?\/\//i.test(String(im.src))) err(`${ici} : image n° ${j + 1} de « ${d.id} » : aucune image d’un autre domaine (règle du dépôt)`);
+          if (!im.credit) err(`${ici} : image n° ${j + 1} de « ${d.id} » : il manque le crédit affiché sous l’image (\`credit\`)`);
+        });
+        docs.set(d.id, d);
+      }
+    });
+    const vus = new Set();
+    o.questions.forEach((id) => {
+      const q = parIdTout.get(id);
+      if (!q) err(`${ici} cite une question inconnue « ${id} »`);
+      if (q.type !== 'ouverture') err(`${ici} cite « ${id} », qui n’est pas une question d’ouverture`);
+      if (vus.has(id)) err(`${ici} cite « ${id} » deux fois`);
+      vus.add(id);
+      if (!docs.has(q.doc)) err(`question « ${id} » : \`doc\` = « ${q.doc} » n’est pas un document de l’écran d’ouverture (${[...docs.keys()].join(', ')})`);
+    });
+    ouvQ.forEach((q) => { if (!vus.has(q.id)) err(`la question d’ouverture « ${q.id} » n’est citée par l’écran d’ouverture`); });
+    const actives = o.questions.filter((id) => parIdTout.get(id).actif !== false);
+    if (!actives.length) err(`${ici} n’a plus aucune question active`);
+    ouverture = { ...o, questions: actives, docs };
+  } else if (ouvQ.length) err(`la question d’ouverture « ${ouvQ[0].id} » n’a pas d’écran d’ouverture (\`ouverture\` manque)`);
   const liste = toutes.filter((q) => q.actif !== false);
-  const notees = liste.filter((q) => !q.reflexion);
+  const notees = liste.filter((q) => !q.reflexion && q.type !== 'ouverture');
   if (notees.length && !(typeof Q.part === 'number' && Q.part > 0)) err('`part` (les points sur 20 réservés aux questions notées) manque');
   return {
     id: Q.id, part: notees.length ? Q.part : 0, personnes, liste, notees,
     parId: new Map(liste.map((q) => [q.id, q])),
     fil: liste.filter((q) => q.type === 'fil'),
+    ouverture,
     etapes: etapes.filter((e) => e.questions.length),
   };
 }
@@ -191,6 +251,7 @@ export function htmlQuestion(M, q, r, o = {}) {
   return `<div class="qf-q" data-question="${ech(q.id)}">
     ${o.numero ? `<p class="qf-num">${ech(o.numero)}</p>` : ''}
     <p class="qf-enonce">${ech(q.enonce)}</p>
+    ${o.aide || ''}
     ${q.reflexion ? '<p class="note qf-reflexion">Pour réfléchir : il n’y a pas une seule bonne réponse, choisis la tienne.</p>' : ''}
     ${corps}${suite}
     ${o.sortie && !o.estProf ? '<p class="note qf-sortie" data-q-sortie>Tu as quitté la page pendant la question : ton enseignant le verra.</p>' : ''}
@@ -221,4 +282,61 @@ export function htmlEtape(M, e, db, o = {}) {
       ${o.estProf ? '' : `<div class="qf-continuer"><button type="button" class="btn btn-p" data-q-continuer="${ech(e.id)}" ${fini ? '' : 'disabled'}>Continuer${
         e.continuer ? ` : ${ech(e.continuer)}` : ''} →</button>${fini ? '' : '<span class="note">Réponds aux questions pour continuer : une réponse fausse ne bloque pas.</span>'}</div>`}
     </section>`;
+}
+
+/* ================================================================ l'écran « Avant de commencer » */
+export const ouvertureRepondues = (db, M) => (M.ouverture ? M.ouverture.questions.filter((id) => repondu(reponse(db, M, id))).length : 0);
+export const ouvertureFaite = (db, M) => !M.ouverture || ouvertureRepondues(db, M) === M.ouverture.questions.length;
+
+// Un visuel (images) : les photos, leur légende et leur crédit. Les images sont servies par le dépôt (jamais d'autre domaine).
+function htmlVisuel(d) {
+  return `<div class="ent-doc qo-visuel" data-ouv-visuel="${ech(d.id)}"><h3 class="qo-titre-doc">${ech(d.titre || d.court)}</h3>
+    ${d.images.map((im) => `<figure class="qo-fig"><img src="${ech(im.src)}" alt="${ech(im.alt)}">
+      <figcaption>${im.legende ? `${ech(im.legende)}<br>` : ''}<span class="note">${ech(im.credit)}</span></figcaption></figure>`).join('')}</div>`;
+}
+
+// L'aide d'une question : repliée, avec le bouton qui ramène le bloc de gauche au bon document. Le texte porte ses
+// `[[mots]]` cliquables (le moteur les transforme après l'affichage).
+const htmlAide = (q, ouverte) => (q.aide ? `<details class="qo-aide" data-ouv-aide="${ech(q.id)}"${ouverte ? ' open' : ''}><summary>Aide</summary><p>${ech(q.aide)}
+  <button type="button" class="btn btn-s qo-voir" data-ouv-voir="${ech(q.doc)}" data-cle="voir-${ech(q.id)}">Voir le document</button></p></details>` : '');
+
+// L'écran. À gauche, les documents en onglets ; à droite, UNE question à la fois, avec ses pastilles.
+//   o = { estProf, k (rang de la question), doc (l'onglet ouvert), feuille(id) → html d'un document, parQuestion(id) → options }
+export function htmlOuverture(M, db, o = {}) {
+  const ov = M.ouverture, P = M.personnes[ov.de], qui = ech(appel(P));
+  const ids = ov.questions, n = ids.length;
+  const k = Math.min(Math.max(o.k || 0, 0), n - 1);
+  const q = M.parId.get(ids[k]);
+  const toutes = ouvertureFaite(db, M);
+  const sel = ov.docs.has(o.doc) ? o.doc : q.doc;
+  const docs = [...ov.docs.values()];
+  const court = (d) => (d.type === 'images' ? d.court : o.court(d.id));
+  const pastilles = ids.map((id, i) => {
+    const fait = repondu(reponse(db, M, id));
+    return `<button type="button" role="tab" class="qo-pas${i === k ? ' qo-cur' : ''}${fait ? ' qo-faite' : ''}" data-ouv-aller="${i}"
+      data-cle="pas-${i}" aria-selected="${i === k}" aria-label="Question ${i + 1}${fait ? ', répondue' : ''}">${fait ? '✓' : i + 1}</button>`;
+  }).join('');
+  const nb = ouvertureRepondues(db, M);
+  const dernier = k === n - 1;
+  return `<div class="ent-tete"><h2>${ech(ov.titre || 'Avant de commencer')}, avec ${qui}</h2>${P.role ? `<p class="note">${ech(P.nom)}, ${ech(P.role)}</p>` : ''}</div>
+    ${ov.situation ? `<p class="qf-situation"><b>${qui} :</b> « ${ech(ov.situation)} »</p>` : ''}
+    <div class="qo-cols" data-ouverture="${ech(ov.id)}">
+      <section class="panneau qo-docs" aria-label="Documents">
+        <div class="qo-onglets" role="tablist">${docs.map((d) => `<button type="button" role="tab" class="qo-onglet" data-ouv-doc="${ech(d.id)}"
+          data-cle="onglet-${ech(d.id)}" aria-selected="${d.id === sel}">${ech(court(d))}</button>`).join('')}</div>
+        <div class="qo-feuille" role="tabpanel">${ov.docs.get(sel).type === 'images' ? htmlVisuel(ov.docs.get(sel)) : o.feuille(sel)}</div>
+      </section>
+      <section class="panneau qo-bloc" aria-label="Questions">
+        <div class="qo-pastilles" role="tablist" aria-label="Les questions">${pastilles}<span class="note" data-ouv-compte>${nb} sur ${n} répondues</span></div>
+        ${htmlQuestion(M, q, reponse(db, M, q.id), { ...o.parQuestion(q.id), numero: `Question ${k + 1} sur ${n}`,
+          aide: o.estProf ? '' : htmlAide(q, o.aideOuverte && o.aideOuverte(q.id)) })}
+        <div class="qo-nav">
+          <button type="button" class="btn btn-s" data-ouv-aller="${k - 1}" data-cle="precedente" ${k === 0 ? 'disabled' : ''}>← Précédente</button>
+          ${!dernier ? `<button type="button" class="btn btn-s" data-ouv-aller="${k + 1}" data-cle="suivante">Suivante →</button>`
+            : o.estProf ? ''
+            : toutes ? `<button type="button" class="btn btn-p" data-ouv-continuer data-cle="continuer">Continuer${ov.continuer ? ` : ${ech(ov.continuer)}` : ''} →</button>`
+            : '<span class="note">Réponds à toutes les questions pour continuer : une réponse fausse ne bloque pas.</span>'}
+        </div>
+      </section>
+    </div>`;
 }

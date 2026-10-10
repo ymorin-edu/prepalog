@@ -8,6 +8,11 @@
 // - `qui-utilise-le-bon` : point d'étape d'Inès après l'envoi du bon, NOTÉE (1,5) ; « Répondre » à Malo reste fermé jusqu'à la réponse.
 // - `vides-faux` : Lucas, au choix de la phrase « vides », réflexion, NON notée.
 // Les deux notées pèsent chacune 1 dans la `part` de 3 : 1,5 point sur 20 chacune.
+//
+// L'écran « Avant de commencer » (brief `docs/briefs/MOTEUR-avant-de-commencer.md`, 10/10/2026) : cinq questions d'ouverture,
+// NON notées (l'élève ne le sait pas), avec les documents de la séance et deux photos à gauche. Elles préparent la lecture sans
+// résoudre le piège en chaîne (ni le minimum, ni le jour, ni le remplacement). Deux sont d'éco-droit : le contrat de vente
+// (Code civil, article 1113, onglet « Le droit ») et la consigne (arrêté du 6 février 2026, montants des conditions de vente).
 
 import { apresFiche, apresGeste } from '../../core/declencheurs.js';
 import { EQUIPE } from '../france-boissons.js';
@@ -16,6 +21,16 @@ export const QUESTIONS = {
   id: 'france-boissons-commande',
   part: 3,
   personnes: { ines: EQUIPE.ines, karim: EQUIPE.karim, lucas: EQUIPE.lucas },
+  ouverture: { id: 'avant-de-commencer', de: 'ines', titre: 'Avant de commencer', continuer: 'voir l’accueil',
+    situation: 'Bonjour ! Malo, le gérant de La Cabane à Malo, nous a écrit pour la Fête de la musique. Avant de prendre sa commande, lis ses documents à gauche et réponds à mes questions.',
+    documents: ['commande-malo', 'fiche-client', 'stock', 'conditions',
+      { id: 'photos', court: 'Photos', titre: 'Ce que Malo appelle « ses vides »', type: 'images', images: [
+        { src: './contenus/images/france-boissons/futs-mur.jpg', alt: 'Des fûts de bière en métal alignés contre un mur',
+          legende: 'Des fûts : le métal contient la bière, et le fût est consigné.', credit: 'Photo : Marco Zuppone, Unsplash' },
+        { src: './contenus/images/france-boissons/casier-vides.jpg', alt: 'Un casier en plastique rempli de bouteilles',
+          legende: 'Un casier : il range les bouteilles, et il est consigné lui aussi.', credit: 'Photo : Jennifer Chen, Unsplash' }] },
+      'droit'],
+    questions: ['qui-est-malo', 'les-vides', 'ou-regarder', 'vente-conclue', 'consigne-rendue'] },
   etapes: [
     { id: 'avant-reponse', de: 'ines', apres: apresFiche('bon-de-commande'), ferme: 'repondre:reponse-malo',
       titre: 'Point d’étape avant de répondre à Malo', continuer: 'répondre à Malo',
@@ -23,6 +38,46 @@ export const QUESTIONS = {
       questions: ['qui-utilise-le-bon'] },
   ],
   liste: [
+    { id: 'qui-est-malo', type: 'ouverture', de: 'ines', doc: 'fiche-client',
+      enonce: 'Qui est Malo pour France Boissons ?',
+      aide: 'Regarde la fiche client. Un [[CHR|client CHR]], c’est un café, un hôtel ou un restaurant.',
+      choix: [{ v: 'client', lib: 'Un client : il tient un bar et nous achète des boissons' },
+        { v: 'fournisseur', lib: 'Un fournisseur : il nous vend de la bière' },
+        { v: 'collegue', lib: 'Un collègue de la plateforme de Buchelay' }],
+      juste: 'client',
+      retour: 'Malo est un client CHR : il tient un bar de plage. C’est pour ça qu’on lui répondra au « vous », même s’il nous tutoie.' },
+    { id: 'les-vides', type: 'ouverture', de: 'ines', doc: 'photos',
+      enonce: 'Malo écrit « reprends mes vides ». De quoi parle-t-il ?',
+      aide: 'Regarde les photos, puis clique sur les mots : [[vides]], [[consigne]].',
+      choix: [{ v: 'consignes', lib: 'De ses fûts et casiers consignés, qu’il rend vides' },
+        { v: 'jeter', lib: 'De bouteilles vides à jeter' },
+        { v: 'annuler', lib: 'D’une ancienne commande à annuler' }],
+      juste: 'consignes',
+      retour: 'Les fûts et les casiers sont consignés : Malo les a payés en plus de la boisson, et le chauffeur les reprend vides à la livraison.' },
+    { id: 'ou-regarder', type: 'ouverture', de: 'ines', doc: 'stock',
+      enonce: 'Pour savoir ce qu’on peut livrer à Malo, où regardes-tu ?',
+      aide: 'Pense à ce que demande Malo… et à ce que la plateforme a vraiment, et à ses règles.',
+      choix: [{ v: 'stock-cond', lib: 'Dans le stock et dans les conditions de vente' },
+        { v: 'message', lib: 'Dans le message de Malo : il dit ce qu’il veut' },
+        { v: 'fiche', lib: 'Dans la fiche client seule' }],
+      juste: 'stock-cond',
+      retour: 'Le message dit ce que Malo veut. Le stock et les conditions de vente disent ce qu’on peut lui livrer. C’est en comparant les deux qu’on remplit le bon de commande.' },
+    { id: 'vente-conclue', type: 'ouverture', de: 'ines', doc: 'droit',
+      enonce: 'Malo a envoyé sa commande. D’après l’article 1113 du Code civil, la vente est-elle déjà conclue ?',
+      aide: 'Lis l’article dans l’onglet « Le droit ». La commande de Malo, c’est une offre. Qui doit l’accepter ?',
+      choix: [{ v: 'acceptation', lib: 'Non : il faut d’abord que France Boissons accepte sa commande' },
+        { v: 'envoi', lib: 'Oui : elle est conclue dès que Malo envoie sa commande' },
+        { v: 'paiement', lib: 'Non : elle sera conclue seulement quand Malo aura payé' }],
+      juste: 'acceptation',
+      retour: 'La commande de Malo est une offre. La vente est conclue quand France Boissons l’accepte, par exemple par ta réponse. Le paiement vient après : il n’est pas nécessaire pour que le contrat existe.' },
+    { id: 'consigne-rendue', type: 'ouverture', de: 'ines', doc: 'conditions',
+      enonce: 'Un bar rend au chauffeur 2 fûts vides et 3 casiers vides. Combien de consigne France Boissons lui rend-il ?',
+      aide: 'Regarde les montants de consigne dans « Conditions de vente » : un montant par fût, un autre par casier.',
+      choix: [{ v: '92', lib: '92 € (2 × 40 € + 3 × 4 €)' },
+        { v: '80', lib: '80 € : on ne rend que la consigne des fûts' },
+        { v: '0', lib: '0 € : la consigne payée n’est jamais rendue' }],
+      juste: '92',
+      retour: 'La consigne est rendue quand l’emballage revient vide : 2 × 40 € pour les fûts et 3 × 4 € pour les casiers, soit 92 €. Ces montants sont fixés par un arrêté, le même pour tous les distributeurs de boissons.' },
     { id: 'pourquoi-ce-remplacement', type: 'fil', de: 'karim', quand: apresGeste('fiche:bon-de-commande:remplacement'), reflexion: true,
       enonce: 'Je vois ton choix dans la liste « Remplacement ». Pourquoi ce choix ?',
       choix: [{ v: 'blonde', lib: 'C’est une blonde de 20 L, comme Malo le demande' },

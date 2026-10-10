@@ -1064,6 +1064,21 @@ poids de ses jalons + `part` doit valoir 20 (contrôlé à l'ouverture).
   l'enseignant n'y voit que les identifiants.
 - Essai : `outils/essai-questions.html` (élève, enseignant, évaluation).
 
+### L'écran « Avant de commencer » (10/10/2026, brief `docs/briefs/MOTEUR-avant-de-commencer.md`, lot 1)
+
+Toute séance de scénario nouvelle commence par cet écran (pas les anciennes : une séance sans `ouverture` s'ouvre comme avant).
+Dans le fichier de questions : un bloc `ouverture` et des questions `type: 'ouverture'` (voir l'en-tête de `core/types/questions.js`).
+- `ouverture: { id, de, titre, situation, continuer, documents: [...], questions: [...] }` ; `documents` mêle des ids de
+  `documents` de la séance et des **visuels** `{ id, court, titre, type: 'images', images: [{ src, alt, legende, credit }] }`
+  (images du dépôt, jamais d'un autre domaine, crédit affiché sous l'image, ligne dans `CREDITS.md`).
+- Question d'ouverture : `{ id, type: 'ouverture', de, doc, enonce, choix, juste, retour, aide? }`. `doc` = ce que le bloc de gauche
+  montre ; `aide` (facultative) se replie, ses `[[mots]]` sont cliquables, « Voir le document » ramène à `doc`.
+- **Elle ne compte pas dans la note** (ni `groupe`, ni `poids`, ni jalon ; le moteur le refuse) et rien à l'écran ne le dit.
+  Corrigée à l'écran (✓ / ✗ + retour), réponse rangée comme les autres (`db.questions[séance][id]`, plus `@ouverture` = heure d'arrivée).
+- Imposée à l'élève (menu fermé, cadenas) tant qu'il n'a pas répondu à tout ; **jamais** à l'enseignant, après la remise, ni à un
+  élève dont la séance a déjà commencé (fiche envoyée ou message envoyé). « Continuer » mène à l'Accueil, qui reste tel quel.
+- Pas encore faits (lots 2 et 3 du brief) : évaluation notée sur 4 avec « Je ne sais pas », tirage des questions par élève.
+
 ### Modifier les questions d'une séance (une demande de Tristan = ce fichier seul, en Sonnet)
 
 | Ce que Tristan veut faire | Ce qu'il faut changer dans `contenus/questions/<séance>.js` | Ce qui arrive aux élèves |
