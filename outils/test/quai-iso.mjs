@@ -362,6 +362,28 @@ await v('Quai iso : chauffeur au volant sans visage, cale rouge = signalisation 
   vrai(!r.vert, 'du vert dans le camion de sécurité');
 });
 
+// ÉTAPE 1 bis (retours de Tristan, 10/10/2026) : le sens de la cale, et la lampe allumée qui se distingue au premier coup d'œil.
+await v('Quai iso : la cale a sa pente tournée vers le pneu (pointe au sol contre la roue, dos vertical à l’extérieur) ; la lampe allumée ne ressemble pas à l’éteinte', async () => {
+  const r = await pg.evaluate(async () => {
+    const K = await import('/core/iso.js');
+    const I = K.projection({ unite: 54, origine: [330, 150] }), J = K.projection({ unite: 60, origine: [470, 235] });
+    const cale = K.camionPorteur(I, 3.7, 0.35, { cale: 'posee' });
+    const face = (couleur) => (cale.match(new RegExp('<polygon points="([^"]+)" fill="' + couleur + '"')) || [])[1] || null;
+    const allumee = K.lampeQuai(J, 'allumee'), eteinte = K.lampeQuai(J, 'eteinte');
+    return { pente: face('#d93a2b'), dos: face('#bd3326'), cercles: (allumee.tete.match(/<circle/g) || []).length, rayons: (allumee.tete.match(/<line/g) || []).length,
+      lentille: [/#fff6c2/.test(allumee.tete), /#fff6c2/.test(eteinte.tete)], halo: [allumee.tete.includes('rgba(255,214,90'), ['rgba(255,214,90', '<line', '<circle'].some((m) => eteinte.tete.includes(m))],
+      cone: [allumee.cone.length > 0, eteinte.cone.length > 0] };
+  });
+  // Valeurs écrites à la main : camion en (3,7 ; 0,35), unité 54, origine (330 ; 150). La pente part de la bande de roulement
+  // (y = 1,46 m, au sol) et monte vers l'extérieur (y = 1,90 m, 0,22 m de haut) ; le dos vertical est à y = 1,90 m.
+  egal(r.pente, '470.3,309.8 482.5,316.9 461.9,316.9 449.7,309.8', 'la pente de la cale : pointe au sol côté roue, haut à l’extérieur');
+  egal(r.dos, '449.7,321.7 461.9,328.7 461.9,316.9 449.7,309.8', 'le dos vertical de la cale, à l’extérieur');
+  egal(r.lentille, [true, false], 'la lentille de la lampe : claire allumée, noire éteinte');
+  egal(r.halo, [true, false], 'le halo : autour de la tête allumée seulement');
+  egal([r.cercles, r.rayons], [2, 8], 'le halo (deux anneaux) et ses huit rayons');
+  egal(r.cone, [true, false], 'le faisceau : allumée seulement');
+});
+
 // La fumée : dessinée dans tous les cas, animée seulement si l'élève n'a pas demandé moins de mouvement.
 await v('Quai iso : fumée — trois bouffées, immobiles mais dessinées en mouvement réduit ; animées sinon', async () => {
   const lire = (p) => p.$$eval('svg[data-vue="dehors"] .iso-fumee', (L) => L.map((c) => { const r = c.getBoundingClientRect(); return { x: +r.x.toFixed(2), y: +r.y.toFixed(2), w: +r.width.toFixed(2), anim: getComputedStyle(c).animationName, n: c.getAnimations().length }; }));
@@ -388,6 +410,29 @@ await v('Quai iso : fumée — trois bouffées, immobiles mais dessinées en mou
   egal(c1.map((c) => c.n), [0, 0, 0], 'la case « mouvement réduit » de la page n’arrête pas la fumée');
   vrai(c1.every((c) => c.w > 4), 'la case « mouvement réduit » fait disparaître la fumée');
   await libre.close();
+});
+
+// Étape 1 bis : les bouffées sont plus grandes ; la zone de la fumée doit les contenir sur toute leur course (montée, grossissement).
+await v('Quai iso : fumée — à chaque instant de sa course animée, chaque bouffée visible reste dans la zone de la fumée', async () => {
+  const libre = await pageEssai(ctxMouvement);
+  await libre.check('[data-montrer-zones]');
+  const r = await libre.evaluate(async () => {
+    const z = document.querySelector('rect[data-zone="fumee"]').getBoundingClientRect();
+    const m = { x0: 1e9, y0: 1e9, x1: -1e9, y1: -1e9, n: 0 };
+    for (let t = 0; t < 64; t++) {
+      await new Promise((ok) => setTimeout(ok, 50));
+      for (const c of document.querySelectorAll('svg[data-vue="dehors"] .iso-fumee')) {
+        if (Number(getComputedStyle(c).opacity) < 0.05) continue;
+        const b = c.getBoundingClientRect(); m.n++;
+        m.x0 = Math.min(m.x0, b.x); m.y0 = Math.min(m.y0, b.y); m.x1 = Math.max(m.x1, b.right); m.y1 = Math.max(m.y1, b.bottom);
+      }
+    }
+    return { zone: { x0: z.x, y0: z.y, x1: z.right, y1: z.bottom }, fumee: m };
+  });
+  await libre.close();
+  vrai(r.fumee.n > 20, `trop peu de bouffées visibles échantillonnées : ${r.fumee.n}`);
+  vrai(r.zone.x1 > r.zone.x0, 'la zone de la fumée n’est pas visible');
+  vrai(r.fumee.x0 >= r.zone.x0 && r.fumee.y0 >= r.zone.y0 && r.fumee.x1 <= r.zone.x1 && r.fumee.y1 <= r.zone.y1, `une bouffée sort de la zone : ${JSON.stringify(r)}`);
 });
 
 /* ------------------------------------------------------------------ étape 2 : l'inspection sur la scène */

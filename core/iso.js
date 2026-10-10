@@ -465,7 +465,9 @@ const CAB = { x0: .03, x1: .97, y0: 2.6, y1: 3.54, z0: .36, z1: 1.56 };
 const PARE_BRISE = { x0: .1, x1: .9, y: 3.52, z0: 1.02, z1: 1.46 };
 const VITRE_LAT = { x: .97, y0: 2.68, y1: 3.25, z0: 1.05, z1: 1.45 };
 // La cale de roue (devant la roue arrière côté élève) et le pot d'échappement (arrière droit de la cabine).
-const CALE = { x0: .76, x1: 1.02, y0: 1.27, long: .38, haut: .2, bras: .3 };
+// `y0` = la pointe de la cale, qui touche la bande de roulement de la roue arrière (pneu en y 1,06, rayon .19) ; `y1` = le dos
+// vertical, à l'extérieur : la pente monte de la roue vers l'extérieur et passe SOUS le pneu (une vraie cale).
+const CALE = { x0: .76, x1: 1.02, y0: 1.11, long: .44, haut: .22, bras: .3 };
 const POT = { x: 1.0, y: 2.68, z1: 1.9 };
 
 // Une ellipse posée dans un plan (vitre) : `plan(u, z)` donne le point monde, on la rend en polygone.
@@ -499,20 +501,24 @@ function fumeeEchappement(I, x, yr) {
   const [px, py] = I.P(x + POT.x, yr + POT.y, POT.z1 + .02), u = I.unite;
   let g = '';
   [0, 1, 2].forEach((k) => {
-    const cx = px + u * (.04 + .06 * k), cy = py - u * (.14 + .19 * k), r = u * (.09 + .04 * k);
-    g += `<circle class="iso-fumee" cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${r.toFixed(1)}" fill="rgba(74,78,82,${(.82 - .17 * k).toFixed(2)})" style="--iso-dx:${(u * .12).toFixed(1)}px;--iso-dy:${(-u * .3).toFixed(1)}px;animation-delay:${(-k * .9).toFixed(1)}s"/>`;
+    const cx = px + u * (.05 + .07 * k), cy = py - u * (.2 + .3 * k), r = u * (.15 + .06 * k);
+    g += `<circle class="iso-fumee" cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${r.toFixed(1)}" fill="rgba(74,78,82,${(.82 - .17 * k).toFixed(2)})" style="--iso-dx:${(u * .14).toFixed(1)}px;--iso-dy:${(-u * .32).toFixed(1)}px;animation-delay:${(-k * .9).toFixed(1)}s"/>`;
   });
   return g;
 }
-// La cale de roue rouge à bras : un coin posé devant la roue arrière, côté élève, et son bras (poignée) qui revient
-// vers l'élève. Rouge = signalisation (exception du kit), jamais un verdict.
+// La cale de roue rouge à bras (D-4, étape 1 bis) : comme une vraie cale, la PENTE est tournée vers le pneu et passe sous
+// lui (la pointe, à ras du sol, touche la bande de roulement), le DOS vertical est à l'extérieur, et le bras (poignée)
+// part de ce dos vers l'élève. Quelques nervures sur la pente la rendent lisible. Rouge = signalisation (exception du
+// kit), jamais un verdict.
 function caleDeRoue(I, x, yr) {
   const { face, pts } = I;
   const x0 = x + CALE.x0, x1 = x + CALE.x1, y0 = yr + CALE.y0, y1 = y0 + CALE.long, h = CALE.haut;
-  let g = face([[x1, y0, 0], [x1, y1, 0], [x1, y0, h]], '#a8291d', 'rgba(0,0,0,.35)');
-  g += face([[x0, y0, h], [x1, y0, h], [x1, y1, 0], [x0, y1, 0]], '#d93a2b', 'rgba(0,0,0,.35)');
+  let g = face([[x0, y0, 0], [x1, y0, 0], [x1, y1, h], [x0, y1, h]], '#d93a2b', 'rgba(0,0,0,.35)');
+  for (const f of [.3, .55, .8]) g += `<polyline points="${pts([[x0, y0 + CALE.long * f, h * f], [x1, y0 + CALE.long * f, h * f]])}" fill="none" stroke="rgba(90,12,6,.45)" stroke-width="1.5"/>`;
+  g += face([[x1, y0, 0], [x1, y1, 0], [x1, y1, h]], '#a8291d', 'rgba(0,0,0,.35)');
+  g += face([[x0, y1, 0], [x1, y1, 0], [x1, y1, h], [x0, y1, h]], '#bd3326', 'rgba(0,0,0,.35)');
   const xb = (x0 + x1) / 2;
-  g += `<polyline points="${pts([[xb, y1, .02], [xb, y1 + .14, .2], [xb, y1 + CALE.bras, .3]])}" fill="none" stroke="#a8291d" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>`;
+  g += `<polyline points="${pts([[xb, y1, .16], [xb, y1 + .14, .24], [xb, y1 + CALE.bras, .3]])}" fill="none" stroke="#a8291d" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>`;
   g += `<polyline points="${pts([[xb - .06, y1 + CALE.bras, .3], [xb + .06, y1 + CALE.bras, .3]])}" fill="none" stroke="#7d1d14" stroke-width="5" stroke-linecap="round"/>`;
   return g;
 }
@@ -522,7 +528,8 @@ function caleDeRoue(I, x, yr) {
 export function boitesCamion(x, yr, o = {}) {
   return {
     cabine: [[x + PARE_BRISE.x0, yr + PARE_BRISE.y - .02, PARE_BRISE.z0, x + PARE_BRISE.x1, yr + PARE_BRISE.y, PARE_BRISE.z1]],
-    fumee: [[x + POT.x - .1, yr + POT.y - .1, POT.z1 + .1, x + POT.x + .3, yr + POT.y + .1, POT.z1 + 1.1]],
+    // y plus petit = plus à droite à l'écran : la dérive des bouffées part vers la droite, sans descendre sur la cale.
+    fumee: [[x + POT.x - .1, yr + POT.y - .5, POT.z1 + .1, x + POT.x + .3, yr + POT.y + .1, POT.z1 + 1.6]],
     cale: [[x + CALE.x0 - .03, yr + CALE.y0 - .02, 0, x + CALE.x1 + .03, yr + CALE.y0 + CALE.long + CALE.bras + .04, .36]],
   };
 }
@@ -620,13 +627,16 @@ function niveleurPose(I, part) {
   return g;
 }
 // La lampe de quai, sur le mur à droite de l'ouverture, au-dessus de l'ouverture à la hauteur de l'enseigne (mètres) :
-// socle `[x, y, z, largeur, profondeur, hauteur]`, bras (points), tête, et le point d'où part la lumière.
-const LAMPE = { base: [4.28, 0, 2.42, 0.14, 0.05, 0.2], bras: [[4.35, 0.05, 2.52], [4.35, 0.28, 2.6], [4.17, 0.32, 2.54]], tete: [4.04, 0.22, 2.44, 0.26, 0.22, 0.16], foyer: [4.17, 0.22, 2.52] };
+// socle `[x, y, z, largeur, profondeur, hauteur]`, bras (points), tête, et le point d'où part la lumière (le centre de
+// la lentille, sur la face de la tête tournée vers l'élève : c'est elle qui s'allume ou reste noire).
+const LAMPE = { base: [4.28, 0, 2.42, 0.14, 0.05, 0.2], bras: [[4.35, 0.05, 2.52], [4.35, 0.28, 2.6], [4.17, 0.32, 2.54]], tete: [4.0, 0.2, 2.4, 0.34, 0.26, 0.22], foyer: [4.17, 0.46, 2.51] };
 // La lampe de quai (D-4) : une tête articulée sur un bras, fixée au mur à droite de l'ouverture, braquée vers
 // l'intérieur de la remorque. `etat` : 'allumee' (défaut) | 'eteinte'. Rend `{ cone, tete }` : `cone` (le
 // faisceau et sa flaque de lumière, vides si éteinte) se dessine DANS le clip de l'ouverture, avant les palettes ;
-// `tete` (le bras, la tête, le halo) après `murQuai`. Blanc pâle translucide : de la lumière, pas un verdict.
-// `o.essai` : voir `objetEssai` (il entoure la tête, pas le faisceau).
+// `tete` (le bras, la tête, sa lentille) après `murQuai`. ALLUMÉE : lentille blanc chaud, halo en deux anneaux et
+// rayons autour de la tête, faisceau franc mais pâle et translucide ; ÉTEINTE : lentille noire, rien autour. Jaune
+// et blanc chauds seulement (de la lumière : ni vert ni rouge, jamais un verdict).
+// `o.essai` : voir `objetEssai` (il entoure la tête et sa lentille, pas le halo ni le faisceau).
 export function lampeQuai(I, etat = 'allumee', o = {}) {
   const { face, boite, pts, P } = I;
   const allumee = etat !== 'eteinte';
@@ -634,19 +644,33 @@ export function lampeQuai(I, etat = 'allumee', o = {}) {
   let cone = '';
   if (allumee) {
     // Par l'ouverture on ne voit que le début de la remorque (y de 0 à -1,2 environ) : c'est là que la lumière se lit.
-    cone = face([LAMPE.foyer, [2.45, -1.3, 0], [3.55, -1.3, 0]], 'rgba(255,246,190,.28)', 'none')
-      + face([[2.45, -0.1, 0.006], [3.55, -0.1, 0.006], [3.55, -1.3, 0.006], [2.45, -1.3, 0.006]], 'rgba(255,246,190,.3)', 'none')
-      + face([[2.41, -0.1, 0.1], [2.41, -1.3, 0.1], [2.41, -1.3, 1.9], [2.41, -0.1, 1.9]], 'rgba(255,246,190,.24)', 'none');
+    cone = face([LAMPE.foyer, [2.45, -1.3, 0], [3.55, -1.3, 0]], 'rgba(255,247,200,.38)', 'none')
+      + face([[2.45, -0.1, 0.006], [3.55, -0.1, 0.006], [3.55, -1.3, 0.006], [2.45, -1.3, 0.006]], 'rgba(255,247,200,.42)', 'none')
+      + face([[2.62, -0.3, 0.008], [3.38, -0.3, 0.008], [3.38, -1.1, 0.008], [2.62, -1.1, 0.008]], 'rgba(255,252,225,.34)', 'none')
+      + face([[2.41, -0.1, 0.1], [2.41, -1.3, 0.1], [2.41, -1.3, 1.9], [2.41, -0.1, 1.9]], 'rgba(255,247,200,.3)', 'none');
     cone = `<g pointer-events="none">${cone}</g>`;   // de la lumière : jamais ce qu'un clic atteint
   }
-  let t = '';
-  if (allumee) { const [hx, hy] = P(...LAMPE.foyer); t += `<circle cx="${hx.toFixed(1)}" cy="${hy.toFixed(1)}" r="${(I.unite * 0.22).toFixed(1)}" fill="rgba(255,244,170,.5)" pointer-events="none"/>`; }
-  t += boite(...LAMPE.base, gris);
+  const [lx, ly, lz] = LAMPE.foyer, [tx, ty, tz, tw, td, th] = LAMPE.tete;
+  let halo = '';
+  if (allumee) {
+    const [hx, hy] = P(lx, ly, lz), u = I.unite;
+    halo += `<circle cx="${hx.toFixed(1)}" cy="${hy.toFixed(1)}" r="${(u * .56).toFixed(1)}" fill="rgba(255,214,90,.16)"/>`;
+    halo += `<circle cx="${hx.toFixed(1)}" cy="${hy.toFixed(1)}" r="${(u * .4).toFixed(1)}" fill="rgba(255,214,90,.3)"/>`;
+    for (let k = 0; k < 8; k++) {
+      const a = k * Math.PI / 4, c = Math.cos(a), sn = Math.sin(a);
+      halo += `<line x1="${(hx + c * u * .46).toFixed(1)}" y1="${(hy + sn * u * .46).toFixed(1)}" x2="${(hx + c * u * .66).toFixed(1)}" y2="${(hy + sn * u * .66).toFixed(1)}" stroke="rgba(245,176,20,.95)" stroke-width="3" stroke-linecap="round"/>`;
+    }
+    halo = `<g pointer-events="none">${halo}</g>`;
+  }
+  let t = boite(...LAMPE.base, gris);
   t += `<polyline points="${pts(LAMPE.bras)}" fill="none" stroke="#3a3f43" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>`;
   t += boite(...LAMPE.tete, noir);
-  return { cone, tete: objetEssai(o, 'lampe', allumee ? 'allumee' : 'eteinte', t) };
+  // La lentille : un rectangle presque aussi grand que la face avant de la tête (y = ty + td).
+  const yf = ty + td + .002, m = .035;
+  t += face([[tx + m, yf, tz + m], [tx + tw - m, yf, tz + m], [tx + tw - m, yf, tz + th - m], [tx + m, yf, tz + th - m]], allumee ? '#fff6c2' : '#15181a', allumee ? '#f5b014' : 'rgba(255,255,255,.18)');
+  return { cone, tete: halo + objetEssai(o, 'lampe', allumee ? 'allumee' : 'eteinte', t) };
 }
-// La zone de la lampe : le socle, le bras et la tête (le faisceau n'en fait pas partie : il recouvre la remorque).
+// La zone de la lampe : le socle, le bras et la tête (le faisceau et le halo n'en font pas partie : ils ne se cliquent pas).
 export function boitesLampe() {
   const bte = ([x, y, z, w, d, h]) => [x, y, z, x + w, y + d, z + h];
   const xs = LAMPE.bras.map((p) => p[0]), ys = LAMPE.bras.map((p) => p[1]), zs = LAMPE.bras.map((p) => p[2]);
