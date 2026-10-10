@@ -333,7 +333,7 @@ est à compléter avec `outils/test.mjs`, `outils/essai-quai-inspection.*`, `out
 | 5 | Chariot frontal en iso *(si Tristan le veut, point 1 du 2.5)* | `core/iso.js`, `core/types/quai.js` | avec `dechargement.par: 'cariste'` et `rendu: 'iso'`, `dessinerChariotFrontal` (échelle du quai) sort les palettes à la place du chauffeur au transpalette | Spartoo (chauffeur) intact ; le chariot entre par l'ouverture, coupé au mur | le déchargement d'essai se fait au chariot | 3 à 4 h |
 | 6 | Fiche et livraison | `activites/FICHE-SEANCE.md`, `docs/chantiers.md`, `docs/decisions.md`, §3 ci-dessous | paragraphe « Inspection sur la scène », unité, libellés, fûts | — | D-4 livré : la séance peut s'écrire | 1 h |
 
-### 2.5 Points à trancher par Tristan
+### 2.5 Points à trancher par Tristan — **tranchés le 10/10/2026 : (1) a, le chariot frontal se dessine (étape 5 retenue) ; (2) a, fûts dessinés et unité partout.**
 
 1. **Déchargement au chariot frontal sur le quai iso** (brief ENT-6.4 §4.3, absent du §7 et du moteur : en iso, le chauffeur
    tire la palette au transpalette, quel que soit `dechargement.par`). **(a, recommandé)** étape 5 (+3 à 4 h) : c'est le
