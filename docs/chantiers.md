@@ -25,7 +25,7 @@
 | 4 | Fiabiliser le mode réel (écoutes, échecs remontés, geler, suivi) | C2 | moyen | Sonnet | oui | 3 | **livré** (08/10, b85c141, autre session : écoutes fermées, échecs signalés, démo alignée, tests de règles sur GitHub) |
 | 5 | Un bug de contenu n'est plus noté « faux » | C3 | petit | Sonnet | oui | 4 fini | **livré** (08/10, b0776d1) |
 | 6 | Suppressions sans traces invisibles, miroir reconstruisible | C4 | moyen | Sonnet | oui | 1, 4 | **livré** (08/10, 9ba74a9 puis d96f6c7) ; console RTDB publiée le 08/10 |
-| 7 | Quota Spark : mesurer, puis supprimer les écritures inutiles | C9 | moyen | Sonnet | oui | 4 | à faire |
+| 7 | Quota Spark : mesurer, puis supprimer les écritures inutiles | C9 | moyen | Sonnet | oui | 4 | **mesuré** (11/10, voir `decisions.md`) : ~63 écritures par élève et par heure, aucune optimisation nécessaire pour l'instant |
 | **Lot B — rendre la croissance possible** | | | | | | | |
 | 8 | Fabrique de séance d'entreprise (24 fichiers recopiés) | C6 | moyen | Sonnet | oui (petit) | — | **livré** (08/10, db5ed50 à ee13996) |
 | 9 | `entreprise.js` : options figées, `COLORS`/`SHIP` sortis, modules extraits | C5 | gros | Opus puis Sonnet | oui | 8 | **livré** (9a, 9a bis, 9b, 9c ; 9c bis à faire plus tard) |
@@ -210,6 +210,11 @@ s'aligner.
   de deux minutes (sauvegarde + temps fusionnées) ; `elevesSansGroupe` filtré sur `creePar`.
 - **Fini quand.** Le compteur d'écritures d'une séance d'une heure est connu et noté dans
   `decisions.md` ; le test « note non réécrite » reste vert.
+- **Mesuré (11/10/2026).** Séance du 07/10, 11 élèves, 13h30–14h30 : 694 écritures et 801 lectures, soit
+  ~63 écritures par élève et par heure (le fond de 2 minutes explique presque tout). Une classe de 30 pendant
+  une heure ≈ 9,5 % du quota quotidien d'écritures. **Optimisations différées** : on ne les fait que si une
+  mesure dépasse ~50 % du quota sur un jour de classe, ou si une séance à vue « quai » (chrono de 60 s, non
+  mesurée) pose problème. Détail, réserves et chiffres de la Realtime Database dans `decisions.md`.
 
 ### 8. Fabrique de séance d'entreprise (C6) — avant France Boissons
 - **Ce qu'on fait.** `seanceEntreprise(UNIVERS, SEANCE, meta)` dans `core/types/` qui dérive `trame`,
