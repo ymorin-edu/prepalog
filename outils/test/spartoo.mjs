@@ -834,7 +834,7 @@ await v('Spartoo réception : poids (8 jalons, total 20), plus d’avancement, u
 
 // ---------- 41 ter. ENT-1.1 : le manquant signalé à Puma peut s'écrire « un carton » (11/10/2026). Presque toute la classe
 // l'écrivait ainsi et le jalon les comptait faux. Base fabriquée ; réponses attendues écrites à la main.
-await v('Spartoo réception : « un carton » en lettres est accepté pour le manquant, pas « deux cartons » ni « un colis »', async () => {
+await v('Spartoo réception : « un carton » ou « un colis » en lettres est accepté pour le manquant, pas « deux cartons » ni « un paquet »', async () => {
   const r = await page.evaluate(async () => {
     const S = await import('/contenus/spartoo-reception.js');
     const SP = await import('/contenus/spartoo.js');
@@ -848,10 +848,12 @@ await v('Spartoo réception : « un carton » en lettres est accepté pour le ma
       paires: juge(debut + 'PM-SUE-MA-41 : il manque 6 paires.'),
       deux: juge(debut + 'PM-SUE-MA-41 : il manque deux cartons.'),
       colis: juge(debut + 'PM-SUE-MA-41 : il manque un colis.'),
+      paquet: juge(debut + 'PM-SUE-MA-41 : il manque un paquet.'),
+      deuxColis: juge(debut + 'PM-SUE-MA-41 : il manque deux colis.'),
       sansReference: juge(debut + 'Il manque un carton.'),
     };
   });
-  const attendu = { lettres: 'ok', majuscule: 'ok', chiffre: 'ok', paires: 'ok', deux: 'ko', colis: 'ko', sansReference: 'ko' };
+  const attendu = { lettres: 'ok', majuscule: 'ok', chiffre: 'ok', paires: 'ok', deux: 'ko', colis: 'ok', paquet: 'ko', deuxColis: 'ko', sansReference: 'ko' };
   if (JSON.stringify(r) !== JSON.stringify(attendu)) throw new Error('réserves à Puma : ' + JSON.stringify(r));
 });
 

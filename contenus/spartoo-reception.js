@@ -364,7 +364,7 @@ const JALONS = [
         // Le manquant écrit en chiffres (la trame le dit) : en paires (« 6 ») ou en cartons (« 1 carton »).
         const aManque = manque.every((a) => {
           const paires = a.annonce - a.compte, cartons = paires / PAIRES_PAR_CARTON;
-          return t.includes(a.sku) && (new RegExp(`\\b${paires}\\b`).test(t) || new RegExp(`\\b(${cartons}|${MOTS_NOMBRE[cartons] || cartons})\\s+CARTON`).test(t));
+          return t.includes(a.sku) && (new RegExp(`\\b${paires}\\b`).test(t) || new RegExp(`\\b(${cartons}|${MOTS_NOMBRE[cartons] || cartons})\\s+(CARTON|COLIS)`).test(t));
         });
         const aCasse = casse.every((a) => t.includes(a.sku));
         const ok = aLot && aManque && aCasse;
