@@ -254,6 +254,11 @@ et désignations d'ENT-6.4). Dessins : `contenus/images/france-boissons/` (SVG d
 
 ## 7. Demandes au moteur
 
+> **Livré par le chantier D-5 (11/10/2026)**, sauf le script de l'animation (contenu de la séance) : 7.1 = `mode: 'masse'` du Plan
+> d'entrepôt (`core/types/entrepot-masse.js`), 7.2 = l'animation passe à 8 fûts, 7.3 = `ecrans` de l'animation, 7.4 = `placeMasse`.
+> Format et pièges : `activites/FICHE-SEANCE.md`, « Mode `masse` » et « Écrans de présentation ». Écart à trancher : P2 et P4
+> sont aussi justes dans un couloir vide (M02, M06), voir `docs/decisions.md` du 11/10/2026.
+
 1. **Plan d'entrepôt, mode « stockage de masse »** (nouveau ; à ajouter à `MOTEUR-vue-plan-entrepot.md` ou en brief moteur à part,
    au choix de Claude Code après l'état des lieux). Rien de « France Boissons » dans `core/` : la séance déclare son plan.
    - **Dessin en 3D isométrique** (vue d'ensemble + couloir ouvert), comme la maquette : sol, allée, quais, mur du fond avec
@@ -330,7 +335,7 @@ aide sur un écran de lycée ; un élève de 2de finit en 50 min ; le bilan ne d
 - [x] Après le rangement : fiche d'entrée en stock avec couloir et calcul du stock, pas de message (Tristan, 05/10).
 - [x] Stock de 6.2 aligné sur le plan (Tristan, 05/10).
 - [x] 10 jalons ; une seule question « Pour réfléchir » (Tristan, 05/10).
-- [ ] Mode masse dans la vue Plan d'entrepôt ou vue à part (défaut : mode de la vue existante).
+- [x] Mode masse dans la vue Plan d'entrepôt ou vue à part (défaut : mode de la vue existante) → mode `masse` de la vue, dans son fichier (D-5, 11/10/2026).
 - [x] Animation à questions : **vue à part, réutilisable** (Tristan, 05/10) → brief moteur `docs/briefs/MOTEUR-vue-animation.md` (kit iso qui grandit ; **livrée le 05/10**, à réutiliser par le mode masse et par cette séance).
 - [ ] Dessins des écrans matériel (défaut : Cowork les fournit avant l'implémentation de la séance).
 

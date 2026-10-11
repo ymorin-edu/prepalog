@@ -115,7 +115,7 @@ plan d'entrepôt, fiche, animation) sans `id` texte non vide, sont refusées aus
 | `documentsStyle` | texte | Mise en page CSS des documents joints (règles imbriquées sous `.ent-doc`). | `activites/smoby-recrutement.js` |
 | `fiche` | objet | Une fiche à remplir. | `activites/smoby-arrivee.js` |
 | `fiches` | tableau | Plusieurs fiches à remplir (la première garde l'écran `fiche`, les autres `fiche:<id>`). | `activites/smoby-lettre-voiture.js` |
-| `animation` | objet | Une animation à questions. | essais seulement (aucune séance ne la passe encore) |
+| `animation` | objet | Une animation à questions (et ses écrans de présentation, D-5). | essais seulement (aucune séance ne la passe encore) |
 | `animations` | tableau | Plusieurs animations (rare). | essais seulement |
 | `questions` | objet | Questions au fil et points d'étape (voir « Questions au fil »). | essais seulement (aucune séance ne la passe encore) |
 | `equipe` | objet | Personnes citées par les questions, en plus de `questions.personnes` ; destinataires d'un message à transférer (`transfert.a`). | essai des questions (`contenus/questions-essai.js`) |
@@ -1131,6 +1131,62 @@ l'affichage). Les photos sont **dans le dépôt** (`contenus/<entreprise>/…`),
   (aussi le cas « visite » de la page d'essai, **sans** `premierEssai` : la page et le bloc `entrepot` gardent le mode
   d'origine) ; tests : bloc `entrepot` (fin du fichier), et bloc `smoby` pour le premier essai.
 
+### Mode `masse` : ranger en stockage de masse, en 3D (chantier D-5, 11/10/2026) — `core/types/entrepot-masse.js`
+
+Des palettes posées **au sol et gerbées**, dans des **couloirs** qu'un chariot frontal remplit et vide **par l'allée**
+(ENT-6.5 §7.1 ; maquette validée `docs/briefs/france-boissons/maquette-6.5-stockage-masse.html`). Rien du plan à racks n'y
+sert. Le dessin est celui du kit iso (`core/iso.js`), le même que l'animation du FIFO : panneaux des couloirs au mur du fond,
+flèches ENTRÉE / SORTIE au sol, palettes de rétention à 8 fûts. Format complet en tête du fichier ; exemple :
+`contenus/entrepot-masse-essai.js` (les données d'ENT-6.5) ; page d'essai `outils/essai-entrepot.html`, cas « Stockage de
+masse » ; tests : bloc `entrepot` (« Masse : … »).
+
+```js
+entrepot: {
+  id: 'fb-masse', libelle: 'Zone de masse', mode: 'masse',
+  personnage: { nom, role, date, texte: { guidage, entrainement, evaluation } },
+  consigne: 'Prends une palette (clique sa carte), puis clique un couloir sur le plan.',
+  plan: { couloirs: [{ id: 'M01', places: 4 }, …, { id: 'M08', places: 4, reserve: 'vides' }],
+          reception: 'Zone de réception', litiges: { titre: 'Zone litiges', futs: 1 }, quais: ['QUAI 10', …] },
+  references: { HEI30: { nom: 'Heineken fût 30 L', court: 'Heineken 30 L', format: '30 L' }, VIDES: { nom, court: 'VIDES', vides: true } },
+  hauteurs: { '30 L': 2, '20 L': 3 }, portee: 4,
+  lots: { S20: { couleur: 'jaune' }, S24: { couleur: 'bleu' } },
+  stock: { M01: [[{ ref: 'HEI30', lot: 'S20' }, { ref: 'HEI30', lot: 'S20' }]] },   // piles du FOND vers l'avant, du bas vers le haut
+  palettes: [{ id: 'P1', ref: 'HEI30', lot: 'S24', futs: 8, kg: 350, reception: 'conforme' }, …],
+  criteres: [{ type: 'zoneReservee', nom: 'couloir VIDES' }, { type: 'uneReference' }, { type: 'unSeulLot' },
+             { type: 'hauteurGerbage' }, { type: 'parLeFond' }],
+  regles: { lignes: [ … ] }, note: { sur: 20 },
+}
+```
+
+- **Une place** se dit « couloir M02, position 1, niveau 1 » : **position 1 = le fond** (contre le mur), la dernière = devant
+  (côté allée) ; niveau 1 = au sol. Le niveau n'est pas rangé : il se déduit de l'**ordre de pose**.
+- **Gestes** : prendre une palette (sa carte, ou la palette en zone de réception), cliquer un couloir sur le plan (il s'ouvre
+  en grand, en 3D), cliquer une **boîte verte** (les seules places possibles) ; « ← Retour au plan » ou Échap. **Le moteur
+  empêche** ce que le chariot ne peut pas faire : poser derrière une pile, poser sur une pile déjà à `portee` niveaux,
+  reprendre une palette qui n'est pas au sommet ou devant laquelle il y a une pile (« Impossible de la reprendre : une autre
+  palette la bloque. »). **Tout le reste est accepté**, et jugé à la validation.
+- **« Valider mon rangement »** (actif quand tout est posé, avec confirmation) **fige** le rangement. Rien n'est jugé avant.
+  Après (guidage, entraînement) : dans chaque carte, « ✓ bien rangée » ou « ✗ critère : … » (le **nom** seulement, jamais la
+  place). Évaluation : « Rendre mon travail » rend la copie, aucun bilan, pas de « Les règles ».
+- **Critères** (les cinq types ; la séance choisit et peut renommer par `nom`), jugés contre **ce qui était dans le couloir
+  quand l'élève a posé la palette** (stock de départ et ses palettes posées avant elle : c'est le geste qui casse la règle
+  qui est faux) : `zoneReservee` (couloir réservé aux vides : il passe en premier et arrête les autres), `uneReference`,
+  `unSeulLot`, `hauteurGerbage` (par `format`), `parLeFond` (une position derrière est vide).
+- **Jalons** : un par palette par défaut (`palette-P1`…), « à faire » avant la validation, puis juste ou faux (`etat: 'ko'`) ;
+  `etapesEntrepot(P)` les rend, la séance y pose ses poids. **Pour une fiche qui suit** (ENT-6.5, jalons 7 à 10) :
+  `placeMasse(db, P, 'P1')` → `{ couloir, position, niveau }` (ou `null`), la place où l'élève l'a **lui-même** posée
+  (pas de double peine) ; `fautesMasse(P, etat, 'P1')` → les noms des critères faux ; `bonnesReponses(P)` → toutes les
+  bonnes places sur le stock de départ (enseignant, tests ; jamais montrées à l'élève).
+- **Attention, ce que le moteur accepte** : une palette posée seule dans un couloir **vide** respecte toutes les règles. En
+  ENT-6.5, P2 et P4 sont donc justes aussi en M02 ou M06 (il ne reste alors qu'un couloir vide pour P1 et P3), comme le dit
+  la remarque du brief ; la colonne « Bonne(s) place(s) » du brief ne les cite pas.
+- **Dessin** : vue d'ensemble (couloirs de gauche à droite, réception et litiges à droite, allée et quais devant), étiquette
+  du lot au sommet de chaque pile (« lot S20 », « P1 · S24 » pour une palette de l'élève, cerclée de vert ; « VIDES » en gris),
+  écartées vers le haut avec un trait quand deux se recouvriraient ; palettes qui apparaissent au chargement, palette posée qui
+  **tombe** (rien de tout cela en mouvement réduit). Tient en 1366 × 768 et 1280 × 720 sans défiler (testé).
+- **État** : `db.entrepots[<id>]` = `{ pos: { P1: { c: 'M02', p: 1 } }, ordre: ['P1', …], valide, at, premierGeste, verifs }`.
+  Gestes publiés : `entrepot:<id>:poser`, `entrepot:<id>:verifier` (la validation).
+
 ## Vue « animation à questions » (scène isométrique, arrêt, question) — `core/types/animation.js`
 
 Depuis le 05/10/2026 (brief `docs/briefs/MOTEUR-vue-animation.md`, maquette d'ENT-6.5). Montrer **un geste
@@ -1200,14 +1256,26 @@ reproduite, `contenus/animation-essai.js` ; page d'essai `outils/essai-animation
   une image (fond clair en sombre aussi). Signalétique au sol (panneaux verts, flèches ENTRÉE / SORTIE) : exception
   notée dans `docs/decisions.md`.
 
+### Écrans de présentation : le matériel du poste, un mot expliqué (chantier D-5, 11/10/2026)
+
+`ecrans: [{ titre, image?: { src, alt, mention? }, blocs: ['html', …] }]` dans la déclaration d'une animation : avant la
+partie 1, des écrans **non notés** — un dessin à gauche, **trois blocs au plus** (règle d'écriture de 2de), « ◀ Précédent » /
+« Suivant ▶ » ; le dernier dit « Voir l'animation ▶ ». Une animation **sans `parties` ni `scene`** n'est faite que d'écrans :
+c'est un écran du menu (« Le matériel »), sans jalon. `ecransVus` est rangé quand l'élève a vu le dernier : il revient
+ensuite droit à l'animation, et le lien `libelleEcrans` (« Revoir le mot FIFO ») y ramène. L'image vient du site
+(`./contenus/…`) : une adresse d'un autre domaine, un écran sans `titre`, plus de trois blocs ou une image sans `alt`
+empêchent la séance de se charger. Exemple : `ECRANS_MATERIEL` et `ECRAN_FIFO` de `contenus/animation-essai.js` (textes du
+brief ENT-6.5 §4) ; page d'essai `outils/essai-animation.html`, « avec les écrans du matériel et du mot FIFO ».
+
 ### Le kit de dessin isométrique — `core/iso.js`
 
 **Jamais de code de dessin dans `contenus/`.** Le kit contient : projection (`projection()`, unité = une place de
 palette), `face`, `boite`, cadrage automatique sur le décor ; décor (sol, mur, allée, couloir de masse et ses places,
-panneau, flèches et textes au sol, repères de profondeur) ; charge `retention` (palette de rétention noire, 0 à 4
-fûts, étiquette de lot, texte au sol, pastille « ! ») ; acteur `chariotFrontal` (gestes `poser`, `reprendre`,
-cariste en silhouette sans visage). Il est conçu pour servir aussi au futur mode « stockage de masse » du Plan
-d'entrepôt (ENT-6.5 §7.1). `core/iso.js` porte aussi les objets du **quai iso** (façade, camion porteur, cabine, cale, butoirs,
+panneau, flèches et textes au sol, repères de profondeur ; `zone` au sol et `quai` depuis D-5) ; charge `retention`
+(palette de rétention noire, **8 fûts en quinconce** depuis le 11/10/2026 — décision 52 —, `futs` de 0 à 8, étiquette de lot ou
+`texte`, texte au sol, pastille « ! », `fuite`) ; palettes **gerbées** (`z` en multiples de `HAUT_NIVEAU`) ; acteur
+`chariotFrontal` (gestes `poser`, `reprendre`, cariste en silhouette sans visage). Il sert aussi au mode « stockage de
+masse » du Plan d'entrepôt (ci-dessus). `core/iso.js` porte aussi les objets du **quai iso** (façade, camion porteur, cabine, cale, butoirs,
 niveleur, lampe, bac de rétention à huit fûts, `boiteEcran` pour les zones de clic) : ils sont décrits dans « Le quai iso » ;
 `dessinerChariotFrontal` y sert aussi, à l'échelle du quai (options `chargeSvg`, `coupe`, `gilet`).
 
