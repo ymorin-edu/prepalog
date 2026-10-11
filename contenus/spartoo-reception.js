@@ -28,6 +28,8 @@ export const LOT = 'LOT-PM-2609';
 export const BL = 'BL-77421';
 export const COMMANDE = 'CF-20261003';
 export const PAIRES_PAR_CARTON = 6;
+// Le manquant peut s'écrire « un carton » : les nombres en toutes lettres que le jalon `reserve` reconnaît (majuscules).
+const MOTS_NOMBRE = ['ZERO', 'UN', 'DEUX', 'TROIS', 'QUATRE', 'CINQ', 'SIX'];
 // Le piège (brief §6.4) : même fournisseur, BL aux chiffres inversés, saisissable. Rien sur le quai pour lui.
 export const REC_PIEGE = 'REC-04129';
 export const BL_PIEGE = 'BL-77412';
@@ -362,7 +364,7 @@ const JALONS = [
         // Le manquant écrit en chiffres (la trame le dit) : en paires (« 6 ») ou en cartons (« 1 carton »).
         const aManque = manque.every((a) => {
           const paires = a.annonce - a.compte, cartons = paires / PAIRES_PAR_CARTON;
-          return t.includes(a.sku) && (new RegExp(`\\b${paires}\\b`).test(t) || new RegExp(`\\b${cartons}\\s*CARTON`).test(t));
+          return t.includes(a.sku) && (new RegExp(`\\b${paires}\\b`).test(t) || new RegExp(`\\b(${cartons}|${MOTS_NOMBRE[cartons] || cartons})\\s+CARTON`).test(t));
         });
         const aCasse = casse.every((a) => t.includes(a.sku));
         const ok = aLot && aManque && aCasse;

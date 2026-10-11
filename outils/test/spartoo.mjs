@@ -229,7 +229,7 @@ await v('Spartoo : le stock est verrouillé par un code', async () => {
 });
 
 // ---------- 29. l'exercice de bout en bout : les trois jalons
-await v('Spartoo : exercice complet, trois jalons au vert', async () => {
+await v('Spartoo : exercice complet, onze jalons au vert', async () => {
   // Étape 4 — répondre à Léa avec le stock réel.
   await ouvrirMail('Stan Smith');
   await page.waitForSelector('[data-repondre]');
@@ -286,7 +286,7 @@ await v('Spartoo : exercice complet, trois jalons au vert', async () => {
 });
 
 // ---------- 30. le suivi de classe voit l'avancement
-await v('Spartoo : avancement remonté au suivi de classe', async () => {
+await v('Spartoo : note pondérée de la préparation remontée au suivi (20/20)', async () => {
   // L'environnement est immersif : pas de bandeau Prepalog, on en sort par son propre bouton.
   await page.click('[data-quitter]');
   await page.waitForSelector('#btnDeco', { timeout: 6000 });
@@ -298,7 +298,11 @@ await v('Spartoo : avancement remonté au suivi de classe', async () => {
   await page.click('[data-ong="suivi"]');
   await page.waitForSelector('text=ENT-1.1', { timeout: 6000 });
   const t = await page.textContent('#contenuProf');
-  if (!/3\/3/.test(t)) throw new Error('avancement attendu 3/3, lu : ' + (t.match(/\d\/3/g) || ['aucun']).join(' '));
+  // Notation pondérée du 11/10/2026 : onze jalons, 20 points. La préparation juste vaut 20/20 (plus un « 3/3 » d'avancement).
+  // Les notes du Suivi sont collées sans espace dans le texte de la page (« 18/2020/20 ») : on les relit une à une.
+  const notes = (t.match(/\d+(?:,\d)?\/20/g) || []);
+  if (!notes.includes('20/20')) throw new Error('note 20/20 attendue pour ENT-1.2, lu : ' + (notes.join(' ') || 'aucune'));
+  if (/\d\/3\b/.test(t)) throw new Error('un avancement « x/3 » est resté au suivi : ' + (t.match(/\d\/3\b/g) || []).join(' '));
 });
 
 // ---------- 31. la réception : même base, volet propre à la séance
@@ -503,7 +507,8 @@ await v('Spartoo réception : note pondérée remontée au suivi (18/20, questio
   await page.waitForSelector('text=ENT-1.2', { timeout: 6000 });
   const t = await page.textContent('#contenuProf');
   if (!t.includes('18/20')) throw new Error('note 18/20 attendue pour ENT-1.1 (questionnaire faux sur la question 4 : 20 − 2), lu : ' + t.slice(0, 300));
-  if (!/3\/3/.test(t)) throw new Error('l’avancement 3/3 de la préparation a disparu');
+  const notes = (t.match(/\d+(?:,\d)?\/20/g) || []);
+  if (!notes.includes('20/20')) throw new Error('la note 20/20 de la préparation a disparu, lu : ' + (notes.join(' ') || 'aucune'));
 });
 
 // ---------- 34. la traçabilité : l'aval est semé, le lot se remonte dans les deux sens
@@ -595,7 +600,7 @@ await v('Blocage qualité : le lot seul est touché, sans réponse soufflée', a
 });
 
 // ---------- 36. la traçabilité de bout en bout : les trois jalons
-await v('Spartoo traçabilité : trois jalons au vert', async () => {
+await v('Spartoo traçabilité : neuf jalons au vert', async () => {
   // Les deux références qui restent : 17 et 22 paires du lot.
   await page.click('[data-vue="blocage"]');
   await page.waitForSelector('#blLot');
@@ -630,7 +635,7 @@ await v('Spartoo traçabilité : trois jalons au vert', async () => {
 });
 
 // ---------- 37. trois avancements côte à côte dans le suivi
-await v('Spartoo traçabilité : avancement remonté au suivi', async () => {
+await v('Spartoo traçabilité : trois notes sur 20 côte à côte dans le suivi', async () => {
   await page.click('[data-quitter]');
   await page.waitForSelector('#btnDeco', { timeout: 6000 });
   await page.click('#btnDeco');
@@ -641,10 +646,11 @@ await v('Spartoo traçabilité : avancement remonté au suivi', async () => {
   await page.click('[data-ong="suivi"]');
   await page.waitForSelector('text=ENT-1.3', { timeout: 6000 });
   const t = await page.textContent('#contenuProf');
-  // Trois séances, trois avancements distincts, sur une seule et même base (1.1 a huit jalons).
-  const av = (t.match(/3\/3/g) || []).length;
-  // 1.1 : 18/20 (note pondérée), la question 4 du questionnaire a été répondue fausse exprès (cas 31 bis) ; 1.2 et 1.3 restent en avancement.
-  if (av < 2 || !t.includes('18/20')) throw new Error('attendus 18/20, 3/3, 3/3 ; lu : ' + av + ' fois 3/3');
+  // Trois séances, trois notes sur 20, sur une seule et même base. 1.1 : 18/20, la question 4 du questionnaire a été répondue
+  // fausse exprès (cas 31 bis) ; 1.2 et 1.3 : 20/20 chacune (notation pondérée du 11/10/2026, plus d'avancement « 3/3 »).
+  const vingt = (t.match(/\d+(?:,\d)?\/20/g) || []).filter((x) => x === '20/20').length;
+  if (vingt < 2 || !t.includes('18/20')) throw new Error('attendus 18/20, 20/20, 20/20 ; lu : ' + vingt + ' fois 20/20');
+  if (/\d\/3\b/.test(t)) throw new Error('un avancement « x/3 » est resté au suivi');
 });
 
 // ---------- 38. la traçabilité sans les séances précédentes : l'amont est posé
@@ -824,6 +830,122 @@ await v('Spartoo réception : poids (8 jalons, total 20), plus d’avancement, u
   if (attendu.reduce((a, x) => a + x[1], 0) !== 20) throw new Error('somme ≠ 20');
   if (r.bareme !== 20 || r.notation) throw new Error('bareme ' + r.bareme + ', notation ' + r.notation);
   if (r.groupes.some((g) => g !== null)) throw new Error('un regroupement est apparu : ' + JSON.stringify(r.groupes));
+});
+
+// ---------- 41 ter. ENT-1.1 : le manquant signalé à Puma peut s'écrire « un carton » (11/10/2026). Presque toute la classe
+// l'écrivait ainsi et le jalon les comptait faux. Base fabriquée ; réponses attendues écrites à la main.
+await v('Spartoo réception : « un carton » en lettres est accepté pour le manquant, pas « deux cartons » ni « un colis »', async () => {
+  const r = await page.evaluate(async () => {
+    const S = await import('/contenus/spartoo-reception.js');
+    const SP = await import('/contenus/spartoo.js');
+    const reserve = S.ETAPES.find((e) => e.id === 'reserve');
+    const juge = (texte) => reserve.verifier({ mails: [{ folder: 'out', toMail: SP.SUP_BY_ID.F003.email, text: texte, ts: 1 }] }, SP).status;
+    const debut = 'Bonjour, lot LOT-PM-2609. PM-RSX-BL-42 : colis endommagé. ';
+    return {
+      lettres: juge(debut + 'PM-SUE-MA-41 : il manque un carton.'),
+      majuscule: juge(debut + 'PM-SUE-MA-41 : il manque UN CARTON.'),
+      chiffre: juge(debut + 'PM-SUE-MA-41 : il manque 1 carton.'),
+      paires: juge(debut + 'PM-SUE-MA-41 : il manque 6 paires.'),
+      deux: juge(debut + 'PM-SUE-MA-41 : il manque deux cartons.'),
+      colis: juge(debut + 'PM-SUE-MA-41 : il manque un colis.'),
+      sansReference: juge(debut + 'Il manque un carton.'),
+    };
+  });
+  const attendu = { lettres: 'ok', majuscule: 'ok', chiffre: 'ok', paires: 'ok', deux: 'ko', colis: 'ko', sansReference: 'ko' };
+  if (JSON.stringify(r) !== JSON.stringify(attendu)) throw new Error('réserves à Puma : ' + JSON.stringify(r));
+});
+
+// ---------- 41 quater. ENT-1.2 et ENT-1.3 : note pondérée sur 20 (poids validés par Tristan le 11/10/2026, suite du lot 4).
+// Tables écrites à la main ; ni « avancement » ni jalon sans poids ; une ligne de bandeau par BLOC.
+await v('Spartoo préparation et traçabilité : poids (11 et 9 jalons, total 20 chacune), plus d’avancement, un bloc par ligne de bandeau', async () => {
+  const r = await page.evaluate(async () => {
+    const lire = async (contenu, activite) => {
+      const S = await import(contenu), A = await import(activite);
+      const blocs = [];
+      S.ETAPES.forEach((e) => { if (!blocs.includes(e.groupe)) blocs.push(e.groupe); });
+      return { poids: S.ETAPES.map((e) => [e.id, e.poids]), blocs, bareme: A.meta.bareme, notation: A.meta.notation || null };
+    };
+    return { p: await lire('/contenus/spartoo.js', '/activites/spartoo.js'), t: await lire('/contenus/spartoo-tracabilite.js', '/activites/spartoo-tracabilite.js') };
+  });
+  const prep = [['lea', 4],
+    ['commande-NK-AM270-NR-42-vu', 1], ['commande-NK-AM270-NR-42-loc', 1], ['commande-NK-AM270-NR-42-qte', 1.5],
+    ['commande-AD-STS-BL-41-vu', 1], ['commande-AD-STS-BL-41-loc', 1], ['commande-AD-STS-BL-41-qte', 1.5],
+    ['commande-PM-SUE-NR-40-vu', 1], ['commande-PM-SUE-NR-40-loc', 1], ['commande-PM-SUE-NR-40-qte', 2],
+    ['reappro-refs', 3], ['reappro-moq', 2]];
+  const trac = [['amont-lot', 2.5], ['amont-date', 2], ['amont-fournisseur', 1.5],
+    ['aval-CMD-048301', 2], ['aval-CMD-048307', 3], ['aval-CMD-048312', 2],
+    ['blocage-PM-SUE-RG-39', 2], ['blocage-PM-SUE-MA-41', 2.5], ['blocage-PM-RSX-BL-42', 2.5]];
+  if (JSON.stringify(r.p.poids) !== JSON.stringify(prep)) throw new Error('poids de la préparation : ' + JSON.stringify(r.p.poids));
+  if (JSON.stringify(r.t.poids) !== JSON.stringify(trac)) throw new Error('poids de la traçabilité : ' + JSON.stringify(r.t.poids));
+  if (prep.reduce((a, x) => a + x[1], 0) !== 20 || trac.reduce((a, x) => a + x[1], 0) !== 20) throw new Error('somme ≠ 20');
+  for (const [nom, x] of [['préparation', r.p], ['traçabilité', r.t]]) {
+    if (x.bareme !== 20 || x.notation) throw new Error(`${nom} : bareme ${x.bareme}, notation ${x.notation}`);
+  }
+  const blocsPrep = ['La réponse à Léa', 'La commande : Nike Air Max 270 T.42', 'La commande : adidas Stan Smith blanche T.41', 'La commande : Puma Suede noire T.40', 'Le réapprovisionnement Puma'];
+  const blocsTrac = ['Le lot identifié', 'Les commandes livrées avec ce lot', 'Le stock restant bloqué'];
+  if (JSON.stringify(r.p.blocs) !== JSON.stringify(blocsPrep)) throw new Error('blocs de la préparation : ' + JSON.stringify(r.p.blocs));
+  if (JSON.stringify(r.t.blocs) !== JSON.stringify(blocsTrac)) throw new Error('blocs de la traçabilité : ' + JSON.stringify(r.t.blocs));
+});
+
+// ---------- 41 quinquies. ENT-1.2 : une erreur ne coûte que sa part (bases fabriquées, notes écrites à la main)
+await v('Spartoo préparation : un emplacement faux coûte 1 point, un mail à Puma sous le minimum 2 points', async () => {
+  const r = await page.evaluate(async () => {
+    const S = await import('/contenus/spartoo.js');
+    const depart = S.baseDeDepart('Essai').stock;
+    const rows = (loc) => ({
+      'NK-AM270-NR-42': { seen: 8, loc: 'B-01-1', qty: 1, status: 'ok' },
+      'AD-STS-BL-41': { seen: 1, loc, qty: 1, status: 'warn' },
+      'PM-SUE-NR-40': { seen: 0, loc: 'B-06-1', qty: 0, status: 'crit' },
+    });
+    const commande = (loc) => ({ no: 'CMD-048213', lines: [{ sku: 'NK-AM270-NR-42', qty: 1 }, { sku: 'AD-STS-BL-41', qty: 2 }, { sku: 'PM-SUE-NR-40', qty: 1 }],
+      prep: { validated: true, at: 1, rows: rows(loc) } });
+    const stock = { ...depart, 'NK-AM270-NR-42': 7, 'AD-STS-BL-41': 0, 'PM-SUE-NR-40': 0 };
+    const mailPuma = (texte) => ({ folder: 'out', toMail: S.SUP_BY_ID.F003.email, text: texte, ts: 1 });
+    const note = (db) => S.ETAPES.filter((e) => e.verifier(db, S).status === 'ok').reduce((t, e) => t + e.poids, 0);
+    const etats = (db) => Object.fromEntries(S.ETAPES.map((e) => [e.id, e.verifier(db, S).status]));
+    const justes = { stock, orders: [commande('B-04-1')], mails: [] };
+    const loc = { stock, orders: [commande('B-99-9')], mails: [] };
+    const sous = { stock, orders: [], mails: [mailPuma('PM-SUE-NR-40 : 12 paires')] };
+    const plein = { stock, orders: [], mails: [mailPuma('PM-SUE-NR-40 : 12 paires'), mailPuma('PM-SUE-NR-40 : 12 paires\nPM-SUE-NR-36 : 12 paires')] };
+    const nonValidee = { stock, orders: [{ ...commande('B-04-1'), prep: { validated: false, rows: {} } }], mails: [] };
+    return { justes: note(justes), loc: note(loc), locEtat: etats(loc)['commande-AD-STS-BL-41-loc'], sous: note(sous), sousEtats: [etats(sous)['reappro-refs'], etats(sous)['reappro-moq']],
+      plein: note(plein), nonValidee: etats(nonValidee)['commande-NK-AM270-NR-42-vu'] };
+  });
+  const attendu = { justes: 11, loc: 10, locEtat: 'ko', sous: 3, sousEtats: ['ok', 'ko'], plein: 5, nonValidee: 'attente' };
+  if (JSON.stringify(r) !== JSON.stringify(attendu)) throw new Error('notes de la préparation : ' + JSON.stringify(r) + ' au lieu de ' + JSON.stringify(attendu));
+});
+
+// ---------- 41 sexies. ENT-1.3 : le compte rendu et le blocage jugés case par case (bases fabriquées, notes écrites à la main)
+await v('Spartoo traçabilité : date fausse −2, commande oubliée −3, référence non bloquée −2,5 ; commande sans paire du lot : rien à citer', async () => {
+  const r = await page.evaluate(async () => {
+    const S = await import('/contenus/spartoo-tracabilite.js');
+    const SP = await import('/contenus/spartoo.js');
+    const T0 = new Date(2026, 9, 5, 10, 0).getTime();
+    const lot = 'LOT-PM-2609', RG = 'PM-SUE-RG-39', MA = 'PM-SUE-MA-41', RSX = 'PM-RSX-BL-42';
+    const entree = (sku, delta) => ({ sku, delta, lot, ts: T0, type: 'Entrée', ref: 'REC-04127' });
+    const vente = (sku, delta, no) => ({ sku, delta, lot, ts: T0 + 3600e3, type: 'Sortie : préparation', ref: 'BP-' + no });
+    const blocage = (sku, delta) => ({ sku, delta, lot, ts: T0 + 7200e3, type: 'Blocage qualité', ref: 'BQ' });
+    const entrees = [entree(RG, 24), entree(MA, 18), entree(RSX, 24)];
+    const ventes = [vente(RG, -2, '048301'), vente(MA, -1, '048307'), vente(RSX, -2, '048307'), vente(RG, -1, '048312')];
+    const orders = [{ no: 'CMD-048301' }, { no: 'CMD-048307' }, { no: 'CMD-048312' }];
+    const tout = [blocage(RG, -21), blocage(MA, -17), blocage(RSX, -22)];
+    const compte = (texte) => ({ folder: 'out', toMail: S.DIRECTION, text: texte, ts: 2 });
+    const bon = 'Lot LOT-PM-2609, entré le 05/10/2026, fournisseur Puma. Commandes : CMD-048301, CMD-048307, CMD-048312.';
+    const note = (db) => S.ETAPES.filter((e) => e.verifier(db, SP).status === 'ok').reduce((t, e) => t + e.poids, 0);
+    const etat = (db, id) => S.ETAPES.find((e) => e.id === id).verifier(db, SP);
+    const base = (moves, mails) => ({ moves, orders, mails });
+    return {
+      parfait: note(base([...entrees, ...ventes, ...tout], [compte(bon)])),
+      mauvaiseDate: note(base([...entrees, ...ventes, ...tout], [compte(bon.replace('05/10/2026', '06/10/2026'))])),
+      oubli: note(base([...entrees, ...ventes, ...tout], [compte(bon.replace('CMD-048307, ', ''))])),
+      nonBloquee: note(base([...entrees, ...ventes, tout[0], tout[2]], [compte(bon)])),
+      rien: note(base([...entrees, ...ventes], [])),
+      rienEtats: [etat(base([...entrees, ...ventes], []), 'amont-lot').status, etat(base([...entrees, ...ventes], []), 'aval-CMD-048301').status, etat(base([...entrees, ...ventes], []), 'blocage-PM-SUE-RG-39').status],
+      sansCommande: etat(base([...entrees, ventes[0], ventes[3], ...tout], [compte(bon.replace('CMD-048307, ', ''))]), 'aval-CMD-048307').status,
+    };
+  });
+  const attendu = { parfait: 20, mauvaiseDate: 18, oubli: 17, nonBloquee: 17.5, rien: 0, rienEtats: ['attente', 'attente', 'attente'], sansCommande: 'ok' };
+  if (JSON.stringify(r) !== JSON.stringify(attendu)) throw new Error('notes de la traçabilité : ' + JSON.stringify(r) + ' au lieu de ' + JSON.stringify(attendu));
 });
 
 // ---------- 42. le bandeau de fin de séance, sur une entreprise d'essai : rien tant qu'un jalon est à faire ;

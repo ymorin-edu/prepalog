@@ -67,6 +67,7 @@ Décisions pédagogiques arrêtées :
    06/10/2026 (parcours, `versionBase`) ; ENT-1.2 et ENT-1.3 seront refondues comme elle (deux briefs
    Cowork à venir) et sont **gelées d'ici là : bugs seulement**, aucune règle commune (tutoiement,
    correction après bilan, confirmation…) ne s'y applique avant leur refonte (décision du 09/10/2026).
+   Seule exception : la **notation pondérée sur 20** leur a été appliquée le 11/10/2026 (11 et 9 jalons, poids validés par Tristan), la refonte est en pause.
    **Le modèle, c'est Boost** (ENT-3.x).
 6. Une séance nouvelle se fabrique **d'abord avec les vues existantes**, en déclarant du contenu.
    Mais si une compétence peut être abordée sous un **angle nouveau, ludique ou innovant** grâce à

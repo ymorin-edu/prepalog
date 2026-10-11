@@ -20,6 +20,7 @@
 
 import { LOT, BL, ANNONCE, COLIS, attendu } from './spartoo-reception.js';
 import { CATALOGUE } from './spartoo.js';
+import { ponderer } from './ponderation.js';
 
 /* ------------------------------------------------------------------ constantes */
 
@@ -175,7 +176,7 @@ export const VOLET = {
 };
 
 /* ============================ Suivi de l'exercice ============================
- * Trois jalons, sur le modèle des deux autres séances. Aucun retour n'est donné à l'élève
+ * Neuf jalons pondérés (total 20), trois blocs au bandeau de fin. Aucun retour n'est donné à l'élève
  * pendant l'exercice : il travaille, l'enseignant voit le résultat.
  *
  *   ok      le travail est fait et juste
@@ -195,91 +196,108 @@ function comptesRendus(db) {
   return (db.mails || []).filter((m) => m.folder === 'out' && nrm(m.toMail) === nrm(DIRECTION))
     .sort((a, b) => a.ts - b.ts);
 }
+// NOTE PONDÉRÉE SUR 20 (poids validés par Tristan le 11/10/2026, suite du lot 4 de `docs/briefs/NOTATION-ponderation.md`) :
+// neuf jalons, trois blocs au bandeau de fin. Comme avant, un élève qui se reprend n'est pas puni pour son premier jet :
+// un critère est juste dès qu'un des comptes rendus le remplit (mais envoyer dix messages vides ne rapporte rien).
 
-// Le jalon retient le meilleur essai : un élève qui s'est repris n'est pas puni pour son
-// premier jet, mais il ne gagne rien à envoyer dix messages vides.
-function meilleur(mails, juger) {
-  const evals = mails.map(juger);
-  return evals.find((e) => e.ok) || evals[evals.length - 1];
+// L'AMONT : le numéro de lot, la date d'entrée et le fournisseur, dans le compte rendu.
+function amontJuge(db, U) {
+  const entrees = mouvementsDuLot(db).filter((m) => m.delta > 0).sort((a, b) => a.ts - b.ts);
+  if (!entrees.length) return { status: 'na' };
+  const mails = comptesRendus(db);
+  if (!mails.length) return { status: 'attente' };
+  const date = fdate(entrees[0].ts);
+  const v = U.CATALOGUE.VM[entrees[0].sku];
+  const sup = v ? U.SUP_BY_ID[v.model.sup] : null;
+  const marque = sup ? sup.brand : '';
+  return {
+    evals: mails.map((msg) => {
+      const t = String(msg.text || '');
+      // La date est demandée au format jj/mm/aaaa dans le message de M. Morin comme dans la trame :
+      // on n'évalue pas sur une règle cachée.
+      return {
+        lot: t.toUpperCase().includes(LOT), date: t.includes(date), sup: !!marque && nrm(t).includes(nrm(marque)),
+        texte: `Compte rendu envoyé le ${new Date(msg.ts).toLocaleString('fr-FR')}.\n`, date_: date, marque, ts: msg.ts,
+      };
+    }),
+  };
 }
-
-export const ETAPES = [
-  {
-    id: 'amont',
-    titre: 'Lot identifié dans le compte rendu (numéro, date d’entrée, fournisseur)',
-    verifier(db, U) {
-      const entrees = mouvementsDuLot(db).filter((m) => m.delta > 0).sort((a, b) => a.ts - b.ts);
-      if (!entrees.length) return { status: 'na' };
-      const mails = comptesRendus(db);
-      if (!mails.length) return { status: 'attente' };
-
-      const date = fdate(entrees[0].ts);
-      const v = U.CATALOGUE.VM[entrees[0].sku];
-      const sup = v ? U.SUP_BY_ID[v.model.sup] : null;
-      const marque = sup ? sup.brand : '';
-
-      const best = meilleur(mails, (msg) => {
-        const t = String(msg.text || '');
-        const aLot = t.toUpperCase().includes(LOT);
-        // La date est demandée au format jj/mm/aaaa dans le message de M. Morin comme dans
-        // la trame : on n'évalue pas sur une règle cachée.
-        const aDate = t.includes(date);
-        const aSup = !!marque && nrm(t).includes(nrm(marque));
-        return {
-          ok: aLot && aDate && aSup,
-          detail: `Compte rendu envoyé le ${new Date(msg.ts).toLocaleString('fr-FR')}.\n`
-            + `Numéro de lot ${LOT} : ${aLot ? 'présent' : 'absent'}\n`
-            + `Date d'entrée en stock ${date} : ${aDate ? 'présente' : 'absente ou mal écrite'}\n`
-            + `Fournisseur ${marque || '(inconnu)'} : ${aSup ? 'nommé' : 'non nommé'}`,
-          ts: msg.ts,
-        };
-      });
-      return { status: best.ok ? 'ok' : 'ko', detail: best.detail, ts: best.ts };
-    },
+const jalonAmont = (id, titre, cle, texte) => ({
+  id, titre,
+  verifier(db, U) {
+    const j = amontJuge(db, U);
+    if (j.status) return { status: j.status };
+    const best = j.evals.find((e) => e[cle]) || j.evals[j.evals.length - 1];
+    return { status: best[cle] ? 'ok' : 'ko', detail: best.texte + texte(best, best[cle]), ts: best.ts };
   },
-  {
-    id: 'aval',
-    titre: 'Commandes livrées avec ce lot retrouvées et citées',
-    verifier(db) {
-      const sorties = mouvementsDuLot(db).filter((m) => m.delta < 0 && m.type !== 'Blocage qualité');
-      const cmds = [];
-      sorties.forEach((m) => {
-        const o = (db.orders || []).find((x) => 'BP-' + x.no.replace('CMD-', '') === m.ref);
-        if (o && !cmds.includes(o.no)) cmds.push(o.no);
-      });
-      if (!cmds.length) return { status: 'na' };
-      const mails = comptesRendus(db);
-      if (!mails.length) return { status: 'attente' };
+});
 
-      const best = meilleur(mails, (msg) => {
-        const t = String(msg.text || '').toUpperCase();
-        const trouvees = cmds.filter((no) => t.includes(no));
-        const manquantes = cmds.filter((no) => !t.includes(no));
-        return {
-          ok: manquantes.length === 0,
-          detail: `Compte rendu envoyé le ${new Date(msg.ts).toLocaleString('fr-FR')}.\n`
-            + `${trouvees.length} commande(s) citée(s) sur ${cmds.length} : ${trouvees.join(', ') || '—'}\n`
-            + (manquantes.length ? `Manque : ${manquantes.join(', ')}` : 'Toutes les commandes concernées sont citées.'),
-          ts: msg.ts,
-        };
-      });
-      return { status: best.ok ? 'ok' : 'ko', detail: best.detail, ts: best.ts };
-    },
+// L'AVAL : une case par commande livrée avec ce lot. Les trois commandes sont semées pour tout le monde ; si l'une
+// d'elles n'a vendu aucune paire du lot (réception de 1.1 incomplète), il n'y a rien à citer et la case est juste.
+const COMMANDES_AVAL = [['CMD-048301', 'Première', 2], ['CMD-048307', 'Deuxième', 3], ['CMD-048312', 'Troisième', 2]];
+const jalonAval = ([no, rang]) => ({
+  id: `aval-${no}`,
+  titre: `${rang} commande livrée avec ce lot : retrouvée et citée`,
+  verifier(db) {
+    const sorties = mouvementsDuLot(db).filter((m) => m.delta < 0 && m.type !== 'Blocage qualité');
+    const cmds = [];
+    sorties.forEach((m) => {
+      const o = (db.orders || []).find((x) => 'BP-' + x.no.replace('CMD-', '') === m.ref);
+      if (o && !cmds.includes(o.no)) cmds.push(o.no);
+    });
+    if (!cmds.length) return { status: 'na' };
+    if (!cmds.includes(no)) return { status: 'ok', detail: `${no} : aucune paire de ce lot dans cette commande, rien à citer.` };
+    const mails = comptesRendus(db);
+    if (!mails.length) return { status: 'attente' };
+    const cite = mails.find((msg) => String(msg.text || '').toUpperCase().includes(no));
+    const dernier = cite || mails[mails.length - 1];
+    return {
+      status: cite ? 'ok' : 'ko',
+      detail: `Compte rendu envoyé le ${new Date(dernier.ts).toLocaleString('fr-FR')}.\n${no} : ${cite ? 'citée' : 'non citée'}`,
+      ts: dernier.ts,
+    };
   },
-  {
-    id: 'blocage',
-    titre: 'Stock restant du lot bloqué, référence par référence',
-    verifier(db) {
-      const lignes = bilanDuLot(db).filter((x) => x.entre > 0);
-      if (!lignes.length) return { status: 'na' };
-      if (!lignes.some((x) => x.bloque > 0)) return { status: 'attente' };
-      const tout = lignes.every((x) => x.reste === 0);
-      const detail = lignes.map((x) => `${x.sku} : ${x.reste === 0 ? 'correct' : 'à corriger'} — `
+});
+
+// LE BLOCAGE : une case par référence du lot. Une référence dont aucune paire n'est entrée n'a rien à bloquer.
+const REFS_BLOCAGE = [['PM-SUE-RG-39', 'Puma Suede Classic XXI rouge T.39', 2], ['PM-SUE-MA-41', 'Puma Suede Classic XXI bleu marine T.41', 2.5], ['PM-RSX-BL-42', 'Puma RS-X blanc T.42', 2.5]];
+const jalonBlocage = ([sku, nom]) => ({
+  id: `blocage-${sku}`,
+  titre: `Stock restant bloqué : ${nom}`,
+  verifier(db) {
+    const lignes = bilanDuLot(db).filter((x) => x.entre > 0);
+    if (!lignes.length) return { status: 'na' };
+    if (!lignes.some((x) => x.bloque > 0)) return { status: 'attente' };
+    const x = lignes.find((l) => l.sku === sku);
+    if (!x) return { status: 'ok', detail: `${sku} : aucune paire de ce lot en stock, rien à bloquer.` };
+    const dernier = mouvementsDuLot(db).filter((m) => m.type === 'Blocage qualité' && m.sku === sku)
+      .reduce((t, m) => Math.max(t, m.ts), 0);
+    return {
+      status: x.reste === 0 ? 'ok' : 'ko',
+      detail: `${x.sku} : ${x.reste === 0 ? 'correct' : 'à corriger'} — `
         + `${x.entre} entrée(s), ${x.sorti} vendue(s), ${x.bloque} bloquée(s), `
-        + (x.reste === 0 ? 'rien ne reste de ce lot' : `il reste ${x.reste} ${x.reste > 1 ? 'paires' : 'paire'} à bloquer`)).join('\n');
-      const dernier = mouvementsDuLot(db).filter((m) => m.type === 'Blocage qualité')
-        .reduce((t, m) => Math.max(t, m.ts), 0);
-      return { status: tout ? 'ok' : 'ko', detail, ts: dernier || undefined };
-    },
+        + (x.reste === 0 ? 'rien ne reste de ce lot' : `il reste ${x.reste} ${x.reste > 1 ? 'paires' : 'paire'} à bloquer`),
+      ts: dernier || undefined,
+    };
   },
+});
+
+const JALONS = [
+  jalonAmont('amont-lot', 'Lot identifié dans le compte rendu : numéro de lot', 'lot',
+    (e, ok) => `Numéro de lot ${LOT} : ${ok ? 'présent' : 'absent'}`),
+  jalonAmont('amont-date', 'Lot identifié dans le compte rendu : date d’entrée en stock', 'date',
+    (e, ok) => `Date d'entrée en stock ${e.date_} : ${ok ? 'présente' : 'absente ou mal écrite'}`),
+  jalonAmont('amont-fournisseur', 'Lot identifié dans le compte rendu : fournisseur', 'sup',
+    (e, ok) => `Fournisseur ${e.marque || '(inconnu)'} : ${ok ? 'nommé' : 'non nommé'}`),
+  ...COMMANDES_AVAL.map(jalonAval),
+  ...REFS_BLOCAGE.map(jalonBlocage),
 ];
+
+export const BAREME = {
+  'amont-lot': [2.5, 'Le lot identifié'],
+  'amont-date': [2, 'Le lot identifié'],
+  'amont-fournisseur': [1.5, 'Le lot identifié'],
+  ...Object.fromEntries(COMMANDES_AVAL.map(([no, , p]) => [`aval-${no}`, [p, 'Les commandes livrées avec ce lot']])),
+  ...Object.fromEntries(REFS_BLOCAGE.map(([sku, , p]) => [`blocage-${sku}`, [p, 'Le stock restant bloqué']])),
+};
+export const ETAPES = ponderer(JALONS, BAREME, 'ENT-1.3');

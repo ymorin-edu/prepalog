@@ -5,6 +5,7 @@
 // que recopiées, pour qu'aucune valeur ne dérive.
 
 import { buildCatalog, pad, rng, COLORS, SHIP } from './entreprise-commun.js';
+import { ponderer } from './ponderation.js';
 
 // Ce que le moteur ne connaît plus (chantier 9, lot 9b) : les couleurs des chaussures (nom et teinte de la pastille du
 // catalogue) et les trois modes de livraison des commandes (libellé, prix du port). La fabrique `seanceEntreprise` les
@@ -231,7 +232,93 @@ function refsQtes(texte, supId, VM) {
   return out;
 }
 
-export const ETAPES = [
+// NOTE PONDÉRÉE SUR 20 (poids validés par Tristan le 11/10/2026, suite du lot 4 de `docs/briefs/NOTATION-ponderation.md`) :
+// onze jalons. Chaque ligne de la commande se juge en trois temps (le stock trouvé, l'emplacement, la quantité et le
+// statut) : une erreur sur une ligne ne coûte plus que sa part. Le bandeau de fin garde UNE ligne par bloc.
+const LIGNES_COMMANDE = [
+  { sku: 'NK-AM270-NR-42', nom: 'Nike Air Max 270 T.42', poids: [1, 1, 1.5] },
+  { sku: 'AD-STS-BL-41', nom: 'adidas Stan Smith blanche T.41', poids: [1, 1, 1.5] },
+  { sku: 'PM-SUE-NR-40', nom: 'Puma Suede noire T.40', poids: [1, 1, 2] },
+];
+
+// Ce que l'élève a rempli pour une ligne de la commande, comparé à ce qu'il devait trouver. Le stock réel au moment de la
+// préparation se reconstitue : stock actuel + sortie faite.
+function ligneJugee(db, U, no, sku) {
+  const o = (db.orders || []).find((x) => x.no === no);
+  if (!o) return { status: 'na' };
+  if (!o.prep || !o.prep.validated) return { status: 'attente' };
+  const l = o.lines.find((x) => x.sku === sku);
+  if (!l) return { status: 'na' };
+  const v = U.CATALOGUE.VM[sku], r = (o.prep.rows || {})[sku] || {};
+  const qty = (r.qty === '' || r.qty == null) ? 0 : r.qty;
+  const reel = stockDe(db, sku) + qty;
+  const qteAttendue = Math.min(l.qty, reel);
+  const statutAttendu = reel >= l.qty ? 'ok' : (reel === 0 ? 'crit' : 'warn');
+  return {
+    at: o.prep.at,
+    vu: r.seen === reel, loc: nrmLoc(r.loc) === nrmLoc(v.loc), qte: r.qty === qteAttendue && r.status === statutAttendu,
+    seen: r.seen, reel, locSaisi: r.loc, locReel: v.loc, qty: r.qty, qteAttendue, statut: r.status, statutAttendu,
+  };
+}
+
+const jalonsLigne = (L) => [
+  ['vu', 'stock trouvé', (x) => `stock trouvé ${x.seen === '' || x.seen == null ? '(vide)' : x.seen} (réel ${x.reel})`],
+  ['loc', 'emplacement', (x) => `emplacement ${x.locSaisi || '(vide)'} (réel ${x.locReel})`],
+  ['qte', 'quantité à préparer et statut', (x) => `à préparer ${x.qty === '' || x.qty == null ? '(vide)' : x.qty} (attendu ${x.qteAttendue}), statut ${x.statut || '(vide)'} (attendu ${x.statutAttendu})`],
+].map(([cle, quoi, texte]) => ({
+  id: `commande-${L.sku}-${cle}`,
+  titre: `Ligne ${L.nom} : ${quoi}`,
+  verifier(db, U) {
+    const x = ligneJugee(db, U, 'CMD-048213', L.sku);
+    if (x.status) return { status: x.status };
+    return { status: x[cle] ? 'ok' : 'ko', detail: `${L.sku} : ${x[cle] ? 'correct' : 'à corriger'} — ${texte(x)}`, ts: x.at };
+  },
+}));
+
+// Le mail de réapprovisionnement à Puma, jugé en deux temps. Comme avant, un élève qui se reprend n'est pas puni pour
+// son premier jet : un critère est juste dès qu'un des messages envoyés à Puma le remplit.
+function reapproJuge(db, U) {
+  const sup = U.SUP_BY_ID.F003, VM = U.CATALOGUE.VM;
+  if (!sup) return { status: 'na' };
+  const mails = (db.mails || []).filter((m) => m.folder === 'out' && nrm(m.toMail) === nrm(sup.email))
+    .sort((a, b) => a.ts - b.ts);
+  if (!mails.length) return { status: 'attente' };
+  const evals = mails.map((msg) => {
+    const trouves = refsQtes(msg.text || '', sup.id, VM);
+    let total = 0, exact = true;
+    trouves.forEach((x) => {
+      total += x.qty;
+      if (x.qty !== x.v.model.max - stockDe(db, x.sku)) exact = false;
+    });
+    const aSue = trouves.some((x) => x.sku === 'PM-SUE-NR-40');
+    const lignes = trouves.length
+      ? trouves.map((x) => { const c = stockDe(db, x.sku), e = x.v.model.max - c;
+          return `${x.sku} : ${x.qty} demandée(s) (stock actuel ${c}, maximum ${x.v.model.max}, attendu ${e})`
+            + (x.qty === e ? ' — correct' : ' — à corriger'); }).join('\n')
+      : `Aucune référence ${sup.brand} avec une quantité claire n'a été reconnue.`;
+    return {
+      refs: trouves.length > 0 && aSue && exact,
+      moq: trouves.length > 0 && total >= (sup.moq || 0),
+      detailRefs: `Message envoyé le ${new Date(msg.ts).toLocaleString('fr-FR')} à ${sup.brand}.\n${lignes}`
+        + (trouves.length && !aSue ? "\nLa référence PM-SUE-NR-40 n'apparaît pas dans ce message." : ''),
+      detailMoq: `Message envoyé le ${new Date(msg.ts).toLocaleString('fr-FR')} à ${sup.brand} — `
+        + `total ${total} paire${total > 1 ? 's' : ''} (minimum requis ${sup.moq}).`,
+      ts: msg.ts,
+    };
+  });
+  return { evals };
+}
+const jalonReappro = (id, titre, cle, detailCle) => ({
+  id, titre,
+  verifier(db, U) {
+    const j = reapproJuge(db, U);
+    if (j.status) return { status: j.status };
+    const best = j.evals.find((e) => e[cle]) || j.evals[j.evals.length - 1];
+    return { status: best[cle] ? 'ok' : 'ko', detail: best[detailCle], ts: best.ts };
+  },
+});
+
+const JALONS = [
   {
     id: 'lea',
     titre: 'Réponse à Léa Dubois (stock Stan Smith blanches, T.44)',
@@ -248,67 +335,15 @@ export const ETAPES = [
       return { status: ok ? 'ok' : 'ko', detail: rep.text || '', ts: rep.ts };
     },
   },
-  {
-    id: 'commande',
-    titre: 'Commande CMD-048213 préparée et validée',
-    verifier(db, U) {
-      const VM = U.CATALOGUE.VM;
-      const o = (db.orders || []).find((x) => x.no === 'CMD-048213');
-      if (!o) return { status: 'na' };
-      if (!o.prep || !o.prep.validated) return { status: 'attente' };
-      // Le stock réel au moment de la préparation se reconstitue : stock actuel + sortie faite.
-      const lignes = o.lines.map((l) => {
-        const r = (o.prep.rows || {})[l.sku] || {};
-        const qty = (r.qty === '' || r.qty == null) ? 0 : r.qty;
-        const reel = stockDe(db, l.sku) + qty, v = VM[l.sku];
-        const qteAttendue = Math.min(l.qty, reel);
-        const statutAttendu = reel >= l.qty ? 'ok' : (reel === 0 ? 'crit' : 'warn');
-        const ok = r.seen === reel && nrmLoc(r.loc) === nrmLoc(v.loc) && r.qty === qteAttendue && r.status === statutAttendu;
-        return { sku: l.sku, ok, seen: r.seen, reel, loc: r.loc, locReel: v.loc, qty: r.qty, qteAttendue, statut: r.status, statutAttendu };
-      });
-      const tout = lignes.every((x) => x.ok);
-      const detail = `Préparation validée le ${new Date(o.prep.at).toLocaleString('fr-FR')} — `
-        + (o.prep.complete ? 'commande complète' : 'commande avec reliquat') + '.\n'
-        + lignes.map((x) => `${x.sku} : ${x.ok ? 'correct' : 'à corriger'} — stock trouvé `
-          + `${x.seen === '' ? '(vide)' : x.seen} (réel ${x.reel}), emplacement ${x.loc || '(vide)'} (réel ${x.locReel}), `
-          + `à préparer ${x.qty === '' ? '(vide)' : x.qty} (attendu ${x.qteAttendue}), `
-          + `statut ${x.statut || '(vide)'} (attendu ${x.statutAttendu})`).join('\n');
-      return { status: tout ? 'ok' : 'ko', detail, ts: o.prep.at };
-    },
-  },
-  {
-    id: 'reappro',
-    titre: 'Réapprovisionnement envoyé à Puma (PM-SUE-NR-40)',
-    verifier(db, U) {
-      const sup = U.SUP_BY_ID.F003, VM = U.CATALOGUE.VM;
-      if (!sup) return { status: 'na' };
-      const mails = (db.mails || []).filter((m) => m.folder === 'out' && nrm(m.toMail) === nrm(sup.email))
-        .sort((a, b) => a.ts - b.ts);
-      if (!mails.length) return { status: 'attente' };
-      const juger = (msg) => {
-        const trouves = refsQtes(msg.text || '', sup.id, VM);
-        let total = 0, exact = true;
-        trouves.forEach((x) => {
-          total += x.qty;
-          const courant = stockDe(db, x.sku);
-          if (x.qty !== x.v.model.max - courant) exact = false;
-        });
-        const aSue = trouves.some((x) => x.sku === 'PM-SUE-NR-40');
-        const moqOk = total >= (sup.moq || 0);
-        const ok = trouves.length > 0 && aSue && exact && moqOk;
-        const detail = `Message envoyé le ${new Date(msg.ts).toLocaleString('fr-FR')} à ${sup.brand} — `
-          + `total ${total} paire${total > 1 ? 's' : ''} (minimum requis ${sup.moq}).\n`
-          + (trouves.length
-            ? trouves.map((x) => { const c = stockDe(db, x.sku), e = x.v.model.max - c;
-                return `${x.sku} : ${x.qty} demandée(s) (stock actuel ${c}, maximum ${x.v.model.max}, attendu ${e})`
-                  + (x.qty === e ? ' — correct' : ' — à corriger'); }).join('\n')
-            : `Aucune référence ${sup.brand} avec une quantité claire n'a été reconnue.`)
-          + (trouves.length && !aSue ? "\nLa référence PM-SUE-NR-40 n'apparaît pas dans ce message." : '');
-        return { ok, detail, ts: msg.ts };
-      };
-      const evals = mails.map(juger);
-      const best = evals.find((e) => e.ok) || evals[evals.length - 1];
-      return { status: best.ok ? 'ok' : 'ko', detail: best.detail, ts: best.ts };
-    },
-  },
+  ...LIGNES_COMMANDE.flatMap(jalonsLigne),
+  jalonReappro('reappro-refs', 'Réapprovisionnement Puma : références et quantités (PM-SUE-NR-40)', 'refs', 'detailRefs'),
+  jalonReappro('reappro-moq', 'Réapprovisionnement Puma : minimum de commande', 'moq', 'detailMoq'),
 ];
+
+export const BAREME = {
+  lea: [4, 'La réponse à Léa'],
+  ...Object.fromEntries(LIGNES_COMMANDE.flatMap((L) => ['vu', 'loc', 'qte'].map((c, i) => [`commande-${L.sku}-${c}`, [L.poids[i], `La commande : ${L.nom}`]]))),
+  'reappro-refs': [3, 'Le réapprovisionnement Puma'],
+  'reappro-moq': [2, 'Le réapprovisionnement Puma'],
+};
+export const ETAPES = ponderer(JALONS, BAREME, 'ENT-1.2');
