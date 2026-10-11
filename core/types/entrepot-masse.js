@@ -24,7 +24,7 @@
 //     plan: {
 //       couloirs: [{ id: 'M01', places: 4 }, …, { id: 'M08', places: 4, reserve: 'vides' }],   // de gauche à droite
 //       reception: 'Zone de réception',                       // où attendent les palettes à ranger
-//       litiges: { titre: 'Zone litiges', ligne: 'fût qui fuit', futs: 1 },   // décor (facultatif)
+//       litiges: { titre: 'Zone litiges', ligne?, futs: 1 },   // décor (facultatif) : le fût qui fuit, sur sa palette
 //       quais: ['QUAI 10', …],                                // décor (facultatif)
 //     },
 //     references: { HEI30: { nom: 'Heineken fût 30 L', court: 'Heineken 30 L', format: '30 L' }, …,
@@ -57,7 +57,7 @@
 // place où l'élève a posé la palette, juste ou fausse : la fiche est comparée à SON rangement (pas de double peine).
 
 import { ech } from '../texte.js';
-import { projection, DEFS, compilerScene, dessinerDecor, dessinerCharge, HAUT_NIVEAU, FUTS_PALETTE, LOTS_KIT } from '../iso.js';
+import { projection, DEFS, compilerScene, dessinerDecor, dessinerCharge, etiquetteCharge, cadreEtiquette, HAUT_NIVEAU, FUTS_PALETTE, LOTS_KIT } from '../iso.js';
 
 /* ================================================================== critères */
 const CRITERES = {
@@ -232,10 +232,10 @@ function geometrie(M) {
   // La réception au fond (les étiquettes de ses palettes montent devant le mur, sans rien cacher), deux palettes par
   // rang, les rangs décalés pour que les étiquettes ne se recouvrent pas ; la zone litiges devant, côté allée.
   const nPal = Object.keys(M.pal).length, rangs = Math.ceil(nPal / 2);
-  const yR1 = -.1 + (rangs - 1) * 1.4 + 1.25;
+  const yR1 = -.1 + (rangs - 1) * 1.4 + 1.6;    // une bande libre devant le dernier rang : le titre de la zone
   return { N, xR, xFin, yAllee: N + .25, yQuai: N + 2.05,
     reception: { de: [xR, -.4], a: [xR + 3.6, yR1] },
-    litiges: { de: [xR, yR1 + .2], a: [xR + 3.6, Math.max(yR1 + 1.6, N + .2)] },
+    litiges: { de: [xR, yR1 + .15], a: [xR + 3.6, Math.max(yR1 + 1.1, N + .2)] },
     placeRecep: (i) => [xR + .25 + (i % 2) * 2.3, -.15 + Math.floor(i / 2) * 1.4] };
 }
 
@@ -290,15 +290,38 @@ export function creerMasse(P, M, opts, h) {
     if (M.refs[top.ref].vides) return { lot: '_vides', texte: M.nomCourt(top.ref) };
     return { lot: top.lot, texte: top.id ? `${top.id} · ${top.lot}` : `lot ${top.lot}` };
   };
+  // L'étiquette du sommet d'une pile (à poser après les boîtes de place du couloir ouvert).
+  const etiquettePile = (I, sc, x, y, L) => {
+    if (!L.length) return '';
+    const et = etiquette(L), top = L[L.length - 1];
+    return etiquetteCharge(I, { x, y, z: (L.length - 1) * HAUT_NIVEAU, lot: et.lot, texte: et.texte }, sc, { sel: !!top.id });
+  };
+  // Les étiquettes du plan d'ensemble, posées en dernier : une pile haute dans un couloir voisin recouvrirait celle d'une
+  // pile basse (P2 sur la pile de M03 à côté de P1 en M02). De la plus basse à l'écran à la plus haute, chacune garde sa
+  // place si elle est libre, sinon elle monte d'un cran jusqu'à l'être ; un trait la relie à sa pile.
+  function etiquettesPlan(I, sc, T) {
+    const L = T.filter((t) => t.L.length).map((t) => {
+      const et = etiquette(t.L), p = { x: t.x, y: t.y, z: (t.L.length - 1) * HAUT_NIVEAU, lot: et.lot, texte: et.texte };
+      return { p, sel: !!t.L[t.L.length - 1].id, r: cadreEtiquette(I, p, et.texte) };
+    }).sort((a, b) => b.r.y - a.r.y);
+    const poses = [], touche = (a, b) => a.x < b.x + b.w + 2 && b.x < a.x + a.w + 2 && a.y < b.y + b.h + 2 && b.y < a.y + a.h + 2;
+    return L.map((it) => {
+      let dy = 0;
+      while (poses.some((q) => touche(Object.assign({}, it.r, { y: it.r.y - dy }), q)) && dy < 200) dy += 6;
+      poses.push(Object.assign({}, it.r, { y: it.r.y - dy }));
+      return etiquetteCharge(I, it.p, sc, { sel: it.sel, dy });
+    }).join('');
+  }
   // La scène du kit : les couloirs déclarés, les couleurs de lot, plus le gris des vides.
   const lotsScene = () => Object.assign({ _vides: { couleur: 'gris' } }, Object.fromEntries(Object.entries(M.lots).map(([k, c]) => [k, { couleur: c }])));
   // Une pile : ses palettes de bas en haut, l'étiquette sur celle du sommet. La palette qui vient d'être posée tombe ;
   // au premier dessin, les palettes apparaissent l'une après l'autre (`k` : le rang d'apparition).
-  function pile(I, sc, x, y, L, k0) {
+  // `sansEtiquette` : l'étiquette du sommet est posée plus tard (`etiquettePile`).
+  function pile(I, sc, x, y, L, k0, sansEtiquette) {
     let s = '';
     L.forEach((it, n) => {
       const haut = n === L.length - 1, et = haut ? etiquette(L) : null;
-      const c = dessinerCharge(I, { x, y, z: n * HAUT_NIVEAU, futs: it.futs, lot: et ? et.lot : null, texte: et ? et.texte : null }, sc, { sel: !!it.id && haut });
+      const c = dessinerCharge(I, { x, y, z: n * HAUT_NIVEAU, futs: it.futs, lot: et ? et.lot : null, texte: et ? et.texte : null }, sc, { sel: !!it.id && haut, sansEtiquette });
       const cls = it.id && it.id === ui.tombe ? 'pm-tombe' : !ui.vu ? 'pm-apparait' : '';
       s += `<g${it.id ? ` data-pm-posee="${ech(it.id)}"` : ''}${cls ? ` class="${cls}" style="animation-delay:${cls === 'pm-apparait' ? (k0 + n) * 45 : 0}ms"` : ''}>${c}</g>`;
     });
@@ -327,15 +350,16 @@ export function creerMasse(P, M, opts, h) {
     const sc = compilerScene({ decor, lots: lotsScene() }, `entrepot ${P.id}`);
     let s = dessinerDecor(I, sc);
     let k0 = 0;
+    const T = [];
     M.couloirs.forEach((c) => {
       const x = c.k * PAS, y0 = N - c.n, L = piles(M, e, c.id), titre = titreCouloir(e, c);
       let g = `<polygon class="pm-sol" points="${I.pts([[x - .05, y0 - .05, 0], [x + 1.05, y0 - .05, 0], [x + 1.05, N + .05, 0], [x - .05, N + .05, 0]])}"/>`;
       g += `<polygon class="pm-panneau" points="${I.pts([[x + .1, -.5, PANNEAU[0] - .05], [x + .9, -.5, PANNEAU[0] - .05], [x + .9, -.5, PANNEAU[1] + .05], [x + .1, -.5, PANNEAU[1] + .05]])}"/>`;
-      L.forEach((pl, i) => { g += pile(I, sc, x, y0 + i, pl, k0); k0 += pl.length; });
+      L.forEach((pl, i) => { g += pile(I, sc, x, y0 + i, pl, k0, true); k0 += pl.length; T.push({ x, y: y0 + i, L: pl }); });
       s += `<g class="pm-couloir${R.fige ? ' pm-lecture' : ''}" data-pm-couloir="${ech(c.id)}" data-pe-cle="c:${ech(c.id)}" ${R.fige ? '' : 'tabindex="0" role="button"'} aria-label="${ech(`Couloir ${c.id} : ${titre}`)}">${g}</g>`;
     });
     // Le décor de la zone litiges : une palette de rétention et ce qu'elle porte (le fût qui fuit).
-    if (P.plan.litiges) s += dessinerCharge(I, { x: G.litiges.de[0] + 2.4, y: G.litiges.de[1] + .1, z: 0, futs: P.plan.litiges.futs == null ? 1 : P.plan.litiges.futs }, sc);
+    if (P.plan.litiges) s += dessinerCharge(I, { x: G.litiges.de[0] + 2.55, y: G.litiges.de[1] + .02, z: 0, futs: P.plan.litiges.futs == null ? 1 : P.plan.litiges.futs, fuite: true }, sc);
     // Les palettes qui attendent en réception (cliquables) ; celle en main garde sa place, cerclée.
     Object.values(M.pal).forEach((p, i) => {
       if (e.pos[p.id]) return;
@@ -343,6 +367,7 @@ export function creerMasse(P, M, opts, h) {
       const c = dessinerCharge(I, { x, y, z: 0, futs: p.futs, lot: p.lot, texte: `${p.id}${main ? ' en main' : ''}` }, sc, { sel: main });
       s += `<g class="pm-recep${!ui.vu ? ' pm-apparait' : ''}" data-pm-pal="${ech(p.id)}" data-pe-cle="r:${ech(p.id)}" ${R.fige ? '' : 'tabindex="0" role="button"'} aria-label="${ech(`${p.id} ${nomPal(p)}, en réception`)}">${c}</g>`;
     });
+    s += `<g pointer-events="none">${etiquettesPlan(I, sc, T)}</g>`;
     const vb = cadre(I, [[-.6, -.5, 0], [xF, -.5, 0], [xF, G.yQuai + .6, 0], [-.6, G.yQuai + .6, 0], [-.6, -.75, MUR], [xF, -.75, MUR]]);
     return `<svg class="pm-svg" viewBox="${vb}" role="img" aria-label="La zone de stockage de masse, en 3D : ${M.couloirs.length} couloirs, l’allée devant, la zone de réception à droite">${DEFS}${s}</svg>`;
   }
@@ -351,32 +376,38 @@ export function creerMasse(P, M, opts, h) {
   function svgCouloir(e, R) {
     const c = M.C[ui.ouvert], n = c.n, I = projection({ unite: 70, origine: [0, 0] });
     const decor = [
-      { type: 'sol', de: [-1.3, -.5], a: [2.8, n + 1.9] },
-      { type: 'mur', y: -.5, de: -1.3, a: 2.8, hauteur: MUR },
-      { type: 'allee', de: [-1.3, n + .25], a: [2.8, n + 1.9] },
+      { type: 'sol', de: [-.7, -.5], a: [2.8, n + 1.9] },
+      { type: 'mur', y: -.5, de: -.7, a: 2.8, hauteur: MUR },
+      { type: 'allee', de: [-.7, n + .25], a: [2.8, n + 1.9] },
       { type: 'couloirMasse', id: c.id, x: 0, profondeur: n, panneau: c.id, panneauZ: PANNEAU, fleches: true, reserve: !!c.reserve },
-      { type: 'texteSol', texte: 'ALLÉE : le chariot entre et sort par ici', en: [.2, n + 1.55], style: 'allee' },
+      { type: 'texteSol', texte: 'ALLÉE : le chariot entre et sort par ici', en: [.9, n + 1.7], style: 'allee' },
     ];
     const sc = compilerScene({ decor, lots: lotsScene() }, `entrepot ${P.id}`);
     let s = dessinerDecor(I, sc);
     const L = piles(M, e, c.id), f = devant(L), possibles = R.fige || !ui.main ? [] : placesPossibles(M, e, c.id);
+    let etiq = '';
     L.forEach((pl, i) => {
       const y = i, p = i + 1;
       const [lx, ly] = I.P(1.12, y + .5, 0);
       s += `<text x="${lx + 6}" y="${ly + 5}" font-size="13" font-weight="700" fill="#3d3a33">position ${p}${p === 1 ? ' (fond)' : p === n ? ' (devant)' : ''}</text>`;
       if (ui.main && !R.fige && p < f) s += `<text x="${lx + 6}" y="${ly + 21}" font-size="12" font-weight="700" fill="#9d2727">inaccessible (une pile devant)</text>`;
-      s += pile(I, sc, 0, y, pl, 0);
+      s += pile(I, sc, 0, y, pl, 0, true);
+      etiq += etiquettePile(I, sc, 0, y, pl);
       const ici = possibles.find((x) => x.p === p);
       if (ici) {
-        const z0 = (ici.n - 1) * HAUT_NIVEAU, z1 = z0 + HAUT_NIVEAU;
-        const F = [[[.03, y + .97, z0], [.97, y + .97, z0], [.97, y + .97, z1], [.03, y + .97, z1]], [[.97, y + .03, z0], [.97, y + .97, z0], [.97, y + .97, z1], [.97, y + .03, z1]],
-          [[.03, y + .03, z1], [.97, y + .03, z1], [.97, y + .97, z1], [.03, y + .97, z1]]];
+        // Au sol : un carré en pointillé (des boîtes debout se recouvriraient d'une place à l'autre) ; sur une pile : une
+        // boîte de la hauteur d'une palette, posée sur elle.
+        const z0 = (ici.n - 1) * HAUT_NIVEAU, z1 = ici.n > 1 ? z0 + HAUT_NIVEAU : 0;
+        const F = ici.n > 1 ? [[[.03, y + .97, z0], [.97, y + .97, z0], [.97, y + .97, z1], [.03, y + .97, z1]], [[.97, y + .03, z0], [.97, y + .97, z0], [.97, y + .97, z1], [.97, y + .03, z1]],
+          [[.03, y + .03, z1], [.97, y + .03, z1], [.97, y + .97, z1], [.03, y + .97, z1]]] : [[[.05, y + .05, 0], [.95, y + .05, 0], [.95, y + .95, 0], [.05, y + .95, 0]]];
         const [tx, ty] = I.P(.5, y + .5, z1);
         s += `<g class="pm-place" data-pm-place="${p}" data-pe-cle="p:${p}" tabindex="0" role="button" aria-label="${ech(`Poser ${ui.main} en position ${p}, niveau ${ici.n}`)}">${F.map((q) => `<polygon points="${I.pts(q)}"/>`).join('')}
           <text x="${tx}" y="${ty + 5}" text-anchor="middle" font-size="12.5" font-weight="800" fill="#0b6634">${ech(ui.main)} ici · niv. ${ici.n}</text></g>`;
       }
     });
-    const vb = cadre(I, [[-1.3, -.5, 0], [2.8, -.5, 0], [2.8, n + 1.9, 0], [-1.3, n + 1.9, 0], [-1.3, -.75, MUR], [2.8, -.75, MUR], [2.6, n * .5, 0]]);
+    // Les étiquettes par-dessus les boîtes de place, mais transparentes au clic : la boîte reste cliquable en son milieu.
+    s += `<g pointer-events="none">${etiq}</g>`;
+    const vb = cadre(I, [[-.7, -.5, 0], [2.8, -.5, 0], [2.8, n + 1.9, 0], [-.7, n + 1.9, 0], [-.7, -.75, MUR], [2.8, -.75, MUR], [2.6, n * .5, 0]]);
     return `<svg class="pm-svg" viewBox="${vb}" role="img" aria-label="${ech(`Le couloir ${c.id} en 3D : position 1 au fond, contre le mur ; position ${n} devant, côté allée`)}">${DEFS}${s}</svg>`;
   }
 
@@ -395,14 +426,14 @@ export function creerMasse(P, M, opts, h) {
       <span class="pe-ttl"><span class="pe-pid">${ech(p.id)}</span> ${ech(nomPal(p))}</span>
       <dl><dt>Fûts · poids</dt><dd>${p.futs} · ${p.kg != null ? `${p.kg} kg` : '—'}</dd><dt>Lot</dt><dd>${ech(p.lot)}</dd>
         <dt>Réception</dt><dd class="pm-recep-txt">${ech(p.reception || 'conforme')}</dd>
-        <dt>Posée</dt><dd>${pl ? `<b>${ech(pl.couloir)} · pos. ${pl.position} · niv. ${pl.niveau}</b>` : ui.main === p.id ? '<b>en main</b>' : '—'}</dd></dl></button>`;
+        <dt>Posée</dt><dd>${pl ? `<b>${ech(pl.couloir)} · pos. ${pl.position} · niv. ${pl.niveau}</b>` : ui.main === p.id ? '<b>en main</b>' : '—'}</dd></dl>${verdict(e, p.id, R)}</button>`;
   }
-  function bilan(e, R) {
+  // Après la validation (hors évaluation) : ✓, ou le NOM des critères faux, dans la carte de la palette. Jamais la bonne place.
+  function verdict(e, id, R) {
     if (!e.valide || R.eval) return '';
-    const J = jalonsMasse(M, e);
-    return `<div class="pm-bilan" data-pm-bilan><b>Ton rangement</b>${J.map((j) => `<div data-pm-verd="${ech(j.palette)}">${ech(j.palette)} ${j.ok
-      ? '<span class="pe-ok">✓</span>' : `<span class="pe-ko">✗ critère : ${ech((j.criteres || []).join(', ') || 'non posée')}</span>`}</div>`).join('')}
-      <small>Seul le nom du critère est donné.</small></div>`;
+    const j = jalonsMasse(M, e).find((x) => x.palette === id);
+    if (!j) return '';
+    return `<span class="pe-verd pm-verd ${j.ok ? 'pe-ok' : 'pe-ko'}" data-pm-verd="${ech(id)}">${j.ok ? '✓ bien rangée' : `✗ critère : ${ech((j.criteres || []).join(', ') || 'non posée')}`}</span>`;
   }
   function consigne(e, R) {
     if (R.fige) return R.eval ? 'Copie rendue.' : 'Rangement validé : il ne change plus.';
@@ -450,7 +481,7 @@ export function creerMasse(P, M, opts, h) {
           <div class="pm-act">${actions(e, R)}${regles}</div></div>
         <div class="pm-jeu"><aside class="pm-cote"><div class="pm-cartes">${Object.values(M.pal).map((p) => carte(e, p, R)).join('')}</div>
             <div class="pm-consigne" data-pm-consigne>${consigne(e, R)}</div>
-            <div class="pe-msg pm-msg ${ui.msgType ? `pe-${ui.msgType}` : ''}" data-pm-msg role="status">${ui.msg}</div>${bilan(e, R)}${prof}</aside>
+            <div class="pe-msg pm-msg ${ui.msgType ? `pe-${ui.msgType}` : ''}" data-pm-msg role="status">${ui.msg}</div>${prof}</aside>
           <section class="pe-espace pm-espace"><div class="pm-fil">${fil}</div><div class="pm-dessin">${svg}</div></section></div></div>`;
     },
     brancher(z, e, api) {

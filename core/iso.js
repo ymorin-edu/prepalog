@@ -181,10 +181,9 @@ export function dessinerDecor(I, sc) {
       // son titre et une ligne de plus écrits au sol, le long du bord du fond. Aucun rouge : le rouge dirait « faux ».
       const [x0, y0] = d.de, [x1, y1] = d.a, T = ZONES_SOL[d.ton] || ZONES_SOL.reception;
       s += `<polygon points="${pts([[x0, y0, 0], [x1, y0, 0], [x1, y1, 0], [x0, y1, 0]])}" fill="${T.fond}" stroke="${T.trait}" stroke-width="2.5" stroke-dasharray="8 5"/>`;
-      // Les textes vont le long du bord AVANT (côté allée) : ce qui est posé dans la zone ne les cache pas.
-      const [tx, ty] = P(x0 + .12, y1 - .42, 0);
-      if (d.titre) s += `<text x="${tx}" y="${ty}" font-size="13" font-weight="800" fill="#1a1915" transform="rotate(30 ${tx} ${ty})">${ech(d.titre)}</text>`;
-      if (d.ligne) { const [lx, ly] = P(x0 + .12, y1 - .17, 0); s += `<text x="${lx}" y="${ly}" font-size="11.5" font-weight="600" fill="#3d3a33" transform="rotate(30 ${lx} ${ly})">${ech(d.ligne)}</text>`; }
+      // Le texte va le long du bord AVANT (côté allée) : ce qui est posé dans la zone ne le cache pas.
+      const [tx, ty] = P(x0 + .12, y1 - .22, 0);
+      if (d.titre || d.ligne) s += `<text x="${tx}" y="${ty}" font-size="13" font-weight="800" fill="#1a1915" transform="rotate(30 ${tx} ${ty})">${ech(d.titre || '')}${d.ligne ? `<tspan font-size="11.5" font-weight="600" fill="#3d3a33">${d.titre ? ' — ' : ''}${ech(d.ligne)}</tspan>` : ''}</text>`;
     } else if (d.type === 'quai') {
       // Une porte de quai au bord du bâtiment (stockage de masse, D-5) : une plaque jaune au sol et son nom.
       const [x0, y0] = d.de, w = d.largeur || 1.6;
@@ -242,19 +241,17 @@ export const FUTS_PALETTE = 8;
 export const HAUT_RETENTION = (0.2 + 0.46 / 1.30) * COTE_SCENE;
 export const HAUT_NIVEAU = HAUT_RETENTION + 0.02;
 
-// Une charge posée ou portée. `p` : { x, y, z, charge: 'retention', futs (0-8, 8 par défaut), lot, etiq, etiqTon, alerte }.
+// Une charge posée ou portée. `p` : { x, y, z, charge: 'retention', futs (0-8, 8 par défaut), lot, etiq, etiqTon, alerte,
+// fuite (le premier fût fuit vers l'avant : la zone litiges du stockage de masse) }.
 // `sc` : la scène compilée (couleurs des lots, côté de l'étiquette). `o.sel` : la palette est cerclée d'un liseré.
 export function dessinerCharge(I, p, sc, o = {}) {
   const { P } = I;
   const n = p.futs == null ? FUTS_PALETTE : p.futs;
-  const pal = { futs: Array.from({ length: FUTS_PALETTE }, (_, k) => ({ no: k + 1, absent: k >= n })) };
+  const pal = { futs: Array.from({ length: FUTS_PALETTE }, (_, k) => ({ no: k + 1, absent: k >= n, fuite: p.fuite && k === 0 ? 'S' : null })) };
   const m = (1 - COTE_SCENE) / 2;
-  let g = paletteFuts(I, pal, p.x + m, p.y + m, 0, { cote: COTE_SCENE, z: p.z, dents: false });
+  let g = paletteFuts(I, pal, p.x + m, p.y + m, 0, { cote: COTE_SCENE, z: p.z, dents: !!p.fuite });
   const [cx, cy] = P(p.x + .5, p.y + .5, p.z + HAUT_RETENTION + .12);
-  const L = p.lot ? sc.lots[p.lot] : null;
-  // L'étiquette dit « lot S24 », ou le texte de `p.texte` (« VIDES », « P1 · S24 » : le stockage de masse) ; elle s'élargit avec lui.
-  const t = p.texte != null ? String(p.texte) : `lot ${p.lot}`, w = Math.max(68, Math.round(t.length * 8.6 + 14));
-  if (L) g += `<rect x="${cx - w / 2}" y="${cy - 22}" width="${w}" height="22" rx="5" fill="${L.c}" stroke="${o.sel ? '#107c41' : 'rgba(0,0,0,.35)'}" stroke-width="${o.sel ? 3 : 1}"/><text x="${cx}" y="${cy - 6}" text-anchor="middle" font-size="14" font-weight="800" fill="${L.t}">${ech(t)}</text>`;
+  if (!o.sansEtiquette) g += etiquetteCharge(I, p, sc, o);
   if (p.etiq) {
     const coul = TONS_SOL[p.etiqTon] || TONS_SOL.neutre;
     if (sc.aDroite(p.x)) { const [ex, ey] = P(p.x + 1.08, p.y + .62, 0); g += `<text x="${ex}" y="${ey}" font-size="13" font-weight="700" fill="${coul}">${ech(p.etiq)}</text>`; }
@@ -262,6 +259,24 @@ export function dessinerCharge(I, p, sc, o = {}) {
   }
   if (p.alerte) g += `<circle cx="${cx + 44}" cy="${cy - 12}" r="15" fill="#9d2727"/><text x="${cx + 44}" y="${cy - 6}" text-anchor="middle" font-size="18" font-weight="800" fill="#fff">!</text>`;
   return g;
+}
+
+export const largeurEtiquette = (t) => Math.max(68, Math.round(String(t).length * 8.6 + 14));
+// Le cadre à l'écran de l'étiquette d'une charge (le stockage de masse écarte celles qui se recouvrent) : { x, y, w, h }.
+export function cadreEtiquette(I, p, t) {
+  const [cx, cy] = I.P(p.x + .5, p.y + .5, p.z + HAUT_RETENTION + .12), w = largeurEtiquette(t);
+  return { x: cx - w / 2, y: cy - 22, w, h: 22 };
+}
+// L'étiquette de lot d'une charge, seule : « lot S24 », ou le texte de `p.texte` (« VIDES », « P1 · S24 » : le stockage de
+// masse) ; elle s'élargit avec lui. Le stockage de masse la pose APRÈS ce qu'il dessine sur une pile (`o.sansEtiquette` sur la
+// charge), pour qu'aucune boîte de place ne la cache.
+// `o.dy` : l'étiquette est remontée de dy pixels (une autre était à sa place) ; un trait la relie à sa charge.
+export function etiquetteCharge(I, p, sc, o = {}) {
+  const L = p.lot ? sc.lots[p.lot] : null;
+  if (!L) return '';
+  const [cx, cy0] = I.P(p.x + .5, p.y + .5, p.z + HAUT_RETENTION + .12), dy = o.dy || 0, cy = cy0 - dy;
+  const t = p.texte != null ? String(p.texte) : `lot ${p.lot}`, w = largeurEtiquette(t);
+  return (dy ? `<line x1="${cx}" y1="${cy}" x2="${cx}" y2="${cy0 - 2}" stroke="#3d3a33" stroke-width="1.5"/>` : '') + `<rect x="${cx - w / 2}" y="${cy - 22}" width="${w}" height="22" rx="5" fill="${L.c}" stroke="${o.sel ? '#107c41' : 'rgba(0,0,0,.35)'}" stroke-width="${o.sel ? 3 : 1}"/><text x="${cx}" y="${cy - 6}" text-anchor="middle" font-size="14" font-weight="800" fill="${L.t}">${ech(t)}</text>`;
 }
 
 /* ============================== chariot élévateur frontal (fourches vers le fond) */

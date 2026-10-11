@@ -1406,10 +1406,21 @@ await v('Masse : parcours juste (P1 M02, P2 sur la pile de M03, P3 M06, P4 M07 p
   await validerM();
   const J = await jugerM();
   egal(J.L, [true, true, true, true], 'jalons');
-  egal(await pm.$$eval(`${ZM} [data-pm-verd]`, (L) => L.map((d) => d.textContent.replace(/\s+/g, ' ').trim())), ['P1 ✓', 'P2 ✓', 'P3 ✓', 'P4 ✓'], 'bilan');
+  egal(await pm.$$eval(`${ZM} [data-pm-verd]`, (L) => L.map((d) => `${d.dataset.pmVerd} ${d.textContent.replace(/\s+/g, ' ').trim()}`)),
+    ['P1 ✓ bien rangée', 'P2 ✓ bien rangée', 'P3 ✓ bien rangée', 'P4 ✓ bien rangée'], 'bilan, dans chaque carte');
   vrai(await pm.$eval(`${ZM} .pm-cartes [data-pm-pal="P1"]`, (b) => b.disabled), 'cartes fermées après la validation');
   vrai(!(await presentM('[data-pm-couloir][tabindex]')), 'couloirs plus cliquables');
   vrai(/validé/.test(await texteM('[data-pm-consigne]')), 'la consigne dit que le rangement est validé');
+});
+
+await v('Masse : sur le plan, aucune étiquette de pile n’en recouvre une autre (P2 haute en M03 à côté de P1 basse en M02)', async () => {
+  // Suite du cas précédent : le rangement juste est validé, le plan est affiché.
+  const R = await pm.$$eval(`${ZM} .pm-svg g[pointer-events="none"] rect`, (L) => L.map((r) => r.getBoundingClientRect()).map((b) => [b.left, b.top, b.right, b.bottom]));
+  vrai(R.length >= 8, `étiquettes trouvées : ${R.length}`);
+  const touche = (a, b) => a[0] < b[2] - 1 && b[0] < a[2] - 1 && a[1] < b[3] - 1 && b[1] < a[3] - 1;
+  const paires = [];
+  R.forEach((a, i) => R.slice(i + 1).forEach((b, j) => { if (touche(a, b)) paires.push(`${i}-${i + 1 + j}`); }));
+  egal(paires, [], 'étiquettes qui se recouvrent');
 });
 
 await v('Masse : variante juste (P1 M06, P3 M02, P2 M03 pos. 2) → 4 / 4', async () => {
@@ -1432,9 +1443,9 @@ await v('Masse : rangement faux — le bilan nomme le critère, jamais la bonne 
   const J = await jugerM();
   egal(J.L, [false, true, false, false], 'jalons');
   egal(J.crit, { P1: ['un seul lot par couloir'], P2: [], P3: ['une seule référence'], P4: ['couloir VIDES'] }, 'critères');
-  const B = await texteM('[data-pm-bilan]');
-  vrai(/P1 ✗ critère : un seul lot par couloir/.test(B) && /P2 ✓/.test(B) && /P3 ✗ critère : une seule référence/.test(B), `bilan : ${B}`);
-  vrai(!/M0\d|position|niveau/.test(B), 'le bilan ne donne aucune place');
+  const B = await pm.$$eval(`${ZM} [data-pm-verd]`, (L) => L.map((d) => d.textContent.replace(/\s+/g, ' ').trim()));
+  egal(B, ['✗ critère : un seul lot par couloir', '✓ bien rangée', '✗ critère : une seule référence', '✗ critère : couloir VIDES'], 'bilan');
+  vrai(!/M0\d|position|niveau/.test(B.join(' ')), 'le bilan ne donne aucune place');
 });
 
 await v('Masse : gestes impossibles — derrière une pile, hors de portée, reprendre une palette bloquée', async () => {
@@ -1497,7 +1508,7 @@ await v('Masse : évaluation — pas de règles ni de bilan, copie rendue avec l
   egal([R.score, R.max], [15, 20], 'note : 3 jalons sur 4');
   egal(R.detail.entrepot.jalons.map((j) => [j.ok, j.adresse]), [[true, 'M02 · position 1 · niveau 1'], [false, 'M04 · position 2 · niveau 1'],
     [true, 'M06 · position 1 · niveau 1'], [true, 'M07 · position 2 · niveau 1']], 'détail');
-  vrai(!(await presentM('[data-pm-bilan]')), 'aucun bilan à l’élève');
+  vrai(!(await presentM('[data-pm-verd]')), 'aucun bilan à l’élève');
 });
 
 await v('Masse : enseignant — bonnes places dans un encadré ; élève — rien', async () => {

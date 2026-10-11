@@ -349,6 +349,7 @@
 .pm-pal{ flex:none; padding:4px 7px }
 .pm-pal dl{ grid-template-columns:6.4em minmax(0,1fr) }
 .pm-pal dd.pm-recep-txt{ white-space:normal; font-weight:500 }
+.pm-verd{ margin-top:2px }
 .pm-consigne, .pm-bilan{ background:var(--panneau); border:1px solid var(--filet); border-radius:var(--r); padding:5px 8px }
 .pm-bilan > b{ display:block; margin-bottom:2px }
 .pm-bilan > div{ font-weight:700 }

@@ -23,7 +23,7 @@ export const MASSE = {
   plan: {
     couloirs: ['M01', 'M02', 'M03', 'M04', 'M05', 'M06', 'M07'].map((id) => ({ id, places: 4 })).concat({ id: 'M08', places: 4, reserve: 'vides' }),
     reception: 'Zone de réception',
-    litiges: { titre: 'Zone litiges', ligne: 'fût qui fuit', futs: 1 },
+    litiges: { titre: 'Zone litiges', futs: 1 },
     quais: ['QUAI 10', 'QUAI 11', 'QUAI 12', 'QUAI 13', 'QUAI 14'],
   },
   references: {
