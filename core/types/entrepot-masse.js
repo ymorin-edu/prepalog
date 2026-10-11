@@ -535,7 +535,9 @@ export function creerMasse(P, M, opts, h) {
         e.valide = true; e.at = Date.now(); e.verifs = (e.verifs || 0) + 1;
         sig('verifier'); sauver();
         if (R.eval && api.rendreCopie) api.rendreCopie();
-        redessiner();
+        // Tout l'écran, menu compris (ENT-6.5, 11/10/2026) : une entrée qui attend le rangement validé (fiche `quand`,
+        // `fermetures`) apparaît tout de suite, sans attendre un autre clic du menu.
+        if (api.redessinerTout) api.redessinerTout(); else redessiner();
       });
     },
   };
