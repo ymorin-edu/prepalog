@@ -7,7 +7,6 @@ est déjà modifié ou inscrit ci-dessous, **elle s'arrête et le dit à Tristan
 
 | Chantier | Fichiers qu'il touche | Depuis |
 |---|---|---|
-| D-6 lot 1 (ENT-6.6) : stockage de masse, sous-mode comptage | `core/types/entrepot-masse.js`, `core/types/entrepot.js`, `core/iso.js`, `styles/entrepot.css`, `contenus/entrepot-masse-essai.js`, `outils/test/entrepot.mjs` | 11/10/2026 |
 
 Rappel : un seul chantier à la fois dans `core/types/tournee.js`, `core/types/grille.js`,
 `core/types/entreprise.js`, `styles/base.css` et `outils/test/boost.mjs` (voir `docs/briefs/COORDINATION-boost.md`).
