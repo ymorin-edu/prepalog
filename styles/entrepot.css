@@ -331,3 +331,44 @@
 .pv-decomp label{ display:flex; flex-direction:column; gap:6px; background:var(--panneau); border:1px solid var(--filet); border-radius:var(--r); padding:10px }
 .pv-part{ font-size:1.5rem; font-weight:800 }
 .pv-decomp select{ padding:6px; font-size:1rem }
+
+/* ------------------------------------------------------------------
+   Mode STOCKAGE DE MASSE (core/types/entrepot-masse.js, chantier D-5, 11/10/2026).
+   La scène 3D est une image (teintes du kit iso, les mêmes dans les deux thèmes) : seuls
+   le cadre, les cartes et les textes de côté suivent le thème. 1366 × 768 sans défiler :
+   le haut tient sur une ligne, les cartes sont compactes à gauche, la 3D prend le reste.
+   ------------------------------------------------------------------ */
+.pm-haut{ display:flex; gap:10px; align-items:flex-start; padding:6px 8px }
+.pm-perso{ flex:1 1 auto; max-width:none }
+.pm-act{ display:flex; gap:6px; align-items:flex-start; flex:0 0 auto }
+.pm-act > .btn, .pm-act summary{ white-space:nowrap }
+.pm-act .pe-confirme{ flex-direction:row; align-items:center; flex-wrap:wrap; max-width:420px }
+.pm-jeu{ display:grid; grid-template-columns:236px minmax(0,1fr); gap:8px; align-items:start; padding:0 8px 8px }
+.pm-cote{ display:flex; flex-direction:column; gap:6px; font-size:.86rem; line-height:1.3; min-width:0 }
+.pm-cartes{ display:flex; flex-direction:column; gap:5px }
+.pm-pal{ flex:none; padding:4px 7px }
+.pm-pal dl{ grid-template-columns:6.4em minmax(0,1fr) }
+.pm-pal dd.pm-recep-txt{ white-space:normal; font-weight:500 }
+.pm-consigne, .pm-bilan{ background:var(--panneau); border:1px solid var(--filet); border-radius:var(--r); padding:5px 8px }
+.pm-bilan > b{ display:block; margin-bottom:2px }
+.pm-bilan > div{ font-weight:700 }
+.pm-bilan small{ display:block; color:var(--encre-douce); margin-top:3px }
+.pm-msg:empty{ display:none }
+.pm-espace{ display:flex; flex-direction:column; gap:4px }
+.pm-fil{ display:flex; gap:10px; align-items:center; font-size:.9rem; min-height:2em }
+.pm-dessin{ height:var(--pm-dispo, 520px); min-height:300px }
+.pm-svg{ display:block; width:100%; height:100%; background:#f6f2e9; border-radius:var(--r) }
+.pm-couloir{ cursor:pointer; outline:none }
+.pm-couloir.pm-lecture{ cursor:default }
+.pm-sol, .pm-panneau{ fill:transparent; stroke:none }
+.pm-couloir:not(.pm-lecture):hover .pm-sol, .pm-couloir:focus-visible .pm-sol{ fill:rgba(16,124,65,.16); stroke:#107c41; stroke-width:2.5 }
+.pm-recep{ cursor:pointer; outline:none }
+.pm-recep:focus-visible, .pm-recep:hover{ filter:drop-shadow(0 0 3px #107c41) }
+.pm-place{ cursor:pointer; outline:none }
+.pm-place polygon{ fill:rgba(16,124,65,.08); stroke:#107c41; stroke-width:2; stroke-dasharray:7 5 }
+.pm-place:hover polygon, .pm-place:focus-visible polygon{ fill:rgba(16,124,65,.22); stroke-width:3 }
+.pm-tombe{ animation:pm-tombe .7s cubic-bezier(.3,1.4,.6,1) both }
+.pm-apparait{ animation:pm-apparait .45s ease-out both }
+@keyframes pm-tombe{ from{ transform:translateY(-120px); opacity:0 } to{ transform:none; opacity:1 } }
+@keyframes pm-apparait{ from{ transform:translateY(-30px); opacity:0 } to{ transform:none; opacity:1 } }
+@media (prefers-reduced-motion: reduce){ .pm-tombe, .pm-apparait{ animation:none } }

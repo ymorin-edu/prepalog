@@ -60,7 +60,7 @@ export const TONS_SOL = { neutre: '#1a1915', ok: VERT_TEXTE_SOL, alerte: '#9d272
 /* ================================================================== la scène */
 // Les types connus. Un type inconnu empêche la séance de se charger (message clair) : on ne découvre
 // pas en classe qu'un objet ne se dessine pas.
-export const TYPES_DECOR = ['sol', 'mur', 'allee', 'couloirMasse', 'reperesProfondeur', 'texteSol'];
+export const TYPES_DECOR = ['sol', 'mur', 'allee', 'couloirMasse', 'reperesProfondeur', 'texteSol', 'zone', 'quai'];
 export const TYPES_CHARGE = ['retention'];
 export const TYPES_ACTEUR = ['chariotFrontal'];
 // Les gestes de chaque acteur (d'autres arriveront avec d'autres acteurs).
@@ -125,6 +125,8 @@ export function compilerScene(S, ou = 'scène') {
 }
 
 /* =================================================================== le décor */
+// Les deux tons d'une zone au sol : réception (jaune, comme les quais), litiges (ambre). Teintes fixes : la scène est une image.
+const ZONES_SOL = { reception: { fond: 'rgba(229,184,0,.13)', trait: '#c9a200' }, litiges: { fond: 'rgba(138,79,15,.09)', trait: '#8a4f0f' } };
 export function dessinerDecor(I, sc) {
   const { P, pts, face, boite } = I;
   const yMur = sc.mur ? sc.mur.y : null;
@@ -141,20 +143,26 @@ export function dessinerDecor(I, sc) {
       s += face([[x0, y0, 0], [x1, y0, 0], [x1, y1, 0], [x0, y1, 0]], '#efeadf', 'none');
     } else if (d.type === 'couloirMasse') {
       const c = sc.couloirs.find((k) => k.id === d.id), x = c.x, y = c.y, n = c.n;
-      s += face([[x - .05, y - .05, 0], [x + 1.05, y - .05, 0], [x + 1.05, y + n + .05, 0], [x - .05, y + n + .05, 0]], '#f6f2e9', '#b9b3a6');
+      // `reserve: true` : un couloir réservé (les fûts vides rendus par les clients), au sol teinté (stockage de masse, D-5).
+      s += face([[x - .05, y - .05, 0], [x + 1.05, y - .05, 0], [x + 1.05, y + n + .05, 0], [x - .05, y + n + .05, 0]], d.reserve ? '#e9e3ec' : '#f6f2e9', '#b9b3a6');
       for (let k = 0; k < n; k++) s += `<polygon points="${pts([[x + .08, y + k + .08, 0], [x + .92, y + k + .08, 0], [x + .92, y + k + .92, 0], [x + .08, y + k + .92, 0]])}" fill="none" stroke="#c9c3b6" stroke-dasharray="5 4"/>`;
       // Le panneau du couloir, sur le mur du fond (ou juste derrière la première place s'il n'y a pas de mur).
       if (d.panneau) {
         const ym = yMur != null ? yMur : y - 0.5;
-        s += face([[x + .15, ym, .45], [x + .85, ym, .45], [x + .85, ym, .85], [x + .15, ym, .85]], '#1f5f3a', '#0f3d24');
-        const [lx, ly] = P(x + .5, ym, .65);
-        s += `<text x="${lx}" y="${ly + 6}" text-anchor="middle" font-size="17" font-weight="800" fill="#fff" transform="rotate(30 ${lx} ${ly})">${ech(d.panneau)}</text>`;
+        // `panneauZ` : [bas, haut] du panneau (stockage de masse, D-5 : au-dessus des piles, sur un mur plus haut).
+        const [z0, z1] = d.panneauZ || [.45, .85];
+        s += face([[x + .15, ym, z0], [x + .85, ym, z0], [x + .85, ym, z1], [x + .15, ym, z1]], '#1f5f3a', '#0f3d24');
+        const [lx, ly] = P(x + .5, ym, (z0 + z1) / 2);
+        const fs = d.panneauTaille || 17;   // `panneauTaille` : la taille du texte (une scène dessinée plus petite)
+        s += `<text x="${lx}" y="${ly + fs * .35}" text-anchor="middle" font-size="${fs}" font-weight="800" fill="#fff" transform="rotate(30 ${lx} ${ly})">${ech(d.panneau)}</text>`;
       }
       // Flèche verte = entrée (côté gauche du couloir), flèche rouge = sortie (côté droit).
       if (d.fleches) {
         const b = y + n;
         s += face([[x + .22, b + .95, 0], [x + .38, b + .95, 0], [x + .38, b + .45, 0], [x + .48, b + .45, 0], [x + .3, b + .15, 0], [x + .12, b + .45, 0], [x + .22, b + .45, 0]], '#107c41', 'none');
         s += face([[x + .62, b + .15, 0], [x + .78, b + .15, 0], [x + .78, b + .65, 0], [x + .88, b + .65, 0], [x + .7, b + .95, 0], [x + .52, b + .65, 0], [x + .62, b + .65, 0]], '#9d2727', 'none');
+        // `mots: false` : la flèche seule (le stockage de masse n'écrit ENTRÉE / SORTIE que sous le premier couloir).
+        if (d.mots === false) continue;
         const [gx, gy] = P(x + .3, b + 1.15, 0);
         s += `<text x="${gx}" y="${gy + 6}" text-anchor="middle" font-size="12" font-weight="800" fill="${VERT_TEXTE_SOL}">ENTRÉE</text>`;
         const [rx, ry] = P(x + .85, b + 1.25, 0);
@@ -168,6 +176,21 @@ export function dessinerDecor(I, sc) {
         const [px, py] = P(c.x + 1.12, c.y + k + .5, 0);
         s += `<text x="${px + 6}" y="${py + 5}" font-size="13" font-weight="700" fill="#555047">${ech(t)}</text>`;
       });
+    } else if (d.type === 'zone') {
+      // Une zone au sol (stockage de masse, D-5) : `ton` 'reception' (bordure jaune) ou 'litiges' (bordure ambre),
+      // son titre et une ligne de plus écrits au sol, le long du bord du fond. Aucun rouge : le rouge dirait « faux ».
+      const [x0, y0] = d.de, [x1, y1] = d.a, T = ZONES_SOL[d.ton] || ZONES_SOL.reception;
+      s += `<polygon points="${pts([[x0, y0, 0], [x1, y0, 0], [x1, y1, 0], [x0, y1, 0]])}" fill="${T.fond}" stroke="${T.trait}" stroke-width="2.5" stroke-dasharray="8 5"/>`;
+      // Les textes vont le long du bord AVANT (côté allée) : ce qui est posé dans la zone ne les cache pas.
+      const [tx, ty] = P(x0 + .12, y1 - .42, 0);
+      if (d.titre) s += `<text x="${tx}" y="${ty}" font-size="13" font-weight="800" fill="#1a1915" transform="rotate(30 ${tx} ${ty})">${ech(d.titre)}</text>`;
+      if (d.ligne) { const [lx, ly] = P(x0 + .12, y1 - .17, 0); s += `<text x="${lx}" y="${ly}" font-size="11.5" font-weight="600" fill="#3d3a33" transform="rotate(30 ${lx} ${ly})">${ech(d.ligne)}</text>`; }
+    } else if (d.type === 'quai') {
+      // Une porte de quai au bord du bâtiment (stockage de masse, D-5) : une plaque jaune au sol et son nom.
+      const [x0, y0] = d.de, w = d.largeur || 1.6;
+      s += face([[x0, y0, 0], [x0 + w, y0, 0], [x0 + w, y0 + .45, 0], [x0, y0 + .45, 0]], '#e5b800', '#8a6d00');
+      const [qx, qy] = P(x0 + w / 2, y0 + .23, 0);
+      s += `<text x="${qx}" y="${qy + 4}" text-anchor="middle" font-size="10.5" font-weight="800" fill="#1a1915" transform="rotate(30 ${qx} ${qy + 4})">${ech(d.texte || '')}</text>`;
     } else if (d.type === 'texteSol') {
       const [ax, ay] = P(d.en[0], d.en[1], 0);
       if (d.style === 'allee') {
@@ -186,7 +209,7 @@ export function dessinerDecor(I, sc) {
 export function bornesDecor(I, sc) {
   const L = [];
   for (const d of sc.decor) {
-    if (d.type === 'sol' || d.type === 'allee') { const [x0, y0] = d.de, [x1, y1] = d.a; L.push([x0, y0, 0], [x1, y0, 0], [x1, y1, 0], [x0, y1, 0]); }
+    if (d.type === 'sol' || d.type === 'allee' || d.type === 'zone') { const [x0, y0] = d.de, [x1, y1] = d.a; L.push([x0, y0, 0], [x1, y0, 0], [x1, y1, 0], [x0, y1, 0]); }
     if (d.type === 'mur') L.push([d.de, d.y - .25, d.hauteur || 1.1], [d.a, d.y, 0], [d.de, d.y, 0], [d.a, d.y - .25, d.hauteur || 1.1]);
   }
   sc.couloirs.forEach((c) => L.push([c.x, c.y, 0], [c.x + 1, c.y + c.n + 1.3, 0]));
@@ -229,7 +252,9 @@ export function dessinerCharge(I, p, sc, o = {}) {
   let g = paletteFuts(I, pal, p.x + m, p.y + m, 0, { cote: COTE_SCENE, z: p.z, dents: false });
   const [cx, cy] = P(p.x + .5, p.y + .5, p.z + HAUT_RETENTION + .12);
   const L = p.lot ? sc.lots[p.lot] : null;
-  if (L) g += `<rect x="${cx - 34}" y="${cy - 22}" width="68" height="22" rx="5" fill="${L.c}" stroke="${o.sel ? '#107c41' : 'rgba(0,0,0,.35)'}" stroke-width="${o.sel ? 3 : 1}"/><text x="${cx}" y="${cy - 6}" text-anchor="middle" font-size="14" font-weight="800" fill="${L.t}">lot ${ech(p.lot)}</text>`;
+  // L'étiquette dit « lot S24 », ou le texte de `p.texte` (« VIDES », « P1 · S24 » : le stockage de masse) ; elle s'élargit avec lui.
+  const t = p.texte != null ? String(p.texte) : `lot ${p.lot}`, w = Math.max(68, Math.round(t.length * 8.6 + 14));
+  if (L) g += `<rect x="${cx - w / 2}" y="${cy - 22}" width="${w}" height="22" rx="5" fill="${L.c}" stroke="${o.sel ? '#107c41' : 'rgba(0,0,0,.35)'}" stroke-width="${o.sel ? 3 : 1}"/><text x="${cx}" y="${cy - 6}" text-anchor="middle" font-size="14" font-weight="800" fill="${L.t}">${ech(t)}</text>`;
   if (p.etiq) {
     const coul = TONS_SOL[p.etiqTon] || TONS_SOL.neutre;
     if (sc.aDroite(p.x)) { const [ex, ey] = P(p.x + 1.08, p.y + .62, 0); g += `<text x="${ex}" y="${ey}" font-size="13" font-weight="700" fill="${coul}">${ech(p.etiq)}</text>`; }

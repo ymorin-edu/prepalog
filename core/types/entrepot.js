@@ -7,7 +7,8 @@
 // global, géométrie écrite à la main, stock tiré par un générateur) : ici on reprend le comportement,
 // le plan est DÉCLARÉ par le contenu et dessiné par le moteur. Le mode « préparation » (lot 4) est
 // venu le même jour (voir plus bas, « PRÉPARATION ») ; le mode « comptage » (lot 3) n'est pas encore
-// écrit : une séance qui le déclare ne se charge pas.
+// écrit : une séance qui le déclare ne se charge pas. Le mode « masse » (stockage de masse en 3D isométrique, chantier D-5,
+// 11/10/2026) vit dans `entrepot-masse.js` : voir sa tête.
 //
 // Elle vit dans l'environnement d'entreprise (`entreprise.js`), comme le quai et le planning, et
 // n'existe que si la séance déclare `entrepot` (`plan` est déjà la vue de transport). Elle ne connaît
@@ -84,6 +85,8 @@
 // Pas d'import de `ui.js` : un corrigé de séance peut importer ce module hors du navigateur.
 // Le mode VISITE (second chantier, 05/10/2026) vit dans son propre fichier : voir sa tête.
 import { compilerVisite, jalonsVisite, detailVisite, creerVisite, etatVisiteNeuf } from './entrepot-visite.js';
+// Le mode STOCKAGE DE MASSE (chantier D-5, 11/10/2026) vit aussi dans son fichier : il ne prend rien du plan à racks.
+import { compilerMasse, etatMasseNeuf, jalonsMasse, solutionsMasse, creerMasse, placeDe, fautesMasse as fautesM } from './entrepot-masse.js';
 import { ech, pad2 } from '../texte.js';
 import { noteProportionnelle } from '../notes.js';
 import { auClavier } from '../gestes.js';
@@ -180,7 +183,8 @@ function compiler(P) {
   const err = (m) => { throw new Error(`entrepot ${P && P.id} : ${m}`); };
   if (!P || !P.id) err('il manque un id');
   const mode = P.mode || 'rangement';
-  if (!['rangement', 'preparation', 'visite'].includes(mode)) err(`le mode « ${mode} » n'est pas encore écrit dans le moteur (lot 3 du brief)`);
+  if (!['rangement', 'preparation', 'visite', 'masse'].includes(mode)) err(`le mode « ${mode} » n'est pas encore écrit dans le moteur (lot 3 du brief)`);
+  if (mode === 'masse') { const MM = compilerMasse(P, err); COMPILES.set(P, MM); return MM; }
   const L = P.plan || err('il manque le plan');
   const T = L.travees || 4, N = L.niveaux || 3, E = L.emplacements || 3;
   if (N > 4 || E > 4) err('4 niveaux et 4 emplacements par niveau au plus');
@@ -494,6 +498,7 @@ function solutions(M, id) {
 export function etatNeuf(mode) {
   if (mode === 'preparation') return etatPrepNeuf();
   if (mode === 'visite') return etatVisiteNeuf();
+  if (mode === 'masse') return etatMasseNeuf();
   return { place: {}, verifie: false, verifs: 0, premierGeste: null, aideCharge: true };
 }
 const etatDe = (db, P) => (db && db.entrepots && db.entrepots[P.id]) || etatNeuf(P.mode);
@@ -507,6 +512,7 @@ export function jalonsEntrepot(db, P, temps = P.temps) {
   let L;
   if (M.mode === 'preparation') L = jalonsPrep(M, Object.assign(etatPrepNeuf(), e), temps);
   else if (M.mode === 'visite') L = jalonsVisite(M, e);
+  else if (M.mode === 'masse') L = jalonsMasse(M, Object.assign(etatMasseNeuf(), e));
   else {
     const place = e.place || {};
     L = M.jalons.map((j) => ({ id: j.id, lib: j.lib, palette: j.palette,
@@ -536,6 +542,10 @@ export function noteEntrepot(db, P, temps = P.temps) {
   if (compiler(P).mode === 'visite') {
     return { score, max: N.sur, ok, total, detail: { jalons: L.map((l) => ({ jalon: l.lib, ok: l.ok })), visite: detailVisite(compiler(P), e) } };
   }
+  if (compiler(P).mode === 'masse') {
+    return { score, max: N.sur, ok, total, detail: { jalons: L.map((l) => ({ jalon: l.lib, ok: l.ok, adresse: l.place, criteres: l.criteres })),
+      premierGeste: e.premierGeste || null } };
+  }
   if (compiler(P).mode === 'preparation') {
     const X = calculPrep(compiler(P), Object.assign(etatPrepNeuf(), e));
     return { score, max: N.sur, ok, total,
@@ -550,6 +560,7 @@ export function noteEntrepot(db, P, temps = P.temps) {
 // Les bonnes réponses de chaque palette (page d'essai, tests, côté enseignant).
 export function bonnesReponses(P) {
   const M = compiler(P);
+  if (M.mode === 'masse') return solutionsMasse(M);
   return Object.fromEntries(Object.keys(M.pal).map((id) => [id, solutions(M, id)]));
 }
 // Ce que la préparation attend (page d'essai, côté enseignant, tests) : les meilleurs tours, et la
@@ -565,6 +576,10 @@ export function attendusPreparation(P) {
 export function calculPreparation(P, e) { return calculPrep(compiler(P), Object.assign(etatPrepNeuf(), e)); }
 // Les fautes d'une palette posée à une adresse (tests : « chaque piège nomme son critère, et lui seul »).
 export function fautesEntrepot(P, id, a, place = {}) { return fautes(compiler(P), place, id, a); }
+// STOCKAGE DE MASSE : les noms des critères faux d'une palette dans un état (null : pas posée), et la place où l'élève
+// l'a posée, `{ couloir, position, niveau }` ou null — ce que lit la fiche d'entrée en stock qui suit (ENT-6.5).
+export function fautesMasse(P, e, id) { const F = fautesM(compiler(P), Object.assign(etatMasseNeuf(), e), id); return F && F.map((k) => k.nom); }
+export function placeMasse(db, P, id) { return placeDe(compiler(P), Object.assign(etatMasseNeuf(), etatDe(db, P)), id); }
 
 /* ================================================================ géométrie */
 // Le plan vu de dessus, en unités SVG (la maquette v2 donne 800 × 562 pour 2 allées de 2 côtés et
@@ -605,6 +620,13 @@ function geometrie(M) {
 export function creerEntrepot(P, opts = {}) {
   const M = compiler(P);
   if (M.mode === 'visite' && opts.copie) throw new Error(`entrepot ${P.id} : le mode visite n'a pas d'évaluation`);
+  if (M.mode === 'masse') {
+    const V = creerMasse(P, M, opts, { echap: (racine, fn) => { echap = { racine, fn }; }, clavier: auClavier });
+    V.jalons = (db) => jalonsEntrepot(db, P);
+    V.note = P.note || opts.copie ? (db) => noteEntrepot(db, P, opts.copie ? 'evaluation' : undefined) : null;
+    V.bonnesReponses = () => bonnesReponses(P);
+    return V;
+  }
   const G = geometrie(M);
   const PREP = M.mode === 'preparation';
   // `empl` : la fiche de prélèvement ouverte ; `reappro` : le picking qu'on réapprovisionne (on attend le

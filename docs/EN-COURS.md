@@ -7,7 +7,7 @@ est déjà modifié ou inscrit ci-dessous, **elle s'arrête et le dit à Tristan
 
 | Chantier | Fichiers qu'il touche | Depuis |
 |---|---|---|
-| D-5 (mode stockage de masse, animation à 8 fûts, écrans matériel) | `core/iso.js`, `core/types/animation.js`, `core/types/entrepot.js`, `contenus/animation-essai.js`, `outils/test/animation.mjs`, `outils/test/entrepot*.mjs`, `styles/entrepot.css` | 11/10/2026 |
+| D-5 (mode stockage de masse, animation à 8 fûts, écrans matériel) | `core/iso.js`, `core/types/animation.js`, `core/types/entrepot.js`, `core/types/entrepot-masse.js`, `contenus/entrepot-masse-essai.js`, `outils/essai-entrepot.html`, `outils/essai-entrepot.js`, `contenus/animation-essai.js`, `outils/test/animation.mjs`, `outils/test/entrepot*.mjs`, `styles/entrepot.css` | 11/10/2026 |
 
 Rappel : un seul chantier à la fois dans `core/types/tournee.js`, `core/types/grille.js`,
 `core/types/entreprise.js`, `styles/base.css` et `outils/test/boost.mjs` (voir `docs/briefs/COORDINATION-boost.md`).

@@ -1286,4 +1286,276 @@ await v('Visite : aucun défilement de page, chaque étape, à 1366 × 768 et 12
 });
 
 await ctxV.close();
+
+/* ====================================================================== STOCKAGE DE MASSE (chantier D-5) */
+// Le mode « masse » (core/types/entrepot-masse.js) sur le contenu d'essai d'ENT-6.5 (`contenus/entrepot-masse-essai.js`).
+// Bonnes places et critères ÉCRITS À LA MAIN, d'après le brief ENT-6.5 §4 et §8 (position 1 = fond, niveau 1 = sol) :
+//   P1 Heineken 30 L : M02 ou M06, pos. 1, niv. 1 · P2 Pelforth : M03 pos. 1 niv. 3 (sur la pile de 2) ou M03 pos. 2 niv. 1 ·
+//   P3 Affligem : M02 ou M06, pos. 1, niv. 1 · P4 Edelweiss : M07 pos. 2 niv. 1.
+// Et, comme le dit la remarque du brief (§4, « aucune règle de plus ») : P2 et P4 dans un couloir VIDE (M02, M06) respectent
+// toutes les règles ; le moteur les accepte (il ne reste alors qu'un couloir vide pour P1 et P3).
+const ctxM = await nav.newContext({ viewport: { width: 1366, height: 768 } });
+const erreursM = [];
+const pm = await ctxM.newPage();
+pm.setDefaultTimeout(6000);
+pm.on('pageerror', (e) => erreursM.push('PAGEERROR: ' + e.message));
+pm.on('console', (m) => { if (m.type() === 'error' && !/\b404\b/.test(m.text())) erreursM.push('CONSOLE: ' + m.text()); });
+await pm.goto(BASE);
+await pm.waitForSelector('#btnProf', { timeout: 8000 });
+
+const ZM = '#pmTest .pm';
+const monterM = (o = {}) => pm.evaluate(async (o) => {
+  const { creerEntreprise } = await import('/core/types/entreprise.js');
+  const E = await import('/outils/essai-entrepot.js');
+  const C = await import('/contenus/entrepot-masse-essai.js');
+  document.querySelector('#pmTest')?.remove();
+  const hote = document.createElement('div'); hote.id = 'pmTest'; document.body.appendChild(hote);
+  const temps = o.temps || 'entrainement';
+  const db = o.db || {};
+  window.__m = { db, remis: null };
+  creerEntreprise(E.univers({ temps, entrepot: C.MASSE })).rendre(hote, {
+    meta: { id: 'essai-entrepot', code: 'ESSAI', titre: 'Essai', portee: 'eleve', immersif: true, temps, copie: temps === 'evaluation' },
+    profil: { prenom: 'Lea', nom: 'Test', role: o.role || 'eleve', uid: 'u-test' },
+    jeu: { etat: () => db, sauver: () => {} },
+    enregistrer: () => {}, quitter: () => {}, codeStock: 'ABC', lireScore: async () => null,
+    rendreCopie: async (res) => { window.__m.remis = res; return { rendu: Date.now() }; },
+  });
+  document.querySelector('#pmTest .ent-nav[data-vue="entrepot"]').click();
+}, o);
+// Ce que le moteur juge, sur la base de l'élève : jalons (true / false / null = pas encore jugé), critères, places.
+const jugerM = () => pm.evaluate(async () => {
+  const E = await import('/core/types/entrepot.js');
+  const C = await import('/contenus/entrepot-masse-essai.js');
+  const J = E.jalonsEntrepot(window.__m.db, C.MASSE);
+  return { ok: J.ok, L: J.L.map((l) => (l.etat ? l.ok : null)), crit: Object.fromEntries(J.L.map((l) => [l.palette, l.criteres])),
+    place: Object.fromEntries(['P1', 'P2', 'P3', 'P4'].map((id) => [id, E.placeMasse(window.__m.db, C.MASSE, id)])) };
+});
+const presentM = async (sel) => !!(await pm.$(`${ZM} ${sel}`));
+const texteM = async (sel) => ((await pm.textContent(`${ZM} ${sel}`)) || '').replace(/\s+/g, ' ').trim();
+// Poser une palette : la prendre (sa carte), ouvrir le couloir sur le plan, cliquer la place (position) dans le couloir.
+async function poserM(id, c, p) {
+  await pm.click(`${ZM} .pm-cartes [data-pm-pal="${id}"]`);
+  if (await presentM('[data-pm="retour"]')) await pm.click(`${ZM} [data-pm="retour"]`);
+  await pm.click(`${ZM} [data-pm-couloir="${c}"] .pm-sol`);
+  await pm.click(`${ZM} [data-pm-place="${p}"]`);
+  await pm.click(`${ZM} [data-pm="retour"]`);
+}
+async function validerM() {
+  await pm.click(`${ZM} [data-pm="valider"]`);
+  await pm.click(`${ZM} [data-pm="oui"]`);
+}
+
+await v('Masse : bonnes places calculées par le moteur (écrites à la main ici)', async () => {
+  const B = await pm.evaluate(async () => {
+    const E = await import('/core/types/entrepot.js');
+    const C = await import('/contenus/entrepot-masse-essai.js');
+    return E.bonnesReponses(C.MASSE);
+  });
+  egal(B, {
+    P1: ['M02 · position 1 · niveau 1', 'M06 · position 1 · niveau 1'],
+    P2: ['M02 · position 1 · niveau 1', 'M03 · position 1 · niveau 3', 'M03 · position 2 · niveau 1', 'M06 · position 1 · niveau 1'],
+    P3: ['M02 · position 1 · niveau 1', 'M06 · position 1 · niveau 1'],
+    P4: ['M02 · position 1 · niveau 1', 'M06 · position 1 · niveau 1', 'M07 · position 2 · niveau 1'],
+  });
+});
+
+await v('Masse : chaque piège nomme son critère, et lui seul (fautes jugées sur le stock de départ)', async () => {
+  const r = await pm.evaluate(async () => {
+    const E = await import('/core/types/entrepot.js');
+    const C = await import('/contenus/entrepot-masse-essai.js');
+    const f = (id, c, p) => E.fautesMasse(C.MASSE, { pos: { [id]: { c, p } }, ordre: [id] }, id);
+    return {
+      p1Devant: f('P1', 'M01', 2), p1Sur: f('P1', 'M01', 1), p1Pos4: f('P1', 'M02', 4),
+      p2M04: f('P2', 'M04', 2), p2M05: f('P2', 'M05', 2), p3Devant: f('P3', 'M05', 2), p3Sur: f('P3', 'M05', 1),
+      p4Sur3: f('P4', 'M07', 1), p4Vides: f('P4', 'M08', 3), p4Juste: f('P4', 'M07', 2), nonPosee: E.fautesMasse(C.MASSE, {}, 'P1'),
+    };
+  });
+  egal(r.p1Devant, ['un seul lot par couloir'], 'P1 en M01 devant le S20');
+  egal(r.p1Sur, ['un seul lot par couloir', 'hauteur de gerbage'], 'P1 sur la pile de 2 de M01 (30 L : 2 au plus)');
+  egal(r.p1Pos4, ['par le fond'], 'P1 en M02 position 4');
+  egal(r.p2M04, ['un seul lot par couloir'], 'P2 en M04 (lot S19)');
+  egal(r.p2M05, ['une seule référence', 'un seul lot par couloir'], 'P2 en M05 (Affligem S18)');
+  egal(r.p3Devant, ['un seul lot par couloir'], 'P3 devant le S18');
+  egal(r.p3Sur, ['un seul lot par couloir'], 'P3 sur le S18');
+  egal(r.p4Sur3, ['hauteur de gerbage'], 'P4 sur la pile de 3 de M07');
+  egal(r.p4Vides, ['couloir VIDES'], 'P4 dans le couloir VIDES : le couloir réservé arrête les autres critères');
+  egal(r.p4Juste, [], 'P4 en M07 position 2');
+  egal(r.nonPosee, null, 'palette non posée');
+});
+
+await v('Masse : rien n’est jugé avant la validation ; inaction = « Valider » fermé, 0 jalon', async () => {
+  await monterM();
+  egal((await jugerM()).L, [null, null, null, null], 'jalons avant tout geste');
+  vrai(await pm.$eval(`${ZM} [data-pm="valider"]`, (b) => b.disabled), '« Valider mon rangement » fermé tant que tout n’est pas posé');
+  await poserM('P1', 'M02', 1);
+  egal((await jugerM()).L, [null, null, null, null], 'une palette posée (juste) : toujours rien de jugé');
+  vrai(await pm.$eval(`${ZM} [data-pm="valider"]`, (b) => b.disabled), 'trois palettes restent');
+  egal((await jugerM()).ok, 0, 'aucun jalon juste');
+});
+
+await v('Masse : parcours juste (P1 M02, P2 sur la pile de M03, P3 M06, P4 M07 pos. 2) → 4 / 4, rangement figé, bilan ✓', async () => {
+  await monterM();
+  await poserM('P1', 'M02', 1);
+  await poserM('P2', 'M03', 1);
+  await poserM('P3', 'M06', 1);
+  await poserM('P4', 'M07', 2);
+  const avant = await jugerM();
+  egal(avant.place, { P1: { couloir: 'M02', position: 1, niveau: 1 }, P2: { couloir: 'M03', position: 1, niveau: 3 },
+    P3: { couloir: 'M06', position: 1, niveau: 1 }, P4: { couloir: 'M07', position: 2, niveau: 1 } }, 'places lues pour la fiche (placeMasse)');
+  egal(avant.L, [null, null, null, null], 'pas jugé avant la validation');
+  await validerM();
+  const J = await jugerM();
+  egal(J.L, [true, true, true, true], 'jalons');
+  egal(await pm.$$eval(`${ZM} [data-pm-verd]`, (L) => L.map((d) => d.textContent.replace(/\s+/g, ' ').trim())), ['P1 ✓', 'P2 ✓', 'P3 ✓', 'P4 ✓'], 'bilan');
+  vrai(await pm.$eval(`${ZM} .pm-cartes [data-pm-pal="P1"]`, (b) => b.disabled), 'cartes fermées après la validation');
+  vrai(!(await presentM('[data-pm-couloir][tabindex]')), 'couloirs plus cliquables');
+  vrai(/validé/.test(await texteM('[data-pm-consigne]')), 'la consigne dit que le rangement est validé');
+});
+
+await v('Masse : variante juste (P1 M06, P3 M02, P2 M03 pos. 2) → 4 / 4', async () => {
+  await monterM();
+  await poserM('P1', 'M06', 1);
+  await poserM('P3', 'M02', 1);
+  await poserM('P2', 'M03', 2);
+  await poserM('P4', 'M07', 2);
+  await validerM();
+  egal((await jugerM()).L, [true, true, true, true]);
+});
+
+await v('Masse : rangement faux — le bilan nomme le critère, jamais la bonne place ; jugé dans l’ordre de pose', async () => {
+  await monterM();
+  await poserM('P1', 'M01', 2);         // devant le S20
+  await poserM('P2', 'M02', 1);         // couloir vide : juste
+  await poserM('P3', 'M02', 2);         // devant P2, posée après elle : c'est P3 qui casse la règle
+  await poserM('P4', 'M08', 3);         // couloir VIDES
+  await validerM();
+  const J = await jugerM();
+  egal(J.L, [false, true, false, false], 'jalons');
+  egal(J.crit, { P1: ['un seul lot par couloir'], P2: [], P3: ['une seule référence'], P4: ['couloir VIDES'] }, 'critères');
+  const B = await texteM('[data-pm-bilan]');
+  vrai(/P1 ✗ critère : un seul lot par couloir/.test(B) && /P2 ✓/.test(B) && /P3 ✗ critère : une seule référence/.test(B), `bilan : ${B}`);
+  vrai(!/M0\d|position|niveau/.test(B), 'le bilan ne donne aucune place');
+});
+
+await v('Masse : gestes impossibles — derrière une pile, hors de portée, reprendre une palette bloquée', async () => {
+  await monterM();
+  // M01 : la pile de 2 du stock est en position 1 ; avec P1 en main, on pose sur elle ou devant, jamais derrière.
+  await pm.click(`${ZM} .pm-cartes [data-pm-pal="P1"]`);
+  await pm.click(`${ZM} [data-pm-couloir="M01"] .pm-sol`);
+  egal(await pm.$$eval(`${ZM} [data-pm-place]`, (L) => L.map((g) => g.dataset.pmPlace)), ['1', '2', '3', '4'], 'places de M01 (sur la pile, puis devant)');
+  await pm.click(`${ZM} [data-pm="retour"]`);
+  await pm.click(`${ZM} .pm-cartes [data-pm-pal="P1"]`);   // la reposer en réception
+  // M07 : la pile de 3, puis P4 dessus (4e niveau, accepté) ; ensuite plus rien sur cette pile (portée : 4).
+  await poserM('P4', 'M07', 1);
+  egal((await jugerM()).place.P4, { couloir: 'M07', position: 1, niveau: 4 }, 'P4 posée au 4e niveau (accepté, jugé à la validation)');
+  await pm.click(`${ZM} .pm-cartes [data-pm-pal="P2"]`);
+  await pm.click(`${ZM} [data-pm-couloir="M07"] .pm-sol`);
+  egal(await pm.$$eval(`${ZM} [data-pm-place]`, (L) => L.map((g) => g.dataset.pmPlace)), ['2', '3', '4'], 'pile de 4 : hors de portée');
+  await pm.click(`${ZM} [data-pm="retour"]`);
+  await pm.click(`${ZM} .pm-cartes [data-pm-pal="P2"]`);
+  // Reprendre : P1 en M02 pos. 1, P3 devant elle en pos. 2 → P1 bloquée ; P3 se reprend.
+  await poserM('P1', 'M02', 1);
+  await poserM('P3', 'M02', 2);
+  await pm.click(`${ZM} .pm-cartes [data-pm-pal="P1"]`);
+  vrai(/Impossible de la reprendre : une autre palette la bloque/.test(await texteM('[data-pm-msg]')), 'message de blocage');
+  egal((await jugerM()).place.P1, { couloir: 'M02', position: 1, niveau: 1 }, 'P1 reste posée');
+  await pm.click(`${ZM} .pm-cartes [data-pm-pal="P3"]`);
+  egal((await jugerM()).place.P3, null, 'P3 reprise (rien devant elle)');
+  const e = await pm.evaluate(() => window.__m.db.entrepots['essai-masse']);
+  egal(e.ordre, ['P4', 'P1'], 'ordre de pose : P3 en est sortie');
+});
+
+await v('Masse : couloir ouvert — places possibles en boîtes, « inaccessible » derrière une pile, la palette posée tombe', async () => {
+  await monterM();
+  await pm.click(`${ZM} .pm-cartes [data-pm-pal="P2"]`);
+  await pm.click(`${ZM} [data-pm-couloir="M03"] .pm-sol`);
+  egal(await pm.$$eval(`${ZM} [data-pm-place] text`, (L) => L.map((t) => t.textContent)), ['P2 ici · niv. 3', 'P2 ici · niv. 1', 'P2 ici · niv. 1', 'P2 ici · niv. 1'], 'textes des boîtes');
+  await pm.click(`${ZM} [data-pm-place="2"]`);
+  vrai(await presentM('[data-pm-posee="P2"].pm-tombe'), 'la palette posée tombe');
+  await pm.click(`${ZM} [data-pm="retour"]`);
+  await poserM('P4', 'M03', 3);
+  await pm.click(`${ZM} .pm-cartes [data-pm-pal="P1"]`);
+  await pm.click(`${ZM} [data-pm-couloir="M03"] .pm-sol`);
+  egal(await pm.$$eval(`${ZM} .pm-svg text`, (L) => L.filter((t) => /inaccessible/.test(t.textContent)).length), 2, 'positions 1 et 2 inaccessibles (P4 devant)');
+  egal(await pm.$$eval(`${ZM} [data-pm-place]`, (L) => L.map((g) => g.dataset.pmPlace)), ['3', '4'], 'aucune place derrière la pile de P4');
+  vrai(/Couloir M03 en 3D — Pelforth 20 L \+ Edelweiss 20 L · lot S24/.test(await texteM('.pm-fil')), 'le fil décrit le couloir');
+  await pm.keyboard.press('Escape');
+  vrai(!(await presentM('[data-pm="retour"]')), 'Échap ramène au plan');
+});
+
+await v('Masse : évaluation — pas de règles ni de bilan, copie rendue avec la note et les places', async () => {
+  await monterM({ temps: 'evaluation' });
+  vrai(!(await presentM('[data-pe-regles]')), 'pas de « Les règles » en évaluation');
+  await poserM('P1', 'M02', 1);
+  await poserM('P2', 'M04', 2);
+  await poserM('P3', 'M06', 1);
+  await poserM('P4', 'M07', 2);
+  egal(await texteM('[data-pm="valider"]'), 'Rendre mon travail', 'bouton');
+  await validerM();
+  await pm.waitForFunction(() => window.__m.remis);
+  const R = await pm.evaluate(() => window.__m.remis);
+  egal([R.score, R.max], [15, 20], 'note : 3 jalons sur 4');
+  egal(R.detail.entrepot.jalons.map((j) => [j.ok, j.adresse]), [[true, 'M02 · position 1 · niveau 1'], [false, 'M04 · position 2 · niveau 1'],
+    [true, 'M06 · position 1 · niveau 1'], [true, 'M07 · position 2 · niveau 1']], 'détail');
+  vrai(!(await presentM('[data-pm-bilan]')), 'aucun bilan à l’élève');
+});
+
+await v('Masse : enseignant — bonnes places dans un encadré ; élève — rien', async () => {
+  await monterM({ role: 'prof' });
+  vrai(/P4 : .*M07 · position 2 · niveau 1/.test(await texteM('.pe-prof')), 'bonnes places côté enseignant');
+  await monterM();
+  vrai(!(await presentM('.pe-prof')), 'rien côté élève');
+});
+
+await v('Masse : déclaration fautive refusée au chargement, avec un message clair', async () => {
+  const r = await pm.evaluate(async () => {
+    const E = await import('/core/types/entrepot.js');
+    const C = await import('/contenus/entrepot-masse-essai.js');
+    const copie = () => JSON.parse(JSON.stringify(C.MASSE));
+    const essai = (f) => { const x = copie(); f(x); try { E.creerEntrepot(x); return ''; } catch (e) { return e.message; } };
+    return {
+      bon: essai(() => {}),
+      couloir: essai((x) => { x.stock.M09 = [[{ ref: 'HEI30', lot: 'S20' }]]; }),
+      lot: essai((x) => { x.palettes[0].lot = 'S99'; }),
+      ref: essai((x) => { x.palettes[0].ref = 'XXX'; }),
+      crit: essai((x) => { x.criteres.push({ type: 'parcours' }); }),
+      hauteur: essai((x) => { delete x.hauteurs['20 L']; }),
+      portee: essai((x) => { x.stock.M07 = [[1, 2, 3, 4, 5].map(() => ({ ref: 'EDW20', lot: 'S24' }))]; }),
+      reserve: essai((x) => { x.plan.couloirs[7].reserve = 'froid'; }),
+    };
+  });
+  egal(r.bon, '', 'le contenu d’essai se charge');
+  vrai(/couloir inconnu : M09/.test(r.couloir), r.couloir);
+  vrai(/lot inconnu « S99 »/.test(r.lot), r.lot);
+  vrai(/référence inconnue \(XXX\)/.test(r.ref), r.ref);
+  vrai(/critère de type inconnu : parcours/.test(r.crit), r.crit);
+  vrai(/pas de hauteur de gerbage pour le format « 20 L »/.test(r.hauteur), r.hauteur);
+  vrai(/plus haut que la portée du chariot/.test(r.portee), r.portee);
+  vrai(/réserve inconnue « froid »/.test(r.reserve), r.reserve);
+});
+
+await v('Masse : la page d’essai tient en 1366 × 768 et 1280 × 720 sans défiler (plan et couloir ouvert)', async () => {
+  const pe = await ctxM.newPage();
+  const err = [];
+  pe.on('pageerror', (e) => err.push(e.message));
+  for (const [w, h] of [[1366, 768], [1280, 720]]) {
+    await pe.setViewportSize({ width: w, height: h });
+    await pe.goto(BASE + 'outils/essai-entrepot.html');
+    await pe.waitForSelector('.pe');
+    await pe.selectOption('#reglages select[name="cas"]', 'masse');
+    await pe.waitForSelector('.pm');
+    await pe.evaluate(() => { document.querySelector('#reglages').style.display = 'none'; document.querySelector('#mention').style.display = 'none'; window.dispatchEvent(new Event('resize')); });
+    const d1 = await pe.evaluate(() => document.documentElement.scrollHeight - window.innerHeight);
+    await pe.click('.pm .pm-cartes [data-pm-pal="P2"]');
+    await pe.click('.pm [data-pm-couloir="M03"] .pm-sol');
+    await pe.evaluate(() => window.dispatchEvent(new Event('resize')));
+    const d2 = await pe.evaluate(() => document.documentElement.scrollHeight - window.innerHeight);
+    egal([Math.max(0, d1), Math.max(0, d2)], [0, 0], `pixels qui dépassent à ${w} × ${h} (plan, couloir)`);
+  }
+  egal(err, [], 'erreurs JS');
+  await pe.close();
+});
+
+await v('Masse : aucune erreur JavaScript', async () => { egal(erreursM, []); });
+await ctxM.close();
 }
