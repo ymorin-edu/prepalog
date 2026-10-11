@@ -9,11 +9,12 @@ import { CAS } from '../contenus/entrepot-essai.js';
 import { etapesEntrepot } from '../core/types/entrepot.js';
 import { THEME } from '../contenus/smoby.js';
 import { THEME as THEME_FB } from '../contenus/france-boissons.js';
-import { MASSE } from '../contenus/entrepot-masse-essai.js';
+import { MASSE, COMPTAGE } from '../contenus/entrepot-masse-essai.js';
 
-// `masse` : le stockage de masse d'ENT-6.5 (chantier D-5), dans la charte de France Boissons.
+// `masse` : le stockage de masse d'ENT-6.5 (chantier D-5), dans la charte de France Boissons ; `comptage` : le même, en
+// comptage à l'aveugle (ENT-6.6, chantier D-6).
 export function univers({ cas = 'rangement', temps = 'guidage', entrepot = null } = {}) {
-  const P = entrepot || (cas === 'masse' ? MASSE : CAS[cas]);
+  const P = entrepot || (cas === 'masse' ? MASSE : cas === 'comptage' ? COMPTAGE : CAS[cas]);
   const masse = P.mode === 'masse';
   return {
     ENTREPRISE: masse ? { id: 'essai-entrepot', nom: 'France Boissons — essai de la zone de masse', sousTitre: 'Plateforme — stockage de masse', exercice: 'Essai de l’écran Plan d’entrepôt' }

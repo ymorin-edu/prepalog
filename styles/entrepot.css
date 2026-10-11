@@ -363,6 +363,8 @@
 .pm-couloir.pm-lecture{ cursor:default }
 .pm-sol, .pm-panneau{ fill:transparent; stroke:none }
 .pm-couloir:not(.pm-lecture):hover .pm-sol, .pm-couloir:focus-visible .pm-sol{ fill:rgba(16,124,65,.16); stroke:#107c41; stroke-width:2.5 }
+.pm-litiges{ cursor:pointer; outline:none }
+.pm-litiges:hover .pm-sol, .pm-litiges:focus-visible .pm-sol{ fill:rgba(138,79,15,.14); stroke:#8a4f0f; stroke-width:2.5 }
 .pm-recep{ cursor:pointer; outline:none }
 .pm-recep:focus-visible, .pm-recep:hover{ filter:drop-shadow(0 0 3px #107c41) }
 .pm-place{ cursor:pointer; outline:none }

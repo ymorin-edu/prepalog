@@ -1567,6 +1567,196 @@ await v('Masse : la page d’essai tient en 1366 × 768 et 1280 × 720 sans déf
   await pe.close();
 });
 
+/* ------------------------------------------------- le sous-mode COMPTAGE (chantier D-6, lot 1 ; brief ENT-6.6 §4 et §7.1) */
+// Le contenu d'essai `COMPTAGE` : la zone de masse du jeudi 7 h. Ce qui se compte, ÉCRIT À LA MAIN d'après le tableau du brief
+// (§4, étape 1) : M01 15 · M02 8 Heineken (+ 8 Pelforth S19 posée dessus) · M03 24 · M04 0 · M05 2 · M06 7 · M08 19 vides ;
+// M07 (non compté par la séance) : 3 × 8 + 7 = 31. Codes de contrôle : M01 47, M02 82, M03 15, M04 63, M05 29, M06 54, M07 31, M08 91.
+const monterC = (o = {}) => pm.evaluate(async (o) => {
+  const { creerEntreprise } = await import('/core/types/entreprise.js');
+  const E = await import('/outils/essai-entrepot.js');
+  const C = await import('/contenus/entrepot-masse-essai.js');
+  document.querySelector('#pmTest')?.remove();
+  const hote = document.createElement('div'); hote.id = 'pmTest'; document.body.appendChild(hote);
+  const db = o.db || {};
+  window.__m = { db, signaux: [] };
+  creerEntreprise(E.univers({ temps: 'guidage', entrepot: C.COMPTAGE })).rendre(hote, {
+    meta: { id: 'essai-entrepot', code: 'ESSAI', titre: 'Essai', portee: 'eleve', immersif: true, temps: 'guidage' },
+    profil: { prenom: 'Lea', nom: 'Test', role: o.role || 'eleve', uid: 'u-test' },
+    jeu: { etat: () => db, sauver: () => {} },
+    enregistrer: () => {}, quitter: () => {}, codeStock: 'ABC', lireScore: async () => null,
+  });
+  document.querySelector('#pmTest .ent-nav[data-vue="entrepot"]').click();
+}, o);
+const ouvrirC = async (c) => {
+  if (await presentM('[data-pm="retour"]')) await pm.click(`${ZM} [data-pm="retour"]`);
+  await pm.click(`${ZM} [data-pm-couloir="${c}"] .pm-sol`);
+  await pm.waitForSelector(`${ZM}[data-pm-ouvert="${c}"]`);
+};
+// Tout ce que l'élève peut lire dans la vue (texte, étiquettes d'accessibilité, infobulles), sans l'encadré « Compter les
+// fûts » (il dit « 8 fûts » par palette pleine : une règle, pas le stock). On retire ensuite ce qui a le droit de porter un
+// chiffre : couloirs, lots, formats, date et heure, étiquettes de la zone litiges, code de contrôle lu sur le panneau, « 3D »
+// et le nombre de couloirs (description du plan).
+const chiffresC = () => pm.evaluate((ZM) => {
+  const R = document.querySelector(ZM);
+  const morceaux = [];
+  R.querySelectorAll('*').forEach((el) => {
+    if (el.closest('.pe-regles')) return;
+    ['aria-label', 'title'].forEach((a) => { if (el.getAttribute(a)) morceaux.push(el.getAttribute(a)); });
+    el.childNodes.forEach((n) => { if (n.nodeType === 3 && !el.closest('[data-pm-code]')) morceaux.push(n.textContent); });
+  });
+  return morceaux.join(' | ').replace(/M0\d|S\d\d|\d\d L|jeudi 17 juin, 7 h|16\/06|19 h|QUAI 1\d|\b3D\b|\b8 couloirs/g, '').match(/\d+/g) || [];
+}, ZM);
+
+await v('Masse comptage : ce qui se compte, calculé par le moteur depuis le stock déclaré (écrit à la main ici)', async () => {
+  const r = await pm.evaluate(async () => {
+    const E = await import('/core/types/entrepot.js');
+    const C = await import('/contenus/entrepot-masse-essai.js');
+    const P = C.COMPTAGE;
+    return { reel: E.comptageReel(P), m02Pel: E.futsReels(P, 'M02', 'PEL20', 'S19'), m04Pel: E.futsReels(P, 'M04', 'PEL20', 'S19'),
+      m08: E.futsReels(P, 'M08', 'VIDES'), m01Autre: E.futsReels(P, 'M01', 'HEI30', 'S24') };
+  });
+  egal(r.reel, {
+    M01: [{ ref: 'HEI30', lot: 'S20', futs: 15 }],
+    M02: [{ ref: 'HEI30', lot: 'S24', futs: 8 }, { ref: 'PEL20', lot: 'S19', futs: 8 }],
+    M03: [{ ref: 'PEL20', lot: 'S24', futs: 24 }],
+    M04: [],
+    M05: [{ ref: 'AFF20', lot: 'S18', futs: 2 }],
+    M06: [{ ref: 'AFF20', lot: 'S24', futs: 7 }],
+    M07: [{ ref: 'EDW20', lot: 'S24', futs: 31 }],
+    M08: [{ ref: 'VIDES', lot: null, futs: 19 }],
+  });
+  egal([r.m02Pel, r.m04Pel, r.m08, r.m01Autre], [8, 0, 19, 0], 'futsReels : Pelforth en M02, en M04, vides, autre lot');
+});
+
+await v('Masse comptage : à l’aveugle — aucune quantité écrite (plan, chaque couloir, zone litiges) ; rien à prendre ni à valider', async () => {
+  await monterC();
+  await pm.waitForSelector(`${ZM}[data-pm-comptage]`);
+  vrai(await presentM('.pe-regles'), 'l’encadré « Compter les fûts » est là');
+  egal(await chiffresC(), [], 'chiffres lisibles sur le plan');
+  for (const c of ['M01', 'M02', 'M03', 'M04', 'M05', 'M06', 'M07', 'M08']) {
+    await ouvrirC(c);
+    egal(await chiffresC(), [], `chiffres lisibles dans le couloir ${c}`);
+  }
+  await pm.click(`${ZM} [data-pm="retour"]`);
+  await pm.click(`${ZM} [data-pm-litiges] .pm-sol`);
+  await pm.waitForSelector(`${ZM}[data-pm-ouvert="litiges"]`);
+  egal(await chiffresC(), [], 'chiffres lisibles dans la zone litiges');
+  for (const sel of ['.pm-cartes', '[data-pm="valider"]', '[data-pm-place]', '[data-pm-pal]', '.pe-prof']) vrai(!(await presentM(sel)), `rien de tel côté élève : ${sel}`);
+});
+
+await v('Masse comptage : le code de contrôle n’est écrit que dans le couloir ouvert, et c’est le sien', async () => {
+  await monterC();
+  vrai(!(await presentM('[data-pm-code]')), 'aucun code sur le plan d’ensemble');
+  const codes = {};
+  for (const c of ['M01', 'M02', 'M03', 'M04', 'M05', 'M06', 'M07', 'M08']) {
+    await ouvrirC(c);
+    codes[c] = await pm.$$eval(`${ZM} [data-pm-code]`, (L) => L.map((x) => x.textContent));
+  }
+  egal(codes, { M01: ['47'], M02: ['82'], M03: ['15'], M04: ['63'], M05: ['29'], M06: ['54'], M07: ['31'], M08: ['91'] });
+});
+
+await v('Masse comptage : référence et lot en étiquette ; deux étiquettes dans la pile mixte de M02, une seule ailleurs', async () => {
+  await monterC();
+  const etiq = {};
+  for (const c of ['M01', 'M02', 'M03', 'M04', 'M07', 'M08']) {
+    await ouvrirC(c);
+    etiq[c] = await pm.$$eval(`${ZM} [data-pm-etiq-face]`, (L) => L.map((x) => x.textContent.trim()));
+  }
+  egal(etiq, {
+    M01: ['Heineken 30 L · lot S20'],
+    M02: ['Heineken 30 L · lot S24', 'Pelforth 20 L · lot S19'],
+    M03: ['Pelforth 20 L · lot S24'],
+    M04: [],
+    M07: ['Edelweiss 20 L · lot S24', 'Edelweiss 20 L · lot S24'],
+    M08: ['VIDES', 'VIDES'],
+  });
+  await ouvrirC('M02');
+  vrai(/Heineken 30 L \+ Pelforth 20 L · lot S24, S19/.test(await texteM('.pm-fil')), 'le titre du couloir nomme les deux références');
+});
+
+await v('Masse comptage : la zone litiges se clique, montre ses deux fûts et leurs étiquettes ; Échap revient au plan', async () => {
+  await monterC();
+  await pm.click(`${ZM} [data-pm-litiges] .pm-sol`);
+  await pm.waitForSelector(`${ZM}[data-pm-ouvert="litiges"]`);
+  const L = await pm.$$eval(`${ZM} [data-pm-litige]`, (X) => X.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));
+  egal(L, ['Affligem 20 L · lot S24Étiquette : « Réception 16/06 — fuit »', 'Heineken 30 L · lot S20Étiquette : « Percé par une fourche — 16/06, 19 h »']);
+  await pm.keyboard.press('Escape');
+  await pm.waitForSelector(`${ZM}[data-pm-ouvert=""]`);
+  vrai(await presentM('[data-pm-litiges][tabindex="0"]'), 'la zone reste cliquable au clavier');
+});
+
+await v('Masse comptage : les couloirs ouverts sont retenus (une fois), aucun jalon ; gestes déclarés', async () => {
+  await monterC();
+  await ouvrirC('M04');
+  await ouvrirC('M02');
+  await ouvrirC('M04');
+  const r = await pm.evaluate(async () => {
+    const E = await import('/core/types/entrepot.js');
+    const C = await import('/contenus/entrepot-masse-essai.js');
+    const e = window.__m.db.entrepots[C.COMPTAGE.id];
+    return { vus: Object.keys(e.vus).sort(), date: typeof e.vus.M04, pos: e.pos, J: E.jalonsEntrepot(window.__m.db, C.COMPTAGE).total,
+      sig: E.creerEntrepot(C.COMPTAGE).signaux };
+  });
+  egal([r.vus, r.date, r.pos, r.J], [['M02', 'M04'], 'number', {}, 0]);
+  egal(r.sig, ['M01', 'M02', 'M03', 'M04', 'M05', 'M06', 'M07', 'M08'].map((c) => `entrepot:essai-masse-comptage:ouvrir:${c}`).concat('entrepot:essai-masse-comptage:litiges'));
+});
+
+await v('Masse comptage : enseignant — ce qui se compte, dans un encadré', async () => {
+  await monterC({ role: 'prof' });
+  const t = await texteM('[data-pm-reel]');
+  vrai(/M01 : Heineken 30 L lot S20 — 15 fûts/.test(t), t);
+  vrai(/M02 : Heineken 30 L lot S24 — 8 fûts ; Pelforth 20 L lot S19 — 8 fûts/.test(t), t);
+  vrai(/M04 : vide/.test(t) && /M08 : VIDES — 19 fûts/.test(t), t);
+});
+
+await v('Masse comptage : déclaration fautive refusée au chargement, avec un message clair', async () => {
+  const r = await pm.evaluate(async () => {
+    const E = await import('/core/types/entrepot.js');
+    const C = await import('/contenus/entrepot-masse-essai.js');
+    const copie = () => JSON.parse(JSON.stringify(C.COMPTAGE));
+    const essai = (f) => { const x = copie(); f(x); try { E.creerEntrepot(x); return ''; } catch (e) { return e.message; } };
+    return {
+      bon: essai(() => {}),
+      palettes: essai((x) => { x.palettes = [{ id: 'P1', ref: 'HEI30', lot: 'S24' }]; }),
+      criteres: essai((x) => { x.criteres = [{ type: 'parLeFond' }]; }),
+      code: essai((x) => { x.plan.couloirs[0].code = 'A7'; }),
+      litiges: essai((x) => { x.plan.litiges.charges = [1, 2, 3, 4].map(() => ({ ref: 'HEI30', lot: 'S20' })); }),
+      lotLitige: essai((x) => { x.plan.litiges.charges[0].lot = 'S99'; }),
+    };
+  });
+  egal(r.bon, '', 'le contenu d’essai se charge');
+  vrai(/le comptage ne range rien/.test(r.palettes), r.palettes);
+  vrai(/pas de `criteres` ni de `jalons`/.test(r.criteres), r.criteres);
+  vrai(/couloir M01 : le code de contrôle/.test(r.code), r.code);
+  vrai(/zone litiges : `charges` est une liste de 1 à 3/.test(r.litiges), r.litiges);
+  vrai(/zone litiges, charge n° 1 : lot inconnu « S99 »/.test(r.lotLitige), r.lotLitige);
+});
+
+await v('Masse comptage : la page d’essai tient en 1366 × 768 et 1280 × 720 sans défiler (plan, couloir ouvert, litiges)', async () => {
+  const pe = await ctxM.newPage();
+  const err = [];
+  pe.on('pageerror', (e) => err.push(e.message));
+  for (const [w, h] of [[1366, 768], [1280, 720]]) {
+    await pe.setViewportSize({ width: w, height: h });
+    await pe.goto(BASE + 'outils/essai-entrepot.html');
+    await pe.waitForSelector('.pe');
+    await pe.selectOption('#reglages select[name="cas"]', 'comptage');
+    await pe.waitForSelector('.pm[data-pm-comptage]');
+    await pe.evaluate(() => { document.querySelector('#reglages').style.display = 'none'; document.querySelector('#mention').style.display = 'none'; window.dispatchEvent(new Event('resize')); });
+    const d = [];
+    d.push(await pe.evaluate(() => document.documentElement.scrollHeight - window.innerHeight));
+    await pe.click('.pm [data-pm-couloir="M03"] .pm-sol');
+    await pe.evaluate(() => window.dispatchEvent(new Event('resize')));
+    d.push(await pe.evaluate(() => document.documentElement.scrollHeight - window.innerHeight));
+    await pe.click('.pm [data-pm="retour"]');
+    await pe.click('.pm [data-pm-litiges] .pm-sol');
+    d.push(await pe.evaluate(() => document.documentElement.scrollHeight - window.innerHeight));
+    egal(d.map((x) => Math.max(0, x)), [0, 0, 0], `pixels qui dépassent à ${w} × ${h} (plan, couloir, litiges)`);
+  }
+  egal(err, [], 'erreurs JS');
+  await pe.close();
+});
+
 await v('Masse : aucune erreur JavaScript', async () => { egal(erreursM, []); });
 await ctxM.close();
 }

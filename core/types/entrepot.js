@@ -86,7 +86,7 @@
 // Le mode VISITE (second chantier, 05/10/2026) vit dans son propre fichier : voir sa tête.
 import { compilerVisite, jalonsVisite, detailVisite, creerVisite, etatVisiteNeuf } from './entrepot-visite.js';
 // Le mode STOCKAGE DE MASSE (chantier D-5, 11/10/2026) vit aussi dans son fichier : il ne prend rien du plan à racks.
-import { compilerMasse, etatMasseNeuf, jalonsMasse, solutionsMasse, creerMasse, placeDe, fautesMasse as fautesM } from './entrepot-masse.js';
+import { compilerMasse, etatMasseNeuf, jalonsMasse, solutionsMasse, creerMasse, placeDe, fautesMasse as fautesM, comptageMasse } from './entrepot-masse.js';
 import { ech, pad2 } from '../texte.js';
 import { noteProportionnelle } from '../notes.js';
 import { auClavier } from '../gestes.js';
@@ -579,6 +579,13 @@ export function fautesEntrepot(P, id, a, place = {}) { return fautes(compiler(P)
 // STOCKAGE DE MASSE : les noms des critères faux d'une palette dans un état (null : pas posée), et la place où l'élève
 // l'a posée, `{ couloir, position, niveau }` ou null — ce que lit la fiche d'entrée en stock qui suit (ENT-6.5).
 export function fautesMasse(P, e, id) { const F = fautesM(compiler(P), Object.assign(etatMasseNeuf(), e), id); return F && F.map((k) => k.nom); }
+// COMPTAGE (chantier D-6) : ce qui se compte vraiment dans chaque couloir, { M01: [{ ref, lot, futs }], … } ; et le nombre de
+// fûts d'une référence et d'un lot dans un couloir (0 s'il n'y en a pas). L'attendu du terminal et du corrigé, calculé.
+export function comptageReel(P) { return comptageMasse(compiler(P)); }
+export function futsReels(P, couloir, ref, lot = null) {
+  const L = comptageReel(P)[couloir] || [];
+  return L.filter((x) => x.ref === ref && (x.lot || null) === (lot || null)).reduce((t, x) => t + x.futs, 0);
+}
 export function placeMasse(db, P, id) { return placeDe(compiler(P), Object.assign(etatMasseNeuf(), etatDe(db, P)), id); }
 
 /* ================================================================ géométrie */

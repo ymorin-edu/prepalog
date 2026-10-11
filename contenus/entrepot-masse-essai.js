@@ -60,3 +60,49 @@ export const MASSE = {
   ] },
   note: { sur: 20 },
 };
+
+// ─────────────────────────────────────────────────────────── le sous-mode COMPTAGE (chantier D-6, lot 1)
+// La zone de masse d'ENT-6.6 (brief `docs/briefs/ENT-6.6-france-boissons-inventaire.md` §4, étape 1), jeudi 17 juin à 7 h : le
+// stock du soir d'ENT-6.5, palettes rangées à leur bonne place, puis les trois écarts construits du brief (un fût Heineken percé
+// en zone litiges, la Pelforth S19 reposée sur la Heineken de M02, trois vides manquants). Construit : tout (plan, codes de
+// contrôle, stock, étiquettes) ; l'inventaire à la voix aussi (non trouvé chez France Boissons, voir le brief §2).
+export const MENTION_COMPTAGE = 'Contenu d’essai : la zone de masse d’ENT-6.6 (France Boissons), comptage à l’aveugle. Plan, codes de '
+  + 'contrôle, stock et étiquettes <b>construits</b>. Dessin — scène construite, ce n’est pas la plateforme de Buchelay.';
+
+const CODES = { M01: '47', M02: '82', M03: '15', M04: '63', M05: '29', M06: '54', M07: '31', M08: '91' };
+export const COMPTAGE = {
+  id: 'essai-masse-comptage',
+  libelle: 'Zone de masse',
+  mode: 'masse',
+  comptage: true,
+  personnage: { nom: 'Nadia', role: 'cheffe de quai', date: 'jeudi 17 juin, 7 h',
+    texte: { guidage: 'Ouvre chaque couloir et compte les fûts. Ne regarde pas le stock du logiciel : compte ce que tu vois.' } },
+  consigne: 'Ouvre un couloir, lis le code sur son panneau, puis compte les fûts.',
+  plan: {
+    couloirs: Object.keys(CODES).map((id) => (id === 'M08' ? { id, places: 4, reserve: 'vides', code: CODES[id] } : { id, places: 4, code: CODES[id] })),
+    reception: 'Zone de réception',
+    litiges: { titre: 'Zone litiges', charges: [
+      { ref: 'AFF20', lot: 'S24', futs: 1, fuite: true, etiq: 'Réception 16/06 — fuit' },
+      { ref: 'HEI30', lot: 'S20', futs: 1, fuite: true, etiq: 'Percé par une fourche — 16/06, 19 h' },
+    ] },
+    quais: ['QUAI 10', 'QUAI 11', 'QUAI 12', 'QUAI 13', 'QUAI 14'],
+  },
+  references: MASSE.references,
+  hauteurs: MASSE.hauteurs,
+  portee: 4,
+  lots: MASSE.lots,
+  stock: {
+    M01: [[{ ref: 'HEI30', lot: 'S20' }, { ref: 'HEI30', lot: 'S20', futs: 7 }]],
+    M02: [[{ ref: 'HEI30', lot: 'S24' }, { ref: 'PEL20', lot: 'S19' }]],
+    M03: [pile('PEL20', 'S24', 3)],
+    M05: [pile('AFF20', 'S18', 1, 2)],
+    M06: [pile('AFF20', 'S24', 1, 7)],
+    M07: [pile('EDW20', 'S24', 3), pile('EDW20', 'S24', 1, 7)],
+    M08: [pile('VIDES', null, 2), pile('VIDES', null, 1, 3)],
+  },
+  regles: { titre: 'Compter les fûts', entete: 'Compter les fûts', lignes: [
+    'Une palette pleine = <b>8 fûts</b>.',
+    'Compte les palettes de chaque pile, puis regarde s’il manque des fûts sur une palette.',
+    'Ne compte que la référence demandée.',
+  ] },
+};

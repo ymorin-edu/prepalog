@@ -53,11 +53,26 @@
 // fois sur ce geste-là). Rien n'est jugé avant « Valider mon rangement » (qui FIGE le rangement) ; après, le bilan
 // nomme le critère seulement, jamais la bonne place (règle « que, pas de combien »). Évaluation : rien avant la copie.
 //
+// LE SOUS-MODE COMPTAGE (chantier D-6, lot 1, 11/10/2026, brief `docs/briefs/ENT-6.6-france-boissons-inventaire.md` §7.1) :
+// `comptage: true` dans la déclaration. On REGARDE, on ne déplace rien : ni `palettes`, ni `criteres`, ni `jalons` (refusés),
+// pas de carte ni de « Valider ». À l'aveugle : aucune quantité écrite nulle part (ni étiquette, ni titre, ni texte d'aide) ;
+// les fûts se comptent sur le dessin (une palette incomplète montre ses places vides). Ce qui change :
+//   - `plan.couloirs[].code` : le CODE DE CONTRÔLE (1 à 4 chiffres), écrit sur le panneau du couloir, et SEULEMENT dans le
+//     couloir ouvert (on va au couloir pour le lire, comme sur le terrain) ;
+//   - dans le couloir ouvert, l'étiquette du sommet dit la référence et le lot (« Heineken 30 L · lot S20 ») ; une palette
+//     d'une autre référence ou d'un autre lot que celle posée dessus porte sa propre étiquette, sur sa face avant ;
+//   - la zone litiges se clique et s'ouvre en grand : `plan.litiges.charges: [{ ref, lot, futs: 1, fuite?, etiq: 'Percé…' }]`
+//     (3 au plus ; `etiq` = ce qui est écrit sur le fût) ;
+//   - le terrain retient les couloirs ouverts (`vus: { M01: date }`), une trace pour l'enseignant, jamais notée ;
+//   - gestes `entrepot:<id>:ouvrir:<couloir>` et `entrepot:<id>:litiges` (questions au fil).
+// Ce qui se compte vraiment (corrigé, terminal, tests) : `comptageMasse(M)` ici, `comptageReel(P)` dans `entrepot.js`.
+// `plan.litiges.charges` sert aussi au rangement (le décor de la zone) ; l'ancien `futs: 1` y reste valable.
+//
 // POUR LA FICHE QUI SUIT (ENT-6.5, jalons 7 à 10) : `placeMasse(db, P, 'P1')` (exporté par `entrepot.js`) rend la
 // place où l'élève a posé la palette, juste ou fausse : la fiche est comparée à SON rangement (pas de double peine).
 
 import { ech } from '../texte.js';
-import { projection, DEFS, compilerScene, dessinerDecor, dessinerCharge, etiquetteCharge, cadreEtiquette, HAUT_NIVEAU, FUTS_PALETTE, LOTS_KIT } from '../iso.js';
+import { projection, DEFS, compilerScene, dessinerDecor, dessinerCharge, etiquetteCharge, cadreEtiquette, largeurEtiquette, HAUT_NIVEAU, HAUT_RETENTION, FUTS_PALETTE, LOTS_KIT } from '../iso.js';
 
 /* ================================================================== critères */
 const CRITERES = {
@@ -73,12 +88,15 @@ const RESERVES = ['vides'];
 /* ================================================================ compilation */
 export function compilerMasse(P, err) {
   const L = P.plan || err('il manque le plan');
+  const comptage = P.comptage === true;
   const couloirs = (L.couloirs || []).map((c, k) => {
     if (!c || !c.id) err(`couloir n° ${k + 1} : il manque l'id`);
     const n = c.places | 0;
     if (n < 1 || n > 6) err(`couloir ${c.id} : \`places\` va de 1 à 6`);
     if (c.reserve != null && !RESERVES.includes(c.reserve)) err(`couloir ${c.id} : réserve inconnue « ${c.reserve} » (réserves : ${RESERVES.join(', ')})`);
-    return { id: c.id, n, k, reserve: c.reserve || null };
+    const code = c.code == null ? null : String(c.code);
+    if (code != null && !/^\d{1,4}$/.test(code)) err(`couloir ${c.id} : le code de contrôle (\`code\`) s'écrit avec 1 à 4 chiffres`);
+    return { id: c.id, n, k, reserve: c.reserve || null, code };
   });
   if (!couloirs.length) err('aucun couloir (plan.couloirs)');
   const C = {};
@@ -115,6 +133,17 @@ export function compilerMasse(P, err) {
       stock[cid][i] = pile.map((x) => ({ stock: true, ref: x.ref, lot: x.lot || null, futs: x.futs == null ? FUTS_PALETTE : x.futs }));
     });
   });
+  // La zone litiges : ses charges déclarées (une palette de rétention chacune), ou l'ancien décor (`futs` : le fût qui fuit).
+  const Lt = L.litiges || null;
+  if (Lt && Lt.charges != null && (!Array.isArray(Lt.charges) || !Lt.charges.length || Lt.charges.length > 3)) err('zone litiges : `charges` est une liste de 1 à 3 charges');
+  const litiges = Lt && Lt.charges ? Lt.charges.map((x, i) => {
+    charge(x, `zone litiges, charge n° ${i + 1}`);
+    return { ref: x.ref, lot: x.lot || null, futs: x.futs == null ? 1 : x.futs, fuite: !!x.fuite, etiq: x.etiq ? String(x.etiq) : '' };
+  }) : [];
+  if (comptage) {
+    if ((P.palettes || []).length) err('le comptage ne range rien : pas de `palettes` (on compte le stock)');
+    if ((P.criteres || []).length || P.jalons) err('le comptage ne juge rien ici : pas de `criteres` ni de `jalons` (ils sont au terminal)');
+  }
   const pal = {};
   (P.palettes || []).forEach((p) => {
     if (!p || !p.id) err('une palette sans id');
@@ -122,7 +151,7 @@ export function compilerMasse(P, err) {
     charge(p, `palette ${p.id}`);
     pal[p.id] = Object.assign({ futs: FUTS_PALETTE }, p);
   });
-  if (!Object.keys(pal).length) err('aucune palette à ranger');
+  if (!comptage && !Object.keys(pal).length) err('aucune palette à ranger');
   const crit = (P.criteres || []).map((c) => {
     if (!CRITERES[c.type]) err(`critère de type inconnu : ${c.type} (types : ${TYPES_CRITERES_MASSE.join(', ')})`);
     return Object.assign({ id: c.type, nom: CRITERES[c.type] }, c);
@@ -130,8 +159,22 @@ export function compilerMasse(P, err) {
   const nomCourt = (ref) => refs[ref].court || refs[ref].nom;
   const jalons = P.jalons || Object.values(pal).map((p) => ({ id: `palette-${p.id}`, palette: p.id, lib: `${p.id} bien rangée (${nomCourt(p.ref)})` }));
   jalons.forEach((j) => { if (!pal[j.palette]) err(`jalon ${j.id} : palette inconnue (${j.palette})`); });
-  return { P, mode: 'masse', couloirs, C, refs, hauteurs, portee, lots, stock, pal, crit, jalons, nomCourt,
+  return { P, mode: 'masse', comptage, couloirs, C, refs, hauteurs, portee, lots, stock, pal, crit, jalons, nomCourt, litiges,
     nMax: Math.max(...couloirs.map((c) => c.n)) };
+}
+
+// CE QUI SE COMPTE dans chaque couloir (stock déclaré) : { M01: [{ ref, lot, futs }], … }, une ligne par référence et lot,
+// dans l'ordre où on les rencontre du fond vers l'avant, du bas vers le haut. Le corrigé, le terminal et les tests le
+// lisent : l'attendu se CALCULE depuis le dessin, il n'est jamais recopié. JAMAIS montré à l'élève.
+export function comptageMasse(M) {
+  return Object.fromEntries(M.couloirs.map((c) => {
+    const R = [];
+    M.stock[c.id].flat().forEach((x) => {
+      const l = R.find((r) => r.ref === x.ref && r.lot === x.lot);
+      if (l) l.futs += x.futs; else R.push({ ref: x.ref, lot: x.lot, futs: x.futs });
+    });
+    return [c.id, R];
+  }));
 }
 
 /* ======================================================== l'état et ses piles */
@@ -231,7 +274,8 @@ function geometrie(M) {
   const xR = (K - 1) * PAS + 1.6, xFin = xR + 3.9;
   // La réception au fond (les étiquettes de ses palettes montent devant le mur, sans rien cacher), deux palettes par
   // rang, les rangs décalés pour que les étiquettes ne se recouvrent pas ; la zone litiges devant, côté allée.
-  const nPal = Object.keys(M.pal).length, rangs = Math.ceil(nPal / 2);
+  // Au moins un rang : en comptage, la réception est vide mais garde sa place (le plan reste celui du rangement).
+  const nPal = Object.keys(M.pal).length, rangs = Math.max(1, Math.ceil(nPal / 2));
   const yR1 = -.1 + (rangs - 1) * 1.4 + 1.6;    // une bande libre devant le dernier rang : le titre de la zone
   return { N, xR, xFin, yAllee: N + .25, yQuai: N + 2.05,
     reception: { de: [xR, -.4], a: [xR + 3.6, yR1] },
@@ -243,7 +287,7 @@ function geometrie(M) {
 // `h` : ce que prête `entrepot.js` (Échap, focus au clavier). `opts.copie` : l'évaluation.
 export function creerMasse(P, M, opts, h) {
   const G = geometrie(M);
-  const ui = { main: null, ouvert: null, msg: '', msgType: '', confirmer: false, regles: false, tombe: null, vu: false, focus: null };
+  const ui = { main: null, ouvert: null, litiges: false, msg: '', msgType: '', confirmer: false, regles: false, tombe: null, vu: false, focus: null };
   const tempsDe = (api) => (opts.copie ? 'evaluation' : P.temps || (api && api.temps) || 'guidage');
   function regime(api, e) {
     const t = tempsDe(api), rendue = !!(api && api.copieRendue && api.copieRendue());
@@ -285,14 +329,26 @@ export function creerMasse(P, M, opts, h) {
 
   /* ----------------------------------------------------------- le dessin */
   const I0 = projection({ unite: 40, origine: [0, 0] });
-  const etiquette = (x) => {
-    const top = x[x.length - 1];
-    if (M.refs[top.ref].vides) return { lot: '_vides', texte: M.nomCourt(top.ref) };
-    return { lot: top.lot, texte: top.id ? `${top.id} · ${top.lot}` : `lot ${top.lot}` };
+  // L'étiquette d'une palette : « lot S24 » sur le plan ; `long` (le couloir ouvert en comptage) : la référence et le lot.
+  const texteDe = (x, long) => {
+    if (M.refs[x.ref].vides) return { lot: '_vides', texte: M.nomCourt(x.ref) };
+    return { lot: x.lot, texte: x.id ? `${x.id} · ${x.lot}` : long ? `${M.nomCourt(x.ref)} · lot ${x.lot}` : `lot ${x.lot}` };
   };
+  const etiquette = (L, long) => texteDe(L[L.length - 1], long);
   // L'étiquette du sommet d'une pile (à poser après les boîtes de place du couloir ouvert).
+  // COMPTAGE : les étiquettes vont À DROITE de la pile, à hauteur de leur palette, reliées par un trait (posées dessus, elles
+  // cacheraient les fûts du fond ou une palette de la pile, ce qu'on compte) : celle de la palette du sommet, et celle de
+  // toute palette d'une autre référence ou d'un autre lot que celle posée dessus (deux étiquettes différentes dans la pile).
   const etiquettePile = (I, sc, x, y, L) => {
     if (!L.length) return '';
+    if (M.comptage) return L.map((a, n) => {
+      const b = L[n + 1];
+      if (b && a.ref === b.ref && a.lot === b.lot) return '';
+      const t = texteDe(a, true), K = sc.lots[t.lot], w = largeurEtiquette(t.texte), [ax, ay] = I.P(x + 1, y + .5, n * HAUT_NIVEAU + .3);
+      return `<g data-pm-etiq-face><line x1="${ax - 6}" y1="${ay}" x2="${ax + 12}" y2="${ay}" stroke="#3d3a33" stroke-width="1.5"/>`
+        + `<rect x="${ax + 12}" y="${ay - 11}" width="${w}" height="22" rx="5" fill="${K.c}" stroke="rgba(0,0,0,.35)"/>`
+        + `<text x="${ax + 12 + w / 2}" y="${ay + 5}" text-anchor="middle" font-size="14" font-weight="800" fill="${K.t}">${ech(t.texte)}</text></g>`;
+    }).join('');
     const et = etiquette(L), top = L[L.length - 1];
     return etiquetteCharge(I, { x, y, z: (L.length - 1) * HAUT_NIVEAU, lot: et.lot, texte: et.texte }, sc, { sel: !!top.id });
   };
@@ -356,10 +412,22 @@ export function creerMasse(P, M, opts, h) {
       let g = `<polygon class="pm-sol" points="${I.pts([[x - .05, y0 - .05, 0], [x + 1.05, y0 - .05, 0], [x + 1.05, N + .05, 0], [x - .05, N + .05, 0]])}"/>`;
       g += `<polygon class="pm-panneau" points="${I.pts([[x + .1, -.5, PANNEAU[0] - .05], [x + .9, -.5, PANNEAU[0] - .05], [x + .9, -.5, PANNEAU[1] + .05], [x + .1, -.5, PANNEAU[1] + .05]])}"/>`;
       L.forEach((pl, i) => { g += pile(I, sc, x, y0 + i, pl, k0, true); k0 += pl.length; T.push({ x, y: y0 + i, L: pl }); });
-      s += `<g class="pm-couloir${R.fige ? ' pm-lecture' : ''}" data-pm-couloir="${ech(c.id)}" data-pe-cle="c:${ech(c.id)}" ${R.fige ? '' : 'tabindex="0" role="button"'} aria-label="${ech(`Couloir ${c.id} : ${titre}`)}">${g}</g>`;
+      // En comptage, un couloir s'ouvre toujours (on regarde, on ne pose rien).
+      const lecture = R.fige && !M.comptage;
+      s += `<g class="pm-couloir${lecture ? ' pm-lecture' : ''}" data-pm-couloir="${ech(c.id)}" data-pe-cle="c:${ech(c.id)}" ${lecture ? '' : 'tabindex="0" role="button"'} aria-label="${ech(`Couloir ${c.id} : ${titre}`)}">${g}</g>`;
     });
-    // Le décor de la zone litiges : une palette de rétention et ce qu'elle porte (le fût qui fuit).
-    if (P.plan.litiges) s += dessinerCharge(I, { x: G.litiges.de[0] + 2.55, y: G.litiges.de[1] + .02, z: 0, futs: P.plan.litiges.futs == null ? 1 : P.plan.litiges.futs, fuite: true }, sc);
+    // Le décor de la zone litiges : ses palettes de rétention et ce qu'elles portent (le fût qui fuit). En comptage, elle
+    // se clique pour l'ouvrir en grand (on y lit les étiquettes).
+    if (P.plan.litiges) {
+      const [lx, ly] = G.litiges.de, [ax, ay] = G.litiges.a;
+      const ch = M.litiges.length
+        ? M.litiges.map((x, k) => dessinerCharge(I, { x: lx + .25 + k * 1.1, y: ly + .02, z: 0, futs: x.futs, fuite: x.fuite }, sc)).join('')
+        : dessinerCharge(I, { x: lx + 2.55, y: ly + .02, z: 0, futs: P.plan.litiges.futs == null ? 1 : P.plan.litiges.futs, fuite: true }, sc);
+      s += M.comptage
+        ? `<g class="pm-litiges" data-pm-litiges data-pe-cle="b:litiges" tabindex="0" role="button" aria-label="${ech(`${P.plan.litiges.titre || 'Zone litiges'} : l’ouvrir en grand`)}">`
+          + `<polygon class="pm-sol" points="${I.pts([[lx, ly, 0], [ax, ly, 0], [ax, ay, 0], [lx, ay, 0]])}"/>${ch}</g>`
+        : ch;
+    }
     // Les palettes qui attendent en réception (cliquables) ; celle en main garde sa place, cerclée.
     Object.values(M.pal).forEach((p, i) => {
       if (e.pos[p.id]) return;
@@ -375,21 +443,32 @@ export function creerMasse(P, M, opts, h) {
   // LE COULOIR OUVERT, en grand.
   function svgCouloir(e, R) {
     const c = M.C[ui.ouvert], n = c.n, I = projection({ unite: 70, origine: [0, 0] });
+    const L = piles(M, e, c.id), f = devant(L), possibles = R.fige || !ui.main ? [] : placesPossibles(M, e, c.id);
+    // COMPTAGE : on compte des fûts, il faut les voir grands. Le dessin est recadré sur les piles (jusqu'à la première place
+    // vide devant elles ; un couloir vide se montre en entier), l'allée sort du cadre, et le panneau du couloir (avec son code
+    // de contrôle) descend juste au-dessus des piles. Une pile plus en avant paraît plus basse d'une demi-place.
+    const vus = !M.comptage ? n : f ? Math.min(n, f + 1) : n;
+    const haut = M.comptage ? Math.max(.5, ...L.map((pl, i) => pl.length * HAUT_NIVEAU - i * .5)) : 0;
+    const PZ = !M.comptage ? PANNEAU : c.code ? [haut + .5, haut + 1.25] : [haut + .5, haut + .95];
+    const mur = M.comptage ? PZ[1] + .15 : MUR;
     const decor = [
       { type: 'sol', de: [-.7, -.5], a: [2.8, n + 1.9] },
-      { type: 'mur', y: -.5, de: -.7, a: 2.8, hauteur: MUR },
+      { type: 'mur', y: -.5, de: -.7, a: 2.8, hauteur: mur },
       { type: 'allee', de: [-.7, n + .25], a: [2.8, n + 1.9] },
-      { type: 'couloirMasse', id: c.id, x: 0, profondeur: n, panneau: c.id, panneauZ: PANNEAU, fleches: true, reserve: !!c.reserve },
+      // En comptage, le panneau porte le code de contrôle sous le nom du couloir.
+      { type: 'couloirMasse', id: c.id, x: 0, profondeur: n, panneau: c.id, panneauZ: PZ,
+        panneauCode: M.comptage && c.code ? c.code : null, fleches: true, reserve: !!c.reserve },
       { type: 'texteSol', texte: 'ALLÉE : le chariot entre et sort par ici', en: [.9, n + 1.7], style: 'allee' },
     ];
     const sc = compilerScene({ decor, lots: lotsScene() }, `entrepot ${P.id}`);
     let s = dessinerDecor(I, sc);
-    const L = piles(M, e, c.id), f = devant(L), possibles = R.fige || !ui.main ? [] : placesPossibles(M, e, c.id);
     let etiq = '';
     L.forEach((pl, i) => {
       const y = i, p = i + 1;
+      if (p > vus) return;
+      // En comptage, pas de « position n » : on compte un couloir, pas une place (et la droite est aux étiquettes).
       const [lx, ly] = I.P(1.12, y + .5, 0);
-      s += `<text x="${lx + 6}" y="${ly + 5}" font-size="13" font-weight="700" fill="#3d3a33">position ${p}${p === 1 ? ' (fond)' : p === n ? ' (devant)' : ''}</text>`;
+      if (!M.comptage) s += `<text x="${lx + 6}" y="${ly + 5}" font-size="13" font-weight="700" fill="#3d3a33">position ${p}${p === 1 ? ' (fond)' : p === n ? ' (devant)' : ''}</text>`;
       if (ui.main && !R.fige && p < f) s += `<text x="${lx + 6}" y="${ly + 21}" font-size="12" font-weight="700" fill="#9d2727">inaccessible (une pile devant)</text>`;
       s += pile(I, sc, 0, y, pl, 0, true);
       etiq += etiquettePile(I, sc, 0, y, pl);
@@ -407,8 +486,37 @@ export function creerMasse(P, M, opts, h) {
     });
     // Les étiquettes par-dessus les boîtes de place, mais transparentes au clic : la boîte reste cliquable en son milieu.
     s += `<g pointer-events="none">${etiq}</g>`;
-    const vb = cadre(I, [[-.7, -.5, 0], [2.8, -.5, 0], [2.8, n + 1.9, 0], [-.7, n + 1.9, 0], [-.7, -.75, MUR], [2.8, -.75, MUR], [2.6, n * .5, 0]]);
-    return `<svg class="pm-svg" viewBox="${vb}" role="img" aria-label="${ech(`Le couloir ${c.id} en 3D : position 1 au fond, contre le mur ; position ${n} devant, côté allée`)}">${DEFS}${s}</svg>`;
+    const vb = M.comptage && vus < n
+      ? cadre(I, [[-.35, -.5, 0], [1.2, -.5, 0], [1.2, vus + .2, 0], [-.35, vus + .2, 0], [.1, -.6, mur], [1.0, -.6, mur], [1 + 2.3, .5, 0]])
+      : cadre(I, [[-.7, -.5, 0], [2.8, -.5, 0], [2.8, n + 1.9, 0], [-.7, n + 1.9, 0], [-.7, -.75, mur], [2.8, -.75, mur], [2.6, n * .5, 0]]);
+    return `<svg class="pm-svg" viewBox="${vb}" role="img" aria-label="${ech(M.comptage ? `Le couloir ${c.id} en 3D, vu depuis l’allée : ${titreCouloir(e, c)}`
+      : `Le couloir ${c.id} en 3D : position 1 au fond, contre le mur ; position ${n} devant, côté allée`)}">${DEFS}${s}</svg>`;
+  }
+
+  // LA ZONE LITIGES ouverte en grand (comptage) : ses palettes de rétention l'une derrière l'autre, et à droite de chacune
+  // ce qu'on lit dessus (référence, lot, et l'étiquette posée sur le fût). Aucune quantité écrite : le fût se voit.
+  function svgLitiges() {
+    const I = projection({ unite: 70, origine: [0, 0] }), Lt = P.plan.litiges;
+    const K = M.litiges.length ? M.litiges : [{ ref: null, lot: null, futs: Lt.futs == null ? 1 : Lt.futs, fuite: true, etiq: '' }];
+    const n = K.length, prof = n * 1.3 + .1;
+    const decor = [
+      { type: 'sol', de: [-.7, -.5], a: [3.4, prof + .9] },
+      { type: 'zone', ton: 'litiges', de: [-.3, -.3], a: [1.3, prof], titre: (Lt.titre || 'Zone litiges').toUpperCase(), ligne: Lt.ligne || '' },
+    ];
+    const sc = compilerScene({ decor, lots: lotsScene() }, `entrepot ${P.id}`);
+    let s = dessinerDecor(I, sc), etiq = '';
+    K.forEach((x, k) => {
+      const y = k * 1.3;
+      s += dessinerCharge(I, { x: 0, y, z: 0, futs: x.futs, fuite: x.fuite }, sc);
+      if (!x.ref) return;
+      const t = texteDe(x, true), haut = texteDe(x, false), [lx, ly] = I.P(1.3, y + .55, .2);
+      etiq += etiquetteCharge(I, { x: 0, y, z: 0, lot: haut.lot, texte: haut.texte }, sc);
+      etiq += `<text x="${lx + 6}" y="${ly}" font-size="14" font-weight="800" fill="#1a1915" data-pm-litige="${k + 1}">${ech(t.texte)}`
+        + (x.etiq ? `<tspan x="${lx + 6}" dy="19" font-size="13.5" font-weight="700" fill="#3d3a33">Étiquette : « ${ech(x.etiq)} »</tspan>` : '') + '</text>';
+    });
+    s += `<g pointer-events="none">${etiq}</g>`;
+    const vb = cadre(I, [[-.7, -.5, 0], [3.4, -.5, 0], [3.4, prof + .9, 0], [-.7, prof + .9, 0], [-.7, -.5, 1.2], [5.2, prof * .5, 0]]);
+    return `<svg class="pm-svg" viewBox="${vb}" role="img" aria-label="${ech(`${Lt.titre || 'Zone litiges'} en 3D : ${K.filter((x) => x.ref).map((x) => [texteDe(x, true).texte, x.etiq].filter(Boolean).join(', ')).join(' ; ')}`)}">${DEFS}${s}</svg>`;
   }
 
   /* ------------------------------------------------------- textes de côté */
@@ -436,6 +544,7 @@ export function creerMasse(P, M, opts, h) {
     return `<span class="pe-verd pm-verd ${j.ok ? 'pe-ok' : 'pe-ko'}" data-pm-verd="${ech(id)}">${j.ok ? '✓ bien rangée' : `✗ critère : ${ech((j.criteres || []).join(', ') || 'non posée')}`}</span>`;
   }
   function consigne(e, R) {
+    if (M.comptage) return ech(P.consigne || 'Ouvre un couloir pour compter ce que tu vois.');
     if (R.fige) return R.eval ? 'Copie rendue.' : 'Rangement validé : il ne change plus.';
     if (ui.main) return `<b>${ech(ui.main)}</b> en main. ${ui.ouvert ? 'Clique la place où la poser (boîte verte).' : 'Clique un couloir, puis la place où la poser.'}`;
     if (toutesPosees(e)) return R.eval ? 'Toutes les palettes sont posées : rends ton travail quand tu as fini.' : 'Toutes les palettes sont posées : relis les règles, puis valide ton rangement.';
@@ -453,12 +562,13 @@ export function creerMasse(P, M, opts, h) {
   }
 
   return {
-    signaux: [`entrepot:${P.id}:poser`, `entrepot:${P.id}:verifier`],
+    signaux: M.comptage ? [...M.couloirs.map((c) => `entrepot:${P.id}:ouvrir:${c.id}`), `entrepot:${P.id}:litiges`]
+      : [`entrepot:${P.id}:poser`, `entrepot:${P.id}:verifier`],
     id: P.id,
     nav: { libelle: P.libelle || "Plan de l'entrepôt" },
     etatNeuf: etatMasseNeuf,
     calculette: () => false,
-    lire: () => ({ main: ui.main, ouvert: ui.ouvert, msg: ui.msg }),
+    lire: () => ({ main: ui.main, ouvert: ui.ouvert, litiges: ui.litiges, msg: ui.msg }),
     html(e, api) {
       if (!e.pos) Object.assign(e, etatMasseNeuf(), e);
       const R = regime(api, e);
@@ -468,18 +578,25 @@ export function creerMasse(P, M, opts, h) {
       const regles = R.regles && RG ? `<details class="pe-regles" data-pe-regles ${ui.regles ? 'open' : ''}><summary data-pe-cle="b:regles">${ech(RG.titre || 'Les règles')} ▾</summary>
         <div class="pe-regles-corps"><b>${ech(RG.entete || 'Les règles de la zone de masse')}</b><ol>${(RG.lignes || []).map((l) => `<li>${l}</li>`).join('')}</ol>
         ${RG.encadre ? `<div class="pe-encadre">${RG.encadre}</div>` : ''}</div></details>` : '';
-      const c = ui.ouvert ? M.C[ui.ouvert] : null;
-      const fil = c
-        ? `<button type="button" class="btn" data-pm="retour" data-pe-cle="b:retour">← Retour au plan</button><span>Couloir <b>${ech(c.id)}</b> en 3D — ${ech(titreCouloir(e, c))}</span>`
-        : `<span>Zone de stockage de masse, en 3D — ${R.fige ? 'ton rangement' : 'clique un couloir pour l’ouvrir en grand'}</span>`;
-      const prof = api && api.estProf ? `<details class="pe-prof"><summary>Côté enseignant : bonnes places</summary>${Object.entries(solutionsMasse(M)).map(([id, L]) =>
-        `<div><b>${ech(id)}</b> : ${L.map(ech).join(' ; ') || 'aucune'}</div>`).join('')}</details>` : '';
-      const svg = c ? svgCouloir(e, R) : svgPlan(e, R);
+      if (M.comptage && !e.vus) e.vus = {};
+      const c = ui.ouvert ? M.C[ui.ouvert] : null, lit = !c && ui.litiges && !!P.plan.litiges;
+      const retour = '<button type="button" class="btn" data-pm="retour" data-pe-cle="b:retour">← Retour au plan</button>';
+      const fil = c ? `${retour}<span>Couloir <b>${ech(c.id)}</b> en 3D — ${ech(titreCouloir(e, c))}</span>`
+        : lit ? `${retour}<span><b>${ech(P.plan.litiges.titre || 'Zone litiges')}</b> en 3D</span>`
+        : `<span>Zone de stockage de masse, en 3D — ${R.fige && !M.comptage ? 'ton rangement' : 'clique un couloir pour l’ouvrir en grand'}</span>`;
+      // Côté enseignant : les bonnes places (rangement), ou ce qui se compte vraiment dans chaque couloir (comptage).
+      const nomLot = (x) => `${M.nomCourt(x.ref)}${x.lot ? ` lot ${x.lot}` : ''}`;
+      const prof = !(api && api.estProf) ? ''
+        : M.comptage ? `<details class="pe-prof" data-pm-reel><summary>Côté enseignant : ce qui se compte</summary>${Object.entries(comptageMasse(M)).map(([id, L]) =>
+          `<div><b>${ech(id)}</b> : ${L.map((x) => `${ech(nomLot(x))} — ${x.futs} fût${x.futs > 1 ? 's' : ''}`).join(' ; ') || 'vide'}</div>`).join('')}</details>`
+        : `<details class="pe-prof"><summary>Côté enseignant : bonnes places</summary>${Object.entries(solutionsMasse(M)).map(([id, L]) =>
+          `<div><b>${ech(id)}</b> : ${L.map(ech).join(' ; ') || 'aucune'}</div>`).join('')}</details>`;
+      const svg = c ? svgCouloir(e, R) : lit ? svgLitiges() : svgPlan(e, R);
       ui.vu = true; ui.tombe = null;
-      return `<div class="pe pm" data-entrepot="${ech(P.id)}" data-pe-mode="masse" data-pe-temps="${R.t}" data-pm-ouvert="${c ? ech(c.id) : ''}" data-pm-valide="${!!e.valide}">
+      return `<div class="pe pm${M.comptage ? ' pm-comptage' : ''}" data-entrepot="${ech(P.id)}" data-pe-mode="masse"${M.comptage ? ' data-pm-comptage' : ''} data-pe-temps="${R.t}" data-pm-ouvert="${c ? ech(c.id) : lit ? 'litiges' : ''}" data-pm-valide="${!!e.valide}">
         <div class="pm-haut"><div class="pe-perso pm-perso"><b>${ech([per.nom, per.role].filter(Boolean).join(', '))}${per.date ? ` · ${ech(per.date)}` : ''}</b>${txt}</div>
-          <div class="pm-act">${actions(e, R)}${regles}</div></div>
-        <div class="pm-jeu"><aside class="pm-cote"><div class="pm-cartes">${Object.values(M.pal).map((p) => carte(e, p, R)).join('')}</div>
+          <div class="pm-act">${M.comptage ? '' : actions(e, R)}${regles}</div></div>
+        <div class="pm-jeu"><aside class="pm-cote">${M.comptage ? '' : `<div class="pm-cartes">${Object.values(M.pal).map((p) => carte(e, p, R)).join('')}</div>`}
             <div class="pm-consigne" data-pm-consigne>${consigne(e, R)}</div>
             <div class="pe-msg pm-msg ${ui.msgType ? `pe-${ui.msgType}` : ''}" data-pm-msg role="status">${ui.msg}</div>${prof}</aside>
           <section class="pe-espace pm-espace"><div class="pm-fil">${fil}</div><div class="pm-dessin">${svg}</div></section></div></div>`;
@@ -496,7 +613,10 @@ export function creerMasse(P, M, opts, h) {
         if (el.tagName !== 'BUTTON') el.addEventListener('keydown', (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); fn(); } });
       };
       const on = (cle, fn) => racine.querySelectorAll(`[data-pm="${cle}"]`).forEach((b) => activer(b, fn));
-      const fermer = () => { if (!ui.ouvert) return false; ui.focus = `c:${ui.ouvert}`; ui.ouvert = null; dire(''); redessiner(); return true; };
+      const fermer = () => {
+        if (!ui.ouvert && !ui.litiges) return false;
+        ui.focus = ui.ouvert ? `c:${ui.ouvert}` : 'b:litiges'; ui.ouvert = null; ui.litiges = false; dire(''); redessiner(); return true;
+      };
       h.echap(racine, fermer);
       // La hauteur d'écran qui reste sous le haut de la vue : la 3D y tient en entier (1366 × 768 sans défiler).
       const dessin = racine.querySelector('.pm-dessin');
@@ -514,6 +634,23 @@ export function creerMasse(P, M, opts, h) {
       if (h.clavier() && ui.focus) {
         const el = racine.querySelector(`[data-pe-cle="${CSS.escape(ui.focus)}"]`);
         if (el) el.focus({ preventScroll: true });
+      }
+      // COMPTAGE : on ouvre un couloir ou la zone litiges pour regarder ; la première ouverture d'un couloir est retenue.
+      if (M.comptage) {
+        racine.querySelectorAll('[data-pm-couloir]').forEach((g) => activer(g, () => {
+          const cid = g.dataset.pmCouloir;
+          ui.ouvert = cid; ui.litiges = false; ui.focus = 'b:retour';
+          if (!e.vus) e.vus = {};
+          if (!e.vus[cid]) { e.vus[cid] = Date.now(); noterGeste(e); sauver(); }
+          sig(`ouvrir:${cid}`);
+          redessiner();
+        }));
+        racine.querySelectorAll('[data-pm-litiges]').forEach((g) => activer(g, () => {
+          ui.litiges = true; ui.ouvert = null; ui.focus = 'b:retour';
+          sig('litiges');
+          redessiner();
+        }));
+        return;
       }
       if (R.fige) return;
       racine.querySelectorAll('[data-pm-pal]').forEach((b) => activer(b, () => { prendre(e, b.dataset.pmPal); sauver(); redessiner(); }));

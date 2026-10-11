@@ -143,7 +143,7 @@ export function dessinerDecor(I, sc) {
       s += face([[x0, y0, 0], [x1, y0, 0], [x1, y1, 0], [x0, y1, 0]], '#efeadf', 'none');
     } else if (d.type === 'couloirMasse') {
       const c = sc.couloirs.find((k) => k.id === d.id), x = c.x, y = c.y, n = c.n;
-      // `reserve: true` : un couloir réservé (les fûts vides rendus par les clients), au sol teinté (stockage de masse, D-5).
+      // `panneauCode` : voir plus bas. `reserve: true` : un couloir réservé (les fûts vides rendus par les clients), au sol teinté (stockage de masse, D-5).
       s += face([[x - .05, y - .05, 0], [x + 1.05, y - .05, 0], [x + 1.05, y + n + .05, 0], [x - .05, y + n + .05, 0]], d.reserve ? '#e9e3ec' : '#f6f2e9', '#b9b3a6');
       for (let k = 0; k < n; k++) s += `<polygon points="${pts([[x + .08, y + k + .08, 0], [x + .92, y + k + .08, 0], [x + .92, y + k + .92, 0], [x + .08, y + k + .92, 0]])}" fill="none" stroke="#c9c3b6" stroke-dasharray="5 4"/>`;
       // Le panneau du couloir, sur le mur du fond (ou juste derrière la première place s'il n'y a pas de mur).
@@ -154,7 +154,16 @@ export function dessinerDecor(I, sc) {
         s += face([[x + .15, ym, z0], [x + .85, ym, z0], [x + .85, ym, z1], [x + .15, ym, z1]], '#1f5f3a', '#0f3d24');
         const [lx, ly] = P(x + .5, ym, (z0 + z1) / 2);
         const fs = d.panneauTaille || 17;   // `panneauTaille` : la taille du texte (une scène dessinée plus petite)
-        s += `<text x="${lx}" y="${ly + fs * .35}" text-anchor="middle" font-size="${fs}" font-weight="800" fill="#fff" transform="rotate(30 ${lx} ${ly})">${ech(d.panneau)}</text>`;
+        if (d.panneauCode == null) s += `<text x="${lx}" y="${ly + fs * .35}" text-anchor="middle" font-size="${fs}" font-weight="800" fill="#fff" transform="rotate(30 ${lx} ${ly})">${ech(d.panneau)}</text>`;
+        else {
+          // `panneauCode` (comptage, chantier D-6) : le nom du couloir en haut, et dessous, sur une plaque claire, le code de
+          // contrôle que l'élève lit pour prouver au terminal qu'il est devant le bon couloir.
+          const [hx, hy] = P(x + .5, ym, z0 + (z1 - z0) * .72), [bx, by] = P(x + .5, ym, z0 + (z1 - z0) * .27);
+          // `skewY(30)` : le texte et la plaque sont posés À PLAT sur le mur (les verticales restent verticales).
+          s += `<text transform="translate(${hx} ${hy}) skewY(30)" y="${fs * .35}" text-anchor="middle" font-size="${fs}" font-weight="800" fill="#fff">${ech(d.panneau)}</text>`;
+          s += `<g transform="translate(${bx} ${by}) skewY(30)"><rect x="${-fs * 1.05}" y="${-fs * .62}" width="${fs * 2.1}" height="${fs * 1.24}" rx="3" fill="#f4f1ea" stroke="#0f3d24"/>`
+            + `<text y="${fs * .36}" text-anchor="middle" font-size="${fs}" font-weight="800" fill="#1a1915" data-pm-code>${ech(d.panneauCode)}</text></g>`;
+        }
       }
       // Flèche verte = entrée (côté gauche du couloir), flèche rouge = sortie (côté droit).
       if (d.fleches) {
