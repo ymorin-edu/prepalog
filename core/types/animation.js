@@ -27,7 +27,7 @@
 // Décor, charges et acteurs : voir `core/iso.js`. Les PAS (fermés, connus du moteur) :
 //   { legende: 'html' }                       — numérotée toute seule, sur toutes les parties
 //   { attendre: ms }
-//   { nouvelle: 'a', charge?: 'retention', futs?: 4, lot? }  — une charge, invisible tant qu'on ne la pose pas
+//   { nouvelle: 'a', charge?: 'retention', futs?: 8, lot? }  — une charge, invisible tant qu'on ne la pose pas
 //   { placer: 'a', place: 'M01.fond' }        — sans mouvement
 //   { geste: 'poser' | 'reprendre', acteur: 'chariot', objet: 'a', place? }
 //   { etiquette: 'a', texte, ton?: 'neutre' | 'ok' | 'alerte' }  — texte au sol près de la charge
@@ -51,7 +51,7 @@
 import { ech, toast, memoriserFocus, retrouverFocus } from '../ui.js';
 import { hasard } from '../tirage.js';
 import { projection, DEFS, compilerScene, dessinerDecor, bornesDecor, dessinerObjets, HAUT_RETENTION,
-  TYPES_CHARGE, GESTES } from '../iso.js';
+  TYPES_CHARGE, GESTES, FUTS_PALETTE } from '../iso.js';
 
 export const TYPES_PAS = ['legende', 'attendre', 'nouvelle', 'placer', 'geste', 'etiquette', 'alerte', 'finAlerte', 'bulle', 'effacer'];
 const TONS_BULLE = ['neutre', 'ok', 'alerte'];
@@ -87,7 +87,7 @@ export function compilerAnimation(A) {
     const lot = (l, lieu) => { if (l != null && !sc.lots[l]) err(`${lieu} : lot « ${l} » absent de \`scene.lots\``); };
     const charge = (o, lieu) => {
       if (o.charge != null && !TYPES_CHARGE.includes(o.charge)) err(`${lieu} : charge inconnue « ${o.charge} » (charges du kit : ${TYPES_CHARGE.join(', ')})`);
-      if (o.futs != null && !(Number.isInteger(o.futs) && o.futs >= 0 && o.futs <= 4)) err(`${lieu} : \`futs\` va de 0 à 4`);
+      if (o.futs != null && !(Number.isInteger(o.futs) && o.futs >= 0 && o.futs <= FUTS_PALETTE)) err(`${lieu} : \`futs\` va de 0 à ${FUTS_PALETTE}`);
       lot(o.lot, lieu);
     };
     ((Pt.depart && Pt.depart.palettes) || []).forEach((p, i) => {

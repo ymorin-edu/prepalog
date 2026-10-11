@@ -198,7 +198,6 @@ export function bornesDecor(I, sc) {
 
 /* ============================================ palette de rétention et ses fûts */
 const ZB = 0.2, KH = 0.46, KR = 0.2;
-export const HAUT_RETENTION = ZB + KH;   // le dessus des fûts (pour viser une bulle au-dessus d'une charge)
 
 // `r` et `h` : le rayon et la hauteur du fût (par défaut ceux du kit ; la palette de fûts du quai les met à l'échelle).
 function fut(I, cx, cy, z, r = KR, h = KH) {
@@ -208,29 +207,29 @@ function fut(I, cx, cy, z, r = KR, h = KH) {
   [0.22, 0.78].forEach((f) => { const yy = by + (ty - by) * f; g += `<path d="M${bx - rx},${yy} A${rx},${ry} 0 0 0 ${bx + rx},${yy}" fill="none" stroke="#7d858a" stroke-width="1.8"/>`; });
   return g + `<ellipse cx="${tx}" cy="${ty}" rx="${rx}" ry="${ry}" fill="#eef0f1" stroke="#7d858a"/><ellipse cx="${tx}" cy="${ty}" rx="${rx * .32}" ry="${ry * .32}" fill="#4a4f52"/>`;
 }
-function retention(I, x, y, z) {
-  const { pts, boite } = I;
-  let g = '';
-  [[.06, .06], [.78, .06], [.06, .78], [.78, .78]].forEach(([a, b]) => { g += boite(x + a, y + b, z, .16, .16, .05, ['#2a2d2f', '#1e2123', '#16191a']); });
-  g += boite(x + .03, y + .03, z + .05, .94, .94, ZB - .05, ['#3d4245', '#2f3336', '#24282a']);
-  for (let k = 1; k < 6; k++) {
-    const t = .03 + k * .94 / 6;
-    g += `<polyline points="${pts([[x + t, y + .97, z + .06], [x + t, y + .97, z + ZB - .02]])}" stroke="#1b1e20" stroke-width="2"/><polyline points="${pts([[x + .97, y + t, z + .06], [x + .97, y + t, z + ZB - .02]])}" stroke="#1b1e20" stroke-width="2"/>`;
-  }
-  return g;
-}
-const PLACES_FUTS = [[.28, .28], [.72, .28], [.28, .72], [.72, .72]];
 
-// Une charge posée ou portée. `p` : { x, y, z, charge: 'retention', futs (0-4, 4 par défaut), lot,
-// etiq, etiqTon, alerte }. `sc` : la scène compilée (couleurs des lots, côté de l'étiquette).
-export function dessinerCharge(I, p, sc) {
+// LA CHARGE DE LA SCÈNE (chantier D-5, 11/10/2026 : décision 52 de Tristan, qui remplace la 37) : la palette de rétention
+// noire portant 8 fûts debout en quinconce 3-2-3, la même que celle du quai (`paletteFuts`, plus bas), réduite à une place
+// de la scène (bac de 0,94 au milieu d'une place de 1). `futs` de 0 à 8 : les places vides sont les DERNIÈRES (l'avant
+// droit d'abord), là où le manque se voit. Le bac a un côté de 0,94 : tout ce qui suit est à cette échelle.
+const COTE_SCENE = 0.94;
+export const FUTS_PALETTE = 8;
+// Le dessus des fûts (pour viser une bulle au-dessus d'une charge) et la hauteur d'une palette GERBÉE : la suivante se
+// pose sur les fûts de celle du dessous (stockage de masse), donc un niveau = la hauteur d'une palette chargée.
+export const HAUT_RETENTION = (0.2 + 0.46 / 1.30) * COTE_SCENE;
+export const HAUT_NIVEAU = HAUT_RETENTION + 0.02;
+
+// Une charge posée ou portée. `p` : { x, y, z, charge: 'retention', futs (0-8, 8 par défaut), lot, etiq, etiqTon, alerte }.
+// `sc` : la scène compilée (couleurs des lots, côté de l'étiquette). `o.sel` : la palette est cerclée d'un liseré.
+export function dessinerCharge(I, p, sc, o = {}) {
   const { P } = I;
-  let g = retention(I, p.x, p.y, p.z);
-  const n = p.futs == null ? 4 : p.futs;
-  PLACES_FUTS.slice(0, n).sort((a, b) => (a[0] + a[1]) - (b[0] + b[1])).forEach(([dx, dy]) => { g += fut(I, p.x + dx, p.y + dy, p.z + ZB); });
+  const n = p.futs == null ? FUTS_PALETTE : p.futs;
+  const pal = { futs: Array.from({ length: FUTS_PALETTE }, (_, k) => ({ no: k + 1, absent: k >= n })) };
+  const m = (1 - COTE_SCENE) / 2;
+  let g = paletteFuts(I, pal, p.x + m, p.y + m, 0, { cote: COTE_SCENE, z: p.z, dents: false });
   const [cx, cy] = P(p.x + .5, p.y + .5, p.z + HAUT_RETENTION + .12);
   const L = p.lot ? sc.lots[p.lot] : null;
-  if (L) g += `<rect x="${cx - 34}" y="${cy - 22}" width="68" height="22" rx="5" fill="${L.c}" stroke="rgba(0,0,0,.35)"/><text x="${cx}" y="${cy - 6}" text-anchor="middle" font-size="14" font-weight="800" fill="${L.t}">lot ${ech(p.lot)}</text>`;
+  if (L) g += `<rect x="${cx - 34}" y="${cy - 22}" width="68" height="22" rx="5" fill="${L.c}" stroke="${o.sel ? '#107c41' : 'rgba(0,0,0,.35)'}" stroke-width="${o.sel ? 3 : 1}"/><text x="${cx}" y="${cy - 6}" text-anchor="middle" font-size="14" font-weight="800" fill="${L.t}">lot ${ech(p.lot)}</text>`;
   if (p.etiq) {
     const coul = TONS_SOL[p.etiqTon] || TONS_SOL.neutre;
     if (sc.aDroite(p.x)) { const [ex, ey] = P(p.x + 1.08, p.y + .62, 0); g += `<text x="${ex}" y="${ey}" font-size="13" font-weight="700" fill="${coul}">${ech(p.etiq)}</text>`; }
@@ -297,7 +296,7 @@ export function dessinerChariotFrontal(I, c, sc) {
 // Les charges visibles du fond vers l'avant (et de gauche à droite), puis les acteurs.
 export function dessinerObjets(I, sc, charges, acteurs) {
   const portees = new Set(acteurs.map((a) => a.charge).filter(Boolean));
-  const ps = charges.filter((p) => p.visible && !portees.has(p)).sort((a, b) => (a.x + a.y) - (b.x + b.y));
+  const ps = charges.filter((p) => p.visible && !portees.has(p)).sort((a, b) => (a.x + a.y) - (b.x + b.y) || (a.z || 0) - (b.z || 0));
   let s = ps.map((p) => dessinerCharge(I, p, sc)).join('');
   for (const a of acteurs) if (a.visible && a.type === 'chariotFrontal') s += dessinerChariotFrontal(I, a, sc);
   return s;
@@ -843,22 +842,22 @@ export const facesExterieuresFut = (no) => (FACES_FUT[no - 1] || '').split('');
 
 // Le bac de rétention de côté `c`, coin min en (x, y) : le `retention` du kit (pieds, bac, nervures du caillebotis) agrandi,
 // coupé aux plans `yMin` / `yMax` comme les cartons, et le caillebotis (ses trous) sur le dessus.
-function bacRetention(I, x, y, c, yMin, yMax) {
+function bacRetention(I, x, y, c, yMin, yMax, z = 0) {
   const { pts, P, unite } = I;
   let g = '';
-  [[.06, .06], [.78, .06], [.06, .78], [.78, .78]].forEach(([a, b]) => { g += boiteY(I, x + a * c, y + b * c, 0, .16 * c, .16 * c, .05 * c, ['#2a2d2f', '#1e2123', '#16191a'], yMin, yMax); });
-  g += boiteY(I, x + .03 * c, y + .03 * c, .05 * c, .94 * c, .94 * c, (ZB - .05) * c, ['#3d4245', '#2f3336', '#24282a'], yMin, yMax);
+  [[.06, .06], [.78, .06], [.06, .78], [.78, .78]].forEach(([a, b]) => { g += boiteY(I, x + a * c, y + b * c, z, .16 * c, .16 * c, .05 * c, ['#2a2d2f', '#1e2123', '#16191a'], yMin, yMax); });
+  g += boiteY(I, x + .03 * c, y + .03 * c, z + .05 * c, .94 * c, .94 * c, (ZB - .05) * c, ['#3d4245', '#2f3336', '#24282a'], yMin, yMax);
   for (let k = 1; k < 6; k++) {
     const t = (.03 + k * .94 / 6) * c;
-    if (y + .97 * c <= yMax + 1e-6 && y + .97 * c >= yMin - 1e-6) g += `<polyline points="${pts([[x + t, y + .97 * c, .06 * c], [x + t, y + .97 * c, (ZB - .02) * c]])}" stroke="#1b1e20" stroke-width="2"/>`;
-    if (y + t <= yMax + 1e-6 && y + t >= yMin - 1e-6) g += `<polyline points="${pts([[x + .97 * c, y + t, .06 * c], [x + .97 * c, y + t, (ZB - .02) * c]])}" stroke="#1b1e20" stroke-width="2"/>`;
+    if (y + .97 * c <= yMax + 1e-6 && y + .97 * c >= yMin - 1e-6) g += `<polyline points="${pts([[x + t, y + .97 * c, z + .06 * c], [x + t, y + .97 * c, z + (ZB - .02) * c]])}" stroke="#1b1e20" stroke-width="2"/>`;
+    if (y + t <= yMax + 1e-6 && y + t >= yMin - 1e-6) g += `<polyline points="${pts([[x + .97 * c, y + t, z + .06 * c], [x + .97 * c, y + t, z + (ZB - .02) * c]])}" stroke="#1b1e20" stroke-width="2"/>`;
   }
   // Le caillebotis : une grille de petits trous sombres sur le dessus (ils passent sous les fûts).
   const rx = .018 * c * unite * K1, ry = .018 * c * unite * K2;
   for (let a = 0; a < 6; a++) for (let b = 0; b < 6; b++) {
     const px = x + (.14 + a * .144) * c, py = y + (.14 + b * .144) * c;
     if (py > yMax + 1e-6 || py < yMin - 1e-6) continue;
-    const [ex, ey] = P(px, py, ZB * c);
+    const [ex, ey] = P(px, py, z + ZB * c);
     g += `<ellipse cx="${ex.toFixed(1)}" cy="${ey.toFixed(1)}" rx="${rx.toFixed(1)}" ry="${ry.toFixed(1)}" fill="#16191a"/>`;
   }
   return g;
@@ -904,8 +903,8 @@ function futDePalette(I, cx, cy, z, rr, hh, f, o, fuite) {
 // la coulure sur le fût et la flaque dans le bac, de ce côté-là.
 export function paletteFuts(I, pal, ox, oy, r, o = {}) {
   const c = o.cote || COTE_BAC, e = c / COTE_BAC, yMin = o.yMin ?? -99, yMax = o.yMax ?? 99;
-  const rr = R_FUT * e, hh = H_FUT * e, zb = ZB * c, mx = ox + c / 2, my = oy + c / 2;
-  let g = bacRetention(I, ox, oy, c, yMin, yMax);
+  const z0 = o.z || 0, rr = R_FUT * e, hh = H_FUT * e, zb = z0 + ZB * c, mx = ox + c / 2, my = oy + c / 2;
+  let g = bacRetention(I, ox, oy, c, yMin, yMax, z0);
   const L = [];
   (pal.futs || []).forEach((f) => {
     if (f.absent) return;

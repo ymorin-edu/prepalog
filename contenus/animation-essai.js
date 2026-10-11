@@ -4,8 +4,8 @@
 // validée « parfait » par Tristan) REPRODUITE TELLE QUELLE à travers la vue : mêmes places, mêmes bulles,
 // même rythme à 0,8. Premier critère de validation du brief (§13) : « c'est la même ».
 // Il sert à la page `outils/essai-animation.html` et au bloc de tests `outils/test/animation.mjs`.
-// Rien de réel ici n'est vérifié : dessin et scénario construits (palettes de rétention de 4 fûts,
-// règle de l'exercice). La séance ENT-6.5 déclarera son propre contenu.
+// Rien de réel ici n'est vérifié : dessin et scénario construits (palettes de rétention de 8 fûts en
+// quinconce, règle de l'exercice, décision 52 du 05/10/2026). La séance ENT-6.5 déclarera son propre contenu.
 
 export const MENTION = 'Contenu d’essai : la maquette d’animation d’ENT-6.5 rejouée par la vue du moteur. '
   + 'Dessin et scénario construits. Sans son.';

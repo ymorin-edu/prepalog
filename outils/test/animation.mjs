@@ -121,6 +121,25 @@ await v('Kit iso : palette de cartons — l’absent n’est pas dessiné, l’e
   egal(r.enfonce, [0, 1, 1, 0], 'enfoncement visible selon la vue (avant, côté droit, arrière, côté gauche)');
 });
 
+// La charge de la scène (D-5, décision 52) : 8 fûts par défaut, les places vides en moins, et une palette posée sur une
+// autre est dessinée plus haut (gerbage du stockage de masse). Un fût = un tracé au dégradé métal.
+await v('Kit iso : la charge de la scène porte 8 fûts (7 si déclaré), une palette gerbée se dessine un niveau plus haut', async () => {
+  const r = await pg.evaluate(async () => {
+    const K = await import('/core/iso.js');
+    const I = K.projection();
+    const sc = K.compilerScene({ decor: [{ type: 'couloirMasse', id: 'M01', profondeur: 2 }], lots: { S24: { couleur: 'bleu' } } });
+    const futs = (s) => (s.match(/url\(#isoMetal\)/g) || []).length;
+    const rect = (s) => +/<rect x="[^"]+" y="([^"]+)"/.exec(s)[1];
+    const bas = K.dessinerCharge(I, { x: 0, y: 0, z: 0, lot: 'S24' }, sc);
+    const haut = K.dessinerCharge(I, { x: 0, y: 0, z: K.HAUT_NIVEAU, lot: 'S24' }, sc);
+    return { huit: futs(bas), sept: futs(K.dessinerCharge(I, { x: 0, y: 0, z: 0, futs: 7 }, sc)), zero: futs(K.dessinerCharge(I, { x: 0, y: 0, z: 0, futs: 0 }, sc)),
+      ecart: Math.round(rect(bas) - rect(haut)), attendu: Math.round(K.HAUT_NIVEAU * I.unite), FUTS: K.FUTS_PALETTE };
+  });
+  egal(r.FUTS, 8, 'huit fûts par palette (décision 52)');
+  egal([r.huit, r.sept, r.zero], [8, 7, 0], 'fûts dessinés : par défaut, futs: 7, futs: 0');
+  egal(r.ecart, r.attendu, 'l’étiquette de la palette du dessus monte d’un niveau');
+});
+
 await v('Animation : contenu fautif refusé au chargement (pas, place, objet, juste, type de décor)', async () => {
   const r = await pg.evaluate(async () => {
     const { creerEntreprise } = await import('/core/types/entreprise.js');
