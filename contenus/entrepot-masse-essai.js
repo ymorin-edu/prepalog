@@ -67,7 +67,8 @@ export const MASSE = {
 // en zone litiges, la Pelforth S19 reposée sur la Heineken de M02, trois vides manquants). Construit : tout (plan, codes de
 // contrôle, stock, étiquettes) ; l'inventaire à la voix aussi (non trouvé chez France Boissons, voir le brief §2).
 export const MENTION_COMPTAGE = 'Contenu d’essai : la zone de masse d’ENT-6.6 (France Boissons), comptage à l’aveugle. Plan, codes de '
-  + 'contrôle, stock et étiquettes <b>construits</b>. Dessin — scène construite, ce n’est pas la plateforme de Buchelay.';
+  + 'contrôle, stock et étiquettes <b>construits</b> ; préparation à la voix <b>vérifiée</b> chez France Boissons, inventaire à la voix '
+  + '<b>construit</b> (terminal sans son à ce stade). Dessin — scène construite, ce n’est pas la plateforme de Buchelay.';
 
 const CODES = { M01: '47', M02: '82', M03: '15', M04: '63', M05: '29', M06: '54', M07: '31', M08: '91' };
 export const COMPTAGE = {
@@ -77,7 +78,7 @@ export const COMPTAGE = {
   comptage: true,
   personnage: { nom: 'Nadia', role: 'cheffe de quai', date: 'jeudi 17 juin, 7 h',
     texte: { guidage: 'Ouvre chaque couloir et compte les fûts. Ne regarde pas le stock du logiciel : compte ce que tu vois.' } },
-  consigne: 'Ouvre un couloir, lis le code sur son panneau, puis compte les fûts.',
+  consigne: 'Lis le terminal, va au couloir, compte, réponds.',
   plan: {
     couloirs: Object.keys(CODES).map((id) => (id === 'M08' ? { id, places: 4, reserve: 'vides', code: CODES[id] } : { id, places: 4, code: CODES[id] })),
     reception: 'Zone de réception',
@@ -99,6 +100,28 @@ export const COMPTAGE = {
     M06: [pile('AFF20', 'S24', 1, 7)],
     M07: [pile('EDW20', 'S24', 3), pile('EDW20', 'S24', 1, 7)],
     M08: [pile('VIDES', null, 2), pile('VIDES', null, 1, 3)],
+  },
+  // Le terminal vocal (chantier D-6, lot 2) : la liste du brief §4, dans son ordre, et ses cinq jalons de comptage (§5, jalons
+  // 1 à 5). Les nombres attendus ne sont écrits nulle part : ils se calculent depuis le stock ci-dessus.
+  terminal: {
+    titre: 'Inventaire tournant',
+    lignes: [
+      { couloir: 'M01', ref: 'HEI30', lot: 'S20' },
+      { couloir: 'M02', ref: 'HEI30', lot: 'S24' },
+      { couloir: 'M03', ref: 'PEL20', lot: 'S24' },
+      { couloir: 'M04', ref: 'PEL20', lot: 'S19' },
+      { couloir: 'M05', ref: 'AFF20', lot: 'S18' },
+      { couloir: 'M06', ref: 'AFF20', lot: 'S24' },
+      { couloir: 'M08', ref: 'VIDES' },
+    ],
+    jalons: [
+      { id: 'compte-M01', lib: 'M01 : Heineken 30 L compté juste', lignes: ['M01'] },
+      { id: 'compte-M02', lib: 'M02 : Heineken 30 L compté juste', lignes: ['M02'] },
+      { id: 'compte-M04', lib: 'M04 : Pelforth 20 L compté juste', lignes: ['M04'] },
+      { id: 'compte-M08', lib: 'M08 : fûts vides comptés justes', lignes: ['M08'] },
+      { id: 'compte-autres', lib: 'M03, M05 et M06 comptés justes', lignes: ['M03', 'M05', 'M06'] },
+    ],
+    fin: 'Comptage terminé : 7 lignes. Merci.',
   },
   regles: { titre: 'Compter les fûts', entete: 'Compter les fûts', lignes: [
     'Une palette pleine = <b>8 fûts</b>.',

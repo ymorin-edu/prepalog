@@ -542,6 +542,11 @@ export function noteEntrepot(db, P, temps = P.temps) {
   if (compiler(P).mode === 'visite') {
     return { score, max: N.sur, ok, total, detail: { jalons: L.map((l) => ({ jalon: l.lib, ok: l.ok })), visite: detailVisite(compiler(P), e) } };
   }
+  if (compiler(P).mode === 'masse' && compiler(P).comptage) {
+    const T = e.terminal || {};
+    return { score, max: N.sur, ok, total, detail: { jalons: L.map((l) => ({ jalon: l.lib, ok: l.ok, comptes: l.comptes })),
+      codesFaux: T.codesFaux || {}, premierGeste: e.premierGeste || null } };
+  }
   if (compiler(P).mode === 'masse') {
     return { score, max: N.sur, ok, total, detail: { jalons: L.map((l) => ({ jalon: l.lib, ok: l.ok, adresse: l.place, criteres: l.criteres })),
       premierGeste: e.premierGeste || null } };
@@ -586,6 +591,10 @@ export function futsReels(P, couloir, ref, lot = null) {
   const L = comptageReel(P)[couloir] || [];
   return L.filter((x) => x.ref === ref && (x.lot || null) === (lot || null)).reduce((t, x) => t + x.futs, 0);
 }
+// Le TERMINAL du comptage (chantier D-6, lot 2) : ce que l'élève a compté, { M01: 15, … } (une ligne non comptée n'y est pas),
+// et si le terminal est allé au bout. Ce que lira l'écran Inventaire (lot 4) et la fiche qui suit : SES comptages.
+export function comptagesTerminal(db, P) { const T = etatDe(db, P).terminal || {}; return Object.assign({}, T.reponses || {}); }
+export function comptageFini(db, P) { return !!(etatDe(db, P).terminal || {}).fin; }
 export function placeMasse(db, P, id) { return placeDe(compiler(P), Object.assign(etatMasseNeuf(), etatDe(db, P)), id); }
 
 /* ================================================================ géométrie */

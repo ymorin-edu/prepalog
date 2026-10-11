@@ -68,11 +68,28 @@
 // Ce qui se compte vraiment (corrigé, terminal, tests) : `comptageMasse(M)` ici, `comptageReel(P)` dans `entrepot.js`.
 // `plan.litiges.charges` sert aussi au rangement (le décor de la zone) ; l'ancien `futs: 1` y reste valable.
 //
+// LE TERMINAL VOCAL DU COMPTAGE (chantier D-6, lot 2, 11/10/2026, brief ENT-6.6 §7.2 ; le panneau : `terminal.js`) :
+//   terminal: {
+//     titre: 'Inventaire tournant',                         // dans l'en-tête du boîtier
+//     lignes: [{ couloir: 'M01', ref: 'HEI30', lot: 'S20' }, …, { couloir: 'M08', ref: 'VIDES' }],   // dans l'ordre imposé
+//         // `id` : le couloir par défaut (à donner si un couloir est compté deux fois) ; le couloir a un `code`
+//     jalons: [{ id, lib, lignes: ['M03', 'M05', 'M06'] }, …],   // juste = TOUTES ces lignes comptées juste ;
+//         // défaut : un jalon par ligne. `lib` ne dit jamais le nombre attendu (le suivi le montre à l'élève).
+//     fin: 'Comptage terminé. …',                           // la phrase de fin (défaut : « Comptage terminé. »)
+//   }
+// À droite de la 3D. La phrase d'une ligne : « Couloir M04. Code de contrôle ? », puis « <nom de la référence>. Lot S19.
+// Combien de fûts ? » (`references[].voix` remplace le nom si le contenu veut une autre formule). Juste = le nombre de fûts
+// de CETTE référence et de CE lot dans le couloir, calculé depuis le stock (`comptageMasse`). Rien n'est jugé avant la
+// dernière ligne (sinon le suivi dirait ligne à ligne si le compte est bon) ; une ligne non comptée est fausse. Les codes
+// faux sont une trace (côté enseignant), jamais notée. État : `db.entrepots[<id>].terminal` (voir `terminal.js`).
+// Gestes (questions au fil) : `entrepot:<id>:compte:<ligne>` à chaque ligne comptée, `entrepot:<id>:compte-fin` à la fin.
+//
 // POUR LA FICHE QUI SUIT (ENT-6.5, jalons 7 à 10) : `placeMasse(db, P, 'P1')` (exporté par `entrepot.js`) rend la
 // place où l'élève a posé la palette, juste ou fausse : la fiche est comparée à SON rangement (pas de double peine).
 
 import { ech } from '../texte.js';
 import { projection, DEFS, compilerScene, dessinerDecor, dessinerCharge, etiquetteCharge, cadreEtiquette, largeurEtiquette, HAUT_NIVEAU, HAUT_RETENTION, FUTS_PALETTE, LOTS_KIT } from '../iso.js';
+import { creerTerminal, terminalNeuf } from './terminal.js';
 
 /* ================================================================== critères */
 const CRITERES = {
@@ -159,8 +176,37 @@ export function compilerMasse(P, err) {
   const nomCourt = (ref) => refs[ref].court || refs[ref].nom;
   const jalons = P.jalons || Object.values(pal).map((p) => ({ id: `palette-${p.id}`, palette: p.id, lib: `${p.id} bien rangée (${nomCourt(p.ref)})` }));
   jalons.forEach((j) => { if (!pal[j.palette]) err(`jalon ${j.id} : palette inconnue (${j.palette})`); });
-  return { P, mode: 'masse', comptage, couloirs, C, refs, hauteurs, portee, lots, stock, pal, crit, jalons, nomCourt, litiges,
+  const terminal = P.terminal ? compilerTerminal(P.terminal, { comptage, C, refs, lots, nomCourt }, err) : null;
+  return { P, mode: 'masse', comptage, couloirs, C, refs, hauteurs, portee, lots, stock, pal, crit, jalons, nomCourt, litiges, terminal,
     nMax: Math.max(...couloirs.map((c) => c.n)) };
+}
+
+// Le terminal du comptage : ses lignes rédigées (ce que dit le terminal) et ses jalons.
+function compilerTerminal(D, { comptage, C, refs, lots, nomCourt }, err) {
+  if (!comptage) err('le terminal ne sert qu’au comptage (`comptage: true`)');
+  if (!Array.isArray(D.lignes) || !D.lignes.length) err('terminal : `lignes` est une liste (au moins une ligne)');
+  const ids = new Set();
+  const lignes = D.lignes.map((l, k) => {
+    const ou = `terminal, ligne n° ${k + 1}`;
+    if (!l || !C[l.couloir]) err(`${ou} : couloir inconnu (${l && l.couloir})`);
+    if (C[l.couloir].code == null) err(`${ou} : le couloir ${l.couloir} n'a pas de code de contrôle (\`code\`)`);
+    const r = refs[l.ref] || err(`${ou} : référence inconnue (${l.ref})`);
+    if (!r.vides && !lots[l.lot]) err(`${ou} : lot inconnu « ${l.lot} » (lots)`);
+    const id = String(l.id || l.couloir);
+    if (ids.has(id)) err(`${ou} : la ligne ${id} existe déjà (donner un \`id\` à chaque ligne d'un couloir compté deux fois)`);
+    ids.add(id);
+    const lot = r.vides ? null : l.lot;
+    return { id, couloir: l.couloir, ref: l.ref, lot, code: C[l.couloir].code,
+      lieu: `Couloir ${l.couloir}.`, question: `${r.voix || r.nom}.${lot ? ` Lot ${lot}.` : ''} Combien de fûts ?` };
+  });
+  const jalons = (D.jalons || lignes.map((l) => ({ id: `compte-${l.id}`, lignes: [l.id],
+    lib: `${l.couloir} : ${nomCourt(l.ref)}${l.lot ? ` lot ${l.lot}` : ''} compté juste` }))).map((j) => {
+    if (!j || !j.id || !j.lib) err('terminal : un jalon sans `id` ou sans `lib`');
+    if (!Array.isArray(j.lignes) || !j.lignes.length) err(`terminal, jalon ${j.id} : \`lignes\` est une liste de lignes`);
+    j.lignes.forEach((x) => { if (!ids.has(String(x))) err(`terminal, jalon ${j.id} : ligne inconnue (${x})`); });
+    return { id: j.id, lib: j.lib, lignes: j.lignes.map(String) };
+  });
+  return { titre: D.titre || '', lignes, jalons, textes: { fin: D.fin || 'Comptage terminé.', codeFaux: 'Code faux. Vérifie le couloir.' } };
 }
 
 // CE QUI SE COMPTE dans chaque couloir (stock déclaré) : { M01: [{ ref, lot, futs }], … }, une ligne par référence et lot,
@@ -243,8 +289,25 @@ export function fautesMasse(M, e, id) {
   return F;
 }
 
+// Le nombre de fûts que l'élève doit trouver pour chaque ligne du terminal : { M01: 15, … }. Calculé, JAMAIS montré.
+export function attendusTerminal(M) {
+  const R = comptageMasse(M);
+  return Object.fromEntries((M.terminal ? M.terminal.lignes : []).map((l) => [l.id,
+    (R[l.couloir] || []).filter((x) => x.ref === l.ref && (x.lot || null) === l.lot).reduce((t, x) => t + x.futs, 0)]));
+}
+
 // Les jalons : rien n'est jugé avant la validation (le rangement figé) ; après, juste ou faux (`etat: 'ko'`).
+// En comptage : ceux du terminal, jugés quand la dernière ligne est comptée.
 export function jalonsMasse(M, e) {
+  if (M.comptage) {
+    if (!M.terminal) return [];
+    const T = e.terminal || terminalNeuf(), A = attendusTerminal(M), R = T.reponses || {};
+    return M.terminal.jalons.map((j) => {
+      const ok = !!T.fin && j.lignes.every((id) => R[id] === A[id]);
+      return { id: j.id, lib: j.lib, ok, etat: T.fin ? (ok ? 'ok' : 'ko') : undefined,
+        comptes: Object.fromEntries(j.lignes.map((id) => [id, id in R ? R[id] : null])) };
+    });
+  }
   return M.jalons.map((j) => {
     const F = fautesMasse(M, e, j.palette);
     const ok = !!e.valide && !!F && !F.length;
@@ -295,6 +358,7 @@ export function creerMasse(P, M, opts, h) {
   }
   const nomPal = (p) => M.refs[p.ref].nom;
   const toutesPosees = (e) => Object.keys(M.pal).every((id) => e.pos[id]);
+  const TERM = M.terminal ? creerTerminal(M.terminal) : null;
 
   /* ----------------------------------------------------------- les gestes */
   function dire(t, type) { ui.msg = t; ui.msgType = type || ''; }
@@ -562,7 +626,8 @@ export function creerMasse(P, M, opts, h) {
   }
 
   return {
-    signaux: M.comptage ? [...M.couloirs.map((c) => `entrepot:${P.id}:ouvrir:${c.id}`), `entrepot:${P.id}:litiges`]
+    signaux: M.comptage ? [...M.couloirs.map((c) => `entrepot:${P.id}:ouvrir:${c.id}`), `entrepot:${P.id}:litiges`,
+      ...(M.terminal ? [...M.terminal.lignes.map((l) => `entrepot:${P.id}:compte:${l.id}`), `entrepot:${P.id}:compte-fin`] : [])]
       : [`entrepot:${P.id}:poser`, `entrepot:${P.id}:verifier`],
     id: P.id,
     nav: { libelle: P.libelle || "Plan de l'entrepôt" },
@@ -579,6 +644,7 @@ export function creerMasse(P, M, opts, h) {
         <div class="pe-regles-corps"><b>${ech(RG.entete || 'Les règles de la zone de masse')}</b><ol>${(RG.lignes || []).map((l) => `<li>${l}</li>`).join('')}</ol>
         ${RG.encadre ? `<div class="pe-encadre">${RG.encadre}</div>` : ''}</div></details>` : '';
       if (M.comptage && !e.vus) e.vus = {};
+      if (TERM && !e.terminal) e.terminal = terminalNeuf();
       const c = ui.ouvert ? M.C[ui.ouvert] : null, lit = !c && ui.litiges && !!P.plan.litiges;
       const retour = '<button type="button" class="btn" data-pm="retour" data-pe-cle="b:retour">← Retour au plan</button>';
       const fil = c ? `${retour}<span>Couloir <b>${ech(c.id)}</b> en 3D — ${ech(titreCouloir(e, c))}</span>`
@@ -596,7 +662,8 @@ export function creerMasse(P, M, opts, h) {
       return `<div class="pe pm${M.comptage ? ' pm-comptage' : ''}" data-entrepot="${ech(P.id)}" data-pe-mode="masse"${M.comptage ? ' data-pm-comptage' : ''} data-pe-temps="${R.t}" data-pm-ouvert="${c ? ech(c.id) : lit ? 'litiges' : ''}" data-pm-valide="${!!e.valide}">
         <div class="pm-haut"><div class="pe-perso pm-perso"><b>${ech([per.nom, per.role].filter(Boolean).join(', '))}${per.date ? ` · ${ech(per.date)}` : ''}</b>${txt}</div>
           <div class="pm-act">${M.comptage ? '' : actions(e, R)}${regles}</div></div>
-        <div class="pm-jeu"><aside class="pm-cote">${M.comptage ? '' : `<div class="pm-cartes">${Object.values(M.pal).map((p) => carte(e, p, R)).join('')}</div>`}
+        <div class="pm-jeu${TERM ? ' pm-avec-term' : ''}"><aside class="pm-cote">${TERM ? TERM.html(e.terminal, { estProf: !!(api && api.estProf) })
+          : M.comptage ? '' : `<div class="pm-cartes">${Object.values(M.pal).map((p) => carte(e, p, R)).join('')}</div>`}
             <div class="pm-consigne" data-pm-consigne>${consigne(e, R)}</div>
             <div class="pe-msg pm-msg ${ui.msgType ? `pe-${ui.msgType}` : ''}" data-pm-msg role="status">${ui.msg}</div>${prof}</aside>
           <section class="pe-espace pm-espace"><div class="pm-fil">${fil}</div><div class="pm-dessin">${svg}</div></section></div></div>`;
@@ -650,6 +717,10 @@ export function creerMasse(P, M, opts, h) {
           sig('litiges');
           redessiner();
         }));
+        // À la dernière ligne, tout l'écran (menu compris) : une entrée qui attend la fin du comptage apparaît tout de suite.
+        if (TERM) TERM.brancher(racine, e.terminal, { sauver,
+          redessiner: () => (e.terminal.fin && api.redessinerTout ? api.redessinerTout() : redessiner()),
+          signal: (evt, l) => { if (evt === 'reponse' || evt === 'fin') sig(`compte:${l.id}`); if (evt === 'fin') sig('compte-fin'); } });
         return;
       }
       if (R.fige) return;

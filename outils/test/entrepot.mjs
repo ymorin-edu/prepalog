@@ -1685,7 +1685,9 @@ await v('Masse comptage : la zone litiges se clique, montre ses deux fûts et le
   vrai(await presentM('[data-pm-litiges][tabindex="0"]'), 'la zone reste cliquable au clavier');
 });
 
-await v('Masse comptage : les couloirs ouverts sont retenus (une fois), aucun jalon ; gestes déclarés', async () => {
+// Réécrit au lot 2 (11/10/2026) : le comptage a maintenant les 5 jalons du terminal (jamais jugés en ouvrant des couloirs),
+// et les gestes du terminal s'ajoutent à la liste.
+await v('Masse comptage : les couloirs ouverts sont retenus (une fois), aucun jalon jugé ; gestes déclarés', async () => {
   await monterC();
   await ouvrirC('M04');
   await ouvrirC('M02');
@@ -1694,11 +1696,14 @@ await v('Masse comptage : les couloirs ouverts sont retenus (une fois), aucun ja
     const E = await import('/core/types/entrepot.js');
     const C = await import('/contenus/entrepot-masse-essai.js');
     const e = window.__m.db.entrepots[C.COMPTAGE.id];
-    return { vus: Object.keys(e.vus).sort(), date: typeof e.vus.M04, pos: e.pos, J: E.jalonsEntrepot(window.__m.db, C.COMPTAGE).total,
+    const J = E.jalonsEntrepot(window.__m.db, C.COMPTAGE);
+    return { vus: Object.keys(e.vus).sort(), date: typeof e.vus.M04, pos: e.pos, J: [J.total, J.ok, J.L.filter((l) => l.etat).length],
       sig: E.creerEntrepot(C.COMPTAGE).signaux };
   });
-  egal([r.vus, r.date, r.pos, r.J], [['M02', 'M04'], 'number', {}, 0]);
-  egal(r.sig, ['M01', 'M02', 'M03', 'M04', 'M05', 'M06', 'M07', 'M08'].map((c) => `entrepot:essai-masse-comptage:ouvrir:${c}`).concat('entrepot:essai-masse-comptage:litiges'));
+  egal([r.vus, r.date, r.pos, r.J], [['M02', 'M04'], 'number', {}, [5, 0, 0]]);
+  const S = 'entrepot:essai-masse-comptage:';
+  egal(r.sig, ['M01', 'M02', 'M03', 'M04', 'M05', 'M06', 'M07', 'M08'].map((c) => `${S}ouvrir:${c}`).concat(`${S}litiges`,
+    ['M01', 'M02', 'M03', 'M04', 'M05', 'M06', 'M08'].map((c) => `${S}compte:${c}`), `${S}compte-fin`));
 });
 
 await v('Masse comptage : enseignant — ce qui se compte, dans un encadré', async () => {
@@ -1755,6 +1760,155 @@ await v('Masse comptage : la page d’essai tient en 1366 × 768 et 1280 × 720 
   }
   egal(err, [], 'erreurs JS');
   await pe.close();
+});
+
+/* --------------------------------------- le TERMINAL VOCAL du comptage (chantier D-6, lot 2 ; brief ENT-6.6 §4 étape 1, §5, §7.2) */
+// La liste du contenu d'essai, dans l'ordre : M01 M02 M03 M04 M05 M06 M08. Les comptages justes, ÉCRITS À LA MAIN d'après le
+// tableau du brief : 15 · 8 · 24 · 0 · 2 · 7 · 19 ; les codes de contrôle (lus sur les panneaux) : 47 · 82 · 15 · 63 · 29 · 54 · 91.
+// Jalons (ordre du contenu) : M01, M02, M04, M08, puis « M03, M05 et M06 » ensemble.
+const VT = `${ZM} [data-terminal]`;
+const CODES_T = ['47', '82', '15', '63', '29', '54', '91'];
+const JUSTES_T = [15, 8, 24, 0, 2, 7, 19];
+const termC = () => pm.evaluate(() => JSON.parse(JSON.stringify(((window.__m.db.entrepots || {})['essai-masse-comptage'] || {}).terminal || null)));
+const actuC = () => texteM('[data-vt-actu]');
+// Taper une réponse au terminal et la valider par Entrée (le panneau se redessine : on attend qu'il ait changé).
+async function repondreC(x) {
+  const avant = await pm.evaluate(() => (((window.__m.db.entrepots || {})['essai-masse-comptage'] || {}).terminal || { journal: [] }).journal.length);
+  await pm.fill(`${VT} [data-vt-champ]`, String(x));
+  await pm.press(`${VT} [data-vt-champ]`, 'Enter');
+  await pm.waitForFunction((n) => window.__m.db.entrepots['essai-masse-comptage'].terminal.journal.length > n, avant);
+}
+async function compterC(comptes, { codes = CODES_T } = {}) {
+  for (let i = 0; i < comptes.length; i++) { await repondreC(codes[i]); await repondreC(comptes[i]); }
+}
+// Les jalons du comptage sur la base de l'élève : true / false / null (pas encore jugé), dans l'ordre du contenu.
+const jalonsC = () => pm.evaluate(async () => {
+  const E = await import('/core/types/entrepot.js');
+  const C = await import('/contenus/entrepot-masse-essai.js');
+  return E.jalonsEntrepot(window.__m.db, C.COMPTAGE).L.map((l) => (l.etat ? l.ok : null));
+});
+// Les jalons d'un état construit à la main (réponses, fini ou non) : les pièges du brief §8 sans repasser par l'écran.
+const jalonsReponses = (reponses, fin = true) => pm.evaluate(async ({ reponses, fin }) => {
+  const E = await import('/core/types/entrepot.js');
+  const C = await import('/contenus/entrepot-masse-essai.js');
+  const db = { entrepots: { [C.COMPTAGE.id]: { terminal: { i: 7, phase: 'code', reponses, codesFaux: {}, journal: [], fin: fin ? 1 : null } } } };
+  const J = E.jalonsEntrepot(db, C.COMPTAGE);
+  return { L: J.L.map((l) => (l.etat ? l.ok : null)), ok: J.ok };
+}, { reponses, fin });
+const REP = (L) => Object.fromEntries(['M01', 'M02', 'M03', 'M04', 'M05', 'M06', 'M08'].map((id, i) => [id, L[i]]));
+
+await v('Terminal : à droite de la 3D, il commence par le premier couloir de sa liste ; aucun chiffre lisible au départ', async () => {
+  await monterC();
+  await pm.waitForSelector(VT);
+  egal(await actuC(), 'Couloir M01. Code de contrôle ?');
+  const b = await pm.evaluate((Z) => {
+    const r = (s) => document.querySelector(`${Z} ${s}`).getBoundingClientRect();
+    return { term: r('[data-terminal]').left, dessin: r('.pm-dessin').right };
+  }, ZM);
+  vrai(b.term >= b.dessin, `le terminal (x = ${b.term}) est à droite du dessin (fin x = ${b.dessin})`);
+  egal(await chiffresC(), [], 'chiffres lisibles (terminal compris)');
+  vrai(/TERMINAL VOCAL · Inventaire tournant/.test(await texteM('.vt-tete')) && /sans son/.test(await texteM('.vt-son')), 'en-tête');
+  vrai(!(await presentM('[data-vt-prof]')), 'pas de trace enseignant côté élève');
+});
+
+await v('Terminal : parcours juste au clavier → les 5 jalons justes, phrase de fin, champ fermé ; rien n’est jugé avant la fin', async () => {
+  await monterC();
+  await pm.waitForSelector(VT);
+  await repondreC('47');
+  egal(await actuC(), 'Heineken fût 30 L. Lot S20. Combien de fûts ?', 'la question de M01 (ni quantité ni théorique)');
+  await repondreC('15');
+  vrai(/Compris : 15\./.test(await texteM('.vt-ecran')), 'le terminal répète le nombre');
+  egal(await actuC(), 'Couloir M02. Code de contrôle ?');
+  vrai(await pm.evaluate((s) => document.activeElement === document.querySelector(s), `${VT} [data-vt-champ]`), 'le focus reste dans le champ');
+  await compterC(JUSTES_T.slice(1), { codes: CODES_T.slice(1) });
+  egal(await jalonsC(), [true, true, true, true, true]);
+  egal(await actuC(), 'Comptage terminé : 7 lignes. Merci.');
+  vrai(await pm.$eval(`${VT} [data-vt-champ]`, (x) => x.disabled), 'le champ est fermé');
+  const T = await termC();
+  egal([T.reponses, T.codesFaux, !!T.fin, T.i], [REP(JUSTES_T), {}, true, 7]);
+  vrai(T.journal.every((j) => typeof j.h === 'number'), 'journal horodaté');
+  // Avant la dernière ligne, rien n'est jugé (le suivi ne dit pas ligne à ligne si le compte est bon).
+  egal((await jalonsReponses(REP(JUSTES_T.slice(0, 6)), false)).L, [null, null, null, null, null], '6 lignes sur 7');
+});
+
+await v('Terminal : inaction 0 / 5 ; les pièges du brief §8 font tomber leur jalon, et lui seul', async () => {
+  await monterC();
+  egal(await jalonsC(), [null, null, null, null, null], 'rien fait');
+  egal((await jalonsReponses({})).ok, 0, 'terminal fini sans réponse (base forcée) : 0');
+  egal((await jalonsReponses(REP(JUSTES_T))).L, [true, true, true, true, true], 'juste');
+  egal((await jalonsReponses(REP([16, 8, 24, 0, 2, 7, 19]))).L, [false, true, true, true, true], 'M01 compté 16 (palette du dessus supposée pleine)');
+  egal((await jalonsReponses(REP([15, 16, 24, 0, 2, 7, 19]))).L, [true, false, true, true, true], 'M02 compté 16 (la Pelforth posée dessus comptée)');
+  egal((await jalonsReponses(REP([15, 8, 24, 8, 2, 7, 19]))).L, [true, true, false, true, true], 'M04 compté 8 (stock supposé)');
+  egal((await jalonsReponses(REP([15, 8, 24, 0, 2, 7, 22]))).L, [true, true, true, false, true], 'M08 compté 22');
+  egal((await jalonsReponses(REP([15, 8, 24, 0, 2, 8, 19]))).L, [true, true, true, true, false], 'M06 compté 8 : un seul faux = faux');
+  const sansM05 = REP(JUSTES_T); delete sansM05.M05;
+  egal((await jalonsReponses(sansM05)).L, [true, true, true, true, false], 'M05 non compté = faux');
+});
+
+await v('Terminal : code faux → « Code faux », redemandé, trace comptée ; aucun jalon perdu ; l’enseignant voit la trace', async () => {
+  await monterC();
+  await pm.waitForSelector(VT);
+  await repondreC('74');
+  egal(await actuC(), 'Couloir M01. Code de contrôle ?', 'le terminal redemande');
+  vrai(/Code faux\. Vérifie le couloir\./.test(await texteM('.vt-ecran .vt-ko')), 'le refus, en rouge (texte)');
+  await repondreC('47');
+  await repondreC('15');
+  await repondreC('47');      // le code de M01 au couloir M02
+  await compterC(JUSTES_T.slice(1), { codes: CODES_T.slice(1) });
+  const T = await termC();
+  egal(T.codesFaux, { M01: 1, M02: 1 });
+  egal(await jalonsC(), [true, true, true, true, true], 'aucun jalon perdu');
+  await monterC({ role: 'prof', db: await pm.evaluate(() => window.__m.db) });
+  vrai(/Codes faux \(trace, non notée\) : M01 ×1 · M02 ×1/.test(await texteM('[data-vt-faux]')), await texteM('[data-vt-prof]'));
+});
+
+await v('Terminal : case vide → rien ; lettres → « des chiffres » ; Répète ne change rien ; un rechargement reprend à la même ligne', async () => {
+  await monterC();
+  await pm.waitForSelector(VT);
+  await repondreC('47');
+  const avant = await termC();
+  await pm.fill(`${VT} [data-vt-champ]`, '  ');
+  await pm.press(`${VT} [data-vt-champ]`, 'Enter');
+  await pm.click(`${VT} [data-vt-valider]`);
+  egal((await termC()).journal.length, avant.journal.length, 'une case vide ne fait rien (0 est une réponse, rien n’en est pas une)');
+  await repondreC('quinze');
+  vrai(/Réponds avec des chiffres/.test(await texteM('.vt-ecran .vt-ko')), 'refus');
+  egal(await actuC(), 'Heineken fût 30 L. Lot S20. Combien de fûts ?', 'toujours la même question');
+  egal((await termC()).reponses, {}, 'aucune réponse rangée');
+  const n = (await termC()).journal.length;
+  await pm.click(`${VT} [data-vt-repete]`);
+  vrai(await presentM('[data-vt-actu].vt-flash'), 'la phrase en cours clignote');
+  egal([(await termC()).journal.length, await actuC()], [n, 'Heineken fût 30 L. Lot S20. Combien de fûts ?'], 'Répète');
+  await repondreC('15');
+  await monterC({ db: await pm.evaluate(() => window.__m.db) });
+  egal(await actuC(), 'Couloir M02. Code de contrôle ?', 'après rechargement');
+  vrai(/Compris : 15\./.test(await texteM('.vt-ecran')), 'l’échange est toujours affiché');
+  // Ce que l'élève a tapé mais pas validé reste dans le champ quand il ouvre un couloir.
+  await pm.fill(`${VT} [data-vt-champ]`, '8');
+  await ouvrirC('M02');
+  egal(await pm.$eval(`${VT} [data-vt-champ]`, (x) => x.value), '8', 'saisie gardée');
+});
+
+await v('Terminal : déclaration fautive refusée au chargement, avec un message clair', async () => {
+  const r = await pm.evaluate(async () => {
+    const E = await import('/core/types/entrepot.js');
+    const C = await import('/contenus/entrepot-masse-essai.js');
+    const essai = (f, base = C.COMPTAGE) => { const x = JSON.parse(JSON.stringify(base)); f(x); try { E.creerEntrepot(x); return ''; } catch (e) { return e.message; } };
+    return {
+      couloir: essai((x) => { x.terminal.lignes[0].couloir = 'M09'; }),
+      sansCode: essai((x) => { delete x.plan.couloirs[0].code; }),
+      lot: essai((x) => { x.terminal.lignes[0].lot = 'S99'; }),
+      double: essai((x) => { x.terminal.lignes[1].couloir = 'M01'; }),
+      jalon: essai((x) => { x.terminal.jalons[0].lignes = ['M07']; }),
+      rangement: essai((x) => { x.terminal = JSON.parse(JSON.stringify(C.COMPTAGE.terminal)); }, C.MASSE),
+    };
+  });
+  vrai(/terminal, ligne n° 1 : couloir inconnu \(M09\)/.test(r.couloir), r.couloir);
+  vrai(/le couloir M01 n'a pas de code de contrôle/.test(r.sansCode), r.sansCode);
+  vrai(/terminal, ligne n° 1 : lot inconnu « S99 »/.test(r.lot), r.lot);
+  vrai(/la ligne M01 existe déjà/.test(r.double), r.double);
+  vrai(/terminal, jalon compte-M01 : ligne inconnue \(M07\)/.test(r.jalon), r.jalon);
+  vrai(/le terminal ne sert qu’au comptage/.test(r.rangement), r.rangement);
 });
 
 await v('Masse : aucune erreur JavaScript', async () => { egal(erreursM, []); });
