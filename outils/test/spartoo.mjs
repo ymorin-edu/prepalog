@@ -819,13 +819,13 @@ await v('Spartoo : base d’avant la refonte → 1.2 fermée, 1.1 repart de zér
 
 // ---------- 41 bis. ENT-1.1 : note pondérée sur 20 (lot 4 de la notation, poids validés par Tristan le 10/10/2026). Table écrite
 // à la main ; ENT-1.1 n'est plus en « avancement » ; ses lignes de bandeau restent une par jalon (aucun regroupement).
-await v('Spartoo réception : poids (8 jalons, total 20), plus d’avancement, une ligne de bandeau par jalon', async () => {
+await v('Spartoo réception : poids (10 jalons, total 20), plus d’avancement, une ligne de bandeau par jalon', async () => {
   const r = await page.evaluate(async () => {
     const S = await import('/contenus/spartoo-reception.js');
     const A = await import('/activites/spartoo-reception.js');
     return { poids: S.ETAPES.map((e) => [e.id, e.poids]), groupes: S.ETAPES.map((e) => e.groupe === undefined ? null : e.groupe), bareme: A.meta.bareme, notation: A.meta.notation || null };
   });
-  const attendu = [['procedure', 2], ['comptage', 2.5], ['decision', 3], ['reserves-bl', 3.5], ['signature', 1], ['controle', 3], ['entree', 2.5], ['reserve', 2.5]];
+  const attendu = [['procedure', 2], ['comptage', 2.5], ['decision', 3], ['reserves-bl', 3.5], ['signature', 1], ['controle', 3], ['entree', 2.5], ['reserve-lot', 0.5], ['reserve-manque', 1], ['reserve-casse', 1]];
   if (JSON.stringify(r.poids) !== JSON.stringify(attendu)) throw new Error('poids : ' + JSON.stringify(r.poids));
   if (attendu.reduce((a, x) => a + x[1], 0) !== 20) throw new Error('somme ≠ 20');
   if (r.bareme !== 20 || r.notation) throw new Error('bareme ' + r.bareme + ', notation ' + r.notation);
@@ -838,7 +838,7 @@ await v('Spartoo réception : « un carton » ou « un colis » en lettres est a
   const r = await page.evaluate(async () => {
     const S = await import('/contenus/spartoo-reception.js');
     const SP = await import('/contenus/spartoo.js');
-    const reserve = S.ETAPES.find((e) => e.id === 'reserve');
+    const reserve = S.ETAPES.find((e) => e.id === 'reserve-manque');
     const juge = (texte) => reserve.verifier({ mails: [{ folder: 'out', toMail: SP.SUP_BY_ID.F003.email, text: texte, ts: 1 }] }, SP).status;
     const debut = 'Bonjour, lot LOT-PM-2609. PM-RSX-BL-42 : colis endommagé. ';
     return {
@@ -855,6 +855,36 @@ await v('Spartoo réception : « un carton » ou « un colis » en lettres est a
   });
   const attendu = { lettres: 'ok', majuscule: 'ok', chiffre: 'ok', paires: 'ok', deux: 'ko', colis: 'ok', paquet: 'ko', deuxColis: 'ko', sansReference: 'ko' };
   if (JSON.stringify(r) !== JSON.stringify(attendu)) throw new Error('réserves à Puma : ' + JSON.stringify(r));
+});
+
+// ---------- 41 ter bis. ENT-1.1 : le mail à Puma se note critère par critère, plus « les trois ou rien » (11/10/2026).
+// Les trois mails sont ceux de vrais élèves du 08 et 09/10/2026 (recopiés sans nom) ; points écrits à la main : lot 0,5, manquant 1, abîmé 1.
+await v('Spartoo réception : mail à Puma noté critère par critère (lot 0,5 · manquant 1 · abîmé 1)', async () => {
+  const r = await page.evaluate(async () => {
+    const S = await import('/contenus/spartoo-reception.js');
+    const SP = await import('/contenus/spartoo.js');
+    const ids = ['reserve-lot', 'reserve-manque', 'reserve-casse'];
+    const note = (texte) => {
+      const db = { mails: texte == null ? [] : [{ folder: 'out', toMail: SP.SUP_BY_ID.F003.email, text: texte, ts: 1 }] };
+      const et = S.ETAPES.filter((e) => ids.includes(e.id));
+      return { statuts: et.map((e) => e.verifier(db, SP).status), points: et.filter((e) => e.verifier(db, SP).status === 'ok').reduce((t, e) => t + e.poids, 0) };
+    };
+    return {
+      parfait: note('Lot LOT-PM-2609 : il manque 1 carton de PM-SUE-MA-41 et PM-RSX-BL-42 est endommagé.'),
+      fauteDansLeLot: note('Sur le LOT-BM-2609, il manque un carton qui est égale à 6 paires de la référence PM-SUE-MA-41. Un colis endommagé : PM-RSX-BL-42.'),
+      referencesInversees: note('Commande LOT-PM-2609 : PM-SUE-RG-39 carton endommagé et PM-RSX-BL-42 1 carton manquant.'),
+      sansAbime: note('Pour le lot "LOT-PM-2609" j\'ai reçu 3 colis sur 4 pour la réf "PM-SUE-MA-41".'),
+      aucunMail: note(null),
+    };
+  });
+  const attendu = {
+    parfait: { statuts: ['ok', 'ok', 'ok'], points: 2.5 },
+    fauteDansLeLot: { statuts: ['ko', 'ok', 'ok'], points: 2 },
+    referencesInversees: { statuts: ['ok', 'ko', 'ok'], points: 1.5 },   // RSX-BL-42 est citée : le contrôle de l'abîmé ne regarde que la référence
+    sansAbime: { statuts: ['ok', 'ko', 'ko'], points: 0.5 },
+    aucunMail: { statuts: ['attente', 'attente', 'attente'], points: 0 },
+  };
+  if (JSON.stringify(r) !== JSON.stringify(attendu)) throw new Error('mail à Puma : ' + JSON.stringify(r));
 });
 
 // ---------- 41 quater. ENT-1.2 et ENT-1.3 : note pondérée sur 20 (poids validés par Tristan le 11/10/2026, suite du lot 4).

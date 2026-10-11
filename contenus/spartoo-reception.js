@@ -2,7 +2,7 @@
 //
 // L'univers (catalogue, fournisseurs, clients, thème) est celui de `spartoo.js` : on ne le duplique pas. Ce
 // fichier porte ce qui appartient à la séance : ses messages, le questionnaire de la procédure, le quai (le
-// camion, la palette), les réceptions de la liste, la marche à suivre de l'accueil, et ses huit jalons.
+// camion, la palette), les réceptions de la liste, la marche à suivre de l'accueil, et ses dix jalons.
 //
 // Le déroulé, dans l'ordre réel : lire la procédure (questionnaire : le quai s'ouvre à l'envoi) ; au quai, le
 // chauffeur remet le BL, l'élève compte la palette, écrit ses réserves AU TRANSPORTEUR sur le BL et fait
@@ -28,7 +28,7 @@ export const LOT = 'LOT-PM-2609';
 export const BL = 'BL-77421';
 export const COMMANDE = 'CF-20261003';
 export const PAIRES_PAR_CARTON = 6;
-// Le manquant peut s'écrire « un carton » : les nombres en toutes lettres que le jalon `reserve` reconnaît (majuscules).
+// Le manquant peut s'écrire « un carton » : les nombres en toutes lettres que les jalons `reserve-*` reconnaît (majuscules).
 const MOTS_NOMBRE = ['ZERO', 'UN', 'DEUX', 'TROIS', 'QUATRE', 'CINQ', 'SIX'];
 // Le piège (brief §6.4) : même fournisseur, BL aux chiffres inversés, saisissable. Rien sur le quai pour lui.
 export const REC_PIEGE = 'REC-04129';
@@ -254,6 +254,53 @@ const palQuai = (db) => { const e = etatQuai(db); return (e && e.palettes && e.p
 const statut = (ok, essaye, detail) => (ok ? { status: 'ok' } : essaye ? { status: 'ko', detail } : { status: 'attente' });
 const piegeValide = (db) => { const r = (db.receptions || []).find((x) => x.no === REC_PIEGE); return !!(r && r.ctrl && r.ctrl.validated); };
 
+// Les réserves signalées à Puma, jugées critère par critère (11/10/2026, demande de Tristan : on ne note plus « les trois
+// ou rien ») : le numéro de lot, le manquant, le colis abîmé. Comme pour le reste, un critère est juste dès qu'un des mails
+// envoyés à Puma le remplit : un élève qui se reprend n'est pas puni pour son premier jet.
+const jugerReserves = (db, U) => {
+  const sup = U.SUP_BY_ID.F003;
+  if (!sup) return { status: 'na' };
+  const mails = (db.mails || []).filter((m) => m.folder === 'out' && nrm(m.toMail) === nrm(sup.email))
+    .sort((a, b) => a.ts - b.ts);
+  if (!mails.length) return { status: 'attente' };
+  const att = attendu();
+  const manque = att.filter((a) => a.compte < a.annonce);
+  const casse = att.filter((a) => a.etat === 'abime');
+  return {
+    evals: mails.map((msg) => {
+      const t = String(msg.text || '').toUpperCase();
+      return {
+        lot: t.includes(LOT),
+        // Le manquant écrit en chiffres (la trame le dit) : en paires (« 6 ») ou en cartons (« 1 carton »), et depuis le
+        // 11/10/2026 « un carton » ou « un colis » en toutes lettres (la plupart des élèves l'écrivaient ainsi : le jalon
+        // les comptait faux).
+        manque: manque.every((a) => {
+          const paires = a.annonce - a.compte, cartons = paires / PAIRES_PAR_CARTON;
+          return t.includes(a.sku) && (new RegExp(`\\b${paires}\\b`).test(t) || new RegExp(`\\b(${cartons}|${MOTS_NOMBRE[cartons] || cartons})\\s+(CARTON|COLIS)`).test(t));
+        }),
+        casse: casse.every((a) => t.includes(a.sku)),
+        texte: {
+          lot: `Numéro de lot ${LOT} : `,
+          manque: `Manquant ${manque.map((a) => `${a.sku} (${a.annonce - a.compte} paires, ${(a.annonce - a.compte) / PAIRES_PAR_CARTON} carton)`).join(', ') || '—'} : `,
+          casse: `Colis endommagé ${casse.map((a) => a.sku).join(', ') || '—'} : `,
+        },
+        mots: { lot: ['présent', 'absent'], manque: ['signalé', 'incomplet'], casse: ['signalé', 'non signalé'] },
+        entete: `Message envoyé le ${new Date(msg.ts).toLocaleString('fr-FR')} à ${sup.brand}.\n`,
+        ts: msg.ts,
+      };
+    }),
+  };
+};
+const jalonReserve = (cle, titre) => ({
+  id: `reserve-${cle}`, titre,
+  verifier(db, U) {
+    const j = jugerReserves(db, U);
+    if (j.status) return { status: j.status };
+    const best = j.evals.find((e) => e[cle]) || j.evals[j.evals.length - 1];
+    return { status: best[cle] ? 'ok' : 'ko', detail: best.entete + best.texte[cle] + best.mots[cle][best[cle] ? 0 : 1], ts: best.ts };
+  },
+});
+
 const JALONS = [
   {
     id: 'procedure',
@@ -345,40 +392,9 @@ const JALONS = [
       return { status: tout ? 'ok' : 'ko', detail, ts: r.ctrl.at };
     },
   },
-  {
-    id: 'reserve',
-    titre: 'Réserves signalées à Puma',
-    verifier(db, U) {
-      const sup = U.SUP_BY_ID.F003;
-      if (!sup) return { status: 'na' };
-      const mails = (db.mails || []).filter((m) => m.folder === 'out' && nrm(m.toMail) === nrm(sup.email))
-        .sort((a, b) => a.ts - b.ts);
-      if (!mails.length) return { status: 'attente' };
-      const att = attendu();
-      const manque = att.filter((a) => a.compte < a.annonce);
-      const casse = att.filter((a) => a.etat === 'abime');
-
-      const juger = (msg) => {
-        const t = String(msg.text || '').toUpperCase();
-        const aLot = t.includes(LOT);
-        // Le manquant écrit en chiffres (la trame le dit) : en paires (« 6 ») ou en cartons (« 1 carton »).
-        const aManque = manque.every((a) => {
-          const paires = a.annonce - a.compte, cartons = paires / PAIRES_PAR_CARTON;
-          return t.includes(a.sku) && (new RegExp(`\\b${paires}\\b`).test(t) || new RegExp(`\\b(${cartons}|${MOTS_NOMBRE[cartons] || cartons})\\s+(CARTON|COLIS)`).test(t));
-        });
-        const aCasse = casse.every((a) => t.includes(a.sku));
-        const ok = aLot && aManque && aCasse;
-        const detail = `Message envoyé le ${new Date(msg.ts).toLocaleString('fr-FR')} à ${sup.brand}.\n`
-          + `Numéro de lot ${LOT} : ${aLot ? 'présent' : 'absent'}\n`
-          + `Manquant ${manque.map((a) => `${a.sku} (${a.annonce - a.compte} paires, ${(a.annonce - a.compte) / PAIRES_PAR_CARTON} carton)`).join(', ') || '—'} : ${aManque ? 'signalé' : 'incomplet'}\n`
-          + `Colis endommagé ${casse.map((a) => a.sku).join(', ') || '—'} : ${aCasse ? 'signalé' : 'non signalé'}`;
-        return { ok, detail, ts: msg.ts };
-      };
-      const evals = mails.map(juger);
-      const best = evals.find((e) => e.ok) || evals[evals.length - 1];
-      return { status: best.ok ? 'ok' : 'ko', detail: best.detail, ts: best.ts };
-    },
-  },
+  jalonReserve('lot', 'Réserves à Puma : numéro de lot'),
+  jalonReserve('manque', 'Réserves à Puma : manquant signalé'),
+  jalonReserve('casse', 'Réserves à Puma : colis abîmé signalé'),
 ];
 
 // NOTE PONDÉRÉE SUR 20 (poids validés par Tristan le 10/10/2026, lot 4 de `docs/briefs/NOTATION-ponderation.md`). Le cœur : la décision sur la palette, les réserves précises et le contrôle du bon de réception (piège REC-04129). Une ligne de bandeau par jalon : leurs titres sont déjà validés.
@@ -390,6 +406,8 @@ export const BAREME = {
   signature: [1],
   controle: [3],
   entree: [2.5],
-  reserve: [2.5],
+  'reserve-lot': [0.5],
+  'reserve-manque': [1],
+  'reserve-casse': [1],
 };
 export const ETAPES = ponderer(JALONS, BAREME, 'ENT-1.1');

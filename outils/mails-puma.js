@@ -9,7 +9,7 @@ import * as S from '../contenus/spartoo-reception.js';
 const $ = (id) => document.getElementById(id);
 const ech = (t) => String(t == null ? '' : t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const etat = (t) => { $('etat').textContent = t; };
-const reserve = S.ETAPES.find((e) => e.id === 'reserve');
+const criteres = S.ETAPES.filter((e) => e.id.startsWith('reserve-'));   // lot, manquant, colis abîmé : un jalon chacun
 const adressePuma = SP.SUP_BY_ID.F003.email;
 
 let B = null, prof = null;
@@ -34,12 +34,11 @@ $('connexion').addEventListener('click', async () => {
   try { etat('Connexion…'); prof = await B.connexionProf(); await apresConnexion(); } catch (e) { etat('Connexion refusée : ' + (e.message || e)); }
 });
 
-// Le verdict du jalon sur CE mail seul, ligne par ligne (le détail du jalon : lot, manquant, casse).
-function jugerMail(mail) {
-  try {
-    const r = reserve.verifier({ mails: [mail] }, SP);
-    return { ok: r.status === 'ok', lignes: String(r.detail || '').split('\n').slice(1) };
-  } catch (e) { return { ok: false, lignes: ['Erreur de lecture : ' + e.message] }; }
+// Le verdict des trois jalons sur des mails donnés, critère par critère, avec les points gagnés.
+function jugerMails(mails) {
+  const db = { mails };
+  const r = criteres.map((e) => { const x = e.verifier(db, SP); return { ok: x.status === 'ok', poids: e.poids, ligne: String(x.detail || '').split('\n').pop() }; });
+  return { lignes: r.map((x) => (x.ok ? '✓ ' : '✗ ') + x.ligne + ' (' + (x.ok ? x.poids : 0) + ' / ' + x.poids + ')'), points: r.reduce((n, x) => n + (x.ok ? x.poids : 0), 0), sur: r.reduce((n, x) => n + x.poids, 0) };
 }
 
 $('lire').addEventListener('click', async () => {
@@ -64,14 +63,13 @@ $('lire').addEventListener('click', async () => {
           + (autres.length ? `<div>Autres mails envoyés : ${autres.map((m) => ech(m.toMail || m.to || '?') + ' — ' + ech(m.subject || '')).join(' · ')}</div>` : '') + '</div>');
         continue;
       }
-      const global = reserve.verifier({ mails: aPuma }, SP);
-      if (global.status === 'ok') justes += 1; else faux += 1;
-      liste.insertAdjacentHTML('beforeend', `<div class="carte"><h2>${nom} — <span class="${global.status === 'ok' ? 'ok' : 'ko'}">${global.status === 'ok' ? 'jalon juste' : 'jalon faux'}</span></h2>`
-        + aPuma.map((m) => { const j = jugerMail(m);
-          return `<div class="gris">Envoyé le ${ech(new Date(m.ts).toLocaleString('fr-FR'))} — objet : ${ech(m.subject || '')}</div><pre>${ech(m.text || '')}</pre>`
-            + `<ul class="criteres">${j.lignes.map((l) => `<li>${ech(l)}</li>`).join('')}</ul>`; }).join('') + '</div>');
+      const global = jugerMails(aPuma);
+      if (global.points === global.sur) justes += 1; else faux += 1;
+      liste.insertAdjacentHTML('beforeend', `<div class="carte"><h2>${nom} — <span class="${global.points === global.sur ? 'ok' : 'ko'}">${global.points} / ${global.sur}</span></h2>`
+        + aPuma.map((m) => `<div class="gris">Envoyé le ${ech(new Date(m.ts).toLocaleString('fr-FR'))} — objet : ${ech(m.subject || '')}</div><pre>${ech(m.text || '')}</pre>`).join('')
+        + `<ul class="criteres">${global.lignes.map((l) => `<li>${ech(l)}</li>`).join('')}</ul></div>`);
     }
-    etat(`${eleves.length} élève(s) : ${justes} juste(s), ${faux} faux, ${sans} sans mail à Puma.`);
+    etat(`${eleves.length} élève(s) : ${justes} avec 2,5 / 2,5, ${faux} avec des points perdus, ${sans} sans mail à Puma.`);
   } catch (e) { etat('Lecture impossible : ' + (e.message || e)); }
 });
 

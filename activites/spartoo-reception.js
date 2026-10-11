@@ -33,7 +33,7 @@ const s = seanceEntreprise(SPARTOO, SEANCE, {
   parcours: true,
   // Plus d'élève bloqué en fin de séance (08/10/2026, décision de Tristan après la classe) : le bon de réception
   // ne se modifie plus une fois validé, mais le bandeau disait « à corriger » et ENT-1.2 restait fermée. Comme
-  // pour Smoby 5.3 à 5.6, la suite s'ouvre dès que les 8 jalons sont jugés, justes ou faux ; le bandeau nomme
+  // pour Smoby 5.3 à 5.6, la suite s'ouvre dès que les 10 jalons sont jugés, justes ou faux ; le bandeau nomme
   // ce qui est faux, le détail reste à l'enseignant (Suivi). ENT-1.2 s'adapte au stock réel de l'élève.
   suiteAuBilan: true,
   // Refonte du 06/10/2026 (brief ENT-1.1-spartoo-quai §7.4, décision de Tristan) : toute base Spartoo d'une
