@@ -7,7 +7,6 @@ est déjà modifié ou inscrit ci-dessous, **elle s'arrête et le dit à Tristan
 
 | Chantier | Fichiers qu'il touche | Depuis |
 |---|---|---|
-| ENT-6.5 France Boissons, ranger les fûts (séance) | activites/france-boissons-rangement.js, activites/index.js, contenus/france-boissons-ent65.js, contenus/questions/ENT-6.5.js, contenus/corriges/ENT-6.5.js, outils/test/france-boissons.mjs, docs/briefs/ENT-6.5-france-boissons-rangement.md | 11/10/2026 |
 
 Rappel : un seul chantier à la fois dans `core/types/tournee.js`, `core/types/grille.js`,
 `core/types/entreprise.js`, `styles/base.css` et `outils/test/boost.mjs` (voir `docs/briefs/COORDINATION-boost.md`).

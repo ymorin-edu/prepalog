@@ -6,7 +6,7 @@
 > Lis docs/briefs/ENT-6.5-france-boissons-rangement.md. Commence par l'état des lieux des demandes au moteur du §7 (lecture seule) : dis-moi ce qui existe déjà dans la vue Plan d'entrepôt et dans la fiche à remplir, et propose un découpage en lots. N'implémente la séance qu'une fois les demandes livrées. Annonce la durée avant de commencer et dis-moi si un point du brief contredit le code.
 > ```
 
-**Statut** : à implémenter *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
+**Statut** : à valider par Tristan *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
 **Date du brief** : 05/10/2026
 **Conversation d'origine** : Cowork (Opus) ; fiches projet `claude/prepalog-2de-s2-deroule.md` (décisions 31 à 37),
 `claude/prepalog-reprise-6.5.md` et `claude/prepalog-materiel-decouverte.md`. Modèle : **ENT-5.5 Smoby**
@@ -210,22 +210,30 @@ Une ligne de stock **par référence** ; P1 à P4 portent chacune une référenc
 Mots cliquables : FIFO, lot, stockage de masse, couloir, gerber, hauteur de gerbage, palette de rétention, chariot frontal, zone
 litiges, entrée en stock.
 
-## 4 bis. Questions au fil — À PROPOSER À TRISTAN AVANT DE CONSTRUIRE (règle du 10/10/2026)
+## 4 bis. Questions au fil — TRANCHÉ (Tristan, 10/10 puis 11/10/2026)
 
-Ce brief a été écrit avant la règle. **Avant d'écrire la moindre ligne de la séance**, Claude Code (ou Cowork) propose à
-Tristan le tableau de `docs/briefs/MODELE.md` §4 bis : au moins 4 gestes de travail où une question peut arriver, dont une
-d'éco-droit appliquée au cas ; jamais une question qui donne d'avance la réponse d'un jalon (sinon corrigée au bilan).
-Tristan en garde 2 à 4 ; la part des questions notées (3 à 5 points sur 20) se prend sur les jalons, et le barème du §5
-est revu en conséquence (pondération sur 20 : `docs/briefs/NOTATION-ponderation.md`, lot 2). Les pistes « Pour réfléchir »
-du §9 sont une bonne source de questions.
+Propositions de Cowork (`docs/briefs/france-boissons/PROPOSITIONS-questions-au-fil.md`, « tout gardé » le 10/10), puis le 11/10 :
+**la n° 2 (charges lourdes, R4541-3) est retirée** — doublon avec `manutention-meca` de la banque, et le geste « poser » ne dit
+pas quelle palette. Énoncés fixes (le moteur n'accepte pas de « {sa palette} »). Total des questions notées : **3 points**.
 
-### 4 ter. Avant de commencer — À PROPOSER AUSSI
+| Geste | Qui | Question | Notée | Correction |
+|---|---|---|---|---|
+| 1re palette posée (`entrepot:fb-ent65-masse:poser`) | Nadia | « Tu viens de poser ta première palette. Qu'as-tu vérifié avant de choisir sa place ? » (référence · lot · hauteur · rien de spécial) | réflexion | au bilan |
+| Fûts entrés de P3 saisis (`fiche:entree-stock:P3-futs`) | Nadia | « Tu as noté les fûts entrés pour la palette P3. D'où vient ce nombre ? » — **des fûts vraiment arrivés** · du BL · d'une palette pleine | 1,5 | au bilan |
+| Lot de P1 choisi (`fiche:entree-stock:P1-lot`) | Thomas | « À quoi servira ce numéro ? » (règlement 178/2002, art. 18, cité) — **faire partir le plus ancien, retrouver les fûts en cas de rappel** · le prix · à rien | 1,5 | tout de suite |
 
-Banque de questions de l'écran d'ouverture (`docs/briefs/MOTEUR-avant-de-commencer.md`, `MODELE.md` §4 ter) :
-préparation de l'exercice, 2 ou 3 d'économie-droit appliquées au cas, images si la séance fait découvrir un matériel ;
-au moins le double de ce qu'on tire ; validée par Tristan avant construction. Modèle : la banque d'ENT-6.2.
+### 4 ter. Avant de commencer — TRANCHÉ (Tristan, 10/10/2026)
 
-## 5. Jalons / notation (10, validés par Tristan le 05/10)
+La banque de Cowork (`docs/briefs/france-boissons/BANQUE-avant-de-commencer.md`, ENT-6.5), gardée entière : préparation
+`masse-cest-quoi`, `gerber`, `lot-ancien` (tiré), `stock-apres` (tiré) ; droit `ddm-biere` (1169/2011), `manutention-meca` (R4541-3),
+`securite-collegue` (L4122-1), `sol-glissant` (L4121-1) ; image `palette-retention`, `racks-ou-sol`. Tirage 2 + 2 + 1, non notées,
+calculette. Documents à gauche : « Mots de la zone de masse » (vocabulaire, aucune règle de rangement), « Photos et dessins », « Le droit ».
+
+## 5. Jalons / notation (10, validés par Tristan le 05/10 ; **pondérés sur 20 le 11/10/2026**)
+
+**Poids validés par Tristan le 11/10/2026** : jalons 17 + questions 3 = 20. Comprendre le FIFO 3,5 (jalon 1 : 1,5, jalon 2 : 2) ·
+rangement 8,5 (P1 2,5, P2 2,5, P3 1,5, P4 2) · entrée en stock 5 (P1 1, P2 1,5, P3 1,5, P4 1) · questions au fil 3 (1,5 + 1,5).
+C1.5 = 12, C1.6 = 8 (la compétence « C1.6.1 » n'existe pas dans le site : C1.6). Forme 0 %, aucun jalon à 0.
 
 | # | Jalon | Ce qu'il lit | Piège à éviter |
 |---|---|---|---|
@@ -337,15 +345,31 @@ aide sur un écran de lycée ; un élève de 2de finit en 50 min ; le bilan ne d
 - [x] 10 jalons ; une seule question « Pour réfléchir » (Tristan, 05/10).
 - [x] Mode masse dans la vue Plan d'entrepôt ou vue à part (défaut : mode de la vue existante) → mode `masse` de la vue, dans son fichier (D-5, 11/10/2026).
 - [x] Animation à questions : **vue à part, réutilisable** (Tristan, 05/10) → brief moteur `docs/briefs/MOTEUR-vue-animation.md` (kit iso qui grandit ; **livrée le 05/10**, à réutiliser par le mode masse et par cette séance).
-- [ ] Dessins des écrans matériel (défaut : Cowork les fournit avant l'implémentation de la séance).
+- [x] Dessins des écrans matériel → fournis par Cowork, dans `contenus/images/france-boissons/` (D-5).
+- [x] P2 et P4 dans un couloir vide (M02, M06) : **justes**, aucune règle de plus (Tristan, 11/10/2026).
+- [x] Écrans matériel : **une entrée « Le matériel » à part** dans le menu, avant « Comprendre le FIFO » (Tristan, 11/10/2026).
 
 ---
 
 ## Compte rendu *(rempli par Claude Code à la livraison)*
 
-- **Fichiers créés / modifiés** :
-- **Écarts par rapport au brief** (et pourquoi) :
-- **Décisions prises en route** :
-- **Tests** :
-- **Commits** :
-- **Reste ouvert** :
+*(11/10/2026, Claude Code, Opus)*
+
+- **Fichiers créés / modifiés** : `activites/france-boissons-rangement.js` (+ une ligne dans `activites/index.js`),
+  `contenus/france-boissons-ent65.js` (fiche, messages, documents, jalons) et `contenus/france-boissons-ent65-donnees.js` (matériel, FIFO et son animation, zone de masse, palettes, poids : à part pour que le corrigé se charge hors navigateur),
+  `contenus/questions/ENT-6.5.js`, `contenus/corriges/ENT-6.5.js`, bloc de tests `outils/test/france-boissons.mjs` (section ENT-6.5,
+  cas ENT-6.5 du bloc). **Moteur (accord de Tristan)** : `core/types/entreprise.js` et `core/types/entrepot-masse.js`, deux lignes — après
+  « Valider mon rangement », tout l'écran est redessiné, menu compris (`api.redessinerTout`), pour que « Entrée en stock » apparaisse
+  tout de suite.
+- **Écarts par rapport au brief** (et pourquoi) : note sur 20 pondérée au lieu de 10 jalons à 1 point (règle du 10/10, poids validés) ;
+  C1.6 au lieu de « C1.6.1 » (n'existe pas dans le site) ; une ligne de la fiche = un cadre par palette (pas de brique « lignes » au
+  moteur) ; un document « Mots de la zone de masse » en plus (document à gauche des questions de préparation de l'ouverture).
+- **Décisions prises en route** : voir `docs/decisions.md` du 11/10/2026 (ENT-6.5). Le stock de départ, les palettes (référence lue,
+  fûts bons) et les attendus de la fiche sont calculés depuis l'univers et ENT-6.4 ; un test vérifie l'accord du plan avec le stock.
+- **Tests** : bloc `france-boissons` 136/136, suite entière 1213/1213 ; deux sabotages éprouvés (menu non redessiné : 14 cas tombent ; couloir non comparé : le cas « couloir saisi ≠ posé » tombe seul). Parcours juste 20/20 (animation jouée pour de vrai), variante juste, P2/P4 en couloir
+  vide, inaction 0, Q1 et Q2 fausses, sept pièges de rangement (critère nommé, pas de double peine sur la fiche), quatre pièges de
+  fiche, lot et stock avant non notés, fiche non envoyée, questions au fil fausses (17/20), banque sur 300 graines, textes de loi,
+  corrigé, contresens « premier posé, premier sorti ». Gestes impossibles : déjà au bloc `entrepot`.
+- **Commits** : voir l'historique (« ENT-6.5 : … »).
+- **Reste ouvert** : relire sur Légifrance R4541-3, L4122-1, L4121-1 (relus sur code.travail.gouv.fr) ; trame élève (Cowork, après
+  l'essai à l'écran) ; à juger par Tristan : la séance tient-elle en 50 min, la 3D se lit-elle sur un écran du lycée.
