@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Outil — Mails à Puma (ENT-1.1)</title>
+<!-- OUTIL ENSEIGNANT, en LECTURE SEULE : affiche, pour un groupe, le mail que chaque élève a écrit à Puma à la fin
+     d'ENT-1.1 et ce que le jalon « Réserves signalées à Puma » en pense, critère par critère. Rien n'est écrit dans la
+     base ; rien n'est rangé dans le navigateur. Il lit le VRAI projet (prepalog-config.json) : se connecter avec son compte
+     enseignant Google. Aucun élève ne peut ouvrir cette page utilement (les règles réservent la lecture à l'enseignant).
+     Ouvrir avec `lancer.bat`, puis http://localhost:8000/outils/mails-puma.html -->
+<base href="../">
+<link rel="icon" href="./styles/logo.png">
+<link rel="stylesheet" href="./styles/polices.css">
+<link rel="stylesheet" href="./styles/base.css">
+<style>
+  body { margin: 0; padding: 24px; max-width: 980px; }
+  h1 { font-size: 1.3rem; margin: 0 0 4px; }
+  .note { color: var(--encre-2, inherit); opacity: .8; margin: 0 0 16px; }
+  .barre { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 12px 0 18px; }
+  .carte { border: 1px solid var(--bord, rgba(128,128,128,.4)); border-radius: 10px; padding: 12px 14px; margin: 0 0 12px; background: var(--panneau, transparent); }
+  .carte h2 { font-size: 1rem; margin: 0 0 6px; }
+  .carte pre { white-space: pre-wrap; margin: 6px 0; font: inherit; padding: 8px 10px; border-left: 3px solid rgba(128,128,128,.5); }
+  .ok { color: var(--vert, #2e7d32); font-weight: 600; }
+  .ko { color: #b3261e; font-weight: 600; }
+  .gris { opacity: .75; }
+  .criteres { margin: 4px 0 0; padding-left: 18px; }
+</style>
+</head>
+<body>
+<h1>Mails à Puma — ENT-1.1</h1>
+<p class="note">Lecture seule. Le projet lu est celui des élèves : rien n'est modifié.</p>
+<div class="barre">
+  <button class="btn" id="connexion" type="button">Me connecter (compte enseignant)</button>
+  <select id="groupe" hidden></select>
+  <button class="btn" id="lire" type="button" hidden>Lire les mails</button>
+  <span id="etat" class="gris"></span>
+</div>
+<div id="liste"></div>
+<script type="module" src="./outils/mails-puma.js"></script>
+</body>
+</html>
