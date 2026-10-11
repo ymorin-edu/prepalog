@@ -10,6 +10,27 @@
 export const MENTION = 'Contenu d’essai : la maquette d’animation d’ENT-6.5 rejouée par la vue du moteur. '
   + 'Dessin et scénario construits. Sans son.';
 
+// Les écrans de présentation (chantier D-5) : textes du brief ENT-6.5 §4 (étape 0 « le matériel du poste », puis le mot
+// FIFO expliqué), dessins de Cowork. Pour la page d'essai : un écran « Le matériel » seul, et l'animation précédée du mot.
+const IMG = './contenus/images/france-boissons/';
+export const ECRANS_MATERIEL = [
+  { titre: 'Le chariot frontal',
+    image: { src: IMG + 'materiel-chariot-frontal.svg', alt: 'Un chariot élévateur frontal pose une palette de fûts sur une autre palette', mention: 'Dessin — document pédagogique' },
+    blocs: ['Le chariot frontal porte la palette devant lui, sur ses fourches. Il peut la lever pour <b>gerber</b> : poser une palette sur une autre.',
+      'Pour le conduire, il faut une <b>autorisation de conduite</b> de l’employeur, après une formation comme le <b>CACES R489 catégorie 3</b>.',
+      'Sécurité : on roule <b>fourches baissées</b>, et on ne passe jamais sous une charge levée.'] },
+  { titre: 'La palette de rétention',
+    image: { src: IMG + 'materiel-palette-retention.svg', alt: 'Une palette de rétention noire portant 8 fûts ; un fût fuit et la bière coule dans le bac' },
+    blocs: ['Ici, chaque palette de fûts est posée sur une <b>palette de rétention</b> : un bac en plastique couvert d’une grille.',
+      'Si un fût fuit, la bière coule dans le bac, pas sur le sol : personne ne glisse.',
+      'Dans les entrepôts, on s’en sert surtout pour les produits dangereux. Ici, c’est un choix de l’exercice.'] },
+];
+export const ECRAN_FIFO = { titre: 'FIFO, le mot expliqué',
+  blocs: ['<b>FIFO</b> veut dire <i>First In, First Out</i> : <b>premier entré, premier sorti</b>.',
+    'On fait sortir d’abord le <b>lot</b> le plus ancien (un lot = les fûts fabriqués la même semaine : S20 est plus ancien que S24).',
+    'Regarde ce qui se passe quand on range mal.'] };
+export const MATERIEL_ESSAI = { id: 'essai-materiel', libelle: 'Le matériel', ecrans: ECRANS_MATERIEL, parties: [] };
+
 export const ANIMATION_ESSAI = {
   id: 'essai-fifo',
   libelle: 'Comprendre le FIFO',

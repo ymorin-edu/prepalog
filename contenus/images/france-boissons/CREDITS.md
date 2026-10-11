@@ -45,6 +45,8 @@ Total : 2 371 559 octets (environ 2,3 Mo).
 | Fichier | Auteur | Séance | Mention | Retouche faite | SHA-256 |
 |---|---|---|---|---|---|
 | `materiel-chariot-frontal.svg` | dessin de Cowork pour Prepalog (aucune marque, aucune personne) | ENT-6.4 (« Avant de commencer », question sur le chariot frontal) | Dessin — document pédagogique | aucune : copie octet pour octet de `docs/briefs/france-boissons/materiel-chariot-frontal.svg` | `1ce690faea3cafa449a0f781d1b6cf81a47da0fc09b8fb31f9c317c405476797` |
+| `materiel-palette-retention.svg` | dessin de Cowork pour Prepalog (aucune marque, aucune personne) | ENT-6.5 (écran « le matériel du poste ») ; page d'essai de l'animation (chantier D-5) | Dessin — exercice : 8 fûts sur une palette de rétention (mention dans le dessin) | aucune : copie octet pour octet de `docs/briefs/france-boissons/materiel-palette-retention.svg` (11/10/2026) | `ef6a0bdea66ca504ffcec877e9fe42dbd549c2384b05b13f9ea6718aed3e115c` |
 
-Le dessin garde son bloc de métadonnées de provenance (`c2pa`) : il n'appelle aucune adresse. Le dessin `materiel-palette-retention.svg`
-n'est jamais utilisé (il montre le fût qui fuit de la séance).
+Les deux dessins gardent leur bloc de métadonnées de provenance (`c2pa`) : ils n'appellent aucune adresse. Le dessin
+`materiel-palette-retention.svg` montre le fût qui fuit : jamais en ENT-6.4 (il donnerait la réponse de la réception), il sert à
+ENT-6.5, une fois la fuite connue.

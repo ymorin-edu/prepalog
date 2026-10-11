@@ -5,11 +5,13 @@
 // `animation` : un autre contenu (les tests y passent une copie accélérée ou volontairement fautive).
 
 import { catalogueSimple } from '../contenus/entreprise-commun.js';
-import { ANIMATION_ESSAI } from '../contenus/animation-essai.js';
+import { ANIMATION_ESSAI, MATERIEL_ESSAI, ECRAN_FIFO } from '../contenus/animation-essai.js';
 import { etapesAnimation } from '../core/types/animation.js';
 
-export function univers({ animation = ANIMATION_ESSAI, animations = null, kpis = null } = {}) {
-  const liste = animations || [animation];
+// `ecrans` : la séance d'ENT-6.5 telle qu'elle pourrait se déclarer (chantier D-5) — un écran « Le matériel » (écrans de
+// présentation seuls), puis l'animation précédée du mot FIFO expliqué.
+export function univers({ animation = ANIMATION_ESSAI, animations = null, kpis = null, ecrans = false } = {}) {
+  const liste = animations || (ecrans ? [MATERIEL_ESSAI, Object.assign({}, animation, { ecrans: [ECRAN_FIFO], libelleEcrans: 'Revoir le mot FIFO' })] : [animation]);
   return {
     ENTREPRISE: { id: 'essai-animation', nom: 'France Boissons — essai de l’animation', sousTitre: 'Plateforme — stockage de masse',
       exercice: "Essai de l'écran Animation" },

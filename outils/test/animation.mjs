@@ -46,8 +46,10 @@ const monter = (p, o = {}) => p.evaluate(async (o) => {
     lireScore: async () => null,
   };
   if (o.hors) { creerAnimation(A).rendre(hote, ctx); return; }
-  creerEntreprise(E.univers({ animation: A })).rendre(hote, ctx);
-  document.querySelector('#anTest .ent-nav[data-vue^="animation:"]').click();
+  // `ecrans` : la séance d'ENT-6.5 avec ses écrans de présentation (« Le matériel », puis le mot FIFO avant l'animation) ;
+  // `vue` : l'écran du menu à ouvrir (le premier écran d'animation par défaut).
+  creerEntreprise(E.univers({ animation: A, ecrans: !!o.ecrans })).rendre(hote, ctx);
+  document.querySelector(`#anTest .ent-nav[data-vue${o.vue ? `="animation:${o.vue}"` : '^="animation:"'}]`).click();
 }, o);
 
 const Z = '#anTest';
@@ -331,6 +333,76 @@ await v('Animation : mouvement réduit — la partie 1 atteint sa question, les 
   egal(await p.$$eval(`${Z} [data-anim-bulle]`, (L) => L.length), 0, 'bulles effacées à la question');
   await ctxR.close();
   egal(erreursA, [], 'erreurs JS');
+});
+
+/* ============================================== écrans de présentation (chantier D-5) */
+// Textes et ordre écrits à la main d'après le brief ENT-6.5 §4 (étape 0, puis le mot FIFO expliqué).
+const ecranVu = (p) => p.$$eval(`${Z} [data-anim-ecran]`, (L) => L.filter((s) => !s.hidden).map((s) => `${Number(s.dataset.animEcran) + 1} ${s.querySelector('h2').textContent}`));
+const filmVisible = (p) => p.$eval(`${Z} [data-anim-film]`, (f) => !f.hidden).catch(() => null);
+
+await v('Écrans : « Le matériel » seul — chariot, puis palette de rétention, Précédent / Suivant, aucun jalon, vu rangé à la fin', async () => {
+  const p = pg;
+  await monter(p, { ecrans: true, vue: 'essai-materiel' });
+  egal(await ecranVu(p), ['1 Le chariot frontal'], 'premier écran');
+  vrai(/CACES R489 catégorie 3/.test(await p.textContent(`${Z} [data-anim-ecran="0"]`)), 'texte du chariot');
+  egal(await p.$eval(`${Z} [data-anim-ecran="0"] img`, (i) => i.getAttribute('src')), './contenus/images/france-boissons/materiel-chariot-frontal.svg', 'dessin du chariot');
+  vrai(!(await p.$(`${Z} [data-anim-ecran="0"] [data-anim-ecran-prec]`)), 'pas de « Précédent » au premier écran');
+  egal((await etatAnim(p, 'essai-materiel') || {}).ecransVus, undefined, 'rien de rangé au premier écran');
+  await p.click(`${Z} [data-anim-ecran="0"] [data-anim-ecran-suiv]`);
+  egal(await ecranVu(p), ['2 La palette de rétention'], 'second écran');
+  egal(await p.$eval(`${Z} [data-anim-ecran="1"] img`, (i) => i.complete && i.naturalWidth > 0), true, 'le dessin de la palette se charge');
+  vrai(!(await p.$(`${Z} [data-anim-ecran="1"] [data-anim-ecran-suiv]`)), 'le dernier écran n’a pas de « Suivant » (aucune animation après)');
+  egal((await etatAnim(p, 'essai-materiel')).ecransVus, true, 'vu jusqu’au bout');
+  await p.click(`${Z} [data-anim-ecran="1"] [data-anim-ecran-prec]`);
+  egal(await ecranVu(p), ['1 Le chariot frontal'], 'retour au premier');
+  const etapes = await p.evaluate(async () => {
+    const { etapesAnimation } = await import('/core/types/animation.js');
+    const C = await import('/contenus/animation-essai.js');
+    return etapesAnimation(C.MATERIEL_ESSAI).length;
+  });
+  egal(etapes, 0, 'aucun jalon (non noté)');
+});
+
+await v('Écrans : le mot FIFO avant l’animation — l’animation attend « Voir l’animation », puis on y revient directement ; lien pour revoir le mot', async () => {
+  const p = pg;
+  await monter(p, { ecrans: true, vue: 'essai-fifo' });
+  egal(await ecranVu(p), ['1 FIFO, le mot expliqué'], 'l’écran du mot d’abord');
+  egal(await filmVisible(p), false, 'l’animation est cachée');
+  await p.waitForTimeout(600);
+  egal(await p.$$eval(`${Z} [data-anim-bulle]`, (L) => L.length), 0, 'l’animation ne tourne pas derrière');
+  egal(await p.textContent(`${Z} [data-anim-ecran="0"] [data-anim-ecran-suiv]`), 'Voir l’animation ▶', 'bouton du dernier écran');
+  await p.click(`${Z} [data-anim-ecran="0"] [data-anim-ecran-suiv]`);
+  egal(await filmVisible(p), true, 'l’animation s’affiche');
+  await p.waitForSelector(`${Z} [data-anim-bulle]`, { timeout: 4000 });
+  const db = await base(p);
+  egal(db.animations['essai-fifo'].ecransVus, true, 'vu rangé');
+  // Revenir sur l'écran : l'animation repart directement.
+  await monter(p, { ecrans: true, vue: 'essai-fifo', db });
+  egal(await filmVisible(p), true, 'au retour : l’animation directement');
+  egal(await ecranVu(p), [], 'aucun écran de présentation affiché');
+  await p.click(`${Z} [data-anim-ecrans-revoir]`);
+  egal(await ecranVu(p), ['1 FIFO, le mot expliqué'], '« Revoir le mot FIFO » ramène l’écran');
+  egal(await filmVisible(p), false, 'et cache l’animation');
+});
+
+await v('Écrans : contenu fautif refusé (4 blocs, image d’un autre site, image sans texte, rien à montrer)', async () => {
+  const r = await pg.evaluate(async () => {
+    const { compilerAnimation } = await import('/core/types/animation.js');
+    const C = await import('/contenus/animation-essai.js');
+    const essai = (f) => { const x = JSON.parse(JSON.stringify(C.MATERIEL_ESSAI)); f(x); try { compilerAnimation(x); return ''; } catch (e) { return e.message; } };
+    return {
+      bon: essai(() => {}),
+      blocs: essai((x) => { x.ecrans[0].blocs.push('un de trop'); }),
+      dehors: essai((x) => { x.ecrans[0].image.src = '//exemple.invalid/chariot.svg'; }),
+      alt: essai((x) => { delete x.ecrans[1].image.alt; }),
+      vide: essai((x) => { x.ecrans = []; }),
+    };
+  });
+  egal(r.bon, '', 'le contenu d’essai');
+  vrai(/de 1 à 3 `blocs`/.test(r.blocs), r.blocs);
+  vrai(/doit venir du site/.test(r.dehors), r.dehors);
+  vrai(/besoin de `src` et de `alt`/.test(r.alt), r.alt);
+  vrai(/au moins une partie, ou des `ecrans`/.test(r.vide), r.vide);
 });
 
 await ctxA.close();

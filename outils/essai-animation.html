@@ -32,7 +32,7 @@
 <body>
 <form class="essai-reglages" id="reglages">
   <b>Page d'essai</b> —
-  <label>Où <select name="ou"><option value="simulog">dans une séance Simulog</option><option value="seule">hors Simulog (activité Prepalog)</option></select></label>
+  <label>Où <select name="ou"><option value="simulog">dans une séance Simulog</option><option value="ecrans">dans une séance, avec les écrans du matériel et du mot FIFO (ENT-6.5)</option><option value="seule">hors Simulog (activité Prepalog)</option></select></label>
   <label>Voir comme <select name="role"><option value="eleve">élève</option><option value="prof">enseignant</option></select></label>
   <label>Vitesse <select name="vitesse"><option value="">celle du contenu (0,8)</option><option value="4">× 5 (essai rapide)</option></select></label>
   <label><input type="checkbox" name="garder"> Garder mes réponses (recharger = les retrouver)</label>
@@ -81,7 +81,7 @@ function monter() {
     neuf.className = 'seule';
     creerAnimation(A).rendre(neuf, ctx);
   } else {
-    creerEntreprise(univers({ animation: A })).rendre(neuf, ctx);
+    creerEntreprise(univers({ animation: A, ecrans: f.get('ou') === 'ecrans' })).rendre(neuf, ctx);
     neuf.querySelector('.ent-nav[data-vue^="animation:"]')?.click();
   }
   jalons(A);

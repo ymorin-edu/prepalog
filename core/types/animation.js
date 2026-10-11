@@ -23,7 +23,15 @@
 //     scene: { decor: [...], lots: { S20: { couleur: 'jaune' } }, acteurs: { chariot: { type: 'chariotFrontal' } } },
 //     parties: [{ titre, depart: { palettes: [{ id, lot, place, futs?, etiquette? }] }, pas: [...], question? }],
 //     aRetenir: 'texte (HTML court permis : <b>, <u>)',
+//     ecrans: [{ titre, image?: { src, alt, mention? }, blocs: ['html', 'html', 'html'] }],   // facultatif, voir plus bas
+//     libelleEcrans: 'Revoir le matériel',   // le lien qui y ramène depuis l'animation
 //   }
+// ÉCRANS DE PRÉSENTATION (chantier D-5, 11/10/2026, ENT-6.5 §4 étapes 0 et 1 : « le matériel du poste », « le mot
+// expliqué ») : avant la partie 1, une suite d'écrans NON NOTÉS — un dessin, trois blocs courts au plus (règle d'écriture
+// de 2de), « Suivant ». Le dernier lance l'animation. Une animation peut n'avoir QUE des écrans (`parties` et `scene`
+// absents) : c'est alors un écran du menu « Le matériel », sans question. Rien n'est noté ; `ecransVus` est rangé dans
+// l'état quand l'élève a vu le dernier (il revient ensuite droit à l'animation, et peut revoir les écrans par le lien).
+// L'image vient du site (`./contenus/…`) : une adresse d'un autre domaine empêche la séance de se charger.
 // Décor, charges et acteurs : voir `core/iso.js`. Les PAS (fermés, connus du moteur) :
 //   { legende: 'html' }                       — numérotée toute seule, sur toutes les parties
 //   { attendre: ms }
@@ -66,8 +74,16 @@ export function compilerAnimation(A) {
   const ou = `animation ${A && A.id ? A.id : '(sans id)'}`;
   const err = (m) => { throw new Error(`${ou} : ${m}`); };
   if (!A || !A.id) err('il manque l\'`id` (clé de l\'état dans la base de l\'élève)');
-  if (!Array.isArray(A.parties) || !A.parties.length) err('`parties` manque (au moins une partie)');
-  const sc = compilerScene(A.scene, ou);
+  const ecrans = (A.ecrans || []).map((x, k) => {
+    const ici = `écran n° ${k + 1}`;
+    if (!x || !x.titre) err(`${ici} : il manque le \`titre\``);
+    if (!Array.isArray(x.blocs) || !x.blocs.length || x.blocs.length > 3) err(`${ici} : de 1 à 3 \`blocs\` (règle d'écriture de 2de)`);
+    if (x.image && (!x.image.src || !x.image.alt)) err(`${ici} : une image a besoin de \`src\` et de \`alt\``);
+    if (x.image && /^([a-z]+:)?\/\//i.test(x.image.src)) err(`${ici} : l'image doit venir du site (\`./contenus/…\`), pas d'une autre adresse`);
+    return { titre: String(x.titre), image: x.image || null, blocs: x.blocs.map(String) };
+  });
+  if (!Array.isArray(A.parties) || (!A.parties.length && !ecrans.length)) err('`parties` manque (au moins une partie, ou des `ecrans`)');
+  const sc = A.parties.length || A.scene ? compilerScene(A.scene, ou) : null;
   const vitesse = A.vitesse == null ? 1 : +A.vitesse;
   if (!(vitesse > 0)) err('`vitesse` doit être un nombre positif');
   const questions = [];
@@ -173,7 +189,7 @@ export function compilerAnimation(A) {
     return { titre: Pt.titre || `Partie ${k + 1} sur ${A.parties.length}`, depart: (Pt.depart && Pt.depart.palettes) || [], pas, question: Q, legendes };
   });
   return { id: A.id, libelle: A.libelle || 'Animation', vitesse, alt: A.alt || A.libelle || 'Animation', sc, parties, questions,
-    nbLegendes: numero, aRetenir: A.aRetenir || '' };
+    nbLegendes: numero, aRetenir: A.aRetenir || '', ecrans, libelleEcrans: A.libelleEcrans || 'Revoir la présentation' };
 }
 
 /* ========================================================= état, réponses, jalons */
@@ -227,7 +243,21 @@ export function creerLecteur(A) {
   // Le déroulé en cours (un seul à la fois pour cet écran) : le jeton invalide tout ce qui tournait.
   const run = { jeton: 0 };
 
+  // Un écran de présentation : le dessin à gauche, les blocs à droite, « Précédent » / « Suivant » en bas.
+  function htmlEcran(x, k) {
+    const n = M.ecrans.length, der = k === n - 1;
+    const suite = der ? (M.parties.length ? 'Voir l’animation ▶' : null) : 'Suivant ▶';
+    return `<section class="anim-ecran" data-anim-ecran="${k}" hidden aria-label="${ech(`${x.titre} (${k + 1} sur ${n})`)}">
+      <div class="anim-ecran-corps${x.image ? '' : ' sans-image'}">${x.image ? `<figure class="anim-ecran-img"><img src="${ech(x.image.src)}" alt="${ech(x.image.alt)}">${x.image.mention ? `<figcaption>${ech(x.image.mention)}</figcaption>` : ''}</figure>` : ''}
+        <div class="anim-ecran-txt"><h2>${ech(x.titre)}</h2>${x.blocs.map((b) => `<p>${b}</p>`).join('')}</div></div>
+      <div class="anim-ecran-bas"><span class="anim-ecran-n">${k + 1} / ${n}</span>
+        ${k ? '<button type="button" class="anim-btn" data-anim-ecran-prec>◀ Précédent</button>' : ''}
+        ${suite ? `<button type="button" class="anim-btn plein" data-anim-ecran-suiv>${suite}</button>` : '<span class="note">Fin de la présentation.</span>'}</div></section>`;
+  }
   function html(e, api) {
+    const ecrans = M.ecrans.length ? `<div class="anim-ecrans" data-anim-ecrans>${M.ecrans.map(htmlEcran).join('')}</div>` : '';
+    if (!M.parties.length) return `<div class="anim" data-anim="${ech(M.id)}">${ecrans}</div>`;
+    const revoirEcrans = M.ecrans.length ? `<button type="button" class="anim-aller" data-anim-ecrans-revoir>${ech(M.libelleEcrans)}</button>` : '';
     const nav = M.parties.map((Pt, k) => {
       const ouverte = api.estProf || k <= (e.partie || 0);
       const lien = (cle, lib, ok) => (ok ? `<button type="button" class="anim-aller" data-anim-aller="${cle}">${ech(lib)}</button>`
@@ -236,7 +266,7 @@ export function creerLecteur(A) {
       if (api.estProf && Pt.question) s += lien(`q${k}`, `Question ${Pt.question.rang}`, true);
       return s;
     }).join('<span class="anim-sep" aria-hidden="true">·</span>');
-    return `<div class="anim" data-anim="${ech(M.id)}">
+    return `<div class="anim" data-anim="${ech(M.id)}">${ecrans}<div class="anim-film" data-anim-film>
       <div class="anim-legende" aria-live="polite"><span class="anim-num" data-anim-num>1</span><span class="anim-texte" data-anim-texte>…</span></div>
       <div class="anim-scene">
         <svg data-anim-svg viewBox="0 0 1000 600" role="img" aria-label="${ech(M.alt)}">${DEFS}<g data-anim-decor></g><g data-anim-dyn></g><g data-anim-bulles></g></svg>
@@ -248,18 +278,39 @@ export function creerLecteur(A) {
         <button type="button" class="anim-btn" data-anim-revoir>⟲ Revoir la partie</button>
         <span class="anim-partie" data-anim-partie></span>
         ${M.parties.length > 1 || api.estProf ? `<span class="anim-nav">${api.estProf ? '<span class="note">Enseignant :</span>' : ''}${nav}</span>` : ''}
+        ${revoirEcrans}
         <span class="anim-points" aria-hidden="true">${Array.from({ length: M.nbLegendes }, () => '<span></span>').join('')}</span>
       </div>
-    </div>`;
+    </div></div>`;
   }
 
   function brancher(z, e, api) {
     const R = { jeton: ++run.jeton, pause: false, k: 0, charges: [], acteurs: {}, finie: false };
     const $ = (s) => z.querySelector(s);
+    const ecrire = !api.estProf && !api.figee;
+    // LES ÉCRANS DE PRÉSENTATION : un seul visible ; le film est caché tant qu'on y est. Le dernier vu, `ecransVus` est
+    // rangé (une fois) : l'élève revient ensuite droit à l'animation.
+    const film = $('[data-anim-film]');
+    function montrerEcran(k) {
+      run.jeton++;
+      if (film) film.hidden = true;
+      z.querySelectorAll('[data-anim-ecran]').forEach((s) => { s.hidden = Number(s.dataset.animEcran) !== k; });
+      if (k === M.ecrans.length - 1 && ecrire && !e.ecransVus) { e.ecransVus = true; api.sauver(); }
+    }
+    z.querySelectorAll('[data-anim-ecran]').forEach((s) => {
+      const k = Number(s.dataset.animEcran);
+      s.querySelector('[data-anim-ecran-prec]')?.addEventListener('click', () => montrerEcran(k - 1));
+      s.querySelector('[data-anim-ecran-suiv]')?.addEventListener('click', () => {
+        if (k < M.ecrans.length - 1) { montrerEcran(k + 1); return; }
+        z.querySelectorAll('[data-anim-ecran]').forEach((x) => { x.hidden = true; });
+        film.hidden = false;
+        jouer(0);
+      });
+    });
+    if (!M.parties.length) { montrerEcran(0); return; }
     const svg = $('[data-anim-svg]'), dyn = $('[data-anim-dyn]'), gb = $('[data-anim-bulles]'), boite = $('[data-anim-q]');
     if (!svg) return;
     const vivant = (j) => j === run.jeton && svg.isConnected;
-    const ecrire = !api.estProf && !api.figee;
 
     // Le décor, dessiné une fois ; le cadre de la scène sur le décor (comme la maquette).
     const gd = $('[data-anim-decor]');
@@ -537,7 +588,10 @@ export function creerLecteur(A) {
       ouvrirQuestion(k);
     }));
 
-    // La partie 1 démarre seule (comme la maquette ; §12-5), avec mouvement réduit aussi.
+    $('[data-anim-ecrans-revoir]')?.addEventListener('click', () => montrerEcran(0));
+    // La partie 1 démarre seule (comme la maquette ; §12-5), avec mouvement réduit aussi — après les écrans de
+    // présentation, s'il y en a et que l'élève ne les a pas encore vus jusqu'au bout.
+    if (M.ecrans.length && !e.ecransVus) { montrerEcran(0); return; }
     jouer(0);
   }
 
