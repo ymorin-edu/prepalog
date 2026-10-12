@@ -53,6 +53,12 @@ const monter = (o = {}) => pg.evaluate(async (o) => {
     q('ou-verifier').actif = false;
   } else if (o.variante === 'jamais') {
     q('ou-verifier').quand = () => false;
+  } else if (o.variante === 'selon') {
+    // Texte calculé sur le travail de l'élève (12/10/2026, pour ENT-6.8) : le remplacement choisi, la quantité du bon.
+    const val = (db, b) => (((db.fiches || {}).bon || {}).valeurs || {})[b];
+    q('ou-verifier').selon = (db) => ({ enonce: `Tu proposes ${val(db, 'remplacement') || 'rien'} à Malo. Où vérifies-tu ce qu’on peut lui livrer ?`,
+      libs: { stock: `Dans le stock, à la ligne ${val(db, 'remplacement') || 'rien'}` }, retour: `Pour ${val(db, 'remplacement') || 'rien'} : le stock dit ce qu’on a.` });
+    q('qui-utilise-le-bon').selon = (db) => ({ enonce: `Ton bon de ${val(db, 'quantite') || '?'} cartons part à l’entrepôt. Qui s’en sert en premier ?` });
   } else if (o.variante === 'quantite') {
     const { apresGeste } = await import('/core/declencheurs.js');
     q('ou-verifier').quand = apresGeste('fiche:bon:quantite');
@@ -1359,6 +1365,71 @@ await v('Questions (D-3) : une ligne d’un message par phrases arrivé par un D
   await pause();
   vrai(await present('[data-q-panneau="au-raison"]'), 'la question n’arrive pas au choix de la phrase « raison »');
   vrai(typeof (await base()).gestes['essai-questions']['messagerie:phrase:raison'] === 'number', 'geste non rangé');
+});
+
+/* ===== Texte calculé sur le travail de l'élève (`selon`, 12/10/2026, pour ENT-6.8) ===== */
+await v('Questions (`selon`) : le texte cite le travail de l’élève, calculé à l’arrivée puis figé (un autre choix ne le change plus) ; point d’étape ; retour au bilan', async () => {
+  await monter({ variante: 'selon' });
+  await choisirRemplacement('LIM-1L');
+  const t = await pg.textContent(`${Z} [data-q-panneau]`);
+  vrai(/Tu proposes LIM-1L à Malo/.test(t), `énoncé : ${t}`);
+  egal(await pg.textContent(`${Z} [data-q-choix="stock"]`), 'Dans le stock, à la ligne LIM-1L', 'choix calculé');
+  egal(await pg.textContent(`${Z} [data-q-choix="mail"]`), 'Dans le mail de Malo', 'choix sans texte calculé : le déclaré');
+  egal((await reps())['ou-verifier'].texte.enonce, 'Tu proposes LIM-1L à Malo. Où vérifies-tu ce qu’on peut lui livrer ?', 'texte rangé');
+  await repondreQ('ou-verifier', 'stock');
+  await reprendre();
+  await choisirRemplacement('JUS-POM');
+  egal((await reps())['ou-verifier'].texte.libs, { stock: 'Dans le stock, à la ligne LIM-1L' }, 'le texte rangé a bougé');
+  await envoyerBon('8');
+  await aller('etape:avant-malo');
+  const e = await pg.textContent(`${Z} [data-q-etape]`);
+  vrai(/Ton bon de 8 cartons part à l’entrepôt/.test(e), `point d’étape : ${e}`);
+  vrai(/Que doit-il y trouver d’abord/.test(e), 'la question sans `selon` a perdu son texte');
+  await repondreQ('qui-utilise-le-bon', 'prepa');
+  await repondreQ('ce-que-malo-attend', 'remplacement');
+  await pg.click(`${Z} [data-q-continuer]`);
+  await pause();
+  await pg.click(`${Z} [data-repondre]`);
+  await pg.fill(`${Z} #repT`, 'Bonjour, ce sera de la limonade.');
+  await pg.click(`${Z} #formRep button[type="submit"]`);
+  await pause();
+  await repondreQ('vides', 'trier');
+  await reprendre();
+  vrai(await present('[data-fin-seance] [data-fin]'), 'pas de bandeau de fin');
+  egal(await pg.textContent(`${Z} [data-fin-retour="ou-verifier"]`).then((x) => /Pour LIM-1L : le stock dit ce qu’on a/.test(x)), true, 'retour calculé (et figé) au bilan');
+});
+
+await v('Questions (`selon`) : l’enseignant voit le texte déclaré, sans erreur ; une question sans `selon` ne range aucun texte', async () => {
+  await monter({ variante: 'selon', role: 'prof' });
+  await aller('questions-fil');
+  vrai(/Je te vois choisir un remplacement pour Malo/.test(await pg.textContent(`${Z} #entMain`)), 'texte déclaré absent chez l’enseignant');
+  await monter();
+  await choisirRemplacement('LIM-1L');
+  egal(Object.keys((await reps())['ou-verifier']), ['arrivee'], 'état d’une question sans `selon`');
+});
+
+await v('Questions (`selon`) : contrôle au chargement — pas une fonction, plante ou sans énoncé sur une base vide, deux choix identiques, sur une question d’ouverture ; au travail, un `selon` qui plante laisse le texte déclaré', async () => {
+  const r = await pg.evaluate(async () => {
+    const { compilerQuestions, etatArrivee } = await import('/core/types/questions.js');
+    const { QUESTIONS } = await import('/contenus/questions/ESSAI.js');
+    const essai = (selon, i = 0) => { try { compilerQuestions({ ...QUESTIONS, liste: QUESTIONS.liste.map((q, k) => (k === i ? { ...q, selon } : q)) }); return 'ok'; } catch (e) { return e.message; } };
+    const ouv = (() => { try { compilerQuestions({ ...QUESTIONS, liste: [...QUESTIONS.liste, { id: 'o', type: 'ouverture', de: 'Ines', doc: 'd', enonce: 'E ?',
+      choix: [{ v: 'a', lib: 'A' }, { v: 'b', lib: 'B' }], juste: 'a', retour: 'R.', selon: () => ({ enonce: 'x' }) }],
+      ouverture: { id: 'av', de: 'Ines', documents: ['d'], questions: ['o'] } }, null, ['d']); return 'ok'; } catch (e) { return e.message; } })();
+    const q0 = QUESTIONS.liste[0];
+    const vus = [];
+    const plante = etatArrivee({ ...q0, selon: () => { throw new Error('boum'); } }, {}, (m) => vus.push(m));
+    return { pasFonction: essai('texte'), plante: essai((db) => db.plannings.x), sansEnonce: essai(() => ({ libs: {} })),
+      doublon: essai(() => ({ enonce: 'E', libs: { stock: 'Dans le mail de Malo' } })), juste: essai(() => ({ enonce: 'E', libs: { stock: 'S' } })),
+      ouv, planteTravail: [Object.keys(plante), vus.length, /ou-verifier/.test(vus[0] || '')] };
+  });
+  vrai(/« ou-verifier ».*`selon` est une fonction/.test(r.pasFonction), r.pasFonction);
+  vrai(/« ou-verifier ».*`selon` plante sur une base vide/.test(r.plante), r.plante);
+  vrai(/« ou-verifier ».*doit rendre un `enonce`/.test(r.sansEnonce), r.sansEnonce);
+  vrai(/« ou-verifier ».*deux choix identiques/.test(r.doublon), r.doublon);
+  egal(r.juste, 'ok', 'déclaration juste refusée');
+  vrai(/« o ».*`selon` est pour une question au fil ou de transition/.test(r.ouv), r.ouv);
+  egal(r.planteTravail, [['arrivee'], 1, true], 'selon qui plante au travail');
 });
 
 await v('Questions : aucune erreur de page pendant le bloc', async () => {

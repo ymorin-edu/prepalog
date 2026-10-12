@@ -46,6 +46,11 @@
 // Champs facultatifs d'une question : `poids` (1 par défaut, dans la `part`), `actif: false` (mise de côté),
 // `melanger: false` (choix dans l'ordre déclaré), `libre: true` (réflexion seulement : une ou deux phrases),
 // `rattrapage(db)` (condition de secours, en plus de celle du moteur). La séance branche le tout en une ligne :
+// TEXTE CALCULÉ SUR LE TRAVAIL DE L'ÉLÈVE (12/10/2026, ENT-6.8) : une question au fil ou de transition peut porter
+// `selon: (db) => ({ enonce, libs?: { <clé de choix>: texte }, retour? })` (« Ton planning fait partir Sébastien à 09:00… »).
+// Le texte est calculé UNE FOIS, à l'arrivée de la question, et rangé avec elle (`texte`) : il ne bouge plus si l'élève
+// change son travail ensuite. Mêmes clés et même `juste` pour tous ; `enonce` et `choix` restent déclarés (ce que voit
+// l'enseignant). Essayée au chargement sur une base vide : elle ne doit pas planter et doit rendre un `enonce`.
 // `creerEntreprise({ …, questions: QUESTIONS })` ; le moteur ajoute lui-même un jalon par question notée.
 //
 // La SOUPLESSE (décision 4 de Tristan) : la réponse rangée est la CLÉ `v` du choix, jamais son rang. Reformuler un
@@ -53,7 +58,8 @@
 // Pas de numéro dans les textes (« Question 1 sur 2 » est calculé). Voir `activites/FICHE-SEANCE.md`.
 //
 // ── L'ÉTAT DANS LA BASE DE L'ÉLÈVE (cloisonné par séance) ──────────────────────────────────────────────────
-//   db.questions[<séance>][<question>] = { arrivee, premiere: 'stock', duree, sorties?, horsPage?, libre? }
+//   db.questions[<séance>][<question>] = { arrivee, premiere: 'stock', duree, sorties?, horsPage?, libre?, texte? }
+//   (`texte` = { enonce, libs, retour? } : le texte calculé par `selon`, figé à l'arrivée)
 //   db.questions[<séance>]['@etapes'][<point d'étape>] = heure d'arrivée
 // `premiere` : la clé du PREMIER choix validé, écrite une fois. `duree` : secondes entre l'arrivée et la réponse.
 // `sorties` / `horsPage` : les sorties de page pendant la question (§4.8 bis), rangées avec la réponse.
@@ -115,6 +121,16 @@ export function compilerQuestions(Q, equipe, documentsSeance) {
     if (q.rattrapage != null && typeof q.rattrapage !== 'function') err(`${ici} : \`rattrapage\` est une condition (db) => vrai ou faux`);
     if (q.poids != null && !(typeof q.poids === 'number' && q.poids > 0)) err(`${ici} : \`poids\` est un nombre positif`);
     if (q.apres != null && q.apres !== 'bilan') err(`${ici} : \`apres\` ne peut valoir que 'bilan'`);
+    if (q.selon != null) {
+      if (q.type === 'ouverture') err(`${ici} : \`selon\` est pour une question au fil ou de transition (l’ouverture a \`variante\`)`);
+      if (typeof q.selon !== 'function') err(`${ici} : \`selon\` est une fonction (db) => { enonce, libs?, retour? }`);
+      let t; try { t = texteSelon(q, {}); } catch (x) { err(`${ici} : \`selon\` plante sur une base vide (${x.message})`); }
+      if (!t || typeof t.enonce !== 'string' || !t.enonce) err(`${ici} : \`selon\` doit rendre un \`enonce\` (essayée sur une base vide)`);
+      if (!q.libre) {
+        const lib = q.choix.map((c) => (t.libs || {})[c.v] || c.lib);
+        if (new Set(lib).size !== lib.length) err(`${ici} : \`selon\` rend deux choix identiques (essayée sur une base vide)`);
+      }
+    }
   });
   const parIdTout = new Map(toutes.map((q) => [q.id, q]));
   const eids = new Set();
@@ -227,6 +243,32 @@ export function compilerQuestions(Q, equipe, documentsSeance) {
     ouverture,
     etapes: etapes.filter((e) => e.questions.length),
   };
+}
+
+/* ================================================================ texte calculé (`selon`) */
+// Le texte rendu par `selon`, ramené à { enonce, libs, retour? } (libs sans les clés inconnues ni les textes vides).
+function texteSelon(q, db) {
+  const t = q.selon(db) || {};
+  const libs = {};
+  (q.choix || []).forEach((c) => { const l = (t.libs || {})[c.v]; if (typeof l === 'string' && l) libs[c.v] = l; });
+  return { enonce: t.enonce, libs, ...(typeof t.retour === 'string' && t.retour ? { retour: t.retour } : {}) };
+}
+// L'état d'une question qui arrive : son heure, et son texte calculé s'il y a lieu. `signaler(message, erreur)` : un `selon`
+// qui plante sur le travail d'un élève laisse le texte déclaré (jamais une question qui ne s'affiche pas).
+export function etatArrivee(q, db, signaler) {
+  const S = { arrivee: Date.now() };
+  if (!q || !q.selon) return S;
+  try {
+    const t = texteSelon(q, db);
+    if (typeof t.enonce === 'string' && t.enonce) S.texte = t;
+  } catch (x) { if (signaler) signaler(`le texte (« selon ») de la question « ${q.id} » plante`, x); }
+  return S;
+}
+// La question telle que CET élève la voit : le texte figé à l'arrivée posé sur l'énoncé, les choix et le retour.
+export function questionVue(db, M, q) {
+  const r = reponse(db, M, q.id), t = r && r.texte;
+  if (!t) return q;
+  return { ...q, enonce: t.enonce, retour: t.retour || q.retour, choix: q.choix ? q.choix.map((c) => ({ ...c, lib: (t.libs || {})[c.v] || c.lib })) : q.choix };
 }
 
 /* ================================================================ état, jalons */
@@ -354,7 +396,7 @@ export function htmlEtape(M, e, db, o = {}) {
   return `<div class="ent-tete"><h2>Point d’étape avec ${ech(qui)}</h2>${P.role ? `<p class="note">${ech(P.nom)}, ${ech(P.role)}</p>` : ''}</div>
     <section class="panneau qf-etape" data-q-etape="${ech(e.id)}">
       ${e.situation ? `<p class="qf-situation"><b>${ech(qui)} :</b> « ${ech(e.situation)} »</p>` : ''}
-      ${e.questions.map((id, k) => htmlQuestion(M, M.parId.get(id), reponse(db, M, id),
+      ${e.questions.map((id, k) => htmlQuestion(M, questionVue(db, M, M.parId.get(id)), reponse(db, M, id),
         { ...o.parQuestion(id), numero: n > 1 ? `Question ${k + 1} sur ${n}` : '' })).join('')}
       ${o.estProf ? '' : `<div class="qf-continuer"><button type="button" class="btn btn-p" data-q-continuer="${ech(e.id)}" ${fini ? '' : 'disabled'}>Continuer${
         e.continuer ? ` : ${ech(e.continuer)}` : ''} →</button>${fini ? '' : '<span class="note">Réponds aux questions pour continuer : une réponse fausse ne bloque pas.</span>'}</div>`}

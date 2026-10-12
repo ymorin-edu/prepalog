@@ -1316,6 +1316,13 @@ poids de ses jalons + `part` doit valoir 20 (contrôlé à l'ouverture).
   au bandeau de fin et le `retour` avec lui (pour une question posée avant un envoi qu'elle corrigerait d'avance) ;
   `reflexion: true` → non notée, « Ce qu'en pense … » (avec `apres: 'bilan'` en plus, 10/10/2026 : « Merci, je note » à l'écran, et ce que
   pense le collègue arrive avec le bandeau de fin, « pour réfléchir » ; pour une réflexion dont le retour soufflerait un jalon) ; en évaluation (`copie`) → « Merci, je note » pour toutes.
+- **Texte calculé sur le travail de l'élève** (12/10/2026, pour ENT-6.8) : une question au fil ou de transition peut porter
+  `selon: (db) => ({ enonce, libs?: { <clé>: texte }, retour? })` (« Ton planning fait partir Sébastien à 09:00… »). Calculé **une fois, à
+  l'arrivée** de la question, et rangé avec elle (`texte`) : il ne bouge plus si l'élève change son travail ensuite (panneau, point
+  d'étape, retour au bilan). Mêmes clés et même `juste` pour tous : seule la bonne réponse **calculée** doit porter la clé `juste`.
+  `enonce` et `choix` restent déclarés : c'est ce que voient l'enseignant et « Conduite de séance ». Contrôlé au chargement sur une
+  **base vide** (ne pas planter, rendre un `enonce`, pas deux choix identiques) ; refusé sur une question d'ouverture (elle a `variante`).
+  Un `selon` qui plante sur le travail d'un élève laisse le texte déclaré (signalé en console).
 - La **première réponse** compte, rangée en **clé** (`v`) dans `db.questions[<séance>]`. « Corriger » ne rouvre jamais
   une question ; « Réinitialiser » n'efface pas les réponses. Les sorties de page pendant une question sont comptées
   et montrées à l'enseignant (Repérage), sans effet sur la note.

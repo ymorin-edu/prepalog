@@ -24,7 +24,8 @@ import { monterCalculette, demonterCalculette } from '../calculette.js';
 import { creerDocuments } from './documents.js';
 import { creerFiche } from './fiche.js';
 import { compilerQuestions, etapesQuestions, reponse, repondu, etapeArrivee, etapeFaite, htmlQuestion, htmlPanneau, htmlEtape,
-  appel, CLE_ETAPES, CLE_OUVERTURE, htmlOuverture, ouvertureFaite, noteOuverture, idsOuverture, rangerTirageOuverture } from './questions.js';
+  appel, CLE_ETAPES, CLE_OUVERTURE, htmlOuverture, ouvertureFaite, noteOuverture, idsOuverture, rangerTirageOuverture,
+  etatArrivee, questionVue } from './questions.js';
 import { creerGesteTableur, retourDeTemps } from './export-tableur.js';
 import { graineDeBase, poserGraine, declarerTirage, estTirage, fautesTirage } from '../tirage.js';
 import { BAREME_AFFICHE, pointsBonus } from '../notes.js';
@@ -743,7 +744,8 @@ export function creerEntreprise(U) {
         MQ.etapes.forEach((e) => {
           if (etapeArrivee(db, MQ, e.id) || !essai(e.apres, `"apres" du point d'étape « ${e.id} »`)) return;
           (S[CLE_ETAPES] || (S[CLE_ETAPES] = {}))[e.id] = Date.now();
-          e.questions.forEach((id) => { if (!S[id]) S[id] = { arrivee: Date.now() }; });
+          // Le texte calculé (`selon`) est figé ici, à l'arrivée : il ne bouge plus si l'élève change son travail ensuite.
+          e.questions.forEach((id) => { if (!S[id]) S[id] = etatArrivee(MQ.parId.get(id), db, signaler); });
           fait = true;
         });
         const enLecture = QF.panneau && repondu(reponse(db, MQ, QF.panneau));
@@ -752,7 +754,7 @@ export function creerEntreprise(U) {
           const enAttente = MQ.fil.filter((x) => !(S[x.id] && S[x.id].arrivee));
           let q = enAttente.find((x) => essai(x.quand, `"quand" de la question « ${x.id} »`) || (x.rattrapage && essai(x.rattrapage, `"rattrapage" de la question « ${x.id} »`)));
           if (!q && enAttente.length && etapesSeance.length && etapesSeance.every(jalonJuge)) q = enAttente[0];
-          if (q) { S[q.id] = { arrivee: Date.now() }; QF.panneau = q.id; fait = true; }
+          if (q) { S[q.id] = etatArrivee(q, db, signaler); QF.panneau = q.id; fait = true; }
         }
         if (fait) { majCartes(); majQuestions(); }
         return fait;
@@ -773,7 +775,7 @@ export function creerEntreprise(U) {
         if (!shell || !ancre || !bandeau) return;
         const cle = memoriserFocus([ancre, bandeau]);
         const q = !estProf && !rendue() ? questionDuPanneau() : null;
-        ancre.innerHTML = q ? htmlPanneau(MQ, q, reponse(db, MQ, q.id), optionsQuestion(q.id)) : '';
+        ancre.innerHTML = q ? htmlPanneau(MQ, questionVue(db, MQ, q), reponse(db, MQ, q.id), optionsQuestion(q.id)) : '';
         shell.classList.toggle('ent-avec-panneau', !!q);
         let b = '';
         if (q && !repondu(reponse(db, MQ, q.id))) {
@@ -796,7 +798,7 @@ export function creerEntreprise(U) {
         const q = MQ.parId.get(id);
         if (!q || estProf || rendue()) return;
         const S = etatQ();
-        const r = S[id] || (S[id] = { arrivee: Date.now() });
+        const r = S[id] || (S[id] = etatArrivee(q, db, signaler));
         if (repondu(r)) return;
         if (q.libre) {
           const t = String(QF.brouillon[id] || '').trim();
@@ -1127,7 +1129,7 @@ export function creerEntreprise(U) {
         const L = MQ.liste.filter((q) => q.type !== 'ouverture' && q.apres === 'bilan' && repondu(reponse(db, MQ, q.id)));
         if (!L.length) return '';
         return `<div class="ent-fin-retours" data-fin-retours>${L.map((q) => `<p data-fin-retour="${ech(q.id)}"><b>${ech(appel(MQ.personnes[q.de]))}</b>
-          (${ech(q.reflexion ? 'pour réfléchir' : q.groupe)}) : « ${ech(q.retour)} »</p>`).join('')}</div>`;
+          (${ech(q.reflexion ? 'pour réfléchir' : q.groupe)}) : « ${ech(questionVue(db, MQ, q).retour)} »</p>`).join('')}</div>`;
       }
       function bandeauFin(res) {
         if (estProf || COPIE || !ctx.meta.parcours || !etapes.length) return '';

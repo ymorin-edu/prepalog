@@ -147,7 +147,7 @@ sa liste `signaux`, `FICHE-SEANCE.md`) :
 | pose « à côté », `verifier` | plan d'entrepôt, préparation en 3D | 6.7 (n° 2, 4) |
 | `tournee:<id>:ordonner`, fin de la feuille | Tournée, feuille de calcul | 6.9 (n° 1, 2) |
 | envoi d'un mail à phrases (`messagerie:envoyer:<clé>`) | messagerie | 6.9 (n° 4) |
-| libellés de choix **calculés sur le travail de l'élève** dans une question au fil | moteur des questions | 6.8 (n° 1) |
+| libellés de choix **calculés sur le travail de l'élève** dans une question au fil | moteur des questions | 6.8 (n° 1) — **livré le 12/10/2026** (`selon`, voir `FICHE-SEANCE.md`) |
 
 Les séances 6.4 à 6.10 ont toutes une vue nouvelle ou un mode nouveau : ces gestes naissent avec elles (« une vue nouvelle naît avec
 ses gestes ») ; ce n'est donc pas un chantier à part, mais une ligne de plus dans la demande au moteur de chaque brief.
