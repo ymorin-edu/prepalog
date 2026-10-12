@@ -75,10 +75,12 @@ export const LIGNE_TRANSPORTEUR = { id: 'tr', nom: TRANSPORTEUR.nom, dispo: '07:
   note: 'son chauffeur et son camion · dès 07:00' };
 
 // Les tournées : `service` = la durée du bloc ; `conduite` = ce que jugent 4 h 30 et 9 h (D-8) ; `camion` = le type exigé.
+// La côte : recalée le 12/10/2026 sur la journée d'ENT-6.9 (calage-6.9 : départ 06:00, retour 12 h 51 → 7 h au quart d'heure, 4 h 24 de
+// conduite, 284 km d'autoroute + 56 sur la côte).
 // Rouen : `avant: '13:00'` = 08:30 (départ au plus tard) + 4 h 30 ; la carte n'affiche JAMAIS 13:00 ni 08:30.
 export const TOURNEES = [
-  { id: 'cote', titre: 'Côte normande — Honfleur → Houlgate', court: 'Côte', des: '06:00', avant: '15:30', service: 510, conduite: 270,
-    km: 320, vides: true, camion: 'porteur', fenetre: 'Départ dès 06:00 · retour à Buchelay avant 15:30',
+  { id: 'cote', titre: 'Côte normande — Villerville → Houlgate', court: 'Côte', des: '06:00', avant: '15:30', service: 420, conduite: 264,
+    km: 340, vides: true, camion: 'porteur', fenetre: 'Départ dès 06:00 · retour à Buchelay avant 15:30',
     extra: 'Tournée de Lucas (dont La Cabane à Malo)' },
   { id: 'rouen', titre: `Rouen — fûts du concert de ${ORGANISATEUR}`, court: 'Rouen', des: '06:00', avant: '13:00', service: 270, conduite: 165,
     km: 210, vides: false, camion: 'porteur', fenetre: 'Fûts prêts dès 06:00 · livrés avant 11:00, 2 h 30 après le départ',

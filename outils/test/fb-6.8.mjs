@@ -164,7 +164,7 @@ const PIEGES_V1 = [
   ['Versailles sur T1, côte sur E1', avec(REF1, ['cote', 'lucas', 4, 'E1'], ['versailles', 'fatou', 6, 'T1']), ['camions']],
   ['Julien (permis B) sur Mantes avec E2, Sébastien sur Évreux', avec(REF1, ['mantes', 'julien', 4, 'E2'], ['evreux', 'sebastien', 16, 'VL']), ['chauffeurs']],
   ['Mantes posée à 10:30 (rentre trop tard)', avec(REF1, ['mantes', 'sebastien', 22, 'E2']), ['fenetre']],
-  ['la côte partie à 07:15 (rentre trop tard)', avec(REF1, ['cote', 'lucas', 9, 'T1']), ['fenetre']],
+  ['la côte partie à 08:45 (rentre trop tard)', avec(REF1, ['cote', 'lucas', 15, 'T1']), ['fenetre']],
   ['Fatou fait Versailles puis Évreux (deux tournées)', avec(REF1, ['evreux', 'fatou', 34, 'VL']), ['chauffeurs', 'conduite']],
   ['E1 sur Versailles et Mantes (un camion, deux tournées)', avec(REF1, ['mantes', 'sebastien', 16, 'E1']), ['camions']],
 ];
@@ -213,7 +213,7 @@ await v('ENT-6.8 : sabotages — lire le service au lieu de la conduite fait tom
     const mantesTr = REF2.map((x) => (x[0] === 'mantes' ? ['mantes', 'tr', 8] : x)).concat([]);
     return { conduite: juge(sansConduite, REF2), vides: juge(sansVides, mantesTr), videsVrai: juge(S.PLANNING, mantesTr) };
   }, { REF1, REF2 });
-  egal([r.conduite['v1-conduite'], r.conduite['v2-conduite']], [false, false], 'sans `conduite` : la côte (8 h 30 de service) dépasse 4 h 30');
+  egal([r.conduite['v1-conduite'], r.conduite['v2-conduite']], [false, false], 'sans `conduite` : la côte (7 h de service) dépasse 4 h 30');
   egal(r.videsVrai['v2-vides'], false, 'avec la règle : Mantes au transporteur fait tomber « vides »');
   egal(r.vides['v2-vides'], true, 'sans la règle : le piège ne fait plus rien tomber (le cas de test l’aurait vu)');
 });

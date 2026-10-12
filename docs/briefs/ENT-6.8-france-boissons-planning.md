@@ -110,7 +110,7 @@ Sébastien 09:00). « Connaît la côte » : **information, pas une règle** (§
 
 | Tournée | Fenêtre (carte) | Km | Service / dont conduite | Vides | Camion |
 |---|---|---|---|---|---|
-| **Côte normande** (Honfleur → Houlgate, dont La Cabane à Malo) | départ dès 06:00, **retour avant 15:30** | 320 | 8 h 30 / 4 h 30 | oui | porteur |
+| **Côte normande** (Villerville → Houlgate, dont La Cabane à Malo ; recalée le 12/10/2026 sur ENT-6.9, avant : Honfleur, 320 km, 8 h 30 / 4 h 30) | départ dès 06:00, **retour avant 15:30** | 340 | 7 h / 4 h 24 | oui | porteur |
 | **Rouen** : fûts du concert de la Fête de la musique (organisateur fictif) | prêts dès 06:00, **fûts livrés avant 11:00, 2 h 30 après le départ** | 210 | 4 h 30 / 2 h 45 | **non** (repris mardi 22) | porteur |
 | **Versailles** (cafés, hôtels, restaurants) | départ dès 06:30 | 110 | 7 h / 2 h 30 | oui | porteur **électrique** (règle interne) |
 | **Mantes–Vernon** | **retour avant 16:00** | 90 | 6 h / 2 h | oui | porteur |
@@ -265,7 +265,7 @@ alea: { de: 'Karim — exploitation France Boissons', texte: '…',
 
 1. **Champ `conduite` par carte** (décision 58) : `cumulSansPause` et `plafond` lisent `c.conduite` (minutes) à la place de la
    durée du bloc quand il est présent (repli : la durée). Le compteur « conduite X / 9 h » du guidage aussi. *Indispensable* : sans
-   lui, la côte (8 h 30 de service) ferait tomber 4 h 30 et 9 h.
+   lui, la côte (7 h de service depuis le recalage du 12/10/2026, 8 h 30 avant) ferait tomber 4 h 30.
 2. **Ligne qui porte sa seconde ressource** (`porteAffectation: true` sur une ligne, ici « Transporteur ») : pas de bulle, la
    carte y compte comme affectée (condition `tous`), les règles `sur: 'affectation'` l'ignorent, rien dans « Utilisation des
    camions » (ou une mention « camion du transporteur »). *Repli sans moteur* : une ressource « Camion du transporteur »
@@ -311,7 +311,7 @@ Bloc `fb-6.8` (fichier `outils/test/fb-6.8.mjs`, aides dans `outils/test/france-
   construits.
 - Corrigé `contenus/corriges/ENT-6.8.js` : une solution v1 et v2 + la fiche ; calculé (jugé par le moteur).
 - Questions « Pour réfléchir » de la trame (règle 32, reprises du cadrage) : « Tu as gardé la tournée de la côte chez France
-  Boissons : qui reprendra les fûts vides de Malo ce soir si elle part chez un transporteur ? » ; « Lucas part pour 8 h 30 sur la
+  Boissons : qui reprendra les fûts vides de Malo ce soir si elle part chez un transporteur ? » ; « Lucas part pour 7 h sur la
   côte : que se passerait-il pour la commande de Malo si tu l'avais mis sur un électrique ? »
 
 ## 10. Critères de validation par Tristan

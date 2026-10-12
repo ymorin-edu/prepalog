@@ -321,8 +321,8 @@ l'attente chez Malo se voit dans la feuille ; le SMS se compose en 1 min ; la s�
   avant l'envoi, pause du SMS figée) : chacun fait tomber un cas. Suite entière verte (1334).
 - **Commits** : voir `git log` du 12/10/2026 (« ENT-6.9 : la tournée de la côte… »).
 - **Reste ouvert** :
-  - **ENT-6.8 à recaler** (décision du calage) : sa carte « côte » dit encore « Honfleur → Houlgate » et 8 h 30 de service (la journée calée
-    dure ≈ 7 h). Non touché ici (séance livrée, autre chantier).
+  - ~~ENT-6.8 à recaler~~ **fait le 12/10/2026** (demande de Tristan) : la carte « côte » d'ENT-6.8 dit Villerville → Houlgate, 7 h de service,
+    4 h 24 de conduite, 340 km (voir `docs/decisions.md`).
   - La trame et le corrigé Word (Cowork, après validation à l'écran, §9).
   - À juger à l'écran par Tristan : la longueur de la colonne des contraintes (huit repères à droite de la feuille), le texte des horaires,
     les pastilles « tenu » vertes qui s'affichent à droite pendant le calcul (le moteur dit QUE, jamais l'heure).

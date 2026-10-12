@@ -17,7 +17,7 @@ LUCAS_COTE = '--cote-libre' not in sys.argv    # la côte est posée d'avance su
 PAUSE, MAXSANS, MAXJOUR, REPOS = 45, 270, 540, 660
 
 TOURS = {  # service (durée du bloc), conduite, km, vides, type exigé
- 'cote':  dict(nom='Côte normande', des='06:00', avant='15:30', service=510, conduite=270, km=320, vides=True,  type='porteur'),
+ 'cote':  dict(nom='Côte normande', des='06:00', avant='15:30', service=420, conduite=264, km=340, vides=True,  type='porteur'),  # recalée sur ENT-6.9 (12/10/2026)
  'rouen': dict(nom='Rouen (fûts du concert)', des='06:00', avant='13:00', service=270, conduite=165, km=210, vides=False, type='porteur'),
  'vers':  dict(nom='Versailles', des='06:30', avant=None, service=420, conduite=150, km=110, vides=True, type='electrique'),
  'mantes':dict(nom='Mantes–Vernon', des='06:00', avant='16:00', service=360, conduite=120, km=90, vides=True, type='porteur'),
@@ -201,17 +201,17 @@ def pieges():
     print("=== Références"); montre("1er envoi attendu (cadrage)", V1, 1); montre("après l'imprévu attendu", V2, 2)
     montre("1er envoi relu après l'imprévu", V1, 2)
     print("=== Pièges du 1er envoi")
-    if LUCAS_COTE: print("(carte côte posée sur Lucas à 06:00 : les pièges « X sur la côte », « côte partie à 07:15 » et « côte au transporteur » ne sont plus jouables, ni ceux qui mettent la côte sur un autre camion que T1/T2 avant l'imprévu ou que T1 après ; gardés pour mémoire)")
+    if LUCAS_COTE: print("(carte côte posée sur Lucas à 06:00 : les pièges « X sur la côte », « côte partie à 08:45 » et « côte au transporteur » ne sont plus jouables, ni ceux qui mettent la côte sur un autre camion que T1/T2 avant l'imprévu ou que T1 après ; gardés pour mémoire)")
     montre("Julien (permis B) sur la côte, T1", m(V1, cote=('julien','T1','06:00'), evreux=('lucas','VL','06:00')), 1)
     montre("Sébastien sur la côte à 06:00", m(V1, cote=('sebastien','T1','06:00'), mantes=('lucas','E2','06:00')), 1)
     montre("Sébastien sur Rouen à 08:30", m(V1, rouen=('sebastien','T2','08:30'), mantes=('amandine','E2','06:30')), 1)
     montre("Sébastien sur Rouen à 09:00 (repos ok)", m(V1, rouen=('sebastien','T2','09:00'), mantes=('amandine','E2','06:30')), 1)
     montre("Amandine sur la côte à 06:00", m(V1, cote=('amandine','T1','06:00'), rouen=('lucas','T2','06:00')), 1)
-    montre("Côte sur électrique E2 (320 km)", m(V1, cote=('lucas','E2','06:00'), mantes=('sebastien','T1','09:00')), 1)
+    montre("Côte sur électrique E2 (340 km)", m(V1, cote=('lucas','E2','06:00'), mantes=('sebastien','T1','09:00')), 1)
     montre("Versailles sur thermique T1", m(V1, vers=('fatou','T1','06:30'), cote=('lucas','E1','06:00')), 1)
     montre("Rouen sur E2 (210 km)", m(V1, rouen=('amandine','E2','06:30'), mantes=('sebastien','T2','09:00')), 1)
     montre("Mantes sur le VL, Évreux sur E2", m(V1, mantes=('sebastien','VL','09:00'), evreux=('julien','E2','06:00')), 1)
-    montre("Côte partie à 07:15 (rentre trop tard)", m(V1, cote=('lucas','T1','07:15')), 1)
+    montre("Côte partie à 08:45 (rentre trop tard)", m(V1, cote=('lucas','T1','08:45')), 1)
     montre("Fatou fait Versailles puis Évreux (2 tournées)", m(V1, evreux=('fatou','VL','13:30')), 1)
     print("=== Pièges après l'imprévu")
     montre("1er envoi gardé tel quel", V1, 2)
