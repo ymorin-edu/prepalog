@@ -7,7 +7,6 @@ est déjà modifié ou inscrit ci-dessous, **elle s'arrête et le dit à Tristan
 
 | Chantier | Fichiers qu'il touche | Depuis |
 |---|---|---|
-| D-7 lot 4 (montage sur deux palettes, pour ENT-6.7) | `core/types/entrepot-picking.js`, `core/types/entrepot.js`, `core/types/terminal.js`, `styles/entrepot.css`, `contenus/entrepot-picking-essai.js`, `outils/essai-entrepot.html`, `outils/essai-entrepot.js`, `outils/test/entrepot.mjs`, `activites/FICHE-SEANCE.md` | 12/10/2026 |
 
 Rappel : un seul chantier à la fois dans `core/types/tournee.js`, `core/types/grille.js`,
 `core/types/entreprise.js`, `styles/base.css` et `outils/test/boost.mjs` (voir `docs/briefs/COORDINATION-boost.md`).
