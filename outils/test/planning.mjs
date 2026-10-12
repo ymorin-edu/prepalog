@@ -709,8 +709,10 @@ const monterVariante = (p, o = {}) => p.evaluate(async (o) => {
   document.querySelector('#plTest')?.remove();
   const hote = document.createElement('div'); hote.id = 'plTest'; document.body.appendChild(hote);
   const P0 = C.CAS[o.cas || 'perso'];
-  const P = { ...P0, alea: { ...P0.alea, ...(o.retraits ? { retraits: o.retraits } : {}) },
-    aides: { ...P0.aides, ...(o.sansVerifier ? { verifier: false } : {}) } };
+  // `variante` (D-8) : le source d'une fonction (C, o) => déclaration, construite dans la page (les fonctions ne passent pas).
+  const P = o.variante ? new Function(`return ${o.variante}`)()(C, o)
+    : { ...P0, alea: { ...P0.alea, ...(o.retraits ? { retraits: o.retraits } : {}) },
+      aides: { ...P0.aides, ...(o.sansVerifier ? { verifier: false } : {}) } };
   const temps = o.temps || 'guidage';
   const U = E.univers({ cas: o.cas || 'perso', temps, planning: P });
   const db = {};
@@ -786,6 +788,94 @@ await v('Planning (D-3) : `aides.verifier: false` en entraînement — ni « Vé
   egal((await etat(pg, 'perso')).phase, 2, 'envoi');
   egal((await etat(pg, 'perso')).verifs || 0, 0, 'vérifications comptées');
   egal(erreursP, [], 'erreurs JS');
+});
+
+/* =========================================================== chantier D-8 (ENT-6.8, 12/10/2026) */
+// Le cas « chauffeurs » avec une ligne « Transporteur (fictif) » qui porte son camion (`porteAffectation`) et, avec
+// `o.service`, une durée de service plus longue que la conduite pour E1 (5 h de service, 4 h de conduite).
+const VARIANTE_D8 = ((C, o) => {
+  const CH = C.CHAUF;
+  const TR = { id: 'tr', nom: 'Transporteur (fictif)', permis: 'CE', note: 'avec son camion', dispo: '07:00', porteAffectation: o.porte !== false };
+  return { ...CH,
+    lignes: { ...CH.lignes, liste: CH.lignes.liste.concat([TR]) },
+    affectation: { ...CH.affectation, porte: 'son camion' },
+    cartes: { ...CH.cartes, duree: (c) => c.service || c.conduite,
+      liste: CH.cartes.liste.map((c) => (o.service && c.id === 'E1' ? { ...c, service: 300 } : c)) } };
+}).toString();
+
+await v('Planning (D-8) : `conduite` d’une carte — 4 h 30 et 9 h jugés sur la conduite, pas sur la durée du service ; sans `conduite`, la durée (sabotage dans les deux sens), limite à 4 h 30 juste', async () => {
+  const r = await pg.evaluate(async () => {
+    const { jalonsPlanning } = await import('/core/types/planning.js');
+    const C = await import('/contenus/planning-essai.js');
+    const B = C.CHAUF;
+    // Deux tournées de 5 h de service sur Julie, une pause entre : 4 h de conduite chacune (8 h dans la journée).
+    const tournee = (id, service, conduite) => ({ id, titre: id, type: 'porteur', famille: 'porteur', service, des: '06:00', avant: '19:00',
+      ...(conduite == null ? {} : { conduite }) });
+    const P8 = (liste) => ({ ...B, id: 'essai-d8', alea: undefined, cartes: { ...B.cartes, duree: (c) => c.service, liste },
+      jalons: [{ id: 'pause', lib: 'pause', regles: ['pause'] }, { id: 'jour', lib: 'jour', regles: ['jour'] },
+        { id: 'autres', lib: 'autres', regles: ['chauffeurUnique', 'permis', 'camionUnique', 'typeCamion', 'atelier', 'fenetre', 'repos'] }] });
+    const deux = { A: { r: 'julie', s: 4, k: 'p3' }, 'pause-1': { r: 'julie', s: 24 }, B: { r: 'julie', s: 27, k: 'p3' } };
+    const j = (P, place) => jalonsPlanning({ plannings: { 'essai-d8': { v1: { place } } } }, P).L.map((l) => l.ok);
+    const une = { A: { r: 'julie', s: 4, k: 'p3' } };
+    return {
+      conduite: j(P8([tournee('A', 300, 240), tournee('B', 300, 240)]), deux),
+      sansConduite: j(P8([tournee('A', 300), tournee('B', 300)]), deux),
+      juste: j(P8([tournee('A', 510, 270)]), une),      // la côte d'ENT-6.8 : 8 h 30 de service, juste 4 h 30 de conduite
+      auDela: j(P8([tournee('A', 510, 285)]), une),
+    };
+  });
+  egal(r, { conduite: [true, true, true], sansConduite: [false, false, true], juste: [true, true, true], auDela: [false, true, true] }, 'jalons');
+});
+
+await v('Planning (D-8) : compteur de conduite (guidage) — il compte la conduite de la carte, pas son service', async () => {
+  await monterVariante(pg, { cas: 'chauf', variante: VARIANTE_D8, service: true });
+  await poser(pg, 'E1', 'julie', 4, 's1');
+  const julie = await pg.$$eval(`${Z} [data-pl-grille] .pl-res`, (L) => L.map((x) => x.textContent.replace(/\s+/g, ' ')).find((t) => /Julie/.test(t)));
+  vrai(/conduite 4 h 00 \/ 9 h/.test(julie), `compteur : ${julie}`);
+  egal(await pg.$eval(`${Z} [data-pl-id="E1"][data-pl-vue="g"]`, (e) => e.style.gridColumn.replace(/\s/g, '')), '6/span20', 'le bloc garde la durée du service (5 h)');
+  egal(erreursP, [], 'erreurs JS');
+});
+
+await v('Planning (D-8) : ligne qui porte son camion — pas de bulle, « son camion » sur la carte et le bloc, rien dans « Utilisation des camions », compte comme affectée ; déplacée ailleurs, la bulle revient', async () => {
+  await monterVariante(pg, { cas: 'chauf', variante: VARIANTE_D8 });
+  await poser(pg, 'E3', 'tr', 8);
+  vrai(!(await present(pg, '.pl-bulle')), 'une bulle s’ouvre sur la ligne du transporteur');
+  const bloc = await texte(pg, `${Z} [data-pl-id="E3"][data-pl-vue="g"]`);
+  vrai(/son camion/.test(bloc) && !/camion \?/.test(bloc), `bloc : ${bloc}`);
+  const carte = await texte(pg, `${Z} [data-pl-id="E3"][data-pl-vue="b"]`);
+  vrai(/Transporteur \(fictif\), 07:00–09:30 · son camion/.test(carte), `carte : ${carte}`);
+  vrai(!(await present(pg, '[data-pl-id="E3"][data-pl-vue="b"] [data-pl-act="bulle"]')), 'lien « Choisir le camion » sur la carte');
+  vrai(!(await present(pg, '[data-pl-lect="E3"]')), 'E3 dans « Utilisation des camions »');
+  vrai(!(await problemes(pg)).some((x) => /sans camion.*E3/.test(x)), 'E3 compté sans camion');
+  // Un clic sur le bloc le prend (comme une pause) : pas de bulle.
+  await pg.click(`${Z} [data-pl-id="E3"][data-pl-vue="g"]`);
+  vrai(!(await present(pg, '.pl-bulle')), 'le clic sur le bloc ouvre une bulle');
+  await pg.keyboard.press('Escape');
+  // E5 posé chez Marc avec le Porteur n° 3, puis déplacé chez le transporteur : l'affectation tombe ; ramené chez Marc : la bulle revient.
+  await poser(pg, 'E5', 'marc', 29, 'p3');
+  vrai(await present(pg, '[data-pl-lect="E5"]'), 'E5 absent de « Utilisation des camions » chez Marc');
+  await poser(pg, 'E5', 'tr', 29);
+  egal((await etat(pg, 'chauf')).place.E5, { r: 'tr', s: 29 }, 'l’affectation d’avant reste');
+  vrai(!(await present(pg, '[data-pl-lect="E5"]')) && !(await present(pg, '.pl-bulle')), 'E5 encore affecté ou bulle ouverte');
+  await poser(pg, 'E5', 'marc', 29);
+  vrai(await present(pg, '.pl-bulle'), 'la bulle ne revient pas hors de la ligne du transporteur');
+  egal(erreursP, [], 'erreurs JS');
+});
+
+await v('Planning (D-8) : jalons — sur la ligne du transporteur, une affectation fantôme ne compte pas et la carte est affectée ; sans `porteAffectation`, la même place fait tomber « camions », ou tout (carte sans camion)', async () => {
+  const r = await pg.evaluate(async (src) => {
+    const { jalonsPlanning } = await import('/core/types/planning.js');
+    const C = await import('/contenus/planning-essai.js');
+    const mk = new Function(`return ${src}`)();
+    // La solution du 1er envoi, E3 chez le transporteur (07:00) : avec le Semi n° 1 resté d'avant (déjà pris par E1, mauvais type), puis sans rien.
+    const base = { E1: { r: 'sofiane', s: 8, k: 's1' }, E2: { r: 'julie', s: 12, k: 's2' }, 'pause-1': { r: 'julie', s: 26 }, 'pause-2': { r: 'sofiane', s: 24 },
+      E4: { r: 'sofiane', s: 27, k: 's1' }, E5: { r: 'julie', s: 29, k: 'p3' } };
+    const fantome = { ...base, E3: { r: 'tr', s: 8, k: 's1' } }, nu = { ...base, E3: { r: 'tr', s: 8 } };
+    const j = (P, place) => jalonsPlanning({ plannings: { [P.id]: { v1: { place } } } }, P).L.filter((l) => l.version === '1er envoi').map((l) => l.ok);
+    return { fantome: j(mk(C, {}), fantome), nu: j(mk(C, {}), nu), sansPorteFantome: j(mk(C, { porte: false }), fantome), sansPorteNu: j(mk(C, { porte: false }), nu) };
+  }, VARIANTE_D8);
+  egal(r, { fantome: [true, true, true, true, true], nu: [true, true, true, true, true],
+    sansPorteFantome: [true, true, false, true, true], sansPorteNu: [false, false, false, false, false] }, 'jalons (tous, chauffeurs, camions, fenêtre, conduite)');
 });
 
 await ctxP.close();

@@ -259,6 +259,10 @@ alea: { de: 'Karim — exploitation France Boissons', texte: '…',
 
 ## 7. Demandes au moteur (vue Planning ; une séance n'écrit rien dans `core/`)
 
+> **État au 12/10/2026 (chantier D-8, Claude Code)** : 7.1 et 7.2 **livrés** (`conduite` sur la carte ; `porteAffectation` sur la
+> ligne, avec `affectation.porte` pour écrire « son camion ») ; 7.3 existait déjà (`versions: [2]`) ; 7.4 et 7.5 : le repli
+> `critere`. Voir `activites/FICHE-SEANCE.md` (vue Planning) et `docs/decisions.md`. La séance peut s'écrire (Sonnet suffit).
+
 1. **Champ `conduite` par carte** (décision 58) : `cumulSansPause` et `plafond` lisent `c.conduite` (minutes) à la place de la
    durée du bloc quand il est présent (repli : la durée). Le compteur « conduite X / 9 h » du guidage aussi. *Indispensable* : sans
    lui, la côte (8 h 30 de service) ferait tomber 4 h 30 et 9 h.

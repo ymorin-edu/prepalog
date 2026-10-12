@@ -888,11 +888,11 @@ planning: {
   id: 'smoby-quais', libelle: 'Planning des quais', titre, date,
   infos: (o) => [html…],         // o = { guidage, phase, lignes, ressources, reprise(l) } — panneau consigne
   echelle: { type: 'heures', debut: '06:00', fin: '14:00', pas: 15 }      // ou { type: 'jours', jours: [...], semaine: 5 }
-  lignes: { titre, legende?, liste: [{ id, nom, note?, de?, a?, dispo?, arrivee?, finHier?, …champs du contenu }] },
+  lignes: { titre, legende?, liste: [{ id, nom, note?, de?, a?, dispo?, arrivee?, finHier?, porteAffectation?, …champs du contenu }] },
   affectation: { question: 'Qui charge le camion {carte} ?', manque: 'cariste ?', lien: 'le cariste',   // facultatif
-                 liste: [{ id, nom, de?, a?, dispo?, … }], nonAffectees?: (cartes) => texte,
+                 liste: [{ id, nom, de?, a?, dispo?, … }], nonAffectees?: (cartes) => texte, porte?: 'son camion',
                  lecture: { titre, legende, bloc: (carte, ligne) => texte } },   // grille en lecture seule
-  cartes: { titre, legende?, aPlacer?, liste: [{ id, titre, court?, famille, des?, avant?, date?, … }],
+  cartes: { titre, legende?, aPlacer?, liste: [{ id, titre, court?, famille, des?, avant?, date?, conduite?, … }],
             details: (c, o) => [html…], duree: (c) => minutes (jours en échelle « jours »),
             libDuree?: 'Chargement', detailDuree?: (c) => '10 min + 33 × 2 min',     // détail : guidage seulement
             ligne?: (c) => c.qui, semaineEntiere?: true, impose?: …,                   // cas « personnel »
@@ -907,6 +907,16 @@ Heures en `'HH:MM'`, durées en **minutes** (en jours pour l'échelle « jours �
 **arrondie au créneau supérieur**. Une carte reçue par les fonctions du contenu garde tous ses champs ; le moteur y
 ajoute `_des`, `_avant`, `_L` (créneaux), `_dem` (jour demandé), `modifie` (champs changés par l'aléa, pour écrire
 « (nouvelle heure) »), `nouveau`, `pause`.
+
+**Conduite et service** (D-8, ENT-6.8) : une carte qui déclare `conduite` (minutes) est jugée sur elle par `cumulSansPause`,
+`plafond` et le compteur de conduite du guidage, tandis que le bloc garde sa durée (le service : une tournée de 8 h 30 dont
+4 h 30 de conduite). Sans `conduite`, c'est la durée du bloc qui compte.
+
+**Ligne qui porte sa seconde ressource** (`porteAffectation: true` sur une ligne, D-8 : un transporteur vient avec son
+camion) : une carte posée sur cette ligne n'ouvre pas de bulle, compte comme affectée (jalons, « sans camion »), est
+ignorée des règles `sur: 'affectation'` et n'apparaît pas dans la grille en lecture seule. Une affectation choisie avant
+de déplacer la carte sur cette ligne tombe. La carte et le bloc écrivent `affectation.porte` (ex. « son camion ») à la
+place de la ressource. Le contenu lit la ligne d'une carte dans `db.plannings[id].v1/v2.place[carte].r`.
 
 **Couleurs** (libres par séance, décision de Tristan du 04/10/2026, sans lien avec la charte de l'entreprise) : chaque
 famille déclare `couleur: '#rrggbb'` (le trait ; le fond est la même couleur translucide), `nom` (écrit dans la légende,
@@ -933,8 +943,8 @@ règle n'est pas respectée, jamais **de combien** — les vôtres aussi (un tes
 | `dateImposee` | — (`impose`, `date` de la carte) | carte imposée posée ailleurs qu'à sa date | `(carte, o)` |
 | `effectif` | `besoin: [par colonne]` | présents < besoin (présent = colonne sans carte, après l'arrivée) | `(jour, t)` |
 | `auMoinsUn` | `filtre: (ligne) => bool`, `libelle` | aucun présent qui vérifie le filtre | `(jour, t)` |
-| `cumulSansPause` | `max` (min) | cumul d'une ligne > max **sans carte Pause entre deux** | `(ligne, o)` |
-| `plafond` | `max` (min) | somme des durées d'une ligne > max | `(ligne, o)` |
+| `cumulSansPause` | `max` (min) | cumul d'une ligne (sa `conduite` pour une carte qui la déclare) > max **sans carte Pause entre deux** | `(ligne, o)` |
+| `plafond` | `max` (min) | somme des durées (ou des `conduite`) d'une ligne > max | `(ligne, o)` |
 | `reposDepuisVeille` | `repos` (min) ; la ligne porte `finHier` | premier départ avant fin d'hier + repos | `(ligne, o)` |
 | `sansNecessite` | `avec: [ids de règles]` | carte non imposée décalée alors que sa date demandée respectait les règles `avec` ; jugé quand tout est posé | `(carte, o)` |
 | `critere` | `verifier({ D, I, place, o }) => [{ texte, cartes }]` | dernier recours | — |

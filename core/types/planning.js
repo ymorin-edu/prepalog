@@ -17,11 +17,17 @@
 //     infos: (o) => [html…],                 // panneau consigne ; o = { guidage, phase, lignes, ressources, reprise(l) }
 //     echelle: { type: 'heures', debut: '06:00', fin: '14:00', pas: 15 }
 //           ou { type: 'jours', jours: ['lun 7', …], semaine: 5 },
-//     lignes: { titre, liste: [{ id, nom, note?, de?, a?, dispo?, arrivee?, finHier?, … }] },
+//     lignes: { titre, liste: [{ id, nom, note?, de?, a?, dispo?, arrivee?, finHier?, porteAffectation?, … }] },
+//                                         // `porteAffectation: true` (D-8, ENT-6.8 : un transporteur vient avec son camion) :
+//                                         // une carte posée sur cette ligne n'a pas de bulle et compte comme affectée ; les
+//                                         // règles `sur: 'affectation'` l'ignorent, la grille en lecture seule ne la montre pas
 //     affectation: { question: 'Qui charge le camion {carte} ?', manque: 'cariste ?', lien: 'le cariste',
+//                    porte?: 'son camion',   // ce qui s'écrit à la place de la ressource, sur une ligne `porteAffectation`
 //                    liste: [{ id, nom, de?, a?, dispo?, … }],
 //                    lecture: { titre, legende, bloc: (carte, ligne) => texte } },     // facultatif
-//     cartes: { titre, legende?, aPlacer?, liste: [{ id, titre, court?, famille, des?, avant?, … }],
+//     cartes: { titre, legende?, aPlacer?, liste: [{ id, titre, court?, famille, des?, avant?, conduite?, … }],
+//               // `conduite` (minutes, D-8) : ce que lisent `cumulSansPause`, `plafond` et le compteur de conduite à la place
+//               // de la durée du bloc (une tournée de 8 h 30 de service dont 4 h 30 de conduite) ; absent = la durée
 //               details: (c, o) => [html…], duree: (c) => minutes (ou jours), libDuree?, detailDuree?: (c) => texte,
 //               ligne?: (c) => id de ligne imposée, semaineEntiere?, demandee?: (c) => jour, impose?: (c) => bool,
 //               nonPosees?: (cartes) => texte, pauses?: { nombre, duree, libelle } },
@@ -177,10 +183,16 @@ function posees(D, place) {
     if (!p || p.s == null) return;
     const r = c._ligne || p.r;
     if (!D.L[r]) return;
-    I.push({ id: c.id, c, r, k: p.k && D.R[p.k] ? p.k : null, s: p.s, e: p.s + c._L });
+    // Sur une ligne qui porte sa seconde ressource, une affectation restée d'avant (carte déplacée) ne compte pas.
+    const porte = porteSur(D, r);
+    I.push({ id: c.id, c, r, k: !porte && p.k && D.R[p.k] ? p.k : null, porte, s: p.s, e: p.s + c._L });
   });
   return I;
 }
+// Une ligne qui porte sa seconde ressource (`porteAffectation`, D-8 : le transporteur et son camion).
+const porteSur = (D, r) => !!(D.L[r] && D.L[r].porteAffectation);
+// Les minutes de conduite d'un bloc : `conduite` de la carte si elle le déclare (D-8), sinon sa durée.
+const conduiteDe = (E, c) => (c.conduite != null && !c.pause ? Number(c.conduite) || 0 : E.minutes(c._L));
 
 // Qui est là à chaque colonne : une ligne est « pas là » hors de sa présence (intérimaire pas encore
 // arrivé) et sur les colonnes que couvrent ses cartes. Présent = toute colonne sans carte.
@@ -292,6 +304,7 @@ const TYPES = {
     return out;
   },
   // Cumul des blocs d'une ligne au-delà de `max` minutes SANS carte Pause entre deux (la pause se planifie).
+  // Une carte qui déclare `conduite` compte pour sa conduite, pas pour sa durée (D-8).
   cumulSansPause(R, X) {
     const out = [];
     X.D.lignes.forEach((l) => {
@@ -299,18 +312,18 @@ const TYPES = {
       let acc = 0, dit = false;
       siens.forEach((i) => {
         if (i.c.pause) { acc = 0; return; }
-        acc += X.E.minutes(i.c._L);
+        acc += conduiteDe(X.E, i.c);
         if (acc > R.max && !dit) { dit = true; out.push({ texte: msg(R, (x) => `${x.nom} travaille trop longtemps sans pause.`, l, X.o), cartes: [i.id], cote: R.marque || 'ligne' }); }
       });
     });
     return out;
   },
-  // Somme des durées d'une ligne au-delà de `max` minutes.
+  // Somme des durées d'une ligne au-delà de `max` minutes (la `conduite` d'une carte qui la déclare, D-8).
   plafond(R, X) {
     const out = [];
     X.D.lignes.forEach((l) => {
       const siens = X.I.filter((i) => i.r === l.id && !i.c.pause);
-      const tot = siens.reduce((a, i) => a + X.E.minutes(i.c._L), 0);
+      const tot = siens.reduce((a, i) => a + conduiteDe(X.E, i.c), 0);
       if (tot > R.max) out.push({ texte: msg(R, (x) => `${x.nom} dépasse le maximum de la journée.`, l, X.o), cartes: siens.map((i) => i.id), cote: R.marque || 'ligne' });
     });
     return out;
@@ -359,7 +372,7 @@ function analyser(P, E, D, place, seules) {
   const I = posees(D, place);
   const pos = new Set(I.map((i) => i.id));
   const nonPosees = D.cartes.filter((c) => !pos.has(c.id));
-  const nonAffectees = P.affectation ? I.filter((i) => !i.c.pause && !i.k).map((i) => i.c) : [];
+  const nonAffectees = P.affectation ? I.filter((i) => !i.c.pause && !i.k && !i.porte).map((i) => i.c) : [];
   let pr = null;
   const X = { P, E, D, I, place: place || {}, nonPosees, presents: () => (pr || (pr = presences(D, I, E))), o: outils(E, D) };
   const textes = [];
@@ -601,8 +614,10 @@ export function creerPlanning(P, opts = {}) {
     }
     const p = e.place[id] || {};
     p.r = r; p.s = s;
+    // Posée sur la ligne du transporteur (`porteAffectation`) : l'affectation d'avant tombe, pas de bulle.
+    if (porteSur(D, r)) delete p.k;
     e.place[id] = p;
-    ui.bulle = c._affecter && !p.k ? id : null;
+    ui.bulle = c._affecter && !p.k && !porteSur(D, r) ? id : null;
   }
   function retirer(e, id) { delete e.place[id]; if (ui.bulle === id) ui.bulle = null; }
   // GESTES (questions au fil, lot 3) : `planning:<id>:poser` (poser, déplacer ou retirer une carte), `planning:<id>:envoyer`.
@@ -686,7 +701,9 @@ export function creerPlanning(P, opts = {}) {
       const s = p.s, fin = s + c._L;
       const decale = c._dem != null && !c._impose && s !== c._dem;
       etat = `Posé : ${c._ligne ? '' : `${ech(nomLigne(D, p.r))}, `}${ech(E.plage(s, fin))}${decale ? ' (décalé)' : ''}`;
-      if (c._affecter) {
+      if (c._affecter && porteSur(D, c._ligne || p.r)) {
+        if (AF.porte) etat += ` · ${ech(AF.porte)}`;
+      } else if (c._affecter) {
         const fk = direct && an.fauxK[c.id];
         etat += ` · <span class="${fk ? 'pl-faux-t' : ''}">${p.k && D.R[p.k] ? ech(nomRes(D, p.k)) : `<span class="pl-manque">${ech(AF.manque || '?')}</span>`}</span>
           <button class="pl-lien" data-pl-act="bulle" data-pour="${ech(c.id)}">${p.k ? 'Changer' : 'Choisir'} ${ech(AF.lien || '')}</button>`;
@@ -727,7 +744,7 @@ export function creerPlanning(P, opts = {}) {
       const rep = R.reprise && rRepos ? repriseSlot(rRepos, l, E) : null;
       let petit = l.note ? ech(l.note) : '';
       if (R.conduite && plaf) {
-        const m = an.I.filter((x) => x.r === l.id && !x.c.pause).reduce((a, x) => a + E.minutes(x.c._L), 0);
+        const m = an.I.filter((x) => x.r === l.id && !x.c.pause).reduce((a, x) => a + conduiteDe(E, x.c), 0);
         const hm = (v) => `${Math.floor(v / 60)} h${v % 60 ? ` ${pad2(v % 60)}` : ''}`;
         petit += `${petit ? ' · ' : ''}conduite ${Math.floor(m / 60)} h ${pad2(m % 60)} / ${hm(plaf.max)}`;
       }
@@ -747,12 +764,13 @@ export function creerPlanning(P, opts = {}) {
       const cl = couloirs(ici);
       ici.forEach((x) => {
         const c = x.c, faux = direct && an.faux[c.id];
-        const k = c._affecter ? (x.k ? ech(nomRes(D, x.k)) : `<span class="pl-manque">${ech(AF.manque || '?')}</span>`) : '';
+        const k = !c._affecter ? '' : x.porte ? ech(AF.porte || '')
+          : x.k ? ech(nomRes(D, x.k)) : `<span class="pl-manque">${ech(AF.manque || '?')}</span>`;
         const lib = c.pause ? ech(c.court) : c._affecter ? `<b>${ech(c.id)}</b> ${k}` : ech(c.court);
         h += `<button class="pl-bloc ${teinte(c)}${cl[c.id] ? ' pl-decale' : ''}${faux ? ' pl-bloc-faux' : ''}${ui.sel === c.id ? ' pl-sel' : ''}" draggable="true"
           data-pl-id="${ech(c.id)}" data-pl-vue="g" style="${couleur(c)}grid-row:${r};grid-column:${x.s + 2} / span ${c._L}"
           title="${ech(c.titre)} ${ech(E.plage(x.s, x.e))}" aria-label="${ech(c.titre)}, ${ech(l.nom)}, ${ech(E.plage(x.s, x.e))}${faux ? ', problème' : ''}">${lib}</button>`;
-        if (ui.bulle === c.id && c._affecter) h += htmlBulle(e, D, c, x, r);
+        if (ui.bulle === c.id && c._affecter && !x.porte) h += htmlBulle(e, D, c, x, r);
       });
     });
     // Compteurs sous la grille (cas personnel) : visibles à tous les temps ; en rouge en direct seulement.
@@ -1041,6 +1059,8 @@ export function creerPlanning(P, opts = {}) {
       racine.querySelectorAll('[data-pl-id]').forEach((el) => {
         const id = el.dataset.plId, vue = el.dataset.plVue, c = D.C[id];
         if (!c) return;
+        // Un bloc sur la ligne du transporteur (`porteAffectation`) n'a pas de bulle : le clic le prend, comme une pause.
+        const bulle = () => c._affecter && !(e.place[id] && porteSur(D, c._ligne || e.place[id].r));
         el.addEventListener('dragstart', (ev) => {
           ev.dataTransfer.setData('text/plain', id);
           ev.dataTransfer.effectAllowed = 'move';
@@ -1058,7 +1078,7 @@ export function creerPlanning(P, opts = {}) {
               poser(e, D, ui.sel, cs.dataset.r, +cs.dataset.t); ui.sel = null; fait(); return;
             }
           }
-          if (vue === 'g' && c._affecter && ui.sel !== id) {
+          if (vue === 'g' && bulle() && ui.sel !== id) {
             ui.bulle = ui.bulle === id ? null : id; ui.sel = null; ui.ouvrirBulle = !!ui.bulle; redessiner(); return;
           }
           ui.sel = ui.sel === id ? null : id; ui.bulle = null; redessiner();
@@ -1068,7 +1088,7 @@ export function creerPlanning(P, opts = {}) {
           const k = ev.key;
           if (k === 'Escape') { if (ui.sel || ui.bulle) { ui.sel = null; ui.bulle = null; redessiner(); } return; }
           if (vue === 'b' && (k === 'Enter' || k === ' ')) { ev.preventDefault(); ui.sel = ui.sel === id ? null : id; ui.bulle = null; redessiner(); return; }
-          if (vue === 'g' && k === 'Enter' && c._affecter && ui.sel !== id) { ev.preventDefault(); ui.bulle = id; ui.ouvrirBulle = true; redessiner(); return; }
+          if (vue === 'g' && k === 'Enter' && bulle() && ui.sel !== id) { ev.preventDefault(); ui.bulle = id; ui.ouvrirBulle = true; redessiner(); return; }
           if (vue === 'g' && (k === ' ' || k === 'Enter') && ui.sel !== id) { ev.preventDefault(); ui.sel = id; ui.bulle = null; redessiner(); return; }
           if (ui.sel !== id) return;
           if (k === 'Delete' || k === 'Backspace') { ev.preventDefault(); retirer(e, id); ui.sel = null; ui.focus = { id, vue: 'b' }; fait(); return; }
