@@ -149,10 +149,12 @@ await v('ENT-6.7 : livraison — pret: true et ouverture: prof, rang entre ENT-6
     const I = await import('/activites/index.js');
     const L = await I.chargerActivites();
     const A = await import('/activites/france-boissons-preparation.js');
+    const S8 = await import('/activites/france-boissons-planning.js');
     const codes = (Array.isArray(L) ? L : []).map((x) => (x.meta || x).code).filter((c) => /^ENT-6\./.test(c || ''));
-    return { pret: A.meta.pret, ouverture: A.meta.ouverture, echecs: I.activitesEnEchec().length, codes };
+    return { pret: A.meta.pret, ouverture: A.meta.ouverture, echecs: I.activitesEnEchec().length, codes, apres: S8.meta.precedente };
   });
   egal([r.pret, r.ouverture, r.echecs], [true, 'prof', 0], 'livraison');
+  egal(r.apres, 'france-boissons-preparation', 'ENT-6.8 s’ouvre après ENT-6.7 (décision de Tristan du 12/10/2026)');
   if (r.codes.length) { const i = r.codes.indexOf('ENT-6.7'); vrai(i > 0 && r.codes[i - 1] === 'ENT-6.6' && r.codes[i + 1] === 'ENT-6.8', 'rang : ' + r.codes); }
 });
 

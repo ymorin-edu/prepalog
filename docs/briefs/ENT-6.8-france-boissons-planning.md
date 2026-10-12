@@ -365,7 +365,7 @@ signale « E2 n'a pas assez d'autonomie » sur Mantes sans donner de chiffre ; l
   - **Barème** : 13 jalons pondérés (17 points) + 2 questions notées (3), `bareme: 20` (règle du 10/10/2026). Poids **validés par Tristan le
     12/10/2026** : planning 1er envoi 5 (tous 0,5 · chauffeurs 1 · camions 1,5 · fenêtres 1 · conduite 1), après l'imprévu 7 (0,5 · 1 · 2 · 1 · 1 ·
     vides 1,5), documents à bord 5 (Rouen 2,5 · Mantes 2,5), questions 3.
-  - **`precedente: 'france-boissons-inventaire'`** (ENT-6.6) : ENT-6.7 n'existe pas encore ; à passer à ENT-6.7 quand elle sera construite.
+  - **`precedente: 'france-boissons-preparation'`** (ENT-6.7) depuis le 12/10/2026 (décision de Tristan) ; avant, provisoirement ENT-6.6.
 - **Décisions prises en route** :
   - Noms fictifs (aucune entreprise active de ce nom trouvée par recherche web le 12/10/2026) : **Locaporteur** (loueur), **Transports Ancelin**
     (transporteur), **Rouen en fête** (organisateur du concert), toujours suivis de « (fictif) ».
@@ -382,4 +382,4 @@ signale « E2 n'a pas assez d'autonomie » sur Mantes sans donner de chiffre ; l
   pièges de la fiche, fiche incomplète refusée, textes calculés des questions, corrigé. Suite complète verte avant le push.
 - **Commits** : voir `git log` du 12/10/2026 (« ENT-6.8 : … »).
 - **Reste ouvert** : essai à l'écran par Tristan (1366 × 768) puis ouverture à son groupe ; relire les textes de Karim et du loueur ; trame courte
-  (Cowork, après validation) ; `precedente` à passer à ENT-6.7 ; la durée réelle (≈ 45 min + le message au loueur).
+  (Cowork, après validation) ; la durée réelle (≈ 45 min + le message au loueur).

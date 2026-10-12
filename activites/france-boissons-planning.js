@@ -24,9 +24,9 @@ const s = seanceEntreprise(FB, SEANCE, {
   domaines: ['D2'],
   temps: 'entrainement',
   bareme: 20,           // jalons pondérés (17) + questions notées (3), somme = 20
-  // Parcours strict. ENT-6.7 n'est pas encore construite : en attendant, la séance suit ENT-6.6 (à passer à ENT-6.7 quand elle existera).
+  // Parcours strict : ne s'ouvre qu'à l'élève dont ENT-6.7 a son premier bilan (décision de Tristan du 12/10/2026).
   parcours: true,
-  precedente: 'france-boissons-inventaire',
+  precedente: 'france-boissons-preparation',
   // Règle du premier bilan : « Corriger » rouvre le planning (1re version fausse d'abord) et la fiche « Documents à bord ».
   correction: true,
   questions: 'ENT-6.8',

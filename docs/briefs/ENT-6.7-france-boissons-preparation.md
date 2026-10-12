@@ -324,6 +324,5 @@ premier sur une palette sans place libre voit le critère « aucun casier sous u
   signal remis après la sauvegarde) : chacun fait tomber des cas. Suite entière verte : 1309/1309, 314 s.
 - **Commits** : voir l'historique du 12/10/2026 (« ENT-6.7 : … »).
 - **Reste ouvert** : textes de Nadia (accueil, fin) à relire à l'écran ; palette en bois, quai 14 (construits) ; Code civil 1603 à relire
-  sur Légifrance avant d'ouvrir aux élèves ; trame courte (Cowork, après validation à l'écran) ; **ENT-6.8 a encore `precedente:
-  'france-boissons-inventaire'`** (provisoire) : à passer à `'france-boissons-preparation'` si Tristan le veut ; le bandeau de fin d'origine
+  sur Légifrance avant d'ouvrir aux élèves ; trame courte (Cowork, après validation à l'écran) ; ENT-6.8 suit maintenant ENT-6.7 (`precedente`, décision de Tristan du 12/10) ; le bandeau de fin d'origine
   dit « Relis ta trame à ces étapes » alors que la séance n'a pas de trame (texte du moteur, commun aux séances sans « Corriger »).
