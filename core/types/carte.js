@@ -177,7 +177,7 @@ function htmlCadre(C, o = {}) {
       ${svgCarte(C, o)}
       <div class="ct-reperes" data-ct-reperes></div>
       <div class="ct-echelle"><span data-ct-ech-txt></span><i data-ct-ech-barre></i></div>
-      <div class="ct-attrib">© contributeurs OpenStreetMap · quartiers : IRIS © IGN-INSEE · bâti : OSM / IGN BD TOPO</div>
+      <div class="ct-attrib">${ech(C.attrib || '© contributeurs OpenStreetMap · quartiers : IRIS © IGN-INSEE · bâti : OSM / IGN BD TOPO')}</div>
       <div class="ct-bulle" data-ct-bulle role="status" aria-live="polite"></div>
     </div>`;
 }
@@ -258,7 +258,8 @@ function monterScene(z, C, ui, o = {}) {
     }
   }
   function echelle(k) {
-    const pas = [50, 100, 200, 250, 500, 1000, 2000].find((p) => p >= 110 * k * 0.6) || 1000;
+    // 5 et 10 km pour une carte de côte (ENT-6.9, ≈ 30 m par pixel) ; une ville n'y arrive jamais.
+    const pas = [50, 100, 200, 250, 500, 1000, 2000, 5000, 10000].find((p) => p >= 110 * k * 0.6) || 1000;
     $('[data-ct-ech-barre]').style.width = pas / k + 'px';
     $('[data-ct-ech-txt]').textContent = pas >= 1000 ? pas / 1000 + ' km' : pas + ' m';
   }
@@ -625,10 +626,11 @@ export function planDeCarte(PLAN) {
     points: clients,
     depart: Object.assign({ id: 'depart', lettre: 'E' }, C.depart),
     arrivee: Object.assign({ id: 'arrivee', lettre: 'G' }, C.arrivee),
-    echelle: { libelle: 'une case = 1 km' },
+    echelle: { libelle: `une case = ${(C.pas || 1000) / 1000} km` },
+    // `boucle` (carte de la côte, ENT-6.9) : le départ EST l'arrivée, un seul point, une seule ligne.
     legende: [
       { forme: 'rond', couleur: 'var(--vert)', texte: C.depart.nom },
-      { forme: 'rond', couleur: 'var(--terre)', texte: C.arrivee.nom },
+      ...(C.boucle ? [] : [{ forme: 'rond', couleur: 'var(--terre)', texte: C.arrivee.nom }]),
       { forme: 'rond', couleur: 'var(--ardoise-fond)', texte: 'Client : son numéro' },
     ],
   });
@@ -702,8 +704,9 @@ export function carteTournee(P) {
             : `Retirer ${p.nom} de la tournée (actuellement ${rang + 1}ᵉ arrêt)`),
         });
       }).join('');
+      // En boucle, l'arrivée est au même endroit que le départ : un seul rond (deux se recouvriraient).
       const calque = bout(P.depart, 'depart', departPose, 'ct-mk-depart')
-        + bout(P.arrivee, 'arrivee', arriveePose, 'ct-mk-arrivee') + points;
+        + (C.boucle ? '' : bout(P.arrivee, 'arrivee', arriveePose, 'ct-mk-arrivee')) + points;
       return htmlCadre(C, { fixes: false, trace, calque, classe: 'ct-cadre-tournee' });
     },
     // La tournée redessine toute sa vue à chaque clic : la scène est remontée à chaque fois,
@@ -713,7 +716,7 @@ export function carteTournee(P) {
       if (!z.querySelector('[data-ct-svg]')) return null;
       const geste = o.lecture ? 'La tournée se lit sur la carte ; elle ne se modifie pas.' : 'Cliquez les clients dans l’ordre de passage.';
       return monterScene(z, C, ui, {
-        aide: () => (ui.vue === 'ensemble' ? `${geste} Un quartier s’ouvre avec ses boutons.` : geste),
+        aide: () => (ui.vue === 'ensemble' ? `${geste} ${C.unite === 'commune' ? 'Une commune' : 'Un quartier'} s’ouvre avec ses boutons.` : geste),
         // Un clic sur un quartier (hors d'un point) l'ouvre ; un point garde son clic à lui.
         clicQuartier: (ev) => !ev.target.closest('[data-clic-point],[data-clic-extremite]'),
       });

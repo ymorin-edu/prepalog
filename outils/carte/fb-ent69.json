@@ -1,0 +1,33 @@
+{
+ "sortie": "contenus/fb-ent69-carte.js",
+ "description": "les six clients d'ENT-6.9 (établissements inventés, noms vérifiés libres le 12/10/2026 ; rues réelles, numéros géocodés à la BAN le 12/10/2026, point au milieu de la rue quand elle n'a pas de numéro) ; communes OSM ; profil porteur.",
+ "profil": "porteur",
+ "communes": {
+  "villerville": "Villerville",
+  "trouville": "Trouville-sur-Mer",
+  "deauville": "Deauville",
+  "touques": "Touques",
+  "villers": "Villers-sur-Mer",
+  "houlgate": "Houlgate"
+ },
+ "entree": {
+  "nom": "Sortie de Touques",
+  "rue": "Route de Pont-l'Évêque",
+  "lonlat": [0.13842, 49.315],
+  "source": "route de Pont-l'Évêque (double sens), 60 m après le bout nord de l'A132 dans OpenStreetMap ; commune OSM : Canapville, à la limite de Touques"
+ },
+ "clients": [
+  { "id": "D", "nom": "Café de l'Étal", "adresse": "40 rue Gambetta", "cp": "14800", "ville": "Deauville",
+    "rue": "Rue Gambetta", "lonlat": [0.077666, 49.36051], "commune": "deauville" },
+  { "id": "R", "nom": "Le Relais du Phare", "adresse": "20 rue du Général Leclerc", "cp": "14113", "ville": "Villerville",
+    "rue": "Rue du Général Leclerc", "lonlat": [0.129731, 49.400452], "commune": "villerville" },
+  { "id": "T", "nom": "Brasserie Le Cabestan", "adresse": "30 rue des Bains", "cp": "14360", "ville": "Trouville-sur-Mer",
+    "rue": "Rue des Bains", "lonlat": [0.082289, 49.365967], "commune": "trouville" },
+  { "id": "M", "nom": "La Cabane à Malo", "adresse": "rue Alfred Feine", "cp": "14640", "ville": "Villers-sur-Mer",
+    "rue": "Rue Alfred Feine", "lonlat": null, "commune": "villers" },
+  { "id": "V", "nom": "Hôtel des Vaches Noires", "adresse": "20 rue du Maréchal Foch", "cp": "14640", "ville": "Villers-sur-Mer",
+    "rue": "Rue du Maréchal Foch", "lonlat": [-0.006465, 49.322358], "commune": "villers" },
+  { "id": "G", "nom": "Le Bistrot de la Digue", "adresse": "rue Henri Dobert", "cp": "14510", "ville": "Houlgate",
+    "rue": "Rue Henri Dobert", "lonlat": null, "commune": "houlgate" }
+ ]
+}

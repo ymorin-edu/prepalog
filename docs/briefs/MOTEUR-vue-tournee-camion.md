@@ -9,7 +9,7 @@
 > **📋 Phrase — LOT 4 (vides et place), plus tard :** `Lis docs/briefs/MOTEUR-vue-tournee-camion.md et implémente le LOT 4, avec sa page d'essai.`
 > **LOT 5 (plan de chargement)** : **à cadrer avec Cowork avant toute construction** (maquette à valider).
 
-**Statut** : en cours — **lots 1 et 2 livrés le 12/10/2026, lot 3 : profil porteur livré**, carte de la côte reportée à ENT-6.9 (choix de Tristan), page d'essai à faire *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
+**Statut** : à valider par Tristan — **lots 1 à 3 livrés le 12/10/2026** (profil porteur ; carte de la côte construite avec ENT-6.9, `contenus/fb-ent69-carte.js`) ; **page d'essai** `outils/essai-tournee-camion.html` à valider à l'écran *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
 **Date du brief** : 06/10/2026
 **Conversation d'origine** : Cowork (Opus), cadrage d'ENT-6.9 ; fiche projet `claude/prepalog-reprise-6.9.md` (décision 65 :
 « on peut mettre les 4 cas dans le moteur et utiliser 1 et 2 pour cette séance »).

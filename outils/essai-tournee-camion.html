@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Essai — tournée camion sur la côte (Prepalog)</title>
+<!-- Page d'ESSAI du chantier D-9 (brief docs/briefs/MOTEUR-vue-tournee-camion.md, §8), à valider par Tristan
+     AVANT ENT-6.9 : la vue Tournée du moteur sur la carte réelle de la côte (`contenus/fb-ent69-carte.js`),
+     décor France Boissons. Ce n'est PAS la séance : valeurs du jeu C du calage d'ENT-6.9 (45 km/h sur la
+     côte, 20 min par arrêt), textes provisoires. Liée nulle part, rien n'est enregistré : un rechargement
+     repart de zéro.
+     Ouvrir avec `lancer.bat`, puis http://localhost:8000/outils/essai-tournee-camion.html
+     Ce qu'on doit y voir : un client « ouvre à 10 h » (attente), des fenêtres « avant… », l'autoroute dans
+     le bandeau, la jauge de conduite qui passe la pause, tous les clients à servir (pas de quai). -->
+<base href="../">
+<link rel="icon" href="./styles/logo.png">
+<link rel="stylesheet" href="./styles/polices.css">
+<link rel="stylesheet" href="./styles/base.css">
+<link rel="stylesheet" href="./styles/inventaire.css">
+<link rel="stylesheet" href="./styles/plan.css">
+<link rel="stylesheet" href="./styles/grille.css">
+<link rel="stylesheet" href="./styles/quiz.css">
+<link rel="stylesheet" href="./styles/carte.css">
+</head>
+<body>
+<div id="hote"></div>
+<script type="module">
+import { creerEntreprise } from './core/types/entreprise.js';
+import * as FB from './contenus/france-boissons.js';
+import { CARTE } from './contenus/fb-ent69-carte.js';
+
+const h = (hh, mm = 0) => hh * 60 + mm;
+// Horaires du jeu C du calage (docs/briefs/france-boissons/calage-6.9-resultats.txt, choix de Tristan du 12/10/2026).
+// Les textes sont provisoires : ceux de la séance seront relus à l'écran.
+const CRENEAUX = {
+  D: { avant: h(8, 30), libelle: 'vendredi, jour de marché : après 8 h 30, la place est fermée aux camions' },
+  R: { avant: h(11, 30), libelle: 'avant le service du midi (11 h 30)' },
+  T: { avant: h(11, 30), libelle: 'zone piétonne : livraisons avant 11 h 30' },
+  M: { apres: h(10), libelle: 'Malo n’ouvre qu’à 10 h' },
+  G: { avant: h(10, 30), libelle: 'livraison avant 10 h 30' },
+};
+const POINTS = CARTE.clients.map((c) => ({ ...c, kg: 0, colis: 0, ...(CRENEAUX[c.id] ? { creneau: CRENEAUX[c.id] } : {}) }));
+
+const moteur = creerEntreprise({
+  ENTREPRISE: FB.ENTREPRISE, VOCAB: FB.VOCAB, CATALOGUE: FB.CATALOGUE,
+  SUPPLIERS: FB.SUPPLIERS, SUP_BY_ID: FB.SUP_BY_ID, CUSTOMERS: FB.CUSTOMERS, CM: FB.CM,
+  baseDeDepart: FB.baseDeDepart, THEME: FB.THEME,
+  etapes: [], exercice: 'Essai — tournée camion sur la côte',
+  transportSection: 'Tournées', transportId: 'essai-tournee-camion',
+  plan: { libelle: 'Carte de la côte', titre: 'La côte, de Honfleur à Houlgate', consigne: '', carte: CARTE, clients: POINTS },
+  tournee: {
+    libelle: 'Tournée (essai)', titre: 'Ordonner la tournée de la côte (essai)',
+    consigne: 'Lucas est parti de Buchelay à 6 h. Cliquez les six clients dans l’ordre de passage : '
+      + 'la tournée part de la sortie de l’autoroute et y revient. Valeurs provisoires (calage à venir).',
+    points: POINTS,
+    mesures: [],
+    horaire: {
+      depart: h(6), limite: h(15, 30), vitesse: 45, service: 20,
+      libelleLimite: 'retour à Buchelay',
+      approche: { km: 142, vitesse: 90, libelle: 'A13 Buchelay → sortie de Touques', retour: true },
+      pause: { apres: 270, duree: 45 },
+    },
+    quai: false, departAQuai: true,
+  },
+});
+const db = {};
+moteur.rendre(document.getElementById('hote'), {
+  meta: { id: 'essai-tournee-camion', code: 'ESSAI', titre: 'France Boissons — essai de la tournée camion',
+    portee: 'eleve', immersif: true, jeuId: 'essai-tournee-camion' },
+  profil: { prenom: 'Essai', nom: 'Camion', role: 'eleve' },
+  jeu: { etat: () => db, sauver: () => {} },
+  enregistrer: () => {}, quitter: () => { location.reload(); }, codeStock: '',
+});
+window.__essai = { db };
+document.querySelector('.ent-nav[data-vue="tournee"]')?.click();
+</script>
+</body>
+</html>

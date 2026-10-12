@@ -1,0 +1,37 @@
+Km sur la côte (carte, profil porteur) :
+  entrée→R 12.1  entrée→T 7.2  entrée→D 7.3  entrée→V 13.3  entrée→M 13.8  entrée→G 19.5
+  R→T 5.5  T→D 1.7  D→V 7.6  V→M 0.5  M→G 7.1
+  ordre le plus court : R-T-D-V-M-G, 54.2 km sur la côte ; nord → sud 54.2 km ; autoroute 284 km, 03 h 09 de conduite
+
+6750 jeux essayés ; les 12 meilleurs (critères tenus sur 8, horaires utiles sur 5) :
+  n°0: 8/8 5/5  côte 45 km/h, 15 min/arrêt, D<08 h 15 R<11 h 30 T<11 h 30 G<10 h 30 : 47 ordres bons (7 %), meilleure D-R-T-V-M-G 04 h 24 de conduite, retour 12 h 41, 8 ordres rentrent après 15 h 30  manque : []
+  n°1: 8/8 5/5  côte 45 km/h, 15 min/arrêt, D<08 h 30 R<11 h 30 T<11 h 30 G<10 h 30 : 47 ordres bons (7 %), meilleure D-R-T-V-M-G 04 h 24 de conduite, retour 12 h 41, 8 ordres rentrent après 15 h 30  manque : []
+  n°2: 8/8 5/5  côte 45 km/h, 25 min/arrêt, D<08 h 30 R<11 h 30 T<12 h 00 G<11 h 00 : 43 ordres bons (6 %), meilleure D-R-T-V-M-G 04 h 24 de conduite, retour 13 h 01, 170 ordres rentrent après 15 h 30  manque : []
+  n°3: 8/8 5/5  côte 45 km/h, 25 min/arrêt, D<08 h 45 R<11 h 30 T<12 h 00 G<11 h 00 : 43 ordres bons (6 %), meilleure D-R-T-V-M-G 04 h 24 de conduite, retour 13 h 01, 170 ordres rentrent après 15 h 30  manque : []
+  n°4: 8/8 5/5  côte 45 km/h, 20 min/arrêt, D<08 h 30 R<11 h 30 T<11 h 30 G<10 h 30 : 42 ordres bons (6 %), meilleure D-R-T-V-M-G 04 h 24 de conduite, retour 12 h 51, 116 ordres rentrent après 15 h 30  manque : []
+  n°5: 8/8 5/5  côte 45 km/h, 25 min/arrêt, D<08 h 30 R<11 h 30 T<11 h 30 G<11 h 00 : 40 ordres bons (6 %), meilleure D-R-T-V-M-G 04 h 24 de conduite, retour 13 h 01, 170 ordres rentrent après 15 h 30  manque : []
+  n°6: 8/8 5/5  côte 45 km/h, 25 min/arrêt, D<08 h 45 R<11 h 30 T<11 h 30 G<11 h 00 : 40 ordres bons (6 %), meilleure D-R-T-V-M-G 04 h 24 de conduite, retour 13 h 01, 170 ordres rentrent après 15 h 30  manque : []
+  n°7: 8/8 5/5  côte 45 km/h, 20 min/arrêt, D<08 h 30 R<11 h 30 T<11 h 00 G<10 h 30 : 37 ordres bons (5 %), meilleure D-R-T-V-M-G 04 h 24 de conduite, retour 12 h 51, 116 ordres rentrent après 15 h 30  manque : []
+  n°8: 8/8 5/5  côte 45 km/h, 15 min/arrêt, D<08 h 15 R<11 h 00 T<11 h 00 G<10 h 30 : 36 ordres bons (5 %), meilleure D-R-T-V-M-G 04 h 24 de conduite, retour 12 h 41, 8 ordres rentrent après 15 h 30  manque : []
+  n°9: 8/8 5/5  côte 45 km/h, 15 min/arrêt, D<08 h 30 R<11 h 00 T<11 h 00 G<10 h 30 : 36 ordres bons (5 %), meilleure D-R-T-V-M-G 04 h 24 de conduite, retour 12 h 41, 8 ordres rentrent après 15 h 30  manque : []
+  n°10: 8/8 4/5  côte 45 km/h, 15 min/arrêt, D<08 h 15 R<11 h 30 T<11 h 30 G<11 h 00 : 55 ordres bons (8 %), meilleure D-R-T-V-M-G 04 h 24 de conduite, retour 12 h 41, 8 ordres rentrent après 15 h 30  manque : []
+  n°11: 8/8 4/5  côte 45 km/h, 15 min/arrêt, D<08 h 15 R<11 h 30 T<11 h 30 G<11 h 30 : 55 ordres bons (8 %), meilleure D-R-T-V-M-G 04 h 24 de conduite, retour 12 h 41, 8 ordres rentrent après 15 h 30  manque : []
+
+Détail : côte 45 km/h, 20 min par arrêt, créneaux {'D': {'avant': 510}, 'R': {'avant': 690}, 'T': {'avant': 690}, 'M': {'apres': 600}, 'G': {'avant': 630}}
+  nord → sud R-T-D-V-M-G : 54.2 km, conduite 04 h 22, retour 12 h 51, ratés ['D'], pause False, attente 29 min
+  sud → nord G-M-V-D-T-R : 55.5 km, conduite 04 h 23, retour 13 h 53, ratés ['D', 'R'], pause False, attente 89 min
+  plus court R-T-D-V-M-G : 54.2 km, conduite 04 h 22, retour 12 h 51, ratés ['D'], pause False, attente 29 min
+  ordres bons : 42
+    D-R-T-V-M-G : 55.9 km, conduite 04 h 24, retour 12 h 51, attente 27 min
+    D-T-R-V-M-G : 56.0 km, conduite 04 h 24, retour 12 h 51, attente 26 min
+    D-R-T-V-G-M : 56.3 km, conduite 04 h 24, retour 12 h 24, attente 0 min
+    D-T-R-V-G-M : 56.4 km, conduite 04 h 25, retour 12 h 25, attente 0 min
+    R-D-T-V-M-G : 56.7 km, conduite 04 h 25, retour 12 h 51, attente 26 min
+    D-V-G-M-T-R : 56.8 km, conduite 04 h 25, retour 13 h 11, attente 46 min
+    D-R-T-G-M-V : 56.8 km, conduite 04 h 25, retour 12 h 33, attente 8 min
+    D-T-R-G-M-V : 56.9 km, conduite 04 h 25, retour 12 h 33, attente 8 min
+    D-R-T-M-G-V : 57.0 km, conduite 04 h 25, retour 13 h 12, attente 47 min
+    R-D-T-V-G-M : 57.1 km, conduite 04 h 25, retour 12 h 25, attente 0 min
+    T-D-R-V-M-G : 57.1 km, conduite 04 h 25, retour 12 h 51, attente 25 min
+    D-R-T-G-V-M : 57.1 km, conduite 04 h 25, retour 12 h 25, attente 0 min
+  fenêtres tenues mais > 4 h 30 : 80 ; < 4 h 30 mais fenêtre ratée : 102 ; Malo avant 10 h : 538 ordres, dont bons : 34

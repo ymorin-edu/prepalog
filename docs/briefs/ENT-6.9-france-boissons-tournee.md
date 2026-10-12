@@ -6,7 +6,8 @@
 > Lis docs/EN-COURS.md puis docs/briefs/ENT-6.9-france-boissons-tournee.md. Vérifie d'abord que les lots 1 à 3 de MOTEUR-vue-tournee-camion sont livrés. Construis la carte de la côte, puis écris un script de calage (docs/briefs/france-boissons/calage-6.9.py) et propose-moi 2 ou 3 jeux de valeurs chiffrés (§6) avant d'écrire la séance. Annonce la durée avant de commencer et dis-moi si un point du brief contredit le code.
 > ```
 
-**Statut** : à implémenter *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
+**Statut** : en cours — carte de la côte et calage faits le 12/10/2026 (**Honfleur remplacé par Villerville, jeu C** : voir
+« Calage retenu » au §6 et `docs/decisions.md`) ; séance à écrire *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
 **Date du brief** : 06/10/2026
 **Conversation d'origine** : Cowork (Opus) ; fiche projet `claude/prepalog-reprise-6.9.md` (décisions 65 à 71) ; cadrage
 `claude/prepalog-2de-s2-cadrage.md` (décisions 9, 16) ; déroulé `claude/prepalog-2de-s2-deroule.md` (calendrier 31, règle 32) ;
@@ -205,6 +206,18 @@ colis), fenêtres des 6 clients. Profil à garantir :
 - km d'autoroute Buchelay → sortie de Touques : **mesurés** (OSM ou Mappy), pas inventés ; la sortie vers 7 h 35 en découle.
 
 Valeurs attendues (feuille, bilan, menus du SMS) **calculées** depuis les données, jamais recopiées.
+
+**Calage retenu (12/10/2026, choix de Tristan ; Claude Code)** — remplace le tableau provisoire du §4 :
+- **Honfleur remplacé par Villerville** : avec Honfleur, la boucle réelle sur la côte fait 67 km et tenir 4 h 30 exigeait
+  55 km/h de moyenne (1 % d'ordres justes). Le titre « de Honfleur à Houlgate » est à revoir ici et dans ENT-6.8.
+- Clients : **D** Café de l'Étal (40 rue Gambetta, Deauville) avant 8 h 30 · **R** Le Relais du Phare (20 rue du Général-Leclerc,
+  Villerville) avant 11 h 30 · **T** Brasserie Le Cabestan (30 rue des Bains, Trouville) avant 11 h 30 · **M** La Cabane à Malo
+  (rue Alfred-Feine, Villers) pas avant 10 h · **V** Hôtel des Vaches Noires (20 rue du Maréchal-Foch, Villers) sans horaire ·
+  **G** Le Bistrot de la Digue (rue Henri-Dobert, Houlgate) avant 10 h 30. Les textes des horaires sont à réécrire (le « avant le
+  service du midi » et « avant 10 h 30 » de Houlgate n'ont plus de justification métier).
+- **45 km/h** sur la côte, **20 min** par arrêt, autoroute **142 km** mesurés (sortie à 7 h 35), point d'entrée **« Sortie de
+  Touques »**. 42 ordres justes sur 720 ; meilleure tournée D-R-T-V-M-G, 55,9 km, 4 h 24 de conduite, retour 12 h 51.
+- Détail et profil complet : `docs/briefs/france-boissons/calage-6.9-resultats.txt`.
 
 ## 7. Demandes au moteur
 
