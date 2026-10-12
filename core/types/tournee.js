@@ -35,6 +35,8 @@
 //     horaire: {                            // facultatif : la contrainte de temps
 //       depart: 13 * 60, limite: 16 * 60 + 10, vitesse: 12, service: 6,
 //       libelleLimite: 'départ du train',
+//       repere: '…',                        // facultatif : la note de la jauge muette quand les contraintes sont
+//                                           //   dans la feuille (défaut : celle du train d'ENT-3.1, « Il faut être à la gare… »)
 //     },                                    // `service` : un nombre de minutes par arrêt, OU
 //                                           //   { base: 4, parColis: 1, champ: 'colis' } (voir `serviceDe`)
 //     report: [{ id, libelle, unite, tolerance, valeur: (bilan) => … }],
@@ -612,8 +614,8 @@ export function creerTournee(T) {
         ${DANS_GRILLE
           // Les données du calcul (distance, vitesse, arrêts) sont dans la feuille, à gauche :
           // les répéter ici les ferait lire deux fois sans rien apprendre.
-          ? `<span class="note">Il faut être à la gare avant cette heure.
-              L'heure d'arrivée, c'est à vous de la calculer.</span>`
+          ? `<span class="note">${H.repere ? ech(H.repere) : `Il faut être à la gare avant cette heure.
+              L'heure d'arrivée, c'est à vous de la calculer.`}</span>`
           : `<span class="note">Départ à ${hhmm(H.depart)}. ${fr(b.km, 1)} km à parcourir,
               ${b.retenus.length} arrêt${b.retenus.length > 1 ? 's' : ''},
               ${ech(texteService())}, ${ech(String(H.vitesse))} km/h en ville.${APPROCHE
