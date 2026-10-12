@@ -6,8 +6,8 @@
 > Lis docs/EN-COURS.md puis docs/briefs/ENT-6.9-france-boissons-tournee.md. Vérifie d'abord que les lots 1 à 3 de MOTEUR-vue-tournee-camion sont livrés. Construis la carte de la côte, puis écris un script de calage (docs/briefs/france-boissons/calage-6.9.py) et propose-moi 2 ou 3 jeux de valeurs chiffrés (§6) avant d'écrire la séance. Annonce la durée avant de commencer et dis-moi si un point du brief contredit le code.
 > ```
 
-**Statut** : en cours — carte de la côte et calage faits le 12/10/2026 (**Honfleur remplacé par Villerville, jeu C** : voir
-« Calage retenu » au §6 et `docs/decisions.md`) ; séance à écrire *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
+**Statut** : **à valider par Tristan** — construite le 12/10/2026 (`pret: true, ouverture: 'prof'`) ; carte de la côte et calage faits le même
+jour (**Honfleur remplacé par Villerville, jeu C** : voir « Calage retenu » au §6 et `docs/decisions.md`) *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
 **Date du brief** : 06/10/2026
 **Conversation d'origine** : Cowork (Opus) ; fiche projet `claude/prepalog-reprise-6.9.md` (décisions 65 à 71) ; cadrage
 `claude/prepalog-2de-s2-cadrage.md` (décisions 9, 16) ; déroulé `claude/prepalog-2de-s2-deroule.md` (calendrier 31, règle 32) ;
@@ -278,9 +278,51 @@ l'attente chez Malo se voit dans la feuille ; le SMS se compose en 1 min ; la s�
 
 ## Compte rendu *(rempli par Claude Code à la livraison)*
 
-- **Fichiers créés / modifiés** :
+*(12/10/2026, Claude Code)*
+
+- **Fichiers créés / modifiés** : `activites/france-boissons-tournee.js` (ENT-6.9, `pret: true, ouverture: 'prof'`, parcours après ENT-6.8) et sa
+  ligne dans `activites/index.js` ; `contenus/france-boissons-ent69.js` (tournée, documents, messages, SMS, jalons, accueil) ;
+  `contenus/france-boissons-ent69-donnees.js` (données PURES : clients, horaires, journée calculée comme le moteur, feuille de route, menus du
+  SMS — lues aussi hors navigateur par le corrigé) ; `contenus/questions/ENT-6.9.js` ; `contenus/corriges/ENT-6.9.js` ; `outils/test/fb-6.9.mjs`
+  et sa ligne dans `BLOCS` et `GROUPES` (groupe 1) de `outils/test.mjs` ; **moteur** : `core/types/tournee.js`, une option facultative
+  `horaire.repere` (voir « Décisions »).
+- **Notation (validée par Tristan le 12/10/2026, option A)** : 12 jalons pondérés (16) + 3 questions notées (4) = 20. La tournée 6,5 (six
+  clients 0,5 · horaires 2,5 · conduite ≤ 4 h 30 2 · retour avant 15 h 30 1,5) ; la feuille 6,5 (aller 1 · arrivées et départs 2 · conduite
+  totale 1,5 · pause 1 · heure de retour 1) ; le SMS 3 (trois premiers arrêts 1 · heure de retour 1 · pause 1) ; questions : à qui sert
+  l'heure de retour 1, conduire sans pause 1,5, lire un SMS au volant 1,5. Rien de vrai avant l'envoi de la tournée.
+- **Questions (§4 bis, §4 ter)** : celles de `france-boissons/PROPOSITIONS-questions-au-fil.md` (n° 1 à 4) et la banque de
+  `BANQUE-avant-de-commencer.md` (8 questions, 2 + 2 tirées, calculette), toutes gardées par Tristan le 10/10/2026, plus la question « Pour
+  réfléchir » du §4 (Malo en premier), en réponse libre non notée lue au bilan.
 - **Écarts par rapport au brief** (et pourquoi) :
-- **Décisions prises en route** :
-- **Tests** :
-- **Commits** :
+  - **Pas de geste nouveau au moteur** pour les questions n° 1 et 2 (marquées ⚙) : une question au fil accepte une condition sur l'état
+    (`quand: (db) => …`, comme `pourquoi-vehicule` d'ENT-6.8). n° 1 arrive au premier arrêt posé ; n° 2 (point d'étape) arrive **à l'envoi
+    de la tournée**, avant le SMS, et non « à la fin de la feuille » : la carte et la feuille sont alors figées, la question ne souffle rien.
+  - **« Pause nécessaire ? »** (bloc D) : une case où l'élève tape **45 ou 0** (sans formule), au lieu d'une case oui / non : la feuille ne
+    sait juger que des nombres, et la pause entre ainsi dans la formule de l'heure de retour (`+B24`).
+  - **Conduite en minutes** (270 = 4 h 30) dans la feuille, et non en « h min » : une formule ne compare que des nombres.
+  - **Signature du SMS** : « La suite de l'ordre est dans ton terminal. {prénom} » (l'élève signe son SMS) au lieu de « … Karim ».
+  - **Lucas n'annonce pas 7 h 35** dans son SMS (« je sors bientôt à Touques ») : c'est la réponse de l'étape 2 de la feuille.
+  - **Compétence** : `OTM-C1.3` seule dans `competences` (C2.2, « secondaire, non noté à part », n'y est pas : sinon la note compterait aussi
+    pour C2.2). Pas de `correction: true` : guidage, la feuille se vérifie à l'écran avant l'envoi.
+  - Textes des horaires réécrits (calage : Villerville au lieu de Honfleur ; Houlgate « avant 10 h 30 » justifié par la digue aux piétons et
+    aux terrasses, construit). `dechargement-pause` (ouverture) dit 20 min, le temps par arrêt calé, au lieu de 15.
+- **Décisions prises en route** : option `horaire.repere` de la vue Tournée (le texte de la jauge muette quand les contraintes sont dans la
+  feuille ; sans elle, le texte d'ENT-3.1 « Il faut être à la gare… », inchangé pour Boost) ; libellés de la feuille raccourcis pour que les six
+  colonnes tiennent en 1366 px (les aides de chaque cellule gardent l'explication) ; commandes des clients affichées dans la liste (construites,
+  ne jouent pas). Voir `docs/decisions.md`.
+- **Tests** : bloc `fb-6.9`, 14 cas (valeurs écrites à la main) : le moteur retrouve le calage (42 ordres justes, 80 « horaires tenus mais plus
+  de 4 h 30 ») et le calcul pur du contenu dit la même chose que lui sur les 720 ordres ; parcours juste 20 / 20 à l'écran ; 2e tournée juste
+  20 / 20 ; chaque piège fait tomber son jalon (nord → sud : horaires ; zigzag : conduite ; Malo en premier : horaires, conduite, retour — la
+  feuille bien calculée garde ses points ; attente oubliée : heures ; conduite sans autoroute ou avec les arrêts : conduite totale ; pause « 0 »
+  avec 4 h 48 : pause ; pause oubliée dans l'heure de retour ; nombre tapé au lieu d'une formule ; SMS : autre 1er arrêt, heure d'une feuille
+  fausse, « pas de pause » avec 4 h 48) ; inaction 0 / 20, rien de vrai avant l'envoi ; « Envoyer » refusé avec un client à placer ; « que, pas
+  de combien » (Malo en premier : ni 07 h 53, ni 15 h 35, ni 4 h 43 à l'écran) ; carte (communes, itinéraires) ; sabotages (sans attente,
+  autoroute hors conduite, arrêts dans la conduite) ; corrigé. Éprouvés par trois sabotages du contenu (horaires toujours tenus, jalons vrais
+  avant l'envoi, pause du SMS figée) : chacun fait tomber un cas. Suite entière verte (1334).
+- **Commits** : voir `git log` du 12/10/2026 (« ENT-6.9 : la tournée de la côte… »).
 - **Reste ouvert** :
+  - **ENT-6.8 à recaler** (décision du calage) : sa carte « côte » dit encore « Honfleur → Houlgate » et 8 h 30 de service (la journée calée
+    dure ≈ 7 h). Non touché ici (séance livrée, autre chantier).
+  - La trame et le corrigé Word (Cowork, après validation à l'écran, §9).
+  - À juger à l'écran par Tristan : la longueur de la colonne des contraintes (huit repères à droite de la feuille), le texte des horaires,
+    les pastilles « tenu » vertes qui s'affichent à droite pendant le calcul (le moteur dit QUE, jamais l'heure).
