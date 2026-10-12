@@ -129,3 +129,35 @@ export const COMPTAGE = {
     'Ne compte que la référence demandée.',
   ] },
 };
+
+// L'INVENTAIRE qui suit le comptage (chantier D-6, lot 4 ; brief ENT-6.6 §4, étape 2) : une ligne libre par ligne du terminal
+// (`cle` = le couloir, comme les réponses du terminal), avec le stock du LOGICIEL (construit, brief §4 : il diffère du réel en
+// M01, M04 et M08). Les comptages de l'élève arrivent par `comptages(db)`, que le montage branche sur le terminal du plan
+// (voir `outils/essai-entrepot.js`). Décisions attendues : M01 régulariser (Casse), M04 remettre en place (la palette est en
+// M02), M08 régulariser (Vides manquants).
+const SYSTEME = { M01: 16, M02: 8, M03: 24, M04: 8, M05: 2, M06: 7, M08: 22 };
+const ATTENDUS = {
+  M01: { attendu: 'regul', motif: 'Casse', explication: 'Le fût percé hier soir est en zone litiges : il est perdu, le stock baisse de 1, motif Casse.' },
+  M04: { attendu: 'rayon', explication: 'La palette de Pelforth S19 a été reposée en M02, sur la Heineken : on la remet en M04, on ne touche pas au stock.' },
+  M08: { attendu: 'regul', motif: 'Vides manquants', explication: 'Trois vides manquent : on régularise et on prévient Nadia.' },
+};
+export const INVENTAIRE_COMPTAGE = {
+  id: 'INV-ESSAI-MASSE',
+  titre: 'Inventaire tournant — zone de masse',
+  sousTitre: 'jeudi 17 juin, 7 h · 7 lignes',
+  source: 'comptages',
+  attenteComptage: 'Termine d’abord le comptage au terminal : l’inventaire s’ouvrira avec tes comptages.',
+  ecarts: 'eleve',
+  correction: 'detaillee',
+  taux: false,
+  actions: ['regul', 'rayon'],
+  libelles: { regul: 'Régulariser le stock du logiciel', rayon: 'Remettre en place' },
+  motifs: ['Casse', 'Vides manquants', 'Erreur de réception', 'Erreur de rangement'],
+  conseil: 'Un écart, c’est un signal. <b>Cherche d’abord pourquoi</b> : une palette ailleurs ? un fût cassé ? '
+    + 'On ne corrige le stock que si les fûts ont vraiment disparu.',
+  lignes: COMPTAGE.terminal.lignes.map((l) => Object.assign({
+    cle: l.couloir, emplacement: l.couloir, ref: l.ref,
+    designation: MASSE.references[l.ref].court === 'VIDES' ? 'Fûts vides' : `${MASSE.references[l.ref].court} — lot ${l.lot}`,
+    systeme: SYSTEME[l.couloir],
+  }, ATTENDUS[l.couloir] || {})),
+};

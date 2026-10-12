@@ -1994,6 +1994,126 @@ await v('Terminal : déclaration fautive refusée au chargement, avec un message
   vrai(/le terminal ne sert qu’au comptage/.test(r.rangement), r.rangement);
 });
 
+/* ------------------------------ les comptages du terminal → écran INVENTAIRE (chantier D-6, lot 4 ; brief ENT-6.6 §4 étape 2, §7.3) */
+// Le contenu d'essai `INVENTAIRE_COMPTAGE` : une ligne libre par couloir du terminal, stock du LOGICIEL écrit à la main ici d'après
+// le brief : M01 16 · M02 8 · M03 24 · M04 8 · M05 2 · M06 7 · M08 22. Écarts d'un comptage juste : −1 · 0 · 0 · −8 · 0 · 0 · −3.
+const ZI = '#pmTest .ent-main';
+const SYS_I = ['16', '8', '24', '8', '2', '7', '22'];
+const COULOIRS_I = ['M01', 'M02', 'M03', 'M04', 'M05', 'M06', 'M08'];
+const allerInv = async () => { await pm.click('#pmTest .ent-nav[data-vue="inventaire"]'); await pm.waitForSelector(`${ZI} .ent-tete`); };
+const allerPlan = async () => { await pm.click('#pmTest .ent-nav[data-vue="entrepot"]'); await pm.waitForSelector(VT); };
+const etatInv = () => pm.evaluate(() => JSON.parse(JSON.stringify((window.__m.db.inventaires || {})['INV-ESSAI-MASSE'] || null)));
+const bilanInv = () => pm.evaluate(async () => {
+  const I = await import('/core/types/inventaire.js');
+  const C = await import('/contenus/entrepot-masse-essai.js');
+  const b = I.bilanInventaire(window.__m.db, C.INVENTAIRE_COMPTAGE, null);
+  return { valide: b.valide, ecartsOk: b.ecartsOk, tauxOk: b.tauxOk, justes: b.justes, notees: b.notees,
+    lignes: b.lignes.map((l) => [l.cle, l.premier, l.ecartPremier, l.action, l.motif, l.juste]) };
+});
+async function ecartsInv(L) {
+  for (let i = 0; i < COULOIRS_I.length; i++) await pm.fill(`${ZI} [data-inv-ecart="${COULOIRS_I[i]}"]`, String(L[i]));
+  await pm.click(`${ZI} [data-inv-aller="3"]`);
+}
+async function deciderInv(c, action, motif) {
+  await pm.selectOption(`${ZI} [data-inv-action="${c}"]`, action);
+  if (motif) await pm.selectOption(`${ZI} [data-inv-motif="${c}"]`, motif);
+}
+const lignesInv = () => pm.evaluate((s) => [...document.querySelectorAll(s)].map((tr) => tr.dataset.invLigne), `${ZI} [data-inv-ligne]`);
+const texteI = async () => ((await pm.textContent(ZI)) || '').replace(/\s+/g, ' ');
+
+await v('Inventaire après le terminal : il attend la fin du comptage, sans état ni stock du logiciel ; puis s’ouvre sur les écarts', async () => {
+  await monterC();
+  await pm.waitForSelector(VT);
+  vrai(await pm.$('#pmTest .ent-nav[data-vue="inventaire"]'), 'l’entrée « Inventaire » est au menu');
+  await allerInv();
+  vrai(await pm.$(`${ZI} [data-inv-attente]`), 'l’écran attend');
+  vrai(/Termine d’abord le comptage au terminal/.test(await texteI()), 'le message d’attente');
+  egal(await etatInv(), null, 'aucun état créé');
+  vrai(!(await pm.$(`${ZI} table`)), 'aucun tableau');
+  // Six lignes sur sept : toujours en attente.
+  await allerPlan();
+  await compterC(JUSTES_T.slice(0, 6));
+  await allerInv();
+  vrai(await pm.$(`${ZI} [data-inv-attente]`), 'six lignes sur sept : l’écran attend encore');
+  egal(await etatInv(), null, 'toujours aucun état');
+  await allerPlan();
+  await repondreC('91'); await repondreC('19');
+  await allerInv();
+  vrai(!(await pm.$(`${ZI} [data-inv-attente]`)), 'comptage fini : l’écran s’ouvre');
+  vrai(await pm.$(`${ZI} [data-inv-comptages]`), 'il dit que les comptages sont repris tels quels');
+  egal(await pm.evaluate((s) => [...document.querySelectorAll(s)].map((li) => [li.textContent.trim(), li.className]), `${ZI} .inv-etapes li`),
+    [['1. Compter', 'fait'], ['2. Constater les écarts', 'cours'], ['3. Traiter les écarts', ''], ["4. Valider l'inventaire", '']]);
+  egal((await pm.$$(`${ZI} [data-inv-saisie]`)).length, 0, 'aucun champ de comptage : non modifiable');
+  const L = await pm.evaluate((s) => [...document.querySelectorAll(s)].map((tr) => [...tr.cells].slice(0, 4).map((c) => c.textContent.trim())), `${ZI} tbody tr`);
+  egal(L.map((r) => r[0]), COULOIRS_I, 'les couloirs, dans l’ordre du terminal');
+  egal(L.map((r) => r[1]), ['Heineken 30 L — lot S20', 'Heineken 30 L — lot S24', 'Pelforth 20 L — lot S24', 'Pelforth 20 L — lot S19',
+    'Affligem 20 L — lot S18', 'Affligem 20 L — lot S24', 'Fûts vides'], 'désignations');
+  egal(L.map((r) => r[2]), SYS_I, 'le stock du logiciel, maintenant');
+  egal(L.map((r) => r[3]), JUSTES_T.map(String), 'les comptages de l’élève');
+  vrai(!/Valeur de l'écart/.test(await texteI()), 'pas de colonne « valeur » sans prix');
+  egal((await etatInv()).saisie, { M01: '15', M02: '8', M03: '24', M04: '0', M05: '2', M06: '7', M08: '19' }, 'comptages repris');
+});
+
+await v('Inventaire : parcours juste — écarts, deux décisions seulement (« Remettre en place »), pas de taux, régularisations sans mouvement', async () => {
+  await monterC();
+  await pm.waitForSelector(VT);
+  await compterC(JUSTES_T);
+  await allerInv();
+  await ecartsInv([-1, 0, 0, -8, 0, 0, -3]);
+  egal(await lignesInv(), ['M01', 'M04', 'M08'], 'les lignes en écart');
+  egal(await pm.evaluate((s) => [...document.querySelectorAll(s)].map((o) => o.textContent.trim()), `${ZI} [data-inv-action="M04"] option`),
+    ['— choisir —', 'Régulariser le stock du logiciel', 'Remettre en place'], 'deux décisions, libellés de la séance');
+  vrai(!(await pm.$(`${ZI} [data-inv-ouvrir]`)), 'pas de « voir les mouvements »');
+  vrai(/Un écart, c’est un signal/.test(await pm.textContent(`${ZI} [data-inv-conseil]`)), 'le conseil de la séance');
+  await deciderInv('M01', 'regul', 'Casse');
+  await deciderInv('M04', 'rayon');
+  await deciderInv('M08', 'regul', 'Vides manquants');
+  await pm.click(`${ZI} [data-inv-aller="4"]`);
+  await pm.waitForSelector(`${ZI} [data-inv-valider]`);
+  vrai(!(await pm.$(`${ZI} [data-inv-taux]`)) && !/Taux d'écart/.test(await texteI()), 'pas de taux d’écart dans l’écran');
+  vrai(/Ce qui sera régularisé dans le logiciel/.test(await texteI()), 'titre des régularisations');
+  await pm.click(`${ZI} [data-inv-valider]`);
+  await pm.waitForSelector(`${ZI} [data-inv-valide]`);
+  egal(await bilanInv(), { valide: true, ecartsOk: true, tauxOk: null, justes: 3, notees: 3, lignes: [
+    ['M01', 15, -1, 'regul', 'Casse', true], ['M02', 8, 0, '', '', null], ['M03', 24, 0, '', '', null], ['M04', 0, -8, 'rayon', '', true],
+    ['M05', 2, 0, '', '', null], ['M06', 7, 0, '', '', null], ['M08', 19, -3, 'regul', 'Vides manquants', true]] });
+  const e = await etatInv();
+  egal(e.ajustements.map((a) => [a.ref, a.delta, a.motif]), [['M01', -1, 'Casse'], ['M08', -3, 'Vides manquants']], 'régularisations gardées');
+  egal(await pm.evaluate(() => (window.__m.db.moves || []).length), 0, 'aucun mouvement de stock (lignes libres)');
+  vrai(/Ajustement inventaire · Heineken 30 L — lot S20 · −1/.test(await texteI()), 'le bilan nomme la ligne');
+});
+
+await v('Inventaire : pas de double peine (M01 compté 16 : écart 0 juste) ; un écart faux est refusé ; « Remettre en place » sur M01 = faux', async () => {
+  await monterC();
+  await pm.waitForSelector(VT);
+  await compterC([16, 8, 24, 0, 2, 7, 19]);
+  await allerInv();
+  await ecartsInv([-1, 0, 0, -8, 0, 0, -3]);
+  vrai(/1 écart est faux/.test(await pm.textContent(`${ZI} [data-inv-msg]`)), 'l’écart du bon comptage, pas du sien : refusé');
+  await ecartsInv([0, 0, 0, -8, 0, 0, -3]);
+  egal(await lignesInv(), ['M04', 'M08'], 'M01 sans écart pour lui');
+  await deciderInv('M04', 'regul', 'Casse');
+  await deciderInv('M08', 'regul', 'Vides manquants');
+  await pm.click(`${ZI} [data-inv-aller="4"]`);
+  await pm.waitForSelector(`${ZI} [data-inv-valider]`);
+  await pm.click(`${ZI} [data-inv-valider]`);
+  await pm.waitForSelector(`${ZI} [data-inv-valide]`);
+  const b = await bilanInv();
+  egal([b.ecartsOk, b.justes], [true, 1], 'écarts justes sur SES comptages ; M04 régularisé et M01 sans décision : faux');
+  egal(b.lignes.filter((l) => l[5] != null).map((l) => [l[0], l[5]]), [['M01', false], ['M04', false], ['M08', true]]);
+  // « Remettre en place » sur M01, sans repasser par l'écran : faux (il fallait régulariser, Casse).
+  const r = await pm.evaluate(async () => {
+    const I = await import('/core/types/inventaire.js');
+    const C = await import('/contenus/entrepot-masse-essai.js');
+    const e = { etape: 3, systeme: { M01: 16, M02: 8, M03: 24, M04: 8, M05: 2, M06: 7, M08: 22 },
+      saisie: { M01: '15', M02: '8', M03: '24', M04: '0', M05: '2', M06: '7', M08: '19' }, ecarts: { M01: '-1', M02: '0', M03: '0', M04: '-8', M05: '0', M06: '0' },
+      decisions: { M01: { action: 'rayon', motif: '' } }, recomptes: {}, taux: '', valide: null };
+    const b = I.bilanInventaire({ inventaires: { 'INV-ESSAI-MASSE': e } }, C.INVENTAIRE_COMPTAGE, null);
+    return { m01: b.lignes[0].juste, ecartsOk: b.ecartsOk };
+  });
+  egal(r, { m01: false, ecartsOk: false }, 'M01 remis en place : faux ; écart de M08 non saisi : écarts faux');
+});
+
 await v('Masse : aucune erreur JavaScript', async () => { egal(erreursM, []); });
 await ctxM.close();
 }

@@ -1792,7 +1792,7 @@ export function creerEntreprise(U) {
         },
       });
       // Périmètre pas encore choisi par l'élève (`perimetre` de la séance) : l'écran attend.
-      function vueInventaire() { return VINV.attente(db) ? VINV.attenteHtml() : VINV.html(etatInventaire(), apiInventaire()); }
+      function vueInventaire() { return VINV.attente(db) ? VINV.attenteHtml(db) : VINV.html(etatInventaire(), apiInventaire()); }
 
       /* ---------------------------------------------------------- geste tableur */
       // Ce que le geste demande à l'environnement. La graine des salissures : l'élève (son

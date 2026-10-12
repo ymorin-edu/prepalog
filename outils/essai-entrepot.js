@@ -6,13 +6,13 @@
 
 import { catalogueSimple } from '../contenus/entreprise-commun.js';
 import { CAS } from '../contenus/entrepot-essai.js';
-import { etapesEntrepot } from '../core/types/entrepot.js';
+import { etapesEntrepot, comptagesTerminal, comptageFini } from '../core/types/entrepot.js';
 import { THEME } from '../contenus/smoby.js';
 import { THEME as THEME_FB } from '../contenus/france-boissons.js';
-import { MASSE, COMPTAGE } from '../contenus/entrepot-masse-essai.js';
+import { MASSE, COMPTAGE, INVENTAIRE_COMPTAGE } from '../contenus/entrepot-masse-essai.js';
 
 // `masse` : le stockage de masse d'ENT-6.5 (chantier D-5), dans la charte de France Boissons ; `comptage` : le même, en
-// comptage à l'aveugle (ENT-6.6, chantier D-6).
+// comptage à l'aveugle (ENT-6.6, chantier D-6), suivi de l'écran Inventaire qui reprend les comptages du terminal (lot 4).
 export function univers({ cas = 'rangement', temps = 'guidage', entrepot = null } = {}) {
   const P = entrepot || (cas === 'masse' ? MASSE : cas === 'comptage' ? COMPTAGE : CAS[cas]);
   const masse = P.mode === 'masse';
@@ -28,5 +28,7 @@ export function univers({ cas = 'rangement', temps = 'guidage', entrepot = null 
     etapes: etapesEntrepot(P), exercice: 'Essai de l’écran Plan d’entrepôt',
     entrepot: P, copie: temps === 'evaluation', sansTrame: "Tout à l'écran",
     menu: ['receptions', 'stock'],     // un menu court, comme une séance Smoby (la visite tient sans défiler)
+    ...(P === COMPTAGE ? { inventaire: Object.assign({}, INVENTAIRE_COMPTAGE,
+      { comptages: (db) => (comptageFini(db, P) ? comptagesTerminal(db, P) : null) }) } : {}),
   };
 }
