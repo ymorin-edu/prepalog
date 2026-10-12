@@ -69,6 +69,7 @@ export const ACTIVITES = [
   () => import('./france-boissons-inventaire.js'),
   () => import('./france-boissons-preparation.js'),
   () => import('./france-boissons-planning.js'),
+  () => import('./france-boissons-tournee.js'),
 ];
 
 // Pictogrammes des rubriques. Une seule grille pour les dix : trait de 1,6 px, bouts et
