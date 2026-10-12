@@ -415,6 +415,15 @@ export function personne(I, x, y, o = {}) {
   g += `<ellipse cx="${X(0)}" cy="${Y(93.5)}" rx="${n(5.3)}" ry="${n(6.4)}" fill="${peau}"/>`;
   g += o.dos ? `<ellipse cx="${X(0)}" cy="${Y(94.5)}" rx="${n(5.5)}" ry="${n(6)}" fill="#3a2a1f"/>`
     : `<path d="M${X(-5.4)},${Y(94)} Q${X(-5.8)},${Y(101)} ${X(0)},${Y(100.6)} Q${X(5.8)},${Y(101)} ${X(5.4)},${Y(94)} Q${X(3)},${Y(97.5)} ${X(-5.4)},${Y(94)} Z" fill="#3a2a1f"/>`;
+  // Le préparateur guidé à la voix (D-7 lot 2, ENT-6.7) : `o.casque` (serre-tête, deux écouteurs, micro vers la bouche) et
+  // `o.terminal` (le boîtier à la ceinture). Sans ces options, le dessin est celui d'avant, au caractère près.
+  if (o.casque) {
+    g += `<g data-iso-casque><path d="M${X(-5.9)},${Y(93)} Q${X(-6.4)},${Y(103.5)} ${X(0)},${Y(103)} Q${X(6.4)},${Y(103.5)} ${X(5.9)},${Y(93)}" fill="none" stroke="#23272b" stroke-width="${n(1.5)}"/>`;
+    [-5.9, 5.9].forEach((v) => { g += `<ellipse cx="${X(v)}" cy="${Y(92.5)}" rx="${n(1.7)}" ry="${n(2.6)}" fill="#23272b"/>`; });
+    if (!o.dos) g += `<path d="M${X(5.9)},${Y(91)} Q${X(5)},${Y(88)} ${X(1.8)},${Y(88.6)}" fill="none" stroke="#23272b" stroke-width="${n(0.9)}"/><circle cx="${X(1.6)}" cy="${Y(88.6)}" r="${n(1)}" fill="#23272b"/>`;
+    g += '</g>';
+  }
+  if (o.terminal) g += `<g data-iso-terminal><rect x="${X(5.5)}" y="${Y(56)}" width="${n(5)}" height="${n(7.5)}" rx="${n(1)}" fill="#23272b"/><rect x="${X(6.3)}" y="${Y(54.8)}" width="${n(3.4)}" height="${n(2.4)}" fill="#59636a"/></g>`;
   return g;
 }
 // Le point au-dessus de la tête d'une personne posée en (x, y) : là où pointe sa bulle.
@@ -977,3 +986,258 @@ export function paletteFuts(I, pal, ox, oy, r, o = {}) {
   });
   return g;
 }
+
+/* ============================== l'allée de picking : fûts, casiers, travée à tiroir, palette client (D-7 lot 2) */
+// Les objets d'ENT-6.7 (brief `docs/briefs/ENT-6.7-france-boissons-preparation.md` §7.2 et §7.3), repris de la maquette
+// validée (`docs/briefs/france-boissons/maquette-6.7-preparation-vocale.html`) ; le CASIER est celui que Tristan a validé le
+// 06/10 pour ENT-6.10 (`maquette-6.10-retour-vides.html` : plastique anthracite ajouré, poignées, pied sombre, rebord clair),
+// plein (bouteilles capsulées) ou vide (goulots ouverts). Unité : le MÈTRE, comme le quai. Rien ici n'est cliquable par
+// soi-même : la vue (lot 3 : l'allée ; lot 4 : le montage) pose ses attributs par `attrs`. Aucun vert (le vert ne dit que
+// « juste ») ; les teintes se choisissent PAR NOM, comme les lots (un nom inconnu est refusé : on ne découvre pas en classe
+// qu'un objet ne se dessine pas). Page d'essai : `outils/essai-kit-iso.html`.
+
+// La bande de marque d'un fût et la capsule d'une bouteille.
+export const TEINTES_FUT = { or: '#b8862b', bleu: '#2f5f9e', rouge: '#a8322a', cuivre: '#9a5b2e', gris: '#6f777c' };
+export const TEINTES_CAPSULE = { bleu: '#2f6fc0', jaune: '#d8b52a', rouge: '#b3302a', gris: '#9aa1a6' };
+// Un fût de picking : 39,5 cm de diamètre (6 par palette client : 3 × 39,5 cm sur 1,20 m), plus ou moins haut selon le volume.
+export const HAUT_FUT = { 20: 0.38, 30: 0.46 };
+export const RAYON_FUT = R_FUT;
+// Un casier de 12 bouteilles d'un litre (4 × 3).
+export const CASIER = { w: 0.40, d: 0.30, h: 0.30 };
+
+const teinte = (table, nom, quoi) => {
+  if (nom == null) return null;
+  if (!table[nom]) throw new Error(`kit iso : ${quoi} « ${nom} » inconnue (connues : ${Object.keys(table).join(', ')})`);
+  return table[nom];
+};
+const f1 = (v) => v.toFixed(1);
+
+// La hauteur d'un objet posé ({ type: 'fut', litres } ou { type: 'casier' }) : ce qui se pose dessus part de là.
+export function hauteurObjet(ob) {
+  if (ob.type === 'casier') return CASIER.h;
+  if (ob.type === 'fut') {
+    const h = HAUT_FUT[ob.litres || 30];
+    if (!h) throw new Error(`kit iso : fût de ${ob.litres} L inconnu (connus : ${Object.keys(HAUT_FUT).join(', ')} L)`);
+    return h;
+  }
+  throw new Error(`kit iso : objet « ${ob.type} » inconnu (fut, casier)`);
+}
+
+// Un fût debout, centre du pied en (cx, cy, z). `o` : { litres (20 | 30, 30 par défaut), bande (teinte de marque, ou rien),
+// abime (cabossé : un enfoncement sombre sur la face avant, un reflet, un pli ; marqué `data-iso-avarie`), r (rayon) }.
+export function futDebout(I, cx, cy, z, o = {}) {
+  const { P, unite } = I;
+  const r = o.r || R_FUT, h = hauteurObjet({ type: 'fut', litres: o.litres }), coul = teinte(TEINTES_FUT, o.bande, 'teinte de fût');
+  const [bx, by] = P(cx, cy, z), [, ty] = P(cx, cy, z + h), rx = r * unite * K1, ry = r * unite * K2;
+  let g = fut(I, cx, cy, z, r, h);
+  if (coul) {
+    // La bande de marque, sur la face tournée vers nous, entre les deux cercles.
+    const bas = by + (ty - by) * .36, haut = by + (ty - by) * .62, a0 = Math.PI * .12, a1 = Math.PI * .88;
+    const arc = (yy, u0, u1) => Array.from({ length: 9 }, (_, k) => { const a = u0 + (u1 - u0) * k / 8; return `${f1(bx + rx * Math.cos(a))},${f1(yy + ry * Math.sin(a))}`; });
+    g += `<polygon points="${arc(bas, a0, a1).concat(arc(haut, a1, a0)).join(' ')}" fill="${coul}" stroke="rgba(0,0,0,.3)" stroke-width=".8"/>`;
+  }
+  if (o.abime) {
+    const yy = by + (ty - by) * .5, c0 = bx + rx * .05, w = rx * .75, hh = (by - ty) * .42, ep = (v) => Math.max(v, unite / 60).toFixed(1);
+    g += `<g data-iso-avarie><path d="M${f1(c0 - w)},${f1(yy - hh * .2)} C${f1(c0 - w * .4)},${f1(yy - hh)} ${f1(c0 + w * .5)},${f1(yy - hh * .8)} ${f1(c0 + w)},${f1(yy - hh * .1)} C${f1(c0 + w * .6)},${f1(yy + hh * .9)} ${f1(c0 - w * .5)},${f1(yy + hh)} ${f1(c0 - w)},${f1(yy - hh * .2)} Z" fill="#3e464b" opacity=".85"/>`
+      + `<path d="M${f1(c0 - w * .7)},${f1(yy + hh * .35)} C${f1(c0 - w * .2)},${f1(yy + hh * .75)} ${f1(c0 + w * .4)},${f1(yy + hh * .6)} ${f1(c0 + w * .75)},${f1(yy + hh * .15)}" fill="none" stroke="#f4f6f7" stroke-width="${ep(1.2)}" opacity=".9"/>`
+      + `<path d="M${f1(c0 - w * .5)},${f1(yy - hh * .35)} l${f1(w * .35)},${f1(hh * .5)} l${f1(w * .3)},${f1(-hh * .3)} l${f1(w * .35)},${f1(hh * .35)}" fill="none" stroke="#1f2427" stroke-width="${ep(1)}"/></g>`;
+  }
+  return `<g data-iso-objet="fut" data-litres="${o.litres || 30}" data-z="${z.toFixed(3)}"${o.abime ? ' data-abime' : ''}>${g}</g>`;
+}
+
+// Un casier de 12 bouteilles, coin min en (x, y, z), 0,40 m selon x et 0,30 m selon y. `o` : { vide (goulots ouverts : les
+// vides d'ENT-6.10), capsule (teinte des bouchons d'un casier plein ; gris par défaut) }.
+export function casier(I, x, y, z, o = {}) {
+  const { P, pts, face, unite } = I, { w, d, h } = CASIER;
+  const cap = o.vide ? null : (teinte(TEINTES_CAPSULE, o.capsule, 'teinte de capsule') || TEINTES_CAPSULE.gris);
+  const coque = '#4a5157', sombre = '#2c3236', bord = '#c3cbd0';
+  let g = face([[x, y, z + .02], [x + w, y, z + .02], [x + w, y + d, z + .02], [x, y + d, z + .02]], sombre, 'none');
+  g += face([[x, y, z], [x + w, y, z], [x + w, y, z + h], [x, y, z + h]], '#3a4247', 'rgba(0,0,0,.4)');
+  g += face([[x, y, z], [x, y + d, z], [x, y + d, z + h], [x, y, z + h]], '#30373b', 'rgba(0,0,0,.4)');
+  // Les bouteilles 4 × 3, de l'arrière vers l'avant : corps en verre clair, goulot qui dépasse, capsule ou goulot ouvert.
+  const bt = [];
+  for (let i = 0; i < 4; i++) for (let j = 0; j < 3; j++) bt.push([x + w * (i + .5) / 4, y + d * (j + .5) / 3]);
+  const r1 = Math.min(w / 4, d / 3) * .36, r2 = r1 * .45;
+  const cyl = (bx, by, z0, z1, r, f, st) => {
+    const [ax, ay] = P(bx, by, z0), [tx, ty] = P(bx, by, z1), rx = r * unite * K1, ry = r * unite * K2;
+    return `<path d="M${f1(ax - rx)},${f1(ay)} L${f1(tx - rx)},${f1(ty)} L${f1(tx + rx)},${f1(ty)} L${f1(ax + rx)},${f1(ay)} A${f1(rx)},${f1(ry)} 0 0 1 ${f1(ax - rx)},${f1(ay)} Z" fill="${f}" stroke="${st}" stroke-width=".8"/>`
+      + `<ellipse cx="${f1(tx)}" cy="${f1(ty)}" rx="${f1(rx)}" ry="${f1(ry)}" fill="${f}" stroke="${st}" stroke-width=".8"/>`;
+  };
+  bt.sort((p, q) => (p[0] + p[1]) - (q[0] + q[1])).forEach(([bx, by]) => {
+    g += cyl(bx, by, z, z + h * .7, r1, '#cfe3ea', '#7f9aa6') + cyl(bx, by, z + h * .7, z + h * 1.12, r2, '#d9ebf1', '#7f9aa6');
+    const [tx, ty] = P(bx, by, z + h * 1.12);
+    g += cap ? `<ellipse data-iso-capsule cx="${f1(tx)}" cy="${f1(ty)}" rx="${f1(r2 * unite * K1 * 1.05)}" ry="${f1(r2 * unite * K2 * 1.05)}" fill="${cap}" stroke="rgba(0,0,0,.4)" stroke-width=".6"/>`
+      : `<ellipse cx="${f1(tx)}" cy="${f1(ty)}" rx="${f1(r2 * unite * K1 * .6)}" ry="${f1(r2 * unite * K2 * .6)}" fill="#1f2426"/>`;
+  });
+  // Les parois avant (avant-gauche y + d, avant-droite x + w), ajourées, avec la poignée, le pied sombre et le rebord clair.
+  const paroi = (A, B, coul) => {
+    const L = (t, zz) => [A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t, zz];
+    let p = face([L(0, z), L(1, z), L(1, z + h), L(0, z + h)], coul, 'rgba(0,0,0,.45)');
+    [[.08, .3], [.38, .62], [.7, .92]].forEach(([t0, t1]) => { p += face([L(t0, z + h * .12), L(t1, z + h * .12), L(t1, z + h * .5), L(t0, z + h * .5)], 'rgba(207,227,234,.9)', 'rgba(0,0,0,.35)'); });
+    p += face([L(0, z), L(1, z), L(1, z + h * .07), L(0, z + h * .07)], '#1a1d20', 'none');
+    p += face([L(.3, z + h * .66), L(.7, z + h * .66), L(.7, z + h * .84), L(.3, z + h * .84)], '#1a1d20', 'none');
+    return p + `<polyline points="${pts([L(0, z + h * .97), L(1, z + h * .97)])}" fill="none" stroke="${bord}" stroke-width="${Math.max(3, unite / 35).toFixed(1)}"/>`;
+  };
+  g += paroi([x, y + d], [x + w, y + d], coque) + paroi([x + w, y + d], [x + w, y], '#59636a');
+  g += `<polyline points="${pts([[x, y, z + h], [x + w, y, z + h], [x + w, y + d, z + h], [x, y + d, z + h], [x, y, z + h]])}" fill="none" stroke="${bord}" stroke-width="${Math.max(1.5, unite / 60).toFixed(1)}"/>`;
+  return `<g data-iso-objet="casier" data-z="${z.toFixed(3)}"${o.vide ? ' data-vide' : ''}>${g}</g>`;
+}
+
+// LA TRAVÉE DE PICKING : deux poteaux bleus de chaque côté, des lisses orange ; au niveau 1, un TIROIR COULISSANT (plateau
+// sur rails, poignée côté allée) qui porte la marchandise ; aux niveaux 2 et 3, des plateaux grillagés SANS fûts (la réserve
+// est au sol, en zone de masse : décision de Tristan du 06/10). Coin min en (x, y) ; L selon x (le long de l'allée), D selon y.
+// `o` : {
+//   cote: 'A' (l'allée est devant, y + D : on voit la face du tiroir) | 'B' (l'allée est derrière, côté y : la marchandise
+//     est rangée de ce côté-là) ;
+//   contenu: { type: 'fut' | 'casier', n (0 = emplacement vide), litres, bande, capsule, abimes (combien de fûts cabossés :
+//     les plus en avant, côté allée) } ;
+//   sortie : de combien (m) le tiroir est tiré vers l'allée (0 par défaut ; tiré, il passe devant l'étiquette de lisse) ;
+//   voile : opacité de toute la travée (le côté B de la vue d'ensemble, en transparence) ; voileHaut : celle des niveaux 2-3
+//     et des poteaux avant seulement (la vue de près : le tiroir se voit à travers) ;
+//   etiquette : { adresse, designation, lot, code } — l'étiquette de la lisse basse, avec le CODE DÉTROMPEUR en gros. Elle
+//     n'est dessinée que si on la demande (la vue de près) : la vue d'ensemble ne la passe jamais, et le code n'est alors
+//     nulle part dans le dessin. Côté A seulement (la face avant d'un côté B ne se voit pas) ;
+//   attrs : attributs posés sur le groupe de la travée.
+// }
+export const TRAVEE = { L: 1.8, D: 1.0, N2: 1.05, N3: 1.95, H: 2.6 };
+export const PLACES_TIROIR = { fut: 8, casier: 12 };
+const POTEAU_RACK = ['#4f7fc0', '#2f5f9e', '#244b80'], LIS = ['#f39a4a', '#e07b22', '#b85f12'], TIROIR = ['#d7dcdf', '#aab2b7', '#8f989e'];
+// Les places de la marchandise d'un tiroir, de la plus en avant (côté allée) à la plus au fond : [x, y, z] du pied (fût)
+// ou du coin min (casier), dans le repère de la travée.
+function placesTiroir(type, cote) {
+  const D = TRAVEE.D, avant = cote === 'B' ? 0 : 1, P = [];
+  if (type === 'fut') {
+    for (const j of [avant, 1 - avant]) for (let i = 3; i >= 0; i--) P.push([.3 + i * .4, j ? D - .3 : .3, 0]);
+  } else {
+    for (let n = 0; n < 2; n++) for (const j of [avant, 1 - avant]) for (let i = 2; i >= 0; i--) P.push([.15 + i * .52, j ? D - .1 - CASIER.d : .1, n * CASIER.h]);
+  }
+  return P;
+}
+
+export function traveePicking(I, x, y, o = {}) {
+  const { L, D, N2, N3, H } = TRAVEE, cote = o.cote || 'A', c = o.contenu || null;
+  if (cote !== 'A' && cote !== 'B') throw new Error(`kit iso : travée côté « ${cote} » inconnu (A, B)`);
+  if (o.etiquette && cote !== 'A') throw new Error('kit iso : l’étiquette de lisse ne se dessine que côté A (vue de face)');
+  if (c && !PLACES_TIROIR[c.type]) throw new Error(`kit iso : contenu de tiroir « ${c.type} » inconnu (fut, casier)`);
+  if (c && (c.n || 0) > PLACES_TIROIR[c.type]) throw new Error(`kit iso : ${c.n} ${c.type === 'fut' ? 'fûts' : 'casiers'} dans un tiroir de ${PLACES_TIROIR[c.type]} places`);
+  const sortie = (o.sortie || 0) * (cote === 'B' ? -1 : 1);
+  const poteau = (px, py) => I.boite(px, py, 0, .07, .07, H, POTEAU_RACK);
+  const lisse = (z, py) => I.boite(x, py, z, L, .06, .09, LIS);
+  const plateau = (z) => I.face([[x + .05, y + .05, z + .09], [x + L - .05, y + .05, z + .09], [x + L - .05, y + D - .05, z + .09], [x + .05, y + D - .05, z + .09]], 'rgba(160,168,174,.55)', '#7f878c')
+    + [.25, .5, .75].map((t) => `<polyline points="${I.pts([[x + .05 + (L - .1) * t, y + .05, z + .09], [x + .05 + (L - .1) * t, y + D - .05, z + .09]])}" fill="none" stroke="#7f878c" stroke-width="1"/>`).join('');
+  // Le fond : sol de la travée, poteaux arrière.
+  let g = I.face([[x, y, 0], [x + L, y, 0], [x + L, y + D, 0], [x, y + D, 0]], 'rgba(255,255,255,.35)', '#c9c3b6');
+  g += poteau(x, y) + poteau(x + L - .07, y);
+  // Le tiroir : rails, plateau, puis la marchandise (de bas en haut, de l'arrière vers l'avant), puis sa face et sa poignée.
+  const yt = y + sortie;
+  g += I.boite(x + .06, y + .1, .02, .04, D - .2, .04, TIROIR) + I.boite(x + L - .1, y + .1, .02, .04, D - .2, .04, TIROIR);
+  let t = I.boite(x + .1, yt + .04, .06, L - .2, D - .08, .04, TIROIR);
+  if (c) {
+    const n = c.n || 0, ab = Math.min(c.abimes || 0, n);
+    placesTiroir(c.type, cote).slice(0, n).map((p, k) => ({ p, k }))
+      .sort((a, b) => (a.p[2] - b.p[2]) || ((a.p[0] + a.p[1]) - (b.p[0] + b.p[1])))
+      .forEach(({ p, k }) => {
+        t += c.type === 'fut' ? futDebout(I, x + p[0], yt + p[1], .1, { litres: c.litres, bande: c.bande, abime: k < ab })
+          : casier(I, x + p[0], yt + p[1], .1 + p[2], { capsule: c.capsule, vide: c.vide });
+      });
+  }
+  const yf = cote === 'B' ? yt + .04 : yt + D - .04;
+  t += I.face([[x + .1, yf, .06], [x + L - .1, yf, .06], [x + L - .1, yf, .14], [x + .1, yf, .14]], TIROIR[1], 'rgba(0,0,0,.3)');
+  t += `<polyline points="${I.pts([[x + L * .4, yf, .12], [x + L * .6, yf, .12]])}" fill="none" stroke="#3d4245" stroke-width="${Math.max(2, I.unite / 40).toFixed(1)}" stroke-linecap="round"/>`;
+  // Le devant : lisse basse, niveaux 2 et 3 (plateaux vides), lisses avant et arrière, poteaux avant. Un tiroir TIRÉ côté A est
+  // devant les poteaux : il se dessine après eux.
+  let h = I.boite(x, y + D - .06, 0, L, .06, .05, LIS);
+  h += lisse(N2, y) + plateau(N2) + lisse(N3, y) + plateau(N3);
+  h += lisse(N2, y + D - .06) + lisse(N3, y + D - .06);
+  h += poteau(x, y + D - .07) + poteau(x + L - .07, y + D - .07);
+  if (o.voileHaut != null) h = `<g opacity="${o.voileHaut}">${h}</g>`;
+  g += sortie > 0 ? h + t : t + h;
+  if (o.etiquette) g += etiquetteLisse(I, x + L * .3, y + D + .02, o.etiquette);
+  const attrs = o.attrs ? ` ${o.attrs}` : '';
+  return `<g data-iso-objet="travee"${o.voile != null ? ` opacity="${o.voile}"` : ''}${attrs}>${g}</g>`;
+}
+
+// L'étiquette d'emplacement, posée devant la lisse basse, au tiers gauche de la travée (là où les fûts, rangés depuis la
+// droite, ne la cachent pas et où elle ne cache pas un fût cabossé) ; centre en (cx, cy, 0) : l'adresse, la désignation et le lot,
+// et le code détrompeur en gros (fond sombre, chiffres jaunes). Mesurée en pixels d'une vue à 150 pixels par mètre.
+function etiquetteLisse(I, cx, cy, e) {
+  const [lx, ly] = I.P(cx, cy, .04), k = I.unite / 150, X = (v) => f1(lx + v * k), Y = (v) => f1(ly + v * k), n = (v) => f1(v * k);
+  const bas = [e.designation, e.lot ? `lot ${e.lot}` : ''].filter(Boolean).join(' · ');
+  return `<g data-iso-etiquette-lisse><rect x="${X(-110)}" y="${Y(-4)}" width="${n(240)}" height="${n(46)}" rx="${n(5)}" fill="#fff8d0" stroke="#8a6d00" stroke-width="${n(2)}"/>`
+    + `<text x="${X(-100)}" y="${Y(15)}" font-size="${n(14)}" font-weight="800" fill="#1a1915">${ech(e.adresse || '')}</text>`
+    + `<text x="${X(-100)}" y="${Y(33)}" font-size="${n(11.5)}" fill="#555047">${ech(bas)}</text>`
+    + `<rect x="${X(76)}" y="${Y(2)}" width="${n(46)}" height="${n(34)}" rx="${n(4)}" fill="#1a1915"/>`
+    + `<text data-iso-code x="${X(99)}" y="${Y(27)}" text-anchor="middle" font-size="${n(22)}" font-weight="800" fill="#ffe08a">${ech(e.code || '')}</text></g>`;
+}
+
+// Le volume d'une travée (ses trois faces visibles, en points d'écran) : ce que la vue éclaire au survol et fait cliquer.
+export function volumeTravee(I, x, y) {
+  const { L, D, H } = TRAVEE;
+  return [[[x, y + D, 0], [x + L, y + D, 0], [x + L, y + D, H], [x, y + D, H]], [[x + L, y, 0], [x + L, y + D, 0], [x + L, y + D, H], [x + L, y, H]],
+    [[x, y, H], [x + L, y, H], [x + L, y + D, H], [x, y + D, H]]].map((f) => I.pts(f));
+}
+
+// LA PALETTE CLIENT : une palette en bois 1,20 × 0,80 (construit : la source ne dit pas la matière), coin min en (x, y, z),
+// et ses 6 CASES (3 × 2, une par fût de 39,5 cm), numérotées 0 à 5 du fond-gauche à l'avant-droite (case c : colonne c % 3,
+// rangée Math.floor(c / 3), la rangée 1 étant l'avant). `o` : {
+//   piles : 6 listes au plus, chacune les objets d'une case de bas en haut ({ type: 'fut', litres, bande, abime } ou
+//     { type: 'casier', capsule, vide }) : ce qu'on pose sur une pile part de son sommet (un fût sur un casier se voit) ;
+//   film : le nombre de tours de film étirable (0 : pas de film ; le voile s'épaissit avec les tours, un trait par tour) ;
+//   etiquettes : les côtés étiquetés parmi 'avant', 'arriere', 'gauche', 'droite', 'dessus'. Seuls avant, droite et dessus
+//     se voient d'ici : tous sont écrits dans `data-iso-etiquettes`, pour que la vue les dise ;
+//   attrsCase(c) : les attributs du groupe d'une case (la vue la rend cliquable) ; casesVisibles : le contour des cases.
+// }
+export const CASES_PALETTE = 6;
+export const COTES_ETIQUETTE = ['avant', 'arriere', 'gauche', 'droite', 'dessus'];
+export const hauteurPile = (pile) => (pile || []).reduce((s, ob) => s + hauteurObjet(ob), 0);
+
+export function paletteClient(I, x, y, o = {}) {
+  const { W, D, plancher: PH } = PAL_EUR, z0 = o.z || 0, piles = o.piles || [];
+  if (piles.length > CASES_PALETTE) throw new Error(`kit iso : ${piles.length} piles sur une palette client de ${CASES_PALETTE} cases`);
+  const et = o.etiquettes || [];
+  et.forEach((c) => { if (!COTES_ETIQUETTE.includes(c)) throw new Error(`kit iso : côté d’étiquette « ${c} » inconnu (${COTES_ETIQUETTE.join(', ')})`); });
+  const bois = ['#d6ae78', '#b88a55', '#9c7243'];
+  let g = '';
+  [0, .55, 1.1].forEach((dx) => { g += I.boite(x + dx, y, z0, .1, D, .1, bois); });
+  g += I.boite(x, y, z0 + .1, W, D, PH - .1, bois);
+  [.4, .8].forEach((t) => { g += `<polyline points="${I.pts([[x + W * t, y, z0 + PH], [x + W * t, y + D, z0 + PH]])}" fill="none" stroke="#9c7243" stroke-width="1"/>`; });
+  const zp = z0 + PH;
+  const cases = Array.from({ length: CASES_PALETTE }, (_, c) => ({ c, cx: x + .2 + (c % 3) * .4, cy: y + .2 + Math.floor(c / 3) * .4, pile: piles[c] || [] }));
+  cases.slice().sort((a, b) => (a.cx + a.cy) - (b.cx + b.cy)).forEach((k) => {
+    let s = '';
+    if (o.casesVisibles || o.attrsCase) {
+      const q = [[k.cx - .19, k.cy - .19, zp + .002], [k.cx + .19, k.cy - .19, zp + .002], [k.cx + .19, k.cy + .19, zp + .002], [k.cx - .19, k.cy + .19, zp + .002]];
+      s += `<polygon data-iso-case="${k.c}" points="${I.pts(q)}" fill="rgba(255,255,255,.08)" stroke="rgba(60,40,20,.45)" stroke-width="1" stroke-dasharray="4 3"/>`;
+    }
+    let z = zp;
+    k.pile.forEach((ob) => {
+      s += ob.type === 'casier' ? casier(I, k.cx - CASIER.w / 2, k.cy - CASIER.d / 2, z, ob) : futDebout(I, k.cx, k.cy, z, ob);
+      z += hauteurObjet(ob);
+    });
+    g += o.attrsCase ? `<g ${o.attrsCase(k.c)}>${s}</g>` : s;
+  });
+  const hMax = zp + Math.max(.3, ...cases.map((k) => hauteurPile(k.pile)));
+  const tours = Math.max(0, Math.round(o.film || 0));
+  if (tours) {
+    const voile = `rgba(190,220,240,${Math.min(.12 * tours, .6).toFixed(2)})`;
+    let f = I.face([[x, y + D, zp], [x + W, y + D, zp], [x + W, y + D, hMax], [x, y + D, hMax]], voile, 'rgba(120,160,190,.6)')
+      + I.face([[x + W, y, zp], [x + W, y + D, zp], [x + W, y + D, hMax], [x + W, y, hMax]], voile, 'rgba(120,160,190,.6)');
+    for (let t = 1; t <= tours; t++) {
+      const zz = zp + (hMax - zp) * t / (tours + 1);
+      f += `<polyline points="${I.pts([[x, y + D, zz], [x + W, y + D, zz], [x + W, y, zz]])}" fill="none" stroke="rgba(110,150,180,.75)" stroke-width="1.2"/>`;
+    }
+    g += `<g data-iso-film="${tours}">${f}</g>`;
+  }
+  // Les étiquettes d'expédition qu'on voit : une feuille blanche à deux lignes, à plat sur sa face (q : haut-gauche,
+  // haut-droit, bas-droit, bas-gauche).
+  const feuille = (q) => I.face(q, '#fbfbf8', '#1a1915') + [.35, .62].map((t) => {
+    const a = entre(q[0], q[3], t), b = entre(q[1], q[2], t);
+    return `<polyline points="${I.pts([entre(a, b, .15), entre(a, b, .85)])}" fill="none" stroke="#1a1915" stroke-width="1"/>`;
+  }).join('');
+  const zb = zp + .08, zh = Math.min(zp + .3, hMax - .02), e = .003;
+  if (et.includes('avant')) g += `<g data-iso-etiquette="avant">${feuille([[x + .45, y + D + e, zh], [x + .75, y + D + e, zh], [x + .75, y + D + e, zb], [x + .45, y + D + e, zb]])}</g>`;
+  if (et.includes('droite')) g += `<g data-iso-etiquette="droite">${feuille([[x + W + e, y + .55, zh], [x + W + e, y + .25, zh], [x + W + e, y + .25, zb], [x + W + e, y + .55, zb]])}</g>`;
+  if (et.includes('dessus')) g += `<g data-iso-etiquette="dessus">${feuille([[x + .45, y + .25, hMax + e], [x + .75, y + .25, hMax + e], [x + .75, y + .55, hMax + e], [x + .45, y + .55, hMax + e]])}</g>`;
+  return `<g data-iso-objet="paletteClient" data-iso-etiquettes="${et.join(' ')}">${g}</g>`;
+}
+const entre = (a, b, t) => [0, 1, 2].map((i) => a[i] + (b[i] - a[i]) * t);

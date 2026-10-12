@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Essai — Dessins de l'allée de picking (Prepalog)</title>
+<!-- Page d'ESSAI des dessins du kit iso pour ENT-6.7 (`core/iso.js`, chantier D-7 lot 2) : fûts, casiers, travée à tiroir,
+     vue de près, palettes client, préparateur, et une allée assemblée. Rien n'y est cliquable ni enregistré ; elle n'est liée
+     nulle part. Ouvrir avec `lancer.bat`, puis http://localhost:8000/outils/essai-kit-iso.html -->
+<base href="../">
+<link rel="icon" href="./styles/logo.png">
+<link rel="stylesheet" href="./styles/polices.css">
+<link rel="stylesheet" href="./styles/base.css">
+<style>
+  .kit-tete{ background:#fff7d6; border-bottom:1px solid #e8d48a; padding:8px 16px; font:14px/1.5 sans-serif; color:#3b3200 }
+  .kit-planches{ display:grid; grid-template-columns:repeat(auto-fill, minmax(min(100%, 600px), 1fr)); gap:16px; padding:16px }
+  .kit-planche{ margin:0; border:1px solid var(--filet); border-radius:10px; overflow:hidden; background:var(--panneau) }
+  .kit-planche svg{ display:block; width:100%; height:auto; max-height:520px }
+  .kit-planche figcaption{ padding:8px 12px; color:var(--encre); font-size:14px }
+</style>
+</head>
+<body>
+<p class="kit-tete"><b>Page d'essai des dessins de l'allée de picking (D-7, lot 2)</b> — à juger à l'œil : rien n'est cliquable ici.</p>
+<main class="kit-planches" id="planches"></main>
+<script type="module">
+  import { monter } from './outils/essai-kit-iso.js';
+  monter(document.getElementById('planches'));
+</script>
+</body>
+</html>

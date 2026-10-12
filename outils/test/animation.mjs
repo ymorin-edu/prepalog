@@ -405,5 +405,98 @@ await v('Écrans : contenu fautif refusé (4 blocs, image d’un autre site, ima
   vrai(/au moins une partie, ou des `ecrans`/.test(r.vide), r.vide);
 });
 
+// ------------------------------------------------ l'allée de picking d'ENT-6.7 (D-7 lot 2, `core/iso.js`)
+// Ce qui vaut son prix : le CODE DÉTROMPEUR n'est dans le dessin que si la vue de près le demande (brief 6.7 §8 : « le code
+// n'est pas dans le DOM de l'allée ») ; le fût cabossé n'est dessiné cabossé que s'il est déclaré ; une pile pose ce qui
+// vient dessus à la hauteur de ce qui est dessous (le critère « fût sur casier » du lot 4 lira ces hauteurs) ; un nom de teinte
+// ou un nombre impossible est refusé ; aucun vert. Le reste (l'allure) se juge sur `outils/essai-kit-iso.html`.
+await v('Kit iso, picking : le code détrompeur n’est dessiné qu’avec l’étiquette de lisse (vue de près)', async () => {
+  const r = await pg.evaluate(async () => {
+    const K = await import('/core/iso.js');
+    const I = K.projection({ unite: 150 });
+    const c = { type: 'fut', n: 2, litres: 20, bande: 'cuivre', abimes: 1 };
+    const loin = K.traveePicking(I, 0, 0, { cote: 'A', contenu: c });
+    const pres = K.traveePicking(I, 0, 0, { cote: 'A', contenu: c, etiquette: { adresse: 'A-T03-N1', designation: 'Affligem Blonde 20 L', lot: 'S18', code: '49' } });
+    const refus = (o) => { try { K.traveePicking(I, 0, 0, o); return ''; } catch (e) { return e.message; } };
+    return { loin: /data-iso-code|>49</.test(loin), pres: />49<\/text>/.test(pres) && /data-iso-code/.test(pres), lot: /lot S18/.test(pres),
+      coteB: refus({ cote: 'B', etiquette: { code: '83' } }) };
+  });
+  egal(r.loin, false, 'le code dans la travée vue de loin');
+  egal(r.pres, true, 'le code dans la vue de près');
+  egal(r.lot, true, 'le lot écrit sur l’étiquette');
+  vrai(/que côté A/.test(r.coteB), `étiquette côté B : ${r.coteB}`);
+});
+
+await v('Kit iso, picking : tiroir — n fûts, les cabossés seulement ceux déclarés ; vide ; trop plein, teinte ou type inconnus refusés', async () => {
+  const r = await pg.evaluate(async () => {
+    const K = await import('/core/iso.js');
+    const I = K.projection({ unite: 100 });
+    const n = (s, m) => (s.match(m) || []).length;
+    const tr = (c) => K.traveePicking(I, 0, 0, { cote: 'A', contenu: c });
+    const refus = (c) => { try { tr(c); return ''; } catch (e) { return e.message; } };
+    const a = tr({ type: 'fut', n: 2, abimes: 1 }), b = tr({ type: 'fut', n: 7 }), vide = tr({ type: 'fut', n: 0 }), cas = tr({ type: 'casier', n: 8, capsule: 'bleu' });
+    return { futsA: n(a, /data-iso-objet="fut"/g), abimesA: n(a, /data-iso-avarie/g), futsB: n(b, /data-iso-objet="fut"/g), abimesB: n(b, /data-iso-avarie/g),
+      vide: n(vide, /data-iso-objet="(fut|casier)"/g), casiers: n(cas, /data-iso-objet="casier"/g),
+      trop: refus({ type: 'fut', n: 9 }), teinte: refus({ type: 'fut', n: 1, bande: 'vert' }), type: refus({ type: 'bidon', n: 1 }) };
+  });
+  egal([r.futsA, r.abimesA], [2, 1], 'A-T03 : 2 fûts dont 1 cabossé');
+  egal([r.futsB, r.abimesB], [7, 0], 'A-T04 : 7 fûts, aucun cabossé');
+  egal(r.vide, 0, 'emplacement vide : rien dans le tiroir');
+  egal(r.casiers, 8, 'A-T01 : 8 casiers');
+  vrai(/9 fûts dans un tiroir de 8 places/.test(r.trop), r.trop);
+  vrai(/teinte de fût « vert » inconnue/.test(r.teinte), r.teinte);
+  vrai(/contenu de tiroir « bidon » inconnu/.test(r.type), r.type);
+});
+
+await v('Kit iso, picking : casier plein (12 capsules) ou vide ; palette client — pile à la bonne hauteur, étiquettes et film, 7 piles refusées', async () => {
+  const r = await pg.evaluate(async () => {
+    const K = await import('/core/iso.js');
+    const I = K.projection({ unite: 100 });
+    const n = (s, m) => (s.match(m) || []).length;
+    const fut = { type: 'fut', litres: 30 }, cas = { type: 'casier', capsule: 'jaune' };
+    const pal = K.paletteClient(I, 0, 0, { piles: [[cas, fut], [fut, cas], [], [fut, fut]], film: 3, etiquettes: ['avant', 'arriere', 'dessus'] });
+    const z = (type) => [...pal.matchAll(new RegExp(`data-iso-objet="${type}" (?:data-litres="\\d+" )?data-z="([\\d.]+)"`, 'g'))].map((m) => +m[1]).sort();
+    const refus = (o) => { try { K.paletteClient(I, 0, 0, o); return ''; } catch (e) { return e.message; } };
+    return { plein: n(K.casier(I, 0, 0, 0, { capsule: 'bleu' }), /data-iso-capsule/g), vide: n(K.casier(I, 0, 0, 0, { vide: true }), /data-iso-capsule/g),
+      zFuts: z('fut'), zCasiers: z('casier'), film: /data-iso-film="3"/.test(pal),
+      etiq: /data-iso-etiquettes="avant arriere dessus"/.test(pal), dessinees: [...pal.matchAll(/data-iso-etiquette="(\w+)"/g)].map((m) => m[1]),
+      sept: refus({ piles: [[], [], [], [], [], [], []] }), cote: refus({ etiquettes: ['devant'] }) };
+  });
+  egal([r.plein, r.vide], [12, 0], 'capsules : casier plein, casier vide');
+  // Plancher 0,144 ; casier 0,30 ; fût 30 L 0,46 (valeurs écrites à la main).
+  egal(r.zFuts, [0.144, 0.144, 0.444, 0.604], 'hauteur du pied des fûts (sur le plancher, sur un casier, sur un fût)');
+  egal(r.zCasiers, [0.144, 0.604], 'hauteur du pied des casiers (sur le plancher, sur un fût)');
+  egal(r.film, true, 'film : 3 tours');
+  egal(r.etiq, true, 'les côtés étiquetés, tous écrits');
+  egal(r.dessinees, ['avant', 'dessus'], 'seules les étiquettes visibles d’ici sont dessinées');
+  vrai(/7 piles sur une palette client de 6 cases/.test(r.sept), r.sept);
+  vrai(/côté d’étiquette « devant » inconnu/.test(r.cote), r.cote);
+});
+
+await v('Kit iso, picking : le préparateur porte casque et terminal sur demande seulement ; aucun vert dans les dessins nouveaux', async () => {
+  const r = await pg.evaluate(async () => {
+    const K = await import('/core/iso.js');
+    const I = K.projection({ unite: 120 });
+    const tout = K.traveePicking(I, 0, 0, { cote: 'A', contenu: { type: 'fut', n: 8, abimes: 1, bande: 'or' }, etiquette: { adresse: 'A', code: '1' } })
+      + K.traveePicking(I, 0, 2, { cote: 'B', contenu: { type: 'casier', n: 12, capsule: 'jaune' }, voile: .3 })
+      + Object.keys(K.TEINTES_FUT).map((b) => K.futDebout(I, 0, 0, 0, { bande: b })).join('')
+      + Object.keys(K.TEINTES_CAPSULE).map((c) => K.casier(I, 0, 0, 0, { capsule: c })).join('')
+      + K.paletteClient(I, 0, 0, { piles: [[{ type: 'casier' }, { type: 'fut', abime: true }]], film: 5, etiquettes: ['avant', 'droite', 'dessus'], casesVisibles: true })
+      + K.personne(I, 0, 0, { casque: true, terminal: true });
+    // Une teinte « verte » : teinte entre 75° et 165°, saturée (au-delà de 25 %), pas trop sombre ni trop claire.
+    const vert = (r, g, b) => { const M = Math.max(r, g, b) / 255, m = Math.min(r, g, b) / 255, l = (M + m) / 2, d = M - m;
+      if (d < 1e-6) return false; const s = d / (1 - Math.abs(2 * l - 1));
+      let h = M === r / 255 ? ((g - b) / 255 / d) % 6 : M === g / 255 ? (b - r) / 255 / d + 2 : (r - g) / 255 / d + 4; h = (h * 60 + 360) % 360;
+      return h >= 75 && h <= 165 && s > .25 && l > .12 && l < .9; };
+    const verts = [];
+    for (const m of tout.matchAll(/#([0-9a-f]{6})\b/gi)) { const v = parseInt(m[1], 16); if (vert(v >> 16, (v >> 8) & 255, v & 255)) verts.push(m[0]); }
+    for (const m of tout.matchAll(/rgba?\((\d+),\s*(\d+),\s*(\d+)/g)) if (vert(+m[1], +m[2], +m[3])) verts.push(m[0]);
+    return { sans: /data-iso-casque|data-iso-terminal/.test(K.personne(I, 0, 0)), avec: /data-iso-casque/.test(tout) && /data-iso-terminal/.test(tout), verts: [...new Set(verts)] };
+  });
+  egal(r.sans, false, 'personne sans option : ni casque ni terminal');
+  egal(r.avec, true, 'personne avec casque et terminal');
+  egal(r.verts, [], 'teintes vertes dans les dessins de l’allée');
+});
+
 await ctxA.close();
 }
