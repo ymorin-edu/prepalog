@@ -9,7 +9,7 @@
 > **📋 Phrase — LOT 4 (vides et place), plus tard :** `Lis docs/briefs/MOTEUR-vue-tournee-camion.md et implémente le LOT 4, avec sa page d'essai.`
 > **LOT 5 (plan de chargement)** : **à cadrer avec Cowork avant toute construction** (maquette à valider).
 
-**Statut** : en cours — **lots 1 et 2 livrés le 12/10/2026**, lot 3 et page d'essai à faire *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
+**Statut** : en cours — **lots 1 et 2 livrés le 12/10/2026, lot 3 : profil porteur livré**, carte de la côte reportée à ENT-6.9 (choix de Tristan), page d'essai à faire *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
 **Date du brief** : 06/10/2026
 **Conversation d'origine** : Cowork (Opus), cadrage d'ENT-6.9 ; fiche projet `claude/prepalog-reprise-6.9.md` (décision 65 :
 « on peut mettre les 4 cas dans le moteur et utiliser 1 et 2 pour cette séance »).
@@ -173,3 +173,31 @@ sortie identique à avant.** « Que, pas de combien » : aucune jauge n'affiche 
   tombent pas pile) ; le test choisit une limite qui ne tombe sur aucune conduite.
 - **Commits** : « Tournée : approche d'autoroute, conduite et pause… » (D-9 lot 2).
 - **Reste ouvert** : lot 3 ; la page d'essai du §8.
+
+**Lot 3, partie A — profil « porteur » des itinéraires (12/10/2026)**
+
+- **Découpage (choix de Tristan)** : le §5.1 est fait ; le §5.2 (carte de la côte, communes, point d'entrée, adresses BAN)
+  se construira **avec ENT-6.9**, quand les six clients et leurs adresses seront validés (le brief d'ENT-6.9 attend encore
+  leurs noms de Cowork). Le §5.3 est tenu.
+- **État des lieux (§2)** : `itineraires.py` n'avait qu'un réseau, celui du vélo (`motorway`/`trunk` exclus, sens unique
+  respecté sur les grands axes seulement). L'extraction de Nîmes n'a gardé, pour les voies, que `highway`, `name`, `oneway`,
+  `service`, `ref`, `layer`, `bridge`, `tunnel`, `area` : **ni `hgv`, ni `maxweight`, ni `access`, ni `junction`**.
+- **Fichiers** : `outils/carte/itineraires.py` (profils `velo` / `porteur`), `outils/carte/construire.py` (lit `profil` dans
+  le JSON de la séance), `outils/carte/essai-profils.py` (nouveau).
+- **Ce que fait le porteur** : §5.1 tel quel, plus la zone de rencontre (`living_street`) permise ; autoroute, bretelle et
+  rond-point à sens unique même sans le tag `oneway` (convention OSM) ; `hgv=no`, `motor_vehicle=no`, `access=no|private` et
+  `maxweight` sous 16 t exclus — **ils ne jouent qu'avec une extraction qui garde ces tags** (limite connue, non bloquante :
+  l'extraction de la côte devra les garder, ainsi que `junction`).
+- **Choix faits en route** (voir `docs/decisions.md`) : un client dans une rue hors réseau (rue piétonne) s'accroche à la voie
+  permise la plus proche — **à savoir pour ENT-6.9, la brasserie de la rue des Bains** ; pour le porteur, l'accrochage se fait
+  seulement sur les voies d'où l'on va partout et d'où l'on revient (sinon une impasse à sens unique rendait une tournée de
+  Nîmes impossible). Le vélo garde l'accrochage d'avant.
+- **Tests** : hors de la suite Playwright (il faut Python, shapely et les données brutes, absentes de GitHub) :
+  `python outils/carte/essai-profils.py` — 12 réseaux fabriqués (rue piétonne, piste cyclable, voie de service, sens unique
+  sur petite rue et sur grand axe, sens inversé, autoroute et rond-point sans tag, poids lourds interdits, 3,5 t, 19 t, accès
+  privé), un client en rue piétonne, et le réseau réel de Nîmes (56 trajets, 55 différents du vélo, aucun par une voie
+  interdite ni à contresens). Sabotages qui le font tomber : porteur par les rues piétonnes ; sens uniques ignorés ; autoroute
+  sans sens implicite ; `hgv` ignoré ; accrochage hors du cœur du réseau. **Boost régénéré octet pour octet** (`construire.py`
+  sur `essai.json`, `boost-ent31.json`, `boost-ent32.json` : aucun changement dans `contenus/`).
+- **Commits** : « Itinéraires : profil porteur… » (D-9 lot 3, partie A).
+- **Reste ouvert** : la carte de la côte (§5.2), avec ENT-6.9 ; la page d'essai du §8.

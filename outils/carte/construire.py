@@ -393,7 +393,8 @@ for c in NOUVEAUX:
 from itineraires import itineraires
 POINTS_TOURNEE = [dict(id='depart', xy=DEPART['xy']), dict(id='arrivee', xy=ARRIVEE['xy'])] + \
     [dict(id=c['id'], xy=c['xy'], rue=c['rue']) for c in CLIENTS]
-ITIN = itineraires(POINTS_TOURNEE)
+# Le profil du véhicule : `"profil": "porteur"` dans le JSON de la séance (D-9, lot 3) ; vélo par défaut.
+ITIN = itineraires(POINTS_TOURNEE, SEANCE.get('profil', 'velo'))
 TRAJETS = {k: dict(m=round(v['m']), d=chemin([LineString(v['g'])], tol=1.5)) for k, v in sorted(ITIN.items())}
 print('itinéraires :', len(TRAJETS), 'trajets,', sum(len(t['d']) for t in TRAJETS.values()) // 1000, 'ko ;',
       'entrepôt → gare', TRAJETS['depart|arrivee']['m'], 'm')
