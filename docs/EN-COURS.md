@@ -7,7 +7,6 @@ est déjà modifié ou inscrit ci-dessous, **elle s'arrête et le dit à Tristan
 
 | Chantier | Fichiers qu'il touche | Depuis |
 |---|---|---|
-| D-7 lot 5 (fiche de séance, clôture du chantier) | `activites/FICHE-SEANCE.md`, `docs/chantiers.md`, `docs/decisions.md`, `docs/briefs/ENT-6.7-france-boissons-preparation.md` | 12/10/2026 |
 
 Rappel : un seul chantier à la fois dans `core/types/tournee.js`, `core/types/grille.js`,
 `core/types/entreprise.js`, `styles/base.css` et `outils/test/boost.mjs` (voir `docs/briefs/COORDINATION-boost.md`).
