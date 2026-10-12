@@ -47,7 +47,7 @@
 //       reflexion: 'Le terminal t’a donné les lignes …',      // facultatif : « Pour réfléchir », réponse libre non notée
 //       jalons: { casier, futs, film, etiquettes, palettes }, // facultatif : les noms des critères (sinon ceux de la maquette)
 //     },
-//     note: { sur: 20 },
+//     note: { sur: 20 },   // page d'essai SEULEMENT : dans une séance, elle remplace la note pondérée (voir FICHE-SEANCE.md)
 //   }
 //
 // Le terminal dit « Côté A, travée 03, niveau 1. Code de contrôle ? », puis « <voix>, lot S18. Prends 2. ». Le CODE n'est écrit
@@ -465,9 +465,11 @@ export function creerPicking(P, M, opts, h) {
     else { e.palettes = Array.from({ length: MO.n }, (_, p) => listePal(e, p)); e.palettes[dest] = [...e.palettes[dest], ...objets]; }
     e.verifie = false;
     const r = TERM.poser(T);
-    h.sauver();
+    // Les gestes AVANT la sauvegarde : c'est elle qui fait arriver une question au fil sur ce geste.
     h.sig(`ligne:${l.id}`);
-    if (r.evt === 'fin') { h.sig('fin'); ui.focus = 'film:0'; return 'fin'; }
+    if (r.evt === 'fin') h.sig('fin');
+    h.sauver();
+    if (r.evt === 'fin') { ui.focus = 'film:0'; return 'fin'; }
     ui.focus = null;
     return r.evt;
   }
@@ -552,8 +554,8 @@ export function creerPicking(P, M, opts, h) {
       const aller = (adr) => {
         if (!M.E[adr]) return;
         ui.ouvert = adr; ui.ici = adr; ui.focus = 'b:retour';
-        if (!e.vus[adr]) { e.vus[adr] = Date.now(); if (!e.premierGeste) e.premierGeste = e.vus[adr]; sauver(); }
         sig(`ouvrir:${adr}`);
+        if (!e.vus[adr]) { e.vus[adr] = Date.now(); if (!e.premierGeste) e.premierGeste = e.vus[adr]; sauver(); }
         redessiner();
       };
       racine.querySelectorAll('[data-pk-trav]').forEach((g) => activer(g, () => aller(g.dataset.pkTrav)));

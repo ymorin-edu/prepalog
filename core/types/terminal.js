@@ -297,8 +297,9 @@ export function creerTerminal({ lignes, textes = {}, titre = '', mots = [] }) {
       const apres = (evt, l) => {
         ui.saisie = '';
         parler(texteParle(T, lignes, textes));
-        api.sauver();
+        // Le geste AVANT la sauvegarde : c'est elle qui fait arriver une question au fil sur ce geste (sinon au geste suivant).
         if (api.signal) api.signal(evt, l);
+        api.sauver();
         api.redessiner();
       };
       champ.addEventListener('input', () => { ui.saisie = champ.value; });
