@@ -86,6 +86,23 @@
 // Le bilan donne alors, par arrêt, `attentes` et `departs` (minutes), `attente` (total), et chaque
 // créneau porte `apres`, `attente`, `trop: 'tot' | 'tard' | null`. Sans `apres`, rien ne change.
 //
+// APPROCHE, CONDUITE ET PAUSE (chantier D-9, lot 2, 12/10/2026) — un camion qui vient de loin :
+//   horaire.approche: { km: 180, vitesse: 90, libelle: 'A13 Buchelay → sortie de Touques', retour: true }
+//     Avant la carte, le véhicule roule `km` à `vitesse` (90 par défaut) jusqu'au départ du plan, et
+//     revient de même après l'arrivée si `retour`. Tout le reste de la journée glisse d'autant.
+//     Un trajet d'approche ne compte que si son bout est posé (`extremitesACliquer`), comme les km.
+//   horaire.pause: { apres: 270, duree: 45 }
+//     Au-delà de `apres` minutes de CONDUITE, la pause est due : elle s'ajoute au retour (on ne la
+//     place pas dans la journée, simplification du brief). Jauge « Conduite » : dit QUE, pas de combien.
+//   quai: false
+//     Tous les clients sont à servir : pas de « laisser à quai ». Ce qui n'est pas dans la tournée
+//     est « à placer », et le report comme « J'ai terminé » refusent une tournée incomplète.
+// Le bilan donne alors `conduite` (min : approche aller + carte + approche retour ; ni le service ni
+// l'attente), `kmApproche`, `minutesApproche`, `pauseDue`, `pause` (min ajoutées), `aPlacer`.
+// `km` reste la distance SUR LA CARTE. Pour la feuille de calcul, `troncons` donne les km de chaque
+// arrêt depuis le point précédent (le départ pour le premier, `null` s'il n'est pas posé) et
+// `kmRetour` ceux du dernier arrêt à l'arrivée : le contenu les recopie rang par rang dans ses lignes.
+//
 // Des PHASES : la journée change en cours de séance (ENT-3.2, « l'imprévu », chantier C du plan
 // Boost, 03/10/2026) :
 //
@@ -149,6 +166,8 @@ export const hhmm = (m) => { const r = Math.round(m); return `${String(Math.floo
 const fr = (n, d = 2) => new Intl.NumberFormat('fr-FR', { maximumFractionDigits: d }).format(n);
 // L'heure dite comme un client la dit : « 10 h », « 11 h 30 » (fenêtres d'ouverture).
 const hcourt = (m) => { const r = Math.round(m); return r % 60 ? `${Math.floor(r / 60)} h ${String(r % 60).padStart(2, '0')}` : `${Math.floor(r / 60)} h`; };
+// Une durée de conduite : « 4 h 30 » (D-9, lot 2).
+const duree = (m) => { const r = Math.round(m); return `${Math.floor(r / 60)} h ${String(r % 60).padStart(2, '0')}`; };
 // Le libellé par défaut d'un créneau. « livraison avant… » reste mot pour mot celui d'ENT-3.2.
 const libelleCreneau = (c) => (c.apres == null ? `livraison avant ${hhmm(c.avant)}`
   : (c.avant == null ? `ouvre à ${hcourt(c.apres)}` : `de ${hcourt(c.apres)} à ${hcourt(c.avant)}`));
@@ -187,6 +206,10 @@ export function creerTournee(T) {
   // Une journée à fenêtres d'ouverture : la fiche du client sur la carte dit alors son créneau.
   const FENETRES = POINTS.some((p) => p.creneau && p.creneau.apres != null)
     || Object.values(T.phases || {}).some((c) => Object.values((c && c.creneaux) || {}).some((x) => x && x.apres != null));
+  // Approche hors carte, pause, tournée sans quai (D-9, lot 2, voir l'en-tête).
+  const APPROCHE = H && H.approche ? Object.assign({ vitesse: 90 }, H.approche) : null;
+  const PAUSE = H && H.pause ? H.pause : null;
+  const QUAI = T.quai !== false;
   const SERVICE_COLIS = !!(H && H.service && typeof H.service === 'object');
   const serviceDe = (p) => {
     if (!H) return 0;
@@ -286,6 +309,10 @@ export function creerTournee(T) {
   // désarme au premier autre geste, puisque la vue se redessine.
   let razArme = false;
   let terminerArme = false;   // « J'ai terminé » : même geste en deux clics que « Recommencer »
+  let refusTermine = null;    // sans quai (D-9, lot 2) : pourquoi « J'ai terminé » est refusé, le temps d'un dessin
+  // Sans quai : le message qui refuse une tournée où il reste des clients à placer.
+  const texteAPlacer = (b) => (QUAI || !b.aPlacer.length ? ''
+    : `Il reste ${b.aPlacer.length} client${b.aPlacer.length > 1 ? 's' : ''} à placer dans la tournée : tous sont à servir.`);
   let ongletActif = null;     // les onglets (voir l'en-tête) : celui qui est ouvert, en mémoire
   let phaseVue = null;        // la phase du dernier dessin : un changement rouvre le premier onglet à faire
 
@@ -445,21 +472,35 @@ export function creerTournee(T) {
     // à `apres + service`, et toute la suite de la journée glisse d'autant. L'attente n'est ni du
     // trajet ni du service : elle se compte à part (`attente`), pour que le lot 2 ne la prenne pas
     // pour de la conduite. Sans `apres`, elle vaut 0 et rien ne bouge.
+    //
+    // ── L'approche hors carte, la conduite et la pause (D-9, lot 2) ──────────────────────
+    // L'approche aller décale toute la journée ; la conduite ne compte que le volant (approche
+    // aller, carte, approche retour) ; la pause due s'ajoute au retour. Voir l'en-tête.
     let km = 0, minutes = 0, arrivee = null, service = 0, attente = 0;
-    const arrivees = {}, attentes = {}, departs = {};
+    let conduite = 0, pause = 0, pauseDue = false, kmApproche = 0, minutesApproche = 0, kmRetour = null;
+    const arrivees = {}, attentes = {}, departs = {}, troncons = {};
     if (H && PLAN && retenus.length) {
       const suite = [];
       if (PLAN.depart && departPose(etat)) suite.push(PLAN.depart);
       retenus.forEach((p) => suite.push(p));
       if (PLAN.arrivee && arriveePose(etat)) suite.push(PLAN.arrivee);
+      const AP = APPROCHE;
+      const minAp = AP ? AP.km / AP.vitesse * 60 : 0;
+      const aller = AP && (!PLAN.depart || departPose(etat)) ? minAp : 0;
+      const retour = AP && AP.retour && (!PLAN.arrivee || arriveePose(etat)) ? minAp : 0;
+      kmApproche = AP ? AP.km * ((aller ? 1 : 0) + (retour ? 1 : 0)) : 0;
+      minutesApproche = aller + retour;
       // Le service des arrêts déjà servis, cumulé au fil de la tournée.
       let servi = 0;
       suite.forEach((p, i) => {
-        if (i > 0) km += km1(suite[i - 1], p);
+        const t = i > 0 ? km1(suite[i - 1], p) : null;
+        if (i > 0) km += t;
         const j = retenus.indexOf(p);
+        if (j < 0 && i > 0 && p === PLAN.arrivee) kmRetour = t;
         if (j >= 0) {
           const id = String(p.id);
-          const a = H.depart + km / H.vitesse * 60 + servi + attente;
+          troncons[id] = t;
+          const a = H.depart + aller + km / H.vitesse * 60 + servi + attente;
           const cr = p.creneau;
           const w = ATTENTE && cr && cr.apres != null && a < cr.apres ? cr.apres - a : 0;
           arrivees[id] = a;
@@ -470,7 +511,10 @@ export function creerTournee(T) {
         }
       });
       service = retenus.reduce((t, p) => t + serviceDe(p), 0);
-      minutes = km / H.vitesse * 60 + service + attente;
+      conduite = aller + km / H.vitesse * 60 + retour;
+      pauseDue = !!PAUSE && conduite > PAUSE.apres;
+      pause = pauseDue ? PAUSE.duree : 0;
+      minutes = km / H.vitesse * 60 + service + attente + minutesApproche + pause;
       arrivee = H.depart + minutes;
     }
     const enRetard = !!(H && arrivee != null && H.limite != null && arrivee > H.limite);
@@ -511,6 +555,9 @@ export function creerTournee(T) {
       service,
       // L'attente à l'ouverture, par arrêt et au total (D-9), et l'heure où le véhicule repart.
       attente, attentes, departs,
+      // Approche, conduite et pause (D-9, lot 2) ; km par tronçon pour la feuille ; clients à placer.
+      conduite, pauseDue, pause, kmApproche, minutesApproche, troncons, kmRetour,
+      aPlacer: QUAI ? [] : ecartes.map((p) => String(p.id)),
       arrivees, creneaux, creneauxRates, creneauRate: creneauxRates.length > 0,
       // Exposé pour les jalons du contenu, qui doivent pouvoir distinguer « mal organisé » de
       // « pas fini ». `arrivee` est déjà l'HEURE de retour, d'où les noms explicites.
@@ -569,7 +616,8 @@ export function creerTournee(T) {
               L'heure d'arrivée, c'est à vous de la calculer.</span>`
           : `<span class="note">Départ à ${hhmm(H.depart)}. ${fr(b.km, 1)} km à parcourir,
               ${b.retenus.length} arrêt${b.retenus.length > 1 ? 's' : ''},
-              ${ech(texteService())}, ${ech(String(H.vitesse))} km/h en ville.
+              ${ech(texteService())}, ${ech(String(H.vitesse))} km/h en ville.${APPROCHE
+                ? ` En plus : ${ech(texteApproche())}.` : ''}${PAUSE ? ` Une pause due s’ajoute au retour.` : ''}
               L'heure de retour, c'est à vous de la calculer.</span>`}
         ${H.comparaison ? `<span class="tour-compare">${ech(H.comparaison)}</span>` : ''}
         ${sv ? '' : (b.enRetard ? `<span class="pastille crit">${ech(H.libelleLimite || 'Horaire limite')} manqué</span>`
@@ -583,11 +631,41 @@ export function creerTournee(T) {
       <span class="note">${fr(b.km, 1)} km parcourus, ${fr(b.minutes, 0)} min au total
         (${b.retenus.length} arrêt${b.retenus.length > 1 ? 's' : ''}
         ${SERVICE_COLIS ? `: ${ech(texteService())}` : `× ${H.service || 0} min de service`})${b.attente > 0
-          ? `, dont ${fr(b.attente, 0)} min d’attente à l’ouverture` : ''}.</span>
+          ? `, dont ${fr(b.attente, 0)} min d’attente à l’ouverture` : ''}${b.minutesApproche > 0
+          ? `, dont ${fr(b.minutesApproche, 0)} min d’autoroute (${fr(b.kmApproche, 1)} km)` : ''}${b.pause > 0
+          ? `, dont ${fr(b.pause, 0)} min de pause` : ''}.</span>
       ${b.enRetard ? `<span class="pastille crit">${ech(H.libelleLimite || 'Horaire limite')} manqué
         de ${fr(b.arrivee - H.limite, 0)} min</span>` : ''}
     </div>`;
   }
+
+  // ── La jauge « Conduite » (D-9, lot 2) ─────────────────────────────────────────────────
+  // Repère : la limite de conduite sans pause. Franchir la limite n'est pas une faute (la pause
+  // est prise, elle allonge la journée) : pastille ambre, jamais rouge. Muette, elle dit QUE la
+  // pause est due, jamais de combien la limite est passée ni le temps de conduite.
+  const textePause = () => `pause de ${fr(PAUSE.duree, 0)} min obligatoire`;
+  function jaugeConduite(b, muet) {
+    if (!PAUSE || b.arrivee == null) return '';
+    const regle = `Au-delà de ${duree(PAUSE.apres)} de conduite, ${textePause()}. Le temps aux arrêts et l’attente ne sont pas de la conduite.`;
+    if (muet) {
+      return `<div class="tour-jauge tour-jauge-repere" data-tour-conduite>
+        <div class="tour-j-tete"><span>Conduite</span><b class="mono">${duree(PAUSE.apres)} sans pause</b></div>
+        <span class="note">${regle} Le temps de conduite, c’est à vous de le calculer.</span>
+        ${sv || !b.pauseDue ? '' : `<span class="pastille warn">${textePause().replace(/^./, (x) => x.toUpperCase())}</span>`}
+      </div>`;
+    }
+    const part = Math.min(100, b.conduite / PAUSE.apres * 100);
+    return `<div class="tour-jauge" data-tour-conduite>
+      <div class="tour-j-tete"><span>Conduite</span><b class="mono">${duree(b.conduite)} / ${duree(PAUSE.apres)}</b></div>
+      <div class="tour-j-barre"><i style="width:${part}%"></i></div>
+      <span class="note">${regle}</span>
+      ${b.pauseDue ? `<span class="pastille warn">${textePause().replace(/^./, (x) => x.toUpperCase())} : ajoutée au retour</span>`
+        : '<span class="pastille ok">pas de pause obligatoire</span>'}
+    </div>`;
+  }
+  // L'approche hors carte, dite en une ligne : « A13 Buchelay → sortie de Touques : 180 km d'autoroute ».
+  const texteApproche = () => (!APPROCHE ? '' : `${APPROCHE.libelle ? `${APPROCHE.libelle} : ` : ''}${fr(APPROCHE.km, 1)} km d’autoroute`
+    + `${APPROCHE.retour ? ', à l’aller et au retour' : ''} (${fr(APPROCHE.vitesse, 0)} km/h)`);
 
   // Le retard à un créneau, en minutes entières : le même arrondi que l'heure affichée
   // (`hhmm`), et jamais « raté de 0 min » pour quelques secondes de trop.
@@ -728,7 +806,7 @@ export function creerTournee(T) {
             <button class="btn btn-s" data-bas="${pos}" ${pos === n - 1 ? 'disabled' : ''}
               aria-label="Descendre ${ech(p.nom)}">↓</button>
             <button class="btn btn-s" data-quai="${ech(id)}"
-              title="Laisser cet arrêt à quai, pour une autre tournée">retirer</button>
+              title="${QUAI ? 'Laisser cet arrêt à quai, pour une autre tournée' : 'Retirer cet arrêt de la tournée, pour le replacer ailleurs'}">retirer</button>
           </span>`}
         </li>`;
       };
@@ -773,10 +851,11 @@ export function creerTournee(T) {
             <span class="note">commande annulée : ne se charge plus</span></span></li>`;
         }).join('')}</ul></div>`;
       const quai = `<div class="tour-quai">
-        <div class="ent-lbl">${ech(T.libelleQuai || 'Laissés à quai')} (${aQuai.length})</div>
+        <div class="ent-lbl">${ech(T.libelleQuai || (QUAI ? 'Laissés à quai' : 'À placer dans la tournée'))} (${aQuai.length})</div>
         ${aQuai.length === 0
-          ? '<p class="note">Aucun. Tout est chargé dans le véhicule.</p>'
-          : `<ul class="tour-liste tour-liste-quai tour-puces">${aQuai.map((id) => {
+          ? `<p class="note">${QUAI ? 'Aucun. Tout est chargé dans le véhicule.' : 'Aucun. Tous les clients sont dans la tournée.'}</p>`
+          : `${QUAI ? '' : '<p class="note">Tous les clients sont à servir : aucun ne reste à quai.</p>'}
+          <ul class="tour-liste tour-liste-quai tour-puces">${aQuai.map((id) => {
               const p = pointDe(id);
               return !p ? '' : `<li class="tour-item tour-puce">
                 <span class="tour-texte">
@@ -831,14 +910,17 @@ export function creerTournee(T) {
         </div>`;
       const ONG = optDe(etat, 'onglets') || [];
       const jaugesHtml = `${etiq || ONG.length ? '' : raz}${MESURES.map((m) => jauge(m, b.cumuls[m.id], muet)).join('')}
-            ${jaugeHoraire(b, muet)}${b.creneaux.map((c) => jaugeCreneau(c, b, muet)).join('')}`;
+            ${jaugeHoraire(b, muet)}${jaugeConduite(b, muet)}${b.creneaux.map((c) => jaugeCreneau(c, b, muet)).join('')}`;
       // Les contraintes en ÉTIQUETTES : la limite seule, sans phrase ni verdict, en une ligne
       // au-dessus de la feuille. La feuille prend alors toute la largeur.
-      const etiquettes = !etiq ? [] : (Array.isArray(etiq) ? etiq : [
+      const etiquettesCalculees = [
         ...MESURES.filter((m) => m.max != null).map((m) => `${m.libelle} : ${fr(m.max)} ${m.unite || ''} au plus`.replace(/\s+/g, ' ')),
         ...(H && H.limite != null ? [`${(H.libelleLimite || 'Horaire limite').replace(/^./, (x) => x.toUpperCase())} : ${hhmm(H.limite)}`] : []),
+        ...(APPROCHE ? [texteApproche()] : []),
+        ...(PAUSE ? [`Conduite : ${textePause()} au-delà de ${duree(PAUSE.apres)}`] : []),
         ...b.creneaux.map(etiquetteCreneau),
-      ]);
+      ];
+      const etiquettes = !etiq ? [] : (Array.isArray(etiq) ? etiq : etiquettesCalculees);
       const etiquettesHtml = !etiq ? '' : `<div class="tour-etiquettes" data-tour-etiquettes>
           <span class="ent-lbl">Contraintes</span>
           ${etiquettes.map((x) => `<span class="tour-etiquette">${ech(x)}</span>`).join('')}
@@ -860,7 +942,7 @@ export function creerTournee(T) {
             <button class="btn btn-p${terminerArme ? ' btn-alerte' : ''}" data-tour-terminer>${ech(terminerArme
               ? (TE.confirmer || 'Confirmer ? Cliquez encore') : (TE.libelle || 'J’ai terminé'))}</button>
             ${terminerArme ? '<button class="btn btn-s" data-tour-terminer-non>Annuler</button>' : ''}
-          </div>`);
+          </div>${refusTermine ? `<div class="avis avis-err" data-tour-refus>${ech(refusTermine)}</div>` : ''}`);
 
       const cases = !REPORT.length ? '' : `
         <div class="tour-report">
@@ -903,6 +985,7 @@ export function creerTournee(T) {
       const blocCarte = `
         <div class="tour-grille${DANS_GRILLE && recap ? ' tour-grille-deux' : ''}${fige ? ' tour-fige' : ''}">
           <div class="tour-col">
+            ${APPROCHE && PLAN ? `<p class="note tour-approche" data-tour-approche>${ech(texteApproche())}.</p>` : ''}
             ${PLAN ? `<div class="plan-boite${clic ? ' plan-boite-clic' : ''}">
               ${CARTE ? CARTE.html({
                 ordre: etat.ordre, cliquable: clic, annules,
@@ -962,11 +1045,7 @@ export function creerTournee(T) {
             COPIE ? { sansCorrection: true } : {}, fige ? { lectureSeule: true } : {}, O.consigne ? { consigne: O.consigne } : {}));
         } else if (O.contenu === 'tournee') {
           // Sur la carte, les contraintes en étiquettes : l'élève les a sous les yeux en construisant.
-          const etq = etiquettes.length ? etiquettes : [
-            ...MESURES.filter((m) => m.max != null).map((m) => `${m.libelle} : ${fr(m.max)} ${m.unite || ''} au plus`.replace(/\s+/g, ' ')),
-            ...(H && H.limite != null ? [`${(H.libelleLimite || 'Horaire limite').replace(/^./, (x) => x.toUpperCase())} : ${hhmm(H.limite)}`] : []),
-            ...b.creneaux.map(etiquetteCreneau),
-          ];
+          const etq = etiquettes.length ? etiquettes : etiquettesCalculees;
           corps = `<div class="tour-etiquettes" data-tour-etiquettes><span class="ent-lbl">Contraintes</span>
             ${etq.map((x) => `<span class="tour-etiquette">${ech(x)}</span>`).join('')}</div>${blocCarte}`;
         } else {
@@ -1037,6 +1116,7 @@ export function creerTournee(T) {
       razArme = false;          // tout redessin désarme ; seul le premier clic ci-dessous réarme
       const terminerEtaitArme = terminerArme;
       terminerArme = false;
+      refusTermine = null;
       // La carte réelle a son zoom, son échelle et ses traits à épaisseur d'écran : la scène se
       // remonte après chaque redessin, en gardant le zoom où l'élève l'avait laissé.
       if (CARTE) CARTE.brancher(z, { lecture: figeDe(etat) });
@@ -1053,6 +1133,14 @@ export function creerTournee(T) {
       // « J'ai terminé » : le premier clic arme, le second horodate et fige ; « Reprendre » défige.
       z.querySelector('[data-tour-terminer]')?.addEventListener('click', () => {
         if (!terminerEtaitArme) { terminerArme = true; api.redessiner(); return; }
+        // Sans quai : une tournée incomplète ne se termine pas.
+        const manque = texteAPlacer(bilanDe(etat));
+        if (manque) {
+          refusTermine = manque;
+          api.redessiner();
+          if (api.toast) api.toast('Tournée incomplète.');
+          return;
+        }
         etat.termine = Date.now();
         api.sauver(); api.redessiner();
         if (api.toast) api.toast('Correction terminée.');
@@ -1247,6 +1335,16 @@ export function creerTournee(T) {
           return;
         }
         const b = bilanDe(etat);
+        // Sans quai (D-9, lot 2) : tous les clients sont à servir, le report attend qu'ils soient placés.
+        const manque = texteAPlacer(b);
+        if (manque) {
+          etat.bloque = `${manque} Placez-les avant de reporter vos résultats.`;
+          etat.juge = {};
+          etat.valide = null;
+          api.sauver(); api.redessiner();
+          if (api.toast) api.toast('Tournée incomplète.');
+          return;
+        }
         // ── Les résultats ne se valident pas tant que la tournée ne tient pas ──────────────
         // Défaut relevé par Tristan le 03/10/2026 : *« il suffit de garder les 6 premières et
         // on tombe juste, aucun travail de tournée à faire »*. Il a raison, et la cause est

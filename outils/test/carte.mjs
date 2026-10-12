@@ -847,6 +847,232 @@ await v('fenêtre : « tropTot: rate » — le report est refusé, muet sans dir
   await pageCt.evaluate(() => document.getElementById('cr-hote')?.remove());
 });
 
+/* ------------------------------------------------------------------------------------------ */
+/* Approche, conduite, pause, sans quai (chantier D-9, lot 2, 12/10/2026).                   */
+/* Toujours la journée d'ENT-3.2 : 45 km d'autoroute à 90 km/h = 30 min à l'aller, 30 au     */
+/* retour. Les attendus sont recalculés ici, à la main, depuis la table des itinéraires.     */
+const APPROCHE = { km: 45, vitesse: 90, libelle: 'A13 essai → sortie', retour: true };
+const bilanCamion = (ordre, horaire, extra) => pageCt.evaluate(async ({ ordre, horaire, extra }) => {
+  const { creerTournee } = await import('/core/types/tournee.js');
+  const B = await import('/contenus/boost.js');
+  const C = (await import('/contenus/boost-ent32-carte.js')).CARTE;
+  const vue = creerTournee(Object.assign({ plan: { carte: C },
+    horaire: Object.assign({ depart: 14 * 60 + 10, limite: B.VELO.train, vitesse: B.VELO.vitesse, service: B.VELO.service }, horaire || {}),
+    extremitesACliquer: true }, extra || {}));
+  const tous = C.clients.map((c) => c.id);
+  const b = vue.bilan({ ordre, quai: tous.filter((x) => !ordre.includes(x)), depart: 1, arrivee: 1, report: {}, juge: {} });
+  const ch = ['depart', ...ordre, 'arrivee'];
+  const legs = ch.slice(1).map((x, i) => C.trajets[`${ch[i]}|${x}`].m / 1000);
+  return { km: b.km, minutes: b.minutes, arrivee: b.arrivee, arrivees: b.arrivees, conduite: b.conduite,
+    pauseDue: b.pauseDue, pause: b.pause, kmApproche: b.kmApproche, minutesApproche: b.minutesApproche,
+    troncons: b.troncons, kmRetour: b.kmRetour, aPlacer: b.aPlacer, attente: b.attente,
+    service: B.VELO.service, vitesse: B.VELO.vitesse, legs };
+}, { ordre, horaire: horaire || null, extra: extra || null });
+const proche = (x, y) => x != null && Math.abs(x - y) < 1e-9;
+
+await v('camion : l’approche décale la journée, compte dans la conduite, pas dans les km de la carte', async () => {
+  const sans = await bilanCamion(ORDRE_BON);
+  const avec = await bilanCamion(ORDRE_BON, { approche: APPROCHE });
+  if (!proche(avec.km, sans.km)) throw new Error(`km de la carte : ${avec.km} pour ${sans.km}`);
+  if (!proche(avec.kmApproche, 90) || !proche(avec.minutesApproche, 60)) throw new Error(`approche : ${avec.kmApproche} km, ${avec.minutesApproche} min`);
+  if (!proche(avec.arrivees.c6, sans.arrivees.c6 + 30)) throw new Error(`arrivée chez c6 : ${avec.arrivees.c6} pour ${sans.arrivees.c6 + 30}`);
+  if (!proche(avec.arrivee, sans.arrivee + 60)) throw new Error(`retour : ${avec.arrivee} pour ${sans.arrivee + 60}`);
+  // La conduite : 30 + km de la carte à la vitesse + 30. Ni le service ni l'attente.
+  const carte = sans.legs.reduce((t, x) => t + x, 0) / sans.vitesse * 60;
+  if (!proche(avec.conduite, 60 + carte)) throw new Error(`conduite : ${avec.conduite} pour ${60 + carte}`);
+  if (!proche(sans.conduite, carte)) throw new Error(`conduite sans approche : ${sans.conduite} pour ${carte}`);
+  // Sans retour : l'aller seul.
+  const aller = await bilanCamion(ORDRE_BON, { approche: { ...APPROCHE, retour: false } });
+  if (!proche(aller.arrivee, sans.arrivee + 30) || !proche(aller.conduite, 30 + carte)) throw new Error(`aller seul : ${aller.arrivee}, ${aller.conduite}`);
+  // Vitesse par défaut : 90 km/h.
+  const defaut = await bilanCamion(ORDRE_BON, { approche: { km: 45, retour: true } });
+  if (!proche(defaut.minutesApproche, 60)) throw new Error('vitesse d’approche par défaut : ' + defaut.minutesApproche);
+});
+
+await v('camion : l’attente à l’ouverture et le service ne comptent pas dans la conduite', async () => {
+  const r = await pageCt.evaluate(async () => {
+    const { creerTournee } = await import('/core/types/tournee.js');
+    const B = await import('/contenus/boost.js');
+    const C0 = (await import('/contenus/boost-ent32-carte.js')).CARTE;
+    const C = { ...C0, clients: C0.clients.map((c) => (c.id === 'c6' ? { ...c, creneau: { apres: 16 * 60 } } : c)) };
+    const H = { depart: 14 * 60 + 10, limite: B.VELO.train, vitesse: B.VELO.vitesse, service: B.VELO.service, approche: { km: 45, retour: true } };
+    const ordre = ['c6', 'c7', 'c8', 'c3', 'c4', 'c1', 'c2'];
+    const etat = { ordre, quai: ['c5'], depart: 1, arrivee: 1 };
+    const a = creerTournee({ plan: { carte: C }, horaire: H, extremitesACliquer: true }).bilan(etat);
+    const b = creerTournee({ plan: { carte: C0 }, horaire: H, extremitesACliquer: true }).bilan(etat);
+    const s = creerTournee({ plan: { carte: C0 }, horaire: { ...H, service: 20 }, extremitesACliquer: true }).bilan(etat);
+    return { attA: a.attente, cA: a.conduite, cB: b.conduite, cS: s.conduite };
+  });
+  if (!(r.attA > 0)) throw new Error('l’essai n’attend pas l’ouverture');
+  if (!proche(r.cA, r.cB)) throw new Error(`l’attente compte dans la conduite : ${r.cA} pour ${r.cB}`);
+  if (!proche(r.cS, r.cB)) throw new Error(`le service compte dans la conduite : ${r.cS} pour ${r.cB}`);
+});
+
+await v('camion : la pause due s’ajoute au retour — juste au-dessus de la limite oui, juste en dessous non', async () => {
+  const base = await bilanCamion(ORDRE_BON, { approche: APPROCHE });
+  const c = base.conduite;
+  const due = await bilanCamion(ORDRE_BON, { approche: APPROCHE, pause: { apres: c - 1, duree: 45 } });
+  if (!due.pauseDue || due.pause !== 45 || !proche(due.arrivee, base.arrivee + 45) || !proche(due.minutes, base.minutes + 45)) {
+    throw new Error(`pause due : ${JSON.stringify({ d: due.pauseDue, p: due.pause, a: due.arrivee, b: base.arrivee })}`);
+  }
+  // La pause ne déplace pas les arrivées chez les clients (on ne la place pas dans la journée).
+  if (!proche(due.arrivees.c2, base.arrivees.c2)) throw new Error('la pause déplace une arrivée');
+  if (!proche(due.conduite, c)) throw new Error('la pause compte dans la conduite');
+  const pas = await bilanCamion(ORDRE_BON, { approche: APPROCHE, pause: { apres: c + 1, duree: 45 } });
+  if (pas.pauseDue || pas.pause !== 0 || !proche(pas.arrivee, base.arrivee)) throw new Error('pause due sous la limite');
+});
+
+await v('camion : les km de chaque tronçon et du retour, pour la feuille, rang par rang', async () => {
+  const r = await bilanCamion(ORDRE_BON);
+  ORDRE_BON.forEach((id, i) => {
+    if (!proche(r.troncons[id], r.legs[i])) throw new Error(`tronçon ${i + 1} (${id}) : ${r.troncons[id]} pour ${r.legs[i]}`);
+  });
+  if (!proche(r.kmRetour, r.legs[r.legs.length - 1])) throw new Error(`retour : ${r.kmRetour}`);
+  const total = ORDRE_BON.reduce((t, id) => t + r.troncons[id], 0) + r.kmRetour;
+  if (Math.abs(total - r.km) > 1e-9) throw new Error(`la somme des tronçons (${total}) n’est pas la distance (${r.km})`);
+  // Bouts non posés : le premier tronçon et le retour n'existent pas.
+  const sansBouts = await pageCt.evaluate(async (ordre) => {
+    const { creerTournee } = await import('/core/types/tournee.js');
+    const C = (await import('/contenus/boost-ent32-carte.js')).CARTE;
+    const b = creerTournee({ plan: { carte: C }, horaire: { depart: 600, vitesse: 12, service: 4 }, extremitesACliquer: true })
+      .bilan({ ordre, quai: ['c5'], depart: null, arrivee: null });
+    return { t0: b.troncons[ordre[0]], kr: b.kmRetour, t1: b.troncons[ordre[1]] };
+  }, ORDRE_BON);
+  if (sansBouts.t0 !== null || sansBouts.kr !== null || !(sansBouts.t1 > 0)) throw new Error('bouts non posés : ' + JSON.stringify(sansBouts));
+});
+
+await v('camion : le moteur et le calage comptent les mêmes ordres avec approche et pause', async () => {
+  // Départ avancé de l'aller + retour (60 min) : sans pause, la journée est celle d'ENT-3.2. La
+  // pause (15 min) au-delà du premier dixième des conduites fait manquer le train à une partie des ordres.
+  const os = await import('node:os');
+  const { execFileSync } = await import('node:child_process');
+  const J0 = JSON.parse(fs.readFileSync(path.join(ROOT, 'outils', 'carte', 'boost-ent32.json'), 'utf8'));
+  const cal = J0.calibrage;
+  const med = await pageCt.evaluate(async (cal) => {
+    const { creerTournee } = await import('/core/types/tournee.js');
+    const C = (await import('/contenus/boost-ent32-carte.js')).CARTE;
+    const vue = creerTournee({ plan: { carte: C }, horaire: { depart: cal.depart - 60, vitesse: cal.vitesse, service: cal.service,
+      approche: { km: 45, retour: true } }, extremitesACliquer: true });
+    const S = C.clients.filter((c) => c.id !== 'c5').map((c) => c.id);
+    function* perms(a) { if (a.length < 2) { yield a; return; } for (let i = 0; i < a.length; i++) for (const p of perms([...a.slice(0, i), ...a.slice(i + 1)])) yield [a[i], ...p]; }
+    const cs = [];
+    for (const p of perms(S)) cs.push(vue.bilan({ ordre: p, quai: ['c5'], depart: 1, arrivee: 1 }).conduite);
+    cs.sort((a, b) => a - b);
+    return cs[Math.floor(cs.length / 10)] + 0.001;   // jamais pile sur une conduite : l’égalité dépend de l’arrondi
+  }, cal);
+  const pause = { apres: med, duree: 15 };
+  const J = { ...J0, calibrage: { ...cal, depart: cal.depart - 60, approche: { km: 45, retour: true }, pause } };
+  const dos = fs.mkdtempSync(path.join(os.tmpdir(), 'prepalog-camion-'));
+  fs.writeFileSync(path.join(dos, 'jour.json'), JSON.stringify(J));
+  let sortie;
+  try { sortie = execFileSync(process.execPath, [path.join(ROOT, 'outils', 'carte', 'calibrer.mjs'), path.join(ROOT, 'contenus', 'boost-ent32-carte.js'), path.join(dos, 'jour.json')], { encoding: 'utf8', stdio: 'pipe' }); }
+  catch (e) { sortie = String(e.stdout || ''); }
+  fs.rmSync(dos, { recursive: true, force: true });
+  const m = sortie.match(/(\d+) ordres de passage : (\d+) attrapent le train .*?, (\d+) tiennent aussi le créneau/);
+  if (!m) throw new Error('sortie du calage illisible : ' + sortie.slice(0, 200));
+  const r = await pageCt.evaluate(async ({ cal, pause }) => {
+    const { creerTournee } = await import('/core/types/tournee.js');
+    const C = (await import('/contenus/boost-ent32-carte.js')).CARTE;
+    const H = { depart: cal.depart - 60, limite: cal.train, vitesse: cal.vitesse, service: cal.service, approche: { km: 45, retour: true } };
+    const avec = creerTournee({ plan: { carte: C }, horaire: { ...H, pause }, extremitesACliquer: true });
+    const sans = creerTournee({ plan: { carte: C }, horaire: H, extremitesACliquer: true });
+    const S = C.clients.filter((c) => c.id !== 'c5').map((c) => c.id);
+    function* perms(a) { if (a.length < 2) { yield a; return; } for (let i = 0; i < a.length; i++) for (const p of perms([...a.slice(0, i), ...a.slice(i + 1)])) yield [a[i], ...p]; }
+    let n = 0, train = 0, tout = 0, trainSans = 0, dues = 0;
+    for (const p of perms(S)) {
+      n++;
+      const e = { ordre: p, quai: ['c5'], depart: 1, arrivee: 1 };
+      const b = avec.bilan(e);
+      if (b.pauseDue) dues++;
+      if (!sans.bilan(e).enRetard) trainSans++;
+      if (!b.enRetard) { train++; if (!b.creneauRate) tout++; }
+    }
+    return { n, train, tout, trainSans, dues };
+  }, { cal, pause });
+  // Sans ordre où la pause change le train, le cas ne prouverait rien.
+  if (!r.dues || r.train === r.trainSans) throw new Error(`la pause ne change rien à l’essai (${r.dues} pauses, ${r.train} / ${r.trainSans} au train)`);
+  if (`${r.n} ${r.train} ${r.tout}` !== `${m[1]} ${m[2]} ${m[3]}`) {
+    throw new Error(`moteur : ${r.n} ordres, ${r.train} au train, ${r.tout} tiennent tout ; calage : ${m[1]}, ${m[2]}, ${m[3]}`);
+  }
+});
+
+await v('camion : à l’écran — bandeau d’autoroute, jauge « Conduite » qui dit QUE la pause est due, jamais de combien', async () => {
+  const H = (pause) => ({ horaire: { depart: 14 * 60 + 10, limite: 18 * 60, vitesse: 12, service: 4, libelleLimite: 'retour au dépôt',
+    approche: APPROCHE, pause } });
+  const conduite = (await bilanCamion(ORDRE_BON, { approche: APPROCHE, vitesse: 12 })).conduite;
+  const jaugeC = () => pageCt.$eval('#cr-hote [data-tour-conduite]', (e) => e.textContent.replace(/\s+/g, ' '));
+  const hm = (m) => { const r = Math.round(m); return `${Math.floor(r / 60)} h ${String(r % 60).padStart(2, '0')}`; };
+  // Parlante, pause due : la conduite, la limite, pastille ambre.
+  await monterCr(H({ apres: conduite - 1, duree: 45 }), ORDRE_BON);
+  await pageCt.waitForSelector('#cr-hote [data-tour-conduite]');
+  let j = await jaugeC();
+  if (!j.includes(`${hm(conduite)} / ${hm(conduite - 1)}`) || !/Pause de 45 min obligatoire : ajoutée au retour/.test(j)) throw new Error('jauge parlante : ' + j);
+  if (!await pageCt.$('#cr-hote [data-tour-conduite] .pastille.warn')) throw new Error('la pastille de pause n’est pas ambre');
+  const bandeau = await pageCt.textContent('#cr-hote [data-tour-approche]');
+  if (!/A13 essai → sortie : 45 km d’autoroute, à l’aller et au retour \(90 km\/h\)/.test(bandeau)) throw new Error('bandeau : ' + bandeau);
+  const t = await texteCr();
+  if (!/dont 60 min d’autoroute \(90 km\)/.test(t) || !/dont 45 min de pause/.test(t)) throw new Error('le retour ne dit pas l’approche et la pause');
+  // Muette : QUE la pause est due ; ni la conduite, ni l'écart.
+  await monterCr({ ...H({ apres: 270, duree: 45 }), jaugesRepere: true }, ORDRE_BON);
+  await pageCt.waitForSelector('#cr-hote [data-tour-conduite]');
+  j = await jaugeC();
+  if (!/4 h 30 sans pause/.test(j)) throw new Error('la limite n’est plus donnée : ' + j);
+  if (/Pause de 45 min obligatoire/.test(j)) throw new Error('pause annoncée alors qu’elle n’est pas due : ' + j);
+  await monterCr({ ...H({ apres: conduite - 1, duree: 45 }), jaugesRepere: true }, ORDRE_BON);
+  await pageCt.waitForSelector('#cr-hote [data-tour-conduite]');
+  j = await jaugeC();
+  if (!/Pause de 45 min obligatoire/.test(j)) throw new Error('la jauge muette ne dit pas que la pause est due : ' + j);
+  if (j.includes(hm(conduite)) || /dépass|de trop/.test(j)) throw new Error('la jauge muette donne la conduite ou l’écart : ' + j);
+  if ((await texteCr()).includes(hm(conduite))) throw new Error('la page muette donne la conduite');
+  // Sans verdict : rien sur la pause (la règle reste, en minuscules).
+  await monterCr({ ...H({ apres: conduite - 1, duree: 45 }), sansVerdict: true }, ORDRE_BON);
+  await pageCt.waitForSelector('#cr-hote [data-tour-conduite]');
+  if (/Pause de 45/.test(await jaugeC())) throw new Error('pause annoncée sans verdict');
+  // Étiquettes : l'approche et la pause.
+  await monterCr({ ...H({ apres: 270, duree: 45 }), etiquettes: true }, ORDRE_BON);
+  const etq = await pageCt.textContent('#cr-hote [data-tour-etiquettes]');
+  if (!/45 km d’autoroute/.test(etq) || !/Conduite : pause de 45 min obligatoire au-delà de 4 h 30/.test(etq)) throw new Error('étiquettes : ' + etq);
+  // Une journée sans approche ni pause n'a ni bandeau ni jauge de conduite.
+  await monterCr({}, ORDRE_BON);
+  await pageCt.waitForSelector('#cr-hote [data-creneau="c6"]');
+  if (await pageCt.$('#cr-hote [data-tour-conduite]') || await pageCt.$('#cr-hote [data-tour-approche]')) throw new Error('jauge ou bandeau sans approche ni pause');
+});
+
+await v('camion : sans quai — « à placer », report et « J’ai terminé » refusés tant qu’un client manque', async () => {
+  const tous = [...ORDRE_BON, 'c5'];
+  const SQ = { quai: false, exigeConforme: false, termine: { libelle: 'J’ai terminé' } };
+  await monterCr(SQ, ORDRE_BON);
+  await pageCt.waitForSelector('#cr-hote .tour-quai');
+  const q = await pageCt.textContent('#cr-hote .tour-quai');
+  if (!/À placer dans la tournée \(1\)/.test(q) || /Laissés à quai/.test(q)) throw new Error('liste : ' + q);
+  if ((await bilanCamion(ORDRE_BON, null, { quai: false })).aPlacer.join() !== 'c5') throw new Error('aPlacer');
+  if ((await bilanCamion(ORDRE_BON)).aPlacer.length) throw new Error('aPlacer avec quai');
+  await validerCr();
+  if (!/Il reste 1 client à placer dans la tournée/.test(await texteCr())) throw new Error('report non refusé : ' + (await texteCr()).slice(-300));
+  if (Object.keys(await pageCt.evaluate(() => window.__cr.db.transport['essai-cr'].tournee.juge)).length) throw new Error('cases jugées malgré le refus');
+  await pageCt.$eval('#cr-hote [data-tour-terminer]', (b) => b.click());
+  await pageCt.$eval('#cr-hote [data-tour-terminer]', (b) => b.click());
+  await pageCt.waitForSelector('#cr-hote [data-tour-refus]');
+  if (await pageCt.evaluate(() => window.__cr.db.transport['essai-cr'].tournee.termine)) throw new Error('« J’ai terminé » accepté avec un client à placer');
+  // Tous placés : pas de refus au report, et « J'ai terminé » passe.
+  await monterCr(SQ, tous);
+  await pageCt.waitForSelector('#cr-hote .tour-quai');
+  if (!/Tous les clients sont dans la tournée/.test(await pageCt.textContent('#cr-hote .tour-quai'))) throw new Error('liste vide mal dite');
+  await validerCr();
+  if (/à placer dans la tournée :/.test(await texteCr())) throw new Error('refus avec une tournée complète');
+  await pageCt.$eval('#cr-hote [data-tour-terminer]', (b) => b.click());
+  await pageCt.$eval('#cr-hote [data-tour-terminer]', (b) => b.click());
+  await pageCt.waitForTimeout(80);
+  if (!await pageCt.evaluate(() => window.__cr.db.transport['essai-cr'].tournee.termine)) throw new Error('« J’ai terminé » refusé avec une tournée complète');
+  // Avec quai (défaut) : la même tournée incomplète n'est pas refusée pour ça.
+  await monterCr({ exigeConforme: false }, ORDRE_BON);
+  await pageCt.waitForSelector('#cr-hote .tour-quai');
+  await validerCr();
+  const t = await texteCr();
+  if (/à placer dans la tournée :/.test(t) || !/Laissés à quai/.test(t)) throw new Error('le défaut a changé');
+  await pageCt.evaluate(() => document.getElementById('cr-hote')?.remove());
+});
+
 await v('carte : aucune erreur, aucune requête hors du site', async () => {
   if (erreursCt.length) throw new Error([...new Set(erreursCt)].slice(0, 3).join(' | '));
   if (hotesCt.size) throw new Error('requête extérieure : ' + [...hotesCt].join(', '));

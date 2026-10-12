@@ -9,7 +9,7 @@
 > **📋 Phrase — LOT 4 (vides et place), plus tard :** `Lis docs/briefs/MOTEUR-vue-tournee-camion.md et implémente le LOT 4, avec sa page d'essai.`
 > **LOT 5 (plan de chargement)** : **à cadrer avec Cowork avant toute construction** (maquette à valider).
 
-**Statut** : en cours — **lot 1 livré le 12/10/2026**, lots 2 et 3 à faire *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
+**Statut** : en cours — **lots 1 et 2 livrés le 12/10/2026**, lot 3 et page d'essai à faire *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
 **Date du brief** : 06/10/2026
 **Conversation d'origine** : Cowork (Opus), cadrage d'ENT-6.9 ; fiche projet `claude/prepalog-reprise-6.9.md` (décision 65 :
 « on peut mettre les 4 cas dans le moteur et utiliser 1 et 2 pour cette séance »).
@@ -144,4 +144,32 @@ sortie identique à avant.** « Que, pas de combien » : aucune jauge n'affiche 
   font tomber un cas : attente retirée de la vue ; attente retirée du calage ; jauge muette qui donne la durée ; attente en
   mode « raté ». Sortie de `calibrer.mjs` identique avant/après pour ENT-3.1 et ENT-3.2. Suite entière : 1314/1314.
 - **Commits** : « Tournée : fenêtres d'ouverture… » (D-9 lot 1).
-- **Reste ouvert** : lots 2 et 3 ; la page d'essai du §8 (après le lot 2, pour montrer approche et pause en même temps).
+- **Reste ouvert** : lot 3 ; la page d'essai du §8.
+
+**Lot 2 — approche, conduite, pause, sans quai (12/10/2026)**
+
+- **État des lieux (§2), pour le lot 2** : le quai n'avait pas d'interrupteur (bouton « retirer », liste « Laissés à quai »
+  toujours là). La feuille **lit déjà l'arrêt n° i** : elle est engendrée par le contenu depuis le bilan (`b.retenus[i]`, lignes
+  réservées comme Boost) ; ce qui manquait, c'était les **km de chaque tronçon** (Boost les reconstituait à rebours depuis l'heure
+  d'arrivée). Les phrases à menus calculés et le filtre des voies relèvent du lot 3 / d'ENT-6.9 : pas regardés.
+- **Fichiers modifiés** : `core/types/tournee.js` (en-tête, `bilanDe`, jauge « Conduite », bandeau, étiquettes, liste « à placer »,
+  refus du report et de « J'ai terminé »), `outils/carte/calibrer.mjs`, `outils/test/carte.mjs`.
+- **Écarts par rapport au brief** : §4.6, pas de syntaxe de cellule `{ arret: i, champ }` dans `grille.js` : le bilan donne
+  `troncons[id]` (km depuis le point précédent, `null` si le départ n'est pas posé) et `kmRetour`, que le contenu recopie rang
+  par rang dans ses lignes, comme il le fait déjà pour le nom et le poids. Un seul mécanisme au lieu de deux ; `grille.js` intact.
+  §4.4 `plafondJour` non construit (non utilisé en 6.9). §4.1 « bandeau » lu comme une ligne au-dessus de la carte, reprise en
+  étiquette.
+- **Décisions prises en route** : voir `docs/decisions.md` (12/10/2026, D-9 lot 2). Questions du §10 : la pause est ajoutée au
+  retour (défaut), à trancher par Tristan.
+- **Tests** : 7 cas « camion » dans le bloc `carte` (approche : journée décalée, km de la carte inchangés, conduite à la main,
+  aller seul, vitesse par défaut ; attente et service hors conduite ; pause juste au-dessus / juste en dessous, arrivées non
+  déplacées ; km par tronçon et retour, somme = distance, bouts non posés ; moteur et calage comptent les mêmes ordres avec
+  approche et pause ; écran parlant, muet, sans verdict, étiquettes, journée sans approche ; sans quai). Sabotages qui font tomber
+  un cas : approche oubliée dans la conduite ; service compté dans la conduite ; pause non ajoutée au retour ; pause retirée du
+  calage ; jauge muette qui donne la conduite ; report accepté incomplet sans quai. Sortie de `calibrer.mjs` identique
+  avant/après pour ENT-3.1 et ENT-3.2. Suite entière : 1321/1321.
+- **Piège vu en route** : le moteur et le calage additionnent les km dans un ordre différent ; à l'égalité **exacte** avec une
+  limite (une conduite pile à 4 h 30), l'arrondi peut les départager d'un ordre. Sans effet en séance (des minutes réelles ne
+  tombent pas pile) ; le test choisit une limite qui ne tombe sur aucune conduite.
+- **Commits** : « Tournée : approche d'autoroute, conduite et pause… » (D-9 lot 2).
+- **Reste ouvert** : lot 3 ; la page d'essai du §8.

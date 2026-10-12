@@ -47,6 +47,17 @@ const sommeSvc = (ids) => ids.reduce((t, id) => t + svc(id), 0);
 // service commence, et l'attente ajoutée. Sans `apres`, l'attente vaut 0 : Boost ne bouge pas.
 const ouverture = (k, a) => (k && k.apres != null && a < k.apres ? k.apres - a : 0);
 const tropTard = (k, debut) => !!k && k.avant != null && debut > k.avant;
+// L'approche hors carte et la pause (chantier D-9, lot 2) : la MÊME règle que `bilanDe`. L'approche
+// aller décale toute la journée ; la conduite = approche aller + carte + approche retour ; au-delà de
+// `pause.apres` minutes de conduite, la pause s'ajoute au retour. Sans `approche` ni `pause`, rien ne bouge.
+const AP = J.approche ? { vitesse: 90, ...J.approche } : null;
+const ALLER = AP ? AP.km / AP.vitesse * 60 : 0;
+const RETOUR = AP && AP.retour ? ALLER : 0;
+const finDe = (mCarte, svcTotal, att) => {
+  const conduite = ALLER + mCarte / 1000 / J.vitesse * 60 + RETOUR;
+  const pause = J.pause && conduite > J.pause.apres ? J.pause.duree : 0;
+  return J.depart + conduite + svcTotal + att + pause;
+};
 const hm = (m) => `${Math.floor(m / 60)} h ${String(Math.round(m % 60)).padStart(2, '0')}`;
 function* perms(a) { if (a.length < 2) { yield a; return; } for (let i = 0; i < a.length; i++) for (const p of perms([...a.slice(0, i), ...a.slice(i + 1)])) yield [a[i], ...p]; }
 
@@ -70,12 +81,12 @@ for (const p of perms(S.map((c) => c.id))) {
   for (let i = 1; i < ch.length; i++) {
     m += d(ch[i - 1], ch[i]);
     if (i < ch.length - 1) {
-      const a = J.depart + m / 1000 / J.vitesse * 60 + servi + att;
+      const a = J.depart + ALLER + m / 1000 / J.vitesse * 60 + servi + att;
       const w = ouverture(PAR_ID[ch[i]].creneau, a);
       att += w; deb[ch[i]] = a + w; servi += svc(ch[i]);
     }
   }
-  const fin = J.depart + m / 1000 / J.vitesse * 60 + sommeSvc(p) + att;
+  const fin = finDe(m, sommeSvc(p), att);
   const okTrain = fin <= J.train;
   const okCren = cren.every((c) => !tropTard(c.creneau, deb[c.id]));
   if (okTrain) train++;
@@ -107,14 +118,14 @@ if (IMP) {
       m += d(ch[i - 1], ch[i]);
       if (i < ch.length - 1) {
         const k = cr2(S2.find((c) => c.id === ch[i]));
-        const a = J.depart + m / 1000 / J.vitesse * 60 + servi + att;
+        const a = J.depart + ALLER + m / 1000 / J.vitesse * 60 + servi + att;
         const w = ouverture(k, a);
         att += w;
         if (tropTard(k, a + w)) ok = false;
         servi += svc(ch[i]);
       }
     }
-    const fin = J.depart + m / 1000 / J.vitesse * 60 + sommeSvc(p) + att;
+    const fin = finDe(m, sommeSvc(p), att);
     return { m, fin, ok: ok && fin <= J.train };
   };
   const encore = tiennent.filter((p) => ev(p.filter((id) => !an.includes(id))).ok).length;
