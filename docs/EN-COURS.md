@@ -7,6 +7,7 @@ est déjà modifié ou inscrit ci-dessous, **elle s'arrête et le dit à Tristan
 
 | Chantier | Fichiers qu'il touche | Depuis |
 |---|---|---|
+| D-8 (planning : `conduite`, `porteAffectation`) | core/types/planning.js, outils/test/planning.mjs, contenus/planning-essai.js, activites/FICHE-SEANCE.md | 12/10 |
 
 Rappel : un seul chantier à la fois dans `core/types/tournee.js`, `core/types/grille.js`,
 `core/types/entreprise.js`, `styles/base.css` et `outils/test/boost.mjs` (voir `docs/briefs/COORDINATION-boost.md`).
