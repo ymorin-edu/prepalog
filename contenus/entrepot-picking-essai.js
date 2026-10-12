@@ -5,11 +5,12 @@
 // déclarera son propre contenu (`contenus/france-boissons-ent67.js`). Vérifié : la préparation à la voix et les tiroirs
 // coulissants sous les racks chez France Boissons (INRS, Travail et Sécurité n° 843, 2022 ; site de l'entreprise). Construit :
 // le plan (1 allée, 2 côtés, 4 travées), les emplacements, leurs codes et leurs quantités, le fût cabossé.
-// Le montage des palettes (lot 4) n'est pas encore là : les lignes n'attendent aucune pose.
+// `PICKING` : l'allée seule (lot 3, sans palettes : ses tests). `PICKING_PALETTES` : la même avec le montage des deux palettes
+// client (lot 4, brief §4 étape 2 et §5 jalons 6 à 10), celle de la page d'essai.
 
 export const MENTION = 'Contenu d’essai : l’allée de picking d’ENT-6.7 (France Boissons). Plan, emplacements, codes et quantités '
-  + '<b>construits</b> ; préparation à la voix et tiroirs coulissants <b>vérifiés</b> chez France Boissons. Les palettes client arrivent au '
-  + 'lot 4. Dessin — scène construite, ce n’est pas la plateforme de Buchelay.';
+  + '<b>construits</b> ; préparation à la voix et tiroirs coulissants <b>vérifiés</b> chez France Boissons. Règle de pose des palettes '
+  + 'client <b>construite</b> (brief). Dessin — scène construite, ce n’est pas la plateforme de Buchelay.';
 
 export const PICKING = {
   id: 'essai-picking',
@@ -57,3 +58,22 @@ export const PICKING = {
   ] },
   note: { sur: 20 },
 };
+
+// La même allée, avec les deux palettes client à monter (lot 4). Construit : la règle de pose, le texte de l'étiquette (la commande
+// de Malo d'ENT-6.2, tournée de la côte). Vérifié : 6 fûts au plus vers les clients (palette 1,20 × 0,80, INRS ED 135).
+export const PICKING_PALETTES = Object.assign({}, PICKING, {
+  id: 'essai-picking-palettes',
+  consigne: 'Écoute (ou lis) le terminal, va à l’emplacement, réponds, puis pose.',
+  regles: { entete: 'Les règles de la préparation', lignes: [
+    'Palette client <b>1,20 × 0,80</b> : <b>6 fûts au plus</b>, une seule couche (sur une palette de stock, il y en a 8 : ce n’est pas la même palette).',
+    '<b>Jamais un fût sur un casier</b> ; les casiers se posent sur les fûts ou à une place libre.',
+    'Un fût abîmé ne part jamais chez le client : <b>signale-le au terminal avec le bon mot</b>.',
+    'Film : <b>3 à 5 tours</b>.',
+    'Étiquettes : <b>deux côtés opposés + le dessus</b>.',
+  ] },
+  montage: {
+    palettes: 2,
+    etiquette: 'La Cabane à Malo — Villers-sur-Mer · Tournée de la côte · vendredi 18 juin',
+    reflexion: 'Le terminal t’a donné les lignes une par une. Qu’est-ce que tu y as gagné, et qu’est-ce que tu y as perdu, pour faire ta palette ? (L’INRS signale que les préparateurs guidés à la voix ne peuvent plus anticiper leur palette.)',
+  },
+});

@@ -35,7 +35,8 @@
 //   signalée ; sa `question` peut être une fonction de cette quantité. Rien n'est rangé que l'exception : la liste des lignes
 //   se recalcule (`lignesDuTerminal`).
 // - `pose` : après une quantité acceptée (non nulle), le terminal dit cette phrase et ATTEND : le champ se ferme jusqu'à ce que
-//   la vue hôte appelle `poser()` (la marchandise est posée) ; alors seulement la ligne suivante.
+//   la vue hôte appelle `poser()` (la marchandise est posée) ; alors seulement la ligne suivante. Une fonction reçoit la
+//   quantité prise (« Pose ton fût. » / « Pose tes 2 fûts. », lot 4).
 // - « Ce que le terminal sait de toi » : `bilanTerminal` (lignes, durée, codes faux, lignes par heure), non noté.
 //
 // L'état, rangé par la vue hôte dans la base de l'élève (cloisonné par séance) :
@@ -105,7 +106,7 @@ export function phraseTerminal(T, lignes, textes = {}) {
   const l = L[T.i];
   if (T.phase === 'code') return `${l.lieu} ${X.code}`;
   if (T.phase === 'combien') return X.combien((T.mot || {}).lib || '');
-  if (T.phase === 'pose') return l.pose || '';
+  if (T.phase === 'pose') return (typeof l.pose === 'function' ? l.pose(T.reponses[l.id]) : l.pose) || '';
   return (T.exceptions || {})[l.id] ? X.prends(reste(T, l)) : l.question;
 }
 

@@ -10,13 +10,13 @@ import { etapesEntrepot, comptagesTerminal, comptageFini } from '../core/types/e
 import { THEME } from '../contenus/smoby.js';
 import { THEME as THEME_FB } from '../contenus/france-boissons.js';
 import { MASSE, COMPTAGE, INVENTAIRE_COMPTAGE } from '../contenus/entrepot-masse-essai.js';
-import { PICKING } from '../contenus/entrepot-picking-essai.js';
+import { PICKING_PALETTES } from '../contenus/entrepot-picking-essai.js';
 
 // `masse` : le stockage de masse d'ENT-6.5 (chantier D-5), dans la charte de France Boissons ; `comptage` : le même, en
 // comptage à l'aveugle (ENT-6.6, chantier D-6), suivi de l'écran Inventaire qui reprend les comptages du terminal (lot 4) ;
-// `picking` : l'allée de picking d'ENT-6.7, guidée par le terminal (chantier D-7, lot 3).
+// `picking` : l'allée de picking d'ENT-6.7, guidée par le terminal (chantier D-7, lot 3), et ses deux palettes client (lot 4).
 export function univers({ cas = 'rangement', temps = 'guidage', entrepot = null } = {}) {
-  const P = entrepot || (cas === 'masse' ? MASSE : cas === 'comptage' ? COMPTAGE : cas === 'picking' ? PICKING : CAS[cas]);
+  const P = entrepot || (cas === 'masse' ? MASSE : cas === 'comptage' ? COMPTAGE : cas === 'picking' ? PICKING_PALETTES : CAS[cas]);
   const masse = P.mode === 'masse' || P.mode === 'picking';
   return {
     ENTREPRISE: masse ? { id: 'essai-entrepot', nom: 'France Boissons — essai de la zone de masse', sousTitre: 'Plateforme — stockage de masse', exercice: 'Essai de l’écran Plan d’entrepôt' }

@@ -39,6 +39,14 @@
 //       fin: 'Commande terminée : …', phraseBilan: '…',       // la phrase de fin ; la phrase sous « Ce que le terminal sait de toi »
 //     },
 //     regles: { titre?, entete?, lignes: [html…], encadre? },  // « Les règles ▾ » (guidage, entraînement)
+//     montage: {                                              // facultatif (lot 4) : les palettes client à monter
+//       palettes: 2,                                          // 1 à 3 palettes client 1,20 × 0,80 de 6 cases
+//       titre: 'Tes palettes client · 1,20 × 0,80',
+//       etiquette: 'La Cabane à Malo — Villers-sur-Mer · …',  // le texte de l'étiquette d'expédition (affiché)
+//       futsMax: 6, film: [3, 5],                             // les règles jugées (défauts : 6 cases, 3 à 5 tours)
+//       reflexion: 'Le terminal t’a donné les lignes …',      // facultatif : « Pour réfléchir », réponse libre non notée
+//       jalons: { casier, futs, film, etiquettes, palettes }, // facultatif : les noms des critères (sinon ceux de la maquette)
+//     },
 //     note: { sur: 20 },
 //   }
 //
@@ -52,18 +60,37 @@
 //   - ligne avec `attendu` : ce mot-là, cette quantité-là, puis le reste pris (« Manquant » au lieu d'« Abîmé » : faux) ;
 //   - ligne de remplacement : présente (une exception a été dite) et la quantité `attendu.n` prise.
 // `lib` d'un jalon : `jalon` sur la ligne (et sur `remplacement`), sinon « Ligne n : <nom> » — jamais la réponse.
-// Le montage des palettes (§7.3, lot 4) n'est pas encore là : une ligne ne déclare pas encore de `pose`. Pas d'évaluation.
+//
+// LE MONTAGE (chantier D-7, lot 4, 12/10/2026 ; brief ENT-6.7 §4 étape 2, §5 jalons 6 à 10, §7.3 et §7.4), si `montage` est
+// déclaré : après chaque quantité acceptée, le terminal dit « Pose tes fûts. » et attend ; sous lui, « Où poses-tu les 2 fûts
+// Pelforth Blonde 20 L ? » → Palette 1 · Palette 2 · « À côté, je le pose après » (une ligne = une seule destination). Le
+// terminal fini, les objets « à côté » se posent (clic sur l'objet, puis sur une palette), on filme et on étiquette CHAQUE
+// palette, puis « Vérifier ma préparation » (actif quand rien n'est à côté). « ↶ Reposer le dernier » (décision de Tristan du
+// 12/10/2026), le terminal fini, remet à côté le dernier objet posé sur une palette ; les lignes du terminal ne se refont pas.
+// RÈGLE DE POSE (brief, construite) : une palette a 6 cases ; un objet va sur la première case vide ; sinon un fût va sur un
+// casier au sommet d'une case (la faute que voit le critère « casier »), à défaut sur un fût ; un casier va sur un fût, à
+// défaut sur un casier ; entre plusieurs cases, la plus basse (puis la première). Rien n'est jamais refusé. La pile se
+// recalcule depuis l'ordre de pose (`montage`), jamais rangée.
+// Le fût cabossé : un tiroir donne d'abord ses fûts de devant, donc les cabossés ; un fût signalé « Abîmé » reste au tiroir
+// (décision 50). Pris sans rien dire, il part sur la palette, cabossé (le dessin le montre).
+// JALONS 6 à 10, à la suite des lignes : aucun fût sur un casier ; `futsMax` fûts au plus par palette ; film (`film`) et
+// étiquettes (deux côtés opposés + le dessus) sur chaque palette utilisée ; toutes les palettes utilisées. Jugés à
+// « Vérifier » seulement (un changement efface la vérification) et SEULEMENT si les jalons des lignes sont justes et que
+// rien n'est à côté : une palette vide respecte « aucun fût sur un casier » (aucun jalon par inaction, décision 50).
+// Pas d'évaluation (un entraînement).
 //
 // L'état, dans la base de l'élève (`db.entrepots[<id>]`, cloisonné par séance) :
-//   { terminal: (voir `terminal.js`), vus: { 'A-T03': date de la première ouverture }, premierGeste }
+//   { terminal: (voir `terminal.js`), vus: { 'A-T03': date de la première ouverture }, premierGeste,
+//     palettes: [[{ ref, emp, ligne, abime? }, …], …] (l'ordre de pose), cote: [objets à côté], film: ['4', …],
+//     etiq: [{ avant: true, … }, …], verifie, verifs, reflexion }
 // `vus` est une trace pour l'enseignant, jamais notée. La travée ouverte et la place du préparateur ne sont pas gardées.
-// Gestes publiés (questions au fil) : `entrepot:<id>:ouvrir:<emplacement>`, `entrepot:<id>:ligne:<ligne>` (une ligne finie),
-// `entrepot:<id>:fin`.
+// Gestes publiés (questions au fil) : `entrepot:<id>:ouvrir:<emplacement>`, `entrepot:<id>:ligne:<ligne>` (une ligne finie,
+// donc posée), `entrepot:<id>:fin`, et avec un montage `entrepot:<id>:verifier`.
 
 import { ech } from '../texte.js';
 import { projection, DEFS, compilerScene, dessinerDecor, traveePicking, volumeTravee, personne, TRAVEE, PLACES_TIROIR, HAUT_FUT,
-  TEINTES_FUT, TEINTES_CAPSULE } from '../iso.js';
-import { creerTerminal, terminalNeuf, bilanTerminal, htmlBilanTerminal } from './terminal.js';
+  TEINTES_FUT, TEINTES_CAPSULE, paletteClient, hauteurObjet, CASES_PALETTE, PAL_EUR } from '../iso.js';
+import { creerTerminal, terminalNeuf, bilanTerminal, htmlBilanTerminal, lignesDuTerminal } from './terminal.js';
 
 export const MOTS_PREPARATION = [
   { id: 'manquant', lib: 'Manquant', combien: true },
@@ -103,11 +130,40 @@ export function compilerPicking(P, err) {
     if (!/^\d{1,4}$/.test(code)) err(`emplacement ${adr} : le code détrompeur (\`code\`) s'écrit avec 1 à 4 chiffres`);
     E[adr] = { adr, cote: c, t, ref: x.ref, lot: x.lot ? String(x.lot) : null, n, abimes: ab, code };
   } });
-  const terminal = compilerTerminalPicking(P.terminal || err('il manque le terminal (le picking est guidé à la voix)'), { E, refs }, err);
-  return { P, mode: 'picking', T, refs, E, terminal, nomDe: (ref) => refs[ref].court || refs[ref].nom };
+  const montage = P.montage ? compilerMontage(P.montage, err) : null;
+  const terminal = compilerTerminalPicking(P.terminal || err('il manque le terminal (le picking est guidé à la voix)'), { E, refs, montage }, err);
+  if (montage) montage.jalons.forEach((j) => terminal.jalons.push(j));
+  return { P, mode: 'picking', T, refs, E, terminal, montage, nomDe: (ref) => refs[ref].court || refs[ref].nom };
 }
 
-function compilerTerminalPicking(D, { E, refs }, err) {
+// Les côtés d'une palette qu'on étiquette, et ce qu'on lit à l'écran.
+export const COTES_PALETTE = [['avant', 'avant'], ['arriere', 'arrière'], ['gauche', 'gauche'], ['droite', 'droite'], ['dessus', 'dessus']];
+const ETIQ_JUSTES = ['arriere,avant,dessus', 'dessus,droite,gauche'];
+const NOMBRES = ['', 'une', 'deux', 'trois'];
+
+function compilerMontage(D, err) {
+  const n = D.palettes == null ? 2 : D.palettes;
+  if (!Number.isInteger(n) || n < 1 || n > 3) err('montage : `palettes` va de 1 à 3');
+  const futsMax = D.futsMax == null ? CASES_PALETTE : D.futsMax;
+  if (!Number.isInteger(futsMax) || futsMax < 1 || futsMax > CASES_PALETTE) err(`montage : \`futsMax\` va de 1 à ${CASES_PALETTE}`);
+  const film = D.film || [3, 5];
+  if (!Array.isArray(film) || film.length !== 2 || !film.every((t) => Number.isInteger(t) && t >= 1 && t <= 6) || film[0] > film[1]) {
+    err('montage : `film` est [tours au moins, tours au plus], de 1 à 6');
+  }
+  const J = D.jalons || {};
+  const libs = {
+    casier: J.casier || 'Critère : aucun casier sous un fût',
+    futs: J.futs || `Critère : ${futsMax} fûts au plus par palette client`,
+    film: J.film || 'Critère : film étirable',
+    etiquettes: J.etiquettes || 'Critère : étiquettes d’expédition',
+    palettes: J.palettes || (n === 1 ? 'Critère : la palette, rien à côté' : `Critère : ${NOMBRES[n]} palettes`),
+  };
+  return { n, futsMax, film, titre: D.titre || `${n > 1 ? 'Tes palettes client' : 'Ta palette client'} · 1,20 × 0,80`,
+    etiquette: D.etiquette ? String(D.etiquette) : '', reflexion: D.reflexion ? String(D.reflexion) : '',
+    jalons: Object.entries(libs).map(([type, lib]) => ({ id: `montage-${type}`, montage: type, lib })) };
+}
+
+function compilerTerminalPicking(D, { E, refs, montage }, err) {
   if (!Array.isArray(D.lignes) || !D.lignes.length) err('terminal : `lignes` est une liste (au moins une ligne)');
   const mots = D.mots || MOTS_PREPARATION;
   if (!Array.isArray(mots)) err('terminal : `mots` est une liste');
@@ -116,11 +172,13 @@ function compilerTerminalPicking(D, { E, refs }, err) {
   const unId = (id, ou) => { if (ids.has(id)) err(`${ou} : la ligne ${id} existe déjà (donner un \`id\`)`); ids.add(id); return id; };
   const lieu = (e) => `Côté ${e.cote}, travée ${t2(e.t)}, niveau 1.`;
   const dire = (e, n) => `${refs[e.ref].voix || refs[e.ref].nom}${e.lot ? `, lot ${e.lot}` : ''}. Prends ${n}.`;
+  // Avec un montage, le terminal attend la pose : « Pose tes casiers. », « Pose ton fût. ».
+  const pose = (e) => (montage ? (n) => `Pose ${n > 1 ? 'tes' : 'ton'} ${refs[e.ref].type === 'casier' ? 'casier' : 'fût'}${n > 1 ? 's' : ''}.` : undefined);
   const jalons = [];
   const lignes = D.lignes.map((l, k) => {
     const ou = `terminal, ligne n° ${k + 1}`;
     const e = E[l && l.emplacement] || err(`${ou} : emplacement inconnu (${l && l.emplacement})`);
-    if ('pose' in l) err(`${ou} : la pose sur les palettes arrive avec le montage (chantier D-7, lot 4)`);
+    if ('pose' in l) err(`${ou} : une ligne ne déclare pas \`pose\`, la pose vient du \`montage\` (chantier D-7, lot 4)`);
     const prends = l.prends;
     if (!Number.isInteger(prends) || prends < 1 || prends > e.n) err(`${ou} : \`prends\` va de 1 à ${e.n} (ce que contient ${e.adr})`);
     const id = unId(String(l.id || e.adr), ou);
@@ -131,6 +189,7 @@ function compilerTerminalPicking(D, { E, refs }, err) {
       if (!Number.isInteger(a.n) || a.n < 1 || a.n > prends) err(`${ou} : \`attendu.n\` va de 1 à ${prends}`);
     }
     const ligne = { id, emplacement: e.adr, lieu: lieu(e), code: e.code, prends, question: dire(e, prends) };
+    if (montage) ligne.pose = pose(e);
     jalons.push({ id: `ligne-${id}`, ligne: id, prends, attendu: a, lib: l.jalon || null, ref: e.ref });
     if (l.remplacement) {
       const r = l.remplacement, er = E[r.emplacement] || err(`${ou} : remplacement à un emplacement inconnu (${r.emplacement})`);
@@ -138,6 +197,7 @@ function compilerTerminalPicking(D, { E, refs }, err) {
       if (er.n < prends) err(`${ou} : le remplacement ${er.adr} ne contient que ${er.n} (il en faut ${prends} si toute la ligne est signalée)`);
       const rid = unId(String(r.id || er.adr), `${ou}, remplacement`);
       ligne.remplacement = { id: rid, emplacement: er.adr, lieu: lieu(er), code: er.code, question: (n) => dire(er, n) };
+      if (montage) ligne.remplacement.pose = pose(er);
       if (a) jalons.push({ id: `ligne-${rid}`, ligne: rid, remplace: id, n: a.n, lib: r.jalon || null, ref: er.ref });
     } else if (a) err(`${ou} : une exception attendue sans \`remplacement\` (le terminal ne donnerait pas la suite)`);
     return ligne;
@@ -148,12 +208,62 @@ function compilerTerminalPicking(D, { E, refs }, err) {
 }
 
 /* ================================================================ le jugement */
-export const etatPickingNeuf = () => ({ terminal: terminalNeuf(), vus: {}, premierGeste: null });
+export const etatPickingNeuf = () => ({ terminal: terminalNeuf(), vus: {}, premierGeste: null,
+  palettes: [], cote: [], film: [], etiq: [], verifie: false, verifs: 0, reflexion: '' });
 
-// Les jalons (brief §5, 1 à 5) : juste ou faux une fois le terminal fini, rien avant (voir la tête).
+// Les objets que pose une ligne de `n` pris à l'emplacement `emp` : le tiroir donne ses fûts de devant d'abord, donc les
+// cabossés qui y restent, sauf ceux que l'élève a signalés « Abîmé » sur cette ligne (ils restent au tiroir).
+export function objetsPris(M, e, l, n) {
+  const E = M.E[l.emplacement], deja = tousPoses(e).filter((o) => o.emp === E.adr && o.abime).length;
+  const x = ((e.terminal || {}).exceptions || {})[l.id], signales = x && x.mot === 'abime' ? x.n : 0;
+  const ab = Math.max(0, Math.min(n, E.abimes - deja - signales));
+  return Array.from({ length: n }, (_, k) => (k < ab ? { ref: E.ref, emp: E.adr, ligne: l.id, abime: 1 } : { ref: E.ref, emp: E.adr, ligne: l.id }));
+}
+const tousPoses = (e) => [...(e.palettes || []).flat(), ...(e.cote || [])];
+
+// Une palette montée, rejouée dans l'ordre de pose (la règle de la tête) : [{ o, c (case), z (hauteur du pied), sous }].
+export function empiler(M, liste) {
+  const piles = Array.from({ length: CASES_PALETTE }, () => []), h = piles.map(() => 0);
+  const type = (o) => (o ? M.refs[o.ref].type : null);
+  return (liste || []).map((o) => {
+    let c = piles.findIndex((p) => !p.length);
+    if (c < 0) {
+      const sommet = (k) => type(piles[k][piles[k].length - 1]);
+      const veut = type(o) === 'fut' ? 'casier' : 'fut';
+      let cand = piles.map((_, k) => k).filter((k) => sommet(k) === veut);
+      if (!cand.length) cand = piles.map((_, k) => k);
+      c = cand.reduce((a, k) => (h[k] < h[a] - 1e-9 ? k : a), cand[0]);
+    }
+    const q = { o, c, z: h[c], sous: piles[c][piles[c].length - 1] || null };
+    piles[c].push(o); h[c] += hauteurObjet(isoDe(M, o));
+    return q;
+  });
+}
+// Un objet posé tel que le kit iso le dessine.
+function isoDe(M, o) {
+  const r = M.refs[o.ref];
+  return r.type === 'fut' ? { type: 'fut', litres: r.litres, bande: r.bande, abime: !!o.abime } : { type: 'casier', capsule: r.capsule };
+}
+
+// Ce que le montage donne sur une base : par palette, les piles, les fûts, un fût sur un casier, film et étiquettes justes.
+export function calculMontage(M, e) {
+  const Mo = M.montage;
+  return Array.from({ length: Mo.n }, (_, p) => {
+    const liste = (e.palettes || [])[p] || [], pos = empiler(M, liste);
+    const tours = parseInt((e.film || [])[p], 10);
+    const etq = COTES_PALETTE.map((x) => x[0]).filter((k) => ((e.etiq || [])[p] || {})[k]).sort().join(',');
+    return { p, liste, pos, futs: liste.filter((o) => M.refs[o.ref].type === 'fut').length,
+      futSurCasier: pos.some((q) => M.refs[q.o.ref].type === 'fut' && q.sous && M.refs[q.sous.ref].type === 'casier'),
+      film: tours >= Mo.film[0] && tours <= Mo.film[1], etiquettes: ETIQ_JUSTES.includes(etq) };
+  });
+}
+
+// Les jalons (brief §5) : ceux des lignes, juste ou faux une fois le terminal fini, rien avant ; ceux du montage, à
+// « Vérifier » seulement, et « non jugé » (faux) tant qu'une ligne est fausse (voir la tête).
 export function jalonsPicking(M, e) {
   const T = e.terminal || terminalNeuf(), R = T.reponses || {}, EX = T.exceptions || {}, fin = !!T.fin;
-  return M.terminal.jalons.map((j) => {
+  const lignes = M.terminal.jalons.filter((j) => !j.montage);
+  const L = lignes.map((j) => {
     let ok;
     if (j.remplace) ok = R[j.ligne] === j.n;
     else if (j.attendu) { const x = EX[j.ligne]; ok = !!x && x.mot === j.attendu.mot && x.n === j.attendu.n && R[j.ligne] === j.prends - j.attendu.n; }
@@ -162,6 +272,21 @@ export function jalonsPicking(M, e) {
     return { id: j.id, lib: j.lib, ok, etat: fin ? (ok ? 'ok' : 'ko') : undefined, ligne: j.ligne,
       pris: j.ligne in R ? R[j.ligne] : null, exception: EX[j.ligne] || null };
   });
+  if (!M.montage) return L;
+  const lignesOk = L.every((l) => l.ok), juge = fin && !!e.verifie, X = calculMontage(M, e);
+  const utilisees = X.filter((x) => x.liste.length), rien = !(e.cote || []).length;
+  const regle = {
+    casier: () => !X.some((x) => x.futSurCasier),
+    futs: () => X.every((x) => x.futs <= M.montage.futsMax),
+    film: () => utilisees.length > 0 && utilisees.every((x) => x.film),
+    etiquettes: () => utilisees.length > 0 && utilisees.every((x) => x.etiquettes),
+    palettes: () => utilisees.length === X.length,
+  };
+  M.terminal.jalons.filter((j) => j.montage).forEach((j) => {
+    const ok = juge && lignesOk && rien && regle[j.montage]();
+    L.push({ id: j.id, lib: j.lib, ok, etat: juge ? (ok ? 'ok' : 'ko') : undefined, montage: j.montage, nonJuge: juge && !lignesOk });
+  });
+  return L;
 }
 
 // Ce que le terminal attend, ligne à ligne (côté enseignant, page d'essai, tests) : JAMAIS montré à l'élève.
@@ -195,14 +320,25 @@ function geometrie(M) {
 export function creerPicking(P, M, opts, h) {
   if (opts.copie) throw new Error(`entrepot ${P.id} : le mode picking n'a pas encore d'évaluation`);
   const G = geometrie(M);
-  const ui = { ouvert: null, ici: null, regles: false, focus: null };
+  const ui = { ouvert: null, ici: null, regles: false, focus: null, main: null };
   const tempsDe = (api) => P.temps || (api && api.temps) || 'guidage';
   const TT = M.terminal;
   const TERM = creerTerminal({ lignes: TT.lignes, textes: TT.textes, titre: TT.titre, mots: TT.mots });
-  const contenu = (e) => {
-    const r = M.refs[e.ref];
-    return r.type === 'fut' ? { type: 'fut', n: e.n, litres: r.litres, bande: r.bande, abimes: e.abimes }
-      : { type: 'casier', n: e.n, capsule: r.capsule };
+  const MO = M.montage;
+  let etat = null;      // la base de l'élève, le temps d'un dessin (les tiroirs se vident de ce qui a été pris)
+  // Ce qui a été pris à un emplacement : posé (palettes, à côté), ou pris et pas encore posé (la ligne en cours).
+  const enMain = (e) => {
+    const T = e.terminal || {};
+    if (!MO || T.fin || T.phase !== 'pose') return [];
+    const l = lignesDuTerminal(TT.lignes, T)[T.i];
+    return l ? objetsPris(M, e, l, T.reponses[l.id] || 0) : [];
+  };
+  const contenu = (x) => {
+    const r = M.refs[x.ref];
+    const pris = etat && MO ? [...tousPoses(etat), ...enMain(etat)].filter((o) => o.emp === x.adr) : [];
+    const n = Math.max(0, x.n - pris.length), ab = Math.max(0, Math.min(n, x.abimes - pris.filter((o) => o.abime).length));
+    return r.type === 'fut' ? { type: 'fut', n, litres: r.litres, bande: r.bande, abimes: ab }
+      : { type: 'casier', n, capsule: r.capsule };
   };
   const cadre = (I, pts) => {
     const xy = pts.map((p) => I.P(...p)), xs = xy.map((p) => p[0]), ys = xy.map((p) => p[1]);
@@ -258,18 +394,111 @@ export function creerPicking(P, M, opts, h) {
     return `<svg class="pm-svg pk-svg" viewBox="${vb}" role="img" aria-label="${ech(`L’emplacement ${e.adr}-N1, de près : le tiroir coulissant et l’étiquette de la lisse`)}">${DEFS}${s}</svg>`;
   }
 
+  /* -------------------------------------------------------------- le montage (lot 4) */
+  // Ce que dit un objet, un groupe d'objets : « les 2 fûts Pelforth Blonde 20 L », « le casier Eau minérale 1 L ».
+  const quoi = (ref, n) => {
+    const r = M.refs[ref], mot = r.type === 'casier' ? 'casier' : 'fût';
+    return n > 1 ? `les ${n} ${mot}s ${r.nom}` : `le ${mot} ${r.nom}`;
+  };
+  const listePal = (e, p) => ((e.palettes || [])[p] || []);
+
+  // LES PALETTES, côte à côte, chacune dans son cadre en 3D (en diagonale dans un seul dessin, elles prenaient deux fois la
+  // hauteur de la colonne) ; chacune se clique quand un objet « à côté » est en main. Le cadre est celui d'une pile de deux
+  // couches : le dessin ne bouge pas quand on pose.
+  function svgPalettes(e) {
+    const I = projection({ unite: 100, origine: [0, 0] }), X = calculMontage(M, e), { W, D } = PAL_EUR, prise = ui.main != null;
+    const vb = cadre(I, [[-.1, -.1, 0], [W + .1, -.1, 0], [W + .1, D + .1, 0], [-.1, D + .1, 0], [0, 0, 1.05], [W, 0, 1.05], [0, D, 1.05]]);
+    return X.map((x) => {
+      const piles = Array.from({ length: CASES_PALETTE }, () => []);
+      x.pos.forEach((q) => piles[q.c].push(isoDe(M, q.o)));
+      const dessin = `<polygon class="pk-pal-sol" points="${I.pts([[-.08, -.08, 0], [W + .08, -.08, 0], [W + .08, D + .08, 0], [-.08, D + .08, 0]])}"/>`
+        + paletteClient(I, 0, 0, { piles, film: parseInt((e.film || [])[x.p], 10) || 0,
+          etiquettes: COTES_PALETTE.map((c) => c[0]).filter((k) => ((e.etiq || [])[x.p] || {})[k]), casesVisibles: true });
+      return `<figure class="pk-pal${prise ? ' pk-pal-cible' : ''}" data-pk-pal="${x.p}" data-pk-objets="${x.liste.length}"${prise ? ` tabindex="0" role="button" aria-label="${ech(`Poser sur la palette ${x.p + 1}`)}"` : ''}>
+        <svg class="pk-pal-svg" viewBox="${vb}" role="img" aria-label="${ech(`Palette ${x.p + 1}`)}">${DEFS}${dessin}</svg><figcaption>Palette ${x.p + 1}</figcaption></figure>`;
+    }).join('');
+  }
+
+  function htmlMontage(e, t, jal) {
+    const T = e.terminal, fin = !!T.fin, X = calculMontage(M, e), cote = e.cote || [];
+    const bouton = (attrs, cle, lib, off, cls = 'btn') => `<button type="button" class="${cls}" ${attrs} data-pe-cle="${cle}" ${off ? 'disabled' : ''}>${lib}</button>`;
+    let h = `<section class="pk-montage" data-pk-montage aria-label="${ech(MO.titre)}"><b class="pk-titre">${ech(MO.titre)}</b>`;
+    if (!fin && T.phase === 'pose') {
+      const l = lignesDuTerminal(TT.lignes, T)[T.i], n = T.reponses[l.id];
+      h += `<div class="pk-question" data-pk-question>Où poses-tu ${ech(quoi(M.E[l.emplacement].ref, n))} ?</div><div class="pk-poser">${
+        X.map((x) => bouton(`data-pk-poser="${x.p}"`, `poser:${x.p}`, `Palette ${x.p + 1}`)).join('')}${
+        bouton('data-pk-poser="cote"', 'poser:cote', 'À côté, je le pose après', false, 'btn pk-acote')}</div>`;
+    } else if (!fin) h += '<div class="pe-petit">Suis le terminal : va à l’emplacement, lis le code, prends, puis pose.</div>';
+    // « ↶ Reposer le dernier » : à l'étape 2 seulement (le brief : on corrige les objets posés avant de vérifier).
+    h += `<div class="pk-palettes">${svgPalettes(e)}</div>${fin ? `<div class="pk-reposer">${X.map((x) => bouton(`data-pk-reposer="${x.p}"`, `reposer:${x.p}`,
+      `↶ Reposer le dernier (palette ${x.p + 1})`, !x.liste.length)).join('')}</div>` : ''}`;
+    if (cote.length) {
+      h += `<div class="pk-cote" data-pk-cote><b>À côté :</b> ${cote.map((o, k) => `<button type="button" class="pk-objet${ui.main === k ? ' pk-main' : ''}" data-pk-objet="${k}"
+        data-pe-cle="objet:${k}" aria-pressed="${ui.main === k}" ${fin ? '' : 'disabled'}>${M.refs[o.ref].type === 'casier' ? '▦' : '◯'} ${ech(M.refs[o.ref].nom)}${o.abime ? ' (cabossé)' : ''}</button>`).join('')}
+        <div class="pe-petit">${fin ? (ui.main != null ? `Clique la palette où le poser.</div><div class="pk-poser">${X.map((x) => bouton(`data-pk-vers="${x.p}"`, `vers:${x.p}`, `Sur la palette ${x.p + 1}`)).join('')}` : 'Clique un objet, puis une palette.') : 'Tu les poseras quand la commande sera terminée.'}</div></div>`;
+    }
+    if (fin) {
+      h += `<div class="pe-finir pk-finir"><b>Avant l’expédition</b>${MO.etiquette ? `<div class="pe-petit" data-pk-etiquette>Étiquette d’expédition : « ${ech(MO.etiquette)} »</div>` : ''}${
+        X.map((x) => `<div class="pk-fin-pal" data-pk-fin="${x.p}"><b>Palette ${x.p + 1}</b>
+          <label>Film étirable : <select data-pk-film="${x.p}" data-pe-cle="film:${x.p}"><option value="">— tours —</option>${[1, 2, 3, 4, 5, 6].map((n) => `<option value="${n}" ${String((e.film || [])[x.p]) === String(n) ? 'selected' : ''}>${n}</option>`).join('')}</select> tours</label>
+          <div class="pe-etq">Étiquettes : ${COTES_PALETTE.map(([k, lib]) => `<label><input type="checkbox" data-pk-etiq="${x.p}:${k}" data-pe-cle="etiq:${x.p}:${k}" ${((e.etiq || [])[x.p] || {})[k] ? 'checked' : ''}> ${lib}</label>`).join('')}</div></div>`).join('')}
+        <div class="pe-boutons">${bouton('data-pk="verifier"', 'b:verifier', 'Vérifier ma préparation', cote.length > 0, 'btn btn-p')}</div></div>`;
+      if (e.verifie) {
+        const nonJuge = jal.some((j) => j.nonJuge);
+        h += `<div class="pm-bilan pk-bilan" data-pk-bilan><b>Ma préparation</b>${jal.map((j) => `<div class="${j.nonJuge ? 'pe-petit' : j.ok ? 'pe-ok' : 'pe-ko'}" data-pk-jalon="${ech(j.id)}" data-ok="${j.ok}">${
+          j.nonJuge ? '— non jugé' : j.ok ? '✓' : '✗'} ${ech(j.lib)}</div>`).join('')}
+          <div><b>${jal.filter((j) => j.ok).length} / ${jal.length}</b></div>
+          <small>${t === 'guidage' || t === 'entrainement' ? 'Entraînement : seul le nom du critère est donné.' : ''}${nonJuge ? ' Les critères des palettes ne sont jugés que si toutes les lignes sont justes.' : ''}</small></div>`;
+        if (MO.reflexion) h += `<label class="pk-reflexion" data-pk-reflexion-bloc><b>Pour réfléchir</b> ${ech(MO.reflexion)}
+          <textarea data-pk-reflexion data-pe-cle="b:reflexion" rows="3" placeholder="ta réponse">${ech(e.reflexion || '')}</textarea></label>`;
+      }
+    }
+    return `${h}</section>`;
+  }
+
+  // Les gestes du montage. `fait()` sauve et redessine ; une pose ou un changement efface la vérification.
+  function poserLigne(e, dest, h) {
+    const T = e.terminal;
+    if (T.fin || T.phase !== 'pose') return;
+    const l = lignesDuTerminal(TT.lignes, T)[T.i], objets = objetsPris(M, e, l, T.reponses[l.id] || 0);
+    if (dest === 'cote') e.cote = [...(e.cote || []), ...objets];
+    else { e.palettes = Array.from({ length: MO.n }, (_, p) => listePal(e, p)); e.palettes[dest] = [...e.palettes[dest], ...objets]; }
+    e.verifie = false;
+    const r = TERM.poser(T);
+    h.sauver();
+    h.sig(`ligne:${l.id}`);
+    if (r.evt === 'fin') { h.sig('fin'); ui.focus = 'film:0'; return 'fin'; }
+    ui.focus = null;
+    return r.evt;
+  }
+  function poserObjet(e, p) {
+    const cote = e.cote || [];
+    if (ui.main == null || !cote[ui.main] || !(e.terminal || {}).fin) return;
+    const [o] = cote.splice(ui.main, 1);
+    e.palettes = Array.from({ length: MO.n }, (_, k) => listePal(e, k)); e.palettes[p] = [...e.palettes[p], o];
+    e.cote = cote; e.verifie = false; ui.main = null;
+  }
+  function reposer(e, p) {
+    const T = e.terminal || {}, L = listePal(e, p);
+    if (!L.length || !T.fin) return;
+    e.palettes = Array.from({ length: MO.n }, (_, k) => listePal(e, k));
+    const o = e.palettes[p].pop();
+    e.cote = [...(e.cote || []), o]; e.verifie = false; ui.main = null;
+  }
+
   return {
     signaux: [...Object.keys(M.E).map((a) => `entrepot:${P.id}:ouvrir:${a}`),
       ...TT.lignes.flatMap((l) => [l.id, ...(l.remplacement ? [l.remplacement.id] : [])]).map((id) => `entrepot:${P.id}:ligne:${id}`),
-      `entrepot:${P.id}:fin`],
+      `entrepot:${P.id}:fin`, ...(MO ? [`entrepot:${P.id}:verifier`] : [])],
     id: P.id,
     nav: { libelle: P.libelle || 'Allée de picking' },
     etatNeuf: etatPickingNeuf,
     calculette: () => false,
     lire: () => ({ ouvert: ui.ouvert, ici: ui.ici }),
     html(e, api) {
-      if (!e.terminal) Object.assign(e, etatPickingNeuf(), e);
-      if (!e.vus) e.vus = {};
+      // Une base d'avant le montage (lot 3) prend les champs qui lui manquent, sans rien perdre.
+      Object.entries(etatPickingNeuf()).forEach(([k, v]) => { if (e[k] == null) e[k] = v; });
+      etat = e;
       const t = tempsDe(api), estProf = !!(api && api.estProf);
       const per = P.personnage || {}, txt = (per.texte || {})[t] || '';
       const RG = P.regles;
@@ -286,8 +515,8 @@ export function creerPicking(P, M, opts, h) {
       return `<div class="pe pm pk" data-entrepot="${ech(P.id)}" data-pe-mode="picking" data-pe-temps="${t}" data-pk-ouvert="${e0 ? ech(e0.adr) : ''}">
         <div class="pm-haut"><div class="pe-perso pm-perso"><b>${ech([per.nom, per.role].filter(Boolean).join(', '))}${per.date ? ` · ${ech(per.date)}` : ''}</b>${txt}</div>
           <div class="pm-act">${regles}</div></div>
-        <div class="pm-jeu pm-avec-term"><aside class="pm-cote">${TERM.html(e.terminal, { estProf, son: !!(api && api.sonTerminal && api.sonTerminal()) })}
-            <div class="pm-consigne" data-pm-consigne>${ech(P.consigne || 'Écoute (ou lis) le terminal, va à l’emplacement, réponds.')}</div>
+        <div class="pm-jeu pm-avec-term${MO ? ' pk-avec-montage' : ''}"><aside class="pm-cote">${TERM.html(e.terminal, { estProf, son: !!(api && api.sonTerminal && api.sonTerminal()) })}
+            ${MO ? htmlMontage(e, t, jalonsPicking(M, e)) : ''}<div class="pm-consigne" data-pm-consigne>${ech(P.consigne || 'Écoute (ou lis) le terminal, va à l’emplacement, réponds.')}</div>
             ${P.annonce ? `<div class="pm-consigne pk-annonce" data-pk-annonce>${ech(P.annonce)}</div>` : ''}${bilan}${prof}</aside>
           <section class="pe-espace pm-espace"><div class="pm-fil">${fil}</div><div class="pm-dessin">${e0 ? svgPres(e0) : svgAllee()}</div></section></div></div>`;
     },
@@ -335,6 +564,56 @@ export function creerPicking(P, M, opts, h) {
         t.addEventListener('mouseenter', () => { if (vol) vol.classList.add('pk-survol'); });
         t.addEventListener('mouseleave', () => { if (vol) vol.classList.remove('pk-survol'); });
       });
+      // LE MONTAGE : la destination de la ligne en cours, l'objet « à côté » en main et sa palette, reposer, film,
+      // étiquettes, vérifier. Une fin de terminal redessine tout l'écran (comme une fin au clavier).
+      if (MO) {
+        // La colonne défile seule : elle garde sa place d'un dessin à l'autre, et descend juste ce qu'il faut pour montrer
+        // les palettes quand une pose est attendue (une fois par ligne : l'élève peut remonter lire le terminal).
+        const col = racine.querySelector('.pm-cote');
+        col.scrollTop = ui.defile || 0;
+        col.addEventListener('scroll', () => { ui.defile = col.scrollTop; });
+        const T0 = e.terminal;
+        if (!T0.fin && T0.phase === 'pose' && ui.vuPose !== T0.i) {
+          ui.vuPose = T0.i;
+          const bas = racine.querySelector('[data-pk-montage] .pk-palettes');
+          const d = bas ? bas.getBoundingClientRect().bottom - col.getBoundingClientRect().bottom + 6 : 0;
+          if (d > 0) { col.scrollTop += d; ui.defile = col.scrollTop; }
+        }
+        const fait = (cle) => { if (cle !== undefined) ui.focus = cle; sauver(); redessiner(); };
+        racine.querySelectorAll('[data-pk-poser]').forEach((b) => activer(b, () => {
+          const d = b.dataset.pkPoser;
+          const evt = poserLigne(e, d === 'cote' ? 'cote' : +d, { sauver, sig });
+          if (evt === 'fin' && api.redessinerTout) api.redessinerTout(); else redessiner();
+        }));
+        racine.querySelectorAll('[data-pk-objet]').forEach((b) => activer(b, () => {
+          const k = +b.dataset.pkObjet;
+          ui.main = ui.main === k ? null : k; ui.focus = ui.main == null ? `objet:${k}` : 'vers:0'; redessiner();
+        }));
+        const vers = (p) => { poserObjet(e, p); fait((e.cote || []).length ? 'objet:0' : 'film:0'); };
+        racine.querySelectorAll('[data-pk-vers]').forEach((b) => activer(b, () => vers(+b.dataset.pkVers)));
+        racine.querySelectorAll('[data-pk-pal][role="button"]').forEach((g) => activer(g, () => vers(+g.dataset.pkPal)));
+        racine.querySelectorAll('[data-pk-reposer]').forEach((b) => activer(b, () => { reposer(e, +b.dataset.pkReposer); fait(`reposer:${b.dataset.pkReposer}`); }));
+        racine.querySelectorAll('[data-pk-film]').forEach((s) => s.addEventListener('change', () => {
+          const p = +s.dataset.pkFilm;
+          e.film = Array.from({ length: MO.n }, (_, k) => (e.film || [])[k] || ''); e.film[p] = s.value; e.verifie = false; fait(`film:${p}`);
+        }));
+        racine.querySelectorAll('[data-pk-etiq]').forEach((c) => c.addEventListener('change', () => {
+          const [p, k] = c.dataset.pkEtiq.split(':');
+          e.etiq = Array.from({ length: MO.n }, (_, i) => Object.assign({}, (e.etiq || [])[i] || {}));
+          e.etiq[+p][k] = c.checked; e.verifie = false; fait(`etiq:${p}:${k}`);
+        }));
+        racine.querySelectorAll('[data-pk="verifier"]').forEach((b) => activer(b, () => {
+          if ((e.cote || []).length || !(e.terminal || {}).fin) return;
+          e.verifie = true; e.verifs = (e.verifs || 0) + 1; sig('verifier');
+          ui.focus = 'b:verifier'; sauver();
+          if (api.redessinerTout) api.redessinerTout(); else redessiner();
+          const bilanEl = document.querySelector(`[data-entrepot="${CSS.escape(P.id)}"] [data-pk-bilan]`);
+          if (bilanEl) bilanEl.scrollIntoView({ block: 'nearest' });
+        }));
+        // La réponse libre : gardée à chaque frappe, sans redessiner (le curseur reste où il est).
+        const refl = racine.querySelector('[data-pk-reflexion]');
+        if (refl) refl.addEventListener('input', () => { e.reflexion = refl.value.slice(0, 2000); sauver(); });
+      }
       if (h.clavier() && ui.focus) {
         const el = racine.querySelector(`[data-pe-cle="${CSS.escape(ui.focus)}"]`);
         if (el) el.focus({ preventScroll: true });

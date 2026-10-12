@@ -2454,6 +2454,250 @@ await v('Picking : la vue tient en 1366 × 768 et 1280 × 720 sans défiler (all
   await pe.close();
 });
 
+// LE MONTAGE DES PALETTES CLIENT (mode « picking » avec `montage`, chantier D-7, lot 4, 12/10/2026 ; brief ENT-6.7 §4 étape 2,
+// §5 jalons 6 à 10, §7.3-7.4, §8). Contenu `PICKING_PALETTES` de `contenus/entrepot-picking-essai.js`. Attendus ÉCRITS À LA MAIN :
+// parcours juste = eau à côté, Pelforth et les deux Affligem sur la palette 2, Heineken sur la palette 1, puis les 3 casiers sur
+// la palette 2 (cases 4 et 5 libres, le troisième sur le Pelforth de la case 0) ; film 4 tours, étiquettes avant + arrière +
+// dessus sur chaque palette → 10 / 10. Règle de pose : première case vide ; sinon un fût va sur un casier, un casier sur un fût.
+const ZKP = '#kpTest .pk';
+const IDP = 'essai-picking-palettes';
+const monterKP = (o = {}) => pm.evaluate(async (o) => {
+  const { creerEntreprise } = await import('/core/types/entreprise.js');
+  const E = await import('/outils/essai-entrepot.js');
+  const C = await import('/contenus/entrepot-picking-essai.js');
+  document.querySelector('#pkTest')?.remove();
+  document.querySelector('#kpTest')?.remove();
+  const hote = document.createElement('div'); hote.id = 'kpTest'; document.body.appendChild(hote);
+  const db = o.db || {};
+  window.__kp = { db };
+  creerEntreprise(E.univers({ temps: 'entrainement', entrepot: C.PICKING_PALETTES })).rendre(hote, {
+    meta: { id: 'essai-entrepot', code: 'ESSAI', titre: 'Essai', portee: 'eleve', immersif: true, temps: 'entrainement' },
+    profil: { prenom: 'Lea', nom: 'Test', role: 'eleve', uid: 'u-test' },
+    jeu: { etat: () => db, sauver: () => {} },
+    enregistrer: () => {}, quitter: () => {}, codeStock: 'ABC', lireScore: async () => null,
+  });
+  document.querySelector('#kpTest .ent-nav[data-vue="entrepot"]').click();
+}, o);
+const etatKP = () => pm.evaluate((id) => JSON.parse(JSON.stringify(((window.__kp.db.entrepots) || {})[id] || null)), IDP);
+const texteKP = async (sel) => ((await pm.textContent(`${ZKP} ${sel}`)) || '').replace(/\s+/g, ' ').trim();
+const journalKP = () => pm.evaluate((id) => ((((window.__kp.db.entrepots || {})[id] || {}).terminal) || { journal: [] }).journal.length, IDP);
+async function repondreKP(x) {
+  const avant = await journalKP();
+  await pm.fill(`${ZKP} [data-vt-champ]`, String(x));
+  await pm.press(`${ZKP} [data-vt-champ]`, 'Enter');
+  await pm.waitForFunction(({ n, id }) => window.__kp.db.entrepots[id].terminal.journal.length > n, { n: avant, id: IDP });
+}
+async function poserKP(d) {
+  const avant = await pm.evaluate((id) => window.__kp.db.entrepots[id].terminal.i, IDP);
+  await pm.click(`${ZKP} [data-pk-poser="${d}"]`);
+  await pm.waitForFunction(({ n, id }) => { const T = window.__kp.db.entrepots[id].terminal; return T.i > n || !!T.fin; }, { n: avant, id: IDP });
+}
+// Une partie jouée sur les fonctions (sans l'écran). `gestes` : réponses au terminal, « MOT:abime », « POSE:0 | 1 | cote » ;
+// `cote` : la palette de chaque objet « à côté », dans l'ordre ; `film`, `etiq` : par palette ; `verifie` (vrai par défaut).
+// Rend les jalons (true / false / null = pas encore jugé), « non jugé », les piles (« réf@case/sous ») et les fûts cabossés posés.
+const jouerKP = (o) => pm.evaluate(async (o) => {
+  const K = await import('/core/types/terminal.js');
+  const E = await import('/core/types/entrepot.js');
+  const C = await import('/contenus/entrepot-picking-essai.js');
+  const PK = await import('/core/types/entrepot-picking.js');
+  const M = PK.compilerPicking(C.PICKING_PALETTES, (m) => { throw new Error(m); });
+  const TT = M.terminal, e = PK.etatPickingNeuf(), T = e.terminal;
+  e.palettes = [[], []];
+  (o.gestes || []).forEach((g) => {
+    if (g.startsWith('MOT:')) K.motTerminal(T, TT.lignes, TT.mots.find((m) => m.id === g.slice(4)), TT.textes);
+    else if (g.startsWith('POSE:')) {
+      const d = g.slice(5), l = K.lignesDuTerminal(TT.lignes, T)[T.i], objets = PK.objetsPris(M, e, l, T.reponses[l.id]);
+      if (d === 'cote') e.cote.push(...objets); else e.palettes[+d].push(...objets);
+      K.poseTerminal(T, TT.lignes);
+    } else K.repondreTerminal(T, TT.lignes, g, TT.textes, Date.now(), TT.mots);
+  });
+  (o.cote || []).forEach((p) => e.palettes[p].push(e.cote.shift()));
+  e.film = o.film || ['4', '4'];
+  e.etiq = (o.etiq || [['avant', 'arriere', 'dessus'], ['avant', 'arriere', 'dessus']]).map((L) => Object.fromEntries(L.map((c) => [c, true])));
+  e.verifie = o.verifie !== false;
+  const J = E.jalonsEntrepot({ entrepots: { [C.PICKING_PALETTES.id]: e } }, C.PICKING_PALETTES);
+  const X = PK.calculMontage(M, e);
+  return { L: J.L.map((l) => (l.etat ? l.ok : null)), nj: J.L.filter((l) => l.nonJuge).length, ok: J.ok, total: J.total,
+    piles: X.map((x) => x.pos.map((q) => `${q.o.ref}@${q.c}${q.sous ? `/${q.sous.ref}` : ''}`)),
+    cabosses: e.palettes.flat().filter((x) => x.abime).length, aCote: e.cote.length };
+}, o);
+const LIGNES_KP = (d) => ['36', '3', `POSE:${d[0]}`, '24', '2', `POSE:${d[1]}`, '49', 'MOT:abime', '1', '1', `POSE:${d[2]}`, '83', '1', `POSE:${d[3]}`, '17', '6', `POSE:${d[4]}`];
+const JUSTE_KP = { gestes: LIGNES_KP(['cote', 1, 1, 1, 0]), cote: [1, 1, 1] };
+const DIX = [true, true, true, true, true, true, true, true, true, true];
+
+await v('Montage : la déclaration — 10 jalons (5 lignes + 5 critères), « Pose tes casiers. », une déclaration fausse ne se charge pas', async () => {
+  const r = await pm.evaluate(async () => {
+    const C = await import('/contenus/entrepot-picking-essai.js');
+    const PK = await import('/core/types/entrepot-picking.js');
+    const K = await import('/core/types/terminal.js');
+    const err = (m) => { throw new Error(m); };
+    const M = PK.compilerPicking(C.PICKING_PALETTES, err), TT = M.terminal;
+    const T = K.terminalNeuf();
+    ['36', '3'].forEach((g) => K.repondreTerminal(T, TT.lignes, g, TT.textes, Date.now(), TT.mots));
+    const pose1 = [T.phase, K.phraseTerminal(T, TT.lignes, TT.textes), K.repondreTerminal(T, TT.lignes, '24', TT.textes, Date.now(), TT.mots)];
+    K.poseTerminal(T, TT.lignes);
+    ['24', '2'].forEach((g) => K.repondreTerminal(T, TT.lignes, g, TT.textes, Date.now(), TT.mots));
+    const pose2 = K.phraseTerminal(T, TT.lignes, TT.textes);
+    const essai = (f) => { const P = JSON.parse(JSON.stringify(C.PICKING_PALETTES)); f(P); try { PK.compilerPicking(P, err); return 'chargée'; } catch (e) { return e.message; } };
+    const seul = PK.compilerPicking(C.PICKING, err).terminal;
+    return { pose1, pose2, jalons: TT.jalons.map((j) => j.lib), sansMontage: seul.jalons.length, seul: seul.lignes.some((l) => l.pose),
+      saboteurs: [essai((P) => { P.montage.palettes = 4; }), essai((P) => { P.montage.futsMax = 8; }), essai((P) => { P.montage.film = [5, 3]; })] };
+  });
+  egal(r.pose1, ['pose', 'Pose tes casiers.', null], 'quantité acceptée : le terminal attend la pose, rien d’autre ne se joue');
+  egal(r.pose2, 'Pose tes fûts.');
+  egal(r.jalons, ['Ligne 1 : eau minérale', 'Ligne 2 : Pelforth', 'Ligne 3 : Affligem', 'Ligne 4 : Affligem', 'Ligne 5 : Heineken 30 L',
+    'Critère : aucun casier sous un fût', 'Critère : 6 fûts au plus par palette client', 'Critère : film étirable', 'Critère : étiquettes d’expédition', 'Critère : deux palettes']);
+  egal([r.sansMontage, r.seul], [5, false], 'sans `montage`, l’allée du lot 3 est inchangée (5 jalons, aucune pose)');
+  vrai(/`palettes` va de 1 à 3/.test(r.saboteurs[0]), r.saboteurs[0]);
+  vrai(/`futsMax` va de 1 à 6/.test(r.saboteurs[1]), r.saboteurs[1]);
+  vrai(/`film` est/.test(r.saboteurs[2]), r.saboteurs[2]);
+});
+
+await v('Montage : les jalons — juste 10/10, rien avant « Vérifier », inaction 0, piles de la règle de pose, fût cabossé pris sans rien dire', async () => {
+  const juste = await jouerKP(JUSTE_KP);
+  egal([juste.L, juste.ok, juste.total], [DIX, 10, 10]);
+  egal(juste.piles, [['HEI30@0', 'HEI30@1', 'HEI30@2', 'HEI30@3', 'HEI30@4', 'HEI30@5'],
+    ['PEL20@0', 'PEL20@1', 'AFF20@2', 'AFF20@3', 'EAU1L@4', 'EAU1L@5', 'EAU1L@0/PEL20']], 'deux cases libres, puis le casier sur un fût');
+  egal(juste.cabosses, 0, '« Abîmé 1 » : le fût cabossé reste au tiroir');
+  const pasVerifie = await jouerKP(Object.assign({}, JUSTE_KP, { verifie: false }));
+  egal(pasVerifie.L, [true, true, true, true, true, null, null, null, null, null], 'les critères attendent « Vérifier »');
+  const rien = await jouerKP({});
+  egal([rien.L, rien.ok], [[null, null, null, null, null, null, null, null, null, null], 0], 'inaction : rien de jugé, 0');
+  const pris = await jouerKP({ gestes: ['36', '3', 'POSE:cote', '24', '2', 'POSE:1', '49', '2', 'POSE:1', '17', '6', 'POSE:0'], cote: [1, 1, 1] });
+  egal([pris.L, pris.ok, pris.nj], [[true, true, false, false, true, false, false, false, false, false], 3, 5], '2 pris sans mot : 3 / 10, critères « non jugé »');
+  egal(pris.cabosses, 1, 'le fût cabossé est parti sur la palette');
+  const manq = await jouerKP({ gestes: ['36', '3', 'POSE:cote', '24', '2', 'POSE:1', '49', 'MOT:manquant', '1', '1', 'POSE:1', '83', '1', 'POSE:1', '17', '6', 'POSE:0'], cote: [1, 1, 1] });
+  egal([manq.L, manq.cabosses], [[true, true, false, true, true, false, false, false, false, false], 1], '« Manquant 1 » : le fût pris est le cabossé (celui de devant)');
+});
+
+await v('Montage : chaque critère tombe seul — fût sur casier, 8 fûts, film, étiquettes voisines, une palette pour tout, un objet à côté', async () => {
+  // Casiers d'abord sur la palette 2, puis 3 fûts : les cases libres suffisent ; le 4e fût monte sur un casier.
+  const trois = await jouerKP({ gestes: LIGNES_KP([1, 1, 1, 'cote', 0]) });
+  egal(trois.piles[1], ['EAU1L@0', 'EAU1L@1', 'EAU1L@2', 'PEL20@3', 'PEL20@4', 'AFF20@5'], '3 casiers + 3 fûts : aucun fût sur un casier');
+  const quatre = await jouerKP({ gestes: LIGNES_KP([1, 1, 1, 'cote', 0]), cote: [1] });
+  egal(quatre.piles[1][6], 'AFF20@0/EAU1L', 'le 4e fût monte sur un casier');
+  egal(quatre.L, [true, true, true, true, true, false, true, true, true, true], 'critère 6 seul faux');
+  const heineken = await jouerKP({ gestes: LIGNES_KP([0, 1, 1, 1, 0]) });
+  egal(heineken.piles[0].filter((x) => x.endsWith('/EAU1L')).length, 3, '3 casiers puis 6 Heineken : 3 fûts sur les casiers');
+  egal(heineken.L.slice(5), [false, true, true, true, true]);
+  const huit = await jouerKP({ gestes: LIGNES_KP(['cote', 0, 1, 1, 0]), cote: [1, 1, 1] });
+  egal(huit.L.slice(5), [true, false, true, true, true], '8 fûts sur la palette 1 : critère 7 seul');
+  egal((await jouerKP(Object.assign({}, JUSTE_KP, { film: ['4', '2'] }))).L.slice(5), [true, true, false, true, true], 'film 2 tours');
+  egal((await jouerKP(Object.assign({}, JUSTE_KP, { film: ['6', '4'] }))).L.slice(5), [true, true, false, true, true], 'film 6 tours');
+  egal((await jouerKP(Object.assign({}, JUSTE_KP, { etiq: [['avant', 'arriere', 'dessus'], ['avant', 'droite', 'dessus']] }))).L.slice(5),
+    [true, true, true, false, true], 'étiquettes sur deux côtés voisins');
+  egal((await jouerKP(Object.assign({}, JUSTE_KP, { etiq: [['gauche', 'droite', 'dessus'], ['avant', 'arriere', 'dessus', 'gauche']] }))).L.slice(5),
+    [true, true, true, false, true], 'gauche + droite + dessus juste ; quatre étiquettes faux');
+  const une = await jouerKP({ gestes: LIGNES_KP([0, 0, 0, 0, 0]), film: ['4', ''], etiq: [['avant', 'arriere', 'dessus'], []] });
+  egal(une.L.slice(5), [false, false, true, true, false], 'tout sur une palette : fûts sur les casiers, trop de fûts, une palette vide (film et étiquettes jugés sur la palette utilisée)');
+  const reste = await jouerKP({ gestes: LIGNES_KP(['cote', 1, 1, 1, 0]), cote: [1, 1] });
+  egal([reste.aCote, reste.L.slice(5)], [1, [false, false, false, false, false]], 'un objet encore à côté : aucun critère');
+});
+
+await v('Montage à l’écran : poser ligne à ligne, « à côté » puis sur la palette, film et étiquettes, Vérifier → 10 / 10 ; Reposer', async () => {
+  await monterKP();
+  await pm.waitForSelector(ZKP);
+  egal(await pm.$$eval(`${ZKP} [data-pk-pal]`, (L) => L.map((f) => f.dataset.pkObjets)), ['0', '0'], 'deux palettes vides');
+  egal(await pm.$$eval(`${ZKP} [data-pk-reposer]`, (L) => L.length), 0, 'pas de « Reposer » avant la fin');
+  await repondreKP('36'); await repondreKP('3');
+  egal(await texteKP('[data-vt-actu]'), 'Pose tes casiers.');
+  egal(await texteKP('[data-pk-question]'), 'Où poses-tu les 3 casiers Eau minérale 1 L ?');
+  vrai(await pm.$eval(`${ZKP} [data-vt-champ]`, (c) => c.disabled), 'le champ du terminal attend la pose');
+  await poserKP('cote');
+  vrai(/Côté A, travée 02/.test(await texteKP('[data-vt-actu]')), 'posé : la ligne suivante');
+  vrai(await pm.$eval(`${ZKP} [data-pk-objet="0"]`, (b) => b.disabled), 'à côté : se pose après la commande');
+  await repondreKP('24'); await repondreKP('2');
+  egal(await texteKP('[data-pk-question]'), 'Où poses-tu les 2 fûts Pelforth Blonde 20 L ?');
+  await poserKP('1');
+  await repondreKP('49'); await pm.click(`${ZKP} [data-vt-mot="abime"]`); await repondreKP('1'); await repondreKP('1');
+  egal(await texteKP('[data-pk-question]'), 'Où poses-tu le fût Affligem Blonde 20 L ?');
+  egal(await texteKP('[data-vt-actu]'), 'Pose ton fût.');
+  await poserKP('1');
+  await repondreKP('83'); await repondreKP('1'); await poserKP('1');
+  await repondreKP('17'); await repondreKP('6'); await poserKP('0');
+  await pm.waitForSelector(`${ZKP} [data-pk="verifier"]`);
+  vrai(await pm.$eval(`${ZKP} [data-pk="verifier"]`, (b) => b.disabled), 'Vérifier inactif tant qu’un objet est à côté');
+  egal(await pm.$$eval(`${ZKP} .pm-dessin [data-abime]`, (L) => L.length), 1, 'le fût cabossé est resté dans le tiroir');
+  // Les objets à côté : par le bouton, par le clic sur la palette, par le bouton encore.
+  await pm.click(`${ZKP} [data-pk-objet="0"]`); await pm.click(`${ZKP} [data-pk-vers="1"]`);
+  await pm.click(`${ZKP} [data-pk-objet="0"]`); await pm.click(`${ZKP} [data-pk-pal="1"]`);
+  await pm.click(`${ZKP} [data-pk-objet="0"]`); await pm.click(`${ZKP} [data-pk-vers="1"]`);
+  egal(await pm.$$eval(`${ZKP} [data-pk-pal]`, (L) => L.map((f) => f.dataset.pkObjets)), ['6', '7']);
+  egal(await pm.$$eval(`${ZKP} [data-pk-cote]`, (L) => L.length), 0, 'plus rien à côté');
+  for (const k of [0, 1]) {
+    await pm.selectOption(`${ZKP} [data-pk-film="${k}"]`, '4');
+    for (const c of ['avant', 'arriere', 'dessus']) await pm.check(`${ZKP} [data-pk-etiq="${k}:${c}"]`);
+  }
+  egal(await pm.$$eval(`${ZKP} [data-pk-pal] [data-iso-film]`, (L) => L.map((g) => g.dataset.isoFilm)), ['4', '4'], 'le film se dessine');
+  await pm.click(`${ZKP} [data-pk="verifier"]`);
+  await pm.waitForSelector(`${ZKP} [data-pk-bilan]`);
+  vrai(/10 \/ 10/.test(await texteKP('[data-pk-bilan]')), await texteKP('[data-pk-bilan]'));
+  egal(await pm.$$eval(`${ZKP} [data-pk-jalon]`, (L) => L.map((d) => d.dataset.ok)), DIX.map(String));
+  const r = await pm.evaluate(async () => {
+    const E = await import('/core/types/entrepot.js');
+    const C = await import('/contenus/entrepot-picking-essai.js');
+    return { n: E.noteEntrepot(window.__kp.db, C.PICKING_PALETTES), sig: E.creerEntrepot(C.PICKING_PALETTES).signaux };
+  });
+  egal([r.n.score, r.n.detail.palettes, r.n.detail.aCote], [20, [6, 7], 0]);
+  vrai(r.sig.includes(`entrepot:${IDP}:verifier`), 'geste « verifier » publié');
+  // Reposer : le dernier casier repart à côté, la vérification s'efface, Vérifier redevient inactif ; on le repose.
+  await pm.click(`${ZKP} [data-pk-reposer="1"]`);
+  egal(await pm.$$eval(`${ZKP} [data-pk-pal]`, (L) => L.map((f) => f.dataset.pkObjets)), ['6', '6']);
+  egal(await pm.$$eval(`${ZKP} [data-pk-bilan]`, (L) => L.length), 0, 'un changement efface la vérification');
+  vrai(await pm.$eval(`${ZKP} [data-pk="verifier"]`, (b) => b.disabled), 'Vérifier inactif à nouveau');
+  egal((await etatKP()).cote.map((o) => o.ref), ['EAU1L']);
+  await pm.click(`${ZKP} [data-pk-objet="0"]`); await pm.click(`${ZKP} [data-pk-vers="1"]`);
+  await pm.click(`${ZKP} [data-pk="verifier"]`);
+  await pm.waitForSelector(`${ZKP} [data-pk-bilan]`);
+  vrai(/10 \/ 10/.test(await texteKP('[data-pk-bilan]')), 'revérifié');
+  await pm.fill(`${ZKP} [data-pk-reflexion]`, 'On ne voit pas la suite.');
+  egal((await etatKP()).reflexion, 'On ne voit pas la suite.', 'la réponse libre est gardée');
+});
+
+await v('Montage à l’écran : fût cabossé pris sans rien dire → il est sur la palette ; les critères « non jugé »', async () => {
+  await monterKP();
+  await pm.waitForSelector(ZKP);
+  await repondreKP('36'); await repondreKP('3'); await poserKP('1');
+  await repondreKP('24'); await repondreKP('2'); await poserKP('1');
+  await repondreKP('49'); await repondreKP('2');
+  egal(await texteKP('[data-pk-question]'), 'Où poses-tu les 2 fûts Affligem Blonde 20 L ?');
+  await poserKP('1');
+  egal(await pm.$$eval(`${ZKP} .pm-dessin [data-abime]`, (L) => L.length), 0, 'plus de fût cabossé dans le tiroir');
+  egal(await pm.$$eval(`${ZKP} [data-pk-pal] [data-abime]`, (L) => L.length), 1, 'il est sur la palette');
+  await repondreKP('17'); await repondreKP('6'); await poserKP('0');
+  await pm.click(`${ZKP} [data-pk="verifier"]`);
+  await pm.waitForSelector(`${ZKP} [data-pk-bilan]`);
+  const b = await texteKP('[data-pk-bilan]');
+  vrai(/3 \/ 10/.test(b) && (b.match(/non jugé/g) || []).length === 5, b);
+});
+
+await v('Montage : à 1366 × 768 et 1280 × 720, les boutons de pose se voient sans défiler ; une base du lot 3 se charge', async () => {
+  const pe = await ctxM.newPage();
+  const err = [];
+  pe.on('pageerror', (e) => err.push(e.message));
+  for (const [w, h] of [[1366, 768], [1280, 720]]) {
+    await pe.setViewportSize({ width: w, height: h });
+    await pe.goto(BASE + 'outils/essai-entrepot.html');
+    await pe.waitForSelector('.pe');
+    await pe.selectOption('#reglages select[name="cas"]', 'picking');
+    await pe.waitForSelector('.pk [data-pk-montage]');
+    await pe.evaluate(() => { document.querySelector('#reglages').style.display = 'none'; document.querySelector('#mention').style.display = 'none'; window.dispatchEvent(new Event('resize')); });
+    for (const x of ['36', '3']) { await pe.fill('.pk [data-vt-champ]', x); await pe.press('.pk [data-vt-champ]', 'Enter'); }
+    await pe.waitForSelector('.pk [data-pk-poser="0"]');
+    const vu = await pe.evaluate(() => ['[data-pk-poser="0"]', '[data-pk-poser="cote"]', '[data-pk-pal="1"]'].map((s) => {
+      const r = document.querySelector(`.pk ${s}`).getBoundingClientRect();
+      return r.top >= 0 && r.bottom <= innerHeight && r.right <= innerWidth;
+    }));
+    egal(vu, [true, true, true], `boutons de pose et palette 2 visibles à ${w} × ${h}`);
+    egal(Math.max(0, await pe.evaluate(() => document.documentElement.scrollHeight - innerHeight)), 0, `la page ne défile pas à ${w} × ${h}`);
+  }
+  egal(err, [], 'erreurs JS');
+  await pe.close();
+  await monterKP({ db: { entrepots: { [IDP]: { terminal: { i: 0, phase: 'code', reponses: {}, codesFaux: {}, journal: [], debut: null, fin: null }, vus: {} } } } });
+  await pm.waitForSelector(`${ZKP} [data-pk-montage]`);
+  egal(await pm.$$eval(`${ZKP} [data-pk-pal]`, (L) => L.length), 2, 'une base sans palettes prend les champs qui lui manquent');
+});
+
 await v('Masse : aucune erreur JavaScript', async () => { egal(erreursM, []); });
 await ctxM.close();
 }

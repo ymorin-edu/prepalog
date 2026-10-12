@@ -378,6 +378,34 @@
 .pk-trav:hover polygon, .pk-trav:focus-visible polygon, .pk-trav.pk-survol polygon{ fill:rgba(16,124,65,.16); stroke:#107c41; stroke-width:2 }
 .pk-adr{ cursor:pointer }
 .pk-annonce{ font-size:.82rem; color:var(--encre-douce) }
+/* Le MONTAGE des palettes client (chantier D-7 lot 4, 12/10/2026), sous le terminal comme dans la maquette 6.7 validée : la
+   colonne s'élargit et défile seule, l'allée garde toute la hauteur. Une palette qui attend un objet « à côté » se cerne
+   d'un trait (jamais d'aplat vert : le vert plein ne dit que « juste ») ; l'objet en main, d'un trait épais. */
+.pm-jeu.pm-avec-term.pk-avec-montage{ grid-template-columns:minmax(0,1fr) 340px }
+.pk-avec-montage .pm-cote{ max-height:calc(var(--pm-dispo, 520px) + 2.5em); overflow-y:auto; padding-right:2px }
+.pk-montage{ display:flex; flex-direction:column; gap:5px; background:var(--panneau); border:1px solid var(--filet); border-radius:var(--r); padding:6px 8px }
+.pk-question{ font-weight:700 }
+.pk-poser, .pk-reposer{ display:flex; flex-wrap:wrap; gap:5px }
+.pk-poser .btn, .pk-reposer .btn{ flex:1 1 auto; padding:4px 8px; font-size:.82rem }
+.pk-acote{ border-style:dashed }
+.pk-palettes{ display:flex; gap:6px }
+.pk-pal{ flex:1 1 0; min-width:0; margin:0; background:#f6f2e9; border-radius:var(--r); border:1.5px solid transparent; outline:none }
+.pk-pal figcaption{ text-align:center; font-weight:800; font-size:.8rem; color:#3d3a33; padding-bottom:3px }
+.pk-pal-svg{ display:block; width:100%; height:auto }
+.pk-pal-sol{ fill:transparent; stroke:none }
+.pk-pal-cible{ cursor:pointer; outline:none }
+.pk-pal-cible{ border:1.5px dashed #3d3a33 }
+.pk-pal-cible:hover, .pk-pal-cible:focus-visible{ border:3px solid #3d3a33 }
+.pk-cote{ display:flex; flex-wrap:wrap; gap:4px; align-items:center }
+.pk-cote > .pe-petit, .pk-cote > .pk-poser{ flex-basis:100% }
+.pk-objet{ font:inherit; font-size:.8rem; border:1px dashed var(--encre-douce); border-radius:6px; padding:2px 7px; background:transparent; color:var(--encre); cursor:pointer }
+.pk-objet.pk-main{ border:2px solid var(--encre) }
+.pk-objet:disabled{ cursor:default; opacity:.75 }
+.pk-finir{ gap:4px; font-size:.84rem }
+.pk-fin-pal{ border-top:1px solid var(--filet); padding-top:4px }
+.pk-bilan > div{ font-weight:600 }
+.pk-reflexion{ display:flex; flex-direction:column; gap:4px; font-size:.84rem }
+.pk-reflexion textarea{ width:100%; font:inherit }
 .pm-tombe{ animation:pm-tombe .7s cubic-bezier(.3,1.4,.6,1) both }
 .pm-apparait{ animation:pm-apparait .45s ease-out both }
 @keyframes pm-tombe{ from{ transform:translateY(-120px); opacity:0 } to{ transform:none; opacity:1 } }

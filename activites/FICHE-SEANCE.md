@@ -1204,7 +1204,8 @@ des **tiroirs coulissants** en N1, N2-N3 vides, et le **terminal vocal** à droi
 maquette validée `docs/briefs/france-boissons/maquette-6.7-preparation-vocale.html`). Mode à part plutôt qu'option du mode
 préparation (décision de Tristan, 12/10/2026). Dessins du kit iso (lot 2), terminal de préparation (lot 1). Format complet en
 tête du fichier ; exemple : `contenus/entrepot-picking-essai.js` (les données d'ENT-6.7) ; page d'essai
-`outils/essai-entrepot.html`, cas « Allée de picking » ; tests : bloc `entrepot` (« Picking : … »).
+`outils/essai-entrepot.html`, cas « Allée de picking » (avec les palettes : `PICKING_PALETTES`) ; tests : bloc `entrepot`
+(« Picking : … », « Montage : … »).
 
 ```js
 entrepot: {
@@ -1219,6 +1220,7 @@ entrepot: {
     { emplacement: 'A-T03', prends: 2, attendu: { mot: 'abime', n: 1 }, remplacement: { emplacement: 'B-T03' } }, …],
     fin: 'Commande terminée : …', phraseBilan: 'Chaque réponse au terminal est enregistrée …' },
   regles: { lignes: [ … ] }, note: { sur: 20 },
+  montage: { palettes: 2, etiquette: 'La Cabane à Malo — Villers-sur-Mer · …', reflexion: 'Le terminal t’a donné …' },  // lot 4, facultatif
 }
 ```
 
@@ -1234,9 +1236,24 @@ entrepot: {
   fin du terminal seulement (avant : « à faire » ; l'inaction ne rapporte rien). Sans `attendu` : la quantité prise sans
   exception ; avec : ce mot et cette quantité, puis le reste ; remplacement : présent et `attendu.n` pris. Noms par défaut
   « Ligne n : <court> » (jamais la réponse), ou `jalon: '…'` sur la ligne. Codes faux : trace, jamais notés.
-- **Pas encore** : les palettes client et la pose (lot 4 : une ligne qui déclare `pose` est refusée), l'évaluation.
-- **État** : `db.entrepots[<id>]` = `{ terminal, vus: { 'A-T03': date }, premierGeste }`. Gestes publiés :
-  `entrepot:<id>:ouvrir:<emplacement>`, `entrepot:<id>:ligne:<ligne>`, `entrepot:<id>:fin`.
+- **Le montage** (chantier D-7, lot 4, 12/10/2026), si `montage` est déclaré : après chaque quantité acceptée, le terminal
+  dit « Pose tes fûts. » et attend ; sous lui, « Où poses-tu les 2 fûts Pelforth Blonde 20 L ? » → Palette 1 · Palette 2 ·
+  « À côté, je le pose après » (une ligne = une destination). Commande terminée : les objets « à côté » se posent (clic sur
+  l'objet, puis sur une palette), film (tours) et étiquettes (5 côtés) **par palette**, « ↶ Reposer le dernier » (décision de
+  Tristan du 12/10), puis « Vérifier ma préparation » (inactif tant que quelque chose est à côté) → le bilan, et « Pour
+  réfléchir » si `reflexion` est déclaré. Une ligne ne déclare jamais `pose` (refusée) : c'est le montage qui la donne.
+  **Règle de pose** (construite, brief) : 6 cases par palette ; première case vide ; sinon un fût va sur un casier (la faute à
+  voir), un casier sur un fût ; à défaut sur le même type ; la case la plus basse. Le tiroir donne ses fûts de devant d'abord :
+  un fût cabossé pris sans rien dire part sur la palette (il se voit) ; signalé « Abîmé », il reste au tiroir.
+  **Jalons 6 à 10**, à la suite des lignes : aucun fût sur un casier ; `futsMax` (6) fûts au plus par palette ; film (`film`,
+  3 à 5 tours) et étiquettes (deux côtés opposés + dessus) sur chaque palette **utilisée** ; toutes les palettes utilisées.
+  Jugés à « Vérifier » seulement (un changement efface la vérification), et **faux, affichés « non jugé »**, tant qu'une ligne
+  est fausse ou qu'un objet reste à côté (aucun jalon par inaction). Noms : ceux de la maquette, ou `montage.jalons`.
+- **Pas encore** : l'évaluation (refusée à la déclaration).
+- **État** : `db.entrepots[<id>]` = `{ terminal, vus: { 'A-T03': date }, premierGeste }`, plus avec un montage
+  `{ palettes: [[{ ref, emp, ligne, abime? }], …] (ordre de pose), cote, film: ['4', …], etiq: [{ avant: true, … }, …], verifie,
+  verifs, reflexion }`. Gestes publiés : `entrepot:<id>:ouvrir:<emplacement>`, `entrepot:<id>:ligne:<ligne>` (une ligne finie,
+  donc posée), `entrepot:<id>:fin`, et `entrepot:<id>:verifier`.
 
 ## Vue « animation à questions » (scène isométrique, arrêt, question) — `core/types/animation.js`
 

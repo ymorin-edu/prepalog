@@ -550,7 +550,8 @@ export function noteEntrepot(db, P, temps = P.temps) {
   if (compiler(P).mode === 'picking') {
     const T = e.terminal || {};
     return { score, max: N.sur, ok, total, detail: { jalons: L.map((l) => ({ jalon: l.lib, ok: l.ok, pris: l.pris, exception: l.exception })),
-      codesFaux: T.codesFaux || {}, vus: Object.keys(e.vus || {}), premierGeste: e.premierGeste || null } };
+      codesFaux: T.codesFaux || {}, vus: Object.keys(e.vus || {}), premierGeste: e.premierGeste || null,
+      ...(compiler(P).montage ? { palettes: (e.palettes || []).map((l) => l.length), aCote: (e.cote || []).length, verifs: e.verifs || 0 } : {}) } };
   }
   if (compiler(P).mode === 'masse' && compiler(P).comptage) {
     const T = e.terminal || {};
