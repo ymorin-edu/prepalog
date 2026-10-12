@@ -6,7 +6,7 @@
 > Lis docs/EN-COURS.md puis docs/briefs/ENT-6.8-france-boissons-planning.md. Commence par le §7 (demandes au moteur, vue Planning) : dis-moi ce qui existe déjà et ce qui reste à faire, en lecture seule, avant d'écrire la séance. Rejoue le calage (docs/briefs/france-boissons/calage-6.8.py) contre le moteur dans les tests. Annonce la durée avant de commencer et dis-moi si un point du brief contredit le code.
 > ```
 
-**Statut** : à implémenter *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
+**Statut** : livré le 12/10/2026, **à valider par Tristan à l'écran** *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
 **Date du brief** : 05/10/2026
 **Conversation d'origine** : Cowork (Opus) ; fiche projet `claude/prepalog-reprise-6.8.md` (décisions 57 à 62) ; cadrage
 `claude/prepalog-2de-s2-cadrage.md` (décisions 9, 11, 16) ; déroulé S2 `claude/prepalog-2de-s2-deroule.md` (règles 17-37).
@@ -347,9 +347,39 @@ signale « E2 n'a pas assez d'autonomie » sur Mantes sans donner de chiffre ; l
 
 ## Compte rendu *(rempli par Claude Code à la livraison)*
 
-- **Fichiers créés / modifiés** :
+- **Fichiers créés / modifiés** : `contenus/france-boissons-ent68.js` (données, règles, messages, fiche, jalons), `contenus/questions/ENT-6.8.js`,
+  `activites/france-boissons-planning.js` (`pret: true, ouverture: 'prof'`) et sa ligne dans `activites/index.js`, `contenus/corriges/ENT-6.8.js`,
+  `outils/test/fb-6.8.mjs` et sa ligne dans `BLOCS` et `GROUPES` (groupe 3) de `outils/test.mjs`. Moteur, avant la séance : chantier D-8
+  (`conduite` par carte, ligne `porteAffectation`) et questions à texte calculé (`selon`), voir `docs/decisions.md`.
 - **Écarts par rapport au brief** (et pourquoi) :
+  - **La côte ne se pose que sur la ligne de Lucas** (option A, décision de Tristan du 06/10/2026, notée dans `calage-6.8.py` mais pas dans ce
+    brief ; reconfirmée le 12/10/2026 : `cartes.ligne`, l'élève choisit l'heure et le camion). Le calage compte donc **16** organisations justes
+    avant l'imprévu et **12** après (et non 48 et 36) ; les pièges « Julien / Amandine / Sébastien sur la côte » ne se jouent plus.
+  - **Pas de « Vérifier mon planning »** (refonte, Q6 : « à appliquer de même à 6.8 ») ; **« avant le week-end de la Fête de la musique »** (Q10).
+  - **Message au loueur** (refonte, Q9 « Appel au loueur en phrases à choisir, au vous », précisé par Tristan le 12/10/2026) : après le 2e envoi, le
+    loueur demande une confirmation écrite ; l'élève répond par phrases au vous (salutation, **véhicule demandé**, quand, formule), **non noté** ;
+    la fiche « Documents à bord » n'apparaît qu'après cet envoi (`fiche.quand`). Question de réflexion de Karim à l'envoi : « Tu as demandé {le
+    véhicule}. Pourquoi celui-là ? », corrigée au bilan.
+  - **Le 1er envoi renvoyé tel quel** : tous les jalons de la reprise sont faux (garde `repriseIdentique`, règle commune de la refonte), et non
+    « jalon 8 seul ».
+  - **Barème** : 13 jalons pondérés (17 points) + 2 questions notées (3), `bareme: 20` (règle du 10/10/2026). Poids **validés par Tristan le
+    12/10/2026** : planning 1er envoi 5 (tous 0,5 · chauffeurs 1 · camions 1,5 · fenêtres 1 · conduite 1), après l'imprévu 7 (0,5 · 1 · 2 · 1 · 1 ·
+    vides 1,5), documents à bord 5 (Rouen 2,5 · Mantes 2,5), questions 3.
+  - **`precedente: 'france-boissons-inventaire'`** (ENT-6.6) : ENT-6.7 n'existe pas encore ; à passer à ENT-6.7 quand elle sera construite.
 - **Décisions prises en route** :
-- **Tests** :
-- **Commits** :
-- **Reste ouvert** :
+  - Noms fictifs (aucune entreprise active de ce nom trouvée par recherche web le 12/10/2026) : **Locaporteur** (loueur), **Transports Ancelin**
+    (transporteur), **Rouen en fête** (organisateur du concert), toujours suivis de « (fictif) ».
+  - Textes de loi relus mot pour mot le 12/10/2026 : règlement (CE) 561/2006 art. 2, 4 g, 6, 7 (Office des publications de l'UE ; EUR-Lex refuse
+    les accès automatiques) ; arrêté du 9 novembre 1999 art. 2, 4, 7, 9 et Code du travail L1132-1 (Légifrance, navigateur).
+  - La question du véhicule arrive **à l'envoi** du message au loueur (le choix d'une phrase n'est rangé qu'à l'envoi : un texte calculé ne peut
+    pas le lire avant).
+  - Questions (§4 bis) : les 4 de Cowork (repos de Sébastien et temps de conduite du transporteur **notées**, en points d'étape ; qui transporte
+    Mantes et « que vérifies-tu » en réflexion corrigée au bilan) + celle du véhicule. Banque d'ouverture (§4 ter) : les 8 de Cowork, tirage 2 + 2,
+    calculette ; `repos-11h` et `conduite-9h` à valeurs tirées.
+- **Tests** : bloc `fb-6.8` (14 cas) : calage jugé par le vrai moteur (références, 2e solution, 10 pièges du 1er envoi et 7 après l'imprévu,
+  chacun ne fait tomber que son jalon), « que, pas de combien », sabotages dans les deux sens (`conduite`, règle des vides), ouverture (Rouen sans
+  13:00 ni 08:30, pas de « Vérifier », la côte va chez Lucas), inaction, parcours juste 20/20 à l'écran, 2e solution 20/20, 1er envoi gardé tel quel,
+  pièges de la fiche, fiche incomplète refusée, textes calculés des questions, corrigé. Suite complète verte avant le push.
+- **Commits** : voir `git log` du 12/10/2026 (« ENT-6.8 : … »).
+- **Reste ouvert** : essai à l'écran par Tristan (1366 × 768) puis ouverture à son groupe ; relire les textes de Karim et du loueur ; trame courte
+  (Cowork, après validation) ; `precedente` à passer à ENT-6.7 ; la durée réelle (≈ 45 min + le message au loueur).
