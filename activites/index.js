@@ -67,6 +67,7 @@ export const ACTIVITES = [
   () => import('./france-boissons-reception.js'),
   () => import('./france-boissons-rangement.js'),
   () => import('./france-boissons-inventaire.js'),
+  () => import('./france-boissons-preparation.js'),
   () => import('./france-boissons-planning.js'),
 ];
 

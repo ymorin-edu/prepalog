@@ -6,7 +6,7 @@
 > Lis docs/EN-COURS.md puis docs/briefs/ENT-6.7-france-boissons-preparation.md et sa maquette docs/briefs/france-boissons/maquette-6.7-preparation-vocale.html. Commence par l'état des lieux des demandes au moteur du §7 (lecture seule) : dis-moi ce qui existe déjà (terminal vocal d'ENT-6.6, mode préparation d'ENT-5.6, film et étiquettes) et propose un découpage en lots. N'implémente la séance qu'une fois les demandes livrées. Annonce la durée avant de commencer et dis-moi si un point du brief contredit le code.
 > ```
 
-**Statut** : à implémenter *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
+**Statut** : livré le 12/10/2026, à essayer à l'écran par Tristan *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
 **Date du brief** : 05/10/2026
 **Conversation d'origine** : Cowork (Opus) ; fiches projet `claude/prepalog-reprise-6.7.md` (décisions 42 à 52) et
 `claude/prepalog-6.7-maquette.md` ; cadrage `claude/prepalog-2de-s2-cadrage.md` (décision 8). Modèle : **ENT-5.6 Smoby** (mode
@@ -302,9 +302,28 @@ premier sur une palette sans place libre voit le critère « aucun casier sous u
 
 ## Compte rendu *(rempli par Claude Code à la livraison)*
 
-- **Fichiers créés / modifiés** :
-- **Écarts par rapport au brief** (et pourquoi) :
-- **Décisions prises en route** :
-- **Tests** :
-- **Commits** :
-- **Reste ouvert** :
+- **Fichiers créés / modifiés** : `activites/france-boissons-preparation.js` (+ sa ligne dans `activites/index.js`) ;
+  `contenus/france-boissons-ent67-donnees.js` (allée, terminal, palettes, poids : données pures) ; `contenus/france-boissons-ent67.js`
+  (messages, documents, lexique, accueil, jalons) ; `contenus/questions/ENT-6.7.js` ; `contenus/corriges/ENT-6.7.js` ;
+  `contenus/images/france-boissons/materiel-portique-futs.svg` (copie octet pour octet du dessin de Cowork, empreinte vérifiée, ligne dans
+  `CREDITS.md`) ; `outils/test/fb-6.7.mjs` (+ `BLOCS` et `GROUPES` (groupe 4) de `outils/test.mjs`) ; correctif moteur dans
+  `core/types/terminal.js` et `core/types/entrepot-picking.js` ; `activites/FICHE-SEANCE.md` (mode picking : exemple livré, piège `note`).
+- **Écarts par rapport au brief** (et pourquoi) : **barème 20** au lieu de 10 (règle du 10/10 : jalons pondérés, poids validés par
+  Tristan le 12/10) ; questions au fil et banque d'ouverture ajoutées (règle du 10/10, choix de Tristan) ; `suiteAuBilan: true`
+  (pas de « Corriger » : les lignes ne se refont pas, un élève qui en rate une ne doit pas rester bloqué avant ENT-6.8) ; écart du §8 déjà noté
+  au lot 4 de D-7 (casiers d'abord + 4 fûts : le 4e monte sur un casier) ; l'écran du matériel est un seul écran à trois blocs (le terminal
+  vocal a été présenté en ENT-6.6).
+- **Décisions prises en route** : voir `docs/decisions.md` du 12/10/2026 (deux lignes ENT-6.7). Questions : A code de l'emplacement (1),
+  C matériel dû par l'employeur (L4121-1, R4541-3 ; 1,5), D le vendeur répond du fût cabossé (C. civ. 1603 ; 1,5, au bilan) ; réflexion E =
+  celle de la vue. Poids : lignes 3, fût abîmé 5, montage 5, film et étiquettes 3, questions 4.
+- **Tests** : bloc `fb-6.7`, 17 cas (déclaration et poids écrits à la main, livraison, données reprises d'ENT-6.2, ouverture sans code
+  dans l'allée, inaction 0/20, parcours juste à l'écran 20/20 avec code faux, refus « 1 » et « 3 », « Abîmé 1 », ligne S24, les trois
+  questions à leur geste, message de fin ; fût cabossé pris 7/20 ; « Manquant » 9/20 ; « Emplacement vide » 7/20 ; chaque critère du montage
+  à son poids ; revérifier rattrape ; questions fausses 16/20 ; son coupé ; aucun vert dans le terminal ; ouverture tirée sur 300 graines ;
+  le droit et le corrigé ; enseignant ; erreurs JS). Éprouvé par 4 sabotages (poids échangés, bonne réponse changée, fût cabossé retiré,
+  signal remis après la sauvegarde) : chacun fait tomber des cas. Suite entière verte : 1309/1309, 314 s.
+- **Commits** : voir l'historique du 12/10/2026 (« ENT-6.7 : … »).
+- **Reste ouvert** : textes de Nadia (accueil, fin) à relire à l'écran ; palette en bois, quai 14 (construits) ; Code civil 1603 à relire
+  sur Légifrance avant d'ouvrir aux élèves ; trame courte (Cowork, après validation à l'écran) ; **ENT-6.8 a encore `precedente:
+  'france-boissons-inventaire'`** (provisoire) : à passer à `'france-boissons-preparation'` si Tristan le veut ; le bandeau de fin d'origine
+  dit « Relis ta trame à ces étapes » alors que la séance n'a pas de trame (texte du moteur, commun aux séances sans « Corriger »).

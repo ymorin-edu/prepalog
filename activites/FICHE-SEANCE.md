@@ -1220,10 +1220,13 @@ entrepot: {
   terminal: { titre: 'Préparation', lignes: [{ emplacement: 'A-T01', prends: 3 },
     { emplacement: 'A-T03', prends: 2, attendu: { mot: 'abime', n: 1 }, remplacement: { emplacement: 'B-T03' } }, …],
     fin: 'Commande terminée : …', phraseBilan: 'Chaque réponse au terminal est enregistrée …' },
-  regles: { lignes: [ … ] }, note: { sur: 20 },
+  regles: { lignes: [ … ] },
   montage: { palettes: 2, etiquette: 'La Cabane à Malo — Villers-sur-Mer · …', reflexion: 'Le terminal t’a donné …' },  // lot 4, facultatif
 }
 ```
+- **Jamais `note` dans une séance** (piège trouvé à la construction d'ENT-6.7, 12/10/2026) : déclarée, `note` fait noter TOUTE la
+  séance par la vue seule (jalons de la vue ÷ leur nombre × 20, sans les poids ni les questions), comme une évaluation. Le contenu
+  d'essai (`contenus/entrepot-picking-essai.js`) la porte pour sa page d'essai seulement. Même règle pour les autres modes.
 
 - **Tous** les emplacements des deux côtés se déclarent (`A-T01` à `B-T0n`) ; `n: 0` = tiroir vide ; `abimes` : les fûts
   cabossés, les plus en avant. Teintes par **nom** (celles du kit). Une déclaration fausse ne se charge pas (message clair).
@@ -1250,6 +1253,9 @@ entrepot: {
   3 à 5 tours) et étiquettes (deux côtés opposés + dessus) sur chaque palette **utilisée** ; toutes les palettes utilisées.
   Jugés à « Vérifier » seulement (un changement efface la vérification), et **faux, affichés « non jugé »**, tant qu'une ligne
   est fausse ou qu'un objet reste à côté (aucun jalon par inaction). Noms : ceux de la maquette, ou `montage.jalons`.
+- **Exemple livré** : ENT-6.7 (`contenus/france-boissons-ent67-donnees.js`, jalons rangés bloc par bloc dans
+  `contenus/france-boissons-ent67.js`). Sans « Corriger » (les lignes ne se refont pas) : `suiteAuBilan: true` dans le `meta`, sinon
+  l'élève qui a raté une ligne attend pour toujours la séance suivante. Les gestes `ligne:<…>` et `verifier` portent des questions au fil.
 - **Brancher la séance** (comme ENT-6.6 avec la masse) : `entrepot: ENTREPOT` dans les options, et les jalons de la vue
   repris avec leurs poids : `etapesEntrepot(ENTREPOT).map((e) => ({ ...e, groupe: …, poids: POIDS[e.id] }))`. Les `id` sont
   stables : `ligne-<id>` par ligne (l'`id` de la ligne, sinon son emplacement : `ligne-A-T01`), `ligne-<id du remplacement>`
