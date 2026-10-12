@@ -7,6 +7,7 @@ est déjà modifié ou inscrit ci-dessous, **elle s'arrête et le dit à Tristan
 
 | Chantier | Fichiers qu'il touche | Depuis |
 |---|---|---|
+| ENT-6.8 (séance France Boissons, planning du vendredi) | contenus/france-boissons-ent68.js, activites/france-boissons-vendredi.js, contenus/questions/ENT-6.8.js, outils/test/fb-6.8.mjs, outils/test.mjs, activites/index.js, contenus/corriges/ENT-6.8.js, docs/briefs/ENT-6.8-france-boissons-planning.md | 12/10/2026 |
 
 Rappel : un seul chantier à la fois dans `core/types/tournee.js`, `core/types/grille.js`,
 `core/types/entreprise.js`, `styles/base.css` et `outils/test/boost.mjs` (voir `docs/briefs/COORDINATION-boost.md`).
