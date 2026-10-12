@@ -370,6 +370,14 @@
 .pm-place{ cursor:pointer; outline:none }
 .pm-place polygon{ fill:rgba(16,124,65,.08); stroke:#107c41; stroke-width:2; stroke-dasharray:7 5 }
 .pm-place:hover polygon, .pm-place:focus-visible polygon{ fill:rgba(16,124,65,.22); stroke-width:3 }
+/* Mode PICKING (core/types/entrepot-picking.js, chantier D-7 lot 3, 12/10/2026) : la mise en page est celle de la masse avec
+   terminal ; au survol (ou au clavier), le volume de la travée s'éclaire en vert translucide, comme un couloir de masse.
+   L'adresse au sol se clique aussi et éclaire le volume de sa travée (`pk-survol`, posé par la vue). */
+.pk-trav{ cursor:pointer; outline:none }
+.pk-trav polygon{ fill:transparent; stroke:none }
+.pk-trav:hover polygon, .pk-trav:focus-visible polygon, .pk-trav.pk-survol polygon{ fill:rgba(16,124,65,.16); stroke:#107c41; stroke-width:2 }
+.pk-adr{ cursor:pointer }
+.pk-annonce{ font-size:.82rem; color:var(--encre-douce) }
 .pm-tombe{ animation:pm-tombe .7s cubic-bezier(.3,1.4,.6,1) both }
 .pm-apparait{ animation:pm-apparait .45s ease-out both }
 @keyframes pm-tombe{ from{ transform:translateY(-120px); opacity:0 } to{ transform:none; opacity:1 } }

@@ -2236,6 +2236,224 @@ await v('Terminal, préparation : à l’écran — mots fermés hors question, 
   await pt.close();
 });
 
+// ---------------------------------------------------------------------------------------------------------------------
+// L'ALLÉE DE PICKING (mode « picking », chantier D-7, lot 3, 12/10/2026 ; brief ENT-6.7 §4 étape 1, §5 jalons 1 à 5, §7.2, §8).
+// Contenu d'essai `contenus/entrepot-picking-essai.js` (les données du brief). Attendus ÉCRITS À LA MAIN d'après le brief :
+// codes A-T01 36 · B-T01 58 · A-T02 24 · B-T02 71 · A-T03 49 · B-T03 83 · A-T04 17 · B-T04 62 ; parcours juste : 36 → 3,
+// 24 → 2, 49 → « Abîmé » 1 → 1, 83 → 1 (ligne B-T03 ajoutée), 17 → 6. Jalons dans l'ordre : A-T01, A-T02, A-T03, B-T03, A-T04.
+const ZK = '#pkTest .pk';
+const monterK = (o = {}) => pm.evaluate(async (o) => {
+  const { creerEntreprise } = await import('/core/types/entreprise.js');
+  const E = await import('/outils/essai-entrepot.js');
+  const C = await import('/contenus/entrepot-picking-essai.js');
+  document.querySelector('#pkTest')?.remove();
+  const hote = document.createElement('div'); hote.id = 'pkTest'; document.body.appendChild(hote);
+  const db = o.db || {};
+  window.__k = { db };
+  creerEntreprise(E.univers({ temps: 'entrainement', entrepot: C.PICKING })).rendre(hote, {
+    meta: { id: 'essai-entrepot', code: 'ESSAI', titre: 'Essai', portee: 'eleve', immersif: true, temps: 'entrainement' },
+    profil: { prenom: 'Lea', nom: 'Test', role: o.role || 'eleve', uid: 'u-test' },
+    jeu: { etat: () => db, sauver: () => {} },
+    enregistrer: () => {}, quitter: () => {}, codeStock: 'ABC', lireScore: async () => null,
+  });
+  document.querySelector('#pkTest .ent-nav[data-vue="entrepot"]').click();
+}, o);
+const etatK = () => pm.evaluate(() => JSON.parse(JSON.stringify(((window.__k.db.entrepots) || {})['essai-picking'] || null)));
+const texteK = async (sel) => ((await pm.textContent(`${ZK} ${sel}`)) || '').replace(/\s+/g, ' ').trim();
+async function repondreK(x) {
+  const avant = await pm.evaluate(() => (((window.__k.db.entrepots || {})['essai-picking'] || {}).terminal || { journal: [] }).journal.length);
+  await pm.fill(`${ZK} [data-vt-champ]`, String(x));
+  await pm.press(`${ZK} [data-vt-champ]`, 'Enter');
+  await pm.waitForFunction((n) => window.__k.db.entrepots['essai-picking'].terminal.journal.length > n, avant);
+}
+async function motK(id) {
+  const avant = await pm.evaluate(() => window.__k.db.entrepots['essai-picking'].terminal.journal.length);
+  await pm.click(`${ZK} [data-vt-mot="${id}"]`);
+  await pm.waitForFunction((n) => window.__k.db.entrepots['essai-picking'].terminal.journal.length > n, avant);
+}
+// Les jalons d'une partie jouée sur les fonctions du terminal (sans l'écran) : true / false / null (pas encore jugé).
+const jouerK = (gestes) => pm.evaluate(async (gestes) => {
+  const K = await import('/core/types/terminal.js');
+  const E = await import('/core/types/entrepot.js');
+  const C = await import('/contenus/entrepot-picking-essai.js');
+  const { compilerPicking } = await import('/core/types/entrepot-picking.js');
+  const M = compilerPicking(C.PICKING, (m) => { throw new Error(m); });
+  const TT = M.terminal, T = K.terminalNeuf();
+  gestes.forEach((g) => (g.startsWith('MOT:') ? K.motTerminal(T, TT.lignes, TT.mots.find((m) => m.id === g.slice(4)), TT.textes)
+    : K.repondreTerminal(T, TT.lignes, g, TT.textes, Date.now(), TT.mots)));
+  const J = E.jalonsEntrepot({ entrepots: { [C.PICKING.id]: { terminal: T } } }, C.PICKING);
+  return { L: J.L.map((l) => (l.etat ? l.ok : null)), ok: J.ok, total: J.total, ids: K.lignesDuTerminal(TT.lignes, T).map((l) => l.id) };
+}, gestes);
+const JUSTE_K = ['36', '3', '24', '2', '49', 'MOT:abime', '1', '1', '83', '1', '17', '6'];
+
+await v('Picking : la déclaration d’essai se charge ; le terminal dit les phrases du brief ; une déclaration fausse ne se charge pas', async () => {
+  const r = await pm.evaluate(async () => {
+    const C = await import('/contenus/entrepot-picking-essai.js');
+    const { compilerPicking } = await import('/core/types/entrepot-picking.js');
+    const err = (m) => { throw new Error(m); };
+    const M = compilerPicking(C.PICKING, err);
+    const L = M.terminal.lignes;
+    const essai = (f) => { const P = JSON.parse(JSON.stringify(C.PICKING)); f(P); try { compilerPicking(P, err); return 'chargée'; } catch (e) { return e.message; } };
+    return {
+      lieux: L.map((l) => `${l.lieu} ${l.question}`),
+      remp: [L[2].remplacement.lieu, L[2].remplacement.question(1)],
+      jalons: M.terminal.jalons.map((j) => j.lib),
+      saboteurs: [
+        essai((P) => { delete P.emplacements['B-T02']; }),
+        essai((P) => { P.terminal.lignes[3].prends = 8; }),
+        essai((P) => { P.terminal.lignes[2].remplacement.emplacement = 'A-T04'; }),
+        essai((P) => { P.terminal.lignes[0].pose = 'Pose tes casiers.'; }),
+        essai((P) => { P.references.PEL20.bande = 'vert'; }),
+        essai((P) => { P.emplacements['A-T01'].code = 'AB'; }),
+      ],
+    };
+  });
+  egal(r.lieux, ['Côté A, travée 01, niveau 1. Eau minérale, casier de douze bouteilles. Prends 3.',
+    'Côté A, travée 02, niveau 1. Pelforth Blonde, vingt litres. Prends 2.',
+    'Côté A, travée 03, niveau 1. Affligem Blonde, vingt litres, lot S18. Prends 2.',
+    'Côté A, travée 04, niveau 1. Heineken, trente litres. Prends 6.']);
+  egal(r.remp, ['Côté B, travée 03, niveau 1.', 'Affligem Blonde, vingt litres, lot S24. Prends 1.']);
+  egal(r.jalons, ['Ligne 1 : eau minérale', 'Ligne 2 : Pelforth', 'Ligne 3 : Affligem', 'Ligne 4 : Affligem', 'Ligne 5 : Heineken 30 L'], 'aucun nom de jalon ne dit la réponse');
+  vrai(/il manque l'emplacement B-T02/.test(r.saboteurs[0]), r.saboteurs[0]);
+  vrai(/`prends` va de 1 à 7/.test(r.saboteurs[1]), r.saboteurs[1]);
+  vrai(/même référence/.test(r.saboteurs[2]), r.saboteurs[2]);
+  vrai(/lot 4/.test(r.saboteurs[3]), r.saboteurs[3]);
+  vrai(/teinte de fût « vert » inconnue/.test(r.saboteurs[4]), r.saboteurs[4]);
+  vrai(/code détrompeur/.test(r.saboteurs[5]), r.saboteurs[5]);
+  const ev = await pm.evaluate(async () => {
+    const E = await import('/core/types/entrepot.js');
+    const C = await import('/contenus/entrepot-picking-essai.js');
+    try { E.creerEntrepot(C.PICKING, { copie: true }); return 'créée'; } catch (e) { return e.message; }
+  });
+  vrai(/pas encore d'évaluation/.test(ev), ev);
+});
+
+await v('Picking : l’allée en 3D — 8 travées et leurs adresses au sol, le préparateur en zone de préparation, AUCUN code nulle part', async () => {
+  await monterK();
+  await pm.waitForSelector(ZK);
+  egal(await pm.$$eval(`${ZK} [data-pk-trav]`, (L) => L.map((g) => g.dataset.pkTrav)),
+    ['B-T01', 'B-T02', 'B-T03', 'B-T04', 'A-T01', 'A-T02', 'A-T03', 'A-T04'], 'volumes : le côté B d’abord, le côté A par-dessus');
+  egal((await pm.$$eval(`${ZK} [data-pk-adr]`, (L) => L.map((t) => t.textContent))).sort(),
+    ['A-T01', 'A-T02', 'A-T03', 'A-T04', 'B-T01', 'B-T02', 'B-T03', 'B-T04']);
+  egal(await pm.getAttribute(`${ZK} [data-pk-preparateur]`, 'data-pk-preparateur'), '');
+  egal(await pm.$$eval(`${ZK} .pm-dessin [data-iso-objet="travee"]`, (L) => L.length), 8);
+  egal(await pm.$$eval(`${ZK} .pm-dessin [data-abime]`, (L) => L.length), 1, 'le fût cabossé se voit dans l’allée');
+  // Le code ne se lit que de près : ni étiquette de lisse, ni chiffre d'un code dans le texte, les attributs lisibles ou l'accessibilité.
+  egal(await pm.$$eval(`${ZK} [data-iso-etiquette-lisse], ${ZK} [data-iso-code]`, (L) => L.length), 0);
+  // (Sans la ligne de Nadia : sa date, « jeudi 17 juin », a le droit d'être lue, et 17 est aussi le code de A-T04.)
+  const lu = await pm.evaluate((ZK) => {
+    const R = document.querySelector(ZK).cloneNode(true);
+    R.querySelector('.pm-perso').remove();
+    return [R.textContent, ...[...R.querySelectorAll('*')].flatMap((el) => ['aria-label', 'title', 'placeholder', 'value'].map((a) => el.getAttribute(a) || ''))].join(' | ');
+  }, ZK);
+  egal(['36', '58', '24', '71', '49', '83', '17', '62'].filter((c) => new RegExp(`(^|\\D)${c}(\\D|$)`).test(lu)), [], 'codes lisibles dans l’allée');
+  vrai(/Côté A, travée 01, niveau 1\. Code de contrôle \?/.test(await texteK('[data-vt-actu]')), 'le terminal commence par la ligne 1');
+  vrai(/lot S18 de M05 est passé dans le tiroir A-T03/.test(await texteK('[data-pk-annonce]')), 'la phrase du réassort');
+});
+
+await v('Picking : survol d’une adresse = volume éclairé ; clic → vue de près (code en gros, fût cabossé), préparateur placé ; Retour et Échap', async () => {
+  await monterK();
+  await pm.waitForSelector(ZK);
+  await pm.hover(`${ZK} [data-pk-adr="A-T03"]`);
+  vrai(await pm.$eval(`${ZK} [data-pk-trav="A-T03"]`, (g) => g.classList.contains('pk-survol')), 'adresse survolée : son volume s’éclaire');
+  const fond = await pm.$eval(`${ZK} [data-pk-trav="A-T03"] polygon`, (p) => getComputedStyle(p).fill);
+  vrai(/rgba\(16, 124, 65, 0\.16\)/.test(fond), `vert translucide : ${fond}`);
+  await pm.hover(`${ZK} .pm-fil`);
+  vrai(!(await pm.$eval(`${ZK} [data-pk-trav="A-T03"]`, (g) => g.classList.contains('pk-survol'))), 'plus survolée : éteint');
+  await pm.click(`${ZK} [data-pk-adr="A-T03"]`);
+  await pm.waitForSelector(`${ZK}[data-pk-ouvert="A-T03"]`);
+  egal(await texteK('[data-iso-code]'), '49');
+  const etiq = await texteK('[data-iso-etiquette-lisse]');
+  vrai(/A-T03-N1/.test(etiq) && /Affligem Blonde 20 L · lot S18/.test(etiq), `adresse, désignation et lot : ${etiq}`);
+  egal(await pm.$$eval(`${ZK} .pm-dessin [data-abime]`, (L) => L.length), 1, 'le fût cabossé, de près');
+  egal(Object.keys((await etatK()).vus), ['A-T03'], 'la première ouverture est retenue (trace)');
+  await pm.click(`${ZK} [data-pm="retour"]`);
+  await pm.waitForSelector(`${ZK}[data-pk-ouvert=""]`);
+  egal(await pm.getAttribute(`${ZK} [data-pk-preparateur]`, 'data-pk-preparateur'), 'A-T03', 'le préparateur reste devant la travée');
+  // Clic sur le volume d'une travée du côté B (bas de sa face avant, devant tout le reste), puis Échap.
+  // (La place se calcule au moment du clic, une fois le dessin stable : la vue se recale à la taille de l'écran après un retour.)
+  const bb = await pm.$eval(`${ZK} [data-pk-trav="B-T04"] polygon`, (p) => { const r = p.getBoundingClientRect(); return { w: r.width, h: r.height }; });
+  await pm.click(`${ZK} [data-pk-trav="B-T04"] polygon >> nth=0`, { position: { x: bb.w / 2, y: bb.h * .85 } });
+  await pm.waitForSelector(`${ZK}[data-pk-ouvert="B-T04"]`);
+  egal(await texteK('[data-iso-code]'), '62');
+  egal(await pm.$$eval(`${ZK} .pm-dessin [data-iso-objet="fut"]`, (L) => L.length), 0, 'B-T04 : tiroir vide');
+  await pm.keyboard.press('Escape');
+  await pm.waitForSelector(`${ZK}[data-pk-ouvert=""]`);
+  egal(await pm.getAttribute(`${ZK} [data-pk-preparateur]`, 'data-pk-preparateur'), 'B-T04');
+});
+
+await v('Picking : le parcours du brief à l’écran (codes lus de près, « Abîmé 1 ») → 5 / 5 jalons, ligne B-T03 ajoutée, bilan du terminal', async () => {
+  await monterK();
+  await pm.waitForSelector(ZK);
+  for (const [adr, code, q] of [['A-T01', '36', '3'], ['A-T02', '24', '2']]) {
+    await pm.click(`${ZK} [data-pk-adr="${adr}"]`);
+    egal(await texteK('[data-iso-code]'), code);
+    await repondreK(code); await repondreK(q);
+    await pm.click(`${ZK} [data-pm="retour"]`);
+  }
+  await pm.click(`${ZK} [data-pk-adr="A-T03"]`);
+  await repondreK('49');
+  await motK('abime');
+  egal(await texteK('[data-vt-actu]'), 'Abîmé : combien ?');
+  await repondreK('1'); await repondreK('1');
+  vrai(/Côté B, travée 03, niveau 1\. Code de contrôle \?/.test(await texteK('[data-vt-actu]')), 'la ligne de remplacement arrive');
+  await pm.click(`${ZK} [data-pm="retour"]`);
+  await pm.click(`${ZK} [data-pk-adr="B-T03"]`);
+  egal(await texteK('[data-iso-code]'), '83');
+  await repondreK('83'); await repondreK('1');
+  await repondreK('17'); await repondreK('6');
+  await pm.waitForSelector(`${ZK} [data-vt-bilan]`);
+  egal(await texteK('[data-vt-b="lignes"]'), '5');
+  vrai(/productivité des préparateurs/.test(await texteK('[data-vt-bilan]')), 'la phrase sous le bilan');
+  const r = await pm.evaluate(async () => {
+    const E = await import('/core/types/entrepot.js');
+    const C = await import('/contenus/entrepot-picking-essai.js');
+    const J = E.jalonsEntrepot(window.__k.db, C.PICKING);
+    return { L: J.L.map((l) => l.ok), n: E.noteEntrepot(window.__k.db, C.PICKING).score, sig: E.creerEntrepot(C.PICKING).signaux };
+  });
+  egal(r.L, [true, true, true, true, true]);
+  egal(r.n, 20);
+  vrai(['entrepot:essai-picking:ouvrir:A-T03', 'entrepot:essai-picking:ligne:B-T03', 'entrepot:essai-picking:fin'].every((s) => r.sig.includes(s)), r.sig.join(' '));
+  egal((await etatK()).terminal.exceptions, { 'A-T03': { mot: 'abime', n: 1 } });
+});
+
+await v('Picking : les jalons — inaction, fût cabossé pris sans rien dire, « Manquant 1 », « Emplacement vide », code faux (trace seulement)', async () => {
+  const rien = await jouerK([]);
+  egal([rien.L, rien.ok], [[null, null, null, null, null], 0], 'rien n’est jugé avant la fin ; l’inaction ne rapporte rien');
+  const moitie = await jouerK(JUSTE_K.slice(0, 4));
+  egal(moitie.L, [null, null, null, null, null], 'toujours rien à mi-chemin');
+  egal((await jouerK(JUSTE_K)).L, [true, true, true, true, true]);
+  const pris = await jouerK(['36', '3', '24', '2', '49', '2', '17', '6']);
+  egal([pris.L, pris.ids], [[true, true, false, false, true], ['A-T01', 'A-T02', 'A-T03', 'A-T04']], '2 pris sans mot : pas de ligne B-T03, jalons 3 et 4 faux');
+  const manq = await jouerK(['36', '3', '24', '2', '49', 'MOT:manquant', '1', '1', '83', '1', '17', '6']);
+  egal(manq.L, [true, true, false, true, true], '« Manquant » au lieu d’« Abîmé » : jalon 3 faux, B-T03 juste');
+  const vide = await jouerK(['36', '3', '24', '2', '49', 'MOT:vide', '83', '2', '17', '6']);
+  egal(vide.L, [true, true, false, false, true], '« Emplacement vide » : B-T03 de 2, jalons 3 et 4 faux');
+  const faux = await jouerK(['63', '36', '3', '42', '24', '2', '49', 'MOT:abime', '1', '1', '83', '1', '17', '6']);
+  egal(faux.L, [true, true, true, true, true], 'deux codes faux : aucun jalon perdu');
+});
+
+await v('Picking : la vue tient en 1366 × 768 et 1280 × 720 sans défiler (allée, vue de près)', async () => {
+  const pe = await ctxM.newPage();
+  const err = [];
+  pe.on('pageerror', (e) => err.push(e.message));
+  for (const [w, h] of [[1366, 768], [1280, 720]]) {
+    await pe.setViewportSize({ width: w, height: h });
+    await pe.goto(BASE + 'outils/essai-entrepot.html');
+    await pe.waitForSelector('.pe');
+    await pe.selectOption('#reglages select[name="cas"]', 'picking');
+    await pe.waitForSelector('.pk');
+    await pe.evaluate(() => { document.querySelector('#reglages').style.display = 'none'; document.querySelector('#mention').style.display = 'none'; window.dispatchEvent(new Event('resize')); });
+    const d = [await pe.evaluate(() => document.documentElement.scrollHeight - window.innerHeight)];
+    await pe.click('.pk [data-pk-adr="A-T04"]');
+    await pe.evaluate(() => window.dispatchEvent(new Event('resize')));
+    d.push(await pe.evaluate(() => document.documentElement.scrollHeight - window.innerHeight));
+    egal(d.map((x) => Math.max(0, x)), [0, 0], `pixels qui dépassent à ${w} × ${h} (allée, vue de près)`);
+  }
+  egal(err, [], 'erreurs JS');
+  await pe.close();
+});
+
 await v('Masse : aucune erreur JavaScript', async () => { egal(erreursM, []); });
 await ctxM.close();
 }

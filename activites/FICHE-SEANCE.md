@@ -1197,6 +1197,47 @@ entrepot: {
 - **État** : `db.entrepots[<id>]` = `{ pos: { P1: { c: 'M02', p: 1 } }, ordre: ['P1', …], valide, at, premierGeste, verifs }`.
   Gestes publiés : `entrepot:<id>:poser`, `entrepot:<id>:verifier` (la validation).
 
+### Mode `picking` : l'allée de picking en 3D, guidée par le terminal vocal (chantier D-7, lot 3, 12/10/2026) — `core/types/entrepot-picking.js`
+
+Une **allée de picking** (deux côtés, A au fond, B devant en transparence, T01 près de la zone de préparation et du quai),
+des **tiroirs coulissants** en N1, N2-N3 vides, et le **terminal vocal** à droite qui donne les lignes une à une (ENT-6.7 §7.2 ;
+maquette validée `docs/briefs/france-boissons/maquette-6.7-preparation-vocale.html`). Mode à part plutôt qu'option du mode
+préparation (décision de Tristan, 12/10/2026). Dessins du kit iso (lot 2), terminal de préparation (lot 1). Format complet en
+tête du fichier ; exemple : `contenus/entrepot-picking-essai.js` (les données d'ENT-6.7) ; page d'essai
+`outils/essai-entrepot.html`, cas « Allée de picking » ; tests : bloc `entrepot` (« Picking : … »).
+
+```js
+entrepot: {
+  id: 'fb-picking', libelle: 'Allée de picking', mode: 'picking',
+  personnage: { nom, role, date, texte: { guidage, entrainement } },
+  consigne: 'Écoute (ou lis) le terminal, va à l’emplacement, réponds.', annonce: 'Ce matin, le picking a été réapprovisionné …',
+  plan: { travees: 4, zone: 'Zone de préparation', quai: 'QUAI 14' },
+  references: { AFF20: { nom: 'Affligem Blonde 20 L', court: 'Affligem', voix: 'Affligem Blonde, vingt litres', type: 'fut', litres: 20, bande: 'cuivre' },
+                EAU1L: { nom: 'Eau minérale 1 L', voix: 'Eau minérale, casier de douze bouteilles', type: 'casier', capsule: 'bleu' }, … },
+  emplacements: { 'A-T03': { ref: 'AFF20', lot: 'S18', n: 2, abimes: 1, code: '49' }, 'B-T04': { ref: 'HEI20', n: 0, code: '62' }, … },
+  terminal: { titre: 'Préparation', lignes: [{ emplacement: 'A-T01', prends: 3 },
+    { emplacement: 'A-T03', prends: 2, attendu: { mot: 'abime', n: 1 }, remplacement: { emplacement: 'B-T03' } }, …],
+    fin: 'Commande terminée : …', phraseBilan: 'Chaque réponse au terminal est enregistrée …' },
+  regles: { lignes: [ … ] }, note: { sur: 20 },
+}
+```
+
+- **Tous** les emplacements des deux côtés se déclarent (`A-T01` à `B-T0n`) ; `n: 0` = tiroir vide ; `abimes` : les fûts
+  cabossés, les plus en avant. Teintes par **nom** (celles du kit). Une déclaration fausse ne se charge pas (message clair).
+- **Gestes** : survol d'une travée (ou de son adresse au sol) = son volume en vert translucide ; clic = le préparateur y va et
+  la **vue de près** s'ouvre (tiroir, marchandise, **étiquette de lisse** : adresse, désignation, lot, **code en gros**) ;
+  « ← Retour à l'allée » ou Échap. **Le code ne se lit que de près** (testé : ni dans l'allée, ni dans un texte d'aide).
+- **Le terminal** dit « Côté A, travée 03, niveau 1. Code de contrôle ? » puis « <voix>, lot S18. Prends 2. » ; mots par
+  défaut Manquant, Abîmé, Emplacement vide ; toute exception sur une ligne qui déclare `remplacement` ajoute cette ligne.
+  À la fin : « Ce que le terminal sait de toi » (non noté) et la `phraseBilan`.
+- **Jalons** (brief ENT-6.7 §5, 1 à 5) : un par ligne, plus un pour le remplacement d'une ligne qui a un `attendu`. Jugés à la
+  fin du terminal seulement (avant : « à faire » ; l'inaction ne rapporte rien). Sans `attendu` : la quantité prise sans
+  exception ; avec : ce mot et cette quantité, puis le reste ; remplacement : présent et `attendu.n` pris. Noms par défaut
+  « Ligne n : <court> » (jamais la réponse), ou `jalon: '…'` sur la ligne. Codes faux : trace, jamais notés.
+- **Pas encore** : les palettes client et la pose (lot 4 : une ligne qui déclare `pose` est refusée), l'évaluation.
+- **État** : `db.entrepots[<id>]` = `{ terminal, vus: { 'A-T03': date }, premierGeste }`. Gestes publiés :
+  `entrepot:<id>:ouvrir:<emplacement>`, `entrepot:<id>:ligne:<ligne>`, `entrepot:<id>:fin`.
+
 ## Vue « animation à questions » (scène isométrique, arrêt, question) — `core/types/animation.js`
 
 Depuis le 05/10/2026 (brief `docs/briefs/MOTEUR-vue-animation.md`, maquette d'ENT-6.5). Montrer **un geste

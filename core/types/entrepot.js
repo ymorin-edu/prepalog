@@ -8,7 +8,8 @@
 // le plan est DÉCLARÉ par le contenu et dessiné par le moteur. Le mode « préparation » (lot 4) est
 // venu le même jour (voir plus bas, « PRÉPARATION ») ; le mode « comptage » (lot 3) n'est pas encore
 // écrit : une séance qui le déclare ne se charge pas. Le mode « masse » (stockage de masse en 3D isométrique, chantier D-5,
-// 11/10/2026) vit dans `entrepot-masse.js` : voir sa tête.
+// 11/10/2026) vit dans `entrepot-masse.js` : voir sa tête. Le mode « picking » (allée de picking en 3D guidée par le terminal
+// vocal, chantier D-7, 12/10/2026) vit dans `entrepot-picking.js` : voir sa tête.
 //
 // Elle vit dans l'environnement d'entreprise (`entreprise.js`), comme le quai et le planning, et
 // n'existe que si la séance déclare `entrepot` (`plan` est déjà la vue de transport). Elle ne connaît
@@ -86,6 +87,7 @@
 // Le mode VISITE (second chantier, 05/10/2026) vit dans son propre fichier : voir sa tête.
 import { compilerVisite, jalonsVisite, detailVisite, creerVisite, etatVisiteNeuf } from './entrepot-visite.js';
 // Le mode STOCKAGE DE MASSE (chantier D-5, 11/10/2026) vit aussi dans son fichier : il ne prend rien du plan à racks.
+import { compilerPicking, etatPickingNeuf, jalonsPicking, attendusPicking, creerPicking } from './entrepot-picking.js';
 import { compilerMasse, etatMasseNeuf, jalonsMasse, solutionsMasse, creerMasse, placeDe, fautesMasse as fautesM, comptageMasse } from './entrepot-masse.js';
 import { ech, pad2 } from '../texte.js';
 import { noteProportionnelle } from '../notes.js';
@@ -183,8 +185,9 @@ function compiler(P) {
   const err = (m) => { throw new Error(`entrepot ${P && P.id} : ${m}`); };
   if (!P || !P.id) err('il manque un id');
   const mode = P.mode || 'rangement';
-  if (!['rangement', 'preparation', 'visite', 'masse'].includes(mode)) err(`le mode « ${mode} » n'est pas encore écrit dans le moteur (lot 3 du brief)`);
+  if (!['rangement', 'preparation', 'visite', 'masse', 'picking'].includes(mode)) err(`le mode « ${mode} » n'est pas encore écrit dans le moteur (lot 3 du brief)`);
   if (mode === 'masse') { const MM = compilerMasse(P, err); COMPILES.set(P, MM); return MM; }
+  if (mode === 'picking') { const MK = compilerPicking(P, err); COMPILES.set(P, MK); return MK; }
   const L = P.plan || err('il manque le plan');
   const T = L.travees || 4, N = L.niveaux || 3, E = L.emplacements || 3;
   if (N > 4 || E > 4) err('4 niveaux et 4 emplacements par niveau au plus');
@@ -499,6 +502,7 @@ export function etatNeuf(mode) {
   if (mode === 'preparation') return etatPrepNeuf();
   if (mode === 'visite') return etatVisiteNeuf();
   if (mode === 'masse') return etatMasseNeuf();
+  if (mode === 'picking') return etatPickingNeuf();
   return { place: {}, verifie: false, verifs: 0, premierGeste: null, aideCharge: true };
 }
 const etatDe = (db, P) => (db && db.entrepots && db.entrepots[P.id]) || etatNeuf(P.mode);
@@ -513,6 +517,7 @@ export function jalonsEntrepot(db, P, temps = P.temps) {
   if (M.mode === 'preparation') L = jalonsPrep(M, Object.assign(etatPrepNeuf(), e), temps);
   else if (M.mode === 'visite') L = jalonsVisite(M, e);
   else if (M.mode === 'masse') L = jalonsMasse(M, Object.assign(etatMasseNeuf(), e));
+  else if (M.mode === 'picking') L = jalonsPicking(M, Object.assign(etatPickingNeuf(), e));
   else {
     const place = e.place || {};
     L = M.jalons.map((j) => ({ id: j.id, lib: j.lib, palette: j.palette,
@@ -542,6 +547,11 @@ export function noteEntrepot(db, P, temps = P.temps) {
   if (compiler(P).mode === 'visite') {
     return { score, max: N.sur, ok, total, detail: { jalons: L.map((l) => ({ jalon: l.lib, ok: l.ok })), visite: detailVisite(compiler(P), e) } };
   }
+  if (compiler(P).mode === 'picking') {
+    const T = e.terminal || {};
+    return { score, max: N.sur, ok, total, detail: { jalons: L.map((l) => ({ jalon: l.lib, ok: l.ok, pris: l.pris, exception: l.exception })),
+      codesFaux: T.codesFaux || {}, vus: Object.keys(e.vus || {}), premierGeste: e.premierGeste || null } };
+  }
   if (compiler(P).mode === 'masse' && compiler(P).comptage) {
     const T = e.terminal || {};
     return { score, max: N.sur, ok, total, detail: { jalons: L.map((l) => ({ jalon: l.lib, ok: l.ok, comptes: l.comptes })),
@@ -566,6 +576,7 @@ export function noteEntrepot(db, P, temps = P.temps) {
 export function bonnesReponses(P) {
   const M = compiler(P);
   if (M.mode === 'masse') return solutionsMasse(M);
+  if (M.mode === 'picking') return attendusPicking(M);
   return Object.fromEntries(Object.keys(M.pal).map((id) => [id, solutions(M, id)]));
 }
 // Ce que la préparation attend (page d'essai, côté enseignant, tests) : les meilleurs tours, et la
@@ -636,6 +647,13 @@ function geometrie(M) {
 export function creerEntrepot(P, opts = {}) {
   const M = compiler(P);
   if (M.mode === 'visite' && opts.copie) throw new Error(`entrepot ${P.id} : le mode visite n'a pas d'évaluation`);
+  if (M.mode === 'picking') {
+    const V = creerPicking(P, M, opts, { echap: (racine, fn) => { echap = { racine, fn }; }, clavier: auClavier });
+    V.jalons = (db) => jalonsEntrepot(db, P);
+    V.note = P.note ? (db) => noteEntrepot(db, P) : null;
+    V.bonnesReponses = () => bonnesReponses(P);
+    return V;
+  }
   if (M.mode === 'masse') {
     const V = creerMasse(P, M, opts, { echap: (racine, fn) => { echap = { racine, fn }; }, clavier: auClavier });
     V.jalons = (db) => jalonsEntrepot(db, P);
