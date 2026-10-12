@@ -226,6 +226,15 @@ redéclarer si elle peut être partagée). Dessins : `contenus/images/france-boi
 
 ## 7. Demandes au moteur
 
+> **Livré par le chantier D-7 (12/10/2026)** : 7.1 = terminal de préparation (`core/types/terminal.js`, lot 1, validé par
+> Tristan) ; 7.2 = `mode: 'picking'` du Plan d'entrepôt (`core/types/entrepot-picking.js`, lot 3 ; dessins du kit iso, lot 2) ;
+> 7.3 et 7.4 = `montage` du mode picking (lot 4) ; 7.5 = les `ecrans` de l'animation (D-5), déjà là. Exemple complet :
+> `contenus/entrepot-picking-essai.js` (les données de ce brief). Format, `id` des jalons pour les poids et pièges :
+> `activites/FICHE-SEANCE.md`, « Mode `picking` » et « Le terminal vocal ». Pas d'évaluation dans ce mode (la séance est un
+> entraînement). **Écart au §8** : « casiers posés en premier puis 4 fûts sur la même palette → aucun fût sur casier » contredit
+> la règle de pose (3 casiers + 4 fûts = 7 objets pour 6 cases : le 4e fût monte sur un casier) ; voir `docs/decisions.md`
+> du 12/10/2026 (lot 4). Le bloc `fb-6.7` s'écrira avec la séance.
+
 1. **Terminal vocal** (vue nouvelle d'ENT-6.6, §7.2 de son brief) — **ajouts pour la préparation** :
    - ligne de préparation = emplacement → code → « Prends n » → quantité confirmée ; refus « moins sans mot » et « plus » ;
    - **mots d'exception** déclarés par le contenu (Répète, Manquant, Abîmé, Emplacement vide) avec « combien ? » ;

@@ -108,7 +108,7 @@ plan d'entrepôt, fiche, animation) sans `id` texte non vide, sont refusées aus
 | `tournee` | objet | La tournée à construire sur le plan. | `activites/boost-ent32.js` |
 | `quai` | objet ou fonction | Quai de réception (voir « Vue quai ») ; une **fonction de la graine** = un quai tiré par élève. | `activites/picard-ent42.js` ; tiré : `activites/picard-ent44.js` |
 | `planning` | objet | Planning : cartes sur une grille (voir « Vue Planning »). | `activites/smoby-arrivee.js` |
-| `entrepot` | objet | Plan d'entrepôt : rangement, préparation, visite (voir « Vue Plan d'entrepôt »). | `activites/smoby-rangement.js` |
+| `entrepot` | objet | Plan d'entrepôt : rangement, préparation, visite, stockage de masse (et comptage), allée de picking (voir « Vue Plan d'entrepôt »). | `activites/smoby-rangement.js` |
 | `inventaire` | objet ou fonction | Inventaire ; une **fonction de la graine** = un inventaire tiré par élève. | `activites/cdiscount-inventaire.js` ; tiré : `activites/cdiscount-compte-a-rebours.js` |
 | `tableur` | objet | Geste tableur : extractions, exporter, déposer (voir « Geste tableur »). | `activites/cdiscount-chiffres.js` |
 | `documents` | tableau | Documents joints lus sans saisie `[{ id, titre, court, html }]` ; un mail les joint par `pieces`. | `activites/smoby-recrutement.js` |
@@ -986,8 +986,9 @@ envoi rend la copie. Note = jalons réussis / jalons × `note.sur` (20 par défa
 ## Vue « Plan d'entrepôt » (ranger des palettes, préparer une commande) — `core/types/entrepot.js`
 
 Depuis le 04/10/2026 (brief `docs/briefs/MOTEUR-vue-plan-entrepot.md`, maquette v2 de `docs/briefs/plan-entrepot/`).
-Trois modes sont écrits : **`rangement`** (lots 1 et 2), **`preparation`** (lot 4) et **`visite`** (second chantier), plus bas ; une séance qui déclare
-`comptage` ne se charge pas tant que le lot 3 n'est pas fait. En rangement, l'élève prend une palette (carte du bandeau ou zone de réception du
+Cinq modes sont écrits : **`rangement`** (lots 1 et 2), **`preparation`** (lot 4), **`visite`** (second chantier), **`masse`**
+(chantier D-5, avec son sous-mode comptage du chantier D-6) et **`picking`** (chantier D-7), plus bas ; le mode `comptage` du plan à
+racks (lot 3 du brief) n'est pas écrit : une séance qui le déclare ne se charge pas. En rangement, l'élève prend une palette (carte du bandeau ou zone de réception du
 plan), choisit une **travée** sur le plan vu de dessus (elle s'ouvre en grand, vue de face), puis un **emplacement**.
 L'adresse s'écrit `A1-T03-N2-E1` (allée A côté 1, travée 03, niveau 2 — niveau 1 = sol —, emplacement 1). Emplacement
 occupé : refusé tout de suite. **Aucune règle « lourd en bas » dans un rack** : seule la charge totale du niveau compte.
@@ -1197,7 +1198,7 @@ entrepot: {
 - **État** : `db.entrepots[<id>]` = `{ pos: { P1: { c: 'M02', p: 1 } }, ordre: ['P1', …], valide, at, premierGeste, verifs }`.
   Gestes publiés : `entrepot:<id>:poser`, `entrepot:<id>:verifier` (la validation).
 
-### Mode `picking` : l'allée de picking en 3D, guidée par le terminal vocal (chantier D-7, lot 3, 12/10/2026) — `core/types/entrepot-picking.js`
+### Mode `picking` : l'allée de picking en 3D, guidée par le terminal vocal (chantier D-7, lots 3 et 4, 12/10/2026) — `core/types/entrepot-picking.js`
 
 Une **allée de picking** (deux côtés, A au fond, B devant en transparence, T01 près de la zone de préparation et du quai),
 des **tiroirs coulissants** en N1, N2-N3 vides, et le **terminal vocal** à droite qui donne les lignes une à une (ENT-6.7 §7.2 ;
@@ -1249,11 +1250,44 @@ entrepot: {
   3 à 5 tours) et étiquettes (deux côtés opposés + dessus) sur chaque palette **utilisée** ; toutes les palettes utilisées.
   Jugés à « Vérifier » seulement (un changement efface la vérification), et **faux, affichés « non jugé »**, tant qu'une ligne
   est fausse ou qu'un objet reste à côté (aucun jalon par inaction). Noms : ceux de la maquette, ou `montage.jalons`.
-- **Pas encore** : l'évaluation (refusée à la déclaration).
+- **Brancher la séance** (comme ENT-6.6 avec la masse) : `entrepot: ENTREPOT` dans les options, et les jalons de la vue
+  repris avec leurs poids : `etapesEntrepot(ENTREPOT).map((e) => ({ ...e, groupe: …, poids: POIDS[e.id] }))`. Les `id` sont
+  stables : `ligne-<id>` par ligne (l'`id` de la ligne, sinon son emplacement : `ligne-A-T01`), `ligne-<id du remplacement>`
+  pour la ligne de remplacement attendue (`ligne-B-T03`), puis `montage-casier`, `montage-futs`, `montage-film`,
+  `montage-etiquettes`, `montage-palettes`. `bonnesReponses(ENTREPOT)` (de `entrepot.js`) donne ce que le terminal attend ligne à ligne
+  (corrigé, tests ; jamais montré à l'élève). Note : `noteEntrepot` met dans `detail` les jalons (`pris`, `exception`), les
+  codes faux, les emplacements vus, l'heure du premier geste et, avec un montage, les objets par palette, ceux restés à côté et
+  le nombre de « Vérifier ». Le son du terminal se règle par groupe dans « Conduite de séance » (voir « Le terminal vocal »).
+- **Pas encore** : l'évaluation (`copie` : la vue refuse de s'ouvrir, « le mode picking n'a pas encore d'évaluation »).
 - **État** : `db.entrepots[<id>]` = `{ terminal, vus: { 'A-T03': date }, premierGeste }`, plus avec un montage
   `{ palettes: [[{ ref, emp, ligne, abime? }], …] (ordre de pose), cote, film: ['4', …], etiq: [{ avant: true, … }, …], verifie,
   verifs, reflexion }`. Gestes publiés : `entrepot:<id>:ouvrir:<emplacement>`, `entrepot:<id>:ligne:<ligne>` (une ligne finie,
   donc posée), `entrepot:<id>:fin`, et `entrepot:<id>:verifier`.
+
+### Le terminal vocal (chantiers D-6 et D-7) — `core/types/terminal.js`
+
+Un boîtier sombre qui **dit une phrase à la fois** et attend une réponse tapée (« Valider », « Répète »). Il n'est pas une
+vue qu'une séance déclare : ce sont les modes `masse` avec `comptage` (inventaire d'ENT-6.6) et `picking` (préparation
+d'ENT-6.7) qui l'ouvrent et lui **rédigent ses lignes** depuis le plan. Format complet en tête du fichier ; page d'essai
+`outils/essai-terminal.html` (les lignes d'ENT-6.7, bouton « J'ai posé » à la place de l'allée) ; tests : bloc `entrepot`.
+
+- **Le dialogue d'une ligne** : « <lieu> Code de contrôle ? » → le code lu sur place (faux : « Code faux. … », redemandé,
+  compté, jamais noté) → la question → un nombre → « Compris : n. » → la ligne suivante. Ordre imposé, pas de retour sur une
+  ligne validée ; une case vide ne fait rien (0 est une réponse). Le terminal **ne juge rien** : il range les réponses, les
+  jalons de la vue les comparent au vrai.
+- **En préparation** (`prends` sur la ligne) : la quantité doit être **exactement** ce qui reste (moins → « Tu dois prendre
+  n. Si tu ne peux pas, dis … », plus → « Trop. Prends n. », refusés en rouge) ; un **mot d'exception** par ligne, pendant la
+  question (Manquant et Abîmé demandent « combien ? », Emplacement vide signale toute la ligne) ; toute exception sur une
+  ligne qui a un remplacement **ajoute** cette ligne juste après ; `pose` : le terminal attend que la marchandise soit
+  posée avant la ligne suivante. Le terminal accepte la bonne quantité quoi que l'élève ait pris : il ne voit pas le fût
+  cabossé (c'est le piège d'ENT-6.7).
+- **« Ce que le terminal sait de toi »** à la fin (non noté) : lignes, durée, codes faux, lignes par heure (« — » sous une
+  minute), puis la phrase de la séance (`phraseBilan`).
+- **Couleurs** : neutres ; un refus est en texte rouge ; aucun vert.
+- **Le son** : coupé par défaut ; l'enseignant l'active **par groupe** dans « Conduite de séance » (case « Son activé pour le
+  groupe ») ; l'élève peut le couper pour lui, jamais l'activer. Voix de synthèse **installées sur le poste** (français
+  seulement, aucune requête réseau) ; sans voix française, le terminal reste muet et le texte suffit (il est toujours
+  affiché). À essayer avec un casque avant la séance.
 
 ## Vue « animation à questions » (scène isométrique, arrêt, question) — `core/types/animation.js`
 
@@ -1346,6 +1380,14 @@ panneau, flèches et textes au sol, repères de profondeur ; `zone` au sol et `q
 masse » du Plan d'entrepôt (ci-dessus). `core/iso.js` porte aussi les objets du **quai iso** (façade, camion porteur, cabine, cale, butoirs,
 niveleur, lampe, bac de rétention à huit fûts, `boiteEcran` pour les zones de clic) : ils sont décrits dans « Le quai iso » ;
 `dessinerChariotFrontal` y sert aussi, à l'échelle du quai (options `chargeSvg`, `coupe`, `gilet`).
+Depuis le chantier D-7 (lot 2, 12/10/2026), la section « l'allée de picking » (unité : le mètre) : `futDebout` (20 L ou
+30 L, 39,5 cm de diamètre, bande de marque, `abime` = cabossé, marqué `data-iso-avarie`), `casier` (12 bouteilles d'un
+litre, plein ou `vide`), `traveePicking` (tiroir coulissant en N1, N2-N3 vides, côté A ou B, `voile`, et l'**étiquette de
+lisse** avec le code, dessinée seulement si la vue la demande), `volumeTravee` (la zone de survol et de clic),
+`paletteClient` (1,20 × 0,80, 6 cases, piles, `film` en tours, `etiquettes` par côté, `attrsCase`) ; `personne` prend
+`casque` et `terminal`. Teintes **par nom** (`TEINTES_FUT` : or, bleu, rouge, cuivre, gris ; `TEINTES_CAPSULE` : bleu,
+jaune, rouge, gris), **sans vert** ; un nom inconnu est refusé. Page d'essai `outils/essai-kit-iso.html` ; tests : bloc
+`animation`.
 
 **Un objet qui manque** (camion, transpalette, rack, quai…) : l'écrire dans la section 7 du brief de la séance
 (« objets à ajouter au kit » : ce qu'on doit voir, les gestes, une image de référence) ; un chantier moteur l'ajoute à
