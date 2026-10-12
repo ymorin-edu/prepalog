@@ -1783,6 +1783,15 @@ ${so.phrase}` : ''}`)}"
         </div>
       </section>
       <section class="panneau">
+        <h2>Son du terminal vocal</h2>
+        <p class="note">Le terminal vocal (inventaire, préparation) <strong>affiche toujours le texte</strong>. Cochez pour qu'il le
+          <strong>lise aussi à voix haute</strong> chez les élèves de ce groupe : prévoyez des casques. Coupé par défaut. L'élève peut
+          le couper pour lui, jamais l'activer. La voix est celle installée sur le poste (rien n'est téléchargé) ; sans voix française
+          sur le poste, le terminal reste muet.</p>
+        <label class="choix"><input type="checkbox" id="sonTerminal" ${g.sonTerminal === true ? 'checked' : ''}>
+          <span>Son activé pour le groupe <strong>${ech(g.nom)}</strong></span></label>
+      </section>
+      <section class="panneau">
         <h2>Bases partagées${demi ? ` — ${ech(nomD)}` : ''}</h2>
         ${demi ? `<p class="note">Les bases de classe (portée groupe) ci-dessous sont celles de ${ech(nomD)} :
           chaque demi-groupe a la sienne, les élèves sans demi-groupe gardent celle de la classe.</p>` : ''}
@@ -1803,6 +1812,15 @@ ${so.phrase}` : ''}`)}"
       <section class="panneau" id="reponsesClasse" hidden></section>`;
     remplirReponsesClasse(z.querySelector('#reponsesClasse'), g, metas);
 
+    z.querySelector('#sonTerminal').addEventListener('change', async (ev) => {
+      const c = ev.target, actif = c.checked;
+      try {
+        await B.majGroupe(g.id, { sonTerminal: actif });
+        g.sonTerminal = actif;
+        groupes = await B.groupesDuProf(ctx.profil.uid);
+        toast(actif ? 'Son du terminal activé pour ce groupe.' : 'Son du terminal coupé pour ce groupe.');
+      } catch (e) { c.checked = !actif; toast("Le réglage du son n'a pas pu être enregistré."); }
+    });
     z.querySelector('#btnCodeStock').addEventListener('click', async () => {
       const codeStock = z.querySelector('#codeStock').value.trim();
       try {

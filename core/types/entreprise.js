@@ -1877,6 +1877,8 @@ export function creerEntreprise(U) {
       const apiEntrepot = () => ({
         sauver, estProf, signal, temps: tempsPlanning(),
         redessiner: dessinerVue,
+        // Le son du terminal vocal : le réglage du groupe, posé par l'enseignant seul (coupé par défaut).
+        sonTerminal: () => ctx.sonTerminal === true,
         // Après la validation du rangement (mode masse) : le menu aussi, pour la fiche qui l'attend (ENT-6.5).
         redessinerTout: dessiner,
         copieRendue: rendue,

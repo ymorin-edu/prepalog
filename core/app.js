@@ -511,6 +511,8 @@ async function vueActivite(aid, avant) {
     // Code qui déverrouille la vue d'ensemble du stock dans un environnement d'entreprise :
     // l'enseignant le donne au moment qu'il choisit dans la séance.
     codeStock: objGroupe?.codeStock || null,
+    // Le son du terminal vocal (ENT-6.6, 6.7) : réglé par l'enseignant seul, par groupe, coupé par défaut.
+    sonTerminal: objGroupe?.sonTerminal === true,
     // La fiche d'intention du scénario (`ENTREPRISES`, activites/index.js). Transmise telle
     // quelle : c'est la vue qui décide de ne la montrer qu'à l'enseignant.
     intention: intentionDe(m.meta.code),

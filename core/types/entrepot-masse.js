@@ -662,7 +662,7 @@ export function creerMasse(P, M, opts, h) {
       return `<div class="pe pm${M.comptage ? ' pm-comptage' : ''}" data-entrepot="${ech(P.id)}" data-pe-mode="masse"${M.comptage ? ' data-pm-comptage' : ''} data-pe-temps="${R.t}" data-pm-ouvert="${c ? ech(c.id) : lit ? 'litiges' : ''}" data-pm-valide="${!!e.valide}">
         <div class="pm-haut"><div class="pe-perso pm-perso"><b>${ech([per.nom, per.role].filter(Boolean).join(', '))}${per.date ? ` · ${ech(per.date)}` : ''}</b>${txt}</div>
           <div class="pm-act">${M.comptage ? '' : actions(e, R)}${regles}</div></div>
-        <div class="pm-jeu${TERM ? ' pm-avec-term' : ''}"><aside class="pm-cote">${TERM ? TERM.html(e.terminal, { estProf: !!(api && api.estProf) })
+        <div class="pm-jeu${TERM ? ' pm-avec-term' : ''}"><aside class="pm-cote">${TERM ? TERM.html(e.terminal, { estProf: !!(api && api.estProf), son: !!(api && api.sonTerminal && api.sonTerminal()) })
           : M.comptage ? '' : `<div class="pm-cartes">${Object.values(M.pal).map((p) => carte(e, p, R)).join('')}</div>`}
             <div class="pm-consigne" data-pm-consigne>${consigne(e, R)}</div>
             <div class="pe-msg pm-msg ${ui.msgType ? `pe-${ui.msgType}` : ''}" data-pm-msg role="status">${ui.msg}</div>${prof}</aside>

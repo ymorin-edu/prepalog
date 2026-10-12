@@ -1583,7 +1583,7 @@ const monterC = (o = {}) => pm.evaluate(async (o) => {
     meta: { id: 'essai-entrepot', code: 'ESSAI', titre: 'Essai', portee: 'eleve', immersif: true, temps: 'guidage' },
     profil: { prenom: 'Lea', nom: 'Test', role: o.role || 'eleve', uid: 'u-test' },
     jeu: { etat: () => db, sauver: () => {} },
-    enregistrer: () => {}, quitter: () => {}, codeStock: 'ABC', lireScore: async () => null,
+    enregistrer: () => {}, quitter: () => {}, codeStock: 'ABC', lireScore: async () => null, sonTerminal: !!o.son,
   });
   document.querySelector('#pmTest .ent-nav[data-vue="entrepot"]').click();
 }, o);
@@ -1887,6 +1887,89 @@ await v('Terminal : case vide → rien ; lettres → « des chiffres » ; Répè
   await pm.fill(`${VT} [data-vt-champ]`, '8');
   await ouvrirC('M02');
   egal(await pm.$eval(`${VT} [data-vt-champ]`, (x) => x.value), '8', 'saisie gardée');
+});
+
+// Le SON (chantier D-6, lot 3) : une fausse synthèse vocale remplace celle du navigateur et note ce qu'on lui fait dire.
+// `voix` : les voix qu'elle prétend avoir installées.
+const fausseVoix = (voix) => pm.evaluate((voix) => {
+  window.__dit = []; window.__coupe = 0;
+  const synth = { getVoices: () => voix, speak: (u) => window.__dit.push(u.text), cancel: () => { window.__coupe++; } };
+  Object.defineProperty(window, 'speechSynthesis', { value: synth, configurable: true });
+  window.SpeechSynthesisUtterance = function (t) { this.text = t; };
+}, voix);
+const dit = () => pm.evaluate(() => window.__dit.slice());
+const FR_LOCALE = { name: 'Hortense', lang: 'fr-FR', localService: true };
+
+await v('Son : le choix de la voix (française, installée sur le poste) et le texte dit', async () => {
+  const r = await pm.evaluate(async () => {
+    const T = await import('/core/types/terminal.js');
+    const lignes = [{ id: 'M01', lieu: 'Couloir M01.', code: '47', question: 'Q1' }, { id: 'M02', lieu: 'Couloir M02.', code: '82', question: 'Q2' }];
+    const t = T.terminalNeuf();
+    const avant = T.texteParle(t, lignes);
+    T.repondreTerminal(t, lignes, '47'); const code = T.texteParle(t, lignes);
+    T.repondreTerminal(t, lignes, '15'); const compris = T.texteParle(t, lignes);
+    T.repondreTerminal(t, lignes, 'abc'); const refus = T.texteParle(t, lignes);
+    T.repondreTerminal(t, lignes, '99'); const faux = T.texteParle(t, lignes);
+    return { avant, code, compris, refus, faux, choix: [
+      T.choisirVoix([{ lang: 'fr-FR', localService: false, name: 'réseau' }]),
+      T.choisirVoix([{ lang: 'en-US', localService: true, name: 'anglais' }]),
+      T.choisirVoix([]), T.choisirVoix(undefined),
+      (T.choisirVoix([{ lang: 'fr-CA', localService: true, name: 'ca' }, { lang: 'fr-FR', localService: true, name: 'fr' }, { lang: 'fr-FR', localService: false, name: 'web' }]) || {}).name,
+      (T.choisirVoix([{ lang: 'fr-BE', localService: true, name: 'be' }]) || {}).name,
+    ] };
+  });
+  egal(r.avant, 'Couloir M01. Code de contrôle ?', 'première phrase seule');
+  egal(r.code, 'Q1', 'code juste : la question, rien d’autre');
+  egal(r.compris, 'Compris : 15. Couloir M02. Code de contrôle ?', 'Compris + la suite');
+  egal(r.refus, 'Je n’ai pas compris. Réponds avec des chiffres. Couloir M02. Code de contrôle ?', 'refus + la phrase attendue');
+  egal(r.faux, 'Code faux. Vérifie le lieu. Couloir M02. Code de contrôle ?', 'code faux');
+  egal(r.choix, [null, null, null, null, 'fr', 'be'], 'jamais une voix du réseau, jamais une autre langue ; fr-FR préférée');
+});
+
+await v('Son : coupé par défaut — bouton absent, rien n’est dit, même avec une voix installée', async () => {
+  await monterC();
+  await pm.waitForSelector(VT);
+  await fausseVoix([FR_LOCALE]);
+  vrai(!(await presentM('[data-vt-son]')), 'aucun bouton pour activer le son');
+  vrai(/sans son/.test(await texteM('.vt-son')), 'l’en-tête dit « sans son »');
+  await repondreC('47'); await repondreC('15');
+  await pm.click(`${VT} [data-vt-repete]`);
+  egal(await dit(), [], 'rien n’est dit');
+});
+
+await v('Son : activé par l’enseignant — la phrase est dite, Répète la redit, l’élève peut couper et remettre, jamais plus que l’enseignant', async () => {
+  await monterC({ son: true });
+  await pm.waitForSelector(VT);
+  await fausseVoix([{ name: 'Web', lang: 'fr-FR', localService: false }, FR_LOCALE]);
+  egal((await texteM('.vt-son')).trim(), 'Couper le son', 'le bouton');
+  await repondreC('47');
+  egal(await dit(), ['Heineken fût 30 L. Lot S20. Combien de fûts ?']);
+  await repondreC('15');
+  egal((await dit()).pop(), 'Compris : 15. Couloir M02. Code de contrôle ?');
+  await pm.click(`${VT} [data-vt-repete]`);
+  egal((await dit()).pop(), 'Couloir M02. Code de contrôle ?', 'Répète redit la phrase en cours');
+  const avant = (await dit()).length;
+  await pm.click(`${VT} [data-vt-son]`);
+  egal((await texteM('.vt-son')).trim(), 'Remettre le son');
+  vrai(await pm.evaluate(() => window.__coupe > 0), 'la phrase en cours est coupée');
+  vrai(await pm.evaluate((s) => document.activeElement === document.querySelector(s), `${VT} [data-vt-son]`), 'le focus reste sur le bouton');
+  await repondreC('82'); await pm.click(`${VT} [data-vt-repete]`);
+  egal((await dit()).length, avant, 'coupé par l’élève : plus rien n’est dit');
+  await pm.click(`${VT} [data-vt-son]`);
+  egal((await texteM('.vt-son')).trim(), 'Couper le son');
+  vrai((await dit()).length === avant + 1, 'remis : la phrase en cours est redite');
+});
+
+await v('Son : aucune voix française installée → texte seul, sans message ni erreur', async () => {
+  await monterC({ son: true });
+  await pm.waitForSelector(VT);
+  await fausseVoix([{ name: 'Web', lang: 'fr-FR', localService: false }, { name: 'Zira', lang: 'en-US', localService: true }]);
+  await repondreC('47'); await repondreC('15');
+  egal(await dit(), []);
+  vrai(!/voix|erreur|impossible/i.test(await texteM('.vt-boitier')), 'aucun message à l’élève');
+  await pm.evaluate(() => { delete window.SpeechSynthesisUtterance; });
+  await pm.click(`${VT} [data-vt-repete]`);
+  egal(await actuC(), 'Couloir M02. Code de contrôle ?', 'le terminal continue sans API de voix');
 });
 
 await v('Terminal : déclaration fautive refusée au chargement, avec un message clair', async () => {

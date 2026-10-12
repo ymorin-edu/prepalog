@@ -389,6 +389,9 @@
 .vt-tete{ display:flex; align-items:center; gap:7px; font-size:.72rem; letter-spacing:.03em; color:#aeb7be; margin-bottom:6px }
 .vt-led{ width:9px; height:9px; border-radius:50%; background:#e8ecef; box-shadow:0 0 5px rgba(232,236,239,.7); flex:none }
 .vt-son{ margin-left:auto; border:1px solid #5a636a; border-radius:4px; padding:0 6px; white-space:nowrap }
+button.vt-son-btn{ background:transparent; color:inherit; font:inherit; cursor:pointer }
+button.vt-son-btn:hover{ background:#323a40 }
+button.vt-son-btn:focus-visible{ outline:3px solid #ffe08a; outline-offset:1px }
 .vt-ecran{ background:#14171a; border-radius:8px; padding:8px 10px; min-height:9.5em; font:.9rem/1.45 "IBM Plex Mono", ui-monospace, Consolas, monospace; color:#d5dbe0; overflow-wrap:anywhere }
 .vt-passe{ color:#a3adb4; font-size:.8rem }
 .vt-moi{ color:#ffe08a; font-size:.8rem }

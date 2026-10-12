@@ -12,7 +12,9 @@
 // « <question> » → un nombre → « Compris : n. » → la ligne suivante. L'ordre est IMPOSÉ, pas de retour sur une ligne validée ;
 // une case vide ne fait rien (0 est une réponse, rien n'en est pas une). Après la dernière ligne : `textes.fin`.
 // Le terminal ne juge RIEN : il range les réponses ; les jalons de la vue hôte les comparent à ce qui est vrai.
-// Le texte est TOUJOURS affiché. Le son (lot 3) passera par `parler()` : il ne parle pas encore.
+// Le texte est TOUJOURS affiché. Le SON (lot 3) : réglage de l'enseignant seul, par groupe (« Conduite de séance », coupé par
+// défaut, `ctx.sonTerminal`) ; l'élève peut le couper pour lui, jamais l'activer. Voix = synthèse du navigateur, voix installées
+// sur le poste seulement (`localService`, langue fr) : aucune requête réseau. Pas de voix → texte seul, sans message.
 //
 // L'état, rangé par la vue hôte dans la base de l'élève (cloisonné par séance) :
 //   { i: n° de la ligne en cours, phase: 'code' | 'reponse', reponses: { M01: 15 }, codesFaux: { M01: 2 },
@@ -30,6 +32,22 @@ const TEXTES = {
   compris: (n) => `Compris : ${n}.`,
   fin: 'Terminé.',
 };
+
+// Parmi les voix du navigateur, une voix française installée sur le poste (jamais une voix qui passe par le réseau), ou null.
+export function choisirVoix(voix) {
+  const l = Array.from(voix || []).filter((v) => v && v.localService === true && /^fr([-_]|$)/i.test(v.lang || ''));
+  return l.find((v) => /^fr[-_]fr$/i.test(v.lang)) || l[0] || null;
+}
+
+// Ce que le terminal DIT après une réponse : ses phrases depuis la dernière réponse de l'élève (« Compris : 15. », un refus),
+// puis la phrase qu'il attend maintenant. Sans réponse encore (ou « Répète ») : la phrase en cours seule.
+export function texteParle(T, lignes, textes = {}) {
+  let k = T.journal.length;
+  while (k > 0 && T.journal[k - 1].q !== 'e') k--;
+  const dits = k > 0 ? T.journal.slice(k).filter((j) => j.q === 't').map((j) => j.x) : [];
+  dits.push(phraseTerminal(T, lignes, textes));
+  return dits.join(' ');
+}
 
 // La phrase que le terminal dit maintenant (celle qu'on attend de l'élève), ou la phrase de fin.
 export function phraseTerminal(T, lignes, textes = {}) {
@@ -68,12 +86,26 @@ export function repondreTerminal(T, lignes, saisie, textes = {}, h = Date.now())
 
 // Le panneau. `lignes`, `textes` : de la vue hôte ; `titre` : la deuxième moitié de l'en-tête (« Inventaire tournant »).
 export function creerTerminal({ lignes, textes = {}, titre = '' }) {
-  const ui = { saisie: '', flash: false, focus: false };
+  const ui = { saisie: '', flash: false, focus: false, coupe: false, sonOk: false, focusSon: false };
   const VU = 5;     // les dernières phrases échangées, au-dessus de la phrase en cours
-  // Le son (lot 3) : rien pour l'instant, le texte suffit (le terminal se comprend sans son, brief §10).
-  const parler = () => {};
+  // Le son : seulement si l'enseignant l'a activé pour le groupe (`ui.sonOk`, relu à chaque dessin) et que l'élève ne l'a pas coupé.
+  // Une phrase qui en remplace une autre la coupe. Toute erreur du navigateur est avalée : le texte suffit.
+  const parler = (texte) => {
+    if (!ui.sonOk || ui.coupe || typeof window === 'undefined') return;
+    try {
+      const s = window.speechSynthesis;
+      if (!s || typeof SpeechSynthesisUtterance !== 'function') return;
+      const v = choisirVoix(s.getVoices());
+      if (!v) return;
+      s.cancel();
+      const u = new SpeechSynthesisUtterance(texte);
+      u.voice = v; u.lang = v.lang;
+      s.speak(u);
+    } catch (e) { /* texte seul */ }
+  };
   return {
-    html(T, { estProf = false } = {}) {
+    html(T, { estProf = false, son = false } = {}) {
+      ui.sonOk = !!son;
       const fini = !!T.fin;
       const passe = T.journal.slice(-VU).map((j) => (j.q === 'e'
         ? `<div class="vt-moi">› ${ech(j.x)}</div>`
@@ -88,7 +120,9 @@ export function creerTerminal({ lignes, textes = {}, titre = '' }) {
         <div data-vt-faux>Codes faux (trace, non notée) : ${faux.length ? faux.map(([id, n]) => `${ech(id)} ×${n}`).join(' · ') : 'aucun'}</div></details>`;
       return `<div class="vt" data-terminal data-vt-ligne="${T.i}" data-vt-phase="${fini ? 'fin' : T.phase}">
         <div class="vt-boitier" role="group" aria-label="Terminal vocal">
-          <div class="vt-tete"><span class="vt-led" aria-hidden="true"></span>TERMINAL VOCAL${titre ? ` · ${ech(titre)}` : ''}<span class="vt-son">sans son</span></div>
+          <div class="vt-tete"><span class="vt-led" aria-hidden="true"></span>TERMINAL VOCAL${titre ? ` · ${ech(titre)}` : ''}${son
+            ? `<button type="button" class="vt-son vt-son-btn" data-vt-son aria-pressed="${!ui.coupe}">${ui.coupe ? 'Remettre le son' : 'Couper le son'}</button>`
+            : '<span class="vt-son">sans son</span>'}</div>
           <div class="vt-ecran" aria-live="polite">${passe}${actu}</div>
           <form class="vt-saisie" data-vt-form autocomplete="off">
             <input data-vt-champ inputmode="numeric" autocomplete="off" maxlength="6" value="${ech(fini ? '' : ui.saisie)}"
@@ -111,7 +145,7 @@ export function creerTerminal({ lignes, textes = {}, titre = '' }) {
         ui.focus = true;
         if (!evt) { champ.focus({ preventScroll: true }); return; }
         ui.saisie = '';
-        parler(phraseTerminal(T, lignes, textes));
+        parler(texteParle(T, lignes, textes));
         api.sauver();
         if (api.signal) api.signal(evt, l);
         api.redessiner();
@@ -121,6 +155,15 @@ export function creerTerminal({ lignes, textes = {}, titre = '' }) {
         parler(phraseTerminal(T, lignes, textes));
         api.redessiner();
       });
+      // L'élève coupe le son pour lui (et le remet tant que l'enseignant le laisse actif) ; le bouton n'existe pas sinon.
+      const bSon = el.querySelector('[data-vt-son]');
+      if (bSon) bSon.addEventListener('click', () => {
+        ui.coupe = !ui.coupe; ui.focusSon = true;
+        try { if (ui.coupe && window.speechSynthesis) window.speechSynthesis.cancel(); } catch (e) { /* rien */ }
+        if (!ui.coupe) parler(phraseTerminal(T, lignes, textes));
+        api.redessiner();
+      });
+      if (ui.focusSon) { ui.focusSon = false; if (bSon) bSon.focus({ preventScroll: true }); return; }
       // Le focus revient au champ après une réponse (on enchaîne les lignes au clavier), jamais en arrivant sur l'écran.
       if (ui.focus) {
         ui.focus = false;
