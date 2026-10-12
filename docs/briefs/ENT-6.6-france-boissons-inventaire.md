@@ -6,7 +6,7 @@
 > Lis docs/EN-COURS.md puis docs/briefs/ENT-6.6-france-boissons-inventaire.md. Commence par l'état des lieux des demandes au moteur du §7 (lecture seule) : dis-moi ce qui existe déjà (mode stockage de masse, écran Inventaire, fiche à remplir) et propose un découpage en lots. N'implémente la séance qu'une fois les demandes livrées. Annonce la durée avant de commencer et dis-moi si un point du brief contredit le code.
 > ```
 
-**Statut** : à implémenter *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
+**Statut** : à valider par Tristan *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
 **Date du brief** : 05/10/2026
 **Conversation d'origine** : Cowork (Opus) ; fiches projet `claude/prepalog-2de-s2-deroule.md` (décisions 38 à 41) et
 `claude/prepalog-2de-s2-cadrage.md` (décision 7). Modèles : **ENT-6.5** (vue 3D du stockage de masse, même plan) et **ENT-2.2 / 2.3
@@ -274,9 +274,46 @@ M04 se résout en trouvant la palette en M02, pas en corrigeant le stock ; la s�
 
 ## Compte rendu *(rempli par Claude Code à la livraison)*
 
-- **Fichiers créés / modifiés** :
+*(12/10/2026, Claude Code, Opus)*
+
+- **Fichiers créés / modifiés** : `activites/france-boissons-inventaire.js` (+ une ligne dans `activites/index.js`) ;
+  `contenus/france-boissons-ent66.js` et `contenus/france-boissons-ent66-donnees.js` ; `contenus/questions/ENT-6.6.js` ;
+  `contenus/corriges/ENT-6.6.js` ; `contenus/images/france-boissons/materiel-terminal-vocal.svg` (copie octet pour octet du dessin de
+  Cowork, ligne dans `CREDITS.md`) ; `outils/test/france-boissons.mjs` (section ENT-6.6, 15 cas). **Moteur, deux lignes** :
+  `core/types/inventaire.js` et `core/types/entreprise.js` — la validation de l'inventaire redessine aussi le menu (sinon « Compte rendu »
+  n'apparaissait qu'après un autre clic ; même correctif que pour le rangement d'ENT-6.5 le 11/10).
 - **Écarts par rapport au brief** (et pourquoi) :
+  - **Barème** : 10 jalons pondérés sur 16 + 3 questions notées (4) = 20 (règle du 10/10), poids **validés par Tristan le 12/10** :
+    compter 8 (M01 2, M02 2, M04 1,5, M08 1,5, M03-M05-M06 1), écarts et décisions 5,5 (écarts 1,5, M04 2,5, M01 1,5), compte rendu 2,5
+    (vides 1,5, taux 1) ; questions : aveugle 1, codes faux 1,5, M04 1,5.
+  - **Questions au fil** (§4 bis, toutes gardées) : énoncés fixes (le moteur ne glisse pas « {n} » dans une question). La question M04
+    (n° 2) arrive à la **première case du compte rendu** : l'écran Inventaire ne publie pas encore la décision d'une ligne ; corrigée au
+    bilan comme prévu. Les n° 1 et 3 forment le **point d'étape** de fin de comptage (Nadia puis Inès), qui garde l'inventaire fermé.
+  - **Étiquettes « référence · lot » à droite de la pile** dans le couloir ouvert (choix du lot 1 de D-6, validé le 11/10), pas au sommet.
+  - **Jalon 9** : il vérifie les **deux** cases (fûts manquants et euros), calculées sur le comptage de l'élève.
+  - **Domaines** écrits `D2, D3, D5`, compétence `C1.6` : même format que les autres séances France Boissons (sans préfixe).
 - **Décisions prises en route** :
-- **Tests** :
-- **Commits** :
+  - Écran Inventaire en `correction: 'aucune'` : rien n'est refusé ni corrigé avant le bilan (sinon l'écran refusait un écart faux et
+    le jalon 6 était acquis d'office).
+  - Une ligne **sans écart sur le comptage de l'élève** n'a pas de décision possible : la décision attendue (M01, M04) est alors **fausse**
+    (« décision absente = faux », brief §5). Ex. : M01 compté 16 → jalons 1 et 8 faux, jalons 6 et 10 justes sur ses comptages.
+  - Document **« Mon inventaire »** à côté du compte rendu, rempli **seulement après la validation** : ses comptages et le stock du
+    logiciel, pour compter les lignes justes (sans marque juste / faux). Avant : un message, aucun chiffre.
+  - Le stock du logiciel est **calculé** depuis le stock de départ d'ENT-6.5 et ses 4 palettes rangées à leur bonne place ; le stock vu
+    jeudi est déclaré (construit), avec les trois écarts du brief.
+  - Le terminal dit « Heineken, fût de 30 litres. Lot S20. Combien de fûts ? » (formule `voix`, meilleure à l'oral que « fût 30 L »).
+  - « Le droit » : L1222-3 et L1222-4 relus mot pour mot sur code.travail.gouv.fr ; L123-12 et L541-1-1 (réemploi) d'après plusieurs
+    sources concordantes, **Légifrance bloqué : à relire avant ouverture** ; arrêté du 6 février 2026 : montants seulement.
+- **Tests** : bloc `france-boissons` 152/152, suite entière 1250/1250 (en parallèle) ; 15 cas ENT-6.6 (déclaration, livraison, données, ouverture et fuite du stock du logiciel,
+  inaction 0/20, parcours juste 20/20 avec un code faux, pas de double peine, pièges M02 / M08 / écart recopié, décisions, fiche, questions,
+  son, « Avant de commencer » sur 300 graines, droit et corrigé, enseignant). Éprouvés par 7 sabotages (fuite de « Mon inventaire »,
+  point d'étape qui ne ferme rien, compte rendu jugé sur le bon comptage, décision toujours juste, compte rendu sans condition, menu non
+  redessiné, case des fûts non vérifiée) : chacun fait tomber son cas.
+- **Commits** : voir `git log` (« ENT-6.6 : inventaire tournant à la voix… »).
 - **Reste ouvert** :
+  - **Moteur, à trancher** : (1) le menu range les fiches **avant** la zone de masse (« Compte rendu » au-dessus de « Zone de masse » ;
+    déjà le cas pour « Entrée en stock » en ENT-6.5) ; (2) l'écran Inventaire **vouvoie** et dit « système » (« Vos comptages », « compté −
+    système ») : textes du moteur, écrits pour Cdiscount ; (3) l'écran Inventaire ne publie aucun geste (la question M04 ne peut pas
+    arriver à la décision elle-même).
+  - Essai à l'écran par Tristan (avec un casque pour le son) ; trame courte et question d'éco-droit RSE par Cowork, après validation.
+  - Textes L123-12 et L541-1-1 à relire sur Légifrance.

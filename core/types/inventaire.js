@@ -456,7 +456,8 @@ export function creerInventaire(INV, CATALOGUE) {
     e.valide = Date.now();
     api.sauver();
     api.toast(passes.length ? `Inventaire validé : ${passes.length} ajustement${passes.length > 1 ? 's' : ''} passé${passes.length > 1 ? 's' : ''}.` : 'Inventaire validé.');
-    api.redessiner();
+    // Le menu aussi (une fiche peut attendre la validation, ENT-6.6) ; sans l'environnement d'entreprise, l'écran seul.
+    (api.redessinerTout || api.redessiner)();
   }
 
   return {

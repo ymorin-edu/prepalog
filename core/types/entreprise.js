@@ -1785,6 +1785,8 @@ export function creerEntreprise(U) {
       const apiInventaire = () => ({
         sauver, toast, db,
         redessiner: dessinerVue,
+        // Après la validation : le menu aussi, pour la fiche qui l'attend (ENT-6.6, comme le rangement d'ENT-6.5).
+        redessinerTout: dessiner,
         mouvements: () => db.moves,
         ajuster(sku, delta, origine) {
           if (delta < 0) sortirFifo(sku, -delta, 'Ajustement inventaire', origine);
