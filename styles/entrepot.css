@@ -410,5 +410,10 @@ button.vt-son-btn:focus-visible{ outline:3px solid #ffe08a; outline-offset:1px }
 .vt-btn:hover:not(:disabled){ background:#48525a }
 .vt-btn:focus-visible{ outline:3px solid #ffe08a; outline-offset:1px }
 .vt-btn:disabled{ opacity:.4; cursor:default }
-.vt-mots{ display:flex; gap:5px; margin-top:6px }
+.vt-mots{ display:flex; flex-wrap:wrap; gap:5px; margin-top:6px }
 .vt-mots .vt-btn{ border-width:1px; border-color:#6b757c; background:#323a40; font-size:.8rem; padding:5px 10px }
+/* « Ce que le terminal sait de toi » (préparation, D-7 lot 1) : un encadré de l'écran, aux teintes du thème, pas du boîtier. */
+.vt-bilan{ background:var(--panneau); border:1px solid var(--filet); border-radius:8px; padding:10px 14px; color:var(--encre) }
+.vt-bilan h3{ margin:0 0 6px; font-size:1rem }
+.vt-bilan ul{ margin:0; padding-left:1.2em }
+.vt-bilan p{ margin:8px 0 0; color:var(--encre-douce) }

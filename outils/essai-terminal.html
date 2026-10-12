@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Essai — Terminal de préparation (Prepalog)</title>
+<!-- Page d'ESSAI du terminal vocal en préparation (`core/types/terminal.js`, chantier D-7 lot 1), sur les lignes d'ENT-6.7
+     (`outils/essai-terminal.js`). L'allée et les palettes viendront aux lots 3 et 4 : ici, un bouton « J'ai posé » tient
+     lieu de pose. Elle n'est liée nulle part et rien n'y est enregistré. Ouvrir avec `lancer.bat`, puis
+     http://localhost:8000/outils/essai-terminal.html -->
+<base href="../">
+<link rel="icon" href="./styles/logo.png">
+<link rel="stylesheet" href="./styles/polices.css">
+<link rel="stylesheet" href="./styles/base.css">
+<link rel="stylesheet" href="./styles/entrepot.css">
+<style>
+  .essai-reglages{ background:#fff7d6; border-bottom:1px solid #e8d48a; padding:8px 16px; font:14px/1.5 sans-serif; color:#3b3200 }
+  .essai-reglages label{ display:inline-block; margin:2px 16px 2px 0; white-space:nowrap; font-weight:400; color:#3b3200 }
+  .essai-reglages button, .essai-reglages input{ width:auto }
+  .essai-jeu{ display:grid; grid-template-columns:minmax(0,1fr) 300px; gap:16px; padding:16px; max-width:1100px }
+  .essai-pose{ border:2px dashed var(--filet); border-radius:10px; padding:14px; color:var(--encre) }
+  .essai-pose p{ margin:0 0 10px }
+  @media (max-width:760px){ .essai-jeu{ grid-template-columns:minmax(0,1fr) } }
+</style>
+</head>
+<body>
+<form class="essai-reglages" id="reglages">
+  <b>Page d'essai du terminal (D-7, lot 1)</b> — chaque changement repart de zéro :
+  <label><input type="checkbox" name="son"> Son activé par l'enseignant</label>
+  <label><input type="checkbox" name="prof"> Voir comme l'enseignant</label>
+  <button type="button" id="recommencer">Recommencer</button>
+</form>
+<div class="essai-jeu">
+  <div class="essai-pose" id="pose"></div>
+  <div id="terminal"></div>
+</div>
+<script type="module">
+import { creerTerminal, terminalNeuf, bilanTerminal, htmlBilanTerminal } from './core/types/terminal.js';
+import { LIGNES, MOTS, TEXTES, PHRASE_BILAN } from './outils/essai-terminal.js';
+
+const f = document.querySelector('#reglages');
+let T, TERM;
+function dessiner() {
+  const zt = document.querySelector('#terminal'), zp = document.querySelector('#pose');
+  zt.innerHTML = TERM.html(T, { estProf: f.prof.checked, son: f.son.checked });
+  TERM.brancher(zt, T, { sauver: () => {}, redessiner: dessiner });
+  const attend = T.phase === 'pose' && !T.fin;
+  zp.innerHTML = T.fin
+    ? htmlBilanTerminal(bilanTerminal(T, LIGNES), PHRASE_BILAN)
+    : `<p>Ici viendront l'allée de picking (lot 3) et les deux palettes client (lot 4).</p>
+       <button type="button" class="btn" data-essai-poser ${attend ? '' : 'disabled'}>J'ai posé la marchandise</button>`;
+  const b = zp.querySelector('[data-essai-poser]');
+  if (b) b.addEventListener('click', () => { if (TERM.poser(T).evt) dessiner(); });
+}
+function neuf() { T = terminalNeuf(); TERM = creerTerminal({ lignes: LIGNES, textes: TEXTES, titre: 'Préparation', mots: MOTS }); dessiner(); }
+f.addEventListener('change', dessiner);
+document.querySelector('#recommencer').addEventListener('click', neuf);
+neuf();
+</script>
+</body>
+</html>

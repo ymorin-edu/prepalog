@@ -2114,6 +2114,128 @@ await v('Inventaire : pas de double peine (M01 compté 16 : écart 0 juste) ; un
   egal(r, { m01: false, ecartsOk: false }, 'M01 remis en place : faux ; écart de M08 non saisi : écarts faux');
 });
 
+// ---------------------------------------------------------------------------------------------------------------------
+// Le TERMINAL en PRÉPARATION (chantier D-7, lot 1, 12/10/2026 ; brief ENT-6.7 §4 étape 1, §7.1, §8). Les lignes d'essai :
+// `outils/essai-terminal.js` (celles du brief). Attendus écrits à la main : codes 36 · 24 · 49 · 83 · 17 ; prises 3 · 2 · 2 · 6 ;
+// « Abîmé 1 » sur L3 → L4 (Affligem S24) de 1 ; « Manquant 1 » → L4 de 1 ; « Emplacement vide » → L4 de 2, L3 à 0.
+const jouerPrep = (gestes) => pm.evaluate(async (gestes) => {
+  const K = await import('/core/types/terminal.js');
+  const D = await import('/outils/essai-terminal.js');
+  const T = K.terminalNeuf();
+  let h = 1000;
+  const evts = gestes.map((g) => {
+    h += 30000;
+    if (g === 'POSE') return K.poseTerminal(T, D.LIGNES, h);
+    if (g.startsWith('MOT:')) return K.motTerminal(T, D.LIGNES, D.MOTS.find((m) => m.id === g.slice(4)), D.TEXTES, h);
+    return K.repondreTerminal(T, D.LIGNES, g, D.TEXTES, h, D.MOTS);
+  });
+  const L = K.lignesDuTerminal(D.LIGNES, T);
+  return { evts, T: JSON.parse(JSON.stringify(T)), ids: L.map((l) => l.id), prends: L.map((l) => l.prends),
+    phrase: K.phraseTerminal(T, D.LIGNES, D.TEXTES), refus: T.journal.filter((j) => j.ko).map((j) => j.x),
+    bilan: K.bilanTerminal(T, D.LIGNES), possible: K.motPossible(T, D.LIGNES) };
+}, gestes);
+const DEBUT = ['36', '3', 'POSE', '24', '2', 'POSE', '49'];
+
+await v('Terminal, préparation : le parcours du brief (« Abîmé 1 ») — ligne S24 ajoutée, attente de la pose, fin et bilan', async () => {
+  const r = await jouerPrep([...DEBUT, 'MOT:abime', '1', '1', 'POSE', '83', '1', 'POSE', '17', '6', 'POSE']);
+  egal(r.evts, ['code', 'pris', 'reponse', 'code', 'pris', 'reponse', 'code', 'mot', 'exception', 'pris', 'reponse', 'code', 'pris', 'reponse',
+    'code', 'pris', 'fin']);
+  egal(r.T.reponses, { L1: 3, L2: 2, L3: 1, 'L4': 1, L5: 6 });
+  egal(r.T.exceptions, { L3: { mot: 'abime', n: 1 } });
+  egal(r.ids, ['L1', 'L2', 'L3', 'L4', 'L5']);
+  egal(r.prends, [3, 2, 2, 1, 6]);
+  egal(r.phrase, 'Commande terminée : La Cabane à Malo. Filme et étiquette tes palettes.');
+  egal(r.refus, [], 'aucun refus');
+  const dits = r.T.journal.map((j) => j.x);
+  vrai(dits.includes('Abîmé') && dits.includes('Abîmé : combien ?') && dits.includes('Compris : 1 abîmé.') && dits.includes('Prends 1.'), dits.join(' | '));
+  vrai(dits.includes('Affligem Blonde, vingt litres, lot S24. Prends 1.'), 'la question de la ligne ajoutée dit la quantité signalée');
+  egal([r.bilan.lignes, r.bilan.codesFaux, r.bilan.duree, r.bilan.parHeure], [5, 0, 16 * 30000, 38], 'bilan : 5 lignes en 8 min');
+});
+
+await v('Terminal, préparation : moins sans mot et plus sont refusés (rien n’est rangé) ; la quantité juste passe, même sans mot (pas de ligne S24)', async () => {
+  const r = await jouerPrep(['36', '2', '4', '0', '3']);
+  egal(r.evts, ['code', 'refus', 'refus', 'refus', 'pris']);
+  egal(r.refus, ['Tu dois prendre 3. Si tu ne peux pas, dis Manquant, Abîmé ou Emplacement vide.', 'Trop. Prends 3.',
+    'Tu dois prendre 3. Si tu ne peux pas, dis Manquant, Abîmé ou Emplacement vide.']);
+  egal(r.T.reponses, { L1: 3 });
+  egal(r.phrase, 'Pose tes casiers.');
+  const s = await jouerPrep([...DEBUT, '2', 'POSE']);
+  egal([s.T.reponses.L3, s.T.exceptions, s.ids], [2, undefined, ['L1', 'L2', 'L3', 'L5']], 'le fût cabossé pris sans rien dire : pas de remplacement');
+  egal(s.phrase, 'Côté A, travée 04, niveau 1. Code de contrôle ?');
+});
+
+await v('Terminal, préparation : « Manquant 1 » → S24 de 1 ; « Emplacement vide » → S24 de 2, la ligne à 0 sans pose ; « combien ? » borné', async () => {
+  const m = await jouerPrep([...DEBUT, 'MOT:manquant', '0', '3', '1', '1', 'POSE']);
+  egal(m.evts.slice(7), ['mot', 'refus', 'refus', 'exception', 'pris', 'reponse']);
+  egal(m.refus, ['Réponds un nombre de 1 à 2.', 'Réponds un nombre de 1 à 2.']);
+  egal([m.T.exceptions, m.T.reponses.L3, m.prends[3]], [{ L3: { mot: 'manquant', n: 1 } }, 1, 1]);
+  const vd = await jouerPrep([...DEBUT, 'MOT:vide']);
+  egal(vd.evts[7], 'reponse');
+  egal([vd.T.exceptions, vd.T.reponses.L3, vd.ids, vd.prends[3]], [{ L3: { mot: 'vide', n: 2 } }, 0, ['L1', 'L2', 'L3', 'L4', 'L5'], 2]);
+  egal(vd.phrase, 'Côté B, travée 03, niveau 1. Code de contrôle ?', 'pas de pose : rien n’a été pris');
+  vrai(vd.T.journal.some((j) => j.x === 'Compris : emplacement vide.'), 'Compris : emplacement vide.');
+  const a2 = await jouerPrep([...DEBUT, 'MOT:abime', '2', 'POSE']);
+  egal([a2.evts.slice(7), a2.T.reponses.L3, a2.prends[3]], [['mot', 'reponse', null], 0, 2], 'les 2 abîmés : rien à prendre ni à poser, S24 de 2');
+});
+
+await v('Terminal, préparation : un mot seulement pendant la question, une fois par ligne ; rien pendant la pose ; S24 jamais signalée deux fois', async () => {
+  const c = await jouerPrep(['MOT:abime']);
+  egal([c.evts, c.T.journal.length, c.possible], [[null], 0, false], 'pendant le code : refusé, rien écrit');
+  const d = await jouerPrep(['36', 'MOT:abime', '1', 'MOT:manquant']);
+  egal(d.evts, ['code', 'mot', 'exception', null], 'deuxième mot sur la même ligne : refusé');
+  egal(d.T.exceptions, { L1: { mot: 'abime', n: 1 } });
+  egal(d.phrase, 'Prends 2.');
+  const p = await jouerPrep(['36', '3', '3', 'MOT:vide', 'POSE', 'POSE']);
+  egal(p.evts, ['code', 'pris', null, null, 'reponse', null], 'pendant la pose : ni réponse ni mot ; une pose de trop ne fait rien');
+  egal(p.T.i, 1);
+  const r = await jouerPrep([...DEBUT, 'MOT:abime', '1', '1', 'POSE', '83', 'MOT:abime', '1']);
+  egal(r.ids, ['L1', 'L2', 'L3', 'L4', 'L5'], 'un mot sur la ligne ajoutée : pas de nouvelle ligne (elle n’a pas de remplacement)');
+  egal(r.T.reponses['L4'], 0);
+});
+
+await v('Terminal, préparation : à l’écran — mots fermés hors question, champ fermé pendant la pose, aucun vert, bilan à la fin', async () => {
+  const pt = await ctxM.newPage();
+  pt.setDefaultTimeout(6000);
+  pt.on('pageerror', (e) => erreursM.push('PAGEERROR (essai-terminal): ' + e.message));
+  await pt.goto(BASE + 'outils/essai-terminal.html');
+  await pt.waitForSelector('[data-terminal]');
+  const ferme = (s) => pt.$eval(s, (b) => b.disabled);
+  const rep = async (x) => { await pt.fill('[data-vt-champ]', x); await pt.press('[data-vt-champ]', 'Enter'); };
+  egal(await pt.evaluate(() => [...document.querySelectorAll('[data-vt-mot]')].map((b) => b.textContent)),['Manquant', 'Abîmé', 'Emplacement vide']);
+  vrai(await ferme('[data-vt-mot="abime"]'), 'mot fermé pendant le code');
+  await rep('36');
+  vrai(!(await ferme('[data-vt-mot="abime"]')), 'mot ouvert pendant la question');
+  await rep('3');
+  vrai(await ferme('[data-vt-champ]') && await ferme('[data-vt-valider]') && await ferme('[data-vt-mot="vide"]'), 'pendant la pose');
+  egal(await pt.textContent('[data-vt-actu]'), 'Pose tes casiers.');
+  vrai(await pt.evaluate(() => document.activeElement === document.querySelector('[data-vt-repete]')), 'le focus va sur Répète');
+  await pt.click('[data-essai-poser]');
+  await rep('24'); await rep('2'); await pt.click('[data-essai-poser]');
+  await rep('49');
+  await pt.click('[data-vt-mot="abime"]');
+  egal(await pt.textContent('[data-vt-actu]'), 'Abîmé : combien ?');
+  vrai(await pt.evaluate(() => document.activeElement === document.querySelector('[data-vt-champ]')), 'le focus revient au champ');
+  // Aucun vert dans le boîtier (ni texte, ni fond, ni bordure) : le vert ne dit que « juste ».
+  const verts = await pt.evaluate(() => {
+    const vert = (c) => { const m = (c || '').match(/\d+(\.\d+)?/g); if (!m) return false; const [r, g, b, a = 1] = m.map(Number); return a > 0 && g > r + 30 && g > b + 30; };
+    return [...document.querySelectorAll('.vt-boitier, .vt-boitier *')].flatMap((el) => {
+      const s = getComputedStyle(el);
+      return ['color', 'backgroundColor', 'borderTopColor'].filter((p) => vert(s[p])).map((p) => `${el.className} ${p} ${s[p]}`);
+    });
+  });
+  egal(verts, []);
+  await rep('1'); await rep('1'); await pt.click('[data-essai-poser]');
+  await rep('83'); await rep('1'); await pt.click('[data-essai-poser]');
+  await rep('17'); await rep('6');
+  vrai(!(await pt.$('[data-vt-bilan]')), 'pas de bilan avant la dernière pose');
+  await pt.click('[data-essai-poser]');
+  await pt.waitForSelector('[data-vt-bilan]');
+  egal(await pt.textContent('[data-vt-b="lignes"]'), '5');
+  egal(await pt.textContent('[data-vt-b="codes"]'), '0');
+  vrai(await ferme('[data-vt-champ]'), 'champ fermé à la fin');
+  await pt.close();
+});
+
 await v('Masse : aucune erreur JavaScript', async () => { egal(erreursM, []); });
 await ctxM.close();
 }
