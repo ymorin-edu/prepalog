@@ -41,6 +41,12 @@ const svc = (id) => {
   return Number(S.base || 0) + Number(S.parColis || 0) * Number((PAR_ID[id] || {})[S.champ || 'colis'] || 0);
 };
 const sommeSvc = (ids) => ids.reduce((t, id) => t + svc(id), 0);
+// L'attente à l'ouverture (chantier D-9, lot 1) : arrivé chez un client avant `creneau.apres`, on
+// attend qu'il ouvre et toute la suite glisse d'autant — la MÊME règle que `bilanDe` dans
+// core/types/tournee.js (mode `tropTot: 'attente'`, le défaut). Rend l'arrivée, l'heure où le
+// service commence, et l'attente ajoutée. Sans `apres`, l'attente vaut 0 : Boost ne bouge pas.
+const ouverture = (k, a) => (k && k.apres != null && a < k.apres ? k.apres - a : 0);
+const tropTard = (k, debut) => !!k && k.avant != null && debut > k.avant;
 const hm = (m) => `${Math.floor(m / 60)} h ${String(Math.round(m % 60)).padStart(2, '0')}`;
 function* perms(a) { if (a.length < 2) { yield a; return; } for (let i = 0; i < a.length; i++) for (const p of perms([...a.slice(0, i), ...a.slice(i + 1)])) yield [a[i], ...p]; }
 
@@ -60,14 +66,18 @@ const tiennent = [];
 for (const p of perms(S.map((c) => c.id))) {
   n++;
   const ch = ['depart', ...p, 'arrivee'];
-  let m = 0, servi = 0; const arr = {};
+  let m = 0, servi = 0, att = 0; const deb = {};
   for (let i = 1; i < ch.length; i++) {
     m += d(ch[i - 1], ch[i]);
-    if (i < ch.length - 1) { arr[ch[i]] = J.depart + m / 1000 / J.vitesse * 60 + servi; servi += svc(ch[i]); }
+    if (i < ch.length - 1) {
+      const a = J.depart + m / 1000 / J.vitesse * 60 + servi + att;
+      const w = ouverture(PAR_ID[ch[i]].creneau, a);
+      att += w; deb[ch[i]] = a + w; servi += svc(ch[i]);
+    }
   }
-  const fin = J.depart + m / 1000 / J.vitesse * 60 + sommeSvc(p);
+  const fin = J.depart + m / 1000 / J.vitesse * 60 + sommeSvc(p) + att;
   const okTrain = fin <= J.train;
-  const okCren = cren.every((c) => arr[c.id] <= c.creneau.avant);
+  const okCren = cren.every((c) => !tropTard(c.creneau, deb[c.id]));
   if (okTrain) train++;
   if (okTrain && okCren) { tout++; tiennent.push(p); if (!meilleur || m < meilleur.m) meilleur = { p, m, fin }; }
   if (!court || m < court.m) court = { p, m, fin, okCren, okTrain };
@@ -92,16 +102,19 @@ if (IMP) {
   const kg2 = S2.reduce((t, c) => t + c.kg, 0);
   if (kg2 > J.chargeUtile) pb.push(`imprévu : ${kg2} kg chargés pour ${J.chargeUtile}`);
   const ev = (p) => {
-    const ch = ['depart', ...p, 'arrivee']; let m = 0, ok = true, servi = 0;
+    const ch = ['depart', ...p, 'arrivee']; let m = 0, ok = true, servi = 0, att = 0;
     for (let i = 1; i < ch.length; i++) {
       m += d(ch[i - 1], ch[i]);
       if (i < ch.length - 1) {
         const k = cr2(S2.find((c) => c.id === ch[i]));
-        if (k && J.depart + m / 1000 / J.vitesse * 60 + servi > k.avant) ok = false;
+        const a = J.depart + m / 1000 / J.vitesse * 60 + servi + att;
+        const w = ouverture(k, a);
+        att += w;
+        if (tropTard(k, a + w)) ok = false;
         servi += svc(ch[i]);
       }
     }
-    const fin = J.depart + m / 1000 / J.vitesse * 60 + sommeSvc(p);
+    const fin = J.depart + m / 1000 / J.vitesse * 60 + sommeSvc(p) + att;
     return { m, fin, ok: ok && fin <= J.train };
   };
   const encore = tiennent.filter((p) => ev(p.filter((id) => !an.includes(id))).ok).length;

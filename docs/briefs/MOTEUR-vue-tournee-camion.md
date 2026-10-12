@@ -9,7 +9,7 @@
 > **📋 Phrase — LOT 4 (vides et place), plus tard :** `Lis docs/briefs/MOTEUR-vue-tournee-camion.md et implémente le LOT 4, avec sa page d'essai.`
 > **LOT 5 (plan de chargement)** : **à cadrer avec Cowork avant toute construction** (maquette à valider).
 
-**Statut** : à implémenter *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
+**Statut** : en cours — **lot 1 livré le 12/10/2026**, lots 2 et 3 à faire *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
 **Date du brief** : 06/10/2026
 **Conversation d'origine** : Cowork (Opus), cadrage d'ENT-6.9 ; fiche projet `claude/prepalog-reprise-6.9.md` (décision 65 :
 « on peut mettre les 4 cas dans le moteur et utiliser 1 et 2 pour cette séance »).
@@ -124,9 +124,24 @@ sortie identique à avant.** « Que, pas de combien » : aucune jauge n'affiche 
 
 ## Compte rendu *(rempli par Claude Code à la livraison)*
 
-- **Fichiers créés / modifiés** :
-- **Écarts par rapport au brief** (et pourquoi) :
-- **Décisions prises en route** :
-- **Tests** :
-- **Commits** :
-- **Reste ouvert** :
+**Lot 1 — fenêtres d'ouverture (12/10/2026)**
+
+- **État des lieux (§2), pour le lot 1** : existaient `creneau: { avant, libelle }`, l'heure d'arrivée à chaque arrêt
+  (`bilan.arrivees`), `creneaux[i].rate`, les jauges muettes et les créneaux changés par une phase. N'existaient pas : `apres`,
+  l'attente, `tropTot`, `trop`. La fiche du client sur la carte (infobulle) ne disait aucun créneau. `calibrer.mjs` ne
+  connaissait que `avant`. Les autres questions du §2 (km d'un tronçon dans la feuille, phrases à menus calculés, filtre des
+  voies) relèvent des lots 2 et 3 : pas encore regardées.
+- **Fichiers modifiés** : `core/types/tournee.js` (en-tête, `bilanDe`, jauges, liste, étiquettes, refus du report),
+  `core/types/carte.js` (infobulle du client : option `notes`), `outils/carte/calibrer.mjs`, `outils/test/carte.mjs`.
+- **Écarts par rapport au brief** : aucun sur le calcul. §3.4 lu ainsi : les jauges **muettes** disent *que* (« Trop tôt :
+  attente jusqu'à l'ouverture »), jamais combien ni l'heure ; les jauges **parlantes** donnent l'arrivée et la durée de
+  l'attente, comme elles donnent déjà le retard d'un créneau raté. Textes neutres sur le véhicule (« on attend qu'il ouvre »).
+- **Décisions prises en route** : voir `docs/decisions.md` (12/10/2026, D-9 lot 1). Le défaut « attente » est celui du brief ;
+  la question ouverte du §10 reste à trancher par Tristan (`tropTot: 'rate'` existe et est testé).
+- **Tests** : 5 cas « fenêtre » dans le bloc `carte` (attente et décalage de la journée recalculés à la main ; pile à
+  l'ouverture, mode « raté », trop tard dans une fenêtre ; moteur et calage comptent les mêmes ordres sur une journée où l'on
+  attend ; écran parlant, muet, sans verdict, étiquettes, fiche de carte ; refus du report en mode « raté »). Sabotages qui
+  font tomber un cas : attente retirée de la vue ; attente retirée du calage ; jauge muette qui donne la durée ; attente en
+  mode « raté ». Sortie de `calibrer.mjs` identique avant/après pour ENT-3.1 et ENT-3.2. Suite entière : 1314/1314.
+- **Commits** : « Tournée : fenêtres d'ouverture… » (D-9 lot 1).
+- **Reste ouvert** : lots 2 et 3 ; la page d'essai du §8 (après le lot 2, pour montrer approche et pause en même temps).

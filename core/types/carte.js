@@ -696,7 +696,7 @@ export function carteTournee(P) {
         return marqueurTournee(p, {
           cl: 'ct-mk-client plan-pt' + (o.cliquable ? ' plan-pt-clic' : '') + (rang < 0 ? ' plan-pt-quai' : ''),
           creux: rang < 0, lettre: String(p.numero), rang: rang < 0 ? '' : String(rang + 1),
-          titre: `${p.numero}. ${p.nom}`,
+          titre: `${p.numero}. ${p.nom}${o.notes && o.notes[String(p.id)] ? ` — ${o.notes[String(p.id)]}` : ''}`,
           data: ` data-point="${ech(p.id)}"${rang >= 0 ? ` data-rang="${rang + 1}"` : ''}`,
           cible: cible(`data-clic-point="${ech(p.id)}"`, rang < 0 ? `Ajouter ${p.nom} à la fin de la tournée`
             : `Retirer ${p.nom} de la tournée (actuellement ${rang + 1}ᵉ arrêt)`),

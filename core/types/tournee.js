@@ -46,7 +46,8 @@
 // `bilan` passé aux cases de report et aux jalons du contenu :
 //   { retenus, ecartes, cumuls: { [idMesure]: nombre }, km, minutes, service, arrivee,
 //     depassements: [idMesure…], enRetard,
-//     arrivees: { [idPoint]: minutes }, creneaux: [{ id, nom, avant, libelle, charge, arrivee, rate }],
+//     arrivees: { [idPoint]: minutes }, attentes, departs, attente,
+//     creneaux: [{ id, nom, apres, avant, libelle, charge, arrivee, attente, trop, rate }],
 //     creneauxRates: [idPoint…], creneauRate }
 //
 // Deux options de séance d'ERREUR INDUITE (ENT-3.3, « la tournée à corriger », 02/10/2026) :
@@ -75,6 +76,15 @@
 //
 // Un point peut porter un CRÉNEAU de livraison : `creneau: { avant: 14 * 60 + 45, libelle }`
 // (ENT-3.2 : la Pâtisserie Arnaud n'accepte qu'avant 14 h 45). Voir `bilanDe`.
+//
+// FENÊTRES D'OUVERTURE (chantier D-9, lot 1, 12/10/2026, brief `MOTEUR-vue-tournee-camion.md`) :
+// le créneau accepte aussi `apres` — `{ apres: 10 * 60 }` (« ouvre à 10 h »), ou les deux,
+// `{ apres: 10 * 60, avant: 11 * 60 + 30 }` (« de 10 h à 11 h 30 »). Arrivé avant l'ouverture :
+//   tropTot: 'attente'   (défaut) le véhicule ATTEND l'ouverture, puis sert : l'attente s'ajoute à
+//                        la journée (heure de retour, arrivées suivantes) ; ce n'est pas un raté.
+//   tropTot: 'rate'      l'arrivée trop tôt est un créneau raté, sans attente.
+// Le bilan donne alors, par arrêt, `attentes` et `departs` (minutes), `attente` (total), et chaque
+// créneau porte `apres`, `attente`, `trop: 'tot' | 'tard' | null`. Sans `apres`, rien ne change.
 //
 // Des PHASES : la journée change en cours de séance (ENT-3.2, « l'imprévu », chantier C du plan
 // Boost, 03/10/2026) :
@@ -137,6 +147,14 @@ import { creerGrille } from './grille.js';
 const minutesDuJour = (ts) => { const d = new Date(ts); return d.getHours() * 60 + d.getMinutes(); };
 export const hhmm = (m) => { const r = Math.round(m); return `${String(Math.floor(r / 60)).padStart(2, '0')} h ${String(r % 60).padStart(2, '0')}`; };
 const fr = (n, d = 2) => new Intl.NumberFormat('fr-FR', { maximumFractionDigits: d }).format(n);
+// L'heure dite comme un client la dit : « 10 h », « 11 h 30 » (fenêtres d'ouverture).
+const hcourt = (m) => { const r = Math.round(m); return r % 60 ? `${Math.floor(r / 60)} h ${String(r % 60).padStart(2, '0')}` : `${Math.floor(r / 60)} h`; };
+// Le libellé par défaut d'un créneau. « livraison avant… » reste mot pour mot celui d'ENT-3.2.
+const libelleCreneau = (c) => (c.apres == null ? `livraison avant ${hhmm(c.avant)}`
+  : (c.avant == null ? `ouvre à ${hcourt(c.apres)}` : `de ${hcourt(c.apres)} à ${hcourt(c.avant)}`));
+const aCreneau = (c) => !!c && (c.avant != null || c.apres != null);
+// Le créneau en étiquette (« Contraintes ») : sans ouverture, le texte d'avant, inchangé.
+const etiquetteCreneau = (c) => (c.apres == null ? `${c.nom} : avant ${hhmm(c.avant)}` : `${c.nom} : ${libelleCreneau(c)}`);
 
 export function creerTournee(T) {
   // Le plan est FACULTATIF. Une séance peut n'avoir qu'une contrainte de charge — ordonner
@@ -164,6 +182,11 @@ export function creerTournee(T) {
   // un arrêt coûte `base` minutes plus `parColis` minutes par colis livré (`champ`, 'colis' par
   // défaut). Un seul calcul, ici, que lisent les arrivées, le créneau, les jauges et le report —
   // et `outils/carte/calibrer.mjs` applique la même formule.
+  // Arrivé avant l'ouverture d'un client : on attend (défaut), ou c'est raté (voir l'en-tête).
+  const ATTENTE = T.tropTot !== 'rate';
+  // Une journée à fenêtres d'ouverture : la fiche du client sur la carte dit alors son créneau.
+  const FENETRES = POINTS.some((p) => p.creneau && p.creneau.apres != null)
+    || Object.values(T.phases || {}).some((c) => Object.values((c && c.creneaux) || {}).some((x) => x && x.apres != null));
   const SERVICE_COLIS = !!(H && H.service && typeof H.service === 'object');
   const serviceDe = (p) => {
     if (!H) return 0;
@@ -416,8 +439,14 @@ export function creerTournee(T) {
     // arrive chez le quatrième client après avoir servi les trois premiers, pas après l'avoir
     // servi lui. C'est la règle de `outils/carte/calibrer.mjs`, qui a calé la journée : les
     // deux calculs doivent tomber sur les mêmes 371 ordres, et un test le vérifie.
-    let km = 0, minutes = 0, arrivee = null, service = 0;
-    const arrivees = {};
+    //
+    // ── L'attente à l'ouverture (D-9, lot 1) ─────────────────────────────────────────────
+    // Arrivé chez un client avant son ouverture (`creneau.apres`), le véhicule attend : il repart
+    // à `apres + service`, et toute la suite de la journée glisse d'autant. L'attente n'est ni du
+    // trajet ni du service : elle se compte à part (`attente`), pour que le lot 2 ne la prenne pas
+    // pour de la conduite. Sans `apres`, elle vaut 0 et rien ne bouge.
+    let km = 0, minutes = 0, arrivee = null, service = 0, attente = 0;
+    const arrivees = {}, attentes = {}, departs = {};
     if (H && PLAN && retenus.length) {
       const suite = [];
       if (PLAN.depart && departPose(etat)) suite.push(PLAN.depart);
@@ -429,12 +458,19 @@ export function creerTournee(T) {
         if (i > 0) km += km1(suite[i - 1], p);
         const j = retenus.indexOf(p);
         if (j >= 0) {
-          arrivees[String(p.id)] = H.depart + km / H.vitesse * 60 + servi;
+          const id = String(p.id);
+          const a = H.depart + km / H.vitesse * 60 + servi + attente;
+          const cr = p.creneau;
+          const w = ATTENTE && cr && cr.apres != null && a < cr.apres ? cr.apres - a : 0;
+          arrivees[id] = a;
+          attentes[id] = w;
+          attente += w;
+          departs[id] = a + w + serviceDe(p);
           servi += serviceDe(p);
         }
       });
       service = retenus.reduce((t, p) => t + serviceDe(p), 0);
-      minutes = km / H.vitesse * 60 + service;
+      minutes = km / H.vitesse * 60 + service + attente;
       arrivee = H.depart + minutes;
     }
     const enRetard = !!(H && arrivee != null && H.limite != null && arrivee > H.limite);
@@ -447,16 +483,24 @@ export function creerTournee(T) {
     // aucun créneau jugé — comme le train.
     //
     // « Avant 14 h 45 » admet 14 h 45 pile (`<=`), comme le calage.
+    //
+    // Une fenêtre (D-9) : trop tôt = arrivé avant `apres` ; trop tard = le service commence (après
+    // l'attente éventuelle) après `avant`. En mode attente, seul « trop tard » est un raté.
     const creneaux = [];
     PTS.forEach((p) => {
-      if (!p.creneau || p.creneau.avant == null) return;
+      const cr = p.creneau;
+      if (!aCreneau(cr)) return;
       const id = String(p.id);
       const a = arrivees[id] == null ? null : arrivees[id];
+      const w = attentes[id] || 0;
+      const tot = a != null && cr.apres != null && a < cr.apres;
+      const tard = a != null && cr.avant != null && a + w > cr.avant;
       creneaux.push({
-        id, nom: p.nom, avant: p.creneau.avant,
-        libelle: p.creneau.libelle || `livraison avant ${hhmm(p.creneau.avant)}`,
+        id, nom: p.nom, avant: cr.avant,
+        libelle: cr.libelle || libelleCreneau(cr),
         charge: etat.ordre.some((x) => String(x) === id),
-        arrivee: a, rate: a != null && a > p.creneau.avant,
+        arrivee: a, rate: tard || (tot && !ATTENTE),
+        apres: cr.apres, attente: w, trop: tard ? 'tard' : (tot ? 'tot' : null),
       });
     });
     const creneauxRates = creneaux.filter((c) => c.rate).map((c) => c.id);
@@ -465,6 +509,8 @@ export function creerTournee(T) {
       retenus, ecartes, cumuls, km, minutes, arrivee, depassements, enRetard,
       // Le temps passé aux arrêts, en minutes (avec un service par colis, il dépend des clients).
       service,
+      // L'attente à l'ouverture, par arrêt et au total (D-9), et l'heure où le véhicule repart.
+      attente, attentes, departs,
       arrivees, creneaux, creneauxRates, creneauRate: creneauxRates.length > 0,
       // Exposé pour les jalons du contenu, qui doivent pouvoir distinguer « mal organisé » de
       // « pas fini ». `arrivee` est déjà l'HEURE de retour, d'où les noms explicites.
@@ -536,7 +582,8 @@ export function creerTournee(T) {
       <div class="tour-j-barre"><i style="width:${part}%"></i></div>
       <span class="note">${fr(b.km, 1)} km parcourus, ${fr(b.minutes, 0)} min au total
         (${b.retenus.length} arrêt${b.retenus.length > 1 ? 's' : ''}
-        ${SERVICE_COLIS ? `: ${ech(texteService())}` : `× ${H.service || 0} min de service`}).</span>
+        ${SERVICE_COLIS ? `: ${ech(texteService())}` : `× ${H.service || 0} min de service`})${b.attente > 0
+          ? `, dont ${fr(b.attente, 0)} min d’attente à l’ouverture` : ''}.</span>
       ${b.enRetard ? `<span class="pastille crit">${ech(H.libelleLimite || 'Horaire limite')} manqué
         de ${fr(b.arrivee - H.limite, 0)} min</span>` : ''}
     </div>`;
@@ -544,36 +591,54 @@ export function creerTournee(T) {
 
   // Le retard à un créneau, en minutes entières : le même arrondi que l'heure affichée
   // (`hhmm`), et jamais « raté de 0 min » pour quelques secondes de trop.
-  const retardMin = (c) => Math.max(1, Math.round(c.arrivee - c.avant));
+  const retardMin = (c) => Math.max(1, Math.round(c.arrivee + (c.attente || 0) - c.avant));
+  // L'avance sur l'ouverture, même règle (D-9) : jamais « 0 min » pour quelques secondes.
+  const avanceMin = (c) => Math.max(1, Math.round(c.apres - c.arrivee));
 
   // Une jauge par client à créneau, sous celle du train : c'est une contrainte de plus, au même
   // rang que la charge et l'horaire. Muette (`jaugesRepere`), elle dit QUE le créneau est raté,
   // jamais de combien ni à quelle heure on arrive — ce serait la réponse de la feuille de
   // calcul. Parlante, elle donne l'heure d'arrivée et le retard.
+  //
+  // Avec une ouverture (D-9) : arrivé trop tôt en mode attente, ce n'est pas un raté — la pastille
+  // est ambre (« trop tôt : attente jusqu’à l’ouverture »), et muette elle ne dit ni l'heure ni la
+  // durée de l'attente, qui allonge la journée que l'élève doit calculer.
   function jaugeCreneau(c, b, muet) {
     if (!H || !PLAN) return '';
+    // La limite en tête : l'heure seule (créneau d'ENT-3.2, inchangé), « dès 10 h 00 » ou
+    // « 10 h 00 – 11 h 30 ».
+    const borne = c.apres == null ? hhmm(c.avant)
+      : (c.avant == null ? `dès ${hhmm(c.apres)}` : `${hhmm(c.apres)} – ${hhmm(c.avant)}`);
     // Titre court : avec le nom du client, il passait sur deux lignes dans la colonne de droite
     // (vu à l'écran le 02/10) ; le nom va dans la note.
     const tete = `<div class="tour-j-tete"><span>Créneau</span>
-        <b class="mono">${c.charge && c.arrivee != null && !muet ? `${hhmm(c.arrivee)} / ` : ''}${hhmm(c.avant)}</b></div>`;
+        <b class="mono">${c.charge && c.arrivee != null && !muet ? `${hhmm(c.arrivee)} / ` : ''}${borne}</b></div>`;
     if (!c.charge) {
       return `<div class="tour-jauge tour-jauge-creneau${muet ? ' tour-jauge-repere' : ''}" data-creneau="${ech(c.id)}">
         ${tete}<span class="note">${ech(c.nom)} : ${ech(c.libelle)}. Ce client n’est pas dans la tournée.</span></div>`;
     }
+    const tot = c.trop === 'tot';
     if (muet) {
+      const regle = c.apres == null ? 'Il faut arriver chez ce client avant cette heure.'
+        : `${ATTENTE ? 'Arrivé avant l’ouverture, on attend qu’il ouvre : l’attente compte dans la journée.'
+          : 'Arrivé avant l’ouverture, la livraison est refusée.'}${c.avant != null ? ' Et il faut arriver avant la fermeture du créneau.' : ''}`;
       return `<div class="tour-jauge tour-jauge-creneau tour-jauge-repere ${c.rate && !sv ? 'trop' : ''}" data-creneau="${ech(c.id)}">
         ${tete}
-        <span class="note">${ech(c.nom)} : ${ech(c.libelle)}. Il faut arriver chez ce client avant cette heure.
+        <span class="note">${ech(c.nom)} : ${ech(c.libelle)}. ${regle}
           L’heure d’arrivée chez lui, c’est à vous de la calculer.</span>
-        ${sv ? '' : (c.rate ? '<span class="pastille crit">Créneau raté</span>'
-          : (DANS_GRILLE && b.complete ? '<span class="pastille ok">créneau tenu</span>' : ''))}
+        ${sv ? '' : (c.rate ? `<span class="pastille crit">${tot ? 'Arrivée trop tôt : créneau raté' : 'Créneau raté'}</span>`
+          : (tot ? '<span class="pastille warn">Trop tôt : attente jusqu’à l’ouverture</span>'
+            : (DANS_GRILLE && b.complete ? '<span class="pastille ok">créneau tenu</span>' : '')))}
       </div>`;
     }
     return `<div class="tour-jauge tour-jauge-creneau ${c.rate ? 'trop' : ''}" data-creneau="${ech(c.id)}">
       ${tete}
-      <span class="note">${ech(c.nom)} : ${ech(c.libelle)}. Arrivée prévue à ${hhmm(c.arrivee)}.</span>
-      ${c.rate ? `<span class="pastille crit">Créneau raté de ${retardMin(c)} min</span>`
-        : '<span class="pastille ok">créneau tenu</span>'}
+      <span class="note">${ech(c.nom)} : ${ech(c.libelle)}. Arrivée prévue à ${hhmm(c.arrivee)}.${c.attente > 0
+        ? ` Attente jusqu’à l’ouverture : ${fr(c.attente, 0)} min.` : ''}</span>
+      ${c.rate ? `<span class="pastille crit">${tot ? `Arrivée trop tôt de ${avanceMin(c)} min : créneau raté`
+        : `Créneau raté de ${retardMin(c)} min`}</span>`
+        : (tot ? `<span class="pastille warn">Trop tôt : ${fr(c.attente, 0)} min d’attente</span>`
+          : '<span class="pastille ok">créneau tenu</span>')}
     </div>`;
   }
 
@@ -640,9 +705,9 @@ export function creerTournee(T) {
       // l'élève doit voir ce qui a bougé, sans qu'on lui dise ce que ça fait à sa tournée.
       const creneauNote = (p) => {
         if (p.creneauLeve) return ' · <span class="tour-creneau tour-creneau-change" data-creneau-change>plus de créneau aujourd’hui</span>';
-        if (!p.creneau || p.creneau.avant == null) return '';
+        if (!aCreneau(p.creneau)) return '';
         return ` · <span class="tour-creneau${p.creneauChange ? ' tour-creneau-change' : ''}"${p.creneauChange ? ' data-creneau-change' : ''}>`
-          + `${ech(p.creneau.libelle || `livraison avant ${hhmm(p.creneau.avant)}`)}${p.creneauChange ? ' · nouveau' : ''}</span>`;
+          + `${ech(p.creneau.libelle || libelleCreneau(p.creneau))}${p.creneauChange ? ' · nouveau' : ''}</span>`;
       };
 
       // Le récapitulatif, compact : une ligne par arrêt. Le numéro du client est posé AVANT le
@@ -772,7 +837,7 @@ export function creerTournee(T) {
       const etiquettes = !etiq ? [] : (Array.isArray(etiq) ? etiq : [
         ...MESURES.filter((m) => m.max != null).map((m) => `${m.libelle} : ${fr(m.max)} ${m.unite || ''} au plus`.replace(/\s+/g, ' ')),
         ...(H && H.limite != null ? [`${(H.libelleLimite || 'Horaire limite').replace(/^./, (x) => x.toUpperCase())} : ${hhmm(H.limite)}`] : []),
-        ...b.creneaux.map((c) => `${c.nom} : avant ${hhmm(c.avant)}`),
+        ...b.creneaux.map(etiquetteCreneau),
       ]);
       const etiquettesHtml = !etiq ? '' : `<div class="tour-etiquettes" data-tour-etiquettes>
           <span class="ent-lbl">Contraintes</span>
@@ -841,6 +906,9 @@ export function creerTournee(T) {
             ${PLAN ? `<div class="plan-boite${clic ? ' plan-boite-clic' : ''}">
               ${CARTE ? CARTE.html({
                 ordre: etat.ordre, cliquable: clic, annules,
+                // Journée à fenêtres (D-9) : la fiche du client dit son créneau, au survol.
+                notes: FENETRES ? Object.fromEntries(PTS.filter((p) => aCreneau(p.creneau))
+                  .map((p) => [String(p.id), p.creneau.libelle || libelleCreneau(p.creneau)])) : null,
                 extremites: EXTREMITES, departPose: etat.depart, arriveePose: etat.arrivee,
               }) : svgPlan(PLAN, {
                 noms: true, ordre: etat.ordre, cliquable: clic, id: 'tournee',
@@ -897,7 +965,7 @@ export function creerTournee(T) {
           const etq = etiquettes.length ? etiquettes : [
             ...MESURES.filter((m) => m.max != null).map((m) => `${m.libelle} : ${fr(m.max)} ${m.unite || ''} au plus`.replace(/\s+/g, ' ')),
             ...(H && H.limite != null ? [`${(H.libelleLimite || 'Horaire limite').replace(/^./, (x) => x.toUpperCase())} : ${hhmm(H.limite)}`] : []),
-            ...b.creneaux.map((c) => `${c.nom} : avant ${hhmm(c.avant)}`),
+            ...b.creneaux.map(etiquetteCreneau),
           ];
           corps = `<div class="tour-etiquettes" data-tour-etiquettes><span class="ent-lbl">Contraintes</span>
             ${etq.map((x) => `<span class="tour-etiquette">${ech(x)}</span>`).join('')}</div>${blocCarte}`;
@@ -1213,6 +1281,11 @@ export function creerTournee(T) {
           }
           // Le créneau raté refuse le report au même titre que le train : c'est le cœur d'ENT-3.2.
           b.creneaux.filter((c) => c.rate).forEach((c) => {
+            if (c.trop === 'tot') {
+              maux.push(muetAuReport ? `arrivée trop tôt chez ${c.nom}`
+                : `arrivée trop tôt chez ${c.nom} (${avanceMin(c)} min avant l’ouverture)`);
+              return;
+            }
             maux.push(muetAuReport
               ? `créneau raté chez ${c.nom}`
               : `créneau raté chez ${c.nom} (${retardMin(c)} min de retard)`);

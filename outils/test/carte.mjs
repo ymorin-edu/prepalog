@@ -603,12 +603,13 @@ await v('créneau : le moteur et le calage comptent les mêmes ordres (train, pu
 });
 
 // La vue montée sur la journée d'ENT-3.2, repérage déjà fait, tournée posée par l'état.
-const monterCr = (opts, ordre) => pageCt.evaluate(async ({ opts, ordre }) => {
+// `cr` (facultatif, D-9) : un autre créneau pour la pâtisserie ; par défaut celui d'ENT-3.2.
+const monterCr = (opts, ordre, cr) => pageCt.evaluate(async ({ opts, ordre, cr }) => {
   document.getElementById('cr-hote')?.remove();
   document.getElementById('ct-hote')?.remove();
   const { creerEntreprise } = await import('/core/types/entreprise.js');
   const B = await import('/contenus/boost.js');
-  const CARTE = ((x) => ({ ...x, clients: x.clients.map((c) => (c.id === 'c6' ? { ...c, creneau: { avant: 885, libelle: 'livraison avant 14 h 45' } } : c)) }))((await import('/contenus/boost-ent32-carte.js')).CARTE);
+  const CARTE = ((x) => ({ ...x, clients: x.clients.map((c) => (c.id === 'c6' ? { ...c, creneau: cr || { avant: 885, libelle: 'livraison avant 14 h 45' } } : c)) }))((await import('/contenus/boost-ent32-carte.js')).CARTE);
   const moteur = creerEntreprise({
     ENTREPRISE: B.ENTREPRISE, VOCAB: B.VOCAB, CATALOGUE: B.CATALOGUE, SUPPLIERS: B.SUPPLIERS,
     SUP_BY_ID: B.SUP_BY_ID, CUSTOMERS: B.CUSTOMERS, CM: B.CM, baseDeDepart: B.baseDeDepart, THEME: B.THEME,
@@ -635,7 +636,7 @@ const monterCr = (opts, ordre) => pageCt.evaluate(async ({ opts, ordre }) => {
   });
   window.__cr = { db };
   hote.querySelector('.ent-nav[data-vue="tournee"]').click();
-}, { opts: opts || {}, ordre });
+}, { opts: opts || {}, ordre, cr: cr || null });
 const texteCr = () => pageCt.textContent('#cr-hote .ent-main');
 const jaugeCr = () => pageCt.$eval('#cr-hote [data-creneau="c6"]', (e) => ({ txt: e.textContent.replace(/\s+/g, ' '), trop: e.classList.contains('trop') }));
 const validerCr = async (km) => {
@@ -683,6 +684,166 @@ await v('créneau : jauges muettes — « créneau raté », sans l’heure d’
   const t = await texteCr();
   if (!/ne tient pas encore/.test(t) || !/créneau raté chez Pâtisserie Arnaud/.test(t)) throw new Error('report non refusé : ' + t.slice(-400));
   if (/de retard|15 h 07|raté de/.test(t)) throw new Error('la page muette donne le retard ou l’arrivée : ' + t.slice(-400));
+  await pageCt.evaluate(() => document.getElementById('cr-hote')?.remove());
+});
+
+/* ------------------------------------------------------------------------------------------ */
+/* Fenêtres d'ouverture (chantier D-9, lot 1, 12/10/2026, brief MOTEUR-vue-tournee-camion).  */
+/* La journée d'ENT-3.2, où la pâtisserie (c6) n'ouvre qu'à 14 h 40 : servie en premier      */
+/* (ORDRE_BON), on y arrive vers 14 h 20 et on attend. Les attendus sont recalculés ici, à   */
+/* la main, depuis la table des itinéraires.                                                 */
+const OUVRE = 14 * 60 + 40;
+const bilanFen = (ordre, cr, extra) => pageCt.evaluate(async ({ ordre, cr, extra }) => {
+  const { creerTournee } = await import('/core/types/tournee.js');
+  const B = await import('/contenus/boost.js');
+  const C = ((x) => ({ ...x, clients: x.clients.map((c) => {
+    if (c.id !== 'c6') return c;
+    const q = { ...c }; if (cr) q.creneau = cr; else delete q.creneau; return q;
+  }) }))((await import('/contenus/boost-ent32-carte.js')).CARTE);
+  const vue = creerTournee(Object.assign({ plan: { carte: C },
+    horaire: { depart: 14 * 60 + 10, limite: B.VELO.train, vitesse: B.VELO.vitesse, service: B.VELO.service },
+    extremitesACliquer: true }, extra || {}));
+  const tous = C.clients.map((c) => c.id);
+  const b = vue.bilan({ ordre, quai: tous.filter((x) => !ordre.includes(x)), depart: 1, arrivee: 1, report: {}, juge: {} });
+  // Le trajet à la main : départ → c6, puis c6 → second arrêt.
+  const v = B.VELO.vitesse;
+  const a6 = 14 * 60 + 10 + C.trajets[`depart|${ordre[0]}`].m / 1000 / v * 60;
+  const t67 = C.trajets[`${ordre[0]}|${ordre[1]}`].m / 1000 / v * 60;
+  return { arrivees: b.arrivees, attentes: b.attentes, departs: b.departs, attente: b.attente,
+    arrivee: b.arrivee, minutes: b.minutes, creneaux: b.creneaux, rates: b.creneauxRates,
+    service: B.VELO.service, a6, t67 };
+}, { ordre, cr: cr || null, extra: extra || null });
+
+await v('fenêtre : arrivé avant l’ouverture, on attend — la journée glisse d’autant, et ce n’est pas un raté', async () => {
+  const r = await bilanFen(ORDRE_BON, { apres: OUVRE });
+  const sans = await bilanFen(ORDRE_BON, null);
+  const w = OUVRE - r.a6;
+  if (!(w > 5)) throw new Error(`la journée d’essai n’arrive pas assez tôt chez c6 (${r.a6})`);
+  const proche = (x, y) => x != null && Math.abs(x - y) < 1e-9;
+  if (!proche(r.arrivees.c6, r.a6)) throw new Error(`arrivée chez c6 : ${r.arrivees.c6} pour ${r.a6}`);
+  if (!proche(r.attentes.c6, w) || !proche(r.attente, w)) throw new Error(`attente : ${r.attentes.c6} / ${r.attente} pour ${w}`);
+  if (!proche(r.departs.c6, OUVRE + r.service)) throw new Error(`départ de c6 : ${r.departs.c6} pour ${OUVRE + r.service}`);
+  // Le client suivant : après l'ouverture, le service, puis le trajet.
+  if (!proche(r.arrivees[ORDRE_BON[1]], OUVRE + r.service + r.t67)) throw new Error(`arrivée chez ${ORDRE_BON[1]} : ${r.arrivees[ORDRE_BON[1]]}`);
+  if (!proche(r.arrivee, sans.arrivee + w) || !proche(r.minutes, sans.minutes + w)) throw new Error(`retour ${r.arrivee} pour ${sans.arrivee + w}`);
+  if (sans.attente !== 0) throw new Error('une attente sans créneau : ' + sans.attente);
+  const c = r.creneaux.find((x) => x.id === 'c6');
+  if (!c || c.trop !== 'tot' || c.rate || r.rates.length || c.apres !== OUVRE || !proche(c.attente, w)) throw new Error('créneau : ' + JSON.stringify(c));
+  if (c.libelle !== 'ouvre à 14 h 40') throw new Error('libellé : ' + c.libelle);
+});
+
+await v('fenêtre : cas limites — pile à l’ouverture, « tropTot: rate », trop tard dans une fenêtre', async () => {
+  const pile = await bilanFen(ORDRE_BON, { apres: 0 });
+  const exact = await bilanFen(ORDRE_BON, { apres: pile.a6 });
+  const c0 = exact.creneaux.find((x) => x.id === 'c6');
+  if (exact.attente !== 0 || c0.trop !== null || c0.rate) throw new Error('arrivé pile à l’ouverture : ' + JSON.stringify(c0));
+  // Mode « raté » : pas d'attente, la journée ne bouge pas, mais le créneau est raté.
+  const rate = await bilanFen(ORDRE_BON, { apres: OUVRE }, { tropTot: 'rate' });
+  const sans = await bilanFen(ORDRE_BON, null);
+  const c1 = rate.creneaux.find((x) => x.id === 'c6');
+  if (rate.attente !== 0 || rate.arrivee !== sans.arrivee) throw new Error('le mode « raté » fait attendre');
+  if (c1.trop !== 'tot' || !c1.rate || rate.rates.join() !== 'c6') throw new Error('mode « raté » : ' + JSON.stringify(c1));
+  // Fenêtre de 14 h 40 à 14 h 45, pâtisserie en 4e (15 h 07) : trop tard, sans attente.
+  const tard = await bilanFen(ORDRE_RATE, { apres: OUVRE, avant: 885 });
+  const c2 = tard.creneaux.find((x) => x.id === 'c6');
+  if (c2.trop !== 'tard' || !c2.rate || tard.attente !== 0) throw new Error('fenêtre dépassée : ' + JSON.stringify(c2));
+  if (c2.libelle !== 'de 14 h 40 à 14 h 45') throw new Error('libellé : ' + c2.libelle);
+  // Dans la fenêtre en attendant : ni tôt ni tard au bilan des ratés.
+  const ok = await bilanFen(ORDRE_BON, { apres: OUVRE, avant: OUVRE + 30 });
+  if (ok.rates.length || ok.creneaux.find((x) => x.id === 'c6').trop !== 'tot') throw new Error('fenêtre tenue après attente : ' + JSON.stringify(ok.creneaux));
+});
+
+await v('fenêtre : le moteur et le calage comptent les mêmes ordres avec une attente à l’ouverture', async () => {
+  // Le calage sur une journée d'essai : celle du calage d'ENT-3.2 (départ 14 h 35), pâtisserie ouverte
+  // de 15 h à 15 h 30 : servie tôt, on attend ; servie tard, c'est raté. Ses règles
+  // de journée (faites pour Boost) peuvent tomber : seuls ses comptes nous intéressent ici.
+  const os = await import('node:os');
+  const { execFileSync } = await import('node:child_process');
+  const { pathToFileURL } = await import('node:url');
+  const dos = fs.mkdtempSync(path.join(os.tmpdir(), 'prepalog-fen-'));
+  const cr = { apres: 15 * 60, avant: 15 * 60 + 30 };
+  fs.writeFileSync(path.join(dos, 'carte.mjs'), `import { CARTE as C0 } from ${JSON.stringify(pathToFileURL(path.join(ROOT, 'contenus', 'boost-ent32-carte.js')).href)};\n`
+    + `export const CARTE = { ...C0, clients: C0.clients.map((c) => (c.id === 'c6' ? { ...c, creneau: ${JSON.stringify(cr)} } : c)) };\n`);
+  fs.copyFileSync(path.join(ROOT, 'outils', 'carte', 'boost-ent32.json'), path.join(dos, 'jour.json'));
+  let sortie;
+  try { sortie = execFileSync(process.execPath, [path.join(ROOT, 'outils', 'carte', 'calibrer.mjs'), path.join(dos, 'carte.mjs'), path.join(dos, 'jour.json')], { encoding: 'utf8', stdio: 'pipe' }); }
+  catch (e) { sortie = String(e.stdout || ''); }
+  fs.rmSync(dos, { recursive: true, force: true });
+  const m = sortie.match(/(\d+) ordres de passage : (\d+) attrapent le train .*?, (\d+) tiennent aussi le créneau/);
+  if (!m) throw new Error('sortie du calage illisible : ' + sortie.slice(0, 200));
+  const r = await pageCt.evaluate(async (cr) => {
+    const { creerTournee } = await import('/core/types/tournee.js');
+    const C0 = (await import('/contenus/boost-ent32-carte.js')).CARTE;
+    const C = { ...C0, clients: C0.clients.map((c) => (c.id === 'c6' ? { ...c, creneau: cr } : c)) };
+    const J = (await import('/contenus/boost-ent32.js')).JOURNEE;
+    const vue = creerTournee({ plan: { carte: C }, mesures: [],
+      horaire: { depart: J.depart, limite: J.limite, vitesse: J.vitesse, service: J.service },
+      extremitesACliquer: true });
+    const S = C.clients.filter((c) => c.id !== 'c5').map((c) => c.id);
+    function* perms(a) { if (a.length < 2) { yield a; return; } for (let i = 0; i < a.length; i++) for (const p of perms([...a.slice(0, i), ...a.slice(i + 1)])) yield [a[i], ...p]; }
+    let n = 0, train = 0, tout = 0, attendu = 0;
+    for (const p of perms(S)) {
+      n++;
+      const b = vue.bilan({ ordre: p, quai: ['c5'], depart: 1, arrivee: 1, report: {}, juge: {} });
+      if (b.attente > 0) attendu++;
+      if (!b.enRetard) { train++; if (!b.creneauRate) tout++; }
+    }
+    return { n, train, tout, attendu };
+  }, cr);
+  // Sans ordre qui attende, le cas ne prouverait rien.
+  if (!r.attendu) throw new Error('aucun ordre n’attend l’ouverture : la journée d’essai ne teste rien');
+  if (`${r.n} ${r.train} ${r.tout}` !== `${m[1]} ${m[2]} ${m[3]}`) {
+    throw new Error(`moteur : ${r.n} ordres, ${r.train} au train, ${r.tout} tiennent tout ; calage : ${m[1]}, ${m[2]}, ${m[3]}`);
+  }
+});
+
+await v('fenêtre : à l’écran — « ouvre à », pastille ambre, et muette elle dit QUE le véhicule attend, jamais combien', async () => {
+  const titreC6 = () => pageCt.$eval('#cr-hote [data-point="c6"] > title', (e) => e.textContent);
+  // Parlante : l'arrivée, l'attente en minutes, la pastille ambre (pas un raté).
+  await monterCr({}, ORDRE_BON, { apres: OUVRE });
+  await pageCt.waitForSelector('#cr-hote [data-creneau="c6"]');
+  let j = await jaugeCr();
+  if (j.trop || !/dès 14 h 40/.test(j.txt) || !/Trop tôt : \d+ min d’attente/.test(j.txt)) throw new Error('jauge parlante : ' + j.txt);
+  if (!await pageCt.$('#cr-hote [data-creneau="c6"] .pastille.warn')) throw new Error('la pastille « trop tôt » n’est pas ambre');
+  if (!/ouvre à 14 h 40/.test(await pageCt.textContent('#cr-hote #tourListe'))) throw new Error('l’ouverture ne se lit pas sur la ligne du client');
+  if (!/ouvre à 14 h 40/.test(await titreC6())) throw new Error('fiche de la carte : ' + await titreC6());
+  if (!/dont \d+ min d’attente à l’ouverture/.test(await texteCr())) throw new Error('le retour ne dit pas l’attente');
+  // Muette : QUE le véhicule attend, sans durée ni heure d'arrivée.
+  await monterCr({ jaugesRepere: true }, ORDRE_BON, { apres: OUVRE });
+  await pageCt.waitForSelector('#cr-hote [data-creneau="c6"]');
+  j = await jaugeCr();
+  if (j.trop || !/Trop tôt : attente jusqu’à l’ouverture/.test(j.txt)) throw new Error('jauge muette : ' + j.txt);
+  if (/\d+ min|14 h 1\d|14 h 2\d/.test(j.txt)) throw new Error('la jauge muette donne l’attente ou l’arrivée : ' + j.txt);
+  if (/min d’attente/.test(await texteCr())) throw new Error('la page muette donne la durée de l’attente');
+  // Sans verdict : rien sur « trop tôt ».
+  await monterCr({ sansVerdict: true }, ORDRE_BON, { apres: OUVRE });
+  await pageCt.waitForSelector('#cr-hote [data-creneau="c6"]');
+  if (/Trop tôt/.test((await jaugeCr()).txt)) throw new Error('« trop tôt » dit sans verdict');
+  // Étiquettes et fenêtre : « de 14 h 40 à 15 h 10 ».
+  await monterCr({ etiquettes: true }, ORDRE_BON, { apres: OUVRE, avant: 15 * 60 + 10 });
+  const etq = await pageCt.textContent('#cr-hote [data-tour-etiquettes]');
+  if (!/Pâtisserie Arnaud : de 14 h 40 à 15 h 10/.test(etq)) throw new Error('étiquettes : ' + etq);
+  // Une journée sans ouverture ne touche pas à la fiche de la carte (ENT-3.2 inchangée).
+  await monterCr({}, ORDRE_BON);
+  await pageCt.waitForSelector('#cr-hote [data-creneau="c6"]');
+  if ((await titreC6()).includes('—')) throw new Error('la fiche d’ENT-3.2 a changé : ' + await titreC6());
+});
+
+await v('fenêtre : « tropTot: rate » — le report est refusé, muet sans dire de combien', async () => {
+  await monterCr({ tropTot: 'rate' }, ORDRE_BON, { apres: OUVRE });
+  await pageCt.waitForSelector('#cr-hote [data-creneau="c6"]');
+  let j = await jaugeCr();
+  if (!j.trop || !/Arrivée trop tôt de \d+ min : créneau raté/.test(j.txt)) throw new Error('jauge : ' + j.txt);
+  await validerCr();
+  let t = await texteCr();
+  if (!/ne tient pas encore/.test(t) || !/arrivée trop tôt chez Pâtisserie Arnaud \(\d+ min avant l’ouverture\)/.test(t)) throw new Error('report : ' + t.slice(-400));
+  await monterCr({ tropTot: 'rate', jaugesRepere: true }, ORDRE_BON, { apres: OUVRE });
+  await pageCt.waitForSelector('#cr-hote [data-creneau="c6"]');
+  j = await jaugeCr();
+  if (!j.trop || !/Arrivée trop tôt : créneau raté/.test(j.txt) || /\d+ min/.test(j.txt)) throw new Error('jauge muette : ' + j.txt);
+  await validerCr();
+  t = await texteCr();
+  if (!/arrivée trop tôt chez Pâtisserie Arnaud/.test(t) || /avant l’ouverture\)/.test(t)) throw new Error('report muet : ' + t.slice(-400));
   await pageCt.evaluate(() => document.getElementById('cr-hote')?.remove());
 });
 
