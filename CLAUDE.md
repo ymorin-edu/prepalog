@@ -197,7 +197,11 @@ modifier une séance**, et la corriger si le code a changé.
 - Suite Playwright en mode démonstration, ~1 000 cas. **En local, la lancer en parallèle :
   `node outils/test-parallele.mjs`** (tous les blocs, six navigateurs à la fois, ~4 min 30 ; le temps
   est celui du bloc le plus long, Smoby). `node outils/test.mjs` joue la même suite dans un seul
-  navigateur (~14 min) ; sur GitHub, en trois groupes (`--groupe N`, voir l'en-tête de `outils/test.mjs`).
+  navigateur (~14 min) ; sur GitHub, en quatre groupes (`--groupe N`, voir l'en-tête de `outils/test.mjs`).
+  Les séances France Boissons ont **un bloc par séance** (`fb-6.1` à `fb-6.6`, aides communes dans
+  `outils/test/france-boissons/commun.mjs`, sous-dossier exprès : le lanceur refuse un `.mjs` égaré dans
+  `outils/test/`) : une séance nouvelle = son fichier `outils/test/fb-6.x.mjs` + sa ligne dans `BLOCS` et dans
+  `GROUPES` (dans le groupe le plus léger).
   Un bloc seul : `node outils/test.mjs boost` (plusieurs : `boost carte`). Un bloc par fichier
   dans `outils/test/` ; un fichier non inscrit dans `BLOCS` du lanceur fait refuser le départ, et un
   bloc absent de `GROUPES` aussi (une entreprise nouvelle = sa ligne dans les deux ; le lanceur

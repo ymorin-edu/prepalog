@@ -294,7 +294,7 @@ rester sans cette dépendance recopie les 4 lignes de `lireNombre` (comme `conte
 deux lisent pareil. **Pas de bloc `lignes`** (libellé + case + liste sur une ligne) : une suite de blocs `nombre` et `liste`,
 éventuellement dans un `cadre`, suffit pour un bon de commande (décision D-2). Exemple : le bon de commande d'ENT-6.2
 (`FICHE` dans `contenus/france-boissons-ent62.js` : six cases `nombre` entières et positives, une `liste`, un `choix`, dans des
-`cadre`) ; tests : bloc `france-boissons`.
+`cadre`) ; tests : bloc `fb-6.2`.
 **Limite connue** (ENT-6.2, 10/10/2026) : le bouton « Répondre » d'un mail par phrases est là dès l'arrivée du mail ; rien ne le
 ferme tant qu'une condition est fausse (sauf un point d'étape, `ferme: 'repondre:<clé>'`). Une séance qui veut « le bon d'abord,
 la réponse ensuite » fait attendre la **suite** (la réponse du client : `tous(apresFiche(…), …)`), pas le bouton.
@@ -311,7 +311,7 @@ charge pas (le message nomme la fiche, le document ou le jalon) — une fonction
 vide, par exemple). Au dessin, une fonction qui plante est signalée (console, comme un jalon) et la fiche ou le document affiche
 un avis d'erreur ; une fiche qui ne se dessine pas ne part pas. Les gestes publiés par une fiche à `blocs(db)` sont ceux du dessin
 sur base vide, plus `fiche:<id>:envoyer`. Valeurs fixes : rien ne change. Exemple : `contenus/france-boissons-ent61.js`
-(`FICHE_QUI`, `DOC_ORGANIGRAMME_ELEVE`, jalons du courrier) ; tests : bloc `france-boissons`.
+(`FICHE_QUI`, `DOC_ORGANIGRAMME_ELEVE`, jalons du courrier) ; tests : bloc `fb-6.1`.
 
 **Menu de gauche rétractable** (04/10/2026, même brief, lot 3) : dans toutes les entreprises, sans rien
 déclarer. Un bouton en tête du menu le replie en une bande étroite (« » » pour le rouvrir) ; le choix est

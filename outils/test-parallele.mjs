@@ -11,7 +11,7 @@
 // On ne descend pas sous le bloc le plus long (Smoby ou Picard, ~2 min 30) : au-delà de six places, on ne
 // gagne plus rien. Décision de Tristan du 10/10/2026 (six navigateurs).
 //
-// Il ne touche ni à `outils/test.mjs` ni aux blocs. GitHub garde ses trois groupes (`--groupe N`).
+// Il ne touche ni à `outils/test.mjs` ni aux blocs. GitHub garde ses quatre groupes (`--groupe N`).
 //
 // Comptage : un bloc lancé seul rejoue d'abord ses prérequis (`PREREQUIS` de `outils/test.mjs` : le socle
 // avant Spartoo, groupes, Smoby, questions), et chaque navigateur termine par le cas « aucune requête
@@ -29,9 +29,9 @@ import { fileURLToPath } from 'node:url';
 const LANCEUR = fileURLToPath(new URL('./test.mjs', import.meta.url));
 const PORT_DE_BASE = 8099;
 const PLACES_PAR_DEFAUT = 6;
-// Les blocs les plus longs partent d'abord (mesures du 06/10/2026 et du 10/10/2026) ; les autres suivent
+// Les blocs les plus longs partent d'abord (mesures du 06/10/2026, du 10/10/2026 et du 12/10/2026 pour les blocs `fb-6.x`) ; les autres suivent
 // dans l'ordre de `BLOCS`. Un bloc absent d'ici n'est pas oublié, il part juste après.
-const LONGS_D_ABORD = ['smoby', 'picard', 'entrepot', 'boost', 'cdiscount', 'questions', 'spartoo', 'groupes'];
+const LONGS_D_ABORD = ['smoby', 'picard', 'fb-6.2', 'fb-6.4', 'fb-6.5', 'fb-6.3', 'fb-6.1', 'entrepot', 'boost', 'cdiscount', 'questions', 'spartoo', 'groupes'];
 
 const arg = process.argv[2];
 const PLACES = arg === undefined ? PLACES_PAR_DEFAUT : Number(arg);

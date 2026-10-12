@@ -281,7 +281,7 @@ indisponibilité hachurée, `apresPlanning(id, 2)` pour ouvrir la fiche, fiche `
 
 ## 8. Tests attendus
 
-Bloc `france-boissons` (cas préfixés « ENT-6.8 ») ; les demandes moteur ont leurs cas dans le bloc `planning`.
+Bloc `fb-6.8` (fichier `outils/test/fb-6.8.mjs`, aides dans `outils/test/france-boissons/commun.mjs`, une ligne dans `BLOCS` et dans `GROUPES` de `outils/test.mjs`, groupe le plus léger ; cas préfixés « ENT-6.8 ») ; les demandes moteur ont leurs cas dans le bloc `planning`.
 - **Parcours juste 13 / 13** avec la solution de référence **écrite à la main** (v1 : Lucas côte T1 06:00 · Amandine Rouen T2
   06:30 · Fatou Versailles E1 06:30 · Sébastien Mantes E2 09:00 · Julien Évreux VL 06:00 ; v2 : Lucas côte T1 06:00 · Rouen
   Transporteur 07:00 · Fatou Versailles E1 06:30 · Sébastien Mantes Location 09:00 · Julien Évreux VL 06:00 ; fiche juste).

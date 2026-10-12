@@ -3,10 +3,11 @@
 # tout de suite. Elle PRÉVIENT (croix rouge sur le commit, mail de GitHub) si quelque chose
 # est cassé. Mode démonstration uniquement, comme en local : aucun accès au vrai Firebase.
 #
-# Depuis le 06/10/2026 (lot 1 de MOTEUR-tests-rapides), la suite est coupée en trois groupes
-# (`GROUPES` dans outils/test.mjs) qui tournent EN MÊME TEMPS sur trois machines : trois coches
-# « Tests 1, 2, 3 » par push. Un groupe rouge n'arrête pas les autres (fail-fast: false).
-# Une 4e coche, « Tests séances », déroule ENT-1.1 → 1.2 → 1.3 dans l'ordre d'un élève et compare
+# Depuis le 06/10/2026 (lot 1 de MOTEUR-tests-rapides), la suite est coupée en groupes
+# (`GROUPES` dans outils/test.mjs) qui tournent EN MÊME TEMPS sur autant de machines : trois groupes
+# jusqu'au 12/10/2026, quatre depuis (France Boissons, un bloc par séance) : quatre coches
+# « Tests 1, 2, 3, 4 » par push. Un groupe rouge n'arrête pas les autres (fail-fast: false).
+# Une 5e coche, « Tests séances », déroule ENT-1.1 → 1.2 → 1.3 dans l'ordre d'un élève et compare
 # les écrans aux corrigés (outils/test-seances.mjs, port 8098 ; lot 4, 06/10/2026).
 
 name: Tests
@@ -23,7 +24,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        groupe: [1, 2, 3, séances]
+        groupe: [1, 2, 3, 4, séances]
     steps:
       - uses: actions/checkout@v4
 

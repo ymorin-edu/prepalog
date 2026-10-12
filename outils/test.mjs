@@ -3,11 +3,11 @@
 //   node outils/test.mjs              toute la suite, dans l'ordre (comme avant le découpage)
 //   node outils/test.mjs boost        un seul bloc (plus rapide quand on travaille sur une entreprise)
 //   node outils/test.mjs boost carte  plusieurs blocs, toujours remis dans l'ordre de la suite
-//   node outils/test.mjs --groupe 2   un des trois groupes de `GROUPES` (c'est ce que lance GitHub)
+//   node outils/test.mjs --groupe 2   un des quatre groupes de `GROUPES` (c'est ce que lance GitHub)
 //
-// Sur GitHub, la suite entière frôlait la limite de 15 min : elle y tourne en trois groupes, en
-// même temps, sur trois machines (lot 1 de MOTEUR-tests-rapides, 06/10/2026). Le port du serveur
-// de test se règle par `PORT_TESTS` (8099 par défaut).
+// Sur GitHub, la suite entière frôlait la limite de 15 min : elle y tourne en quatre groupes, en
+// même temps, sur quatre machines (trois depuis le lot 1 de MOTEUR-tests-rapides, 06/10/2026 ; quatre
+// depuis le 12/10/2026). Le port du serveur de test se règle par `PORT_TESTS` (8099 par défaut).
 //
 // Jusqu'au 02/10/2026, toute la suite tenait dans ce fichier (5 743 lignes). Plusieurs
 // conversations travaillent en même temps sur le dépôt et s'écrasaient dans ce fichier unique :
@@ -34,7 +34,7 @@ const BLOCS = ['socle', 'spartoo', 'groupes', 'dependances', 'transport', 'boost
   'temps',
   'questions',
   'tirage-niveaux',
-  'france-boissons',
+  'fb-6.1', 'fb-6.2', 'fb-6.3', 'fb-6.4', 'fb-6.5', 'fb-6.6',
   'quai-iso'];
 const PREREQUIS = { spartoo: ['socle'], groupes: ['socle'], smoby: ['socle'], questions: ['socle'] };
 
@@ -51,13 +51,17 @@ const PREREQUIS = { spartoo: ['socle'], groupes: ['socle'], smoby: ['socle'], qu
   }
 }
 
-// Les trois groupes que GitHub lance en même temps (`--groupe N`). Répartis pour durer à peu près
-// autant (mesures du 06/10/2026, voir docs/briefs/MOTEUR-tests-rapides.md). Un bloc et ses
-// prérequis restent dans le même groupe : sinon le prérequis tournerait deux fois.
+// Les quatre groupes que GitHub lance en même temps (`--groupe N`). Répartis pour durer à peu près
+// autant (mesures du 06/10/2026, voir docs/briefs/MOTEUR-tests-rapides.md ; refaits le 12/10/2026 :
+// France Boissons, dix séances prévues, durait 8 min 20 d'un seul bloc et fait un bloc par séance, `fb-6.x`,
+// mesuré 6.1 72 s · 6.2 109 s · 6.3 75 s · 6.4 105 s · 6.5 103 s · 6.6 31 s, soit ≈ 5 min 30 par groupe).
+// Un bloc et ses prérequis restent dans le même groupe : sinon le prérequis tournerait deux fois.
+// Une séance France Boissons nouvelle (`fb-6.7`…) va dans le groupe le plus léger.
 const GROUPES = {
-  1: ['quiz', 'carte', 'picard', 'demi-groupes', 'temps', 'tirage-niveaux', 'france-boissons', 'quai-iso'],
-  2: ['socle', 'spartoo', 'groupes', 'tableur-export', 'smoby', 'animation', 'visibilite', 'questions'],
-  3: ['dependances', 'transport', 'boost', 'inventaire', 'cdiscount', 'planning', 'entrepot', 'copie', 'amenagements'],
+  1: ['quiz', 'carte', 'picard', 'demi-groupes', 'temps', 'tirage-niveaux', 'fb-6.1', 'quai-iso'],
+  2: ['socle', 'spartoo', 'groupes', 'tableur-export', 'smoby', 'animation', 'visibilite', 'questions', 'fb-6.3'],
+  3: ['dependances', 'transport', 'boost', 'inventaire', 'cdiscount', 'planning', 'entrepot', 'copie', 'amenagements', 'fb-6.6'],
+  4: ['fb-6.2', 'fb-6.4', 'fb-6.5'],
 };
 // Même garde que pour les blocs oubliés : un bloc rangé dans aucun groupe (ou dans deux) ne
 // tournerait pas sur GitHub (ou deux fois), sans que rien ne le dise.

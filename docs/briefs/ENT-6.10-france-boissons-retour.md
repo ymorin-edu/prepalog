@@ -322,7 +322,7 @@ mots cliquables, pastilles d'étapes, menu déclaré par séance.
 
 ## 8. Tests attendus
 
-Bloc `france-boissons` (cas « ENT-6.10 ») :
+Bloc `fb-6.10` (fichier `outils/test/fb-6.10.mjs`, aides dans `outils/test/france-boissons/commun.mjs`, une ligne dans `BLOCS` et dans `GROUPES` de `outils/test.mjs`, groupe le plus léger ; cas « ENT-6.10 ») :
 - **Parcours juste 12 / 12** avec la solution écrite à la main (8 / 5 / 1 ; grille 9-5 / 9-3 / 8-5 / 10-3 / +1 −2 / 40 −8 / 32 ;
   phrases ; animation ; 90,9 / 20,5 / 1 084 / 114).
 - **Inaction 0 / 12** ; aucune fiche envoyable vide.

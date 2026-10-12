@@ -252,7 +252,7 @@ moteur à la fois.
 
 ## 8. Tests attendus
 
-Bloc `france-boissons` (cas préfixés « ENT-6.7 ») : parcours juste → **10 / 10** et message de fin ; **inaction 0 / 10** ; codes
+Bloc `fb-6.7` (fichier `outils/test/fb-6.7.mjs`, aides dans `outils/test/france-boissons/commun.mjs`, une ligne dans `BLOCS` et dans `GROUPES` de `outils/test.mjs`, groupe le plus léger ; cas préfixés « ENT-6.7 ») : parcours juste → **10 / 10** et message de fin ; **inaction 0 / 10** ; codes
 36 · 24 · 49 · 83 · 17 acceptés, code faux → redemandé, **aucun jalon perdu**, trace présente ; ligne 3 « 2 » sans mot → jalon 3 faux,
 **pas de ligne 4**, jalon 4 faux, jalons 6-10 « non jugé » (3 / 10) ; ligne 3 « Manquant 1 » → ligne 4 ajoutée, jalon 3 faux ; ligne 3
 « Emplacement vide » → ligne 4 de 2 fûts, jalon 3 faux ; « 1 » sans mot → refusé ; « 3 » → refusé ; casiers posés en premier sur une

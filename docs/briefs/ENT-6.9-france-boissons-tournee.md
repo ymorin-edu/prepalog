@@ -217,7 +217,7 @@ Toutes dans `docs/briefs/MOTEUR-vue-tournee-camion.md` :
 
 ## 8. Tests attendus
 
-Bloc `france-boissons` (cas préfixés « ENT-6.9 ») ; les cas du moteur dans le bloc `boost` / `carte` (ou un bloc `tournee`).
+Bloc `fb-6.9` (fichier `outils/test/fb-6.9.mjs`, aides dans `outils/test/france-boissons/commun.mjs`, une ligne dans `BLOCS` et dans `GROUPES` de `outils/test.mjs`, groupe le plus léger ; cas préfixés « ENT-6.9 ») ; les cas du moteur dans le bloc `boost` / `carte` (ou un bloc `tournee`).
 - **Parcours juste 12 / 12** avec la solution de référence **écrite à la main** (ordre, feuille, SMS).
 - **Une 2e tournée juste** différente → 12 / 12 (les jalons jugent les contraintes).
 - **Chaque piège** du §5 fait tomber **son** jalon : nord → sud (2) ; ordre « fenêtres tenues, conduite > 4 h 30 » (3, et 4 si
