@@ -13,7 +13,8 @@ ICI = os.path.dirname(os.path.abspath(__file__))
 SOURCES = os.environ.get('CARTE_SOURCES') or os.path.join(ICI, 'sources')
 
 # L'EMPRISE : Nîmes par défaut (Boost, inchangé octet pour octet) ; `CARTE_EMPRISE=cote` pour la côte
-# normande d'ENT-6.9 (`construire-cote.py` la règle lui-même). Chaque emprise a sa projection : à 49° N,
+# normande d'ENT-6.9 (`construire-cote.py` la règle lui-même) ; `CARTE_EMPRISE=region` pour la carte des
+# itinéraires d'Anvers à Valenciennes et Dourges (`construire-region.py`, Decathlon ENT-7.x). Chaque emprise a sa projection : à 49° N,
 # un degré de longitude fait 72 km, contre 80 km à 44° N — garder celle de Nîmes fausserait les km de 10 %.
 EMPRISE = os.environ.get('CARTE_EMPRISE', 'nimes')
 
@@ -32,7 +33,35 @@ def _cote():
             osm.append(x)
     return dict(osm=osm, iris=[])
 
-if EMPRISE == 'cote':
+def _region():
+    """Les extractions Overpass de la région (`extraire-region.mjs`), au même format que `_cote` ; un nœud
+    (ville, lieu) = { tags, p: [lon, lat] } (centre pour une voie ou une relation)."""
+    osm = []
+    for nom in ('routes', 'cote', 'frontieres', 'eau', 'rail', 'rail-local', 'villes', 'lieux'):
+        for e in json.load(open(os.path.join(SOURCES, 'region', nom + '.json'), encoding='utf-8'))['elements']:
+            x = dict(id=e['id'], type=e['type'], tags=e.get('tags', {}), src='rail' if nom == 'rail-local' else nom)
+            if 'lat' in e:
+                x['p'] = [e['lon'], e['lat']]
+            elif 'center' in e:
+                x['p'] = [e['center']['lon'], e['center']['lat']]
+            if e['type'] == 'way' and 'geometry' in e:
+                x['g'] = [[p['lon'], p['lat']] for p in e['geometry']]
+            elif e['type'] == 'relation':
+                x['m'] = [dict(r=m.get('role', ''), g=[[p['lon'], p['lat']] for p in m['geometry']])
+                          for m in e.get('members', []) if m['type'] == 'way' and 'geometry' in m]
+            osm.append(x)
+    return dict(osm=osm, iris=[])
+
+if EMPRISE == 'region':
+    D = _region()
+    # Origine : le coin nord-ouest de l'extraction (51,45° N ; 2,70° E). Longueur d'un degré à 50,8° N, au
+    # milieu de la région. Sur 130 km du nord au sud, cette projection plate fausse les longueurs est-ouest
+    # d'environ 1 % aux bords : elle sert au DESSIN ; les kilomètres se comptent sur la sphère (`km_geo`).
+    LON0, LAT0 = 2.70, 51.45
+    _PHI = math.radians(50.8)
+    KX = 111412.84 * math.cos(_PHI) - 93.5 * math.cos(3 * _PHI)
+    KY = 111132.92 - 559.82 * math.cos(2 * _PHI) + 1.175 * math.cos(4 * _PHI)
+elif EMPRISE == 'cote':
     D = _cote()
     # Origine : le coin nord-ouest de l'extraction (49,45° N ; 0,13° O). Longueur d'un degré à 49,36° N
     # (latitude moyenne de la côte), formules de l'ellipsoïde GRS 80 au premier ordre.
@@ -52,6 +81,17 @@ def xy(lon, lat):
 
 def lonlat(x, y):
     return (LON0 + x / KX, LAT0 - y / KY)
+
+def km_geo(pts):
+    """Longueur d'une ligne de points projetés (x, y), en mètres, mesurée sur la sphère (rayon moyen de la
+    Terre) : on revient aux longitudes et latitudes, que la projection inverse rend exactement."""
+    R, m = 6371008.8, 0.0
+    ll = [lonlat(*p) for p in pts]
+    for (l1, p1), (l2, p2) in zip(ll, ll[1:]):
+        f1, f2 = math.radians(p1), math.radians(p2)
+        a = math.sin((f2 - f1) / 2) ** 2 + math.cos(f1) * math.cos(f2) * math.sin(math.radians(l2 - l1) / 2) ** 2
+        m += 2 * R * math.asin(math.sqrt(a))
+    return m
 
 def proj(geom):
     return transform(lambda lon, lat, z=None: xy(lon, lat), geom)

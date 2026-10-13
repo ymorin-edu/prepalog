@@ -35,7 +35,7 @@ permise la plus proche : le camion s'arrête au bout de la rue, la livraison fin
 """
 import heapq, math, re
 from shapely.geometry import LineString, Point
-from geo import D, xy
+from geo import D, xy, lonlat
 
 # Profil vélo : la classe de chaque voie permise. Seules `maj` et `sec` respectent le sens unique.
 PERMIS = {
@@ -215,3 +215,88 @@ def itineraires(points, profil='velo', osm=None):
             chemin = [tuple(p['xy'])] + chemin[::-1] + [tuple(q['xy'])]
             out[f"{p['id']}|{q['id']}"] = {'m': dist[n1] + acc0 + acc1, 'g': chemin}
     return out
+
+
+# ───────────────────────────────────────────────────── carte régionale : un graphe par mode, des passages
+# Brief MOTEUR-carte-regionale (13/10/2026). Ce qui précède n'a pas bougé (Boost et la côte octet pour
+# octet) ; ce qui suit sert la carte des itinéraires d'une région (Decathlon ENT-7.x) : la route et le camion
+# final prennent le profil `porteur` ci-dessus, la barge et le rail ont leur propre réseau, et un itinéraire
+# passe par des POINTS DE PASSAGE imposés par le contenu, pour coller au trajet voulu (Anvers → Malines →
+# Bruxelles…) plutôt qu'au plus court chemin brut.
+
+def reseau_lignes(garde, souder=0, osm=None):
+    """Le graphe NON orienté des voies que `garde(tags)` accepte (rail, voies d'eau). `souder` (mètres) : relie
+    les bouts de voie distants de moins de `souder` (une rivière OSM coupée à une écluse, deux tronçons qui se
+    touchent sans partager de nœud)."""
+    arcs, voies = {}, []
+    def ajoute(a, b):
+        if a == b: return
+        L = math.dist(a, b)
+        for u, v in ((a, b), (b, a)):
+            d = arcs.setdefault(u, {})
+            if v not in d or d[v] > L: d[v] = L
+    for e in (D['osm'] if osm is None else osm):
+        if 'g' not in e or not garde(e['tags']):
+            continue
+        ns = [tuple(round(v, 1) for v in xy(*p)) for p in e['g']]
+        for a, b in zip(ns, ns[1:]):
+            ajoute(a, b)
+        voies.append((e['tags'].get('name'), ns))
+    if souder:
+        bouts = sorted({n for _, ns in voies for n in (ns[0], ns[-1])})
+        for i, a in enumerate(bouts):
+            for b in bouts[i + 1:]:
+                if b[0] - a[0] > souder: break
+                if a != b and math.dist(a, b) < souder:
+                    ajoute(a, b)
+    return arcs, voies
+
+def candidats(arcs, voies, p, rayon):
+    """Les accroches possibles d'un point de PASSAGE : une par voie à moins de `rayon` mètres (les 6 plus
+    proches), ou la voie la plus proche s'il n'y en a aucune. Une autoroute a deux chaussées à sens unique :
+    accrocher un passage à la plus proche seulement ferait parfois faire demi-tour au camion ; on laisse le
+    calcul choisir la bonne."""
+    P = Point(p['xy'])
+    proches = []
+    for i, (nom, ns) in enumerate(voies):
+        d = min(LineString([a, b]).distance(P) for a, b in zip(ns, ns[1:]))
+        if d <= rayon: proches.append((d, i))
+    choisies = [voies[i] for _, i in sorted(proches)[:6]]
+    out = []
+    for v in (choisies or [None]):
+        n, acc = accrocher(arcs, [v] if v else voies, p['xy'])
+        if all(n != c[0] for c in out): out.append((n, acc))
+    return out
+
+def par_passages(arcs, voies, points, rayon=400):
+    """Le plus court chemin qui passe, dans l'ordre, par chacun des `points` ([{xy, rue?}]). Rend
+    { 'g': [(x, y)…], 'm': mètres sur le plan } ; le premier et le dernier point sont les extrémités (accrochés
+    à leur voie la plus proche, ou à leur `rue`), les autres des passages (voir `candidats`)."""
+    etapes = [[accrocher(arcs, voies, points[0]['xy'], points[0].get('rue'))]]
+    etapes += [candidats(arcs, voies, p, rayon) for p in points[1:-1]]
+    etapes += [[accrocher(arcs, voies, points[-1]['xy'], points[-1].get('rue'))]]
+    # Programmation dynamique : pour chaque accroche d'une étape, le meilleur chemin depuis le départ.
+    best = {etapes[0][0][0]: (etapes[0][0][1], [etapes[0][0][0]])}
+    for i, suivantes in enumerate(etapes[1:], 1):
+        nouv = {}
+        for n0, (m0, ch0) in best.items():
+            dist, prec = dijkstra(arcs, n0)
+            for n1, acc1 in suivantes:
+                if n1 not in dist: continue
+                m = m0 + dist[n1]
+                if n1 not in nouv or m < nouv[n1][0]:
+                    bout = [n1]
+                    while bout[-1] != n0:
+                        bout.append(prec[bout[-1]])
+                    nouv[n1] = (m, ch0 + bout[::-1][1:])
+        if not nouv:
+            raise SystemExit(f'pas de chemin jusqu’au point n° {i} ({lonlat(*points[i]["xy"])})')
+        best = nouv
+    (n, (m, ch)), = best.items()
+    return {'g': [tuple(points[0]['xy'])] + ch + [tuple(points[-1]['xy'])], 'm': m + etapes[-1][0][1]}
+
+def reseau_porteur_coeur(osm=None):
+    """Le réseau du porteur, réduit aux voies d'où l'on va partout et d'où l'on revient (comme `itineraires`)."""
+    arcs, voies = reseau('porteur', osm)
+    C = coeur(arcs)
+    return arcs, [(nom, ns) for nom, ns in voies if all(n in C for n in ns)]

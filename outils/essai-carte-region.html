@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Essai — carte régionale des itinéraires</title>
+<!-- Page d'essai du lot 1 (brief MOTEUR-carte-regionale, 13/10/2026) : affiche le module généré par
+     outils/carte/construire-region.py, tel quel, pour juger le dessin AVANT d'écrire la vue cliquable
+     du moteur (lot 2). Rien ici n'est du moteur : la vue définitive vivra dans core/types/.
+     Ouvrir par le serveur local (lancer.bat), puis http://localhost:8000/outils/essai-carte-region.html -->
+<link rel="stylesheet" href="../styles/base.css">
+<style>
+  body{ background:var(--fond); color:var(--encre); font-family:system-ui,"Segoe UI",sans-serif; margin:0; padding:16px }
+  h1{ font-size:18px; margin:0 0 4px }
+  .note{ color:var(--encre-douce); font-size:13px; margin:0 0 10px }
+  .barre{ display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin-bottom:8px }
+  .barre button{ font:inherit; font-size:13px; padding:5px 10px; border:1px solid var(--filet); border-radius:var(--r);
+    background:var(--panneau); color:var(--encre); cursor:pointer }
+  .barre button[aria-pressed="true"]{ border-color:var(--encre); font-weight:700 }
+  .grille{ display:grid; grid-template-columns:minmax(0,1fr) 300px; gap:14px; align-items:start }
+  .cadre{ position:relative; height:calc(100vh - 140px); min-height:440px; border:1px solid var(--filet);
+    border-radius:var(--r); background:#f3f1ec; overflow:hidden }
+  .cadre svg{ width:100%; height:100%; display:block }
+  .attrib{ position:absolute; right:6px; bottom:4px; font-size:11px; color:#4a443d; background:rgba(255,255,255,.8); padding:1px 6px; border-radius:4px }
+  .echelle{ position:absolute; left:10px; bottom:8px; font-size:11px; color:#3d372f; background:rgba(255,255,255,.8); padding:3px 6px; border-radius:4px }
+  .echelle i{ display:block; height:5px; border:1.5px solid #3d372f; border-top:0; margin-top:2px }
+  .panneau{ background:var(--panneau); border:1px solid var(--filet); border-radius:var(--r); padding:12px 14px; font-size:13.5px }
+  .panneau h3{ font-size:12.5px; text-transform:uppercase; letter-spacing:.04em; color:var(--encre-douce); margin:12px 0 6px }
+  .panneau h3:first-child{ margin-top:0 }
+  .leg{ display:flex; align-items:center; gap:8px; margin:5px 0 }
+  .leg svg{ flex:none }
+  .leg .cr-it .halo{ stroke:var(--panneau) }
+  .leg .cr-it .trait, .leg .cr-it .trav{ stroke:var(--encre) }
+  .fiche p{ margin:4px 0 }
+  .nb .cadre{ filter:grayscale(1) contrast(1.05) }
+
+  /* le dessin : un plan papier, couleurs fixes (comme styles/carte.css) */
+  .cr-eau{ fill:#cde0ec }
+  .cr-eauL{ fill:none; stroke:#9cc0da; stroke-linecap:round; stroke-linejoin:round }
+  .cr-auto{ fill:none; stroke:#d8ccb3; stroke-linecap:round; stroke-linejoin:round }
+  .cr-rail{ fill:none; stroke:#c4beb4 }
+  .cr-front{ fill:none; stroke:#8a8378 }
+  .cr-grille{ fill:none; stroke:#5b544b; stroke-opacity:.35 }
+  .cr-cadre{ fill:none; stroke:#5b544b }
+  .cr-rep{ fill:#3d372f; font-weight:700; text-anchor:middle; dominant-baseline:central }
+  .cr-pays{ fill:#8a8378; font-weight:700; letter-spacing:.25em; text-anchor:middle }
+  .cr-ville{ fill:#5b544b }
+  .cr-vnom{ fill:#3d372f; paint-order:stroke; stroke:#f3f1ec; stroke-linejoin:round }
+  .cr-it path{ fill:none; stroke-linecap:round; stroke-linejoin:round }
+  .cr-it .halo{ stroke:#f3f1ec }
+  .cr-it .trav{ stroke-linecap:butt }
+  .cr-it .trait, .cr-it .trav{ stroke:#1f1c18 }
+  .cr-it.estompe{ opacity:.28 }
+  .cr-it .choix{ stroke:#1f1c18; stroke-opacity:.18; display:none }
+  .cr-it.choisi .choix{ display:block }
+  .cr-lieu .rond{ stroke:#1f1c18 }
+  .cr-lieu.port .rond, .cr-lieu.terminal .rond{ fill:#fdfbf7 }
+  .cr-lieu.entrepot .rond{ fill:#1f5fa8 }
+  .cr-lieu text{ font-weight:800; text-anchor:middle; dominant-baseline:central }
+  .cr-lieu.entrepot .lettre{ fill:#fdfbf7 }
+  .cr-lieu .lettre{ fill:#1f1c18 }
+  .cr-lnom{ fill:#1f1c18; font-weight:700; paint-order:stroke; stroke:#f3f1ec; stroke-linejoin:round }
+</style>
+</head>
+<body>
+<h1>Essai — carte des itinéraires (lot 1)</h1>
+<p class="note">Le dessin seul, tel que le build le calcule. Rien n'est cliquable sur la carte à ce stade : les boutons servent à juger
+  l'affichage (destination, itinéraire mis en avant, derniers kilomètres, thème, noir et blanc).</p>
+<div class="barre" data-barre></div>
+<div class="grille">
+  <div class="cadre" data-cadre>
+    <svg data-svg role="img"></svg>
+    <div class="echelle"><span data-ech></span><i data-ech-barre></i></div>
+    <div class="attrib" data-attrib></div>
+  </div>
+  <aside class="panneau">
+    <h3>Légende</h3>
+    <div data-legende></div>
+    <h3>Itinéraire</h3>
+    <div class="fiche" data-fiche></div>
+  </aside>
+</div>
+<script type="module">
+import { CARTE as C } from '../contenus/decathlon-carte.js';
+
+const $ = (s) => document.querySelector(s);
+const svg = $('[data-svg]'), cadre = $('[data-cadre]');
+const ui = { dest: 'rouvignies', choisi: null, zoom: false, theme: 'clair', nb: false };
+const NOMS = { route: 'Route', barge: 'Barge', rail: 'Rail', camion: 'Camion (derniers km)' };
+const ech = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+
+// Les quatre traits, en pixels d'écran : la FORME distingue les modes (impression noir et blanc, daltonisme).
+//   route = plein épais ; barge = tirets longs ; rail = fin à traverses ; camion = pointillé fin.
+const TRAIT = {
+  route:  { w: 4.6, dash: null },
+  barge:  { w: 3.4, dash: [14, 6] },
+  rail:   { w: 1.6, dash: null, trav: { w: 7, dash: [1.2, 8] } },
+  camion: { w: 2.6, dash: [0.1, 5.2] },
+};
+
+function legende() {
+  return Object.keys(TRAIT).map((t) => `<div class="leg"><svg width="56" height="14" class="cr-it">${echantillon(t)}</svg>${NOMS[t]}</div>`).join('');
+}
+function echantillon(t) {
+  const T = TRAIT[t], d = 'M4 7H52';
+  return `<path class="halo" d="${d}" stroke-width="${T.w + 3}"/>`
+    + (T.trav ? `<path class="trav" d="${d}" stroke-width="${T.trav.w}" stroke-dasharray="${T.trav.dash}" stroke-linecap="butt"/>` : '')
+    + `<path class="trait" d="${d}" stroke-width="${T.w}"${T.dash ? ` stroke-dasharray="${T.dash}"` : ''}/>`;
+}
+
+function dessiner() {
+  const [FX, FY, FW, FH] = C.frame;
+  const K = C.couches;
+  let dG = '';
+  for (let i = 1; i < C.cols.length; i++) dG += `M${FX + i * C.pas} ${FY}V${FY + FH}`;
+  for (let j = 1; j < C.nl; j++) dG += `M${FX} ${FY + j * C.pas}H${FX + FW}`;
+  const reps = [...C.cols].map((c, i) => `<text class="cr-rep" data-fs="12" x="${FX + (i + .5) * C.pas}" y="${FY}" data-dy="-11">${c}</text>`).join('')
+    + [...Array(C.nl)].map((_, j) => `<text class="cr-rep" data-fs="12" x="${FX}" data-dx="-12" y="${FY + (j + .5) * C.pas}">${j + 1}</text>`).join('');
+  const I = C.itineraires[ui.dest];
+  const ids = new Set(Object.values(I).flatMap((it) => it.segments.flatMap((s) => [s.de, s.a])));
+  const arrivee = Object.values(I)[0].segments.at(-1).a;
+  // Les itinéraires : le choisi par-dessus, les autres estompés. Chaque tronçon a son trait.
+  const ordre = Object.keys(I).sort((a, b) => (a === ui.choisi) - (b === ui.choisi));
+  const its = ordre.map((m) => {
+    const it = I[m];
+    const cl = ui.choisi ? (m === ui.choisi ? ' choisi' : ' estompe') : '';
+    const segs = it.segments.map((s) => `<g data-type="${s.type}">
+        <path class="choix" d="${s.d}"/><path class="halo" d="${s.d}"/>
+        ${TRAIT[s.type].trav ? `<path class="trav" d="${s.d}"/>` : ''}<path class="trait" d="${s.d}"/></g>`).join('');
+    return `<g class="cr-it${cl}" data-mode="${m}">${segs}</g>`;
+  }).join('');
+  const lettre = { port: 'P', terminal: 'T', entrepot: 'E' };
+  const lieux = [...ids].map((k) => {
+    const l = C.lieux[k], n = C.noms[ui.dest][k];
+    const type = l.type === 'entrepot' && k !== arrivee ? 'terminal' : l.type;
+    return `<g class="cr-lieu ${type}" data-x="${l.x}" data-y="${l.y}"><title>${ech(l.nom)}</title>
+        <circle class="rond" r="${type === 'terminal' ? 7 : 10}"/><text class="lettre" font-size="${type === 'terminal' ? 9 : 11}">${lettre[l.type]}</text></g>
+      <text class="cr-lnom" data-fs="12.5" data-px="${n.dx} ${n.dy}" x="${l.x}" y="${l.y}" text-anchor="${n.ancre}">${ech(l.court)}</text>`;
+  }).join('');
+  const villes = C.villes.map((v) => `<circle class="cr-ville" data-r="2.6" cx="${v.x}" cy="${v.y}"/>
+      <text class="cr-vnom" data-fs="12" data-px="${v.dx} ${v.dy}" x="${v.x}" y="${v.y}" text-anchor="${v.ancre}">${ech(v.nom)}</text>`).join('');
+  const pays = C.pays.map((p) => `<text class="cr-pays" data-fs="13" x="${p.x}" y="${p.y}">${ech(p.nom)}</text>`).join('');
+  svg.setAttribute('aria-label', `Carte d'Anvers à ${ech(C.lieux[arrivee].court.replace(/^Entrepôt de /, ''))} : trois itinéraires, route, barge et rail`);
+  svg.innerHTML = `<defs><clipPath id="cr-clip"><rect x="${FX}" y="${FY}" width="${FW}" height="${FH}"/></clipPath></defs>
+    <rect x="${FX - 1e5}" y="${FY - 1e5}" width="${FW + 2e5}" height="${FH + 2e5}" fill="#f3f1ec"/>
+    <g clip-path="url(#cr-clip)">
+      <path class="cr-eau" d="${K.eau}"/><path class="cr-eauL" d="${K.eauL}"/>
+      <path class="cr-rail" d="${K.rail}"/><path class="cr-auto" d="${K.autoroutes}"/>
+      <path class="cr-front" d="${K.frontieres}"/>
+      <path class="cr-grille" d="${dG}"/>
+      ${pays}${villes}
+    </g>
+    <rect class="cr-cadre" x="${FX}" y="${FY}" width="${FW}" height="${FH}"/>${reps}
+    ${its}${lieux}`;
+  $('[data-attrib]').textContent = C.attrib;
+  $('[data-legende]').innerHTML = legende() + `<div class="leg"><svg width="56" height="22"><g class="cr-lieu entrepot" transform="translate(28 11)"><circle class="rond" r="9" stroke-width="2"/><text class="lettre" font-size="10">E</text></g></svg>Entrepôt d'arrivée</div>
+    <div class="leg"><svg width="56" height="22"><g class="cr-lieu terminal" transform="translate(28 11)"><circle class="rond" r="7" stroke-width="2"/><text class="lettre" font-size="9">T</text></g></svg>Terminal (changement de mode)</div>
+    <div class="leg"><svg width="56" height="14"><path d="M4 7H52" class="cr-front" stroke-width="1.4" stroke-dasharray="10 4 2 4"/></svg>Frontière</div>`;
+  fiche();
+  appliquer();
+}
+
+function fiche() {
+  const I = C.itineraires[ui.dest];
+  const it = ui.choisi && I[ui.choisi];
+  $('[data-fiche]').innerHTML = !it ? '<p>Aucun itinéraire choisi.</p>' : `<p><b>${ech(it.nom)}</b> — ${it.km} km</p>
+    <p>${ech(it.texte)}</p>
+    <p>${it.segments.map((s) => `${NOMS[s.type].replace(/ \(.*/, '').toLowerCase()} ${s.km} km`).join(' + ')}</p>
+    <p>Terminaux : ${it.terminaux.length ? it.terminaux.map((k) => ech(C.lieux[k].court)).join(', ') : 'aucun'}</p>
+    <p>Ruptures de charge : ${it.ruptures}</p>`;
+}
+
+// Épaisseurs et tailles en pixels d'écran, quel que soit le zoom (comme monterScene dans carte.js).
+function appliquer() {
+  const [FX, FY, FW, FH] = C.frame;
+  const v = ui.zoom ? C.vues[ui.dest] : [FX - 2500, FY - 3500, FW + 5000, FH + 6000];
+  svg.setAttribute('viewBox', v.join(' '));
+  const W = cadre.clientWidth, H = cadre.clientHeight, k = 1 / Math.min(W / v[2], H / v[3]);
+  const px = (sel, w, dash) => svg.querySelectorAll(sel).forEach((p) => {
+    p.style.strokeWidth = w * k; if (dash) p.style.strokeDasharray = dash.map((x) => x * k).join(' ');
+  });
+  px('.cr-eauL', 1.6); px('.cr-auto', 2.2); px('.cr-rail', 1.1); px('.cr-front', 1.4, [10, 4, 2, 4]);
+  px('.cr-grille', 1); px('.cr-cadre', 1.6);
+  for (const [t, T] of Object.entries(TRAIT)) {
+    px(`[data-type="${t}"] .halo`, T.w + 3);
+    px(`[data-type="${t}"] .choix`, T.w + 9);
+    px(`[data-type="${t}"] .trait`, T.w, T.dash);
+    if (T.trav) px(`[data-type="${t}"] .trav`, T.trav.w, T.trav.dash);
+  }
+  svg.querySelectorAll('.cr-it.choisi .trait').forEach((p) => { p.style.strokeWidth = parseFloat(p.style.strokeWidth) * 1.5; });
+  svg.querySelectorAll('[data-fs]').forEach((t) => {
+    t.style.fontSize = t.dataset.fs * k + 'px'; t.style.strokeWidth = 3 * k;
+    if (t.dataset.px) { const [a, b] = t.dataset.px.split(' ').map(Number); t.setAttribute('dx', a * k); t.setAttribute('dy', b * k); }
+    if (t.dataset.dx) t.setAttribute('dx', t.dataset.dx * k);
+    if (t.dataset.dy) t.setAttribute('dy', t.dataset.dy * k);
+  });
+  svg.querySelectorAll('[data-r]').forEach((c) => c.setAttribute('r', c.dataset.r * k));
+  svg.querySelectorAll('.cr-lieu').forEach((g) => { g.setAttribute('transform', `translate(${g.dataset.x} ${g.dataset.y}) scale(${k})`); g.querySelector('.rond').style.strokeWidth = 2; });
+  const pas = [1000, 2000, 5000, 10000, 20000, 50000].find((p) => p >= 110 * k * 0.6) || 50000;
+  $('[data-ech-barre]').style.width = pas / k + 'px';
+  $('[data-ech]').textContent = pas / 1000 + ' km';
+}
+
+function barre() {
+  const b = (txt, on, f) => { const x = document.createElement('button'); x.textContent = txt; x.setAttribute('aria-pressed', on);
+    x.onclick = () => { f(); barre(); dessiner(); }; return x; };
+  const z = $('[data-barre]'); z.innerHTML = '';
+  z.append(b('Vers Rouvignies', ui.dest === 'rouvignies', () => { ui.dest = 'rouvignies'; }),
+    b('Vers Dourges', ui.dest === 'dourges', () => { ui.dest = 'dourges'; }), ' · ',
+    ...['route', 'barge', 'rail'].map((m) => b(m[0].toUpperCase() + m.slice(1), ui.choisi === m, () => { ui.choisi = ui.choisi === m ? null : m; })), ' · ',
+    b('Derniers kilomètres', ui.zoom, () => { ui.zoom = !ui.zoom; }), ' · ',
+    b('Thème sombre', ui.theme === 'sombre', () => { ui.theme = ui.theme === 'sombre' ? 'clair' : 'sombre';
+      document.documentElement.dataset.theme = ui.theme; }),
+    b('Noir et blanc', ui.nb, () => { ui.nb = !ui.nb; document.body.classList.toggle('nb', ui.nb); }));
+}
+new ResizeObserver(appliquer).observe(cadre);
+document.documentElement.dataset.theme = ui.theme;
+barre(); dessiner();
+</script>
+</body>
+</html>

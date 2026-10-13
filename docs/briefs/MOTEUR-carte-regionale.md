@@ -6,7 +6,7 @@
 > Lis CLAUDE.md, docs/EN-COURS.md, docs/audit-architecture.md (partie carte) puis docs/briefs/MOTEUR-carte-regionale.md. Fais d'abord l'état des lieux du §6 en lecture seule (carte.js, geo.py, construire-cote.py, itineraires.py, extraire-cote.mjs) et dis-moi ce que tu réutilises et ce qui est neuf. Annonce la durée avant de commencer. Lot par lot, et montre-moi une capture de la carte (lot 1) avant d'écrire la vue cliquable (lot 2).
 > ```
 
-**Statut** : à implémenter
+**Statut** : lot 1 livré (13/10/2026) ; lots 2 et 3 à faire
 **Date du brief** : 13/10/2026
 **Conversation d'origine** : Cowork (Opus). Décision de Tristan du 13/10/2026 : **carte cliquable** pour ENT-7.1 (brief 7.1 §11 n° 1),
 plutôt qu'un dessin fixe. Maquette : `G:\Mon Drive\Travail\Logistique\1L\Claude outputs\maquette-decathlon-7x.html` (écran « Carte
@@ -159,10 +159,45 @@ dire à Tristan**) :
 
 ## Compte rendu *(rempli par Claude Code à la livraison)*
 
-- **Fichiers créés / modifiés** :
-- **Distances obtenues** (par itinéraire et par tronçon) :
+### Lot 1 — extraction et build (13/10/2026)
+
+- **Fichiers créés / modifiés** : `outils/carte/extraire-region.mjs` (nouveau) ; `outils/carte/geo.py` (emprise `region`, projection à
+  50,8° N, `km_geo`) ; `outils/carte/itineraires.py` (ajouts en fin de fichier : `reseau_lignes`, `candidats`, `par_passages`,
+  `reseau_porteur_coeur` ; rien d'existant n'a changé) ; `outils/carte/construire-region.py` (nouveau) ; `outils/carte/decathlon.json`
+  (nouveau) ; `contenus/decathlon-carte.js` (généré, **167 Ko**) ; `outils/essai-carte-region.html` (page d'essai, pas du moteur).
+- **Distances obtenues** (mesurées sur la sphère, arrondies au km par tronçon) :
+
+  | Destination | Mode | Tronçons | Total | Brief (provisoire) |
+  |---|---|---|---|---|
+  | Rouvignies | route | route 173 | **173 km** | 165 |
+  | Rouvignies | barge | barge 194 + camion 13 | **207 km** | 215 + 6 |
+  | Rouvignies | rail | rail 162 + camion 45 | **207 km** | 175 + 48 |
+  | Dourges | route | route 153 | **153 km** | — |
+  | Dourges | barge | barge 263 + camion 3 (2,5) | **266 km** | — |
+  | Dourges | rail | rail 162 + camion 3 (2,5) | **165 km** | — |
+
+- **Ordre du CO₂** (facteurs du brief 7.1 §6.2, km arrondis par tronçon) : vers Rouvignies, 13,5 t : barge 61 < rail 67 < route 119 kg ;
+  15,8 t : 72 < 78 < 139. Vers Dourges, 13,5 t : rail 38 < barge 73 < route 105 ; 15,8 t : 45 < 86 < 123. **L'ordre voulu tient.**
+- **Lieux** (vérifié = objet OSM nommé ; supposé = à confirmer par Tristan) :
+  - port d'Anvers : terminal **Antwerp Gateway** (DP World) au Deurganckdok, relation OSM 21119015 — **vérifié dans OSM ; le choix du terminal
+    est construit** (le brief n'en nommait aucun) ;
+  - terminal de Bruay-sur-l'Escaut : relation OSM 21189603 « Terminal Bruay-sur-l'Escaut » — vérifié ;
+  - entrepôt Decathlon de Dourges : nœud OSM 3971089596 « decathlon » dans Delta 3 — vérifié ;
+  - **terminal LDCT** : **non nommé dans OSM** ; posé au quai du canal de la Deûle, sur les voies de desserte de Delta 3 — **supposé** ;
+  - **entrepôt de Rouvignies** : **non nommé dans OSM** ; posé sur le plus grand entrepôt récent de la ZAC de l'Aérodrome Ouest (way
+    427004502) — **supposé**. D'où un camion de **13 km** depuis Bruay (le brief disait 6).
 - **Écarts par rapport au brief** :
-- **Décisions prises en route** :
-- **Tests** :
-- **Commits** :
-- **Reste ouvert** :
+  - **Rail vers Dourges** : le brief proposait Bruxelles → Mons → Valenciennes → Douai ; par les voies OSM, cela fait 313 km (la ligne
+    Mons-Valenciennes ne passe plus la frontière). Pris par Gand → Courtrai → Lille, comme vers Rouvignies (162 km).
+  - **Estuaire de l'Escaut (Flessingue)** : hors du cadre. Le cadre s'arrête au nord à environ 51,37° N, et l'agrandir réduirait toute la
+    carte ; la mer du Nord tient dans le coin nord-ouest.
+  - **Contargo Prouvy** : OSM montre un terminal « Contargo Prouvy » (Contargo Container Escaut Service) à **500 m** du site supposé de
+    l'entrepôt de Rouvignies. Le brief 7.1 garde Bruay ; à vérifier par Cowork (si la barge de Decathlon y arrive, le camion final fait
+    moins de 1 km).
+- **Décisions prises en route** : les kilomètres se mesurent sur la sphère (la projection plate se tromperait d'environ 1 % aux bords) ;
+  les trains ne roulent ni sur les lignes à grande vitesse ni dans les faisceaux de gare, mais entrent au terminal par les embranchements ;
+  un point de passage s'accroche à la chaussée qui évite un demi-tour ; les noms des lieux sont placés par destination et collés à leur
+  point en pixels.
+- **Tests** : construction rejouée deux fois sur les mêmes sources, même empreinte (alerte 11) ; modules de Nîmes (×3) et de la côte
+  reconstruits, **identiques octet pour octet** ; bloc `dependances` 42/42. Le bloc `carte-region` viendra avec la vue (lot 2).
+- **Reste ouvert** : confirmer LDCT et Rouvignies ; au zoom de Dourges, les noms du terminal et de l'entrepôt se chevauchent (lot 3).

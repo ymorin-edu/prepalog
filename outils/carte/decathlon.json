@@ -1,0 +1,71 @@
+{
+  "titre": "Carte des itinéraires d'Anvers aux entrepôts Decathlon de Rouvignies et de Dourges (ENT-7.1 à 7.4).",
+  "description": "un conteneur au port d'Anvers, trois façons de l'amener à Rouvignies (7.1 à 7.3) ou à Dourges (7.4) : route, barge + camion, rail + camion.",
+  "sortie": "contenus/decathlon-carte.js",
+  "pas": 10000,
+  "marge": 6000,
+  "mer": [[2.95, 51.33]],
+  "voiesNavigables": "Schelde|Escaut|Ringvaart|Dunkerque|Deûle|Scarpe|grand gabarit|Sensée",
+  "souderEau": 150,
+  "souderRail": 15,
+  "eauAireMin": 300000,
+  "lieux": [
+    { "id": "anvers", "type": "port", "nom": "Port d'Anvers — terminaux à conteneurs du Deurganckdok", "court": "Port d'Anvers",
+      "lonlat": [4.2642, 51.2888], "osm": "relation 21119015 « Antwerp Gateway » (DP World), au Deurganckdok" },
+    { "id": "bruay", "type": "terminal", "nom": "Terminal fluvial de Bruay-sur-l'Escaut", "court": "Terminal de Bruay",
+      "lonlat": [3.5478, 50.3924], "osm": "relation 21189603 « Terminal Bruay-sur-l’Escaut »" },
+    { "id": "ldct", "type": "terminal", "nom": "Terminal rail-barge de Dourges (LDCT)", "court": "Terminal de Dourges",
+      "lonlat": [2.9855, 50.4490], "osm": "non nommé dans OSM : quai du canal de la Deûle et voies de desserte (ways 102608074, 102608080), dans la plateforme Delta 3 (way 517720539) — position à confirmer" },
+    { "id": "rouvignies", "type": "entrepot", "nom": "Entrepôt Decathlon de Rouvignies", "court": "Entrepôt de Rouvignies",
+      "lonlat": [3.4349, 50.3326], "osm": "non nommé dans OSM : way 427004502 (building=warehouse), le plus grand entrepôt récent de la ZAC de l'Aérodrome Ouest — à confirmer" },
+    { "id": "delta3", "type": "entrepot", "nom": "Entrepôt Decathlon de Dourges (Delta 3)", "court": "Entrepôt de Dourges",
+      "lonlat": [2.9749, 50.4465], "osm": "node 3971089596 « decathlon », dans la plateforme Delta 3 (way 517720539)" }
+  ],
+  "villes": [
+    { "nom": "Anvers" }, { "nom": "Gand" }, { "nom": "Bruxelles" }, { "nom": "Malines" }, { "nom": "Audenarde" },
+    { "nom": "Tournai" }, { "nom": "Courtrai" }, { "nom": "Lille" }, { "nom": "Mons" }, { "nom": "Valenciennes" },
+    { "nom": "Condé", "osm": "Condé-sur-l'Escaut" }, { "nom": "Douai" }
+  ],
+  "pays": [
+    { "nom": "BELGIQUE", "lonlat": [3.95, 50.95] },
+    { "nom": "FRANCE", "lonlat": [3.25, 50.30] },
+    { "nom": "PAYS-BAS", "lonlat": [3.85, 51.38] }
+  ],
+  "derniersKm": { "rouvignies": ["bruay", "rouvignies"], "dourges": ["ldct", "delta3"] },
+  "derniersKmMarge": 5000,
+  "itineraires": {
+    "rouvignies": {
+      "route": { "nom": "Route", "texte": "Un camion porte le conteneur d'Anvers à l'entrepôt, sans changer de véhicule : par Malines, Bruxelles et Mons (E19), puis l'A2 jusqu'à Valenciennes.",
+        "segments": [ { "type": "route", "de": "anvers", "a": "rouvignies", "km": [140, 200],
+          "passages": [[4.465, 51.02], [3.93, 50.46], [3.58, 50.36]] } ] },
+      "barge": { "nom": "Barge + camion", "texte": "Une barge remonte l'Escaut par Gand, Audenarde, Tournai et Condé jusqu'au terminal de Bruay-sur-l'Escaut ; un camion fait les derniers kilomètres.",
+        "segments": [ { "type": "barge", "de": "anvers", "a": "bruay", "km": [180, 270], "accesMax": 2500,
+            "note": "le Deurganckdok est un bassin, sans ligne de voie d'eau dans OSM : l'accès traverse le bassin jusqu'à l'Escaut",
+            "passages": [[3.74, 50.99], [3.605, 50.845], [3.39, 50.62], [3.58, 50.455]] },
+          { "type": "camion", "de": "bruay", "a": "rouvignies", "km": [3, 16] } ] },
+      "rail": { "nom": "Rail + camion", "texte": "Un train emporte le conteneur par Gand, Courtrai et Lille jusqu'au terminal de Dourges ; un camion le conduit ensuite à Rouvignies.",
+        "segments": [ { "type": "rail", "de": "anvers", "a": "ldct", "km": [140, 230],
+            "passages": [[3.7106, 51.0357], [3.2644, 50.8243], [3.07, 50.63]] },
+          { "type": "camion", "de": "ldct", "a": "rouvignies", "km": [35, 65] } ] }
+    },
+    "dourges": {
+      "route": { "nom": "Route", "texte": "Un camion porte le conteneur d'Anvers à l'entrepôt, sans changer de véhicule : par Gand, Courtrai et Lille (E17 puis A1).",
+        "segments": [ { "type": "route", "de": "anvers", "a": "delta3", "km": [120, 190],
+          "passages": [[3.70, 51.005], [3.30, 50.81], [3.07, 50.58]] } ] },
+      "barge": { "nom": "Barge + camion", "texte": "Une barge remonte l'Escaut jusqu'à Valenciennes, puis le canal Dunkerque-Escaut par Bouchain et Douai jusqu'au terminal de Dourges ; un camion fait les deux derniers kilomètres.",
+        "segments": [ { "type": "barge", "de": "anvers", "a": "ldct", "km": [200, 330], "accesMax": 2500,
+            "passages": [[3.74, 50.99], [3.605, 50.845], [3.39, 50.62], [3.58, 50.455], [3.31, 50.29], [3.08, 50.37]] },
+          { "type": "camion", "de": "ldct", "a": "delta3", "km": [1, 6] } ] },
+      "rail": { "nom": "Rail + camion", "texte": "Un train emporte le conteneur par Gand, Courtrai et Lille jusqu'au terminal de Dourges ; un camion fait les deux derniers kilomètres.",
+        "segments": [ { "type": "rail", "de": "anvers", "a": "ldct", "km": [160, 270],
+            "passages": [[3.7106, 51.0357], [3.2644, 50.8243], [3.07, 50.63]],
+            "note": "le brief proposait Bruxelles, Mons, Valenciennes, Douai : 313 km par les voies OSM (la ligne Mons-Valenciennes ne passe plus la frontière) ; même chemin que vers Rouvignies" },
+          { "type": "camion", "de": "ldct", "a": "delta3", "km": [1, 6] } ] }
+    }
+  },
+  "co2": {
+    "facteurs": { "route": 0.051, "camion": 0.051, "barge": 0.020, "rail": 0.0165 },
+    "poids": [13.5, 15.8],
+    "ordre": { "rouvignies": ["barge", "rail", "route"], "dourges": ["rail", "barge", "route"] }
+  }
+}
