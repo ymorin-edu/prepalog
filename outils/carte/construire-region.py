@@ -318,6 +318,22 @@ for dest, ids in SEANCE.get('derniersKm', {}).items():
     x1, y1 = max(p[0] for p in ps) + m, max(p[1] for p in ps) + m
     VUES[dest] = [round(x0), round(y0), round(x1 - x0), round(y1 - y0)]
 
+# --------------------------------------------------------------------- les noms au zoom des derniers kilomètres
+# Les places ci-dessus valent pour la vue d'ensemble (≈ 250 m par pixel). Au zoom, deux lieux proches s'écartent à
+# l'écran (le terminal LDCT et l'entrepôt de Dourges : 800 m, soit 3 px en vue d'ensemble) et leurs noms, collés à leur
+# point en pixels, se chevauchaient (lot 3, 13/10) : on recalcule leurs places à l'échelle de chaque vue de zoom.
+NOMS_ZOOM = {}
+K_VUE_ENSEMBLE = K_ENS
+for dest, vb in VUES.items():
+    K_ENS = max(vb[2] / 860, vb[3] / 520)
+    cadre_vue = box(vb[0], vb[1], vb[0] + vb[2], vb[1] + vb[3])
+    ids = [k for k in NOMS_LIEUX[dest] if cadre_vue.contains(Point(LIEUX[k]['xy']))]
+    tr = [LineString(sg['g']).buffer(7 * K_ENS) for it in ITIN[dest].values() for sg in it['segs']]
+    pts = [Point(*LIEUX[i]['xy']).buffer(13 * K_ENS) for i in ids] + [Point(*v['xy']).buffer(4 * K_ENS) for v in VILLES]
+    poses_z = []
+    NOMS_ZOOM[dest] = {k: placer(LIEUX[k]['court'], LIEUX[k]['xy'], 12.5, 16 * K_ENS, pts, poses_z, tr) for k in ids}
+K_ENS = K_VUE_ENSEMBLE
+
 # --------------------------------------------------------------------- le paquet de données
 def tol_de(t): return 25 if t == 'camion' else 40
 DATA = dict(
@@ -329,6 +345,9 @@ DATA = dict(
     lieux={k: dict(nom=l['nom'], court=l['court'], type=l['type'], x=round(l['xy'][0]), y=round(l['xy'][1]),
                    case=case_de(l['xy']), osm=l.get('osm', '')) for k, l in LIEUX.items()},
     noms=NOMS_LIEUX,
+    nomsZoom=NOMS_ZOOM,
+    # La projection (origine, mètres par degré) : une séance pose une marque par sa longitude et sa latitude.
+    proj=[LON0, LAT0, KX, KY],
     vues=VUES,
     itineraires={dest: {mode: dict(
         mode=mode, nom=it['nom'], texte=it['texte'],

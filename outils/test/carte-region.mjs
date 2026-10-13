@@ -28,7 +28,7 @@ await pg.goto(BASE);
 await pg.waitForSelector('#btnProf', { timeout: 8000 });
 
 const SEANCE = 'essai-itin';
-// `o` : { destination, quadrillage, role, couleurRoute (sabotage : colorer la route) }.
+// `o` : { destination, quadrillage, role, marque (l'écluse de Kain, visible quand `db.alea` est vrai) }.
 const monter = (o = {}) => pg.evaluate(async (o) => {
   document.getElementById('ci-hote')?.remove();
   const { creerEntreprise } = await import('/core/types/entreprise.js');
@@ -43,6 +43,9 @@ const monter = (o = {}) => pg.evaluate(async (o) => {
       alt: `Carte d'Anvers à ${o.destination === 'dourges' ? 'Dourges' : 'Rouvignies'} : trois itinéraires, route, barge et rail`,
       offres: (mode) => ({ route: ['Transports Nord Express', 'Delmotte'], barge: ['Contargo'], rail: ['Rail Fret Benelux'] })[mode],
       quadrillage: !!o.quadrillage,
+      // L'écluse de Kain : way OSM 152861639 « Écluse de Kain » (50,6284 N ; 3,3714 E), vérifiée dans l'extraction du 13/10.
+      marques: o.marque ? [{ id: 'kain', lonlat: [3.3714, 50.6284], titre: 'Écluse de Kain fermée',
+        texte: 'Arrêt de navigation du 02/02 au 05/03', coupe: 'barge', legende: 'Navigation arrêtée', quand: (db) => !!db.alea }] : [],
     },
   });
   const hote = document.createElement('div'); hote.id = 'ci-hote'; document.body.prepend(hote);
@@ -52,7 +55,7 @@ const monter = (o = {}) => pg.evaluate(async (o) => {
     profil: { prenom: 'Lea', nom: 'Dupont', role: o.role || 'eleve' },
     jeu: { etat: () => db, sauver: () => {} }, enregistrer: () => {}, quitter: () => {}, codeStock: '',
   });
-  window.__ci = { db, CARTE };
+  window.__ci = { db, CARTE, hote };
   hote.querySelector('.ent-nav[data-vue="itineraires"]').click();
 }, o);
 // Immobile = la viewBox ne bouge plus pendant 5 images (le zoom est animé).
@@ -274,6 +277,80 @@ await v('Carte des itinéraires : vers Dourges, sa liste et son entrepôt d’ar
     try { creerCarteItineraires({ carte: CARTE, destination: 'lille' }); return ''; } catch (e) { return e.message; }
   });
   vrai(msg.includes('destination inconnue « lille »'), 'message : ' + msg);
+});
+
+
+// Rouvre la vue (le moteur la redessine à chaque entrée de menu) : c'est ainsi qu'un aléa déclenché devient visible.
+const rouvrir = () => pg.evaluate(() => {
+  const h = window.__ci.hote;
+  h.querySelector('.ent-nav[data-vue="accueil"]').click();
+  h.querySelector('.ent-nav[data-vue="itineraires"]').click();
+});
+
+await v('Carte des itinéraires (lot 3) : la marque de Kain est absente avant le déclencheur, présente après ; dessin sans couleur ; texte alternatif sans chiffre', async () => {
+  await pg.setViewportSize({ width: 1366, height: 768 });
+  await monter({ marque: true }); await pg.waitForSelector('[data-ct-svg]'); await immobile();
+  egal(await pg.$$eval('[data-ct-svg] .ci-marque', (x) => x.length), 0, 'marque avant le déclencheur');
+  egal(await pg.$$eval('[data-ct-svg] .ci-apres', (x) => x.length), 0, 'trait estompé avant le déclencheur');
+  vrai(!(await pg.getAttribute('[data-ct-svg]', 'aria-label')).includes('Kain'), 'le texte alternatif annonce l’aléa avant le déclencheur');
+  await pg.evaluate(() => { window.__ci.db.alea = true; });
+  await rouvrir(); await pg.waitForSelector('[data-ct-svg] .ci-marque'); await immobile();
+  egal(await pg.$$eval('[data-ct-svg] [data-ci-marque]', (x) => x.map((g) => g.dataset.ciMarque)), ['kain'], 'la marque après le déclencheur');
+  vrai((await pg.textContent('[data-ct-svg] .ci-marque')).includes('Arrêt de navigation du 02/02 au 05/03'), 'cartouche');
+  const alt = await pg.getAttribute('[data-ct-svg]', 'aria-label');
+  vrai(alt.includes('Écluse de Kain fermée') && !/\d/.test(alt), 'texte alternatif : ' + alt);
+  const coul = await pg.$$eval('[data-ct-svg] .ci-marque *', (els) => els.flatMap((e) => [getComputedStyle(e).fill, getComputedStyle(e).stroke]));
+  const teintes = coul.filter((c) => { const m = String(c).match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/); return m && Math.max(+m[1], +m[2], +m[3]) - Math.min(+m[1], +m[2], +m[3]) > 25; });
+  egal(teintes, [], 'la marque porte une couleur');
+  vrai((await pg.textContent('.ci-legende')).includes('Navigation arrêtée'), 'légende de la marque');
+});
+
+await v('Carte des itinéraires (lot 3) : la barge passe en trait estompé APRÈS l’écluse (camion final compris) ; la route et le rail ne bougent pas ; la fiche de la barge annonce l’arrêt', async () => {
+  const apres = await pg.evaluate(() => Object.fromEntries([...document.querySelectorAll('[data-ci-it]')].map((g) =>
+    [g.dataset.ciIt, [...g.querySelectorAll('[data-type]')].map((t) => `${t.dataset.type}${t.classList.contains('ci-apres') ? ':après' : ''}`)])));
+  egal(apres, { route: ['route'], barge: ['barge', 'barge:après', 'camion:après'], rail: ['rail', 'camion'] }, 'morceaux des itinéraires');
+  // La coupure est à l'écluse : le dernier point du morceau « avant » est à moins de 3 km de la marque.
+  const ecart = await pg.evaluate(() => {
+    const p = document.querySelector('[data-ci-it="barge"] [data-type="barge"]:not(.ci-apres) .ci-couche');
+    const L = p.getTotalLength(), q = p.getPointAtLength(L);
+    const m = document.querySelector('[data-ci-marque="kain"]');
+    return Math.hypot(q.x - +m.dataset.x, q.y - +m.dataset.y);
+  });
+  vrai(ecart < 3000, `la coupure est à ${Math.round(ecart)} m de l'écluse`);
+  await pg.click('[data-ci-mode="barge"]');
+  vrai((await pg.textContent('[data-ci-fiche] .ci-alea')).includes('Écluse de Kain fermée — Arrêt de navigation du 02/02 au 05/03'), 'avis dans la fiche de la barge');
+  await pg.click('[data-ci-mode="route"]');
+  egal(await pg.$$eval('[data-ci-fiche] .ci-alea', (x) => x.length), 0, 'avis dans la fiche de la route');
+  await pg.click('[data-ci-mode="route"]');
+  // La marque se dessine aussi au zoom, et reste à l'échelle de l'écran.
+  vrai(await pg.$eval('[data-ci-marque="kain"]', (g) => /scale\(/.test(g.getAttribute('transform'))), 'marque mise à l’échelle');
+});
+
+await v('Carte des itinéraires (lot 3) : une marque mal déclarée (sans lonlat, hors de la carte, type inconnu) empêche la séance de se charger', async () => {
+  const msgs = await pg.evaluate(async () => {
+    const { creerCarteItineraires } = await import('/core/types/carte-itineraires.js');
+    const { CARTE } = await import('/contenus/decathlon-carte.js');
+    const essai = (m) => { try { creerCarteItineraires({ carte: CARTE, destination: 'rouvignies', marques: [m] }); return ''; } catch (e) { return e.message; } };
+    return [essai({ id: 'a', titre: 'x' }), essai({ id: 'b', titre: 'x', lonlat: [5.5, 45] }), essai({ id: 'c', titre: 'x', lonlat: [3.37, 50.63], coupe: 'avion' })];
+  });
+  vrai(msgs[0].includes('lonlat'), msgs[0]);
+  vrai(msgs[1].includes('hors de la carte'), msgs[1]);
+  vrai(msgs[2].includes('type inconnu « avion »'), msgs[2]);
+});
+
+await v('Carte des itinéraires (lot 3) : au zoom de Dourges, les noms du terminal et de l’entrepôt ne se chevauchent pas, et aucun ne couvre l’autre point', async () => {
+  await monter({ destination: 'dourges' }); await pg.waitForSelector('[data-ct-svg]'); await immobile();
+  await pg.click('[data-ci-derniers]'); await immobile();
+  const r = await pg.evaluate(() => {
+    const b = (el) => { const x = el.getBoundingClientRect(); return { l: x.left, t: x.top, r: x.right, b: x.bottom }; };
+    const nom = (txt) => [...document.querySelectorAll('[data-ct-svg] .ci-lnom')].find((t) => t.textContent === txt);
+    return { t: b(nom('Terminal de Dourges')), e: b(nom('Entrepôt de Dourges')),
+      pt: b(document.querySelector('[data-ci-lieu="ldct"] .ci-rond')), pe: b(document.querySelector('[data-ci-lieu="delta3"] .ci-rond')) };
+  });
+  const coupe = (a, b) => a.l < b.r && b.l < a.r && a.t < b.b && b.t < a.b;
+  vrai(!coupe(r.t, r.e), 'les deux noms se chevauchent : ' + JSON.stringify(r));
+  vrai(!coupe(r.t, r.pe) && !coupe(r.e, r.pt), 'un nom couvre l’autre point');
+  await pg.click('[data-ci-ensemble]'); await immobile();
 });
 
 for (const [w, h] of [[1366, 768], [1280, 720]]) {

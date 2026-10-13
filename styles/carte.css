@@ -199,3 +199,13 @@
 .ci-legende li{ display:flex; align-items:center; gap:6px; margin:1px 0 }
 .ci-legende svg{ flex:none; transform:scale(.85); transform-origin:left center; margin-right:-6px }
 .ci-legende .ci-ech{ box-shadow:none }
+/* Lot 3 (13/10/2026) : la marque d'aléa, SANS COULEUR (rond blanc, croix à l'encre, cartouche) ; le tronçon arrêté, estompé
+   après elle ; l'avis dans la fiche, à l'encre (ni rouge, qui dirait « faux », ni ambre, qui dit le rail). */
+.ci-marque .ci-m-rond{ fill:#fdfbf7; stroke:#1f1c18; stroke-width:2 }
+.ci-marque .ci-m-croix{ fill:none; stroke:#1f1c18; stroke-width:3.5; stroke-linecap:round }
+.ci-marque .ci-m-cartouche rect{ fill:#fdfbf7; stroke:#1f1c18; stroke-width:1.5 }
+.ci-marque text{ fill:#1f1c18; font-family:system-ui,"Segoe UI",sans-serif; pointer-events:none }
+.ci-marque .ci-m-titre{ font-weight:800; font-size:12.5px }
+.ci-marque .ci-m-texte{ font-size:11.5px }
+.ci-it .ci-apres{ opacity:.3 }
+.ci-alea{ border-left:4px solid var(--encre); padding:4px 0 4px 8px; margin:6px 0 }

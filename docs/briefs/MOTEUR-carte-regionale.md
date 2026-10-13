@@ -6,7 +6,7 @@
 > Lis CLAUDE.md, docs/EN-COURS.md, docs/audit-architecture.md (partie carte) puis docs/briefs/MOTEUR-carte-regionale.md. Fais d'abord l'état des lieux du §6 en lecture seule (carte.js, geo.py, construire-cote.py, itineraires.py, extraire-cote.mjs) et dis-moi ce que tu réutilises et ce qui est neuf. Annonce la durée avant de commencer. Lot par lot, et montre-moi une capture de la carte (lot 1) avant d'écrire la vue cliquable (lot 2).
 > ```
 
-**Statut** : lots 1 et 2 livrés (13/10/2026) ; lot 3 à faire
+**Statut** : livré (13/10/2026, lots 1 à 3)
 **Date du brief** : 13/10/2026
 **Conversation d'origine** : Cowork (Opus). Décision de Tristan du 13/10/2026 : **carte cliquable** pour ENT-7.1 (brief 7.1 §11 n° 1),
 plutôt qu'un dessin fixe. Maquette : `G:\Mon Drive\Travail\Logistique\1L\Claude outputs\maquette-decathlon-7x.html` (écran « Carte
@@ -232,3 +232,21 @@ dire à Tristan**) :
   long menu de gauche (le menu d'une séance Decathlon sera plus court : à revérifier sur la séance).
 - **Reste ouvert (lot 3)** : marques d'aléa (écluse de Kain), noms du terminal et de l'entrepôt de Dourges au zoom ; le Suivi de classe
   n'affiche pas encore les itinéraires ouverts (ils sont rangés, comme demandé) ; confirmer LDCT et l'entrepôt de Rouvignies.
+
+### Lot 3 — marques d'aléa et seconde destination (13/10/2026)
+
+- **Fichiers** : `core/types/carte-itineraires.js` (option `marques`, tronçon coupé, avis dans la fiche, noms au zoom) ;
+  `styles/carte.css` ; `outils/carte/construire-region.py` (`nomsZoom`, `proj` dans le module) ; `contenus/decathlon-carte.js`
+  (régénéré : distances inchangées) ; `outils/test/carte-region.mjs` (4 cas de plus) ; `activites/FICHE-SEANCE.md`.
+- **Écluse de Kain** : way OSM 152861639 « Écluse de Kain » (50,6284 N ; 3,3714 E) — **vérifié** dans l'extraction. La séance la
+  déclare : `{ id: 'kain', lonlat: [3.3714, 50.6284], titre: 'Écluse de Kain fermée', texte: 'Arrêt de navigation du 02/02 au 05/03',
+  coupe: 'barge', quand: (db) => … }`.
+- **Écart au brief ENT-7.3** (§ étape 2) : il demandait l'écluse barrée en `--terre` (ambre). Suivi le brief moteur (dessin **sans
+  couleur**), car depuis la variante C l'ambre est la couleur du rail : à redire à Cowork pour le brief 7.3.
+- **Dourges** : la destination était déjà calculée au lot 1 ; au zoom, les noms du terminal LDCT et de l'entrepôt prennent des places
+  propres à cette échelle (ils se chevauchaient). En vue d'ensemble, les deux ronds restent presque l'un sur l'autre (800 m = 3 px) :
+  c'est le bouton « derniers kilomètres » qui les sépare.
+- **Tests** : bloc `carte-region` 18/18. Sabotages : marque toujours visible → « absente avant le déclencheur » tombe ; seuil de coupure
+  à 0 → le cas de la barge estompée tombe ; noms de zoom débranchés → le cas de Dourges tombe.
+- **Reste ouvert** : confirmer LDCT et l'entrepôt de Rouvignies (positions supposées) ; le Suivi de classe n'affiche pas encore les
+  itinéraires ouverts ; la séance ENT-7.1 elle-même (son brief demande encore des choix à Tristan).

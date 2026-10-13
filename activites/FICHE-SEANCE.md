@@ -920,6 +920,13 @@ carteItineraires: {
   alt: "Carte d'Anvers à Rouvignies : trois itinéraires, route, barge et rail",   // texte alternatif, SANS chiffre
   offres: (mode, db) => ['Contargo'],  // noms des prestataires qui ont fait une offre pour ce mode (facultatif)
   quadrillage: false,                  // vrai : quadrillage et repères en bordure (absent par défaut)
+  marques: [{                          // marques d'aléa (facultatives)
+    id: 'kain', lonlat: [3.3714, 50.6284],           // way OSM 152861639 « Écluse de Kain »
+    titre: 'Écluse de Kain fermée', texte: 'Arrêt de navigation du 02/02 au 05/03',
+    coupe: 'barge',                    // le type de tronçon arrêté là : estompé APRÈS la marque, camion final compris
+    quand: (db) => …,                  // visible seulement quand c'est vrai (après le déclencheur de l'aléa)
+    legende: 'Navigation arrêtée',     // libellé de la légende (défaut : le titre)
+  }],
 }
 ```
 
@@ -936,7 +943,11 @@ carteItineraires: {
 - **Repérage** (enseignant) : chaque itinéraire ouvert est compté dans `db.indicateurs[idSéance].carte[mode]`, comme les documents ;
   rien n'est compté chez l'enseignant ni dans une copie rendue.
 - **Écran** : 1366 × 768 et 1280 × 720 sans défilement de la vue ; la légende est dans la carte ; la colonne fait 300 px.
-- Lot 3 à venir : marques d'aléa (`marques`, écluse de Kain en ENT-7.3) et noms de Dourges au zoom.
+- **Marques d'aléa** (lot 3) : dessinées **sans couleur** (rond blanc, croix à l'encre, cartouche), jamais en ambre (le rail) ni en
+  rouge (« faux »). Le titre s'ajoute au texte alternatif : il ne doit **pas contenir de chiffre**. La fiche de l'itinéraire coupé
+  annonce l'arrêt. Une marque mal déclarée (sans `lonlat`, hors de la carte, `coupe` inconnu) empêche la séance de se charger.
+  La vue se redessine à chaque entrée de menu : une marque déclenchée apparaît à la prochaine ouverture de la carte.
+- **Au zoom des derniers kilomètres**, les noms des lieux prennent des places calculées pour cette échelle (`CARTE.nomsZoom`).
 
 ## Vue « Planning » (cartes sur une grille) — `core/types/planning.js`
 
