@@ -30,7 +30,6 @@
   .leg{ display:flex; align-items:center; gap:8px; margin:5px 0 }
   .leg svg{ flex:none }
   .leg .cr-it .halo{ stroke:var(--panneau) }
-  .leg .cr-it .trait, .leg .cr-it .trav{ stroke:var(--encre) }
   .fiche p{ margin:4px 0 }
   .nb .cadre{ filter:grayscale(1) contrast(1.05) }
 
@@ -48,8 +47,6 @@
   .cr-vnom{ fill:#3d372f; paint-order:stroke; stroke:#f3f1ec; stroke-linejoin:round }
   .cr-it path{ fill:none; stroke-linecap:round; stroke-linejoin:round }
   .cr-it .halo{ stroke:#f3f1ec }
-  .cr-it .trav{ stroke-linecap:butt }
-  .cr-it .trait, .cr-it .trav{ stroke:#1f1c18 }
   .cr-it.estompe{ opacity:.28 }
   .cr-it .choix{ stroke:#1f1c18; stroke-opacity:.18; display:none }
   .cr-it.choisi .choix{ display:block }
@@ -75,6 +72,7 @@
   </div>
   <aside class="panneau">
     <h3>Légende</h3>
+    <p class="note" data-variante></p>
     <div data-legende></div>
     <h3>Itinéraire</h3>
     <div class="fiche" data-fiche></div>
@@ -89,23 +87,41 @@ const ui = { dest: 'rouvignies', choisi: null, zoom: false, theme: 'clair', nb: 
 const NOMS = { route: 'Route', barge: 'Barge', rail: 'Rail', camion: 'Camion (derniers km)' };
 const ech = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 
-// Les quatre traits, en pixels d'écran : la FORME distingue les modes (impression noir et blanc, daltonisme).
-//   route = plein épais ; barge = tirets longs ; rail = fin à traverses ; camion = pointillé fin.
-const TRAIT = {
-  route:  { w: 4.6, dash: null },
-  barge:  { w: 3.4, dash: [14, 6] },
-  rail:   { w: 1.6, dash: null, trav: { w: 7, dash: [1.2, 8] } },
-  camion: { w: 2.6, dash: [0.1, 5.2] },
+// Les quatre traits, en pixels d'écran : chacun est une PILE de couches (la première dessous). Trois variantes à
+// comparer (demande de Tristan du 13/10 : « jouer sur les formes et/ou la couleur »). Couleurs permises : encre,
+// ambre, violet — ni vert (« juste », ordre d'une tournée), ni rouge (« faux »), ni bleu (l'entrepôt d'arrivée).
+const ENCRE = '#1f1c18', PAPIER = '#f3f1ec', VIOLET = '#6a3d9a', AMBRE = '#a8600a', GRIS = '#4a443d';
+const VARIANTES = {
+  A: { nom: 'A · formes renforcées (sans couleur)', traits: {
+    route:  [{ w: 6.5, c: ENCRE }, { w: 2.4, c: PAPIER }],
+    barge:  [{ w: 4, c: ENCRE, dash: [16, 7], cap: 'butt' }],
+    rail:   [{ w: 4.6, c: ENCRE }, { w: 2.6, c: PAPIER, dash: [7, 7], cap: 'butt' }],
+    camion: [{ w: 3.4, c: ENCRE, dash: [0.1, 6.5] }],
+  } },
+  B: { nom: 'B · formes renforcées + couleurs', traits: {
+    route:  [{ w: 6.5, c: ENCRE }, { w: 2.4, c: PAPIER }],
+    barge:  [{ w: 4.2, c: VIOLET, dash: [16, 7], cap: 'butt' }],
+    rail:   [{ w: 4.8, c: AMBRE }, { w: 2.6, c: PAPIER, dash: [7, 7], cap: 'butt' }],
+    camion: [{ w: 3.4, c: GRIS, dash: [0.1, 6.5] }],
+  } },
+  C: { nom: 'C · couleurs, traits simples', traits: {
+    route:  [{ w: 5, c: ENCRE }],
+    barge:  [{ w: 4, c: VIOLET, dash: [18, 5], cap: 'butt' }],
+    rail:   [{ w: 2, c: AMBRE }, { w: 8, c: AMBRE, dash: [1.6, 7], cap: 'butt' }],
+    camion: [{ w: 3, c: ENCRE, dash: [0.1, 6] }],
+  } },
 };
+ui.variante = 'A';
+const TRAIT = () => VARIANTES[ui.variante].traits;
+const largeurMax = (L) => Math.max(...L.map((c) => c.w));
 
 function legende() {
-  return Object.keys(TRAIT).map((t) => `<div class="leg"><svg width="56" height="14" class="cr-it">${echantillon(t)}</svg>${NOMS[t]}</div>`).join('');
+  return Object.keys(TRAIT()).map((t) => `<div class="leg"><svg width="56" height="16" class="cr-it">${echantillon(t)}</svg>${NOMS[t]}</div>`).join('');
 }
 function echantillon(t) {
-  const T = TRAIT[t], d = 'M4 7H52';
-  return `<path class="halo" d="${d}" stroke-width="${T.w + 3}"/>`
-    + (T.trav ? `<path class="trav" d="${d}" stroke-width="${T.trav.w}" stroke-dasharray="${T.trav.dash}" stroke-linecap="butt"/>` : '')
-    + `<path class="trait" d="${d}" stroke-width="${T.w}"${T.dash ? ` stroke-dasharray="${T.dash}"` : ''}/>`;
+  const L = TRAIT()[t], d = 'M5 8H51';
+  return `<path class="halo" d="${d}" stroke-width="${largeurMax(L) + 3}"/>` + L.map((c) => `<path d="${d}" stroke="${c.c === PAPIER ? "var(--panneau)" : c.c}"
+    stroke-width="${c.w}" style="stroke-linecap:${c.cap || "round"}"${c.dash ? ` stroke-dasharray="${c.dash}"` : ''}/>`).join('');
 }
 
 function dessiner() {
@@ -126,7 +142,7 @@ function dessiner() {
     const cl = ui.choisi ? (m === ui.choisi ? ' choisi' : ' estompe') : '';
     const segs = it.segments.map((s) => `<g data-type="${s.type}">
         <path class="choix" d="${s.d}"/><path class="halo" d="${s.d}"/>
-        ${TRAIT[s.type].trav ? `<path class="trav" d="${s.d}"/>` : ''}<path class="trait" d="${s.d}"/></g>`).join('');
+        ${TRAIT()[s.type].map((c, i) => `<path class="couche" data-couche="${i}" d="${s.d}" stroke="${c.c}" style="stroke-linecap:${c.cap || "round"}"/>`).join('')}</g>`).join('');
     return `<g class="cr-it${cl}" data-mode="${m}">${segs}</g>`;
   }).join('');
   const lettre = { port: 'P', terminal: 'T', entrepot: 'E' };
@@ -156,6 +172,7 @@ function dessiner() {
   $('[data-legende]').innerHTML = legende() + `<div class="leg"><svg width="56" height="22"><g class="cr-lieu entrepot" transform="translate(28 11)"><circle class="rond" r="9" stroke-width="2"/><text class="lettre" font-size="10">E</text></g></svg>Entrepôt d'arrivée</div>
     <div class="leg"><svg width="56" height="22"><g class="cr-lieu terminal" transform="translate(28 11)"><circle class="rond" r="7" stroke-width="2"/><text class="lettre" font-size="9">T</text></g></svg>Terminal (changement de mode)</div>
     <div class="leg"><svg width="56" height="14"><path d="M4 7H52" class="cr-front" stroke-width="1.4" stroke-dasharray="10 4 2 4"/></svg>Frontière</div>`;
+  $('[data-variante]').textContent = VARIANTES[ui.variante].nom;
   fiche();
   appliquer();
 }
@@ -181,13 +198,14 @@ function appliquer() {
   });
   px('.cr-eauL', 1.6); px('.cr-auto', 2.2); px('.cr-rail', 1.1); px('.cr-front', 1.4, [10, 4, 2, 4]);
   px('.cr-grille', 1); px('.cr-cadre', 1.6);
-  for (const [t, T] of Object.entries(TRAIT)) {
-    px(`[data-type="${t}"] .halo`, T.w + 3);
-    px(`[data-type="${t}"] .choix`, T.w + 9);
-    px(`[data-type="${t}"] .trait`, T.w, T.dash);
-    if (T.trav) px(`[data-type="${t}"] .trav`, T.trav.w, T.trav.dash);
+  for (const [t, L] of Object.entries(TRAIT())) {
+    // L'itinéraire choisi grossit d'un tiers, couches et motifs compris (la forme reste la même).
+    for (const [sel, f] of [['.cr-it', 1], ['.cr-it.choisi', 1.35]]) {
+      px(`${sel} [data-type="${t}"] .halo`, (largeurMax(L) + 3) * f);
+      px(`${sel} [data-type="${t}"] .choix`, (largeurMax(L) + 9) * f);
+      L.forEach((c, i) => px(`${sel} [data-type="${t}"] [data-couche="${i}"]`, c.w * f, c.dash && c.dash.map((x) => x * f)));
+    }
   }
-  svg.querySelectorAll('.cr-it.choisi .trait').forEach((p) => { p.style.strokeWidth = parseFloat(p.style.strokeWidth) * 1.5; });
   svg.querySelectorAll('[data-fs]').forEach((t) => {
     t.style.fontSize = t.dataset.fs * k + 'px'; t.style.strokeWidth = 3 * k;
     if (t.dataset.px) { const [a, b] = t.dataset.px.split(' ').map(Number); t.setAttribute('dx', a * k); t.setAttribute('dy', b * k); }
@@ -208,6 +226,7 @@ function barre() {
   z.append(b('Vers Rouvignies', ui.dest === 'rouvignies', () => { ui.dest = 'rouvignies'; }),
     b('Vers Dourges', ui.dest === 'dourges', () => { ui.dest = 'dourges'; }), ' · ',
     ...['route', 'barge', 'rail'].map((m) => b(m[0].toUpperCase() + m.slice(1), ui.choisi === m, () => { ui.choisi = ui.choisi === m ? null : m; })), ' · ',
+    ...Object.keys(VARIANTES).map((v) => b('Variante ' + v, ui.variante === v, () => { ui.variante = v; })), ' · ',
     b('Derniers kilomètres', ui.zoom, () => { ui.zoom = !ui.zoom; }), ' · ',
     b('Thème sombre', ui.theme === 'sombre', () => { ui.theme = ui.theme === 'sombre' ? 'clair' : 'sombre';
       document.documentElement.dataset.theme = ui.theme; }),

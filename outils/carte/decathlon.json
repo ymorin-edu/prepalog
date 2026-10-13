@@ -37,7 +37,7 @@
     "rouvignies": {
       "route": { "nom": "Route", "texte": "Un camion porte le conteneur d'Anvers à l'entrepôt, sans changer de véhicule : par Malines, Bruxelles et Mons (E19), puis l'A2 jusqu'à Valenciennes.",
         "segments": [ { "type": "route", "de": "anvers", "a": "rouvignies", "km": [140, 200],
-          "passages": [[4.465, 51.02], [3.93, 50.46], [3.58, 50.36]] } ] },
+          "passages": [[4.465, 51.02], [3.93, 50.46]] } ] },
       "barge": { "nom": "Barge + camion", "texte": "Une barge remonte l'Escaut par Gand, Audenarde, Tournai et Condé jusqu'au terminal de Bruay-sur-l'Escaut ; un camion fait les derniers kilomètres.",
         "segments": [ { "type": "barge", "de": "anvers", "a": "bruay", "km": [180, 270], "accesMax": 2500,
             "note": "le Deurganckdok est un bassin, sans ligne de voie d'eau dans OSM : l'accès traverse le bassin jusqu'à l'Escaut",

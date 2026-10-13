@@ -169,15 +169,15 @@ dire à Tristan**) :
 
   | Destination | Mode | Tronçons | Total | Brief (provisoire) |
   |---|---|---|---|---|
-  | Rouvignies | route | route 173 | **173 km** | 165 |
+  | Rouvignies | route | route 168 | **168 km** | 165 |
   | Rouvignies | barge | barge 194 + camion 13 | **207 km** | 215 + 6 |
   | Rouvignies | rail | rail 162 + camion 45 | **207 km** | 175 + 48 |
   | Dourges | route | route 153 | **153 km** | — |
   | Dourges | barge | barge 263 + camion 3 (2,5) | **266 km** | — |
   | Dourges | rail | rail 162 + camion 3 (2,5) | **165 km** | — |
 
-- **Ordre du CO₂** (facteurs du brief 7.1 §6.2, km arrondis par tronçon) : vers Rouvignies, 13,5 t : barge 61 < rail 67 < route 119 kg ;
-  15,8 t : 72 < 78 < 139. Vers Dourges, 13,5 t : rail 38 < barge 73 < route 105 ; 15,8 t : 45 < 86 < 123. **L'ordre voulu tient.**
+- **Ordre du CO₂** (facteurs du brief 7.1 §6.2, km arrondis par tronçon) : vers Rouvignies, 13,5 t : barge 61 < rail 67 < route 116 kg ;
+  15,8 t : 72 < 78 < 135. Vers Dourges, 13,5 t : rail 38 < barge 73 < route 105 ; 15,8 t : 45 < 86 < 123. **L'ordre voulu tient.**
 - **Lieux** (vérifié = objet OSM nommé ; supposé = à confirmer par Tristan) :
   - port d'Anvers : terminal **Antwerp Gateway** (DP World) au Deurganckdok, relation OSM 21119015 — **vérifié dans OSM ; le choix du terminal
     est construit** (le brief n'en nommait aucun) ;
@@ -200,4 +200,8 @@ dire à Tristan**) :
   point en pixels.
 - **Tests** : construction rejouée deux fois sur les mêmes sources, même empreinte (alerte 11) ; modules de Nîmes (×3) et de la côte
   reconstruits, **identiques octet pour octet** ; bloc `dependances` 42/42. Le bloc `carte-region` viendra avec la vue (lot 2).
+- **Après l'essai de Tristan (13/10)** : le passage imposé à Valenciennes faisait faire à la route un aller-retour de 4,6 km sur une
+  bretelle ; retiré (la route prend l'A2 d'elle-même) : 173 → 168 km. Derniers kilomètres : **bouton qui zoome** (§9 n° 1, choix de
+  Tristan). Tracés à rendre plus distincts « en jouant sur les formes et/ou la couleur » : trois variantes dans la page d'essai
+  (A formes renforcées, B formes + couleurs, C couleurs et traits simples), choix de Tristan attendu.
 - **Reste ouvert** : confirmer LDCT et Rouvignies ; au zoom de Dourges, les noms du terminal et de l'entrepôt se chevauchent (lot 3).
