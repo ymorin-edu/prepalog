@@ -72,7 +72,7 @@ export const PRESTATAIRES = {
     assure: 'Anvers → entrepôts du Nord, porte à porte', reel: false },
   barge: { id: 'barge', nom: 'Contargo', mode: 'barge', modeLib: 'barge + camion', mail: 'booking@contargo.example',
     assure: 'Anvers → terminal de Bruay-sur-l’Escaut (et Dourges), camion final compris', reel: true, service: 'Service réservations' },
-  rail: { id: 'rail', nom: 'Rail Fret Benelux', mode: 'rail', modeLib: 'rail + camion', mail: 'commandes@railfret-benelux.example',
+  rail: { id: 'rail', nom: 'Rail Flandres-Artois', mode: 'rail', modeLib: 'rail + camion', mail: 'commandes@rail-flandres-artois.example',
     assure: 'Anvers → terminal de Dourges, camion final compris', reel: false },
 };
 export const REFERENCES = ['route', 'barge', 'rail'];

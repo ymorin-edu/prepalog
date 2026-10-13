@@ -198,7 +198,7 @@ for (const retard of ['rail', 'barge']) {
     proche(n.score, 20, 'note');
     // Les questions ancrées sur SON tirage.
     const q = (await base()).questions[ID];
-    vrai(new RegExp(retard === 'rail' ? 'Rail Fret Benelux arrive vendredi 29/01/2027' : 'Contargo arrive vendredi 29/01/2027').test(q['retard-magasins'].texte.enonce),
+    vrai(new RegExp(retard === 'rail' ? 'Rail Flandres-Artois arrive vendredi 29/01/2027' : 'Contargo arrive vendredi 29/01/2027').test(q['retard-magasins'].texte.enonce),
       'question du retard : ' + q['retard-magasins'].texte.enonce);
     vrai(/E-Flux Logistique propose 590 €, 100 € de moins que Routiers du Hainaut/.test(q['liste-referencee'].texte.enonce), q['liste-referencee'].texte.enonce);
     vrai(/125 kg/.test(q['co2-obligatoire'].texte.enonce), q['co2-obligatoire'].texte.enonce);
@@ -206,7 +206,7 @@ for (const retard of ['rail', 'barge']) {
     egal(await pg.$$eval(`${Z} .ent-pastille.fait`, (L) => L.length), 4, 'quatre pastilles faites');
     // Claire reprend ce que l'élève a écrit, sans dire si c'est juste.
     const claire = (await entrants()).filter((m) => m.subject === 'Ton choix').map((m) => m.text).join(' | ');
-    const att = retard === 'rail' ? 'Contargo, 760 €, 66 kg' : 'Rail Fret Benelux, 800 €, 73 kg';
+    const att = retard === 'rail' ? 'Contargo, 760 €, 66 kg' : 'Rail Flandres-Artois, 800 €, 73 kg';
     vrai(claire.includes(att), `Claire reprend le choix (${att}) : ${claire}`);
     egal(/juste|faux|erreur|bravo|bon choix|exact/i.test(claire), false, 'Claire neutre : ' + claire);
   });
@@ -320,7 +320,7 @@ await v('ENT-7.1 : documents — le devis porte le CO₂ calculé sur le poids T
   });
   vrai(/Information CO₂<\/a>|Information CO₂/.test(r.doc) && /135 kg de CO₂/.test(r.doc), 'devis de la route à 15,8 t');
   vrai(/15[s  ]800 kg/.test(r.cahier), 'poids tiré au cahier des charges');
-  egal(r.offresRail, ['Rail Fret Benelux'], 'offres pour le rail');
+  egal(r.offresRail, ['Rail Flandres-Artois'], 'offres pour le rail');
   egal(r.offresRoute.sort(), ['E-Flux Logistique', 'Routiers du Hainaut'], 'offres pour la route');
   vrai(!/retard|trop tard/i.test(r.cahier + r.doc), 'aucun document ne parle de retard');
 });

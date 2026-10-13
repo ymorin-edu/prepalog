@@ -100,10 +100,10 @@ function offresReferencees(retard, V) {
         `Camion : ${kCamB.km} km jusqu’à l’entrepôt`] };
   barge.detailPrix = [['Fret barge', V.prixBarge - 290], ['Manutention aux terminaux', 110], ['Camion final', 180]];
   const rail = retard === 'rail'
-    ? { id: 'rail', prix: V.prixRail, co2: c('rail'), devis: 'RFB-2701-088', arrivee: { iso: '2027-01-29', h: 10 },
+    ? { id: 'rail', prix: V.prixRail, co2: c('rail'), devis: 'RFA-2701-088', arrivee: { iso: '2027-01-29', h: 10 },
       deroule: ['Départ du train (hebdomadaire) : jeu. 28/01', `Train : ${kRail.km} km jusqu’au ${nomLieu(kRail.a).replace(/^Terminal/, 'terminal')}, arrivée ven. 29/01`,
         `Camion : ${kCamR.km} km jusqu’à l’entrepôt`] }
-    : { id: 'rail', prix: V.prixRail, co2: c('rail'), devis: 'RFB-2701-088', arrivee: { iso: '2027-01-27', h: 15 },
+    : { id: 'rail', prix: V.prixRail, co2: c('rail'), devis: 'RFA-2701-088', arrivee: { iso: '2027-01-27', h: 15 },
       deroule: ['Départ du train : mar. 26/01', `Train : ${kRail.km} km jusqu’au ${nomLieu(kRail.a).replace(/^Terminal/, 'terminal')}, arrivée mer. 27/01`,
         `Camion : ${kCamR.km} km jusqu’à l’entrepôt`] };
   return [route, barge, rail].map((o) => ({ ...PRESTATAIRES[o.id], ...o, prestataire: o.id, mode: o.id, referencee: true,

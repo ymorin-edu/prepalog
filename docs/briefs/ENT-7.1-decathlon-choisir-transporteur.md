@@ -249,7 +249,7 @@ Valeurs **calculées par le code** (CO₂, chiffre de contrôle, attendus) ; dan
 |---|---|---|---|
 | **Routiers du Hainaut** (fictif) | Route | Anvers → entrepôts du Nord, porte à porte | `affretement@routiers-hainaut.example` |
 | **Contargo** (réel, données construites) | Barge + camion | Anvers → terminal de Bruay-sur-l'Escaut (et Dourges), camion final compris | `booking@contargo.example` |
-| **Rail Fret Benelux** (fictif) | Rail + camion | Anvers → terminal de Dourges, camion final compris | `commandes@railfret-benelux.example` |
+| **Rail Flandres-Artois** (fictif ; « Rail Fret Benelux » renommé le 13/10/2026, trop proche de noms réels) | Rail + camion | Anvers → terminal de Dourges, camion final compris | `commandes@railfret-benelux.example` |
 
 Pied : « Un prestataire absent de cette liste ne peut pas recevoir de commande, même moins cher. — Document reconstitué. Contargo
 est un opérateur réel ; les autres prestataires sont fictifs. »
@@ -280,7 +280,7 @@ de ses 48 km de camion) ; **vers Dourges (7.4), rail < barge < route**. Cette m�
 |---|---|---|---|---|---|
 | Routiers du Hainaut (route) | mer. 27/01 · 11 h (enlèvement 7 h) | 690 € | 660 – 720 € | **123 kg** | oui |
 | Contargo (barge + camion) | **tirage `rt-rail`** : mer. 27/01 · 16 h (barge mar. 26/01 au soir → Bruay mer. 27/01 matin → camion 6 km) ; **tirage `rt-barge`** : ven. 29/01 · 9 h (« barge du 26/01 complète, prochain départ jeu. 28/01 ») | 760 € (fret 470 + manutention 110 + camion 180) | 730 – 790 € | **67 kg** | `rt-rail` : oui → **bonne réponse** ; `rt-barge` : **non** |
-| Rail Fret Benelux (rail + camion) | **tirage `rt-rail`** : ven. 29/01 · 10 h (départ hebdomadaire jeu. 28/01 → Dourges ven. 29/01 → camion 48 km) ; **tirage `rt-barge`** : mer. 27/01 · 15 h (départ mar. 26/01 → Dourges mer. 27/01 → camion 48 km) | 800 € | 770 – 830 € | **78 kg** | `rt-rail` : **non** ; `rt-barge` : oui → **bonne réponse** |
+| Rail Flandres-Artois (rail + camion) | **tirage `rt-rail`** : ven. 29/01 · 10 h (départ hebdomadaire jeu. 28/01 → Dourges ven. 29/01 → camion 48 km) ; **tirage `rt-barge`** : mer. 27/01 · 15 h (départ mar. 26/01 → Dourges mer. 27/01 → camion 48 km) | 800 € | 770 – 830 € | **78 kg** | `rt-rail` : **non** ; `rt-barge` : oui → **bonne réponse** |
 
 *(Dates recalées sur la disponibilité du 26/01 : barge en ≈ 1 jour et demi d'Anvers à Bruay, construit. Si Tristan préfère des délais
 de barge plus longs, avancer la disponibilité, jamais la limite.)*
@@ -435,16 +435,17 @@ au bilan sans qu'on lui donne la réponse ; 45 min tenues.
 - **Vérifié sur le web le 13/10/2026** : article L1431-3 (Légifrance, version 2025) ; préfixes PLGU (attribué) et PRPU (libre) au registre BIC ; bleu
   de la marque **#3643BA** (couleur « brand » du site decathlon.fr). Noms fictifs : « Routiers du Hainaut / Haynaut », « E-Flux Logistique »,
   « Bateliers du Nord », « RailCo Express » : rien trouvé ; **« Rail Fret Benelux »** : pas d'entreprise de ce nom, mais des noms proches existent
-  (Crossrail Benelux Fret, Rail Cargo Carrier Benelux, liste belge des entreprises ferroviaires) ; **« Fret Éclair »** : une entreprise de ce nom
+  (Crossrail Benelux Fret, Rail Cargo Carrier Benelux, liste belge des entreprises ferroviaires) : **renommé « Rail Flandres-Artois »** (Tristan,
+  13/10/2026 ; rien trouvé sous ce nom) ; **« Fret Éclair »** : une entreprise de ce nom
   existerait dans l'Allier (annuaire tiers) — pièce gardée, non tirée.
 - **Tests** : bloc `decathlon` 15/15 ; suite complète (voir le commit). Sabotages faits (chacun fait tomber le bon cas) : bonne réponse « barge » en
   dur (3 cas), jalon « comparer » sur toutes les offres (1), Claire qui dit « juste » (2), CO₂ écrit en dur dans un devis (1), fiche sans `defile`
   (2, les deux tailles d'écran), offre hors liste plus émettrice que la bonne réponse (le contrôle d'équité, 1).
 - **Commits** : voir `git log` (séance, moteur, tests, ce compte rendu).
 - **Reste ouvert** (à Tristan) :
-  1. Valider la nouvelle bonne réponse de la question n° 1 (droit : trajet parti de Belgique).
+  1. ~~Question n° 1~~ : validée par Tristan le 13/10/2026.
   2. **Charte** : le moteur ne neutralise que le rouge et le vert ; le bleu Decathlon reste dans la zone de travail (bouton « Envoyer », onglets,
-     cases cochées : comme Picard). Sur la carte, seul l'entrepôt est bleu (#1f5fa8, fixe). À garder, ou petit chantier moteur pour neutraliser le bleu.
+     cases cochées : comme Picard). Sur la carte, seul l'entrepôt est bleu (#1f5fa8, fixe). **Gardé** (Tristan, 13/10/2026).
   3. Logo : le nom en texte bleu ; le logo officiel seulement avec ton accord.
-  4. « Rail Fret Benelux » : garder, ou renommer (noms proches réels) ?
+  4. ~~« Rail Fret Benelux »~~ : renommé « Rail Flandres-Artois » (Tristan, 13/10/2026).
   5. Trame courte (Cowork, après validation à l'écran) ; §11 n° 6 (Karim → Mehdi) reste pour 7.2.
