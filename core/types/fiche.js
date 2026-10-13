@@ -30,6 +30,10 @@
 // `largeurDocs` (D-10, 13/10/2026) : la part de la largeur prise par les documents, la fiche valant 1 (défaut 1, moitié-moitié) :
 // 1.85 pour un dessin à compter (ENT-6.10 ①), 0.75 pour laisser la place à une feuille de calcul. `serree: true` : des blocs plus
 // rapprochés (la fiche ① d'ENT-6.10 tient ainsi à 1280 × 720 sans défilement).
+// `defile: true` (13/10/2026, ENT-7.1 : le comparateur d'offres a cinq blocs et jusqu'à six offres) : la fiche DÉFILE DANS SA COLONNE, la
+// page non. Les deux colonnes prennent la hauteur qui reste sous le haut de la fiche ; les documents défilent dans la leur, les blocs dans
+// la leur, et le bouton d'envoi (avec « Il manque ») reste en bas, toujours visible. Mesuré au dessin et quand la fenêtre change de
+// taille ; l'un sous l'autre (place trop étroite), rien n'est borné. Sans l'option, rien ne change.
 //
 // RIEN N'EST JUGÉ AVANT L'ENVOI, rien n'est corrigé à l'écran (guidage compris) : le bilan de la séance dit
 // à la fin quelles cases étaient fausses. L'envoi est refusé tant qu'il manque une réponse (la raison
@@ -348,14 +352,32 @@ export function creerFiche(F, VDOC, { signaler } = {}) {
             <p class="ent-fiche-manque" data-fiche-manque role="alert">${ech(ui.manque || '')}</p>`)}
       </form>`;
     return `<div class="ent-tete"><h2>${ech(F.titre || libelle)}</h2>${F.sousTitre ? `<p class="note">${ech(F.sousTitre)}</p>` : ''}</div>
-      <div class="ent-fiche${docs.length ? ' ent-fiche-cote' : ''}">
+      <div class="ent-fiche${docs.length ? ' ent-fiche-cote' : ''}${F.defile ? ' ent-fiche-defile' : ''}">
         ${docs.length ? `<div class="ent-fiche-docs"${F.largeurDocs ? ` style="flex-grow:${Number(F.largeurDocs) || 1}"` : ''}>${onglets(ui, api.docVu, docs, api.db)}</div>` : ''}
         <div class="ent-fiche-droite">${formulaire}</div>
       </div>`;
   }
 
+  // `defile` : la hauteur des deux colonnes = ce qui reste de la fenêtre sous le haut de la fiche (variable `--fiche-h`). Rien quand les
+  // colonnes sont l'une sous l'autre. Un écouteur de taille par fiche affichée, retiré dès qu'elle n'est plus dans la page.
+  function borner(z) {
+    const el = z.querySelector('.ent-fiche-defile');
+    if (!el) return;
+    const ajuster = () => {
+      if (!el.isConnected) { window.removeEventListener('resize', ajuster); return; }
+      const d = el.querySelector('.ent-fiche-docs'), f = el.querySelector('.ent-fiche-droite');
+      const cote = !d || !f || Math.abs(d.getBoundingClientRect().top - f.getBoundingClientRect().top) < 4;
+      const haut = el.getBoundingClientRect().top + window.scrollY;
+      if (cote) el.style.setProperty('--fiche-h', `${Math.max(320, Math.floor(window.innerHeight - haut - 10))}px`);
+      else el.style.removeProperty('--fiche-h');
+    };
+    ajuster();
+    window.addEventListener('resize', ajuster);
+  }
+
   // Aucun redessin pendant le remplissage : le focus et la place dans la page restent où ils sont.
   function brancher(z, e, ui, api) {
+    if (F.defile) borner(z);
     if (!e.valeurs) e.valeurs = {};
     const sig = (n) => { if (api.signal) api.signal(`fiche:${F.id}:${n}`); };
     const ecrit = () => { if (ui.manque) { ui.manque = ''; const m = z.querySelector('[data-fiche-manque]'); if (m) m.textContent = ''; } api.sauver(); };

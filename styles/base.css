@@ -934,6 +934,15 @@ a.ent-nav{ text-decoration:none }
 .ent-fiche-form fieldset{ border:0; padding:0; margin:0; min-width:0 }
 .ent-fiche-bloc + .ent-fiche-bloc{ margin-top:16px }
 .ent-fiche-serree .ent-fiche-bloc + .ent-fiche-bloc{ margin-top:9px }   /* `serree: true` (D-10, 13/10/2026) */
+/* `defile: true` (13/10/2026, ENT-7.1) : la fiche défile dans sa colonne, la page non ; le bouton d'envoi reste en bas, visible.
+   La hauteur (`--fiche-h`) est posée par core/types/fiche.js ; sans elle (colonnes l'une sous l'autre), rien n'est borné. */
+.ent-fiche-defile{ height:var(--fiche-h, auto); align-items:stretch }
+.ent-fiche-defile > .ent-fiche-docs{ position:static; max-height:var(--fiche-h, none); overflow:auto }
+.ent-fiche-defile > .ent-fiche-droite{ display:flex; flex-direction:column; min-height:0; max-height:var(--fiche-h, none) }
+.ent-fiche-defile .ent-fiche-form{ display:flex; flex-direction:column; min-height:0; flex:1 1 auto }
+.ent-fiche-defile .ent-fiche-form > fieldset{ flex:1 1 auto; min-height:0; overflow:auto; padding-right:4px }
+.ent-fiche-defile .ent-fiche-form > [data-fiche-envoyer], .ent-fiche-defile .ent-fiche-form > [data-fiche-envoyee]{ flex:none; margin-top:10px; align-self:flex-start }
+.ent-fiche-defile .ent-fiche-form > [data-fiche-manque]{ flex:none; margin-bottom:0 }
 .ent-fiche-h{ margin:0 0 6px; font-size:1.02rem }
 .ent-fiche-lib{ display:block; font-weight:600; margin-bottom:4px }
 table.ent-tri{ border-collapse:collapse; width:100%; font-size:.92rem }

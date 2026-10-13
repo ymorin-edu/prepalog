@@ -327,6 +327,10 @@ sur base vide, plus `fiche:<id>:envoyer`. Valeurs fixes : rien ne change. Exempl
   valeur(ref), brut(ref) }`. Geste : `fiche:<id>:<bloc>` à la sortie d'une case remplie.
 - Fiche : `largeurDocs` (part de la largeur prise par les documents, la fiche valant 1 ; 1.85 pour un dessin à compter, 0.75 pour une
   feuille) et `serree: true` (blocs rapprochés, pour tenir à 1280 × 720).
+- Fiche : `defile: true` (13/10/2026, ENT-7.1) : la fiche **défile dans sa colonne**, la page non ; les documents défilent dans la leur et
+  le bouton d'envoi (avec « Il manque ») reste en bas, toujours visible. Pour une fiche qui ne tient pas à 1280 × 720 même `serree` (le
+  comparateur d'offres d'ENT-7.1 : cinq blocs, jusqu'à six offres). La hauteur est mesurée au dessin et quand la fenêtre change de taille ;
+  colonnes l'une sous l'autre (place trop étroite) : rien n'est borné. Sans l'option, rien ne change. Exemple : `contenus/decathlon-ent71.js`.
 - Document **dessin** : `{ id, titre, court, image: { src: './contenus/…svg', alt, mention } }` (avec ou sans `html` dessous). Pleine
   largeur de la colonne ; un clic ou « Agrandir » ouvre la **loupe** plein écran (Échap, « Fermer » ou le fond la referment, le focus
   revient). `alt` obligatoire, et il ne doit pas donner la réponse (pas de nombre à compter) ; `src` local obligatoire.
