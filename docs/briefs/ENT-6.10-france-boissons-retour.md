@@ -28,7 +28,7 @@ Règles d'écriture 2de : `claude/prepalog-2de-eleve-debut-annee.md` (3 lignes p
 | Compétence(s) | **OTM-C2.3** (suivre l'opération : traçabilité, traiter un incident, rendre compte aux interlocuteurs) ; **LOG-C2.5** (traiter les retours des supports de charge et des contenants) ; domaines D3 (supports consignés : enregistrer les mouvements, suivre les retours) et D1 |
 | Temps pédagogique | **OTM-C2.3 : entraînement** (guidage en ENT-5.8). **LOG-C2.5 : premier et seul temps en 2de** (règle 15 : « découvert », reprise en 1re) → la feuille garde ses **phrases d'aide visibles** (§4, étape 2) |
 | Notation | jalons + note sur 20 |
-| Barème | 12 |
+| Barème | **20** (`bareme: 20`) : jalons 16 + questions au fil notées 4 (`part: 4`) — poids validés par Tristan le 13/10/2026 (option A), voir §5 |
 | `pret` à la livraison | `pret: true, ouverture: 'prof'` |
 
 ## 2. L'entreprise : vérifié / construit
@@ -263,9 +263,14 @@ Banque de questions de l'écran d'ouverture (`docs/briefs/MOTEUR-avant-de-commen
 préparation de l'exercice, 2 ou 3 d'économie-droit appliquées au cas, images si la séance fait découvrir un matériel ;
 au moins le double de ce qu'on tire ; validée par Tristan avant construction. Modèle : la banque d'ENT-6.2.
 
-## 5. Jalons / notation (12)
+## 5. Jalons / notation (sur 20)
 
-Rien de vrai avant l'envoi de la fiche concernée ; **inaction 0 / 12**.
+Rien de vrai avant l'envoi de la fiche concernée ; **inaction 0 / 20**.
+
+**Poids validés par Tristan le 13/10/2026 (option A)** : contrôle 4,5 (j1 2 · j2 1 · j3 1,5) · compte de consignes 5 (j4 1,5 ·
+j5 1,5 · j6 2) · rendre compte 4 (j7 1 · j8 1,5 · j9 1,5) · boucle des vides 2,5 (j10 0,5 · j11 0,5 · j12 1,5) · questions au fil
+notées 4 (n° 2 : 1,5 · n° 3 : 1,5 · n° 4 : 1 ; `PROPOSITIONS-questions-au-fil.md`, toutes gardées le 10/10). **Maquette validée
+par Tristan le 13/10/2026** (avec ses décisions du 06 et du 07/10).
 
 | # | Jalon | Ce qu'il lit | Piège qui le fait tomber |
 |---|---|---|---|
