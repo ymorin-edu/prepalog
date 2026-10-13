@@ -94,20 +94,19 @@ const docFutBouteille = () => `<article class="fb10-doc" aria-label="Un fût, un
       de fûts (fût Euro 30 L, 9,5 kg vide) ; fiche d’un vendeur de bouteilles (33 cl, 225 g vide).</p>
   </article>`;
 
-// Textes de loi : C. civ. 1103 (texte court, connu) ; C. env. L541-1-1 et C. trav. L1222-4 repris d'ENT-6.6 (relus le 12/10/2026,
-// L541-1-1 d'après des sources concordantes, Légifrance bloqué : à relire avant ouverture) ; arrêté du 6 février 2026 : montants
-// seulement (texte non relu, comme en 6.2 et 6.6).
+// Textes de loi : C. civ. 1103, C. env. L541-1-1 et arrêté du 6 février 2026 (art. 1er, 4° et 11°) relus sur Légifrance le 13/10/2026
+// (versions en vigueur) ; C. trav. L1222-4 repris d'ENT-6.6 (relu le 12/10/2026 sur code.travail.gouv.fr).
 const art = (code, num, texte) => `<p class="fb-st" style="margin-top:14px">${code}, ${num}</p>${texte}`;
 const docDroit = () => `<article class="fb10-doc" aria-label="Le droit">
     <p class="fb-t">Le droit : consigne, contrat, réemploi, information du salarié</p>
-    ${art('Arrêté du 6 février 2026', 'consignation des emballages (en vigueur le 1er janvier 2027)', '<p>Montant de la consigne : '
-      + '<b>40 €</b> par fût de 20 à 50 litres, <b>4 €</b> par casier.</p>')}
+    ${art('Arrêté du 6 février 2026', 'consignation des emballages (en vigueur le 1er janvier 2027)', '<p>Article 1er (extrait) : « 4° Fûts d’une contenance égale ou supérieure à 20 litres : <b>40 euros</b> ; […] 11° Casiers à trous : '
+      + '<b>4 euros</b>. »</p>')}
     ${art('Code civil', 'article 1103', '<p>« Les contrats légalement formés tiennent lieu de loi à ceux qui les ont faits. »</p>')}
     ${art('Code de l’environnement', 'article L541-1-1 (extrait)', '<p>Réemploi : « toute opération par laquelle des substances, matières ou produits '
       + 'qui ne sont pas des déchets sont utilisés de nouveau pour un usage identique à celui pour lequel ils avaient été conçus ».</p>')}
     ${art('Code du travail', 'article L1222-4', '<p>« Aucune information concernant personnellement un salarié ne peut être collectée par un '
       + 'dispositif qui n’a pas été porté préalablement à sa connaissance. »</p>')}
-    <p class="fb-pied">Textes réels — sources : Code civil, Code de l’environnement, Code du travail (code.travail.gouv.fr) ; montants de l’arrêté d’après la FNB</p>
+    <p class="fb-pied">Textes réels — sources : Code civil, Code de l’environnement, Code du travail (code.travail.gouv.fr) ; arrêté du 6 février 2026, Journal officiel du 26 février 2026 (Légifrance)</p>
   </article>`;
 
 export const DOCUMENTS = [

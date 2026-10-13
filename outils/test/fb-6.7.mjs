@@ -398,7 +398,7 @@ await v('ENT-6.7 : « Le droit » cite L4121-1, R4541-3, L3121-16, L1222-4, le C
   });
   for (const a of ['L4121-1', 'protéger la santé physique et mentale', 'R4541-3', 'éviter le recours à la manutention manuelle', 'L3121-16',
     'vingt minutes consécutives', 'L1222-4', 'porté préalablement à sa connaissance', '1603', 'celle de délivrer et celle de garantir',
-    'conserve ses propriétés spécifiques', '40 €']) vrai(r.droit.includes(a), 'le droit : ' + a);
+    'conserve ses propriétés spécifiques', 'égale ou supérieure à 20 litres : <b>40 euros</b>']) vrai(r.droit.includes(a), 'le droit : ' + a);
   vrai(!/\b(36|24|49|83|17)\b/.test(r.mots) && !/Prends/.test(r.mots), 'les mots ne donnent ni code ni quantité');
   for (const a of ['["A-T03","49","Affligem Blonde 20 L, lot S18","2","« Abîmé », 1, puis 1 pris"]', '["B-T03","83"', '["A-T04","17","Heineken 30 L","6"',
     '"6 Heineken 30 L"', '"2 Pelforth + 2 Affligem + 3 casiers eau minérale"', 'Total 20, tout en C2.1']) vrai(r.corrige.includes(a), 'corrigé : ' + a);

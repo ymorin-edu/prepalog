@@ -425,6 +425,5 @@ ci-dessus décrit le lot 1 ; il reste juste.
   - **Captures des objets** envoyées à Tristan le 13/10 : à valider à l'écran (page d'essai `outils/essai-boucle-vides.html`, et l'animation).
   - **Cartes de messages** : elles poussent l'écran vers le bas (toutes les séances) ; à 1366 × 768, avec deux ou trois cartes non fermées,
     la page défile un peu. La maquette les voulait en bas à gauche, par-dessus. Question posée à Tristan, sans réponse.
-  - Textes de loi L541-1-1 et arrêté du 6 février 2026 à relire sur Légifrance avant ouverture (comme en 6.6) ; C. civ. 1103 cité de mémoire
-    (texte court, connu).
+  - ~~Textes de loi à relire~~ : relus sur Légifrance le 13/10/2026 (voir `docs/decisions.md`) ; l'arrêté est cité tel quel.
   - Trame courte (Cowork) après validation à l'écran ; durée réelle à mesurer en classe.

@@ -402,7 +402,7 @@ await v('ENT-6.6 : « Le droit » cite L123-12, L541-1-1, l’arrêté de 2026, 
     const C = await import('/contenus/corriges/ENT-6.6.js');
     return { droit: S.DOCUMENTS.find((d) => d.id === 'droit').html, corrige: JSON.stringify(C.CORRIGE) };
   });
-  for (const a of ['L123-12', 'au moins une fois tous les douze mois', 'L541-1-1', 'utilisés de nouveau pour un usage identique', '6 février 2026', '40 €',
+  for (const a of ['L123-12', 'au moins une fois tous les douze mois', 'L541-1-1', 'utilisés de nouveau pour un usage identique', '6 février 2026', 'égale ou supérieure à 20 litres : <b>40 euros</b>', 'Casiers à trous',
     'L1222-3', 'expressément informé, préalablement', 'L1222-4', 'porté préalablement à sa connaissance']) vrai(r.droit.includes(a), 'le droit : ' + a);
   for (const a of ['["M01","47","Heineken 30 L — lot S20","15","16"]', '["M04","63","Pelforth 20 L — lot S19","0","8"]', '["M08","91","Fûts vides","19","22"]',
     '["M04","−8","Remettre en place (sans régulariser)"', '"120 €"', '"57 %"', '"4 sur 7"']) vrai(r.corrige.includes(a), 'corrigé : ' + a);

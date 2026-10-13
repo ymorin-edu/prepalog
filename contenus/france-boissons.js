@@ -114,7 +114,7 @@ export const LEXIQUE = {
 // ─────────────────────────────────────────── la vente aux CHR (ENT-6.2, repris par les séances suivantes de S2)
 // VÉRIFIÉ (brief ENT-6.2 §2) : les marques (Heineken, Affligem, Pelforth, Edelweiss : marques de Heineken France ; Affligem
 // Blonde et Pelforth Blonde existent en fût de 20 L) et les montants de consigne de l'arrêté du 6 février 2026, en vigueur
-// le 1er janvier 2027 (40 € par fût de 20 à 50 L, 4 € par casier), valables pour toute la S2.
+// le 1er janvier 2027 (art. 1er : 40 € par fût de 20 L ou plus, 4 € par casier à trous ; relu sur Légifrance le 13/10/2026), valables pour toute la S2.
 // CONSTRUIT : les stocks, le minimum de commande, l'heure limite, le jour de tournée, le client et son numéro.
 
 // Les montants de consigne, en euros (arrêté du 6 février 2026).

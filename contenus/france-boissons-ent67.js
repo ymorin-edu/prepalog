@@ -69,7 +69,7 @@ const docMots = () => `<article class="fb7-doc" aria-label="Mots de la préparat
 // code.travail.gouv.fr : L4121-1, R4541-3, L3121-16, L1222-4 ; règlement (UE) 1169/2011, art. 2 §2 r) et annexe X, sur sa version
 // consolidée (EUR-Lex bloqué : à recouper). Code civil 1603 : mêmes mots dans toutes les sources, Légifrance non lu (bloqué) ; il
 // n'existe pas d'article qui écrive « conforme » : la délivrance conforme est de jurisprudence (d'où la phrase d'explication sous
-// l'article). Arrêté du 6 février 2026 : montant de la consigne, repris d'ENT-6.6, texte non relu.
+// l'article). Arrêté du 6 février 2026 (art. 1er, 4° et 11°) : relu sur Légifrance le 13/10/2026.
 const art = (code, num, texte) => `<p class="fb-st" style="margin-top:14px">${code}, ${num}</p>${texte}`;
 export const TEXTES_DROIT = [
   ['Code du travail', 'article L4121-1 (extrait)', '<p>« L’employeur prend les mesures nécessaires pour assurer la sécurité et protéger la santé '
@@ -85,13 +85,13 @@ export const TEXTES_DROIT = [
   ['Règlement (UE) n° 1169/2011', 'article 2 et annexe X (extraits)', '<p>« Date de durabilité minimale d’une denrée alimentaire : la date '
     + 'jusqu’à laquelle cette denrée alimentaire conserve ses propriétés spécifiques dans des conditions de conservation appropriées. »</p>'
     + '<p>Elle est précédée des termes « à consommer de préférence avant… ». La bière la porte (sauf à 10 % d’alcool ou plus).</p>'],
-  ['Arrêté du 6 février 2026', 'consignation des emballages (en vigueur le 1er janvier 2027)', '<p>Montant de la consigne : <b>40 €</b> par fût '
-    + 'de 20 à 50 litres, <b>4 €</b> par casier.</p>'],
+  ['Arrêté du 6 février 2026', 'consignation des emballages (en vigueur le 1er janvier 2027)', '<p>Article 1er (extrait) : « 4° Fûts d’une contenance égale ou supérieure à 20 litres : <b>40 euros</b> ; […] 11° Casiers à trous : '
+      + '<b>4 euros</b>. »</p>'],
 ];
 const docDroit = () => `<article class="fb7-doc" aria-label="Le droit">
     <p class="fb-t">Le droit : santé au travail, pause, information du salarié, vente, consigne</p>
     ${TEXTES_DROIT.map(([c, n, t]) => art(c, n, t)).join('')}
-    <p class="fb-pied">Textes réels — sources : Code du travail, Code civil, règlement (UE) n° 1169/2011 ; montants de l’arrêté d’après la FNB</p>
+    <p class="fb-pied">Textes réels — sources : Code du travail, Code civil, règlement (UE) n° 1169/2011 ; arrêté du 6 février 2026, Journal officiel du 26 février 2026 (Légifrance)</p>
   </article>`;
 
 export const DOCUMENTS = [
