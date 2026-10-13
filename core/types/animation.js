@@ -25,6 +25,7 @@
 //     aRetenir: 'texte (HTML court permis : <b>, <u>)',
 //     ecrans: [{ titre, image?: { src, alt, mention? }, blocs: ['html', 'html', 'html'] }],   // facultatif, voir plus bas
 //     libelleEcrans: 'Revoir le matériel',   // le lien qui y ramène depuis l'animation
+//     quand: (db) => booléen,     // facultatif (D-10, 13/10/2026) : l'entrée du menu n'apparaît qu'une fois vrai (`apresMail`…)
 //   }
 // ÉCRANS DE PRÉSENTATION (chantier D-5, 11/10/2026, ENT-6.5 §4 étapes 0 et 1 : « le matériel du poste », « le mot
 // expliqué ») : avant la partie 1, une suite d'écrans NON NOTÉS — un dessin, trois blocs courts au plus (règle d'écriture
@@ -595,7 +596,8 @@ export function creerLecteur(A) {
     jouer(0);
   }
 
-  return { id: M.id, nav: { libelle: M.libelle }, etatNeuf, html, brancher, modele: M,
+  // `quand(db)` (chantier D-10, ENT-6.10 §7.4) : l'écran reste hors du menu tant que c'est faux, comme une fiche.
+  return { id: M.id, nav: { libelle: M.libelle }, quand: typeof A.quand === 'function' ? A.quand : null, etatNeuf, html, brancher, modele: M,
     signaux: M.questions.map((Q) => `animation:${M.id}:${Q.id}`) };
 }
 

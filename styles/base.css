@@ -933,6 +933,7 @@ a.ent-nav{ text-decoration:none }
 .ent-fiche-form{ margin-top:0 }
 .ent-fiche-form fieldset{ border:0; padding:0; margin:0; min-width:0 }
 .ent-fiche-bloc + .ent-fiche-bloc{ margin-top:16px }
+.ent-fiche-serree .ent-fiche-bloc + .ent-fiche-bloc{ margin-top:9px }   /* `serree: true` (D-10, 13/10/2026) */
 .ent-fiche-h{ margin:0 0 6px; font-size:1.02rem }
 .ent-fiche-lib{ display:block; font-weight:600; margin-bottom:4px }
 table.ent-tri{ border-collapse:collapse; width:100%; font-size:.92rem }
@@ -964,6 +965,30 @@ fieldset[disabled] .ent-ouinon button{ cursor:default }
    au lieu de le recouvrir : posées par-dessus, elles cachaient les boutons du haut d'un écran (« Agrandir le
    planning »). Bord ambre (jamais vert : le vert plein ne dit que « juste »), fond du panneau, une ombre. */
 .ent-cartes-ancre{ position:sticky; top:0; z-index:40; display:flex; justify-content:flex-end; pointer-events:none }
+/* Les pastilles d'étape de la séance (chantier D-10, 13/10/2026) : une ligne, au-dessus de l'écran de travail. « Fait » =
+   coche et bordure verte (un trait, jamais d'aplat : le vert plein dit « juste »). */
+.ent-pastilles{ list-style:none; margin:0 0 6px; padding:0; display:flex; flex-wrap:wrap; gap:6px 10px; font-size:13px }
+.ent-pastille{ display:flex; align-items:center; gap:6px; padding:2px 10px 2px 3px; border:1px solid var(--filet);
+  border-radius:999px; color:var(--encre-douce); background:var(--panneau) }
+.ent-pastille-n{ display:inline-grid; place-items:center; width:20px; height:20px; border-radius:50%;
+  border:1px solid var(--filet); font-size:12px; font-weight:700 }
+.ent-pastille.fait{ border-color:var(--vert); color:var(--encre) }
+.ent-pastille.fait .ent-pastille-n{ border-color:var(--vert); color:var(--vert) }
+/* La bande prend sa place sur la hauteur du cadre : la page ne défile pas à 1366 × 768 (ENT-6.10 §4 bis.1). */
+.ent-pastilles + .ent-shell{ margin-top:0; min-height:calc(100vh - 124px) }
+/* Un dessin en document, et sa loupe plein écran (chantier D-10, 13/10/2026). */
+.ent-doc.ent-doc-dessin{ width:100% }   /* un dessin prend toute la colonne (la feuille de papier en fait 560 px) */
+.ent-doc-image{ margin:0 }
+.ent-doc-loupe{ display:block; position:relative; width:100%; padding:0; border:0; background:none; cursor:zoom-in }
+.ent-doc-loupe img{ display:block; width:100%; height:auto }
+.ent-doc-loupe-lib{ position:absolute; right:6px; top:6px; display:flex; align-items:center; gap:4px; padding:3px 8px;
+  border:1px solid var(--filet); border-radius:6px; background:var(--panneau); color:var(--encre); font-size:12px; font-weight:600 }
+.ent-doc-loupe:focus-visible{ outline:3px solid var(--ardoise); outline-offset:2px }
+.ent-doc-image figcaption{ margin-top:4px; font-size:11px; color:var(--encre-douce) }
+.ent-loupe{ position:fixed; inset:0; z-index:200; display:grid; place-items:center; padding:48px 16px 16px;
+  background:rgba(20,18,15,.82); cursor:zoom-out }
+.ent-loupe img{ max-width:100%; max-height:100%; width:auto; height:auto; background:var(--panneau); border-radius:6px; cursor:default }
+.ent-loupe-fermer{ position:absolute; top:10px; right:16px }
 .ent-cartes{ width:min(380px, calc(100vw - 32px)); margin-top:8px;
   display:flex; flex-direction:column; align-items:stretch; gap:8px; pointer-events:none }
 .ent-cartes:empty{ display:none }

@@ -28,14 +28,74 @@
 // doit rien écrire. Contrôle au chargement : essayée sur une base vide (`{}`), elle doit rendre un texte, sinon la séance
 // ne se charge pas (message qui nomme le document). Au dessin, une fonction qui plante est signalée (console) et la
 // feuille affiche un avis d'erreur. Un texte fixe : rien ne change.
+//
+// UN DESSIN EN DOCUMENT (chantier D-10, 13/10/2026, brief ENT-6.10 §7.2) : `image: { src: './contenus/…svg', alt, mention? }`
+// (avec ou sans `html`, qui s'écrit alors dessous). Le dessin prend toute la largeur de la feuille ; un clic (ou « Agrandir »)
+// l'ouvre EN PLEIN ÉCRAN (la loupe : Échap, « Fermer » ou un clic sur le fond la referment, le focus revient au dessin).
+// `alt` est obligatoire et ne doit pas donner la réponse (ENT-6.10 : il ne dit pas combien de fûts) ; `mention` s'écrit en
+// pied du dessin. `src` vient du site (« ./ ») : une adresse d'un autre domaine empêche la séance de se charger.
 
 import { ech } from '../ui.js';
+
+const LOUPE = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+  aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L21 21M10.5 7.5v6M7.5 10.5h6"/></svg>`;
+
+// La loupe plein écran : une seule pour la page, posée au premier clic sur un dessin (délégation sur le document).
+let loupePosee = false;
+function poserLoupe() {
+  if (loupePosee || typeof document === 'undefined') return;
+  loupePosee = true;
+  let retour = null;
+  const fermer = () => {
+    const o = document.querySelector('[data-doc-loupe-ouverte]');
+    if (!o) return;
+    o.remove();
+    if (retour && retour.isConnected) retour.focus({ preventScroll: true });
+    retour = null;
+  };
+  document.addEventListener('click', (ev) => {
+    const b = ev.target.closest && ev.target.closest('[data-doc-loupe]');
+    if (b) {
+      ev.preventDefault();
+      const img = b.querySelector('img');
+      if (!img) return;
+      fermer();
+      retour = b;
+      const o = document.createElement('div');
+      o.className = 'ent-loupe';
+      o.dataset.docLoupeOuverte = '';
+      o.setAttribute('role', 'dialog');
+      o.setAttribute('aria-modal', 'true');
+      o.setAttribute('aria-label', b.dataset.docLoupe || 'Dessin agrandi');
+      o.innerHTML = `<button type="button" class="btn ent-loupe-fermer" data-doc-loupe-fermer>Fermer (Échap)</button>`
+        + `<img src="${ech(img.getAttribute('src'))}" alt="${ech(img.getAttribute('alt') || '')}">`;
+      document.body.appendChild(o);
+      o.querySelector('[data-doc-loupe-fermer]').focus();
+      return;
+    }
+    const o = document.querySelector('[data-doc-loupe-ouverte]');
+    if (o && (ev.target === o || (ev.target.closest && ev.target.closest('[data-doc-loupe-fermer]')))) fermer();
+  });
+  document.addEventListener('keydown', (ev) => {
+    const o = document.querySelector('[data-doc-loupe-ouverte]');
+    if (!o) return;
+    if (ev.key === 'Escape') { ev.preventDefault(); fermer(); }
+    // Le focus reste dans la loupe (un seul bouton).
+    else if (ev.key === 'Tab') { ev.preventDefault(); o.querySelector('[data-doc-loupe-fermer]').focus(); }
+  });
+}
 
 const TROMBONE = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
   aria-hidden="true"><path d="M21 11l-8.5 8.5a5 5 0 0 1-7-7L14 4a3.5 3.5 0 0 1 5 5l-8.5 8.5a2 2 0 0 1-3-3L15 7"/></svg>`;
 
 // Le HTML d'un document pour une base : texte fixe, ou fonction de la base (contrôlée : un texte).
 function htmlDe(d, db) {
+  if (d.image) {
+    const I = d.image, reste = d.html == null ? '' : htmlDe(Object.assign({}, d, { image: null }), db);
+    return `<figure class="ent-doc-image"><button type="button" class="ent-doc-loupe" data-doc-loupe="${ech(d.titre || I.alt)}" data-libre
+      title="Agrandir le dessin"><img src="${ech(I.src)}" alt="${ech(I.alt)}"><span class="ent-doc-loupe-lib">${LOUPE} Agrandir</span></button>${
+      I.mention ? `<figcaption>${ech(I.mention)}</figcaption>` : ''}</figure>${reste || ''}`;
+  }
   if (typeof d.html !== 'function') return d.html;
   const h = d.html(db || {});
   if (typeof h !== 'string') throw new Error(`« html(db) » rend ${h === null ? 'null' : typeof h} au lieu d’un texte`);
@@ -46,6 +106,11 @@ export function creerDocuments(liste, style, { signaler } = {}) {
   const DOC = {};
   (liste || []).forEach((d) => {
     DOC[d.id] = d;
+    if (d.image) {
+      if (!d.image.src || !String(d.image.src).startsWith('./')) throw new Error(`document « ${d.id} » : l'image doit venir du site (« ./contenus/… »)`);
+      if (!d.image.alt) throw new Error(`document « ${d.id} » : il manque le texte de remplacement (« alt ») du dessin`);
+      poserLoupe();
+    }
     // Contrôle au chargement : une fonction de la base est essayée sur une base vide.
     if (typeof d.html === 'function') {
       try { htmlDe(d, {}); } catch (x) {
@@ -63,7 +128,7 @@ export function creerDocuments(liste, style, { signaler } = {}) {
       if (signaler) signaler(`le document « ${id} » ne se dessine pas`, x);
       h = '<div class="avis avis-err" data-doc-erreur>Ce document ne s’affiche pas (erreur de la séance) : signale-le à ton professeur.</div>';
     }
-    return `<div class="ent-doc" data-doc="${ech(id)}">${h}</div>`;
+    return `<div class="ent-doc${DOC[id].image ? ' ent-doc-dessin' : ''}" data-doc="${ech(id)}">${h}</div>`;
   }
 
   return {

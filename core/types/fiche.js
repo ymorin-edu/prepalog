@@ -27,6 +27,9 @@
 //
 // Avec `documents`, ils s'affichent à gauche en onglets et restent à l'écran quand on descend dans la
 // fiche ; la fiche est à droite. Quand la place manque, l'un sous l'autre. Sans `documents` : la fiche seule.
+// `largeurDocs` (D-10, 13/10/2026) : la part de la largeur prise par les documents, la fiche valant 1 (défaut 1, moitié-moitié) :
+// 1.85 pour un dessin à compter (ENT-6.10 ①), 0.75 pour laisser la place à une feuille de calcul. `serree: true` : des blocs plus
+// rapprochés (la fiche ① d'ENT-6.10 tient ainsi à 1280 × 720 sans défilement).
 //
 // RIEN N'EST JUGÉ AVANT L'ENVOI, rien n'est corrigé à l'écran (guidage compris) : le bilan de la séance dit
 // à la fin quelles cases étaient fausses. L'envoi est refusé tant qu'il manque une réponse (la raison
@@ -72,6 +75,20 @@
 //     prend toute la ligne). La fiche peut aussi porter `entete` (HTML du contenu : titre du document, numéro…)
 //     et `pied` (texte : « Document pédagogique, reconstitution, non contractuel »).
 //
+// FEUILLE DE CALCUL DANS LA FICHE (chantier D-10, 13/10/2026, brief ENT-6.10 §7.1) : un bloc `grille` pose la feuille de
+// `core/types/grille.js` (saisie directe : formule et résultat côte à côte, pointage des cases à la souris) :
+//   { type: 'grille', id: 'compte', feuille: { colonnes: ['A', 'B', 'C'], decimales: 2, colonneAide: 'Aide', donneesGrisees: true },
+//     lignes: [ … ] | (db) => [ … ] }
+// `feuille` : les options de `creerGrille` (sans `lignes`) ; défauts posés ici : `verifier: false` (rien n'est jugé avant
+// l'envoi) et `couleurs: false`. `lignes` : celles de `creerGrille`, ou une FONCTION DE LA BASE, rappelée à chaque dessin et à
+// chaque jugement : c'est ainsi qu'une case lit une AUTRE FICHE de la séance (attendu et aide de la ligne 4 d'ENT-6.10 tirés de
+// `ficheEnvoyee(db, 'controle')`). Rien n'est recopié dans une case : l'élève recopie lui-même.
+// État : `valeurs[<bloc>] = { cases: { B3: '9', B5: '=B2+B3-B4' } }`. « Manque » : toute case à remplir vide (« Il manque : les
+// cases B3, C3 »), sauf `envoi.incomplet`. Fiche envoyée : la feuille se relit (formules et résultats), sans verdict. Entrée dans
+// une case passe à la case suivante (n'envoie jamais). Geste : `fiche:<id>:<bloc>` à la sortie d'une case remplie.
+// Jalons : `lireFeuille(ficheId, bloc, db)` ci-dessous → `{ juge: { B3: 'ok' | 'valeur' | 'pasFormule' | … }, valeur(ref), brut(ref) }`,
+// sur les cases rangées de la fiche (ou celles passées en 4e argument).
+//
 // Envoi incomplet (ENT-5.8) : `envoi: { incomplet: true }` laisse partir la fiche avec des cases vides, comme
 // une vraie lettre mal remplie (c'est alors à un jalon de la séance de dire « incomplète »). Sans l'option,
 // l'envoi est refusé tant qu'il manque une réponse.
@@ -89,6 +106,28 @@
 // la fiche affiche un avis d'erreur à la place, sans casser l'écran. Valeurs fixes : rien ne change.
 
 import { ech, confirmerDansLaPage } from '../ui.js';
+import { creerGrille } from './grille.js';
+
+// La feuille d'un bloc `grille` : une par déclaration (les plis et la case choisie vivent dans l'objet), créée au premier usage.
+const FEUILLES = new WeakMap();
+const feuilleDe = (b) => {
+  if (!FEUILLES.has(b)) FEUILLES.set(b, creerGrille(Object.assign({ verifier: false, couleurs: false }, b.feuille || {})));
+  return FEUILLES.get(b);
+};
+const lignesDe = (b, db) => (typeof b.lignes === 'function' ? b.lignes(db || {}) : b.lignes) || [];
+const colonnesDe = (b) => (b.feuille && b.feuille.colonnes) || ['A', 'B'];
+// Les adresses des cases à remplir d'un bloc `grille`, dans l'ordre de lecture (ligne par ligne).
+const casesARemplir = (b, db) => lignesDe(b, db).flatMap((L, i) => colonnesDe(b)
+  .filter((c) => L[c] && typeof L[c] === 'object' && L[c].saisie).map((c) => `${c}${i + 1}`));
+
+// Pour les jalons : la feuille d'un bloc `grille` de la fiche `ficheId`, jugée sur la base de l'élève (ses cases rangées,
+// ou `cases` si on les donne). Le jalon vérifie lui-même que la fiche est envoyée (`ficheEnvoyee`).
+export function lireFeuille(ficheId, b, db, cases) {
+  const f = db && db.fiches && db.fiches[ficheId];
+  const C = cases || (f && f.valeurs && f.valeurs[b.id] && f.valeurs[b.id].cases) || {};
+  const G = feuilleDe(b), L = lignesDe(b, db);
+  return { juge: G.juger(L, C), valeur: (ref) => G.valeur(L, C, ref), brut: (ref) => G.brut(L, C, ref), cases: C };
+}
 
 // Une saisie de nombre, telle que tapée → un nombre, ou NaN. Espaces (milliers), virgule décimale.
 export function lireNombre(s) {
@@ -187,6 +226,10 @@ export function creerFiche(F, VDOC, { signaler } = {}) {
         if (n) L.push(b.manque ? b.manque.replace('{n}', n) : `${n} case${n > 1 ? 's' : ''} du tableau sans réponse`);
       } else if (b.type === 'liste' || b.type === 'choix' || (SAISIES.includes(b.type) && !b.fige)) {
         if (v[b.id] == null || String(v[b.id]).trim() === '') L.push(b.manque || `« ${b.lib || b.titre || b.id} »`);
+      } else if (b.type === 'grille') {
+        const C = (v[b.id] && v[b.id].cases) || {};
+        const vides = casesARemplir(b, db).filter((r) => C[r] == null || String(C[r]).trim() === '');
+        if (vides.length) L.push(b.manque ? b.manque.replace('{n}', vides.length) : `${vides.length > 1 ? 'les cases' : 'la case'} ${vides.join(', ')}`);
       }
     });
     return L;
@@ -201,6 +244,8 @@ export function creerFiche(F, VDOC, { signaler } = {}) {
     }).filter(Boolean);
   }
 
+  // Ce que lit le dessin d'un bloc `grille` (la base, la fiche figée) : posé par `html` avant de dessiner les blocs.
+  const dessin = { db: {}, fige: false };
   function bloc(b, e) {
     const v = e.valeurs || {};
     const titre = b.titre && b.type !== 'encadre' ? `<h3 class="ent-fiche-h">${ech(b.titre)}</h3>` : '';
@@ -266,6 +311,10 @@ export function creerFiche(F, VDOC, { signaler } = {}) {
     if (b.type === 'encadre') {
       return `<div class="ent-encadre">${b.titre ? `<b>${ech(b.titre)}</b>` : ''}${ech(b.texte || '').replace(/\n/g, '<br>')}</div>`;
     }
+    if (b.type === 'grille') {
+      return `${titre}${consigne}<div class="ent-fiche-feuille" data-fiche-grille="${ech(b.id)}">${feuilleDe(b).html(lignesDe(b, dessin.db),
+        v[b.id] || { cases: {} }, { lectureSeule: dessin.fige, sansCorrection: true, sansVerifier: true })}</div>`;
+    }
     return `<div class="avis avis-err">Bloc de fiche inconnu : « ${ech(b.type)} ».</div>`;
   }
 
@@ -283,9 +332,10 @@ export function creerFiche(F, VDOC, { signaler } = {}) {
   // `api.db` : la base de l'élève (une fiche ou des documents fonction de la base la lisent à chaque dessin).
   function html(e, ui, api) {
     const fige = !!e.envoye || api.figee;
+    dessin.db = api.db; dessin.fige = fige;
     const brut = blocsBrutsDe(api.db);
     const docs = docsDe(api.db);
-    const formulaire = `<form class="panneau ent-fiche-form${F.grille ? ' ent-fiche-grille' : ''}" data-fiche="${ech(F.id)}" novalidate>
+    const formulaire = `<form class="panneau ent-fiche-form${F.grille ? ' ent-fiche-grille' : ''}${F.serree ? ' ent-fiche-serree' : ''}" data-fiche="${ech(F.id)}" novalidate>
         <fieldset${fige ? ' disabled' : ''}>${F.entete ? `<div class="ent-fiche-entete">${F.entete}</div>` : ''}<div class="ent-fiche-blocs">${
           brut ? (brut || []).map((b) => `<div class="ent-fiche-bloc${b.type === 'cadre' && b.large ? ' large' : ''}">${bloc(b, e)}</div>`).join('')
             : '<div class="avis avis-err" data-fiche-erreur>Cette fiche ne s’affiche pas (erreur de la séance) : signale-le à ton professeur.</div>'}</div>${
@@ -299,7 +349,7 @@ export function creerFiche(F, VDOC, { signaler } = {}) {
       </form>`;
     return `<div class="ent-tete"><h2>${ech(F.titre || libelle)}</h2>${F.sousTitre ? `<p class="note">${ech(F.sousTitre)}</p>` : ''}</div>
       <div class="ent-fiche${docs.length ? ' ent-fiche-cote' : ''}">
-        ${docs.length ? `<div class="ent-fiche-docs">${onglets(ui, api.docVu, docs, api.db)}</div>` : ''}
+        ${docs.length ? `<div class="ent-fiche-docs"${F.largeurDocs ? ` style="flex-grow:${Number(F.largeurDocs) || 1}"` : ''}>${onglets(ui, api.docVu, docs, api.db)}</div>` : ''}
         <div class="ent-fiche-droite">${formulaire}</div>
       </div>`;
   }
@@ -337,8 +387,28 @@ export function creerFiche(F, VDOC, { signaler } = {}) {
       sig(el.dataset.ficheSaisie); api.sauver();
     }));
     // Entrée dans une case ne fait pas partir la fiche (un envoi incomplet serait possible) : seul le bouton envoie.
+    // Dans une feuille de calcul, Entrée passe à la case suivante (comme un tableur).
     z.querySelector('[data-fiche]')?.addEventListener('keydown', (ev) => {
-      if (ev.key === 'Enter' && ev.target.tagName === 'INPUT') ev.preventDefault();
+      if (ev.key !== 'Enter' || ev.target.tagName !== 'INPUT') return;
+      ev.preventDefault();
+      const feuille = ev.target.dataset.gr && ev.target.closest('[data-fiche-grille]');
+      if (!feuille) return;
+      const L = [...feuille.querySelectorAll('input[data-gr]')];
+      const suivant = L[L.indexOf(ev.target) + 1];
+      if (suivant) suivant.focus();
+    });
+    // Les feuilles de calcul : la grille range les cases dans `valeurs[<bloc>].cases` et recalcule sans redessin.
+    z.querySelectorAll('[data-fiche-grille]').forEach((el) => {
+      const b = blocsDe(api.db).find((x) => x.id === el.dataset.ficheGrille);
+      if (!b) return;
+      const fige = !!e.envoye || api.figee;
+      if (!fige && !(e.valeurs[b.id] && e.valeurs[b.id].cases)) e.valeurs[b.id] = { cases: {} };
+      feuilleDe(b).brancher(el, {
+        etat: e.valeurs[b.id] || { cases: {} }, lectureSeule: fige,
+        lignes: () => lignesDe(b, api.db), sauver: ecrit, redessiner: () => {},
+      });
+      if (fige) return;
+      el.querySelectorAll('input[data-gr]').forEach((x) => x.addEventListener('change', () => { if (x.value !== '') { sig(b.id); api.sauver(); } }));
     });
     // Cases à cocher : la liste des cochées, dans l'ordre déclaré.
     z.querySelectorAll('[data-fiche-case]').forEach((el) => el.addEventListener('change', () => {

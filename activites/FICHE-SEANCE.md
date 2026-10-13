@@ -115,6 +115,7 @@ plan d'entrepôt, fiche, animation) sans `id` texte non vide, sont refusées aus
 | `documentsStyle` | texte | Mise en page CSS des documents joints (règles imbriquées sous `.ent-doc`). | `activites/smoby-recrutement.js` |
 | `fiche` | objet | Une fiche à remplir. | `activites/smoby-arrivee.js` |
 | `fiches` | tableau | Plusieurs fiches à remplir (la première garde l'écran `fiche`, les autres `fiche:<id>`). | `activites/smoby-lettre-voiture.js` |
+| `pastilles` | tableau | Pastilles d'étape de la séance, `[{ libelle, fait(db) }]`, une bande sur tous les écrans (D-10). | `activites/france-boissons-retour.js` |
 | `animation` | objet | Une animation à questions (et ses écrans de présentation, D-5). | essais seulement (aucune séance ne la passe encore) |
 | `animations` | tableau | Plusieurs animations (rare). | essais seulement |
 | `questions` | objet | Questions au fil et points d'étape (voir « Questions au fil »). | essais seulement (aucune séance ne la passe encore) |
@@ -312,6 +313,26 @@ vide, par exemple). Au dessin, une fonction qui plante est signalée (console, c
 un avis d'erreur ; une fiche qui ne se dessine pas ne part pas. Les gestes publiés par une fiche à `blocs(db)` sont ceux du dessin
 sur base vide, plus `fiche:<id>:envoyer`. Valeurs fixes : rien ne change. Exemple : `contenus/france-boissons-ent61.js`
 (`FICHE_QUI`, `DOC_ORGANIGRAMME_ELEVE`, jalons du courrier) ; tests : bloc `fb-6.1`.
+
+**Feuille de calcul dans une fiche, dessin en document, pastilles d'étape** (chantier D-10, 13/10/2026, brief ENT-6.10 §7) :
+- Bloc **`grille`** : `{ type: 'grille', id: 'compte', feuille: { colonnes: ['A', 'B', 'C'], decimales: 2, colonneAide: 'Aide',
+  donneesGrisees: true, largeurs: { A: '27%', B: '23%', C: '23%', aide: 'auto' } }, lignes: [ … ] | (db) => [ … ] }`. Les lignes et
+  les cellules sont celles de `creerGrille` (`core/types/grille.js` : `saisie`, `formule`, `attendu` nombre ou `(lire) => …`, `note`,
+  `tolerance` nombre ou `'1 %'`, `placeholder`). `lignes(db)` est rappelée à chaque dessin : c'est ainsi qu'une case (son attendu, son
+  aide) lit **une autre fiche** de la séance (ENT-6.10 : la ligne 4 rappelle les comptes envoyés à la fiche ①). Rien n'est jugé avant
+  l'envoi (`verifier: false` par défaut) ; « Il manque » nomme les cases vides ; envoyée, la feuille se relit sans verdict ; Entrée
+  passe à la case suivante ; une formule se construit en cliquant les cases (pointage de `grille.js`, curseur « copie », case qui
+  clignote). Jalons : `lireFeuille(ficheId, bloc, db)` (`core/types/fiche.js`) → `{ juge: { B5: 'ok' | 'pasFormule' | 'valeur' | … },
+  valeur(ref), brut(ref) }`. Geste : `fiche:<id>:<bloc>` à la sortie d'une case remplie.
+- Fiche : `largeurDocs` (part de la largeur prise par les documents, la fiche valant 1 ; 1.85 pour un dessin à compter, 0.75 pour une
+  feuille) et `serree: true` (blocs rapprochés, pour tenir à 1280 × 720).
+- Document **dessin** : `{ id, titre, court, image: { src: './contenus/…svg', alt, mention } }` (avec ou sans `html` dessous). Pleine
+  largeur de la colonne ; un clic ou « Agrandir » ouvre la **loupe** plein écran (Échap, « Fermer » ou le fond la referment, le focus
+  revient). `alt` obligatoire, et il ne doit pas donner la réponse (pas de nombre à compter) ; `src` local obligatoire.
+- **`pastilles`** (option de `creerEntreprise`) : `[{ libelle, fait: (db) => booléen }]`, une bande d'une ligne au-dessus de l'écran
+  de travail, sur tous les écrans ; « fait » ou « à faire », jamais « juste ». Redessinée à chaque écran et après chaque envoi.
+- **Animation à son tour** : `animation.quand(db)` la garde hors du menu tant que c'est faux (comme une fiche).
+Exemple : `contenus/france-boissons-ent610.js` ; tests : bloc `fb-6.10`.
 
 **Menu de gauche rétractable** (04/10/2026, même brief, lot 3) : dans toutes les entreprises, sans rien
 déclarer. Un bouton en tête du menu le replie en une bande étroite (« » » pour le rouvrir) ; le choix est

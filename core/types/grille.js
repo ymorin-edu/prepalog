@@ -50,6 +50,8 @@
 //       faux sur sa ligne, mais le total se juge contre la somme des poids QU'IL A TAPÉS. Si la
 //       fonction rend `null` (une donnée manque encore), la cellule n'est pas jugée juste : elle
 //       attend (`'attente'`) — sans ça, une feuille vide donnerait un total « juste » de 0.
+//     tolerance: 0.5 | '1 %'
+//       L'écart permis avec l'attendu : un nombre (absolu, 0,01 par défaut) ou un pourcentage de l'attendu (ENT-6.10).
 //     prerempli: '=B12/B13*60'
 //       La cellule arrive déjà écrite (la feuille d'un collègue, ENT-3.3). L'élève la modifie, et
 //       c'est jugé comme une saisie. Rien n'est écrit dans sa base tant qu'il n'y touche pas : la
@@ -76,6 +78,17 @@
 //                         le lit comme une cellule vide). Ses colonnes ne sont pas celles de la feuille.
 //                         Il affiche ses résultats avec au moins deux décimales : c'est là qu'on pose
 //                         les étapes intermédiaires (0,98 h), qu'un arrondi à l'unité rendrait fausses.
+//     colonneAide: 'Aide'  (ENT-6.10, chantier D-10, 13/10/2026) l'aide de chaque ligne (sa `note`, sinon l'`aide`
+//                         de ses cellules) dans une DERNIÈRE COLONNE du tableau, intitulée ainsi, au lieu d'être
+//                         écrite sous le libellé (sous la case, la feuille ne tenait pas en hauteur à 1280 × 720).
+//                         Sans effet en affichage tableur (l'aide y est sous la barre).
+//     largeurs: { A: '30%', B: '24%', aide: 'auto' }  des colonnes de largeur fixe (`<colgroup>`), la colonne d'aide comprise.
+//     donneesGrisees: true  les nombres DONNÉS (hors première colonne) sont grisés : on voit d'un coup
+//                         d'œil ce qui ne se saisit pas (ENT-6.10, ligne « Chez le client avant la tournée »).
+//
+// Le POINTAGE se voit (ENT-6.10 §7.5, 13/10/2026, pour toutes les feuilles) : tant qu'un champ contient une formule,
+// le tableau prend la classe `gr-formule` (curseur « copie », pointillé au survol d'une case) ; la case désignée
+// clignote une fois (`gr-flash`).
 //
 // La feuille en LECTURE SEULE (ENT-3.3 en deux temps, chantier E, 03/10/2026) : l'appelant passe
 // `lectureSeule: true` à `html` ET à `brancher` (la vue tournée le fait quand elle est figée).
@@ -118,6 +131,7 @@ export function creerGrille(G) {
   let detacherPointage = null;
   const DEC = G.decimales == null ? 2 : G.decimales;
   const AIDES_BOUTON = G.aides === 'bouton';
+  const COL_AIDE = G.colonneAide && G.affichage !== 'tableur' ? (G.colonneAide === true ? 'Aide' : String(G.colonneAide)) : null;
   const SOBRE = G.couleurs === false;
   const BR = !G.brouillon ? null : {
     colonnes: G.brouillon.colonnes || ['F', 'G'],
@@ -269,7 +283,9 @@ export function creerGrille(G) {
       if (calcule && (attendu == null || !Number.isFinite(attendu))) { juge[c.ref] = 'attente'; return; }
       if (attendu != null) {
         const v = r.valeurs[c.ref];
-        const tol = c.tolerance == null ? 0.01 : c.tolerance;
+        // `tolerance: '1 %'` (ENT-6.10, 13/10/2026) : un écart relatif à l'attendu ; un nombre : un écart absolu.
+        const rel = typeof c.tolerance === 'string' && /%\s*$/.test(c.tolerance);
+        const tol = c.tolerance == null ? 0.01 : rel ? Math.abs(attendu) * parseFloat(c.tolerance.replace(',', '.')) / 100 : c.tolerance;
         if (v == null || Math.abs(v - attendu) > tol) { juge[c.ref] = 'valeur'; return; }
       }
       juge[c.ref] = 'ok';
@@ -313,7 +329,7 @@ export function creerGrille(G) {
       const r = evaluerGrille(cellulesDe(lignes, cases));
 
       const enTete = `<tr><th class="gr-coin"></th>${COLS
-        .map((c) => `<th class="gr-col">${ech(c)}</th>`).join('')}</tr>`;
+        .map((c) => `<th class="gr-col">${ech(c)}</th>`).join('')}${COL_AIDE ? `<th class="gr-col gr-col-aide">${ech(COL_AIDE)}</th>` : ''}</tr>`;
 
       // `jusqua` : seules les premières lignes se dessinent (un onglet de la vue tournée) ; le calcul,
       // lui, porte toujours sur la feuille entière.
@@ -392,20 +408,23 @@ export function creerGrille(G) {
             note = `<button type="button" class="gr-aide-btn" data-gr-aide="${i}" aria-expanded="${ouvert}"
                 aria-controls="${id}" aria-label="Aide pour « ${ech(txt)} »" title="Aide">?</button>
               <span class="gr-expl gr-aide-txt" id="${id}"${ouvert ? '' : ' hidden'}>${ech(aideLigne)}</span>`;
-          } else if (col === COLS[0] && L.note && !AIDES_BOUTON && !TAB) {
+          } else if (col === COLS[0] && L.note && !AIDES_BOUTON && !TAB && !COL_AIDE) {
             note = `<span class="gr-expl">${ech(L.note)}</span>`;
           }
-          return `<td class="gr-fixe${nb ? ' gr-nb mono' : ''}${teinte(v)}${TAB && selection === a ? ' gr-sel' : ''}" data-ref="${ech(a)}"${
+          return `<td class="gr-fixe${nb ? ' gr-nb mono' : ''}${nb && G.donneesGrisees && col !== COLS[0] ? ' gr-donnee' : ''}${teinte(v)}${TAB && selection === a ? ' gr-sel' : ''}" data-ref="${ech(a)}"${
             TAB ? ` data-gr-cel="${ech(a)}" tabindex="0"` : ''}>${ech(txt)}${note}</td>`;
         }).join('');
         // Sans couleurs, le TYPE de ligne ne se dessine plus : étape, résultat et contrainte se
         // ressemblent, et c'est à l'élève de savoir lequel il compare à quoi.
+        // La colonne « Aide » (`colonneAide`) : la note de la ligne, sinon l'aide de ses cellules à remplir.
+        const colAide = !COL_AIDE ? '' : `<td class="gr-aide-col">${L.entete ? '' : ech(L.note || COLS.map((col) => L[col])
+          .filter((v) => v && typeof v === 'object' && v.saisie && v.aide).map((v) => v.aide).join(' '))}</td>`;
         return `<tr class="${L.entete ? 'gr-ligne-entete' : ''}${L.type && !SOBRE ? ` gr-t-${ech(L.type)}` : ''}">
-          <th class="gr-num mono">${i + 1}</th>${cells}</tr>`;
+          <th class="gr-num mono">${i + 1}</th>${cells}${colAide}</tr>`;
       }).join('');
 
       // Avec les aides pliées, la liste du bas disparaît aussi : elle redonnerait ce que le « ? » cache.
-      const aides = AIDES_BOUTON || TAB ? [] : aRemplir(lignes).filter((c) => c.aide);
+      const aides = AIDES_BOUTON || TAB || COL_AIDE ? [] : aRemplir(lignes).filter((c) => c.aide);
       const bilan = !aJuge ? '' : (() => {
         const vals = Object.values(juge);
         if (vals.every((x) => x === 'ok')) {
@@ -479,6 +498,8 @@ export function creerGrille(G) {
         })()}
         <div class="gr-feuilles${BR ? ' gr-avec-brouillon' : ''}">
           <div class="ent-scroll"><table class="gr-table">
+            ${!G.largeurs ? '' : `<colgroup><col class="gr-col-num">${COLS.map((c) => `<col style="width:${ech(G.largeurs[c] || 'auto')}">`).join('')}${
+              COL_AIDE ? `<col style="width:${ech(G.largeurs.aide || 'auto')}">` : ''}</colgroup>`}
             <thead>${enTete}</thead><tbody>${corps}</tbody>
           </table></div>
           ${brouillon}
@@ -643,13 +664,15 @@ export function creerGrille(G) {
         curseur.fin = el.selectionEnd == null ? curseur.debut : el.selectionEnd;
       };
 
+      // Le tableau dit qu'il se pointe : tant que le champ en cours contient une formule (classe `gr-formule`).
+      const modeFormule = () => z.querySelectorAll('.gr-table').forEach((t) => t.classList.toggle('gr-formule', !!(actif && estFormule(actif.value))));
       z.querySelectorAll('[data-gr], [data-grb], [data-gr-barre]').forEach((el) => {
         // `pose = null` : une frappe au clavier périme le repère du geste précédent.
-        const maj = () => { pose = null; noter(el); suivreCurseur(el); };
+        const maj = () => { pose = null; noter(el); suivreCurseur(el); modeFormule(); };
         el.addEventListener('input', maj);
         el.addEventListener('change', maj);
-        el.addEventListener('focus', () => { actif = el; suivreCurseur(el); });
-        el.addEventListener('blur', () => { if (actif === el) actif = null; });
+        el.addEventListener('focus', () => { actif = el; suivreCurseur(el); modeFormule(); });
+        el.addEventListener('blur', () => { if (actif === el) actif = null; modeFormule(); });
         ['keyup', 'click', 'select'].forEach((ev) => el.addEventListener(ev, () => suivreCurseur(el)));
       });
 
@@ -768,6 +791,9 @@ export function creerGrille(G) {
             pose = null;                       // un clic neuf repart du curseur, pas de la pose d'avant
             enCours = true;
             ecrire(ref);
+            // La case désignée clignote une fois (on voit ce qu'on vient d'ajouter à la formule).
+            const td = e.target.closest('[data-ref]');
+            if (td) { td.classList.remove('gr-flash'); void td.offsetWidth; td.classList.add('gr-flash'); }
             pose.ancre = ref;
             surligner(ref, ref);
             tableau.classList.add('gr-pointe');

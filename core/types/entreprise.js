@@ -287,6 +287,12 @@ export function creerEntreprise(U) {
   // L'entrée du menu reste visible, grisée, avec le message, tant que `ouvertSi(db)` est faux ; l'écran ne
   // s'ouvre pas non plus par un autre chemin. Pour l'élève seulement : l'enseignant navigue librement.
   const FERMETURES = U.fermetures || {};
+  // LES PASTILLES D'ÉTAPE DE LA SÉANCE (chantier D-10, 13/10/2026, ENT-6.10 §4 bis.2) : `pastilles: [{ libelle: 'Contrôler',
+  // fait: (db) => booléen }, …]`, une bande d'une ligne au-dessus de l'écran de travail, sur tous les écrans. `fait` lit la base
+  // et ne juge JAMAIS (« la fiche est envoyée », pas « elle est juste ») : coche « fait » ou « à faire ». Redessinée à chaque
+  // écran et après chaque envoi. Une condition qui plante compte « à faire » (signalée). Sans `pastilles`, rien n'est dessiné.
+  const PASTILLES = Array.isArray(U.pastilles) ? U.pastilles : [];
+  PASTILLES.forEach((p, i) => { if (!p || !p.libelle || typeof p.fait !== 'function') throw new Error('pastille n° ' + (i + 1) + ' : il faut « libelle » et « fait(db) »'); });
   const montre = (v) => !MENU || !ECRANS_DONNEES.includes(v) || MENU.has(v)
     || (v === 'commande' && MENU.has('commandes')) || (v === 'reception' && MENU.has('receptions')) || (v === 'produit' && MENU.has('catalogue'));
   // Les aides « articles » (désignation, couleur, taille, état du stock) : `entreprise-outils.js` (lot 9c, module 3).
@@ -1406,6 +1412,7 @@ export function creerEntreprise(U) {
             <div data-fin-seance>${bandeauFin()}</div>
             ${MQ ? '<div class="qf-bandeau" data-qf-bandeau></div>' : ''}
             <div class="ent-cartes-ancre" data-cartes-ancre></div>
+            ${PASTILLES.length ? '<ol class="ent-pastilles" data-ent-pastilles aria-label="Les étapes de la séance"></ol>' : ''}
             <div class="ent-shell${replie ? ' ent-menu-replie' : ''}">
               <aside class="ent-side">
                 ${boutonMenu(replie)}
@@ -1414,7 +1421,7 @@ export function creerEntreprise(U) {
                 ${item('accueil', 'Accueil')}
                 ${item('mail', 'Messagerie', nonLus)}
                 ${groupe((VPLAN || VTOUR) && !VFICHE && !VQUAI && !VPL && !VENT && !VINV && !VANIMS.length ? U.transportSection || 'Transport' : 'Mon poste', [
-                  ...VANIMS.map((VA) => item(vueAnim(VA), VA.nav.libelle)),
+                  ...VANIMS.filter((VA) => !VA.quand || VA.quand(db)).map((VA) => item(vueAnim(VA), VA.nav.libelle)),
                   ...VFICHES.filter((VF) => !VF.quand || VF.quand(db)).map((VF) => item(vueDeFiche(VF), VF.nav.libelle)),
                   VQUAI && item('quai', VQUAI.nav.libelle),
                   VPL && item('planning', VPL.nav.libelle), VENT && item('entrepot', VENT.nav.libelle),
@@ -1610,6 +1617,18 @@ export function creerEntreprise(U) {
         hote.scrollIntoView({ block: 'start', behavior: 'smooth' });
       }
 
+      // Les pastilles d'étape (voir PASTILLES) : « fait » ou « à faire », jamais « juste ».
+      function majPastilles() {
+        const ol = hote.querySelector('[data-ent-pastilles]');
+        if (!ol) return;
+        ol.innerHTML = PASTILLES.map((p, i) => {
+          let fait = false;
+          try { fait = !!p.fait(db); } catch (x) { signaler('la pastille « ' + p.libelle + ' » plante', x); }
+          return `<li class="ent-pastille${fait ? ' fait' : ''}" data-pastille="${i}" aria-label="${i + 1}. ${ech(p.libelle)} : ${fait ? 'fait' : 'à faire'}"><span class="ent-pastille-n" aria-hidden="true">${
+            fait ? '✓' : i + 1}</span>${ech(p.libelle)}</li>`;
+        }).join('');
+      }
+
       function dessinerVueBrut() {
         const z = hote.querySelector('#entMain');
         const vues = {
@@ -1637,6 +1656,7 @@ export function creerEntreprise(U) {
         // planning) : tout l'environnement se redessine, le menu compris (sinon il garderait l'entrée fermée et n'aurait pas le point d'étape).
         if (fermeture(E.vue)) { E.vue = ouvertureImposee() ? 'ouverture' : 'accueil'; dessinerBrut(); return; }
         z.innerHTML = (vues[E.vue] || vueAccueil)();
+        majPastilles();
         brancher(z);
         figerVue(z);
         appliquerGel();
