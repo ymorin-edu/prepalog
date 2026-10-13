@@ -15,9 +15,9 @@
     { "id": "bruay", "type": "terminal", "nom": "Terminal fluvial de Bruay-sur-l'Escaut", "court": "Terminal de Bruay",
       "lonlat": [3.5478, 50.3924], "osm": "relation 21189603 « Terminal Bruay-sur-l’Escaut »" },
     { "id": "ldct", "type": "terminal", "nom": "Terminal rail-barge de Dourges (LDCT)", "court": "Terminal de Dourges",
-      "lonlat": [2.9855, 50.4490], "osm": "non nommé dans OSM : quai du canal de la Deûle et voies de desserte (ways 102608074, 102608080), dans la plateforme Delta 3 (way 517720539) — position à confirmer" },
+      "lonlat": [2.9847, 50.4473], "osm": "non nommé dans OSM ; centre du parc éclairé par 8 mâts (nodes 13806336286 à 13806336293, IGN 2025), entre les voies de desserte (ways 102608074, 102608080) et le quai du canal de la Deûle, dans Delta 3 (way 517720539) ; adresse publiée : Plateforme multimodale Delta 3, A1 sortie 17.1, 62119 Dourges — recoupé" },
     { "id": "rouvignies", "type": "entrepot", "nom": "Entrepôt Decathlon de Rouvignies", "court": "Entrepôt de Rouvignies",
-      "lonlat": [3.4349, 50.3326], "osm": "non nommé dans OSM : way 427004502 (building=warehouse), le plus grand entrepôt récent de la ZAC de l'Aérodrome Ouest — à confirmer" },
+      "lonlat": [3.4349, 50.3326], "osm": "non nommé dans OSM : way 427004502 (building=warehouse), le grand entrepôt récent en bordure de la rue Marc Jodot (OSM ways 1253410894 et suivantes) ; adresse publiée : 705 rue Marc Jodot, Parc d'activités de l'Aérodrome Ouest, 59220 Rouvignies — recoupé" },
     { "id": "delta3", "type": "entrepot", "nom": "Entrepôt Decathlon de Dourges (Delta 3)", "court": "Entrepôt de Dourges",
       "lonlat": [2.9749, 50.4465], "osm": "node 3971089596 « decathlon », dans la plateforme Delta 3 (way 517720539)" }
   ],

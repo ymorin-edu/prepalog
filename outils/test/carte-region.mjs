@@ -5,7 +5,7 @@
 // Montée dans le vrai moteur d'entreprise, décor Boost (la séance Decathlon n'existe pas encore), comme le bloc `carte`.
 //
 // Valeurs ÉCRITES À LA MAIN, relevées au build du 13/10/2026 (`outils/carte/construire-region.py`, km sur la sphère) :
-//   vers Rouvignies : route 168 ; barge 194 + camion 13 = 207 ; rail 162 + camion 45 = 207 ;
+//   vers Rouvignies : route 168 ; barge 194 + camion 13 = 207 ; rail 162 + camion 46 = 208 (LDCT recalé le 13/10) ;
 //   vers Dourges    : route 153 ; barge 263 + camion 3 = 266 ; rail 162 + camion 3 = 165.
 // Facteurs du CO₂ (brief 7.1 §6.2, kg CO₂ par tonne-km) : camion 0,051 · barge 0,020 · rail 0,0165.
 // Ordre voulu : vers Rouvignies barge < rail < route ; vers Dourges rail < barge < route (13,5 et 15,8 t).
@@ -114,10 +114,10 @@ await v('Carte des itinéraires : distances écrites à la main (vers Rouvignies
   const km = await pg.evaluate(() => Object.fromEntries(Object.entries(window.__ci.CARTE.itineraires).map(([d, I]) =>
     [d, Object.fromEntries(Object.entries(I).map(([m, it]) => [m, [it.km, it.segments.map((s) => `${s.type} ${s.km}`).join(' + ')]]))])));
   egal(km, {
-    rouvignies: { route: [168, 'route 168'], barge: [207, 'barge 194 + camion 13'], rail: [207, 'rail 162 + camion 45'] },
+    rouvignies: { route: [168, 'route 168'], barge: [207, 'barge 194 + camion 13'], rail: [208, 'rail 162 + camion 46'] },
     dourges: { route: [153, 'route 153'], barge: [266, 'barge 263 + camion 3'], rail: [165, 'rail 162 + camion 3'] },
   }, 'distances du module');
-  egal(await pg.$$eval('[data-ci-mode] .ci-km', (s) => s.map((x) => x.textContent)), ['168 km', '207 km', '207 km'], 'distances de la liste');
+  egal(await pg.$$eval('[data-ci-mode] .ci-km', (s) => s.map((x) => x.textContent)), ['168 km', '207 km', '208 km'], 'distances de la liste');
   await pg.click('[data-ci-mode="barge"]');
   const f = await pg.textContent('[data-ci-fiche]');
   vrai(f.includes('barge 194 km + camion 13 km'), 'distance par tronçon absente de la fiche : ' + f);
@@ -140,7 +140,7 @@ await v('Carte des itinéraires : l’ordre du CO₂ du brief 7.1 tient avec les
     vrai(co2(r.barge, t) < co2(r.rail, t) && co2(r.rail, t) < co2(r.route, t), `vers Rouvignies à ${t} t : ${co2(r.barge, t)} / ${co2(r.rail, t)} / ${co2(r.route, t)}`);
     vrai(co2(d.rail, t) < co2(d.barge, t) && co2(d.barge, t) < co2(d.route, t), `vers Dourges à ${t} t : ${co2(d.rail, t)} / ${co2(d.barge, t)} / ${co2(d.route, t)}`);
   }
-  egal([co2(segs.rouvignies.barge, 13.5), co2(segs.rouvignies.rail, 13.5), co2(segs.rouvignies.route, 13.5)], [61, 67, 116], 'CO₂ vers Rouvignies à 13,5 t');
+  egal([co2(segs.rouvignies.barge, 13.5), co2(segs.rouvignies.rail, 13.5), co2(segs.rouvignies.route, 13.5)], [61, 68, 116], 'CO₂ vers Rouvignies à 13,5 t');
 });
 
 // La forme : chaque type de tronçon a sa signature (épaisseur, pointillés, couches) ; un seul est plein et sans pointillés.

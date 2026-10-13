@@ -183,9 +183,10 @@ dire à Tristan**) :
     est construit** (le brief n'en nommait aucun) ;
   - terminal de Bruay-sur-l'Escaut : relation OSM 21189603 « Terminal Bruay-sur-l'Escaut » — vérifié ;
   - entrepôt Decathlon de Dourges : nœud OSM 3971089596 « decathlon » dans Delta 3 — vérifié ;
-  - **terminal LDCT** : **non nommé dans OSM** ; posé au quai du canal de la Deûle, sur les voies de desserte de Delta 3 — **supposé** ;
+  - **terminal LDCT** : **non nommé dans OSM** ; posé au quai du canal de la Deûle, sur les voies de desserte de Delta 3 — **supposé**
+    (recalé le 13/10 au centre des 8 mâts d'éclairage du parc à conteneurs, 50,4473 N ; 2,9847 E : **recoupé**, voir plus bas) ;
   - **entrepôt de Rouvignies** : **non nommé dans OSM** ; posé sur le plus grand entrepôt récent de la ZAC de l'Aérodrome Ouest (way
-    427004502) — **supposé**. D'où un camion de **13 km** depuis Bruay (le brief disait 6).
+    427004502) — **supposé** (puis **recoupé** le 13/10 : il borde la rue Marc Jodot, l'adresse publiée, voir plus bas). D'où un camion de **13 km** depuis Bruay (le brief disait 6).
 - **Écarts par rapport au brief** :
   - **Rail vers Dourges** : le brief proposait Bruxelles → Mons → Valenciennes → Douai ; par les voies OSM, cela fait 313 km (la ligne
     Mons-Valenciennes ne passe plus la frontière). Pris par Gand → Courtrai → Lille, comme vers Rouvignies (162 km).
@@ -250,3 +251,16 @@ dire à Tristan**) :
   à 0 → le cas de la barge estompée tombe ; noms de zoom débranchés → le cas de Dourges tombe.
 - **Reste ouvert** : confirmer LDCT et l'entrepôt de Rouvignies (positions supposées) ; la séance ENT-7.1 elle-même (son brief
   demande encore des choix à Tristan). *(Suivi de classe : colonne « Itinéraires ouverts » ajoutée le 13/10, après le lot 3.)*
+
+### Après le lot 3 — les deux lieux recherchés sur le web (13/10/2026, demande de Tristan : « cherche l'info, sinon on invente »)
+
+- **Entrepôt Decathlon de Rouvignies** : adresse publiée **705 rue Marc Jodot, Parc d'activités de l'Aérodrome Ouest, 59220
+  Rouvignies** (annuaire des entreprises de l'État, SIRET 306 138 900 03712 ; Pages Jaunes ; annonce de job dating de mars 2026). La
+  rue Marc Jodot est dans OSM ; le bâtiment retenu (way 427004502) la borde. **Recoupé** (le bâtiment n'est nommé nulle part) ;
+  position inchangée.
+- **Terminal LDCT** : adresse publiée **Plateforme multimodale Delta 3, A1 sortie 17.1, 62119 Dourges** (Pappers, SIREN 452 050 792),
+  sans position précise. OSM y dessine, entre les voies de desserte et le quai du canal de la Deûle, **8 mâts d'éclairage** en grille
+  (la signature d'un parc à conteneurs) : le terminal est posé à leur centre, **50,4473 N ; 2,9847 E** (190 m de la position supposée).
+  **Recoupé**, pas vérifié.
+- **Effet sur les distances** : rail vers Rouvignies 162 + camion **46** = **208 km** (au lieu de 207) ; barge vers Dourges 263 + 3 ;
+  le reste inchangé. L'ordre du CO₂ tient (vers Rouvignies, 13,5 t : barge 61 < rail 68 < route 116 kg).
