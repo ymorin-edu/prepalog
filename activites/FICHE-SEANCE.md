@@ -331,7 +331,15 @@ sur base vide, plus `fiche:<id>:envoyer`. Valeurs fixes : rien ne change. Exempl
   revient). `alt` obligatoire, et il ne doit pas donner la réponse (pas de nombre à compter) ; `src` local obligatoire.
 - **`pastilles`** (option de `creerEntreprise`) : `[{ libelle, fait: (db) => booléen }]`, une bande d'une ligne au-dessus de l'écran
   de travail, sur tous les écrans ; « fait » ou « à faire », jamais « juste ». Redessinée à chaque écran et après chaque envoi.
-- **Animation à son tour** : `animation.quand(db)` la garde hors du menu tant que c'est faux (comme une fiche).
+- **Animation à son tour** : `animation.quand(db)` la garde hors du menu tant que c'est faux (comme une fiche) ; `menuApres: true` la liste
+  APRÈS les fiches (une animation de fin de séance).
+- **Scène « trajet »** de l'animation (lot 2) : une carte schématique au lieu d'un entrepôt. `scene: { trajet: { sol?, route: [[x, y], …]
+  (segments selon x ou y), lieux: [{ id, type: 'plateforme' | 'bar' | 'brasserie' | 'lavage', x, y, nom }], arrets: { id: [x, y] } (sur la
+  route) }, acteurs: { camion: { type: 'porteur' } } }` ; chaque partie place le camion (`depart: { camion: { a: '<arrêt>', charge } }`) ;
+  pas `{ rouler: 'camion', vers: '<arrêt>', ms? }` et `{ charger: 'camion', charge: 'pleins' | 'vides' | null }` (on voit le chargement par
+  le rideau entrouvert) ; `bulle.vers` vise un arrêt ou un lieu ; les pas d'entrepôt (`geste`, `nouvelle`…) y sont refusés. Le camion est
+  dessiné par-dessus le décor : la route passe DEVANT les bâtiments. Objets du kit (`core/iso.js`) : `porteurRideaux` (4 sens), `futVide`,
+  `batiment`, `route`, `nomLieu`. Page d'essai : `outils/essai-boucle-vides.html`.
 Exemple : `contenus/france-boissons-ent610.js` ; tests : bloc `fb-6.10`.
 
 **Menu de gauche rétractable** (04/10/2026, même brief, lot 3) : dans toutes les entreprises, sans rien

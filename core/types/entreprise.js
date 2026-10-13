@@ -1421,8 +1421,10 @@ export function creerEntreprise(U) {
                 ${item('accueil', 'Accueil')}
                 ${item('mail', 'Messagerie', nonLus)}
                 ${groupe((VPLAN || VTOUR) && !VFICHE && !VQUAI && !VPL && !VENT && !VINV && !VANIMS.length ? U.transportSection || 'Transport' : 'Mon poste', [
-                  ...VANIMS.filter((VA) => !VA.quand || VA.quand(db)).map((VA) => item(vueAnim(VA), VA.nav.libelle)),
+                  ...VANIMS.filter((VA) => !VA.menuApres && (!VA.quand || VA.quand(db))).map((VA) => item(vueAnim(VA), VA.nav.libelle)),
                   ...VFICHES.filter((VF) => !VF.quand || VF.quand(db)).map((VF) => item(vueDeFiche(VF), VF.nav.libelle)),
+                  // Une animation qui vient APRÈS les fiches dans le déroulé (`menuApres`, ENT-6.10) : listée après elles.
+                  ...VANIMS.filter((VA) => VA.menuApres && (!VA.quand || VA.quand(db))).map((VA) => item(vueAnim(VA), VA.nav.libelle)),
                   VQUAI && item('quai', VQUAI.nav.libelle),
                   VPL && item('planning', VPL.nav.libelle), VENT && item('entrepot', VENT.nav.libelle),
                   VPLAN && item('plan', VPLAN.nav.libelle), VTOUR && item('tournee', VTOUR.nav.libelle),

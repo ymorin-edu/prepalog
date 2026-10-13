@@ -16,6 +16,7 @@ export default async function bloc({ v, nav, BASE, egal, vrai }) {
 
 const F = await ouvrirFB({ nav, BASE });
 const { pg, Z, pause, base, note, present, aller, entrants } = F;
+await pg.emulateMedia({ reducedMotion: 'reduce' });
 
 const ID = 'france-boissons-retour';
 const REP_OUV = { avoir: 'du', 'solde-chez-client': 'juste', 'ticket-terminal': 'terminal', 'qui-facture': 'ines',
@@ -114,7 +115,21 @@ const INES = (prenom = 'Lea') => ({ bonjour: 'Bonjour Inès,', futs: 'Fûts : 40
   casiers: 'Casiers : avoir de 8 € (2 casiers de moins chez Malo).', heineken: 'Facture 5 Heineken 30 L : le 6e a été refusé.', merci: `Merci, ${prenom}` });
 
 const JALONS = ['futs-vides', 'casiers-plein', 'ticket', 'compte-lus', 'compte-solde', 'compte-montants', 'malo-fut-ton', 'malo-vides-solde',
-  'ines', 'chiffrage'];
+  'ines', 'anim-q1', 'anim-q2', 'chiffrage'];
+// L'animation (mouvement réduit : les déplacements sont instantanés, les attentes restent) : la question arrive, on répond (rang DÉCLARÉ).
+async function animation(reponses = [0, 0]) {
+  await aller('animation:fb-boucle-vides');
+  for (const r of reponses) {
+    for (const c of [].concat(r)) {
+      await pg.waitForSelector(`${Z} [data-anim-q]:not([hidden]) [data-anim-choix]:not([disabled])`, { timeout: 40000 });
+      await pg.click(`${Z} [data-anim-choix="${c}"]`); await pg.click(`${Z} [data-anim-valider]`);
+      await pause();
+      if (await present('[data-anim-refaire]') && c !== [].concat(r).slice(-1)[0]) { await pg.click(`${Z} [data-anim-refaire]`); await pause(); }
+    }
+    await pg.click(`${Z} [data-anim-suite]`);
+    await pause();
+  }
+}
 
 // ─────────────────────────────────────────────────────────── les données, calculées par le contenu (valeurs écrites ici à la main)
 await v('ENT-6.10 : données — ticket, comptes au quai, compte de consignes et chiffrage calculés depuis la commande d’ENT-6.2 (valeurs écrites à la main)', async () => {
@@ -210,12 +225,18 @@ await v('ENT-6.10 : parcours juste à l’écran — contrôle, point d’étape
   vrai(await pg.$eval(`${Z} [data-gr="B5"]`, (i) => i.readOnly || i.disabled), 'feuille figée après l’envoi');
   await phrases('malo-consignes', MALO());
   await phrases('ines-facture', INES());
+  // Menu progressif : l'animation arrive après les deux réponses, listée APRÈS les fiches ; la fiche ④ n'est pas encore là.
+  menu = await pg.$$eval(`${Z} .ent-nav`, (L) => L.map((b) => b.dataset.vue || b.dataset.vueFermee).filter((x) => /^(fiche|animation)/.test(x)));
+  egal(menu, ['fiche', 'fiche:consignes', 'animation:fb-boucle-vides'], 'menu avant l’animation');
+  await animation([0, 0]);
+  await aller('accueil');
   await feuille('fiche:chiffrage', CHIFFRAGE);
   const n = await note();
   const faux = JALONS.filter((j) => n.detail[j] !== 'ok');
   egal(faux, [], 'jalons justes');
   egal(['question:qui-aurait-du-compter', 'question:consigne-due', 'question:reemploi-loi'].map((j) => n.detail[j]), ['ok', 'ok', 'ok'], 'questions notées');
   egal(await pg.$$eval(`${Z} .ent-pastille.fait`, (L) => L.length), 4, 'quatre pastilles faites');
+  egal(n.score, 20, 'note');
   // Les messages de Karim ne disent jamais si c'était juste (alerte 28) ni combien de vides.
   const karim = (await entrants()).filter((m) => m.from === 'Karim').map((m) => m.text).join(' | ');
   egal(/juste|faux|erreur|bravo|\b8\b|\b9\b/i.test(karim.replace(/[\s\S]*?Lucas est au quai 14/, '')), false, 'Karim neutre : ' + karim);
@@ -244,6 +265,55 @@ await v('ENT-6.10 : inaction 0 ; aucune fiche ne part vide ; aide de la ligne 4 
     'Tu as compté au quai : 9 fûts, 5 casiers.', 'aide de la ligne 4 avec ses comptes faux');
 });
 
+await v('ENT-6.10 : animation — Q2 fausse puis juste : jalon 11 faux (la première réponse compte), Q1 juste ; la fiche ④ s’ouvre seulement après les deux questions', async () => {
+  const db = { fiches: { controle: { valeurs: CTRL, envoye: { at: 1 } }, consignes: { valeurs: { compte: { cases: COMPTE() } }, envoye: { at: 2 } } } };
+  await monter({ uid: 'fb610-anim', db });
+  await pg.evaluate(() => {
+    const d = window.__f.db;
+    d.mails.filter((m) => m.phrases).forEach((m, k) => d.mails.push({ id: 900 + k, folder: 'out', toMail: m.fromMail, ts: Date.now() + k, text: 'x', phrases: { id: m.phrases.id, choix: {} } }));
+    Object.assign(d.questions['france-boissons-retour'], { 'qui-aurait-du-compter': { arrivee: 1, premiere: 'lucas', duree: 1 }, 'ce-que-tu-compares': { arrivee: 1, premiere: 'quai', duree: 1 }, 'consigne-due': { arrivee: 1, premiere: 'consigne', duree: 1 } });
+  });
+  await monter({ uid: 'fb610-anim', db: await base() });
+  vrai(!(await present('.ent-nav[data-vue="fiche:chiffrage"]')), 'fiche ④ fermée avant l’animation');
+  await animation([0, [3, 0]]);
+  const r = await pg.evaluate(async () => { const S = await import('/contenus/france-boissons-ent610.js');
+    return Object.fromEntries(S.ETAPES.filter((e) => /^anim/.test(e.id)).map((e) => [e.id, e.verifier(window.__f.db).status])); });
+  egal(r, { 'anim-q1': 'ok', 'anim-q2': 'ko' }, 'jalons de l’animation');
+  await aller('accueil');
+  vrai(await present('.ent-nav[data-vue="fiche:chiffrage"]'), 'fiche ④ ouverte après les deux questions');
+});
+
+await v('Scène « trajet » (D-10) : la position suit la route et le sens de marche ; refus clairs (arrêt hors route, segment en biais, pas d’entrepôt, arrêt inconnu, camion sans départ)', async () => {
+  const r = await pg.evaluate(async () => {
+    const { compilerTrajet } = await import('/core/iso.js');
+    const { compilerAnimation } = await import('/core/types/animation.js');
+    const S = await import('/contenus/france-boissons-ent610.js');
+    const sc = compilerTrajet(S.ANIMATION.scene, 'essai');
+    const pos = (s, av) => { const p = sc.position(s, av); return [p.x, p.y, p.sens]; };
+    const refus = (f) => { try { f(); return 'accepté'; } catch (x) { return x.message; } };
+    const T = (o) => ({ trajet: Object.assign({ route: [[0, 0], [0, 5], [6, 5]], arrets: { a: [0, 1] } }, o), acteurs: { camion: { type: 'porteur' } } });
+    const A = (pas, depart = { camion: { a: 'a' } }) => ({ id: 'essai-trajet', scene: T({}), parties: [{ depart, pas }] });
+    return {
+      arrets: [sc.arrets.brasserie.s, sc.arrets.buchelay.s, sc.arrets.malo.s], long: sc.long,
+      p1: pos(sc.arrets.buchelay.s, true), p2: pos(sc.arrets.buchelay.s, false), p3: pos(sc.arrets.malo.s, true), p4: pos(3, false),
+      horsRoute: refus(() => compilerTrajet(T({ arrets: { a: [2, 2] } }), 'x')),
+      biais: refus(() => compilerTrajet(T({ route: [[0, 0], [2, 3]] }), 'x')),
+      geste: refus(() => compilerAnimation(A([{ geste: 'poser', acteur: 'camion', objet: 'p', place: 'a' }]))),
+      inconnu: refus(() => compilerAnimation(A([{ rouler: 'camion', vers: 'zz' }]))),
+      sansDepart: refus(() => compilerAnimation(A([{ legende: 'x' }], {}))),
+      bon: refus(() => compilerAnimation(A([{ rouler: 'camion', vers: 'a' }, { charger: 'camion', charge: 'vides' }]))),
+    };
+  });
+  // Route : 8 selon y, 19,5 selon x, 4,4 selon y (total 31,9) ; brasserie à 1, Buchelay à 8 + 9,5, Malo à 8 + 19,5 + 4,2.
+  egal(r.arrets.map((x) => Math.round(x * 10) / 10), [1, 17.5, 31.7], 'abscisses des arrêts');
+  egal(Math.round(r.long * 10) / 10, 31.9, 'longueur de la route');
+  egal(r.p1, [12.5, 12.6, 'E'], 'Buchelay, vers Malo'); egal(r.p2, [12.5, 12.6, 'O'], 'Buchelay, vers la brasserie');
+  egal(r.p3, [22.5, 8.4, 'N'], 'Malo, à l’aller'); egal(r.p4, [3, 7.6, 'N'], 'vers la brasserie (en remontant)');
+  vrai(/n'est pas sur la route/.test(r.horsRoute), r.horsRoute); vrai(/ni selon x ni selon y/.test(r.biais), r.biais);
+  vrai(/pas de sens dans une scène trajet/.test(r.geste), r.geste); vrai(/arrêt inconnu « zz »/.test(r.inconnu), r.inconnu);
+  vrai(/départ du camion « camion » manquant/.test(r.sansDepart), r.sansDepart); egal(r.bon, 'accepté', 'scène juste');
+});
+
 // ─────────────────────────────────────────────────────────── l'écran : sans défilement, loupe, formule en cliquant
 for (const [w, h] of [[1366, 768], [1280, 720]]) {
   await v(`ENT-6.10 : ergonomie ${w} × ${h} — aucune fiche ne fait défiler la page, le bouton d’envoi se voit ; un fût du dessin fait au moins 40 px (1366)`, async () => {
@@ -259,10 +329,11 @@ for (const [w, h] of [[1366, 768], [1280, 720]]) {
         db.questions['france-boissons-retour']['qui-aurait-du-compter'] = { arrivee: 1, premiere: 'lucas', duree: 1 };
         db.questions['france-boissons-retour']['ce-que-tu-compares'] = { arrivee: 1, premiere: 'quai', duree: 1 };
         db.questions['france-boissons-retour']['consigne-due'] = { arrivee: 1, premiere: 'consigne', duree: 1 };
+        db.animations = { 'fb-boucle-vides': { reponses: { q1: { premiere: 0, juste: true }, q2: { premiere: 0, juste: true } }, ordres: {}, partie: 1 } };
       });
       await monter({ uid: 'fb610-ecran', db: await base() });
       const mesures = [];
-      for (const vue of ['fiche', 'fiche:consignes', 'fiche:chiffrage']) {
+      for (const vue of ['fiche', 'fiche:consignes', 'fiche:chiffrage', 'animation:fb-boucle-vides']) {
         await aller(vue);
         await pg.$$eval('[data-carte-fermer]', (L) => L.forEach((b) => b.click()));
         await pause(200);
@@ -270,9 +341,10 @@ for (const [w, h] of [[1366, 768], [1280, 720]]) {
         // des cartes de messages : elle pousse l'écran de travail dans toutes les séances (question posée à Tristan le 13/10/2026).
         mesures.push(await pg.evaluate(() => { window.scrollTo(0, 0); const p = document.querySelector('#fTest .ent-page');
           const cartes = document.querySelector('#fTest .ent-cartes-ancre').getBoundingClientRect().height;
-          return { h: p.scrollHeight - cartes, bas: document.querySelector('#fTest [data-fiche-envoyee], #fTest [data-fiche-envoyer]').getBoundingClientRect().bottom - cartes }; }));
+          const b = document.querySelector('#fTest [data-fiche-envoyee], #fTest [data-fiche-envoyer], #fTest .anim-ctrl');
+          return { h: p.scrollHeight - cartes, bas: b.getBoundingClientRect().bottom - cartes }; }));
       }
-      const dit = mesures.map((m, i) => `fiche ${i + 1} : ${Math.round(m.h)} px, bouton à ${Math.round(m.bas)}`).join(' ; ');
+      const dit = mesures.map((m, i) => `écran ${i + 1} : ${Math.round(m.h)} px, bouton à ${Math.round(m.bas)}`).join(' ; ');
       vrai(mesures.every((m) => m.h <= h + 1 && m.bas <= h), `${dit} (pour ${h})`);
       if (w === 1366) {
         await aller('fiche');

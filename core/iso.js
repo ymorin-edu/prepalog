@@ -1241,3 +1241,345 @@ export function paletteClient(I, x, y, o = {}) {
   return `<g data-iso-objet="paletteClient" data-iso-etiquettes="${et.join(' ')}">${g}</g>`;
 }
 const entre = (a, b, t) => [0, 1, 2].map((i) => a[i] + (b[i] - a[i]) * t);
+
+/* ================================== la boucle des vides : route, porteur à rideaux, bâtiments (chantier D-10, lot 2) */
+// Les objets de l'animation « la boucle des vides » d'ENT-6.10 (brief `docs/briefs/ENT-6.10-france-boissons-retour.md` §4.4a, §7.3 et §11 :
+// « camion, route, bâtiments » soignés, au niveau du dessin du quai). Une CARTE SCHÉMATIQUE : l'unité est celle de la carte (un camion
+// fait 3,4 de long), pas le mètre ni la place de palette. Aucune couleur de repère dans le décor (ni vert : l'ordre d'une tournée et
+// « juste » ; ni bleu franc : le client) : sol sable, bas-côtés kaki, mer gris-bleu. Pas de marque, pas de visage. Page d'essai :
+// `outils/essai-boucle-vides.html`.
+
+// Un fût debout à bouchon GRIS : un VIDE qui revient (ENT-6.10). Mêmes options que `futDebout`, plus `vide`.
+export function futVide(I, cx, cy, z, o = {}) {
+  const { P, unite } = I;
+  const r = o.r || R_FUT, h = hauteurObjet({ type: 'fut', litres: o.litres });
+  const [tx, ty] = P(cx, cy, z + h), rx = r * unite * K1, ry = r * unite * K2;
+  let g = fut(I, cx, cy, z, r, h);
+  // Le bouchon gris (plus large que le raccord du fût plein) et un petit reflet.
+  g += `<ellipse cx="${f1(tx)}" cy="${f1(ty)}" rx="${f1(rx * .46)}" ry="${f1(ry * .46)}" fill="#8d9599" stroke="#5c6266" stroke-width=".8"/>`
+    + `<ellipse cx="${f1(tx - rx * .1)}" cy="${f1(ty - ry * .12)}" rx="${f1(rx * .18)}" ry="${f1(ry * .14)}" fill="#c3c9cc"/>`;
+  return `<g data-iso-objet="fut" data-vide data-litres="${o.litres || 30}" data-z="${z.toFixed(3)}">${g}</g>`;
+}
+
+// Une roue d'axe y (camion qui roule selon x) : le cercle est dans le plan du flanc y = constante.
+function roueY(I, x, y, z, r, l) {
+  const u = I.unite;
+  const M = (yy) => { const [ex, ey] = I.P(x, yy, z); return `matrix(${(C30 * u).toFixed(3)},${(S30 * u).toFixed(3)},0,${(-u).toFixed(3)},${ex.toFixed(1)},${ey.toFixed(1)})`; };
+  let g = '';
+  for (let k = 0; k <= 4; k++) g += `<circle r="${r}" transform="${M(y + l * k / 4)}" fill="#141617" stroke="#0b0c0d" stroke-width="${(0.6 / u).toFixed(4)}"/>`;
+  g += `<circle r="${(r * .55).toFixed(3)}" transform="${M(y + l)}" fill="#8d9397" stroke="#5c6266" stroke-width="${(1 / u).toFixed(4)}"/>`;
+  return g + `<circle r="${(r * .18).toFixed(3)}" transform="${M(y + l + 0.001)}" fill="#3a3e41"/>`;
+}
+
+// LE PORTEUR À RIDEAUX de la tournée, qui ROULE (la vue quai a le sien, en marche arrière vers la façade). (x, y) = le milieu du
+// camion au sol ; `dir` = le sens de marche : 'E' (+x), 'O' (−x), 'S' (+y, vers l'élève), 'N' (−y). Repère local : `a` le long du
+// camion (0 = l'arrière, LONG = l'avant), `b` en travers (−LARG/2 … +LARG/2), z vers le haut.
+// Options : `charge` : 'pleins' (fûts à bandes de marque et casiers d'eau capsulés), 'vides' (fûts à bouchon gris, casiers ouverts),
+// rien (caisse vide) ; `rideau` : 'entrouvert' (défaut : l'arrière du flanc visible est ouvert, on voit le chargement) | 'ferme'.
+export const PORTEUR = { LONG: 3.4, LARG: 1, CAISSE: 2.4, CAB: .86, Z0: .42, HC: 1.42, HCAB: 1.18 };
+const SENS = ['E', 'O', 'S', 'N'];
+export function porteurRideaux(I, x, y, dir = 'E', o = {}) {
+  if (!SENS.includes(dir)) throw new Error(`kit iso : sens du porteur « ${dir} » inconnu (${SENS.join(', ')})`);
+  const { LONG, LARG, CAISSE, CAB, Z0, HC, HCAB } = PORTEUR, B = LARG / 2;
+  // Local → monde.
+  const W = (a, b, z) => {
+    const s = a - LONG / 2;
+    return dir === 'E' ? [x + s, y + b, z] : dir === 'O' ? [x - s, y - b, z] : dir === 'S' ? [x - b, y + s, z] : [x + b, y - s, z];
+  };
+  // Le flanc visible (b), et le bout visible : l'avant si le camion vient vers l'élève ou va à droite, sinon l'arrière.
+  const bVis = dir === 'E' || dir === 'N' ? B : -B, avantVu = dir === 'E' || dir === 'S';
+  const F = (L, fill, st = 'rgba(0,0,0,.28)') => I.face(L.map((p) => W(...p)), fill, st);
+  // Une boîte locale : les trois faces visibles (flanc visible, bout visible, dessus), couleurs { flanc, bout, dessus }.
+  const boite = (a0, a1, b0, b1, z0, z1, c) => {
+    const bv = bVis > 0 ? b1 : b0, av = avantVu ? a1 : a0;
+    return F([[a0, bv, z0], [a1, bv, z0], [a1, bv, z1], [a0, bv, z1]], c.flanc)
+      + F([[av, b0, z0], [av, b1, z0], [av, b1, z1], [av, b0, z1]], c.bout)
+      + F([[a0, b0, z1], [a1, b0, z1], [a1, b1, z1], [a0, b1, z1]], c.dessus);
+  };
+  let g = '';
+  // L'ombre au sol.
+  const [ox, oy] = I.P(...W(LONG / 2, 0, 0));
+  g += `<ellipse cx="${f1(ox)}" cy="${f1(oy)}" rx="${f1(I.unite * 1.95)}" ry="${f1(I.unite * .78)}" fill="rgba(0,0,0,.16)"/>`;
+  // Les roues (deux essieux arrière, un avant), du côté caché d'abord : la caisse les recouvre.
+  // Le flanc visible est toujours du côté +y (camion selon x) ou +x (camion selon y) : le moyeu y est dessiné.
+  const roues = (bb) => [.42, .9, LONG - .55].map((a) => {
+    const [wx, wy] = W(a, bb, 0);
+    return dir === 'E' || dir === 'O' ? roueY(I, wx, wy - .07, .2, .19, .14) : roue(I, wx - .07, wy, .2, .19, .14);
+  }).join('');
+  g += roues(-bVis * .92);
+  // Le châssis.
+  g += boite(.1, LONG - .1, -B * .8, B * .8, .3, Z0, { flanc: '#2f3336', bout: '#26292b', dessus: '#3b3f42' });
+  let caisse = '';
+  // La CAISSE : le plancher et le fond d'abord (on les voit par le rideau entrouvert), puis le chargement, puis les rideaux.
+  const a0 = .05, a1 = .05 + CAISSE, ouvert = o.rideau !== 'ferme';
+  const aOuv = a0 + CAISSE * .52;   // le rideau est tiré de l'arrière jusqu'ici
+  caisse += F([[a0, -B, Z0], [a1, -B, Z0], [a1, B, Z0], [a0, B, Z0]], '#5a5048');
+  caisse += F([[a0, -bVis, Z0], [a1, -bVis, Z0], [a1, -bVis, Z0 + HC], [a0, -bVis, Z0 + HC]], '#d9dbd7');
+  if (ouvert && o.charge) {
+    // Deux rangées de fûts (et des casiers devant), de la plus éloignée du flanc visible à la plus proche.
+    const rang = (bb) => {
+      let s = '';
+      for (let k = 0; k < 4; k++) {
+        const a = a0 + .2 + k * .3;
+        if (a > aOuv - .12) break;
+        const [cx, cy, cz] = W(a, bb, Z0);
+        s += o.charge === 'vides' ? futVide(I, cx, cy, cz, { litres: 30, r: .13 }) : futDebout(I, cx, cy, cz, { litres: 30, r: .13, bande: k % 2 ? 'or' : 'rouge' });
+      }
+      return s;
+    };
+    caisse += rang(-bVis * .45) + rang(bVis * .05);
+    const [kx, ky, kz] = W(a0 + .12, bVis * .3, Z0);
+    caisse += casier(I, Math.min(kx, kx), Math.min(ky, ky), kz, o.charge === 'vides' ? { vide: true } : { capsule: 'bleu' });
+  }
+  // Le toit, la face avant de la caisse (côté cabine), la face arrière (portes), puis le flanc visible : rideau tiré à l'arrière
+  // (l'ouverture), rideau fermé à l'avant, avec ses plis.
+  const toile = '#c9cdd0', toileOmbre = '#b4b9bc', bout = avantVu ? '#d3d6d3' : '#e2e4e0';
+  caisse += F([[avantVu ? a1 : a0, -B, Z0], [avantVu ? a1 : a0, B, Z0], [avantVu ? a1 : a0, B, Z0 + HC], [avantVu ? a1 : a0, -B, Z0 + HC]], bout);
+  if (!avantVu) {
+    // Les portes arrière : deux battants, leurs barres de fermeture.
+    [-.25, .25].forEach((bb) => { caisse += `<polyline points="${I.pts([W(a0 - .005, bb, Z0 + .1), W(a0 - .005, bb, Z0 + HC - .1)].map((p) => p))}" fill="none" stroke="#8d9397" stroke-width="2"/>`; });
+    caisse += `<polyline points="${I.pts([W(a0 - .005, 0, Z0 + .05), W(a0 - .005, 0, Z0 + HC - .05)])}" fill="none" stroke="#6f777c" stroke-width="1.5"/>`;
+    caisse += F([[a0 - .006, -B * .9, Z0 + .18], [a0 - .006, -B * .7, Z0 + .18], [a0 - .006, -B * .7, Z0 + .26], [a0 - .006, -B * .9, Z0 + .26]], '#c0392b', 'none')
+      + F([[a0 - .006, B * .7, Z0 + .18], [a0 - .006, B * .9, Z0 + .18], [a0 - .006, B * .9, Z0 + .26], [a0 - .006, B * .7, Z0 + .26]], '#c0392b', 'none');
+  }
+  caisse += F([[a0, -B, Z0 + HC], [a1, -B, Z0 + HC], [a1, B, Z0 + HC], [a0, B, Z0 + HC]], '#e9ebe8');
+  const debutRideau = ouvert ? aOuv : a0;
+  caisse += F([[debutRideau, bVis, Z0], [a1, bVis, Z0], [a1, bVis, Z0 + HC], [debutRideau, bVis, Z0 + HC]], toile);
+  for (let a = debutRideau + .14; a < a1 - .05; a += .17) {
+    caisse += `<polyline points="${I.pts([W(a, bVis, Z0 + .04), W(a, bVis, Z0 + HC - .06)])}" fill="none" stroke="${toileOmbre}" stroke-width="1.6"/>`;
+  }
+  if (ouvert) {
+    // Le rideau ramassé en paquet contre l'arrière, et les montants.
+    caisse += F([[a0, bVis, Z0], [a0 + .12, bVis, Z0], [a0 + .12, bVis, Z0 + HC], [a0, bVis, Z0 + HC]], toileOmbre);
+    caisse += `<polyline points="${I.pts([W(aOuv, bVis, Z0), W(aOuv, bVis, Z0 + HC)])}" fill="none" stroke="#8d9397" stroke-width="2.4"/>`;
+  }
+  // Les rails haut et bas, la sangle de tension.
+  caisse += `<polyline points="${I.pts([W(a0, bVis, Z0 + HC), W(a1, bVis, Z0 + HC)])}" fill="none" stroke="#7d858a" stroke-width="3"/>`
+    + `<polyline points="${I.pts([W(a0, bVis, Z0 + .02), W(a1, bVis, Z0 + .02)])}" fill="none" stroke="#55595c" stroke-width="3"/>`;
+  // La CABINE : blanche, calandre sombre, pare-brise et vitre latérale ; phares ; pare-chocs.
+  const c0 = a1 + .07, c1 = c0 + CAB;
+  let cab = '';
+  cab += boite(c0, c1, -B * .97, B * .97, .36, .36 + HCAB, { flanc: '#e7e8e4', bout: '#d6d8d3', dessus: '#f2f3f0' });
+  cab += F([[c0 + .06, bVis * .985, .86], [c1 - .28, bVis * .985, .86], [c1 - .06, bVis * .985, 1.12], [c1 - .06, bVis * .985, 1.42], [c0 + .06, bVis * .985, 1.42]], '#26323b', 'none');
+  cab += F([[c0 + .02, bVis * .985, .5], [c1 - .02, bVis * .985, .5], [c1 - .02, bVis * .985, .56], [c0 + .02, bVis * .985, .56]], '#6f777c', 'none');
+  cab += `<polyline points="${I.pts([W(c0 + .04, bVis * .99, .4), W(c0 + .04, bVis * .99, 1.46), W(c1 - .06, bVis * .99, 1.46), W(c1 - .06, bVis * .99, .62)])}" fill="none" stroke="#a9adaa" stroke-width="1.4"/>`
+    + F([[c0 + .14, bVis * .99, .78], [c0 + .26, bVis * .99, .78], [c0 + .26, bVis * .99, .82], [c0 + .14, bVis * .99, .82]], '#55595c', 'none');
+  const bm = bVis * 1.16;
+  cab += `<polyline points="${I.pts([W(c1 - .08, bVis * .99, 1.35), W(c1 - .08, bm, 1.35)])}" fill="none" stroke="#2f3336" stroke-width="2"/>`
+    + F([[c1 - .12, bm, 1.05], [c1 - .04, bm, 1.05], [c1 - .04, bm, 1.38], [c1 - .12, bm, 1.38]], '#2f3336', 'none');
+  if (avantVu) {
+    const av = c1 + .004;
+    cab += F([[av, -B * .85, .95], [av, B * .85, .95], [av, B * .85, 1.46], [av, -B * .85, 1.46]], '#26323b', 'none')
+      + F([[av, -B * .6, .48], [av, B * .6, .48], [av, B * .6, .8], [av, -B * .6, .8]], '#3a4044', 'none');
+    [-B * .78, B * .62].forEach((bb) => { cab += F([[av, bb, .5], [av, bb + .16, .5], [av, bb + .16, .6], [av, bb, .6]], '#ffe8a3', 'none'); });
+    cab += F([[av, -B, .32], [av, B, .32], [av, B, .42], [av, -B, .42]], '#3b3f42', 'none');
+  }
+  g += avantVu ? caisse + cab : cab + caisse;
+  // Les roues du côté visible, par-dessus la caisse.
+  g += roues(bVis * .92);
+  return `<g data-iso-objet="porteur" data-sens="${dir}"${o.charge ? ` data-charge="${o.charge}"` : ''}>${g}</g>`;
+}
+
+// LA ROUTE : une suite de segments droits selon x ou y (`points` = [[x, y], …], fermée si `boucle`), enrobé gris, bas-côtés kaki,
+// ligne médiane blanche en tirets. `largeur` = la chaussée.
+export function route(I, points, o = {}) {
+  const L = o.boucle ? [...points, points[0]] : points, lg = o.largeur || 1.5, bc = lg / 2 + .35;
+  const bande = (p, q, demi, coul) => {
+    const dx = Math.sign(q[0] - p[0]), dy = Math.sign(q[1] - p[1]);
+    const x0 = Math.min(p[0], q[0]) - (dy ? demi : demi), x1 = Math.max(p[0], q[0]) + (dy ? demi : demi);
+    const y0 = Math.min(p[1], q[1]) - demi, y1 = Math.max(p[1], q[1]) + demi;
+    return I.face(dx ? [[x0, p[1] - demi, 0], [x1, p[1] - demi, 0], [x1, p[1] + demi, 0], [x0, p[1] + demi, 0]]
+      : [[p[0] - demi, y0, 0], [p[0] + demi, y0, 0], [p[0] + demi, y1, 0], [p[0] - demi, y1, 0]], coul, 'none');
+  };
+  let g = '';
+  for (let k = 0; k < L.length - 1; k++) g += bande(L[k], L[k + 1], bc, '#bdb68f');
+  for (let k = 0; k < L.length - 1; k++) g += bande(L[k], L[k + 1], lg / 2, '#6c6f70');
+  for (let k = 0; k < L.length - 1; k++) {
+    const p = L[k], q = L[k + 1], n = Math.hypot(q[0] - p[0], q[1] - p[1]);
+    for (let t = .3; t < n - .3; t += .9) {
+      const u = t / n, v = Math.min(1, (t + .45) / n);
+      g += `<polyline points="${I.pts([[p[0] + (q[0] - p[0]) * u, p[1] + (q[1] - p[1]) * u, .002], [p[0] + (q[0] - p[0]) * v, p[1] + (q[1] - p[1]) * v, .002]])}" fill="none" stroke="#f4f4f1" stroke-width="${Math.max(1.5, I.unite / 22).toFixed(1)}"/>`;
+    }
+  }
+  return `<g data-iso-objet="route">${g}</g>`;
+}
+
+// Un nom de lieu, à l'écran (pas dans le plan) : pastille claire, texte sombre, au-dessus du point (x, y, z).
+// La taille suit l'échelle de la carte (`I.unite`) : sur une carte réduite, le nom reste lisible.
+export function nomLieu(I, x, y, z, texte) {
+  const fs = Math.max(13, I.unite * .5), k = fs / 15;
+  const [px, py] = I.P(x, y, z), w = Math.ceil(largeurTexte(texte) * 1.08 * k) + 20 * k, h = 26 * k;
+  return `<g data-iso-lieu><rect x="${f1(px - w / 2)}" y="${f1(py - h - 4 * k)}" width="${f1(w)}" height="${f1(h)}" rx="${f1(6 * k)}" fill="#fdfbf7" stroke="#55504a" stroke-width="${f1(1.4 * k)}"/>`
+    + `<text x="${f1(px)}" y="${f1(py - 4 * k - h * .3)}" text-anchor="middle" font-size="${f1(fs)}" font-weight="700" font-family="Inter, system-ui, 'Segoe UI', Arial, sans-serif" fill="#1a1915">${ech(texte)}</text></g>`;
+}
+
+// LES BÂTIMENTS. (x, y) = le coin du bâtiment au sol le plus éloigné de l'élève (x et y les plus petits) ; la façade utile (portes,
+// comptoir) est sur le côté y le plus grand, tourné vers l'élève. `nom` (facultatif) : la pastille au-dessus.
+export const BATIMENTS = ['plateforme', 'bar', 'brasserie', 'lavage'];
+export function batiment(I, type, x, y, o = {}) {
+  if (!BATIMENTS.includes(type)) throw new Error(`kit iso : bâtiment « ${type} » inconnu (${BATIMENTS.join(', ')})`);
+  const { face, boite, pts } = I;
+  let g = '', haut = 2;
+  if (type === 'plateforme') {
+    // Un grand entrepôt bardé, toit plat, une rangée de portes de quai à butoirs jaunes et noirs, une bande de bureau vitrée.
+    const W = 7, D = 3.6, H = 2.1; haut = H;
+    g += face([[x - .3, y - .3, 0], [x + W + .3, y - .3, 0], [x + W + .3, y + D + .55, 0], [x - .3, y + D + .55, 0]], '#cfc8b6', 'none');
+    g += boite(x, y, 0, W, D, H, ['#b9bec1', '#dfe2e0', '#c9cdcb']);
+    for (let k = 0; k < 6; k++) {
+      const x0 = x + .5 + k * 1.05;
+      g += face([[x0, y + D + .005, .25], [x0 + .7, y + D + .005, .25], [x0 + .7, y + D + .005, 1.25], [x0, y + D + .005, 1.25]], '#7f878c', 'rgba(0,0,0,.35)');
+      for (let z = .4; z < 1.2; z += .16) g += `<polyline points="${pts([[x0, y + D + .006, z], [x0 + .7, y + D + .006, z]])}" fill="none" stroke="#6a7176" stroke-width="1"/>`;
+      g += face([[x0 - .06, y + D + .006, .1], [x0 - .01, y + D + .006, .1], [x0 - .01, y + D + .006, .36], [x0 - .06, y + D + .006, .36]], '#e5b800', 'none')
+        + face([[x0 + .71, y + D + .006, .1], [x0 + .76, y + D + .006, .1], [x0 + .76, y + D + .006, .36], [x0 + .71, y + D + .006, .36]], '#e5b800', 'none');
+    }
+    g += face([[x + W + .005, y + .3, 1.2], [x + W + .005, y + D - .3, 1.2], [x + W + .005, y + D - .3, 1.75], [x + W + .005, y + .3, 1.75]], '#3d4a55', 'none');
+    for (let yy = y + .6; yy < y + D - .3; yy += .5) g += `<polyline points="${pts([[x + W + .006, yy, 1.2], [x + W + .006, yy, 1.75]])}" fill="none" stroke="#9aa3aa" stroke-width="1.2"/>`;
+    g += `<polyline points="${pts([[x, y + D, H], [x + W, y + D, H], [x + W, y, H]])}" fill="none" stroke="#8d9397" stroke-width="2.5"/>`;
+  } else if (type === 'bar') {
+    // Le bar de plage : le sable, la mer derrière (gris-bleu, des vagues), une cabane en planches, un auvent rayé, un parasol, deux tables.
+    const W = 2.6, D = 1.8; haut = 1.9;
+    g += face([[x - 1.6, y - 2.2, 0], [x + W + 2, y - 2.2, 0], [x + W + 2, y - .5, 0], [x - 1.6, y - .5, 0]], '#a9bcc0', 'none');
+    for (let k = 0; k < 5; k++) {
+      const yy = y - 2 + k * .32;
+      g += `<polyline points="${pts([[x - 1.4, yy, .002], [x - .6, yy + .08, .002], [x + .4, yy, .002], [x + 1.4, yy + .08, .002], [x + 2.4, yy, .002], [x + W + 1.8, yy + .08, .002]])}" fill="none" stroke="#e8eef0" stroke-width="1.4"/>`;
+    }
+    g += face([[x - 1.6, y - .5, 0], [x + W + 2, y - .5, 0], [x + W + 2, y + D + 1.8, 0], [x - 1.6, y + D + 1.8, 0]], '#e6d3a3', 'none');
+    g += boite(x, y, 0, W, D, 1.35, ['#8a6a48', '#b0875c', '#9a7550']);
+    for (let z = .15; z < 1.35; z += .17) g += `<polyline points="${pts([[x, y + D + .004, z], [x + W, y + D + .004, z], [x + W + .004, y + D, z], [x + W + .004, y, z]])}" fill="none" stroke="#7e5f3f" stroke-width="1"/>`;
+    // Le comptoir ouvert, puis le toit à une pente.
+    g += face([[x + .4, y + D + .006, .55], [x + W - .4, y + D + .006, .55], [x + W - .4, y + D + .006, 1.15], [x + .4, y + D + .006, 1.15]], '#3a2f26', 'none');
+    g += boite(x + .3, y + D, .5, W - .6, .25, .06, ['#d9c2a0', '#c4a77f', '#b39770']);
+    g += face([[x - .1, y - .1, 1.6], [x + W + .1, y - .1, 1.6], [x + W + .1, y + D + .05, 1.35], [x - .1, y + D + .05, 1.35]], '#a3794f', 'rgba(0,0,0,.3)')
+      + face([[x + W + .1, y - .1, 1.6], [x + W + .1, y + D + .05, 1.35], [x + W + .1, y + D + .05, 1.3], [x + W + .1, y - .1, 1.55]], '#7e5f3f', 'none');
+    // L'auvent rayé ocre et blanc au-dessus du comptoir.
+    for (let k = 0; k < 8; k++) {
+      const x0 = x + .2 + k * (W - .4) / 8, x1 = x0 + (W - .4) / 8;
+      g += face([[x0, y + D, 1.3], [x1, y + D, 1.3], [x1, y + D + .55, .98], [x0, y + D + .55, .98]], k % 2 ? '#f1ede4' : '#c98a2e', 'rgba(0,0,0,.2)');
+    }
+    // Le parasol et deux tables rondes.
+    const para = (px, py) => {
+      let s = `<polyline points="${pts([[px, py, 0], [px, py, 1.35]])}" fill="none" stroke="#6a5a48" stroke-width="2.5"/>`;
+      const n = 10, R = .7;
+      for (let k = 0; k < n; k++) {
+        const a0 = k * 2 * Math.PI / n, a1 = (k + 1) * 2 * Math.PI / n;
+        s += face([[px, py, 1.55], [px + R * Math.cos(a0), py + R * Math.sin(a0), 1.2], [px + R * Math.cos(a1), py + R * Math.sin(a1), 1.2]], k % 2 ? '#f1ede4' : '#c98a2e', 'rgba(0,0,0,.15)');
+      }
+      return s;
+    };
+    const table = (tx, ty) => `<polyline points="${pts([[tx, ty, 0], [tx, ty, .45]])}" fill="none" stroke="#55504a" stroke-width="2"/>`
+      + `<ellipse cx="${f1(I.P(tx, ty, .45)[0])}" cy="${f1(I.P(tx, ty, .45)[1])}" rx="${f1(.28 * I.unite * K1)}" ry="${f1(.28 * I.unite * K2)}" fill="#f1ede4" stroke="#8a7f70"/>`;
+    g += table(x + W + .8, y + D + .2) + para(x + W + .8, y + D + .2) + table(x + .5, y + D + 1.1);
+  } else if (type === 'brasserie') {
+    // La brasserie : un bâtiment de brique à toit en sheds, une cheminée, trois cuves inox à côté.
+    const W = 4.6, D = 3, H = 1.9; haut = 2.9;
+    g += face([[x - .3, y - .3, 0], [x + W + 2.2, y - .3, 0], [x + W + 2.2, y + D + 1, 0], [x - .3, y + D + 1, 0]], '#cfc8b6', 'none');
+    g += boite(x + 3.7, y + .1, 0, .45, .45, 2.9, ['#7a3f2c', '#9a4f35', '#86452f']);
+    g += boite(x, y, 0, W, D, H, ['#8f4a32', '#b0603f', '#9a5236']);
+    for (let z = .2; z < H; z += .2) g += `<polyline points="${pts([[x, y + D + .004, z], [x + W, y + D + .004, z], [x + W + .004, y + D, z], [x + W + .004, y, z]])}" fill="none" stroke="#8a4a32" stroke-width=".8" opacity=".7"/>`;
+    for (let k = 0; k < 4; k++) {
+      const x0 = x + .35 + k * 1.05;
+      g += face([[x0, y + D + .006, .8], [x0 + .55, y + D + .006, .8], [x0 + .55, y + D + .006, 1.55], [x0, y + D + .006, 1.55]], '#3d4a55', 'rgba(0,0,0,.3)');
+    }
+    // Les sheds : trois pans en dents de scie.
+    for (let k = 0; k < 3; k++) {
+      const y0 = y + k * D / 3, y1 = y0 + D / 3;
+      g += face([[x, y0, H], [x + W, y0, H], [x + W, y1, H + .45], [x, y1, H + .45]], '#6f777c', 'rgba(0,0,0,.25)')
+        + face([[x, y1, H], [x + W, y1, H], [x + W, y1, H + .45], [x, y1, H + .45]], '#a9c0c8', 'rgba(0,0,0,.25)')
+        + face([[x + W, y0, H], [x + W, y1, H], [x + W, y1, H + .45]], '#9a5236', 'none');
+    }
+    // Les cuves (cylindres inox, toit conique).
+    [[W + .7, .5], [W + 1.6, .5], [W + .7, 1.6]].forEach(([dx, dy]) => {
+      const cx = x + dx, cy = y + dy, r = .42, h = 2.2;
+      g += fut(I, cx, cy, 0, r, h);
+      const [tx, ty] = I.P(cx, cy, h), [sx, sy] = I.P(cx, cy, h + .35), rx = r * I.unite * K1, ry = r * I.unite * K2;
+      g += `<path d="M${f1(tx - rx)},${f1(ty)} L${f1(sx)},${f1(sy)} L${f1(tx + rx)},${f1(ty)} A${f1(rx)},${f1(ry)} 0 0 1 ${f1(tx - rx)},${f1(ty)} Z" fill="#c9ced1" stroke="#7d858a" stroke-width=".8"/>`;
+    });
+  } else {
+    // Le petit bâtiment de lavage (légendé par la scène) : bardage gris, une porte, une buée de vapeur.
+    const W = 1.8, D = 1.4, H = 1.2; haut = H;
+    g += boite(x, y, 0, W, D, H, ['#9aa3aa', '#c9cfd3', '#b3bbc0']);
+    g += face([[x + .5, y + D + .005, 0], [x + 1.2, y + D + .005, 0], [x + 1.2, y + D + .005, .85], [x + .5, y + D + .005, .85]], '#5d666c', 'none');
+    const [vx, vy] = I.P(x + .9, y + .7, H + .1), u = I.unite;
+    [0, 1, 2].forEach((k) => { g += `<circle cx="${f1(vx + u * .12 * k)}" cy="${f1(vy - u * (.15 + .22 * k))}" r="${f1(u * (.16 + .05 * k))}" fill="rgba(236,240,242,${(.85 - .2 * k).toFixed(2)})"/>`; });
+  }
+  if (o.nom) {
+    const cx = { plateforme: 3.5, bar: 1.3, brasserie: 2.3, lavage: .9 }[type], cy = { plateforme: 1.8, bar: .9, brasserie: 1.5, lavage: .7 }[type];
+    g += nomLieu(I, x + cx, y + cy, haut + .6, o.nom);
+  }
+  return `<g data-iso-objet="batiment" data-type="${type}">${g}</g>`;
+}
+
+// LA SCÈNE « TRAJET » de l'animation à questions (chantier D-10, lot 2 ; ENT-6.10 : la boucle des vides). Une carte schématique au lieu
+// d'un entrepôt : des lieux (bâtiments), une route, des arrêts sur la route, un camion qui roule de l'un à l'autre.
+//   scene: { trajet: {
+//     sol: [x0, y0, x1, y1],                                         // le terrain (facultatif)
+//     route: [[3, 4.6], [3, 12.6], [22.5, 12.6], [22.5, 8.2]],          // segments selon x ou y
+//     lieux: [{ id: 'buchelay', type: 'plateforme', x: 9, y: 7.6, nom: 'Plateforme de Buchelay' }, …],   // type : BATIMENTS
+//     arrets: { buchelay: [12.5, 12.6], malo: [22.5, 8.4] },        // des points SUR la route
+//   }, acteurs: { camion: { type: 'porteur' } } }
+// Le camion est toujours dessiné par-dessus le décor : la route doit passer DEVANT les bâtiments (côté élève), ce que le contrôle
+// ne vérifie pas (c'est à la page d'essai de le montrer).
+export function compilerTrajet(S, ou = 'scène') {
+  const err = (m) => { throw new Error(`${ou} : ${m}`); };
+  const T = S && S.trajet;
+  if (!T) err('`scene.trajet` manque');
+  const R = T.route;
+  if (!Array.isArray(R) || R.length < 2) err('`trajet.route` : au moins deux points');
+  const segs = [];
+  let long = 0;
+  for (let k = 0; k < R.length - 1; k++) {
+    const p = R[k], q = R[k + 1];
+    if (p[0] !== q[0] && p[1] !== q[1]) err(`route : le segment n° ${k + 1} n'est ni selon x ni selon y`);
+    const n = Math.abs(q[0] - p[0]) + Math.abs(q[1] - p[1]);
+    if (!n) err(`route : le segment n° ${k + 1} est nul`);
+    segs.push({ p, q, s0: long, n });
+    long += n;
+  }
+  // L'abscisse d'un point sur la route (ou une erreur s'il n'y est pas).
+  const abscisse = (pt, quoi) => {
+    for (const g of segs) {
+      const dx = Math.sign(g.q[0] - g.p[0]), dy = Math.sign(g.q[1] - g.p[1]);
+      const surX = dx && pt[1] === g.p[1] && (pt[0] - g.p[0]) * dx >= 0 && (g.q[0] - pt[0]) * dx >= 0;
+      const surY = dy && pt[0] === g.p[0] && (pt[1] - g.p[1]) * dy >= 0 && (g.q[1] - pt[1]) * dy >= 0;
+      if (surX || surY) return g.s0 + Math.abs(pt[0] - g.p[0]) + Math.abs(pt[1] - g.p[1]);
+    }
+    return err(`${quoi} [${pt}] n'est pas sur la route`);
+  };
+  const lieux = (T.lieux || []).map((l, i) => {
+    if (!l || !l.id) err(`lieu n° ${i + 1} : il manque l'\`id\``);
+    if (!BATIMENTS.includes(l.type)) err(`lieu « ${l.id} » : type inconnu « ${l.type} » (${BATIMENTS.join(', ')})`);
+    return { id: l.id, type: l.type, x: +l.x || 0, y: +l.y || 0, nom: l.nom || '' };
+  });
+  const arrets = {}, places = {};
+  Object.entries(T.arrets || {}).forEach(([id, pt]) => {
+    arrets[id] = { x: pt[0], y: pt[1], s: abscisse(pt, `arrêt « ${id} »`) };
+    places[id] = { x: pt[0] - .5, y: pt[1] - .5 };
+  });
+  if (!Object.keys(arrets).length) err('`trajet.arrets` : au moins un arrêt');
+  lieux.forEach((l) => { if (!places[l.id]) places[l.id] = { x: l.x, y: l.y }; });
+  const acteurs = {};
+  Object.entries(S.acteurs || {}).forEach(([id, a]) => {
+    if (!a || a.type !== 'porteur') err(`acteur « ${id} » : une scène trajet n'a qu'un acteur de type « porteur »`);
+    acteurs[id] = { id, type: 'porteur' };
+  });
+  // La position à l'abscisse s, et le sens du camion (selon le sens de marche : `avance` = vers les s croissants).
+  const position = (s, avance = true) => {
+    const t = Math.max(0, Math.min(long, s));
+    const g = segs.find((x) => t <= x.s0 + x.n + 1e-9) || segs[segs.length - 1];
+    const u = (t - g.s0) / g.n, dx = Math.sign(g.q[0] - g.p[0]), dy = Math.sign(g.q[1] - g.p[1]);
+    const sens = dx ? ((dx > 0) === avance ? 'E' : 'O') : ((dy > 0) === avance ? 'S' : 'N');
+    return { x: g.p[0] + (g.q[0] - g.p[0]) * u, y: g.p[1] + (g.q[1] - g.p[1]) * u, sens };
+  };
+  return { trajet: true, sol: T.sol || null, route: R, lieux, arrets, places, acteurs, lots: {}, decor: [], couloirs: [], long, position,
+    dehors: () => 0, aDroite: () => true, couloirEn: () => null };
+}
+
+// Le décor d'une scène trajet : le terrain, la route, les bâtiments (du fond vers l'élève) et leurs noms.
+export function dessinerTrajet(I, sc) {
+  const xs = [...sc.route.map((p) => p[0]), ...sc.lieux.map((l) => l.x)], ys = [...sc.route.map((p) => p[1]), ...sc.lieux.map((l) => l.y)];
+  const [x0, y0, x1, y1] = sc.sol || [Math.min(...xs) - 3, Math.min(...ys) - 3.5, Math.max(...xs) + 4.5, Math.max(...ys) + 3];
+  let g = I.face([[x0, y0, 0], [x1, y0, 0], [x1, y1, 0], [x0, y1, 0]], '#ddd5c2', 'none');
+  g += route(I, sc.route);
+  sc.lieux.slice().sort((a, b) => (a.x + a.y) - (b.x + b.y)).forEach((l) => { g += batiment(I, l.type, l.x, l.y, { nom: l.nom }); });
+  return g;
+}

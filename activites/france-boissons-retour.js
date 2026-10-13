@@ -5,12 +5,12 @@
 //
 // Vendredi 17 h, quai 14 : compter les vides de Malo et trouver l'erreur du ticket signé, tenir le compte de consignes de Malo dans une
 // feuille de calcul, prévenir Malo et Inès par phrases à choisir, puis la boucle des vides (animation) et le chiffrage du réemploi.
-// Données dans `contenus/france-boissons-ent610.js` (et `-donnees.js`, pures), questions dans `contenus/questions/ENT-6.10.js`, univers
+// Animation « la boucle des vides » : scène trajet du kit iso (chantier D-10, lot 2). Données dans `contenus/france-boissons-ent610.js` (et `-donnees.js`, pures), questions dans `contenus/questions/ENT-6.10.js`, univers
 // dans `contenus/france-boissons.js`.
 //
 // 12 jalons pondérés (somme 16) + 3 questions notées (`part: 4`), somme = 20 (`bareme: 20`), poids validés par Tristan le 13/10/2026.
 // Une base par séance (pas de `jeuId`). Pas de trame pour l'instant (tout à l'écran ; trame courte par Cowork après validation).
-// EN CONSTRUCTION : `pret: false` tant que l'animation (lot 2) n'est pas branchée.
+// Livrée le 13/10/2026 (`pret: true, ouverture: 'prof'`) : Tristan l'essaie à l'écran et l'ouvre lui-même à son groupe.
 
 import { seanceEntreprise } from '../core/types/seance-entreprise.js';
 import * as FB from '../contenus/france-boissons.js';
@@ -30,7 +30,7 @@ const s = seanceEntreprise(FB, SEANCE, {
   parcours: true,
   precedente: 'france-boissons-tournee',
   questions: 'ENT-6.10',
-  pret: false,
+  pret: true,
   ouverture: 'prof',
 }, SEANCE.OPTIONS);
 export const meta = s.meta;

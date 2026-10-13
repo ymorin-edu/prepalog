@@ -14,11 +14,12 @@
 import { apresFiche, apresMail, tous } from '../core/declencheurs.js';
 import { phrasesJustes } from '../core/phrases.js';
 import { ficheEnvoyee, lireFeuille } from '../core/types/fiche.js';
+import { etapesAnimation, reponseAnimation } from '../core/types/animation.js';
 import { QUESTIONS } from './questions/ENT-6.10.js';
 import { EQUIPE, EXTERIEURS, LEXIQUE as LEXIQUE_FB, mailDe, heureScenario, CABANE, CONSIGNES, DOC_ORGANIGRAMME, DOC_ANNUAIRE,
   STYLE_DOCUMENTS as STYLE_FB } from './france-boissons.js';
 import {
-  ID, ID_VOLET, SCENARIO, FICHE_CONTROLE, FICHE_COMPTE, FICHE_CHIFFRAGE, BLOC_COMPTE, BLOC_CHIFFRAGE, MSG_MALO, MSG_INES, CLE_MALO, CLE_INES,
+  ID, ID_VOLET, SCENARIO, ANIM, FICHE_CONTROLE, FICHE_COMPTE, FICHE_CHIFFRAGE, BLOC_COMPTE, BLOC_CHIFFRAGE, MSG_MALO, MSG_INES, CLE_MALO, CLE_INES,
   NUMERO_TICKET, LIVRAISON, LIVRES, VIDES_TICKET, AU_QUAI, CHOIX_TICKET, TICKET_JUSTE, AVANT, REEL, comptesEleve,
   lignesCompte, CASES_COMPTE, FUT_BOUTEILLE, lignesChiffrage, CASES_CHIFFRAGE,
 } from './france-boissons-ent610-donnees.js';
@@ -141,6 +142,79 @@ export const STYLE_DOCUMENTS = `${STYLE_FB}
 .fb10-sig{display:flex; flex-wrap:wrap; justify-content:space-between; gap:4px 12px; margin:10px 0 0; border-top:1px dashed var(--filet); padding-top:6px}
 `;
 
+// ─────────────────────────────────────────────────────────────── ④ la boucle des vides (animation à questions, scène « trajet »)
+// Brief §4.4a : partie 1, Buchelay → Malo (pleins posés, vides repris dans le MÊME camion) → retour ; partie 2, les vides vers la
+// brasserie (Mons-en-Barœul, comme en 6.4) → lavage, remplissage → le fût revient plein. Carte schématique (`compilerTrajet`, kit iso).
+// L'écran n'apparaît qu'après les deux réponses (Malo, Inès) ; la fiche ④ qu'après les deux questions.
+const deuxReponses = tous(apresMail({ a: EXTERIEURS.malo.mail }), apresMail({ a: mailDe('ines') }));
+export const ANIMATION = {
+  id: ANIM,
+  libelle: '④ La boucle des vides',
+  quand: deuxReponses,
+  menuApres: true,
+  vitesse: 1,
+  alt: 'Animation : une carte avec la plateforme de Buchelay, le bar de plage de Malo et la brasserie ; le camion de Lucas roule de l’une à l’autre.',
+  scene: {
+    trajet: {
+      sol: [-1.2, -2.6, 25.4, 14.4],
+      route: [[3, 4.6], [3, 12.6], [22.5, 12.6], [22.5, 8.2]],
+      lieux: [
+        { id: 'brasserie', type: 'brasserie', x: 0, y: 0, nom: 'Brasserie (Mons-en-Barœul)' },
+        { id: 'lavage', type: 'lavage', x: 7.4, y: .6, nom: 'Lavage' },
+        { id: 'buchelay', type: 'plateforme', x: 9, y: 7.6, nom: 'Plateforme de Buchelay' },
+        { id: 'malo', type: 'bar', x: 20.6, y: 4.8, nom: 'La Cabane à Malo' },
+      ],
+      arrets: { brasserie: [3, 5.6], buchelay: [12.5, 12.6], malo: [22.5, 8.4] },
+    },
+    acteurs: { camion: { type: 'porteur' } },
+  },
+  parties: [
+    { titre: 'Partie 1 sur 2 : la tournée de Lucas', depart: { camion: { a: 'buchelay', charge: 'pleins' } },
+      pas: [
+        { legende: 'À Buchelay, le camion part <b>plein</b> : la commande de Malo.' },
+        { attendre: 900 },
+        { rouler: 'camion', vers: 'malo' },
+        { legende: 'Chez Malo : Lucas pose les <b>pleins</b> et reprend les <b>vides</b>, <b>dans le même camion</b>.' },
+        { bulle: 'malo', lignes: ['Pleins posés,', 'vides repris'], vers: 'malo', hauteur: 2.2, decalage: [-250, -40] },
+        { attendre: 1300 },
+        { charger: 'camion', charge: 'vides' },
+        { attendre: 1300 },
+        { effacer: 'malo' },
+        { legende: 'Retour à Buchelay avec les vides.' },
+        { rouler: 'camion', vers: 'buchelay' },
+        { legende: 'Le camion est rentré. <b>Arrête-toi et réfléchis.</b>' },
+      ],
+      question: { id: 'q1', titre: 'Question 1', enonce: 'Pourquoi Lucas reprend-il les vides dans le même camion ?',
+        choix: ['Sinon, le camion rentrerait vide et il faudrait un autre trajet pour les vides.', 'Parce que les vides sont dangereux.',
+          'Parce que Malo n’a pas de poubelle assez grande.', 'Pour les vendre à un ferrailleur.'],
+        juste: 0,
+        explication: 'Le camion qui a livré rentre de toute façon : il rapporte les vides au lieu de rouler à vide. Pas de trajet en plus, moins de '
+          + 'carburant, moins de camions sur la route.' } },
+    { titre: 'Partie 2 sur 2 : la boucle du fût', depart: { camion: { a: 'buchelay', charge: 'vides' } },
+      pas: [
+        { legende: 'Les vides de toute la côte repartent vers la <b>brasserie</b> (Mons-en-Barœul).' },
+        { attendre: 700 },
+        { rouler: 'camion', vers: 'brasserie' },
+        { legende: 'À la brasserie : <b>lavage</b>, contrôle, puis <b>remplissage</b>.' },
+        { bulle: 'lavage', lignes: ['Lavé, contrôlé,', 'rempli de nouveau'], vers: 'lavage', hauteur: 1.6, decalage: [60, -40] },
+        { attendre: 1500 },
+        { charger: 'camion', charge: 'pleins' },
+        { attendre: 900 },
+        { effacer: 'lavage' },
+        { legende: 'Le fût revient <b>plein</b> à Buchelay. Un fût fait ce tour <b>environ 50 fois en 15 ans</b> (Conseil national de l’emballage).' },
+        { rouler: 'camion', vers: 'buchelay' },
+      ],
+      question: { id: 'q2', titre: 'Question 2', enonce: 'Un fût vide perdu, qu’est-ce que ça coûte à France Boissons ?',
+        choix: ['40 € de consigne, et un fût de moins dans la boucle.', 'Rien : le client paie toujours.', 'Seulement le prix de la bière.', '4 €.'],
+        juste: 0,
+        explication: 'La consigne du fût (40 €) ne couvre pas tout : il faut aussi acheter un fût neuf pour le remplacer dans la boucle, '
+          + 'alors qu’il aurait pu servir encore des dizaines de fois.' } },
+  ],
+  aRetenir: 'Un fût <b>revient</b> : il est lavé et rempli de nouveau. Chaque vide repris, c’est <b>un emballage qui n’est pas jeté</b>.',
+};
+// La fiche ④ s'ouvre quand l'élève a répondu aux deux questions de l'animation (justes ou fausses).
+const animationFaite = (db) => ['q1', 'q2'].every((q) => reponseAnimation(db, ANIM, q).repondu);
+
 // ─────────────────────────────────────────────────────────────── les fiches
 const nombre = (id, lib, unite, manque) => ({ type: 'nombre', id, lib, unite, min: 0, entier: true, manque });
 
@@ -181,14 +255,13 @@ export const FICHE_2 = {
 export const BLOC_FEUILLE_CHIFFRAGE = { type: 'grille', id: BLOC_CHIFFRAGE, lignes: lignesChiffrage,
   feuille: { titre: 'Ce que rapporte un fût qui revient', colonnes: ['A', 'B'], decimales: 1, colonneAide: 'Aide',
     largeurs: { A: '38%', B: '28%', aide: 'auto' } } };
-const deuxReponses = tous(apresMail({ a: EXTERIEURS.malo.mail }), apresMail({ a: mailDe('ines') }));
 export const FICHE_3 = {
   id: FICHE_CHIFFRAGE, libelle: '④ Ce que rapporte un fût', titre: 'Ce que rapporte un fût qui revient',
   sousTitre: 'Recopie les données de la fiche à gauche (lignes 2 à 6). Lignes 7 à 10 : tape « = » puis clique sur les cases.',
   documents: ['fut-bouteille', 'droit'],
   largeurDocs: 0.75,
   bouton: 'Ouvrir le chiffrage',
-  quand: deuxReponses,
+  quand: animationFaite,
   blocs: [BLOC_FEUILLE_CHIFFRAGE],
   envoi: { bouton: 'Envoyer à Karim', a: 'Karim', suite: 'Karim te répond dans la Messagerie.' },
 };
@@ -275,8 +348,14 @@ export const VOLET = {
     // Les deux réponses envoyées : Karim ouvre la boucle des vides (sans nombre : rien ne souffle ce qui vient d'être envoyé).
     { id: 'boucle', quand: deuxReponses,
       semer: (prenom, db) => ({ mails: [mail(prenom, KARIM, 'Où vont les vides ?',
-        'Les vides de Malo ne restent pas ici. Regarde où ils vont, puis chiffre-le pour moi : la fiche « Ce que rapporte un fût » '
-          + 'est dans ton menu.\n\nKarim', { db, decalage: 2, extra: { ouvreFiche: FICHE_CHIFFRAGE } })] }) },
+        'Les vides de Malo ne restent pas ici. Regarde où ils vont (« La boucle des vides », dans ton menu), puis chiffre-le pour moi.'
+          + '\n\nKarim', { db, decalage: 2 })] }) },
+    // L'animation faite (ses deux questions répondues, justes ou fausses) : Karim ouvre le chiffrage. Il arrive à la navigation suivante
+    // (l'écran de l'animation ne se redessine pas sous l'élève).
+    { id: 'chiffrer', quand: animationFaite,
+      semer: (prenom, db) => ({ mails: [mail(prenom, KARIM, 'À toi de chiffrer',
+        'Tu as vu où vont les vides. Maintenant, chiffre ce que rapporte un fût qui revient : la fiche est dans ton menu.\n\nKarim',
+        { db, decalage: 3, extra: { ouvreFiche: FICHE_CHIFFRAGE } })] }) },
     // Le chiffrage envoyé : fin de la séance.
     { id: 'fin', quand: apresFiche(FICHE_CHIFFRAGE),
       semer: (prenom, db) => ({ mails: [mail(prenom, KARIM, 'Merci',
@@ -298,9 +377,7 @@ export const POIDS = {
   'futs-vides': 2, 'casiers-plein': 1, ticket: 1.5,
   'compte-lus': 1.5, 'compte-solde': 1.5, 'compte-montants': 2,
   'malo-fut-ton': 1, 'malo-vides-solde': 1.5, ines: 1.5,
-  // PROVISOIRE (lot 1 du chantier D-10) : les deux jalons de l'animation (0,5 + 0,5) arrivent au lot 2 ; leur point est porté par le
-  // chiffrage en attendant (somme 20 exigée par le moteur). À remettre à 1,5 quand l'animation est branchée.
-  'anim-q1': 0.5, 'anim-q2': 0.5, chiffrage: 2.5,
+  'anim-q1': 0.5, 'anim-q2': 0.5, chiffrage: 1.5,
 };
 const attente = { status: 'attente' };
 const ok = { status: 'ok' };
@@ -333,7 +410,9 @@ export const ETAPES = [
   jalonPhrases('malo-fut-ton', 'Malo : le fût abîmé non facturé, et le ton (salutation, fin)', MSG_MALO, ['salutation', 'fut', 'fin']),
   jalonPhrases('malo-vides-solde', 'Malo : les vides vraiment repris et son solde de consignes', MSG_MALO, ['vides', 'solde']),
   jalonPhrases('ines', 'Inès : consigne des fûts, avoir des casiers, Heineken livrés', MSG_INES, ['futs', 'casiers', 'heineken']),
-  // Jalons 10 et 11 (l'animation) : ajoutés avec l'animation (lot 2 du chantier D-10).
+  // Jalons 10 et 11 : les deux questions de l'animation, jugées sur la PREMIÈRE réponse (règle de la vue).
+  ...etapesAnimation(ANIMATION).map((e, k) => ({ ...e, id: `anim-q${k + 1}`, titre: `Boucle des vides : question ${k + 1} de l’animation`,
+    groupe: GROUPES.boucle, poids: POIDS[`anim-q${k + 1}`], ecran: `animation:${ANIM}` })),
   jalonFeuille('chiffrage', 'Chiffrage : données lues justes et calculs en formule', GROUPES.boucle, FICHE_CHIFFRAGE, BLOC_FEUILLE_CHIFFRAGE,
     [...CASES_CHIFFRAGE.donnees, ...CASES_CHIFFRAGE.calculs]),
 ];
@@ -385,6 +464,7 @@ export const OPTIONS = {
   documents: DOCUMENTS,
   documentsStyle: STYLE_DOCUMENTS,
   fiches: [FICHE_1, FICHE_2, FICHE_3],
+  animation: ANIMATION,
   pastilles: PASTILLES,
   equipe: EQUIPE,
   questions: QUESTIONS,

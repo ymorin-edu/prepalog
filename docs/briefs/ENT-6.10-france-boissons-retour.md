@@ -6,7 +6,7 @@
 > Lis docs/EN-COURS.md puis docs/briefs/ENT-6.10-france-boissons-retour.md. Fais d'abord l'état des lieux du §7 en lecture seule (grille dans la fiche, image en document, objets du kit iso, menu progressif) et dis-moi ce qui manque. Annonce la durée avant de commencer et dis-moi si un point du brief contredit le code. Ne construis pas la séance avant que Tristan ait validé la maquette de Cowork (§4 bis).
 > ```
 
-**Statut** : à implémenter *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
+**Statut** : livré (13/10/2026), à valider par Tristan à l’écran *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
 **Date du brief** : 06/10/2026
 **Conversation d'origine** : Cowork (Opus) ; fiche projet `claude/prepalog-reprise-6.10.md` (décisions 72 à 80) ; cadrage
 `claude/prepalog-2de-s2-cadrage.md` (décisions 10, 13) ; déroulé `claude/prepalog-2de-s2-deroule.md` (calendrier 31, règle 32) ;
@@ -394,9 +394,37 @@ de haut en bas sans chercher ; aucun écran ne défile ; l'animation tourne de f
 - Question posée à Tristan : la pile des cartes de messages pousse l'écran vers le bas (toutes les séances) ; la maquette les voulait en bas
   à gauche, par-dessus. Les tests d'ergonomie mesurent sans elles.
 
-- **Fichiers créés / modifiés** :
+**Livré le 13/10/2026** (`pret: true, ouverture: 'prof'`) : chantier moteur D-10 (lots 1 et 2) et séance. Le paragraphe « État au 13/10 »
+ci-dessus décrit le lot 1 ; il reste juste.
+
+- **Fichiers créés / modifiés** : moteur `core/types/fiche.js` (bloc `grille`, `lireFeuille`, `largeurDocs`, `serree`), `core/types/grille.js`
+  (`colonneAide`, `donneesGrisees`, `largeurs`, tolérance « % », pointage visible), `core/types/documents.js` (document `image`, loupe),
+  `core/types/entreprise.js` et `entreprise-options.js` (`pastilles`, animation à `quand` et `menuApres`), `core/types/animation.js` (scène
+  « trajet » : pas `rouler`, `charger`, départ du camion), `core/iso.js` (`porteurRideaux` dans les 4 sens, `futVide`, `batiment` plateforme /
+  bar / brasserie / lavage, `route`, `nomLieu`, `compilerTrajet`, `dessinerTrajet`), `styles/base.css`, `styles/grille.css` ; séance
+  `activites/france-boissons-retour.js`, `contenus/france-boissons-ent610.js` et `-donnees.js`, `contenus/questions/ENT-6.10.js`,
+  `contenus/corriges/ENT-6.10.js`, `contenus/images/france-boissons/quai-retour-vides.svg` (copie octet pour octet, crédit) ; tests
+  `outils/test/fb-6.10.mjs`, une ligne dans `BLOCS` et `GROUPES` (groupe 2) de `outils/test.mjs` ; page d'essai `outils/essai-boucle-vides.html`
+  (et `.js`) ; `activites/FICHE-SEANCE.md`.
 - **Écarts par rapport au brief** (et pourquoi) :
-- **Décisions prises en route** :
-- **Tests** :
-- **Commits** :
+  - Question au fil n° 3 (Inès) : énoncé **général** (« un client garde un fût de plus… ») au lieu de « Malo garde chez lui un fût de plus » :
+    tel quel, il donnait le solde de Malo et la phrase d'Inès pendant que l'élève les écrit.
+  - Le message de Karim qui ouvre la boucle ne dit plus « les 8 vides » (rien ne souffle ce qui vient d'être envoyé) ; un message de plus de
+    Karim (« À toi de chiffrer ») ouvre la fiche ④ quand les deux questions de l'animation sont répondues.
+  - L'aide de la ligne 4 tient en une phrase : « Tu as compté au quai : 8 fûts, 5 casiers. » (au lieu de deux aides, une par colonne).
+  - Pas de document « Revoir l'animation » dans la fiche ④ : l'animation reste au menu.
+  - `temps: 'entrainement'` pour la séance entière (le moteur n'a qu'un temps par séance ; C2.5 y est un premier temps).
+  - Code de compétence `C2.5` (sans préfixe : c'est l'écriture du site pour la logistique), pas `LOG-C2.5`.
+- **Décisions prises en route** : voir `docs/decisions.md` (13/10/2026).
+- **Tests** : bloc `fb-6.10`, 11 cas (données écrites à la main ; jalons sans écran et pièges ; parcours juste à l'écran = 20/20 ; inaction ;
+  animation, Q2 fausse puis juste ; ergonomie 1366 × 768 et 1280 × 720 sur les trois fiches et l'animation ; loupe ; formule en cliquant ;
+  scène trajet et ses refus), éprouvés par 5 sabotages (formule non exigée, ligne 4 jugée sur le ticket, Karim qui dit « juste », fiche ④
+  toujours ouverte, animation avant les fiches au menu). Suite complète verte.
+- **Commits** : `de7642e` (EN-COURS), `cfe1bc5` (lot 1), état du chantier, puis la livraison (lot 2).
 - **Reste ouvert** :
+  - **Captures des objets** envoyées à Tristan le 13/10 : à valider à l'écran (page d'essai `outils/essai-boucle-vides.html`, et l'animation).
+  - **Cartes de messages** : elles poussent l'écran vers le bas (toutes les séances) ; à 1366 × 768, avec deux ou trois cartes non fermées,
+    la page défile un peu. La maquette les voulait en bas à gauche, par-dessus. Question posée à Tristan, sans réponse.
+  - Textes de loi L541-1-1 et arrêté du 6 février 2026 à relire sur Légifrance avant ouverture (comme en 6.6) ; C. civ. 1103 cité de mémoire
+    (texte court, connu).
+  - Trame courte (Cowork) après validation à l'écran ; durée réelle à mesurer en classe.

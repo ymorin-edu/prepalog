@@ -26,6 +26,7 @@
 //     ecrans: [{ titre, image?: { src, alt, mention? }, blocs: ['html', 'html', 'html'] }],   // facultatif, voir plus bas
 //     libelleEcrans: 'Revoir le matériel',   // le lien qui y ramène depuis l'animation
 //     quand: (db) => booléen,     // facultatif (D-10, 13/10/2026) : l'entrée du menu n'apparaît qu'une fois vrai (`apresMail`…)
+//     menuApres: true,            // facultatif (D-10) : listée APRÈS les fiches au menu (l'animation vient en fin de séance)
 //   }
 // ÉCRANS DE PRÉSENTATION (chantier D-5, 11/10/2026, ENT-6.5 §4 étapes 0 et 1 : « le matériel du poste », « le mot
 // expliqué ») : avant la partie 1, une suite d'écrans NON NOTÉS — un dessin, trois blocs courts au plus (règle d'écriture
@@ -43,6 +44,12 @@
 //   { alerte: ['a', 'b'] } / { finAlerte: [...] }  — la pastille « ! »
 //   { bulle: 'nom', lignes: [...], vers: place | objet | [x, y, z], hauteur?, decalage: [dx, dy], ton?, fleche?, largeur? }
 //   { effacer: ['nom', …] }                   — les bulles, par leur nom
+// SCÈNE « TRAJET » (chantier D-10, lot 2, 13/10/2026, ENT-6.10 : la boucle des vides) : `scene: { trajet: { route, lieux, arrets },
+// acteurs: { camion: { type: 'porteur' } } }` (format en tête de `compilerTrajet`, `core/iso.js`). Une partie place le camion par
+// `depart: { camion: { a: 'buchelay', charge: 'pleins' } }` ; deux pas de plus :
+//   { rouler: 'camion', vers: 'malo', ms? }     — le camion roule sur la route jusqu'à l'arrêt (durée : la distance, ou `ms`)
+//   { charger: 'camion', charge: 'pleins' | 'vides' | null }   — ce qu'on voit par le rideau entrouvert
+// `bulle.vers` vise un arrêt ou un lieu. Les pas de charge (`nouvelle`, `geste`…) y sont refusés.
 // Places nommées, pas de coordonnées dans le script (sauf `vers` d'une bulle, qui peut viser un point).
 // Question : { id, titre, enonce, choix: [...], juste: rang DANS L'ORDRE DÉCLARÉ, explication, suite? }.
 // Un pas inconnu, une place ou un objet qui n'existe pas, un `juste` hors des choix : la séance ne se
@@ -60,9 +67,11 @@
 import { ech, toast, memoriserFocus, retrouverFocus } from '../ui.js';
 import { hasard } from '../tirage.js';
 import { projection, DEFS, compilerScene, dessinerDecor, bornesDecor, dessinerObjets, HAUT_RETENTION,
-  TYPES_CHARGE, GESTES, FUTS_PALETTE } from '../iso.js';
+  TYPES_CHARGE, GESTES, FUTS_PALETTE, compilerTrajet, dessinerTrajet, porteurRideaux } from '../iso.js';
 
-export const TYPES_PAS = ['legende', 'attendre', 'nouvelle', 'placer', 'geste', 'etiquette', 'alerte', 'finAlerte', 'bulle', 'effacer'];
+export const TYPES_PAS = ['legende', 'attendre', 'nouvelle', 'placer', 'geste', 'etiquette', 'alerte', 'finAlerte', 'bulle', 'effacer', 'rouler', 'charger'];
+const CHARGES_CAMION = ['pleins', 'vides'];
+const PAS_ENTREPOT = ['nouvelle', 'placer', 'geste', 'etiquette', 'alerte', 'finAlerte'];
 const TONS_BULLE = ['neutre', 'ok', 'alerte'];
 const ECART_DEHORS = 0.6;   // le chariot qui ressort avec une charge va un peu plus loin (maquette)
 
@@ -84,7 +93,7 @@ export function compilerAnimation(A) {
     return { titre: String(x.titre), image: x.image || null, blocs: x.blocs.map(String) };
   });
   if (!Array.isArray(A.parties) || (!A.parties.length && !ecrans.length)) err('`parties` manque (au moins une partie, ou des `ecrans`)');
-  const sc = A.parties.length || A.scene ? compilerScene(A.scene, ou) : null;
+  const sc = A.parties.length || A.scene ? (A.scene && A.scene.trajet ? compilerTrajet(A.scene, ou) : compilerScene(A.scene, ou)) : null;
   const vitesse = A.vitesse == null ? 1 : +A.vitesse;
   if (!(vitesse > 0)) err('`vitesse` doit être un nombre positif');
   const questions = [];
@@ -122,6 +131,18 @@ export function compilerAnimation(A) {
       const t = typeDePas(p);
       if (!t) err(`${lieu} : pas inconnu ${JSON.stringify(p)} (pas connus : ${TYPES_PAS.join(', ')})`);
       const liste = (v) => [].concat(v);
+      if (t === 'rouler' || t === 'charger') {
+        if (!sc.trajet) err(`${lieu} : « ${t} » ne sert que dans une scène trajet`);
+        if (!sc.acteurs[p[t]]) err(`${lieu} : acteur inconnu « ${p[t]} » (à déclarer dans scene.acteurs)`);
+        if (t === 'rouler') {
+          if (!sc.arrets[p.vers]) err(`${lieu} : arrêt inconnu « ${p.vers} » (arrêts : ${Object.keys(sc.arrets).join(', ')})`);
+          if (p.ms != null && !(+p.ms > 0)) err(`${lieu} : ms = une durée positive`);
+          return { t, acteur: p.rouler, vers: p.vers, ms: p.ms == null ? null : +p.ms };
+        }
+        if (p.charge != null && !CHARGES_CAMION.includes(p.charge)) err(`${lieu} : charge « ${p.charge} » inconnue (${CHARGES_CAMION.join(', ')} ou rien)`);
+        return { t, acteur: p.charger, charge: p.charge || null };
+      }
+      if (sc && sc.trajet && PAS_ENTREPOT.includes(t)) err(`${lieu} : « ${t} » n'a pas de sens dans une scène trajet`);
       if (t === 'legende') { numero++; legendes.push(numero); return { t, html: String(p.legende), n: numero }; }
       if (t === 'attendre') { if (!(+p.attendre >= 0)) err(`${lieu} : \`attendre\` = un nombre de millisecondes`); return { t, ms: +p.attendre }; }
       if (t === 'nouvelle') {
@@ -187,7 +208,18 @@ export function compilerAnimation(A) {
         juste: q.juste, explication: String(q.explication || ''), suite: q.suite || null, partie: k, rang: questions.length + 1 };
       questions.push(Q);
     }
-    return { titre: Pt.titre || `Partie ${k + 1} sur ${A.parties.length}`, depart: (Pt.depart && Pt.depart.palettes) || [], pas, question: Q, legendes };
+    // Le camion d'une scène trajet, au départ de la partie (à un arrêt, chargé ou non).
+    const camions = {};
+    if (sc && sc.trajet) {
+      Object.keys(sc.acteurs).forEach((id) => {
+        const d = (Pt.depart && Pt.depart[id]) || null;
+        if (!d) err(`${ici} : départ du camion « ${id} » manquant (depart: { ${id}: { a: '<arrêt>' } })`);
+        if (!sc.arrets[d.a]) err(`${ici} : le camion part d'un arrêt inconnu « ${d.a} »`);
+        if (d.charge != null && !CHARGES_CAMION.includes(d.charge)) err(`${ici} : charge « ${d.charge} » inconnue`);
+        camions[id] = { a: d.a, charge: d.charge || null, sens: d.sens || null };
+      });
+    }
+    return { titre: Pt.titre || `Partie ${k + 1} sur ${A.parties.length}`, depart: (Pt.depart && Pt.depart.palettes) || [], camions, pas, question: Q, legendes };
   });
   return { id: A.id, libelle: A.libelle || 'Animation', vitesse, alt: A.alt || A.libelle || 'Animation', sc, parties, questions,
     nbLegendes: numero, aRetenir: A.aRetenir || '', ecrans, libelleEcrans: A.libelleEcrans || 'Revoir la présentation' };
@@ -239,7 +271,8 @@ function compile(A) { if (!compilees.has(A)) compilees.set(A, compilerAnimation(
 // `api` : { estProf, graine (identifiant de l'élève), sauver(), figee }.
 export function creerLecteur(A) {
   const M = compile(A);
-  const I = projection();
+  // Une carte schématique (scène trajet) : une unité plus petite, pour que les textes gardent leur taille à l'écran.
+  const I = projection(M.sc && M.sc.trajet ? { unite: 34 } : {});
   const reduit = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
   // Le déroulé en cours (un seul à la fois pour cet écran) : le jeton invalide tout ce qui tournait.
   const run = { jeton: 0 };
@@ -315,14 +348,27 @@ export function creerLecteur(A) {
 
     // Le décor, dessiné une fois ; le cadre de la scène sur le décor (comme la maquette).
     const gd = $('[data-anim-decor]');
-    gd.innerHTML = dessinerDecor(I, M.sc);
+    gd.innerHTML = M.sc.trajet ? dessinerTrajet(I, M.sc) : dessinerDecor(I, M.sc);
     let bb = null;
     try { bb = gd.getBBox(); } catch (x) { bb = null; }
-    if (!bb || !bb.width) bb = bornesDecor(I, M.sc);
+    if (!bb || !bb.width) bb = M.sc.trajet ? { x: 0, y: 0, width: 1000, height: 600 } : bornesDecor(I, M.sc);
     svg.setAttribute('viewBox', `${(bb.x - 10).toFixed(0)} ${(bb.y - 60).toFixed(0)} ${(bb.width + 20).toFixed(0)} ${(bb.height + 70).toFixed(0)}`);
 
     /* ------------------------------------------------------------ dessin */
-    const dessiner = () => { dyn.innerHTML = dessinerObjets(I, M.sc, R.charges, Object.values(R.acteurs)); };
+    const dessiner = () => {
+      if (!M.sc.trajet) { dyn.innerHTML = dessinerObjets(I, M.sc, R.charges, Object.values(R.acteurs)); return; }
+      dyn.innerHTML = Object.values(R.acteurs).filter((a) => a.visible).map((a) => {
+        const p = M.sc.position(a.s, a.avance);
+        return porteurRideaux(I, p.x, p.y, a.sensFixe || p.sens, { charge: a.charge });
+      }).join('');
+    };
+    // Le camion roule sur la route jusqu'à l'arrêt : la durée suit la distance (ou `ms`).
+    async function rouler(a, vers, ms, j) {
+      const s1 = M.sc.arrets[vers].s;
+      if (Math.abs(s1 - a.s) < 1e-6) return;
+      a.avance = s1 > a.s; a.sensFixe = null;
+      await aller(a, { s: s1 }, ms || Math.abs(s1 - a.s) * 260, j);
+    }
     function legende(n, h) {
       $('[data-anim-num]').textContent = n;
       $('[data-anim-texte]').innerHTML = h;
@@ -428,7 +474,11 @@ export function creerLecteur(A) {
           etiq: p.etiquette || '', etiqTon: p.ton || 'neutre', alerte: false };
       });
       R.acteurs = {};
-      Object.values(M.sc.acteurs).forEach((a) => { R.acteurs[a.id] = { id: a.id, type: a.type, x: 0, y: 0, lev: 0, visible: false, charge: null }; });
+      Object.values(M.sc.acteurs).forEach((a) => {
+        const c = M.sc.trajet ? M.parties[k].camions[a.id] : null;
+        R.acteurs[a.id] = c ? { id: a.id, type: a.type, s: M.sc.arrets[c.a].s, avance: true, sensFixe: c.sens, visible: true, charge: c.charge }
+          : { id: a.id, type: a.type, x: 0, y: 0, lev: 0, visible: false, charge: null };
+      });
       dessiner();
     }
     async function executer(p, j) {
@@ -446,6 +496,8 @@ export function creerLecteur(A) {
         case 'alerte': p.ids.forEach((id) => { charge(id).alerte = true; }); dessiner(); break;
         case 'finAlerte': p.ids.forEach((id) => { charge(id).alerte = false; }); dessiner(); break;
         case 'bulle': bulle(p); break;
+        case 'rouler': await rouler(R.acteurs[p.acteur], p.vers, p.ms, j); break;
+        case 'charger': R.acteurs[p.acteur].charge = p.charge; dessiner(); break;
         case 'effacer': effacer(p.ids); break;
         default: break;
       }
@@ -597,7 +649,7 @@ export function creerLecteur(A) {
   }
 
   // `quand(db)` (chantier D-10, ENT-6.10 §7.4) : l'écran reste hors du menu tant que c'est faux, comme une fiche.
-  return { id: M.id, nav: { libelle: M.libelle }, quand: typeof A.quand === 'function' ? A.quand : null, etatNeuf, html, brancher, modele: M,
+  return { id: M.id, nav: { libelle: M.libelle }, quand: typeof A.quand === 'function' ? A.quand : null, menuApres: !!A.menuApres, etatNeuf, html, brancher, modele: M,
     signaux: M.questions.map((Q) => `animation:${M.id}:${Q.id}`) };
 }
 
