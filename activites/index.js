@@ -71,6 +71,7 @@ export const ACTIVITES = [
   () => import('./france-boissons-planning.js'),
   () => import('./france-boissons-tournee.js'),
   () => import('./france-boissons-retour.js'),
+  () => import('./decathlon-choix-transporteur.js'),
 ];
 
 // Pictogrammes des rubriques. Une seule grille pour les dix : trait de 1,6 px, bouts et
@@ -150,6 +151,8 @@ export const ENTREPRISES = [
     intention: { pdf: './contenus/intentions/smoby-intention-pedagogique.pdf', docx: './contenus/intentions/smoby-intention-pedagogique.docx' } },  // relue par Tristan le 09/10/2026
   // Logo officiel du site (chantier D-E, 09/10/2026, accord de Tristan du 05/10) ; charte : `contenus/france-boissons.js`.
   { n: 6, nom: 'France Boissons', metier: 'Boissons — plateforme de Buchelay (Yvelines)', logo: './contenus/trames/logos/france-boissons.svg' },
+  // Pas le logo officiel (accord de Tristan non demandé) : le nom en texte, dans le bleu de la marque ; charte : `contenus/decathlon.js`.
+  { n: 7, nom: 'Decathlon', metier: 'Transport amont — entrepôt de Rouvignies (Nord)', logo: './contenus/trames/logos/decathlon-texte.svg' },
 ];
 
 // ------------------------------------------------------------------- l'ordre
