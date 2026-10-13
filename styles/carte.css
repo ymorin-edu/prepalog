@@ -140,3 +140,62 @@
 .ct-mk .plan-pt-cible:focus{ outline:none }
 .ct-mk .plan-pt-cible:focus-visible{ stroke:var(--terre); stroke-width:3 }
 .ct-mk.plan-pt-clic:hover .ct-rond{ stroke-width:3.5 }
+
+/* ------------------------------------------------------------------ la carte des itinéraires
+   Ajouté le 13/10/2026 avec `core/types/carte-itineraires.js` (brief MOTEUR-carte-regionale, lot 2). Mêmes deux
+   mondes que la carte de ville : le PANNEAU suit les variables du site ; la CARTE est un plan papier, couleurs fixes.
+   Les couleurs des tracés (encre, violet, ambre) sont posées par la vue, couche par couche (`TRAITS`) : ni vert ni rouge.
+   1366 × 768 et 1280 × 720 sans défilement de page : la carte prend la hauteur qui reste, la colonne fait 300 px. */
+.ci-vue{ display:grid; grid-template-columns:minmax(0,1fr) 300px; gap:14px; align-items:start }
+.ci-bloc{ min-width:0 }
+.ci-boite{ height:max(380px, calc(100vh - 250px)); min-height:0 }
+.ci-svg .ci-fond{ fill:#f3f1ec }
+.ci-eau{ fill:#cde0ec }
+.ci-eauL{ fill:none; stroke:#9cc0da; stroke-linecap:round; stroke-linejoin:round }
+.ci-auto{ fill:none; stroke:#d8ccb3; stroke-linecap:round; stroke-linejoin:round }
+.ci-rail{ fill:none; stroke:#c4beb4 }
+.ci-front{ fill:none; stroke:#8a8378 }
+.ci-grille{ fill:none; stroke:#5b544b; stroke-opacity:.35 }
+.ci-cadre{ fill:none; stroke:#5b544b }
+.ci-pays{ fill:#8a8378; font-weight:700; letter-spacing:.25em; text-anchor:middle; font-family:system-ui,"Segoe UI",sans-serif; pointer-events:none }
+.ci-ville{ fill:#5b544b }
+.ci-vnom{ fill:#3d372f; paint-order:stroke; stroke:#f3f1ec; stroke-linejoin:round; font-family:system-ui,"Segoe UI",sans-serif; pointer-events:none }
+.ci-it path{ fill:none; stroke-linejoin:round }
+.ci-it .ci-halo{ stroke:#f3f1ec; stroke-linecap:round }
+/* La zone de clic d'un tracé : large et INVISIBLE (comme la cible d'un point de la tournée). */
+.ci-it .ci-clic{ stroke:transparent; stroke-linecap:round; pointer-events:stroke; cursor:pointer }
+.ci-it.ci-estompe{ opacity:.25 }
+.ci-it.ci-choisi .ci-halo{ stroke:#1f1c18; stroke-opacity:.16 }
+.ci-lieu .ci-rond{ stroke:#1f1c18; stroke-width:2 }
+.ci-port .ci-rond, .ci-terminal .ci-rond{ fill:#fdfbf7 }
+.ci-entrepot .ci-rond{ fill:#1f5fa8 }
+.ci-lieu .ci-lettre{ font-weight:800; text-anchor:middle; dominant-baseline:central; fill:#1f1c18; font-family:system-ui,"Segoe UI",sans-serif; pointer-events:none }
+.ci-entrepot .ci-lettre{ fill:#fdfbf7 }
+.ci-lnom{ fill:#1f1c18; font-weight:700; paint-order:stroke; stroke:#f3f1ec; stroke-linejoin:round; font-family:system-ui,"Segoe UI",sans-serif; pointer-events:none }
+
+/* le panneau */
+.ci-panneau{ background:var(--panneau); border:1px solid var(--filet); border-radius:var(--r); padding:12px 14px; font-size:13.5px }
+.ci-panneau h3{ font-size:12.5px; text-transform:uppercase; letter-spacing:.04em; color:var(--encre-douce); margin:12px 0 6px }
+.ci-panneau h3:first-child{ margin-top:0 }
+.ci-liste{ display:flex; flex-direction:column; gap:5px }
+.ci-choix{ display:flex; align-items:center; gap:8px; width:100%; padding:6px 8px; font:inherit; color:var(--encre); text-align:left;
+  background:var(--panneau); border:1px solid var(--filet); border-radius:var(--r); cursor:pointer }
+.ci-choix:hover{ background:var(--survol) }
+/* Choisi : bordure et graisse à l'ENCRE (l'accent d'une charte n'a rien à faire ici). */
+.ci-choix[aria-pressed="true"]{ border:2px solid var(--encre); padding:5px 7px; font-weight:700 }
+.ci-choix .ci-nom{ flex:1 }
+.ci-km{ color:var(--encre-douce); font-variant-numeric:tabular-nums; font-weight:600 }
+/* Un échantillon de trait est un morceau de CARTE : posé sur le papier, il garde ses couleurs fixes (l'encre de la route
+   disparaissait sur le panneau sombre de Boost, essai du 13/10). */
+.ci-ech{ flex:none; border-radius:3px; background:#f3f1ec; box-shadow:inset 0 0 0 1px rgba(0,0,0,.12) }
+.ci-fiche{ margin-top:10px }
+.ci-fiche h4{ margin:0 0 4px; font-size:14.5px }
+.ci-fiche p{ margin:4px 0 }
+.ci-fiche dl{ margin:6px 0 0; display:grid; grid-template-columns:auto; gap:1px }
+.ci-fiche dt{ font-size:12px; color:var(--encre-douce); margin-top:4px }
+.ci-fiche dd{ margin:0 }
+.ci-legende{ position:absolute; left:8px; top:8px; list-style:none; margin:0; padding:5px 9px 5px 5px; font-size:12px; color:#2a2622;
+  background:rgba(253,251,247,.9); border:1px solid #d6cfc2; border-radius:4px; pointer-events:none }
+.ci-legende li{ display:flex; align-items:center; gap:6px; margin:1px 0 }
+.ci-legende svg{ flex:none; transform:scale(.85); transform-origin:left center; margin-right:-6px }
+.ci-legende .ci-ech{ box-shadow:none }

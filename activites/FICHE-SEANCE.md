@@ -105,6 +105,7 @@ plan d'entrepôt, fiche, animation) sans `id` texte non vide, sont refusées aus
 | `transportSection` | texte | Nom du groupe de menu qui porte plan et tournée (« Transport » par défaut). | `activites/boost-ent32.js` |
 | `transportId` | texte | Clé de `db.transport` partagée entre deux séances (sinon l'`id` de la séance). | `activites/boost-ent32.js` |
 | `plan` | objet | Plan schématique, ou carte réelle avec `plan.carte`. | `activites/boost-ent32.js` |
+| `carteItineraires` | objet | Carte des itinéraires d'un point A à un point B par plusieurs modes (route, barge, rail), sur une carte réelle ; consultée, jamais notée. Voir « Vue « Carte des itinéraires » » plus bas. | (Decathlon ENT-7.x, à venir) |
 | `tournee` | objet | La tournée à construire sur le plan. | `activites/boost-ent32.js` |
 | `quai` | objet ou fonction | Quai de réception (voir « Vue quai ») ; une **fonction de la graine** = un quai tiré par élève. | `activites/picard-ent42.js` ; tiré : `activites/picard-ent44.js` |
 | `planning` | objet | Planning : cartes sur une grille (voir « Vue Planning »). | `activites/smoby-arrivee.js` |
@@ -902,6 +903,40 @@ de l'élève) à la première ouverture, AVANT le volet — qui la lit (`graineD
 séance qui ne tire que ses données (sans quai ni inventaire tirés) déclare `tirage: true`. La note garde `detail.graine`.
 Le stock de départ d'un jeu tiré se pose dans `semer` (la base de départ ne connaît pas la graine). Voir
 `contenus/cdiscount-compte-a-rebours.js` et son corrigé par élève `contenus/corriges/ENT-2.5.js`.
+
+## Vue « Carte des itinéraires » (d'un point A à un point B par plusieurs modes) — `core/types/carte-itineraires.js`
+
+Écrite le 13/10/2026 (brief `docs/briefs/MOTEUR-carte-regionale.md`, lot 2) pour Decathlon ENT-7.1 à 7.4, et pour toute carte
+« d'un port à un entrepôt par la route, la barge ou le rail ». L'élève **regarde** les itinéraires, en clique un pour lire sa fiche
+(trajet, distance par tronçon, terminaux, ruptures de charge, offres reçues) et zoome sur les derniers kilomètres. **Rien n'y est
+noté, rien n'y est un geste de travail** ; l'itinéraire choisi est un état d'affichage, jamais rangé dans la base.
+
+```js
+carteItineraires: {
+  carte: CARTE,                        // import { CARTE } from '../contenus/decathlon-carte.js' (généré)
+  destination: 'rouvignies',           // une clé de CARTE.itineraires ('rouvignies' ou 'dourges')
+  libelle: 'Carte des itinéraires',    // entrée de menu (défaut)
+  titre, consigne,                     // en-tête de la vue (facultatifs)
+  alt: "Carte d'Anvers à Rouvignies : trois itinéraires, route, barge et rail",   // texte alternatif, SANS chiffre
+  offres: (mode, db) => ['Contargo'],  // noms des prestataires qui ont fait une offre pour ce mode (facultatif)
+  quadrillage: false,                  // vrai : quadrillage et repères en bordure (absent par défaut)
+}
+```
+
+- **La carte se fabrique au build**, jamais à la main : `node outils/carte/extraire-region.mjs` (extraction OpenStreetMap filtrée,
+  dans `outils/carte/sources/region/`, ignoré par git), puis `py outils/carte/construire-region.py outils/carte/<séance>.json`. Le
+  JSON déclare les lieux (avec l'objet OSM cité), les villes repères, les itinéraires (types de tronçons `route`, `barge`, `rail`,
+  `camion`, points de passage, fourchettes de km), les vues « derniers kilomètres » et l'ordre du CO₂ à tenir : le build s'arrête si
+  un tracé sort de sa fourchette ou si l'ordre ne tient pas. Il est reproductible octet pour octet. Format : `outils/carte/decathlon.json`.
+- **Les distances viennent du module** (`CARTE.itineraires[dest][mode].km` et `.segments[i].km`) : une séance calcule son CO₂ ou
+  ses délais **sur ces valeurs**, jamais sur des nombres recopiés.
+- **Les traits** (variante C, choisie par Tristan le 13/10) : route = trait plein encre ; barge = tirets violets ; rail = trait ambre à
+  traverses ; camion = pointillé encre. Ni vert ni rouge ; seul l'entrepôt d'arrivée est bleu. La carte est un plan papier : mêmes
+  couleurs en thème clair et sombre ; la charte de l'entreprise reste au bandeau.
+- **Repérage** (enseignant) : chaque itinéraire ouvert est compté dans `db.indicateurs[idSéance].carte[mode]`, comme les documents ;
+  rien n'est compté chez l'enseignant ni dans une copie rendue.
+- **Écran** : 1366 × 768 et 1280 × 720 sans défilement de la vue ; la légende est dans la carte ; la colonne fait 300 px.
+- Lot 3 à venir : marques d'aléa (`marques`, écluse de Kain en ENT-7.3) et noms de Dourges au zoom.
 
 ## Vue « Planning » (cartes sur une grille) — `core/types/planning.js`
 

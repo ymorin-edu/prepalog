@@ -25,7 +25,7 @@
 // Ajouter un bloc : créer `outils/test/<nom>.mjs` sur le modèle des autres
 // (`export default async function bloc({ v, page, nav, … })`), puis l'inscrire dans `BLOCS`.
 
-const BLOCS = ['socle', 'spartoo', 'groupes', 'dependances', 'transport', 'boost', 'quiz', 'carte', 'inventaire',
+const BLOCS = ['socle', 'spartoo', 'groupes', 'dependances', 'transport', 'boost', 'quiz', 'carte', 'carte-region', 'inventaire',
   'cdiscount', 'picard', 'tableur-export', 'planning', 'entrepot', 'smoby', 'animation',
   'copie',
   'visibilite',
@@ -61,7 +61,7 @@ const GROUPES = {
   1: ['quiz', 'carte', 'picard', 'demi-groupes', 'temps', 'tirage-niveaux', 'fb-6.1', 'quai-iso', 'fb-6.9'],
   2: ['socle', 'spartoo', 'groupes', 'tableur-export', 'smoby', 'animation', 'visibilite', 'questions', 'fb-6.3', 'fb-6.10'],
   3: ['dependances', 'transport', 'boost', 'inventaire', 'cdiscount', 'planning', 'entrepot', 'copie', 'amenagements', 'fb-6.6', 'fb-6.8'],
-  4: ['fb-6.2', 'fb-6.4', 'fb-6.5', 'fb-6.7'],
+  4: ['fb-6.2', 'fb-6.4', 'fb-6.5', 'fb-6.7', 'carte-region'],
 };
 // Même garde que pour les blocs oubliés : un bloc rangé dans aucun groupe (ou dans deux) ne
 // tournerait pas sur GitHub (ou deux fois), sans que rien ne le dise.

@@ -246,23 +246,37 @@ K_ENS = max((FW + 400) / 860, (FH + 420) / 520)
 def largeur(t, fpx): return len(t) * 0.6 * fpx * K_ENS
 POINTS_LIEUX = [Point(*l['xy']).buffer(13 * K_ENS) for l in LIEUX.values()]
 POINTS_VILLES = [Point(*v['xy']).buffer(4 * K_ENS) for v in VILLES]
-# Les tracés des itinéraires : un nom de ville évite de s'y poser s'il a une autre place (sinon il est recouvert).
-TRACES = [LineString(s['g']).simplify(200).buffer(4 * K_ENS) for d in ITIN.values() for it in d.values() for s in it['segs']]
-def placer(nom, p, fpx, r, obstacles, poses, souples=()):
-    """La place d'un nom autour de son point, essayée dans l'ordre : droite, gauche, dessus, dessous, puis dessus
-    et dessous calés à gauche (près du bord). Un nom ne couvre aucun point, aucun nom déjà posé."""
+# Les tracés des itinéraires, épaissis de la moitié du trait le plus large (les traverses du rail, 8 px) et du halo :
+# un nom ne s'y pose pas (essai de Tristan du 13/10 : « Gand », « Lille », « Courtrai » étaient effacés). Le point
+# d'une ville peut être SOUS un tracé (Gand, sur la voie ferrée) : on ne déplace jamais un point, c'est le nom qui
+# cherche sa place à côté.
+TRACES = [LineString(s['g']).simplify(40).buffer(7 * K_ENS) for d in ITIN.values() for it in d.values() for s in it['segs']]
+def placer(nom, p, fpx, r, obstacles, poses, traces=()):
+    """La place d'un nom autour de son point : huit directions (droite, gauche, dessus, dessous, puis les diagonales),
+    à trois distances. Un nom ne couvre aucun point (sauf le sien), aucun nom déjà posé, aucun tracé ; s'il n'y a
+    vraiment aucune place hors des tracés, il en prend une sur un tracé et le build le dit."""
     w, h = largeur(nom, fpx), fpx * K_ENS
     x, y = p
-    essais = [('start', x + r, y + 0.35 * h, box(x + r, y - 0.65 * h, x + r + w, y + 0.35 * h)),
-              ('end', x - r, y + 0.35 * h, box(x - r - w, y - 0.65 * h, x - r, y + 0.35 * h)),
-              ('middle', x, y - r, box(x - w / 2, y - r - h, x + w / 2, y - r)),
-              ('middle', x, y + r + 0.8 * h, box(x - w / 2, y + r, x + w / 2, y + r + h)),
-              # Près du bord du cadre : dessus ou dessous, mais calé à gauche sur le point.
-              ('start', x - 0.4 * r, y - r, box(x - 0.4 * r, y - r - h, x - 0.4 * r + w, y - r)),
-              ('start', x - 0.4 * r, y + r + 0.8 * h, box(x - 0.4 * r, y + r, x - 0.4 * r + w, y + r + h))]
-    for gene in (list(souples), []):
+    dirs = [(1, 0), (-1, 0), (0, -1), (0, 1), (1, -1), (-1, -1), (1, 1), (-1, 1)]
+    essais = []
+    for rr in (r, r + 5 * K_ENS, r + 11 * K_ENS):
+        for ux, uy in dirs:
+            ax, ay = x + ux * rr * (0.75 if uy else 1), y + uy * rr * (0.75 if ux else 1)
+            x0 = ax if ux > 0 else (ax - w if ux < 0 else ax - w / 2)
+            y0 = ay - 0.65 * h if uy == 0 else (ay - h if uy < 0 else ay)
+            ancre = 'start' if ux > 0 else ('end' if ux < 0 else 'middle')
+            essais.append((ancre, ax if ux else x, y0 + 0.75 * h, box(x0, y0, x0 + w, y0 + h)))
+        # Près du bord du cadre : dessus ou dessous, calé à gauche sur le point.
+        for uy in (-1, 1):
+            y0 = y - rr - h if uy < 0 else y + rr
+            essais.append(('start', x - 0.4 * r, y0 + 0.75 * h, box(x - 0.4 * r, y0, x - 0.4 * r + w, y0 + h)))
+    P = Point(p)
+    for gene in (list(traces), []):
         for ancre, lx, ly, b in essais:
-            if FRAME.contains(b) and not any(b.intersects(o) for o in obstacles + poses + gene if not o.contains(Point(p))):
+            if FRAME.contains(b) and not any(b.intersects(o) for o in obstacles + poses if not o.contains(P)) \
+                    and not any(b.intersects(t) for t in gene):
+                if traces and not gene:
+                    print(f'  ATTENTION : le nom « {nom} » n’a de place que sur un tracé')
                 poses.append(b.buffer(2 * K_ENS))
                 # Le nom est rangé en PIXELS d'écran par rapport à son point (comme le nom d'un marqueur dans
                 # carte.js) : au zoom, il reste collé à son point au lieu de rester à sa place de vue d'ensemble.

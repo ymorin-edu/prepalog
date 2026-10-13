@@ -14,6 +14,7 @@
 import { ech, toast, confirmer, secondClic, memoriserFocus, retrouverFocus, garderFocus } from '../ui.js';
 import { creerPlan } from './plan.js';
 import { creerCarte } from './carte.js';
+import { creerCarteItineraires } from './carte-itineraires.js';
 import { creerTournee } from './tournee.js';
 import { creerInventaire } from './inventaire.js';
 import { creerQuai } from './quai.js';
@@ -156,6 +157,9 @@ export function creerEntreprise(U) {
   // L'enseignant ramasse les copies non rendues et peut en rouvrir une (core/copie.js).
   const COPIE = !!U.copie;
   const VPLAN = U.plan ? (U.plan.carte ? creerCarte(U.plan) : creerPlan(U.plan)) : null;
+  // La CARTE DES ITINÉRAIRES (13/10/2026, brief MOTEUR-carte-regionale) : d'un point A à un point B par plusieurs modes,
+  // sur une carte réelle (`core/types/carte-itineraires.js`). On la consulte, rien n'y est noté ni rangé dans la base.
+  const VITI = U.carteItineraires ? creerCarteItineraires(U.carteItineraires) : null;
   const VTOUR = U.tournee ? creerTournee(Object.assign({ plan: U.plan }, U.tournee, COPIE ? { copie: true } : {})) : null;
   // L'écran « Inventaire » (02/10/2026, chantier E), sur le même principe : il n'existe que si
   // la séance déclare un `inventaire` — format dans `claude/prepalog-inventaire-format.md`.
@@ -1420,7 +1424,8 @@ export function creerEntreprise(U) {
                 ${MQ && MQ.ouverture ? item('ouverture', MQ.ouverture.titre || 'Avant de commencer') : ''}
                 ${item('accueil', 'Accueil')}
                 ${item('mail', 'Messagerie', nonLus)}
-                ${groupe((VPLAN || VTOUR) && !VFICHE && !VQUAI && !VPL && !VENT && !VINV && !VANIMS.length ? U.transportSection || 'Transport' : 'Mon poste', [
+                ${groupe((VPLAN || VTOUR || VITI) && !VFICHE && !VQUAI && !VPL && !VENT && !VINV && !VANIMS.length ? U.transportSection || 'Transport' : 'Mon poste', [
+                  VITI && item('itineraires', VITI.nav.libelle),
                   ...VANIMS.filter((VA) => !VA.menuApres && (!VA.quand || VA.quand(db))).map((VA) => item(vueAnim(VA), VA.nav.libelle)),
                   ...VFICHES.filter((VF) => !VF.quand || VF.quand(db)).map((VF) => item(vueDeFiche(VF), VF.nav.libelle)),
                   // Une animation qui vient APRÈS les fiches dans le déroulé (`menuApres`, ENT-6.10) : listée après elles.
@@ -1636,6 +1641,7 @@ export function creerEntreprise(U) {
         const vues = {
           accueil: vueAccueil, ...MSG.vues, ...COM.vues, ...REC.vues,
           plan: vuePlan, tournee: vueTournee,
+          itineraires: VITI ? () => VITI.html(db) : vueAccueil,
           ...CAT.vues, ...STK.vues, ...BLO.vues,
           inventaire: VINV ? vueInventaire : vueAccueil,
           quai: VQUAI ? vueQuai : vueAccueil,
@@ -2044,6 +2050,14 @@ export function creerEntreprise(U) {
         TIERS.brancher(z);
         CON.brancher(z);
         if (E.vue === 'plan' && VPLAN) VPLAN.brancher(z, apiTransport('plan'));
+        // La carte des itinéraires : chaque itinéraire ouvert est compté pour le repérage de l'enseignant
+        // (`db.indicateurs[séance].carte[mode]`, comme les documents), jamais chez l'enseignant ni dans une copie rendue.
+        if (E.vue === 'itineraires' && VITI) VITI.brancher(z, { db, reperer: (mode) => {
+          if (estProf || rendue()) return;
+          const r = reperageSeance();
+          (r.carte || (r.carte = {}))[mode] = (r.carte[mode] || 0) + 1;
+          ctx.jeu.sauver();      // pas `sauver()` : ouvrir un itinéraire n'est pas un geste (ni déclencheur, ni question)
+        } });
         if (E.vue === 'tournee' && VTOUR) VTOUR.brancher(z, apiTransport('tournee'));
         if (E.vue === 'fichiers' && VTAB) VTAB.brancher(z, apiTableur());
         if (E.vue === 'extractions' && VTAB && VTAB.navExtractions) VTAB.brancherExtractions(z, apiTableur());

@@ -182,22 +182,20 @@ function htmlCadre(C, o = {}) {
     </div>`;
 }
 
-// `ui` : { vue } — l'état d'affichage, gardé par l'appelant pour survivre à un redessin.
-// `o.aide(ui)` : le texte d'aide de la barre ; `o.clicQuartier(ev)` : vrai si un clic sur un
-// quartier doit l'ouvrir (le repérage le refuse quand un client est armé et la carte zoomée).
-function monterScene(z, C, ui, o = {}) {
+// LE SOCLE COMMUN de toute carte vectorielle du moteur (séparé le 13/10/2026, brief MOTEUR-carte-regionale) :
+// la `viewBox` et son zoom animé, l'échelle, les repères du quadrillage, la bulle, le redimensionnement. Il ne sait
+// rien de ce qui est dessiné : la ville (`monterScene`, ci-dessous) et la carte des itinéraires
+// (`carte-itineraires.js`) lui passent leurs crochets.
+//   o.vb(vue)           → la viewBox [x, y, l, h] d'une vue (son nom est gardé par l'appelant dans `ui.vue`) ;
+//   o.zz(vue)           → le degré de zoom de cette vue, de 0 (ensemble) à 1 (zoom), interpolé pendant l'animation ;
+//   o.epaisseurs(k, zz) → règle les traits et les textes, `k` = mètres par pixel d'écran ;
+//   o.grille            → faux : pas de repères de quadrillage en bordure (la carte n'en a pas) ;
+//   o.aide(ui)          → le texte d'aide de la barre.
+export function monterCadre(z, C, ui, o) {
   const $ = (s) => z.querySelector(s);
   const svg = $('[data-ct-svg]'), cadre = $('[data-ct-cadre]');
-  const [FX, FY, FW, FH] = C.frame;
-  const VUE_ENSEMBLE = vueEnsemble(C);
-  const routesCas = {}, routesFil = {};
-  svg.querySelectorAll('[data-cas]').forEach((p) => { routesCas[p.dataset.cas] = p; });
-  svg.querySelectorAll('[data-fil]').forEach((p) => { routesFil[p.dataset.fil] = p; });
-  const qs = {}; svg.querySelectorAll('[data-q]').forEach((p) => { qs[p.dataset.q] = p; });
-  const etiqs = {}; svg.querySelectorAll('[data-etiq]').forEach((g) => { etiqs[g.dataset.etiq] = g; });
-  const masque = svg.querySelector('.ct-masque');
-  const vb = { v: (ui.vue === 'ensemble' ? VUE_ENSEMBLE : C.quartiers[ui.vue].vb).slice(),
-    z: ui.vue === 'ensemble' ? 0 : 1 };
+  const [FX, FY] = C.frame;
+  const vb = { v: o.vb(ui.vue).slice(), z: o.zz(ui.vue) };
 
   function visible(v) {
     const W = cadre.clientWidth || 800, H = cadre.clientHeight || 560;
@@ -207,9 +205,85 @@ function monterScene(z, C, ui, o = {}) {
   }
   // Les traits gardent une épaisseur d'ÉCRAN fixe, quel que soit le zoom : `k` = mètres par pixel.
   function appliquer() {
-    const v = vb.v, zz = vb.z;
-    svg.setAttribute('viewBox', v.join(' '));
-    const vis = visible(v), k = 1 / vis.s;
+    svg.setAttribute('viewBox', vb.v.join(' '));
+    const vis = visible(vb.v), k = 1 / vis.s;
+    o.epaisseurs(k, vb.z);
+    if (o.grille !== false) reperesGrille(vis);
+    echelle(k);
+  }
+  function reperesGrille(v) {
+    const box = $('[data-ct-reperes]'); box.innerHTML = '';
+    const px = (x) => (x - v.x) * v.s, py = (y) => (y - v.y) * v.s;
+    const haut = Math.max(py(FY), 0) + 13, gauche = Math.max(px(FX), 0) + 15;
+    for (let i = 0; i < C.cols.length; i++) {
+      const a = Math.max(FX + i * C.pas, v.x), b = Math.min(FX + (i + 1) * C.pas, v.x + v.w);
+      if (b - a < 30 / v.s) continue;
+      const s = document.createElement('span'); s.textContent = C.cols[i];
+      s.style.left = px((a + b) / 2) + 'px'; s.style.top = (py(FY) > 0 ? py(FY) - 14 : haut) + 'px';
+      box.appendChild(s);
+    }
+    for (let j = 0; j < C.nl; j++) {
+      const a = Math.max(FY + j * C.pas, v.y), b = Math.min(FY + (j + 1) * C.pas, v.y + v.h);
+      if (b - a < 30 / v.s) continue;
+      const s = document.createElement('span'); s.textContent = j + 1;
+      s.style.top = py((a + b) / 2) + 'px'; s.style.left = (px(FX) > 0 ? px(FX) - 16 : gauche) + 'px';
+      box.appendChild(s);
+    }
+  }
+  function echelle(k) {
+    // 5 et 10 km pour une carte de côte (ENT-6.9, ≈ 30 m par pixel) ; 20 et 50 km pour une région (≈ 250 m par
+    // pixel). Une ville n'y arrive jamais : les paliers ajoutés au bout ne changent rien pour elle.
+    const pas = [50, 100, 200, 250, 500, 1000, 2000, 5000, 10000, 20000, 50000].find((p) => p >= 110 * k * 0.6) || 1000;
+    $('[data-ct-ech-barre]').style.width = pas / k + 'px';
+    $('[data-ct-ech-txt]').textContent = pas >= 1000 ? pas / 1000 + ' km' : pas + ' m';
+  }
+
+  let anim = null;
+  function allerA(cible, zCible, fin) {
+    cancelAnimationFrame(anim);
+    const v0 = vb.v.slice(), z0 = vb.z, t0 = performance.now(), T = 520;
+    const pas = (t) => {
+      const u = Math.min(1, (t - t0) / T), e = u < 0.5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2;
+      vb.v = v0.map((x, i) => x + (cible[i] - x) * e);
+      vb.z = z0 + (zCible - z0) * e;
+      appliquer();
+      if (u < 1) anim = requestAnimationFrame(pas); else if (fin) fin();
+    };
+    anim = requestAnimationFrame(pas);
+  }
+  function aide() { const el = $('[data-ct-aide]'); if (el && o.aide) el.textContent = o.aide(ui); }
+
+  let minuteur = null;
+  function bulle(txt) {
+    const b = $('[data-ct-bulle]'); b.textContent = txt; b.classList.add('vue');
+    clearTimeout(minuteur); minuteur = setTimeout(() => b.classList.remove('vue'), 3200);
+  }
+
+  // La carte se recalcule si son cadre change de taille (fenêtre, panneau latéral).
+  if (typeof ResizeObserver !== 'undefined') {
+    const ro = new ResizeObserver(() => { if (svg.isConnected) appliquer(); else ro.disconnect(); });
+    ro.observe(cadre);
+  }
+  return { svg, cadre, vb, visible, appliquer, allerA, aide, bulle };
+}
+
+// La scène d'une VILLE (repérage, tournée), posée sur le socle commun : couches de rues, quartiers cliquables, noms
+// de rues. `ui` : { vue } — l'état d'affichage, gardé par l'appelant pour survivre à un redessin.
+// `o.aide(ui)` : le texte d'aide de la barre ; `o.clicQuartier(ev)` : vrai si un clic sur un
+// quartier doit l'ouvrir (le repérage le refuse quand un client est armé et la carte zoomée).
+function monterScene(z, C, ui, o = {}) {
+  const $ = (s) => z.querySelector(s);
+  const svg = $('[data-ct-svg]');
+  const [FX, FY, FW, FH] = C.frame;
+  const VUE_ENSEMBLE = vueEnsemble(C);
+  const routesCas = {}, routesFil = {};
+  svg.querySelectorAll('[data-cas]').forEach((p) => { routesCas[p.dataset.cas] = p; });
+  svg.querySelectorAll('[data-fil]').forEach((p) => { routesFil[p.dataset.fil] = p; });
+  const qs = {}; svg.querySelectorAll('[data-q]').forEach((p) => { qs[p.dataset.q] = p; });
+  const etiqs = {}; svg.querySelectorAll('[data-etiq]').forEach((g) => { etiqs[g.dataset.etiq] = g; });
+  const masque = svg.querySelector('.ct-masque');
+
+  function epaisseurs(k, zz) {
     for (const c of ORDRE) {
       const [a, b] = LARG[c];
       routesFil[c].style.strokeWidth = (c === 'pie' ? (a + (b - a) * zz) : b * zz) * k;
@@ -235,49 +309,13 @@ function monterScene(z, C, ui, o = {}) {
     svg.querySelectorAll('.ct-mk').forEach((g) => {
       g.setAttribute('transform', `translate(${g.dataset.x} ${g.dataset.y}) scale(${k})`);
     });
-    reperesGrille(vis);
-    echelle(k);
   }
-  function reperesGrille(v) {
-    const box = $('[data-ct-reperes]'); box.innerHTML = '';
-    const px = (x) => (x - v.x) * v.s, py = (y) => (y - v.y) * v.s;
-    const haut = Math.max(py(FY), 0) + 13, gauche = Math.max(px(FX), 0) + 15;
-    for (let i = 0; i < C.cols.length; i++) {
-      const a = Math.max(FX + i * C.pas, v.x), b = Math.min(FX + (i + 1) * C.pas, v.x + v.w);
-      if (b - a < 30 / v.s) continue;
-      const s = document.createElement('span'); s.textContent = C.cols[i];
-      s.style.left = px((a + b) / 2) + 'px'; s.style.top = (py(FY) > 0 ? py(FY) - 14 : haut) + 'px';
-      box.appendChild(s);
-    }
-    for (let j = 0; j < C.nl; j++) {
-      const a = Math.max(FY + j * C.pas, v.y), b = Math.min(FY + (j + 1) * C.pas, v.y + v.h);
-      if (b - a < 30 / v.s) continue;
-      const s = document.createElement('span'); s.textContent = j + 1;
-      s.style.top = py((a + b) / 2) + 'px'; s.style.left = (px(FX) > 0 ? px(FX) - 16 : gauche) + 'px';
-      box.appendChild(s);
-    }
-  }
-  function echelle(k) {
-    // 5 et 10 km pour une carte de côte (ENT-6.9, ≈ 30 m par pixel) ; une ville n'y arrive jamais.
-    const pas = [50, 100, 200, 250, 500, 1000, 2000, 5000, 10000].find((p) => p >= 110 * k * 0.6) || 1000;
-    $('[data-ct-ech-barre]').style.width = pas / k + 'px';
-    $('[data-ct-ech-txt]').textContent = pas >= 1000 ? pas / 1000 + ' km' : pas + ' m';
-  }
+  const S = monterCadre(z, C, ui, {
+    vb: (k) => (k === 'ensemble' ? VUE_ENSEMBLE : C.quartiers[k].vb),
+    zz: (k) => (k === 'ensemble' ? 0 : 1),
+    epaisseurs, aide: o.aide,
+  });
 
-  let anim = null;
-  function allerA(cible, zCible, fin) {
-    cancelAnimationFrame(anim);
-    const v0 = vb.v.slice(), z0 = vb.z, t0 = performance.now(), T = 520;
-    const pas = (t) => {
-      const u = Math.min(1, (t - t0) / T), e = u < 0.5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2;
-      vb.v = v0.map((x, i) => x + (cible[i] - x) * e);
-      vb.z = z0 + (zCible - z0) * e;
-      appliquer();
-      if (u < 1) anim = requestAnimationFrame(pas); else if (fin) fin();
-    };
-    anim = requestAnimationFrame(pas);
-  }
-  function aide() { const el = $('[data-ct-aide]'); if (el && o.aide) el.textContent = o.aide(ui); }
   function marquerVue() {
     const k = ui.vue;
     svg.classList.toggle('ct-zoom', k !== 'ensemble');
@@ -288,10 +326,10 @@ function monterScene(z, C, ui, o = {}) {
     z.querySelector('[data-ct-ensemble]').classList.toggle('btn-p', k === 'ensemble');
     z.querySelectorAll('[data-ct-zoom]').forEach((b) => b.classList.toggle('btn-p', b.dataset.ctZoom === k));
     if (k !== 'ensemble') ajusterEtiquettes(k);
-    aide();
+    S.aide();
   }
-  function zoomer(k) { ui.vue = k; marquerVue(); allerA(C.quartiers[k].vb, 1); }
-  function ensemble() { ui.vue = 'ensemble'; marquerVue(); allerA(VUE_ENSEMBLE, 0); }
+  function zoomer(k) { ui.vue = k; marquerVue(); S.allerA(C.quartiers[k].vb, 1); }
+  function ensemble() { ui.vue = 'ensemble'; marquerVue(); S.allerA(VUE_ENSEMBLE, 0); }
 
   // Garde-fou : un nom plus long que son chemin serait coupé AUX DEUX BOUTS par le navigateur
   // (le « ous » de Rousselier, 02/10). La place a été calculée avec des largeurs mesurées,
@@ -308,12 +346,6 @@ function monterScene(z, C, ui, o = {}) {
     }
   }
 
-  let minuteur = null;
-  function bulle(txt) {
-    const b = $('[data-ct-bulle]'); b.textContent = txt; b.classList.add('vue');
-    clearTimeout(minuteur); minuteur = setTimeout(() => b.classList.remove('vue'), 3200);
-  }
-
   $('[data-ct-ensemble]').addEventListener('click', ensemble);
   z.querySelectorAll('[data-ct-zoom]').forEach((b) => b.addEventListener('click', () => zoomer(b.dataset.ctZoom)));
   for (const k in qs) {
@@ -324,13 +356,8 @@ function monterScene(z, C, ui, o = {}) {
       if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); zoomer(k); }
     });
   }
-  // La carte se recalcule si son cadre change de taille (fenêtre, panneau latéral).
-  if (typeof ResizeObserver !== 'undefined') {
-    const ro = new ResizeObserver(() => { if (svg.isConnected) appliquer(); else ro.disconnect(); });
-    ro.observe(cadre);
-  }
-  marquerVue(); appliquer();
-  return { svg, cadre, vb, visible, appliquer, zoomer, ensemble, bulle, aide };
+  marquerVue(); S.appliquer();
+  return { svg, cadre: S.cadre, vb: S.vb, visible: S.visible, appliquer: S.appliquer, zoomer, ensemble, bulle: S.bulle, aide: S.aide };
 }
 
 /* ----------------------------------------------------------------------- la vue repérage */

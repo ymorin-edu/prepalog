@@ -6,7 +6,7 @@
 > Lis CLAUDE.md, docs/EN-COURS.md, docs/audit-architecture.md (partie carte) puis docs/briefs/MOTEUR-carte-regionale.md. Fais d'abord l'état des lieux du §6 en lecture seule (carte.js, geo.py, construire-cote.py, itineraires.py, extraire-cote.mjs) et dis-moi ce que tu réutilises et ce qui est neuf. Annonce la durée avant de commencer. Lot par lot, et montre-moi une capture de la carte (lot 1) avant d'écrire la vue cliquable (lot 2).
 > ```
 
-**Statut** : lot 1 livré (13/10/2026) ; lots 2 et 3 à faire
+**Statut** : lots 1 et 2 livrés (13/10/2026) ; lot 3 à faire
 **Date du brief** : 13/10/2026
 **Conversation d'origine** : Cowork (Opus). Décision de Tristan du 13/10/2026 : **carte cliquable** pour ENT-7.1 (brief 7.1 §11 n° 1),
 plutôt qu'un dessin fixe. Maquette : `G:\Mon Drive\Travail\Logistique\1L\Claude outputs\maquette-decathlon-7x.html` (écran « Carte
@@ -205,3 +205,30 @@ dire à Tristan**) :
   Tristan). Tracés à rendre plus distincts « en jouant sur les formes et/ou la couleur » : trois variantes dans la page d'essai
   (A formes renforcées, B formes + couleurs, C couleurs et traits simples), choix de Tristan attendu.
 - **Reste ouvert** : confirmer LDCT et Rouvignies ; au zoom de Dourges, les noms du terminal et de l'entrepôt se chevauchent (lot 3).
+
+### Lot 2 — la vue cliquable (13/10/2026)
+
+- **Choix de Tristan** : derniers kilomètres par un **bouton qui zoome** ; tracés **variante C** (route trait plein encre, barge tirets
+  violets, rail trait ambre à traverses, camion pointillé encre) ; **pas de quadrillage** (aucune séance Decathlon ne lit une case ;
+  option `quadrillage: true` pour une séance future) ; noms de villes à déplacer hors des tracés (fait au build : huit directions,
+  trois distances, les tracés évités avec la largeur des traverses ; les points ne bougent pas).
+- **Fichiers** : `core/types/carte.js` (le socle commun `monterCadre` — viewBox et zoom animé, échelle, repères, bulle,
+  redimensionnement — séparé du dessin de la ville ; échelle prolongée à 20 et 50 km ; **Boost et la côte inchangés**, blocs `boost`,
+  `carte`, `fb-6.9` 172/172) ; `core/types/carte-itineraires.js` (nouveau) ; `core/types/entreprise.js` (vue `itineraires`, menu,
+  repérage) ; `core/types/entreprise-options.js` (option `carteItineraires`) ; `styles/carte.css` (section « la carte des
+  itinéraires ») ; `activites/FICHE-SEANCE.md` (ligne d'option et section de la vue) ; `outils/carte/construire-region.py` (placement
+  des noms) ; `outils/test/carte-region.mjs` (nouveau) ; **`outils/test.mjs` touché** : `carte-region` ajouté à `BLOCS` et au groupe 4.
+- **Décisions prises en route** : la légende est **dans la carte** (coin haut gauche), pas sous la fiche : à 1280 × 720 la colonne ne
+  tenait pas ; les échantillons de trait sont posés sur une pastille papier (l'encre de la route disparaissait sur un panneau sombre) ;
+  les tracés se cliquent à la souris (zone élargie à 18 px, invisible) mais ne sont pas des arrêts de tabulation : le clavier passe par
+  la liste de boutons, une seule fois ; ouvrir un itinéraire est compté (`db.indicateurs[séance].carte[mode]`) sans déclencher de geste
+  (ni déclencheur, ni question au fil) ; le choisi grossit de 1,4 et passe au-dessus des autres, avec un halo à l'encre pâle.
+- **Tests** : bloc `carte-region` 14/14 (ouverture, distances écrites à la main, ordre du CO₂, forme et couleurs, clic sur chaque tracé,
+  clavier, repérage, derniers kilomètres, quadrillage absent / présent, Dourges, 1366 × 768 et 1280 × 720). Sabotages faits : route
+  verte → le cas « aucun vert » tombe ; camion dessiné comme la barge → le cas de forme tombe ; facteur barge à 0,05 → le build
+  s'arrête (« ORDRE DU CO₂ NON TENU ») sans écrire de fichier. Le build lui-même n'est pas rejoué par la suite (il lui faut Python et
+  les extractions OSM).
+- **Mesure de l'écran** : la VUE tient à 1366 × 768 et 1280 × 720 ; la page, elle, défile dans le décor d'essai Boost à cause de son
+  long menu de gauche (le menu d'une séance Decathlon sera plus court : à revérifier sur la séance).
+- **Reste ouvert (lot 3)** : marques d'aléa (écluse de Kain), noms du terminal et de l'entrepôt de Dourges au zoom ; le Suivi de classe
+  n'affiche pas encore les itinéraires ouverts (ils sont rangés, comme demandé) ; confirmer LDCT et l'entrepôt de Rouvignies.

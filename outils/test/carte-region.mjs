@@ -1,0 +1,307 @@
+// Suite de tests de Prepalog — bloc « carte-region » : la carte des itinéraires (core/types/carte-itineraires.js), d'un
+// point A à un point B par plusieurs modes, sur la carte réelle d'Anvers à Rouvignies et Dourges (contenus/decathlon-carte.js).
+// Brief docs/briefs/MOTEUR-carte-regionale.md, lot 2 (13/10/2026). `node outils/test.mjs carte-region` ne lance que ce bloc.
+//
+// Montée dans le vrai moteur d'entreprise, décor Boost (la séance Decathlon n'existe pas encore), comme le bloc `carte`.
+//
+// Valeurs ÉCRITES À LA MAIN, relevées au build du 13/10/2026 (`outils/carte/construire-region.py`, km sur la sphère) :
+//   vers Rouvignies : route 168 ; barge 194 + camion 13 = 207 ; rail 162 + camion 45 = 207 ;
+//   vers Dourges    : route 153 ; barge 263 + camion 3 = 266 ; rail 162 + camion 3 = 165.
+// Facteurs du CO₂ (brief 7.1 §6.2, kg CO₂ par tonne-km) : camion 0,051 · barge 0,020 · rail 0,0165.
+// Ordre voulu : vers Rouvignies barge < rail < route ; vers Dourges rail < barge < route (13,5 et 15,8 t).
+//
+// Ce que la suite NE refait pas : le build (il lui faut Python, shapely et les extractions OSM, absents de GitHub). Sa
+// reproductibilité et l'identité des cartes de Nîmes et de la côte se contrôlent en relançant les scripts (compte rendu
+// du brief) ; ici, on garde la vue et les chiffres qu'elle affiche.
+
+export default async function bloc({ v, nav, BASE, egal, vrai }) {
+
+const ctxCi = await nav.newContext({ viewport: { width: 1366, height: 768 } });
+const pg = await ctxCi.newPage();
+pg.setDefaultTimeout(8000);
+const erreurs = [];
+const hotes = new Set();
+pg.on('pageerror', (e) => erreurs.push('PAGEERROR: ' + e.message));
+pg.on('console', (m) => { if (m.type() === 'error' && !/\b404\b/.test(m.text())) erreurs.push('CONSOLE: ' + m.text()); });
+pg.on('request', (r) => { try { const h = new URL(r.url()).hostname; if (h && !['127.0.0.1', 'localhost'].includes(h)) hotes.add(h); } catch (e) {} });
+await pg.goto(BASE);
+await pg.waitForSelector('#btnProf', { timeout: 8000 });
+
+const SEANCE = 'essai-itin';
+// `o` : { destination, quadrillage, role, couleurRoute (sabotage : colorer la route) }.
+const monter = (o = {}) => pg.evaluate(async (o) => {
+  document.getElementById('ci-hote')?.remove();
+  const { creerEntreprise } = await import('/core/types/entreprise.js');
+  const B = await import('/contenus/boost.js');
+  const { CARTE } = await import('/contenus/decathlon-carte.js');
+  const moteur = creerEntreprise({
+    ENTREPRISE: B.ENTREPRISE, VOCAB: B.VOCAB, CATALOGUE: B.CATALOGUE, SUPPLIERS: B.SUPPLIERS,
+    SUP_BY_ID: B.SUP_BY_ID, CUSTOMERS: B.CUSTOMERS, CM: B.CM, baseDeDepart: B.baseDeDepart, THEME: B.THEME,
+    etapes: [], exercice: 'Essai',
+    carteItineraires: {
+      carte: CARTE, destination: o.destination || 'rouvignies', titre: 'Trois façons de venir d’Anvers',
+      alt: `Carte d'Anvers à ${o.destination === 'dourges' ? 'Dourges' : 'Rouvignies'} : trois itinéraires, route, barge et rail`,
+      offres: (mode) => ({ route: ['Transports Nord Express', 'Delmotte'], barge: ['Contargo'], rail: ['Rail Fret Benelux'] })[mode],
+      quadrillage: !!o.quadrillage,
+    },
+  });
+  const hote = document.createElement('div'); hote.id = 'ci-hote'; document.body.prepend(hote);
+  const db = {};
+  moteur.rendre(hote, {
+    meta: { id: 'essai-itin', code: 'ESSAI', titre: 'Carte — essai', portee: 'eleve', immersif: true },
+    profil: { prenom: 'Lea', nom: 'Dupont', role: o.role || 'eleve' },
+    jeu: { etat: () => db, sauver: () => {} }, enregistrer: () => {}, quitter: () => {}, codeStock: '',
+  });
+  window.__ci = { db, CARTE };
+  hote.querySelector('.ent-nav[data-vue="itineraires"]').click();
+}, o);
+// Immobile = la viewBox ne bouge plus pendant 5 images (le zoom est animé).
+const immobile = () => pg.evaluate(() => new Promise((ok) => {
+  let y = null, n = 0;
+  const f = () => {
+    const s = document.querySelector('[data-ct-svg]');
+    const cle = window.scrollY + '|' + (s ? s.getAttribute('viewBox') : '');
+    if (cle === y) n++; else { n = 0; y = cle; }
+    if (n >= 5) ok(); else requestAnimationFrame(f);
+  };
+  requestAnimationFrame(f);
+}));
+const presse = () => pg.$$eval('[data-ci-mode]', (bs) => bs.filter((b) => b.getAttribute('aria-pressed') === 'true').map((b) => b.dataset.ciMode));
+// Un clic de SOURIS sur le tracé d'un mode : un point de sa zone de clic qui est, à l'écran, bien sous ce tracé-là
+// (elementFromPoint), cherché le long du tronçon le plus long ; puis la souris va à ce pixel.
+const cliquerTrace = async (mode) => {
+  await immobile();
+  const pt = await pg.evaluate((mode) => {
+    const chemins = [...document.querySelectorAll(`[data-ci-clic="${mode}"]`)].sort((a, b) => b.getTotalLength() - a.getTotalLength());
+    for (const p of chemins) {
+      const svg = p.ownerSVGElement, L = p.getTotalLength();
+      for (let f = 0.5; f > 0.05; f -= 0.05) {
+        for (const g of [f, 1 - f]) {
+          const q = p.getPointAtLength(L * g), s = svg.createSVGPoint(); s.x = q.x; s.y = q.y;
+          const e = s.matrixTransform(svg.getScreenCTM());
+          const el = document.elementFromPoint(e.x, e.y);
+          if (el && el.dataset && el.dataset.ciClic === mode && e.y > 0 && e.y < innerHeight) return { x: e.x, y: e.y };
+        }
+      }
+    }
+    return null;
+  }, mode);
+  vrai(pt, `aucun point du tracé « ${mode} » n'est cliquable à l'écran`);
+  await pg.mouse.click(pt.x, pt.y);
+};
+
+await v('Carte des itinéraires : la vue s’ouvre au menu, sans erreur ni requête hors du site ; mention OpenStreetMap ; texte alternatif sans chiffre', async () => {
+  await monter();
+  await pg.waitForSelector('[data-ct-svg]');
+  await immobile();
+  vrai(await pg.isVisible('.ent-nav[data-vue="itineraires"]'), 'entrée de menu « Carte des itinéraires » absente');
+  vrai((await pg.textContent('.ct-attrib')).includes('© contributeurs OpenStreetMap'), 'mention OSM absente');
+  const alt = await pg.getAttribute('[data-ct-svg]', 'aria-label');
+  egal(alt, "Carte d'Anvers à Rouvignies : trois itinéraires, route, barge et rail", 'texte alternatif');
+  vrai(!/\d/.test(alt), 'le texte alternatif contient un chiffre');
+  vrai((await pg.textContent('.ci-panneau h3')).includes("Trois façons d'aller à Rouvignies"), 'titre de la liste');
+  egal(await pg.$$eval('[data-ci-mode]', (bs) => bs.map((b) => b.dataset.ciMode)), ['route', 'barge', 'rail'], 'les trois itinéraires de la liste');
+  egal(erreurs, [], 'erreurs de page');
+  egal([...hotes], [], 'requêtes hors du site');
+});
+
+await v('Carte des itinéraires : distances écrites à la main (vers Rouvignies et vers Dourges), affichées dans la liste et la fiche', async () => {
+  const km = await pg.evaluate(() => Object.fromEntries(Object.entries(window.__ci.CARTE.itineraires).map(([d, I]) =>
+    [d, Object.fromEntries(Object.entries(I).map(([m, it]) => [m, [it.km, it.segments.map((s) => `${s.type} ${s.km}`).join(' + ')]]))])));
+  egal(km, {
+    rouvignies: { route: [168, 'route 168'], barge: [207, 'barge 194 + camion 13'], rail: [207, 'rail 162 + camion 45'] },
+    dourges: { route: [153, 'route 153'], barge: [266, 'barge 263 + camion 3'], rail: [165, 'rail 162 + camion 3'] },
+  }, 'distances du module');
+  egal(await pg.$$eval('[data-ci-mode] .ci-km', (s) => s.map((x) => x.textContent)), ['168 km', '207 km', '207 km'], 'distances de la liste');
+  await pg.click('[data-ci-mode="barge"]');
+  const f = await pg.textContent('[data-ci-fiche]');
+  vrai(f.includes('barge 194 km + camion 13 km'), 'distance par tronçon absente de la fiche : ' + f);
+  vrai(f.includes('Terminal fluvial de Bruay-sur-l\'Escaut'), 'terminal absent de la fiche');
+  vrai(/Ruptures de charge\s*1/.test(f), 'une rupture de charge pour la barge');
+  vrai(f.includes('Contargo') && f.includes('Les prix, dates et CO₂ sont dans les devis.'), 'offres reçues pour ce mode');
+  await pg.click('[data-ci-mode="route"]');
+  vrai(/Ruptures de charge\s*aucune/.test(await pg.textContent('[data-ci-fiche]')), 'la route : aucune rupture de charge');
+  vrai(/porte à porte/.test(await pg.textContent('[data-ci-fiche]')), 'la route : porte à porte');
+  await pg.click('[data-ci-mode="route"]');
+});
+
+await v('Carte des itinéraires : l’ordre du CO₂ du brief 7.1 tient avec les distances réelles, à 13,5 t et 15,8 t, vers les deux destinations', async () => {
+  const F = { route: 0.051, camion: 0.051, barge: 0.020, rail: 0.0165 };
+  const segs = await pg.evaluate(() => Object.fromEntries(Object.entries(window.__ci.CARTE.itineraires).map(([d, I]) =>
+    [d, Object.fromEntries(Object.entries(I).map(([m, it]) => [m, it.segments.map((s) => [s.type, s.km])]))])));
+  const co2 = (L, t) => Math.round(L.reduce((a, [ty, km]) => a + t * km * F[ty], 0));
+  for (const t of [13.5, 15.8]) {
+    const r = segs.rouvignies, d = segs.dourges;
+    vrai(co2(r.barge, t) < co2(r.rail, t) && co2(r.rail, t) < co2(r.route, t), `vers Rouvignies à ${t} t : ${co2(r.barge, t)} / ${co2(r.rail, t)} / ${co2(r.route, t)}`);
+    vrai(co2(d.rail, t) < co2(d.barge, t) && co2(d.barge, t) < co2(d.route, t), `vers Dourges à ${t} t : ${co2(d.rail, t)} / ${co2(d.barge, t)} / ${co2(d.route, t)}`);
+  }
+  egal([co2(segs.rouvignies.barge, 13.5), co2(segs.rouvignies.rail, 13.5), co2(segs.rouvignies.route, 13.5)], [61, 67, 116], 'CO₂ vers Rouvignies à 13,5 t');
+});
+
+// La forme : chaque type de tronçon a sa signature (épaisseur, pointillés, couches) ; un seul est plein et sans pointillés.
+const signatures = () => pg.evaluate(() => {
+  const out = {};
+  for (const t of ['route', 'barge', 'rail', 'camion']) {
+    const g = document.querySelector(`[data-ct-svg] [data-type="${t}"]`);
+    if (!g) continue;
+    out[t] = [...g.querySelectorAll('.ci-couche')].map((p) => {
+      const cs = getComputedStyle(p);
+      return `${cs.stroke}|${cs.strokeDasharray === 'none' ? 'plein' : 'pointillé'}|${(parseFloat(cs.strokeWidth) / parseFloat(getComputedStyle(g.querySelector('.ci-couche')).strokeWidth)).toFixed(2)}|${p.style.strokeLinecap}`;
+    }).join(' / ') + ' # ' + [...g.querySelectorAll('.ci-couche')].map((p) => getComputedStyle(p).strokeDasharray.split(/[ ,]+/).map((x) => Math.round(parseFloat(x) * 10)).join('-')).join('/');
+  }
+  return out;
+});
+const estVert = (c) => { const m = String(c).match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?/); if (!m || m[4] === '0') return false;
+  const [r, g, b] = [+m[1], +m[2], +m[3]]; return g > r + 30 && g > b + 15; };
+const estBleu = (c) => { const m = String(c).match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?/); if (!m || m[4] === '0') return false;
+  const [r, g, b] = [+m[1], +m[2], +m[3]]; return b > r + 60 && b > g + 30; };
+
+await v('Carte des itinéraires : les quatre traits se distinguent par la forme (un seul plein, des pointillés tous différents) ; aucun vert ; seul l’entrepôt d’arrivée est bleu', async () => {
+  await monter();
+  await pg.waitForSelector('[data-ct-svg]'); await immobile();
+  const S = await signatures();
+  egal(Object.keys(S).sort(), ['barge', 'camion', 'rail', 'route'], 'les quatre types sont dessinés');
+  egal(new Set(Object.values(S)).size, 4, 'deux types de tronçon ont le même trait : ' + JSON.stringify(S));
+  const pleins = Object.entries(S).filter(([, s]) => !s.includes('pointillé')).map(([t]) => t);
+  egal(pleins, ['route'], 'un seul trait plein, la route');
+  const dashs = Object.values(S).map((s) => s.split(' # ')[1]);
+  egal(new Set(dashs).size, 4, 'deux types ont les mêmes pointillés');
+  const couleurs = await pg.evaluate(() => [...document.querySelectorAll('[data-ct-svg] *')].map((e) => {
+    const cs = getComputedStyle(e);
+    return { cl: e.getAttribute('class') || e.tagName, fill: cs.fill, stroke: cs.stroke };
+  }));
+  const verts = couleurs.filter((c) => estVert(c.fill) || estVert(c.stroke));
+  egal(verts.map((c) => c.cl), [], 'éléments verts sur la carte');
+  const bleus = couleurs.filter((c) => estBleu(c.fill) || estBleu(c.stroke)).map((c) => c.cl);
+  egal(bleus, ['ci-rond'], 'éléments bleus (seul le rond de l’entrepôt d’arrivée)');
+  vrai(await pg.$eval('[data-ct-svg] .ci-entrepot', (g) => g.dataset.ciLieu === 'rouvignies'), 'le rond bleu est celui de Rouvignies');
+});
+
+await v('Carte des itinéraires (sabotage) : une route colorée en vert fait tomber le contrôle « aucun vert » ; deux traits identiques font tomber le contrôle de forme', async () => {
+  await pg.evaluate(() => document.querySelectorAll('[data-ct-svg] [data-type="route"] .ci-couche').forEach((p) => p.setAttribute('stroke', '#0b7a41')));
+  const verts = (await pg.evaluate(() => [...document.querySelectorAll('[data-ct-svg] *')].map((e) => getComputedStyle(e).stroke))).filter(estVert);
+  vrai(verts.length > 0, 'le sabotage « route verte » ne serait pas vu');
+  await monter(); await pg.waitForSelector('[data-ct-svg]'); await immobile();
+  await pg.evaluate(() => {
+    const barge = document.querySelector('[data-ct-svg] [data-type="barge"] .ci-couche');
+    document.querySelectorAll('[data-ct-svg] [data-type="camion"]').forEach((g) => {
+      g.querySelectorAll('.ci-couche').forEach((p) => { p.setAttribute('stroke', barge.getAttribute('stroke')); p.style.strokeLinecap = barge.style.strokeLinecap; });
+    });
+    // L'épaisseur et les pointillés sont reposés à chaque redessin de la scène : on les fige après coup.
+    const b = getComputedStyle(barge);
+    document.querySelectorAll('[data-ct-svg] [data-type="camion"] .ci-couche').forEach((p) => {
+      p.style.setProperty('stroke-width', b.strokeWidth, 'important'); p.style.setProperty('stroke-dasharray', b.strokeDasharray, 'important');
+    });
+  });
+  const S = await signatures();
+  vrai(new Set(Object.values(S)).size < 4, 'le sabotage « camion = barge » ne serait pas vu');
+  await monter();
+});
+
+await v('Carte des itinéraires : clic sur chaque tracé → sa fiche, les deux autres estompés ; second clic → plus rien de choisi', async () => {
+  await pg.waitForSelector('[data-ct-svg]'); await immobile();
+  const largeur = (m) => pg.$eval(`[data-ci-it="${m}"] .ci-couche`, (p) => parseFloat(getComputedStyle(p).strokeWidth));
+  for (const m of ['route', 'barge', 'rail']) {
+    const w0 = await largeur(m);
+    await cliquerTrace(m);
+    egal(await presse(), [m], `après un clic sur le tracé ${m}`);
+    const nom = { route: 'Route', barge: 'Barge + camion', rail: 'Rail + camion' }[m];
+    vrai((await pg.textContent('[data-ci-fiche] h4')).startsWith(nom), `fiche du mode ${m}`);
+    egal(await pg.$$eval('[data-ci-it]', (gs) => gs.map((g) => `${g.dataset.ciIt}:${g.classList.contains('ci-choisi') ? 'choisi' : g.classList.contains('ci-estompe') ? 'estompé' : '-'}`).sort()),
+      ['barge', 'rail', 'route'].map((x) => `${x}:${x === m ? 'choisi' : 'estompé'}`), 'choisi et estompés');
+    // Le choisi s'épaissit d'un facteur 1,4 (même zoom : la vue d'ensemble ne bouge pas).
+    const r = (await largeur(m)) / w0;
+    vrai(Math.abs(r - 1.4) < 0.02, `le tracé ${m} choisi n'a pas grossi de 1,4 (${r.toFixed(2)})`);
+  }
+  await cliquerTrace('rail');
+  egal(await presse(), [], 'second clic sur le même tracé : plus rien de choisi');
+  vrai((await pg.textContent('[data-ci-fiche]')).includes('Cliquez un itinéraire'), 'la fiche revient à la consigne');
+  egal(await pg.$$eval('.ci-estompe, .ci-choisi', (x) => x.length), 0, 'plus rien d’estompé');
+});
+
+await v('Carte des itinéraires : au clavier, Tab parcourt les trois itinéraires, Entrée et Espace choisissent, le focus reste sur le bouton', async () => {
+  await pg.focus('[data-ci-mode="route"]');
+  await pg.keyboard.press('Tab');
+  egal(await pg.evaluate(() => document.activeElement.dataset.ciMode), 'barge', 'Tab mène à la barge');
+  await pg.keyboard.press('Enter');
+  egal(await presse(), ['barge'], 'Entrée choisit la barge');
+  egal(await pg.evaluate(() => document.activeElement.dataset.ciMode), 'barge', 'le focus reste sur le bouton (Entrée)');
+  await pg.keyboard.press('Tab');
+  await pg.keyboard.press('Space');
+  egal(await presse(), ['rail'], 'Espace choisit le rail');
+  egal(await pg.evaluate(() => document.activeElement.dataset.ciMode), 'rail', 'le focus reste sur le bouton (Espace)');
+  await pg.keyboard.press('Space');
+  egal(await presse(), [], 'Espace une seconde fois : plus rien de choisi');
+});
+
+await v('Carte des itinéraires : le repérage compte les itinéraires ouverts (pas les fermetures), et rien d’autre ne va dans la base', async () => {
+  await monter(); await pg.waitForSelector('[data-ct-svg]');
+  await pg.click('[data-ci-mode="route"]'); await pg.click('[data-ci-mode="barge"]');
+  await pg.click('[data-ci-mode="barge"]'); await pg.click('[data-ci-mode="route"]');
+  const db = await pg.evaluate(() => JSON.parse(JSON.stringify(window.__ci.db)));
+  egal(db.indicateurs && db.indicateurs['essai-itin'] && db.indicateurs['essai-itin'].carte, { route: 2, barge: 1 }, 'ouvertures comptées');
+  vrai(!JSON.stringify(db).includes('choisi') && !('itineraires' in db), 'un état d’affichage est rangé dans la base');
+  await monter({ role: 'prof' }); await pg.waitForSelector('[data-ct-svg]');
+  await pg.click('[data-ci-mode="rail"]');
+  const dbP = await pg.evaluate(() => JSON.parse(JSON.stringify(window.__ci.db)));
+  vrai(!(dbP.indicateurs && dbP.indicateurs['essai-itin'] && dbP.indicateurs['essai-itin'].carte), 'chez l’enseignant, rien n’est compté');
+});
+
+await v('Carte des itinéraires : « Voir les derniers kilomètres » zoome sur le terminal et l’entrepôt ; « Vue d’ensemble » revient ; pas de quadrillage sans l’option', async () => {
+  await monter(); await pg.waitForSelector('[data-ct-svg]'); await immobile();
+  const ens = await pg.getAttribute('[data-ct-svg]', 'viewBox');
+  await pg.click('[data-ci-derniers]'); await immobile();
+  const vue = await pg.evaluate(() => window.__ci.CARTE.vues.rouvignies.join(' '));
+  egal((await pg.getAttribute('[data-ct-svg]', 'viewBox')).split(' ').map((x) => Math.round(+x)).join(' '), vue, 'viewBox des derniers kilomètres');
+  vrai((await pg.textContent('[data-ct-ech-txt]')).trim() !== '', 'échelle affichée');
+  await pg.click('[data-ci-ensemble]'); await immobile();
+  egal(await pg.getAttribute('[data-ct-svg]', 'viewBox'), ens, 'retour à la vue d’ensemble');
+  egal(await pg.$$eval('.ci-grille', (x) => x.length), 0, 'quadrillage dessiné sans l’option');
+  egal(await pg.$$eval('[data-ct-reperes] span', (x) => x.length), 0, 'repères du quadrillage sans l’option');
+  await monter({ quadrillage: true }); await pg.waitForSelector('[data-ct-svg]'); await immobile();
+  egal(await pg.$$eval('.ci-grille', (x) => x.length), 1, 'quadrillage avec l’option');
+  vrai(await pg.$$eval('[data-ct-reperes] span', (x) => x.length) > 10, 'repères avec l’option');
+});
+
+await v('Carte des itinéraires : vers Dourges, sa liste et son entrepôt d’arrivée (bleu) ; une destination inconnue empêche la séance de se charger', async () => {
+  await monter({ destination: 'dourges' }); await pg.waitForSelector('[data-ct-svg]'); await immobile();
+  egal(await pg.$$eval('[data-ci-mode] .ci-km', (s) => s.map((x) => x.textContent)), ['153 km', '266 km', '165 km'], 'distances vers Dourges');
+  vrai(await pg.$eval('[data-ct-svg] .ci-entrepot', (g) => g.dataset.ciLieu === 'delta3'), 'l’entrepôt bleu est celui de Dourges');
+  egal(await pg.$$eval('[data-ct-svg] [data-ci-lieu="rouvignies"]', (x) => x.length), 0, 'Rouvignies n’est pas sur la carte de Dourges');
+  const msg = await pg.evaluate(async () => {
+    const { creerCarteItineraires } = await import('/core/types/carte-itineraires.js');
+    const { CARTE } = await import('/contenus/decathlon-carte.js');
+    try { creerCarteItineraires({ carte: CARTE, destination: 'lille' }); return ''; } catch (e) { return e.message; }
+  });
+  vrai(msg.includes('destination inconnue « lille »'), 'message : ' + msg);
+});
+
+for (const [w, h] of [[1366, 768], [1280, 720]]) {
+  // La VUE tient dans la fenêtre (le menu de gauche, lui, dépend de la séance : celui du décor Boost est long).
+  await v(`Carte des itinéraires : ${w} × ${h}, la vue tient sans défilement — carte, liste et fiche du plus long itinéraire visibles`, async () => {
+    await pg.setViewportSize({ width: w, height: h });
+    await monter(); await pg.waitForSelector('[data-ct-svg]');
+    await pg.evaluate(() => window.scrollTo(0, 0)); await immobile();
+    await pg.click('[data-ci-mode="rail"]');
+    const m = await pg.evaluate(() => {
+      const r = (s) => document.querySelector(s).getBoundingClientRect();
+      const pan = document.querySelector('.ci-panneau');
+      return { vue: r('.ci-vue').bottom, ih: innerHeight, droite: r('.ci-vue').right, iw: innerWidth,
+        sw: document.scrollingElement.scrollWidth, carte: r('[data-ct-cadre]').height, fiche: r('[data-ci-fiche]').bottom,
+        panDefile: pan.scrollHeight > pan.clientHeight + 1 };
+    });
+    vrai(m.vue <= m.ih, `la vue dépasse le bas de la fenêtre : ${Math.round(m.vue)} pour ${m.ih}`);
+    vrai(m.droite <= m.iw && m.sw <= m.iw + 1, `défilement horizontal : ${m.sw} pour ${m.iw}`);
+    vrai(m.carte >= 380, `carte trop petite : ${m.carte} px`);
+    vrai(!m.panDefile && m.fiche <= m.ih, 'la fiche du rail ne tient pas dans la colonne');
+    await pg.click('[data-ci-mode="rail"]');
+  });
+}
+
+await v('Carte des itinéraires : aucune erreur de page pendant le bloc ; aucune requête hors du site', async () => {
+  egal(erreurs, [], 'erreurs de page');
+  egal([...hotes], [], 'requêtes hors du site');
+});
+
+await ctxCi.close();
+}

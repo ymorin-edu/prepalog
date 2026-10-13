@@ -46,6 +46,7 @@ export const OPTIONS = {
   transportId: { type: 'string', role: "clé de `db.transport` partagée entre deux séances (sinon l'id de la séance)" },
   // — Les vues (une vue n'existe que si la séance la déclare) —
   plan: { type: 'object', role: 'plan schématique ou carte réelle (`plan.carte`)' },
+  carteItineraires: { type: 'object', role: "carte des itinéraires d'un point A à un point B par plusieurs modes (`core/types/carte-itineraires.js`)" },
   tournee: { type: 'object', role: 'tournée à construire sur le plan' },
   quai: { type: 'object|function', role: 'quai de réception ; une fonction de la graine = un quai tiré par élève' },
   planning: { type: 'object', role: 'planning : cartes sur une grille' },
