@@ -224,6 +224,7 @@ export function creerCarteItineraires(O) {
   return {
     nav: { id: 'itineraires', libelle: O.libelle || 'Carte des itinéraires' },
     modes: MODES,
+    noms: Object.fromEntries(MODES.map((m) => [m, I[m].nom])),
     marquesActives: (db) => marquesActives(db).map((k) => k.id),
     html(db) {
       const carte = svgCarte(db);         // d'abord : la légende et la fiche relisent les marques qu'il a posées

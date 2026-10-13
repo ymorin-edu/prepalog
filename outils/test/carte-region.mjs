@@ -37,7 +37,8 @@ const monter = (o = {}) => pg.evaluate(async (o) => {
   const moteur = creerEntreprise({
     ENTREPRISE: B.ENTREPRISE, VOCAB: B.VOCAB, CATALOGUE: B.CATALOGUE, SUPPLIERS: B.SUPPLIERS,
     SUP_BY_ID: B.SUP_BY_ID, CUSTOMERS: B.CUSTOMERS, CM: B.CM, baseDeDepart: B.baseDeDepart, THEME: B.THEME,
-    etapes: [], exercice: 'Essai',
+    // `o.etape` : un jalon d'essai, pour que la note remonte (sans jalon, le moteur ne remonte rien).
+    etapes: o.etape ? [{ id: 'essai', titre: 'Essai', verifier: () => ({ status: 'attente' }) }] : [], exercice: 'Essai',
     carteItineraires: {
       carte: CARTE, destination: o.destination || 'rouvignies', titre: 'Trois façons de venir d’Anvers',
       alt: `Carte d'Anvers à ${o.destination === 'dourges' ? 'Dourges' : 'Rouvignies'} : trois itinéraires, route, barge et rail`,
@@ -53,9 +54,10 @@ const monter = (o = {}) => pg.evaluate(async (o) => {
   moteur.rendre(hote, {
     meta: { id: 'essai-itin', code: 'ESSAI', titre: 'Carte — essai', portee: 'eleve', immersif: true },
     profil: { prenom: 'Lea', nom: 'Dupont', role: o.role || 'eleve' },
-    jeu: { etat: () => db, sauver: () => {} }, enregistrer: () => {}, quitter: () => {}, codeStock: '',
+    jeu: { etat: () => db, sauver: () => {} }, enregistrer: (r) => { window.__ci.remontees.push(JSON.parse(JSON.stringify(r))); },
+    quitter: () => {}, codeStock: '',
   });
-  window.__ci = { db, CARTE, hote };
+  window.__ci = Object.assign(window.__ci && window.__ci.hote === hote ? window.__ci : { remontees: [] }, { db, CARTE, hote });
   hote.querySelector('.ent-nav[data-vue="itineraires"]').click();
 }, o);
 // Immobile = la viewBox ne bouge plus pendant 5 images (le zoom est animé).
@@ -374,6 +376,69 @@ for (const [w, h] of [[1366, 768], [1280, 720]]) {
     await pg.click('[data-ci-mode="rail"]');
   });
 }
+
+
+await v('Suivi de classe : ouvrir un itinéraire fait remonter le compte avec la note, et les noms des itinéraires y sont rangés', async () => {
+  await monter({ etape: true }); await pg.waitForSelector('[data-ct-svg]');
+  await pg.evaluate(() => { window.__ci.remontees.length = 0; });
+  await pg.click('[data-ci-mode="barge"]');
+  const r = await pg.evaluate(() => window.__ci.remontees.at(-1));
+  vrai(r, 'aucune remontée après l’ouverture d’un itinéraire');
+  egal(r.detail.indicateurs['essai-itin'].carte, { barge: 1 }, 'compte remonté');
+  egal(r.detail.itineraires, { noms: { route: 'Route', barge: 'Barge + camion', rail: 'Rail + camion' } }, 'noms rangés avec la note');
+});
+
+await v('Suivi de classe : colonne « Itinéraires ouverts » au Repérage (2 / 3, détail au survol) ; absente d’une séance sans carte', async () => {
+  const ctxP = await nav.newContext({ viewport: { width: 1366, height: 900 } });
+  const pp = await ctxP.newPage();
+  pp.setDefaultTimeout(8000);
+  try {
+    await pp.goto(BASE);
+    await pp.waitForSelector('#btnProf');
+    await pp.click('#btnProf');
+    await pp.waitForSelector('#btnProfEspace');
+    const ids = await pp.evaluate(async () => {
+      const { B } = await import('/core/backend.js');
+      const prof = B.profilCourant();
+      const gid = (await B.creerGroupe({ nom: 'Carte régionale', annee: '2026-2027', niveau: '1re', profUid: prof.uid })).id
+        || (await B.groupesDuProf(prof.uid)).find((g) => g.nom === 'Carte régionale').id;
+      await B.creerEleves(gid, [{ nom: 'CARTE', prenom: 'Test', matricule: 'carte-test', code: 'x' }, { nom: 'SANS', prenom: 'Carte', matricule: 'sans-carte', code: 'x' }]);
+      const els = await B.elevesDuGroupe(gid);
+      const el = els.find((x) => x.nom === 'CARTE'), autre = els.find((x) => x.nom === 'SANS');
+      const { chargerActivites } = await import('/activites/index.js');
+      const m = (await chargerActivites()).map((x) => x.meta).find((x) => x.portee === 'eleve' && x.immersif && x.bareme && !x.copie);
+      const noms = { route: 'Route', barge: 'Barge + camion', rail: 'Rail + camion' };
+      // `avion` : un itinéraire qui n'est plus sur la carte ne compte pas.
+      await B.ecrireScore(gid, el.uid, m.id, { score: 1, max: 5, detail: { itineraires: { noms },
+        indicateurs: { [m.id]: { temps: 600, carte: { barge: 3, rail: 1, avion: 2 } } } } });
+      await B.ecrireScore(gid, autre.uid, m.id, { score: 1, max: 5, detail: { indicateurs: { [m.id]: { temps: 300 } } } });
+      return { gid, uid: el.uid, autre: autre.uid, aid: m.id };
+    });
+    await pp.click('#btnProfEspace');
+    await pp.click('[data-ong="suivi"]');
+    await pp.waitForSelector(`#reperage [data-reperage="${ids.aid}"]`, { timeout: 6000 });
+    const lu = await pp.$eval(`#reperage [data-reperage="${ids.aid}"]`, (b, ids) => {
+      const c = (uid) => { const x = b.querySelector(`tr[data-rep-eleve="${uid}"] [data-rep="itineraires"]`); return x && [x.textContent, x.title]; };
+      return { entete: [...b.querySelectorAll('thead th')].map((t) => t.textContent).includes('Itinéraires ouverts'), carte: c(ids.uid), sans: c(ids.autre) };
+    }, ids);
+    egal(lu, { entete: true, carte: ['2 / 3', 'Barge + camion (3), Rail + camion (1)'], sans: ['—', ''] }, 'colonne des itinéraires');
+    // Sans carte dans aucune note : pas de colonne.
+    await pp.evaluate(async (ids) => {
+      const { B } = await import('/core/backend.js');
+      await B.ecrireScore(ids.gid, ids.uid, ids.aid, { score: 1, max: 5, detail: { indicateurs: { [ids.aid]: { temps: 600 } } } });
+    }, ids);
+    await pp.reload();
+    await pp.waitForSelector('#btnProfEspace');
+    await pp.click('#btnProfEspace');
+    await pp.click('[data-ong="suivi"]');
+    await pp.waitForSelector(`#reperage [data-reperage="${ids.aid}"]`, { timeout: 6000 });
+    egal(await pp.$$eval(`#reperage [data-reperage="${ids.aid}"] [data-rep="itineraires"]`, (x) => x.length), 0, 'colonne sans carte');
+    vrai(!(await pp.$eval(`#reperage [data-reperage="${ids.aid}"]`, (b) => [...b.querySelectorAll('thead th')].some((t) => t.textContent === 'Itinéraires ouverts'))),
+      'en-tête sans carte');
+  } finally {
+    await ctxP.close();
+  }
+});
 
 await v('Carte des itinéraires : aucune erreur de page pendant le bloc ; aucune requête hors du site', async () => {
   egal(erreurs, [], 'erreurs de page');

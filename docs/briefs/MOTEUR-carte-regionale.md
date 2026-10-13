@@ -248,5 +248,5 @@ dire à Tristan**) :
   c'est le bouton « derniers kilomètres » qui les sépare.
 - **Tests** : bloc `carte-region` 18/18. Sabotages : marque toujours visible → « absente avant le déclencheur » tombe ; seuil de coupure
   à 0 → le cas de la barge estompée tombe ; noms de zoom débranchés → le cas de Dourges tombe.
-- **Reste ouvert** : confirmer LDCT et l'entrepôt de Rouvignies (positions supposées) ; le Suivi de classe n'affiche pas encore les
-  itinéraires ouverts ; la séance ENT-7.1 elle-même (son brief demande encore des choix à Tristan).
+- **Reste ouvert** : confirmer LDCT et l'entrepôt de Rouvignies (positions supposées) ; la séance ENT-7.1 elle-même (son brief
+  demande encore des choix à Tristan). *(Suivi de classe : colonne « Itinéraires ouverts » ajoutée le 13/10, après le lot 3.)*

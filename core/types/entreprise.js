@@ -401,6 +401,8 @@ export function creerEntreprise(U) {
     if (db && db.indicateurs) detail.titres = Object.fromEntries(etapes.map((e) => [e.id, e.titre || e.id]));
     // Les documents de la séance (nombre et noms courts), pour la colonne « Documents ouverts » du repérage :
     // le suivi ne charge pas la séance, il lit tout ici.
+    // Les itinéraires de la carte (13/10/2026), pour la colonne « Itinéraires ouverts » du repérage, au même titre.
+    if (VITI) detail.itineraires = { noms: VITI.noms };
     if (VDOC) detail.documents = { total: VDOC.ids().length,
       noms: Object.fromEntries(VDOC.ids().map((id) => [id, VDOC.doc(id).court || VDOC.doc(id).titre || id])) };
     // Le quai range aussi ses temps dans le détail : le temps réel passé en guidage sert à caler
@@ -2056,7 +2058,9 @@ export function creerEntreprise(U) {
           if (estProf || rendue()) return;
           const r = reperageSeance();
           (r.carte || (r.carte = {}))[mode] = (r.carte[mode] || 0) + 1;
-          ctx.jeu.sauver();      // pas `sauver()` : ouvrir un itinéraire n'est pas un geste (ni déclencheur, ni question)
+          // Pas `sauver()` : ouvrir un itinéraire n'est pas un geste (ni déclencheur, ni question). `remonterEtapes` porte le
+          // compte jusqu'au suivi de classe (colonne « Itinéraires ouverts »), sans rien juger de plus.
+          ctx.jeu.sauver(); remonterEtapes();
         } });
         if (E.vue === 'tournee' && VTOUR) VTOUR.brancher(z, apiTransport('tournee'));
         if (E.vue === 'fichiers' && VTAB) VTAB.brancher(z, apiTableur());
