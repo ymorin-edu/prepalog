@@ -135,13 +135,13 @@ await v('Niveaux : l’onglet montre élèves × entreprises (Cdiscount, plus ce
   await ongletProf('niveaux');
   vrai(picardDeclare, 'activites/picard-ent42.js n’a plus la ligne « id » attendue : la déclaration d’essai est à revoir');
   const cols = await pg.$$eval('[data-col-scenario]', (L) => L.map((x) => x.dataset.colScenario));
-  // France Boissons (6) depuis ENT-6.1 (09/10/2026), qui déclare `niveauxPrevus: ['confirme']`.
-  egal(cols, ['2', '4', '6'], 'colonnes');
+  // France Boissons (6) depuis ENT-6.1 (09/10/2026), Decathlon (7) depuis ENT-7.1 (13/10/2026) : elles déclarent `niveauxPrevus: ['confirme']`.
+  egal(cols, ['2', '4', '6', '7'], 'colonnes');
   const noms = await pg.$$eval('[data-col-scenario] strong', (L) => L.map((x) => x.textContent.trim()));
-  egal(noms, ['Cdiscount', 'Picard', 'France Boissons'], 'en-têtes');
+  egal(noms, ['Cdiscount', 'Picard', 'France Boissons', 'Decathlon'], 'en-têtes');
   const valeurs = await pg.$$eval('[data-niveau-eleve]', (L) => [...new Set(L.map((s) => s.value))]);
   egal(valeurs, ['standard'], 'valeurs');
-  egal(await pg.$$eval('[data-niveau-eleve]', (L) => L.length), 3 * Object.keys(EL).length, 'cases');
+  egal(await pg.$$eval('[data-niveau-eleve]', (L) => L.length), cols.length * Object.keys(EL).length, 'cases');   // une case par élève et par colonne
   egal(await pg.$$eval('[data-niveau-eleve] option', (L) => [...new Set(L.map((o) => o.textContent.trim()))]),
     ['Standard', 'Confirmé', 'Accompagné'], 'choix');
   vrai(/prochaine séance ouverte par l.élève/.test(await pg.textContent('#contenuProf')), 'phrase « Un changement vaut… »');
@@ -525,6 +525,12 @@ const BANQUES_FIGEES = {
     courrier: ['msg-malo', 'msg-amandine-planning', 'msg-attestation', 'msg-brasserie-quai', 'msg-medecine', 'msg-rack',
       'msg-facture-consignes', 'msg-garage', 'msg-chauffeur-quai', 'msg-candidature', 'msg-echange-conges', 'msg-partir-tot',
       'msg-journaliste'],
+  },
+  // ENT-7.1 Decathlon (13/10/2026).
+  'contenus/decathlon-ent71-donnees.js': {
+    retard: ['rt-rail', 'rt-barge'],
+    horsListe: ['hl-eflux', 'hl-bateliers', 'hl-railco', 'hl-eclair'],
+    bonus: ['bo-heure', 'bo-homonyme', 'bo-suivant'],
   },
 };
 await v('Tirage : banques stables — aucun id d’une banque déclarée ne disparaît (liste figée), toute banque déclarée est inscrite', async () => {

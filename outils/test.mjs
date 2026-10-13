@@ -35,7 +35,8 @@ const BLOCS = ['socle', 'spartoo', 'groupes', 'dependances', 'transport', 'boost
   'questions',
   'tirage-niveaux',
   'fb-6.1', 'fb-6.2', 'fb-6.3', 'fb-6.4', 'fb-6.5', 'fb-6.6', 'fb-6.7', 'fb-6.8', 'fb-6.9', 'fb-6.10',
-  'quai-iso'];
+  'quai-iso',
+  'decathlon'];
 const PREREQUIS = { spartoo: ['socle'], groupes: ['socle'], smoby: ['socle'], questions: ['socle'] };
 
 // Un fichier de bloc posé dans `outils/test/` mais oublié dans `BLOCS` ne tournerait jamais,
@@ -61,7 +62,7 @@ const GROUPES = {
   1: ['quiz', 'carte', 'picard', 'demi-groupes', 'temps', 'tirage-niveaux', 'fb-6.1', 'quai-iso', 'fb-6.9'],
   2: ['socle', 'spartoo', 'groupes', 'tableur-export', 'smoby', 'animation', 'visibilite', 'questions', 'fb-6.3', 'fb-6.10'],
   3: ['dependances', 'transport', 'boost', 'inventaire', 'cdiscount', 'planning', 'entrepot', 'copie', 'amenagements', 'fb-6.6', 'fb-6.8'],
-  4: ['fb-6.2', 'fb-6.4', 'fb-6.5', 'fb-6.7', 'carte-region'],
+  4: ['fb-6.2', 'fb-6.4', 'fb-6.5', 'fb-6.7', 'carte-region', 'decathlon'],
 };
 // Même garde que pour les blocs oubliés : un bloc rangé dans aucun groupe (ou dans deux) ne
 // tournerait pas sur GitHub (ou deux fois), sans que rien ne le dise.
