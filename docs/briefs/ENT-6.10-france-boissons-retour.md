@@ -377,6 +377,23 @@ de haut en bas sans chercher ; aucun écran ne défile ; l'animation tourne de f
 
 ## Compte rendu *(rempli par Claude Code à la livraison)*
 
+**État au 13/10/2026 (en cours, pour reprendre)** — lot 1 commité et poussé (`cfe1bc5`), séance en `pret: false` :
+- Fait (moteur) : bloc `grille` de la fiche (`core/types/fiche.js`, `lireFeuille`), colonne Aide / données grisées / largeurs / tolérance « % »
+  (`core/types/grille.js`), pointage visible dans toutes les feuilles, document `image` + loupe (`core/types/documents.js`), `pastilles` de
+  séance et animation à `quand` (`core/types/entreprise.js`, `animation.js`), fiche `largeurDocs` et `serree`. Documenté dans `FICHE-SEANCE.md`.
+- Fait (séance) : `contenus/france-boissons-ent610.js` et `-donnees.js`, `contenus/questions/ENT-6.10.js`, `activites/france-boissons-retour.js`,
+  corrigé, bloc `fb-6.10` (9 cas verts, éprouvés par 3 sabotages), suite complète verte.
+- **Provisoire** : les jalons 10 et 11 (animation) manquent ; leur point est porté par `chiffrage` (2,5 au lieu de 1,5, commentaire dans
+  `POIDS`). La fiche ④ apparaît après les deux réponses (Malo, Inès) : à rebrancher après l'animation (`quand` : les deux questions répondues).
+- **Lot 2 à faire (Opus)** : objets du kit iso (`core/iso.js`) — porteur à rideaux dans les 4 directions, chargement visible par le rideau
+  entrouvert (pleins / vides / rien), fût vide à bouchon gris, plateforme à quais, bar de plage (auvent, sable, mer gris-bleu), brasserie
+  (cuves) + bâtiment « lavage », route à bas-côtés et pointillé ; aucune couleur de repère (vert, bleu) dans le décor. Page d'essai et
+  **une capture par objet montrée à Tristan avant de brancher** (§11). Puis une scène « trajet » dans `core/types/animation.js` (lieux,
+  route, pas `rouler` / `charger`), l'animation `fb-boucle-vides` (2 parties, 2 questions du §4.4a), ses jalons (`etapesAnimation`), le
+  poids du chiffrage remis à 1,5, les tests, `pret: true`.
+- Question posée à Tristan : la pile des cartes de messages pousse l'écran vers le bas (toutes les séances) ; la maquette les voulait en bas
+  à gauche, par-dessus. Les tests d'ergonomie mesurent sans elles.
+
 - **Fichiers créés / modifiés** :
 - **Écarts par rapport au brief** (et pourquoi) :
 - **Décisions prises en route** :
