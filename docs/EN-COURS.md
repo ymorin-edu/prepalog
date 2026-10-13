@@ -7,7 +7,7 @@ est déjà modifié ou inscrit ci-dessous, **elle s'arrête et le dit à Tristan
 
 | Chantier | Fichiers qu'il touche | Depuis |
 |---|---|---|
-| Séance ENT-7.1 Decathlon (choisir le transporteur) | `activites/decathlon-choix-transporteur*.js (à créer)`, `contenus/decathlon*.js (à créer)`, `contenus/questions/ENT-7.1*.js (à créer)`, `contenus/corriges/ENT-7.1*.js (à créer)`, `outils/test/decathlon*.mjs (à créer)`, `activites/index.js`, `outils/test.mjs`, `outils/test/tirage-niveaux.mjs`, `docs/briefs/ENT-7.1-decathlon-choisir-transporteur.md` | 13/10/2026 |
+| Séance ENT-7.1 Decathlon (choisir le transporteur) ; moteur : fiche qui défile dans son cadre (`defile`) | `activites/decathlon-choix-transporteur*.js (à créer)`, `contenus/decathlon*.js (à créer)`, `contenus/questions/ENT-7.1*.js (à créer)`, `contenus/corriges/ENT-7.1*.js (à créer)`, `outils/test/decathlon*.mjs (à créer)`, `activites/index.js`, `outils/test.mjs`, `outils/test/tirage-niveaux.mjs`, `docs/briefs/ENT-7.1-decathlon-choisir-transporteur.md`, `core/types/fiche.js`, `styles/base.css`, `activites/FICHE-SEANCE.md` | 13/10/2026 |
 
 Rappel : un seul chantier à la fois dans `core/types/tournee.js`, `core/types/grille.js`,
 `core/types/entreprise.js`, `styles/base.css` et `outils/test/boost.mjs` (voir `docs/briefs/COORDINATION-boost.md`).
