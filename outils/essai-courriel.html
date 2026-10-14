@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Essai — nouveau courriel (Prepalog)</title>
+<!-- Page d'ESSAI du lot 1 du brief `docs/briefs/MOTEUR-courriel-planning.md` : l'écran « Nouveau courriel » d'ENT-7.2 (données en dur,
+     élève témoin Léa). Page autonome : elle ne touche à rien du moteur, n'est liée nulle part et n'envoie rien hors du site.
+     Deux choix à comparer : le champ À (A liste / B suggestions) et les pièces jointes (A cases / B bouton Joindre).
+     Ouvrir avec `lancer.bat`, puis http://localhost:8000/outils/essai-courriel.html -->
+<base href="../">
+<link rel="icon" href="./styles/logo.png">
+<link rel="stylesheet" href="./styles/polices.css">
+<link rel="stylesheet" href="./styles/base.css">
+<style>
+  body{ margin:0; background:var(--fond); color:var(--encre) }
+  .essai-aide{ background:#fff7d6; border-bottom:1px solid #e8d48a; padding:6px 16px; font:13.5px/1.45 sans-serif; color:#3b3200 }
+  .essai-aide b{ color:#3b3200 }
+  .essai-aide ol{ margin:2px 0 0; padding-left:20px }
+  .essai-reglages{ background:#fff7d6; border-bottom:1px solid #e8d48a; padding:6px 16px; font:14px/1.4 sans-serif; color:#3b3200; display:flex; flex-wrap:wrap; gap:6px 24px; align-items:center }
+  .essai-reglages fieldset{ border:0; margin:0; padding:0; display:flex; gap:8px; align-items:center }
+  .essai-reglages legend{ float:left; padding:0; margin-right:8px; font-weight:700; color:#3b3200 }
+  .essai-reglages label{ display:inline-flex; align-items:center; gap:4px; margin:0; font-size:14px; font-weight:600; color:#3b3200; cursor:pointer;
+    border:1px solid #c8b45e; border-radius:6px; padding:3px 10px; background:transparent }
+  .essai-reglages label:has(input:checked){ border:2px solid #3b3200; padding:2px 9px }
+  .essai-reglages input{ width:auto; margin:0 }
+  .essai-bandeau{ display:flex; align-items:center; gap:14px; padding:6px 16px; border-bottom:1px solid var(--filet); background:var(--panneau) }
+  .essai-bandeau b{ font-size:17px }
+  .essai-bandeau .menu{ display:flex; gap:6px; margin-left:auto }
+  .essai-bandeau .btn.on{ border-color:var(--ardoise); box-shadow:inset 0 -3px 0 var(--ardoise) }
+  #ecran{ padding:10px 16px 8px; max-width:1100px }
+  #ecran h2{ margin:0 0 6px; font-size:1.2rem }
+  #ecran .panneau{ padding:12px 16px; margin-bottom:0 }
+  .champ{ margin-bottom:8px; position:relative }
+  .essai-deux{ display:grid; grid-template-columns:1fr 1fr; gap:12px }
+  textarea{ resize:none; display:block }
+  .pj-cases{ display:flex; flex-wrap:wrap; gap:6px 18px }
+  .pj-cases label{ display:inline-flex; align-items:center; gap:6px; margin:0; font-size:.9rem; font-weight:400; color:var(--encre); cursor:pointer }
+  .pj-cases input{ width:auto; margin:0 }
+  .pj-etiquettes{ display:flex; flex-wrap:wrap; gap:6px; align-items:center }
+  .pj-etiquettes .ent-pj{ cursor:default; padding:3px 4px 3px 10px }
+  .pj-etiquettes .ent-pj button{ font:inherit; cursor:pointer; border:0; background:none; color:var(--encre-douce); padding:0 6px; font-size:1.1rem; line-height:1 }
+  .pj-etiquettes .ent-pj button:hover{ color:var(--rouge) }
+  .pj-menu{ position:absolute; z-index:5; margin-top:4px; background:var(--panneau); border:1px solid var(--filet); border-radius:var(--r); box-shadow:var(--ombre); padding:4px; min-width:260px }
+  .pj-menu button{ display:flex; align-items:center; gap:6px; width:100%; text-align:left; font:inherit; font-size:.9rem; color:var(--encre); background:none; border:0; border-radius:4px; padding:6px 8px; cursor:pointer }
+  .pj-menu button:hover, .pj-menu button:focus-visible{ background:var(--survol) }
+  .suggestions{ position:absolute; z-index:5; left:0; right:0; top:100%; margin:2px 0 0; padding:3px; list-style:none; background:var(--panneau); border:1px solid var(--filet); border-radius:var(--r); box-shadow:var(--ombre) }
+  .suggestions li{ padding:5px 8px; border-radius:4px; cursor:pointer; font-size:.9rem }
+  .suggestions li .note{ margin-left:6px }
+  .suggestions li.on{ background:var(--survol); box-shadow:inset 3px 0 0 var(--ardoise) }
+  .retour{ margin:8px 0 0; min-height:1.4em; font-size:.92rem; color:var(--encre) }
+  .retour.refus{ color:var(--rouge) }
+  .retour .rangee{ margin-top:6px }
+  .envoyer-ligne{ display:flex; align-items:flex-start; gap:14px }
+  .envoyer-ligne .retour{ margin:0; flex:1 }
+  .boite{ display:grid; grid-template-columns:260px 1fr; gap:14px; align-items:start }
+  .boite .liste{ display:flex; flex-direction:column; gap:4px; max-height:300px; overflow:auto }
+  .boite .ent-lecteur{ min-height:200px; max-height:330px; overflow:auto }
+  .boite .ent-lecteur p{ margin:6px 0 }
+  .ent-pj-liste{ margin:10px 0 0; padding-top:8px }
+  .ent-pj-liste .ent-pj{ cursor:default }
+  .ent-mitem .pastille{ font-size:11px; color:var(--ardoise); margin-left:6px }
+  .menu .compte{ margin-left:4px; font-size:.8rem; color:var(--ardoise) }
+</style>
+</head>
+<body>
+<div class="essai-aide" id="aide">
+  <b>À essayer</b> (page d'essai : rien n'est jugé, rien ne part sur Internet) :
+  <ol>
+    <li>Choisis ci-dessous une variante pour le champ <b>À</b> et une pour les <b>pièces jointes</b>, puis écris un courriel à Contargo et envoie-le <b>sans</b> pièce jointe : la réponse arrive dans la boîte de réception après une seconde.</li>
+    <li>Va dans « Ordre de transport », clique « Enregistrer », reviens dans « Nouveau courriel » : le fichier OT-2027-0142.pdf est maintenant proposé. Joins-le, envoie, regarde la réponse. Change de variante et recommence : laquelle te paraît la plus simple pour un élève ?</li>
+    <li>Essaie aussi : envoyer sans destinataire, sans objet, avec le quai ou Claire (aucune réponse), et changer d'écran en plein brouillon.</li>
+  </ol>
+</div>
+<form class="essai-reglages" id="reglages" onsubmit="return false">
+  <fieldset><legend>Champ À</legend>
+    <label><input type="radio" name="va" value="A" checked> A · liste déroulante</label>
+    <label><input type="radio" name="va" value="B"> B · taper et choisir</label></fieldset>
+  <fieldset><legend>Pièces jointes</legend>
+    <label><input type="radio" name="vp" value="A" checked> A · cases à cocher</label>
+    <label><input type="radio" name="vp" value="B"> B · bouton « Joindre un fichier »</label></fieldset>
+</form>
+<div class="essai-bandeau">
+  <b>Decathlon</b><span class="note">Entrepôt de Rouvignies · service transport amont</span>
+  <nav class="menu" aria-label="Menu">
+    <button type="button" class="btn btn-s on" data-ecran="messagerie">Messagerie<span class="compte" id="compte"></span></button>
+    <button type="button" class="btn btn-s" data-ecran="ot">Ordre de transport</button>
+    <button type="button" class="btn btn-s" data-ecran="courriel">Nouveau courriel</button>
+  </nav>
+</div>
+<main id="ecran">
+  <section id="e-messagerie"></section>
+  <section id="e-ot" hidden>
+    <h2>Ordre de transport</h2>
+    <div class="panneau">
+      <p style="margin-top:0">L'ordre de transport est rempli (écran simulé). Il reste à l'enregistrer pour pouvoir l'envoyer.</p>
+      <button type="button" class="btn btn-p" id="enregOT">Enregistrer l'ordre de transport</button>
+      <p class="retour" id="retourOT" role="status"></p>
+    </div>
+  </section>
+  <section id="e-courriel" hidden></section>
+</main>
+
+<script type="module">
+// ── Données de 7.2, en dur ─────────────────────────────────────────────────────────────────────────────────────────
+const PRENOM = 'Léa';
+const MON_MAIL = 'lea@decathlon-rouvignies.exemple';
+const OT = 'OT-2027-0142';
+const PREFIXE = 'PRPU', NUM = '418270';
+
+// Chiffre de contrôle ISO 6346 : lettres 10..38 sans les multiples de 11, poids 2^i, somme modulo 11, puis modulo 10.
+function chiffreControle(code10) {
+  const VAL = {}; let v = 10;
+  for (const c of 'ABCDEFGHIJKLMNOPQRSTUVWXYZ') { if (v % 11 === 0) v++; VAL[c] = v++; }
+  let somme = 0;
+  [...code10].forEach((c, i) => { somme += (/[0-9]/.test(c) ? Number(c) : VAL[c]) * 2 ** i; });
+  return (somme % 11) % 10;
+}
+const CLE = chiffreControle(PREFIXE + NUM);
+window.__chiffreControle = CLE;
+const CONTENEUR = `${PREFIXE} ${NUM} ${CLE}`;
+
+const CARNET = [
+  { id: 'routiers', nom: 'Routiers du Hainaut', role: 'prestataire', mail: 'exploitation@routiers-hainaut.exemple',
+    presta: true, signature: 'Service exploitation, Routiers du Hainaut', livraison: 'mardi 02/02 vers 8 h' },
+  { id: 'contargo', nom: 'Contargo', role: 'prestataire · Service réservations', mail: 'reservations@contargo.exemple',
+    presta: true, signature: 'Service réservations, Contargo', livraison: 'lundi 01/02 vers 9 h' },
+  { id: 'rail', nom: 'Rail Flandres-Artois', role: 'prestataire', mail: 'commercial@rail-flandres-artois.exemple',
+    presta: true, signature: 'Service commercial, Rail Flandres-Artois', livraison: 'mercredi 03/02 vers 10 h' },
+  { id: 'quai', nom: 'Quai de réception Rouvignies', role: 'Decathlon', mail: 'quai.rouvignies@decathlon-rouvignies.exemple', presta: false },
+  { id: 'claire', nom: 'Claire Vasseur', role: 'ta responsable', mail: 'claire.vasseur@decathlon-rouvignies.exemple', presta: false },
+];
+const FICHIERS = [
+  { id: 'cdc', nom: 'Cahier des charges' },
+  { id: 'avis', nom: 'Avis de mise à disposition' },
+  { id: 'ot', nom: 'OT-2027-0142.pdf', apres: true },
+];
+
+// ── L'état de la page ──────────────────────────────────────────────────────────────────────────────────────────────
+const S = {
+  ecran: 'messagerie', otEnregistre: false, dossier: 'in', sel: null,
+  brouillon: { a: '', obj: '', pj: [], msg: '' },
+  mails: [
+    { id: 1, dossier: 'in', nom: 'Claire Vasseur', mail: CARNET[4].mail, obj: 'La barge de Contargo', pj: ['cdc', 'avis'], lu: false, h: '08:12',
+      texte: `Bonjour ${PRENOM},\nOn a retenu la barge de Contargo pour les conteneurs de la collection printemps. Un nouveau vient d'être mis à disposition à Anvers.\nÀ toi de passer la commande : remplis l'ordre de transport, envoie-le à Contargo par courriel, puis appelle le quai.\nClaire` },
+  ],
+  suivant: 2,
+};
+const $ = (s, r = document) => r.querySelector(s);
+const ech = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const norm = (t) => String(t).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+const heure = () => new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+const fichiersDispo = () => FICHIERS.filter((f) => !f.apres || S.otEnregistre);
+const fichier = (id) => FICHIERS.find((f) => f.id === id);
+const TROMBONE = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 11l-8.5 8.5a5 5 0 0 1-7-7L14 4a3.5 3.5 0 0 1 5 5l-8.5 8.5a2 2 0 0 1-3-3L15 7"/></svg>`;
+const variante = (nom) => document.querySelector(`input[name="${nom}"]:checked`).value;
+
+// Le destinataire écrit ou choisi → une personne du carnet (nom ou adresse exacts, majuscules et accents sans importance).
+const trouve = (texte) => {
+  const t = norm(texte);
+  if (!t) return null;
+  return CARNET.find((c) => norm(c.nom) === t || norm(c.mail) === t || norm(`${c.nom} <${c.mail}>`) === t) || null;
+};
+
+// ── Menu ───────────────────────────────────────────────────────────────────────────────────────────────────────────
+function aller(ecran) {
+  S.ecran = ecran;
+  ['messagerie', 'ot', 'courriel'].forEach((e) => { $('#e-' + e).hidden = e !== ecran; });
+  document.querySelectorAll('[data-ecran]').forEach((b) => b.classList.toggle('on', b.dataset.ecran === ecran));
+  if (ecran === 'messagerie') dessinerMessagerie();
+  if (ecran === 'courriel') dessinerPJ();
+}
+document.querySelectorAll('[data-ecran]').forEach((b) => b.addEventListener('click', () => aller(b.dataset.ecran)));
+$('#enregOT').addEventListener('click', () => {
+  S.otEnregistre = true;
+  $('#retourOT').textContent = `Ordre de transport enregistré : ${OT}.pdf est maintenant disponible comme fichier.`;
+});
+
+// ── Messagerie ─────────────────────────────────────────────────────────────────────────────────────────────────────
+function rangeePJ(ids) {
+  const L = ids.map(fichier).filter(Boolean);
+  return L.length ? `<div class="ent-pj-liste" role="group" aria-label="Pièces jointes">${L.map((f) =>
+    `<span class="ent-pj">${TROMBONE}<span>${ech(f.nom)}</span></span>`).join('')}</div>` : '';
+}
+function dessinerMessagerie() {
+  const nonLus = S.mails.filter((m) => m.dossier === 'in' && !m.lu).length;
+  $('#compte').textContent = nonLus ? `(${nonLus})` : '';
+  const liste = S.mails.filter((m) => m.dossier === S.dossier).sort((a, b) => b.id - a.id);
+  const sel = liste.find((m) => m.id === S.sel);
+  const items = liste.map((m) => `<button type="button" class="ent-mitem ${!m.lu && m.dossier === 'in' ? 'nonlu' : ''} ${sel && sel.id === m.id ? 'on' : ''}" data-mail="${m.id}">
+      <span class="ent-de"><span>${ech(m.dossier === 'in' ? m.nom : 'À : ' + m.nom)}</span><span class="note">${m.h}</span></span>
+      <span class="ent-obj">${ech(m.obj || '(sans objet)')}</span></button>`).join('') || '<div class="note">Aucun message.</div>';
+  const lecteur = sel
+    ? `<div class="ent-lecteur"><h3>${ech(sel.obj || '(sans objet)')}</h3>
+        <p class="note">${sel.dossier === 'in' ? 'De' : 'À'} : ${ech(sel.nom)} &lt;${ech(sel.mail)}&gt; · ${sel.h}</p>
+        <p>${ech(sel.texte || '(message vide)').replace(/\n/g, '<br>')}</p>${rangeePJ(sel.pj)}</div>`
+    : '<div class="ent-lecteur ent-vide-lect note">Sélectionne un message pour le lire.</div>';
+  $('#e-messagerie').innerHTML = `<h2>Messagerie</h2><p class="note" style="margin:0 0 6px">Adresse : ${ech(MON_MAIL)}</p>
+    <div class="panneau"><div class="rangee" style="margin-bottom:10px">
+      <button type="button" class="btn btn-s ${S.dossier === 'in' ? 'btn-p' : ''}" data-dossier="in">Réception</button>
+      <button type="button" class="btn btn-s ${S.dossier === 'out' ? 'btn-p' : ''}" data-dossier="out">Envoyés</button>
+      <span class="pousse"><button type="button" class="btn btn-s btn-p" data-nouveau>Nouveau courriel</button></span></div>
+      <div class="boite"><div class="liste">${items}</div>${lecteur}</div></div>`;
+}
+$('#e-messagerie').addEventListener('click', (e) => {
+  const d = e.target.closest('[data-dossier]'), m = e.target.closest('[data-mail]');
+  if (d) { S.dossier = d.dataset.dossier; S.sel = null; dessinerMessagerie(); }
+  else if (m) { S.sel = Number(m.dataset.mail); const x = S.mails.find((y) => y.id === S.sel); if (x) x.lu = true; dessinerMessagerie(); }
+  else if (e.target.closest('[data-nouveau]')) aller('courriel');
+});
+
+// ── Nouveau courriel ───────────────────────────────────────────────────────────────────────────────────────────────
+const B = S.brouillon;
+let surbrillance = -1;
+function dessinerCourriel() {
+  const vA = variante('va');
+  const champA = vA === 'A'
+    ? `<select id="cA" aria-label="Destinataire"><option value="">Choisis un destinataire…</option>${CARNET.map((c) =>
+        `<option value="${ech(c.nom)}"${trouve(B.a) === c ? ' selected' : ''}>${ech(c.nom)} — ${ech(c.role)}</option>`).join('')}</select>`
+    : `<input id="cA" type="text" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="sugg" placeholder="Tape au moins 2 lettres (ex. Co…)" value="${ech(B.a)}">
+       <ul class="suggestions" id="sugg" role="listbox" hidden></ul>`;
+  $('#e-courriel').innerHTML = `<h2>Nouveau courriel</h2>
+    <div class="panneau">
+      <div class="essai-deux">
+        <div class="champ"><label for="cA">À</label>${champA}</div>
+        <div class="champ"><label for="cObj">Objet</label><input id="cObj" type="text" autocomplete="off" value="${ech(B.obj)}"></div>
+      </div>
+      <div class="champ"><label for="cMsg">Message</label><textarea id="cMsg" rows="5">${ech(B.msg)}</textarea></div>
+      <div class="champ" id="zonePJ"></div>
+      <div class="envoyer-ligne"><button type="button" class="btn btn-p" id="cEnvoyer">Envoyer</button>
+        <div class="retour" id="cRetour" role="status" aria-live="polite"></div></div>
+    </div>`;
+  const a = $('#cA');
+  if (vA === 'A') a.addEventListener('change', () => { B.a = a.value; });
+  else brancherSuggestions(a);
+  $('#cObj').addEventListener('input', (e) => { B.obj = e.target.value; });
+  $('#cMsg').addEventListener('input', (e) => { B.msg = e.target.value; });
+  $('#cEnvoyer').addEventListener('click', () => tenter(false));
+  dessinerPJ();
+}
+
+function brancherSuggestions(champ) {
+  const ul = $('#sugg');
+  let trouves = [];
+  const fermer = () => { ul.hidden = true; champ.setAttribute('aria-expanded', 'false'); surbrillance = -1; };
+  const montrer = () => {
+    const t = norm(champ.value);
+    trouves = t.length < 2 ? [] : CARNET.filter((c) => norm(`${c.nom} ${c.role} ${c.mail}`).includes(t));
+    if (!trouves.length) return fermer();
+    surbrillance = -1;
+    ul.innerHTML = trouves.map((c, i) => `<li role="option" id="s${i}" data-i="${i}">${ech(c.nom)}<span class="note">${ech(c.role)} · ${ech(c.mail)}</span></li>`).join('');
+    ul.hidden = false; champ.setAttribute('aria-expanded', 'true');
+  };
+  const choisir = (i) => { const c = trouves[i]; if (!c) return; champ.value = c.nom; B.a = c.nom; fermer(); };
+  const marquer = () => ul.querySelectorAll('li').forEach((li, i) => {
+    li.classList.toggle('on', i === surbrillance); li.setAttribute('aria-selected', i === surbrillance ? 'true' : 'false');
+  });
+  champ.addEventListener('input', () => { B.a = champ.value; montrer(); });
+  champ.addEventListener('keydown', (e) => {
+    if (ul.hidden) return;
+    if (e.key === 'ArrowDown') { e.preventDefault(); surbrillance = (surbrillance + 1) % trouves.length; marquer(); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); surbrillance = (surbrillance - 1 + trouves.length) % trouves.length; marquer(); }
+    else if (e.key === 'Enter') { e.preventDefault(); if (surbrillance >= 0) choisir(surbrillance); }
+    else if (e.key === 'Escape') fermer();
+  });
+  ul.addEventListener('mousedown', (e) => { const li = e.target.closest('li'); if (li) { e.preventDefault(); choisir(Number(li.dataset.i)); } });
+  champ.addEventListener('blur', fermer);
+}
+
+function dessinerPJ() {
+  const z = $('#zonePJ');
+  if (!z) return;
+  const dispo = fichiersDispo();
+  B.pj = B.pj.filter((id) => dispo.some((f) => f.id === id));
+  if (variante('vp') === 'A') {
+    z.innerHTML = `<label style="margin-bottom:4px">Pièces jointes</label><div class="pj-cases" role="group" aria-label="Pièces jointes">${dispo.map((f) =>
+      `<label><input type="checkbox" value="${f.id}"${B.pj.includes(f.id) ? ' checked' : ''}> ${TROMBONE} ${ech(f.nom)}</label>`).join('')}</div>`;
+    z.querySelectorAll('input').forEach((i) => i.addEventListener('change', () => {
+      B.pj = dispo.filter((f) => z.querySelector(`input[value="${f.id}"]`).checked).map((f) => f.id);
+    }));
+  } else {
+    const restants = dispo.filter((f) => !B.pj.includes(f.id));
+    z.innerHTML = `<label style="margin-bottom:4px">Pièces jointes</label><div class="pj-etiquettes">
+      <button type="button" class="btn btn-s" id="joindre" aria-expanded="false">${TROMBONE} Joindre un fichier</button>
+      ${B.pj.map((id) => `<span class="ent-pj">${TROMBONE}<span>${ech(fichier(id).nom)}</span><button type="button" data-retire="${id}" aria-label="Retirer ${ech(fichier(id).nom)}">×</button></span>`).join('')}</div>
+      <div class="pj-menu" id="pjMenu" hidden>${restants.length ? restants.map((f) => `<button type="button" data-joint="${f.id}">${TROMBONE} ${ech(f.nom)}</button>`).join('')
+        : '<span class="note" style="padding:6px 8px;display:block">Aucun autre fichier à joindre.</span>'}</div>`;
+    const menu = $('#pjMenu'), bouton = $('#joindre');
+    bouton.addEventListener('click', () => { menu.hidden = !menu.hidden; bouton.setAttribute('aria-expanded', String(!menu.hidden)); if (!menu.hidden) menu.querySelector('button')?.focus(); });
+    menu.addEventListener('click', (e) => { const b = e.target.closest('[data-joint]'); if (b) { B.pj.push(b.dataset.joint); dessinerPJ(); $('#joindre').focus(); } });
+    menu.addEventListener('keydown', (e) => { if (e.key === 'Escape') { menu.hidden = true; bouton.focus(); } });
+    z.querySelectorAll('[data-retire]').forEach((b) => b.addEventListener('click', () => { B.pj = B.pj.filter((x) => x !== b.dataset.retire); dessinerPJ(); }));
+  }
+}
+
+function retour(texte, refus) { const r = $('#cRetour'); r.className = 'retour' + (refus ? ' refus' : ''); r.textContent = texte; return r; }
+
+function tenter(confirme) {
+  const dest = trouve(B.a);
+  if (!B.a.trim()) return retour('Choisis un destinataire.', true);
+  if (!dest) return retour('Ce destinataire n’est pas dans le carnet : choisis une personne de la liste.', true);
+  const sansObjet = !B.obj.trim(), sansMsg = !B.msg.trim();
+  if (!confirme && (sansObjet || sansMsg)) {
+    const q = sansObjet && sansMsg ? 'Envoyer sans objet et sans message ?' : sansObjet ? 'Envoyer sans objet ?' : 'Envoyer sans message ?';
+    const r = retour(q);
+    r.insertAdjacentHTML('beforeend', '<div class="rangee"><button type="button" class="btn btn-s btn-p" id="oui">Oui, envoyer</button><button type="button" class="btn btn-s" id="non">Non, je complète</button></div>');
+    $('#oui').addEventListener('click', () => tenter(true));
+    $('#non').addEventListener('click', () => { retour(''); (sansObjet ? $('#cObj') : $('#cMsg')).focus(); });
+    $('#oui').focus();
+    return;
+  }
+  envoyer(dest);
+}
+
+function envoyer(dest) {
+  const pj = B.pj.slice();
+  S.mails.push({ id: S.suivant++, dossier: 'out', nom: dest.nom, mail: dest.mail, obj: B.obj.trim(), texte: B.msg, pj, lu: true, h: heure() });
+  B.a = ''; B.obj = ''; B.pj = []; B.msg = '';
+  dessinerCourriel();
+  retour(`Courriel envoyé à ${dest.nom}. Tu le retrouves dans « Envoyés ».`);
+  if (dest.presta) setTimeout(() => repondre(dest, pj.includes('ot')), 1000);
+}
+
+function repondre(dest, avecOrdre) {
+  const texte = avecOrdre
+    ? `Bonjour, nous avons bien reçu votre ordre de transport ${OT} pour le conteneur ${CONTENEUR}. Enlèvement confirmé : départ de la barge jeudi 28/01 au soir, arrivée au terminal de Bruay vendredi 29/01, livraison à votre quai ${dest.livraison}. ${dest.signature}`
+    : 'Bonjour, nous ne pouvons pas enregistrer votre demande sans l’ordre de transport. Merci de nous le transmettre en pièce jointe.';
+  S.mails.push({ id: S.suivant++, dossier: 'in', nom: dest.nom, mail: dest.mail, obj: 'RE : ' + (S.mails.filter((m) => m.dossier === 'out' && m.nom === dest.nom).pop()?.obj || 'votre courriel'),
+    texte, pj: [], lu: false, h: heure() });
+  if (S.ecran === 'messagerie') dessinerMessagerie(); else $('#compte').textContent = `(${S.mails.filter((m) => m.dossier === 'in' && !m.lu).length})`;
+}
+
+// Un changement de variante redessine le formulaire en gardant le brouillon (le texte écrit reste).
+$('#reglages').addEventListener('change', () => { dessinerCourriel(); });
+dessinerCourriel();
+dessinerMessagerie();
+</script>
+</body>
+</html>

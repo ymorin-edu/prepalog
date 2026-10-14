@@ -16,6 +16,10 @@
 // `messagerie:transfert`, messages déclenchés (`apresTransfert`), accusé d'un transfert corrigé (`volet.corrections[<clé>]`). Gelé par le
 // gel générique du cœur (le bouton n'est pas `data-libre`). L'enseignant voit tout et ne range rien (`E.transfertsProf`, écran seulement).
 // Le drapeau de confirmation d'un envoi par phrases (`confirmeEnvoi`) vit DANS le montage (une ouverture), jamais en haut du fichier.
+// LE NOUVEAU COURRIEL (14/10/2026, option `courriel`, `core/types/courriel.js`) : `COUR` (le modèle compilé, ou `null`) change l'écran
+// « Nouveau message » en « Nouveau courriel » (carnet, pièces jointes, brouillon, réponse automatique) ; `signaler` journalise une réponse
+// qui plante. Sans `COUR`, l'écran « Nouveau message » à un fournisseur est celui d'avant. Les pièces jointes passent par `VDOC`, qui sait
+// aussi ouvrir une fiche enregistrée (`fiche:<id>`, `documents.js`).
 // Rend `{ vues: { mail }, brancher(z), ouvrirMail, docVu, compterDoc }` : `ouvrirMail` sert aux cartes des messages et au retour du quai ;
 // `docVu` et `compterDoc` aux fiches (pièces jointes ouvertes). Les clics `[data-ouvrir-cmd]`, `[data-ouvrir-rec]` et `[data-enreg-cmd]`
 // sont branchés ici : les mails de commande et de bon de livraison portent ces boutons, et ce sont les mêmes que les boutons « Ouvrir »
@@ -29,14 +33,17 @@
 import { ech, toast, confirmerDansLaPage, auClavier } from '../ui.js';
 import { appel } from './questions.js';
 import { texteCompose } from '../phrases.js';
+import { monterCourriel } from './courriel.js';
 import { compterAide } from '../lexique.js';
 import { fdate, fdt, norm } from './entreprise-outils.js';
 import { GESTE_TRANSFERT, gesteTransfertDe, GESTE_PHRASE, transfertsDe, peutTransferer, rangerTransfert, heureTransfert } from './transfert.js';
 
 export function monterMessagerie({ db, E, hote, prenom, estProf, rendue, A, VOCAB, VARIANTS, SUP_BY_ID, B, COM, REC, VDOC, VFICHES, vueDeFiche,
   VINV, VQUAI, MQ, SEANCE, reponsesFournisseur, ajouterMail, declencher, accuseCorrection, etapeQuiFerme, sauver, dessiner, dessinerVue,
-  aller, PERSONNES = {}, signal = () => {} }) {
+  aller, PERSONNES = {}, signal = () => {}, COUR = null, signaler = () => {} }) {
   const { unite } = A;
+  const CO = COUR ? monterCourriel(COUR, { db, E, hote, prenom, estProf, rendue, ajouterMail, declencher, sauver, dessiner, signal, signaler,
+    seance: SEANCE, VDOC }) : null;
   const { tousFournisseurs } = B;
   const { corpsMailCommande, preparer } = COM;
   const { receptionDe, bonDeLivraison } = REC;
@@ -99,6 +106,7 @@ export function monterMessagerie({ db, E, hote, prenom, estProf, rendue, A, VOCA
 
       function vueMail() {
         const adresse = `${norm(prenom).replace(/ /g, '')}@${VOCAB.mailDomain}`;
+        if (E.redige && CO) return CO.html(adresse);
         if (E.redige) {
           const fs = tousFournisseurs().slice().sort((a, b) => (a.brand < b.brand ? -1 : 1));
           return `<div class="ent-tete"><h2>Messagerie</h2><p class="note">Adresse : ${ech(adresse)}</p></div>
@@ -121,7 +129,7 @@ export function monterMessagerie({ db, E, hote, prenom, estProf, rendue, A, VOCA
         const items = liste.map((m) => `
           <button class="ent-mitem ${m.read || E.dossier === 'out' ? '' : 'nonlu'} ${sel && sel.id === m.id ? 'on' : ''}" data-mail="${m.id}">
             <span class="ent-de"><span>${ech(E.dossier === 'in' ? m.from : 'À : ' + m.to)}</span><span class="note">${fdate(m.ts)}</span></span>
-            <span class="ent-obj">${ech(m.subject)}</span>${marqueTransfert(m)}</button>`).join('')
+            <span class="ent-obj">${ech(m.subject || (m.courriel ? '(sans objet)' : m.subject))}</span>${marqueTransfert(m)}</button>`).join('')
           || '<div class="vide">Aucun message.</div>';
 
         let lecteur = '<div class="ent-vide-lect note">Sélectionnez un message pour le lire.</div>';
@@ -131,7 +139,7 @@ export function monterMessagerie({ db, E, hote, prenom, estProf, rendue, A, VOCA
           const corps = sel.kind === 'order' ? corpsMailCommande(sel.order)
             : sel.kind === 'bl' ? `<p>${ech(sel.text).replace(/\n/g, '<br>')}</p>${recDuMail ? bonDeLivraison(recDuMail) : ''}`
             : sel.kind === 'releve' ? `<p>${ech(sel.text || '').replace(/\n/g, '<br>')}</p>${VINV && sel.inventaire === VINV.id ? VINV.releve(sel) : ''}`
-            : `<p>${ech(sel.text).replace(/\n/g, '<br>')}</p>`;
+            : `<p>${ech(sel.courriel && !sel.text ? '(message vide)' : sel.text).replace(/\n/g, '<br>')}</p>`;
           let actions = '';
           if (E.dossier === 'in') {
             if (sel.kind === 'order') {
@@ -158,10 +166,10 @@ export function monterMessagerie({ db, E, hote, prenom, estProf, rendue, A, VOCA
           if (piece) lecteur = `<div class="ent-lecteur">${VDOC.visionneuse(piece, sel.pieces, db)}</div>`;
           else lecteur = `<div class="ent-lecteur">
             <button class="lien-accueil" data-mail-retour>← Retour</button>
-            <h3>${ech(sel.subject)}</h3>
+            <h3>${ech(sel.subject || (sel.courriel ? '(sans objet)' : sel.subject))}</h3>
             <p class="note">${E.dossier === 'in' ? 'De : ' + ech(sel.from + ' <' + sel.fromMail + '>') : 'À : ' + ech(sel.to + ' <' + (sel.toMail || '') + '>')} · ${fdt(sel.ts)}</p>
             ${corps}
-            ${VDOC ? VDOC.rangee(sel.pieces, docVu) : ''}
+            ${VDOC ? VDOC.rangee(sel.pieces, docVu, db) : ''}
             ${actions ? `<div class="rangee" style="margin-top:14px">${actions}</div>` : ''}${E.dossier === 'in' ? blocTransfert(sel) : ''}
             ${E.dossier === 'in' && sel.phrases ? (etapeQuiFerme(`repondre:${sel.cle || sel.phrases.id}`) ? '' : formPhrases(sel)) : `<form id="formRep" hidden style="margin-top:14px">
               <div class="champ"><label for="repT">Votre réponse</label><textarea id="repT" rows="${sel.amorce ? 8 : 6}">${ech(sel.amorce || '')}</textarea></div>
@@ -175,7 +183,7 @@ export function monterMessagerie({ db, E, hote, prenom, estProf, rendue, A, VOCA
             <div class="rangee" style="margin-bottom:12px">
               <button class="btn btn-s ${E.dossier === 'in' ? 'btn-p' : ''}" data-dossier="in">Réception</button>
               <button class="btn btn-s ${E.dossier === 'out' ? 'btn-p' : ''}" data-dossier="out">Envoyés</button>
-              <span class="pousse"><button class="btn btn-s btn-p" data-nouveau>Nouveau message</button></span>
+              <span class="pousse"><button class="btn btn-s btn-p" data-nouveau>${CO ? 'Nouveau courriel' : 'Nouveau message'}</button></span>
             </div>
             <div class="ent-boite ${sel ? 'sel' : ''}"><div class="ent-mlist">${items}</div>${lecteur}</div>
           </section>`;
@@ -237,7 +245,8 @@ export function monterMessagerie({ db, E, hote, prenom, estProf, rendue, A, VOCA
       const docVu = (id) => !!(E.vus[id] || (db.indicateurs && db.indicateurs[SEANCE]
         && db.indicateurs[SEANCE].docs && db.indicateurs[SEANCE].docs[id]));
       function compterDoc(id) {
-        if (estProf || rendue()) { E.vus[id] = true; return; }
+        // Une fiche enregistrée jointe à un courriel n'est pas un document de la séance : ni compte, ni repérage (juste « ouvert »).
+        if (estProf || rendue() || (VDOC && VDOC.externe(id))) { E.vus[id] = true; return; }
         compterAide(db, SEANCE, 'docs', id); sauver();
       }
       function ouvrirPiece(id) {
@@ -336,7 +345,8 @@ export function monterMessagerie({ db, E, hote, prenom, estProf, rendue, A, VOCA
       const pj = E.piece; E.piece = null; dessinerVue();
       z.querySelector(`[data-pj="${pj}"]`)?.focus();
     });
-    z.querySelector('[data-nouveau]')?.addEventListener('click', () => { E.redige = true; dessiner(); });
+    z.querySelector('[data-nouveau]')?.addEventListener('click', () => { E.redige = true; if (CO) CO.ouvrir(); dessiner(); });
+    if (CO && E.redige) CO.brancher(z);
     z.querySelector('[data-retour-quai]')?.addEventListener('click', () => { E.retourQuai = false; aller('quai'); });
     z.querySelector('[data-annuler]')?.addEventListener('click', () => { E.redige = false; dessiner(); });
     z.querySelector('[data-envoyer-fou]')?.addEventListener('click', envoyerAuFournisseur);

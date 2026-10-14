@@ -46,7 +46,10 @@ hors du menu tant que c'est faux (comme le Téléphone). Sans ces champs, rien n
 
 ## 3. Retours de Tristan à l'écran
 
-*(à remplir)*
+- 14/10/2026, page `outils/essai-courriel.html` : champ **À = variante A** (liste déroulante du carnet) ; **pièces jointes =
+  variante B** (bouton « Joindre un fichier », liste des fichiers disponibles, étiquettes avec croix). Bouton « Envoyer » : le style
+  `btn-p` habituel du site (comme « Envoyer la fiche »), pas de cas à part.
+- Lot 3 livré (ca3de0f) : `occupe` sur une ligne (jugé par `unAlaFois`), `quand` du planning.
 
 ## Compte rendu
 

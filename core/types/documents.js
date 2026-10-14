@@ -29,6 +29,11 @@
 // ne se charge pas (message qui nomme le document). Au dessin, une fonction qui plante est signalée (console) et la
 // feuille affiche un avis d'erreur. Un texte fixe : rien ne change.
 //
+// UNE PIÈCE QUI VIENT D'AILLEURS (14/10/2026, brief `docs/briefs/MOTEUR-courriel-planning.md`, lot 2) : `ajouter({ id, court, titre, html })`
+// pose un document que le MOTEUR ajoute (la fiche enregistrée, id `fiche:<id de la fiche>`) : `court` et `titre` peuvent être des
+// fonctions de la base, `html(db)` est appelé à chaque dessin. Une pièce ajoutée se joint et s'ouvre comme les autres, mais n'est
+// ni dans `ids()` (le repérage de l'enseignant ne la compte pas) ni dans les documents d'une fiche.
+//
 // UN DESSIN EN DOCUMENT (chantier D-10, 13/10/2026, brief ENT-6.10 §7.2) : `image: { src: './contenus/…svg', alt, mention? }`
 // (avec ou sans `html`, qui s'écrit alors dessous). Le dessin prend toute la largeur de la feuille ; un clic (ou « Agrandir »)
 // l'ouvre EN PLEIN ÉCRAN (la loupe : Échap, « Fermer » ou un clic sur le fond la referment, le focus revient au dessin).
@@ -85,6 +90,9 @@ function poserLoupe() {
   });
 }
 
+// Un nom de pièce : un texte, ou une fonction de la base (pièce ajoutée par le moteur).
+const nomDe = (x, db) => (typeof x === 'function' ? String(x(db || {})) : x);
+
 const TROMBONE = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
   aria-hidden="true"><path d="M21 11l-8.5 8.5a5 5 0 0 1-7-7L14 4a3.5 3.5 0 0 1 5 5l-8.5 8.5a2 2 0 0 1-3-3L15 7"/></svg>`;
 
@@ -133,20 +141,31 @@ export function creerDocuments(liste, style, { signaler } = {}) {
 
   return {
     doc: (id) => DOC[id] || null,
-    ids: () => Object.keys(DOC),
+    ids: () => Object.keys(DOC).filter((id) => !DOC[id].externe),
+    externe: (id) => !!(DOC[id] && DOC[id].externe),
+    // Une pièce ajoutée par le moteur (voir l'en-tête). Contrôlée comme les autres : essayée sur une base vide.
+    ajouter(d) {
+      if (DOC[d.id]) throw new Error(`document « ${d.id} » déclaré deux fois`);
+      DOC[d.id] = Object.assign({}, d, { externe: true });
+      try { htmlDe(DOC[d.id], {}); nomDe(d.court || d.titre, {}); } catch (x) {
+        delete DOC[d.id];
+        throw new Error(`document « ${d.id} » : « html(db) » ne marche pas sur une base vide : ${x && x.message ? x.message : x}`);
+      }
+    },
+    nom: (id, db) => { const d = DOC[id]; return d ? nomDe(d.court || d.titre, db) : id; },
     pieces,
 
     // La feuille elle-même.
     feuille,
 
     // La rangée sous le texte du mail. `vu(id)` : déjà ouvert ?
-    rangee(ids, vu) {
+    rangee(ids, vu, db) {
       const L = pieces(ids);
       if (!L.length) return '';
       return `<div class="ent-pj-liste" role="group" aria-label="Pièces jointes">${L.map((id) => {
         const v = vu(id);
         return `<button type="button" class="ent-pj${v ? ' vu' : ''}" data-pj="${ech(id)}" data-libre>${TROMBONE}<span>${
-          ech(DOC[id].court || DOC[id].titre)}</span>${v ? '<span class="ent-pj-vu">· ouvert</span>' : ''}</button>`;
+          ech(nomDe(DOC[id].court || DOC[id].titre, db))}</span>${v ? '<span class="ent-pj-vu">· ouvert</span>' : ''}</button>`;
       }).join('')}</div>`;
     },
 
@@ -158,7 +177,7 @@ export function creerDocuments(liste, style, { signaler } = {}) {
       return `<div class="ent-visio" data-visio="${ech(id)}">
         <div class="ent-visio-tete">
           <button type="button" class="lien-accueil" data-pj-retour data-libre>← Retour au message</button>
-          <span class="ent-visio-titre">${ech(d.titre || d.court)}</span>
+          <span class="ent-visio-titre">${ech(nomDe(d.titre || d.court, db))}</span>
           <span class="ent-visio-nav">
             <button type="button" class="btn btn-s" ${prec ? `data-pj="${ech(prec)}"` : 'disabled'} data-libre>‹ Précédent</button>
             <button type="button" class="btn btn-s" ${suiv ? `data-pj="${ech(suiv)}"` : 'disabled'} data-libre>Suivant ›</button>

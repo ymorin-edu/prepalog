@@ -120,6 +120,7 @@ plan d'entrepôt, fiche, animation) sans `id` texte non vide, sont refusées aus
 | `animation` | objet | Une animation à questions (et ses écrans de présentation, D-5). | essais seulement (aucune séance ne la passe encore) |
 | `animations` | tableau | Plusieurs animations (rare). | essais seulement |
 | `telephone` | objet | Écran « Téléphone » : appels où l'élève choisit ses répliques, contacts sans dialogue (voir « Vue « Dialogue à choix » »). | essai seulement (`contenus/dialogue-essai.js`) ; Decathlon ENT-7.2 à 7.4, à venir |
+| `courriel` | objet | Écran « Nouveau courriel » de la messagerie : carnet (liste du champ À), pièces jointes, réponse automatique, brouillon (voir « Nouveau courriel et fiche enregistrée »). Sans elle, « Nouveau message » (fournisseurs) ne change pas. | essai seulement (`contenus/courriel-essai.js`) ; Decathlon ENT-7.2, à venir |
 | `questions` | objet | Questions au fil et points d'étape (voir « Questions au fil »). | essais seulement (aucune séance ne la passe encore) |
 | `equipe` | objet | Personnes citées par les questions, en plus de `questions.personnes` ; destinataires d'un message à transférer (`transfert.a`). | essai des questions (`contenus/questions-essai.js`) |
 | `tirage` | (sans contrôle de type) | **Tirage mémorisé** : la déclaration `declarerTirage({ banques, … })`, que la fabrique prend dans `SEANCE.TIRAGE` (voir « Tirage mémorisé et banques »). Ou vrai (forme d'avant) = jeu tiré par élève même sans quai ni inventaire tiré : la graine est posée et inscrite dans le détail de la note. | `contenus/tirage-essai.js` (essai seulement) |
@@ -255,7 +256,7 @@ seulement ceux que le document marque `[[…]]`. Ouvertures comptées dans `db.i
 Exemple : `outils/essai-2de-documents.js`.
 
 **Fiche à remplir** (04/10/2026, `core/types/fiche.js`, même brief, lot 2) : `creerEntreprise({ …, fiche: { id,
-libelle, titre, sousTitre, documents: [ids], bouton, blocs: […], envoi: { bouton, a, suite } } })` ajoute une
+libelle, titre, sousTitre, documents: [ids], bouton, blocs: […], envoi: { bouton, a, suite } } })` (`envoi: { enregistrer: true, nomPiece }` : fiche enregistrée et jointe à un courriel, voir « Nouveau courriel et fiche enregistrée ») ajoute une
 entrée de menu (`libelle`) ; un mail semé portant `ouvreFiche: '<fiche.id>'` montre le bouton `bouton`. Avec
 `documents`, ils sont à gauche en onglets (restent à l'écran), la fiche à droite ; l'un sous l'autre si la place
 manque. Blocs : `ouinon` (`lignes`, `colonnes`, `entete`), `liste` (`choix: [{ v, lib }]`, `vide`), `choix`
@@ -1014,6 +1015,64 @@ fermetures: { planning: { ouvertSi: dialogueFini('quai'), message: 'Appelle d’
 - **Embranchements** : `vers: '<réplique>'` sur un choix. Un choix juste part vers sa réplique ; un choix maladroit qui porte `vers`
   fait aussi avancer (« Ce n'est pas de notre faute » → « le client s'énerve »), compte une reprise, et sa `reaction` est facultative.
   La bonne réponse de la réplique d'avant doit souvent sauter la branche (`vers` vers la réplique qui suit la branche).
+
+## Nouveau courriel et fiche enregistrée — `core/types/courriel.js`, `core/types/fiche.js` (14/10/2026)
+
+Écrits le 14/10/2026 (brief `docs/briefs/MOTEUR-courriel-planning.md`, lot 2 ; page d'essai validée par Tristan : `outils/essai-courriel.html`)
+pour Decathlon ENT-7.2 (l'élève remplit un ordre de transport, l'**enregistre**, puis l'envoie **par courriel** en pièce jointe).
+Un exemple qui tourne : `contenus/courriel-essai.js` (montée par le bloc de tests `courriel`).
+
+```js
+import { courrielsEnvoyes } from '../core/types/courriel.js';
+
+documents: [{ id: 'cdc', titre: 'Cahier des charges', court: 'Cahier des charges', html: '…' }],
+fiche: { id: 'ordre', libelle: 'Ordre de transport', blocs: [ … ],
+  envoi: { bouton: 'Enregistrer l’ordre de transport', enregistrer: true,       // fiche ENREGISTRÉE (et non envoyée à quelqu'un)
+           nomPiece: 'OT-2027-0142.pdf' /* ou (db) => 'OT-' + … + '.pdf' */,   // le nom du fichier : obligatoire avec `enregistrer`
+           suite: 'Envoie-le maintenant par courriel.' } },
+courriel: {
+  carnet: [{ id: 'contargo', nom: 'Contargo', mail: 'reservations@contargo.exemple', role: 'prestataire' }, …],   // la liste du champ À, dans cet ordre
+  pieces: ['cdc'],                       // facultatif : documents de la séance joignables (en plus des fiches enregistrées)
+  objet: '',                             // facultatif : objet prérempli (vide par défaut)
+  reponse: (c, db, prenom) => null | { de: 'contargo', texte: '…', objet?: '…', pieces?: ['avis'] } | [ … ],   // facultatif
+},
+etapes: [{ id: 'envoi', titre: '…', poids: 5,
+  verifier: (db) => { const L = courrielsEnvoyes(db, META.id).filter((c) => c.a === 'contargo'); return { status: !L.length ? 'attente' : L.some((c) => c.pieces.includes('fiche:ordre')) ? 'ok' : 'ko' }; } }],
+```
+
+- **L'écran** : avec `courriel`, le bouton « Nouveau message » de la messagerie devient « Nouveau courriel » : À (liste déroulante du carnet),
+  Objet, Message, Pièces jointes (bouton « Joindre un fichier », étiquettes avec une croix), « Envoyer » (`btn btn-p`). Envoi refusé sans
+  destinataire (la raison sous le bouton, le travail est gardé) ; objet vide ou message vide : confirmation **dans la page** (jamais
+  `window.confirm`) ; Entrée n'envoie rien. Les courriels envoyés sont dans « Envoyés » avec leurs pièces ; un objet vide s'y lit « (sans objet) ».
+  **Rien n'est jugé à l'écran** : aucun texte du moteur ne dit « juste », « faux », « correct » ou « erreur ».
+- **Réponse automatique** (`reponse`) : `c = { a (id du carnet), objet, corps, pieces: [ids], at }` ; `null` = pas de réponse (un contact
+  sans réponse, comme le quai ou la responsable, est un contact pour lequel la fonction rend `null`). `de` : un id du carnet (nom et adresse
+  repris) ou un nom libre ; objet par défaut « RE : <objet envoyé> ». Elle arrive **aussitôt** en boîte de réception (même mécanisme que les
+  réponses des fournisseurs : heure de l'envoi + 1 s), jamais après la remise d'une copie. Une réponse qui plante est signalée (console), l'envoi
+  reste fait. Elle peut porter des `pieces` (un document de la séance ou `fiche:<id>`).
+- **Brouillon** : À, objet, message et pièces sont gardés quand l'élève change d'écran, revient ou recharge ; vidés à l'envoi. Rangés dans la
+  base de l'élève, **cloisonnés par séance** : `db.courriels[<séance>] = { brouillon: { a, objet, corps, pieces }, envoyes: [{ a, objet, corps, pieces, at }] }`.
+  L'enseignant écrit sur une copie en mémoire : rien n'est rangé. Copie rendue : rien ne s'envoie, ne se range ni ne se joint.
+- **Gestes** (questions au fil `quand: apresGeste(…)`, déclencheurs de messages) : `courriel:envoyer` à chaque envoi et
+  `courriel:envoyer:<id du carnet>`. Un autre geste `courriel:…` empêche la séance de s'ouvrir (comme les autres gestes), et un geste
+  `courriel:…` cité dans une séance **sans** l'option aussi. Après l'envoi, `declencher()` comme partout.
+- **Lecture pour les jalons** : `courrielsEnvoyes(db, idSeance?)` → `[{ a, objet, corps, pieces, at }]` dans l'ordre d'envoi (sans `idSeance` :
+  toutes les séances de la base, par date). Le moteur ne juge rien : le jalon lit ce que l'élève a écrit et joint. Ne pas récompenser l'inaction :
+  « à faire » tant qu'aucun courriel n'est parti (voir l'exemple).
+- **Fiche enregistrée** (`envoi.enregistrer: true`, `envoi.nomPiece`) : la fiche ne part pas vers quelqu'un, elle est enregistrée et figée.
+  Textes : bouton = `envoi.bouton` ; confirmation « Tu enregistres l'ordre de transport ? Tu ne pourras plus le modifier. » (le texte du bouton
+  sans « Enregistrer » ; `envoi.confirmation` le remplace) avec « Oui, enregistrer » ; bandeau « Enregistré le … » ; bulle « Fiche enregistrée. ».
+  Le geste (`fiche:<id>:envoyer`), `apresFiche(id)` et `ficheEnvoyee(db, id)` restent ceux de l'envoi : rien ne change pour les jalons. Sans
+  `enregistrer`, une fiche se comporte exactement comme avant. Contrôlé à l'ouverture : `enregistrer` sans `nomPiece` (ou `nomPiece` sans
+  `enregistrer`, ou une fonction qui plante sur une base vide ou rend un texte vide) empêche la séance de se charger.
+- **La pièce `fiche:<id de la fiche>`** : tant que la fiche n'est pas enregistrée, elle n'est pas proposée dans « Joindre un fichier » ; ensuite
+  elle l'est sous le nom `nomPiece`. Dans un courriel envoyé ou reçu (`pieces: ['fiche:ordre']`), l'ouvrir montre la fiche **figée comme un
+  document** (feuille de papier, lecture seule, « Enregistré le … »), avec « ← Retour au message ». Elle n'est pas un document de la séance :
+  elle n'entre ni dans `documents`, ni dans le comptage du repérage de l'enseignant. Un nom de fichier fonction de la base est lu à chaque dessin.
+- **Contrôlé à l'ouverture** (message qui nomme le contact) : `carnet` non vide, `id` unique et sans espace ni « : » (il sert de geste), `nom`
+  et `mail` présents, `pieces` = documents déclarés par `documents`, `reponse` fonction, clés inconnues refusées (`reponces`) ; l'option
+  `courriel` est dans la table des options.
+- **Écran** : 1366 × 768 et 1280 × 720 sans défilement de page, pièces jointes comprises ; variables du thème seulement (styles `.ent-courriel*` de `base.css`).
 
 ## Vue « Planning » (cartes sur une grille) — `core/types/planning.js`
 

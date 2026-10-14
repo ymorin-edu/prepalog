@@ -896,6 +896,29 @@ a.ent-nav{ text-decoration:none }
 .ent-pj:hover, .ent-pj.vu{ border-color:var(--ardoise) }
 .ent-pj svg{ flex:none }
 .ent-pj-vu{ color:var(--ardoise); font-size:.8rem }
+/* Le nouveau courriel (14/10/2026, core/types/courriel.js ; page d'essai validée : outils/essai-courriel.html). Variables du thème seulement. */
+.ent-courriel .champ{ position:relative; margin-bottom:8px }
+.ent-courriel textarea{ resize:none; display:block }
+.ent-courriel-deux{ display:grid; grid-template-columns:1fr 1fr; gap:12px }
+@media (max-width:640px){ .ent-courriel-deux{ grid-template-columns:1fr } }
+.ent-courriel-pj{ display:flex; flex-wrap:wrap; gap:6px; align-items:center }
+.ent-courriel-pj .ent-pj{ cursor:default; padding:3px 4px 3px 10px }
+.ent-courriel-pj .ent-pj button{ font:inherit; cursor:pointer; border:0; background:none; color:var(--encre-douce); padding:0 6px; font-size:1.1rem; line-height:1 }
+.ent-courriel-pj .ent-pj button:hover{ color:var(--rouge) }
+.ent-courriel-menu{ position:absolute; z-index:5; margin-top:4px; background:var(--panneau); border:1px solid var(--filet); border-radius:var(--r);
+  box-shadow:var(--ombre); padding:4px; min-width:260px }
+.ent-courriel-menu[hidden]{ display:none }
+.ent-courriel-menu button{ display:flex; align-items:center; gap:6px; width:100%; text-align:left; font:inherit; font-size:.9rem; color:var(--encre);
+  background:none; border:0; border-radius:4px; padding:6px 8px; cursor:pointer }
+.ent-courriel-menu button:hover, .ent-courriel-menu button:focus-visible{ background:var(--survol) }
+.ent-courriel-menu-vide{ display:block; padding:6px 8px }
+.ent-courriel-envoi{ display:flex; align-items:flex-start; gap:14px }
+.ent-courriel-retour{ flex:1; min-height:1.4em; font-size:.92rem; color:var(--encre); outline:none }
+.ent-courriel-retour.refus{ color:var(--rouge) }
+.ent-courriel-retour .confirme-page{ margin:0 }
+/* Une fiche enregistrée ouverte comme un document (pièce `fiche:<id>`, fiche.js `feuilleFigee`) : sur la feuille de papier, en lecture seule. */
+.ent-fiche-piece{ padding:14px 16px }
+.ent-fiche-piece .ent-fiche-piece-date{ margin:10px 0 0 }
 .ent-lecteur{ min-width:0 }
 .ent-visio-tete{ display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; margin-bottom:12px }
 .ent-visio-tete .lien-accueil{ margin:0 }

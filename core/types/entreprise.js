@@ -48,6 +48,7 @@ import { monterCommandes } from './entreprise-commandes.js';
 import { monterReceptions } from './entreprise-receptions.js';
 import { monterConsole } from './entreprise-console.js';
 import { monterMessagerie } from './entreprise-messagerie.js';
+import { compilerCourriel } from './courriel.js';
 // Les formats ont changé d'adresse (lot 9c, module 3) : ils restent importables d'ici.
 export { eur, fdate, fdt, norm, normLoc } from './entreprise-outils.js';
 // La table des options a changé d'adresse (lot 9c, module 1) : `OPTIONS` reste importable d'ici (un test la lit).
@@ -210,7 +211,9 @@ export function creerEntreprise(U) {
   // fiche de poste, des CV… que l'élève lit sans les saisir. Ils n'existent que si la séance les déclare
   // (format en tête de `core/types/documents.js`) ; un mail semé les joint par `pieces: [ids]`.
   // `html` peut être une fonction de la base (chantier D-1 bis) : essayée ici sur une base vide, signalée au dessin.
-  const VDOC = U.documents ? creerDocuments(U.documents, U.documentsStyle, { signaler }) : null;
+  // Une fiche ENREGISTRÉE (`envoi.enregistrer`, 14/10/2026) est aussi une pièce à joindre : il faut alors les documents, même sans liste.
+  const AVEC_FICHE_ENREGISTREE = [].concat(U.fiche || [], U.fiches || []).some((F) => F && F.envoi && F.envoi.enregistrer);
+  const VDOC = U.documents || AVEC_FICHE_ENREGISTREE ? creerDocuments(U.documents || [], U.documentsStyle, { signaler }) : null;
   // La FICHE À REMPLIR (même brief, lot 2) : un écran de plus, seulement si la séance déclare `fiche`
   // (format en tête de `core/types/fiche.js`). Son état vit dans `db.fiches[<fiche.id>]`.
   // Plusieurs fiches (05/10/2026, ENT-5.8) : `fiches: [F1, F2]` ; la première garde l'écran `fiche`, les
@@ -218,6 +221,11 @@ export function creerEntreprise(U) {
   // `blocs` et `documents` d'une fiche peuvent être des fonctions de la base (chantier D-1 bis, voir `fiche.js`).
   const VFICHES = [].concat(U.fiche || [], U.fiches || []).map((F) => creerFiche(F, VDOC, { signaler }));
   const VFICHE = VFICHES[0] || null;
+  // Chaque fiche enregistrée devient la pièce `fiche:<id>` : jointe à un courriel, elle s'ouvre figée comme un document.
+  VFICHES.filter((VF) => VF.enregistrer).forEach((VF) => VDOC.ajouter({ id: VF.idPiece, court: VF.nomPiece, titre: VF.nomPiece, html: (db) => VF.feuilleFigee(db) }));
+  // LE NOUVEAU COURRIEL (14/10/2026, brief `docs/briefs/MOTEUR-courriel-planning.md`, lot 2) : seulement si la séance déclare `courriel`
+  // (format en tête de `core/types/courriel.js`). Contrôlé ici : un carnet vide, une pièce inconnue empêchent la séance de se charger.
+  const VCOUR = U.courriel ? compilerCourriel(U.courriel, { VDOC, VFICHES }) : null;
   // L'ANIMATION À QUESTIONS (05/10/2026, brief `docs/briefs/MOTEUR-vue-animation.md`) : un écran de plus,
   // seulement si la séance déclare `animation` (ou `animations: [A, B]`, rare) — format en tête de
   // `core/types/animation.js`. Son état vit dans `db.animations[<animation.id>]`. Le contenu est vérifié
@@ -255,7 +263,7 @@ export function creerEntreprise(U) {
   const ficheDeVue = (v) => VFICHES.find((VF) => vueDeFiche(VF) === v) || null;
   {
     // La messagerie est de toutes les séances : son geste (le transfert d'un message, chantier D-1) est toujours connu.
-    const connus = new Set([...VFICHES, ...VANIMS, VPL, VENT, VQUAI, VTEL].filter(Boolean).flatMap((V) => V.signaux || []).concat(GESTE_TRANSFERT));
+    const connus = new Set([...VFICHES, ...VANIMS, VPL, VENT, VQUAI, VTEL, VCOUR].filter(Boolean).flatMap((V) => V.signaux || []).concat(GESTE_TRANSFERT));
     // Le geste de transfert d'UN message (`messagerie:transfert:<clé>`) : connu pour les messages que le volet sème avec un
     // `transfert`, et pour ceux qu'il déclare dans `volet.transferables` (les messages qui arrivent plus tard, par un déclencheur).
     // Une clé qu'il ne déclare pas (faute de frappe) empêche la séance de s'ouvrir.
@@ -1833,7 +1841,7 @@ export function creerEntreprise(U) {
       // La messagerie : `entreprise-messagerie.js` (lot 9c, module 13). Après `COM` et `REC`, qu'elle utilise.
       const MSG = monterMessagerie({ db, E, hote, prenom, estProf, rendue, A, VOCAB, VARIANTS, SUP_BY_ID, B, COM, REC, VDOC, VFICHES, vueDeFiche,
         VINV, VQUAI, MQ, SEANCE, reponsesFournisseur: U.reponsesFournisseur || [], ajouterMail, declencher, accuseCorrection, etapeQuiFerme,
-        sauver, dessiner, dessinerVue, aller, PERSONNES, signal });
+        sauver, dessiner, dessinerVue, aller, PERSONNES, signal, COUR: VCOUR, signaler });
       const { ouvrirMail, docVu, compterDoc } = MSG;
 
 
@@ -2001,7 +2009,7 @@ export function creerEntreprise(U) {
           // Un envoi CORRIGÉ (le deuxième, le troisième…) reçoit l'accusé du volet, sans rejouer le premier message.
           if (!arrive && !rendue() && e && e.envois > 1) accuseCorrection(e.id, e.envois);
           sauver(); dessiner();
-          toast('Fiche envoyée.');
+          toast(e && e.enregistree ? 'Fiche enregistrée.' : 'Fiche envoyée.');
         },
       });
       function vueFiche(VF) { return VF.html(etatFiche(VF), uiFiche(VF), apiFiche()); }

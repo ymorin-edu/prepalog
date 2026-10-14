@@ -101,6 +101,17 @@
 // Une entrée de menu par fiche ; la première garde l'écran `fiche`, les autres `fiche:<id>`. Une fiche qui porte
 // `quand(db)` n'apparaît (menu, bouton du mail) qu'une fois la condition vraie : un écran qui attend un message.
 //
+// FICHE ENREGISTRÉE (14/10/2026, brief `docs/briefs/MOTEUR-courriel-planning.md`, lot 2 ; ENT-7.2 : l'ordre de transport) :
+// `envoi: { bouton: 'Enregistrer l'ordre de transport', enregistrer: true, nomPiece: 'OT-2027-0142.pdf' }`. La fiche ne part pas
+// vers quelqu'un : elle est ENREGISTRÉE, figée comme une fiche envoyée, et devient un fichier à joindre à un courriel (option
+// `courriel`, `core/types/courriel.js`). Les textes disent « enregistr… » (confirmation : « Tu enregistres l'ordre de transport ?
+// Tu ne pourras plus le modifier. », `envoi.confirmation` pour la remplacer ; bandeau : « Enregistré le … ») au lieu de « envoyée ». Le
+// geste (`fiche:<id>:envoyer`), `apresFiche` et `ficheEnvoyee` restent ceux de l'envoi : rien ne change pour les jalons.
+// `nomPiece` : le nom du fichier, un texte ou une fonction de la base `(db) => texte` ; obligatoire avec `enregistrer`. Tant que la fiche
+// n'est pas enregistrée, le fichier n'existe pas (il n'est pas proposé à « Joindre un fichier »). Son id de pièce est
+// `fiche:<id de la fiche>` : dans `pieces` d'un courriel envoyé ou reçu, il s'ouvre comme un document, la fiche FIGÉE sur une feuille
+// de papier (`feuilleFigee(db)`, lecture seule). Sans `enregistrer`, une fiche se comporte exactement comme avant.
+//
 // FONCTION DE LA BASE (chantier D-1 bis, 09/10/2026, brief ENT-6.1 §7.3) : `blocs` et `documents` peuvent être des
 // fonctions `(db) => …` de la base de l'élève, pour une fiche TIRÉE par élève (ses cases, ses lignes : `TIRAGE.piecesTirees`).
 // La fonction est appelée À CHAQUE DESSIN (et à l'envoi), jamais rangée dans la base : elle ne doit rien écrire. Contrôle
@@ -215,6 +226,19 @@ export function creerFiche(F, VDOC, { signaler } = {}) {
   const blocs = blocsDe({});
   const envoi = F.envoi || {};
   const libelle = F.libelle || F.titre || 'Fiche';
+  // Fiche enregistrée : le nom du fichier est exigé (et essayé sur une base vide).
+  const ENREG = envoi.enregistrer === true;
+  const nomPiece = (db) => {
+    const n = typeof envoi.nomPiece === 'function' ? envoi.nomPiece(db || {}) : envoi.nomPiece;
+    return typeof n === 'string' ? n : '';
+  };
+  if (envoi.enregistrer != null && typeof envoi.enregistrer !== 'boolean') throw new Error(`fiche « ${F.id} » : envoi.enregistrer est vrai ou faux`);
+  if (ENREG) {
+    let n = '';
+    try { n = nomPiece({}); } catch (x) { throw new Error(`fiche « ${F.id} » : envoi.nomPiece(db) ne marche pas sur une base vide : ${x && x.message ? x.message : x}`); }
+    if (!n.trim()) throw new Error(`fiche « ${F.id} » : envoi.enregistrer exige envoi.nomPiece (le nom du fichier, texte ou fonction de la base qui rend un texte)`);
+  } else if (envoi.nomPiece != null) throw new Error(`fiche « ${F.id} » : envoi.nomPiece n'a de sens qu'avec envoi.enregistrer: true`);
+  const aEnregistrer = (b) => String(b || '').replace(/^Enregistrer\s+/i, '');
 
   // Ce qui manque avant l'envoi, dans l'ordre de la fiche (`db` : la base, pour une fiche fonction de la base).
   function manque(e, db) {
@@ -322,6 +346,20 @@ export function creerFiche(F, VDOC, { signaler } = {}) {
     return `<div class="avis avis-err">Bloc de fiche inconnu : « ${ech(b.type)} ».</div>`;
   }
 
+  // La fiche ENREGISTRÉE vue comme un DOCUMENT (pièce `fiche:<id>` d'un courriel) : les mêmes blocs que l'écran, remplis des valeurs de
+  // l'élève, en lecture seule, sans documents à gauche ni bouton. Un champ « fonction de la base » qui plante donne l'avis d'erreur.
+  function feuilleFigee(db) {
+    const e = (db && db.fiches && db.fiches[F.id]) || { valeurs: {} };
+    dessin.db = db || {}; dessin.fige = true;
+    const brut = blocsBrutsDe(db || {});
+    return `<div class="ent-fiche-piece" data-fiche-piece="${ech(F.id)}"><div class="ent-fiche-form${F.grille ? ' ent-fiche-grille' : ''}${F.serree ? ' ent-fiche-serree' : ''}">
+        <fieldset disabled>${F.entete ? `<div class="ent-fiche-entete">${F.entete}</div>` : ''}<div class="ent-fiche-blocs">${
+          brut ? brut.map((b) => `<div class="ent-fiche-bloc${b.type === 'cadre' && b.large ? ' large' : ''}">${bloc(b, e)}</div>`).join('')
+            : '<div class="avis avis-err" data-fiche-erreur>Cette fiche ne s’affiche pas (erreur de la séance) : signale-le à ton professeur.</div>'}</div>${
+          F.pied ? `<p class="ent-fiche-pied">${ech(F.pied)}</p>` : ''}</fieldset>${
+          e.envoye ? `<p class="note ent-fiche-piece-date">Enregistré le ${ech(jourHeure(e.envoye.at))}.</p>` : ''}</div></div>`;
+  }
+
   // Les onglets des documents (à gauche) et le document choisi.
   function onglets(ui, docVu, docs, db) {
     const sel = docs.includes(ui.doc) ? ui.doc : docs[0];
@@ -345,7 +383,7 @@ export function creerFiche(F, VDOC, { signaler } = {}) {
             : '<div class="avis avis-err" data-fiche-erreur>Cette fiche ne s’affiche pas (erreur de la séance) : signale-le à ton professeur.</div>'}</div>${
           F.pied ? `<p class="ent-fiche-pied">${ech(F.pied)}</p>` : ''}</fieldset>
         ${e.envoye
-          ? `<div class="ent-fiche-envoyee" data-fiche-envoyee tabindex="-1">Fiche envoyée${envoi.a ? ` à ${ech(envoi.a)}` : ''} le ${
+          ? `<div class="ent-fiche-envoyee" data-fiche-envoyee tabindex="-1">${ENREG ? 'Enregistré' : `Fiche envoyée${envoi.a ? ` à ${ech(envoi.a)}` : ''}`} le ${
             ech(jourHeure(e.envoye.at))}.${envoi.suite ? ' ' + ech(envoi.suite) : ''}
             <button type="button" class="lien-accueil" data-vue2="mail" data-libre>Ouvrir la Messagerie</button></div>`
           : (api.figee ? '' : `<button class="btn btn-p" type="submit" data-fiche-envoyer>${ech(envoi.bouton || 'Envoyer la fiche')}</button>
@@ -477,10 +515,14 @@ export function creerFiche(F, VDOC, { signaler } = {}) {
       ui.manque = '';
       // Envoi définitif : d'abord une confirmation dans la page (06/10/2026, Smoby C2).
       if (!ui.confirme) {
-        confirmerDansLaPage(z.querySelector('[data-fiche-envoyer]'), e.envois
+        confirmerDansLaPage(z.querySelector('[data-fiche-envoyer]'), ENREG
+          ? (envoi.confirmation || (e.envois ? `Tu enregistres de nouveau ${aEnregistrer(envoi.bouton) || 'la fiche'} ?`
+            : `Tu enregistres ${aEnregistrer(envoi.bouton) || 'la fiche'} ? Tu ne pourras plus le modifier.`))
+          : e.envois
           ? `Tu renvoies ta fiche corrigée${envoi.a ? ` à ${envoi.a}` : ''} ?`
           : `Tu envoies ta fiche${envoi.a ? ` à ${envoi.a}` : ''} ? Tu ne pourras plus la modifier.`,
-          () => { ui.confirme = true; z.querySelector('[data-fiche]').requestSubmit(); });
+          () => { ui.confirme = true; z.querySelector('[data-fiche]').requestSubmit(); },
+          ENREG ? { oui: 'Oui, enregistrer' } : undefined);
         return;
       }
       ui.confirme = false;
@@ -496,7 +538,7 @@ export function creerFiche(F, VDOC, { signaler } = {}) {
       // Le nombre d'envois (une fiche rouverte pour correction se renvoie : lot A, 07/10/2026).
       e.envois = (e.envois || 0) + 1;
       sig('envoyer');
-      api.envoyee({ id: F.id, envois: e.envois });
+      api.envoyee({ id: F.id, envois: e.envois, enregistree: ENREG });
       z.querySelector('[data-fiche-envoyee]')?.focus({ preventScroll: true });
     });
     // Les onglets : seul le document change (la fiche ne bouge pas) ; flèches gauche / droite au clavier.
@@ -523,6 +565,9 @@ export function creerFiche(F, VDOC, { signaler } = {}) {
 
   return {
     id: F.id, docs: docsFixes || docsDe({}), nav: { libelle }, quand: F.quand || null,
+    // Fiche enregistrée (voir l'en-tête) : `enregistrer`, l'id de la pièce, son nom, sa feuille figée, et « est-elle enregistrée ? ».
+    enregistrer: ENREG, idPiece: `fiche:${F.id}`, nomPiece, feuilleFigee,
+    enregistree: (db) => !!(db && db.fiches && db.fiches[F.id] && db.fiches[F.id].envoye),
     bouton: F.bouton || `Ouvrir la ${minus(libelle)}`,
     etatNeuf: () => ({ valeurs: {} }),
     manque, refus, html, brancher,

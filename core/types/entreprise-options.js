@@ -59,6 +59,7 @@ export const OPTIONS = {
   fiches: { type: 'array', role: 'plusieurs fiches à remplir' },
   animation: { type: 'object', role: 'animation à questions (une seule)' },
   animations: { type: 'array', role: 'plusieurs animations à questions (rare)' },
+  courriel: { type: 'object', role: 'écran Nouveau courriel : carnet (liste du champ À), pièces jointes, réponse automatique, brouillon (`core/types/courriel.js`)' },
   telephone: { type: 'object', role: 'écran Téléphone : appels à répliques à choisir (`core/types/dialogue.js`), contacts sans dialogue' },
   questions: { type: 'object', role: "questions au fil et points d'étape" },
   equipe: { type: 'object', role: 'personnes citées par les questions (en plus de `questions.personnes`) et destinataires d’un message à transférer' },
