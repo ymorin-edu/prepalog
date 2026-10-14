@@ -558,6 +558,8 @@ await v('ENT-7.2 : jalons sans écran — le témoin juste ; chaque piège du br
   egal(faux2(await jalons2(c((L) => { L[0].a = 'quai'; L[0].corps = 'Salut'; }))), ['courriel-destinataire', 'courriel-forme'], 'au quai, mal écrit : deux jalons, chacun une fois');
   // Jalon 8 : un courriel juste suivi d'un autre (à Claire, sans pièce, sans formule) reste juste ; la forme se juge sur le premier.
   egal(faux2(await jalons2(c((L) => { L.push({ a: 'claire', objet: '', corps: 'ok', pieces: [] }); }))), [], 'jalons 8 et 9 jugés sur le courriel qui porte l’ordre, pas sur le dernier');
+  // Jalon 9 : le courriel juste, puis un courriel mal écrit à un AUTRE prestataire : la forme reste jugée sur celui qui porte l'ordre à Contargo.
+  egal(faux2(await jalons2(c((L) => { L.push({ a: 'rail', objet: '', corps: 'salut, tu fais quoi', pieces: [] }); }))), [], 'courriel juste puis courriel bâclé à un autre prestataire');
   // Sans courriel juste, la forme se juge sur le dernier courriel à un prestataire.
   egal(faux2(await jalons2(c((L) => { L[0].pieces = []; L.push({ a: 'rail', objet: '', corps: 'tu', pieces: [] }); }))), ['courriel-destinataire', 'courriel-forme'], 'sans courriel juste : dernier courriel à un prestataire');
   // L'appel et le créneau.
@@ -597,12 +599,12 @@ await v('ENT-7.2 : planning — Quai 6 à 09:30 est la SEULE bonne réponse, ave
         if (jalonsPlanning(db, P).L.every((x) => x.ok)) out.push(`${l.id}@${7 + t / 2}`);
       } return out; };
     const complet = S.PLANNING;
-    const sans = { ...complet, lignes: { ...complet.lignes, liste: complet.lignes.liste.map((l) => (l.id === 'Q5' ? { ...l, occupe: l.occupe.slice(0, 1) } : l)) } };
+    const sans = { ...complet, lignes: { ...complet.lignes, liste: complet.lignes.liste.map((l) => (l.id === 'Q7' ? { ...l, occupe: l.occupe.slice(1) } : l)) } };
     return { complet: juste(complet), sans: juste(sans), pris: complet.lignes.liste.map((l) => l.occupe.length) };
   });
   egal(r.complet, ['Q6@9.5'], 'avec le créneau de plus');
   egal(r.sans, ['Q6@9.5'], 'sans le créneau de plus');
-  egal(r.pris, [2, 2, 1], 'créneaux pris par quai (le Quai 5 en a un de plus que dans la version de base)');
+  egal(r.pris, [1, 2, 2], 'créneaux pris par quai (le Quai 7 en a un de plus que dans la version de base : 07:00–08:30)');
 });
 
 // ─────────────────────────────────────────────────────────── le parcours à l'écran

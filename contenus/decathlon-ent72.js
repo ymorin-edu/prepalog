@@ -259,9 +259,9 @@ export const PLANNING = {
     'Déchargement : <b>1 h 30</b>', 'Un quai ne reçoit qu’un conteneur à la fois', 'Un chauffeur n’attend pas plus d’une heure avant d’être déchargé'],
   echelle: { type: 'heures', debut: '07:00', fin: '13:00', pas: 30 },
   lignes: { titre: 'Planning du quai — lundi 01/02/2027', liste: [
-    { id: 'Q5', nom: 'Quai 5', occupe: [{ de: '07:30', a: '10:30', titre: PRIS }, { de: '11:00', a: '12:00', titre: PRIS }] },
+    { id: 'Q5', nom: 'Quai 5', occupe: [{ de: '07:30', a: '10:30', titre: PRIS }] },
     { id: 'Q6', nom: 'Quai 6', occupe: [{ de: '08:00', a: '09:30', titre: PRIS }, { de: '11:00', a: '12:30', titre: PRIS }] },
-    { id: 'Q7', nom: 'Quai 7', occupe: [{ de: '09:00', a: '12:00', titre: PRIS }] },
+    { id: 'Q7', nom: 'Quai 7', occupe: [{ de: '07:00', a: '08:30', titre: PRIS }, { de: '09:00', a: '12:00', titre: PRIS }] },   // 07:00–08:30 : le créneau pris « de plus » (bonus du brief, pour tous : un planning est une déclaration fixe)
   ] },
   cartes: { titre: 'Ton conteneur à placer',
     liste: [{ id: 'cont', titre: 'Ton conteneur · 1 h 30', court: 'Ton conteneur', famille: 'cont', des: '09:00', avant: '13:00' }],

@@ -6,7 +6,7 @@
 > Lis docs/EN-COURS.md puis docs/briefs/ENT-7.2-decathlon-ordre-de-transport.md. Fais d'abord l'état des lieux du §7 en lecture seule (fiche « enregistrée » devenue pièce jointe, écran Nouveau courriel avec carnet et réponses automatiques, planning à créneaux déjà pris, vue Dialogue à choix) et dis-moi ce qui manque. Annonce la durée avant de commencer et dis-moi si un point du brief contredit le code. Ne construis pas avant que Tristan ait tranché les §4 bis, §4 ter et §11.
 > ```
 
-**Statut** : à implémenter
+**Statut** : livré
 **Date du brief** : 13/10/2026
 **Conversation d'origine** : Cowork (Opus) ; fiches `claude/prepalog-decathlon-cadrage.md` (décisions 5 à 15, poids §6.4) et
 `claude/prepalog-decathlon-maquette.md` (décisions 16 à 21). **À lire avec `ENT-7.1-decathlon-choisir-transporteur.md`** : univers,
@@ -315,11 +315,28 @@ c'est le cahier des charges de Decathlon qui l'exige », comme 7.1), **d4 retir�
 
 ---
 
-## Compte rendu *(rempli par Claude Code à la livraison)*
+## Compte rendu *(rempli par Claude Code à la livraison, 14/10/2026)*
 
-- **Fichiers créés / modifiés** :
+- **Fichiers créés / modifiés** : `activites/decathlon-ordre-transport.js` (la séance, `pret: true, ouverture: 'prof'`) ; `contenus/decathlon-ent72.js` (documents, ordre, carnet et
+  réponses, téléphone, planning, messages, jalons, pastilles, accueil) ; `contenus/decathlon-ent72-donnees.js` (données pures : tirage, numéro piège, attendus) ;
+  `contenus/questions/ENT-7.2.js` ; `contenus/corriges/ENT-7.2.js` ; `activites/index.js` (une ligne) ; `contenus/decathlon.js` (**univers commun** : Mehdi Benali ajouté à `EQUIPE`) ;
+  `activites/FICHE-SEANCE.md` (deux pièges) ; **tests** : `outils/test/decathlon.mjs` (17 cas « ENT-7.2 » ajoutés, aucun cas existant réécrit) et
+  `outils/test/tirage-niveaux.mjs` (**touché** : une entrée dans `BANQUES_FIGEES`, comme 7.1). Rien dans `core/` ni `styles/`. Pas de trame (Cowork).
 - **Écarts par rapport au brief** :
-- **Décisions prises en route** :
-- **Tests** :
-- **Commits** :
-- **Reste ouvert** :
+  - **Banque « Avant de commencer »** : le moteur exige au moins le double de ce qu'on tire par rubrique ; d1, d2, d3 ne font que 3 en droit pour en tirer 2. **J'ai ajouté une 4e question de droit, `d5`**
+    (« Qui doit faire vérifier le poids d'un conteneur avant son chargement ? » : le chargeur, d'après le document sur la pesée) : **à valider par Tristan**. d4 retirée comme décidé.
+  - **Instructions fausses** : banque de 4 pièces, 2 tirées parmi froid, ADR, « zone sous douane » ; **le hayon est le bonus du confirmé** (jamais tiré au socle). Au jalon 6, le hayon coché ne coûte que le bonus.
+  - **Créneau pris « de plus »** : un planning est une déclaration fixe (pas de fonction de la base) : je ne peux pas le réserver au confirmé. Le bloc de plus (Quai 7, 07:00–08:30) est donc **pour tous** ; il ne change pas la bonne réponse (testé avec et sans).
+  - **Planning** : la carte s'appelle « Ton conteneur » (pas de numéro : titre fixe) ; le bouton dit « Envoyer le planning au chef » ; pas de bande ambrée ni de légende de carte, pour tenir à 1280 × 720 (706 px au lieu de 842).
+  - **N° de conteneur** : la police à chasse fixe est dans l'avis (le document), pas dans la case de saisie (le moteur n'a pas l'option). **« Référence Decathlon » et « Disponible à partir du »** : cases présentes, non jugées (le brief ne les met dans aucun jalon).
+  - **Parcours** : `parcours` + `precedente: 7.1` + `suiteAuBilan` (pas de `correction` : l'ordre est figé à l'enregistrement, le courriel n'a pas d'envoi final) ; ordre en deux colonnes qui défilent dans leur colonne (`defile`), la page ne bouge pas.
+  - **Appel** : deux contacts à messagerie vocale (Claire Vasseur ; Contargo — réservations, aucune personne nommée) ; chaque contact différent appelé avant le quai = une reprise.
+  - **Jalon 9** : jugé sur le premier courriel qui porte l'ordre à Contargo ; à défaut, le dernier courriel à un prestataire ; à défaut, le dernier courriel (pour qu'une erreur ne se paie qu'une fois). Prénom de l'élève lu sur le premier message reçu. L'objet accepte aussi « OT-2027-0142 ».
+  - **Questions** : ajout de « seulement téléphoné à Contargo ? » (Pour réfléchir du §4) en plus de la n° 5 (`numero-quai`, réflexion libre, au bilan) ; n° 4 en réserve (`actif: false`). Lexique 7.2 dans la séance (pas dans l'univers).
+- **Décisions prises en route** : voir `docs/decisions.md` (14/10, ENT-7.2). Un piège de moteur trouvé : `note: { sur: 20 }` dans un `planning` remplace toute la note de la séance (consigné dans `FICHE-SEANCE.md`).
+- **Tests** : bloc `decathlon` 32/32 (17 cas ENT-7.2, ~40 s) ; suite entière 1446/1447 puis vert après l'entrée de `BANQUES_FIGEES` (331 s). 19 sabotages, **chacun fait tomber au moins un cas** : jalon 8 jugé sur le dernier courriel (2) ; réponse de Contargo qui cite le n° de l'avis (1) ;
+  jalon 9 jugé sur le dernier courriel (1, après ajout d'un cas qui ne tombait pas) ; chaque jalon 1 à 6, 8, 9, 10, 11 affaibli (1 à 3 cas) ; bonus toujours juste (1) ; Claire qui dit « correct » (1) ; piège de l'appel = vrai numéro (2) ; numéro de l'avis remplacé par celui de l'ordre dans l'appel (1) ; créneau pris retiré (3).
+- **Vérifié** : chiffres de contrôle à la main (3 et 1) ; Code civil art. 1366 (lu sur un site tiers, Légifrance n'a pas répondu) ; VGM (coordinateur). **Construit** : tout le reste, dit en pied de chaque document.
+- **Commits** : voir `git log` (séance en brouillon, puis livraison).
+- **Reste ouvert** : (1) valider `d5` ; (2) relire l'art. 1366 sur Légifrance ; (3) le planning ne peut pas porter le n° de l'élève ni un bonus propre au confirmé : demande au moteur si Tristan y tient (7.3, 7.4) ; (4) trame courte (Cowork) ;
+  (5) l'ordre (douze cases, six instructions) défile dans sa colonne à 1366 × 768 : à regarder à l'écran.

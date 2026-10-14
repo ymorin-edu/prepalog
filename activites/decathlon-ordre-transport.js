@@ -29,7 +29,7 @@ const s = seanceEntreprise(DECATHLON, SEANCE, {
   suiteAuBilan: true,
   niveauxPrevus: ['confirme'],   // bonus du confirmé : une instruction fausse de plus (« hayon élévateur »)
   questions: 'ENT-7.2',
-  pret: false,
+  pret: true,
   ouverture: 'prof',
 }, SEANCE.OPTIONS);
 export const meta = s.meta;

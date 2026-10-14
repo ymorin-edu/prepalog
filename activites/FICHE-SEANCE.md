@@ -119,8 +119,8 @@ plan d'entrepôt, fiche, animation) sans `id` texte non vide, sont refusées aus
 | `pastilles` | tableau | Pastilles d'étape de la séance, `[{ libelle, fait(db) }]`, une bande sur tous les écrans (D-10). | `activites/france-boissons-retour.js` |
 | `animation` | objet | Une animation à questions (et ses écrans de présentation, D-5). | essais seulement (aucune séance ne la passe encore) |
 | `animations` | tableau | Plusieurs animations (rare). | essais seulement |
-| `telephone` | objet | Écran « Téléphone » : appels où l'élève choisit ses répliques, contacts sans dialogue (voir « Vue « Dialogue à choix » »). | essai seulement (`contenus/dialogue-essai.js`) ; Decathlon ENT-7.2 à 7.4, à venir |
-| `courriel` | objet | Écran « Nouveau courriel » de la messagerie : carnet (liste du champ À), pièces jointes, réponse automatique, brouillon (voir « Nouveau courriel et fiche enregistrée »). Sans elle, « Nouveau message » (fournisseurs) ne change pas. | essai seulement (`contenus/courriel-essai.js`) ; Decathlon ENT-7.2, à venir |
+| `telephone` | objet | Écran « Téléphone » : appels où l'élève choisit ses répliques, contacts sans dialogue (voir « Vue « Dialogue à choix » »). | essai (`contenus/dialogue-essai.js`) ; Decathlon ENT-7.2 (`contenus/decathlon-ent72.js`), 7.3 et 7.4 à venir |
+| `courriel` | objet | Écran « Nouveau courriel » de la messagerie : carnet (liste du champ À), pièces jointes, réponse automatique, brouillon (voir « Nouveau courriel et fiche enregistrée »). Sans elle, « Nouveau message » (fournisseurs) ne change pas. | essai (`contenus/courriel-essai.js`) ; Decathlon ENT-7.2 (`contenus/decathlon-ent72.js`) |
 | `questions` | objet | Questions au fil et points d'étape (voir « Questions au fil »). | essais seulement (aucune séance ne la passe encore) |
 | `equipe` | objet | Personnes citées par les questions, en plus de `questions.personnes` ; destinataires d'un message à transférer (`transfert.a`). | essai des questions (`contenus/questions-essai.js`) |
 | `tirage` | (sans contrôle de type) | **Tirage mémorisé** : la déclaration `declarerTirage({ banques, … })`, que la fabrique prend dans `SEANCE.TIRAGE` (voir « Tirage mémorisé et banques »). Ou vrai (forme d'avant) = jeu tiré par élève même sans quai ni inventaire tiré : la graine est posée et inscrite dans le détail de la note. | `contenus/tirage-essai.js` (essai seulement) |
@@ -1754,6 +1754,8 @@ sur 2 » est calculé). Après toute modification : `node outils/test.mjs questi
 
 ## Pièges
 
+- **Ne pas déclarer `note: { sur: 20 }` dans un `planning` de séance à jalons** (ENT-7.2, 14/10/2026) : le moteur lit cette clé comme « la note de la séance est celle du planning » et ignore alors tous les autres jalons et les questions (score 0 tant que le planning n'est pas envoyé, puis 0 ou 20). Seules les séances d'évaluation d'un planning seul (`copie`) l'utilisent. Un cas du bloc `decathlon` le retient (inaction = 0, une question seule = 1 point).
+- **Un `planning` est une déclaration fixe** : ses cartes, ses lignes et ses créneaux pris (`occupe`) ne se calculent pas sur la base de l'élève (pas de « fonction de la base »). Pour une séance tirée par élève, le titre d'une carte ne peut pas porter le numéro de l'élève (ENT-7.2 : « Ton conteneur »), et un cas « bonus du confirmé » ne peut pas changer le planning. Le bouton d'envoi dit toujours « Envoyer le planning au chef ».
 - **Un module `core/types/entreprise-*.js` n'importe jamais `entreprise.js`** (import circulaire : `entreprise.js` les importe). Il
   reçoit ce dont il a besoin par son nom (jamais `ctx` ni `U` ; un écran de données reçoit en plus la base `db` et l'état d'écran `E` de l'élève, et ne touche que ses clés) ; `entreprise.js` ré-exporte ce que d'autres fichiers
   lui importaient (`OPTIONS`, `eur`, `fdate`, `fdt`, `norm`, `normLoc`). Chantier 9, lot 9c, 08/10/2026 : le plan et les
