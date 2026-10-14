@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Essai — dialogue à choix (Prepalog)</title>
+<!-- Page d'ESSAI de la vue « Dialogue à choix » (brief `docs/briefs/MOTEUR-vue-dialogue.md`, lot 1). Elle importe le VRAI module
+     de la vue (`core/types/dialogue.js`) avec l'appel au quai d'ENT-7.2 écrit en dur (élève témoin : conteneur PLGU 418270 6,
+     OT-2027-0142, n° piège PLGU 418720 6). Elle n'est liée nulle part et rien n'est branché dans le moteur d'entreprise.
+     La base est gardée dans ce navigateur (localStorage) : recharger la page retrouve l'appel où il en était.
+     Ouvrir avec `lancer.bat`, puis http://localhost:8000/outils/essai-dialogue.html -->
+<base href="../">
+<link rel="icon" href="./styles/logo.png">
+<link rel="stylesheet" href="./styles/polices.css">
+<link rel="stylesheet" href="./styles/base.css">
+<link rel="stylesheet" href="./styles/dialogue.css">
+<style>
+  body{ margin:0; background:var(--fond) }
+  .essai-reglages{ background:#fff7d6; border-bottom:1px solid #e8d48a; padding:6px 16px; font:14px/1.6 sans-serif; color:#3b3200 }
+  .essai-reglages label{ display:inline-block; margin:1px 14px 1px 0; white-space:nowrap; font-weight:400; color:#3b3200 }
+  .essai-reglages select, .essai-reglages input[type=text]{ width:auto; display:inline-block; padding:1px 4px; font-size:13.5px }
+  .essai-reglages input[type=text]{ width:7em }
+  .essai-reglages input[type=checkbox]{ width:auto; display:inline; margin:0 4px 0 0; vertical-align:middle }
+  .essai-note{ background:#fff7d6; border:1px solid #e8d48a; color:#3b3200; padding:8px 16px; font:13.5px/1.5 monospace; white-space:pre-wrap; margin:0 }
+  .essai-bandeau{ display:flex; align-items:center; gap:14px; padding:8px 16px; border-bottom:1px solid var(--filet); background:var(--panneau); color:var(--encre) }
+  .essai-bandeau b{ font-size:17px }
+  .essai-bandeau span{ color:var(--encre-douce); font-size:14px }
+  #hote{ padding:12px 16px }
+  #hote .dlg{ --dlg-reserve:150px }
+</style>
+</head>
+<body>
+<form class="essai-reglages" id="reglages">
+  <b>Page d'essai</b> — l'appel est gardé au rechargement ; un changement de réglage repart de zéro :
+  <label>Mode <select name="mode"><option value="guidage">guidage</option><option value="evaluation">évaluation</option></select></label>
+  <label>Voir comme <select name="role"><option value="eleve">élève</option><option value="prof">enseignant</option></select></label>
+  <label>Prénom <input type="text" name="prenom" value="Léa"></label>
+  <label><input type="checkbox" name="rappel"> « Rappeler » permis (correction)</label>
+  <label>Thème <select name="theme"><option value="clair">clair</option><option value="sombre">sombre</option></select></label>
+  <button type="button" id="note">Ce que lit la note</button>
+  <button type="button" id="zero">Repartir de zéro</button>
+</form>
+<pre id="essaiNote" class="essai-note" hidden></pre>
+<div class="essai-bandeau"><b>Decathlon</b><span>Entrepôt de Rouvignies · service transport amont · Téléphone</span></div>
+<div id="hote"></div>
+<script type="module">
+import { creerTelephone, appelRetenu, appelEnCours, reprises, premiereReponse } from './core/types/dialogue.js';
+
+// ── Le contenu d'ENT-7.2 (brief §4, étape 4), écrit en dur pour l'essai ────────────────────────────────────────────
+const OT = 'OT-2027-0142';
+const espace = (n) => `${n.slice(0, 4)} ${n.slice(4, 10)} ${n.slice(10)}`;   // PLGU4182706 → PLGU 418270 6
+const noConteneur = (db) => espace(db.conteneur || 'PLGU4182706');
+const noPiege = (db) => espace(db.piege || 'PLGU4187206');
+const PERSONNES = { mehdi: { nom: 'Mehdi Benali', role: 'chef de quai', appel: 'Mehdi' } };
+const TELEPHONE = {
+  situation: 'Appelle le quai de réception pour réserver le créneau d’arrivée du conteneur.',
+  dialogues: [{
+    id: 'quai', de: 'mehdi',
+    contact: { nom: 'Quai de réception — Rouvignies', detail: 'poste 214' },
+    repliques: [
+      { id: 'accueil', dit: 'Quai de réception de Rouvignies, Mehdi, j’écoute.',
+        choix: [
+          { v: 'presente', juste: true, lib: 'Bonjour, c’est {prenom}, du transport amont. Je t’appelle pour réserver un créneau pour un conteneur.' },
+          { v: 'camion', lib: 'Salut, c’est pour un camion.', reaction: 'Euh… bonjour. C’est qui, et c’est pour quoi exactement ?' },
+          { v: 'place', lib: 'Tu as de la place lundi ?', reaction: 'De la place pour quoi ? Tu es qui ?' },
+        ] },
+      { id: 'refs', dit: 'D’accord. Tu as les références ?',
+        choix: [
+          { v: 'juste', juste: true, lib: `Oui : conteneur PLGU 418270 6, ordre de transport ${OT}.` },
+          { v: 'inverse', lib: `Oui : conteneur PLGU 418720 6, ordre de transport ${OT}.`, reaction: 'Je ne le trouve pas, ce numéro. Relis-le sur ton avis.' },
+          { v: 'collection', lib: 'C’est la collection printemps.', reaction: 'J’en reçois dix par semaine, de la collection printemps. Il me faut le numéro du conteneur.' },
+        ],
+        selon: (db) => ({ libs: {
+          juste: `Oui : conteneur ${noConteneur(db)}, ordre de transport ${OT}.`,
+          inverse: `Oui : conteneur ${noPiege(db)}, ordre de transport ${OT}.` } }) },
+      { id: 'arrivee', dit: 'Il arrive quand, et comment ?',
+        choix: [
+          { v: 'lundi', juste: true, lib: 'Lundi 1er février vers 9 h, en camion depuis le terminal de Bruay.' },
+          { v: 'bateau', lib: 'Par bateau, directement au quai.', reaction: 'Un bateau ne vient pas à mon quai ! Le dernier bout, c’est en camion, non ? Et quel jour ?' },
+          { v: 'jeudi', lib: 'Jeudi.', reaction: 'Jeudi, c’est le départ d’Anvers. Moi, je veux le jour où il arrive ici.' },
+        ] },
+      { id: 'cloture', dit: 'OK. Je t’ouvre le planning du quai de lundi : pose ton conteneur sur un créneau libre et envoie-le-moi.',
+        choix: [
+          { v: 'merci', juste: true, lib: 'D’accord, je le fais tout de suite. Merci !' },
+          { v: 'salut', lib: 'C’est bon, salut !', reaction: '… Bon. Tu me l’envoies, le planning ?' },
+        ] },
+    ],
+  }],
+};
+
+// ── La page ───────────────────────────────────────────────────────────────────────────────────────────────────
+const form = document.getElementById('reglages');
+const boite = document.getElementById('essaiNote');
+const CLE = 'essai-dialogue-base';
+let etat = {}, gestes = [], vue = null;
+const db = { conteneur: 'PLGU4182706', piege: 'PLGU4187206' };
+const lire = () => { try { return JSON.parse(localStorage.getItem(CLE) || 'null'); } catch (e) { return null; } };
+const reglages = () => Object.fromEntries(new FormData(form));
+const garder = () => { try { localStorage.setItem(CLE, JSON.stringify({ reglages: reglages(), etat, gestes })); } catch (e) { /* rien */ } };
+const avant = lire();
+if (avant && avant.reglages) {
+  Object.entries(avant.reglages).forEach(([k, v]) => { if (form[k]) form[k].value = v; });
+  form.rappel.checked = avant.reglages.rappel === 'on';
+}
+function monter(garderBase) {
+  const R = reglages();
+  document.documentElement.dataset.theme = R.theme;
+  const hote = document.getElementById('hote');
+  const neuf = hote.cloneNode(false); hote.replaceWith(neuf);
+  boite.hidden = true;
+  etat = garderBase && avant && avant.etat ? avant.etat : {};
+  gestes = garderBase && avant && avant.gestes ? avant.gestes : [];
+  vue = creerTelephone(TELEPHONE, { personnes: PERSONNES });
+  const api = {
+    estProf: R.role === 'prof', graine: 'eleve-temoin', prenom: R.prenom || 'Léa', db,
+    evaluation: R.mode === 'evaluation', figee: false,
+    rappel: () => R.rappel === 'on',
+    sauver: garder,
+    signal: (g) => { if (!gestes.includes(g)) gestes.push(g); garder(); },
+  };
+  neuf.innerHTML = vue.html(etat, api);
+  vue.brancher(neuf, etat, api);
+  garder();
+}
+form.addEventListener('change', () => monter(false));
+document.getElementById('zero').addEventListener('click', () => { try { localStorage.removeItem(CLE); } catch (e) { /* rien */ } monter(false); });
+document.getElementById('note').addEventListener('click', () => {
+  const eD = etat.quai;
+  const a = appelRetenu(eD), c = appelEnCours(eD);
+  const L = [];
+  L.push(`Appels passés : ${(eD && eD.appels.length) || 0}${c ? ' (un appel en cours)' : ''}`);
+  if (!a) L.push('Aucun appel terminé : le jalon « Appel au quai » reste « à faire » (rien de vrai sans appel raccroché).');
+  else {
+    L.push(`Appel retenu (le dernier terminé) : ${reprises(a)} reprise(s) → jalon 10 « au plus 2 reprises » : ${reprises(a) <= 2 ? '✓' : '✗'}`);
+    L.push('Première réponse à chaque réplique : ' + ['accueil', 'refs', 'arrivee', 'cloture'].map((r) => `${r} = ${premiereReponse(a, r)}`).join(' · '));
+  }
+  L.push(`Gestes publiés : ${gestes.join(', ') || 'aucun'}`);
+  boite.textContent = L.join('\n');
+  boite.hidden = !boite.hidden;
+});
+monter(true);
+</script>
+</body>
+</html>
