@@ -291,17 +291,27 @@ se lit comme une conversation (pas comme un QCM) ; le planning montre clairement
 
 ## 11. Questions ouvertes
 
-1. [ ] Part des questions au fil : (a) ou (b) (§5) ? (b)
-2. [ ] Répartition interne de l'appel (dialogue 1,5 + créneau 1,5) ? (oui)
-3. [ ] Repères du jalon 9 (objet, formule, signature, vouvoiement) ? (oui)
-4. [ ] Nom du chef de quai (« Mehdi Benali » proposé, pour ne pas reprendre le Karim de France Boissons) ?
-5. [ ] Bonus du confirmé (§5) : instruction et créneau supplémentaires ?
-6. [ ] Question au fil n° 2 (L. 133-3) : texte à relire ; s'applique-t-il ici (transport terminé par camion, contrat avec Contargo) ?
-   Sinon la remplacer par la question de l'art. 1366.
-7. [ ] Le chantier « Dialogue à choix » passe avant la construction de 7.2 (la séance en dépend) : d'accord ?
-8. [ ] **Mauvais numéro** (ajout de Claude Code, 14/10/2026) : Tristan a décidé que l'écran Téléphone liste aussi des contacts sans
-   dialogue (Claire, Contargo : messagerie vocale) et qu'appeler un mauvais contact **avant** le quai **coûte des points**. Combien, et
-   pris sur quel jalon (le 10, « appel au quai », ou un jalon à part) ? Les poids validés le 13/10 ne le prévoient pas.
+1. [x] Part des questions au fil : (a) ou (b) (§5) ? **(b)**
+2. [x] Répartition interne de l'appel (dialogue 1,5 + créneau 1,5) ? **Oui.**
+3. [x] Repères du jalon 9 (objet, formule, signature, vouvoiement) ? **Oui.**
+4. [x] Nom du chef de quai : **Mehdi Benali** (14/10).
+5. [x] Bonus du confirmé : **les deux** — 6e instruction **fausse** « Hayon élévateur obligatoire » (+0,5 si non cochée) et un
+   2e créneau pris de plus au planning (14/10).
+6. [x] Question au fil n° 2 : **remplacée** (14/10). L. 133-3 vise le transport intérieur ; à l'international par route, c'est la CMR
+   (art. 30 : réserves dès la livraison pour un dommage apparent) ; la barge relève de la CMNI : délai incertain pour ce trajet en deux
+   morceaux. Nouvelle question, juste sous tous les régimes : « Le conteneur arrive : scellé intact, mais trois cartons écrasés. Que
+   fais-tu pour que Decathlon garde un recours contre le transporteur ? » — **juste** : « J'écris des réserves précises sur le document
+   de livraison, à la réception, avant que le chauffeur reparte. » · « Rien : le scellé intact prouve que tout va bien. » · « Je le
+   signale à la fin du mois, sur la facture. » · « Je préviens la douane d'Anvers. »
+7. [x] Le chantier « Dialogue à choix » : **livré** le 14/10 (lots 1 à 3).
+8. [x] **Mauvais numéro** : un contact à messagerie appelé avant le quai **compte comme une reprise** au jalon 10 (aucun poids changé,
+   14/10).
+
+**Autres décisions du 14/10 (Tristan)** : questions au fil 1, 2, 3 notées (1 point chacune), 4 en réserve, 5 en réflexion ; banque
+« Avant de commencer » : d1, d2, **d3 corrigée** (juste : « Non, la loi ne l'impose pas encore pour un transport parti de l'étranger :
+c'est le cahier des charges de Decathlon qui l'exige », comme 7.1), **d4 retirée** (doublon de la question au fil n° 2) ; compétence
+**C2.6** (comme 7.1) ; **version complète** (les quatre écrans, créneau compris). Reprises de 7.1 : préfixe de conteneur **PRPU**
+(PLGU est attribué au registre BIC ; chiffre de contrôle recalculé), **Rail Flandres-Artois** au lieu de « Rail Fret Benelux ».
 
 ---
 
