@@ -228,7 +228,7 @@ export function creerEntreprise(U) {
   // plus, seulement si la séance déclare `telephone` (format en tête de `core/types/dialogue.js`). Les interlocuteurs sont des
   // personnes de la séance (`equipe`, `questions.personnes`). Son état vit dans `db.dialogues[<séance>]`. Un dialogue mal
   // déclaré empêche la séance de se charger (message qui nomme le dialogue et la réplique).
-  const VTEL = U.telephone ? creerTelephone(U.telephone, { personnes: PERSONNES }) : null;
+  const VTEL = U.telephone ? creerTelephone(U.telephone, { personnes: PERSONNES, evaluation: COPIE }) : null;
   {
     // Ce qui cite un dialogue doit le trouver dans la séance : un jalon (`dialogue`, `ecran: 'dialogue:<id>'`), une condition
     // `dialogueFini(id)` (fermetures, déclencheurs, questions). Une faute de frappe ne se découvre pas en classe.

@@ -38,7 +38,12 @@
 // Appeler un leurre range { id, at } dans `etat['@leurres']` ; la séance le lit (et le fait payer) par `leurresAppeles`.
 // `{prenom}` est remplacé par le prénom de l'élève dans `dit`, `lib`, `reaction`, `neutre`, `fin`. La réponse rangée est la
 // CLÉ `v` du choix, jamais son rang : reformuler, réordonner, ajouter un choix ne change rien pour qui a déjà joué.
-// Un choix peut porter `vers: '<id de réplique>'` (embranchement, lot 3) ; sans `vers`, l'appel est linéaire.
+// Un choix peut porter `vers: '<id de réplique>'` (embranchement, lot 3) ; sans `vers`, l'appel est linéaire. Un choix juste
+// (ou `accepte`) part vers sa réplique ; un choix maladroit qui porte `vers` fait AUSSI avancer (« Ce n'est pas de notre faute » →
+// « le client s'énerve ») : il compte une reprise, sa `reaction` est alors facultative (la réplique visée parle). Contrôle : toute
+// réplique atteignable mène au bout de l'appel par les bonnes réponses (pas de boucle sans issue).
+// ÉVALUATION (copie, ou `mode: 'evaluation'`) : une `reaction` est facultative (elle n'est jamais montrée) ; `neutre` (facultatif,
+// par choix) est dit avant la réplique suivante. Après la remise, l'appel se relit (« Relire l'appel »), rien ne s'écrit.
 // Tout ce qui est mal déclaré empêche la vue de se créer, avec un message qui nomme le dialogue et la réplique.
 //
 // ── L'ÉTAT (cloisonné par séance dans la base : `db.dialogues[<séance>]`) ────────────────────────────────────
@@ -67,7 +72,8 @@ const nomDe = (p) => (p && (p.appel || String(p.nom || '').split(' ')[0])) || ''
 const avecPrenom = (t, prenom) => String(t == null ? '' : t).replace(/\{prenom\}/g, prenom || '');
 
 /* ================================================================ contrôle au chargement */
-export function compilerTelephone(T, personnes = {}) {
+// `evaluation` : la séance est une copie (le mode par défaut de ses dialogues est alors l'évaluation, où une `reaction` est facultative).
+export function compilerTelephone(T, personnes = {}, { evaluation = false } = {}) {
   const err = (m) => { throw new Error(`telephone : ${m}`); };
   if (!T || typeof T !== 'object') err('le bloc est vide');
   if (T.quand != null && typeof T.quand !== 'function') err('`quand` est une fonction (db) => booléen');
@@ -82,6 +88,7 @@ export function compilerTelephone(T, personnes = {}) {
     if (!d.contact || !d.contact.nom) err(`${ici} : il manque \`contact.nom\` (la ligne de la liste des contacts)`);
     if (d.quand != null && typeof d.quand !== 'function') err(`${ici} : \`quand\` est une fonction (db) => booléen`);
     if (d.mode != null && !['guidage', 'evaluation'].includes(d.mode)) err(`${ici} : \`mode\` vaut 'guidage' ou 'evaluation'`);
+    const enEval = d.mode ? d.mode === 'evaluation' : evaluation;
     const repliques = (d.repliques || []).filter((r) => r && r.actif !== false);
     if (!repliques.length) err(`${ici} : il faut au moins une réplique active`);
     const rids = new Set();
@@ -101,9 +108,11 @@ export function compilerTelephone(T, personnes = {}) {
       const justes = r.choix.filter((c) => c.juste);
       if (justes.length !== 1) err(`${la} : il faut exactement un choix \`juste: true\` (${justes.length} trouvé${justes.length > 1 ? 's' : ''})`);
       r.choix.forEach((c) => {
-        if (!c.juste && !c.reaction && d.mode !== 'evaluation') err(`${la} : le choix « ${c.v} » n’est pas juste et n’a pas de \`reaction\` (ce que répond l’interlocuteur)`);
+        // Un choix non juste qui part vers une autre réplique (`vers`) peut se passer de réaction : la réplique visée parle.
+        if (!c.juste && !c.reaction && !c.vers && !enEval) err(`${la} : le choix « ${c.v} » n’est pas juste et n’a pas de \`reaction\` (ce que répond l’interlocuteur)`);
         if (c.juste && (c.reaction || c.accepte)) err(`${la} : le choix juste « ${c.v} » n’a ni \`reaction\` ni \`accepte\``);
         if (c.accepte && !c.reaction) err(`${la} : le choix « ${c.v} » est \`accepte\` mais n’a pas de \`reaction\``);
+        if (c.neutre != null && (typeof c.neutre !== 'string' || !c.neutre.trim())) err(`${la} : \`neutre\` du choix « ${c.v} » est une phrase (ou absent)`);
       });
       if (r.selon != null) {
         if (typeof r.selon !== 'function') err(`${la} : \`selon\` est une fonction (db) => { dit?, libs? }`);
@@ -112,16 +121,26 @@ export function compilerTelephone(T, personnes = {}) {
       }
       if (typeof r.dit === 'function') { try { r.dit({}); } catch (x) { err(`${la} : \`dit\` plante sur une base vide (${x.message})`); } }
     });
-    // Les embranchements (lot 3) : chaque `vers` vise une réplique ; le chemin des bonnes réponses finit.
+    // LES EMBRANCHEMENTS (lot 3) : chaque `vers` vise une réplique, et TOUTE BRANCHE FINIT. Les répliques qu'on peut atteindre
+    // (par n'importe quel choix : en évaluation, chaque réponse fait avancer) ; depuis chacune, la suite des bonnes réponses doit
+    // arriver au bout de l'appel sans repasser deux fois au même endroit. En guidage, les maladresses se grisent et la bonne
+    // réponse reste : c'est elle qui garantit qu'aucun élève ne tourne en rond.
     repliques.forEach((r) => r.choix.forEach((c) => {
       if (c.vers != null && !rids.has(c.vers)) err(`${ici}, réplique « ${r.id} » : \`vers\` = « ${c.vers} » n’est pas une réplique`);
     }));
-    const vus = new Set();
-    for (let i = 0; i < repliques.length;) {
-      if (vus.has(i)) err(`${ici} : les bonnes réponses tournent en rond (réplique « ${repliques[i].id} »)`);
-      vus.add(i);
-      i = suivante(repliques, i, repliques[i].choix.find((c) => c.juste));
+    const atteintes = new Set([0]);
+    for (const pile = [0]; pile.length;) {
+      const i = pile.pop();
+      repliques[i].choix.forEach((c) => { const j = suivante(repliques, i, c); if (j < repliques.length && !atteintes.has(j)) { atteintes.add(j); pile.push(j); } });
     }
+    [...atteintes].sort((a, b) => a - b).forEach((depart) => {
+      const vus = new Set();
+      for (let i = depart; i < repliques.length;) {
+        if (vus.has(i)) err(`${ici} : depuis la réplique « ${repliques[depart].id} », les bonnes réponses tournent en rond (réplique « ${repliques[i].id} ») : l’appel ne finit jamais`);
+        vus.add(i);
+        i = suivante(repliques, i, repliques[i].choix.find((c) => c.juste));
+      }
+    });
     return { ...d, repliques, personne: personnes[d.de] };
   });
   // LES CONTACTS SANS DIALOGUE (« leurres », décision de Tristan du 14/10/2026) : ils répondent par une messagerie vocale.
@@ -214,9 +233,11 @@ export function deroule(D, appel, { prenom = '', evaluation = false } = {}) {
       passe = true;
     } else if (c.juste) passe = true;
     else {
-      bulles.push({ qui: 'lui', t: avecPrenom(c.reaction, prenom), reaction: true });
+      // Une maladresse : le personnage réagit (s'il y a une réaction), la réponse se grise ; elle fait avancer si elle est
+      // `accepte` ou si elle part vers une autre réplique (`vers` : la conversation prend une autre tournure).
+      if (c.reaction) bulles.push({ qui: 'lui', t: avecPrenom(c.reaction, prenom), reaction: true });
       grises.add(c.v);
-      passe = !!c.accepte;
+      passe = !!(c.accepte || c.vers);
     }
     if (passe) {
       grises.clear();
@@ -230,8 +251,8 @@ export function deroule(D, appel, { prenom = '', evaluation = false } = {}) {
 }
 
 /* ================================================================ la vue */
-export function creerTelephone(T, { personnes = {} } = {}) {
-  const M = compilerTelephone(T, personnes);
+export function creerTelephone(T, { personnes = {}, evaluation = false } = {}) {
+  const M = compilerTelephone(T, personnes, { evaluation });
   const parId = new Map(M.dialogues.map((D) => [D.id, D]));
   const leurreDe = new Map(M.leurres.map((l) => [l.id, l]));
   const signaux = M.dialogues.flatMap((D) => [`dialogue:${D.id}:appeler`, ...D.repliques.map((r) => `dialogue:${D.id}:${r.id}`), `dialogue:${D.id}:fin`])
@@ -289,11 +310,14 @@ export function creerTelephone(T, { personnes = {} } = {}) {
       const eD = E[D.id], enCours = appelEnCours(eD), fait = appelRetenu(eD);
       const etat = enCours ? 'Appel en cours' : fait ? 'Appel terminé' : '';
       let bouton;
-      if ((enCours && ui.sel === D.id) || (occupe && occupe !== D)) bouton = '';
+      // Copie rendue (évaluation) : on relit ce qui a été dit, on n'appelle plus. `data-libre` : le verrou de la copie le laisse passer.
+      const relire = `<button type="button" class="dlg-btn lien" data-dlg-journal="${ech(D.id)}" data-libre>Relire l’appel</button>`;
+      if (api.figee) bouton = (enCours || fait) && ui.sel !== D.id ? relire : '';
+      else if ((enCours && ui.sel === D.id) || (occupe && occupe !== D)) bouton = '';
       else if (enCours) bouton = `<button type="button" class="dlg-btn plein" data-dlg-appeler="${ech(D.id)}">Reprendre l’appel</button>`;
       else if (!fait) bouton = `<button type="button" class="dlg-btn plein" data-dlg-appeler="${ech(D.id)}">📞 Appeler</button>`;
       else if (!api.figee && !estEval(D, api) && (api.estProf || (api.rappel && api.rappel(D.id)))) bouton = `<button type="button" class="dlg-btn" data-dlg-appeler="${ech(D.id)}">📞 Rappeler</button>`;
-      else bouton = `<button type="button" class="dlg-btn lien" data-dlg-journal="${ech(D.id)}">Relire l’appel</button>`;
+      else bouton = relire;
       return `<li class="dlg-contact${ui.sel === D.id ? ' choisi' : ''}">
         <span class="dlg-initiale" aria-hidden="true">${ech(nomDe(D.personne).slice(0, 1).toUpperCase())}</span>
         <span class="dlg-qui"><b>${ech(D.contact.nom)}</b>${D.contact.detail ? `<span>${ech(D.contact.detail)}</span>` : ''}
@@ -445,7 +469,7 @@ export function creerTelephone(T, { personnes = {} } = {}) {
     }
     function raccrocher() {
       const D = parId.get(ui.sel), eD = D && E[D.id], appel = eD && appelEnCours(eD);
-      if (!appel || !deroule(D, appel, { evaluation: estEval(D, api) }).fini) return;
+      if (api.figee || !appel || !deroule(D, appel, { evaluation: estEval(D, api) }).fini) return;
       appel.fin = Date.now();
       signal(`dialogue:${D.id}:fin`);
       ecrire();

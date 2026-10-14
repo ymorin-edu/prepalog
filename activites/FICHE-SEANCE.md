@@ -997,8 +997,9 @@ fermetures: { planning: { ouvertSi: dialogueFini('quai'), message: 'Appelle d’
   compris), `premiereReponse(appel, réplique)` (la clé du premier choix dit à cette réplique), `leurresAppeles(etat, { avant: 'quai' })`
   (contacts sans dialogue appelés avant le bon numéro ; `etat` = `db.dialogues[séance]`).
 - **Contrôlé à l'ouverture** (message qui nomme le dialogue et la réplique) : ids, `de` connu, 2 à 4 choix, clés uniques, exactement
-  un `juste`, une `reaction` à chaque choix non juste (guidage), `selon` essayé sur une base vide ; un jalon ou une condition
-  `dialogueFini` qui cite un dialogue absent ; un geste `dialogue:…` inconnu cité par une question ou un message.
+  un `juste`, une `reaction` à chaque choix non juste (guidage ; facultative en évaluation ou sur un choix qui porte `vers`), `selon`
+  essayé sur une base vide ; `vers` qui vise une réplique inconnue, et **toute branche finit** (depuis chaque réplique atteignable, les
+  bonnes réponses mènent au bout) ; un jalon ou une condition `dialogueFini` qui cite un dialogue absent ; un geste `dialogue:…` inconnu.
 - **Correction** (`meta.correction`) : le jalon déclare `ecran: 'dialogue:<id>'` (`jalonDialogue` le pose). « Corriger » ouvre le
   Téléphone sur ce contact avec **« Rappeler »** ; un nouvel appel repart de zéro (ordre retiré, textes recalculés), le premier reste
   rangé. Un appel de plus = une correction (note moyennée par le moteur). Sans correction, un appel terminé se relit, il ne se refait pas.
@@ -1007,8 +1008,12 @@ fermetures: { planning: { ouvertSi: dialogueFini('quai'), message: 'Appelle d’
   « Appels » : appels terminés, reprises, et au survol ce que l'élève a dit (réplique : clé) appel par appel.
 - **Écran** : 1366 × 768 et 1280 × 720 sans défilement pendant l'appel ; le fil défile dans sa zone. Aucun aplat vert, aucun rouge
   pendant l'appel ; interlocuteur et élève se distinguent par la place et la forme de la bulle (lisible en noir et blanc).
-- **Évaluation** (`copie`, ou `mode: 'evaluation'` sur un dialogue) : aucune réaction, aucun grisé, la première réponse compte ;
-  `neutre` par choix (facultatif). Écrit dans la vue, essayé sur la page `outils/essai-dialogue.html` ; la copie se branche au lot 3.
+- **Évaluation** (`copie`, ou `mode: 'evaluation'` sur un dialogue) : aucune réaction, aucun grisé, chaque réponse fait avancer et la
+  première compte ; `neutre` par choix (facultatif, ne dit jamais si c'est juste). Un seul appel, pas de « Rappeler », rien au suivi
+  pendant le travail. Après la remise de la copie, rien ne s'écrit ; « Relire l'appel » reste cliquable (`data-libre`).
+- **Embranchements** : `vers: '<réplique>'` sur un choix. Un choix juste part vers sa réplique ; un choix maladroit qui porte `vers`
+  fait aussi avancer (« Ce n'est pas de notre faute » → « le client s'énerve »), compte une reprise, et sa `reaction` est facultative.
+  La bonne réponse de la réplique d'avant doit souvent sauter la branche (`vers` vers la réplique qui suit la branche).
 
 ## Vue « Planning » (cartes sur une grille) — `core/types/planning.js`
 

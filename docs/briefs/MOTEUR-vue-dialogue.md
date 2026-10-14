@@ -6,7 +6,7 @@
 > Lis CLAUDE.md, docs/EN-COURS.md, docs/audit-architecture.md puis docs/briefs/MOTEUR-vue-dialogue.md. Fais d'abord l'état des lieux du §8 en lecture seule (questions.js, phrases.js, animation.js, entreprise.js, entreprise-options.js, declencheurs.js) et dis-moi ce que tu réutilises et ce qui est neuf. Annonce la durée avant de commencer. Commence par le lot 1 : la page d'essai cliquable avec l'appel au quai d'ENT-7.2, et attends que je l'aie essayée avant de brancher la vue dans le moteur.
 > ```
 
-**Statut** : lots 1 et 2 livrés (14/10/2026), lot 3 à faire
+**Statut** : livré (lots 1, 2 et 3, 14/10/2026)
 **Date du brief** : 14/10/2026
 **Conversation d'origine** : Cowork (Opus). Demande de Claude Code du 14/10 au matin : « l'appel au chef de quai a besoin d'un nouvel
 écran Dialogue à choix ; le brief ENT-7.2 dit que Cowork doit d'abord écrire `MOTEUR-vue-dialogue.md` ». Décision 8 de Tristan
@@ -401,5 +401,25 @@ léger) — **`outils/test.mjs` touché : le dire à Tristan**). Sur la séance 
   la colonne « Appels » du suivi (seul `journalCourt` est testé).
 - **À savoir pour ENT-7.2** : après l'appel, le bandeau de fin s'ajoute au-dessus et la page défile (pas pendant l'appel). Une séance qui
   a des pastilles d'étape ou un bandeau de questions pendant l'appel devra vérifier la hauteur (`--dlg-reserve` dans `styles/dialogue.css`).
-- **Reste ouvert** : **lot 3** (copie d'évaluation : rien ne s'écrit après la remise, « Relire l'appel » après la remise, tests du mode
-  évaluation dans le moteur ; contrôle « toute branche finit » au-delà du chemin des bonnes réponses).
+- **Reste ouvert** (à la fin du lot 2) : lot 3.
+
+**Lot 3 livré le 14/10/2026** :
+- **Fichiers modifiés** : `core/types/dialogue.js` (mode évaluation pris de la copie dès le contrôle, `neutre` contrôlé, embranchements,
+  contrôle « toute branche finit », « Relire l'appel » après la remise), `core/types/entreprise.js` (une ligne : la copie passée à la vue),
+  `outils/test/dialogue.mjs` (4 cas de plus : 24), `activites/FICHE-SEANCE.md`.
+- **Écarts par rapport au brief** :
+  - un choix **maladroit qui porte `vers` fait avancer** (sinon l'exemple du brief, « Ce n'est pas de notre faute » → « le client s'énerve »,
+    était impossible en guidage) ; il compte une reprise ; sa `reaction` devient facultative (la réplique visée parle) ;
+  - **une seule bonne réponse par réplique** reste la règle (le brief parlait d'« un juste par branche » : c'est le cas, chaque réplique
+    d'une branche a le sien) ;
+  - « toute branche finit » = depuis **chaque réplique qu'on peut atteindre** (par n'importe quelle réponse), les bonnes réponses mènent au
+    bout sans tourner en rond. Une boucle qui a une sortie par la bonne réponse est permise ;
+  - en évaluation, un appel commencé mais pas raccroché au moment de la remise ne rapporte rien (règle « rien de vrai avant le raccrochage »,
+    comme en guidage). À dire aux élèves d'ENT-7.4 : raccrocher avant de rendre.
+- **Tests** : bloc `dialogue` 24/24 ; suite entière 1400/1400. Éprouvés dans l'autre sens : réaction affichée en évaluation → « évaluation »
+  et « copie rendue » tombent ; contrôle depuis le début seulement → « contrôle des embranchements » tombe ; maladresse à `vers` qui n'avance
+  pas → « embranchement » tombe ; « Relire » sans `data-libre` → « copie rendue » tombe ; copie non passée à la vue → « contrôle » tombe.
+  La page d'essai du lot 1 marche toujours (vérifiée en évaluation). Non éprouvé : la garde de « Raccrocher » après la remise (le bouton
+  n'est plus affiché, la garde est une deuxième sécurité).
+- **Reste ouvert** : rien pour le moteur. ENT-7.2 à 7.4 se construisent avec leurs briefs ; l'habillage « face à face » (§10 n° 7) viendra
+  avec la séance qui le demandera.

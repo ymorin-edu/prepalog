@@ -42,7 +42,19 @@ const monter = (o = {}) => pg.evaluate(async ({ o, SEANCE }) => {
     dialogues: S.TELEPHONE.dialogues.map((d) => ({ ...d, repliques: d.repliques.map((r) => ({ ...r, choix: r.choix.map((c) => ({ ...c })) })) })) });
   const T = copieT();
   const r = (id) => T.dialogues[0].repliques.find((x) => x.id === id);
-  const U = S.univers({ telephone: T });
+  // L'EMBRANCHEMENT (lot 3) : à « jour », « Je ne sais pas » part vers la réplique « rappel-jour » (sans réaction : elle parle) ;
+  // la bonne réponse de « jour » saute par-dessus (`vers: 'vehicule'`).
+  if (o.branche || o.faute === 'boucle' || o.faute === 'versInconnu') {
+    const R = T.dialogues[0].repliques;
+    r('jour').choix.find((c) => c.juste).vers = 'vehicule';
+    r('jour').choix.push({ v: 'sais-pas', lib: 'Je ne sais pas, je dois demander.', vers: 'rappel-jour' });
+    R.splice(R.findIndex((x) => x.id === 'vehicule'), 0, { id: 'rappel-jour', dit: 'Regarde ton bon de livraison, c’est écrit dessus. Alors, quel jour ?',
+      choix: [{ v: 'mardi', juste: true, lib: 'Mardi, vers 9 h. Excuse-moi.' },
+        { v: 'toujours', lib: 'Je ne trouve toujours pas.', reaction: 'Prends ton temps, je patiente.' }] });
+  }
+  // L'ÉVALUATION : une phrase neutre après le piège (elle ne dit rien de la réponse).
+  if (o.copie) r('refs').choix.find((c) => c.v === 'inverse').neutre = 'D’accord, je note.';
+  const U = S.univers({ telephone: T, copie: !!o.copie });
   if (o.faute) {
     const F = {
       deuxJustes: () => { r('jour').choix[1].juste = true; delete r('jour').choix[1].reaction; },
@@ -55,6 +67,9 @@ const monter = (o = {}) => pg.evaluate(async ({ o, SEANCE }) => {
       option: () => { U.telephon = U.telephone; delete U.telephone; },
       jalonAbsent: () => { U.etapes = U.etapes.map((e) => ({ ...e, ecran: 'dialogue:quia' })); },
       fermeture: () => { U.fermetures = { stock: { ouvertSi: dialogueFini('quia'), message: 'x' } }; },
+      // La boucle n'est atteinte que par une maladresse : seul le contrôle « toute branche finit » la voit.
+      boucle: () => { r('rappel-jour').choix[0].vers = 'rappel-jour'; },
+      versInconnu: () => { r('jour').choix.find((c) => c.v === 'sais-pas').vers = 'nulle-part'; },
       geste: () => { U.questions = { id: SEANCE, personnes: {}, etapes: [], liste: [{ id: 'q', type: 'fil', de: 'nadia', reflexion: true,
         quand: apresGeste('dialogue:quai:refz'), enonce: 'E ?', choix: [{ v: 'a', lib: 'A' }, { v: 'b', lib: 'B' }], retour: 'R.' }] }; },
     };
@@ -72,7 +87,7 @@ const monter = (o = {}) => pg.evaluate(async ({ o, SEANCE }) => {
   const db = o.garder ? JSON.parse(JSON.stringify(window.__d.db)) : (o.db ? JSON.parse(JSON.stringify(o.db)) : {});
   window.__d = { db, enregistres: [], moteur: null };
   const ctx = {
-    meta: { ...S.META, ...(o.correction ? { correction: true } : {}) },
+    meta: { ...S.META, ...(o.correction ? { correction: true } : {}), ...(o.copie ? { copie: true, temps: 'evaluation' } : {}) },
     profil: { prenom: 'Lea', nom: 'Test', role: o.role || 'eleve', uid: o.uid || 'u-test' },
     jeu: { etat: () => db, sauver: () => {} },
     enregistrer: (x) => { window.__d.enregistres.push(JSON.parse(JSON.stringify(x))); }, quitter: () => {}, codeStock: 'ESSAI',
@@ -453,6 +468,89 @@ await v('Téléphone : le journal court de l’enseignant (Repérage) — appels
     return JSON.stringify(J);
   });
   egal(JSON.parse(html), { quai: [{ reprises: 2, pas: 'accueil:salut accueil:presente' }], '@leurres': ['thomas'] }, 'journal court (un appel en cours n’y est pas)');
+});
+
+await v('Téléphone (lot 3) : contrôle des embranchements — `vers` inconnu, boucle sans issue atteinte par une maladresse ; une maladresse sans réaction est permise en évaluation', async () => {
+  const boucle = await monter({ faute: 'boucle' });
+  vrai(/depuis la réplique « rappel-jour », les bonnes réponses tournent en rond/.test(boucle), boucle);
+  const vers = await monter({ faute: 'versInconnu' });
+  vrai(/« jour » : `vers` = « nulle-part » n’est pas une réplique/.test(vers), vers);
+  egal(await monter({ faute: 'sansReaction', copie: true }), 'accepté', 'évaluation : une maladresse sans réaction est refusée');
+});
+
+await v('Téléphone (lot 3) : embranchement — « Je ne sais pas » mène à une autre réplique (1 reprise), puis l’appel reprend son cours', async () => {
+  await monter({ branche: true });
+  await aller('telephone');
+  await appeler();
+  await dire('presente');
+  await dire('juste');
+  await dire('sais-pas');
+  vrai(/Regarde ton bon de livraison/.test(await fil()), 'la réplique de la branche ne vient pas');
+  egal((await choixAffiches()).sort(), ['mardi', 'toujours'], 'pas à la réplique de la branche');
+  await dire('toujours');
+  vrai(/Prends ton temps/.test(await fil()), 'la réaction dans la branche manque');
+  await dire('mardi');
+  egal((await choixAffiches()).sort(), ['gros', 'porteur'], 'la branche ne rejoint pas l’appel');
+  for (const r of ORDRE.slice(3)) await dire(JUSTES[r]);
+  await raccrocher();
+  const A = (await appelsQuai())[0];
+  egal(A.pas.map((p) => `${p.r}:${p.v}`).slice(2, 5), ['jour:sais-pas', 'rappel-jour:toujours', 'rappel-jour:mardi'], 'ce que l’élève a dit');
+  egal(A.reprises, 2, 'reprises');
+  // Le chemin juste saute la branche.
+  await monter({ branche: true });
+  await aller('telephone');
+  await appelComplet();
+  vrai(!(await appelsQuai())[0].pas.some((p) => p.r === 'rappel-jour'), 'la bonne réponse passe par la branche');
+});
+
+await v('Téléphone (lot 3) : évaluation — aucune réaction, aucun grisé, la première réponse compte et l’appel enchaîne (phrase neutre déclarée) ; pas de « Rappeler », rien au suivi pendant le travail', async () => {
+  await monter({ copie: true });
+  await aller('telephone');
+  await appeler();
+  await dire('salut');
+  const f1 = await fil();
+  vrai(!/C’est qui/.test(f1), 'une réaction s’affiche en évaluation');
+  egal((await choixAffiches()).sort(), ['bientot', 'inverse', 'juste', 'produit'], 'l’appel n’enchaîne pas');
+  egal(await pg.$$eval(`${Z} [data-dlg-choix][disabled], ${Z} .dlg-choix.dit`, (L) => L.length), 0, 'un choix grisé');
+  await dire('inverse');
+  vrai(/D’accord, je note\.\s*Nadia\s*Je la vois\. Elle arrive quand \?/.test(await fil()), 'la phrase neutre puis la réplique suivante');
+  vrai(!/Je ne le trouve pas/.test(await fil()), 'la réaction du piège s’affiche');
+  for (const r of ORDRE.slice(2)) await dire(JUSTES[r]);
+  await raccrocher();
+  const A = (await appelsQuai())[0];
+  egal(A.pas.map((p) => p.v), ['salut', 'inverse', 'mardi', 'porteur', 'oui', 'merci'], 'premières réponses rangées');
+  egal(A.reprises, 2, 'reprises');
+  vrai(!(await present('[data-dlg-appeler="quai"]')), 'on peut rappeler en évaluation');
+  egal(await pg.textContent(`${Z} [data-fin-seance]`), '', 'un bandeau de fin en évaluation');
+  egal(await pg.evaluate(() => window.__d.enregistres.length), 0, 'une note remonte pendant le travail');
+  const n = await note();
+  egal([n.score, n.detail['appel-quai'], n.detail['numero-quai']], [10, 'ok', 'ko'], 'note de la copie');
+});
+
+await v('Téléphone (lot 3) : copie rendue — rien ne s’écrit plus, l’appel se relit (« Relire l’appel » passe le verrou)', async () => {
+  await monter({ copie: true });
+  await aller('telephone');
+  // En évaluation, une maladresse fait avancer : « place » est LA réponse à l'accueil.
+  await appeler();
+  await dire('place');
+  for (const r of ORDRE.slice(1)) await dire(JUSTES[r]);
+  await raccrocher();
+  await appeler('thomas');
+  await pg.click(`${Z} [data-dlg-raccrocher-leurre]`);
+  await pause();
+  await pg.waitForSelector(`${Z} [data-copie-rendre]`);
+  await pg.click(`${Z} [data-copie-rendre]`);
+  await pg.click(`${Z} [data-copie-rendre]`);
+  await pg.waitForSelector(`${Z} [data-copie-avis]`);
+  const avant = JSON.stringify(await base());
+  await aller('telephone');
+  egal(await pg.$$eval(`${Z} [data-dlg-appeler], ${Z} [data-dlg-choix], ${Z} [data-dlg-raccrocher]`, (L) => L.length), 0, 'un bouton de travail reste');
+  vrai(await pg.$eval(`${Z} [data-dlg-journal="quai"]`, (b) => !b.disabled), '« Relire l’appel » est désactivé');
+  await pg.click(`${Z} [data-dlg-journal="quai"]`);
+  await pause();
+  vrai(/Bonne journée, Lea !/.test(await fil()), 'le journal ne se relit pas');
+  vrai(/De la place pour quoi/.test(await fil()) === false, 'une réaction s’affiche au journal d’une évaluation');
+  egal(JSON.stringify(await base()), avant, 'la base a changé après la remise');
 });
 
 await v('Téléphone : aucune erreur de page pendant le bloc', async () => {
