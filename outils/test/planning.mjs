@@ -878,5 +878,226 @@ await v('Planning (D-8) : jalons — sur la ligne du transporteur, une affectati
     sansPorteFantome: [true, true, false, true, true], sansPorteNu: [false, false, false, false, false] }, 'jalons (tous, chauffeurs, camions, fenêtre, conduite)');
 });
 
+
+/* ====================================================== lot 3 (ENT-7.2) : créneaux déjà pris, `quand` */
+// Un planning de quai minimal : 3 quais, échelle 07:00 → 13:00 par 30 min (t = 0 pour 07:00), une carte « Conteneur » de
+// 1 h 30 (3 créneaux) qui arrive à 09:00. Pris : Quai 5 07:30–10:30 · Quai 6 08:00–09:30 et 11:00–12:30 · Quai 7 09:00–12:00.
+// Bonne réponse : Quai 6 à 09:30 (t = 5). Construit dans la page (les fonctions ne passent pas).
+// `o.quand` : 'db' (lit db.ouvert) ou 'plante' ; `o.mal` : une faute de déclaration à essayer.
+const VARIANTE_PRIS = ((C, o) => {
+  const pris = (L) => (o.sansPris ? undefined : L);
+  const P = {
+    id: 'essai-pris', libelle: 'Planning du quai', titre: 'Quais de réception — lundi 1er février', date: 'Lundi 1er février',
+    infos: () => ['Pose ton conteneur sur un créneau libre.'],
+    echelle: o.jours ? { type: 'jours', jours: ['lun 1', 'mar 2'], semaine: 5 } : { type: 'heures', debut: '07:00', fin: '13:00', pas: 30 },
+    lignes: { titre: 'Planning du quai', liste: [
+      { id: 'Q5', nom: 'Quai 5', occupe: pris([{ de: '07:30', a: '10:30', titre: 'Conteneur TGHU 120 — autre séance' }]) },
+      { id: 'Q6', nom: 'Quai 6', occupe: pris([{ de: '08:00', a: '09:30', titre: 'Conteneur MSKU 441' }, { de: '11:00', a: '12:30', titre: 'Conteneur CMAU 902' }]) },
+      { id: 'Q7', nom: 'Quai 7', occupe: pris([{ de: '09:00', a: '12:00', titre: 'Conteneur HLXU 330' }]) },
+    ] },
+    cartes: { titre: 'Conteneur à placer', liste: [{ id: 'C1', titre: 'Conteneur PRPU — déchargement 1 h 30', court: 'C1', famille: 'cont', des: '09:00', avant: '13:00' }],
+      duree: () => 90, nonPosees: () => 'Le conteneur n’est pas encore posé.' },
+    familles: { cont: { couleur: '#f0be00', nom: 'jaune', legende: 'conteneur' } },
+    regles: [
+      { id: 'un', type: 'unAlaFois', sur: 'ligne' },
+      { id: 'fen', type: 'fenetre' },
+      { id: 'att', type: 'attenteMax', minutes: 60 },
+    ],
+    jalons: [{ id: 'cren', lib: 'Créneau valide', regles: ['un', 'fen', 'att'] }],
+    note: { sur: 20 },
+  };
+  if (o.quand === 'db') P.quand = (db) => !!db.ouvert;
+  if (o.quand === 'plante') P.quand = () => { throw new Error('quand cassé'); };
+  if (o.quand === 'faux-type') P.quand = 'oui';
+  const L = P.lignes.liste;
+  if (o.mal === 'de-apres-a') L[1].occupe[0] = { de: '09:30', a: '08:00', titre: 'x' };
+  if (o.mal === 'egal') L[1].occupe[0] = { de: '08:00', a: '08:00', titre: 'x' };
+  if (o.mal === 'hors-echelle') L[1].occupe[1] = { de: '12:00', a: '13:30', titre: 'x' };
+  if (o.mal === 'avant-echelle') L[1].occupe[0] = { de: '06:30', a: '08:00', titre: 'x' };
+  if (o.mal === 'heure') L[1].occupe[0] = { de: '8h', a: '09:30', titre: 'x' };
+  if (o.mal === 'sans-titre') L[1].occupe[0] = { de: '08:00', a: '09:30' };
+  if (o.mal === 'pas-liste') L[1].occupe = { de: '08:00', a: '09:30', titre: 'x' };
+  if (o.mal === 'sans-regle') P.regles = P.regles.filter((R) => R.type !== 'unAlaFois'), P.jalons = [{ id: 'cren', lib: 'c', regles: ['fen'] }];
+  if (o.mal === 'aleaAjout') P.alea = { de: 'x', texte: 'y', ajoutLignes: [{ id: 'Q8', nom: 'Quai 8', occupe: [{ de: '10:00', a: '09:00', titre: 'x' }] }] };
+  return P;
+}).toString();
+const monterPris = (p, o = {}) => p.evaluate(async (o) => {
+  const { creerEntreprise } = await import('/core/types/entreprise.js');
+  const E = await import('/outils/essai-planning.js');
+  const C = await import('/contenus/planning-essai.js');
+  document.querySelector('#plTest')?.remove();
+  const hote = document.createElement('div'); hote.id = 'plTest'; document.body.appendChild(hote);
+  const P = new Function(`return ${o.variante}`)()(C, o);
+  const U = E.univers({ cas: 'quai', temps: o.temps || 'guidage', planning: P });
+  const db = o.ouvert ? { ouvert: true } : {};
+  window.__p = { db, moteur: creerEntreprise(U), remis: null };
+  window.__p.moteur.rendre(hote, {
+    meta: { id: 'essai-pris', code: 'ESSAI', titre: 'Essai', portee: 'eleve', immersif: true, temps: o.temps || 'guidage', copie: o.temps === 'evaluation' },
+    profil: { prenom: 'Lea', nom: 'Test', role: o.role || 'eleve', uid: 'u-test' },
+    jeu: { etat: () => db, sauver: () => {} }, enregistrer: () => {}, quitter: () => {}, codeStock: 'ABC', lireScore: async () => null,
+    rendreCopie: async (res) => { window.__p.remis = res; return { rendu: Date.now() }; },
+  });
+  const nav = document.querySelector('#plTest .ent-nav[data-vue="planning"]');
+  if (nav && !o.sansClic) nav.click();
+}, { ...o, variante: VARIANTE_PRIS });
+// Monter une déclaration fautive : rend le message de l'erreur (ou null si la séance se charge).
+const monterFaute = (p, mal) => p.evaluate(async ({ variante, mal }) => {
+  const { creerEntreprise } = await import('/core/types/entreprise.js');
+  const E = await import('/outils/essai-planning.js');
+  const C = await import('/contenus/planning-essai.js');
+  try {
+    const P = new Function(`return ${variante}`)()(C, { mal, jours: mal === 'jours', quand: mal === 'faux-type' ? 'faux-type' : undefined });
+    creerEntreprise(E.univers({ cas: 'quai', planning: P }));
+    return null;
+  } catch (x) { return x.message; }
+}, { variante: VARIANTE_PRIS, mal });
+const navPlanning = (p) => p.$('#plTest .ent-nav[data-vue="planning"]');
+const NOMPL = 'essai-pris';
+const placePris = (p) => p.evaluate((id) => JSON.parse(JSON.stringify((window.__p.db.plannings || {})[id] || null)), NOMPL);
+const MSG_Q6 = 'Quai 6 est déjà pris à ce moment-là.';
+
+await v('Planning (lot 3) : `occupe` — les créneaux déjà pris sont dessinés (titre lisible, libellé pour le lecteur d’écran, légende), au bon endroit', async () => {
+  await monterPris(pg);
+  const blocs = await pg.$$eval(`${Z} [data-pl-pris]`, (L) => L.map((b) => ({ r: b.dataset.plPris, texte: b.textContent.trim(), col: b.style.gridColumn.replace(/\s/g, ''), aria: b.getAttribute('aria-label'), role: b.getAttribute('role') })));
+  egal(blocs.map((b) => [b.r, b.texte, b.col]), [
+    ['Q5', 'Conteneur TGHU 120 — autre séance', '3/span6'], ['Q6', 'Conteneur MSKU 441', '4/span3'], ['Q6', 'Conteneur CMAU 902', '10/span3'], ['Q7', 'Conteneur HLXU 330', '6/span6'],
+  ], 'blocs pris (ligne, titre, colonne : 07:30 = colonne 3)');
+  vrai(blocs.every((b) => b.role === 'img' && /déjà pris/.test(b.aria) && b.aria.includes(b.texte)), `libellés pour le lecteur d’écran : ${JSON.stringify(blocs.map((b) => b.aria))}`);
+  vrai(blocs[1].aria.startsWith('Quai 6, déjà pris, 08:00–09:30'), `libellé : ${blocs[1].aria}`);
+  vrai(/déjà pris/.test(await texte(pg, `${Z} [data-pl-legende-couleurs]`)), 'légende du gris pointillé absente');
+  egal(await pg.$eval(`${Z} [data-pl-pris]`, (b) => getComputedStyle(b).borderTopStyle), 'dotted', 'bordure pointillée (distincte des cartes et des hachures)');
+  egal(Object.keys((await placePris(pg)).place), [], 'rien posé dans la base à l’ouverture');
+  egal(await problemes(pg), ['Le conteneur n’est pas encore posé.'], 'problèmes à l’ouverture');
+  egal(erreursP, [], 'erreurs JS');
+});
+
+await v('Planning (lot 3) : `occupe` — une carte posée sur un créneau pris est un problème qui dit QUE (guidage) ; juste après, aucun ; chaque bloc et chaque ligne comptent', async () => {
+  await monterPris(pg);
+  await poser(pg, 'C1', 'Q6', 4);          // 09:00–10:30 : recouvre 08:00–09:30
+  egal(await problemes(pg), [MSG_Q6], 'carte sur Quai 6 à 09:00');
+  vrai(!/\d\s*(min|h)\b/.test((await problemes(pg))[0]), 'le message donne une durée (de combien)');
+  vrai(await present(pg, '[data-pl-id="C1"][data-pl-vue="g"].pl-bloc-faux'), 'bloc fautif pas marqué');
+  await poser(pg, 'C1', 'Q6', 5);          // 09:30–11:00 : juste après le 1er pris, juste avant le 2e
+  egal(await problemes(pg), [], 'carte posée juste après le bloc pris (et finissant à l’ouverture du suivant)');
+  await poser(pg, 'C1', 'Q6', 6);          // 10:00–11:30 : recouvre 11:00–12:30
+  egal(await problemes(pg), [MSG_Q6], 'carte qui mord sur le 2e bloc pris');
+  await poser(pg, 'C1', 'Q5', 6);          // 10:00–11:30 : recouvre la fin de Quai 5 (07:30–10:30)
+  egal(await problemes(pg), ['Quai 5 est déjà pris à ce moment-là.'], 'Quai 5');
+  await poser(pg, 'C1', 'Q7', 4);          // 09:00–10:30 sur Quai 7 (pris 09:00–12:00)
+  egal(await problemes(pg), ['Quai 7 est déjà pris à ce moment-là.'], 'Quai 7');
+  await poser(pg, 'C1', 'Q5', 8);          // 11:00–12:30 : Quai 5 est libre après 10:30 (attente de 2 h : autre règle)
+  vrai(!(await problemes(pg)).some((x) => /pris/.test(x)), `Quai 5 libre après 10:30 signalé pris : ${await problemes(pg)}`);
+});
+
+await v('Planning (lot 3) : `occupe` — l’envoi juge le créneau (jalon faux sur un pris, juste sur le bon) ; rien de la déclaration ne se range dans la base de l’élève', async () => {
+  await monterPris(pg);
+  await poser(pg, 'C1', 'Q6', 4);
+  await envoyer(pg);
+  egal(await pastilles(pg), [false], 'jalon avec la carte sur un créneau pris');
+  const e = await placePris(pg);
+  egal(e.v1.place.C1, { r: 'Q6', s: 4 }, 'version envoyée');
+  vrai(!/occupe|MSKU|CMAU|TGHU|HLXU|déjà pris/.test(JSON.stringify(await pg.evaluate(() => window.__p.db))), 'la base de l’élève contient la déclaration des blocs pris');
+  await monterPris(pg);
+  await poser(pg, 'C1', 'Q6', 5);
+  await envoyer(pg);
+  egal(await pastilles(pg), [true], 'jalon avec la carte juste après le bloc pris');
+  vrai(!/occupe|MSKU|CMAU|TGHU|HLXU|déjà pris/.test(JSON.stringify(await pg.evaluate(() => window.__p.db))), 'la base de l’élève contient la déclaration des blocs pris (2)');
+});
+
+await v('Planning (lot 3) : `occupe` — évaluation : rien n’est signalé, la note se lit sur la version envoyée (0 sur un pris, 20 sur le bon)', async () => {
+  await monterPris(pg, { temps: 'evaluation' });
+  vrai(await present(pg, '[data-pl-pris]'), 'blocs pris absents en évaluation');
+  await poser(pg, 'C1', 'Q6', 4);
+  vrai(!(await present(pg, '[data-pl-problemes] li')), 'des problèmes sont montrés en évaluation');
+  await envoyer(pg);
+  egal(await pg.evaluate(() => window.__p.moteur.noter(window.__p.db).score), 0, 'note avec la carte sur un pris');
+  await monterPris(pg, { temps: 'evaluation' });
+  await poser(pg, 'C1', 'Q6', 5);
+  await envoyer(pg);
+  egal(await pg.evaluate(() => window.__p.moteur.noter(window.__p.db).score), 20, 'note avec la bonne réponse');
+});
+
+await v('Planning (lot 3) : `occupe` — un bloc pris n’est ni déplaçable ni cliquable comme une carte ; le clic et le dépôt passent à la case dessous', async () => {
+  await monterPris(pg);
+  const t = await pg.$eval(`${Z} [data-pl-pris="Q6"][data-k="0"]`, (b) => ({ drag: b.getAttribute('draggable'), id: b.dataset.plId, tab: b.getAttribute('tabindex'), tag: b.tagName,
+    pe: getComputedStyle(b).pointerEvents }));
+  egal(t, { drag: null, id: undefined, tab: null, tag: 'DIV', pe: 'none' }, 'bloc pris : ni draggable, ni data-pl-id, ni focus, ni clic');
+  const centre = async (sel) => { await pg.$eval(sel, (el) => el.scrollIntoView({ block: 'center', inline: 'center' })); const b = await (await pg.$(sel)).boundingBox(); return [b.x + b.width / 2, b.y + b.height / 2]; };
+  // Cliquer le bloc sans rien en main : aucun effet (pas de carte prise, rien posé, rien enregistré).
+  let [x, y] = await centre(`${Z} [data-pl-pris="Q7"]`);
+  await pg.mouse.click(x, y);
+  egal(Object.keys((await placePris(pg)).place), [], 'un clic sur le bloc pris a posé quelque chose');
+  vrai(!(await present(pg, '.pl-sel')), 'un clic sur le bloc pris a pris quelque chose en main');
+  // Une carte en main, un clic sur le bloc : elle se pose sur la case dessous (Quai 7), et le problème est signalé.
+  await pg.click(`${Z} [data-pl-id="C1"][data-pl-vue="b"]`);
+  [x, y] = await centre(`${Z} [data-pl-pris="Q7"]`);
+  await pg.mouse.click(x, y);
+  const p = (await placePris(pg)).place.C1;
+  egal(p.r, 'Q7', 'ligne où la carte est tombée');
+  vrai(p.s >= 4 && p.s <= 9, `créneau sous le bloc : ${p.s}`);
+  vrai((await problemes(pg)).includes('Quai 7 est déjà pris à ce moment-là.'), `problème signalé : ${await problemes(pg)}`);
+  // Le bloc pris ne bouge pas, et la carte (bloc fautif) est bien au-dessus de lui.
+  egal(await pg.$$eval(`${Z} [data-pl-pris]`, (L) => L.length), 4, 'les blocs pris sont toujours 4');
+});
+
+await v('Planning (lot 3) : `quand` — le Planning n’est pas au menu tant que c’est faux, y est après, et l’enseignant le voit toujours', async () => {
+  await monterPris(pg, { quand: 'db' });
+  vrai(!(await navPlanning(pg)), 'Planning au menu alors que quand est faux');
+  vrai(!(await present(pg, '[data-planning]')), 'écran Planning rendu');
+  vrai(!!(await pg.$('#plTest .ent-nav[data-vue="stock"]')), 'le reste du menu manque');
+  await monterPris(pg, { quand: 'db', ouvert: true });
+  vrai(!!(await navPlanning(pg)), 'Planning absent du menu alors que quand est vrai');
+  vrai(await present(pg, '[data-planning]'), 'écran Planning absent alors que quand est vrai');
+  await monterPris(pg, { quand: 'db', role: 'prof', sansClic: true });
+  vrai(!!(await navPlanning(pg)), 'l’enseignant ne voit pas le Planning alors que quand est faux');
+  await monterPris(pg, { role: 'eleve', sansClic: true });
+  vrai(!!(await navPlanning(pg)), 'sans `quand`, le Planning disparaît du menu');
+});
+
+await v('Planning (lot 3) : `quand` — redevenu faux pendant qu’on est sur l’écran : pas de plantage, l’écran se vide ; une condition qui plante = fermé, signalé', async () => {
+  const avantErreurs = erreursP.length;
+  await monterPris(pg, { quand: 'db', ouvert: true });
+  vrai(await present(pg, '[data-planning]'), 'écran Planning absent');
+  await pg.evaluate(() => { window.__p.db.ouvert = false; });
+  await pg.click(`${Z} [data-pl="agrandir"]`);                      // un geste qui redessine l'écran
+  vrai(!(await present(pg, '[data-planning]')), 'le Planning reste affiché alors que quand est faux');
+  egal(erreursP.slice(avantErreurs), [], 'erreurs JS après le passage à faux');
+  await monterPris(pg, { quand: 'plante', sansClic: true });
+  vrai(!(await navPlanning(pg)), 'une condition qui plante laisse le Planning ouvert');
+  vrai(erreursP.slice(avantErreurs).some((x) => /condition « quand » du Planning plante.*quand cassé/.test(x)), `plantage non signalé : ${erreursP}`);
+  erreursP.splice(avantErreurs);                                   // signalé exprès : il ne compte pas comme une erreur de la suite
+  await monterPris(pg, { quand: 'plante', role: 'prof', sansClic: true });
+  vrai(!!(await navPlanning(pg)), 'l’enseignant ne voit pas le Planning quand `quand` plante');
+});
+
+await v('Planning (lot 3) : déclaration mal formée refusée avec un message qui nomme le planning, la ligne et le bloc', async () => {
+  egal(await monterFaute(pg, null), null, 'la déclaration saine se charge');
+  const cas = {
+    'de-apres-a': /essai-pris.*Q6.*occupe\[0\].*09:30.*avant.*08:00/,
+    egal: /Q6.*occupe\[0\].*doit être avant/,
+    'hors-echelle': /Q6.*occupe\[1\].*13:30.*sort de l'échelle.*07:00–13:00/,
+    'avant-echelle': /Q6.*occupe\[0\].*06:30.*sort de l'échelle/,
+    heure: /Q6.*occupe\[0\].*HH:MM.*8h/,
+    'sans-titre': /Q6.*occupe\[0\].*titre/,
+    'pas-liste': /Q6.*`occupe` est une liste/,
+    'sans-regle': /unAlaFois/,
+    aleaAjout: /Q8.*occupe\[0\].*doit être avant/,
+    jours: /Q5.*échelle « jours »/,
+    'faux-type': /`quand` est une fonction/,
+  };
+  for (const [mal, re] of Object.entries(cas)) {
+    const m = await monterFaute(pg, mal);
+    vrai(m && re.test(m), `${mal} : ${m}`);
+  }
+});
+
+await v('Planning (lot 3) : sans `occupe` ni `quand`, rien ne change — aucun bloc pris, pas de légende en plus, mêmes problèmes', async () => {
+  await monterPris(pg, { sansPris: true });
+  vrai(!(await present(pg, '[data-pl-pris]')), 'bloc pris sans `occupe`');
+  vrai(!/déjà pris/.test(await texte(pg, `${Z} [data-pl-legende-couleurs]`)), 'légende du pris sans `occupe`');
+  await poser(pg, 'C1', 'Q6', 4);
+  egal(await problemes(pg), [], 'sans `occupe`, la même place ne pose aucun problème');
+});
+
 await ctxP.close();
 }

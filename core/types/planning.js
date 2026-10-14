@@ -17,7 +17,17 @@
 //     infos: (o) => [html…],                 // panneau consigne ; o = { guidage, phase, lignes, ressources, reprise(l) }
 //     echelle: { type: 'heures', debut: '06:00', fin: '14:00', pas: 15 }
 //           ou { type: 'jours', jours: ['lun 7', …], semaine: 5 },
-//     lignes: { titre, liste: [{ id, nom, note?, de?, a?, dispo?, arrivee?, finHier?, porteAffectation?, … }] },
+//     lignes: { titre, liste: [{ id, nom, note?, de?, a?, dispo?, arrivee?, finHier?, porteAffectation?, occupe?, … }] },
+//                                         // `occupe: [{ de: '08:00', a: '09:30', titre: 'Conteneur MSKU 441' }]` (lot 3, ENT-7.2) :
+//                                         // des créneaux DÉJÀ PRIS sur la ligne (autres conteneurs, autres équipes). Dessinés en gris
+//                                         // pointillé, sans geste (le clic et le dépôt passent à la case dessous), lus par le lecteur
+//                                         // d'écran, jamais rangés dans la base. Une carte posée dessus = un problème de la règle
+//                                         // `unAlaFois` (sur la ligne, obligatoire si `occupe` est déclaré) : « Quai 6 est déjà pris
+//                                         // à ce moment-là. » (`messagePris` de la règle : texte ou (carte, ligne, bloc, o) => texte).
+//                                         // Échelle « heures » seulement ; heures dans l'échelle, de < a, titre non vide, sinon la
+//                                         // séance ne se charge pas (message qui nomme la ligne). Aussi dans `alea.ajoutLignes`.
+//     quand: (db, idSeance) => booléen,   // facultatif : tant que c'est faux, le Planning n'est pas au menu de l'élève (même patron
+//                                         // que le Téléphone ; l'enseignant le voit toujours ; une condition qui plante = fermé, signalé)
 //                                         // `porteAffectation: true` (D-8, ENT-6.8 : un transporteur vient avec son camion) :
 //                                         // une carte posée sur cette ligne n'a pas de bulle et compte comme affectée ; les
 //                                         // règles `sur: 'affectation'` l'ignorent, la grille en lecture seule ne la montre pas
@@ -120,7 +130,30 @@ function ressource(x, E) {
   const arrivee = x.arrivee != null ? E.slot(x.arrivee) : 0;
   r._debut = Math.max(0, de, dispo, arrivee);
   r._fin = x.a != null ? E.slotFin(x.a) : E.n;
+  // Les créneaux déjà pris (`occupe`, ENT-7.2) : arrondis VERS L'EXTÉRIEUR (une heure qui ne tombe pas sur un créneau
+  // prend le créneau entier). Ils viennent de la déclaration, jamais de la base de l'élève.
+  r._occupe = (x.occupe || []).map((o) => ({ titre: o.titre, de: o.de, a: o.a,
+    s: Math.floor((minutesDe(o.de) - E.debut) / E.pas), e: Math.ceil((minutesDe(o.a) - E.debut) / E.pas) }));
   return r;
+}
+
+// Contrôle d'un `occupe` : une faute de déclaration s'arrête tout de suite, en nommant le planning et la ligne.
+const HEURE = /^([01]?\d|2[0-3]):[0-5]\d$/;
+function verifierOccupe(P, E, l) {
+  if (l.occupe == null) return;
+  const ici = `planning ${P.id}, ligne « ${l.id} »`;
+  if (!Array.isArray(l.occupe)) throw new Error(`${ici} : \`occupe\` est une liste [{ de, a, titre }].`);
+  if (E.type === 'jours') throw new Error(`${ici} : \`occupe\` n'existe que pour l'échelle « heures » (cette ligne est sur l'échelle « jours »).`);
+  const fin = E.debut + E.n * E.pas;
+  l.occupe.forEach((o, i) => {
+    const bloc = `${ici}, occupe[${i}]`;
+    if (!o || typeof o !== 'object') throw new Error(`${bloc} : il faut { de: 'HH:MM', a: 'HH:MM', titre }.`);
+    if (!HEURE.test(String(o.de)) || !HEURE.test(String(o.a))) throw new Error(`${bloc} : \`de\` et \`a\` s'écrivent 'HH:MM' (reçu « ${o.de} » et « ${o.a} »).`);
+    if (typeof o.titre !== 'string' || !o.titre.trim()) throw new Error(`${bloc} : il faut un \`titre\` (texte lu à l'écran).`);
+    const d = minutesDe(o.de), f = minutesDe(o.a);
+    if (d >= f) throw new Error(`${bloc} : \`de\` (${o.de}) doit être avant \`a\` (${o.a}).`);
+    if (d < E.debut || f > fin) throw new Error(`${bloc} : ${o.de}–${o.a} sort de l'échelle de la grille (${hhmm(E.debut)}–${hhmm(fin)}).`);
+  });
 }
 
 // Une carte : la déclaration du contenu telle quelle (le contenu relit ses propres champs), plus les
@@ -231,6 +264,18 @@ const TYPES = {
         out.push({ texte: msg(R, (x, y, r) => `${r.nom} : ${x.id} et ${y.id} en même temps.`, A.c, B.c, res, X.o),
           cartes: [A.id, B.id], cote: R.marque || sur });
       }
+    }
+    // Une carte posée sur un créneau déjà pris de sa ligne (`occupe`) : le message dit QUE la ligne est prise, jamais
+    // de combien. `messagePris` (texte ou (carte, ligne, bloc, o) => texte) remplace le texte par défaut.
+    if (sur === 'ligne') {
+      L.forEach((A) => {
+        const res = X.D.L[A.r];
+        ((res && res._occupe) || []).filter((b) => A.s < b.e && b.s < A.e).forEach((b) => {
+          const mp = R.messagePris;
+          out.push({ texte: typeof mp === 'function' ? mp(A.c, res, b, X.o) : typeof mp === 'string' ? mp : `${res.nom} est déjà pris à ce moment-là.`,
+            cartes: [A.id], cote: R.marque || sur });
+        });
+      });
     }
     return out;
   },
@@ -423,6 +468,13 @@ function compiler(P) {
   const pbCouleurs = verifierCouleurs(P.familles);
   if (pbCouleurs.length) throw new Error(`planning ${P.id} : ${pbCouleurs.join(' ')}`);
   const E = echelleDe(P);
+  if (P.quand != null && typeof P.quand !== 'function') throw new Error(`planning ${P.id} : \`quand\` est une fonction (db, séance) => booléen.`);
+  const avecPris = [...((P.lignes && P.lignes.liste) || []), ...((P.alea && P.alea.ajoutLignes) || [])];
+  avecPris.forEach((l) => verifierOccupe(P, E, l));
+  // Les créneaux pris se lisent par `unAlaFois` (sur la ligne) : sans cette règle, ils seraient dessinés mais jamais jugés.
+  if (avecPris.some((l) => l.occupe && l.occupe.length) && !(P.regles || []).some((R) => R.type === 'unAlaFois' && (R.sur || 'ligne') === 'ligne')) {
+    throw new Error(`planning ${P.id} : des lignes déclarent \`occupe\`, mais aucune règle \`unAlaFois\` (sur la ligne) ne les juge : en ajouter une.`);
+  }
   const M = { P, E, D: { 1: donnees(P, E, 1), 2: donnees(P, E, 2) } };
   // `alea.retraits` : un id inconnu, ou une carte gardée dont la ligne imposée est retirée (elle ne pourrait plus se poser,
   // et le planning ne serait jamais complet), s'arrêtent tout de suite.
@@ -760,6 +812,12 @@ export function creerPlanning(P, opts = {}) {
         h += `<button class="pl-case${E.fort(t) ? ' pl-fort' : ''}${pasLa ? ' pl-hors' : repos ? ' pl-repos' : ''}${fen ? ' pl-fen' : ''}" style="grid-row:${r};grid-column:${t + 2}"
           data-pl-case data-r="${ech(l.id)}" data-t="${t}" tabindex="-1" aria-label="${ech(l.nom)}, ${ech(E.lib(t))}${repos && !pasLa ? ', repos obligatoire' : ''}">${pasLa && E.type === 'jours' ? 'pas là' : ''}</button>`;
       }
+      // Les créneaux déjà pris : un bloc gris pointillé, sans geste (le clic et le dépôt traversent jusqu'à la case dessous,
+      // où l'on peut poser une carte : le problème est alors signalé). Lu par les lecteurs d'écran (role=img + libellé).
+      (l._occupe || []).forEach((b, k) => {
+        h += `<div class="pl-bloc pl-pris" data-pl-pris="${ech(l.id)}" data-k="${k}" role="img" style="grid-row:${r};grid-column:${b.s + 2} / span ${b.e - b.s}"
+          aria-label="${ech(l.nom)}, déjà pris, ${ech(E.plage(b.s, b.e))} : ${ech(b.titre)}">${ech(b.titre)}</div>`;
+      });
       const ici = an.I.filter((x) => x.r === l.id);
       const cl = couloirs(ici);
       ici.forEach((x) => {
@@ -882,6 +940,7 @@ export function creerPlanning(P, opts = {}) {
       return `<span class="pl-puce" style="--pl-c:${rgb.join(',')};--pl-t:rgb(${rgb.join(',')})"></span>${f.nom ? `${ech(f.nom)} : ` : ''}${ech(f.legende)}`;
     });
     if (C.pauses) L.push('<span class="pl-puce pl-pause"></span>hachuré : pause');
+    if (D.lignes.some((l) => l._occupe && l._occupe.length)) L.push('<span class="pl-puce pl-pris"></span>gris pointillé : déjà pris, on ne peut pas y poser');
     const rRepos = regle('reposDepuisVeille');
     if (R && R.reprise && rRepos && D.lignes.some((l) => repriseSlot(rRepos, l, E) > 0)) L.push('<span class="pl-puce pl-repos"></span>quadrillé : repos obligatoire');
     return L.join(' · ');
@@ -891,6 +950,8 @@ export function creerPlanning(P, opts = {}) {
     signaux: [`planning:${P.id}:poser`, `planning:${P.id}:envoyer`],
     id: P.id,
     nav: { libelle: P.libelle || 'Planning' },
+    // `quand(db, séance)` : l'entrée de menu n'apparaît qu'une fois vrai (l'enseignant la voit toujours) ; lu par entreprise.js.
+    quand: typeof P.quand === 'function' ? P.quand : null,
     etatNeuf,
     jalons: (db) => jalonsPlanning(db, P),
     note: P.note || opts.copie ? (db) => notePlanning(db, P) : null,

@@ -13,18 +13,18 @@
 
 :root, .theme-papier{
   --pl-alpha:.30;
-  --pl-fenetre:rgba(156,98,10,.13); --pl-hachure:rgba(85,80,71,.18);
+  --pl-fenetre:rgba(156,98,10,.13); --pl-hachure:rgba(85,80,71,.18); --pl-pris:rgba(85,80,71,.30);
   --pl-ambre:#7d4e07; --pl-rouge:#9d2727;
 }
 :root[data-theme="sombre"]{
   --pl-alpha:.16;
-  --pl-fenetre:rgba(224,172,77,.14); --pl-hachure:rgba(154,171,187,.2);
+  --pl-fenetre:rgba(224,172,77,.14); --pl-hachure:rgba(154,171,187,.2); --pl-pris:rgba(154,171,187,.26);
   --pl-ambre:#f0c070; --pl-rouge:#ff8f8a;
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="clair"]){
     --pl-alpha:.16;
-    --pl-fenetre:rgba(224,172,77,.14); --pl-hachure:rgba(154,171,187,.2);
+    --pl-fenetre:rgba(224,172,77,.14); --pl-hachure:rgba(154,171,187,.2); --pl-pris:rgba(154,171,187,.26);
     --pl-ambre:#f0c070; --pl-rouge:#ff8f8a;
   }
 }
@@ -147,3 +147,10 @@
 /* Le menu de l'environnement disparaît tant que le planning est agrandi (classe posée par la vue). */
 .ent-shell.pl-agrandi{ grid-template-columns:minmax(0,1fr) }
 .ent-shell.pl-agrandi > .ent-side{ display:none }
+
+/* --- créneaux déjà pris sur une ligne (`occupe`, ENT-7.2) ------------------------------------ */
+/* Un aplat gris avec bordure POINTILLÉE : ni la couleur d'une famille (carte), ni les hachures des pauses et des heures
+   hors présence, ni le quadrillé du repos. Aucun geste dessus : le clic et le dépôt passent à la case dessous. */
+.pl-bloc.pl-pris{ z-index:1; cursor:default; pointer-events:none; background:var(--pl-pris); border:2px dotted var(--encre-douce);
+  color:var(--encre); font-style:italic; line-height:1.25; padding-top:4px }
+.pl-puce.pl-pris{ background:var(--pl-pris); border:2px dotted var(--encre-douce) }

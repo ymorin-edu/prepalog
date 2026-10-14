@@ -1071,6 +1071,30 @@ Pour en essayer une : les sélecteurs de couleur de `outils/essai-planning.html`
 (« Voir les consignes » les rouvre ; le message de l'aléa reste visible). Le choix est rangé dans l'état (`agrandi`) et
 retrouvé à la séance suivante ; les autres écrans gardent leur menu. Rien à déclarer.
 
+**Créneaux déjà pris** (`occupe`, lot 3 du moteur ENT-7.2, 14/10/2026) : une ligne déclare ce qui l'occupe déjà (autres
+conteneurs, autres équipes) ; l'élève cherche un créneau libre. Facultatif, **échelle « heures » seulement**.
+
+```js
+lignes: { titre: 'Quais de réception', liste: [
+  { id: 'Q6', nom: 'Quai 6', occupe: [{ de: '08:00', a: '09:30', titre: 'Conteneur MSKU 441' },
+                                       { de: '11:00', a: '12:30', titre: 'Conteneur CMAU 902' }] },
+] },
+regles: [{ id: 'quai', type: 'unAlaFois', sur: 'ligne' }],   // OBLIGATOIRE si `occupe` est déclaré : c'est elle qui juge
+```
+
+Le bloc est dessiné en **gris pointillé** (légende ajoutée toute seule), avec son `titre` ; aucun geste dessus (pas déplaçable,
+pas de focus ; un clic ou un dépôt à cet endroit atteint la case dessous, où l'on peut poser une carte). Un lecteur d'écran lit
+« Quai 6, déjà pris, 08:00–09:30 : Conteneur MSKU 441 ». Une carte qui le recouvre, ne serait-ce que d'un créneau, est un
+problème de `unAlaFois` : « Quai 6 est déjà pris à ce moment-là. » (que, jamais de combien ; `messagePris` de la règle, texte
+ou `(carte, ligne, bloc, o) => texte`, le remplace). Juste après (09:30) ou juste avant (11:00) : aucun problème. Jamais rangé
+dans la base de l'élève. Heure qui ne tombe pas sur un créneau : arrondie vers l'extérieur. Refusés au chargement, avec le
+planning, la ligne et le bloc nommés : `de` ≥ `a`, heure mal écrite, hors de l'échelle, `titre` vide, échelle « jours », ou
+aucune règle `unAlaFois` sur la ligne.
+
+**`quand(db, idSeance)`** (même lot) : fonction facultative posée sur `planning`. Tant qu'elle rend faux, le Planning n'est pas au
+menu de l'élève (l'enseignant le voit toujours) ; elle plante = fermé + signalé dans la console. Exemple : le planning du quai
+n'arrive qu'après l'appel au chef de quai : `quand: dialogueFini('appel-quai')` (`core/declencheurs.js`).
+
 **Règles** : `{ id, type, …, message }`. Le message est une fonction (ou un texte) ; celui par défaut dit **que** la
 règle n'est pas respectée, jamais **de combien** — les vôtres aussi (un test relit tous les messages).
 

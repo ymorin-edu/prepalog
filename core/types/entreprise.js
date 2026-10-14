@@ -779,6 +779,11 @@ export function creerEntreprise(U) {
         if (!VTEL || estProf || !VTEL.quand) return !!VTEL;
         try { return !!VTEL.quand(db, ctx.meta.id); } catch (x) { signaler('la condition « quand » du Téléphone plante', x); return false; }
       };
+      // Le Planning, même patron (lot 3, ENT-7.2) : `planning.quand(db, séance)` ; l'enseignant le voit toujours.
+      const plOuvert = () => {
+        if (!VPL || estProf || !VPL.quand) return !!VPL;
+        try { return !!VPL.quand(db, ctx.meta.id); } catch (x) { signaler('la condition « quand » du Planning plante', x); return false; }
+      };
       const rappelPermis = (id) => {
         const eD = lireTel() && lireTel()[id], a = appelRetenu(eD);
         return !!(CORRECTION && !COPIE && eD && eD.rappel && a && eD.rappel > a.debut);
@@ -1487,7 +1492,7 @@ export function creerEntreprise(U) {
                   // Le Téléphone : visible quand sa condition est vraie (l'enseignant le voit toujours) ; « en cours » tant qu'un appel l'est.
                   VTEL && telOuvert() && item('telephone', VTEL.nav.libelle, appelEnCoursIci() ? 'en cours' : 0),
                   VQUAI && item('quai', VQUAI.nav.libelle),
-                  VPL && item('planning', VPL.nav.libelle), VENT && item('entrepot', VENT.nav.libelle),
+                  VPL && plOuvert() && item('planning', VPL.nav.libelle), VENT && item('entrepot', VENT.nav.libelle),
                   VPLAN && item('plan', VPLAN.nav.libelle), VTOUR && item('tournee', VTOUR.nav.libelle),
                   VINV && item('inventaire', VINV.nav.libelle), ...itemsQuestions(item)])}
                 ${groupe('Données', [
@@ -1701,7 +1706,7 @@ export function creerEntreprise(U) {
           ...CAT.vues, ...STK.vues, ...BLO.vues,
           inventaire: VINV ? vueInventaire : vueAccueil,
           quai: VQUAI ? vueQuai : vueAccueil,
-          planning: VPL ? vuePlanning : vueAccueil,
+          planning: VPL && plOuvert() ? vuePlanning : vueAccueil,
           entrepot: VENT ? vueEntrepot : vueAccueil,
           telephone: VTEL && telOuvert() ? () => VTEL.html(etatTel(), apiTel()) : vueAccueil,
           ...Object.fromEntries(VFICHES.map((VF) => [vueDeFiche(VF), () => vueFiche(VF)])),
@@ -2149,7 +2154,7 @@ export function creerEntreprise(U) {
         if (E.vue === 'extractions' && VTAB && VTAB.navExtractions) VTAB.brancherExtractions(z, apiTableur());
         if (E.vue === 'inventaire' && VINV && !VINV.attente(db)) VINV.brancher(z, etatInventaire(), apiInventaire());
         if (E.vue === 'quai' && VQUAI) VQUAI.brancher(z, etatQuai(), apiQuai());
-        if (E.vue === 'planning' && VPL) VPL.brancher(z, etatPlanning(), apiPlanning());
+        if (E.vue === 'planning' && VPL && plOuvert()) VPL.brancher(z, etatPlanning(), apiPlanning());
         if (E.vue === 'entrepot' && VENT) VENT.brancher(z, etatEntrepot(), apiEntrepot());
         if (E.vue === 'telephone' && VTEL && telOuvert()) VTEL.brancher(z, etatTel(), apiTel());
         // La calculette du site, sur l'écran du plan seulement (entraînement, évaluation : voir entrepot.js).
