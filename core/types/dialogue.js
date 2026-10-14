@@ -41,7 +41,7 @@
 // Un choix peut porter `vers: '<id de réplique>'` (embranchement, lot 3) ; sans `vers`, l'appel est linéaire.
 // Tout ce qui est mal déclaré empêche la vue de se créer, avec un message qui nomme le dialogue et la réplique.
 //
-// ── L'ÉTAT (cloisonné par séance dans la base au lot 2 : `db.dialogues[<séance>]`) ────────────────────────────────────
+// ── L'ÉTAT (cloisonné par séance dans la base : `db.dialogues[<séance>]`) ────────────────────────────────────
 //   { <dialogue>: { appels: [{ debut, fin?, ordres: { <réplique>: [v, …] }, textes: { <réplique>: { dit?, libs? } },
 //                              pas: [{ r, v, at }], reprises }] } }
 // Le premier appel est le premier essai ; « Rappeler » (correction) en ajoute un. La position dans l'appel se DÉDUIT des
@@ -49,7 +49,11 @@
 //
 // ── CE QUE `creerTelephone` REND ──────────────────────────────────────────────────────────────────────────────────────
 //   { id, nav: { libelle }, quand, situation, dialogues, signaux, etatNeuf, html(etat, api), brancher(z, etat, api) }
-//   api : { estProf, graine, prenom, db, sauver(), figee, evaluation, rappel(id) → booléen, signal(geste), delai }
+//   api : { estProf, graine, prenom, db, seance, sauver(), figee, evaluation, rappel(id) → booléen, signal(geste), delai,
+//           apresFin(id) }   (`seance` est passé aux `quand(db, seance)` ; `apresFin` : le moteur redessine son menu au raccrochage)
+// Lot 2 (14/10/2026) : branchée par `entreprise.js` (option `telephone`, écran « telephone »), état dans
+// `db.dialogues[<séance>]`, lectures pour les jalons plus bas (`appelRetenuDe`, `jalonDialogue`), `dialogueFini` dans
+// `core/declencheurs.js`.
 // L'enseignant joue l'appel sur une copie en mémoire : rien n'est écrit.
 
 import { ech } from '../ui.js';
@@ -159,6 +163,35 @@ export function leurresAppeles(etat, { avant } = {}) {
   return [...new Set(L.filter((x) => x.at < debut).map((x) => x.id))];
 }
 
+// LES LECTURES SUR LA BASE (lot 2) : l'état d'un dialogue est cloisonné par séance, `db.dialogues[<séance>][<dialogue>]`.
+// Un jalon reçoit la base seule : la séance passe son propre id (celui de son `meta`).
+export const dialogueDe = (db, seance, id) => (db && db.dialogues && db.dialogues[seance] && db.dialogues[seance][id]) || null;
+export const appelRetenuDe = (db, seance, id) => appelRetenu(dialogueDe(db, seance, id));
+// Un jalon tout prêt (à poser dans `etapes`) : « à faire » tant qu'aucun appel n'est terminé (rien de vrai avant, un appel
+// abandonné reste à faire), puis `juge(appel, db)` sur le DERNIER appel terminé. `ecran: 'dialogue:<id>'` : « Corriger »
+// rouvre ce contact avec « Rappeler ». Le moteur vérifie à l'ouverture que le dialogue existe dans la séance.
+export function jalonDialogue({ seance, dialogue, juge, ...jalon }) {
+  if (!seance || !dialogue || typeof juge !== 'function') throw new Error('jalonDialogue : il faut { seance, dialogue, juge(appel, db) }');
+  return { ...jalon, dialogue, ecran: `dialogue:${dialogue}`,
+    verifier(db) {
+      const a = appelRetenuDe(db, seance, dialogue);
+      if (!a) return { status: 'attente' };
+      return { status: juge(a, db) ? 'ok' : 'ko' };
+    } };
+}
+// Le journal court des appels TERMINÉS, pour l'enseignant (remonte avec la note, lu dans le Repérage) : par dialogue, un
+// élément par appel { reprises, pas: 'réplique:clé …' } ; les contacts sans dialogue appelés. Rien d'un appel en cours :
+// la note ne se réécrit pas à chaque réplique.
+export function journalCourt(etat) {
+  const J = {};
+  Object.entries(etat || {}).forEach(([id, eD]) => {
+    if (id === CLE_LEURRES) { if (eD && eD.length) J[CLE_LEURRES] = eD.map((x) => x.id); return; }
+    const L = appels(eD).filter((a) => a.fin).map((a) => ({ reprises: reprises(a), pas: (a.pas || []).map((p) => `${p.r}:${p.v}`).join(' ') }));
+    if (L.length) J[id] = L;
+  });
+  return Object.keys(J).length ? J : null;
+}
+
 /* ================================================================ le déroulé d'un appel */
 // Tout se DÉDUIT des pas : où en est l'appel, les bulles dans l'ordre, les choix grisés à la réplique en cours.
 export function deroule(D, appel, { prenom = '', evaluation = false } = {}) {
@@ -209,8 +242,8 @@ export function creerTelephone(T, { personnes = {} } = {}) {
 
   const estEval = (D, api) => (D.mode ? D.mode === 'evaluation' : !!api.evaluation);
   const etatDe = (etat, api) => (api.estProf ? (ui.prof || (ui.prof = {})) : etat);
-  const visibles = (api) => M.dialogues.filter((D) => api.estProf || !D.quand || D.quand(api.db || {}));
-  const leurresVisibles = (api) => M.leurres.filter((l) => api.estProf || !l.quand || l.quand(api.db || {}));
+  const visibles = (api) => M.dialogues.filter((D) => api.estProf || !D.quand || D.quand(api.db || {}, api.seance));
+  const leurresVisibles = (api) => M.leurres.filter((l) => api.estProf || !l.quand || l.quand(api.db || {}, api.seance));
   const nomContact = (x) => (leurreDe.has(x.id) ? x.nom : x.contact.nom);
   // Un contact sans dialogue qu'on vient d'appeler : sa messagerie vocale, puis « Raccrocher ».
   function htmlLeurre(l) {
@@ -417,6 +450,8 @@ export function creerTelephone(T, { personnes = {} } = {}) {
       signal(`dialogue:${D.id}:fin`);
       ecrire();
       redessiner('[data-dlg-appeler], [data-dlg-journal]');
+      // Le moteur redessine son menu (un écran ouvert par `dialogueFini`, la marque « appel en cours » qui part).
+      if (!api.estProf && api.apresFin) api.apresFin(D.id);
     }
     ui.attente = false; ui.jeton++;
     relier();
@@ -424,9 +459,14 @@ export function creerTelephone(T, { personnes = {} } = {}) {
     if (fil) fil.scrollTop = fil.scrollHeight;
   }
 
-  return { id: 'telephone', nav: { libelle: M.libelle }, quand: M.quand, situation: M.situation, dialogues: M.dialogues, signaux, etatNeuf, html, brancher,
+  return { id: 'telephone', nav: { libelle: M.libelle }, quand: M.quand, situation: M.situation, dialogues: M.dialogues, leurres: M.leurres,
+    signaux, etatNeuf, html, brancher,
     // Pour la page d'essai et l'enseignant : oublier la copie jouée par l'enseignant, rouvrir l'écran au repos.
-    oublier() { ui.prof = null; ui.sel = null; ui.attente = false; ui.vide = false; ui.jeton++; } };
+    oublier() { ui.prof = null; ui.sel = null; ui.attente = false; ui.vide = false; ui.jeton++; },
+    // « Corriger » (moteur) : l'écran s'ouvre sur ce contact.
+    ouvrir(id) { if (parId.has(id)) { ui.sel = id; ui.vide = false; ui.attente = false; ui.jeton++; } },
+    // Un appel est-il en cours dans cet état (questions au fil retenues, marque au menu) ?
+    enCours: (etat) => M.dialogues.some((D) => appelEnCours(etat && etat[D.id])) };
 }
 
 const heure = (t) => { const d = new Date(t); return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };

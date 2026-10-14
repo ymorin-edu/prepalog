@@ -20,6 +20,7 @@ import { creerInventaire } from './inventaire.js';
 import { creerQuai } from './quai.js';
 import { creerPlanning } from './planning.js';
 import { creerLecteur } from './animation.js';
+import { creerTelephone, appelEnCours, appelRetenu, appels, journalCourt } from './dialogue.js';
 import { creerEntrepot } from './entrepot.js';
 import { monterCalculette, demonterCalculette } from '../calculette.js';
 import { creerDocuments } from './documents.js';
@@ -223,6 +224,26 @@ export function creerEntreprise(U) {
   // ici : un pas, une place ou un objet inconnu empêche la séance de se charger.
   const VANIMS = [].concat(U.animation || [], U.animations || []).map((A) => creerLecteur(A));
   VANIMS.forEach((VA, i) => { if (VANIMS.findIndex((x) => x.id === VA.id) !== i) throw new Error(`animation ${VA.id} déclarée deux fois`); });
+  // L'ÉCRAN TÉLÉPHONE (vue « Dialogue à choix », 14/10/2026, brief `docs/briefs/MOTEUR-vue-dialogue.md`, lot 2) : un écran de
+  // plus, seulement si la séance déclare `telephone` (format en tête de `core/types/dialogue.js`). Les interlocuteurs sont des
+  // personnes de la séance (`equipe`, `questions.personnes`). Son état vit dans `db.dialogues[<séance>]`. Un dialogue mal
+  // déclaré empêche la séance de se charger (message qui nomme le dialogue et la réplique).
+  const VTEL = U.telephone ? creerTelephone(U.telephone, { personnes: PERSONNES }) : null;
+  {
+    // Ce qui cite un dialogue doit le trouver dans la séance : un jalon (`dialogue`, `ecran: 'dialogue:<id>'`), une condition
+    // `dialogueFini(id)` (fermetures, déclencheurs, questions). Une faute de frappe ne se découvre pas en classe.
+    const ids = new Set(VTEL ? VTEL.dialogues.map((D) => D.id) : []);
+    const voir = (id, ou) => { if (!ids.has(id)) throw new Error(`${ou} : le dialogue « ${id} » n’existe pas dans cette séance (${[...ids].join(', ') || 'aucun écran Téléphone déclaré'})`); };
+    const dialoguesDe = (c) => (c && Array.isArray(c.dialogues) ? c.dialogues : []);
+    etapesSeance.forEach((e) => {
+      if (!e) return;
+      if (e.dialogue != null) voir(e.dialogue, `le jalon « ${e.id} »`);
+      if (typeof e.ecran === 'string' && e.ecran.startsWith('dialogue:')) voir(e.ecran.slice(9), `le jalon « ${e.id} »`);
+    });
+    Object.entries(U.fermetures || {}).forEach(([v, F]) => dialoguesDe(F && F.ouvertSi).forEach((id) => voir(id, `la fermeture de l’écran « ${v} »`)));
+    ((U.volet && U.volet.declencheurs) || []).forEach((d) => dialoguesDe(d && d.quand).forEach((id) => voir(id, `le message « ${d.id} »`)));
+    if (MQ) MQ.fil.forEach((q) => [q.quand, q.rattrapage].forEach((c) => dialoguesDe(c).forEach((id) => voir(id, `la question « ${q.id} »`))));
+  }
   controlerIdentifiants([['quai', 'quais', [VQUAI].filter(Boolean)], ['planning', 'plannings', [VPL].filter(Boolean)],
     ["plan d'entrepôt", "plans d'entrepôt", [VENT].filter(Boolean)], ['fiche', 'fiches', VFICHES], ['animation', 'animations', VANIMS]]);
   const vueAnim = (VA) => `animation:${VA.id}`;
@@ -234,7 +255,7 @@ export function creerEntreprise(U) {
   const ficheDeVue = (v) => VFICHES.find((VF) => vueDeFiche(VF) === v) || null;
   {
     // La messagerie est de toutes les séances : son geste (le transfert d'un message, chantier D-1) est toujours connu.
-    const connus = new Set([...VFICHES, ...VANIMS, VPL, VENT, VQUAI].filter(Boolean).flatMap((V) => V.signaux || []).concat(GESTE_TRANSFERT));
+    const connus = new Set([...VFICHES, ...VANIMS, VPL, VENT, VQUAI, VTEL].filter(Boolean).flatMap((V) => V.signaux || []).concat(GESTE_TRANSFERT));
     // Le geste de transfert d'UN message (`messagerie:transfert:<clé>`) : connu pour les messages que le volet sème avec un
     // `transfert`, et pour ceux qu'il déclare dans `volet.transferables` (les messages qui arrivent plus tard, par un déclencheur).
     // Une clé qu'il ne déclare pas (faute de frappe) empêche la séance de s'ouvrir.
@@ -403,6 +424,12 @@ export function creerEntreprise(U) {
     // le suivi ne charge pas la séance, il lit tout ici.
     // Les itinéraires de la carte (13/10/2026), pour la colonne « Itinéraires ouverts » du repérage, au même titre.
     if (VITI) detail.itineraires = { noms: VITI.noms };
+    // Les appels TERMINÉS de l'écran Téléphone (14/10/2026), pour le Repérage de l'enseignant (colonne « Appels ») : par dialogue,
+    // les reprises et ce que l'élève a dit (clés), appel par appel. Rien pendant un appel : la note ne se réécrit qu'au raccrochage.
+    if (VTEL && seanceMontee && db && db.dialogues && db.dialogues[seanceMontee]) {
+      const J = journalCourt(db.dialogues[seanceMontee]);
+      if (J) detail.dialogues = J;
+    }
     if (VDOC) detail.documents = { total: VDOC.ids().length,
       noms: Object.fromEntries(VDOC.ids().map((id) => [id, VDOC.doc(id).court || VDOC.doc(id).titre || id])) };
     // Le quai range aussi ses temps dans le détail : le temps réel passé en guidage sert à caler
@@ -478,7 +505,7 @@ export function creerEntreprise(U) {
         if (fe) return `Fais d’abord le point d’étape avec ${appel(MQ.personnes[fe.de])}.`;
         const F = FERMETURES[v];
         if (!F || estProf) return '';
-        try { return F.ouvertSi(db) ? '' : (F.message || 'Pas encore ouvert.'); } catch (x) { signaler(`la condition d'ouverture de l'écran « ${v} » plante`, x); return ''; }
+        try { return F.ouvertSi(db, ctx.meta.id) ? '' : (F.message || 'Pas encore ouvert.'); } catch (x) { signaler(`la condition d'ouverture de l'écran « ${v} » plante`, x); return ''; }
       };
 
       // Le niveau de l'élève DANS CETTE SÉANCE (brief MOTEUR-statut-annulee, 03/10/2026) :
@@ -744,6 +771,18 @@ export function creerEntreprise(U) {
       // Un jalon qui plante (état 'erreur') est jugé : le rattrapage ne doit pas attendre un bug de contenu.
       const jalonJuge = (j) => { try { const st = j.verifier(db, U).status; return st === 'ok' || st === 'ko'; } catch (x) { signaler(`le jalon « ${j.id} » plante`, x); return true; } };
       const essai = (f, quoi) => { try { return !!f(db, ctx.meta.id); } catch (x) { signaler(`la condition ${quoi || 'd’une question'} plante`, x); return false; } };
+      // L'ÉCRAN TÉLÉPHONE, ce qu'en lisent le menu, les questions et « Corriger » : sans créer l'état (le menu se dessine chez un
+      // élève qui n'a jamais ouvert le Téléphone). L'écran lui-même est plus bas (« écran Téléphone »).
+      const lireTel = () => (db.dialogues && db.dialogues[ctx.meta.id]) || null;
+      const appelEnCoursIci = () => !!(VTEL && !estProf && VTEL.enCours(lireTel()));
+      const telOuvert = () => {
+        if (!VTEL || estProf || !VTEL.quand) return !!VTEL;
+        try { return !!VTEL.quand(db, ctx.meta.id); } catch (x) { signaler('la condition « quand » du Téléphone plante', x); return false; }
+      };
+      const rappelPermis = (id) => {
+        const eD = lireTel() && lireTel()[id], a = appelRetenu(eD);
+        return !!(CORRECTION && !COPIE && eD && eD.rappel && a && eD.rappel > a.debut);
+      };
       // L'ARRIVÉE. Un point d'étape arrive quand son envoi a eu lieu (juste ou faux) ; ses questions sont « arrivées » avec
       // lui. Une question au fil arrive à son geste, une à la fois, jamais pendant qu'on lit le retour de la précédente.
       // RATTRAPAGE (jamais un élève bloqué) : une question au fil dont le geste n'a pas eu lieu arrive par sa condition
@@ -761,7 +800,9 @@ export function creerEntreprise(U) {
           fait = true;
         });
         const enLecture = QF.panneau && repondu(reponse(db, MQ, QF.panneau));
-        if (!filOuverte() && !enLecture) {
+        // Pendant un appel (écran Téléphone), aucune question au fil ne s'ouvre : son panneau gèlerait l'écran et couperait la
+        // conversation. Elle attend que l'élève raccroche (le raccrochage sauve, donc la rappelle ici).
+        if (!filOuverte() && !enLecture && !appelEnCoursIci()) {
           // D'abord une question dont le geste (ou le rattrapage déclaré) a eu lieu ; sinon, le rattrapage du moteur.
           const enAttente = MQ.fil.filter((x) => !(S[x.id] && S[x.id].arrivee));
           let q = enAttente.find((x) => essai(x.quand, `"quand" de la question « ${x.id} »`) || (x.rattrapage && essai(x.rattrapage, `"rattrapage" de la question « ${x.id} »`)));
@@ -1116,8 +1157,8 @@ export function creerEntreprise(U) {
       // Fini = tout est jugé. Un jalon qui plante (état 'erreur') est jugé : un bug de contenu ne bloque personne.
       const bilanComplet = (st) => etapes.length > 0 && etapes.every((e) => st[e.id] === 'ok' || st[e.id] === 'ko' || st[e.id] === 'erreur');
       const sansFaux = (st) => etapes.every((e) => st[e.id] === 'ok' || st[e.id] === 'erreur');
-      // Les écrans à rouvrir : ceux des jalons faux qui déclarent un `ecran` ('fiche:<id>', 'phrases:<id>', 'planning:<id>'
-      // ou 'transfert:<clé du mail>').
+      // Les écrans à rouvrir : ceux des jalons faux qui déclarent un `ecran` ('fiche:<id>', 'phrases:<id>', 'planning:<id>',
+      // 'transfert:<clé du mail>' ou 'dialogue:<id>').
       // `ecran` peut être une fonction de la base (chantier D-1 bis) : évaluée ici, à chaque fois, jamais rangée. Une
       // fonction qui plante ou rend autre chose qu'un texte est signalée et vaut « pas d'écran » (rien à rouvrir).
       function ecranDe(e) {
@@ -1195,6 +1236,15 @@ export function creerEntreprise(U) {
               if (dernier) E.brouillon[m.id] = Object.assign({}, dernier.phrases.choix);
               vers = { vue: 'mail', mail: m.id };
             }
+          } else if (genre === 'dialogue') {
+            // Un appel jugé faux (écran Téléphone) : « Rappeler » est offert sur ce contact. Le premier appel reste rangé ; le
+            // jalon lit le dernier appel terminé, il reste faux jusqu'au nouvel appel raccroché.
+            const eD = VTEL && lireTel() && lireTel()[id];
+            if (eD && appelRetenu(eD) && !appelEnCours(eD)) {
+              eD.rappel = Date.now();
+              VTEL.ouvrir(id);
+              if (!vers) vers = { vue: 'telephone' };
+            }
           } else if (genre === 'transfert') {
             // Un message mal transféré (chantier D-1) : « Transférer à… » revient sous le message ; le premier transfert
             // reste rangé (`premier`), le jalon reste faux jusqu'au nouveau transfert. Un message juste ne se rouvre pas
@@ -1211,7 +1261,7 @@ export function creerEntreprise(U) {
         E.vue = vers.vue;
         if (vers.mail) { E.dossier = 'in'; E.mailSel = vers.mail; E.piece = null; }
         dessiner();
-        hote.querySelector('[data-fiche-envoyer], #formPhr, [data-transfert-ouvrir]')?.scrollIntoView({ block: 'nearest' });
+        hote.querySelector('[data-fiche-envoyer], #formPhr, [data-transfert-ouvrir], [data-dlg-appeler]')?.scrollIntoView({ block: 'nearest' });
       }
 
       // La note du suivi de classe : les points des jalons réussis (le nombre de jalons réussis quand ils n'ont pas
@@ -1237,6 +1287,8 @@ export function creerEntreprise(U) {
           else if (genre === 'phrases') n += Math.max(0, db.mails.filter((m) => m.folder === 'out' && m.phrases && m.phrases.id === id).length - 1);
           else if (genre === 'planning' && VPL && VPL.id === id) n += VPL.corrections(db.plannings && db.plannings[id]);
           else if (genre === 'transfert') n += Math.max(0, ((transfertsDe(db, SEANCE)[id] || {}).n || 0) - 1);
+          // Un appel de plus après le premier, raccroché : une correction.
+          else if (genre === 'dialogue') n += Math.max(0, appels(lireTel() && lireTel()[id]).filter((a) => a.fin).length - 1);
         });
         return n;
       }
@@ -1426,12 +1478,14 @@ export function creerEntreprise(U) {
                 ${MQ && MQ.ouverture ? item('ouverture', MQ.ouverture.titre || 'Avant de commencer') : ''}
                 ${item('accueil', 'Accueil')}
                 ${item('mail', 'Messagerie', nonLus)}
-                ${groupe((VPLAN || VTOUR || VITI) && !VFICHE && !VQUAI && !VPL && !VENT && !VINV && !VANIMS.length ? U.transportSection || 'Transport' : 'Mon poste', [
+                ${groupe((VPLAN || VTOUR || VITI) && !VFICHE && !VQUAI && !VPL && !VENT && !VINV && !VTEL && !VANIMS.length ? U.transportSection || 'Transport' : 'Mon poste', [
                   VITI && item('itineraires', VITI.nav.libelle),
                   ...VANIMS.filter((VA) => !VA.menuApres && (!VA.quand || VA.quand(db))).map((VA) => item(vueAnim(VA), VA.nav.libelle)),
                   ...VFICHES.filter((VF) => !VF.quand || VF.quand(db)).map((VF) => item(vueDeFiche(VF), VF.nav.libelle)),
                   // Une animation qui vient APRÈS les fiches dans le déroulé (`menuApres`, ENT-6.10) : listée après elles.
                   ...VANIMS.filter((VA) => VA.menuApres && (!VA.quand || VA.quand(db))).map((VA) => item(vueAnim(VA), VA.nav.libelle)),
+                  // Le Téléphone : visible quand sa condition est vraie (l'enseignant le voit toujours) ; « en cours » tant qu'un appel l'est.
+                  VTEL && telOuvert() && item('telephone', VTEL.nav.libelle, appelEnCoursIci() ? 'en cours' : 0),
                   VQUAI && item('quai', VQUAI.nav.libelle),
                   VPL && item('planning', VPL.nav.libelle), VENT && item('entrepot', VENT.nav.libelle),
                   VPLAN && item('plan', VPLAN.nav.libelle), VTOUR && item('tournee', VTOUR.nav.libelle),
@@ -1649,6 +1703,7 @@ export function creerEntreprise(U) {
           quai: VQUAI ? vueQuai : vueAccueil,
           planning: VPL ? vuePlanning : vueAccueil,
           entrepot: VENT ? vueEntrepot : vueAccueil,
+          telephone: VTEL && telOuvert() ? () => VTEL.html(etatTel(), apiTel()) : vueAccueil,
           ...Object.fromEntries(VFICHES.map((VF) => [vueDeFiche(VF), () => vueFiche(VF)])),
           ...Object.fromEntries(VANIMS.map((VA) => [vueAnim(VA), () => VA.html(etatAnim(VA), apiAnim())])),
           fiche: VFICHE ? () => vueFiche(VFICHE) : vueAccueil,
@@ -1686,6 +1741,8 @@ export function creerEntreprise(U) {
         const reprise = db.reprise, points = db.points, indicateurs = db.indicateurs, menuReplie = db.menuReplie, versionBase = db.versionBase;
         // Les réponses aux questions survivent aussi (sinon on effacerait une mauvaise première réponse).
         const questions = db.questions;
+        // Les appels du Téléphone aussi, comme les questions : le premier appel reste rangé (la note le lit au premier bilan).
+        const dialogues = db.dialogues;
         const photo = ctx.meta.precedente && points && points[ctx.meta.precedente];
         Object.keys(db).forEach((k) => delete db[k]);
         if (photo) {
@@ -1707,6 +1764,7 @@ export function creerEntreprise(U) {
         // Le repérage n'est pas du travail : repartir de zéro n'efface ni le temps ni les aides ouvertes.
         if (indicateurs) db.indicateurs = indicateurs;
         if (questions) db.questions = questions;
+        if (dialogues) db.dialogues = dialogues;
         // Le menu replié est un réglage d'écran, pas du travail.
         if (menuReplie) db.menuReplie = true;
         normaliserBase();
@@ -1954,6 +2012,30 @@ export function creerEntreprise(U) {
         return true;
       }
 
+      /* ---------------------------------------------------------- écran Téléphone */
+      // Cloisonné par séance : `db.dialogues[<séance>]` (format en tête de `core/types/dialogue.js`). L'enseignant joue l'appel
+      // sur une copie en mémoire (la vue le sait par `estProf`) : rien n'est écrit, ni chez lui ni chez l'élève.
+      // Le RAPPEL (correction après le premier bilan) : « Corriger » range `rappel` (heure) sur le dialogue ; « Rappeler » est
+      // offert tant que le dernier appel terminé a commencé AVANT (un nouvel appel le consomme). Gardé au rechargement.
+      const TEL_PROF = {};
+      function etatTel() {
+        if (estProf) return TEL_PROF;
+        if (!db.dialogues) db.dialogues = {};
+        return db.dialogues[ctx.meta.id] || (db.dialogues[ctx.meta.id] = VTEL.etatNeuf());
+      }
+      const apiTel = () => ({
+        estProf, signal, figee: rendue(), evaluation: COPIE, prenom, db, seance: ctx.meta.id,
+        graine: graineDeBase(db) || ctx.profil.uid || prenom,
+        rappel: rappelPermis,
+        sauver() {
+          if (rendue()) return;
+          declencher(); arriverQuestions();
+          ctx.jeu.sauver(); remonterEtapes();
+        },
+        // Au raccrochage : le menu se redessine (écran ouvert par `dialogueFini`, marque « en cours » retirée, question arrivée).
+        apresFin() { if (E.vue === 'telephone') dessiner(); },
+      });
+
       /* ---------------------------------------------------------- animation à questions */
       // Cloisonnée par séance : `db.animations[<id de l'animation de cette séance>]`. L'enseignant n'y
       // écrit rien (le lecteur le sait par `estProf`). Une réponse rangée n'est jamais suivie d'un redessin
@@ -2069,6 +2151,7 @@ export function creerEntreprise(U) {
         if (E.vue === 'quai' && VQUAI) VQUAI.brancher(z, etatQuai(), apiQuai());
         if (E.vue === 'planning' && VPL) VPL.brancher(z, etatPlanning(), apiPlanning());
         if (E.vue === 'entrepot' && VENT) VENT.brancher(z, etatEntrepot(), apiEntrepot());
+        if (E.vue === 'telephone' && VTEL && telOuvert()) VTEL.brancher(z, etatTel(), apiTel());
         // La calculette du site, sur l'écran du plan seulement (entraînement, évaluation : voir entrepot.js).
         // Posée sur la page, hors de la zone de la séance : elle prendrait l'accent de la charte (le rouge de
         // Smoby dirait « faux », un vert « juste »). Son bouton est donc à l'encre, quelle que soit l'entreprise.

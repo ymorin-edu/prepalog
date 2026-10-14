@@ -96,7 +96,7 @@ plan d'entrepôt, fiche, animation) sans `id` texte non vide, sont refusées aus
 | `sansTrame` | texte | Phrase du bandeau quand tout se fait à l'écran ; sans effet si `trame` est là. | `activites/smoby-visite.js` |
 | `copie` | booléen | Évaluation : copie rendue une seule fois, note figée (voir `noter`). Déduite de `meta.copie`. | `activites/picard-ent44.js` |
 | `menu` | tableau | Les écrans de **données** gardés au menu, parmi `commandes`, `receptions`, `stock`, `catalogue`, `blocage`, `clients`, `fournisseurs`, `console` (un nom inconnu refuse la séance). Sans `menu`, tous restent. | `activites/picard-ent42.js` (`menu: []`) |
-| `fermetures` | objet | `{ écran: { ouvertSi(db), message } }` : l'entrée du menu reste visible, grisée avec le message, tant que `ouvertSi(db)` est faux (élève seulement). | `activites/spartoo-reception.js` |
+| `fermetures` | objet | `{ écran: { ouvertSi(db, séance), message } }` : l'entrée du menu reste visible, grisée avec le message, tant que `ouvertSi` est faux (élève seulement). `ouvertSi` reçoit aussi l'id de la séance (depuis le 14/10/2026 : `dialogueFini(id)`). | `activites/spartoo-reception.js` |
 | `stockOuvert` | booléen | L'écran Stock s'ouvre sans le code de l'enseignant (Smoby). Sans l'option, il reste verrouillé (Spartoo : il pousse vers la console `.getstock`). | `activites/smoby-visite.js` |
 | `receptionLitige` | booléen | Ajoute « En litige (zone litiges) » aux décisions du bon de réception ; la ligne n'entre pas en stock. | `activites/smoby-rangement.js` |
 | `couleurs` | objet | `{ code: [nom, teinte] }` : noms et teintes des couleurs des variantes (pastilles du catalogue, colonne Couleur). Sans table, pas de pastille. **Facultative**, exportée par l'univers. | `contenus/spartoo.js` |
@@ -119,6 +119,7 @@ plan d'entrepôt, fiche, animation) sans `id` texte non vide, sont refusées aus
 | `pastilles` | tableau | Pastilles d'étape de la séance, `[{ libelle, fait(db) }]`, une bande sur tous les écrans (D-10). | `activites/france-boissons-retour.js` |
 | `animation` | objet | Une animation à questions (et ses écrans de présentation, D-5). | essais seulement (aucune séance ne la passe encore) |
 | `animations` | tableau | Plusieurs animations (rare). | essais seulement |
+| `telephone` | objet | Écran « Téléphone » : appels où l'élève choisit ses répliques, contacts sans dialogue (voir « Vue « Dialogue à choix » »). | essai seulement (`contenus/dialogue-essai.js`) ; Decathlon ENT-7.2 à 7.4, à venir |
 | `questions` | objet | Questions au fil et points d'étape (voir « Questions au fil »). | essais seulement (aucune séance ne la passe encore) |
 | `equipe` | objet | Personnes citées par les questions, en plus de `questions.personnes` ; destinataires d'un message à transférer (`transfert.a`). | essai des questions (`contenus/questions-essai.js`) |
 | `tirage` | (sans contrôle de type) | **Tirage mémorisé** : la déclaration `declarerTirage({ banques, … })`, que la fabrique prend dans `SEANCE.TIRAGE` (voir « Tirage mémorisé et banques »). Ou vrai (forme d'avant) = jeu tiré par élève même sans quai ni inventaire tiré : la graine est posée et inscrite dans le détail de la note. | `contenus/tirage-essai.js` (essai seulement) |
@@ -693,7 +694,7 @@ Un jalon (`etapes`) peut déclarer, en plus de `id`, `titre` et `verifier(db)` :
 - `groupe` : la ligne du bandeau de fin (séance `correction`, ou visite notée au premier essai). Un groupe est juste quand toutes ses cases le sont. Le
   bandeau ne descend jamais à la case (une case oui/non nommée fausse donnerait la réponse) et n'affiche jamais de points.
 - `ecran` : où l'élève corrige, `'fiche:<id de la fiche>'`, `'phrases:<id du message par phrases>'`, `'planning:<id du
-  planning>'` ou `'transfert:<clé du message>'` (un message à transférer, voir plus haut) ; ou une fonction `(db) => …` qui rend
+  planning>'`, `'transfert:<clé du message>'` (un message à transférer, voir plus haut) ou `'dialogue:<id du dialogue>'` (un appel : « Rappeler », voir « Vue « Dialogue à choix » ») ; ou une fonction `(db) => …` qui rend
   l'un de ces textes pour l'élève (son message tiré : « Fonction de la base de l'élève », plus haut). Le bouton « Corriger » n'apparaît que s'il y a un `ecran` à rouvrir parmi les jalons faux. Un planning se rouvre
   à la première version fausse, avec le planning envoyé : si c'est la 1re, la version d'après l'aléa est mise de côté et revient
   au renvoi (deux envois = **une** correction, compteur `finis` de l'état du planning).
@@ -952,6 +953,62 @@ carteItineraires: {
   annonce l'arrêt. Une marque mal déclarée (sans `lonlat`, hors de la carte, `coupe` inconnu) empêche la séance de se charger.
   La vue se redessine à chaque entrée de menu : une marque déclenchée apparaît à la prochaine ouverture de la carte.
 - **Au zoom des derniers kilomètres**, les noms des lieux prennent des places calculées pour cette échelle (`CARTE.nomsZoom`).
+
+## Vue « Dialogue à choix » (l'écran Téléphone) — `core/types/dialogue.js`
+
+Écrite le 14/10/2026 (brief `docs/briefs/MOTEUR-vue-dialogue.md`, lots 1 et 2) pour Decathlon ENT-7.2 à 7.4, puis la 2de et le CAP.
+L'élève **téléphone** : l'interlocuteur parle (une bulle), l'élève choisit sa réponse parmi 2 à 4 répliques. Une réponse maladroite
+fait **réagir le personnage** (il ne corrige pas, il réagit), la même réplique revient et la réponse maladroite se grise : personne n'est
+bloqué. Rien ne dit « juste » ou « faux » pendant l'appel ; le ✓ / ✗ arrive au bandeau de fin. Le format complet de la déclaration
+est en tête de `core/types/dialogue.js` ; un exemple qui tourne : `contenus/dialogue-essai.js`.
+
+```js
+import { dialogueFini } from '../core/declencheurs.js';
+import { jalonDialogue, reprises, premiereReponse, leurresAppeles, dialogueDe } from '../core/types/dialogue.js';
+
+telephone: {
+  libelle: 'Téléphone',                       // entrée du menu « Mon poste » (défaut)
+  quand: (db, seance) => …,                   // facultatif : l'entrée n'apparaît qu'une fois vrai (l'enseignant la voit toujours)
+  situation: 'Appelle le quai pour réserver le créneau.',   // ce que montre l'écran avant tout appel
+  dialogues: [{ id: 'quai', de: 'nadia',      // `de` : une personne de `equipe` (ou de `questions.personnes`)
+    contact: { nom: 'Quai de réception', detail: 'poste 214' },
+    repliques: [{ id: 'accueil', dit: 'Quai de réception, Nadia, j’écoute.', choix: [
+      { v: 'presente', juste: true, lib: 'Bonjour, c’est {prenom}…' },
+      { v: 'salut', lib: 'Salut, c’est pour un camion.', reaction: 'Euh… bonjour. C’est qui ?' },
+      { v: 'sec', lib: 'Ouais.', reaction: '… Bon.', accepte: true } ],     // réagit ET passe à la suite (compte une reprise)
+      selon: (db) => ({ libs: { presente: '…' } }) }],                       // textes calculés UNE FOIS, à l'arrivée de la réplique
+    fin: 'Bonne journée !' }],
+  leurres: [{ id: 'thomas', nom: 'Thomas Leroy', detail: '…', message: 'Vous êtes sur la messagerie de…' }],   // contacts sans dialogue
+},
+etapes: [jalonDialogue({ seance: META.id, dialogue: 'quai', id: 'appel', titre: '…', groupe: 'Appel au quai', poids: 4,
+  juge: (appel, db) => reprises(appel) <= 2 })],
+fermetures: { planning: { ouvertSi: dialogueFini('quai'), message: 'Appelle d’abord le quai.' } },
+```
+
+- **État** : `db.dialogues[<séance>][<dialogue>] = { appels: [{ debut, fin?, ordres, textes, pas: [{ r, v, at }], reprises }], rappel? }`,
+  et `db.dialogues[<séance>]['@leurres'] = [{ id, at }]` (contacts sans dialogue appelés). Rangé à chaque réplique dite : changer
+  d'écran, recharger ou changer de poste retrouve l'appel à la même réplique (mêmes textes, même ordre, mêmes grisés) ; le menu
+  porte « en cours ». Un seul appel à la fois. **« Réinitialiser » garde les appels** (comme les réponses aux questions au fil).
+- **La réponse rangée est la clé `v`**, jamais son rang : reformuler, réordonner, ajouter un choix ne change rien pour qui a joué.
+  L'`id` d'un dialogue et d'une réplique ne change jamais. L'ordre des réponses est tiré par élève (graine + dialogue + réplique +
+  numéro de l'appel) et rangé.
+- **Les jalons** lisent le **dernier appel terminé** (`jalonDialogue`, ou `appelRetenuDe(db, séance, id)` à la main) : rien n'est vrai
+  avant le raccrochage, un appel laissé en route reste « à faire ». Lectures : `reprises(appel)` (réponses maladroites, `accepte`
+  compris), `premiereReponse(appel, réplique)` (la clé du premier choix dit à cette réplique), `leurresAppeles(etat, { avant: 'quai' })`
+  (contacts sans dialogue appelés avant le bon numéro ; `etat` = `db.dialogues[séance]`).
+- **Contrôlé à l'ouverture** (message qui nomme le dialogue et la réplique) : ids, `de` connu, 2 à 4 choix, clés uniques, exactement
+  un `juste`, une `reaction` à chaque choix non juste (guidage), `selon` essayé sur une base vide ; un jalon ou une condition
+  `dialogueFini` qui cite un dialogue absent ; un geste `dialogue:…` inconnu cité par une question ou un message.
+- **Correction** (`meta.correction`) : le jalon déclare `ecran: 'dialogue:<id>'` (`jalonDialogue` le pose). « Corriger » ouvre le
+  Téléphone sur ce contact avec **« Rappeler »** ; un nouvel appel repart de zéro (ordre retiré, textes recalculés), le premier reste
+  rangé. Un appel de plus = une correction (note moyennée par le moteur). Sans correction, un appel terminé se relit, il ne se refait pas.
+- **Questions au fil** : aucune ne s'ouvre pendant un appel ; celle dont le geste arrive pendant l'appel s'ouvre au raccrochage.
+- **Enseignant** : il joue l'appel sans rien écrire ; la réponse attendue est marquée. Le Repérage (suivi de classe) a une colonne
+  « Appels » : appels terminés, reprises, et au survol ce que l'élève a dit (réplique : clé) appel par appel.
+- **Écran** : 1366 × 768 et 1280 × 720 sans défilement pendant l'appel ; le fil défile dans sa zone. Aucun aplat vert, aucun rouge
+  pendant l'appel ; interlocuteur et élève se distinguent par la place et la forme de la bulle (lisible en noir et blanc).
+- **Évaluation** (`copie`, ou `mode: 'evaluation'` sur un dialogue) : aucune réaction, aucun grisé, la première réponse compte ;
+  `neutre` par choix (facultatif). Écrit dans la vue, essayé sur la page `outils/essai-dialogue.html` ; la copie se branche au lot 3.
 
 ## Vue « Planning » (cartes sur une grille) — `core/types/planning.js`
 
@@ -1524,6 +1581,7 @@ poids de ses jalons + `part` doit valoir 20 (contrôlé à l'ouverture).
   | quai `<id>` | `quai:<id>:decharger`, `quai:<id>:valider` (une palette), `quai:<id>:cloturer` ; en inspection sur la scène (`securite.mode: 'scene'`, D-4) en plus `scene:<id>:signaler` (chaque envoi de marques), `scene:<id>:decharger` (le figeage « C'est bon », pas l'arrêt par le collègue) |
   | plan d'entrepôt `<id>` | `entrepot:<id>:poser` (poser une palette), `entrepot:<id>:verifier` |
   | animation `<id>` | `animation:<id>:<question>` (la première réponse) |
+  | téléphone, dialogue `<id>` | `dialogue:<id>:appeler` (le premier appel), `dialogue:<id>:<réplique>` (la première réponse à cette réplique, juste ou non, au premier appel), `dialogue:<id>:fin` (raccroché un appel fini) ; contact sans dialogue `<id>` : `dialogue:<id>:appeler` (chaque appel) |
   | messagerie (toutes les séances) | `messagerie:transfert` (transférer un message, n'importe lequel ; chantier D-1) ; `messagerie:transfert:<clé du message>` (transférer CE message, 10/10/2026, publié **en plus** du précédent) |
   | messagerie, réponse par phrases | `messagerie:phrase:<ligne>` (le premier choix d'une phrase sur cette ligne, juste ou faux ; ENT-6.2, 10/10/2026) ; la ligne doit exister dans un mail semé par le volet **ou par un déclencheur** (chantier D-3, 10/10/2026 : chaque `declencheurs[].semer` est essayé une fois sur une base vide au chargement ; un déclencheur qui ne se sème pas sans base ne publie rien), sinon la séance ne s'ouvre pas ; une ligne imposée (`texte`) n'est pas un geste |
 

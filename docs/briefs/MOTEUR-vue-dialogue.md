@@ -6,7 +6,7 @@
 > Lis CLAUDE.md, docs/EN-COURS.md, docs/audit-architecture.md puis docs/briefs/MOTEUR-vue-dialogue.md. Fais d'abord l'état des lieux du §8 en lecture seule (questions.js, phrases.js, animation.js, entreprise.js, entreprise-options.js, declencheurs.js) et dis-moi ce que tu réutilises et ce qui est neuf. Annonce la durée avant de commencer. Commence par le lot 1 : la page d'essai cliquable avec l'appel au quai d'ENT-7.2, et attends que je l'aie essayée avant de brancher la vue dans le moteur.
 > ```
 
-**Statut** : à implémenter
+**Statut** : lots 1 et 2 livrés (14/10/2026), lot 3 à faire
 **Date du brief** : 14/10/2026
 **Conversation d'origine** : Cowork (Opus). Demande de Claude Code du 14/10 au matin : « l'appel au chef de quai a besoin d'un nouvel
 écran Dialogue à choix ; le brief ENT-7.2 dit que Cowork doit d'abord écrire `MOTEUR-vue-dialogue.md` ». Décision 8 de Tristan
@@ -370,7 +370,36 @@ léger) — **`outils/test.mjs` touché : le dire à Tristan**). Sur la séance 
 - **Tests** : vérifiés à l'écran (1366 × 768, 1280 × 720, clair et sombre, élève / enseignant, guidage / évaluation, clavier, double-clic) ;
   suite entière verte (1377). Le bloc `dialogue` (§9) s'écrit au lot 2.
 - **Commits** : `ab93273` (lot 1), `7feac96` (contacts à messagerie vocale).
-- **Reste ouvert** : **lot 2** (option `telephone` dans `entreprise-options.js` et `FICHE-SEANCE.md`, menu et `quand`, état
-  `db.dialogues[séance]`, gestes dans `signaux` — y compris `dialogue:<leurre>:appeler` —, questions au fil retenues pendant l'appel
-  (`arriverQuestions` dans `entreprise.js`), `dialogueFini` dans `declencheurs.js`, genre `dialogue:<id>` dans `corriger()`, journal
-  côté enseignant, séance d'essai `contenus/dialogue-essai.js`, bloc de test `dialogue`) ; **lot 3** (copie d'évaluation figée, tests).
+- **Reste ouvert** (à la fin du lot 1) : lot 2, lot 3.
+
+**Lot 2 livré le 14/10/2026** (lot 3 à faire) :
+- **Fichiers créés / modifiés** : `core/types/entreprise.js` (option `telephone` : entrée « Mon poste » avec `quand` et la marque
+  « en cours », écran `telephone`, état `db.dialogues[<séance>]`, gestes de la vue dans les gestes connus, questions au fil retenues
+  pendant un appel, genre `dialogue:<id>` dans `corriger()` et dans le compte des corrections, contrôle des dialogues cités,
+  « Réinitialiser »), `core/types/entreprise-options.js` (ligne `telephone`), `core/types/dialogue.js` (lectures sur la base
+  `dialogueDe`, `appelRetenuDe`, le jalon tout prêt `jalonDialogue`, `journalCourt` pour l'enseignant, `ouvrir`, `enCours`,
+  `apresFin`), `core/declencheurs.js` (`dialogueFini(id)`), `core/prof.js` (colonne « Appels » du Repérage),
+  `contenus/dialogue-essai.js` (séance d'essai, contenu construit, sans Decathlon), `outils/test/dialogue.mjs` (bloc neuf, 20 cas),
+  `outils/test.mjs` (**touché** : une ligne dans `BLOCS`, une dans le groupe 4 de `GROUPES`), `activites/FICHE-SEANCE.md`.
+- **Écarts par rapport au brief** :
+  - les questions au fil sont retenues **dans `arriverQuestions`** (pas de verrou publié par la vue) ; le rattrapage du moteur aussi ;
+  - `fermetures.ouvertSi` reçoit désormais **(db, séance)** (avant : db seul), pour que `dialogueFini` lise l'état cloisonné ; sans effet
+    sur les séances existantes (elles ignorent le 2e argument) ; les `quand` du Téléphone reçoivent aussi la séance ;
+  - le **journal pour l'enseignant** n'est pas une « fiche élève » (elle n'existe pas) : c'est une colonne « Appels » du Repérage (nombre
+    d'appels, reprises ; au survol, appel par appel, les clés dites, ex. `accueil:salut accueil:presente`, et les autres numéros appelés).
+    Il ne remonte qu'au raccrochage (aucune écriture de note à chaque réplique) ;
+  - l'infobulle « 2 reprises : références, arrivée » sur le jalon du Suivi n'est pas faite : le Repérage donne la même chose ;
+  - les gestes `dialogue:<id>:<réplique>` ne sont publiés qu'au **premier appel** (comportement du lot 1 : un rappel ne refait pas
+    arriver une question).
+- **Décisions prises en route** (une ligne dans `docs/decisions.md`) : « Réinitialiser » **garde les appels** (règle des questions au fil) ;
+  « Rappeler » n'est offert qu'après « Corriger » (rangé, retrouvé au rechargement) ; pendant le rappel, le jalon reste celui du dernier
+  appel terminé (le bandeau reste affiché, ✗).
+- **Tests** : bloc `dialogue` 20/20 ; suite entière 1396/1396 (en parallèle). **Éprouvés dans l'autre sens** : jalon qui lit le premier
+  appel → « correction » tombe ; grisé retiré → « maladresse » et « jamais bloqué » tombent ; texte recalculé au dessin → « textes figés »
+  tombe ; questions non retenues → « questions au fil » tombe ; « Rappeler » toujours permis → « correction » tombe ; fermeture sans la
+  séance → « parcours juste » tombe. Vu à l'écran (1366 × 768) dans le moteur. Non couvert : le mode évaluation dans le moteur (lot 3),
+  la colonne « Appels » du suivi (seul `journalCourt` est testé).
+- **À savoir pour ENT-7.2** : après l'appel, le bandeau de fin s'ajoute au-dessus et la page défile (pas pendant l'appel). Une séance qui
+  a des pastilles d'étape ou un bandeau de questions pendant l'appel devra vérifier la hauteur (`--dlg-reserve` dans `styles/dialogue.css`).
+- **Reste ouvert** : **lot 3** (copie d'évaluation : rien ne s'écrit après la remise, « Relire l'appel » après la remise, tests du mode
+  évaluation dans le moteur ; contrôle « toute branche finit » au-delà du chemin des bonnes réponses).

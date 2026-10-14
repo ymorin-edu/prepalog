@@ -1154,6 +1154,21 @@ ${so.phrase}` : ''}`)}"
           const titre = ouverts.length ? liste(Object.fromEntries(ouverts.map(([k, n]) => [N[k], n]))) : 'Aucun itinéraire ouvert';
           return `<td class="num" data-rep="itineraires" title="${ech(titre)}">${ouverts.length} / ${Object.keys(N).length}</td>`;
         };
+        // « Appels » (écran Téléphone, 14/10/2026) : seulement pour une séance où un élève a raccroché un appel. Le journal court
+        // rangé avec la note (`detail.dialogues`) : nombre d'appels terminés et reprises (réponses maladroites) ; le survol donne,
+        // appel par appel, ce que l'élève a dit (réplique : clé de la réponse) et les contacts sans dialogue appelés.
+        const appelsDe = (e) => { const t = par[e.uid]?.[m.id]; return t && t.detail && t.detail.dialogues; };
+        const avecAppels = eleves.some(appelsDe);
+        const caseAppels = (e) => {
+          if (!avecAppels) return '';
+          const J = appelsDe(e);
+          if (!J) return '<td class="num" data-rep="appels">—</td>';
+          const L = Object.entries(J).filter(([k]) => k !== '@leurres');
+          const n = L.reduce((a, [, x]) => a + x.length, 0), rp = L.reduce((a, [, x]) => a + x.reduce((b, y) => b + (y.reprises || 0), 0), 0);
+          const titre = L.map(([id, x]) => x.map((y, i) => `${id}, appel ${i + 1} (${y.reprises || 0} reprise${y.reprises > 1 ? 's' : ''}) : ${y.pas}`).join('\n')).join('\n')
+            + (J['@leurres'] ? `\nAutres numéros appelés : ${J['@leurres'].join(', ')}` : '');
+          return `<td class="num" data-rep="appels" title="${ech(titre)}">${n} appel${n > 1 ? 's' : ''} · ${rp} reprise${rp > 1 ? 's' : ''}</td>`;
+        };
         // La colonne des sorties de page : seulement pour une séance qui pose des questions au fil.
         const avecQuestions = eleves.some((e) => { const r = rep(e); return !!(r && r.questions); });
         const caseSorties = (r) => {
@@ -1172,7 +1187,7 @@ ${so.phrase}` : ''}`)}"
         };
         const lignes = eleves.map((e) => {
           const r = rep(e);
-          if (!r) return `<tr><td>${ech(e.nom)} ${ech(e.prenom)}</td><td class="num note" colspan="${4 + (avecDocs ? 1 : 0) + (avecItin ? 1 : 0) + (avecQuestions ? 1 : 0)}">—</td></tr>`;
+          if (!r) return `<tr><td>${ech(e.nom)} ${ech(e.prenom)}</td><td class="num note" colspan="${4 + (avecDocs ? 1 : 0) + (avecItin ? 1 : 0) + (avecAppels ? 1 : 0) + (avecQuestions ? 1 : 0)}">—</td></tr>`;
           const reel = par[e.uid][m.id].detail.quai && par[e.uid][m.id].detail.quai.reel;
           const p = Object.entries(r.premier || {});
           // Les jalons ratés sont nommés par leur TITRE (rangé par le moteur avec la note, `detail.titres`, 07/10/2026),
@@ -1188,14 +1203,14 @@ ${so.phrase}` : ''}`)}"
           return `<tr data-rep-eleve="${ech(e.uid)}"><td>${ech(e.nom)} ${ech(e.prenom)}${mention}</td>
             <td class="num" data-rep="temps">${minutes(r.temps || 0)}${reel ? `<span class="note"> (quai : ${minutes(reel)})</span>` : ''}</td>
             <td class="num" data-rep="mots" title="${ech(liste(r.mots))}">${somme(r.mots)}</td>
-            <td class="num" data-rep="aides" title="${ech(liste(r.aides))}">${somme(r.aides)}</td>${caseDocs(e, r)}${caseItin(e, r)}
+            <td class="num" data-rep="aides" title="${ech(liste(r.aides))}">${somme(r.aides)}</td>${caseDocs(e, r)}${caseItin(e, r)}${caseAppels(e)}
             <td class="num" data-rep="premier" title="${ech(bulle)}">${p.length ? `${ok.length} / ${p.length}` : '—'}</td>${caseSorties(r)}</tr>`;
         }).join('');
         return `<details class="reperage" data-reperage="${ech(m.id)}"><summary>${ech(m.code)} — ${ech(m.titre)}</summary>
           <div style="overflow:auto"><table>
             <thead><tr><th>Élève</th><th class="num">Temps passé</th><th class="num">Mots ouverts</th>
               <th class="num">Autres aides</th>${avecDocs ? '<th class="num">Documents ouverts</th>' : ''}${
-                avecItin ? '<th class="num">Itinéraires ouverts</th>' : ''}<th class="num">Jalons justes du premier coup</th>${
+                avecItin ? '<th class="num">Itinéraires ouverts</th>' : ''}${avecAppels ? '<th class="num">Appels</th>' : ''}<th class="num">Jalons justes du premier coup</th>${
                 avecQuestions ? '<th class="num">Sorties de page pendant une question</th>' : ''}</tr></thead>
             <tbody>${lignes}</tbody></table></div></details>`;
       }).join('');
@@ -1204,6 +1219,7 @@ ${so.phrase}` : ''}`)}"
         <strong>Repérage des élèves (vous seul le voyez)</strong>
         <p class="note">Par séance : le temps passé l'écran ouvert, les mots cliquables et les autres aides ouverts,
           les documents ouverts (s'il y en a : ouverts, pas forcément lus), les itinéraires ouverts sur la carte (s'il y en a),
+          les appels passés au Téléphone et leurs reprises (réponses maladroites ; s'il y en a),
           et les jalons justes au premier jugement (premier envoi, premier dépôt, première validation) sur les
           jalons déjà jugés ; pour une séance à questions, les sorties de page pendant une question (onglet quitté,
           fenêtre quittée plus de 3 s : sans effet sur la note). Survolez une case pour le détail.

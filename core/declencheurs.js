@@ -11,6 +11,7 @@
 //   quand: apresFiche('selection')                           il a envoyé sa fiche
 //   quand: apresGeste('quai:fb-quai:decharger')              il a fait ce geste dans une vue (lot 3, 08/10/2026)
 //   quand: apresTransfert('msg-malo')                         il a transféré ce message (chantier D-1, 09/10/2026)
+//   quand: dialogueFini('quai')                              il a raccroché un appel fini (vue Téléphone, 14/10/2026)
 //   quand: tous(apresJalon(…), apresMail(…))                 les deux
 //
 // Une condition reçoit `(db, seance)` : `seance` est l'id de la séance (les gestes sont cloisonnés par séance).
@@ -103,6 +104,19 @@ export function apresTransfert(idMail) {
   };
 }
 
+// Vrai dès qu'un appel du dialogue `id` est TERMINÉ (l'élève a raccroché à la fin de l'appel ; vue « Dialogue à choix »,
+// écran Téléphone, `core/types/dialogue.js`, 14/10/2026). **Juste ou faux, peu importe** : les réponses ne sont pas
+// regardées. Un appel commencé puis laissé ne compte pas. Cloisonné par séance : `db.dialogues[<séance>][<id>]`. Sert aux
+// `fermetures` (`ouvertSi` reçoit aussi la séance), aux `quand` et aux déclencheurs. `.dialogues` : contrôlé au chargement.
+export function dialogueFini(id) {
+  const f = (db, seance) => {
+    const D = db && db.dialogues && db.dialogues[seance] && db.dialogues[seance][id];
+    return !!(D && (D.appels || []).some((a) => a && a.fin));
+  };
+  f.dialogues = [id];
+  return f;
+}
+
 // Les gestes cités par une condition (pour le contrôle au chargement).
 export const gestesDe = (f) => (f && Array.isArray(f.gestes) ? f.gestes : []);
 
@@ -110,5 +124,6 @@ export const gestesDe = (f) => (f && Array.isArray(f.gestes) ? f.gestes : []);
 export function tous(...conditions) {
   const f = (db, seance) => conditions.every((c) => c(db, seance));
   f.gestes = conditions.flatMap(gestesDe);
+  f.dialogues = conditions.flatMap((c) => (c && Array.isArray(c.dialogues) ? c.dialogues : []));
   return f;
 }
