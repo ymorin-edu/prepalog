@@ -358,9 +358,19 @@ léger) — **`outils/test.mjs` touché : le dire à Tristan**). Sur la séance 
 
 ## Compte rendu *(rempli par Claude Code à la livraison)*
 
-- **Fichiers créés / modifiés** :
-- **Écarts par rapport au brief** :
-- **Décisions prises en route** :
-- **Tests** :
-- **Commits** :
-- **Reste ouvert** :
+**Lot 1 livré le 14/10/2026** (lots 2 et 3 à faire) :
+- **Fichiers créés / modifiés** : `core/types/dialogue.js` (la vue : contrôle, déroulé, lectures `appelRetenu`, `reprises`, `premiereReponse`,
+  `leurresAppeles`), `styles/dialogue.css` (chargée par `index.html`, sans effet tant qu'aucune séance ne déclare `telephone`),
+  `outils/essai-dialogue.html` (appel au quai d'ENT-7.2 en dur, réglages mode / rôle / prénom / « Rappeler » / thème, bouton « Ce que lit la note »).
+- **Écarts par rapport au brief** : la position dans l'appel n'est pas rangée, elle se **déduit des `pas`** (plus solide au rechargement) ;
+  le mode évaluation et `vers` (lot 3) sont déjà dans la vue (le contrôle « toute branche finit » ne suit que le chemin des bonnes réponses).
+- **Décisions prises en route** : §10 tranché par Tristan (voir `docs/decisions.md`, 14/10) ; **contacts sans dialogue faits** (`leurres`,
+  messagerie vocale), un mauvais numéro avant le bon **coûte des points** (combien : question 8 du brief ENT-7.2) ; contacts classés par
+  ordre alphabétique ; un seul appel à la fois.
+- **Tests** : vérifiés à l'écran (1366 × 768, 1280 × 720, clair et sombre, élève / enseignant, guidage / évaluation, clavier, double-clic) ;
+  suite entière verte (1377). Le bloc `dialogue` (§9) s'écrit au lot 2.
+- **Commits** : `ab93273` (lot 1), `7feac96` (contacts à messagerie vocale).
+- **Reste ouvert** : **lot 2** (option `telephone` dans `entreprise-options.js` et `FICHE-SEANCE.md`, menu et `quand`, état
+  `db.dialogues[séance]`, gestes dans `signaux` — y compris `dialogue:<leurre>:appeler` —, questions au fil retenues pendant l'appel
+  (`arriverQuestions` dans `entreprise.js`), `dialogueFini` dans `declencheurs.js`, genre `dialogue:<id>` dans `corriger()`, journal
+  côté enseignant, séance d'essai `contenus/dialogue-essai.js`, bloc de test `dialogue`) ; **lot 3** (copie d'évaluation figée, tests).
