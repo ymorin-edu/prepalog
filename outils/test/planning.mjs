@@ -54,6 +54,13 @@ const monter = (p, o = {}) => p.evaluate(async (o) => {
   const hote = document.createElement('div'); hote.id = 'plTest'; document.body.appendChild(hote);
   const temps = o.temps || 'guidage';
   const U = E.univers({ cas: o.cas, temps, planning: C.CAS[o.cas] });
+  // Séance à jalons pondérés (14/10/2026) : les jalons du planning se partagent 15 points, un jalon hors planning,
+  // toujours réussi, en vaut 5. La note du planning ne doit jamais remplacer celle des jalons.
+  if (o.poids) {
+    const n = U.etapes.length;
+    U.etapes = [...U.etapes.map((e) => ({ ...e, poids: 15 / n })),
+      { id: 'hors-planning', titre: 'Jalon hors planning', poids: 5, verifier: () => ({ status: 'ok' }) }];
+  }
   // Un message qui arrive au GESTE « poser une carte » (questions au fil, lot 3) : `o.geste` = le nom du geste.
   if (o.geste) {
     const { apresGeste } = await import('/core/declencheurs.js');
@@ -1097,6 +1104,23 @@ await v('Planning (lot 3) : sans `occupe` ni `quand`, rien ne change — aucun b
   vrai(!/déjà pris/.test(await texte(pg, `${Z} [data-pl-legende-couleurs]`)), 'légende du pris sans `occupe`');
   await poser(pg, 'C1', 'Q6', 4);
   egal(await problemes(pg), [], 'sans `occupe`, la même place ne pose aucun problème');
+});
+
+// Bug trouvé en construisant ENT-7.2 (14/10/2026) : la note du planning (`note` déclaré, ou implicite en évaluation)
+// remplaçait celle d'une séance à jalons pondérés. Avant le correctif : 0 sans rien faire, 10 après le 1er envoi.
+await v('Planning dans une séance à jalons pondérés : la note reste celle des jalons (5 sans rien faire, 12,5 après le 1er envoi), pas celle du planning', async () => {
+  await monter(pg, { cas: 'quai', temps: 'evaluation', poids: true });
+  let n = await pg.evaluate(() => window.__p.moteur.noter(window.__p.db));
+  egal([n.score, n.max], [5, 20], 'inaction : seul le jalon hors planning compte');
+  vrai(n.detail.planning, 'le détail du planning reste rangé pour l’enseignant');
+  await poserTout(pg, QUAI1);
+  await envoyer(pg);
+  n = await pg.evaluate(() => window.__p.moteur.noter(window.__p.db));
+  egal([n.score, n.max], [12.5, 20], '1er envoi : 5 + 15 × 5/10');
+  // Guidage, même séance : la clé `note` déclarée par le cas d'essai ne remplace rien non plus.
+  await monter(pg, { cas: 'quai', poids: true });
+  n = await pg.evaluate(() => window.__p.moteur.noter(window.__p.db));
+  egal([n.score, n.max], [5, 20], 'guidage : `note` du planning ignorée');
 });
 
 await ctxP.close();

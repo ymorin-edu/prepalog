@@ -47,7 +47,7 @@
 //       reflexion: 'Le terminal t’a donné les lignes …',      // facultatif : « Pour réfléchir », réponse libre non notée
 //       jalons: { casier, futs, film, etiquettes, palettes }, // facultatif : les noms des critères (sinon ceux de la maquette)
 //     },
-//     note: { sur: 20 },   // page d'essai SEULEMENT : dans une séance, elle remplace la note pondérée (voir FICHE-SEANCE.md)
+//     note: { sur: 20 },   // page d'essai SEULEMENT : dans une séance à jalons pondérés, elle est ignorée (14/10/2026)
 //   }
 //
 // Le terminal dit « Côté A, travée 03, niveau 1. Code de contrôle ? », puis « <voix>, lot S18. Prends 2. ». Le CODE n'est écrit

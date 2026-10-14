@@ -444,16 +444,19 @@ export function creerEntreprise(U) {
     // les seuils de rapidité de l'évaluation (décision de Tristan, 03/10/2026). En évaluation, la
     // note n'est plus le nombre d'étapes : 15 points de réception + 5 de rapidité (`noteQuai`).
     // Le planning en évaluation : jalons réussis / jalons × 20, détail jalon par jalon (brief §7).
+    // Séance à jalons pondérés (décision de Tristan, 14/10/2026, bug trouvé en construisant ENT-7.2) : la note reste celle
+    // des jalons et des questions, la note du planning (`note` déclaré, ou implicite en `copie`) ne la remplace jamais ;
+    // son détail reste rangé pour l'enseignant. Même règle pour l'entrepôt.
     if (VPL && VPL.note) {
       const n = VPL.note(db);
       detail.planning = n.detail;
-      return { score: n.score, max: n.max, detail };
+      if (!AVEC_POIDS) return { score: n.score, max: n.max, detail };
     }
     // Le plan d'entrepôt en évaluation : même principe (jalons réussis / jalons × 20).
     if (VENT && VENT.note) {
       const n = VENT.note(db);
       detail.entrepot = n.detail;
-      return { score: n.score, max: n.max, detail };
+      if (!AVEC_POIDS) return { score: n.score, max: n.max, detail };
     }
     const VQ = quaiDeBase(db);
     if (VQ) {

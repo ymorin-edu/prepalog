@@ -1204,7 +1204,9 @@ Sans aléa : un seul envoi, puis le bilan. « Réinitialiser le planning » vide
 version envoyée.
 
 **Évaluation** : `meta.copie: true`, `copie: meta.copie`, `export const noter = (db) => moteur.noter(db)` ; le dernier
-envoi rend la copie. Note = jalons réussis / jalons × `note.sur` (20 par défaut), détail jalon par jalon, clics sur
+envoi rend la copie. Note = jalons réussis / jalons × `note.sur` (20 par défaut), **seulement si aucun jalon de la séance
+n'a de `poids`** (page d'essai, évaluation d'un planning seul) ; dans une séance à jalons pondérés, la note reste celle des
+jalons et des questions (14/10/2026). Détail jalon par jalon, clics sur
 « Vérifier », heure du premier geste et des envois dans `detail.planning` (rangés, montrés nulle part).
 
 ## Vue « Plan d'entrepôt » (ranger des palettes, préparer une commande) — `core/types/entrepot.js`
@@ -1255,7 +1257,8 @@ entrepot: {
   `parcours` n'est jugé que si le type de produit est juste. Un message remplacé par la séance doit tenir la même règle.
 - **Temps** : guidage = consigne de la palette en main (colonne de côté), bandes de rotation, parcours dessiné, après
   « Vérifier mon rangement », le **nom** du critère seul (`✗ critère : rotation`, jamais où aller) ; entraînement = parcours seul, nom du critère seul ;
-  évaluation (`copie: true`) = rien de signalé, « Rendre mon travail » en deux clics, note jalons × 20.
+  évaluation (`copie: true`) = rien de signalé, « Rendre mon travail » en deux clics, note jalons × 20 (sauf séance à jalons
+  pondérés : la note reste celle des jalons, comme pour le planning).
 - La vue tient dans l'écran à 1366 × 768 (le plan prend la hauteur qui reste sous le bandeau). Les textes peuvent porter
   des `[[mots cliquables]]`, sauf dans les cartes de palettes (ce sont des boutons).
 
@@ -1754,7 +1757,7 @@ sur 2 » est calculé). Après toute modification : `node outils/test.mjs questi
 
 ## Pièges
 
-- **Ne pas déclarer `note: { sur: 20 }` dans un `planning` de séance à jalons** (ENT-7.2, 14/10/2026) : le moteur lit cette clé comme « la note de la séance est celle du planning » et ignore alors tous les autres jalons et les questions (score 0 tant que le planning n'est pas envoyé, puis 0 ou 20). Seules les séances d'évaluation d'un planning seul (`copie`) l'utilisent. Un cas du bloc `decathlon` le retient (inaction = 0, une question seule = 1 point).
+- **`note: { sur: 20 }` d'un `planning` ou d'un `entrepot`** (piège trouvé en ENT-7.2, **corrigé le 14/10/2026**) : dans une séance dont un jalon déclare un `poids`, cette note (déclarée, ou implicite en `copie`) **ne remplace plus** celle des jalons et des questions ; son détail reste rangé (`detail.planning`, `detail.entrepot`). Elle ne sert qu'aux séances sans poids (pages d'essai, évaluation d'un planning seul). Inutile donc de la déclarer dans une séance ENT. Un cas du bloc `planning` le retient (inaction = 5 sur 20 avec un jalon hors planning de 5 points, et non 0).
 - **Un `planning` est une déclaration fixe** : ses cartes, ses lignes et ses créneaux pris (`occupe`) ne se calculent pas sur la base de l'élève (pas de « fonction de la base »). Pour une séance tirée par élève, le titre d'une carte ne peut pas porter le numéro de l'élève (ENT-7.2 : « Ton conteneur »), et un cas « bonus du confirmé » ne peut pas changer le planning. Le bouton d'envoi dit toujours « Envoyer le planning au chef ».
 - **Un module `core/types/entreprise-*.js` n'importe jamais `entreprise.js`** (import circulaire : `entreprise.js` les importe). Il
   reçoit ce dont il a besoin par son nom (jamais `ctx` ni `U` ; un écran de données reçoit en plus la base `db` et l'état d'écran `E` de l'élève, et ne touche que ses clés) ; `entreprise.js` ré-exporte ce que d'autres fichiers
