@@ -72,6 +72,7 @@ export const ACTIVITES = [
   () => import('./france-boissons-tournee.js'),
   () => import('./france-boissons-retour.js'),
   () => import('./decathlon-choix-transporteur.js'),
+  () => import('./decathlon-ordre-transport.js'),
 ];
 
 // Pictogrammes des rubriques. Une seule grille pour les dix : trait de 1,6 px, bouts et

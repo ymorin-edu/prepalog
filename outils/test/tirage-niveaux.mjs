@@ -532,6 +532,10 @@ const BANQUES_FIGEES = {
     horsListe: ['hl-eflux', 'hl-bateliers', 'hl-railco', 'hl-eclair'],
     bonus: ['bo-heure', 'bo-homonyme', 'bo-suivant'],
   },
+  // ENT-7.2 Decathlon (14/10/2026) : les instructions fausses de l'ordre de transport (le hayon est le bonus du confirmé).
+  'contenus/decathlon-ent72-donnees.js': {
+    instructions: ['in-froid', 'in-adr', 'in-douane', 'in-hayon'],
+  },
 };
 await v('Tirage : banques stables — aucun id d’une banque déclarée ne disparaît (liste figée), toute banque déclarée est inscrite', async () => {
   const fs = await import('node:fs');

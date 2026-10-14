@@ -359,6 +359,562 @@ await v('ENT-7.1 : charte — aucun aplat vert dans la zone de travail (comparat
   egal(await aplats(), [], 'carte des itinéraires');
 });
 
+// ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+// ENT-7.2 — Decathlon, « passer la commande » (brief `docs/briefs/ENT-7.2-decathlon-ordre-de-transport.md` §8, décisions du 14/10/2026).
+// Valeurs ÉCRITES À LA MAIN (calculées par le coordinateur) :
+//   chiffre de contrôle ISO 6346 : PRPU 418270 → 3 ; PRPU 418720 (deux chiffres voisins inversés) → 1 (≠ 3 : le piège n'est pas un numéro valable) ;
+//   élève TÉMOIN (tirage posé à la main) : conteneur « PRPU 418270 3 » ; piège de l'appel « PRPU 418720 3 » (le chiffre de contrôle de l'élève gardé) ;
+//   scellé « DC 0 771 409 » ; poids brut 14 980 kg ; référence PO-ROU-2027-0412 ; instructions fausses : froid et ADR ; ordre OT-2027-0142.
+// Poids (14/10/2026) : ordre 3 · 1,5 · 1,5 · 1,5 · 1,5 · 1 ; courriel 3 · 1 ; appel 1,5 ; créneau 1,5 ; questions 1 + 1 + 1.
+// Planning du quai (lundi 01/02, 07:00 → 13:00 par 30 min, t = 0 pour 07:00) : carte de 1 h 30 qui arrive à 09:00 ; bonne réponse unique :
+//   Quai 6 à 09:30 (t = 5) ; Quai 5 à 10:30 attend 1 h 30, Quai 7 à 12:00 attend 3 h.
+// ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+const ID2 = 'decathlon-ordre-transport';
+const REP_OUV2 = { p1: 'commande', p2: 'decathlon', p3: 'preuve', p4: 'avis', p5: 'tout', d1: 'oui', d2: 'regle', d3: 'cahier', d5: 'chargeur' };
+const tirage2 = (o = {}) => ({ graine: `temoin72|${ID2}`, pieces: { instructions: ['in-froid', 'in-adr'] },
+  difficultes: { instructions: { 'in-froid': 'moyen', 'in-adr': 'moyen' } }, ...(o.bonus ? { bonus: { instructions: o.bonus } } : {}),
+  valeurs: { serie: 0, scelle: 771409, poids: 14980, ref: 412, ...(o.valeurs || {}) }, essai: 0, secours: false, at: 1 });
+const monter2 = (o = {}) => pg.evaluate(async (o) => {
+  const A = await import('/activites/decathlon-ordre-transport.js');
+  document.querySelector('#fTest')?.remove();
+  const hote = document.createElement('div'); hote.id = 'fTest'; document.body.prepend(hote);
+  const db = o.db ? JSON.parse(JSON.stringify(o.db)) : {};
+  if (o.rep) {
+    const Q = ((db.questions = db.questions || {})[o.id] = db.questions[o.id] || {});
+    for (const [id, r] of Object.entries(o.rep)) if (!Q[id]) Q[id] = { arrivee: 1, premiere: r, duree: 1 };
+  }
+  window.__f = { db, enregistres: [] };
+  A.rendre(hote, {
+    meta: A.meta, aisance: o.aisance || 'standard',
+    profil: { prenom: 'Lea', nom: 'Test', role: o.role || 'eleve', uid: o.uid || 'dk72' },
+    jeu: { etat: () => db, sauver: () => {} },
+    enregistrer: (r) => { window.__f.enregistres.push(JSON.parse(JSON.stringify(r))); }, quitter: () => {}, codeStock: 'DK',
+    lireScore: async () => null, rendreCopie: async () => ({ rendu: Date.now() }),
+  });
+  return JSON.parse(JSON.stringify(db));
+}, { id: ID2, rep: o.sansOuverture ? null : REP_OUV2, ...o });
+
+const FIL3 = Object.fromEntries(['chiffre-controle', 'reserves', 'ecrit-et-oral'].map((k) => [k, { arrivee: 1, premiere: 'x', duree: 1 }]));
+const BONNES2 = { 'chiffre-controle': 'controle', reserves: 'reserves', 'ecrit-et-oral': 'trace' };
+const JUSTE2 = { presta: 'contargo', cont: 'PRPU 418270 3', type: '40hc', scelle: 'DC 0 771 409', poids: '14 980', enl: 'anvers', dispo: '2027-01-28',
+  ref: 'PO-ROU-2027-0412', liv: 'rouvignies', limd: '2027-02-02', limh: '14:00', inst: ['rdv', 'scelle', 'vide'] };
+const MAIL_JUSTE = { a: 'contargo', objet: 'Ordre de transport OT-2027-0142 — conteneur PRPU 418270 3',
+  corps: 'Bonjour,\n\nVeuillez trouver ci-joint notre ordre de transport pour ce conteneur.\n\nCordialement,\nLea', pj: ['fiche:ot'] };
+const JUSTES_APPEL = { accueil: 'presente', refs: 'juste', arrivee: 'juste', planning: 'merci' };
+const JALONS2 = ['ot-conteneur', 'ot-scelle', 'ot-poids-type', 'ot-presta-enlevement', 'ot-livraison-limite', 'ot-instructions', 'courriel-destinataire', 'courriel-forme',
+  'appel-quai', 'creneau'];
+const QUESTIONS2 = ['question:chiffre-controle', 'question:reserves', 'question:ecrit-et-oral'];
+const PRIS_MSG = /\b(juste|justes|faux|fausse|correct|correcte|erreur|bravo)\b/i;
+
+// L'ordre, rempli comme un élève (réponses du type JUSTE2) ; `enregistrer: false` le laisse en l'état.
+async function remplir2(r, { enregistrer = true } = {}) {
+  await aller('fiche');
+  const saisir = async (champ, t) => { await pg.fill(`${Z} #fi-${champ}`, String(t)); await pg.dispatchEvent(`${Z} #fi-${champ}`, 'change'); await pause(30); await qrep(BONNES2); };
+  const liste = async (champ, t) => { await pg.selectOption(`${Z} #fi-${champ}`, t); await pause(30); await qrep(BONNES2); };
+  if (r.presta) await liste('presta', r.presta);
+  if (r.cont != null) await saisir('cont', r.cont);
+  if (r.type) await liste('type', r.type);
+  if (r.scelle != null) await saisir('scelle', r.scelle);
+  if (r.poids != null) await saisir('poids', r.poids);
+  if (r.enl) await liste('enl', r.enl);
+  if (r.dispo) await saisir('dispo', r.dispo);
+  if (r.ref != null) await saisir('ref', r.ref);
+  if (r.liv) await liste('liv', r.liv);
+  if (r.limd) await saisir('limd', r.limd);
+  if (r.limh) await saisir('limh', r.limh);
+  for (const i of r.inst || []) { await pg.check(`${Z} input[data-fiche-case="inst"][value="${i}"]`); await pause(30); await qrep(BONNES2); }
+  if (!enregistrer) return;
+  await pg.click(`${Z} [data-fiche-envoyer]`);
+  await pause(60);
+  if (await present('[data-confirme-oui]')) { await pg.click(`${Z} [data-confirme-oui]`); await pause(); }
+  await qrep(BONNES2);
+}
+async function courriel2({ a, objet = '', corps = '', pj = [] }) {
+  await aller('mail');
+  if (!(await present('[data-courriel]'))) { await pg.click(`${Z} [data-nouveau]`); await pause(); }
+  await pg.selectOption(`${Z} #cA`, a);
+  await pg.fill(`${Z} #cObj`, objet);
+  await pg.fill(`${Z} #cMsg`, corps);
+  for (const id of pj) { await pg.click(`${Z} [data-c-joindre]`); await pg.click(`${Z} [data-c-joint="${id}"]`); await pause(); }
+  await pg.click(`${Z} [data-c-envoyer]`);
+  await pause();
+  if (await present('[data-c-confirme]')) { await pg.click(`${Z} [data-c-oui]`); await pause(); }
+  await qrep(BONNES2);
+}
+// L'appel : `leurres` appelés avant ; `sauf` : réponses maladroites dites avant la juste, par réplique.
+async function appel2({ leurres = [], sauf = {} } = {}) {
+  await aller('telephone');
+  for (const l of leurres) { await pg.click(`${Z} [data-dlg-appeler="${l}"]`); await pause(); await pg.click(`${Z} [data-dlg-raccrocher-leurre]`); await pause(); }
+  await pg.click(`${Z} [data-dlg-appeler="quai"]`); await pause();
+  for (const r of ['accueil', 'refs', 'arrivee', 'planning']) {
+    for (const x of sauf[r] || []) { await pg.click(`${Z} [data-dlg-choix="${x}"]`); await pause(); }
+    await pg.click(`${Z} [data-dlg-choix="${JUSTES_APPEL[r]}"]`); await pause();
+  }
+  await pg.click(`${Z} [data-dlg-raccrocher]`); await pause();
+  await qrep(BONNES2);
+}
+async function planning2(r = 'Q6', t = 5) {
+  await aller('planning');
+  await pg.click(`${Z} [data-pl-id="cont"][data-pl-vue="b"]`);
+  const sel = `${Z} [data-pl-grille] [data-pl-case][data-r="${r}"][data-t="${t}"]`;
+  await pg.$eval(sel, (el) => el.scrollIntoView({ block: 'center', inline: 'center' }));
+  await pg.click(sel, { force: true });
+  await pause();
+  await pg.click(`${Z} [data-pl="envoyer"]`);
+  await pause(60);
+  if (await present('[data-pl="quandMeme"]')) await pg.click(`${Z} [data-pl="quandMeme"]`);
+  else if (await present('[data-confirme-oui]')) await pg.click(`${Z} [data-confirme-oui]`);
+  await pause();
+  await qrep({ ...BONNES2 });
+}
+const statuts2 = (n) => Object.fromEntries([...JALONS2, ...QUESTIONS2].map((j) => [j, n.detail[j]]));
+const ko2 = (n) => [...JALONS2, ...QUESTIONS2].filter((j) => n.detail[j] !== 'ok');
+
+// ─────────────────────────────────────────────────────────── les données (valeurs écrites à la main)
+await v('ENT-7.2 : données — chiffre de contrôle PRPU 418270 → 3 et piège PRPU 418720 → 1 (à la main), témoin, 200 élèves : pièges toujours invalides, aucun secours', async () => {
+  const r = await pg.evaluate(async () => {
+    const U = await import('/contenus/decathlon.js');
+    const D = await import('/contenus/decathlon-ent72-donnees.js');
+    const T = D.jeuDe({});
+    const out = { secours: 0, ecarts: [], series: new Set(), memes: [], fausses: new Set() };
+    for (let i = 0; i < 200; i++) {
+      const g = `eleve-${i}|${D.ID}`, t = D.TIRAGE.tirer(g, { confirme: i % 4 === 0 });
+      if (t.secours) out.secours++;
+      const J = D.jeuEleve({ tirages: { [D.ID]: { graine: g, ...t } } });
+      const e = D.ecartsEquite(J); if (e.length) out.ecarts.push(`${i} : ${e.join(' ; ')}`);
+      // Contrôle indépendant du générateur : le piège a le chiffre de l'élève, mais le vrai chiffre de ses 10 premiers caractères est différent.
+      const p = J.piege.replace(/\s/g, ''), n = J.sansEspaces;
+      if (U.chiffreControle(p.slice(0, 10)) === Number(p.slice(-1)) || p === n) out.memes.push(J.conteneur);
+      out.series.add(J.conteneur); J.fausses.forEach((f) => out.fausses.add(f));
+    }
+    return { cc: [U.chiffreControle('PRPU418270'), U.chiffreControle('PRPU418720')], T: [T.conteneur, T.piege, T.scelle, T.reference, T.poids, T.fausses.slice().sort()],
+      secours: out.secours, ecarts: out.ecarts, memes: out.memes, series: out.series.size, fausses: [...out.fausses].sort(),
+      banque: D.SERIES.map((x) => x.serie) };
+  });
+  egal(r.cc, [3, 1], 'chiffres de contrôle');
+  egal(r.T, ['PRPU 418270 3', 'PRPU 418720 3', 'DC 0 771 409', 'PO-ROU-2027-0412', 14980, ['adr', 'froid']], 'élève témoin');
+  egal([r.secours, r.ecarts, r.memes], [0, [], []], 'secours, écarts d’équité, pièges valables');
+  vrai(r.series >= 6, `${r.series} numéros différents sur 200 élèves`);
+  egal(r.fausses, ['adr', 'douane', 'froid'], 'les fausses tirées sont dans les trois du socle (jamais le hayon, réservé au bonus)');
+  const de71 = ['418207', '306552', '527190', '611348', '245873', '739016'];
+  vrai(r.banque.length === 6 && r.banque.every((s) => !de71.includes(s)), 'la banque de numéros doit différer de celle d’ENT-7.1 : ' + r.banque);
+});
+
+// ─────────────────────────────────────────────────────────── les jalons sans écran (bases fabriquées)
+const jalons2 = (d) => pg.evaluate(async ({ T, d }) => {
+  const S = await import('/contenus/decathlon-ent72.js');
+  const D = await import('/contenus/decathlon-ent72-donnees.js');
+  const db = { tirages: { [S.ID]: T }, fiches: {}, mails: [{ folder: 'in', to: 'Lea' }] };
+  if (d.ordre) db.fiches.ot = { valeurs: d.ordre, ...(d.enregistre === false ? {} : { envoye: { at: 1 } }) };
+  if (d.courriels) db.courriels = { [S.ID]: { envoyes: d.courriels.map((c, i) => ({ pieces: [], objet: '', corps: '', at: 100 + i, ...c })) } };
+  if (d.appel) db.dialogues = { [S.ID]: { quai: { appels: [{ debut: 1000, fin: 2000, pas: [], reprises: d.appel.reprises || 0 }] },
+    '@leurres': (d.appel.leurres || []).map((id, i) => ({ id, at: 500 + i })) } };
+  if (d.leurresApres) db.dialogues[S.ID]['@leurres'] = d.leurresApres.map((id, i) => ({ id, at: 3000 + i }));
+  if (d.planning) db.plannings = { [S.ID === 'x' ? '' : 'quai-reception']: { v1: { place: { cont: { r: d.planning[0], s: d.planning[1] } } } } };
+  return Object.fromEntries(S.ETAPES.map((e) => [e.id, (e.verifier(db) || { status: 'null' }).status]));
+}, { T: tirage2(d.tir || {}), d });
+const parfait2 = { ordre: JUSTE2, courriels: [{ a: 'contargo', objet: MAIL_JUSTE.objet, corps: MAIL_JUSTE.corps, pieces: ['fiche:ot'] }], appel: { reprises: 0 }, planning: ['Q6', 5] };
+const IDS2 = ['ot-conteneur', 'ot-scelle', 'ot-poids-type', 'ot-presta-enlevement', 'ot-livraison-limite', 'ot-instructions', 'courriel-destinataire', 'courriel-forme', 'appel-quai', 'creneau'];
+const faux2 = (r) => IDS2.filter((j) => r[j] !== 'ok');
+const avec2 = (f) => { const d = JSON.parse(JSON.stringify(parfait2)); f(d); return d; };
+await v('ENT-7.2 : jalons sans écran — le témoin juste ; chaque piège du brief fait tomber SON jalon seulement ; une erreur ne se paie qu’une fois ; rien de vrai avant les gestes', async () => {
+  egal(faux2(await jalons2(parfait2)), [], 'témoin juste');
+  const o = (f) => avec2((d) => f(d.ordre));
+  egal(faux2(await jalons2(o((r) => { r.cont = 'PRPU 418270'; }))), ['ot-conteneur'], 'chiffre de contrôle oublié');
+  egal(faux2(await jalons2(o((r) => { r.cont = 'PRPU 418720 3'; }))), ['ot-conteneur'], 'deux chiffres inversés');
+  egal(faux2(await jalons2(o((r) => { r.cont = 'PRPU 4I8270 3'; }))), ['ot-conteneur'], 'I pour 1');
+  egal(faux2(await jalons2(o((r) => { r.cont = 'prpu4182703'; }))), [], 'espaces et majuscules ignorés');
+  egal(faux2(await jalons2(o((r) => { r.scelle = 'DC0771409'; }))), [], 'scellé sans espaces');
+  egal(faux2(await jalons2(o((r) => { r.scelle = 'DC 0 771 490'; }))), ['ot-scelle'], 'scellé faux');
+  egal(faux2(await jalons2(o((r) => { r.type = '40'; }))), ['ot-poids-type'], '40 pieds au lieu de 40’ HC');
+  egal(faux2(await jalons2(o((r) => { r.poids = '14620'; }))), ['ot-poids-type'], 'poids de la séance précédente');
+  egal(faux2(await jalons2(o((r) => { r.poids = '14980'; }))), [], 'poids sans espace');
+  egal(faux2(await jalons2(o((r) => { r.enl = 'bruay'; }))), ['ot-presta-enlevement'], 'Bruay en enlèvement');
+  egal(faux2(await jalons2(o((r) => { r.presta = 'rail'; }))), ['ot-presta-enlevement'], 'autre transporteur');
+  egal(faux2(await jalons2(o((r) => { r.liv = 'dourges'; }))), ['ot-livraison-limite'], 'Dourges');
+  egal(faux2(await jalons2(o((r) => { r.limd = '2027-01-28'; }))), ['ot-livraison-limite'], 'date de disponibilité en limite');
+  egal(faux2(await jalons2(o((r) => { r.limh = '8:00'; }))), ['ot-livraison-limite'], 'heure fausse');
+  egal(faux2(await jalons2(o((r) => { r.limh = '14h'; }))), [], 'heure « 14h »');
+  egal(faux2(await jalons2(o((r) => { r.inst = ['rdv', 'scelle', 'vide', 'adr']; }))), ['ot-instructions'], 'ADR coché');
+  egal(faux2(await jalons2(o((r) => { r.inst = ['rdv', 'scelle', 'vide', 'froid']; }))), ['ot-instructions'], 'froid coché');
+  egal(faux2(await jalons2(o((r) => { r.inst = ['rdv', 'scelle']; }))), ['ot-instructions'], 'instruction juste oubliée');
+  egal(faux2(await jalons2(o((r) => { r.inst = []; }))), ['ot-instructions'], 'aucune instruction');
+  // Le courriel.
+  const c = (f) => avec2((d) => f(d.courriels));
+  egal(faux2(await jalons2(c((L) => { L[0].a = 'quai'; }))), ['courriel-destinataire'], 'ordre envoyé au quai (la forme, elle, reste juste)');
+  egal(faux2(await jalons2(c((L) => { L[0].a = 'claire'; }))), ['courriel-destinataire'], 'ordre envoyé à Claire');
+  egal(faux2(await jalons2(c((L) => { L[0].a = 'routiers'; }))), ['courriel-destinataire'], 'ordre envoyé à un autre prestataire');
+  egal(faux2(await jalons2(c((L) => { L[0].pieces = []; }))), ['courriel-destinataire'], 'sans pièce jointe');
+  egal(faux2(await jalons2(c((L) => { L[0].pieces = ['cahier']; }))), ['courriel-destinataire'], 'mauvaise pièce jointe');
+  egal(faux2(await jalons2(c((L) => { L[0].corps = 'Salut,\n\nvoici l’ordre.\n\nLea'; }))), ['courriel-forme'], '« Salut »');
+  egal(faux2(await jalons2(c((L) => { L[0].corps = 'Bonjour,\n\nPeux-tu enregistrer ma commande ? Merci à toi.\n\nLea'; }))), ['courriel-forme'], 'tutoiement');
+  egal(faux2(await jalons2(c((L) => { L[0].corps = 'Bonjour,\n\nVeuillez trouver ci-joint l’ordre.\n\nCordialement'; }))), ['courriel-forme'], 'sans signature');
+  egal(faux2(await jalons2(c((L) => { L[0].corps = 'Bonjour,\n\nVoici l’ordre.\n\nCordialement,\nService transport, Decathlon'; }))), [], 'signature « Decathlon »');
+  egal(faux2(await jalons2(c((L) => { L[0].corps = 'Veuillez trouver ci-joint l’ordre.\n\nLea'; }))), ['courriel-forme'], 'sans formule d’appel');
+  egal(faux2(await jalons2(c((L) => { L[0].objet = ''; }))), ['courriel-forme'], 'objet vide');
+  egal(faux2(await jalons2(c((L) => { L[0].objet = 'Ordre de transport'; }))), [], 'objet « ordre de transport »');
+  egal(faux2(await jalons2(c((L) => { L[0].objet = 'PRPU4182703'; }))), [], 'objet = n° sans espaces');
+  // L'ordre envoyé au quai : la forme se juge sur ce courriel (une erreur ne se paie qu'une fois).
+  egal(faux2(await jalons2(c((L) => { L[0].a = 'quai'; L[0].corps = 'Salut'; }))), ['courriel-destinataire', 'courriel-forme'], 'au quai, mal écrit : deux jalons, chacun une fois');
+  // Jalon 8 : un courriel juste suivi d'un autre (à Claire, sans pièce, sans formule) reste juste ; la forme se juge sur le premier.
+  egal(faux2(await jalons2(c((L) => { L.push({ a: 'claire', objet: '', corps: 'ok', pieces: [] }); }))), [], 'jalons 8 et 9 jugés sur le courriel qui porte l’ordre, pas sur le dernier');
+  // Sans courriel juste, la forme se juge sur le dernier courriel à un prestataire.
+  egal(faux2(await jalons2(c((L) => { L[0].pieces = []; L.push({ a: 'rail', objet: '', corps: 'tu', pieces: [] }); }))), ['courriel-destinataire', 'courriel-forme'], 'sans courriel juste : dernier courriel à un prestataire');
+  // L'appel et le créneau.
+  const a = (f) => avec2((d) => f(d.appel));
+  egal(faux2(await jalons2(a((x) => { x.reprises = 2; }))), [], '2 reprises');
+  egal(faux2(await jalons2(a((x) => { x.reprises = 3; }))), ['appel-quai'], '3 reprises');
+  egal(faux2(await jalons2(a((x) => { x.reprises = 1; x.leurres = ['contargo']; }))), [], 'mauvais numéro + 1 reprise');
+  egal(faux2(await jalons2(a((x) => { x.reprises = 2; x.leurres = ['contargo']; }))), ['appel-quai'], 'mauvais numéro + 2 reprises');
+  egal(faux2(await jalons2(a((x) => { x.reprises = 0; x.leurres = ['claire', 'contargo']; }))), [], 'deux mauvais numéros, aucune reprise');
+  egal(faux2(await jalons2(a((x) => { x.reprises = 1; x.leurres = ['claire', 'contargo']; }))), ['appel-quai'], 'deux mauvais numéros + 1 reprise');
+  egal(faux2(await jalons2(avec2((d) => { d.appel.reprises = 2; d.leurresApres = ['contargo']; }))), [], 'un numéro appelé APRÈS le quai ne compte pas');
+  const p = (cr) => avec2((d) => { d.planning = cr; });
+  egal(faux2(await jalons2(p(['Q5', 7]))), ['creneau'], 'Quai 5 à 10:30');
+  egal(faux2(await jalons2(p(['Q6', 4]))), ['creneau'], 'Quai 6 à 09:00 (sur un créneau pris)');
+  egal(faux2(await jalons2(p(['Q6', 3]))), ['creneau'], 'avant l’arrivée du camion');
+  egal(faux2(await jalons2(p(['Q7', 10]))), ['creneau'], 'Quai 7 à 12:00 (attend trop)');
+  // Une erreur ne se paie qu'une fois : le n° faux dans l'ordre ne coûte que le jalon 1 ; le courriel juste reste juste.
+  egal(faux2(await jalons2(o((r) => { r.cont = 'PRPU 418720 3'; r.inst = ['rdv', 'scelle', 'vide']; }))), ['ot-conteneur'], 'n° faux dans l’ordre, courriel juste');
+  // Rien de vrai sans le geste.
+  const vide = await jalons2({});
+  egal(IDS2.map((j) => vide[j]), IDS2.map(() => 'attente'), 'rien fait : tout « à faire »');
+  egal([vide['ot-enregistre'], vide['bonus-hayon']], ['attente', 'null'], 'passage à faire, pas de bonus au standard');
+  const non = await jalons2({ ordre: JUSTE2, enregistre: false });
+  egal(IDS2.slice(0, 6).map((j) => non[j]), IDS2.slice(0, 6).map(() => 'attente'), 'ordre rempli mais pas enregistré');
+  const ordreSeul = await jalons2({ ordre: JUSTE2 });
+  egal([ordreSeul['ot-enregistre'], ordreSeul['courriel-destinataire'], ordreSeul['courriel-forme'], ordreSeul['appel-quai'], ordreSeul.creneau], ['ok', 'attente', 'attente', 'attente', 'attente'], 'ordre enregistré seulement');
+});
+
+// ─────────────────────────────────────────────────────────── l'unicité du créneau (avec et sans le créneau pris de plus)
+await v('ENT-7.2 : planning — Quai 6 à 09:30 est la SEULE bonne réponse, avec et sans le créneau pris de plus (tous les quais × tous les créneaux)', async () => {
+  const r = await pg.evaluate(async () => {
+    const S = await import('/contenus/decathlon-ent72.js');
+    const { jalonsPlanning } = await import('/core/types/planning.js');
+    const juste = (P) => { const out = [];
+      for (const l of P.lignes.liste) for (let t = 0; t < 12; t++) {
+        const db = { plannings: { [P.id]: { v1: { place: { cont: { r: l.id, s: t } } } } } };
+        if (jalonsPlanning(db, P).L.every((x) => x.ok)) out.push(`${l.id}@${7 + t / 2}`);
+      } return out; };
+    const complet = S.PLANNING;
+    const sans = { ...complet, lignes: { ...complet.lignes, liste: complet.lignes.liste.map((l) => (l.id === 'Q5' ? { ...l, occupe: l.occupe.slice(0, 1) } : l)) } };
+    return { complet: juste(complet), sans: juste(sans), pris: complet.lignes.liste.map((l) => l.occupe.length) };
+  });
+  egal(r.complet, ['Q6@9.5'], 'avec le créneau de plus');
+  egal(r.sans, ['Q6@9.5'], 'sans le créneau de plus');
+  egal(r.pris, [2, 2, 1], 'créneaux pris par quai (le Quai 5 en a un de plus que dans la version de base)');
+});
+
+// ─────────────────────────────────────────────────────────── le parcours à l'écran
+await v('ENT-7.2 : parcours juste à l’écran — 20 / 20, 3 questions au fil, quatre pastilles, menu progressif, réponses et messages neutres, Contargo cite le n° de l’ordre', async () => {
+  await monter2({ uid: 'dk72-juste', db: { tirages: { [ID2]: tirage2() } } });
+  const menu = async () => (await pg.$$eval(`${Z} .ent-nav`, (L) => L.map((b) => b.dataset.vue || b.dataset.vueFermee)));
+  let m = await menu();
+  vrai(m.includes('fiche') && m.includes('mail') && !m.includes('telephone') && !m.includes('planning'), 'menu au départ : ' + m);
+  egal(await pg.$$eval(`${Z} .ent-pastille.fait`, (L) => L.length), 0, 'aucune pastille faite au départ');
+  const a0 = await note(); egal(a0 ? a0.score : 0, 0, 'inaction : 0');
+  await remplir2(JUSTE2);
+  egal(await pg.$$eval(`${Z} .ent-pastille.fait`, (L) => L.length), 1, 'pastille ordre');
+  m = await menu(); vrai(!m.includes('telephone'), 'Téléphone au menu avant le premier courriel');
+  await courriel2(MAIL_JUSTE);
+  m = await menu(); vrai(m.includes('telephone') && !m.includes('planning'), 'après le courriel : Téléphone oui, Planning non : ' + m);
+  const R = (await entrants()).filter((x) => /RE : /.test(x.subject));
+  egal(R.length, 1, 'réponse de Contargo');
+  vrai(/bien reçu votre ordre de transport OT-2027-0142 pour le conteneur PRPU 418270 3\./.test(R[0].text) && /lundi 01\/02 vers 9 h/.test(R[0].text), 'réponse : ' + R[0].text);
+  await appel2();
+  m = await menu(); vrai(m.includes('planning'), 'après l’appel : Planning au menu : ' + m);
+  await planning2('Q6', 5);
+  const n = await note();
+  egal(ko2(n), [], 'jalons et questions');
+  proche(n.score, 20, 'note');
+  egal(await pg.$$eval(`${Z} .ent-pastille.fait`, (L) => L.length), 4, 'quatre pastilles faites');
+  // Mehdi puis Claire reprennent le créneau choisi, sans dire si c'est juste.
+  const E = await entrants();
+  const mehdi = E.filter((x) => x.subject === 'Ton créneau').map((x) => x.text).join(' | '), claire = E.filter((x) => x.subject === 'Commande passée').map((x) => x.text).join(' | ');
+  vrai(/Quai 6, lundi 01\/02 à 09:30/.test(mehdi), 'Mehdi reprend le créneau : ' + mehdi);
+  vrai(/Commande passée, créneau réservé/.test(claire), claire);
+  egal(E.filter((x) => PRIS_MSG.test(x.text)).map((x) => x.subject), [], 'aucun message ne dit juste / faux / correct / erreur');
+  const q = (await base()).questions[ID2];
+  vrai(/Tu viens de taper « PRPU 418270 3 »/.test(q['chiffre-controle'].texte.enonce), 'question 1 ancrée sur ce qu’il a tapé : ' + q['chiffre-controle'].texte.enonce);
+});
+
+await v('ENT-7.2 : l’appel — les réactions du chef de quai ; le piège de la 2e réplique est « PRPU 418720 3 » ; le juste est le numéro de l’AVIS ; chaque maladresse compte une reprise', async () => {
+  await monter2({ uid: 'dk72-appel', db: { tirages: { [ID2]: tirage2() }, gestes: { [ID2]: { 'courriel:envoyer': 1 } }, questions: { [ID2]: FIL3 } } });
+  await aller('telephone');
+  await pg.click(`${Z} [data-dlg-appeler="quai"]`); await pause();
+  const dire = async (x) => { await pg.click(`${Z} [data-dlg-choix="${x}"]`); await pause(); };
+  const fil = () => pg.textContent(`${Z} [data-dlg-fil]`);
+  vrai(/Quai de réception de Rouvignies, Mehdi, j’écoute\./.test(await fil()), 'première réplique');
+  await dire('camion');
+  vrai(/C’est qui, et c’est pour quoi exactement/.test(await fil()), 'réaction à « Salut, c’est pour un camion »');
+  await dire('lundi');
+  vrai(/De la place pour quoi \? Tu es qui \?/.test(await fil()), 'réaction à « Tu as de la place lundi ? »');
+  await dire('presente');
+  vrai(/Bonjour, c’est Lea, du transport amont/.test(await fil()), 'présentation avec le prénom');
+  const libs = await pg.$$eval(`${Z} [data-dlg-choix]`, (L) => L.map((b) => [b.dataset.dlgChoix, b.textContent.replace(/\s+/g, ' ').trim()]));
+  egal(Object.fromEntries(libs.slice().sort()), { collection: 'C’est la collection printemps.', inverse: 'Oui : conteneur PRPU 418720 3, ordre de transport OT-2027-0142.',
+    juste: 'Oui : conteneur PRPU 418270 3, ordre de transport OT-2027-0142.' }, 'choix de la 2e réplique (n° de l’avis, piège à deux chiffres inversés)');
+  await dire('inverse');
+  vrai(/Je ne le trouve pas, ce numéro\. Relis-le sur ton avis\./.test(await fil()), 'réaction au numéro inversé');
+  await dire('collection');
+  vrai(/dix par semaine/.test(await fil()), 'réaction à « la collection printemps »');
+  await dire('juste');
+  await dire('bateau');
+  vrai(/Un bateau ne vient pas à mon quai/.test(await fil()), 'réaction au bateau');
+  await dire('jeudi');
+  vrai(/Jeudi, c’est le départ d’Anvers/.test(await fil()), 'réaction à jeudi');
+  await dire('juste');
+  await dire('salut');
+  vrai(/Tu me l’envoies, le planning \?/.test(await fil()), 'réaction à « C’est bon, salut ! »');
+  await dire('merci');
+  await pg.click(`${Z} [data-dlg-raccrocher]`); await pause();
+  const E = (await base()).dialogues[ID2];
+  egal(E.quai.appels[0].reprises, 7, 'sept maladresses = sept reprises');
+  const reactions = await fil();
+  vrai(!PRIS_MSG.test(reactions.replace(/Oui : conteneur[^.]*\./g, '')), 'le fil de l’appel ne dit ni juste, ni faux, ni correct, ni erreur : ' + reactions);
+});
+
+await v('ENT-7.2 : les contacts du Téléphone (répertoire par ordre alphabétique) ; un mauvais numéro tombe sur une messagerie vocale neutre, rangée et lue par `leurresAppeles`', async () => {
+  await monter2({ uid: 'dk72-leurre', db: { tirages: { [ID2]: tirage2() }, gestes: { [ID2]: { 'courriel:envoyer': 1 } }, questions: { [ID2]: FIL3 } } });
+  await aller('telephone');
+  egal(await pg.$$eval(`${Z} .dlg-contact b`, (L) => L.map((b) => b.textContent)), ['Claire Vasseur', 'Contargo — réservations', 'Quai de réception — Rouvignies'], 'répertoire');
+  await pg.click(`${Z} [data-dlg-appeler="contargo"]`); await pause();
+  vrai(/messagerie du service réservations de Contargo/.test(await pg.textContent(`${Z} .dlg-droite`)), 'messagerie vocale de Contargo');
+  vrai(!PRIS_MSG.test(await pg.textContent(`${Z} .dlg-droite`)), 'messagerie vocale neutre');
+  await pg.click(`${Z} [data-dlg-raccrocher-leurre]`); await pause();
+  const E = (await base()).dialogues[ID2];
+  egal(E['@leurres'].map((x) => x.id), ['contargo'], 'appel rangé');
+  vrai(!!(await base()).gestes[ID2]['dialogue:contargo:appeler'], 'geste rangé');
+  // La lecture du moteur : ce contact, appelé avant le quai, est compté (le jalon 10 en fait une reprise).
+  const avant = await pg.evaluate(async () => {
+    const { leurresAppeles } = await import('/core/types/dialogue.js');
+    const e = JSON.parse(JSON.stringify(window.__f.db.dialogues['decathlon-ordre-transport']));
+    e.quai = { appels: [{ debut: Date.now() + 5000, pas: [], reprises: 0 }] };
+    return leurresAppeles(e, { avant: 'quai' });
+  });
+  egal(avant, ['contargo'], 'leurres appelés avant le quai');
+});
+
+// ─────────────────────────────────────────────────────────── les pièges à l'écran
+await v('ENT-7.2 : inaction 0 — ordre vide refusé (« Il manque »), ordre incomplet refusé, travail gardé, le menu ne s’ouvre pas', async () => {
+  await monter2({ uid: 'dk72-vide', db: { tirages: { [ID2]: tirage2() } } });
+  await aller('fiche');
+  await pg.click(`${Z} [data-fiche-envoyer]`); await pause();
+  const m = await pg.$eval(`${Z} [data-fiche-manque]`, (e) => e.textContent);
+  vrai(/Il manque/.test(m) && /le transporteur/.test(m) && /le n° de conteneur/.test(m) && /le poids brut/.test(m), 'ordre vide refusé : ' + m);
+  egal((await note() || { score: 0 }).score, 0, 'note de l’inaction');
+  await remplir2({ presta: 'contargo', cont: 'PRPU 418270 3', type: '40hc' }, { enregistrer: false });
+  await pg.click(`${Z} [data-fiche-envoyer]`); await pause();
+  const m2 = await pg.$eval(`${Z} [data-fiche-manque]`, (e) => e.textContent);
+  vrai(/le n° de scellé/.test(m2) && !/le n° de conteneur/.test(m2), 'ordre à moitié refusé : ' + m2);
+  const db = await base();
+  egal([db.fiches.ot.envoye, db.fiches.ot.valeurs.cont], [undefined, 'PRPU 418270 3'], 'pas enregistré, travail gardé');
+  vrai(!(await pg.$(`${Z} .ent-nav[data-vue="telephone"]`)), 'Téléphone au menu sans courriel');
+  // Le seul geste qui compte (première question notée répondue) : 1 point, rien de plus.
+  egal((await note()).score, 1, 'la question du chiffre de contrôle, seule, vaut 1');
+});
+
+await v('ENT-7.2 : pièges à l’écran — courriel SANS pièce jointe : jalon 8 faux et réponse « merci de nous transmettre l’ordre » ; ordre envoyé au quai : jalon 8 faux, aucune réponse', async () => {
+  await monter2({ uid: 'dk72-sanspj', db: { tirages: { [ID2]: tirage2() } } });
+  await remplir2(JUSTE2);
+  await courriel2({ ...MAIL_JUSTE, pj: [] });
+  let R = (await entrants()).filter((x) => /RE : /.test(x.subject));
+  vrai(/nous ne pouvons pas enregistrer votre demande sans l’ordre de transport\. Merci de nous le transmettre en pièce jointe\./.test(R[0].text), 'réponse sans pièce : ' + R[0].text);
+  vrai(!/PRPU/.test(R[0].text), 'la réponse sans pièce cite un numéro');
+  let n = await note();
+  egal([n.detail['courriel-destinataire'], n.detail['courriel-forme']], ['ko', 'ok'], 'jalon 8 faux, forme juste (une erreur, un jalon)');
+  // Puis le bon courriel : le jalon 8 devient juste (jugé sur un courriel qui porte l'ordre à Contargo, pas sur le dernier envoyé).
+  await courriel2(MAIL_JUSTE);
+  n = await note();
+  egal(n.detail['courriel-destinataire'], 'ok', 'jalon 8 après le bon courriel');
+  await courriel2({ a: 'claire', objet: 'Info', corps: 'ok', pj: [] });
+  n = await note();
+  egal([n.detail['courriel-destinataire'], n.detail['courriel-forme']], ['ok', 'ok'], 'un courriel de plus, à Claire, ne change rien');
+  R = (await entrants()).filter((x) => /RE : /.test(x.subject));
+  egal(R.length, 2, 'Claire ne répond pas');
+  await monter2({ uid: 'dk72-quai', db: { tirages: { [ID2]: tirage2() } } });
+  await remplir2(JUSTE2);
+  await courriel2({ ...MAIL_JUSTE, a: 'quai' });
+  n = await note();
+  egal([n.detail['courriel-destinataire'], n.detail['courriel-forme']], ['ko', 'ok'], 'ordre au quai');
+  egal((await entrants()).filter((x) => /RE : /.test(x.subject)).length, 0, 'le quai ne répond pas par courriel');
+});
+
+await v('ENT-7.2 : les autres prestataires répondent avec LEURS horaires (route : mardi 02/02 vers 8 h ; rail : mercredi 03/02 vers 10 h), citent le n° de l’ordre, ne disent pas si c’est juste', async () => {
+  await monter2({ uid: 'dk72-autres', db: { tirages: { [ID2]: tirage2() } } });
+  await remplir2(JUSTE2);
+  await courriel2({ ...MAIL_JUSTE, a: 'routiers' });
+  await courriel2({ ...MAIL_JUSTE, a: 'rail' });
+  const R = (await entrants()).filter((x) => /RE : /.test(x.subject));
+  egal(R.length, 2, 'deux réponses');
+  vrai(R[0].text.includes('PRPU 418270 3. Enlèvement confirmé : départ du camion vendredi 29/01, livraison à votre quai mardi 02/02 vers 8 h.') && R[0].text.includes('Routiers du Hainaut'), R[0].text);
+  vrai(R[1].text.includes('PRPU 418270 3. Enlèvement confirmé : départ du train vendredi 29/01, livraison à votre quai mercredi 03/02 vers 10 h.') && R[1].text.includes('Rail Flandres-Artois'), R[1].text);
+  egal(R.filter((x) => PRIS_MSG.test(x.text)).length, 0, 'réponses neutres');
+  const n = await note();
+  egal([n.detail['courriel-destinataire'], n.detail['courriel-forme']], ['ko', 'ok'], 'ni Contargo ni l’ordre juste : jalon 8 faux, la forme se juge sur le dernier courriel à un prestataire');
+});
+
+await v('ENT-7.2 : une erreur ne se paie qu’une fois — n° faux dans l’ordre, courriel juste : jalon 1 faux, jalon 8 vrai, et la réponse de Contargo cite le n° de L’ÉLÈVE (pas celui de l’avis)', async () => {
+  await monter2({ uid: 'dk72-une-fois', db: { tirages: { [ID2]: tirage2() } } });
+  await remplir2({ ...JUSTE2, cont: 'PRPU 418720 3' });
+  await courriel2({ ...MAIL_JUSTE, objet: 'Ordre de transport OT-2027-0142' });
+  const R = (await entrants()).filter((x) => /RE : /.test(x.subject));
+  vrai(/pour le conteneur PRPU 418720 3\./.test(R[0].text) && !/418270/.test(R[0].text), 'Contargo cite le n° écrit dans l’ordre : ' + R[0].text);
+  const n = await note();
+  egal([n.detail['ot-conteneur'], n.detail['courriel-destinataire'], n.detail['courriel-forme']], ['ko', 'ok', 'ok'], 'seul le jalon 1 est faux');
+  // Le chef de quai, lui, lit l'AVIS : le choix juste de la 2e réplique reste le n° de l'avis.
+  await aller('telephone');
+  await pg.click(`${Z} [data-dlg-appeler="quai"]`); await pause();
+  await pg.click(`${Z} [data-dlg-choix="presente"]`); await pause();
+  vrai(/Oui : conteneur PRPU 418270 3, ordre de transport/.test(await pg.textContent(`${Z} [data-dlg-choix="juste"]`)), 'choix juste = n° de l’avis');
+});
+
+await v('ENT-7.2 : l’appel compte les reprises à l’écran — 3 maladresses → jalon 10 faux ; mauvais numéro (Claire) puis 1 maladresse → vrai, 2 maladresses → faux', async () => {
+  for (const [uid, leurres, sauf, attendu] of [
+    ['dk72-r3', [], { accueil: ['camion', 'lundi'], refs: ['inverse'] }, 'ko'],
+    ['dk72-r2', [], { accueil: ['camion'], refs: ['inverse'] }, 'ok'],
+    ['dk72-l1', ['claire'], { accueil: ['camion'] }, 'ok'],
+    ['dk72-l2', ['claire'], { accueil: ['camion', 'lundi'] }, 'ko'],
+  ]) {
+    await monter2({ uid, db: { tirages: { [ID2]: tirage2() }, gestes: { [ID2]: { 'courriel:envoyer': 1 } }, questions: { [ID2]: FIL3 } } });
+    await appel2({ leurres, sauf });
+    const n = await note();
+    egal(n.detail['appel-quai'], attendu, `${uid} : jalon 10`);
+  }
+});
+
+await v('ENT-7.2 : le créneau à l’écran — Quai 5 à 10:30 fait tomber le jalon 11 seul ; Quai 6 à 09:30 le rend juste ; le guidage dit QUE le quai est pris', async () => {
+  const base2 = { tirages: { [ID2]: tirage2() }, gestes: { [ID2]: { 'courriel:envoyer': 1 } }, questions: { [ID2]: FIL3 },
+    dialogues: { [ID2]: { quai: { appels: [{ debut: 1, fin: 2, pas: [], reprises: 0 }] } } } };
+  await monter2({ uid: 'dk72-pl5', db: base2 });
+  await planning2('Q5', 7);
+  let n = await note();
+  egal(n.detail.creneau, 'ko', 'Quai 5 à 10:30');
+  await monter2({ uid: 'dk72-pl6', db: base2 });
+  await aller('planning');
+  await pg.click(`${Z} [data-pl-id="cont"][data-pl-vue="b"]`);
+  const sel = (r, t) => `${Z} [data-pl-grille] [data-pl-case][data-r="${r}"][data-t="${t}"]`;
+  await pg.$eval(sel('Q6', 4), (el) => el.scrollIntoView({ block: 'center', inline: 'center' }));
+  await pg.click(sel('Q6', 4), { force: true }); await pause();
+  const pb = await pg.$$eval(`${Z} [data-pl-problemes] li`, (L) => L.map((x) => x.textContent.trim()));
+  egal(pb, ['Quai 6 est déjà pris à ce moment-là.'], 'problème en direct (que, jamais de combien)');
+  await planning2('Q6', 5);
+  n = await note();
+  egal(n.detail.creneau, 'ok', 'Quai 6 à 09:30');
+});
+
+// ─────────────────────────────────────────────────────────── confirmé, Avant de commencer
+await v('ENT-7.2 : confirmé — une instruction fausse de plus (« Hayon élévateur obligatoire »), +0,5 si elle n’est pas cochée ; standard → null ; le mot « bonus » n’est pas à l’écran', async () => {
+  await monter2({ uid: 'dk72-conf', aisance: 'confirme', db: { tirages: { [ID2]: tirage2({ bonus: ['in-hayon'] }) } } });
+  await aller('fiche');
+  const libs = await pg.$$eval(`${Z} input[data-fiche-case="inst"]`, (L) => L.map((i) => i.value).sort());
+  egal(libs, ['adr', 'froid', 'hayon', 'rdv', 'scelle', 'vide'], 'six instructions');
+  vrai(/Hayon élévateur obligatoire\./.test(await pg.textContent(`${Z} [data-fiche="ot"]`)), 'texte de la 6e instruction');
+  vrai(!/bonus/i.test(await pg.evaluate((Z) => document.querySelector(Z).innerText, Z)), 'le mot « bonus » est à l’écran');
+  const statut = (inst) => pg.evaluate(async ({ inst }) => {
+    const S = await import('/contenus/decathlon-ent72.js');
+    const db = JSON.parse(JSON.stringify(window.__f.db));
+    db.fiches = { ot: { valeurs: { inst }, envoye: { at: 1 } } };
+    return S.ETAPES.find((e) => e.id === 'bonus-hayon').verifier(db).status;
+  }, { inst });
+  egal(await statut(['rdv', 'scelle', 'vide']), 'ok', 'hayon non coché');
+  egal(await statut(['rdv', 'scelle', 'vide', 'hayon']), 'ko', 'hayon coché');
+  // Hayon coché : le jalon 6 (instructions) ne le juge pas (une erreur, un seul endroit).
+  const j6 = await pg.evaluate(async () => {
+    const S = await import('/contenus/decathlon-ent72.js');
+    const db = JSON.parse(JSON.stringify(window.__f.db));
+    db.fiches = { ot: { valeurs: { inst: ['rdv', 'scelle', 'vide', 'hayon'] }, envoye: { at: 1 } } };
+    return S.ETAPES.find((e) => e.id === 'ot-instructions').verifier(db).status;
+  });
+  egal(j6, 'ok', 'jalon 6 sur un confirmé qui coche le hayon');
+  const standard = await jalons2({});
+  egal(standard['bonus-hayon'], 'null', 'standard : rien');
+});
+
+await v('ENT-7.2 : Avant de commencer — 4 questions tirées (2 préparation, 2 droit), la banque en a au moins le double par rubrique ; d4 retirée', async () => {
+  await monter2({ uid: 'dk72-ouverture', sansOuverture: true });
+  const db = await base();
+  const r = await pg.evaluate(async () => {
+    const { QUESTIONS } = await import('/contenus/questions/ENT-7.2.js');
+    return { rub: Object.fromEntries(QUESTIONS.liste.filter((q) => q.type === 'ouverture').map((q) => [q.id, q.rubrique])), tirage: QUESTIONS.ouverture.tirage };
+  });
+  const ids = db.questions[ID2]['@tirage'].ids;
+  const parRub = (L) => L.reduce((o, id) => ({ ...o, [r.rub[id]]: (o[r.rub[id]] || 0) + 1 }), {});
+  const tri = (o) => Object.fromEntries(Object.entries(o).sort());
+  egal(tri(parRub(ids)), tri({ preparation: 2, droit: 2 }), 'tirées : ' + ids.join(', '));
+  egal(Object.keys(r.rub).sort(), ['d1', 'd2', 'd3', 'd5', 'p1', 'p2', 'p3', 'p4', 'p5'], 'la banque (d4 retirée)');
+  const banque = parRub(Object.keys(r.rub));
+  vrai(Object.entries(r.tirage).every(([k, n]) => banque[k] >= 2 * n), 'banque : ' + JSON.stringify(banque));
+  vrai(await present('.ent-nav[data-vue="ouverture"]'), 'écran d’ouverture au menu');
+});
+
+// ─────────────────────────────────────────────────────────── l'écran
+for (const [w, h] of [[1366, 768], [1280, 720]]) {
+  await v(`ENT-7.2 : ergonomie ${w} × ${h} — l’ordre (confirmé, 6 instructions), le courriel (3 pièces jointes), le téléphone en appel et le planning tiennent sans défilement de page`, async () => {
+    await pg.setViewportSize({ width: w, height: h });
+    try {
+      const cree = { tirages: { [ID2]: tirage2({ bonus: ['in-hayon'] }) }, mails: [{ folder: 'in', to: 'Lea', subject: 'x', from: 'C', text: 'x' }] };
+      const mesure = async (vue) => pg.evaluate(({ vue }) => {
+        window.scrollTo(0, 0);
+        const hote = document.querySelector('#fTest'), cartes = document.querySelector('#fTest .ent-cartes-ancre');
+        const d = document.scrollingElement;
+        const c = cartes ? cartes.getBoundingClientRect().height : 0;
+        const p = document.querySelector('#fTest .ent-page');
+        return { vue, page: p.scrollHeight - c, h: innerHeight, large: d.scrollWidth - innerWidth }; }, { vue });
+      const ferme = async () => { await pg.$$eval('[data-carte-fermer]', (L) => L.forEach((b) => b.click())); await pause(150); };
+      // L'ordre : non enregistré, avec son bouton.
+      await monter2({ uid: 'dk72-ecran', aisance: 'confirme', db: cree });
+      await aller('fiche'); await ferme();
+      let m = await mesure('fiche');
+      const bouton = await pg.evaluate(() => document.querySelector('#fTest [data-fiche-envoyer]').getBoundingClientRect().bottom);
+      vrai(m.page <= h + 1 && bouton <= h && m.large <= 0, `ordre : page ${Math.round(m.page)}, bouton ${Math.round(bouton)}, large ${m.large} (pour ${h})`);
+      // Le courriel.
+      await remplir2(JUSTE2);
+      await aller('mail');
+      if (!(await present('[data-courriel]'))) { await pg.click(`${Z} [data-nouveau]`); await pause(); }
+      await pg.selectOption(`${Z} #cA`, 'contargo');
+      await pg.fill(`${Z} #cObj`, 'Ordre de transport OT-2027-0142');
+      await pg.fill(`${Z} #cMsg`, 'Bonjour,\n\nVoici l’ordre.\n\nCordialement,\nLea');
+      for (const id of ['cahier', 'avis', 'fiche:ot']) { await pg.click(`${Z} [data-c-joindre]`); await pg.click(`${Z} [data-c-joint="${id}"]`); await pause(); }
+      await ferme();
+      m = await mesure('courriel');
+      vrai(m.page <= h + 1 && m.large <= 0, `courriel : page ${Math.round(m.page)}, large ${m.large} (pour ${h})`);
+      await pg.fill(`${Z} #cObj`, '');
+      await pg.click(`${Z} [data-c-envoyer]`); await pause();
+      const conf = await pg.evaluate(() => document.querySelector('#fTest [data-c-confirme]').getBoundingClientRect().bottom + document.scrollingElement.scrollTop);
+      vrai(conf <= h, `confirmation du courriel à ${Math.round(conf)} (pour ${h})`);
+      // Le téléphone, en plein appel.
+      await monter2({ uid: 'dk72-ecran2', db: { ...cree, gestes: { [ID2]: { 'courriel:envoyer': 1 } }, questions: { [ID2]: FIL3 } } });
+      await aller('telephone');
+      await pg.click(`${Z} [data-dlg-appeler="quai"]`); await pause();
+      for (const x of ['camion', 'presente', 'inverse', 'juste']) { await pg.click(`${Z} [data-dlg-choix="${x}"]`); await pause(); }
+      await ferme();
+      m = await mesure('telephone');
+      vrai(m.page <= h + 1 && m.large <= 0, `téléphone : page ${Math.round(m.page)}, large ${m.large} (pour ${h})`);
+      // Le planning.
+      await monter2({ uid: 'dk72-ecran3', db: { ...cree, gestes: { [ID2]: { 'courriel:envoyer': 1 } }, questions: { [ID2]: FIL3 }, dialogues: { [ID2]: { quai: { appels: [{ debut: 1, fin: 2, pas: [], reprises: 0 }] } } } } });
+      await aller('planning'); await ferme();
+      m = await mesure('planning');
+      vrai(m.page <= h + 1 && m.large <= 0, `planning : page ${Math.round(m.page)}, large ${m.large} (pour ${h})`);
+    } finally { await pg.setViewportSize({ width: 1366, height: 900 }); }
+  });
+}
+
+await v('ENT-7.2 : documents — l’avis, le cahier et le devis portent les valeurs TIRÉES (poids, scellé, référence, CO₂ calculé sur le poids) ; aucun ne dit quelles instructions sont fausses', async () => {
+  await monter2({ uid: 'dk72-docs', db: { tirages: { [ID2]: tirage2({ valeurs: { poids: 15800, ref: 7, scelle: 1234567 } }) } } });
+  const r = await pg.evaluate(async () => {
+    const S = await import('/contenus/decathlon-ent72.js');
+    const html = (id) => S.DOCUMENTS.find((d) => d.id === id).html(window.__f.db);
+    return { avis: html('avis'), cahier: html('cahier'), devis: html('devis') };
+  });
+  vrai(/15[s  ]800 kg/.test(r.avis) && /DC 1 234 567/.test(r.avis) && /PO-ROU-2027-0007/.test(r.avis) && /PRPU 418270 3/.test(r.avis), 'avis');
+  vrai(/15[s  ]800 kg/.test(r.cahier) && /PO-ROU-2027-0007/.test(r.cahier), 'cahier');
+  vrai(/135 kg de CO₂|\d+ kg de CO₂/.test(r.devis), 'devis : CO₂ calculé');
+  const tout = r.avis + r.cahier + r.devis;
+  vrai(!/frigorifique|ADR|hayon|zone sous douane/i.test(tout.replace(/non dangereuses/g, '')), 'un document donne le texte d’une instruction fausse');
+  vrai(PRIS_MSG.test(tout) === false, 'un document dit « juste / faux / correct / erreur »');
+});
+
 await v('ENT-7.1 : aucune erreur JavaScript pendant le bloc', async () => { egal(erreursF.filter((e) => !/favicon/.test(e)), [], 'erreurs'); });
 await F.fermer();
 }
