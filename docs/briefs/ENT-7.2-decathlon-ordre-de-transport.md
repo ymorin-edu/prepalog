@@ -338,5 +338,5 @@ c'est le cahier des charges de Decathlon qui l'exige », comme 7.1), **d4 retir�
   jalon 9 jugé sur le dernier courriel (1, après ajout d'un cas qui ne tombait pas) ; chaque jalon 1 à 6, 8, 9, 10, 11 affaibli (1 à 3 cas) ; bonus toujours juste (1) ; Claire qui dit « correct » (1) ; piège de l'appel = vrai numéro (2) ; numéro de l'avis remplacé par celui de l'ordre dans l'appel (1) ; créneau pris retiré (3).
 - **Vérifié** : chiffres de contrôle à la main (3 et 1) ; Code civil art. 1366 (lu sur un site tiers, Légifrance n'a pas répondu) ; VGM (coordinateur). **Construit** : tout le reste, dit en pied de chaque document.
 - **Commits** : voir `git log` (séance en brouillon, puis livraison).
-- **Reste ouvert** : (1) valider `d5` ; (2) relire l'art. 1366 sur Légifrance ; (3) le planning ne peut pas porter le n° de l'élève ni un bonus propre au confirmé : demande au moteur si Tristan y tient (7.3, 7.4) ; (4) trame courte (Cowork) ;
+- **Reste ouvert** : (1) ~~valider `d5`~~ validée par Tristan le 14/10/2026 ; (2) relire l'art. 1366 sur Légifrance ; (3) le planning ne peut pas porter le n° de l'élève ni un bonus propre au confirmé : demande au moteur si Tristan y tient (7.3, 7.4) ; (4) trame courte (Cowork) ;
   (5) l'ordre (douze cases, six instructions) défile dans sa colonne à 1366 × 768 : à regarder à l'écran.
