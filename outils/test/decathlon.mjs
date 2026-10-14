@@ -360,5 +360,5 @@ await v('ENT-7.1 : charte — aucun aplat vert dans la zone de travail (comparat
 });
 
 await v('ENT-7.1 : aucune erreur JavaScript pendant le bloc', async () => { egal(erreursF.filter((e) => !/favicon/.test(e)), [], 'erreurs'); });
-F.fermer();
+await F.fermer();
 }

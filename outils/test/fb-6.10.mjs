@@ -394,5 +394,5 @@ await v('ENT-6.10 : formule en cliquant — « = », clic sur B2, « + », clic 
   egal((await base()).fiches.consignes.valeurs.compte.cases.B5, '=B2+B3-B4', 'rangée dans la base');
 });
 
-F.fermer();
+await F.fermer();
 }
