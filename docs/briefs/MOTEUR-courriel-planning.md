@@ -1,6 +1,6 @@
 # Brief moteur — Nouveau courriel, ordre enregistré en pièce jointe, planning à créneaux pris (pour ENT-7.2, puis 7.3 et 7.4)
 
-**Statut** : en cours (14/10/2026)
+**Statut** : livré (14/10/2026)
 **Origine** : état des lieux du §7 d'`ENT-7.2-decathlon-ordre-de-transport.md` (Claude Code, 14/10/2026). Demandes n° 1, 2, 4, 5 ;
 la n° 3 (vue Dialogue à choix) est livrée (`MOTEUR-vue-dialogue.md`).
 **Modèle** : cadrage Opus (ce fichier) ; lots construits par Sonnet. **Durée** : ≈ 4 h (moteur) avant la séance (≈ 3 h 30).
@@ -53,4 +53,14 @@ hors du menu tant que c'est faux (comme le Téléphone). Sans ces champs, rien n
 
 ## Compte rendu
 
-*(à remplir à la livraison)*
+- **Lot 1** : page d'essai `outils/essai-courriel.html` ; choix de Tristan au §3.
+- **Lot 2** (205cfc1) : `core/types/courriel.js` (option `courriel` : `carnet`, `pieces`, `reponse`, `objet` ; gestes `courriel:envoyer` et
+  `courriel:envoyer:<id>` ; lecture `courrielsEnvoyes(db, séance?)` ; état `db.courriels[<séance>] = { brouillon, envoyes }`) ; fiche
+  `envoi.enregistrer` / `nomPiece` / `confirmation`, pièce `fiche:<id>` ouverte figée ; séance d'essai `contenus/courriel-essai.js`, bloc
+  `courriel` (23 cas, 25 sabotages) ; `outils/test.mjs` touché (BLOCS, groupe 4). Réponse automatique immédiate, datée de l'envoi + 1 s.
+- **Lot 3** (ca3de0f) : `occupe: [{ de, a, titre }]` sur une ligne, jugé par `unAlaFois` (exigée sur la ligne), message « … est déjà pris à
+  ce moment-là » ; `planning.quand(db, séance)` ; bloc `planning` + 10 cas.
+- **Lot 4** : fait avec les lots 2 et 3 (`activites/FICHE-SEANCE.md`).
+- **Suite entière** : 1430 / 1431 (seul échec : quai-iso « chariot coupé au mur », vert seul). Les blocs fb-6.10 et decathlon sortent
+  « erreur JS » en fin de bloc (`Target.disposeBrowserContext`, Playwright) : déjà là avant le chantier (vérifié sur HEAD propre).
+- **Non vérifié** : thème sombre, charte d'entreprise rouge ou verte, mode réel Firebase.
