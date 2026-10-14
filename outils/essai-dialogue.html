@@ -44,7 +44,7 @@
 <div class="essai-bandeau"><b>Decathlon</b><span>Entrepôt de Rouvignies · service transport amont · Téléphone</span></div>
 <div id="hote"></div>
 <script type="module">
-import { creerTelephone, appelRetenu, appelEnCours, reprises, premiereReponse } from './core/types/dialogue.js';
+import { creerTelephone, appelRetenu, appelEnCours, reprises, premiereReponse, leurresAppeles } from './core/types/dialogue.js';
 
 // ── Le contenu d'ENT-7.2 (brief §4, étape 4), écrit en dur pour l'essai ────────────────────────────────────────────
 const OT = 'OT-2027-0142';
@@ -54,6 +54,13 @@ const noPiege = (db) => espace(db.piege || 'PLGU4187206');
 const PERSONNES = { mehdi: { nom: 'Mehdi Benali', role: 'chef de quai', appel: 'Mehdi' } };
 const TELEPHONE = {
   situation: 'Appelle le quai de réception pour réserver le créneau d’arrivée du conteneur.',
+  // Les contacts sans dialogue (décision de Tristan du 14/10/2026) : se tromper de numéro coûte des points dans la séance.
+  leurres: [
+    { id: 'claire', nom: 'Claire Vasseur', detail: 'responsable transport amont',
+      message: 'Bonjour, vous êtes bien sur la messagerie de Claire Vasseur. Je suis en réunion : laissez-moi un message, je vous rappelle.' },
+    { id: 'contargo', nom: 'Contargo — service réservations', detail: 'barge Anvers ↔ Bruay',
+      message: 'Contargo, service réservations. Tous nos conseillers sont occupés. Pour commander un transport, envoyez votre ordre de transport par courriel.' },
+  ],
   dialogues: [{
     id: 'quai', de: 'mehdi',
     contact: { nom: 'Quai de réception — Rouvignies', detail: 'poste 214' },
@@ -134,6 +141,8 @@ document.getElementById('note').addEventListener('click', () => {
     L.push(`Appel retenu (le dernier terminé) : ${reprises(a)} reprise(s) → jalon 10 « au plus 2 reprises » : ${reprises(a) <= 2 ? '✓' : '✗'}`);
     L.push('Première réponse à chaque réplique : ' + ['accueil', 'refs', 'arrivee', 'cloture'].map((r) => `${r} = ${premiereReponse(a, r)}`).join(' · '));
   }
+  const avant = leurresAppeles(etat, { avant: 'quai' });
+  L.push(`Mauvais numéro avant d’appeler le quai : ${avant.length ? avant.join(', ') + ' → la séance retire des points' : 'aucun'}`);
   L.push(`Gestes publiés : ${gestes.join(', ') || 'aucun'}`);
   boite.textContent = L.join('\n');
   boite.hidden = !boite.hidden;

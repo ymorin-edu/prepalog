@@ -31,7 +31,11 @@
 //       }],
 //       fin: 'Bonne journée !',             // facultatif : dernière bulle de l'interlocuteur
 //     }],
+//     leurres: [{ id: 'claire', nom: 'Claire Vasseur', detail: 'transport amont',   // facultatif : contacts SANS dialogue
+//                 message: 'Bonjour, vous êtes sur la messagerie de…', quand? }],    // (messagerie vocale, appel rangé)
 //   }
+// Les contacts (dialogues et leurres) sont classés par ordre alphabétique, comme un répertoire. Un seul appel à la fois.
+// Appeler un leurre range { id, at } dans `etat['@leurres']` ; la séance le lit (et le fait payer) par `leurresAppeles`.
 // `{prenom}` est remplacé par le prénom de l'élève dans `dit`, `lib`, `reaction`, `neutre`, `fin`. La réponse rangée est la
 // CLÉ `v` du choix, jamais son rang : reformuler, réordonner, ajouter un choix ne change rien pour qui a déjà joué.
 // Un choix peut porter `vers: '<id de réplique>'` (embranchement, lot 3) ; sans `vers`, l'appel est linéaire.
@@ -116,7 +120,20 @@ export function compilerTelephone(T, personnes = {}) {
     }
     return { ...d, repliques, personne: personnes[d.de] };
   });
-  return { libelle: T.libelle || 'Téléphone', quand: T.quand || null, situation: T.situation || '', dialogues };
+  // LES CONTACTS SANS DIALOGUE (« leurres », décision de Tristan du 14/10/2026) : ils répondent par une messagerie vocale.
+  // Choisir QUI appeler fait partie de C2.6.2 : chaque appel est rangé, la séance le lit (et le fait payer) par `leurresAppeles`.
+  if (T.leurres != null && !Array.isArray(T.leurres)) err('`leurres` est une liste de contacts { id, nom, detail?, message }');
+  const leurres = (T.leurres || []).map((l, k) => {
+    const ici = `contact sans dialogue ${l && l.id ? `« ${l.id} »` : `n° ${k + 1}`}`;
+    if (!l || !l.id || !ID_OK.test(l.id)) err(`${ici} : l’id ne prend que des minuscules sans accent, des chiffres et des tirets`);
+    if (ids.has(l.id)) err(`${ici} : id déjà pris par un autre contact`);
+    ids.add(l.id);
+    if (!l.nom) err(`${ici} : il manque \`nom\``);
+    if (!l.message) err(`${ici} : il manque \`message\` (ce que dit la messagerie vocale)`);
+    if (l.quand != null && typeof l.quand !== 'function') err(`${ici} : \`quand\` est une fonction (db) => booléen`);
+    return { ...l };
+  });
+  return { libelle: T.libelle || 'Téléphone', quand: T.quand || null, situation: T.situation || '', dialogues, leurres };
 }
 
 // L'indice de la réplique qui suit, après le choix `c` à la réplique `i` (au-delà du dernier : l'appel est fini).
@@ -133,6 +150,14 @@ export const appelRetenu = (etatD) => { const L = appels(etatD).filter((a) => a.
 export const reprises = (appel) => (appel && appel.reprises) || 0;
 // La clé `v` du PREMIER choix dit à cette réplique dans cet appel (ou null).
 export const premiereReponse = (appel, r) => { const p = appel && (appel.pas || []).find((x) => x.r === r); return p ? p.v : null; };
+// Les contacts sans dialogue que l'élève a appelés (ids, dans l'ordre, sans doublon). Avec `avant: '<dialogue>'` : seulement
+// ceux appelés AVANT le premier appel de ce dialogue (« il s'est trompé de numéro avant d'appeler le quai »).
+export const CLE_LEURRES = '@leurres';
+export function leurresAppeles(etat, { avant } = {}) {
+  const L = (etat && etat[CLE_LEURRES]) || [];
+  const debut = avant ? ((appels(etat && etat[avant])[0] || {}).debut ?? Infinity) : Infinity;
+  return [...new Set(L.filter((x) => x.at < debut).map((x) => x.id))];
+}
 
 /* ================================================================ le déroulé d'un appel */
 // Tout se DÉDUIT des pas : où en est l'appel, les bulles dans l'ordre, les choix grisés à la réplique en cours.
@@ -175,14 +200,29 @@ export function deroule(D, appel, { prenom = '', evaluation = false } = {}) {
 export function creerTelephone(T, { personnes = {} } = {}) {
   const M = compilerTelephone(T, personnes);
   const parId = new Map(M.dialogues.map((D) => [D.id, D]));
-  const signaux = M.dialogues.flatMap((D) => [`dialogue:${D.id}:appeler`, ...D.repliques.map((r) => `dialogue:${D.id}:${r.id}`), `dialogue:${D.id}:fin`]);
+  const leurreDe = new Map(M.leurres.map((l) => [l.id, l]));
+  const signaux = M.dialogues.flatMap((D) => [`dialogue:${D.id}:appeler`, ...D.repliques.map((r) => `dialogue:${D.id}:${r.id}`), `dialogue:${D.id}:fin`])
+    .concat(M.leurres.map((l) => `dialogue:${l.id}:appeler`));
   const etatNeuf = () => ({});
   // L'état de l'écran (pas de la base) : le contact ouvert, la réponse en train d'arriver, la copie de l'enseignant.
-  const ui = { sel: null, attente: false, jeton: 0, prof: null };
+  const ui = { sel: null, attente: false, jeton: 0, prof: null, vide: false };
 
   const estEval = (D, api) => (D.mode ? D.mode === 'evaluation' : !!api.evaluation);
   const etatDe = (etat, api) => (api.estProf ? (ui.prof || (ui.prof = {})) : etat);
   const visibles = (api) => M.dialogues.filter((D) => api.estProf || !D.quand || D.quand(api.db || {}));
+  const leurresVisibles = (api) => M.leurres.filter((l) => api.estProf || !l.quand || l.quand(api.db || {}));
+  const nomContact = (x) => (leurreDe.has(x.id) ? x.nom : x.contact.nom);
+  // Un contact sans dialogue qu'on vient d'appeler : sa messagerie vocale, puis « Raccrocher ».
+  function htmlLeurre(l) {
+    return `<section class="dlg-appel" aria-label="${ech(`Appel : ${l.nom}`)}">
+      <header class="dlg-tete"><span class="dlg-initiale grande" aria-hidden="true">${ech(l.nom.slice(0, 1).toUpperCase())}</span>
+        <span class="dlg-qui"><b>${ech(l.nom)}</b>${l.detail ? `<span>${ech(l.detail)}</span>` : ''}</span>
+        <span class="dlg-statut">Messagerie vocale</span></header>
+      <div class="dlg-fil" data-dlg-fil aria-live="polite">${ui.attente
+        ? '<div class="dlg-bulle lui points" aria-label="Ça sonne…"><span></span><span></span><span></span></div>'
+        : `<div class="dlg-bulle lui"><span class="dlg-dit">Messagerie vocale</span>${ech(l.message)}</div>`}</div>
+      <div class="dlg-reponses"><button type="button" class="dlg-btn plein dlg-raccrocher" data-dlg-raccrocher-leurre>Raccrocher</button></div></section>`;
+  }
 
   // L'arrivée d'une réplique : ordre des choix tiré (graine de l'élève + dialogue + réplique + numéro de l'appel) et textes
   // calculés, rangés une fois. Ne bouge plus ensuite.
@@ -201,14 +241,22 @@ export function creerTelephone(T, { personnes = {} } = {}) {
   }
 
   /* ---------------------------------------------------------------- dessin */
+  // Les contacts dans l'ordre alphabétique, comme un répertoire : le bon numéro n'est pas toujours le premier.
   function htmlContacts(E, api) {
-    const L = visibles(api);
+    const L = [...visibles(api), ...leurresVisibles(api)].sort((a, b) => nomContact(a).localeCompare(nomContact(b), 'fr'));
     if (!L.length) return '<p class="note">Aucun numéro à appeler pour l’instant.</p>';
+    const occupe = M.dialogues.find((x) => appelEnCours(E[x.id]));
     return `<ul class="dlg-contacts">${L.map((D) => {
+      if (leurreDe.has(D.id)) {
+        return `<li class="dlg-contact${ui.sel === D.id ? ' choisi' : ''}">
+          <span class="dlg-initiale" aria-hidden="true">${ech(D.nom.slice(0, 1).toUpperCase())}</span>
+          <span class="dlg-qui"><b>${ech(D.nom)}</b>${D.detail ? `<span>${ech(D.detail)}</span>` : ''}</span>
+          ${api.figee || occupe ? '' : `<button type="button" class="dlg-btn plein" data-dlg-appeler="${ech(D.id)}">📞 Appeler</button>`}</li>`;
+      }
       const eD = E[D.id], enCours = appelEnCours(eD), fait = appelRetenu(eD);
       const etat = enCours ? 'Appel en cours' : fait ? 'Appel terminé' : '';
       let bouton;
-      if (enCours && ui.sel === D.id) bouton = '';
+      if ((enCours && ui.sel === D.id) || (occupe && occupe !== D)) bouton = '';
       else if (enCours) bouton = `<button type="button" class="dlg-btn plein" data-dlg-appeler="${ech(D.id)}">Reprendre l’appel</button>`;
       else if (!fait) bouton = `<button type="button" class="dlg-btn plein" data-dlg-appeler="${ech(D.id)}">📞 Appeler</button>`;
       else if (!api.figee && !estEval(D, api) && (api.estProf || (api.rappel && api.rappel(D.id)))) bouton = `<button type="button" class="dlg-btn" data-dlg-appeler="${ech(D.id)}">📞 Rappeler</button>`;
@@ -264,13 +312,14 @@ export function creerTelephone(T, { personnes = {} } = {}) {
   function html(etat, api) {
     const E = etatDe(etat, api);
     // Un appel en cours se retrouve en ouvrant l'écran ; sinon, le journal du dernier appel terminé.
-    if (!ui.sel) {
+    if (!ui.sel && !ui.vide) {
       const L = visibles(api);
       const D = L.find((x) => appelEnCours(E[x.id])) || L.find((x) => appelRetenu(E[x.id]));
       if (D) ui.sel = D.id;
     }
     const D = ui.sel && parId.get(ui.sel);
-    const droite = D && (appelEnCours(E[D.id]) || appelRetenu(E[D.id])) ? htmlAppel(D, E, api)
+    const droite = ui.sel && leurreDe.has(ui.sel) ? htmlLeurre(leurreDe.get(ui.sel))
+      : D && (appelEnCours(E[D.id]) || appelRetenu(E[D.id])) ? htmlAppel(D, E, api)
       : `<div class="dlg-repos"><p>${ech(M.situation || 'Choisis un numéro à appeler.')}</p></div>`;
     return `<div class="dlg" data-dlg>
       <aside class="dlg-gauche"><h2 class="dlg-h">Contacts</h2>${htmlContacts(E, api)}</aside>
@@ -293,11 +342,14 @@ export function creerTelephone(T, { personnes = {} } = {}) {
     }
     function relier() {
       z.querySelectorAll('[data-dlg-appeler]').forEach((b) => b.addEventListener('click', () => appeler(b.dataset.dlgAppeler)));
-      z.querySelectorAll('[data-dlg-journal]').forEach((b) => b.addEventListener('click', () => { ui.sel = b.dataset.dlgJournal; redessiner(); }));
+      z.querySelectorAll('[data-dlg-journal]').forEach((b) => b.addEventListener('click', () => { ui.sel = b.dataset.dlgJournal; ui.vide = false; redessiner(); }));
       z.querySelectorAll('[data-dlg-choix]:not([disabled])').forEach((b) => b.addEventListener('click', () => repondre(b.dataset.dlgChoix)));
       z.querySelector('[data-dlg-raccrocher]')?.addEventListener('click', raccrocher);
+      z.querySelector('[data-dlg-raccrocher-leurre]')?.addEventListener('click', () => { ui.sel = null; ui.attente = false; ui.jeton++; ui.vide = true; redessiner('[data-dlg-appeler]'); });
     }
     function appeler(id) {
+      ui.vide = false;
+      if (leurreDe.has(id)) { appelerLeurre(id); return; }
       const D = parId.get(id);
       if (!D || api.figee) return;
       const eD = E[id] || (E[id] = { appels: [] });
@@ -312,6 +364,24 @@ export function creerTelephone(T, { personnes = {} } = {}) {
         ecrire();
       }
       redessiner('[data-dlg-choix]:not([disabled])');
+    }
+    // Un contact sans dialogue : l'appel est rangé (l'heure compte : avant ou après le bon numéro), la messagerie répond.
+    function appelerLeurre(id) {
+      if (api.figee || M.dialogues.some((x) => appelEnCours(E[x.id]))) return;
+      (E[CLE_LEURRES] || (E[CLE_LEURRES] = [])).push({ id, at: Date.now() });
+      signal(`dialogue:${id}:appeler`);
+      ecrire();
+      ui.sel = id;
+      const ms = delai();
+      if (!ms) { redessiner('[data-dlg-raccrocher-leurre]'); return; }
+      ui.attente = true;
+      const j = ++ui.jeton;
+      redessiner();
+      setTimeout(() => {
+        if (j !== ui.jeton || !z.isConnected) return;
+        ui.attente = false;
+        redessiner('[data-dlg-raccrocher-leurre]');
+      }, ms);
     }
     function repondre(v) {
       if (ui.attente || api.figee) return;              // un double-clic ne dit pas deux répliques
@@ -356,7 +426,7 @@ export function creerTelephone(T, { personnes = {} } = {}) {
 
   return { id: 'telephone', nav: { libelle: M.libelle }, quand: M.quand, situation: M.situation, dialogues: M.dialogues, signaux, etatNeuf, html, brancher,
     // Pour la page d'essai et l'enseignant : oublier la copie jouée par l'enseignant, rouvrir l'écran au repos.
-    oublier() { ui.prof = null; ui.sel = null; ui.attente = false; ui.jeton++; } };
+    oublier() { ui.prof = null; ui.sel = null; ui.attente = false; ui.vide = false; ui.jeton++; } };
 }
 
 const heure = (t) => { const d = new Date(t); return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
