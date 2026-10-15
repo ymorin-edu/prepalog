@@ -6,7 +6,7 @@
 > Lis CLAUDE.md, docs/EN-COURS.md puis docs/briefs/ENT-8.1-action-se-situer.md en entier. Vérifie d'abord que la vue « Localiser » (docs/briefs/MOTEUR-vue-localiser.md) est livrée. ENT-8.1 crée l'univers commun contenus/action.js et l'entreprise n° 8 : récupère le logo d'Action par script (alerte 10) et lis sa licence avant de l'ajouter. Annonce la durée avant de commencer et dis-moi si un point du brief contredit le code.
 > ```
 
-**Statut** : à implémenter
+**Statut** : livré (15/10/2026, `pret: true, ouverture: 'prof'` : Tristan l'essaie à l'écran et l'ouvre lui-même à son groupe)
 **Date du brief** : 15/10/2026
 **Conversation d'origine** : Cowork (Opus), cadrage d'Action du 15/10/2026 — fiches du projet `claude/prepalog-action-cadrage.md` et
 `claude/prepalog-action-deroule-8.1-8.2.md` (décisions de Tristan de 19 h 09 à 19 h 20).
@@ -379,9 +379,81 @@ Graines choisies dans le test, valeurs attendues écrites à la main.
 
 ## Compte rendu *(rempli par Claude Code à la livraison)*
 
+*Rempli le 15/10/2026 par le sous-agent Opus de la phase 3 (chantier Action, `docs/briefs/COORDINATION-action.md`). L'univers
+(`contenus/action.js`), la vue « Localiser » et l'entreprise n° 8 existaient déjà (phases 1 et 2).*
+
 - **Fichiers créés / modifiés** :
+  - `contenus/action-ent81.js` (nouveau) : la carte (`LOCALISER`), les trois fiches, les jalons, les messages de Samia, l'accueil, les options.
+  - `contenus/action-ent81-donnees.js` (nouveau, **hors de la liste prévue**, voir les écarts) : les banques `acteurs` et `situations`, les
+    7 rôles, les 6 étiquettes de la chaîne, le tirage (`TIRAGE`, ordre de départ de la chaîne compris) et les lectures pures de la base.
+  - `contenus/questions/ENT-8.1.js` (nouveau) : « Avant de commencer » (10 questions, 3 + 1 tirées) et A, C, D, E.
+  - `contenus/corriges/ENT-8.1.js` (nouveau) : corrigé commun et corrigé par élève (acteurs, carte lieu par lieu avec région,
+    département et ville, ordre de départ, situations, question E ; Labastide et la situation en plus marquées « bonus »).
+  - `activites/action-se-situer.js` : le squelette d'ENT-8.2 remplacé par la séance.
+  - `outils/test/action-81.mjs` (nouveau bloc) et `outils/test.mjs` (**alerte 7** : deux lignes, `'action-81'` dans `BLOCS` et dans le
+    groupe 1 de `GROUPES`).
+  - `contenus/action.js` **non modifié** (les `etiq` proposés tiennent à l'écran : Nîmes au-dessus, Ensuès en dessous, Gonfreville à gauche).
+  - `activites/index.js` et `outils/test/socle.mjs` (`'ENT-8.1': 'CAP-C1.1'`) : déjà faits par le chantier ENT-8.2, vérifiés, non touchés.
 - **Écarts par rapport au brief** (et pourquoi) :
+  1. **Bloc de tests `action-81`** et non des cas dans `action` (le bloc `action` est celui d'ENT-8.2 ; un bloc par séance, comme
+     `decathlon-74`).
+  2. **Un fichier de données pures en plus** (`contenus/action-ent81-donnees.js`) : la question E lit la 1re situation tirée ; si les
+     questions importaient le contenu (qui les importe), l'import circulaire ferait planter le bloc `questions`, qui charge les fichiers de
+     questions seuls. Même découpage que Decathlon (`decathlon-ent72-donnees.js`). **Conséquence** : `outils/test/tirage-niveaux.mjs` doit
+     inscrire la banque dans `BANQUES_FIGEES` (fichier que ce chantier ne touche pas) :
+     `'contenus/action-ent81-donnees.js': { acteurs: ['geodis', 'lycee', 'client', 'fournisseur', 'magasin', 'transporteur', 'action'], situations: ['s-cartons', 's-chute', 's-etiquette', 's-emplacement', 's-retard', 's-camion', 's-scan', 's-abime'] }`.
+  3. **Question C au geste `localiser:entrepot:departement`** (décision n° 3 du chef de chantier, au lieu du magasin).
+  4. **Texte de fin de la carte** : « Les ronds creux sont les autres entrepôts Action » (la vue les dessine en ronds creux, pas en
+     « points gris »). Message de Samia de l'étape 2 complété d'une phrase (« sa région, puis son département, puis sa ville ») ; message 1 :
+     « ta [[tutrice]] » cliquable.
+  5. **`code-postal`** : cinq villes dont les deux pièges calculés tombent sur de vrais départements (jamais 30, 13, 76, 82) — Paris 75015,
+     Lyon 69003, Dunkerque 59140, Amiens 80090, Metz 57070. Rennes, Bordeaux, Strasbourg et Lille (exemples du brief) sont écartées : leurs
+     codes finissent par « 00 », le piège « deux derniers chiffres » n'y existe pas. Les pièges s'affichent comme le juste, avec le nom
+     (« le 03 (Allier) », « le 06 (Alpes-Maritimes) »).
+  6. **`finFige`** : la phrase générale du chef de chantier (« La carte et les questions de Samia se jouent au premier essai : elles ne se
+     rejouent pas. »).
 - **Décisions prises en route** :
-- **Tests** : bloc / suite entière, nombre de cas, sabotages éprouvés
-- **Commits** :
+  1. La carte est fermée **jusqu'à l'envoi de « Qui est qui ? »** (`fermetures`, message « Après la fiche « Qui est qui ? » »), puis le
+     point d'étape la garde fermée jusqu'à la réponse (`ferme: 'ecran:localiser'`) ; « Continuer » l'ouvre. Une fiche rouverte par
+     « Corriger » ne referme ni la carte ni la fiche suivante (condition : la fiche a été envoyée **une fois**, `envois`).
+  2. « La chaîne » et « Ce que je change » n'apparaissent au menu qu'à leur tour (`quand` de la fiche : carte finie ; chaîne envoyée).
+  3. L'ordre de départ de la chaîne est une **valeur tirée et rangée** (`TIRAGE.valeurs`), re-tirée par `verifier` si elle tombe juste ;
+     « Toi, tu travailles ici » offre les 6 étiquettes **dans ce même ordre de départ** (jamais l'ordre juste : il ne souffle rien).
+  4. Les 7 rôles de « Qui est qui ? » : un ordre tiré par élève, **le même à chaque ligne** (plus simple à lire en CAP) ; les clés des rôles
+     ne nomment pas l'acteur. Les jalons lisent les lignes par **rang**, jamais par un id visible dans la page.
+  5. « Ce que je change » : la situation en plus du confirmé est la **4e ligne** ; les 3 conséquences mélangées par élève et par ligne.
+  6. Jalons de « Ce que je change » rangés **par difficulté** (facile 1, moyenne 1,25, difficile 1,25), quelle que soit la ligne tirée.
+  7. **Contournement d'un défaut du moteur** (`sansNull`, commenté dans `contenus/action-ent81.js`) : le rattrapage des questions au fil
+     (`jalonJuge`, `core/types/entreprise.js` l. 803) lit `.status` de tous les jalons, bonus compris, et écrit une erreur en console sur le
+     `null` d'un cas bonus non reçu — chez **chaque élève standard dès la fin de la carte**. Les jalons bonus d'ENT-8.1 rendent donc « juste »
+     au lieu de `null` chez un élève qui n'est pas confirmé (le moteur ne les appelle nulle part ailleurs pour lui). **Correctif moteur
+     d'une ligne à faire** (`if (r == null) return true`), puis retirer le contournement. Les autres séances à cas bonus peuvent la
+     rencontrer dès qu'une question au fil attend son rattrapage quand les jalons bonus sont atteints (NON vérifié).
+  8. Ouverture : trois visuels séparés (« Sur la route », « Dans l'entrepôt », « Une allée »), crédit sous chaque photo ; `entrepot-sert`
+     montre la photo des racks. Retours d'ouverture écrits par Claude Code (courts, sans leçon).
+- **Tests** : bloc `action-81`, **15 cas** (+ le cas global du lanceur), vert en ≈ 2 min 30 à 1366 × 768, souris sur `boundingBox()`.
+  Graines `a81-juste`, `a81-faux`, `a81-acc`, `a81-rien`, `a81-conf`, valeurs écrites à la main.
+  **Sabotages éprouvés (8, chacun fait tomber au moins un cas, fichiers remis ensuite)** : jalons « Qui est qui ? » inversés (7 cas
+  tombent), jalons de la carte inversés (7), ordre de la chaîne inversé (7), « où tu travailles » inversé (7), « Ce que je change » inversé
+  (7), cas bonus toujours juste (1 : le confirmé), ordre de départ laissé juste et règle retirée (4, dont l'équité sur 300 graines), carte
+  ouverte dès le départ (1).
+  **Non-régression** (`socle dependances localiser questions tirage-niveaux`) : 202 / 205 ; les 3 cas tombés attendent une mise à jour de
+  fichiers de test que ce chantier ne touche pas : (a) `outils/test/socle.mjs` l. 814 : `'10/20 (1/3)'` → `'10/20 (1/4)'` (ENT-8.1 déclare
+  aussi CAP-C1.1, avec DEC-1, QUI-6 et ENT-6.1 ; commentaire l. 813 à suivre) ; (b) `outils/test/tirage-niveaux.mjs` l. 140-142 : colonnes
+  `['2', '4', '6', '7', '8']` et en-têtes `[…, 'Decathlon', 'Action']` (ENT-8.1 déclare `niveauxPrevus`) ; (c) `BANQUES_FIGEES` (écart
+  n° 2), avec aussi `contenus/action-ent82.js` (banques d'ENT-8.2). Captures (document, « Qui est qui ? », carte à l'étape département, fin de la carte, « La chaîne »,
+  « Ce que je change », bandeau de fin) prises par le bloc avec `CAPTURES_ENT81=<dossier>`.
+- **Commits** : aucun (le chef de chantier relit et commite).
 - **Reste ouvert** :
+  1. **Textes à relire à l'écran par Tristan** (construits par Cowork ou par Claude Code) : le document « Action et Geodis en bref » ; les
+     7 acteurs et leurs rôles (le transporteur, la distinction Action / magasin) ; les 8 situations et leurs 3 conséquences ; les 6
+     étiquettes de la chaîne ; les 10 questions d'ouverture et leurs retours ; A, C, D, E et leurs retours ; les 5 messages de Samia ;
+     le texte de fin de la carte ; l'accueil.
+  2. **À regarder à l'écran (moteur, pas la séance)** : au niveau standard, le panneau de la carte écrit « Ensuès-la-Redonne,
+     Bouches-du-Rhône (13) » **avant** l'étape « département » : le jalon revient à lire le numéro sur la carte (c'est le choix de la vue,
+     §2.5 du brief moteur ; seul le confirmé n'a que la ville). Après la réponse au point d'étape, l'entrée « Carte de France » du menu reste
+     grisée jusqu'à « Continuer » ou à un autre clic de menu ; après « Voir le bilan » de la carte, « La chaîne » n'apparaît au menu qu'à la
+     navigation suivante (la carte « Nouveau message » de Samia y mène, avec le bouton « Ouvrir la fiche »).
+  3. Les trois mises à jour de tests de la non-régression (a, b, c ci-dessus) : sans elles, `socle` et `tirage-niveaux` tombent.
+  4. Le correctif moteur de `jalonJuge` (décision n° 7).
+  5. Trame et cours d'une demi-page (Cowork, après validation à l'écran).
