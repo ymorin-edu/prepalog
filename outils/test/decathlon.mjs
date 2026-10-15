@@ -1106,7 +1106,7 @@ await v('ENT-7.3 : données — chiffre de contrôle PRPU 530641 → 3, CO₂ à
 });
 
 // ─────────────────────────────────────────────────────────── le montage et le menu
-await v('ENT-7.3 : montage et menu — brouillon (pret: false), pas d’erreur de chargement ; au départ ni comparateur n° 2, ni ordre n° 2, ni téléphone, carte sans marque, aucune pastille faite', async () => {
+await v('ENT-7.3 : montage et menu — livrée (pret: true, ouverture « prof », fermée aux élèves tant que l’enseignant ne l’a pas cochée), pas d’erreur de chargement ; au départ ni comparateur n° 2, ni ordre n° 2, ni téléphone, carte sans marque, aucune pastille faite', async () => {
   const m = await pg.evaluate(async () => {
     const A = await import('/activites/decathlon-barge-arretee.js');
     const R = await import('/activites/index.js');
@@ -1114,7 +1114,8 @@ await v('ENT-7.3 : montage et menu — brouillon (pret: false), pas d’erreur d
       prevus: A.meta.niveauxPrevus, precedente: A.meta.precedente, enEchec: (R.activitesEnEchec ? R.activitesEnEchec() : []).map((x) => x.id || x) };
   });
   egal([m.pret, m.code, m.temps, m.bareme, m.niveaux, m.comp, m.prevus, m.precedente],
-    [false, 'ENT-7.3', 'erreur', 20, ['1re'], ['C2.6'], ['confirme'], 'decathlon-ordre-transport'], 'meta');
+    [true, 'ENT-7.3', 'erreur', 20, ['1re'], ['C2.6'], ['confirme'], 'decathlon-ordre-transport'], 'meta');
+  egal(m.ouverture, 'prof', 'ouverture réservée à l’enseignant');
   egal(m.enEchec, [], 'séances écartées du registre');
   await monter3({ uid: 'dk73-menu', db: { tirages: { [ID3]: tirage3() } } });
   const mn = await menu3();

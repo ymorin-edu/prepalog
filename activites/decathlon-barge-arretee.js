@@ -9,7 +9,7 @@
 //
 // 7 jalons pondérés (somme 17) + 3 questions notées (`part: 3`), somme = 20 (`bareme: 20`), poids validés par Tristan le 15/10/2026.
 // Pas de `correction` : `suiteAuBilan` ouvre la suite quand tout est jugé.
-// EN CONSTRUCTION (`pret: false`) : lot 1 livré le 15/10/2026 ; la livraison (`pret: true, ouverture: 'prof'`) vient après les pièges et les sabotages.
+// Livrée le 15/10/2026 (`pret: true, ouverture: 'prof'`) : Tristan l'essaie à l'écran et l'ouvre lui-même à son groupe.
 
 import { seanceEntreprise } from '../core/types/seance-entreprise.js';
 import * as DECATHLON from '../contenus/decathlon.js';
@@ -29,7 +29,8 @@ const s = seanceEntreprise(DECATHLON, SEANCE, {
   suiteAuBilan: true,
   niveauxPrevus: ['confirme'],   // bonus du confirmé : une cinquième offre au comparateur n° 2
   questions: 'ENT-7.3',
-  pret: false,
+  pret: true,
+  ouverture: 'prof',
 }, SEANCE.OPTIONS);
 export const meta = s.meta;
 export const rendre = s.rendre;

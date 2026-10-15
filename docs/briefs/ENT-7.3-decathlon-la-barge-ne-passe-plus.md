@@ -6,7 +6,7 @@
 > Lis docs/EN-COURS.md puis docs/briefs/ENT-7.3-decathlon-la-barge-ne-passe-plus.md. Fais d'abord l'état des lieux du §7 en lecture seule (deuxième comparateur après l'aléa, second ordre de transport, ordre des courriels jugé à l'heure, carte avec l'écluse barrée) et dis-moi ce qui manque. Annonce la durée avant de commencer et dis-moi si un point du brief contredit le code. Ne construis pas avant que Tristan ait tranché le §11, en particulier le n° 1.
 > ```
 
-**Statut** : à implémenter
+**Statut** : livré (15/10/2026)
 **Date du brief** : 13/10/2026
 **Conversation d'origine** : Cowork (Opus) ; cadrage (décisions 5, 9, 14), maquette (décisions 16 à 21, **20 = le déroulé de cette
 séance**). **À lire avec ENT-7.1 et ENT-7.2** (univers, CO₂, comparateur, ordre, courriel, dialogue : non répétés ici).
@@ -252,21 +252,55 @@ partir en début de séance avec un chronomètre de l'enseignant).
 
 ## 11. Questions ouvertes
 
-1. [ ] **Premier choix : (A) Claire tranche (recommandé) ou (B) décision 20 à la lettre avec la parade** ?
-2. [ ] Cause de l'arrêt : **avarie** (imprévisible, force majeure) plutôt que travaux programmés ? (oui)
-3. [ ] Part des questions au fil : (a) ou (b) (§5) ? (b)
-4. [ ] Question d'ouverture d4 (art. 1103) : la garder malgré qu'elle souffle « il faut annuler » ? (non, la remplacer)
-5. [ ] RailCo dans le carnet d'adresses (on peut lui commander, l'erreur va jusqu'au bout) ? (non : hors liste, pas dans le carnet)
-6. [ ] Durée (≈ 50 min) : acceptable, ou couper ?
-7. [ ] Annulation **sans frais** dans la réponse de Contargo (cohérent avec la force majeure) ? (oui)
+1. [x] **Premier choix : (A) Claire tranche (recommandé) ou (B) décision 20 à la lettre avec la parade** ? → **(A)** (Tristan, 15/10/2026)
+2. [x] Cause de l'arrêt : **avarie** (imprévisible, force majeure) plutôt que travaux programmés ? → **oui**
+3. [x] Part des questions au fil : (a) ou (b) (§5) ? → **(b)** : Qualifier 3 · Rechoisir 4 · Sécuriser 3 · Annuler 4 · Prévenir 2 · Forme 1 · questions 3
+4. [x] Question d'ouverture d4 (art. 1103) : la garder malgré qu'elle souffle « il faut annuler » ? → **non, remplacée** (art. 1231-1 : « Un transporteur te confirme un transport par écrit, puis ne vient pas… »)
+5. [x] RailCo dans le carnet d'adresses (on peut lui commander, l'erreur va jusqu'au bout) ? → **non** : hors liste, pas dans le carnet
+6. [x] Durée (≈ 50 min) : acceptable, ou couper ? → **à mesurer à l'écran** (essai de Tristan)
+7. [x] Annulation **sans frais** dans la réponse de Contargo (cohérent avec la force majeure) ? → **oui**
 
 ---
 
-## Compte rendu *(rempli par Claude Code à la livraison)*
+## Compte rendu *(rempli par Claude Code à la livraison, 15/10/2026)*
 
-- **Fichiers créés / modifiés** :
+- **Fichiers créés / modifiés** : `activites/decathlon-barge-arretee.js` (la séance, `pret: true, ouverture: 'prof'`) ; `contenus/decathlon-ent73.js` (documents, comparateurs n° 1 et n° 2,
+  ordres n° 1 et n° 2, carnet et réponses, téléphone, messages et déclencheurs, jalons, pastilles, carte, accueil) ; `contenus/decathlon-ent73-donnees.js` (données pures : tirage,
+  offres, attendus) ; `contenus/questions/ENT-7.3.js` ; `contenus/corriges/ENT-7.3.js` ; `activites/index.js` (une ligne) ; **tests** : `outils/test/decathlon.mjs` (20 cas « ENT-7.3 »
+  ajoutés, **aucun cas existant réécrit**) et `outils/test/tirage-niveaux.mjs` (**touché** : une entrée dans `BANQUES_FIGEES`, comme 7.1 et 7.2). Rien dans `core/` ni `styles/`,
+  rien dans l'univers `contenus/decathlon.js` (lu seulement). Pas de trame (Cowork).
 - **Écarts par rapport au brief** :
-- **Décisions prises en route** :
-- **Tests** :
-- **Commits** :
-- **Reste ouvert** :
+  - **Banque « Avant de commencer » : d3 réécrite.** Le brief proposait « Oui, la loi l'y oblige » (rail, L. 1431-3). C'est faux pour un transport qui part d'Anvers (3e alinéa : l'étranger
+    est renvoyé à plus tard, lu sur Légifrance le 13/10, voir ENT-7.1). La juste devient « Pas encore : … ici, c'est le cahier des charges de Decathlon qui l'exige ». **À valider.**
+  - **d4 (art. 1103) remplacée**, comme décidé, par « Un transporteur te confirme un transport par écrit, puis ne vient pas… » (art. 1231-1) : texte donné par Tristan.
+  - **Question au fil n° 5** : le brief disait « vendredi au lieu de mardi » (incohérent avec l'étape 1) ; écrite « vendredi à 15 h au lieu de 9 h ». Elle est en réflexion libre, au bilan, comme
+    « Pour réfléchir » (les deux arrivent au raccrochage).
+  - **p2 (écluse)** : le schéma SVG de Cowork n'est pas dans le dépôt ; une courte explication en texte le remplace (`DOC_ECLUSE`).
+  - **CO₂ du code** : à 15,18 t, route 130, barge 69, rail 76 kg (et RailCo 63 = barge − 6), pas les 128 / 70 / 81 du §6 (distances provisoires). L'ordre barge < rail < route tient pour tout poids de 13,5 à 15,8 t.
+  - **« Ordre n° 1 joint au rail »** ne coûte que « sécuriser » (le rail confirme l'ordre reçu, c'est lui le « nouveau prestataire »), pas « annuler » : une erreur ne se paie qu'une fois.
+  - **Courriel au rail sans aucune pièce** : « sécuriser » ET « annuler » faux (le rail ne confirme rien : annuler Contargo laisserait le conteneur sans transport). **À valider.**
+  - **Téléphone** ouvert dès qu'un ordre (n° 1 ou n° 2) est parti chez un prestataire autre que Contargo après l'ordre n° 1 (trouvé en écrivant les pièges : l'ordre n° 1 renvoyé au rail laissait le
+    Téléphone fermé et l'élève sans bilan).
+  - **« Annuler au bon moment » faux seulement après l'appel** quand l'élève n'annule jamais (« à faire » avant : l'élève qui écrit d'abord au rail, l'ordre juste, n'a pas de faux provisoire au Repérage).
+    Une annulation envoyée avant la confirmation du nouveau prestataire est fausse tout de suite. L'ordre des envois se juge sur les **heures** (`at`), jamais sur la place dans le tableau.
+  - **Annulation reconnue** : un courriel à Contargo, après l'ordre n° 1, où le mot « annul » figure dans l'**objet ou le corps** et qui nomme BARGE-2027-0311, le n° du conteneur de l'avis ou celui de l'ordre.
+  - **Poids du jalon Rechoisir** : 4 = RailCo hors liste **1,5** + rail retenu **2,5** (validés par Tristan). Total 17 + 3 de questions = 20.
+  - **Sécuriser / Forme** jugés dès que les courriels existent (« sécuriser » : dès qu'un courriel est parti chez un autre prestataire ; « forme » : à l'appel fini, ou quand les deux courriels existent).
+  - **Carte** : marque de l'écluse de Kain sans couleur (comme le moteur la dessine), `coupe: 'barge'`, visible dès l'imprévu. **Confirmé** : la 5e offre est aux DEUX comparateurs (banque `b73-*`, 3 pièces) ;
+    jugée au comparateur n° 2 seulement. **Comparateur n° 2** : le tableau ③ prix et CO₂ est conservé (le brief liste ces colonnes) mais n'est pas jugé.
+  - **Parcours** : `parcours` + `precedente: 7.2` + `suiteAuBilan` (pas de `correction`).
+- **Décisions prises en route** : voir `docs/decisions.md` (15/10, ENT-7.3). Messages semés à la date du scénario (lundi 01/02/2027) ; les envois et réponses de l'élève gardent la date réelle
+  (limite connue de la Messagerie, comme en 7.2 : l'imprévu se lit au-dessus de la confirmation de Contargo). Pièces numérotées OT-2027-0151 (n° 1) et OT-2027-0158 (n° 2), commande BARGE-2027-0311.
+- **Vérifié / construit** : **vérifié** : chiffre de contrôle PRPU 530641 = 3 à la main ; CO₂ sur les kilomètres de la carte ; Code civil art. 1218 **lu en partie** sur Légifrance le 15/10 (structure : définition,
+  empêchement temporaire, définitif) ; l'Escaut fermé cinq semaines en 2024 (communiqué Contargo, repris du brief). **SUPPOSÉ** : le mot à mot des art. 1218 et 1231-1 recopiés dans les documents
+  (l'outil de lecture ne restitue pas le texte ; 1231-1 non lu sur Légifrance) : **à relire**. **Construit** : l'avarie de l'écluse de Kain (cause, dates), tous les messages de Contargo, les offres, RailCo, le chef de quai,
+  Claire (dit en pied de chaque document).
+- **Tests** : bloc `decathlon` 52/52 (20 cas ENT-7.3, ~110 s) ; suite entière 1469/1469 (377 s) au lot 2. **13 sabotages, chacun fait tomber au moins un cas** : (a) jalon « annuler » jugé sur la place dans le tableau (le cas
+  des heures inversées, fabriqué : à l'écran l'ordre du tableau est toujours celui des heures) ; (b) aléa au premier courriel quel qu'il soit (2 cas) ; (c) aléa seulement sur Contargo (2) ; (d) jalon 1 « oui » (7) ; (e) jalon 3 accepte la
+  route (2) ; (f) jalon 4 accepte l'ordre n° 1 (2) ; (g) annulation acceptée au rail (1) ; (h) 3 reprises acceptées (2) ; (i) sans vouvoiement (1) ; (j) Claire dit « C'est juste » (3) ; (k) cases de l'ordre n° 2 non figées (5) ;
+  (l) bonus toujours juste (1) ; (m) RailCo plus émetteur que le rail, avec et sans le contrôle de la séance (2).
+- **Commits** : voir `git log` (séance en brouillon, pièges et sabotages, livraison).
+- **Reste ouvert** : (1) valider la d3 réécrite (L. 1431-3, Anvers) et la question de remplacement de d4 (art. 1231-1) ; (2) relire les art. 1218 et 1231-1 sur Légifrance (mot à mot supposé) ;
+  (3) la question au fil n° 1 (force majeure) dit « La barge ne part pas » et l'élève peut encore modifier sa réponse « Tient la date ? » avant l'envoi : la garder, ou la passer au bilan (`apres: 'bilan'`) ;
+  (4) trame courte (Cowork) ; (5) durée (≈ 50 min) à mesurer à l'écran ; (6) le jalon bonus n'est pas testé sur toute la chaîne confirmé (testé jalon par jalon et en note jouée sur le comparateur n° 2 seul : 9,5 contre 9) ;
+  (7) courriel au rail sans pièce : « sécuriser » et « annuler » tous deux faux, à valider.
