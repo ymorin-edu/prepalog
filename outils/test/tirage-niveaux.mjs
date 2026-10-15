@@ -541,6 +541,12 @@ const BANQUES_FIGEES = {
   'contenus/decathlon-ent73-donnees.js': {
     bonus: ['b73-heure', 'b73-homonyme', 'b73-suivant'],
   },
+  // ENT-7.4 Decathlon, évaluation (15/10/2026) : l'offre en retard, l'offre hors liste, les instructions fausses de l'ordre.
+  'contenus/decathlon-ent74-donnees.js': {
+    retard: ['rt4-barge', 'rt4-rail'],
+    horsListe: ['hl4-eflux', 'hl4-bateliers', 'hl4-railco', 'hl4-eclair'],
+    instructions: ['in4-froid', 'in4-adr', 'in4-douane'],
+  },
 };
 await v('Tirage : banques stables — aucun id d’une banque déclarée ne disparaît (liste figée), toute banque déclarée est inscrite', async () => {
   const fs = await import('node:fs');

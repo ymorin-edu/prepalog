@@ -55,6 +55,8 @@ export const EQUIPE = {
   claire: { nom: 'Claire Vasseur', role: 'responsable transport amont (ta tutrice)', appel: 'Claire', registre: 'tu' },
   // Ajouté par ENT-7.2 (14/10/2026) : le chef de quai de Rouvignies, personnage CONSTRUIT (nom choisi par Tristan). Tu poli entre collègues.
   mehdi: { nom: 'Mehdi Benali', role: 'chef de quai, entrepôt de Rouvignies', appel: 'Mehdi', registre: 'tu' },
+  // Ajouté par ENT-7.4 (15/10/2026) : le chef de quai de Dourges, personnage CONSTRUIT (nom proposé à Tristan, à valider). Tu entre collègues.
+  yanis: { nom: 'Yanis Haddad', role: 'chef de quai, entrepôt de Dourges (Delta 3)', appel: 'Yanis', registre: 'tu' },
 };
 export const mailDe = (id) => `${id}@${VOCAB.mailDomain}`;
 

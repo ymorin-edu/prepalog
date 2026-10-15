@@ -6,7 +6,7 @@
 > Lis docs/EN-COURS.md puis docs/briefs/ENT-7.4-decathlon-evaluation-dourges.md. Fais d'abord l'état des lieux du §7 en lecture seule (évaluation sur les vues de 7.1 à 7.3, Dialogue à choix en mode évaluation, part de l'ouverture notée à 3) et dis-moi ce qui manque. Annonce la durée avant de commencer et dis-moi si un point du brief contredit le code.
 > ```
 
-**Statut** : à implémenter
+**Statut** : livré (15/10/2026)
 **Date du brief** : 13/10/2026
 **Conversation d'origine** : Cowork (Opus) ; décisions 5, 10, 14, 15 (cadrage) et 16 à 21 (maquette). **À lire avec ENT-7.1 à 7.3.**
 **Modèle** : Sonnet.
@@ -179,11 +179,31 @@ le bilan ; 50 min tenues.
 
 ---
 
-## Compte rendu *(rempli par Claude Code à la livraison)*
+## Compte rendu *(rempli par Claude Code à la livraison, 15/10/2026)*
 
-- **Fichiers créés / modifiés** :
+- **Fichiers créés / modifiés** : `activites/decathlon-evaluation-dourges.js` ; `contenus/decathlon-ent74.js` (séance), `contenus/decathlon-ent74-donnees.js` (données pures, tirage, équité) ;
+  `contenus/questions/ENT-7.4.js` ; `contenus/corriges/ENT-7.4.js` ; `outils/test/decathlon-74.mjs` (nouveau bloc, 10 cas) ; modifiés : `contenus/decathlon.js` (le chef de quai
+  `yanis` dans `EQUIPE`), `activites/index.js` (une ligne), `outils/test.mjs` (le bloc dans `BLOCS` et dans `GROUPES`, groupe 1), `outils/test/tirage-niveaux.mjs`
+  (les trois banques inscrites dans `BANQUES_FIGEES`). Aucun fichier du moteur (`core/`) ni `styles/` touché.
 - **Écarts par rapport au brief** :
-- **Décisions prises en route** :
-- **Tests** :
-- **Commits** :
-- **Reste ouvert** :
+  1. **Rail** : le brief dit « Rail Fret Benelux » ; le code (7.1 à 7.3) a « Rail Flandres-Artois » : gardé, pour ne pas changer de prestataire d'une séance à l'autre.
+  2. **Préfixe du conteneur** : le brief donne « PLGU 602215 8 » ; PLGU est attribué à une société réelle (vérifié le 13/10/2026) : `PRPU 602215 5` (chiffre de contrôle calculé, vérifié à la main).
+  3. **CO₂** : calculé sur les kilomètres de la carte vers Dourges (route 153, barge 263 + 3, rail 162 + 3) : à 13,95 t, route 109, barge 76, rail 39 kg (le brief disait 107 / 82 / 49).
+  4. **Prix** : route 610-650, rail 660-710, barge 720-750 (le brief : 610-670, 660-720, 690-750 ; ces plages se chevauchent et rendaient la route parfois pas la moins chère, ou deux prix égaux).
+  5. **Question k-d1** (information CO₂) : le brief proposait « Le prestataire informe Decathlon » ; or le trajet part d'Anvers, et le 3e alinéa de L1431-3 renvoie à plus tard les transports qui partent de
+     l'étranger (lu sur Légifrance le 13/10/2026). C'est la question d3 d'ENT-7.3, adaptée : « Pas encore : c'est le cahier des charges de Decathlon qui l'exige ».
+  6. **Jalons** : le brief donne les poids par groupe ; répartis en 14 jalons (besoin 1 + 1, tri 1,5 + 1,5, comparaison 1,5 + 1,5, décision 1 + 1, ordre 2 + 1 + 1, courriel 1,5 + 0,5, appel 1) : aucun
+     jalon à 0, la forme du courriel pèse 0,5 point. Somme 17 + 3 de questions = 20.
+  7. **Compétences** : `competences: ['C2.6']` (C2.6.1 et C2.6.2 n'existent pas dans `core/competences.js`, comme 7.1 à 7.3). Pas de `parcours` ni `precedente` (comme Picard 4.4 et Cdiscount 2.5) :
+     la séance s'ouvre quand l'enseignant la coche.
+  8. **Aucun contact « leurre »** au téléphone (pas de messagerie de Claire ou de Contargo à appeler par erreur) ; pas de lexique (`lexique: {}`) : une évaluation n'a aucune aide.
+- **Décisions prises en route** : le chef de quai de Dourges s'appelle **Yanis Haddad** (nom construit, proposé : à valider) ; l'« offre commandée » (celle dont le chef de quai donne l'arrivée) est le transporteur de
+  l'ordre de l'élève, à défaut l'offre qu'il a retenue, à défaut la bonne réponse ; la hors liste retenue fait tomber le tri, la décision, le transporteur de l'ordre et le destinataire du courriel (5 points) mais pas l'appel.
+  La banque d'offres en retard est tirée en premier, la hors liste en second : le contrôle d'équité refuse un jeu où deux offres arrivent à la même heure (E-Flux arrive à 11 h, pas à 9 h comme la barge).
+- **Tests** : bloc `decathlon-74` (10 cas, 10 s) : données (200 élèves, 0 secours, 50 % de barge en retard, numéros ≠ 7.1 à 7.3, numéro « lu à l'envers » jamais valable) ; montage ; inaction 0 ; parcours juste 20 / 20 pour les
+  deux témoins (`rt4-barge` → rail, `rt4-rail` → barge), joué à l'écran (souris, clavier, téléphone) ; l'habitude de la barge (17,5) ; chaque piège fait tomber son jalon seul ; la route retenue et commandée à l'écran ; « Avant de commencer »
+  (3 / 2 / 1,5 / 0). Éprouvés par sabotage dans les deux sens (`commandee` toujours la bonne réponse ; décision toujours juste ; transporteur jugé sur la bonne réponse). Suite entière : 1 493 cas verts.
+  **Touché** : `outils/test.mjs` (bloc ajouté) et `outils/test/tirage-niveaux.mjs` (banques inscrites) ; aucun cas existant réécrit.
+- **Commits** : voir `git log` (« ENT-7.4 : … »).
+- **Reste ouvert** : (1) Tristan l'essaie à l'écran puis l'ouvre à son groupe (`pret: true, ouverture: 'prof'`) ; (2) valider le nom Yanis Haddad ; (3) relire sur Légifrance les art. 1218 et 1366 du Code civil (mot à mot supposé, comme en 7.3) :
+  les questions k-d2 et k-d3 en dépendent ; (4) le code `ENT-7.4` est provisoire, comme 7.1 à 7.3 ; (5) pas de trame ni de fiche enseignant (brief §9 : fiche d'une page à faire par Cowork).

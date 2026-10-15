@@ -74,6 +74,7 @@ export const ACTIVITES = [
   () => import('./decathlon-choix-transporteur.js'),
   () => import('./decathlon-ordre-transport.js'),
   () => import('./decathlon-barge-arretee.js'),
+  () => import('./decathlon-evaluation-dourges.js'),
 ];
 
 // Pictogrammes des rubriques. Une seule grille pour les dix : trait de 1,6 px, bouts et
