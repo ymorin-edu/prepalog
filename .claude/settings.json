@@ -27,5 +27,27 @@
       "Bash(git checkout -- :*)",
       "Bash(git rebase:*)"
     ]
+  },
+  "hooks": {
+    "Notification": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \"$CLAUDE_PROJECT_DIR/.claude/alerte.ps1\" besoin"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \"$CLAUDE_PROJECT_DIR/.claude/alerte.ps1\" fin"
+          }
+        ]
+      }
+    ]
   }
 }
