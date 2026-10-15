@@ -176,7 +176,7 @@ tranché l'option B).
 - **Commits** : `f4f63dd` (moteur, fiche, tests), `250c6bb` (les 21 séances), `24e2062` (correction du socle),
   puis la documentation.
 - **Reste ouvert** : Tristan ouvre les séances à son groupe CAP dans « Conduite de séance » (elles restent
-  fermées : rien n'est visible des élèves tant qu'il ne coche pas). Hors brief, encore au chantier 12 de
-  `docs/chantiers.md` : défaut de niveau d'un groupe, contrôle « référentiel 2de sans évaluation ». Aucune
-  évaluation CAP (tout au coefficient 1), aucune règle Firebase touchée.
+  fermées : rien n'est visible des élèves tant qu'il ne coche pas). Les deux points du chantier 12 hors de ce
+  brief (niveau d'un groupe à choisir, avis « OTM / AGOrA de 2de sans évaluation ») ont été livrés le même jour :
+  `docs/chantiers.md` §12. Aucune évaluation CAP (tout au coefficient 1), aucune règle Firebase touchée.
 
