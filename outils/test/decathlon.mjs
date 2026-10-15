@@ -917,6 +917,317 @@ await v('ENT-7.2 : documents — l’avis, le cahier et le devis portent les val
   vrai(PRIS_MSG.test(tout) === false, 'un document dit « juste / faux / correct / erreur »');
 });
 
+// ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+// ENT-7.3 — Decathlon, « la barge ne passe plus » (brief `docs/briefs/ENT-7.3-decathlon-la-barge-ne-passe-plus.md` §8, décisions du 15/10/2026).
+// LOT 1 : montage et menu, parcours juste 20 / 20 joué à l'écran, inaction 0, pas de point avant l'aléa. (Pièges et sabotages : lot 2.)
+// Valeurs ÉCRITES À LA MAIN (calculées par le coordinateur) :
+//   chiffre de contrôle ISO 6346 : PRPU 530641 → 3 ; élève TÉMOIN (tirage posé à la main) : conteneur « PRPU 530641 3 », scellé « DC 0 771 518 »,
+//   poids brut 15 180 kg, référence PO-ROU-2027-0523, route 690 €, barge 760 €, rail 800 €, RailCo Express 610 €.
+//   CO₂ à 15,18 t vers Rouvignies (route 168 km ; barge 194 + camion 13 ; rail 162 + camion 46) : route 130, barge 69, rail 76 kg ; RailCo = barge − 6 = 63 kg.
+//   Avant l'aléa les quatre offres tiennent la date (jeudi 11/02 14 h) ; après : la barge ne part pas ; bonne réponse = le RAIL (76 kg, entre barge et route).
+// Poids (15/10/2026) : qualifier 3 · RailCo hors liste 1,5 · rail retenu 2,5 · sécuriser 3 · annuler au bon moment 4 · prévenir le quai 2 · forme 1 ; questions 1 + 1 + 1.
+// ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+const ID3 = 'decathlon-barge-arretee';
+const REP_OUV3 = { p1: 'bateaux', p2: 'niveau', p3: 'courriel', p4: 'engage', p5: 'arrets', d1: 'non', d2: 'oui', d3: 'cahier', d4: 'reparer' };
+const tirage3 = (o = {}) => ({ graine: `temoin73|${ID3}`, pieces: { bonus: [] }, difficultes: { bonus: {} }, ...(o.bonus ? { bonus: { bonus: o.bonus } } : {}),
+  valeurs: { serie: 0, scelle: 771518, poids: 15180, ref: 523, prixRoute: 690, prixBarge: 760, prixRail: 800, ...(o.valeurs || {}) }, essai: 0, secours: false, at: 1 });
+const monter3 = (o = {}) => pg.evaluate(async (o) => {
+  const A = await import('/activites/decathlon-barge-arretee.js');
+  document.querySelector('#fTest')?.remove();
+  const hote = document.createElement('div'); hote.id = 'fTest'; document.body.prepend(hote);
+  const db = o.db ? JSON.parse(JSON.stringify(o.db)) : {};
+  if (o.rep) {
+    const Q = ((db.questions = db.questions || {})[o.id] = db.questions[o.id] || {});
+    for (const [id, r] of Object.entries(o.rep)) if (!Q[id]) Q[id] = { arrivee: 1, premiere: r, duree: 1 };
+  }
+  window.__f = { db, enregistres: [] };
+  A.rendre(hote, {
+    meta: A.meta, aisance: o.aisance || 'standard',
+    profil: { prenom: 'Lea', nom: 'Test', role: o.role || 'eleve', uid: o.uid || 'dk73' },
+    jeu: { etat: () => db, sauver: () => {} },
+    enregistrer: (r) => { window.__f.enregistres.push(JSON.parse(JSON.stringify(r))); }, quitter: () => {}, codeStock: 'DK',
+    lireScore: async () => null, rendreCopie: async () => ({ rendu: Date.now() }),
+  });
+  return JSON.parse(JSON.stringify(db));
+}, { id: ID3, rep: o.sansOuverture ? null : REP_OUV3, ...o });
+
+const BONNES3 = { 'force-majeure': 'force-majeure', 'railco-hors-liste': 'verifie', 'ce-qui-a-change': 'date' };
+// Répond au panneau ouvert (puis reprend), tant qu'il y en a un. Les questions libres reçoivent une phrase.
+async function qrep3(choix = BONNES3) {
+  for (let i = 0; i < 6; i++) {
+    const id = await pg.$eval(`${Z} [data-q-panneau]`, (e) => e.dataset.qPanneau).catch(() => null);
+    if (!id) return;
+    if (await present(`[data-q-libre="${id}"]`)) await pg.fill(`${Z} [data-q-libre="${id}"]`, 'Le quai, les magasins.');
+    else await pg.click(`${Z} [data-q-choix="${choix[id]}"][data-q="${id}"]`);
+    await pg.click(`${Z} [data-q-repondre="${id}"]`);
+    await pg.click(`${Z} [data-q-reprendre]`);
+    await pause();
+  }
+}
+// Le point d'étape de Claire après le comparateur n° 2 (une question), puis « Continuer ».
+async function etape3(v = 'date') {
+  await aller('etape:avant-ordre-2');
+  await pg.click(`${Z} [data-q-choix="${v}"][data-q="ce-qui-a-change"]`);
+  await pg.click(`${Z} [data-q-repondre="ce-qui-a-change"]`);
+  await pause();
+  await pg.click(`${Z} [data-q-continuer]`);
+  await pause();
+}
+const adresses3 = () => pg.evaluate(async () => {
+  const D = await import('/contenus/decathlon-ent73-donnees.js');
+  const J = D.jeuEleve(window.__f.db);
+  return Object.fromEntries(J.offres.map((o) => [o.slot, { prix: D.casePrix(J, o.slot), co2: D.caseCO2(J, o.slot) }]));
+});
+// Remplit un comparateur (n° 1 : écran `fiche` ; n° 2 : `fiche:cmp2`) comme un élève, puis l'envoie.
+async function comparateur3(ecran, r, { envoi = true } = {}) {
+  await aller(ecran);
+  const saisir = async (sel, t) => { await pg.fill(`${Z} ${sel}`, String(t)); await pg.dispatchEvent(`${Z} ${sel}`, 'change'); await pause(30); await qrep3(); };
+  if (r.limite) await saisir('#fi-limite', r.limite);
+  if (r.heure) await saisir('#fi-heure', r.heure);
+  if (r.budget) await saisir('#fi-budget', r.budget);
+  if (r.critere) { await pg.selectOption(`${Z} #fi-critere`, r.critere); await pause(); await qrep3(); }
+  for (const [slot, t] of Object.entries(r.tri || {})) {
+    for (const col of ['liste', 'date']) {
+      if (t[col] == null) continue;
+      await pg.click(`${Z} [data-ouinon="tri|${slot}|${col}|${t[col] ? 1 : 0}"]`);
+      await pause(30);
+      await qrep3();
+    }
+  }
+  const A = await adresses3();
+  for (const [slot, x] of Object.entries(r.chiffres || {})) {
+    if (x.prix != null) await saisir(`[data-gr="${A[slot].prix}"]`, x.prix);
+    if (x.co2 != null) await saisir(`[data-gr="${A[slot].co2}"]`, x.co2);
+  }
+  if (r.retenue) { await pg.selectOption(`${Z} #fi-retenue`, r.retenue); await pause(); await qrep3(); }
+  if (r.justif) { await pg.check(`${Z} input[name="fi-justif"][value="${r.justif}"]`); await pause(); await qrep3(); }
+  if (!envoi) return;
+  await pg.click(`${Z} [data-fiche-envoyer]`);
+  await pause(60);
+  if (await present('[data-confirme-oui]')) { await pg.click(`${Z} [data-confirme-oui]`); await pause(); }
+  await qrep3();
+}
+// Un ordre de transport (n° 1 : `fiche:ot1` ; n° 2 : `fiche:ot2`, dont les cases du conteneur sont reprises et figées), enregistré.
+async function ordre3(ecran, r, { enregistrer = true } = {}) {
+  await aller(ecran);
+  const saisir = async (champ, t) => { await pg.fill(`${Z} #fi-${champ}`, String(t)); await pg.dispatchEvent(`${Z} #fi-${champ}`, 'change'); await pause(30); await qrep3(); };
+  const liste = async (champ, t) => { await pg.selectOption(`${Z} #fi-${champ}`, t); await pause(30); await qrep3(); };
+  if (r.presta) await liste('presta', r.presta);
+  if (r.cont != null) await saisir('cont', r.cont);
+  if (r.type) await liste('type', r.type);
+  if (r.scelle != null) await saisir('scelle', r.scelle);
+  if (r.poids != null) await saisir('poids', r.poids);
+  if (r.enl) await liste('enl', r.enl);
+  if (r.dispo) await saisir('dispo', r.dispo);
+  if (r.ref != null) await saisir('ref', r.ref);
+  if (r.liv) await liste('liv', r.liv);
+  if (r.limd) await saisir('limd', r.limd);
+  if (r.limh) await saisir('limh', r.limh);
+  for (const i of r.inst || []) { await pg.check(`${Z} input[data-fiche-case="inst"][value="${i}"]`); await pause(30); await qrep3(); }
+  if (!enregistrer) return;
+  await pg.click(`${Z} [data-fiche-envoyer]`);
+  await pause(60);
+  if (await present('[data-confirme-oui]')) { await pg.click(`${Z} [data-confirme-oui]`); await pause(); }
+  await qrep3();
+}
+async function courriel3({ a, objet = '', corps = '', pj = [] }) {
+  await aller('mail');
+  if (!(await present('[data-courriel]'))) { await pg.click(`${Z} [data-nouveau]`); await pause(); }
+  await pg.selectOption(`${Z} #cA`, a);
+  await pg.fill(`${Z} #cObj`, objet);
+  await pg.fill(`${Z} #cMsg`, corps);
+  for (const id of pj) { await pg.click(`${Z} [data-c-joindre]`); await pg.click(`${Z} [data-c-joint="${id}"]`); await pause(); }
+  await pg.click(`${Z} [data-c-envoyer]`);
+  await pause();
+  if (await present('[data-c-confirme]')) { await pg.click(`${Z} [data-c-oui]`); await pause(); }
+  await qrep3();
+}
+const JUSTES_APPEL3 = { accueil: 'presente', changement: 'juste', fin: 'merci' };
+// L'appel : `leurres` appelés avant ; `sauf` : réponses maladroites dites avant la juste, par réplique.
+async function appel3({ leurres = [], sauf = {} } = {}) {
+  await aller('telephone');
+  for (const l of leurres) { await pg.click(`${Z} [data-dlg-appeler="${l}"]`); await pause(); await pg.click(`${Z} [data-dlg-raccrocher-leurre]`); await pause(); }
+  await pg.click(`${Z} [data-dlg-appeler="quai"]`); await pause();
+  for (const r of ['accueil', 'changement', 'fin']) {
+    for (const x of sauf[r] || []) { await pg.click(`${Z} [data-dlg-choix="${x}"]`); await pause(); }
+    if (!(sauf[r] || []).includes('sec')) { await pg.click(`${Z} [data-dlg-choix="${JUSTES_APPEL3[r]}"]`); await pause(); }
+  }
+  await pg.click(`${Z} [data-dlg-raccrocher]`); await pause();
+  await qrep3();
+}
+
+const CHIFFRES3 = { route: { prix: 690, co2: 130 }, barge: { prix: 760, co2: 69 }, rail: { prix: 800, co2: 76 }, horsliste: { prix: 610, co2: 63 } };
+const CMP1_JUSTE = { limite: '2027-02-11', heure: '14:00', budget: '950', critere: 'co2', chiffres: CHIFFRES3, retenue: 'barge', justif: 'co2',
+  tri: { route: { liste: true, date: true }, barge: { liste: true, date: true }, rail: { liste: true, date: true }, horsliste: { liste: false, date: true } } };
+const CMP2_JUSTE = { chiffres: CHIFFRES3, retenue: 'rail', justif: 'date-co2',
+  tri: { route: { liste: true, date: true }, barge: { liste: true, date: false }, rail: { liste: true, date: true }, horsliste: { liste: false, date: true } } };
+const OT1_JUSTE = { presta: 'contargo', cont: 'PRPU 530641 3', type: '40hc', scelle: 'DC 0 771 518', poids: '15 180', enl: 'anvers', dispo: '2027-02-01',
+  ref: 'PO-ROU-2027-0523', liv: 'rouvignies', limd: '2027-02-11', limh: '14:00', inst: ['rdv', 'scelle', 'vide'] };
+const OT2_JUSTE = { presta: 'rail', enl: 'anvers', liv: 'rouvignies', limd: '2027-02-11', limh: '14:00', inst: ['rdv', 'scelle', 'vide'] };
+const MAIL_OT1 = { a: 'contargo', objet: 'Ordre de transport OT-2027-0151 — conteneur PRPU 530641 3',
+  corps: 'Bonjour,\n\nVeuillez trouver ci-joint notre ordre de transport pour ce conteneur.\n\nCordialement,\nLea', pj: ['fiche:ot1'] };
+const MAIL_OT2 = { a: 'rail', objet: 'Ordre de transport OT-2027-0158 — conteneur PRPU 530641 3',
+  corps: 'Bonjour,\n\nVeuillez trouver ci-joint notre nouvel ordre de transport, qui remplace le précédent, pour ce conteneur.\n\nCordialement,\nLea', pj: ['fiche:ot2'] };
+const MAIL_ANNUL = { a: 'contargo', objet: 'Annulation de la commande BARGE-2027-0311',
+  corps: 'Bonjour,\n\nNous annulons notre commande BARGE-2027-0311 pour le conteneur PRPU 530641 3.\n\nCordialement,\nLea' };
+const JALONS3 = ['qualifier-barge', 'rechoisir-horsliste', 'rechoisir-rail', 'securiser', 'annuler', 'appel-quai', 'forme'];
+const QUESTIONS3 = ['question:force-majeure', 'question:railco-hors-liste', 'question:ce-qui-a-change'];
+const PRIS_MSG3 = /\b(juste|justes|faux|fausse|correct|correcte|bien|erreur|bravo)\b/i;
+const ko3 = (n) => [...JALONS3, ...QUESTIONS3].filter((j) => n.detail[j] !== 'ok');
+const menu3 = async () => pg.$$eval(`${Z} .ent-nav`, (L) => L.map((b) => b.dataset.vue || b.dataset.vueFermee));
+
+// ─────────────────────────────────────────────────────────── les données (valeurs écrites à la main)
+await v('ENT-7.3 : données — chiffre de contrôle PRPU 530641 → 3, CO₂ à 15,18 t (130 / 69 / 76, RailCo 63), témoin, 300 élèves : jeux équitables, aucun secours, banque de numéros ≠ 7.1 et 7.2', async () => {
+  const r = await pg.evaluate(async () => {
+    const U = await import('/contenus/decathlon.js');
+    const D = await import('/contenus/decathlon-ent73-donnees.js');
+    const T = D.jeuDe({});
+    const out = { secours: 0, ecarts: [], conf: 0, series: new Set() };
+    for (let i = 0; i < 300; i++) {
+      const g = `eleve-${i}|${D.ID}`, t = D.TIRAGE.tirer(g, { confirme: i % 3 === 0 });
+      if (t.secours) out.secours++;
+      const J = D.jeuEleve({ tirages: { [D.ID]: { graine: g, ...t } } });
+      const e = D.ecartsEquite(J); if (e.length) out.ecarts.push(`${i} : ${e.join(' ; ')}`);
+      if (J.offres.length === 5) out.conf++;
+      out.series.add(J.conteneur);
+    }
+    return { cc: U.chiffreControle('PRPU530641'), T: { conteneur: T.conteneur, scelle: T.scelle, reference: T.reference, poids: T.poids, bonne: T.bonne.slot,
+      offres: Object.fromEntries(T.offres.map((o) => [o.slot, [o.prix, o.co2, o.tientAvant, o.tient, o.referencee]])) },
+    secours: out.secours, ecarts: out.ecarts, conf: out.conf, series: out.series.size, banque: D.SERIES };
+  });
+  egal(r.cc, 3, 'chiffre de contrôle');
+  egal(r.T, { conteneur: 'PRPU 530641 3', scelle: 'DC 0 771 518', reference: 'PO-ROU-2027-0523', poids: 15180, bonne: 'rail',
+    offres: { route: [690, 130, true, true, true], barge: [760, 69, true, false, true], rail: [800, 76, true, true, true], horsliste: [610, 63, true, true, false] } }, 'élève témoin');
+  egal([r.secours, r.ecarts], [0, []], 'secours, écarts d’équité');
+  vrai(r.conf === 100, `${r.conf} confirmés sur 100 ont cinq offres`);
+  vrai(r.series >= 6, `${r.series} numéros différents sur 300 élèves`);
+  const de71 = ['418207', '306552', '527190', '611348', '245873', '739016'], de72 = ['418270', '530982', '271645', '904316', '362708', '687153'];
+  vrai(r.banque.length === 6 && r.banque.every((s) => !de71.includes(s) && !de72.includes(s)), 'la banque de numéros doit différer de celles d’ENT-7.1 et 7.2 : ' + r.banque);
+});
+
+// ─────────────────────────────────────────────────────────── le montage et le menu
+await v('ENT-7.3 : montage et menu — brouillon (pret: false), pas d’erreur de chargement ; au départ ni comparateur n° 2, ni ordre n° 2, ni téléphone, carte sans marque, aucune pastille faite', async () => {
+  const m = await pg.evaluate(async () => {
+    const A = await import('/activites/decathlon-barge-arretee.js');
+    const R = await import('/activites/index.js');
+    return { pret: A.meta.pret, ouverture: A.meta.ouverture, code: A.meta.code, temps: A.meta.temps, bareme: A.meta.bareme, niveaux: A.meta.niveaux, comp: A.meta.competences,
+      prevus: A.meta.niveauxPrevus, precedente: A.meta.precedente, enEchec: (R.activitesEnEchec ? R.activitesEnEchec() : []).map((x) => x.id || x) };
+  });
+  egal([m.pret, m.code, m.temps, m.bareme, m.niveaux, m.comp, m.prevus, m.precedente],
+    [false, 'ENT-7.3', 'erreur', 20, ['1re'], ['C2.6'], ['confirme'], 'decathlon-ordre-transport'], 'meta');
+  egal(m.enEchec, [], 'séances écartées du registre');
+  await monter3({ uid: 'dk73-menu', db: { tirages: { [ID3]: tirage3() } } });
+  const mn = await menu3();
+  vrai(mn.includes('fiche') && mn.includes('mail') && mn.includes('itineraires'), 'menu au départ : ' + mn);
+  vrai(!mn.some((x) => /^fiche:/.test(x)) && !mn.includes('telephone') && !mn.includes('planning'), 'ni ordre n° 1, ni comparateur n° 2, ni ordre n° 2, ni téléphone au départ : ' + mn);
+  egal(await pg.$$eval(`${Z} .ent-pastille.fait`, (L) => L.length), 0, 'aucune pastille faite au départ');
+  egal(await pg.$$eval(`${Z} .ent-pastille`, (L) => L.length), 5, 'cinq pastilles');
+  const E = await entrants();
+  egal(E.length, 1, 'un seul message au départ (Claire)');
+  vrai(/un nouveau conteneur est disponible à Anvers aujourd’hui/.test(E[0].text) && E[0].pieces.length === 7, 'message de Claire et ses sept pièces (cahier, liste, 4 devis, avis) : ' + E[0].pieces);
+  egal(E[0].ouvreFiche, 'cmp1', 'le message ouvre le comparateur n° 1');
+  await aller('itineraires'); await pg.waitForSelector(`${Z} [data-ct-svg]`);
+  egal(await pg.$$eval(`${Z} [data-ct-svg] [data-ci-marque]`, (L) => L.length), 0, 'carte : aucune marque avant l’aléa');
+  egal((await note() || { score: 0 }).score, 0, 'note de départ');
+});
+
+// ─────────────────────────────────────────────────────────── l'inaction et « pas de point avant l'aléa »
+await v('ENT-7.3 : inaction 0 — comparateur n° 1 vide refusé (« Il manque »), rien envoyé, le menu ne s’ouvre pas', async () => {
+  await monter3({ uid: 'dk73-vide', db: { tirages: { [ID3]: tirage3() } } });
+  await aller('fiche');
+  await pg.click(`${Z} [data-fiche-envoyer]`); await pause();
+  const m = await pg.$eval(`${Z} [data-fiche-manque]`, (e) => e.textContent);
+  vrai(/Il manque/.test(m) && /la date limite/.test(m) && /l’offre retenue/.test(m), 'comparateur vide refusé : ' + m);
+  egal((await note() || { score: 0 }).score, 0, 'note de l’inaction');
+  vrai(!(await menu3()).includes('fiche:ot1'), 'ordre n° 1 au menu sans comparateur');
+});
+
+await v('ENT-7.3 : pas de point avant l’aléa — comparateur n° 1 et ordre n° 1 parfaits, rien ensuite : 0 ; puis le courriel (l’aléa arrive) : toujours 0, aucun jalon vrai', async () => {
+  await monter3({ uid: 'dk73-avant', db: { tirages: { [ID3]: tirage3() } } });
+  await comparateur3('fiche', CMP1_JUSTE);
+  vrai((await menu3()).includes('fiche:ot1'), 'ordre n° 1 au menu après le comparateur n° 1');
+  await ordre3('fiche:ot1', OT1_JUSTE);
+  let n = await note();
+  proche((n || { score: 0 }).score, 0, 'comparateur n° 1 et ordre n° 1 parfaits, rien ensuite');
+  egal(aleaMarque(await base()), false, 'l’aléa n’est pas arrivé avant le courriel');
+  await courriel3(MAIL_OT1);
+  n = await note();
+  proche(n.score, 0, 'après le premier courriel (aléa arrivé), toujours aucun point');
+  egal(ko3(n).length, JALONS3.length + QUESTIONS3.length, 'aucun jalon vrai');
+  egal(aleaMarque(await base()), true, 'l’aléa est arrivé avec le courriel');
+});
+function aleaMarque(db) { return !!(db.volets && db.volets['dk-ent73#alea']); }
+
+// ─────────────────────────────────────────────────────────── le parcours juste à l'écran
+await v('ENT-7.3 : parcours juste à l’écran — 20 / 20 ; l’aléa arrive après la confirmation de Contargo (carte marquée) ; Claire tranche (option A) ; point d’étape ferme l’ordre n° 2 ; annulation après la confirmation du rail ; aucun message ne dit juste / faux / bien', async () => {
+  await monter3({ uid: 'dk73-juste', db: { tirages: { [ID3]: tirage3() } } });
+  // ① Commander (non noté)
+  await comparateur3('fiche', CMP1_JUSTE);
+  let E = await entrants();
+  const decision = E.find((x) => x.subject === 'Ton choix');
+  vrai(decision && /Tu proposes Contargo\. Pour ce trajet on part sur la barge de Contargo, comme d’habitude : passe-lui la commande\. J’ai déjà réservé le quai pour vendredi 9 h\./.test(decision.text), 'Claire reprend l’offre, puis décide : ' + (decision && decision.text));
+  egal(await pg.$$eval(`${Z} .ent-pastille.fait`, (L) => L.length), 0, 'pastille Commander pas faite avant le courriel');
+  await ordre3('fiche:ot1', OT1_JUSTE);
+  const m0 = await menu3();
+  vrai(!m0.includes('fiche:cmp2') && !m0.includes('telephone'), 'avant le courriel : ni comparateur n° 2 ni téléphone : ' + m0);
+  await courriel3(MAIL_OT1);
+  // ② L'imprévu
+  E = await entrants();
+  const conf = E.filter((x) => /^RE : /.test(x.subject));
+  egal(conf.length, 1, 'la confirmation de Contargo');
+  vrai(/Référence de commande : BARGE-2027-0311/.test(conf[0].text) && /départ de la barge mercredi 03\/02 au soir, livraison à votre quai vendredi 05\/02 vers 9 h/.test(conf[0].text)
+    && /pour le conteneur PRPU 530641 3\./.test(conf[0].text), 'confirmation : ' + conf[0].text);
+  const alea = E.find((x) => /^Arrêt de navigation/.test(x.subject));
+  vrai(alea && /avarie à l’écluse de Kain/.test(alea.text) && /mardi 02\/02 au vendredi 05\/03\/2027/.test(alea.text) && /conteneur PRPU 530641 3 ne pourra pas partir/.test(alea.text)
+    && /BARGE-2027-0311/.test(alea.text), 'message de Contargo : ' + (alea && alea.text));
+  const claire = E.find((x) => x.subject === 'Le message de Contargo');
+  vrai(claire && /Tu as vu le message de Contargo \? À toi de jouer : il faut que ce conteneur soit à quai jeudi 11 à 14 h\./.test(claire.text), 'Claire après l’aléa');
+  const m1 = await menu3();
+  vrai(m1.includes('fiche:cmp2') && !m1.includes('fiche:ot2') && !m1.includes('telephone'), 'après l’aléa : comparateur n° 2 oui, ordre n° 2 et téléphone non : ' + m1);
+  await aller('itineraires'); await pg.waitForSelector(`${Z} [data-ct-svg] [data-ci-marque]`);
+  egal(await pg.$$eval(`${Z} [data-ct-svg] [data-ci-marque]`, (L) => L.map((g) => g.dataset.ciMarque)), ['kain'], 'carte : la marque de Kain après l’aléa');
+  vrai((await pg.textContent(`${Z} [data-ct-svg] .ci-marque`)).includes('du mardi 02/02 au vendredi 05/03/2027'), 'dates de l’arrêt sur la carte');
+  const n0 = await note(); proche(n0.score, 0, 'rien de noté avant le comparateur n° 2');
+  // ③ Rechoisir
+  await comparateur3('fiche:cmp2', CMP2_JUSTE);
+  vrai(!(await menu3()).includes('fiche:ot2') || await present('.ent-nav[data-vue-fermee="fiche:ot2"]'), 'ordre n° 2 fermé tant que le point d’étape n’est pas fait');
+  egal(await present('.ent-nav[data-vue-fermee="fiche:ot2"]'), true, 'ordre n° 2 grisé (fermé par le point d’étape)');
+  await etape3('date');
+  vrai((await menu3()).includes('fiche:ot2'), 'ordre n° 2 ouvert après le point d’étape');
+  E = await entrants();
+  const note2 = E.find((x) => x.subject === 'Ton nouveau choix');
+  vrai(note2 && /Je note : Rail Flandres-Artois\. Commande-la, et règle la question de Contargo\./.test(note2.text), 'Claire note le nouveau choix : ' + (note2 && note2.text));
+  // ④ Commander et annuler
+  await aller('fiche:ot2');
+  egal(await pg.$$eval(`${Z} [data-fiche="ot2"] input[readonly], ${Z} [data-fiche="ot2"] input[disabled]`, (L) => L.map((i) => i.id).sort()),
+    ['fi-cont', 'fi-dispo', 'fi-poids', 'fi-ref', 'fi-scelle', 'fi-type'], 'cases du conteneur reprises de l’ordre n° 1 et figées');
+  egal(await pg.$eval(`${Z} #fi-cont`, (i) => i.value), 'PRPU 530641 3', 'n° de conteneur repris');
+  await ordre3('fiche:ot2', OT2_JUSTE);
+  await courriel3(MAIL_OT2);
+  E = await entrants();
+  const rail = E.filter((x) => /^RE : /.test(x.subject)).pop();
+  vrai(/départ du train jeudi 04\/02 d’Anvers, terminal de Dourges vendredi 05\/02, livraison à votre quai vendredi 05\/02 vers 15 h/.test(rail.text) && /OT-2027-0158/.test(rail.text) && /Rail Flandres-Artois/.test(rail.text), 'confirmation du rail : ' + rail.text);
+  vrai((await menu3()).includes('telephone'), 'téléphone au menu après le courriel avec l’ordre n° 2');
+  egal(await pg.$$eval(`${Z} .ent-pastille.fait`, (L) => L.length), 3, 'pastilles faites avant l’annulation : commander, imprévu, rechoisir');
+  await courriel3(MAIL_ANNUL);
+  E = await entrants();
+  const annul = E.filter((x) => /^RE : /.test(x.subject)).pop();
+  vrai(/Nous annulons votre commande BARGE-2027-0311, sans frais en raison de l’arrêt de navigation\./.test(annul.text), 'réponse de Contargo : ' + annul.text);
+  // ⑤ Prévenir le quai
+  await appel3();
+  E = await entrants();
+  const fin = E.find((x) => x.subject === 'Merci');
+  vrai(fin && /Merci Lea\. Un conteneur, un imprévu, et il arrive quand même avant la mise en rayon\./.test(fin.text), 'Claire à la fin');
+  const n = await note();
+  egal(ko3(n), [], 'jalons et questions');
+  proche(n.score, 20, 'note');
+  egal(await pg.$$eval(`${Z} .ent-pastille.fait`, (L) => L.length), 5, 'cinq pastilles faites');
+  egal(E.filter((x) => PRIS_MSG3.test(`${x.subject} ${x.text}`)).map((x) => x.subject), [], 'aucun message ne dit juste / faux / correct / bien / erreur');
+  const q = (await base()).questions[ID3];
+  vrai(/Lundi tu as pris la barge, aujourd’hui le rail\./.test(q['ce-qui-a-change'].texte.enonce), 'question de transition ancrée sur son choix : ' + q['ce-qui-a-change'].texte.enonce);
+  vrai(!!q['prevenir-qui'] && !!q['lundi-ce-soir'], 'les deux réflexions sont posées à la fin de l’appel');
+});
+
 await v('ENT-7.1 : aucune erreur JavaScript pendant le bloc', async () => { egal(erreursF.filter((e) => !/favicon/.test(e)), [], 'erreurs'); });
 await F.fermer();
 }

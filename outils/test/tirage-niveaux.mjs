@@ -536,6 +536,10 @@ const BANQUES_FIGEES = {
   'contenus/decathlon-ent72-donnees.js': {
     instructions: ['in-froid', 'in-adr', 'in-douane', 'in-hayon'],
   },
+  // ENT-7.3 Decathlon (15/10/2026) : la cinquième offre du comparateur n° 2 (bonus du confirmé).
+  'contenus/decathlon-ent73-donnees.js': {
+    bonus: ['b73-heure', 'b73-homonyme', 'b73-suivant'],
+  },
 };
 await v('Tirage : banques stables — aucun id d’une banque déclarée ne disparaît (liste figée), toute banque déclarée est inscrite', async () => {
   const fs = await import('node:fs');
