@@ -301,6 +301,6 @@ partir en début de séance avec un chronomètre de l'enseignant).
   (l) bonus toujours juste (1) ; (m) RailCo plus émetteur que le rail, avec et sans le contrôle de la séance (2).
 - **Commits** : voir `git log` (séance en brouillon, pièges et sabotages, livraison).
 - **Reste ouvert** : (1) valider la d3 réécrite (L. 1431-3, Anvers) et la question de remplacement de d4 (art. 1231-1) ; (2) relire les art. 1218 et 1231-1 sur Légifrance (mot à mot supposé) ;
-  (3) la question au fil n° 1 (force majeure) dit « La barge ne part pas » et l'élève peut encore modifier sa réponse « Tient la date ? » avant l'envoi : la garder, ou la passer au bilan (`apres: 'bilan'`) ;
+  (3) ~~la question au fil n° 1 (force majeure) dit « La barge ne part pas » et l'élève peut encore modifier sa réponse « Tient la date ? » avant l'envoi : la garder, ou la passer au bilan~~ **gardée au fil** (Tristan, 15/10/2026) ;
   (4) trame courte (Cowork) ; (5) durée (≈ 50 min) à mesurer à l'écran ; (6) le jalon bonus n'est pas testé sur toute la chaîne confirmé (testé jalon par jalon et en note jouée sur le comparateur n° 2 seul : 9,5 contre 9) ;
   (7) courriel au rail sans pièce : « sécuriser » et « annuler » tous deux faux, à valider.
