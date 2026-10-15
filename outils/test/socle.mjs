@@ -450,6 +450,7 @@ await v('compétences : chaque séance déclare ce que Tristan a validé le 02/1
       niveauxSansCap: !!(m.competencesCap && m.competencesCap.length && m.niveaux && m.niveaux.length && !m.niveaux.includes('cap')),
     }));
   });
+  const faux = [];
   for (const [code, cap] of Object.entries(ATTENDU_CAP)) {
     const m = metas.find((x) => x.code === code);
     if (!m) { faux.push(code + ' introuvable (CAP)'); continue; }
@@ -461,7 +462,6 @@ await v('compétences : chaque séance déclare ce que Tristan a validé le 02/1
     if (m.capEtranger.length) faux.push(`${m.code} : ${m.capEtranger} dans competencesCap`);
     if (m.niveauxSansCap) faux.push(`${m.code} : competencesCap sans le niveau cap`);
   });
-  const faux = [];
   for (const [code, [comp, temps]] of Object.entries(ATTENDU)) {
     const m = metas.find((x) => x.code === code);
     if (!m) { faux.push(code + ' introuvable'); continue; }
@@ -721,9 +721,14 @@ await v('compétences : un groupe CAP lit `competencesCap`, les autres `competen
   // Une note 6/10 sur a vaut 12/20 en CAP-C1.4 chez un CAP et 12/20 en C1.4 chez un 1re : la même.
   const travaux = { a: { meilleur: 6, max: 10 } };
   const co = C.coefsDuGroupe({});
-  const mCap = C.moyenneCompetence(C.seancesParCompetence(C.metasPourNiveau([a, b, c], 'cap')).find((x) => x.code === 'CAP-C1.4').seances, travaux, co);
-  const m1re = C.moyenneCompetence(C.seancesParCompetence([a, b, c]).find((x) => x.code === 'C1.4').seances, travaux, co);
-  if (mCap.moyenne !== 12 || m1re.moyenne !== 12) faux.push(`moyennes : CAP ${mCap.moyenne}, 1re ${m1re.moyenne}`);
+  const colCap = C.seancesParCompetence(C.metasPourNiveau([a, b, c], 'cap')).find((x) => x.code === 'CAP-C1.4');
+  const col1re = C.seancesParCompetence([a, b, c]).find((x) => x.code === 'C1.4');
+  if (!colCap || !col1re) faux.push('colonne CAP-C1.4 ou C1.4 absente');
+  else {
+    const mCap = C.moyenneCompetence(colCap.seances, travaux, co);
+    const m1re = C.moyenneCompetence(col1re.seances, travaux, co);
+    if (mCap.moyenne !== 12 || m1re.moyenne !== 12) faux.push(`moyennes : CAP ${mCap.moyenne}, 1re ${m1re.moyenne}`);
+  }
   if (faux.length) throw new Error(faux.join(' | '));
 });
 
