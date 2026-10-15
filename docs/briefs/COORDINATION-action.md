@@ -127,3 +127,4 @@ ENT-8.2 ne dépend pas de la vue Localiser : elle se construit **pendant** la vu
 
 - 15/10 20 h : briefs et maquette commités (712ff99), inscription dans `EN-COURS.md` (2809171), états des lieux
   faits (carte ; moteur d'entreprise), phase 1 lancée.
+- 15/10 soir : phase 1 livrée et commitée : lot 1 contours (800687f), univers Action + logo + photos (177da27, 39356e0), zones de visite + geste `entrepot:<id>:visite:fin` (9691a0c). Le logo est rangé dans `contenus/trames/logos/action.svg|png` (convention des autres logos). Décisions en route : la photo du transpalette est manuelle (aucune électrique libre), la question `img-transpalette` dit « un transpalette » ; `palette-filmee.jpg` est un recadrage de `zone-colis.jpg` (ne pas montrer les deux sur un même écran) ; la place du hub du Havre est le centre de la commune de Gonfreville-l'Orcher (approchée, dite dans `MENTION`). Phase 2 lancée : vue Localiser (Opus) et ENT-8.2 (Opus) en parallèle.
