@@ -14,3 +14,6 @@ pendant l'usage : tout est servi par le dépôt.
 
 Les photos de France Boissons (ENT-6.x) sont recensées, une par une, dans
 [`contenus/images/france-boissons/CREDITS.md`](contenus/images/france-boissons/CREDITS.md).
+
+Le logo d'Action (Wikimedia Commons, domaine public, mais marque) et les photos d'Action (ENT-8.x) sont recensés, un par un,
+dans [`contenus/images/action/CREDITS.md`](contenus/images/action/CREDITS.md).
