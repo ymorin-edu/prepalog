@@ -1,0 +1,614 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Maquette — ENT-1.2 poste de préparation RFID (Spartoo)</title>
+<style>
+  /* Thème de la maquette du quai d'ENT-1.1 (validée). La couleur de Spartoo reste au bandeau et aux onglets :
+     dans la zone de travail, les boutons principaux sont à l'encre (décision du 05/10/2026). */
+  :root{--fond:#151211;--carte:#1d1918;--trait:#332e2c;--texte:#eeeae6;--doux:#a9a29c;--rose:#e2445c;--vert:#3fae6a;--rouge:#ff8a80}
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--fond);color:var(--texte);font-family:Inter,system-ui,Segoe UI,Arial,sans-serif}
+  .app{height:100vh;min-height:620px;display:flex;flex-direction:column}
+  .tete{display:flex;align-items:center;gap:12px;padding:8px 18px;border-bottom:1px solid var(--trait);background:#1c1817;flex-wrap:wrap}
+  .logo{width:30px;height:30px;background:#fff;border-radius:4px;display:grid;place-items:center;color:#c8102e;font-size:8px;font-weight:800}
+  .marque{color:var(--rose);font-weight:700;font-size:18px}
+  .badge{background:#3a3533;border:1px solid #555;border-radius:20px;padding:3px 11px;font-size:13px;font-family:ui-monospace,monospace}
+  .tete .lieu{font-size:13px;color:var(--doux)}
+  .tete .droite{margin-left:auto;display:flex;gap:8px;align-items:center}
+  .tete select{background:#2a2524;color:#fff;border:1px solid #555;border-radius:5px;padding:3px 6px;font-size:12.5px}
+  .tete .maq{font-size:11px;color:#999;border:1px dashed #666;border-radius:4px;padding:2px 7px}
+  .etapes{display:flex;gap:6px;padding:7px 18px;border-bottom:1px solid var(--trait)}
+  .etapes button{flex:1;background:#221e1d;border:1px solid var(--trait);color:var(--doux);border-radius:6px;padding:6px 8px;font-size:13.5px;text-align:left;cursor:pointer}
+  .etapes button.on{border-color:var(--rose);color:#fff;background:#2b1418}
+  .etapes button.fait{color:#cfe9d8}
+  .etapes button:disabled{opacity:.4;cursor:not-allowed}
+  .corps{flex:1;display:flex;min-height:0;position:relative}
+  .scene{flex:1;position:relative;min-width:0;display:flex;flex-direction:column}
+  .scene svg{flex:1;width:100%;min-height:0;display:block}
+  .legende{padding:6px 16px 8px;font-size:14px;color:#ddd;min-height:34px;border-top:1px solid var(--trait)}
+  .legende b{color:#fff}
+  .panneau{width:480px;flex-shrink:0;border-left:1px solid var(--trait);padding:10px 14px;overflow:auto;background:#191514}
+  h3{margin:0 0 8px;font-size:15px}
+  h4{margin:8px 0 4px;font-size:13px;color:var(--doux);font-weight:600}
+  .note{font-size:12.5px;color:var(--doux);line-height:1.4}
+  .btn{background:#2a2524;border:1px solid #5a524f;color:#fff;border-radius:6px;padding:7px 12px;font-size:14px;cursor:pointer}
+  .btn.prim{background:var(--texte);border-color:var(--texte);color:#151211;font-weight:600}
+  .btn.petit{padding:3px 8px;font-size:12.5px}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+  .bloc{border:1px solid var(--trait);border-radius:8px;padding:8px 10px;margin-bottom:8px;background:var(--carte)}
+  .aide{border-left:3px solid #8da2c9;padding:5px 8px;background:#1b2130;font-size:12.5px;color:#d6def0;margin-bottom:9px;line-height:1.4}
+  /* bon de la vague */
+  table.bon{width:100%;border-collapse:collapse;font-size:12.5px}
+  .bon th{font-size:10.5px;color:var(--doux);text-align:left;padding:3px 4px;border-bottom:1px solid var(--trait);font-weight:600}
+  .bon td{padding:4px;border-bottom:1px solid var(--trait);vertical-align:middle}
+  .bon tr.ligne{cursor:pointer}
+  .bon tr.ligne:hover td{background:#231e1d}
+  .bon tr.sel td{background:#2a2320}
+  .bon tr.cmd td{background:#211c1b;color:#fff;font-weight:600;font-size:12px;cursor:default}
+  .mono{font-family:ui-monospace,monospace;font-size:12px}
+  .bon td.mono{white-space:nowrap}
+  .num{text-align:center}
+  .signale{font-size:11.5px;color:#f1c27d}
+  /* étiquette de boîte (zoom) */
+  .piles{display:flex;gap:8px;flex-wrap:wrap}
+  .etq{width:208px;background:#fff;color:#111;border:2px solid #bbb;border-radius:3px;padding:6px 8px;font-size:11.5px;line-height:1.35;font-family:Arial,sans-serif;cursor:pointer;text-align:left}
+  .etq.sel{border-color:#f0c419;box-shadow:0 0 0 2px #f0c419}
+  .etq .l1{font-size:10px;color:#444;display:flex;justify-content:space-between}
+  .etq .ref{font-size:15px;font-weight:800;letter-spacing:.3px;margin:2px 0}
+  .etq .puce{display:inline-block;font-size:9.5px;border:1px solid #888;border-radius:3px;padding:0 4px;margin-top:3px;color:#333}
+  .etq .cb{height:14px;margin-top:4px;background:repeating-linear-gradient(90deg,#111 0 2px,#fff 2px 3px,#111 3px 4px,#fff 4px 7px,#111 7px 8px,#fff 8px 9px)}
+  .prendre{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px}
+  /* bacs */
+  .bacs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+  .bacs .b{border:1px solid var(--trait);border-radius:6px;padding:5px 6px;font-size:12px;min-height:58px}
+  .bacs .b b{font-size:12.5px}
+  .bacs .b .x{color:var(--doux);cursor:pointer;margin-left:4px}
+  /* colis */
+  .choix{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 8px}
+  .choix button{background:#221e1d;border:1px solid #555;color:#ddd;border-radius:6px;padding:6px 9px;font-size:13px;cursor:pointer}
+  .choix button.on{border-color:#f0c419;color:#fff;box-shadow:inset 0 0 0 1px #f0c419}
+  .etqT{width:132px;background:#fff;color:#111;border-radius:3px;padding:5px 6px;font-family:Arial,sans-serif;font-size:10.5px;line-height:1.3;cursor:pointer;border:2px solid #bbb;text-align:left}
+  .etqT.on{border-color:#f0c419;box-shadow:0 0 0 2px #f0c419}
+  .etqT .m{font-weight:800;font-size:12px;border-bottom:2px solid #111;margin-bottom:3px;padding-bottom:2px}
+  .etqT .gros{font-size:15px;font-weight:800;margin-top:2px}
+  .verdict{font-size:12.5px;line-height:1.55}
+  .ok{color:#7ad39a}.ko{color:var(--rouge)}
+  .ok b,.ko b{color:inherit}
+  /* question au fil */
+  .gel{position:absolute;inset:0;background:rgba(10,8,8,.28);display:flex;justify-content:flex-end;align-items:flex-start;z-index:5}
+  .question{width:470px;max-height:calc(100% - 28px);margin:14px 494px 14px 14px;background:#211c1b;border:1px solid #4a5874;border-left:4px solid #8da2c9;border-radius:8px;padding:14px 16px;overflow:auto;box-shadow:0 8px 28px rgba(0,0,0,.5)}
+  .question .qui{font-size:12px;color:var(--doux);margin-bottom:6px}
+  .question .enonce{font-size:15px;line-height:1.45;margin-bottom:10px}
+  .question .rep{display:block;width:100%;text-align:left;margin-bottom:6px;background:#2a2524;border:1px solid #5a524f;color:#fff;border-radius:6px;padding:8px 10px;font-size:14px;cursor:pointer}
+  .question .rep.on{border-color:#f0c419}
+  .question .retour{margin-top:10px;font-size:14px;line-height:1.45;border-top:1px solid var(--trait);padding-top:8px}
+  table.bp{width:100%;border-collapse:collapse;font-size:12.5px}
+  .bp td,.bp th{padding:3px 4px;border-bottom:1px solid var(--trait);text-align:left}
+  .bp th{font-size:10.5px;color:var(--doux)}
+  .pied{font-size:10.5px;color:#8a857c;margin-top:8px}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style></head><body>
+<div class="app">
+  <div class="tete"><div class="logo">spartoo</div><span class="marque">Spartoo</span><span class="badge">ENT-1.2 · Préparation</span>
+    <span class="lieu">Toolog — Saint-Quentin-Fallavier (38) · Poste de préparation 3</span>
+    <span class="droite"><label class="note" for="temps">Temps :</label><select id="temps"><option value="guidage">guidage</option><option value="entrainement">entraînement</option></select>
+      <span class="maq">Maquette jetable — 2D iso</span></span></div>
+  <div class="etapes" id="etapes"></div>
+  <div class="corps" id="corps">
+    <div class="scene"><svg id="svg" role="img" aria-label="Scène du poste de préparation"></svg><div class="legende" id="legende"></div></div>
+    <div class="panneau" id="panneau"></div>
+  </div>
+</div>
+<script>
+/* ================== kit iso (mêmes constantes que core/iso.js et la maquette du quai) ================== */
+const C30=0.866,S30=0.5;
+function projection(unite,ox,oy){
+  const P=(x,y,z)=>[ox+(x-y)*C30*unite, oy+(x+y)*S30*unite-z*unite];
+  const pts=a=>a.map(p=>P(...p).map(v=>v.toFixed(1)).join(',')).join(' ');
+  const face=(a,fill,stroke='rgba(0,0,0,.25)',extra='')=>`<polygon points="${pts(a)}" fill="${fill}" stroke="${stroke}" stroke-width="1" ${extra}/>`;
+  const boite=(x,y,z,w,d,h,c,st)=>face([[x,y+d,z],[x+w,y+d,z],[x+w,y+d,z+h],[x,y+d,z+h]],c[1],st)
+    +face([[x+w,y,z],[x+w,y+d,z],[x+w,y+d,z+h],[x+w,y,z+h]],c[2],st)
+    +face([[x,y,z+h],[x+w,y,z+h],[x+w,y+d,z+h],[x,y+d,z+h]],c[0],st);
+  return {unite,P,pts,face,boite};
+}
+const ech=t=>String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+// Texte posé sur une face « avant » (plan y constant) : x → (cos30, sin30), z → vers le haut.
+function texteAvant(I,x,y,z,txt,taille,coul,opts={}){
+  const [ox,oy]=I.P(x,y,z);
+  return `<text transform="matrix(${C30},${S30},0,1,${ox.toFixed(1)},${oy.toFixed(1)})" font-size="${taille}" font-weight="${opts.gras?800:600}" fill="${coul}" text-anchor="${opts.ancre||'middle'}" font-family="Inter, system-ui, Segoe UI, Arial, sans-serif">${ech(txt)}</text>`;
+}
+// Roue d'axe x (reprise de la maquette du quai) : un cercle dans le plan du flanc, projeté.
+function roue(I,x,y,z,r,l){
+  const u=I.unite,M=(xx)=>{const [ex,ey]=I.P(xx,y,z);return `matrix(${-C30*u},${S30*u},0,${-u},${ex},${ey})`;};
+  let g='';
+  for(let k=0;k<=3;k++) g+=`<circle r="${r}" transform="${M(x+l*k/3)}" fill="#141617" stroke="#0b0c0d" stroke-width="${0.6/u}"/>`;
+  g+=`<circle r="${r*.5}" transform="${M(x+l)}" fill="#8d9397"/>`;
+  return g;
+}
+// Une personne debout, SANS VISAGE (reprise de la maquette du quai, validée).
+function personne(I,x,y,opts={}){
+  const [fx,fy]=I.P(x,y,0),u=I.unite,k=u*1.75/100;
+  const X=v=>fx+v*k,Y=v=>fy-v*k;
+  const peau='#c99a76',peauOmbre='#b3876a',pant='#2e3b4c',pantOmbre='#253140',gil='#f0c419',gilOmbre='#d6ad10',band='#e6e8e8',t='#30363b';
+  let g=`<ellipse cx="${fx}" cy="${fy}" rx="${13*k}" ry="${5*k}" fill="rgba(0,0,0,.2)"/>`;
+  g+=`<path d="M${X(-6.5)},${Y(1)} L${X(-7)},${Y(47)} L${X(-0.5)},${Y(47)} L${X(-1.5)},${Y(1)} Z" fill="${pantOmbre}"/>`;
+  g+=`<path d="M${X(1.5)},${Y(1)} L${X(0.5)},${Y(47)} L${X(7)},${Y(47)} L${X(6.5)},${Y(1)} Z" fill="${pant}"/>`;
+  g+=`<path d="M${X(-8.5)},${Y(0)} q0,${-4*k} ${3*k},${-4*k} h${4*k} v${4*k} Z" fill="${t}"/>`;
+  g+=`<path d="M${X(0.5)},${Y(0)} q0,${-4*k} ${3*k},${-4*k} h${4.5*k} q${2*k},0 ${2*k},${4*k} Z" fill="${t}"/>`;
+  g+=`<path d="M${X(-9)},${Y(78)} q${-3*k},${12*k} ${-2.5*k},${30*k}" stroke="${gilOmbre}" stroke-width="${5.5*k}" stroke-linecap="round" fill="none"/>`;
+  g+=`<circle cx="${X(-11)}" cy="${Y(46)}" r="${2.6*k}" fill="${peauOmbre}"/>`;
+  g+=`<path d="M${X(-9.5)},${Y(48)} L${X(-10.5)},${Y(79)} Q${X(-9)},${Y(84)} ${X(-3)},${Y(85)} L${X(3)},${Y(85)} Q${X(9)},${Y(84)} ${X(10.5)},${Y(79)} L${X(9.5)},${Y(48)} Z" fill="${gil}"/>`;
+  g+=`<path d="M${X(1)},${Y(48)} L${X(1)},${Y(85)} L${X(3)},${Y(85)} Q${X(9)},${Y(84)} ${X(10.5)},${Y(79)} L${X(9.5)},${Y(48)} Z" fill="${gilOmbre}" opacity=".55"/>`;
+  [57,66].forEach(v=>{g+=`<rect x="${X(-10.2)}" y="${Y(v+2.6)}" width="${20.4*k}" height="${2.6*k}" fill="${band}"/>`;});
+  g+=`<path d="M${X(-3)},${Y(85)} L${X(0)},${Y(77)} L${X(3)},${Y(85)} Z" fill="#3b4652"/>`;
+  if(opts.main){const [mx,my]=opts.main;
+    g+=`<path d="M${X(9)},${Y(79)} L${mx},${my}" stroke="${gil}" stroke-width="${5.5*k}" stroke-linecap="round"/>`;
+    g+=`<circle cx="${mx}" cy="${my}" r="${2.8*k}" fill="${peau}"/>`;}
+  else{g+=`<path d="M${X(9)},${Y(78)} q${3*k},${12*k} ${2.5*k},${30*k}" stroke="${gil}" stroke-width="${5.5*k}" stroke-linecap="round" fill="none"/>`;
+    g+=`<circle cx="${X(11.5)}" cy="${Y(46)}" r="${2.6*k}" fill="${peau}"/>`;}
+  g+=`<rect x="${X(-2.2)}" y="${Y(89)}" width="${4.4*k}" height="${5*k}" fill="${peauOmbre}"/>`;
+  g+=`<ellipse cx="${X(0)}" cy="${Y(93.5)}" rx="${5.3*k}" ry="${6.4*k}" fill="${peau}"/>`;
+  g+=`<path d="M${X(-5.4)},${Y(94)} Q${X(-5.8)},${Y(101)} ${X(0)},${Y(100.6)} Q${X(5.8)},${Y(101)} ${X(5.4)},${Y(94)} Q${X(3)},${Y(97.5)} ${X(-5.4)},${Y(94)} Z" fill="#3a2a1f"/>`;
+  return g;
+}
+const mesure=(()=>{const c=document.createElement('canvas').getContext('2d');c.font='14px Inter, system-ui, Segoe UI, Arial, sans-serif';return t=>c.measureText(t).width;})();
+function bulle(x,y,lignes){
+  const pad=14,lh=20,W=Math.ceil(Math.max(...lignes.map(mesure)))+pad*2,H=lignes.length*lh+pad*2-6,r=12;
+  const bx=x-34,by=y-14-H,q=12;
+  const d=`M${bx+r},${by} H${bx+W-r} A${r},${r} 0 0 1 ${bx+W},${by+r} V${by+H-r} A${r},${r} 0 0 1 ${bx+W-r},${by+H} H${x+q} L${x},${y} L${x-q*0.2},${by+H} H${bx+r} A${r},${r} 0 0 1 ${bx},${by+H-r} V${by+r} A${r},${r} 0 0 1 ${bx+r},${by} Z`;
+  return `<g><path d="${d}" fill="rgba(0,0,0,.18)" transform="translate(2,3)"/><path d="${d}" fill="#fff" stroke="#2c2c2c" stroke-width="1.5"/>
+    ${lignes.map((l,k)=>`<text x="${bx+pad}" y="${by+pad+11+k*lh}" font-size="14" font-family="Inter, system-ui, Segoe UI, Arial, sans-serif" fill="#1a1a1a">${ech(l)}</text>`).join('')}</g>`;
+}
+
+/* ================== données de la séance (brief ENT-1.2 §6.2) ================== */
+// Articles : marque, modèle, couleur, pointure. Les références sont celles du catalogue de Spartoo.
+const ART={
+ 'NK-AM270-NR-42':['Nike','Air Max 270','Noir',42],'NK-AM270-NR-43':['Nike','Air Max 270','Noir',43],
+ 'AD-STS-BL-41':['adidas','Stan Smith','Blanc',41],'AD-STS-BL-42':['adidas','Stan Smith','Blanc',42],
+ 'PM-SUE-NR-39':['Puma','Suede Classic XXI','Noir',39],'PM-SUE-NR-40':['Puma','Suede Classic XXI','Noir',40],
+ 'PM-SUE-MA-40':['Puma','Suede Classic XXI','Bleu marine',40],'PM-SUE-MA-41':['Puma','Suede Classic XXI','Bleu marine',41],
+ 'PM-RSX-BL-42':['Puma','RS-X','Blanc',42],'PM-RSX-BL-43':['Puma','RS-X','Blanc',43],
+ 'CV-CTAS-NR-40':['Converse','Chuck Taylor All Star','Noir',40],'CV-CTAS-BL-38':['Converse','Chuck Taylor All Star','Blanc',38],
+ 'VN-OLD-NR-41':['Vans','Old Skool','Noir',41],'VN-OLD-RG-42':['Vans','Old Skool','Rouge',42],
+ 'NB-574-GR-42':['New Balance','574','Gris',42],'NB-574-BE-40':['New Balance','574','Beige',40],
+ 'RB-CL-BL-43':['Reebok','Classic Leather','Blanc',43],'AD-GAZ-MA-41':['adidas','Gazelle','Bleu marine',41],
+};
+const MARQUE_COUL={Nike:['#f29a5f','#e0702a','#c45f22'],adidas:['#5d8bd1','#2f5ea8','#264d8c'],Puma:['#4a4a4a','#2b2b2b','#1c1c1c'],
+  Converse:['#e4dfd2','#cfc8b8','#b6af9f'],Vans:['#c75252','#a83636','#8c2b2b'],'New Balance':['#aab2b9','#8e979f','#788088'],Reebok:['#f1f1ec','#dcdcd5','#c6c6be']};
+// Le massif Lifestyle, allée B : 10 colonnes × 3 niveaux. Rangé PAR CATÉGORIE, pas par marque (Toolog) :
+// une Air Max à côté d'une Stan Smith. Chaque emplacement : [référence, nombre de boîtes, lot].
+const EMPL={
+ 'B-01-1':['NK-AM270-NR-42',8,'LOT-NK-2533'],'B-02-1':['NK-AM270-NR-43',6,'LOT-NK-2533'],'B-03-1':['AD-STS-BL-42',5,'LOT-AD-2561'],
+ 'B-04-1':['AD-STS-BL-41',1,'LOT-AD-2561'],'B-05-1':['PM-SUE-NR-39',4,'LOT-PM-2588'],'B-06-1':['PM-SUE-NR-40',0,''],
+ 'B-07-1':['PM-SUE-MA-40',5,'LOT-PM-2588'],'B-08-1':['PM-RSX-BL-43',3,'LOT-PM-2588'],'B-09-1':['CV-CTAS-NR-40',7,'LOT-CV-2550'],
+ 'B-10-1':['VN-OLD-NR-41',6,'LOT-VN-2577'],
+ 'B-01-2':['CV-CTAS-BL-38',5,'LOT-CV-2550'],'B-02-2':['VN-OLD-RG-42',4,'LOT-VN-2577'],'B-03-2':['NB-574-GR-42',6,'LOT-NB-2590'],
+ 'B-04-2':['NB-574-BE-40',3,'LOT-NB-2590'],'B-05-2':['RB-CL-BL-43',5,'LOT-RB-2542'],'B-06-2':['AD-GAZ-MA-41',4,'LOT-AD-2561'],
+ 'B-07-2':['PM-SUE-MA-41',18,'LOT-PM-2609'],'B-08-2':['PM-RSX-BL-42',24,'LOT-PM-2609'],'B-09-2':['NK-AM270-NR-43',2,'LOT-NK-2533'],
+ 'B-10-2':['CV-CTAS-NR-40',3,'LOT-CV-2550'],
+ 'B-01-3':['VN-OLD-NR-41',9,'LOT-VN-2577'],'B-02-3':['NB-574-GR-42',9,'LOT-NB-2590'],'B-03-3':['RB-CL-BL-43',7,'LOT-RB-2542'],
+ 'B-04-3':['CV-CTAS-BL-38',9,'LOT-CV-2550'],'B-05-3':['AD-STS-BL-42',8,'LOT-AD-2561'],'B-06-3':['PM-SUE-NR-39',6,'LOT-PM-2588'],
+ 'B-07-3':['NB-574-BE-40',9,'LOT-NB-2590'],'B-08-3':['VN-OLD-RG-42',5,'LOT-VN-2577'],'B-09-3':['AD-GAZ-MA-41',6,'LOT-AD-2561'],
+ 'B-10-3':['RB-CL-BL-43',4,'LOT-RB-2542'],
+};
+const ADR={};Object.entries(EMPL).forEach(([a,[r]])=>{if(!ADR[r])ADR[r]=a;});
+ADR['NK-AM270-NR-42']='B-01-1';ADR['AD-STS-BL-41']='B-04-1';ADR['PM-SUE-NR-40']='B-06-1';ADR['PM-SUE-MA-41']='B-07-2';ADR['PM-RSX-BL-42']='B-08-2';
+const MODES={COL:{nom:'Colissimo Domicile',court:'DOMICILE',dit:'Livraison à domicile'},REL:{nom:'Point Relais',court:'POINT RELAIS',dit:'Retrait en point relais'},CHR:{nom:'Chronopost Express',court:'EXPRESS',dit:'Livraison express'}};
+const VAGUE={no:'V-1027',cmds:[
+  {bac:1,no:'CMD-048213',client:'Chloé Michel',ville:'Rennes',ship:'COL',lignes:[{ref:'NK-AM270-NR-42',q:1},{ref:'AD-STS-BL-41',q:2},{ref:'PM-SUE-NR-40',q:1}]},
+  {bac:2,no:'CMD-048307',client:'Clara Bernard',ville:'Lyon',ship:'REL',lignes:[{ref:'PM-SUE-MA-41',q:1},{ref:'PM-RSX-BL-42',q:2}]},
+  {bac:3,no:'CMD-048312',client:'Noah Fournier',ville:'Nantes',ship:'CHR',lignes:[{ref:'PM-SUE-MA-41',q:2}]},
+]};
+const LIGNES=[];VAGUE.cmds.forEach(c=>c.lignes.forEach((l,k)=>LIGNES.push({id:`${c.bac}-${k}`,bac:c.bac,cmd:c,ref:l.ref,q:l.q,adr:ADR[l.ref]})));
+const CARTONS={S:{lib:'S',dit:'1 boîte'},M:{lib:'M',dit:'2 boîtes'},L:{lib:'L',dit:'3 ou 4 boîtes'}};
+const cartonJuste=n=>n<=1?'S':n===2?'M':'L';
+
+/* ================== état ================== */
+const E={etape:0,fait:[false,false,false,false,false],temps:'guidage',cell:null,pile:false,ligneSel:null,
+  bacs:{1:[],2:[],3:[]},pris:[],          // pris : historique des boîtes prises [{bac,ref,adr}] (pour « Reposer »)
+  signal:{},                              // id de ligne → true
+  stockPris:{},                           // adresse → boîtes prises
+  passages:[],premier:null,               // passages au tunnel ; le premier fige les cases B et C
+  colis:{},bacColis:1,                    // bac → {carton, etiquette, cage, valide, premier}
+  q:null,qRep:{},qVues:new Set(),anim:null};
+const svg=document.getElementById('svg'),pan=document.getElementById('panneau'),leg=document.getElementById('legende');
+const ETAPES=['① La vague','② Prélever','③ Tunnel RFID','④ Emballer, étiqueter','⑤ Bilan'];
+function barre(){
+  document.getElementById('etapes').innerHTML=ETAPES.map((t,k)=>{const libre=k===0||E.fait[k-1]||k===E.etape;
+    return `<button class="${k===E.etape?'on':''} ${E.fait[k]?'fait':''}" data-e="${k}" ${libre?'':'disabled'}>${E.fait[k]?'✓ ':''}${t}</button>`;}).join('');
+  document.querySelectorAll('[data-e]').forEach(b=>b.onclick=()=>{if(!E.q)aller(+b.dataset.e);});
+}
+function aller(k){if(E.anim){cancelAnimationFrame(E.anim);E.anim=null;}E.etape=k;barre();[etape1,etape2,etape3,etape4,etape5][k]();}
+document.getElementById('temps').onchange=e=>{E.temps=e.target.value;aller(E.etape);};
+const reduit=matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ================== état calculé ================== */
+const dansBac=(bac,ref)=>E.bacs[bac].filter(r=>r===ref).length;
+const restant=adr=>{const e=EMPL[adr];return e?e[1]-(E.stockPris[adr]||0):0;};
+const attendu=l=>Math.min(l.q,EMPL[l.adr][1]);           // ce qu'on peut prendre : la commande, plafonnée par le stock
+function ligneJuste(l,f){   // f : figé (au premier passage) ou état courant
+  const pris=f?f.pris[l.id]:dansBac(l.bac,l.ref),sig=f?f.signal[l.id]:!!E.signal[l.id];
+  return pris===attendu(l)&&(attendu(l)<l.q)===sig;
+}
+// Le contrôle du tunnel : il lit les puces du bac et les compare à la commande du bac. Il ne connaît pas le stock :
+// une ligne incomplète est acceptée si elle a été SIGNALÉE (elle partira en reliquat).
+function lireBac(bac){
+  const c=VAGUE.cmds.find(x=>x.bac===bac),refs=c.lignes.map(l=>l.ref);
+  if(E.bacs[bac].some(r=>!refs.includes(r)))return {ok:false,pourquoi:'intrus'};
+  for(const l of LIGNES.filter(x=>x.bac===bac)){const n=dansBac(bac,l.ref);
+    if(n>l.q)return {ok:false,pourquoi:'trop'};
+    if(n<l.q&&!E.signal[l.id])return {ok:false,pourquoi:'manque'};}
+  // un bac vide n'est jamais conforme (sinon « tout signaler » passerait le tunnel : l'inaction récompensée)
+  if(!E.bacs[bac].length)return {ok:false,pourquoi:'vide'};
+  return {ok:true};
+}
+const MOTIF={intrus:'une puce lue ne correspond pas à la commande du bac',trop:'le bac contient plus de boîtes que la commande',
+  manque:'il manque des boîtes sans signalement',vide:'le bac est vide'};
+
+/* ================== questions au fil (brief §4 bis) ================== */
+const QUESTIONS={
+  rupture:{qui:'Nadia, cheffe d’équipe préparation',enonce:l=>`Tu viens de signaler <b>${l.ref}</b> : ${restant(l.adr)+dansBac(l.bac,l.ref)===0?'aucune paire':'pas assez de paires'} à l’emplacement ${l.adr}. ${l.cmd.client} en a commandé ${l.q}. Pour sa commande, que se passe-t-il ?`,
+    choix:['La ligne part plus tard (reliquat) et on la prévient.','On met une autre pointure dans le bac.','On annule toute sa commande.'],juste:0,
+    retour:'Une autre pointure, c’est un retour assuré. Le reste de sa commande part ce soir, la ligne manquante suivra.'},
+  puce:{qui:'Nadia, cheffe d’équipe préparation',enonce:()=>'Le tunnel vient de lire ton chariot. D’après ce qu’il t’a affiché, qu’a-t-il comparé ?',
+    choix:['La puce de chaque boîte et la commande du bac.','Le poids de chaque bac.','Le code-barres du carton.'],juste:0,
+    retour:'Une puce par boîte : chez nous, une erreur pour 50 000 commandes au moins. Avec une étiquette classique, c’était une pour 10 000.'},
+  relais:{qui:'Nadia, cheffe d’équipe préparation',enonce:()=>'Tu as étiqueté <b>CMD-048307</b>. Elle part en point relais : où Clara Bernard récupère-t-elle son colis ?',
+    choix:['Dans un commerce du réseau, près de chez elle.','Chez elle, remis en main propre.','À l’entrepôt de Saint-Quentin-Fallavier.'],juste:0,
+    retour:'Le point relais coûte moins cher au client, et le colis part dans la même navette du soir.'},
+};
+function poser(id,arg){
+  if(E.qVues.has(id))return;E.qVues.add(id);E.q={id,arg,choix:null,repondu:false};montrerQuestion();
+}
+function montrerQuestion(){
+  document.querySelector('.gel')?.remove();if(!E.q)return;
+  const Q=QUESTIONS[E.q.id],div=document.createElement('div');div.className='gel';
+  const r=E.q.repondu,juste=E.q.choix===Q.juste;
+  div.innerHTML=`<div class="question" role="dialog" aria-label="Question"><div class="qui">💬 ${Q.qui} — question au fil (ton travail attend ta réponse)</div>
+    <div class="enonce">${Q.enonce(E.q.arg)}</div>
+    ${Q.choix.map((c,k)=>`<button class="rep ${E.q.choix===k?'on':''}" data-c="${k}" ${r?'disabled':''}>${ech(c)}</button>`).join('')}
+    ${r?`<div class="retour"><b class="${juste?'ok':'ko'}">${juste?'✓ Oui.':'✗ Non.'}</b> ${ech(Q.retour)}</div><p><button class="btn prim" id="qOk">Reprendre mon travail</button></p>`
+      :`<p><button class="btn prim" id="qVal" ${E.q.choix==null?'disabled':''}>Répondre</button></p>`}
+    <p class="note">La première réponse compte. Tu peux regarder le bon et les bacs, pas toucher à ton travail tant que tu n’as pas répondu.</p></div>`;
+  document.getElementById('corps').appendChild(div);
+  div.querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>{E.q.choix=+b.dataset.c;montrerQuestion();});
+  const v=div.querySelector('#qVal');if(v)v.onclick=()=>{E.q.repondu=true;E.qRep[E.q.id]=E.q.choix===Q.juste;montrerQuestion();};
+  const o=div.querySelector('#qOk');if(o)o.onclick=()=>{E.q=null;montrerQuestion();aller(E.etape);};
+}
+
+/* ================== objets dessinés ================== */
+function sol(I,x0,y0,x1,y1){
+  let g=I.face([[x0,y0,0],[x1,y0,0],[x1,y1,0],[x0,y1,0]],'#e4dfd3','none');
+  return g;
+}
+function boiteChaussure(I,x,y,z,w,d,h,ref){
+  const c=MARQUE_COUL[ART[ref][0]]||['#ccc','#bbb','#aaa'];
+  let g=I.boite(x,y,z,w,d,h,c,'rgba(0,0,0,.35)');
+  // étiquette blanche (et sa puce) sur le bout visible de la boîte
+  g+=I.face([[x+w*.18,y+d,z+h*.25],[x+w*.82,y+d,z+h*.25],[x+w*.82,y+d,z+h*.78],[x+w*.18,y+d,z+h*.78]],'#fbfbf8','none');
+  return g;
+}
+const RX=8,RL=3,CW=0.62,LH=0.5,RD=0.5,Z0=0.1;
+function rayon(I,surbrillance){
+  let g='';
+  // fond du rayonnage
+  g+=I.face([[0,0,0],[RX*CW,0,0],[RX*CW,0,Z0+RL*LH+0.05],[0,0,Z0+RL*LH+0.05]],'#8c959b','none');
+  for(let n=0;n<RL;n++){
+    const z=Z0+n*LH;
+    g+=I.boite(0,0,z-0.04,RX*CW,RD,0.04,['#c8cdd0','#9aa3a8','#8a9297']);
+    for(let c=0;c<RX;c++){
+      const adr=`B-${String(c+1).padStart(2,'0')}-${n+1}`,e=EMPL[adr];if(!e)continue;
+      const nb=Math.min(9,restant(adr));
+      const pos=[];for(let b=0;b<nb;b++)pos.push({i:b%3,k:Math.floor(b/3)});
+      pos.sort((a,b)=>(a.k-b.k)||(a.i-b.i));
+      pos.forEach(p=>{g+=boiteChaussure(I,c*CW+0.05+p.i*0.18,0.07,z+p.k*0.125,0.16,0.36,0.115,e[0]);});
+    }
+    // lisse avant (porte-étiquettes) et adresses
+    g+=I.face([[0,RD,z-0.04],[RX*CW,RD,z-0.04],[RX*CW,RD,z-0.13],[0,RD,z-0.13]],'#f2c230','#b18c14');
+    for(let c=0;c<RX;c++){const adr=`B-${String(c+1).padStart(2,'0')}-${n+1}`;
+      g+=texteAvant(I,c*CW+CW/2,RD+0.001,z-0.118,adr,12.5,'#1d1d1b',{gras:true});}
+  }
+  // montants avant
+  for(let c=0;c<=RX;c+=2) g+=I.boite(c*CW-0.025,RD-0.05,0,0.05,0.05,Z0+RL*LH+0.05,['#3c6e9e','#2f5f8e','#284f78']);
+  // panneau du massif
+  g+=I.face([[0.2,0.002,Z0+RL*LH+0.12],[2.2,0.002,Z0+RL*LH+0.12],[2.2,0.002,Z0+RL*LH+0.42],[0.2,0.002,Z0+RL*LH+0.42]],'#1f2a33','#0e151b');
+  g+=texteAvant(I,1.2,0.003,Z0+RL*LH+0.2,'LIFESTYLE · ALLÉE B',13,'#fff',{gras:true});
+  // zones cliquables (devant tout) et surbrillances
+  for(let n=0;n<RL;n++)for(let c=0;c<RX;c++){
+    const adr=`B-${String(c+1).padStart(2,'0')}-${n+1}`,z=Z0+n*LH,x=c*CW;
+    const pts=I.pts([[x,RD,z],[x+CW,RD,z],[x+CW,RD,z+LH-0.06],[x,RD,z+LH-0.06]]);
+    const sel=E.cell===adr,sb=surbrillance===adr;
+    g+=`<polygon points="${pts}" data-cell="${adr}" fill="${sel?'rgba(240,196,25,.18)':'rgba(0,0,0,0)'}" stroke="${sel?'#f0c419':sb?'#ffffff':'none'}" stroke-width="${sel?3:2.5}" ${sb&&!sel?'stroke-dasharray="7 5"':''} style="cursor:pointer"><title>${adr}</title></polygon>`;
+  }
+  return g;
+}
+// Le chariot de préparation à trois bacs (un bac = une commande), poussé par sa poignée côté droit.
+function chariot(I,x,y,o={}){
+  let g='';
+  const z0=0.16,BW=0.46,BD=0.56,BH=0.27,L=1.56,D=0.66;
+  g+=`<ellipse cx="${I.P(x+L/2,y+D/2,0)[0]}" cy="${I.P(x+L/2,y+D/2,0)[1]}" rx="${I.unite*.95}" ry="${I.unite*.42}" fill="rgba(0,0,0,.13)"/>`;
+  [[0.1,0.06],[L-0.18,0.06],[0.1,D-0.06],[L-0.18,D-0.06]].forEach(([dx,dy])=>{g+=roue(I,x+dx,y+dy,0.07,0.07,0.05);});
+  g+=I.boite(x,y,0.11,L,D,0.05,['#bfc5c9','#8f979c','#7f878c']);
+  // poignée
+  g+=I.boite(x+L-0.04,y+0.04,z0,0.04,0.04,0.8,['#555','#444','#333'])+I.boite(x+L-0.04,y+D-0.08,z0,0.04,0.04,0.8,['#555','#444','#333']);
+  g+=I.boite(x+L-0.05,y+0.02,z0+0.78,0.06,D-0.04,0.05,['#2b2b2b','#202020','#181818']);
+  for(let b=1;b<=3;b++){
+    const bx=x+0.05+(b-1)*(BW+0.04),by=y+0.05,cont=(o.bacs||E.bacs)[b];
+    // intérieur vu par l'ouverture : fond, paroi du fond, paroi de gauche
+    g+=I.face([[bx,by,z0],[bx+BW,by,z0],[bx+BW,by+BD,z0],[bx,by+BD,z0]],'#3b4954','none');
+    g+=I.face([[bx,by,z0],[bx+BW,by,z0],[bx+BW,by,z0+BH],[bx,by,z0+BH]],'#4a5b68','none');
+    g+=I.face([[bx,by,z0],[bx,by+BD,z0],[bx,by+BD,z0+BH],[bx,by,z0+BH]],'#2f3b44','none');
+    // boîtes dans le bac, à plat, jusqu'à 3 par rang
+    cont.forEach((ref,i)=>{const k=Math.floor(i/3),j=i%3;g+=boiteChaussure(I,bx+0.03+j*0.145,by+0.08,z0+0.01+k*0.12,0.13,0.36,0.11,ref);});
+    // parois avant et droite (devant les boîtes), bord
+    g+=I.face([[bx,by+BD,z0],[bx+BW,by+BD,z0],[bx+BW,by+BD,z0+BH],[bx,by+BD,z0+BH]],'rgba(70,110,150,.93)','#2b4a66');
+    g+=I.face([[bx+BW,by,z0],[bx+BW,by+BD,z0],[bx+BW,by+BD,z0+BH],[bx+BW,by,z0+BH]],'rgba(55,92,128,.93)','#2b4a66');
+    // numéro du bac
+    g+=I.face([[bx+0.13,by+BD+0.002,z0+0.06],[bx+0.33,by+BD+0.002,z0+0.06],[bx+0.33,by+BD+0.002,z0+0.21],[bx+0.13,by+BD+0.002,z0+0.21]],'#fbfbf8','none');
+    g+=texteAvant(I,bx+0.23,by+BD+0.003,z0+0.085,String(b),15,'#111',{gras:true});
+    if(o.verdicts&&o.verdicts[b]){const v=o.verdicts[b],[cx,cy]=I.P(bx+BW/2,by+BD/2,z0+0.95);
+      g+=`<line x1="${cx}" y1="${cy+14}" x2="${I.P(bx+BW/2,by+BD/2,z0+BH)[0]}" y2="${I.P(bx+BW/2,by+BD/2,z0+BH)[1]}" stroke="#333" stroke-width="1.5"/>`;
+      g+=`<circle cx="${cx}" cy="${cy}" r="15" fill="${v.ok?'#2f8a52':'#fff'}" stroke="${v.ok?'#1d6b3c':'#c0392b'}" stroke-width="2.5"/><text x="${cx}" y="${cy+6}" text-anchor="middle" font-size="18" font-weight="800" fill="${v.ok?'#fff':'#c0392b'}">${v.ok?'✓':'✗'}</text>`;}
+  }
+  if(o.cmdSel){const b=o.cmdSel,bx=x+0.05+(b-1)*(BW+0.04);
+    g+=`<polygon points="${I.pts([[bx-0.02,y+0.03,z0+BH+0.01],[bx+BW+0.02,y+0.03,z0+BH+0.01],[bx+BW+0.02,y+BD+0.07,z0+BH+0.01],[bx-0.02,y+BD+0.07,z0+BH+0.01]])}" fill="none" stroke="#f0c419" stroke-width="3"/>`;}
+  return g;
+}
+function poignee(I,x,y){return I.P(x+1.54,y+0.33,0.98);}
+
+/* ================== ① la vague ================== */
+function terminal(I,x,y){
+  let g=I.boite(x,y,0,0.08,0.08,1.25,['#444','#333','#2a2a2a']);
+  g+=I.face([[x-0.5,y+0.12,1.2],[x+0.6,y+0.12,1.2],[x+0.6,y+0.12,1.74],[x-0.5,y+0.12,1.74]],'#101418','#000');
+  g+=I.face([[x-0.47,y+0.121,1.23],[x+0.57,y+0.121,1.23],[x+0.57,y+0.121,1.71],[x-0.47,y+0.121,1.71]],'#163042','none');
+  g+=texteAvant(I,x+0.05,y+0.122,1.55,'VAGUE V-1027',11,'#bfe3ff',{gras:true});
+  g+=texteAvant(I,x+0.05,y+0.122,1.41,'3 commandes · 3 bacs',10,'#bfe3ff');
+  g+=texteAvant(I,x+0.05,y+0.122,1.29,'départ navettes 19:30',9.5,'#9fd0a8');
+  return g;
+}
+function docVague(){
+  return `<div class="bloc"><h3>Bon de prélèvement — vague ${VAGUE.no}</h3>
+  <table class="bon"><tr><th>Bac</th><th>Réf.</th><th>Article</th><th class="num">Pointure</th><th class="num">Qté</th><th>Adresse</th></tr>
+  ${VAGUE.cmds.map(c=>`<tr class="cmd"><td colspan="6">Bac ${c.bac} · ${c.no} · ${ech(c.client)} (${c.ville}) · ${MODES[c.ship].dit}</td></tr>`+
+    LIGNES.filter(l=>l.bac===c.bac).map(l=>`<tr><td class="num">${l.bac}</td><td class="mono">${l.ref}</td><td>${ART[l.ref][1]} · ${ART[l.ref][2]}</td><td class="num">${ART[l.ref][3]}</td><td class="num"><b>${l.q}</b></td><td class="mono">${l.adr}</td></tr>`).join('')).join('')}
+  </table><div class="pied">Document pédagogique — reconstitution, non contractuel.</div></div>`;
+}
+function etape1(){
+  const I=projection(120,430,215);
+  svg.setAttribute('viewBox','0 0 1000 600');
+  const t0=performance.now(),D=reduit?0:2600;
+  const dessiner=t=>{
+    const f=D?Math.min(1,t/D):1,xc=2.6+(-0.4-2.6)*(1-Math.pow(1-f,2));
+    let s=sol(I,-2.5,-1.2,4.5,3.2);
+    s+=I.face([[-2.5,-1.2,0],[4.5,-1.2,0],[4.5,-1.2,2.2],[-2.5,-1.2,2.2]],'#cfcac0','none');
+    s+=terminal(I,4.1,0.5);
+    s+=chariot(I,xc,0.75);
+    const [hx,hy]=poignee(I,xc,0.75);s+=personne(I,xc+1.95,1.08,{main:[hx,hy]});
+    if(f>=1){const [bx,by]=I.P(xc+1.95,1.08,1.9);s+=bulle(bx+8,by-6,['Vague V-1027 : trois commandes,','un bac par commande.','Lis le bon avant de partir dans l’allée.']);}
+    svg.innerHTML=s;
+    leg.innerHTML='<b>17:42</b> — Ton chariot est prêt au poste 3 : trois bacs vides, numérotés 1, 2, 3.';
+    if(f<1)E.anim=requestAnimationFrame(()=>dessiner(performance.now()-t0));else E.anim=null;
+  };
+  dessiner(0);
+  pan.innerHTML=`<h3>La vague arrive au poste</h3><p class="note">Commandes passées avant 13 h : elles partent ce soir avec les navettes des transporteurs. Le terminal t’a attribué la vague ${VAGUE.no}.</p>
+  ${E.temps==='guidage'?'<div class="aide"><b>Un bac = une commande.</b> Le numéro du bac est écrit sur le bon, à côté de chaque commande. Regarde aussi le mode de livraison : il servira à l’emballage.</div>':''}
+  ${docVague()}<button class="btn prim" id="go1">Partir dans l’allée B</button>`;
+  document.getElementById('go1').onclick=()=>{E.fait[0]=true;aller(1);};
+}
+
+/* ================== ② prélever ================== */
+function sceneAllee(){
+  const I=projection(105,440,215);
+  svg.setAttribute('viewBox','0 0 1000 600');
+  const surb=E.temps==='guidage'&&E.ligneSel?LIGNES.find(l=>l.id===E.ligneSel).adr:null;
+  let s=sol(I,-1.2,-0.3,RX*CW+0.6,3.6)+rayon(I,surb);
+  s+=chariot(I,-0.5,2.55,{cmdSel:null});
+  const [hx,hy]=poignee(I,-0.5,2.55);s+=personne(I,1.45,2.88,{main:[hx,hy]});
+  svg.innerHTML=s;
+  svg.querySelectorAll('[data-cell]').forEach(p=>p.onclick=()=>{if(E.q)return;E.cell=p.dataset.cell;E.pile=false;sceneAllee();panneau2();});
+  leg.innerHTML=E.cell?`<b>17:48</b> — Emplacement <b>${E.cell}</b> ouvert : lis l’étiquette d’une boîte avant de la prendre.`:'<b>17:45</b> — Allée B, massif Lifestyle. Clique un emplacement pour voir ses boîtes.';
+}
+function boutonsSignal(){
+  const ls=LIGNES.filter(l=>l.adr===E.cell&&dansBac(l.bac,l.ref)<l.q&&!E.signal[l.id]);
+  if(!ls.length)return '';
+  return `<div class="prendre"><span class="note">Pas assez de boîtes ici pour ta commande ?</span>${ls.map(l=>`<button class="btn petit" data-sig="${l.id}">⚑ Signaler un manque : bac ${l.bac}, ${l.ref}</button>`).join('')}</div>`;
+}
+function ficheEmplacement(){
+  if(!E.cell)return `<div class="bloc"><p class="note">Clique un emplacement du rayonnage : ses boîtes s’affichent ici.</p></div>`;
+  const e=EMPL[E.cell],n=restant(E.cell);
+  if(!n)return `<div class="bloc"><h4>Emplacement ${E.cell}</h4><p><b>Emplacement vide.</b> Aucune boîte ici.</p>${boutonsSignal()}</div>`;
+  const [m,mod,coul,p]=ART[e[0]];
+  return `<div class="bloc"><h4>Emplacement ${E.cell} · ${n} boîte${n>1?'s':''}</h4>
+    <div class="piles"><button class="etq ${E.pile?'sel':''}" id="pile"><div class="l1"><b>${ech(m.toUpperCase())}</b><span>1 paire</span></div>
+      <div class="ref">${e[0]}</div><div>${ech(mod)} · ${ech(coul)}</div><div>Pointure <b>${p}</b></div><div>Lot ${e[2]}</div><span class="puce">◉ puce RFID</span><div class="cb"></div></button>
+      <div class="note" style="flex:1;min-width:150px">Toutes les boîtes de cet emplacement portent cette étiquette.<br>Clique l’étiquette pour prendre une boîte.</div></div>
+    ${E.pile?`<div class="prendre"><span class="note">Prendre 1 boîte, la poser dans :</span>${[1,2,3].map(b=>`<button class="btn petit" data-mettre="${b}">Bac ${b}</button>`).join('')}</div>`:''}${boutonsSignal()}</div>`;
+}
+function bonPrelevement(){
+  return `<div class="bloc"><h4>Bon de la vague ${VAGUE.no}${E.temps==='guidage'?' — clique une ligne : son emplacement s’éclaire':''}</h4>
+  <table class="bon"><tr><th>Réf.</th><th class="num">Pt.</th><th class="num">Qté</th><th>Adresse</th><th class="num">Dans le bac</th><th></th></tr>
+  ${VAGUE.cmds.map(c=>`<tr class="cmd"><td colspan="6">Bac ${c.bac} · ${c.no} · ${ech(c.client)}</td></tr>`+
+    LIGNES.filter(l=>l.bac===c.bac).map(l=>{const n=dansBac(l.bac,l.ref);
+      return `<tr class="ligne ${E.ligneSel===l.id?'sel':''}" data-l="${l.id}"><td class="mono">${l.ref}</td><td class="num">${ART[l.ref][3]}</td><td class="num"><b>${l.q}</b></td><td class="mono">${l.adr}</td><td class="num">${n} / ${l.q}</td>
+      <td>${E.signal[l.id]?`<span class="signale">⚑ signalée</span> <button class="btn petit" data-ann="${l.id}">annuler</button>`:''}</td></tr>`;}).join('')).join('')}
+  </table></div>`;
+}
+function bacsListe(){
+  return `<div class="bloc"><h4>Ton chariot</h4><div class="bacs">${[1,2,3].map(b=>{const c=VAGUE.cmds.find(x=>x.bac===b);
+    const comp={};E.bacs[b].forEach(r=>comp[r]=(comp[r]||0)+1);
+    return `<div class="b"><b>Bac ${b}</b> <span class="note">${c.no}</span><br>${Object.entries(comp).map(([r,q])=>`<span class="mono">${r}</span> × ${q}`).join('<br>')||'<span class="note">vide</span>'}</div>`;}).join('')}</div>
+    <div style="margin-top:6px;display:flex;gap:6px"><button class="btn petit" id="reposer" ${E.pris.length?'':'disabled'}>↶ Reposer la dernière boîte</button></div></div>`;
+}
+function panneau2(){
+  const ret=E.passages.length&&E.passages[E.passages.length-1];
+  const refuses=ret?[1,2,3].filter(b=>!ret[b].ok):[];
+  pan.innerHTML=`${refuses.length?`<div class="aide">Le tunnel a refusé ${refuses.map(b=>'le bac '+b).join(' et ')}. Reprends-${refuses.length>1?'les':'le'}, puis repasse au tunnel.</div>`:''}
+  ${ficheEmplacement()}${bonPrelevement()}${bacsListe()}
+  <button class="btn prim" id="go2">Pousser le chariot au tunnel →</button>`;
+  const pile=document.getElementById('pile');if(pile)pile.onclick=()=>{if(E.q)return;E.pile=!E.pile;panneau2();};
+  pan.querySelectorAll('[data-mettre]').forEach(b=>b.onclick=()=>{if(E.q)return;
+    if(restant(E.cell)<=0)return;const ref=EMPL[E.cell][0],bac=+b.dataset.mettre;
+    E.bacs[bac].push(ref);E.pris.push({bac,ref,adr:E.cell});E.stockPris[E.cell]=(E.stockPris[E.cell]||0)+1;
+    if(restant(E.cell)<=0)E.pile=false;sceneAllee();panneau2();});
+  pan.querySelectorAll('[data-l]').forEach(tr=>tr.onclick=e=>{if(E.q||e.target.closest('button'))return;E.ligneSel=tr.dataset.l;sceneAllee();panneau2();});
+  pan.querySelectorAll('[data-sig]').forEach(b=>b.onclick=()=>{if(E.q)return;const l=LIGNES.find(x=>x.id===b.dataset.sig);E.signal[l.id]=true;panneau2();poser('rupture',l);});
+  pan.querySelectorAll('[data-ann]').forEach(b=>b.onclick=()=>{if(E.q)return;delete E.signal[b.dataset.ann];panneau2();});
+  document.getElementById('reposer').onclick=()=>{if(E.q)return;const p=E.pris.pop();if(!p)return;
+    const i=E.bacs[p.bac].lastIndexOf(p.ref);E.bacs[p.bac].splice(i,1);E.stockPris[p.adr]--;sceneAllee();panneau2();};
+  document.getElementById('go2').onclick=()=>{if(E.q)return;E.fait[1]=true;aller(2);};
+}
+function etape2(){sceneAllee();panneau2();}
+
+/* ================== ③ tunnel RFID ================== */
+function portique(I,x,y,partie,etat){
+  const c=['#d0d5d8','#a7afb4','#949ca1'];let g='';
+  if(partie==='fond'){g+=I.boite(x,y-0.25,0,0.22,0.16,1.75,c);}
+  else{g+=I.boite(x,y+0.85,0,0.22,0.16,1.75,c);
+    g+=I.boite(x,y-0.25,1.75,0.22,1.26,0.22,['#e5e8ea','#b8bfc3','#a3abaf']);
+    g+=texteAvant(I,x+0.11,y+1.012,1.81,'RFID',10,'#1d1d1b',{gras:true});
+    const [lx,ly]=I.P(x+0.11,y+0.38,2.06);
+    g+=`<circle cx="${lx}" cy="${ly}" r="9" fill="${etat==='lit'?'#f0c419':etat==='ok'?'#2f8a52':etat==='ko'?'#c0392b':'#555'}" stroke="#222" stroke-width="2"/>`;}
+  return g;
+}
+function ondes(I,x,y){let g='';const [cx,cy]=I.P(x+0.11,y+0.3,1.7);
+  for(let k=1;k<=3;k++)g+=`<path d="M${cx-18*k},${cy+10*k} Q${cx},${cy+22*k} ${cx+18*k},${cy+10*k}" fill="none" stroke="#f0c419" stroke-width="2" opacity="${0.9-k*0.22}"/>`;return g;}
+function etape3(){
+  const I=projection(105,360,250);
+  svg.setAttribute('viewBox','0 0 1000 600');
+  const xp=0.7,y=0.4,xd=3.4,xa=-2.4,T=reduit?0:4200,t0=performance.now();
+  let lu=null;
+  pan.innerHTML=`<h3>Le tunnel RFID</h3><p class="note">Le chariot passe sous le portique : il lit la puce de chaque boîte et la compare à la commande de chaque bac.</p><div id="res3"><p class="note">Lecture en cours…</p></div>`;
+  const dessiner=t=>{
+    const f=T?Math.min(1,t/T):1,xc=xd+(xa-xd)*f;
+    const sous=xc+1.56>xp&&xc<xp+0.22;
+    let s=sol(I,-3,-1.5,5,3);
+    s+=I.face([[-3,-1.5,0],[5,-1.5,0],[5,-1.5,2.4],[-3,-1.5,2.4]],'#cfcac0','none');
+    for(let k=0;k<8;k++){const xx=-2.6+k;s+=I.face([[xx,y+0.32,0.001],[xx+0.5,y+0.32,0.001],[xx+0.5,y+0.36,0.001],[xx,y+0.36,0.001]],'#e7c628','none');}
+    s+=portique(I,xp,y,'fond');
+    s+=chariot(I,xc,y,{verdicts:f>=1?lu:null});
+    const [hx,hy]=poignee(I,xc,y);s+=personne(I,xc+1.95,y+0.33,{main:[hx,hy]});
+    s+=portique(I,xp,y,'devant',f>=1?(lu&&[1,2,3].every(b=>lu[b].ok)?'ok':'ko'):sous?'lit':'');
+    if(sous)s+=ondes(I,xp,y);
+    svg.innerHTML=s;
+    leg.innerHTML=f<1?'<b>18:21</b> — Le chariot passe sous le portique…':'<b>18:22</b> — Lecture terminée : regarde le voyant de chaque bac.';
+    if(f<1)E.anim=requestAnimationFrame(()=>dessiner(performance.now()-t0));
+    else{E.anim=null;}
+  };
+  // lecture : faite une fois, au début du passage (le résultat s'affiche à la fin)
+  lu={1:lireBac(1),2:lireBac(2),3:lireBac(3)};
+  const n=E.passages.length;E.passages.push(lu);
+  if(n===0){E.premier={pris:{},signal:{},bacs:{1:lu[1].ok,2:lu[2].ok,3:lu[3].ok}};
+    LIGNES.forEach(l=>{E.premier.pris[l.id]=dansBac(l.bac,l.ref);E.premier.signal[l.id]=!!E.signal[l.id];});}
+  const fin=()=>{
+    const tous=[1,2,3].every(b=>lu[b].ok);
+    const lignes=[1,2,3].map(b=>{const v=lu[b];
+      if(v.ok)return `<div class="ok">✓ <b>Bac ${b}</b> conforme à ${VAGUE.cmds[b-1].no}</div>`;
+      return `<div class="ko">✗ <b>Bac ${b}</b> refusé${E.temps==='guidage'?' : '+MOTIF[v.pourquoi]:''}</div>`;}).join('');
+    document.getElementById('res3').innerHTML=`<div class="bloc verdict">${E.temps==='entrainement'&&!tous?'<div class="ko">✗ Un bac au moins est refusé.</div>':lignes}</div>
+      <p class="note">Passage n° ${n+1}${n?' (seul le premier passage compte pour la note ; celui-ci te sert à corriger)':' — c’est lui qui compte pour la note'}.</p>
+      ${tous?`<button class="btn prim" id="go3">Emballer et étiqueter →</button>`:`<button class="btn prim" id="rep3">Reprendre ${E.temps==='entrainement'?'les bacs':'le'+([1,2,3].filter(b=>!lu[b].ok).length>1?'s bacs refusés':' bac refusé')}</button>`}`;
+    const go=document.getElementById('go3');if(go)go.onclick=()=>{if(E.q)return;E.fait[2]=true;aller(3);};
+    const rp=document.getElementById('rep3');if(rp)rp.onclick=()=>{if(E.q)return;aller(1);};
+    if(n===0)poser('puce');
+  };
+  dessiner(0);
+  if(T)setTimeout(fin,T+60);else fin();
+}
+
+/* ================== ④ emballer, étiqueter ================== */
+const CAGES=[['COL',0],['REL',1.35],['CHR',2.7]];
+function cage(I,x,y,mode,colis){
+  let g='';const w=1.1,d=0.9,h=1.5;
+  // fond et côté (grillage)
+  g+=I.face([[x,y,0],[x+w,y,0],[x+w,y,h],[x,y,h]],'rgba(120,128,134,.25)','#6b7378');
+  g+=I.face([[x,y,0],[x,y+d,0],[x,y+d,h],[x,y,h]],'rgba(120,128,134,.18)','#6b7378');
+  g+=I.face([[x,y,0],[x+w,y,0],[x+w,y+d,0],[x,y+d,0]],'#d2cdc2','none');
+  colis.forEach((cl,i)=>{const t={S:[.28,.22,.16],M:[.38,.3,.2],L:[.5,.36,.26]}[cl.carton];
+    g+=I.boite(x+0.12+i*0.42,y+0.25,0,t[0],t[1],t[2],['#d9b27a','#c99c5f','#b48549']);
+    g+=I.face([[x+0.15+i*0.42,y+0.25+t[1],0.04],[x+0.12+i*0.42+t[0]-0.04,y+0.25+t[1],0.04],[x+0.12+i*0.42+t[0]-0.04,y+0.25+t[1],t[2]-0.04],[x+0.15+i*0.42,y+0.25+t[1],t[2]-0.04]],'#fff','none');});
+  // grillage avant et droit
+  for(let k=0;k<=6;k++){const xx=x+k*w/6;g+=`<polyline points="${I.pts([[xx,y+d,0],[xx,y+d,h]])}" stroke="#6b7378" stroke-width="1.2"/>`;}
+  for(let k=0;k<=5;k++){const zz=k*h/5;g+=`<polyline points="${I.pts([[x,y+d,zz],[x+w,y+d,zz],[x+w,y,zz]])}" fill="none" stroke="#6b7378" stroke-width="1.2"/>`;}
+  for(let k=0;k<=5;k++){const yy=y+k*d/5;g+=`<polyline points="${I.pts([[x+w,yy,0],[x+w,yy,h]])}" stroke="#6b7378" stroke-width="1.2"/>`;}
+  // panneau
+  g+=I.face([[x+0.05,y+d+0.002,h+0.05],[x+w-0.05,y+d+0.002,h+0.05],[x+w-0.05,y+d+0.002,h+0.34],[x+0.05,y+d+0.002,h+0.34]],'#1f2a33','#0e151b');
+  g+=texteAvant(I,x+w/2,y+d+0.003,h+0.13,MODES[mode].court,12,'#fff',{gras:true});
+  // zone cliquable
+  g+=`<polygon data-cage="${mode}" points="${I.pts([[x,y+d,0],[x+w,y+d,0],[x+w,y+d,h+0.34],[x,y+d,h+0.34]])}" fill="rgba(0,0,0,0)" stroke="${E.colis[E.bacColis]&&E.colis[E.bacColis].cage===mode?'#f0c419':'none'}" stroke-width="3" style="cursor:pointer"><title>Cage ${MODES[mode].nom}</title></polygon>`;
+  return g;
+}
+function sceneColis(){
+  const I=projection(92,420,140);
+  svg.setAttribute('viewBox','0 0 1000 600');
+  let s=sol(I,-2.8,-0.6,4.6,3.6);
+  const parCage={COL:[],REL:[],CHR:[]};
+  Object.values(E.colis).forEach(c=>{if(c.valide)parCage[c.cage].push(c);});
+  CAGES.forEach(([m,x])=>{s+=cage(I,x,-0.4,m,parCage[m]);});
+  // établi d'emballage avec le carton en cours
+  s+=I.boite(0.6,1.5,0,1.5,0.8,0.82,['#c7b08a','#a8916c','#957f5c']);
+  const c=E.colis[E.bacColis];
+  if(c&&c.carton&&!c.valide){const t={S:[.28,.22,.16],M:[.38,.3,.2],L:[.5,.36,.26]}[c.carton];
+    s+=I.boite(1.1,1.75,0.82,t[0]*1.3,t[1]*1.3,t[2]*1.3,['#d9b27a','#c99c5f','#b48549']);
+    if(c.etiquette)s+=I.face([[1.14,1.75+t[1]*1.3+0.002,0.86],[1.1+t[0]*1.3-0.05,1.75+t[1]*1.3+0.002,0.86],[1.1+t[0]*1.3-0.05,1.75+t[1]*1.3+0.002,0.82+t[2]*1.3-0.05],[1.14,1.75+t[1]*1.3+0.002,0.82+t[2]*1.3-0.05]],'#fff','#999');}
+  s+=chariot(I,-2.2,1.6,{cmdSel:E.bacColis});
+  s+=personne(I,2.45,2.05);
+  svg.innerHTML=s;
+  svg.querySelectorAll('[data-cage]').forEach(p=>p.onclick=()=>{if(E.q)return;const c=E.colis[E.bacColis];
+    if(!c||!c.etiquette||c.valide){leg.innerHTML='<b>18:30</b> — Choisis d’abord le carton et colle l’étiquette, puis pose le colis dans une cage.';return;}
+    c.cage=p.dataset.cage;sceneColis();panneau4();});
+  leg.innerHTML='<b>18:28</b> — Établi d’emballage. Derrière, les cages de départ des navettes du soir.';
+}
+function etiquetteT(mode,cmd){
+  return `<div class="m">${ech(MODES[mode].nom.toUpperCase())}</div><div>${ech(cmd.client)}</div><div>${ech(cmd.ville)}</div><div class="gros">${MODES[mode].court}</div><div style="font-size:9px;color:#555">${cmd.no}</div>`;
+}
+function panneau4(){
+  const b=E.bacColis,cmd=VAGUE.cmds.find(x=>x.bac===b);
+  if(!E.colis[b])E.colis[b]={carton:null,etiquette:null,cage:null,valide:false};
+  const c=E.colis[b],nb=E.bacs[b].length;
+  pan.innerHTML=`<div class="choix">${[1,2,3].map(k=>`<button data-bac="${k}" class="${k===b?'on':''}">Bac ${k}${E.colis[k]&&E.colis[k].valide?' ✓':''}</button>`).join('')}</div>
+  <div class="bloc"><h4>Bac ${b} · ${cmd.no} · ${ech(cmd.client)}</h4>
+    <p style="margin:2px 0 6px">${nb} boîte${nb>1?'s':''} dans le bac · Livraison choisie par la cliente : <b>${ech(MODES[cmd.ship].dit)}</b></p>
+    ${c.valide?`<p class="ok">✓ Colis validé, posé dans la cage ${ech(MODES[c.cage].nom)}.</p>`:`
+    <h4>1. Le carton</h4><div class="choix">${Object.entries(CARTONS).map(([k,v])=>`<button data-carton="${k}" class="${c.carton===k?'on':''}">${v.lib} · ${v.dit}</button>`).join('')}</div>
+    <h4>2. L’étiquette du transporteur</h4><div class="choix">${Object.keys(MODES).map(m=>`<button class="etqT ${c.etiquette===m?'on':''}" data-etq="${m}">${etiquetteT(m,cmd)}</button>`).join('')}</div>
+    <h4>3. La cage de départ</h4><p class="note" style="margin:0 0 6px">${c.cage?`Cage choisie : <b>${ech(MODES[c.cage].nom)}</b>.`:'Clique une cage dans la scène.'}</p>
+    <button class="btn prim" id="valC" ${c.carton&&c.etiquette&&c.cage?'':'disabled'}>Valider le colis</button>`}
+  </div>
+  ${E.temps==='guidage'?'<div class="aide">Le carton suit le nombre de boîtes du bac. L’étiquette et la cage suivent le mode de livraison choisi par le client.</div>':''}
+  ${[1,2,3].every(k=>E.colis[k]&&E.colis[k].valide)?'<button class="btn prim" id="go4">Voir le bilan de la vague →</button>':''}
+  <div class="pied">Étiquettes : document pédagogique — reconstitution, non contractuel (pas de logo de transporteur).</div>`;
+  pan.querySelectorAll('[data-bac]').forEach(x=>x.onclick=()=>{if(E.q)return;E.bacColis=+x.dataset.bac;sceneColis();panneau4();});
+  pan.querySelectorAll('[data-carton]').forEach(x=>x.onclick=()=>{if(E.q)return;c.carton=x.dataset.carton;sceneColis();panneau4();});
+  pan.querySelectorAll('[data-etq]').forEach(x=>x.onclick=()=>{if(E.q)return;c.etiquette=x.dataset.etq;sceneColis();panneau4();if(b===2)poser('relais');});
+  const v=document.getElementById('valC');if(v)v.onclick=()=>{if(E.q)return;c.valide=true;
+    c.juste={carton:c.carton===cartonJuste(nb),envoi:c.etiquette===cmd.ship&&c.cage===cmd.ship};sceneColis();panneau4();};
+  const g=document.getElementById('go4');if(g)g.onclick=()=>{E.fait[3]=true;aller(4);};
+}
+function etape4(){if(!E.colis[E.bacColis])E.bacColis=1;sceneColis();panneau4();}
+
+/* ================== ⑤ bilan (ce que verront l'élève et l'enseignant) ================== */
+function etape5(){
+  const I=projection(92,420,140);sceneColis();
+  leg.innerHTML='<b>19:30</b> — Les navettes passent prendre les cages. Le poste a écrit les bons de préparation.';
+  const P=E.premier||{pris:{},signal:{},bacs:{}};
+  const cas=(ok,t)=>`<div class="${ok?'ok':'ko'}">${ok?'✓':'✗'} ${t}</div>`;
+  const statut=l=>{const n=dansBac(l.bac,l.ref);return n===l.q?'Complet':n===0?'Rupture (reliquat)':'Partiel (reliquat '+(l.q-n)+')';};
+  const lot=LIGNES.filter(l=>EMPL[l.adr][2]==='LOT-PM-2609').reduce((t,l)=>t+dansBac(l.bac,l.ref),0);
+  pan.innerHTML=`<h3>Bilan de la vague ${VAGUE.no}</h3>
+  <p class="note">Maquette : le bandeau de fin de séance du site montrera les blocs ; chaque case est jugée à son <b>premier essai</b> (lignes et bacs : au premier passage au tunnel). « Corriger » rouvrira le travail ; la note sera la moyenne du premier bilan et du corrigé.</p>
+  <div class="bloc verdict"><h4>Prélèvement (au premier passage au tunnel)</h4>
+    ${LIGNES.map((l,k)=>cas(ligneJuste(l,P),`Ligne ${k+1} : ${l.ref} (bac ${l.bac})`)).join('')}</div>
+  <div class="bloc verdict"><h4>Contrôle au tunnel (premier passage)</h4>${[1,2,3].map(b=>cas(P.bacs[b],`Bac ${b}`)).join('')}</div>
+  <div class="bloc verdict"><h4>Colis</h4>${VAGUE.cmds.map(c=>{const x=E.colis[c.bac]||{};const j=x.juste||{};return cas(j.carton,`${c.no} : carton`)+cas(j.envoi,`${c.no} : étiquette et cage`);}).join('')}</div>
+  <div class="bloc verdict"><h4>Questions au fil</h4>${['rupture','puce','relais'].map(q=>E.qRep[q]==null?`<div class="note">… ${q} : pas encore posée</div>`:cas(E.qRep[q],'Question « '+q+' »')).join('')}</div>
+  <div class="bloc"><h4>Bons de préparation écrits par le poste</h4><table class="bp"><tr><th>Commande</th><th>Réf.</th><th>Préparé</th><th>Statut</th></tr>
+    ${LIGNES.map(l=>`<tr><td class="mono">${l.cmd.no}</td><td class="mono">${l.ref}</td><td>${dansBac(l.bac,l.ref)} / ${l.q}</td><td>${statut(l)}</td></tr>`).join('')}</table>
+    <p class="note">Lot <b>LOT-PM-2609</b> (reçu en ENT-1.1) : <b>${lot} paire${lot>1?'s':''}</b> sortie${lot>1?'s':''} avec BP-048307 et BP-048312. C’est ce que l’élève remontera en ENT-1.3.</p></div>
+  <div class="aide">Suite de la séance (hors maquette) : réapprovisionner Puma pour PM-SUE-NR-40 (Messagerie), et répondre à Léa Dubois.</div>
+  <button class="btn" id="raz">Rejouer la maquette</button>`;
+  document.getElementById('raz').onclick=()=>location.reload();
+  E.fait[4]=true;barre();
+}
+
+barre();etape1();
+</script>
+</body></html>

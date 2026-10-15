@@ -3,7 +3,9 @@
 > Écrit par Cowork (conception), lu et complété par Claude Code (construction).
 > **Ne rien inventer** : ce qui n'est pas décidé va dans « Questions ouvertes ».
 
-**Statut** : à implémenter — **vue nouvelle : maquette jouable d'abord, validée par Tristan, puis chantier moteur**
+**Statut** : à implémenter — **maquette du poste VALIDÉE par Tristan le 09/10/2026** (`docs/briefs/spartoo/maquette-poste-rfid-1.2.html`) :
+elle fait foi pour le rendu et l'interaction ; son code est jetable (on reprend le comportement, pas le code).
+**Reprise** : `docs/RECAP-2026-10-09-spartoo-1.2-1.3.md` (ordre, conflits avec les autres sessions, questions à poser d'abord).
 **Date du brief** : 09/10/2026
 **Conversation d'origine** : Cowork, « ENT-1.2 et ENT-1.3, refonte sur le modèle du brief ENT-1.1 » (09/10/2026)
 **Brief jumeau** : `docs/briefs/ENT-1.3-spartoo-isoler-le-lot.md` (le fil conducteur 1.1 → 1.2 → 1.3 passe par les deux).
@@ -17,7 +19,7 @@ lecture par un geste du métier).
    retrouve en 1.3 **les commandes qu'il a lui-même préparées** (plus de commandes de collègue semées, sauf filet §6.6).
 
 **Ordre proposé** (un chantier moteur à la fois) : (1) **maquette jouable** du poste (Cowork, `docs/briefs/spartoo/
-maquette-poste-rfid-1.2.html`), validée par Tristan ; (2) objets du kit iso (§7.2) ; (3) vue `poste` (§7.1) ;
+maquette-poste-rfid-1.2.html`, **validée le 09/10**) ; (2) objets du kit iso (§7.2) ; (3) vue `poste` (§7.1) ;
 (4) contenu ENT-1.2 (§6) et bases déjà commencées (§7 bis) ; (5) ENT-1.3 (brief jumeau). Validation en local avant push.
 
 > ⚠ **ENT-1.2 est une séance OUVERTE aux élèves** (`pret: true`, parcours strict, ancienne règle d'ouverture) et le site
@@ -86,7 +88,7 @@ en 1.3, c'est **sa** préparation qu'il remontera.
 | 1 | Messagerie | Lit les **consignes du poste** (M. Morin, tutoie, 5 règles au plus) et la question de Léa Dubois ; répond au **questionnaire du poste** (fiche, comme 1.1) ; le poste est **fermé** tant que le questionnaire n'est pas envoyé (`fermetures`, même faux) |
 | 2 | Messagerie | Répond à Léa Dubois : stock de Stan Smith blanches T.44 (`.getstock`, déjà appris en 1.1) — **inchangé** |
 | 3 | **Poste ①** la vague | Le terminal affiche la vague **V-1027** : 3 commandes web, 3 bacs numérotés sur le chariot (un bac = une commande). L'élève lit les lignes (réf., pointure, quantité, **adresse**) |
-| 4 | **Poste ②** prélever | Pour chaque ligne : choisir l'**allée/massif** (rangés **par catégorie** : Lifestyle, Running, Skate…), ouvrir l'emplacement (vue de face : boîtes avec étiquette lisible au zoom), **prendre** le nombre de boîtes, les **poser dans le bon bac**. Emplacement vide ou insuffisant : « Signaler : rupture » / « Signaler : manque (n trouvée·s) » |
+| 4 | **Poste ②** prélever | Pour chaque ligne : choisir l'**allée/massif** (rangés **par catégorie** : Lifestyle, Running, Skate…), ouvrir l'emplacement (vue de face : boîtes avec étiquette lisible au zoom), **prendre** le nombre de boîtes, les **poser dans le bon bac**. Emplacement vide ou insuffisant : **vérifier d'abord à la console** (`.getstock <réf.>` : le stock du système confirme-t-il l'étagère ?), puis « Signaler : rupture » / « Signaler : manque (n trouvée·s) » (§6.7) |
 | 5 | **Poste ③** tunnel RFID | Pousser le chariot dans le tunnel : chaque bac est lu ; **bac conforme** ✓, sinon ✗ « la puce lue ne correspond pas à la commande du bac 2 » (dit **que**, jamais **quoi**) → l'élève reprend le bac, corrige, repasse |
 | 6 | **Poste ④** emballer, étiqueter | Pour chaque bac conforme : choisir le **carton** (S, M, L selon le nombre de boîtes), imprimer et coller l'**étiquette du mode de livraison de la commande** (domicile, point relais, express), poser le colis dans la **cage de départ** du transporteur. « Valider le colis » = sortie de stock et bon de préparation |
 | 7 | Messagerie | Réapprovisionner Puma (PM-SUE-NR-40 en rupture : `max − stock`, minimum de commande de 20) — **jalon actuel** |
@@ -126,6 +128,11 @@ joint (elle porte sur le métier, pas sur l'article).
 | E. Client | 2 | réponse à Léa : stock réel en chiffres | jalon `lea` actuel | inchangé |
 | F. Réapprovisionnement | 2 | mail à Puma | jalon `reappro` actuel | inchangé (calcule sur le stock **après** la vague) |
 | Questions au fil | 3 | `rupture`, `puce`, `relais` | moteur des questions | — |
+
+Deux règles fixées en faisant la maquette (09/10, **validées avec elle**) : (1) **le signalement se fait sur place** — le bouton « ⚑ Signaler un
+manque » n'apparaît que dans l'emplacement ouvert, pour les lignes de cette adresse (on signale ce qu'on a vu) ; (2) **un bac
+vide n'est jamais conforme au tunnel** (sinon « tout signaler, rien prendre » passerait le contrôle : l'inaction récompensée).
+Le tunnel accepte une ligne signalée à tort (il ne connaît pas le stock) : c'est la case B qui la juge.
 
 Fin de séance : **bandeau de fin par blocs** (✓ / ✗, titres sans la réponse), `suiteAuBilan: true` (ENT-1.3 s'ouvre quand
 tout est jugé, justes ou faux), **« Corriger »** après le bilan (règle du 07/10 : note = moyenne du premier bilan et du
@@ -190,8 +197,8 @@ l'ancien stock) ; relever `versionBase` (remet tout le monde à zéro : **interd
 
 - **Consignes du poste** (M. Morin, **tu**) — remplace « Bienvenue » comme message de départ de 1.2 (la bienvenue reste
   en 1.1) ; 5 règles : (1) un bac = une commande, on ne mélange pas ; (2) on vérifie **référence et pointure** sur
-  l'étiquette avant de prendre ; (3) emplacement vide ou incomplet : on **signale**, on ne remplace jamais par une
-  autre pointure ; (4) le tunnel contrôle chaque bac : un bac refusé, on le reprend ; (5) le carton et l'étiquette
+  l'étiquette avant de prendre ; (3) emplacement vide ou incomplet : on **vérifie le stock à la console**, puis on
+  **signale**, on ne remplace jamais par une autre pointure ; (4) le tunnel contrôle chaque bac : un bac refusé, on le reprend ; (5) le carton et l'étiquette
   suivent le mode de livraison choisi par le client. Bouton « Répondre au questionnaire ».
 - **Question de Léa Dubois** et **« Nouvelle commande web »** : gardées ; la seconde annonce **la vague** (« 3 commandes
   web à préparer avant le départ des navettes ») au lieu d'une seule commande.
@@ -217,6 +224,23 @@ Nouveau `VOLET` **`preparation-2`** : messages (§6.4), commandes de la vague, s
 lit ensuite : les sorties du lot **faites par l'élève** (moves `Sortie : préparation`, `ref: BP-…`, `lot`). Filet : si
 l'élève arrive en 1.3 sans aucune sortie du lot (vague non validée), 1.3 sème la préparation de ces deux commandes par
 un collègue (comme aujourd'hui). Voir le brief jumeau.
+
+### 6.7 La console avant de signaler (ajout de Tristan, 09/10/2026 au soir)
+
+Avant de signaler une rupture ou un manque, l'élève **contrôle le stock du système** avec `.getstock <réf.>` (commande
+apprise en 1.1, déjà utilisée pour Léa). Le geste du métier : on ne déclare pas un manque sur la seule foi de l'étagère,
+on compare le **physique** (ce que je vois) au **théorique** (ce que dit le système).
+
+Dans la vague telle qu'elle est (valeurs **à recalculer par le code**) : PM-SUE-NR-40 → le système dit **0**, l'étagère est
+vide : rupture confirmée ; AD-STS-BL-41 → le système dit **ce que l'étagère montre** (1) : manque confirmé. Les deux
+concordent : l'élève apprend le réflexe, sans piège d'écart en 1.2 (un écart physique / théorique relève de
+l'inventaire, pas de cette séance).
+
+- Le poste le rappelle dans l'emplacement ouvert, à côté du bouton « ⚑ Signaler » : « Vérifie le stock à la console
+  avant de signaler. » (aide du guidage, retirée en entraînement et en évaluation).
+- **Non noté pour l'instant** (barème §5 inchangé) : voir §11 — le noter suppose que le moteur sache si l'élève a tapé
+  `.getstock <cette réf.>` **avant** son signalement.
+- La question `rupture` de Nadia peut citer le chiffre : « Le système dit 0 et l'étagère est vide… » (inchangée sinon).
 
 ## 6 bis. Tirage et niveaux
 
@@ -302,6 +326,9 @@ sur une étagère vide ; finir la vague ; `.getlot LOT-PM-2609` montre **ses** d
 - [ ] Adresses : garder `v.loc` du catalogue (proposé) ou passer à une adresse à 4 segments par massif ?
 - [ ] Le texte de loi joint à la question `rupture` (à vérifier sur Légifrance par Cowork).
 - [ ] Nadia, cheffe d'équipe : nom et rôle à confirmer.
+- [ ] Vérification à la console avant de signaler (§6.7) : la **noter** (case du bloc B, ou un bloc à part en reprenant
+  des points ailleurs) ou la laisser en consigne non notée ? La noter demande au moteur une trace des commandes console
+  (signal `console:getstock` avec la référence et l'heure) : à vérifier dans `core/` par Claude Code avant de promettre.
 
 ---
 
