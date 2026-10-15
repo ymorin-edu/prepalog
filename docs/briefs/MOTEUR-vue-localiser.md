@@ -6,7 +6,7 @@
 > Lis CLAUDE.md, docs/EN-COURS.md, docs/chantiers.md puis docs/briefs/MOTEUR-vue-localiser.md en entier, et ouvre la maquette docs/briefs/action/maquette-localiser-action.html dans le navigateur. Commite d'abord les fichiers de docs/briefs/action/ et les trois briefs Action (MOTEUR-vue-localiser, ENT-8.1, ENT-8.2) s'ils ne le sont pas. Fais l'état des lieux du §8 en lecture seule et dis-moi ce que tu réutilises et ce qui est neuf. Annonce la durée avant de commencer. Lot par lot : montre-moi une capture des contours (lot 1) avant d'écrire la vue cliquable (lot 2).
 > ```
 
-**Statut** : à implémenter
+**Statut** : livré (15/10/2026 au soir, lots 1 à 3 ; commits 800687f et dc9a875 ; à valider à l'écran par Tristan sur `outils/essai-localiser-vue.html` et dans ENT-8.1)
 **Date du brief** : 15/10/2026
 **Conversation d'origine** : Cowork (Opus), cadrage d'Action (CAP OL) du 15/10/2026 — fiches du projet
 `claude/prepalog-action-cadrage.md` (décisions 3, 4, 9, 10, 11) et `claude/prepalog-action-deroule-8.1-8.2.md`.
