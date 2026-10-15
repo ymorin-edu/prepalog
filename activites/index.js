@@ -75,6 +75,9 @@ export const ACTIVITES = [
   () => import('./decathlon-ordre-transport.js'),
   () => import('./decathlon-barge-arretee.js'),
   () => import('./decathlon-evaluation-dourges.js'),
+  // Action (entrepôt Geodis d'Ensuès-la-Redonne) — ENT-8.x. CAP OL.
+  () => import('./action-se-situer.js'),
+  () => import('./action-prise-de-poste.js'),
 ];
 
 // Pictogrammes des rubriques. Une seule grille pour les dix : trait de 1,6 px, bouts et
@@ -156,6 +159,8 @@ export const ENTREPRISES = [
   { n: 6, nom: 'France Boissons', metier: 'Boissons — plateforme de Buchelay (Yvelines)', logo: './contenus/trames/logos/france-boissons.svg' },
   // Pas le logo officiel (accord de Tristan non demandé) : le nom en texte, dans le bleu de la marque ; charte : `contenus/decathlon.js`.
   { n: 7, nom: 'Decathlon', metier: 'Transport amont — entrepôt de Rouvignies (Nord)', logo: './contenus/trames/logos/decathlon-texte.svg' },
+  // Logo de Wikimedia Commons (PD-textlogo, marque ; accord de Tristan, brief ENT-8.1 §2) ; charte : `contenus/action.js`.
+  { n: 8, nom: 'Action', metier: 'Commerce à petits prix — entrepôt Geodis d’Ensuès-la-Redonne (Bouches-du-Rhône)', logo: './contenus/trames/logos/action.svg' },
 ];
 
 // ------------------------------------------------------------------- l'ordre

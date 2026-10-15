@@ -6,7 +6,7 @@
 > Lis CLAUDE.md, docs/EN-COURS.md puis docs/briefs/ENT-8.2-action-prise-de-poste.md en entier. Vérifie d'abord qu'ENT-8.1 est livrée (univers contenus/action.js), puis fais la demande au moteur du §7.1 (deux lieux de visite : vestiaire et zone de contrôle) et l'état des lieux du §7.2, puis la séance. Annonce la durée avant de commencer et dis-moi si un point du brief contredit le code.
 > ```
 
-**Statut** : à implémenter
+**Statut** : livré (15/10/2026, `pret: true, ouverture: 'prof'` — à essayer à l'écran avant de l'ouvrir au groupe)
 **Date du brief** : 15/10/2026
 **Conversation d'origine** : Cowork (Opus), cadrage d'Action du 15/10/2026 — fiches du projet `claude/prepalog-action-cadrage.md` et
 `claude/prepalog-action-deroule-8.1-8.2.md` (décisions de Tristan de 19 h 09 à 19 h 20), plus deux décisions du 15/10 au soir (§11).
@@ -391,9 +391,80 @@ Bloc `action` (créé par ENT-8.1). Graines choisies dans le test, valeurs atten
 
 ## Compte rendu *(rempli par Claude Code à la livraison)*
 
+Livré le 15/10/2026 par un sous-agent (Opus) du chantier Action ; le chef de chantier relit et commite.
+
 - **Fichiers créés / modifiés** :
+  - créés : `contenus/action-ent82.js` (contenu de la séance ; exporte aussi pour C1.3 le plan de la réception `PLAN_RECEPTION` /
+    `ZONES_RECEPTION`, le document « Le droit » `DOC_DROIT`, le planigramme `CAMIONS` / `docPlanigramme`), `contenus/questions/ENT-8.2.js`,
+    `contenus/corriges/ENT-8.2.js`, `activites/action-prise-de-poste.js`, `outils/test/action.mjs` (bloc `action`, 20 cas) ;
+    `activites/action-se-situer.js` créé en squelette `pret: false`… puis **remplacé pendant le travail** par le chantier ENT-8.1 (séance complète).
+  - modifiés : `activites/index.js` (entreprise n° 8 « Action » + deux `import()`), `outils/test.mjs` (`'action'` dans `BLOCS` et dans le
+    **groupe 4** de `GROUPES`, le moins chargé en nombre de blocs), `outils/test/socle.mjs` (deux lignes `ATTENDU_CAP` : `'ENT-8.1': 'CAP-C1.1',
+    'ENT-8.2': 'CAP-C1.2'`). **Alerte 7 : deux fichiers de test touchés.** Alerte 8 : ENT-8.2 ajoutée (rang ENT-8.2, après ENT-8.1).
 - **Écarts par rapport au brief** (et pourquoi) :
+  - **Plan de la réception** : le moteur dessine les **quais sur le mur du bas** (au sud, pas au nord) et empile les zones nommées à droite
+    des racks, de haut en bas : litiges, bureau, vestiaire, zone de contrôle, zone de réception (contre l'allée principale). Il exige au moins
+    une allée de racks : **deux allées de racks à un niveau** (le stock, où partent les palettes contrôlées), et non un rack minimal, parce
+    qu'avec une seule allée le plan est trop étroit pour **quatre** quais (le Quai 4 sortait du dessin).
+  - **Transpalette** : la seule photo libre est un transpalette **manuel** et le kit iso n'en a pas d'électrique : la question d'image devient
+    « Comment s'appelle cet engin ? → un transpalette » (pièges : chariot élévateur frontal, gerbeur) ; la fiche « Avant d'ouvrir » garde
+    « Un transpalette électrique chargé » en texte.
+  - **Niveleur** : le kit iso (`core/iso.js`) le dessine dans le quai iso, mais ne produit pas d'image fichier ; `img-niveleur` prend la
+    **photo du quai intérieur déjà au dépôt** (`contenus/smoby/quai-interieur.jpg`, Pexels 1267327, marques effacées, crédité dans
+    `contenus/smoby/LISEZMOI.md`) : énoncé « La plaque bleue au bord du quai sert à… ». Banque image : 3 questions (2 × 1 tirée).
+  - **Photos de la visite** : 4 photos d'Action (`PHOTOS` : quai, vestiaire, zone-colis pour la réception, palette filmée pour le contrôle) +
+    **deux reprises de Smoby** déjà au dépôt : le dessin de la zone litiges et la photo de bureau (Pexels 7658310). Photos à associer : quai (2),
+    bureau (6), vestiaire (1), réception (3) — pas le contrôle (sa photo ressemble trop à celle de la réception).
+  - **Rendre compte, ligne « fin »** : « (rien) » remplacé par « À plus. » (le texte « (rien) » se serait écrit tel quel dans le message envoyé).
+  - **Message de Julie ajouté** à l'arrivée de la demande du fournisseur (« Place ce camion sur le planning des quais… ») : sans lui, rien ne
+    disait à un CAP d'aller au planning (le fournisseur écrit au vous, sans consigne).
+  - **« Banque `commande` »** : ce sont des **valeurs tirées** (`valeurs` du tirage : n°, N, k), pas une banque de pièces. Lettre de voiture :
+    nombre de palettes = livrés ÷ 96 arrondi au-dessus (construit).
+  - **Date** : les messages sont datés du 9 novembre de l'année scolaire en cours, de 6 h à 6 h 58 (une heure par étape) ; la Messagerie
+    affiche « 09/11/2026 » (avec l'année : moteur) mais pas le jour de la semaine (le 9/11/2026 est un lundi).
+  - « Le droit » : quatre textes (L4111-5, L4141-1 **1er alinéa seulement**, 1603, 1604), joint au message de Samia de l'étape 4 et cité dans
+    les énoncés de F et I.
 - **Décisions prises en route** :
-- **Tests** : bloc / suite entière, nombre de cas, sabotages éprouvés
-- **Commits** :
+  - Grille du planigramme **telle que proposée** (§6.1), contrôlée au chargement par `ecartsGrille()` : une seule bonne réponse par lecture,
+    bonne réponse dans les choix, au moins une place juste (quai 2 de 9 h à 10 h, quais 3 et 4 à 10 h). Choix des lectures : heures = les 3
+    arrivées les plus proches ; camions = ordre alphabétique (le premier ne se devine pas à sa place).
+  - Textes de loi **recopiés mot pour mot sur Légifrance le 15/10/2026** : C. civ. 1603 (LEGIARTI000006441528), 1604 (LEGIARTI000006441557) ;
+    C. trav. L4111-5 (LEGIARTI000006903144), L4141-1 (LEGIARTI000027326445 ; 1er alinéa relu aussi sur code.travail.gouv.fr).
+  - Noms construits : fournisseur « Vaisselle Lotus », transporteur « Transports Seine-Provence » (dit en pied des documents), article
+    « Assiettes plates en grès, lot de 6 ».
+  - Les écrans qui suivent une fiche restent au menu pendant une correction (condition « déjà envoyée une fois » : `dejaEnvoyee`).
+  - Questions : le fichier `contenus/questions/ENT-8.2.js` n'importe rien de la séance (cycle d'import) ; la commande témoin (960 / 48) y est
+    recopiée, un cas vérifie que l'énoncé de I et les documents disent les mêmes nombres.
+- **Tests** : bloc `action` **20 cas verts** (`PORT_TESTS=8110 node outils/test.mjs action`, ~10 s) : données du planigramme (valeurs à la main :
+  7 h, quai 2, bougies, quai 2, 2, jouets ; places justes), contrôle de grille (trois grilles rendues ambiguës refusées), déclaration et
+  poids (16 + part 4), jalons sans écran (inaction 0, chaque piège sur SON jalon, planning vide = 0), bonus du confirmé, tirage (300 graines ×
+  2 niveaux : trois personnes, commande cohérente, zéro secours ; sans la garde, > 30 tirages fautifs), question I (300 graines : mêmes N, N − k,
+  k que ses documents), parcours juste à l'écran (ouverture répondue FAUX → 20/20, bandeau 6 lignes ✓, menu progressif, 10 messages dans
+  l'ordre, aucun « juste / faux / bonus », heures croissantes), F / I / H / K à l'écran, pire cas (0/20, bandeau ✗ partout, « Corriger »,
+  `finFige`, photo de fin rangée), corriger (visite figée, salutation, « refuser une palette » à Kevin), planning à l'écran (Q1 9 h, Q3 11 h,
+  Q2 9 h), confirmé à l'écran (4 tâches, 3 lectures, bandeau identique, pas de « bonus », note du socle 20), tirage stable, verrou du parcours,
+  écrans à 1366 × 768, corrigé par élève.
+  **Sabotages éprouvés** (11, chacun fait tomber au moins un cas, fichier remis) : jalon de visite inversé (5 cas), tâches toujours à Samia (8),
+  lecture décalée (7), règle du quai pris retirée du jalon (4), facture attendue (8), « rien de trop » retiré (2), salutation jamais jugée (3),
+  « avant d'ouvrir » juste sans envoi (3), garde « 3 personnes » retirée (2, dont le cas des 300 graines), un camion déplacé (19 : la séance
+  ne se charge plus), énoncé de I avec N au lieu de N − k (3).
+  **Non-régression** `socle dependances entrepot planning questions tirage-niveaux` : 348 / 351. **Trois échecs dus à l'entreprise n° 8, dans
+  des fichiers hors de cette mission** (à corriger par le chef de chantier) :
+  1. `outils/test/tirage-niveaux.mjs` `BANQUES_FIGEES` : ajouter `'contenus/action-ent82.js': { taches: ['t-decharger', 't-saisir', 't-bl',
+     't-compter', 't-rdv', 't-ranger', 't-refuser', 't-equipe'], lectures: ['l-havre-heure', 'l-havre-quai', 'l-premier', 'l-libre-9h',
+     'l-q3-combien', 'l-dernier'] }` (et la ligne de `contenus/action-ent81-donnees.js` pour ENT-8.1) ;
+  2. même fichier, ligne ≈ 140 : colonnes de l'onglet « Niveaux » `['2', '4', '6', '7', '8']` et en-têtes `[…, 'Decathlon', 'Action']` ;
+  3. `outils/test/socle.mjs` ≈ 814 et 824 : CAP-C1.1 compte maintenant 4 séances (ENT-8.1 s'ajoute à DEC-1, QUI-6, ENT-6.1) : `'10/20 (1/4)'`
+     et `';1 sur 4;10'` (cause : ENT-8.1, pas ENT-8.2).
+- **Commits** : aucun (le chef de chantier commite).
 - **Reste ouvert** :
+  - **Moteur, à savoir** : à la fin de la visite et à l'envoi du planning, le menu ne se redessine qu'au changement d'écran (l'élève voit la
+    carte du message de Samia / Julie et y va ; les tests passent par la Messagerie). En guidage, le planning dit en direct « déjà pris » ou
+    « aucun problème » avant l'envoi (comportement du moteur). La Messagerie affiche l'année des messages.
+  - Le plan est construit : à valider à l'écran (disposition, place des racks).
+  - Pas de trame élève (Cowork, après validation).
+  - **Textes à relire à l'écran par Tristan** : les 7 messages (Samia ×4, Julie ×3, Kevin, le fournisseur) et les 4 accusés « Bien reçu » ;
+    l'accueil et la mention « Bon à savoir » ; la visite (accueil, 6 arrêts, consignes d'« Où est-ce ? », fin) ; les 8 tâches ; les 6 lectures et
+    leurs choix ; la consigne du planning ; les trois documents et leurs noms construits ; « Le droit » ; les deux fiches des documents ; les
+    phrases du compte rendu (dont « À plus. ») ; les 10 questions d'ouverture et leurs retours (dont `img-niveleur` sur la photo du quai
+    intérieur) ; F, H, I, K et leurs retours ; `finFige`.
