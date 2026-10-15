@@ -29,6 +29,7 @@ const s = seanceEntreprise(ACTION, SEANCE, {
   precedente: 'action-se-situer',
   niveauxPrevus: ['confirme'],   // bonus du confirmé : une tâche et une lecture de plus (cachés à l'élève)
   questions: 'ENT-8.2',
+  trame: 'action-prise-de-poste',  // contenus/trames/ENT-8.2-action-prise-de-poste-trame-eleve.pdf|docx (Cowork, relue par Tristan le 16/10/2026)
   pret: true,
   ouverture: 'prof',
 }, SEANCE.OPTIONS);

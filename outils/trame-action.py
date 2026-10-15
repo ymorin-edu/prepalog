@@ -303,8 +303,8 @@ def trame_81():
         'Les produits restent à Action. Moi, stagiaire chez Geodis, je prépare les produits d’Action.',
     ])
     T.soustitre('3. Ce que change mon travail')
-    T.p('Une erreur à l’entrepôt se voit au magasin : un produit qui manque dans le rayon, qui arrive cassé ou en retard. '
-        'Le premier à le voir, c’est le client.', taille=10.5, apres=4)
+    T.p('Une erreur à l’entrepôt se voit au magasin : un produit qui manque, cassé ou en retard. Le premier à le voir, c’est '
+        'le personnel du magasin, en ouvrant les colis ou en remplissant le rayon.', taille=10.5, apres=4)
 
     T.soustitre('4. Régions et départements')
     # deux colonnes : la carte à gauche, le texte et le tableau à droite

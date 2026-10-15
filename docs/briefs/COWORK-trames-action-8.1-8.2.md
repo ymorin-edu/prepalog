@@ -58,3 +58,7 @@ Déclarer `trame: { pdf, docx }` dans `activites/action-se-situer.js` et `activi
 
 
 - 16/10/2026, Claude Code : les quatre fichiers de trames, le générateur et ce brief sont commités tels que déposés (brouillons, **non déclarés** dans les activités). Relecture faite : aucune valeur tirée par élève n'est imprimée ; le cours est bien une feuille à part. **À revoir par Cowork** : dans le cours d'ENT-8.1 (§3 « Ce que change mon travail »), « Le premier à le voir, c'est le client » contredit la question E de la séance, dont la bonne réponse est **le personnel du magasin** (en ouvrant les colis ou en remplissant le rayon) ; à recaler avec la question. Le générateur fixe les dates du document (reproductible) et ne cite aucune adresse d'hébergeur.
+- 16/10/2026, **Cowork — correction faite** : cours d'ENT-8.1, §3 « Ce que change mon travail » recalé sur la question E : « Le premier à
+  le voir, c'est le personnel du magasin, en ouvrant les colis ou en remplissant le rayon. » (même formule que le choix juste de
+  `qui-remarque`). La trame tient toujours sur 2 pages. Fichiers touchés : `outils/trame-action.py`,
+  `contenus/trames/ENT-8.1-action-se-situer-trame-eleve.{docx,pdf}` et ce brief ; ENT-8.2 non touchée. **À commiter** (non déclaré).
