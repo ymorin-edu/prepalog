@@ -425,14 +425,41 @@ await v('compétences : chaque séance déclare ce que Tristan a validé le 02/1
     'ENT-5.7': ['OTM-C2.2,OTM-C3.2', 'guidage'], 'ENT-5.8': ['OTM-C2.1,OTM-C2.3', 'guidage'],
   };
   const HORS = ['TAB-1', 'TAB-3', 'QUI-8', 'QUI-9', 'QUI-10'];
+  // Compétences CAP (`competencesCap`) : le tableau §3 du brief MOTEUR-cap-ol, validé par Tristan le 15/10/2026,
+  // écrit à la main. Toute séance absente d'ici n'en déclare aucune ; une séance qui en déclare et qui a des
+  // `niveaux` doit y compter 'cap', sinon un groupe CAP ne la voit pas.
+  const ATTENDU_CAP = {
+    'DEC-1': 'CAP-C1.1', 'QUI-6': 'CAP-C1.1', 'ENT-6.1': 'CAP-C1.1,CAP-C1.2', 'ENT-5.3': 'CAP-C1.2',
+    'ENT-1.1': 'CAP-C1.3,CAP-C1.4', 'ENT-5.4': 'CAP-C1.3,CAP-C1.4', 'ENT-6.4': 'CAP-C1.3,CAP-C1.4',
+    'ENT-4.1': 'CAP-C1.3,CAP-C1.4', 'ENT-4.2': 'CAP-C1.3,CAP-C1.4', 'ENT-4.3': 'CAP-C1.3,CAP-C1.4',
+    'ENT-5.5': 'CAP-C1.5', 'ENT-6.5': 'CAP-C1.5', 'ENT-6.6': 'CAP-C1.5', 'ENT-2.3': 'CAP-C1.5',
+    'TAB-4': 'CAP-C1.4,CAP-C1.5', 'TAB-5': 'CAP-C1.5',
+    'ENT-5.6': 'CAP-C3.1,CAP-C3.4', 'ENT-6.7': 'CAP-C3.1,CAP-C3.2,CAP-C3.4', 'ENT-1.3': 'CAP-C3.4',
+    'ENT-5.8': 'CAP-C3.5', 'ENT-6.10': 'CAP-C3.7',
+  };
   const metas = await page.evaluate(async () => {
     const { chargerActivites } = await import('/activites/index.js');
     const { COMPETENCES, TEMPS } = await import('/core/competences.js');
     return (await chargerActivites()).map(({ meta: m }) => ({
       code: m.code, bareme: m.bareme, comp: (m.competences || []).join(','), temps: m.temps,
-      inconnues: (m.competences || []).filter((c) => !COMPETENCES[c]),
+      inconnues: [...(m.competences || []), ...(m.competencesCap || [])].filter((c) => !COMPETENCES[c]),
       tempsOk: m.temps === undefined || !!TEMPS[m.temps],
+      cap: (m.competencesCap || []).join(','),
+      capMalRange: (m.competences || []).filter((c) => /^CAP-/.test(c)),
+      capEtranger: (m.competencesCap || []).filter((c) => !/^CAP-/.test(c)),
+      niveauxSansCap: !!(m.competencesCap && m.competencesCap.length && m.niveaux && m.niveaux.length && !m.niveaux.includes('cap')),
     }));
+  });
+  for (const [code, cap] of Object.entries(ATTENDU_CAP)) {
+    const m = metas.find((x) => x.code === code);
+    if (!m) { faux.push(code + ' introuvable (CAP)'); continue; }
+    if (m.cap !== cap) faux.push(`${code} : competencesCap ${m.cap || 'absent'} (attendu ${cap})`);
+  }
+  metas.forEach((m) => {
+    if (m.cap && !ATTENDU_CAP[m.code]) faux.push(`${m.code} : competencesCap ${m.cap} hors du tableau validé`);
+    if (m.capMalRange.length) faux.push(`${m.code} : code CAP dans competences (${m.capMalRange})`);
+    if (m.capEtranger.length) faux.push(`${m.code} : ${m.capEtranger} dans competencesCap`);
+    if (m.niveauxSansCap) faux.push(`${m.code} : competencesCap sans le niveau cap`);
   });
   const faux = [];
   for (const [code, [comp, temps]] of Object.entries(ATTENDU)) {
@@ -554,12 +581,14 @@ await v('compétences : OTM et AGOrA, spécialité par préfixe et séance compt
     'C1.4': 'Traiter les opérations de réception de produits selon les procédures',
   };
   const faux = Object.entries(LIB).filter(([k, l]) => C.COMPETENCES[k] !== l).map(([k]) => `${k} : ${C.COMPETENCES[k]}`);
-  // 16 Logistique + 11 OTM + 9 AGOrA.
+  // 16 Logistique + 11 OTM + 9 AGOrA + 12 CAP OL (ajoutés le 15/10/2026, brief MOTEUR-cap-ol : 36 → 48).
   const n = Object.keys(C.COMPETENCES);
-  if (n.length !== 36) faux.push(`${n.length} codes au lieu de 36`);
+  if (n.length !== 48) faux.push(`${n.length} codes au lieu de 48`);
   if (n.filter((k) => k.startsWith('OTM-')).length !== 11) faux.push('OTM : pas 11 codes');
   if (n.filter((k) => k.startsWith('AGO-')).length !== 9) faux.push('AGO : pas 9 codes');
-  const spe = { 'C1.4': 'LOG', 'OTM-C2.1': 'OTM', 'AGO-3.2': 'AGO', 'X-1': 'LOG', '': 'LOG' };
+  if (n.filter((k) => k.startsWith('CAP-')).length !== 12) faux.push('CAP : pas 12 codes');
+  // 'CAP-' n'est pas une spécialité (décision de Tristan, 15/10/2026 : SPECIALITES reste à trois, notion de 2de).
+  const spe = { 'C1.4': 'LOG', 'OTM-C2.1': 'OTM', 'AGO-3.2': 'AGO', 'X-1': 'LOG', '': 'LOG', 'CAP-C1.4': 'LOG' };
   Object.entries(spe).forEach(([c, s]) => { if (C.specialite(c) !== s) faux.push(`spécialité de « ${c} » : ${C.specialite(c)}`); });
   if (faux.length) throw new Error(faux.join(' | '));
 
@@ -651,6 +680,118 @@ await v('compétences : la moyenne par spécialité, pour un groupe de 2de seule
       const { B } = await import('/core/backend.js');
       await B.poserNote(gid, uid, a1, null);
       await B.poserNote(gid, uid, a2, null);
+      await B.supprimerEleve(uid);
+      await B.majGroupe(gid, { niveau });
+    }, ids);
+    await rouvrir();
+  }
+});
+
+// ---------- CAP OL : `competencesCap`, lu à la place de `competences` par un groupe CAP (MOTEUR-cap-ol, 15/10/2026)
+await v('compétences : un groupe CAP lit `competencesCap`, les autres `competences`, à l\'unité', async () => {
+  const C = await import(pathToFileURL(path.join(ROOT, 'core/competences.js')).href);
+  // Libellés écrits à la main d'après le JO du 13/03/2026 (bloc 1) et la fiche ONISEP du 16/03/2026 (bloc 3).
+  const LIB = {
+    'CAP-C1.2': 'Prendre un poste en autonomie',
+    'CAP-C1.4': "Contrôler les quantités et l'état de la livraison",
+    'CAP-C3.7': 'Appliquer les écogestes professionnels',
+  };
+  const faux = Object.entries(LIB).filter(([k, l]) => C.COMPETENCES[k] !== l).map(([k]) => `${k} : ${C.COMPETENCES[k]}`);
+  // Pas de CAP-C2.x : le bloc 2 (conduite d'engins) est hors Prepalog. Et SPECIALITES reste à trois.
+  if (Object.keys(C.COMPETENCES).some((k) => /^CAP-C2\./.test(k))) faux.push('un code CAP-C2.x existe');
+  if (Object.keys(C.SPECIALITES).join(',') !== 'LOG,OTM,AGO') faux.push('SPECIALITES : ' + Object.keys(C.SPECIALITES));
+  const a = { id: 'a', bareme: 10, temps: 'guidage', competences: ['C1.2', 'C1.4'], competencesCap: ['CAP-C1.3', 'CAP-C1.4'] };
+  const b = { id: 'b', bareme: 10, temps: 'evaluation', competences: ['C1.6'] };               // rien pour le CAP
+  const c = { id: 'c', bareme: 10, temps: 'guidage', competences: ['C2.1'], competencesCap: ['CAP-C3.1'] };
+  const j = (l) => l.join(',');
+  if (j(C.competencesPour(a, 'cap')) !== 'CAP-C1.3,CAP-C1.4') faux.push('competencesPour cap : ' + j(C.competencesPour(a, 'cap')));
+  if (j(C.competencesPour(a, '1re')) !== 'C1.2,C1.4' || j(C.competencesPour(a, undefined)) !== 'C1.2,C1.4') faux.push('competencesPour hors CAP');
+  if (C.competencesPour(b, 'cap').length !== 0 || C.competencesPour(null, 'cap').length !== 0) faux.push('sans competencesCap : liste vide attendue');
+  // Groupe CAP : b sort du tableau, a et c y entrent sous leurs codes CAP ; les métas d'origine ne bougent pas.
+  const cap = C.seancesParCompetence(C.metasPourNiveau([a, b, c], 'cap')).map((x) => `${x.code}:${x.seances.map((m) => m.id).join('')}`).join(' ');
+  if (cap !== 'CAP-C1.3:a CAP-C1.4:a CAP-C3.1:c') faux.push('tableau CAP : ' + cap);
+  if (j(a.competences) !== 'C1.2,C1.4') faux.push("méta d'origine modifiée");
+  // Tout autre niveau : les mêmes objets, tels quels.
+  for (const n of ['2de', '1re', 'tle', undefined, null]) {
+    const r = C.metasPourNiveau([a, b, c], n);
+    if (r.length !== 3 || r[0] !== a || r[1] !== b || r[2] !== c) faux.push(`metasPourNiveau(${n}) a recopié`);
+  }
+  const bac = C.seancesParCompetence(C.metasPourNiveau([a, b, c], '1re')).map((x) => x.code).join(',');
+  if (bac !== 'C1.2,C1.4,C1.6,C2.1') faux.push('tableau 1re : ' + bac);
+  // Une note 6/10 sur a vaut 12/20 en CAP-C1.4 chez un CAP et 12/20 en C1.4 chez un 1re : la même.
+  const travaux = { a: { meilleur: 6, max: 10 } };
+  const co = C.coefsDuGroupe({});
+  const mCap = C.moyenneCompetence(C.seancesParCompetence(C.metasPourNiveau([a, b, c], 'cap')).find((x) => x.code === 'CAP-C1.4').seances, travaux, co);
+  const m1re = C.moyenneCompetence(C.seancesParCompetence([a, b, c]).find((x) => x.code === 'C1.4').seances, travaux, co);
+  if (mCap.moyenne !== 12 || m1re.moyenne !== 12) faux.push(`moyennes : CAP ${mCap.moyenne}, 1re ${m1re.moyenne}`);
+  if (faux.length) throw new Error(faux.join(' | '));
+});
+
+await v('compétences : un groupe CAP voit ses moyennes CAP-C… avec libellé, un groupe de 1re garde C1.1', async () => {
+  // Le groupe passe en CAP le temps du test. Un élève neuf, supprimé à la fin, reçoit 10/20 sur DEC-1
+  // (C1.1 au Bac Pro, CAP-C1.1 au CAP) ; le groupe est remis comme on l'a trouvé.
+  const ids = await page.evaluate(async () => {
+    const k = Object.keys(localStorage).find((x) => /groupes$/.test(x));
+    const gs = JSON.parse(localStorage.getItem(k));
+    const gid = Object.keys(gs).find((id) => gs[id].nom === '1 LOG A');
+    const { B } = await import('/core/backend.js');
+    await B.creerEleves(gid, [{ nom: 'CAPOL', prenom: 'Test', matricule: 'cap-ol-test', code: 'x' }]);
+    const el = (await B.elevesDuGroupe(gid)).find((x) => x.nom === 'CAPOL');
+    const { chargerActivites } = await import('/activites/index.js');
+    const aid = (await chargerActivites()).map((x) => x.meta).find((m) => m.code === 'DEC-1').id;
+    await B.poserNote(gid, el.uid, aid, { score: 10, max: 20 });
+    await B.majGroupe(gid, { niveau: 'cap' });
+    return { gid, uid: el.uid, aid, niveau: gs[gid].niveau };
+  });
+  const rouvrir = async () => {
+    await page.reload();
+    await page.waitForSelector('#btnProfEspace', { timeout: 8000 });
+    await page.click('#btnProfEspace');
+    await page.click('[data-ong="competences"]');
+    await page.waitForSelector('#tabComp', { timeout: 6000 });
+  };
+  const lireTableau = () => page.$$eval('#tabComp', ([t]) => {
+    const th = [...t.querySelectorAll('thead th')].slice(1)
+      .map((x) => ({ code: x.textContent.replace(/\s+/g, ' ').trim().replace(/ \/20$/, ''), titre: x.getAttribute('title') }));
+    const l = [...t.querySelectorAll('tbody tr')].find((x) => /CAPOL/.test(x.textContent));
+    const td = {};
+    l.querySelectorAll('td[data-comp]').forEach((d) => { td[d.dataset.comp] = d.textContent.replace(/\s+/g, ' ').trim(); });
+    return { th, td };
+  });
+  try {
+    await rouvrir();
+    let lu = await lireTableau();
+    // Les colonnes : les compétences CAP qu'au moins une séance déclare (tableau §3 du brief), dans l'ordre du
+    // référentiel, écrites à la main. Ni CAP-C3.3 ni CAP-C3.6 (aucune séance), ni aucune colonne Bac Pro.
+    const codes = lu.th.map((x) => x.code).join(',');
+    if (codes !== 'CAP-C1.1,CAP-C1.2,CAP-C1.3,CAP-C1.4,CAP-C1.5,CAP-C3.1,CAP-C3.2,CAP-C3.4,CAP-C3.5,CAP-C3.7') throw new Error('colonnes CAP : ' + codes);
+    const t14 = lu.th.find((x) => x.code === 'CAP-C1.4').titre;
+    if (t14 !== "Contrôler les quantités et l'état de la livraison") throw new Error('libellé CAP-C1.4 : ' + t14);
+    // DEC-1, QUI-6 et ENT-6.1 déclarent CAP-C1.1 : une faite sur trois, 10/20.
+    if (lu.td['CAP-C1.1'] !== '10/20 (1/3)') throw new Error('CAP-C1.1 : ' + lu.td['CAP-C1.1']);
+    // Une séance sans compétence CAP (SCE-1, C1.6) n'apparaît nulle part dans le tableau CAP ; DEC-1 y est.
+    const seancesComp = await page.$eval('#panSeancesComp', (p) => p.textContent);
+    if (/SCE-1|C1\.6/.test(seancesComp)) throw new Error('une séance sans compétence CAP figure au tableau CAP');
+    if (!/CAP-C1\.1[\s\S]*DEC-1/.test(seancesComp)) throw new Error('DEC-1 absente de CAP-C1.1');
+    if (await page.$('#tabSpe')) throw new Error('tableau par spécialité affiché pour un groupe CAP');
+    // L'export sort les colonnes CAP, et aucune colonne Bac Pro.
+    const [dl] = await Promise.all([page.waitForEvent('download'), page.click('#btnCsvComp')]);
+    const csv = fs.readFileSync(await dl.path(), 'utf8').replace(/^﻿/, '');
+    const l11 = csv.split('\r\n').find((l) => /^CAPOL;Test;CAP-C1\.1;/.test(l));
+    if (!l11 || !l11.endsWith(';1 sur 3;10')) throw new Error('export CAP-C1.1 : ' + l11);
+    if (!/;Se situer dans un environnement professionnel spécifique;/.test(l11)) throw new Error('libellé absent de l\'export : ' + l11);
+    if (/;C1\.1;/.test(csv)) throw new Error('export CAP : une colonne Bac Pro');
+    // Le même travail, dans un groupe de 1re : en C1.1, et plus aucune colonne CAP.
+    await page.evaluate(async ({ gid }) => { const { B } = await import('/core/backend.js'); await B.majGroupe(gid, { niveau: '1re' }); }, ids);
+    await rouvrir();
+    lu = await lireTableau();
+    if (lu.th.some((x) => /^CAP-/.test(x.code))) throw new Error('colonne CAP dans un groupe de 1re');
+    const n11 = await nbSeances('C1.1');
+    if (lu.td['C1.1'] !== `10/20 (1/${n11})`) throw new Error('C1.1 en 1re : ' + lu.td['C1.1'] + ` au lieu de 10/20 (1/${n11})`);
+  } finally {
+    await page.evaluate(async ({ gid, uid, aid, niveau }) => {
+      const { B } = await import('/core/backend.js');
+      await B.poserNote(gid, uid, aid, null);
       await B.supprimerEleve(uid);
       await B.majGroupe(gid, { niveau });
     }, ids);

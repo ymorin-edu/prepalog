@@ -13,7 +13,7 @@ import { NIVEAUX, libelleNiveau, courtNiveau, libelleNiveaux, activiteVisible, h
   demisDe, nomDemi, forcage } from './niveaux.js';
 import { BAREME_AFFICHE, noteSur20, noteConvertie, formaterNote } from './notes.js';
 import { estCopie, estRendue, libelleRendu, ramasser, rouvrir, baseDeLEleve } from './copie.js';
-import { TEMPS, COEFS_DEFAUT, coefsDuGroupe, seancesParCompetence, seancesParSpecialite, moyenneCompetence } from './competences.js';
+import { TEMPS, COEFS_DEFAUT, coefsDuGroupe, seancesParCompetence, seancesParSpecialite, moyenneCompetence, metasPourNiveau } from './competences.js';
 
 // Le nom de famille d'une activité, d'après le préfixe de son code (voir CLAUDE.md) : bandeau du Suivi.
 const FAMILLES = { DEC: 'Découverte', ACT: 'Outils métier', TAB: 'Tableur', REF: 'Exercices', SCE: 'Scénarios',
@@ -1528,9 +1528,12 @@ ${so.phrase}` : ''}`)}"
     ]);
     const eleves = tous.filter((e) => dansDemi(g, e));
     const deDemi = demiActif ? ` — ${nomDemi(g, demiActif)}` : '';
-    const comps = seancesParCompetence(mods.map((m) => m.meta));
+    // Les compétences de chaque séance POUR CE GROUPE : un groupe CAP lit `competencesCap` à la place
+    // de `competences` (brief MOTEUR-cap-ol, 15/10/2026) ; les autres niveaux, rien ne change.
+    const metas = metasPourNiveau(mods.map((m) => m.meta), g.niveau);
+    const comps = seancesParCompetence(metas);
     // En 2de seulement : une moyenne par spécialité (logistique, transport, gestion), même calcul.
-    const specs = g.niveau === '2de' ? seancesParSpecialite(mods.map((m) => m.meta)) : [];
+    const specs = g.niveau === '2de' ? seancesParSpecialite(metas) : [];
     const coefs = coefsDuGroupe(g);
     const par = {};
     travaux.forEach((t) => { (par[t.uid] = par[t.uid] || {})[t.aid] = t; });

@@ -84,6 +84,28 @@ export const COMPETENCES = Object.freeze({
   'AGO-3.1': 'Suivi de la carrière du personnel',
   'AGO-3.2': "Suivi organisationnel et financier de l'activité du personnel",
   'AGO-3.3': "Participation à l'activité sociale de l'organisation",
+
+  // CAP Opérateur logistique, arrêté du 13 février 2026 (JO du 13/03/2026), blocs 1 et 3 — brief
+  // `MOTEUR-cap-ol`, 15/10/2026. Libellés vérifiés le 15/10/2026 : bloc 1 sur le JO (copie de
+  // l'académie de Lyon), bloc 3 sur la fiche ONISEP du 16/03/2026. Le bloc 2 (conduite d'engins)
+  // demande une manipulation réelle : hors Prepalog. Le préfixe `CAP-` est OBLIGATOIRE : les numéros
+  // recoupent ceux du Bac Pro sous d'autres intitulés (C1.2 = sécurité au Bac Pro, prendre un poste
+  // au CAP). Une séance les déclare dans `competencesCap`, jamais dans `competences` (voir
+  // `competencesPour` plus bas). Ce préfixe ne fait PAS une spécialité (`SPECIALITES` est une
+  // notion de 2de) : `specialite('CAP-…')` rend 'LOG', sans conséquence puisqu'un groupe CAP n'a pas
+  // de tableau par spécialité.
+  'CAP-C1.1': 'Se situer dans un environnement professionnel spécifique',
+  'CAP-C1.2': 'Prendre un poste en autonomie',
+  'CAP-C1.3': 'Prendre en charge les opérations de réception',
+  'CAP-C1.4': "Contrôler les quantités et l'état de la livraison",
+  'CAP-C1.5': 'Mettre en stock les marchandises ou les produits',
+  'CAP-C3.1': 'Prendre en charge la préparation de commandes',
+  'CAP-C3.2': 'Déstocker les marchandises et/ou produits',
+  'CAP-C3.3': 'Conditionner les marchandises et/ou produits',
+  'CAP-C3.4': "Réaliser et transférer l'unité de charge",
+  'CAP-C3.5': 'Expédier les unités de charge',
+  'CAP-C3.6': "Identifier les conséquences d'un fait ou d'une donnée économique sur l'activité logistique et la supply chain ou chaîne logistique",
+  'CAP-C3.7': 'Appliquer les écogestes professionnels',
 });
 
 // La spécialité d'une compétence se lit sur son préfixe : `OTM-` transport, `AGO-` gestion,
@@ -128,6 +150,29 @@ export function coefsDuGroupe(groupe) {
 export function compteParCompetence(meta) {
   return !!(meta && meta.bareme && Array.isArray(meta.competences) && meta.competences.length
     && TEMPS[meta.temps]);
+}
+
+/**
+ * Les compétences qu'une séance travaille POUR UN NIVEAU DE GROUPE (brief `MOTEUR-cap-ol`, choix de
+ * Tristan du 15/10/2026 : un champ à part). Un groupe CAP lit `competencesCap` à la place de
+ * `competences` : la même séance range sa note dans C1.4 chez un Bac Pro et dans CAP-C1.4 chez un
+ * CAP. Sans `competencesCap`, elle n'entre dans aucune moyenne CAP (elle reste dans le suivi par
+ * séance). Tout autre niveau lit `competences` : aucune moyenne Bac Pro ne bouge.
+ */
+export function competencesPour(meta, niveauGroupe) {
+  if (!meta) return [];
+  const l = niveauGroupe === 'cap' ? meta.competencesCap : meta.competences;
+  return Array.isArray(l) ? l : [];
+}
+
+/**
+ * Les métas telles que les voit un groupe : pour un groupe CAP, des copies où `competences` est
+ * remplacé par `competencesCap` (les métas d'origine ne bougent pas) ; les autres niveaux les
+ * reçoivent telles quelles. À passer à `seancesParCompetence` et `seancesParSpecialite`.
+ */
+export function metasPourNiveau(metas, niveauGroupe) {
+  if (niveauGroupe !== 'cap') return metas;
+  return metas.map((m) => ({ ...m, competences: competencesPour(m, 'cap') }));
 }
 
 /**
