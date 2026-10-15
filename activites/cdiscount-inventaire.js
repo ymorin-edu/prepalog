@@ -22,6 +22,7 @@ const s = seanceEntreprise(CDISCOUNT, SEANCE, {
   desc: "Recompter les références qu'on a choisies, calculer les écarts, retrouver leur cause, décider et valider l'inventaire.",
   // Compétences et temps pédagogique : voir core/competences.js.
   competences: ['C1.6'],
+  competencesCap: ['CAP-C1.5'],   // CAP OL 2026 : lu par un groupe CAP à la place de competences
   temps: 'entrainement',
   // Volume déclaré (`claude/prepalog-montee-en-competences.md`) : toute l'allée A. Un élève
   // confirmé (`db.aisance`) recompte en plus A-05 et A-06 (voir le contenu).

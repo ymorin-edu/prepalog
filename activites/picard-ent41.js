@@ -24,8 +24,9 @@ const s = seanceEntreprise(PICARD, SEANCE, {
   titre: 'Picard — le premier camion',
   desc: 'Réceptionner un camion de surgelés au quai 32 : lire le ticket de température, faire décharger, '
     + 'contrôler chaque palette, refuser ou émettre des réserves précises, rentrer le lot en chambre froide.',
-  niveaux: ['1re'],
+  niveaux: ['1re', 'cap'],
   competences: ['C1.4'],
+  competencesCap: ['CAP-C1.3', 'CAP-C1.4'],   // CAP OL 2026 : lu par un groupe CAP à la place de competences
   temps: 'guidage',
   bareme: 20,           // jalons pondérés, somme des poids = 20 (règle du 10/10/2026)
   reinitialisable: true,

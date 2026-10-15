@@ -20,6 +20,7 @@ const s = seanceEntreprise(SPARTOO, SEANCE, {
   desc: "Remonter un lot défectueux dans les deux sens, bloquer le stock restant et rendre compte.",
   // Compétences et temps pédagogique : voir core/competences.js (validé par Tristan, 02/10/2026).
   competences: ['C3.2'],
+  competencesCap: ['CAP-C3.4'],   // CAP OL 2026 : lu par un groupe CAP à la place de competences
   temps: 'guidage',
   bareme: 20,           // jalons pondérés, somme des poids = 20 (règle du 10/10/2026, poids du 11/10/2026)
   // Remise à zéro de la base par l'élève : seulement en séance X.1, qui ouvre la chaîne. Une

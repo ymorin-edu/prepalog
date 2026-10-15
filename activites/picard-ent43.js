@@ -20,8 +20,9 @@ const s = seanceEntreprise(PICARD, SEANCE, {
   titre: 'Picard — la réception de nuit',
   desc: 'Mathis a réceptionné un camion à 3 h : contrôler son travail à partir des documents et des palettes en chambre '
     + 'froide, puis bloquer ce qui doit l’être et protester auprès du transporteur dans le délai.',
-  niveaux: ['1re'],
+  niveaux: ['1re', 'cap'],
   competences: ['C1.4'],
+  competencesCap: ['CAP-C1.3', 'CAP-C1.4'],   // CAP OL 2026 : lu par un groupe CAP à la place de competences
   temps: 'erreur',
   bareme: 20,           // jalons pondérés, somme des poids = 20
   trame: 'picard-reception-de-nuit',

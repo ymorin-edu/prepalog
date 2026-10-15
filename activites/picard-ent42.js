@@ -23,8 +23,9 @@ const s = seanceEntreprise(PICARD, SEANCE, {
   titre: 'Picard — deux camions, un seul quai',
   desc: 'Deux camions de surgelés attendent au quai 32 : lire les deux tickets, choisir et justifier l’ordre de '
     + 'déchargement, puis réceptionner les deux lots sans aide (huit palettes, quatre aléas).',
-  niveaux: ['1re'],
+  niveaux: ['1re', 'cap'],
   competences: ['C1.4', 'C1.3'],
+  competencesCap: ['CAP-C1.3', 'CAP-C1.4'],   // CAP OL 2026 : lu par un groupe CAP à la place de competences
   temps: 'entrainement',
   bareme: 20,           // jalons pondérés, somme des poids = 20
   trame: 'picard-deux-camions',

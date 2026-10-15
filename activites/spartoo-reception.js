@@ -21,6 +21,7 @@ const s = seanceEntreprise(SPARTOO, SEANCE, {
   desc: "Contrôle d'une livraison fournisseur, réserves et entrée en stock avec numéro de lot, du quai à l'entrée en stock.",
   // Compétences et temps pédagogique : voir core/competences.js (validé par Tristan, 02/10/2026).
   competences: ['C1.4'],
+  competencesCap: ['CAP-C1.3', 'CAP-C1.4'],   // CAP OL 2026 : lu par un groupe CAP à la place de competences
   temps: 'guidage',
   bareme: 20,           // jalons pondérés, somme des poids = 20 (règle du 10/10/2026)
   // Remise à zéro de la base par l'élève : seulement en séance X.1, qui ouvre la chaîne. Une

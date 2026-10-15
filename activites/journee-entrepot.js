@@ -47,6 +47,7 @@ export const meta = {
   // C'est « Conduite de séance » qui ferme ce qu'on ne veut pas ouvrir ce jour-là.
   // Compétences et temps pédagogique : voir core/competences.js (validé par Tristan, 02/10/2026).
   competences: ['C1.4', 'C1.6'],
+  competencesCap: ['CAP-C1.4', 'CAP-C1.5'],   // CAP OL 2026 : lu par un groupe CAP à la place de competences
   temps: 'entrainement',
   bareme: EXERCICES.length,
   portee: 'eleve',

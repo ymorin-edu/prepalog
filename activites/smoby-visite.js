@@ -20,8 +20,9 @@ const s = seanceEntreprise(SMOBY, SEANCE, {
   titre: 'Smoby — la visite de la plateforme',
   desc: 'Premier jour du cariste : découvrir la plateforme vue du ciel, suivre le parcours de visite dans l’entrepôt, '
     + 'apprendre les mots du rack, délimiter une travée, lire et retrouver une adresse d’emplacement.',
-  niveaux: ['2de'],
+  niveaux: ['2de', 'cap'],
   competences: ['C1.2', 'C1.5'],
+  competencesCap: ['CAP-C1.2'],   // CAP OL 2026 : lu par un groupe CAP à la place de competences
   domaines: ['D4'],
   coeur: true,
   temps: 'guidage',

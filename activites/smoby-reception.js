@@ -19,8 +19,9 @@ const s = seanceEntreprise(SMOBY, SEANCE, {
   titre: 'Smoby — premier déchargement',
   desc: 'Cariste au quai de réception de la plateforme de Moirans : vérifier la sécurité avant de décharger, '
     + 'décharger au chariot un camion de l’usine d’Arinthod, contrôler 4 palettes de jouets et porter des réserves précises.',
-  niveaux: ['2de'],
+  niveaux: ['2de', 'cap'],
   competences: ['C1.2', 'C1.4'],
+  competencesCap: ['CAP-C1.3', 'CAP-C1.4'],   // CAP OL 2026 : lu par un groupe CAP à la place de competences
   domaines: ['D4', 'D5'],
   coeur: true,
   temps: 'guidage',

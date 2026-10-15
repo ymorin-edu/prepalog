@@ -19,8 +19,9 @@ const s = seanceEntreprise(FB, SEANCE, {
   titre: 'France Boissons — le camion de la brasserie',
   desc: 'Cariste au quai de la plateforme de Buchelay : repérer seul ce qui ne va pas avant de décharger, contrôler 4 palettes de fûts '
     + 'contre le bon de livraison, porter des réserves précises et mettre un fût qui fuit de côté.',
-  niveaux: ['2de'],
+  niveaux: ['2de', 'cap'],
   competences: ['C1.2', 'C1.4'],
+  competencesCap: ['CAP-C1.3', 'CAP-C1.4'],   // CAP OL 2026 : lu par un groupe CAP à la place de competences
   domaines: ['D4', 'D5'],
   coeur: true,
   temps: 'entrainement',

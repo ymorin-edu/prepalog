@@ -23,8 +23,9 @@ const s = seanceEntreprise(SMOBY, SEANCE, {
   titre: 'Kuehne+Nagel — la lettre de voiture et le retard',
   desc: 'Agent d’exploitation à l’agence Kuehne+Nagel de Besançon : remplir la lettre de voiture d’un enlèvement chez Smoby, '
     + 'puis gérer un retard et prévenir le client et l’expéditeur.',
-  niveaux: ['2de'],
+  niveaux: ['2de', 'cap'],
   competences: ['OTM-C2.1', 'OTM-C2.3'],
+  competencesCap: ['CAP-C3.5'],   // CAP OL 2026 : lu par un groupe CAP à la place de competences
   domaines: ['D3', 'D1'],
   coeur: true,
   temps: 'guidage',

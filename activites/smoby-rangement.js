@@ -19,8 +19,9 @@ const s = seanceEntreprise(SMOBY, SEANCE, {
   desc: 'Cariste : ranger sur le plan de l’entrepôt les palettes reçues d’Arinthod (choisir la travée, puis l’emplacement) '
     + 'en respectant les règles de l’entrepôt, saisir l’entrée en stock des quantités réellement reçues, vérifier le stock '
     + 'et prévenir l’exploitation Kuehne+Nagel.',
-  niveaux: ['2de'],
+  niveaux: ['2de', 'cap'],
   competences: ['C1.5', 'C1.6'],
+  competencesCap: ['CAP-C1.5'],   // CAP OL 2026 : lu par un groupe CAP à la place de competences
   domaines: ['D4'],
   coeur: true,
   temps: 'guidage',

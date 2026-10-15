@@ -21,8 +21,9 @@ const s = seanceEntreprise(FB, SEANCE, {
   titre: 'France Boissons — le retour de Lucas',
   desc: 'Agent d’exploitation à Buchelay : contrôler au quai les vides rapportés de chez Malo, trouver l’erreur du ticket signé, tenir le '
     + 'compte de consignes du client dans la feuille de calcul, prévenir Malo et la facturation, puis chiffrer ce que rapporte un fût qui revient.',
-  niveaux: ['2de'],
+  niveaux: ['2de', 'cap'],
   competences: ['OTM-C2.3', 'C2.5'],
+  competencesCap: ['CAP-C3.7'],   // CAP OL 2026 : lu par un groupe CAP à la place de competences
   domaines: ['D3', 'D1'],
   temps: 'entrainement',
   bareme: 20,           // jalons pondérés (16) + questions notées (4), somme = 20

@@ -19,8 +19,9 @@ const s = seanceEntreprise(SMOBY, SEANCE, {
   titre: 'Smoby — la palette de la commande de Noël',
   desc: 'Cariste à la plateforme Smoby : préparer la palette mixte qui complète l’enlèvement E1 de la commande de Noël — '
     + 'prélever au picking, réapprovisionner depuis la réserve, monter une palette stable, filmer et étiqueter.',
-  niveaux: ['2de'],
+  niveaux: ['2de', 'cap'],
   competences: ['C2.1'],
+  competencesCap: ['CAP-C3.1', 'CAP-C3.4'],   // CAP OL 2026 : lu par un groupe CAP à la place de competences
   domaines: ['D4'],
   coeur: true,
   temps: 'guidage',

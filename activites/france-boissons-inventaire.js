@@ -18,8 +18,9 @@ const s = seanceEntreprise(FB, SEANCE, {
   titre: 'France Boissons — inventaire tournant',
   desc: 'Préparateur à la plateforme de Buchelay : compter les fûts à l’aveugle avec le terminal vocal, trouver les écarts et leur cause, '
     + 'décider, puis rendre compte à la cheffe de quai.',
-  niveaux: ['2de'],
+  niveaux: ['2de', 'cap'],
   competences: ['C1.6'],
+  competencesCap: ['CAP-C1.5'],   // CAP OL 2026 : lu par un groupe CAP à la place de competences
   domaines: ['D2', 'D3', 'D5'],
   coeur: true,
   temps: 'guidage',

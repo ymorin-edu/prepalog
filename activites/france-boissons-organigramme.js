@@ -21,8 +21,9 @@ const s = seanceEntreprise(FB, SEANCE, {
   code: 'ENT-6.1',
   titre: 'France Boissons — bienvenue à Buchelay',
   desc: 'Lire l’organigramme de la plateforme de Buchelay, distinguer qui dirige et qui aide, et transmettre chaque message à la bonne personne.',
-  niveaux: ['2de'],
+  niveaux: ['2de', 'cap'],
   competences: ['C1.1'],
+  competencesCap: ['CAP-C1.1', 'CAP-C1.2'],   // CAP OL 2026 : lu par un groupe CAP à la place de competences
   domaines: ['D1'],
   temps: 'guidage',
   bareme: 20,           // jalons pondérés, somme des poids = 20

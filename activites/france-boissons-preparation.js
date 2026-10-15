@@ -18,8 +18,9 @@ const s = seanceEntreprise(FB, SEANCE, {
   titre: 'France Boissons — la commande de Malo à la voix',
   desc: 'Préparateur à la plateforme de Buchelay : préparer à la voix la commande de La Cabane à Malo, signaler un fût abîmé avec le bon mot, '
     + 'monter deux palettes client, filmer et étiqueter.',
-  niveaux: ['2de'],
+  niveaux: ['2de', 'cap'],
   competences: ['C2.1'],
+  competencesCap: ['CAP-C3.1', 'CAP-C3.2', 'CAP-C3.4'],   // CAP OL 2026 : lu par un groupe CAP à la place de competences
   domaines: ['D4'],
   coeur: true,
   temps: 'entrainement',
