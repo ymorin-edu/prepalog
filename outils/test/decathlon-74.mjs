@@ -230,6 +230,17 @@ await v('ENT-7.4 : Avant de commencer — 3 questions tirées notées (3 points)
       suiteAuFil: L.filter((q) => q.type !== 'ouverture').length, part: M.QUESTIONS.part };
   });
   egal(Q, { banque: 10, prep: 6, droit: 4, tirage: { preparation: 1, droit: 2 }, aides: 0, mots: 0, suiteAuFil: 0, part: 3 }, 'la banque d’« Avant de commencer »');
+  // Le droit reste lisible à gauche (décision de Tristan, 15/10/2026), sans mot cliquable : chaque question de droit a son texte, la préparation a le cahier des charges.
+  const D = await pg.evaluate(async () => {
+    const M = await import('/contenus/questions/ENT-7.4.js');
+    const A = await import('/contenus/decathlon-ent74.js');
+    const html = (id) => { const d = A.DOCUMENTS.find((x) => x.id === id); return typeof d.html === 'function' ? d.html({}) : d.html; };
+    return { docs: M.QUESTIONS.ouverture.documents, parQuestion: Object.fromEntries(M.QUESTIONS.liste.map((q) => [q.id, q.doc])),
+      cliquables: M.QUESTIONS.ouverture.documents.filter((id) => html(id).includes('[[')), art: ['droit', 'ecrit', 'forcemajeure'].map((id) => /L1431-3|1366|1218/.exec(html(id))[0]) };
+  });
+  egal(D.docs, ['cahier', 'droit', 'ecrit', 'forcemajeure'], 'documents de gauche');
+  egal(D.parQuestion, { 'k-p1': 'cahier', 'k-p2': 'cahier', 'k-p3': 'cahier', 'k-p4': 'cahier', 'k-p5': 'cahier', 'k-p6': 'cahier', 'k-d1': 'droit', 'k-d2': 'ecrit', 'k-d3': 'forcemajeure', 'k-d4': 'droit' }, 'le texte de chaque question');
+  egal([D.cliquables, D.art], [[], ['L1431-3', '1366', '1218']], 'aucun mot cliquable, les trois textes présents');
   // Deux élèves : tirages possiblement différents, tous de 3 questions (1 + 2).
   const T = await pg.evaluate(async () => {
     const { tirerOuverture } = await import('/core/types/questions.js');

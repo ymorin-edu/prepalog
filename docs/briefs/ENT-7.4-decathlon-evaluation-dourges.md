@@ -197,6 +197,7 @@ le bilan ; 50 min tenues.
   7. **Compétences** : `competences: ['C2.6']` (C2.6.1 et C2.6.2 n'existent pas dans `core/competences.js`, comme 7.1 à 7.3). Pas de `parcours` ni `precedente` (comme Picard 4.4 et Cdiscount 2.5) :
      la séance s'ouvre quand l'enseignant la coche.
   8. **Aucun contact « leurre »** au téléphone (pas de messagerie de Claire ou de Contargo à appeler par erreur) ; pas de lexique (`lexique: {}`) : une évaluation n'a aucune aide.
+  9. **Le droit reste lisible à gauche** pendant « Avant de commencer » (décision de Tristan, 15/10/2026, option B) : L1431-3, art. 1366 et art. 1218, les mêmes textes qu'en 7.3, sans mot cliquable ni aide par question ; le brief écartait toute aide. Les questions de préparation ont le cahier des charges.
 - **Décisions prises en route** : le chef de quai de Dourges s'appelle **Yanis Haddad** (nom construit, proposé : à valider) ; l'« offre commandée » (celle dont le chef de quai donne l'arrivée) est le transporteur de
   l'ordre de l'élève, à défaut l'offre qu'il a retenue, à défaut la bonne réponse ; la hors liste retenue fait tomber le tri, la décision, le transporteur de l'ordre et le destinataire du courriel (5 points) mais pas l'appel.
   La banque d'offres en retard est tirée en premier, la hors liste en second : le contrôle d'équité refuse un jeu où deux offres arrivent à la même heure (E-Flux arrive à 11 h, pas à 9 h comme la barge).

@@ -5,6 +5,8 @@
 // ÉVALUATION : AUCUNE question au fil (le moteur les rendrait « Merci, je note » ; rien à déclarer). Seul l'écran « Avant de commencer » est NOTÉ
 // (`part: 3`) : 10 questions clés (6 de préparation, 4 de droit), l'élève en reçoit 3 (1 de préparation, 2 de droit) tirées dans sa base. Aucune aide,
 // aucun mot cliquable, « Je ne sais pas » ajouté par le moteur ; juste +1, « Je ne sais pas » 0, fausse −1 ÷ (nombre de mauvaises réponses), plancher 0.
+// DOCUMENTS À GAUCHE (décision de Tristan, 15/10/2026) : le cahier des charges pour la préparation ; pour le droit, les mêmes textes qu'en 7.3 (L1431-3, art. 1366, art. 1218), lisibles
+// pendant les questions : l'évaluation vérifie qu'on comprend un texte, pas qu'on l'a appris par cœur (le brief écartait toute aide ; elle reste écartée pour la méthode).
 // Les 10 reprennent les questions ★ de 7.1 à 7.3, réécrites pour Dourges.
 //
 // ÉCART au brief (dit à Tristan à la livraison) : `k-d1`. Le brief demandait « Qui doit informer qui du CO₂ ? — Le prestataire informe Decathlon ».
@@ -17,7 +19,7 @@
 import { EQUIPE } from '../decathlon.js';
 import { ID } from '../decathlon-ent74-donnees.js';
 
-const q = (id, rubrique, enonce, choix, juste, retour) => ({ id, type: 'ouverture', de: 'claire', doc: 'cahier', rubrique, cle: true, enonce, choix, juste, retour });
+const q = (id, rubrique, enonce, choix, juste, retour, doc = 'cahier') => ({ id, type: 'ouverture', de: 'claire', doc, rubrique, cle: true, enonce, choix, juste, retour });
 
 export const QUESTIONS = {
   id: ID,
@@ -25,7 +27,7 @@ export const QUESTIONS = {
   personnes: { claire: EQUIPE.claire, yanis: EQUIPE.yanis },
   ouverture: { id: 'avant-de-commencer', de: 'claire', part: 3, titre: 'Avant de commencer', continuer: 'voir l’accueil',
     situation: 'Bonjour ! Je suis en déplacement toute la semaine : tu t’occupes seul(e) d’un conteneur. Avant de commencer, réponds à mes questions, sans aide.',
-    documents: ['cahier'],
+    documents: ['cahier', 'droit', 'ecrit', 'forcemajeure'],   // le droit reste lisible à gauche (décision de Tristan, 15/10/2026) : on teste la compréhension, pas la mémoire
     tirage: { preparation: 1, droit: 2 },
     questions: ['k-p1', 'k-p2', 'k-p3', 'k-p4', 'k-p5', 'k-p6', 'k-d1', 'k-d2', 'k-d3', 'k-d4'] },
   liste: [
@@ -57,18 +59,18 @@ export const QUESTIONS = {
     q('k-d1', 'droit', 'Le rail te confirme un transport qui part d’Anvers pour Dourges. D’après la loi, doit-il te donner le CO₂ de la prestation ?',
       [{ v: 'cahier', lib: 'Pas encore : la loi renvoie à plus tard les transports qui partent de l’étranger ; ici, c’est le cahier des charges de Decathlon qui l’exige.' },
         { v: 'loi', lib: 'Oui : la loi l’y oblige pour tout transport.' }, { v: 'demande', lib: 'Non, seulement s’il en reçoit la demande.' }], 'cahier',
-      'Le Code des transports (L1431-3) oblige à informer du CO₂, mais renvoie à plus tard les transports qui partent ou arrivent hors de France. Anvers est en Belgique : c’est Decathlon qui exige le chiffre.'),
+      'Le Code des transports (L1431-3) oblige à informer du CO₂, mais renvoie à plus tard les transports qui partent ou arrivent hors de France. Anvers est en Belgique : c’est Decathlon qui exige le chiffre.', 'droit'),
     q('k-d2', 'droit', 'Le prestataire dit n’avoir pas reçu ton ordre. Ton courriel peut-il servir de preuve ?',
       [{ v: 'oui', lib: 'Oui, comme un écrit papier, si l’on sait qu’il vient de toi et qu’il n’a pas été modifié.' }, { v: 'recommande', lib: 'Non, seulement un recommandé papier.' },
         { v: 'jamais', lib: 'Non, un courriel n’engage jamais.' }], 'oui',
-      'Selon l’article 1366 du Code civil, l’écrit électronique a la même force probante que le papier si la personne est identifiée et si le texte est conservé sans modification.'),
+      'Selon l’article 1366 du Code civil, l’écrit électronique a la même force probante que le papier si la personne est identifiée et si le texte est conservé sans modification.', 'ecrit'),
     q('k-d3', 'droit', 'L’arrêt de l’Escaut avait été annoncé un mois avant ta commande. Le prestataire barge peut-il invoquer la force majeure ?',
       [{ v: 'non', lib: 'Non : l’événement pouvait être prévu.' }, { v: 'toujours', lib: 'Oui : un arrêt de navigation est toujours une force majeure.' },
         { v: 'ecrit', lib: 'Oui, s’il prévient par écrit.' }], 'non',
-      'La force majeure (article 1218 du Code civil) suppose un événement imprévisible à la conclusion du contrat. Un arrêt annoncé avant la commande pouvait être prévu.'),
+      'La force majeure (article 1218 du Code civil) suppose un événement imprévisible à la conclusion du contrat. Un arrêt annoncé avant la commande pouvait être prévu.', 'forcemajeure'),
     q('k-d4', 'droit', 'Decathlon vise −20 % d’émissions du transport. C’est…',
       [{ v: 'engagement', lib: 'un engagement que Decathlon a pris lui-même ; la loi n’oblige pas à réduire, seulement à informer' },
         { v: 'loi', lib: 'une obligation fixée par la loi pour toutes les entreprises' }, { v: 'transporteur', lib: 'une obligation imposée par chaque transporteur à ses clients' }], 'engagement',
-      'Réduire les émissions, c’est l’engagement que Decathlon a pris lui-même (engagements.decathlon.fr). La loi oblige à informer du CO₂, pas à le réduire.'),
+      'Réduire les émissions, c’est l’engagement que Decathlon a pris lui-même (engagements.decathlon.fr). La loi oblige à informer du CO₂, pas à le réduire.', 'droit'),
   ],
 };

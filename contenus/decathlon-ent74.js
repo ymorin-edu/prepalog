@@ -19,7 +19,7 @@ import { apresFiche, apresGeste, dialogueFini } from '../core/declencheurs.js';
 import { courrielsEnvoyes } from '../core/types/courriel.js';
 import { jalonDialogue, premiereReponse } from '../core/types/dialogue.js';
 import { QUESTIONS } from './questions/ENT-7.4.js';
-import { CARTE, EQUIPE, mailDe, heureScenario, STYLE_DOCUMENTS, DOC_LISTE, PIED, PRESTATAIRES, nomLieu, quand, kg, euros, ech, JOURS } from './decathlon.js';
+import { CARTE, EQUIPE, mailDe, heureScenario, STYLE_DOCUMENTS, DOC_LISTE, DOC_DROIT, PIED, PRESTATAIRES, nomLieu, quand, kg, euros, ech, JOURS } from './decathlon.js';
 import {
   ID, ID_VOLET, SCENARIO, DESTINATION, CMP, OT, DIALOGUE, B, BO, COL, DISPO, LIMITE, BUDGET, OT_NUM, FICHIER, CRITERES, CRITERE_JUSTE, JUSTIFS, JUSTIF_JUSTE,
   PRESTAS, PRESTA_DE, TYPES, LIEUX_ENL, LIEUX_LIV, BONNES, INSTRUCTIONS_JUSTES,
@@ -101,6 +101,29 @@ function devisHtml(o) {
   </article>`;
 }
 
+
+// Le droit, à gauche pendant « Avant de commencer » (décision de Tristan, 15/10/2026) : l'évaluation teste la compréhension des textes, pas leur mémoire. Les mêmes textes
+// qu'en ENT-7.3 (art. 1218 et 1366 du Code civil : structure lue sur Légifrance, MOT À MOT supposé, à relire ; L1431-3 : lu sur Légifrance le 13/10/2026). Aucune aide ni mot cliquable.
+const DOC_ECRIT = { id: 'ecrit', titre: 'Le droit : l’écrit électronique', court: 'Le droit (écrit)',
+  html: `<article class="dk-doc" aria-label="Le droit : l’écrit électronique">
+    <p class="dk-t">L’écrit électronique comme preuve</p>
+    <p class="dk-st">Code civil, article 1366</p>
+    <p class="dk-cite">« L’écrit électronique a la même force probante que l’écrit sur support papier, sous réserve que puisse être dûment identifiée la personne
+      dont il émane et qu’il soit établi et conservé dans des conditions de nature à en garantir l’intégrité. »</p>
+    <p class="dk-pied">Texte réel — source : Code civil, art. 1366 (lu sur un site qui le cite le 14/10/2026 ; à relire sur Légifrance).</p>
+  </article>` };
+const DOC_FORCE_MAJEURE = { id: 'forcemajeure', titre: 'Le droit : la force majeure', court: 'Le droit (force majeure)',
+  html: `<article class="dk-doc" aria-label="Le droit : la force majeure">
+    <p class="dk-t">La force majeure</p>
+    <p class="dk-st">Code civil, article 1218</p>
+    <p class="dk-cite">« Il y a force majeure en matière contractuelle lorsqu’un événement échappant au contrôle du débiteur, qui ne pouvait être raisonnablement prévu
+      lors de la conclusion du contrat et dont les effets ne peuvent être évités par des mesures appropriées, empêche l’exécution de son obligation.</p>
+    <p class="dk-cite">Si l’empêchement est temporaire, l’exécution de l’obligation est suspendue à moins que le retard qui en résulterait ne justifie la résolution du
+      contrat. Si l’empêchement est définitif, le contrat est résolu de plein droit et les parties sont libérées de leurs obligations dans les conditions prévues aux
+      articles 1351 et 1351-1. »</p>
+    <p class="dk-pied">Texte réel — source : Code civil, art. 1218 (Légifrance, version en vigueur depuis le 01/10/2016 ; mot à mot à relire).</p>
+  </article>` };
+
 export const STYLE = `${STYLE_DOCUMENTS}
 .dk-mono{font-family:ui-monospace,Consolas,'Courier New',monospace; letter-spacing:.05em; font-weight:700}
 `;
@@ -108,6 +131,8 @@ export const DOCUMENTS = [
   { id: 'avis', titre: 'Avis de mise à disposition', court: 'Avis de mise à disposition', html: docAvis },
   { id: 'cahier', titre: 'Cahier des charges', court: 'Cahier des charges', html: docCahier },
   { ...DOC_LISTE, html: sansMots(DOC_LISTE.html) },
+  { ...DOC_DROIT, html: sansMots(DOC_DROIT.html) },
+  DOC_ECRIT, DOC_FORCE_MAJEURE,
   ...LETTRES.map((l, i) => ({ id: idDevis(i), titre: `Devis ${l.toUpperCase()}`, court: `Devis ${l.toUpperCase()}`, html: (db) => devisHtml(jeuEleve(db).offres[i]) })),
 ];
 // Les 4 devis de l'élève (3 offres référencées et 1 hors liste).
