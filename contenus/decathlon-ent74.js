@@ -103,25 +103,25 @@ function devisHtml(o) {
 
 
 // Le droit, à gauche pendant « Avant de commencer » (décision de Tristan, 15/10/2026) : l'évaluation teste la compréhension des textes, pas leur mémoire. Les mêmes textes
-// qu'en ENT-7.3 (art. 1218 et 1366 du Code civil : structure lue sur Légifrance, MOT À MOT supposé, à relire ; L1431-3 : lu sur Légifrance le 13/10/2026). Aucune aide ni mot cliquable.
+// qu'en ENT-7.3 (art. 1218 et 1366 du Code civil : RELUS mot à mot sur Légifrance le 15/10/2026 ; L1431-3 : lu sur Légifrance le 13/10/2026). Aucune aide ni mot cliquable.
 const DOC_ECRIT = { id: 'ecrit', titre: 'Le droit : l’écrit électronique', court: 'Le droit (écrit)',
   html: `<article class="dk-doc" aria-label="Le droit : l’écrit électronique">
     <p class="dk-t">L’écrit électronique comme preuve</p>
     <p class="dk-st">Code civil, article 1366</p>
     <p class="dk-cite">« L’écrit électronique a la même force probante que l’écrit sur support papier, sous réserve que puisse être dûment identifiée la personne
       dont il émane et qu’il soit établi et conservé dans des conditions de nature à en garantir l’intégrité. »</p>
-    <p class="dk-pied">Texte réel — source : Code civil, art. 1366 (lu sur un site qui le cite le 14/10/2026 ; à relire sur Légifrance).</p>
+    <p class="dk-pied">Texte réel — source : Code civil, art. 1366 (texte relu mot à mot sur Légifrance le 15/10/2026).</p>
   </article>` };
 const DOC_FORCE_MAJEURE = { id: 'forcemajeure', titre: 'Le droit : la force majeure', court: 'Le droit (force majeure)',
   html: `<article class="dk-doc" aria-label="Le droit : la force majeure">
     <p class="dk-t">La force majeure</p>
     <p class="dk-st">Code civil, article 1218</p>
     <p class="dk-cite">« Il y a force majeure en matière contractuelle lorsqu’un événement échappant au contrôle du débiteur, qui ne pouvait être raisonnablement prévu
-      lors de la conclusion du contrat et dont les effets ne peuvent être évités par des mesures appropriées, empêche l’exécution de son obligation.</p>
+      lors de la conclusion du contrat et dont les effets ne peuvent être évités par des mesures appropriées, empêche l’exécution de son obligation par le débiteur.</p>
     <p class="dk-cite">Si l’empêchement est temporaire, l’exécution de l’obligation est suspendue à moins que le retard qui en résulterait ne justifie la résolution du
       contrat. Si l’empêchement est définitif, le contrat est résolu de plein droit et les parties sont libérées de leurs obligations dans les conditions prévues aux
       articles 1351 et 1351-1. »</p>
-    <p class="dk-pied">Texte réel — source : Code civil, art. 1218 (Légifrance, version en vigueur depuis le 01/10/2016 ; mot à mot à relire).</p>
+    <p class="dk-pied">Texte réel — source : Code civil, art. 1218 (Légifrance, version en vigueur depuis le 01/10/2016, relu mot à mot le 15/10/2026).</p>
   </article>` };
 
 export const STYLE = `${STYLE_DOCUMENTS}

@@ -12,7 +12,7 @@
 //
 // VÉRIFIÉ / CONSTRUIT : voir MENTION (et l'en-tête de `contenus/decathlon.js`). Poids brut vérifié (VGM) : amendement SOLAS règle VI/2
 // (résolution OMI MSC.380(94)), en vigueur le 1er juillet 2016, obligation du chargeur (coordinateur, 14/10/2026). Code civil art. 1366
-// lu le 14/10/2026 sur un site tiers qui le cite (Légifrance non lisible depuis le poste) : à relire sur Légifrance.
+// lu le 14/10/2026 sur un site tiers, puis RELU mot à mot sur Légifrance le 15/10/2026 (identique).
 
 import { apresGeste, apresPlanning, dialogueFini } from '../core/declencheurs.js';
 import { etapesPlanning } from '../core/types/planning.js';
@@ -111,7 +111,7 @@ const DOC_ECRIT = { id: 'ecrit', titre: 'Le droit : l’écrit électronique', c
     <p class="dk-cite">« L’écrit électronique a la même force probante que l’écrit sur support papier, sous réserve que puisse être dûment identifiée la personne
       dont il émane et qu’il soit établi et conservé dans des conditions de nature à en garantir l’intégrité. »</p>
     <p>Un courriel avec une [[pièce jointe]] est un écrit électronique : il garde la trace de ce qu’on a demandé, à qui, et quand.</p>
-    <p class="dk-pied">Texte réel — source : Code civil, art. 1366 (lu sur un site qui le cite le 14/10/2026 ; à relire sur Légifrance).</p>
+    <p class="dk-pied">Texte réel — source : Code civil, art. 1366 (texte relu mot à mot sur Légifrance le 15/10/2026).</p>
   </article>` };
 
 const DOC_PESEE = { id: 'pesee', titre: 'Le poids brut vérifié d’un conteneur', court: 'La pesée (SOLAS)',

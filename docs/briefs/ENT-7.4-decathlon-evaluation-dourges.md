@@ -206,5 +206,5 @@ le bilan ; 50 min tenues.
   (3 / 2 / 1,5 / 0). Éprouvés par sabotage dans les deux sens (`commandee` toujours la bonne réponse ; décision toujours juste ; transporteur jugé sur la bonne réponse). Suite entière : 1 493 cas verts.
   **Touché** : `outils/test.mjs` (bloc ajouté) et `outils/test/tirage-niveaux.mjs` (banques inscrites) ; aucun cas existant réécrit.
 - **Commits** : voir `git log` (« ENT-7.4 : … »).
-- **Reste ouvert** : (1) Tristan l'essaie à l'écran puis l'ouvre à son groupe (`pret: true, ouverture: 'prof'`) ; (2) valider le nom Yanis Haddad ; (3) relire sur Légifrance les art. 1218 et 1366 du Code civil (mot à mot supposé, comme en 7.3) :
+- **Reste ouvert** : (1) Tristan l'essaie à l'écran puis l'ouvre à son groupe (`pret: true, ouverture: 'prof'`) ; (2) valider le nom Yanis Haddad ; (3) ~~relire sur Légifrance les art. 1218 et 1366~~ **fait le 15/10/2026** (art. 1366 et 1231-1 identiques ; art. 1218 corrigé : « par le débiteur » manquait, aussi en 7.3) :
   les questions k-d2 et k-d3 en dépendent ; (4) le code `ENT-7.4` est provisoire, comme 7.1 à 7.3 ; (5) pas de trame ni de fiche enseignant (brief §9 : fiche d'une page à faire par Cowork).

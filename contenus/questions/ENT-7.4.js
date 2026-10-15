@@ -13,8 +13,7 @@
 // Or le trajet part d'Anvers : le 3e alinéa de l'article L1431-3 du Code des transports renvoie à plus tard les transports qui partent de l'étranger
 // (lu sur Légifrance le 13/10/2026, cf. ENT-7.1 et la question d3 d'ENT-7.3). La réponse du brief aurait contredit ce qu'ENT-7.1 et 7.3 enseignent :
 // la question est donc celle d'ENT-7.3 (« doit-il te donner le CO₂ ? »), adaptée à Dourges.
-// Les articles 1218 (force majeure) et 1366 (écrit électronique) du Code civil : MÊME statut qu'en ENT-7.3 (structure lue sur Légifrance, mot à mot
-// supposé, à relire). L'élève n'a pas leur texte sous les yeux en évaluation : il doit savoir ce qu'ils disent.
+// Les articles 1218 (force majeure) et 1366 (écrit électronique) du Code civil : RELUS mot à mot sur Légifrance le 15/10/2026 (comme l'article 1231-1). Ils restent lisibles à gauche pendant « Avant de commencer » (décision de Tristan, option B).
 
 import { EQUIPE } from '../decathlon.js';
 import { ID } from '../decathlon-ent74-donnees.js';

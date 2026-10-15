@@ -16,8 +16,8 @@
 // maintenance des écluses (communiqué Contargo du 04/02/2025, brief §2). Construit : l'avarie de l'écluse de Kain (cause, dates), tous les messages
 // de Contargo, toutes les offres, RailCo Express. Code civil art. 1218 et 1231-1 : lus sur Légifrance le 15/10/2026 pour la structure (page 1218 :
 // définition, empêchement temporaire, empêchement définitif ; 1231-1 : dommages et intérêts sauf force majeure) ; le MOT À MOT recopié ci-dessous
-// vient de la connaissance du texte et n'a pas pu être recopié depuis Légifrance (l'outil de lecture ne restitue pas le texte intégral) : SUPPOSÉ,
-// à relire sur Légifrance. Art. 1366 : même statut qu'en ENT-7.2.
+// vient de la connaissance du texte : RELU mot à mot sur Légifrance le 15/10/2026 (art. 1218 : il manquait « par le débiteur » en fin de premier alinéa, corrigé ;
+// art. 1231-1 et art. 1366 : identiques). Art. 1366 : même texte qu'en ENT-7.2.
 
 import { apresFiche, apresGeste, dialogueFini } from '../core/declencheurs.js';
 import { courrielsEnvoyes } from '../core/types/courriel.js';
@@ -149,7 +149,7 @@ const DOC_FORCE_MAJEURE = { id: 'forcemajeure', titre: 'Le droit : la force maje
     <p class="dk-t">La [[force majeure]]</p>
     <p class="dk-st">Code civil, article 1218</p>
     <p class="dk-cite">« Il y a force majeure en matière contractuelle lorsqu’un événement échappant au contrôle du débiteur, qui ne pouvait être raisonnablement prévu
-      lors de la conclusion du contrat et dont les effets ne peuvent être évités par des mesures appropriées, empêche l’exécution de son obligation.</p>
+      lors de la conclusion du contrat et dont les effets ne peuvent être évités par des mesures appropriées, empêche l’exécution de son obligation par le débiteur.</p>
     <p class="dk-cite">Si l’empêchement est temporaire, l’exécution de l’obligation est suspendue à moins que le retard qui en résulterait ne justifie la résolution du
       contrat. Si l’empêchement est définitif, le contrat est résolu de plein droit et les parties sont libérées de leurs obligations dans les conditions prévues aux
       articles 1351 et 1351-1. »</p>
@@ -164,7 +164,7 @@ const DOC_ECRIT = { id: 'ecrit', titre: 'Le droit : l’écrit électronique', c
     <p class="dk-cite">« L’écrit électronique a la même force probante que l’écrit sur support papier, sous réserve que puisse être dûment identifiée la personne
       dont il émane et qu’il soit établi et conservé dans des conditions de nature à en garantir l’intégrité. »</p>
     <p>Un courriel est un écrit électronique : il garde la trace de ce qu’on a demandé, à qui, et quand.</p>
-    <p class="dk-pied">Texte réel — source : Code civil, art. 1366 (lu sur un site qui le cite le 14/10/2026 ; à relire sur Légifrance).</p>
+    <p class="dk-pied">Texte réel — source : Code civil, art. 1366 (texte relu mot à mot sur Légifrance le 15/10/2026).</p>
   </article>` };
 
 const DOC_RESPONSABILITE = { id: 'responsabilite', titre: 'Le droit : ne pas exécuter un contrat', court: 'Le droit (inexécution)',
