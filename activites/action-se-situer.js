@@ -28,6 +28,7 @@ const s = seanceEntreprise(ACTION, SEANCE, {
   correction: true,
   niveauxPrevus: ['confirme', 'accompagne'],   // confirmé : lieu et situation bonus ; accompagné : la carte avec les noms (fiches standard)
   questions: 'ENT-8.1',
+  reinitialisable: true,            // première séance d’Action : l’enseignant peut remettre un élève à zéro (règle des X.1)
   pret: true,
   ouverture: 'prof',
 }, SEANCE.OPTIONS);

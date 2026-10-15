@@ -136,10 +136,10 @@ await v('Niveaux : l’onglet montre élèves × entreprises (Cdiscount, plus ce
   await ongletProf('niveaux');
   vrai(picardDeclare, 'activites/picard-ent42.js n’a plus la ligne « id » attendue : la déclaration d’essai est à revoir');
   const cols = await pg.$$eval('[data-col-scenario]', (L) => L.map((x) => x.dataset.colScenario));
-  // France Boissons (6) depuis ENT-6.1 (09/10/2026), Decathlon (7) depuis ENT-7.1 (13/10/2026) : elles déclarent `niveauxPrevus: ['confirme']`.
-  egal(cols, ['2', '4', '6', '7'], 'colonnes');
+  // France Boissons (6) depuis ENT-6.1 (09/10/2026), Decathlon (7) depuis ENT-7.1 (13/10/2026), Action (8) depuis ENT-8.1 (15/10/2026) : elles déclarent `niveauxPrevus: ['confirme']`.
+  egal(cols, ['2', '4', '6', '7', '8'], 'colonnes');
   const noms = await pg.$$eval('[data-col-scenario] strong', (L) => L.map((x) => x.textContent.trim()));
-  egal(noms, ['Cdiscount', 'Picard', 'France Boissons', 'Decathlon'], 'en-têtes');
+  egal(noms, ['Cdiscount', 'Picard', 'France Boissons', 'Decathlon', 'Action'], 'en-têtes');
   const valeurs = await pg.$$eval('[data-niveau-eleve]', (L) => [...new Set(L.map((s) => s.value))]);
   egal(valeurs, ['standard'], 'valeurs');
   egal(await pg.$$eval('[data-niveau-eleve]', (L) => L.length), cols.length * Object.keys(EL).length, 'cases');   // une case par élève et par colonne
@@ -546,6 +546,16 @@ const BANQUES_FIGEES = {
     retard: ['rt4-barge', 'rt4-rail'],
     horsListe: ['hl4-eflux', 'hl4-bateliers', 'hl4-railco', 'hl4-eclair'],
     instructions: ['in4-froid', 'in4-adr', 'in4-douane'],
+  },
+  // ENT-8.1 Action (15/10/2026) : les acteurs et les situations de « d'où viennent les produits du magasin ».
+  'contenus/action-ent81-donnees.js': {
+    acteurs: ['geodis', 'lycee', 'client', 'fournisseur', 'magasin', 'transporteur', 'action'],
+    situations: ['s-cartons', 's-chute', 's-etiquette', 's-emplacement', 's-retard', 's-camion', 's-scan', 's-abime'],
+  },
+  // ENT-8.2 Action (15/10/2026) : les tâches et les lectures du planning des quais.
+  'contenus/action-ent82.js': {
+    taches: ['t-decharger', 't-saisir', 't-bl', 't-compter', 't-rdv', 't-ranger', 't-refuser', 't-equipe'],
+    lectures: ['l-havre-heure', 'l-havre-quai', 'l-premier', 'l-libre-9h', 'l-q3-combien', 'l-dernier'],
   },
 };
 await v('Tirage : banques stables — aucun id d’une banque déclarée ne disparaît (liste figée), toute banque déclarée est inscrite', async () => {

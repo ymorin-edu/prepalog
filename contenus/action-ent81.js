@@ -125,17 +125,11 @@ function situationDe(db, d) {
 }
 
 const ECRAN = { qui: `fiche:${FICHES.qui}`, chaine: `fiche:${FICHES.chaine}`, change: `fiche:${FICHES.change}` };
-// CONTOURNEMENT d’un défaut du moteur (signalé au chef de chantier le 15/10/2026) : le rattrapage des questions au fil (`jalonJuge`,
-// `core/types/entreprise.js`) lit `.status` de TOUS les jalons, bonus compris, et écrit une erreur en console sur le `null` d’un cas bonus
-// non reçu (chaque élève standard, dès la fin de la carte). Chez un élève qui n’est pas confirmé, le moteur n’appelle un jalon bonus nulle
-// part ailleurs (note, bandeau, « fini ») : on y rend « juste » au lieu de `null`. Chez un confirmé, rien ne change (`null` s’il n’a pas
-// le cas, ce qui n’arrive pas ici). À retirer quand `jalonJuge` saura lire `null`.
-const sansNull = (j) => ({ ...j, verifier: (db) => { const r = j.verifier(db); return r == null && !(db && db.aisance === 'confirme') ? ok : r; } });
 export const ETAPES = [
   ...[['geodis', 'fixe'], ['facile', 'facile'], ['moyen', 'moyen'], ['difficile', 'difficile']].map(([id, quoi]) => ({
     id: `qui-${id}`, titre: 'Qui est qui ? : le rôle d’un acteur', groupe: GROUPES.qui, ecran: ECRAN.qui, poids: 1,
     verifier: (db) => jugerActeur(db, quoi) })),
-  ...etapesLocaliser(LOCALISER, ID).map((j) => (j.bonus ? sansNull(j) : Object.assign(j, { poids: 0.75, groupe: GROUPES.carte }))),
+  ...etapesLocaliser(LOCALISER, ID).map((j) => (j.bonus ? j : Object.assign(j, { poids: 0.75, groupe: GROUPES.carte }))),
   { id: 'chaine-ordre', titre: 'La chaîne : le chemin d’un produit dans l’ordre', groupe: GROUPES.chaine, ecran: ECRAN.chaine, poids: 2.5,
     verifier(db) { const f = fiche(db, FICHES.chaine); return !f.envoye ? attente : memeOrdre(f.valeurs.ordre, ORDRE_JUSTE) ? ok : ko; } },
   { id: 'chaine-place', titre: 'La chaîne : où tu travailles', groupe: GROUPES.chaine, ecran: ECRAN.chaine, poids: 1.5,
@@ -145,8 +139,8 @@ export const ETAPES = [
     verifier: (db) => { const [p, i] = situationDe(db, d); return jugerSituation(db, p, i); } })),
   // Le cas bonus du confirmé : sans poids ni groupe, `null` quand l’élève ne l’a pas reçu (caché à l’élève). Le lieu bonus de la carte
   // (Labastide) rend ses deux jalons bonus par `etapesLocaliser`.
-  sansNull({ id: 'change-bonus', bonus: true, ecran: ECRAN.change, titre: 'Ce que je change : situation en plus',
-    verifier: (db) => { const p = TIRAGE.piecesBonus(db, 'situations')[0]; return p ? jugerSituation(db, p, situationsSocle(db).length) : null; } }),
+  { id: 'change-bonus', bonus: true, ecran: ECRAN.change, titre: 'Ce que je change : situation en plus',
+    verifier: (db) => { const p = TIRAGE.piecesBonus(db, 'situations')[0]; return p ? jugerSituation(db, p, situationsSocle(db).length) : null; } },
 ];
 
 // ─────────────────────────────────────────────────────────────── les messages de Samia (au tu ; date du scénario)

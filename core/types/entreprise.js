@@ -800,7 +800,7 @@ export function creerEntreprise(U) {
         return MQ.etapes.find((e) => e.ferme === cle && etapeArrivee(db, MQ, e.id) && !etapeFaite(db, MQ, e)) || null;
       }
       // Un jalon qui plante (état 'erreur') est jugé : le rattrapage ne doit pas attendre un bug de contenu.
-      const jalonJuge = (j) => { try { const st = j.verifier(db, U).status; return st === 'ok' || st === 'ko'; } catch (x) { signaler(`le jalon « ${j.id} » plante`, x); return true; } };
+      const jalonJuge = (j) => { try { const r = j.verifier(db, U); if (r == null) return true; const st = r.status; return st === 'ok' || st === 'ko'; } catch (x) { signaler(`le jalon « ${j.id} » plante`, x); return true; } };
       const essai = (f, quoi) => { try { return !!f(db, ctx.meta.id); } catch (x) { signaler(`la condition ${quoi || 'd’une question'} plante`, x); return false; } };
       // L'ÉCRAN TÉLÉPHONE, ce qu'en lisent le menu, les questions et « Corriger » : sans créer l'état (le menu se dessine chez un
       // élève qui n'a jamais ouvert le Téléphone). L'écran lui-même est plus bas (« écran Téléphone »).

@@ -5,10 +5,15 @@
 // rend le corrigé d’un élève, calculé depuis sa base (jamais recopié). La carte est la même pour tous (Labastide : confirmé seulement).
 
 import { ID, TIRAGE, ROLES, CHAINE, PLACE_JUSTE, acteursDe, situationsSocle, ordreDepart, libRole, libChaine } from '../action-ent81-donnees.js';
-import { LOCALISER } from '../action-ent81.js';
-import { corrigeLocaliser } from '../../core/types/localiser.js';
+import { LIEUX } from '../action.js';
+import { FRANCE } from '../france-contours.js';
 
-const CARTE = corrigeLocaliser(LOCALISER);
+// Le corrigé se calcule ici depuis l’univers et les contours, sans importer le moteur : le test des corrigés de trame
+// (`outils/test/spartoo.mjs`) charge chaque corrigé sous Node, où `window` n’existe pas. Même forme que `corrigeLocaliser`
+// de `core/types/localiser.js` (nom, région et département en clair avec leur code, ville, bonus).
+const REG = new Map(FRANCE.regions.map((r) => [r.code, r])), DEP = new Map(FRANCE.deps.map((d) => [d.code, d]));
+const CARTE = LIEUX.map((l) => ({ id: l.id, nom: l.nom, bonus: !!l.bonus, ville: l.ville,
+  region: `${REG.get(l.region).nom} (${l.region})`, departement: `${DEP.get(l.dep).nom} (${l.dep})` }));
 const lieuEnClair = (c) => `${c.nom} : région ${c.region} · département ${c.departement} · ville ${c.ville}`;
 
 export const CORRIGE = {
