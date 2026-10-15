@@ -31,7 +31,7 @@
 | 9 | `entreprise.js` : options figées, `COLORS`/`SHIP` sortis, modules extraits | C5 | gros | Opus puis Sonnet | oui | 8 | **livré** (9a, 9a bis, 9b, 9c ; 9c bis à faire plus tard) |
 | 10 | Un seul drapeau « Simulog » dans tout le code | C13 | petit | Sonnet | oui | — | livré (09/10/2026, 7cd4a21, 58fe9e7) |
 | 11 | Plusieurs enseignants : co-prof, groupes par prof, orphelins filtrés | C7 | moyen à gros | Opus (décision) puis Sonnet | oui + règles | 1, 6 | **livré** (11a 09/10, 076ec30, 8ad642a ; 11b 09/10, 8ba2042, af1d707, 6191913) ; **consoles Firestore et RTDB publiées le 09/10** |
-| 12 | CAP OL et niveaux : référentiel, défauts, TAB-4 | C8 | moyen | Sonnet (Cowork d'abord) | oui | référentiel CAP relevé | à faire |
+| 12 | CAP OL et niveaux : référentiel, défauts, TAB-4 | C8 | moyen | Sonnet (Cowork d'abord) | oui | référentiel CAP relevé | **livré pour les compétences** (15/10, f4f63dd, 250c6bb, 24e2062) ; reste : défaut de niveau, contrôle 2de sans évaluation |
 | **Lot C — hygiène** | | | | | | | |
 | 13 | Tests : compteurs en dur, cas vides, `ATTENDU` complété, doublons | C10b | moyen | Sonnet | non (tests) | — | **livré** (09/10, 06f57c6 à 03eb63e) |
 | 14 | Doublons des vues (`ech`, étapes, note, palette, confirmation, mélange, focus) | C11 | moyen | Sonnet | oui | 9 avancé | **livré** (09/10, f3cec57 à d637118) |
@@ -350,6 +350,13 @@ s'aligner.
   `competences.js`, défaut de niveau d'un groupe à choisir, moyennes par spécialité étendues, TAB-4
   avec `niveaux: ['cap']` si c'est voulu ; un contrôle qui signale un référentiel 2de sans évaluation.
 - **Fini quand.** Un groupe CAP voit ses séances et son tableau de compétences avec des libellés.
+- **Fait, part « compétences » (15/10/2026, f4f63dd, 250c6bb, 24e2062).** Brief `docs/briefs/MOTEUR-cap-ol.md`.
+  12 compétences `CAP-C1.1` à `CAP-C3.7` (blocs 1 et 3 du CAP OL 2026) dans `competences.js` ; une séance les
+  déclare dans un champ à part, `competencesCap`, lu à la place de `competences` par un groupe `cap` (option B,
+  choix de Tristan) ; 21 séances les déclarent et reçoivent le niveau `cap` ; TAB-4 reste ouvert à tous.
+  `SPECIALITES` n'a pas bougé (notion de 2de). Socle : compteur 36 → 48, liste des séances CAP tenue à la main,
+  un cas à l'unité, un cas d'écran (groupe CAP puis 1re, export), trois sabotages éprouvés. **Reste** : le défaut
+  de niveau d'un groupe à la création et le contrôle « référentiel 2de sans évaluation » (pas dans le brief).
 
 ### 13. Tests : la forme (C10b)
 - **Ce qu'on fait.** Remplacer les compteurs en dur par des valeurs calculées depuis le registre ;
