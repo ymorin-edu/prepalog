@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Essai — contours de la France</title>
+<!-- Page d'essai du lot 1 (brief MOTEUR-vue-localiser, 15/10/2026) : affiche le module généré par
+     outils/carte/construire-france.py (contenus/france-contours.js), tel quel, pour juger les contours AVANT
+     d'écrire la vue cliquable (lot 2). Rien ici n'est du moteur et rien n'est cliquable sur la carte.
+     Ouvrir par le serveur local (lancer.bat), puis outils/essai-localiser.html
+     Paramètres : ?vue=france | region | dep   &code=76 (région) ou 30 (département)   &theme=sombre   &jours=1
+     (jours=1 : tout est plein et sombre sur fond clair, une fente entre deux voisins se verrait comme un trait clair). -->
+<link rel="stylesheet" href="../styles/base.css">
+<style>
+  body{ background:var(--fond); color:var(--encre); font-family:system-ui,"Segoe UI",sans-serif; margin:0; padding:16px }
+  h1{ font-size:18px; margin:0 0 4px }
+  .note{ color:var(--encre-douce); font-size:13px; margin:0 0 10px }
+  .barre{ display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin-bottom:8px }
+  .barre button, .barre label{ font:inherit; font-size:13px; padding:5px 10px; border:1px solid var(--filet); border-radius:var(--r);
+    background:var(--panneau); color:var(--encre); cursor:pointer }
+  .barre button[aria-pressed="true"]{ border-color:var(--encre); font-weight:700 }
+  .barre .sep{ width:10px }
+  .cadre{ position:relative; height:calc(100vh - 150px); min-height:420px; border:1px solid var(--filet);
+    border-radius:var(--r); background:var(--panneau); overflow:hidden }
+  .cadre svg{ width:100%; height:100%; display:block }
+  .attrib{ position:absolute; right:6px; bottom:4px; font-size:11px; color:var(--encre-douce); background:var(--panneau);
+    border:1px solid var(--filet); padding:1px 6px; border-radius:4px }
+
+  /* le dessin : que des variables de base.css (lisible en thème clair et sombre), des teintes translucides pour les
+     zones (jamais d'aplat de couleur fixe), le vert plein seulement pour « juste » */
+  .zone{ fill:var(--encre); fill-opacity:.07; stroke:var(--encre-douce); stroke-linejoin:round; vector-effect:non-scaling-stroke }
+  .zone.eteinte{ fill-opacity:.03; stroke-opacity:.45 }
+  .zone.juste{ fill:var(--vert-pale); fill-opacity:1; stroke:var(--vert); stroke-width:2.2px }
+  .zone.voisine{ fill-opacity:.07 }
+  .jours .zone{ fill:var(--encre); fill-opacity:1; stroke:none }
+  .jours .zone.juste{ fill:var(--ardoise-fond) }
+  .jours{ background:var(--panneau) }
+  .nom{ fill:var(--encre); font-weight:600; text-anchor:middle; dominant-baseline:central; paint-order:stroke; stroke:var(--panneau);
+    stroke-linejoin:round; pointer-events:none }
+  .nom.doux{ fill:var(--encre-douce); font-weight:500 }
+  .rep{ fill:var(--encre-douce); stroke:var(--panneau); vector-effect:non-scaling-stroke }
+</style>
+</head>
+<body>
+<h1>Essai — contours de la France (lot 1)</h1>
+<p class="note">Le dessin seul, tel que le build le calcule : la France en régions, une région en départements, un département au
+  zoom avec ses voisins. Rien n'est cliquable à ce stade.</p>
+<div class="barre" data-barre></div>
+<div class="cadre" data-cadre>
+  <svg data-svg role="img"></svg>
+  <div class="attrib" data-attrib></div>
+</div>
+<script type="module">
+import { FRANCE as F } from '../contenus/france-contours.js';
+
+const $ = (s) => document.querySelector(s);
+const svg = $('[data-svg]'), cadre = $('[data-cadre]');
+const ech = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+const P = new URLSearchParams(location.search);
+const ui = { vue: P.get('vue') || 'france', code: P.get('code') || null, jours: P.get('jours') === '1' };
+if (P.get('theme') === 'sombre') document.documentElement.dataset.theme = 'sombre';
+
+const REG = Object.fromEntries(F.regions.map((r) => [r.code, r]));
+const DEP = Object.fromEntries(F.deps.map((d) => [d.code, d]));
+const U = F.unite;                       // unités de grille par unité de base
+let vb = [0, 0, F.w, F.h];
+
+// Le cadre d'un groupe de zones, avec une marge (en unités de base).
+function englobant(cadres, marge) {
+  const m = marge * U;
+  return [Math.min(...cadres.map((c) => c[0])) - m, Math.min(...cadres.map((c) => c[1])) - m,
+    Math.max(...cadres.map((c) => c[2])) + m, Math.max(...cadres.map((c) => c[3])) + m];
+}
+
+function dessiner() {
+  let corps = '', cadres, noms = '';
+  if (ui.vue === 'france') {
+    cadres = [[0, 0, F.w, F.h]];
+    // La France entière, en régions ; la région « trouvée » (ici la 76) montre le style « juste ».
+    corps = F.regions.map((r) => `<path class="zone${r.code === (ui.code || '76') ? ' juste' : ''}" d="${r.d}"/>`).join('');
+    noms = F.regions.map((r) => `<text class="nom" data-fs="13" x="${r.lab[0]}" y="${r.lab[1]}">${ech(r.nom)}</text>`).join('');
+    vb = [0, 0, F.w, F.h];
+  } else if (ui.vue === 'region') {
+    const rc = ui.code || '76';
+    const mem = F.deps.filter((d) => d.region === rc);
+    // Les autres régions éteintes (même tracé que leurs départements simplifiés), les départements de la région au premier plan.
+    corps = F.regions.filter((r) => r.code !== rc).map((r) => `<path class="zone eteinte" d="${r.d}"/>`).join('')
+      + mem.map((d) => `<path class="zone" d="${d.d}"/>`).join('');
+    noms = mem.map((d) => `<text class="nom" data-fs="12" x="${d.lab[0]}" y="${d.lab[1] - 0}">${ech(d.nom)}</text>
+      <text class="nom doux" data-fs="11" data-dy="15" x="${d.lab[0]}" y="${d.lab[1]}">${ech(d.code)}</text>`).join('');
+    vb = englobant(mem.map((d) => d.cadre), 6);
+  } else {
+    const c = ui.code || '30';
+    const d0 = DEP[c];
+    const voisins = d0.voisins.map((v) => DEP[v]);
+    // Le département au zoom (tracé détaillé), ses voisins à côté (détaillé aussi : la frontière commune est la même).
+    corps = voisins.map((d) => `<path class="zone voisine" d="${d.fin}"/>`).join('')
+      + `<path class="zone juste" d="${d0.fin}"/>`;
+    noms = [d0, ...voisins].map((d) => {
+      const lab = d === d0 ? d0.lab : d.lab;
+      return `<text class="nom${d === d0 ? '' : ' doux'}" data-fs="${d === d0 ? 16 : 12}" x="${lab[0]}" y="${lab[1]}">${ech(d.nom)} ${ech(d.code)}</text>`;
+    }).join('');
+    vb = englobant([d0.cadre], 7);
+  }
+  svg.innerHTML = corps + noms;
+  svg.setAttribute('aria-label', 'Contours de la France');
+  $('[data-attrib]').textContent = F.attrib;
+  appliquer();
+  barre();
+}
+
+// Textes de taille constante à l'écran, quel que soit le zoom : on les calcule sur la largeur du viewBox.
+function appliquer() {
+  const W = cadre.clientWidth, H = cadre.clientHeight;
+  // L'étendue réellement visible : le viewBox est centré dans le cadre (preserveAspectRatio « meet »).
+  const e = Math.min(W / (vb[2] - vb[0]), H / (vb[3] - vb[1]));
+  const vw = W / e, vh = H / e;
+  const cx = (vb[0] + vb[2]) / 2, cy = (vb[1] + vb[3]) / 2;
+  svg.setAttribute('viewBox', [cx - vw / 2, cy - vh / 2, vw, vh].join(' '));
+  const k = 1 / e;                                  // unités de grille par pixel d'écran
+  svg.querySelectorAll('.nom').forEach((t) => {
+    const fs = +t.dataset.fs;
+    t.style.fontSize = fs * k + 'px';
+    t.style.strokeWidth = 3 * k + 'px';
+    if (t.dataset.dy) t.setAttribute('y', +t.getAttribute('y') + +t.dataset.dy * k);
+  });
+  svg.querySelectorAll('.zone').forEach((p) => { p.style.strokeWidth = ''; });
+  svg.classList.toggle('jours', ui.jours);
+  cadre.style.background = "";
+}
+
+function barre() {
+  const B = $('[data-barre]');
+  const vues = [['france', '', 'La France en régions'], ['region', '76', 'Occitanie en départements'], ['dep', '30', 'Le Gard au zoom'],
+    ['dep', '2A', 'Corse-du-Sud'], ['dep', '75', 'Paris']];
+  const sombre = document.documentElement.dataset.theme === 'sombre';
+  B.innerHTML = vues.map(([v, c, t]) => `<button type="button" data-v="${v}" data-c="${c}" aria-pressed="${ui.vue === v && (ui.code || '') === c}">${t}</button>`).join('')
+    + `<span class="sep"></span><button type="button" data-th aria-pressed="${sombre}">Thème sombre</button>`
+    + `<button type="button" data-jours aria-pressed="${ui.jours}">Montrer les jours</button>`;
+  B.querySelectorAll('[data-v]').forEach((b) => b.addEventListener('click', () => { ui.vue = b.dataset.v; ui.code = b.dataset.c || null; dessiner(); }));
+  B.querySelector('[data-th]').addEventListener('click', () => {
+    if (document.documentElement.dataset.theme === 'sombre') delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = 'sombre';
+    barre();
+  });
+  B.querySelector('[data-jours]').addEventListener('click', () => { ui.jours = !ui.jours; appliquer(); barre(); });
+}
+
+addEventListener('resize', appliquer);
+dessiner();
+window.essai = { F, ui, dessiner };
+</script>
+</body>
+</html>
