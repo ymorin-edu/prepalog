@@ -216,9 +216,12 @@ s'aligner.
   mesure dépasse ~50 % du quota sur un jour de classe, ou si une séance à vue « quai » (chrono de 60 s, non
   mesurée) pose problème. Détail, réserves et chiffres de la Realtime Database dans `decisions.md`.
 - **Mesuré (15/10/2026), journée du 14/10.** 6 425 écritures et 6 381 lectures sur la journée (32 % et 13 % du
-  quota), avec trois heures de classe au-dessus de 1 500 écritures (1L1 11–12 h : 1 767 ; 1L2 16–17 h : 1 570) :
-  par élève, sans doute 90 à 120 écritures par heure, au-dessus des 63 du 07/10 (effectifs et séances à confirmer).
-  Seuil des 50 % non atteint ; détail heure par heure dans `decisions.md`.
+  quota). Spartoo ENT-1.1 à 1.3 : **147 écritures par élève et par heure** (1L1, 12 élèves, 11–12 h) et **196**
+  (1L2, 8 élèves, 16–17 h), contre 63 le 07/10 sur Smoby. Cause vérifiée dans le code : la vue « quai » écrit à
+  chaque palette de l'animation, à chaque clic, toutes les 60 s (chrono) et toutes les 2 min (temps passé, deux
+  écritures) : fond de 120 par élève et par heure sans aucun geste. Seuil des 50 % non atteint ; options B (chrono
+  rangé dans la sauvegarde des 2 min, −60) et C (une sauvegarde par animation, pas par palette) proposées à
+  Tristan, non faites. Détail dans `decisions.md`.
 
 ### 8. Fabrique de séance d'entreprise (C6) — avant France Boissons
 - **Ce qu'on fait.** `seanceEntreprise(UNIVERS, SEANCE, meta)` dans `core/types/` qui dérive `trame`,
