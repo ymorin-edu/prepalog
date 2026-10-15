@@ -947,6 +947,26 @@ await v('Spartoo préparation : un emplacement faux coûte 1 point, un mail à P
   if (JSON.stringify(r) !== JSON.stringify(attendu)) throw new Error('notes de la préparation : ' + JSON.stringify(r) + ' au lieu de ' + JSON.stringify(attendu));
 });
 
+// ---------- 41 quinquies bis. ENT-1.2 : le mail à Puma se note sur UN SEUL message (bug du 15/10/2026 : 12 puis 20 paires)
+await v('Spartoo préparation : 12 paires puis 20 paires de la même référence ne donnent pas les 5 points du réapprovisionnement', async () => {
+  const r = await page.evaluate(async () => {
+    const S = await import('/contenus/spartoo.js');
+    const stock = { ...S.baseDeDepart('Essai').stock, 'PM-SUE-NR-40': 0 };
+    const mail = (texte, ts) => ({ folder: 'out', toMail: S.SUP_BY_ID.F003.email, text: texte, ts });
+    const etats = (mails) => {
+      const db = { stock, orders: [], mails };
+      return ['reappro-refs', 'reappro-moq'].map((id) => S.ETAPES.find((e) => e.id === id).verifier(db, S).status).join(',');
+    };
+    return {
+      douzePuisVingt: etats([mail('PM-SUE-NR-40 : 12 paires', 1), mail('PM-SUE-NR-40 : 20 paires', 2)]),
+      deuxRefsPuisVingt: etats([mail('PM-SUE-NR-40 : 12 + PM-SUE-NR-36 : 12', 1), mail('PM-SUE-NR-40 : 20 paires', 2)]),
+      vingtSeul: etats([mail('PM-SUE-NR-40 : 20 paires', 1)]),
+    };
+  });
+  const attendu = { douzePuisVingt: 'ok,ko', deuxRefsPuisVingt: 'ok,ok', vingtSeul: 'ko,ok' };
+  if (JSON.stringify(r) !== JSON.stringify(attendu)) throw new Error('mail à Puma : ' + JSON.stringify(r) + ' au lieu de ' + JSON.stringify(attendu));
+});
+
 // ---------- 41 sexies. ENT-1.3 : le compte rendu et le blocage jugés case par case (bases fabriquées, notes écrites à la main)
 await v('Spartoo traçabilité : date fausse −2, commande oubliée −3, référence non bloquée −2,5 ; commande sans paire du lot : rien à citer', async () => {
   const r = await page.evaluate(async () => {

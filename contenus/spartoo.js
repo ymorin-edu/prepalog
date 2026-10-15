@@ -275,8 +275,8 @@ const jalonsLigne = (L) => [
   },
 }));
 
-// Le mail de réapprovisionnement à Puma, jugé en deux temps. Comme avant, un élève qui se reprend n'est pas puni pour
-// son premier jet : un critère est juste dès qu'un des messages envoyés à Puma le remplit.
+// Le mail de réapprovisionnement à Puma, jugé en deux temps. Un élève qui se reprend n'est pas puni pour son
+// premier jet : on retient le meilleur des messages envoyés à Puma (les deux critères sur le même message).
 function reapproJuge(db, U) {
   const sup = U.SUP_BY_ID.F003, VM = U.CATALOGUE.VM;
   if (!sup) return { status: 'na' };
@@ -308,12 +308,19 @@ function reapproJuge(db, U) {
   });
   return { evals };
 }
+// Bug du 15/10/2026 : chaque critère était jugé sur son meilleur message À PART, donc « 12 paires » (références
+// justes, minimum non atteint) puis « 20 paires » de la même référence donnaient les 5 points. Les deux critères
+// se jugent désormais sur UN MÊME message : celui qui rapporte le plus de points, le plus récent à égalité.
+function meilleurMessage(evals) {
+  const pts = (e) => (e.refs ? BAREME['reappro-refs'][0] : 0) + (e.moq ? BAREME['reappro-moq'][0] : 0);
+  return evals.reduce((m, e) => (pts(e) >= pts(m) ? e : m));
+}
 const jalonReappro = (id, titre, cle, detailCle) => ({
   id, titre,
   verifier(db, U) {
     const j = reapproJuge(db, U);
     if (j.status) return { status: j.status };
-    const best = j.evals.find((e) => e[cle]) || j.evals[j.evals.length - 1];
+    const best = meilleurMessage(j.evals);
     return { status: best[cle] ? 'ok' : 'ko', detail: best[detailCle], ts: best.ts };
   },
 });
