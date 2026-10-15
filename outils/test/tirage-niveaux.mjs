@@ -107,6 +107,7 @@ await v('Niveaux : l’onglet montre élèves × entreprises (Cdiscount, plus ce
   await pg.click('#btnProfEspace');
   await pg.waitForSelector('#gNom');
   await pg.fill('#gNom', 'NIV 1');
+  await pg.selectOption('#gNiveau', '1re');
   await pg.click('#btnCreerG');
   await pg.waitForSelector('text=NIV 1');
   await pg.click('[data-ong="comptes"]');
@@ -596,6 +597,7 @@ await v('Tirage : Corrigés — pour un élève choisi, ses pièces (avec ce qu�
   await pt.click('#btnProfEspace');
   await pt.waitForSelector('#gNom');
   await pt.fill('#gNom', 'TIR 1');
+  await pt.selectOption('#gNiveau', '1re');
   await pt.click('#btnCreerG');
   await pt.waitForSelector('text=TIR 1');
   await pt.click('[data-ong="comptes"]');

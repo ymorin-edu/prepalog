@@ -88,6 +88,7 @@ await v('aménagements : l’onglet « Comptes élèves » montre le tiers-temps
   await pg.click('#btnProfEspace');
   await pg.waitForSelector('#gNom');
   await pg.fill('#gNom', 'AME 1');
+  await pg.selectOption('#gNiveau', '1re');
   await pg.click('#btnCreerG');
   await pg.waitForSelector('text=AME 1');
   await pg.click('[data-ong="comptes"]');

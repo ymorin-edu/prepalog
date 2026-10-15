@@ -24,6 +24,7 @@ await v('création de groupe', async () => {
   await page.click('#btnProfEspace');
   await page.waitForSelector('#gNom');
   await page.fill('#gNom', '1 LOG A');
+  await page.selectOption('#gNiveau', '1re');
   await page.click('#btnCreerG');
   await page.waitForSelector('text=1 LOG A', { timeout: 6000 });
 });
@@ -1852,6 +1853,7 @@ await v('Simulog : l’enseignant voit un logo par entreprise, et rien d’autre
   await pl.click('#btnProfEspace');
   await pl.waitForSelector('#gNom');
   await pl.fill('#gNom', 'LOGI 1');
+  await pl.selectOption('#gNiveau', '1re');
   await pl.click('#btnCreerG');
   await pl.waitForSelector('text=LOGI 1');
   await pl.click('[data-ong="comptes"]');
@@ -2028,6 +2030,7 @@ await v('fiche d’intention : onglet Corrigés, sous l’entreprise qui la déc
   await pi.click('#btnProfEspace');
   await pi.waitForSelector('#gNom');
   await pi.fill('#gNom', 'INTENT 1');
+  await pi.selectOption('#gNiveau', '1re');
   await pi.click('#btnCreerG');
   await pi.waitForSelector('text=INTENT 1');
   await pi.click('[data-ong="comptes"]');
@@ -2120,6 +2123,7 @@ await v('Précédent : activité → rubrique → accueil, et Suivant refait le 
   await pn.click('#btnProfEspace');
   await pn.waitForSelector('#gNom');
   await pn.fill('#gNom', 'NAVIG 1');
+  await pn.selectOption('#gNiveau', '1re');
   await pn.click('#btnCreerG');
   await pn.waitForSelector('text=NAVIG 1');
   await pn.click('[data-ong="comptes"]');

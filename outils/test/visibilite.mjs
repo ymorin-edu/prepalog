@@ -145,6 +145,7 @@ await v('visibilité : l’enseignant voit les trois séances, chacune avec ce q
   await pg.click('#btnProfEspace');
   await pg.waitForSelector('#gNom');
   await pg.fill('#gNom', 'VIS 1');
+  await pg.selectOption('#gNiveau', '1re');
   await pg.click('#btnCreerG');
   await pg.waitForSelector('text=VIS 1');
   await pg.click('[data-ong="comptes"]');

@@ -442,6 +442,7 @@ const creerGroupeEcran = async (nom) => {
   await ongletEspace('groupes');
   await page.fill('#gNom', nom);
   await viderToast();
+  await page.selectOption('#gNiveau', '1re');
   await page.click('#btnCreerG');
 };
 // Active un groupe (s'il ne l'est pas déjà) depuis l'onglet Groupes.
@@ -901,6 +902,39 @@ await v('plusieurs enseignants : le ménage du lot 11b ne laisse rien, la sessio
     return { groupes: Object.keys(g).filter((k) => /duo/i.test(k)), eleves: Object.values(u).filter((x) => /^zd/.test(x.matricule || '')).length };
   });
   if (r.groupes.length || r.eleves) throw new Error('reste : ' + JSON.stringify(r));
+});
+
+// ---------- 40. Chantier 12 : le niveau d'un nouveau groupe se choisit, il n'est jamais présélectionné (Tristan, 15/10/2026).
+await v('groupes : sans niveau choisi, « Créer le groupe » refuse et ne crée rien ; le niveau choisi (CAP) est celui du groupe', async () => {
+  await ongletEspace('groupes');
+  const defaut = await page.$eval('#gNiveau', (s) => ({ valeur: s.value, premier: s.options[0].textContent.trim(), nb: s.options.length }));
+  if (defaut.valeur !== '' || !/choisir le niveau/.test(defaut.premier)) throw new Error('présélection : ' + JSON.stringify(defaut));
+  if (defaut.nb !== 5) throw new Error(defaut.nb + ' options au lieu de 5 (« choisir » + quatre niveaux)');
+  await page.fill('#gNom', 'ZZ SANS NIVEAU');
+  await viderToast();
+  await page.click('#btnCreerG');
+  await attendreToast(/Choisissez le niveau du groupe/);
+  const avant = await lireDemo('groupes');
+  if (Object.values(avant || {}).some((g) => g.nom === 'ZZ SANS NIVEAU')) throw new Error('groupe créé sans niveau');
+  // Le nom saisi n'est pas perdu : on choisit CAP et on recommence.
+  if ((await page.inputValue('#gNom')) !== 'ZZ SANS NIVEAU') throw new Error('nom effacé par le refus');
+  await page.selectOption('#gNiveau', 'cap');
+  await viderToast();
+  await page.click('#btnCreerG');
+  await attendreToast(/Groupe créé/);
+  const apres = await lireDemo('groupes');
+  const gid = Object.keys(apres).find((k) => apres[k].nom === 'ZZ SANS NIVEAU');
+  if (!gid || apres[gid].niveau !== 'cap') throw new Error('niveau enregistré : ' + (gid && apres[gid].niveau));
+  // Ménage : le groupe d'essai part, « 1 LOG A » redevient le groupe actif.
+  await page.evaluate(async (g) => { const { B } = await import('/core/backend.js'); await B.supprimerGroupe(g); }, gid);
+  if (Object.keys(await lireDemo('groupes')).includes(gid)) throw new Error('groupe d\'essai non supprimé');
+  const g1 = Object.keys(apres).find((k) => apres[k].nom === '1 LOG A');
+  if (g1) {
+    await page.reload();
+    await page.waitForSelector('#btnProfEspace', { timeout: 8000 });
+    await page.click('#btnProfEspace');
+    await activerGroupe(g1);
+  }
 });
 
 }

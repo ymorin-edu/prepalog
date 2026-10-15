@@ -1815,6 +1815,7 @@ await v('ENT-4.4 : corrigé — par élève dans l’onglet Corrigés (camion, j
   await p.click('#btnProfEspace');
   await p.waitForSelector('#gNom');
   await p.fill('#gNom', 'PIC 44');
+  await p.selectOption('#gNiveau', '1re');
   await p.click('#btnCreerG');
   await p.waitForSelector('text=PIC 44');
   await p.click('[data-ong="comptes"]');

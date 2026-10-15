@@ -308,7 +308,8 @@ export async function rendreEspaceProf(hote, ctx) {
             <input id="gNom" placeholder="ex : 1 LOG A"></div>
           <div class="champ"><label for="gNiveau">Niveau</label>
             <select id="gNiveau">
-              ${NIVEAUX.map((n) => `<option value="${ech(n.id)}" ${n.id === '1re' ? 'selected' : ''}>${ech(n.label)}</option>`).join('')}
+              <option value="">— choisir le niveau —</option>
+              ${NIVEAUX.map((n) => `<option value="${ech(n.id)}">${ech(n.label)}</option>`).join('')}
             </select></div>
           <div class="champ"><label for="gAnnee">Année scolaire</label>
             <input id="gAnnee" value="${new Date().getMonth() >= 7 ? new Date().getFullYear() : new Date().getFullYear() - 1}-${new Date().getMonth() >= 7 ? new Date().getFullYear() + 1 : new Date().getFullYear()}"></div>
@@ -499,11 +500,15 @@ export async function rendreEspaceProf(hote, ctx) {
     z.querySelector('#btnCreerG').addEventListener('click', async () => {
       const nom = z.querySelector('#gNom').value.trim();
       if (!nom) return toast('Donnez un nom au groupe.');
+      // Le niveau se choisit, il n'est jamais présélectionné (chantier 12, choix de Tristan du 15/10/2026) : un
+      // groupe créé au mauvais niveau cache ses séances aux élèves sans que rien ne le dise.
+      const niveau = z.querySelector('#gNiveau').value;
+      if (!niveau) { z.querySelector('#gNiveau').focus(); return toast('Choisissez le niveau du groupe.'); }
       try {
         const g = await B.creerGroupe({
           nom,
           annee: z.querySelector('#gAnnee').value.trim(),
-          niveau: z.querySelector('#gNiveau').value,
+          niveau,
           profUid: ctx.profil.uid,
         });
         groupes = await B.groupesDuProf(ctx.profil.uid);

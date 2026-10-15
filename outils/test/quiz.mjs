@@ -82,6 +82,7 @@ await v('QUI-8 : un groupe et un élève dédiés pour ce bloc', async () => {
   await page.click('#btnProfEspace');
   await page.waitForSelector('#gNom', { timeout: 6000 });
   await page.fill('#gNom', GROUPE_QZ);
+  await page.selectOption('#gNiveau', '1re');
   await page.click('#btnCreerG');
   await page.waitForSelector(`text=${GROUPE_QZ}`, { timeout: 6000 });
   await page.click('[data-ong="comptes"]');

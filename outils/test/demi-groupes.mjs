@@ -113,6 +113,7 @@ await v('demi-groupes : classe sans demi-groupes — aucun sélecteur, aucune co
   await pg.click('#btnProfEspace');
   await pg.waitForSelector('#gNom');
   await pg.fill('#gNom', 'DEMI 1L');
+  await pg.selectOption('#gNiveau', '1re');
   await pg.click('#btnCreerG');
   await pg.waitForSelector('#panDemis');
   if (await pg.$$eval('#panDemis [data-demi]', (l) => l.length)) throw new Error('demi-groupe présent à la création');
