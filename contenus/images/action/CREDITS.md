@@ -36,16 +36,16 @@ seulement » n'ont subi que le changement de taille du serveur de Pexels.
 | Fichier | Auteur | Page source | Licence | Mention | Retouche faite | Dimensions | Taille | SHA-256 |
 |---|---|---|---|---|---|---|---|---|
 | `entrepot-racks.jpg` | Tiger Lily | [Pexels 4483610](https://www.pexels.com/photo/4483610/) | Pexels | Photo d'un autre entrepôt — Tiger Lily / Pexels | réduite seulement | 1200 x 800 | 221 386 o | `b021832f821b1f0b25246839e32c587dccb4dee07ed53b8f1f012c55a6957ab5` |
-| `rayon-magasin.jpg` | quang vinh | [Pexels 20665616](https://www.pexels.com/photo/20665616/) | Pexels | Photo d'un autre magasin — quang vinh / Pexels | réduite seulement | 1200 x 800 | 156 764 o | `2cf0057beb25a5435b2840a7f24251bbf45472eee9e437d234f8bb9a44a86379` |
+| `rayon-magasin.jpg` | Victoria Emerson | [Pexels 6160302](https://www.pexels.com/photo/6160302/) | Pexels | Photo d'un autre magasin — Victoria Emerson / Pexels | réduite seulement (1100 px de large : à 1200 px elle dépassait 250 Ko) | 1100 x 733 | 239 445 o | `0c1bee59e133c036f140a3e61aad80976ea9793eb29d182322d9cc7dd5514331` |
 | `semi-remorque.jpg` | Quintin Gellar | [Pexels 6563903](https://www.pexels.com/photo/6563903/) | Pexels | Photo d'un autre camion — Quintin Gellar / Pexels | réduite seulement | 1200 x 737 | 161 578 o | `b2ac467202c6f0358994ee3e710ded7d3af643d9568bac7a0e3eb6a580ab3138` |
-| `palette-filmee.jpg` | cottonbro studio | [Pexels 5532843](https://www.pexels.com/photo/5532843/) | Pexels | Photo d'un autre entrepôt — cottonbro studio / Pexels | réduite seulement | 1200 x 800 | 182 149 o | `0e4fb51a09a77ac3e88ec3e37f6fe597f8c59dbbdc8bcb69458b10f858d9ee0e` |
+| `palette-filmee.jpg` | Freek Wolsink | [Pexels 34221998](https://www.pexels.com/photo/34221998/) (la même photo que `zone-colis.jpg`) | Pexels | Photo d'un autre entrepôt — Freek Wolsink / Pexels | **recadrée** sur les piles de droite, prise dans la version de 2400 px (zone de 740 x 1040 px, origine 1340 x 340) ; les affichettes floutées de `zone-colis.jpg` et la silhouette du fond sont hors cadre | 740 x 1040 | 123 813 o | `63f2023d86e1e47f147817d66348851b8ebda96bbf9a3d9e4ec0c442e36eee4b` |
 | `quai-camion.jpg` | ELEVATE | [Pexels 1267325](https://www.pexels.com/photo/1267325/) | Pexels | Photo d'un autre quai — ELEVATE / Pexels | lettrages « CASCADE » (trois remorques) et petits logos « Utility » floutés (huit zones). Original non retouché : SHA-256 `28504c3aa9fa46f53a92d7384373327810096161ab0e711d70c71829d476eb50` | 1200 x 801 | 108 865 o | `a0388a768d5b0d21237ea83f680dac9a92f279dc333286f1087c9c42a31e3db4` |
 | `transpalette-manuel.jpg` | Caleb Oquendo | [Pexels 34585139](https://www.pexels.com/photo/34585139/) | Pexels | Photo d'un autre entrepôt — Caleb Oquendo / Pexels | inscription « SUNBELT RENTALS » du timon, étiquette « Clayton » et petite étiquette du timon floutées. Original non retouché : SHA-256 `ea373acd0f3397252f83f292776dbadad329b9c1dc61adb431e9f3fea2b49b62` | 1200 x 1800 | 216 839 o | `fcb381cdb07e0b7ccf29e3566c3573ae8aed44f628cffb454ef682bd7db36e23` |
 | `gilets-epi.jpg` | Carsten Ruthemann | [Pexels 34442873](https://www.pexels.com/photo/34442873/) | Pexels | Photo d'un autre site — Carsten Ruthemann / Pexels | réduite seulement | 1200 x 800 | 142 300 o | `22d3040f1a9649b4a646361376d8e8e913e682ff1f556abe387a58c645529d3c` |
 | `zone-colis.jpg` | Freek Wolsink | [Pexels 34221998](https://www.pexels.com/photo/34221998/) | Pexels | Photo d'un autre entrepôt — Freek Wolsink / Pexels | deux affichettes du fond (texte néerlandais, petit logo) floutées. Original non retouché : SHA-256 `d06ac65bdcb3786a08b561d84e548cc4399efff20490ce87683a185e3fec7e04` | 1200 x 800 | 166 167 o | `d323b9145f3fd95a79ec6ac6dbb8e19ce78e643704e29d4e4631b2f85b7026ec` |
 | `vestiaire.jpg` | ubeyde oral | [Pexels 3907399](https://www.pexels.com/photo/3907399/) | Pexels | Photo d'un autre vestiaire — ubeyde oral / Pexels | réduite seulement | 1200 x 807 | 136 627 o | `998198dc5444cbf091b5c20952cbb767ec216ebac0ca196463dbe97a525ec04d` |
 
-Total des photos : 1 492 675 octets (environ 1,4 Mo).
+Total des photos : 1 517 020 octets (environ 1,4 Mo).
 
 ## À savoir avant d'afficher
 
@@ -53,10 +53,12 @@ Total des photos : 1 492 675 octets (environ 1,4 Mo).
   transpalette électrique sans personne ni marque (recherches « electric pallet jack/truck », « pallet stacker », « battery »).
   La question `img-transpalette` d'ENT-8.2 (« un transpalette électrique ») ne peut donc pas s'appuyer sur cette photo telle
   quelle : soit la réponse devient « un transpalette » (manuel ou électrique), soit on cherche une autre photo, soit un dessin.
-- `palette-filmee.jpg` : **un mur de canettes vides filmées** (vue de face, sans palette visible), pas une palette de cartons ;
-  elle montre bien le film étirable. Aucune marque lisible sur les canettes.
-- `rayon-magasin.jpg` : les étiquettes de prix sont **en vietnamien et en dongs** (« KHÁN MẶT », « 49.000 »), aucune enseigne.
-  Un rayon de serviettes, pas un magasin discount français : décor générique, à ne jamais présenter comme un magasin Action.
+- `palette-filmee.jpg` : **recadrage de la photo de `zone-colis.jpg`** (mêmes cartons, même auteur) : trois rangées de charges de cartons
+  filmées ; les pieds de palette ne se voient qu'en bas. Cette photo remplace (15/10/2026) un mur de canettes filmées, qui ne
+  montrait pas une palette. Si la séance montre aussi `zone-colis.jpg`, l'élève voit deux fois la même photo.
+- `rayon-magasin.jpg` : un bazar de produits ménagers (balais, serpillières, bassines, seaux), **sans aucun texte lisible**, sans enseigne ;
+  il remplace (15/10/2026) un rayon de serviettes aux étiquettes en vietnamien. Un étal de marché ou de bazar plus qu'un rayon
+  de magasin discount : décor générique, à ne jamais présenter comme un magasin Action.
 - `semi-remorque.jpg` : **camion américain** (route du Nevada), loin et petit ; aucun texte lisible. Pas un tracteur européen.
 - `quai-camion.jpg` : trois remorques américaines à quai, sans cabine ; les lettrages ont été floutés (traces de flou visibles
   de près) ; reste un « 2 » de numéro de quai et de petites plaques illisibles.
