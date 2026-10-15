@@ -30,6 +30,11 @@ service cloud.firestore {
     function estProf()       { return connecte() && monRole() == 'prof'; }
     function membreDuGroupe(gid) { return connecte() && gid in mesGroupes(); }
 
+    // Un nombre raisonnable (audit du 15/10/2026) : ni négatif, ni au-delà de `haut`. Sert à borner
+    // ce qu'un élève écrit dans ses propres résultats. L'appelant passe `.get(clé, 0)` pour ne
+    // jamais supposer que le champ existe (un champ absent vaut 0, donc passe).
+    function nombreBorne(x, haut) { return x is number && x >= 0 && x <= haut; }
+
     // Réservé aux lectures et écritures unitaires : fait un get() du groupe visé.
     function profDuGroupe(gid) {
       return connecte()
@@ -75,20 +80,19 @@ service cloud.firestore {
 
       // Mise à jour.
       //
-      // L'élève ne peut changer que son nom et son prénom (audit du 08/10/2026, C1). Avant,
-      // seuls `role`, `aisance` et `tiersTemps` lui étaient interdits : il pouvait donc
-      // s'ajouter un identifiant de groupe (le slug du nom, devinable) dans `groupes`, lire
-      // ce groupe et y écrire des travaux, ou toucher à `matricule` et `code`. Liste
-      // blanche plutôt que liste noire : un champ ajouté demain lui reste fermé par défaut.
-      // `diff().affectedKeys()` ne suppose pas que le champ existe.
+      // L'élève ne modifie RIEN de son profil, nom et prénom compris (audit du 15/10/2026).
+      // Le 08/10/2026 (C1) il ne pouvait déjà changer que `nom` et `prenom` (liste blanche : plus
+      // de groupe ajouté, ni de `matricule`, `code`, `role` ou aménagement touché). Reste que ces
+      // deux champs sont ceux qu'affichent le suivi de classe et les exports : depuis la console du
+      // navigateur, un élève pouvait prendre le nom d'un camarade. Or aucun écran élève n'écrit
+      // dans son profil (vérifié : toutes les écritures de `users` dans core/ sont celles d'un
+      // enseignant) ; cette branche ne servait donc à rien d'autre. Fermée sans remplacement : si un
+      // écran « changer mon prénom » voit le jour, il faudra une règle écrite pour lui.
       //
       // L'enseignant met à jour le profil d'un ÉLÈVE (groupes, aménagements, nom), jamais
       // celui d'un collègue, et ne change jamais un rôle. Le sien reste modifiable.
-      allow update: if connecte() && request.resource.data.role == resource.data.role && (
-        (uid == moi() && !estProf()
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nom', 'prenom'])) ||
-        (estProf() && (uid == moi() || resource.data.get('role', '') == 'eleve'))
-      );
+      allow update: if connecte() && request.resource.data.role == resource.data.role
+        && estProf() && (uid == moi() || resource.data.get('role', '') == 'eleve');
 
       // Suppression : l'enseignant efface un profil d'élève (supprimerEleve), jamais celui
       // d'un collègue. Chantier 11, lot 11b (09/10/2026) : on ne supprime que ce qu'on a créé, ou
@@ -143,6 +147,17 @@ service cloud.firestore {
       // (déblocage de parcours, réservé à l'enseignant) et ne met pas un autre uid/gid
       // dans le document. Le score lui-même reste calculé par le navigateur : l'outil est
       // formatif, une évaluation notée se passe en classe.
+      //
+      // Audit du 15/10/2026 : on ne l'empêche pas, on refuse seulement l'absurde, ce que la console du
+      // navigateur permet d'écrire à la main. `score`, `max` et `meilleur` : un nombre entre 0 et 1000
+      // (un barème réel est de 20, le plafond est large exprès). `tentatives` : un nombre positif.
+      // On n'exige PAS `meilleur <= max` ni `score <= max` : `meilleurScore` (core/notes.js) convertit
+      // l'ancien meilleur quand le barème d'une séance change, et le bonus du niveau confirmé peut
+      // dépasser le barème ; une écriture refusée en classe vaut un « score non enregistré » devant
+      // les élèves, ce qui est pire que la faille. `ramasse` : « ramassée » veut dire que l'enseignant a
+      // ramassé la copie (core/copie.js), l'élève ne l'écrit jamais à vrai. `max`, `meilleur`,
+      // `tentatives` passent par `.get(clé, 0)` : jamais d'hypothèse qu'ils existent. Les enseignants du
+      // groupe ne sont pas concernés par ces bornes (la branche `profDuGroupe` est à part).
       allow create, update: if (uid == moi() && membreDuGroupe(gid)
                                 && !aid.matches('_debloque-.*')
                                 && (resource == null
@@ -150,7 +165,12 @@ service cloud.firestore {
                                 && !('parProf' in request.resource.data)
                                 && request.resource.data.get('uid', uid) == uid
                                 && request.resource.data.get('gid', gid) == gid
-                                && request.resource.data.get('score', 0) is number)
+                                && nombreBorne(request.resource.data.get('score', 0), 1000)
+                                && nombreBorne(request.resource.data.get('max', 0), 1000)
+                                && nombreBorne(request.resource.data.get('meilleur', 0), 1000)
+                                && request.resource.data.get('tentatives', 0) is number
+                                && request.resource.data.get('tentatives', 0) >= 0
+                                && request.resource.data.get('ramasse', false) != true)
                             || profDuGroupe(gid);
       // Suppression (décision de Tristan, 08/10/2026) : la remise à neuf d'un parcours
       // (`versionBase`, core/app.js) est faite par l'élève lui-même : il efface ses scores du
@@ -170,7 +190,12 @@ service cloud.firestore {
     // ------------------------------------------------- jeux privés (portée élève)
     match /prives/{uid}/jeux/{aid} {
       allow read:  if uid == moi() || estProf();
-      allow write: if uid == moi();
+      // Audit du 15/10/2026 : le compte doit avoir un profil. Un compte Firebase créé à la volée sans
+      // profil (l'inscription est ouverte : c'est ainsi que les élèves sont créés, depuis l'application)
+      // n'a plus d'endroit où écrire dans notre base. Coût : une lecture de règle par écriture privée
+      // (le `exists()` du profil), mise en cache pour la durée de la requête. La suppression reste
+      // permise à son propriétaire sans cette condition (voir plus bas).
+      allow write: if uid == moi() && exists(/databases/$(database)/documents/users/$(moi()));
       // Purge : l'enseignant efface le travail d'un élève qu'il supprime, sans pouvoir le
       // modifier. Écrire à sa place reste interdit — seul l'effacement est ouvert.
       allow delete: if uid == moi() || estProf();

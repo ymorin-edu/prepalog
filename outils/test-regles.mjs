@@ -143,8 +143,8 @@ await v("un élève ne crée pas de compte élève", () =>
   assertFails(fsDe('e1').doc('users/e8').set({ role: 'eleve', nom: 'Complice', groupes: [] })));
 
 // ---------- 2. le rôle n'est pas modifiable par son porteur
-await v("un élève modifie son profil sans toucher au rôle", () =>
-  assertSucceeds(fsDe('e1').doc('users/e1').update({ nom: 'Emma D.' })));
+await v("un élève ne modifie plus rien de son profil, nom compris (15/10/2026)", () =>
+  assertFails(fsDe('e1').doc('users/e1').update({ nom: 'Emma D.' })));
 
 await v("un élève ne se promeut pas enseignant", () =>
   assertFails(fsDe('e1').doc('users/e1').update({ role: 'prof' })));
@@ -169,8 +169,8 @@ await v("un élève ne retire pas non plus son tiers-temps ni ne change son nive
   await assertFails(fsDe('e1').doc('users/e1').update({ aisance: 'standard' }));
 });
 
-await v("un élève dont le tiers-temps est posé modifie toujours le reste de son profil", () =>
-  assertSucceeds(fsDe('e1').doc('users/e1').update({ nom: 'Emma' })));
+await v("un élève dont le tiers-temps est posé ne modifie plus rien de son profil, nom compris (15/10/2026)", () =>
+  assertFails(fsDe('e1').doc('users/e1').update({ nom: 'Emma' })));
 
 // Niveaux par scénario (brief MOTEUR-tirage-et-niveaux, lot 1, 09/10/2026) : `niveaux: { '6': 'confirme' }` remplace
 // le niveau unique `aisance`, que le premier réglage retire. Seul l'enseignant les écrit. e2 ne porte au départ ni
@@ -194,8 +194,8 @@ await v("un élève ne change pas, n'efface pas et ne vide pas ses niveaux par s
   await assertFails(fsDe('e1').doc('users/e1').update({ niveaux: effacer() }));
   await assertFails(fsDe('e1').doc('users/e1').update({ aisance: 'confirme' }));
 });
-await v("ce qui reste : l'élève dont les niveaux sont posés change toujours son nom, l'enseignant les retire", async () => {
-  await assertSucceeds(fsDe('e1').doc('users/e1').update({ nom: 'Emma' }));
+await v("ce qui reste : l'élève dont les niveaux sont posés ne change plus son nom (15/10/2026), l'enseignant les retire", async () => {
+  await assertFails(fsDe('e1').doc('users/e1').update({ nom: 'Emma' }));
   await assertSucceeds(fsDe('prof1').doc('users/e2').update({ niveaux: effacer() }));
 });
 
@@ -210,8 +210,16 @@ await v("un élève ne change ni son matricule ni son code", async () => {
 });
 await v("un élève ne glisse pas un champ inconnu dans son profil", () =>
   assertFails(fsDe('e1').doc('users/e1').update({ creePar: 'e1' })));
-await v("un élève change son prénom", () =>
-  assertSucceeds(fsDe('e1').doc('users/e1').update({ prenom: 'Emma-Rose' })));
+await v("un élève ne change plus son prénom (15/10/2026)", () =>
+  assertFails(fsDe('e1').doc('users/e1').update({ prenom: 'Emma-Rose' })));
+await v("un élève ne prend pas le nom d'un camarade, ni par une mise à jour ni en réécrivant tout son profil (15/10/2026)", async () => {
+  await assertFails(fsDe('e1').doc('users/e1').update({ nom: 'Léo', prenom: 'Camille' }));
+  await assertFails(fsDe('e1').doc('users/e1').set({ role: 'eleve', nom: 'Léo', matricule: '1001', code: 'ab12', groupes: ['g1'] }));
+});
+await v("ce qui reste du profil : l'enseignant du groupe change le nom d'un élève, l'élève lit toujours le sien (15/10/2026)", async () => {
+  await assertSucceeds(fsDe('prof1').doc('users/e1').update({ nom: 'Emma D.', prenom: 'Emma' }));
+  await assertSucceeds(fsDe('e1').doc('users/e1').get());
+});
 await v("l'enseignant ajoute puis retire un groupe au profil d'un élève", async () => {
   await assertSucceeds(fsDe('prof1').doc('users/e3').update({ groupes: ['g2', 'g1'] }));
   await assertSucceeds(fsDe('prof1').doc('users/e3').update({ groupes: ['g2'] }));
@@ -348,6 +356,56 @@ await v("un élève met à jour son résultat (temps passé, tentative)", () =>
 await v("un élève qui s'est ajouté un groupe n'y écrit rien (profil verrouillé)", () =>
   assertFails(fsDe('e1').doc('travaux/g2/eleves/e1/activites/qcm2').set({ score: 20, max: 20 })));
 
+// ---------- 6 ter. ce que la console du navigateur permet d'écrire à la main (audit du 15/10/2026)
+// On ne cherche pas à empêcher un élève de gonfler son score (calculé par le navigateur, outil formatif) : on refuse
+// l'absurde. Le test « écriture normale » est discriminant dans l'autre sens : si une borne devient trop serrée, il tombe,
+// et une écriture refusée en classe vaut un « score non enregistré » devant les élèves.
+const TB = 'travaux/g1/eleves/e1/activites/';
+await v("bornes : une écriture normale (score, max, meilleur, tentatives) est acceptée", () =>
+  assertSucceeds(fsDe('e1').doc(TB + 'borne1').set({ score: 12, max: 20, meilleur: 12, tentatives: 1 })));
+await v("bornes : un score négatif est refusé", () =>
+  assertFails(fsDe('e1').doc(TB + 'borne2').set({ score: -5, max: 20 })));
+await v("bornes : un score de 5000 est refusé", () =>
+  assertFails(fsDe('e1').doc(TB + 'borne3').set({ score: 5000, max: 20 })));
+await v("bornes : un max de 5000 est refusé", () =>
+  assertFails(fsDe('e1').doc(TB + 'borne4').set({ score: 12, max: 5000 })));
+await v("bornes : un max négatif ou qui n'est pas un nombre est refusé", async () => {
+  await assertFails(fsDe('e1').doc(TB + 'borne4b').set({ score: 12, max: -1 }));
+  await assertFails(fsDe('e1').doc(TB + 'borne4c').set({ score: 12, max: 'vingt' }));
+});
+await v("bornes : un meilleur négatif est refusé", () =>
+  assertFails(fsDe('e1').doc(TB + 'borne5').set({ score: 12, max: 20, meilleur: -3 })));
+await v("bornes : un meilleur de 5000 ou qui n'est pas un nombre est refusé", async () => {
+  await assertFails(fsDe('e1').doc(TB + 'borne5b').set({ score: 12, max: 20, meilleur: 5000 }));
+  await assertFails(fsDe('e1').doc(TB + 'borne5c').set({ score: 12, max: 20, meilleur: 'douze' }));
+});
+await v("bornes : tentatives négatives ou qui ne sont pas un nombre refusées", async () => {
+  await assertFails(fsDe('e1').doc(TB + 'borne6').set({ score: 12, max: 20, tentatives: -1 }));
+  await assertFails(fsDe('e1').doc(TB + 'borne6b').set({ score: 12, max: 20, tentatives: 'beaucoup' }));
+});
+await v("bornes : l'élève n'écrit pas ramasse: true (c'est l'enseignant qui ramasse)", async () => {
+  await assertFails(fsDe('e1').doc(TB + 'borne7').set({ score: 12, max: 20, ramasse: true }));
+  await assertFails(fsDe('e1').doc(TB + 'borne7b').set({ score: 12, max: 20, rendu: 1790000000003, ramasse: true }));
+});
+await v("bornes : l'élève écrit ramasse: false, et une copie rendue normale", async () => {
+  await assertSucceeds(fsDe('e1').doc(TB + 'borne8').set({ score: 4, max: 6, meilleur: 4, tentatives: 1, rendu: 1790000000004, ramasse: false }));
+});
+await v("bornes : un meilleur plus grand que max est accepté (barème changé, core/notes.js), et un score au-dessus du max aussi (bonus)", async () => {
+  await assertSucceeds(fsDe('e1').doc(TB + 'borne9').set({ score: 12, max: 9, meilleur: 20, tentatives: 3 }));
+  await assertSucceeds(fsDe('e1').doc(TB + 'borne9b').set({ score: 21, max: 20, meilleur: 21 }));
+});
+await v("bornes : à la limite, 1000 et 0 sont acceptés", () =>
+  assertSucceeds(fsDe('e1').doc(TB + 'borne10').set({ score: 0, max: 1000, meilleur: 1000, tentatives: 0 })));
+await v("bornes : une mise à jour qui sort de la borne est refusée (update, pas seulement set)", async () => {
+  await assertFails(fsDe('e1').doc(TB + 'borne1').update({ score: 99999 }));
+  await assertFails(fsDe('e1').doc(TB + 'borne1').update({ ramasse: true }));
+  await assertSucceeds(fsDe('e1').doc(TB + 'borne1').update({ score: 14, meilleur: 14, tentatives: 2 }));
+});
+await v("bornes : l'enseignant du groupe n'est pas concerné — il ramasse (ramasse: true) et pose un barème hors borne", async () => {
+  await assertSucceeds(fsDe('prof1').doc('travaux/g1/eleves/e2/activites/borneP').set({ score: 3, max: 6, meilleur: 3, rendu: 1790000000005, ramasse: true }));
+  await assertSucceeds(fsDe('prof1').doc('travaux/g1/eleves/e2/activites/borneP2').set({ score: 2000, max: 5000, meilleur: -1 }));
+});
+
 // ---------- 6 bis. la copie rendue (évaluations, 02/10/2026) : figée pour l'élève
 // Un résultat qui porte `rendu` ne se réécrit plus par l'élève — ni à la main dans la console
 // du navigateur, ni par un onglet resté ouvert. Seul l'enseignant du groupe le ramasse ou le
@@ -376,6 +434,18 @@ await v("un élève écrit son jeu privé", () =>
 
 await v("un élève n'écrit pas le jeu privé d'un autre", () =>
   assertFails(fsDe('e2').doc('prives/e1/jeux/logisim').set({ blob: 'x', rev: 9 })));
+
+// Audit du 15/10/2026 : un compte sans profil (créé à la volée, l'inscription est ouverte) n'écrit plus dans `prives/`.
+await v("un compte sans profil n'écrit pas dans prives/ (même sous son propre uid)", () =>
+  assertFails(fsDe('intrus').doc('prives/intrus/jeux/x').set({ blob: 'x', rev: 1 })));
+await v("un compte sans profil n'écrit pas non plus dans prives/ en fusion (merge)", () =>
+  assertFails(fsDe('intrus').doc('prives/intrus/jeux/x').set({ blob: 'y', rev: 2 }, { merge: true })));
+await v("un élève avec profil écrit toujours le sien (e1 a un profil)", () =>
+  assertSucceeds(fsDe('e1').doc('prives/e1/jeux/autre').set({ blob: '{}', rev: 1 })));
+await v("un enseignant écrit toujours son propre espace privé (il a un profil)", () =>
+  assertSucceeds(fsDe('prof1').doc('prives/prof1/jeux/x').set({ blob: '{}', rev: 1 })));
+await v("un compte sans profil efface toujours ce qui est à son uid (rien d'invisible laissé derrière)", () =>
+  assertSucceeds(fsDe('intrus').doc('prives/intrus/jeux/x').delete()));
 
 await v("un enseignant lit le jeu privé d'un élève", () =>
   assertSucceeds(fsDe('prof1').doc('prives/e1/jeux/logisim').get()));
@@ -573,6 +643,41 @@ await v("un élève s'inscrit au classement sous sa propre clé", () =>
 
 await v("un élève n'écrit pas la ligne de classement d'un autre", () =>
   assertFails(dbDe('e2').ref(`${CL}/e1`).set(resultat(20))));
+
+// Audit du 15/10/2026 : sa propre ligne ne s'écrit que si l'on est inscrit au miroir du groupe déclaré dans `gid`.
+// Fixtures : e1 et e2 sont inscrits à acces/g1/eleves (semis du bloc RTDB) ; e11 est ajouté ici ; `intrus` n'est
+// inscrit nulle part ; acces/g2 reçoit prof2 pour que le groupe g2 existe au miroir sans que e11 y figure.
+await env.withSecurityRulesDisabled(async (ctx) => {
+  await ctx.database().ref('acces/g1/eleves/e11').set(true);
+  await ctx.database().ref('acces/g2').update({ 'profs/prof2': true });
+});
+await v("classement : un élève inscrit au groupe g1 écrit sa ligne avec gid: 'g1'", () =>
+  assertSucceeds(dbDe('e11').ref(`${CL}/e11`).set(resultat(11))));
+await v("classement : le même élève avec gid: 'g2' (où il n'est pas inscrit) est refusé", () =>
+  assertFails(dbDe('e11').ref(`${CL}/e11`).set({ ...resultat(11), gid: 'g2' })));
+await v("classement : un compte sans inscription (intrus) est refusé, même avec un gid vrai", () =>
+  assertFails(dbDe('intrus').ref(`${CL}/intrus`).set(resultat(20))));
+await v("classement : une ligne sans gid est refusée", async () => {
+  const { gid, ...sansGid } = resultat(11);
+  await assertFails(dbDe('e11').ref(`${CL}/e11`).set(sansGid));
+});
+await v("classement : un gid qui n'est pas une chaîne, vide, ou d'un groupe inexistant, est refusé", async () => {
+  await assertFails(dbDe('e11').ref(`${CL}/e11`).set({ ...resultat(11), gid: 7 }));
+  await assertFails(dbDe('e11').ref(`${CL}/e11`).set({ ...resultat(11), gid: 'gfantome' }));
+  await assertFails(dbDe('e11').ref(`${CL}/e11`).set({ ...resultat(11), gid: '' }));
+});
+// prof2 n'est PAS dans profsGlobaux : seule l'inscription à acces/g2/profs lui ouvre sa ligne (prof1, global, passerait de toute façon).
+await v("classement : un enseignant non global inscrit au groupe (profs) écrit sa propre ligne avec ce gid, pas avec un autre", async () => {
+  await assertSucceeds(dbDe('prof2').ref(`${CL}/prof2`).set({ ...resultat(15), gid: 'g2' }));
+  await assertFails(dbDe('prof2').ref(`${CL}/prof2`).set({ ...resultat(15), gid: 'g1' }));
+});
+await v("classement : un élève efface sa propre ligne, même s'il n'est inscrit nulle part (effacement libre)", async () => {
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    await ctx.database().ref(`${CL}/eorphelin`).set(resultat(5));
+  });
+  await assertSucceeds(dbDe('eorphelin').ref(`${CL}/eorphelin`).remove());
+  await assertSucceeds(dbDe('e11').ref(`${CL}/e11`).remove());
+});
 
 await v("un élève n'efface pas la ligne de classement d'un autre", () =>
   assertFails(dbDe('e2').ref(`${CL}/e1`).remove()));
@@ -975,5 +1080,19 @@ process.exit(ko.length ? 1 : 0);
 //       de `meta` par `auth != null` → tombent « un élève n'écrit pas `meta/ouvert` » et « un élève ne gèle pas la séance
 //       lui-même » (172/174). Hors de portée : retirer ce `.write` de `meta` ne fait rien tomber, l'enseignant écrit `meta`
 //       par le `.write` de `jeux/$gid` plus haut.
+//  11. Audit de la console élève (15/10/2026), régressions jouées une à une puis annulées (résultats constatés : voir le rapport de la séance) :
+//     firestore.rules `travaux` : retirer `score <= 1000` (la borne haute de `nombreBorne` pour le score)
+//     → tombe : « bornes : un score de 5000 est refusé ». Retirer `>= 0` → tombe : « un score négatif ».
+//     Retirer le contrôle de `max` → tombent « un max de 5000 » et « un max négatif ou… » ; celui de `meilleur` → tombent
+//       « un meilleur négatif », « un meilleur de 5000 » ; celui de `tentatives` → « tentatives négatives ».
+//     Retirer `ramasse != true` → tombe : « l'élève n'écrit pas ramasse: true ».
+//     Ajouter à tort `meilleur <= max` → tombe : « un meilleur plus grand que max est accepté » (le test dans l'autre sens).
+//     firestore.rules `prives` : retirer le `exists()` du profil → tombent « un compte sans profil n'écrit pas dans prives/ » (deux cas).
+//     firestore.rules `users` : remettre la branche élève (`hasOnly(['nom', 'prenom'])`) → tombent les cas réécrits
+//       (« ne modifie plus rien de son profil », « ne change plus son prénom », « ne prend pas le nom d'un camarade »).
+//     database.rules.json `classements/$aid/$uid` : retirer la clause d'inscription (garder `$uid === auth.uid` seul)
+//     → tombent « le même élève avec gid: 'g2' », « un compte sans inscription », « une ligne sans gid », « un gid qui n'est pas… ».
+//     Retirer `!newData.exists() ||` → tombe : « un élève efface sa propre ligne… » (cas de l'élève orphelin).
+//     Retirer seulement la moitié `profs` de la clause → tombe : « un enseignant non global inscrit au groupe (profs) écrit sa propre ligne ».
 //  Hors de portée : le `size() > 0` de `responsableDe` et de la règle de groupe. Il ne change que la nature du
 //  refus sur une liste vide (erreur d'évaluation ou `false`, les deux refusent).
