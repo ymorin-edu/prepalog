@@ -781,7 +781,7 @@ await v('quai : guidage — « Recommencer la réception » repart d’un quai n
 await v('ENT-4.1 : déclaration (C1.4, guidage, 1re, 18 jalons pondérés sur 20, livrée fermée aux élèves)', async () => {
   const m = await pg2.evaluate(async () => (await import('/activites/picard-ent41.js')).meta);
   egal([m.id, m.code, m.rubrique, m.competences, m.temps, m.niveaux, m.bareme, m.pret, m.ouverture, m.immersif, m.portee, !!m.copie],
-    ['picard-ent41', 'ENT-4.1', 'simulog', ['C1.4'], 'guidage', ['1re'], 20, true, 'prof', true, 'eleve', false], 'meta');
+    ['picard-ent41', 'ENT-4.1', 'simulog', ['C1.4'], 'guidage', ['1re', 'cap'], 20, true, 'prof', true, 'eleve', false], 'meta');
 });
 
 await v('ENT-4.1 : sous le logo Picard dans Simulog, elle s’ouvre sur l’accueil et le mail du chef de quai', async () => {
@@ -909,7 +909,7 @@ async function jouer42(p, ecarts = {}) {
 await v('ENT-4.2 : déclaration (C1.4 + C1.3, entraînement, 1re, 30 jalons pondérés sur 20, livrée fermée aux élèves)', async () => {
   const m = await pg2.evaluate(async () => (await import('/activites/picard-ent42.js')).meta);
   egal([m.id, m.code, m.rubrique, m.competences, m.temps, m.niveaux, m.bareme, m.pret, m.ouverture, m.immersif, !!m.copie],
-    ['picard-ent42', 'ENT-4.2', 'simulog', ['C1.4', 'C1.3'], 'entrainement', ['1re'], 20, true, 'prof', true, false], 'meta');
+    ['picard-ent42', 'ENT-4.2', 'simulog', ['C1.4', 'C1.3'], 'entrainement', ['1re', 'cap'], 20, true, 'prof', true, false], 'meta');
 });
 
 await v('ENT-4.2 : écran ① — deux camions, l’ordre ne se choisit qu’après les deux tickets, aucune aide', async () => {
@@ -1330,7 +1330,7 @@ const terminer43 = async (p) => { await clic(p, '[data-q="terminer"]'); await cl
 await v('ENT-4.3 : meta (erreur induite C1.4, 1re, livrée fermée aux élèves, dix jalons pondérés sur 20)', async () => {
   const m = await pg2.evaluate(async () => (await import('/activites/picard-ent43.js')).meta);
   egal([m.id, m.code, m.rubrique, m.competences, m.temps, m.niveaux, m.bareme, m.pret, m.ouverture, m.immersif, m.portee, !!m.copie],
-    ['picard-ent43', 'ENT-4.3', 'simulog', ['C1.4'], 'erreur', ['1re'], 20, true, 'prof', true, 'eleve', false], 'meta');
+    ['picard-ent43', 'ENT-4.3', 'simulog', ['C1.4'], 'erreur', ['1re', 'cap'], 20, true, 'prof', true, 'eleve', false], 'meta');
 });
 
 await v('ENT-4.3 : contenu — N2 acceptée à tort au-dessus de −15 °C, N3 37 pour 40, N1 conforme ; tout à −21 °C aujourd’hui', async () => {

@@ -121,7 +121,7 @@ await v('ENT-6.5 : déclaration — meta, parcours après ENT-6.4, dix jalons au
   });
   const m = r.meta;
   egal([m.id, m.code, m.rubrique, m.niveaux, m.competences, m.domaines, m.temps, m.bareme, m.parcours, m.precedente, m.correction, m.questions, m.corrige, m.portee],
-    ['france-boissons-rangement', 'ENT-6.5', 'simulog', ['2de'], ['C1.5', 'C1.6'], ['D4', 'D5'], 'entrainement', 20, true, 'france-boissons-reception', true, 'ENT-6.5',
+    ['france-boissons-rangement', 'ENT-6.5', 'simulog', ['2de', 'cap'], ['C1.5', 'C1.6'], ['D4', 'D5'], 'entrainement', 20, true, 'france-boissons-reception', true, 'ENT-6.5',
       './contenus/corriges/ENT-6.5.js', 'eleve'], 'meta');
   vrai(m.jeuId === undefined, 'une base par séance : aucun jeuId partagé');
   const F = 'Comprendre le FIFO', R = 'Rangement dans la zone de masse', S = 'Entrée en stock';

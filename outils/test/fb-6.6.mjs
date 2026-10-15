@@ -146,7 +146,7 @@ await v('ENT-6.6 : déclaration — meta (guidage C1.6, parcours après ENT-6.5)
   });
   const m = r.meta;
   egal([m.id, m.code, m.rubrique, m.niveaux, m.competences, m.domaines, m.temps, m.bareme, m.parcours, m.precedente, m.correction, m.questions, m.corrige, m.portee],
-    ['france-boissons-inventaire', 'ENT-6.6', 'simulog', ['2de'], ['C1.6'], ['D2', 'D3', 'D5'], 'guidage', 20, true, 'france-boissons-rangement', true, 'ENT-6.6',
+    ['france-boissons-inventaire', 'ENT-6.6', 'simulog', ['2de', 'cap'], ['C1.6'], ['D2', 'D3', 'D5'], 'guidage', 20, true, 'france-boissons-rangement', true, 'ENT-6.6',
       './contenus/corriges/ENT-6.6.js', 'eleve'], 'meta');
   vrai(m.jeuId === undefined, 'une base par séance : aucun jeuId partagé');
   const C = 'Compter avec le terminal', D = 'Écarts et décisions', R = 'Compte rendu à Nadia';

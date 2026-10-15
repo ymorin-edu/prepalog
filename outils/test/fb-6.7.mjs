@@ -130,7 +130,7 @@ await v('ENT-6.7 : déclaration — meta (entraînement C2.1, parcours après EN
   });
   const m = r.meta;
   egal([m.id, m.code, m.rubrique, m.niveaux, m.competences, m.domaines, m.temps, m.bareme, m.parcours, m.precedente, m.questions, m.corrige, m.portee, m.correction, m.suiteAuBilan],
-    ['france-boissons-preparation', 'ENT-6.7', 'simulog', ['2de'], ['C2.1'], ['D4'], 'entrainement', 20, true, 'france-boissons-inventaire', 'ENT-6.7',
+    ['france-boissons-preparation', 'ENT-6.7', 'simulog', ['2de', 'cap'], ['C2.1'], ['D4'], 'entrainement', 20, true, 'france-boissons-inventaire', 'ENT-6.7',
       './contenus/corriges/ENT-6.7.js', 'eleve', undefined, true], 'meta');
   vrai(m.jeuId === undefined, 'une base par séance : aucun jeuId partagé');
   const L = 'Les lignes du terminal', Ab = 'Le fût abîmé', M = 'Le montage des palettes', Fe = 'Film et étiquettes';

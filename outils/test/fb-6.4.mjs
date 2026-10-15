@@ -209,7 +209,7 @@ await v('ENT-6.4 : déclaration — meta, parcours après ENT-6.3, dix jalons au
   });
   const m = r.meta;
   egal([m.id, m.code, m.rubrique, m.niveaux, m.competences, m.domaines, m.temps, m.bareme, m.parcours, m.precedente, m.correction, m.questions, m.corrige, m.portee],
-    ['france-boissons-reception', 'ENT-6.4', 'simulog', ['2de'], ['C1.2', 'C1.4'], ['D4', 'D5'], 'entrainement', 20, true, 'france-boissons-conges', true, 'ENT-6.4',
+    ['france-boissons-reception', 'ENT-6.4', 'simulog', ['2de', 'cap'], ['C1.2', 'C1.4'], ['D4', 'D5'], 'entrainement', 20, true, 'france-boissons-conges', true, 'ENT-6.4',
       './contenus/corriges/ENT-6.4.js', 'eleve'], 'meta');
   vrai(m.jeuId === undefined, 'une base par séance : aucun jeuId partagé');
   const SEC = 'Sécurité avant de décharger', PAL = 'Contrôle des palettes', RES = 'Réserves et BL', MSG = 'Message à Nadia';

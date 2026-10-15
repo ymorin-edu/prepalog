@@ -2059,7 +2059,7 @@ await v('ENT-5.4 : déclaration (code, 2de, C1.2 et C1.4, sur 20, correction, li
     return { m: [m.id, m.code, m.rubrique, m.niveaux, m.competences, m.domaines, m.temps, m.bareme, m.correction, m.pret, m.ouverture, m.portee],
       st, inscrite: (await Promise.all(I.ACTIVITES.map((f) => f()))).some((x) => x.meta.id === 'smoby-reception') };
   });
-  egal(r.m, ['smoby-reception', 'ENT-5.4', 'simulog', ['2de'], ['C1.2', 'C1.4'], ['D4', 'D5'], 'guidage', 20, true, true, 'prof', 'eleve'], 'meta');
+  egal(r.m, ['smoby-reception', 'ENT-5.4', 'simulog', ['2de', 'cap'], ['C1.2', 'C1.4'], ['D4', 'D5'], 'guidage', 20, true, true, 'prof', 'eleve'], 'meta');
   egal(r.st, [['./contenus/smoby/quai-remorques.jpg', 200, 'image/jpeg'], ['./contenus/smoby/quai-interieur.jpg', 200, 'image/jpeg'],
     ['./contenus/smoby/quai-exterieur.jpg', 200, 'image/jpeg']], 'photos');
   vrai(r.inscrite, 'séance absente du registre');
@@ -2339,7 +2339,7 @@ await v('ENT-5.5 : déclaration (code, 2de, C1.5 et C1.6, 9 jalons, livrée ferm
     return { m: [m.id, m.code, m.rubrique, m.niveaux, m.competences, m.domaines, m.temps, m.bareme, m.pret, m.ouverture, m.portee, m.coeur],
       inscrite: (await Promise.all(I.ACTIVITES.map((f) => f()))).some((x) => x.meta.id === 'smoby-rangement') };
   });
-  egal(r.m, ['smoby-rangement', 'ENT-5.5', 'simulog', ['2de'], ['C1.5', 'C1.6'], ['D4'], 'guidage', 20, true, 'prof', 'eleve', true], 'meta');
+  egal(r.m, ['smoby-rangement', 'ENT-5.5', 'simulog', ['2de', 'cap'], ['C1.5', 'C1.6'], ['D4'], 'guidage', 20, true, 'prof', 'eleve', true], 'meta');
   vrai(r.inscrite, 'séance absente du registre');
 });
 
@@ -2511,7 +2511,7 @@ await v('ENT-5.6 : déclaration (code, 2de, C2.1, 9 jalons, livrée fermée aux 
     return { m: [m.id, m.code, m.rubrique, m.niveaux, m.competences, m.domaines, m.temps, m.bareme, m.pret, m.ouverture, m.portee, m.coeur],
       inscrite: (await Promise.all(I.ACTIVITES.map((f) => f()))).some((x) => x.meta.id === 'smoby-preparation') };
   });
-  egal(r.m, ['smoby-preparation', 'ENT-5.6', 'simulog', ['2de'], ['C2.1'], ['D4'], 'guidage', 20, true, 'prof', 'eleve', true], 'meta');
+  egal(r.m, ['smoby-preparation', 'ENT-5.6', 'simulog', ['2de', 'cap'], ['C2.1'], ['D4'], 'guidage', 20, true, 'prof', 'eleve', true], 'meta');
   vrai(r.inscrite, 'séance absente du registre');
 });
 
@@ -2698,7 +2698,7 @@ await v('ENT-5.3 : déclaration (code, 2de, C1.2 et C1.5, 23 cases sur 20, noté
     return { m: [m.id, m.code, m.rubrique, m.niveaux, m.competences, m.domaines, m.temps, m.bareme, m.pret, m.ouverture, m.portee, m.coeur],
       codes, premier: S.VISITE.premierEssai, n: S.ETAPES.length };
   });
-  egal(r.m, ['smoby-visite', 'ENT-5.3', 'simulog', ['2de'], ['C1.2', 'C1.5'], ['D4'], 'guidage', 20, true, 'prof', 'eleve', true], 'meta');
+  egal(r.m, ['smoby-visite', 'ENT-5.3', 'simulog', ['2de', 'cap'], ['C1.2', 'C1.5'], ['D4'], 'guidage', 20, true, 'prof', 'eleve', true], 'meta');
   egal([r.premier, r.n], [true, 23], 'premier essai, 23 cases');
   vrai(r.codes.includes('ENT-5.3'), 'séance absente du registre');
   vrai(r.codes.indexOf('ENT-5.3') === r.codes.indexOf('ENT-5.4') - 1, `ordre du registre : ${r.codes.join(', ')}`);
@@ -3310,7 +3310,7 @@ await v('ENT-5.8 : déclaration (code, 2de, OTM-C2.1 et C2.3, sur 20, correction
       comp: ['OTM-C2.1', 'OTM-C2.3'].every((c) => JSON.stringify(C).includes(c)),
       rang: metas.filter((x) => /^ENT-5\./.test(x.code)).map((x) => x.code) };
   });
-  egal(r.m, ['smoby-lettre-voiture', 'ENT-5.8', 'simulog', ['2de'], ['OTM-C2.1', 'OTM-C2.3'], ['D3', 'D1'], 'guidage', 20, true, true, 'prof', 'eleve', true, true], 'meta');
+  egal(r.m, ['smoby-lettre-voiture', 'ENT-5.8', 'simulog', ['2de', 'cap'], ['OTM-C2.1', 'OTM-C2.3'], ['D3', 'D1'], 'guidage', 20, true, true, 'prof', 'eleve', true, true], 'meta');
   vrai(r.comp, 'OTM-C2.1 ou OTM-C2.3 absente de core/competences.js');
   egal(r.rang.slice(-2), ['ENT-5.7', 'ENT-5.8'], 'rang dans le registre');
 });
