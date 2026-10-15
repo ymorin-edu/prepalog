@@ -13,7 +13,7 @@ import { NIVEAUX, libelleNiveau, courtNiveau, libelleNiveaux, activiteVisible, h
   demisDe, nomDemi, forcage } from './niveaux.js';
 import { BAREME_AFFICHE, noteSur20, noteConvertie, formaterNote } from './notes.js';
 import { estCopie, estRendue, libelleRendu, ramasser, rouvrir, baseDeLEleve } from './copie.js';
-import { TEMPS, COEFS_DEFAUT, coefsDuGroupe, seancesParCompetence, seancesParSpecialite, moyenneCompetence, metasPourNiveau } from './competences.js';
+import { TEMPS, COEFS_DEFAUT, coefsDuGroupe, seancesParCompetence, seancesParSpecialite, moyenneCompetence, metasPourNiveau, sansEvaluation2de } from './competences.js';
 
 // Le nom de famille d'une activité, d'après le préfixe de son code (voir CLAUDE.md) : bandeau du Suivi.
 const FAMILLES = { DEC: 'Découverte', ACT: 'Outils métier', TAB: 'Tableur', REF: 'Exercices', SCE: 'Scénarios',
@@ -1539,6 +1539,9 @@ ${so.phrase}` : ''}`)}"
     const comps = seancesParCompetence(metas);
     // En 2de seulement : une moyenne par spécialité (logistique, transport, gestion), même calcul.
     const specs = g.niveau === '2de' ? seancesParSpecialite(metas) : [];
+    // En 2de aussi : un avis, sans rien bloquer, sur les compétences OTM / AGOrA travaillées sans évaluation
+    // (finalité, décision 3 ; chantier 12, choix de Tristan du 15/10/2026).
+    const aEvaluer = g.niveau === '2de' ? sansEvaluation2de(metas) : [];
     const coefs = coefsDuGroupe(g);
     const par = {};
     travaux.forEach((t) => { (par[t.uid] = par[t.uid] || {})[t.aid] = t; });
@@ -1594,6 +1597,12 @@ ${so.phrase}` : ''}`)}"
           Une séance pas encore faite ne compte pas pour zéro : elle n'entre pas dans la moyenne.
           Entre parenthèses : séances faites sur séances de la compétence. Survolez une moyenne
           pour voir le détail. Une séance qui travaille deux compétences compte pour les deux.</p>`}
+        ${aEvaluer.length ? `
+        <p class="note" id="avisEval2de"><strong>À prévoir en 2de :</strong> l'évaluation de
+          ${aEvaluer.map((c) => `<strong title="${ech(c.libelle)}">${ech(c.code)}</strong>`).join(', ')}.
+          Ces compétences de transport ou de gestion sont travaillées en 2de sans séance d'évaluation ouverte
+          à la 2de ; la règle de la 2de GATL veut un temps de travail <em>et</em> l'évaluation dans l'année
+          (la logistique, elle, peut rester en découverte).</p>` : ''}
       </section>
       ${specs.length && eleves.length ? `
       <section class="panneau" id="panSpe">

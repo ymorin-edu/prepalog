@@ -176,6 +176,31 @@ export function metasPourNiveau(metas, niveauGroupe) {
 }
 
 /**
+ * Règle de la 2de GATL (finalité, décision 3, 05/10/2026) : une compétence OTM ou AGOrA travaillée en
+ * 2de doit avoir son évaluation dans l'année ; la logistique, elle, peut rester « découverte ». Rend les
+ * compétences de transport ou de gestion qu'au moins une séance de 2de travaille sans qu'aucune séance
+ * d'évaluation de 2de ne les porte, dans l'ordre du référentiel : [{ code, libelle }]. Sert à un avis
+ * dans l'onglet « Compétences » d'un groupe de 2de, rien de plus (choix de Tristan, 15/10/2026 : ne rien
+ * bloquer). Une séance « de 2de » déclare '2de' ou aucun niveau ; une séance en préparation compte,
+ * comme dans le tableau.
+ */
+export function sansEvaluation2de(metas) {
+  const de2de = metas.filter((m) => compteParCompetence(m) && (!m.niveaux || !m.niveaux.length || m.niveaux.includes('2de')));
+  const travaillees = new Set();
+  const evaluees = new Set();
+  de2de.forEach((m) => m.competences.forEach((c) => {
+    if (specialite(c) === 'LOG') return;
+    travaillees.add(c);
+    if (m.temps === 'evaluation') evaluees.add(c);
+  }));
+  const ordre = Object.keys(COMPETENCES);
+  const rang = (c) => { const i = ordre.indexOf(c); return i < 0 ? ordre.length : i; };
+  return [...travaillees].filter((c) => !evaluees.has(c))
+    .sort((a, b) => rang(a) - rang(b) || a.localeCompare(b))
+    .map((code) => ({ code, libelle: COMPETENCES[code] || '' }));
+}
+
+/**
  * Note sur 20 d'une séance pour le tableau par compétence, quel que soit son mode de
  * notation : corrigée par le noyau, saisie à la main (sur son barème) ou en jalons.
  * `null` si l'élève n'a pas de score.

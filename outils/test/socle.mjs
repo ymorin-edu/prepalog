@@ -659,6 +659,15 @@ await v('compétences : la moyenne par spécialité, pour un groupe de 2de seule
   try {
     await rouvrir();
     if (!(await page.$('#tabSpe'))) throw new Error('pas de tableau par spécialité pour un groupe de 2de');
+    // L'avis « à prévoir en 2de » (chantier 12, 15/10/2026) : les OTM / AGOrA travaillées par Smoby sans évaluation
+    // de 2de y sont (ENT-5.8 OTM-C2.1, ENT-5.1 AGO-3.1), jamais une compétence logistique.
+    const avis = await page.$eval('#avisEval2de', (p) => p.textContent.replace(/\s+/g, ' ')).catch(() => null);
+    if (!avis) throw new Error('pas d\'avis « à prévoir en 2de »');
+    if (!/À prévoir en 2de/.test(avis) || !/OTM-C2\.1/.test(avis) || !/AGO-3\.1/.test(avis)) throw new Error('avis 2de : ' + avis);
+    // Un code logistique = « C1.4 » sans préfixe (« OTM-C1.3 » n'en est pas un).
+    if (/(?<![A-Z-])C\d\.\d/.test(avis)) throw new Error('une compétence logistique dans l\'avis 2de : ' + avis);
+    const titre21 = await page.$$eval('#avisEval2de strong[title]', (l) => l.find((s) => s.textContent.trim() === 'OTM-C2.1')?.getAttribute('title'));
+    if (titre21 !== 'Constituer le dossier transport') throw new Error('libellé en infobulle : ' + titre21);
     const lu = await page.$$eval('#tabSpe', ([t]) => {
       const th = [...t.querySelectorAll('thead th')].map((x) => x.textContent.replace(/\s+/g, ' ').trim());
       const l = [...t.querySelectorAll('tbody tr')].find((x) => /SPECIALITE/.test(x.textContent));
@@ -675,6 +684,7 @@ await v('compétences : la moyenne par spécialité, pour un groupe de 2de seule
     await page.evaluate(async ({ gid }) => { const { B } = await import('/core/backend.js'); await B.majGroupe(gid, { niveau: '1re' }); }, ids);
     await rouvrir();
     if (await page.$('#tabSpe')) throw new Error('tableau par spécialité affiché pour un groupe de 1re');
+    if (await page.$('#avisEval2de')) throw new Error('avis « à prévoir en 2de » affiché pour un groupe de 1re');
   } finally {
     // On remet le groupe comme on l'a trouvé.
     await page.evaluate(async ({ gid, uid, a1, a2, niveau }) => {
@@ -731,6 +741,32 @@ await v('compétences : un groupe CAP lit `competencesCap`, les autres `competen
     if (mCap.moyenne !== 12 || m1re.moyenne !== 12) faux.push(`moyennes : CAP ${mCap.moyenne}, 1re ${m1re.moyenne}`);
   }
   if (faux.length) throw new Error(faux.join(' | '));
+});
+
+await v('compétences : OTM / AGOrA de 2de sans évaluation, le calcul de l\'avis, à l\'unité', async () => {
+  const C = await import(pathToFileURL(path.join(ROOT, 'core/competences.js')).href);
+  // Travaillées en 2de : OTM-C2.1 (évaluée en 2de : pas listée), OTM-C2.3 (évaluée en 1re seulement : listée),
+  // AGO-3.1 (jamais évaluée : listée), OTM-C2.2 (séance sans niveau, donc ouverte à la 2de : listée).
+  // Logistique C1.2 : jamais listée. OTM-C3.2 : travaillée en 1re seulement, pas l'affaire de la 2de.
+  // Une séance sans temps ou sans barème ne compte pas.
+  const metas = [
+    { id: 'a', bareme: 10, temps: 'guidage', niveaux: ['2de'], competences: ['OTM-C2.1', 'C1.2'] },
+    { id: 'b', bareme: 10, temps: 'evaluation', niveaux: ['2de'], competences: ['OTM-C2.1'] },
+    { id: 'c', bareme: 10, temps: 'guidage', niveaux: ['2de'], competences: ['OTM-C2.3', 'AGO-3.1'] },
+    { id: 'd', bareme: 10, temps: 'evaluation', niveaux: ['1re'], competences: ['OTM-C2.3'] },
+    { id: 'e', bareme: 10, temps: 'entrainement', competences: ['OTM-C2.2'] },
+    { id: 'f', bareme: 10, temps: 'guidage', niveaux: ['1re'], competences: ['OTM-C3.2'] },
+    { id: 'g', bareme: 10, niveaux: ['2de'], competences: ['AGO-2.1'] },
+    { id: 'h', temps: 'guidage', niveaux: ['2de'], competences: ['AGO-2.2'] },
+  ];
+  const r = C.sansEvaluation2de(metas);
+  const codes = r.map((x) => x.code).join(',');
+  if (codes !== 'OTM-C2.2,OTM-C2.3,AGO-3.1') throw new Error('à évaluer en 2de : ' + codes);
+  if (r[2].libelle !== 'Suivi de la carrière du personnel') throw new Error('libellé : ' + r[2].libelle);
+  // Tout évalué : rien à signaler. Aucune séance : rien non plus.
+  const ok = C.sansEvaluation2de([metas[0], metas[1], { id: 'i', bareme: 10, temps: 'evaluation', competences: ['OTM-C2.2', 'OTM-C2.3', 'AGO-3.1'] }, metas[2], metas[4]]);
+  if (ok.length) throw new Error('rien attendu : ' + ok.map((x) => x.code));
+  if (C.sansEvaluation2de([]).length) throw new Error('liste vide attendue sans séance');
 });
 
 await v('compétences : un groupe CAP voit ses moyennes CAP-C… avec libellé, un groupe de 1re garde C1.1', async () => {
