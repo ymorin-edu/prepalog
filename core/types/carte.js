@@ -190,7 +190,9 @@ function htmlCadre(C, o = {}) {
 //   o.zz(vue)           → le degré de zoom de cette vue, de 0 (ensemble) à 1 (zoom), interpolé pendant l'animation ;
 //   o.epaisseurs(k, zz) → règle les traits et les textes, `k` = mètres par pixel d'écran ;
 //   o.grille            → faux : pas de repères de quadrillage en bordure (la carte n'en a pas) ;
-//   o.aide(ui)          → le texte d'aide de la barre.
+//   o.aide(ui)          → le texte d'aide de la barre ;
+//   o.duree             → durée du zoom animé, en ms (520 par défaut ; la vue Localiser demande 650, 15/10/2026) ;
+//   o.echelle           → faux : pas d'échelle en mètres (la carte de France de la vue Localiser n'en a pas).
 export function monterCadre(z, C, ui, o) {
   const $ = (s) => z.querySelector(s);
   const svg = $('[data-ct-svg]'), cadre = $('[data-ct-cadre]');
@@ -209,7 +211,7 @@ export function monterCadre(z, C, ui, o) {
     const vis = visible(vb.v), k = 1 / vis.s;
     o.epaisseurs(k, vb.z);
     if (o.grille !== false) reperesGrille(vis);
-    echelle(k);
+    if (o.echelle !== false) echelle(k);
   }
   function reperesGrille(v) {
     const box = $('[data-ct-reperes]'); box.innerHTML = '';
@@ -241,7 +243,7 @@ export function monterCadre(z, C, ui, o) {
   let anim = null;
   function allerA(cible, zCible, fin) {
     cancelAnimationFrame(anim);
-    const v0 = vb.v.slice(), z0 = vb.z, t0 = performance.now(), T = 520;
+    const v0 = vb.v.slice(), z0 = vb.z, t0 = performance.now(), T = o.duree || 520;
     const pas = (t) => {
       const u = Math.min(1, (t - t0) / T), e = u < 0.5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2;
       vb.v = v0.map((x, i) => x + (cible[i] - x) * e);

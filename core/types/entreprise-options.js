@@ -61,6 +61,7 @@ export const OPTIONS = {
   animations: { type: 'array', role: 'plusieurs animations à questions (rare)' },
   courriel: { type: 'object', role: 'écran Nouveau courriel : carnet (liste du champ À), pièces jointes, réponse automatique, brouillon (`core/types/courriel.js`)' },
   telephone: { type: 'object', role: 'écran Téléphone : appels à répliques à choisir (`core/types/dialogue.js`), contacts sans dialogue' },
+  localiser: { type: 'object', role: 'carte de France : situer chaque lieu (région → département → ville), trajet de la marchandise à la fin (`core/types/localiser.js`)' },
   questions: { type: 'object', role: "questions au fil et points d'étape" },
   equipe: { type: 'object', role: 'personnes citées par les questions (en plus de `questions.personnes`) et destinataires d’un message à transférer' },
   // — Ce que le contenu fournit au moteur (chantier 9, lot 9b : le moteur n'importe plus aucun fichier de `contenus/`) —

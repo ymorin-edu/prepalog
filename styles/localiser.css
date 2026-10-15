@@ -1,0 +1,124 @@
+/* ============================================================
+   Vue « Localiser » (core/types/localiser.js) — 15/10/2026, brief docs/briefs/MOTEUR-vue-localiser.md.
+   D'après la maquette validée par Tristan (docs/briefs/action/maquette-localiser-action.html).
+   Le panneau et la carte ne prennent que les variables de base.css (et de la charte d'une entreprise, qui peut imposer
+   un thème sombre à sa zone : Boost). Deux teintes propres à la vue, CALCULÉES sur ces variables, donc justes dans tous
+   les thèmes, y compris celui qu'une entreprise impose à sa zone (que trois blocs :root ne verraient pas) :
+     --lc-bleu : le CLIENT (magasin), règle « bleu = client » des vues de transport. base.css n'a pas de bleu de charte
+                 (l'accent --ardoise est celui de l'entreprise : il ne doit jamais dire « client »). Un bleu mêlé à
+                 l'encre : foncé sur le papier, clair sur un fond sombre (contraste ≥ 4,5 dans les deux) ;
+     --lc-mer  : la mer, qui recule : le fond, un peu assombri (plus sombre que la terre dans tous les thèmes).
+   Le vert plein (--vert-pale / --vert) ne dit que « juste » : seule la zone trouvée le prend. Le faux = trait
+   rouge, jamais d'aplat rouge. L'aide après deux erreurs = pointillés terre.
+   ============================================================ */
+
+.lc, .lc-encart{ --lc-bleu:color-mix(in srgb, #3b7be0 68%, var(--encre)); --lc-mer:color-mix(in srgb, var(--fond) 93%, #000) }
+
+.lc{ display:grid; grid-template-columns:330px minmax(0,1fr); gap:14px; height:var(--lc-h,620px); color:var(--encre) }
+@media (max-width:820px){
+  .lc{ grid-template-columns:1fr; height:auto }
+  .lc-boite{ height:62vh; min-height:320px }
+}
+
+/* ---------------------------------------------------------------- le panneau */
+.lc-panneau{ background:var(--panneau); border:1px solid var(--filet); border-radius:var(--r); padding:14px 16px; overflow:auto; min-height:0 }
+.lc-tete{ display:flex; justify-content:space-between; align-items:baseline; gap:8px; margin-bottom:4px }
+.lc-titre{ font-size:13px; font-weight:600; text-transform:uppercase; letter-spacing:.04em; color:var(--encre-douce) }
+.lc-compteur{ font-size:14px; font-weight:700; white-space:nowrap }
+.lc-prof{ display:flex; flex-wrap:wrap; gap:6px 10px; align-items:center; font-size:13px; padding:6px 8px; margin:6px 0 8px;
+  background:var(--gele-fond); border:1px solid var(--filet); border-radius:var(--r) }
+.lc-prof label{ display:inline-flex; align-items:center; gap:4px; margin:0; font-weight:600 }
+.lc-prof .btn{ padding:3px 8px; font-size:13px }
+.lc-prof select{ font:inherit; padding:2px 4px; background:var(--panneau); color:var(--encre); border:1px solid var(--filet); border-radius:var(--r) }
+.lc-prof-note{ color:var(--encre-douce); font-size:12px }
+.lc-lieu{ display:flex; gap:12px; align-items:flex-start; margin:10px 0 12px }
+.lc-pastille{ flex:none; width:44px; height:44px; border-radius:50%; display:grid; place-items:center; font-weight:700; font-size:18px;
+  border:3px solid var(--lc-c, var(--encre)); color:var(--lc-c, var(--encre)); background:var(--panneau) }
+.lc-pastille.lc-petite{ display:inline-grid; width:22px; height:22px; font-size:11px; border-width:2px; margin-right:6px; vertical-align:middle }
+.lc-nom-lieu{ font-size:19px; font-weight:700; line-height:1.2 }
+.lc-role{ color:var(--encre-douce); font-size:14.5px; margin-top:3px; line-height:1.35 }
+.lc-ville{ font-weight:700; margin-top:4px; font-size:15px }
+.lc-consigne{ font-size:18px; font-weight:600; margin:6px 0 8px; line-height:1.3 }
+.lc-indice{ border-left:3px solid var(--terre); padding:3px 10px; font-size:15px; margin:6px 0 }
+.lc-message{ min-height:24px; font-size:16px; margin:6px 0 0 }
+.lc-message.lc-faux{ color:var(--rouge) }
+.lc-message.lc-juste{ color:var(--vert); font-weight:600 }
+.lc-etapes{ list-style:none; padding:0; margin:12px 0 0; display:flex; gap:6px }
+.lc-etapes li{ flex:1; text-align:center; font-size:13px; padding:6px 2px; border:1px solid var(--filet); border-radius:var(--r); color:var(--encre-douce) }
+.lc-etapes li.encours{ border-color:var(--encre); color:var(--encre); font-weight:600 }
+.lc-etapes li.fait{ color:var(--vert); border-color:var(--vert) }
+.lc-suivant{ margin-top:14px; font-weight:600; padding:9px 18px; background:var(--encre); border-color:var(--encre); color:var(--panneau) }
+.lc-suivant:hover{ border-color:var(--encre); filter:brightness(1.15) }
+.lc-bilan{ margin-top:10px; font-size:15px }
+.lc-bilan table{ border-collapse:collapse; width:100% }
+.lc-bilan th, .lc-bilan td{ padding:5px 6px; border-bottom:1px solid var(--filet); text-align:left; font-weight:400 }
+.lc-bilan thead th{ font-weight:600; font-size:13px; color:var(--encre-douce) }
+.lc-bilan thead th{ text-transform:none; letter-spacing:normal }
+.lc-bilan-lieu{ display:flex; align-items:center; gap:6px; font-weight:600 }
+.lc-bilan-lieu .lc-pastille{ margin:0 }
+.lc-ok{ color:var(--vert); font-weight:700 }
+.lc-ko{ color:var(--rouge); font-weight:700 }
+.lc-lu{ position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap }
+.lc-fin h3{ font-size:16px; margin:14px 0 4px }
+.lc-fin p{ font-size:14.5px; line-height:1.4; margin:0 }
+
+/* les couleurs des types de lieu (règle des vues de transport : bleu = le client) */
+.lc-t-magasin{ --lc-c:var(--lc-bleu) }
+.lc-t-entrepot{ --lc-c:var(--terre) }
+.lc-t-port{ --lc-c:var(--encre) }
+.lc-t-usine, .lc-t-site{ --lc-c:var(--encre-douce) }
+
+/* ---------------------------------------------------------------- la carte */
+.lc-carte{ display:flex; flex-direction:column; min-width:0; min-height:0; background:var(--panneau); border:1px solid var(--filet);
+  border-radius:var(--r); overflow:hidden }
+.lc-boite{ position:relative; flex:1; min-height:0; background:var(--lc-mer) }
+.lc-svg{ position:absolute; inset:0; width:100%; height:100%; display:block; user-select:none; touch-action:manipulation }
+.lc-mer{ fill:var(--lc-mer) }
+.lc-zone{ fill:var(--panneau); stroke:var(--encre-douce); stroke-width:1; stroke-linejoin:round; vector-effect:non-scaling-stroke; transition:fill .15s }
+.lc-zone[data-lc-cle]{ cursor:pointer }
+.lc-zone[data-lc-cle]:hover{ fill:var(--survol); stroke:var(--encre); stroke-width:2 }
+.lc-zone[data-lc-cle]:focus{ outline:none }
+.lc-zone[data-lc-cle]:focus-visible{ fill:var(--survol); stroke:var(--encre); stroke-width:3.5 }
+.lc-zone.lc-eteinte{ fill:var(--fond); stroke:var(--filet) }
+.lc-zone.lc-fixe{ cursor:default }
+.lc-zone.lc-dep{ stroke:var(--encre); stroke-width:2.5 }
+.lc-zone.juste, .lc-zone.juste:hover{ fill:var(--vert-pale); stroke:var(--vert); stroke-width:2.5 }
+.lc-zone.faux, .lc-zone.faux:hover{ stroke:var(--rouge); stroke-width:3 }
+.lc-zone.aide{ stroke:var(--terre); stroke-width:3.5; stroke-dasharray:7 5 }
+.lc-nom{ fill:var(--encre); font-weight:600; dominant-baseline:middle; pointer-events:none; paint-order:stroke; stroke:var(--panneau); stroke-linejoin:round;
+  font-family:inherit }
+.lc-nom.lc-doux{ fill:var(--encre-douce); font-weight:500 }
+.lc-nom.lc-num{ font-weight:700 }
+.lc-anime [data-lc-etiq]{ opacity:0 }
+.lc-place{ fill:var(--lc-c); stroke:var(--panneau); stroke-width:2; vector-effect:non-scaling-stroke }
+.lc-repere{ fill:var(--encre-douce); pointer-events:none }
+.lc-choix{ cursor:pointer }
+.lc-choix:focus{ outline:none }
+.lc-choix-large{ fill:transparent; stroke:none }
+.lc-choix-cible{ fill:var(--panneau); stroke:var(--encre); stroke-width:2.5; vector-effect:non-scaling-stroke }
+.lc-choix:hover .lc-choix-cible, .lc-choix:focus-visible .lc-choix-cible{ fill:var(--survol); stroke-width:4 }
+.lc-choix.faux .lc-choix-cible{ stroke:var(--rouge); stroke-width:4 }
+.lc-choix.aide .lc-choix-cible{ stroke:var(--terre); stroke-width:4; stroke-dasharray:4 3; vector-effect:non-scaling-stroke }
+.lc-choix.juste .lc-choix-cible{ fill:var(--vert-pale); stroke:var(--vert) }
+.lc-reseau{ fill:var(--panneau); stroke:var(--encre-douce); stroke-width:2; vector-effect:non-scaling-stroke }
+.lc-fleche{ fill:none; stroke:var(--encre); stroke-linecap:round; pointer-events:none }
+.lc-pointe{ fill:var(--encre); pointer-events:none }
+.lc-cadre-encart{ fill:none; stroke:var(--encre); stroke-width:1.5; stroke-dasharray:5 4; vector-effect:non-scaling-stroke; pointer-events:none }
+.qf-gele .lc-zone[data-lc-cle], .qf-gele .lc-choix{ cursor:default }
+.qf-gele .lc-zone[data-lc-cle]:hover{ fill:var(--panneau); stroke:var(--encre-douce); stroke-width:1 }
+
+/* l'encart (fin, lieux proches) : en haut, du côté opposé aux lieux */
+.lc-encart{ position:absolute; top:10px; width:min(42%,420px); aspect-ratio:4 / 3; border:2px solid var(--encre); border-radius:var(--r);
+  background:var(--lc-mer); overflow:hidden; box-shadow:var(--ombre) }
+.lc-encart-droite{ right:10px }
+.lc-encart-gauche{ left:10px }
+.lc-encart-svg{ display:block; width:100%; height:100% }
+
+/* le pied : légende et mention */
+.lc-pied{ border-top:1px solid var(--filet); padding:6px 12px 6px; display:flex; flex-wrap:wrap; align-items:center; gap:4px 16px }
+.lc-legende{ list-style:none; margin:0; padding:0; display:flex; flex-wrap:wrap; gap:4px 14px; font-size:13.5px; color:var(--encre-douce) }
+.lc-legende li{ display:inline-flex; align-items:center; gap:6px }
+.lc-rond{ display:inline-block; width:13px; height:13px; border-radius:50%; background:var(--lc-c) }
+.lc-rond.lc-creux{ background:var(--panneau); border:2px solid var(--encre-douce) }
+.lc-fleche-leg{ fill:none; stroke:var(--encre); stroke-width:2.2; stroke-dasharray:6 4 }
+.lc-credit{ margin:0 0 0 auto; font-size:11.5px; color:var(--encre-douce) }

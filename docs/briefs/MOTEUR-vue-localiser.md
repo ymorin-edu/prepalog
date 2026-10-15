@@ -268,9 +268,51 @@ dire à Tristan**), sur le contenu d'essai :
 
 ## Compte rendu *(rempli par Claude Code à la livraison)*
 
+*Lots 2 et 3 (sous-agent Opus, 15/10/2026 au soir ; le lot 1 est le commit 800687f).*
+
 - **Fichiers créés / modifiés** :
+  - créés : `core/types/localiser.js` (la vue : contrôles, `etapesLocaliser`, `corrigeLocaliser`, `creerLocaliser`), `styles/localiser.css`,
+    `contenus/localiser-essai.js` (jeux ACTION et PROCHE), `outils/test/localiser.mjs` (bloc de 16 cas), `outils/essai-localiser-vue.html`
+    (page d'essai cliquable : jeu, niveau, élève / enseignant, question, thème).
+  - modifiés : `core/types/carte.js` (`monterCadre` : `o.duree`, défaut 520 inchangé ; `o.echelle: false` ; rien d'autre),
+    `core/types/entreprise.js` (création `VLOC`, contrôle de `localiserFini`, identifiant, gestes connus, menu « Mon poste », table des
+    vues, état `db.localiser[<séance>][<vue>]`, API `{ db, seance, estProf, gele, signal, sauver, redessiner, reperer, graine }`, refus d'un
+    lieu bonus sans `niveauxPrevus`), `core/types/entreprise-options.js` (ligne `localiser`), `core/declencheurs.js` (`localiserFini`,
+    `tous` propage `.localisers`), `index.html` (feuille `localiser.css`), `activites/FICHE-SEANCE.md` (ligne d'option, section « Vue
+    « Localiser » » avec exemple copiable ; compte des options corrigé : 49), `outils/test.mjs` (bloc `localiser` dans `BLOCS` et dans
+    le **groupe 1** de `GROUPES` : alerte 7).
 - **Écarts par rapport au brief** (et pourquoi) :
+  - **`contours: FRANCE` est exigé dans la déclaration** : le moteur n'importe rien de `contenus/` (chantier 9, un test le garde), et
+    un import statique ferait charger 570 Ko à toutes les séances. Le contenu le passe, comme `carte: CARTE` pour la vue Carte.
+  - **`etapesLocaliser(L, séance)`** prend l'id de la séance (comme `jalonDialogue`) : l'état est cloisonné par séance.
+  - **Couleurs propres à la vue calculées, pas déclarées trois fois** : `base.css` n'a pas de bleu de charte. `--lc-bleu` =
+    `color-mix(#3b7be0 68 %, var(--encre))`, `--lc-mer` = `color-mix(var(--fond) 93 %, #000)` : justes dans les trois thèmes **et** sous
+    une charte qui impose son thème sombre à sa zone (Boost), ce que trois blocs `:root` ne voient pas. Seules couleurs écrites en dur.
+  - Le bouton « Lieu suivant » est à l'encre (comme la maquette), pas `btn-p` : l'accent par défaut du site est vert (aplat interdit).
+  - Positions des lieux d'Action : `contenus/action.js` n'existait pas → maquette (magasin, entrepôt, réseau) et centres de commune
+    approchés (Gonfreville, Rouen, Dieppe, Fécamp, Le Havre, Labastide et ses villes) ; ENT-8.1 prendra les positions OSM.
 - **Décisions prises en route** :
-- **Tests** : bloc / suite entière, nombre de cas, sabotages éprouvés
-- **Commits** :
+  - distance minimale entre deux points d'un lieu **8 km** ; tolérance « point dans son département » **300 m** (en unités de grille) ;
+  - l'étape en cours **se déduit de l'état** (`at` de chaque étape) : la reprise ne peut pas se désynchroniser ; `premier` s'écrit au
+    premier clic de l'étape (vrai = bon du premier coup), `essais` compte les clics, `at` = trouvé ;
+  - fini = clic « Voir le bilan » (geste `localiser:<vue>:fin`) ; un clic faux sauve tout de suite (le premier essai faux est gardé),
+    un clic juste sauve à la fin de l'animation, après `signal` (la question au fil arrive après le zoom) ;
+  - l'enseignant joue sur une copie en mémoire, avec un sélecteur de lieu **et de niveau** (pour voir les trois niveaux à l'écran) ;
+  - lot 3 : règle du quart (décision 3) ; l'encart se pose en haut, du côté opposé aux lieux, avec son cadre en pointillés sur la
+    grande carte ; une flèche trop courte pour l'échelle (lieux qui se touchent) n'est pas dessinée ; un site du réseau à moins de 2 km
+    d'un lieu (ou de même nom) n'est pas redessiné ;
+  - la hauteur de la vue se recalcule quand la page change de taille (le bandeau d'une question au fil la fait descendre).
+- **Tests** : bloc `localiser` **16 cas verts** (≈ 2 min 30), groupe 1 de GitHub (estimé le plus léger sans mesure récente). Non-régression
+  `boost carte carte-region fb-6.9 decathlon decathlon-74 dependances` : 291 / 292, le seul cas tombé est celui de `docs/EN-COURS.md`
+  (format de date « 15/10/2026 20 h » et `outils/test/action.mjs` inscrit mais absent) : hors de cette vue. Sabotages (faits, vus tomber,
+  remis, empreintes vérifiées) : jalon lu sur le dernier essai → « une erreur à la région » et « reprise » tombent ; ville comptée dans les
+  jalons → « ville non notée » tombe (et 14 autres : la somme des poids n'est plus 20) ; nom de la région dans le message → le cas des
+  messages tombe ; aplat vert sur une zone fausse → « couleurs » tombe ; contrôle « point hors du département » retiré → « contrôles »
+  tombe. Pas de cas « deux builds » (Python absent de GitHub) : reproductibilité vérifiée à la main au lot 1.
+- **Commits** : aucun (le chef de chantier relit et commite).
 - **Reste ouvert** :
+  - §11 n° 1 (évaluation) : la vue est refusée en `copie` ;
+  - une question au fil fait défiler la page de ≈ 40 px à 1366 × 768 (le bandeau du moteur s'ajoute au-dessus de `.ent-shell` ; même
+    chose pour toutes les vues ; la carte, elle, se recale) ;
+  - Tristan tranche à l'écran la règle du quart et la place de l'encart (page `outils/essai-localiser-vue.html`, jeu France Boissons) ;
+  - lisibilité de la mer et des zones éteintes sous la charte sombre de Boost : correcte mais peu contrastée (c'est la charte).

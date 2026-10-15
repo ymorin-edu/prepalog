@@ -76,7 +76,7 @@ options, une `meta.trame` qui n'est pas un nom, `correction: true` sans aucun ja
 ### Les options de `creerEntreprise` — la table qui fait foi (chantier 9, lot 9a, 08/10/2026)
 
 Tout ce qu'une séance peut passer à `creerEntreprise` (directement, ou dans le quatrième argument de
-`seanceEntreprise`) est dans **`OPTIONS`**, dans `core/types/entreprise-options.js` : 44 options, une ligne chacune. Le tableau
+`seanceEntreprise`) est dans **`OPTIONS`**, dans `core/types/entreprise-options.js` : 49 options (15/10/2026), une ligne chacune. Le tableau
 ci-dessous la reprend ; si les deux se contredisent, c'est `OPTIONS` qui a raison. **Une option absente de `OPTIONS` fait
 refuser la séance** : le message (en français) nomme la clé, propose la bonne casse s'il s'agit d'une faute de majuscule, et
 liste les clés connues ; avec la fabrique il nomme aussi la séance. Un type qui n'est pas celui du tableau est refusé de la même
@@ -120,6 +120,7 @@ plan d'entrepôt, fiche, animation) sans `id` texte non vide, sont refusées aus
 | `animation` | objet | Une animation à questions (et ses écrans de présentation, D-5). | essais seulement (aucune séance ne la passe encore) |
 | `animations` | tableau | Plusieurs animations (rare). | essais seulement |
 | `telephone` | objet | Écran « Téléphone » : appels où l'élève choisit ses répliques, contacts sans dialogue (voir « Vue « Dialogue à choix » »). | essai (`contenus/dialogue-essai.js`) ; Decathlon ENT-7.2 (`contenus/decathlon-ent72.js`), 7.3 et 7.4 à venir |
+| `localiser` | objet | Carte de France : l'élève situe chaque lieu en trois clics guidés (région → département → ville), trajet de la marchandise à la fin (voir « Vue « Localiser » »). | essai (`contenus/localiser-essai.js`) ; Action ENT-8.1 à venir |
 | `courriel` | objet | Écran « Nouveau courriel » de la messagerie : carnet (liste du champ À), pièces jointes, réponse automatique, brouillon (voir « Nouveau courriel et fiche enregistrée »). Sans elle, « Nouveau message » (fournisseurs) ne change pas. | essai (`contenus/courriel-essai.js`) ; Decathlon ENT-7.2 (`contenus/decathlon-ent72.js`) |
 | `questions` | objet | Questions au fil et points d'étape (voir « Questions au fil »). | essais seulement (aucune séance ne la passe encore) |
 | `equipe` | objet | Personnes citées par les questions, en plus de `questions.personnes` ; destinataires d'un message à transférer (`transfert.a`). | essai des questions (`contenus/questions-essai.js`) |
@@ -956,6 +957,70 @@ carteItineraires: {
   La vue se redessine à chaque entrée de menu : une marque déclenchée apparaît à la prochaine ouverture de la carte.
 - **Au zoom des derniers kilomètres**, les noms des lieux prennent des places calculées pour cette échelle (`CARTE.nomsZoom`).
 
+## Vue « Localiser » (situer les lieux sur la carte de France) — `core/types/localiser.js`
+
+Écrite le 15/10/2026 (brief `docs/briefs/MOTEUR-vue-localiser.md`, lots 2 et 3) pour Action ENT-8.1, puis toute entreprise (règle CAP
+de Tristan : à chaque découverte d'entreprise, l'élève situe les lieux). Contours : `contenus/france-contours.js` (IGN Admin Express,
+Licence Ouverte), que **la séance passe** (`contours: FRANCE`) : le moteur n'importe rien de `contenus/`. Exemple copiable :
+
+```js
+import { FRANCE } from '../contenus/france-contours.js';
+import { etapesLocaliser } from '../core/types/localiser.js';
+import { apresGeste, localiserFini } from '../core/declencheurs.js';
+
+export const LOCALISER = {
+  id: 'action-carte', libelle: 'Carte de France', titre: 'Où sont les lieux ?', contours: FRANCE,
+  lieux: [
+    { id: 'magasin', lettre: 'M', type: 'magasin', nom: 'Action Nîmes Cap Costières', role: 'Le magasin que ton entrepôt livre.',
+      ville: 'Nîmes', dep: '30', region: '76', lonlat: [4.36, 43.837], osm: 'way …',
+      autres: [{ ville: 'Alès', lonlat: [4.082, 44.125] }, { ville: 'Uzès', lonlat: [4.419, 44.012] }, { ville: 'Beaucaire', lonlat: [4.644, 43.808] }],
+      reperes: [{ ville: 'Montpellier', lonlat: [3.877, 43.611] }], indice: 'Au sud du département…', etiq: 'g' },
+    // … ; un lieu `bonus: true` (sans indice) : confirmé seulement, meta `niveauxPrevus: ['confirme']`
+  ],
+  flux: ['port', 'entrepot', 'magasin'],
+  reseau: { libelle: 'autres entrepôts Action', sites: [{ ville: 'Moissy-Cramayel', lonlat: [2.593, 48.626] }] },
+  fin: { titre: 'Le chemin de la marchandise', texte: '… (Le trajet est imaginé pour l’exercice.)' },
+};
+// Jalons : deux par lieu du socle (région, département), au premier essai. La séance pose poids et groupe.
+export const ETAPES = etapesLocaliser(LOCALISER, 'action-se-situer').map((j) => (j.bonus ? j : Object.assign(j, { poids: 2, groupe: 'La carte' })));
+// Dans creerEntreprise (ou les options de seanceEntreprise) : localiser: LOCALISER, finFige: '…'
+// Une question après le département de l'entrepôt : quand: apresGeste('localiser:entrepot:departement')
+// Un écran ouvert après la carte : fermetures: { fiche: { ouvertSi: localiserFini('action-carte'), message: '…' } }
+```
+
+- **Un lieu** : `id` (unique dans la séance, différent de l'id de la vue), `lettre` (pastille), `type` (`magasin` = bleu, le client ;
+  `entrepot` = terre ; `port` = encre ; `usine`, `site` = encre douce), `nom`, `role`, `ville`, `dep` et `region` (codes INSEE, France
+  métropolitaine), `lonlat` ([longitude, latitude], relevée dans OSM, `osm` = l'objet cité), `autres` (**exactement 3** villes réelles du
+  même département), `reperes` (facultatif ; standard et confirmé ; peuvent être hors du département), `indice` (standard ; exigé hors
+  bonus), `etiq` (place du nom à la fin : `h`, `b`, `g`, `d`), `bonus`. `lieux` peut être une fonction `(db) => [...]` (contrôlée sur une
+  base vide ; mêmes ids pour tous).
+- **Contrôles au chargement** (la séance ne s'ouvre pas, le message nomme le lieu) : id en double (entre lieux ou avec la vue), type
+  inconnu, texte vide, département absent des contours (outre-mer) ou hors de sa région, point (lieu ou `autres`) hors de son
+  département (tracé détaillé, tolérance 300 m pour le bord de mer), `autres` ≠ 3, deux points du même lieu à moins de **8 km**, `flux` qui
+  cite un lieu inconnu ou bonus, `localiserFini` sur une carte absente, évaluation (`copie: true` : refusée tant que ce n'est pas tranché),
+  lieu bonus sans `meta.niveauxPrevus: ['confirme']`.
+- **Niveaux** (`db.aisance`) : accompagné = noms des régions, nom et numéro des départements, noms sur les 4 points, département dans la
+  fiche ; standard = noms des régions, numéros, repères (carrés gris), indice ; confirmé = aucun nom ni numéro, repères, pas d'indice, la
+  ville seule dans la fiche, plus le lieu bonus (« Lieu 1 sur 4 », jamais le mot « bonus »). Lecteur d'écran : le nom seulement si le
+  niveau l'affiche (« Région 4 », « Département 76 », « Point 2 »).
+- **Le geste** : une erreur → trait rouge 0,7 s et « Ce n'est pas la bonne région. Essaie encore. » ; à la 2e erreur de l'étape, la bonne
+  zone (ou le bon point) entourée en pointillés terre, « Regarde la zone entourée. » ; jamais le nom de la réponse. Juste → « Bien vu ! »,
+  zone en vert pâle, zoom animé (650 ms) sur l'étape suivante. Les 4 points sont dans un ordre stable par élève (graine).
+- **Notation** : `etapesLocaliser(L, séance)` rend `localiser:<lieu>:region` et `localiser:<lieu>:departement`, `attente` tant que l'étape
+  n'est pas trouvée, puis `ok` (du premier coup) ou `ko`. **Aucun `ecran`** (la carte ne se rejoue pas : dire pourquoi par `finFige`).
+  La ville n'a pas de jalon et n'est pas au bilan. Un lieu bonus rend deux jalons `bonus: true` (`null` chez un élève qui ne l'a pas).
+- **Gestes** (une fois, à la fin de l'étape, après l'animation) : `localiser:<lieu>:region|departement|ville`, et `localiser:<vue>:fin`
+  (« Voir le bilan »). **Déclencheur** : `localiserFini('<vue>')` (fermetures, messages, questions).
+- **État** : `db.localiser[<séance>][<vue>] = { courant: { lieu, etape }, lieux: { <lieu>: { region: { premier, essais, at }, … } }, fini }` ;
+  l'étape en cours se déduit de l'état (reprise exacte après rechargement). Erreurs par lieu et par étape (ville comprise) :
+  `db.indicateurs[<séance>].localiser` (repérage, sans effet sur la note). « Réinitialiser » efface la carte, pas le repérage.
+- **Fin** : bilan lieu × (Région, Département) ✓ / ✗ « du premier coup », « Du premier coup : x sur 6 », texte `fin` ; sur la carte, les
+  lieux à leur couleur, le réseau en ronds creux (un site déjà posé comme lieu n'est pas redessiné) et le trajet du `flux` : **fléché sur
+  la France entière**, ou **encart zoomé** si les lieux du flux tiennent dans un quart de la largeur et un quart de la hauteur de la France.
+- **Enseignant** : joue librement sur une copie en mémoire (rien n'est écrit), choisit le lieu et le niveau affiché. **Gel** : pendant une
+  question au fil, clics et touches ne font rien. **Écran** : 1366 × 768 et 1280 × 720 sans défilement (la carte prend la hauteur qui
+  reste). Corrigé : `corrigeLocaliser(L)` rend, par lieu, la région, le département et la ville attendus.
+
 ## Vue « Dialogue à choix » (l'écran Téléphone) — `core/types/dialogue.js`
 
 Écrite le 14/10/2026 (brief `docs/briefs/MOTEUR-vue-dialogue.md`, lots 1 et 2) pour Decathlon ENT-7.2 à 7.4, puis la 2de et le CAP.
@@ -1350,7 +1415,14 @@ l'affichage). Les photos sont **dans le dépôt** (`contenus/<entreprise>/…`),
 | `fin` | `texte`, `consigne`, `image?`, `grandTitre?` | d'emblée | — |
 
 - **Ancres du parcours** (jamais de pixels) : `quai:<nom du quai>`, `zone:reception`, `zone:litiges`, `zone:bureau`,
-  `allee:principale`, `allee:<id>`. La trace se calcule (on descend à l'allée principale, on la longe, on remonte).
+  `zone:vestiaire`, `zone:controle`, `allee:principale`, `allee:<id>`. La trace se calcule (on descend à l'allée principale, on la longe,
+  on remonte). Une zone n'est une ancre que si le plan la déclare dans `zones` (`litiges: ['L1', …]`, `bureau: 'chef de quai'`, et depuis le
+  15/10/2026 `vestiaire` et `controle` : `true`, un texte (la note) ou `{ nom?, note? }` ; noms par défaut « Vestiaire » et « Zone de contrôle »,
+  dessinés sous le bureau, 4 travées au moins pour les quatre zones) ; une ancre inconnue empêche la visite de se charger. Une visite se
+  charge **sans** `stock`, `produits` ni `gammes` (pas d'étape `adresse`).
+- **Geste de fin** (15/10/2026) : la visite publie `entrepot:<id>:visite:fin` une fois, quand l'élève atteint l'étape `fin` (jamais pour
+  l'enseignant ni après la remise). Usage : `quand: apresGeste('entrepot:action-reception:visite:fin')` dans `volet.declencheurs`, ou dans
+  une question au fil. Le rangement garde ses gestes `entrepot:<id>:poser` et `:verifier`.
 - **Jalons** : chacun rend `'attente'` tant que l'élève n'a rien tenté, puis `'ok'` / `'ko'` (`etapesEntrepot` le passe au
   suivi : le repérage en tire « du premier coup »). **Un clic faux ne fait pas perdre le jalon** : l'élève recommence.
   L'adresse se décompose en **une seule** validation (la correction reste affichée). Un re-clic sur une cible déjà trouvée

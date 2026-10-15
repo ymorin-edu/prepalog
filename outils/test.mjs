@@ -39,7 +39,9 @@ const BLOCS = ['socle', 'spartoo', 'groupes', 'dependances', 'transport', 'boost
   'decathlon',
   'decathlon-74',
   'dialogue',
-  'courriel'];
+  'localiser',
+  'courriel',
+  'action'];
 const PREREQUIS = { spartoo: ['socle'], groupes: ['socle'], smoby: ['socle'], questions: ['socle'] };
 
 // Un fichier de bloc posé dans `outils/test/` mais oublié dans `BLOCS` ne tournerait jamais,
@@ -62,10 +64,10 @@ const PREREQUIS = { spartoo: ['socle'], groupes: ['socle'], smoby: ['socle'], qu
 // Un bloc et ses prérequis restent dans le même groupe : sinon le prérequis tournerait deux fois.
 // Une séance France Boissons nouvelle (`fb-6.7`…) va dans le groupe le plus léger.
 const GROUPES = {
-  1: ['quiz', 'carte', 'picard', 'demi-groupes', 'temps', 'tirage-niveaux', 'fb-6.1', 'quai-iso', 'fb-6.9', 'decathlon-74'],
+  1: ['quiz', 'carte', 'picard', 'demi-groupes', 'temps', 'tirage-niveaux', 'fb-6.1', 'quai-iso', 'fb-6.9', 'decathlon-74', 'localiser'],
   2: ['socle', 'spartoo', 'groupes', 'tableur-export', 'smoby', 'animation', 'visibilite', 'questions', 'fb-6.3', 'fb-6.10'],
   3: ['dependances', 'transport', 'boost', 'inventaire', 'cdiscount', 'planning', 'entrepot', 'copie', 'amenagements', 'fb-6.6', 'fb-6.8'],
-  4: ['fb-6.2', 'fb-6.4', 'fb-6.5', 'fb-6.7', 'carte-region', 'decathlon', 'dialogue', 'courriel'],
+  4: ['fb-6.2', 'fb-6.4', 'fb-6.5', 'fb-6.7', 'carte-region', 'decathlon', 'dialogue', 'courriel', 'action'],
 };
 // Même garde que pour les blocs oubliés : un bloc rangé dans aucun groupe (ou dans deux) ne
 // tournerait pas sur GitHub (ou deux fois), sans que rien ne le dise.

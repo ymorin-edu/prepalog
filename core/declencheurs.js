@@ -12,6 +12,7 @@
 //   quand: apresGeste('quai:fb-quai:decharger')              il a fait ce geste dans une vue (lot 3, 08/10/2026)
 //   quand: apresTransfert('msg-malo')                         il a transféré ce message (chantier D-1, 09/10/2026)
 //   quand: dialogueFini('quai')                              il a raccroché un appel fini (vue Téléphone, 14/10/2026)
+//   quand: localiserFini('action-carte')                     il a atteint le bilan de la carte (vue Localiser, 15/10/2026)
 //   quand: tous(apresJalon(…), apresMail(…))                 les deux
 //
 // Une condition reçoit `(db, seance)` : `seance` est l'id de la séance (les gestes sont cloisonnés par séance).
@@ -117,6 +118,16 @@ export function dialogueFini(id) {
   return f;
 }
 
+// Vrai quand l'élève a atteint le BILAN de la carte `vue` (vue « Localiser », `core/types/localiser.js`, 15/10/2026) : tous ses
+// lieux situés et « Voir le bilan » cliqué. **Juste ou faux, peu importe** (le premier essai n'est pas regardé). Cloisonné par
+// séance : `db.localiser[<séance>][<vue>].fini`. Sert aux `fermetures`, aux `quand` et aux déclencheurs (message qui suit la carte).
+// `.localisers` : contrôlé au chargement (une vue inconnue empêche la séance de s'ouvrir).
+export function localiserFini(vue) {
+  const f = (db, seance) => !!(db && db.localiser && db.localiser[seance] && db.localiser[seance][vue] && db.localiser[seance][vue].fini);
+  f.localisers = [vue];
+  return f;
+}
+
 // Les gestes cités par une condition (pour le contrôle au chargement).
 export const gestesDe = (f) => (f && Array.isArray(f.gestes) ? f.gestes : []);
 
@@ -125,5 +136,6 @@ export function tous(...conditions) {
   const f = (db, seance) => conditions.every((c) => c(db, seance));
   f.gestes = conditions.flatMap(gestesDe);
   f.dialogues = conditions.flatMap((c) => (c && Array.isArray(c.dialogues) ? c.dialogues : []));
+  f.localisers = conditions.flatMap((c) => (c && Array.isArray(c.localisers) ? c.localisers : []));
   return f;
 }

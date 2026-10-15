@@ -22,6 +22,7 @@ import { creerPlanning } from './planning.js';
 import { creerLecteur } from './animation.js';
 import { creerTelephone, appelEnCours, appelRetenu, appels, journalCourt } from './dialogue.js';
 import { creerEntrepot } from './entrepot.js';
+import { creerLocaliser } from './localiser.js';
 import { monterCalculette, demonterCalculette } from '../calculette.js';
 import { creerDocuments } from './documents.js';
 import { creerFiche } from './fiche.js';
@@ -237,6 +238,19 @@ export function creerEntreprise(U) {
   // personnes de la séance (`equipe`, `questions.personnes`). Son état vit dans `db.dialogues[<séance>]`. Un dialogue mal
   // déclaré empêche la séance de se charger (message qui nomme le dialogue et la réplique).
   const VTEL = U.telephone ? creerTelephone(U.telephone, { personnes: PERSONNES, evaluation: COPIE }) : null;
+  // LA CARTE DE FRANCE À SITUER (vue « Localiser », 15/10/2026, brief `docs/briefs/MOTEUR-vue-localiser.md`) : un écran de plus,
+  // seulement si la séance déclare `localiser` (format en tête de `core/types/localiser.js`). Son état vit dans
+  // `db.localiser[<séance>][<id de la vue>]`. Des lieux mal déclarés (département hors de sa région, point hors de son département,
+  // points trop proches…) empêchent la séance de se charger ; la vue refuse aussi une évaluation (`copie`), pas encore tranchée.
+  const VLOC = U.localiser ? creerLocaliser(U.localiser, { copie: COPIE }) : null;
+  {
+    // Ce qui cite une carte (`localiserFini(vue)` : fermetures, déclencheurs, questions) doit la trouver dans la séance.
+    const voir = (id, ou) => { if (!VLOC || VLOC.id !== id) throw new Error(`${ou} : la carte « ${id} » n’existe pas dans cette séance (${VLOC ? VLOC.id : 'aucune carte à situer déclarée'})`); };
+    const cartesDe = (c) => (c && Array.isArray(c.localisers) ? c.localisers : []);
+    Object.entries(U.fermetures || {}).forEach(([v, F]) => cartesDe(F && F.ouvertSi).forEach((id) => voir(id, `la fermeture de l’écran « ${v} »`)));
+    ((U.volet && U.volet.declencheurs) || []).forEach((d) => cartesDe(d && d.quand).forEach((id) => voir(id, `le message « ${d.id} »`)));
+    if (MQ) MQ.fil.forEach((q) => [q.quand, q.rattrapage].forEach((c) => cartesDe(c).forEach((id) => voir(id, `la question « ${q.id} »`))));
+  }
   {
     // Ce qui cite un dialogue doit le trouver dans la séance : un jalon (`dialogue`, `ecran: 'dialogue:<id>'`), une condition
     // `dialogueFini(id)` (fermetures, déclencheurs, questions). Une faute de frappe ne se découvre pas en classe.
@@ -253,7 +267,8 @@ export function creerEntreprise(U) {
     if (MQ) MQ.fil.forEach((q) => [q.quand, q.rattrapage].forEach((c) => dialoguesDe(c).forEach((id) => voir(id, `la question « ${q.id} »`))));
   }
   controlerIdentifiants([['quai', 'quais', [VQUAI].filter(Boolean)], ['planning', 'plannings', [VPL].filter(Boolean)],
-    ["plan d'entrepôt", "plans d'entrepôt", [VENT].filter(Boolean)], ['fiche', 'fiches', VFICHES], ['animation', 'animations', VANIMS]]);
+    ["plan d'entrepôt", "plans d'entrepôt", [VENT].filter(Boolean)], ['fiche', 'fiches', VFICHES], ['animation', 'animations', VANIMS],
+    ['carte à situer', 'cartes à situer', [VLOC].filter(Boolean)]]);
   const vueAnim = (VA) => `animation:${VA.id}`;
   // LES GESTES connus de la séance (questions au fil, lot 3) : la liste que publie chaque vue déclarée. Un `apresGeste`
   // qui en cite un autre (faute de frappe, vue absente) empêche la séance de se charger : on ne découvre pas en classe
@@ -263,7 +278,7 @@ export function creerEntreprise(U) {
   const ficheDeVue = (v) => VFICHES.find((VF) => vueDeFiche(VF) === v) || null;
   {
     // La messagerie est de toutes les séances : son geste (le transfert d'un message, chantier D-1) est toujours connu.
-    const connus = new Set([...VFICHES, ...VANIMS, VPL, VENT, VQUAI, VTEL, VCOUR].filter(Boolean).flatMap((V) => V.signaux || []).concat(GESTE_TRANSFERT));
+    const connus = new Set([...VFICHES, ...VANIMS, VPL, VENT, VQUAI, VTEL, VCOUR, VLOC].filter(Boolean).flatMap((V) => V.signaux || []).concat(GESTE_TRANSFERT));
     // Le geste de transfert d'UN message (`messagerie:transfert:<clé>`) : connu pour les messages que le volet sème avec un
     // `transfert`, et pour ceux qu'il déclare dans `volet.transferables` (les messages qui arrivent plus tard, par un déclencheur).
     // Une clé qu'il ne déclare pas (faute de frappe) empêche la séance de s'ouvrir.
@@ -498,6 +513,11 @@ export function creerEntreprise(U) {
       }
       if (TIR) {
         try { TIR.lier(ctx.meta.id); } catch (x) { hote.innerHTML = `<div class="avis avis-err">Tirage : ${ech(x.message)}</div>`; return; }
+      }
+      // Un lieu bonus de la carte (confirmé) demande `niveauxPrevus: ['confirme']` dans le meta, comme un tirage à cas bonus.
+      if (VLOC && VLOC.aBonus && !(Array.isArray(ctx.meta.niveauxPrevus) && ctx.meta.niveauxPrevus.includes('confirme'))) {
+        hote.innerHTML = `<div class="avis avis-err">La carte « ${ech(VLOC.id)} » a un lieu bonus du confirmé : le meta doit déclarer « niveauxPrevus: ['confirme'] ».</div>`;
+        return;
       }
       if (ctx.meta.portee !== 'eleve') {
         hote.innerHTML = `<div class="avis avis-err">Un environnement d'entreprise doit être de portée « eleve ».</div>`;
@@ -1494,8 +1514,9 @@ export function creerEntreprise(U) {
                 ${MQ && MQ.ouverture ? item('ouverture', MQ.ouverture.titre || 'Avant de commencer') : ''}
                 ${item('accueil', 'Accueil')}
                 ${item('mail', 'Messagerie', nonLus)}
-                ${groupe((VPLAN || VTOUR || VITI) && !VFICHE && !VQUAI && !VPL && !VENT && !VINV && !VTEL && !VANIMS.length ? U.transportSection || 'Transport' : 'Mon poste', [
+                ${groupe((VPLAN || VTOUR || VITI) && !VFICHE && !VQUAI && !VPL && !VENT && !VINV && !VTEL && !VLOC && !VANIMS.length ? U.transportSection || 'Transport' : 'Mon poste', [
                   VITI && item('itineraires', VITI.nav.libelle),
+                  VLOC && item('localiser', VLOC.nav.libelle),
                   ...VANIMS.filter((VA) => !VA.menuApres && (!VA.quand || VA.quand(db))).map((VA) => item(vueAnim(VA), VA.nav.libelle)),
                   ...VFICHES.filter((VF) => !VF.quand || VF.quand(db)).map((VF) => item(vueDeFiche(VF), VF.nav.libelle)),
                   // Une animation qui vient APRÈS les fiches dans le déroulé (`menuApres`, ENT-6.10) : listée après elles.
@@ -1720,6 +1741,7 @@ export function creerEntreprise(U) {
           planning: VPL && plOuvert() ? vuePlanning : vueAccueil,
           entrepot: VENT ? vueEntrepot : vueAccueil,
           telephone: VTEL && telOuvert() ? () => VTEL.html(etatTel(), apiTel()) : vueAccueil,
+          localiser: VLOC ? () => VLOC.html(etatLoc(), apiLoc()) : vueAccueil,
           ...Object.fromEntries(VFICHES.map((VF) => [vueDeFiche(VF), () => vueFiche(VF)])),
           ...Object.fromEntries(VANIMS.map((VA) => [vueAnim(VA), () => VA.html(etatAnim(VA), apiAnim())])),
           fiche: VFICHE ? () => vueFiche(VFICHE) : vueAccueil,
@@ -2052,6 +2074,31 @@ export function creerEntreprise(U) {
         apresFin() { if (E.vue === 'telephone') dessiner(); },
       });
 
+      /* ---------------------------------------------------------- carte à situer (vue Localiser) */
+      // Cloisonnée par séance : `db.localiser[<séance>][<id de la vue>]`. L'enseignant joue sur une copie en mémoire (rien n'est écrit,
+      // ni chez lui ni chez l'élève) ; il voit les ✓ / ✗ de l'élève dans le détail de la note. Pendant une question au fil (`gele()`),
+      // la vue ignore clics et touches : le gel du moteur ne bloque pas `keydown`. Les erreurs par lieu et par étape (ville comprise)
+      // vont au repérage de l'enseignant (`db.indicateurs[<séance>].localiser`), sans effet sur la note.
+      const LOC_PROF = VLOC ? VLOC.etatNeuf() : null;
+      function etatLoc() {
+        if (estProf) return LOC_PROF;
+        if (!db.localiser) db.localiser = {};
+        const S = db.localiser[ctx.meta.id] || (db.localiser[ctx.meta.id] = {});
+        return S[VLOC.id] || (S[VLOC.id] = VLOC.etatNeuf());
+      }
+      const apiLoc = () => ({
+        db, seance: ctx.meta.id, estProf, signal, gele: gelActif,
+        graine: graineDeBase(db) || ctx.profil.uid || prenom,
+        sauver: () => { if (!estProf) sauver(); },
+        redessiner: dessinerVue,
+        reperer(lieu, etape) {
+          if (estProf || rendue()) return;
+          const r = reperageSeance();
+          const T = (r.localiser || (r.localiser = {}))[lieu] || (r.localiser[lieu] = {});
+          T[etape] = (T[etape] || 0) + 1;
+        },
+      });
+
       /* ---------------------------------------------------------- animation à questions */
       // Cloisonnée par séance : `db.animations[<id de l'animation de cette séance>]`. L'enseignant n'y
       // écrit rien (le lecteur le sait par `estProf`). Une réponse rangée n'est jamais suivie d'un redessin
@@ -2171,6 +2218,7 @@ export function creerEntreprise(U) {
         if (E.vue === 'planning' && VPL && plOuvert()) VPL.brancher(z, etatPlanning(), apiPlanning());
         if (E.vue === 'entrepot' && VENT) VENT.brancher(z, etatEntrepot(), apiEntrepot());
         if (E.vue === 'telephone' && VTEL && telOuvert()) VTEL.brancher(z, etatTel(), apiTel());
+        if (E.vue === 'localiser' && VLOC) VLOC.brancher(z, etatLoc(), apiLoc());
         // La calculette du site, sur l'écran du plan seulement (entraînement, évaluation : voir entrepot.js).
         // Posée sur la page, hors de la zone de la séance : elle prendrait l'accent de la charte (le rouge de
         // Smoby dirait « faux », un vert « juste »). Son bouton est donc à l'encre, quelle que soit l'entreprise.
