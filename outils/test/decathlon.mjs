@@ -1228,6 +1228,426 @@ await v('ENT-7.3 : parcours juste à l’écran — 20 / 20 ; l’aléa arrive a
   vrai(!!q['prevenir-qui'] && !!q['lundi-ce-soir'], 'les deux réflexions sont posées à la fin de l’appel');
 });
 
+// ─────────────────────────────────────────────────────────── ENT-7.3, LOT 2 : les pièges, le confirmé, Avant de commencer, l'écran, la charte
+// Jalons sans écran (bases fabriquées, comme `jalons2` de 7.2) : les courriels portent des HEURES (`at`) écrites à la main, pas celles du moteur.
+const jalons3 = (d) => pg.evaluate(async ({ T, d }) => {
+  const S = await import('/contenus/decathlon-ent73.js');
+  const db = { tirages: { [S.ID]: T }, fiches: {}, mails: [{ folder: 'in', to: 'Lea' }] };
+  if (d.cmp2) db.fiches.cmp2 = { valeurs: d.cmp2, ...(d.envoye2 === false ? {} : { envoye: { at: 1 } }) };
+  if (d.ot1) db.fiches.ot1 = { valeurs: d.ot1, envoye: { at: 1 } };
+  if (d.ot2) db.fiches.ot2 = { valeurs: d.ot2, envoye: { at: 1 } };
+  if (d.courriels) db.courriels = { [S.ID]: { envoyes: d.courriels.map((c, i) => ({ pieces: [], objet: '', corps: '', at: 100 + 100 * i, ...c })) } };
+  if (d.appel) db.dialogues = { [S.ID]: { quai: { appels: [{ debut: 1000, fin: 2000, pas: [], reprises: d.appel.reprises || 0 }] },
+    '@leurres': (d.appel.leurres || []).map((id, i) => ({ id, at: 500 + i })) } };
+  if (d.leurresApres) db.dialogues[S.ID]['@leurres'] = d.leurresApres.map((id, i) => ({ id, at: 3000 + i }));
+  return Object.fromEntries(S.ETAPES.map((e) => [e.id, (e.verifier(db) || { status: 'null' }).status]));
+}, { T: tirage3(d.tir || {}), d });
+const PARFAIT3 = { cmp2: { tri: CMP2_JUSTE.tri, retenue: 'rail', justif: 'date-co2' }, ot1: OT1_JUSTE, ot2: OT2_JUSTE,
+  courriels: [{ a: 'contargo', objet: MAIL_OT1.objet, corps: MAIL_OT1.corps, pieces: ['fiche:ot1'] },
+    { a: 'rail', objet: MAIL_OT2.objet, corps: MAIL_OT2.corps, pieces: ['fiche:ot2'] },
+    { a: 'contargo', objet: MAIL_ANNUL.objet, corps: MAIL_ANNUL.corps, pieces: [] }],
+  appel: { reprises: 0 } };
+const avec3 = (f) => { const d = JSON.parse(JSON.stringify(PARFAIT3)); f(d); return d; };
+// Ce qui n'est PAS « ok » (jalon → état) : on nomme ce qui tombe, et tout le reste doit être vrai.
+const pasOk3 = (r) => Object.fromEntries(JALONS3.filter((j) => r[j] !== 'ok').map((j) => [j, r[j]]));
+// L'annulation passe AVANT le courriel au nouveau prestataire (dans le tableau ET dans les heures).
+const avantConf = (d) => { d.courriels.splice(1, 0, d.courriels.pop()); d.courriels[1].at = 150; d.courriels[2].at = 250; };
+const BONNE_ANNUL = 'Bonjour,\n\nNous annulons notre commande BARGE-2027-0311.\n\nCordialement,\nLea';
+
+await v('ENT-7.3 : jalons sans écran — le parcours juste ; chaque piège du brief fait tomber SON jalon seulement ; une erreur ne se paie qu’une fois ; l’ordre des envois se juge sur les HEURES', async () => {
+  egal(pasOk3(await jalons3(PARFAIT3)), {}, 'parcours juste');
+  // Le comparateur n° 2.
+  egal(pasOk3(await jalons3(avec3((d) => { d.cmp2.tri.barge.date = true; }))), { 'qualifier-barge': 'ko' }, 'barge « tient la date » (son devis dit toujours vendredi 9 h)');
+  egal(pasOk3(await jalons3(avec3((d) => { d.cmp2.tri.horsliste.liste = true; }))), { 'rechoisir-horsliste': 'ko' }, 'RailCo « dans la liste » (l’erreur induite)');
+  egal(pasOk3(await jalons3(avec3((d) => { d.cmp2.retenue = 'route'; }))), { 'rechoisir-rail': 'ko' }, 'route retenue');
+  egal(pasOk3(await jalons3(avec3((d) => { d.cmp2.retenue = 'horsliste'; }))), { 'rechoisir-rail': 'ko' }, 'RailCo retenu (le tri, lui, reste juste)');
+  egal(pasOk3(await jalons3(avec3((d) => { d.cmp2.retenue = 'barge'; }))), { 'rechoisir-rail': 'ko' }, 'barge retenue');
+  egal(pasOk3(await jalons3(avec3((d) => { d.cmp2.tri.horsliste.liste = true; d.cmp2.retenue = 'horsliste'; }))), { 'rechoisir-horsliste': 'ko', 'rechoisir-rail': 'ko' }, 'RailCo « oui » ET retenu : deux jalons, chacun une fois');
+  egal(pasOk3(await jalons3(avec3((d) => { d.cmp2.tri.route.date = false; d.cmp2.tri.rail.liste = false; }))), {}, 'route « en retard » et rail « hors liste » : non jugés (une erreur de tri hors barge / RailCo ne coûte rien de plus)');
+  // Le second ordre et le courriel au nouveau prestataire.
+  egal(pasOk3(await jalons3(avec3((d) => { d.courriels[1].pieces = ['fiche:ot1']; }))), { securiser: 'ko' }, 'ordre n° 1 joint au rail : « sécuriser » faux, l’annulation reste jugée sur ce courriel');
+  egal(pasOk3(await jalons3(avec3((d) => { d.courriels[1].pieces = []; }))), { securiser: 'ko', annuler: 'ko' }, 'courriel au rail sans aucune pièce jointe : le rail ne confirme rien, annuler Contargo laisserait le conteneur sans transport');
+  egal(pasOk3(await jalons3(avec3((d) => { d.courriels[1].a = 'contargo'; }))), { securiser: 'ko', annuler: 'ko' }, 'ordre n° 2 envoyé à Contargo : pas de nouveau prestataire, donc annuler faux aussi (le conteneur reste sans transport)');
+  egal(pasOk3(await jalons3(avec3((d) => { d.ot2.presta = 'contargo'; }))), { securiser: 'ko' }, 'ordre n° 2 : transporteur laissé sur Contargo');
+  egal(pasOk3(await jalons3(avec3((d) => { d.ot2.liv = 'dourges'; }))), { securiser: 'ko' }, 'ordre n° 2 : livraison à Dourges');
+  egal(pasOk3(await jalons3(avec3((d) => { d.ot2.limd = '2027-02-05'; }))), { securiser: 'ko' }, 'ordre n° 2 : date limite fausse');
+  egal(pasOk3(await jalons3(avec3((d) => { d.ot2.limh = '8:00'; }))), { securiser: 'ko' }, 'ordre n° 2 : heure limite fausse');
+  egal(pasOk3(await jalons3(avec3((d) => { d.ot2.limh = '14h'; }))), {}, 'ordre n° 2 : heure « 14h »');
+  egal(pasOk3(await jalons3(avec3((d) => { d.ot2.enl = 'bruay'; d.ot2.inst = []; }))), {}, 'enlèvement et instructions de l’ordre n° 2 : non jugés');
+  // Le MOMENT de l'annulation, sur les HEURES.
+  egal(pasOk3(await jalons3(avec3(avantConf))), { annuler: 'ko' }, 'annulation envoyée AVANT la confirmation du rail');
+  egal(pasOk3(await jalons3(avec3((d) => { d.courriels.pop(); }))), { annuler: 'ko' }, 'pas d’annulation, l’appel est fini');
+  const sansAppel = avec3((d) => { d.courriels.pop(); delete d.appel; });
+  egal(pasOk3(await jalons3(sansAppel)), { annuler: 'attente', 'appel-quai': 'attente', forme: 'attente' }, 'pas d’annulation, pas d’appel : rien de jugé en route');
+  egal(pasOk3(await jalons3(avec3((d) => { d.courriels[2].a = 'rail'; }))), { annuler: 'ko' }, 'annulation envoyée au RAIL : Contargo n’est jamais prévenu');
+  egal(pasOk3(await jalons3(avec3((d) => { d.courriels[2].a = 'routiers'; }))), { annuler: 'ko' }, 'annulation envoyée à la route');
+  egal(pasOk3(await jalons3(avec3((d) => { d.courriels[2].corps = 'Bonjour,\n\nNous annulons la commande.\n\nCordialement,\nLea'; d.courriels[2].objet = 'Annulation'; }))), { annuler: 'ko' },
+    'annulation sans le n° de la commande ni du conteneur');
+  egal(pasOk3(await jalons3(avec3((d) => { d.courriels[2].corps = 'Bonjour,\n\nMerci de bien vouloir annuler le conteneur PRPU5306413.\n\nCordialement,\nLea'; d.courriels[2].objet = 'Conteneur PRPU 530641 3'; }))), {},
+    'annulation qui nomme le conteneur sans espaces');
+  egal(pasOk3(await jalons3(avec3((d) => { d.courriels[2].corps = 'Bonjour,\n\nNous maintenons notre commande BARGE-2027-0311.\n\nCordialement,\nLea'; d.courriels[2].objet = 'Commande BARGE-2027-0311'; }))), { annuler: 'ko' }, 'courriel à Contargo qui maintient la commande');
+  // Les heures, pas la place dans le tableau : le tableau dit « l’annulation d’abord », les heures disent « le rail d’abord ».
+  egal(pasOk3(await jalons3(avec3((d) => { d.courriels[1].at = 300; d.courriels[2].at = 200; }))), { annuler: 'ko' }, 'tableau juste mais heures inversées : l’annulation est partie avant');
+  egal(pasOk3(await jalons3(avec3((d) => { d.courriels.splice(1, 0, d.courriels.pop()); d.courriels[1].at = 300; d.courriels[2].at = 200; }))), {},
+    'tableau « annulation d’abord » mais heures justes (rail à 200, annulation à 300) : l’annulation est partie après');
+  // Une erreur ne se paie qu'une fois : la route retenue et commandée, Contargo annulé après la confirmation de la route.
+  const route = avec3((d) => { d.cmp2.retenue = 'route'; d.ot2.presta = 'routiers'; d.courriels[1].a = 'routiers'; });
+  egal(pasOk3(await jalons3(route)), { 'rechoisir-rail': 'ko', securiser: 'ko' }, 'route retenue ET commandée, Contargo annulé après la confirmation de la route : 3 et 4 faux, 5 VRAI');
+  egal(pasOk3(await jalons3(avec3((d) => { d.cmp2.retenue = 'route'; d.ot2.presta = 'routiers'; d.courriels[1].a = 'routiers'; avantConf(d); }))),
+    { 'rechoisir-rail': 'ko', securiser: 'ko', annuler: 'ko' }, 'route commandée, mais Contargo annulé AVANT : les trois');
+  egal(pasOk3(await jalons3(avec3((d) => { d.cmp2.retenue = 'route'; }))), { 'rechoisir-rail': 'ko' }, 'route retenue mais ordre et courriel justes (rail) : un seul jalon');
+  // Le quai.
+  egal(pasOk3(await jalons3(avec3((d) => { d.appel.reprises = 2; }))), {}, '2 reprises');
+  egal(pasOk3(await jalons3(avec3((d) => { d.appel.reprises = 3; }))), { 'appel-quai': 'ko' }, '3 reprises (« vendredi 9 h comme prévu » compris)');
+  egal(pasOk3(await jalons3(avec3((d) => { d.appel.reprises = 1; d.appel.leurres = ['contargo']; }))), {}, 'mauvais numéro + 1 reprise');
+  egal(pasOk3(await jalons3(avec3((d) => { d.appel.reprises = 2; d.appel.leurres = ['claire']; }))), { 'appel-quai': 'ko' }, 'mauvais numéro + 2 reprises');
+  egal(pasOk3(await jalons3(avec3((d) => { d.appel.reprises = 2; d.leurresApres = ['contargo']; }))), {}, 'un numéro appelé APRÈS le quai ne compte pas');
+  // La forme.
+  const forme = (f) => avec3((d) => f(d.courriels));
+  egal(pasOk3(await jalons3(forme((L) => { L[1].corps = 'Salut,\n\nvoici le nouvel ordre.\n\nLea'; }))), { forme: 'ko' }, '« Salut » au rail');
+  egal(pasOk3(await jalons3(forme((L) => { L[1].corps = 'Bonjour,\n\nPeux-tu enregistrer ma commande ? Merci à toi.\n\nLea'; }))), { forme: 'ko' }, 'tutoiement au rail');
+  egal(pasOk3(await jalons3(forme((L) => { L[1].corps = 'Bonjour,\n\nVeuillez trouver ci-joint le nouvel ordre.\n\nCordialement'; }))), { forme: 'ko' }, 'sans signature');
+  egal(pasOk3(await jalons3(forme((L) => { L[1].corps = 'Veuillez trouver ci-joint le nouvel ordre.\n\nLea'; }))), { forme: 'ko' }, 'sans formule d’appel');
+  egal(pasOk3(await jalons3(forme((L) => { L[1].objet = ''; }))), { forme: 'ko' }, 'objet vide');
+  egal(pasOk3(await jalons3(forme((L) => { L[2].corps = 'Bonjour,\n\nPeux-tu annuler la commande BARGE-2027-0311 ?\n\nLea'; }))), { forme: 'ko' }, 'annulation tutoyée : seule la forme tombe, l’annulation reste valable');
+  egal(pasOk3(await jalons3(forme((L) => { L[2].corps = 'Annulons la commande BARGE-2027-0311.\n\nLea'; }))), { forme: 'ko' }, 'annulation sans formule d’appel');
+  egal(pasOk3(await jalons3(forme((L) => { L[1].corps = 'Bonjour,\n\nVoici le nouvel ordre.\n\nCordialement,\nService transport, Decathlon'; }))), {}, 'signature « Decathlon »');
+  egal(pasOk3(await jalons3(forme((L) => { L[0].corps = 'Salut'; L[0].objet = ''; }))), {}, 'le PREMIER courriel (ordre n° 1) n’est pas noté, même mal écrit');
+  // Rien de vrai sans le geste.
+  const vide = await jalons3({});
+  egal(JALONS3.map((j) => vide[j]), JALONS3.map(() => 'attente'), 'rien fait : tout « à faire »');
+  egal(vide['bonus-offre'], 'null', 'standard : pas de bonus');
+  const avantAlea = await jalons3({ ot1: OT1_JUSTE, courriels: [PARFAIT3.courriels[0]] });
+  egal(JALONS3.map((j) => avantAlea[j]), JALONS3.map(() => 'attente'), 'ordre n° 1 envoyé, rien ensuite : tout « à faire »');
+  const sansEnvoi = await jalons3({ cmp2: PARFAIT3.cmp2, envoye2: false, courriels: [PARFAIT3.courriels[0]] });
+  egal(JALONS3.slice(0, 3).map((j) => sansEnvoi[j]), ['attente', 'attente', 'attente'], 'comparateur n° 2 rempli mais pas envoyé');
+});
+
+await v('ENT-7.3 : l’imprévu ne part que sur un courriel à un prestataire AVEC l’ordre n° 1 (jamais à Claire, au quai, ni sans l’ordre, ni avec l’ordre n° 2) ; route et rail le déclenchent aussi', async () => {
+  const r = await pg.evaluate(async () => {
+    const S = await import('/contenus/decathlon-ent73.js');
+    const d = S.VOLET.declencheurs.find((x) => x.id === 'alea');
+    const essai = (a, pieces) => !!d.quand({ courriels: { [S.ID]: { envoyes: [{ a, pieces, objet: '', corps: '', at: 1 }] } } }, S.ID);
+    return { contargo: essai('contargo', ['fiche:ot1']), routiers: essai('routiers', ['fiche:ot1']), rail: essai('rail', ['fiche:ot1']),
+      claire: essai('claire', ['fiche:ot1']), quai: essai('quai', ['fiche:ot1']), sansPj: essai('contargo', []), autrePj: essai('contargo', ['cahier', 'avis']),
+      ot2: essai('contargo', ['fiche:ot2']), aucun: !!d.quand({}, S.ID) };
+  });
+  egal(r, { contargo: true, routiers: true, rail: true, claire: false, quai: false, sansPj: false, autrePj: false, ot2: false, aucun: false }, 'qui déclenche');
+});
+
+await v('ENT-7.3 : à l’écran, un courriel à Claire (avec l’ordre joint), puis à Contargo sans pièce, ne déclenchent pas l’imprévu ; le courriel au rail avec l’ordre n° 1 le déclenche', async () => {
+  await monter3({ uid: 'dk73-decl', db: { tirages: { [ID3]: tirage3() } } });
+  await comparateur3('fiche', CMP1_JUSTE);
+  await ordre3('fiche:ot1', OT1_JUSTE);
+  await courriel3({ a: 'claire', objet: 'Mon ordre', corps: 'Bonjour,\n\nvoici mon ordre.\n\nLea', pj: ['fiche:ot1'] });
+  egal(aleaMarque(await base()), false, 'courriel à Claire avec l’ordre joint');
+  await courriel3({ a: 'contargo', objet: 'Question', corps: 'Bonjour,\n\nPouvez-vous me confirmer le départ ?\n\nCordialement,\nLea' });
+  egal(aleaMarque(await base()), false, 'courriel à Contargo sans pièce jointe');
+  const R = (await entrants()).filter((x) => /^RE : /.test(x.subject));
+  egal(R.length, 1, 'une seule réponse (Contargo, sans pièce : « merci de nous transmettre l’ordre ») ; Claire ne répond pas');
+  vrai(/sans l’ordre de transport\. Merci de nous le transmettre en pièce jointe\./.test(R[0].text) && !/BARGE-2027/.test(R[0].text), R[0].text);
+  const mn = await menu3(); vrai(!mn.includes('fiche:cmp2') && !mn.includes('telephone'), 'pas de comparateur n° 2 : ' + mn);
+  await courriel3({ ...MAIL_OT1, a: 'rail' });
+  egal(aleaMarque(await base()), true, 'le rail avec l’ordre n° 1 déclenche l’imprévu (juste ou faux)');
+  const E = await entrants();
+  vrai(E.some((x) => /^Arrêt de navigation/.test(x.subject)) && E.some((x) => x.subject === 'Le message de Contargo'), 'les deux messages de l’aléa sont arrivés');
+  egal(E.filter((x) => PRIS_MSG3.test(`${x.subject} ${x.text}`)).map((x) => x.subject), [], 'messages neutres');
+});
+
+// ─────────────────────────────────────────────────────────── les deux parcours qui comptent : l'ordre RÉEL des envois, joué à l'écran
+async function jusquaCmp2(uid, o = {}) {
+  await monter3({ uid, aisance: o.aisance, db: { tirages: { [ID3]: tirage3(o.tirage || {}) } } });
+  await comparateur3('fiche', CMP1_JUSTE);
+  await ordre3('fiche:ot1', OT1_JUSTE);
+  await courriel3(MAIL_OT1);
+}
+await v('ENT-7.3 : annulation AVANT la confirmation du rail, jouée à l’écran — jalon « annuler » faux (16 / 20), tout le reste vrai ; Contargo répond pareil ; rien n’est dit à l’élève', async () => {
+  await jusquaCmp2('dk73-avant-conf');
+  await comparateur3('fiche:cmp2', CMP2_JUSTE);
+  await etape3('date');
+  await ordre3('fiche:ot2', OT2_JUSTE);
+  await courriel3(MAIL_ANNUL);                                       // d'abord l'annulation…
+  let E = await entrants();
+  const annul1 = E.filter((x) => /^RE : /.test(x.subject)).pop();
+  vrai(/Nous annulons votre commande BARGE-2027-0311, sans frais en raison de l’arrêt de navigation\./.test(annul1.text), 'Contargo annule sans rien dire du moment : ' + annul1.text);
+  await courriel3(MAIL_OT2);                                         // … puis la commande au rail
+  await appel3();
+  const n = await note();
+  egal(ko3(n), ['annuler'], 'seul le moment de l’annulation tombe');
+  proche(n.score, 16, 'note : 20 − 4');
+  E = await entrants();
+  egal(E.filter((x) => PRIS_MSG3.test(`${x.subject} ${x.text}`)).map((x) => x.subject), [], 'aucun message ne dit juste / faux / bien / erreur');
+});
+
+await v('ENT-7.3 : route retenue ET commandée, Contargo annulé après la confirmation de la route, jouée à l’écran — « offre retenue » et « ordre au rail » faux, « annuler » VRAI (14,5 / 20) ; la route répond avec ses horaires', async () => {
+  await jusquaCmp2('dk73-route');
+  await comparateur3('fiche:cmp2', { ...CMP2_JUSTE, retenue: 'route', justif: 'date-co2' });
+  await etape3('date');
+  await ordre3('fiche:ot2', { ...OT2_JUSTE, presta: 'routiers' });
+  await courriel3({ ...MAIL_OT2, a: 'routiers', objet: 'Ordre de transport OT-2027-0158 — conteneur PRPU 530641 3' });
+  let E = await entrants();
+  const rte = E.filter((x) => /^RE : /.test(x.subject)).pop();
+  vrai(/livraison à votre quai mercredi 10\/02 vers 11 h/.test(rte.text) && /OT-2027-0158/.test(rte.text) && /Routiers du Hainaut/.test(rte.text), 'confirmation de la route : ' + rte.text);
+  await courriel3(MAIL_ANNUL);
+  await appel3();
+  const n = await note();
+  egal(ko3(n), ['rechoisir-rail', 'securiser'], 'offre retenue et ordre au rail faux ; l’annulation, elle, est juste');
+  proche(n.score, 14.5, 'note : 20 − 2,5 − 3');
+  const q = (await base()).questions[ID3];
+  vrai(/Lundi tu as pris la barge, aujourd’hui la route\./.test(q['ce-qui-a-change'].texte.enonce), 'la question de transition suit SON choix : ' + q['ce-qui-a-change'].texte.enonce);
+  E = await entrants();
+  const note2 = E.find((x) => x.subject === 'Ton nouveau choix');
+  vrai(/Je note : Routiers du Hainaut\./.test(note2.text), 'Claire reprend la route : ' + note2.text);
+  egal(E.filter((x) => PRIS_MSG3.test(`${x.subject} ${x.text}`)).map((x) => x.subject), [], 'messages neutres');
+});
+
+await v('ENT-7.3 : pas d’annulation du tout, jouée à l’écran — « annuler » faux seulement APRÈS l’appel (« à faire » avant), tout le reste vrai (16 / 20) ; ordre n° 1 envoyé au rail : « sécuriser » faux seul', async () => {
+  await jusquaCmp2('dk73-sans-annul');
+  await comparateur3('fiche:cmp2', CMP2_JUSTE);
+  await etape3('date');
+  await ordre3('fiche:ot2', OT2_JUSTE);
+  await courriel3(MAIL_OT2);
+  let n = await note();
+  egal(n.detail.annuler, 'attente', 'avant l’appel : à faire');
+  await appel3();
+  n = await note();
+  egal(ko3(n), ['annuler'], 'après l’appel : faux, seul');
+  proche(n.score, 16, 'note');
+  // Le piège de l'ordre n° 1 renvoyé au rail.
+  await jusquaCmp2('dk73-ot1-rail');
+  await comparateur3('fiche:cmp2', CMP2_JUSTE);
+  await etape3('date');
+  await ordre3('fiche:ot2', OT2_JUSTE);
+  await courriel3({ ...MAIL_OT2, pj: ['fiche:ot1'] });
+  const R = (await entrants()).filter((x) => /^RE : /.test(x.subject)).pop();
+  vrai(/ordre de transport OT-2027-0151/.test(R.text), 'le rail confirme l’ordre n° 1 qu’on lui a envoyé : ' + R.text);
+  await courriel3(MAIL_ANNUL);
+  await appel3();
+  n = await note();
+  egal(ko3(n), ['securiser'], 'ordre n° 1 joint au rail : seul « sécuriser » tombe');
+  proche(n.score, 17, 'note : 20 − 3');
+});
+
+await v('ENT-7.3 : « Salut » et tutoiement à l’écran — seule la forme tombe (19 / 20) ; les réactions du chef de quai ne disent ni juste ni faux', async () => {
+  await jusquaCmp2('dk73-forme');
+  await comparateur3('fiche:cmp2', CMP2_JUSTE);
+  await etape3('date');
+  await ordre3('fiche:ot2', OT2_JUSTE);
+  await courriel3({ ...MAIL_OT2, corps: 'Salut,\n\nvoici le nouvel ordre, peux-tu le prendre ?\n\nLea' });
+  await courriel3(MAIL_ANNUL);
+  await appel3();
+  const n = await note();
+  egal(ko3(n), ['forme'], 'seule la forme tombe');
+  proche(n.score, 19, 'note');
+});
+
+await v('ENT-7.3 : le quai à l’écran — « vendredi 9 h comme prévu » + 2 autres maladresses = 3 reprises, jalon faux ; 2 reprises, vrai ; mauvais numéro + 2 reprises, faux ; ton sec compté ; la réponse juste porte le n° de l’AVIS', async () => {
+  const seed = { tirages: { [ID3]: tirage3() }, volets: { 'dk-ent73#alea': 1 },
+    courriels: { [ID3]: { envoyes: [{ a: 'contargo', pieces: ['fiche:ot1'], objet: '', corps: '', at: 1 }, { a: 'rail', pieces: ['fiche:ot2'], objet: '', corps: '', at: 2 }] } } };
+  for (const [uid, leurres, sauf, attendu, reprises] of [
+    ['dk73-q3', [], { accueil: ['salut', 'bateau'], changement: ['prevu'] }, 'ko', 3],
+    ['dk73-q2', [], { accueil: ['salut'], changement: ['prevu'] }, 'ok', 2],
+    ['dk73-l2', ['claire'], { accueil: ['salut', 'bateau'] }, 'ko', 2],
+    ['dk73-sec', [], { fin: ['sec'] }, 'ok', 1],
+  ]) {
+    await monter3({ uid, db: JSON.parse(JSON.stringify(seed)) });
+    await appel3({ leurres, sauf });
+    const n = await note();
+    egal(n.detail['appel-quai'], attendu, `${uid} : jalon du quai`);
+    egal((await base()).dialogues[ID3].quai.appels[0].reprises, reprises, `${uid} : reprises`);
+  }
+  await monter3({ uid: 'dk73-fil', db: JSON.parse(JSON.stringify(seed)) });
+  await aller('telephone');
+  await pg.click(`${Z} [data-dlg-appeler="quai"]`); await pause();
+  const dire = async (x) => { await pg.click(`${Z} [data-dlg-choix="${x}"]`); await pause(); };
+  const fil = () => pg.textContent(`${Z} [data-dlg-fil]`);
+  await dire('salut'); vrai(/Ça va\. C’est pour quoi \?/.test(await fil()), 'réaction à « Salut, ça va ? »');
+  await dire('bateau'); vrai(/Quel bateau \? Quel conteneur \?/.test(await fil()), 'réaction au bateau');
+  vrai(/conteneur PRPU 530641 3\./.test(await pg.textContent(`${Z} [data-dlg-choix="presente"]`)), 'le choix juste porte le n° de l’avis');
+  await dire('presente');
+  await dire('prevu'); vrai(/Comme prévu par barge \?/.test(await fil()), 'réaction à « vendredi 9 h comme prévu »');
+  await dire('inconnu'); vrai(/Le rail t’a confirmé une heure, non \?/.test(await fil()), 'réaction à « je ne sais pas encore quand »');
+  await dire('juste'); await dire('sec'); vrai(/… Bon\. À plus\./.test(await fil()), 'ton sec');
+  await pg.click(`${Z} [data-dlg-raccrocher]`); await pause();
+  egal((await base()).dialogues[ID3].quai.appels[0].reprises, 5, 'cinq maladresses = cinq reprises');
+  vrai(!PRIS_MSG3.test(await fil()), 'le fil de l’appel ne dit ni juste, ni faux, ni bien : ' + await fil());
+});
+
+await v('ENT-7.3 : les réponses automatiques des prestataires sont neutres, citent le n° ÉCRIT par l’élève et ne corrigent rien (avant et après l’imprévu, ordres n° 1 et n° 2, sans pièce)', async () => {
+  const r = await pg.evaluate(async () => {
+    const S = await import('/contenus/decathlon-ent73.js');
+    const D = await import('/contenus/decathlon-ent73-donnees.js');
+    const out = [];
+    for (const alea of [false, true]) for (const a of ['routiers', 'contargo', 'rail', 'quai', 'claire']) for (const pieces of [[], ['fiche:ot1'], ['fiche:ot2'], ['cahier']]) for (const corps of ['Bonjour', 'Nous annulons la commande']) {
+      const db = { tirages: {}, fiches: { ot1: { valeurs: { cont: 'PRPU 999999 9' }, envoye: { at: 1 } }, ot2: { valeurs: { cont: 'PRPU 999999 9' }, envoye: { at: 1 } } },
+        volets: alea ? { [`${D.ID_VOLET}#${D.ALEA}`]: 1 } : {} };
+      const rep = S.reponse({ a, objet: 'x', corps, pieces, at: 1 }, db);
+      out.push({ alea, a, pieces: pieces.join('+'), corps, texte: rep ? rep.texte : null });
+    }
+    return out;
+  });
+  const PRIS = /\b(juste|justes|faux|fausse|correct|correcte|bien|erreur|bravo)\b/i;
+  egal(r.filter((x) => x.texte && PRIS.test(x.texte)).map((x) => x.texte), [], 'une réponse dit juste / faux / bien');
+  egal(r.filter((x) => (x.a === 'quai' || x.a === 'claire') && x.texte !== null).length, 0, 'le quai et Claire ne répondent pas par courriel');
+  const avecOrdre = r.filter((x) => ['routiers', 'rail'].includes(x.a) && /fiche:ot/.test(x.pieces));
+  vrai(avecOrdre.length > 0 && avecOrdre.every((x) => /pour le conteneur PRPU 999999 9\./.test(x.texte)), 'les prestataires citent le n° écrit par l’élève');
+  const contAvant = r.find((x) => !x.alea && x.a === 'contargo' && x.pieces === 'fiche:ot1' && x.corps === 'Bonjour');
+  vrai(/Référence de commande : BARGE-2027-0311/.test(contAvant.texte), 'Contargo confirme avant l’imprévu : ' + contAvant.texte);
+  const contSans = r.find((x) => !x.alea && x.a === 'contargo' && x.pieces === '' && x.corps === 'Bonjour');
+  vrai(/sans l’ordre de transport/.test(contSans.texte), 'Contargo sans pièce : ' + contSans.texte);
+  const apresAnnul = r.filter((x) => x.alea && x.a === 'contargo' && x.corps === 'Nous annulons la commande');
+  vrai(apresAnnul.length === 4 && apresAnnul.every((x) => /Nous annulons votre commande BARGE-2027-0311, sans frais en raison de l’arrêt de navigation\./.test(x.texte)), 'Contargo annule sans frais après l’imprévu, avec ou sans pièce');
+  const apresAutre = r.filter((x) => x.alea && x.a === 'contargo' && x.corps === 'Bonjour');
+  vrai(apresAutre.length === 4 && apresAutre.every((x) => /reste arrêtée jusqu’au vendredi 05\/03\/2027/.test(x.texte) && !/annulons/.test(x.texte)), 'accusé neutre après l’imprévu');
+  const railOt2 = r.find((x) => x.alea && x.a === 'rail' && x.pieces === 'fiche:ot2' && x.corps === 'Bonjour');
+  vrai(/départ du train jeudi 04\/02 d’Anvers, terminal de Dourges vendredi 05\/02, livraison à votre quai vendredi 05\/02 vers 15 h/.test(railOt2.texte), 'rail : ' + railOt2.texte);
+});
+
+// ─────────────────────────────────────────────────────────── le confirmé : la cinquième offre aux deux comparateurs
+const BONUS3 = { 'b73-heure': 'date', 'b73-homonyme': 'liste', 'b73-suivant': 'date' };
+await v('ENT-7.3 : confirmé — la 5e offre est aux DEUX comparateurs et dans le message de Claire ; écartée dans la bonne colonne +0,5, gardée 0 ; standard → null ; le mot « bonus » n’est pas à l’écran', async () => {
+  for (const [piece, col] of Object.entries(BONUS3)) {
+    const ok = (tri) => jalons3({ tir: { bonus: [piece] }, cmp2: { tri }, ...(tri ? {} : {}) });
+    const statut = async (tri) => (await ok(tri))['bonus-offre'];
+    egal(await statut({ bonus1: { liste: col !== 'liste', date: col !== 'date' } }), 'ok', `${piece} écartée dans « ${col} »`);
+    egal(await statut({ bonus1: { liste: true, date: true } }), 'ko', `${piece} gardée`);
+    egal(await statut({ bonus1: { liste: col === 'liste', date: col === 'date' } }), 'ko', `${piece} : « non » dans la mauvaise colonne`);
+    const nonEnvoye = await jalons3({ tir: { bonus: [piece] }, cmp2: { tri: {} }, envoye2: false });
+    egal(nonEnvoye['bonus-offre'], 'attente', `${piece} : comparateur n° 2 non envoyé`);
+  }
+  egal((await jalons3({ cmp2: { tri: { bonus1: { liste: true, date: true } } } }))['bonus-offre'], 'null', 'standard : null même avec une ligne « bonus1 » saisie');
+  // À l'écran : cinq lignes aux deux comparateurs, cinq devis, le message de Claire en joint huit.
+  const seedConf = { tirages: { [ID3]: tirage3({ bonus: ['b73-homonyme'] }) }, volets: { 'dk-ent73#alea': 1 } };
+  await monter3({ uid: 'dk73-conf', aisance: 'confirme', db: seedConf });
+  const E = await entrants();
+  egal(E[0].pieces.length, 8, 'le message de Claire joint 8 pièces (cahier, liste, 5 devis, avis)');
+  for (const ecran of ['fiche', 'fiche:cmp2']) {
+    await aller(ecran);
+    egal(await pg.$$eval(`${Z} [data-ouinon^="tri|"][data-ouinon$="|0"]`, (L) => L.length), 10, `${ecran} : 5 offres × 2 colonnes`);
+    vrai(await present('[data-ouinon="tri|bonus1|liste|0"]'), `${ecran} : la ligne de la 5e offre`);
+    vrai(/Routiers du Haynaut/.test(await pg.textContent(`${Z} [data-fiche]`)), `${ecran} : le nom de la 5e offre`);
+    vrai(!/bonus/i.test(await pg.evaluate((Z) => document.querySelector(Z).innerText, Z)), `${ecran} : le mot « bonus » est à l’écran`);
+  }
+  // La note : cmp2 seul, rempli à l'écran (qualifier 3 + RailCo 1,5 + rail 2,5 + 2 questions au fil = 9), plus 0,5 si la 5e offre est écartée.
+  const chiffresTous = () => pg.evaluate(async () => {
+    const D = await import('/contenus/decathlon-ent73-donnees.js');
+    return Object.fromEntries(D.jeuEleve(window.__f.db).offres.map((o) => [o.slot, { prix: o.prix, co2: o.co2 }]));
+  });
+  for (const [uid, garde, attendu] of [['dk73-conf-ok', false, 9.5], ['dk73-conf-ko', true, 9]]) {
+    await monter3({ uid, aisance: 'confirme', db: JSON.parse(JSON.stringify(seedConf)) });
+    const tri = { ...CMP2_JUSTE.tri, bonus1: { liste: garde, date: garde } };
+    await comparateur3('fiche:cmp2', { ...CMP2_JUSTE, tri, chiffres: await chiffresTous() });
+    const n = await note();
+    proche(n.score, attendu, `${uid} : note (9 + 0,5 si la 5e offre est écartée)`);
+  }
+});
+
+// ─────────────────────────────────────────────────────────── Avant de commencer
+await v('ENT-7.3 : Avant de commencer — 4 questions tirées (2 préparation, 2 droit), la banque en a au moins le double par rubrique ; d4 est la question de l’art. 1231-1', async () => {
+  await monter3({ uid: 'dk73-ouverture', sansOuverture: true });
+  const db = await base();
+  const r = await pg.evaluate(async () => {
+    const { QUESTIONS } = await import('/contenus/questions/ENT-7.3.js');
+    const d4 = QUESTIONS.liste.find((q) => q.id === 'd4');
+    return { rub: Object.fromEntries(QUESTIONS.liste.filter((q) => q.type === 'ouverture').map((q) => [q.id, q.rubrique])), tirage: QUESTIONS.ouverture.tirage,
+      d4: [d4.enonce, d4.choix.find((c) => c.v === d4.juste).lib, d4.choix.map((c) => c.lib).sort()] };
+  });
+  const ids = db.questions[ID3]['@tirage'].ids;
+  const parRub = (L) => L.reduce((o, id) => ({ ...o, [r.rub[id]]: (o[r.rub[id]] || 0) + 1 }), {});
+  const tri = (o) => Object.fromEntries(Object.entries(o).sort());
+  egal(tri(parRub(ids)), tri({ preparation: 2, droit: 2 }), 'tirées : ' + ids.join(', '));
+  egal(Object.keys(r.rub).sort(), ['d1', 'd2', 'd3', 'd4', 'p1', 'p2', 'p3', 'p4', 'p5'], 'la banque');
+  const banque = parRub(Object.keys(r.rub));
+  vrai(Object.entries(r.tirage).every(([k, n]) => banque[k] >= 2 * n), 'banque : ' + JSON.stringify(banque));
+  vrai(await present('.ent-nav[data-vue="ouverture"]'), 'écran d’ouverture au menu');
+  egal(r.d4, ['Un transporteur te confirme un transport par écrit, puis ne vient pas, sans raison valable. Que peut faire Decathlon ?',
+    'Lui demander de réparer le préjudice : le contrat l’engageait.', ['Le signaler à la douane.', 'Lui demander de réparer le préjudice : le contrat l’engageait.', 'Rien : un courriel n’engage pas.']], 'd4 (décision de Tristan)');
+});
+
+// ─────────────────────────────────────────────────────────── l'équité, vérifiée SANS la fonction de la séance
+await v('ENT-7.3 : équité vérifiée à part (300 élèves, sans `ecartsEquite`) — RailCo moins cher et moins émetteur que le rail, rail entre barge et route, barge hors date, rail et route à l’heure', async () => {
+  const r = await pg.evaluate(async () => {
+    const D = await import('/contenus/decathlon-ent73-donnees.js');
+    const U = await import('/contenus/decathlon.js');
+    const mal = [];
+    for (let i = 0; i < 300; i++) {
+      const g = `equite-${i}|${D.ID}`, t = D.TIRAGE.tirer(g, { confirme: i % 2 === 0 });
+      const J = D.jeuEleve({ tirages: { [D.ID]: { graine: g, ...t } } });
+      const o = (s) => J.offres.find((x) => x.slot === s);
+      const [route, barge, rail, rc] = ['route', 'barge', 'rail', 'horsliste'].map(o);
+      const c = (m) => U.co2(J.poids, 'rouvignies', m);
+      if (!(rc.co2 < rail.co2)) mal.push(`${i} : RailCo ${rc.co2} ≥ rail ${rail.co2}`);
+      if (!(rc.prix < Math.min(route.prix, barge.prix, rail.prix))) mal.push(`${i} : RailCo pas le moins cher`);
+      if (!(barge.co2 < rail.co2 && rail.co2 < route.co2)) mal.push(`${i} : ordre du CO₂`);
+      if ([c('barge'), c('rail'), c('route')].join() !== [barge.co2, rail.co2, route.co2].join()) mal.push(`${i} : CO₂ pas celui de la carte`);
+      if (barge.tient || !rail.tient || !route.tient) mal.push(`${i} : dates après l’aléa`);
+      if (J.bonne.slot !== 'rail' || rc.referencee) mal.push(`${i} : bonne réponse`);
+      if (![route, barge, rail, rc].every((x) => x.tientAvant)) mal.push(`${i} : une offre ne tient pas la date avant l’aléa`);
+    }
+    return mal;
+  });
+  egal(r, [], 'écarts');
+});
+
+// ─────────────────────────────────────────────────────────── l'écran
+const SEED_ECRAN3 = {
+  cmp1: (bonus) => ({ tirages: { [ID3]: tirage3({ bonus }) } }),
+  ot1: (bonus) => ({ tirages: { [ID3]: tirage3({ bonus }) }, fiches: { cmp1: { valeurs: {}, envoye: { at: 1 } } } }),
+  cmp2: (bonus) => ({ tirages: { [ID3]: tirage3({ bonus }) }, volets: { 'dk-ent73#alea': 1 }, fiches: { cmp1: { valeurs: {}, envoye: { at: 1 } } } }),
+  ot2: (bonus) => ({ tirages: { [ID3]: tirage3({ bonus }) }, volets: { 'dk-ent73#alea': 1 },
+    fiches: { cmp1: { valeurs: {}, envoye: { at: 1 } }, cmp2: { valeurs: {}, envoye: { at: 1 } }, ot1: { valeurs: OT1_JUSTE, envoye: { at: 1 } } },
+    questions: { [ID3]: { 'ce-qui-a-change': { arrivee: 1, premiere: 'date', duree: 1 } } } }),
+};
+for (const [w, h] of [[1366, 768], [1280, 720]]) {
+  await v(`ENT-7.3 : ergonomie ${w} × ${h} — comparateurs n° 1 et n° 2 (confirmé, 5 offres) et ordres n° 1 et n° 2 : bouton d’envoi visible, la page ne défile pas, la fiche défile dans sa colonne`, async () => {
+    await pg.setViewportSize({ width: w, height: h });
+    try {
+      const ferme = async () => { await pg.$$eval('[data-carte-fermer]', (L) => L.forEach((b) => b.click())); await pause(150); };
+      for (const [ecran, cle] of [['fiche', 'cmp1'], ['fiche:ot1', 'ot1'], ['fiche:cmp2', 'cmp2'], ['fiche:ot2', 'ot2']]) {
+        await monter3({ uid: `dk73-ecran-${cle}`, aisance: 'confirme', db: SEED_ECRAN3[cle](['b73-heure']) });
+        await aller(ecran); await ferme();
+        const m = await pg.evaluate(() => {
+          window.scrollTo(0, 0);
+          const cartes = document.querySelector('#fTest .ent-cartes-ancre'), d = document.scrollingElement;
+          const c = cartes ? cartes.getBoundingClientRect().height : 0;
+          const p = document.querySelector('#fTest .ent-page');
+          return { page: p.scrollHeight - c, h: innerHeight, large: d.scrollWidth - innerWidth,
+            bouton: document.querySelector('#fTest [data-fiche-envoyer]').getBoundingClientRect().bottom };
+        });
+        vrai(m.page <= h + 1 && m.bouton <= h && m.large <= 0, `${cle} : page ${Math.round(m.page)}, bouton ${Math.round(m.bouton)}, large ${m.large} (pour ${h})`);
+      }
+    } finally { await pg.setViewportSize({ width: 1366, height: 900 }); }
+  });
+}
+
+await v('ENT-7.3 : charte — aucun aplat vert dans la zone de travail (comparateurs, ordres, carte avec la marque, courriel, téléphone) ; aucun champ de saisie n’a d’aplat vert ni d’aplat d’accent', async () => {
+  const aplats = () => pg.evaluate(() => {
+    const main = document.querySelector('#fTest .ent-main');
+    const cs = getComputedStyle(main);
+    const rgb = (h) => { const d = document.createElement('i'); d.style.color = h; document.body.append(d); const c = getComputedStyle(d).color; d.remove(); return c; };
+    const V = rgb(cs.getPropertyValue('--vert').trim()), A = rgb(cs.getPropertyValue('--ardoise').trim());
+    const tous = [...main.querySelectorAll('*')];
+    return { vert: tous.filter((e) => getComputedStyle(e).backgroundColor === V).map((e) => e.className || e.tagName),
+      champs: tous.filter((e) => /^(INPUT|SELECT|TEXTAREA)$/.test(e.tagName) && [V, A].includes(getComputedStyle(e).backgroundColor)).map((e) => e.id || e.tagName) };
+  });
+  const sans = async (quoi) => { const a = await aplats(); egal([a.vert, a.champs], [[], []], quoi); };
+  await monter3({ uid: 'dk73-charte1', db: SEED_ECRAN3.cmp1([]) });
+  await comparateur3('fiche', CMP1_JUSTE, { envoi: false }); await sans('comparateur n° 1 rempli');
+  const seed = SEED_ECRAN3.cmp2([]);
+  seed.fiches.ot1 = { valeurs: OT1_JUSTE, envoye: { at: 1 } };
+  seed.courriels = { [ID3]: { envoyes: [{ a: 'contargo', pieces: ['fiche:ot1'], objet: '', corps: '', at: 1 }, { a: 'rail', pieces: ['fiche:ot2'], objet: '', corps: '', at: 2 }] } };
+  await monter3({ uid: 'dk73-charte2', db: seed });
+  await comparateur3('fiche:cmp2', CMP2_JUSTE, { envoi: false }); await sans('comparateur n° 2 rempli');
+  for (const ecran of ['fiche:ot1', 'itineraires', 'mail', 'telephone']) {
+    await aller(ecran);
+    if (ecran === 'itineraires') await pg.waitForSelector(`${Z} [data-ct-svg] [data-ci-marque]`);
+    if (ecran === 'telephone') { await pg.click(`${Z} [data-dlg-appeler="quai"]`); await pause(); await pg.click(`${Z} [data-dlg-choix="salut"]`); await pause(); }
+    await sans(ecran);
+  }
+  await monter3({ uid: 'dk73-charte3', db: SEED_ECRAN3.ot2([]) });
+  await aller('fiche:ot2'); await sans('ordre n° 2');
+});
+
 await v('ENT-7.1 : aucune erreur JavaScript pendant le bloc', async () => { egal(erreursF.filter((e) => !/favicon/.test(e)), [], 'erreurs'); });
 await F.fermer();
 }

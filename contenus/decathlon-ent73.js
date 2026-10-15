@@ -382,7 +382,9 @@ export function reponse(c, db) {
 export const COURRIEL = { carnet: CARNET, pieces: ['cahier', 'avis'], reponse };
 
 // ─────────────────────────────────────────────────────────────── le téléphone (le chef de quai)
-const aEnvoyeOrdre2 = (db, seance) => courrielsEnvoyes(db, seance).some((c) => c.pieces.includes(`fiche:${OT2}`));
+// Le téléphone s'ouvre quand le nouvel ordre est parti (ou qu'un ordre est parti chez le nouveau prestataire : l'ordre n° 1 renvoyé par erreur ne ferme pas l'appel
+// au quai, sinon l'élève resterait sans bilan).
+const aEnvoyeOrdre2 = (db, seance) => { const L = courrielsEnvoyes(db, seance); return L.some((c) => c.pieces.includes(`fiche:${OT2}`)) || !!courrielNouveau(L); };
 export const TELEPHONE = {
   libelle: 'Téléphone',
   quand: aEnvoyeOrdre2,
@@ -496,8 +498,13 @@ const jalonCmp2 = (id, groupe, titre, juste) => ({ id, titre, groupe: GROUPES[gr
 
 // Les courriels, lus à l'HEURE (`at`) : jamais sur l'ordre du tableau.
 const parHeure = (L) => L.slice().sort((a, b) => a.at - b.at);
-// Le premier courriel qui porte l'ordre n° 2 à un prestataire AUTRE que Contargo : la confirmation du nouveau prestataire naît avec lui.
-export const courrielNouveau = (L) => parHeure(L).find((c) => c.a !== 'contargo' && PRESTA_MAIL.includes(c.a) && c.pieces.includes(`fiche:${OT2}`));
+// Le premier courriel, APRÈS l'ordre n° 1, qui porte un ordre (le n° 2, ou le n° 1 envoyé par erreur) à un prestataire AUTRE que Contargo : la
+// confirmation du nouveau prestataire naît avec lui (une erreur ne se paie qu'une fois : l'ordre n° 1 envoyé au rail coûte « sécuriser », pas « annuler »).
+export const courrielNouveau = (L) => {
+  const p = premierOrdre(L);
+  return p ? parHeure(L).find((c) => c.at > p.at && c.a !== 'contargo' && PRESTA_MAIL.includes(c.a)
+    && (c.pieces.includes(`fiche:${OT2}`) || c.pieces.includes(`fiche:${OT1}`))) : undefined;
+};
 // Une annulation : un courriel à Contargo, après l'ordre n° 1, qui dit « annul » ET nomme la commande ou le conteneur (celui de l'avis ou celui que l'élève a écrit).
 export function annulation(c, db, apres) {
   if (c.a !== 'contargo' || !(c.at > apres.at)) return false;
@@ -529,8 +536,13 @@ export const ETAPES = [
   jalonCmp2('rechoisir-rail', 'rechoisir', 'La décision : l’offre qui émet le moins de CO₂ parmi celles qui tiennent encore la date et sont référencées', (v, J) => v[B.retenue] === J.bonne.slot),
   { id: 'securiser', titre: 'La commande : l’ordre n° 2 envoyé au rail, bien rempli', groupe: GROUPES.securiser, poids: POIDS.securiser,
     verifier(db) {
-      const L = courrielsEnvoyes(db, ID);
-      if (!L.some((c) => c.pieces.includes(`fiche:${OT2}`))) return attente;
+      const L = courrielsEnvoyes(db, ID), p = premierOrdre(L);
+      if (!p) return attente;
+      // « À faire » tant que l'élève n'a rien envoyé de plus au nouveau prestataire ; un courriel à un prestataire autre que Contargo sans l'ordre
+      // n° 2 (par exemple l'ordre n° 1 envoyé une seconde fois) se juge : faux, sinon l'élève resterait sans bilan.
+      const ot2 = L.some((c) => c.pieces.includes(`fiche:${OT2}`));
+      const ailleurs = L.some((c) => c.at > p.at && c.a !== 'contargo' && PRESTA_MAIL.includes(c.a));
+      if (!ot2 && !ailleurs) return attente;
       const o = fiche(db, OT2).v;
       const rempli = o[BO.presta] === BONNES.presta && o[BO.liv] === BONNES.liv && o[BO.limd] === LIMITE.iso && lireHeure(o[BO.limh]) === LIMITE.h * 60;
       return rempli && L.some((c) => c.a === 'rail' && c.pieces.includes(`fiche:${OT2}`)) ? ok : ko;
@@ -549,15 +561,16 @@ export const ETAPES = [
     poids: POIDS['appel-quai'], juge: (a, db) => reprises(a) + leurresAppeles(db.dialogues && db.dialogues[ID], { avant: DIALOGUE }).length <= 2 }), ecran: undefined },
   { id: 'forme', titre: 'Les courriels : un objet clair, une formule d’appel, le vouvoiement et une signature', groupe: GROUPES.forme, poids: POIDS.forme,
     verifier(db) {
-      const L = courrielsEnvoyes(db, ID);
-      const nv = courrielNouveau(L);
-      if (!nv) return attente;
-      const ann = courrielAnnulation(L, db);
-      const p = premierOrdre(L);
-      const dernierContargo = p ? parHeure(L).filter((c) => c.a === 'contargo' && c.at > p.at).pop() : undefined;
-      const c2 = ann || dernierContargo;
-      if (!c2 && !dialogueFini(DIALOGUE)(db, ID)) return attente;
-      return formeCourriel(nv, db, motsOrdre2(db)) && (!c2 || formeCourriel(c2, db, motsAnnulation(db))) ? ok : ko;
+      // Le courriel au nouveau prestataire (à défaut, le dernier courriel envoyé à un prestataire autre que Contargo après l'ordre n° 1) et le courriel
+      // d'annulation (à défaut, le dernier courriel à Contargo après l'ordre n° 1) : chacun jugé s'il existe. Jugé quand les deux existent, ou l'appel fini.
+      const L = courrielsEnvoyes(db, ID), p = premierOrdre(L);
+      if (!p) return attente;
+      const apres = parHeure(L).filter((c) => c.at > p.at);
+      const nv = courrielNouveau(L) || apres.filter((c) => c.a !== 'contargo' && PRESTA_MAIL.includes(c.a)).pop();
+      const ann = courrielAnnulation(L, db) || apres.filter((c) => c.a === 'contargo').pop();
+      if (!(dialogueFini(DIALOGUE)(db, ID) || (nv && ann))) return attente;
+      if (!nv && !ann) return ko;
+      return (!nv || formeCourriel(nv, db, motsOrdre2(db))) && (!ann || formeCourriel(ann, db, motsAnnulation(db))) ? ok : ko;
     } },
   // Le bonus du confirmé : la cinquième offre du comparateur n° 2, écartée pour la bonne raison. `null` si l'élève ne l'a pas reçue.
   { id: 'bonus-offre', bonus: true, titre: 'Offre en plus écartée pour la bonne raison',
