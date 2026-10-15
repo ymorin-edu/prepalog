@@ -1588,7 +1588,9 @@ export function creerQuai(Q, opts = {}) {
   }
   // Le contrôleur de l'animation, posé sur la scène affichée. Les événements du temps du quai
   // (porte ouverte, chaque palette posée) ne passent qu'une fois, jamais en « revoir » ; s'ils
-  // n'ont pas tous eu lieu quand l'écran disparaît, ils sont appliqués d'un coup.
+  // n'ont pas tous eu lieu quand l'écran disparaît, ils sont appliqués d'un coup. Une seule
+  // sauvegarde, à la fin de l'animation (15/10/2026, quota : chaque palette en coûtait une) ; une page
+  // rechargée en plein déchargement le termine d'un coup à la réouverture (`html`), rien n'est perdu.
   function evenements(e, t, ci = ca(e)) {
     let fait = false;
     const k = K(e, ci), P = PAL[ci];
@@ -1605,13 +1607,13 @@ export function creerQuai(Q, opts = {}) {
     if (!svg) return null;
     const g = (n) => svg.querySelector(`[data-g="${n}"]`);
     const N = PAL[ca(e)].length, FIN = fin(N);
-    let t = 0, t0 = null, raf = null;
+    let t = 0, t0 = null, raf = null, touche = false;
     const a = {
       rejeu,
       finir() {
         cancelAnimationFrame(raf); raf = null;
         if (ui.anim === a) ui.anim = null;
-        if (!rejeu && evenements(e, FIN)) api.sauver();
+        if (!rejeu && (evenements(e, FIN) || touche)) api.sauver();
       },
     };
     const dessinerT = () => {
@@ -1633,7 +1635,7 @@ export function creerQuai(Q, opts = {}) {
       if (!svg.isConnected) { a.finir(); return; }
       if (t0 === null) t0 = now - t;
       t = now - t0;
-      if (!rejeu && evenements(e, t)) { api.sauver(); majHorloges(z, e); }
+      if (!rejeu && evenements(e, t)) { touche = true; majHorloges(z, e); }
       dessinerT();
       if (t >= FIN) { a.finir(); api.redessiner(); return; }
       raf = requestAnimationFrame(boucle);

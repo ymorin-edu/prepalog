@@ -2073,8 +2073,11 @@ export function creerEntreprise(U) {
       // Le chrono réel. Il compte en secondes, par écart d'horloge (un onglet en arrière-plan ne
       // reçoit plus qu'un tic par minute), s'arrête à la clôture de la réception ou à la remise
       // de la copie, et ne tourne pas tant qu'on ne sait pas si la copie est déjà rendue. Il est
-      // rangé dans la base toutes les 60 s et à la sortie : il survit à un rechargement. (60 s et non
-      // 10 s : chaque sauvegarde est une écriture Firebase, et le quota gratuit est compté par jour.)
+      // rangé dans la base à la sortie et, en route, par la sauvegarde du temps passé (toutes les 2 min,
+      // ci-dessus) : il survit à un rechargement. Là où cette remontée n'existe pas (évaluation, enseignant),
+      // il se range lui-même toutes les 120 s. Avant le 15/10/2026 il se rangeait toutes les 60 s en plus de la
+      // remontée des 2 min : 120 écritures Firebase par élève et par heure de quai sans aucun geste, mesuré
+      // sur Spartoo le 14/10 (chantier 7, options B et C) ; au pire, 2 min de chrono sont perdues au lieu d'une.
       // Le tiers-temps de l'élève (brief MOTEUR-tiers-temps, à venir) est recopié dans l'état à
       // chaque ouverture : `noter(db)` et le ramassage le lisent là.
       let minuterie = null;
@@ -2100,7 +2103,7 @@ export function creerEntreprise(U) {
           const q = etatQuai();
           if (q.fini) return;
           q.reel = Math.round(((q.reel || 0) + dt) * 10) / 10;
-          if (t - sauve >= 60000) { sauve = t; ctx.jeu.sauver(); }
+          if ((COPIE || estProf) && t - sauve >= 120000) { sauve = t; ctx.jeu.sauver(); }
           if (E.vue === 'quai') VQUAI.tic(hote.querySelector('#entMain'), q);
         }, 1000);
         window.addEventListener('pagehide', sauverChrono);

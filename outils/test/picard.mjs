@@ -56,12 +56,12 @@ const monter = (p, opts = {}) => p.evaluate(async (o) => {
   const CLE = 'essai-quai-base';
   const db = o.garder ? JSON.parse(localStorage.getItem(CLE) || '{}') : {};
   const moteur = creerEntreprise(U);
-  window.__q = { db, U, E, moteur, remis: null, enregistres: [] };
+  window.__q = { db, U, E, moteur, remis: null, enregistres: [], sauvegardes: 0 };
   moteur.rendre(hote, {
     meta: { id: 'essai-quai', code: 'ESSAI', titre: 'Picard — essai', portee: 'eleve', immersif: true, copie: !!o.evaluation },
     profil: { prenom: 'Lea', nom: 'Test', role: o.role || 'eleve' },
     tiersTemps: !!o.tiers,
-    jeu: { etat: () => db, sauver: () => { if (o.garder) localStorage.setItem(CLE, JSON.stringify(db)); } },
+    jeu: { etat: () => db, sauver: () => { window.__q.sauvegardes++; if (o.garder) localStorage.setItem(CLE, JSON.stringify(db)); } },
     enregistrer: (r) => { window.__q.enregistres.push(JSON.parse(JSON.stringify(r))); }, quitter: () => {}, codeStock: 'ABC',
     lireScore: async () => null,
     rendreCopie: async (res) => { window.__q.remis = res; return { rendu: Date.now() }; },
@@ -352,6 +352,21 @@ await v('quai : déchargement — la porte s’ouvre, les palettes arrivent une 
   await pg.waitForTimeout(600);
   await clic(pg, '[data-q="passer"]');
   egal((await etat(pg)).minute, 5.5, '« Revoir » a coûté du temps');
+});
+
+// Quota (15/10/2026, option C) : pendant l'animation, chaque palette posée n'écrit plus en base ; une seule
+// sauvegarde quand l'animation finit (ou qu'on la passe). Éprouvé : remettre `api.sauver()` dans la boucle
+// de `animer` fait tomber ce cas (6 sauvegardes au lieu d'une).
+await v('quai : l’animation du déchargement ne sauve qu’une fois, à la fin (pas une fois par palette)', async () => {
+  await monter(pg);
+  await clic(pg, '[data-q="decharger"]');
+  await pg.waitForTimeout(300);
+  const apresClic = await pg.evaluate(() => window.__q.sauvegardes);
+  await pg.waitForFunction(() => /2 \/ 5/.test(document.querySelector('[data-q-nb]')?.textContent || ''), null, { timeout: 8000 });
+  egal(await pg.evaluate(() => window.__q.sauvegardes), apresClic, 'sauvegarde pendant l’animation (palettes posées)');
+  await clic(pg, '[data-q="passer"]');
+  egal((await etat(pg)).evts, 6, 'déchargement non terminé');
+  egal(await pg.evaluate(() => window.__q.sauvegardes), apresClic + 1, 'sauvegardes à la fin de l’animation');
 });
 
 await v('quai : huit palettes — toutes posées sur le quai, 8 min 30 de déchargement', async () => {
@@ -648,6 +663,32 @@ await v('zone de calcul (guidage) : la ligne « détail » du bilan (non compté
   });
   egal([l.fait, l.ok, l.compte], ['12 par couche × 5 couches − 3', true, false], 'ligne détail de P1');
 });
+
+/* ========================================================= chrono : sauvegardes */
+
+// Quota (15/10/2026, option B) : le chrono du quai ne se range plus toutes les 60 s. En entraînement, c'est la
+// remontée du temps passé (toutes les 2 min) qui porte la sauvegarde ; en évaluation, où elle n'existe pas,
+// le chrono se range toutes les 120 s. Dans les deux cas : 2 sauvegardes en 5 min, sans aucun geste.
+// Éprouvé : remettre `t - sauve >= 60000` sans condition fait tomber les deux cas (7 et 5 sauvegardes).
+// Horloge simulée sur une page neuve : `clock.install()` doit précéder la pose des minuteries.
+for (const [nom, opts, attendu] of [
+  ['entraînement', {}, 2],
+  ['évaluation', { evaluation: true }, 2],
+]) {
+  await v(`quai : chrono sans geste pendant 5 min (${nom}) — ${attendu} sauvegardes, plus une toutes les 60 s`, async () => {
+    const p = await nouvellePage();
+    try {
+      await p.clock.install();
+      await monter(p, opts);
+      await p.clock.runFor(1500);
+      const avant = await p.evaluate(() => window.__q.sauvegardes);
+      await p.clock.runFor(300000);
+      const n = (await p.evaluate(() => window.__q.sauvegardes)) - avant;
+      egal(n, attendu, 'sauvegardes en 5 min');
+      vrai((await etat(p, opts)).reel >= 290, 'le chrono n’a pas compté les 5 min');
+    } finally { await p.close(); }
+  });
+}
 
 /* ========================================================= évaluation */
 
@@ -1871,7 +1912,7 @@ await v('ENT-4.4 : sous le logo Picard dans Simulog, elle s’ouvre sur l’accu
 await v('ENT-4.4 : Précédent par erreur — copie non rendue, travail gardé, chrono arrêté dehors puis repris', async () => {
   const { ctx, pg: p, erreurs } = await contexte({ viewport: { width: 1366, height: 1000 } });
   // Horloge simulée (06/10/2026, lot 2 de MOTEUR-tests-rapides) : le temps s'écoule normalement, et
-  // `runFor` l'avance d'un coup en déclenchant les minuteries du chrono (tic 1 s, sauvegarde 60 s).
+  // `runFor` l'avance d'un coup en déclenchant les minuteries du chrono (tic 1 s, sauvegarde 120 s en évaluation).
   // Installée avant l'ouverture de la séance, donc avant que le chrono ne pose sa minuterie.
   await p.clock.install();
   // L'enseignant : un groupe de 1re, un élève, ENT-4.4 ouverte au groupe.
@@ -1919,10 +1960,10 @@ await v('ENT-4.4 : Précédent par erreur — copie non rendue, travail gardé, 
   const a = await lire();
   egal([a.ticketRep, a.rendu], ['long', false], 'travail / copie après Précédent');
   vrai(a.reel >= 2.5, 'chrono non enregistré à la sortie : ' + a.reel);
-  // Dehors, le chrono ne tourne pas. 61 s : au-delà de sa sauvegarde toutes les 60 s, sans quoi un
-  // chrono resté en marche ne laisserait aucune trace (éprouvé : avec 3 s, le sabotage passait ; avec
-  // l'horloge simulée, 61 s avancées d'un coup, le sabotage tombe toujours — éprouvé le 06/10/2026).
-  await p.clock.runFor(61000);
+  // Dehors, le chrono ne tourne pas. 121 s : au-delà de sa sauvegarde toutes les 120 s (en évaluation ; 60 s
+  // avant le 15/10/2026), sans quoi un chrono resté en marche ne laisserait aucune trace (éprouvé : avec 3 s,
+  // le sabotage passait ; avec l'horloge simulée, 121 s avancées d'un coup, le sabotage tombe toujours).
+  await p.clock.runFor(121000);
   egal((await lire()).reel, a.reel, 'chrono qui tourne hors de la séance');
   // L'élève rouvre : il retrouve son travail, la copie est toujours à rendre, le chrono repart de sa valeur.
   await p.click('[data-act="picard-ent44"]');

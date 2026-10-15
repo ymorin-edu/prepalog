@@ -221,8 +221,9 @@ s'aligner.
   (1L2, 8 élèves, 16–17 h), contre 63 le 07/10 sur Smoby. Cause vérifiée dans le code : la vue « quai » écrit à
   chaque palette de l'animation, à chaque clic, toutes les 60 s (chrono) et toutes les 2 min (temps passé, deux
   écritures) : fond de 120 par élève et par heure sans aucun geste. Seuil des 50 % non atteint ; options B (chrono
-  rangé dans la sauvegarde des 2 min, −60) et C (une sauvegarde par animation, pas par palette) proposées à
-  Tristan, non faites. Détail dans `decisions.md`.
+  rangé dans la sauvegarde des 2 min, −60) et C (une sauvegarde par animation, pas par palette) **faites le
+  15/10/2026** (choix de Tristan) : fond de 60 au lieu de 120, une écriture par déchargement au lieu d'une par
+  palette ; effet à mesurer à la prochaine séance ENT-1.1. Détail dans `decisions.md`.
 
 ### 8. Fabrique de séance d'entreprise (C6) — avant France Boissons
 - **Ce qu'on fait.** `seanceEntreprise(UNIVERS, SEANCE, meta)` dans `core/types/` qui dérive `trame`,
