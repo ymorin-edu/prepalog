@@ -170,12 +170,12 @@ le bilan ; 50 min tenues.
 
 ## 11. Questions ouvertes
 
-1. [ ] `ouverture.part` : **3** (validé) si le moteur l'accepte, sinon 4 et Transmettre à 6 ?
-2. [ ] « Une erreur ne se paie qu'une fois » en évaluation (jalons 5 à 7 jugés sur l'offre choisie par l'élève) ? (oui)
-3. [ ] Pastilles d'étape en évaluation (« fait », jamais « juste ») ? (oui : elles aident à ne rien oublier sans rien souffler)
-4. [ ] Chef de quai de Dourges : un personnage distinct de celui de Rouvignies ? (oui, nom à choisir)
+1. [x] `ouverture.part` : **3** (Tristan, 15/10/2026) ; si le moteur le refuse, revenir voir Tristan (4 et Transmettre à 6).
+2. [x] « Une erreur ne se paie qu'une fois » en évaluation (jalons 5 à 7 jugés sur l'offre choisie par l'élève) ? (oui, Tristan, 15/10/2026)
+3. [x] Pastilles d'étape en évaluation (« fait », jamais « juste ») ? (oui : elles aident à ne rien oublier sans rien souffler) — oui (Tristan, 15/10/2026)
+4. [x] Chef de quai de Dourges : un personnage distinct de celui de Rouvignies ? (oui, nom à choisir) — oui, un autre ; nom fictif à proposer (Tristan, 15/10/2026)
 5. [x] Contre la copie : offre en retard tirée, bonne réponse rail ou barge (Tristan, 13/10/2026, décision 22).
-6. [ ] Durée 50 min ; pas de planning du quai en évaluation (le créneau a été évalué en formatif) ? (oui)
+6. [x] Durée 50 min ; pas de planning du quai en évaluation (le créneau a été évalué en formatif) ? (oui) — oui (Tristan, 15/10/2026)
 
 ---
 
