@@ -223,8 +223,13 @@ const nrm = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLo
 const nrmLoc = (s) => String(s || '').trim().toUpperCase().replace(/\s+/g, '');
 const RE_SKU = /\b([A-Z]{2,3}-[A-Z0-9]+-[A-Z]{2}-\d{1,2})\b[^0-9]{0,20}?(\d{1,4})/g;
 
+// Bug du 15/10/2026 : « PM-SUE-NR-40 pointure 40 : 12 paires » donnait une quantité de 40. La pointure rappelée juste
+// après la référence (c'est la même que celle de la référence) n'est pas une quantité : on l'écarte avant de lire.
+const RE_POINTURE = /(\b[A-Z]{2,3}-[A-Z0-9]+-[A-Z]{2}-(\d{1,2})\b[^0-9]{0,20}?)\b(?:pointure|taille|en|t|p)\.?\s*\(?\2\)?(?!\d)/gi;
+
 function refsQtes(texte, supId, VM) {
   const out = []; let m; RE_SKU.lastIndex = 0;
+  texte = String(texte || '').replace(RE_POINTURE, '$1');
   while ((m = RE_SKU.exec(texte))) {
     const sku = m[1].toUpperCase(), qty = parseInt(m[2], 10), v = VM[sku];
     if (v && v.model.sup === supId) out.push({ sku, qty, v });

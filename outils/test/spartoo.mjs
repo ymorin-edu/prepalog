@@ -967,6 +967,28 @@ await v('Spartoo préparation : 12 paires puis 20 paires de la même référence
   if (JSON.stringify(r) !== JSON.stringify(attendu)) throw new Error('mail à Puma : ' + JSON.stringify(r) + ' au lieu de ' + JSON.stringify(attendu));
 });
 
+// ---------- 41 quinquies ter. ENT-1.2 : la pointure rappelée après la référence n'est pas la quantité (bug du 15/10/2026)
+await v('Spartoo préparation : « PM-SUE-NR-40 pointure 40 : 12 paires » se lit 12, pas 40', async () => {
+  const r = await page.evaluate(async () => {
+    const S = await import('/contenus/spartoo.js');
+    const stock = { ...S.baseDeDepart('Essai').stock, 'PM-SUE-NR-40': 0 };
+    const mail = (texte) => ({ folder: 'out', toMail: S.SUP_BY_ID.F003.email, text: texte, ts: 1 });
+    const etats = (texte) => {
+      const db = { stock, orders: [], mails: [mail(texte)] };
+      return ['reappro-refs', 'reappro-moq'].map((id) => S.ETAPES.find((e) => e.id === id).verifier(db, S).status).join(',');
+    };
+    return {
+      pointure: etats('Bonjour, PM-SUE-NR-40 pointure 40 : 12 paires'),
+      taille: etats('PM-SUE-NR-40 (taille 40) : 12 paires'),
+      tPoint: etats('PM-SUE-NR-40 T.40, 12 paires'),
+      enQuarante: etats('PM-SUE-NR-40 en 40 : 12 paires'),
+      pointureSeule: etats('PM-SUE-NR-40 pointure 40'),
+    };
+  });
+  const attendu = { pointure: 'ok,ko', taille: 'ok,ko', tPoint: 'ok,ko', enQuarante: 'ok,ko', pointureSeule: 'ko,ko' };
+  if (JSON.stringify(r) !== JSON.stringify(attendu)) throw new Error('mail à Puma avec pointure : ' + JSON.stringify(r) + ' au lieu de ' + JSON.stringify(attendu));
+});
+
 // ---------- 41 sexies. ENT-1.3 : le compte rendu et le blocage jugés case par case (bases fabriquées, notes écrites à la main)
 await v('Spartoo traçabilité : date fausse −2, commande oubliée −3, référence non bloquée −2,5 ; commande sans paire du lot : rien à citer', async () => {
   const r = await page.evaluate(async () => {
