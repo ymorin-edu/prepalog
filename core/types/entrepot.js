@@ -209,6 +209,26 @@ function compiler(P) {
   // Le décor (zone de réception, passage piétons de la visite) peut aussi se déclarer à côté du plan.
   const zones = Object.assign({}, L.zones || {}, P.zones || {});
   const litiges = zones.litiges || [];
+  // Les zones nommées de la visite (vestiaire, zone de contrôle) : `true`, un texte (la note, comme `bureau`) ou
+  // { nom?, note? }. Elles se dessinent sous le bureau, au-dessus de la zone de réception, et servent d'ancres.
+  const nommees = {};
+  ZONES_NOMMEES.forEach(([cle, defaut]) => {
+    const z = zones[cle];
+    if (!z) return;
+    if (mode !== 'visite') err(`zones.${cle} : cette zone ne se dessine que dans une visite (mode: 'visite')`);
+    const o = typeof z === 'object' ? z : {};
+    const nom = o.nom || defaut, note = typeof z === 'string' ? z : (o.note || '');
+    if (nom.length > 26 || note.length > 34) err(`zones.${cle} : le nom (26 signes au plus) ou la note (34 au plus) est trop long pour la zone`);
+    nommees[cle] = { nom, note };
+  });
+  if (Object.keys(nommees).length) {
+    let y = 40;
+    if (litiges.length) y += 30 + Math.ceil(litiges.length / 2) * 74 + 18;
+    if (zones.bureau) y += 72;
+    y += 72 * Object.keys(nommees).length;
+    const h = Y0 + T * TH + 12 - 6 - Math.max(y, Y0 + T * TH + 12 - 192);
+    if (h < 80) err(`le plan est trop court pour toutes ses zones à droite (la zone de réception n'aurait que ${h} de haut, 80 au moins) : ajouter une travée ou retirer une zone`);
+  }
   const produits = P.produits || {};
   const gammes = P.gammes || {};
   Object.entries(produits).forEach(([k, p]) => { if (!gammes[p.gamme]) err(`le produit ${k} a une gamme inconnue (${p.gamme})`); });
@@ -246,7 +266,7 @@ function compiler(P) {
     for (let e = 1; e <= E; e++) s += kgEn(place, adresse(d.c, d.t, d.n, e), sauf);
     return s;
   };
-  const M = { P, mode, T, N, E, allees, cotes, ordre, toutes, existe, hs, litiges, zones, produits, stock, pal, crit,
+  const M = { P, mode, T, N, E, allees, cotes, ordre, toutes, existe, hs, litiges, zones, nommees, produits, stock, pal, crit,
     nomGamme, gammeDe, cotesDeGamme, estLitige, occupant, chargeNiveau };
   if (mode === 'preparation') compilerPrep(M, err);
   else if (mode === 'visite') compilerVisite(M, err);
@@ -610,6 +630,9 @@ export function comptageFini(db, P) { return !!(etatDe(db, P).terminal || {}).fi
 export function placeMasse(db, P, id) { return placeDe(compiler(P), Object.assign(etatMasseNeuf(), etatDe(db, P)), id); }
 
 /* ================================================================ géométrie */
+// Les zones nommées qu'une visite peut déclarer dans `zones` (clé, nom affiché par défaut), de haut en bas.
+const ZONES_NOMMEES = [['vestiaire', 'Vestiaire'], ['controle', 'Zone de contrôle']];
+const H_ZONE = 54;
 // Le plan vu de dessus, en unités SVG (la maquette v2 donne 800 × 562 pour 2 allées de 2 côtés et
 // 4 travées). Les allées se suivent de gauche à droite ; deux blocs voisins sont dos à dos. À droite
 // des racks : zone litiges, bureau, zone de réception. La place libre à droite reste pour d'autres
@@ -637,8 +660,10 @@ function geometrie(M) {
   if (litiges) y += litiges.h + 18;
   const bureau = M.zones.bureau ? { y, h: 54 } : null;
   if (bureau) y += 54 + 18;
+  const nommees = {};
+  ZONES_NOMMEES.forEach(([cle]) => { if (M.nommees[cle]) { nommees[cle] = { y, h: H_ZONE }; y += H_ZONE + 18; } });
   const yRec = Math.max(y, yPr - 192);
-  return { racks, allees, droite, ZX, W: ZX + ZW + 18, H: yBas + 92, yBas, yPr, litiges, bureau,
+  return { racks, allees, droite, ZX, W: ZX + ZW + 18, H: yBas + 92, yBas, yPr, litiges, bureau, nommees,
     recep: { y: yRec, h: yPr - 6 - yRec },
     quaiX: (i) => 270 + i * 100,
     yTrav: (t) => Y0 + (M.T - t) * TH }; // T01 en bas, près de l'allée principale
@@ -901,6 +926,12 @@ export function creerEntrepot(P, opts = {}) {
       s += `<rect x="${ZX}" y="${y}" width="${ZW}" height="54" fill="var(--panneau)" stroke="${ink}" stroke-width="2.5"/>
         <text x="${ZX + ZW / 2}" y="${y + 24}" text-anchor="middle" font-size="14" font-weight="700" fill="${ink}" ${TXT}>Bureau</text><text x="${ZX + ZW / 2}" y="${y + 41}" text-anchor="middle" font-size="12" fill="${soft}" ${TXT}>${ech(M.zones.bureau)}</text>`;
     }
+    ZONES_NOMMEES.forEach(([cle]) => {
+      const z = M.nommees[cle], g = G.nommees[cle];
+      if (!z) return;
+      s += `<g data-pe-zone="${cle}"><rect x="${ZX}" y="${g.y}" width="${ZW}" height="${H_ZONE}" fill="var(--panneau)" stroke="${ink}" stroke-width="2.5"/>
+        <text x="${ZX + ZW / 2}" y="${g.y + (z.note ? 24 : 32)}" text-anchor="middle" font-size="14" font-weight="700" fill="${ink}" ${TXT}>${ech(z.nom)}</text>${z.note ? `<text x="${ZX + ZW / 2}" y="${g.y + 41}" text-anchor="middle" font-size="12" fill="${soft}" ${TXT}>${ech(z.note)}</text>` : ''}</g>`;
+    });
     const pals = Object.values(M.pal), rangs = Math.max(1, Math.ceil(pals.length / 2));
     const hR = rangs * 76 + 34, yR = yPr - 6 - hR;
     if (PREP) s += htmlPlanPrep(e, R);

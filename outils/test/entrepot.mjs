@@ -2700,4 +2700,187 @@ await v('Montage : à 1366 × 768 et 1280 × 720, les boutons de pose se voient 
 
 await v('Masse : aucune erreur JavaScript', async () => { egal(erreursM, []); });
 await ctxM.close();
+
+/* =========================================================== VISITE : zones nommées, visite sans stock, geste de fin (15/10/2026) */
+// Chantier ENT-8.2 §7.1 : `zones.vestiaire` et `zones.controle` (dessinées sous le bureau, ancres de parcours) ; une visite
+// qui se charge sans stock ; le geste `entrepot:<id>:visite:fin`. Valeurs écrites À LA MAIN, d'après la géométrie du plan
+// d'ENT-5.3 (2 allées de 2 côtés, 4 travées) : droite = 534, zones à ZX = 572, point d'ancre des zones à x = 553 ; zone litiges
+// 40 → 144, bureau 162 → 216, vestiaire 234 → 288, zone de contrôle 306 → 360, zone de réception 378 → 476 ; allée principale
+// à y = 482, trace le long de y = 505 ; QUAI 2 à x = 410, ancre de la réception à (680, 456).
+const ctxZ = await nav.newContext({ viewport: { width: 1366, height: 768 }, reducedMotion: 'reduce' });
+const erreursZ = [];
+const pz = await ctxZ.newPage();
+pz.setDefaultTimeout(6000);
+pz.on('pageerror', (e) => erreursZ.push('PAGEERROR: ' + e.message));
+pz.on('console', (m) => { if (m.type() === 'error' && !/\b404\b/.test(m.text())) erreursZ.push('CONSOLE: ' + m.text()); });
+await pz.goto(BASE);
+await pz.waitForSelector('#btnProf', { timeout: 8000 });
+
+// Monte une visite courte (accueil, parcours de 6 arrêts, fin) sur le plan d'ENT-5.3. `o.zones` : le décor ; `o.ancres` : les 6 ancres ;
+// `o.sansStock` : ni stock, ni produits, ni gammes ; `o.role` ; `o.volet` : un déclencheur sur le geste de fin.
+const monterZ = (p, o = {}) => p.evaluate(async (o) => {
+  const { creerEntreprise } = await import('/core/types/entreprise.js');
+  const { apresGeste } = await import('/core/declencheurs.js');
+  const E = await import('/outils/essai-entrepot.js');
+  const C = await import('/contenus/entrepot-essai.js');
+  document.querySelector('#peTest')?.remove();
+  const hote = document.createElement('div'); hote.id = 'peTest'; document.body.appendChild(hote);
+  const P = structuredClone(C.VISITE);
+  P.id = 'essai-zones';
+  P.premierEssai = false;
+  P.zones = o.zones || { reception: { note: 'vide à 8 h' }, vestiaire: 'EPI obligatoires', controle: true };
+  const ANCRES = o.ancres || ['zone:vestiaire', 'quai:QUAI 2', 'zone:reception', 'zone:controle', 'zone:litiges', 'zone:bureau'];
+  const accueil = P.etapes.find((t) => t.id === 'accueil');
+  P.etapes = [accueil, { id: 'parcours', type: 'parcours', titre: 'Le parcours', texte: 'Suis-moi.',
+    etapes: ANCRES.map((a, k) => ({ n: k + 1, ancre: a, titre: `Arrêt ${k + 1}`, texte: `Texte ${k + 1}` })) }];   // la fin vient de P.fin
+  if (o.sansStock) { delete P.stock; delete P.produits; delete P.gammes; }
+  const U = E.univers({ temps: 'guidage', entrepot: P });
+  if (o.volet) U.volet = { id: 'volet-essai', semer: () => ({ mails: [] }), declencheurs: [{ id: 'suite', quand: apresGeste(`entrepot:${P.id}:visite:fin`),
+    semer: () => ({ mails: [{ folder: 'in', ts: Date.now(), from: 'Samia', fromMail: 'samia@essai.example', to: 'Lea', subject: 'La suite', kind: 'text', text: 'Bonjour' }] }) }] };
+  const db = {};
+  const moteur = creerEntreprise(U);
+  window.__e = { db, moteur, P };
+  moteur.rendre(hote, {
+    meta: { id: 'essai-entrepot', code: 'ESSAI', titre: 'Essai', portee: 'eleve', immersif: true, temps: 'guidage' },
+    profil: { prenom: 'Lea', nom: 'Test', role: o.role || 'eleve', uid: 'u-test' },
+    jeu: { etat: () => db, sauver: () => {} },
+    enregistrer: () => {}, quitter: () => {}, codeStock: 'ABC', lireScore: async () => null,
+  });
+  document.querySelector('#peTest .ent-nav[data-vue="entrepot"]').click();
+}, o);
+const ZZ = '#peTest .pv';
+// Fait tout le parcours (6 arrêts, dans l'ordre) en partant de l'étape « Le parcours ».
+async function parcourirZ(p) {
+  for (let n = 1; n <= 6; n++) await p.click(`${ZZ} svg [data-pv-etape="${n}"]`);
+}
+const traceZ = (p) => p.$eval(`${ZZ} [data-pv-trace]`, (t) => t.getAttribute('points'));
+const zoneZ = (p, cle) => p.evaluate((cle) => {
+  const g = document.querySelector(`#peTest [data-pe-zone="${cle}"]`);
+  if (!g) return null;
+  const r = g.querySelector('rect');
+  return { x: +r.getAttribute('x'), y: +r.getAttribute('y'), textes: [...g.querySelectorAll('text')].map((t) => t.textContent) };
+}, cle);
+
+await v('Visite, zones : vestiaire et zone de contrôle dessinés sous le bureau, nom écrit ; la trace passe par elles dans l’ordre du parcours', async () => {
+  await monterZ(pz, { role: 'prof' });
+  await pz.click(`${ZZ} [data-pv-aller="1"]`);
+  await pz.waitForSelector(`${ZZ} svg [data-pv-etape="1"]`);
+  egal(await zoneZ(pz, 'vestiaire'), { x: 572, y: 234, textes: ['Vestiaire', 'EPI obligatoires'] }, 'vestiaire : cadre et nom (la note est celle du contenu)');
+  egal(await zoneZ(pz, 'controle'), { x: 572, y: 306, textes: ['Zone de contrôle'] }, 'zone de contrôle : cadre et nom par défaut');
+  await parcourirZ(pz);
+  egal(await traceZ(pz), '553,261 553,505 410,505 680,505 680,456 680,505 553,505 553,333 553,92 553,189', 'trace : vestiaire → quai 2 → réception → contrôle → litiges → bureau');
+  egal(await pz.$$eval(`${ZZ} svg [data-pv-etape]`, (L) => L.map((g) => [+g.querySelector('circle').getAttribute('cx'), +g.querySelector('circle').getAttribute('cy')])),
+    [[553, 261], [410, 505], [680, 456], [553, 333], [553, 92], [553, 189]], 'les six numéros sont posés sur leur lieu');
+});
+
+await v('Visite, zones : un nom donné par le contenu remplace le nom par défaut ; sans déclaration, rien n’est dessiné (ENT-5.3 garde son plan)', async () => {
+  await monterZ(pz, { role: 'prof', zones: { reception: {}, vestiaire: { nom: 'Vestiaire du personnel' }, controle: { nom: 'Contrôle', note: 'comptage et état' } },
+    ancres: ['zone:vestiaire', 'zone:controle', 'zone:reception', 'quai:QUAI 1', 'quai:QUAI 2', 'quai:QUAI 3'] });
+  await pz.click(`${ZZ} [data-pv-aller="1"]`);
+  await pz.waitForSelector(`${ZZ} svg [data-pv-etape="1"]`);
+  egal((await zoneZ(pz, 'vestiaire')).textes, ['Vestiaire du personnel'], 'nom du contenu, sans note');
+  egal((await zoneZ(pz, 'controle')).textes, ['Contrôle', 'comptage et état'], 'nom et note du contenu');
+  await pz.evaluate(async () => {
+    const { creerEntreprise } = await import('/core/types/entreprise.js');
+    const E = await import('/outils/essai-entrepot.js');
+    const C = await import('/contenus/entrepot-essai.js');
+    document.querySelector('#peTest')?.remove();
+    const hote = document.createElement('div'); hote.id = 'peTest'; document.body.appendChild(hote);
+    const db = {};
+    creerEntreprise(E.univers({ temps: 'guidage', entrepot: structuredClone(C.VISITE) })).rendre(hote, {
+      meta: { id: 'essai-entrepot', code: 'ESSAI', titre: 'Essai', portee: 'eleve', immersif: true, temps: 'guidage' },
+      profil: { prenom: 'Lea', nom: 'Test', role: 'prof', uid: 'u-test' }, jeu: { etat: () => db, sauver: () => {} },
+      enregistrer: () => {}, quitter: () => {}, codeStock: 'ABC', lireScore: async () => null });
+    document.querySelector('#peTest .ent-nav[data-vue="entrepot"]').click();
+  });
+  await pz.click(`${ZZ} [data-pv-aller="2"]`);
+  await pz.waitForSelector(`${ZZ} svg [data-pv-etape="1"]`);
+  egal(await pz.$$eval('#peTest [data-pe-zone]', (L) => L.length), 0, 'aucune zone nommée sur le plan d’ENT-5.3');
+  egal(await pz.$$eval(`${ZZ} svg.pe-svg-plan rect`, (L) => L.filter((r) => r.getAttribute('x') === '572').map((r) => [+r.getAttribute('y'), +r.getAttribute('height')])),
+    [[40, 104], [162, 54], [290, 186]], 'la colonne de droite d’ENT-5.3 : litiges, bureau, réception (inchangée)');
+});
+
+await v('Visite, zones : une ancre inconnue ou une zone non déclarée empêche la visite de s’ouvrir, le message nomme l’ancre', async () => {
+  const r = await pz.evaluate(async () => {
+    const { creerEntrepot } = await import('/core/types/entrepot.js');
+    const C = await import('/contenus/smoby-ent53.js');
+    const essai = (f) => { const P = structuredClone(C.VISITE); P.id = `x${Math.random()}`; f(P); try { creerEntrepot(P); return ''; } catch (e) { return e.message; } };
+    const ancre = (P, a) => { P.etapes.find((t) => t.id === 'parcours').etapes[1].ancre = a; };
+    return [
+      essai((P) => ancre(P, 'zone:cantine')),
+      essai((P) => ancre(P, 'zone:vestiaire')),
+      essai((P) => ancre(P, 'zone:controle')),
+      essai((P) => { P.zones.vestiaire = true; ancre(P, 'zone:vestiaire'); }),
+      essai((P) => { P.zones.controle = { note: 'comptage' }; ancre(P, 'zone:controle'); }),
+      essai((P) => { P.zones.vestiaire = true; P.zones.controle = true; ancre(P, 'zone:controle'); }),
+      essai((P) => { P.plan = Object.assign({}, P.plan, { travees: 3, horsService: [] }); P.zones.vestiaire = true; P.zones.controle = true; }),
+      essai((P) => { P.zones.vestiaire = { nom: 'Vestiaire du personnel de la plateforme' }; }),
+      essai((P) => { P.plan = Object.assign({}, P.plan, { zones: { bureau: 'chef de quai', quais: ['QUAI 1', 'QUAI 2', 'QUAI 3'] } }); ancre(P, 'zone:litiges'); }),
+      essai((P) => { P.zones.vestiaire = true; P.mode = 'rangement'; }),
+    ];
+  });
+  vrai(r[0].includes('ancre inconnue') && r[0].includes('zone:cantine'), `zone:cantine : ${r[0]}`);
+  vrai(r[1].includes('ancre inconnue') && r[1].includes('zone:vestiaire') && r[1].includes('déclarée'), `vestiaire non déclaré : ${r[1]}`);
+  vrai(r[2].includes('zone:controle'), `contrôle non déclaré : ${r[2]}`);
+  egal([r[3], r[4], r[5]], ['', '', ''], 'vestiaire (true), contrôle (note), les deux : ancres connues');
+  vrai(r[6].includes('trop court'), `3 travées pour 5 zones : ${r[6]}`);
+  vrai(r[7].includes('zones.vestiaire') && r[7].includes('trop long'), `nom trop long : ${r[7]}`);
+  vrai(r[8].includes('zone:litiges') && r[8].includes('ancre inconnue'), `litiges non déclarés : ${r[8]}`);
+  vrai(r[9].includes('zones.vestiaire') && r[9].includes('visite'), `hors visite : ${r[9]}`);
+});
+
+await v('Visite sans stock (ni produits, ni gammes, pas d’étape adresse) : elle se charge, le plan se dessine, le parcours se fait', async () => {
+  await monterZ(pz, { role: 'prof', sansStock: true });
+  await pz.click(`${ZZ} [data-pv-aller="1"]`);
+  await pz.waitForSelector(`${ZZ} svg [data-pv-etape="1"]`);
+  await parcourirZ(pz);
+  vrai((await traceZ(pz)).startsWith('553,261 553,505 410,505'), 'trace calculée sans stock');
+  egal(await pz.$$eval(`${ZZ} .pe-trav-l`, (L) => L.length), 16, 'les seize travées du plan (4 côtés × 4), en lecture');
+  egal(await pz.$$eval(`${ZZ} [data-pe-etat="stock"]`, (L) => L.length), 0, 'aucun emplacement occupé');
+  egal(erreursZ, [], 'erreurs JS');
+});
+
+await v('Visite : le geste « entrepot:<id>:visite:fin » est publié une fois à l’arrivée à la fin, et ouvre un message qui l’attend (apresGeste)', async () => {
+  await monterZ(pz, { volet: true });
+  const gestes = () => pz.evaluate(() => JSON.parse(JSON.stringify(window.__e.db.gestes || null)));
+  const mails = () => pz.evaluate(() => (window.__e.db.mails || []).filter((m) => m.subject === 'La suite').length);
+  egal(await gestes(), null, 'aucun geste au départ');
+  await pz.click(`${ZZ} [data-pv="suivant"]`);
+  egal(await gestes(), null, 'pas de geste en chemin');
+  await parcourirZ(pz);
+  egal(await gestes(), null, 'ni à la fin du parcours');
+  egal(await mails(), 0, 'le message n’est pas arrivé');
+  await pz.click(`${ZZ} [data-pv="suivant"]`);
+  const g = await gestes();
+  egal(Object.keys(g['essai-entrepot']), ['entrepot:essai-zones:visite:fin'], 'le geste, cloisonné par séance');
+  vrai(g['essai-entrepot']['entrepot:essai-zones:visite:fin'] > 0, 'rangé avec son heure');
+  egal(await mails(), 1, 'le message attendu est arrivé');
+  const t0 = g['essai-entrepot']['entrepot:essai-zones:visite:fin'];
+  await pz.click(`${ZZ} [data-pv-aller="1"]`);
+  await pz.click(`${ZZ} [data-pv-aller="2"]`);
+  egal((await gestes())['essai-entrepot']['entrepot:essai-zones:visite:fin'], t0, 'revenir puis retourner à la fin ne le republie pas');
+});
+
+await v('Visite : l’enseignant qui saute à la fin ne publie aucun geste ; un geste de fin mal écrit empêche la séance de se charger', async () => {
+  await monterZ(pz, { role: 'prof', volet: true });
+  await pz.click(`${ZZ} [data-pv-aller="2"]`);
+  egal(await pz.evaluate(() => window.__e.db.gestes || null), null, 'rien pour l’enseignant');
+  const r = await pz.evaluate(async () => {
+    const { creerEntreprise } = await import('/core/types/entreprise.js');
+    const { apresGeste } = await import('/core/declencheurs.js');
+    const E = await import('/outils/essai-entrepot.js');
+    const C = await import('/contenus/entrepot-essai.js');
+    const essai = (geste) => {
+      const U = E.univers({ temps: 'guidage', entrepot: structuredClone(C.VISITE) });
+      U.volet = { id: 'volet-essai', semer: () => ({ mails: [] }), declencheurs: [{ id: 'suite', quand: apresGeste(geste), semer: () => ({ mails: [] }) }] };
+      try { creerEntreprise(U); return ''; } catch (e) { return e.message; }
+    };
+    return [essai('entrepot:smoby-visite:visite:fin'), essai('entrepot:smoby-visite:visite:finir')];
+  });
+  egal(r[0], '', 'le geste de fin de la visite est connu');
+  vrai(r[1].includes('geste inconnu') && r[1].includes('visite:finir'), `faute de frappe : ${r[1]}`);
+});
+
+await v('Visite, zones : aucune erreur JavaScript', async () => { egal(erreursZ, []); });
+await ctxZ.close();
 }

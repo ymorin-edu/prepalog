@@ -64,7 +64,15 @@
 //   fin            image?, grandTitre?, texte, consigne
 //
 // Les ancres du parcours (pas de pixels : la géométrie est celle du plan déclaré) : `quai:<nom du quai>`,
-// `zone:reception`, `zone:litiges`, `zone:bureau`, `allee:principale`, `allee:<id d'allée>`.
+// `zone:reception`, `zone:litiges`, `zone:bureau`, `zone:vestiaire`, `zone:controle`, `allee:principale`, `allee:<id d'allée>`.
+// Une zone qui n'est pas déclarée dans `zones` n'est pas une ancre (`zone:litiges` veut `zones.litiges: ['L1', …]`, `zone:bureau` veut
+// `zones.bureau`, `zone:vestiaire` et `zone:controle` veulent `zones.vestiaire` et `zones.controle`) : la visite ne se charge pas.
+// Le vestiaire et la zone de contrôle se déclarent `zones: { vestiaire: true | 'note' | { nom?, note? } }` : un cadre sous le bureau,
+// son nom écrit dedans (« Vestiaire », « Zone de contrôle » par défaut). Un plan à 4 travées les porte avec les quatre zones.
+// Une visite n'a pas besoin de stock : sans `stock`, `produits` ni `gammes` (pas d'étape `adresse`), elle se charge.
+//
+// LE GESTE publié (questions au fil, déclencheurs `apresGeste`) : `entrepot:<id de la vue>:visite:fin`, une seule fois, quand l'élève
+// atteint l'étape `fin` (il n'y en a pas si la visite n'a pas d'étape de ce type). Rien pour l'enseignant ni après la remise.
 //
 // L'état, dans `db.entrepots[<id>]` (cloisonné par séance) : { courante, atteinte, x: { <id d'étape>: … } } —
 // points ouverts, questions lancées, réponses et essais, étapes du parcours vues, coins posés et vérifications,
@@ -114,7 +122,9 @@ export function compilerVisite(M, err) {
       q.zones.forEach((z) => zone(z, `${ou}, question ${q.id}`));
     });
   };
-  const ancres = ['zone:reception', 'zone:litiges', 'zone:bureau', 'allee:principale',
+  // Une zone n'est une ancre que si le plan la dessine (la réception, elle, est toujours dessinée en visite).
+  const zonesDessinees = ['reception', ...(M.litiges.length ? ['litiges'] : []), ...(M.zones.bureau ? ['bureau'] : []), ...Object.keys(M.nommees)];
+  const ancres = [...zonesDessinees.map((z) => `zone:${z}`), 'allee:principale',
     ...(M.zones.quais || []).map((q) => `quai:${q}`), ...M.allees.map((al) => `allee:${al.id}`)];
   const ids = new Set();
   const jalons = [];
@@ -146,7 +156,7 @@ export function compilerVisite(M, err) {
       if (!Array.isArray(et.etapes) || !et.etapes.length) err(`${ou} : aucune étape de parcours`);
       et.etapes.forEach((p, k) => {
         if (p.n !== k + 1) err(`${ou} : les étapes du parcours se numérotent 1, 2, 3… dans l'ordre`);
-        if (!ancres.includes(p.ancre)) err(`${ou}, étape n° ${p.n} : ancre inconnue (${p.ancre}) — ancres : ${ancres.join(', ')}`);
+        if (!ancres.includes(p.ancre)) err(`${ou}, étape n° ${p.n} : ancre inconnue (${p.ancre}) — ancres : ${ancres.join(', ')}${/^zone:/.test(p.ancre) ? ' (une zone doit être déclarée dans `zones` pour servir d’ancre)' : ''}`);
         (p.images || []).forEach((k2) => image(k2, `${ou}, étape n° ${p.n}`));
       });
     }
@@ -273,6 +283,7 @@ export function creerVisite(P, M, O) {
   Object.assign(ui, { actif: {}, photo: null, msgs: {}, zoomDe: null, survol: null });
   const ET = V.etapes;
   const per = P.personnage || {};
+  const GESTE_FIN = `entrepot:${P.id}:visite:fin`;
   const xDe = (e, et) => e.x[et.id] || (e.x[et.id] = {});
   const num = (k, t) => `<span class="pe-num pv-num">${k}</span><span>${t}</span>`;
   const msgDe = (et) => ui.msgs[et.id] || { t: '', type: '' };
@@ -411,6 +422,7 @@ export function creerVisite(P, M, O) {
     else if (nom === 'reception') pt = [G.ZX + 108, G.recep.y + Math.min(110, G.recep.h - 20)];
     else if (nom === 'litiges') pt = [xC, G.litiges.y + G.litiges.h / 2];
     else if (nom === 'bureau') pt = [xC, G.bureau.y + 27];
+    else if (G.nommees[nom]) pt = [xC, G.nommees[nom].y + 27];
     else if (nom === 'principale') pt = [G.quaiX(0) + 30, yT];
     else pt = [G.allees[nom].cx, O.Y0 + M.T * O.TH * 0.65];
     const d = p.decalage || [0, 0];
@@ -712,6 +724,9 @@ export function creerVisite(P, M, O) {
     const i = courante(e), et = ET[i], x = xDe(e, et);
     const redessiner = () => api.redessiner();
     const fait = () => { api.sauver(); redessiner(); };
+    // LE GESTE DE FIN (15/10/2026) : `entrepot:<id>:visite:fin`, publié quand l'élève atteint l'étape `fin` (une seule fois :
+    // `api.signal` ne range un geste qu'une fois, et se tait pour l'enseignant et pour une copie rendue), juste avant la sauvegarde.
+    const arriver = (k) => { if (ET[k].type === 'fin' && api.signal) api.signal(GESTE_FIN); };
     const activer = (el, fn) => {
       el.addEventListener('click', fn);
       if (el.tagName !== 'BUTTON') el.addEventListener('keydown', (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); fn(ev); } });
@@ -744,9 +759,9 @@ export function creerVisite(P, M, O) {
     racine.querySelectorAll('[data-pv-aller]').forEach((b) => activer(b, () => {
       const k = +b.dataset.pvAller;
       if (k === i || !peutAller(e, k, api)) return;
-      aller(e, k); ui.focus = `aller:${k}`; fait();
+      aller(e, k); ui.focus = `aller:${k}`; arriver(k); fait();
     }));
-    on('suivant', () => { if (!finie(et, x) || i >= ET.length - 1) return; aller(e, i + 1); ui.focus = 'b:suivant'; fait(); });
+    on('suivant', () => { if (!finie(et, x) || i >= ET.length - 1) return; aller(e, i + 1); ui.focus = 'b:suivant'; arriver(i + 1); fait(); });
     on('retour', () => {
       if (et.type === 'parcours') { ui.focus = `etape:${ui.photo}`; ui.photo = null; }
       if (et.type === 'adresse') { ui.focus = `trav:${ui.trav}`; ui.trav = null; ui.survol = null; dire(et, ''); }
@@ -838,6 +853,7 @@ export function creerVisite(P, M, O) {
   }
 
   return {
+    signaux: [GESTE_FIN],
     id: P.id,
     nav: { libelle: P.libelle || 'Visite' },
     etatNeuf: etatVisiteNeuf,
