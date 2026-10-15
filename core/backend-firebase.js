@@ -28,6 +28,26 @@ export function chargerSdk() {
   return Promise.all(MODULES_SDK.map((m) => import(m)));
 }
 
+// Ce que l'élève lit quand sa connexion échoue. Firebase range tout sous un code `auth/…` ou un code
+// Firestore ; jusqu'au 15/10/2026 tout devenait « Matricule ou code incorrect », panne de réseau
+// comprise : l'élève croyait s'être trompé, retapait et insistait. Seule une vraie faute de saisie
+// doit dire « incorrect » ; le reste dit quoi faire, et le code brut reste visible pour l'enseignant.
+export function messageConnexion(e) {
+  const code = String(e?.code || '');
+  if (code === 'auth/network-request-failed' || code === 'unavailable' || code === 'deadline-exceeded') {
+    return 'Le réseau ne répond pas. Attendez quelques secondes, puis réessayez une seule fois.';
+  }
+  if (code === 'auth/too-many-requests' || code === 'resource-exhausted') {
+    return 'Trop de tentatives en peu de temps : la connexion est bloquée un moment. Attendez une minute avant de réessayer.';
+  }
+  if (code === 'auth/user-disabled') return 'Ce compte est désactivé. Prévenez votre enseignant.';
+  if (code === 'auth/invalid-credential' || code === 'auth/invalid-login-credentials' || code === 'auth/wrong-password'
+    || code === 'auth/user-not-found' || code === 'auth/invalid-email' || code === 'auth/missing-password') {
+    return 'Matricule ou code incorrect.';
+  }
+  return `Connexion impossible pour le moment (${code || e?.message || 'erreur inconnue'}). Prévenez votre enseignant.`;
+}
+
 export async function creerBackendFirebase() {
   const [AP, AU, FS, DB] = await chargerSdk();
 
@@ -129,9 +149,14 @@ export async function creerBackendFirebase() {
       try {
         await AU.signInWithEmailAndPassword(auth, matEmail(matricule), matMdp(matricule, code));
       } catch (e) {
-        throw new Error('Matricule ou code incorrect.');
+        throw new Error(messageConnexion(e));
       }
-      courant = await chargerProfil(auth.currentUser);
+      try {
+        courant = await chargerProfil(auth.currentUser);
+      } catch (e) {
+        // Identifié, mais le profil ne se lit pas (Firestore injoignable, droits) : même traduction.
+        throw new Error(messageConnexion(e));
+      }
       if (!courant) throw new Error('Profil introuvable. Prévenez votre enseignant.');
       notifier();
       return courant;

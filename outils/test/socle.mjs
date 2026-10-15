@@ -1043,6 +1043,104 @@ await v('nouveau logo à l\'accueil élève et à la connexion', async () => {
   await page.waitForSelector('text=Bonjour Léa', { timeout: 6000 });
 });
 
+// ---------- 14 ter. connexion : un appui à la fois, bouton qui dit qu'il travaille
+// Le 14/10/2026, une classe entière se connectant à la même minute sur un réseau lent : les
+// élèves martelaient Entrée, chaque appui relançait une connexion complète. Ici le backend de
+// démonstration est ralenti exprès pour que l'attente existe, et on compte les appels.
+await v('connexion : Entrée répété ne lance qu\'une connexion', async () => {
+  await page.click('#btnDeco');
+  await page.waitForSelector('#mat');
+  // 1. un code faux rend la main : le bouton redevient cliquable, avec son libellé d'origine
+  await page.fill('#mat', '2601');
+  await page.fill('#code', 'zzz9');
+  await page.press('#code', 'Enter');
+  await page.waitForSelector('#errEleve .avis-err', { timeout: 6000 });
+  const apresErreur = await page.$eval('#btnEleve', (b) => ({ off: b.disabled, texte: b.textContent }));
+  if (apresErreur.off || apresErreur.texte !== 'Entrer') throw new Error('bouton bloqué après un code faux : ' + JSON.stringify(apresErreur));
+  // 2. backend ralenti, cinq Entrée d'un coup : un seul appel, bouton grisé et parlant
+  const pendant = await page.evaluate(async () => {
+    const { B } = await import('/core/backend.js');
+    window.__origCE = B.connexionEleve;
+    window.__nbCE = 0;
+    B.connexionEleve = async (m, c) => {
+      window.__nbCE++;
+      await new Promise((r) => setTimeout(r, 700));
+      return window.__origCE.call(B, m, c);
+    };
+    const code = document.getElementById('code');
+    code.value = 'aaa1';
+    for (let i = 0; i < 5; i++) code.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    await new Promise((r) => setTimeout(r, 50));
+    const b = document.getElementById('btnEleve');
+    return { nb: window.__nbCE, off: b.disabled, texte: b.textContent, busy: b.getAttribute('aria-busy') };
+  });
+  if (pendant.nb !== 1) throw new Error(`${pendant.nb} connexion(s) lancée(s) pour cinq Entrée`);
+  if (!pendant.off || pendant.busy !== 'true') throw new Error('bouton pas grisé pendant l\'attente : ' + JSON.stringify(pendant));
+  if (!/Connexion/.test(pendant.texte)) throw new Error(`le bouton ne dit pas qu'il travaille : « ${pendant.texte} »`);
+  await page.waitForSelector('text=Bonjour Léa', { timeout: 6000 });
+  const nbFinal = await page.evaluate(async () => {
+    const { B } = await import('/core/backend.js');
+    B.connexionEleve = window.__origCE;
+    delete window.__origCE;
+    return window.__nbCE;
+  });
+  if (nbFinal !== 1) throw new Error(`${nbFinal} connexion(s) au total`);
+});
+
+// ---------- 14 quater. ce que lit l'élève quand Firebase refuse
+// Avant le 15/10/2026, une panne de réseau s'affichait « Matricule ou code incorrect » : l'élève
+// retapait et insistait. La traduction est une fonction pure, exercée ici sans SDK ni réseau.
+await v('connexion : une panne de réseau ne dit pas « code incorrect »', async () => {
+  const r = await page.evaluate(async () => {
+    const { messageConnexion } = await import('/core/backend-firebase.js');
+    return {
+      reseau: messageConnexion({ code: 'auth/network-request-failed' }),
+      firestore: messageConnexion({ code: 'unavailable' }),
+      bloque: messageConnexion({ code: 'auth/too-many-requests' }),
+      faux: messageConnexion({ code: 'auth/invalid-credential' }),
+      fauxAncien: messageConnexion({ code: 'auth/wrong-password' }),
+      inconnu: messageConnexion({ code: 'auth/zzz', message: 'x' }),
+      vide: messageConnexion(undefined),
+    };
+  });
+  if (!/réseau/.test(r.reseau) || /incorrect/.test(r.reseau)) throw new Error('réseau : ' + r.reseau);
+  if (!/réseau/.test(r.firestore)) throw new Error('firestore : ' + r.firestore);
+  if (!/Trop de tentatives/.test(r.bloque) || /incorrect/.test(r.bloque)) throw new Error('blocage : ' + r.bloque);
+  if (r.faux !== 'Matricule ou code incorrect.') throw new Error('faux : ' + r.faux);
+  if (r.fauxAncien !== 'Matricule ou code incorrect.') throw new Error('faux (ancien code) : ' + r.fauxAncien);
+  if (!/auth\/zzz/.test(r.inconnu) || !/enseignant/.test(r.inconnu)) throw new Error('inconnu : ' + r.inconnu);
+  if (!/enseignant/.test(r.vide)) throw new Error('vide : ' + r.vide);
+});
+
+// ---------- 14 quinquies. une connexion répétée du même élève ne renvoie pas à l'accueil
+// Firebase prévient deux fois à chaque connexion, et un Entrée tardif une fois de plus : l'élève
+// qui avait déjà ouvert une rubrique se retrouvait à l'accueil. Ici on ouvre une rubrique, puis on
+// refait la connexion de Léa par le backend, et la rubrique doit rester à l'écran.
+await v('connexion : se reconnecter en étant déjà connecté ne redessine pas', async () => {
+  await page.waitForSelector('[data-rub="quiz"]');
+  await page.click('[data-rub="quiz"]');
+  await page.waitForSelector('[data-act="quiz-flux"]', { timeout: 6000 });
+  await page.evaluate(async () => {
+    const { B } = await import('/core/backend.js');
+    await B.connexionEleve('2601', 'aaa1');
+    await new Promise((r) => setTimeout(r, 300));
+  });
+  if (!(await page.$('[data-act="quiz-flux"]'))) throw new Error("la rubrique a disparu : l'accueil a été redessiné");
+  if (await page.$('text=Bonjour Léa')) throw new Error("l'accueil est revenu par-dessus la rubrique");
+  // et une autre personne, elle, change bien l'écran
+  await page.evaluate(async () => {
+    const { B } = await import('/core/backend.js');
+    await B.connexionProf();
+  });
+  await page.waitForSelector('#btnProfEspace, .prof-onglets, #hoteProf', { timeout: 6000 });
+  // retour à l'état attendu par la suite : Léa à l'accueil
+  await page.evaluate(async () => {
+    const { B } = await import('/core/backend.js');
+    await B.connexionEleve('2601', 'aaa1');
+  });
+  await page.waitForSelector('text=Bonjour Léa', { timeout: 6000 });
+});
+
 // ---------- 15. niveaux : le mécanisme, vérifié à l'unité
 //
 // Depuis le 01/10/2026, aucune activité ne déclare de `niveaux` : tout est ouvert à tous

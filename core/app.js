@@ -164,27 +164,45 @@ function vueConnexion() {
 
   brancherEntete();
 
-  const connecterEleve = async () => {
-    const z = document.getElementById('errEleve');
-    z.innerHTML = '';
-    try {
-      await B.connexionEleve(document.getElementById('mat').value, document.getElementById('code').value);
-    } catch (e) { z.innerHTML = `<div class="avis avis-err">${ech(e.message)}</div>`; }
+  // Une seule connexion à la fois. Sur le réseau du lycée, une classe entière qui se connecte à la
+  // même minute attend plusieurs secondes ; sans ce verrou, chaque appui sur Entrée relançait une
+  // demande complète (constaté le 14/10/2026), et le bouton ne disait pas que ça travaillait.
+  const brancherConnexion = (idBtn, idErr, action) => {
+    const btn = document.getElementById(idBtn);
+    const libelle = btn.textContent;
+    let enCours = false;
+    return async () => {
+      if (enCours) return;
+      enCours = true;
+      const z = document.getElementById(idErr);
+      z.innerHTML = '';
+      btn.disabled = true;
+      btn.setAttribute('aria-busy', 'true');
+      btn.textContent = 'Connexion…';
+      try {
+        await action();
+      } catch (e) {
+        z.innerHTML = `<div class="avis avis-err">${ech(e.message)}</div>`;
+      } finally {
+        // En cas de réussite l'écran a déjà changé : remettre le bouton d'aplomb est sans effet.
+        enCours = false;
+        btn.disabled = false;
+        btn.removeAttribute('aria-busy');
+        btn.textContent = libelle;
+      }
+    };
   };
 
+  const connecterEleve = brancherConnexion('btnEleve', 'errEleve', () =>
+    B.connexionEleve(document.getElementById('mat').value, document.getElementById('code').value));
   document.getElementById('btnEleve').addEventListener('click', connecterEleve);
   // La touche Entrée vaut validation : les élèves tapent au clavier, pas à la souris.
   ['mat', 'code'].forEach((id) => document.getElementById(id).addEventListener('keydown', (e) => {
     if (e.key === 'Enter') connecterEleve();
   }));
 
-  document.getElementById('btnProf').addEventListener('click', async () => {
-    const z = document.getElementById('errProf');
-    z.innerHTML = '';
-    try {
-      await B.connexionProf(DEMO ? document.getElementById('mail').value : undefined);
-    } catch (e) { z.innerHTML = `<div class="avis avis-err">${ech(e.message)}</div>`; }
-  });
+  document.getElementById('btnProf').addEventListener('click', brancherConnexion('btnProf', 'errProf', () =>
+    B.connexionProf(DEMO ? document.getElementById('mail').value : undefined)));
 }
 
 // -------------------------------------------------------------------- accueil
@@ -622,6 +640,10 @@ function vuePanne(e) {
   } catch (e) { vuePanne(e); return; }
 
   B.onAuth(async (p) => {
+    // Même personne déjà à l'écran : rien à redessiner. Une connexion Firebase prévient deux fois
+    // (l'écouteur d'authentification, puis l'appel lui-même), et un appui tardif sur Entrée une fois
+    // de plus ; sans ce garde-fou, l'élève qui avait déjà ouvert une activité était renvoyé à l'accueil.
+    if (p && profil && p.uid === profil.uid) { profil = p; return; }
     profil = p;
     // Un changement de session repart de l'accueil : sinon la rubrique ouverte par
     // l'utilisateur précédent resterait affichée après la connexion suivante.
