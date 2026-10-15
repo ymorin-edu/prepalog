@@ -12,12 +12,15 @@ import { versCSV, telecharger, ouvrirJeu, cheminDe } from './store.js';
 import { NIVEAUX, libelleNiveau, courtNiveau, libelleNiveaux, activiteVisible, horsNiveau, ouvertureParProf,
   demisDe, nomDemi, forcage } from './niveaux.js';
 import { BAREME_AFFICHE, noteSur20, noteConvertie, formaterNote } from './notes.js';
-import { estCopie, estRendue, libelleRendu, ramasser, rouvrir, baseDeLEleve } from './copie.js';
+import { estCopie, estRendue, libelleRendu, ramasser, rouvrir, baseDeLEleve,
+  dateHeureRendu, renduAvantOuverture, verifierCopie } from './copie.js';
 import { TEMPS, COEFS_DEFAUT, coefsDuGroupe, seancesParCompetence, seancesParSpecialite, moyenneCompetence, metasPourNiveau, sansEvaluation2de } from './competences.js';
 
 // Le nom de famille d'une activité, d'après le préfixe de son code (voir CLAUDE.md) : bandeau du Suivi.
 const FAMILLES = { DEC: 'Découverte', ACT: 'Outils métier', TAB: 'Tableur', REF: 'Exercices', SCE: 'Scénarios',
   QUI: 'Quiz', MES: 'Messagerie' };
+// Infobulle d'une note « à la main » qui n'a pas été saisie par un enseignant (signal du Suivi, 15/10/2026).
+const TITRE_DOUTEUSE = "Cette valeur n'a pas été saisie par un enseignant (écrite par l'élève ou par la séance) : vérifiez-la, puis saisissez la note.";
 // Les activités hors entreprise, regroupées par préfixe consécutif (l'ordre des activités est gardé).
 function famillesDe(metas) {
   const out = [];
@@ -43,6 +46,9 @@ export async function rendreEspaceProf(hote, ctx) {
   let demiActif = '';
   // Entreprises repliées dans le Suivi (07/10/2026) : le choix tient le temps de la visite de l'espace enseignant.
   const suiviPlies = new Set();
+  // Résultats du bouton « Vérifier » du Suivi (15/10/2026) : « groupe|séance » → uid → { etat, recalcul, rendu }.
+  // Gardés le temps de la visite ; `rendu` (l'heure de la copie vérifiée) écarte un résultat périmé.
+  const verifs = new Map();
 
   // Le groupe actif est partagé avec l'accueil : l'y remonter à chaque changement.
   function activer(gid) { if (gid !== gidActif) demiActif = ''; gidActif = gid; if (ctx.setGroupe) ctx.setGroupe(gid); }
@@ -1031,12 +1037,15 @@ export async function rendreEspaceProf(hote, ctx) {
     const cellule = (e, m) => {
       const t = par[e.uid]?.[m.id];
       if (aLaMain(m)) {
-        return `<td class="num col-saisie">
+        // Audit du 15/10/2026 : une note saisie par l'enseignant porte `parProf` (poserNote). Une valeur sans
+        // cette marque a été écrite par l'élève (depuis la console) ou par la séance : on la signale, sans rien bloquer.
+        const douteuse = !!(t && typeof t.meilleur === 'number' && t.parProf !== true);
+        return `<td class="num col-saisie${douteuse ? ' note-douteuse' : ''}">
           <input type="number" class="note-saisie" data-uid="${ech(e.uid)}" data-aid="${ech(m.id)}"
             data-max="${m.bareme}" min="0" max="${m.bareme}" step="0.5"
             value="${t && typeof t.meilleur === 'number' ? t.meilleur : ''}"
-            aria-label="${ech(m.code)} — ${ech(e.nom)} ${ech(e.prenom)}"
-            title="Note sur ${m.bareme}. Laisser vide pour effacer.">
+            aria-label="${ech(m.code)} — ${ech(e.nom)} ${ech(e.prenom)}"${douteuse ? ' data-douteuse="eleve"' : ''}
+            title="${douteuse ? TITRE_DOUTEUSE + ' ' : ''}Note sur ${m.bareme}. Laisser vide pour effacer.">
         </td>`;
       }
       // Évaluation en copie rendue (core/copie.js) : une copie rendue ou ramassée affiche sa
@@ -1049,8 +1058,24 @@ export async function rendreEspaceProf(hote, ctx) {
         const lu = noteConvertie(m)
           ? `${formaterNote(noteSur20(t.meilleur, max))}<span class="note">/${BAREME_AFFICHE}</span>`
           : `${t.meilleur}/${max}`;
-        return `<td class="num ${classe} copie-cell" title="${t.meilleur} sur ${max} — copie ${ech(libelleRendu(t))}">${lu}
-          <span class="note copie-mention" data-copie-mention>${t.ramasse ? 'ramassée' : 'rendue'}</span>
+        // Signaux (audit du 15/10/2026) : copie remise avant la première ouverture de la séance, et résultat du
+        // bouton « Vérifier » de la colonne (recalcul depuis le travail enregistré de l'élève).
+        const ouvertLe = g.ouvertLe?.[m.id];
+        const avant = renduAvantOuverture(t, ouvertLe);
+        let ver = verifs.get(`${g.id}|${m.id}`)?.get(e.uid);
+        if (ver && ver.rendu !== t.rendu) ver = null;
+        const rv = ver && ver.recalcul ? `${formaterNote(ver.recalcul.score)}/${ver.recalcul.max}` : '';
+        const mentionVer = !ver ? '' : ver.etat === 'ok' ? 'vérifiée' : ver.etat === 'ecart' ? `≠ recalcul ${rv}`
+          : ver.etat === 'sans-base' ? 'sans travail enregistré' : '';
+        const douteuse = avant || (ver && (ver.etat === 'ecart' || ver.etat === 'sans-base'));
+        const alertes = [];
+        if (avant) alertes.push(`Copie rendue ${dateHeureRendu(t.rendu)} alors que la séance a été ouverte pour la première fois ${dateHeureRendu(ouvertLe)} : elle n'a pas pu être faite dans l'application. Rouvrez-la si besoin.`);
+        if (ver && ver.etat === 'ecart') alertes.push(`La note enregistrée (${formaterNote(t.score)}/${t.max}) ne correspond pas au recalcul depuis le travail de l'élève (${rv}). Rouvrez la copie puis ramassez-la pour reprendre la note recalculée.`);
+        if (ver && ver.etat === 'sans-base') alertes.push("Aucun travail enregistré pour cet élève dans cette séance : la note ne peut pas venir de l'application. Rouvrez la copie si besoin.");
+        // Une copie suspecte ne prend ni le vert « juste » ni le rouge « faux » : le doute passe avant la note.
+        return `<td class="num ${douteuse ? '' : classe} copie-cell${douteuse ? ' note-douteuse' : ''}" title="${ech(`${t.meilleur} sur ${max} — copie ${libelleRendu(t)}${alertes.length ? `\n${alertes.join('\n')}` : ''}`)}">${lu}
+          <span class="note copie-mention" data-copie-mention>${avant ? "rendue avant l'ouverture" : t.ramasse ? 'ramassée' : 'rendue'}</span>${mentionVer
+            ? `<span class="note copie-verif" data-copie-verif="${ech(ver.etat)}">${ech(mentionVer)}</span>` : ''}
           <button type="button" class="btn-copie-rouvrir" data-copie-rouvrir data-uid="${ech(e.uid)}" data-aid="${ech(m.id)}"
             title="Rouvrir la copie : la note est effacée, l'élève peut reprendre et rendre de nouveau"
             aria-label="Rouvrir la copie — ${ech(m.code)} — ${ech(e.nom)} ${ech(e.prenom)}">×</button></td>`;
@@ -1255,9 +1280,17 @@ ${so.phrase}` : ''}`)}"
           r2 += `<th class="suivi-debut suivi-plie" scope="col" title="${ech(b.nom)} : ${b.cols.length} séance${b.cols.length > 1 ? 's' : ''} repliée${b.cols.length > 1 ? 's' : ''}">…</th>`;
         } else {
           b.cols.forEach((m, i) => {
+            // Évaluation en copie : « Vérifier » recalcule les copies rendues depuis le travail enregistré (à la demande).
+            const verifBtn = !estCopie(m) ? '' : (() => {
+              const sait = typeof mods.find((x) => x.meta.id === m.id)?.noter === 'function';
+              return ` <button type="button" class="btn-copie-verifier" data-copie-verifier="${ech(m.id)}"${sait ? '' : ' disabled'}
+                title="${sait ? 'Recalcule chaque copie rendue à partir du travail enregistré de l\'élève et signale les écarts'
+                  : 'Cette séance ne sait pas se recalculer'}"
+                aria-label="Vérifier les copies — ${ech(m.code)}">Vérifier</button>`;
+            })();
             r2 += `<th class="${aLaMain(m) ? 'col-saisie ' : ''}${i === 0 ? 'suivi-debut' : ''}" scope="col" title="${ech(titreCol(m))}">
               ${ech(m.code)}${aLaMain(m) ? `<span class="note"> /${m.bareme}</span>`
-                : noteConvertie(m) ? `<span class="note"> /${BAREME_AFFICHE}</span>` : ''}</th>`;
+                : noteConvertie(m) ? `<span class="note"> /${BAREME_AFFICHE}</span>` : ''}${verifBtn}</th>`;
           });
         }
       });
@@ -1373,6 +1406,10 @@ ${so.phrase}` : ''}`)}"
               toast('Note enregistrée.');
             }
             dernier = inp.value;
+            // La note vient maintenant d'un enseignant (parProf) : le doute tombe sans attendre le redessin.
+            inp.removeAttribute('data-douteuse');
+            inp.closest('td')?.classList.remove('note-douteuse');
+            inp.title = `Note sur ${max}. Laisser vide pour effacer.`;
             inp.classList.add('enregistre');
             setTimeout(() => inp.classList.remove('enregistre'), 900);
           } catch (e) {
@@ -1430,6 +1467,37 @@ ${so.phrase}` : ''}`)}"
         toast(`${module.meta.code} : ${n.ok} copie(s) ramassée(s), ${n.rendue} déjà rendue(s), `
           + `${n.vide} élève(s) sans travail${n.erreur ? `, ${n.erreur} en erreur` : ''}.`, 6000);
         await vueSuivi(z, g);
+      }));
+      // « Vérifier » (audit du 15/10/2026) : une lecture par copie rendue, seulement au clic (quota Firebase).
+      // Le résultat est gardé dans `verifs` ; seul le tableau est redessiné, sans relire les travaux.
+      racine.querySelectorAll('[data-copie-verifier]').forEach((b) => b.addEventListener('click', async (ev) => {
+        const clavier = ev.detail === 0;
+        const module = moduleDe(b.dataset.copieVerifier);
+        if (!module || typeof module.noter !== 'function') return;
+        const aid = module.meta.id;
+        b.disabled = true;
+        const resultats = new Map();
+        const n = { ok: 0, ecart: 0, 'sans-base': 0, erreur: 0 };
+        for (const eleve of eleves) {
+          const travail = par[eleve.uid]?.[aid];
+          if (!estRendue(travail)) continue;
+          try {
+            const r = await verifierCopie(B, { eleve, module, travail });
+            resultats.set(eleve.uid, { ...r, rendu: travail.rendu });
+            n[r.etat] = (n[r.etat] || 0) + 1;
+          } catch (e) { n.erreur++; }
+        }
+        verifs.set(`${g.id}|${aid}`, resultats);
+        const total = n.ok + n.ecart + n['sans-base'];
+        const s = (k) => (k > 1 ? 's' : '');
+        toast(total + n.erreur === 0 ? `${module.meta.code} : aucune copie rendue à vérifier.`
+          : `${module.meta.code} : ${n.ok} copie${s(n.ok)} vérifiée${s(n.ok)}, ${n.ecart} écart${s(n.ecart)}`
+            + `${n['sans-base'] ? `, ${n['sans-base']} sans travail enregistré` : ''}${n.erreur ? `, ${n.erreur} en erreur` : ''}.`, 6000);
+        const { scrollLeft, scrollTop } = cadre;
+        cadre.innerHTML = tableauSuivi();
+        cadre.scrollLeft = scrollLeft; cadre.scrollTop = scrollTop;
+        brancherCellules(cadre);
+        if (clavier) cadre.querySelector(`[data-copie-verifier="${CSS.escape(aid)}"]`)?.focus();
       }));
       racine.querySelectorAll('[data-copie-rouvrir]').forEach((b) => b.addEventListener('click', async () => {
         const m = notees.find((x) => x.id === b.dataset.aid);
@@ -1886,19 +1954,24 @@ ${so.phrase}` : ''}`)}"
         // s'écrasent plus. Un identifiant à point (aucun aujourd'hui) retomberait sur la table entière.
         const id = c.dataset.ouvre;
         const pointe = !id.includes('.');
+        // Première ouverture (classe OU demi-groupe), écrite UNE fois et jamais réécrite (audit du 15/10/2026) :
+        // le Suivi s'en sert pour signaler une copie rendue avant que la séance ait pu être faite.
+        const premiere = c.checked && !g.ouvertLe?.[id] ? Date.now() : null;
         if (demi) {
-          if (pointe) await B.majGroupe(g.id, { [`ouvertsDemi.${demi}.${id}`]: c.checked });
-          else {
+          if (pointe) {
+            await B.majGroupe(g.id, { [`ouvertsDemi.${demi}.${id}`]: c.checked,
+              ...(premiere ? { [`ouvertLe.${id}`]: premiere } : {}) });
+          } else {
             const ouvertsDemi = { ...(g.ouvertsDemi || {}) };
             ouvertsDemi[demi] = { ...(ouvertsDemi[demi] || {}), [id]: c.checked };
-            await B.majGroupe(g.id, { ouvertsDemi });
+            await B.majGroupe(g.id, { ouvertsDemi, ...(premiere ? { ouvertLe: { ...(g.ouvertLe || {}), [id]: premiere } } : {}) });
           }
         } else if (pointe) {
-          await B.majGroupe(g.id, { [`ouverts.${id}`]: c.checked });
+          await B.majGroupe(g.id, { [`ouverts.${id}`]: c.checked, ...(premiere ? { [`ouvertLe.${id}`]: premiere } : {}) });
         } else {
           const ouverts = { ...(g.ouverts || {}) };
           ouverts[id] = c.checked;
-          await B.majGroupe(g.id, { ouverts });
+          await B.majGroupe(g.id, { ouverts, ...(premiere ? { ouvertLe: { ...(g.ouvertLe || {}), [id]: premiere } } : {}) });
         }
         groupes = await B.groupesDuProf(ctx.profil.uid);
         toast(`${c.checked ? 'Activité ouverte' : 'Activité fermée'}${demi ? ` pour ${nomD}` : ''}.`);

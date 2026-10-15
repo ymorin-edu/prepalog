@@ -26,6 +26,7 @@
 | 5 | Un bug de contenu n'est plus noté « faux » | C3 | petit | Sonnet | oui | 4 fini | **livré** (08/10, b0776d1) |
 | 6 | Suppressions sans traces invisibles, miroir reconstruisible | C4 | moyen | Sonnet | oui | 1, 4 | **livré** (08/10, 9ba74a9 puis d96f6c7) ; console RTDB publiée le 08/10 |
 | 7 | Quota Spark : mesurer, puis supprimer les écritures inutiles | C9 | moyen | Sonnet | oui | 4 | **mesuré** (11/10, voir `decisions.md`) : ~63 écritures par élève et par heure, aucune optimisation nécessaire pour l'instant |
+| 22 | Console élève : règles bornées, session qui expire, alertes dans le suivi (note à la main sans `parProf`, copie rendue avant l'ouverture, bouton « Vérifier ») | audit du 15/10 | moyen | Fable + Sonnet | oui + règles | 1 | **livré** (15/10/2026, voir `decisions.md`) ; **consoles Firestore et RTDB à publier** |
 | **Lot B — rendre la croissance possible** | | | | | | | |
 | 8 | Fabrique de séance d'entreprise (24 fichiers recopiés) | C6 | moyen | Sonnet | oui (petit) | — | **livré** (08/10, db5ed50 à ee13996) |
 | 9 | `entreprise.js` : options figées, `COLORS`/`SHIP` sortis, modules extraits | C5 | gros | Opus puis Sonnet | oui | 8 | **livré** (9a, 9a bis, 9b, 9c ; 9c bis à faire plus tard) |

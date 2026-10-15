@@ -727,6 +727,19 @@ body.immersion .app{ max-width:1720px; padding:14px 24px 0 }
 .btn-copie-rouvrir:hover, .btn-copie-rouvrir:focus-visible,
 .btn-ramasser:hover, .btn-ramasser:focus-visible{ border-color:var(--encre-douce); color:inherit }
 .copie-ramassage{ margin-top:16px; padding-top:12px; border-top:1px solid var(--filet) }
+/* Signaux du suivi (audit du 15/10/2026) : une valeur ou une copie suspecte est cernée en ambre (trait,
+   jamais d'aplat : le vert dit « juste », le rouge « faux »). */
+.note-douteuse{ outline:2px dashed var(--terre); outline-offset:-2px }
+.note-douteuse .copie-mention, .note-douteuse .copie-verif{ color:var(--terre) }
+.copie-verif{ margin-left:6px }
+.copie-verif::before{ content:'· '; color:var(--encre-douce) }
+.note-saisie[data-douteuse]{ border-color:var(--terre) }
+.btn-copie-verifier{
+  font:inherit; font-size:.75rem; font-weight:normal; color:var(--encre-douce); background:none;
+  border:1px solid var(--filet); border-radius:var(--r); padding:0 5px; cursor:pointer; line-height:1.4; margin-left:4px;
+}
+.btn-copie-verifier:hover, .btn-copie-verifier:focus-visible{ border-color:var(--encre-douce); color:inherit }
+.btn-copie-verifier:disabled{ cursor:not-allowed; opacity:.6 }
 
 /* --- environnement d'entreprise (type « entreprise ») --------------------------
    LogiSim dans la charte Prepalog : une colonne de navigation à gauche, le travail

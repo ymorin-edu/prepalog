@@ -22,6 +22,17 @@ export const estRendue = (travail) => !!(travail && travail.rendu);
 export const heureRendu = (ts) => new Date(ts)
   .toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }).replace(':', ' h ');
 
+// « le 15/10 à 10 h 42 » : quand le jour peut différer de celui de la remise (infobulles d'alerte).
+export const dateHeureRendu = (ts) => `le ${new Date(ts)
+  .toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })} à ${heureRendu(ts)}`;
+
+// Signal du suivi (audit du 15/10/2026) : une copie REMISE PAR L'ÉLÈVE avant la première ouverture de la
+// séance par l'enseignant n'a pas pu être faite dans l'application (écriture depuis la console). Une copie
+// ramassée est écrite par l'enseignant, donc jamais suspecte. `ouvertLe` absent (séance ouverte avant que
+// la date soit enregistrée) : pas d'alerte, on ne devine rien.
+export const renduAvantOuverture = (travail, ouvertLe) =>
+  estRendue(travail) && !travail.ramasse && typeof ouvertLe === 'number' && travail.rendu < ouvertLe;
+
 // « rendue à 10 h 42 » / « ramassée à 11 h 00 », pour l'infobulle et la mention du suivi.
 export function libelleRendu(travail) {
   if (!estRendue(travail)) return '';
@@ -55,6 +66,23 @@ export async function ramasser(B, { gid, eleve, module }) {
     nom: eleve.nom || '', prenom: eleve.prenom || '', ramasse: true,
   });
   return { ok: true, travail };
+}
+
+// Vérifier une copie rendue : on recalcule la note depuis le travail enregistré de l'élève (sa base
+// privée) avec les mêmes jalons que la remise, et on la compare à la note enregistrée. Une lecture par
+// élève : à ne lancer que sur demande (quota Firebase). Ne modifie rien. Rend `{ etat, recalcul }` :
+//   'ok'        — le recalcul donne la même note ;
+//   'ecart'     — la note enregistrée ne correspond pas au recalcul (`recalcul` = { score, max, … }) ;
+//   'sans-base' — l'élève n'a aucun travail enregistré pour cette séance ;
+//   'module'    — l'activité ne sait pas se recalculer (pas de `noter`).
+export async function verifierCopie(B, { eleve, module, travail }) {
+  if (typeof module.noter !== 'function') return { etat: 'module', recalcul: null };
+  const meta = module.meta;
+  const base = await baseDeLEleve(B, eleve.uid, meta.jeuId || meta.id);
+  if (!base) return { etat: 'sans-base', recalcul: null };
+  const res = module.noter(base);
+  const ecart = Math.abs(res.score - travail.score) > 0.01 || res.max !== travail.max;
+  return { etat: ecart ? 'ecart' : 'ok', recalcul: { score: res.score, max: res.max } };
 }
 
 // Rouvrir : le résultat part, l'élève peut reprendre et rendre de nouveau.

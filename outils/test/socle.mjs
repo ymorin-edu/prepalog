@@ -925,6 +925,220 @@ await v("suivi : le 0 posé par l'enseignant tient quand l'élève refait la sé
   }
 });
 
+// ---------- 12 ter. audit du 15/10/2026 : le suivi SIGNALE (sans rien bloquer) ce qu'un élève a pu écrire
+// lui-même depuis la console. Trois signaux : une note « à la main » sans marque d'enseignant, une copie
+// rendue avant la première ouverture de la séance, et le bouton « Vérifier » d'une colonne d'évaluation.
+// Les données sont posées par le backend de démonstration, puis remises comme on les a trouvées.
+const AUDIT_GID = '1-log-a';
+const auditIds = () => page.evaluate(async (gid) => {
+  const { B } = await import('/core/backend.js');
+  const eleves = await B.elevesDuGroupe(gid);
+  const de = (nom) => eleves.find((e) => e.nom === nom).uid;
+  return { gid, lea: de('DUPONT'), noe: de('MARTIN') };
+}, AUDIT_GID);
+// L'espace enseignant garde la liste de ses groupes en mémoire tant qu'on y reste : après avoir écrit un groupe
+// par le backend, on passe par l'accueil et on rouvre l'espace pour qu'il la relise. (Le cas d'avant a rendu la main
+// à l'enseignant sur l'accueil.)
+const auditEspace = async () => {
+  if (await page.$('#hoteProf #btnRetour')) await page.click('#hoteProf #btnRetour');
+  await page.waitForSelector('#btnProfEspace', { timeout: 6000 });
+  await page.click('#btnProfEspace');
+  await page.waitForSelector('[data-ong="groupes"]', { timeout: 6000 });
+  const a = await page.$(`[data-actif="${AUDIT_GID}"]`);
+  if (a) { await a.click(); await page.waitForTimeout(200); }
+};
+// Revenir sur le suivi en le faisant relire (on passe par un autre onglet).
+const auditSuivi = async () => {
+  await auditEspace();
+  await page.click('[data-ong="groupes"]');
+  await page.waitForSelector('#gNom');
+  await page.click('[data-ong="suivi"]');
+  await page.waitForSelector('#contenuProf tbody tr');
+};
+// Pose une copie rendue de l'élève à l'heure voulue (`rendu`), au nom de l'enseignant ou non (`ramasse`).
+const auditCopie = (o) => page.evaluate(async ({ gid, uid, aid, score, rendu, ramasse }) => {
+  const { B } = await import('/core/backend.js');
+  await B.poserNote(gid, uid, aid, null);
+  await B.rendreCopie(gid, uid, aid, { score, max: 20, ramasse: !!ramasse });
+  const k = `prepalog:travaux/${gid}/${uid}/${aid}`;
+  const t = JSON.parse(localStorage.getItem(k));
+  t.rendu = rendu;
+  localStorage.setItem(k, JSON.stringify(t));
+}, o);
+const auditNettoyer = (aid) => page.evaluate(async ({ gid, aid }) => {
+  const { B } = await import('/core/backend.js');
+  const eleves = await B.elevesDuGroupe(gid);
+  for (const e of eleves) { await B.poserNote(gid, e.uid, aid, null); localStorage.removeItem(`prepalog:prive/${e.uid}/${aid}`); }
+  await B.majGroupe(gid, { ouvertLe: null });
+}, { gid: AUDIT_GID, aid });
+
+await v("suivi : une note « à la main » qui ne vient pas d'un enseignant est signalée, sa saisie lève le doute", async () => {
+  const AID = 'bouygues-telecom';
+  const { gid, lea, noe } = await auditIds();
+  const SEL = (uid) => `.note-saisie[data-aid="${AID}"][data-uid="${uid}"]`;
+  try {
+    // Ce qu'écrirait un élève depuis la console : un résultat sans la marque `parProf`.
+    await page.evaluate(async ({ gid, lea, AID }) => {
+      const { B } = await import('/core/backend.js');
+      await B.poserNote(gid, lea, AID, null);
+      await B.ecrireScore(gid, lea, AID, { score: 20, max: 20 });
+    }, { gid, lea, AID });
+    await auditSuivi();
+    await page.waitForSelector(SEL(lea));
+    const r = await page.$eval(SEL(lea), (i) => ({ d: i.dataset.douteuse, td: i.closest('td').className, t: i.title, v: i.value,
+      contour: getComputedStyle(i.closest('td')).outlineStyle }));
+    if (r.d !== 'eleve' || !/note-douteuse/.test(r.td) || r.v !== '20') throw new Error('valeur de l\'élève non signalée : ' + JSON.stringify(r));
+    if (!/n'a pas été saisie par un enseignant/.test(r.t)) throw new Error('infobulle : ' + r.t);
+    if (r.contour !== 'dashed') throw new Error('contour ambre absent (styles) : ' + r.contour);
+    // Une case vide, et la valeur de l'autre élève, ne sont pas signalées.
+    const autre = await page.$eval(SEL(noe), (i) => ({ d: i.hasAttribute('data-douteuse'), td: i.closest('td').className }));
+    if (autre.d || /note-douteuse/.test(autre.td)) throw new Error('case vide signalée : ' + JSON.stringify(autre));
+    // L'enseignant saisit : le doute tombe tout de suite.
+    await page.fill(SEL(lea), '12');
+    await page.press(SEL(lea), 'Tab');
+    await page.waitForFunction((s) => { const i = document.querySelector(s); return !i.hasAttribute('data-douteuse') && !/note-douteuse/.test(i.closest('td').className); }, SEL(lea), { timeout: 4000 });
+    // … et au redessin, la note est bien celle de l'enseignant.
+    await auditSuivi();
+    await page.waitForSelector(SEL(lea));
+    const apres = await page.$eval(SEL(lea), (i) => ({ d: i.hasAttribute('data-douteuse'), td: i.closest('td').className, v: i.value }));
+    if (apres.d || /note-douteuse/.test(apres.td) || apres.v !== '12') throw new Error('après saisie : ' + JSON.stringify(apres));
+    const stocke = await page.evaluate(async ({ gid, lea, AID }) => (await (await import('/core/backend.js')).B.lireScore(gid, lea, AID)), { gid, lea, AID });
+    if (stocke.parProf !== true || stocke.meilleur !== 12) throw new Error('poserNote : ' + JSON.stringify(stocke));
+  } finally {
+    await page.evaluate(async ({ gid, lea, AID }) => { const { B } = await import('/core/backend.js'); await B.poserNote(gid, lea, AID, null); }, { gid, lea, AID });
+  }
+});
+
+await v("suivi : une copie rendue avant la première ouverture de la séance est signalée (pas une copie honnête ni une copie ramassée)", async () => {
+  const AID = 'picard-ent44';
+  const { gid, lea } = await auditIds();
+  const BTN = `[data-copie-rouvrir][data-uid="${lea}"][data-aid="${AID}"]`;
+  const maintenant = Date.now();
+  const cas = async ({ ouvertLe, rendu, ramasse }) => {
+    await page.evaluate(async ({ gid, AID, ouvertLe }) => {
+      const { B } = await import('/core/backend.js');
+      await B.majGroupe(gid, { ouvertLe: ouvertLe === null ? null : { [AID]: ouvertLe } });
+    }, { gid, AID, ouvertLe });
+    await auditCopie({ gid, uid: lea, aid: AID, score: 10, rendu, ramasse });
+    await auditSuivi();
+    await page.waitForSelector(BTN);
+    return page.$eval(BTN, (b) => { const td = b.closest('td');
+      return { cls: td.className, mention: td.querySelector('[data-copie-mention]').textContent.trim(), title: td.title,
+        contour: getComputedStyle(td).outlineStyle }; });
+  };
+  try {
+    // Rendue une heure AVANT l'ouverture : signalée.
+    const avant = await cas({ ouvertLe: maintenant, rendu: maintenant - 3600 * 1000 });
+    if (avant.mention !== "rendue avant l'ouverture" || !/note-douteuse/.test(avant.cls)) throw new Error('avant l\'ouverture : ' + JSON.stringify(avant));
+    if (!/Copie rendue le \d\d\/\d\d à \d\d h \d\d alors que la séance a été ouverte pour la première fois le \d\d\/\d\d à \d\d h \d\d : elle n'a pas pu être faite dans l'application/.test(avant.title)) throw new Error('infobulle : ' + avant.title);
+    if (avant.contour !== 'dashed') throw new Error('contour ambre absent : ' + avant.contour);
+    // Rendue une minute APRÈS l'ouverture : copie honnête.
+    const apres = await cas({ ouvertLe: maintenant, rendu: maintenant + 60 * 1000 });
+    if (apres.mention !== 'rendue' || /note-douteuse/.test(apres.cls)) throw new Error('après l\'ouverture : ' + JSON.stringify(apres));
+    // Séance ouverte avant que la date soit enregistrée (pas de `ouvertLe`) : aucune alerte.
+    const sans = await cas({ ouvertLe: null, rendu: maintenant - 3600 * 1000 });
+    if (sans.mention !== 'rendue' || /note-douteuse/.test(sans.cls)) throw new Error('sans ouvertLe : ' + JSON.stringify(sans));
+    // Une copie ramassée par l'enseignant est écrite par lui : jamais suspecte.
+    const ram = await cas({ ouvertLe: maintenant, rendu: maintenant - 3600 * 1000, ramasse: true });
+    if (ram.mention !== 'ramassée' || /note-douteuse/.test(ram.cls)) throw new Error('ramassée : ' + JSON.stringify(ram));
+  } finally { await auditNettoyer(AID); }
+});
+
+await v("suivi : cocher l'ouverture d'une séance écrit sa date de première ouverture, une seule fois", async () => {
+  const AID = 'picard-ent44';
+  const { gid } = await auditIds();
+  const SEL = `[data-ouvre="${AID}"]`;
+  const lireOuvertLe = () => page.evaluate(async ({ gid, AID }) => (await (await import('/core/backend.js')).B.groupe(gid)).ouvertLe?.[AID] ?? null, { gid, AID });
+  const attendre = (attendu) => page.waitForFunction(async ({ gid, AID, attendu }) => {
+    const g = await (await import('/core/backend.js')).B.groupe(gid);
+    return attendu === 'aucun' ? !g.ouvertLe?.[AID] : typeof g.ouvertLe?.[AID] === 'number';
+  }, { gid, AID, attendu }, { timeout: 4000 });
+  try {
+    await auditEspace();
+    await page.click('[data-ong="seance"]');
+    await page.waitForSelector(SEL);
+    if (await lireOuvertLe() !== null) throw new Error('ouvertLe présent avant toute ouverture');
+    const avant = Date.now();
+    await page.check(SEL);
+    await attendre('date');
+    const t1 = await lireOuvertLe();
+    if (!(t1 >= avant && t1 <= Date.now())) throw new Error('date de première ouverture : ' + t1 + ' (' + avant + ')');
+    // Fermer puis rouvrir plus tard : la date d'origine reste, sinon des copies honnêtes passeraient pour suspectes.
+    await page.waitForSelector(SEL);
+    await page.uncheck(SEL);
+    await page.waitForFunction((s) => !document.querySelector(s)?.checked, SEL);
+    await page.waitForTimeout(60);
+    await page.check(SEL);
+    await page.waitForFunction((s) => document.querySelector(s)?.checked, SEL);
+    await page.waitForTimeout(150);
+    const t2 = await lireOuvertLe();
+    if (t2 !== t1) throw new Error(`la date a été réécrite : ${t1} puis ${t2}`);
+  } finally {
+    await page.evaluate(async ({ gid, AID }) => {
+      const { B } = await import('/core/backend.js');
+      await B.majGroupe(gid, { [`ouverts.${AID}`]: false, ouvertLe: null });
+    }, { gid, AID });
+  }
+});
+
+await v("suivi : « Vérifier » recalcule les copies rendues (écart, sans travail enregistré, vérifiée), et ne lit rien avant le clic", async () => {
+  const AID = 'picard-ent44';
+  const { gid, lea, noe } = await auditIds();
+  const maintenant = Date.now();
+  const cellule = (uid) => page.$eval(`[data-copie-rouvrir][data-uid="${uid}"][data-aid="${AID}"]`, (b) => { const td = b.closest('td');
+    return { cls: td.className, verif: td.querySelector('[data-copie-verif]')?.textContent.trim() || null, titre: td.title,
+      mention: td.querySelector('[data-copie-mention]').textContent.trim() }; });
+  const toast = () => page.evaluate(() => document.getElementById('toast')?.textContent || '');
+  const lectures = () => page.evaluate(() => window.__lecturesAudit);
+  try {
+    // Léa : note enregistrée 17/20 alors que son travail (une base presque vide) vaut 0/20. Noé : une copie, mais aucun travail.
+    await page.evaluate(async ({ lea, AID }) => {
+      const { B } = await import('/core/backend.js');
+      await B.ecrireJeuPrive(lea, AID, { v: 1 });
+      window.__lecturesAudit = 0;
+      const orig = B.lireJeuPrive;
+      window.__origLire = orig;
+      B.lireJeuPrive = (...a) => { window.__lecturesAudit++; return orig.apply(B, a); };
+    }, { lea, AID });
+    await auditCopie({ gid, uid: lea, aid: AID, score: 17, rendu: maintenant });
+    await auditCopie({ gid, uid: noe, aid: AID, score: 0, rendu: maintenant });
+    await auditSuivi();
+    const BOUTON = `[data-copie-verifier="${AID}"]`;
+    await page.waitForSelector(BOUTON);
+    // Seule la colonne d'une évaluation en copie porte le bouton.
+    const nb = await page.$$eval('[data-copie-verifier]', (b) => b.length);
+    const nbCopies = await page.evaluate(async () => (await (await import('/activites/index.js')).chargerActivites()).filter((m) => m.meta.copie && m.meta.bareme).length);
+    if (nb !== nbCopies) throw new Error(`${nb} boutons « Vérifier » pour ${nbCopies} évaluations en copie`);
+    if (await lectures() !== 0) throw new Error('lecture de bases avant le clic : ' + await lectures());
+    if ((await cellule(lea)).verif !== null) throw new Error('mention de vérification avant le clic');
+    await page.click(BOUTON);
+    await page.waitForSelector(`[data-copie-verif]`);
+    const l = await cellule(lea), n = await cellule(noe);
+    if (l.verif !== '≠ recalcul 0/20' || !/note-douteuse/.test(l.cls)) throw new Error('écart : ' + JSON.stringify(l));
+    if (!/La note enregistrée \(17\/20\) ne correspond pas au recalcul depuis le travail de l'élève \(0\/20\)\. Rouvrez la copie puis ramassez-la/.test(l.titre)) throw new Error('infobulle écart : ' + l.titre);
+    if (l.mention !== 'rendue') throw new Error('la mention « rendue » a disparu : ' + l.mention);
+    if (n.verif !== 'sans travail enregistré' || !/note-douteuse/.test(n.cls)) throw new Error('sans base : ' + JSON.stringify(n));
+    if (await lectures() !== 2) throw new Error('une lecture par copie rendue attendue : ' + await lectures());
+    const t = await toast();
+    if (!/ENT-4\.4 : 0 copie vérifiée, 1 écart, 1 sans travail enregistré/.test(t)) throw new Error('bilan : ' + t);
+    // Les deux copies deviennent cohérentes (note 0/20 = recalcul 0/20, travail enregistré) : « vérifiée », sans alerte.
+    await auditCopie({ gid, uid: lea, aid: AID, score: 0, rendu: maintenant + 1000 });
+    await page.evaluate(async ({ noe, AID }) => { await (await import('/core/backend.js')).B.ecrireJeuPrive(noe, AID, { v: 1 }); }, { noe, AID });
+    await auditSuivi();
+    await page.waitForSelector(BOUTON);
+    await page.click(BOUTON);
+    await page.waitForFunction(() => document.querySelectorAll('[data-copie-verif="ok"]').length === 2);
+    for (const uid of [lea, noe]) {
+      const c = await cellule(uid);
+      if (c.verif !== 'vérifiée' || /note-douteuse/.test(c.cls)) throw new Error('cohérente : ' + JSON.stringify(c));
+    }
+    if (!/2 copies vérifiées, 0 écart/.test(await toast())) throw new Error('bilan 2 : ' + await toast());
+  } finally {
+    await page.evaluate(async () => { if (window.__origLire) (await import('/core/backend.js')).B.lireJeuPrive = window.__origLire; });
+    await auditNettoyer(AID);
+  }
+});
+
 // ---------- 13. bascule clair / sombre
 await v('bascule du thème et persistance', async () => {
   const fondDe = () => page.evaluate(() => getComputedStyle(document.body).backgroundColor);
