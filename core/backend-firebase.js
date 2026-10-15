@@ -86,6 +86,16 @@ export async function creerBackendFirebase() {
     return profil;
   }
 
+  // Durée de la session (audit console élève, 15/10/2026). L'élève travaille sur un poste
+  // partagé : sa session ne survit pas à la fermeture de l'onglet (`browserSessionPersistence`),
+  // sinon le suivant retrouvait son compte ouvert. L'enseignant, sur son poste, garde la sienne
+  // (`browserLocalPersistence`, le réglage d'avant). Le réglage se fait AVANT chaque connexion :
+  // Firebase y range l'utilisateur au moment où il se connecte. Un échec du réglage (stockage
+  // bloqué) ne doit jamais empêcher la connexion : on retombe sur le réglage courant.
+  async function reglerPersistance(persistance) {
+    try { await AU.setPersistence(auth, persistance); } catch (e) { /* sans gravité */ }
+  }
+
   return {
     mode: 'firebase',
 
@@ -121,6 +131,7 @@ export async function creerBackendFirebase() {
 
     async connexionProf() {
       panne = null;
+      await reglerPersistance(AU.browserLocalPersistence);
       const c = await AU.signInWithPopup(auth, new AU.GoogleAuthProvider());
       const ref = dref('users', c.user.uid);
       const s = await FS.getDoc(ref);
@@ -146,6 +157,7 @@ export async function creerBackendFirebase() {
 
     async connexionEleve(matricule, code) {
       panne = null;
+      await reglerPersistance(AU.browserSessionPersistence);
       try {
         await AU.signInWithEmailAndPassword(auth, matEmail(matricule), matMdp(matricule, code));
       } catch (e) {
@@ -489,7 +501,9 @@ export async function creerBackendFirebase() {
       // Instance secondaire : créer un compte connecte l'utilisateur, on ne veut pas
       // déconnecter l'enseignant à chaque élève.
       const app2 = AP.initializeApp(CONFIG.firebase, 'creation' + Date.now());
-      const auth2 = AU.getAuth(app2);
+      // En mémoire seulement : les comptes créés ne laissent aucune session dans le navigateur
+      // de l'enseignant (15/10/2026).
+      const auth2 = AU.initializeAuth(app2, { persistence: AU.inMemoryPersistence });
       const faits = [], erreurs = [];
       const majAcces = {};
       for (let i = 0; i < liste.length; i++) {
