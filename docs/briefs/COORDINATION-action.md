@@ -218,3 +218,26 @@ avant. Les quatre tournent en parallèle ; ENT-8.4 n'écrit pas dans `planning.j
 ### 6.5 Journal du chantier 2
 
 - 16/10 après-midi : briefs commités (eee6db1), squelettes (91479ff), feuille §6 (12acd92) ; deux états des lieux Sonnet en parallèle, puis quatre sous-agents : images (eafefd8), moteur `depart` (55cb2c3), ENT-8.4 Opus (23a8ebc, 19 cas), ENT-8.3 Opus (4d6e197, 21 cas) ; cas du registre du bloc `action` recalé (62d00f5). Comptes rendus des deux briefs remplis par les constructeurs, statuts « livré ». **Rien n'a été vu à l'écran par Tristan.** Laissé ouvert par les constructeurs : cartes « Nouveau message » qui s'empilent sans passage par la Messagerie ; barre « Ouvrir la Messagerie » pendant « Avant de commencer » ; bouton « Vérifier mon planning » gardé en 8.4 (`aides.verifier: false` pour le retirer) ; lexique « remorque à deux planchers » (« deux étages ») proche de la réponse à P ; PDF d'éduscol non relu.
+
+## 7. Chantier 3 (16/10/2026) : ENT-8.5 (évaluation CAP-C1.1) — décisions du chef de chantier
+
+**Délégation** : Tristan, 16/10/2026, « tu vas faire le chef de chantier pour 8.5, tu prends les décisions ». Même règles qu'au §1 (aucun
+sous-agent ne commite ; le chef commite par nom et pousse suite verte). **Périmètre : la demande au moteur du §7 d'ENT-8.5, puis ENT-8.5.**
+ENT-8.6 (jumelle) n'est **pas** dans ce chantier : elle fera l'objet d'un chantier suivant, après l'essai de 8.5 à l'écran ; 8.5 pose pour elle
+le module partagé `contenus/action-eval-sites.js` (les deux sites + fonction pure `siteDe(identifiantEleve)`).
+
+| Chantier | Modèle | Port | Fichiers (et personne d'autre) |
+|---|---|---|---|
+| Moteur : vue Localiser acceptée en `copie` (niveau standard, pas de bonus, aide après 2 erreurs, rien au Suivi avant la remise) | Opus | 8115 | `core/types/localiser.js`, `core/types/entreprise.js` (si la remise l'exige), `styles/localiser.css`, `outils/test/localiser.mjs` (cas ajoutés), `activites/FICHE-SEANCE.md` (section localiser) |
+| ENT-8.5 | Opus | 8116 | `contenus/action-eval-sites.js`, `contenus/action-ent85-donnees.js`, `contenus/action-ent85.js`, `contenus/questions/ENT-8.5.js`, `contenus/corriges/ENT-8.5.js`, `activites/action-evaluation-se-situer.js`, `contenus/action.js` (ajouts seulement : Belleville, Villefranche, La Sentinelle), `activites/index.js` (si la rubrique l'exige), `outils/test/action-85.mjs`, `outils/test/socle.mjs` (ligne `ATTENDU_CAP` + cas CAP-C1.1 recalé), lignes dans `outils/test.mjs` (`BLOCS`, `GROUPES`) et `tirage-niveaux.mjs` |
+
+Séquence : moteur d'abord (ENT-8.5 s'appuie sur la vue), puis ENT-8.5. Décisions du chef :
+
+1. **`lieux` en fonction** : déjà accepté par le moteur (`listeLieux`, `localiser.js:135`) : le point 2 du §7 est acquis ; le sous-agent le vérifie
+   par un cas et n'écrit que le point 1. Pas de repli à deux vues.
+2. **Fin de la carte en évaluation** : « le trajet fléché » du `fin` est conservé (rien ne dit juste ou faux) ; le sous-agent le dit si le
+   moteur impose autre chose.
+3. **Même site 8.5 / 8.6** : fonction pure sur l'identifiant de l'élève (brief §7 point 3, 2ᵉ voie), dans `action-eval-sites.js`, sans graine de séance.
+4. **Poids du §5 du brief** : repris tels quels (décidés par Cowork sur délégation de Tristan, §11 du brief).
+5. **Textes construits par Cowork** : écrits tels quels, liste à relire à l'écran dans le compte rendu.
+6. **Alertes à dire à Tristan** : 7 (`test.mjs`, `socle.mjs`, `tirage-niveaux.mjs`, `localiser.mjs` touchés ; CAP-C1.1 passe à 6 séances) ; 8 (activité ajoutée) ; 9 (entreprise réelle : GXO, Kuehne+Nagel, Onnaing, Belleville, La Sentinelle, Villefranche : vérifié par Cowork, sources au brief) ; 13 (la vue n'agit que si `localiser` est déclaré). Rien ne change dans Firebase.
