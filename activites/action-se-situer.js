@@ -26,6 +26,7 @@ const s = seanceEntreprise(ACTION, SEANCE, {
   bareme: 20,                       // jalons pondérés (16) + questions notées (4), somme = 20
   parcours: true,                   // première séance du parcours Action (pas de `precedente`)
   correction: true,
+  bilanDetail: true,                // CAP : le bilan de fin descend à la case, avec « Corriger dans … » par ligne et la liste « À corriger » (16/10/2026)
   niveauxPrevus: ['confirme', 'accompagne'],   // confirmé : lieu et situation bonus ; accompagné : la carte avec les noms (fiches standard)
   questions: 'ENT-8.1',
   reinitialisable: true,            // première séance d’Action : l’enseignant peut remettre un élève à zéro (règle des X.1)

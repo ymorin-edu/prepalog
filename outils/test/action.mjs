@@ -577,6 +577,62 @@ await v('ENT-8.2 : corriger « Qui fait quoi ? » — « Décider de refuser une
   vrai(n.score < 20 && n.score > 19, 'note moyennée (premier bilan et correction) : ' + n.score);
 });
 
+await v('ENT-8.2 : bilan détaillé (CAP) — sous chaque bloc faux, une ligne par case et « Corriger dans … » ; le bouton ouvre CET écran ; la liste « À corriger » reste en haut et se coche au renvoi ; le bilan revient tout juste', async () => {
+  await monter({ uid: 'ac82-detail', db: { tirages: { [ID]: tirage() } } });
+  await parcoursComplet({ qui: { ...QUI, 't-ranger': 'julie' }, lire: { ...LIRE, 'l-havre-heure': '08:30' }, quai: 'Q1', t: 12 });
+  let b = await fin();
+  egal(b.lignes.filter(([, e]) => e === 'ko').map(([g]) => g), ['Qui fait quoi ?', 'Le planigramme'], 'blocs faux');
+  const detail = () => pg.$$eval(`${Z} [data-fin-case]`, (L) => L.map((l) => [l.dataset.finCase, l.dataset.finCaseEtat, l.querySelector('[data-fin-aller]')?.dataset.finAller || '']));
+  egal(await detail(), [['tache-1', 'ok', ''], ['tache-2', 'ko', 'fiche:qui-fait-quoi'], ['tache-3', 'ok', ''],
+    ['lecture-1', 'ko', 'fiche:planigramme'], ['lecture-2', 'ok', ''], ['v1-quai-libre', 'ko', 'planning:action-quais'], ['v1-creneau', 'ok', '']], 'lignes du détail');
+  if (CAPTURES) await pg.screenshot({ path: `${CAPTURES}/7-bilan-detail.png`, fullPage: true });
+  const txt = await pg.$eval(`${Z} [data-fin-seance]`, (e) => e.textContent.replace(/\s+/g, ' '));
+  vrai(/Corriger dans « Lire le planigramme »/.test(txt) && /Corriger dans « Planning des quais »/.test(txt) && /Corriger dans « Qui fait quoi \? »/.test(txt), 'noms des écrans : ' + txt);
+  vrai(!/07:00|7 h|kevin|Kevin|Quai 2/.test(txt.replace(/Quai 2 est prêt[^.]*\./, '')), 'aucune bonne réponse dans le bilan');
+  await pg.click(`${Z} [data-fin-aller="planning:action-quais"]`); await pause();
+  vrai(await present('[data-pl-grille]'), 'le planning s’ouvre (et non la première fiche)');
+  const liste = () => pg.$$eval(`${Z} [data-acorriger] [data-acorr]`, (L) => L.map((l) => [l.dataset.acorr, l.dataset.acorrFait]));
+  egal(await liste(), [['fiche:qui-fait-quoi', 'false'], ['fiche:planigramme', 'false'], ['planning:action-quais', 'false']], 'liste « À corriger »');
+  await planning('Q2', 12);
+  egal(await liste(), [['fiche:qui-fait-quoi', 'false'], ['fiche:planigramme', 'false'], ['planning:action-quais', 'true']], 'planning renvoyé : coché');
+  if (CAPTURES) await pg.screenshot({ path: `${CAPTURES}/8-a-corriger.png` });
+  vrai(/Il te reste 2 écrans à corriger/.test(await pg.$eval(`${Z} [data-acorriger]`, (e) => e.textContent)), 'reste 2');
+  await pg.click(`${Z} [data-acorr-aller="fiche:planigramme"]`); await pause();
+  await pg.selectOption(`${Z} #fi-l-havre-heure`, '07:00'); await envoyerFiche();
+  await pg.click(`${Z} [data-acorr-aller="fiche:qui-fait-quoi"]`); await pause();
+  await pg.selectOption(`${Z} #fi-t-ranger`, 'kevin'); await envoyerFiche();
+  b = await fin();
+  egal(b && b.fin, 'ok', 'bilan revenu, tout juste');
+  vrai(!(await present('[data-acorriger]')), 'la liste « À corriger » est partie');
+  // Sans le drapeau (une séance qui ne le déclare pas) : ni détail ni liste.
+  await pg.evaluate(async () => { const A = await import('/activites/action-prise-de-poste.js'); A.meta.bilanDetail = false; });
+  await monter({ uid: 'ac82-detail-sans', db: { tirages: { [ID]: tirage() } } });
+  await parcoursComplet({ qui: { ...QUI, 't-ranger': 'julie' } });
+  b = await fin();
+  egal(b.lignes.filter(([, e]) => e === 'ko').map(([g]) => g), ['Qui fait quoi ?'], 'sans le drapeau : le bloc faux');
+  egal(await detail(), [], 'sans le drapeau : aucune ligne de détail');
+  await pg.click(`${Z} [data-fin-corriger]`); await pause();
+  vrai(!(await present('[data-acorriger]')), 'sans le drapeau : pas de liste');
+  await pg.evaluate(async () => { const A = await import('/activites/action-prise-de-poste.js'); A.meta.bilanDetail = true; });
+});
+
+await v('ENT-8.2 : étape suivante (CAP) — la barre nomme l’écran à faire et y mène, se tait sur cet écran ; le menu « Mon poste » suit l’ordre de la séance (la visite en premier)', async () => {
+  const barre = () => pg.$eval(`${Z} [data-suite-seance]`, (e) => e.textContent.replace(/\s+/g, ' ').trim()).catch(() => null);
+  await monter({ uid: 'ac82-suite', db: { tirages: { [ID]: tirage() } } });
+  egal(await barre(), 'Étape suivante : Visite de la réception Y aller →', 'au départ');
+  await pg.click(`${Z} [data-suite-aller]`); await pause();
+  vrai(await present('.pv'), 'la visite s’ouvre');
+  egal(await barre(), '', 'pas de barre sur l’écran de l’étape');
+  await visite();
+  egal(await barre(), 'Étape suivante : Qui fait quoi ? Y aller →', 'après la visite');
+  await pg.click(`${Z} [data-suite-aller]`); await pause();
+  vrai(await present('[data-fiche="qui-fait-quoi"]'), 'la fiche « Qui fait quoi ? » s’ouvre');
+  const poste = await pg.$$eval(`${Z} .ent-side .ent-nav`, (L) => L.map((b) => b.dataset.vue || b.dataset.vueFermee));
+  egal(poste.slice(poste.indexOf('entrepot')), ['entrepot', 'fiche'], 'menu : la visite puis « Qui fait quoi ? »');
+  await qui();
+  egal(await barre(), 'Étape suivante : Lire le planigramme Y aller →', 'après « Qui fait quoi ? »');
+});
+
 await v('ENT-8.2 : planning à l’écran — Quai 1 à 9 h (déjà pris) : jalon du quai faux, la fenêtre juste ; Quai 3 à 11 h : la fenêtre fausse', async () => {
   for (const [r, t, attendu] of [['Q1', 12, ['ko', 'ok']], ['Q3', 20, ['ok', 'ko']], ['Q2', 12, ['ok', 'ok']]]) {
     await monter({ uid: `ac82-pl-${r}`, db: { tirages: { [ID]: tirage() }, fiches: { 'qui-fait-quoi': { valeurs: QUI, envoye: { at: 1 } }, planigramme: { valeurs: LIRE, envoye: { at: 1 } } },

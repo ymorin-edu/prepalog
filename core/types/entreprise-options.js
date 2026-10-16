@@ -38,6 +38,7 @@ export const OPTIONS = {
   // — Les écrans —
   menu: { type: 'array', role: 'écrans de données gardés au menu (sans lui, tous restent)' },
   fermetures: { type: 'object', role: "écrans fermés tant qu'une condition est fausse : { écran: { ouvertSi(db), message } }" },
+  suite: { type: 'array', role: 'ordre des écrans de travail : [{ vue, libelle, fait(db), mail? }] — barre « Étape suivante » et menu « Mon poste » dans cet ordre (CAP, ENT-8.x, 16/10/2026)' },
   pastilles: { type: 'array', role: 'pastilles d’étape de la séance, une bande d’une ligne sur tous les écrans : [{ libelle, fait(db) }] (D-10, ENT-6.10)' },
   stockOuvert: { type: 'boolean', role: "écran Stock ouvert sans le code de l'enseignant" },
   receptionLitige: { type: 'boolean', role: 'décision « En litige » au bon de réception' },

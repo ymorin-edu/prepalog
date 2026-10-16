@@ -340,6 +340,13 @@ export function creerEntreprise(U) {
   // et ne juge JAMAIS (« la fiche est envoyée », pas « elle est juste ») : coche « fait » ou « à faire ». Redessinée à chaque
   // écran et après chaque envoi. Une condition qui plante compte « à faire » (signalée). Sans `pastilles`, rien n'est dessiné.
   const PASTILLES = Array.isArray(U.pastilles) ? U.pastilles : [];
+  // L'ÉTAPE SUIVANTE (CAP, ENT-8.1 et 8.2, 16/10/2026, choix de Tristan : les élèves se perdaient entre les écrans) : `suite: [{ vue,
+  // libelle, fait(db), mail? }]`, les écrans de travail dans l'ordre de la séance (`vue` : 'fiche', 'fiche:<id>', 'planning',
+  // 'entrepot', 'localiser', 'mail' ; `mail` : l'id d'une réponse par phrases, pour ouvrir son message). Une barre « Étape suivante :
+  // <libelle> — Y aller → » sur tous les écrans, sauf celui de l'étape ; et le groupe « Mon poste » du menu suit cet ordre.
+  // Sans `suite`, rien ne change.
+  const SUITE = Array.isArray(U.suite) ? U.suite : [];
+  SUITE.forEach((p, i) => { if (!p || !p.vue || !p.libelle || typeof p.fait !== 'function') throw new Error('suite, étape n° ' + (i + 1) + ' : il faut « vue », « libelle » et « fait(db) »'); });
   PASTILLES.forEach((p, i) => { if (!p || !p.libelle || typeof p.fait !== 'function') throw new Error('pastille n° ' + (i + 1) + ' : il faut « libelle » et « fait(db) »'); });
   const montre = (v) => !MENU || !ECRANS_DONNEES.includes(v) || MENU.has(v)
     || (v === 'commande' && MENU.has('commandes')) || (v === 'reception' && MENU.has('receptions')) || (v === 'produit' && MENU.has('catalogue'));
@@ -1146,6 +1153,10 @@ export function creerEntreprise(U) {
       // la séance restent « à faire » jusqu'à l'envoi (la photo de fin et la note moyennée en dépendent) :
       // Spartoo et Boost jugent leurs jalons en continu, ils n'ont pas le drapeau.
       const CORRECTION = !!(ctx.meta && ctx.meta.correction);
+      // BILAN DÉTAILLÉ (`meta.bilanDetail`, séances CAP, 16/10/2026, choix de Tristan) : le bandeau de fin descend à la case sous
+      // chaque bloc faux, avec un bouton « Corriger dans … » par ligne ; après « Corriger », la liste « À corriger » reste en haut
+      // de l'écran jusqu'au renvoi de chaque écran rouvert. Sans le drapeau, rien ne change.
+      const DETAIL = CORRECTION && !!(ctx.meta && ctx.meta.bilanDetail);
       // SUITE AU BILAN (lot 0 du brief SMOBY-notation-5.3-5.8, 07/10/2026 ; règle absolue de Tristan : « aucun élève
       // bloqué à la fin »). `meta.suiteAuBilan: true` : la séance suivante s'ouvre au premier bilan, comme pour
       // `correction`, mais sans bouton « Corriger » ni note moyennée (le bandeau d'origine, dont la dernière phrase
@@ -1210,6 +1221,127 @@ export function creerEntreprise(U) {
         etapes.forEach((e) => { const ec = ecranDe(e); if (st[e.id] === 'ko' && ec && !L.includes(ec)) L.push(ec); });
         return L;
       }
+      // L'écran d'un jalon, pour l'élève (bilan détaillé et liste « À corriger ») : son nom (celui du menu) et où il mène.
+      function libelleEcran(ec) {
+        const i = ec.indexOf(':'), genre = ec.slice(0, i), id = ec.slice(i + 1);
+        if (genre === 'fiche') { const VF = VFICHES.find((v) => v.id === id); return VF ? VF.nav.libelle : 'la fiche'; }
+        if (genre === 'planning') return VPL ? VPL.nav.libelle : 'le planning';
+        if (genre === 'phrases') {
+          const m = db.mails.find((y) => y.folder === 'in' && y.phrases && y.phrases.id === id);
+          return m && m.subject ? `Messagerie : ${m.subject}` : 'la Messagerie';
+        }
+        if (genre === 'dialogue') return VTEL ? VTEL.nav.libelle : 'le téléphone';
+        return 'la Messagerie';
+      }
+      function versEcran(ec) {
+        const i = ec.indexOf(':'), genre = ec.slice(0, i), id = ec.slice(i + 1);
+        if (genre === 'fiche') { const VF = VFICHES.find((v) => v.id === id); return VF ? { vue: vueDeFiche(VF) } : null; }
+        if (genre === 'planning') return VPL ? { vue: 'planning' } : null;
+        if (genre === 'phrases') { const m = db.mails.find((y) => y.folder === 'in' && y.phrases && y.phrases.id === id); return m ? { vue: 'mail', mail: m.id } : null; }
+        if (genre === 'transfert') { const m = db.mails.find((y) => y.folder === 'in' && y.transfert && y.cle === id); return m ? { vue: 'mail', mail: m.id } : null; }
+        if (genre === 'dialogue') return VTEL ? { vue: 'telephone', contact: id } : null;
+        return null;
+      }
+      // Le nombre d'envois d'un écran (fiche, réponse par phrases, planning, transfert, appel raccroché) : un écran de la liste
+      // « À corriger » est coché quand il dépasse celui du moment de « Corriger ».
+      function envoisDe(ec) {
+        const i = ec.indexOf(':'), genre = ec.slice(0, i), id = ec.slice(i + 1);
+        if (genre === 'fiche') return (db.fiches && db.fiches[id] && db.fiches[id].envois) || 0;
+        if (genre === 'phrases') return db.mails.filter((m) => m.folder === 'out' && m.phrases && m.phrases.id === id).length;
+        if (genre === 'planning') return VPL && VPL.id === id ? VPL.corrections(db.plannings && db.plannings[id]) : 0;
+        if (genre === 'transfert') return (transfertsDe(db, SEANCE)[id] || {}).n || 0;
+        if (genre === 'dialogue') return appels(lireTel() && lireTel()[id]).filter((a) => a.fin).length;
+        return 0;
+      }
+      function allerEcran(ec) {
+        const v = versEcran(ec);
+        if (!v) return;
+        if (v.contact && VTEL) VTEL.ouvrir(v.contact);
+        aller(v.vue, v.mail ? { dossier: 'in', mailSel: v.mail, piece: null } : null);
+      }
+      // La liste « À corriger » : rangée au clic sur « Corriger » (`db.aCorriger[séance]`, les écrans rouverts et leur nombre
+      // d'envois à ce moment), montrée tant que le bilan n'est pas de nouveau complet.
+      const lireACorriger = () => (db.aCorriger && db.aCorriger[ctx.meta.id]) || null;
+      function aCorrigerHtml() {
+        const L = lireACorriger();
+        if (!L || !L.length) return '';
+        const reste = L.filter((x) => envoisDe(x.ecran) <= x.envois).length;
+        return `<div class="ent-fin ent-fin-v2 ent-acorr" role="status" data-acorriger><div class="ent-fin-corps">
+          <h2 class="ent-fin-t">${reste ? `Il te reste ${reste === 1 ? 'un écran' : `${reste} écrans`} à corriger` : 'Tout est renvoyé'}</h2>
+          <p>Clique un écran pour l’ouvrir, corrige, puis renvoie-le. Ton bilan revient quand tout est renvoyé.</p>
+          <ol class="ent-acorr-liste">${L.map((x) => {
+            const fait = envoisDe(x.ecran) > x.envois;
+            return `<li${fait ? ' class="ent-fin-juste"' : ''} data-acorr="${ech(x.ecran)}" data-acorr-fait="${fait}">${fait ? '<span class="ent-fin-m" aria-hidden="true">✓</span>' : ''}
+              <button type="button" class="btn${fait ? '' : ' btn-p'}" data-acorr-aller="${ech(x.ecran)}">${ech(libelleEcran(x.ecran))}</button>
+              ${fait ? '<span class="ent-fin-a">renvoyé</span>' : ''}</li>`;
+          }).join('')}</ol></div></div>`;
+      }
+      // La barre « Étape suivante » (voir SUITE). Rien pour l'enseignant, en évaluation, après la remise, ni quand le bandeau de fin
+      // ou la liste « À corriger » est là (toutes les étapes sont alors faites).
+      function ecranOuvert(v) {
+        if (fermeture(v)) return false;
+        if (v === 'mail' || v === 'accueil') return true;
+        if (v === 'planning') return plOuvert();
+        if (v === 'entrepot') return !!VENT;
+        if (v === 'localiser') return !!VLOC;
+        if (v === 'fiche' || v.startsWith('fiche:')) {
+          const VF = VFICHES.find((x) => vueDeFiche(x) === v);
+          try { return !!VF && (!VF.quand || !!VF.quand(db)); } catch (x) { return false; }
+        }
+        return montre(v);
+      }
+      const mailDeSuite = (S) => (S.mail ? db.mails.find((y) => y.folder === 'in' && y.phrases && y.phrases.id === S.mail) : null);
+      function etapeSuivante() {
+        for (const S of SUITE) {
+          try { if (!S.fait(db, ctx.meta.id)) return S; } catch (x) { signaler(`l’étape « ${S.libelle} » de la suite plante`, x); return null; }
+        }
+        return null;
+      }
+      function barreSuite() {
+        if (estProf || COPIE || rendue() || !SUITE.length) return '';
+        const S = etapeSuivante();
+        if (!S) return '';
+        // L'écran est gardé fermé par un point d'étape (questions au fil, `ferme`) : la barre mène au point d'étape.
+        const fe = etapeQuiFerme(`ecran:${S.vue}`);
+        if (fe) {
+          return E.vue === `etape:${fe.id}` ? '' : `<div class="ent-suite" data-suite="etape:${ech(fe.id)}"><span>Étape suivante : <b>${ech(`Point d’étape avec ${appel(MQ.personnes[fe.de])}`)}</b></span>
+            <button type="button" class="btn btn-p" data-suite-aller>Y aller →</button></div>`;
+        }
+        const m = mailDeSuite(S);
+        const ici = E.vue === S.vue && (!S.mail || (m && E.mailSel === m.id));
+        if (ici) return '';
+        if (ecranOuvert(S.vue) && (!S.mail || m)) {
+          return `<div class="ent-suite" data-suite="${ech(S.vue)}"><span>Étape suivante : <b>${ech(S.libelle)}</b></span>
+            <button type="button" class="btn btn-p" data-suite-aller>Y aller →</button></div>`;
+        }
+        // L'écran n'est pas encore ouvert : un message l'apporte (le lire), sinon rien.
+        const nonLu = db.mails.some((y) => y.folder === 'in' && !y.read);
+        return nonLu && E.vue !== 'mail' ? `<div class="ent-suite" data-suite="mail"><span>Étape suivante : <b>lis ton nouveau message</b></span>
+            <button type="button" class="btn btn-p" data-suite-aller>Ouvrir la Messagerie →</button></div>` : '';
+      }
+      function allerSuite() {
+        const S = etapeSuivante();
+        if (!S) return;
+        const fe = etapeQuiFerme(`ecran:${S.vue}`);
+        if (fe) { aller(`etape:${fe.id}`); return; }
+        const m = mailDeSuite(S);
+        if (ecranOuvert(S.vue) && (!S.mail || m)) aller(S.vue, m ? { dossier: 'in', mailSel: m.id, piece: null } : null);
+        else aller('mail', { dossier: 'in' });
+      }
+      function majSuite() {
+        const z = hote.querySelector('[data-suite-seance]');
+        if (!z) return;
+        const h = hote.querySelector('[data-fin-seance]')?.innerHTML.trim() ? '' : barreSuite();
+        if (z.innerHTML.trim() === h.trim()) return;
+        z.innerHTML = h;
+        z.querySelector('[data-suite-aller]')?.addEventListener('click', allerSuite);
+      }
+      // Le menu « Mon poste » dans l'ordre de `suite` (les écrans qu'elle ne nomme pas gardent leur ordre, après).
+      function ordonnerPoste(L) {
+        if (!SUITE.length) return L;
+        const rang = (h) => { const x = typeof h === 'string' && /data-vue(?:-fermee)?="([^"]+)"/.exec(h); const i = x ? SUITE.findIndex((S) => S.vue === x[1]) : -1; return i < 0 ? SUITE.length : i; };
+        return L.filter(Boolean).map((h, i) => [h, rang(h), i]).sort((a, b) => a[1] - b[1] || a[2] - b[2]).map((x) => x[0]);
+      }
       // Les questions corrigées AU BILAN (`apres: 'bilan'`, questions au fil) : leur explication vient avec le bandeau de fin.
       function retoursAuBilan() {
         if (!MQ) return '';
@@ -1223,26 +1355,35 @@ export function creerEntreprise(U) {
       function bandeauFin(res) {
         if (estProf || COPIE || !ctx.meta.parcours || !etapes.length) return '';
         const st = res || noterBase(db).detail;
-        if (!fini(st)) return '';
+        if (!fini(st)) return DETAIL ? aCorrigerHtml() : '';
         // Le HTML est fabriqué par `entreprise-fin.js` (lot 9c, module 4) ; ici, ce qui dépend de la séance en cours.
         // Un `ecran` fonction de la base y arrive évalué (le module ne lit que des valeurs).
-        const etapesVues = etapes.some((e) => typeof e.ecran === 'function')
+        let etapesVues = etapes.some((e) => typeof e.ecran === 'function')
           ? etapes.map((e) => (typeof e.ecran === 'function' ? Object.assign({}, e, { ecran: ecranDe(e) }) : e)) : etapes;
+        // Bilan détaillé : `titreBilan` (texte ou fonction de la base) remplace le titre d'une case dans le détail, par exemple
+        // le nom de l'acteur ou le rang de la ligne sur la fiche quand l'ordre y est tiré. Une fonction qui plante garde le titre.
+        if (DETAIL) etapesVues = etapesVues.map((e) => {
+          if (e.titreBilan == null) return e;
+          let t = e.titreBilan;
+          if (typeof t === 'function') { try { t = t(db); } catch (x) { signaler(`le titre de bilan du jalon « ${e.id} » plante`, x); t = null; } }
+          return typeof t === 'string' && t ? Object.assign({}, e, { titre: t }) : e;
+        });
         return bandeauFinHtml(st, { etapes: etapesVues, correction: CORRECTION, premierEssai: PREMIER_ESSAI, suiteAuBilan: SUITE_AU_BILAN,
           suivante: ctx.suivante, reinitialisable: ctx.meta.reinitialisable, avecQuestions: !!MQ, finFige: U.finFige,
-          retours: retoursAuBilan, peutCorriger: ecransAFaire(st).length > 0 });
+          retours: retoursAuBilan, peutCorriger: ecransAFaire(st).length > 0, detail: DETAIL ? { libelle: libelleEcran } : null });
       }
       function brancherBandeauFin() {
         hote.querySelector('[data-fin-quitter]')?.addEventListener('click', () => sortir(ctx.quitter));
-        hote.querySelector('[data-fin-corriger]')?.addEventListener('click', corriger);
+        hote.querySelector('[data-fin-corriger]')?.addEventListener('click', () => corriger());
+        hote.querySelectorAll('[data-fin-aller]').forEach((b) => b.addEventListener('click', () => corriger(b.dataset.finAller)));
+        hote.querySelectorAll('[data-acorr-aller]').forEach((b) => b.addEventListener('click', () => allerEcran(b.dataset.acorrAller)));
       }
       function majBandeauFin(res) {
         const z = hote.querySelector('[data-fin-seance]');
         if (!z) return;
         const h = bandeauFin(res);
-        if (z.innerHTML.trim() === h.trim()) return;
-        z.innerHTML = h;
-        brancherBandeauFin();
+        if (z.innerHTML.trim() !== h.trim()) { z.innerHTML = h; brancherBandeauFin(); }
+        majSuite();
       }
 
       // CORRIGER (lot A, 07/10/2026). Après le premier bilan, l'élève peut reprendre les envois qui portent une
@@ -1250,11 +1391,13 @@ export function creerEntreprise(U) {
       // « rien n'est vrai avant l'envoi », et le bandeau s'efface jusqu'au renvoi). Une réponse par phrases se
       // renvoie telle quelle (c'est déjà possible : le dernier envoi fait foi) ; son brouillon est prérempli
       // avec les choix de l'élève, jamais avec la bonne réponse. Le premier écran concerné s'ouvre.
-      function corriger() {
+      function corriger(cible) {
         if (estProf || COPIE || rendue() || !CORRECTION) return;
         const st = noterBase(db).detail;
         const ecrans = ecransAFaire(st);
         if (!ecrans.length) return;
+        // Bilan détaillé : la liste « À corriger » (avant de rouvrir : les envois comptés sont ceux d'avant la correction).
+        if (DETAIL) { if (!db.aCorriger) db.aCorriger = {}; db.aCorriger[ctx.meta.id] = ecrans.map((ec) => ({ ecran: ec, envois: envoisDe(ec) })); }
         let vers = null;
         ecrans.forEach((x) => {
           const genre = x.slice(0, x.indexOf(':')), id = x.slice(x.indexOf(':') + 1);
@@ -1293,6 +1436,8 @@ export function creerEntreprise(U) {
           }
         });
         if (!vers) return;
+        // « Corriger dans … » (bilan détaillé) : c'est cet écran qui s'ouvre, les autres restent rouverts (liste « À corriger »).
+        if (typeof cible === 'string' && ecrans.includes(cible)) { const v = versEcran(cible); if (v) { if (v.contact && VTEL) VTEL.ouvrir(v.contact); vers = v; } }
         sauver();
         E.vue = vers.vue;
         if (vers.mail) { E.dossier = 'in'; E.mailSel = vers.mail; E.piece = null; }
@@ -1504,6 +1649,7 @@ export function creerEntreprise(U) {
             </header>
             ${VTAB && VTAB.aide && E.aideTableur ? `<div class="ent-aide" data-aide-tableur-texte style="white-space:pre-line">${ech(VTAB.aide)}</div>` : ''}
             <div data-fin-seance>${bandeauFin()}</div>
+            ${SUITE.length ? '<div data-suite-seance></div>' : ''}
             ${MQ ? '<div class="qf-bandeau" data-qf-bandeau></div>' : ''}
             <div class="ent-cartes-ancre" data-cartes-ancre></div>
             ${PASTILLES.length ? '<ol class="ent-pastilles" data-ent-pastilles aria-label="Les étapes de la séance"></ol>' : ''}
@@ -1514,7 +1660,7 @@ export function creerEntreprise(U) {
                 ${MQ && MQ.ouverture ? item('ouverture', MQ.ouverture.titre || 'Avant de commencer') : ''}
                 ${item('accueil', 'Accueil')}
                 ${item('mail', 'Messagerie', nonLus)}
-                ${groupe((VPLAN || VTOUR || VITI) && !VFICHE && !VQUAI && !VPL && !VENT && !VINV && !VTEL && !VLOC && !VANIMS.length ? U.transportSection || 'Transport' : 'Mon poste', [
+                ${groupe((VPLAN || VTOUR || VITI) && !VFICHE && !VQUAI && !VPL && !VENT && !VINV && !VTEL && !VLOC && !VANIMS.length ? U.transportSection || 'Transport' : 'Mon poste', ordonnerPoste([
                   VITI && item('itineraires', VITI.nav.libelle),
                   VLOC && item('localiser', VLOC.nav.libelle),
                   ...VANIMS.filter((VA) => !VA.menuApres && (!VA.quand || VA.quand(db))).map((VA) => item(vueAnim(VA), VA.nav.libelle)),
@@ -1526,7 +1672,7 @@ export function creerEntreprise(U) {
                   VQUAI && item('quai', VQUAI.nav.libelle),
                   VPL && plOuvert() && item('planning', VPL.nav.libelle), VENT && item('entrepot', VENT.nav.libelle),
                   VPLAN && item('plan', VPLAN.nav.libelle), VTOUR && item('tournee', VTOUR.nav.libelle),
-                  VINV && item('inventaire', VINV.nav.libelle), ...itemsQuestions(item)])}
+                  VINV && item('inventaire', VINV.nav.libelle), ...itemsQuestions(item)]))}
                 ${groupe('Données', [
                   montre('commandes') && item('commandes', 'Commandes', aFaire, ['commandes', 'commande']),
                   montre('receptions') && item('receptions', 'Réceptions', aRecevoir, ['receptions', 'reception']),
@@ -1571,6 +1717,7 @@ export function creerEntreprise(U) {
         });
         hote.querySelector('[data-quitter]').addEventListener('click', () => sortir(ctx.quitter));
         brancherBandeauFin();
+        majSuite();
         hote.querySelector('[data-copie-rendre]')?.addEventListener('click', () => {
           if (!secondClic(copie, 'arme', { garder: true })) { dessiner(); return; }
           rendreLaCopie();

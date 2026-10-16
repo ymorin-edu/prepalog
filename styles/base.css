@@ -810,6 +810,16 @@ a.ent-nav{ text-decoration:none }
 .ent-fin-juste{ color:var(--vert) }
 .ent-fin-faux{ color:var(--rouge) }
 .ent-fin-a{ margin-left:auto; font-size:13px; color:var(--encre-douce) }
+/* Bilan détaillé (`meta.bilanDetail`, CAP, 16/10/2026) : sous un bloc faux, une ligne par case ; liste « À corriger » après « Corriger ». */
+.ent-fin-liste li.ent-fin-sous{ display:block; padding:0 0 4px 2.4em; color:var(--encre) }
+.ent-fin-detail{ list-style:none; margin:0; padding:0; font-size:15px }
+.ent-fin-detail li{ padding:2px 0 }
+.ent-fin-aller{ margin-left:auto; min-height:30px; padding:2px 12px; font-size:14px }
+.ent-acorr-liste{ margin:4px 0 4px; padding-left:22px; display:flex; flex-direction:column; gap:6px }
+.ent-acorr-liste li{ display:flex; gap:8px; align-items:center }
+/* La barre « Étape suivante » (`suite`, CAP, 16/10/2026) : une ligne au-dessus des pastilles, le bouton à droite. */
+.ent-suite{ display:flex; gap:12px; align-items:center; justify-content:space-between; flex-wrap:wrap; margin:6px 0; padding:8px 14px;
+  border:1px solid var(--ardoise); border-radius:var(--r); background:var(--panneau); color:var(--encre); font-size:16px }
 .ent-fin-btns{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:6px }
 .ent-fin-corriger{ font-size:17px; font-weight:700; padding:9px 20px }
 .ent-fin-gain{ font-size:18px; font-weight:700; color:var(--encre) }

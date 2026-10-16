@@ -301,6 +301,11 @@
 .pv-col{ flex:1; min-width:0; display:flex; flex-direction:column }
 /* associer : le plan un peu plus large que la photo */
 .pv-associer .pv-col-plan{ flex:1.25 }
+/* associer en deux blocs (`deuxBlocs`) : pas de colonne de côté, la photo à gauche (la réponse dessous), le plan à droite, plus large */
+.pv-jeu.pv-jeu-plein{ grid-template-columns:minmax(0,1fr) }
+.pv-deux .pv-col-photo{ flex:1 }
+.pv-deux .pv-col-plan{ flex:1.6 }
+.pv-msg-photo{ flex:none; margin-top:6px; font-size:1rem }
 .pv-main .pe-svg-plan, .pv-main .pe-releve{ flex:1; min-height:0; width:100% }
 .pv-main .pe-releve{ display:flex }
 .pv-main .pe-svg-plan, .pv-main .pe-svg-face{ display:block; width:100%; height:100% }

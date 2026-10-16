@@ -63,8 +63,26 @@ export function bandeauAncien(st, { etapes, suiteAuBilan, suivante, reinitialisa
               : `Relis ta trame à ces étapes. Si tu ne trouves pas, appelle ton professeur${reinitialisable ? ' ou réinitialise ta séance' : ''}.
             La séance suivante s'ouvrira quand tout sera juste.`}</span>${aVerifier}${retours()}</div></div>`;
 }
+// LE DÉTAIL CASE PAR CASE (`meta.bilanDetail`, séances CAP, ENT-8.1 et 8.2, 16/10/2026, choix de Tristan) : sous chaque bloc à
+// corriger, une ligne par case ✓ / ✗ (son titre, jamais la réponse), et sur chaque ligne fausse qui se rouvre, un bouton qui dit
+// l'écran où aller (`data-fin-aller` = l'écran du jalon) ; une ligne fausse qui ne se rouvre pas le dit. Deux cases au même titre
+// dans un bloc prennent « n° 1, n° 2 » dans l'ordre de la séance (celui de la fiche). `libelle(ecran)` : le nom de l'écran (menu).
+function lignesDetail(etapes, st, g, libelle) {
+  const E = etapes.filter((e) => g.ids.includes(e.id));
+  const vus = {}, total = {};
+  E.forEach((e) => { total[e.titre] = (total[e.titre] || 0) + 1; });
+  return `<ul class="ent-fin-detail" data-fin-detail="${ech(g.ids[0])}">${E.map((e) => {
+    vus[e.titre] = (vus[e.titre] || 0) + 1;
+    const t = total[e.titre] > 1 ? `${e.titre} (n° ${vus[e.titre]})` : e.titre;
+    const ok = st[e.id] === 'ok', ko = st[e.id] === 'ko';
+    const fin = ko ? (e.ecran ? `<button type="button" class="btn ent-fin-aller" data-fin-aller="${ech(e.ecran)}">Corriger dans « ${ech(libelle(e.ecran))} » →</button>`
+      : '<span class="ent-fin-a">ne se corrige pas</span>') : `<span class="ent-fin-a">${ok ? 'juste' : 'à vérifier'}</span>`;
+    return `<li class="${ok ? 'ent-fin-juste' : ko ? 'ent-fin-faux' : ''}" data-fin-case="${ech(e.id)}" data-fin-case-etat="${ok ? 'ok' : ko ? 'ko' : 'erreur'}">
+      <span class="ent-fin-m" aria-hidden="true">${ok ? '✓' : ko ? '✗' : '?'}</span><span>${ech(t)}</span>${fin}</li>`;
+  }).join('')}</ul>`;
+}
 export function bandeauFin(st, { etapes, correction, premierEssai, suiteAuBilan, suivante, reinitialisable, avecQuestions,
-  finFige, retours, peutCorriger }) {
+  finFige, retours, peutCorriger, detail = null }) {
         if (!correction && !premierEssai) return bandeauAncien(st, { etapes, suiteAuBilan, suivante, reinitialisable, retours });
         const G = groupesDuBilan(etapes, st);
         const tout = G.every((g) => g.ok);
@@ -74,7 +92,8 @@ export function bandeauFin(st, { etapes, correction, premierEssai, suiteAuBilan,
         const [motOk, motKo] = correction ? ['juste', 'à corriger'] : ['du premier coup', 'après une erreur'];
         const liste = `<ul class="ent-fin-liste" aria-label="Résultat par étape">${G.map((g) => `<li class="${g.etat === 'ok' ? 'ent-fin-juste' : g.etat === 'ko' ? 'ent-fin-faux' : ''}" data-fin-jalon="${ech(g.ids[0])}"
           data-fin-etat="${g.etat}"><span class="ent-fin-m" aria-hidden="true">${g.etat === 'ok' ? '✓' : g.etat === 'ko' ? '✗' : '?'}</span><span>${ech(g.nom)}</span>
-          <span class="ent-fin-a">${g.etat === 'ok' ? motOk : g.etat === 'ko' ? motKo : 'à vérifier'}</span></li>`).join('')}</ul>`;
+          <span class="ent-fin-a">${g.etat === 'ok' ? motOk : g.etat === 'ko' ? motKo : 'à vérifier'}</span></li>${
+          detail && correction && g.etat === 'ko' ? `<li class="ent-fin-sous">${lignesDetail(etapes, st, g, detail.libelle)}</li>` : ''}`).join('')}</ul>`;
         if (incertain) {
           return `<div class="ent-fin ent-fin-v2" role="status" data-fin="averifier"><div class="ent-fin-corps">
             <h2 class="ent-fin-t">Tu as fini.</h2>

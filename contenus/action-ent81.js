@@ -128,6 +128,8 @@ const ECRAN = { qui: `fiche:${FICHES.qui}`, chaine: `fiche:${FICHES.chaine}`, ch
 export const ETAPES = [
   ...[['geodis', 'fixe'], ['facile', 'facile'], ['moyen', 'moyen'], ['difficile', 'difficile']].map(([id, quoi]) => ({
     id: `qui-${id}`, titre: 'Qui est qui ? : le rôle d’un acteur', groupe: GROUPES.qui, ecran: ECRAN.qui, poids: 1,
+    // Le bilan détaillé (CAP) : le nom de l'acteur, tel qu'écrit sur la fiche (jamais son rôle).
+    titreBilan: (db) => { const p = acteursDe(db).find((a) => (quoi === 'fixe' ? a.id === 'geodis' : a.difficulte === quoi && a.id !== 'geodis')); return p ? `Qui est qui ? : ${p.nom}` : null; },
     verifier: (db) => jugerActeur(db, quoi) })),
   ...etapesLocaliser(LOCALISER, ID).map((j) => (j.bonus ? j : Object.assign(j, { poids: 0.75, groupe: GROUPES.carte }))),
   { id: 'chaine-ordre', titre: 'La chaîne : le chemin d’un produit dans l’ordre', groupe: GROUPES.chaine, ecran: ECRAN.chaine, poids: 2.5,
@@ -136,6 +138,8 @@ export const ETAPES = [
     verifier(db) { const f = fiche(db, FICHES.chaine); return !f.envoye ? attente : f.valeurs.place === PLACE_JUSTE ? ok : ko; } },
   ...['facile', 'moyen', 'difficile'].map((d) => ({
     id: `change-${d}`, titre: 'Ce que je change : ce qui arrive au magasin', groupe: GROUPES.change, ecran: ECRAN.change, poids: POIDS_SITUATION[d],
+    // Le bilan détaillé (CAP) : le rang de la situation sur la fiche de l'élève (l'ordre y est tiré).
+    titreBilan: (db) => { const i = situationDe(db, d)[1]; return i >= 0 ? `Ce que je change : la situation n° ${i + 1}` : null; },
     verifier: (db) => { const [p, i] = situationDe(db, d); return jugerSituation(db, p, i); } })),
   // Le cas bonus du confirmé : sans poids ni groupe, `null` quand l’élève ne l’a pas reçu (caché à l’élève). Le lieu bonus de la carte
   // (Labastide) rend ses deux jalons bonus par `etapesLocaliser`.
@@ -193,7 +197,15 @@ export const ACCUEIL = {
 };
 export const FIN_FIGE = 'La carte et les questions de Samia se jouent au premier essai : elles ne se rejouent pas.';
 
+// L'ordre des écrans de travail (barre « Étape suivante » et menu « Mon poste », CAP, 16/10/2026).
+export const SUITE = [
+  { vue: 'fiche', libelle: 'Qui est qui ?', fait: dejaEnvoyee(FICHES.qui) },
+  { vue: 'localiser', libelle: 'Carte de France', fait: localiserFini(VUE) },
+  { vue: `fiche:${FICHES.chaine}`, libelle: 'La chaîne', fait: dejaEnvoyee(FICHES.chaine) },
+  { vue: `fiche:${FICHES.change}`, libelle: 'Ce que je change', fait: dejaEnvoyee(FICHES.change) },
+];
 export const OPTIONS = {
+  suite: SUITE,
   menu: [],
   exercice: 'Séance 1 : d’où viennent les produits ?',
   sansTrame: 'Tout se fait à l’écran',

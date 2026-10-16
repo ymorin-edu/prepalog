@@ -430,7 +430,7 @@ export const VISITE = {
         { n: 6, ancre: 'zone:bureau', titre: 'Bureau de la réception', images: ['bureau'], dir: 0, cone: 50,
           texte: 'Samia, cheffe d’équipe, organise le travail et décide en cas de problème. Julie, agent administratif, tient le [[planigramme]] et saisit les réceptions dans le [[WMS]].' },
       ] },
-    { id: 'reperer', type: 'associer', titre: 'Où est-ce ?', heure: '6:15', parcours: 'parcours',
+    { id: 'reperer', type: 'associer', titre: 'Où est-ce ?', heure: '6:15', parcours: 'parcours', deuxBlocs: true,
       texte: 'À toi. Je te montre une photo : dis-moi à quel endroit du tour elle a été prise.',
       aide: 'Associe chaque photo à son endroit.',
       liste: 'Les photos',
@@ -633,6 +633,16 @@ export const PASTILLES = [
   { libelle: 'Documents', fait: (db) => dejaEnvoyee(FICHES.docs)(db) && dejaEnvoyee(FICHES.avant)(db) },
   { libelle: 'Compte rendu', fait: (db) => phrasesJustes(db, PHRASES_ID).envoye },
 ];
+// L'ordre des écrans de travail (barre « Étape suivante » et menu « Mon poste », CAP, 16/10/2026).
+export const SUITE = [
+  { vue: 'entrepot', libelle: 'Visite de la réception', fait: (db) => geste(db, `entrepot:${VISITE_ID}:visite:fin`) },
+  { vue: 'fiche', libelle: 'Qui fait quoi ?', fait: dejaEnvoyee(FICHES.qui) },
+  { vue: `fiche:${FICHES.lire}`, libelle: 'Lire le planigramme', fait: dejaEnvoyee(FICHES.lire) },
+  { vue: 'planning', libelle: 'Planning des quais', fait: (db) => !!(db.plannings && db.plannings[PLANNING_ID] && db.plannings[PLANNING_ID].v1) },
+  { vue: `fiche:${FICHES.docs}`, libelle: 'Les documents du camion', fait: dejaEnvoyee(FICHES.docs) },
+  { vue: `fiche:${FICHES.avant}`, libelle: 'Avant d’ouvrir le camion', fait: dejaEnvoyee(FICHES.avant) },
+  { vue: 'mail', mail: PHRASES_ID, libelle: 'Le compte rendu à Samia', fait: (db) => phrasesJustes(db, PHRASES_ID).envoye },
+];
 export const LEXIQUE_82 = {
   ...LEXIQUE,
   cariste: 'Personne qui conduit un chariot élévateur pour charger, décharger et ranger les palettes.',
@@ -667,6 +677,7 @@ export const OPTIONS = {
   planning: PLANNING,
   entrepot: VISITE,
   pastilles: PASTILLES,
+  suite: SUITE,
   equipe: EQUIPE,
   questions: QUESTIONS,
   finFige: FIN_FIGE,

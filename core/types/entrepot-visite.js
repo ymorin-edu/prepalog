@@ -53,6 +53,7 @@
 //                  titre, images: [clé…], dir (degrés, 0 = est, 90 = sud), cone (longueur), texte }]
 //   associer       parcours (id de l'étape parcours : ses numéros et ses ancres), liste, consigne, consigneFini,
 //                  juste ({n} {titre}), faux, photos: [{ id, image, n (l'étape du parcours d'où elle est prise), jalon? }]
+//                  deuxBlocs? (true : pas de colonne de côté, la photo à gauche avec la réponse dessous, le plan à droite)
 //                  — le plan à gauche avec les numéros, une photo à la fois à droite (dans l'ordre déclaré)
 //   delimiter      image, coins: { hg, hd, bg, bd }, tolerance, noms, consigne, rappel, messages: { juste, faux
 //                  ({coins}) }, correction: { legendes: [{ texte, x, y, rot?, plein? }] }, jalon?,
@@ -504,7 +505,16 @@ export function creerVisite(P, M, O) {
         <text x="${cx}" y="${cy + 8}" text-anchor="middle" font-size="22" font-weight="800" fill="${plein ? 'var(--panneau)' : 'var(--pe-visite)'}">${p.n}</text></g>`;
     }).join('');
     const k = i < 0 ? N - 1 : i, ph = et.photos[k];
-    const espace = `<div class="pv-duo pv-associer"><div class="pv-col pv-col-plan"><div class="pv-main">${O.htmlPlan(E0, R0, { lecture: true, dessus, aria: 'Plan de la plateforme : les endroits du parcours, numérotés' })}</div></div>
+    const plan = `<div class="pv-col pv-col-plan"><div class="pv-main">${O.htmlPlan(E0, R0, { lecture: true, dessus, aria: 'Plan de la plateforme : les endroits du parcours, numérotés' })}</div></div>`;
+    // DEUX BLOCS (`deuxBlocs: true`, CAP, ENT-8.2, 16/10/2026, demande de Tristan : la liste des photos à côté rendait le plan trop
+    // petit sur les écrans du lycée) : pas de colonne de côté ; la photo à gauche, avec la réponse du personnage dessous, le plan à
+    // droite. Le rang de la photo reste dans la consigne (« 1/4 »). La photo suivante vient dès que la réponse est juste.
+    if (et.deuxBlocs) {
+      const espace = `<div class="pv-duo pv-associer pv-deux"><div class="pv-col pv-col-photo" data-pv-photo="${ech(ph.id)}">${photo(ph.image, null, { alt: `Photo ${k + 1}` })}
+        ${htmlMsg(et, 'pv-msg-photo')}</div>${plan}</div>`;
+      return { consigne, cote: '', espace };
+    }
+    const espace = `<div class="pv-duo pv-associer">${plan}
       <div class="pv-col" data-pv-photo="${ech(ph.id)}">${photo(ph.image, null, { alt: `Photo ${k + 1}` })}</div></div>`;
     return { consigne, cote, espace };
   };
@@ -700,7 +710,7 @@ export function creerVisite(P, M, O) {
         <div class="pe-perso pv-perso"><b>${ech(tete)}</b>${et.texte || ''}</div>
         <div class="pv-consigne" data-pv-consigne>${C.consigne}</div>
         <div class="pv-act">${act}<span class="pe-petit" data-pv-aide>${fin ? '' : ech(et.aide || '')}</span></div></div>
-      <div class="pv-jeu"><aside class="pv-cote" data-pv-cote>${C.cote}</aside>
+      <div class="pv-jeu${C.cote ? '' : ' pv-jeu-plein'}">${C.cote ? `<aside class="pv-cote" data-pv-cote>${C.cote}</aside>` : ''}
         <section class="pv-espace">${C.espace}</section></div></div>`;
   }
 

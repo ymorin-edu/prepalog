@@ -379,6 +379,37 @@ await v('ENT-8.1 : « Qui est qui ? » — Action répondu « vend les produits 
   egal(await bandeau(), tout('ok'), 'bandeau après correction');
 });
 
+await v('ENT-8.1 : bilan détaillé (CAP) — l’acteur faux nommé comme sur la fiche (jamais son rôle), la situation fausse par son rang sur la fiche (ordre tiré) ; « Corriger dans « Ce que je change » » ouvre cette fiche', async () => {
+  await monter({ uid: 'a81-juste' });
+  await jouer({ qui: ['stocke', 'vend', 'forme', 'amene'], change: ['tard', 'stock', 'rien'] });
+  const L = await pg.$$eval(`${Z} [data-fin-case]`, (L) => L.map((l) => [l.children[1].textContent.trim(), l.dataset.finCaseEtat, l.querySelector('[data-fin-aller]')?.dataset.finAller || '']));
+  const noms = await pg.evaluate(async () => { const D = await import('/contenus/action-ent81-donnees.js'); return D.acteursDe(window.__f.db).map((p) => p.nom); });
+  const ko = L.filter(([, e]) => e === 'ko');
+  egal(ko, [[`Qui est qui ? : ${noms[1]}`, 'ko', 'fiche:qui'], ['Ce que je change : la situation n° 3', 'ko', 'fiche:change']], 'lignes fausses');
+  egal(L.filter(([t]) => /^Qui est qui/.test(t)).map(([t]) => t).sort(), noms.map((n) => `Qui est qui ? : ${n}`).sort(), 'les 4 acteurs, par leur nom');
+  vrai(!L.some(([t]) => /(n° \d\)$)/.test(t) && /^Qui est qui/.test(t)), 'pas de « n° » ajouté aux acteurs');
+  await clic('[data-fin-aller="fiche:change"]');
+  await pause();
+  vrai(await present('[data-fiche="change"] [data-fiche-envoyer]'), 'la fiche « Ce que je change » est ouverte');
+  egal(await pg.$$eval(`${Z} [data-acorriger] [data-acorr]`, (L) => L.map((l) => l.dataset.acorr)), ['fiche:qui', 'fiche:change'], 'liste « À corriger »');
+});
+
+await v('ENT-8.1 : étape suivante (CAP) — « Qui est qui ? », puis le point d’étape qui garde la carte, puis la carte ; chaque « Y aller » ouvre l’écran nommé', async () => {
+  const barre = () => pg.$eval(`${Z} [data-suite-seance]`, (e) => e.textContent.replace(/\s+/g, ' ').trim()).catch(() => null);
+  await monter({ uid: 'a81-juste' });
+  egal(await barre(), 'Étape suivante : Qui est qui ? Y aller →', 'au départ');
+  await envoyerQui(JUSTE.qui);
+  egal(await barre(), 'Étape suivante : Point d’étape avec Samia Y aller →', 'la carte est gardée par le point d’étape');
+  await clic('[data-suite-aller]'); await pause();
+  vrai(await present('[data-q="lien-action-geodis"]'), 'le point d’étape s’ouvre');
+  await clic('[data-q-choix="contrat"][data-q="lien-action-geodis"]');
+  await clic('[data-q-repondre="lien-action-geodis"]'); await pause();
+  egal(await barre(), 'Étape suivante : Carte de France Y aller →', 'après le point d’étape');
+  await clic('[data-suite-aller]'); await pause();
+  vrai(await present('[data-lc]'), 'la carte s’ouvre');
+  egal(await barre(), '', 'pas de barre sur la carte');
+});
+
 await v('ENT-8.1 : carte — une erreur à la région du port → bloc « La carte » ✗ seul (19,25/20) ; erreurs à la ville seulement → bloc ✓ (20/20)', async () => {
   await monter({ uid: 'a81-juste' });
   await jouer({ carte: { 'port:region': 1 } });

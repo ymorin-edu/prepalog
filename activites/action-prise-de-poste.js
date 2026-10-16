@@ -26,6 +26,7 @@ const s = seanceEntreprise(ACTION, SEANCE, {
   bareme: 20,
   parcours: true,
   correction: true,
+  bilanDetail: true,                // CAP : le bilan de fin descend à la case, avec « Corriger dans … » par ligne et la liste « À corriger » (16/10/2026)
   precedente: 'action-se-situer',
   niveauxPrevus: ['confirme'],   // bonus du confirmé : une tâche et une lecture de plus (cachés à l'élève)
   questions: 'ENT-8.2',
