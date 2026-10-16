@@ -913,6 +913,9 @@ const VARIANTE_PRIS = ((C, o) => {
     jalons: [{ id: 'cren', lib: 'Créneau valide', regles: ['un', 'fen', 'att'] }],
     note: { sur: 20 },
   };
+  // `rendCopie: false` (ENT-8.6, 16/10/2026) : l'envoi en évaluation ne rend pas la copie ; `o.mal === 'rendCopie'` : une valeur refusée.
+  if (o.rendCopie === false) P.rendCopie = false;
+  if (o.mal === 'rendCopie') P.rendCopie = 'non';
   if (o.quand === 'db') P.quand = (db) => !!db.ouvert;
   if (o.quand === 'plante') P.quand = () => { throw new Error('quand cassé'); };
   if (o.quand === 'faux-type') P.quand = 'oui';
@@ -1022,6 +1025,36 @@ await v('Planning (lot 3) : `occupe` — évaluation : rien n’est signalé, la
   await poser(pg, 'C1', 'Q6', 5);
   await envoyer(pg);
   egal(await pg.evaluate(() => window.__p.moteur.noter(window.__p.db).score), 20, 'note avec la bonne réponse');
+});
+
+await v('Planning (`rendCopie: false`, ENT-8.6) : en évaluation, l’envoi fige la version SANS rendre la copie ; la copie se rend par le bandeau ; sans l’option, l’envoi rend la copie comme avant ; valeur autre que false refusée', async () => {
+  // Option posée : bouton sans « rendre ma copie », envoi = version figée, rien de remis.
+  await monterPris(pg, { temps: 'evaluation', rendCopie: false });
+  egal(await texte(pg, `${Z} [data-pl="envoyer"]`), 'Envoyer le planning au chef', 'libellé avec l’option');
+  await poser(pg, 'C1', 'Q6', 5);
+  await envoyer(pg);
+  await pg.waitForTimeout(300);
+  egal(await pg.evaluate(() => window.__p.remis), null, 'copie remise à l’envoi du planning malgré l’option');
+  egal((await placePris(pg)).phase, 'fini', 'version non figée');
+  vrai(await present(pg, '[data-pl-envoye]') && !(await present(pg, '[data-pl-rendu]')), 'écran « Planning envoyé » absent');
+  vrai(!(await present(pg, '.pl-pastille')), 'bilan montré à l’élève');
+  egal(await pg.evaluate(() => window.__p.moteur.noter(window.__p.db).score), 20, 'note de la version envoyée');
+  // La copie se rend par le bouton du bandeau (deux clics).
+  await pg.click('#plTest [data-copie-rendre]');
+  await pg.click('#plTest [data-copie-rendre]');
+  await pg.waitForFunction(() => window.__p.remis);
+  egal(await pg.evaluate(() => window.__p.remis.score), 20, 'note remise par le bandeau');
+  // Sans l’option : comportement d’avant (libellé, copie rendue à l’envoi).
+  await monterPris(pg, { temps: 'evaluation' });
+  egal(await texte(pg, `${Z} [data-pl="envoyer"]`), 'Envoyer le planning et rendre ma copie', 'libellé sans l’option');
+  await poser(pg, 'C1', 'Q6', 5);
+  await envoyer(pg);
+  await pg.waitForFunction(() => window.__p.remis);
+  vrai(await present(pg, '[data-pl-rendu]'), 'écran « Copie rendue » absent sans l’option');
+  // Une valeur autre que false : refusée au chargement, en nommant le planning.
+  const m = await monterFaute(pg, 'rendCopie');
+  vrai(m && m.includes('essai-pris') && m.includes('rendCopie'), `valeur refusée : ${m}`);
+  egal(erreursP, [], 'erreurs JS');
 });
 
 await v('Planning (lot 3) : `occupe` — un bloc pris n’est ni déplaçable ni cliquable comme une carte ; le clic et le dépôt passent à la case dessous', async () => {

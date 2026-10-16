@@ -66,7 +66,8 @@
 //
 // Le temps pédagogique (`api.temps`) décide de ce qui est signalé (brief §3.5) : guidage = en direct
 // et toutes les aides ; entraînement = sur « Vérifier mon planning », aide « règles » seule ;
-// évaluation = jamais, et le deuxième envoi rend la copie. On dit QUE une règle n'est pas
+// évaluation = jamais, et le dernier envoi rend la copie (sauf `rendCopie: false` : d'autres écrans suivent,
+// la copie se rend par le bandeau). On dit QUE une règle n'est pas
 // respectée, jamais DE COMBIEN : les messages par défaut le respectent, ceux du contenu aussi.
 
 // Pas d'import de `ui.js` : un corrigé de séance peut importer ce module hors du navigateur.
@@ -500,6 +501,7 @@ function compiler(P) {
   (P.jalons || []).forEach((j) => (j.regles || []).forEach((id) => {
     if (!ids.has(id)) throw new Error(`planning ${P.id} : le jalon « ${j.id} » cite la règle « ${id} », qui n'existe pas.`);
   }));
+  if (P.rendCopie !== undefined && P.rendCopie !== false) throw new Error(`planning ${P.id} : \`rendCopie\` ne prend que la valeur false (reçu « ${P.rendCopie} »).`);
   const pbCouleurs = verifierCouleurs(P.familles);
   if (pbCouleurs.length) throw new Error(`planning ${P.id} : ${pbCouleurs.join(' ')}`);
   const E = echelleDe(P);
@@ -747,7 +749,9 @@ export function creerPlanning(P, opts = {}) {
       if (e.finis > 1 && api.corrige) api.corrige(e.finis - 1);
     }
     api.sauver();
-    if (final && tempsDe(api) === 'evaluation' && api.rendreCopie) api.rendreCopie();
+    // `rendCopie: false` (ENT-8.6) : une évaluation où d'autres écrans suivent le planning ; l'envoi fige la version, la copie se rend
+    // par le bouton du bandeau.
+    if (final && tempsDe(api) === 'evaluation' && P.rendCopie !== false && api.rendreCopie) api.rendreCopie();
     api.redessiner();
     if (api.haut) api.haut();
   }
@@ -938,7 +942,7 @@ export function creerPlanning(P, opts = {}) {
     }
     const final = e.phase === 2 || !P.alea;
     const lib = !final ? 'Envoyer le planning au chef'
-      : R.eval ? (P.alea ? 'Envoyer le planning corrigé et rendre ma copie' : 'Envoyer le planning et rendre ma copie')
+      : R.eval && P.rendCopie !== false ? (P.alea ? 'Envoyer le planning corrigé et rendre ma copie' : 'Envoyer le planning et rendre ma copie')
         : (P.alea ? 'Envoyer le planning corrigé' : 'Envoyer le planning au chef');
     return `<div class="pl-panneau"><h3>${e.phase === 2 ? 'Planning à reprendre' : 'Votre planning'}</h3>${h}
       <div class="pl-actions">
@@ -955,6 +959,10 @@ export function creerPlanning(P, opts = {}) {
     const { L, ok, total } = jalonsPlanning({ plannings: { [P.id]: e } }, P);
     const table = `<table class="pl-bilan" data-pl-bilan><thead><tr><th>Version</th><th>Jalon</th><th></th></tr></thead><tbody>${L.map((l) =>
       `<tr><td>${ech(l.version)}</td><td>${ech(l.lib)}</td><td><span class="pl-pastille ${l.ok ? 'pl-oui' : 'pl-non'}" data-ok="${l.ok}">${l.ok ? '✓' : '✗'}</span></td></tr>`).join('')}</tbody></table>`;
+    if (R.eval && P.rendCopie === false) {
+      return `<div class="pl-panneau" data-pl-envoye><h3>Planning envoyé</h3><p>Ton planning est envoyé : tu ne peux plus le modifier. Continue ton travail.</p>
+        ${api.estProf ? `<h3 class="pl-prof">Côté enseignant — ${ok} / ${total} jalons</h3>${table}` : ''}</div>`;
+    }
     if (R.eval) {
       return `<div class="pl-panneau" data-pl-rendu><h3>Copie rendue</h3><p>Votre planning a été envoyé. Le résultat sera donné par votre enseignant.</p>
         ${api.estProf ? `<h3 class="pl-prof">Côté enseignant — ${ok} / ${total} jalons</h3>${table}` : ''}</div>`;

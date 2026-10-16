@@ -1292,7 +1292,10 @@ Sans aléa : un seul envoi, puis le bilan. « Réinitialiser le planning » vide
 version envoyée.
 
 **Évaluation** : `meta.copie: true`, `copie: meta.copie`, `export const noter = (db) => moteur.noter(db)` ; le dernier
-envoi rend la copie. Note = jalons réussis / jalons × `note.sur` (20 par défaut), **seulement si aucun jalon de la séance
+envoi rend la copie, **sauf si le planning déclare `rendCopie: false`** (ENT-8.6, 16/10/2026 : d'autres écrans suivent le planning dans
+l'évaluation) : l'envoi fige alors la version (écran « Planning envoyé », bouton « Envoyer le planning au chef », sans « et rendre ma
+copie ») et l'élève rend sa copie par le bouton « Rendre ma copie » du bandeau. Toute autre valeur que `false` est refusée au
+chargement ; sans l'option, rien ne change (bloc `planning`). Note = jalons réussis / jalons × `note.sur` (20 par défaut), **seulement si aucun jalon de la séance
 n'a de `poids`** (page d'essai, évaluation d'un planning seul) ; dans une séance à jalons pondérés, la note reste celle des
 jalons et des questions (14/10/2026). Détail jalon par jalon, clics sur
 « Vérifier », heure du premier geste et des envois dans `detail.planning` (rangés, montrés nulle part).
