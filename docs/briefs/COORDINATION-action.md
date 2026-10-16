@@ -129,3 +129,88 @@ ENT-8.2 ne dépend pas de la vue Localiser : elle se construit **pendant** la vu
   faits (carte ; moteur d'entreprise), phase 1 lancée.
 - 15/10 soir : phase 1 livrée et commitée : lot 1 contours (800687f), univers Action + logo + photos (177da27, 39356e0), zones de visite + geste `entrepot:<id>:visite:fin` (9691a0c). Le logo est rangé dans `contenus/trames/logos/action.svg|png` (convention des autres logos). Décisions en route : la photo du transpalette est manuelle (aucune électrique libre), la question `img-transpalette` dit « un transpalette » ; `palette-filmee.jpg` est un recadrage de `zone-colis.jpg` (ne pas montrer les deux sur un même écran) ; la place du hub du Havre est le centre de la commune de Gonfreville-l'Orcher (approchée, dite dans `MENTION`). Phase 2 lancée : vue Localiser (Opus) et ENT-8.2 (Opus) en parallèle.
 - 15/10 nuit : phase 2 et 3 livrées : vue Localiser lots 2-3 (dc9a875, 16 cas), ENT-8.2 (17ecc48, 20 cas), ENT-8.1 (0de1c0c, 16 cas). Finitions : correctif `jalonJuge` (jalon bonus `null` jugé sans erreur de console), contournement `sansNull` retiré d'ENT-8.1, cas existants adaptés à l'entreprise n° 8 (`socle.mjs` : CAP-C1.1 compte 4 séances ; `tirage-niveaux.mjs` : colonne Action et banques figées). Comptes rendus des trois briefs remplis, statuts « livré ». **Rien n'a été vu à l'écran par Tristan.** Ce que les sous-agents ont laissé ouvert : le menu se redessine en retard après un point d'étape et après le bilan de la carte (moteur, l'élève passe par la carte « Nouveau message ») ; en guidage le planning dit « déjà pris » avant l'envoi (moteur) ; la question au fil fait défiler la page d'≈ 40 px (bandeau du moteur) ; sous la charte sombre de Boost la mer et les zones éteintes sont peu contrastées ; la règle du quart (encart) et les `etiq` des noms sur la carte sont à juger à l'écran ; trames élèves à faire par Cowork.
+
+## 6. Chantier 2 (16/10/2026) : ENT-8.3 et ENT-8.4 — décisions du chef de chantier
+
+**Délégation** : Tristan, 16/10/2026, « tu vas faire le chef de chantier pour 8.3 8.4, tu prends les décisions ». Même schéma qu'au §1 :
+aucun sous-agent ne commite ; Fable commite par nom et pousse à la fin, suite verte. Briefs : `ENT-8.3-action-autre-site.md`,
+`ENT-8.4-action-avant-noel.md`. Squelettes `pret: false` des deux séances posés par Fable (91479ff) : registre et `ATTENDU_CAP` déjà à jour.
+
+### 6.1 Organisation
+
+| Chantier | Modèle | Port | Fichiers (et personne d'autre) |
+|---|---|---|---|
+| Images (porte de quai numérotée, chariot élévateur, pictogramme du point de rassemblement, remorque à deux planchers) | Sonnet | — | `contenus/images/action/porte-quai-numero.jpg`, `chariot-elevateur.jpg`, `point-rassemblement.svg`, `remorque-deux-planchers.svg`, `CREDITS.md` (ajout) |
+| Moteur : carte pré-posée dans le Planning (`depart` sur une carte) | Sonnet | 8114 | `core/types/planning.js`, `outils/test/planning.mjs` (cas ajoutés), `activites/FICHE-SEANCE.md` (section planning) |
+| ENT-8.3 | Opus | 8112 | `contenus/action-ent83.js`, `action-ent83-donnees.js`, `contenus/questions/ENT-8.3.js`, `contenus/corriges/ENT-8.3.js`, `activites/action-autre-site.js`, `contenus/action.js` (ajouts seulement : Roques, Onnaing), `activites/index.js` (ligne `metier` de l'entreprise n° 8), `outils/test/action-83.mjs`, `outils/test/socle.mjs` (cas CAP-C1.1 recalé), lignes dans `outils/test.mjs` (groupe 2) et `tirage-niveaux.mjs` |
+| ENT-8.4 | Opus | 8113 | `contenus/action-ent84.js`, `action-ent84-donnees.js`, `contenus/questions/ENT-8.4.js`, `contenus/corriges/ENT-8.4.js`, `activites/action-avant-noel.js`, `outils/test/action-84.mjs`, lignes dans `outils/test.mjs` (groupe 3) et `tirage-niveaux.mjs` |
+
+`outils/test.mjs` et `outils/test/tirage-niveaux.mjs` : édités **par ajout de ligne**, à l'outil Edit, après relecture du fichier juste
+avant. Les quatre tournent en parallèle ; ENT-8.4 n'écrit pas dans `planning.js` et joue son bloc une fois le correctif moteur posé.
+
+### 6.2 ENT-8.3 — ce que l'état des lieux a établi (VÉRIFIÉ) et ce qui est tranché
+
+- **Lieux propres à la séance** : `localiser.lieux` se déclare dans la séance (`core/types/entreprise.js:245`, `localiser.js:135`) ; le filtre
+  `reseauDe` (`localiser.js:324`) écarte un site de `RESEAU` à moins de 2 km d'un lieu joué → Labastide et Onnaing ne sont jamais dessinés deux
+  fois. **Décision** : ENT-8.3 déclare sa propre liste dans `action-ent83-donnees.js` ; Labastide y est copié de `contenus/action.js` avec un
+  `indice` et sans `bonus` ; **Roques** (centre de la commune, OSM, dep 31, région 76) et **Onnaing** (lieu complet, dep 59, région 32, bonus) sont
+  construits et ajoutés à `contenus/action.js` comme exports nouveaux (`LIEUX` d'ENT-8.1 intact).
+- **`suite` + `apresFiche`** : la barre mène à l'écran dès qu'il est ouvert, message lu ou non (`entreprise.js:1313`). Rien à demander ; un cas
+  du bloc 8.3 le couvre (le bloc 8.1 passe par des points d'étape).
+- **Documents** : `html: (db) =>` accepté, `<img>` local accepté, `largeurDocs` sans plafond (1,85 en ENT-6.10), `sousTitre` texte simple.
+- **Fiche « Corriger la chaîne »** : le moteur n'a pas de ligne à deux listes → deux `cadre` « Erreur 1 » / « Erreur 2 », chacun avec une
+  `liste` « case n° » (1 à 6) et une `liste` « devrait dire » (9 étiquettes mélangées par élève). Jalons sans ordre, dans le contenu.
+- **Remorque à deux planchers** : dessin SVG du chantier images, affiché en `<img>` dans le document de l'étape 4 ; si le fond des documents est
+  sombre sous le thème sombre (enseignant seul), la figure reçoit un fond translucide clair.
+- **Entreprise n° 8** (`activites/index.js:165`) : `metier` devient « Commerce à petits prix — entrepôts Geodis (Ensuès-la-Redonne) et GXO
+  (Labastide-Saint-Pierre) » : à dire à Tristan.
+- **Socle** : avec ENT-8.3, CAP-C1.1 compte cinq séances (une `pret: false` compte) : le cas « 10/20 (1/4) » et l'export « 1 sur 4;10 » du bloc
+  `socle` sont recalés sur la valeur réelle (cas existant réécrit : alerte 7).
+- Questions ouvertes du brief (§11) : **1** carte aux mêmes niveaux qu'en 8.1 (aucun chantier moteur) ; **2** textes de Cowork tels quels,
+  liste à relire à l'écran dans le compte rendu ; **3** pictogramme en traits seulement ; le piège « Geodis » de la question L est gardé.
+- Tirage : banques `entrepots` (fixe Labastide, 2 tirés, `verifier` ≥ 2 exploitants), `acteurs` (facile 1, moyen 1), `erreurs` (facile 1 +
+  moyen ou difficile 1 : deux banques ou une `verifier`, au choix du constructeur, sur deux cases différentes), `situations` (facile 1, moyen 1,
+  difficile 1, bonus confirmé moyen 1, jamais `s-etiquette` avec `e-nimes`).
+
+### 6.3 ENT-8.4 — ce que l'état des lieux a établi (VÉRIFIÉ) et ce qui est tranché
+
+- **Carte pré-posée** : impossible aujourd'hui (`etatNeuf` : `place: {}`, `planning.js:500`). **Décision : petit correctif moteur** plutôt que le
+  repli du brief (un `occupe` « place de Romain » chevaucherait l'`occupe` « produits ménagers » : deux blocs superposés, illisible). Clé nouvelle
+  sur une carte : `depart: { ligne: '<id de ligne>', de: 'HH:MM' }` ; `etatNeuf` la pose dans `place` ; « Réinitialiser » et la rouverture par
+  « Corriger » la gardent telle qu'elle est (la correction repart de la pose envoyée, comme aujourd'hui) ; contrôle au chargement (ligne connue,
+  heure dans l'échelle, la carte tient) ; la carte posée se déplace comme toute carte posée. Sans `depart`, rien ne change (bloc `planning`
+  vert, ENT-6.3, 6.8, 7.2, 8.2 inchangées). Jalon « replacé » : règles `quai` (conflit avec les produits ménagers tant qu'elle n'a pas bougé) et
+  `fenetre` ; une carte laissée à sa place = faux, sans rien de plus à écrire.
+- **Fenêtre « avant midi »** : `poser` ramène une carte dans l'échelle (`planning.js:662`) et `fenetre` finissant à la fin de l'échelle ne se
+  déclenche jamais. **Décision** : échelle **06:00–13:00** (pas 30 min), `fenetre` avant 12:00 ; « Quai 3 à 11 h » finit à 12 h 30 → ✗ ; le
+  document du planigramme montre la même échelle (après-midi vide).
+- **Ligne « nouveau créneau »** : une ligne de phrases peut être `choix: (db) =>` / `juste: (db) =>` mais elle est figée quand le mail entre
+  dans la base (`entreprise.js:1189`). **Décision** : le mail du compte rendu est semé après la fiche des documents (donc après l'envoi du
+  planning) avec ses phrases calculées sur la pose envoyée (`db.plannings[id].v1.place`) ; carte jamais déplacée → la phrase juste est « Je ne
+  l'ai pas déplacé. » ; **le jalon de la ligne est écrit dans le contenu** : il compare le texte choisi à la phrase recalculée sur la pose
+  **courante** ; si cette phrase n'est pas parmi les choix du mail (planning corrigé après le compte rendu), il juge sur la pose du moment du
+  compte rendu. Dit dans le compte rendu du brief.
+- **Document planigramme** : fabriqué comme en 8.2 (`tablePlanigramme`, mêmes données que les `occupe`), recopié dans le fichier de 8.4 avec
+  une classe par camion pour dessiner le camion de Romain à sa place fausse, **sans le signaler** (même style que les autres).
+- **Plan de Labastide** : SVG dessiné dans `action-ent84-donnees.js` (8 lieux numérotés, indices dessinés, pictogramme du point de
+  rassemblement inclus par `<image href="./contenus/images/action/point-rassemblement.svg">`), `largeurDocs: 1.6`, vérifié à 1366 × 768 par un
+  cas du bloc. Il ne va pas dans `contenus/action.js` (seule ENT-8.3 y écrit ce soir) : l'évaluation de janvier l'importera du fichier de 8.4.
+- **Banque `lectures`** : le tirage veut des effectifs fixes par difficulté → les quatre lectures du socle sont déclarées `facile` (une tirée),
+  les deux dernières `difficile` (bonus du confirmé). Les mentions « moyen » du brief restent indicatives.
+- **Banque `taches`** : les 8 tâches d'ENT-8.2 recopiées (Romain, Lucas, Inès) + `t-retours`, `t-changer-rdv` ; pas d'import de
+  `action-ent82.js` (séances cloisonnées).
+- **Convention de PFMP (question Q)** : les citations du brief (vérifiées par Cowork le 16/10/2026 sur le PDF d'éduscol) sont reprises telles
+  quelles, avec la date de consultation ; si le constructeur relit le PDF lui-même, il le dit.
+- Questions ouvertes (§11) : **1** Lucas (cariste), Inès (agent administratif) ; **2** « Qui fait quoi ? » 0,75 · 0,75 · 1 ; **3** « Rendre
+  compte » conflit 0,75 · créneau 0,75 · salutation 0,5 · fin 0,5 ; **4** textes de Cowork tels quels, liste à relire.
+- Images : `chariot-elevateur.jpg` pour `img-chariot` ; `img-niveleur` sur la photo de quai de Smoby comme en 8.2.
+
+### 6.4 Alertes à dire à Tristan à la livraison
+
+- **7** : `outils/test.mjs` (blocs `action-83`, `action-84`), `outils/test/socle.mjs` (lignes `ATTENDU_CAP`, cas CAP-C1.1 recalé),
+  `tirage-niveaux.mjs` (banques figées), `outils/test/planning.mjs` (cas ajoutés).
+- **8** : deux activités ajoutées (ENT-8.3, ENT-8.4) ; `metier` de l'entreprise n° 8 changé.
+- **9** : entreprise réelle (GXO, Kuehne+Nagel, Onnaing, Roques) : vérifié par Cowork, rien de nouveau inventé ; Roques au centre de la commune.
+- **10** : deux photos récupérées par script, deux dessins originaux.
+- **13** : `depart` n'agit que si une carte le déclare.
+- Rien ne change dans Firebase.
