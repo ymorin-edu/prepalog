@@ -214,3 +214,7 @@ avant. Les quatre tournent en parallèle ; ENT-8.4 n'écrit pas dans `planning.j
 - **10** : deux photos récupérées par script, deux dessins originaux.
 - **13** : `depart` n'agit que si une carte le déclare.
 - Rien ne change dans Firebase.
+
+### 6.5 Journal du chantier 2
+
+- 16/10 après-midi : briefs commités (eee6db1), squelettes (91479ff), feuille §6 (12acd92) ; deux états des lieux Sonnet en parallèle, puis quatre sous-agents : images (eafefd8), moteur `depart` (55cb2c3), ENT-8.4 Opus (23a8ebc, 19 cas), ENT-8.3 Opus (4d6e197, 21 cas) ; cas du registre du bloc `action` recalé (62d00f5). Comptes rendus des deux briefs remplis par les constructeurs, statuts « livré ». **Rien n'a été vu à l'écran par Tristan.** Laissé ouvert par les constructeurs : cartes « Nouveau message » qui s'empilent sans passage par la Messagerie ; barre « Ouvrir la Messagerie » pendant « Avant de commencer » ; bouton « Vérifier mon planning » gardé en 8.4 (`aides.verifier: false` pour le retirer) ; lexique « remorque à deux planchers » (« deux étages ») proche de la réponse à P ; PDF d'éduscol non relu.
