@@ -6,7 +6,7 @@
 > Lis CLAUDE.md, docs/EN-COURS.md puis docs/briefs/ENT-8.5-action-evaluation-se-situer.md et docs/briefs/ENT-8.6-action-evaluation-prise-de-poste.md en entier. Commence par la demande au moteur du §7 d'ENT-8.5 (vue Localiser en évaluation, lieux selon le tirage, même site dans les deux séances), puis ENT-8.5, puis ENT-8.6. Annonce la durée avant de commencer et dis-moi si un point des briefs contredit le code.
 > ```
 
-**Statut** : à implémenter
+**Statut** : livré (16/10/2026, `pret: true, ouverture: 'prof'` ; à essayer à l’écran par Tristan)
 **Date du brief** : 16/10/2026
 **Conversation d'origine** : Cowork (Opus), 16/10/2026 au soir. **Tristan a délégué les décisions** (« fais le cadrage de la 8.5, prends les
 décisions ») : toutes les décisions de ce brief sont de Cowork, listées au §11 pour que Tristan puisse en revenir. Fiche du projet :
@@ -284,8 +284,69 @@ ce qui est évalué par sous-compétence, les deux sites. Corrigé par élève d
 ## Compte rendu *(rempli par Claude Code à la livraison)*
 
 - **Fichiers créés / modifiés** :
+  - créés : `contenus/action-eval-sites.js` (module PARTAGÉ avec ENT-8.6 : les deux sites, `siteDe(uid)`, `uidDeBase`, `siteDeBase`,
+    `remplir`), `contenus/action-ent85-donnees.js`, `contenus/action-ent85.js`, `contenus/questions/ENT-8.5.js`, `contenus/corriges/ENT-8.5.js`,
+    `activites/action-evaluation-se-situer.js`, `outils/test/action-85.mjs` (bloc nouveau, 17 cas) ;
+  - modifiés (ajouts seulement) : `contenus/action.js` (`LIEU_BELLEVILLE`, `LIEU_VILLEFRANCHE`, `LIEU_LA_SENTINELLE` ; rien d’autre ne bouge),
+    `activites/index.js` (une ligne), `outils/test.mjs` (`action-85` dans `BLOCS` et dans le groupe 4 de `GROUPES`, celui qui a le moins de
+    blocs), `outils/test/socle.mjs` (ligne `'ENT-8.5': 'CAP-C1.1'` dans `ATTENDU_CAP` ; **cas CAP-C1.1 recalé : 6 séances, « 1/6 » et
+    « 1 sur 6 »**), `outils/test/tirage-niveaux.mjs` (banques d’ENT-8.5 dans `BANQUES_FIGEES`). Rien dans `core/` ni `styles/`.
+  - Séance livrée en `pret: true, ouverture: 'prof'`, `copie: true`, `noter`, sans `parcours` ni `precedente`, `code: 'ENT-8.5'` (après ENT-8.4).
 - **Écarts par rapport au brief** (et pourquoi) :
+  1. **Questions d’ouverture « réécrites pour le site »** : impossible sans le moteur (une question d’ouverture n’a que `variante`, qui reçoit
+     un tirage au hasard, pas la base de l’élève ; `selon` y est refusé ; `de` est une personne fixe). Énoncés neutres : « L’entrepôt où tu
+     fais ce stage sert à… », « … dans le magasin que ton entrepôt livre ? », « Ton tuteur de stage, c’est… » ; la personne s’appelle
+     « Ton tuteur ». Le site de l’élève est écrit dans le document de gauche « Ton stage » (calculé sur sa base : prestataire, site,
+     département, tuteur, sans aucun rôle). → demande au moteur ci-dessous.
+  2. **`k-img-palette` mise de côté** (`actif: false`, toujours déclarée) : le brief voulait l’exclure du tirage d’un élève qui a `s-film`,
+     or le tirage d’ouverture ne voit pas celui de la séance. Banque d’images : 3 actives (≥ 2 × 1).
+  3. **Barre « Étape suivante »** : le moteur ne la montre jamais en évaluation (`copie`). L’élève avance par le message du tuteur (carte
+     « Nouveau message » → « Ouvrir la fiche »), le menu (ordonné par `suite`, fiches grisées « Après … ») et les pastilles « fait ».
+     « Qui est qui ? » n’apparaît au menu qu’après un redessin (limite connue, ENT-8.3) : le message y mène.
+  4. **Textes fixes du moteur** (sous-titre et bouton d’une fiche, bandeau) : ils ne connaissent pas le site → « Envoyer la fiche à ton
+     tuteur », bandeau « Un nouvel entrepôt d’Action ». Le site, le magasin et le prestataire sont dans les blocs, les messages, la carte.
+  5. **Situations reprises d’ENT-8.1** (`s-retard`, `s-camion`, `s-scan`) : mises au format d’ENT-8.3 (juste + 2 pièges + « Rien ne change au
+     magasin ») ; second piège = leur « Rien : … » d’ENT-8.1 (clés renommées `attend`, `memes`, `labas`). `s-chute` et `s-abime` d’ENT-8.1 ne
+     sont pas reprises (doublons de `s-film` et `s-reserve`). Banque : 3 faciles, 5 moyennes, 3 difficiles.
+  6. **Position de Villefranche-sur-Saône** : le brief disait « centre de la commune » faute d’adresse ; OpenStreetMap a un magasin « Action »
+     dans la commune (chemin 136805547, Port de Beauregard) : il est pris (RELEVÉ ; que ce soit le magasin de l’offre France Travail est
+     SUPPOSÉ, seul Action de la commune dans OSM le 16/10/2026). La Sentinelle : la ZAC du Vignoble (chemin OSM 1370095358), APPROCHÉE.
 - **Décisions prises en route** :
-- **Tests** :
-- **Commits** :
+  - Site = `siteDe(uid)` (hachage de « uid|action-evaluation-site », sans id de séance) ; l’uid est relu dans la base par `uidDeBase(db,
+    idSeance)` = la graine du tirage de la séance sans son « |<séance> » (le moteur ne pose pas `db.tirage` quand une séance déclare un
+    `TIRAGE`). Base vide : Onnaing. Répartition : 100 Onnaing sur 200 graines.
+  - Paires de situations jamais tirées ensemble (elles se soufflent) : `s-etiquette` + `s-camion`, `s-ordre` + `s-retard`.
+  - Départ de la chaîne : re-tiré tant qu’une MOITIÉ est juste (pas seulement l’ordre entier) : envoyer sans toucher = 0 sur l’ordre.
+  - Les 8 rôles dans un ordre fixe (vend, guide, possède, forme, fabrique, emmène, stocke, achète) ; le `role` des lieux de la carte est neutre
+    (« L’entrepôt où tu fais ton stage. ») : l’ancien « X y stocke et prépare… » aurait donné la ligne du prestataire.
+  - Titres des jalons de carte sans nom de site (« La carte : L’entrepôt — la région, du premier coup »), le Suivi est le même pour les deux.
+  - « ton tuteur » / « ta tutrice » selon le site ; « l’entrepôt d’Onnaing » (élision, `{de-site}`).
+  - Toutes les fiches partent incomplètes (`envoi.incomplet`) : une ligne vide est fausse.
+- **Textes à relire à l’écran** (construits par Claude Code, pas par Cowork) : les messages d’étape du tuteur (« Merci, c’est noté.
+  Maintenant, dis-moi le rôle de chaque acteur. », « … remets dans l’ordre le chemin d’un produit, et dis-moi où tu travailles. », « …
+  Dernière chose : ce que tu fais ici se voit au magasin de {ville}… ») ; sous-titres des fiches ; consigne de l’ordre ; titre et texte de fin
+  de carte (« Le chemin des produits vers {ville} » + phrase sur les points approchés) ; les indices de la carte (Onnaing « Tout près de
+  Valenciennes, à l’est, vers la Belgique. », La Sentinelle « Tout près de Valenciennes, à l’ouest de la ville. », Belleville « Au nord du
+  département, près de la Saône, entre Lyon et Mâcon. », Villefranche « Au nord de Lyon, au bord de la Saône. ») ; le document « Ton stage » ;
+  la `situation` d’ouverture ; les retours des questions (jamais montrés en évaluation) ; l’accueil et `MENTION`. Textes de Cowork repris
+  tels quels : accueil du tuteur, message de fin, rôles, chaîne, situations, questions (sauf l’écart n° 1).
+- **Points d’attention pour Tristan** : `k-entrepot` (« stocker puis préparer les commandes ») ressemble au rôle du prestataire, et
+  `k-img-semi` (« transporter les palettes de l’entrepôt aux magasins ») au rôle du transporteur : gardées (choix de Cowork ; la réponse
+  n’est jamais corrigée à l’écran), à trancher.
+- **Tests** : bloc `action-85`, 17 cas, vert (≈ 3 min 30). Valeurs écrites à la main pour deux témoins (a85-a Onnaing, a85-b Belleville) :
+  20/20 à l’écran et à la remise (= `noter(db)`), rien remonté avant ; l’un joué par l’autre 13/20 ; inaction 0 ; ouverture 4 / 3 / 2,5 / 0 / 0 ;
+  carte une erreur → − 0,75, aide après deux erreurs, aucun mot qui juge ; chaîne inversion 5-6 → − 1,25, départ tel quel → − 2,5, non envoyée
+  → 0 ; un même rôle partout ≤ 1/4 ; « Rien ne change » partout → 0 ; équité 300 graines ; même site qu’ENT-8.6 pour 50 élèves ; contrôle de la
+  carte des deux sites ; 1366 × 768 ; corrigé. **Éprouvés dans les deux sens** (sabotages posés puis retirés, `core/` revenu à l’identique) :
+  niveau de l’élève lu au lieu du standard en évaluation → le cas « accompagné ou confirmé » tombe ; site tiré avec la graine de la séance →
+  le cas « même site » tombe ; règle des moitiés retirée → le cas d’équité tombe ; jalon « fin » qui lit le début → le cas de la chaîne tombe.
+  Blocs voisins : voir le compte rendu du chef de chantier.
+- **Commits** : aucun (le chef de chantier commite par nom).
 - **Reste ouvert** :
+  - **Demande au moteur** (un chantier à part) : écrire le site de l’élève dans une question d’ouverture (`variante(hasard, db)` ou `selon`
+    accepté à l’ouverture) et dans le nom de la personne / la `situation` ; laisser une séance exclure une question d’ouverture selon son
+    tirage (`k-img-palette` / `s-film`) ; une barre « Étape suivante » en évaluation (sans rien juger) ; `sousTitre` et `envoi.bouton` d’une
+    fiche en fonction de la base.
+  - ENT-8.6 réutilise `contenus/action-eval-sites.js` : `siteDeBase(db, 'action-evaluation-prise-de-poste')`, `SITES[x].tuteur`
+    (prénom, fonction, mot, mail), `prestataire`, `site`, `deSite`, `ville`, `magasin`, `autreMagasin`, `remplir`.
+  - Fiche enseignant (Cowork) après validation à l’écran.

@@ -257,7 +257,7 @@ await v('ENT-8.2 : déclaration (CAP, CAP-C1.2, guidage, 20 points, parcours apr
     true, 'prof', './contenus/corriges/ENT-8.2.js'], 'meta ENT-8.2');
   egal(r.b, ['action-se-situer', 'ENT-8.1', ['cap'], [], ['CAP-C1.1'], 'guidage', 20, true, false], 'meta d’ENT-8.1 (la précédente : première du parcours)');
   egal(r.entreprise && [r.entreprise.nom, r.entreprise.logo], ['Action', './contenus/trames/logos/action.svg'], 'entreprise n° 8');
-  egal(r.registre, ['ENT-8.1', 'ENT-8.2', 'ENT-8.3', 'ENT-8.4'], 'au registre');   // ENT-8.3 et 8.4 ajoutées le 16/10/2026
+  egal(r.registre, ['ENT-8.1', 'ENT-8.2', 'ENT-8.3', 'ENT-8.4', 'ENT-8.5'], 'au registre');   // ENT-8.3, 8.4 et 8.5 ajoutées le 16/10/2026
   proche(r.somme, 16, 'somme des poids des jalons');
   egal(r.part, 4, 'part des questions');
   egal(r.parGroupe, [['Repérer mon poste', 3], ['Qui fait quoi ?', 3], ['Le planigramme', 4], ['Les documents du camion', 4], ['Rendre compte', 2]], 'points par ligne du bandeau');

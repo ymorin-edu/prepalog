@@ -438,6 +438,7 @@ await v('compétences : chaque séance déclare ce que Tristan a validé le 02/1
     'ENT-5.6': 'CAP-C3.1,CAP-C3.4', 'ENT-6.7': 'CAP-C3.1,CAP-C3.2,CAP-C3.4', 'ENT-1.3': 'CAP-C3.4',
     'ENT-5.8': 'CAP-C3.5', 'ENT-6.10': 'CAP-C3.7',
     'ENT-8.1': 'CAP-C1.1', 'ENT-8.2': 'CAP-C1.2', 'ENT-8.3': 'CAP-C1.1', 'ENT-8.4': 'CAP-C1.2',
+    'ENT-8.5': 'CAP-C1.1',
   };
   const metas = await page.evaluate(async () => {
     const { chargerActivites } = await import('/activites/index.js');
@@ -810,9 +811,9 @@ await v('compétences : un groupe CAP voit ses moyennes CAP-C… avec libellé, 
     if (codes !== 'CAP-C1.1,CAP-C1.2,CAP-C1.3,CAP-C1.4,CAP-C1.5,CAP-C3.1,CAP-C3.2,CAP-C3.4,CAP-C3.5,CAP-C3.7') throw new Error('colonnes CAP : ' + codes);
     const t14 = lu.th.find((x) => x.code === 'CAP-C1.4').titre;
     if (t14 !== "Contrôler les quantités et l'état de la livraison") throw new Error('libellé CAP-C1.4 : ' + t14);
-    // DEC-1, QUI-6, ENT-6.1, ENT-8.1 et ENT-8.3 (Action) déclarent CAP-C1.1 : une faite sur cinq, 10/20.
-    // (Recalé le 16/10/2026 par ENT-8.3, qui ajoute une séance à CAP-C1.1 : « 1/4 » et « 1 sur 4 » auparavant.)
-    if (lu.td['CAP-C1.1'] !== '10/20 (1/5)') throw new Error('CAP-C1.1 : ' + lu.td['CAP-C1.1']);
+    // DEC-1, QUI-6, ENT-6.1, ENT-8.1, ENT-8.3 et ENT-8.5 (Action) déclarent CAP-C1.1 : une faite sur six, 10/20.
+    // (Recalé le 16/10/2026 par ENT-8.3 — « 1/4 » auparavant —, puis par ENT-8.5 — « 1/5 » et « 1 sur 5 » auparavant.)
+    if (lu.td['CAP-C1.1'] !== '10/20 (1/6)') throw new Error('CAP-C1.1 : ' + lu.td['CAP-C1.1']);
     // Une séance sans compétence CAP (SCE-1, C1.6) n'apparaît nulle part dans le tableau CAP ; DEC-1 y est.
     const seancesComp = await page.$eval('#panSeancesComp', (p) => p.textContent);
     if (/SCE-1|C1\.6/.test(seancesComp)) throw new Error('une séance sans compétence CAP figure au tableau CAP');
@@ -822,7 +823,7 @@ await v('compétences : un groupe CAP voit ses moyennes CAP-C… avec libellé, 
     const [dl] = await Promise.all([page.waitForEvent('download'), page.click('#btnCsvComp')]);
     const csv = fs.readFileSync(await dl.path(), 'utf8').replace(/^﻿/, '');
     const l11 = csv.split('\r\n').find((l) => /^CAPOL;Test;CAP-C1\.1;/.test(l));
-    if (!l11 || !l11.endsWith(';1 sur 5;10')) throw new Error('export CAP-C1.1 : ' + l11);
+    if (!l11 || !l11.endsWith(';1 sur 6;10')) throw new Error('export CAP-C1.1 : ' + l11);
     if (!/;Se situer dans un environnement professionnel spécifique;/.test(l11)) throw new Error('libellé absent de l\'export : ' + l11);
     if (/;C1\.1;/.test(csv)) throw new Error('export CAP : une colonne Bac Pro');
     // Le même travail, dans un groupe de 1re : en C1.1, et plus aucune colonne CAP.

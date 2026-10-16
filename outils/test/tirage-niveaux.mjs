@@ -572,6 +572,11 @@ const BANQUES_FIGEES = {
     erreursMd: ['e-ensues', 'e-marseille', 'e-labastide', 'e-fournisseur'],
     situations: ['s-etiquette', 's-film', 's-cartons', 's-emplacement', 's-lourd', 's-compte', 's-ordre', 's-reserve'],
   },
+  // ENT-8.5 Action (16/10/2026, évaluation) : acteurs de « Qui est qui ? » (Action fixe), situations de « Ce que je change ».
+  'contenus/action-ent85-donnees.js': {
+    acteurs: ['action', 'prestataire', 'magasin', 'client', 'lycee', 'fournisseur', 'transporteur'],
+    situations: ['s-etiquette', 's-film', 's-cartons', 's-emplacement', 's-lourd', 's-compte', 's-ordre', 's-reserve', 's-retard', 's-camion', 's-scan'],
+  },
 };
 await v('Tirage : banques stables — aucun id d’une banque déclarée ne disparaît (liste figée), toute banque déclarée est inscrite', async () => {
   const fs = await import('node:fs');

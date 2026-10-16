@@ -173,6 +173,53 @@ export const LIEU_ONNAING = { id: 'onnaing', lettre: 'E', type: 'entrepot', bonu
   reperes: [{ ville: 'Valenciennes', lonlat: [3.5235, 50.3579] }],
   etiq: 'd' };   // pas d’`indice` : lieu bonus, réservé au niveau confirmé
 
+// ─────────────────────────────────────────── lieux ajoutés pour ENT-8.5 (16/10/2026, évaluation : deux sites tirés), exports NOUVEAUX
+// Positions relevées dans OpenStreetMap (Nominatim, 16/10/2026), arrondies à 4 décimales. `role` NEUTRE : il ne dit jamais ce que fait le
+// prestataire (ce serait une ligne de « Qui est qui ? »). `indice` (niveau standard) : CONSTRUIT par Claude Code, à relire à l’écran.
+// Belleville-en-Beaujolais (Rhône) : VÉRIFIÉ (brief ENT-8.5 §2, communiqué du 06/09/2023) : entrepôt Action exploité par Kuehne+Nagel, livre
+// le Sud-Est. Position : CENTRE DE LA COMMUNE (relation OSM 8886392, la même que dans `RESEAU`), APPROCHÉE. Distances du point à ses
+// « autres » : Tarare 32,9 km, Lyon 40,6 km, Givors 59,1 km ; Mâcon (22,7 km, Saône-et-Loire) n’est qu’un repère.
+export const LIEU_BELLEVILLE = { id: 'entrepot', lettre: 'E', type: 'entrepot',
+  nom: 'L’entrepôt Kuehne+Nagel de Belleville-en-Beaujolais', role: 'L’entrepôt où tu fais ton stage.',
+  ville: 'Belleville-en-Beaujolais', dep: '69', region: '84',
+  lonlat: [4.7216, 46.1144], osm: 'relation 8886392',
+  autres: [
+    { ville: 'Tarare', lonlat: [4.4371, 45.8943], osm: 'relation 396927' },
+    { ville: 'Lyon', lonlat: [4.832, 45.7578], osm: 'relation 120965' },
+    { ville: 'Givors', lonlat: [4.7697, 45.5844], osm: 'relation 139203' },
+  ],
+  reperes: [{ ville: 'Mâcon', lonlat: [4.8322, 46.3037] }],
+  indice: 'Au nord du département, près de la Saône, entre Lyon et Mâcon.', etiq: 'd' };
+// Villefranche-sur-Saône (Rhône) : VÉRIFIÉ (brief ENT-8.5 §2, offre France Travail d’Action pour ce magasin, adresse non donnée). Position :
+// le magasin « Action » d’OpenStreetMap dans la commune (chemin OSM 136805547, `shop=variety_store`, 240 rue François Meunier-Vial, Port de
+// Beauregard), RELEVÉ ; que ce soit le magasin de l’offre est SUPPOSÉ (seul magasin Action de la commune dans OSM le 16/10/2026). Distances :
+// Beaujeu 20,7 km, Villeurbanne 27,9 km, Saint-Symphorien-sur-Coise 46,0 km ; Lyon (27,5 km) est un repère.
+export const LIEU_VILLEFRANCHE = { id: 'magasin', lettre: 'M', type: 'magasin',
+  nom: 'Le magasin Action de Villefranche-sur-Saône', role: 'Le magasin que ton entrepôt livre.',
+  ville: 'Villefranche-sur-Saône', dep: '69', region: '84',
+  lonlat: [4.7348, 45.9959], osm: 'way 136805547',
+  autres: [
+    { ville: 'Beaujeu', lonlat: [4.5908, 46.1531], osm: 'relation 300888' },
+    { ville: 'Villeurbanne', lonlat: [4.8796, 45.7661], osm: 'relation 120989' },
+    { ville: 'Saint-Symphorien-sur-Coise', lonlat: [4.4551, 45.6313], osm: 'relation 143674' },
+  ],
+  reperes: [{ ville: 'Lyon', lonlat: [4.832, 45.7578] }],
+  indice: 'Au nord de Lyon, au bord de la Saône.', etiq: 'g' };
+// La Sentinelle (Nord) : VÉRIFIÉ (brief ENT-8.5 §2, L’Observateur du 24/10/2025) : magasin Action ouvert le 8/11/2025, zone du Vignoble, rue
+// des Vignes, près de Valenciennes. Le magasin n’est pas dans OSM : position = la ZAC du Vignoble (chemin OSM 1370095358, `landuse=retail`),
+// APPROCHÉE. Distances : Douai 29,1 km, Dunkerque 109,6 km, Avesnes-sur-Helpe 40,2 km ; Valenciennes (2,8 km) est un repère.
+export const LIEU_LA_SENTINELLE = { id: 'magasin', lettre: 'M', type: 'magasin',
+  nom: 'Le magasin Action de La Sentinelle', role: 'Le magasin que ton entrepôt livre.',
+  ville: 'La Sentinelle', dep: '59', region: '32',
+  lonlat: [3.4886, 50.3455], osm: 'way 1370095358',
+  autres: [
+    { ville: 'Douai', lonlat: [3.0805, 50.3676], osm: 'relation 56243' },
+    { ville: 'Dunkerque', lonlat: [2.3773, 51.0348], osm: 'relation 139610' },
+    { ville: 'Avesnes-sur-Helpe', lonlat: [3.9321, 50.1219], osm: 'relation 55390' },
+  ],
+  reperes: [{ ville: 'Valenciennes', lonlat: [3.5235, 50.3579] }],
+  indice: 'Tout près de Valenciennes, à l’ouest de la ville.', etiq: 'g' };
+
 // D’où vient chaque position (pour le compte rendu et les tests) : `releve` = l’objet d’OpenStreetMap est l’établissement lui-même ;
 // `approche` = centre de commune.
 export const PROVENANCE = { magasin: 'releve', entrepot: 'releve', port: 'approche', labastide: 'releve' };
