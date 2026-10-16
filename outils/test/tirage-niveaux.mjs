@@ -577,6 +577,14 @@ const BANQUES_FIGEES = {
     acteurs: ['action', 'prestataire', 'magasin', 'client', 'lycee', 'fournisseur', 'transporteur'],
     situations: ['s-etiquette', 's-film', 's-cartons', 's-emplacement', 's-lourd', 's-compte', 's-ordre', 's-reserve', 's-retard', 's-camion', 's-scan'],
   },
+  // ENT-8.6 Action (16/10/2026, évaluation) : lieux, tâches et documents repris d'ENT-8.4 ; lectures du planigramme du 12 janvier ; notes du quai.
+  'contenus/action-ent86-donnees.js': {
+    lieux: ['l-quai', 'l-vestiaire', 'l-rassemblement', 'l-controle', 'l-bureau', 'l-charge', 'l-retours', 'l-litiges'],
+    taches: ['t-decharger', 't-saisir', 't-bl', 't-compter', 't-rdv', 't-ranger', 't-refuser', 't-equipe', 't-retours', 't-changer-rdv'],
+    lectures: ['l-havre-heure', 'l-havre-quai', 'l-retours', 'l-q1-combien', 'l-libre-7h', 'l-dernier'],
+    documents: ['commande', 'livraison', 'transport'],
+    quai: ['encombre', 'transpalette', 'bl', 'pret'],
+  },
 };
 await v('Tirage : banques stables — aucun id d’une banque déclarée ne disparaît (liste figée), toute banque déclarée est inscrite', async () => {
   const fs = await import('node:fs');

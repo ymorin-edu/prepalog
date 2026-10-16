@@ -81,6 +81,7 @@ export const ACTIVITES = [
   () => import('./action-autre-site.js'),
   () => import('./action-avant-noel.js'),
   () => import('./action-evaluation-se-situer.js'),
+  () => import('./action-evaluation-prise-de-poste.js'),
 ];
 
 // Pictogrammes des rubriques. Une seule grille pour les dix : trait de 1,6 px, bouts et

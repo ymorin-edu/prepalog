@@ -3,7 +3,7 @@
 > **📋 Phrase à copier-coller dans Claude Code (Opus) :** celle d'ENT-8.5 (les deux briefs se construisent dans le même chantier, après la
 > demande au moteur du §7 d'ENT-8.5).
 
-**Statut** : à implémenter
+**Statut** : livré (16/10/2026, `pret: true, ouverture: 'prof'` ; à essayer à l’écran par Tristan)
 **Date du brief** : 16/10/2026
 **Conversation d'origine** : Cowork (Opus), 16/10/2026 au soir, **décisions déléguées par Tristan** (§11). **À lire avec ENT-8.5**, dont les
 §0, §0 bis et §2 valent ici (deux évaluations, copie rendue, site tiré par élève, sans aide, ouverture notée, un écran par étape).
@@ -271,8 +271,64 @@ Pas de trame. Fiche enseignant commune avec ENT-8.5 (§9 d'ENT-8.5).
 ## Compte rendu *(rempli par Claude Code à la livraison)*
 
 - **Fichiers créés / modifiés** :
+  - **moteur (premier ensemble, à commiter à part)** : `core/types/planning.js` (option `rendCopie: false`, voir ci-dessous),
+    `outils/test/planning.mjs` (un cas AJOUTÉ, et deux lignes ajoutées dans l’aide `VARIANTE_PRIS` pour poser l’option ; aucun cas existant
+    réécrit), `activites/FICHE-SEANCE.md` (section Planning, paragraphe « Évaluation » : l’exception dite). `core/types/entreprise.js` n’a pas
+    eu à changer.
+  - **séance (second ensemble)** : créés `contenus/action-ent86-donnees.js`, `contenus/action-ent86.js`, `contenus/questions/ENT-8.6.js`,
+    `contenus/corriges/ENT-8.6.js`, `activites/action-evaluation-prise-de-poste.js`, `outils/test/action-86.mjs` (bloc nouveau, 16 cas) ;
+    modifiés par ajout : `activites/index.js` (une ligne), `outils/test.mjs` (`action-86` dans `BLOCS` et dans le groupe 4 de `GROUPES`, celui
+    qui a le moins de blocs), `outils/test/socle.mjs` (ligne `'ENT-8.6': 'CAP-C1.2'` dans `ATTENDU_CAP` ; **aucun cas ne compte les séances
+    de CAP-C1.2 : rien à recaler**, le cas qui compte CAP-C1.1 reste à « 1/6 »), `outils/test/action.mjs` (registre : `'ENT-8.6'` ajouté),
+    `outils/test/tirage-niveaux.mjs` (banques d’ENT-8.6 dans `BANQUES_FIGEES`), `docs/decisions.md` (deux lignes), ce brief.
+    `contenus/action-eval-sites.js` n’a pas changé (lu seulement). Rien dans `styles/`.
+  - Séance livrée en `pret: true, ouverture: 'prof'`, `copie: true`, `noter`, sans `parcours` ni `precedente`, `code: 'ENT-8.6'` (après ENT-8.5).
 - **Écarts par rapport au brief** (et pourquoi) :
-- **Décisions prises en route** :
-- **Tests** :
-- **Commits** :
+  1. **§7 point 1 (planning en évaluation) : le moteur ne le permettait pas.** En séance `copie`, l’envoi du planning rendait TOUTE la copie
+     (l’élève perdait les documents et le compte rendu). Décision du chef de chantier (option A) : option `rendCopie: false` du planning,
+     ajoutée au moteur avant la séance. Avec elle, l’envoi fige la version (écran « Planning envoyé ») et la copie se rend par le bouton du
+     bandeau ; sans elle, rien ne change. Pas de « Vérifier », pas de « Les règles » en évaluation : confirmé.
+  2. **§7 point 2 (phrases calculées en copie)** : elles marchent sans bilan (vérifié par les deux témoins et le cas « rendre compte »).
+  3. **§7 point 3 (plan aux numéros tirés)** : `PLAN_LABASTIDE` est une chaîne figée ; ENT-8.6 remplace les numéros des 8 ronds dans le
+     texte du dessin par la permutation de l’élève (`planNumerote`). ENT-8.4 n’est pas touchée (bloc `action-84` vert).
+  4. **Questions d’ouverture sans le site** (même limite qu’en ENT-8.5) : `k-consignes` dit « Tu es en stage dans cet entrepôt » et sa bonne
+     réponse « l’entreprise qui t’accueille » (sans « {prestataire} ») ; la personne est « Ton tuteur ». Le site est écrit dans « Ton stage ».
+  5. **« Le droit »** : un document propre à ENT-8.6 (Code du travail L4111-5 et L4141-1, recopiés de Légifrance le 15/10/2026 comme en
+     ENT-8.2 ; convention-type de PFMP art. 8 et 10, **citations du brief d’ENT-8.4, vérifiées par Cowork sur le PDF d’éduscol le 16/10/2026,
+     NON relues par Claude Code**), sans le Code civil d’ENT-8.2. Approuvé par le chef de chantier.
+  6. **Pas de barre « Étape suivante »** en évaluation (moteur) : l’élève avance par les messages (« Ouvrir la fiche »), le menu (ordonné par
+     `suite`, planning grisé « Après la fiche « Le planigramme » ») et les pastilles « fait ». Le message de l’agent (le créneau) n’a pas de
+     bouton : le Planning est au menu.
+  7. Le bon de livraison dit « copie envoyée par le fournisseur la veille » : sinon la note « le chauffeur ne l’a pas donné » contredisait l’onglet.
+- **Décisions prises en route** : voir `docs/decisions.md` (16/10/2026, deux lignes). En bref : permutation du plan au hasard, sans autre
+  contrainte ; tâches d’ENT-8.4 lues chef / cariste / agent / moi ; « autres places » du compte rendu = des places justes de la grille ;
+  « Il manque N cartons. » juste si l’élève a répondu N ; la fin arrive dès la réponse par phrases ; lectures dans l’ordre facile puis moyenne.
+- **Textes à relire à l’écran** (écrits par Claude Code, pas par Cowork) : les **quatre notes du quai** (`NOTES` de
+  `contenus/action-ent86-donnees.js` : « Transpalette : batterie vide. Aucun autre transpalette chargé au quai. », « Bon de livraison : le
+  chauffeur ne l’a pas donné. », « Devant la porte : rien, le quai est dégagé. »…) ; les messages d’étape du tuteur (« Merci, c’est noté.
+  Maintenant, dis-moi qui fait quoi dans l’équipe. », « … Voici le planigramme de ce matin : lis-le et réponds à mes questions. ») ; la
+  consigne « Clique sur « Répondre » et choisis une phrase par ligne. » ajoutée au message du compte rendu (comme ENT-8.4) ; les objets des
+  messages (« Ce matin, tu tiens la réception », « Un créneau à placer »…) ; les sous-titres des fiches ; les deux lignes d’`infos` du
+  planning ; les libellés de choix (« Non : le quai est encombré. », « Je mets un transpalette en charge et j’en prends un chargé. »…, mis
+  en phrases d’après le brief) ; les choix de « À quelle heure arrive le camion du Havre ? » (6 h, 6 h 30, 7 h, 8 h) ; les retours des
+  questions d’ouverture (jamais montrés en évaluation) ; la `situation` d’ouverture ; « Ton stage » ; `MENTION`, l’accueil ; le transporteur
+  construit « Transports Estuaire-Seine ». Textes de Cowork repris tels quels : accueil, message de l’agent, message du camion du Havre,
+  message du compte rendu, message de fin, phrases du §6.3, questions du §4 ter (sauf l’écart n° 4), lectures du §6.4.
+- **Points d’attention pour Tristan** : la tâche `t-rdv` (« Noter au planigramme le rendez-vous d’un fournisseur. » → l’agent administratif)
+  peut sembler contredire l’étape 3b, où c’est l’élève qui place le camion à la demande de l’agent (banque d’ENT-8.4 reprise telle quelle).
+- **Tests** : bloc `action-86`, 16 cas, vert (≈ 35 s). Valeurs écrites à la main pour deux témoins (a85-a Onnaing, a85-b Belleville, les
+  mêmes graines qu’`action-85`) : 20/20 à l’écran et à la remise (= `noter(db)`), le planning envoyé ne rend pas la copie, rien remonté
+  avant ; inaction 0 ; ouverture 4 / 3 / 2,5 / 0 / 0 ; plan : les numéros d’ENT-8.4 → 0/2,5, numéros affichés écrits à la main, 300 graines
+  → ≥ 290 permutations ; planning quai 3 9 h ✓, quai 2 9 h ✗, quai 3 11 h ✗, quai 4 11 h 30 ✗, non posé ✗ ; documents (notes pret,
+  encombre, transpalette) ; compte rendu (une erreur payée une fois, phrase d’une autre note ✗, non posé dit ✓) ; contrôle de la grille dans
+  les deux sens ; même site qu’ENT-8.5 pour 50 élèves ; équité sur 300 graines (notes du quai entre 15 et 35 % sur 200) ; 1366 × 768 ;
+  corrigé. **Éprouvés dans les deux sens** (sabotages posés puis retirés) : créneau jugé contre une place fixe → le cas « rendre compte »
+  tombe ; « que fais-tu » jugé sans la note → le cas des documents tombe ; permutation retirée → le cas « Repérer » tombe ; option
+  `rendCopie` retirée → les témoins et le cas du planning tombent ; « le quai 2 » jugé contre la note seule → le cas « rendre compte »
+  tombe. Moteur : bloc `planning` 48/48, sabotage « l’option ignorée » → le cas nouveau tombe ; « jamais de copie rendue » → l’ancien cas
+  d’évaluation et le nouveau tombent. Blocs voisins : voir le compte rendu du chef de chantier.
+- **Commits** : aucun (le chef de chantier commite par nom, en deux ensembles : moteur, puis séance).
 - **Reste ouvert** :
+  - **Demande au moteur** (celles d’ENT-8.5, toujours ouvertes) : le site de l’élève dans une question d’ouverture et dans le nom de la
+    personne ; une barre « Étape suivante » en évaluation ; `sousTitre` et `envoi.bouton` d’une fiche en fonction de la base.
+  - Fiche enseignant commune avec ENT-8.5 (Cowork), après validation à l’écran.
