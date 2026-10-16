@@ -78,6 +78,8 @@ export const ACTIVITES = [
   // Action (entrepôt Geodis d'Ensuès-la-Redonne) — ENT-8.x. CAP OL.
   () => import('./action-se-situer.js'),
   () => import('./action-prise-de-poste.js'),
+  () => import('./action-autre-site.js'),
+  () => import('./action-avant-noel.js'),
 ];
 
 // Pictogrammes des rubriques. Une seule grille pour les dix : trait de 1,6 px, bouts et
