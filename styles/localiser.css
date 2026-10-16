@@ -85,6 +85,8 @@
 .lc-zone.juste, .lc-zone.juste:hover{ fill:var(--vert-pale); stroke:var(--vert); stroke-width:2.5 }
 .lc-zone.faux, .lc-zone.faux:hover{ stroke:var(--rouge); stroke-width:3 }
 .lc-zone.aide{ stroke:var(--terre); stroke-width:3.5; stroke-dasharray:7 5 }
+/* Évaluation (copie) : le clic est vu, sans rien dire de juste ou de faux (ni vert, ni rouge) : trait d'encre. */
+.lc-zone.essai, .lc-zone.essai:hover, .lc-zone.retenu, .lc-zone.retenu:hover{ fill:var(--survol); stroke:var(--encre); stroke-width:3 }
 .lc-nom{ fill:var(--encre); font-weight:600; dominant-baseline:middle; pointer-events:none; paint-order:stroke; stroke:var(--panneau); stroke-linejoin:round;
   font-family:inherit }
 .lc-nom.lc-doux{ fill:var(--encre-douce); font-weight:500 }
@@ -100,6 +102,7 @@
 .lc-choix.faux .lc-choix-cible{ stroke:var(--rouge); stroke-width:4 }
 .lc-choix.aide .lc-choix-cible{ stroke:var(--terre); stroke-width:4; stroke-dasharray:4 3; vector-effect:non-scaling-stroke }
 .lc-choix.juste .lc-choix-cible{ fill:var(--vert-pale); stroke:var(--vert) }
+.lc-choix.essai .lc-choix-cible, .lc-choix.retenu .lc-choix-cible{ fill:var(--survol); stroke:var(--encre); stroke-width:4 }
 .lc-reseau{ fill:var(--panneau); stroke:var(--encre-douce); stroke-width:2; vector-effect:non-scaling-stroke }
 .lc-fleche{ fill:none; stroke:var(--encre); stroke-linecap:round; pointer-events:none }
 .lc-pointe{ fill:var(--encre); pointer-events:none }

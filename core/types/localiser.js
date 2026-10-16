@@ -11,13 +11,23 @@
 //     lieux: [ { id, lettre, type, nom, role, ville, dep, region, lonlat: [lon, lat], osm,
 //                autres: [{ ville, lonlat, osm } ×3], reperes: [{ ville, lonlat }], indice, etiq, bonus }, … ],
 //              // ou (db) => [...] (contrôlé sur une base vide ; les ids doivent être les mêmes pour tous)
-//     flux: ['port', 'entrepot', 'magasin'],   // facultatif : le trajet de la marchandise, à la fin
+//     flux: ['port', 'entrepot', 'magasin'],   // facultatif : le trajet de la marchandise, à la fin ; ou (db) => [...]
 //     reseau: { libelle: 'autres entrepôts Action', sites: [{ ville, lonlat }] },   // facultatif : ronds creux, à la fin
-//     fin: { titre, texte },                   // facultatif : le panneau de la fin
+//     fin: { titre, texte },                   // facultatif : le panneau de la fin ; ou (db) => { titre, texte }
 //   }
 // `type` : magasin (bleu, le client), entrepot (terre), port (encre), usine, site. `etiq` : place du nom à la fin (h, b, g, d).
 // Un lieu `bonus: true` n'est joué que par un élève CONFIRMÉ (`db.aisance`), jamais en évaluation ; le meta doit déclarer
 // `niveauxPrevus: ['confirme']` (contrôlé à l'ouverture par le moteur).
+// `lieux`, `flux` et `fin` en fonction (db) : le site tiré de l'élève (la graine est `graineDeBase(db)`, core/tirage.js). Seule la
+// base VIDE est contrôlée au chargement : une séance à plusieurs sites contrôle chacun dans son bloc de tests (`controlerLocaliser`).
+//
+// ÉVALUATION (`copie: true` de la séance, passée par le moteur ; tranché le 16/10/2026, §7 du brief ENT-8.5) : la carte se joue au
+// niveau STANDARD pour tous (quel que soit `db.aisance`, l'enseignant aussi), sans lieu bonus ; on recommence jusqu'à trouver et
+// l'aide (zone entourée) vient après deux erreurs ; la note porte toujours sur le premier essai. Rien ne dit juste ou faux : pas de
+// « Bien vu » ni de « Ce n'est pas… » (« Essaie une autre région. »), pas de trait rouge ni d'aplat vert (trait d'encre), pas de
+// tableau du premier coup à la fin (« Tous les lieux sont placés sur la carte. » et le texte de `fin`), bouton « Terminer la carte ».
+// Rien au Suivi avant la remise : le moteur d'entreprise s'en charge (`remonterEtapes`), comme pour toutes les vues ; le repérage
+// des erreurs (`db.indicateurs`) est lu par l'enseignant après la remise. Jalons : `etapesLocaliser(L, séance, { copie: true })`.
 //
 // Les décisions de Tristan (15/10/2026) et où elles vivent :
 //   - trois étapes par lieu ; seules la RÉGION et le DÉPARTEMENT sont notés, au PREMIER ESSAI (`etapesLocaliser`) ; la ville
@@ -58,7 +68,9 @@ const CONSIGNES = {
   vu: 'Voilà où se trouve ce lieu en France.',
 };
 const RATE = { region: 'Ce n’est pas la bonne région.', departement: 'Ce n’est pas le bon département.', ville: 'Ce n’est pas la bonne ville.' };
-const AIDE = { region: 'Regarde la zone entourée.', departement: 'Regarde la zone entourée.', ville: 'Regarde le point entouré.' };
+// En évaluation (`copie`) : rien qui dise juste ou faux, seulement l'invitation à cliquer ailleurs.
+const ENCORE = { region: 'Essaie une autre région.', departement: 'Essaie un autre département.', ville: 'Essaie une autre ville.' };
+const AIDE = { region:'Regarde la zone entourée.', departement: 'Regarde la zone entourée.', ville: 'Regarde le point entouré.' };
 
 /* ------------------------------------------------------------------ géométrie */
 
@@ -133,6 +145,9 @@ export function ordreChoix(lieu, graine) {
 const texte = (v) => typeof v === 'string' && v.trim().length > 0;
 const coord = (v) => Array.isArray(v) && v.length === 2 && v.every((n) => typeof n === 'number' && Number.isFinite(n));
 const listeLieux = (L, db) => (typeof L.lieux === 'function' ? L.lieux(db || {}) : L.lieux) || [];
+// `flux` et `fin` suivent `lieux` : une valeur, ou (db) => valeur (le site tiré de l'élève ; évaluation Action, 16/10/2026).
+const fluxDe0 = (L, db) => (typeof L.flux === 'function' ? L.flux(db || {}) : L.flux);
+const finDe0 = (L, db) => (typeof L.fin === 'function' ? L.fin(db || {}) : L.fin);
 const niveauDe = (db) => (db && NIVEAUX.includes(db.aisance) ? db.aisance : 'standard');
 // Les lieux que joue CET élève, dans l'ordre : un lieu bonus seulement chez un confirmé.
 export function lieuxDe(L, db, niveau = niveauDe(db)) {
@@ -204,9 +219,11 @@ export function controlerLocaliser(L) {
       }
     }
   });
-  if (L.flux != null) {
-    if (!Array.isArray(L.flux) || L.flux.length < 2) faute('« flux » : la liste des ids du trajet, au moins deux');
-    L.flux.forEach((id) => {
+  let flux = null, fin = null;
+  try { flux = fluxDe0(L, {}); fin = finDe0(L, {}); } catch (e) { faute(`« flux(db) » ou « fin(db) » ne marche pas sur une base vide : ${e && e.message ? e.message : e}`); }
+  if (flux != null) {
+    if (!Array.isArray(flux) || flux.length < 2) faute('« flux » : la liste des ids du trajet, au moins deux');
+    flux.forEach((id) => {
       const l = lieux.find((x) => x.id === id);
       if (!l) faute(`« flux » cite le lieu « ${id} », qui n’existe pas (lieux : ${lieux.map((x) => x.id).join(', ')})`);
       if (l.bonus) faute(`« flux » cite le lieu bonus « ${id} » : le trajet doit être le même pour tous`);
@@ -216,9 +233,9 @@ export function controlerLocaliser(L) {
     if (!L.reseau || !texte(L.reseau.libelle) || !Array.isArray(L.reseau.sites)) faute('« reseau » : { libelle, sites: [{ ville, lonlat }] }');
     L.reseau.sites.forEach((s, i) => { if (!s || !texte(s.ville) || !coord(s.lonlat)) faute(`« reseau » : le site n° ${i + 1} : il faut { ville, lonlat }`); });
   }
-  if (L.fin != null) {
-    if (typeof L.fin !== 'object') faute('« fin » : { titre, texte }');
-    for (const k of ['titre', 'texte']) if (L.fin[k] != null && !texte(L.fin[k])) faute(`« fin.${k} » est un texte non vide`);
+  if (fin != null) {
+    if (typeof fin !== 'object') faute('« fin » : { titre, texte }');
+    for (const k of ['titre', 'texte']) if (fin[k] != null && !texte(fin[k])) faute(`« fin.${k} » est un texte non vide`);
   }
   return lieux;
 }
@@ -228,14 +245,16 @@ export function controlerLocaliser(L) {
 // Deux jalons par lieu du socle : la région et le département, jugés au PREMIER essai (`attente` tant que l'étape n'est pas
 // trouvée, puis `ok` du premier coup ou `ko`). Aucun `ecran` : la carte ne se rouvre pas par « Corriger ». La séance y pose
 // `poids` et `groupe`. Un lieu bonus rend deux jalons `bonus: true` (sans poids ni groupe), `null` chez un élève qui ne l'a pas.
-export function etapesLocaliser(L, seance) {
+// Évaluation : `etapesLocaliser(L, seance, { copie: true })` ne rend AUCUN jalon de lieu bonus (la vue ne les joue pas) et juge
+// au niveau standard ; sans lieu bonus déclaré, l'option ne change rien.
+export function etapesLocaliser(L, seance, { copie = false } = {}) {
   if (!texte(seance)) throw new Error('etapesLocaliser(L, seance) : il faut l’id de la séance (l’état est rangé sous db.localiser[séance][vue])');
-  return listeLieux(L, {}).flatMap((l) => ['region', 'departement'].map((et) => {
+  return listeLieux(L, {}).filter((l) => !copie || !l.bonus).flatMap((l) => ['region', 'departement'].map((et) => {
     const j = {
       id: `localiser:${l.id}:${et}`,
       titre: `${l.nom} : ${et === 'region' ? 'la région' : 'le département'}, du premier coup`,
       verifier(db) {
-        const present = lieuxDe(L, db).some((x) => x.id === l.id);
+        const present = lieuxDe(L, db, copie ? 'standard' : niveauDe(db)).some((x) => x.id === l.id);
         if (!present) return l.bonus ? null : { status: 'attente' };
         const x = xEtape(etatVue(db, seance, L.id), l.id, et);
         if (!x || !x.at) return { status: 'attente' };
@@ -247,21 +266,24 @@ export function etapesLocaliser(L, seance) {
   }));
 }
 
-// Pour le corrigé de l'enseignant : par lieu, la région, le département et la ville attendus.
-export function corrigeLocaliser(L) {
+// Pour le corrigé de l'enseignant : par lieu, la région, le département et la ville attendus. `db` : la base de l'élève, quand
+// `lieux` est une fonction (le site tiré) ; sans elle, les lieux d'une base vide.
+export function corrigeLocaliser(L, db = {}) {
   const F = L.contours;
   const REG = new Map(F.regions.map((r) => [r.code, r])), DEP = new Map(F.deps.map((d) => [d.code, d]));
-  return listeLieux(L, {}).map((l) => ({ id: l.id, nom: l.nom, bonus: !!l.bonus, ville: l.ville,
+  return listeLieux(L, db).map((l) => ({ id: l.id, nom: l.nom, bonus: !!l.bonus, ville: l.ville,
     region: `${REG.get(l.region).nom} (${l.region})`, departement: `${DEP.get(l.dep).nom} (${l.dep})` }));
 }
 
 /* ------------------------------------------------------------------ la vue */
 
 export function creerLocaliser(L, opts = {}) {
-  if (opts.copie) {
-    throw new Error(`localiser${L && L.id ? ` « ${L.id} »` : ''} : la carte ne se joue pas en évaluation (copie) tant que la question n’est pas tranchée (brief MOTEUR-vue-localiser, §11 n° 1)`);
-  }
-  const lieux0 = controlerLocaliser(L);
+  // ÉVALUATION (`copie`, 16/10/2026, §7 du brief ENT-8.5) : niveau STANDARD pour tous, aucun lieu bonus, rien qui dise juste ou
+  // faux (ni phrase, ni trait rouge, ni aplat vert, ni tableau du premier coup) ; on recommence quand même jusqu'à trouver et
+  // l'aide vient après deux erreurs (la note porte sur le premier essai). Rien ne remonte au Suivi avant la remise : c'est le
+  // moteur d'entreprise qui le tient (`remonterEtapes`), comme pour toutes les vues.
+  const COPIE = !!opts.copie;
+  const lieux0 = controlerLocaliser(L).filter((l) => !COPIE || !l.bonus);
   const F = L.contours;
   const REG = new Map(F.regions.map((r) => [r.code, r])), DEP = new Map(F.deps.map((d) => [d.code, d]));
   const P = (ll) => projeter(F, ll);
@@ -272,7 +294,7 @@ export function creerLocaliser(L, opts = {}) {
 
   function contexte(e, api) {
     const db = api.db || {};
-    const niveau = api.estProf ? ui.niveauProf : niveauDe(db);
+    const niveau = COPIE ? 'standard' : api.estProf ? ui.niveauProf : niveauDe(db);
     const lieux = lieuxDe(L, db, niveau);
     if (!e.lieux) e.lieux = {};
     let l = lieux.find((x) => e.courant && x.id === e.courant.lieu);
@@ -304,8 +326,9 @@ export function creerLocaliser(L, opts = {}) {
   // Règle (décision 3 du chef de chantier) : si les lieux du `flux` tiennent dans un quart de la largeur ET un quart de la
   // hauteur de la France, ils se toucheraient sur la carte entière → encart zoomé ; sinon trajet fléché sur la France entière.
   function fluxDe(R) {
-    if (!L.flux) return [];
-    return L.flux.map((id) => R.lieux.find((x) => x.id === id)).filter(Boolean);
+    const ids = fluxDe0(L, R.db);
+    if (!Array.isArray(ids)) return [];
+    return ids.map((id) => R.lieux.find((x) => x.id === id)).filter(Boolean);
   }
   function modeFin(R) {
     const fl = fluxDe(R);
@@ -477,12 +500,16 @@ export function creerLocaliser(L, opts = {}) {
   function panneauHtml(R) {
     const { l, niveau, etape, lieux, api } = R;
     const tete = `<div class="lc-tete"><span class="lc-titre">${ech(L.titre || L.libelle || 'Carte de France')}</span>
-      <span class="lc-compteur" data-lc-compteur>${etape === 'fin' ? 'Bilan' : `Lieu ${R.i + 1} sur ${lieux.length}`}</span></div>`;
+      <span class="lc-compteur" data-lc-compteur>${etape === 'fin' ? (COPIE ? 'Carte terminée' : 'Bilan') : `Lieu ${R.i + 1} sur ${lieux.length}`}</span></div>`;
     const prof = api.estProf ? `<div class="lc-prof" data-lc-prof>
         <label>Lieu <select data-lc-prof-lieu>${lieux.map((x, n) => `<option value="${ech(x.id)}"${x === l && etape !== 'fin' ? ' selected' : ''}>${n + 1}. ${ech(x.ville)}${x.bonus ? ' (bonus)' : ''}</option>`).join('')}</select></label>
-        <label>Niveau <select data-lc-prof-niveau>${NIVEAUX.map((n) => `<option value="${n}"${n === niveau ? ' selected' : ''}>${{ accompagne: 'accompagné', standard: 'standard', confirme: 'confirmé' }[n]}</option>`).join('')}</select></label>
+        ${COPIE ? '<span class="lc-prof-note">Évaluation : niveau standard pour tous.</span>' : `<label>Niveau <select data-lc-prof-niveau>${NIVEAUX.map((n) => `<option value="${n}"${n === niveau ? ' selected' : ''}>${{ accompagne: 'accompagné', standard: 'standard', confirme: 'confirmé' }[n]}</option>`).join('')}</select></label>`}
         <button type="button" class="btn btn-s" data-lc-bouton="recommencer">Recommencer</button>
         <span class="lc-prof-note">Vous cliquez librement : rien n’est écrit.</span></div>` : '';
+    const FIN = finDe0(L, R.db);
+    const finTexte = FIN ? `<div class="lc-fin" data-lc-fin>${FIN.titre ? `<h3>${ech(FIN.titre)}</h3>` : ''}${FIN.texte ? `<p>${ech(FIN.texte)}</p>` : ''}</div>` : '';
+    // Évaluation : pas de tableau du premier coup (il dirait juste / faux) ; le texte de fin seul.
+    if (etape === 'fin' && COPIE) return `${tete}${prof}<p class="lc-consigne" data-lc-consigne>Tous les lieux sont placés sur la carte.</p>${finTexte}`;
     if (etape === 'fin') {
       const lignes = lieux.map((x) => `<tr><td class="lc-bilan-lieu"><span class="lc-pastille lc-petite lc-t-${x.type}" aria-hidden="true">${ech(x.lettre)}</span>${ech(x.ville)}</td>${['region', 'departement'].map((et) => {
         const ok = xEtape(R.e, x.id, et) && xEtape(R.e, x.id, et).premier === true;
@@ -492,7 +519,7 @@ export function creerLocaliser(L, opts = {}) {
       return `${tete}${prof}
         <div class="lc-bilan" data-lc-bilan><table><thead><tr><td></td><th scope="col">Région</th><th scope="col">Département</th></tr></thead><tbody>${lignes}</tbody></table>
         <p data-lc-premier-coup>Du premier coup : <b>${nb} sur ${lieux.length * 2}</b>.</p></div>
-        ${L.fin ? `<div class="lc-fin" data-lc-fin>${L.fin.titre ? `<h3>${ech(L.fin.titre)}</h3>` : ''}${L.fin.texte ? `<p>${ech(L.fin.texte)}</p>` : ''}</div>` : ''}`;
+        ${finTexte}`;
     }
     const D = R.D;
     const ville = niveau === 'confirme' ? l.ville : `${l.ville}, ${D.nom} (${D.code})`;
@@ -509,7 +536,7 @@ export function creerLocaliser(L, opts = {}) {
       ${etape === 'ville' && niveau === 'standard' && l.indice ? `<p class="lc-indice" data-lc-indice>Indice : ${ech(l.indice)}</p>` : ''}
       <p class="lc-message${ui.cls ? ' lc-' + ui.cls : ''}" data-lc-message role="status">${ech(ui.msg)}</p>
       <ol class="lc-etapes">${etapes}</ol>
-      ${etape === 'vu' && !ui.anime ? `<button type="button" class="btn lc-suivant" data-lc-bouton="${dernier ? 'bilan' : 'suivant'}">${dernier ? 'Voir le bilan' : 'Lieu suivant'}</button>` : ''}`;
+      ${etape === 'vu' && !ui.anime ? `<button type="button" class="btn lc-suivant" data-lc-bouton="${dernier ? 'bilan' : 'suivant'}">${dernier ? (COPIE ? 'Terminer la carte' : 'Voir le bilan') : 'Lieu suivant'}</button>` : ''}`;
   }
 
   function legendeHtml(R) {
@@ -611,10 +638,13 @@ export function creerLocaliser(L, opts = {}) {
       if (x.premier == null) x.premier = juste;
       if (!juste) {
         if (api.reperer) api.reperer(l.id, et);
-        el.classList.add('faux');
-        setTimeout(() => el.classList.remove('faux'), FLASH);
+        // Évaluation : ni trait rouge ni « ce n'est pas… » ; une invitation neutre, la même aide après deux erreurs.
+        const flash = COPIE ? 'essai' : 'faux';
+        el.classList.add(flash);
+        setTimeout(() => el.classList.remove(flash), FLASH);
         const n = x.essais;
-        dire(`${RATE[et]} ${n >= 2 ? AIDE[et] : 'Essaie encore.'}`, 'faux');
+        if (COPIE) dire(n >= 2 ? AIDE[et] : ENCORE[et], '');
+        else dire(`${RATE[et]} ${n >= 2 ? AIDE[et] : 'Essaie encore.'}`, 'faux');
         if (n >= 2) {
           const bon = et === 'ville'
             ? racine.querySelector(`[data-lc-cle="p${ordreChoix(l, R.graine).findIndex((c) => c.bon) + 1}"]`)
@@ -627,9 +657,10 @@ export function creerLocaliser(L, opts = {}) {
       // Juste : la zone en « juste », puis l'étape suivante, zoomée ; le geste est publié à la fin de l'animation.
       x.at = Date.now();
       const auClavier = garderClavier();
-      el.classList.add('juste');
+      el.classList.add(COPIE ? 'retenu' : 'juste');
       el.classList.remove('aide');
-      dire(et === 'ville' ? `${l.ville} est placée sur la carte.` : 'Bien vu !', 'juste');
+      if (COPIE) dire(et === 'ville' ? `${l.ville} est placée sur la carte.` : '', '');
+      else dire(et === 'ville' ? `${l.ville} est placée sur la carte.` : 'Bien vu !', 'juste');
       ui.anime = true;
       racine.classList.add('lc-anime');
       setTimeout(() => {
@@ -733,8 +764,9 @@ export function creerLocaliser(L, opts = {}) {
     signaux,
     aBonus: lieux0.some((l) => l.bonus),
     etatNeuf,
-    lieuxDe: (db, niveau) => lieuxDe(L, db, niveau),
-    corrige: () => corrigeLocaliser(L),
+    lieuxDe: (db, niveau) => lieuxDe(L, db, COPIE ? 'standard' : niveau),
+    copie: COPIE,
+    corrige: (db) => corrigeLocaliser(L, db),
     html,
     brancher,
   };

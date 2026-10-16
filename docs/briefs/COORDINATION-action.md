@@ -221,7 +221,7 @@ avant. Les quatre tournent en parallèle ; ENT-8.4 n'écrit pas dans `planning.j
 
 ## 7. Chantier 3 (16/10/2026) : ENT-8.5 (évaluation CAP-C1.1) — décisions du chef de chantier
 
-**Délégation** : Tristan, 16/10/2026, « tu vas faire le chef de chantier pour 8.5, tu prends les décisions ». Même règles qu'au §1 (aucun
+**Délégation** : Tristan, 16/10/2026, « tu vas faire le chef de chantier pour 8.5, tu prends les décisions ». **Mise à jour (Tristan) : « tu feras 8.6 après » : ENT-8.6 suit dans ce même chantier, sans attendre l'essai à l'écran de 8.5.** Même règles qu'au §1 (aucun
 sous-agent ne commite ; le chef commite par nom et pousse suite verte). **Périmètre : la demande au moteur du §7 d'ENT-8.5, puis ENT-8.5.**
 ENT-8.6 (jumelle) n'est **pas** dans ce chantier : elle fera l'objet d'un chantier suivant, après l'essai de 8.5 à l'écran ; 8.5 pose pour elle
 le module partagé `contenus/action-eval-sites.js` (les deux sites + fonction pure `siteDe(identifiantEleve)`).

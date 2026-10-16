@@ -24,7 +24,9 @@ await pg.goto(BASE);
 await pg.waitForSelector('#btnProf', { timeout: 8000 });
 
 // o : { jeu: 'action' | 'proche', aisance, role, db (reprise), question (geste qui l'appelle), meta (en plus), modif (nom d'une
-// variante fautive du contenu, pour les contrôles), fermeture (localiserFini sur une carte), copie }.
+// variante fautive du contenu, pour les contrôles), fermeture (localiserFini sur une carte), copie (évaluation : meta, remise
+// et `etapesLocaliser(…, { copie: true })`), fonctions (lieux, flux et fin en fonction de la base : `db.essaiSite === 'b'` met le
+// magasin à Deauville) }.
 // Rend le message d'erreur si la séance est refusée (creerEntreprise lève, ou l'hôte affiche un avis), sinon null.
 const monter = (o = {}) => pg.evaluate(async (o) => {
   document.getElementById('lc-hote')?.remove();
@@ -48,8 +50,17 @@ const monter = (o = {}) => pg.evaluate(async (o) => {
   if (o.modif === 'id-double') lieu('magasin').id = 'essai-carte';
   if (o.modif === 'outre-mer') { lieu('port').dep = '974'; }
   if (o.modif === 'sans-contours') L.contours = null;
+  if (o.fonctions) {
+    // Lieux, flux et fin selon le « site » de l'élève (comme une évaluation à deux sites) : mêmes ids, le magasin change.
+    const P = JSON.parse(JSON.stringify(E.LOCALISER_PROCHE.lieux.find((x) => x.id === 'etal')));
+    const site = (db) => (db && db.essaiSite === 'b' ? 'b' : 'a');
+    const A = L.lieux, Bl = L.lieux.map((x) => (x.id === 'magasin' ? { ...P, id: 'magasin', lettre: 'M' } : x));
+    L.lieux = (db) => (site(db) === 'b' ? Bl : A);
+    L.flux = (db) => (site(db) === 'b' ? ['port', 'magasin'] : ['port', 'entrepot', 'magasin']);
+    L.fin = (db) => ({ titre: 'Le chemin', texte: `Jusqu’au magasin de ${site(db) === 'b' ? 'Deauville' : 'Nîmes'}.` });
+  }
   const poids = [3, 3, 3, 3, 4, 4];
-  const etapes = etapesLocaliser(L, 'essai-localiser').map((j) => (j.bonus ? j : Object.assign(j, { poids: poids.shift(), groupe: 'La carte' })));
+  const etapes = etapesLocaliser(L, 'essai-localiser', { copie: !!o.copie }).map((j) => (j.bonus ? j : Object.assign(j, { poids: poids.shift(), groupe: 'La carte' })));
   const U = {
     ENTREPRISE: B.ENTREPRISE, VOCAB: B.VOCAB, CATALOGUE: B.CATALOGUE, SUPPLIERS: B.SUPPLIERS,
     SUP_BY_ID: B.SUP_BY_ID, CUSTOMERS: B.CUSTOMERS, CM: B.CM, baseDeDepart: B.baseDeDepart, THEME: B.THEME,
@@ -68,12 +79,14 @@ const monter = (o = {}) => pg.evaluate(async (o) => {
   let M;
   try { M = creerEntreprise(U); } catch (e) { return e.message; }
   const db = o.db ? JSON.parse(JSON.stringify(o.db)) : {};
-  window.__lc = { db, moteur: M, remontees: [] };
+  window.__lc = { db, moteur: M, remontees: [], copies: [] };
   M.rendre(hote, {
-    meta: { id: 'essai-localiser', code: 'ESSAI', titre: 'Carte — essai', portee: 'eleve', immersif: true, niveauxPrevus: ['confirme'], ...(o.meta || {}) },
+    meta: { id: 'essai-localiser', code: 'ESSAI', titre: 'Carte — essai', portee: 'eleve', immersif: true, niveauxPrevus: ['confirme'], ...(o.copie ? { copie: true } : {}), ...(o.meta || {}) },
     profil: { prenom: 'Lea', nom: 'Dupont', role: o.role || 'eleve', uid: 'u-lea' }, aisance: o.aisance,
     jeu: { etat: () => db, sauver: () => {} }, enregistrer: (r) => { window.__lc.remontees.push(JSON.parse(JSON.stringify(r))); },
     quitter: () => {}, codeStock: '',
+    lireScore: async () => null,
+    rendreCopie: async (res) => { window.__lc.copies.push(JSON.parse(JSON.stringify(res))); return { rendu: Date.now() }; },
   });
   const avis = hote.querySelector('.avis-err');
   if (avis) return avis.textContent;
@@ -171,7 +184,7 @@ await v('Localiser : contrôles au chargement — la séance ne s’ouvre pas, l
     const m = await monter({ modif, jeu });
     vrai(m && re.test(m), `${modif} : message attendu ${re}, reçu : ${m}`);
   }
-  vrai(/ne se joue pas en évaluation/.test(await monter({ copie: true })), 'une évaluation (copie) doit être refusée');
+  egal(await monter({ copie: true }), null, 'une évaluation (copie) est acceptée depuis le 16/10/2026 (brief ENT-8.5, §7)');
   vrai(/lieu bonus du confirmé : le meta doit déclarer « niveauxPrevus/.test(await monter({ meta: { niveauxPrevus: [] } })), 'un lieu bonus sans niveauxPrevus doit être refusé');
   egal(await monter({ jeu: 'proche', meta: { niveauxPrevus: [] } }), null, 'sans lieu bonus, niveauxPrevus n’est pas exigé');
   vrai(/la carte « autre » n’existe pas/.test(await monter({ fermeture: 'autre' })), 'localiserFini sur une carte inconnue');
@@ -502,6 +515,140 @@ await v('Localiser (lot 3) : la fin — lieux proches → encart zoomé (règle 
   egal(await pg.evaluate(async () => (await import('/core/declencheurs.js')).localiserFini('essai-carte')(window.__lc.db, 'essai-localiser')), true, 'localiserFini après la fin');
   egal(erreurs, [], 'erreurs de page');
   egal([...hotes], [], 'requêtes hors du site');
+});
+
+/* ------------------------------------------------------------------ ÉVALUATION (copie), 16/10/2026, brief ENT-8.5 §7 */
+
+const NOMS_INTERDITS = /juste|faux|fausse|bien vu|bravo|n’est pas|pas la bonne|pas le bon|premier coup|erreur|✓|✗/i;
+
+await v('Localiser (évaluation) : séance copie acceptée ; un confirmé joue au niveau standard, sans lieu bonus (3 lieux, aucun jalon bonus) ; un accompagné voit le niveau standard', async () => {
+  egal(await monter({ copie: true, aisance: 'confirme' }), null, 'copie refusée');
+  await immobile();
+  egal((await lire()).niveau, 'standard', 'confirmé : niveau');
+  egal(await pg.textContent(`${R} [data-lc-compteur]`), 'Lieu 1 sur 3', 'confirmé : compteur sans le lieu bonus');
+  egal(await pg.$$eval(`${R} [data-lc-etiq] text`, (L) => L.length), 13, 'confirmé : noms des régions (standard)');
+  egal(await pg.getAttribute(`${R} [data-lc-cle="28"]`, 'aria-label'), 'Normandie', 'confirmé : région lue par son nom (standard)');
+  const ids = Object.keys(await jalons()).filter((k) => k.startsWith('localiser:')).sort();
+  egal(ids, ['localiser:entrepot:departement', 'localiser:entrepot:region', 'localiser:magasin:departement', 'localiser:magasin:region',
+    'localiser:port:departement', 'localiser:port:region'], 'confirmé : jalons (aucun pour le lieu bonus)');
+  vrai(!(await jalons()).bonus, 'confirmé : un bloc bonus dans la note');
+  // La liste des jalons elle-même (le moteur, en copie, ne juge déjà aucun jalon bonus : ceci tient la liste propre).
+  egal(await pg.evaluate(async () => {
+    const { etapesLocaliser } = await import('/core/types/localiser.js');
+    const E = await import('/contenus/localiser-essai.js');
+    return [etapesLocaliser(E.LOCALISER_ACTION, 'x', { copie: true }).length, etapesLocaliser(E.LOCALISER_ACTION, 'x').length];
+  }), [6, 8], 'etapesLocaliser en copie : aucun jalon de lieu bonus');
+  // Un lieu bonus déclaré n'exige pas `niveauxPrevus` en évaluation (il y est ignoré).
+  egal(await monter({ copie: true, meta: { niveauxPrevus: [] } }), null, 'copie avec lieu bonus, sans niveauxPrevus');
+  await monter({ copie: true, aisance: 'confirme' });
+  await toutJuste(3);
+  vrai(!(await etat()).lieux.labastide, 'confirmé : le lieu bonus a été joué');
+  egal(await pg.$$eval(`${R} .lc-reseau`, (L) => L.length), 5, 'confirmé : Labastide reste un rond creux du réseau');
+  // Accompagné : numéros seuls au département, indice et repère à la ville, points sans nom.
+  egal(await monter({ copie: true, aisance: 'accompagne' }), null, 'copie refusée (accompagné)');
+  egal((await lire()).niveau, 'standard', 'accompagné : niveau');
+  await juste();
+  egal((await pg.$$eval(`${R} [data-lc-etiq] text`, (L) => L.map((t) => t.textContent))).sort(), ['14', '27', '50', '61', '76'], 'accompagné : numéros seuls (standard)');
+  await juste();
+  vrai(/^Indice : /.test(await pg.textContent(`${R} [data-lc-indice]`)), 'accompagné : indice (standard)');
+  egal(await pg.$$eval(`${R} .lc-choix`, (L) => L.map((e) => e.getAttribute('aria-label')).sort()), ['Point 1', 'Point 2', 'Point 3', 'Point 4'], 'accompagné : points sans nom (standard)');
+  // L'enseignant aussi voit le standard, sans liste de niveaux.
+  await monter({ copie: true, role: 'prof' });
+  await immobile();
+  vrai(!(await pg.$(`${R} [data-lc-prof-niveau]`)), 'enseignant : liste des niveaux en évaluation');
+  egal((await lire()).niveau, 'standard', 'enseignant : niveau');
+  egal(erreurs, [], 'erreurs de page');
+});
+
+await v('Localiser (évaluation) : deux erreurs → la zone entourée, la région reste fausse au premier essai ; aucune phrase juste / faux, ni trait rouge ni aplat vert, ni tableau du premier coup ; rien au Suivi avant la remise, la note et le repérage après', async () => {
+  await monter({ copie: true });
+  const vus = [];
+  // Ce que la VUE écrit dans le panneau (le texte du contenu mis à part : fiche du lieu, indice — « Juste à l'est du Havre »).
+  const noter = async () => vus.push(await pg.$eval(`${R} [data-lc-panneau]`, (p) => {
+    const c = p.cloneNode(true);
+    c.querySelectorAll('.lc-lieu, [data-lc-indice]').forEach((x) => x.remove());
+    return c.textContent;
+  }));
+  await faux();
+  egal(await message(), 'Essaie une autre région.', 'message de la 1re erreur');
+  egal(await pg.$$eval(`${R} .faux`, (L) => L.length), 0, 'trait rouge en évaluation');
+  await noter();
+  await faux();
+  egal(await message(), 'Regarde la zone entourée.', 'message de la 2e erreur');
+  egal(await pg.$$eval(`${R} [data-lc-zones] .aide`, (L) => L.map((e) => e.dataset.lcCle)), ['28'], 'zone entourée (la Normandie)');
+  await noter();
+  // Le bon clic : un trait d'encre, jamais le vert « juste ».
+  await cliquer((await lire()).bon);
+  egal(await pg.$$eval(`${R} .juste`, (L) => L.length), 0, 'aplat vert au bon clic');
+  egal(await pg.$$eval(`${R} .retenu`, (L) => L.length), 1, 'le clic retenu');
+  egal(await message(), '', 'message au bon clic');
+  await immobile();
+  await noter();
+  await juste(); await noter();
+  await faux(); await faux(); await noter();
+  egal(await message(), 'Regarde le point entouré.', 'aide à la ville');
+  await juste(); await noter();
+  await bouton('suivant'); await lieuJuste(); await bouton('suivant'); await lieuJuste(); await noter();
+  vrai((await pg.textContent(`${R} [data-lc-bouton="bilan"]`)).includes('Terminer la carte'), 'bouton de fin');
+  await bouton('bilan');
+  await noter();
+  vrai(!(await pg.$(`${R} [data-lc-bilan]`)) && !(await pg.$(`${R} [data-lc-premier-coup]`)), 'tableau du premier coup en évaluation');
+  egal(await pg.textContent(`${R} [data-lc-compteur]`), 'Carte terminée', 'compteur de fin');
+  vrai((await pg.textContent(`${R} [data-lc-fin]`)).includes('imaginé pour l’exercice'), 'texte de fin');
+  egal(await pg.$$eval(`${R} [data-lc-traits] .lc-fleche`, (L) => L.length), 2, 'trajet fléché à la fin');
+  for (const t of vus) vrai(!NOMS_INTERDITS.test(t), `phrase qui dit juste ou faux : « ${(t.match(NOMS_INTERDITS) || [])[0]} » dans ${t.replace(/\s+/g, ' ')}`);
+  vrai(!/Corriger/.test(await pg.textContent('#lc-hote')), '« Corriger » à l’écran');
+  // La note : région du port fausse au premier essai (3 points sur 20), le reste juste ; rien de remonté.
+  const d = await jalons();
+  egal(['port', 'entrepot', 'magasin'].flatMap((l) => ['region', 'departement'].map((e) => d[`localiser:${l}:${e}`])), ['ko', 'ok', 'ok', 'ok', 'ok', 'ok'], 'jalons');
+  egal(await pg.evaluate(() => window.__lc.remontees.length), 0, 'remontée au Suivi avant la remise');
+  egal((await base()).indicateurs[SEANCE].localiser, { port: { region: 2, ville: 2 } }, 'repérage des erreurs');
+  // La remise : « Rendre ma copie », confirmée.
+  await pg.click('#lc-hote [data-copie-rendre]');
+  await pg.click('#lc-hote [data-copie-rendre]');
+  await pg.waitForFunction(() => window.__lc.copies.length === 1);
+  const c = await pg.evaluate(() => window.__lc.copies[0]);
+  egal([c.score, c.max], [17, 20], 'note rendue');
+  egal(c.detail['localiser:port:region'], 'ko', 'jalon rendu');
+  egal(await pg.evaluate(() => window.__lc.remontees.length), 0, 'remontée au Suivi par la vue');
+  egal((await base()).indicateurs[SEANCE].localiser, { port: { region: 2, ville: 2 } }, 'repérage gardé pour l’enseignant');
+  egal(erreurs, [], 'erreurs de page');
+});
+
+await v('Localiser : lieux, flux et fin en fonction de la base (le site tiré) — chaque élève joue son site, la fin suit, le corrigé aussi ; contrôlés sur une base vide', async () => {
+  egal(await monter({ fonctions: true }), null, 'fonctions refusées');
+  await juste(); await juste(); await juste(); await bouton('suivant');
+  await lieuJuste(); await bouton('suivant');
+  egal((await lire()).lieu, 'magasin', 'site a : 3e lieu');
+  egal((await lire()).bon, '76', 'site a : le magasin est en Occitanie');
+  await lieuJuste(); await bouton('bilan');
+  vrai((await pg.textContent(`${R} [data-lc-fin]`)).includes('Nîmes'), 'site a : texte de fin');
+  egal(await pg.$$eval(`${R} [data-lc-traits] .lc-fleche`, (L) => L.length), 2, 'site a : trajet en deux flèches');
+  egal(await monter({ fonctions: true, db: { essaiSite: 'b' } }), null, 'site b refusé');
+  await lieuJuste(); await bouton('suivant'); await lieuJuste(); await bouton('suivant');
+  egal((await lire()).bon, '28', 'site b : le magasin est en Normandie');
+  await lieuJuste(); await bouton('bilan');
+  egal((await jalons())['localiser:magasin:region'], 'ok', 'site b : jalon du magasin');
+  vrai((await pg.textContent(`${R} [data-lc-fin]`)).includes('Deauville'), 'site b : texte de fin');
+  // Le flux du site b (le Havre → Deauville) est court : encart zoomé, là où le site a dessine le trajet sur la France entière.
+  egal((await lire()).encart, 'encart', 'site b : le flux suit la base (encart)');
+  egal(await pg.$$eval(`${R} [data-lc-encart] text`, (L) => L.map((t) => t.textContent).sort()), ['Deauville', 'Gonfreville-l’Orcher'], 'site b : noms dans l’encart');
+  const corr = await pg.evaluate(async () => {
+    const { corrigeLocaliser } = await import('/core/types/localiser.js');
+    const E = await import('/contenus/localiser-essai.js');
+    const P = E.LOCALISER_PROCHE.lieux.find((x) => x.id === 'etal');
+    const L = { ...E.LOCALISER_ACTION, lieux: (db) => (db.essaiSite === 'b' ? E.LIEUX_ACTION.map((x) => (x.id === 'magasin' ? { ...P, id: 'magasin' } : x)) : E.LIEUX_ACTION) };
+    return [corrigeLocaliser(L).find((x) => x.id === 'magasin').ville, corrigeLocaliser(L, { essaiSite: 'b' }).find((x) => x.id === 'magasin').ville];
+  });
+  egal(corr, ['Nîmes', 'Deauville'], 'corrigé selon la base');
+  // Une fonction qui plante sur une base vide refuse la séance.
+  const m = await pg.evaluate(async () => {
+    const { controlerLocaliser } = await import('/core/types/localiser.js');
+    const E = await import('/contenus/localiser-essai.js');
+    try { controlerLocaliser({ ...E.LOCALISER_ACTION, fin: (db) => db.x.y }); return null; } catch (e) { return e.message; }
+  });
+  vrai(/« flux\(db\) » ou « fin\(db\) » ne marche pas sur une base vide/.test(m || ''), 'fin(db) qui plante : ' + m);
+  egal(erreurs, [], 'erreurs de page');
 });
 
 await ctxL.close();

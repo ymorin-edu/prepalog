@@ -994,13 +994,15 @@ export const ETAPES = etapesLocaliser(LOCALISER, 'action-se-situer').map((j) => 
   `entrepot` = terre ; `port` = encre ; `usine`, `site` = encre douce), `nom`, `role`, `ville`, `dep` et `region` (codes INSEE, France
   métropolitaine), `lonlat` ([longitude, latitude], relevée dans OSM, `osm` = l'objet cité), `autres` (**exactement 3** villes réelles du
   même département), `reperes` (facultatif ; standard et confirmé ; peuvent être hors du département), `indice` (standard ; exigé hors
-  bonus), `etiq` (place du nom à la fin : `h`, `b`, `g`, `d`), `bonus`. `lieux` peut être une fonction `(db) => [...]` (contrôlée sur une
-  base vide ; mêmes ids pour tous).
+  bonus), `etiq` (place du nom à la fin : `h`, `b`, `g`, `d`), `bonus`. `lieux`, `flux` et `fin` peuvent être des fonctions `(db) => …`
+  (le site tiré de l'élève : la graine est `graineDeBase(db)` de `core/tirage.js`, soit l'identifiant de l'élève) ; **seule la base vide
+  est contrôlée** au chargement, mêmes ids pour tous : une séance à plusieurs sites appelle `controlerLocaliser` sur chacun dans son bloc
+  de tests.
 - **Contrôles au chargement** (la séance ne s'ouvre pas, le message nomme le lieu) : id en double (entre lieux ou avec la vue), type
   inconnu, texte vide, département absent des contours (outre-mer) ou hors de sa région, point (lieu ou `autres`) hors de son
   département (tracé détaillé, tolérance 300 m pour le bord de mer), `autres` ≠ 3, deux points du même lieu à moins de **8 km**, `flux` qui
-  cite un lieu inconnu ou bonus, `localiserFini` sur une carte absente, évaluation (`copie: true` : refusée tant que ce n'est pas tranché),
-  lieu bonus sans `meta.niveauxPrevus: ['confirme']`.
+  cite un lieu inconnu ou bonus, `localiserFini` sur une carte absente, `flux(db)` ou `fin(db)` qui plante sur une base vide, lieu bonus
+  sans `meta.niveauxPrevus: ['confirme']` (pas exigé en évaluation : le lieu bonus y est ignoré).
 - **Niveaux** (`db.aisance`) : accompagné = noms des régions, nom et numéro des départements, noms sur les 4 points, département dans la
   fiche ; standard = noms des régions, numéros, repères (carrés gris), indice ; confirmé = aucun nom ni numéro, repères, pas d'indice, la
   ville seule dans la fiche, plus le lieu bonus (« Lieu 1 sur 4 », jamais le mot « bonus »). Lecteur d'écran : le nom seulement si le
@@ -1021,7 +1023,18 @@ export const ETAPES = etapesLocaliser(LOCALISER, 'action-se-situer').map((j) => 
   la France entière**, ou **encart zoomé** si les lieux du flux tiennent dans un quart de la largeur et un quart de la hauteur de la France.
 - **Enseignant** : joue librement sur une copie en mémoire (rien n'est écrit), choisit le lieu et le niveau affiché. **Gel** : pendant une
   question au fil, clics et touches ne font rien. **Écran** : 1366 × 768 et 1280 × 720 sans défilement (la carte prend la hauteur qui
-  reste). Corrigé : `corrigeLocaliser(L)` rend, par lieu, la région, le département et la ville attendus.
+  reste). Corrigé : `corrigeLocaliser(L, db)` rend, par lieu, la région, le département et la ville attendus (`db` : la base de l'élève
+  quand `lieux` est une fonction ; sans elle, la base vide).
+- **Évaluation** (`copie: true` de la séance, accepté depuis le 16/10/2026, §7 du brief ENT-8.5) : le moteur passe `copie` à la vue, qui
+  joue au **niveau standard pour tous** (quel que soit `db.aisance` ; l'enseignant aussi, sans liste des niveaux) et **ignore les lieux
+  bonus**. On recommence toujours jusqu'à trouver, l'aide (zone ou point entouré) vient après deux erreurs ; la note porte sur le premier
+  essai, l'aide ne rapporte rien. **Rien ne dit juste ou faux** : une erreur → « Essaie une autre région. » (puis « Regarde la zone
+  entourée. »), sans trait rouge ; le bon clic → trait d'encre (`retenu`), pas de vert ni de « Bien vu ! » ; la ville trouvée → « Nîmes est
+  placée sur la carte. » ; dernier lieu → bouton « Terminer la carte » ; la fin → « Carte terminée », « Tous les lieux sont placés sur la
+  carte. », le texte `fin` et le trajet, **sans tableau du premier coup**. Rien au Suivi avant la remise (le moteur, comme pour toute vue) ;
+  le repérage (`db.indicateurs[<séance>].localiser`) reste pour l'enseignant. Jalons : **`etapesLocaliser(L, séance, { copie: true })`**
+  (aucun jalon de lieu bonus ; sans lieu bonus déclaré, l'option ne change rien). Les ✓ / ✗ par lieu se lisent dans le détail de la note
+  après la remise.
 
 ## Vue « Dialogue à choix » (l'écran Téléphone) — `core/types/dialogue.js`
 
