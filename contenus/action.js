@@ -138,6 +138,41 @@ export const RESEAU = {
   ],
 };
 
+// ─────────────────────────────────────────── lieux ajoutés pour ENT-8.3 (16/10/2026), exports NOUVEAUX : `LIEUX` ci-dessus reste celui d’ENT-8.1
+// Positions relevées dans OpenStreetMap (Nominatim, 16/10/2026), arrondies à 4 décimales ; toutes des CENTRES DE COMMUNE (relations
+// administratives), donc APPROCHÉES pour les établissements. Le contrôle de la vue (`controlerLocaliser`) les rejoue au chargement.
+//
+// Roques (Haute-Garonne) : VÉRIFIÉ (brief ENT-8.3 §2, Le Bonbon, 21/07/2026) : arrivée d’Action au centre commercial de Roques annoncée,
+// ouverture annoncée ; ouverture effective et adresse NON trouvées le 16/10/2026. Décision de Tristan (16/10) : « le nouveau magasin Action
+// de Roques », sans date ni adresse ; le point est le CENTRE DE LA COMMUNE (relation OSM 158891), dit dans la séance. Distances (haversine)
+// du point à ses « autres » : Saint-Gaudens 69,1 km, Villefranche-de-Lauragais 29,9 km, Fronton 36,8 km (plus de 8 km) ; Toulouse (11,9 km) est un repère.
+export const LIEU_ROQUES = { id: 'magasin', lettre: 'M', type: 'magasin',
+  nom: 'Le nouveau magasin Action de Roques', role: 'Le nouveau magasin que ton entrepôt va livrer.',
+  ville: 'Roques', dep: '31', region: '76',
+  lonlat: [1.3759, 43.5093], osm: 'relation 158891',
+  autres: [
+    { ville: 'Saint-Gaudens', lonlat: [0.7247, 43.1078], osm: 'relation 160931' },
+    { ville: 'Villefranche-de-Lauragais', lonlat: [1.7151, 43.4005], osm: 'relation 126283' },
+    { ville: 'Fronton', lonlat: [1.3903, 43.8403], osm: 'relation 152028' },
+  ],
+  reperes: [{ ville: 'Toulouse', lonlat: [1.4442, 43.6045] }],
+  indice: 'Juste au sud-ouest de Toulouse, au bord de la Garonne.', etiq: 'b' };
+// Onnaing (Nord) : VÉRIFIÉ (brief ENT-8.3 §2, communiqué de GXO du 15/10/2026) : centre inauguré, exploité par GXO, 3e site GXO pour Action
+// en France. Position : centre de la commune (relation OSM 53706, la même que dans `RESEAU`), APPROCHÉE. Lieu BONUS (confirmé seulement,
+// sans indice). Distances du point à ses « autres » : Lille 47,1 km, Maubeuge 29,1 km, Cambrai 35,1 km ; Valenciennes (6,4 km) n’est
+// qu’un repère.
+export const LIEU_ONNAING = { id: 'onnaing', lettre: 'E', type: 'entrepot', bonus: true,
+  nom: 'Le nouveau centre Action d’Onnaing', role: 'Le plus récent entrepôt d’Action en France.',
+  ville: 'Onnaing', dep: '59', region: '32',
+  lonlat: [3.6011, 50.3871], osm: 'relation 53706',
+  autres: [
+    { ville: 'Lille', lonlat: [3.0635, 50.6366], osm: 'relation 58404' },
+    { ville: 'Maubeuge', lonlat: [3.9743, 50.2786], osm: 'relation 55074' },
+    { ville: 'Cambrai', lonlat: [3.2346, 50.1758], osm: 'relation 55938' },
+  ],
+  reperes: [{ ville: 'Valenciennes', lonlat: [3.5235, 50.3579] }],
+  etiq: 'd' };   // pas d’`indice` : lieu bonus, réservé au niveau confirmé
+
 // D’où vient chaque position (pour le compte rendu et les tests) : `releve` = l’objet d’OpenStreetMap est l’établissement lui-même ;
 // `approche` = centre de commune.
 export const PROVENANCE = { magasin: 'releve', entrepot: 'releve', port: 'approche', labastide: 'releve' };

@@ -162,7 +162,7 @@ export const ENTREPRISES = [
   // Pas le logo officiel (accord de Tristan non demandé) : le nom en texte, dans le bleu de la marque ; charte : `contenus/decathlon.js`.
   { n: 7, nom: 'Decathlon', metier: 'Transport amont — entrepôt de Rouvignies (Nord)', logo: './contenus/trames/logos/decathlon-texte.svg' },
   // Logo de Wikimedia Commons (PD-textlogo, marque ; accord de Tristan, brief ENT-8.1 §2) ; charte : `contenus/action.js`.
-  { n: 8, nom: 'Action', metier: 'Commerce à petits prix — entrepôt Geodis d’Ensuès-la-Redonne (Bouches-du-Rhône)', logo: './contenus/trames/logos/action.svg' },
+  { n: 8, nom: 'Action', metier: 'Commerce à petits prix — entrepôts Geodis (Ensuès-la-Redonne) et GXO (Labastide-Saint-Pierre)', logo: './contenus/trames/logos/action.svg' },
 ];
 
 // ------------------------------------------------------------------- l'ordre

@@ -552,10 +552,25 @@ const BANQUES_FIGEES = {
     acteurs: ['geodis', 'lycee', 'client', 'fournisseur', 'magasin', 'transporteur', 'action'],
     situations: ['s-cartons', 's-chute', 's-etiquette', 's-emplacement', 's-retard', 's-camion', 's-scan', 's-abime'],
   },
+  // ENT-8.4 Action (16/10/2026) : lieux du plan de Labastide, tâches, lectures du planigramme, questions de documents.
+  'contenus/action-ent84-donnees.js': {
+    lieux: ['l-quai', 'l-vestiaire', 'l-rassemblement', 'l-controle', 'l-bureau', 'l-charge', 'l-retours', 'l-litiges'],
+    taches: ['t-decharger', 't-saisir', 't-bl', 't-compter', 't-rdv', 't-ranger', 't-refuser', 't-equipe', 't-retours', 't-changer-rdv'],
+    lectures: ['l-retours-quai', 'l-q2-dernier', 'l-q1-10h', 'l-havre-combien', 'l-q4-premier', 'l-total'],
+    documents: ['commande', 'livraison', 'transport'],
+  },
   // ENT-8.2 Action (15/10/2026) : les tâches et les lectures du planning des quais.
   'contenus/action-ent82.js': {
     taches: ['t-decharger', 't-saisir', 't-bl', 't-compter', 't-rdv', 't-ranger', 't-refuser', 't-equipe'],
     lectures: ['l-havre-heure', 'l-havre-quai', 'l-premier', 'l-libre-9h', 'l-q3-combien', 'l-dernier'],
+  },
+  // ENT-8.3 Action (16/10/2026) : entrepôts et acteurs de « Qui est qui ? », erreurs de la chaîne de Romain, situations.
+  'contenus/action-ent83-donnees.js': {
+    entrepots: ['labastide', 'ensues', 'verrieres', 'belleville', 'onnaing', 'moissy'],
+    acteurs: ['roques', 'romain', 'lycee', 'fournisseur', 'transporteur'],
+    erreurs: ['e-avion', 'e-nimes'],
+    erreursMd: ['e-ensues', 'e-marseille', 'e-labastide', 'e-fournisseur'],
+    situations: ['s-etiquette', 's-film', 's-cartons', 's-emplacement', 's-lourd', 's-compte', 's-ordre', 's-reserve'],
   },
 };
 await v('Tirage : banques stables — aucun id d’une banque déclarée ne disparaît (liste figée), toute banque déclarée est inscrite', async () => {

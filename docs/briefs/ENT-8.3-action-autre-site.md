@@ -6,7 +6,7 @@
 > Lis CLAUDE.md, docs/EN-COURS.md puis docs/briefs/ENT-8.3-action-autre-site.md en entier. Fais d'abord l'état des lieux du §7 (dis-moi ce qui manque au moteur avant de contourner), puis construis la séance. Annonce la durée avant de commencer et dis-moi si un point du brief contredit le code.
 > ```
 
-**Statut** : à implémenter
+**Statut** : livré (16/10/2026, `pret: true, ouverture: 'prof'`, pas encore vu à l'écran par Tristan)
 **Date du brief** : 16/10/2026
 **Conversation d'origine** : Cowork (Opus) — cadrage du 15/10/2026 au soir (`claude/prepalog-action-entrainement-c1.md`, décisions 1 à 13),
 puis deux décisions du 16/10/2026 (§0 bis et §2) prises après les retours de classe des CAP sur ENT-8.1 et ENT-8.2.
@@ -372,9 +372,57 @@ Bloc nouveau `outils/test/action-83.mjs` (+ une ligne dans `BLOCS` et dans `GROU
 
 ## Compte rendu *(rempli par Claude Code à la livraison)*
 
+*(Claude Code, Opus, sous-agent du chef de chantier, 16/10/2026 ; décisions de cadrage : `COORDINATION-action.md` §6.2.)*
+
 - **Fichiers créés / modifiés** :
+  - créés : `contenus/action-ent83.js` (messages, carte, documents, fiches, jalons, options), `contenus/action-ent83-donnees.js` (lieux,
+    banques, tirage, chaîne, jugement sans ordre), `contenus/questions/ENT-8.3.js`, `contenus/corriges/ENT-8.3.js`, `outils/test/action-83.mjs` (21 cas) ;
+  - remplacé : `activites/action-autre-site.js` (le squelette ; `id` inchangé) ;
+  - ajouts seulement : `contenus/action.js` (exports nouveaux `LIEU_ROQUES`, `LIEU_ONNAING` ; `LIEUX`/`RESEAU` d'ENT-8.1 intacts) ;
+    `activites/index.js` (ligne `metier` de l'entreprise n° 8 : « Commerce à petits prix — entrepôts Geodis (Ensuès-la-Redonne) et GXO
+    (Labastide-Saint-Pierre) ») ; `outils/test.mjs` (`action-83` dans `BLOCS` et `GROUPES[2]`) ; `outils/test/tirage-niveaux.mjs`
+    (`BANQUES_FIGEES`) ; `outils/test/socle.mjs` : **cas existant réécrit** (alerte 7) — CAP-C1.1 compte maintenant 5 séances :
+    « 10/20 (1/5) » et « 1 sur 5;10 » au lieu de « 1/4 » (commentaire du cas daté).
+- **Vérifié / construit** : VÉRIFIÉ = les faits du §2 (exploitants des six entrepôts, Moissy ID Logistics → XPO → GXO, Onnaing le plus
+  récent, deux planchers, ≈ 150 nouveautés, arrivée annoncée d'Action à Roques) ; positions relevées par Claude Code dans OSM (Nominatim,
+  16/10/2026) : Roques = **centre de la commune** (relation 158891, dit dans le texte de fin de la carte et dans `MENTION`), Onnaing =
+  centre de la commune (relation 53706), villes « autres » et repères = centres de commune. CONSTRUIT (dit dans `MENTION`) : Romain, ses
+  messages, que Labastide livre Roques, le trajet, la chaîne de Romain, les situations, tous les documents.
 - **Écarts par rapport au brief** (et pourquoi) :
-- **Décisions prises en route** :
-- **Tests** :
-- **Commits** :
+  1. Banque `erreurs` coupée en **deux banques** (`erreurs` : les 2 faciles, 1 tirée ; `erreursMd` : les 4 autres déclarées `moyen`, 1 tirée,
+     la difficulté du brief gardée dans `niveau` pour le corrigé) : le tirage veut des effectifs fixes par difficulté, « 1 moyenne OU
+     difficile » ne s'écrit pas autrement (option laissée au constructeur par le chef de chantier). Chaque erreur a sa case : deux
+     erreurs ne tombent jamais sur la même case.
+  2. Banque `entrepots` : le brief ne donne pas de difficulté ; les 5 tirables sont `moyen` (2 tirés).
+  3. « Qui est qui ? » s'ouvre par `quand` (absente du menu jusqu'à la fin de la carte), « La chaîne » et « Ce que je change » par
+     `fermetures` (grisées avec la raison). Vu à l'écran : le menu n'est pas redessiné à la fin de la carte (limite connue du moteur), une
+     entrée grisée « Après la carte de France » y restait alors que la barre menait déjà à la fiche.
+  4. La chaîne est dessinée en **deux rangées de trois** (1 → 2 → 3, retour fléché, 4 → 5 → 6) et non en colonne : la colonne descendait
+     sous l'écran à 1366 × 768 (895 px).
+  5. Titres du bilan de la chaîne sans chiffre (« une erreur trouvée » / « l'autre erreur trouvée », idem « corrigée ») plutôt que la
+     numérotation du moteur, pour qu'aucun chiffre ne se confonde avec un numéro de case.
+  6. Clés des choix : celles des situations sont propres à chaque conséquence, celles des étiquettes de la chaîne sont des lettres
+     neutres (la valeur d'une option ne trahit pas la bonne réponse).
+  7. Énoncé `img-quai-numero` adapté à la photo livrée : « La plaque au-dessus de chaque porte (B56, B57…) sert à… ».
+  8. L'entreprise de la séance remplace celle de l'univers (`ENTREPRISE`, `VOCAB` exportés par le contenu) : le bandeau dit « Entrepôt GXO
+     de Labastide-Saint-Pierre (82) » ; Romain est déclaré dans le fichier de questions (l'univers ne connaît que l'équipe d'Ensuès).
+- **Décisions prises en route** : `largeurDocs: 1.25` pour la chaîne ; remorque sur un fond clair translucide (`.ac-trait`) ; mot cliquable
+  « remorque à deux planchers » défini sans dire à quoi elle sert (« deux étages ») — il rapproche quand même de P, à juger.
+- **Tests** (port 8112) : `action-83` **21/21** ; `socle`, `tirage-niveaux`, `action-81`, `action`, `questions`, `dependances` verts.
+  Sabotages : garde « 2 exploitants » retirée → tombe « équité sur 300 graines » (seul) ; jugement de la chaîne rendu dépendant de l'ordre →
+  tombent « la chaîne à l'écran (ordre inverse) » et « jugement sans ordre (fonction pure) » ; deux poids échangés dans « Qui est qui ? »
+  (somme gardée à 20) → tombent « la séance se charge » (poids jalon par jalon) et « Action lui-même partout » (17,625 au lieu de 17,75).
+  Captures de chaque écran relues à 1366 × 768.
+- **Commits** : aucun (le chef de chantier commite).
 - **Reste ouvert** :
+  1. **Moteur** : les cartes « Nouveau message » non lues s'empilent en haut à droite (jusqu'à trois) **par-dessus le panneau des
+     questions et le haut des fiches** : avec « un écran par étape », l'élève ne passe plus par la Messagerie, les cartes restent (le test
+     les ferme avant de répondre). Piste : fermer la carte quand l'élève ouvre l'écran que le message apporte (`ouvreFiche`).
+  2. **Moteur** : pendant « Avant de commencer », la barre dit « lis ton nouveau message — Ouvrir la Messagerie » alors que la Messagerie
+     est fermée jusqu'aux réponses ; le menu n'est pas redessiné à la fin de la carte (voir écart 3).
+  3. Textes construits à relire à l'écran (Tristan) : messages de Romain, document « Le réseau d'Action en France », « Ton stage chez
+     GXO », consignes d'écran (`sousTitre`), titre de la carte, texte de fin de la carte, les 8 situations et leurs pièges, les 7 rôles,
+     les 10 questions d'ouverture et leurs retours, L, N, P et leurs retours, les définitions nouvelles du lexique.
+  4. À juger à l'écran : la chaîne au vidéoprojecteur ; le titre de la carte (consigne de Romain, sur 4 lignes en petites capitales) ;
+     les listes longues de « Ce que je change » coupées dans la case fermée (lisibles une fois ouverte) ; le pictogramme en traits.
+  5. Trame et cours : Cowork, après validation à l'écran.
