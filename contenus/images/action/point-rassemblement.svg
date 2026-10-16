@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" role="img" aria-label="Point de rassemblement : quatre flèches convergent vers un groupe de personnes">
+<g stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none">
+<rect x="5" y="5" width="110" height="110" rx="16"/>
+<path d="M60 14 V32 M52 24 L60 32 L68 24"/>
+<path d="M60 106 V88 M52 96 L60 88 L68 96"/>
+<path d="M14 60 H32 M24 52 L32 60 L24 68"/>
+<path d="M106 60 H88 M96 52 L88 60 L96 68"/>
+<path d="M53 78 V71 A7 7 0 0 1 67 71 V78" stroke-width="3.5"/>
+<path d="M38 78 V73 A5 5 0 0 1 48 73 V78" stroke-width="3"/>
+<path d="M72 78 V73 A5 5 0 0 1 82 73 V78" stroke-width="3"/>
+</g>
+<g fill="currentColor">
+<circle cx="60" cy="54" r="6"/>
+<circle cx="43" cy="63" r="4.5"/>
+<circle cx="77" cy="63" r="4.5"/>
+</g>
+</svg>

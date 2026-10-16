@@ -44,8 +44,11 @@ seulement » n'ont subi que le changement de taille du serveur de Pexels.
 | `gilets-epi.jpg` | Carsten Ruthemann | [Pexels 34442873](https://www.pexels.com/photo/34442873/) | Pexels | Photo d'un autre site — Carsten Ruthemann / Pexels | réduite seulement | 1200 x 800 | 142 300 o | `22d3040f1a9649b4a646361376d8e8e913e682ff1f556abe387a58c645529d3c` |
 | `zone-colis.jpg` | Freek Wolsink | [Pexels 34221998](https://www.pexels.com/photo/34221998/) | Pexels | Photo d'un autre entrepôt — Freek Wolsink / Pexels | deux affichettes du fond (texte néerlandais, petit logo) floutées. Original non retouché : SHA-256 `d06ac65bdcb3786a08b561d84e548cc4399efff20490ce87683a185e3fec7e04` | 1200 x 800 | 166 167 o | `d323b9145f3fd95a79ec6ac6dbb8e19ce78e643704e29d4e4631b2f85b7026ec` |
 | `vestiaire.jpg` | ubeyde oral | [Pexels 3907399](https://www.pexels.com/photo/3907399/) | Pexels | Photo d'un autre vestiaire — ubeyde oral / Pexels | réduite seulement | 1200 x 807 | 136 627 o | `998198dc5444cbf091b5c20952cbb767ec216ebac0ca196463dbe97a525ec04d` |
+| `porte-quai-numero.jpg` | Simeon Galabov | [Pexels 34968619](https://www.pexels.com/photo/34968619/) | Pexels | Photo d'un autre quai — Simeon Galabov / Pexels | réduite seulement (ajoutée le 16/10/2026) ; deux petits autocollants sur les niveleurs, illisibles à cette taille (vérifié en agrandissant) | 1200 x 797 | 107 009 o | `5c9511d867ae022c462cbc49bf2374180c6473c1cb7f560c941da55f53589ba3` |
+| `chariot-elevateur.jpg` | Ani Set | [Pexels 8760709](https://www.pexels.com/photo/8760709/) | Pexels | Photo d'un autre entrepôt — Ani Set / Pexels | réduite seulement (ajoutée le 16/10/2026) | 1200 x 800 | 110 443 o | `f36e03044f7f31276b555d1bd73671e7e488bb394a887725b03aadd82f037d6e` |
 
 Total des photos : 1 517 020 octets (environ 1,4 Mo).
+Ajoutées le 16/10/2026 (`porte-quai-numero.jpg`, `chariot-elevateur.jpg`) : 217 452 octets de plus. Fabrication : `outils/images-action-photos.mjs` (curl avec en-tête de navigateur, car Pexels refuse le téléchargement fait par `fetch()` de node ; fichier relu et vérifié).
 
 ## À savoir avant d'afficher
 
@@ -70,3 +73,19 @@ Total des photos : 1 517 020 octets (environ 1,4 Mo).
   fond (près de l'affichette de droite), sans visage reconnaissable.
 - `vestiaire.jpg` : vestiaire d'un site de sport (casiers orange), sans personne.
 - Le pays n'est pas la France sur plusieurs photos : décor générique seulement.
+- `porte-quai-numero.jpg` : quais d'un entrepôt jaune, numéros **B56 à B60** (lettre + nombre, pas un simple « 56 ») sur une plaque blanche
+  au-dessus de chaque porte ; portes fermées, sans personne, sans camion ; décor générique, jamais un site Action.
+- `chariot-elevateur.jpg` : chariot élévateur frontal orange à trois roues, **fourches bien visibles**, siège vide (aucune personne), dans un
+  grand local vide à sol de béton. Sans inscription lisible. **Au fond, un transpalette électrique à timon (jaune-orange)** : c'est le seul
+  transpalette électrique sans personne ni marque trouvé jusqu'ici, mais il est petit.
+
+## Les dessins (16/10/2026)
+
+Dessins originaux, sans source extérieure : traits à l'encre seulement (`currentColor`, aucune couleur, donc ils prennent la couleur du texte
+en thème clair et sombre). Pas de texte dans les images. L'espace de noms `xmlns="http://www.w3.org/2000/svg"` est un identifiant de format,
+pas une requête.
+
+| Fichier | Auteur | Licence | Fabrication | Dimensions | Taille | SHA-256 |
+|---|---|---|---|---|---|---|
+| `point-rassemblement.svg` | dessin original Prepalog, 16/10/2026, traits à l'encre (quatre flèches vers un groupe de trois silhouettes, cadre carré arrondi) ; pas copié d'une norme | fait pour le projet | écrit à la main | viewBox 120 x 120 | 826 o | `97c124051ad06d94ffbed41e20e3e175028d3b84f73336fc0d7aba25b352c039` |
+| `remorque-deux-planchers.svg` | dessin original Prepalog, 16/10/2026, traits à l'encre (semi-remorque vue de côté, flanc partiellement transparent : deux planchers de cinq palettes chargées de cartons, plancher intermédiaire ; partie fermée à gauche, limite en pointillés) | fait pour le projet | généré par `outils/images-action-remorque.mjs` (reproductible) | viewBox 640 x 240 | 7 229 o | `f14c7a1b09bb7a8597ff8c866652f451b858172d2efda47a35225fe0e364f4cb` |
