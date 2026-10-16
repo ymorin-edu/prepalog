@@ -6,7 +6,7 @@
 > Lis CLAUDE.md, docs/EN-COURS.md puis docs/briefs/ENT-8.4-action-avant-noel.md en entier. ENT-8.3 doit être livrée (précédente du parcours). Fais d'abord l'état des lieux du §7 (dis-moi ce qui manque au moteur avant de contourner), puis construis la séance. Annonce la durée avant de commencer et dis-moi si un point du brief contredit le code.
 > ```
 
-**Statut** : à implémenter
+**Statut** : livré (16/10/2026, Claude Code, sous-agent Opus du chantier 2 ; non commité : le chef de chantier commite)
 **Date du brief** : 16/10/2026
 **Conversation d'origine** : Cowork (Opus) — cadrage du 15/10/2026 au soir (`claude/prepalog-action-entrainement-c1.md`, décisions 8 à 13),
 puis la décision « un écran par étape » du 16/10/2026 (§0 bis d'ENT-8.3, retours de classe des CAP).
@@ -371,9 +371,58 @@ Bloc nouveau `outils/test/action-84.mjs` (+ une ligne dans `BLOCS` et `GROUPES` 
 
 ## Compte rendu *(rempli par Claude Code à la livraison)*
 
-- **Fichiers créés / modifiés** :
+- **Fichiers créés / modifiés** : `contenus/action-ent84-donnees.js` (données pures : plan de Labastide en SVG, équipe, grille, contrôle,
+  banques et tirage, phrases calculées), `contenus/action-ent84.js` (documents, fiches, planning, messages, jalons, options),
+  `contenus/questions/ENT-8.4.js`, `contenus/corriges/ENT-8.4.js`, `activites/action-avant-noel.js` (squelette remplacé, `pret: true,
+  ouverture: 'prof'`), `outils/test/action-84.mjs` (19 cas, nouveau bloc) ; lignes ajoutées : `outils/test.mjs` (`action-84` dans `BLOCS` et
+  `GROUPES[3]`, **alerte 7**), `outils/test/tirage-niveaux.mjs` (`BANQUES_FIGEES` de `action-ent84-donnees.js`). Rien dans `core/` ni
+  `contenus/action.js` (décision §6.3 du chef de chantier).
 - **Écarts par rapport au brief** (et pourquoi) :
+  - §6 : le plan et l'équipe de Labastide vivent dans `action-ent84-donnees.js` (`PLAN_LABASTIDE`, `LIEUX_PLAN`, `EQUIPE_84`), pas dans
+    `contenus/action.js` (décision §6.3) ; l'évaluation de janvier les importera de là.
+  - §6.1 : échelle **06:00–13:00** (et non 12:00), pour que la règle « avant midi » puisse se déclencher (décision §6.3) ; le document du
+    planigramme montre la même échelle (12 h – 13 h vide). La grille du brief tient telle quelle : une seule paire en conflit (jeux de société
+    / produits ménagers), un seul créneau libre (quai 3, 10 h 30 – 12 h), une bonne réponse par lecture — contrôlé au chargement.
+  - §4, étape 3a : « Quel camion Romain a-t-il mal placé ? » ne propose **jamais les produits ménagers** : les deux camions se recouvrent et
+    rien ne dit lequel a été mal posé ; les trois pièges sont des camions hors conflit (vaisselle, décorations de Noël, camion du Havre),
+    calculés. Sans cela la question avait deux bonnes réponses.
+  - §6.3, ligne « fin » : le choix « (rien) » est remplacé par « À plus. » (une phrase vide n'est pas un choix lisible dans une liste ; comme
+    ENT-8.2). La ligne « nouveau créneau » propose toujours 4 choix : sa pose (ou, s'il n'a rien bougé, un troisième créneau de la grille),
+    deux autres créneaux de la grille, « Je ne l'ai pas déplacé. ».
+  - §4, étape 4 : les documents sont à gauche de la fiche, pas joints au message (§0 bis : jamais « ouvre le document X »).
+  - Banques : les deux questions « Quel document… ? » sont tirées dans une banque `documents` (3 pièces, 2 tirées), inscrite dans
+    `BANQUES_FIGEES` ; lectures : les 4 du socle en `facile`, les 2 dernières en `difficile` (décision §6.3).
 - **Décisions prises en route** :
-- **Tests** :
-- **Commits** :
+  - Planning : la carte « Jeux de société — 1 h 30 » porte `depart: { ligne: 'Q3', de: '07:30' }` (correctif moteur 55cb2c3). Un seul jalon de
+    planning, « le camion replacé » (règles `quai` + `fenetre`, 2 points) : laissé à sa place = faux. Le planning est **grisé au menu**
+    (`fermetures`) jusqu'à l'envoi de la fiche « Le planigramme ». « Vérifier mon planning » reste disponible (défaut du moteur en
+    entraînement) : **à juger par Tristan** (`aides.verifier: false` le retire).
+  - Jalon « nouveau créneau » (§6.3) : la phrase choisie au dernier envoi est comparée à la phrase recalculée sur le planning **envoyé**
+    courant (`v1`) ; si elle n'est pas parmi les choix du mail (planning corrigé ensuite vers une autre place), ou pendant une correction du
+    planning, on juge sur la phrase juste du moment du compte rendu. Le §5 « rejuger après Corriger » est donc fait, dans ces limites. Carte
+    retirée puis planning envoyé : la phrase juste reste « Je ne l'ai pas déplacé. » (cas limite).
+  - Documents « plan » et « planigramme » élargis à toute la colonne par `&:has(…){width:100%}` dans `documentsStyle` (la feuille de papier
+    fait 560 px ; le plan y était trop petit). Plan : `largeurDocs: 1.6`, ≈ 650 px de large à 1366 × 768, tient sans défiler.
+  - Plan : les portes de quai portent « Q1 » à « Q4 » (sans rond) ; la légende dit que seuls les ronds numérotés sont les lieux à trouver.
+    Numéros fixes : contrôle 1, vestiaire 2, quai 3, local de charge 4, point de rassemblement 5, litiges 6, bureau 7, retours 8.
+  - Planigramme : deux camions qui se recouvrent sont dessinés sur **deux rangs du même quai** (quai 3), même style que les autres.
+  - Domaine des mails `gxo-labastide.example` ; `ENTREPRISE.sousTitre` « Entrepôt GXO de Labastide-Saint-Pierre (82) » (export de la séance).
+  - Convention de PFMP (Q) : citations reprises du brief (vérifiées par Cowork sur le PDF d'éduscol le 16/10/2026), **non relues par Claude
+    Code** ; source et date dans l'en-tête de `contenus/questions/ENT-8.4.js`.
+  - Construit (commentaires du code et `MENTION` de l'accueil) : plan, Romain, Lucas, Inès, tâches, grille et camions, fournisseur « Jouets
+    Clairbois », transporteur « Transports Estuaire-Garonne », article, quantités, note du quai, horaires. Vérifié (ENT-8.3 §2) : Labastide,
+    GXO, Action, hub du Havre.
+- **Tests** : bloc `action-84` 19/19 (≈ 40 s) ; `tirage-niveaux` et `action` verts (65/65 avec `action-84`) ; `questions` et `dependances`
+  verts ; `socle` : un cas tombe (« CAP-C1.1 : 10/20 (1/5) »), recalé par le chantier ENT-8.3, pas par celui-ci. Sabotages : règle `quai`
+  retirée du jalon → 5 cas tombent dont « place de Romain » ; ligne « créneau » jugée contre la bonne place → 5 cas tombent dont « quai 2 à
+  10 h » ; poids « replacé » et « trouvé » échangés → le cas « quai 2 à 10 h » à l'écran tombe (18,5 au lieu de 18), et le cas de déclaration
+  pose maintenant les poids jalon par jalon.
+- **Commits** : aucun (le chef de chantier commite).
 - **Reste ouvert** :
+  - **Textes construits à relire à l'écran par Tristan** : les messages de Romain, la note « Le quai 2 à 6 h 40 », les phrases du compte rendu,
+    les retours des questions, les 10 questions « Avant de commencer », les quatre définitions nouvelles du lexique (zone de retours, point de
+    rassemblement, local de charge, convention de stage), les consignes en haut d'écran, les noms construits du fournisseur et du transporteur.
+  - À juger à l'écran : le plan (chaque lieu se devine-t-il ?), le camion de Romain visible sans être signalé, « Vérifier mon planning » gardé
+    ou non, 45 minutes.
+  - Les messages ENVOYÉS par l'élève portent la date réelle (limite connue du moteur).
+  - Trame et cours (Cowork, après validation à l'écran).
