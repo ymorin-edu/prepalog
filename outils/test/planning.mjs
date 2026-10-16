@@ -1123,5 +1123,132 @@ await v('Planning dans une séance à jalons pondérés : la note reste celle de
   egal([n.score, n.max], [5, 20], 'guidage : `note` du planning ignorée');
 });
 
+/* ================================================= `depart` : une carte déjà posée au départ (ENT-8.4, 16/10/2026) */
+// Le planning du quai ci-dessus (échelle 07:00 → 13:00 par 30 min, t = 0 pour 07:00), avec le conteneur C1 (1 h 30) DÉJÀ POSÉ sur le
+// Quai 6 à 08:30 (t = 3) : il recouvre le pris 08:00–09:30. Deux jalons séparés (règle `un`, règle `fen`) ; `des` ramené à 07:00 pour
+// que la fenêtre ne dépende pas de la place de départ, et la règle d'attente retirée (hors sujet ici). Bonne place : Quai 6 à 09:30 (t = 5). Valeurs écrites à la main.
+// `o.depart` remplace le départ, `o.sansDepart` l'enlève, `o.imposee` impose la ligne Q5 à la carte, `o.alea` ajoute une faute d'aléa.
+const VARIANTE_DEPART = `((C, o) => {
+  const P = (${VARIANTE_PRIS})(C, o);
+  const c = P.cartes.liste[0];
+  c.des = '07:00';
+  if (!o.sansDepart) c.depart = o.depart || { ligne: 'Q6', de: '08:30' };
+  if (o.imposee) P.cartes.ligne = () => 'Q5';
+  P.regles = P.regles.filter((R) => R.id !== 'att');
+  if (o.alea === 'ajout') P.alea = { de: 'x', texte: 'y', ajoutCartes: [{ id: 'C2', titre: 'C2', court: 'C2', famille: 'cont', depart: { ligne: 'Q6', de: '08:30' } }] };
+  if (o.alea === 'modif') P.alea = { de: 'x', texte: 'y', cartes: { C1: { depart: { ligne: 'Q6', de: '08:30' } } } };
+  P.jalons = [{ id: 'quai', lib: 'Quai libre', regles: ['un'] }, { id: 'fen', lib: 'Dans la fenêtre', regles: ['fen'] }];
+  return P;
+})`;
+const monterDepart = (p, o = {}) => p.evaluate(async (o) => {
+  const { creerEntreprise } = await import('/core/types/entreprise.js');
+  const E = await import('/outils/essai-planning.js');
+  const C = await import('/contenus/planning-essai.js');
+  document.querySelector('#plTest')?.remove();
+  const hote = document.createElement('div'); hote.id = 'plTest'; document.body.appendChild(hote);
+  const P = new Function(`return ${o.variante}`)()(C, o);
+  const U = E.univers({ cas: 'quai', temps: o.temps || 'guidage', planning: P });
+  const CLE = 'essai-depart-base';
+  if (!o.garder) localStorage.removeItem(CLE);
+  const db = JSON.parse(localStorage.getItem(CLE) || '{}');
+  window.__p = { db, moteur: creerEntreprise(U), remis: null };
+  window.__p.moteur.rendre(hote, {
+    meta: { id: 'essai-pris', code: 'ESSAI', titre: 'Essai', portee: 'eleve', immersif: true, temps: o.temps || 'guidage', copie: o.temps === 'evaluation' },
+    profil: { prenom: 'Lea', nom: 'Test', role: 'eleve', uid: 'u-test' },
+    jeu: { etat: () => db, sauver: () => localStorage.setItem(CLE, JSON.stringify(db)) }, enregistrer: () => {}, quitter: () => {}, codeStock: 'ABC', lireScore: async () => null,
+    rendreCopie: async (res) => { window.__p.remis = res; return { rendu: Date.now() }; },
+  });
+  document.querySelector('#plTest .ent-nav[data-vue="planning"]').click();
+}, { ...o, variante: VARIANTE_DEPART });
+const monterFauteDepart = (p, o) => p.evaluate(async ({ variante, o }) => {
+  const { creerEntreprise } = await import('/core/types/entreprise.js');
+  const E = await import('/outils/essai-planning.js');
+  const C = await import('/contenus/planning-essai.js');
+  try {
+    creerEntreprise(E.univers({ cas: 'quai', planning: new Function(`return ${variante}`)()(C, o) }));
+    return null;
+  } catch (x) { return x.message; }
+}, { variante: VARIANTE_DEPART, o });
+const DEP = { r: 'Q6', s: 3 };
+const blocC1 = (p) => p.$eval(`${Z} [data-pl-grille] [data-pl-id="C1"][data-pl-vue="g"]`, (b) => ({ col: b.style.gridColumn.replace(/\s/g, '') })).catch(() => null);
+
+await v('Planning (`depart`) : la carte est posée dès l’ouverture, à sa place de départ — dessinée, comptée comme posée, rangée dans la base ; sans `depart` rien ne change', async () => {
+  await monterDepart(pg);
+  egal((await placePris(pg)).place, { C1: DEP }, 'pose de départ rangée dans la base');
+  const b = await blocC1(pg);
+  vrai(b && b.col === '5/span3', `bloc dessiné à 08:30 (colonne 5, 3 créneaux) : ${JSON.stringify(b)}`);
+  vrai(!(await problemes(pg)).some((x) => /pas encore posé/.test(x)), `la carte compte comme non posée : ${await problemes(pg)}`);
+  egal(await problemes(pg), [MSG_Q6], 'la carte de départ est jugée comme une autre : Quai 6 est pris à 08:30');
+  await monterDepart(pg, { sansDepart: true });
+  egal((await placePris(pg)).place, {}, 'sans `depart` : rien de posé');
+  vrai(!(await blocC1(pg)), 'sans `depart` : un bloc est dessiné');
+  egal(await problemes(pg), ['Le conteneur n’est pas encore posé.'], 'sans `depart` : la carte est à poser');
+  egal(erreursP, [], 'erreurs JS');
+});
+
+await v('Planning (`depart`) : laissée sur un créneau pris, la carte donne un jalon faux ; déplacée sur une place libre, un jalon juste — et la carte posée se déplace comme toute autre', async () => {
+  await monterDepart(pg);
+  await envoyer(pg);
+  egal(await pastilles(pg), [false, true], 'jalons (quai libre, fenêtre) avec la carte laissée sur le pris');
+  egal((await placePris(pg)).v1.place.C1, DEP, 'version envoyée = la pose de départ');
+  await monterDepart(pg);
+  await poser(pg, 'C1', 'Q6', 5);
+  egal((await placePris(pg)).place.C1, { r: 'Q6', s: 5 }, 'carte déplacée (09:30)');
+  egal(await problemes(pg), [], 'plus de problème une fois déplacée');
+  await envoyer(pg);
+  egal(await pastilles(pg), [true, true], 'jalons avec la carte déplacée sur une place libre');
+  // Évaluation : rien n'est signalé, la note se lit sur la version envoyée.
+  await monterDepart(pg, { temps: 'evaluation' });
+  vrai(!!(await blocC1(pg)), 'départ absent en évaluation');
+  await envoyer(pg);
+  egal(await pg.evaluate(() => window.__p.moteur.noter(window.__p.db).score), 10, 'évaluation : carte laissée = 1 jalon sur 2');
+});
+
+await v('Planning (`depart`) : « Réinitialiser » ramène la carte à sa place de départ ; retirée, elle reste retirée à la réouverture ; la base retrouvée garde la pose en cours', async () => {
+  await monterDepart(pg);
+  await poser(pg, 'C1', 'Q6', 5);
+  await pg.click(`${Z} [data-pl="raz"]`); await pg.click(`${Z} [data-pl="razOui"]`);
+  egal((await placePris(pg)).place, { C1: DEP }, 'après « Réinitialiser » : la carte est de retour à son départ');
+  vrai((await blocC1(pg)).col === '5/span3', 'après « Réinitialiser » : bloc de retour à 08:30');
+  await poser(pg, 'C1', 'Q7', 8);
+  await monterDepart(pg, { garder: true });
+  egal((await placePris(pg)).place, { C1: { r: 'Q7', s: 8 } }, 'réouverture : la pose en cours est retrouvée, pas remplacée par le départ');
+  await pg.click(`${Z} [data-pl-id="C1"][data-pl-vue="b"] [data-pl-act="retirer"]`);
+  egal((await placePris(pg)).place, {}, 'carte retirée');
+  await monterDepart(pg, { garder: true });
+  egal((await placePris(pg)).place, {}, 'réouverture : la carte retirée n’est pas reposée au départ');
+  // « Réinitialiser » à partir du vide : le départ revient.
+  await pg.click(`${Z} [data-pl="raz"]`); await pg.click(`${Z} [data-pl="razOui"]`);
+  egal((await placePris(pg)).place, { C1: DEP }, '« Réinitialiser » après retrait : le départ revient');
+  // Après l'envoi, « Recommencer » (bilan) repart aussi du départ.
+  await poser(pg, 'C1', 'Q6', 5);
+  await envoyer(pg);
+  await pg.click(`${Z} [data-pl="refaire"]`); await pg.click(`${Z} [data-pl="refaireOui"]`);
+  egal((await placePris(pg)).place, { C1: DEP }, '« Recommencer » : la carte repart de son départ');
+  egal(erreursP, [], 'erreurs JS');
+});
+
+await v('Planning (`depart`) : déclaration mal formée refusée au chargement avec un message qui nomme le planning et la carte', async () => {
+  egal(await monterFauteDepart(pg, {}), null, 'la déclaration saine se charge');
+  egal(await monterFauteDepart(pg, { depart: { ligne: 'Q6', de: '07:00' } }), null, 'premier créneau accepté');
+  egal(await monterFauteDepart(pg, { depart: { ligne: 'Q7', de: '11:30' } }), null, 'dernier créneau possible (finit à 13:00) accepté');
+  const cas = [
+    [{ depart: { ligne: 'Q9', de: '08:30' } }, /essai-pris.*C1.*depart.*Q9.*n'existe pas/],
+    [{ depart: { ligne: 'Q6', de: '06:30' } }, /C1.*depart.*06:30 sort de l'échelle.*07:00–13:00/],
+    [{ depart: { ligne: 'Q6', de: '13:00' } }, /C1.*13:00 sort de l'échelle/],
+    [{ depart: { ligne: 'Q6', de: '12:00' } }, /C1.*commencée à 12:00 sort de l'échelle/],
+    [{ depart: { ligne: 'Q6', de: '08:15' } }, /C1.*08:15 ne tombe pas sur un créneau/],
+    [{ depart: { ligne: 'Q6', de: '8h' } }, /C1.*HH:MM.*8h/],
+    [{ depart: 'Q6' }, /C1.*il faut \{ ligne/],
+    [{ imposee: true }, /C1.*imposée sur la ligne « Q5 », pas « Q6 »/],
+    [{ alea: 'ajout' }, /C2.*aléa.*pas être posée au départ/],
+    [{ alea: 'modif' }, /C1.*l'aléa ne peut pas déclarer `depart`/],
+  ];
+  for (const [o, re] of cas) {
+    const m = await monterFauteDepart(pg, o);
+    vrai(m && re.test(m), `${JSON.stringify(o)} : ${m}`);
+  }
+});
+
 await ctxP.close();
 }

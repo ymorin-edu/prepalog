@@ -156,6 +156,41 @@ function verifierOccupe(P, E, l) {
   });
 }
 
+// `depart` (carte déjà posée au départ, ENT-8.4) : { ligne, de } sur une carte de `cartes.liste`. Contrôlé une fois à la
+// compilation, sur les cartes de la phase 1 : la séance ne se charge pas si la ligne est inconnue, si l'heure (ou le jour)
+// n'est pas un créneau de l'échelle, ou si la carte, avec sa durée, ne tient pas dans l'échelle. Rend la pose de départ,
+// de la même forme que celle qu'écrit `poser` : { <carte>: { r, s } }.
+function departsDe(P, E, D1) {
+  const out = {};
+  const C = P.cartes || {};
+  const ici = (id) => `planning ${P.id}, carte « ${id} », depart`;
+  // Une carte de l'aléa (ajoutée ou modifiée) n'existe pas au départ : un `depart` y serait ignoré sans bruit, on le refuse.
+  ((P.alea && P.alea.ajoutCartes) || []).forEach((c) => { if (c && c.depart != null) throw new Error(`${ici(c.id)} : une carte ajoutée par l'aléa ne peut pas être posée au départ.`); });
+  Object.entries((P.alea && P.alea.cartes) || {}).forEach(([id, m]) => { if (m && m.depart != null) throw new Error(`${ici(id)} : l'aléa ne peut pas déclarer \`depart\` (il ne vaut qu'au départ).`); });
+  D1.cartes.forEach((c) => {
+    if (c.depart == null) return;
+    const dep = c.depart, ou = ici(c.id);
+    if (typeof dep !== 'object' || Array.isArray(dep)) throw new Error(`${ou} : il faut { ligne: '<id de ligne>', de: 'HH:MM' }.`);
+    if (!D1.L[dep.ligne]) throw new Error(`${ou} : la ligne « ${dep.ligne} » n'existe pas.`);
+    if (c._ligne && c._ligne !== dep.ligne) throw new Error(`${ou} : la carte est imposée sur la ligne « ${c._ligne} », pas « ${dep.ligne} ».`);
+    let s;
+    if (E.type === 'jours') {
+      s = E.slot(dep.de);
+      if (!Number.isInteger(s) || s < 0 || s >= E.n) throw new Error(`${ou} : le jour « ${dep.de} » n'est pas dans l'échelle (${(E.jours || []).join(', ')}).`);
+    } else {
+      if (!HEURE.test(String(dep.de))) throw new Error(`${ou} : \`de\` s'écrit 'HH:MM' (reçu « ${dep.de} »).`);
+      const fin = E.debut + E.n * E.pas, m = minutesDe(dep.de);
+      if (m < E.debut || m >= fin) throw new Error(`${ou} : ${dep.de} sort de l'échelle de la grille (${hhmm(E.debut)}–${hhmm(fin)}).`);
+      if ((m - E.debut) % E.pas) throw new Error(`${ou} : ${dep.de} ne tombe pas sur un créneau de la grille (un créneau tous les ${E.pas} min depuis ${hhmm(E.debut)}).`);
+      s = (m - E.debut) / E.pas;
+    }
+    if (s + c._L > E.n) throw new Error(`${ou} : la carte (${E.fmt(c._L)}) commencée à ${dep.de} sort de l'échelle de la grille.`);
+    if (C.semaineEntiere && E.semaine && s + c._L > (Math.floor(s / E.semaine) + 1) * E.semaine) throw new Error(`${ou} : la carte commencée « ${dep.de} » passe le week-end.`);
+    out[c.id] = { r: dep.ligne, s };
+  });
+  return out;
+}
+
 // Une carte : la déclaration du contenu telle quelle (le contenu relit ses propres champs), plus les
 // champs calculés par le moteur, préfixés d'un `_` pour ne jamais écraser ceux du contenu.
 function carteDe(c, P, E) {
@@ -476,6 +511,7 @@ function compiler(P) {
     throw new Error(`planning ${P.id} : des lignes déclarent \`occupe\`, mais aucune règle \`unAlaFois\` (sur la ligne) ne les juge : en ajouter une.`);
   }
   const M = { P, E, D: { 1: donnees(P, E, 1), 2: donnees(P, E, 2) } };
+  M.departs = departsDe(P, E, M.D[1]);
   // `alea.retraits` : un id inconnu, ou une carte gardée dont la ligne imposée est retirée (elle ne pourrait plus se poser,
   // et le planning ne serait jamais complet), s'arrêtent tout de suite.
   const RT = (P.alea && P.alea.retraits) || null;
@@ -497,8 +533,11 @@ function compiler(P) {
 }
 
 /* =============================================================== état, jalons */
-export function etatNeuf() {
-  return { phase: 1, place: {}, v1: null, v2: null, aleaVu: false, verifs: 0, premierGeste: null, envois: [] };
+// `P` (la déclaration) : les cartes qui déclarent `depart` sont déjà posées, à leur place de départ. Sans `P` ou sans `depart`,
+// le planning est vide, comme toujours.
+export function etatNeuf(P) {
+  const place = P ? cp(compiler(P).departs) : {};
+  return { phase: 1, place, v1: null, v2: null, aleaVu: false, verifs: 0, premierGeste: null, envois: [] };
 }
 // Deux placements identiques (mêmes cartes, mêmes lignes, mêmes créneaux, mêmes affectations).
 function memePlace(a, b) {
@@ -952,7 +991,7 @@ export function creerPlanning(P, opts = {}) {
     nav: { libelle: P.libelle || 'Planning' },
     // `quand(db, séance)` : l'entrée de menu n'apparaît qu'une fois vrai (l'enseignant la voit toujours) ; lu par entreprise.js.
     quand: typeof P.quand === 'function' ? P.quand : null,
-    etatNeuf,
+    etatNeuf: () => etatNeuf(P),
     jalons: (db) => jalonsPlanning(db, P),
     note: P.note || opts.copie ? (db) => notePlanning(db, P) : null,
     alea: !!P.alea,
@@ -986,7 +1025,7 @@ export function creerPlanning(P, opts = {}) {
     lire(e) { const a = M.lire(e.place, phaseDonnees(e)); return { problemes: a.P, tous: a.tous }; },
     html(e, api) {
       const R = regime(api);
-      if (!e.place) Object.assign(e, etatNeuf(), e);
+      if (!e.place) Object.assign(e, etatNeuf(P), e);
       if (e.phase === 'fini') return `<div class="pl" data-planning="${ech(P.id)}" data-pl-temps="${R.t}"><div class="pl-plein">${htmlBilan(e, api, R)}</div></div>`;
       const D = M.D[phaseDonnees(e)];
       const an = analyser(P, E, D, e.place, null);
@@ -1042,7 +1081,7 @@ export function creerPlanning(P, opts = {}) {
         ui.refaire = false; ui.sel = null; ui.bulle = null;
         const garde = { aleaVu: e.aleaVu || !!e.v1, verifs: e.verifs || 0, envois: e.envois || [], finis: e.finis || 0, premierGeste: e.premierGeste, agrandi: !!e.agrandi };
         Object.keys(e).forEach((k) => delete e[k]);
-        Object.assign(e, etatNeuf(), garde);
+        Object.assign(e, etatNeuf(P), garde);
         api.sauver(); redessiner();
       });
       if (e.phase === 'fini') return;
@@ -1087,8 +1126,8 @@ export function creerPlanning(P, opts = {}) {
       on('quandMeme', () => { ui.confEnvoi = false; envoyer(e, api); });
       on('raz', () => { ui.raz = true; redessiner(); });
       on('razNon', () => { ui.raz = false; redessiner(); });
-      // Réinitialiser : vide le planning EN COURS, jamais la version déjà envoyée.
-      on('razOui', () => { e.place = {}; ui.sel = null; ui.bulle = null; fait(); });
+      // Réinitialiser : vide le planning EN COURS (les cartes à `depart` retournent à leur place de départ), jamais la version déjà envoyée.
+      on('razOui', () => { e.place = etatNeuf(P).place; ui.sel = null; ui.bulle = null; fait(); });
 
       // Les liens des cartes et de la bulle.
       racine.querySelectorAll('[data-pl-act]').forEach((b) => b.addEventListener('click', (ev) => {

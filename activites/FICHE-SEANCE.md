@@ -1218,6 +1218,13 @@ dans la base de l'élève. Heure qui ne tombe pas sur un créneau : arrondie ver
 planning, la ligne et le bloc nommés : `de` ≥ `a`, heure mal écrite, hors de l'échelle, `titre` vide, échelle « jours », ou
 aucune règle `unAlaFois` sur la ligne.
 
+**`depart: { ligne: '<id de ligne>', de: 'HH:MM' }`** (clé facultative d'une carte de `cartes.liste`, ENT-8.4) : la carte est **déjà posée**
+à cette place à l'ouverture (dessinée sur la grille, comptée comme posée) ; l'élève la déplace comme toute carte posée. Les règles la jugent
+comme les autres : laissée sur un créneau `occupe`, elle donne un jalon faux. « Réinitialiser » et « Recommencer » la ramènent à sa place de
+départ ; « Corriger » repart de la pose envoyée, comme avant. Refusés au chargement, avec le planning et la carte nommés : ligne inconnue,
+heure mal écrite, hors de l'échelle ou qui ne tombe pas sur un créneau, carte qui ne tient pas dans l'échelle, ligne différente de la ligne
+imposée de la carte, `depart` sur une carte (ou une modification) de l'aléa. Pas d'affectation au départ (seconde ressource à choisir).
+
 **`quand(db, idSeance)`** (même lot) : fonction facultative posée sur `planning`. Tant qu'elle rend faux, le Planning n'est pas au
 menu de l'élève (l'enseignant le voit toujours) ; elle plante = fermé + signalé dans la console. Exemple : le planning du quai
 n'arrive qu'après l'appel au chef de quai : `quand: dialogueFini('appel-quai')` (`core/declencheurs.js`).
