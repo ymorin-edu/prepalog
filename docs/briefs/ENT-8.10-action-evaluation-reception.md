@@ -6,7 +6,7 @@
 > Lis CLAUDE.md, docs/EN-COURS.md, docs/briefs/ENT-8.5-action-evaluation-se-situer.md (§0 bis, §2), docs/briefs/ENT-8.7-action-decharger.md (§6, §7) puis docs/briefs/ENT-8.10-action-evaluation-reception.md en entier. ENT-8.9, ENT-8.5 / 8.6 (module des sites) et le chantier moteur « quai en deux séances » (avec son mode évaluation) doivent être livrés. Fais l'état des lieux du §7, dis-moi ce qui contredit le brief, puis construis la séance. Annonce la durée avant de commencer.
 > ```
 
-**Statut** : à implémenter
+**Statut** : livré (17/10/2026, `pret: true, ouverture: 'prof'`)
 **Date du brief** : 17/10/2026
 **Conversation d'origine** : Cowork (Opus), 17/10/2026, **décisions déléguées par Tristan** (« A, prépare les briefs, tu prends les décisions » :
 Action s'arrête à ENT-8.10, la dernière séance de la série). Toutes les décisions sont de Cowork (§11).
@@ -194,9 +194,55 @@ Pas de trame. Fiche enseignant d'une page (Cowork, après livraison) : ce que me
 
 ## Compte rendu *(rempli par Claude Code à la livraison)*
 
-- **Fichiers créés / modifiés** :
-- **Écarts par rapport au brief** (et pourquoi) :
-- **Décisions prises en route** :
-- **Tests** :
-- **Commits** :
-- **Reste ouvert** :
+*(Claude Code, Opus, 17/10/2026 ; décisions du chef de chantier : `COORDINATION-action.md` §8.2 et §8.5 bis.)*
+
+- **Note par compétence (§11 n° 1) : le moteur donne la MÊME note aux deux compétences** (`core/competences.js`, aucune répartition entre
+  deux `competencesCap`). La note d'ENT-8.10 compte donc tout entière pour CAP-C1.3 et pour CAP-C1.4. À Tristan de trancher : garder ainsi,
+  couper en 8.10 / 8.11, ou demander un chantier moteur.
+- **Fichiers créés / modifiés** : `contenus/action-ent810.js`, `contenus/action-ent810-donnees.js`, `contenus/questions/ENT-8.10.js`,
+  `contenus/corriges/ENT-8.10.js`, `activites/action-evaluation-reception.js` (remplace le squelette), `outils/test/action-810.mjs` (16 cas),
+  une ligne dans `BLOCS` et une dans `GROUPES` (groupe 4) de `outils/test.mjs`, une entrée dans `BANQUES_FIGEES` de `outils/test/tirage-niveaux.mjs`
+  (alerte 7). Rien dans `core/`, `styles/`, `contenus/action.js`, `contenus/action-eval-sites.js`.
+- **Moteur (chantier à part, posé par le chef pendant la construction)** : la note d'un quai en copie ne remplace plus celle des jalons pondérés
+  (`noterBase`) ; option `rendCopie: false` du quai (la clôture ne rend pas la copie). ENT-8.10 déclare `rendCopie: false` : la copie se rend par
+  « Rendre ma copie », après le compte rendu.
+- **Écarts par rapport au brief** :
+  1. **Pas de barre « Étape suivante »** (§0, §10) : le moteur ne la montre jamais en évaluation. L'ordre est donné par le menu « Mon poste »
+     (dans l'ordre de la séance), les écrans fermés tant que le précédent n'est pas fait (« Au quai » après la fiche, le quai après l'accueil), et
+     les messages du tuteur qui annoncent l'écran suivant. Même écart qu'ENT-8.6.
+  2. **Inspection en copie** : réponses du cariste neutres, la même pour un défaut signalé et pour une marque à côté (« C'est noté. Dis-moi quand on
+     peut décharger. ») ; mais la scène **se répare sous les yeux de l'élève** (moteur) : il voit qu'un défaut était réel. Un faux signalement coûte
+     déjà le jalon « aucun faux ».
+  3. **Questions d'ouverture sans le nom du site** (le moteur ne sait pas l'y écrire, comme ENT-8.5 / 8.6) : `k-qui-ecrit` « l'entreprise qui
+     t'accueille et le transporteur… », `k-attendre` « Le cariste… » / « ton tuteur », `k-qui-paie` « l'entreprise qui t'accueille » ; la personne
+     est « Ton tuteur ».
+  4. **« 2 sans problème 0,75 chacune » (§5)** : il y a trois palettes sans problème (le piège et deux conformes). Retenu : le piège 0,75, chaque
+     conforme 0,375 (total du bloc 3,5 inchangé).
+  5. **« Le droit »** : R4515-8 réduit à son 1er alinéa ; L133-1 en entier (3 alinéas).
+  6. Les signalements de l'inspection vont au **cariste** du site (le tuteur est en réunion).
+- **Décisions prises en route** : protocole du quai 3 **écrit par Claude Code**, une spec par site (vitesse 15 / 20 km/h, poste d'urgence 300 / 600,
+  local chauffeurs, responsable Karim / Sandrine) ; aucune consigne juste identique mot pour mot à ENT-8.7 (un cas le vérifie). Le poste d'urgence et
+  la trousse sur une ligne, plan de la cour un peu plus petit (style de la séance) : sinon le protocole dépassait le bas de l'écran à 1366 × 768.
+  Dialogue de Thomas écrit par Claude Code ; les bonnes réponses diffèrent d'ENT-8.7 (un cas le vérifie), et la présentation et le local chauffeurs
+  changent avec le site (`selon`). Camion : P1 cadres photo 5 × 8, P2 vases en verre 4 × 5, P3 guirlandes lumineuses 6 × 6, P4 coussins 3 × 6
+  (références `DEC-`, construites). Quantités fixes d'ENT-8.8 (2 écrasés devant, 1 derrière, 2 manquants). « Ma réception » :
+  la phrase des réserves que l'élève a écrites ; sans réserve, « Tout est conforme, aucune réserve. ». Elle est calculée à la signature. Pièges
+  calculés : autre palette, autre nombre, ou la phrase attendue.
+- **VÉRIFIÉ / CONSTRUIT** : C. com. L133-1 **relu sur Légifrance** le 17/10/2026 (LEGIARTI000006220288, version en vigueur depuis le 21/09/2000) ;
+  R4515-4, R4515-8, L133-3 recopiés des fichiers d'ENT-8.7 / 8.8 (relus le 17/10/2026). Sites : ceux d'ENT-8.5 (vérifiés par Cowork). Tout le reste
+  est construit et dit dans `MENTION`.
+- **Textes à relire par Tristan à l'écran** : les deux protocoles du quai 3 ; les répliques de Thomas ; les messages du tuteur (consigne du protocole,
+  « Le camion est là », « Le quai 3 », « Merci… Rendre ma copie ») ; les phrases du compte rendu ; les `retour` des questions d'ouverture ; la
+  lisibilité du plan de la cour (réduit).
+- **Tests** : bloc `action-810`, 16 cas verts. Deux témoins (a85-a Onnaing, a85-b Belleville) : 20/20 à la remise, égal à `noter(db)`, et la clôture
+  du quai ne rend pas la copie. Autres cas : inaction 0 ; même site qu'ENT-8.5 sur 50 élèves ; tirage sur 300 graines (chaque type de problème
+  entre 20 et 45 % sur 200) ; ouverture et barème « Je ne sais pas » ; dialogue sans réaction ; inspection sans arrêt ; dépose au premier clic
+  sans réaction ni case grisée ; compte rendu « honnête » ✓ avec contrôle ✗ ; déballage ; écrans 1366 × 768 ; corrigé. Blocs `action`, `copie`,
+  `tirage-niveaux`, `socle`, `questions`, `dependances` : verts. Sabotages éprouvés puis remis en place :
+  - compte rendu jugé contre la bonne décision : le cas « honnête » tombe ;
+  - dépose en copie traitée comme en guidage : le cas « premier clic » tombe ;
+  - un poids changé : la somme tombe.
+- **Commits** : (le chef de chantier).
+- **Reste ouvert** : la note par compétence (ci-dessus) ; l'écart 1 (barre en évaluation) et l'écart 2 (réparation visible), qui demanderaient le
+  moteur ; le quai en copie affiche encore « il compte dans la note de rapidité » (texte du moteur) alors que la note est celle des jalons ; le
+  clavier n'est pas pris en charge à l'inspection (moteur) ; la Messagerie affiche l'année (moteur, comme ENT-8.6).

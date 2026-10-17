@@ -589,6 +589,10 @@ const BANQUES_FIGEES = {
   'contenus/action-ent87-donnees.js': {
     situations: ['s-pieton', 's-aider', 's-vitesse', 's-partir', 's-blesse', 's-gilet', 's-responsable', 's-aerosols'],
   },
+  // ENT-8.10 Action (17/10/2026, évaluation) : les situations de la fiche « Le protocole du quai 3 » (banque d’ENT-8.7, recopiée).
+  'contenus/action-ent810-donnees.js': {
+    situations: ['s-pieton', 's-aider', 's-vitesse', 's-partir', 's-blesse', 's-gilet', 's-responsable', 's-aerosols'],
+  },
 };
 await v('Tirage : banques stables — aucun id d’une banque déclarée ne disparaît (liste figée), toute banque déclarée est inscrite', async () => {
   const fs = await import('node:fs');
