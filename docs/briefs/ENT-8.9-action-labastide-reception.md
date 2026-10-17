@@ -6,7 +6,7 @@
 > Lis CLAUDE.md, docs/EN-COURS.md, docs/briefs/ENT-8.7-action-decharger.md (§0, §6, §7), docs/briefs/ENT-8.8-action-controler.md (§6) puis docs/briefs/ENT-8.9-action-labastide-reception.md en entier. ENT-8.8 et le chantier moteur « quai en deux séances » doivent être livrés. Fais l'état des lieux du §7, dis-moi ce qui contredit le brief, puis construis la séance. Annonce la durée avant de commencer.
 > ```
 
-**Statut** : à implémenter
+**Statut** : livré
 **Date du brief** : 17/10/2026
 **Conversation d'origine** : Cowork (Opus), 17/10/2026, **décisions déléguées par Tristan** (« A, prépare les briefs, tu prends les décisions » :
 Action s'arrête à ENT-8.10). Cadre fixé par Tristan : feuille de route du 16/10 (« 8.9 entraînement à Labastide, erreur induite : palette abîmée
@@ -274,9 +274,45 @@ litiges). Noir et blanc. Corrigé : `contenus/corriges/ENT-8.9.js`.
 
 ## Compte rendu *(rempli par Claude Code à la livraison)*
 
-- **Fichiers créés / modifiés** :
+*(Claude Code, sous-agent constructeur, 17/10/2026 ; décisions du chef : `COORDINATION-action.md` §8.2 et §8.5.)*
+
+- **Texte de loi** : C. com. **L133-1 relu sur Légifrance le 17/10/2026** (WebFetch, LEGIARTI000006220288, en vigueur depuis le 21/09/2000). Écart : ce
+  que le brief appelait « 1er alinéa » tient en **deux alinéas** sur Légifrance (1er : la perte, hors force majeure ; 2e : les avaries, hors vice propre
+  ou force majeure) : les deux sont écrits dans « Le droit ». L133-3 recopié du fichier d'ENT-8.8, texte identique (un cas le vérifie mot pour mot).
+- **Fichiers créés / modifiés** : créés `contenus/action-ent89-donnees.js` (protocole du quai 5, scène, camion de jouets, tirage, quai d'un élève, Jan,
+  fiche, phrases calculées, `qui-paie`), `contenus/action-ent89.js` (documents, Au quai, fiche, messages, jalons, options), `contenus/questions/ENT-8.9.js`,
+  `contenus/corriges/ENT-8.9.js`, `outils/test/action-89.mjs` (16 cas) ; `activites/action-palette-lucas.js` remplace le squelette, livré `pret: true,
+  ouverture: 'prof'` ; `outils/test.mjs` : une ligne dans `BLOCS`, une dans `GROUPES` (groupe 3) (alerte 7). Rien dans `tirage-niveaux.mjs` : la
+  séance ne déclare aucune banque `declarerTirage` (tout est tiré de la graine par `tirerJeu`, comme ENT-8.8).
 - **Écarts par rapport au brief** (et pourquoi) :
-- **Décisions prises en route** :
-- **Tests** :
-- **Commits** :
-- **Reste ouvert** :
+  1. **Pas de 3e anomalie de scène pour le confirmé, pas de `niveauxPrevus`** : le quai est une fonction de la seule graine, il ne reçoit pas le niveau
+     (même limite qu'ENT-8.7) ; aucun autre bonus n'est prévu par le brief : la séance est la même pour tous (Accompagné = standard, décision §8.2 n° 4).
+  2. **Dépose en variante A** (6 cases sur une ligne : allée piétonne, R1 à R4, devant le quai 6), poids 0,25 × 4 ; **aides de comptage éteintes pour
+     tous** (`aides: {}`, brouillon de calcul libre), comme ENT-6.4.
+  3. **Protocole à gauche du dialogue : impossible** (la vue Dialogue n'affiche que la `situation`, en texte) : la situation dit en une phrase
+     « moteur coupé, clés remises, le chauffeur attend au local chauffeurs », et le protocole du quai 5 est joint au premier message de Romain.
+  4. **« Local chauffeurs à droite du poste de garde » non écrit** : le plan de la cour du gabarit commun le dessine en haut à gauche, loin du poste.
+  5. **Fiche de Lucas en boutons radio** (pas en listes déroulantes) : réponses longues, même raison qu'ENT-8.7.
+  6. **`qui-paie`** : énoncé calculé sur SA palette à problème ; quand c'est un manquant, « Les cartons qui manquent sur ta palette P… ont été perdus
+     pendant le transport » et la bonne réponse « il répond des pertes » (« abîmés » / « avaries » seraient faux). L'énoncé renvoie à « Le droit », joint
+     au message « Le camion est à quai » (la question tombe à la clôture du quai, avant la fiche).
+  7. **« 2 palettes sans problème (dont le piège) 0,5 chacune »** : il y en a trois (le piège + 2 conformes) ; jalons « le piège » 0,5 et « les deux
+     conformes » 0,5 (justes ensemble). Le reste du §5 tel quel ; somme 20 vérifiée par un cas.
+  8. Le transporteur sans nom : la vue écrit « Le camion de … », « Le chauffeur (…) » : on y lit « Jan ». Dernière bulle de Jan (« D'accord.
+     J'attends. ») et réplique au quai (« Papiers. Pour vous. J'attends au local. ») construites ; les gestes du §6.2 écrits en indication (« (Tu
+     montres le 5 de la main.) », « (Tu montres le pictogramme.) »).
+- **Décisions prises en route** : « ma réception » juste = la phrase de CE QUE L'ÉLÈVE A ÉCRIT sur le document signé (rien écrit → « Tout est conforme,
+  aucune réserve. » est la juste, le vrai problème devient un piège) ; « la palette de Lucas » juste = la phrase de SA ligne 2 (une réponse sans phrase,
+  « courriel » ou « un an » : celle de sa date) ; phrases figées à l'envoi de la fiche. Inès écrit à la signature, la fiche s'ouvre à la signature, le quai
+  compte « fait » à la clôture. Graine = identifiant + « |action-palette-lucas » ; dangers n° 1 (cabine ou cale) / n° 2 (niveleur, lampe ou butoirs).
+  Quantités fixes (écrasé derrière 1, manquants 2, piège = moitié de la couche du dessus), comme ENT-8.8.
+- **Tests** : bloc `action-89`, **16 cas verts** (dont 200 graines : date de Lucas 99 récentes / 101 anciennes, zéro secours). Sabotages éprouvés puis
+  remis : ligne 2 jugée sans la date tirée → 3 cas tombent (dont le témoin `ancien`) ; phrase de Lucas jugée contre la bonne réponse → 2 cas tombent
+  (dont « une erreur ne se paie qu'une fois ») ; poids du piège à 1 → la séance ne se charge plus, 10 cas tombent dont la somme.
+- **Commits** : aucun (le chef de chantier commite).
+- **Reste ouvert** : textes à relire à l'écran — ceux de Cowork (Jan, Romain, Inès, fiche, phrases, questions et retours) et ceux de Claude Code
+  (protocole du quai 5 découpé, situation de « Au quai », dernière bulle de Jan, phrase « Je te joins aussi « Le droit » », lexique, aides et retours
+  d'« Avant de commencer », trois pictogrammes, dessins de la palette de Lucas et du calendrier) ; la Messagerie affiche l'année réelle sur l'envoi de
+  l'élève (limite connue) ; à 1366 × 768 la scène du quai commence sous la ligne de flottaison (moteur, comme ENT-6.4) ; l'inspection ne se joue pas au
+  clavier (moteur) ; mots cliquables « lettre recommandée » et « zone litiges » définis mais non posés dans un texte (les textes où ils tombent sont de
+  Cowork ou de loi) ; 50 minutes à juger en classe ; trame de Cowork. **Rien n'a été vu à l'écran par Tristan.**
