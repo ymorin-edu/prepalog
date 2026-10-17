@@ -13,8 +13,8 @@ décisions »). Aucune question de cadrage n'a été posée pour cette séance :
 Cadre fixé par Tristan : feuille de route d'Action (16/10, « 8.8 guidage C1.4 : comptage, avaries, réserves sur la lettre de voiture, rendre
 compte ») et décision 1 du cadrage d'ENT-8.7 (8.8 reprend **le même camion** au contrôle).
 **Modèle** : **Opus** (séance nouvelle).
-**Place dans l'ordre** : juste après ENT-8.7 (`docs/briefs/ENT-8.7-action-decharger.md`) ; le lot 1 du chantier moteur d'ENT-8.7 (`depart: 'controle'`) avant.
-**Durée estimée par Cowork** : ≈ 4 à 5 h. Ce qui prend le temps : le tirage des anomalies sur les 5 palettes et son contrôle d'équité, les phrases
+**Place dans l'ordre** : juste après ENT-8.7 (`docs/briefs/ENT-8.7-action-decharger.md`) ; le lot 1 du chantier moteur d'ENT-8.7 (`commence: 'controle'`) avant.
+**Durée estimée par Cowork** : ≈ 4 à 5 h. Ce qui prend le temps : le tirage des anomalies sur les 4 palettes et son contrôle d'équité, les phrases
 du compte rendu calculées sur le tirage de l'élève, les tests.
 
 ---
@@ -23,7 +23,7 @@ du compte rendu calculées sur le tirage de l'élève, les tests.
 
 - **§0 d'ENT-8.7** (CAP, Geodis à Ensuès, Samia / Kevin / Julie, un écran par étape, `bilanDetail`, suite d'ENT-8.2, transporteur construit
   « Transports Seine-Provence », chauffeur Marc).
-- **Date du scénario : mardi 9 novembre, 7 h 30** (sans année) — la suite immédiate d'ENT-8.7 : les 5 palettes du camion du Havre sont en zone de
+- **Date du scénario : mardi 9 novembre, 7 h 30** (sans année) — la suite immédiate d'ENT-8.7 : les 4 palettes du camion du Havre sont en zone de
   réception du quai 2, Marc attend au local chauffeurs.
 - **Ce qu'ENT-5.4 et ENT-6.4 font déjà** (vue quai, contrôle, réserves, ouvertes au CAP sur C1.4) : ENT-8.8 les reprend **en guidage CAP**, sans
   l'inspection ni le déchargement (faits en 8.7), et ajoute ce qu'elles n'ont pas : **les anomalies tirées par élève**, le **délai de protestation**
@@ -72,11 +72,11 @@ induite : une palette abîmée acceptée sans réserve par un collègue), ENT-8.
 
 ### Étape 0 — Avant de commencer (non notée, Samia) — §4 ter
 
-### Étape 1 — Le quai 2 : contrôler, écrire les réserves, faire signer (vue quai iso, sans froid, **`depart: 'controle'`**, lot 1 du §7 d'ENT-8.7)
+### Étape 1 — Le quai 2 : contrôler, écrire les réserves, faire signer (vue quai iso, sans froid, **`commence: 'controle'`** (nom retenu à l'état des lieux du 17/10), lot 1 du §7 d'ENT-8.7)
 
-- **Message de Samia** (aussi en consigne du quai) : « Les 5 palettes sont au sol. Pour chacune : compte les cartons, fais le tour, lis l'étiquette,
+- **Message de Samia** (aussi en consigne du quai) : « Les 4 palettes sont au sol. Pour chacune : compte les cartons, fais le tour, lis l'étiquette,
   puis décide. S'il y a un problème, écris une réserve précise et fais-la signer par Marc. Samia »
-- La vue s'ouvre à l'étape ③ : les palettes P1 à P5 en zone de réception, le BL (§6.1) à côté. Pour chaque palette : tourner, compter (aides de
+- La vue s'ouvre à l'étape ③ : les palettes P1 à P4 en zone de réception, le BL (§6.1) à côté. Pour chaque palette : tourner, compter (aides de
   guidage, §6 bis), lire l'étiquette, décider (**accepter** / **accepter avec réserves**, motifs `['avarie', 'manquant']`, et `produit` chez le
   confirmé seulement si l'état des lieux le permet : §6 bis), fiche de contrôle comme Smoby / Picard.
 - **Étape ④** : réserves sur le document (une ligne par palette à problème, quantité et motif), **sans** la mention « sous réserve de déballage »
@@ -145,11 +145,11 @@ Bloc `ouverture` (Samia), **tirage 3 notions + 1 image** : `tirage: { preparatio
 - `couches` : {c} et {k} **tirés** (c de 3 à 6, k de 4 à 10), jamais ceux d'une palette du camion.
 - **Écartées** : `deballage` (donnerait le jalon `deballage`), `trois-jours` (donnerait Q1), `signature` (donnerait Q2).
 
-## 5. Jalons / notation (sur 20) — poids proposés par Cowork (règle du 10/10 : **à valider par Tristan avant de coder**, §11 n° 1)
+## 5. Jalons / notation (sur 20) — poids proposés par Cowork, **validés par Tristan le 16/10/2026 à 19 h 20**
 
 | Bloc (ligne du bandeau) | Cases (un jalon chacune) | Poids | Ce qu'il lit | Piège à éviter |
 |---|---|---|---|---|
-| **Contrôler les palettes** | 3 palettes sans problème : comptage **et** décision justes, 1 chacune · 2 palettes à problème : comptage **et** décision (bon motif) justes, 2,5 chacune | **8** | `jalonsQuai` : `<P>-comptage` et `<P>-decision` (un jalon de la séance = les deux) | le piège de la couche incomplète : compter la palette « pleine » = faux ; `titreBilan` = « Palette P3 » |
+| **Contrôler les palettes** | 2 palettes sans problème (dont le piège) : comptage **et** décision justes, 1,5 chacune · 2 palettes à problème : comptage **et** décision (bon motif) justes, 2,5 chacune | **8** | `jalonsQuai` : `<P>-comptage` et `<P>-decision` (un jalon de la séance = les deux) | le piège de la couche incomplète : compter la palette « pleine » = faux ; `titreBilan` = « Palette P3 » |
 | **Les réserves et la signature** | réserve écrite juste (quantité et motif) 1,5 × 2 · pas de « sous réserve de déballage » 1 · signature de Marc 1 | **5** | `<P>-reserve`, `deballage`, `signature` | `deballage` n'est vrai **qu'une fois les réserves écrites** (vue : `E.ecrit && !mention`) : pas de prime à l'inaction |
 | **Rendre compte** | réserves 1 · zone litiges 1 · salutation 0,5 · fin 0,5 | **3** | réponse par phrases (dernier envoi) | forme = 1 sur 20 (5 %) ; message non envoyé = faux |
 | **Les questions de Samia** | Q1 1,5 · Q2 1,5 · Q3 1 | **4** (`part: 4`) | moteur des questions | — |
@@ -173,9 +173,9 @@ Bloc `ouverture` (Samia), **tirage 3 notions + 1 image** : `tirage: { preparatio
 ### 6.1 Le BL et la lettre de voiture (reconstitués)
 
 - **BL** (du hub d'import Action, Gonfreville-l'Orcher → entrepôt Action / Geodis, Ensuès-la-Redonne), mardi 9 novembre : une ligne par palette (P1 à
-  P5 : référence, désignation, cartons **au BL**). Le BL dit toujours le nombre de cartons **plein** de la palette, sauf pour la palette au piège
+  P4 : référence, désignation, cartons **au BL**). Le BL dit toujours le nombre de cartons **plein** de la palette, sauf pour la palette au piège
   « couche incomplète normale » (le BL dit le nombre réel).
-- **Lettre de voiture** : Transports Seine-Provence (construit), 5 palettes, case « Réserves », signature du destinataire et du transporteur. Si la
+- **Lettre de voiture** : Transports Seine-Provence (construit), 4 palettes, case « Réserves », signature du destinataire et du transporteur. Si la
   vue ne montre qu'un document (§7), il est titré « Bon de livraison — lettre de voiture ».
 
 ### 6.2 Les anomalies possibles (banque `anomalies`)
@@ -195,7 +195,7 @@ Les quantités (2 cartons) sont des valeurs de départ : le code peut les tirer 
 | Ligne | Juste (exemple : problèmes sur P2 `ecrase-face` et P4 `manquant`) | Pièges (calculés) |
 |---|---|---|
 | salutation | « Bonjour Samia, » | « Salut ma grande, » · « Madame la directrice, » |
-| reçu (imposée) | « J'ai contrôlé les 5 palettes du camion du Havre. » | — |
+| reçu (imposée) | « J'ai contrôlé les 4 palettes du camion du Havre. » | — |
 | réserves | « Réserves signées par le chauffeur : P2, 2 cartons abîmés ; P4, 2 cartons manquants. » | « Tout est conforme, aucune réserve. » · une palette fausse à la place d'une juste · une quantité fausse |
 | zone litiges | « J'ai mis les 2 cartons abîmés de P2 en zone litiges. » | « J'ai rangé les cartons abîmés en stock avec les autres. » · « J'ai rendu les cartons abîmés au chauffeur. » |
 | fin | « Je reste au quai. {prénom} » | « Bisous » · « À plus. » |
@@ -206,29 +206,31 @@ Les quantités (2 cartons) sont des valeurs de départ : le code peut les tirer 
 
 ## 6 bis. Tirage et niveaux
 
-- **Pièce fixe** : les 5 palettes de `CAMION_HAVRE` (désignations, couches, cartons), le BL et la lettre de voiture.
+- **Pièce fixe** : les 4 palettes de `CAMION_HAVRE` (désignations, couches, cartons), le BL et la lettre de voiture.
 - **Tirage par élève** (graine) :
-  - **2 palettes à problème** parmi P1 à P5 : une `facile` (`ecrase-face`) et une `moyen` (`ecrase-cache` **ou** `manquant`) ;
+  - **2 palettes à problème** parmi P1 à P4 : une `facile` (`ecrase-face`) et une `moyen` (`ecrase-cache` **ou** `manquant`) ;
   - **1 palette au piège** `couche-normale`, sur une autre palette ;
-  - les 2 autres : conformes, pleines.
+  - la dernière : conforme, pleine.
   - `verifier` : 3 palettes différentes ; **au moins une avarie** (garanti par `ecrase-face`) ; le piège ne tombe jamais sur une palette dont la
     couche du dessus est déjà incomplète au départ.
 - **Confirmé** : **aides de comptage éteintes** (pas de détail du comptage, pas de rappel de la règle des couches), comme l'entraînement ENT-6.4 ;
-  **pas de cas bonus** : ⚠ §11 n° 3 (le camion est celui d'ENT-8.7, 5 palettes, on n'en ajoute pas). Si l'état des lieux montre qu'une palette peut
+  **pas de cas bonus** : ⚠ §11 n° 3 (le camion est celui d'ENT-8.7, 4 palettes, on n'en ajoute pas). Si l'état des lieux montre qu'une palette peut
   porter un **jalon bonus** sans changer le socle (par exemple une 2e référence `produit` sur une palette conforme qui ne compte qu'en bonus), le
   proposer à Tristan avant de le faire.
 - **Standard** : aides de guidage **allumées** (règle des couches, détail du comptage, Samia qui explique), comme ENT-5.4.
 - **Accompagné** : standard + la consigne de chaque palette rappelle « Fais le tour de la palette avant de décider. » (texte, pas d'indice sur la
   palette) ; si la vue ne sait pas rendre ses aides fonction de `db.aisance`, contenu standard (le dire).
 - **Consigne neutre** : rien ne dit combien de palettes ont un problème.
+- **Niveaux et lot 4** : l'état des lieux du 17/10 (§7 d'ENT-8.7) montre que la vue quai ne lit pas le niveau de l'élève ; les aides fonction
+  du niveau demandent le **lot 4 facultatif** (≈ 1 h 30). Sans lui : contenu standard pour tous, et le dire à Tristan.
 
 ## 7. Demandes au moteur
 
-- **Lot 1 du chantier « quai en deux séances »** (ENT-8.7 §7.1) : `depart: 'controle'`. Rien d'autre de nouveau a priori.
+- **Lot 1 du chantier « quai en deux séances »** (ENT-8.7 §7.1) : `commence: 'controle'` (nommé `depart` au premier jet du brief). Rien d'autre de nouveau a priori.
 - **À vérifier à l'état des lieux** (le dire à Tristan avant de contourner) :
   - le **titre du document** de l'étape ④ (« BL ») se règle-t-il par le contenu ? Sinon, petite demande : `document: 'Bon de livraison — lettre de
     voiture'` (Sonnet, ≈ 20 min) ; à défaut on garde « BL » et le cours le dit ;
-  - le **quai fonction de la graine** (`quai: (graine) => …`, ENT-4.4) avec `depart: 'controle'` et `etapesQuaiTire` ;
+  - le **quai fonction de la graine** (`quai: (graine) => …`, ENT-4.4) avec `commence: 'controle'` et `etapesQuaiTire` ;
   - les aides fonction du niveau (`db.aisance`) ;
   - le déclencheur « BL signé » pour semer le mail du compte rendu (ENT-6.4 le fait : le reprendre).
 
@@ -269,13 +271,14 @@ Bloc **`action-88`** (fichier `outils/test/action-88.mjs`, ligne dans `BLOCS` et
 
 ## 11. Décisions de Cowork à faire valider par Tristan (délégation du 16/10/2026, 19 h 02)
 
-1. [ ] **Poids** (§5) : Contrôler les palettes 8 · Réserves et signature 5 · Rendre compte 3 · Questions 4. **À valider avant de coder**
-   (règle du 10/10/2026).
+1. [x] **Poids** (§5) : Contrôler les palettes 8 · Réserves et signature 5 · Rendre compte 3 · Questions 4 — **validés par Tristan le
+   16/10/2026 à 19 h 20**.
 2. [x] **Questions au fil** : Q1 (délai de 3 jours, L133-3) 1,5 · Q2 (pourquoi signer) 1,5 au bilan · Q3 (qui saisit dans le WMS) 1 · Q4 réflexion.
 3. [x] **Confirmé sans cas bonus** (aides de comptage éteintes) : le camion est le même qu'en 8.7, on n'ajoute pas de palette.
-4. [x] **Anomalies** : 2 problèmes par élève (1 facile + 1 moyen) + 1 piège de comptage, sur les 5 palettes fixes ; `produit` gardé pour plus tard.
+4. [x] **Anomalies** : 2 problèmes par élève (1 facile + 1 moyen) + 1 piège de comptage, sur les 4 palettes fixes (la 4e est conforme) ; `produit` gardé pour plus tard.
 5. [x] **Réserves sur « Bon de livraison — lettre de voiture »** (un seul document à l'écran si la vue n'en sait pas deux).
-6. [ ] Textes construits par Cowork (messages, BL, phrases, ouverture, retours) : à relire à l'écran.
+6. [x] **4 palettes** (et non 5) et option **`commence: 'controle'`** : ajustés le 17/10 après l'état des lieux d'ENT-8.7.
+7. [ ] Textes construits par Cowork (messages, BL, phrases, ouverture, retours) : à relire à l'écran.
 
 ---
 

@@ -14,7 +14,7 @@ décisions »). **Les décisions de Cowork qui changent une décision de Tristan
 **Modèle** : chantier moteur §7 : **Sonnet** pour les lots 1 et 3, **Opus** pour le lot 2 (interaction nouvelle dans la vue quai). Séance : **Opus**.
 **Place dans l'ordre** : après ENT-8.6 (fin du chantier ENT-8.5 / 8.6 en cours le 16/10) ; le chantier moteur §7 avant la séance ; ENT-8.8 juste après.
 **Durée estimée par Cowork** : moteur ≈ 5 à 6 h (lot 1 ≈ 2 h, lot 2 ≈ 3 h, lot 3 ≈ 45 min, tests compris) ; séance ≈ 5 h. Ce qui prend le temps :
-le protocole de sécurité dessiné (une page), le dialogue et ses réactions, la déclaration du quai (scène, 5 palettes, cases de dépose), les tests.
+le protocole de sécurité dessiné (une page), le dialogue et ses réactions, la déclaration du quai (scène, 4 palettes, cases de dépose), les tests.
 
 ---
 
@@ -67,7 +67,7 @@ Trois écrans de travail, deux vues nouvelles pour ces élèves (le dialogue, le
   - INRS : préciser dans le protocole **l'emplacement d'attente du conducteur**, à l'écart des chariots ([INRS](https://www.inrs.fr/metiers/transport/transport-routier-marchandises/transport-routier-marchandises-agir.html)).
 - **Construit (à dire dans la séance)** : l'accueil des chauffeurs chez Geodis à Ensuès (rien de publié) ; le **protocole du quai 2** (reconstitué
   d'après R4515-6, consignes et valeurs construites : 10 km/h, local chauffeurs, point de rassemblement…) ; le chauffeur **Marc** ; le chargement du
-  camion (**5 palettes filmées, une sorte de produit par palette**, refaites au hub du Havre) ; les produits (désignations génériques, aucune marque) ;
+  camion (**4 palettes filmées, une sorte de produit par palette**, refaites au hub du Havre) ; les produits (désignations génériques, aucune marque) ;
   la scène du quai ; les cases de dépose. Les gestes de quai (cale, clés, niveleur, lampe, butoirs) sont la pratique courante, déjà utilisée en ENT-5.4
   et ENT-6.4, **sans source officielle relue** sur ces gestes précis.
 - **Documents reconstitués** : pied « Document pédagogique — reconstitution, non contractuel ». Logo d'Action : déjà au dépôt (ENT-8.1).
@@ -79,7 +79,7 @@ Trois écrans de travail, deux vues nouvelles pour ces élèves (le dialogue, le
 À la fin, l'élève sait **appliquer le protocole de sécurité** d'un quai à des situations, **accueillir un chauffeur** poliment et l'envoyer au
 bon endroit, **vérifier que le camion et le quai sont sûrs** avant de décharger et **signaler** ce qui ne va pas sans décharger, et **diriger le
 déchargement** (qui décharge, avec quoi, où poser chaque palette). Premier temps de CAP-C1.3, juste après ENT-8.2. Le contrôle des palettes est
-**laissé à ENT-8.8** (CAP-C1.4) : la séance s'arrête quand les 5 palettes sont au sol. Pas de doublon avec ENT-5.4 / 6.4 (déjà ouvertes au CAP) :
+**laissé à ENT-8.8** (CAP-C1.4) : la séance s'arrête quand les 4 palettes sont au sol. Pas de doublon avec ENT-5.4 / 6.4 (déjà ouvertes au CAP) :
 ici le déchargement est fait par le cariste, l'élève applique le protocole et dirige.
 
 ## 4. Déroulé (≈ 45 min)
@@ -130,8 +130,8 @@ ici le déchargement est fait par le cariste, l'élève applique le protocole et
   R1–R6) ; deux cases sont **sur l'allée piétonne** (marquage au sol hachuré) et deux **devant le quai 3** (pièges). Un choix faux : Kevin
   réagit (« Là, c'est l'allée piétonne : je ne pose pas ici. » / « Ça, c'est la zone du quai 3. ») et l'élève choisit à nouveau ; **le premier
   choix compte** (jalon). Une case occupée ne se propose pas (pas de gerbage à la réception : dit par Kevin dans sa première bulle).
-- **Fin du quai** (lot 1 du §7, `arret: 'dechargement'`) : les 5 palettes sont au sol, le camion reste à quai porte ouverte, le chauffeur au local.
-  Bandeau du quai : « Les 5 palettes sont en zone de réception. Le contrôle, c'est la prochaine fois. » Question P (§4 bis).
+- **Fin du quai** (lot 1 du §7, `arret: 'dechargement'`) : les 4 palettes sont au sol, le camion reste à quai porte ouverte, le chauffeur au local.
+  Bandeau du quai : « Les 4 palettes sont en zone de réception. Le contrôle, c'est la prochaine fois. » Question P (§4 bis).
 
 ### Fin
 
@@ -189,7 +189,7 @@ Bloc `ouverture` (Samia), **tirage 3 notions + 1 image** : `tirage: { preparatio
 | **Accueillir le chauffeur** | salutation 0,5 · documents 1 · quai 1 · attente (moteur, clés, local) 1,5 · fin 0,5 | **4,5** | dernier appel terminé (`jalonDialogue` / `premiereReponse(appel, '<réplique>') === '<v juste>'`) | rien de vrai avant le raccrochage ; forme = 1 sur 20 (5 %) |
 | **Le protocole** | 3 situations tirées : facile 1 · moyenne 1,5 · difficile 1,5 | **4** | `ficheEnvoyee(db,'protocole').valeurs[<ligne>]` | `titreBilan` (la situation, pas son rang) ; envoyer à vide = 0 |
 | **Avant de décharger** | anomalie signalée **avant** « C'est bon » 3 · aucun faux signalement 1 | **4** | `securite.signaux` du quai (jalons `securite-<id>`, `securite-aucun-faux`) | « aucun faux » est **faux si rien n'a été signalé** (pas de prime à l'inaction) ; une marque enlevée avant l'envoi ne compte pas |
-| **Diriger le déchargement** | « qui décharge, avec quoi » 1 · dépose de chaque palette au premier choix 0,5 × 5 | **3,5** | fiche `protocole` (ligne `engin`) ; état du quai (lot 2 : `depose[<palette>].premier`) | une palette non posée = faux ; rien n'est vrai avant la fin du déchargement |
+| **Diriger le déchargement** | « qui décharge, avec quoi » 1 · dépose de chaque palette au premier choix 0,625 × 4 | **3,5** | fiche `protocole` (ligne `engin`) ; état du quai (lot 2 : `depose[<palette>].premier`) | une palette non posée = faux ; rien n'est vrai avant la fin du déchargement |
 | **Les questions de Samia** | M 1,5 · N 1,5 · P 1 | **4** (`part: 4`) | moteur des questions | — |
 | **Total** | | **20** | | |
 
@@ -200,7 +200,7 @@ Bloc `ouverture` (Samia), **tirage 3 notions + 1 image** : `tirage: { preparatio
 
 ## 6. Contenu (données)
 
-- **`contenus/action.js`** (univers) : y ajouter **`CAMION_HAVRE`** — les 5 palettes du camion du Havre, **pièce fixe partagée par ENT-8.7 et
+- **`contenus/action.js`** (univers) : y ajouter **`CAMION_HAVRE`** — les 4 palettes du camion du Havre, **pièce fixe partagée par ENT-8.7 et
   ENT-8.8** (§6.3), et le document « Le droit — quai » (R4515-4, -6, -8) s'il sert aux deux. ⚠ Le chantier ENT-8.5 touche `contenus/action*.js` le
   16/10 : attendre qu'il soit effacé de `docs/EN-COURS.md`.
 - **`contenus/action-ent87.js`** (et `action-ent87-donnees.js` si besoin) : messages, protocole, fiche, dialogue, quai, banques et tirage, jalons, ouverture.
@@ -246,10 +246,9 @@ l'heure. » Le jalon `fin` lit la première réponse à `fin` (les maladroits y 
 | P2 | Assiettes plates en grès, lot de 6 | 4 × 6 | 24 |
 | P3 | Boîtes de rangement plastique | 4 × 5 | 20 |
 | P4 | Torchons de cuisine, lot de 3 | 6 × 8 | 48 |
-| P5 | Puzzles 500 pièces | 5 × 10 | 50 |
 
 Références construites (format libre, par exemple `ACT-` + 5 chiffres). ENT-8.7 n'en montre que l'aspect (palettes filmées) ; ENT-8.8 y
-place les anomalies tirées. ⚠ §11 n° 9 : **5 palettes fixes** (et non 4 à 6 tirées) pour que les deux séances parlent du même camion.
+place les anomalies tirées. ⚠ §11 n° 9 : **4 palettes fixes** (et non 4 à 6 tirées ; 4 parce que le plan de dépose de la vue est éprouvé jusqu'à 4, état des lieux du 17/10) pour que les deux séances parlent du même camion.
 
 ### 6.4 La scène et les cases de dépose
 
@@ -301,7 +300,7 @@ place les anomalies tirées. ⚠ §11 n° 9 : **5 palettes fixes** (et non 4 à 
   les choix par niveau ou rendre la consigne du quai fonction de la base : **état des lieux §7.4**, sinon Accompagné = contenu standard (le dire).
 - **Consignes neutres** : rien ne dit combien d'anomalies il y a.
 
-## 7. Demandes au moteur — chantier « quai en deux séances » (un seul chantier, avant ENT-8.7)
+## 7. Demandes au moteur — chantier « quai en deux séances » (un seul chantier, avant ENT-8.7) — **accepté par Tristan le 16/10/2026 à 19 h 20**
 
 Pensé pour servir à d'autres séances : toute réception CAP / 2de peut désormais séparer **décharger** (C1.3) et **contrôler** (C1.4).
 Tests dans le bloc `quai` (ou le bloc où vit la vue) ; **ENT-1.1, 4.x, 5.4, 6.4 inchangées** (blocs verts).
@@ -324,6 +323,9 @@ Tests dans le bloc `quai` (ou le bloc où vit la vue) ; **ENT-1.1, 4.x, 5.4, 6.4
   `depose[<palette>] = { premier: <case>, essais: [...] }`. Une case occupée n'est pas cliquable.
 - Fonction pure pour les jalons (`jalonsDepose`) : par palette, `ok` si le premier choix est une case juste.
 - Lecteur d'écran : les cases portent leur nom (« Case R3 », « Allée piétonne »), pas leur verdict. Écran 1366 × 768 sans défilement.
+- **Mode évaluation** (ajouté le 17/10/2026 pour ENT-8.10) : dans une séance `copie`, le premier clic sur une case pose la palette, **sans
+  réaction** du cariste ni case grisée ; le jalon lit ce premier clic. **Quai complet** (ENT-8.9, 8.10) : la dépose marche aussi sans `arret` ni
+  `commence`, avec l'inspection avant et le contrôle après ; ENT-8.9 et 8.10 ont **4 palettes** (plan éprouvé jusqu'à 4).
 
 ### 7.3 Lot 3 — le dialogue en face à face (Sonnet, ≈ 45 min)
 
@@ -421,12 +423,13 @@ Bloc **`action-87`** (fichier `outils/test/action-87.mjs`, ligne dans `BLOCS` et
    remplacées par **`plan-circulation`** ★ et **`remorque`**. À relire.
 8. [x] **Poids internes** : « Avant de décharger » 4 = **signalée 3 + aucun faux 1** (au lieu de « repérer 2 + signaler 2 » : la vue juge le
    signalement avant de décharger et les faux signalements, pas un « repérage » à part) ; « qui décharge » 1 (au lieu de « engin » 1).
-9. [x] **Palettes** : décision 9 « 4 à 6 tirées » → **5 palettes fixes** (`CAMION_HAVRE`), parce qu'ENT-8.8 contrôle le même camion et que les
+9. [x] **Palettes** : décision 9 « 4 à 6 tirées » → **4 palettes fixes** (`CAMION_HAVRE` ; 5 au premier jet, ramenées à 4 le 17/10 : plan de dépose éprouvé jusqu'à 4), parce qu'ENT-8.8 contrôle le même camion et que les
    séances sont cloisonnées (pas de tirage partagé).
 10. [x] **Anomalies** : décision 5 (banque de 6 dont scellé cassé, n° de scellé, immatriculation, palette penchée) → **les 5 objets de la vue**
     (cabine, cale, niveleur, lampe, butoirs), sans chantier moteur de plus. Le scellé et l'immatriculation (pré-contrôle documentaire) restent une
     idée pour l'entraînement **ENT-8.9** (demande moteur à cadrer alors).
-11. [ ] Si Tristan refuse le lot 2 (dépose dirigée) : Kevin pose seul, le bloc « Diriger le déchargement » tombe à 1 → **poids à refaire avec lui**.
+11. [x] Chantier « quai en deux séances » (lots 1 à 3, dépose dirigée comprise) **accepté par Tristan le 16/10/2026 à 19 h 20** ; poids d'ENT-8.8 validés
+    le même jour ; dépose dirigée confirmée le 17/10 (ordre : lot 1, lot 3, maquette du lot 2). Action s'arrête à ENT-8.10 (Tristan, 17/10).
 12. [ ] Textes construits par Cowork (protocole, dialogue, réponses de Samia, situations, retours), à relire à l'écran.
 13. [x] `precedente` : **ENT-8.4** (`action-avant-noel`) ; ENT-8.5 / 8.6 sont des évaluations sans `parcours`, ouvertes par l'enseignant.
 
