@@ -30,7 +30,7 @@ import { compilerQuestions, etapesQuestions, reponse, repondu, etapeArrivee, eta
   appel, CLE_ETAPES, CLE_OUVERTURE, htmlOuverture, ouvertureFaite, noteOuverture, idsOuverture, rangerTirageOuverture,
   etatArrivee, questionVue } from './questions.js';
 import { creerGesteTableur, retourDeTemps } from './export-tableur.js';
-import { graineDeBase, poserGraine, declarerTirage, estTirage, fautesTirage } from '../tirage.js';
+import { graineDeBase, poserGraine, declarerTirage, estTirage, fautesTirage, niveauEleve, NIVEAUX_ELEVE } from '../tirage.js';
 import { BAREME_AFFICHE, pointsBonus } from '../notes.js';
 import { gestesDe } from '../declencheurs.js';
 import { GESTE_TRANSFERT, gesteTransfertDe, GESTE_PHRASE, rouvrirTransfert, transfertsDe, fauteTransfert } from './transfert.js';
@@ -189,17 +189,28 @@ export function creerEntreprise(U) {
   // alors `quai` sous forme de FONCTION de la graine (`(graine) => déclaration du quai`). La graine
   // (l'identifiant de l'élève) est posée dans sa base à la première ouverture (`db.tirage`) ; l'écran,
   // la note et le ramassage lisent tous le quai de CETTE base (`quaiDeBase`), jamais un quai commun.
+  // LE QUAI REÇOIT AUSSI LE NIVEAU DE L'ÉLÈVE (lot 4 « contenus selon le niveau », 17/10/2026, briefs ENT-8.7 §7.4 et ENT-8.8 §6 bis) :
+  // la fonction est appelée `quai(graine, { niveau, copie })`, `niveau` = `niveauEleve(db)` ('standard', 'confirme' ou 'accompagne' ;
+  // toujours 'standard' en évaluation et pour l'enseignant). Un quai est gardé PAR GRAINE ET PAR NIVEAU ; une séance qui ne lit que la
+  // graine ne change pas. Au chargement, les trois variantes de la graine de référence sont construites : une déclaration fautive
+  // à un niveau se découvre tout de suite, avec le niveau dans le message.
   const OPTS_QUAI = COPIE ? { copie: true } : {};
   const QUAI_TIRE = typeof U.quai === 'function' ? U.quai : null;
   const quaisTires = new Map();
-  const quaiDeGraine = (g) => {
-    if (!quaisTires.has(g)) quaisTires.set(g, creerQuai(QUAI_TIRE(g), OPTS_QUAI));
-    return quaisTires.get(g);
+  const quaiDeGraine = (g, niveau = 'standard') => {
+    const k = `${g}|${niveau}`;
+    if (!quaisTires.has(k)) quaisTires.set(k, creerQuai(QUAI_TIRE(g, { niveau, copie: COPIE }), OPTS_QUAI));
+    return quaisTires.get(k);
   };
   const QUAI_FIXE = U.quai && !QUAI_TIRE ? creerQuai(U.quai, OPTS_QUAI) : null;
-  const quaiDeBase = (db) => (QUAI_TIRE ? quaiDeGraine(graineDeBase(db)) : QUAI_FIXE);
+  const quaiDeBase = (db) => (QUAI_TIRE ? quaiDeGraine(graineDeBase(db), niveauEleve(db, { copie: COPIE })) : QUAI_FIXE);
   // Le quai de l'écran ouvert : celui de la base de l'élève, fixé par `rendre`.
   let VQUAI = QUAI_TIRE ? quaiDeGraine('') : QUAI_FIXE;
+  if (QUAI_TIRE && !COPIE) {
+    NIVEAUX_ELEVE.filter((n) => n !== 'standard').forEach((n) => {
+      try { quaiDeGraine('', n); } catch (x) { throw new Error(`quai du niveau « ${n} » : ${x.message}`); }
+    });
+  }
   // L'écran « Planning » (04/10/2026, brief `docs/briefs/MOTEUR-vue-planning.md`), même principe : il
   // n'existe que si la séance déclare un `planning` (format en tête de `core/types/planning.js`). Son
   // état vit dans `db.plannings[<planning.id>]`. L'aléa arrive par un déclencheur `phasePlanning: 2`.
@@ -488,6 +499,9 @@ export function creerEntreprise(U) {
       // Quai tiré : le jeu reçu, l'attendu et la réponse, jalon par jalon (lisible par l'enseignant).
       if (QUAI_TIRE) {
         detail.quai.graine = graineDeBase(db);
+        // Le niveau reçu par le quai (lot 4) : seulement s'il n'est pas le standard (le détail de la note porte déjà `niveau`).
+        const nq = niveauEleve(db, { copie: COPIE });
+        if (nq !== 'standard') detail.quai.niveau = nq;
         if (VQ.resume) detail.quai.jeu = VQ.resume(db);
       }
       if (VQ.note) {

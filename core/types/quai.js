@@ -1238,14 +1238,16 @@ export function etapesQuai(Q) {
 // de P3 n'existe que si P3 porte un aléa) : l'étape n° k est donc le k-ième jalon compté du jeu DE LA
 // BASE lue. Le tirage garantit la même structure à tous (même nombre de jalons, dans le même ordre :
 // la suite de tests le vérifie sur des centaines de graines).
-export function etapesQuaiTire(quaiDe, graineDeBase) {
-  const ref = jalonsQuai({}, quaiDe('')).L.filter((l) => l.compte);
+// `niveauDe(db)` (facultatif, lot 4 du 17/10/2026) : le niveau de l'élève passé en second argument à `quaiDe`, comme le fait le
+// moteur (`quai: (graine, { niveau }) => …`, voir `entreprise.js`) ; absent, 'standard' pour tous (ENT-4.4, qui ne lit pas le niveau).
+export function etapesQuaiTire(quaiDe, graineDeBase, niveauDe = () => 'standard') {
+  const ref = jalonsQuai({}, quaiDe('', { niveau: 'standard' })).L.filter((l) => l.compte);
   let nRes = 0;
   return ref.map((l, k) => ({
     id: `j${k + 1}`,
     titre: /-reserve$/.test(l.id) ? `Réserve écrite n° ${++nRes}` : l.lib,
     verifier(db) {
-      const L = jalonsQuai(db, quaiDe(graineDeBase(db))).L.filter((x) => x.compte);
+      const L = jalonsQuai(db, quaiDe(graineDeBase(db), { niveau: niveauDe(db) })).L.filter((x) => x.compte);
       return { status: L[k] && L[k].ok ? 'ok' : 'attente' };
     },
   }));

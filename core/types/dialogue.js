@@ -31,6 +31,7 @@
 //         selon: (db) => ({ dit?, libs?: { <v>: texte } }),   // textes calculés UNE FOIS, à l'arrivée de la réplique
 //         melanger: false,                  // facultatif : choix dans l'ordre déclaré
 //         actif: false,                     // facultatif : réplique mise de côté sans la supprimer
+//         niveaux: ['confirme'],            // facultatif : la réplique n'est JOUÉE qu'à ces niveaux d'élève (lot 4, voir ci-dessous)
 //       }],
 //       fin: 'Bonne journée !',             // facultatif : dernière bulle de l'interlocuteur
 //     }],
@@ -49,8 +50,21 @@
 // par choix) est dit avant la réplique suivante. Après la remise, l'appel se relit (« Relire l'appel »), rien ne s'écrit.
 // Tout ce qui est mal déclaré empêche la vue de se créer, avec un message qui nomme le dialogue et la réplique.
 //
+// CONTENU SELON LE NIVEAU DE L'ÉLÈVE (lot 4, 17/10/2026, briefs ENT-8.7 §7.4 et ENT-8.8 §6 bis ; choix de Tristan : option 3).
+// Le niveau ('standard', 'confirme', 'accompagne') est celui de `db.aisance`, lu par `niveauEleve` (`core/tirage.js`) ; TOUJOURS
+// 'standard' en évaluation (copie) et pour l'enseignant. Deux réglages, facultatifs, qui ne changent rien quand ils sont absents :
+//   - sur un CHOIX, `niveaux: ['standard', 'confirme']` : le choix n'est MONTRÉ qu'à ces niveaux (l'accompagné voit 2 réponses au
+//     lieu de 3 : les deux autres portent `niveaux`) ;
+//   - sur une RÉPLIQUE, `niveaux: ['confirme']` : la réplique n'est JOUÉE qu'à ces niveaux (une question de plus au confirmé) ; aux
+//     autres niveaux, l'appel passe directement à la réplique suivante, comme si elle n'existait pas.
+// Le niveau d'un appel est RANGÉ à son début (`appel.niveau`) : un réglage changé ensuite ne touche pas un appel commencé (un appel
+// d'avant le lot 4, sans `niveau`, se joue au standard : tout ce qui n'a pas `niveaux` y est). Les gestes (`signaux`) portent toutes
+// les répliques, jouées ou non. Contrôle au chargement, pour CHAQUE niveau dès qu'un `niveaux` est déclaré : il reste 2 à 4 choix
+// et la bonne réponse à chaque réplique jouée, chaque `vers` vise une réplique jouée à ce niveau, et toute branche finit ; les
+// messages disent le niveau. `repliquesPour(D, niveau)` rend les répliques jouées à un niveau, avec leurs choix montrés.
+//
 // ── L'ÉTAT (cloisonné par séance dans la base : `db.dialogues[<séance>]`) ────────────────────────────────────
-//   { <dialogue>: { appels: [{ debut, fin?, ordres: { <réplique>: [v, …] }, textes: { <réplique>: { dit?, libs? } },
+//   { <dialogue>: { appels: [{ debut, fin?, niveau?, ordres: { <réplique>: [v, …] }, textes: { <réplique>: { dit?, libs? } },
 //                              pas: [{ r, v, at }], reprises }] } }
 // Le premier appel est le premier essai ; « Rappeler » (correction) en ajoute un. La position dans l'appel se DÉDUIT des
 // `pas` (rien d'autre n'est rangé) : un rechargement retrouve l'appel à la même réplique, mêmes textes, même ordre, mêmes grisés.
@@ -66,9 +80,15 @@
 
 import { ech } from '../ui.js';
 import { garderFocus, retrouverFocus, auClavier } from '../gestes.js';
-import { hasard } from '../tirage.js';
+import { hasard, niveauEleve, NIVEAUX_ELEVE } from '../tirage.js';
 
 const ID_OK = /^[a-z0-9][a-z0-9-]*$/;
+// Le niveau d'un appel qui commence : celui de l'élève dans la séance, 'standard' en évaluation (copie) et pour l'enseignant.
+const niveauDe = (api) => (api.estProf ? 'standard' : niveauEleve(api.db || {}, { copie: !!api.evaluation }));
+// Un choix ou une réplique est-il présent à ce niveau ? (sans `niveaux` : partout)
+const auNiveau = (x, n) => !Array.isArray(x.niveaux) || x.niveaux.includes(n);
+// Les répliques JOUÉES à un niveau, chacune avec les choix MONTRÉS à ce niveau (lot 4) ; sans `niveaux` nulle part, les répliques telles quelles.
+export const repliquesPour = (D, niveau) => (D.parNiveau && D.parNiveau[niveau]) || D.repliques;
 const DELAI = 700;                      // ms avant la réponse de l'interlocuteur : un effet d'affichage, rien ne s'y compte
 
 // LES TEXTES DU MOTEUR À L'ÉCRAN, en deux jeux : au téléphone (par défaut) et en face à face (`face: true`, 17/10/2026, ENT-8.7 :
@@ -119,12 +139,14 @@ export function compilerTelephone(T, personnes = {}, { evaluation = false } = {}
       if (rids.has(r.id)) err(`${la} : id en double`);
       rids.add(r.id);
       if (!r.dit || !['string', 'function'].includes(typeof r.dit)) err(`${la} : il manque \`dit\` (ce que dit l’interlocuteur : un texte ou (db) => texte)`);
+      verifierNiveaux(r, `${la} : \`niveaux\` de la réplique`, err);
       if (!Array.isArray(r.choix) || r.choix.length < 2 || r.choix.length > 4) err(`${la} : il faut 2 à 4 choix`);
       const vs = new Set();
       r.choix.forEach((c) => {
         if (!c || !c.v || !c.lib) err(`${la} : chaque choix porte une clé courte \`v\` et un texte \`lib\``);
         if (vs.has(c.v)) err(`${la} : clé \`v\` = « ${c.v} » en double`);
         vs.add(c.v);
+        verifierNiveaux(c, `${la} : \`niveaux\` du choix « ${c.v} »`, err);
       });
       const justes = r.choix.filter((c) => c.juste);
       if (justes.length !== 1) err(`${la} : il faut exactement un choix \`juste: true\` (${justes.length} trouvé${justes.length > 1 ? 's' : ''})`);
@@ -149,20 +171,38 @@ export function compilerTelephone(T, personnes = {}, { evaluation = false } = {}
     repliques.forEach((r) => r.choix.forEach((c) => {
       if (c.vers != null && !rids.has(c.vers)) err(`${ici}, réplique « ${r.id} » : \`vers\` = « ${c.vers} » n’est pas une réplique`);
     }));
-    const atteintes = new Set([0]);
-    for (const pile = [0]; pile.length;) {
-      const i = pile.pop();
-      repliques[i].choix.forEach((c) => { const j = suivante(repliques, i, c); if (j < repliques.length && !atteintes.has(j)) { atteintes.add(j); pile.push(j); } });
-    }
-    [...atteintes].sort((a, b) => a - b).forEach((depart) => {
-      const vus = new Set();
-      for (let i = depart; i < repliques.length;) {
-        if (vus.has(i)) err(`${ici} : depuis la réplique « ${repliques[depart].id} », les bonnes réponses tournent en rond (réplique « ${repliques[i].id} ») : l’appel ne finit jamais`);
-        vus.add(i);
-        i = suivante(repliques, i, repliques[i].choix.find((c) => c.juste));
+    // PAR NIVEAU (lot 4) : dès qu'un `niveaux` est déclaré, les répliques jouées et les choix montrés à chaque niveau sont vérifiés à part
+    // (2 à 4 choix, la bonne réponse présente, `vers` vers une réplique jouée, toute branche finit) ; sans `niveaux`, une seule passe, celle
+    // d'aujourd'hui, avec les mêmes messages.
+    const avecNiveaux = repliques.some((r) => Array.isArray(r.niveaux) || r.choix.some((c) => Array.isArray(c.niveaux)));
+    const parNiveau = {};
+    (avecNiveaux ? NIVEAUX_ELEVE : ['standard']).forEach((n) => {
+      const ou = avecNiveaux ? ` au niveau « ${n} »` : '';
+      const Rn = repliques.filter((r) => auNiveau(r, n)).map((r) => ({ ...r, choix: r.choix.filter((c) => auNiveau(c, n)) }));
+      if (!Rn.length) err(`${ici} : aucune réplique jouée${ou}`);
+      const idsN = new Set(Rn.map((r) => r.id));
+      if (avecNiveaux) Rn.forEach((r) => {
+        const la = `${ici}, réplique « ${r.id} »`;
+        if (r.choix.length < 2 || r.choix.length > 4) err(`${la} : il faut 2 à 4 choix${ou} (${r.choix.length} montré${r.choix.length > 1 ? 's' : ''})`);
+        if (!r.choix.some((c) => c.juste)) err(`${la} : la bonne réponse manque${ou} (son \`niveaux\` ne le comprend pas)`);
+        r.choix.forEach((c) => { if (c.vers != null && !idsN.has(c.vers)) err(`${la} : \`vers\` = « ${c.vers} » n’est pas une réplique jouée${ou}`); });
+      });
+      const atteintes = new Set([0]);
+      for (const pile = [0]; pile.length;) {
+        const i = pile.pop();
+        Rn[i].choix.forEach((c) => { const j = suivante(Rn, i, c); if (j < Rn.length && !atteintes.has(j)) { atteintes.add(j); pile.push(j); } });
       }
+      [...atteintes].sort((a, b) => a - b).forEach((depart) => {
+        const vus = new Set();
+        for (let i = depart; i < Rn.length;) {
+          if (vus.has(i)) err(`${ici} : depuis la réplique « ${Rn[depart].id} », les bonnes réponses tournent en rond (réplique « ${Rn[i].id} ») : l’appel ne finit jamais${ou}`);
+          vus.add(i);
+          i = suivante(Rn, i, Rn[i].choix.find((c) => c.juste));
+        }
+      });
+      parNiveau[n] = Rn;
     });
-    return { ...d, repliques, personne: personnes[d.de] };
+    return { ...d, repliques, parNiveau: avecNiveaux ? parNiveau : null, personne: personnes[d.de] };
   });
   // LES CONTACTS SANS DIALOGUE (« leurres », décision de Tristan du 14/10/2026) : ils répondent par une messagerie vocale.
   // Choisir QUI appeler fait partie de C2.6.2 : chaque appel est rangé, la séance le lit (et le fait payer) par `leurresAppeles`.
@@ -178,6 +218,12 @@ export function compilerTelephone(T, personnes = {}, { evaluation = false } = {}
     return { ...l };
   });
   return { libelle: T.libelle || 'Téléphone', quand: T.quand || null, situation: T.situation || '', dialogues, leurres, face: T.face === true };
+}
+
+// `niveaux` (facultatif) : une liste non vide de niveaux connus.
+function verifierNiveaux(x, ou, err) {
+  if (x.niveaux == null) return;
+  if (!Array.isArray(x.niveaux) || !x.niveaux.length || x.niveaux.some((n) => !NIVEAUX_ELEVE.includes(n))) err(`${ou} est une liste parmi ${NIVEAUX_ELEVE.join(', ')}`);
 }
 
 // L'indice de la réplique qui suit, après le choix `c` à la réplique `i` (au-delà du dernier : l'appel est fini).
@@ -234,8 +280,9 @@ export function journalCourt(etat) {
 
 /* ================================================================ le déroulé d'un appel */
 // Tout se DÉDUIT des pas : où en est l'appel, les bulles dans l'ordre, les choix grisés à la réplique en cours.
+// Les répliques sont celles du niveau de l'appel (`appel.niveau`, rangé à son début ; un appel sans niveau se joue au standard).
 export function deroule(D, appel, { prenom = '', evaluation = false } = {}) {
-  const R = D.repliques, lui = nomDe(D.personne);
+  const R = repliquesPour(D, (appel && appel.niveau) || 'standard'), lui = nomDe(D.personne);
   const textes = (appel && appel.textes) || {};
   const dit = (r) => avecPrenom(textes[r.id] && textes[r.id].dit != null ? textes[r.id].dit : (typeof r.dit === 'string' ? r.dit : ''), prenom);
   const lib = (r, c) => avecPrenom((textes[r.id] && textes[r.id].libs && textes[r.id].libs[c.v]) || c.lib, prenom);
@@ -436,9 +483,11 @@ export function creerTelephone(T, { personnes = {}, evaluation = false } = {}) {
       if (!appelEnCours(eD)) {
         const deja = appelRetenu(eD);
         if (deja && (estEval(D, api) || !(api.estProf || (api.rappel && api.rappel(id))))) { redessiner(); return; }
-        const appel = { debut: Date.now(), ordres: {}, textes: {}, pas: [], reprises: 0 };
+        // Le niveau de l'élève est rangé avec l'appel (lot 4) : les répliques jouées et les choix montrés sont ceux de ce niveau jusqu'au bout.
+        const niveau = niveauDe(api);
+        const appel = { debut: Date.now(), niveau, ordres: {}, textes: {}, pas: [], reprises: 0 };
         eD.appels.push(appel);
-        arriver(D, appel, eD.appels.length, D.repliques[0], api);
+        arriver(D, appel, eD.appels.length, repliquesPour(D, niveau)[0], api);
         if (eD.appels.length === 1) signal(`dialogue:${id}:appeler`);
         ecrire();
       }

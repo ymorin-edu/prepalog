@@ -2956,6 +2956,162 @@ await v('Quai : `rendCopie` ne prend que false — absent ou false acceptés, tr
   }
 });
 
+/* ------------------------------------------------------------------ lot 4 : le quai reçoit le niveau de l'élève (17/10/2026) */
+// Un quai FONCTION de la graine ET du niveau (`quai: (graine, { niveau, copie }) => …`), bâti sur le quai d'essai : au standard, le quai
+// d'ENT-6.4 tel quel ; à l'accompagné, les aides de consigne et une consigne de scène qui rappelle de faire le tour ; au confirmé, un défaut
+// de plus (la cale absente). La fonction NOTE chaque appel (`window.__qn.appels`) : c'est ainsi qu'on sait ce que le moteur lui passe.
+// `o.faute` : la variante du confirmé est fautive (un point en double, refusé par `verifierQuai`). Rend 'ok' ou le message du refus.
+const CONSIGNE_ACC = 'Fais le tour du camion, puis clique sur ce qui ne va pas.';
+const monterNiveau = (p, o = {}) => p.evaluate(async ({ o, CONSIGNE_ACC }) => {
+  const { creerEntreprise } = await import('/core/types/entreprise.js');
+  const E = await import('/outils/essai-quai-inspection.js');
+  document.querySelector('#qiScene')?.remove();
+  const hote = document.createElement('div'); hote.id = 'qiScene'; document.body.prepend(hote);
+  window.__qn = { appels: [], M: null };
+  const quaiDe = (graine, opts) => {
+    window.__qn.appels.push([graine, opts]);
+    const niveau = (opts && opts.niveau) || 'standard';
+    const S = JSON.parse(JSON.stringify(E.SECURITE_ENT64));
+    if (niveau === 'accompagne') S.consigne = CONSIGNE_ACC;
+    if (niveau === 'confirme') { const c = S.points.find((x) => x.id === 'cale'); c.etat = 'absente'; c.ok = false; c.repare = 'Je fais poser la cale.'; }
+    if (niveau === 'confirme' && o.faute) S.points.push({ ...S.points[0] });
+    const Q = E.quaiEssai({ securite: S });
+    Q.aides = niveau === 'accompagne' ? { consignes: true } : {};
+    return Q;
+  };
+  const U = Object.assign(E.universQuai(E.quaiEssai({}), { copie: !!o.copie }), { quai: quaiDe });
+  const db = o.db ? JSON.parse(JSON.stringify(o.db)) : {};
+  window.__qs = { db, Q: E.quaiEssai({}), enregistres: [] };
+  const meta = Object.assign({ id: 'essai-niveau', code: 'ESSAI', titre: 'Essai du quai par niveau', portee: 'eleve', immersif: true, temps: 'guidage', bareme: 20 },
+    o.copie ? { copie: true, temps: 'evaluation' } : {});
+  let M;
+  try { M = creerEntreprise(U); } catch (x) { return x.message; }
+  window.__qn.M = M;
+  M.rendre(hote, {
+    meta, profil: { prenom: 'Lea', nom: 'Test', role: o.role || 'eleve', uid: 'u-niv' }, aisance: o.aisance || 'standard',
+    jeu: { etat: () => db, sauver: () => {} },
+    enregistrer: () => {}, quitter: () => {}, codeStock: 'ABC', lireScore: async () => null, rendreCopie: async () => ({ rendu: Date.now() }),
+  });
+  document.querySelector('#qiScene .ent-nav[data-vue="quai"]').click();
+  return 'ok';
+}, { o, CONSIGNE_ACC });
+async function pageNiveau(o = {}) {
+  const p = await ctxS.newPage();
+  p.setDefaultTimeout(8000);
+  p.on('pageerror', (e) => erreurs.push('PAGEERROR: ' + e.message));
+  p.on('console', (m) => { if (m.type() === 'error' && !/\b404\b/.test(m.text())) erreurs.push('CONSOLE: ' + m.text()); });
+  await p.goto(BASE);
+  await p.waitForSelector('#btnProf', { timeout: 8000 });
+  const r = await monterNiveau(p, o);
+  if (r !== 'ok') { await p.close(); return { message: r }; }
+  await p.waitForSelector(`${HOTE} [data-q-inspection], ${HOTE} [data-q="passer1"]`);
+  if (await p.$(`${HOTE} [data-q="passer1"]`)) await p.click(`${HOTE} [data-q="passer1"]`);
+  await p.waitForSelector(`${HOTE} [data-q-inspection]`);
+  return { p };
+}
+const appelsNiveau = (p) => p.evaluate(() => window.__qn.appels);
+const noteNiveau = (p) => p.evaluate(() => window.__qn.M.noter(window.__qs.db));
+const CONSIGNE_STD = 'Clique sur ce qui ne va pas, puis signale-le à Nadia.';
+
+await v('Quai niveau : la fonction reçoit (graine, { niveau, copie }) — les trois variantes au chargement, puis celle de l’élève ; au standard, le quai d’aujourd’hui', async () => {
+  const { p } = await pageNiveau({});
+  const A = await appelsNiveau(p);
+  egal(A.slice(0, 3), [['', { niveau: 'standard', copie: false }], ['', { niveau: 'confirme', copie: false }], ['', { niveau: 'accompagne', copie: false }]],
+    'les trois variantes de la graine de référence, au chargement');
+  egal(A[A.length - 1], ['u-niv', { niveau: 'standard', copie: false }], 'le quai de l’élève : sa graine, son niveau');
+  egal(await p.$eval(`${HOTE} [data-q-consigne]`, (n) => n.textContent.trim()), CONSIGNE_STD, 'la consigne du standard');
+  const n = await noteNiveau(p);
+  egal(n.detail.quai.niveau, undefined, 'au standard, le détail ne porte pas de niveau');
+  egal(n.detail.quai.jeu.filter((l) => /^Danger/.test(l.lib)).length, 2, 'deux dangers au standard (cabine, niveleur)');
+  await p.close();
+});
+
+await v('Quai niveau : l’accompagné reçoit SON quai (consigne de scène, aides allumées), le confirmé le sien (un défaut de plus) ; le détail de la note dit le niveau', async () => {
+  const acc = (await pageNiveau({ aisance: 'accompagne' })).p;
+  let A = await appelsNiveau(acc);
+  egal(A[A.length - 1], ['u-niv', { niveau: 'accompagne', copie: false }], 'accompagné : ce que reçoit la fonction');
+  egal(await acc.$eval(`${HOTE} [data-q-consigne]`, (n) => n.textContent.trim()), CONSIGNE_ACC, 'accompagné : la consigne de la scène');
+  let n = await noteNiveau(acc);
+  egal([n.detail.quai.niveau, n.detail.quai.jeu.filter((l) => /^Danger/.test(l.lib)).length], ['accompagne', 2], 'accompagné : détail et dangers');
+  // Les aides de consigne : visibles à l'étape ② (le standard n'en a pas).
+  await acc.evaluate(() => { const s = window.__qs.db.quais['essai-inspection'].securite; s.fait = true; s.signales = []; });
+  await acc.close();
+  const conf = (await pageNiveau({ aisance: 'confirme' })).p;
+  A = await appelsNiveau(conf);
+  egal(A[A.length - 1], ['u-niv', { niveau: 'confirme', copie: false }], 'confirmé : ce que reçoit la fonction');
+  egal(await conf.$eval(`${HOTE} [data-q-consigne]`, (n) => n.textContent.trim()), CONSIGNE_STD, 'confirmé : la consigne du standard');
+  n = await noteNiveau(conf);
+  egal([n.detail.quai.niveau, n.detail.quai.jeu.filter((l) => /^Danger/.test(l.lib)).length], ['confirme', 3], 'confirmé : détail et dangers (cale en plus)');
+  await conf.close();
+});
+
+await v('Quai niveau : les aides du quai suivent le niveau à l’écran — « quai-aide » chez l’accompagné à l’étape ②, aucune chez le standard', async () => {
+  for (const aisance of ['accompagne', 'standard']) {
+    const { p } = await pageNiveau({ aisance });
+    // « C'est bon, on peut décharger » (deux clics, Nadia n'arrête pas), puis « Oui, vous pouvez décharger » : l'étape ②.
+    await decharger(p);
+    await p.waitForSelector(`${HOTE} [data-q="decharger"]`);
+    await p.click(`${HOTE} [data-q="decharger"]`);
+    await p.waitForSelector(`${HOTE} [data-q="vers3"]`);
+    const n = await p.$$eval(`${HOTE} .quai-aide`, (L) => L.length);
+    vrai(aisance === 'accompagne' ? n >= 1 : n === 0, `${aisance} : ${n} aide(s) à l’étape ②`);
+    await p.close();
+  }
+});
+
+await v('Quai niveau : en évaluation (copie), le quai reçoit toujours « standard » et aucune autre variante n’est construite ; l’enseignant aussi', async () => {
+  const { p } = await pageNiveau({ aisance: 'confirme', copie: true });
+  const A = await appelsNiveau(p);
+  egal(A.map((x) => x[1]), [{ niveau: 'standard', copie: true }, { niveau: 'standard', copie: true }], 'en copie : la référence puis l’élève, au standard, `copie: true`');
+  egal(A.map((x) => x[0]), ['', 'u-niv'], 'en copie : les graines');
+  await p.close();
+  const q = (await pageNiveau({ aisance: 'confirme', role: 'prof' })).p;
+  const B = await appelsNiveau(q);
+  egal(B[B.length - 1][1], { niveau: 'standard', copie: false }, 'l’enseignant : le standard');
+  egal(await q.$eval(`${HOTE} [data-q-consigne]`, (n) => n.textContent.trim()), CONSIGNE_STD, 'l’enseignant : la consigne du standard');
+  await q.close();
+});
+
+await v('Quai niveau : une variante fautive à un niveau est refusée au chargement, avec le niveau dans le message ; la même séance sans la faute s’ouvre', async () => {
+  const r = await pageNiveau({ faute: true });
+  vrai(!!r.message && /^quai du niveau « confirme » : /.test(r.message) && /en double|deux fois|déjà/.test(r.message), `le refus : ${r.message}`);
+  const ok = await pageNiveau({});
+  vrai(!!ok.p, 'la séance sans faute ne s’ouvre pas');
+  if (ok.p) await ok.p.close();
+});
+
+await v('Quai niveau : `etapesQuaiTire(quaiDe, graineDeBase, niveauDe)` juge sur le quai du niveau de la base ; sans `niveauDe`, le standard pour tous', async () => {
+  const R = await pg.evaluate(async () => {
+    const { etapesQuaiTire, etatNeuf } = await import('/core/types/quai.js');
+    const { graineDeBase, niveauEleve } = await import('/core/tirage.js');
+    const E = await import('/outils/essai-quai-inspection.js');
+    // Standard : P1 attendue « accepter » ; confirmé : P1 abîmée (réserves — avarie). Même nombre de jalons aux deux niveaux.
+    const quaiDe = (graine, { niveau } = {}) => {
+      const Q = E.quaiEssai({});
+      if (niveau === 'confirme') Object.assign(Q.camions[0].palettes[0], { avarie: { '0,0,1': 'N' }, attendu: 'reserves', motifAttendu: 'avarie' });
+      return Q;
+    };
+    const baseDe = (aisance) => {
+      const Q = quaiDe('', { niveau: aisance });
+      const e = etatNeuf(Q);
+      e.palettes = e.palettes || {};
+      e.palettes.P1 = Object.assign(e.palettes.P1 || { vue: 0, vues: [0], sonde: null, compte: null, etiqVue: false, detail: {}, motif: 'aucun', res: '', motif2: 'aucun', res2: '', fiche: { temp: '', ref: '', endo: '', manq: '' }, calcul: {} },
+        { compte: 8, decision: 'accepter', motif: 'aucun' });
+      return { aisance, tirage: { graine: 'x' }, quais: { [Q.id]: e } };
+    };
+    const avec = etapesQuaiTire(quaiDe, graineDeBase, (db) => niveauEleve(db));
+    const sans = etapesQuaiTire(quaiDe, graineDeBase);
+    const k = avec.findIndex((x) => /P1 décision/.test(x.titre));
+    return { k, titres: avec.map((x) => x.titre), memes: JSON.stringify(avec.map((x) => x.titre)) === JSON.stringify(sans.map((x) => x.titre)),
+      avecStd: avec[k].verifier(baseDe('standard')).status, avecConf: avec[k].verifier(baseDe('confirme')).status,
+      sansStd: sans[k].verifier(baseDe('standard')).status, sansConf: sans[k].verifier(baseDe('confirme')).status };
+  });
+  vrai(R.k >= 0, `le jalon « P1 décision » introuvable (${R.titres.join(' · ')})`);
+  vrai(R.memes, 'les étapes de référence diffèrent avec et sans niveauDe');
+  egal([R.avecStd, R.avecConf], ['ok', 'attente'], 'avec niveauDe : « accepter » est juste au standard, pas au confirmé');
+  egal([R.sansStd, R.sansConf], ['ok', 'ok'], 'sans niveauDe : le standard pour tous');
+});
+
 await v('Quai iso : la page d’essai ne demande rien hors du site et ne plante pas', async () => {
   const hors = await pe.evaluate(() => performance.getEntriesByType('resource').map((e) => e.name).filter((n) => !n.startsWith(location.origin)));
   egal(hors, [], 'ressources hors du site');

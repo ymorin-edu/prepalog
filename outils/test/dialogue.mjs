@@ -44,7 +44,7 @@ const monter = (o = {}) => pg.evaluate(async ({ o, SEANCE }) => {
   const r = (id) => T.dialogues[0].repliques.find((x) => x.id === id);
   // L'EMBRANCHEMENT (lot 3) : à « jour », « Je ne sais pas » part vers la réplique « rappel-jour » (sans réaction : elle parle) ;
   // la bonne réponse de « jour » saute par-dessus (`vers: 'vehicule'`).
-  if (o.branche || o.faute === 'boucle' || o.faute === 'versInconnu') {
+  if (o.branche || ['boucle', 'versInconnu', 'nivVersCache'].includes(o.faute)) {
     const R = T.dialogues[0].repliques;
     r('jour').choix.find((c) => c.juste).vers = 'vehicule';
     r('jour').choix.push({ v: 'sais-pas', lib: 'Je ne sais pas, je dois demander.', vers: 'rappel-jour' });
@@ -59,6 +59,17 @@ const monter = (o = {}) => pg.evaluate(async ({ o, SEANCE }) => {
     T.face = true; delete T.leurres; T.libelle = 'Au quai';
     T.dialogues[0].contact = { nom: 'Marc — chauffeur', detail: 'camion du Havre' };
     if (o.sansSituation) delete T.situation; else T.situation = 'Accueille le chauffeur sur le quai.';
+  }
+  // LE NIVEAU DE L'ÉLÈVE (lot 4, 17/10/2026) : `o.niveaux` (ou une faute `niv…`) ajoute à la déclaration d'essai des choix et une réplique réservés
+  // à des niveaux : à « accueil », « place » et, à « refs », « produit » et « bientot » ne sont montrés qu'au standard et au confirmé (l'accompagné
+  // voit 2 réponses) ; la réplique « hayon », entre « vehicule » et « confirme », n'est jouée qu'au confirmé.
+  if (o.niveaux || /^niv/.test(o.faute || '')) {
+    r('accueil').choix.find((c) => c.v === 'place').niveaux = ['standard', 'confirme'];
+    r('refs').choix.forEach((c) => { if (['produit', 'bientot'].includes(c.v)) c.niveaux = ['standard', 'confirme']; });
+    const R = T.dialogues[0].repliques;
+    R.splice(R.findIndex((x) => x.id === 'confirme'), 0, { id: 'hayon', dit: 'Et il a un hayon, ce porteur ?', niveaux: ['confirme'],
+      choix: [{ v: 'hayon-oui', juste: true, lib: 'Oui, un hayon élévateur.' },
+        { v: 'hayon-sais-pas', lib: 'Aucune idée.', reaction: 'Regarde la fiche du véhicule, c’est marqué dessus.' }] });
   }
   // L'ÉVALUATION : une phrase neutre après le piège (elle ne dit rien de la réponse).
   if (o.copie) r('refs').choix.find((c) => c.v === 'inverse').neutre = 'D’accord, je note.';
@@ -80,6 +91,14 @@ const monter = (o = {}) => pg.evaluate(async ({ o, SEANCE }) => {
       versInconnu: () => { r('jour').choix.find((c) => c.v === 'sais-pas').vers = 'nulle-part'; },
       faceLeurres: () => { T.face = true; },                    // les leurres de l'essai restent déclarés
       faceType: () => { T.face = 'oui'; delete T.leurres; },
+      // Les niveaux (lot 4) : un niveau inconnu, `niveaux` qui n'est pas une liste, la bonne réponse cachée à un niveau, un seul choix
+      // montré à un niveau, un `vers` vers une réplique non jouée au niveau (avec l'embranchement), une boucle qui n'existe qu'au confirmé.
+      nivInconnu: () => { r('jour').choix[1].niveaux = ['expert']; },
+      nivReplique: () => { r('accueil').niveaux = 'confirme'; },
+      nivJusteCache: () => { r('accueil').choix[0].niveaux = ['confirme']; },
+      nivTropPeu: () => { r('jour').choix[1].niveaux = ['confirme']; },
+      nivVersCache: () => { r('rappel-jour').niveaux = ['confirme']; },
+      nivBoucle: () => { r('hayon').choix[0].vers = 'hayon'; },
       geste: () => { U.questions = { id: SEANCE, personnes: {}, etapes: [], liste: [{ id: 'q', type: 'fil', de: 'nadia', reflexion: true,
         quand: apresGeste('dialogue:quai:refz'), enonce: 'E ?', choix: [{ v: 'a', lib: 'A' }, { v: 'b', lib: 'B' }], retour: 'R.' }] }; },
     };
@@ -99,6 +118,7 @@ const monter = (o = {}) => pg.evaluate(async ({ o, SEANCE }) => {
   const ctx = {
     meta: { ...S.META, ...(o.correction ? { correction: true } : {}), ...(o.copie ? { copie: true, temps: 'evaluation' } : {}) },
     profil: { prenom: 'Lea', nom: 'Test', role: o.role || 'eleve', uid: o.uid || 'u-test' },
+    aisance: o.aisance || 'standard',                       // le niveau de l'élève dans la séance (lot 4), figé dans `db.aisance` par le moteur
     jeu: { etat: () => db, sauver: () => {} },
     enregistrer: (x) => { window.__d.enregistres.push(JSON.parse(JSON.stringify(x))); }, quitter: () => {}, codeStock: 'ESSAI',
     lireScore: async () => null, rendreCopie: async () => ({ rendu: Date.now() }),
@@ -742,6 +762,118 @@ await v('Face à face : `face` avec des leurres (messagerie vocale) est refusé 
   vrai(/face à face : pas de leurres \(messagerie vocale\)/.test(await monter({ faute: 'faceLeurres' })), 'le moteur n’a pas refusé');
   vrai(/`face` vaut true ou false/.test(await monter({ faute: 'faceType' })), 'le moteur n’a pas refusé un `face` qui n’est pas un booléen');
   egal(await monter({ face: true }), 'ok', 'la déclaration en face à face est refusée');
+});
+
+/* ------------------------------------------------------------------ lot 4 : contenu selon le niveau de l'élève (17/10/2026) */
+// La déclaration d'essai avec `niveaux` (voir `monter`) : à « accueil » 3 réponses au standard et au confirmé, 2 à l'accompagné ; à « refs »
+// 4 / 4 / 2 ; la réplique « hayon » jouée au confirmé seulement. Valeurs écrites à la main.
+const ORDRE_CONF = ['accueil', 'refs', 'jour', 'vehicule', 'hayon', 'confirme', 'cloture'];
+const JUSTES_CONF = { ...JUSTES, hayon: 'hayon-oui' };
+const ordreRange = async () => Object.keys(((await appelsQuai())[0] || {}).ordres || {});
+
+await v('Niveaux (lot 4) : fautes par niveau refusées avec le niveau dans le message ; la déclaration à niveaux est acceptée, avec ou sans embranchement', async () => {
+  const attendus = {
+    nivInconnu: /« jour » : `niveaux` du choix « semaine » est une liste parmi standard, confirme, accompagne/,
+    nivReplique: /« accueil » : `niveaux` de la réplique est une liste parmi standard, confirme, accompagne/,
+    nivJusteCache: /« accueil » : la bonne réponse manque au niveau « standard »/,
+    nivTropPeu: /« jour » : il faut 2 à 4 choix au niveau « standard » \(1 montré\)/,
+    nivBoucle: /tournent en rond \(réplique « hayon »\) : l’appel ne finit jamais au niveau « confirme »/,
+    nivVersCache: /« jour » : `vers` = « rappel-jour » n’est pas une réplique jouée au niveau « standard »/,
+  };
+  for (const [faute, re] of Object.entries(attendus)) {
+    const m = await monter({ faute });
+    vrai(re.test(m), `${faute} : ${m}`);
+  }
+  egal(await monter({ niveaux: true }), 'ok', 'la déclaration à niveaux est refusée');
+  egal(await monter({ niveaux: true, branche: true }), 'ok', 'la déclaration à niveaux avec embranchement est refusée');
+  // Sans `niveaux`, les messages d'aujourd'hui, sans mention de niveau.
+  vrai(!/niveau/.test(await monter({ faute: 'boucle' })), 'un dialogue sans `niveaux` parle de niveau dans son message');
+});
+
+await v('Niveaux (lot 4) : l’accompagné voit 2 réponses là où les autres en voient 3 ou 4, ne joue pas la réplique du confirmé ; le niveau est rangé avec l’appel ; note 20', async () => {
+  await monter({ niveaux: true, aisance: 'accompagne' });
+  await aller('telephone');
+  await appeler();
+  egal((await choixAffiches()).sort(), ['presente', 'salut'], 'réponses à « accueil »');
+  await dire('presente');
+  egal((await choixAffiches()).sort(), ['inverse', 'juste'], 'réponses à « refs »');
+  await dire('juste'); await dire('mardi'); await dire('porteur');
+  egal((await choixAffiches()).sort(), ['ouais', 'oui'], 'après « vehicule » : « confirme » tout de suite, pas « hayon »');
+  await dire('oui'); await dire('merci');
+  await raccrocher();
+  const A = (await appelsQuai())[0];
+  egal(A.niveau, 'accompagne', 'le niveau rangé avec l’appel');
+  egal(await ordreRange(), ORDRE, 'les répliques jouées');
+  egal(A.ordres.accueil.slice().sort(), ['presente', 'salut'], 'l’ordre rangé ne porte que les clés montrées');
+  egal(A.ordres.refs.slice().sort(), ['inverse', 'juste'], 'idem à « refs »');
+  egal(Object.keys((await base()).gestes[SEANCE]).sort(), ['dialogue:quai:appeler', ...ORDRE.map((r) => `dialogue:quai:${r}`), 'dialogue:quai:fin'].sort(), 'gestes');
+  egal((await note()).score, 20, 'note');
+});
+
+await v('Niveaux (lot 4) : le confirmé joue la réplique « hayon » entre « vehicule » et « confirme » (geste rangé, `premiereReponse`) et voit toutes les réponses', async () => {
+  await monter({ niveaux: true, aisance: 'confirme' });
+  await aller('telephone');
+  await appeler();
+  egal((await choixAffiches()).sort(), ['place', 'presente', 'salut'], 'réponses à « accueil »');
+  await dire('presente');
+  egal((await choixAffiches()).sort(), ['bientot', 'inverse', 'juste', 'produit'], 'réponses à « refs »');
+  await dire('juste'); await dire('mardi'); await dire('porteur');
+  vrai(/Et il a un hayon, ce porteur \?/.test(await fil()), 'la réplique « hayon » n’est pas posée au confirmé');
+  egal((await choixAffiches()).sort(), ['hayon-oui', 'hayon-sais-pas'], 'réponses à « hayon »');
+  await dire('hayon-sais-pas');
+  vrai(/Regarde la fiche du véhicule/.test(await fil()), 'la réaction de « hayon »');
+  await dire('hayon-oui'); await dire('oui'); await dire('merci');
+  await raccrocher();
+  const A = (await appelsQuai())[0];
+  egal([A.niveau, A.reprises], ['confirme', 1], 'niveau et reprises');
+  egal(await ordreRange(), ORDRE_CONF, 'les répliques jouées, « hayon » comprise');
+  egal(A.pas.filter((p) => p.r === 'hayon').map((p) => p.v), ['hayon-sais-pas', 'hayon-oui'], 'ce qui a été dit à « hayon »');
+  vrai((await base()).gestes[SEANCE]['dialogue:quai:hayon'] >= 1, 'le geste « dialogue:quai:hayon » n’est pas rangé');
+  egal((await note()).score, 20, 'note');
+});
+
+await v('Niveaux (lot 4) : au standard, rien ne change (6 répliques, 3 et 4 réponses, pas de « hayon ») ; en évaluation et pour l’enseignant, le confirmé joue au standard', async () => {
+  for (const o of [{ aisance: 'standard' }, { aisance: 'confirme', copie: true }, { aisance: 'confirme', role: 'prof' }]) {
+    await monter({ niveaux: true, ...o });
+    await aller('telephone');
+    await appeler();
+    const quoi = JSON.stringify(o);
+    egal((await choixAffiches()).sort(), ['place', 'presente', 'salut'], `${quoi} : réponses à « accueil »`);
+    await dire('presente');
+    egal((await choixAffiches()).sort(), ['bientot', 'inverse', 'juste', 'produit'], `${quoi} : réponses à « refs »`);
+    await dire('juste'); await dire('mardi'); await dire('porteur');
+    egal((await choixAffiches()).sort(), ['ouais', 'oui'], `${quoi} : après « vehicule », « confirme » (pas « hayon »)`);
+    await dire('oui'); await dire('merci');
+    await raccrocher();
+    if (o.role === 'prof') { vrai(!(await base()).dialogues, `${quoi} : l’enseignant a écrit dans la base`); continue; }
+    const A = (await appelsQuai())[0];
+    egal([A.niveau, await ordreRange()], ['standard', ORDRE], `${quoi} : niveau rangé et répliques jouées`);
+  }
+});
+
+await v('Niveaux (lot 4) : un appel garde son niveau si le réglage change en route ; un appel d’avant le lot 4 (sans niveau) se joue au standard', async () => {
+  await monter({ niveaux: true, aisance: 'accompagne' });
+  await aller('telephone');
+  await appeler(); await dire('presente');
+  // Le réglage de l'enseignant change (il passe l'élève confirmé) et la page se recharge : l'appel commencé reste au niveau accompagné.
+  await pg.evaluate(() => { window.__d.db.aisance = 'confirme'; });
+  await monter({ niveaux: true, garder: true, aisance: 'confirme' });
+  await aller('telephone');
+  egal((await choixAffiches()).sort(), ['inverse', 'juste'], 'après le changement de réglage, « refs » montre toujours 2 réponses');
+  await dire('juste'); await dire('mardi'); await dire('porteur');
+  egal((await choixAffiches()).sort(), ['ouais', 'oui'], 'toujours pas de « hayon »');
+  // Un appel rangé AVANT le lot 4 : pas de `niveau`. Chez un confirmé, il se joue au standard : « hayon » n'est pas posée.
+  const ancien = { dialogues: { [SEANCE]: { quai: { appels: [{ debut: 1, ordres: {}, textes: {}, pas: [], reprises: 0 }] } } } };
+  await monter({ niveaux: true, aisance: 'confirme', db: ancien });
+  await aller('telephone');
+  egal((await choixAffiches()).sort(), ['place', 'presente', 'salut'], 'un appel sans niveau : les 3 réponses du standard');
+  await dire('presente'); await dire('juste'); await dire('mardi'); await dire('porteur');
+  egal((await choixAffiches()).sort(), ['ouais', 'oui'], 'un appel sans niveau : pas de « hayon »');
+  await dire('oui'); await dire('merci');
+  await raccrocher();
+  const A = (await appelsQuai())[0];
+  // L'appel fabriqué à la main n'avait pas d'ordre rangé pour « accueil » (le moteur ne l'avait pas fait arriver) : les suivantes, oui.
+  egal([A.niveau, await ordreRange()], [undefined, ORDRE.slice(1)], 'l’appel ancien reste sans niveau, répliques du standard');
 });
 
 await v('Téléphone : aucune erreur de page pendant le bloc', async () => {

@@ -387,7 +387,10 @@ opérations quand `db.aisance === 'confirme'`, sans changer celles du jeu standa
 évaluation ne le lit pas). « Accompagné » : contenu à concevoir ; en testant `=== 'confirme'`, la séance lui donne le
 contenu standard. **Jamais affiché à l'élève** ; le détail de la note porte `niveau: 'confirmé'` (ou `'accompagné'`).
 Une séance qui prévoit un contenu par niveau le déclare : `meta.niveauxPrevus: ['confirme']` (colonne de son entreprise
-dans l'onglet « Niveaux » ; voir « Tirage mémorisé et banques » plus bas).
+dans l'onglet « Niveaux » ; voir « Tirage mémorisé et banques » plus bas). Pour le lire proprement : `niveauEleve(db, { copie })`
+(`core/tirage.js`) rend `'standard'` quand le niveau manque, est inconnu, ou en évaluation. Depuis le lot 4 (17/10/2026), **deux vues le
+reçoivent elles-mêmes** : le quai tiré (`quai: (graine, { niveau }) => …`, voir « Le quai reçoit le niveau de l'élève » plus bas) et le
+Dialogue (`niveaux` sur un choix ou une réplique, voir « Vue Dialogue à choix »).
 
 **Vue « quai de réception »** (03/10/2026, pilote Picard ENT-4.x) : la séance déclare `quai: { id, lieu,
 seuilHorsFroid, dechargement, couts, aides, photos, camions: [{ …, palettes }] }` (exemple complet :
@@ -451,6 +454,20 @@ propose alors de choisir un élève du groupe actif. Test obligatoire : des cent
 ⚠ Ne pas toucher à la réserve ni au tirage entre l'ouverture d'une évaluation et le ramassage (le camion des élèves
 changerait) : un test « jeu figé » le rappelle. L'inventaire (ENT-2.5) accepte lui aussi une fonction de la graine
 (voir « Inventaire tiré par élève » plus bas).
+
+**Le quai reçoit le niveau de l'élève** (lot 4 « contenus selon le niveau », 17/10/2026, briefs ENT-8.7 §7.4 et ENT-8.8 §6 bis ; choix de
+Tristan : option 3). Quand `quai` est une fonction, le moteur l'appelle **`quai(graine, { niveau, copie })`** : `niveau` = `niveauEleve(db)`
+(`core/tirage.js` : `db.aisance` ramené à `'standard'` s'il manque, **toujours `'standard'` en évaluation et pour l'enseignant**), `copie` = la
+séance est une copie. Un quai est gardé **par graine et par niveau** ; une fonction qui ne lit que la graine (ENT-4.4, 8.7 à 8.10 aujourd'hui)
+**ne change pas**. Tout ce qui est dans la déclaration devient donc réglable par niveau : `aides` (comptage éteint chez le confirmé, allumé
+chez l'accompagné), `securite.consigne` (un rappel « Fais le tour » chez l'accompagné), les `points` de la scène (un défaut de plus chez le
+confirmé), les palettes… **Au chargement**, le moteur construit les trois variantes de la graine de référence (hors copie) : une déclaration
+fautive à un niveau est refusée tout de suite, message « quai du niveau « confirme » : … ». Le détail de la note porte `detail.quai.niveau`
+quand il n'est pas le standard. La séance qui lit son quai elle-même (jalons `jalonsQuai(db, quaiDeBase(db))`) passe le niveau à sa fonction :
+`quaiDe(graineDeBase(db), { niveau: niveauEleve(db) })` — et **garde son propre cache par graine ET par niveau** s'il en a un.
+`etapesQuaiTire(quaiDe, graineDeBase, niveauDe)` prend un troisième argument facultatif, `(db) => niveau` ; absent, le standard pour tous.
+Règles : un contenu confirmé **ajoute** (jamais un socle différent) ; un chiffre caché ne doit pas se déduire ; une séance qui s'en sert déclare
+`meta.niveauxPrevus`. Tests : bloc `quai-iso` (cas « Quai niveau : … »).
 
 **Second motif** (quai, ENT-4.4) : `deuxMotifs: true` dans la déclaration propose un second menu « motif » sur
 CHAQUE palette (pour ne pas désigner celle qui a deux problèmes) ; la palette déclare `motif2Attendu`. Décision juste
@@ -1312,6 +1329,22 @@ fermetures: { planning: { ouvertSi: dialogueFini('quai'), message: 'Appelle d’
   ```
   Le bouton de la liste dit « Aller le voir » ; l'élève répond, puis « Terminer ». Page d'essai : `outils/essai-dialogue.html`, réglage
   « Cas : face à face ». Tests : bloc `dialogue` (cas « Face à face : … »).
+- **Contenu selon le niveau de l'élève** (lot 4, 17/10/2026, briefs ENT-8.7 §7.4 et ENT-8.8 §6 bis ; choix de Tristan : option 3). Le niveau
+  est `niveauEleve(db)` (`core/tirage.js` : `db.aisance`, **toujours `'standard'` en évaluation et pour l'enseignant**). Deux réglages facultatifs,
+  sans effet quand ils sont absents :
+  - sur un **choix**, `niveaux: ['standard', 'confirme']` : le choix n'est **montré** qu'à ces niveaux (l'accompagné voit 2 réponses au lieu de 3 :
+    les autres portent `niveaux`) ;
+  - sur une **réplique**, `niveaux: ['confirme']` : la réplique n'est **jouée** qu'à ces niveaux (une question de plus au confirmé) ; aux autres,
+    l'appel passe à la réplique suivante comme si elle n'existait pas.
+
+  Le niveau d'un appel est **rangé à son début** (`appel.niveau`) : un réglage changé ensuite ne touche pas un appel commencé ; un appel d'avant
+  le lot 4 (sans `niveau`) se joue au standard. Les gestes portent toutes les répliques, jouées ou non ; `premiereReponse(appel, 'hayon')` rend
+  `null` chez qui ne l'a pas jouée (un jalon qui la lit doit le prévoir : jalon bonus, ou `niveauxPrevus`). **Contrôle au chargement, pour chaque
+  niveau** dès qu'un `niveaux` est déclaré : 2 à 4 choix montrés et la bonne réponse présente à chaque réplique jouée, chaque `vers` vise une
+  réplique jouée à ce niveau, toute branche finit ; les messages disent le niveau (« il faut 2 à 4 choix au niveau « accompagne » (1 montré) »,
+  « la bonne réponse manque au niveau « standard » »). Sans `niveaux`, les messages d'aujourd'hui. `repliquesPour(D, niveau)` (exportée) rend
+  les répliques jouées à un niveau avec leurs choix montrés. Règles : la consigne reste **neutre** (le niveau est caché à l'élève) ; un choix en
+  moins chez l'accompagné retire une maladresse, jamais la bonne réponse. Tests : bloc `dialogue` (cas « Niveaux (lot 4) : … »).
 
 ## Nouveau courriel et fiche enregistrée — `core/types/courriel.js`, `core/types/fiche.js` (14/10/2026)
 

@@ -75,6 +75,14 @@ export function tirerJeu(decl, graine) {
 // La graine rangée dans la base de l'élève ('' tant qu'elle n'a pas été posée).
 export const graineDeBase = (db) => String((db && db.tirage && db.tirage.graine) || '');
 
+// LE NIVEAU DE L'ÉLÈVE DANS LA SÉANCE, tel que le lisent les vues (lot 4 « contenus selon le niveau », 17/10/2026) : `db.aisance`
+// ('standard', 'confirme' ou 'accompagne', figé par `entreprise.js` à la première ouverture), ramené à 'standard' s'il manque ou
+// s'il est inconnu, et TOUJOURS 'standard' en évaluation (`copie: true`) : une évaluation ne lit pas le niveau, comme les cas bonus
+// du tirage. C'est ce que reçoit la fonction d'un quai tiré (`quai: (graine, { niveau, copie }) => …`) et ce que range un appel du
+// Dialogue à son début (`appel.niveau`). Une séance qui calcule elle-même un quai par niveau l'appelle avec sa base.
+export const NIVEAUX_ELEVE = ['standard', 'confirme', 'accompagne'];
+export const niveauEleve = (db, { copie = false } = {}) => (!copie && db && NIVEAUX_ELEVE.includes(db.aisance) ? db.aisance : 'standard');
+
 // À l'ouverture : pose la graine (l'identifiant de l'élève) si la base n'en a pas. Rend vrai si
 // la base a changé (à sauver). Une graine déjà posée n'est JAMAIS remplacée.
 export function poserGraine(db, uid) {
