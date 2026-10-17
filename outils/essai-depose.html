@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="fr" data-theme="clair">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Essai — Kevin pose les palettes où tu lui dis (Prepalog)</title>
+<!-- Page d'ESSAI (maquette cliquable) du lot 2 du chantier « quai en deux séances » : la dépose dirigée par l'élève
+     (brief docs/briefs/ENT-8.7-action-decharger.md §7.2). Elle n'est liée nulle part et ne touche pas au moteur.
+     Aucune requête hors du site. Ouvrir avec `lancer.bat`, puis http://localhost:8000/outils/essai-depose.html -->
+<base href="../">
+<link rel="icon" href="./styles/logo.png">
+<link rel="stylesheet" href="./styles/polices.css">
+<link rel="stylesheet" href="./styles/base.css">
+<link rel="stylesheet" href="./styles/quai.css">
+<link rel="stylesheet" href="./outils/essai-depose.css">
+</head>
+<body>
+<main class="dep-page" data-dep-racine>
+  <h1>Essai : Kevin pose les palettes où tu lui dis (ENT-8.7, lot 2)</h1>
+  <div class="dep-intro">
+    <p>Le quai 2 chez Geodis (centre de distribution Action). Le camion du Havre est à quai, porte ouverte. Kevin sort les quatre palettes une à une au chariot frontal ; avant chaque palette, il attend, la palette sur les fourches, et <b>l'élève clique la case où il la pose</b>. C'est une maquette : rien n'est encore dans le moteur.</p>
+    <ul>
+      <li><b>Guidage</b> : une case piège fait réagir Kevin, elle se grise, l'élève rechoisit. <b>Évaluation</b> : le premier clic pose, même sur un piège, sans un mot.</li>
+      <li>Essaie aussi au clavier : <kbd>Tab</kbd> passe d'une case à l'autre, <kbd>Entrée</kbd> ou <kbd>Espace</kbd> choisit.</li>
+      <li>Le cadre pointillé est l'écran d'un élève en 1366 × 768. « Plein écran » le montre seul, à la taille de ta fenêtre (<kbd>Échap</kbd> pour revenir).</li>
+    </ul>
+  </div>
+  <form class="dep-reglages" data-dep-reglages aria-label="Réglages de l'essai">
+    <fieldset><legend>Les cases</legend>
+      <label><input type="radio" name="variante" value="A" checked> A : 6 cases, 4 justes, 1 allée piétonne, 1 quai 3</label>
+      <label><input type="radio" name="variante" value="B"> B : 8 cases, 4 justes, 2 allée piétonne, 2 quai 3</label></fieldset>
+    <fieldset><legend>Les pièges au sol</legend>
+      <label><input type="radio" name="pieges" value="numerotes" checked> peints et numérotés comme les autres (brief)</label>
+      <label><input type="radio" name="pieges" value="nus"> pas peints : seules R1 à R4 sont des cases</label></fieldset>
+    <fieldset><legend>La séance</legend>
+      <label><input type="radio" name="mode" value="guidage" checked> guidage (Kevin réagit)</label>
+      <label><input type="radio" name="mode" value="copie"> évaluation (le premier clic pose)</label></fieldset>
+    <fieldset><legend>Kevin attend</legend>
+      <label><input type="radio" name="attente" value="sortie" checked> à la sortie du camion</label>
+      <label><input type="radio" name="attente" value="allee"> devant la zone, dans l'allée</label></fieldset>
+    <fieldset><legend>Une case piège refusée</legend>
+      <label><input type="radio" name="grise" value="garde" checked> reste grisée jusqu'à la fin</label>
+      <label><input type="radio" name="grise" value="palette"> se rallume à la palette suivante</label></fieldset>
+    <fieldset><legend>Animation</legend>
+      <label><input type="checkbox" name="calme"> mouvement réduit (aucune animation)</label></fieldset>
+  </form>
+  <p class="dep-actions">
+    <button type="button" class="btn" data-dep-rejouer>↺ Rejouer depuis le début</button>
+    <button type="button" class="btn btn-p" data-dep-plein>Plein écran (gabarit 1366 × 768)</button>
+    <span>Changer un réglage rejoue depuis le début.</span>
+  </p>
+  <div class="dep-gabarit"><div class="dep-ecran" data-dep-ecran></div></div>
+  <section class="dep-sait" aria-labelledby="dep-sait-titre">
+    <h2 id="dep-sait-titre">Ce que la vue sait, calculé maintenant (pour toi, jamais pour l'élève)</h2>
+    <div data-dep-sait></div>
+  </section>
+</main>
+<script type="module">
+import { monterDepose } from './outils/essai-depose.js';
+window.essaiDepose = monterDepose(document.querySelector('[data-dep-racine]'));
+</script>
+</body>
+</html>

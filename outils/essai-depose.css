@@ -1,0 +1,59 @@
+/* Page d'ESSAI de la dépose dirigée (outils/essai-depose.html). Les règles `.dep-case*` et `.dep-grisee` passeront dans
+   styles/quai.css au branchement ; le reste (réglages, gabarit, plein écran) n'appartient qu'à la page d'essai. */
+
+.dep-page{ max-width:1400px; margin:0 auto; padding:14px 16px 40px }
+.dep-page h1{ font-size:20px; margin:0 0 4px }
+.dep-page h2{ font-size:17px; margin:18px 0 6px }
+.dep-intro{ margin:0 0 10px; font-size:14px; max-width:100ch }
+.dep-intro li{ margin:2px 0 }
+.dep-reglages{ display:flex; flex-wrap:wrap; gap:10px; margin:0 0 8px }
+.dep-reglages fieldset{ border:1px solid var(--filet); border-radius:var(--r); background:var(--panneau); padding:6px 12px 8px; margin:0; min-width:0 }
+.dep-reglages legend{ font-weight:700; font-size:13px; padding:0 4px }
+.dep-reglages label{ display:block; font-size:14px; margin:3px 0; font-weight:400 }
+.dep-reglages input{ width:auto; display:inline-block; margin-right:4px }
+.dep-actions{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:0 0 8px; font-size:13px; color:var(--encre-douce) }
+
+/* Le gabarit de l'écran élève : 1366 × 768 (ou la largeur de la fenêtre si elle est plus étroite). */
+.dep-gabarit{ position:relative; width:min(1366px, 100%); height:768px; margin:0 auto; border:2px dashed var(--encre-douce); border-radius:6px; overflow:hidden; background:var(--fond); box-sizing:border-box }
+.dep-ecran{ display:flex; flex-direction:column; gap:8px; height:100%; padding:10px 14px; box-sizing:border-box }
+.dep-bandeau{ display:flex; flex-wrap:wrap; gap:4px 14px; align-items:center; padding:8px 12px; border-radius:var(--r); background:var(--encre); color:var(--fond); font-size:14px }
+.dep-bandeau b{ font-size:16px }
+.dep-maquette{ border:1px solid currentColor; border-radius:10px; padding:0 8px; font-size:11px; text-transform:uppercase; letter-spacing:.05em }
+.dep-quitter{ margin-left:auto; font:inherit; font-size:13px; color:inherit; background:transparent; border:1px solid currentColor; border-radius:var(--r); padding:3px 10px; cursor:pointer }
+.dep-quitter:focus-visible{ outline:2px solid var(--fond); outline-offset:2px }
+.dep-stepper{ display:flex; gap:18px; list-style:none; margin:0; padding:0 2px; font-size:14px; color:var(--encre-douce) }
+.dep-stepper .ici{ color:var(--encre); font-weight:700; border-bottom:3px solid var(--ardoise) }
+.dep-consigne{ margin:0; font-size:15px }
+.dep-scene{ flex:0 1 auto; min-height:0; display:flex; flex-direction:column }
+.quai-scene2.quai-iso.dep-scene svg{ flex:1 1 auto; min-height:0; width:100%; height:auto; max-height:470px }
+.dep-barre{ flex:0 0 auto }
+.dep-ecran .quai-fin-decharge{ flex:0 0 auto }
+.dep-sr{ position:absolute; width:1px; height:1px; margin:-1px; padding:0; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0 }
+
+/* Plein écran : l'écran élève seul, à la taille de la fenêtre (à 1366 × 768, c'est le gabarit). Échap ou le bouton du bandeau pour sortir. */
+body.dep-plein{ overflow:hidden }
+body.dep-plein .dep-gabarit{ position:fixed; inset:0; width:100vw; height:100vh; margin:0; border:0; border-radius:0; z-index:100 }
+
+/* Les cases de la dépose (couche au-dessus du dessin). Le dessin iso garde ses teintes claires quel que soit le thème : les
+   traits sont donc des teintes FIXES (encre et papier de la charte claire), jamais du vert (le vert plein dit « juste »). */
+.dep-case{ cursor:pointer; outline:none }
+.dep-case-zone{ fill:rgba(26,25,21,0); pointer-events:all }
+.dep-case-halo{ fill:none; stroke:#fdfbf7; stroke-width:7; stroke-opacity:.92; pointer-events:none; animation:depLueur 1.6s ease-in-out infinite }
+.dep-case-trait{ fill:none; stroke:#1a1915; stroke-width:2.6; stroke-dasharray:9 5; pointer-events:none }
+.dep-case:hover .dep-case-zone{ fill:rgba(26,25,21,.10) }
+.dep-case:hover .dep-case-trait{ stroke-width:3.6; stroke-dasharray:none }
+.dep-case:focus-visible .dep-case-zone{ fill:rgba(26,25,21,.10) }
+.dep-case:focus-visible .dep-case-halo{ stroke-width:12; animation:none; stroke-opacity:1 }
+.dep-case:focus-visible .dep-case-trait{ stroke-width:4; stroke-dasharray:none }
+@keyframes depLueur{ 0%, 100%{ stroke-opacity:.92 } 50%{ stroke-opacity:.35 } }
+@media (prefers-reduced-motion: reduce){ .dep-case-halo{ animation:none } }
+.dep-calme .dep-case-halo{ animation:none }
+
+/* Le cadre « ce que la vue sait ». */
+.dep-sait{ border:1px solid var(--filet); border-radius:var(--r); background:var(--panneau); padding:8px 14px; margin-top:14px; font-size:14px }
+.dep-sait p{ margin:6px 0 }
+.dep-defile{ overflow-x:auto }
+.dep-table{ border-collapse:collapse; margin:4px 0 8px; font-size:14px }
+.dep-table caption{ text-align:left; font-weight:700; padding:0 0 4px }
+.dep-table th, .dep-table td{ border:1px solid var(--filet); padding:3px 8px; text-align:left }
+.dep-sait pre{ white-space:pre-wrap; word-break:break-word; font-size:12px; background:var(--fond); padding:6px; border-radius:var(--r) }
