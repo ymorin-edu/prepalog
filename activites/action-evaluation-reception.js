@@ -9,6 +9,8 @@ export const meta = {
   titre: 'Action — évaluation : recevoir un camion dans un nouveau site',
   desc: 'Appliquer le protocole de sécurité, accueillir le chauffeur, vérifier le quai et le camion, faire décharger, contrôler les palettes, écrire les réserves et rendre compte.',
   rubrique: 'simulog',
+  immersif: true,
+  portee: 'eleve',
   niveaux: ['cap'],
   competences: [],
   competencesCap: ['CAP-C1.3', 'CAP-C1.4'],

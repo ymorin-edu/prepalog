@@ -8,6 +8,8 @@ export const meta = {
   titre: 'Action — la palette de Lucas',
   desc: 'Recevoir seul un camion de jouets à Labastide, de l’accueil du chauffeur aux réserves, puis traiter une palette abîmée acceptée sans réserve la veille.',
   rubrique: 'simulog',
+  immersif: true,
+  portee: 'eleve',
   niveaux: ['cap'],
   competences: [],
   competencesCap: ['CAP-C1.3', 'CAP-C1.4'],
