@@ -15,12 +15,12 @@
 import { apresFiche, dialogueFini, quaiDecharge } from '../core/declencheurs.js';
 import { jalonsQuai } from '../core/types/quai.js';
 import { jalonDialogue, premiereReponse } from '../core/types/dialogue.js';
-import { graineDeBase } from '../core/tirage.js';
+import { graineDeBase, niveauEleve } from '../core/tirage.js';
 import { QUESTIONS } from './questions/ENT-8.7.js';
 import { EQUIPE, LEXIQUE, STYLE_DOCUMENTS, PIED, mailDe, figure, DOC_DROIT_QUAI, protocoleSecurite, STYLE_PROTOCOLE } from './action.js';
 import {
   ID, ID_VOLET, QUAI_ID, FICHE_ID, DIALOGUE, SPEC_PROTOCOLE, TIRAGE, ENGIN, REPLIQUES, JUSTES_DIALOGUE, FIN_DIALOGUE,
-  situationsDe, situationsBonus, choixDe, melangerPour, quaiDe, PALETTES, SAMIA_QUAI,
+  situationsDe, situationsBonus, choixDe, melangerPour, quaiDe, anomalieDe, anomalieBonusDe, PALETTES, SAMIA_QUAI,
 } from './action-ent87-donnees.js';
 
 export { TIRAGE };
@@ -43,8 +43,8 @@ const geste = (db, nom) => !!(db && db.gestes && db.gestes[ID] && db.gestes[ID][
 // Une fiche « déjà envoyée une fois » : vraie aussi pendant une correction (« Corriger » retire `envoye`, le geste reste rangé).
 export const dejaEnvoyee = (id) => (db) => envoyee(db, id) || geste(db, `fiche:${id}:envoyer`);
 const ok = { status: 'ok' }, ko = { status: 'ko' }, attente = { status: 'attente' };
-// Le quai de CET élève (sa graine) et son état.
-export const quaiEleve = (db) => quaiDe(graineDeBase(db));
+// Le quai de CET élève (sa graine ET son niveau, lot 4 : comme le moteur) et son état.
+export const quaiEleve = (db) => quaiDe(graineDeBase(db), { niveau: niveauEleve(db) });
 const etatQuai = (db) => (db && db.quais && db.quais[QUAI_ID]) || null;
 
 // ─────────────────────────────────────────────────────────────── les documents (reconstitués ; pieds « Document pédagogique »)
@@ -159,7 +159,8 @@ const jalonAccueil = (id, replique, titre, poids) => jalonDialogue({ seance: ID,
 const ligneQuai = (db, id) => jalonsQuai(db, quaiEleve(db)).L.find((l) => l.id === id) || null;
 const inspectionFigee = (db) => !!(etatQuai(db) && etatQuai(db).securite && etatQuai(db).securite.fait);
 const dechargeFini = (db) => !!(etatQuai(db) && etatQuai(db).dechargeFini);
-export const pointDanger = (db) => quaiEleve(db).securite.points.find((p) => !p.ok);
+// Le danger du SOCLE (le confirmé en a un second, `bonus-danger`, qui ne compte pas dans le socle).
+export const pointDanger = (db) => quaiEleve(db).securite.points.find((p) => p.id === anomalieDe(graineDeBase(db)));
 const jalonQuai = (id, titre, groupe, poids, fini, ligne) => ({ id, titre, groupe, poids,
   verifier(db) { if (!fini(db)) return attente; const l = ligne(db); if (!l) throw new Error(`ligne du quai « ${id} » absente`); return l.ok ? ok : ko; } });
 
@@ -184,6 +185,10 @@ export const ETAPES = [
   { id: 'bonus-situation', titre: 'Le protocole : une situation de plus', bonus: true, ecran: ECRAN_FICHE,
     verifier(db) { const B = situationsBonus(db); if (!B.length) return null; if (!envoyee(db, FICHE_ID)) return attente;
       return B.every((s) => valeurDe(db, FICHE_ID, s.id) === s.juste) ? ok : ko; } },
+  // Le 2e danger de la scène du confirmé (lot 4) : `null` chez qui ne l'a pas reçu ; jugé comme le danger du socle, sans effet sur sa note.
+  { id: 'bonus-danger', titre: 'Avant de décharger : un danger de plus', bonus: true,
+    verifier(db) { if (niveauEleve(db) !== 'confirme') return null; if (!inspectionFigee(db)) return attente;
+      const l = ligneQuai(db, `securite-${anomalieBonusDe(graineDeBase(db))}`); if (!l) throw new Error('ligne du quai « bonus-danger » absente'); return l.ok ? ok : ko; } },
 ];
 
 // ─────────────────────────────────────────────────────────────── l'ordre des écrans, lexique, accueil, options

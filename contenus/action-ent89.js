@@ -27,8 +27,9 @@ import { QUESTIONS } from './questions/ENT-8.9.js';
 import { ENTREPRISE as ENT_ACTION, VOCAB as VOCAB_ACTION, LEXIQUE, STYLE_DOCUMENTS, PIED, PIED_RECONSTITUTION, ech, protocoleSecurite, STYLE_PROTOCOLE } from './action.js';
 import {
   ID, ID_VOLET, QUAI_ID, FICHE_ID, DIALOGUE, PHRASES_ID, DOCUMENT, BL_LUCAS, SPEC_PROTOCOLE, REPLIQUES, JUSTES_DIALOGUE, FIN_DIALOGUE, LIGNES_LUCAS,
-  CONSIGNE_ROMAIN, PALETTES, jeuDeBase, duRole, conformes, quaiDe, quaiDeBase, dateLucas, justeLucas, melangerPour, phrasesCompteRendu,
+  CONSIGNE_ROMAIN, PALETTES, jeuDeBase, duRole, conformes, quaiDe, quaiDeBase, sceneBonusDe, dateLucas, justeLucas, melangerPour, phrasesCompteRendu,
 } from './action-ent89-donnees.js';
+import { graineDeBase, niveauEleve } from '../core/tirage.js';
 
 export { ID, QUAI_ID, FICHE_ID, PHRASES_ID };
 
@@ -327,6 +328,10 @@ export const ETAPES = [
     verifier(db) { if (!envoyee(db, FICHE_ID)) return attente; return okSi(valeurDe(db, FICHE_ID, l.id) === justeLucas(db, l.id)); } })),
   ligneCR('cr-reception', 'Le compte rendu : ma réception', 'reception'),
   ligneCR('cr-lucas', 'Le compte rendu : la palette de Lucas', 'lucas'),
+  // La 3e anomalie de scène du confirmé (lot 4) : `null` chez qui ne l'a pas reçue ; jugée comme les deux du socle, sans effet sur sa note.
+  { id: 'bonus-danger', titre: 'Avant de décharger : un danger de plus', bonus: true,
+    verifier(db) { if (niveauEleve(db) !== 'confirme') return null; if (!inspectionFigee(db)) return attente;
+      const l = lq(db, `securite-${sceneBonusDe(graineDeBase(db), jeuDeBase(db))}`); return okSi(l.ok, l.fait); } },
 ];
 
 // ─────────────────────────────────────────────────────────────── l'ordre des écrans, lexique, accueil, options

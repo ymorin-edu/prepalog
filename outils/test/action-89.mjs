@@ -247,14 +247,15 @@ await v('ENT-8.9 : déclaration (CAP, C1.3 + C1.4, entraînement, 20 points, par
     const Qs = await import('/contenus/questions/ENT-8.9.js');
     const D = await import('/contenus/action-ent89-donnees.js');
     const Qm = await import('/core/types/quai.js');
-    const m = A.meta, E = S.ETAPES;
+    // Le socle (jalons pondérés) à part des cas bonus (lot 4 : `bonus-danger`, sans poids ni groupe).
+    const m = A.meta, E = S.ETAPES.filter((e) => !e.bonus), B = S.ETAPES.filter((e) => e.bonus);
     const q = D.quaiDe('temoin-1');
     return {
       m: [m.id, m.code, m.rubrique, m.niveaux, m.competences, m.competencesCap, m.temps, m.bareme, m.parcours, m.correction, m.bilanDetail, m.precedente,
         m.niveauxPrevus, m.questions, m.pret, m.ouverture, m.corrige],
       ids: E.map((e) => e.id), poids: E.map((e) => e.poids), somme: E.reduce((t, e) => t + e.poids, 0), part: Qs.QUESTIONS.part,
       parGroupe: Object.entries(E.reduce((o, e) => { o[e.groupe] = (o[e.groupe] || 0) + e.poids; return o; }, {})),
-      ecrans: [...new Set(E.filter((e) => e.ecran).map((e) => e.ecran))], bonus: E.filter((e) => e.bonus).length,
+      ecrans: [...new Set(E.filter((e) => e.ecran).map((e) => e.ecran))], bonus: B.map((e) => [e.id, e.poids, e.groupe]),
       qFil: Qs.QUESTIONS.liste.filter((x) => x.type === 'fil').map((x) => [x.id, x.de, x.poids, x.apres || 'tout de suite', !!x.reflexion, x.quand.gestes]),
       ouv: [Qs.QUESTIONS.ouverture.tirage, Qs.QUESTIONS.ouverture.questions.length],
       quai: [q.id, q.rendu, q.froid, q.commence, q.arret, q.document, q.recommencer, q.securite.mode, q.securite.arret, q.securite.points.filter((p) => !p.ok).map((p) => p.objet),
@@ -263,14 +264,14 @@ await v('ENT-8.9 : déclaration (CAP, C1.3 + C1.4, entraînement, 20 points, par
     };
   });
   egal(r.m, ['action-palette-lucas', 'ENT-8.9', 'simulog', ['cap'], [], ['CAP-C1.3', 'CAP-C1.4'], 'entrainement', 20, true, true, true, 'action-controler',
-    undefined, 'ENT-8.9', true, 'prof', './contenus/corriges/ENT-8.9.js'], 'meta ENT-8.9');
+    ['confirme', 'accompagne'], 'ENT-8.9', true, 'prof', './contenus/corriges/ENT-8.9.js'], 'meta ENT-8.9');
   egal(r.ids, JALONS, 'jalons');
   egal(r.poids, [0.5, 0.75, 0.5, 0.75, 0.5, 1.25, 1.25, 0.5, 0.25, 0.25, 0.25, 0.25, 0.5, 0.5, 1.5, 1, 0.5, 0.5, 1, 1, 1, 0.75, 0.75], 'poids jalon par jalon (écrits à la main)');
   proche(r.somme + r.part, 20, 'somme des poids des jalons et des questions');
   egal(r.parGroupe, [['Accueillir le chauffeur', 3], ['Avant de décharger', 3], ['Faire décharger et contrôler', 5.5], ['La palette de Lucas', 3], ['Rendre compte', 1.5]],
     'points par ligne du bandeau (brief §5)');
   egal(r.ecrans, ['dialogue:jan', 'fiche:lucas', `phrases:${PHR}`], '« Corriger » rouvre le dialogue, la fiche de Lucas et les phrases ; jamais le quai');
-  egal(r.bonus, 0, 'aucun cas bonus (le quai ne connaît pas le niveau)');
+  egal(r.bonus, [['bonus-danger', undefined, undefined]], 'un cas bonus (la 3e anomalie de scène du confirmé, lot 4), sans poids ni groupe');
   egal(r.qFil, [['qui-paie', 'romain', 1.5, 'tout de suite', false, [`quai:${QID}:cloturer`]], ['refus-signer', 'romain', 1.5, 'bilan', false, [`quai:${QID}:valider`]],
     ['rappel-lucas', 'ines', 1, 'tout de suite', false, ['fiche:lucas:envoyer']], ['se-comprendre', 'romain', undefined, 'tout de suite', true, ['dialogue:jan:fin']]], 'questions au fil');
   egal(r.ouv, [{ preparation: 3, image: 1 }, 10], 'Avant de commencer : 10 notions, 3 + 1 tirées');
@@ -557,14 +558,61 @@ await v('ENT-8.9 : étape suivante — la barre mène à « Au quai », au quai,
   egal(await barre(), 'Étape suivante : Rendre compte à Romain Y aller →', 'après la fiche');
 });
 
-await v('ENT-8.9 : confirmé — même contenu que le standard (aucun bonus), bandeau identique, note du socle ; aucun « bonus » écrit', async () => {
+// Le quai de la base montée, vu par le contenu (lot 4) : objets en danger, aides, forme du calcul ; et le 3e danger du confirmé pour une graine.
+const quaiMonte = () => pg.evaluate(async () => {
+  const D = await import('/contenus/action-ent89-donnees.js');
+  const q = D.quaiDeBase(window.__f.db);
+  return { dangers: q.securite.points.filter((p) => !p.ok).map((p) => p.id).sort(), aides: q.aides, calcul: q.calcul.forme };
+});
+const bonusDanger = (graine) => pg.evaluate(async (g) => (await import('/contenus/action-ent89-donnees.js')).sceneBonusDe(g), graine);
+
+await v('ENT-8.9 (lot 4) : confirmé — 3 dangers sur la scène ; les deux du socle seuls signalés : bonus 0 / 1, note du socle 20, bandeau identique, aucun « bonus » écrit', async () => {
   await monter({ uid: 'ac89-conf', graine: 'temoin-4', aisance: 'confirme' });
+  const bonus = await bonusDanger('temoin-4');
+  vrai(bonus && !T4.scene.includes(bonus), `le 3e danger : ${bonus}`);
+  egal(await quaiMonte(), { dangers: [...T4.scene, bonus].sort(), aides: {}, calcul: 'brouillon' }, 'le quai du confirmé : trois dangers, aides éteintes');
   await parcours(T4);
   const n = await note();
-  proche(n.score, 20, 'note');
-  egal(n.detail.bonus, undefined, 'pas de bonus');
+  proche(n.score, 20, 'note du socle');
+  egal(n.detail.bonus && [n.detail.bonus.justes, n.detail.bonus.total, n.detail.bonus.etats], [0, 1, { 'bonus-danger': 'ko' }], 'le 3e danger non signalé : bonus faux');
+  egal([n.detail['securite-1'], n.detail['securite-2'], n.detail['securite-aucun-faux']], ['ok', 'ok', 'ok'], 'le socle ne bouge pas');
   egal((await fin()).lignes, GROUPES.map((g) => [g, 'ok']), 'bandeau');
   vrai(!/bonus/i.test(await texte()), 'le mot « bonus » à l’écran');
+});
+
+await v('ENT-8.9 (lot 4) : confirmé — les trois dangers signalés : bonus 1 / 1 ; le standard de la même graine : deux dangers, le même socle, pas de jalon bonus', async () => {
+  await monter({ uid: 'ac89-conf2', graine: 'temoin-1', aisance: 'confirme' });
+  const bonus = await bonusDanger('temoin-1');
+  await parcours(T1, { envois: [[...T1.scene, bonus]] });
+  const n = await note();
+  proche(n.score, 20, 'note du socle');
+  egal(n.detail.bonus && [n.detail.bonus.justes, n.detail.bonus.total, n.detail.bonus.etats], [1, 1, { 'bonus-danger': 'ok' }], 'bonus juste');
+  await monter({ uid: 'ac89-std2', graine: 'temoin-1' });
+  egal(await quaiMonte(), { dangers: T1.scene.slice().sort(), aides: {}, calcul: 'brouillon' }, 'le standard : deux dangers, aides éteintes');
+  egal((await note()).detail.bonus, undefined, 'pas de bonus chez le standard');
+});
+
+await v('ENT-8.9 (lot 4) : accompagné — aides de comptage allumées (comme le standard d’ENT-8.8), 2 réponses par réplique, deux dangers, note 20, aucun bonus', async () => {
+  await monter({ uid: 'ac89-acc', graine: 'temoin-4', aisance: 'accompagne' });
+  egal(await quaiMonte(), { dangers: T4.scene.slice().sort(), aides: { regleCouches: true, detailComptage: true, repere: true, chefDeQuai: true, consignes: true }, calcul: 'feuille' },
+    'le quai de l’accompagné : aides allumées, feuille de calcul, deux dangers');
+  await allerV('telephone');
+  await pg.click(Q('[data-dlg-appeler="jan"]')); await pause();
+  const PREMIERES = { arrivee: 'long', documents: 'rien', quai: 'long', attente: 'camion', fin: 'ciao' };
+  for (const r of ORDRE_DIAL) {
+    const L = await pg.$$eval(Q('[data-dlg-choix]'), (B) => B.map((b) => b.dataset.dlgChoix).sort());
+    egal(L, [DIAL[r], PREMIERES[r]].sort(), `réponses à « ${r} »`);
+    await dire(DIAL[r]);
+  }
+  await pg.click(Q('[data-dlg-raccrocher]')); await pause();
+  await qrep(BONNES_Q, []);
+  await quai(T4, { vus: [] });
+  await ficheLucas(T4.lucas, BONNES_Q, []);
+  await compteRendu(T4.cr, BONNES_Q);
+  const n = await note();
+  proche(n.score, 20, 'note');
+  egal(n.detail.bonus, undefined, 'aucun bonus chez l’accompagné');
+  egal((await fin()).lignes, GROUPES.map((g) => [g, 'ok']), 'bandeau');
 });
 
 await v('ENT-8.9 : parcours — fermée tant qu’ENT-8.8 n’a pas son premier bilan, ouverte ensuite', async () => {

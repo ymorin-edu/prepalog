@@ -26,7 +26,7 @@
 // niveau de l'élève (même limite qu'ENT-8.7) ; écart dit au compte rendu. ⚠ Le jeu d'un élève est une fonction de son identifiant ET de ce fichier :
 // ne pas changer le tirage pendant qu'une classe joue la séance.
 
-import { tirerJeu, graineDeBase, hasard } from '../core/tirage.js';
+import { tirerJeu, graineDeBase, hasard, niveauEleve } from '../core/tirage.js';
 
 export const ID = 'action-palette-lucas';
 export const ID_VOLET = 'action-ent89';
@@ -203,7 +203,16 @@ export function securiteDe(scene) {
     signaler: { qui: 'Romain', rien: 'Là, je ne vois rien qui cloche.' },
   };
 }
-export function quaiDuJeu(jeu) {
+// LE NIVEAU DE L'ÉLÈVE (lot 4, 17/10/2026, brief §6 bis) : le quai reçoit `niveau` du moteur (`quai: (graine, { niveau }) => …`).
+//   - standard : aides de comptage éteintes, brouillon libre (entraînement, COORDINATION §8.5) ;
+//   - accompagné : aides de comptage allumées, comme le standard d'ENT-8.8 (règle des couches, détail, repère, Romain qui explique), feuille avec rappel ;
+//   - confirmé : une 3e anomalie de scène (`bonus`), tirée de la graine parmi les objets que le socle n'a pas pris ; jalon `bonus-danger`.
+export const AIDES_ACCOMPAGNE = { regleCouches: true, detailComptage: true, repere: true, chefDeQuai: true, consignes: true };
+export const sceneBonusDe = (graine, jeu = jeuDe(graine)) => hasard(`${graine == null ? '' : graine}|${ID}|scene-bonus`)
+  .choisir(Object.keys(OBJETS).filter((o) => !jeu.scene.includes(o)));
+
+export function quaiDuJeu(jeu, { niveau = 'standard', bonus = null } = {}) {
+  const accompagne = niveau === 'accompagne';
   return {
     id: QUAI_ID,
     libelle: 'Le quai 5',
@@ -218,11 +227,11 @@ export function quaiDuJeu(jeu) {
     document: DOCUMENT,
     recommencer: false,
     motifs: ['avarie', 'manquant'],
-    // Entraînement : aides de comptage ÉTEINTES pour tous (COORDINATION §8.5), comme ENT-6.4 ; brouillon de calcul libre.
-    calcul: { forme: 'brouillon' },
-    aides: {},
+    // Entraînement : aides de comptage ÉTEINTES (COORDINATION §8.5), comme ENT-6.4, brouillon libre ; ALLUMÉES chez l'accompagné (lot 4).
+    calcul: accompagne ? { forme: 'feuille', rappel: true } : { forme: 'brouillon' },
+    aides: accompagne ? { ...AIDES_ACCOMPAGNE } : {},
     dechargement: { ouverture: 0.5, parPalette: 1, par: 'cariste', nom: 'Lucas' },
-    securite: securiteDe(jeu.scene),
+    securite: securiteDe(bonus ? jeu.scene.concat([bonus]) : jeu.scene),
     depose: JSON.parse(JSON.stringify(DEPOSE)),
     camions: [{
       transporteur: CAMION.transporteur, fournisseur: CAMION.fournisseur, bl: BL_NUMERO, arrivee: '07:00',
@@ -236,9 +245,14 @@ export function quaiDuJeu(jeu) {
     }],
   };
 }
-// Le quai d'une graine (une déclaration neuve à chaque appel : le moteur garde la sienne en cache).
-export const quaiDe = (graine) => quaiDuJeu(jeuDe(graine));
-export const quaiDeBase = (db) => quaiDe(graineDeBase(db));
+// Le quai d'une graine ET d'un niveau (une déclaration neuve à chaque appel : le moteur garde la sienne en cache, par graine et par niveau).
+export const quaiDe = (graine, { niveau = 'standard' } = {}) => {
+  const jeu = jeuDe(graine);
+  return quaiDuJeu(jeu, { niveau, bonus: niveau === 'confirme' ? sceneBonusDe(graine, jeu) : null });
+};
+export const quaiDeBase = (db) => quaiDe(graineDeBase(db), { niveau: niveauEleve(db) });
+// Les choix réservés aux niveaux standard et confirmé : l'accompagné voit 2 réponses par réplique, la juste et la première maladresse (lot 4).
+const PLEINS = ['standard', 'confirme'];
 
 /* ================================================================== le dialogue avec Jan (brief §6.2, tel quel ; vouvoiement) */
 // Les gestes entre parenthèses (« et la main montre le 5 », « pictogramme montré ») sont écrits comme une indication : CONSTRUIT par Claude Code.
@@ -246,23 +260,23 @@ export const REPLIQUES = [
   { id: 'arrivee', dit: 'Bonjour. Livraison. Jouets.', choix: [
     { v: 'bienvenue', juste: true, lib: 'Bonjour ! Bienvenue. Je suis {prenom}.' },
     { v: 'long', lib: 'Salut, c’est pour quoi exactement, votre livraison ?', reaction: 'Pardon ? Pas compris.' },
-    { v: 'ouais', lib: 'Ouais.', reaction: '… Bonjour ?' }] },
+    { v: 'ouais', lib: 'Ouais.', reaction: '… Bonjour ?', niveaux: PLEINS }] },
   { id: 'documents', dit: 'Papiers ?', choix: [
     { v: 'ldv', juste: true, lib: 'Oui : la lettre de voiture et le bon de livraison, s’il vous plaît.' },
     { v: 'rien', lib: 'Non, pas besoin.', reaction: 'Pas besoin ? Sûr ?' },
-    { v: 'identite', lib: 'Montrez-moi votre carte d’identité.', reaction: 'Carte ? Pourquoi ?' }] },
+    { v: 'identite', lib: 'Montrez-moi votre carte d’identité.', reaction: 'Carte ? Pourquoi ?', niveaux: PLEINS }] },
   { id: 'quai', dit: 'Quel quai ?', choix: [
     { v: 'quai5', juste: true, lib: 'Quai 5. Marche arrière, jusqu’aux butoirs. (Tu montres le 5 de la main.)' },
     { v: 'long', lib: 'Vous voyez le grand bâtiment au fond à gauche après le rond-point, c’est un peu plus loin.', reaction: 'Pardon ? Trop vite.' },
-    { v: 'ou', lib: 'Où vous voulez.', reaction: 'Où ? Quel numéro ?' }] },
+    { v: 'ou', lib: 'Où vous voulez.', reaction: 'Où ? Quel numéro ?', niveaux: PLEINS }] },
   { id: 'attente', dit: 'Moi, attendre où ?', choix: [
     { v: 'local', juste: true, lib: 'Moteur coupé. Les clés, s’il vous plaît. Vous attendez au local chauffeurs, là. (Tu montres le pictogramme.)' },
     { v: 'camion', lib: 'Restez dans votre camion, au chaud.', reaction: 'Dans camion ? Protocole dit non…' },
-    { v: 'aider', lib: 'Venez aider Lucas.', reaction: 'Moi décharger ? Non, pas permis.' }] },
+    { v: 'aider', lib: 'Venez aider Lucas.', reaction: 'Moi décharger ? Non, pas permis.', niveaux: PLEINS }] },
   { id: 'fin', dit: 'D’accord. Merci.', choix: [
     { v: 'merci', juste: true, lib: 'Merci à vous. Je viens vous chercher après le contrôle.' },
     { v: 'ciao', lib: 'Ciao !', reaction: '… Ciao.', accepte: true },
-    { v: 'bon', lib: 'Bon.', reaction: '…', accepte: true }] },
+    { v: 'bon', lib: 'Bon.', reaction: '…', accepte: true, niveaux: PLEINS }] },
 ];
 export const JUSTES_DIALOGUE = Object.fromEntries(REPLIQUES.map((r) => [r.id, r.choix.find((c) => c.juste).v]));
 export const FIN_DIALOGUE = 'D’accord. J’attends.';   // CONSTRUIT par Claude Code (le brief ne donne pas la dernière bulle)

@@ -235,7 +235,7 @@ await v('ENT-8.7 : déclaration (CAP, CAP-C1.3, guidage, 20 points, parcours apr
       ouv: [Q.QUESTIONS.ouverture.tirage, Q.QUESTIONS.ouverture.questions.length],
     };
   });
-  egal(r.m, ['action-decharger', 'ENT-8.7', 'simulog', ['cap'], [], ['CAP-C1.3'], 'guidage', 20, true, true, true, 'action-avant-noel', ['confirme'], 'ENT-8.7',
+  egal(r.m, ['action-decharger', 'ENT-8.7', 'simulog', ['cap'], [], ['CAP-C1.3'], 'guidage', 20, true, true, true, 'action-avant-noel', ['confirme', 'accompagne'], 'ENT-8.7',
     true, 'prof', './contenus/corriges/ENT-8.7.js'], 'meta ENT-8.7');
   egal(r.ids, JALONS, 'jalons du socle');
   egal(r.poids, [0.5, 1, 1, 1.5, 0.5, 1, 1.5, 1.5, 3, 1, 1, 0.625, 0.625, 0.625, 0.625], 'poids jalon par jalon (écrits à la main)');
@@ -246,7 +246,7 @@ await v('ENT-8.7 : déclaration (CAP, CAP-C1.3, guidage, 20 points, parcours apr
     ['pourquoi-local', 'samia', undefined, true, 'tout de suite', ['fiche:protocole:envoyer']],
     ['decharge-quand-meme', 'kevin', 1.5, false, 'tout de suite', ['scene:action-quai2-decharger:signaler']],
     ['peut-partir', 'samia', 1, false, 'tout de suite', ['quai:action-quai2-decharger:dechargement']]], 'questions au fil');
-  egal(r.bonus, [['bonus-situation', undefined, undefined]], 'cas bonus sans poids ni groupe');
+  egal(r.bonus, [['bonus-situation', undefined, undefined], ['bonus-danger', undefined, undefined]], 'cas bonus sans poids ni groupe (situation, 2e danger du lot 4)');
   egal(r.ouv, [{ preparation: 3, image: 1 }, 10], 'Avant de commencer : 10 notions, 3 + 1 tirées');
 });
 
@@ -500,17 +500,76 @@ await v('ENT-8.7 : bilan détaillé — la ligne d’une situation porte la SITU
   if (CAPTURES) await pg.screenshot({ path: `${CAPTURES}/7-bilan-detail.png`, fullPage: true });
 });
 
-await v('ENT-8.7 : confirmé à l’écran — 4 situations + « qui décharge », bandeau identique (5 lignes), aucun « bonus » écrit, bonus faux sans effet sur la note du socle', async () => {
+// Le 2e danger de la scène du confirmé pour une graine (lot 4), calculé par le contenu lui-même.
+const bonusDanger = (graine) => pg.evaluate(async (g) => (await import('/contenus/action-ent87-donnees.js')).anomalieBonusDe(g), graine);
+// Les objets en danger du quai de la base montée, et sa consigne de scène.
+const sceneDe = () => pg.evaluate(async () => {
+  const C = await import('/contenus/action-ent87.js');
+  const S = C.quaiEleve(window.__f.db).securite;
+  return { dangers: S.points.filter((p) => !p.ok).map((p) => p.id).sort(), consigne: S.consigne };
+});
+
+await v('ENT-8.7 : confirmé à l’écran — 4 situations + « qui décharge », 2 dangers sur la scène ; seul le socle signalé : 2 bonus faux, note du socle 20, bandeau identique, aucun « bonus » écrit', async () => {
   await monter({ uid: 'ac87-conf', aisance: 'confirme', db: baseTemoin('cale', { confirme: true }) });
   const ids = await protocole({ ...PROTO, 's-blesse': 'c-epi' });
   egal(ids, ['s-partir', 's-aerosols', 's-vitesse', 's-blesse', 'engin'], 'quatre situations, puis « qui décharge »');
-  await accueil(); await quai({ anomalie: 'cale' });
+  const bonus = await bonusDanger(GRAINE.cale);
+  vrai(bonus && bonus !== 'cale', `le 2e danger : ${bonus}`);
+  egal(await sceneDe(), { dangers: ['cale', bonus].sort(), consigne: 'Kevin est prêt. Avant qu’il entre dans le camion, regarde le quai et le camion. Si quelque chose ne va pas, signale-le-moi.' },
+    'la scène du confirmé : le socle et le bonus en danger, consigne du standard');
+  await accueil();
+  // Le socle signalé seul, « C'est bon » : Samia arrête (le 2e danger n'est pas signalé) ; signalé APRÈS l'arrêt, il compte faux au bonus, et le socle ne bouge pas.
+  await quai({ anomalie: 'cale', avant: async () => { await cestBon(); vrai((await chef()).length > 0, 'Samia n’arrête pas'); await marquer(bonus); await signaler(); await qrep(BONNES_Q); } });
   const n = await note();
   proche(n.score, 20, 'note du socle');
-  egal(n.detail.bonus && [n.detail.bonus.justes, n.detail.bonus.total], [0, 1], 'bonus faux');
+  egal(n.detail.bonus && [n.detail.bonus.justes, n.detail.bonus.total, n.detail.bonus.etats['bonus-danger']], [0, 2, 'ko'], 'deux bonus faux (situation, 2e danger signalé après l’arrêt)');
+  egal([n.detail['securite-danger'], n.detail['securite-aucun-faux']], ['ok', 'ok'], 'le socle ne bouge pas');
   const b = await fin();
   egal(b.lignes, GROUPES.map((g) => [g, 'ok']), 'bandeau identique');
   vrai(!/bonus/i.test(await texte()), 'le mot « bonus » à l’écran');
+});
+
+await v('ENT-8.7 (lot 4) : confirmé — les deux dangers signalés : bonus 2 / 2 ; le standard de la même graine n’a qu’un danger, le même socle', async () => {
+  await monter({ uid: 'ac87-conf2', aisance: 'confirme', db: baseTemoin('lampe', { confirme: true }) });
+  const bonus = await bonusDanger(GRAINE.lampe);
+  egal((await sceneDe()).dangers, ['lampe', bonus].sort(), 'les deux dangers');
+  await protocole({ ...PROTO, 's-blesse': 'c-sst' }); await accueil();
+  await quai({ envois: [['lampe', bonus]] });
+  const n = await note();
+  proche(n.score, 20, 'note du socle');
+  egal(n.detail.bonus && [n.detail.bonus.justes, n.detail.bonus.total, n.detail.bonus.etats], [2, 2, { 'bonus-situation': 'ok', 'bonus-danger': 'ok' }], 'bonus justes');
+  await monter({ uid: 'ac87-std2', db: baseTemoin('lampe') });
+  egal(await sceneDe(), { dangers: ['lampe'], consigne: 'Kevin est prêt. Avant qu’il entre dans le camion, regarde le quai et le camion. Si quelque chose ne va pas, signale-le-moi.' },
+    'le standard : un seul danger, le même');
+  egal((await note()).detail.bonus, undefined, 'pas de bonus chez le standard');
+});
+
+await v('ENT-8.7 (lot 4) : accompagné — 2 réponses par réplique (la juste et la première maladresse), la consigne de la scène nomme la vue, note 20, aucun bonus', async () => {
+  await monter({ uid: 'ac87-acc', aisance: 'accompagne', db: baseTemoin('cale') });
+  await protocole();
+  await allerV('telephone');
+  await pg.click(`${Z} [data-dlg-appeler="marc"]`); await pause();
+  const PREMIERES = { arrivee: 'salut', documents: 'rien', quai: 'ou', attente: 'cabine', fin: 'fin-sec' };
+  for (const r of ORDRE_DIAL) {
+    const L = await pg.$$eval(`${Z} [data-dlg-choix]`, (B) => B.map((b) => b.dataset.dlgChoix).sort());
+    egal(L, [DIAL[r], PREMIERES[r]].sort(), `réponses à « ${r} »`);
+    await dire(DIAL[r]);
+  }
+  await pg.click(`${Z} [data-dlg-raccrocher]`); await pause();
+  egal((await sceneDe()).consigne, 'Kevin est prêt. Avant qu’il entre dans le camion, regarde le quai et le camion. Si quelque chose ne va pas, signale-le-moi. Regarde dehors.',
+    'la consigne dit où regarder (cale : dehors)');
+  await allerV('quai');
+  await pg.waitForSelector(SVG);
+  vrai(/Regarde dehors\./.test(await pg.$eval(`${Z} [data-q-consigne]`, (n) => n.textContent)), 'la consigne à l’écran');
+  await quai({ anomalie: 'cale' });
+  const n = await note();
+  proche(n.score, 20, 'note');
+  egal(n.detail.bonus, undefined, 'aucun bonus chez l’accompagné');
+  egal((await fin()).lignes, GROUPES.map((g) => [g, 'ok']), 'bandeau identique');
+  // Un danger « dedans » (la lampe) : la consigne le dit ; le standard de la même graine n'a pas la phrase.
+  egal(await pg.evaluate(async (g) => { const D = await import('/contenus/action-ent87-donnees.js');
+    return [D.quaiDe(g, { niveau: 'accompagne' }).securite.consigne.endsWith(' Regarde dedans, porte ouverte.'), /Regarde/.test(D.quaiDe(g).securite.consigne)]; }, GRAINE.lampe),
+  [true, false], 'lampe : « Regarde dedans, porte ouverte. » chez l’accompagné seulement');
 });
 
 await v('ENT-8.7 : étape suivante — la barre mène du protocole à « Au quai », puis au quai ; rien quand le bandeau de fin est là', async () => {

@@ -22,7 +22,7 @@
 //
 // TOUT EST CONSTRUIT : les anomalies, le n° du bon de livraison, les lots, l'étiquette, les dommages de la question Q1.
 
-import { tirerJeu, graineDeBase } from '../core/tirage.js';
+import { tirerJeu, graineDeBase, niveauEleve } from '../core/tirage.js';
 import { CAMION_HAVRE } from './action.js';
 
 export const ID = 'action-controler';
@@ -129,8 +129,17 @@ export const DEPOSE = { passage: 3, cases: [
   { id: 'quai3-1', sol: 'autre-quai', legende: 'Quai 3', peinte: false, nom: 'Devant le quai 3' }] };
 export const CONSIGNE_SAMIA = 'Les 4 palettes sont au sol. Pour chacune : compte les cartons, fais le tour, lis l’étiquette, puis décide. '
   + 'S’il y a un problème, écris une réserve précise et fais-la signer par Marc. Samia';
+// LE NIVEAU DE L'ÉLÈVE (lot 4, 17/10/2026, brief §6 bis) : le quai reçoit `niveau` du moteur (`quai: (graine, { niveau }) => …`).
+//   - standard : aides de guidage allumées (règle des couches, détail du comptage, repère, Samia qui explique), feuille de calcul avec rappel ;
+//   - confirmé : aides de COMPTAGE éteintes (ni détail, ni règle des couches, ni repère), brouillon libre comme ENT-6.4 ; Samia explique toujours ;
+//   - accompagné : le standard, et la consigne de Samia en tête du quai rappelle de faire le tour avant de décider (texte, aucun indice sur une palette).
+export const AIDES_GUIDAGE = { regleCouches: true, detailComptage: true, repere: true, chefDeQuai: true, consignes: true };
+export const AIDES_CONFIRME = { chefDeQuai: true, consignes: true };
+export const RAPPEL_TOUR = 'Fais le tour de la palette avant de décider.';
+export const consigneSamia = (niveau) => (niveau === 'accompagne' ? `${CONSIGNE_SAMIA.replace(/ Samia$/, '')} ${RAPPEL_TOUR} Samia` : CONSIGNE_SAMIA);
 
-export function quaiDuJeu(jeu) {
+export function quaiDuJeu(jeu, niveau = 'standard') {
+  const confirme = niveau === 'confirme';
   return {
     id: QUAI_ID,
     libelle: 'Le quai 2',
@@ -138,7 +147,7 @@ export function quaiDuJeu(jeu) {
     froid: false,
     titre: 'Entrepôt Action — Geodis, Ensuès-la-Redonne (13) — Quai 2, contrôle',
     destinataire: 'Action — Geodis, Ensuès-la-Redonne',
-    avertissement: `<b>Samia :</b> « ${CONSIGNE_SAMIA.replace(/ Samia$/, '')} »<br>`
+    avertissement: `<b>Samia :</b> « ${consigneSamia(niveau).replace(/ Samia$/, '')} »<br>`
       + 'Le quai est un <b>dessin construit</b>. Les palettes, leurs défauts, le bon de livraison et la lettre de voiture sont <b>construits pour l’exercice</b>.',
     // Le chauffeur a signé, il est reparti : pas de « Recommencer la réception » (la note est le premier bilan).
     recommencer: false,
@@ -151,9 +160,9 @@ export function quaiDuJeu(jeu) {
     dechargement: { ouverture: 0.5, parPalette: 1, par: 'cariste', nom: 'Kevin' },
     // Le même sol qu'en ENT-8.7 (variante A) : les palettes sont dessinées dans R1 à R4, la dépose n'est pas rejouée.
     depose: JSON.parse(JSON.stringify(DEPOSE)),
-    // Aides de guidage allumées POUR TOUS (la vue ne lit pas `db.aisance` : décision §8.2 n° 4).
-    calcul: { forme: 'feuille', rappel: true },
-    aides: { regleCouches: true, detailComptage: true, repere: true, chefDeQuai: true, consignes: true },
+    // Les aides selon le niveau (lot 4) : voir `AIDES_GUIDAGE` / `AIDES_CONFIRME` ci-dessus.
+    calcul: confirme ? { forme: 'brouillon' } : { forme: 'feuille', rappel: true },
+    aides: { ...(confirme ? AIDES_CONFIRME : AIDES_GUIDAGE) },
     camions: [{
       transporteur: CAMION_HAVRE.transporteur, fournisseur: CAMION_HAVRE.provenance, bl: BL_NUMERO, arrivee: '07:00',
       parole: 'Bonjour. Voici la lettre de voiture et le bon de livraison. J’attends au local chauffeurs.',
@@ -166,9 +175,9 @@ export function quaiDuJeu(jeu) {
     }],
   };
 }
-// Le quai d'une graine (une déclaration neuve à chaque appel : le moteur garde la sienne en cache).
-export const quaiDe = (graine) => quaiDuJeu(jeuDe(graine));
-export const quaiDeBase = (db) => quaiDe(graineDeBase(db));
+// Le quai d'une graine ET d'un niveau (une déclaration neuve à chaque appel : le moteur garde la sienne en cache, par graine et par niveau).
+export const quaiDe = (graine, { niveau = 'standard' } = {}) => quaiDuJeu(jeuDe(graine), niveau);
+export const quaiDeBase = (db) => quaiDe(graineDeBase(db), { niveau: niveauEleve(db) });
 
 /* ================================================================== le compte rendu à Samia (§6.3), calculé sur le tirage */
 const pl = (n, un, des) => `${n} ${n > 1 ? des : un}`;

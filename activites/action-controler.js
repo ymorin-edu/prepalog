@@ -7,8 +7,9 @@
 // à Samia par phrases calculées sur son tirage. Contenu : `contenus/action-ent88.js` ; questions : `contenus/questions/ENT-8.8.js`.
 //
 // 16 points de jalons pondérés + 4 de questions (`part: 4`) = 20, poids validés par Tristan le 16/10/2026 à 19 h 20. `correction` : « Corriger »
-// rouvre le compte rendu ; jamais le quai ni une question (`finFige`). Pas de `niveauxPrevus` : la vue quai ne lit pas le niveau de l'élève, les
-// aides de comptage sont allumées pour tous (décision §8.2 n° 4) et aucun cas bonus n'existe sans changer le socle.
+// rouvre le compte rendu ; jamais le quai ni une question (`finFige`). `niveauxPrevus` (lot 4, 17/10/2026) : le quai reçoit le niveau de l'élève
+// — confirmé : aides de comptage éteintes (brouillon libre) ; accompagné : la consigne de Samia rappelle de faire le tour ; aucun cas bonus
+// (le socle ne change pas, brief §6 bis).
 // Une séance réservée au CAP : `competences: []`, `competencesCap: ['CAP-C1.4']`.
 
 import { seanceEntreprise } from '../core/types/seance-entreprise.js';
@@ -28,6 +29,7 @@ const s = seanceEntreprise(ACTION, SEANCE, {
   correction: true,
   bilanDetail: true,
   precedente: 'action-decharger',
+  niveauxPrevus: ['confirme', 'accompagne'],   // confirmé : aides de comptage éteintes ; accompagné : rappel « Fais le tour » (lot 4)
   questions: 'ENT-8.8',
   pret: true,
   ouverture: 'prof',

@@ -167,7 +167,7 @@ await v('ENT-8.8 : déclaration (CAP, CAP-C1.4, guidage, 20 points, parcours apr
       verifier: Qm.verifierQuai(q), fin: S.OPTIONS.finFige,
     };
   });
-  egal(r.m, ['action-controler', 'ENT-8.8', 'simulog', ['cap'], [], ['CAP-C1.4'], 'guidage', 20, true, true, true, 'action-decharger', undefined, 'ENT-8.8',
+  egal(r.m, ['action-controler', 'ENT-8.8', 'simulog', ['cap'], [], ['CAP-C1.4'], 'guidage', 20, true, true, true, 'action-decharger', ['confirme', 'accompagne'], 'ENT-8.8',
     true, 'prof', './contenus/corriges/ENT-8.8.js'], 'meta ENT-8.8');
   egal(r.ids, JALONS, 'jalons');
   egal(r.poids, [2.5, 2.5, 1.5, 1.5, 1.5, 1.5, 1, 1, 1, 1, 0.5, 0.5], 'poids jalon par jalon (écrits à la main)');
@@ -406,18 +406,51 @@ await v('ENT-8.8 : étape suivante — la barre mène au quai, puis au compte re
   vrai(await present('[data-repondre]'), 'la barre ouvre le message de Samia');
 });
 
-await v('ENT-8.8 : confirmé — mêmes aides de comptage allumées (la vue ne lit pas le niveau), bandeau identique, note sur le socle', async () => {
+// Les aides du quai à l'écran ③ (texte des aides, rappel de la formule de la feuille de calcul) et la consigne de Samia en tête du quai.
+// (Le détail du comptage se saisit dans la feuille quand une zone de calcul est déclarée : pas de cases « qdCouches » ici.)
+const aidesEcran = async () => ({
+  aide: await pg.$$eval(Q('.quai-aide'), (L) => L.map((x) => x.textContent).join(' ')),
+  rappel: await present('[data-q-rappel]'),
+  avert: await pg.$eval(Q('.quai-avert'), (n) => n.textContent).catch(() => ''),
+});
+
+await v('ENT-8.8 (lot 4) : confirmé — aides de comptage ÉTEINTES (ni règle des couches, ni détail, ni rappel ; Samia explique toujours), bandeau identique, note sur le socle', async () => {
   await monter({ uid: 'ac88-conf', graine: 'temoin-1', aisance: 'confirme' });
   await allerV('quai');
   await pg.waitForSelector(Q('[data-q-palette]'));
-  const aide = await pg.$$eval(Q('.quai-aide'), (L) => L.map((x) => x.textContent).join(' '));
-  vrai(/Règle du quai : sur une palette, toutes les couches/.test(aide) && /Fais le tour de la palette si besoin/.test(aide), 'aides présentes : ' + aide.slice(0, 200));
+  const A = await aidesEcran();
+  vrai(!/Règle du quai/.test(A.aide) && !A.rappel, `aides de comptage présentes chez le confirmé : ${A.aide.slice(0, 120)} / rappel ${A.rappel}`);
+  vrai(/Pour compter sans tout compter/.test(A.aide), 'Samia n’explique plus : ' + A.aide.slice(0, 120));
+  vrai(!/Fais le tour de la palette avant de décider/.test(A.avert), 'le rappel de l’accompagné chez le confirmé');
+  egal(await pg.evaluate(async () => { const D = await import('/contenus/action-ent88-donnees.js'); const q = D.quaiDe('temoin-1', { niveau: 'confirme' }); return [q.aides, q.calcul.forme]; }),
+    [{ chefDeQuai: true, consignes: true }, 'brouillon'], 'la déclaration du confirmé');
   await quai(T1);
   await compteRendu(CR1);
   const n = await note();
   proche(n.score, 20, 'note');
+  egal(n.detail.bonus, undefined, 'aucun bonus');
   egal((await fin()).lignes, GROUPES.map((g) => [g, 'ok']), 'bandeau');
   vrai(!/bonus/i.test(await texte()), 'le mot « bonus » à l’écran');
+});
+
+await v('ENT-8.8 (lot 4) : accompagné — aides du standard ET la consigne de Samia rappelle « Fais le tour de la palette avant de décider. » ; le standard ne l’a pas', async () => {
+  await monter({ uid: 'ac88-acc', graine: 'temoin-1', aisance: 'accompagne' });
+  await allerV('quai');
+  await pg.waitForSelector(Q('[data-q-palette]'));
+  const A = await aidesEcran();
+  vrai(/Règle du quai : sur une palette, toutes les couches/.test(A.aide) && A.rappel, `aides du standard absentes chez l’accompagné : ${A.aide.slice(0, 120)} / rappel ${A.rappel}`);
+  vrai(/Fais le tour de la palette avant de décider\./.test(A.avert), 'le rappel manque : ' + A.avert.slice(0, 200));
+  vrai(!/P[1-4]/.test(A.avert.replace(/.*« /, '').replace(/ ».*/, '')), 'la consigne de Samia nomme une palette');
+  await quai(T1);
+  await compteRendu(CR1);
+  const n = await note();
+  proche(n.score, 20, 'note');
+  egal(n.detail.bonus, undefined, 'aucun bonus');
+  await monter({ uid: 'ac88-std2', graine: 'temoin-1' });
+  await allerV('quai');
+  await pg.waitForSelector(Q('[data-q-palette]'));
+  const S = await aidesEcran();
+  vrai(/Règle du quai/.test(S.aide) && S.rappel && !/avant de décider/.test(S.avert), 'le standard : aides allumées, sans le rappel');
 });
 
 await v('ENT-8.8 : Avant de commencer — `couches` : 300 graines, jamais les dimensions d’une palette du camion, trois choix distincts, la juste = c × k', async () => {

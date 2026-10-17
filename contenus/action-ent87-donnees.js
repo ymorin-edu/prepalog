@@ -122,19 +122,28 @@ export const OBJETS = {
   lampe: { sur: 'allumee', danger: 'eteinte', libOk: 'Lampe de quai allumée', libKo: 'Lampe de quai éteinte', repare: 'Bien vu : j’allume la lampe de quai.' },
 };
 // Le socle : UNE anomalie parmi les quatre premières (brief §6 bis : facile ou moyen, même valeur au bilan). Tirée de la GRAINE de la base
-// (`db.tirage.graine`, l'identifiant de l'élève, posée par le moteur) parce que le quai ne peut être qu'une fonction de la graine
-// (`quai: (graine) => …`, comme ENT-4.4) : la vue ne lit pas la base. ⚠ Ne pas changer cette liste ni la formule pendant qu'une classe joue la
-// séance (l'anomalie des élèves changerait). Le bonus du confirmé (une 2e anomalie) N'EST PAS construit : la fonction du quai ne reçoit pas le
-// niveau de l'élève (écart dit au compte rendu du brief).
+// (`db.tirage.graine`, l'identifiant de l'élève, posée par le moteur) parce que le quai est une fonction de la graine (`quai: (graine, …) => …`,
+// comme ENT-4.4). ⚠ Ne pas changer cette liste ni la formule pendant qu'une classe joue la séance (l'anomalie des élèves changerait).
 export const ANOMALIES_SOCLE = ['cabine', 'cale', 'niveleur', 'lampe'];
 export const anomalieDe = (graine) => hasard(`${graine == null ? '' : graine}|${ID}|anomalie`).choisir(ANOMALIES_SOCLE);
+// LE BONUS DU CONFIRMÉ (lot 4, 17/10/2026, brief §6 bis) : une 2e anomalie parmi les autres objets (butoirs compris), tirée de la graine aussi,
+// à part du socle (le socle d'un confirmé est celui d'un standard de même graine). Jalon `bonus-danger` (`bonus: true`), sans effet sur la note du socle.
+export const anomalieBonusDe = (graine) => {
+  const socle = anomalieDe(graine);
+  return hasard(`${graine == null ? '' : graine}|${ID}|anomalie-bonus`).choisir(Object.keys(OBJETS).filter((o) => o !== socle));
+};
+// La vue où se trouve chaque objet (pour la consigne de l'accompagné : elle nomme la VUE, jamais l'objet — décision 9 de Tristan, brief §6 bis).
+export const VUE_DE = { cabine: 'dehors', cale: 'dehors', butoirs: 'dehors', niveleur: 'dedans', lampe: 'dedans' };
+export const REGARDE = { dehors: 'Regarde dehors.', dedans: 'Regarde dedans, porte ouverte.' };
 
 export const SAMIA_QUAI = 'Kevin est prêt. Avant qu’il entre dans le camion, regarde le quai et le camion. Si quelque chose ne va pas, signale-le-moi.';
-export function securiteDe(anomalie) {
+// La scène : le socle `anomalie` en danger ; `bonus` (confirmé) : un 2e objet en danger ; `niveau` 'accompagne' : la consigne dit où regarder.
+export function securiteDe(anomalie, { bonus = null, niveau = 'standard' } = {}) {
+  const dangers = [anomalie].concat(bonus ? [bonus] : []);
   return {
     mode: 'scene',
-    consigne: SAMIA_QUAI,
-    points: Object.entries(OBJETS).map(([objet, o]) => (objet === anomalie
+    consigne: niveau === 'accompagne' ? `${SAMIA_QUAI} ${REGARDE[VUE_DE[anomalie]]}` : SAMIA_QUAI,
+    points: Object.entries(OBJETS).map(([objet, o]) => (dangers.includes(objet)
       ? { id: objet, objet, etat: o.danger, ok: false, lib: o.libKo, repare: o.repare }
       : { id: objet, objet, etat: o.sur, ok: true, lib: o.libOk, repare: o.repare })),
     signaler: { qui: 'Samia', rien: 'Là, je ne vois rien qui cloche.' },
@@ -156,7 +165,7 @@ export const DEPOSE = { passage: 3, cases: [
   { id: 'quai3-1', sol: 'autre-quai', legende: 'Quai 3', peinte: false, nom: 'Devant le quai 3', reaction: 'Ça, c’est la zone du quai 3.' }] };
 export const TEXTE_ARRET = 'Les 4 palettes sont en zone de réception. Le contrôle, c’est la prochaine fois.';
 
-export function quaiDuTirage(anomalie) {
+export function quaiDuTirage(anomalie, { bonus = null, niveau = 'standard' } = {}) {
   return {
     id: QUAI_ID, rendu: 'iso', froid: false,
     titre: 'Entrepôt Action — Geodis, Ensuès-la-Redonne (13) — Quai 2, réception',
@@ -169,7 +178,7 @@ export function quaiDuTirage(anomalie) {
     recommencer: false,
     aides: { consignes: true },
     dechargement: { ouverture: 0.5, parPalette: 1, par: 'cariste', nom: 'Kevin' },
-    securite: securiteDe(anomalie),
+    securite: securiteDe(anomalie, { bonus, niveau }),
     depose: JSON.parse(JSON.stringify(DEPOSE)),
     arret: { etape: 'dechargement', texte: TEXTE_ARRET },
     camions: [{
@@ -181,35 +190,39 @@ export function quaiDuTirage(anomalie) {
   };
 }
 const cache = new Map();
-// Le quai d'une graine (l'identifiant de l'élève), toujours le même pour la même graine.
-export function quaiDe(graine) {
-  const g = String(graine == null ? '' : graine);
-  if (!cache.has(g)) cache.set(g, quaiDuTirage(anomalieDe(g)));
-  return cache.get(g);
+// Le quai d'une graine (l'identifiant de l'élève) ET d'un niveau (lot 4 : le moteur passe `{ niveau, copie }`), toujours le même pour la même
+// graine et le même niveau. Sans niveau : le standard (ce que lit le corrigé).
+export function quaiDe(graine, { niveau = 'standard' } = {}) {
+  const g = String(graine == null ? '' : graine), k = `${g}|${niveau}`;
+  if (!cache.has(k)) cache.set(k, quaiDuTirage(anomalieDe(g), { bonus: niveau === 'confirme' ? anomalieBonusDe(g) : null, niveau }));
+  return cache.get(k);
 }
+// Les choix réservés aux niveaux standard et confirmé : l'accompagné voit 2 réponses par réplique, la juste et la première maladresse
+// (décision 9 de Tristan, brief §6 bis ; lot 4).
+const PLEINS = ['standard', 'confirme'];
 
 // ─────────────────────────────────────────────────────────────── le dialogue « Au quai » (textes du brief §6.2, tels quels ; vouvoiement)
 export const REPLIQUES = [
   { id: 'arrivee', dit: 'Bonjour ! Je livre pour Action, j’arrive du Havre.', choix: [
     { v: 'presente', juste: true, lib: 'Bonjour monsieur, bienvenue chez Geodis. Je suis {prenom}, stagiaire à la réception.' },
     { v: 'salut', lib: 'Salut ! C’est pour quoi ?', reaction: 'Euh… bonjour. Je livre, je viens de vous le dire.' },
-    { v: 'attendez', lib: 'Attendez là.', reaction: '… Bonjour quand même.' }] },
+    { v: 'attendez', lib: 'Attendez là.', reaction: '… Bonjour quand même.', niveaux: PLEINS }] },
   { id: 'documents', dit: 'Je vous donne quoi ?', choix: [
     { v: 'ldv', juste: true, lib: 'Votre lettre de voiture et le bon de livraison, s’il vous plaît.' },
     { v: 'rien', lib: 'Rien, on décharge directement.', reaction: 'Ah bon ? D’habitude, on me demande mes papiers.' },
-    { v: 'permis', lib: 'Votre permis de conduire.', reaction: 'Mon permis ? Ce n’est pas un contrôle de police…' }] },
+    { v: 'permis', lib: 'Votre permis de conduire.', reaction: 'Mon permis ? Ce n’est pas un contrôle de police…', niveaux: PLEINS }] },
   { id: 'quai', dit: 'Merci. Je me mets où ?', choix: [
     { v: 'quai2', juste: true, lib: 'Au quai 2, en marche arrière jusqu’aux butoirs.' },
     { v: 'ou', lib: 'Où vous voulez, il y a de la place.', reaction: 'Il y a quatre quais… Lequel ?' },
-    { v: 'quai4', lib: 'Au quai 4.', reaction: 'Le quai 4 ? Sur mon papier, c’est le 2. Vous êtes sûr ?' }] },
+    { v: 'quai4', lib: 'Au quai 4.', reaction: 'Le quai 4 ? Sur mon papier, c’est le 2. Vous êtes sûr ?', niveaux: PLEINS }] },
   { id: 'attente', dit: 'Je reste dans ma cabine pendant que vous déchargez ?', choix: [
     { v: 'local', juste: true, lib: 'Non : vous coupez le moteur, vous me laissez vos clés et vous attendez au local chauffeurs.' },
     { v: 'cabine', lib: 'Oui, restez au chaud.', reaction: 'D’accord… mais votre protocole ne dit pas ça, il me semble.' },
-    { v: 'aider', lib: 'Venez plutôt nous aider à décharger.', reaction: 'Moi ? Je n’ai pas le droit de toucher à vos chariots.' }] },
+    { v: 'aider', lib: 'Venez plutôt nous aider à décharger.', reaction: 'Moi ? Je n’ai pas le droit de toucher à vos chariots.', niveaux: PLEINS }] },
   { id: 'fin', dit: 'D’accord. Je peux repartir quand ?', choix: [
     { v: 'fin-poli', juste: true, lib: 'Je viens vous chercher quand le contrôle est fini. Bonne pause !' },
     { v: 'fin-sec', lib: 'Je ne sais pas.', reaction: '… Bon. Je vais attendre.', accepte: true },
-    { v: 'fin-copain', lib: 'À plus !', reaction: 'Euh… à tout à l’heure.', accepte: true }] },
+    { v: 'fin-copain', lib: 'À plus !', reaction: 'Euh… à tout à l’heure.', accepte: true, niveaux: PLEINS }] },
 ];
 export const JUSTES_DIALOGUE = Object.fromEntries(REPLIQUES.map((r) => [r.id, r.choix.find((c) => c.juste).v]));
 export const FIN_DIALOGUE = 'Merci, à tout à l’heure.';

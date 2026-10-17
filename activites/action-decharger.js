@@ -27,7 +27,7 @@ const s = seanceEntreprise(ACTION, SEANCE, {
   correction: true,
   bilanDetail: true,
   precedente: 'action-avant-noel',
-  niveauxPrevus: ['confirme'],   // bonus du confirmé : une situation de plus (cachée à l'élève)
+  niveauxPrevus: ['confirme', 'accompagne'],   // confirmé : une situation et un danger de scène de plus (cachés) ; accompagné : 2 réponses par réplique, la consigne dit où regarder (lot 4)
   questions: 'ENT-8.7',
   pret: true,
   ouverture: 'prof',
