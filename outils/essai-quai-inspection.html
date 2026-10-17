@@ -77,5 +77,68 @@ const lancer = () => { const h = document.querySelector('[data-hote-scene]'); if
 document.querySelector('[data-lancer-scene]').addEventListener('click', lancer);
 if (location.hash === '#scene') { lancer(); document.getElementById('partie2').scrollIntoView(); }
 </script>
+<section class="eqi eqi-partie2" id="partie3">
+  <h2>Partie 3 — Un quai en deux séances (ENT-8.7 « décharger » et ENT-8.8 « contrôler »)</h2>
+  <p>Le même camion (cinq palettes de fûts, un cariste, aucune inspection), joué de trois façons. <b>Arrêt après le déchargement</b> : le quai s'arrête quand la dernière palette est posée. Regarde le stepper (seulement ① et ②), le bandeau de fin, l'absence de bouton « Compter », « Valider » ou « Clore », et, dans le cadre du bas, que le message suivant est bien « déclenché ». <b>Commence au contrôle</b> : la vue s'ouvre à ③, les cinq palettes sont déjà au sol (clique ④ pour les voir), le camion est reparti dans ton dos : tu comptes, tu décides, tu écris les réserves et tu fais signer. <b>Quai d'aujourd'hui</b> : aucune option, pour comparer.</p>
+  <form class="eqi-reglages" data-reglages-deux aria-label="Réglages de l'essai">
+    <fieldset><legend>Le quai</legend>
+      <label><input type="radio" name="deux" value="arret" checked> arrêt après le déchargement (ENT-8.7)</label>
+      <label><input type="radio" name="deux" value="commence"> commence au contrôle (ENT-8.8)</label>
+      <label><input type="radio" name="deux" value="rien"> le quai d'aujourd'hui (aucune option)</label></fieldset>
+    <fieldset><legend>Le document</legend>
+      <label><input type="checkbox" name="doc"> « Bon de livraison — lettre de voiture »</label></fieldset>
+    <fieldset><legend>Essai</legend>
+      <button type="button" data-recommencer-deux>Tout remettre à zéro</button></fieldset>
+  </form>
+  <p><button type="button" class="btn btn-p" data-lancer-deux>Lancer l'essai</button></p>
+  <div data-hote-deux></div>
+</section>
+<script type="module">
+import { quaiEssai, universQuai, PALETTES_ENT64 } from './outils/essai-quai-inspection.js';
+import { creerEntreprise } from './core/types/entreprise.js';
+import { jalonsQuai } from './core/types/quai.js';
+import { quaiDecharge } from './core/declencheurs.js';
+// Cinq palettes : les quatre fûts d'ENT-6.4 et une cinquième, copie de la première (construites pour l'essai).
+const PALETTES_5 = PALETTES_ENT64.concat([Object.assign(JSON.parse(JSON.stringify(PALETTES_ENT64[0])), { id: 'P5' })]);
+const hote = document.querySelector('[data-hote-deux]');
+let db = {};
+function lancer() {
+  db = {};
+  const choix = document.querySelector('input[name="deux"]:checked').value, doc = document.querySelector('input[name="doc"]').checked;
+  const Q = quaiEssai({ palettes: PALETTES_5, par: 'cariste' });
+  Q.securite = null;   // pas d'inspection ici (ENT-8.7 a la sienne, ENT-8.8 n'en a pas)
+  if (choix === 'arret') Q.arret = { etape: 'dechargement', texte: 'Les 5 palettes sont en zone de réception. Le contrôle, c’est la prochaine fois.' };
+  if (choix === 'commence') Q.commence = 'controle';
+  if (doc) Q.document = 'Bon de livraison — lettre de voiture';
+  hote.innerHTML = '<div data-seance-deux></div><details class="eqi-jalons" open><summary>Ce que la vue sait, calculé maintenant (pour toi, jamais pour l’élève)</summary><div data-etat-deux></div></details>';
+  const etat = hote.querySelector('[data-etat-deux]');
+  const maj = () => {
+    const e = db.quais && db.quais[Q.id], G = (db.gestes && db.gestes[Q.id]) || {};
+    const oui = (b) => (b ? 'oui' : 'non');
+    const J = jalonsQuai(db, Q).L;
+    etat.innerHTML = `<table class="quai-bilan"><tbody>
+      <tr><td>Étape affichée</td><td>${e ? e.etape : '—'}</td></tr>
+      <tr><td>Déchargement fini et quai arrêté — <code>quaiDecharge('${Q.id}')</code></td><td>${oui(quaiDecharge(Q.id)(db))}</td></tr>
+      <tr><td>Geste <code>quai:${Q.id}:dechargement</code> rangé</td><td>${oui(G[`quai:${Q.id}:dechargement`])}</td></tr>
+      <tr><td>Quai figé (<code>fini</code>)</td><td>${oui(e && e.fini)}</td></tr>
+      <tr><td>Jalons de la vue (${J.length})</td><td>${J.length ? J.map((l) => l.id).join(', ') : 'aucun'}</td></tr></tbody></table>`;
+  };
+  const h = document.createElement('div');
+  hote.querySelector('[data-seance-deux]').replaceChildren(h);
+  const ctx = {
+    meta: { id: 'essai-inspection', code: 'ESSAI', titre: 'Essai du quai en deux séances', portee: 'eleve', immersif: true, temps: 'guidage', bareme: 2 },
+    profil: { prenom: 'Essai', nom: 'Deux séances', role: 'eleve', uid: 'essai-eleve' },
+    jeu: { etat: () => db, sauver: maj },
+    enregistrer: () => {}, quitter: () => { lancer(); }, codeStock: 'ESSAI', lireScore: async () => null,
+  };
+  creerEntreprise(universQuai(Q)).rendre(h, ctx);
+  h.querySelector('.ent-nav[data-vue="quai"]')?.click();
+  maj();
+}
+document.querySelector('[data-lancer-deux]').addEventListener('click', () => { document.querySelector('[data-lancer-deux]').hidden = true; lancer(); });
+document.querySelector('[data-reglages-deux]').addEventListener('change', () => { if (hote.childElementCount) lancer(); });
+document.querySelector('[data-recommencer-deux]').addEventListener('click', () => { if (hote.childElementCount) lancer(); });
+if (location.hash === '#deux') { document.querySelector('[data-lancer-deux]').click(); document.getElementById('partie3').scrollIntoView(); }
+</script>
 </body>
 </html>

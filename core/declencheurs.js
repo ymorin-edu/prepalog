@@ -13,6 +13,7 @@
 //   quand: apresTransfert('msg-malo')                         il a transféré ce message (chantier D-1, 09/10/2026)
 //   quand: dialogueFini('quai')                              il a raccroché un appel fini (vue Téléphone, 14/10/2026)
 //   quand: localiserFini('action-carte')                     il a atteint le bilan de la carte (vue Localiser, 15/10/2026)
+//   quand: quaiDecharge('quai-action')                       la dernière palette est posée, quai arrêté (`arret: 'dechargement'`, 17/10/2026)
 //   quand: tous(apresJalon(…), apresMail(…))                 les deux
 //
 // Une condition reçoit `(db, seance)` : `seance` est l'id de la séance (les gestes sont cloisonnés par séance).
@@ -128,6 +129,18 @@ export function localiserFini(vue) {
   return f;
 }
 
+// Vrai quand le quai `id` s'est arrêté après le déchargement (vue Quai, `arret: 'dechargement'`, `core/types/quai.js`, 17/10/2026) : la dernière
+// palette est posée et la vue figée. **Juste ou faux, peu importe** : le déchargement n'est pas jugé ici (la dépose, elle, a ses jalons). Lit le
+// drapeau `dechargeFini` de l'état du quai, rangé une fois ; un rechargement de page ne le change pas. ATTENTION : l'état du quai vit sous
+// `db.quais[<id du quai>]`, **pas cloisonné par séance** comme `db.dialogues` : deux séances qui déclarent le même `id` de quai partagent ce drapeau
+// (ENT-8.7 et ENT-8.8 doivent donc avoir des `id` de quai différents). Le paramètre `seance` n'est pas utilisé. `.quais` : la liste des quais cités ;
+// `entreprise.js` ne la contrôle pas encore au chargement (une faute de frappe sur l'id ne fait jamais arriver le message).
+export function quaiDecharge(id) {
+  const f = (db) => !!(db && db.quais && db.quais[id] && db.quais[id].dechargeFini === true);
+  f.quais = [id];
+  return f;
+}
+
 // Les gestes cités par une condition (pour le contrôle au chargement).
 export const gestesDe = (f) => (f && Array.isArray(f.gestes) ? f.gestes : []);
 
@@ -137,5 +150,6 @@ export function tous(...conditions) {
   f.gestes = conditions.flatMap(gestesDe);
   f.dialogues = conditions.flatMap((c) => (c && Array.isArray(c.dialogues) ? c.dialogues : []));
   f.localisers = conditions.flatMap((c) => (c && Array.isArray(c.localisers) ? c.localisers : []));
+  f.quais = conditions.flatMap((c) => (c && Array.isArray(c.quais) ? c.quais : []));
   return f;
 }

@@ -616,7 +616,49 @@ faut remplir la rangée proche du mur avant celle du fond ; les places d'arrivé
 journal et les pastilles suivent l'ordre de sortie. Légende « {nom} sort la palette P4 au chariot (1 sur 4) » (sans `nom`
 dans `dechargement` : « Le cariste »). Le chauffeur du camion reste debout près de l'accueil. Durée : 32 s pour quatre
 palettes (« Passer l'animation » existe) ; en mouvement réduit, l'état final tout de suite. Sans `par: 'cariste'` : le
-chauffeur au transpalette, comme Spartoo (inchangé). Au-delà de quatre palettes le plan n'a pas été éprouvé.
+chauffeur au transpalette, comme Spartoo (inchangé). Joué et testé avec cinq palettes de fûts (lot 1 du chantier « quai en deux séances », 17/10/2026, cas « cinq palettes » du bloc `quai-iso`) ; au-delà, le plan n'a pas été éprouvé.
+
+#### Un quai en deux séances : `arret`, `commence`, `document` (lot 1 du chantier « quai en deux séances », 17/10/2026)
+
+Cadrage : `docs/briefs/ENT-8.7-action-decharger.md` §7.1 (une réception CAP se joue en deux séances : décharger, puis contrôler). **Trois
+options facultatives de la déclaration du quai ; sans elles, rien ne change d'un octet** (Picard, Smoby, Spartoo et France Boissons
+l'ont vérifié). Page d'essai où l'on clique les deux premières : `outils/essai-quai-inspection.html`, partie 3. Tests : bloc `quai-iso`,
+cas « Quai arrêt », « Quai commence », « Quai deux séances », « Quai document ».
+
+| Option | Valeur | Ce qu'elle fait |
+|---|---|---|
+| `arret` | `'dechargement'` ou `{ etape: 'dechargement', texte: '…' }` | Le quai **s'arrête** quand la dernière palette est posée. Pas d'étapes ③ ④ : ni dans le stepper, ni atteignables, ni à l'écran. Une fois la dernière palette posée, un **bandeau de fin** (`texte` ; défaut « Les palettes sont en zone de réception. ») remplace « Compter la palette » ; aucun bouton Valider, Clore, Recommencer. L'image reste celle de la fin : palettes en zone de réception, camion à quai porte ouverte, chauffeur debout. La légende ne parle plus de signature, ni la consigne (`aides.consignes`) de compter. L'état est **figé** (`fini: true`, comme après « Clore » : le chrono réel s'arrête), le drapeau `dechargeFini` est rangé, et le geste `quai:<id>:dechargement` part **une fois**, quel que soit le chemin (fin de l'animation, « Passer l'animation », mouvement réduit, page rechargée en plein déchargement). Jalons : ceux des étapes jouées (ordre, sécurité, ticket), **pas** de comptage, décision, réserve, déballage, signature, rentrée. |
+| `commence` | `'controle'` | La vue **s'ouvre à ③**, déchargement déjà fait : palettes en zone de réception (image de ④), BL en main, chauffeur debout (il part à la signature, comme d'habitude). L'état est construit par `etatNeuf` : ni ligne de journal, ni minute (l'horloge du quai affiche `debut` s'il est déclaré, sinon l'arrivée du camion — **`debut`** est l'heure de début du quai, d'où le nom `commence`). Ni ⓪ ① ② (stepper ③ ④). Jalons : **ni** `ordre`, `securite-*`, `ticket` ; le reste (comptage, décision, réserves, déballage, signature, rentrée), Clore et le bilan sont inchangés. « Recommencer la réception » (sauf `recommencer: false`) revient à ③. |
+| `document` | texte, par exemple `'Bon de livraison — lettre de voiture'` | Le nom du document de transport dans les titres : « 📄 *document* n° BL… » aux étapes ① (quai iso ou non) et ④. Sans `document`, « Bon de livraison ». Le rappel de ③ dit « Revoir le document » quand un nom est déclaré (« Revoir le bon de livraison » sinon). **Ne change pas** : les abréviations « BL » des consignes, du journal et des jalons, la réplique par défaut du chauffeur (`camions[].parole` la remplace), et le quai « déjà réceptionné » (`mode: 'controle'`, autre mécanisme). |
+
+**Contrôle au chargement** (`verifierQuai`, erreur en clair, la séance ne s'ouvre pas) : valeur inconnue de `arret` / `commence`, texte de
+`arret` vide ou clé inconnue, `document` vide ; `arret` avec `commence` ; l'une ou l'autre avec `mode: 'controle'` ; l'une ou l'autre avec
+plusieurs camions (le suivant ne se met à quai qu'une fois le BL du précédent signé : sans signature, il ne viendrait jamais) ;
+`commence` avec `securite` (l'inspection se joue avant le déchargement) ou avec le froid (`froid: false` obligatoire : un lot déjà déchargé
+n'a pas de temps hors froid à mesurer). `arret` avec une inspection ou avec le froid est permis.
+
+**Le geste et le déclencheur.** `quai:<id>:dechargement` n'est publié (`signaux`) **que si `arret` est déclaré** : la liste des gestes
+des autres séances ne change pas, et `apresGeste('quai:<id>:dechargement')` dans une séance sans `arret` empêche la séance de s'ouvrir
+(geste inconnu), comme pour tout nom inconnu. Le déclencheur **`quaiDecharge('<id>')`** (`core/declencheurs.js`, sur le modèle de
+`dialogueFini`) est vrai dès que `db.quais[<id>].dechargeFini` est posé. Il sert aux `fermetures`, aux `quand` des messages et des
+questions, et se combine avec `tous(…)`. Deux réserves : l'état du quai vit sous `db.quais[<id du quai>]` — **pas cloisonné par séance**
+comme `db.dialogues` —, donc **deux séances ne doivent pas déclarer le même `id` de quai** (ENT-8.7 et ENT-8.8 : deux ids) ; et
+`entreprise.js` ne contrôle pas encore la liste `.quais` du déclencheur (une faute de frappe sur l'id ne fait jamais arriver le message,
+sans erreur).
+
+```js
+// ENT-8.7 — décharger (le quai s'arrête quand la 5e palette est posée)
+quai: { id: 'action-decharger', rendu: 'iso', froid: false, dechargement: { par: 'cariste', nom: 'Kevin' },
+  securite: { mode: 'scene', /* … */ },
+  arret: { etape: 'dechargement', texte: 'Les 5 palettes sont en zone de réception. Le contrôle, c’est la prochaine fois.' },
+  camions: [ /* CAMION_HAVRE */ ] },
+// → message suivant : quand: quaiDecharge('action-decharger')  (ou apresGeste('quai:action-decharger:dechargement'))
+
+// ENT-8.8 — contrôler (la vue s'ouvre à ③, les 5 palettes sont déjà au sol)
+quai: { id: 'action-controler', rendu: 'iso', froid: false, dechargement: { par: 'cariste', nom: 'Kevin' }, debut: '07:10',
+  commence: 'controle', document: 'Bon de livraison — lettre de voiture', recommencer: false,
+  camions: [ /* CAMION_HAVRE, le même */ ] },
+```
 
 #### Plusieurs palettes sur le quai iso
 
@@ -1767,7 +1809,7 @@ poids de ses jalons + `part` doit valoir 20 (contrôlé à l'ouverture).
   |---|---|
   | fiche `<id>` | `fiche:<id>:<bloc>` (choisir, cocher, remettre en ordre ; une saisie à la sortie de la case), `fiche:<id>:<bloc>:<ligne>` (classer une ligne d'un tableau oui / non), `fiche:<id>:envoyer` |
   | planning `<id>` | `planning:<id>:poser` (poser, déplacer, retirer une carte), `planning:<id>:envoyer` |
-  | quai `<id>` | `quai:<id>:decharger`, `quai:<id>:valider` (une palette), `quai:<id>:cloturer` ; en inspection sur la scène (`securite.mode: 'scene'`, D-4) en plus `scene:<id>:signaler` (chaque envoi de marques), `scene:<id>:decharger` (le figeage « C'est bon », pas l'arrêt par le collègue) |
+  | quai `<id>` | `quai:<id>:decharger`, `quai:<id>:valider` (une palette), `quai:<id>:cloturer` ; si le quai déclare `arret: 'dechargement'` (17/10/2026), en plus `quai:<id>:dechargement` (la dernière palette est posée, **une fois**, quel que soit le chemin) ; en inspection sur la scène (`securite.mode: 'scene'`, D-4) en plus `scene:<id>:signaler` (chaque envoi de marques), `scene:<id>:decharger` (le figeage « C'est bon », pas l'arrêt par le collègue) |
   | plan d'entrepôt `<id>` | `entrepot:<id>:poser` (poser une palette), `entrepot:<id>:verifier` |
   | animation `<id>` | `animation:<id>:<question>` (la première réponse) |
   | téléphone, dialogue `<id>` | `dialogue:<id>:appeler` (le premier appel), `dialogue:<id>:<réplique>` (la première réponse à cette réplique, juste ou non, au premier appel), `dialogue:<id>:fin` (raccroché un appel fini) ; contact sans dialogue `<id>` : `dialogue:<id>:appeler` (chaque appel) |

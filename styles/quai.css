@@ -113,6 +113,8 @@
 .quai-vue-lib{ font-size:13px; color:var(--encre-douce); margin:4px 0 8px }
 .quai-outils{ display:grid; gap:10px; align-content:start }
 .quai-constat{ font-size:13px; border-left:3px solid var(--ardoise); padding:4px 8px; background:var(--ardoise-clair) }
+/* Le bandeau de fin d'un quai qui s'arrête après le déchargement (`arret: 'dechargement'`) : un trait d'accent, pas d'aplat. */
+.quai-fin-decharge{ margin:0; border:1px solid var(--filet); border-left:4px solid var(--ardoise); border-radius:var(--r); padding:10px 12px; background:var(--panneau); color:var(--encre); font-size:15px; font-weight:600 }
 .quai-aide{ border:1px dashed var(--ardoise); border-radius:var(--r); padding:8px 10px; font-size:13px; color:var(--encre-douce); margin:0 }
 .quai-zoom{ border:1px solid var(--filet); border-radius:var(--r); padding:10px; background:var(--fond) }
 .quai-etiq{

@@ -2043,6 +2043,403 @@ await v('Quai chariot : mouvement réduit — l’état final tout de suite : qu
   vrai(/Les 4 palettes sont en zone de réception\. Le chauffeur attend ta signature\./.test(car.leg), `légende : ${car.leg}`);
 });
 
+/* ---- chantier « quai en deux séances », lot 1 : `arret: 'dechargement'`, `commence: 'controle'`, `document` (brief ENT-8.7 §7.1, 17/10/2026) */
+// Un quai à un camion et CINQ palettes (les quatre fûts d'ENT-6.4 et une cinquième, copie de P1), un cariste, sans froid ni inspection. Les valeurs
+// attendues sont écrites à la main. Sans ces trois options, rien ne change : la référence de l'étape 0 et les cas des étapes 2 à 5 le prouvent.
+
+const PALS5 = PALS.concat([Object.assign(JSON.parse(JSON.stringify(PALS[0])), { id: 'P5' })]);
+const ID_Q = 'essai-inspection';
+const GESTE_FIN = `quai:${ID_Q}:dechargement`;
+const TEXTE_FIN = 'Les 5 palettes sont en zone de réception. Le contrôle, c’est la prochaine fois.';
+const DEUX = (extra = {}) => Object.assign({ securite: null }, DECH('cariste'), extra);
+// Monte la séance d'essai sur le quai `extra`, sur une base reprise (`db` : celle d'un élève qui revient, copiée) ; `volet` : un message déclenché par
+// `quaiDecharge` + `apresGeste` (la preuve que la séance s'ouvre avec le nouveau geste, et que le message arrive).
+const monterDeux = (p, extra, db, volet = false) => p.evaluate(async ([extra, db0, palettes, volet]) => {
+  const { creerEntreprise } = await import('/core/types/entreprise.js');
+  const E = await import('/outils/essai-quai-inspection.js');
+  const D = await import('/core/declencheurs.js');
+  document.querySelector('#qiScene')?.remove();
+  const hote = document.createElement('div'); hote.id = 'qiScene'; document.body.prepend(hote);
+  const Q = Object.assign(E.quaiEssai({ palettes }), extra);
+  const db = db0 ? JSON.parse(JSON.stringify(db0)) : {};
+  window.__qs = { db, Q, enregistres: [] };
+  const U = E.universQuai(Q);
+  if (volet) {
+    U.volet = { id: 'essai-volet', semer: () => ({ mails: [] }), declencheurs: [{ id: 'suite',
+      quand: D.tous(D.quaiDecharge(Q.id), D.apresGeste(`quai:${Q.id}:dechargement`)),
+      semer: (prenom) => ({ mails: [{ folder: 'in', ts: Date.now(), from: 'Samia', fromMail: 'samia@essai.example', to: prenom, subject: 'La suite', kind: 'text', text: 'Les palettes sont au sol.' }] }) }] };
+  }
+  const meta = { id: 'essai-inspection', code: 'ESSAI', titre: 'Essai de l’inspection', portee: 'eleve', immersif: true, temps: 'guidage', bareme: 20 };
+  const ctx = {
+    meta, profil: { prenom: 'Lea', nom: 'Test', role: 'eleve', uid: 'u-test' },
+    jeu: { etat: () => db, sauver: () => {} },
+    enregistrer: (r) => { window.__qs.enregistres.push(JSON.parse(JSON.stringify(r))); }, quitter: () => {}, codeStock: 'ABC', lireScore: async () => null,
+  };
+  creerEntreprise(U).rendre(hote, ctx);
+  document.querySelector('#qiScene .ent-nav[data-vue="quai"]').click();
+}, [extra, db, PALS5, volet]);
+// `c` : le contexte (mouvement réduit par défaut) ; `horloge` : une horloge simulée (le temps ne passe que par `clock.runFor`).
+async function pageDeux(extra, { c = ctxS, horloge = false, db = null, volet = false } = {}) {
+  const p = await c.newPage();
+  p.setDefaultTimeout(8000);
+  p.on('pageerror', (e) => erreurs.push('PAGEERROR: ' + e.message));
+  p.on('console', (m) => { if (m.type() === 'error' && !/\b404\b/.test(m.text())) erreurs.push('CONSOLE: ' + m.text()); });
+  if (horloge) await p.clock.install({ time: 0 });
+  await p.goto(BASE);
+  await p.waitForSelector('#btnProf', { timeout: 8000 });
+  await monterDeux(p, extra, db, volet);
+  await p.waitForSelector(`${HOTE} .quai-stepper`);
+  // Avec le mouvement normal, l'arrivée du camion dure 5,2 s : « Passer l'animation ».
+  if (await p.locator(`${HOTE} [data-q="passer1"]`).isVisible()) await p.click(`${HOTE} [data-q="passer1"]`);
+  return p;
+}
+const etapesAff = (p) => p.$$eval(`${HOTE} [data-q="etape"]`, (L) => L.map((b) => +b.dataset.n));
+const baseDe = (p) => p.evaluate(() => JSON.parse(JSON.stringify(window.__qs.db)));
+const BANDEAU = `${HOTE} [data-q-fin-decharge]`;
+const boutonsVus = (p) => p.$$eval(`${HOTE} [data-quai] button`, (L) => L.filter((b) => b.offsetParent !== null).map((b) => b.textContent.trim().replace(/\s+/g, ' ')));
+// Les palettes P1 à P5 contrôlées comme dans le cas des quatre fûts : comptage 8, 8, 8, 7, 8 ; réserves de P2 (produit) et de P3 (avarie).
+async function controlerCinq(p) {
+  const valide = async (n, compte, decision, motif) => {
+    await p.click(`${HOTE} [data-q="sel"][data-n="${n}"]`);
+    await p.fill(`${HOTE} #qCompte`, String(compte)); await p.press(`${HOTE} #qCompte`, 'Enter');
+    await p.click(`${HOTE} #qDec-${decision}`);
+    if (motif) await p.click(`${HOTE} #qMot-${motif}`);
+    await p.click(`${HOTE} [data-q="valider"]`);
+  };
+  await valide(0, 8, 'accepter'); await valide(1, 8, 'reserves', 'produit'); await valide(2, 8, 'reserves', 'avarie'); await valide(3, 7, 'accepter'); await valide(4, 8, 'accepter');
+  await p.click(`${HOTE} [data-q="vers4"]`); await p.click(`${HOTE} [data-q="vers4"]`);
+  await p.fill(`${HOTE} #qRes-P2`, 'PEL-20'); await p.fill(`${HOTE} #qRes-P3`, '1');
+}
+
+await v('Quai arrêt : à la dernière palette, le quai se fige — stepper ① ②, bandeau du contenu, aucun bouton Valider / Clore / Recommencer / Compter, le geste « dechargement » part une fois', async () => {
+  const p = await pageDeux(DEUX({ arret: { etape: 'dechargement', texte: TEXTE_FIN } }));
+  egal(await etapesAff(p), [1, 2], 'avant le déchargement : le stepper ne propose que ① et ②');
+  egal(await p.locator(BANDEAU).count(), 0, 'pas de bandeau avant la fin');
+  await p.click(`${HOTE} [data-q="decharger"]`);
+  await p.waitForSelector(BANDEAU);
+  egal(await p.$eval(BANDEAU, (n) => n.textContent.trim()), TEXTE_FIN, 'le bandeau dit le texte du contenu');
+  egal(await etapesAff(p), [1, 2], 'à la fin, ① et ② restent, rien ne vient après');
+  egal(await p.$$eval(`${HOTE} [data-q="etape"]`, (L) => L.map((b) => b.textContent.trim())), ['① Le camion arrive', '② Déchargement'], 'les libellés du stepper');
+  // Ce qui part : aucun bouton de contrôle ni de clôture. Ce qui reste : le stepper et « Revoir le déchargement ».
+  for (const q of ['vers3', 'vers4', 'valider', 'clore', 'recommencer', 'rentrer', 'ecrire', 'signer']) egal(await p.locator(`${HOTE} [data-q="${q}"]`).count(), 0, `le bouton data-q="${q}" existe encore`);
+  const B = await boutonsVus(p);
+  egal(B.filter((t) => /Valider|Clore|Recommencer|Compter|Contrôler|Rendre/.test(t)), [], `boutons de contrôle visibles : ${B}`);
+  egal(B, ['① Le camion arrive', '② Déchargement', '↺ Revoir le déchargement'], 'les seuls boutons visibles');
+  // L'image de fin : cinq palettes au sol, le chariot garé, le chauffeur debout, et une légende qui n'attend aucune signature.
+  const fin = await p.$eval(`${HOTE} [data-q-scene2]`, (s) => ({ pal: new Set([...s.querySelectorAll('[data-iso-pal]')].map((g) => g.dataset.isoPal)).size, chariots: [...s.querySelectorAll('[data-iso-chariot]')].map((g) => g.dataset.isoChariot),
+    chauffeurs: s.querySelectorAll('ellipse[fill="rgba(0,0,0,.2)"]').length, leg: s.parentElement.querySelector('[data-q-leg]').textContent.trim() }));
+  egal([fin.pal, fin.chariots, fin.chauffeurs], [5, ['dehors'], 1], 'cinq palettes, le chariot garé, le chauffeur debout');
+  vrai(/Les 5 palettes sont en zone de réception\.$/.test(fin.leg), `légende de fin : ${fin.leg}`);
+  // L'état : figé, drapeau posé, le déchargement complet (une ligne d'ouverture et cinq poses).
+  const b1 = await baseDe(p), e1 = b1.quais[ID_Q];
+  egal([e1.fini, e1.dechargeFini, e1.etape, e1.evts, e1.journal.length], [true, true, 2, 6, 6], 'état : fini, drapeau, étape ②, cinq poses comptées');
+  egal(Object.keys(b1.gestes[ID_Q]).filter((g) => g === GESTE_FIN), [GESTE_FIN], 'le geste de fin du déchargement est rangé');
+  // La consigne du quai ne parle plus de compter ni de signer (cette séance-là s'arrête au déchargement).
+  egal(await p.$eval(`${HOTE} .quai-aide`, (n) => n.textContent.trim()), 'Sur une plateforme, c’est un cariste qui décharge, au chariot élévateur.', 'la consigne du quai');
+  // Figé : le chrono réel ne court plus, et un clic de plus ne change rien.
+  await p.waitForTimeout(2300);
+  await p.click(`${HOTE} [data-q="revoir"]`);
+  await p.click(`${HOTE} [data-q-scene2]`);
+  egal((await baseDe(p)).quais[ID_Q], e1, 'plus rien ne bouge dans l’état (ni le chrono, ni un clic)');
+  // Le déclencheur : vrai à la fin, faux avant (base vide, quai sans drapeau), et `tous` garde la liste des quais.
+  const D = await p.evaluate(async () => {
+    const T = await import('/core/declencheurs.js'), f = T.quaiDecharge('essai-inspection');
+    return { fin: f(window.__qs.db, 'essai-inspection'), vide: f({}, 'x'), sansDrapeau: f({ quais: { 'essai-inspection': { fini: true, evts: 6 } } }, 'x'), autre: T.quaiDecharge('autre')(window.__qs.db, 'x'),
+      quais: f.quais, tous: T.tous(f, T.apresGeste('a')).quais };
+  });
+  egal(D, { fin: true, vide: false, sansDrapeau: false, autre: false, quais: ['essai-inspection'], tous: ['essai-inspection'] }, 'quaiDecharge');
+  // Recharger la page (la base reprise) : le geste ne repart pas, même après des redessins.
+  const copie = await baseDe(p);
+  delete copie.gestes[ID_Q][GESTE_FIN];
+  await monterDeux(p, DEUX({ arret: { etape: 'dechargement', texte: TEXTE_FIN } }), copie);
+  await p.waitForSelector(BANDEAU);
+  await p.click(`${HOTE} [data-q="etape"][data-n="1"]`); await p.click(`${HOTE} [data-q="etape"][data-n="2"]`);
+  const b2 = await baseDe(p);
+  egal(Object.keys(b2.gestes[ID_Q]).filter((g) => g === GESTE_FIN), [], 'rechargé : le geste n’est pas renvoyé (le drapeau est dans l’état)');
+  egal(b2.quais[ID_Q].dechargeFini, true, 'le drapeau est toujours posé');
+  await p.close();
+});
+
+await v('Quai arrêt : avec le mouvement normal — rien avant la dernière palette ; l’animation jusqu’au bout, « Passer l’animation » et la page rechargée en plein déchargement mènent au même état', async () => {
+  const extra = DEUX({ arret: 'dechargement' });
+  const lire = async (p) => { const b = await baseDe(p), e = b.quais[ID_Q];
+    return { fini: e.fini, drapeau: e.dechargeFini, etape: e.etape, evts: e.evts, minute: e.minute, journal: e.journal, geste: Object.keys(b.gestes[ID_Q]).includes(GESTE_FIN) }; };
+  // a) l'animation jusqu'au bout
+  const a = await pageDeux(extra, { c: ctxSM, horloge: true });
+  await a.click(`${HOTE} [data-q="decharger"]`);
+  const copieDepart = await baseDe(a);   // l'état rangé au clic : porte ouverte, zéro palette posée (ce que la base garde si la page se recharge)
+  await a.clock.runFor(2500);
+  egal(await a.locator(BANDEAU).count(), 0, 'au milieu du déchargement : pas de bandeau');
+  const milieu = await lire(a);
+  egal([milieu.fini, !!milieu.drapeau, milieu.geste], [false, false, false], 'au milieu du déchargement : ni figé, ni geste');
+  await a.clock.runFor(60000);
+  await a.waitForSelector(BANDEAU);
+  egal(await a.$eval(BANDEAU, (n) => n.textContent.trim()), 'Les palettes sont en zone de réception.', 'sans texte déclaré : le texte par défaut');
+  const A = await lire(a);
+  egal([A.fini, A.drapeau, A.etape, A.evts, A.journal.length, A.geste], [true, true, 2, 6, 6, true], 'fin de l’animation');
+  await a.close();
+  // b) « Passer l'animation »
+  const b = await pageDeux(extra, { c: ctxSM, horloge: true });
+  await b.click(`${HOTE} [data-q="decharger"]`);
+  await b.clock.runFor(2500);
+  await b.click(`${HOTE} [data-q="passer"]`);
+  await b.waitForSelector(BANDEAU);
+  const B = await lire(b);
+  await b.close();
+  // c) la page rechargée en plein déchargement (la base du clic, sans l'animation)
+  const c = await pageDeux(extra, { c: ctxSM, horloge: true, db: copieDepart });
+  await c.waitForSelector(BANDEAU);
+  const C = await lire(c);
+  await c.close();
+  egal(B, A, '« Passer l’animation » : le même état que l’animation jusqu’au bout');
+  egal(C, A, 'page rechargée en plein déchargement : le même état');
+});
+
+await v('Quai arrêt : mouvement réduit — l’état final tout de suite, le bandeau et le geste', async () => {
+  const p = await pageDeux(DEUX({ arret: 'dechargement' }), { c: ctxS });
+  await p.click(`${HOTE} [data-q="decharger"]`);
+  await p.waitForSelector(BANDEAU);
+  const b = await baseDe(p), e = b.quais[ID_Q];
+  egal([e.fini, e.dechargeFini, e.evts, Object.keys(b.gestes[ID_Q]).includes(GESTE_FIN)], [true, true, 6, true], 'mouvement réduit');
+  await p.close();
+});
+
+await v('Quai arrêt : le message déclenché par quaiDecharge + le geste arrive à la fin (la séance s’ouvre : le geste est connu) ; sans arret, le même geste est inconnu', async () => {
+  const p = await pageDeux(DEUX({ arret: 'dechargement' }), { volet: true });
+  const avant = await baseDe(p);
+  egal((avant.mails || []).filter((m) => m.subject === 'La suite').length, 0, 'le message n’arrive pas avant la fin');
+  await p.click(`${HOTE} [data-q="decharger"]`);
+  await p.waitForSelector(BANDEAU);
+  const apres = await baseDe(p);
+  egal((apres.mails || []).filter((m) => m.subject === 'La suite').length, 1, 'le message arrive une fois, à la fin du déchargement');
+  egal(typeof apres.volets['essai-volet#suite'], 'number', 'la marque du déclencheur est rangée');
+  // Sans `arret`, le geste n'est pas publié : la séance qui le cite ne s'ouvre pas (les séances existantes gardent la liste d'avant).
+  const refus = await p.evaluate(async () => {
+    const { creerEntreprise } = await import('/core/types/entreprise.js');
+    const E = await import('/outils/essai-quai-inspection.js'), D = await import('/core/declencheurs.js');
+    const Q = E.quaiEssai({}); Q.securite = null;
+    const U = E.universQuai(Q);
+    U.volet = { id: 'v', semer: () => ({ mails: [] }), declencheurs: [{ id: 's', quand: D.apresGeste(`quai:${Q.id}:dechargement`), semer: () => ({ mails: [] }) }] };
+    try { creerEntreprise(U); return 'ouverte'; } catch (x) { return x.message; }
+  });
+  vrai(/geste inconnu « quai:essai-inspection:dechargement »/.test(refus), `sans arret, le geste devrait être inconnu : ${refus}`);
+  const signaux = await p.evaluate(async () => {
+    const Q = await import('/core/types/quai.js'), E = await import('/outils/essai-quai-inspection.js');
+    const sig = (extra) => Q.creerQuai(Object.assign(E.quaiEssai({}), { securite: null }, extra)).signaux;
+    return { sans: sig({}), avec: sig({ arret: 'dechargement' }) };
+  });
+  egal(signaux.sans, ['quai:essai-inspection:decharger', 'quai:essai-inspection:valider', 'quai:essai-inspection:cloturer'], 'sans arret : la liste des gestes d’avant, inchangée');
+  egal(signaux.avec, ['quai:essai-inspection:decharger', 'quai:essai-inspection:valider', 'quai:essai-inspection:cloturer', GESTE_FIN], 'avec arret : un geste de plus');
+  await p.close();
+});
+
+await v('Quai arrêt : une base qui sort de ses étapes (étape ④ rangée) revient à ② ; un quai sans option garde ses quatre étapes', async () => {
+  const p = await pageDeux(DEUX({ arret: 'dechargement' }));
+  await p.click(`${HOTE} [data-q="decharger"]`);
+  await p.waitForSelector(BANDEAU);
+  const copie = await baseDe(p);
+  copie.quais[ID_Q].etape = 4;
+  await monterDeux(p, DEUX({ arret: 'dechargement' }), copie);
+  await p.waitForSelector(`${HOTE} [data-q-scene2]`);
+  egal([await p.locator(`${HOTE} [data-q-cf]`).count(), await p.locator(BANDEAU).count()], [0, 1], 'étape ④ rangée : l’écran de ② s’affiche, pas celui de ④');
+  // Sans option : ① ② ③ ④, et « Compter la palette » (aucun bandeau).
+  await monterDeux(p, DEUX({}));
+  await p.waitForSelector(`${HOTE} [data-q="decharger"]`);
+  egal(await etapesAff(p), [1, 2, 3, 4], 'sans option : les quatre étapes');
+  await p.click(`${HOTE} [data-q="decharger"]`);
+  await p.waitForSelector(`${HOTE} [data-q="vers3"]:not([disabled])`);
+  egal(await p.locator(BANDEAU).count(), 0, 'sans option : pas de bandeau de fin');
+  vrai(/Le chauffeur attend ta signature\.$/.test(await legende(p)), `sans option : la légende d’aujourd’hui — ${await legende(p)}`);
+  egal(await p.$eval(`${HOTE} .quai-aide`, (n) => n.textContent.trim()), 'Sur une plateforme, c’est un cariste qui décharge, au chariot élévateur. Toi, tu ne signes rien tant que tu n’as pas compté.', 'sans option : la consigne d’aujourd’hui');
+  const e = (await baseDe(p)).quais[ID_Q];
+  egal([e.fini, e.dechargeFini], [false, undefined], 'sans option : rien n’est figé');
+  await p.close();
+});
+
+await v('Quai commence : la vue s’ouvre à ③ — déchargement déjà fait (journal vide, aucune minute), stepper ③ ④, palettes en zone et chauffeur debout à ④', async () => {
+  const p = await pageDeux(DEUX({ commence: 'controle', debut: '06:50' }));
+  await p.waitForSelector(`${HOTE} [data-q-palette]`);
+  egal(await etapesAff(p), [3, 4], 'le stepper ne propose que ③ et ④');
+  egal(await p.$$eval(`${HOTE} [data-q="etape"]`, (L) => L.map((b) => b.textContent.trim())), ['③ Compter la palette', '④ Réserves et signature'], 'libellés');
+  egal(await p.$eval(`${HOTE} [data-q-heure]`, (n) => n.textContent.trim()), '06:50', 'l’horloge du quai est l’heure de `debut` : aucune minute ajoutée');
+  const e = (await baseDe(p)).quais[ID_Q];
+  egal([e.etape, e.minute, e.journal, e.decharge, e.ouvertA, e.evts, e.fini, e.signe], [3, 0, [], true, 0, 6, false, false], 'état de départ construit par etatNeuf');
+  for (const q of ['decharger', 'revoir', 'passer', 'vers3']) egal(await p.locator(`${HOTE} [data-q="${q}"]`).count(), 0, `aucun bouton data-q="${q}" (le déchargement est déjà fait)`);
+  vrai(await p.locator(`${HOTE} .quai-rappel-bl`).count() === 1, 'le BL est en main (« Revoir le bon de livraison »)');
+  // ④ : les cinq palettes en zone de réception, le chariot garé, le chauffeur debout et qui attend.
+  await p.click(`${HOTE} [data-q="etape"][data-n="4"]`);
+  const z = await p.$eval(`${HOTE} [data-q-cf]`, (s) => ({ pal: new Set([...s.querySelectorAll('[data-iso-pal]')].map((g) => g.dataset.isoPal)).size, chariots: [...s.querySelectorAll('[data-iso-chariot]')].map((g) => g.dataset.isoChariot),
+    chauffeurs: s.querySelectorAll('ellipse[fill="rgba(0,0,0,.2)"]').length, note: s.closest('.quai-doc').querySelector('[data-q-etatcf]').textContent.trim() }));
+  egal([z.pal, z.chariots, z.chauffeurs], [5, ['dehors'], 1], '④ : cinq palettes au sol, le chariot garé, le chauffeur debout');
+  vrai(/Le chauffeur attend ta signature\.$/.test(z.note), `④ : ${z.note}`);
+  egal((await baseDe(p)).quais[ID_Q].journal, [], 'ouvrir ④ n’écrit rien au journal');
+  await p.close();
+});
+
+await v('Quai commence : compter, décider, réserves, signer, clore — jalons sans ordre ni sécurité ; « Recommencer » revient à ③', async () => {
+  const p = await pageDeux(DEUX({ commence: 'controle' }));
+  await p.waitForSelector(`${HOTE} [data-q-palette]`);
+  await controlerCinq(p);
+  await p.click(`${HOTE} [data-q="ecrire"]`);
+  await p.click(`${HOTE} [data-q="signer"]`);
+  await p.click(`${HOTE} [data-q="clore"]`);
+  await p.waitForSelector(`${HOTE} [data-q-bilan]`);
+  const J = await p.evaluate(async () => { const Q = await import('/core/types/quai.js'); return Q.jalonsQuai(window.__qs.db, window.__qs.Q).L.map((l) => [l.id, l.ok]); });
+  egal(J.map(([id]) => id), ['P1-comptage', 'P1-decision', 'P2-comptage', 'P2-decision', 'P3-comptage', 'P3-decision', 'P4-comptage', 'P4-decision', 'P5-comptage', 'P5-decision',
+    'P2-reserve', 'P3-reserve', 'deballage', 'signature', 'rentre'], 'les jalons : seulement ceux de ③ et ④');
+  egal(J.filter(([, ok]) => !ok), [], 'tous les jalons sont justes');
+  egal(await p.$$eval(`${HOTE} [data-q-bilan] tr[data-jalon]`, (L) => L.length), 15, 'le bilan de la vue liste ces 15 jalons, rien pour ① ②');
+  const e = (await baseDe(p)).quais[ID_Q];
+  egal([e.fini, e.signe, e.rentre, e.dechargeFini], [true, true, true, undefined], 'clos, signé, palettes en zone ; pas de drapeau de fin de déchargement');
+  // « Recommencer la réception » : un quai neuf, qui repart du contrôle.
+  await p.click(`${HOTE} [data-q="recommencer"]`); await p.click(`${HOTE} [data-q="recommencer"]`);
+  await p.waitForSelector(`${HOTE} [data-q-palette]`);
+  const r = (await baseDe(p)).quais[ID_Q];
+  egal([r.etape, r.journal, r.minute, r.fini, r.evts], [3, [], 0, false, 6], 'recommencé : ③, journal vide');
+  await p.close();
+});
+
+await v('Quai commence : une base rangée avant (étape ① ou ②) s’ouvre quand même à ③', async () => {
+  const p = await pageDeux(DEUX({ commence: 'controle' }));
+  await p.waitForSelector(`${HOTE} [data-q-palette]`);
+  const copie = await baseDe(p);
+  copie.quais[ID_Q].etape = 1;
+  await monterDeux(p, DEUX({ commence: 'controle' }), copie);
+  await p.waitForSelector(`${HOTE} [data-q-palette]`);
+  egal(await etapesAff(p), [3, 4], 'étape ① rangée : ③ s’affiche');
+  await p.close();
+});
+
+await v('Quai commence et arrêt : les jalons ne portent que les étapes jouées (écrits à la main) ; un quai sans option garde tous les siens', async () => {
+  const Q0 = () => QC([PC({ id: 'P1' }), PC({ id: 'P2', ref: 'REF-2', avarie: AV(1), attendu: 'reserves', motifAttendu: 'avarie' })], { rendu: 'iso', froid: false, securite: SEC5() });
+  const ids = (Q) => quaiMod.jalonsQuai({}, Q).L.map((l) => l.id);
+  const SECU = ['securite-cabine', 'securite-niveleur', 'securite-aucun-faux'];
+  egal(ids(Q0()), SECU.concat(['P1-comptage', 'P1-decision', 'P2-comptage', 'P2-decision', 'P2-reserve', 'deballage', 'signature', 'rentre']), 'sans option : sécurité, palettes, déballage, signature, rentrée');
+  egal(ids(Object.assign(Q0(), { arret: 'dechargement' })), SECU, 'arret : la sécurité (étape jouée), ni comptage, ni décision, ni réserve, ni déballage, ni signature, ni rentrée');
+  egal(ids(Object.assign(Q0(), { arret: { etape: 'dechargement', texte: 'Fini.' } })), SECU, 'arret en objet : pareil');
+  const J = (Q) => quaiMod.jalonsQuai({}, Q);
+  egal([J(Object.assign(Q0(), { arret: 'dechargement' })).max, J(Q0()).max], [3, 11], 'le nombre de jalons comptés suit');
+  egal(quaiMod.etapesQuai(Object.assign(Q0(), { arret: 'dechargement' })).map((x) => x.id), SECU, 'etapesQuai : une étape du suivi par jalon joué');
+  // `arret` avec froid : le ticket de l'enregistreur (étape ①) reste un jalon.
+  const froid = Object.assign(QC([PC({ id: 'P1' })], { arret: 'dechargement' }));
+  egal(ids(froid), ['ticket'], 'arret avec froid : le ticket (étape ①) reste, rien de ③ ④');
+  // `commence` : ni ordre, ni sécurité, ni ticket, même si le contenu les déclare (verifierQuai le refuse, mais les jalons ne s'y fient pas).
+  const sansOrdre = { ordre: { premier: 0, juste: 'x', phrases: [{ v: 'x', lib: 'x' }] } };
+  const deux = QC([PC({ id: 'P1' })], Object.assign({ securite: SEC5(), rendu: 'iso' }, sansOrdre));
+  deux.camions.push({ nom: 'Deuxième', arrivee: '06:10', fournisseur: 'G', palettes: [PC({ id: 'P2' })] });
+  egal(ids(deux).filter((id) => id === 'ordre' || /^securite-/.test(id) || /^ticket/.test(id)).length > 0, true, 'contrôle du montage : sans commence, le contenu a bien un ordre, une sécurité et des tickets');
+  egal(ids(Object.assign(deux, { commence: 'controle' })).filter((id) => id === 'ordre' || /^securite-/.test(id) || /^ticket/.test(id)), [], 'commence : ni ordre, ni sécurité, ni ticket');
+  vrai(ids(Object.assign(Q0(), { commence: 'controle', securite: null })).includes('rentre'), 'commence : le reste (signature, rentrée…) est inchangé');
+});
+
+await v('Quai deux séances : verifierQuai refuse les combinaisons et les valeurs inconnues, avec un message clair ; creerQuai lève l’erreur', async () => {
+  const bon = (m = {}) => QC([PC({ id: 'P1' })], Object.assign({ rendu: 'iso', froid: false }, m));
+  egal(quaiMod.verifierQuai(bon({ arret: 'dechargement' })), [], 'arret: \'dechargement\'');
+  egal(quaiMod.verifierQuai(bon({ arret: { etape: 'dechargement', texte: 'Fini.' } })), [], 'arret en objet');
+  egal(quaiMod.verifierQuai(bon({ arret: { etape: 'dechargement' } })), [], 'arret en objet sans texte');
+  egal(quaiMod.verifierQuai(bon({ commence: 'controle' })), [], 'commence: \'controle\'');
+  egal(quaiMod.verifierQuai(bon({ document: 'Bon de livraison — lettre de voiture' })), [], 'document');
+  egal(quaiMod.verifierQuai(bon({ arret: 'dechargement', securite: SEC5() })), [], 'arret avec une inspection : permis');
+  const REFUS_DS = [
+    ['commence avec securite', { commence: 'controle', securite: SEC5() }, /commence.*securite/],
+    ['commence avec arret', { commence: 'controle', arret: 'dechargement' }, /arret et commence/],
+    ['arret avec mode controle', { arret: 'dechargement', mode: 'controle' }, /arret avec mode: 'controle'/],
+    ['commence avec mode controle', { commence: 'controle', mode: 'controle' }, /commence avec mode: 'controle'/],
+    ['arret inconnu (texte)', { arret: 'tout' }, /arret : « tout » n’existe pas/],
+    ['arret inconnu (objet)', { arret: { etape: 'controle' } }, /arret : cette valeur n’existe pas/],
+    ['arret: true', { arret: true }, /arret : cette valeur n’existe pas/],
+    ['arret avec une clé inconnue', { arret: { etape: 'dechargement', titre: 'x' } }, /arret\.titre : inconnu/],
+    ['arret avec un texte vide', { arret: { etape: 'dechargement', texte: '  ' } }, /arret\.texte : le texte du bandeau de fin est vide/],
+    ['commence inconnu', { commence: 'reserves' }, /commence : « reserves » n’existe pas/],
+    ['commence: true', { commence: true }, /commence : « true » n’existe pas/],
+    ['document vide', { document: '  ' }, /document : le nom du document de transport est vide/],
+    ['commence avec froid', { commence: 'controle', froid: undefined }, /commence.*sans froid/],
+    ['arret avec deux camions', { arret: 'dechargement', camions: [{ nom: 'A', palettes: [PC({ id: 'P1' })] }, { nom: 'B', palettes: [PC({ id: 'P2' })] }] }, /arret demande un seul camion/],
+    ['commence avec deux camions', { commence: 'controle', camions: [{ nom: 'A', palettes: [PC({ id: 'P1' })] }, { nom: 'B', palettes: [PC({ id: 'P2' })] }] }, /commence demande un seul camion/],
+  ];
+  const fautes = [];
+  for (const [nom, mute, motif] of REFUS_DS) {
+    const Q = bon(mute);
+    if (nom === 'commence avec froid') delete Q.froid;
+    const E = quaiMod.verifierQuai(Q);
+    if (!E.length) fautes.push(`« ${nom} » n’est pas refusé`);
+    else if (!E.some((m) => motif.test(m))) fautes.push(`« ${nom} » : message sans ${motif} (${E.join(' | ')})`);
+  }
+  if (fautes.length) throw new Error(fautes.join(' ; '));
+  // Le moteur lève l'erreur au chargement : la séance ne s'ouvre pas.
+  let levee = '';
+  try { quaiMod.creerQuai(bon({ commence: 'controle', arret: 'dechargement' })); } catch (x) { levee = x.message; }
+  vrai(/arret et commence/.test(levee), `creerQuai devrait lever l’erreur : ${levee}`);
+});
+
+await v('Quai document : le titre de ④ (et de ①) porte le nom déclaré ; sans `document`, « Bon de livraison » comme avant — le rappel de ③ dit « le document » seulement quand un nom est déclaré', async () => {
+  const lire = async (extra) => {
+    const p = await pageDeux(DEUX(Object.assign({ commence: 'controle' }, extra)));
+    await p.waitForSelector(`${HOTE} [data-q-palette]`);
+    const rappel = await p.$eval(`${HOTE} .quai-rappel-bl summary`, (n) => n.textContent.trim());
+    await p.click(`${HOTE} [data-q="etape"][data-n="4"]`);
+    const titre = await p.$eval(`${HOTE} .quai-papier .quai-doc-titre`, (n) => n.textContent.trim());
+    await p.close();
+    return { rappel, titre };
+  };
+  egal(await lire({}), { rappel: '📄 Revoir le bon de livraison', titre: '📄 Bon de livraison n° BL-ESSAI-01 — exemplaire du destinataire' }, 'sans document : les mots d’aujourd’hui');
+  egal(await lire({ document: 'Bon de livraison — lettre de voiture' }), { rappel: '📄 Revoir le document', titre: '📄 Bon de livraison — lettre de voiture n° BL-ESSAI-01 — exemplaire du destinataire' }, 'avec document');
+  // ① (arrivée du camion, quai iso) : le même nom.
+  const p = await pageDeux(DEUX({ arret: 'dechargement', document: 'Lettre de voiture' }));
+  await p.waitForSelector(`${HOTE} [data-q-apres-arrivee] .quai-doc-titre`);
+  egal(await p.$eval(`${HOTE} [data-q-apres-arrivee] .quai-doc-titre`, (n) => n.textContent.trim()), '📄 Lettre de voiture n° BL-ESSAI-01 — Brasserie d’essai', '① porte le nom déclaré');
+  await p.close();
+  const q = await pageDeux(DEUX({ arret: 'dechargement' }));
+  await q.waitForSelector(`${HOTE} [data-q-apres-arrivee] .quai-doc-titre`);
+  egal(await q.$eval(`${HOTE} [data-q-apres-arrivee] .quai-doc-titre`, (n) => n.textContent.trim()), '📄 Bon de livraison n° BL-ESSAI-01 — Brasserie d’essai', '① sans document : comme avant');
+  await q.close();
+});
+
+await v('Quai chariot : cinq palettes (ENT-8.7) — le chariot ne touche aucune palette posée, les cinq bacs tiennent dans la zone de réception, la légende et les pastilles suivent', async () => {
+  // Les places d'arrivée de cinq palettes de fûts (deux colonnes, trois rangs), écrites à la main comme PLACES_4 : y = 2,1 + (2 − rang) × 1,15.
+  const gab = [0, 1, 2, 3, 4].map(() => [0.95, 0.95]);
+  const places = [[2.525, 4.4], [3.675, 4.4], [2.525, 3.25], [3.675, 3.25], [2.525, 2.1]];
+  const pe5 = await pageEssai();
+  const K = 0.85, FL = 1.02 * K, BL = 2.15 * K, DEMI = 0.45;
+  const coupe = (a, b) => a.x0 < b.x1 - 1e-6 && b.x0 < a.x1 - 1e-6 && a.y0 < b.y1 - 1e-6 && b.y0 < a.y1 - 1e-6;
+  const { plan, etats, aPose } = await planDe(pe5, gab, places);
+  await pe5.close();
+  egal(plan.ordre, [4, 3, 2, 1, 0], 'la dernière chargée sort la première');
+  let collisions = [], hors = 0;
+  for (const [t, s] of etats) {
+    const rang = plan.tLift.findIndex((tl, i) => t >= tl && t < plan.tPose[i]);
+    const n = rang < 0 ? null : plan.ordre[rang], charge = n == null ? null : gab[n];
+    let x0 = s.cx - DEMI, x1 = s.cx + DEMI, y0 = s.yc;
+    if (charge) { x0 = Math.min(x0, s.cx - charge[0] / 2); x1 = Math.max(x1, s.cx + charge[0] / 2); y0 = Math.min(y0, s.yc + FL - charge[1]); }
+    const emprise = { x0, x1, y0, y1: s.yc + BL };
+    if (y0 < -0.01 && (x0 < 2.4 - 1e-6 || x1 > 3.6 + 1e-6)) hors++;
+    const derniere = plan.tPose.reduce((d, tp, u) => (t >= tp ? u : d), -1);
+    plan.ordre.forEach((m, u) => {
+      const sousLesFourches = u === derniere && s.yc < places[m][1] + gab[m][1] - 1e-6;
+      const e = sousLesFourches ? { x0: emprise.x0, x1: emprise.x1, y0: s.yc + FL, y1: emprise.y1 } : emprise;
+      if (t >= plan.tPose[u] && coupe(e, { x0: places[m][0], y0: places[m][1], x1: places[m][0] + gab[m][0], y1: places[m][1] + gab[m][1] })) collisions.push(`${t} ms contre la place de la palette ${m + 1}`);
+    });
+  }
+  egal(hors, 0, 'dès qu’une partie du chariot est derrière le mur, elle est dans la largeur de l’ouverture');
+  egal(collisions.slice(0, 3), [], 'le chariot (et sa charge) traverse une palette déjà posée');
+  plan.ordre.forEach((n, u) => {
+    const s = aPose[u];
+    vrai(Math.abs(s.cx - gab[n][0] / 2 - places[n][0]) < 0.01 && Math.abs(s.yc + FL - gab[n][1] - places[n][1]) < 0.01, `la palette ${n + 1} est posée à sa place (chariot en ${s.cx.toFixed(2)} ; ${s.yc.toFixed(2)})`);
+  });
+  // À l'écran (② sans option) : le cadre, les cinq bacs dans la zone calculée, cinq pastilles, la légende d'aujourd'hui.
+  const p = await pageDeux(DEUX({}));
+  await p.click(`${HOTE} [data-q="decharger"]`);
+  await p.waitForSelector(`${HOTE} [data-q="vers3"]:not([disabled])`);
+  const r = await p.$eval(`${HOTE} [data-q-scene2]`, (s) => {
+    const zone = s.querySelector('[data-iso-zone]').getBBox(), bacs = [...s.querySelectorAll('polygon[fill="#3d4245"]')].map((n) => n.getBBox());
+    return { vb: s.getAttribute('viewBox'), bacs: bacs.length, hors: bacs.filter((b) => b.x < zone.x - 1 || b.x + b.width > zone.x + zone.width + 1 || b.y + b.height > zone.y + zone.height + 1).length };
+  });
+  egal(r, { vb: '290 0 640 540', bacs: 5, hors: 0 }, 'cinq bacs de rétention dans la zone de réception, cadre agrandi');
+  egal(await p.$$eval(`${HOTE} [data-q-past] i.sur`, (L) => L.length), 5, 'les cinq pastilles sont « sur le quai »');
+  vrai(/Les 5 palettes sont en zone de réception\. Le chauffeur attend ta signature\.$/.test(await legende(p)), `légende : ${await legende(p)}`);
+  await p.close();
+});
+
 await v('Quai iso : la page d’essai ne demande rien hors du site et ne plante pas', async () => {
   const hors = await pe.evaluate(() => performance.getEntriesByType('resource').map((e) => e.name).filter((n) => !n.startsWith(location.origin)));
   egal(hors, [], 'ressources hors du site');

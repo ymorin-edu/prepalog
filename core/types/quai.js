@@ -126,6 +126,19 @@
 // scène ; « C'est bon, on peut décharger » (deux clics) fige l'inspection. Le contenu est validé par `verifierQuai` (au chargement) ;
 // l'état de chaque objet (`etatsScene`), les zones (`zonesScene`) et le point touché (`pointTouche`) sont des fonctions pures ;
 // les jalons `securite-<id>` et `securite-aucun-faux` se calculent depuis les signaux. Sans `mode`, l'étape ⓪ en liste (lot 5).
+//
+// UN QUAI EN DEUX SÉANCES (17/10/2026, chantier « quai en deux séances », lot 1, brief `docs/briefs/ENT-8.7-action-decharger.md` §7.1).
+// Trois options de la déclaration, qui ne changent RIEN pour une séance qui ne les déclare pas :
+//   - `arret: 'dechargement'` (ou `{ etape: 'dechargement', texte }`) : le quai s'arrête quand la dernière palette est posée. Pas d'étapes ③ ④ (ni
+//     stepper, ni `aller`, ni écran), un bandeau de fin (`texte`) à la place des boutons, l'état est figé (`e.fini`, comme « Clore ») et le geste
+//     `quai:<id>:dechargement` part UNE fois (drapeau `e.dechargeFini`, rangé : un rechargement ne le renvoie pas). Les jalons ne portent que les
+//     étapes jouées (ordre, sécurité, ticket). Déclencheur : `quaiDecharge('<id>')` (`core/declencheurs.js`).
+//   - `commence: 'controle'` : la vue s'ouvre à l'étape ③, déchargement DÉJÀ fait (palettes en zone de réception, BL en main, chauffeur debout) ;
+//     l'état est construit par `etatNeuf`, sans journal ni minutes (l'heure du quai est celle de `debut`, sinon l'arrivée du camion). Pas d'étapes
+//     ⓪ ① ② ; jalons : ni `ordre`, ni `securite-*`, ni `ticket`. (Le nom `debut` est pris : c'est l'heure de début du quai.)
+//   - `document: 'Bon de livraison — lettre de voiture'` : le nom du document de transport dans les titres de l'écran (défaut : « Bon de livraison »).
+// Ces options demandent UN seul camion (le suivant ne se met à quai qu'une fois le BL du précédent signé) ; `commence` demande un quai sans froid
+// (un lot déchargé avant l'ouverture n'a pas de temps hors froid à mesurer) ; `arret` et `commence` s'excluent, et refusent `mode: 'controle'`.
 
 // Pas d'import de `ui.js` : le corrigé d'une séance (`contenus/corriges/`) importe ce module, et la
 // suite de tests charge les corrigés hors du navigateur.
@@ -266,7 +279,19 @@ function reglages(Q) {
     // La zone de calcul de l'étape ③ : `{ forme: 'feuille' | 'brouillon', rappel }` (absente : pas de zone).
     calcul: Q.calcul && Q.calcul.forme ? { forme: Q.calcul.forme === 'brouillon' ? 'brouillon' : 'feuille', rappel: !!Q.calcul.rappel } : null,
     depart: minutesDe(Q.debut || (camions[0] && camions[0].arrivee)),
+    // Un quai en deux séances (lot 1) : la fin après le déchargement (`{ texte }` ou null), le départ au contrôle, le nom du document.
+    arretDech: arretDechargement(Q), commence: Q.commence === 'controle', document: texteNet(Q.document) || DOCUMENT_DEFAUT,
   };
+}
+// `arret: 'dechargement'` ou `arret: { etape: 'dechargement', texte }` : le texte du bandeau de fin (défaut : les palettes sont en zone). Une valeur
+// fautive rend null ici ; c'est `verifierQuai` qui la refuse en clair.
+const DOCUMENT_DEFAUT = 'Bon de livraison';
+const TEXTE_ARRET_DEFAUT = 'Les palettes sont en zone de réception.';
+function arretDechargement(Q) {
+  const a = Q && Q.arret;
+  if (a === 'dechargement') return { texte: TEXTE_ARRET_DEFAUT };
+  if (a && typeof a === 'object' && !Array.isArray(a) && a.etape === 'dechargement') return { texte: texteNet(a.texte) || TEXTE_ARRET_DEFAUT };
+  return null;
 }
 // L'état propre à un camion : à la racine pour le premier, dans `suivants` pour les autres.
 const camionNeuf = () => ({ ticketLu: false, ticketRep: null, decharge: false, evts: 0, froid: 0, ouvertA: null,
@@ -480,12 +505,37 @@ function verifierUnite(Q, E) {
   }
 }
 
+// Un quai en deux séances (lot 1) : `arret`, `commence`, `document`. Une valeur inconnue, ou une combinaison qui n'a pas de sens, est refusée en clair.
+function verifierDeuxSeances(Q, E) {
+  const a = Q.arret;
+  let arret = false;
+  if (a !== undefined) {
+    const etape = typeof a === 'string' ? a : a && typeof a === 'object' && !Array.isArray(a) ? a.etape : undefined;
+    if (etape !== 'dechargement') E.push(`arret : ${typeof a === 'string' ? `« ${a} »` : 'cette valeur'} n’existe pas (la seule étape où s’arrêter est 'dechargement', ou { etape: 'dechargement', texte: '…' })`);
+    else arret = true;
+    if (a && typeof a === 'object' && !Array.isArray(a)) {
+      Object.keys(a).filter((k) => k !== 'etape' && k !== 'texte').forEach((k) => E.push(`arret.${k} : inconnu (etape, texte)`));
+      if (a.texte !== undefined && !texteNet(a.texte)) E.push('arret.texte : le texte du bandeau de fin est vide (retirer texte pour garder « Les palettes sont en zone de réception. »)');
+    }
+  }
+  const commence = Q.commence !== undefined;
+  if (commence && Q.commence !== 'controle') E.push(`commence : « ${Q.commence} » n’existe pas (la seule valeur est 'controle' : la vue s’ouvre à l’étape ③, le déchargement est déjà fait)`);
+  if (Q.document !== undefined && !texteNet(Q.document)) E.push('document : le nom du document de transport est vide (par exemple \'Bon de livraison — lettre de voiture\')');
+  if (arret && commence) E.push('arret et commence : on ne peut pas à la fois s’arrêter après le déchargement et partir du contrôle (il ne resterait aucune étape)');
+  if ((arret || commence) && Q.mode === 'controle') E.push(`${arret ? 'arret' : 'commence'} avec mode: 'controle' : ce mode (quai déjà réceptionné) n’a ni déchargement ni étapes à raccourcir`);
+  if ((arret || commence) && Array.isArray(Q.camions) && Q.camions.length > 1) E.push(`${arret ? 'arret' : 'commence'} demande un seul camion (le camion suivant ne se met à quai qu’une fois le BL du précédent signé)`);
+  if (commence && Q.commence === 'controle') {
+    if (Q.securite) E.push('commence: \'controle\' avec securite : l’inspection se joue avant le déchargement, qui est déjà fait (retirer securite)');
+    if (Q.froid !== false) E.push('commence: \'controle\' demande un quai sans froid (froid: false) : un lot déjà déchargé n’a pas de temps hors froid à mesurer');
+  }
+}
+
 // La liste des écarts d'un contenu de quai, en français courant (liste vide = rien à redire). Appelée par `creerQuai`
 // au chargement ; elle ne regarde que ce que ce chantier ajoute (une séance existante n'a rien à y changer).
 export function verifierQuai(Q) {
   const E = [];
   verifierPalettes(Q, E);
-  if (Q && typeof Q === 'object') verifierUnite(Q, E);
+  if (Q && typeof Q === 'object') { verifierUnite(Q, E); verifierDeuxSeances(Q, E); }
   const S = Q && Q.securite;
   if (!S || typeof S !== 'object') return E;
   const scene = S.mode === 'scene';
@@ -576,6 +626,9 @@ export function etatNeuf(Q) {
   const e = Object.assign({ v: 1, etape: R.securite && !R.scene ? 0 : 1, minute: 0, reel: 0, tiersTemps: false, sel: 0, journal: [], palettes, fini: false }, camionNeuf());
   if (R.securite) e.securite = securiteNeuve(R.scene);
   if (R.multi) Object.assign(e, { suivants: R.camions.slice(1).map(camionNeuf), ordre: { premier: null, phrase: null }, actif: 0 });
+  // `commence: 'controle'` : le déchargement est DÉJÀ fait. Le camion est ouvert (à l'heure de départ du quai, minute 0), les N palettes sont posées
+  // (`evts` = N + 1, comme après la dernière pose), on est à l'étape ③. Ni journal ni minute ajoutés : rien n'a été joué.
+  if (R.commence) Object.assign(e, { decharge: true, ouvertA: 0, evts: R.palettes.filter((p) => p.camion === 0).length + 1, etape: 3 });
   return e;
 }
 // L'étape ⓪ : la réponse à chaque point, les signalements (avec les points « pas OK » à ce moment-là, et
@@ -604,6 +657,9 @@ function normaliser(e, R) {
   if (!Array.isArray(e.journal)) e.journal = [];
   if (!Array.isArray(e.lignes)) e.lignes = [];
   if (R.securite && !e.securite) e.securite = securiteNeuve(R.scene);
+  // Un quai qui part du contrôle n'a que les étapes ③ et ④ ; un quai qui s'arrête au déchargement, que ⓪ ① ②.
+  if (R.commence && !(e.etape >= 3)) e.etape = 3;
+  if (R.arretDech && e.etape > 2) e.etape = 2;
   if (R.scene) {
     // Une base écrite avant le mode scène (ou par une autre version du contenu) : on complète sans rien effacer.
     const sec = e.securite;
@@ -700,7 +756,8 @@ export function jalonsQuai(db, Q) {
   const suff = (c) => (M ? `-${c.lettre}` : '');
   const libC = (lib, c) => (M ? `${lib} (camion ${c.nom})` : lib);
   // L'ordre des camions et sa justification : un seul jalon, les deux à la fois.
-  if (M && Q.ordre) {
+  // `commence: 'controle'` : les étapes ⓪ ① ② ne sont pas jouées, donc ni ordre, ni sécurité, ni ticket (rien « à faire » pour une étape absente).
+  if (M && Q.ordre && !R.commence) {
     const O = Q.ordre, o = E.ordre || {}, ph = Object.fromEntries((O.phrases || []).map((x) => [x.v, x.lib]));
     const cP = R.camions[O.premier] || R.camions[0];
     const fait = o.premier != null && unDecharge(E, R) ? `camion ${R.camions[o.premier].nom} d’abord — « ${ph[o.phrase] || 'sans justification'} »` : 'pas encore choisi';
@@ -708,14 +765,16 @@ export function jalonsQuai(db, Q) {
       !!e && unDecharge(E, R) && o.premier === O.premier && o.phrase === O.juste);
   }
   // L'étape ⓪ (sécurité) : ses deux jalons d'abord, dans l'ordre du jeu.
-  if (R.securite) (R.scene ? jalonsScene(e, R) : jalonsSecurite(e, R)).forEach((l) => j(l.id, l.lib, l.fait, l.attendu, l.ok));
-  if (R.froid) R.camions.forEach((c, ci) => {
+  if (R.securite && !R.commence) (R.scene ? jalonsScene(e, R) : jalonsSecurite(e, R)).forEach((l) => j(l.id, l.lib, l.fait, l.attendu, l.ok));
+  if (R.froid && !R.commence) R.camions.forEach((c, ci) => {
     const k = K(E, ci);
     const lib = Object.fromEntries((c.qcmTicket && c.qcmTicket.choix || QCM_TICKET).map((x) => [x.v, x.court || x.lib]));
     const attenduTicket = (c.qcmTicket && c.qcmTicket.attendu) || 'long';
     j(`ticket${suff(c)}`, libC('Enregistreur', c), k.ticketLu ? (lib[k.ticketRep] || 'lu, sans réponse') : 'non lu',
       `${lib[attenduTicket] || attenduTicket}${attenduTicket === 'long' ? ', à signaler' : ''}`, !!e && k.ticketLu && k.ticketRep === attenduTicket);
   });
+  // `arret: 'dechargement'` : ③ et ④ ne sont pas jouées (ni comptage, ni décision, ni réserve, ni signature, ni rentrée) : on s'arrête aux étapes jouées.
+  if (R.arretDech) return { L, pts, max };
   const PE = R.palettes.map((p) => effective(p, E, R));
   PE.forEach((p) => {
     const s = (E.palettes && E.palettes[p.id]) || s0;
@@ -1059,6 +1118,8 @@ export function creerQuai(Q, opts = {}) {
   const lieuMin = R.lieu.nom.charAt(0).toLowerCase() + R.lieu.nom.slice(1);
   const F = R.froid, SEC = R.securite;
   const ISO = R.iso;
+  // Un quai en deux séances (lot 1) : ARRET = la vue s'arrête au déchargement (`{ texte }`), COMMENCE = elle part du contrôle, DOC = le nom du document.
+  const ARRET = R.arretDech, COMMENCE = R.commence, DOC = R.document;
   // Le mode scène (D-4) : l'inspection se joue sur le quai iso ; sinon la liste OK / Pas OK de l'étape ⓪ (inchangée).
   const SCENE = R.scene, LISTE = !!SEC && !R.scene;
   const SEUIL_SECU = SCENE ? 2 : 1;   // à partir de quelle étape il faut avoir figé l'inspection
@@ -1116,6 +1177,8 @@ export function creerQuai(Q, opts = {}) {
   const fin = (n) => (CARISTE_ISO ? planC().fin + 200 : T_DEB + n * T_PAL + 200);
   const tPoseN = (i) => (CARISTE_ISO ? planC().tPose[i] : T_DEB + i * T_PAL + T_TRAJET);
   const fileP = (P) => (CARISTE_ISO ? P.slice().reverse() : P);
+  // La légende de fin du déchargement, au quai iso. Quand le quai s'arrête là (`arret`), personne n'attend de signature.
+  const legFinIso = (N, e) => `${hhmm(e.minute)} — ${N > 1 ? `Les ${N} palettes sont en ${zoneMin}.` : `La palette est en ${zoneMin}.`}${ARRET ? '' : ' Le chauffeur attend ta signature.'}`;
   let planMemo = null;
   function planC() {
     if (!planMemo) { const P = PAL[0]; planMemo = planChariot({ gab: P.map(gabarit), places: placesIso(P), xPorte: ISO_X + 0.4, ySlot: ISO_YDEP, t0: T_DEB }); }
@@ -1380,7 +1443,7 @@ export function creerQuai(Q, opts = {}) {
     if (attente) leg = `${hhmm(e.minute)} — Le camion est à quai, porte fermée.`;
     else if (t < T_DEB) leg = `${hhmm(e.minute)} — La porte du ${lieuMin} se lève.`;
     else if (nb < N) leg = `${hhmm(e.minute)} — ${quiSort} sort la palette ${P[enCours ?? nb].id} au transpalette (${Math.min(nb + 1, N)} sur ${N}).`;
-    else leg = N > 1 ? `${hhmm(e.minute)} — Les ${N} palettes sont en ${zoneMin}. Le chauffeur attend ta signature.` : `${hhmm(e.minute)} — La palette est en ${zoneMin}. Le chauffeur attend ta signature.`;
+    else leg = legFinIso(N, e);
     return { iso: s, leg, nb, pastilles: P.map((p) => `<i class="${sur.has(p.id) ? 'sur' : ''}">${ech(p.id)}</i>`).join('') };
   }
   // ② et ④ au chariot frontal (D-4, étape 5) : le chariot de `planChariot` entre par l'ouverture, prend la palette de tête sur ses fourches,
@@ -1432,7 +1495,7 @@ export function creerQuai(Q, opts = {}) {
     if (attente) leg = `${hhmm(e.minute)} — Le camion est à quai, porte fermée.`;
     else if (t < T_DEB) leg = `${hhmm(e.minute)} — La porte du ${lieuMin} se lève.`;
     else if (nb < N) leg = `${hhmm(e.minute)} — ${quiSort} sort la palette ${P[plan.ordre[enCours != null ? enCours : nb]].id} au chariot (${Math.min(nb + 1, N)} sur ${N}).`;
-    else leg = N > 1 ? `${hhmm(e.minute)} — Les ${N} palettes sont en ${zoneMin}. Le chauffeur attend ta signature.` : `${hhmm(e.minute)} — La palette est en ${zoneMin}. Le chauffeur attend ta signature.`;
+    else leg = legFinIso(N, e);
     return { iso: s, leg, nb, pastilles: P.map((p) => `<i class="${sur.has(p.id) ? 'sur' : ''}">${ech(p.id)}</i>`).join('') };
   }
   // Le dégradé métallique des fûts n'est posé que si le quai en a (le dessin des autres séances reste octet pour octet le même).
@@ -1514,7 +1577,7 @@ export function creerQuai(Q, opts = {}) {
     else if (t < T_OUVRE) leg = `${hhmm(e.minute)} — Le chauffeur ouvre les portes arrière de sa remorque.`;
     else if (t < T_DEB) leg = F ? `${hhmm(e.minute)} — La porte du quai se lève : l'air froid s'échappe et tombe au sol. Le temps hors froid démarre.` : `${hhmm(e.minute)} — La porte du quai se lève.`;
     else if (nb < P.length) leg = `${hhmm(e.minute)} — ${quiSort} sort la palette ${P[enCours ?? nb].id} ${CARISTE ? 'au chariot' : 'au transpalette'} (${Math.min(nb + 1, P.length)} sur ${P.length}).`;
-    else leg = `${hhmm(e.minute)} — Les ${P.length} palettes sont sur le quai. Le camion attend la fin de tes contrôles.`;
+    else leg = `${hhmm(e.minute)} — Les ${P.length} palettes sont sur le quai.${ARRET ? '' : ' Le camion attend la fin de tes contrôles.'}`;
     const posIds = new Set(posees.map((q) => q[0].id));
     return {
       porte: FIXE ? '' : `translate(0 ${f1(-montee * (PORTE.y1 - PORTE.y0 + 3))})`,
@@ -1540,9 +1603,11 @@ export function creerQuai(Q, opts = {}) {
       <div class="quai-ligne">
         <button class="btn" data-q="passer" ${fini || attente ? 'hidden' : ''}>⏩ Passer l'animation</button>
         <button class="btn" data-q="revoir" data-libre ${fini ? '' : 'hidden'}>↺ Revoir le déchargement</button>
-        <button class="btn btn-p" data-q="vers3" data-libre ${fini ? '' : 'disabled'}>${ISO ? 'Compter la palette' : 'Contrôler les palettes'} →</button>
+        ${ARRET ? '' : `<button class="btn btn-p" data-q="vers3" data-libre ${fini ? '' : 'disabled'}>${ISO ? 'Compter la palette' : 'Contrôler les palettes'} →</button>`}
       </div>
     </div>`;
+    // `arret: 'dechargement'` : une fois la dernière palette posée, le bandeau de fin remplace « Compter la palette » (ni Valider, ni Clore, ni Recommencer).
+    const bandeau = ARRET && fini ? `<p class="quai-fin-decharge" role="status" data-q-fin-decharge>${ech(ARRET.texte)}</p>` : '';
     if (ISO) {
       return `<div class="quai-scene2 quai-iso">
         <svg data-q-scene2 viewBox="290 0 640 ${N > 2 ? 540 : 480}" role="img" aria-label="${ech(R.lieu.nom)} : la porte se lève, ${ech(minuscule(quiSort))} sort ${N > 1 ? 'les palettes' : 'la palette'} ${CARISTE_ISO ? 'au chariot élévateur' : 'au transpalette'} jusqu’en ${ech(zoneMin)}">
@@ -1550,8 +1615,8 @@ export function creerQuai(Q, opts = {}) {
         </svg>
         <div class="quai-legende" data-q-leg>${ech(im.leg)}</div>
       </div>
-      ${barre}
-      ${A.consignes ? `<p class="quai-aide">${CARISTE_ISO ? 'Sur une plateforme, c’est <b>un cariste</b> qui décharge, au chariot élévateur.' : 'Chez un transporteur de messagerie, c’est souvent <b>le chauffeur</b> qui décharge, au transpalette.'} Toi, tu ne signes rien tant que tu n’as pas compté.</p>` : ''}`;
+      ${bandeau}${barre}
+      ${A.consignes ? `<p class="quai-aide">${CARISTE_ISO ? 'Sur une plateforme, c’est <b>un cariste</b> qui décharge, au chariot élévateur.' : 'Chez un transporteur de messagerie, c’est souvent <b>le chauffeur</b> qui décharge, au transpalette.'}${ARRET ? '' : ' Toi, tu ne signes rien tant que tu n’as pas compté.'}</p>` : ''}`;
     }
     return `<div class="quai-scene2">
       <svg data-q-scene2 viewBox="${cx} ${cy} ${cw} ${chh}" preserveAspectRatio="xMidYMid slice" role="img" aria-label="${ech(R.lieu.nom)} : ${FIXE ? 'la remorque est ouverte' : 'la porte s’ouvre'}, ${ech(minuscule(quiSort))} sort les palettes une à une ${CARISTE ? 'au chariot élévateur' : 'au transpalette'}">
@@ -1582,9 +1647,9 @@ export function creerQuai(Q, opts = {}) {
       </svg>
       <div class="quai-legende" data-q-leg>${ech(im.leg)}</div>
     </div>
-    ${barre}
-    ${A.consignes && F ? `<p class="quai-aide">Le quai est réfrigéré (<b>${tempQuai}</b>, voir l'afficheur à droite de la porte), mais c'est bien plus chaud que la remorque à ${fmtT((cm.ticket && cm.ticket.consigne) || -20)}. Dès que la porte s'ouvre, <b>tout le lot sort du froid</b> : regarde la jauge en haut, elle a démarré. Le chauffeur pose les palettes ; à toi ensuite de les contrôler <b>vite et bien</b>, chaque geste coûte du temps.</p>` : ''}
-    ${A.consignes && !F ? `<p class="quai-aide">${ech(quiSort)} pose les palettes sur le quai. À toi ensuite de les contrôler <b>une par une</b> : faire le tour, compter, lire l'étiquette, décider.</p>` : ''}`;
+    ${bandeau}${barre}
+    ${A.consignes && F && !ARRET ? `<p class="quai-aide">Le quai est réfrigéré (<b>${tempQuai}</b>, voir l'afficheur à droite de la porte), mais c'est bien plus chaud que la remorque à ${fmtT((cm.ticket && cm.ticket.consigne) || -20)}. Dès que la porte s'ouvre, <b>tout le lot sort du froid</b> : regarde la jauge en haut, elle a démarré. Le chauffeur pose les palettes ; à toi ensuite de les contrôler <b>vite et bien</b>, chaque geste coûte du temps.</p>` : ''}
+    ${A.consignes && !F && !ARRET ? `<p class="quai-aide">${ech(quiSort)} pose les palettes sur le quai. À toi ensuite de les contrôler <b>une par une</b> : faire le tour, compter, lire l'étiquette, décider.</p>` : ''}`;
   }
   // Le contrôleur de l'animation, posé sur la scène affichée. Les événements du temps du quai
   // (porte ouverte, chaque palette posée) ne passent qu'une fois, jamais en « revoir » ; s'ils
@@ -1814,7 +1879,7 @@ export function creerQuai(Q, opts = {}) {
       </div>
       <div class="quai-grille2">
         <div class="quai-doc">
-          <div class="quai-doc-titre">📄 Bon de livraison</div>
+          <div class="quai-doc-titre">📄 ${ech(DOC)}</div>
           ${blHtml()}
           <div class="quai-reconst">BL n° ${ech(cam.bl)} — Document pédagogique, reconstitution, non contractuel.</div>
         </div>
@@ -2045,7 +2110,7 @@ export function creerQuai(Q, opts = {}) {
     if (inspecte && vu) return `<section class="quai-carte">${inspection(e)}</section>`;
     const apres = `<div class="quai-apres-arrivee" data-q-apres-arrivee ${vu ? '' : 'hidden'}>
         <div class="quai-doc quai-papier">
-          <div class="quai-doc-titre">📄 Bon de livraison n° ${ech(cam.bl)}${cam.fournisseur ? ` — ${ech(cam.fournisseur)}` : ''}</div>
+          <div class="quai-doc-titre">📄 ${ech(DOC)} n° ${ech(cam.bl)}${cam.fournisseur ? ` — ${ech(cam.fournisseur)}` : ''}</div>
           ${blHtml()}
           <div class="quai-reconst">Document pédagogique, reconstitution, non contractuel.</div>
         </div>
@@ -2097,7 +2162,7 @@ export function creerQuai(Q, opts = {}) {
         <p><b>Le chauffeur :</b> « ${ech(cam.parole || `Bonjour, livraison ${cam.fournisseur || ''}. Voilà mon bon de livraison. Je peux ouvrir ?`)} »</p>
       </div>
       <div class="quai-doc">
-        <div class="quai-doc-titre">📄 Bon de livraison</div>
+        <div class="quai-doc-titre">📄 ${ech(DOC)}</div>
         ${blHtml()}
         <div class="quai-reconst">BL n° ${ech(cam.bl)} — Document pédagogique, reconstitution, non contractuel.</div>
       </div>
@@ -2131,7 +2196,7 @@ export function creerQuai(Q, opts = {}) {
         <div class="quai-doc-titre">🚚 Camion ${ech(c.nom)} — arrivé à ${ech(c.arrivee || '')}</div>
         <p class="note">${fictif(c.fournisseur, c.fictif)} · transporteur ${fictif(c.transporteur, c.fictif)} · ${PAL[ci].length} palettes · <b data-q-etat-camion>${etat(ci)}</b></p>
         <div class="quai-chauffeur">${silhouette(36)}<p><b>Le chauffeur :</b> « ${ech(c.parole || `Bonjour, livraison ${c.fournisseur}. Voilà mon bon de livraison et le ticket de l'enregistreur.`)} »</p></div>
-        <div class="quai-doc-titre">📄 Bon de livraison</div>
+        <div class="quai-doc-titre">📄 ${ech(DOC)}</div>
         ${blHtml(ci)}
         <div class="quai-reconst">BL n° ${ech(c.bl)} — Document pédagogique, reconstitution, non contractuel.</div>
         <div class="quai-doc-titre" style="margin-top:10px">🧾 Ticket de l'enregistreur de température</div>
@@ -2401,7 +2466,7 @@ export function creerQuai(Q, opts = {}) {
       </div>
       ${choixCamion(e)}
       <div class="quai-onglets" role="tablist" data-q-onglets>${onglets}</div>
-      <details class="quai-rappel-bl" data-libre><summary data-libre>📄 Revoir le bon de livraison${M ? ` du camion ${ech(cm.nom)}` : ''}</summary>${blHtml(ci)}</details>
+      <details class="quai-rappel-bl" data-libre><summary data-libre>📄 Revoir ${DOC === DOCUMENT_DEFAUT ? 'le bon de livraison' : 'le document'}${M ? ` du camion ${ech(cm.nom)}` : ''}</summary>${blHtml(ci)}</details>
       <div class="quai-poste quai-poste-egal">
         <div class="quai-gauche quai-collee">
           ${ISO ? `<div class="quai-scene quai-scene-iso">
@@ -2506,7 +2571,7 @@ export function creerQuai(Q, opts = {}) {
         </div>
       </div>
       <div class="quai-doc quai-papier">
-        <div class="quai-doc-titre">📄 Bon de livraison n° ${ech(cm.bl)} — exemplaire du destinataire</div>
+        <div class="quai-doc-titre">📄 ${ech(DOC)} n° ${ech(cm.bl)} — exemplaire du destinataire</div>
         ${blHtml(ci)}
         <div class="quai-zone-res"><div class="quai-lib-res">Réserves du destinataire :</div><div class="quai-manuscrit" data-q-lignes>${lignes}</div></div>
         <div class="quai-signatures">
@@ -2603,6 +2668,7 @@ export function creerQuai(Q, opts = {}) {
     api.sauver(); api.redessiner();
   }
   function aller(e, n, api) {
+    if ((ARRET && n > 2) || (COMMENCE && n < 3)) return;   // une étape absente (arret / commence) ne s'atteint pas
     if (n >= SEUIL_SECU && !secuFaite(e)) return;
     if (n > 1 && !unDecharge(e, R)) return;
     if (ui.anim) ui.anim.finir();
@@ -2827,7 +2893,8 @@ export function creerQuai(Q, opts = {}) {
   }
 
   return {
-    signaux: [`quai:${Q.id}:decharger`, `quai:${Q.id}:valider`, `quai:${Q.id}:cloturer`].concat(SCENE ? [`scene:${Q.id}:signaler`, `scene:${Q.id}:decharger`] : []),
+    // `quai:<id>:dechargement` (fin du déchargement, une fois) n'existe que si le quai s'arrête là (`arret`) : la liste des autres séances ne change pas.
+    signaux: [`quai:${Q.id}:decharger`, `quai:${Q.id}:valider`, `quai:${Q.id}:cloturer`].concat(SCENE ? [`scene:${Q.id}:signaler`, `scene:${Q.id}:decharger`] : [], ARRET ? [`quai:${Q.id}:dechargement`] : []),
     id: Q.id,
     nav: { libelle: Q.libelle || 'Quai de réception' },
     etatNeuf: () => etatNeuf(Q),
@@ -2856,7 +2923,8 @@ export function creerQuai(Q, opts = {}) {
       if (M && R.palettes[e.sel] && R.palettes[e.sel].camion !== ca(e) && PAL[ca(e)].length) e.sel = R.palettes.indexOf(PAL[ca(e)][0]);
       const ouvert = unDecharge(e, R);
       // Étape ⓪ (sécurité) : tant que l'élève n'a pas commencé à décharger, ou s'il y revient pour relire.
-      const etape = ouvert ? (e.etape ?? 1) || 1 : (LISTE && (!secuFaite(e) || e.etape === 0) ? 0 : 1);
+      const etape0 = ouvert ? (e.etape ?? 1) || 1 : (LISTE && (!secuFaite(e) || e.etape === 0) ? 0 : 1);
+      const etape = ARRET && etape0 > 2 ? 2 : COMMENCE && etape0 < 3 ? 3 : etape0;
       const corps = etape === 0 ? ecran0(e) : etape === 1 ? ecran1(e) : etape === 2 ? `<section class="quai-carte">${scene2(e)}</section>` : etape === 3 ? ecran3(e) : ecran4(e, api);
       const libs4 = ISO ? ETAPES_ISO.slice() : (M ? ['① Les camions arrivent'].concat(ETAPES.slice(1)) : ETAPES.slice()).map((l, i) => (i === 3 && !F ? `④ Réserves et ${zoneMin}` : l));
       const libs = LISTE ? [ETAPE_SECU].concat(libs4) : libs4;
@@ -2872,7 +2940,7 @@ export function creerQuai(Q, opts = {}) {
         ${Q.avertissement ? `<div class="quai-avert">${Q.avertissement}</div>` : ''}
         ${horloges(e)}
         <nav class="quai-stepper" aria-label="Étapes de la réception">
-          ${libs.map((l, i) => { const n = i + n0, ferme = (n >= SEUIL_SECU && !secuFaite(e)) || (n > 1 && !ouvert);
+          ${libs.map((l, i) => [l, i + n0]).filter(([, n]) => (ARRET ? n <= 2 : COMMENCE ? n >= 3 : true)).map(([l, n]) => { const ferme = (n >= SEUIL_SECU && !secuFaite(e)) || (n > 1 && !ouvert);
             return `<button data-q="etape" data-libre data-n="${n}" class="${etape === n ? 'on' : ''}" ${ferme ? 'disabled' : ''} ${etape === n ? 'aria-current="step"' : ''}>${l}</button>`; }).join('')}
         </nav>
         ${corps}
@@ -2890,6 +2958,14 @@ export function creerQuai(Q, opts = {}) {
         ui.focus = el.id ? `#${el.id}` : el.dataset.q ? `[data-q="${el.dataset.q}"]${el.dataset.n ? `[data-n="${el.dataset.n}"]` : ''}${el.dataset.c ? `[data-c="${el.dataset.c}"]` : ''}` : null;
       }));
       retrouverFocus(z, ui.focus, { defilement: true });
+
+      // `arret: 'dechargement'` : la dernière palette est posée (fin de l'animation, « Passer l'animation », mouvement réduit ou page rechargée : tous ces chemins
+      // finissent ici, par un redessin). Le quai se fige comme après « Clore » et le geste part UNE fois : le drapeau est rangé dans l'état, un rechargement ne le renvoie pas.
+      if (ARRET && !e.dechargeFini && kc().decharge && kc().evts > PAL[0].length) {
+        e.dechargeFini = true; e.fini = true;
+        if (api.signal) api.signal(`quai:${Q.id}:dechargement`);
+        api.sauver();
+      }
 
       on('etape', (ev, b) => {
         const n = +b.dataset.n;
