@@ -2440,6 +2440,410 @@ await v('Quai chariot : cinq palettes (ENT-8.7) — le chariot ne touche aucune 
   await p.close();
 });
 
+/* ---- chantier « dépose dirigée par l'élève » (moteur E-5, lot 2, étape C, 17/10/2026) : `depose` — l'élève clique la case où le cariste pose chaque palette */
+// Cadrage : `docs/briefs/MOTEUR-depose-dirigee.md` ; la fiche : `activites/FICHE-SEANCE.md`, « La dépose dirigée par l'élève ». Un quai à quatre palettes de
+// fûts (celles d'ENT-6.4, qui sortent dans l'ordre P4, P3, P2, P1), un cariste, la variante A de Tristan. Tout ce qui est attendu ci-dessous est écrit à la main.
+// Sans `depose`, rien ne change : la référence de l'étape 0, les cas « quai arrêt » du lot 1 et le dernier cas de cette partie le montrent.
+
+const DEP_A = () => ({ passage: 3, cases: [
+  { id: 'allee-1', sol: 'pieton', peinte: false, nom: 'Allée piétonne' },
+  { id: 'R1' }, { id: 'R2' }, { id: 'R3' }, { id: 'R4' },
+  { id: 'quai3-1', sol: 'autre-quai', legende: 'Quai 3', peinte: false, nom: 'Devant le quai 3' }] });
+const DEP = (extra = {}) => DEUX(Object.assign({ depose: DEP_A() }, extra));
+const GESTE_DEP = `quai:${ID_Q}:depose`;
+const SORTIE = ['P4', 'P3', 'P2', 'P1'];
+const TEXTE_DEP = 'Les 4 palettes sont posées. Le contrôle, c’est la prochaine fois.';
+// Monte la séance sur le quai `extra` (les quatre palettes de fûts), sur une base reprise ; `copie` : une évaluation.
+const monterDep = (p, extra, db, copie = false) => p.evaluate(async ([extra, db0, palettes, copie]) => {
+  const { creerEntreprise } = await import('/core/types/entreprise.js');
+  const E = await import('/outils/essai-quai-inspection.js');
+  document.querySelector('#qiScene')?.remove();
+  const hote = document.createElement('div'); hote.id = 'qiScene'; document.body.prepend(hote);
+  const Q = Object.assign(E.quaiEssai({ palettes }), extra);
+  const db = db0 ? JSON.parse(JSON.stringify(db0)) : {};
+  window.__qs = { db, Q, enregistres: [] };
+  const meta = Object.assign({ id: 'essai-inspection', code: 'ESSAI', titre: 'Essai de la dépose', portee: 'eleve', immersif: true, temps: 'guidage', bareme: 20 }, copie ? { copie: true, temps: 'evaluation' } : {});
+  const ctx = {
+    meta, profil: { prenom: 'Lea', nom: 'Test', role: 'eleve', uid: 'u-test' },
+    jeu: { etat: () => db, sauver: () => {} },
+    enregistrer: (r) => { window.__qs.enregistres.push(JSON.parse(JSON.stringify(r))); }, quitter: () => {}, codeStock: 'ABC', lireScore: async () => null,
+  };
+  creerEntreprise(E.universQuai(Q, { copie })).rendre(hote, ctx);
+  document.querySelector('#qiScene .ent-nav[data-vue="quai"]').click();
+}, [extra, db, PALS, copie]);
+async function pageDep(extra, { c = ctxS, horloge = false, db = null, copie = false } = {}) {
+  const p = await c.newPage();
+  p.setDefaultTimeout(8000);
+  p.on('pageerror', (e) => erreurs.push('PAGEERROR: ' + e.message));
+  p.on('console', (m) => { if (m.type() === 'error' && !/\b404\b/.test(m.text())) erreurs.push('CONSOLE: ' + m.text()); });
+  if (horloge) await p.clock.install({ time: 0 });
+  await p.goto(BASE);
+  await p.waitForSelector('#btnProf', { timeout: 8000 });
+  await monterDep(p, extra, db, copie);
+  await p.waitForSelector(`${HOTE} .quai-stepper`);
+  if (await p.locator(`${HOTE} [data-q="passer1"]`).isVisible()) await p.click(`${HOTE} [data-q="passer1"]`);
+  return p;
+}
+const PHASE = `${HOTE} [data-q-phase]`;
+const phaseDe = (p) => p.$eval(PHASE, (n) => n.dataset.qPhase);
+const gesteDe = (p) => p.$eval(PHASE, (n) => n.dataset.qGeste || null);
+const caseSel = (id) => `${HOTE} [data-q="depose"][data-c="${id}"]`;
+const nbCases = (p) => p.locator(`${HOTE} [data-q="depose"]`).count();
+const posees = (p) => p.$$eval(`${HOTE} [data-iso-posee]`, (L) => Object.fromEntries(L.map((g) => [g.dataset.isoPosee, g.dataset.isoCase]).sort()));   // clés triées : P1 à P4
+// La palette que le cariste tient à la pause, lue dans la légende (« … attend avec la palette P4 (…) »).
+const enAttente = async (p) => (/attend avec la palette (P\d)/.exec(await legende(p)) || [])[1] || null;
+const eDep = async (p) => (await baseDe(p)).quais[ID_Q];
+const departDep = async (p) => { await p.click(`${HOTE} [data-q="decharger"]`); await p.waitForSelector(`${HOTE} [data-q-phase="choix"]`); };
+const jalonsDep = (p) => p.evaluate(async () => {
+  const Q = await import('/core/types/quai.js');
+  return Object.fromEntries(Q.jalonsQuai(window.__qs.db, window.__qs.Q).L.filter((l) => /^depose-/.test(l.id)).map((l) => [l.id, l.ok]));
+});
+// Un clic sur la case `id`, puis on attend que la palette soit à l'écran (mouvement réduit : tout de suite).
+async function poserEn(p, id) {
+  const n = Object.keys(await posees(p)).length;
+  await p.click(caseSel(id));
+  await p.waitForFunction(([s, n]) => document.querySelectorAll(s).length === n + 1, [`${HOTE} [data-iso-posee]`, n]);
+}
+// Mouvement normal sous horloge simulée : le temps ne passe que par `clock.runFor`, jusqu'à la pause « choix ».
+async function jusquaPause(p) { for (let i = 0; i < 80 && (await phaseDe(p)) !== 'choix'; i++) await p.clock.runFor(500); }
+const lireAnnonce = async (p) => {
+  await p.waitForFunction((s) => document.querySelector(s).textContent.trim() !== '', `${HOTE} [data-q-annonce]`);
+  return p.$eval(`${HOTE} [data-q-annonce]`, (n) => n.textContent.trim());
+};
+
+await v('Dépose : verifierQuai refuse ce qui n’a pas de sens (chaque garde nommée) et accepte la variante A, avec `arret` ou `commence`', async () => {
+  const base = () => QC([PC({ id: 'P1' }), PC({ id: 'P2' }), PC({ id: 'P3' }), PC({ id: 'P4' })], { rendu: 'iso', froid: false, dechargement: { par: 'cariste' }, depose: DEP_A() });
+  egal(quaiMod.verifierQuai(base()), [], 'la variante A (quatre palettes, quatre cases justes) est acceptée');
+  egal(quaiMod.verifierQuai(Object.assign(base(), { arret: 'dechargement' })), [], 'depose avec arret : permis');
+  egal(quaiMod.verifierQuai(Object.assign(base(), { commence: 'controle' })), [], 'depose avec commence : permis');
+  const REFUS = [
+    ['sans rendu iso', (Q) => { delete Q.rendu; }, /depose demande .rendu: 'iso'/],
+    ['dechargement par le chauffeur', (Q) => { Q.dechargement = { par: 'chauffeur' }; }, /depose demande .dechargement: \{ par: 'cariste' \}/],
+    ['cinq palettes pour quatre cases justes', (Q) => { Q.camions[0].palettes.push(PC({ id: 'P5' })); }, /5 palettes et 4 cases justes : il faut au moins une case juste par palette/],
+    ['neuf cases', (Q) => { Q.depose.cases.push({ id: 'R5' }, { id: 'R6' }, { id: 'R7' }); }, /depose\.cases : 9 cases, 8 au plus/],
+    ['clé inconnue (consigne)', (Q) => { Q.depose.consigne = 'Clique.'; }, /depose : clé « consigne » inconnue/],
+    ['case autre-quai qui touche le passage', (Q) => { Q.depose.cases[2] = { id: 'R2', sol: 'autre-quai', legende: 'Quai 3' }; }, /depose\.cases\[2\].*ne touche pas le passage/],
+    ['case autre-quai sans légende', (Q) => { Q.depose.cases[5] = { id: 'quai3-1', sol: 'autre-quai' }; }, /« quai3-1 »\) : une case « autre-quai » demande sa légende/],
+    ['juste: true avec un sol', (Q) => { Q.depose.cases[0].juste = true; }, /« allee-1 »\) : juste: true sur une case « pieton »/],
+    ['case fausse sans sol ni réaction', (Q) => { Q.depose.cases[1] = { id: 'R1', juste: false }; }, /« R1 »\) : une case fausse sans sol demande sa réaction/],
+    ['peinte: false sans sol', (Q) => { Q.depose.cases[1] = { id: 'R1', peinte: false }; }, /« R1 »\) : peinte: false sur une case sans sol/],
+    ['grise inconnu', (Q) => { Q.depose.grise = 'toujours'; }, /depose\.grise : « toujours » inconnu/],
+    ['froid absent', (Q) => { delete Q.froid; }, /depose demande un quai sans froid/],
+  ];
+  const fautes = [];
+  for (const [nom, mute, motif] of REFUS) {
+    const Q = base(); mute(Q);
+    const E = quaiMod.verifierQuai(Q);
+    if (!E.length) fautes.push(`« ${nom} » n’est pas refusé`);
+    else if (!E.some((m) => motif.test(m))) fautes.push(`« ${nom} » : message sans ${motif} (${E.join(' | ')})`);
+  }
+  if (fautes.length) throw new Error(fautes.join(' ; '));
+  // Le moteur lève l'erreur au chargement : la séance ne s'ouvre pas.
+  let levee = '';
+  try { const Q = base(); Q.depose.consigne = 'x'; quaiMod.creerQuai(Q); } catch (x) { levee = x.message; }
+  vrai(/clé « consigne » inconnue/.test(levee), `creerQuai devrait lever l’erreur : ${levee}`);
+});
+
+await v('Dépose : géométrie de la variante A (hors navigateur) — six cases sur une ligne, trois de chaque côté de la porte, aucun heurt ; jalons à vide : quatre, tous faux', async () => {
+  const cases = quaiMod.normaliserCases(DEP_A());
+  const geo = quaiMod.geometrieDepose(cases, 3);
+  egal(geo.cases.map((g) => g.id), ['allee-1', 'R1', 'R2', 'R3', 'R4', 'quai3-1'], 'six cases, de gauche à droite');
+  egal(new Set(geo.cases.map((g) => g.y0)).size, 1, 'une seule ligne (même y0)');
+  geo.cases.forEach((g, i) => {
+    if (i < 3) vrai(g.x1 <= 2.4 + 1e-9, `${g.id} : à gauche de la porte (x1 ${g.x1})`);
+    else vrai(g.x0 >= 3.6 - 1e-9, `${g.id} : à droite de la porte (x0 ${g.x0})`);
+  });
+  vrai(geo.cases.every((g, i) => i === 0 || g.x0 > geo.cases[i - 1].x0), 'les cases vont de gauche à droite');
+  geo.cases.forEach((g) => egal(quaiMod.heurtsPose(geo, g), [], `heurts du chariot en posant dans ${g.id}`));
+  const J = quaiMod.jalonsDepose({ depose: {} }, cases, ['P1', 'P2', 'P3', 'P4']);
+  egal(J.map((l) => [l.id, l.ok]), [['depose-P1', false], ['depose-P2', false], ['depose-P3', false], ['depose-P4', false]], 'jalonsDepose à vide : quatre jalons, tous faux');
+  // Par jalonsQuai : présents dès la base vide, faux, et regroupés au bandeau de fin.
+  const Q = QC([PC({ id: 'P1' }), PC({ id: 'P2' }), PC({ id: 'P3' }), PC({ id: 'P4' })], { rendu: 'iso', froid: false, dechargement: { par: 'cariste' }, depose: DEP_A() });
+  const D = quaiMod.jalonsQuai({}, Q).L.filter((l) => /^depose-/.test(l.id));
+  egal(D.map((l) => [l.id, l.ok]), [['depose-P1', false], ['depose-P2', false], ['depose-P3', false], ['depose-P4', false]], 'jalonsQuai({}, Q) : les jalons existent, tous faux');
+  vrai(D.every((l) => !/allee|quai3|R[1-4]/.test(l.lib)), `un libellé de jalon dit la bonne case : ${D.map((l) => l.lib)}`);
+  egal(quaiMod.etapesQuai(Q).filter((x) => /^depose-/.test(x.id)).map((x) => x.groupe), Array(4).fill('Diriger le déchargement'), 'etapesQuai : le groupe du suivi');
+});
+
+await v('Dépose : parcours juste en mouvement réduit — quatre poses (P4, P3, P2, P1), état complet, journal, gestes depose et dechargement rangés une fois, jalons 4 sur 4', async () => {
+  const p = await pageDep(DEP({ arret: { etape: 'dechargement', texte: TEXTE_DEP } }));
+  egal(await etapesAff(p), [1, 2], 'avant le déchargement : ① et ②');
+  await departDep(p);
+  egal(await gesteDe(p), null, 'à la pause : pas de geste en cours');
+  const choix = { P4: 'R3', P3: 'R1', P2: 'R4', P1: 'R2' };   // un ordre quelconque des quatre cases justes
+  let ts1;
+  for (const [i, pal] of SORTIE.entries()) {
+    egal(await enAttente(p), pal, `pause ${i + 1} : la palette attendue`);
+    egal(Object.keys(await posees(p)).length, i, `pause ${i + 1} : palettes déjà posées`);
+    await poserEn(p, choix[pal]);
+    if (i === 0) {
+      const g = (await baseDe(p)).gestes[ID_Q];
+      ts1 = g[GESTE_DEP];
+      vrai(typeof ts1 === 'number', `le geste depose part à la première palette posée : ${JSON.stringify(g)}`);
+      vrai(!(GESTE_FIN in g), 'le geste de fin ne part pas à la première palette');
+    }
+    if (i === 2) egal(await jalonsDep(p), { 'depose-P1': false, 'depose-P2': false, 'depose-P3': false, 'depose-P4': false }, 'tant que la dernière n’est pas posée : tous faux');
+    await p.waitForTimeout(30);   // pour que l'horodatage d'un geste rangé deux fois changerait
+  }
+  await p.waitForSelector(BANDEAU);
+  egal(await p.$eval(BANDEAU, (n) => n.textContent.trim()), TEXTE_DEP, 'le bandeau de fin (arret)');
+  egal(await posees(p), { P1: 'R2', P2: 'R4', P3: 'R1', P4: 'R3' }, 'quatre palettes dans les cases cliquées');
+  const b = await baseDe(p), e = b.quais[ID_Q];
+  egal(e.depose, { P4: { premier: 'R3', essais: ['R3'], pose: 'R3' }, P3: { premier: 'R1', essais: ['R1'], pose: 'R1' }, P2: { premier: 'R4', essais: ['R4'], pose: 'R4' }, P1: { premier: 'R2', essais: ['R2'], pose: 'R2' } }, 'e.depose complet, premier = pose');
+  egal(e.journal.length, 5, 'journal : l’ouverture et quatre poses');
+  [/P1 posée en R2 \(\+1 min\)/, /P2 posée en R4/, /P3 posée en R1/, /P4 posée en R3/, /porte du quai ouverte/].forEach((re, i) => vrai(re.test(e.journal[i]), `journal[${i}] : ${e.journal[i]}`));
+  egal([e.fini, e.dechargeFini, e.evts], [true, true, 5], 'état : figé, drapeau, ouverture + quatre poses comptées');
+  vrai(GESTE_DEP in b.gestes[ID_Q] && GESTE_FIN in b.gestes[ID_Q], `gestes rangés : ${Object.keys(b.gestes[ID_Q])}`);
+  egal(b.gestes[ID_Q][GESTE_DEP], ts1, 'le geste depose n’est horodaté qu’une fois');
+  egal(await jalonsDep(p), { 'depose-P1': true, 'depose-P2': true, 'depose-P3': true, 'depose-P4': true }, 'jalons : quatre sur quatre');
+  // Page rechargée avec la même base : rien ne repart, le même horodatage.
+  await monterDep(p, DEP({ arret: { etape: 'dechargement', texte: TEXTE_DEP } }), b);
+  await p.waitForSelector(BANDEAU);
+  const b2 = await baseDe(p);
+  egal(b2.gestes[ID_Q][GESTE_DEP], ts1, 'rechargé : le geste depose garde son horodatage');
+  egal(b2.quais[ID_Q].depose, e.depose, 'rechargé : le même état');
+  egal(await posees(p), { P1: 'R2', P2: 'R4', P3: 'R1', P4: 'R3' }, 'rechargé : les palettes sont dans leurs cases');
+  await p.close();
+});
+
+await v('Dépose : l’inaction — « Décharger » puis rien — ne donne aucun jalon, aucun geste depose ni dechargement, aucune palette posée', async () => {
+  const p = await pageDep(DEP());
+  await departDep(p);
+  await p.waitForTimeout(250);
+  const b = await baseDe(p), e = b.quais[ID_Q];
+  egal(e.depose, {}, 'rien n’est rangé');
+  egal(Object.values(await jalonsDep(p)).filter(Boolean), [], 'aucun jalon juste');
+  egal(Object.keys((b.gestes && b.gestes[ID_Q]) || {}).filter((g) => g === GESTE_DEP || g === GESTE_FIN), [], 'ni le geste depose ni le geste de fin');
+  egal(await posees(p), {}, 'aucune palette posée');
+  egal([e.fini, e.evts], [false, 1], 'rien n’est fini (seule la porte est ouverte)');
+  vrai(await p.isDisabled(`${HOTE} [data-q="vers3"]`), '③ reste fermée tant que rien n’est posé');
+  await p.close();
+});
+
+await v('Dépose : P3 sur l’allée piétonne (guidage) — Kevin réagit, la case se grise et reste grisée pour P2 et P1, P3 finit posée ; seul le jalon de P3 est faux', async () => {
+  const p = await pageDep(DEP());
+  await departDep(p);
+  await poserEn(p, 'R2');                                   // P4 : juste
+  egal(await enAttente(p), 'P3', 'la pause de P3');
+  const avant = await eDep(p);
+  await p.click(caseSel('allee-1'));
+  egal(await phaseDe(p), 'choix', 'toujours en pause après le refus');
+  egal(await enAttente(p), 'P3', 'P3 attend toujours');
+  const e = await eDep(p);
+  egal(e.depose.P3, { premier: 'allee-1', essais: ['allee-1'], pose: null }, 'P3 : premier clic noté, pas posée');
+  egal([e.journal, e.evts, e.minute], [avant.journal, avant.evts, avant.minute], 'un refus n’écrit rien au journal et ne fait pas avancer le quai');
+  egal(await posees(p), { P4: 'R2' }, 'seule P4 est posée');
+  vrai(/allée piétonne/.test(await lireAnnonce(p)), 'la région aria-live dit la réaction de Kevin');
+  egal(await p.locator(`${HOTE} [data-q-bulle-cariste]`).count(), 1, 'la bulle de Kevin est à l’écran');
+  vrai(/piétonne/.test(await p.$eval(`${HOTE} [data-q-bulle-cariste]`, (n) => n.textContent)), 'la bulle dit la réaction de la case');
+  const gr = `${HOTE} .quai-case-grisee[data-case-grisee="allee-1"]`;
+  egal(await p.locator(gr).count(), 1, 'allee-1 est grisée');
+  egal(await p.$eval(gr, (n) => [n.getAttribute('tabindex'), n.getAttribute('role'), n.getAttribute('aria-hidden')]), [null, null, 'true'], 'grisée : ni tabindex ni rôle, cachée aux lecteurs d’écran');
+  egal(await p.locator(caseSel('allee-1')).count(), 0, 'allee-1 n’est plus une case à choisir');
+  egal(await nbCases(p), 4, 'restent à choisir : R1, R3, R4 et quai3-1');
+  await poserEn(p, 'R1');                                   // P3 : posée ensuite
+  egal(await enAttente(p), 'P2', 'la pause de P2');
+  egal(await p.locator(`${HOTE} .quai-case-grisee[data-case-grisee="allee-1"]`).count(), 1, 'à la pause de P2, allee-1 est toujours grisée (gardée)');
+  egal(await p.locator(caseSel('allee-1')).count(), 0, 'et n’est pas proposée');
+  await poserEn(p, 'R3');
+  await poserEn(p, 'R4');
+  await p.waitForSelector(`${HOTE} [data-q="vers3"]:not([disabled])`);
+  const f = await eDep(p);
+  egal(f.depose.P3, { premier: 'allee-1', essais: ['allee-1', 'R1'], pose: 'R1' }, 'P3 : premier clic faux, posée en R1');
+  egal(f.depose.P4, { premier: 'R2', essais: ['R2'], pose: 'R2' }, 'P4 : sans faute');
+  egal(await jalonsDep(p), { 'depose-P1': true, 'depose-P2': true, 'depose-P3': false, 'depose-P4': true }, 'seul le jalon de P3 est faux');
+  egal(f.journal.length, 5, 'journal : l’ouverture et quatre poses (le refus n’y est pas)');
+  await p.close();
+});
+
+await v('Dépose : en évaluation (copie) le premier clic pose, même sur l’allée — aucune réaction, aucune case grisée ; le jalon de P4 est faux, les autres justes', async () => {
+  const p = await pageDep(DEP(), { copie: true });
+  await departDep(p);
+  vrai(/gerbage/.test(await p.$eval(`${HOTE} [data-q-bulle-cariste]`, (n) => n.textContent)), 'la consigne de la première pause est dite aussi en évaluation');
+  await poserEn(p, 'allee-1');
+  const e = await eDep(p);
+  egal(e.depose.P4, { premier: 'allee-1', essais: ['allee-1'], pose: 'allee-1' }, 'P4 est posée sur l’allée dès le premier clic');
+  egal(await posees(p), { P4: 'allee-1' }, 'la palette est dans l’allée à l’écran');
+  egal(await phaseDe(p), 'choix', 'la vue passe au geste suivant : la pause de P3');
+  egal(await enAttente(p), 'P3', 'Kevin tient P3');
+  egal(await p.locator(`${HOTE} [data-q-bulle-cariste]`).count(), 0, 'aucune bulle de réaction');
+  egal(await p.locator(`${HOTE} .quai-case-grisee`).count(), 0, 'aucune case grisée');
+  vrai(!/je ne pose pas/.test(await lireAnnonce(p)), 'la région aria-live ne dit aucune réaction');
+  await poserEn(p, 'R1'); await poserEn(p, 'R2'); await poserEn(p, 'R3');
+  await p.waitForSelector(`${HOTE} [data-q="vers3"]:not([disabled])`);
+  egal(await jalonsDep(p), { 'depose-P1': true, 'depose-P2': true, 'depose-P3': true, 'depose-P4': false }, 'seul le jalon de P4 est faux');
+  egal(await p.locator(`${HOTE} .quai-case-grisee`).count(), 0, 'à la fin non plus, aucune case grisée');
+  await p.close();
+});
+
+await v('Dépose : le DOM d’une case à choisir ne dit pas le verdict — mêmes attributs, mêmes classes pour une case juste et pour un piège', async () => {
+  const p = await pageDep(DEP());
+  await departDep(p);
+  const lire = () => p.$$eval(`${HOTE} [data-q="depose"]`, (L) => L.map((g) => ({
+    id: g.dataset.c,
+    attrs: g.getAttributeNames().filter((n) => n !== 'data-c' && n !== 'aria-label').sort().map((n) => `${n}=${g.getAttribute(n)}`),
+    enfants: [...g.children].map((c) => `${c.tagName}.${c.getAttribute('class')}|${c.getAttributeNames().filter((n) => n !== 'points').sort().join(',')}`),
+    tout: [g, ...g.querySelectorAll('*')].map((n) => n.getAttributeNames().map((a) => `${a} ${n.getAttribute(a)}`).join(' ')).join(' ') })));
+  const L = await lire();
+  egal(L.map((x) => x.id), ['allee-1', 'R1', 'R2', 'R3', 'R4', 'quai3-1'], 'les six cases sont à choisir');
+  const R1 = L.find((x) => x.id === 'R1');
+  for (const x of L) {
+    egal(x.attrs, R1.attrs, `${x.id} : les attributs (hors data-c et aria-label) sont ceux de R1`);
+    egal(x.enfants, R1.enfants, `${x.id} : les éléments dessinés (classes, noms d’attributs) sont ceux de R1`);
+    vrai(!/juste|faux|piege|piège/i.test(x.tout), `${x.id} : un attribut dit le verdict : ${x.tout}`);
+  }
+  vrai(R1.attrs.some((a) => /^class=quai-case$/.test(a)) && R1.attrs.includes('role=button') && R1.attrs.includes('tabindex=0'), `le contrôle du montage : ${R1.attrs}`);
+  await p.close();
+});
+
+await v('Dépose : au clavier — Tab jusqu’à une case, Entrée sur l’allée refuse et le focus passe à la case suivante, Espace sur une case juste la pose', async () => {
+  const p = await pageDep(DEP());
+  await departDep(p);
+  const foc = () => p.evaluate(() => { const a = document.activeElement; return a && a !== document.body ? (a.dataset && a.dataset.c) || a.tagName : 'body'; });
+  let n = 0;
+  while (n++ < 80) {
+    await p.keyboard.press('Tab');
+    if (await p.evaluate(() => !!document.activeElement && document.activeElement.matches('[data-q="depose"]'))) break;
+  }
+  vrai(n <= 80, 'Tab n’atteint aucune case');
+  egal(await foc(), 'allee-1', 'le premier arrêt est la première case (de gauche à droite)');
+  await p.keyboard.press('Enter');
+  const e = await eDep(p);
+  egal(e.depose.P4, { premier: 'allee-1', essais: ['allee-1'], pose: null }, 'Entrée sur l’allée : refus');
+  egal(await foc(), 'R1', 'après le refus, le focus est sur la case proposée suivante (pas perdu sur body)');
+  egal(Object.keys((await baseDe(p)).gestes[ID_Q] || {}).filter((g) => g === GESTE_DEP), [], 'un refus ne publie pas le geste depose');
+  await p.keyboard.press('Space');
+  await p.waitForFunction((s) => document.querySelectorAll(s).length === 1, `${HOTE} [data-iso-posee]`);
+  egal((await eDep(p)).depose.P4, { premier: 'allee-1', essais: ['allee-1', 'R1'], pose: 'R1' }, 'Espace sur R1 : posée');
+  egal(await posees(p), { P4: 'R1' }, 'P4 est dans R1');
+  egal(await foc(), 'R2', 'après la pose, le focus est sur la case proposée suivante');
+  vrai(GESTE_DEP in (await baseDe(p)).gestes[ID_Q], 'la première pose publie le geste depose');
+  // Un refus sur la DERNIÈRE case : le focus revient à la première case proposée (R2 : R1 est prise), il n’est pas perdu ni envoyé hors de la scène.
+  n = 0;
+  while (n++ < 30 && (await foc()) !== 'quai3-1') await p.keyboard.press('Tab');
+  egal(await foc(), 'quai3-1', 'Tab atteint la dernière case');
+  await p.keyboard.press('Enter');
+  egal((await eDep(p)).depose.P3, { premier: 'quai3-1', essais: ['quai3-1'], pose: null }, 'Entrée sur le quai voisin : refus');
+  egal(await foc(), 'R2', 'après un refus sur la dernière case, le focus revient à la première case proposée');
+  await p.close();
+});
+
+await v('Dépose : avec le mouvement normal — geste puis pause, aucune case pendant un geste, « Passer l’animation » va à la pause suivante seulement ; même base à l’arrivée qu’en mouvement réduit', async () => {
+  const CH = [['R1', 'P4'], ['R2', 'P3'], ['R3', 'P2'], ['R4', 'P1']];
+  // a) mouvement réduit : la référence
+  const r = await pageDep(DEP());
+  await departDep(r);
+  for (const [c] of CH) await poserEn(r, c);
+  await r.waitForFunction((s) => document.querySelector(s).dataset.qPhase === 'fin', PHASE);
+  const eR = await eDep(r), gR = Object.keys((await baseDe(r)).gestes[ID_Q]).sort();
+  await r.close();
+  // b) mouvement normal, horloge simulée
+  const a = await pageDep(DEP(), { c: ctxSM, horloge: true });
+  await a.click(`${HOTE} [data-q="decharger"]`);
+  egal(await phaseDe(a), 'geste', 'juste après « Décharger » : un geste');
+  vrai(['porte', 'chercher'].includes(await gesteDe(a)), `le geste en cours : ${await gesteDe(a)}`);
+  egal(await nbCases(a), 0, 'pendant un geste : aucune case à choisir');
+  vrai(await a.locator(`${HOTE} [data-q="passer"]`).isVisible(), '« Passer l’animation » est là pendant un geste');
+  await jusquaPause(a);
+  egal(await phaseDe(a), 'choix', 'puis la pause');
+  egal(await gesteDe(a), null, 'à la pause : plus de geste');
+  egal(await enAttente(a), 'P4', 'Kevin attend avec P4');
+  egal(await nbCases(a), 6, 'à la pause : les six cases se proposent');
+  vrai(!(await a.locator(`${HOTE} [data-q="passer"]`).isVisible()), '« Passer l’animation » disparaît à la pause');
+  egal(await posees(a), {}, 'aucune palette posée avant le premier clic');
+  for (const [i, [c, pal]] of CH.entries()) {
+    egal(await enAttente(a), pal, `pause ${i + 1}`);
+    await a.click(caseSel(c));
+    egal(await phaseDe(a), 'geste', `clic juste ${i + 1} : un geste tout de suite`);
+    egal(await nbCases(a), 0, `pendant le geste ${i + 1} : aucune case`);
+    await a.click(`${HOTE} [data-q="passer"]`);
+    if (i < 3) {
+      egal(await phaseDe(a), 'choix', `« Passer » ${i + 1} : la pause suivante`);
+      egal(await enAttente(a), CH[i + 1][1], `« Passer » ${i + 1} : la palette suivante attend`);
+      egal(Object.keys(await posees(a)).length, i + 1, `« Passer » ${i + 1} : une seule palette de plus est posée`);
+    } else egal(await phaseDe(a), 'fin', '« Passer » après la dernière : la fin');
+  }
+  const eA = await eDep(a), gA = Object.keys((await baseDe(a)).gestes[ID_Q]).sort();
+  egal(await posees(a), { P1: 'R4', P2: 'R3', P3: 'R2', P4: 'R1' }, 'à la fin : les quatre palettes dans leurs cases');
+  await a.close();
+  egal(eA.depose, eR.depose, 'e.depose : le même en animation et en mouvement réduit');
+  egal(eA.journal, eR.journal, 'e.journal : le même');
+  // `reel` est le chrono réel du quai (les secondes de l'horloge de la page, pas celles du quai) : il court en animation, pas en mouvement réduit.
+  delete eA.reel; delete eR.reel;
+  egal(eA, eR, 'tout l’état du quai (hors le chrono réel) : le même');
+  egal(gA, gR, 'les mêmes gestes rangés');
+});
+
+await v('Dépose : page rechargée en pause (et en plein geste) — pause « choix » tout de suite, palettes dans les mêmes cases, bonne palette en attente, case grisée gardée, journal et evts inchangés', async () => {
+  const extra = DEP();
+  const a = await pageDep(extra, { c: ctxSM, horloge: true });
+  await a.click(`${HOTE} [data-q="decharger"]`);
+  await jusquaPause(a);
+  for (const c of ['R2', 'R4']) { await a.click(caseSel(c)); await a.click(`${HOTE} [data-q="passer"]`); }
+  await a.click(caseSel('allee-1'));                         // P2 : un refus avant le rechargement
+  const avant = await eDep(a), b = await baseDe(a);
+  egal(await enAttente(a), 'P2', 'avant : P2 attend');
+  // a) la base d'une pause
+  await monterDep(a, extra, b);
+  await a.waitForSelector(`${HOTE} [data-q-phase="choix"]`);
+  egal(await phaseDe(a), 'choix', 'rechargé : la pause tout de suite');
+  egal(await posees(a), { P3: 'R4', P4: 'R2' }, 'rechargé : deux palettes, dans les mêmes cases');
+  egal(await enAttente(a), 'P2', 'rechargé : P2 attend');
+  egal(await a.locator(`${HOTE} .quai-case-grisee[data-case-grisee="allee-1"]`).count(), 1, 'rechargé : allee-1 est toujours grisée');
+  egal(await nbCases(a), 3, 'rechargé : R1, R3 et quai3-1 restent à choisir');
+  vrai(!(await a.locator(`${HOTE} [data-q="passer"]`).isVisible()), 'rechargé : rien à passer');
+  const apres = await eDep(a);
+  egal([apres.evts, apres.journal, apres.depose, apres.minute], [avant.evts, avant.journal, avant.depose, avant.minute], 'evts, journal, état et minute inchangés');
+  // b) la base prise en plein geste (juste après un clic juste) : la base est déjà écrite, la pause suivante s'affiche
+  await a.click(caseSel('R1'));
+  egal(await phaseDe(a), 'geste', 'le clic juste lance un geste');
+  const enGeste = await baseDe(a);
+  await monterDep(a, extra, enGeste);
+  await a.waitForSelector(`${HOTE} [data-q-phase="choix"]`);
+  egal(await posees(a), { P2: 'R1', P3: 'R4', P4: 'R2' }, 'rechargé en plein geste : la palette cliquée est posée');
+  egal(await enAttente(a), 'P1', 'rechargé en plein geste : P1 attend');
+  egal((await eDep(a)).journal, enGeste.quais[ID_Q].journal, 'journal inchangé');
+  await a.close();
+});
+
+await v('Dépose : sous `commence: \'controle\'` — la dépose n’est pas jouée : ④ montre les palettes dans R1 à R4, aucune case à choisir, aucun jalon depose ; le geste depose reste déclaré', async () => {
+  const extra = DEP({ commence: 'controle' });
+  const p = await pageDep(extra);
+  await p.waitForSelector(`${HOTE} [data-q-palette]`);
+  egal(await etapesAff(p), [3, 4], 'la vue s’ouvre à ③');
+  await p.click(`${HOTE} [data-q="etape"][data-n="4"]`);
+  await p.waitForSelector(`${HOTE} [data-q-cf]`);
+  egal(await posees(p), { P1: 'R1', P2: 'R2', P3: 'R3', P4: 'R4' }, '④ : P1 à P4 dans R1 à R4, dans l’ordre du contenu');
+  egal(await nbCases(p), 0, 'aucune case à choisir');
+  egal(await p.locator(`${HOTE} [data-q-phase]`).count(), 0, 'aucune phase de dépose');
+  const ids = await p.evaluate(async () => { const Q = await import('/core/types/quai.js'); return Q.jalonsQuai(window.__qs.db, window.__qs.Q).L.map((l) => l.id); });
+  egal(ids.filter((id) => /^depose-/.test(id)), [], 'aucun jalon depose');
+  vrai(ids.includes('P1-comptage'), 'les jalons de ③ y sont (contrôle du montage)');
+  const sig = await p.evaluate(async (dep) => {
+    const Q = await import('/core/types/quai.js'), E = await import('/outils/essai-quai-inspection.js');
+    const base = Object.assign(E.quaiEssai({}), { securite: null, dechargement: { ouverture: 0.5, parPalette: 1, par: 'cariste' } });
+    return { avec: Q.creerQuai(Object.assign(base, { depose: dep })).signaux, sans: Q.creerQuai(Object.assign(E.quaiEssai({}), { securite: null })).signaux };
+  }, DEP_A());
+  egal(sig.avec, ['quai:essai-inspection:decharger', 'quai:essai-inspection:valider', 'quai:essai-inspection:cloturer', GESTE_DEP], 'avec depose : un geste de plus');
+  egal(sig.sans, ['quai:essai-inspection:decharger', 'quai:essai-inspection:valider', 'quai:essai-inspection:cloturer'], 'sans depose : la liste d’avant');
+  await p.close();
+});
+
+await v('Dépose : un quai sans `depose` ne change pas — pas de phase, pas de case, aucun état depose ; le déchargement finit tout seul et le geste de fin part (les gestes et les jalons d’avant : cas « quai arrêt » du lot 1)', async () => {
+  const p = await pageDep(DEUX({ arret: 'dechargement' }));
+  await p.click(`${HOTE} [data-q="decharger"]`);
+  await p.waitForSelector(BANDEAU);
+  egal(await p.locator(`${HOTE} [data-q-phase]`).count(), 0, 'aucun repère de phase');
+  egal([await nbCases(p), await p.locator(`${HOTE} .quai-case, ${HOTE} .quai-case-grisee`).count(), await p.locator(`${HOTE} [data-iso-posee]`).count()], [0, 0, 0], 'ni case, ni palette posée dans une case');
+  const b = await baseDe(p), e = b.quais[ID_Q];
+  egal(e.depose, undefined, 'aucun état depose rangé');
+  egal([e.fini, e.dechargeFini, e.evts], [true, true, 5], 'le déchargement a fini seul (ouverture + quatre palettes)');
+  egal(Object.keys(b.gestes[ID_Q]).filter((g) => g === GESTE_DEP || g === GESTE_FIN), [GESTE_FIN], 'le geste de fin part, pas de geste depose');
+  const ids = await p.evaluate(async () => { const Q = await import('/core/types/quai.js'); return Q.jalonsQuai(window.__qs.db, window.__qs.Q).L.map((l) => l.id); });
+  egal(ids.filter((id) => /^depose-/.test(id)), [], 'aucun jalon depose');
+  await p.close();
+});
+
 await v('Quai iso : la page d’essai ne demande rien hors du site et ne plante pas', async () => {
   const hors = await pe.evaluate(() => performance.getEntriesByType('resource').map((e) => e.name).filter((n) => !n.startsWith(location.origin)));
   egal(hors, [], 'ressources hors du site');
