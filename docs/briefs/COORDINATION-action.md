@@ -327,12 +327,44 @@ texte de loi est marqué VÉRIFIÉ (source) ou CONSTRUIT dans le code et au comp
   d'ENT-6.4), phrases calculées sur le tirage.
 - Quantités abîmées / manquantes : **2 fixes** (valeur de départ du brief) ; pas de tirage 1 à 3 (une variable de moins à relire).
 
-### 8.5 ENT-8.9 et ENT-8.10 — cadre (détail tranché au lancement de la phase 2, dans ce même §)
+### 8.5 ENT-8.9 — tranché (phase 2)
 
-- 8.9 : site Labastide (GXO), tuteur Romain, Lucas, Inès, chauffeur **Jan** (phrases courtes, aucune nationalité), quai complet (inspection → dépose → contrôle
-  → réserves) sans `arret` ni `commence`, erreur induite de Lucas, L133-1 relu sur Légifrance.
-- 8.10 : `copie: true`, `noter`, « Avant de commencer » noté, même site qu'ENT-8.5 / 8.6 par `siteDe(identifiant)` (`contenus/action-eval-sites.js`), quai
-  complet, mode évaluation de la dépose (premier clic pose sans réaction), pas de `parcours`.
+- Site Labastide (GXO), tuteur Romain, Lucas (cariste), Inès (agent administratif), chauffeur **Jan** (phrases courtes, aucune nationalité nommée) ;
+  `precedente: 'action-controler'` ; `questions: 'ENT-8.9'` ; `niveauxPrevus: ['confirme']` (3e anomalie de scène en `bonus: true`) ; l'Accompagné joue le
+  standard (décision 4).
+- Quai `id: 'action-quai5-labastide'`, **complet** (⓪ inspection sur la scène → ① ② déchargement par Lucas avec dépose dirigée → ③ ④ contrôle, réserves,
+  signature), sans `arret` ni `commence` ; `document: 'Bon de livraison — lettre de voiture'` ; `recommencer: false`. **Dépose en variante A** (le brief
+  dit « 2 + 2 pièges » : périmé) : 6 cases sur une ligne, R1–R4 justes et peintes, 1 case sur l'allée piétonne, 1 devant le **quai 6**, non peintes ;
+  poids 0,25 × 4. **Aides de comptage éteintes pour tous** (entraînement, comme ENT-6.4 ; le brief voulait les allumer chez l'Accompagné : lot 4).
+  Entraînement : rien n'arrête l'élève à l'inspection (`securite.arret: false`), le défaut oublié se remet en ordre sans un mot.
+- Protocole du quai 5 : `protocoleSecurite(spec)` de `contenus/action.js` (posée par 8.7) avec la spec de Labastide du §6.1 ; document à gauche du
+  Dialogue **si la vue le permet** (le constructeur vérifie `dialogue.js` / la fiche), sinon la `situation` en 3 lignes. Banques d'anomalies (scène,
+  palettes) **recopiées** dans `action-ent89-donnees.js` (séances cloisonnées : aucun import d'`action-ent87.js` ni d'`action-ent88.js`), textes de loi
+  L133-3 recopié du fichier de 8.8 et **L133-1 relu sur Légifrance** (WebFetch ; sinon marqué « non relu »).
+- La palette de Lucas : BL signé (case Réserves vide, « reçu le {date tirée} »), dessin SVG inline de la palette (3 cartons écrasés face arrière),
+  calendrier SVG de la semaine (lundi 14 → vendredi 18 décembre, aujourd'hui entouré), « Le droit ». Date tirée `recent` (jeudi 17) / `ancien` (lundi 14),
+  50 / 50 contrôlé sur 200 graines. Ligne 2 jugée contre la date tirée ; phrase « la palette de Lucas » du compte rendu jugée contre **sa** ligne 2 (une
+  erreur ne se paie qu'une fois, comme ENT-8.6) ; « ma réception » contre **ses** décisions au quai.
+- Poids du §5 du brief (3 + 3 + 5,5 + 3 + 1,5 + 4 = 20) ; `bilanDetail`, `finFige` pour le quai ; « Corriger » rouvre le dialogue, la fiche de Lucas, les phrases.
+
+### 8.5 bis ENT-8.10 — tranché (phase 2)
+
+- `copie: true`, `export const noter`, `temps: 'evaluation'`, pas de `parcours`, `questions: 'ENT-8.10'` (ouverture seulement, notée `part: 4`, « Le droit » à gauche
+  : R4515-4, R4515-8, L133-1, L133-3, textes recopiés des fichiers de 8.7 / 8.8 / 8.9, sans mot cliquable) ; ni bonus ni niveau.
+- Site : **`siteDe(identifiant)` de `contenus/action-eval-sites.js`** (le même qu'ENT-8.5 / 8.6 pour un élève), tuteur / cariste / agent du site
+  (Karim-Léo-Manon à Onnaing, Sandrine-Hugo-Chloé à Belleville : vérifier les noms dans `action-eval-sites.js`), chauffeur **Thomas**, date mercredi
+  13 janvier 6 h 30, camion de décoration (4 palettes construites : cadres photo, vases en verre, guirlandes lumineuses, coussins).
+- Quai `id: 'action-quai-evaluation'`, complet, mode copie : inspection (1 anomalie facile ou moyen, rien n'arrête), dépose dirigée **en évaluation**
+  (le moteur pose au premier clic sans réaction ni case grisée : le constructeur le vérifie par un cas), variante A (quai voisin : quai 4), contrôle
+  (1 problème parmi `ecrase-face` / `ecrase-cache` / `manquant`, répartition 20–45 % sur 200 graines ; 1 piège ; 2 conformes), réserves, signature ;
+  aides éteintes ; `document: 'Bon de livraison — lettre de voiture'`.
+- Dialogue `face: true` en copie : première réponse comptée, **aucune réaction** (le constructeur vérifie que la vue Dialogue se tait en `copie`, comme
+  ENT-7.4 ; sinon réactions `neutre` et écart noté) ; protocole et répliques **réécrits par site** (aucune bonne réponse mot pour mot identique à 8.7 / 8.9).
+- **Note par compétence (§11 n° 1 du brief)** : le constructeur fait l'état des lieux de `core/notes.js` / `core/competences.js` ; si le moteur ne sait pas
+  répartir une note entre deux `competencesCap`, **la même note va aux deux** et le compte rendu le dit en premier (Tristan tranchera : couper en 8.10 /
+  8.11 ou chantier moteur). Pas de chantier moteur dans cette phase.
+- Poids du §5 (4 + 3 + 3 + 2,5 + 1 + 3,5 + 2 + 1 = 20) ; « ma réception » jugée contre **ses** décisions ; rien ne dit juste ou faux, aucun « Corriger »,
+  barre « Étape suivante » entre les écrans, « Rendre ma copie » à la fin.
 
 ### 8.6 Alertes à dire à Tristan à la livraison
 
