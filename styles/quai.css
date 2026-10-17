@@ -286,3 +286,19 @@ p.quai-main{ margin:8px 0 0; font-size:15px }
 .quai-inspection svg{ display:block; width:100%; height:auto; touch-action:manipulation }
 [data-q-secu-chef]:empty{ display:none }
 .quai-inspection{ margin-bottom:10px }
+
+/* La dépose dirigée par l'élève (chantier E-5, lot 2 ; maquette outils/essai-depose.css, choix de Tristan du 17/10/2026). Les cases
+   sont une couche au-dessus du dessin iso, qui garde ses teintes claires quel que soit le thème : les traits sont donc des teintes
+   FIXES (encre et papier de la charte claire), jamais du vert (le vert plein dit « juste »), jamais d'aplat. */
+.quai-case{ cursor:pointer; outline:none }
+.quai-case-zone{ fill:rgba(26,25,21,0); pointer-events:all }
+.quai-case-halo{ fill:none; stroke:#fdfbf7; stroke-width:7; stroke-opacity:.92; pointer-events:none; animation:quaiLueur 1.6s ease-in-out infinite }
+.quai-case-trait{ fill:none; stroke:#1a1915; stroke-width:2.6; stroke-dasharray:9 5; pointer-events:none }
+.quai-case:hover .quai-case-zone{ fill:rgba(26,25,21,.10) }
+.quai-case:hover .quai-case-trait{ stroke-width:3.6; stroke-dasharray:none }
+.quai-case:focus-visible .quai-case-zone{ fill:rgba(26,25,21,.10) }
+.quai-case:focus-visible .quai-case-halo{ stroke-width:12; animation:none; stroke-opacity:1 }
+.quai-case:focus-visible .quai-case-trait{ stroke-width:4; stroke-dasharray:none }
+@keyframes quaiLueur{ 0%, 100%{ stroke-opacity:.92 } 50%{ stroke-opacity:.35 } }
+@media (prefers-reduced-motion: reduce){ .quai-case-halo{ animation:none } }
+.quai-consigne-depose{ margin:0; font-size:15px }

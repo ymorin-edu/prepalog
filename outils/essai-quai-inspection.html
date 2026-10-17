@@ -140,5 +140,102 @@ document.querySelector('[data-reglages-deux]').addEventListener('change', () => 
 document.querySelector('[data-recommencer-deux]').addEventListener('click', () => { if (hote.childElementCount) lancer(); });
 if (location.hash === '#deux') { document.querySelector('[data-lancer-deux]').click(); document.getElementById('partie3').scrollIntoView(); }
 </script>
+<section class="eqi eqi-partie2" id="depose">
+  <h2>Partie 4 — La dépose dirigée (ENT-8.7, lot 2)</h2>
+  <p>Ici, c'est <b>toi qui dis au cariste où poser chaque palette</b>, dans le vrai quai de Prepalog. Clique « Décharger » : Kevin sort la première palette du camion et attend à la sortie du camion, la palette sur les fourches. Les cases libres s'éclairent (un contour, jamais de vert) ; clique celle où il doit la poser. Seules R1 à R4 sont peintes au sol ; l'allée piétonne et le devant du quai 3 ne s'éclairent que pendant le choix (ce sont les pièges). <b>Guidage</b> : sur un piège, Kevin réagit dans sa bulle, la case se grise jusqu'à la fin et tu rechoisis. <b>Évaluation</b> : ton premier clic pose la palette, sans réaction. Au clavier : Tab pour passer d'une case à l'autre, Entrée ou Espace pour choisir. Les jalons ne comptent que le <b>premier</b> clic de chaque palette. Dans cette étape, Kevin ne roule pas encore : il saute directement d'une pause à la suivante (l'animation viendra ensuite).</p>
+  <form class="eqi-reglages" data-reglages-depose aria-label="Réglages de l'essai de la dépose">
+    <fieldset><legend>Le mode</legend>
+      <label><input type="radio" name="dep-mode" value="guidage" checked> guidage (Kevin réagit)</label>
+      <label><input type="radio" name="dep-mode" value="copie"> évaluation (premier clic posé)</label></fieldset>
+    <fieldset><legend>Les palettes</legend>
+      <label><input type="radio" name="dep-pal" value="futs" checked> 4 palettes de fûts (ENT-6.4)</label>
+      <label><input type="radio" name="dep-pal" value="cartons"> 4 palettes de cartons (comme ENT-8.7)</label></fieldset>
+    <fieldset><legend>Le quai</legend>
+      <label><input type="checkbox" name="dep-arret" checked> s'arrête après le déchargement</label>
+      <label><input type="checkbox" name="dep-calme"> mouvement réduit simulé</label></fieldset>
+    <fieldset><legend>Essai</legend>
+      <button type="button" data-recommencer-depose>Tout remettre à zéro</button></fieldset>
+  </form>
+  <p class="note">« Mouvement réduit simulé » fait comme si Windows avait coupé les effets d'animation : le camion arrive sans rouler et les cases ne clignotent plus. Le vrai réglage vient du système.</p>
+  <details class="eqi-declare"><summary>Ce que la séance déclare (variante A, pièges non peints)</summary><pre data-declare-depose></pre></details>
+  <p><button type="button" class="btn btn-p" data-lancer-depose>Lancer l'essai de la dépose</button></p>
+  <div data-hote-depose></div>
+</section>
+<style>
+  .eqi-calme-depose .quai-case-halo{ animation:none }
+  .eqi-depose-etat td, .eqi-depose-etat th{ padding:3px 8px }
+</style>
+<script type="module">
+import { quaiEssai, universQuai, PALETTES_ENT64 } from './outils/essai-quai-inspection.js';
+import { creerEntreprise } from './core/types/entreprise.js';
+import { jalonsQuai, deposeFinie } from './core/types/quai.js';
+import { quaiDecharge } from './core/declencheurs.js';
+// La déclaration retenue par Tristan le 17/10/2026 (variante A, pièges non peints).
+const DEPOSE = { passage: 3, cases: [
+  { id: 'allee-1', sol: 'pieton', peinte: false, nom: 'Allée piétonne' },
+  { id: 'R1' }, { id: 'R2' }, { id: 'R3' }, { id: 'R4' },
+  { id: 'quai3-1', sol: 'autre-quai', legende: 'Quai 3', peinte: false, nom: 'Devant le quai 3' }] };
+// Quatre palettes de cartons (désignations génériques du brief ENT-8.7 §6.3, quantités construites pour l'essai).
+const carton = (id, nom, W, D, L) => ({ id, ref: `ESS-${id}`, nom, bl: W * D * L, W, D, L, manque: [], avarie: {}, attendu: 'accepter', motifAttendu: 'aucun',
+  etiq: { ref: `ESS-${id}`, nom: nom.toUpperCase(), poids: '1 carton', lot: `ESS-26-000${id.slice(1)}` } });
+const CARTONS = [carton('P1', 'Bougies parfumées, lot de 3', 4, 2, 5), carton('P2', 'Assiettes plates en grès, lot de 6', 3, 2, 4),
+  carton('P3', 'Boîtes de rangement plastique', 5, 1, 4), carton('P4', 'Torchons de cuisine, lot de 3', 4, 2, 6)];
+const hote = document.querySelector('[data-hote-depose]'), form = document.querySelector('[data-reglages-depose]');
+document.querySelector('[data-declare-depose]').textContent = JSON.stringify({ depose: DEPOSE }, null, 1);
+// Le mouvement réduit simulé : le quai lit `matchMedia('(prefers-reduced-motion: reduce)')` à chaque fois ; on lui répond « oui ».
+const vraiMatchMedia = window.matchMedia.bind(window);
+let calme = false;
+window.matchMedia = (q) => (calme && /prefers-reduced-motion:\s*reduce/.test(q) ? { matches: true, media: q, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {} } : vraiMatchMedia(q));
+let db = {};
+function lancer() {
+  db = {};
+  const copie = form.querySelector('input[name="dep-mode"]:checked').value === 'copie';
+  const futs = form.querySelector('input[name="dep-pal"]:checked').value === 'futs';
+  calme = form.querySelector('input[name="dep-calme"]').checked;
+  const Q = quaiEssai({ palettes: futs ? PALETTES_ENT64 : CARTONS, par: 'cariste' });
+  Q.securite = null;   // l'inspection d'ENT-8.7 se joue avant ; elle est essayée en partie 2
+  Q.dechargement.nom = 'Kevin';
+  Q.depose = JSON.parse(JSON.stringify(DEPOSE));
+  if (form.querySelector('input[name="dep-arret"]').checked) Q.arret = { etape: 'dechargement', texte: 'Les 4 palettes sont en zone de réception. Le contrôle, c’est la prochaine fois.' };
+  if (!futs) { delete Q.unite; delete Q.libelles; }
+  hote.classList.toggle('eqi-calme-depose', calme);
+  hote.innerHTML = '<div data-seance-depose></div><details class="eqi-jalons" open><summary>Ce que la vue sait, calculé maintenant (pour toi, jamais pour l’élève)</summary><div data-etat-depose></div></details>';
+  const etat = hote.querySelector('[data-etat-depose]');
+  const ORDRE = Q.camions[0].palettes.map((p) => p.id).reverse();
+  const maj = () => {
+    const e = db.quais && db.quais[Q.id], G = (db.gestes && db.gestes[Q.id]) || {}, D = (e && e.depose) || {};
+    const oui = (b) => (b ? 'oui' : 'non');
+    const J = jalonsQuai(db, Q).L.filter((l) => /^depose-/.test(l.id));
+    const juste = (id) => { const c = Q.depose.cases.find((x) => x.id === id); return c ? (c.sol ? ' (piège)' : ' (juste)') : ''; };
+    etat.innerHTML = `<table class="quai-bilan eqi-depose-etat" data-etat-table><caption>État <code>depose</code> (ordre de sortie : ${ORDRE.join(', ')})</caption>
+      <thead><tr><th>Palette</th><th>Premier clic</th><th>Essais</th><th>Posée en</th><th>Jalon</th></tr></thead><tbody>${ORDRE.map((id) => { const d = D[id], j = J.find((x) => x.id === `depose-${id}`);
+        return `<tr data-etat-palette="${id}"><td>${id}</td><td>${d ? d.premier + juste(d.premier) : '—'}</td><td>${d ? d.essais.join(', ') : '—'}</td><td>${d && d.pose ? d.pose : '—'}</td><td>${j && j.ok ? '✓' : '✗'}</td></tr>`; }).join('')}</tbody></table>
+      <table class="quai-bilan eqi-depose-etat"><tbody>
+      <tr><td>Dépose finie — <code>deposeFinie</code></td><td data-sait="finie">${oui(deposeFinie({ depose: D }, ORDRE))}</td></tr>
+      <tr><td>Geste <code>quai:${Q.id}:depose</code> (première palette posée)</td><td data-sait="geste-depose">${oui(G[`quai:${Q.id}:depose`])}</td></tr>
+      <tr><td>Geste <code>quai:${Q.id}:dechargement</code> (dernière palette posée, avec l'arrêt)</td><td data-sait="geste-dechargement">${oui(G[`quai:${Q.id}:dechargement`])}</td></tr>
+      <tr><td>Déclencheur <code>quaiDecharge('${Q.id}')</code></td><td>${oui(quaiDecharge(Q.id)(db))}</td></tr>
+      <tr><td>Jalons de la dépose (${J.length}) — tous ✗ tant que la dernière palette n’est pas posée</td><td data-sait="jalons">${J.map((l) => `${l.id.replace('depose-', '')} ${l.ok ? '✓' : '✗'}`).join(' · ')}</td></tr>
+      <tr><td>Ce que le bilan lirait</td><td>${J.map((l) => `${l.lib} : ${l.fait} (attendu : ${l.attendu})`).join('<br>')}</td></tr>
+      <tr><td>Journal du quai</td><td>${e && e.journal ? e.journal.slice().reverse().join('<br>') : '—'}</td></tr></tbody></table>`;
+  };
+  const h = document.createElement('div');
+  hote.querySelector('[data-seance-depose]').replaceChildren(h);
+  const ctx = {
+    meta: Object.assign({ id: 'essai-inspection', code: 'ESSAI', titre: 'Essai de la dépose dirigée', portee: 'eleve', immersif: true, temps: 'guidage', bareme: 20 }, copie ? { copie: true, temps: 'evaluation' } : {}),
+    profil: { prenom: 'Essai', nom: 'Dépose', role: 'eleve', uid: 'essai-eleve' },
+    jeu: { etat: () => db, sauver: maj },
+    enregistrer: () => {}, quitter: () => { lancer(); }, codeStock: 'ESSAI', lireScore: async () => null,
+  };
+  creerEntreprise(universQuai(Q, { copie })).rendre(h, ctx);
+  h.querySelector('.ent-nav[data-vue="quai"]')?.click();
+  maj();
+  window.__depose = { db: () => db, Q };
+}
+document.querySelector('[data-lancer-depose]').addEventListener('click', () => { document.querySelector('[data-lancer-depose]').hidden = true; lancer(); });
+form.addEventListener('change', () => { if (hote.childElementCount) lancer(); });
+document.querySelector('[data-recommencer-depose]').addEventListener('click', () => { if (hote.childElementCount) lancer(); });
+if (location.hash === '#depose') { document.querySelector('[data-lancer-depose]').click(); document.getElementById('depose').scrollIntoView(); }
+</script>
 </body>
 </html>

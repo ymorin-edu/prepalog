@@ -655,13 +655,22 @@ export const ouvertureQuai = (I) => I.pts([[2.4, 0, 0], [3.6, 0, 0], [3.6, 0, 2.
 // et la bande jaune et noire du seuil.
 // `o.zone` (D-4, étape 3, ajouté en dernier) : [x0, x1, y0, y1], la zone de réception d'un quai qui reçoit plusieurs
 // palettes ; absent : la zone d'aujourd'hui (une palette), dessinée à l'identique.
+// `o.sol` et `o.nomAuSol` (chantier E-5, lot 2, la dépose dirigée ; ajoutés en dernier, absents = le dessin d'avant, octet pour octet) :
+// `o.sol` = [x0, x1, y1], un sol plus large que celui d'aujourd'hui (de −1,2 à 7,5 m, 6 m de profondeur) ; `o.nomAuSol` = [x, y], le nom
+// de la zone écrit À PLAT au sol à partir de ce point (en mètres), au lieu d'en biais à droite de la zone.
 export function solQuai(I, nomZone = 'Zone de réception', o = {}) {
   const { face, pts, P } = I;
   const [zx0, zx1, zy0, zy1] = o.zone || [2.35, 3.85, 1.9, 3.6];
-  let g = face([[-1.2, 0, 0], [7.5, 0, 0], [7.5, 6, 0], [-1.2, 6, 0]], '#e4dfd3', '#c9c3b6');
+  const [sx0, sx1, sy1] = o.sol || [-1.2, 7.5, 6];
+  let g = face([[sx0, 0, 0], [sx1, 0, 0], [sx1, sy1, 0], [sx0, sy1, 0]], '#e4dfd3', '#c9c3b6');
   g += `<polygon data-iso-zone points="${pts([[zx0, zy0, 0], [zx1, zy0, 0], [zx1, zy1, 0], [zx0, zy1, 0]])}" fill="rgba(231,198,40,.12)" stroke="#d1a90f" stroke-width="3" stroke-dasharray="10 6"/>`;
-  const [tx, ty] = o.zone ? P(zx1 + 0.15, (zy0 + zy1) / 2, 0) : P(4.0, 2.75, 0);
-  g += `<text x="${(tx + 4).toFixed(1)}" y="${(ty + 4).toFixed(1)}" font-size="13" font-weight="800" fill="#555047" transform="rotate(-30 ${tx.toFixed(1)} ${ty.toFixed(1)})">${ech(String(nomZone).toUpperCase())}</text>`;
+  if (o.nomAuSol) {
+    const [ox, oy] = P(0, 0, 0), [ax, ay] = P(1, 0, 0), [bx, by] = P(0, 1, 0), f = (v) => v.toFixed(3);
+    g += `<g transform="matrix(${f(ax - ox)},${f(ay - oy)},${f(bx - ox)},${f(by - oy)},${ox.toFixed(1)},${oy.toFixed(1)})"><text data-iso-nom-zone x="${o.nomAuSol[0]}" y="${o.nomAuSol[1]}" font-size="0.3" font-weight="800" fill="#555047" font-family="Inter, system-ui, 'Segoe UI', Arial, sans-serif">${ech(String(nomZone).toUpperCase())}</text></g>`;
+  } else {
+    const [tx, ty] = o.zone ? P(zx1 + 0.15, (zy0 + zy1) / 2, 0) : P(4.0, 2.75, 0);
+    g += `<text x="${(tx + 4).toFixed(1)}" y="${(ty + 4).toFixed(1)}" font-size="13" font-weight="800" fill="#555047" transform="rotate(-30 ${tx.toFixed(1)} ${ty.toFixed(1)})">${ech(String(nomZone).toUpperCase())}</text>`;
+  }
   for (let k = 0; k < 8; k++) { const x = 2.4 + k * 0.15; g += face([[x, 0, 0], [x + 0.15, 0, 0], [x + 0.15, 0.18, 0], [x, 0.18, 0]], k % 2 ? '#1b1b1b' : '#e7c628', 'none'); }
   return g;
 }

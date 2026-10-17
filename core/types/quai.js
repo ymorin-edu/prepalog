@@ -139,6 +139,11 @@
 //   - `document: 'Bon de livraison — lettre de voiture'` : le nom du document de transport dans les titres de l'écran (défaut : « Bon de livraison »).
 // Ces options demandent UN seul camion (le suivant ne se met à quai qu'une fois le BL du précédent signé) ; `commence` demande un quai sans froid
 // (un lot déchargé avant l'ouverture n'a pas de temps hors froid à mesurer) ; `arret` et `commence` s'excluent, et refusent `mode: 'controle'`.
+//
+// LA DÉPOSE DIRIGÉE PAR L'ÉLÈVE (17/10/2026, même chantier, lot 2, feuille `docs/briefs/MOTEUR-depose-dirigee.md`). `depose: { passage, grise,
+// cases }` (iso, au chariot frontal) : à l'étape ②, le cariste attend à la sortie du camion avec chaque palette et l'élève clique la case où il
+// la pose (guidage : un piège fait réagir le cariste et se grise ; copie : le premier clic pose). État `depose`, geste `quai:<id>:depose`, jalons
+// `depose-<palette>` (groupe « Diriger le déchargement »). Format, état et fonctions : section « la dépose dirigée par l'élève » plus bas.
 
 // Pas d'import de `ui.js` : le corrigé d'une séance (`contenus/corriges/`) importe ce module, et la
 // suite de tests charge les corrigés hors du navigateur.
@@ -281,7 +286,15 @@ function reglages(Q) {
     depart: minutesDe(Q.debut || (camions[0] && camions[0].arrivee)),
     // Un quai en deux séances (lot 1) : la fin après le déchargement (`{ texte }` ou null), le départ au contrôle, le nom du document.
     arretDech: arretDechargement(Q), commence: Q.commence === 'controle', document: texteNet(Q.document) || DOCUMENT_DEFAUT,
+    // La dépose dirigée (lot 2) : les cases complétées, le passage et la règle de grisage ; null sans `depose` (ou si elle est mal
+    // formée : c'est `verifierQuai` qui la refuse en clair).
+    depose: deposeDe(Q),
   };
+}
+function deposeDe(Q) {
+  const D = Q && Q.depose;
+  if (!D || typeof D !== 'object' || !Array.isArray(D.cases) || !D.cases.length || !D.cases.every((c) => c && typeof c === 'object')) return null;
+  return { cases: normaliserCases(D), passage: Number.isInteger(D.passage) ? D.passage : Math.floor(D.cases.length / 2), grise: D.grise === 'palette' ? 'palette' : 'garde' };
 }
 // `arret: 'dechargement'` ou `arret: { etape: 'dechargement', texte }` : le texte du bandeau de fin (défaut : les palettes sont en zone). Une valeur
 // fautive rend null ici ; c'est `verifierQuai` qui la refuse en clair.
@@ -437,6 +450,283 @@ export function etatChariot(plan, t) {
   return { cx: m(leg.a[0], leg.b[0]), yc: m(leg.a[1], leg.b[1]), lev: m(leg.a[2], leg.b[2]), porte: rang < 0 ? null : rang };
 }
 
+/* ======================================== la dépose dirigée par l'élève (chantier E-5, lot 2) */
+// Feuille de coordination `docs/briefs/MOTEUR-depose-dirigee.md` (décisions fixées le 17/10/2026), maquette validée par Tristan :
+// `outils/essai-depose.{html,js,css}` (variante A, pièges non peints). Quand le quai déclare `depose` (iso, au chariot frontal),
+// le cariste sort chaque palette du camion et ATTEND à la sortie du camion, palette sur les fourches ; les cases libres s'éclairent
+// et l'élève clique celle où il la pose. Guidage : une case piège fait réagir le cariste (bulle) et se grise jusqu'à la fin, l'élève
+// rechoisit. Évaluation (`copie`) : le premier clic pose, sans réaction ni grisage. Les jalons lisent le PREMIER clic.
+//
+// Déclaration : `depose: { passage?, grise?, cases: [{ id, sol?, legende?, nom?, reaction?, juste?, peinte? }] }`.
+//   - `cases` : 8 au plus, sur UNE ligne devant le mur ; `passage` = combien sont à gauche de la porte (défaut : la moitié) ;
+//   - `sol: 'pieton'` (l'allée piétonne) ou `'autre-quai'` (devant le quai voisin, `legende` obligatoire : « Quai 3 ») : un piège ;
+//     sans `sol`, une case de la zone de réception, juste par défaut (`juste: false` y demande une `reaction`) ;
+//   - `peinte: false` (un piège seulement) : ni contour ni nom au sol, la case ne s'éclaire que pendant le choix ;
+//   - `grise` : 'garde' (défaut, une case piège reste grisée jusqu'à la fin) ou 'palette' (grisée pour la palette en cours seulement).
+// État : `db.quais[<id>].depose = { <palette>: { premier, essais, pose } }` (une palette sans clic n'a pas d'entrée ; les cases grisées
+// et occupées se recalculent). Toutes les fonctions ci-dessous sont pures : `etat` est un objet qui porte `depose` (l'état du quai
+// lui-même convient).
+export const SOLS_DEPOSE = ['pieton', 'autre-quai'];
+export const PREMIERE_BULLE = 'Dis-moi où je pose chaque palette. Pas de gerbage à la réception.';
+export const GROUPE_DEPOSE = 'Diriger le déchargement';
+const minusculeD = (t) => String(t).charAt(0).toLowerCase() + String(t).slice(1);
+export const reactionDefaut = (c) => (c.sol === 'pieton' ? 'Là, c’est l’allée piétonne : je ne pose pas ici.'
+  : c.sol === 'autre-quai' ? `Ça, c’est la zone du ${minusculeD(c.legende || 'quai voisin')}.` : '');
+export const nomDefaut = (c) => (c.sol === 'pieton' ? `Case ${c.id}, allée piétonne`
+  : c.sol === 'autre-quai' ? `Case ${c.id}, devant le ${minusculeD(c.legende || 'quai voisin')}` : `Case ${c.id}`);
+const CLES_DEPOSE = ['cases', 'passage', 'grise'];
+const CLES_CASE = ['id', 'nom', 'juste', 'reaction', 'sol', 'legende', 'peinte'];
+export const MAX_CASES = 8;
+
+// Les écarts de la déclaration `depose` elle-même (la maquette, sans la clé `consigne`) ; [] = rien à redire.
+function ecartsDeclarationDepose(D, nbPalettes) {
+  const E = [];
+  if (!D || typeof D !== 'object' || Array.isArray(D)) return ['depose doit être un objet { cases, passage }'];
+  Object.keys(D).forEach((k) => { if (!CLES_DEPOSE.includes(k)) E.push(`depose : clé « ${k} » inconnue (${CLES_DEPOSE.join(', ')})`); });
+  const C = D.cases;
+  if (!Array.isArray(C) || !C.length) return E.concat(['depose.cases doit être une liste non vide']);
+  if (C.length > MAX_CASES) E.push(`depose.cases : ${C.length} cases, ${MAX_CASES} au plus (plan non éprouvé au-delà)`);
+  const vus = new Set();
+  C.forEach((c, i) => {
+    const nom = `depose.cases[${i}]${c && typeof c.id === 'string' && c.id ? ` (« ${c.id} »)` : ''}`;
+    if (!c || typeof c !== 'object') { E.push(`${nom} : une case est un objet`); return; }
+    Object.keys(c).forEach((k) => { if (!CLES_CASE.includes(k)) E.push(`${nom} : clé « ${k} » inconnue (${CLES_CASE.join(', ')})`); });
+    if (typeof c.id !== 'string' || !c.id.trim()) E.push(`${nom} : id vide`);
+    else if (vus.has(c.id)) E.push(`${nom} : id en double`);
+    else vus.add(c.id);
+    if (c.sol !== undefined && !SOLS_DEPOSE.includes(c.sol)) E.push(`${nom} : sol « ${c.sol} » inconnu (${SOLS_DEPOSE.join(', ')})`);
+    if (c.juste !== undefined && typeof c.juste !== 'boolean') E.push(`${nom} : juste doit être true ou false`);
+    if (c.juste === true && c.sol) E.push(`${nom} : juste: true sur une case « ${c.sol} » (incohérent : la case se dessine comme un piège)`);
+    if (c.sol === 'autre-quai' && (typeof c.legende !== 'string' || !c.legende.trim())) E.push(`${nom} : une case « autre-quai » demande sa légende (« Quai 3 »)`);
+    ['nom', 'reaction', 'legende'].forEach((k) => { if (c[k] !== undefined && (typeof c[k] !== 'string' || !c[k].trim())) E.push(`${nom} : ${k} vide`); });
+    if (c.juste === false && !c.sol && !c.reaction) E.push(`${nom} : une case fausse sans sol demande sa réaction (ce que dit le cariste)`);
+    if (c.peinte !== undefined && typeof c.peinte !== 'boolean') E.push(`${nom} : peinte doit être true ou false`);
+    if (c.peinte === false && !c.sol) E.push(`${nom} : peinte: false sur une case sans sol (une case juste est toujours peinte au sol)`);
+  });
+  const P = D.passage === undefined ? Math.floor(C.length / 2) : D.passage;
+  if (!Number.isInteger(P) || P < 0 || P > C.length) E.push(`depose.passage : ${D.passage} n’est pas un nombre de cases à gauche de la porte (0 à ${C.length})`);
+  else {
+    [P - 1, P].forEach((i) => { if (C[i] && C[i].sol === 'autre-quai') E.push(`depose.cases[${i}] : une case « autre-quai » ne touche pas le passage de la porte (la porte du quai voisin tomberait sur celle-ci)`); });
+  }
+  if (['garde', 'palette'].indexOf(D.grise === undefined ? 'garde' : D.grise) < 0) E.push(`depose.grise : « ${D.grise} » inconnu (garde, palette)`);
+  const justes = C.filter((c) => c && (c.juste !== undefined ? c.juste : !c.sol)).length;
+  if (Number.isInteger(nbPalettes) && justes < nbPalettes) E.push(`depose : ${nbPalettes} palettes et ${justes} case${justes > 1 ? 's' : ''} juste${justes > 1 ? 's' : ''} : il faut au moins une case juste par palette (une case occupée ne se propose plus, pas de gerbage à la réception)`);
+  return E;
+}
+// Le contrôle de `depose` dans `verifierQuai` (décision 1) : la déclaration, puis ce avec quoi elle se combine. `depose` va avec
+// `securite`, `arret: 'dechargement'` et `commence: 'controle'` (la dépose n'y est pas jouée, les palettes sont dans les cases justes).
+// Appelée seule (`verifierDepose(Q)`), elle rend la liste de ses écarts.
+export function verifierDepose(Q, E = []) {
+  if (!Q || typeof Q !== 'object' || Q.depose === undefined) return E;
+  const cams = Array.isArray(Q.camions) ? Q.camions : [];
+  const n = cams[0] && Array.isArray(cams[0].palettes) ? cams[0].palettes.length : undefined;
+  ecartsDeclarationDepose(Q.depose, n).forEach((x) => E.push(x));
+  if (Q.rendu !== 'iso') E.push('depose demande `rendu: \'iso\'` (les cases se dessinent sur le quai iso)');
+  if (!Q.dechargement || Q.dechargement.par !== 'cariste') E.push('depose demande `dechargement: { par: \'cariste\' }` (c’est le cariste, au chariot frontal, qui attend où poser)');
+  if (Q.froid !== false) E.push('depose demande un quai sans froid (`froid: false`), comme tout le rendu iso');
+  if (cams.length > 1) E.push('depose demande un seul camion, comme tout le rendu iso');
+  if (Q.mode === 'controle') E.push('depose avec mode: \'controle\' : ce mode (quai déjà réceptionné) n’a pas de déchargement');
+  return E;
+}
+
+// Les cases complétées : sol, légende, peinte, juste, nom (l'étiquette lue au clavier) et réaction du cariste.
+export function normaliserCases(D) {
+  return D.cases.map((c) => {
+    const k = { id: c.id, sol: c.sol || null, legende: c.legende || null, peinte: c.peinte !== false };
+    k.juste = c.juste !== undefined ? c.juste : !c.sol;
+    k.nom = c.nom || nomDefaut(k);
+    k.reaction = c.reaction || reactionDefaut(k);
+    return k;
+  });
+}
+export function etatDeposeNeuf() { return { depose: {} }; }
+const caseDe = (cases, id) => cases.find((c) => c.id === id) || null;
+export const casesOccupees = (etat) => new Set(Object.values(etat.depose).map((d) => d.pose).filter(Boolean));
+// Les cases grisées pour la palette en cours : les pièges déjà essayés (toutes palettes avec 'garde', celle-ci avec 'palette') ; aucune en copie.
+export function casesGrisees(etat, cases, palette, { copie = false, grise = 'garde' } = {}) {
+  const G = new Set();
+  if (copie) return G;
+  Object.entries(etat.depose).forEach(([p, d]) => {
+    if (grise === 'palette' && p !== palette) return;
+    d.essais.forEach((id) => { const c = caseDe(cases, id); if (c && !c.juste) G.add(id); });
+  });
+  return G;
+}
+// Les cases qui s'éclairent : ni occupées, ni grisées (dans l'ordre des cases).
+export function casesProposees(etat, cases, palette, opts = {}) {
+  const occ = casesOccupees(etat), gr = casesGrisees(etat, cases, palette, opts);
+  return cases.filter((c) => !occ.has(c.id) && !gr.has(c.id)).map((c) => c.id);
+}
+// Un clic sur la case `id` pour la palette `palette` -> un NOUVEL état, ou le MÊME objet si le clic ne compte pas (case non proposée,
+// palette déjà posée). Pose si copie OU case juste ; sinon l'essai est noté et la palette attend toujours.
+export function choisirCase(etat, cases, palette, id, opts = {}) {
+  const d = etat.depose[palette] || { premier: null, essais: [], pose: null };
+  if (d.pose) return etat;
+  const c = caseDe(cases, id);
+  if (!c || !casesProposees(etat, cases, palette, opts).includes(id)) return etat;
+  const n = { premier: d.premier || id, essais: d.essais.concat([id]), pose: opts.copie || c.juste ? id : null };
+  return { depose: Object.assign({}, etat.depose, { [palette]: n }) };
+}
+export function issueDernierChoix(etat, cases, palette) {
+  const d = etat.depose[palette];
+  if (!d || !d.essais.length) return null;
+  const id = d.essais[d.essais.length - 1], c = caseDe(cases, id);
+  return d.pose ? { issue: 'pose', case: id } : { issue: 'refus', case: id, reaction: c ? c.reaction : '' };
+}
+export const paletteEnAttente = (etat, ordre) => ordre.find((p) => !(etat.depose[p] && etat.depose[p].pose)) || null;
+export const deposeFinie = (etat, ordre) => paletteEnAttente(etat, ordre) === null;
+// Les jalons de la dépose (décision 11) : `ok` = tout posé ET premier choix juste ; rien posé = tous faux (pas de récompense de
+// l'inaction) ; `lib` ne dit pas la bonne case, `attendu` la dit (lu au bilan).
+export function jalonsDepose(etat, cases, palettes) {
+  const fini = palettes.every((p) => etat.depose[p] && etat.depose[p].pose);
+  const justes = cases.filter((c) => c.juste).map((c) => c.id).join(', ');
+  return palettes.map((p) => {
+    const d = etat.depose[p], c = d && d.premier ? caseDe(cases, d.premier) : null;
+    return { id: `depose-${p}`, palette: p, lib: `Dépose de la palette ${p}`, ok: !!(fini && c && c.juste),
+      premier: d ? d.premier : null, attendu: `une case de la zone de réception (${justes})` };
+  });
+}
+
+// LA GÉOMÉTRIE (maquette, pure). Monde du quai iso en mètres (projection `unite 60, origine [470, 235]`) : mur en y = 0, porte de
+// x = 2,4 à 3,6 (centre 3,0), remorque en y < 0. Les cases sur UNE ligne à `Y0`, `passage` cases à gauche de la porte, les autres à
+// droite ; une palette de 0,8 × 1,2 m centrée dans sa case. Le cariste attend à la sortie du camion (`ycSortie`) ; il circule dans
+// l'allée derrière les cases (`ycAllee`). Le point d'attente « allée » de la maquette n'est pas repris (décision 2).
+export const GEO_DEPOSE = { PAS: 1.05, LARG: 0.95, PROF: 1.4, Y0: 1.6, PAL: [0.8, 1.2], X_PORTE: 3.0, BORD_G: 2.4, BORD_D: 3.6, Y_CAMION: -2.9, PAS_CAMION: 1.3 };
+const GD = GEO_DEPOSE;
+function suitesDepose(cases, geo, sol) {
+  const R = [];
+  cases.forEach((c, i) => {
+    if (c.sol !== sol) return;
+    const der = R[R.length - 1];
+    if (der && der.i1 === i - 1) { der.i1 = i; der.x1 = geo[i].x1; } else R.push({ i0: i, i1: i, x0: geo[i].x0, x1: geo[i].x1, legende: c.legende });
+  });
+  return R;
+}
+// -> { cases:[{id,x0,x1,y0,y1,px,py,cx,ycPose,peinte}], pieton:[{i0,i1,x0,x1,legende}], autres:[{…, xPorte}], zone:{x0,x1,y0,y1,xNom}|null,
+//      sol:{x0,x1,y1}, xPorte, ycCamion, ycSortie, ycAllee }
+export function geometrieDepose(cases, passage = Math.floor(cases.length / 2)) {
+  const gab = GD.PAL, ec = Math.max(0, gab[1] - CHARIOT_FL);
+  const geo = cases.map((c, i) => {
+    const x0 = i < passage ? GD.BORD_G - GD.LARG - (passage - 1 - i) * GD.PAS : GD.BORD_D + (i - passage) * GD.PAS;
+    const px = x0 + (GD.LARG - gab[0]) / 2, py = GD.Y0 + (GD.PROF - gab[1]) / 2;
+    return { id: c.id, x0, x1: x0 + GD.LARG, y0: GD.Y0, y1: GD.Y0 + GD.PROF, px, py, cx: px + gab[0] / 2, ycPose: py + gab[1] - CHARIOT_FL, peinte: c.peinte !== false };
+  });
+  const z = geo.filter((g, i) => cases[i].sol !== 'autre-quai' && g.peinte);
+  const xNom = Math.min(...geo.filter((_, i) => cases[i].juste).map((g) => g.x0));
+  return {
+    cases: geo,
+    pieton: suitesDepose(cases, geo, 'pieton'),
+    autres: suitesDepose(cases, geo, 'autre-quai').map((s) => Object.assign(s, { xPorte: (s.x0 + s.x1) / 2 })),
+    zone: z.length ? { x0: Math.min(...z.map((g) => g.x0)) - 0.12, x1: Math.max(...z.map((g) => g.x1)) + 0.12, y0: GD.Y0 - 0.12, y1: GD.Y0 + GD.PROF + 0.12, xNom } : null,
+    sol: { x0: Math.min(-1.2, Math.min(...geo.map((g) => g.x0)) - 0.6), x1: Math.max(7.5, Math.max(...geo.map((g) => g.x1)) + 0.6), y1: 6.4 },
+    xPorte: GD.X_PORTE,
+    ycCamion: GD.Y_CAMION + gab[1] - CHARIOT_FL,
+    ycSortie: 0.12 + ec,
+    ycAllee: GD.Y0 + GD.PROF + 0.12 + ec,
+  };
+}
+// Les trajets du chariot, un par geste (décision 6 : pas de plan précalculé). `legs` = [{ t0, t1, a: [cx, yc, lev], b }] ;
+// `marques` = les instants nommés (`leve`, `sortie`, `pose`) ; `arrivee` = la position finale.
+function planificateurDepose(depart) {
+  const V = CHARIOT_QUAI.V, legs = [], marques = {};
+  let t = 0, pos = depart.slice();
+  const aller = (cx, yc, lev, vitesse) => {
+    const b = [cx == null ? pos[0] : cx, yc == null ? pos[1] : yc, lev == null ? pos[2] : lev];
+    if (b[0] === pos[0] && b[1] === pos[1] && b[2] === pos[2]) return;
+    const d = lev != null && lev !== pos[2] ? V.leve : Math.max(250, 1000 * Math.hypot(b[0] - pos[0], b[1] - pos[1]) / vitesse);
+    legs.push({ t0: t, t1: t + d, a: pos.slice(), b }); t += d; pos = b;
+  };
+  return { V, aller, marque: (n) => { marques[n] = t; }, fin: () => ({ legs, marques, duree: t, arrivee: pos.slice() }) };
+}
+// Chercher : avance jusqu'à la palette de tête, lève (`leve`), recule (`sortie`) jusqu'au point d'attente.
+export function trajetChercher(geo) {
+  const yA = geo.ycSortie, p = planificateurDepose([geo.xPorte, yA, 0]);
+  p.aller(null, geo.ycCamion, null, p.V.avance);
+  p.marque('leve'); p.aller(null, null, CHARIOT_QUAI.LEV); p.marque('sortie');
+  p.aller(null, yA, null, p.V.recule);
+  return p.fin();
+}
+// Poser dans la case `k` (de `geo.cases`) : recule à l'allée, glisse, avance, descend (`pose`), recule, revient à vide au point d'attente.
+export function trajetPoser(geo, k) {
+  const yA = geo.ycSortie, p = planificateurDepose([geo.xPorte, yA, CHARIOT_QUAI.LEV]);
+  p.aller(null, geo.ycAllee, null, p.V.recule);
+  p.aller(k.cx, null, null, p.V.crabeCharge);
+  p.aller(null, k.ycPose, null, p.V.avance);
+  p.aller(null, null, 0); p.marque('pose');
+  p.aller(null, geo.ycAllee, null, p.V.recule);
+  p.aller(geo.xPorte, null, null, p.V.crabe);
+  p.aller(null, yA, null, p.V.avance);
+  return p.fin();
+}
+export function positionSur(legs, t, depart) {
+  if (!legs.length) return depart.slice();
+  let leg = legs[legs.length - 1];
+  for (const l of legs) if (t < l.t1) { leg = l; break; }
+  const f = leg.t1 > leg.t0 ? Math.min(1, Math.max(0, (t - leg.t0) / (leg.t1 - leg.t0))) : 1;
+  return [0, 1, 2].map((i) => leg.a[i] + (leg.b[i] - leg.a[i]) * f);
+}
+// Les heurts du chariot (et de sa charge) avec les palettes des AUTRES cases, pour une pose en `k` (décision 13 : pas dans
+// `verifierQuai`, un test unitaire vérifie que la variante A n'en a aucun). [] = aucun.
+export function heurtsPose(geo, k) {
+  const D = CHARIOT_QUAI.DEMI, gab = GD.PAL, H = [];
+  const emprise = ([cx, yc, lev]) => ({ x0: Math.min(cx - D, cx - gab[0] / 2), x1: Math.max(cx + D, cx + gab[0] / 2), y0: lev > 0 ? Math.min(yc, yc + CHARIOT_FL - gab[1]) : yc, y1: yc + CHARIOT_BL });
+  const coupe = (a, b) => a.x0 < b.x1 - 1e-6 && b.x0 < a.x1 - 1e-6 && a.y0 < b.y1 - 1e-6 && b.y0 < a.y1 - 1e-6;
+  const legs = trajetPoser(geo, k).legs.concat(trajetChercher(geo).legs);
+  legs.forEach((l, n) => {
+    const r = emprise(l.a), s = emprise(l.b), b = { x0: Math.min(r.x0, s.x0), x1: Math.max(r.x1, s.x1), y0: Math.min(r.y0, s.y0), y1: Math.max(r.y1, s.y1) };
+    geo.cases.forEach((o) => { if (o.id !== k.id && coupe(b, { x0: o.px, x1: o.px + gab[0], y0: o.py, y1: o.py + gab[1] })) H.push(`${k.id} : segment ${n} dans ${o.id}`); });
+  });
+  return H;
+}
+// Une réplique en lignes de bulle : une phrase par ligne, coupée à `max` signes (maquette).
+function couperBulle(texte, max = 40) {
+  const L = [];
+  String(texte).split(/(?<=[.!?…])\s+/).forEach((ph) => {
+    let l = '';
+    ph.split(/\s+/).forEach((m) => { if (l && (l + ' ' + m).length > max) { L.push(l); l = m; } else l = l ? `${l} ${m}` : m; });
+    if (l) L.push(l);
+  });
+  return L;
+}
+// Le décor propre à la dépose (maquette, partie 3 ; décision 8), avec la projection `I` du quai. Teintes fixes : le dessin iso ne suit
+// pas le thème. `matriceSolDe` : un texte ou un pictogramme écrit en mètres, à plat sur le sol (x vers la droite, y vers l'élève).
+const POLICE_ISO = 'Inter, system-ui, \'Segoe UI\', Arial, sans-serif';
+function matriceSolDe(I) {
+  const [ox, oy] = I.P(0, 0, 0), [ax, ay] = I.P(1, 0, 0), [bx, by] = I.P(0, 1, 0);
+  return `matrix(${(ax - ox).toFixed(3)},${(ay - oy).toFixed(3)},${(bx - ox).toFixed(3)},${(by - oy).toFixed(3)},${ox.toFixed(1)},${oy.toFixed(1)})`;
+}
+const surSolDe = (I, contenu) => `<g transform="${matriceSolDe(I)}">${contenu}</g>`;
+const rectSolDe = (I, x0, y0, x1, y1, z = 0) => I.pts([[x0, y0, z], [x1, y0, z], [x1, y1, z], [x0, y1, z]]);
+const n1 = (v) => v.toFixed(1);
+// Un pictogramme piéton peint au sol (centré en (x, y), 0,7 m de côté) : carré jaune, silhouette qui marche.
+function pictoPieton(I, x, y) {
+  const s = 0.7, x0 = x - s / 2, y0 = y - s / 2;
+  return surSolDe(I, `<g data-iso-picto="pieton"><rect x="${x0}" y="${y0}" width="${s}" height="${s}" rx="0.06" fill="#e7c628" stroke="#a88a0c" stroke-width="0.02"/>
+    <g fill="none" stroke="#1a1915" stroke-width="0.055" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M${x + 0.02},${y - 0.14} L${x - 0.03},${y + 0.07} M${x - 0.03},${y + 0.07} L${x - 0.13},${y + 0.25} M${x - 0.03},${y + 0.07} L${x + 0.08},${y + 0.16} L${x + 0.1},${y + 0.27}
+        M${x + 0.01},${y - 0.1} L${x - 0.12},${y - 0.01} M${x + 0.01},${y - 0.1} L${x + 0.1},${y - 0.02} L${x + 0.16},${y + 0.06}"/></g>
+    <circle cx="${x + 0.04}" cy="${y - 0.22}" r="0.055" fill="#1a1915"/></g>`);
+}
+// La porte FERMÉE du quai voisin sur le mur, et son panneau (comme celui de `murQuai`).
+function porteVoisine(I, xc, legende) {
+  const x0 = xc - 0.6, x1 = xc + 0.6;
+  let g = `<g data-iso-quai-voisin>${I.face([[x0 - 0.06, 0.0008, 0], [x1 + 0.06, 0.0008, 0], [x1 + 0.06, 0.0008, 2.11], [x0 - 0.06, 0.0008, 2.11]], '#8d969b', 'none')}`;
+  g += I.face([[x0, 0.001, 0], [x1, 0.001, 0], [x1, 0.001, 2.05], [x0, 0.001, 2.05]], '#d4d8da', '#8d969b');
+  for (let z = 0.2; z < 2.05; z += 0.25) g += `<polyline points="${I.pts([[x0, 0.002, z], [x1, 0.002, z]])}" stroke="#a3abb0"/>`;
+  g += I.face([[xc - 0.3, 0.003, 2.25], [xc + 0.3, 0.003, 2.25], [xc + 0.3, 0.003, 2.55], [xc - 0.3, 0.003, 2.55]], '#1f5f3a', '#0f3d24');
+  const [lx, ly] = I.P(xc, 0.004, 2.4);
+  return g + `<text x="${n1(lx)}" y="${n1(ly + 6)}" text-anchor="middle" font-size="11" font-weight="800" fill="#fdfbf7" transform="rotate(30 ${n1(lx)} ${n1(ly)})">${ech(String(legende).toUpperCase())}</text></g>`;
+}
+// La bande jaune et noire du seuil d'une porte de quai (celle de `solQuai`), 8 bandes de 15 cm à partir de x0.
+const seuilPorte = (I, x0) => { let g = ''; for (let k = 0; k < 8; k++) { const x = x0 + k * 0.15; g += I.face([[x, 0, 0], [x + 0.15, 0, 0], [x + 0.15, 0.18, 0], [x, 0.18, 0]], k % 2 ? '#1b1b1b' : '#e7c628', 'none'); } return g; };
+// Une porte piétonne dans le mur, au bout de l'allée piétonne.
+function portePietonne(I, xc) {
+  const x0 = xc - 0.45, x1 = xc + 0.45, [px, py] = I.P(x1 - 0.12, 0.002, 1.0);
+  return `<g data-iso-porte-pietonne>${I.face([[x0, 0.001, 0], [x1, 0.001, 0], [x1, 0.001, 2.0], [x0, 0.001, 2.0]], '#6f7b83', '#4c565d')}`
+    + I.face([[x0 + 0.2, 0.002, 1.25], [x1 - 0.2, 0.002, 1.25], [x1 - 0.2, 0.002, 1.75], [x0 + 0.2, 0.002, 1.75]], '#b9cad4', '#4c565d')
+    + `<circle cx="${n1(px)}" cy="${n1(py)}" r="2.5" fill="#2b2f33"/></g>`;
+}
+
 // Les palettes de fûts (`forme: 'fut'`, D-4 étape 3) : huit places en quinconce 3-2-3 sur un bac de rétention. `manque` = les
 // NUMÉROS des places vides (1 à 8), `avarie` = { numéro: face qui fuit }, la face devant être EXTÉRIEURE (un fût qu'un autre cache
 // ne se voit pas fuir). Le total, le réel et les fuites se calculent (`reglages`) : une dimension déclarée ne servirait à rien.
@@ -535,7 +825,7 @@ function verifierDeuxSeances(Q, E) {
 export function verifierQuai(Q) {
   const E = [];
   verifierPalettes(Q, E);
-  if (Q && typeof Q === 'object') { verifierUnite(Q, E); verifierDeuxSeances(Q, E); }
+  if (Q && typeof Q === 'object') { verifierUnite(Q, E); verifierDeuxSeances(Q, E); verifierDepose(Q, E); }
   const S = Q && Q.securite;
   if (!S || typeof S !== 'object') return E;
   const scene = S.mode === 'scene';
@@ -625,6 +915,8 @@ export function etatNeuf(Q) {
   R.palettes.forEach((p) => { palettes[p.id] = paletteNeuve(); });
   const e = Object.assign({ v: 1, etape: R.securite && !R.scene ? 0 : 1, minute: 0, reel: 0, tiersTemps: false, sel: 0, journal: [], palettes, fini: false }, camionNeuf());
   if (R.securite) e.securite = securiteNeuve(R.scene);
+  // La dépose dirigée (lot 2) : aucune palette choisie (une palette sans clic n'a pas d'entrée).
+  if (R.depose) e.depose = etatDeposeNeuf().depose;
   if (R.multi) Object.assign(e, { suivants: R.camions.slice(1).map(camionNeuf), ordre: { premier: null, phrase: null }, actif: 0 });
   // `commence: 'controle'` : le déchargement est DÉJÀ fait. Le camion est ouvert (à l'heure de départ du quai, minute 0), les N palettes sont posées
   // (`evts` = N + 1, comme après la dernière pose), on est à l'étape ③. Ni journal ni minute ajoutés : rien n'a été joué.
@@ -657,6 +949,15 @@ function normaliser(e, R) {
   if (!Array.isArray(e.journal)) e.journal = [];
   if (!Array.isArray(e.lignes)) e.lignes = [];
   if (R.securite && !e.securite) e.securite = securiteNeuve(R.scene);
+  if (R.depose && (!e.depose || typeof e.depose !== 'object' || Array.isArray(e.depose))) e.depose = etatDeposeNeuf().depose;
+  // (Une base relue peut avoir perdu un `null` ou une liste vide en route : on remet la forme { premier, essais, pose }.)
+  if (R.depose) Object.keys(e.depose).forEach((p) => {
+    const d = e.depose[p];
+    if (!d || typeof d !== 'object') { delete e.depose[p]; return; }
+    if (!Array.isArray(d.essais)) d.essais = [];
+    if (d.premier === undefined) d.premier = d.essais[0] || null;
+    if (d.pose === undefined) d.pose = null;
+  });
   // Un quai qui part du contrôle n'a que les étapes ③ et ④ ; un quai qui s'arrête au déchargement, que ⓪ ① ②.
   if (R.commence && !(e.etape >= 3)) e.etape = 3;
   if (R.arretDech && e.etape > 2) e.etape = 2;
@@ -773,6 +1074,15 @@ export function jalonsQuai(db, Q) {
     j(`ticket${suff(c)}`, libC('Enregistreur', c), k.ticketLu ? (lib[k.ticketRep] || 'lu, sans réponse') : 'non lu',
       `${lib[attenduTicket] || attenduTicket}${attenduTicket === 'long' ? ', à signaler' : ''}`, !!e && k.ticketLu && k.ticketRep === attenduTicket);
   });
+  // La dépose dirigée (lot 2) : un jalon par palette, présents dès la base vide (tous faux), absents quand la dépose n'est pas jouée (`commence`).
+  if (R.depose && !R.commence) {
+    const ED = { depose: (E && E.depose) || {} }, ids = R.palettes.filter((p) => p.camion === 0).map((p) => p.id);
+    jalonsDepose(ED, R.depose.cases, ids).forEach((l) => {
+      const c = l.premier ? R.depose.cases.find((x) => x.id === l.premier) : null, d = ED.depose[l.palette];
+      const fait = c ? `premier choix : ${c.nom}${d && d.pose && d.pose !== l.premier ? ` (posée ensuite en ${d.pose})` : ''}` : 'pas posée';
+      j(l.id, l.lib, fait, l.attendu, l.ok);
+    });
+  }
   // `arret: 'dechargement'` : ③ et ④ ne sont pas jouées (ni comptage, ni décision, ni réserve, ni signature, ni rentrée) : on s'arrête aux étapes jouées.
   if (R.arretDech) return { L, pts, max };
   const PE = R.palettes.map((p) => effective(p, E, R));
@@ -907,6 +1217,9 @@ export function etapesQuai(Q) {
   const ids = jalonsQuai({}, Q).L.filter((l) => l.compte);
   return ids.map(({ id, lib }) => ({
     id, titre: lib,
+    // Les jalons de la dépose dirigée font UNE ligne du bandeau de fin (jamais « P3 ✗ » : la case nommée fausse donnerait la réponse).
+    // `ponderer` (contenus/ponderation.js) garde ce groupe tant que le barème ne donne pas de bloc à ces jalons.
+    ...(/^depose-/.test(id) ? { groupe: GROUPE_DEPOSE } : {}),
     verifier(db) {
       const l = jalonsQuai(db, Q).L.find((x) => x.id === id);
       return { status: l && l.ok ? 'ok' : 'attente' };
@@ -1133,6 +1446,13 @@ export function creerQuai(Q, opts = {}) {
   // Sur le quai iso (D-4, étape 5) le cariste conduit un chariot frontal dessiné à l'échelle du décor (`planChariot`, `imageIsoChariot`).
   const CARISTE_ISO = ISO && CARISTE;
   const quiSort = CARISTE ? (R.D.nom || 'Le cariste') : 'Le chauffeur';
+  // La dépose dirigée (lot 2, voir en tête de la section « dépose dirigée ») : la géométrie des cases remplace les places d'arrivée
+  // (`placesIso` / `zoneIso`) ; les palettes sortent dans l'ordre inverse du chargement (P4, P3, P2, P1). JOUEE : la dépose se joue
+  // à l'étape ② (pas sous `commence`, où les palettes sont déjà dans les cases justes).
+  const DEPOSE = R.depose, GEO = DEPOSE ? geometrieDepose(DEPOSE.cases, DEPOSE.passage) : null;
+  const JOUEE = !!DEPOSE && !COMMENCE;
+  const ORDRE_DEP = DEPOSE ? PAL[0].map((p) => p.id).reverse() : [];
+  const OPTS_DEP = { copie: EVAL, grise: DEPOSE ? DEPOSE.grise : 'garde' };
   const secuFaite = (e) => !SEC || !!(e.securite && e.securite.fait);
   const accepte = (s) => s.decision === 'accepter' || s.decision === 'reserves';
   const st = (e, p) => e.palettes[p.id];
@@ -1145,7 +1465,10 @@ export function creerQuai(Q, opts = {}) {
   // `sonde` : la palette qui vient d'être sondée (l'afficheur se stabilise une fois, pas à chaque redessin).
   const ui = { chef4: false, arme: false, arme4: false, armeRaz: false, anim: null, lancer: false, jouerCf: false, focus: null,
     tente: null, tropMotifs: false, sonde: null, arretSecu: false, arrivee: false, rejeu1: false, anim1: null, t0a: null,
-    vueScene: 'dehors', levee: null, armeScene: false };
+    vueScene: 'dehors', levee: null, armeScene: false,
+    // Dépose dirigée : le texte à annoncer (région `aria-live`) au prochain dessin ; `visDep` / `animDep` : l'image et le contrôleur d'une
+    // animation en cours (étape B ; toujours null ici, les pauses se dessinent depuis la base par `visDe`).
+    annonceDep: '', visDep: null, animDep: null };
 
   // Chaque geste avance l'horloge du quai, et le temps hors froid de CHAQUE lot sorti du camion et
   // pas encore rentré en chambre froide.
@@ -1392,6 +1715,8 @@ export function creerQuai(Q, opts = {}) {
     return [Math.min(...xs) - 0.25, Math.max(...xs) + 0.95 + 0.45, 1.9, Math.max(...ys) + 0.95 + 0.3];
   }
   function imageIso(t, e, attente, o = {}) {
+    // La dépose dirigée : l'image d'une pause, calculée de la base (ou celle d'une animation en cours, étape B).
+    if (DEPOSE) return imageDepose(ui.visDep || visDe(e, { toutes: !!o.toutes }), e, o);
     if (CARISTE_ISO) return imageIsoChariot(t, e, attente, o);
     const P = PAL[ca(e)], N = P.length, depart = (n) => T_DEB + n * T_PAL;
     const G = P.map(gabarit), L = placesIso(P), pasDep = P.every(estFut) ? 1.05 : 1.3;
@@ -1498,8 +1823,192 @@ export function creerQuai(Q, opts = {}) {
     else leg = legFinIso(N, e);
     return { iso: s, leg, nb, pastilles: P.map((p) => `<i class="${sur.has(p.id) ? 'sur' : ''}">${ech(p.id)}</i>`).join('') };
   }
+  /* ------------------------------------------- la dépose dirigée : image, cases, bulle (lot 2) */
+  // Les cases des palettes au sol : une palette posée est dans SA case (l'état fait foi) ; avec `toutes` (sous `commence`, à ④, ou une
+  // fois tout posé), les autres prennent les cases justes libres dans l'ordre du contenu (P1 → première case juste…).
+  function casesDesPalettes(e, toutes) {
+    const D = (e && e.depose) || {}, posees = {}, occ = new Set();
+    PAL[0].forEach((p) => { const d = D[p.id]; if (d && d.pose && GEO.cases.some((g) => g.id === d.pose) && !occ.has(d.pose)) { posees[p.id] = d.pose; occ.add(d.pose); } });
+    if (toutes) {
+      const libres = DEPOSE.cases.filter((c) => c.juste && !occ.has(c.id)).map((c) => c.id);
+      PAL[0].forEach((p) => { if (!posees[p.id] && libres.length) posees[p.id] = libres.shift(); });
+    }
+    return posees;
+  }
+  const etatDep = (e) => ({ depose: (e && e.depose) || {} });
+  const enAttenteDep = (e) => paletteEnAttente(etatDep(e), ORDRE_DEP);
+  const deposeEnCours = (e) => JOUEE && !deposeFinie(etatDep(e), ORDRE_DEP);
+  // Où le cariste reste une fois tout posé : au point d'attente (la sortie du camion, dans le passage de la porte), fourches baissées,
+  // à vide. (Garé dans l'allée derrière les cases, il couvrait le nom de la zone et les cases du devant.)
+  const GARE_DEP = GEO ? [GEO.xPorte, GEO.ycSortie, 0] : null;
+  // Ce qu'on voit à une pause, calculé de la base (décision 7) : `vis = { pos: [cx, yc, lev], portee, posees: { palette: case }, camion:
+  // [palettes dans la remorque, tête d'abord], retard }`. Pendant le choix, le cariste attend à la sortie du camion, la palette en attente
+  // sur les fourches ; la file restante est dans la remorque. Fonction pure (de `e`) : un rechargement retombe sur la même image.
+  function visDe(e, o = {}) {
+    const k = K(e, 0), toutes = COMMENCE || !!o.toutes || (k.decharge && !deposeEnCours(e));
+    const posees = casesDesPalettes(e, toutes);
+    if (toutes) return { pos: GARE_DEP.slice(), portee: null, posees, camion: [], retard: 0 };
+    if (!k.decharge || !(k.evts >= 1)) return { pos: GARE_DEP.slice(), portee: null, posees: {}, camion: ORDRE_DEP.slice(), retard: 0 };
+    const att = enAttenteDep(e);
+    return { pos: [GEO.xPorte, GEO.ycSortie, CHARIOT_QUAI.LEV], portee: att, posees, camion: ORDRE_DEP.filter((id) => id !== att && !posees[id]), retard: 0 };
+  }
+  const palDep = (p, x, y, yMin, yMax) => palSvg(I2, p, x, y, 3, { yMin: Math.max(yMin, -3.6), yMax, lisible: false });
+  // Une palette posée, centrée dans sa case (une palette de fûts est plus large et moins profonde qu'une palette de cartons).
+  const dansCase = (p, g) => { const [gw, gd] = gabarit(p); return [g.x0 + (GD.LARG - gw) / 2, g.y0 + (GD.PROF - gd) / 2]; };
+  // Le chariot (comme `imageIsoChariot`) : la projection du quai à l'échelle K posée sur le bout des fourches, la palette portée sur les
+  // fourches, coupé au mur (`yMin` / `yMax` monde).
+  function chariotDep(pos, portee, yMin, yMax) {
+    const Kc = CHARIOT_QUAI.K, [cx, yc, lev] = pos;
+    const Ik = projection({ unite: I2.unite * Kc, origine: I2.P(cx - 0.5 * Kc, yc, 0) });
+    let charge = '';
+    if (portee) { const [gw, gd] = gabarit(portee); charge = `<g transform="translate(0 ${(-lev * I2.unite).toFixed(2)})">${palDep(portee, cx - gw / 2, yc + CHARIOT_FL - gd, yMin, yMax)}</g>`; }
+    return dessinerChariotFrontal(Ik, { x: 0, y: 0, lev: lev / Kc, chargeSvg: charge, coupe: { yMin: (yMin - yc) / Kc, yMax: (yMax - yc) / Kc }, gilet: true }, {});
+  }
+  // Le chauffeur du camion : pas à ② (comme la maquette validée : un personnage près d'un piège attirerait l'œil), seulement à ④, où il
+  // attend la signature, debout à droite de la dernière case (sa place d'aujourd'hui, x = 6,5, tombe sur les cases).
+  const CHAUFFEUR_DEP = GEO ? [Math.max(...GEO.cases.map((g) => g.x1)) + 0.45, 1.0] : null;
+  // Le sol (calculé une fois) : la dalle élargie, la zone de réception et son nom à la première case juste (`solQuai`), l'allée piétonne
+  // (bande hachurée, pictogrammes), la zone du quai voisin, les cases peintes (contour fin et nom au sol). Une case `peinte: false`
+  // n'a rien au sol : elle ne s'éclaire que pendant le choix.
+  let solDepMemo = null;
+  function solDepose() {
+    if (solDepMemo) return solDepMemo;
+    const S = GEO.sol, Z = GEO.zone, I = I2;
+    let s = solQuai(I, `${R.zone.nom} — ${R.lieu.nom}`, { zone: [Z.x0, Z.x1, Z.y0, Z.y1], sol: [S.x0, S.x1, S.y1], nomAuSol: [Z.xNom, Z.y1 + 0.42] });
+    GEO.pieton.forEach((a, n) => {
+      const x0 = a.x0 - 0.12, x1 = a.x1 + 0.12, id = `quaiAllee${n}`;
+      let raies = '';
+      for (let y = -2; y < S.y1 + 2; y += 0.42) raies += `<polygon points="${I.pts([[x0, y, 0], [x1, y + (x1 - x0), 0], [x1, y + (x1 - x0) + 0.16, 0], [x0, y + 0.16, 0]])}" fill="rgba(231,198,40,.62)"/>`;
+      s += `<g data-iso-allee-pietonne><clipPath id="${id}"><polygon points="${rectSolDe(I, x0, 0, x1, S.y1)}"/></clipPath>`;
+      s += `<polygon points="${rectSolDe(I, x0, 0, x1, S.y1)}" fill="rgba(231,198,40,.16)"/><g clip-path="url(#${id})">${raies}</g>`;
+      s += `<polyline points="${I.pts([[x0, 0, 0], [x0, S.y1, 0]])}" stroke="#d1a90f" stroke-width="3.5" fill="none"/><polyline points="${I.pts([[x1, 0, 0], [x1, S.y1, 0]])}" stroke="#d1a90f" stroke-width="3.5" fill="none"/>`;
+      s += pictoPieton(I, (x0 + x1) / 2, 0.75) + pictoPieton(I, (x0 + x1) / 2, 4.3);
+      s += surSolDe(I, `<text x="${x0 + 0.08}" y="5.35" font-size="0.26" font-weight="800" fill="#555047" font-family="${POLICE_ISO}">PIÉTONS</text>`) + '</g>';
+    });
+    GEO.autres.forEach((a) => {
+      s += `<g data-iso-zone-voisine><polygon points="${rectSolDe(I, a.x0 - 0.12, GD.Y0 - 0.12, a.x1 + 0.12, GD.Y0 + GD.PROF + 0.12)}" fill="rgba(231,198,40,.08)" stroke="#d1a90f" stroke-width="3" stroke-dasharray="10 6"/>`;
+      s += surSolDe(I, `<text x="${a.x0 - 0.05}" y="${GD.Y0 + GD.PROF + 0.42}" font-size="0.3" font-weight="800" fill="#555047" font-family="${POLICE_ISO}">${ech(String(a.legende).toUpperCase())}</text>`) + '</g>';
+      s += seuilPorte(I, a.xPorte - 0.6);
+    });
+    GEO.cases.forEach((g) => {
+      if (!g.peinte) return;
+      s += `<g data-iso-case-peinte="${ech(g.id)}"><polygon points="${rectSolDe(I, g.x0, g.y0, g.x1, g.y1, 0.002)}" fill="none" stroke="#6d675b" stroke-width="1.6"/>`;
+      s += surSolDe(I, `<text x="${(g.x0 + g.x1) / 2}" y="${g.y0 + 0.62}" text-anchor="middle" font-size="0.4" font-weight="800" fill="#6d675b" font-family="${POLICE_ISO}">${ech(g.id)}</text>`) + '</g>';
+    });
+    return (solDepMemo = s);
+  }
+  // Le mur : celui du quai (`murQuai`, porte levée de `ouv`), prolongé au besoin, la porte fermée du quai voisin, la porte piétonne, l'horloge.
+  function murDepose(ouv, e) {
+    const S = GEO.sol, m = ['#b9b3a6', '#c9c3b6', '#a9a397'];
+    let g = S.x0 < -1.2 ? I2.boite(S.x0, -0.3, 0, -1.2 - S.x0, 0.3, 2.7, m) : '';
+    g += murQuai(I2, ouv, R.lieu.nom);
+    if (S.x1 > 7.5) g += I2.boite(7.5, -0.3, 0, S.x1 - 7.5, 0.3, 2.7, m);
+    GEO.autres.forEach((a) => { g += porteVoisine(I2, a.xPorte, a.legende); });
+    GEO.pieton.forEach((a) => { g += portePietonne(I2, (a.x0 + a.x1) / 2); });
+    return g + horlogeQuai(I2, 1.0, 0.01, 2.25, hhmm(e.minute).slice(0, 5));
+  }
+  // Le cadre (viewBox) : le mur au-dessus des cases, la remorque, l'allée où le chariot circule, le chauffeur de ④.
+  let cadreDepMemo = null;
+  function cadreDep() {
+    if (cadreDepMemo) return cadreDepMemo;
+    const xs = GEO.cases.map((g) => g.x0).concat(GEO.cases.map((g) => g.x1));
+    const x0 = Math.min(...xs) - 0.3, x1 = Math.max(...xs) + 0.3, yBas = GEO.ycAllee + CHARIOT_BL + 0.15;
+    const cx0 = Math.min(...GEO.cases.map((g) => g.cx)) - 0.5, cx1 = Math.max(...GEO.cases.map((g) => g.cx)) + 0.5;
+    const pts = [[x0, 0, 2.75], [x1, 0, 2.75], [x0, GD.Y0 + GD.PROF + 0.7, 0], [x1, GD.Y0 + GD.PROF + 0.7, 0], [cx0, yBas, 0], [cx1, yBas, 0], [3.6, -3.6, 2.05], [2.4, -3.6, 2.1],
+      [CHAUFFEUR_DEP[0] + 0.4, CHAUFFEUR_DEP[1], 0], [CHAUFFEUR_DEP[0], CHAUFFEUR_DEP[1], 2.0]];
+    const P = pts.map((p) => I2.P(...p));
+    const a = Math.min(...P.map((p) => p[0])) - 10, b = Math.min(...P.map((p) => p[1])) - 10;
+    return (cadreDepMemo = [Math.floor(a), Math.floor(b), Math.ceil(Math.max(...P.map((p) => p[0])) + 10 - a), Math.ceil(Math.max(...P.map((p) => p[1])) + 10 - b)]);
+  }
+  // L'image d'un instant (une pause, ou un instant d'une animation à l'étape B) : la remorque et sa file, les palettes posées, le chariot.
+  // `o.parti` (④, BL signé) : le chauffeur et les palettes refusées sont repartis, la porte est refermée.
+  function imageDepose(vis, e, o = {}) {
+    const k = K(e, 0), P = PAL[0], N = P.length, Pp = (id) => P.find((p) => p.id === id);
+    const ouv = o.parti || !k.decharge ? 0 : 1;
+    const et = SCENE ? etatsScene(SEC, e.securite) : null;
+    const lp = et && et.lampe ? lampeQuai(I2, et.lampe) : { cone: '', tete: '' };
+    const pas = P.every(estFut) ? 1.05 : GD.PAS_CAMION;
+    const dedans = [], dehors = [];
+    vis.camion.forEach((id, r) => {
+      const p = Pp(id);
+      if (!p) return;
+      const [gw, gd] = gabarit(p), x = GD.X_PORTE - gw / 2, y = GD.Y_CAMION - (r + vis.retard) * pas;
+      dedans.push([x + gw / 2 + y + gd / 2, palDep(p, x, y, -99, 0)]);
+    });
+    let nb = 0;
+    Object.keys(vis.posees).forEach((id) => {
+      const p = Pp(id), g = GEO.cases.find((c) => c.id === vis.posees[id]);
+      if (!p || !g) return;
+      nb++;
+      if (o.parti && !accepte(st(e, p))) return;
+      const [x, y] = dansCase(p, g), [gw, gd] = gabarit(p);
+      dehors.push([x + gw / 2 + y + gd / 2, `<g data-iso-posee="${ech(p.id)}" data-iso-case="${ech(g.id)}">${palDep(p, x, y, 0, 99)}</g>`]);
+    });
+    const portee = vis.portee ? Pp(vis.portee) : null, [cx, yc] = vis.pos;
+    const yPal = portee ? yc + CHARIOT_FL - gabarit(portee)[1] : yc, cle = cx + yc + CHARIOT_BL / 2;
+    if (Math.min(yc, yPal) < 0.02) dedans.push([cle, `<g data-iso-chariot="dedans">${chariotDep(vis.pos, portee, -99, 0)}</g>`]);
+    if (yc + CHARIOT_BL > 0) dehors.push([cle, `<g data-iso-chariot="dehors">${chariotDep(vis.pos, portee, 0, 99)}</g>`]);
+    const trier = (L) => L.sort((a, b) => a[0] - b[0]).map((x) => x[1]).join('');
+    let s = solDepose();
+    s += `<g clip-path="url(#quaiIsoOuv)">${remorqueInterieur(I2)}${niveleur(I2, 'dedans', et ? et.niveleur : 'pose')}${lp.cone}${trier(dedans)}</g>`;
+    s += murDepose(ouv, e) + niveleur(I2, 'dehors', et ? et.niveleur : 'pose') + lp.tete + trier(dehors);
+    if (o.toutes && !o.parti) s += personne(I2, CHAUFFEUR_DEP[0], CHAUFFEUR_DEP[1]);
+    let leg;
+    if (!k.decharge) leg = `${hhmm(e.minute)} — Le camion est à quai, porte fermée.`;
+    else if (portee) leg = `${hhmm(e.minute)} — ${texteAttente(portee.id)}`;
+    else leg = legFinIso(N, e);
+    return { iso: s, leg, nb, pastilles: P.map((p) => `<i class="${vis.posees[p.id] ? 'sur' : ''}">${ech(p.id)}</i>`).join('') };
+  }
+  // « Kevin attend avec la palette P4 (Torchons…, 1 sur 4). Où la pose-t-il ? »
+  function texteAttente(id) {
+    const p = PAL[0].find((x) => x.id === id), rang = ORDRE_DEP.indexOf(id) + 1;
+    return `${quiSort} attend avec la palette ${id} (${p && p.nom ? `${p.nom}, ` : ''}${rang} sur ${ORDRE_DEP.length}). Où la pose-t-il ?`;
+  }
+  const texteFinDep = () => (ARRET ? ARRET.texte : `Les ${PAL[0].length} palettes sont en ${zoneMin}.`);
+  // La couche des cases (décision 9), au-dessus de tout : chaque case proposée est un bouton (rôle, tabindex, NOM, jamais le verdict) ;
+  // une case grisée : hachures, sans rôle ni tabindex ; une case occupée : absente.
+  function coucheCases(e) {
+    if (!JOUEE) return '';
+    const k = K(e, 0), ED = etatDep(e);
+    const p = k.decharge && k.evts >= 1 && !ui.animDep && !e.fini ? paletteEnAttente(ED, ORDRE_DEP) : null;
+    const proposees = p ? casesProposees(ED, DEPOSE.cases, p, OPTS_DEP) : [];
+    const grisees = casesGrisees(ED, DEPOSE.cases, p, OPTS_DEP);
+    return GEO.cases.map((g, i) => {
+      const pts = rectSolDe(I2, g.x0, g.y0, g.x1, g.y1, 0.004), c = DEPOSE.cases[i];
+      if (proposees.includes(g.id)) {
+        return `<g class="quai-case" data-q="depose" data-c="${ech(g.id)}" role="button" tabindex="0" aria-label="${ech(c.nom)}"><polygon class="quai-case-zone" points="${pts}"/><polygon class="quai-case-halo" points="${pts}"/><polygon class="quai-case-trait" points="${pts}"/></g>`;
+      }
+      if (grisees.has(g.id)) return `<g class="quai-case-grisee" data-case-grisee="${ech(g.id)}" aria-hidden="true"><polygon points="${pts}" fill="url(#quaiCaseGrise)" stroke="#7d776c" stroke-width="2" stroke-dasharray="5 4"/></g>`;
+      return '';
+    }).join('');
+  }
+  // Ce que dit le cariste à la pause : sa réaction au dernier clic faux (guidage), sinon sa consigne avant la première palette (guidage et copie).
+  function texteBulleDep(e) {
+    if (!JOUEE || e.fini || ui.animDep) return '';
+    const k = K(e, 0);
+    if (!k.decharge || !(k.evts >= 1)) return '';
+    const ED = etatDep(e), p = paletteEnAttente(ED, ORDRE_DEP);
+    if (!p) return '';
+    const is = issueDernierChoix(ED, DEPOSE.cases, p);
+    if (is && is.issue === 'refus') return is.reaction;
+    if (p === ORDRE_DEP[0] && !(ED.depose[p] && ED.depose[p].essais.length)) return PREMIERE_BULLE;
+    return '';
+  }
+  // La bulle du cariste (décision 10) : la bulle du quai (`bulle`), la pointe sur sa tête ; si la boîte couvrait une case, elle remonte
+  // au-dessus de la plus haute case qu'elle survole et sa pointe s'allonge jusqu'à la tête (une case à choisir n'est jamais cachée).
+  function bulleDep(pos, texte) {
+    const [x, y] = I2.P(pos[0], pos[1] + 1.32, 1.58), lignes = couperBulle(texte);
+    const bx = x - 34, W = Math.max(...lignes.map((l) => l.length)) * 7.6 + 28;   // largeur majorée (la bulle mesure son texte)
+    const sous = GEO.cases.filter((g) => { const xs = [[g.x0, g.y0], [g.x1, g.y0], [g.x1, g.y1], [g.x0, g.y1]].map(([a, b]) => I2.P(a, b, 0)[0]); return Math.max(...xs) > bx && Math.min(...xs) < bx + W; });
+    const haut = sous.length ? Math.min(...sous.map((g) => I2.P(g.x0, g.y0, 0)[1])) : Infinity;
+    const yp = Math.min(y, haut + 4);   // le bas de la boîte de `bulle` est à 14 px au-dessus de sa pointe : 10 px au-dessus de la case
+    const queue = yp < y - 0.5 ? `<path d="M${n1(x - 2.4)},${n1(yp - 15)} L${n1(x)},${n1(y)} L${n1(x + 12)},${n1(yp - 15)}" fill="#fff" stroke="#2c2c2c" stroke-width="1.5" stroke-linejoin="round"/>` : '';
+    return `<g data-q-bulle-cariste>${bulle(x, yp, lignes)}${queue}</g>`;
+  }
+
   // Le dégradé métallique des fûts n'est posé que si le quai en a (le dessin des autres séances reste octet pour octet le même).
-  const defsIso = () => `<defs><clipPath id="quaiIsoOuv"><polygon points="${ouvertureQuai(I2)}"/></clipPath></defs>${HAS_FUT ? DEFS_ISO : ''}`;
+  // La hachure des cases grisées (dépose dirigée), seulement si le quai déclare `depose`.
+  const defsIso = () => `<defs><clipPath id="quaiIsoOuv"><polygon points="${ouvertureQuai(I2)}"/></clipPath>${DEPOSE ? '<pattern id="quaiCaseGrise" patternUnits="userSpaceOnUse" width="8" height="8" patternTransform="rotate(45)"><rect width="8" height="8" fill="rgba(120,116,108,.30)"/><line x1="0" y1="0" x2="0" y2="8" stroke="rgba(85,80,71,.55)" stroke-width="3"/></pattern>' : ''}</defs>${HAS_FUT ? DEFS_ISO : ''}`;
   // ③ la palette en grand, tournée de `s.vue` quarts de tour ; chaque carton présent est cliquable.
   const NOMS_FACES = ['avant', 'côté droit', 'arrière', 'côté gauche'];
   function paletteIso(p, s) {
@@ -1591,23 +2100,39 @@ export function creerQuai(Q, opts = {}) {
   function scene2(e) {
     const ci = ca(e), k = K(e, ci), N = PAL[ci].length, cm = R.camions[ci];
     const fini = k.evts > N, attente = !k.decharge;
-    const im = image(fini ? fin(N) : 0, e, attente);
+    const im = DEPOSE ? imageIso(0, e, attente) : image(fini ? fin(N) : 0, e, attente);
     const [cx, cy, cw, chh] = PH.cadre;
     const pw = PORTE.x1 - PORTE.x0, ph = PORTE.y1 - PORTE.y0;
     const ax = PORTE.x1 + 14;
     const [hx, hy] = PH.horloge || [ax, PORTE.y0 + 78];
     const tempQuai = `${R.lieu.temp > 0 ? '+' : ''}${virgule(Number(R.lieu.temp).toFixed(1))} °C`;
     const barre = `<div class="quai-barre2">
-      <div><div class="quai-compteur2">Palettes sur le quai : <b data-q-nb>${im.nb} / ${N}</b><span class="quai-pastilles2" data-q-past>${im.pastilles}</span></div>
+      <div><div class="quai-compteur2">${DEPOSE ? `Palettes en ${ech(zoneMin)}` : 'Palettes sur le quai'} : <b data-q-nb>${im.nb} / ${N}</b><span class="quai-pastilles2" data-q-past>${im.pastilles}</span></div>
         <div class="note">${M ? `Camion ${ech(cm.nom)}, ${fictif(cm.transporteur, cm.fictif)} · ` : ''}Durée du déchargement : <b>${formule(ci)}</b> de temps du quai</div></div>
       <div class="quai-ligne">
-        <button class="btn" data-q="passer" ${fini || attente ? 'hidden' : ''}>⏩ Passer l'animation</button>
-        <button class="btn" data-q="revoir" data-libre ${fini ? '' : 'hidden'}>↺ Revoir le déchargement</button>
+        <button class="btn" data-q="passer" ${fini || attente || DEPOSE ? 'hidden' : ''}>⏩ Passer l'animation</button>
+        <button class="btn" data-q="revoir" data-libre ${fini && !DEPOSE ? '' : 'hidden'}>↺ Revoir le déchargement</button>
         ${ARRET ? '' : `<button class="btn btn-p" data-q="vers3" data-libre ${fini ? '' : 'disabled'}>${ISO ? 'Compter la palette' : 'Contrôler les palettes'} →</button>`}
       </div>
     </div>`;
     // `arret: 'dechargement'` : une fois la dernière palette posée, le bandeau de fin remplace « Compter la palette » (ni Valider, ni Clore, ni Recommencer).
     const bandeau = ARRET && fini ? `<p class="quai-fin-decharge" role="status" data-q-fin-decharge>${ech(ARRET.texte)}</p>` : '';
+    // La dépose dirigée : le <svg> est un groupe (les cases y sont des boutons) ; le dessin est caché aux lecteurs d'écran, la couche des
+    // cases et la bulle du cariste se posent par-dessus ; la région `aria-live` reçoit ce que dit le cariste (la bulle SVG n'est pas lue).
+    if (DEPOSE) {
+      const vis = ui.visDep || visDe(e), [vx, vy, vw, vh] = cadreDep(), texte = texteBulleDep(e);
+      const choix = JOUEE && !fini && !attente && !e.fini && !ui.animDep;
+      return `<div class="quai-scene2 quai-iso quai-depose">
+        <svg data-q-scene2 viewBox="${vx} ${vy} ${vw} ${vh}" role="group" aria-label="${ech(R.lieu.nom)} vu de l’intérieur : le camion à quai, ${ech(minuscule(quiSort))} au chariot, la ${ech(zoneMin)} et ses cases">
+          ${defsIso()}<g data-g="iso" aria-hidden="true">${im.iso}</g><g data-g="cases">${coucheCases(e)}</g><g data-g="bulle" aria-hidden="true">${texte ? bulleDep(vis.pos, texte) : ''}</g>
+        </svg>
+        <div class="quai-legende" data-q-leg>${ech(im.leg)}</div>
+      </div>
+      ${choix ? `<p class="quai-consigne-depose">${ech(quiSort)} sort les palettes une à une. Pour chacune, <b>clique la case de la ${ech(zoneMin)}</b> où il doit la poser.</p>` : ''}
+      <p class="quai-sr" aria-live="polite" data-q-annonce></p>
+      ${bandeau}${barre}
+      ${A.consignes ? `<p class="quai-aide">Sur une plateforme, c’est <b>un cariste</b> qui décharge, au chariot élévateur.${ARRET ? '' : ' Toi, tu ne signes rien tant que tu n’as pas compté.'}</p>` : ''}`;
+    }
     if (ISO) {
       return `<div class="quai-scene2 quai-iso">
         <svg data-q-scene2 viewBox="290 0 640 ${N > 2 ? 540 : 480}" role="img" aria-label="${ech(R.lieu.nom)} : la porte se lève, ${ech(minuscule(quiSort))} sort ${N > 1 ? 'les palettes' : 'la palette'} ${CARISTE_ISO ? 'au chariot élévateur' : 'au transpalette'} jusqu’en ${ech(zoneMin)}">
@@ -2552,7 +3077,7 @@ export function creerQuai(Q, opts = {}) {
       <div class="quai-grille2">
         <div class="quai-gauche">${ISO ? `<div class="quai-doc">
           <div class="quai-doc-titre">📦 ${ech(R.zone.nom)}</div>
-          <svg class="quai-cf quai-iso" data-q-cf viewBox="200 60 640 ${N > 2 ? 520 : 470}" role="img" aria-label="La palette en ${ech(zoneMin)}${k.signe ? ', le chauffeur est reparti' : ', le chauffeur attend'}">${defsIso()}${imageIso(fin(N), e, false, { parti: k.signe }).iso}</svg>
+          <svg class="quai-cf quai-iso" data-q-cf viewBox="${DEPOSE ? cadreDep().join(' ') : `200 60 640 ${N > 2 ? 520 : 470}`}" role="img" aria-label="La palette en ${ech(zoneMin)}${k.signe ? ', le chauffeur est reparti' : ', le chauffeur attend'}">${defsIso()}${imageIso(DEPOSE ? 0 : fin(N), e, false, { parti: k.signe, toutes: true }).iso}</svg>
           <p class="note" data-q-etatcf>${k.signe ? `Le chauffeur est reparti. ${nAcc > 1 ? `Les ${nAcc} palettes restent` : 'La palette reste'} en ${ech(zoneMin)}.` : `${toutDecide ? `${nAcc} palette${nAcc > 1 ? 's' : ''} en ${ech(zoneMin)}. ` : ''}Le chauffeur attend ta signature.`}</p>
         </div>` : `<div class="quai-doc">
           <div class="quai-doc-titre">${F ? `🧊 ${ech(R.lieu.chambre.nom)}` : `📦 ${ech(R.zone.nom)}`}</div>
@@ -2669,6 +3194,7 @@ export function creerQuai(Q, opts = {}) {
   }
   function aller(e, n, api) {
     if ((ARRET && n > 2) || (COMMENCE && n < 3)) return;   // une étape absente (arret / commence) ne s'atteint pas
+    if (n > 2 && deposeEnCours(e)) return;                  // dépose dirigée : ③ attend que la dernière palette soit posée
     if (n >= SEUIL_SECU && !secuFaite(e)) return;
     if (n > 1 && !unDecharge(e, R)) return;
     if (ui.anim) ui.anim.finir();
@@ -2688,6 +3214,66 @@ export function creerQuai(Q, opts = {}) {
     }
     k.decharge = true; k.ouvertA = e.minute; k.evts = 0; e.etape = 2; ui.lancer = true; ui.chef4 = false;
     api.sauver(); api.redessiner(); if (api.haut) api.haut();
+  }
+
+  /* ----------------------------------------------------- la dépose dirigée : les gestes (lot 2) */
+  // La porte s'ouvre (une fois) : le temps du quai compte l'ouverture, comme le premier événement de `evenements`.
+  function ouvrirDepose(e) {
+    const k = K(e, 0);
+    if (k.evts === 0) { k.evts = 1; avancer(e, R.D.ouverture, 'porte du quai ouverte, début du déchargement'); }
+  }
+  // LE POINT OÙ L'ÉTAPE B INSÈRE LES TRAJETS (décision 6). `gestes` = [{ quoi: 'chercher' | 'poser', palette, case }], DÉJÀ appliqués à
+  // la base (l'état fait foi : un rechargement en pleine animation retombe sur la pause suivante) ; l'animation ne fait que montrer le
+  // passage de l'image d'avant à celle de la pause suivante (`visDe(e)`), en posant `ui.visDep` (l'image de l'instant, que `scene2` dessine
+  // à la place de `visDe`) et `ui.animDep` (le contrôleur ; tant qu'il existe, aucune case ne se propose). Ici (étape A, et en mouvement
+  // réduit) : rien à jouer, on saute à la pause suivante.
+  function jouerDepose(gestes, ensuite) {
+    ui.visDep = null; ui.animDep = null;
+    ensuite();
+  }
+  // Ce que la région `aria-live` annonce à une pause : la consigne du cariste avant la première palette, puis la palette en attente.
+  function annoncePause(e) {
+    const p = enAttenteDep(e);
+    if (!p) return texteFinDep();
+    const d = etatDep(e).depose[p];
+    return `${p === ORDRE_DEP[0] && !(d && d.essais.length) ? `${quiSort} : « ${PREMIERE_BULLE} » ` : ''}${texteAttente(p)}`;
+  }
+  // Après un redessin, au clavier seulement : le focus va à la case proposée qui suit `cid` (sinon la première).
+  function focusApresDep(e, cid) {
+    const ED = etatDep(e), p = paletteEnAttente(ED, ORDRE_DEP);
+    if (!p) return null;
+    const L = casesProposees(ED, DEPOSE.cases, p, OPTS_DEP), ids = DEPOSE.cases.map((c) => c.id), dep = ids.indexOf(cid);
+    const s = L.find((id) => ids.indexOf(id) > dep) || L[0];
+    return s ? `[data-q="depose"][data-c="${s}"]` : null;
+  }
+  // Un clic (ou Entrée / Espace) sur une case. Guidage : un piège est refusé (réaction du cariste, case grisée, l'élève rechoisit) ; une
+  // case juste est posée. Copie : le premier clic pose. Chaque pose avance le temps du quai et `evts` (comme une palette posée hier) ;
+  // la première publie le geste `quai:<id>:depose` ; la dernière finit le déchargement (bandeau `arret`, ou ③ ouverte).
+  function choisirDepose(e, cid, api) {
+    if (!JOUEE || e.fini || ui.animDep) return;
+    const k = K(e, 0);
+    if (!k.decharge || !(k.evts >= 1)) return;
+    const ED = etatDep(e), p = paletteEnAttente(ED, ORDRE_DEP);
+    if (!p) return;
+    const n = choisirCase(ED, DEPOSE.cases, p, cid, OPTS_DEP);
+    if (n === ED) return;
+    e.depose = n.depose;
+    const is = issueDernierChoix(n, DEPOSE.cases, p), c = DEPOSE.cases.find((x) => x.id === cid);
+    if (is.issue === 'refus') {
+      ui.annonceDep = `${quiSort} : « ${is.reaction} » Choisis une autre case.`;
+      ui.focus = focusApresDep(e, cid);
+      api.sauver(); api.redessiner();
+      return;
+    }
+    avancer(e, R.D.parPalette, `${p} posée en ${cid}`);
+    k.evts++;
+    if (Object.values(e.depose).filter((d) => d.pose).length === 1 && api.signal) api.signal(`quai:${Q.id}:depose`);
+    const suite = enAttenteDep(e);
+    ui.focus = focusApresDep(e, cid);
+    jouerDepose([{ quoi: 'poser', palette: p, case: cid }].concat(suite ? [{ quoi: 'chercher', palette: suite }] : []), () => {
+      ui.annonceDep = `Palette ${p} posée : ${c.nom}. ${suite ? texteAttente(suite) : texteFinDep()}`;
+      api.sauver(); api.redessiner();
+    });
   }
 
   if (R.controle) return vueControle();
@@ -2894,7 +3480,8 @@ export function creerQuai(Q, opts = {}) {
 
   return {
     // `quai:<id>:dechargement` (fin du déchargement, une fois) n'existe que si le quai s'arrête là (`arret`) : la liste des autres séances ne change pas.
-    signaux: [`quai:${Q.id}:decharger`, `quai:${Q.id}:valider`, `quai:${Q.id}:cloturer`].concat(SCENE ? [`scene:${Q.id}:signaler`, `scene:${Q.id}:decharger`] : [], ARRET ? [`quai:${Q.id}:dechargement`] : []),
+    // `quai:<id>:depose` (première palette posée par l'élève, une fois) n'existe que si le quai déclare `depose`.
+    signaux: [`quai:${Q.id}:decharger`, `quai:${Q.id}:valider`, `quai:${Q.id}:cloturer`].concat(SCENE ? [`scene:${Q.id}:signaler`, `scene:${Q.id}:decharger`] : [], ARRET ? [`quai:${Q.id}:dechargement`] : [], DEPOSE ? [`quai:${Q.id}:depose`] : []),
     id: Q.id,
     nav: { libelle: Q.libelle || 'Quai de réception' },
     etatNeuf: () => etatNeuf(Q),
@@ -2917,6 +3504,9 @@ export function creerQuai(Q, opts = {}) {
       // du temps du quai s'applique d'un coup.
       R.camions.forEach((_, ci) => {
         const k = K(e, ci);
+        // (Dépose dirigée : pas de rattrapage, l'état de la dépose fait foi ; seule l'ouverture de la porte, si la page a été rechargée
+        // entre « Décharger » et la première pause, se rattrape.)
+        if (JOUEE) { if (k.decharge && k.evts === 0 && !ui.lancer) { ouvrirDepose(e); api.sauver(); } return; }
         if (k.decharge && k.evts <= PAL[ci].length && !ui.anim && !ui.lancer) { evenements(e, fin(PAL[ci].length), ci); api.sauver(); }
       });
       // La palette sélectionnée appartient au camion montré.
@@ -2940,7 +3530,7 @@ export function creerQuai(Q, opts = {}) {
         ${Q.avertissement ? `<div class="quai-avert">${Q.avertissement}</div>` : ''}
         ${horloges(e)}
         <nav class="quai-stepper" aria-label="Étapes de la réception">
-          ${libs.map((l, i) => [l, i + n0]).filter(([, n]) => (ARRET ? n <= 2 : COMMENCE ? n >= 3 : true)).map(([l, n]) => { const ferme = (n >= SEUIL_SECU && !secuFaite(e)) || (n > 1 && !ouvert);
+          ${libs.map((l, i) => [l, i + n0]).filter(([, n]) => (ARRET ? n <= 2 : COMMENCE ? n >= 3 : true)).map(([l, n]) => { const ferme = (n >= SEUIL_SECU && !secuFaite(e)) || (n > 1 && !ouvert) || (n > 2 && deposeEnCours(e));
             return `<button data-q="etape" data-libre data-n="${n}" class="${etape === n ? 'on' : ''}" ${ferme ? 'disabled' : ''} ${etape === n ? 'aria-current="step"' : ''}>${l}</button>`; }).join('')}
         </nav>
         ${corps}
@@ -3031,8 +3621,30 @@ export function creerQuai(Q, opts = {}) {
       // pas d'animation, la fin directement (palettes posées, temps du quai compté).
       if (ui.lancer) {
         ui.lancer = false;
+        // Dépose dirigée : la porte s'ouvre, le cariste va chercher la première palette, puis la pause « choix » (étape B : animés).
+        if (JOUEE) {
+          ouvrirDepose(e);
+          jouerDepose([{ quoi: 'chercher', palette: ORDRE_DEP[0] }], () => { ui.annonceDep = annoncePause(e); api.sauver(); api.redessiner(); });
+          return;
+        }
         if (reduit()) { evenements(e, fin(PAL[ca(e)].length)); api.sauver(); api.redessiner(); return; }
         animer(z, e, api, false);
+      }
+      // Dépose dirigée : un clic sur une case, ou Entrée / Espace sur la case qui a le focus (un <g role="button"> ne reçoit pas de clic
+      // du clavier). Puis l'annonce du cariste, posée 30 ms après le dessin dans la région `aria-live` (vide au dessin : elle est lue).
+      if (JOUEE) {
+        on('depose', geste((ev, b) => choisirDepose(e, b.dataset.c, api)));
+        const sv = z.querySelector('[data-q-scene2]');
+        if (sv) {
+          sv.addEventListener('keydown', (ev) => {
+            const g = ev.target && ev.target.closest ? ev.target.closest('[data-q="depose"]') : null;
+            if (!g || (ev.key !== 'Enter' && ev.key !== ' ')) return;
+            ev.preventDefault();
+            if (!e.fini) choisirDepose(e, g.dataset.c, api);
+          });
+        }
+        const an = z.querySelector('[data-q-annonce]');
+        if (an && ui.annonceDep) { const t = ui.annonceDep; ui.annonceDep = ''; setTimeout(() => { if (an.isConnected) an.textContent = t; }, 30); }
       }
       on('passer', () => { if (ui.anim) ui.anim.finir(); api.redessiner(); });
       on('revoir', () => {
