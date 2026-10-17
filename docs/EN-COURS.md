@@ -7,6 +7,8 @@ est déjà modifié ou inscrit ci-dessous, **elle s'arrête et le dit à Tristan
 
 | Chantier | Fichiers qu'il touche | Depuis |
 |---|---|---|
+| Lot 4 « contenus selon le niveau » (le quai reçoit le niveau ; dialogue : choix et répliques par niveau) | `core/types/entreprise.js`, `core/types/quai.js`, `core/types/dialogue.js`, `outils/test/quai-iso.mjs`, `outils/test/dialogue.mjs`, `activites/FICHE-SEANCE.md`, `docs/decisions.md`, `docs/chantiers.md` | 17/10/2026 soir |
+| Lot 4 « contenus selon le niveau » (quai reçoit le niveau, dialogue : choix et répliques par niveau) | core/types/entreprise.js, core/types/quai.js, core/types/dialogue.js, outils/test/quai-iso.mjs, outils/test/dialogue.mjs, activites/FICHE-SEANCE.md, docs/decisions.md, docs/chantiers.md | 17/10/2026 soir |
 
 Rappel : un seul chantier à la fois dans `core/types/tournee.js`, `core/types/grille.js`,
 `core/types/entreprise.js`, `styles/base.css` et `outils/test/boost.mjs` (voir `docs/briefs/COORDINATION-boost.md`).
